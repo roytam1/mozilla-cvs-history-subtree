@@ -54,8 +54,8 @@ ifdef PR_CLIENT_BUILD
 export::
 	rm -r -f $(DIST)/../public/nspr
 ifdef PR_CLIENT_BUILD_UNIX
-	rm -f $(libdir)/libnspr.a
-	rm -f $(bindir)/libnspr.$(DLL_SUFFIX)
+	rm -f $(dist_libdir)/libnspr.a
+	rm -f $(dist_bindir)/libnspr.$(DLL_SUFFIX)
 endif
 endif
 

@@ -17,9 +17,8 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Original Author: Gagan Saksena <gagan@netscape.com>
- *
  * Contributor(s): 
+ *   Gagan Saksena <gagan@netscape.com> (original author)
  *   Darin Fisher <darin@netscape.com>
  */
 
@@ -37,17 +36,15 @@
 #include "nsIStreamConverter.h"
 #include "nsRepository.h"
 #include "nsIByteArrayInputStream.h"
-
 #include "nsHTTPAtoms.h"
 #include "nsIHttpNotify.h"
 #include "nsINetModRegEntry.h"
 #include "nsIServiceManager.h"
 #include "nsINetModuleMgr.h"
 #include "nsIEventQueueService.h"
-
 #include "nsXPIDLString.h" 
-
 #include "nsIIOService.h"
+#include "nsNetCID.h"
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -109,7 +106,7 @@ NS_IMPL_THREADSAFE_RELEASE(nsHTTPResponseListener)
 
 NS_IMPL_QUERY_INTERFACE2(nsHTTPResponseListener, 
                          nsIStreamListener, 
-                         nsIStreamObserver);
+                         nsIRequestObserver);
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -134,7 +131,7 @@ nsHTTPCacheListener::~nsHTTPCacheListener()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsIStreamObserver methods:
+// nsIRequestObserver methods:
 
 NS_IMETHODIMP
 nsHTTPCacheListener::OnStartRequest(nsIRequest *aRequest,
@@ -159,7 +156,7 @@ nsHTTPCacheListener::OnStartRequest(nsIRequest *aRequest,
 
 NS_IMETHODIMP
 nsHTTPCacheListener::OnStopRequest(nsIRequest *aRequest, nsISupports *aContext,
-                                   nsresult aStatus, const PRUnichar* aStatusArg) 
+                                   nsresult aStatus)
 {
     LOG(("nsHTTPCacheListener::OnStopRequest [this=%x]\n", this));
 
@@ -168,7 +165,7 @@ nsHTTPCacheListener::OnStopRequest(nsIRequest *aRequest, nsISupports *aContext,
     // is no socket transport involved nsnull is passed as the
     // transport...
     //
-    return mChannel->ResponseCompleted(mResponseDataListener, aStatus, aStatusArg);
+    return mChannel->ResponseCompleted(mResponseDataListener, aStatus);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -450,6 +447,7 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest *request,
     //
     if (!mResponseDataListener) {
         // XXX: What should the return code be?
+        LOG(("nsHTTPServerListener::OnDataAvailable -- returning NS_BINDING_ABORTED\n"));
         rv = NS_BINDING_ABORTED;
     }
 
@@ -478,8 +476,9 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest *request,
                         mResponseDataListener,
                         request,
                         getter_AddRefs(converterListener));
-                if (NS_FAILED(rv)) return rv;
-                mResponseDataListener = converterListener;
+                if (NS_SUCCEEDED(rv)) {
+                  mResponseDataListener = converterListener;
+                }
             }
         }
 
@@ -589,7 +588,7 @@ nsHTTPServerListener::OnDataAvailable(nsIRequest *request,
                     mResponse->GetStatus(&status);
 
                 if (status != 304 || !mChannel->HasCachedResponse()) {
-                    mChannel->ResponseCompleted(mResponseDataListener, NS_OK, nsnull);
+                    mChannel->ResponseCompleted(mResponseDataListener, NS_OK);
                     mChannel->SetHTTPServerListener(nsnull);
                 }
 
@@ -649,7 +648,7 @@ nsHTTPServerListener::OnStartRequest(nsIRequest* request, nsISupports* i_pContex
 
 NS_IMETHODIMP
 nsHTTPServerListener::OnStopRequest(nsIRequest* request, nsISupports* i_pContext, 
-                                    nsresult i_Status, const PRUnichar* aStatusArg) 
+                                    nsresult i_Status)
 {
     nsresult rv = i_Status, channelStatus = NS_OK;
 
@@ -700,7 +699,13 @@ nsHTTPServerListener::OnStopRequest(nsIRequest* request, nsISupports* i_pContext
             mResponse->GetStatus(&status);
 
         if (status != 304 || mChannel->HasCachedResponse()) {
-            mChannel->ResponseCompleted(mResponseDataListener, i_Status, aStatusArg);
+            // For 304 responses, we'll call ResponseCompleted after the response
+            // has been completely read from the cache.
+            if (status != 304) {
+                LOG(("Calling ResponseCompleted [httpStatus=%d status=%x]\n", status, i_Status));
+                mChannel->ResponseCompleted(mResponseDataListener, i_Status);
+            }
+            // The channel is done with us.
             mChannel->SetHTTPServerListener(nsnull);
         }
 
@@ -764,7 +769,7 @@ nsHTTPServerListener::OnStopRequest(nsIRequest* request, nsISupports* i_pContext
         if (mPipelinedRequest) {
             while (NS_SUCCEEDED(mPipelinedRequest->AdvanceToNextRequest())) {
                 OnStartRequest(nsnull, nsnull);
-                mChannel->ResponseCompleted(mResponseDataListener, i_Status, aStatusArg);
+                mChannel->ResponseCompleted(mResponseDataListener, i_Status);
                 mChannel->SetHTTPServerListener(nsnull);
             }
 
@@ -809,6 +814,8 @@ nsresult nsHTTPServerListener::Abort()
 nsresult nsHTTPServerListener::FireSingleOnData(nsIStreamListener *aListener, 
                                                 nsISupports *aContext) 
 {
+    LOG(("nsHTTPServerListener::FireSingleOnData [this=%x]\n", this));
+
     nsresult rv = NS_OK;
 
     if (mHeadersDone) {
@@ -852,7 +859,7 @@ nsWriteLineToString(nsIInputStream* in,
         for (; count>0; --count) {
             c = *p++;
             (*writeCount)++;
-            if (c == LF) {
+            if (c == nsCRT::LF) {
                 info->haveLF = PR_TRUE;
                 break;
             }
@@ -903,7 +910,7 @@ nsresult nsHTTPServerListener::ParseStatusLine(nsIInputStream* in,
     }
 
     // Wait for more data to arrive before processing the header...
-    if (bL > 0 && mHeaderBuffer.CharAt(bL - 1) != LF) return NS_OK;
+    if (bL > 0 && mHeaderBuffer.CharAt(bL - 1) != nsCRT::LF) return NS_OK;
 
     LOG(("\tParseStatusLine [this=%x].\tGot Status-Line:%s\n",
         this, mHeaderBuffer.get()));
@@ -976,7 +983,7 @@ nsresult nsHTTPServerListener::ParseHTTPHeader(nsIInputStream* in,
         // If last character in the header string is a LF, then the header 
         // may be complete...
         //
-        newlineOffset = mHeaderBuffer.FindChar(LF, PR_FALSE, newlineOffset);
+        newlineOffset = mHeaderBuffer.FindChar(nsCRT::LF, PR_FALSE, newlineOffset);
         if (newlineOffset == -1)
             return NS_OK;
 
@@ -1043,7 +1050,7 @@ NS_IMPL_THREADSAFE_RELEASE(nsHTTPFinalListener)
 
 NS_IMPL_QUERY_INTERFACE2(nsHTTPFinalListener, 
                          nsIStreamListener, 
-                         nsIStreamObserver);
+                         nsIRequestObserver);
 
 static PRUint32 sFinalListenersCreated = 0;
 static PRUint32 sFinalListenersDeleted = 0;
@@ -1079,7 +1086,7 @@ nsHTTPFinalListener::~nsHTTPFinalListener()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsIStreamObserver methods:
+// nsIRequestObserver methods:
 
 NS_IMETHODIMP
 nsHTTPFinalListener::OnStartRequest(nsIRequest *aRequest,
@@ -1097,7 +1104,7 @@ nsHTTPFinalListener::OnStartRequest(nsIRequest *aRequest,
 
 NS_IMETHODIMP
 nsHTTPFinalListener::OnStopRequest(nsIRequest *aRequest, nsISupports *aContext,
-                                   nsresult aStatus, const PRUnichar* aStatusArg) 
+                                   nsresult aStatus)
 {
     LOG(("nsHTTPFinalListener::OnStopRequest [this=%x]"
          ", mOnStopFired=%u\n", this, mOnStopFired));
@@ -1127,7 +1134,7 @@ nsHTTPFinalListener::OnStopRequest(nsIRequest *aRequest, nsISupports *aContext,
 #endif
 
     mOnStopFired = PR_TRUE;
-    nsresult rv = mListener->OnStopRequest(aRequest, aContext, aStatus, aStatusArg);
+    nsresult rv = mListener->OnStopRequest(aRequest, aContext, aStatus);
 
     return rv;
 }
@@ -1165,7 +1172,7 @@ nsHTTPFinalListener::OnDataAvailable(nsIRequest *aRequest,
             mBusy = PR_FALSE;
 
             if (mOnStopPending) 
-                OnStopRequest(mChannel, mContext, NS_OK, nsnull);
+                OnStopRequest(mChannel, mContext, NS_OK);
 
             return rv;
         }
@@ -1180,7 +1187,7 @@ nsHTTPFinalListener::FireNotifications()
     LOG(("nsHTTPFinalListener::FireNotifications [this=%x]\n", this));
 
     if (!mShutdown)
-        OnStopRequest(mChannel, mContext, NS_OK, nsnull);
+        OnStopRequest(mChannel, mContext, NS_OK);
 }
 
 void

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/pref-mailnews.css" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 
 <!--
 The contents of this file are subject to the Netscape Public
@@ -41,9 +41,6 @@ Contributor(s):
                        "newMailNotification" ];
   ]]>
   </script>
-  <!-- XXX: Replace strres.js when prefutilities is converted -->
-  <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/pref/prefutilities.js"/>
   <script type="application/x-javascript" src="chrome://messenger/content/pref-mailnews.js"/>
   
   <box class="box-smallheader" title="&pane.title;"/>
@@ -91,7 +88,10 @@ Contributor(s):
 
     <box autostretch="never" halign="right">
       <button class="dialog" label="&useDefault.label;" accesskey="&useDefault.accesskey;"
-              oncommand="setHomePageToDefaultPage('mailnewsStartPageUrl');" />
+              id="resetHomePageButton"
+              oncommand="setHomePageToDefaultPage('mailnewsStartPageUrl');">
+        <observes element="mailnewsStartPageUrl" attribute="disabled"/>
+      </button>
      </box>
 
   </titledbox>

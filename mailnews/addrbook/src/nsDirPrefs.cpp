@@ -451,10 +451,10 @@ nsresult DIR_ContainsServer(DIR_Server* pServer, PRBool *hasDir)
 	return NS_OK;
 }
 
-nsresult DIR_AddNewAddressBook(const PRUnichar *dirName, const char *fileName, PRBool migrating, DIR_Server** pServer)
+nsresult DIR_AddNewAddressBook(const PRUnichar *dirName, const char *fileName, PRBool migrating, DirectoryType dirType, DIR_Server** pServer)
 {
 	DIR_Server * server = (DIR_Server *) PR_Malloc(sizeof(DIR_Server));
-	DIR_InitServerWithType (server, PABDirectory);
+	DIR_InitServerWithType (server, dirType);
 	if (!dir_ServerList)
 		DIR_GetDirServers();
 	if (dir_ServerList)
@@ -1999,6 +1999,8 @@ nsresult DIR_DeleteServerFromList(DIR_Server *server)
 			dbPath->Delete(PR_FALSE);
 		}
 
+    delete dbPath;
+
 		nsVoidArray *dirList = DIR_GetDirectories();
 		DIR_SetServerPosition(dirList, server, DIR_POS_DELETE);
 		DIR_DeleteServer(server);
@@ -2814,6 +2816,8 @@ void DIR_SetFileName(char** fileName, const char* defaultName)
 		*fileName = PL_strdup(file);
 		if (file)
 			nsCRT::free(file);
+
+      delete dbPath;
 	}
 }
 

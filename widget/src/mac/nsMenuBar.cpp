@@ -52,15 +52,10 @@
 #include <Appearance.h>
 #include "nsMacResources.h"
 
-#pragma options align=mac68k
-typedef struct {
-	short 	jmpInstr;
-	Ptr 	jmpAddr;
-} JmpRecord, *JmpPtr, **JmpHandle;
-#pragma options align=reset
+#include "DefProcFakery.h"
+
 
 Handle       gMDEF = nsnull;
-Handle       gSystemMDEFHandle = nsnull;
 nsWeakPtr    gMacMenubar;
 nsWeakPtr    gOriginalMenuBar;
 bool         gFirstMenuBar = true; 
@@ -106,12 +101,10 @@ nsMenuBar::nsMenuBar()
   mParent         = nsnull;
   mIsMenuBarAdded = PR_FALSE;
   mUnicodeTextRunConverter = nsnull;
-  
-  MenuDefUPP mdef = NewMenuDefProc( nsDynamicMDEFMain );
-  InstallDefProc((short)nsMacResources::GetLocalResourceFile(), (ResType)'MDEF', (short)128, (Ptr) mdef );
-
+    
   mOriginalMacMBarHandle = nsnull;
   mMacMBarHandle = nsnull;
+  mDocument = nsnull;
   
   mOriginalMacMBarHandle = ::GetMenuBar();
   Handle tmp = ::GetMenuBar();
@@ -144,12 +137,9 @@ nsMenuBar::~nsMenuBar()
   NS_ASSERTION(err==noErr,"nsMenu::~nsMenu: DisposeUnicodeToTextRunInfo failed.");	 
 
   // make sure we unregister ourselves as a document observer
-  nsCOMPtr<nsIWebShell> webShell ( do_QueryReferent(mWebShellWeakRef) );
-  nsCOMPtr<nsIDocument> doc;
-  GetDocument(webShell, getter_AddRefs(doc));
-  if ( doc ) {
+  if ( mDocument ) {
     nsCOMPtr<nsIDocumentObserver> observer ( do_QueryInterface(NS_STATIC_CAST(nsIMenuBar*,this)) );
-    doc->RemoveObserver(observer);
+    mDocument->RemoveObserver(observer);
   }
 
   --gMenuBarCounter;
@@ -283,6 +273,9 @@ nsMenuBar :: RegisterAsDocumentObserver ( nsIWebShell* inWebShell )
   // register ourselves
   nsCOMPtr<nsIDocumentObserver> observer ( do_QueryInterface(NS_STATIC_CAST(nsIMenuBar*,this)) );
   doc->AddObserver(observer);
+  // also get pointer to doc, just in case webshell goes away
+  // we can still remove ourself as doc observer directly from doc
+  mDocument = doc;
 
 } // RegisterAsDocumentObesrver
 
@@ -303,53 +296,48 @@ nsMenuBar::MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWind
 				
 	  MenuHandle macMenuHandle = ::NewMenu(2, "\psubmenu");
 	  if(macMenuHandle) { 
+
+      // get our fake MDEF ready to be stashed into every menu that comes our way.
+      // if we fail creating it, we're probably so doomed there's no point in going
+      // on.
+      if ( !gMDEF ) {
+        MenuDefUPP mdef = NewMenuDefProc( nsDynamicMDEFMain );
+        Boolean success = DefProcFakery::CreateDefProc( mdef, (**macMenuHandle).menuProc, &gMDEF );
+        if ( !success )
+          ::ExitToShell();
+      }
+
 	    gLevel2HierMenu = macMenuHandle;
-	    SInt8 state = ::HGetState((Handle)macMenuHandle);
-	    ::HLock((Handle)macMenuHandle);
-			gSystemMDEFHandle = (**macMenuHandle).menuProc;
 			(**macMenuHandle).menuProc = gMDEF;
 			(**macMenuHandle).menuWidth = -1;
 			(**macMenuHandle).menuHeight = -1;
-			::HSetState((Handle)macMenuHandle, state);
 			::InsertMenu(macMenuHandle, hierMenu);
     }
 			
     macMenuHandle = ::NewMenu(3, "\psubmenu");
 	  if(macMenuHandle) { 
 	    gLevel3HierMenu = macMenuHandle;
-	    SInt8 state = ::HGetState((Handle)macMenuHandle);
-	    ::HLock((Handle)macMenuHandle);
-		  gSystemMDEFHandle = (**macMenuHandle).menuProc;
 		  (**macMenuHandle).menuProc = gMDEF;
 		  (**macMenuHandle).menuWidth = -1;
 		  (**macMenuHandle).menuHeight = -1;
-		  ::HSetState((Handle)macMenuHandle, state);
 		  ::InsertMenu(macMenuHandle, hierMenu);
     }
 			
     macMenuHandle = ::NewMenu(4, "\psubmenu");
 	  if(macMenuHandle) { 
 	    gLevel4HierMenu = macMenuHandle;
-	    SInt8 state = ::HGetState((Handle)macMenuHandle);
-	    ::HLock((Handle)macMenuHandle);
-		  gSystemMDEFHandle = (**macMenuHandle).menuProc;
 		  (**macMenuHandle).menuProc = gMDEF;
 		  (**macMenuHandle).menuWidth = -1;
 		  (**macMenuHandle).menuHeight = -1;
-		  ::HSetState((Handle)macMenuHandle, state);
 		  ::InsertMenu(macMenuHandle, hierMenu);
     }
 			
     macMenuHandle = ::NewMenu(5, "\psubmenu");
 	  if(macMenuHandle) { 
 	    gLevel5HierMenu = macMenuHandle; 
-	    SInt8 state = ::HGetState((Handle)macMenuHandle);
-	    ::HLock((Handle)macMenuHandle);
-			gSystemMDEFHandle = (**macMenuHandle).menuProc;
 			(**macMenuHandle).menuProc = gMDEF;
 			(**macMenuHandle).menuWidth = -1;
 			(**macMenuHandle).menuHeight = -1;
-		  ::HSetState((Handle)macMenuHandle, state);
 		  ::InsertMenu(macMenuHandle, hierMenu);
 		}
 	} else {
@@ -608,41 +596,6 @@ NS_METHOD nsMenuBar::Paint()
 }
 
 
-//-------------------------------------------------------------------------
-void InstallDefProc(
-  short dpPath, 
-  ResType dpType, 
-  short dpID, 
-  Ptr dpAddr)
-{
-	JmpHandle 	jH;
-	short 	savePath;
-
-	savePath = CurResFile();
-	UseResFile(dpPath);
-
-	jH = (JmpHandle)GetResource(dpType, dpID);
-	DetachResource((Handle)jH);
-	gMDEF = (Handle) jH;
-	UseResFile(savePath);
-
-	if (!jH)				/* is there no defproc resource? */\
-	{
-#if DEBUG
-			DebugStr("\pStub Defproc Not Found!");
-#endif
-      ExitToShell();    // bail
-  }
-  
-	HNoPurge((Handle)jH);	/* make this resource nonpurgeable */
-	(**jH).jmpAddr = dpAddr;
-	(**jH).jmpInstr = 0x4EF9;
-	//FlushCache();
-
-	HLockHi((Handle)jH);
-}
-
-
 #pragma mark -
 
 //
@@ -775,6 +728,7 @@ nsMenuBar::StyleRuleRemoved(nsIDocument * aDocument, nsIStyleSheet * aStyleSheet
 NS_IMETHODIMP
 nsMenuBar::DocumentWillBeDestroyed( nsIDocument * aDocument )
 {
+  mDocument = nsnull; // just for yucks
   return NS_OK;
 }
 

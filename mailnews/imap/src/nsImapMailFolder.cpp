@@ -57,7 +57,6 @@
 #include "nsIPrompt.h"
 #include "nsIDocShell.h"
 #include "nsIInterfaceRequestor.h"
-#include "nsINetSupportDialogService.h"
 #include "nsSpecialSystemDirectory.h"
 #include "nsXPIDLString.h"
 #include "nsIImapFlagAndUidState.h"
@@ -71,9 +70,9 @@
 #include "nsImapOfflineSync.h"
 #include "nsIMsgAccountManager.h"
 #include "nsQuickSort.h"
+#include "nsIImapMockChannel.h"
 
 static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kImapProtocolCID, NS_IMAPPROTOCOL_CID);
@@ -481,7 +480,8 @@ NS_IMETHODIMP nsImapMailFolder::GetSubFolders(nsIEnumerator* *result)
     if (path.IsDirectory()) 
     {
         newFlags |= (MSG_FOLDER_FLAG_DIRECTORY | MSG_FOLDER_FLAG_ELIDED);
-        SetFlag(newFlags);
+        if (!mIsServer)
+          SetFlag(newFlags);
         rv = CreateSubFolders(path);
     }
     if (isServer)
@@ -606,6 +606,17 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   // don't run select if we're already running a url/select...
   if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
   {
+    // check if we should download message bodies because it's the inbox and 
+    // the server is specified as one where where we download msg bodies automatically.
+    if (mFlags & MSG_FOLDER_FLAG_INBOX)
+    {
+      nsCOMPtr<nsIImapIncomingServer> imapServer;
+      nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
+
+      if (NS_SUCCEEDED(rv) && imapServer)
+        imapServer->GetDownloadBodiesOnGetNewMail(&m_downloadingFolderForOfflineUse);
+    }
+
     nsCOMPtr <nsIEventQueue> eventQ;
     NS_WITH_SERVICE(nsIEventQueueService, pEventQService, kEventQueueServiceCID, &rv); 
     if (NS_SUCCEEDED(rv) && pEventQService)
@@ -758,7 +769,7 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
     path.SetLeafName(proposedDBName);
 
     NS_NewFileSpecWithSpec(path, getter_AddRefs(dbFileSpec));
-    rv = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
+    rv = mailDBFactory->Open(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
 
         if (NS_SUCCEEDED(rv) && unusedDB)
         {
@@ -933,7 +944,7 @@ NS_IMETHODIMP nsImapMailFolder::GetHierarchyDelimiter(PRUnichar *aHierarchyDelim
 {
   if (!aHierarchyDelimiter)
     return NS_ERROR_NULL_POINTER;
-  ReadDBFolderInfo(PR_FALSE); // update cache first.
+   ReadDBFolderInfo(PR_FALSE); // update cache first.
   *aHierarchyDelimiter = m_hierarchyDelimiter;
   return NS_OK;
 }
@@ -1304,7 +1315,7 @@ NS_IMETHODIMP nsImapMailFolder::GetFolderURL(char **url)
     
 NS_IMETHODIMP nsImapMailFolder::UpdateSummaryTotals(PRBool force) 
 {
-  if (!mNotifyCountChanges)
+  if (!mNotifyCountChanges || mIsServer)
     return NS_OK;
 
   // could we move this into nsMsgDBFolder, or do we need to deal
@@ -1582,7 +1593,6 @@ NS_IMETHODIMP nsImapMailFolder::Adopt(nsIMsgFolder *srcFolder,
 NS_IMETHODIMP nsImapMailFolder::SetOnlineName(const char * aOnlineFolderName)
 {
   nsresult rv;
-
   nsCOMPtr<nsIMsgDatabase> db; 
   nsCOMPtr<nsIDBFolderInfo> folderInfo;
   rv = GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(db));
@@ -2010,6 +2020,13 @@ NS_IMETHODIMP nsImapMailFolder::GetNewMessages(nsIMsgWindow *aWindow)
     if (NS_SUCCEEDED(rv) && pEventQService)
       pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
                         getter_AddRefs(eventQ));
+
+    nsCOMPtr<nsIImapIncomingServer> imapServer;
+    nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
+
+    if (NS_SUCCEEDED(rv) && imapServer)
+      imapServer->GetDownloadBodiesOnGetNewMail(&m_downloadingFolderForOfflineUse);
+
     inbox->SetGettingNewMessages(PR_TRUE);
     rv = imapService->SelectFolder(eventQ, inbox, this, aWindow, nsnull);
   }
@@ -2047,7 +2064,11 @@ nsresult nsImapMailFolder::GetBodysToDownload(nsMsgKeyArray *keysOfMessagesToDow
           PRBool shouldStoreMsgOffline = PR_FALSE;
           nsMsgKey msgKey;
           pHeader->GetMessageKey(&msgKey);
-          ShouldStoreMsgOffline(msgKey, &shouldStoreMsgOffline);
+          // MsgFitsDownloadCriteria ignores MSG_FOLDER_FLAG_OFFLINE, which we want
+          if (m_downloadingFolderForOfflineUse)
+            MsgFitsDownloadCriteria(msgKey, &shouldStoreMsgOffline);
+          else
+            ShouldStoreMsgOffline(msgKey, &shouldStoreMsgOffline);
           if (shouldStoreMsgOffline)
             keysOfMessagesToDownload->Add(msgKey);
         }
@@ -2249,6 +2270,9 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
       {
         nsMsgKeyArray keysToDownload;
         GetBodysToDownload(&keysToDownload);
+        if (keysToDownload.GetSize() > 0)
+          SetNotifyDownloadedLines(PR_TRUE); // ### TODO need to clear this when we've finished
+
         aProtocol->NotifyBodysToDownload(keysToDownload.GetArray(), keysToDownload.GetSize());
       }
       else
@@ -2493,7 +2517,7 @@ NS_IMETHODIMP nsImapMailFolder::CopyData(nsIInputStream *aIStream,
         end = PL_strstr(start, "\r");
         if (!end)
             end = PL_strstr(start, "\n");
-        else if (*(end+1) == LF && linebreak_len == 0)
+        else if (*(end+1) == nsCRT::LF && linebreak_len == 0)
             linebreak_len = 2;
 
         if (linebreak_len == 0) // not initialize yet
@@ -3394,6 +3418,13 @@ nsImapMailFolder::ReleaseUrl()
 }
 
 NS_IMETHODIMP
+nsImapMailFolder::CloseMockChannel(nsIImapMockChannel * aChannel)
+{
+  aChannel->Close();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsImapMailFolder::BeginMessageUpload()
 {
     return NS_ERROR_FAILURE;
@@ -3633,6 +3664,8 @@ NS_IMETHODIMP
 nsImapMailFolder::GetMessageSizeFromDB(const char *id, PRBool idIsUid, PRUint32 *size)
 {
   nsresult rv = NS_ERROR_FAILURE;
+  NS_ENSURE_ARG(size);
+  *size = 0;
   if (id && mDatabase)
   {
     PRUint32 key = atoi(id);
@@ -3667,7 +3700,7 @@ NS_IMETHODIMP nsImapMailFolder::OnStartRequest(nsIRequest *request, nsISupports 
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsImapMailFolder::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
+NS_IMETHODIMP nsImapMailFolder::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus)
 {
   return NS_OK;
 }
@@ -3687,6 +3720,7 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
   nsresult rv = NS_OK;
   m_urlRunning = PR_FALSE;
   m_downloadingFolderForOfflineUse = PR_FALSE;
+  SetNotifyDownloadedLines(PR_FALSE);
     NS_WITH_SERVICE(nsIMsgMailSession, session, kMsgMailSessionCID, &rv); 
   if (aUrl)
   {
@@ -3856,21 +3890,44 @@ void nsImapMailFolder::UpdatePendingCounts(PRBool countUnread, PRBool missingAre
   nsresult rv;
   if (m_copyState)
   {
-    ChangeNumPendingTotalMessages(m_copyState->m_totalCount);
+    if (!m_copyState->m_isCrossServerOp)
+      ChangeNumPendingTotalMessages(m_copyState->m_totalCount);
+    else
+      ChangeNumPendingTotalMessages(1);
 
     if (countUnread)
     {
       // count the moves that were unread
       int numUnread = 0;
       nsCOMPtr <nsIMsgFolder> srcFolder = do_QueryInterface(m_copyState->m_srcSupport);
-      for (PRUint32 keyIndex=0; keyIndex < m_copyState->m_totalCount; keyIndex++)
+      if (!m_copyState->m_isCrossServerOp)
+        for (PRUint32 keyIndex=0; keyIndex < m_copyState->m_totalCount; keyIndex++)
+        {
+          nsCOMPtr<nsIMsgDBHdr> message;
+
+          nsCOMPtr<nsISupports> aSupport =
+          getter_AddRefs(m_copyState->m_messages->ElementAt(keyIndex));
+          message = do_QueryInterface(aSupport, &rv);
+          // if the key is not there, then assume what the caller tells us to.
+          PRBool isRead = missingAreRead;
+          PRUint32 flags;
+          if (message )
+          {
+            message->GetFlags(&flags);
+            isRead = flags & MSG_FLAG_READ;
+          }
+
+          if (!isRead)
+            numUnread++;
+        }
+      else
       {
         nsCOMPtr<nsIMsgDBHdr> message;
 
         nsCOMPtr<nsISupports> aSupport =
-          getter_AddRefs(m_copyState->m_messages->ElementAt(keyIndex));
+          getter_AddRefs(m_copyState->m_messages->ElementAt(m_copyState->m_curIndex));
         message = do_QueryInterface(aSupport, &rv);
-        // if the key is not there, then assume what the caller tells us to.
+          // if the key is not there, then assume what the caller tells us to.
         PRBool isRead = missingAreRead;
         PRUint32 flags;
         if (message )

@@ -37,12 +37,12 @@
 #include "nsIServiceManager.h"
 #include "nsILocalFile.h"
 #include "nsEscape.h"
+#include "nsNetCID.h"
 
 #if defined(XP_PC) && !defined(XP_OS2)
 #include <windows.h>
 #endif
 
-static NS_DEFINE_CID(kStdURLCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kThisStdURLImplementationCID,
                      NS_THIS_STANDARDURL_IMPLEMENTATION_CID);
 static NS_DEFINE_CID(kStdURLParserCID, NS_STANDARDURLPARSER_CID);

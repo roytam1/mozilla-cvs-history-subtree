@@ -50,6 +50,13 @@ outlinerbody:-moz-outliner-cell-text(offline)
   font-style: italic;
 }
 
+/* on a collapsed thread, if the top level message is read, but the thread has
+ * unread children, underline the text.  4.x mac did this, very slick 
+ */
+outlinerbody:-moz-outliner-cell-text(container, closed, hasUnread, read)
+{
+  text-decoration: underline;
+}
 
 /* ::::: priority colors ::::: */
 
@@ -99,11 +106,11 @@ outlinerbody:-moz-outliner-image(threadCol, container, open) {
   list-style-image: url("chrome://messenger/skin/thread-open.gif");
 }
 
-outlinerbody:-moz-outliner-image(threadCol, container, unread) {
+outlinerbody:-moz-outliner-image(threadCol, container, hasUnread) {
   list-style-image: url("chrome://messenger/skin/thread-new-closed.gif");
 }
 
-outlinerbody:-moz-outliner-image(threadCol, container, unread, open) {
+outlinerbody:-moz-outliner-image(threadCol, container, hasUnread, open) {
   list-style-image: url("chrome://messenger/skin/thread-new-open.gif");
 }
 
@@ -141,7 +148,7 @@ outlinerbody:-moz-outliner-image(subjectCol) {
   list-style-image: url("chrome://messenger/skin/message-mail.gif");
 }
 
-outlinerbody:-moz-outliner-image(subjectCol, unread) {
+outlinerbody:-moz-outliner-image(subjectCol, new) {
   list-style-image: url("chrome://messenger/skin/message-mail-new.gif");
 }
 
@@ -157,7 +164,11 @@ outlinerbody:-moz-outliner-image(subjectCol, news) {
   list-style-image: url("chrome://messenger/skin/message-news.gif");
 }
 
-outlinerbody:-moz-outliner-image(subjectCol, news, unread) {
+outlinerbody:-moz-outliner-image(subjectCol, news, new) {
   list-style-image: url("chrome://messenger/skin/message-news-new.gif");
+}
+
+outlinerbody:-moz-outliner-image(subjectCol, news, attach) {
+  list-style-image: url("chrome://messenger/skin/message-news-attach.gif");
 }
 

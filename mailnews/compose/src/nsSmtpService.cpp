@@ -25,6 +25,7 @@
 #include "nsXPIDLString.h"
 #include "nsIPref.h"
 #include "nsIIOService.h"
+#include "nsNetCID.h"
 
 #include "nsSmtpService.h"
 #include "nsIMsgMailSession.h"
@@ -37,7 +38,8 @@
 #include "nsCOMPtr.h"
 #include "nsIMsgIdentity.h"
 #include "nsMsgComposeStringBundle.h"
-#include "nsINetSupportDialogService.h"
+#include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
 
 typedef struct _findServerByKeyEntry {
     const char *key;
@@ -54,7 +56,6 @@ static NS_DEFINE_CID(kCSmtpUrlCID, NS_SMTPURL_CID);
 static NS_DEFINE_CID(kCMailtoUrlCID, NS_MAILTOURL_CID);
 static NS_DEFINE_CID(kSmtpServiceCID, NS_SMTPSERVICE_CID); 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID); 
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 
 // foward declarations...
 nsresult
@@ -186,10 +187,21 @@ nsresult NS_MsgBuildSmtpUrl(nsIFileSpec * aFilePath,
 			smtpUrl->SetPostMessageFile(aFilePath);
 			smtpUrl->SetSenderIdentity(aSenderIdentity);
             smtpUrl->SetNotificationCallbacks(aNotificationCallbacks);
+            
             nsCOMPtr<nsIPrompt> smtpPrompt(do_GetInterface(aNotificationCallbacks));
-            if (!smtpPrompt)
-                smtpPrompt = do_GetService(kNetSupportDialogCID);
-            smtpUrl->SetPrompt(smtpPrompt);
+            nsCOMPtr<nsIAuthPrompt> smtpAuthPrompt(do_GetInterface(aNotificationCallbacks));
+            if (!smtpPrompt || !smtpAuthPrompt)
+            {
+              nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+              if (wwatch) {
+                if (!smtpPrompt)
+                  wwatch->GetNewPrompter(0, getter_AddRefs(smtpPrompt));
+                if (!smtpAuthPrompt)
+                  wwatch->GetNewAuthPrompter(0, getter_AddRefs(smtpAuthPrompt));
+              }
+            }
+            smtpUrl->SetPrompt(smtpPrompt);            
+            smtpUrl->SetAuthPrompt(smtpAuthPrompt);
 			url->RegisterListener(aUrlListener);
 		}
 		rv = smtpUrl->QueryInterface(NS_GET_IID(nsIURI), (void **) aUrl);
@@ -318,12 +330,6 @@ NS_IMETHODIMP nsMailtoChannel::GetURI(nsIURI* *aURI)
   return NS_OK; 
 }
  
-NS_IMETHODIMP nsMailtoChannel::SetURI(nsIURI* aURI)
-{
-  m_url = aURI;
-  return NS_OK; 
-}
- 
 NS_IMETHODIMP nsMailtoChannel::Open(nsIInputStream **_retval)
 {
   NS_NOTREACHED("Open");
@@ -335,14 +341,15 @@ NS_IMETHODIMP nsMailtoChannel::AsyncOpen(nsIStreamListener *listener, nsISupport
   return listener->OnStartRequest(this, ctxt);
 }
 
-NS_IMETHODIMP nsMailtoChannel::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
+NS_IMETHODIMP nsMailtoChannel::GetLoadFlags(nsLoadFlags *aLoadFlags)
 {
-	return NS_ERROR_NOT_IMPLEMENTED;
+  *aLoadFlags = 0;
+	return NS_OK;
 }
 
-NS_IMETHODIMP nsMailtoChannel::SetLoadAttributes(nsLoadFlags aLoadAttributes)
+NS_IMETHODIMP nsMailtoChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
 {
-	return NS_ERROR_NOT_IMPLEMENTED;
+	return NS_OK;
 }
 
 NS_IMETHODIMP nsMailtoChannel::GetContentType(char * *aContentType)

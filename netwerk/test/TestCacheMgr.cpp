@@ -17,7 +17,7 @@
  */
 
 #include "nsIStreamListener.h"
-#include "nsIStreamObserver.h"
+#include "nsIRequestObserver.h"
 #include "nsIServiceManager.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
@@ -219,7 +219,7 @@ public:
     }
 
     NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports* context,
-                             nsresult aStatus, const PRUnichar* aStatusArg) {
+                             nsresult aStatus) {
         PRIntervalTime endTime;
         PRIntervalTime duration;
         
@@ -245,7 +245,7 @@ protected:
     PRUint32             mExpectedStreamLength;
 };
 
-NS_IMPL_ISUPPORTS2(nsReader, nsIStreamListener, nsIStreamObserver)
+NS_IMPL_ISUPPORTS2(nsReader, nsIStreamListener, nsIRequestObserver)
 
 static nsIEventQueue* eventQueue;
 

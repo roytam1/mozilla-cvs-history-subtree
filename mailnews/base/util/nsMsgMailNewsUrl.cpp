@@ -34,7 +34,7 @@
 #include "nsIWebProgressListener.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIIOService.h"
-#include "nsINetDataCacheManager.h"
+#include "nsNetCID.h"
 
 static NS_DEFINE_CID(kUrlListenerManagerCID, NS_URLLISTENERMANAGER_CID);
 static NS_DEFINE_CID(kStandardUrlCID, NS_STANDARDURL_CID);
@@ -482,7 +482,22 @@ NS_IMETHODIMP nsMsgMailNewsUrl::Equals(nsIURI *other, PRBool *_retval)
 
 NS_IMETHODIMP nsMsgMailNewsUrl::SchemeIs(const char *aScheme, PRBool *_retval)
 {
+  nsXPIDLCString scheme;
+  nsresult rv = m_baseURL->GetScheme(getter_Copies(scheme));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // fix #76200 crash on email with <img> with no src.
+  //
+  // make sure we have a scheme before calling SchemeIs()
+  // we have to do this because url parsing can result in a null mScheme
+  // this extra string copy should be removed when #73845 is fixed.
+  if (scheme.get()) {
     return m_baseURL->SchemeIs(aScheme, _retval);
+  }
+  else {
+    *_retval = PR_FALSE;
+    return NS_OK;
+  }
 }
 
 NS_IMETHODIMP nsMsgMailNewsUrl::Clone(nsIURI **_retval)
@@ -604,36 +619,17 @@ NS_IMETHODIMP nsMsgMailNewsUrl::SetFilePath(const char *i_DirFile)
 	return m_baseURL->SetFilePath(i_DirFile);
 }
 
-NS_IMETHODIMP nsMsgMailNewsUrl::SetMemCacheEntry(nsICachedNetData *memCacheEntry)
+NS_IMETHODIMP nsMsgMailNewsUrl::SetMemCacheEntry(nsICacheEntryDescriptor *memCacheEntry)
 {
   m_memCacheEntry = memCacheEntry;
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgMailNewsUrl:: GetMemCacheEntry(nsICachedNetData **memCacheEntry)
+NS_IMETHODIMP nsMsgMailNewsUrl:: GetMemCacheEntry(nsICacheEntryDescriptor **memCacheEntry)
 {
   NS_ENSURE_ARG(memCacheEntry);
   nsresult rv = NS_OK;
 
-  if (!m_memCacheEntry)
-  {
-    nsCOMPtr<nsINetDataCacheManager> cacheManager = do_GetService(NS_NETWORK_CACHE_MANAGER_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv) && cacheManager)
-    {
-      // Retrieve an existing cache entry or create a new one if none exists for the
-      // given URL.
-      nsXPIDLCString urlCString; 
-      // eventually we are going to want to use the url spec - the query/ref part 'cause that doesn't
-      // distinguish urls.......
-      GetSpec(getter_Copies(urlCString));
-      // for now, truncate of the query part so we don't duplicate urls in the cache...
-      char * anchor = PL_strrchr(urlCString, '?');
-      if (anchor)
-        *anchor = '\0';
-      rv = cacheManager->GetCachedNetData(urlCString, 0, 0, nsINetDataCacheManager::BYPASS_PERSISTENT_CACHE,
-                                          getter_AddRefs(m_memCacheEntry));
-    }
-  }
   if (m_memCacheEntry)
   {
     *memCacheEntry = m_memCacheEntry;
@@ -644,6 +640,6 @@ NS_IMETHODIMP nsMsgMailNewsUrl:: GetMemCacheEntry(nsICachedNetData **memCacheEnt
     *memCacheEntry = nsnull;
     return NS_ERROR_NULL_POINTER;
   }
+
   return rv;
 }
-

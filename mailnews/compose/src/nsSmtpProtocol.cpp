@@ -34,8 +34,8 @@
 #include "nsIMsgMailNewsUrl.h"
 #include "nsMsgBaseCID.h"
 #include "nsMsgCompCID.h"
-#include "nsINetSupportDialogService.h"
 #include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 #include "nsString.h"
 #include "nsTextFormatter.h"
 #include "nsIMsgIdentity.h"
@@ -70,7 +70,6 @@
 static PRLogModuleInfo *SMTPLogModule = nsnull;
 
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
-static NS_DEFINE_CID(kCNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID); 
 
 extern "C" 
 {
@@ -268,15 +267,15 @@ esmtp_value_encode(char *addr)
 // END OF TEMPORARY HARD CODED FUNCTIONS 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-NS_IMPL_ADDREF_INHERITED(nsSmtpProtocol, nsMsgProtocol)
-NS_IMPL_RELEASE_INHERITED(nsSmtpProtocol, nsMsgProtocol)
+NS_IMPL_ADDREF_INHERITED(nsSmtpProtocol, nsMsgAsyncWriteProtocol)
+NS_IMPL_RELEASE_INHERITED(nsSmtpProtocol, nsMsgAsyncWriteProtocol)
 
 NS_INTERFACE_MAP_BEGIN(nsSmtpProtocol)
     NS_INTERFACE_MAP_ENTRY(nsIMsgLogonRedirectionRequester)
-NS_INTERFACE_MAP_END_INHERITING(nsMsgProtocol)
+NS_INTERFACE_MAP_END_INHERITING(nsMsgAsyncWriteProtocol)
 
 nsSmtpProtocol::nsSmtpProtocol(nsIURI * aURL)
-    : nsMsgProtocol(aURL)
+    : nsMsgAsyncWriteProtocol(aURL)
 {
     Initialize(aURL);
 }
@@ -328,7 +327,8 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
     m_tlsEnabled = PR_FALSE;
     m_addressCopy = nsnull;
     m_addresses = nsnull;
-	m_addressesLeft = nsnull;
+
+  	m_addressesLeft = nsnull;
     m_verifyAddress = nsnull;	
     m_totalAmountWritten = 0;
     m_totalMessageSize = 0;
@@ -359,7 +359,7 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
         smtpUrl->GetNotificationCallbacks(getter_AddRefs(callbacks));
 
     if (m_prefTrySSL != PREF_SSL_NEVER) {
-        rv = OpenNetworkSocket(aURL, "tls", callbacks);
+        rv = OpenNetworkSocket(aURL, "tlsstepup", callbacks);
         if (NS_FAILED(rv) && m_prefTrySSL == PREF_SSL_TRY) {
             m_prefTrySSL = PREF_SSL_NEVER;
             rv = OpenNetworkSocket(aURL, nsnull, callbacks);
@@ -401,9 +401,9 @@ const char * nsSmtpProtocol::GetUserDomainName()
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsSmtpProtocol::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
+NS_IMETHODIMP nsSmtpProtocol::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus)
 {
-	nsMsgProtocol::OnStopRequest(nsnull, ctxt, aStatus, aMsg);
+	nsMsgAsyncWriteProtocol::OnStopRequest(nsnull, ctxt, aStatus);
 
 	// okay, we've been told that the send is done and the connection is going away. So 
 	// we need to release all of our state
@@ -1140,14 +1140,14 @@ PRInt32 nsSmtpProtocol::SendRecipientResponse()
 
 PRInt32 nsSmtpProtocol::SendData(nsIURI *url, const char *dataBuffer, PRBool aSuppressLogging)
 {
-    if (!url || !dataBuffer) return -1;
+    if (!dataBuffer) return -1;
 
     if (!aSuppressLogging) {
         PR_LOG(SMTPLogModule, PR_LOG_ALWAYS, ("SMTP Send: %s", dataBuffer));
     } else {
         PR_LOG(SMTPLogModule, PR_LOG_ALWAYS, ("Logging suppressed for this command (it probably contained authentication information)"));
     }
-    return nsMsgProtocol::SendData(url, dataBuffer);
+    return nsMsgAsyncWriteProtocol::SendData(url, dataBuffer);
 }
 
 
@@ -1243,13 +1243,10 @@ PRInt32 nsSmtpProtocol::SendMessageInFile()
 	// for now, we are always done at this point..we aren't making multiple calls
 	// to post data...
 
-	// always issue a '.' and CRLF when we are done...
-    if (url)
-        SendData(url, CRLF "." CRLF);
-    UpdateStatus(SMTP_MESSAGE_SENT_WAITING_MAIL_REPLY);
-    m_nextState = SMTP_RESPONSE;
-    m_nextStateAfterResponse = SMTP_SEND_MESSAGE_RESPONSE;
-    return(0);
+  UpdateStatus(SMTP_MESSAGE_SENT_WAITING_MAIL_REPLY);
+  m_nextState = SMTP_RESPONSE;
+  m_nextStateAfterResponse = SMTP_SEND_MESSAGE_RESPONSE;
+  return(0);
 }
 
 PRInt32 nsSmtpProtocol::SendPostData()
@@ -1605,8 +1602,8 @@ nsSmtpProtocol::GetPassword(char **aPassword)
     nsCRT::free(*aPassword);
     *aPassword = 0;
 
-    nsCOMPtr<nsIPrompt> netPrompt;
-    rv = smtpUrl->GetPrompt(getter_AddRefs(netPrompt));
+    nsCOMPtr<nsIAuthPrompt> netPrompt;
+    rv = smtpUrl->GetAuthPrompt(getter_AddRefs(netPrompt));
     if (NS_FAILED(rv)) return rv;
 
     nsXPIDLCString username;
@@ -1684,8 +1681,8 @@ nsSmtpProtocol::GetUsernamePassword(char **aUsername, char **aPassword)
     nsCRT::free(*aPassword);
     *aPassword = 0;
 
-    nsCOMPtr<nsIPrompt> netPrompt;
-    rv = smtpUrl->GetPrompt(getter_AddRefs(netPrompt));
+    nsCOMPtr<nsIAuthPrompt> netPrompt;
+    rv = smtpUrl->GetAuthPrompt(getter_AddRefs(netPrompt));
     if (NS_FAILED(rv)) return rv;
 
     nsXPIDLCString hostname;

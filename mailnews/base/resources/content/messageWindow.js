@@ -403,6 +403,7 @@ var MessageWindowController =
 
 		switch ( command )
 		{
+			case "cmd_close":
 			case "cmd_reply":
 			case "button_reply":
 			case "cmd_replySender":
@@ -462,11 +463,22 @@ var MessageWindowController =
 		switch ( command )
 		{
 			case "cmd_delete":
-      if (gDBView)
-      {
-         gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
-         return enabled.value;
-      }
+				if (isNewsURI(gCurrentMessageUri))
+				{
+					goSetMenuValue(command, 'valueNewsMessage');
+					goSetAccessKey(command, 'valueNewsMessageAccessKey');
+				}
+				else
+				{
+					goSetMenuValue(command, 'valueMessage');
+					goSetAccessKey(command, 'valueMessageAccessKey');
+				}
+
+				if (gDBView)
+				{
+					gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
+					return enabled.value;
+				}
 			case "cmd_reply":
 			case "button_reply":
 			case "cmd_replySender":
@@ -496,13 +508,6 @@ var MessageWindowController =
 			case "cmd_markAsFlagged":
       case "button_file":
 			case "cmd_file":
-				if ( command == "cmd_delete")
-				{
-          if (isNewsURI(gCurrentMessageUri))
-					   goSetMenuValue(command, 'valueNewsMessage');
-          else
-					   goSetMenuValue(command, 'valueMessage');
-				}
 				return ( gCurrentMessageUri != null);
 			case "cmd_getNewMessages":
       case "button_getNewMessages":
@@ -512,8 +517,7 @@ var MessageWindowController =
 				return IsGetNextNMessagesEnabled();
       case "cmd_synchronizeOffline":
       case "cmd_toggleWorkOffline":
-        return true;
-
+			case "cmd_close":
 			case "cmd_nextMsg":
       case "button_next":
 			case "cmd_nextUnreadMsg":
@@ -536,6 +540,9 @@ var MessageWindowController =
 
 		switch ( command )
 		{
+			case "cmd_close":
+				CloseMailWindow();
+				break;
 			case "cmd_getNewMessages":
 				MsgGetMessage();
 				break;
@@ -683,3 +690,7 @@ function CommandUpdate_UndoRedo()
 
 }
 
+function GetDBView()
+{
+  return gDBView;
+}

@@ -29,7 +29,7 @@
 #include "nsIServiceManager.h"
 #include "netCore.h"
 #include "nsAutoLock.h"
-#include "nsIStreamObserver.h"
+#include "nsIRequestObserver.h"
 #include "nsTime.h"
 #ifdef DNS_TIMING
 #include "prinrval.h"
@@ -73,6 +73,10 @@ typedef struct nsLookupElement {
 	
 } nsLookupElement;
 #endif /* XP_MAC */
+
+#if defined(XP_BEOS) && defined(BONE_VERSION)
+#include <arpa/inet.h>
+#endif
 
 // UNIX
 // XXX needs implementation
@@ -356,6 +360,32 @@ nsDNSRequest::Resume(void)
         return mLookup->Resume(this);
     }
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSRequest::GetLoadGroup(nsILoadGroup **loadGroup)
+{
+    *loadGroup = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSRequest::SetLoadGroup(nsILoadGroup *loadGroup)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDNSRequest::GetLoadFlags(nsLoadFlags *loadFlags)
+{
+    *loadFlags = nsIRequest::LOAD_NORMAL;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSRequest::SetLoadFlags(nsLoadFlags loadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

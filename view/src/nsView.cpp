@@ -198,17 +198,15 @@ nsIView* nsView::GetViewFor(nsIWidget* aWidget)
   // The widget's client data points back to the owning view
   if (aWidget && NS_SUCCEEDED(aWidget->GetClientData(clientData))) {
     view = (nsIView*)clientData;
-
-    if (nsnull != view) {
-#ifdef NS_DEBUG
-      // Verify the pointer is really a view
-      nsView* widgetView;
-      NS_ASSERTION((NS_SUCCEEDED(view->QueryInterface(NS_GET_IID(nsIView), (void **)&widgetView))) &&
-                   (widgetView == view), "bad client data");
-#endif
-    }  
+ 
+    nsISupports* data = (nsISupports*)clientData;
+    
+    if (nsnull != data) {
+      if (NS_FAILED(data->QueryInterface(NS_GET_IID(nsIView), (void **)&view))) {
+        return nsnull;  // return null if client data isn't a view
+      }
+    }
   }
-
   return view;
 }
 
@@ -301,6 +299,7 @@ NS_IMETHODIMP nsView :: HandleEvent(nsGUIEvent *event, PRUint32 aEventFlags,
                                     nsEventStatus* aStatus, PRBool aForceHandle, PRBool& aHandled)
 {
   NS_ENSURE_ARG_POINTER(aStatus);
+
 //printf(" %d %d %d %d (%d,%d) \n", this, event->widget, event->widgetSupports, 
 //       event->message, event->point.x, event->point.y);
 
@@ -310,6 +309,12 @@ NS_IMETHODIMP nsView :: HandleEvent(nsGUIEvent *event, PRUint32 aEventFlags,
   nsIViewObserver *obs;
   if (NS_FAILED(mViewManager->GetViewObserver(obs)))
     obs = nsnull;
+
+  // if accessible event pass directly to the view observer
+  if (event->eventStructType == NS_ACCESSIBLE_EVENT) {
+    if (obs)
+       obs->HandleEvent((nsIView *)this, event, aStatus, aForceHandle, aHandled);
+  }
 
   *aStatus = nsEventStatus_eIgnore;
 

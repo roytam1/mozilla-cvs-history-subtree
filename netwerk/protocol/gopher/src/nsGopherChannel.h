@@ -33,7 +33,7 @@
 #include "nsIURI.h"
 #include "nsIURL.h"
 #include "nsGopherHandler.h"
-
+#include "nsIPrompt.h"
 #include "nsIProxy.h"
 #include "nsIStreamListener.h"
 #include "nsITransport.h"
@@ -47,7 +47,7 @@ public:
     NS_DECL_NSICHANNEL
     NS_DECL_NSIPROXY
     NS_DECL_NSISTREAMLISTENER
-    NS_DECL_NSISTREAMOBSERVER
+    NS_DECL_NSIREQUESTOBSERVER
 
     // nsGopherChannel methods:
     nsGopherChannel();
@@ -64,9 +64,10 @@ public:
 protected:
     nsCOMPtr<nsIURI>                    mOriginalURI;
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
+    nsCOMPtr<nsIPrompt>                 mPrompter;
     nsCOMPtr<nsIURI>                    mUrl;
     nsCOMPtr<nsIStreamListener>         mListener;
-    PRUint32                            mLoadAttributes;
+    PRUint32                            mLoadFlags;
     nsCOMPtr<nsILoadGroup>              mLoadGroup;
     nsCString                           mContentType;
     PRInt32                             mContentLength;
@@ -79,8 +80,7 @@ protected:
     PRInt32                             mPort;
     char                                mType;
     nsXPIDLCString                      mSelector;
-
-    nsXPIDLCString                      mRequest;
+    nsCString                           mRequest;
 
     nsCOMPtr<nsISupports>               mResponseContext;
     nsCOMPtr<nsITransport>              mTransport;

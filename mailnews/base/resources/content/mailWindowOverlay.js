@@ -125,13 +125,26 @@ function InitViewSortByMenu()
     setSortByMenuItemCheckState("sortByFlagMenuitem", (sortType == nsMsgViewSortType.byFlagged));
     setSortByMenuItemCheckState("sortByOrderReceivedMenuitem", (sortType == nsMsgViewSortType.byId));
     setSortByMenuItemCheckState("sortByPriorityMenuitem", (sortType == nsMsgViewSortType.byPriority));
-    setSortByMenuItemCheckState("sortBySenderMenuitem", (sortType == nsMsgViewSortType.byAuthor));
     setSortByMenuItemCheckState("sortBySizeMenuitem", (sortType == nsMsgViewSortType.bySize));
     setSortByMenuItemCheckState("sortByStatusMenuitem", (sortType == nsMsgViewSortType.byStatus));
     setSortByMenuItemCheckState("sortBySubjectMenuitem", (sortType == nsMsgViewSortType.bySubject));
     setSortByMenuItemCheckState("sortByThreadMenuitem", (sortType == nsMsgViewSortType.byThread));
     setSortByMenuItemCheckState("sortByUnreadMenuitem", (sortType == nsMsgViewSortType.byUnread));
-
+ 
+    // the Sender / Recipient menu is dynamic
+    setSortByMenuItemCheckState("sortBySenderOrRecipientMenuitem", (sortType == nsMsgViewSortType.byAuthor) || (sortType == nsMsgViewSortType.byRecipient));
+    var senderOrRecipientMenuitem = document.getElementById("sortBySenderOrRecipientMenuitem");
+    if (senderOrRecipientMenuitem) {
+    	var currentFolder = gDBView.msgFolder;
+	if (IsSpecialFolder(currentFolder, MSG_FOLDER_FLAG_SENTMAIL | MSG_FOLDER_FLAG_DRAFTS | MSG_FOLDER_FLAG_QUEUE)) {
+	  senderOrRecipientMenuitem.setAttribute('label',gMessengerBundle.getString('recipientColumnHeader'));
+	  senderOrRecipientMenuitem.setAttribute('accesskey',gMessengerBundle.getString('recipientAccessKey'));
+        }
+        else {
+	  senderOrRecipientMenuitem.setAttribute('label',gMessengerBundle.getString('senderColumnHeader'));
+	  senderOrRecipientMenuitem.setAttribute('accesskey',gMessengerBundle.getString('senderAccessKey'));
+	}
+    }
     var sortOrder = gDBView.sortOrder;
 
     setSortByMenuItemCheckState("sortAscending", (sortOrder == nsMsgViewSortOrder.ascending));
@@ -525,6 +538,9 @@ function MsgForwardMessage(event)
       forwardType = pref.GetIntPref("mail.forward_message_mode");
   } catch (e) {dump ("failed to retrieve pref mail.forward_message_mode");}
 
+  // mail.forward_message_mode could be 1, if the user migrated from 4.x
+  // 1 (forward as quoted) is obsolete, so we treat is as forward inline
+  // since that is more like forward as quoted then forward as attachment
   if (forwardType == 0)
       MsgForwardAsAttachment(event);
   else
@@ -658,9 +674,8 @@ function ConfirmUnsubscribe(folder)
     var dialogMsg = gMessengerBundle.getFormattedString("confirmUnsubscribeText",
                                         [folder.name], 1);
 
-    var commonDialogService = nsJSComponentManager.getService("@mozilla.org/appshell/commonDialogs;1",
-                                                                    "nsICommonDialogs");
-    return commonDialogService.Confirm(window, titleMsg, dialogMsg);
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
+    return promptService.confirm(window, titleMsg, dialogMsg);
 }
 
 function MsgUnsubscribe()

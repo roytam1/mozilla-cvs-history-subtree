@@ -53,6 +53,12 @@
 #include "prtime.h"
 #include "nsIRenderingContextWin.h"
 
+// accessibility only on Windows2000 and Windows98
+#if(WINVER >= 0x0400)
+#include "nsIAccessible.h"
+#include "Accessible.h"
+#endif
+
 #include <imm.h>
 #ifdef MOZ_AIMM
 #include "aimm.h"
@@ -73,6 +79,12 @@
 
 #include "nsITimer.h"
 #include "nsITimerQueue.h"
+
+// For SetIcon
+#include "nsSpecialSystemDirectory.h"
+#include "nsAppDirectoryServiceDefs.h"
+#include "nsXPIDLString.h"
+#include "nsIFile.h"
 
 #define kWindowPositionSlop 10
 
@@ -207,8 +219,8 @@ extern HINSTANCE g_hinst;
     if (nsToolkit::gAIMMApp) \
       nsToolkit::gAIMMApp->GetContext(hWnd, &(hIMC)); \
     else { \
-      nsIMM &theIMM = nsIMM::LoadModule(); \
-      hIMC = theIMM.GetContext(hWnd); \
+      nsIMM& theIMM = nsIMM::LoadModule(); \
+      hIMC = (HIMC)theIMM.GetContext(hWnd);  \
     } \
   }
 
@@ -415,7 +427,7 @@ NS_IMETHODIMP nsWindow::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 // nsWindow constructor
 //
 //-------------------------------------------------------------------------
-nsWindow::nsWindow() : nsBaseWidget()
+nsWindow::nsWindow() : nsBaseWidget(), mRootAccessible(NULL)
 {
     NS_INIT_REFCNT();
     mWnd                = 0;
@@ -495,6 +507,9 @@ UINT nsWindow::gCurrentKeyboardCP = 0;
 //-------------------------------------------------------------------------
 nsWindow::~nsWindow()
 {
+  if (mRootAccessible)
+    mRootAccessible->Release();
+
   mIsDestroying = PR_TRUE;
   if (gCurrentWindow == this) {
     gCurrentWindow = nsnull;
@@ -529,6 +544,7 @@ nsWindow::~nsWindow()
     nsMemory::Free(mIMEReconvertUnicode);
 
   NS_IF_RELEASE(mNativeDragTarget);
+
 }
 
 
@@ -642,8 +658,8 @@ void nsWindow::InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint
       DWORD pos = ::GetMessagePos();
       POINT cpos;
 
-      cpos.x = LOWORD(pos);
-      cpos.y = HIWORD(pos);
+      cpos.x = (short)LOWORD(pos);
+      cpos.y = (short)HIWORD(pos);
 
       if (mWnd != NULL) {
         ::ScreenToClient(mWnd, &cpos);
@@ -769,8 +785,8 @@ nsWindow::EventIsInsideWindow(UINT Msg, nsWindow* aWindow)
   ::GetWindowRect(aWindow->mWnd, &r);
   DWORD pos = ::GetMessagePos();
   POINT mp;
-  mp.x = LOWORD(pos);
-  mp.y = HIWORD(pos);
+  mp.x = (short)LOWORD(pos);
+  mp.y = (short)HIWORD(pos);
 
   // was the event inside this window?
   return (PRBool) PtInRect(&r, mp);
@@ -2978,8 +2994,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // check whether IME window do mouse operation
             if (mIMEIsComposing && nsWindow::uWM_MSIME_MOUSE) {
 							POINT ptPos;
-							ptPos.x = LOWORD(lParam);
-							ptPos.y = HIWORD(lParam);
+							ptPos.x = (short)LOWORD(lParam);
+							ptPos.y = (short)HIWORD(lParam);
 							if (IMECompositionHitTest(NS_MOUSE_LEFT_BUTTON_DOWN, &ptPos))
 								if (HandleMouseActionOfIME(IMEMOUSE_LDOWN))
 									break;
@@ -3007,8 +3023,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // check whether IME window do mouse operation
             if (mIMEIsComposing && nsWindow::uWM_MSIME_MOUSE) {
 							POINT ptPos;
-							ptPos.x = LOWORD(lParam);
-							ptPos.y = HIWORD(lParam);
+							ptPos.x = (short)LOWORD(lParam);
+							ptPos.y = (short)HIWORD(lParam);
 							if (IMECompositionHitTest(NS_MOUSE_MIDDLE_BUTTON_DOWN, &ptPos))
 	              if (HandleMouseActionOfIME(IMEMOUSE_MDOWN))
 		              break;
@@ -3031,8 +3047,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // check whether IME window do mouse operation
             if (mIMEIsComposing && nsWindow::uWM_MSIME_MOUSE) {
 							POINT ptPos;
-							ptPos.x = LOWORD(lParam);
-							ptPos.y = HIWORD(lParam);
+							ptPos.x = (short)LOWORD(lParam);
+							ptPos.y = (short)HIWORD(lParam);
 							if (IMECompositionHitTest(NS_MOUSE_RIGHT_BUTTON_DOWN, &ptPos))
 	              if (HandleMouseActionOfIME(IMEMOUSE_RDOWN))
                 break;
@@ -3338,6 +3354,33 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         nsServiceManager::ReleaseService(kCClipboardCID, clipboard);
       } break;
 
+#ifdef IS_ACCESSIBLE
+        // accessibility only on Windows2000 and Windows98
+#ifdef WM_GETOBJECT
+      case WM_GETOBJECT: 
+      {
+        if (lParam == OBJID_CLIENT) {
+          nsCOMPtr<nsIAccessible> acc;
+          DispatchAccessibleEvent(NS_GETACCESSIBLE, getter_AddRefs(acc));
+
+          // create the COM accessible object
+          if (acc) 
+          {
+            HWND wnd = GetWindowHandle();
+            if (!mRootAccessible) {
+               mRootAccessible = new RootAccessible(acc, wnd); // ref is 0       
+               mRootAccessible->AddRef();
+            }
+            LRESULT lAcc = LresultFromObject(IID_IAccessible, wParam, mRootAccessible); // ref 1
+            *aRetValue = lAcc;
+            return PR_TRUE; // yes we handled it.
+          }
+        }
+      }
+      break;
+#endif
+#endif
+
       default: {
         // Handle both flavors of mouse wheel events.
         if ((msg == WM_MOUSEWHEEL) || (msg == uMSH_MOUSEWHEEL)) {
@@ -3488,8 +3531,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
       return PR_TRUE;
     }
 }
-
-
 
 //-------------------------------------------------------------------------
 //
@@ -3887,8 +3928,8 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   const short kDoubleClickMoveThreshold  = 5;
   POINT mp;
   DWORD pos = ::GetMessagePos();
-  mp.x      = LOWORD(pos);
-  mp.y      = HIWORD(pos);
+  mp.x      = (short)LOWORD(pos);
+  mp.y      = (short)HIWORD(pos);
   PRBool insideMovementThreshold = (abs(gLastMousePoint.x - mp.x) < kDoubleClickMoveThreshold) &&
                                    (abs(gLastMousePoint.y - mp.y) < kDoubleClickMoveThreshold);
 
@@ -3908,8 +3949,8 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   else if (aEventType == NS_MOUSE_LEFT_BUTTON_UP || aEventType == NS_MOUSE_MIDDLE_BUTTON_UP || aEventType == NS_MOUSE_RIGHT_BUTTON_UP) {
     // remember when this happened for the next mouse down
     DWORD pos = ::GetMessagePos();
-    gLastMousePoint.x = LOWORD(pos);
-    gLastMousePoint.y = HIWORD(pos);
+    gLastMousePoint.x = (short)LOWORD(pos);
+    gLastMousePoint.y = (short)HIWORD(pos);
   }
   else if (aEventType == NS_MOUSE_LEFT_BUTTON_DOWN || aEventType == NS_MOUSE_MIDDLE_BUTTON_DOWN || aEventType == NS_MOUSE_RIGHT_BUTTON_DOWN) {
     // now look to see if we want to convert this to a double- or triple-click
@@ -4004,14 +4045,14 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
       } else {
         POINT mp;
         DWORD pos = ::GetMessagePos();
-        mp.x      = LOWORD(pos);
-        mp.y      = HIWORD(pos);
+        mp.x      = (short)LOWORD(pos);
+        mp.y      = (short)HIWORD(pos);
 
         // OK, now find out if we are still inside
         // the captured native window
         POINT cpos;
-        cpos.x = LOWORD(pos);
-        cpos.y = HIWORD(pos);
+        cpos.x = (short)LOWORD(pos);
+        cpos.y = (short)HIWORD(pos);
 
         nsWindow * someWindow = NULL;
         HWND hWnd = ::WindowFromPoint(mp);
@@ -4097,6 +4138,41 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
   return result;
 }
 
+//-------------------------------------------------------------------------
+//
+// Deal with all sort of mouse event
+//
+//-------------------------------------------------------------------------
+PRBool nsWindow::DispatchAccessibleEvent(PRUint32 aEventType, nsIAccessible** aAcc, nsPoint* aPoint)
+{
+  PRBool result = PR_FALSE;
+
+  if (nsnull == mEventCallback) {
+    return result;
+  }
+
+  *aAcc = nsnull;
+
+  nsAccessibleEvent event;
+  InitEvent(event, aEventType, aPoint);
+
+  event.isShift   = IS_VK_DOWN(NS_VK_SHIFT);
+  event.isControl = IS_VK_DOWN(NS_VK_CONTROL);
+  event.isMeta    = PR_FALSE;
+  event.isAlt     = IS_VK_DOWN(NS_VK_ALT);
+  event.eventStructType = NS_ACCESSIBLE_EVENT;
+  event.accessible = nsnull;
+
+  result = DispatchWindowEvent(&event);
+
+  // if the event returned an accesssible get it.
+  if (event.accessible)
+    *aAcc = event.accessible;
+
+  NS_RELEASE(event.widget);
+
+  return result;
+}
 //-------------------------------------------------------------------------
 //
 // Deal with focus messages
@@ -4229,6 +4305,72 @@ NS_METHOD nsWindow::SetTitle(const nsString& aTitle)
     ::SendMessage(mWnd, WM_SETTEXT, (WPARAM)0, (LPARAM)(LPCTSTR)title);
     delete [] title;
   }
+  return NS_OK;
+} 
+
+NS_METHOD nsWindow::SetIcon(const nsAReadableString& anIconSpec) 
+{
+  // Start at app chrome directory.
+  nsCOMPtr<nsIFile> chromeDir;
+  if ( NS_FAILED( NS_GetSpecialDirectory( NS_APP_CHROME_DIR,
+                                          getter_AddRefs( chromeDir ) ) ) ) {
+      return NS_ERROR_FAILURE;
+  }
+  // Get native file name of that directory.
+  nsXPIDLString rootPath;
+  chromeDir->GetUnicodePath( getter_Copies( rootPath ) );
+
+  // Start there.
+  nsAutoString iconPath( rootPath );
+
+  // Now take input path...
+  nsAutoString iconSpec( anIconSpec );
+  // ...append ".ico" to that.
+  iconSpec.Append( NS_LITERAL_STRING(".ico") );
+  // ...and figure out where /chrome/... is within that
+  // (and skip the "resource:///chrome" part).
+  nsAutoString key(NS_LITERAL_STRING("/chrome/"));
+  PRInt32 n = iconSpec.Find( key ) + key.Length();
+  // Convert / to \.
+  nsAutoString slash(NS_LITERAL_STRING("/"));
+  nsAutoString bslash(NS_LITERAL_STRING("\\"));
+  iconSpec.ReplaceChar( *(slash.GetUnicode()), *(bslash.GetUnicode()) );
+
+  // Append that to icon resource path.
+  iconPath.Append( iconSpec.GetUnicode() + n - 1 );
+
+  HICON bigIcon = (HICON)::LoadImageW( NULL,
+                                       (LPCWSTR)iconPath.GetUnicode(),
+                                       IMAGE_ICON,
+                                       ::GetSystemMetrics(SM_CXICON),
+                                       ::GetSystemMetrics(SM_CYICON),
+                                       LR_LOADFROMFILE | LR_SHARED );
+  HICON smallIcon = (HICON)::LoadImageW( NULL,
+                                         (LPCWSTR)iconPath.GetUnicode(),
+                                         IMAGE_ICON,
+                                         ::GetSystemMetrics(SM_CXSMICON),
+                                         ::GetSystemMetrics(SM_CYSMICON),
+                                         LR_LOADFROMFILE | LR_SHARED );
+  if ( bigIcon ) {
+      LRESULT rv = 0;
+      rv = ::SendMessage(mWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)bigIcon);
+  }
+#ifdef DEBUG_law
+  else {
+    nsCAutoString cPath; cPath.AssignWithConversion(iconPath);
+    printf( "\nIcon load error; icon=%s, rc=0x%08X\n\n", (const char*)cPath, ::GetLastError() );
+  }
+#endif
+  if ( smallIcon ) {
+      LRESULT rv = 0;
+      rv = ::SendMessage(mWnd, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)smallIcon);
+  }
+#ifdef DEBUG_law
+  else {
+    nsCAutoString cPath; cPath.AssignWithConversion(iconPath);
+    printf( "\nSmall icon load error; icon=%s, rc=0x%08X\n\n", (const char*)cPath, ::GetLastError() );
+  }
+#endif
   return NS_OK;
 } 
 
@@ -5128,8 +5270,8 @@ void nsWindow::GetCompositionWindowPos(HIMC hIMC, PRUint32 aEventType, COMPOSITI
   point.y = 0;
   DWORD pos = ::GetMessagePos();
 
-  point.x = LOWORD(pos);
-  point.y = HIWORD(pos);
+  point.x = (short)LOWORD(pos);
+  point.y = (short)HIWORD(pos);
 
   if (mWnd != NULL) {
     ::ScreenToClient(mWnd, &point);

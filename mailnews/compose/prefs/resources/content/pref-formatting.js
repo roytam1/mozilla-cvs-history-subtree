@@ -30,8 +30,8 @@ var plainobj = null //new Object();
 //plainobj.treeroot_node = void 0;                  //dom element of plaintextdomain treechildren
 //plainobj.domain_pref = void 0;                    // dom element of the broadcaster mailplaintextdomain
 
-var commonDialogsService = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
-commonDialogsService = commonDialogsService.QueryInterface(Components.interfaces.nsICommonDialogs);
+var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+promptService = promptService.QueryInterface(Components.interfaces.nsIPromptService);
 
 
 function Init()
@@ -70,15 +70,16 @@ function Init()
 function AddDomain(obj)
 {
   var DomainName;
-  if (commonDialogsService)
+  if (promptService)
   {
     var result = {value:0};
-    if (commonDialogsService.Prompt(
+    if (promptService.prompt(
       window,
       obj.DlgTitle,
       obj.DlgMsg,
+      result,
       null,
-      result
+      {value:0}
     ))
       DomainName = result.value.replace(/ /g,"");
   }
@@ -142,8 +143,8 @@ function DomainAlreadyPresent(obj, domain_name, dup)
           else
           errorMsg = document.getElementById("domainerrdlg").getAttribute("dualerr");
           var errorMessage = errorMsg.replace(/@string@/, domain_name);
-          if (commonDialogsService)
-            commonDialogsService.Alert(window, errorTitle, errorMessage);
+          if (promptService)
+            promptService.alert(window, errorTitle, errorMessage);
           else
             window.alert(errorMessage);
           found = true;

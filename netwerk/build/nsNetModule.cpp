@@ -56,6 +56,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if defined(OLD_CACHE)
 #include "nsINetDataCache.h"
 #include "nsINetDataCacheManager.h"
 #include "nsMemCacheCID.h"
@@ -69,6 +70,7 @@
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMemCache, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNetDiskCache, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsCacheManager, Init)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -80,13 +82,13 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMIMEInfoImpl)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "nsStreamObserverProxy.h"
+#include "nsRequestObserverProxy.h"
 #include "nsStreamListenerProxy.h"
 #include "nsStreamProviderProxy.h"
 #include "nsSimpleStreamListener.h"
 #include "nsSimpleStreamProvider.h"
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsStreamObserverProxy)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsRequestObserverProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsStreamListenerProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsStreamProviderProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSimpleStreamListener)
@@ -166,9 +168,7 @@ UnregisterBasicAuth(nsIComponentManager *aCompMgr, nsIFile *aPath,
 #include "nsAboutBlank.h"
 #include "nsAboutBloat.h"
 #include "nsAboutCache.h"
-#include "nsAboutCredits.h"
-#include "nsAboutPlugins.h"
-#include "mzAboutMozilla.h"
+#include "nsAboutRedirector.h"
 #include "nsKeywordProtocolHandler.h"
 
 #ifdef MOZ_NEW_CACHE
@@ -521,9 +521,9 @@ static void PR_CALLBACK nsNeckoShutdown(nsIModule *neckoModule)
 }
 
 static nsModuleComponentInfo gNetModuleInfo[] = {
-    { "I/O Service", 
+    { NS_IOSERVICE_CLASSNAME,
       NS_IOSERVICE_CID,
-      "@mozilla.org/network/io-service;1",
+      NS_IOSERVICE_CONTRACTID,
       nsIOService::Create },
     { "File Transport Service", 
       NS_FILETRANSPORTSERVICE_CID,
@@ -541,13 +541,13 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       NS_DNSSERVICE_CID,
       "@mozilla.org/network/dns-service;1",
       nsDNSService::Create },
-    { "Standard URL Implementation",
+    { NS_STANDARDURL_CLASSNAME,
       NS_STANDARDURL_CID,
-      "@mozilla.org/network/standard-url;1",
+      NS_STANDARDURL_CONTRACTID,
       nsStdURL::Create },
-    { "Simple URI Implementation",
+    { NS_SIMPLEURI_CLASSNAME,
       NS_SIMPLEURI_CID,
-      "@mozilla.org/network/simple-uri;1",
+      NS_SIMPLEURI_CONTRACTID,
       nsSimpleURI::Create },
     { "External Module Manager", 
       NS_NETMODULEMGR_CID,
@@ -569,14 +569,14 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       NS_STREAMLOADER_CID,
       "@mozilla.org/network/stream-loader;1",
       nsStreamLoader::Create },
-    { "Stream-As-File Downloader", 
+    { NS_DOWNLOADER_CLASSNAME,
       NS_DOWNLOADER_CID,
-      "@mozilla.org/network/downloader;1",
+      NS_DOWNLOADER_CONTRACTID,
       nsDownloader::Create },
-    { NS_STREAMOBSERVERPROXY_CLASSNAME,
-      NS_STREAMOBSERVERPROXY_CID,
-      NS_STREAMOBSERVERPROXY_CONTRACTID,
-      nsStreamObserverProxyConstructor },
+    { NS_REQUESTOBSERVERPROXY_CLASSNAME,
+      NS_REQUESTOBSERVERPROXY_CID,
+      NS_REQUESTOBSERVERPROXY_CONTRACTID,
+      nsRequestObserverProxyConstructor },
     { NS_STREAMLISTENERPROXY_CLASSNAME,
       NS_STREAMLISTENERPROXY_CID,
       NS_STREAMLISTENERPROXY_CONTRACTID,
@@ -593,10 +593,6 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       NS_SIMPLESTREAMPROVIDER_CID,
       NS_SIMPLESTREAMPROVIDER_CONTRACTID,
       nsSimpleStreamProviderConstructor },
-    { NS_ASYNCSTREAMOBSERVER_CLASSNAME,
-      NS_ASYNCSTREAMOBSERVER_CID,
-      NS_ASYNCSTREAMOBSERVER_CONTRACTID,
-      nsAsyncStreamObserver::Create },
     { NS_ASYNCSTREAMLISTENER_CLASSNAME,
       NS_ASYNCSTREAMLISTENER_CID,
       NS_ASYNCSTREAMLISTENER_CONTRACTID,
@@ -609,15 +605,9 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       NS_STORAGETRANSPORT_CID,
       NS_STORAGETRANSPORT_CONTRACTID,
       nsStorageTransportConstructor },
-      /*
-    { "Sync Stream Listener", 
-      NS_SYNCSTREAMLISTENER_CID,
-      "@mozilla.org/network/sync-stream-listener;1",
-      nsSyncStreamListener::Create },
-      */
-    { "Load Group", 
+    { NS_LOADGROUP_CLASSNAME,
       NS_LOADGROUP_CID,
-      "@mozilla.org/network/load-group;1",
+      NS_LOADGROUP_CONTRACTID,
       nsLoadGroup::Create },
     { NS_LOCALFILEINPUTSTREAM_CLASSNAME, 
       NS_LOCALFILEINPUTSTREAM_CID,
@@ -760,12 +750,12 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
 	  NS_ISTREAMCONVERTER_KEY, 
 	  CreateNewTXTToHTMLConvFactory
     },
-
+#if defined(OLD_CACHE)
     // from netwerk/cache:
     { "Memory Cache", NS_MEM_CACHE_FACTORY_CID, NS_NETWORK_MEMORY_CACHE_CONTRACTID, nsMemCacheConstructor },
     { "File Cache",   NS_NETDISKCACHE_CID,      NS_NETWORK_FILE_CACHE_CONTRACTID,   nsNetDiskCacheConstructor },
     { "Cache Manager",NS_CACHE_MANAGER_CID,     NS_NETWORK_CACHE_MANAGER_CONTRACTID,nsCacheManagerConstructor },
-
+#endif
     // from netwerk/mime:
     { "The MIME mapping service", 
       NS_MIMESERVICE_CID,
@@ -849,19 +839,19 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       nsAboutBloat::Create
     },
     { "about:credits",
-      NS_ABOUT_CREDITS_MODULE_CID,
+      NS_ABOUT_REDIRECTOR_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "credits",
-      nsAboutCredits::Create
+      nsAboutRedirector::Create
     },
     { "about:plugins",
-      NS_ABOUT_PLUGINS_MODULE_CID,
+      NS_ABOUT_REDIRECTOR_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "plugins",
-      nsAboutPlugins::Create
+      nsAboutRedirector::Create
     },
     { "about:mozilla",
-      MZ_ABOUT_MOZILLA_MODULE_CID,
+      NS_ABOUT_REDIRECTOR_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "mozilla",
-      mzAboutMozilla::Create
+      nsAboutRedirector::Create
     },
     { "about:cache", 
       NS_ABOUT_CACHE_MODULE_CID,

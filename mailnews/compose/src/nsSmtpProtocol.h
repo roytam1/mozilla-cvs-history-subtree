@@ -97,7 +97,7 @@ typedef enum _PrefTrySSL {
     PREF_SSL_ALWAYS = 2
 } PrefTrySSL;
 
-class nsSmtpProtocol : public nsMsgProtocol,
+class nsSmtpProtocol : public nsMsgAsyncWriteProtocol,
                        public nsIMsgLogonRedirectionRequester
 {
 public:
@@ -116,7 +116,7 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 
 	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+	NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status);
 
 private:
   // logon redirection related variables and methods

@@ -25,6 +25,9 @@ srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
+
+DIRS		= chrome
+
 include $(topsrcdir)/config/rules.mk
 
 FILES := \

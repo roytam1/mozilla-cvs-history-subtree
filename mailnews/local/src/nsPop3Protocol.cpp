@@ -35,6 +35,7 @@
 
 #include "msgCore.h"    // precompiled header...
 #include "nspr.h"
+#include "nsCRT.h"
 #include "plbase64.h"
 #include "nsIMsgMailNewsUrl.h"
 #include "nsPop3Protocol.h"
@@ -106,6 +107,18 @@ net_pop3_check_for_hash_messages_marked_delete(PLHashEntry* he,
 	return HT_ENUMERATE_NEXT;		/* XP_Maphash will continue traversing the hash */
 }
 
+static PRIntn PR_CALLBACK
+net_pop3_remove_messages_marked_delete(PLHashEntry* he,
+			  						   PRIntn msgindex, 
+			   						   void *arg)
+{
+	char valueChar = (char)(long)he->value;
+	if (valueChar == DELETE_CHAR)
+	  return HT_ENUMERATE_REMOVE;
+    else
+      return HT_ENUMERATE_NEXT;     /* XP_Maphash will continue traversing the hash */
+}
+
 static void
 put_hash(Pop3UidlHost* host, PLHashTable* table, const char* key, char value)
 {
@@ -165,7 +178,7 @@ net_pop3_load_state(const char* searchhost,
 	while (!fileStream.eof() && !fileStream.failed() && fileStream.is_open())
   {
       fileStream.readline(buf, 512);
-      if (*buf == '#' || *buf == CR || *buf == LF || *buf == 0)
+      if (*buf == '#' || *buf == nsCRT::CR || *buf == nsCRT::LF || *buf == 0)
           continue;
 	  if (buf[0] == '*') {
         /* It's a host&user line. */
@@ -219,7 +232,7 @@ net_pop3_load_state(const char* searchhost,
   }
   if (fileStream.is_open())
    fileStream.close();
-  
+
   return result;
 }
 
@@ -275,7 +288,7 @@ net_pop3_write_state(Pop3UidlHost* host, nsIFileSpec *mailDirectory)
   nsOutputFileStream outFileStream(fileSpec, PR_WRONLY | PR_CREATE_FILE |
                                    PR_TRUNCATE);
 	char* tmpBuffer =
-        "# Netscape POP3 State File" MSG_LINEBREAK
+        "# POP3 State File" MSG_LINEBREAK
         "# This is a generated file!  Do not edit." MSG_LINEBREAK
         MSG_LINEBREAK;
 
@@ -534,23 +547,15 @@ nsresult nsPop3Protocol::GetPassword(char ** aPassword, PRBool *okayValue)
 
         // if the last prompt got us a bad password then show a special dialog
         if (TestFlag(POP3_PASSWORD_FAILED))
-        {
+        { 
             rv = server->ForgetPassword();
             if (NS_FAILED(rv)) return rv;
 
             PRUnichar *passwordTemplate = nsnull;
             mStringService->GetStringByID(POP3_PREVIOUSLY_ENTERED_PASSWORD_IS_INVALID_ETC, &passwordTemplate);
 
-            if (m_commandResponse.Length())
-                passwordPromptString = nsTextFormatter::smprintf(passwordTemplate, m_commandResponse.get(), (const char *) userName, (const char *) hostName);
-            else
-            {
-                PRUnichar * noAnswerText = nsnull;
-                mStringService->GetStringByID(POP3_NO_ANSWER, &noAnswerText);
-                passwordPromptString = nsTextFormatter::smprintf(passwordTemplate, noAnswerText, (const char *) userName, (const char *) hostName);
-                nsCRT::free(noAnswerText);
-            } 
-            nsCRT::free(passwordTemplate);
+            passwordPromptString = nsTextFormatter::smprintf(passwordTemplate, (const char *) userName, (const char *) hostName);
+            nsCRT::free(passwordTemplate); 
         } // otherwise this is the first time we've asked about the server's password so show a first time prompt
         else
         {
@@ -585,9 +590,9 @@ nsresult nsPop3Protocol::GetPassword(char ** aPassword, PRBool *okayValue)
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsPop3Protocol::OnStopRequest(nsIRequest *request, nsISupports * aContext, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsPop3Protocol::OnStopRequest(nsIRequest *request, nsISupports * aContext, nsresult aStatus)
 {
-	nsresult rv = nsMsgProtocol::OnStopRequest(request, aContext, aStatus, aMsg);
+	nsresult rv = nsMsgProtocol::OnStopRequest(request, aContext, aStatus);
 	// turn off the server busy flag on stop request - we know we're done, right?
 	if (m_pop3Server)
 	{
@@ -603,13 +608,12 @@ NS_IMETHODIMP nsPop3Protocol::Cancel(nsresult status)  // handle stop button
 {
   if(m_pop3ConData->msg_closure)
   {
-      m_nsIPop3Sink->IncorporateAbort(m_pop3ConData->msg_closure,
-                                      POP3_MESSAGE_WRITE_ERROR);
+      m_nsIPop3Sink->IncorporateAbort(m_pop3ConData->only_uidl != nsnull);
       m_pop3ConData->msg_closure = NULL;
   }
   // need this to close the stream on the inbox.
   m_nsIPop3Sink->AbortMailDelivery();
-	return nsMsgProtocol::Cancel(NS_BINDING_ABORTED);
+  return nsMsgProtocol::Cancel(NS_BINDING_ABORTED);
 }
 
 
@@ -732,26 +736,18 @@ nsPop3Protocol::WaitForStartOfConnectionResponse(nsIInputStream* aInputStream,
 	PRBool pauseForMoreData = PR_FALSE;
 	line = m_lineStreamBuffer->ReadNextLine(aInputStream, line_length, pauseForMoreData);
 
-    if(pauseForMoreData || !line)
-    {
-		PR_FREEIF(line);
-		m_pop3ConData->pause_for_read = PR_TRUE;
-        return(line_length);
-    }
-    
     PR_LOG(POP3LOGMODULE, PR_LOG_ALWAYS,("RECV: %s", line));
 
-    if(*line == '+')
+    if(line && *line == '+')
 	{
         m_pop3ConData->command_succeeded = PR_TRUE;
         if(PL_strlen(line) > 4)
 			m_commandResponse = line+4;
         else
 			m_commandResponse = line;
-        
-        m_pop3ConData->next_state = m_pop3ConData->next_state_after_response;
-        m_pop3ConData->pause_for_read = PR_FALSE; /* don't pause */
-	}
+        } 
+    m_pop3ConData->next_state = m_pop3ConData->next_state_after_response;
+    m_pop3ConData->pause_for_read = PR_FALSE; /* don't pause */
     
 	PR_FREEIF(line);
     return(1);  /* everything ok */
@@ -816,25 +812,34 @@ nsPop3Protocol::Error(PRInt32 err_code)
         nsCOMPtr<nsIMsgWindow> msgWindow;
         nsCOMPtr<nsIPrompt> dialog;
         rv = mailnewsUrl->GetMsgWindow(getter_AddRefs(msgWindow));
-        if (NS_SUCCEEDED(rv))
+	    NS_ASSERTION(NS_SUCCEEDED(rv) && msgWindow, "no msg window");
+        if (NS_SUCCEEDED(rv) && msgWindow)
         {
             rv = msgWindow->GetPromptDialog(getter_AddRefs(dialog));
             if (NS_SUCCEEDED(rv))
             {
-                PRUnichar * alertString = nsnull;
-                mStringService->GetStringByID(err_code, &alertString);
-                if (alertString)
-                {
-                    dialog->Alert(nsnull, alertString); 
-                    nsCRT::free(alertString);
-                }
+              nsXPIDLString alertString;
+              mStringService->GetStringByID(err_code, getter_Copies(alertString));
+              if (m_pop3ConData->command_succeeded)  //not a server error message
+                dialog->Alert(nsnull, alertString.get()); 
+              else
+              {
+                nsAutoString message(alertString.get());
+                nsXPIDLString serverSaidPrefix;
+                mStringService->GetStringByID(POP3_SERVER_SAID,getter_Copies(serverSaidPrefix));
+                message.Append(NS_LITERAL_STRING(" ").get());
+                message.Append(serverSaidPrefix);
+                message.Append(NS_LITERAL_STRING(" ").get());
+                message.AppendWithConversion(m_commandResponse);
+                dialog->Alert(nsnull,message.GetUnicode()); 
+              }
             }
         }
     }
-	m_pop3ConData->next_state = POP3_ERROR_DONE;
-	m_pop3ConData->pause_for_read = PR_FALSE;
+    m_pop3ConData->next_state = POP3_ERROR_DONE;
+    m_pop3ConData->pause_for_read = PR_FALSE;
 
-	return -1;
+    return -1;
 }
 
 PRInt32 nsPop3Protocol::SendData(nsIURI * aURL, const char * dataBuffer, PRBool aSuppressLogging)
@@ -1056,23 +1061,10 @@ PRInt32 nsPop3Protocol::SendStatOrGurl(PRBool sendStat)
            prompting the user for a password: just fail silently. */
         if (m_pop3ConData->only_check_for_new_mail)
             return MK_POP3_PASSWORD_UNDEFINED;
-        else       //suppress POP3_PASSWORD_FAILURE alert
-        {
-          	m_pop3ConData->next_state = POP3_ERROR_DONE;
-	        m_pop3ConData->pause_for_read = PR_FALSE;
-        }
+        else       
+            Error(POP3_PASSWORD_FAILURE);
         
-		SetFlag(POP3_PASSWORD_FAILED);
-
-        PRBool prefBool = PR_FALSE;
-        m_pop3Server->GetAuthLogin(&prefBool);
-        if (prefBool && m_pop3ConData->capability_flags & POP3_HAS_AUTH_LOGIN)
-            m_pop3ConData->next_state = POP3_AUTH_LOGIN;
-        else
-            m_pop3ConData->next_state = POP3_SEND_USERNAME;
-        /* try again right away */
-        m_pop3ConData->pause_for_read = PR_FALSE;
-        m_pop3ConData->command_succeeded = PR_TRUE;
+	SetFlag(POP3_PASSWORD_FAILED);
 
         // libmsg event sink
         if (m_nsIPop3Sink) 
@@ -1947,8 +1939,7 @@ nsPop3Protocol::GetMsg()
                 }
             }
         }
-        if ((m_pop3ConData->leave_on_server && m_pop3ConData->next_state !=
-             POP3_SEND_DELE) || 
+        if ((m_pop3ConData->next_state != POP3_SEND_DELE) || 
             m_pop3ConData->next_state == POP3_GET_MSG ||
             m_pop3ConData->next_state == POP3_SEND_TOP) { 
 
@@ -2121,6 +2112,7 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
     PRInt32 flags = 0;
     char *uidl = NULL;
     char *newStr;
+    nsresult rv;
 #if 0
     PRInt32 old_bytes_received = m_totalBytesReceived;
 #endif
@@ -2177,12 +2169,12 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
          */
         m_pop3ConData->real_new_counter++;		
         /* (rb) count only real messages being downloaded */
-        m_nsIPop3Sink->IncorporateBegin(uidl, m_url, flags,
-                                        &m_pop3ConData->msg_closure);  
+        rv = m_nsIPop3Sink->IncorporateBegin(uidl, m_url, flags,
+                                        &m_pop3ConData->msg_closure); 
 
         PR_LOG(POP3LOGMODULE, PR_LOG_ALWAYS, ("Done opening message stream!"));
 													
-        if(!m_pop3ConData->msg_closure)
+        if(!m_pop3ConData->msg_closure || NS_FAILED(rv))
             return(Error(POP3_MESSAGE_WRITE_ERROR));
     }
     
@@ -2196,15 +2188,15 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
     {
         if (m_pop3ConData->dot_fix && m_pop3ConData->assumed_end && m_pop3ConData->msg_closure)
         {
-            status =
-                m_nsIPop3Sink->IncorporateComplete(m_pop3ConData->msg_closure);
+            rv =
+                m_nsIPop3Sink->IncorporateComplete();
             // The following was added to prevent the loss of Data when we try
             // and write to somewhere we dont have write access error to (See 
             // bug 62480)
             // (Note: This is only a temp hack until the underlying XPCOM is
             // fixed to return errors)
             
-            if(NS_FAILED(status))
+            if(NS_FAILED(rv))
                 return(Error(POP3_MESSAGE_WRITE_ERROR));
 
             m_pop3ConData->msg_closure = 0;
@@ -2224,16 +2216,18 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
 		do
 		{
             PR_LOG(POP3LOGMODULE, PR_LOG_ALWAYS,("RECV: %s", line));
-			BufferInput(line, buffer_size);
+			PRInt32 res = BufferInput(line, buffer_size);
+            if (res < 0) return(Error(POP3_MESSAGE_WRITE_ERROR));
 			// BufferInput(CRLF, 2);
-            BufferInput(MSG_LINEBREAK, MSG_LINEBREAK_LEN);
+            res = BufferInput(MSG_LINEBREAK, MSG_LINEBREAK_LEN);
+            if (res < 0) return(Error(POP3_MESSAGE_WRITE_ERROR));
 
             m_pop3ConData->parsed_bytes += (buffer_size+2); // including CRLF
     
 			// now read in the next line
 			PR_FREEIF(line);
-			line = m_lineStreamBuffer->ReadNextLine(inputStream, buffer_size,
-                                                    pauseForMoreData);
+		    line = m_lineStreamBuffer->ReadNextLine(inputStream, buffer_size,
+                                                    pauseForMoreData);            
 			status += (buffer_size+2); // including CRLF
 		} while (/* !pauseForMoreData && */ line);
     }
@@ -2254,8 +2248,8 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
     if (pauseForMoreData && m_pop3ConData->dot_fix &&
         m_pop3ConData->assumed_end && m_pop3ConData->msg_closure)
     {
-        status = 
-            m_nsIPop3Sink->IncorporateComplete(m_pop3ConData->msg_closure);
+        rv = 
+            m_nsIPop3Sink->IncorporateComplete();
 
         // The following was added to prevent the loss of Data when we try
         // and write to somewhere we dont have write access error to (See
@@ -2263,7 +2257,7 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
         // (Note: This is only a temp hack until the underlying XPCOM is
         // fixed to return errors)
 
-        if(NS_FAILED(status))
+        if(NS_FAILED(rv))
             return(Error(POP3_MESSAGE_WRITE_ERROR));
 
         m_pop3ConData->msg_closure = 0;
@@ -2363,7 +2357,7 @@ nsPop3Protocol::TopResponse(nsIInputStream* inputStream, PRUint32 length)
 PRInt32
 nsPop3Protocol::HandleLine(char *line, PRUint32 line_length)
 {
-    int status;
+    nsresult rv;
     
     NS_ASSERTION(m_pop3ConData->msg_closure, "m_pop3ConData->msg_closure is null in nsPop3Protocol::HandleLine()");
     if (!m_pop3ConData->msg_closure)
@@ -2388,22 +2382,16 @@ nsPop3Protocol::HandleLine(char *line, PRUint32 line_length)
             line[line_length-1] = ch;
         }
     }
-    
-    status =
-        m_nsIPop3Sink->IncorporateWrite(m_pop3ConData->msg_closure, 
-                                             line, line_length);
 
-    if ((status >= 0) &&
-        (line[0] == '.') &&
-        ((line[1] == CR) || (line[1] == LF)))
+    if ((line[0] == '.') &&
+        ((line[1] == nsCRT::CR) || (line[1] == nsCRT::LF)))
     {
         m_pop3ConData->assumed_end = PR_TRUE;	/* in case byte count from server is */
                                     /* wrong, mark we may have had the end */ 
         if (!m_pop3ConData->dot_fix || m_pop3ConData->truncating_cur_msg ||
             (m_pop3ConData->parsed_bytes >= (m_pop3ConData->pop3_size -3))) 
         {
-            status = 
-                m_nsIPop3Sink->IncorporateComplete(m_pop3ConData->msg_closure);
+            rv = m_nsIPop3Sink->IncorporateComplete();
 
             // The following was added to prevent the loss of Data when we try
             // and write to somewhere we dont have write access error to (See
@@ -2411,14 +2399,33 @@ nsPop3Protocol::HandleLine(char *line, PRUint32 line_length)
             // (Note: This is only a temp hack until the underlying XPCOM is
             // fixed to return errors)
 
-            if(NS_FAILED(status))
+            if(NS_FAILED(rv))
                 return(Error(POP3_MESSAGE_WRITE_ERROR));
 
             m_pop3ConData->msg_closure = 0;
+            return 0;
         }
     }
+      /*When examining a multi-line response, the client checks
+      to see if the line begins with the termination octet.  If so and if
+      octets other than CRLF follow, the first octet of the line (the
+      termination octet) is stripped away.*/
+    else if (line_length > 1  && line[0] == '.' && line[1] == '.' ) 
+    {
+        PRUint32 i=0;
+        while ( i < line_length -1 ){
+           line[i] = line[i+1];
+           i++;
+        }
+        line[i] = '\0';
+        line_length -= 1;
     
-    return status;
+    }
+    rv = m_nsIPop3Sink->IncorporateWrite(line, line_length);
+    if(NS_FAILED(rv))
+      return(Error(POP3_MESSAGE_WRITE_ERROR));
+    
+    return 0;
 }
 
 PRInt32 nsPop3Protocol::SendDele()
@@ -2465,8 +2472,12 @@ PRInt32 nsPop3Protocol::DeleResponse()
             m_pop3ConData->msg_info[m_pop3ConData->last_accessed_msg-1].uidl)
         { 
             if (m_pop3ConData->newuidl)
+              if (m_pop3ConData->leave_on_server)
                 PL_HashTableRemove(m_pop3ConData->newuidl, (void*)
                   m_pop3ConData->msg_info[m_pop3ConData->last_accessed_msg-1].uidl); 
+              else
+                PL_HashTableAdd(m_pop3ConData->newuidl, (void*)
+                  m_pop3ConData->msg_info[m_pop3ConData->last_accessed_msg-1].uidl, (void*)DELETE_CHAR);   
                 /* kill message in new hash table */
             else
                 PL_HashTableRemove(host->hash, 
@@ -2494,7 +2505,7 @@ nsPop3Protocol::CommitState(PRBool remove_last_entry)
             Pop3MsgInfo* info = m_pop3ConData->msg_info +
                 m_pop3ConData->last_accessed_msg; 
             if (info && info->uidl && (m_pop3ConData->only_uidl == NULL) &&
-                m_pop3ConData->newuidl) { 
+                m_pop3ConData->newuidl && m_pop3ConData->newuidl->nentries > 0) { 
                 PRBool val = PL_HashTableRemove (m_pop3ConData->newuidl, info->uidl);
                 PR_ASSERT(val);
             }
@@ -2864,14 +2875,9 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
 			
 			status = SendData(mailnewsurl, "QUIT" CRLF);
             m_pop3ConData->next_state = POP3_WAIT_FOR_RESPONSE;
-#ifdef POP_ALWAYS_USE_UIDL_FOR_DUPLICATES
             m_pop3ConData->next_state_after_response = POP3_QUIT_RESPONSE;
-#else
-            m_pop3ConData->next_state_after_response = POP3_DONE;
-#endif
             break;
 
-#ifdef POP_ALWAYS_USE_UIDL_FOR_DUPLICATES
         case POP3_QUIT_RESPONSE:
             if(m_pop3ConData->command_succeeded)
             {
@@ -2884,6 +2890,13 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
                   if (m_pop3ConData->uidlinfo &&
                       m_pop3ConData->uidlinfo->uncommitted_deletes) 
                       XP_Clrhash (m_pop3ConData->uidlinfo->uncommitted_deletes);*/
+              //delete the uidl because deletes are committed
+              if (!m_pop3ConData->leave_on_server && m_pop3ConData->newuidl){  
+                PL_HashTableEnumerateEntries(m_pop3ConData->newuidl, 
+    								net_pop3_remove_messages_marked_delete,
+    								(void *)m_pop3ConData);   
+              }
+
 
                 m_pop3ConData->next_state = POP3_DONE;
 
@@ -2893,7 +2906,6 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
                 m_pop3ConData->next_state = POP3_ERROR_DONE;
             }
             break;
-#endif
             
         case POP3_DONE:
             CommitState(PR_FALSE);
@@ -2920,8 +2932,7 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
 				
             if(m_pop3ConData->msg_closure)
             {
-                m_nsIPop3Sink->IncorporateAbort(m_pop3ConData->msg_closure,
-                                                POP3_MESSAGE_WRITE_ERROR);
+                m_nsIPop3Sink->IncorporateAbort(m_pop3ConData->only_uidl != nsnull);
                 m_pop3ConData->msg_closure = NULL;
                 m_nsIPop3Sink->AbortMailDelivery();
             }

@@ -76,7 +76,7 @@ public:
     
     NS_DECL_ISUPPORTS
     NS_DECL_NSISTREAMLISTENER
-    NS_DECL_NSISTREAMOBSERVER
+    NS_DECL_NSIREQUESTOBSERVER
     
     NS_FORWARD_NSIREQUEST(mRequest->)
     NS_FORWARD_NSICHANNEL(mChannel->)
@@ -102,7 +102,7 @@ protected:
 
 NS_IMPL_THREADSAFE_ISUPPORTS4(DataRequestForwarder, 
                               nsIStreamListener, 
-                              nsIStreamObserver, 
+                              nsIRequestObserver, 
                               nsIChannel,
                               nsIRequest);
 
@@ -190,7 +190,7 @@ DataRequestForwarder::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 }
 
 NS_IMETHODIMP
-DataRequestForwarder::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode, const PRUnichar *statusText)
+DataRequestForwarder::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode)
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) DataRequestForwarder OnStopRequest [status=%x]\n", this, statusCode)); 
 #ifdef DOUGT_NEW_CACHE
@@ -212,7 +212,7 @@ DataRequestForwarder::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsre
     }
 #endif
     if (mListener)
-        return mListener->OnStopRequest(this, ctxt, statusCode, statusText);
+        return mListener->OnStopRequest(this, ctxt, statusCode);
     
     return NS_OK;
 }
@@ -250,7 +250,7 @@ DataRequestForwarder::OnDataAvailable(nsIRequest *request, nsISupports *ctxt, ns
 
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsFtpState, 
                               nsIStreamListener, 
-                              nsIStreamObserver, 
+                              nsIRequestObserver, 
                               nsIRequest);
 
 nsFtpState::nsFtpState() {
@@ -324,16 +324,16 @@ nsFtpState::OnDataAvailable(nsIRequest *request,
     }
     buffer[aCount] = '\0';
         
+
 #if defined(PR_LOGGING)
-    nsCString logString(buffer);
-    logString.ReplaceChar(CRLF, ' ');
-    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) reading %d bytes: \"%s\"", this, aCount, logString.get()));
-
-#ifdef DEBUG_dougt
-printf("!!! %s\n", logString.get());
+    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) reading %d bytes: \"%s\"", this, aCount, buffer));
+#if 0 //#ifdef DEBUG_dougt
+    printf("!!! %s\n", buffer);
+#endif
 #endif
 
-#endif
+    if (mFTPEventSink)
+        mFTPEventSink->OnFTPControlLog(PR_TRUE, buffer);
     
     // get the response code out.
     if (!mControlReadContinue && !mControlReadBrokenLine) {
@@ -421,7 +421,7 @@ printf("!!! %s\n", logString.get());
 }
 
 
-// nsIStreamObserver implementation
+// nsIRequestObserver implementation
 NS_IMETHODIMP
 nsFtpState::OnStartRequest(nsIRequest *request, nsISupports *aContext)
 {
@@ -437,7 +437,7 @@ nsFtpState::OnStartRequest(nsIRequest *request, nsISupports *aContext)
 
 NS_IMETHODIMP
 nsFtpState::OnStopRequest(nsIRequest *request, nsISupports *aContext,
-                            nsresult aStatus, const PRUnichar* aStatusArg)
+                            nsresult aStatus)
 {
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) nsFtpState::OnStopRequest() rv=%x\n", this, aStatus));
     mControlStatus = aStatus;
@@ -539,7 +539,7 @@ nsFtpState::Process() {
 //////////////////////////////
             case FTP_COMMAND_CONNECT:
                 {
-                    KillControlConnnection();
+                    KillControlConnection();
                     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Establishing control connection...", this));
                     rv = EstablishControlConnection();  // sets mState
                     mInternalError = rv;
@@ -859,7 +859,7 @@ nsFtpState::Process() {
                     mNextState = FTP_ERROR;
                     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) FAILED\n", this));
                 } else {
-                    char *lf = PL_strchr(mResponseMsg.get(), LF);
+                    char *lf = PL_strchr(mResponseMsg.get(), nsCRT::LF);
                     if (lf && lf+1 && *(lf+1)) 
                         // we have a double response
                         // need to read again...
@@ -1061,7 +1061,7 @@ nsFtpState::S_user() {
         usernameStr.Append("anonymous");
     } else {
         if (!mUsername.Length()) {
-            if (!mPrompter) return NS_ERROR_NOT_INITIALIZED;
+            if (!mAuthPrompter) return NS_ERROR_NOT_INITIALIZED;
             PRUnichar *user = nsnull, *passwd = nsnull;
             PRBool retval;
             nsXPIDLCString host;
@@ -1072,10 +1072,10 @@ nsFtpState::S_user() {
 
             nsAutoString realm; // XXX i18n
             CopyASCIItoUCS2(nsLiteralCString(NS_STATIC_CAST(const char*, host)), realm);
-            rv = mPrompter->PromptUsernameAndPassword(nsnull,
-                                                      message.GetUnicode(),
-                                                      realm.GetUnicode(), nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
-                                                      &user, &passwd, &retval);
+            rv = mAuthPrompter->PromptUsernameAndPassword(nsnull,
+                                                          message.GetUnicode(),
+                                                          realm.GetUnicode(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+                                                          &user, &passwd, &retval);
 
             // if the user canceled or didn't supply a username we want to fail
             if (!retval || (user && !*user) )
@@ -1139,7 +1139,7 @@ nsFtpState::S_pass() {
         }
     } else {
         if (!mPassword.Length() || mRetryPass) {
-            if (!mPrompter) return NS_ERROR_NOT_INITIALIZED;
+            if (!mAuthPrompter) return NS_ERROR_NOT_INITIALIZED;
 
             PRUnichar *passwd = nsnull;
             PRBool retval;
@@ -1156,11 +1156,11 @@ nsFtpState::S_pass() {
             nsXPIDLCString prePath;
             rv = mURL->GetPrePath(getter_Copies(prePath));
             if (NS_FAILED(rv)) return rv;
-            rv = mPrompter->PromptPassword(title.GetUnicode(),
-                                           message.GetUnicode(),
-                                           NS_ConvertASCIItoUCS2(prePath).GetUnicode(), 
-                                           nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
-                                           &passwd, &retval);
+            rv = mAuthPrompter->PromptPassword(title.GetUnicode(),
+                                               message.GetUnicode(),
+                                               NS_ConvertASCIItoUCS2(prePath).GetUnicode(), 
+                                               nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+                                               &passwd, &retval);
 
             // we want to fail if the user canceled or didn't enter a password.
             if (!retval || (passwd && !*passwd) )
@@ -1232,11 +1232,24 @@ nsFtpState::R_syst() {
         {
             NS_ASSERTION(0, "Guessing FTP server type.");
             // No clue.  We will just hope it is UNIX type server.
+            // An assertion here indicates that we should be testing 
+            // for another substring
             mServerType = FTP_UNIX_TYPE;
             mList = PR_TRUE;
         }
+
+        return FTP_S_PWD;
     }
-    return FTP_S_PWD;
+
+    if (mResponseCode/100 == 5) {   
+        // server didn't like the SYST command.  Probably (500, 501, 502)
+        // No clue.  We will just hope it is UNIX type server.
+        mServerType = FTP_UNIX_TYPE;
+        mList = PR_TRUE;
+
+        return FTP_S_PWD;
+    }
+    return FTP_ERROR;
 }
 
 nsresult
@@ -1456,10 +1469,15 @@ nsFtpState::S_list() {
     nsCOMPtr<nsIStreamListener> converter;
     
     rv = BuildStreamConverter(getter_AddRefs(converter));
-    if (NS_FAILED(rv)) return rv;
-
+    if (NS_FAILED(rv)) {
+        // clear mResponseMsg which is displayed to the user.
+        // TODO: we should probably set this to something 
+        // meaningful.
+        mResponseMsg = "";
+        return rv;
+    }
     mDRequestForwarder->SetStreamListener(converter);
-
+    
 #ifdef DOUGT_NEW_CACHE
     if (mCacheEntry && mReadingFromCache)
     {            
@@ -1524,7 +1542,7 @@ nsFtpState::R_retr() {
         // this can happen if the server sends back two
         // responses before we've processed the first one.
         PRInt32 loc = -1;
-        loc = mResponseMsg.FindChar(LF);
+        loc = mResponseMsg.FindChar(nsCRT::LF);
         if (loc > -1) {
             PRInt32 err;
             nsCAutoString response;
@@ -1557,7 +1575,7 @@ nsFtpState::S_stor() {
     NS_ASSERTION(mWriteStream, "we're trying to upload without any data");
     
     if (NS_FAILED(rv)) return rv;
-    nsCOMPtr<nsIStreamObserver> observer = do_QueryInterface(mChannel, &rv);
+    nsCOMPtr<nsIRequestObserver> observer = do_QueryInterface(mChannel, &rv);
     if (NS_FAILED(rv)) return rv;
 
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) writing on Data Transport\n", this));
@@ -1712,6 +1730,7 @@ nsFtpState::R_pasv() {
     nsCOMPtr<nsIInterfaceRequestor> callbacks = do_QueryInterface(mChannel);
     mDPipe->SetNotificationCallbacks(callbacks, PR_FALSE);
 
+    NS_IF_RELEASE(mDRequestForwarder);
     mDRequestForwarder = new DataRequestForwarder;
     if (!mDRequestForwarder) return FTP_ERROR;
     NS_ADDREF(mDRequestForwarder);
@@ -1901,13 +1920,44 @@ nsFtpState::Resume(void)
     return rv;
 }
 
+NS_IMETHODIMP
+nsFtpState::GetLoadGroup(nsILoadGroup **aLoadGroup)
+{
+    *aLoadGroup = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFtpState::SetLoadGroup(nsILoadGroup *aLoadGroup)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsFtpState::GetLoadFlags(nsLoadFlags *aLoadFlags)
+{
+    *aLoadFlags = nsIRequest::LOAD_NORMAL;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFtpState::SetLoadFlags(nsLoadFlags aLoadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 nsresult
 nsFtpState::Init(nsIFTPChannel* aChannel,
-                 nsIPrompt*  aPrompter) {
+                 nsIPrompt*  aPrompter,
+                 nsIAuthPrompt* aAuthPrompter,
+                 nsIFTPEventSink* sink) 
+{
     nsresult rv = NS_OK;
 
     mKeepRunning = PR_TRUE;
     mPrompter = aPrompter;
+    mFTPEventSink = sink;
+    mAuthPrompter = aAuthPrompter;
 
     // parameter validation
     NS_ASSERTION(aChannel, "FTP: needs a channel");
@@ -2002,8 +2052,8 @@ nsFtpState::Connect()
         
             if (accessMode & nsICache::ACCESS_READ) {
                 // we can read from the cache.
-                PRUint32 aLoadAttributes;
-                mChannel->GetLoadAttributes(&aLoadAttributes);
+                PRUint32 aLoadFlags;
+                mChannel->GetLoadFlags(&aLoadFlags);
 
                 if (accessMode & nsICache::ACCESS_WRITE) {
                     // we said that we could validate, so here we do it.
@@ -2042,7 +2092,7 @@ nsFtpState::SetWriteStream(nsIInputStream* aInStream, PRUint32 aWriteCount) {
 }
 
 void
-nsFtpState::KillControlConnnection() {
+nsFtpState::KillControlConnection() {
     mControlReadContinue = PR_FALSE;
     mControlReadBrokenLine = PR_FALSE;
     mControlReadCarryOverBuf.Truncate(0);
@@ -2057,6 +2107,8 @@ nsFtpState::KillControlConnnection() {
         mDPipe->SetNotificationCallbacks(nsnull, PR_FALSE);
         mDPipe = 0;
     }
+    
+    NS_IF_RELEASE(mDRequestForwarder);
 
     mIPv6Checked = PR_FALSE;
     if (mIPv6ServerAddress) {
@@ -2139,18 +2191,19 @@ nsFtpState::StopProcessing() {
         if(NS_FAILED(rv)) return rv;
 
         //(void) asyncListener->OnStartRequest(channelRequest, nsnull);
-        (void) asyncListener->OnStopRequest(channelRequest, nsnull, broadcastErrorCode, nsnull);
+        (void) asyncListener->OnStopRequest(channelRequest, nsnull, broadcastErrorCode);
     }
     
     // Clean up the event loop
     mKeepRunning = PR_FALSE;
 
-    KillControlConnnection();
+    KillControlConnection();
 
     // Release the Observers
     mWriteStream = 0;
 
     mPrompter = 0;
+    mAuthPrompter = 0;
     mChannel = 0;
 
 #ifdef DOUGT_NEW_CACHE
@@ -2331,15 +2384,15 @@ nsFtpState::SendFTPCommand(nsCString& command)
     NS_ASSERTION(mControlConnection, "null control connection");
 
 #if defined(PR_LOGGING)
-    nsCString logString(command);
-    logString.ReplaceChar(CRLF, ' ');
-    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Writing \"%s\"\n", this, logString.get()));
-
-#ifdef DEBUG_dougt
-printf("!!! %s\n", logString.get());
+    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Writing \"%s\"\n", this, command.get()));
+#if 0 // #ifdef DEBUG_dougt
+    printf("!!! %s\n", command.get());
+#endif
 #endif
 
-#endif
+    if (mFTPEventSink)
+        mFTPEventSink->OnFTPControlLog(PR_FALSE, command.get());
+
     if (mControlConnection) {
         return mControlConnection->Write(command, mWaitingForDConn);
     }

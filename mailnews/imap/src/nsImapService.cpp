@@ -59,12 +59,16 @@
 #include "nsImapOfflineSync.h"
 #include "nsIMsgHdr.h"
 #include "nsMsgUtils.h"
+#include "nsICacheService.h"
+#include "nsNetCID.h"
+
 #define PREF_MAIL_ROOT_IMAP "mail.root.imap"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kImapUrlCID, NS_IMAPURL_CID);
+static NS_DEFINE_CID(kCacheServiceCID, NS_CACHESERVICE_CID);
 
 
 static const char *sequenceString = "SEQUENCE";
@@ -410,7 +414,7 @@ NS_IMETHODIMP nsImapService::FetchMimePart(nsIURI *aURI, const char *aMessageURI
 	rv = nsParseImapMessageURI(aMessageURI, folderURI, &key, getter_Copies(mimePart));
 	if (NS_SUCCEEDED(rv))
 	{
-    	nsCOMPtr<nsIImapMessageSink> imapMessageSink(do_QueryInterface(folder, &rv));
+    nsCOMPtr<nsIImapMessageSink> imapMessageSink(do_QueryInterface(folder, &rv));
 		if (NS_SUCCEEDED(rv))
     {
       nsCOMPtr<nsIImapUrl> imapUrl = do_QueryInterface(aURI);
@@ -530,35 +534,6 @@ NS_IMETHODIMP nsImapService::DisplayMessage(const char* aMessageURI,
 
       rv = FetchMessage(imapUrl, nsIImapUrl::nsImapMsgFetch, folder, imapMessageSink,
                         aMsgWindow, aURL, aDisplayConsumer, msgKey, PR_TRUE);
-      if (NS_SUCCEEDED(rv))
-      {
-        imapUrl->GetMsgLoadingFromCache(&msgLoadingFromCache);
-        // we're reading this msg from the cache - mark it read on the server.
-        if (msgLoadingFromCache)
-        {
-          nsCOMPtr <nsIMsgDatabase> database;
-          if (NS_SUCCEEDED(folder->GetMsgDatabase(nsnull, getter_AddRefs(database))) && database)
-          {
-            PRBool msgRead = PR_TRUE;
-            database->IsRead(key, &msgRead);
-            if (!msgRead)
-            {
-              nsCOMPtr<nsISupportsArray> messages;
-              rv = NS_NewISupportsArray(getter_AddRefs(messages));
-              if (NS_FAILED(rv)) 
-                return rv;
-              nsCOMPtr<nsIMsgDBHdr> message;
-              GetMsgDBHdrFromURI(aMessageURI, getter_AddRefs(message));
-              nsCOMPtr<nsISupports> msgSupport(do_QueryInterface(message, &rv));
-              if (msgSupport)
-              {
-                messages->AppendElement(msgSupport);
-                folder->MarkMessagesRead(messages, PR_TRUE);
-              }
-            }
-          }
-        }
-      }
     }
 	}
 	return rv;
@@ -3321,3 +3296,21 @@ nsImapService::DownloadAllOffineImapFolders(nsIMsgWindow *aMsgWindow, nsIUrlList
   return NS_ERROR_OUT_OF_MEMORY;
 }
 
+
+NS_IMETHODIMP nsImapService::GetCacheSession(nsICacheSession **result)
+{
+  nsresult rv = NS_OK;
+  if (!mCacheSession)
+  {
+    nsCOMPtr<nsICacheService> serv = do_GetService(kCacheServiceCID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    rv = serv->CreateSession("IMAP-memory-only", nsICache::STORE_IN_MEMORY, nsICache::STREAM_BASED, getter_AddRefs(mCacheSession));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = mCacheSession->SetDoomEntriesIfExpired(PR_FALSE);
+  }
+
+  *result = mCacheSession;
+  NS_IF_ADDREF(*result);
+  return rv;
+}

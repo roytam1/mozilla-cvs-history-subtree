@@ -25,6 +25,7 @@
 
 #include "nsPoint.h"
 #include "nsRect.h"
+#include "nsHashtable.h"
 
 // nsIDOMEvent contains a long enum which includes a member called ERROR,
 // which conflicts with something that Windows defines somewhere.
@@ -38,6 +39,8 @@ class nsIRenderingContext;
 class nsIRegion;
 class nsIWidget;
 class nsIMenuItem;
+class nsIAccessible;
+class nsIContent;
 
 /**
  * Return status for event processors.
@@ -89,6 +92,8 @@ struct nsEvent {
   PRUint32    flags;
   // flags for indicating more event state for Mozilla applications.
   PRUint32    internalAppFlags;
+  // additional type info for user defined events
+  nsHashKey*  userType;
 };
 
 /**
@@ -194,6 +199,14 @@ struct nsMouseEvent : public nsInputEvent {
 };
 
 /**
+ * Accessible event
+ */
+
+struct nsAccessibleEvent : public nsInputEvent {
+    nsIAccessible*     accessible;           
+};
+
+/**
  * Keyboard event
  */
 
@@ -278,6 +291,17 @@ struct nsMenuEvent : public nsGUIEvent {
   PRUint32      mCommand;           
 };
 
+/**
+ * Form event
+ * 
+ * We hold the originating form control for form submit and reset events.
+ * originator is a weak pointer (does not hold a strong reference).
+ */
+
+struct nsFormEvent : public nsEvent {
+  nsIContent *originator;
+};
+
 
 /**
  * Event status for D&D Event
@@ -313,6 +337,8 @@ enum nsDragDropEventStatus {
 #define NS_COMPOSITION_QUERY  17
 #define NS_SCROLLPORT_EVENT   18
 #define NS_RECONVERSION_QUERY 19
+#define NS_ACCESSIBLE_EVENT   20
+#define NS_FORM_EVENT         21
 
  /**
  * GUI MESSAGES
@@ -454,6 +480,14 @@ enum nsDragDropEventStatus {
 #define NS_SCROLLPORT_UNDERFLOW       (NS_SCROLLPORT_START)
 #define NS_SCROLLPORT_OVERFLOW        (NS_SCROLLPORT_START+1)
 #define NS_SCROLLPORT_OVERFLOWCHANGED (NS_SCROLLPORT_START+2)
+
+// Mutation events defined elsewhere starting at 1800
+
+// accessible events
+#define NS_ACCESSIBLE_START           1900
+#define NS_GETACCESSIBLE              (NS_ACCESSIBLE_START)
+
+#define NS_USER_DEFINED_EVENT         2000
 
 #define NS_IS_MOUSE_EVENT(evnt) \
        (((evnt)->message == NS_MOUSE_LEFT_BUTTON_DOWN) || \

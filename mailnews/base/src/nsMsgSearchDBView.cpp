@@ -92,22 +92,23 @@ NS_IMETHODIMP nsMsgSearchDBView::Close()
 
 NS_IMETHODIMP nsMsgSearchDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
 {
-  nsresult rv;
   if (aColID[0] == 'l') // location
   {
-    nsCOMPtr <nsIMsgDBHdr> msgHdr;
-    rv = GetMsgHdrForViewIndex(aRow, getter_AddRefs(msgHdr));
-    NS_ENSURE_SUCCESS(rv, rv);
-    return FetchLocation(msgHdr, aValue);
+    return FetchLocation(aRow, aValue);
   }
   else
     return nsMsgDBView::GetCellText(aRow, aColID, aValue);
-
 }
 
-nsresult nsMsgSearchDBView::FetchLocation(nsIMsgDBHdr * aHdr, PRUnichar ** aSizeString)
+nsresult nsMsgSearchDBView::FetchLocation(PRInt32 aRow, PRUnichar ** aLocationString)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr <nsIMsgFolder> folder;
+  nsresult rv = GetFolderForViewIndex(aRow, getter_AddRefs(folder));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = folder->GetPrettiestName(aLocationString);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
 }
 
 nsresult nsMsgSearchDBView::GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr)
@@ -139,7 +140,7 @@ nsresult nsMsgSearchDBView::GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDataba
   nsCOMPtr <nsIMsgFolder> aFolder;
   GetFolderForViewIndex(index, getter_AddRefs(aFolder));
   if (aFolder)
-    return aFolder->GetMsgDatabase(nsnull, getter_AddRefs(db));
+    return aFolder->GetMsgDatabase(nsnull, db);
   else
     return NS_MSG_INVALID_DBVIEW_INDEX;
 }
@@ -519,4 +520,25 @@ nsresult nsMsgSearchDBView::ProcessContinuousRequest(nsIMsgWindow *window, nsMsg
     return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgSearchDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
+{
+    nsresult rv;
 
+    nsMsgKeyArray preservedSelection;
+    SaveSelection(&preservedSelection);
+    PRInt32 rowCountBeforeSort = GetSize();
+
+    rv = nsMsgDBView::Sort(sortType,sortOrder);
+
+    // the sort may have changed the number of rows
+    // before we restore the selection, tell the outliner
+    // do this before we call restore selection
+    // this is safe when there is no selection. 
+    rv = AdjustRowCount(rowCountBeforeSort, GetSize());
+
+    RestoreSelection(&preservedSelection);
+    if (mOutliner) mOutliner->Invalidate();
+
+    NS_ENSURE_SUCCESS(rv,rv);
+    return rv;
+}

@@ -116,11 +116,14 @@ nsAboutCache::NewChannel(nsIURI *aURI, nsIChannel **result)
     rv = storageStream->GetOutputStream(0, getter_AddRefs(outputStream));
     if (NS_FAILED(rv)) return rv;
 
-    mBuffer.Assign("<html>\n<head>\n<title>Information about the Cache Manager</title>\n</head>\n<body>\n");
+    mBuffer.Assign("<html>\n<head>\n<title>Information about the Cache Service</title>\n</head>\n<body>\n");
+
     outputStream->Write(mBuffer, mBuffer.Length(), &bytesWritten);
 
-
 #ifdef MOZ_NEW_CACHE
+    rv = ParseURI(aURI, mDeviceID);
+    if (NS_FAILED(rv)) return rv;
+
     mStream = outputStream;
     rv = cacheService->VisitEntries(this);
     if (NS_FAILED(rv)) return rv;
@@ -153,47 +156,6 @@ nsAboutCache::NewChannel(nsIURI *aURI, nsIChannel **result)
       DumpCacheInfo(outputStream, cache);
 
       DumpCacheEntries(outputStream, cacheManager, cache);
-/*
-      do {
-        char *key;
-        PRUint32 length;
-        PRBool bMoreEntries = PR_FALSE;
-
-        rv = entryIterator->HasMoreElements(&bMoreEntries);
-        if (!bMoreEntries) break;
-
-        rv = entryIterator->GetNext(getter_AddRefs(item));
-        if (NS_FAILED(rv)) break;
-
-        cacheRecord = do_QueryInterface(item);
-
-        cacheEntryCount += 1;
-        cacheRecord->GetStoredContentLength(&length);
-        cacheSize += length;
-
-        buffer.Truncate(0);
-        buffer.AppendInt(cacheEntryCount);
-        buffer.Append(".\t");
-        buffer.AppendInt(length);
-        buffer.Append(" bytes\t");
-        outputStream->Write(buffer, buffer.Length(), &bytesWritten);
-
-        rv = cacheRecord->GetKey(&length, &key);
-        if (NS_FAILED(rv)) break;
-
-        outputStream->Write(key, strlen(key), &bytesWritten);
-        outputStream->Write("\n", 1, &bytesWritten);
-
-        nsMemory::Free(key);
-
-      } while(1);
-
-      buffer.Truncate(0);
-      buffer.Append("\nTotal Bytes in Cache: ");
-      buffer.AppendInt(cacheSize);
-      buffer.Append("\n\n");
-      outputStream->Write(buffer, buffer.Length(), &bytesWritten);
-*/
     } while(1);
 #endif
 
@@ -227,47 +189,60 @@ nsAboutCache::VisitDevice(const char *deviceID,
     PRUint32 bytesWritten, value;
     nsXPIDLCString str;
 
-    // Write out the Cache Name
-    deviceInfo->GetDescription(getter_Copies(str));
+    *visitEntries = PR_FALSE;
 
-    mBuffer.Assign("<h2>");
-    mBuffer.Append(str);
-    mBuffer.Append("</h2><br>\n");
+    if (mDeviceID.IsEmpty() || mDeviceID.Equals(deviceID)) {
 
-    // Write out cache info
-    
-    mBuffer.Append("<table>\n<tr><td><b>Usage report:</b></td>\n");
-    deviceInfo->GetUsageReport(getter_Copies(str));
-    mBuffer.Append("<td>");
-    mBuffer.Append(str);
-    mBuffer.Append("</td>\n</tr>\n");
+        // Write out the Cache Name
+        deviceInfo->GetDescription(getter_Copies(str));
 
-    mBuffer.Append("\n<tr><td><b>Number of entries:</b></td>\n");
-    value = 0;
-    deviceInfo->GetEntryCount(&value);
-    mBuffer.Append("<td>");
-    mBuffer.AppendInt(value);
-    mBuffer.Append("</td>\n</tr>\n");
+        mBuffer.Assign("<h2>");
+        mBuffer.Append(str);
+        mBuffer.Append("</h2><br>\n");
 
-    mBuffer.Append("\n<tr><td><b>Maximum storage size:</b></td>\n");
-    value = 0;
-    deviceInfo->GetMaximumSize(&value);
-    mBuffer.Append("<td>");
-    mBuffer.AppendInt(value);
-    mBuffer.Append("</td>\n</tr>\n");
+        // Write out cache info
 
-    mBuffer.Append("\n<tr><td><b>Storage in use:</b></td>\n");
-    mBuffer.Append("<td>");
-    value = 0;
-    deviceInfo->GetTotalSize(&value);
-    mBuffer.AppendInt(value);
-    mBuffer.Append(" Bytes</td>\n</tr>\n");
+        mBuffer.Append("<table>\n<tr><td><b>Usage report:</b></td>\n");
+        deviceInfo->GetUsageReport(getter_Copies(str));
+        mBuffer.Append("<td>");
+        mBuffer.Append(str);
+        mBuffer.Append("</td>\n</tr>\n");
 
-    mBuffer.Append("</table>\n<hr>\n");
+        mBuffer.Append("\n<tr><td><b>Number of entries:</b></td>\n");
+        value = 0;
+        deviceInfo->GetEntryCount(&value);
+        mBuffer.Append("<td><tt>");
+        mBuffer.AppendInt(value);
+        mBuffer.Append("</tt></td>\n</tr>\n");
 
-    mStream->Write(mBuffer, mBuffer.Length(), &bytesWritten);
+        mBuffer.Append("\n<tr><td><b>Maximum storage size:</b></td>\n");
+        value = 0;
+        deviceInfo->GetMaximumSize(&value);
+        mBuffer.Append("<td><tt>");
+        mBuffer.AppendInt(value);
+        mBuffer.Append("</tt></td>\n</tr>\n");
 
-    *visitEntries = PR_TRUE;
+        mBuffer.Append("\n<tr><td><b>Storage in use:</b></td>\n");
+        mBuffer.Append("<td><tt>");
+        value = 0;
+        deviceInfo->GetTotalSize(&value);
+        mBuffer.AppendInt(value);
+        mBuffer.Append(" Bytes</tt></td>\n</tr>\n");
+
+        mBuffer.Append("</table>\n");
+
+        if (mDeviceID.IsEmpty()) {
+            mBuffer.Append("\n<a href=\"about:cache?device=");
+            mBuffer.Append(deviceID);
+            mBuffer.Append("\">List Cache Entries</a>\n");
+        } else {
+            *visitEntries = PR_TRUE;
+        }
+        
+        mBuffer.Append("<hr>\n");
+        mStream->Write(mBuffer, mBuffer.Length(), &bytesWritten);
+    }
+
     return NS_OK;
 }
 
@@ -280,44 +255,43 @@ nsAboutCache::VisitEntry(const char *deviceID,
     PRUint32        bytesWritten;
     nsXPIDLCString  key;
     nsXPIDLCString  clientID;
+    PRBool          streamBased;
     
-
     rv = entryInfo->GetKey(getter_Copies(key));
     if (NS_FAILED(rv))  return rv;
 
     rv = entryInfo->GetClientID(getter_Copies(clientID));
     if (NS_FAILED(rv))  return rv;
 
+    rv = entryInfo->IsStreamBased(&streamBased);
+    if (NS_FAILED(rv)) return rv;
+
     // Generate a about:cache-entry URL for this entry...
     nsCAutoString url;
     url += NS_LITERAL_CSTRING("about:cache-entry?client=");
     url += clientID;
+    url += NS_LITERAL_CSTRING("&sb=");
+    url += streamBased ? "1" : "0";
     url += NS_LITERAL_CSTRING("&key=");
     url += key; // key
 
     // Entry start...
-    mBuffer.Assign("<p>\n");
+    mBuffer.Assign("<p><tt>\n");
 
     // URI
-    mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                     "&nbsp;&nbsp;&nbsp;&nbsp;Key: </tt>");
+    mBuffer.Append("<b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+                     "&nbsp;&nbsp;&nbsp;&nbsp;Key: </b>");
     mBuffer.Append("<a href=\"");
     mBuffer.Append(url);
     mBuffer.Append("\">");
     mBuffer.Append(key);
     mBuffer.Append("</a><br>\n");
 
-    // Client
-    mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                     "&nbsp;Client: </tt>");
-    mBuffer.Append(clientID);
-    mBuffer.Append("<br>\n");
-
     // Content length
     PRUint32 length = 0;
     entryInfo->GetDataSize(&length);
 
-    mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Data size: </tt>");
+    mBuffer.Append("<b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Data size: </b>");
     mBuffer.AppendInt(length);
     mBuffer.Append(" Bytes<br>\n");
 
@@ -325,24 +299,16 @@ nsAboutCache::VisitEntry(const char *deviceID,
     PRInt32 fetchCount = 0;
     entryInfo->GetFetchCount(&fetchCount);
 
-    mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;Fetch count: </tt>");
+    mBuffer.Append("<b>&nbsp;&nbsp;&nbsp;Fetch count: </b>");
     mBuffer.AppendInt(fetchCount);
     mBuffer.Append("<br>\n");
 
-    // Last modified time
+    // vars for reporting time
     char buf[255];
     PRUint32 t;
 
-    mBuffer.Append("<tt>&nbsp;&nbsp;Last Fetched: </tt>");
-    entryInfo->GetLastFetched(&t);
-    if (t) {
-        PrintTimeString(buf, sizeof(buf), t);
-        mBuffer.Append(buf);
-    } else
-        mBuffer.Append("No last fetched time");
-    mBuffer.Append("<br>");
-
-    mBuffer.Append("<tt>&nbsp;Last Modified: </tt>");
+    // Last modified time
+    mBuffer.Append("<b>&nbsp;Last Modified: </b>");
     entryInfo->GetLastModified(&t);
     if (t) {
         PrintTimeString(buf, sizeof(buf), t);
@@ -351,20 +317,9 @@ nsAboutCache::VisitEntry(const char *deviceID,
         mBuffer.Append("No last modified time");
     mBuffer.Append("<br>");
 
-    /*
-    mBuffer.Append("<tt>Last Validated: </tt>");
-    entryInfo->GetLastFetched(&t);
-    if (t) {
-        PrintTimeString(buf, sizeof(buf), t);
-        mBuffer.Append(buf);
-    } else
-        mBuffer.Append("No last validated time");
-    mBuffer.Append("<br>");
-    */
-
     // Expires time
-    mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                 "Expires: </tt>");
+    mBuffer.Append("<b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+                 "Expires: </b>");
     entryInfo->GetExpirationTime(&t);
     if (t) {
         PrintTimeString(buf, sizeof(buf), t);
@@ -374,51 +329,41 @@ nsAboutCache::VisitEntry(const char *deviceID,
     }
     mBuffer.Append("<br>");
 
-    // Stream based
-    mBuffer.Append("<tt>&nbsp;&nbsp;Stream based: </tt>");
-    PRBool b = PR_TRUE;
-    entryInfo->IsStreamBased(&b);
-    mBuffer.Append(b ? "TRUE" : "FALSE");
-    mBuffer.Append("<br>\n");
-
-    /*
-    // Flags
-    PRBool flag = PR_FALSE, foundFlag = PR_FALSE;
-    mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                 "Flags: </tt><b>");
-
-    flag = PR_FALSE;
-    entry->GetPartialFlag(&flag);
-    if (flag) {
-        mBuffer.Append("PARTIAL ");
-        foundFlag = PR_TRUE;
-    }
-    flag = PR_FALSE;
-    entry->GetUpdateInProgress(&flag);
-    if (flag) {
-        mBuffer.Append("UPDATE_IN_PROGRESS ");
-        foundFlag = PR_TRUE;
-    }
-    flag = PR_FALSE;
-    entry->GetInUse(&flag);
-    if (flag) {
-        mBuffer.Append("IN_USE");
-        foundFlag = PR_TRUE;
-    }
-
-    if (!foundFlag) {
-        mBuffer.Append("</b>none<br>\n");
-    } else {
-        mBuffer.Append("</b><br>\n");
-    }
-    */
-
     // Entry is done...
-    mBuffer.Append("</p>\n");
+    mBuffer.Append("</p></tt>\n");
 
     mStream->Write(mBuffer, mBuffer.Length(), &bytesWritten);
 
     *visitNext = PR_TRUE;
+    return NS_OK;
+}
+
+
+nsresult
+nsAboutCache::ParseURI(nsIURI * uri, nsCString &deviceID)
+{
+    //
+    // about:cache[?device=string]
+    //
+    nsresult rv;
+
+    deviceID.Truncate();
+
+    nsXPIDLCString path;
+    rv = uri->GetPath(getter_Copies(path));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCAutoString p(path);
+
+    nsReadingIterator<char> start, valueStart, end;
+    p.BeginReading(start);
+    p.EndReading(end);
+
+    valueStart = end;
+    if (!FindInReadable(NS_LITERAL_CSTRING("?device="), start, valueStart))
+        return NS_OK;
+
+    deviceID.Assign(Substring(valueStart, end));
     return NS_OK;
 }
 
@@ -639,5 +584,7 @@ nsAboutCache::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
     NS_RELEASE(about);
     return rv;
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -32,13 +32,13 @@
 #include "nsIMsgMailSession.h"
 #include "nsIMsgFolderCache.h"
 #include "nsIPref.h"
-#include "nsIDOMWindowInternal.h"
+#include "nsIDOMWindow.h"
 #include "nsIAppShellService.h"
-#include "nsAppShellCIDs.h"
-#include "nsIURI.h"
 #include "nsISupportsPrimitives.h"
+#include "nsIWindowWatcher.h"
+#include "nsString.h"
+#include "nsIURI.h"
 
-static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
 static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -99,31 +99,20 @@ NS_IMETHODIMP nsMessengerBootstrap::GetChromeUrlForTask(char **aChromeUrlForTask
 }
 
 // Utility function to open a messenger window and pass an argument string to it.
-static nsresult openWindow( const PRUnichar *chrome, const PRUnichar *args )
-{
-  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+static nsresult openWindow( const PRUnichar *chrome, const PRUnichar *args ) {
+
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  nsCOMPtr<nsISupportsWString> sarg(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
+  if (!wwatch || !sarg)
+    return NS_ERROR_FAILURE;
+
+  sarg->SetData(args);
+
+  nsCOMPtr<nsIDOMWindow> newWindow;
   nsresult rv;
-  nsCOMPtr<nsIAppShellService> appShell(do_CreateInstance(kAppShellServiceCID,
-                                                          &rv));
-
-  if ( NS_SUCCEEDED( rv ) ) {
-    rv = appShell->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
-
-    if ( NS_SUCCEEDED( rv ) && hiddenWindow ) {
-      nsCOMPtr<nsIDOMWindow> newWindow;
-
-      nsCOMPtr<nsISupportsWString> str =
-        do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      str->SetData(args);
-
-      rv = hiddenWindow->OpenDialog(nsLiteralString(chrome),
-                                    NS_LITERAL_STRING("_blank"),
-                                    NS_LITERAL_STRING("chrome,dialog=no,all"),
-                                    str, getter_AddRefs(newWindow));
-    }
-  }
+  rv = wwatch->OpenWindow(0, NS_ConvertUCS2toUTF8(chrome).get(), "_blank",
+                 "chrome,dialog=no,all", sarg,
+                 getter_AddRefs(newWindow));
 
   return rv;
 }

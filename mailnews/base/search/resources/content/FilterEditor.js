@@ -64,18 +64,21 @@ function filterEditorOnLoad()
     moveToAlertPosition();
 }
 
+function onEnterInSearchTerm()
+{
+  // do nothing.  okOk() will get called since this is a dialog
+}
+
 function onOk()
 {
     if (isDuplicateFilterNameExists())
     {
-        var commonDialogsService
-            = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
-        commonDialogsService
-            = commonDialogsService.QueryInterface(Components.interfaces.nsICommonDialogs);
+        var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+        promptService = promptService.QueryInterface(Components.interfaces.nsIPromptService);
 
-        if (commonDialogsService)
+        if (promptService)
         {
-            commonDialogsService.Alert(window,
+            promptService.alert(window,
                 gFilterBundle.getString("cannotHaveDuplicateFilterTitle"),
                 gFilterBundle.getString("cannotHaveDuplicateFilterMessage")
             );

@@ -38,6 +38,7 @@
 #include "nsSpecialSystemDirectory.h"
 #include "nsIDocumentEncoder.h"    // for editor output flags
 #include "nsIURI.h"
+#include "nsNetCID.h"
 #include "nsMsgPrompts.h"
 
 /* for StrAllocCat */
@@ -1284,7 +1285,7 @@ mime_fix_header_1 (const char *string, PRBool addr_p, PRBool news_p)
 	old_size = PL_strlen (string);
 	new_size = old_size;
 	for (i = 0; i < old_size; i++)
-		if (string[i] == CR || string[i] == LF)
+		if (string[i] == nsCRT::CR || string[i] == nsCRT::LF)
 			new_size += 2;
 
 	new_string = (char *) PR_Malloc (new_size + 1);
@@ -1300,12 +1301,12 @@ mime_fix_header_1 (const char *string, PRBool addr_p, PRBool news_p)
 
 	/* replace CR, LF, or CRLF with CRLF-TAB. */
 	while (*in) {
-		if (*in == CR || *in == LF) {
-			if (*in == CR && in[1] == LF)
+		if (*in == nsCRT::CR || *in == nsCRT::LF) {
+			if (*in == nsCRT::CR && in[1] == nsCRT::LF)
 				in++;
 			in++;
-			*out++ = CR;
-			*out++ = LF;
+			*out++ = nsCRT::CR;
+			*out++ = nsCRT::LF;
 			*out++ = '\t';
 		}
 		else
@@ -1476,13 +1477,13 @@ msg_make_filename_qtext(const char *srcText, PRBool stripCRLFs)
 			*/
 		if (*s == '\\' || *s == '"' || 
 			(!stripCRLFs && 
-			 (*s == CR && (*(s+1) != LF || 
-						   (*(s+1) == LF && (s+2) < end && !IS_SPACE(*(s+2)))))))
+			 (*s == nsCRT::CR && (*(s+1) != nsCRT::LF || 
+						   (*(s+1) == nsCRT::LF && (s+2) < end && !IS_SPACE(*(s+2)))))))
 			*d++ = '\\';
 
-		if (*s == CR)
+		if (*s == nsCRT::CR)
 		{
-			if (stripCRLFs && *(s+1) == LF && (s+2) < end && IS_SPACE(*(s+2)))
+			if (stripCRLFs && *(s+1) == nsCRT::LF && (s+2) < end && IS_SPACE(*(s+2)))
 				s += 2;			// skip CRLFLWSP
 		}
 		else
@@ -2023,54 +2024,6 @@ ConvertBufToPlainText(nsString &aConBuf, PRBool formatflowed /* = PR_FALSE */)
   return rv;
 }
 
-// Need to take this input data and do the following conversions
-// in place:
-//
-//  First pass:  Turn CRLF into LF 
-//  Second pass: Turn CR   into LF
-//
-void
-DoLineEndingConJob(char *aBuf, PRUint32 aLen)
-{
-  PRUint32    i;
-
-  if (aLen <= 0)
-    return;
-
-  //  First pass:  Turn CRLF into LF 
-  PRUint32    len = aLen;
-  for (i=0; i < (len-1); i++)
-  {
-    if ( (aBuf[i] == CR) && (aBuf[i+1] == LF) )
-    {
-      nsCRT::memmove((void *)&(aBuf[i]), (void *)&(aBuf[i+1]), (len-i-1));
-      len -= 1;
-      aBuf[len] = '\0';
-    }
-  }
-
-  //  Second pass: Turn CR into LF
-  len = PL_strlen(aBuf);
-  for (i=0; i<len; i++)
-    if (aBuf[i] == CR) 
-      aBuf[i] = LF;
-}
-
-// Need to take this input data and do the following conversions
-// in place:
-//
-//  First pass:  Turn CRLF into LF 
-//  Second pass: Turn CR   into LF
-//
-void
-DoLineEndingConJobUnicode(nsString& aInString)
-{ 
-  //  First pass:  Turn CRLF into LF 
-  aInString.ReplaceSubstring(NS_ConvertASCIItoUCS2(CRLF), NS_ConvertASCIItoUCS2(LF));
-  //  Second pass: Turn CR into LF
-  aInString.ReplaceChar(CR, LF);
-}
-
 // Simple parser to parse Subject. 
 // It only supports the case when the description is within one line. 
 char * 
@@ -2100,7 +2053,7 @@ nsMsgParseSubjectFromFile(nsFileSpec* fileSpec)
     if (wasTruncated)
       continue;
 
-    if (*buffer == CR || *buffer == LF || *buffer == 0) 
+    if (*buffer == nsCRT::CR || *buffer == nsCRT::LF || *buffer == 0) 
       break; 
 
     if ( !PL_strncasecmp(buffer, "Subject: ", 9) )

@@ -25,9 +25,6 @@ include <$(DEPTH)/config/config.mak>
 
 DIRS= 	\
 	public                  \
-	mgr			\
-	memcache		\
-	filecache		\
 !ifdef MOZ_NEW_CACHE
 	src                     \
 !endif

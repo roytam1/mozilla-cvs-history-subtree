@@ -30,6 +30,7 @@
 #include "nsICacheEntryDescriptor.h"
 #include "nsIStorageStream.h"
 #include "nsNetUtil.h"
+#include "prtime.h"
 
 //-----------------------------------------------------------------------------
 // nsISupports implementation
@@ -50,11 +51,11 @@ nsAboutCacheEntry::NewChannel(nsIURI *aURI, nsIChannel **result)
 {
     nsresult rv;
 
-    mStreamChannel = do_CreateInstance(NS_STREAMIOCHANNEL_CONTRACTID, &rv);
+    nsCOMPtr<nsIStreamIOChannel> chan;
+    rv = NS_NewStreamIOChannel(getter_AddRefs(chan), aURI, nsnull);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mStreamChannel->SetURI(aURI);
-    if (NS_FAILED(rv)) return rv;
+    mStreamChannel = do_QueryInterface(chan);
 
     return CallQueryInterface((nsIAboutModule *) this, result);
 }
@@ -194,13 +195,6 @@ nsAboutCacheEntry::GetURI(nsIURI **value)
 }
 
 NS_IMETHODIMP
-nsAboutCacheEntry::SetURI(nsIURI *value)
-{
-    NS_ENSURE_TRUE(mStreamChannel, NS_ERROR_NOT_INITIALIZED);
-    return mStreamChannel->SetURI(value);
-}
-
-NS_IMETHODIMP
 nsAboutCacheEntry::GetOwner(nsISupports **value)
 {
     NS_ENSURE_TRUE(mStreamChannel, NS_ERROR_NOT_INITIALIZED);
@@ -229,17 +223,17 @@ nsAboutCacheEntry::SetLoadGroup(nsILoadGroup *value)
 }
 
 NS_IMETHODIMP
-nsAboutCacheEntry::GetLoadAttributes(PRUint32 *value)
+nsAboutCacheEntry::GetLoadFlags(PRUint32 *value)
 {
     NS_ENSURE_TRUE(mStreamChannel, NS_ERROR_NOT_INITIALIZED);
-    return mStreamChannel->GetLoadAttributes(value);
+    return mStreamChannel->GetLoadFlags(value);
 }
 
 NS_IMETHODIMP
-nsAboutCacheEntry::SetLoadAttributes(PRUint32 value)
+nsAboutCacheEntry::SetLoadFlags(PRUint32 value)
 {
     NS_ENSURE_TRUE(mStreamChannel, NS_ERROR_NOT_INITIALIZED);
-    return mStreamChannel->SetLoadAttributes(value);
+    return mStreamChannel->SetLoadFlags(value);
 }
 
 NS_IMETHODIMP
@@ -302,9 +296,10 @@ NS_IMETHODIMP
 nsAboutCacheEntry::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 {
     nsresult rv;
-    nsCString clientID, key;
+    nsCAutoString clientID, key;
+    PRBool streamBased = PR_TRUE;
 
-    rv = ParseURI(clientID, key);
+    rv = ParseURI(clientID, streamBased, key);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsICacheService> serv =
@@ -313,7 +308,7 @@ nsAboutCacheEntry::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 
     rv = serv->CreateSession(clientID,
                              nsICache::STORE_ANYWHERE,
-                             nsICache::STREAM_BASED,
+                             streamBased,
                              getter_AddRefs(mCacheSession));
     if (NS_FAILED(rv)) return rv;
 
@@ -327,6 +322,22 @@ nsAboutCacheEntry::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 //-----------------------------------------------------------------------------
 // helper methods
 //-----------------------------------------------------------------------------
+
+static PRTime SecondsToPRTime(PRUint32 t_sec)
+{
+    PRTime t_usec, usec_per_sec;
+    LL_I2L(t_usec, t_sec);
+    LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
+    LL_MUL(t_usec, t_usec, usec_per_sec);
+    return t_usec;
+}
+static void PrintTimeString(char *buf, PRUint32 bufsize, PRUint32 t_sec)
+{
+    PRExplodedTime et;
+    PRTime t_usec = SecondsToPRTime(t_sec);
+    PR_ExplodeTime(t_usec, PR_LocalTimeParameters, &et);
+    PR_FormatTime(buf, bufsize, "%c", &et);
+}
 
 #define TD_RIGHT_ALIGN "<td valign=top align=right>"
 
@@ -371,23 +382,85 @@ nsAboutCacheEntry::WriteCacheEntryDescription(nsIOutputStream *outputStream,
         buffer.Append(str);
     buffer.Append("</td></tr>");
 
-    // Since meta data enumeration is not hooked up yet, let's just look for some
-    // well known (HTTP) meta data tags.
 
-    str = 0;
-    descriptor->GetMetaDataElement("request-time", getter_Copies(str));
-    if (str)
-        APPEND_ROW("request-time", str);
+    // temp vars for reporting
+    char timeBuf[255];
+    PRUint32 u = 0;
+    PRInt32  i = 0;
+    nsCAutoString s;
 
-    str = 0;
-    descriptor->GetMetaDataElement("response-time", getter_Copies(str));
-    if (str)
-        APPEND_ROW("response-time", str);
+    // Fetch Count
+    s.Truncate();
+    descriptor->GetFetchCount(&i);
+    s.AppendInt(i);
+    APPEND_ROW("fetch count", s);
 
+    // Last Fetched
+    descriptor->GetLastFetched(&u);
+    if (u) {
+        PrintTimeString(timeBuf, sizeof(timeBuf), u);
+        APPEND_ROW("last fetched", timeBuf);
+    } else {
+        APPEND_ROW("last fetched", "No last fetch time");
+    }
+
+    // Last Modified
+    descriptor->GetLastModified(&u);
+    if (u) {
+        PrintTimeString(timeBuf, sizeof(timeBuf), u);
+        APPEND_ROW("last modified", timeBuf);
+    } else {
+        APPEND_ROW("last modified", "No last modified time");
+    }
+
+    // Expiration Time
+    descriptor->GetExpirationTime(&u);
+    if (u) {
+        PrintTimeString(timeBuf, sizeof(timeBuf), u);
+        APPEND_ROW("expires", timeBuf);
+    } else {
+        APPEND_ROW("expires", "No expiration time");
+    }
+
+    // Data Size
+    s.Truncate();
+    descriptor->GetDataSize(&u);
+    s.AppendInt((PRInt32)u);     // XXX nsICacheEntryInfo interfaces should be fixed.
+    APPEND_ROW("Data size", s);
+
+    // Storage Policy
+
+    // XXX Stream Based?
+
+    // XXX Cache Device
+    // File on disk
+
+    // Security Info
     str = 0;
-    descriptor->GetMetaDataElement("http-headers", getter_Copies(str));
-    if (str)
-        APPEND_ROW("http-headers", str);
+    nsCOMPtr<nsISupports> securityInfo;
+    descriptor->GetSecurityInfo(getter_AddRefs(securityInfo));
+    if (securityInfo) {
+        APPEND_ROW("Security", "This is a secure document.");
+    } else {
+        APPEND_ROW("Security",
+                   "This document does not have any security info associated with it.");
+    }
+
+    buffer.Append("</table>");
+    // Meta Data
+    // let's just look for some well known (HTTP) meta data tags, for now.
+    buffer.Append("<hr><table>");
+
+    // Client ID
+    str = 0;
+    descriptor->GetClientID(getter_Copies(str));
+    if (str)  APPEND_ROW("Client", str);
+
+
+    mBuffer = &buffer;  // make it available for VisitMetaDataElement()
+    descriptor->VisitMetaData(this);
+    mBuffer = nsnull;
+    
 
     buffer.Append("</table>");
 
@@ -407,12 +480,10 @@ nsAboutCacheEntry::WriteCacheEntryUnavailable(nsIOutputStream *outputStream,
 }
 
 nsresult
-nsAboutCacheEntry::ParseURI(nsCString &clientID, nsCString &key)
+nsAboutCacheEntry::ParseURI(nsCString &clientID, PRBool &streamBased, nsCString &key)
 {
     //
-    // about:cache-entry?client=something&key=something-different
-    //                          ^        ^    ^
-    //                          a        b    c
+    // about:cache-entry?client=[string]&sb=[boolean]&key=[string]
     //
     nsresult rv;
 
@@ -426,28 +497,56 @@ nsAboutCacheEntry::ParseURI(nsCString &clientID, nsCString &key)
 
     nsCAutoString p(path);
 
-    nsReadingIterator<char> begin, end, a, b, c;
-    p.BeginReading(begin);
+    nsReadingIterator<char> i1, i2, i3, end;
+    p.BeginReading(i1);
     p.EndReading(end);
 
-    if (!FindCharInReadable('?', begin, end))
+    i2 = end;
+    if (!FindInReadable(NS_LITERAL_CSTRING("?client="), i1, i2))
         return NS_ERROR_FAILURE;
+    // i2 points to the start of clientID
 
-    b = begin;
-    a = end;
-    if (!FindInReadable(NS_LITERAL_CSTRING("client="), b, a))
+    i1 = i2;
+    i3 = end;
+    if (!FindInReadable(NS_LITERAL_CSTRING("&sb="), i1, i3))
         return NS_ERROR_FAILURE;
-    // now a points to the clientID
+    // i1 points to the end of clientID
+    // i3 points to the start of isStreamBased
 
-    b = a;
-    c = end;
-    if (!FindInReadable(NS_LITERAL_CSTRING("&key="), b, c))
+    clientID.Assign(Substring(i2, i1));
+
+    i1 = i3;
+    i2 = end;
+    if (!FindInReadable(NS_LITERAL_CSTRING("&key="), i1, i2))
         return NS_ERROR_FAILURE;
-    // now c points to the key, and b points to the end of clientID
+    // i1 points to the end of isStreamBased
+    // i2 points to the start of key
 
-    clientID.Assign(Substring(a, b));
-    key.Assign(Substring(c, end));
+    streamBased = FindCharInReadable('1', i3, i1);
+    key.Assign(Substring(i2, end));
+
+    return NS_OK;
+}
+
+
+//-----------------------------------------------------------------------------
+// nsICacheMetaDataVisitor implementation
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsAboutCacheEntry::VisitMetaDataElement(const char * key,
+                                        const char * value,
+                                        PRBool *     keepGoing)
+{
+    mBuffer->Append("<tr><td valign=top align=right><tt><b>");
+    mBuffer->Append(key);
+    mBuffer->Append(":</b></tt></td>\n<td><pre>");
+    mBuffer->Append(value);
+    mBuffer->Append("</pre></td></tr>\n");
+
+    *keepGoing = PR_TRUE;
     return NS_OK;
 }
 
 #endif // MOZ_NEW_CACHE
+

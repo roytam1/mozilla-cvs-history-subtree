@@ -23,6 +23,7 @@
 #include "nsLookAndFeel.h"
 #include "nsXPLookAndFeel.h"
 #include "nsCarbonHelpers.h"
+#include "nsIInternetConfigService.h"
 
  
 //-------------------------------------------------------------------------
@@ -58,7 +59,18 @@ NS_IMETHODIMP nsLookAndFeel::GetColor(const nsColorID aID, nscolor &aColor)
 
     switch (aID) {
     case eColor_WindowBackground:
-        aColor = NS_RGB(0xdd,0xdd,0xdd);
+        {
+          nsCOMPtr<nsIInternetConfigService> icService_wb (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
+          if (icService_wb)
+          {
+            res = icService_wb->GetColor(nsIInternetConfigService::eICColor_WebBackgroundColour, &aColor);
+            if (NS_SUCCEEDED(res))
+              return res;
+          }
+
+          aColor = NS_RGB(0xff,0xff,0xff); // default to white if we didn't find it in internet config
+          res = NS_OK;
+        }
         break;
     case eColor_WindowForeground:
         aColor = NS_RGB(0x00,0x00,0x00);        
@@ -85,7 +97,17 @@ NS_IMETHODIMP nsLookAndFeel::GetColor(const nsColorID aID, nscolor &aColor)
         aColor = NS_RGB(0xff,0xff,0xff);
         break;
     case eColor_TextForeground: 
-        aColor = NS_RGB(0x00,0x00,0x00);
+        {
+          nsCOMPtr<nsIInternetConfigService> icService_tf (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
+          if (icService_tf)
+          {
+            res = icService_tf->GetColor(nsIInternetConfigService::eICColor_WebTextColor, &aColor);
+            if (NS_SUCCEEDED(res))
+              return res;
+          }
+          aColor = NS_RGB(0x00,0x00,0x00);
+          res = NS_OK;
+        }
         break;
     case eColor_highlight: // CSS2 color
     case eColor_TextSelectBackground:
@@ -231,6 +253,24 @@ NS_IMETHODIMP nsLookAndFeel::GetColor(const nsColorID aID, nscolor &aColor)
 		break;
     case eColor__moz_field:
 		aColor = NS_RGB(0xff,0xff,0xff);
+        break;
+    case eColor__moz_fieldtext:
+        // XXX There may be a better color for this, but I'm making it
+        // the same as WindowText since that's what's currently used where
+        // I will use -moz-FieldText.
+        res = GetMacTextColor(kThemeTextColorDialogActive, aColor, NS_RGB(0x00,0x00,0x00));
+        break;
+    case eColor__moz_dialog:
+        // XXX There may be a better color for this, but I'm making it
+        // the same as ThreeDFace since that's what's currently used where
+        // I will use -moz-Dialog:
+        res = GetMacBrushColor(kThemeBrushButtonFaceActive, aColor, NS_RGB(0xDD,0xDD,0xDD));
+        break;
+    case eColor__moz_dialogtext:
+        // XXX There may be a better color for this, but I'm making it
+        // the same as WindowText since that's what's currently used where
+        // I will use -moz-DialogText.
+        res = GetMacTextColor(kThemeTextColorDialogActive, aColor, NS_RGB(0x00,0x00,0x00));
         break;
     case eColor__moz_dragtargetzone:
 		//default to lavender if not available
@@ -436,7 +476,7 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
     case eMetric_MultiLineCaretWidth:
         aMetric = 1;
         break;
-    case eMetric_ShowCaretWhenSelection:
+    case eMetric_ShowCaretDuringSelection:
         aMetric = 0;
         break;
     case eMetric_SubmenuDelay:

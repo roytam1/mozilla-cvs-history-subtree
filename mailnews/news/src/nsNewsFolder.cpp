@@ -60,15 +60,16 @@
 #include "nsIDocShell.h"
 #include "nsIWebShell.h"
 #include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
 
 #include "nsXPIDLString.h"
 
 #include "nsIWalletService.h"
 #include "nsIURL.h"
+#include "nsNetCID.h"
 #include "nsINntpUrl.h"
 #include "nsNewsSummarySpec.h"
 
-#include "nsINetSupportDialogService.h"
 #include "nsIInterfaceRequestor.h"
 
 #include "nsReadableUtils.h"
@@ -85,7 +86,6 @@ static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kWalletServiceCID, NS_WALLETSERVICE_CID);
 static NS_DEFINE_CID(kStandardUrlCID, NS_STANDARDURL_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 
 // ###tw  This really ought to be the most
 // efficient file reading size for the current
@@ -1114,7 +1114,7 @@ nsMsgNewsFolder::HandleNewsrcLine(char* line, PRUint32 line_size)
     nsresult rv;
 
 	/* guard against blank line lossage */
-	if (line[0] == '#' || line[0] == CR || line[0] == LF) return 0;
+	if (line[0] == '#' || line[0] == nsCRT::CR || line[0] == nsCRT::LF) return 0;
 
 	line[line_size] = 0;
 
@@ -1444,7 +1444,7 @@ nsMsgNewsFolder::GetGroupPasswordWithUI(const PRUnichar * aPromptMessage, const
   if (!mGroupPassword) {
     // prompt the user for the password
         
-		nsCOMPtr<nsIPrompt> dialog;
+		nsCOMPtr<nsIAuthPrompt> dialog;
 #ifdef DEBUG_seth
     NS_ASSERTION(aMsgWindow,"no msg window");
 #endif
@@ -1461,8 +1461,11 @@ nsMsgNewsFolder::GetGroupPasswordWithUI(const PRUnichar * aPromptMessage, const
 			if (NS_FAILED(rv)) return rv;
     }
 		else {
-			dialog = do_GetService(kNetSupportDialogCID, &rv);
-			if (NS_FAILED(rv)) return rv;
+                  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+                  if (wwatch)
+                    wwatch->GetNewAuthPrompter(0, getter_AddRefs(dialog));
+
+                  if (!dialog) return NS_ERROR_FAILURE;
 		}
  
 		NS_ASSERTION(dialog,"we didn't get a net prompt");
@@ -1477,7 +1480,7 @@ nsMsgNewsFolder::GetGroupPasswordWithUI(const PRUnichar * aPromptMessage, const
 
       nsAutoString realm;
       CopyASCIItoUCS2(nsLiteralCString(NS_STATIC_CAST(const char*, signonURL)), realm);
-      rv = dialog->PromptPassword(aPromptTitle, aPromptMessage, realm.GetUnicode(), nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
+      rv = dialog->PromptPassword(aPromptTitle, aPromptMessage, realm.GetUnicode(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
                                   getter_Copies(uniGroupPassword), &okayValue);
       if (NS_FAILED(rv)) return rv;
 
@@ -1512,7 +1515,7 @@ nsMsgNewsFolder::GetGroupUsernameWithUI(const PRUnichar * aPromptMessage, const
     if (!mGroupUsername) {
         // prompt the user for the username
         
-		nsCOMPtr<nsIPrompt> dialog;
+		nsCOMPtr<nsIAuthPrompt> dialog;
 #ifdef DEBUG_seth
 		NS_ASSERTION(aMsgWindow,"no msg window");
 #endif
@@ -1527,8 +1530,11 @@ nsMsgNewsFolder::GetGroupUsernameWithUI(const PRUnichar * aPromptMessage, const
 			if (NS_FAILED(rv)) return rv;
     }
 		else {
-			dialog = do_GetService(kNetSupportDialogCID, &rv);
-			if (NS_FAILED(rv)) return rv;
+                  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+                  if (wwatch)
+                    wwatch->GetNewAuthPrompter(0, getter_AddRefs(dialog));
+
+                  if (!dialog) return NS_ERROR_FAILURE;
 		}
  
 		NS_ASSERTION(dialog,"we didn't get a net prompt");
@@ -1544,7 +1550,7 @@ nsMsgNewsFolder::GetGroupUsernameWithUI(const PRUnichar * aPromptMessage, const
             nsAutoString realm;
             CopyASCIItoUCS2(nsLiteralCString(NS_STATIC_CAST(const char*, signonURL)), realm);
             rv = dialog->Prompt(aPromptTitle, aPromptMessage, realm.GetUnicode(), 
-                                nsIPrompt::SAVE_PASSWORD_PERMANENTLY, nsnull,
+                                nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY, nsnull,
                                 getter_Copies(uniGroupUsername), &okayValue);
             if (NS_FAILED(rv)) return rv;
 

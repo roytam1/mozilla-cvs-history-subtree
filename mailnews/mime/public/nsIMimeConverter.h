@@ -69,17 +69,19 @@ public:
 
   // Decode routine (also converts output to unicode)
   // On success, decodedString is never null
-  NS_IMETHOD DecodeMimeHeader(const nsCString& header, 
+  NS_IMETHOD DecodeMimeHeader(const char *header, 
                               PRUnichar **decodedString,
                               const char *default_charset = nsnull,
                               PRBool override_charset = PR_FALSE,
                               PRBool eatContinuations = PR_TRUE) = 0;
 
-  // OBSOLESCENT Decode routine (also converts output to unicode)
-  NS_IMETHOD DecodeMimePartIIStr(const nsString& header, 
-                                 nsString& charset, 
-                                 PRUnichar **decodedString,
-								 PRBool eatContinuations = PR_TRUE) = 0;
+  // Decode routine (also converts output to unicode)
+  // On success, decodedString is never null
+  NS_IMETHOD DecodeMimeHeader(const char *header, 
+                              nsAWritableString& decodedString,
+                              const char *default_charset = nsnull,
+                              PRBool override_charset = PR_FALSE,
+                              PRBool eatContinuations = PR_TRUE) = 0;
 
   // Encode routine
   NS_IMETHOD EncodeMimePartIIStr(const char    *header, 
@@ -98,14 +100,14 @@ public:
                             const char* inBuffer, const PRInt32 inLength, char** outBuffer, PRInt32* outLength,
                             PRInt32* numUnConverted) = 0;
 
-  NS_IMETHOD B64EncoderInit(int (*PR_CALLBACK output_fn) (const char *buf, PRInt32 size, void *closure), 
+  NS_IMETHOD B64EncoderInit(nsresult (*PR_CALLBACK output_fn) (const char *buf, PRInt32 size, void *closure), 
                                 void *closure, MimeEncoderData **returnEncoderData)  = 0;
 
-  NS_IMETHOD QPEncoderInit (int (*PR_CALLBACK output_fn) (const char *buf, 
+  NS_IMETHOD QPEncoderInit (nsresult (*PR_CALLBACK output_fn) (const char *buf, 
                                 PRInt32 size, void *closure), void *closure, 
                                 MimeEncoderData ** returnEncoderData) = 0;
 
-  NS_IMETHOD UUEncoderInit (char *filename, int (*PR_CALLBACK output_fn) 
+  NS_IMETHOD UUEncoderInit (char *filename, nsresult (*PR_CALLBACK output_fn) 
                                (const char *buf, PRInt32 size, void *closure), void *closure, 
                                MimeEncoderData ** returnEncoderData) = 0;
 

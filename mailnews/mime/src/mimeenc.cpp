@@ -48,7 +48,7 @@ struct MimeDecoderData {
   char uue_line_buffer [128];
 
   /* Where to write the decoded data */
-  int (*write_buffer) (const char *buf, PRInt32 size, void *closure);
+  nsresult (*write_buffer) (const char *buf, PRInt32 size, void *closure);
   void *closure;
 };
 
@@ -114,10 +114,10 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer, PRInt32 length
 			c = token[1] - ('A' - 10);
 		  else if (token[1] >= 'a' && token[1] <= 'f')
 			c = token[1] - ('a' - 10);
-		  else if (token[1] == CR || token[1] == LF)
+		  else if (token[1] == nsCRT::CR || token[1] == nsCRT::LF)
 			{
 			  /* =\n means ignore the newline. */
-			  if (token[1] == CR && token[2] == LF)
+			  if (token[1] == nsCRT::CR && token[2] == nsCRT::LF)
 				;		/* swallow all three chars */
 			  else
 				{
@@ -346,13 +346,13 @@ mime_decode_uue_buffer (MimeDecoderData *data,
 			*out++ = *input_buffer++;
 			input_length--;
 
-			if (out[-1] == CR || out[-1] == LF)
+			if (out[-1] == nsCRT::CR || out[-1] == nsCRT::LF)
 			  {
 				/* If we just copied a CR, and an LF is waiting, grab it too.
 				 */
-				if (out[-1] == CR &&
+				if (out[-1] == nsCRT::CR &&
 					input_length > 0 &&
-					*input_buffer == LF)
+					*input_buffer == nsCRT::LF)
 				  input_buffer++, input_length--;
 
 				/* We have a line. */
@@ -363,7 +363,7 @@ mime_decode_uue_buffer (MimeDecoderData *data,
 
 		/* Ignore blank lines.
 		 */
-		if (*line == CR || *line == LF)
+		if (*line == nsCRT::CR || *line == nsCRT::LF)
 		  {
 			*line = 0;
 			continue;
@@ -376,14 +376,14 @@ mime_decode_uue_buffer (MimeDecoderData *data,
 		if (out == line_end)
 		  {
 			out--;
-			out[-1] = CR;
+			out[-1] = nsCRT::CR;
 			out[0] = 0;
 		  }
 
 		/* If we didn't get a complete line, simply return; we'll be called
 		   with the rest of this line next time.
 		 */
-		if (out[-1] != CR && out[-1] != LF)
+		if (out[-1] != nsCRT::CR && out[-1] != nsCRT::LF)
 		  {
 			PR_ASSERT (input_length == 0);
 			break;
@@ -399,8 +399,8 @@ mime_decode_uue_buffer (MimeDecoderData *data,
 		  line[0] == 'e' &&
 		  line[1] == 'n' &&
 		  line[2] == 'd' &&
-		  (line[3] == CR ||
-		   line[3] == LF))
+		  (line[3] == nsCRT::CR ||
+		   line[3] == nsCRT::LF))
 		{
 		  /* done! */
 		  data->uue_state = UUE_END;
@@ -554,7 +554,7 @@ MimeDecoderDestroy (MimeDecoderData *data, PRBool abort_p)
 
 static MimeDecoderData *
 mime_decoder_init (mime_encoding which,
-				   int (*output_fn) (const char *, PRInt32, void *),
+				   nsresult (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {
   MimeDecoderData *data = PR_NEW(MimeDecoderData);
@@ -567,21 +567,21 @@ mime_decoder_init (mime_encoding which,
 }
 
 MimeDecoderData *
-MimeB64DecoderInit (int (*output_fn) (const char *, PRInt32, void *),
+MimeB64DecoderInit (nsresult (*output_fn) (const char *, PRInt32, void *),
 					void *closure)
 {
   return mime_decoder_init (mime_Base64, output_fn, closure);
 }
 
 MimeDecoderData *
-MimeQPDecoderInit (int (*output_fn) (const char *, PRInt32, void *),
+MimeQPDecoderInit (nsresult (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {
   return mime_decoder_init (mime_QuotedPrintable, output_fn, closure);
 }
 
 MimeDecoderData *
-MimeUUDecoderInit (int (*output_fn) (const char *, PRInt32, void *),
+MimeUUDecoderInit (nsresult (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {
   return mime_decoder_init (mime_uuencode, output_fn, closure);
@@ -627,7 +627,7 @@ struct MimeEncoderData {
   char *filename; /* filename for use with uuencoding */
 
   /* Where to write the encoded data */
-  int (*write_buffer) (const char *buf, PRInt32 size, void *closure);
+  nsresult (*write_buffer) (const char *buf, PRInt32 size, void *closure);
   void *closure;
 };
 
@@ -645,8 +645,8 @@ mime_uuencode_write_line(MimeEncoderData *data)
 	data->uue_line_buf[0] = ENC(data->line_byte_count);
 
 	/* Tack a CRLF onto the end. */
-	data->uue_line_buf[data->current_column++] = CR;
-	data->uue_line_buf[data->current_column++] = LF;
+	data->uue_line_buf[data->current_column++] = nsCRT::CR;
+	data->uue_line_buf[data->current_column++] = nsCRT::LF;
 
 	/* Write the line to output. */
 	data->write_buffer((const char*)data->uue_line_buf, data->current_column,
@@ -885,7 +885,7 @@ mime_encode_qp_buffer (MimeEncoderData *data, const char *buffer, PRInt32 size)
    */
   for (; in < end; in++)
 	{
-	  if (*in == CR || *in == LF)
+	  if (*in == nsCRT::CR || *in == nsCRT::LF)
 		{
 
       /* Whitespace cannot be allowed to occur at the end of           
@@ -902,8 +902,8 @@ mime_encode_qp_buffer (MimeEncoderData *data, const char *buffer, PRInt32 size)
       }                                                   
 
 		  /* Now write out the newline. */
-		  *out++ = CR;
-		  *out++ = LF;
+		  *out++ = nsCRT::CR;
+		  *out++ = nsCRT::LF;
 		  white = PR_FALSE;
 
 		  status = data->write_buffer (out_buffer, (out - out_buffer),
@@ -912,7 +912,7 @@ mime_encode_qp_buffer (MimeEncoderData *data, const char *buffer, PRInt32 size)
 		  out = out_buffer;
 
 		  /* If its CRLF, swallow two chars instead of one. */
-		  if (in[0] == CR && in[1] == LF)
+		  if (in[0] == nsCRT::CR && in[1] == nsCRT::LF)
 			in++;
 
 		  out = out_buffer;
@@ -973,8 +973,8 @@ mime_encode_qp_buffer (MimeEncoderData *data, const char *buffer, PRInt32 size)
 	  if (data->current_column >= 73)		/* soft line break: "=\r\n" */
 		{
 		  *out++ = '=';
-		  *out++ = CR;
-		  *out++ = LF;
+		  *out++ = nsCRT::CR;
+		  *out++ = nsCRT::LF;
 
 		  status = data->write_buffer (out_buffer, (out - out_buffer),
 									   data->closure);
@@ -1030,8 +1030,8 @@ MimeEncoderDestroy (MimeEncoderData *data, PRBool abort_p)
 	  if (data->in_buffer_count > 1)
 		n = n | (((PRUint32) data->in_buffer[1]) << 8);
 
-	  buf2[0] = CR;
-	  buf2[1] = LF;
+	  buf2[0] = nsCRT::CR;
+	  buf2[1] = nsCRT::LF;
 
 	  for (j = 18; j >= 0; j -= 6)
 		{
@@ -1063,7 +1063,7 @@ MimeEncoderDestroy (MimeEncoderData *data, PRBool abort_p)
 
 static MimeEncoderData *
 mime_encoder_init (mime_encoding which,
-				   int (*output_fn) (const char *, PRInt32, void *),
+				   nsresult (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {
   MimeEncoderData *data = PR_NEW(MimeEncoderData);
@@ -1076,14 +1076,14 @@ mime_encoder_init (mime_encoding which,
 }
 
 MimeEncoderData *
-MimeB64EncoderInit (int (*output_fn) (const char *, PRInt32, void *),
+MimeB64EncoderInit (nsresult (*output_fn) (const char *, PRInt32, void *),
 					void *closure)
 {
   return mime_encoder_init (mime_Base64, output_fn, closure);
 }
 
 MimeEncoderData *
-MimeQPEncoderInit (int (*output_fn) (const char *, PRInt32, void *),
+MimeQPEncoderInit (nsresult (*output_fn) (const char *, PRInt32, void *),
 				   void *closure)
 {
   return mime_encoder_init (mime_QuotedPrintable, output_fn, closure);
@@ -1091,7 +1091,7 @@ MimeQPEncoderInit (int (*output_fn) (const char *, PRInt32, void *),
 
 MimeEncoderData *
 MimeUUEncoderInit (char *filename,
-					int (*output_fn) (const char *, PRInt32, void *),
+					nsresult (*output_fn) (const char *, PRInt32, void *),
 					void *closure)
 {
   MimeEncoderData *enc = mime_encoder_init (mime_uuencode, output_fn, closure);

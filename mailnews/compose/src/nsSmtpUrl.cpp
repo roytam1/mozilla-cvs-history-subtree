@@ -23,6 +23,7 @@
 #include "msgCore.h"
 
 #include "nsIURI.h"
+#include "nsNetCID.h"
 #include "nsSmtpUrl.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
@@ -226,7 +227,7 @@ nsresult nsMailtoUrl::ParseUrl()
     m_toPart.Assign(aPath);
 
   PRInt32 startOfSearchPart = m_toPart.FindChar('?');
-  if (startOfSearchPart > 0)
+  if (startOfSearchPart >= 0)
   {
     // now parse out the search field...
     nsCAutoString searchPart;
@@ -530,6 +531,24 @@ nsSmtpUrl::GetPrompt(nsIPrompt **aNetPrompt)
     if (!m_netPrompt) return NS_ERROR_NULL_POINTER;
     *aNetPrompt = m_netPrompt;
     NS_ADDREF(*aNetPrompt);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSmtpUrl::SetAuthPrompt(nsIAuthPrompt *aNetAuthPrompt)
+{
+    NS_ENSURE_ARG_POINTER(aNetAuthPrompt);
+    m_netAuthPrompt = aNetAuthPrompt;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSmtpUrl::GetAuthPrompt(nsIAuthPrompt **aNetAuthPrompt)
+{
+    NS_ENSURE_ARG_POINTER(aNetAuthPrompt);
+    if (!m_netAuthPrompt) return NS_ERROR_NULL_POINTER;
+    *aNetAuthPrompt = m_netAuthPrompt;
+    NS_ADDREF(*aNetAuthPrompt);
     return NS_OK;
 }
 

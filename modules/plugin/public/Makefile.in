@@ -40,7 +40,6 @@ EXPORTS		= \
 		nsIPluginInstance.h \
 		nsIPluginInstancePeer.h \
 		nsIPluginInstancePeer2.h \
-		nsIPluginManager.h \
 		nsIPluginManager2.h \
 		nsIPluginStream.h \
 		nsIPluginTagInfo.h \
@@ -53,6 +52,7 @@ EXPORTS		= \
 		nsplugin.h \
 		nsplugindefs.h \
 		nsICookieStorage.h \
+		nsPIPluginHost.h \
 		$(NULL)
 
 # DEPRECATED -- remove before we ship 5.0
@@ -66,6 +66,7 @@ EXPORTS		+= \
 XPIDLSRCS 	= \
 		nsIScriptablePlugin.idl \
 		nsIHTTPHeaderListener.idl     \
+		nsIPluginManager.idl \
 		$(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

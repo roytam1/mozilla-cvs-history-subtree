@@ -1,7 +1,8 @@
 #include "nsStreamListenerTee.h"
 
-NS_IMPL_ISUPPORTS2(nsStreamListenerTee,
+NS_IMPL_ISUPPORTS3(nsStreamListenerTee,
                    nsIStreamListener,
+                   nsIRequestObserver,
                    nsIStreamListenerTee)
 
 NS_IMETHODIMP
@@ -15,13 +16,12 @@ nsStreamListenerTee::OnStartRequest(nsIRequest *request,
 NS_IMETHODIMP
 nsStreamListenerTee::OnStopRequest(nsIRequest *request,
                                    nsISupports *context,
-                                   nsresult status,
-                                   const PRUnichar *statusText)
+                                   nsresult status)
 {
     NS_ENSURE_TRUE(mListener, NS_ERROR_NOT_INITIALIZED);
     mInputTee = 0;
     mSink = 0;
-    return mListener->OnStopRequest(request, context, status, statusText);
+    return mListener->OnStopRequest(request, context, status);
 }
 
 NS_IMETHODIMP

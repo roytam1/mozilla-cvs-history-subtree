@@ -47,6 +47,7 @@ Rights Reserved.
         orient="vertical"
         width="750"
         height="500"
+        screenX="10" screenY="10"
         persist="width height screenX screenY sizemode"
         windowtype="mail:3pane">
 
@@ -71,8 +72,7 @@ Rights Reserved.
 <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 
-<commands id="commands">
-
+<commandset id="mailCommands">
   <commandset id="mailFileMenuItems"/>
   <commandset id="mailViewMenuItems"/>
   <commandset id="mailEditMenuItems"/>
@@ -88,11 +88,16 @@ Rights Reserved.
         commandupdater="true"
         events="focus"
         oncommandupdate="FocusRingUpdate_Mail()"/>
-</commands>
+  <commandset id="tasksCommands"/>
+  <command id="toggleSidebar"/>
+</commandset>
 
-<broadcasterset id="broadcasterset"/>
+<broadcasterset id="mailBroadcasters"/>
 
-<keyset id="keyset"/>
+<keyset id="mailKeys">
+  <key id="showHideSidebar"/>
+  <keyset id="tasksKeys"/>
+</keyset>
 
 <popupset>
 
@@ -101,11 +106,14 @@ Rights Reserved.
 
   <popup id="emailAddressPopup" popupanchor="bottomleft">
       <menuitem label="&AddToAddressBook.label;"
-    accesskey="&AddToAddressBook.accesskey;"
+                accesskey="&AddToAddressBook.accesskey;"
                 oncommand="AddNodeToAddressBook(document.popupNode)"/>
       <menuitem label="&SendMailTo.label;"
-    accesskey="&SendMailTo.accesskey;"
+                accesskey="&SendMailTo.accesskey;"
                 oncommand="SendMailToNode(document.popupNode)"/>
+      <menuitem value="&CopyEmailAddress.label;"
+                accesskey="&CopyEmailAddress.accesskey;"
+                oncommand="CopyEmailAddress(document.popupNode)"/>
   </popup>
 
   <popup id="allHeadersPopup"  oncreate="return fillAllHeadersPopup(document.popupNode);" popupanchor="bottomleft">

@@ -17,10 +17,10 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Original Author: Gagan Saksena <gagan@netscape.com>
- *
  * Contributor(s): 
+ *   Gagan Saksena <gagan@netscape.com> (original author)
  *   Adrian Havill <havill@redhat.com>
+ *   Darin Fisher <darin@netscape.com>
  */
 
 #include "nspr.h"
@@ -181,6 +181,32 @@ nsHTTPRequest::Resume()
     return rv;
 }
 
+NS_IMETHODIMP
+nsHTTPRequest::GetLoadGroup(nsILoadGroup **loadGroup)
+{
+    *loadGroup = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTTPRequest::SetLoadGroup(nsILoadGroup *loadGroup)
+{
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTTPRequest::GetLoadFlags(nsLoadFlags *loadFlags)
+{
+    *loadFlags = nsIRequest::LOAD_NORMAL;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTTPRequest::SetLoadFlags(nsLoadFlags loadFlags)
+{
+    return NS_OK;
+}
+
 nsresult
 nsHTTPRequest::Clone(const nsHTTPRequest **aRequest) const
 {
@@ -286,12 +312,6 @@ nsHTTPRequest::SetOverrideRequestSpec(const char *aSpec)
 }
 
 nsresult
-nsHTTPRequest::GetOverrideRequestSpec(char **aSpec)
-{
-    return DupString(aSpec, mRequestSpec);
-}
-
-nsresult
 nsHTTPRequest::formHeaders(PRUint32 capabilities)
 {
     if (mHeadersFormed)
@@ -323,27 +343,26 @@ nsHTTPRequest::formHeaders(PRUint32 capabilities)
         SetHeader(nsHTTPAtoms::User_Agent, uaString.get());
     }
 
-    PRUint32 loadAttributes;
-    mConnection->GetLoadAttributes(&loadAttributes);
+    PRUint32 loadFlags;
+    mConnection->GetLoadFlags(&loadFlags);
     
-    if (loadAttributes & 
-            (nsIChannel::FORCE_VALIDATION | nsIChannel::FORCE_RELOAD)) {
+    if (loadFlags & LOAD_BYPASS_CACHE) {
         // We need to send 'Pragma:no-cache' to inhibit proxy caching even if
         // no proxy is configured since we might be talking with a transparent
         // proxy, i.e. one that operates at the network level.  See bug #14772
         SetHeader(nsHTTPAtoms::Pragma, "no-cache");
-    }
-
-    if (loadAttributes & nsIChannel::FORCE_RELOAD) {
         // If doing a reload, force end-to-end 
         SetHeader(nsHTTPAtoms::Cache_Control, "no-cache");
     }
-    else if (loadAttributes & nsIChannel::FORCE_VALIDATION) {
+    // XXX it should be sufficient to just validate with the immediate host.
+#if 0
+    else if (loadFlags & VALIDATE_ALWAYS) {
         // A "max-age=0" cache-control directive forces each cache along the
         // path to the origin server to revalidate its own entry, if any, with
         // the next cache or server.
         SetHeader(nsHTTPAtoms::Cache_Control, "max-age=0");
     }
+#endif
 
     // Send */*. We're no longer chopping MIME-types for acceptance.
     // MIME based content negotiation has died.
@@ -506,7 +525,7 @@ nsHTTPRequest::formBuffer(nsCString * requestBuffer, PRUint32 capabilities)
 static PRUint32 sPipelinedRequestCreated = 0;
 static PRUint32 sPipelinedRequestDeleted = 0;
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsHTTPPipelinedRequest, nsIStreamObserver)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsHTTPPipelinedRequest, nsIRequestObserver)
 
 nsHTTPPipelinedRequest::nsHTTPPipelinedRequest(nsHTTPHandler *aHandler,
                                                const char *host,
@@ -678,14 +697,14 @@ nsHTTPPipelinedRequest::WriteRequest(nsIInputStream *aRequestStream)
     // transport...
     //
     if (req->mConnection) {
-        nsLoadFlags loadAttributes = nsIChannel::LOAD_NORMAL;
-        req->mConnection->GetLoadAttributes(&loadAttributes);
+        nsLoadFlags loadFlags = nsIRequest::LOAD_NORMAL;
+        req->mConnection->GetLoadFlags(&loadFlags);
 
         nsCOMPtr<nsIInterfaceRequestor> callbacks;
 
         callbacks = do_QueryInterface(NS_STATIC_CAST(nsIHTTPChannel*, req->mConnection));
         mTransport->SetNotificationCallbacks(callbacks,
-                         (loadAttributes & nsIChannel::LOAD_BACKGROUND));
+                         (loadFlags & nsIRequest::LOAD_BACKGROUND));
     }
 
     mOnStopDone = PR_FALSE;
@@ -701,7 +720,7 @@ nsHTTPPipelinedRequest::WriteRequest(nsIInputStream *aRequestStream)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsIStreamObserver methods:
+// nsIRequestObserver methods:
 
 NS_IMETHODIMP
 nsHTTPPipelinedRequest::OnStartRequest(nsIRequest *request, nsISupports* aContext)
@@ -714,7 +733,7 @@ nsHTTPPipelinedRequest::OnStartRequest(nsIRequest *request, nsISupports* aContex
 
 NS_IMETHODIMP
 nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* aContext,
-                                      nsresult aStatus, const PRUnichar* aStatusArg)
+                                      nsresult aStatus)
 {
     nsresult rv;
     nsCOMPtr<nsISocketTransport> trans = do_QueryInterface(mTransport, &rv);
@@ -834,7 +853,7 @@ nsHTTPPipelinedRequest::OnStopRequest(nsIRequest *request, nsISupports* aContext
         while (req) {
             nsCOMPtr<nsIStreamListener> consumer;
             req->mConnection->GetResponseDataListener(getter_AddRefs(consumer));
-            req->mConnection->ResponseCompleted(consumer, rv, nsnull);
+            req->mConnection->ResponseCompleted(consumer, rv);
 
             // Notify the HTTPChannel that the request has finished
 
@@ -1145,14 +1164,14 @@ nsHTTPPipelinedRequest::AdvanceToNextRequest()
         // on some machines, but not on others.  Check for null to avoid
         // topcrash, although we really shouldn't need this.
         NS_ASSERTION(mTransport, "mTransport null in AdvanceToNextRequest");
-        nsLoadFlags flags = nsIChannel::LOAD_NORMAL;
-        req->mConnection->GetLoadAttributes(&flags);
+        nsLoadFlags flags = nsIRequest::LOAD_NORMAL;
+        req->mConnection->GetLoadFlags(&flags);
 
         nsCOMPtr<nsIInterfaceRequestor> callbacks;
 
         callbacks = do_QueryInterface(NS_STATIC_CAST(nsIHTTPChannel*, req->mConnection));
         mTransport->SetNotificationCallbacks(callbacks,
-                                             (flags & nsIChannel::LOAD_BACKGROUND));
+                                             (flags & nsIRequest::LOAD_BACKGROUND));
         NS_RELEASE(req);
     }
 

@@ -94,7 +94,6 @@ nsMsgSendLater::nsMsgSendLater()
   mMessage = nsnull;
   mLeftoverBuffer = nsnull;
 
-  mSendListener = nsnull;
   mListenerArray = nsnull;
   mListenerArrayCount = 0;
 
@@ -133,13 +132,12 @@ nsMsgSendLater::~nsMsgSendLater()
   PR_FREEIF(mLeftoverBuffer);
   PR_FREEIF(mIdentityKey);
 
-  NS_IF_RELEASE(mSendListener);
   NS_IF_RELEASE(mIdentity);
 }
 
 // Stream is done...drive on!
 NS_IMETHODIMP
-nsMsgSendLater::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
+nsMsgSendLater::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
   nsresult    rv;
 
@@ -210,7 +208,7 @@ FindEOL(char *inBuf, char *buf_end)
   while (buf <= buf_end)
     if (*buf == 0) 
       return buf;
-    else if ( (*buf == LF) || (*buf == CR) )
+    else if ( (*buf == nsCRT::LF) || (*buf == nsCRT::CR) )
     {
       findLoc = buf;
       break;
@@ -223,8 +221,8 @@ FindEOL(char *inBuf, char *buf_end)
   else if ((findLoc + 1) > buf_end)
     return buf;
 
-  if ( (*findLoc == LF && *(findLoc+1) == CR) || 
-       (*findLoc == CR && *(findLoc+1) == LF))
+  if ( (*findLoc == nsCRT::LF && *(findLoc+1) == nsCRT::CR) || 
+       (*findLoc == nsCRT::CR && *(findLoc+1) == nsCRT::LF))
     findLoc++; // possibly a pair.       
   return findLoc;
 }
@@ -437,21 +435,6 @@ SendOperationListener::OnStopSending(const char *aMsgID, nsresult aStatus, const
   return rv;
 }
 
-nsIMsgSendListener **
-CreateListenerArray(nsIMsgSendListener *listener, PRUint32 *aListeners)
-{
-  if (!listener)
-    return nsnull;
-
-  nsIMsgSendListener **tArray = (nsIMsgSendListener **)PR_Malloc(sizeof(nsIMsgSendListener *) * 2);
-  if (!tArray)
-    return nsnull;
-  nsCRT::memset(tArray, 0, sizeof(nsIMsgSendListener *) * 2);
-  tArray[0] = listener;
-  *aListeners = 2;
-  return tArray;
-}
-
 nsresult
 nsMsgSendLater::CompleteMailFileSend()
 {
@@ -522,25 +505,15 @@ nsCOMPtr<nsIMsgSend>        pMsgSend = nsnull;
     fields->SetReturnReceipt(PR_TRUE);
 
   // Create the listener for the send operation...
-  mSendListener = new SendOperationListener();
-  if (!mSendListener)
-  {
+  SendOperationListener * sendListener = new SendOperationListener();
+  if (!sendListener)
     return NS_ERROR_OUT_OF_MEMORY;
-  }
   
-  NS_ADDREF(mSendListener);
+  NS_ADDREF(sendListener);
   // set this object for use on completion...
-  mSendListener->SetSendLaterObject(this);
-  PRUint32 listeners;
-  nsIMsgSendListener **tArray = CreateListenerArray(mSendListener, &listeners);
-  if (!tArray)
-  {
-    NS_RELEASE(mSendListener);
-    mSendListener = nsnull;
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
+  sendListener->SetSendLaterObject(this);
 
-  NS_ADDREF(this);  
+  NS_ADDREF(this);  //TODO: We should remove this!!!
   rv = pMsgSend->SendMessageFile(mIdentity,
                                  compFields, // nsIMsgCompFields *fields,
                                  mTempIFileSpec, // nsIFileSpec *sendFileSpec,
@@ -548,13 +521,9 @@ nsCOMPtr<nsIMsgSend>        pMsgSend = nsnull;
                                  PR_FALSE, // PRBool digest_p,
                                  nsIMsgSend::nsMsgDeliverNow, // nsMsgDeliverMode mode,
                                  nsnull, // nsIMsgDBHdr *msgToReplace, 
-                                 tArray, listeners); 
-  NS_RELEASE(mSendListener);
-  mSendListener = nsnull;
-  if (NS_FAILED(rv))
-    return rv;
-
-  return NS_OK;
+                                 sendListener); 
+  NS_IF_RELEASE(sendListener);
+  return rv;
 }
 
 nsresult
@@ -856,14 +825,14 @@ nsMsgSendLater::BuildHeaders()
 	  value = buf;
 
 SEARCH_NEWLINE:
-	  while (*buf != 0 && *buf != CR && *buf != LF)
+	  while (*buf != 0 && *buf != nsCRT::CR && *buf != nsCRT::LF)
 		  buf++;
 
 	  if (buf+1 >= buf_end)
 		  ;
 	  // If "\r\n " or "\r\n\t" is next, that doesn't terminate the header.
 	  else if (buf+2 < buf_end &&
-			   (buf[0] == CR  && buf[1] == LF) &&
+			   (buf[0] == nsCRT::CR  && buf[1] == nsCRT::LF) &&
 			   (buf[2] == ' ' || buf[2] == '\t'))
 		{
 		  buf += 3;
@@ -871,7 +840,7 @@ SEARCH_NEWLINE:
 		}
 	  // If "\r " or "\r\t" or "\n " or "\n\t" is next, that doesn't terminate
 		// the header either. 
-	  else if ((buf[0] == CR  || buf[0] == LF) &&
+	  else if ((buf[0] == nsCRT::CR  || buf[0] == nsCRT::LF) &&
 			   (buf[1] == ' ' || buf[1] == '\t'))
 		{
 		  buf += 2;
@@ -933,9 +902,9 @@ SEARCH_NEWLINE:
 		  PR_FREEIF(draftInfo);
 		}
 
-	  if (*buf == CR || *buf == LF)
+	  if (*buf == nsCRT::CR || *buf == nsCRT::LF)
 		{
-		  if (*buf == CR && buf[1] == LF)
+		  if (*buf == nsCRT::CR && buf[1] == nsCRT::LF)
 			buf++;
 		  buf++;
 		}
@@ -952,8 +921,8 @@ SEARCH_NEWLINE:
 		}
 	}
 
-  m_headers[m_headersFP++] = CR;
-  m_headers[m_headersFP++] = LF;
+  m_headers[m_headersFP++] = nsCRT::CR;
+  m_headers[m_headersFP++] = nsCRT::LF;
 
   // Now we have parsed out all of the headers we need and we 
   // can proceed.
@@ -999,11 +968,11 @@ nsMsgSendLater::DeliverQueuedLine(char *line, PRInt32 length)
   
 // convert existing newline to CRLF 
 // Don't need this because the calling routine is taking care of it.
-//  if (length > 0 && (line[length-1] == CR || 
-//     (line[length-1] == LF && (length < 2 || line[length-2] != CR))))
+//  if (length > 0 && (line[length-1] == nsCRT::CR || 
+//     (line[length-1] == nsCRT::LF && (length < 2 || line[length-2] != nsCRT::CR))))
 //  {
-//    line[length-1] = CR;
-//    line[length++] = LF;
+//    line[length-1] = nsCRT::CR;
+//    line[length++] = nsCRT::LF;
 //  }
 //
   //
@@ -1039,7 +1008,7 @@ nsMsgSendLater::DeliverQueuedLine(char *line, PRInt32 length)
       PR_FREEIF(m_fcc);
     }
     
-    if (line[0] == CR || line[0] == LF || line[0] == 0)
+    if (line[0] == nsCRT::CR || line[0] == nsCRT::LF || line[0] == 0)
     {
 		  // End of headers.  Now parse them; open the temp file;
       // and write the appropriate subset of the headers out. 
@@ -1152,23 +1121,6 @@ nsMsgSendLater::RemoveListener(nsIMsgSendLaterListener *aListener)
   return NS_ERROR_INVALID_ARG;
 }
 
-nsresult
-nsMsgSendLater::DeleteListeners()
-{
-  if ( (mListenerArray) && (*mListenerArray) )
-  {
-    PRInt32 i;
-    for (i=0; i<mListenerArrayCount; i++)
-    {
-      NS_RELEASE(mListenerArray[i]);
-    }
-    
-    PR_FREEIF(mListenerArray);
-  }
-
-  mListenerArrayCount = 0;
-  return NS_OK;
-}
 
 nsresult
 nsMsgSendLater::NotifyListenersOnStartSending(PRUint32 aTotalMessageCount)

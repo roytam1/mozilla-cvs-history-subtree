@@ -289,13 +289,16 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
        SetNewsFolderColumns(false);
 
   // null this out, so we don't try sort.
-  gDBView = null;
+  if (gDBView) {
+    gDBView.close();
+    gDBView = null;
+  }
 
-  // if this is the drafts folder, the sent folder or the send later folder,
-  // set the columns like it was the sent folder
+  // if this is the drafts, sent, or send later folder,
+  // we show "Recipient" instead of "Author"
   SetSentFolderColumns(IsSpecialFolder(newFolder, MSG_FOLDER_FLAG_SENTMAIL | MSG_FOLDER_FLAG_DRAFTS | MSG_FOLDER_FLAG_QUEUE));
-  // now create the db view, which will sort it.
 
+  // now create the db view, which will sort it.
   CreateDBView(newFolder, viewType, viewFlags, sortType, sortOrder);
   // that should have initialized gDBView, now re-root the thread pane
   var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
@@ -311,20 +314,28 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 
 function SwitchView(command)
 {
-  gDBView = null; // close existing view.
+  var oldSortType = gDBView ? gDBView.sortType : nsMsgViewSortType.byThread;
+  var oldSortOrder = gDBView ? gDBView.sortOrder : nsMsgViewSortOrder.ascending;
   var viewFlags = gCurViewFlags;
+
+  // close existing view.
+  if (gDBView) {
+    gDBView.close();
+    gDBView = null; 
+  }
+
   switch(command)
   {
     case "cmd_viewUnreadMsgs":
 
       viewFlags = viewFlags | nsMsgViewFlagsType.kUnreadOnly;
       CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowAllThreads, viewFlags,
-            nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
+            oldSortType, oldSortOrder );
     break;
     case "cmd_viewAllMsgs":
       viewFlags = viewFlags & ~nsMsgViewFlagsType.kUnreadOnly;
       CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowAllThreads, viewFlags,
-            nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
+            oldSortType, oldSortOrder);
     break;
     case "cmd_viewThreadsWithUnread":
       CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowThreadsWithUnread, nsMsgViewFlagsType.kThreadedDisplay,
@@ -345,21 +356,20 @@ function SwitchView(command)
   {
     var outliner = GetThreadOutliner();
     outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView;
-    dump('set outliner view\n');
   }
 }
 
 function SetSentFolderColumns(isSentFolder)
 {
-  var senderColumn = document.getElementById("senderCol");
+  var senderOrRecipientColumn = document.getElementById("senderOrRecipientCol");
 
   if(isSentFolder)
   {
-    senderColumn.setAttribute("label", gMessengerBundle.getString("recipientColumnHeader"));
+    senderOrRecipientColumn.setAttribute("label", gMessengerBundle.getString("recipientColumnHeader"));
   }
   else
   {
-    senderColumn.setAttribute("label", gMessengerBundle.getString("senderColumnHeader"));
+    senderOrRecipientColumn.setAttribute("label", gMessengerBundle.getString("senderColumnHeader"));
   }
 }
 
@@ -403,8 +413,13 @@ function ConvertColumnIDToSortType(columnID)
     case "dateCol":
       sortKey = nsMsgViewSortType.byDate;
       break;
-    case "senderCol":
-      sortKey = nsMsgViewSortType.byAuthor;
+    case "senderOrRecipientCol":
+      if (IsSpecialFolderSelected(MSG_FOLDER_FLAG_SENTMAIL | MSG_FOLDER_FLAG_DRAFTS | MSG_FOLDER_FLAG_QUEUE)) {
+      	sortKey = nsMsgViewSortType.byRecipient;
+      }
+      else {
+      	sortKey = nsMsgViewSortType.byAuthor;
+      }
       break;
     case "subjectCol":
       sortKey = nsMsgViewSortType.bySubject;
@@ -448,7 +463,8 @@ function ConvertSortTypeToColumnID(sortKey)
       columnID = "dateCol";
       break;
     case nsMsgViewSortType.byAuthor:
-      columnID = "senderCol";
+    case nsMsgViewSortType.byRecipient:
+      columnID = "senderOrRecipientCol";
       break;
     case nsMsgViewSortType.bySubject:
       columnID = "subjectCol";
@@ -501,6 +517,10 @@ function CreateBareDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
 {
   var dbviewContractId = "@mozilla.org/messenger/msgdbview;1?type=";
 
+  // hack to turn this into an integer, if it was a string
+  // it would be a string if it came from localStore.rdf
+  viewType = viewType - 0;
+
   switch (viewType) {
       case nsMsgViewType.eShowThreadsWithUnread:
           dbviewContractId += "threadswithunread";
@@ -521,9 +541,6 @@ function CreateBareDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
     if (isNews) {
       // news defaults to threaded mode
       viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
-    }
-    else {
-      viewFlags &= nsMsgViewFlagsType.kThreadedDisplay;
     }
   }
 
@@ -546,10 +563,15 @@ function CreateBareDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
   if (!gThreadPaneCommandUpdater)
     gThreadPaneCommandUpdater = new nsMsgDBViewCommandUpdater();
 
-  gCurSortType = sortType;
+  if ((sortType == nsMsgViewSortType.byAuthor) && IsSpecialFolder(msgFolder, MSG_FOLDER_FLAG_SENTMAIL | MSG_FOLDER_FLAG_DRAFTS | MSG_FOLDER_FLAG_QUEUE)) {
+    gCurSortType = nsMsgViewSortType.byRecipient;
+  }
+  else {
+    gCurSortType = sortType;
+  }
 
   gDBView.init(messenger, msgWindow, gThreadPaneCommandUpdater);
-  gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
+  gDBView.open(msgFolder, gCurSortType, sortOrder, viewFlags, count);
 }
 
 function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
@@ -567,26 +589,8 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
   else
     gDBView.supressMsgDisplay = false;
 
-  var colID = ConvertSortTypeToColumnID(gCurSortType);
-  if (colID) {
-    var column = document.getElementById(colID);
-    gDBView.sortedColumn = column;
-  }
-
-  ShowAppropriateColumns();
+  UpdateSortIndicators(gCurSortType, sortOrder);
   PersistViewAttributesOnFolder();
-}
-
-function ShowAppropriateColumns()
-{
-    if (gDBView && (gDBView.sortType == nsMsgViewSortType.byThread)) {
-      // don't hide them when sorted by thread
-      SetHiddenAttributeOnThreadOnlyColumns("");
-    }
-    else {
-      // hide them when not sorted by thread
-      SetHiddenAttributeOnThreadOnlyColumns("true");
-    }
 }
 
 function SetViewFlags(viewFlags)
@@ -684,7 +688,7 @@ function OnClickThreadAndMessagePaneSplitter()
   // the splitter if collapsed is true
   if (gDBView)
   {
-    if (collapsed)
+    if (!collapsed)
       gDBView.supressMsgDisplay = true;
     else
       gDBView.supressMsgDisplay = false;
@@ -697,22 +701,8 @@ function OnClickThreadAndMessagePaneSplitter()
   if(collapsed)
   {
     LoadSelectionIntoMessagePane();
-    setTimeout("PositionThreadPane();",0);
+    setTimeout("ScrollToMessage(new,true,true);",0);
    }
-*/
-}
-
-function PositionThreadPane()
-{
-    dump("XXX fix PositionThreadPane\n");
-/*
-       var selArray = tree.selectedItems;
-
-       if ( selArray && (selArray.length > 0))
-       try {
-       tree.ensureElementIsVisible(selArray[0]);
-       }
-       catch(e) { }
 */
 }
 
@@ -743,7 +733,10 @@ function FolderPaneSelectionChange()
 
 function ClearThreadPane()
 {
-  gDBView = null; 
+  if (gDBView) {
+    gDBView.close();
+    gDBView = null; 
+  }
 }
 
 function OpenFolderTreeToFolder(folderURI)
@@ -788,7 +781,7 @@ function OpenToFolder(item, folderURI)
 
 function IsSpecialFolder(msgFolder, flags)
 {
-    if ((msgFolder.flags & flags) == 0) {
+    if (!msgFolder || ((msgFolder.flags & flags) == 0)) {
         return false;
     }
     else {
@@ -835,7 +828,7 @@ function Redo()
 function MsgToggleWorkOffline()
 {
   var ioService = nsJSComponentManager.getServiceByID("{9ac9e770-18bc-11d3-9337-00104ba0fd40}", "nsIIOService");
-  var broadcaster = document.getElementById("Communicator:WorkMode");
+  // var command = document.getElementById("Communicator:WorkMode");
   // this is just code for my testing purposes, and doesn't have the proper UI, as in the offline spec.
   // we could use the account manager, or add a new service, the offline manager.
   // what the heck, might as well bite the bullet and add a new service.

@@ -596,7 +596,9 @@ void nsMsgDatabase::DumpCache()
 #endif /* DEBUG */
 
 nsMsgDatabase::nsMsgDatabase()
-    : m_dbFolderInfo(nsnull), m_mdbEnv(nsnull), m_mdbStore(nsnull),
+    : m_dbFolderInfo(nsnull), 
+	  m_nextPseudoMsgKey(-1),
+      m_mdbEnv(nsnull), m_mdbStore(nsnull),
       m_mdbAllMsgHeadersTable(nsnull), m_dbName(""), m_newSet(nsnull),
       m_mdbTokensInitialized(PR_FALSE), m_ChangeListeners(nsnull),
       m_hdrRowScopeToken(0),
@@ -629,7 +631,6 @@ nsMsgDatabase::nsMsgDatabase()
 	  m_HeaderParser(nsnull),
 	  m_headersInUse(nsnull),
 	  m_cachedHeaders(nsnull),
-	  m_nextPseudoMsgKey(-1),
 	  m_bCacheHeaders(PR_FALSE)
 
 {
@@ -1494,6 +1495,8 @@ PRUint32	nsMsgDatabase::GetStatusFlags(nsIMsgDBHdr *msgHdr, PRUint32 origFlags)
     (void)msgHdr->GetMessageKey(&key);
 	if (m_newSet && m_newSet->IsMember(key))
 		statusFlags |= MSG_FLAG_NEW;
+  else
+    statusFlags &= ~MSG_FLAG_NEW;
 	if (IsHeaderRead(msgHdr, &isRead) == NS_OK && isRead)
 		statusFlags |= MSG_FLAG_READ;
 	return statusFlags;
@@ -1598,7 +1601,7 @@ nsresult nsMsgDatabase::MarkHdrReadInDB(nsIMsgDBHdr *msgHdr, PRBool bRead,
     PRUint32 flags;
     rv = msgHdr->GetFlags(&flags);
     flags &= ~MSG_FLAG_NEW;
-
+    msgHdr->SetFlags(flags);
     if (NS_FAILED(rv)) return rv;
     
 	return NotifyKeyChangeAll(key, oldFlags, flags, instigator);
@@ -2040,9 +2043,14 @@ NS_IMETHODIMP nsMsgDatabase::ClearNewList(PRBool notify /* = FALSE */)
 		if (notify)	// need to update view
 		{
 			PRInt32 firstMember;
-			while ((firstMember = m_newSet->GetFirstMember()) != 0)
+      nsMsgKeySet *saveNewSet = m_newSet;
+      // set m_newSet to null so that the code that's listening to the key change
+      // doesn't think we have new messages and send notifications all over
+      // that we have new messages.
+      m_newSet = nsnull;
+			while ((firstMember = saveNewSet->GetFirstMember()) != 0)
 			{
-				m_newSet->Remove(firstMember);	// this bites, since this will cause us to regen new list many times.
+				saveNewSet->Remove(firstMember);	// this bites, since this will cause us to regen new list many times.
 				nsIMsgDBHdr *msgHdr;
 				err = GetMsgHdrForKey(firstMember, &msgHdr);
 				if (NS_SUCCEEDED(err))
@@ -2055,6 +2063,7 @@ NS_IMETHODIMP nsMsgDatabase::ClearNewList(PRBool notify /* = FALSE */)
 					NS_RELEASE(msgHdr);
 				}
 			}
+      m_newSet = saveNewSet;
 		}
 		delete m_newSet;
 		m_newSet = NULL;
@@ -2280,15 +2289,6 @@ NS_IMETHODIMP nsMsgDatabase::ListAllKeys(nsMsgKeyArray &outputKeys)
 	}
 	outputKeys.QuickSort();
 	return err;
-}
-
-static nsresult
-nsMsgDBThreadUnreadFilter(nsIMsgThread *thread)
-{
-    PRUint32 numUnreadChildren = 0;
-    nsresult rv = thread->GetNumUnreadChildren(&numUnreadChildren);
-    if (NS_FAILED(rv)) return rv;
-    return (numUnreadChildren > 0) ? NS_OK : NS_COMFALSE;
 }
 
 class nsMsgDBThreadEnumerator : public nsISimpleEnumerator
@@ -2551,7 +2551,10 @@ NS_IMETHODIMP nsMsgDatabase::AddNewHdrToDB(nsIMsgDBHdr *newHdr, PRBool notify)
 		PRUint32 flags;
 
 		newHdr->GetMessageKey(&key);
-		newHdr->GetFlags(&flags);
+		hdr->GetRawFlags(&flags);
+    // use raw flags instead of GetFlags, because GetFlags will
+    // pay attention to what's in m_newSet, and this new hdr isn't
+    // in m_newSet yet.
 		if (flags & MSG_FLAG_NEW)
 		{
 			PRUint32 newFlags;
@@ -2588,9 +2591,15 @@ NS_IMETHODIMP nsMsgDatabase::CopyHdrFromExistingHdr(nsMsgKey key, nsIMsgDBHdr *e
 
 	if (existingHdr)
 	{
-	    nsMsgHdr* sourceMsgHdr = NS_STATIC_CAST(nsMsgHdr*, existingHdr);      // closed system, cast ok
+    if (key == nsMsgKey_None)
+      return NS_MSG_MESSAGE_NOT_FOUND;
+
+	  nsMsgHdr* sourceMsgHdr = NS_STATIC_CAST(nsMsgHdr*, existingHdr);      // closed system, cast ok
 		nsMsgHdr *destMsgHdr = nsnull;
 		CreateNewHdr(key, (nsIMsgDBHdr **) &destMsgHdr);
+    if (!destMsgHdr)
+      return NS_MSG_MESSAGE_NOT_FOUND;
+
 		nsIMdbRow	*sourceRow = sourceMsgHdr->GetMDBRow() ;
 		nsIMdbRow	*destRow = destMsgHdr->GetMDBRow();
 		err = destRow->SetRow(GetEnv(), sourceRow);

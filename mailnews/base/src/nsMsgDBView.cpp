@@ -19,13 +19,13 @@
  *
  * Contributor(s):
  * Jan Varga (varga@utcru.sk)
+ * Håkan Waara (hwaara@chello.se)
  */
 
 #include "msgCore.h"
 #include "nsMsgDBView.h"
 #include "nsISupports.h"
 #include "nsIMsgFolder.h"
-#include "nsIDBFolderInfo.h"
 #include "nsIDBFolderInfo.h"
 #include "nsIMsgDatabase.h"
 #include "nsIMsgFolder.h"
@@ -53,11 +53,14 @@ nsIAtom * nsMsgDBView::kLowestPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kLowPriorityAtom	= nsnull;
 
 nsIAtom * nsMsgDBView::kUnreadMsgAtom	= nsnull;
+nsIAtom * nsMsgDBView::kNewMsgAtom = nsnull;
+nsIAtom * nsMsgDBView::kReadMsgAtom	= nsnull;
 nsIAtom * nsMsgDBView::kOfflineMsgAtom	= nsnull;
 nsIAtom * nsMsgDBView::kFlaggedMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kNewsMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kImapDeletedMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kAttachMsgAtom = nsnull;
+nsIAtom * nsMsgDBView::kHasUnreadAtom = nsnull;
 
 PRUnichar * nsMsgDBView::kHighestPriorityString = nsnull;
 PRUnichar * nsMsgDBView::kHighPriorityString = nsnull;
@@ -105,11 +108,14 @@ nsMsgDBView::nsMsgDBView()
 void nsMsgDBView::InitializeAtomsAndLiterals()
 {
   kUnreadMsgAtom = NS_NewAtom("unread");
+  kNewMsgAtom = NS_NewAtom("new");
+  kReadMsgAtom = NS_NewAtom("read");
   kOfflineMsgAtom = NS_NewAtom("offline");
   kFlaggedMsgAtom = NS_NewAtom("flagged");
   kNewsMsgAtom = NS_NewAtom("news");
   kImapDeletedMsgAtom = NS_NewAtom("imapdeleted");
   kAttachMsgAtom = NS_NewAtom("attach");
+  kHasUnreadAtom = NS_NewAtom("hasUnread");
 
   kHighestPriorityAtom = NS_NewAtom("priority-highest");
   kHighPriorityAtom = NS_NewAtom("priority-high");
@@ -138,11 +144,14 @@ nsMsgDBView::~nsMsgDBView()
   if (gInstanceCount <= 0) 
   {
     NS_IF_RELEASE(kUnreadMsgAtom);
+    NS_IF_RELEASE(kNewMsgAtom);
+    NS_IF_RELEASE(kReadMsgAtom);
     NS_IF_RELEASE(kOfflineMsgAtom);
     NS_IF_RELEASE(kFlaggedMsgAtom);
     NS_IF_RELEASE(kNewsMsgAtom);
     NS_IF_RELEASE(kImapDeletedMsgAtom);
     NS_IF_RELEASE(kAttachMsgAtom);
+    NS_IF_RELEASE(kHasUnreadAtom);
 
     NS_IF_RELEASE(kHighestPriorityAtom);
     NS_IF_RELEASE(kHighPriorityAtom);
@@ -380,29 +389,14 @@ nsresult nsMsgDBView::FetchPriority(nsIMsgHdr *aHdr, PRUnichar ** aPriorityStrin
   return NS_OK;
 }
 
-// call this AFTER calling ::Sort.
-nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
-{
-  if (mCurrentSortColumn && aNewSortColumn != mCurrentSortColumn)
-    mCurrentSortColumn->RemoveAttribute(NS_LITERAL_STRING("sortDirection"));
-
-  // set the new sort direction on the new sort column
-  mCurrentSortColumn = aNewSortColumn;
-
-  if (m_sortOrder == nsMsgViewSortOrder::ascending)
-    mCurrentSortColumn->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("ascending"));
-  else
-    mCurrentSortColumn->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("descending"));
-  return NS_OK;
-}
-
-nsresult nsMsgDBView::SaveSelection(nsMsgKeyArray * aMsgKeyArray)
+nsresult nsMsgDBView::SaveSelection(nsMsgKeyArray *aMsgKeyArray)
 {
   if (!mOutlinerSelection)
     return NS_OK;
 
   // first, freeze selection.
   mOutlinerSelection->SetSelectEventsSuppressed(PR_TRUE);
+
   // second, get an array of view indices for the selection..
   nsUInt32Array selection;
   GetSelectedIndices(&selection);
@@ -424,15 +418,26 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
   if (!mOutlinerSelection)  // don't assert.
     return NS_OK;
 
-  // first, unfreeze selection.
+  // unfreeze selection.
   mOutlinerSelection->ClearSelection(); // clear the existing selection.
-  mOutlinerSelection->SetSelectEventsSuppressed(PR_FALSE);
   
-  // second, turn our message keys into corresponding view indices
+  // turn our message keys into corresponding view indices
   PRInt32 arraySize = aMsgKeyArray->GetSize();
   nsMsgViewIndex	currentViewPosition = nsMsgViewIndex_None;
   nsMsgViewIndex	newViewPosition;
-  // first, make sure the currentView was preserved....
+
+  // if we are threaded, we need to do a little more work
+  // we need to find (and expand) all the threads that contain messages 
+  // that we had selected before.
+  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+  {
+    for (PRInt32 index = 0; index < arraySize; index ++) 
+    {
+      FindKey(aMsgKeyArray->GetAt(index), PR_TRUE /* expand */);
+    }
+  }
+
+  // make sure the currentView was preserved....
   if (m_currentlyDisplayedMsgKey != nsMsgKey_None)
   {
     currentViewPosition = FindKey(m_currentlyDisplayedMsgKey, PR_FALSE);
@@ -440,6 +445,10 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
     {
       mOutlinerSelection->SetCurrentIndex(currentViewPosition);
       mOutlinerSelection->RangedSelect(currentViewPosition, currentViewPosition, PR_TRUE /* augment */);
+        
+      // make sure the current message is once again visible in the thread pane
+      // so we don't have to go search for it in the thread pane
+      if (mOutliner) mOutliner->EnsureRowIsVisible(currentViewPosition);
     }
   }
 
@@ -452,6 +461,7 @@ nsresult nsMsgDBView::RestoreSelection(nsMsgKeyArray * aMsgKeyArray)
       mOutlinerSelection->RangedSelect(newViewPosition, newViewPosition, PR_TRUE /* augment */);
   }
 
+  mOutlinerSelection->SetSelectEventsSuppressed(PR_FALSE);
   return NS_OK;
 }
 
@@ -659,6 +669,9 @@ NS_IMETHODIMP nsMsgDBView::GetColumnProperties(const PRUnichar *colID, nsIDOMEle
 
 NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colID, nsISupportsArray *properties)
 {
+  if (!IsValidIndex(aRow))
+    return NS_MSG_INVALID_DBVIEW_INDEX; 
+
   // this is where we tell the outliner to apply styles to a particular row
   // i.e. if the row is an unread message...
   nsMsgKey key = m_keys.GetAt(aRow);
@@ -685,6 +698,11 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   PRUint32 flags = m_flags.GetAt(aRow);
   if (!(flags & MSG_FLAG_READ))
     properties->AppendElement(kUnreadMsgAtom);  
+  else 
+    properties->AppendElement(kReadMsgAtom);  
+
+  if (flags & MSG_FLAG_NEW)
+    properties->AppendElement(kNewMsgAtom);  
 
   if (flags & MSG_FLAG_OFFLINE)
     properties->AppendElement(kOfflineMsgAtom);  
@@ -698,36 +716,53 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   if (mIsNews)
     properties->AppendElement(kNewsMsgAtom);
     
-  if (colID[0] == 'p') // for the priority column, add special styles....
+  // add special styles for priority
+  nsMsgPriorityValue priority;
+  msgHdr->GetPriority(&priority);
+  switch (priority)
   {
-    nsMsgPriorityValue priority;
-    msgHdr->GetPriority(&priority);
-    switch (priority)
-    {
-    case nsMsgPriority::highest:
-      properties->AppendElement(kHighestPriorityAtom);  
-      break;
-    case nsMsgPriority::high:
-      properties->AppendElement(kHighPriorityAtom);  
-      break;
-    case nsMsgPriority::low:
-      properties->AppendElement(kLowPriorityAtom);  
-      break;
-    case nsMsgPriority::lowest:
-      properties->AppendElement(kLowestPriorityAtom);  
-      break;
-    default:
-      break;
-    }
+  case nsMsgPriority::highest:
+    properties->AppendElement(kHighestPriorityAtom);  
+    break;
+  case nsMsgPriority::high:
+    properties->AppendElement(kHighPriorityAtom);  
+    break;
+  case nsMsgPriority::low:
+    properties->AppendElement(kLowPriorityAtom);  
+    break;
+  case nsMsgPriority::lowest:
+    properties->AppendElement(kLowestPriorityAtom);  
+    break;
+  default:
+    break;
   }
-  else if (colID[0] == 'f')  
+
+  if (colID[0] == 'f')  
   {
     if (m_flags[aRow] & MSG_FLAG_MARKED) 
     {
       properties->AppendElement(kFlaggedMsgAtom); 
     }
   }
-      
+
+  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+  {
+    if (m_flags[aRow] & MSG_VIEW_FLAG_ISTHREAD)
+    {
+      nsCOMPtr <nsIMsgThread> thread;
+      rv = GetThreadContainingIndex(aRow, getter_AddRefs(thread));
+      if (NS_SUCCEEDED(rv) && thread)
+      {
+        PRUint32 numUnreadChildren;
+        thread->GetNumUnreadChildren(&numUnreadChildren);
+        if (numUnreadChildren > 0)
+        {
+            properties->AppendElement(kHasUnreadAtom);
+        }   
+      }
+    }
+  }     
+
   return NS_OK;
 }
 
@@ -819,6 +854,9 @@ NS_IMETHODIMP nsMsgDBView::HasNextSibling(PRInt32 rowIndex, PRInt32 afterIndex, 
 
 NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
 {
+  if (!IsValidIndex(index))
+    return NS_MSG_INVALID_DBVIEW_INDEX;
+
   if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
     *_retval = m_levels[index];
   else
@@ -846,11 +884,17 @@ nsresult nsMsgDBView::GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder *
 nsresult nsMsgDBView::GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db)
 {
   *db = m_db;
+  NS_IF_ADDREF(*db);
   return NS_OK;
 }
+
 NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
 {
   nsresult rv = NS_OK;
+
+  if (!IsValidIndex(aRow))
+    return NS_MSG_INVALID_DBVIEW_INDEX;
+
   nsMsgKey key = m_keys.GetAt(aRow);
   nsCOMPtr <nsIMsgDBHdr> msgHdr;
   if (key == m_cachedMsgKey)
@@ -947,121 +991,17 @@ NS_IMETHODIMP nsMsgDBView::SetOutliner(nsIOutlinerBoxObject *outliner)
 
 NS_IMETHODIMP nsMsgDBView::ToggleOpenState(PRInt32 index)
 {
-  PRUint32 numChanged = 0;
-  PRInt32 multiplier = -1;
-  if (m_flags[index] & MSG_FLAG_ELIDED)
-    multiplier = 1;
+  PRUint32 numChanged;
   nsresult rv = ToggleExpansion(index, &numChanged);
   NS_ENSURE_SUCCESS(rv,rv);
-  mOutliner->RowCountChanged(index, numChanged * multiplier);
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement * aElement)
 {
-  // if the header is a sortable column then we want to call Sort
-  // otherwise, we'll do something else =)
-
-  nsMsgViewSortTypeValue sortType = nsMsgViewSortType::bySubject;
-  nsMsgViewSortOrderValue sortOrder = nsMsgViewSortOrder::descending;
-  PRBool performSort = PR_TRUE;
-
-  nsAutoString sortOrderValue;
-  aElement->GetAttribute(NS_LITERAL_STRING("sortDirection"), sortOrderValue);
-  if (!sortOrderValue.IsEmpty() && sortOrderValue.Equals(NS_LITERAL_STRING("ascending")))
-     sortOrder = nsMsgViewSortOrder::ascending;
-
-  if ((aColID[0] != 't') && (aColID[1] != 'h')) {
-    m_viewFlags &= ~nsMsgViewFlagsType::kThreadedDisplay;
-  }
-
-  switch (aColID[0])
-  {
-  case 's':
-    if (aColID[1] == 'u') // sort the subject
-    {
-      sortType = nsMsgViewSortType::bySubject;
-    }
-    else if (aColID[1] == 'e') // sort by sender
-    {
-      if (mIsSpecialFolder)
-        sortType = nsMsgViewSortType::byRecipient;
-      else
-        sortType = nsMsgViewSortType::byAuthor;
-    }
-    else if (aColID[1] == 'i') // size
-    {
-      sortType = nsMsgViewSortType::bySize;
-    }
-    else
-    {
-      sortType = nsMsgViewSortType::byStatus;
-    }
-    break;
-  case 'u': 
-    if (aColID[6] == 'B') // unreadButtonColHeader
-    {
-      sortType = nsMsgViewSortType::byUnread;
-    }
-    else  // unreadCol
-    {
-      NS_ASSERTION(0,"fix this");
-      performSort = PR_FALSE;
-    }
-    break;
-  case 'd': // date
-    sortType = nsMsgViewSortType::byDate;
-    break;
-  case 'p': // priority
-    sortType = nsMsgViewSortType::byPriority;
-    break;
-  case 't': // thread column
-    if (aColID[1] == 'h') {
-      sortType = nsMsgViewSortType::byThread;
-      m_viewFlags |= nsMsgViewFlagsType::kThreadedDisplay;
-    }
-    else {
-      NS_ASSERTION(0,"fix this");
-      //sortType = nsMsgViewSortType::byTotal;
-      performSort = PR_FALSE;
-    }
-    break;
-  case 'f': // flagged
-    sortType = nsMsgViewSortType::byFlagged;
-    break;
-  default:
-    performSort = PR_FALSE;
-    break;
-  }
-  
-  PRInt32 countBeforeSort;
-  GetRowCount(&countBeforeSort);
-
-  if (performSort)
-  {
-    // if we are already sorted by the same order, then toggle ascending / descending.
-    if (m_sortType == sortType)
-    {
-      if (sortOrder == nsMsgViewSortOrder::ascending)
-        sortOrder = nsMsgViewSortOrder::descending;
-      else
-        sortOrder = nsMsgViewSortOrder::ascending;
-    }
-
-    Sort(sortType, sortOrder);
-    UpdateSortUI(aElement);
-
-  } // if performSort
-
-  PRInt32 countAfterSort;
-  GetRowCount(&countAfterSort);
-
-  if (countBeforeSort != countAfterSort) {
-    mOutliner->RowCountChanged(0, -countBeforeSort);
-    mOutliner->RowCountChanged(0, countAfterSort);
-  }
-
-  return NS_OK;
+    // let HandleColumnClick() in threadPane.js handle it
+    // since it will set / clear the sort indicators.
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
@@ -1084,9 +1024,9 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
   case 'f': // flagged column
     // toggle the flagged status of the element at row.
     if (m_flags[row] & MSG_FLAG_MARKED)
-      SetFlaggedByIndex(row, PR_FALSE);
+      ApplyCommandToIndices(nsMsgViewCommandType::unflagMessages, (nsMsgViewIndex *) &row, 1);
     else
-      SetFlaggedByIndex(row, PR_TRUE);
+      ApplyCommandToIndices(nsMsgViewCommandType::flagMessages, (nsMsgViewIndex *) &row, 1);
     break;
   default:
     break;
@@ -1107,23 +1047,6 @@ NS_IMETHODIMP nsMsgDBView::PerformActionOnRow(const PRUnichar *action, PRInt32 r
 
 NS_IMETHODIMP nsMsgDBView::PerformActionOnCell(const PRUnichar *action, PRInt32 row, const PRUnichar *colID)
 {
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsMsgDBView::GetSortedColumn(nsIDOMElement ** aColumn)
-{
-  *aColumn = mCurrentSortColumn;
-  NS_IF_ADDREF(*aColumn);
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsMsgDBView::SetSortedColumn(nsIDOMElement * aColumn)
-{
-  if (!mCurrentSortColumn)
-    UpdateSortUI(aColumn);
-
-  mCurrentSortColumn = aColumn;
   return NS_OK;
 }
 
@@ -1670,7 +1593,6 @@ nsresult nsMsgDBView::DownloadFlaggedForOffline(nsIMsgWindow *window)
   return rv;
 }
 
-
 // read/unread handling.
 nsresult nsMsgDBView::ToggleReadByIndex(nsMsgViewIndex index)
 {
@@ -1685,10 +1607,20 @@ nsresult nsMsgDBView::SetReadByIndex(nsMsgViewIndex index, PRBool read)
 
 	if (!IsValidIndex(index))
 		return NS_MSG_INVALID_DBVIEW_INDEX;
-	if (read)
+	if (read) {
 		OrExtraFlag(index, MSG_FLAG_READ);
-	else
+        // MarkRead() will clear this flag in the db
+        // and then call OnKeyChange(), but
+        // because we are the instigator of the change
+        // we'll ignore the change.
+        //
+        // so we need to clear it in m_flags
+        // to keep the db and m_flags in sync
+		AndExtraFlag(index, ~MSG_FLAG_NEW);
+    }
+	else {
 		AndExtraFlag(index, ~MSG_FLAG_READ);
+    }
 
   nsCOMPtr <nsIMsgDatabase> dbToUse;
   rv = GetDBForViewIndex(index, getter_AddRefs(dbToUse));
@@ -2143,16 +2075,12 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 {
     nsresult rv;
 
-    // null db is OK.
-    nsMsgKeyArray preservedSelection;
-
     if (m_sortType == sortType && m_sortValid) {
         if (m_sortOrder == sortOrder) {
             // same as it ever was.  do nothing
             return NS_OK;
         }   
         else {
-            SaveSelection(&preservedSelection);
             if (m_sortType != nsMsgViewSortType::byThread) {
                 rv = ReverseSort();
                 NS_ENSURE_SUCCESS(rv,rv);
@@ -2164,8 +2092,6 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
             m_sortOrder = sortOrder;
             // we just reversed the sort order...we still need to invalidate the view
-            RestoreSelection(&preservedSelection);
-            mOutliner->Invalidate();
             return NS_OK;
         }
     }
@@ -2173,8 +2099,6 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     if (sortType == nsMsgViewSortType::byThread) {
         return NS_OK;
     }
-
-    SaveSelection(&preservedSelection);
 
     // figure out how much memory we'll need, and the malloc it
     PRUint16 maxLen;
@@ -2373,13 +2297,6 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 
     m_sortValid = PR_TRUE;
     //m_db->SetSortInfo(sortType, sortOrder);
-
-    // last but not least, invalidate the entire view and restore
-    // the selection.
-    RestoreSelection(&preservedSelection);
-
-    if (mOutliner)
-      mOutliner->Invalidate();
 
     return NS_OK;
 }
@@ -2859,8 +2776,7 @@ nsMsgViewIndex nsMsgDBView::GetIndexForThread(nsIMsgDBHdr *hdr)
 		// and put new header before found header, or at end.
 		for (PRInt32 i = GetSize() - 1; i >= 0; i--) 
 		{
-			char level = m_levels[i];
-			if (level == 0)
+			if (m_levels[i])
 			{
 				if (insertKey < m_keys.GetAt(i))
 					prevInsertIndex = i;
@@ -2891,8 +2807,7 @@ nsMsgViewIndex nsMsgDBView::GetIndexForThread(nsIMsgDBHdr *hdr)
 		// new header before found header, or at beginning.
 		for (PRInt32 i = 0; i < GetSize(); i++) 
 		{
-			char level = m_levels[i];
-			if (level == 0)
+			if (m_levels[i])
 			{
 				if (insertKey > m_keys.GetAt(i))
 				{
@@ -3049,13 +2964,13 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 
 nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
 {
-	PRUint32	flags = 0;
+  PRUint32	flags = 0;
 #ifdef DEBUG_bienvenu
-	NS_ASSERTION((int) m_keys.GetSize() == m_flags.GetSize() && (int) m_keys.GetSize() == m_levels.GetSize(), "view arrays out of sync!");
+  NS_ASSERTION((int) m_keys.GetSize() == m_flags.GetSize() && (int) m_keys.GetSize() == m_levels.GetSize(), "view arrays out of sync!");
 #endif
   msgHdr->GetFlags(&flags);
-	if (flags & MSG_FLAG_IGNORED && !GetShowingIgnored())
-		return NS_OK;
+  if (flags & MSG_FLAG_IGNORED && !GetShowingIgnored())
+    return NS_OK;
 
   nsMsgKey msgKey, threadId;
   nsMsgKey threadParent;
@@ -3064,66 +2979,60 @@ nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
   msgHdr->GetThreadParent(&threadParent);
 
   // ### this isn't quite right, is it? Should be checking that our thread parent key is none?
-	if (threadParent == nsMsgKey_None) 
-		flags |= MSG_VIEW_FLAG_ISTHREAD;
-	nsMsgViewIndex insertIndex = GetInsertIndex(msgHdr);
-	if (insertIndex == nsMsgViewIndex_None)
-	{
-		// if unreadonly, level is 0 because we must be the only msg in the thread.
-    char levelToAdd = 0; // ### TODO ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) != 0) ? 0 : msgHdr->GetLevel();
+  if (threadParent == nsMsgKey_None) 
+    flags |= MSG_VIEW_FLAG_ISTHREAD;
+  nsMsgViewIndex insertIndex = GetInsertIndex(msgHdr);
+  if (insertIndex == nsMsgViewIndex_None)
+  {
+	// if unreadonly, level is 0 because we must be the only msg in the thread.
+    PRInt32 levelToAdd = 0;
+#if 0 
+    if (!(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly)) 
+    {
+        levelToAdd = FindLevelInThread(msgHdr, insertIndex);
+    }
+#endif
 
     if (m_sortOrder == nsMsgViewSortOrder::ascending)
-		{
-			m_keys.Add(msgKey);
-			m_flags.Add(flags);
-			m_levels.Add(levelToAdd);
-			NoteChange(m_keys.GetSize() - 1, 1, nsMsgViewNotificationCode::insertOrDelete);
-		}
-		else
-		{
-			m_keys.InsertAt(0, msgKey);
-			m_flags.InsertAt(0, flags);
-			m_levels.InsertAt(0, levelToAdd);
-			NoteChange(0, 1, nsMsgViewNotificationCode::insertOrDelete);
-		}
-		m_sortValid = PR_FALSE;
+	{
+	  m_keys.Add(msgKey);
+	  m_flags.Add(flags);
+      m_levels.Add(levelToAdd);
+      NoteChange(m_keys.GetSize() - 1, 1, nsMsgViewNotificationCode::insertOrDelete);
 	}
 	else
 	{
-		m_keys.InsertAt(insertIndex, msgKey);
-		m_flags.InsertAt(insertIndex, flags);
-    char level = 0; // ### TODO (m_sortType == nsMsgViewSortType::byThread) ? 0 : msgHdr->GetLevel();
-		m_levels.InsertAt(insertIndex, level);
-    NoteChange(insertIndex, 1, nsMsgViewNotificationCode::insertOrDelete);
+      m_keys.InsertAt(0, msgKey);
+      m_flags.InsertAt(0, flags);
+      m_levels.InsertAt(0, levelToAdd);
+      NoteChange(0, 1, nsMsgViewNotificationCode::insertOrDelete);
 	}
-	OnHeaderAddedOrDeleted();
-	return NS_OK;
+	m_sortValid = PR_FALSE;
+  }
+  else
+  {
+    m_keys.InsertAt(insertIndex, msgKey);
+    m_flags.InsertAt(insertIndex, flags);
+    PRInt32 level = 0; 
+#if 0 
+    if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+    {
+        level = FindLevelInThread(msgHdr, insertIndex);
+    }
+#endif
+    m_levels.InsertAt(insertIndex, level);
+    NoteChange(insertIndex, 1, nsMsgViewNotificationCode::insertOrDelete);
+  }
+  OnHeaderAddedOrDeleted();
+  return NS_OK;
 }
-
-nsresult nsMsgDBView::InsertHdrAt(nsIMsgDBHdr *msgHdr, nsMsgViewIndex insertIndex)
-{
-	PRUint32	flags = 0;
-  nsMsgKey msgKey;
-	msgHdr->GetFlags(&flags);
-  msgHdr->GetMessageKey(&msgKey);
-
-	NoteStartChange(insertIndex, 1, nsMsgViewNotificationCode::changed);
-	m_keys.SetAt(insertIndex, msgKey);
-	m_flags.SetAt(insertIndex, flags);
-  char level = 0; // ### TODO (m_sortType == nsMsgViewSortType::byThread) ? 0 : msgHdr->GetLevel()
-	m_levels.SetAt(insertIndex, level);
-	NoteEndChange(insertIndex, 1, nsMsgViewNotificationCode::changed);
-	OnHeaderAddedOrDeleted();
-	return NS_OK;
-}
-
 
 PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
 {
   return PR_TRUE; // default is to want all threads.
 }
 
-PRInt32 nsMsgDBView::FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgKey msgKey, nsMsgViewIndex startOfThreadViewIndex)
+PRInt32 nsMsgDBView::FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThreadViewIndex)
 {
   nsMsgKey threadParent;
   msgHdr->GetThreadParent(&threadParent);
@@ -3171,7 +3080,7 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
       // ### TODO - how about hasChildren flag?
 			m_flags.InsertAt(viewIndex, msgFlags & ~MSG_VIEW_FLAGS);
       // ### TODO this is going to be tricky - might use enumerators
-      PRInt32 level = FindLevelInThread(msgHdr, msgKey, startOfThreadViewIndex);
+      PRInt32 level = FindLevelInThread(msgHdr, startOfThreadViewIndex);
 			m_levels.InsertAt(viewIndex, level); 
 			// turn off thread or elided bit if they got turned on (maybe from new only view?)
 			if (i > 0)	
@@ -3368,7 +3277,7 @@ NS_IMETHODIMP nsMsgDBView::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator
   // this will force the outliner to ask for the cell values
   // since we don't have a db and we don't have any keys, 
   // the thread pane goes blank
-  mOutliner->Invalidate();
+  if (mOutliner) mOutliner->Invalidate();
 
   return NS_OK;
 }
@@ -3522,7 +3431,7 @@ nsresult nsMsgDBView::MarkThreadRead(nsIMsgThread *threadHdr, nsMsgViewIndex thr
 
 // Starting from startIndex, performs the passed in navigation, including
 // any marking read needed, and returns the resultId and resultIndex of the
-// destination of the navigation. If there are no more unread in the view,
+// destination of the navigation.  If no message is found in the view,
 // it returns a resultId of nsMsgKey_None and an resultIndex of nsMsgViewIndex_None.
 NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgKey *pResultKey, nsMsgViewIndex *pResultIndex, nsMsgViewIndex *pThreadIndex, PRBool wrap)
 {
@@ -3554,16 +3463,17 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
     nsMsgViewIndex lastIndex = (GetSize() > 0) ? (nsMsgViewIndex) GetSize() - 1 : nsMsgViewIndex_None;
     nsMsgViewIndex threadIndex = nsMsgViewIndex_None;
 
+    // if there aren't any messages in the view, bail out.
+    if (GetSize() <= 0) {
+      *pResultIndex = nsMsgViewIndex_None;
+      *pResultKey = nsMsgKey_None;
+      return NS_OK;
+    }
+
     switch (motion) {
         case nsMsgNavigationType::firstMessage:
-            if (GetSize() > 0) {
-                *pResultIndex = 0;
-                *pResultKey = m_keys.GetAt(0);
-            }
-            else {
-                *pResultIndex = nsMsgViewIndex_None;
-                *pResultKey = nsMsgKey_None;
-            }
+            *pResultIndex = 0;
+            *pResultKey = m_keys.GetAt(0);
             break;
         case nsMsgNavigationType::nextMessage:
             // return same index and id on next on last message
@@ -3959,7 +3869,7 @@ nsresult nsMsgDBView::FindPrevFlagged(nsMsgViewIndex startIndex, nsMsgViewIndex 
 
 PRBool nsMsgDBView::IsValidIndex(nsMsgViewIndex index)
 {
-    return (index < (nsMsgViewIndex) m_keys.GetSize());
+    return ((index >=0) && (index < (nsMsgViewIndex) m_keys.GetSize()));
 }
 
 nsresult nsMsgDBView::OrExtraFlag(nsMsgViewIndex index, PRUint32 orflag)
@@ -4139,33 +4049,17 @@ NS_IMETHODIMP nsMsgDBView::GetMsgFolder(nsIMsgFolder **aMsgFolder)
 
 NS_IMETHODIMP 
 nsMsgDBView::GetNumSelected(PRUint32 *numSelected)
-{
+{ 
   NS_ENSURE_ARG_POINTER(numSelected);
-  *numSelected = 0;
-  if (!mOutlinerSelection) {
+    
+  if (!mOutlinerSelection) 
+  {
+    *numSelected = 0;
     return NS_OK;
   }
-   
-  // we could just use GetSelectedIndices(), we don't for performance
-  // we don't need to know the rows that are selected, just
-  // how many of them.  no need to allocate a nsUInt32Array
-  // just to throw it away.  we call this a lot from the 
-  // front end JS, so make it fast.
-  PRInt32 selectionCount;
-  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
-  for (PRInt32 i = 0; i < selectionCount; i++) {
-    PRInt32 startRange;
-    PRInt32 endRange;
-    rv = mOutlinerSelection->GetRangeAt(i, &startRange, &endRange);
-    NS_ENSURE_SUCCESS(rv, rv);
-    PRInt32 viewSize = GetSize();
-    if (startRange >= 0 && startRange < viewSize) {
-      for (PRInt32 rangeIndex = startRange; rangeIndex <= endRange && rangeIndex < viewSize; rangeIndex++) {
-        (*numSelected)++;
-      }
-    }
-  }
-  return NS_OK;
+  
+  // We call this a lot from the front end JS, so make it fast.
+  return mOutlinerSelection->GetCount((PRInt32*)numSelected);
 }
 
 NS_IMETHODIMP 
@@ -4263,3 +4157,14 @@ nsresult nsMsgDBView::GetFolders(nsISupportsArray **aFolders)
     return NS_OK;
 }
 
+nsresult nsMsgDBView::AdjustRowCount(PRInt32 rowCountBeforeSort, PRInt32 rowCountAfterSort)
+{
+  PRInt32 rowChange = rowCountBeforeSort - rowCountAfterSort;
+
+  if (rowChange) {
+    // this is not safe to use when you have a selection
+    // RowCountChanged() will call AdjustSelection()
+    if (mOutliner) mOutliner->RowCountChanged(0, rowChange);
+  }
+  return NS_OK;
+}

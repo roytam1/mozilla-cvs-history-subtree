@@ -40,9 +40,8 @@
 #include "nsIOutputStream.h"
 #include "nsHTTPResponseListener.h"
 #include "nsIStreamListener.h"
-#include "nsIStreamObserver.h"
 #include "nsIProxy.h"
-#include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 #include "nsIHTTPEventSink.h"
 
 #ifdef MOZ_NEW_CACHE
@@ -118,8 +117,7 @@ public:
     nsresult            Redirect(const char *aURL,
                                  nsIChannel **aResult, PRInt32 aStatusCode);
 
-    nsresult            ResponseCompleted(nsIStreamListener *aListener,
-                                          nsresult aStatus, const PRUnichar* aStatusArg);
+    nsresult            ResponseCompleted(nsIStreamListener *aListener, nsresult aStatus);
 
     nsresult            SetResponse(nsHTTPResponse* i_pResp);
     nsresult            GetResponseContext(nsISupports** aContext);
@@ -139,14 +137,8 @@ protected:
 
 #ifdef MOZ_NEW_CACHE
     nsresult            OpenCacheEntry();
+    nsresult            GenerateCacheKey(nsAWritableCString &);
 
-    nsresult            GetRequestTime(PRUint32 *);
-    nsresult            SetRequestTime(PRUint32);
-    nsresult            GetResponseTime(PRUint32 *);
-    nsresult            SetResponseTime(PRUint32);
-
-    nsresult            ComputeCurrentAge(PRUint32 now, PRUint32 *);
-    nsresult            ComputeFreshnessLifetime(PRUint32 *);
     nsresult            UpdateExpirationTime();
 
     PRBool              ResponseIsCacheable();
@@ -188,13 +180,13 @@ protected:
     // Various event sinks
     nsCOMPtr<nsIHTTPEventSink>          mEventSink;
     nsCOMPtr<nsIHTTPEventSink>          mRealEventSink;
-    nsCOMPtr<nsIPrompt>                 mPrompter;
-    nsCOMPtr<nsIPrompt>                 mRealPrompter;
+    nsCOMPtr<nsIAuthPrompt>             mAuthPrompter;
+    nsCOMPtr<nsIAuthPrompt>             mRealAuthPrompter;
     nsCOMPtr<nsIProgressEventSink>      mProgressEventSink;
     nsCOMPtr<nsIProgressEventSink>      mRealProgressEventSink;
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
 
-    PRUint32                            mLoadAttributes;
+    PRUint32                            mLoadFlags;
     nsCOMPtr<nsILoadGroup>              mLoadGroup;
 
     // nsIPrincipal
@@ -219,6 +211,8 @@ protected:
     nsCOMPtr<nsITransport>              mCacheTransport;
     nsCOMPtr<nsIRequest>                mCacheReadRequest;
     nsCacheAccessMode                   mCacheAccess;
+    PRUint32                            mPostID;
+    PRUint32                            mRequestTime;
 #else
     nsCOMPtr<nsICachedNetData>          mCacheEntry;
     nsCOMPtr<nsIChannel>                mCacheChannel;
@@ -249,7 +243,9 @@ protected:
     PRPackedBool                        mOpenHasEventQueue;
      
     // Cache-related flags
-#ifndef MOZ_NEW_CACHE 
+#ifdef MOZ_NEW_CACHE 
+    PRPackedBool                        mFromCacheOnly;
+#else
     PRPackedBool                        mCachedContentIsAvailable;
 #endif
     PRPackedBool                        mCachedContentIsValid;
@@ -276,7 +272,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIRUNNABLE
     NS_DECL_NSISTREAMLISTENER
-    NS_DECL_NSISTREAMOBSERVER
+    NS_DECL_NSIREQUESTOBSERVER
 
     nsSyncHelper();
     virtual ~nsSyncHelper() {};

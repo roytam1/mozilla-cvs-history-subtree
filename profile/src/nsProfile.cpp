@@ -72,7 +72,7 @@
 
 #include "nsIScriptGlobalObject.h"
 #include "nsIBaseWindow.h"
-#include "nsICommonDialogs.h"
+#include "nsIDialogParamBlock.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIWindowMediator.h"
 
@@ -160,7 +160,6 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kPrefMigrationCID, NS_PREFMIGRATION_CID);
 static NS_DEFINE_CID(kPrefConverterCID, NS_PREFCONVERTER_CID);
 static NS_DEFINE_IID(kCookieServiceCID, NS_COOKIESERVICE_CID);
-static NS_DEFINE_CID(kDialogParamBlockCID, NS_DialogParamBlock_CID);
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
 
 static NS_DEFINE_CID(kChromeRegistryCID,    NS_CHROMEREGISTRY_CID);
@@ -905,10 +904,6 @@ NS_IMETHODIMP nsProfile::GetProfileDir(const PRUnichar *profileName, nsIFile **p
             rv = AddLevelOfIndirection(aProfileDir);
             if (NS_FAILED(rv)) return rv;
 
-            // create the sub directories
-            rv = CreateUserDirectories(aProfileDir);
-            if (NS_FAILED(rv)) return rv;
-            
 			// since we might be changing the location of
 			// profile dir, reset it in the registry.
 			// see bug #56002 for details
@@ -1346,8 +1341,6 @@ nsProfile::CreateNewProfile(const PRUnichar* profileName,
     rv = AddLevelOfIndirection(profileDir);
     if (NS_FAILED(rv)) return rv;
 
-    // Create the sub directories
-    rv = CreateUserDirectories(profileDir);  
     // Set the directory value and add the entry to the registry tree.
     rv = SetProfileDir(profileName, profileDir);
 
@@ -1401,42 +1394,6 @@ nsProfile::CreateNewProfile(const PRUnichar* profileName,
     
     return NS_OK;
 }	
-
-
-// Create required user directories like ImapMail, Mail, News, Cache etc.
-nsresult nsProfile::CreateUserDirectories(nsIFile *profileDir)
-{
-    nsresult rv = NS_OK;
-
-#if defined(DEBUG_profile_verbose)
-    printf("ProfileManager : CreateUserDirectories\n");
-#endif
-
-    const char* subDirNames[] = {
-        NEW_NEWS_DIR_NAME,
-        NEW_IMAPMAIL_DIR_NAME,
-        NEW_MAIL_DIR_NAME,
-        "Cache"
-    };
-    
-    for (PRUint32 i = 0; i < sizeof(subDirNames) / sizeof(char *); i++)
-    {
-      PRBool exists;
-      
-      nsCOMPtr<nsIFile> newDir;    
-      rv = profileDir->Clone(getter_AddRefs(newDir));
-      if (NS_FAILED(rv)) return rv;
-      rv = newDir->Append(subDirNames[i]);
-      if (NS_FAILED(rv)) return rv;
-      rv = newDir->Exists(&exists);
-      if (NS_SUCCEEDED(rv) && !exists)
-          rv = newDir->Create(nsIFile::DIRECTORY_TYPE, 0775);
-      if (NS_FAILED(rv)) return rv;
-    }
-
-    return NS_OK;
-}
-
 
 // Delete all user directories associated with the a profile
 // A FileSpec of the profile's directory is taken as input param
@@ -1936,8 +1893,6 @@ nsProfile::MigrateProfile(const PRUnichar* profileName, PRBool showProgressAsMod
     // No longer copying the default 5.0 profile files into
     // the migrated profile. Check for them as requested.
 	
-	rv = CreateUserDirectories(newProfDir);
-	if (NS_FAILED(rv)) return rv;
     rv = SetProfileDir(profileName, newProfDir);
     if (NS_FAILED(rv)) return rv;
 
@@ -2008,7 +1963,7 @@ nsProfile::ShowProfileWizard(void)
         // list to the dialog
         //-----------------------------------------------------
         nsCOMPtr<nsIDialogParamBlock> ioParamBlock;
-        rv = nsComponentManager::CreateInstance(kDialogParamBlockCID,
+        rv = nsComponentManager::CreateInstance("@mozilla.org/embedcomp/dialogparam;1",
                                             nsnull,
                                             NS_GET_IID(nsIDialogParamBlock),
                                             getter_AddRefs(ioParamBlock));

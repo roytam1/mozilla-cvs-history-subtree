@@ -22,8 +22,8 @@
 
 //NOTE: gMessengerBundle must be defined and set or this Overlay won't work
 
-var commonDialogs = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
-commonDialogs = commonDialogs.QueryInterface(Components.interfaces.nsICommonDialogs);
+var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+promptService = promptService.QueryInterface(Components.interfaces.nsIPromptService);
 var accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
 
 
@@ -71,11 +71,6 @@ function FindNextFolder(originalFolderURI)
     return null;
 }
 
-function ScrollToFirstNewMessage()
-{
-  dump("XXX ScrollToFirstNewMessage needs to be rewritten.\n");
-}
-
 function GetTopLevelMessageForMessage(message, folder)
 {
 	if(!folder)
@@ -90,7 +85,7 @@ function GetTopLevelMessageForMessage(message, folder)
 	return topMessage;
 }
 
-function CrossFolderNavigation (type, supportsFolderPane )
+function CrossFolderNavigation(type, supportsFolderPane )
 {
   if (type != nsMsgNavigationType.nextUnreadMessage) 
   {
@@ -148,22 +143,18 @@ function CrossFolderNavigation (type, supportsFolderPane )
       {
         case 0:
             // do this unconditionally
-            gNextMessageAfterLoad = true;
+            gNextMessageAfterLoad = type;
             if (supportsFolderPane)
               SelectFolder(nextFolderURI);
-            dump("XXX we need code to select the correct type of message, after we load the folder\n");
             break;
         case 1:
+        default:
             var promptText = gMessengerBundle.getFormattedString("advanceNextPrompt", [ nextFolder.name ], 1); 
-            if (commonDialogs.Confirm(window, promptText, promptText)) {
-                gNextMessageAfterLoad = true;
+            if (promptService.confirm(window, promptText, promptText)) {
+                gNextMessageAfterLoad = type;
                 if (supportsFolderPane)
                   SelectFolder(nextFolderURI);
-                dump("XXX we need code to select the correct type of message, after we load the folder\n");
             }
-            break;
-        default:
-            dump("huh?");
             break;
         }
     }
@@ -171,14 +162,12 @@ function CrossFolderNavigation (type, supportsFolderPane )
     return nextFolderURI;
 }
 
-function GoNextMessage(type, startFromBeginning)
+function ScrollToMessage(type, wrap, selectMessage)
 {
   try {
     var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
     var outlinerSelection = outlinerView.selection;
     var currentIndex = outlinerSelection.currentIndex;
-
-    var status = gDBView.navigateStatus(type);
 
     var resultId = new Object;
     var resultIndex = new Object;
@@ -188,12 +177,28 @@ function GoNextMessage(type, startFromBeginning)
 
     // only scroll and select if we found something
     if ((resultId.value != -1) && (resultIndex.value != -1)) {
-        outlinerSelection.select(resultIndex.value);
-        EnsureRowInThreadOutlinerIsVisible(resultIndex.value); 
-        return;
+        if (selectMessage) {
+            outlinerSelection.select(resultIndex.value);
+        }
+        EnsureRowInThreadOutlinerIsVisible(resultIndex.value);
+        return true;
     }
-    
-    CrossFolderNavigation(type, true);
+    else {
+        return false;
+    }
+  }
+  catch (ex) {
+    return false;
+  }
+}
+
+function GoNextMessage(type, startFromBeginning)
+{
+  try {
+    var succeeded = ScrollToMessage(type, startFromBeginning, true);
+    if (!succeeded) {
+      CrossFolderNavigation(type, true);
+    }
   }
   catch (ex) {
     dump("GoNextMessage ex = " + ex + "\n");

@@ -35,7 +35,7 @@ class nsDownloader : public nsIDownloader,
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOWNLOADER
-  NS_DECL_NSISTREAMOBSERVER
+  NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
 
   nsDownloader() { NS_INIT_REFCNT();} ;
@@ -47,7 +47,6 @@ public:
 protected:
   nsCOMPtr<nsIDownloadObserver>     mObserver;
   nsCOMPtr<nsISupports>             mContext;  // the observer's context
-///  nsCOMPtr<nsILoadGroup> mLoadGroup;
 };
 
 #endif // nsDownloader_h__

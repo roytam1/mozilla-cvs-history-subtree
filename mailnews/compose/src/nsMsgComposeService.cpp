@@ -24,10 +24,8 @@
 
 #include "nsMsgComposeService.h"
 #include "nsMsgCompCID.h"
-#include "nsISupportsPrimitives.h"
+#include "nsISupportsArray.h"
 #include "nsIServiceManager.h"
-#include "nsIAppShellService.h"
-#include "nsAppShellCIDs.h"
 #include "nsXPIDLString.h"
 #include "nsIMsgIdentity.h"
 #include "nsISmtpUrl.h"
@@ -35,9 +33,10 @@
 #include "nsMsgI18N.h"
 #include "nsIMsgDraft.h"
 #include "nsIMsgComposeParams.h"
+#include "nsISupportsPrimitives.h"
+#include "nsIWindowWatcher.h"
+#include "nsIDOMWindow.h"
 #include "nsEscape.h"
-#include "nsIDOMWindowInternal.h"
-#include "jsapi.h"
 
 #ifdef MSGCOMP_TRACE_PERFORMANCE
 #include "prlog.h"
@@ -47,7 +46,6 @@
 #include "nsMsgUtils.h"
 #endif
 
-static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kMsgComposeCID, NS_MSGCOMPOSE_CID);
 
 #ifdef NS_DEBUG
@@ -99,34 +97,26 @@ nsMsgComposeService::~nsMsgComposeService()
 {
 }
 
-// Utility function to open a message compose window and pass an
-// nsIMsgComposeParams parameter to it.
+// Utility function to open a message compose window and pass an nsIMsgComposeParams parameter to it.
 static nsresult openWindow( const char *chrome, nsIMsgComposeParams *params )
 {
-  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
   nsresult rv;
 
-  nsCOMPtr<nsIAppShellService> appShell (do_GetService(kAppShellServiceCID));
-  if (appShell)
-  {
-    rv = appShell->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
+  nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+  if (!wwatch)
+    return NS_ERROR_FAILURE;
 
-    if (NS_SUCCEEDED(rv))
-    {
-      nsCOMPtr<nsIDOMWindow> newWindow;
-      nsCOMPtr<nsISupportsInterfacePointer> ifptr =
-        do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsISupportsInterfacePointer> msgParamsWrapper =
+    do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-      ifptr->SetData(params);
-      ifptr->SetDataIID(&NS_GET_IID(nsIMsgComposeParams));
+  msgParamsWrapper->SetData(params);
+  msgParamsWrapper->SetDataIID(&NS_GET_IID(nsIMsgComposeParams));
 
-      rv = hiddenWindow->OpenDialog(NS_ConvertASCIItoUCS2(chrome),
-                                    NS_LITERAL_STRING("_blank"),
-                                    NS_LITERAL_STRING("chrome,dialog=no,all"),
-                                    ifptr, getter_AddRefs(newWindow));
-    }
-  }
+  nsCOMPtr<nsIDOMWindow> newWindow;
+  rv = wwatch->OpenWindow(0, chrome && *chrome ? chrome : DEFAULT_CHROME,
+                 "_blank", "chrome,dialog=no,all", msgParamsWrapper,
+                 getter_AddRefs(newWindow));
 
   return rv;
 }
@@ -334,12 +324,6 @@ nsresult nsMsgComposeService::InitCompose(nsIDOMWindowInternal *aWindow,
 	}
 	
 	return rv;
-}
-
-
-nsresult nsMsgComposeService::DisposeCompose(nsIMsgCompose *compose)
-{
-	return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgComposeService::TimeStamp(const char * label, PRBool resetTime)

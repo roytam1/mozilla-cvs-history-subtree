@@ -128,7 +128,7 @@ public:
     /* Remove this transport from the list. */
     virtual nsresult ReleaseTransport(nsITransport* i_pTrans, PRUint32 capabilies = 0, PRBool aDontRestartChannels = PR_FALSE, PRUint32 aKeepAliveTimeout = 0, PRInt32 aKeepAliveMaxCon = -1);
     virtual nsresult CancelPendingChannel(nsHTTPChannel* aChannel);
-    PRTime GetSessionStartTime() { return mSessionStartTime; }
+    PRUint32 SessionStartTime() { return mSessionStartTime; }
 
     void PrefsChanged(const char* pref = 0);
 
@@ -148,6 +148,7 @@ public:
 
 #ifdef MOZ_NEW_CACHE
     nsresult GetCacheSession(nsCacheStoragePolicy, nsICacheSession **);
+    PRUint32 CreatePostID() { return ++mLastPostID; }
 #endif
 
 protected:
@@ -166,9 +167,11 @@ protected:
 #ifdef MOZ_NEW_CACHE
     nsCOMPtr<nsICacheSession> mCacheSession_ANY;
     nsCOMPtr<nsICacheSession> mCacheSession_MEM;
+    PRUint32                  mLastPostID;
 #endif
 
     char*               mAcceptLanguages;
+    char*               mAcceptLanguagesPrepped;
     char*               mAcceptEncodings;
     char*               mAcceptCharset;
     char*               mAcceptCharsetPrepped;
@@ -186,7 +189,7 @@ protected:
     nsCOMPtr<nsIPref>   mPrefs;
     nsCOMPtr<nsIProtocolProxyService>       mProxySvc;
     PRUint32            mReferrerLevel;
-    PRTime              mSessionStartTime;
+    PRUint32            mSessionStartTime;
 
     nsresult BuildUserAgent();
     nsCString mAppName;

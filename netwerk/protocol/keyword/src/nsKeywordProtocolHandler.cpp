@@ -29,6 +29,7 @@
 #include "nsEscape.h"
 #include "nsIPref.h"
 #include "nsXPIDLString.h"
+#include "nsNetCID.h"
 
 static NS_DEFINE_CID(kSimpleURICID,     NS_SIMPLEURI_CID);
 static NS_DEFINE_CID(kIOServiceCID,     NS_IOSERVICE_CID);
@@ -114,7 +115,7 @@ MangleKeywordIntoHTTPURL(const char *aSpec, const char *aHTTPURL) {
                             &&                   //
                 (two == 'o' || two == 'O')       // "g[G]o[O] blah"
                             &&                   //
-                     (unescaped[12] == ' ') ) {      //
+                     (unescaped[2] == ' ') ) {      //
 
         query = unescaped+3;
     } else {

@@ -30,6 +30,7 @@ function onInit()
 
     setupBiffUI();
     setupMailOnServerUI();
+    setupLimitMessageSizeUI();
 }
 
 function onPreInit(account, accountValues)
@@ -190,4 +191,15 @@ function setupMailOnServerUI()
    var checked = document.getElementById("pop3.leaveMessagesOnServer").checked;
 
    document.getElementById("pop3.deleteMailLeftOnServer").disabled = !checked;
+}
+
+function setupLimitMessageSizeUI()
+{
+   var broadcaster = document.getElementById("broadcaster_limitMessageSize");
+
+   var checked = document.getElementById("server.limitMessageSize").checked;
+   if (checked)
+     broadcaster.removeAttribute("disabled");
+   else
+     broadcaster.setAttribute("disabled", "true");
 }

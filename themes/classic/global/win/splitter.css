@@ -9,7 +9,7 @@
   splitter 
     {
       cursor                : e-resize;
-      background-color      : ThreeDFace;
+      background-color      : -moz-Dialog;
       vertical-align        : middle;
       text-align	    	: center;
     }
@@ -20,6 +20,7 @@
       border                : 1px solid ThreeDShadow;
   	  list-style-image      : url("chrome://global/skin/grippy-horizontal-before.gif");
   	  cursor                : pointer;
+      min-height            : 1px;
     }
   
   grippy:hover
@@ -48,7 +49,7 @@
   splitter[state="dragging"],
   splitter:hover:active
     {
-      background-color      : ThreeDFace;
+      background-color      : -moz-Dialog;
       background-image      : url("chrome://global/skin/splitter-drag-bg.gif");
     }
   

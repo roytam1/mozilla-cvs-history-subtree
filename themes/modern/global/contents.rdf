@@ -14,11 +14,16 @@
         chrome:author="mozilla.org"
         chrome:description="A contemporary theme for all Communicator components."
         chrome:name="modern/1.0"
-        chrome:image="skin/modern/global/preview.gif">
+        chrome:image="preview.gif">
     <chrome:packages>
       <RDF:Seq about="urn:mozilla:skin:modern/1.0:packages">
         <RDF:li resource="urn:mozilla:skin:modern/1.0:global"/>
       </RDF:Seq>
     </chrome:packages>
   </RDF:Description>
+
+  <!-- Version Information.  State that we work only with major version 1 of this
+       package. -->
+  <RDF:Description about="urn:mozilla:skin:modern/1.0:global"
+    chrome:skinVersion="1"/>
 </RDF:RDF>

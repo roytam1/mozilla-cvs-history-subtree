@@ -44,6 +44,10 @@ class nsNativeDragTarget;
 class nsIRollupListener;
 
 class nsIMenuBar;
+struct IAccessible;
+
+#include "nsIAccessible.h"
+#include "nsIAccessibleEventListener.h"
 
 #define NSRGB_2_COLOREF(color) \
             RGB(NS_GET_R(color),NS_GET_G(color),NS_GET_B(color))
@@ -175,6 +179,7 @@ private:
 class nsWindow : public nsSwitchToUIThread,
                  public nsBaseWidget,
                  public nsIKBStateControl
+
 {
 
 public:
@@ -255,6 +260,7 @@ public:
     NS_IMETHOD              ScrollWidgets(PRInt32 aDx, PRInt32 aDy);
     NS_IMETHOD              ScrollRect(nsRect &aRect, PRInt32 aDx, PRInt32 aDy);
     NS_IMETHOD              SetTitle(const nsString& aTitle); 
+    NS_IMETHOD              SetIcon(const nsAReadableString& aIconSpec); 
     NS_IMETHOD              SetMenuBar(nsIMenuBar * aMenuBar) { return NS_ERROR_FAILURE; } 
     NS_IMETHOD              ShowMenuBar(PRBool aShow)         { return NS_ERROR_FAILURE; } 
     NS_IMETHOD              WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect);
@@ -286,6 +292,7 @@ public:
             WNDPROC         GetPrevWindowProc() { return mPrevWndProc; }
 
     virtual PRBool          DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint = nsnull);
+    virtual PRBool          DispatchAccessibleEvent(PRUint32 aEventType, nsIAccessible** aAccessible, nsPoint* aPoint = nsnull);
     virtual PRBool          AutoErase();
     nsPoint*                GetLastPoint() { return &mLastPoint; }
 
@@ -445,6 +452,8 @@ protected:
     static UINT uWM_MSIME_RECONVERT; // reconvert messge for MSIME
     static UINT uWM_MSIME_MOUSE;     // mouse messge for MSIME
     static UINT uWM_ATOK_RECONVERT;  // reconvert messge for ATOK
+
+    IAccessible* mRootAccessible;
 };
 
 //

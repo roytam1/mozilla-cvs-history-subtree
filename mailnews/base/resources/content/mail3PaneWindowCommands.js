@@ -64,10 +64,13 @@ var FolderPaneController =
                     	specialFolder = selectedFolder.getAttribute('SpecialFolder');
                     	isServer = selectedFolder.getAttribute('IsServer');
 						serverType = selectedFolder.getAttribute('ServerType');
-            
+
                         if (serverType == "nntp") {
 				            if ( command == "cmd_delete" )
+                    {
 					            goSetMenuValue(command, 'valueNewsgroup');
+					            goSetAccessKey(command, 'valueNewsgroupAccessKey');
+                    }
                         }
 					}
 					catch (ex) {
@@ -179,6 +182,7 @@ var DefaultController =
 
 		switch ( command )
 		{
+			case "cmd_close":
 			case "cmd_reply":
 			case "button_reply":
 			case "cmd_replySender":
@@ -264,16 +268,28 @@ var DefaultController =
         if ( GetNumSelectedMessages() < 2 ) 
         {
           if (IsNewsMessage(uri))
+          {
             goSetMenuValue(command, 'valueNewsMessage');
+            goSetAccessKey(command, 'valueNewsMessageAccessKey');
+          }
           else
+          {
             goSetMenuValue(command, 'valueMessage');
+            goSetAccessKey(command, 'valueMessageAccessKey');
+          }
         }
         else 
         {
           if (IsNewsMessage(uri)) 
+          {
             goSetMenuValue(command, 'valueNewsMessage');
+            goSetAccessKey(command, 'valueNewsMessageAccessKey');
+          }
           else 
+          {
             goSetMenuValue(command, 'valueMessages');
+            goSetAccessKey(command, 'valueMessagesAccessKey');
+          }
         }
         if (gDBView)
           gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
@@ -389,6 +405,9 @@ var DefaultController =
 
 		switch ( command )
 		{
+			case "cmd_close":
+				CloseMailWindow();
+				break;
       case "button_getNewMessages":
 			case "cmd_getNewMessages":
 				MsgGetMessage();

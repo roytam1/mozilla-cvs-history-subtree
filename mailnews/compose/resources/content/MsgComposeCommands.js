@@ -36,8 +36,8 @@ var messengerMigratorContractID   = "@mozilla.org/messenger/migrator;1";
 var msgComposeService = Components.classes["@mozilla.org/messengercompose;1"].getService();
 msgComposeService = msgComposeService.QueryInterface(Components.interfaces.nsIMsgComposeService);
 
-var commonDialogsService = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
-commonDialogsService = commonDialogsService.QueryInterface(Components.interfaces.nsICommonDialogs);
+var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+promptService = promptService.QueryInterface(Components.interfaces.nsIPromptService);
 
 var ioService = Components.classesByID["{9ac9e770-18bc-11d3-9337-00104ba0fd40}"].getService();
 ioService = ioService.QueryInterface(Components.interfaces.nsIIOService);
@@ -49,6 +49,7 @@ var windowLocked = false;
 var contentChanged = false;
 var currentIdentity = null;
 var defaultSaveOperation = "draft";
+var sendOrSaveOperationInProgress = false;
 
 var gComposeMsgsBundle;
 
@@ -88,6 +89,55 @@ var stateListener = {
   SaveInFolderDone: function(folderURI) {
     DisplaySaveFolderDlg(folderURI);
   }
+};
+
+// all progress notifications are done through the nsIWebProgressListener implementation...
+var progressListener = {
+    onStateChange: function(aWebProgress, aRequest, aStateFlags, aStatus)
+    {
+      if (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_START)
+      {
+        document.getElementById('progressmeter').setAttribute( "mode", "undetermined" );
+      }
+      
+      if (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP)
+      {
+        sendOrSaveOperationInProgress = false;
+        document.getElementById('progressmeter').setAttribute( "mode", "normal" );
+        document.getElementById('progressmeter').setAttribute( "value", 0 );
+        setTimeout("document.getElementById('statusText').setAttribute('label', '')", 5000);
+      }
+    },
+    
+    onProgressChange: function(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress)
+    {
+      // we can ignore this notification
+    },
+
+	  onLocationChange: function(aWebProgress, aRequest, aLocation)
+    {
+      // we can ignore this notification
+    },
+
+    onStatusChange: function(aWebProgress, aRequest, aStatus, aMessage)
+    {
+      statusText = document.getElementById("statusText");
+      if (statusText)
+        statusText.setAttribute("label", aMessage);
+    },
+
+    onSecurityChange: function(aWebProgress, aRequest, state)
+    {
+      // we can ignore this notification
+    },
+
+    QueryInterface : function(iid)
+    {
+     if (iid.equals(Components.interfaces.nsIWebProgressListener) || iid.equals(Components.interfaces.nsISupportsWeakReference))
+      return this;
+     
+     throw Components.results.NS_NOINTERFACE;
+    }
 };
 
 // i18n globals
@@ -282,6 +332,7 @@ var defaultController =
       case "cmd_bold":
       case "cmd_italic":
       case "cmd_underline":
+      case "cmd_smiley":
       case "cmd_strikethrough":
       case "cmd_superscript":
       case "cmd_subscript":
@@ -393,31 +444,31 @@ function CommandUpdate_MsgCompose()
   try {
 
   //File Menu
-  goUpdateCommand("cmd_attachFile");
-  goUpdateCommand("cmd_attachPage");
-  goUpdateCommand("cmd_close");
-  goUpdateCommand("cmd_saveDefault");
-  goUpdateCommand("cmd_saveAsFile");
-  goUpdateCommand("cmd_saveAsDraft");
-  goUpdateCommand("cmd_saveAsTemplate");
-  goUpdateCommand("cmd_sendButton");
-  goUpdateCommand("cmd_sendNow");
-  goUpdateCommand("cmd_sendLater");
+//  goUpdateCommand("cmd_attachFile");
+//  goUpdateCommand("cmd_attachPage");
+//  goUpdateCommand("cmd_close");
+//  goUpdateCommand("cmd_saveDefault");
+//  goUpdateCommand("cmd_saveAsFile");
+//  goUpdateCommand("cmd_saveAsDraft");
+//  goUpdateCommand("cmd_saveAsTemplate");
+//  goUpdateCommand("cmd_sendButton");
+//  goUpdateCommand("cmd_sendNow");
+//  goUpdateCommand("cmd_sendLater");
 //  goUpdateCommand("cmd_printSetup");
-  goUpdateCommand("cmd_print");
-  goUpdateCommand("cmd_quit");
+//  goUpdateCommand("cmd_print");
+//  goUpdateCommand("cmd_quit");
 
   //Edit Menu
   goUpdateCommand("cmd_pasteQuote");
   goUpdateCommand("cmd_find");
   goUpdateCommand("cmd_findNext");
   goUpdateCommand("cmd_replace");
-  goUpdateCommand("cmd_account");
+//  goUpdateCommand("cmd_account");
   goUpdateCommand("cmd_preferences");
 
   //View Menu
-  goUpdateCommand("cmd_showComposeToolbar");
-  goUpdateCommand("cmd_showFormatToolbar");
+//  goUpdateCommand("cmd_showComposeToolbar");
+//  goUpdateCommand("cmd_showFormatToolbar");
 
   //Insert Menu
   if (msgCompose && msgCompose.composeHTML)
@@ -461,6 +512,7 @@ function CommandUpdate_MsgCompose()
     goUpdateCommand("cmd_indent");
     goUpdateCommand("cmd_outdent");
     goUpdateCommand("cmd_align");
+    goUpdateCommand("cmd_smiley");
     goUpdateCommand("cmd_objectProperties");
     goUpdateCommand("cmd_InsertTable");
     goUpdateCommand("cmd_InsertRowAbove");
@@ -484,11 +536,11 @@ function CommandUpdate_MsgCompose()
   }
 
   //Options Menu
-  goUpdateCommand("cmd_selectAddress");
+//  goUpdateCommand("cmd_selectAddress");
   goUpdateCommand("cmd_spelling");
-  goUpdateCommand("cmd_outputFormat");
+//  goUpdateCommand("cmd_outputFormat");
 //  goUpdateCommand("cmd_quoteMessage");
-  goUpdateCommand("cmd_rewrap");
+//  goUpdateCommand("cmd_rewrap");
 
   } catch(e) {}
 }
@@ -516,8 +568,10 @@ function UpdateOfflineState()
 
 function DoCommandClose()
 {
-  if (ComposeCanClose())
-    CloseWindow()
+  var retVal;
+  if ((retVal = ComposeCanClose()))
+	MsgComposeCloseWindow();
+  return retVal;
 }
 
 function DoCommandPrint()
@@ -848,10 +902,10 @@ function ComposeLoad()
   catch (ex) {
     dump("###ERROR WHILE LOADING MESSAGE COMPOSE: " + ex + "\n");
     var errorTitle = gComposeMsgsBundle.getString("initErrorDlogTitle");
-    var errorMsg = gComposeMsgsBundle.getString("initErrorDlogMessage");
-    errorMsg = errorMsg.replace(/%1\$s/, ex);
-    if (commonDialogsService)
-      commonDialogsService.Alert(window, errorTitle, errorMsg);
+    var errorMsg = gComposeMsgsBundle.getFormattedString("initErrorDlogMessage",
+                                                         [ex]);
+    if (promptService)
+      promptService.alert(window, errorTitle, errorMsg);
     else
       window.alert(errorMsg);
 
@@ -866,13 +920,10 @@ function ComposeLoad()
     msgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about::blank", false);
 }
 
-function ComposeUnload(calledFromExit)
+function ComposeUnload()
 {
 	dump("\nComposeUnload from XUL\n");
-
 	msgCompose.UnregisterStateListener(stateListener);
-	if (msgCompose && msgComposeService)
-		msgComposeService.DisposeCompose(msgCompose, false);
 }
 
 function SetDocumentCharacterSet(aCharset)
@@ -1042,15 +1093,16 @@ function GenericSendMessage( msgType )
 				//Check if we have a subject, else ask user for confirmation
 				if (subject == "")
 				{
-    				if (commonDialogsService)
+    				if (promptService)
     				{
-						var result = {value:0};
-        				if (commonDialogsService.Prompt(
+						var result = {value:gComposeMsgsBundle.getString("defaultSubject")};
+        				if (promptService.prompt(
         					window,
         					gComposeMsgsBundle.getString("subjectDlogTitle"),
         					gComposeMsgsBundle.getString("subjectDlogMessage"),
-        					gComposeMsgsBundle.getString("defaultSubject"),
-        					result
+                            result,
+        					null,
+        					{value:0}
         					))
         				{
         					msgCompFields.subject = result.value;
@@ -1100,7 +1152,14 @@ function GenericSendMessage( msgType )
 			try {
 			  windowLocked = true;
 			  CommandUpdate_MsgCompose();
-				msgCompose.SendMsg(msgType, getCurrentIdentity());
+			  
+        var progress = Components.classes["@mozilla.org/messengercompose/composeprogress;1"].createInstance(Components.interfaces.nsIMsgComposeProgress);
+        if (progress)
+        {
+          progress.registerListener(progressListener);
+          sendOrSaveOperationInProgress = true;
+        }
+				msgCompose.SendMsg(msgType, getCurrentIdentity(), progress);
 				contentChanged = false;
 				msgCompose.bodyModified = false;
 			}
@@ -1394,6 +1453,9 @@ function SetComposeWindowTitle(event)
 // This is hooked up to the OS's window close widget (e.g., "X" for Windows)
 function ComposeCanClose()
 {
+  if (sendOrSaveOperationInProgress)
+    return false;
+
 	// Returns FALSE only if user cancels save action
 	if (contentChanged || msgCompose.bodyModified)
 	{
@@ -1401,10 +1463,10 @@ function ComposeCanClose()
 		// and therefore need to be visible (to prevent user confusion)
 		window.focus();
         
-		if (commonDialogsService)
+		if (promptService)
 		{
             var result = {value:0};
-			commonDialogsService.UniversalDialog(
+			promptService.universalDialog(
 				window,
 				null,
 				gComposeMsgsBundle.getString("saveDlogTitle"),
@@ -1418,7 +1480,7 @@ function ComposeCanClose()
 				null,
 				{value:0},
 				{value:0},
-				"chrome://global/skin/question-icon.gif",
+				"question-icon",
 				{value:"false"},
 				3,
 				0,
@@ -1449,7 +1511,7 @@ function ComposeCanClose()
 	return true;
 }
 
-function CloseWindow()
+function MsgComposeCloseWindow()
 {
 	if (msgCompose)
 		msgCompose.CloseWindow();
@@ -1480,8 +1542,8 @@ function AttachFile()
     var errorTitle = gComposeMsgsBundle.getString("DuplicateFileErrorDlogTitle");
     var errorMsg = gComposeMsgsBundle.getString("DuplicateFileErrorDlogMessage");
 
-    if (commonDialogsService)
-      commonDialogsService.Alert(window, errorTitle, errorMsg);
+    if (promptService)
+      promptService.alert(window, errorTitle, errorMsg);
     else
       window.alert(errorMsg);
   }
@@ -1514,15 +1576,16 @@ function AddAttachment(attachment, prettyName)
 
 function AttachPage()
 {
-    if (commonDialogsService)
+    if (promptService)
     {
-        var result = {value:0};
-        if (commonDialogsService.Prompt(
+        var result = {value:""};
+        if (promptService.prompt(
         	window,
         	gComposeMsgsBundle.getString("attachPageDlogTitle"),
         	gComposeMsgsBundle.getString("attachPageDlogMessage"),
+            result,
         	null,
-        	result))
+        	{value:0}))
         {
 			AddAttachment(result.value, null);
         }
@@ -1618,8 +1681,9 @@ function DetermineHTMLAction(convertible)
     if (! msgCompose.composeHTML)
     {
         try {
-            msgCompose.CheckAndPopulateRecipients(true, false, null);
-        } catch(ex) {}
+            var obj = new Object;
+            msgCompose.CheckAndPopulateRecipients(true, false, obj);
+        } catch(ex) { dump("msgCompose.CheckAndPopulateRecipients failed: " + ex + "\n"); }
         return msgCompSendFormat.PlainText;
     }
 
@@ -1638,6 +1702,7 @@ function DetermineHTMLAction(convertible)
             noHtmlRecipients = obj.value;
         } catch(ex)
         {
+            dump("msgCompose.CheckAndPopulateRecipients failed: " + ex + "\n");
             var msgCompFields = msgCompose.compFields;
             noHtmlRecipients = msgCompFields.to + "," + msgCompFields.cc + "," + msgCompFields.bcc;
             preferFormat = abPreferMailFormat.unknown;
@@ -1685,8 +1750,9 @@ function DetermineHTMLAction(convertible)
 	  else
 	  {
 		  try {
-			  msgCompose.CheckAndPopulateRecipients(true, false, null);
-		  } catch(ex) {}
+        var obj = new Object;
+			  msgCompose.CheckAndPopulateRecipients(true, false, obj);
+		  } catch(ex) { dump("msgCompose.CheckAndPopulateRecipients failed: " + ex + "\n"); }
 	  }
 
     return sendFormat;
@@ -1837,8 +1903,8 @@ var attachmentBucketObserver = {
         var errorTitle = gComposeMsgsBundle.getString("DuplicateFileErrorDlogTitle");
         var errorMsg = gComposeMsgsBundle.getString("DuplicateFileErrorDlogMessage");
 
-        if (commonDialogsService)
-          commonDialogsService.Alert(window, errorTitle, errorMsg);
+        if (promptService)
+          promptService.alert(window, errorTitle, errorMsg);
         else
           window.alert(errorMsg);
       }
@@ -1894,16 +1960,16 @@ function DisplaySaveFolderDlg(folderURI)
       return;
 		var checkbox = {value:0};
     var SaveDlgTitle = gComposeMsgsBundle.getString("SaveDialogTitle");
-    var DlgMsg = gComposeMsgsBundle.getString("SaveDialogMsg");
+    var dlgMsg = gComposeMsgsBundle.getFormattedString("SaveDialogMsg",
+                                                       [msgfolder.name,
+                                                        msgfolder.hostname]);
+
     var CheckMsg = gComposeMsgsBundle.getString("CheckMsg");
 
-    var newMessage = DlgMsg.replace(/@FolderName@/, msgfolder.name);
-    var SaveDlgMsg = newMessage.replace(/@HostName@/, msgfolder.hostname);
-
-    if (commonDialogsService)
-      commonDialogsService.AlertCheck(window, SaveDlgTitle, SaveDlgMsg, CheckMsg, checkbox);
+    if (promptService)
+      promptService.alertCheck(window, SaveDlgTitle, dlgMsg, CheckMsg, checkbox);
     else
-      window.alert(SaveDlgMsg);
+      window.alert(dlgMsg);
     try {
           currentIdentity.showSaveMsgDlg = !checkbox.value;
     }//try

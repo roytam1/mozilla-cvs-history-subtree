@@ -134,9 +134,7 @@ enum Pop3StatesEnum {
     POP3_SEND_GURL,                             // 35
 
     POP3_GURL_RESPONSE,                         // 36
-#ifdef POP_ALWAYS_USE_UIDL_FOR_DUPLICATES
     POP3_QUIT_RESPONSE,
-#endif
     POP3_INTERRUPTED
 };
 
@@ -258,7 +256,7 @@ public:
 
     nsresult GetPassword(char ** aPassword, PRBool *okayValue);
 
-	NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports * aContext, nsresult aStatus, const PRUnichar* aMsg);
+	NS_IMETHOD OnStopRequest(nsIRequest *request, nsISupports * aContext, nsresult aStatus);
   NS_IMETHOD Cancel(nsresult status);
 	// for nsMsgLineBuffer
     virtual PRInt32 HandleLine(char *line, PRUint32 line_length);

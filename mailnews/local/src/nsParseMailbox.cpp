@@ -45,6 +45,7 @@
 #include "nsIMsgFilterList.h"
 #include "nsIMsgFilter.h"
 #include "nsIIOService.h"
+#include "nsNetCID.h"
 #include "nsRDFCID.h"
 #include "nsIPref.h"
 #include "nsIRDFService.h"
@@ -144,7 +145,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartRequest(nsIRequest *request, nsISupport
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsMsgMailboxParser::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
+NS_IMETHODIMP nsMsgMailboxParser::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult aStatus)
 {
 	DoneParsingFolder(aStatus);
 	// what can we do? we can close the stream?
@@ -875,14 +876,14 @@ int nsParseMailMessageState::ParseHeaders ()
         header->value = value;
 
   SEARCH_NEWLINE:
-	  while (*buf != 0 && *buf != CR && *buf != LF)
+	  while (*buf != 0 && *buf != nsCRT::CR && *buf != nsCRT::LF)
 		buf++;
 
 	  if (buf+1 >= buf_end)
 		;
 	  /* If "\r\n " or "\r\n\t" is next, that doesn't terminate the header. */
 	  else if (buf+2 < buf_end &&
-			   (buf[0] == CR  && buf[1] == LF) &&
+			   (buf[0] == nsCRT::CR  && buf[1] == nsCRT::LF) &&
 			   (buf[2] == ' ' || buf[2] == '\t'))
 		{
 		  buf += 3;
@@ -890,7 +891,7 @@ int nsParseMailMessageState::ParseHeaders ()
 		}
 	  /* If "\r " or "\r\t" or "\n " or "\n\t" is next, that doesn't terminate
 		 the header either. */
-	  else if ((buf[0] == CR  || buf[0] == LF) &&
+	  else if ((buf[0] == nsCRT::CR  || buf[0] == nsCRT::LF) &&
 			   (buf[1] == ' ' || buf[1] == '\t'))
 		{
 		  buf += 2;
@@ -900,10 +901,10 @@ int nsParseMailMessageState::ParseHeaders ()
 	  if (header)
 		header->length = buf - header->value;
 
-	  if (*buf == CR || *buf == LF)
+	  if (*buf == nsCRT::CR || *buf == nsCRT::LF)
 		{
 		  char *last = buf;
-		  if (*buf == CR && buf[1] == LF)
+		  if (*buf == nsCRT::CR && buf[1] == nsCRT::LF)
 			buf++;
 		  buf++;
 		  *last = 0;	/* short-circuit const, and null-terminate header. */
@@ -1873,6 +1874,7 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
 			newHdr->SetMessageKey (newMsgPos); 
 			newHdr->OrFlags(MSG_FLAG_NEW, &newFlags);
       destIFolder->SetHasNewMessages(PR_TRUE);
+      destMailDB->AddToNewList(newMsgPos);
 		}
 	}
 	else

@@ -20,9 +20,8 @@
  * Contributor(s): 
  *   Pierre Phaneuf <pp@ludusdesign.com>
  */
-#include "prprf.h"
-#include "nsCOMPtr.h"
 #include "nsMsgDeliveryListener.h"
+
 #include "nsIMsgMailNewsUrl.h"
 #include "nsMsgPrompts.h"
 
@@ -36,7 +35,7 @@ nsMsgDeliveryListener::OnStartRunningUrl(nsIURI * aUrl)
 #endif
 
   if (mMsgSendObj)
-    mMsgSendObj->NotifyListenersOnStartSending(nsnull, nsnull);
+    mMsgSendObj->NotifyListenerOnStartSending(nsnull, nsnull);
 
   if (mMsgSendLaterObj)
     mMsgSendLaterObj->NotifyListenersOnStartSending(nsnull);
@@ -62,7 +61,7 @@ nsMsgDeliveryListener::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
 	}
 
   if (mMsgSendObj)
-    mMsgSendObj->NotifyListenersOnStopSending(
+    mMsgSendObj->NotifyListenerOnStopSending(
                                   nsnull,     // const char *aMsgID, 
                                   aExitCode,  // nsresult aStatus, 
                                   nsnull,     // const PRUnichar *aMsg, 
@@ -79,7 +78,7 @@ nsMsgDeliveryListener::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
   // creators exit routine.
   //
   if (mCompletionCallback)
-    rv = (*mCompletionCallback) (aUrl, aExitCode, mTagData);
+    rv = (*mCompletionCallback) (aUrl, aExitCode, mDeliveryType, mTagData);
   else
     rv = NS_OK;
 
@@ -87,8 +86,12 @@ nsMsgDeliveryListener::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
 }
 
 nsMsgDeliveryListener::nsMsgDeliveryListener(nsMsgDeliveryCompletionCallback callback,
-                                             nsMsgDeliveryType delivType, void *tagData)
+                                             nsMsgDeliveryType delivType, nsISupports *tagData)
 {
+#if defined(DEBUG_ducarroz)
+  printf("CREATE nsMsgDeliveryListener: %x\n", this);
+#endif
+
   mTempFileSpec = nsnull;
   mDeliveryType = delivType;
   mTagData = tagData;
@@ -101,11 +104,15 @@ nsMsgDeliveryListener::nsMsgDeliveryListener(nsMsgDeliveryCompletionCallback cal
 
 nsMsgDeliveryListener::~nsMsgDeliveryListener()
 {
+#if defined(DEBUG_ducarroz)
+  printf("DISPOSE nsMsgDeliveryListener: %x\n", this);
+#endif
+
   delete mTempFileSpec;
 }
 
 nsresult 
-nsMsgDeliveryListener::SetMsgComposeAndSendObject(nsMsgComposeAndSend *obj)
+nsMsgDeliveryListener::SetMsgComposeAndSendObject(nsIMsgSend *obj)
 {
   mMsgSendObj = obj;
   return NS_OK;

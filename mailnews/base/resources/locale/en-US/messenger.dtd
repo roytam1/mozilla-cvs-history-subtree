@@ -82,10 +82,15 @@ Rights Reserved.
 
 <!-- Edit Menu -->
 <!ENTITY deleteMsgCmd.label "Delete Message">  
+<!ENTITY deleteMsgCmd.accesskey "d">  
 <!ENTITY cancelNewsMsgCmd.label "Cancel Message">  
+<!ENTITY cancelNewsMsgCmd.accesskey "n">  
 <!ENTITY deleteMsgsCmd.label "Delete Selected Messages">  
+<!ENTITY deleteMsgsCmd.accesskey "d">  
 <!ENTITY deleteFolderCmd.label "Delete Folder">  
+<!ENTITY deleteFolderCmd.accesskey "d">  
 <!ENTITY unsubscribeNewsgroupCmd.label "Unsubscribe">
+<!ENTITY unsubscribeNewsgroupCmd.accesskey "n">
 <!ENTITY selectMenu.label "Select">  
 <!ENTITY selectMenu.accesskey "l">  
 <!ENTITY selectThreadCmd.label "Thread">  
@@ -133,14 +138,13 @@ Rights Reserved.
 <!ENTITY sortByFlagCmd.accesskey "f">  
 <!ENTITY sortByPriorityCmd.label "Priority">  
 <!ENTITY sortByPriorityCmd.accesskey "p">  
-<!ENTITY sortBySenderCmd.label "Sender">  
-<!ENTITY sortBySenderCmd.accesskey "r">  
 <!ENTITY sortBySizeCmd.label "Size">  
 <!ENTITY sortBySizeCmd.accesskey "z">  
 <!ENTITY sortByStatusCmd.label "Status">  
 <!ENTITY sortByStatusCmd.accesskey "u">  
 <!ENTITY sortBySubjectCmd.label "Subject">  
 <!ENTITY sortBySubjectCmd.accesskey "s">  
+<!-- Sender / Recipient lives in messenger.properties, since that item is dynamic -->
 <!ENTITY sortByUnreadCmd.label "Unread">  
 <!ENTITY sortByUnreadCmd.accesskey "n">  
 <!ENTITY sortByThreadCmd.label "Thread">  
@@ -161,8 +165,10 @@ Rights Reserved.
 <!ENTITY expandOrCollapseMenu.accesskey "x">  
 <!ENTITY expandAllThreadsCmd.label "Expand All Threads">  
 <!ENTITY expandAllThreadsCmd.accesskey "e">  
+<!ENTITY expandAllThreadsCmd.key "*">
 <!ENTITY collapseAllThreadsCmd.label "Collapse All Threads">  
 <!ENTITY collapseAllThreadsCmd.accesskey "c">  
+<!ENTITY collapseAllThreadsCmd.key "/">
 <!ENTITY unreadMsgsCmd.label "Unread">  
 <!ENTITY unreadMsgsCmd.accesskey "u">  
 <!ENTITY threadsWithUnreadCmd.label "Threads With Unread">  
@@ -465,10 +471,12 @@ Rights Reserved.
 <!ENTITY folderContextProperties.accesskey "o">
 
 <!-- Message Header View Popup -->
-<!ENTITY AddToAddressBook.label "Add Address To Address Book">
+<!ENTITY AddToAddressBook.label "Add to Address Book...">
 <!ENTITY AddToAddressBook.accesskey "b">
-<!ENTITY SendMailTo.label "Send Mail To">
-<!ENTITY SendMailTo.accesskey "">
+<!ENTITY SendMailTo.label "Compose Mail To">
+<!ENTITY SendMailTo.accesskey "s">
+<!ENTITY CopyEmailAddress.label "Copy Email Address">
+<!ENTITY CopyEmailAddress.accesskey "c">
 
 <!-- Print Engine -->
 <!ENTITY printEngine.title "Printing...">

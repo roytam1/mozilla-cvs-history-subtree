@@ -426,6 +426,7 @@ nsViewManager::nsViewManager()
   mAllowDoubleBuffering = PR_TRUE; 
   mHasPendingInvalidates = PR_FALSE;
   mPendingInvalidateEvent = PR_FALSE;
+  mRecursiveRefreshPending = PR_FALSE;
 }
 
 nsViewManager::~nsViewManager()
@@ -693,6 +694,10 @@ void nsViewManager::Refresh(nsIView *aView, nsIRenderingContext *aContext, nsIRe
 #endif
 
 	NS_ASSERTION(!(PR_TRUE == mPainting), "recursive painting not permitted");
+	if (mPainting) {
+		mRecursiveRefreshPending = PR_TRUE;
+		return;
+	}  
 
 	mPainting = PR_TRUE;
 
@@ -790,6 +795,11 @@ void nsViewManager::Refresh(nsIView *aView, nsIRenderingContext *aContext, nsIRe
 		}
 	}
 
+	if (mRecursiveRefreshPending) {
+		UpdateAllViews(aUpdateFlags);
+		mRecursiveRefreshPending = PR_FALSE;
+	}
+
 #ifdef NS_VM_PERF_METRICS
   MOZ_TIMER_DEBUGLOG(("Stop: nsViewManager::Refresh(region), this=%p\n", this));
   MOZ_TIMER_STOP(mWatch);
@@ -817,6 +827,10 @@ void nsViewManager::Refresh(nsIView *aView, nsIRenderingContext *aContext, const
 #endif
 
 	NS_ASSERTION(!(PR_TRUE == mPainting), "recursive painting not permitted");
+	if (mPainting) {
+		mRecursiveRefreshPending = PR_TRUE;
+		return;
+	}  
 
 	mPainting = PR_TRUE;
 
@@ -918,6 +932,11 @@ void nsViewManager::Refresh(nsIView *aView, nsIRenderingContext *aContext, const
 				}
 			}
 		}
+	}
+
+	if (mRecursiveRefreshPending) {
+		UpdateAllViews(aUpdateFlags);
+		mRecursiveRefreshPending = PR_FALSE;
 	}
 
 #ifdef NS_VM_PERF_METRICS
@@ -1110,8 +1129,8 @@ static void PopState(nsIRenderingContext **aRCs, PRInt32 aRCCount) {
   }
 }
 
-static void AddCoveringWidgetsToOpaqueRegion(nsIRegion* aRgn, nsIDeviceContext* aContext,
-                                             nsIView* aRootView) {
+void nsViewManager::AddCoveringWidgetsToOpaqueRegion(nsIRegion* aRgn, nsIDeviceContext* aContext,
+                                                     nsIView* aRootView) {
     // We accumulate the bounds of widgets obscuring aRootView's widget into mOpaqueRgn.
     // In OptimizeDisplayList, display list elements which lie behind obscuring native
     // widgets are dropped.
@@ -1127,7 +1146,7 @@ static void AddCoveringWidgetsToOpaqueRegion(nsIRegion* aRgn, nsIDeviceContext* 
     if (aRgn) {
       aRgn->SetTo(0, 0, 0, 0);
       nsCOMPtr<nsIWidget> widget;
-      aRootView->GetWidget(*getter_AddRefs(widget));
+      GetWidgetForView(aRootView, getter_AddRefs(widget));
       if (widget) {
         nsCOMPtr<nsIEnumerator> children(dont_AddRef(widget->GetChildren()));
         if (children) {
@@ -1148,7 +1167,24 @@ static void AddCoveringWidgetsToOpaqueRegion(nsIRegion* aRgn, nsIDeviceContext* 
                       nsRect bounds;
                       view->GetBounds(bounds);
                       if (bounds.width > 0 && bounds.height > 0) {
-                        aRgn->Union(bounds.x, bounds.y, bounds.width, bounds.height);
+                        nsIView* viewParent = nsnull;
+                        view->GetParent(viewParent);
+
+                        while (viewParent && viewParent != aRootView) {
+                          nsRect parentBounds;
+
+                          viewParent->GetBounds(parentBounds);
+                          bounds.x += parentBounds.x;
+                          bounds.y += parentBounds.y;
+                          viewParent->GetParent(viewParent);
+                        }
+
+                        // maybe we couldn't get the view into the coordinate
+                        // system of aRootView (maybe it's not a descendant
+                        // view of aRootView?); if so, don't use it
+                        if (viewParent) {
+                          aRgn->Union(bounds.x, bounds.y, bounds.width, bounds.height);
+                        }
                       }
                     }
                   }
@@ -1486,7 +1522,7 @@ static nsresult NewOffscreenContext(nsIDeviceContext* deviceContext, nsDrawingSu
 
 nsresult nsViewManager::CreateBlendingBuffers(nsIRenderingContext &aRC)
 {
-	nsresult rv;
+	nsresult rv = NS_OK;
 
 	// create a blender, if none exists already.
 	if (nsnull == mBlender) {
@@ -1661,22 +1697,24 @@ PRBool nsViewManager::UpdateAllCoveringWidgets(nsIView *aView, nsIView *aTarget,
     if (!overlap) {
         return PR_FALSE;
     }
+
+    PRBool noCropping = bounds == aDamagedRect;
     
-	PRBool hasWidget = PR_FALSE;
-    aView->HasWidget(&hasWidget);
-    PRBool covering = PR_FALSE;
+    PRBool hasWidget = PR_FALSE;
+    if (mRootView == aView) {
+      hasWidget = PR_TRUE;
+    } else {
+      aView->HasWidget(&hasWidget);
+    }
+
     PRUint32 flags = 0;
     aView->GetViewFlags(&flags);
     PRBool isBlittable = (flags & NS_VIEW_PUBLIC_FLAG_DONT_BITBLT) == 0;
     
-    if (hasWidget && bounds == aDamagedRect) {
-        covering = PR_TRUE;
-    }
-     
-	nsIView* childView = nsnull;
-	aView->GetChild(0, childView);
+    nsIView* childView = nsnull;
+    aView->GetChild(0, childView);
     PRBool childCovers = PR_FALSE;
-	while (nsnull != childView)	{
+    while (nsnull != childView) {
         nsRect childRect = bounds;
         nsRect childBounds;
         childView->GetBounds(childBounds);
@@ -1704,13 +1742,13 @@ PRBool nsViewManager::UpdateAllCoveringWidgets(nsIView *aView, nsIView *aTarget,
 		        ViewToWidget(aView, widgetView, bounds);
 
                 nsCOMPtr<nsIWidget> widget;
-                widgetView->GetWidget(*getter_AddRefs(widget));
+                GetWidgetForView(widgetView, getter_AddRefs(widget));
                 widget->Invalidate(bounds, PR_FALSE);
 			}
         }
     }
 
-    return covering || childCovers;
+    return noCropping && (hasWidget || childCovers);
 }
 
 NS_IMETHODIMP nsViewManager::UpdateView(nsIView *aView, const nsRect &aRect, PRUint32 aUpdateFlags)
@@ -1888,7 +1926,26 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
 
 										//printf("refreshing: view: %x, %d, %d, %d, %d\n", view, damrect.x, damrect.y, damrect.width, damrect.height);
 										// Refresh the view
-										Refresh(view, ((nsPaintEvent*)aEvent)->renderingContext, &damrect, updateFlags);
+										if (mRefreshEnabled) {
+											Refresh(view, ((nsPaintEvent*)aEvent)->renderingContext, &damrect, updateFlags);
+										}
+										else {
+											// since we got an NS_PAINT event we need to draw something so we don't get blank areas.
+											nsCOMPtr<nsIWidget> widget;
+											GetWidgetForView(view, getter_AddRefs(widget));
+											if (widget) {
+												nsCOMPtr<nsIRenderingContext> context;
+												context = getter_AddRefs(CreateRenderingContext(*view));
+												if (context) {
+													nscolor bgColor = 0;
+													SystemAttrStruct info;
+													info.mColor = &bgColor;
+													mContext->GetSystemAttribute(eSystemAttr_Color_WindowBackground, &info);
+													context->SetColor(bgColor);
+													context->FillRect(damrect);
+												}
+											}
+										}
 									}
 							}
 
@@ -2232,18 +2289,18 @@ NS_IMETHODIMP nsViewManager::MoveViewTo(nsIView *aView, nscoord aX, nscoord aY)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsViewManager::ResizeView(nsIView *aView, nscoord width, nscoord height)
+NS_IMETHODIMP nsViewManager::ResizeView(nsIView *aView, nscoord width, nscoord height, PRBool aRepaintExposedAreaOnly)
 {
-	nscoord oldWidth, oldHeight;
-	aView->GetDimensions(&oldWidth, &oldHeight);
-	if ((width != oldWidth) || (height != oldHeight)) {
-		nscoord x = 0, y = 0;
-		nsIView* parentView = nsnull;
-	    aView->GetParent(parentView);
-	    if (parentView != nsnull)
-			aView->GetPosition(&x, &y);
-		else
-			parentView = aView;
+  nscoord oldWidth, oldHeight;
+  aView->GetDimensions(&oldWidth, &oldHeight);
+  if ((width != oldWidth) || (height != oldHeight)) {
+    nscoord x = 0, y = 0;
+    nsIView* parentView = nsnull;
+      aView->GetParent(parentView);
+      if (parentView != nsnull)
+      aView->GetPosition(&x, &y);
+    else
+      parentView = aView;
 
      // resize the view.
      nsViewVisibility  visibility;
@@ -2253,15 +2310,57 @@ NS_IMETHODIMP nsViewManager::ResizeView(nsIView *aView, nscoord width, nscoord h
      if (visibility == nsViewVisibility_kHide) {  
        aView->SetDimensions(width, height, PR_FALSE);
      } else {
-		   aView->SetDimensions(width, height, PR_TRUE);
-       nscoord maxWidth = (oldWidth < width ? width : oldWidth);
-		   nscoord maxHeight = (oldHeight < height ? height : oldHeight);
-		   nsRect boundingArea(x, y, maxWidth, maxHeight);
-		   UpdateView(parentView, boundingArea, NS_VMREFRESH_NO_SYNC);
+       if (!aRepaintExposedAreaOnly) {
+          //Invalidate the union of the old and new size
+         aView->SetDimensions(width, height, PR_TRUE);
+         nscoord maxWidth = (oldWidth < width ? width : oldWidth);
+         nscoord maxHeight = (oldHeight < height ? height : oldHeight);
+         nsRect boundingArea(x, y, maxWidth, maxHeight);
+         UpdateView(parentView, boundingArea, NS_VMREFRESH_NO_SYNC);
+       } else {
+         // Invalidate only the newly exposed or contracted region
+         nscoord shortWidth, longWidth, shortHeight, longHeight;
+         if (width < oldWidth) { 
+           shortWidth = width; 
+           longWidth = oldWidth; 
+         } 
+         else { 
+           shortWidth = oldWidth; 
+           longWidth = width; 
+         } 
+  
+         if (height < oldHeight) { 
+           shortHeight = height; 
+           longHeight = oldHeight; 
+         } 
+         else { 
+           shortHeight = oldHeight; 
+           longHeight = height; 
+         } 
+
+         nsRect  damageRect; 
+     
+         //damage the right edge of the parent's view
+         damageRect.x = x + shortWidth; 
+         damageRect.y = y; 
+         damageRect.width = longWidth - shortWidth; 
+         damageRect.height = longHeight; 
+         UpdateView(parentView, damageRect, NS_VMREFRESH_NO_SYNC); 
+            
+         //damage the bottom edge of the parent's view
+         damageRect.x = x; 
+         damageRect.y = y + shortHeight; 
+         damageRect.width = longWidth; 
+         damageRect.height = longHeight - shortHeight; 
+         UpdateView(parentView, damageRect, NS_VMREFRESH_NO_SYNC); 
+         
+
+         aView->SetDimensions(width, height);
+       } 
      }
-	}
-	
-	return NS_OK;
+  }
+  
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsViewManager::SetViewChildClip(nsIView *aView, nsRect *aRect)

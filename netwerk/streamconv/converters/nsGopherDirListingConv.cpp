@@ -34,7 +34,7 @@
 #include "nsIStreamListener.h"
 #include "nsIStreamConverter.h"
 #include "nsIStringStream.h"
-#include "nsIStreamObserver.h"
+#include "nsIRequestObserver.h"
 #include "nsNetUtil.h"
 #include "nsMimeTypes.h"
 
@@ -44,7 +44,7 @@
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsGopherDirListingConv,
                               nsIStreamConverter,
                               nsIStreamListener,
-                              nsIStreamObserver);
+                              nsIRequestObserver);
 
 // nsIStreamConverter implementation
 
@@ -79,7 +79,7 @@ nsGopherDirListingConv::Convert(nsIInputStream *aFromStream,
 
     convertedData.Append("300: ");
     convertedData.Append(spec);
-    convertedData.Append(LF);
+    convertedData.Append(char(nsCRT::LF));
     // END 300:
     
     //Column headings
@@ -197,7 +197,7 @@ nsGopherDirListingConv::OnDataAvailable(nsIRequest *request,
         
         indexFormat.Append("300: ");
         indexFormat.Append(spec.get());
-        indexFormat.Append(LF);
+        indexFormat.Append(char(nsCRT::LF));
         // END 300:
 
         // build up the column heading; 200:
@@ -232,7 +232,7 @@ nsGopherDirListingConv::OnDataAvailable(nsIRequest *request,
     return NS_OK;
 }
 
-// nsIStreamObserver implementation
+// nsIRequestObserver implementation
 NS_IMETHODIMP
 nsGopherDirListingConv::OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
     // we don't care about start. move along... but start masqeurading 
@@ -242,18 +242,15 @@ nsGopherDirListingConv::OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
 
 NS_IMETHODIMP
 nsGopherDirListingConv::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
-                                      nsresult aStatus,
-                                      const PRUnichar* aStatusArg) {
+                                      nsresult aStatus) {
     // we don't care about stop. move along...
     nsCOMPtr<nsILoadGroup> loadgroup;
     nsresult rv = mPartChannel->GetLoadGroup(getter_AddRefs(loadgroup));
     if (NS_FAILED(rv)) return rv;
     if (loadgroup)
-        (void)loadgroup->RemoveRequest(mPartChannel, nsnull,
-                                       aStatus, aStatusArg);
+        (void)loadgroup->RemoveRequest(mPartChannel, nsnull, aStatus);
 
-    return mFinalListener->OnStopRequest(mPartChannel, ctxt,
-                                         aStatus, aStatusArg);
+    return mFinalListener->OnStopRequest(mPartChannel, ctxt, aStatus);
 }
 
 // nsGopherDirListingConv methods
@@ -281,9 +278,9 @@ nsGopherDirListingConv::DigestBufferLines(char* aBuffer, nsCAutoString& aString)
     PRBool cr = PR_FALSE;
 
     // while we have new lines, parse 'em into application/http-index-format.
-    while (line && (eol = PL_strchr(line, LF)) ) {
+    while (line && (eol = PL_strchr(line, nsCRT::LF)) ) {
         // yank any carriage returns too.
-        if (eol > line && *(eol-1) == CR) {
+        if (eol > line && *(eol-1) == nsCRT::CR) {
             eol--;
             *eol = '\0';
             cr = PR_TRUE;
@@ -396,7 +393,7 @@ nsGopherDirListingConv::DigestBufferLines(char* aBuffer, nsCAutoString& aString)
                     aString.Append("DIRECTORY");
                 else
                     aString.Append("FILE");
-                aString.Append(LF);
+                aString.Append(char(nsCRT::LF));
             }
         } else {
             NS_WARNING("Error parsing gopher directory response.\n");

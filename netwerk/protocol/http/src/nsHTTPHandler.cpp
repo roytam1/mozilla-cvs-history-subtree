@@ -94,9 +94,24 @@ static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID); // remove now TODO
 static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 
 #ifdef MOZ_NEW_CACHE
+
 #include "nsICacheService.h"
 static NS_DEFINE_CID(kCacheServiceCID, NS_CACHESERVICE_CID);
-#endif
+
+// XXX move these time routines to a shared library
+static PRUint32
+PRTimeToSeconds(PRTime t_usec)
+{
+    PRTime usec_per_sec;
+    PRUint32 t_sec;
+    LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
+    LL_DIV(t_usec, t_usec, usec_per_sec);
+    LL_L2I(t_sec, t_usec);
+    return t_sec;
+}
+#define NowInSeconds() PRTimeToSeconds(PR_Now())
+
+#endif // MOZ_NEW_CACHE
 
 NS_DEFINE_CID(kCategoryManagerCID, NS_CATEGORYMANAGER_CID);
 
@@ -335,17 +350,103 @@ nsHTTPHandler::NewPostDataStream(PRBool isFile,
         return rv;
     }
 }
+/**
+ *  Allocates a C string into that contains a ISO 639 language list
+ *  notated with HTTP "q" values for output with a HTTP Accept-Language
+ *  header. Previous q values will be stripped because the order of
+ *  the langs imply the q value. The q values are calculated by dividing
+ *  1.0 amongst the number of languages present.
+ *
+ *  Ex: passing: "en, ja"
+ *      returns: "en, ja; q=0.500"
+ *
+ *      passing: "en, ja, fr_CA"
+ *      returns: "en, ja; q=0.667, fr_CA; q=0.333"
+ */
+
+static char *
+PrepareAcceptLanguages(const char *i_AcceptLanguages)
+{
+  if (i_AcceptLanguages)
+  {
+    PRUint32 n, size, wrote;
+    double q, dec;
+    char *p, *p2, *token, *q_Accept;
+    const char *comma;
+    char *o_AcceptLanguages;
+    PRInt32 available;
+
+
+    o_AcceptLanguages = nsCRT::strdup(i_AcceptLanguages);
+    if (nsnull == o_AcceptLanguages)
+      return nsnull;
+    for (p = o_AcceptLanguages, n = size = 0; '\0' != *p; p++)
+    {
+      if (*p == ',') n++;
+        size++;
+    }
+
+    available = size + ++n * 11 + 1;
+    q_Accept = new char[available];
+    if ((char *) 0 == q_Accept)
+      return nsnull;
+    *q_Accept = '\0';
+    q = 1.0;
+    dec = q / (double) n;
+    n = 0;
+    p2 = q_Accept;
+    for (token = nsCRT::strtok(o_AcceptLanguages, ",", &p);
+         token != (char *) 0;
+         token = nsCRT::strtok(p, ",", &p))
+    {
+      while (*token == ' ' || *token == '\x9') token++;
+      char* trim;
+      trim = PL_strpbrk(token, "; \x9");
+      if (trim != (char*)0)  // remove "; q=..." if present
+      *trim = '\0';
+
+      if (*token != '\0')
+      {
+        comma = n++ != 0 ? ", " : ""; // delimiter if not first item
+        if (q < 0.9995)
+          wrote = PR_snprintf(p2, available, "%s%s; q=%1.3f", comma, token, q);
+        else
+          wrote = PR_snprintf(p2, available, "%s%s", comma, token);
+        q -= dec;
+        p2 += wrote;
+        available -= wrote;
+        NS_ASSERTION(available > 0, "allocated string not long enough");
+
+      }
+    }
+    nsCRT::free(o_AcceptLanguages);
+
+    // change alloc from C++ new/delete to nsCRT::strdup's way
+    o_AcceptLanguages = nsCRT::strdup(q_Accept);
+    if (nsnull == o_AcceptLanguages)
+      return nsnull;
+    delete [] q_Accept;
+    return o_AcceptLanguages;
+  }
+  else
+    return nsnull;
+}
 
 NS_IMETHODIMP
 nsHTTPHandler::SetAcceptLanguages(const char* i_AcceptLanguages) 
 {
-    CRTFREEIF(mAcceptLanguages);
-    if (i_AcceptLanguages)
-    {
-        mAcceptLanguages = nsCRT::strdup(i_AcceptLanguages);
-        return (mAcceptLanguages == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
-    }
+  CRTFREEIF (mAcceptLanguages);
+  if (i_AcceptLanguages)
+  {
+    mAcceptLanguages = nsCRT::strdup(i_AcceptLanguages);
+    if (nsnull == mAcceptLanguages)
+      return NS_ERROR_OUT_OF_MEMORY;
+    mAcceptLanguagesPrepped = PrepareAcceptLanguages(i_AcceptLanguages);
+    if (nsnull == mAcceptLanguagesPrepped)
+      return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -355,8 +456,8 @@ nsHTTPHandler::GetAcceptLanguages(char* *o_AcceptLanguages)
         return NS_ERROR_NULL_POINTER;
     if (mAcceptLanguages)
     {
-        *o_AcceptLanguages = nsCRT::strdup(mAcceptLanguages);
-        return (*o_AcceptLanguages == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
+      *o_AcceptLanguages = nsCRT::strdup(mAcceptLanguagesPrepped);
+      return (*o_AcceptLanguages == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
     }
     else
     {
@@ -731,7 +832,11 @@ nsHTTPHandler::SetMisc(const PRUnichar *misc)
 }
 
 nsHTTPHandler::nsHTTPHandler():
+#ifdef MOZ_NEW_CACHE
+    mLastPostID(NowInSeconds()),
+#endif
     mAcceptLanguages(nsnull),
+    mAcceptLanguagesPrepped(nsnull),
     mAcceptEncodings(nsnull),
     mAcceptCharset(nsnull),
     mAcceptCharsetPrepped(nsnull),
@@ -936,7 +1041,7 @@ nsHTTPHandler::Init()
     gHTTPLog = PR_NewLogModule("nsHTTPProtocol");
 #endif /* PR_LOGGING */
 
-    mSessionStartTime = PR_Now();
+    mSessionStartTime = NowInSeconds();
 
     PR_LOG(gHTTPLog, PR_LOG_ALWAYS, ("Creating nsHTTPHandler [this=%x].\n", 
                 this));
@@ -1135,6 +1240,7 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
             } /* for */
         } /* count > 0 */
     }
+    nsCOMPtr<nsISocketTransport> socketTrans;
     // if we didn't find any from the keep-alive idlelist
     if (!trans)
     {
@@ -1179,26 +1285,33 @@ nsresult nsHTTPHandler::RequestTransport(nsIURI* i_Uri,
        
         if (NS_FAILED(rv)) return rv;
 
-        nsLoadFlags loadFlags = nsIChannel::LOAD_NORMAL;
-        i_Channel->GetLoadAttributes(&loadFlags);
+        nsLoadFlags loadFlags = nsIRequest::LOAD_NORMAL;
+        i_Channel->GetLoadFlags(&loadFlags);
 
         nsCOMPtr<nsIInterfaceRequestor> callbacks;
         
         callbacks = do_QueryInterface(NS_STATIC_CAST(nsIHTTPChannel*, i_Channel));
         trans->SetNotificationCallbacks(callbacks,
-                                        (loadFlags & nsIChannel::LOAD_BACKGROUND));
+                                        (loadFlags & nsIRequest::LOAD_BACKGROUND));
 
-        nsCOMPtr<nsISocketTransport> socketTrans = do_QueryInterface(trans, &rv);
+        socketTrans = do_QueryInterface(trans, &rv);
         if (NS_SUCCEEDED(rv)) {
             socketTrans->SetSocketTimeout(mRequestTimeout);
             socketTrans->SetSocketConnectTimeout(mConnectTimeout);
         }
     }
+    else
+        socketTrans = do_QueryInterface(trans);
 
     // Put it in the table...
     // XXX this method incorrectly returns a bool
     rv = mTransportList->AppendElement(trans) ? NS_OK : NS_ERROR_FAILURE;  
     if (NS_FAILED(rv)) return rv;
+
+    // Ensure a reference to the underlying socket.  This is done regardless
+    // of whether or not this socket will be reused.
+    if (socketTrans)
+        socketTrans->SetReuseConnection(PR_TRUE);
 
     *o_pTrans = trans;
     NS_IF_ADDREF(*o_pTrans);
@@ -1285,11 +1398,17 @@ nsHTTPHandler::ReleaseTransport (nsITransport* i_pTrans  ,
     PRInt32 port    = -1;
     nsXPIDLCString  host;
 
-    // Get the address of the socket transport
     {
         nsCOMPtr<nsISocketTransport> socketTrans = do_QueryInterface(i_pTrans);
-        socketTrans->GetHost(getter_Copies(host));
-        socketTrans->GetPort(&port);
+        if (socketTrans) {
+            // Get the address of the socket transport
+            socketTrans->GetHost(getter_Copies(host));
+            socketTrans->GetPort(&port);
+
+            // Drop one reference to the underlying socket.  If this is NOT a keep-alive
+            // connection, then this will cause the socket to close.
+            socketTrans->SetReuseConnection(PR_FALSE);
+        }         
     }
     if (port == -1)
         GetDefaultPort (&port);
@@ -1612,9 +1731,6 @@ nsHTTPHandler::PrefsChanged(const char* pref)
     mPrefs->GetIntPref("network.http.keep-alive.max-connections-per-server",
                 &mMaxAllowedKeepAlivesPerServer);
 
-#if defined(DEBUG_tao_)
-        printf("\n--> nsHTTPHandler::PrefsChanged:pref=%s\n", pref?pref:"null");
-#endif
     if ( (bChangedAll)|| !PL_strcmp(pref, INTL_ACCEPT_LANGUAGES) ) // intl.accept_languages
     {
         nsXPIDLString acceptLanguages;
@@ -1622,10 +1738,6 @@ nsHTTPHandler::PrefsChanged(const char* pref)
                 getter_Copies(acceptLanguages));
         if (NS_SUCCEEDED(rv))
             SetAcceptLanguages(NS_ConvertUCS2toUTF8(acceptLanguages).get());
-#if defined(DEBUG_tao_)
-        printf("\n--> nsHTTPHandler::PrefsChanged: intl.accept_languages=%s\n",
-               (const char *)NS_ConvertUCS2toUTF8(acceptLanguages));
-#endif
     }
     if ( (bChangedAll)|| !PL_strcmp(pref, INTL_ACCEPT_CHARSET) ) // intl.charset.default
     {
@@ -1634,10 +1746,6 @@ nsHTTPHandler::PrefsChanged(const char* pref)
                 getter_Copies(acceptCharset));
         if (NS_SUCCEEDED(rv))
             SetAcceptCharset(NS_ConvertUCS2toUTF8(acceptCharset).get());
-#if defined(DEBUG_tao)
-        printf("\n--> nsHTTPHandler::PrefsChanged: intl.charset.default=%s\n",
-               (const char *)NS_ConvertUCS2toUTF8(acceptCharset));
-#endif
     }
 
     // general.useragent.override
@@ -1660,10 +1768,6 @@ nsHTTPHandler::PrefsChanged(const char* pref)
         if (NS_SUCCEEDED(rv)) {
             mAppLanguage = NS_ConvertUCS2toUTF8(uval);
             //
-#if defined(DEBUG_tao_)
-            printf("\n--> nsHTTPHandler::PrefsChanged:general.useragent.locale=%s\n",
-                   NS_ConvertUCS2toUTF8(uval).get());
-#endif
             BuildUserAgent();
         }
     }

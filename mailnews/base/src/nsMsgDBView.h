@@ -53,7 +53,7 @@ enum eFieldType {
 };
 
 // reserve the top 8 bits in the msg flags for the view-only flags.
-#define MSG_VIEW_FLAGS 0xFE000000
+#define MSG_VIEW_FLAGS 0xEE000000
 #define MSG_VIEW_FLAG_HASCHILDREN 0x40000000
 #define MSG_VIEW_FLAG_ISTHREAD 0x8000000
 
@@ -76,11 +76,14 @@ protected:
   // atoms used for styling the view. we're going to have a lot of
   // these so i'm going to make them static.
   static nsIAtom* kUnreadMsgAtom;
+  static nsIAtom* kNewMsgAtom;
+  static nsIAtom* kReadMsgAtom;
   static nsIAtom* kOfflineMsgAtom;
   static nsIAtom* kFlaggedMsgAtom;
   static nsIAtom* kNewsMsgAtom;
   static nsIAtom* kImapDeletedMsgAtom;
   static nsIAtom* kAttachMsgAtom;
+  static nsIAtom* kHasUnreadAtom;
 
   static nsIAtom* kHighestPriorityAtom;
   static nsIAtom* kHighPriorityAtom;
@@ -112,9 +115,6 @@ protected:
   nsresult FetchPriority(nsIMsgHdr *aHdr, PRUnichar ** aPriorityString);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
 
-  // toggles ascending/descending or adds the sort attribute
-  // also cleans up the attributes on the previously sorted column.
-  nsresult UpdateSortUI(nsIDOMElement * aNewSortColumn);
   // Save and Restore Selection are a pair of routines you should
   // use when performing an operation which is going to change the view
   // and you want to remember the selection. (i.e. for sorting). 
@@ -124,6 +124,12 @@ protected:
   // and we'll restore the selection AND unfreeze selection in the UI.
   nsresult SaveSelection(nsMsgKeyArray * aMsgKeyArray);
   nsresult RestoreSelection(nsMsgKeyArray * aMsgKeyArray);
+
+  // this is not safe to use when you have a selection
+  // RowCountChanged() will call AdjustSelection() 
+  // it should be called after SaveSelection() and before
+  // RestoreSelection()
+  nsresult AdjustRowCount(PRInt32 rowCountBeforeSort, PRInt32 rowCountAfterSort);
 
   nsresult GetSelectedIndices(nsUInt32Array *selection);
   nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, nsIMsgFolder *folder, char ** aURI);
@@ -137,8 +143,6 @@ protected:
   nsMsgViewIndex GetIndexForThread(nsIMsgDBHdr *hdr);
   virtual nsresult GetThreadContainingIndex(nsMsgViewIndex index, nsIMsgThread **thread);
   virtual nsresult GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr);
-
-  virtual nsresult InsertHdrAt(nsIMsgDBHdr *msgHdr, nsMsgViewIndex insertIndex);
 
   nsresult ToggleExpansion(nsMsgViewIndex index, PRUint32 *numChanged);
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
@@ -171,7 +175,7 @@ protected:
 
   nsresult	ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
   nsresult	ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed);
-  PRInt32   FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgKey msgKey, nsMsgViewIndex startOfThreadViewIndex);
+  PRInt32   FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThreadViewIndex);
 	PRInt32	  GetSize(void) {return(m_keys.GetSize());}
 
   // notification api's
@@ -260,7 +264,6 @@ protected:
   nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgViewFlagsTypeValue m_viewFlags;
-  nsCOMPtr<nsIDOMElement> mCurrentSortColumn;
 
   // I18N date formater service which we'll want to cache locally.
   nsCOMPtr<nsIDateTimeFormat> mDateFormater;

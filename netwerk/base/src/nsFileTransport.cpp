@@ -57,7 +57,8 @@ class nsFileTransportSourceWrapper : public nsIInputStream
 public:
     NS_DECL_ISUPPORTS
 
-    nsFileTransportSourceWrapper() : mBytesRead(0) {NS_INIT_ISUPPORTS();}
+    nsFileTransportSourceWrapper()
+        : mBytesRead(0), mLastError(NS_OK) { NS_INIT_ISUPPORTS(); }
     virtual ~nsFileTransportSourceWrapper() {}
 
     //
@@ -73,6 +74,7 @@ public:
         nsresult rv = mSource->Read(aBuf, aCount, aBytesRead);
         if (NS_SUCCEEDED(rv))
             mBytesRead += *aBytesRead;
+        mLastError = rv;
         return rv;
     }
     NS_IMETHOD ReadSegments(nsWriteSegmentFun aWriter, void *aClosure,
@@ -80,6 +82,7 @@ public:
         nsresult rv = mSource->ReadSegments(aWriter, aClosure, aCount, aBytesRead);
         if (NS_SUCCEEDED(rv))
             mBytesRead += *aBytesRead;
+        mLastError = rv;
         return rv;
     }
     NS_IMETHOD GetNonBlocking(PRBool *aValue) {
@@ -101,6 +104,9 @@ public:
     PRUint32 GetBytesRead() {
         return mBytesRead;
     }
+    nsresult GetLastError() {
+        return mLastError;
+    }
 
 protected:
     // 
@@ -108,6 +114,7 @@ protected:
     //
     PRUint32                 mBytesRead;
     nsCOMPtr<nsIInputStream> mSource;
+    nsresult                 mLastError;
 };
 
 // This must be threadsafe since different threads can run the same transport
@@ -124,7 +131,8 @@ class nsFileTransportSinkWrapper : public nsIOutputStream
 public:
     NS_DECL_ISUPPORTS
 
-    nsFileTransportSinkWrapper() : mBytesWritten(0) {NS_INIT_ISUPPORTS();}
+    nsFileTransportSinkWrapper()
+        : mBytesWritten(0), mLastError(NS_OK) { NS_INIT_ISUPPORTS(); }
     virtual ~nsFileTransportSinkWrapper() {}
 
     //
@@ -140,12 +148,14 @@ public:
         nsresult rv = mSink->Write(aBuf, aCount, aBytesWritten);
         if (NS_SUCCEEDED(rv))
             mBytesWritten += *aBytesWritten;
+        mLastError = rv;
         return rv;
     }
     NS_IMETHOD WriteFrom(nsIInputStream *aSource, PRUint32 aCount, PRUint32 *aBytesWritten) {
         nsresult rv = mSink->WriteFrom(aSource, aCount, aBytesWritten);
         if (NS_SUCCEEDED(rv))
             mBytesWritten += *aBytesWritten;
+        mLastError = rv;
         return rv;
     }
     NS_IMETHOD WriteSegments(nsReadSegmentFun aReader, void *aClosure,
@@ -153,6 +163,7 @@ public:
         nsresult rv = mSink->WriteSegments(aReader, aClosure, aCount, aBytesWritten);
         if (NS_SUCCEEDED(rv))
             mBytesWritten += *aBytesWritten;
+        mLastError = rv;
         return rv;
     }
     NS_IMETHOD GetNonBlocking(PRBool *aValue) {
@@ -177,6 +188,9 @@ public:
     PRUint32 GetBytesWritten() {
         return mBytesWritten;
     }
+    nsresult GetLastError() {
+        return mLastError;
+    }
 
 protected:
     // 
@@ -184,6 +198,7 @@ protected:
     //
     PRUint32                  mBytesWritten;
     nsCOMPtr<nsIOutputStream> mSink;
+    nsresult                  mLastError;
 };
 
 // This must be threadsafe since different threads can run the same transport
@@ -383,6 +398,32 @@ nsFileTransport::Resume()
         LOG(("nsFileTransport: Resume ignored [this=%x %s] status=%x cancelstatus=%x\n",
             this, mStreamName.get(), mStatus, mCancelStatus));
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFileTransport::GetLoadGroup(nsILoadGroup **loadGroup)
+{
+    *loadGroup = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFileTransport::SetLoadGroup(nsILoadGroup *loadGroup)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsFileTransport::GetLoadFlags(nsLoadFlags *loadFlags)
+{
+    *loadFlags = nsIRequest::LOAD_NORMAL;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFileTransport::SetLoadFlags(nsLoadFlags loadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -663,9 +704,7 @@ nsFileTransport::Process(void)
       }
 
       case READING: {
-        //
         // Read at most mBufferMaxSize.
-        //
         PRInt32 transferAmt = mBufferMaxSize;
         if (mTransferAmount >= 0)
             transferAmt = PR_MIN(transferAmt, mTransferAmount);
@@ -673,19 +712,35 @@ nsFileTransport::Process(void)
         LOG(("nsFileTransport: READING [this=%x %s] transferAmt=%u mBufferMaxSize=%u\n",
             this, mStreamName.get(), transferAmt, mBufferMaxSize));
 
-        PRUint32 offset = mSourceWrapper->GetBytesRead();
+        PRUint32 total, offset = mSourceWrapper->GetBytesRead();
 
-        //
         // Give the listener a chance to read at most transferAmt bytes from
         // the source input stream.
-        //
         nsresult status = mListener->OnDataAvailable(this, mContext,
                                                      mSourceWrapper,
                                                      mOffset, transferAmt);
 
-        //
+        if (NS_SUCCEEDED(status)) {
+            // Find out what was read.
+            total = mSourceWrapper->GetBytesRead() - offset;
+            LOG(("status = %x total = %d\n", status, total));
+            if (total == 0) {
+                status = mSourceWrapper->GetLastError();
+                if (NS_SUCCEEDED(status)) { // eof
+                    LOG(("eof\n"));
+                    status = NS_BASE_STREAM_CLOSED;
+                }
+            }
+            else if (mTransferAmount > 0) {
+                mTransferAmount -= total;
+                if (mTransferAmount == 0) {
+                    LOG(("mTransferAmount == 0\n"));
+                    status = NS_BASE_STREAM_CLOSED;
+                }
+            }
+        }
+
         // Handle the various return codes.
-        //
         if (status == NS_BASE_STREAM_WOULD_BLOCK) {
             LOG(("nsFileTransport: READING [this=%x %s] listener would block; suspending self.\n",
                 this, mStreamName.get()));
@@ -705,24 +760,12 @@ nsFileTransport::Process(void)
             mXferState = END_READ;
         }
         else {
-            // 
-            // get the number of bytes read
-            //
-            PRUint32 total = mSourceWrapper->GetBytesRead() - offset;
+            // something was read...
             offset += total;
             mOffset += total;
 
-            if (mTransferAmount > 0)
-                mTransferAmount -= total;
-
-            if (total == 0 || mTransferAmount == 0) {
-                LOG(("nsFileTransport: READING [this=%x %s] done reading file.\n",
-                    this, mStreamName.get()));
-                mXferState = END_READ;
-            }
-            else
-                LOG(("nsFileTransport: READING [this=%x %s] read %u bytes [offset=%u]\n",
-                    this, mStreamName.get(), total, mOffset));
+            LOG(("nsFileTransport: READING [this=%x %s] read %u bytes [offset=%u]\n",
+                this, mStreamName.get(), total, mOffset));
 
             if (mProgress)
                 mProgress->OnProgress(this, mContext, offset,
@@ -751,7 +794,7 @@ nsFileTransport::Process(void)
         }
 
         if (mListener) {
-            mListener->OnStopRequest(this, mContext, mStatus, nsnull);
+            mListener->OnStopRequest(this, mContext, mStatus);
             mListener = 0;
         }
         if (mProgress) {
@@ -839,25 +882,34 @@ nsFileTransport::Process(void)
       }
 
       case WRITING: {
-        //
         // Write at most mBufferMaxSize
-        //
         PRUint32 transferAmt = mBufferMaxSize;
         if (mTransferAmount >= 0)
             transferAmt = PR_MIN(transferAmt, (PRUint32)mTransferAmount);
 
-        PRUint32 offset = mSinkWrapper->GetBytesWritten();
+        PRUint32 total, offset = mSinkWrapper->GetBytesWritten();
 
-        // 
         // Ask the provider for data
-        //
         nsresult status = mProvider->OnDataWritable(this, mContext,
                                                     mSinkWrapper,
                                                     mOffset, transferAmt);
+
+        if (NS_SUCCEEDED(status)) {
+            // Find out what was written.
+            total = mSinkWrapper->GetBytesWritten() - offset;
+            if (total == 0) {
+                status = mSinkWrapper->GetLastError();
+                if (NS_SUCCEEDED(status)) // eof
+                    status = NS_BASE_STREAM_CLOSED;
+            }
+            else if (mTransferAmount > 0) {
+                mTransferAmount -= total;
+                if (mTransferAmount == 0)
+                    status = NS_BASE_STREAM_CLOSED;
+            }
+        }
         
-        //
         // Handle the various return codes.
-        //
         if (status == NS_BASE_STREAM_WOULD_BLOCK) {
             LOG(("nsFileTransport: WRITING [this=%x %s] provider would block; suspending self.\n",
                 this, mStreamName.get()));
@@ -877,24 +929,12 @@ nsFileTransport::Process(void)
             mXferState = END_WRITE;
         }
         else {
-            //
-            // Get the number of bytes written
-            //
-            PRUint32 total = mSinkWrapper->GetBytesWritten() - offset;
+            // something was written...
             offset += total;
             mOffset += total;
 
-            if (mTransferAmount > 0)
-                mTransferAmount -= total;
-
-            if (total == 0 || mTransferAmount == 0) {
-                LOG(("nsFileTransport: WRITING [this=%x %s] done writing file.\n",
-                    this, mStreamName.get()));
-                mXferState = END_WRITE;
-            }
-            else 
-                LOG(("nsFileTransport: WRITING [this=%x %s] wrote %u bytes [offset=%u]\n",
-                    this, mStreamName.get(), total, mOffset));
+            LOG(("nsFileTransport: WRITING [this=%x %s] wrote %u bytes [offset=%u]\n",
+                this, mStreamName.get(), total, mOffset));
 
             if (mProgress)
                 mProgress->OnProgress(this, mContext, offset,
@@ -926,7 +966,7 @@ nsFileTransport::Process(void)
         mSinkWrapper = nsnull;
 
         if (mProvider) {
-            mProvider->OnStopRequest(this, mContext, mStatus, nsnull);
+            mProvider->OnStopRequest(this, mContext, mStatus);
             mProvider = 0;
         }
         if (mProgress) {

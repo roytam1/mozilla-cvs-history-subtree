@@ -39,6 +39,13 @@ static const char* kPossibleNull = "Error: possible unintended null in string";
 static const char* kNullPointerError = "Error: unexpected null ptr";
 static const char* kWhitespace="\b\t\r\n ";
 
+const nsBufferHandle<PRUnichar>*
+nsString::GetFlatBufferHandle() const
+  {
+    return NS_REINTERPRET_CAST(const nsBufferHandle<PRUnichar>*, 1);
+  }
+
+
 
 static void Subsume(nsStr& aDest,nsStr& aSource){
   if(aSource.mStr && aSource.mLength) {
@@ -165,7 +172,7 @@ nsString::do_AppendFromElement( PRUnichar inChar )
   }
 
 
-nsString::nsString( const nsAReadableString& aReadable ) {
+nsString::nsString( const nsAString& aReadable ) {
   Initialize(*this,eTwoByte);
   Assign(aReadable);
 }
@@ -1647,7 +1654,7 @@ nsAutoString::nsAutoString( const nsString& aString )
   Append(aString);
 }
 
-nsAutoString::nsAutoString( const nsAReadableString& aString )
+nsAutoString::nsAutoString( const nsAString& aString )
   : nsString()
 {
   Initialize(*this, mBuffer, (sizeof(mBuffer)>>eTwoByte)-1, 0, eTwoByte, PR_FALSE);
@@ -1743,27 +1750,33 @@ NS_ConvertUTF8toUCS2::Init( const char* aCString, PRUint32 aLength )
     }
 
     PRUint32 ucs4;
+    PRUint32 minUcs4;
     PRInt32 state = 0;
     
     if ( 0xC0 == (0xE0 & c) ) { // 2 bytes UTF8
       ucs4 = (PRUint32(c) << 6) & 0x000007C0L;
       state = 1;
+      minUcs4 = 0x00000080;
     }
     else if ( 0xE0 == (0xF0 & c) ) { // 3 bytes UTF8
       ucs4 = (PRUint32(c) << 12) & 0x0000F000L;
       state = 2;
+      minUcs4 = 0x00000800;
     }
     else if ( 0xF0 == (0xF8 & c) ) { // 4 bytes UTF8
       ucs4 = (PRUint32(c) << 18) & 0x001F0000L;
       state = 3;
+      minUcs4 = 0x00010000;
     }
     else if ( 0xF8 == (0xFC & c) ) { // 5 bytes UTF8
       ucs4 = (PRUint32(c) << 24) & 0x03000000L;
       state = 4;
+      minUcs4 = 0x00200000;
     }
     else if ( 0xFC == (0xFE & c) ) { // 6 bytes UTF8
       ucs4 = (PRUint32(c) << 30) & 0x40000000L;
       state = 5;
+      minUcs4 = 0x04000000;
     }
     else {
       NS_ERROR("not a UTF8 string");
@@ -1783,7 +1796,16 @@ NS_ConvertUTF8toUCS2::Init( const char* aCString, PRUint32 aLength )
       }
     }
 
-    if (ucs4 >= 0x00010000) {
+    if (ucs4 < minUcs4) {
+      // Overlong sequence
+      *out++ = 0xFFFD;
+    } else if (ucs4 >= 0xD800 && ucs4 <= 0xDFFF) {
+      // Surrogates
+      *out++ = 0xFFFD;
+    } else if (ucs4 == 0xFFFE || ucs4 == 0xFFFF) {
+      // Prohibited characters
+      *out++ = 0xFFFD;
+    } else if (ucs4 >= 0x00010000) {
       if (ucs4 >= 0x001F0000) {
         *out++ = 0xFFFD;
       }

@@ -46,6 +46,7 @@
 #include "nsITimer.h"
 #include "nsIDOMDocument.h"
 #include "nsIURL.h"
+#include "nsIChannel.h"
 #include "nsIFileWidget.h"
 #include "nsILookAndFeel.h"
 #include "nsIComponentManager.h"
@@ -80,7 +81,6 @@
 #include "nsCWebBrowser.h"
 
 #include "nsIParser.h"
-#include "nsHTMLContentSinkStream.h"
 #include "nsEditorMode.h"
 
 // Needed for "Find" GUI
@@ -116,6 +116,7 @@
 
 #endif
 #include "nsIIOService.h"
+#include "nsNetCID.h"
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 #if defined(ClientWallet) || defined(SingleSignon)
@@ -240,6 +241,12 @@ NS_IMETHODIMP nsBrowserWindow::Create()
 NS_IMETHODIMP nsBrowserWindow::Destroy()
 {
   RemoveBrowser(this);
+
+  nsCOMPtr<nsIBaseWindow> w(do_QueryInterface(mWebBrowser));
+
+  if (w) {
+    w->Destroy();
+  }
 
   nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(mDocShell));
   if(webShell) {
@@ -2257,12 +2264,11 @@ nsBrowserWindow::ConfirmCheck(const PRUnichar *dialogTitle,
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::Prompt(const PRUnichar *dialogTitle, 
+nsBrowserWindow::Prompt(const PRUnichar *dialogTitle,
                         const PRUnichar *text,
-                        const PRUnichar *passwordRealm,
-                        PRUint32 savePassword,
-                        const PRUnichar *defaultText,
-                        PRUnichar **result,
+                        PRUnichar **answer,
+                        const PRUnichar *checkMsg,
+                        PRBool *checkValue,
                         PRBool *_retval)
 {
   nsCAutoString str; str.AssignWithConversion(text);
@@ -2270,58 +2276,31 @@ nsBrowserWindow::Prompt(const PRUnichar *dialogTitle,
   char buf[256];
 
   msg = str.get();
-  if (nsnull != msg) {
+  if (nsnull != msg && nsnull != answer) {
     printf("Browser Window: %s\n", msg);
 
     printf("%cPrompt: ", '\007');
     scanf("%s", buf);
     nsAutoString response; response.AssignWithConversion(buf);
-    *result = response.ToNewUnicode();
+    if (*answer) {
+      nsMemory::Free(*answer);
+      *answer = nsnull;
+    }
+    *answer = response.ToNewUnicode();
+    *_retval = (*answer && nsCRT::strlen(*answer) > 0);
   }
+  else
+    *_retval = PR_FALSE;
   
-  *_retval = (nsCRT::strlen(buf) > 0);
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsBrowserWindow::PromptUsernameAndPassword(const PRUnichar *dialogTitle, 
-                                           const PRUnichar *text,
-                                           const PRUnichar *passwordRealm,
-                                           PRUint32 savePassword,
-                                           PRUnichar **user,
-                                           PRUnichar **pwd,
-                                           PRBool *_retval)
-{
-  nsCAutoString str; str.AssignWithConversion(text);
-  const char* msg = nsnull;
-  char buf[256];
-
-  msg = str.get();
-  if (nsnull != msg) {
-    nsAutoString response;
-    printf("Browser Window: %s\n", msg);
-
-    printf("%cUser: ", '\007');
-    scanf("%s", buf);
-    response.AssignWithConversion(buf);
-    *user = response.ToNewUnicode();
-
-    printf("%cPassword: ", '\007');
-    scanf("%s", buf);
-    response.AssignWithConversion(buf);
-    *pwd = response.ToNewUnicode();
-  }
-
-  *_retval = (nsCRT::strlen(*user) > 0);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBrowserWindow::PromptPassword(const PRUnichar *dialogTitle, 
+nsBrowserWindow::PromptPassword(const PRUnichar *dialogTitle,
                                 const PRUnichar *text,
-                                const PRUnichar *passwordRealm,
-                                PRUint32 savePassword,
-                                PRUnichar **pwd,
+                                PRUnichar **password,
+                                const PRUnichar *checkMsg,
+                                PRBool *checkValue,
                                 PRBool *_retval)
 {
   nsCAutoString str; str.AssignWithConversion(text);
@@ -2329,15 +2308,66 @@ nsBrowserWindow::PromptPassword(const PRUnichar *dialogTitle,
   char buf[256];
 
   msg = str.get();
-  if (nsnull != msg) {
+  if (nsnull != msg && nsnull != password) {
     printf("Browser Window: %s\n", msg);
     printf("%cPassword: ", '\007');
     scanf("%s", buf);
     nsAutoString response; response.AssignWithConversion(buf);
-    *pwd = response.ToNewUnicode();
+    if (*password) {
+      nsMemory::Free(*password);
+      *password = nsnull;
+    }
+    *password = response.ToNewUnicode();
+    *_retval = (*password && nsCRT::strlen(*password) > 0);
   }
+  else
+    *_retval = PR_FALSE;
  
-  *_retval = (nsCRT::strlen(*pwd) > 0);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBrowserWindow::PromptUsernameAndPassword(const PRUnichar *dialogTitle,
+                                           const PRUnichar *text,
+                                           PRUnichar **username,
+                                           PRUnichar **password,
+                                           const PRUnichar *checkMsg,
+                                           PRBool *checkValue,
+                                           PRBool *_retval)
+{
+  nsCAutoString str; str.AssignWithConversion(text);
+  const char* msg = nsnull;
+  char buf[256];
+
+  msg = str.get();
+  if (nsnull != msg && nsnull != username && nsnull != password) {
+    nsAutoString response;
+    printf("Browser Window: %s\n", msg);
+
+    printf("%cUser: ", '\007');
+    scanf("%s", buf);
+    response.AssignWithConversion(buf);
+    if (*username) {
+      nsMemory::Free(*username);
+      *username = nsnull;
+    }
+    *username = response.ToNewUnicode();
+
+    printf("%cPassword: ", '\007');
+    scanf("%s", buf);
+    response.AssignWithConversion(buf);
+    if (*password) {
+      nsMemory::Free(*password);
+      *password = nsnull;
+    }
+    *password = response.ToNewUnicode();
+    
+    *_retval = (*username && nsCRT::strlen(*username) > 0 &&
+                *password && nsCRT::strlen(*password) > 0);
+  }
+  else
+    *_retval = PR_FALSE;
+
   return NS_OK;
 }
 

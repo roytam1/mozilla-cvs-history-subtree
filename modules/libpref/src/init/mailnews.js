@@ -116,6 +116,11 @@ pref("mailnews.wraplength",                 72);
 
 pref("mailnews.reply_on_top",               0); // 0=bottom 1=top 2=select+bottom 3=select+top
 
+// 0=no header, 1="<author> wrote:", 2="On <date> <author> wrote:", 3=user specified
+pref("mailnews.reply_header_type",          1);
+
+pref("mail.purge_threshhold",                100);
+pref("mail.prompt_purge_threshhold",             false);   
 pref("mailnews.force_ascii_search",         false);
 pref("mailnews.autolookup_unknown_mime_types",  true);
 
@@ -285,7 +290,7 @@ pref("mail.display_glyph", true);   // see <http://www.bucksch.org/1/projects/mo
 pref("mail.display_struct", true);  // ditto
 pref("mail.send_struct", false);   // ditto
 
-pref("mail.forward_message_mode", 0); // 0=default as attachment 2=forward as inline with attachments, (obsolete)1=forward as quoted
+pref("mail.forward_message_mode", 0); // 0=default as attachment 2=forward as inline with attachments, (obsolete 4.x value)1=forward as quoted (mapped to 2 in mozilla)
 
 pref("mail.startup.enabledMailCheckOnce", false);
 
@@ -315,3 +320,5 @@ pref("mail.biff.sound_file","");
 pref("mail.biff.default_sound_url","");
 
 pref("mail.content_disposition_type", 0);
+
+pref("mailnews.show_send_progress", false); //Will show a progress dialog when saving or sending a message

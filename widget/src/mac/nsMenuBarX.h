@@ -32,13 +32,16 @@
 #include "nsVoidArray.h"
 #include "nsHashtable.h"
 #include "nsWeakReference.h"
+#include "nsIContent.h"
 
 #include <MacTypes.h>
 #include <UnicodeConverter.h>
+#include <Menus.h>
 
 extern nsWeakPtr gMacMenubarX;
 
 class nsIWidget;
+class nsIDocument;
 
 namespace MenuHelpersX
 {
@@ -168,6 +171,7 @@ protected:
     PRBool                  mIsMenuBarAdded;
 
     nsWeakPtr               mWebShellWeakRef;   // weak ref to webshell
+    nsIDocument*            mDocument;          // pointer to document
 
     MenuRef                 mRootMenu;          // root menu, representing entire menu bar.
 };

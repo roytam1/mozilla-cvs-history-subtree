@@ -28,7 +28,7 @@ pref("network.search.url","http://cgi.netscape.com/cgi-bin/url_search.cgi?search
 pref("keyword.URL", "http://keyword.netscape.com/keyword/");
 pref("keyword.enabled", true);
 pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties");
-pref("general.useragent.misc", "0.8.1");
+pref("general.useragent.misc", "rv:0.8.1+");
 
 pref("general.startup.browser",             true);
 pref("general.startup.mail",                false);
@@ -42,7 +42,7 @@ pref("general.open_location.last_window_choice", 0);
 
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",	   "chrome://navigator/locale/navigator.properties");
+pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
 // "browser.startup.homepage_override" was for 4.x
 pref("browser.startup.homepage_override.1", true);
 pref("browser.startup.autoload_homepage",   true);
@@ -63,10 +63,16 @@ pref("browser.anchor_color",                "#0000EE");
 pref("browser.visited_color",               "#551A8B");
 pref("browser.underline_anchors",           true);
 
+pref("browser.display.use_focus_colors",    false);
+pref("browser.display.focus_background_color", "#117722");
+pref("browser.display.focus_text_color",     "#ffffff");
+pref("browser.display.focus_ring_width",     1);
+pref("browser.display.focus_ring_on_anything", false);
+
 pref("browser.chrome.toolbar_tips",         true);
 pref("browser.chrome.toolbar_style",        2);
 
-pref("browser.toolbars.showbutton.bookmarks", false);
+pref("browser.toolbars.showbutton.bookmarks", true);
 pref("browser.toolbars.showbutton.go",      false);
 pref("browser.toolbars.showbutton.home",    true);
 pref("browser.toolbars.showbutton.mynetscape", true);
@@ -85,7 +91,7 @@ pref("browser.show_about_as_stupid_modal_window", false);
 pref("browser.download.progressDnldDialog.keepAlive", false); // keep the dnload progress dialog up after dnload is complete
 
 // various default search settings
-pref("browser.search.defaulturl", "chrome://navigator/locale/navigator.properties");
+pref("browser.search.defaulturl", "chrome://navigator-region/locale/region.properties");
 pref("browser.search.opensidebarsearchpanel", true);
 pref("browser.search.last_search_category", "NC:SearchCategory?category=urn:search:category:1");
 pref("browser.search.mode", 0);
@@ -105,6 +111,9 @@ pref("browser.PICS.service.http___home_netscape_com_default_rating.service_enabl
 pref("browser.PICS.service.http___home_netscape_com_default_rating.s", 0);
 
 pref("browser.target_new_blocked", false);
+
+// view source
+pref("view_source.syntax_highlight", true);
 
 // gfx widgets
 pref("nglayout.widget.mode", 2);
@@ -126,7 +135,9 @@ pref("browser.related.provider", "http://www-rl.netscape.com/wtgn?");
 pref("browser.related.disabledForDomains", "");
 pref("browser.goBrowsing.enabled", true);
 
-pref("signed.applets.codebase_principal_support", true);
+//Internet Search
+pref("browser.search.defaultenginename", "chrome://navigator/locale/navigator.properties");
+
 // Default Capability Preferences: Security-Critical! 
 // Editing these may create a security risk - be sure you know what you're doing
 pref("capability.policy.default.barprop.visible.set", "UniversalBrowserWrite");
@@ -156,8 +167,7 @@ pref("capability.policy.default.Navigator.preference.set", "UniversalPreferences
 
 pref("capability.policy.default.Window.close", "allAccess");
 pref("capability.policy.default.Window.location.set", "allAccess");
-
-pref("capability.policy.mailnews.sites", "mailbox: imap: news: pop: pop3:");
+// window.openDialog is insecure and must be made inaccessible from web scripts - see bug 56009
 
 pref("capability.policy.mailnews.Domexception.tostring", "noAccess");
 pref("capability.policy.mailnews.Htmldocument.domain", "noAccess");
@@ -275,7 +285,7 @@ pref("imageblocker.enabled",                true);
 pref("intl.accept_languages",               "chrome://navigator/locale/navigator.properties");
 pref("intl.accept_charsets",                "iso-8859-1,*,utf-8");
 pref("intl.collationOption",                "chrome://navigator/locale/navigator.properties");
-
+pref("intl.menuitems.alwaysappendacceskeys","chrome://navigator/locale/navigator.properties");
 pref("intl.charsetmenu.browser.static",     "chrome://navigator/locale/navigator.properties");
 pref("intl.charsetmenu.browser.more1",      "chrome://navigator/locale/navigator.properties");
 pref("intl.charsetmenu.browser.more2",      "chrome://navigator/locale/navigator.properties");

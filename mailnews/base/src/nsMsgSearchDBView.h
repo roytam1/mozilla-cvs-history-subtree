@@ -41,6 +41,7 @@ public:
   NS_IMETHOD Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, 
         nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount);
   NS_IMETHOD Close();
+  NS_IMETHOD Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
   NS_IMETHOD DoCommand(nsMsgViewCommandTypeValue command);
   NS_IMETHOD DoCommandWithFolder(nsMsgViewCommandTypeValue command, nsIMsgFolder *destFolder);
   // override to get location
@@ -49,7 +50,7 @@ public:
   NS_IMETHOD GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder **folder);
   virtual nsresult GetFolders(nsISupportsArray **aFolders);
 protected:
-  nsresult FetchLocation(nsIMsgDBHdr * aHdr, PRUnichar ** aSizeString);
+  nsresult FetchLocation(PRInt32 aRow, PRUnichar ** aLocationString);
   virtual nsresult GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db);
   virtual nsresult RemoveByIndex(nsMsgViewIndex index);
   virtual nsresult CopyMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool isMove, nsIMsgFolder *destFolder);

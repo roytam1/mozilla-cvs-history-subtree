@@ -66,6 +66,11 @@ public:
                                     nsICacheListener *         listener,
                                     nsICacheEntryDescriptor ** result);
 
+    nsresult         EvictEntriesForSession(nsCacheSession *   session);
+
+    nsresult         EvictEntriesForClient(const char *          clientID,
+                                           nsCacheStoragePolicy  storagePolicy);
+
     /**
      * Methods called by nsCacheEntryDescriptor
      */
@@ -141,7 +146,9 @@ private:
                                                          PLDHashEntryHdr * hdr,
                                                          PRUint32          number,
                                                          void *            arg);
-
+#if defined(PR_LOGGING)
+    void LogCacheStatistics();
+#endif
     /**
      *  Data Members
      */
@@ -165,6 +172,7 @@ private:
     PRCList                 mDoomedEntries;
 
     // stats
+    
     PRUint32                mTotalEntries;
     PRUint32                mCacheHits;
     PRUint32                mCacheMisses;

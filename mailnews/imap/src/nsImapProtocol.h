@@ -63,6 +63,7 @@
 #include "nsXPIDLString.h"
 #include "nsIMsgWindow.h"
 #include "nsIMsgLogonRedirector.h"
+#include "nsICacheListener.h"
 
 class nsIMAPMessagePartIDArray;
 class nsIMsgIncomingServer;
@@ -113,7 +114,7 @@ public:
 	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
 	// OnDataAvailable. We then read and process the incoming data from the input stream. 
 	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-    NS_DECL_NSISTREAMOBSERVER
+    NS_DECL_NSIREQUESTOBSERVER
     NS_DECL_NSISTREAMLISTENER
 
 
@@ -578,7 +579,9 @@ private:
 //
 // Threading concern: This class lives entirely in the UI thread.
 
-class nsImapMockChannel : public nsIImapMockChannel
+class nsICacheEntryDescriptor;
+
+class nsImapMockChannel : public nsIImapMockChannel, public nsICacheListener
 {
 public:
 
@@ -586,6 +589,7 @@ public:
   NS_DECL_NSIIMAPMOCKCHANNEL
   NS_DECL_NSICHANNEL
   NS_DECL_NSIREQUEST
+  NS_DECL_NSICACHELISTENER
 	
   nsImapMockChannel();
 	virtual ~nsImapMockChannel();
@@ -605,14 +609,22 @@ protected:
   // because the context is already the uri...
   nsISupports * m_channelContext;
   nsresult m_cancelStatus;
-  nsLoadFlags mLoadAttributes;
+  nsLoadFlags mLoadFlags;
   nsCOMPtr<nsIProgressEventSink> mProgressEventSink;
   nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
   nsCOMPtr<nsISupports> mOwner;
   nsCOMPtr<nsISupports> mSecurityInfo;
+  nsCOMPtr<nsIRequest> mCacheRequest; // the request associated with a read from the cache
   nsCString m_ContentType;
 
-  nsresult SetupPartExtractor(nsIImapUrl * aUrl, nsIStreamListener * aConsumer);
+  // cache related helper methods
+  nsresult OpenCacheEntry(); // makes a request to the cache service for a cache entry for a url
+  PRBool ReadFromLocalCache(); // attempts to read the url out of our local (offline) cache....
+  nsresult ReadFromImapConnection(); // creates a new imap connection to read the url 
+  nsresult ReadFromMemCache(nsICacheEntryDescriptor *entry); // attempts to read the url out of our memory cache
+
+  // we end up daisy chaining multiple nsIStreamListeners into the load process. 
+  nsresult SetupPartExtractorListener(nsIImapUrl * aUrl, nsIStreamListener * aConsumer);
 };
 
 #endif  // nsImapProtocol_h___

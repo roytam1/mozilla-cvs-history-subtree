@@ -61,6 +61,7 @@
 #include "nsMimeTypes.h"
 #include "nsIIOService.h"
 #include "nsIURI.h"
+#include "nsNetCID.h"
 #include "nsIMsgWindow.h"
 
 #include "mimeebod.h"
@@ -1870,7 +1871,7 @@ ResetChannelCharset(MimeObject *obj)
           {
             char *ptr2 = cSet;
             while ( (*cSet) && (*cSet != ' ') && (*cSet != ';') && 
-                    (*cSet != CR) && (*cSet != LF) && (*cSet != '"') )
+                    (*cSet != nsCRT::CR) && (*cSet != nsCRT::LF) && (*cSet != '"') )
               ptr2++;
             
             if (*cSet) {

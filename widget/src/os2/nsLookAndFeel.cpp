@@ -186,6 +186,15 @@ NS_IMETHODIMP nsLookAndFeel::GetColor(const nsColorID aID, nscolor &aColor)
     case eColor__moz_field:
       idx = SYSCLR_WINDOW;
       break;
+    case eColor__moz_fieldtext:
+      idx = SYSCLR_WINDOWTEXT;
+      break;
+    case eColor__moz_dialog:
+      idx = SYSCLR_BUTTONMIDDLE;
+      break;
+    case eColor__moz_dialogtext:
+      idx = SYSCLR_WINDOWTEXT;
+      break;
     default:
         idx = SYSCLR_WINDOW;
         break;
@@ -278,7 +287,7 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
     case eMetric_MultiLineCaretWidth:
         aMetric = 2;
         break;
-    case eMetric_ShowCaretWhenSelection:
+    case eMetric_ShowCaretDuringSelection:
         aMetric = 0;
         break;
     case eMetric_SubmenuDelay:

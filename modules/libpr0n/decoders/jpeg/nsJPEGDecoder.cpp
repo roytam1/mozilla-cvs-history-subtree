@@ -122,8 +122,6 @@ NS_IMETHODIMP nsJPEGDecoder::Init(imgIRequest *aRequest)
   mRequest = aRequest;
   mObserver = do_QueryInterface(mRequest);
 
-  aRequest->GetImage(getter_AddRefs(mImage));
-
   /* We set up the normal JPEG error routines, then override error_exit. */
   mInfo.err = jpeg_std_error(&mErr.pub);
   /*   mInfo.err = jpeg_std_error(&mErr.pub); */
@@ -160,20 +158,8 @@ NS_IMETHODIMP nsJPEGDecoder::Init(imgIRequest *aRequest)
 
   src->decoder = this;
 
-
-
   return NS_OK;
 }
-
-/* readonly attribute imgIRequest request; */
-NS_IMETHODIMP nsJPEGDecoder::GetRequest(imgIRequest * *aRequest)
-{
-  *aRequest = mRequest;
-  NS_ADDREF(*aRequest);
-  return NS_OK;
-}
-
-
 
 
 
@@ -219,13 +205,6 @@ NS_IMETHODIMP nsJPEGDecoder::Write(const char *buf, PRUint32 count, PRUint32 *_r
 NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval)
 {
   LOG_SCOPE_WITH_PARAM(gJPEGlog, "nsJPEGDecoder::WriteFrom", "count", count);
-
-  /* We use our private extension JPEG error handler.
-   * Note that this struct must live as long as the main JPEG parameter
-   * struct, to avoid dangling-pointer problems.
-   */
-  // XXX above what is this?
-
 
   if (inStr) {
     if (!mBuffer) {
@@ -278,20 +257,68 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
 
     mObserver->OnStartDecode(nsnull, nsnull);
 
-    mImage->Init(mInfo.image_width, mInfo.image_height, mObserver);
+
+    /* Check if the request already has an image container.
+       this is the case when multipart/x-mixed-replace is being downloaded
+       if we already have one and it has the same width and height, reuse it.
+     */
+    mRequest->GetImage(getter_AddRefs(mImage));
+    if (mImage) {
+      PRInt32 width, height;
+      mImage->GetWidth(&width);
+      mImage->GetHeight(&height);
+      if ((width != (PRInt32)mInfo.image_width) ||
+          (height != (PRInt32)mInfo.image_height)) {
+        mImage = nsnull;
+      }
+    }
+
+    if (!mImage) {
+      mImage = do_CreateInstance("@mozilla.org/image/container;1");
+      if (!mImage) {
+        mState = JPEG_ERROR;
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+      mRequest->SetImage(mImage);
+      mImage->Init(mInfo.image_width, mInfo.image_height, mObserver);
+    }
+
     mObserver->OnStartContainer(nsnull, nsnull, mImage);
 
-    mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-    gfx_format format;
-#ifdef XP_PC
-    format = gfxIFormats::BGR;
-#else
-    format = gfxIFormats::RGB;
-#endif
-    mFrame->Init(0, 0, mInfo.image_width, mInfo.image_height, format);
-    mImage->AppendFrame(mFrame);
-    mObserver->OnStartFrame(nsnull, nsnull, mFrame);
+    mImage->GetFrameAt(0, getter_AddRefs(mFrame));
 
+    PRBool createNewFrame = PR_TRUE;
+
+    if (mFrame) {
+      PRInt32 width, height;
+      mFrame->GetWidth(&width);
+      mFrame->GetHeight(&height);
+
+      if ((width == (PRInt32)mInfo.image_width) &&
+          (height == (PRInt32)mInfo.image_height)) {
+        createNewFrame = PR_FALSE;
+      } else {
+        mImage->Clear();
+      }
+    }
+
+    if (createNewFrame) {
+      mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
+      if (!mFrame) {
+        mState = JPEG_ERROR;
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+
+      gfx_format format = gfxIFormats::RGB;
+#ifdef XP_PC
+      format = gfxIFormats::BGR;
+#endif
+
+      mFrame->Init(0, 0, mInfo.image_width, mInfo.image_height, format);
+      mImage->AppendFrame(mFrame);
+    }      
+
+    mObserver->OnStartFrame(nsnull, nsnull, mFrame);
 
     /*
      * Make a one-row-high sample array that will go away
@@ -438,6 +465,12 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
            ("[this=%p] nsJPEGDecoder::WriteFrom -- entering JPEG_SINK_NON_JPEG_TRAILER case\n", this));
 
     break;
+
+  case JPEG_ERROR:
+    PR_LOG(gJPEGlog, PR_LOG_DEBUG,
+           ("[this=%p] nsJPEGDecoder::WriteFrom -- entering JPEG_ERROR case\n", this));
+
+    break;
   }
 
   return NS_OK;
@@ -534,7 +567,6 @@ nsJPEGDecoder::OutputScanlines(int num_scanlines)
 
       nsRect r(0, mInfo.output_scanline, mInfo.output_width, 1);
       mObserver->OnDataAvailable(nsnull, nsnull, mFrame, &r);
-
   }
 
   return PR_TRUE;

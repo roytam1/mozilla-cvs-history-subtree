@@ -48,81 +48,6 @@ nsMimeConverter::~nsMimeConverter()
 {
 }
 
-nsresult 
-nsMimeConverter::DecodeMimePartIIStr(const nsString& header, 
-                                           nsString& charset, 
-                                           PRUnichar **decodedString,
-                                     PRBool eatContinuations)
-{
-  char charsetCstr[kMAX_CSNAME+1];
-  char *decodedCstr = nsnull;
-  nsresult res = NS_OK;
-
-  (void) charset.ToCString(charsetCstr, kMAX_CSNAME+1);
-  nsCAutoString encodedStr; encodedStr.AssignWithConversion(header);
-  // apply MIME decode.
-  decodedCstr = MIME_DecodeMimePartIIStr(encodedStr,
-                                           charsetCstr, eatContinuations);
-  if (nsnull == decodedCstr) {
-    // no decode needed and no default charset was specified
-    if (*charsetCstr == '\0') {
-      *decodedString = header.ToNewUnicode();
-    }
-    else {
-      // no MIME encoded, convert default charset to unicode
-      nsAutoString decodedStr;
-      res = ConvertToUnicode(charset, encodedStr, decodedStr);
-      *decodedString = decodedStr.ToNewUnicode();
-    }
-  }
-  else {
-    if (!nsCRT::strcasecmp(charsetCstr, "us-ascii")) {
-      *decodedString = NS_ConvertASCIItoUCS2(decodedCstr).ToNewUnicode();
-      if (!(*decodedString))
-        res = NS_ERROR_OUT_OF_MEMORY;
-    }
-    else {
-
-      // convert MIME charset to unicode
-      // use cached converter since this is the main case for non ASCII users
-      if (!mCharsetConverterManager)
-        mCharsetConverterManager = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &res);
-      if (NS_SUCCEEDED(res)) {
-        nsCOMPtr <nsIAtom>  charsetAtom;
-        res = mCharsetConverterManager->GetCharsetAtom(NS_ConvertASCIItoUCS2(charsetCstr).get(), getter_AddRefs(charsetAtom));
-        if (NS_SUCCEEDED(res)) {
-          if (charsetAtom != mDecoderCharsetAtom) {
-            mDecoderCharsetAtom = charsetAtom;
-            res = mCharsetConverterManager->GetUnicodeDecoder(mDecoderCharsetAtom, getter_AddRefs(mDecoder));
-          }
-        
-          if (NS_SUCCEEDED(res)) {
-            PRUnichar *unichars;
-            PRInt32 unicharLen;
-            PRInt32 decodedLen = nsCRT::strlen(decodedCstr);
-            res = mDecoder->GetMaxLength(decodedCstr, decodedLen, &unicharLen);
-            if (NS_SUCCEEDED(res)) {
-              unichars = (PRUnichar *) nsMemory::Alloc((unicharLen+1) * sizeof(PRUnichar));
-              if (!unichars)
-                res = NS_ERROR_OUT_OF_MEMORY;
-              else {
-                res = mDecoder->Convert(decodedCstr, &decodedLen, unichars, &unicharLen);
-                if (NS_SUCCEEDED(res)) {
-                  unichars[unicharLen] = 0;
-                  *decodedString = unichars;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    PR_FREEIF(decodedCstr);
-  }
-  return res;
-}
- 
 nsresult
 nsMimeConverter::DecodeMimeHeader(const char *header, 
                                   char **decodedString,
@@ -138,7 +63,7 @@ nsMimeConverter::DecodeMimeHeader(const char *header,
 
 // Decode routine (also converts output to unicode)
 nsresult 
-nsMimeConverter::DecodeMimeHeader(const nsCString& header, 
+nsMimeConverter::DecodeMimeHeader(const char *header, 
                                   PRUnichar **decodedString,
                                   const char *default_charset,
                                   PRBool override_charset,
@@ -151,16 +76,37 @@ nsMimeConverter::DecodeMimeHeader(const nsCString& header,
   decodedCstr = MIME_DecodeMimeHeader(header, default_charset,
                                       override_charset, eatContinuations);
   if (nsnull == decodedCstr) {
-    // no decode or conversion needed
-    *decodedString = header.ToNewUnicode();
-  }
-  else {
+    *decodedString = NS_ConvertUTF8toUCS2(header).ToNewUnicode();
+  } else {
     *decodedString = NS_ConvertUTF8toUCS2(decodedCstr).ToNewUnicode();
-    if (!(*decodedString))
-      res = NS_ERROR_OUT_OF_MEMORY;
     PR_FREEIF(decodedCstr);
   }
+  if (!(*decodedString))
+    res = NS_ERROR_OUT_OF_MEMORY;
   return res;
+}
+
+// Decode routine (also converts output to unicode)
+nsresult 
+nsMimeConverter::DecodeMimeHeader(const char *header, 
+                                  nsAWritableString& decodedString,
+                                  const char *default_charset,
+                                  PRBool override_charset,
+                                  PRBool eatContinuations)
+{
+  char *decodedCstr = nsnull;
+
+  // apply MIME decode.
+  decodedCstr = MIME_DecodeMimeHeader(header, default_charset,
+                                      override_charset, eatContinuations);
+  if (nsnull == decodedCstr) {
+    decodedString = NS_ConvertUTF8toUCS2(header);
+  } else {
+    decodedString = NS_ConvertUTF8toUCS2(decodedCstr);
+    PR_FREEIF(decodedCstr);
+  }
+
+  return NS_OK;
 }
 
 nsresult
@@ -208,7 +154,7 @@ nsMimeConverter::ConvertCharset(const PRBool autoDetection, const char* from_cha
 
 
 nsresult 
-nsMimeConverter::B64EncoderInit(int (*output_fn) (const char *buf, PRInt32 size, void *closure), void *closure, 
+nsMimeConverter::B64EncoderInit(nsresult (*output_fn) (const char *buf, PRInt32 size, void *closure), void *closure, 
                    MimeEncoderData **returnEncoderData) 
 {
 MimeEncoderData   *ptr;
@@ -224,7 +170,7 @@ MimeEncoderData   *ptr;
 }
 
 nsresult
-nsMimeConverter::QPEncoderInit (int (*output_fn) (const char *buf, 
+nsMimeConverter::QPEncoderInit (nsresult (*output_fn) (const char *buf, 
                       PRInt32 size, void *closure), void *closure, MimeEncoderData ** returnEncoderData) 
 {
 MimeEncoderData   *ptr;
@@ -240,7 +186,7 @@ MimeEncoderData   *ptr;
 }
 
 nsresult
-nsMimeConverter::UUEncoderInit (char *filename, int (*output_fn) 
+nsMimeConverter::UUEncoderInit (char *filename, nsresult (*output_fn) 
                      (const char *buf, PRInt32 size, void *closure), void *closure, 
                      MimeEncoderData ** returnEncoderData)
 {

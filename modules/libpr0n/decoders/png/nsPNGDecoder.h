@@ -54,17 +54,7 @@ public:
   nsPNGDecoder();
   virtual ~nsPNGDecoder();
 
-static void
-info_callback(png_structp png_ptr, png_infop info_ptr);
-static void
-row_callback(png_structp png_ptr, png_bytep new_row,
-             png_uint_32 row_num, int pass);
-
-static void
-end_callback(png_structp png_ptr, png_infop info_ptr);
-
-  inline PRUint32 ProcessData(unsigned char *data, PRUint32 count);
-
+  inline nsresult ProcessData(unsigned char *data, PRUint32 count, PRUint32 *readCount);
 
 public:
   nsCOMPtr<imgIContainer> mImage;

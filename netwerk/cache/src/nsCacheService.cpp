@@ -201,6 +201,8 @@ nsCacheService::Init()
     if (mCacheServiceLock)
         return NS_ERROR_ALREADY_INITIALIZED;
 
+    CACHE_LOG_INIT();
+
     mCacheServiceLock = PR_NewLock();
     if (mCacheServiceLock == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -275,6 +277,9 @@ nsCacheService::Shutdown()
         printf("### beging nsCacheService::Shutdown()\n");
 #endif
 
+#if defined(PR_LOGGING)
+        LogCacheStatistics();
+#endif
         // Clear entries
         ClearDoomList();
         ClearActiveEntries();
@@ -322,7 +327,7 @@ nsCacheService::CreateSession(const char *          clientID,
 {
     *result = nsnull;
 
-    if (!(mEnableDiskDevice || mEnableMemoryDevice))
+    if ((this == nsnull) || !(mEnableDiskDevice || mEnableMemoryDevice))
         return NS_ERROR_NOT_AVAILABLE;
 
     nsCacheSession * session = new nsCacheSession(clientID, storagePolicy, streamBased);
@@ -334,7 +339,48 @@ nsCacheService::CreateSession(const char *          clientID,
 }
 
 
-/* void visitEntries (in nsICacheVisitor visitor); */
+nsresult
+nsCacheService::EvictEntriesForSession(nsCacheSession * session)
+{
+    return EvictEntriesForClient(session->ClientID()->get(),
+                                 session->StoragePolicy());
+}
+
+
+nsresult
+nsCacheService::EvictEntriesForClient(const char *          clientID,
+                                      nsCacheStoragePolicy  storagePolicy)
+{
+    if (this == nsnull) return NS_ERROR_NOT_AVAILABLE;
+    nsAutoLock lock(mCacheServiceLock);
+    nsresult rv = NS_OK;
+
+    if (storagePolicy == nsICache::STORE_ANYWHERE ||
+        storagePolicy == nsICache::STORE_ON_DISK) {
+
+        if (mEnableDiskDevice) {
+            if (!mDiskDevice) {
+                rv = CreateDiskDevice();
+                if (NS_FAILED(rv)) return rv;
+            }
+            rv = mDiskDevice->EvictEntries(clientID);
+            if (NS_FAILED(rv)) return rv;
+        }
+    }
+
+    if (storagePolicy == nsICache::STORE_ANYWHERE ||
+        storagePolicy == nsICache::STORE_IN_MEMORY) {
+
+        if (mEnableMemoryDevice) {
+            rv = mMemoryDevice->EvictEntries(clientID);
+            if (NS_FAILED(rv)) return rv;
+        }
+    }
+
+    return NS_OK;
+}
+
+
 NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 {
     nsAutoLock lock(mCacheServiceLock);
@@ -369,19 +415,7 @@ NS_IMETHODIMP nsCacheService::VisitEntries(nsICacheVisitor *visitor)
 
 NS_IMETHODIMP nsCacheService::EvictEntries(nsCacheStoragePolicy storagePolicy)
 {
-    nsresult rv = NS_ERROR_NOT_IMPLEMENTED;
-    
-    if (storagePolicy == nsICache::STORE_ON_DISK) {
-        if (mEnableDiskDevice) {
-            if (!mDiskDevice) {
-                rv = CreateDiskDevice();
-                if (NS_FAILED(rv)) return rv;
-            }
-            rv = mDiskDevice->EvictEntries(nsnull);
-        }
-    }
-    
-    return rv;
+    return  EvictEntriesForClient(nsnull, storagePolicy);
 }
 
 
@@ -715,7 +749,9 @@ nsCacheService::EnsureEntryHasDevice(nsCacheEntry * entry)
 
     if (device == nsnull)  return nsnull;
 
+	entry->MarkBinding(); // XXX
     nsresult  rv = device->BindEntry(entry);
+    entry->ClearBinding(); // XXX
     if (NS_FAILED(rv)) return nsnull;
 
     entry->SetCacheDevice(device);
@@ -755,10 +791,11 @@ nsCacheService::DoomEntry_Locked(nsCacheEntry * entry)
 {
     if (this == nsnull)  return NS_ERROR_NOT_AVAILABLE;
     if (entry->IsDoomed())  return NS_OK;
-
+    
     nsresult  rv = NS_OK;
     entry->MarkDoomed();
-
+    
+    NS_ASSERTION(!entry->IsBinding(), "Dooming entry while binding device.");
     nsCacheDevice * device = entry->CacheDevice();
     if (device)  device->DoomEntry(entry);
 
@@ -844,9 +881,7 @@ nsCacheService::CloseDescriptor(nsCacheEntryDescriptor * descriptor)
     nsresult       rv          = NS_OK;
 
     if (!entry->IsValid()) {
-        if (PR_CLIST_IS_EMPTY(&entry->mRequestQ)) {
-            rv = ProcessPendingRequests(entry);
-        }
+        rv = ProcessPendingRequests(entry);
     }
 
     if (!stillActive) {
@@ -1035,3 +1070,22 @@ NS_IMETHODIMP nsCacheService::Observe(nsISupports *aSubject, const PRUnichar *aT
     return Shutdown();
 }
 
+#if defined(PR_LOGGING)
+void
+nsCacheService::LogCacheStatistics()
+{
+    PRUint32 hitPercentage = (PRUint32)((((double)mCacheHits) /
+        ((double)(mCacheHits + mCacheMisses))) * 100);
+    CACHE_LOG_ALWAYS(("\nCache Service Statistics:\n\n"));
+    CACHE_LOG_ALWAYS(("    TotalEntries   = %d\n", mTotalEntries));
+    CACHE_LOG_ALWAYS(("    Cache Hits     = %d\n", mCacheHits));
+    CACHE_LOG_ALWAYS(("    Cache Misses   = %d\n", mCacheMisses));
+    CACHE_LOG_ALWAYS(("    Cache Hit %%    = %d%%\n", hitPercentage));
+    CACHE_LOG_ALWAYS(("    Max Key Length = %d\n", mMaxKeyLength));
+    CACHE_LOG_ALWAYS(("    Max Meta Size  = %d\n", mMaxMetaSize));
+    CACHE_LOG_ALWAYS(("    Max Data Size  = %d\n", mMaxDataSize));
+    CACHE_LOG_ALWAYS(("\n"));
+    CACHE_LOG_ALWAYS(("    Deactivate Failures         = %d\n", mDeactivateFailures));
+    CACHE_LOG_ALWAYS(("    Deactivated Unbound Entries = %d\n", mDeactivatedUnboundEntries));
+}
+#endif

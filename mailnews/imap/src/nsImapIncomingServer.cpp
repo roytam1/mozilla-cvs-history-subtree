@@ -55,7 +55,6 @@
 #include "nsImapUtils.h"
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
-#include "nsINetSupportDialogService.h"
 #include "nsEnumeratorUtils.h"
 #include "nsIEventQueueService.h"
 #include "nsIMsgMailNewsUrl.h"
@@ -63,10 +62,10 @@
 #include "nsMsgI18N.h"
 #include "nsAutoLock.h"
 #include "nsIImapMockChannel.h"
+#include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
 // for the memory cache...
-#include "nsINetDataCacheManager.h"
-#include "nsINetDataCache.h"
-#include "nsICachedNetData.h"
+#include "nsICacheEntryDescriptor.h"
 #include "nsImapUrl.h"
 #include "nsFileStream.h"
 
@@ -74,7 +73,6 @@
 static NS_DEFINE_CID(kCImapHostSessionList, NS_IIMAPHOSTSESSIONLIST_CID);
 static NS_DEFINE_CID(kImapProtocolCID, NS_IMAPPROTOCOL_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kMsgLogonRedirectorServiceCID, NS_MSGLOGONREDIRECTORSERVICE_CID);
@@ -475,10 +473,8 @@ nsImapIncomingServer::LoadNextQueuedUrl(PRBool *aResult)
 
   while (cnt > 0 && !urlRun && keepGoing)
   {
-    nsCOMPtr<nsISupports>
-        aSupport(getter_AddRefs(m_urlQueue->ElementAt(0)));
-    nsCOMPtr<nsIImapUrl>
-        aImapUrl(do_QueryInterface(aSupport, &rv));
+    nsCOMPtr<nsISupports> aSupport(getter_AddRefs(m_urlQueue->ElementAt(0)));
+    nsCOMPtr<nsIImapUrl> aImapUrl(do_QueryInterface(aSupport, &rv));
     nsCOMPtr<nsIMsgMailNewsUrl> aMailNewsUrl(do_QueryInterface(aSupport, &rv));
 
     if (aImapUrl)
@@ -487,9 +483,9 @@ nsImapIncomingServer::LoadNextQueuedUrl(PRBool *aResult)
 
       if (NS_SUCCEEDED(aImapUrl->GetMockChannel(getter_AddRefs(mockChannel))) && mockChannel)
       {
-          nsCOMPtr<nsIRequest> request = do_QueryInterface(mockChannel);
+        nsCOMPtr<nsIRequest> request = do_QueryInterface(mockChannel);
         if (!request)
-            return NS_ERROR_FAILURE;
+          return NS_ERROR_FAILURE;
         request->GetStatus(&rv);
         if (!NS_SUCCEEDED(rv))
         {
@@ -500,10 +496,10 @@ nsImapIncomingServer::LoadNextQueuedUrl(PRBool *aResult)
 
           if (aMailNewsUrl)
           {
-            nsCOMPtr<nsICachedNetData>  cacheEntry;
+            nsCOMPtr<nsICacheEntryDescriptor>  cacheEntry;
             res = aMailNewsUrl->GetMemCacheEntry(getter_AddRefs(cacheEntry));
             if (NS_SUCCEEDED(res) && cacheEntry)
-              cacheEntry->Delete();
+              cacheEntry->Doom();
           }
         }
       }
@@ -511,14 +507,11 @@ nsImapIncomingServer::LoadNextQueuedUrl(PRBool *aResult)
       // between the place we set it and here.
       if (NS_SUCCEEDED(rv))
       {
-        nsISupports *aConsumer =
-            (nsISupports*)m_urlConsumers.ElementAt(0);
-
+        nsISupports *aConsumer = (nsISupports*)m_urlConsumers.ElementAt(0);
         NS_IF_ADDREF(aConsumer);
       
         nsCOMPtr <nsIImapProtocol>  protocolInstance ;
-        rv = CreateImapConnection(nsnull, aImapUrl,
-                                           getter_AddRefs(protocolInstance));
+        rv = CreateImapConnection(nsnull, aImapUrl, getter_AddRefs(protocolInstance));
         if (NS_SUCCEEDED(rv) && protocolInstance)
         {
 		      nsCOMPtr<nsIURI> url = do_QueryInterface(aImapUrl, &rv);
@@ -1718,7 +1711,11 @@ nsImapIncomingServer::FEAlert(const PRUnichar* aString, nsIMsgWindow * aMsgWindo
     aMsgWindow->GetPromptDialog(getter_AddRefs(dialog));
 
   if (!dialog) // if we didn't get one, use the default....
-    dialog = do_GetService(kNetSupportDialogCID);
+  {
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+    if (wwatch)
+      wwatch->GetNewPrompter(0, getter_AddRefs(dialog));
+  }
 
   if (dialog)
 	  rv = dialog->Alert(nsnull, aString);
@@ -1734,7 +1731,11 @@ NS_IMETHODIMP  nsImapIncomingServer::FEAlertFromServer(const char *aString, nsIM
     aMsgWindow->GetPromptDialog(getter_AddRefs(dialog));
 
   if (!dialog) // if we didn't get one, use the default....
-    dialog = do_GetService(kNetSupportDialogCID);
+  {
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+    if (wwatch)
+      wwatch->GetNewPrompter(0, getter_AddRefs(dialog));
+  }
 
 	if (aString)
 	{
@@ -1881,7 +1882,12 @@ nsresult nsImapIncomingServer::GetUnverifiedFolders(nsISupportsArray *aFoldersAr
 	nsCOMPtr<nsIFolder> rootFolder;
 	nsresult rv = GetRootFolder(getter_AddRefs(rootFolder));
 	if(NS_SUCCEEDED(rv) && rootFolder)
+  {
+    nsCOMPtr <nsIMsgImapMailFolder> imapRoot = do_QueryInterface(rootFolder);
+    if (imapRoot)
+      imapRoot->SetVerifiedAsOnlineFolder(PR_TRUE); // don't need to verify the root.
 		rv = GetUnverifiedSubFolders(rootFolder, aFoldersArray, aNumUnverifiedFolders);
+  }
 	return rv;
 }
 

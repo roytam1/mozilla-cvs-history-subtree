@@ -102,7 +102,8 @@ nsSmtpServer::GetTrySSL(PRInt32 *trySSL)
     *trySSL= 0;
     getPrefString("try_ssl", pref);
     rv = prefs->GetIntPref(pref, trySSL);
-    if (NS_FAILED(rv)) *trySSL = 1;
+    if (NS_FAILED(rv))
+		rv = getDefaultIntPref(prefs, 1, "try_ssl", trySSL);
     return NS_OK;
 }
 
@@ -128,8 +129,29 @@ nsSmtpServer::GetAuthMethod(PRInt32 *authMethod)
     *authMethod = 1;
     getPrefString("auth_method", pref);
     rv = prefs->GetIntPref(pref, authMethod);
-    if (NS_FAILED(rv)) *authMethod = 1;
-    return NS_OK;
+    if (NS_FAILED(rv))
+		rv = getDefaultIntPref(prefs, 1, "auth_method", authMethod);
+    return rv;
+}
+
+nsresult
+nsSmtpServer::getDefaultIntPref(nsIPref *prefs,
+								PRInt32 defVal,
+								const char *prefName,
+								PRInt32 *val)
+{
+  // mail.smtpserver.default.<prefName>  
+  nsCAutoString fullPrefName;
+  fullPrefName = "mail.smtpserver.default.";
+  fullPrefName.Append(prefName);
+  nsresult rv = prefs->GetIntPref(fullPrefName, val);
+
+  if (NS_FAILED(rv))
+  { // last resort
+    *val = defVal;
+    rv = NS_OK;
+  }
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -187,7 +209,7 @@ nsSmtpServer::SetPassword(const char * aPassword)
 NS_IMETHODIMP
 nsSmtpServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
                                 PRUnichar *aPromptTitle, 
-                                nsIPrompt* aDialog,
+                                nsIAuthPrompt* aDialog,
                                 char **aPassword) 
 {
     nsresult rv = NS_OK;
@@ -206,7 +228,7 @@ nsSmtpServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
 			rv = GetServerURI(getter_Copies(serverUri));
 			if (NS_FAILED(rv)) return rv;
 			rv = aDialog->PromptPassword(aPromptTitle, aPromptMessage, 
-                                         NS_ConvertASCIItoUCS2(serverUri).get(), nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
+                                         NS_ConvertASCIItoUCS2(serverUri).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
                                          getter_Copies(uniPassword), &okayValue);
             if (NS_FAILED(rv)) return rv;
 				
@@ -231,7 +253,7 @@ nsSmtpServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
 NS_IMETHODIMP
 nsSmtpServer::GetUsernamePasswordWithUI(const PRUnichar * aPromptMessage, const
                                 PRUnichar *aPromptTitle, 
-                                nsIPrompt* aDialog,
+                                nsIAuthPrompt* aDialog,
                                 char **aUsername,
                                 char **aPassword) 
 {
@@ -253,7 +275,7 @@ nsSmtpServer::GetUsernamePasswordWithUI(const PRUnichar * aPromptMessage, const
             rv = GetServerURI(getter_Copies(serverUri));
             if (NS_FAILED(rv)) return rv;
             rv = aDialog->PromptUsernameAndPassword(aPromptTitle, aPromptMessage, 
-                                         NS_ConvertASCIItoUCS2(serverUri).get(), nsIPrompt::SAVE_PASSWORD_PERMANENTLY,
+                                         NS_ConvertASCIItoUCS2(serverUri).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
                                          getter_Copies(uniUsername), getter_Copies(uniPassword), &okayValue);
             if (NS_FAILED(rv)) return rv;
 				

@@ -25,8 +25,7 @@
 //NOTE: This script expects gBrandBundle and gProfileManagerBundle to be
 //      instanciated elsewhere (currently from StartUp in profileSelection.js)
 
-var commonDialogService = nsJSComponentManager.getService("@mozilla.org/appshell/commonDialogs;1",
-                                                          "nsICommonDialogs");
+var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 var profileManagerMode = "selection";
 var set = null;
 
@@ -63,21 +62,21 @@ function RenameProfile()
     lString = lString.replace(/\s*<html:br\/>/g,"\n");
     lString = lString.replace(/%brandShortName%/, gBrandBundle.getString("brandShortName"));
     var title = gProfileManagerBundle.getString("migratetitle");
-    if (commonDialogService.Confirm(window, title, lString))
+    if (promptService.confirm(window, title, lString))
       profile.migrateProfile( profilename, true );
     else
       return false;
   }
   else {
     var oldName = selected.getAttribute("rowName");
-    var result = { };
+    var newName = {value:oldName};
     var dialogTitle = gProfileManagerBundle.getString("renameprofiletitle");
     var msg = gProfileManagerBundle.getString("renameProfilePrompt");
     msg = msg.replace(/%oldProfileName%/gi, oldName);
     while (1) {
-      var rv = commonDialogService.Prompt(window, dialogTitle, msg, oldName, result);
+      var rv = promptService.prompt(window, dialogTitle, msg, newName, null, {value:0});
       if (rv) {
-        var newName = result.value;
+        var newName = newName.value;
         if (!newName) return false;
         var invalidChars = ["/", "\\", "*", ":"];
         for( var i = 0; i < invalidChars.length; i++ )
@@ -102,7 +101,7 @@ function RenameProfile()
         catch(e) {
           var lString = gProfileManagerBundle.getString("profileExists");
           var profileExistsTitle = gProfileManagerBundle.getString("profileExistsTitle");
-          commonDialogService.Alert(window, profileExistsTitle, lString);
+          promptService.alert(window, profileExistsTitle, lString);
           continue;
         }
       }
@@ -130,7 +129,7 @@ function ConfirmDelete()
     lString = lString.replace(/\s*<html:br\/>/g,"\n");
     lString = lString.replace(/%brandShortName%/, gBrandBundle.getString("brandShortName"));
     var title = gProfileManagerBundle.getString("deletetitle");
-    if (commonDialogService.Confirm(window, title, lString)) {
+    if (promptService.confirm(window, title, lString)) {
       profile.deleteProfile( name, false );
       var profileKids = document.getElementById( "profilekids" )
       profileKids.removeChild( selected );
@@ -138,7 +137,7 @@ function ConfirmDelete()
     return;
   }
 
-  var win = window.openDialog('chrome://communicator/content/profile/deleteProfile.xul', 'Deleter', 'chrome,modal=yes,titlebar=yes');
+  var win = window.openDialog('chrome://communicator/content/profile/deleteProfile.xul', 'Deleter', 'chrome,centerscreen,modal=yes,titlebar=yes');
   return win;
 }
 
@@ -170,7 +169,7 @@ function ConfirmMigrateAll()
 {
   var string = gProfileManagerBundle.getString("migrateallprofiles");
   var title = gProfileManagerBundle.getString("migrateallprofilestitle");
-  if (commonDialogService.Confirm(window, title, string))
+  if (promptService.confirm(window, title, string))
     return true;
   else 
     return false;

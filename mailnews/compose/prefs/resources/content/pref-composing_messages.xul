@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
+<?xml-stylesheet href="chrome://communicator/skin/dialogOverlay.css" type="text/css"?>
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 
@@ -27,13 +27,28 @@
     {
       var quotebox = document.getElementById("thenBox");
       var quotecheck = document.getElementById("autoQuote");
-      if( quotecheck.checked ) {
+      if( quotecheck.checked && !quotecheck.disabled ) {
         quotebox.firstChild.removeAttribute("disabled");
         quotebox.lastChild.removeAttribute("disabled");
       }
       else {
         quotebox.firstChild.setAttribute("disabled","true");
         quotebox.lastChild.setAttribute("disabled","true");
+      }
+      
+      var spellChecker;
+      try {
+        spellChecker = Components.classes["@mozilla.org/spellchecker;1"];
+        //switch to this when nsISpellChecker becomes scriptable
+        //spellChecker = Components.classes["@mozilla.org/spellchecker;1"].createInstance(Components.interfaces.nsISpellChecker);
+      }
+      catch (ex) {
+        spellChecker = null;
+      }
+
+      if (spellChecker) {
+        var spellCheckerCheckbox = document.getElementById("spellCheckBeforeSend");
+        spellCheckerCheckbox.removeAttribute("disabled");
       }
     }
   ]]>
@@ -50,8 +65,8 @@
                 pref="true" preftype="int" prefstring="mail.forward_message_mode"
                 prefattribute="value">
         <menupopup>
-          <menuitem value="0" label="&asAttachment.label;" accesskey="&asAttachment.accesskey;"/>
           <menuitem value="2" label="&inline.label;" accesskey="&inline.accesskey;"/>
+          <menuitem value="0" label="&asAttachment.label;" accesskey="&asAttachment.accesskey;"/>
         </menupopup>
       </menulist>
     </box>
@@ -67,8 +82,7 @@
         <menupopup>
           <menuitem value="1" label="&aboveQuote.label;" accesskey="&aboveQuote.accesskey;"/>
           <menuitem value="0" label="&belowQuote.label;" accesskey="&belowQuote.accesskey;"/>
-          <menuitem value="2" label="&selectAndAboveQuote.label;" accesskey="&selectAndAboveQuote.accesskey;"/>
-          <menuitem value="3" label="&selectAndBelowQuote.label;" accesskey="&selectAndBelowQuote.accesskey;"/>
+          <menuitem value="2" label="&selectAndQuote.label;" accesskey="&selectAndQuote.accesskey;"/>
         </menupopup>
       </menulist>        
     </box>
@@ -80,7 +94,7 @@
         
     <checkbox id="spellCheckBeforeSend" label="&spellCheck.label;"
               pref="true" preftype="bool" prefstring="mail.SpellCheckBeforeSend"
-              prefattribute="checked"/>
+              prefattribute="checked" disabled="true"/>
   
   <checkbox id="strictlyMime" label="&useMIME.label;"
                 pref="true" preftype="bool" prefstring="mail.strictly_mime"

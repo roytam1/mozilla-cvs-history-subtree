@@ -35,6 +35,8 @@
 #include "nsGUIEvent.h"
 #include "nsCarbonHelpers.h"
 #include "nsGFXUtils.h"
+#include "DefProcFakery.h"
+#include "nsMacResources.h"
 
 #include <Quickdraw.h>
 
@@ -50,6 +52,11 @@ static const char *sScreenManagerContractID = "@mozilla.org/gfx/screenmanager;1"
 	#define botRight(r)	(((Point *) &(r))[1])
 #endif
 
+
+#if !TARGET_CARBON
+pascal long BorderlessWDEF ( short inCode, WindowPtr inWindow, short inMessage, long inParam ) ;
+long CallSystemWDEF ( short inCode, WindowPtr inWindow, short inMessage, long inParam ) ;
+#endif
 
 // These magic adjustments are so that the contained webshells hangs one pixel
 // off the right and bottom sides of the window. This aligns the scroll bar
@@ -274,8 +281,7 @@ nsMacWindow::nsMacWindow() : Inherited()
 	, mPhantomScrollbar(nsnull)
 	, mPhantomScrollbarData(nsnull)
 {
-  //mMacEventHandler.reset(new nsMacEventHandler(this));
-	mMacEventHandler = (auto_ptr<nsMacEventHandler>) new nsMacEventHandler(this);
+	mMacEventHandler.reset(new nsMacEventHandler(this));
 	WIDGET_SET_CLASSNAME("nsMacWindow");	
 
   // create handlers for drag&drop
@@ -293,6 +299,10 @@ nsMacWindow::~nsMacWindow()
 {
 	if (mWindowPtr)
 	{
+	  // cleanup our special defproc if we are a popup
+    if ( mWindowType == eWindowType_popup )
+      RemoveBorderlessDefProc ( mWindowPtr );
+
   	// cleanup the struct we hang off the scrollbar's refcon	
   	if ( mPhantomScrollbar ) {
   	  ::SetControlReference(mPhantomScrollbar, (long)nsnull);
@@ -360,18 +370,19 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 		switch (mWindowType)
 		{
 			case eWindowType_popup:
-			    // (pinkerton)
-			    // Added very very early support for |eBorderStyle_BorderlessTopLevel| 
-			    // and sets mAcceptsActivation to false so we don't activate the window
-			    // when we show it.
-			    //
-			    // ...fall through...
-			    mOffsetParent = aParent;
-			    if(aParent != nsnull){
-			    	theToolkit =  getter_AddRefs(aParent->GetToolkit());
-			    }
+		    // We're a popup, context menu, etc. Sets
+		    // mAcceptsActivation to false so we don't activate the window
+		    // when we show it.
+		    mOffsetParent = aParent;
+		    if( !aParent )
+		    	theToolkit = getter_AddRefs(aParent->GetToolkit());
 
-          mAcceptsActivation = PR_FALSE;
+        mAcceptsActivation = PR_FALSE;
+				goAwayFlag = false;
+				hOffset = 0;
+				vOffset = 0;
+				wDefProcID = plainDBox;
+        break;
 
 			case eWindowType_child:
 				wDefProcID = plainDBox;
@@ -462,12 +473,6 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 
 		Rect wRect;
 		nsRectToMacRect(aRect, wRect);
-		
-#if TARGET_CARBON
-		// enforce some minimums on carbon. otherwise the system hangs.
-		if (aRect.width < 100) wRect.right = wRect.left + 100;
-		if (aRect.height < 100) wRect.bottom = wRect.top + 100;
-#endif
 
 #ifdef WINDOW_SIZE_TWEAKING
 		// see also the Resize method
@@ -507,7 +512,7 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 
 	if (mWindowPtr == nsnull)
 		return NS_ERROR_OUT_OF_MEMORY;
-		
+  
 	nsMacMessageSink::AddRaptorWindowToList(mWindowPtr, this);
 
 	// create the root control
@@ -554,6 +559,11 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 		NS_ASSERTION ( result == noErr, "can't install drag receive handler");
 	}
 
+  // If we're a popup, we don't want a border (we want CSS to draw it for us). So
+  // install our own window defProc.
+  if ( mWindowType == eWindowType_popup )
+    InstallBorderlessDefProc(mWindowPtr);
+
 	return NS_OK;
 }
 
@@ -575,6 +585,49 @@ NS_IMETHODIMP nsMacWindow::Create(nsNativeWidget aNativeParent,		// this is a wi
 														aNativeParent));
 }
 
+
+//
+// InstallBorderlessDefProc
+//
+// For xul popups, we want borderless windows to match win32's borderless windows. Stash
+// our fake WDEF into this window which takes care of not-drawing the borders.
+//
+void 
+nsMacWindow :: InstallBorderlessDefProc ( WindowPtr inWindow )
+{
+#if !TARGET_CARBON
+  // stash the real WDEF so we can call it later
+  Handle systemPopupWDEF = ((WindowPeek)inWindow)->windowDefProc;
+
+  // load the stub WDEF and stash it away. If this fails, we'll just use the normal one.
+  WindowDefUPP wdef = NewWindowDefUPP( BorderlessWDEF );
+  Handle fakedDefProc;
+  DefProcFakery::CreateDefProc ( wdef, systemPopupWDEF, &fakedDefProc );
+  if ( fakedDefProc )
+    ((WindowPeek)inWindow)->windowDefProc = fakedDefProc;
+#endif
+} // InstallBorderlessDefProc
+
+
+//
+// RemoveBorderlessDefProc
+//
+// Clean up the mess we've made with our fake defproc. Reset it to
+// the system one, just in case someone needs it around after we're
+// through with it.
+//
+void
+nsMacWindow :: RemoveBorderlessDefProc ( WindowPtr inWindow )
+{
+#if !TARGET_CARBON
+  Handle fakedProc = ((WindowPeek)inWindow)->windowDefProc;
+  Handle oldProc = DefProcFakery::GetSystemDefProc(fakedProc);
+  DefProcFakery::DestroyDefProc ( fakedProc );
+  ((WindowPeek)inWindow)->windowDefProc = oldProc;
+#endif
+}
+
+
 //-------------------------------------------------------------------------
 //
 // Hide or show this window
@@ -587,14 +640,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool bState)
   // we need to make sure we call ::Show/HideWindow() to generate the 
   // necessary activate/deactivate events. Calling ::ShowHide() is
   // not adequate, unless we don't want activation (popups). (pinkerton).
-  //
-  // [ we're still tinkering with the bit commented out below. it causes
-  //   problems on osX, but breaks the classic build by not allowing the
-  //   hidden window to be seen by FrontWindow(). We'll fix this later, but
-  //   want to get the trunk back to normalcy. See bug 
-  //     http://bugzilla.mozilla.org/show_bug.cgi?id=70388
-  //   for details (pinkerton) ]
-  if ( bState /* && !mBounds.IsEmpty() */ ) {
+  if ( bState && !mBounds.IsEmpty() ) {
     if ( mAcceptsActivation )
       ::ShowWindow(mWindowPtr);
     else {
@@ -1058,3 +1104,74 @@ void nsMacWindow::IsActive(PRBool* aActive)
 {
   *aActive = mIsActive;
 }
+
+
+#if !TARGET_CARBON
+
+// needed for CallWindowDefProc() to work correctly
+#pragma options align=mac68k
+
+
+//
+// BorderlessWDEF
+//
+// The window defproc for borderless windows. 
+//
+// NOTE: Assumes the window was created with a variant of |plainDBox| so our
+// content/structure adjustments work correctly.
+// 
+pascal long
+BorderlessWDEF ( short inCode, WindowPtr inWindow, short inMessage, long inParam )
+{
+  switch ( inMessage ) {
+    case kWindowMsgDraw:
+    case kWindowMsgDrawGrowOutline:
+    case kWindowMsgGetFeatures:
+      break;
+      
+    case kWindowMsgCalculateShape:
+      // Make the content area bigger so that it draws over the structure region. Use
+      // the sytem wdef to compute the struct/content regions and then play.
+      long result = CallSystemWDEF(inCode, inWindow, inMessage, inParam);
+      ::InsetRgn(((WindowPeek)inWindow)->contRgn, -1, -1);
+      
+      // for some reason, the topleft corner doesn't draw correctly unless i do this.
+	    Rect& structRect = (**((WindowPeek)inWindow)->strucRgn).rgnBBox;
+	    structRect.top++; structRect.left++;
+      break;
+      
+    default:
+      return CallSystemWDEF(inCode, inWindow, inMessage, inParam);
+      break;
+  }
+
+  return 0;
+}
+
+
+//
+// CallSystemWDEF
+//
+// We really don't want to reinvent the wheel, so call back into the system wdef we have
+// stashed away.
+//
+long
+CallSystemWDEF ( short inCode, WindowPtr inWindow, short inMessage, long inParam )
+{
+  // extract the real system wdef out of the fake one we've stored in the window
+  Handle fakedWDEF = ((WindowPeek)inWindow)->windowDefProc;
+  Handle systemDefProc = DefProcFakery::GetSystemDefProc ( fakedWDEF );
+  
+  SInt8 state = ::HGetState(systemDefProc);
+  ::HLock(systemDefProc);
+
+  long retval = CallWindowDefProc( (RoutineDescriptorPtr)*systemDefProc, inCode, inWindow, inMessage, inParam);
+
+  ::HSetState(systemDefProc, state);
+  
+  return retval;
+}
+
+#pragma options align=reset
+
+#endif

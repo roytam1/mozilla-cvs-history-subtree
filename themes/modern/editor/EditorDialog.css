@@ -50,7 +50,7 @@
 }
 
 .middle {
-  vertical-align: middle:
+  vertical-align: middle;
 }
 
 .bold {
@@ -89,6 +89,8 @@
   min-width: 12em;
 }
 
+/* ::::: table properties dialog ::::: */
+
 #PreviousButton {
   list-style-image: url("chrome://global/skin/arrow/arrow-lft.gif");
 }
@@ -105,8 +107,19 @@
   list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
 }
 
+/* ::::: spelling dialog ::::: */
+
 #MisspelledWord {
   font-weight: bold;
+}
+
+#ReplaceWordInput {
+  min-width: 16em;
+  width: 16em;
+}
+
+.spell-check {
+  min-width: 9em;
 }
 
 /* ::::: spacers ::::: */
@@ -195,23 +208,23 @@ button.color-button {
 
 /* ::::: Image Properties dialog ::::: */
 
-.align-menu[data="top"] {
+.align-menu[value="top"] {
 	list-style-image: url("chrome://editor/skin/icons/img-align-top.gif") !important;
 }
 
-.align-menu[data="center"] {
+.align-menu[value="center"] {
 	list-style-image: url("chrome://editor/skin/icons/img-align-mid.gif") !important;
 }
 
-.align-menu[data="bottom"] {
+.align-menu[value="bottom"] {
 	list-style-image: url("chrome://editor/skin/icons/img-align-btm.gif") !important;
 }
 
-.align-menu[data="right"] {
+.align-menu[value="right"] {
 	list-style-image: url("chrome://editor/skin/icons/img-align-rit.gif") !important;
 }
 
-.align-menu[data="left"] {
+.align-menu[value="left"] {
 	list-style-image: url("chrome://editor/skin/icons/img-align-lft.gif") !important;
 }
 

@@ -34,7 +34,7 @@
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsMultiMixedConv,
                               nsIStreamConverter, 
 							  nsIStreamListener,
-                              nsIStreamObserver);
+                              nsIRequestObserver);
 
 
 // nsIStreamConverter implementation
@@ -160,7 +160,7 @@ nsMultiMixedConv::OnDataAvailable(nsIRequest *request, nsISupports *context,
             if (NS_FAILED(rv)) return rv;
             buffer = nsnull;
             bufLen = 0;
-            return SendStop(NS_OK, nsnull);
+            return SendStop(NS_OK);
         }
 
         if (!mNewPart && token > cursor) {
@@ -192,7 +192,7 @@ nsMultiMixedConv::OnDataAvailable(nsIRequest *request, nsISupports *context,
             }
         } else {
             mNewPart = PR_TRUE;
-            rv = SendStop(NS_OK, nsnull);
+            rv = SendStop(NS_OK);
             if (NS_FAILED(rv)) ERR_OUT
             // reset to the token to front.
             // this allows us to treat the token
@@ -218,7 +218,7 @@ nsMultiMixedConv::OnDataAvailable(nsIRequest *request, nsISupports *context,
         // if we don't have a channel already, then we don't even
         // have enough info to start a part, go ahead and buffer
         // enough to collect a boundary token.
-        if (!mPartChannel || !(cursor[bufLen-1] == LF) )
+        if (!mPartChannel || !(cursor[bufLen-1] == nsCRT::LF) )
             bufAmt = PR_MIN(mTokenLen - 1, bufLen);
     }
 
@@ -239,7 +239,7 @@ nsMultiMixedConv::OnDataAvailable(nsIRequest *request, nsISupports *context,
 }
 
 
-// nsIStreamObserver implementation
+// nsIRequestObserver implementation
 NS_IMETHODIMP
 nsMultiMixedConv::OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
 	// we're assuming the content-type is available at this stage
@@ -292,7 +292,7 @@ nsMultiMixedConv::OnStartRequest(nsIRequest *request, nsISupports *ctxt) {
 
 NS_IMETHODIMP
 nsMultiMixedConv::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
-                                nsresult aStatus, const PRUnichar* aStatusArg) {
+                                nsresult aStatus) {
     if (mPartChannel) {
         // we've already called SendStart() (which sets up the mPartChannel,
         // and fires an OnStart()) send any data left over, and then fire the stop.
@@ -304,13 +304,13 @@ nsMultiMixedConv::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
             mBuffer = nsnull;
             mBufLen = 0;
         }
-        (void) SendStop(aStatus, aStatusArg);
+        (void) SendStop(aStatus);
     } else if (NS_FAILED(aStatus)) {
         // underlying data production problem. we should not be in
         // the middle of sending data. if we were, mPartChannel,
         // above, would have been true.
         (void) mFinalListener->OnStartRequest(request, ctxt);
-        (void) mFinalListener->OnStopRequest(request, ctxt, aStatus, aStatusArg);
+        (void) mFinalListener->OnStopRequest(request, ctxt, aStatus);
     }
 
     return NS_OK;
@@ -370,9 +370,9 @@ nsMultiMixedConv::SendStart(nsIChannel *aChannel) {
     if (NS_FAILED(rv)) return rv;
 
     nsLoadFlags loadFlags = 0;
-    mPartChannel->GetLoadAttributes(&loadFlags);
+    mPartChannel->GetLoadFlags(&loadFlags);
     loadFlags |= nsIChannel::LOAD_REPLACE;
-    mPartChannel->SetLoadAttributes(loadFlags);
+    mPartChannel->SetLoadFlags(loadFlags);
 
 	nsCOMPtr<nsILoadGroup> loadGroup;
     (void)aChannel->GetLoadGroup(getter_AddRefs(loadGroup));
@@ -391,11 +391,11 @@ nsMultiMixedConv::SendStart(nsIChannel *aChannel) {
 
 
 nsresult
-nsMultiMixedConv::SendStop(nsresult aStatus, const PRUnichar* aStatusArg) {
+nsMultiMixedConv::SendStop(nsresult aStatus) {
     
     nsresult rv = NS_OK;
     if (mPartChannel) {
-        rv = mFinalListener->OnStopRequest(mPartChannel, mContext, aStatus, aStatusArg);
+        rv = mFinalListener->OnStopRequest(mPartChannel, mContext, aStatus);
         // don't check for failure here, we need to remove the channel from 
         // the loadgroup.
 
@@ -403,7 +403,7 @@ nsMultiMixedConv::SendStop(nsresult aStatus, const PRUnichar* aStatusArg) {
         nsCOMPtr<nsILoadGroup> loadGroup;
         (void) mPartChannel->GetLoadGroup(getter_AddRefs(loadGroup));
         if (loadGroup) 
-            (void) loadGroup->RemoveRequest(mPartChannel, mContext, aStatus, aStatusArg);
+            (void) loadGroup->RemoveRequest(mPartChannel, mContext, aStatus);
     }
 
     mPartChannel = 0;
@@ -443,8 +443,8 @@ nsMultiMixedConv::SendData(char *aBuffer, PRUint32 aLen) {
 PRInt8 
 nsMultiMixedConv::PushOverLine(char *&aPtr, PRUint32 &aLen) {
     PRInt8 chars = 0;
-    if (*aPtr == CR || *aPtr == LF) {
-        if (aPtr[1] == LF)
+    if (*aPtr == nsCRT::CR || *aPtr == nsCRT::LF) {
+        if (aPtr[1] == nsCRT::LF)
             chars++;
         chars++;
     }
@@ -464,9 +464,9 @@ nsMultiMixedConv::ParseHeaders(nsIChannel *aChannel, char *&aPtr,
     PRUint8 lineFeedIncrement = 1;
 
     while ( (cursorLen > 0) 
-            && (newLine = PL_strchr(cursor, LF)) ) {
+            && (newLine = PL_strchr(cursor, nsCRT::LF)) ) {
         // adjust for linefeeds
-        if ( (newLine > cursor) && (newLine[-1] == CR) ) { // CRLF
+        if ( (newLine > cursor) && (newLine[-1] == nsCRT::CR) ) { // CRLF
              lineFeedIncrement = 2;
              newLine--;
         }

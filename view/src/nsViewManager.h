@@ -99,7 +99,7 @@ public:
 
   NS_IMETHOD  MoveViewTo(nsIView *aView, nscoord aX, nscoord aY);
 
-  NS_IMETHOD  ResizeView(nsIView *aView, nscoord aWidth, nscoord aHeight);
+  NS_IMETHOD  ResizeView(nsIView *aView, nscoord aWidth, nscoord aHeight, PRBool aRepaintExposedAreaOnly = PR_FALSE);
 
   NS_IMETHOD  SetViewChildClip(nsIView *aView, nsRect *aRect);
 
@@ -199,6 +199,9 @@ private:
                                      PRBool& aAnyRendered);
 	void ShowDisplayList(PRInt32 flatlen);
 	void ComputeViewOffset(nsIView *aView, nsPoint *aOrigin);
+
+    void AddCoveringWidgetsToOpaqueRegion(nsIRegion* aRgn, nsIDeviceContext* aContext,
+                                          nsIView* aRootView);
 
 	// Predicates
 	PRBool DoesViewHaveNativeWidget(nsIView* aView);
@@ -313,6 +316,7 @@ private:
   PRInt32           mTransCnt;
   PRBool            mRefreshEnabled;
   PRBool            mPainting;
+  PRBool            mRecursiveRefreshPending;
   nsIView           *mMouseGrabber;
   nsIView           *mKeyGrabber;
   PRInt32           mUpdateCnt;

@@ -23,6 +23,7 @@
 #ifndef __nsFtpState__h_
 #define __nsFtpState__h_
 
+#include "ftpCore.h"
 #include "nsIThread.h"
 #include "nsIRunnable.h"
 #include "nsISocketTransportService.h"
@@ -40,6 +41,7 @@
 #include "nsAutoLock.h"
 #include "nsIEventQueueService.h"
 #include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 #include "nsITransport.h"
 
 #include "nsFtpControlConnection.h"
@@ -99,13 +101,13 @@ class nsFtpState : public nsIStreamListener,
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISTREAMLISTENER
-    NS_DECL_NSISTREAMOBSERVER
+    NS_DECL_NSIREQUESTOBSERVER
     NS_DECL_NSIREQUEST
 
     nsFtpState();
     virtual ~nsFtpState();
 
-    nsresult Init(nsIFTPChannel *aChannel, nsIPrompt *aPrompter);
+    nsresult Init(nsIFTPChannel *aChannel, nsIPrompt *aPrompter, nsIAuthPrompt *aAuthPrompter, nsIFTPEventSink *sink);
 
     // use this to provide a stream to be written to the server.
     nsresult SetWriteStream(nsIInputStream* aInStream, PRUint32 aWriteCount);
@@ -150,7 +152,7 @@ private:
                                      PRUint32 bufferSegmentSize, PRUint32 bufferMaxSize,
                                      nsITransport** o_pTrans);
 
-    void KillControlConnnection();
+    void KillControlConnection();
     nsresult StopProcessing();
     nsresult EstablishControlConnection();
     nsresult SendFTPCommand(nsCString& command);
@@ -210,6 +212,9 @@ private:
     PRBool                 mGenerateHTMLContent;
     PRPackedBool           mIPv6Checked;
     nsCOMPtr<nsIPrompt>    mPrompter;
+    nsCOMPtr<nsIFTPEventSink>       mFTPEventSink;
+    nsCOMPtr<nsIAuthPrompt> mAuthPrompter;
+
     char                   *mIPv6ServerAddress; // Server IPv6 address; null if server not IPv6
 
     // ***** control read gvars

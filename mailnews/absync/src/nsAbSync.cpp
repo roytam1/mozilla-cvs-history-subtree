@@ -39,12 +39,13 @@
 #include "nsString.h"
 #include "nsTextFormatter.h"
 #include "nsIStringBundle.h"
-#include "nsINetSupportDialogService.h"
 #include "nsMsgI18N.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDocShellTreeNode.h"
+#include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
 
 static NS_DEFINE_CID(kCAbSyncPostEngineCID, NS_ABSYNC_POST_ENGINE_CID); 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
@@ -53,7 +54,6 @@ static NS_DEFINE_CID(kAddressBookDBCID, NS_ADDRDATABASE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,  NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kAbCardPropertyCID, NS_ABCARDPROPERTY_CID);
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 
 /* Implementation file */
 NS_IMPL_ISUPPORTS1(nsAbSync, nsIAbSync)
@@ -310,8 +310,13 @@ nsAbSync::DisplayErrorMessage(const PRUnichar * msg)
   // If we failed before, fall back to the non-parented modal dialog
   if (NS_FAILED(rv))
   {
-    NS_WITH_SERVICE(nsIPrompt, dialog, kNetSupportDialogCID, &rv);
-    if (NS_FAILED(rv)) return rv;
+    nsCOMPtr<nsIPrompt> dialog;
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+    if (wwatch)
+      wwatch->GetNewPrompter(0, getter_AddRefs(dialog));
+
+    if (!dialog)
+      return NS_ERROR_FAILURE;
     rv = dialog->Alert(nsnull, msg);
   }
 
@@ -603,8 +608,7 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
   // syncing with...
   //
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
-  if (NS_FAILED(rv) || !prefs) 
-    return NS_ERROR_FAILURE;
+  NS_ENSURE_SUCCESS(rv, rv);
 
   prefs->CopyCharPref("mail.absync.address_book",     &mAbSyncAddressBook);
   prefs->GetIntPref  ("mail.absync.last_change",      &mLastChangeNum);
@@ -646,8 +650,7 @@ NS_IMETHODIMP nsAbSync::PerformAbSync(nsIDOMWindowInternal *aDOMWindow, PRInt32 
   if (!mPostEngine)
   {
     rv = nsComponentManager::CreateInstance(kCAbSyncPostEngineCID, NULL, NS_GET_IID(nsIAbSyncPostEngine), getter_AddRefs(mPostEngine));
-    if ( NS_FAILED(rv) || (!mPostEngine) )
-      return NS_ERROR_FAILURE;
+    NS_ENSURE_SUCCESS(rv, rv);
 
     mPostEngine->AddPostListener((nsIAbSyncPostListener *)this);
   }
@@ -728,7 +731,9 @@ nsAbSync::OpenAB(char *aAbName, nsIAddrDatabase **aDatabase)
   else
     rv = NS_ERROR_FAILURE;
 
-	return rv;
+  delete dbPath;
+
+  return rv;
 }
 
 NS_IMETHODIMP    
@@ -745,7 +750,11 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
   if (aAddId)
   {
     PRUint32    aKey;
-    if (NS_FAILED(aCard->GetKey(&aKey)))
+	  nsresult rv = NS_OK;
+
+    nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv)); 
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(dbcard->GetKey(&aKey)))
       return NS_ERROR_FAILURE;
 
 #ifdef DEBUG_rhp
@@ -1019,7 +1028,10 @@ nsAbSync::ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *newSyncRecord,
     {
       newSyncRecord->flags |= SYNC_ADD;
 
-      if (NS_FAILED(aCard->GetKey(&aKey)))
+	    nsresult rv = NS_OK;
+      nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv)); 
+      NS_ENSURE_SUCCESS(rv, rv);
+      if (NS_FAILED(dbcard->GetKey(&aKey)))
         return PR_FALSE;
       
       // Ugh...this should never happen...BUT??
@@ -1131,9 +1143,9 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
   nsCOMPtr<nsIFile> lockFile;
   
   rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(historyFile));
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
   rv = historyFile->Append("absync.dat");
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // TODO: Convert the rest of the code to use
   // nsIFile and avoid this conversion hack.
@@ -1247,7 +1259,11 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
                 // be the ID from the local database for this card entry
                 //
                 PRUint32    aKey;
-                if (NS_FAILED(card->GetKey(&aKey)))
+	              nsresult rv = NS_OK;
+                nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
+                if (NS_FAILED(rv) || !dbcard)
+                  continue;
+                if (NS_FAILED(dbcard->GetKey(&aKey)))
                   continue;
 
                 // Ugh...this should never happen...BUT??
@@ -1377,7 +1393,11 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
         // be the ID from the local database for this card entry
         //
         PRUint32    aKey;
-        if (NS_FAILED(card->GetKey(&aKey)))
+	      nsresult rv = NS_OK;
+        nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
+        if (NS_FAILED(rv) || !dbcard)
+          continue;
+        if (NS_FAILED(dbcard->GetKey(&aKey)))
           continue;
 
         // Ugh...this should never happen...BUT??
@@ -1528,7 +1548,8 @@ nsAbSync::AnalyzeTheLocalAddressBook()
 
   // this should not be hardcoded to abook.mab
   // this works for any address book...not sure why
-  rv = rdfService->GetResource("abdirectory://abook.mab", getter_AddRefs(resource));
+  // absync on go againt abook.mab - candice
+  rv = rdfService->GetResource("abmdbdirectory://abook.mab", getter_AddRefs(resource));
   if (NS_FAILED(rv)) 
     goto EarlyExit;
   
@@ -1786,7 +1807,8 @@ nsAbSync::DeleteCardByServerID(PRInt32 aServerID)
 
   // this should not be hardcoded to abook.mab
   // this works for any address book...not sure why
-  rv = rdfService->GetResource("abdirectory://abook.mab", getter_AddRefs(resource));
+  // absync on go againt abook.mab - candice
+  rv = rdfService->GetResource("abmdbdirectory://abook.mab", getter_AddRefs(resource));
   if (NS_FAILED(rv)) 
     goto EarlyExit;
   
@@ -1815,7 +1837,11 @@ nsAbSync::DeleteCardByServerID(PRInt32 aServerID)
       nsCOMPtr<nsIAbCard> card;
       card = do_QueryInterface(obj, &rv);
 
-      if (NS_FAILED(card->GetKey(&aKey)))
+	    nsresult rv = NS_OK;
+      nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
+      if (NS_FAILED(rv) || !dbcard)
+        continue;
+      if (NS_FAILED(dbcard->GetKey(&aKey)))
         continue;
 
       if ((PRInt32) aKey == clientID)
@@ -2016,7 +2042,7 @@ nsAbSync::ExtractCurrentLine()
   nsString    extractString; 
 
   while ( (*mProtocolOffset) && 
-          ( (*mProtocolOffset != CR) && (*mProtocolOffset != LF) )
+          ( (*mProtocolOffset != nsCRT::CR) && (*mProtocolOffset != nsCRT::LF) )
         )
   {
     extractString.Append(PRUnichar(*mProtocolOffset));
@@ -2028,10 +2054,10 @@ nsAbSync::ExtractCurrentLine()
   else
   {
     while ( (*mProtocolOffset) && 
-            (*mProtocolOffset == CR) )
+            (*mProtocolOffset == nsCRT::CR) )
             mProtocolOffset++;
 
-    if (*mProtocolOffset == LF)
+    if (*mProtocolOffset == nsCRT::LF)
       mProtocolOffset++;
 
     char *tString = extractString.ToNewCString();
@@ -2048,9 +2074,9 @@ nsAbSync::ExtractCurrentLine()
 nsresult        
 nsAbSync::AdvanceToNextLine()
 {
-  // First, find first CR or LF...
+  // First, find first nsCRT::CR or nsCRT::LF...
   while ( (*mProtocolOffset) && 
-          ( (*mProtocolOffset != CR) && (*mProtocolOffset != LF) )
+          ( (*mProtocolOffset != nsCRT::CR) && (*mProtocolOffset != nsCRT::LF) )
         )
   {
     mProtocolOffset++;
@@ -2060,10 +2086,10 @@ nsAbSync::AdvanceToNextLine()
   if (*mProtocolOffset)
   {
     while ( (*mProtocolOffset) && 
-            (*mProtocolOffset != LF) )
+            (*mProtocolOffset != nsCRT::LF) )
         mProtocolOffset++;
     
-    if (*mProtocolOffset == LF)
+    if (*mProtocolOffset == nsCRT::LF)
       mProtocolOffset++;
   }
 
@@ -2387,7 +2413,11 @@ nsAbSync::FindCardByClientID(PRInt32           aClientID,
       nsCOMPtr<nsIAbCard> card;
       card = do_QueryInterface(obj, &rv);
 
-      if (NS_FAILED(card->GetKey(&aKey)))
+      nsresult rv=NS_OK;
+      nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(card, &rv)); 
+      if (NS_FAILED(rv) || !dbcard)
+        continue;
+      if (NS_FAILED(dbcard->GetKey(&aKey)))
         continue;
 
       // Found IT!
@@ -2538,7 +2568,8 @@ nsAbSync::AddNewUsers()
 
   // this should not be hardcoded to abook.mab
   // this works for any address book...not sure why
-  rv = rdfService->GetResource("abdirectory://abook.mab", getter_AddRefs(resource));
+  // absync on go againt abook.mab - candice
+  rv = rdfService->GetResource("abmdbdirectory://abook.mab", getter_AddRefs(resource));
   if (NS_FAILED(rv)) 
     goto EarlyExit;
   

@@ -30,6 +30,7 @@ MODULE		= necko
 
 XPIDLSRCS	= \
 		nsIAuthenticator.idl \
+		nsIAuthPrompt.idl \
 		nsIChannel.idl \
 		nsIFileChannel.idl \
 		nsIDownloader.idl \
@@ -40,7 +41,6 @@ XPIDLSRCS	= \
 		nsINetModRegEntry.idl \
 		nsINetModuleMgr.idl \
 		nsINetNotify.idl \
-		nsIPasswordManager.idl \
 		nsIProgressEventSink.idl \
 		nsIPrompt.idl \
 		nsIProtocolHandler.idl \
@@ -54,7 +54,8 @@ XPIDLSRCS	= \
 		nsISocketTransportService.idl \
 		nsIStreamIO.idl \
 		nsIStreamIOChannel.idl \
-		nsIStreamObserver.idl \
+		nsIRequestObserver.idl \
+		nsIRequestObserverProxy.idl \
 		nsIStreamListener.idl \
 		nsIStreamProvider.idl \
 		nsIStreamLoader.idl \
@@ -73,7 +74,6 @@ EXPORTS		= \
 		netCore.h \
 		nsNetUtil.h \
 		nsUnixColorPrintf.h \
-		nsIPasswordManagerUtils.h \
 		$(NULL)
 
 PREF_JS_EXPORTS = $(srcdir)/security-prefs.js

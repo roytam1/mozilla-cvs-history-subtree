@@ -42,9 +42,11 @@ Rights Reserved.
 <script src="chrome://messenger/content/mailCommands.js"/>
 <script src="chrome://messenger/content/mailWindowOverlay.js"/>
 <script src="chrome://messenger/content/commandglue.js"/>
+<script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
 
-<stringbundleset id="stringbundleset">
+<stringbundleset id="mailStringBundles">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
+  <stringbundle id="bundle_viewZoom"/>
 </stringbundleset>
 
 <commandset id="mailFileMenuItems"
@@ -53,7 +55,7 @@ Rights Reserved.
             oncommandupdate="goUpdateMailMenuItems(this)">
 
     <command id="cmd_getNewMessages" oncommand="goDoCommand('cmd_getNewMessages')" disabled="true"/>
-    <command id="cmd_close" oncommand="CloseMailWindow()"/>
+    <command id="cmd_close" oncommand="goDoCommand('cmd_close')"/>
     <command id="cmd_open" oncommand="goDoCommand('cmd_open')"/>
     
     <command id="cmd_file" disabled="true"/>
@@ -76,6 +78,12 @@ Rights Reserved.
     <command id="cmd_renameFolder" oncommand="goDoCommand('cmd_renameFolder')" />
 </commandset>
 
+<commandset id="mailCommands">
+  <command id="cmd_newNavigator"/>
+  <command id="cmd_newEditor"/>
+  <command id="cmd_quit"/>
+  <!-- <command id="cmd_pageSetup"/>-->
+</commandset>
 <commandset id="mailViewMenuItems"
             commandupdater="true"
             events="create-menu-view"
@@ -113,12 +121,20 @@ Rights Reserved.
   <command id="cmd_cut"/>
   <command id="cmd_copy"/>
   <command id="cmd_paste"/>
+  <command id="cmd_copyLink"/>
+  <command id="cmd_copyImageLocation"/>
+  <command id="cmd_copyImageContents"/>
   <command id="cmd_delete"
          valueFolder="&deleteFolderCmd.label;"
+         valueFolderAccessKey="&deleteFolderCmd.accesskey;"
          valueNewsgroup="&unsubscribeNewsgroupCmd.label;"
+         valueNewsgroupAccessKey="&unsubscribeNewsgroupCmd.accesskey;"
          valueMessage="&deleteMsgCmd.label;"
+         valueMessageAccessKey="&deleteMsgCmd.accesskey;"
          valueNewsMessage="&cancelNewsMsgCmd.label;"
-         valueMessages="&deleteMsgsCmd.label;"/>
+         valueNewsMessageAccessKey="&cancelNewsMsgCmd.accesskey;"
+         valueMessages="&deleteMsgsCmd.label;"
+         valueMessagesAccessKey="&deleteMsgsCmd.accesskey;"/>
   <command id="cmd_editDraft" oncommand="goDoCommand('cmd_editDraft')" disabled="true"/>
   <command id="cmd_selectAll"/>
   <command id="cmd_selectThread" oncommand="goDoCommand('cmd_selectThread')"/>
@@ -185,17 +201,13 @@ Rights Reserved.
   <command id="button_file"/>
 </commandset>
 
-<broadcasterset id="broadcasterset">
+<broadcasterset id="mailBroadcasters">
   <!-- File Menu -->
-  <broadcaster id="cmd_newNavigator"/>
-  <broadcaster id="cmd_newEditor"/>
-  <broadcaster id="cmd_quit"/>
-  <broadcaster id="cmd_pageSetup"/>
-
+  <broadcaster id="Communicator:WorkMode"/>
   <!-- Edit Menu -->
 </broadcasterset>
 
-<keyset id="keyset">
+<keyset id="mailKeys">
     <key id="space" key=" " oncommand="SpaceHit()"/>
 
 	<!-- File Menu -->
@@ -217,6 +229,8 @@ Rights Reserved.
 	<key id="key_markAllRead" key="&markAllReadCmd.key;"             oncommand="goDoCommand('cmd_markAllRead');" modifiers="accel, shift"/>
 	<key id="key_nextMsg" key="&nextMsgCmd.key;"                     oncommand="goDoCommand('cmd_nextMsg')"/>
 	<key id="key_nextUnreadMsg" key="&nextUnreadMsgCmd.key;"         oncommand="goDoCommand('cmd_nextUnreadMsg')"/>
+	<key id="key_expandAllThreads" key="&expandAllThreadsCmd.key;"   oncommand="goDoCommand('cmd_expandAllThreads')"/>
+	<key id="key_collapseAllThreads" key="&collapseAllThreadsCmd.key;" oncommand="goDoCommand('cmd_collapseAllThreads')"/>
 	<key id="key_nextUnreadThread" key="&nextUnreadThreadCmd.key;"   oncommand="goDoCommand('cmd_nextUnreadThread')"/>
 	<key id="key_previousMsg" key="&previousMsgCmd.key;"             oncommand="goDoCommand('cmd_previousMsg')"/>
 	<key id="key_previousUnreadMsg" key="&previousUnreadMsgCmd.key;" oncommand="goDoCommand('cmd_previousUnreadMsg')"/>
@@ -237,7 +251,7 @@ Rights Reserved.
              modifiers="accel, shift"/>
   <key id="key_find" key="&findCmd.key;"  oncommand="goDoCommand('cmd_find')" modifiers="accel"/>
   <key id="key_findAgain" key="&findAgainCmd.key;"   oncommand="goDoCommand('cmd_findAgain')" modifiers="accel"/>
-
+  <keyset id="viewZoomKeys"/>
   <!-- Tab Keys -->
         <key id="tabpaneCounterClockwise" keycode="VK_TAB" oncommand="SwitchPaneFocus('counter-clockwise');"
              modifiers="shift"/>
@@ -475,8 +489,8 @@ Rights Reserved.
   </popup>
 
   <popup id="messagePaneContext"   
-   oncreate="gMessagePaneContextMenu = new nsContextMenu(this); return fillMessagePaneContextMenu(gMessagePaneContextMenu);"
-     ondestroy="contextMenu.onDestroy(); contextMenu = null;">
+     oncreate="gMessagePaneContextMenu = new nsContextMenu(this); return fillMessagePaneContextMenu(gMessagePaneContextMenu);"
+     ondestroy="gMessagePaneContextMenu.onDestroy(); gMessagePaneContextMenu = null;">
         <menuitem id="context-openlink"
                   label="&openLinkCmd.label;"
                   accesskey="&openLinkCmd.accesskey;"
@@ -662,11 +676,11 @@ Rights Reserved.
         <menuitem id="context-copylink"
                   label="&copyLinkCmd.label;"
                   accesskey="&copyLinkCmd.accesskey;"
-                  oncommand="gMessagePaneContextMenu.copyLink();"/>
+                  command="cmd_copyLink"/>
         <menuitem id="context-copyimage"
                   label="&copyImageCmd.label;"
                   accesskey="&copyImageCmd.accesskey;"
-                  oncommand="gMessagePaneContextMenu.copyImage();"/>
+                  command="cmd_copyImageLocation"/>
         <menuseparator id="messagePaneContext-sep-copy"/>
         <menuitem id="context-savelink"
                   label="&saveLinkCmd.label;"
@@ -678,8 +692,8 @@ Rights Reserved.
         <menuitem id="context-bookmarklink"
                   label="&bookmarkLinkCmd.label;"
                   accesskey="&bookmarkLinkCmd.accesskey;"
-                  oncommand="addBookmark(gMessagePaneContextMenu.linkURL(),
-                                         gMessagePaneContextMenu.linkText());"/>
+                  oncommand="BookmarksUtils.addBookmark(gMessagePaneContextMenu.linkURL(),
+                                                        gMessagePaneContextMenu.linkText());"/>
 
 </popup>
 
@@ -799,7 +813,7 @@ Rights Reserved.
       <menuitem id="menu_cut"/>
       <menuitem id="menu_copy"/>
       <menuitem id="menu_paste"/>
-      <menuitem id="menu_delete"/>
+      <menuitem id="menu_delete" observes="cmd_delete"/>
       <menuitem label="&editDraftCmd.label;" 
             accesskey="&editDraftCmd.accesskey;" 
             observes="cmd_editDraft"/>
@@ -854,7 +868,8 @@ Rights Reserved.
           <menuitem id="sortByFlagMenuitem" type="checkbox" label="&sortByFlagCmd.label;" accesskey="&sortByFlagCmd.accesskey;" oncommand="MsgSortByFlagged()"/>
           <menuitem id="sortByOrderReceivedMenuitem" type="checkbox" label="&sortByOrderReceivedCmd.label;"  accesskey="&sortByOrderReceivedCmd.accesskey;" oncommand="MsgSortByOrderReceived()"/>
           <menuitem id="sortByPriorityMenuitem" type="checkbox" label="&sortByPriorityCmd.label;" accesskey="&sortByPriorityCmd.accesskey;" oncommand="MsgSortByPriority()"/>
-          <menuitem id="sortBySenderMenuitem" type="checkbox" label="&sortBySenderCmd.label;" accesskey="&sortBySenderCmd.accesskey;" oncommand="MsgSortBySender()"/>
+	  <!-- for Sender / Recipient, accesskey and label are set dynamically -->
+          <menuitem id="sortBySenderOrRecipientMenuitem" type="checkbox" oncommand="MsgSortBySenderOrRecipient()"/>
           <menuitem id="sortBySizeMenuitem" type="checkbox" label="&sortBySizeCmd.label;" accesskey="&sortBySizeCmd.accesskey;" oncommand="MsgSortBySize()"/>
           <menuitem id="sortByStatusMenuitem" type="checkbox" label="&sortByStatusCmd.label;" accesskey="&sortByStatusCmd.accesskey;" oncommand="MsgSortByStatus()"/>
           <menuitem id="sortBySubjectMenuitem" type="checkbox" label="&sortBySubjectCmd.label;" accesskey="&sortBySubjectCmd.accesskey;" oncommand="MsgSortBySubject()"/>
@@ -878,8 +893,8 @@ Rights Reserved.
            accesskey="&threadsMsgsCmd.accesskey;"
            observes="cmd_sortByThread"/>
           <menuseparator/>
-          <menuitem label="&expandAllThreadsCmd.label;" accesskey="&expandAllThreadsCmd.accesskey;" disabled="true" observes="cmd_expandAllThreads"/>
-          <menuitem label="&collapseAllThreadsCmd.label;" accesskey="&collapseAllThreadsCmd.accesskey;" disabled="true" observes="cmd_collapseAllThreads"/>
+          <menuitem label="&expandAllThreadsCmd.label;" accesskey="&expandAllThreadsCmd.accesskey;" key="key_expandAllThreads" disabled="true" observes="cmd_expandAllThreads"/>
+          <menuitem label="&collapseAllThreadsCmd.label;" accesskey="&collapseAllThreadsCmd.accesskey;" key="key_collapseAllThreads" disabled="true" observes="cmd_collapseAllThreads"/>
         </menupopup>
       </menu>
       <menu id="viewheadersmenu" label="&headersMenu.label;" accesskey="&headersMenu.accesskey;">

@@ -28,7 +28,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= widget
 LIBRARY_NAME	= xpwidgets_s
-REQUIRES	= xpcom string layout dom pref js docshell view intl locale necko uriloader htmlparser webshell uconv unicharutil
+REQUIRES	= xpcom string layout dom pref js docshell view intl locale necko uriloader htmlparser webshell uconv unicharutil gfx2
 
 DEFINES		+= -DUSE_TLS_FOR_TOOLKIT
 
@@ -43,6 +43,10 @@ CPPSRCS		= \
 		nsPrimitiveHelpers.cpp \
 		nsXPLookAndFeel.cpp \
 		$(NULL)
+
+ifeq ($(MOZ_WIDGET_TOOLKIT),mac)
+CPPSRCS += nsWidgetAtoms.cpp
+endif
 
 LOCAL_INCLUDES	= \
 		-I$(srcdir)/../$(MOZ_WIDGET_TOOLKIT) \

@@ -28,8 +28,17 @@
 #include "nsILocalFile.h"
 #include "nsILocalFileMac.h"
 #include "nsMimeTypes.h"
+#include "nsIStringBundle.h"
+#include "nsIPromptService.h"
+#include "nsMemory.h"
 
 #include "nsIInternetConfigService.h"
+
+// chrome URL's
+#define HELPERAPPLAUNCHER_BUNDLE_URL "chrome://global/locale/helperAppLauncher.properties"
+#define BRAND_BUNDLE_URL "chrome://global/locale/brand.properties"
+
+#define NS_PROMPTSERVICE_CID "@mozilla.org/embedcomp/prompt-service;1"
 
 nsOSHelperAppService::nsOSHelperAppService() : nsExternalHelperAppService()
 {
@@ -54,21 +63,79 @@ NS_IMETHODIMP nsOSHelperAppService::LaunchAppWithTempFile(nsIMIMEInfo * aMIMEInf
   	  if (NS_FAILED(rv)) return rv;
   	
   	  rv = app->LaunchAppWithDoc(docToLoad, PR_FALSE); 
-    } 
+    }
   }
   return rv;
 }
 
 NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * aProtocolScheme, PRBool * aHandlerExists)
 {
-  // look up the protocol scheme in the windows registry....if we find a match then we have a handler for it...
+  // look up the protocol scheme in Internet Config....if we find a match then we have a handler for it...
   *aHandlerExists = PR_FALSE;
-  return NS_OK;
+  // ask the internet config service to look it up for us...
+  nsresult rv = NS_ERROR_FAILURE;
+  nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
+  if (icService)
+  {
+    rv = icService->HasProtocolHandler(aProtocolScheme, aHandlerExists);
+    if (rv == NS_ERROR_NOT_AVAILABLE)
+    {
+      // current app is registered to handle the protocol, put up an alert
+      nsCOMPtr<nsIStringBundleService> stringBundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+      if (stringBundleService)
+      {
+        nsILocale* locale = nsnull;
+        nsCOMPtr<nsIStringBundle> appLauncherBundle;
+        rv = stringBundleService->CreateBundle(HELPERAPPLAUNCHER_BUNDLE_URL, locale, getter_AddRefs(appLauncherBundle));
+        if (rv == NS_OK)
+        {
+          nsCOMPtr<nsIStringBundle> brandBundle;
+          rv = stringBundleService->CreateBundle(BRAND_BUNDLE_URL, locale, getter_AddRefs(brandBundle));
+          if (rv == NS_OK)
+          {
+            nsXPIDLString brandName;
+            rv = brandBundle->GetStringFromName(NS_LITERAL_STRING("brandShortName").get(), getter_Copies(brandName));
+            if (rv == NS_OK)
+            {
+              nsXPIDLString errorStr;
+              NS_ConvertASCIItoUCS2 proto(aProtocolScheme);
+              const PRUnichar *formatStrings[] = { brandName.get(), proto.get() };
+              rv = appLauncherBundle->FormatStringFromName(NS_LITERAL_STRING("protocolNotHandled").get(),
+                                                           formatStrings,
+                                                           2,
+                                                           getter_Copies(errorStr));
+              if (rv == NS_OK)
+              {
+                nsCOMPtr<nsIPromptService> prompt (do_GetService(NS_PROMPTSERVICE_CID));
+                if (prompt)
+                  prompt->Alert(nsnull, NS_LITERAL_STRING("Alert").get(), errorStr.get());
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return rv;
 }
 
 NS_IMETHODIMP nsOSHelperAppService::LoadUrl(nsIURI * aURL)
 {
-  return NS_ERROR_FAILURE;
+  char *url = nsnull;
+  nsresult rv = NS_ERROR_FAILURE;
+  
+  if (aURL)
+  {
+    aURL->GetSpec(&url);
+    if (url)
+    {
+      nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
+      if (icService)
+        rv = icService->LaunchURL(url);
+      nsMemory::Free(url);
+    }
+  }
+  return rv;
 }
 
 nsresult nsOSHelperAppService::GetFileTokenForPath(const PRUnichar * platformAppPath, nsIFile ** aFile)
@@ -96,7 +163,11 @@ NS_IMETHODIMP nsOSHelperAppService::GetFromExtension(const char * aFileExt, nsIM
 {
   // first, ask our base class. We may already have this information cached....
   nsresult rv = nsExternalHelperAppService::GetFromExtension(aFileExt, aMIMEInfo);
-  if (NS_SUCCEEDED(rv) && *aMIMEInfo) return rv;
+  if (NS_SUCCEEDED(rv) && *aMIMEInfo) 
+  {
+    UpdateCreatorInfo(*aMIMEInfo);
+    return rv;
+  }
   
   // oops, we didn't find an entry....ask the internet config service to look it up for us...
   nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
@@ -117,7 +188,11 @@ NS_IMETHODIMP nsOSHelperAppService::GetFromMIMEType(const char * aMIMEType, nsIM
 {
   // first, ask our base class. We may already have this information cached....
   nsresult rv = nsExternalHelperAppService::GetFromMIMEType(aMIMEType, aMIMEInfo);
-  if (NS_SUCCEEDED(rv) && *aMIMEInfo) return rv;
+  if (NS_SUCCEEDED(rv) && *aMIMEInfo) 
+  {
+    UpdateCreatorInfo(*aMIMEInfo);
+    return rv;
+  }
   
   // oops, we didn't find an entry....ask the internet config service to look it up for us...
   nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
@@ -133,3 +208,33 @@ NS_IMETHODIMP nsOSHelperAppService::GetFromMIMEType(const char * aMIMEType, nsIM
   if (!*aMIMEInfo) rv = NS_ERROR_FAILURE;
   return rv;
 }
+
+// we never want to use a hard coded value for the creator and file type for the mac. always look these values up
+// from internet config.
+void nsOSHelperAppService::UpdateCreatorInfo(nsIMIMEInfo * aMIMEInfo)
+{
+  PRUint32 macCreatorType;
+  PRUint32 macFileType;
+  aMIMEInfo->GetMacType(&macFileType);
+  aMIMEInfo->GetMacCreator(&macCreatorType);
+  
+  if (macFileType == 0 || macCreatorType == 0)
+  {
+    // okay these values haven't been initialized yet so fetch a mime object from internet config.
+    nsXPIDLCString mimeType;
+    aMIMEInfo->GetMIMEType(getter_Copies(mimeType));
+    nsCOMPtr<nsIInternetConfigService> icService (do_GetService(NS_INTERNETCONFIGSERVICE_CONTRACTID));
+    if (icService)
+    {
+      nsCOMPtr<nsIMIMEInfo> osMimeObject;
+      icService->FillInMIMEInfo(mimeType, nsnull, getter_AddRefs(osMimeObject));
+      if (osMimeObject)
+      {
+        osMimeObject->GetMacType(&macFileType);
+        osMimeObject->GetMacCreator(&macCreatorType);
+        aMIMEInfo->SetMacCreator(macCreatorType);
+        aMIMEInfo->SetMacType(macFileType);
+      } // if we got an os object
+    } // if we got the ic service
+  } // if the creator or file type hasn't been initialized yet
+} 
