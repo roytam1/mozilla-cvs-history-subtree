@@ -87,23 +87,12 @@ sub create_directories {
   }
 }
 
-while($arg = shift) {
-    if ($arg =~ /^--srcdir=/) {
-        $ac_given_srcdir = (split /=/, $arg)[1];
-    }
-    if ($arg =~ /^--cygwin-srcdir/) {
-        $ac_cygwin_srcdir = (split /=/, $arg)[1];
-    }
-}
-
-if (!$ac_given_srcdir) {
+if ($ARGV[0] =~ /^--srcdir=/) {
+  $ac_given_srcdir = (split /=/, shift @ARGV)[1];
+} else {
   $ac_given_srcdir = $0;
   $ac_given_srcdir =~ s|/?build/autoconf/.*$||;
   $ac_given_srcdir = '.' if $ac_given_srcdir eq '';
-}
-
-if (!$ac_cygwin_srcdir) {
-    $ac_cygwin_srcdir = $ac_given_srcdir;
 }
 
 # Read list of makefiles from the stdin or,
@@ -143,12 +132,12 @@ foreach $ac_file (@makefiles) {
       $top_srcdir = $ac_dots;
       $top_srcdir =~ s%/$%%;
     }
-  } elsif ($ac_cygwin_srcdir =~ m%^/% or $ac_cygwin_srcdir =~ m%^.:/%) {
-    $srcdir     = "$ac_cygwin_srcdir$ac_dir_suffix";
-    $top_srcdir = "$ac_cygwin_srcdir";
+  } elsif ($ac_given_srcdir =~ m%^/% or $ac_given_srcdir =~ m%^.:/%) {
+    $srcdir     = "$ac_given_srcdir$ac_dir_suffix";
+    $top_srcdir = "$ac_given_srcdir";
   } else {
-    $srcdir     = "$ac_dots$ac_cygwin_srcdir$ac_dir_suffix";
-    $top_srcdir = "$ac_dots$ac_cygwin_srcdir";
+    $srcdir     = "$ac_dots$ac_given_srcdir$ac_dir_suffix";
+    $top_srcdir = "$ac_dots$ac_given_srcdir";
   }
 
   if (-e $ac_file) {

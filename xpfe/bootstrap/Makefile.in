@@ -56,10 +56,10 @@ REQUIRES	= xpcom \
 		  widget \
 		  dom \
 		  necko \
-		  content \
 		  pref \
 		  appshell \
 		  gfx \
+		  chrome \
 		  xpinstall \
 		  uriloader \
 		  windowwatcher \
@@ -310,7 +310,7 @@ endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
-LIBS	+= -framework QuickTime -framework IOKit
+LIBS	+= -framework QuickTime
 endif
 
 endif

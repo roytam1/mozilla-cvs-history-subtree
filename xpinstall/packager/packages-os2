@@ -354,6 +354,8 @@ bin/res/charsetData.properties
 bin/res/langGroups.properties
 bin/res/language.properties
 bin/res/entityTables/*
+bin/res/rdf/article.gif
+bin/res/rdf/document.gif
 bin/res/rdf/folder-closed.gif
 bin/res/rdf/folder-open.gif
 bin/res/rdf/loading.gif
@@ -420,7 +422,6 @@ bin/components/mdn-service.js
 bin/components/bayesflt.dll
 bin/components/mailview.xpt
 bin/components/mailview.dll
-bin/components/offlineStartup.js 
 
 [chatzilla]
 bin/components/chatzilla-service.js

@@ -35,52 +35,48 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef ipcProto_h__
-#define ipcProto_h__
+#ifndef ipcTransportUnix_h__
+#define ipcTransportUnix_h__
 
-#if defined(XP_WIN)
-//
-// use WM_COPYDATA messages
-//
-#include "prprf.h"
+#include "nsIAsyncInputStream.h"
+#include "nsIAsyncOutputStream.h"
+#include "nsISocketTransport.h"
+#include "nsISocketTransportService.h"
+#include "prio.h"
 
-#define IPC_WINDOW_CLASS              "Mozilla:IPCWindowClass"
-#define IPC_WINDOW_NAME               "Mozilla:IPCWindow"
-#define IPC_CLIENT_WINDOW_CLASS       "Mozilla:IPCAppWindowClass"
-#define IPC_CLIENT_WINDOW_NAME_PREFIX "Mozilla:IPCAppWindow:"
-#define IPC_SYNC_EVENT_NAME           "Local\\MozillaIPCSyncEvent"
-#define IPC_DAEMON_APP_NAME           "mozipcd.exe"
-#define IPC_PATH_SEP_CHAR             '\\'
-#define IPC_MODULES_DIR               "ipc\\modules"
+#include "ipcMessageQ.h"
 
-#define IPC_CLIENT_WINDOW_NAME_MAXLEN (sizeof(IPC_CLIENT_WINDOW_NAME_PREFIX) + 20)
+class ipcTransport;
 
-// writes client name into buf.  buf must be at least
-// IPC_CLIENT_WINDOW_NAME_MAXLEN bytes in length.
-inline void IPC_GetClientWindowName(PRUint32 pid, char *buf)
+//-----------------------------------------------------------------------------
+// ipcReceiver
+//-----------------------------------------------------------------------------
+
+class ipcReceiver : public nsIInputStreamCallback
 {
-    PR_snprintf(buf, IPC_CLIENT_WINDOW_NAME_MAXLEN, "%s%u",
-                IPC_CLIENT_WINDOW_NAME_PREFIX, pid);
-}
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIINPUTSTREAMCALLBACK
 
-#else
-#include "prtypes.h"
-//
-// use UNIX domain socket
-//
-#define IPC_PORT                0
-#define IPC_SOCKET_TYPE         "ipc"
-#define IPC_DAEMON_APP_NAME     "mozipcd"
-#ifdef XP_OS2
-#define IPC_PATH_SEP_CHAR       '\\'
-#define IPC_MODULES_DIR         "ipc\\modules"
-#else
-#define IPC_PATH_SEP_CHAR       '/'
-#define IPC_MODULES_DIR         "ipc/modules"
-#endif
+    ipcReceiver(ipcTransport *transport)
+        : mTransport(transport)
+        , mMsg(nsnull)
+        , mStatus(NS_OK)
+        { }
+    virtual ~ipcReceiver() { }
 
-void IPC_GetDefaultSocketPath(char *buf, PRUint32 bufLen);
+    // called by the transport when it is going away.
+    void ClearTransport() { mTransport = nsnull; }
 
-#endif
+private:
+    static NS_METHOD ReadSegment(nsIInputStream *, void *, const char *,
+                                 PRUint32, PRUint32, PRUint32 *);
 
-#endif // !ipcProto_h__
+    // the transport owns the receiver, so this back pointer does not need
+    // to be an owning reference.
+    ipcTransport *mTransport;
+    ipcMessage   *mMsg;       // message in progress
+    nsresult      mStatus;
+};
+
+#endif // !ipcTransportUnix_h__

@@ -51,7 +51,7 @@ char ipcLogPrefix[10] = {0};
 //-----------------------------------------------------------------------------
 // UNIX
 //-----------------------------------------------------------------------------
-#if defined(XP_UNIX) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_UNIX) || defined(XP_OS2)
 #include <sys/types.h>
 #include <unistd.h>
 

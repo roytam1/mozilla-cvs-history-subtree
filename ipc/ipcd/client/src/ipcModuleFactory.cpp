@@ -48,7 +48,6 @@
 //-----------------------------------------------------------------------------
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(ipcService, Init)
 
-// enable this code to make the IPC service auto-start.
 #if 0
 NS_METHOD
 ipcServiceRegisterProc(nsIComponentManager *aCompMgr,
@@ -84,6 +83,21 @@ ipcServiceUnregisterProc(nsIComponentManager *aCompMgr,
 }
 #endif
 
+#if defined(XP_UNIX) || defined(XP_OS2)
+#include "ipcSocketProviderUnix.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(ipcSocketProviderUnix)
+
+#define IPC_SOCKETPROVIDER_CLASSNAME \
+    "ipcSocketProvider"
+#define IPC_SOCKETPROVIDER_CID \
+{ /* b888f500-ab5d-459c-aab0-bc61e844a503 */         \
+    0xb888f500,                                      \
+    0xab5d,                                          \
+    0x459c,                                          \
+    {0xaa, 0xb0, 0xbc, 0x61, 0xe8, 0x44, 0xa5, 0x03} \
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // extensions
 
@@ -107,6 +121,12 @@ static const nsModuleComponentInfo components[] = {
     ipcServiceRegisterProc,
     ipcServiceUnregisterProc },
     */
+#if defined(XP_UNIX) || defined(XP_OS2)
+  { IPC_SOCKETPROVIDER_CLASSNAME,
+    IPC_SOCKETPROVIDER_CID,
+    NS_NETWORK_SOCKET_CONTRACTID_PREFIX IPC_SOCKET_TYPE,
+    ipcSocketProviderUnixConstructor, },
+#endif
   //
   // extensions go here:
   //

@@ -267,6 +267,8 @@ bin\res\charsetData.properties
 bin\res\langGroups.properties
 bin\res\language.properties
 bin\res\entityTables\*
+bin\res\rdf\article.gif
+bin\res\rdf\document.gif
 bin\res\rdf\folder-closed.gif
 bin\res\rdf\folder-open.gif
 bin\res\rdf\loading.gif
@@ -296,7 +298,6 @@ bin\components\msgmdn.xpt
 bin\components\mdn-service.js
 bin\components\mapihook.xpt
 bin\components\mailview.xpt
-bin/components\offlineStartup.js 
 bin\chrome\messenger.jar
 bin\chrome\messenger\*
 

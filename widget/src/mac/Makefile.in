@@ -86,7 +86,6 @@ CPPSRCS			= nsAppShell.cpp \
 		nsSound.cpp \
 		nsTextWidget.cpp \
 		nsTSMStrategy.cpp \
-		nsToolkitBase.cpp \
 		nsToolkit.cpp \
 		nsWidgetFactory.cpp \
 		nsWindow.cpp \
@@ -134,7 +133,6 @@ LOCAL_INCLUDES	= \
 	-I$(srcdir)/../xpwidgets \
 	$(NULL)
 
-LDFLAGS	+= \
-	-framework QuickTime \
-	-framework IOKit \
-	$(NULL)
+# for "EnterMovies" in nsSound.cpp
+LDFLAGS	+= -framework QuickTime
+
