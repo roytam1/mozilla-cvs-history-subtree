@@ -43,18 +43,23 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= \
-		ParseFTPList.cpp \
-		nsFTPDirListingConv.cpp \
-		nsGopherDirListingConv.cpp \
 		mozTXTToHTMLConv.cpp \
 		nsUnknownDecoder.cpp \
 		nsHTTPCompressConv.cpp \
 		nsTXTToHTMLConv.cpp \
+		nsMultiMixedConv.cpp \
+		$(NULL)
+
+ifndef MOZ_MINOTAUR
+CPPSRCS += \
+		ParseFTPList.cpp \
+		nsFTPDirListingConv.cpp \
+		nsGopherDirListingConv.cpp \
 		nsDirIndex.cpp \
 		nsDirIndexParser.cpp \
 		nsIndexedToHTML.cpp \
-		nsMultiMixedConv.cpp \
-		$(NULL)
+        $(NULL)
+endif
 
 
 ifeq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))

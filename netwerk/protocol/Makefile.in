@@ -28,14 +28,14 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= about \
               data \
-              keyword \
               res \
               file \
               jar \
               http \
-              viewsource \
-              ftp \
-              gopher \
               $(NULL)
+
+ifndef MOZ_MINOTAUR
+DIRS += ftp keyword gopher viewsource
+endif
 
 include $(topsrcdir)/config/rules.mk
