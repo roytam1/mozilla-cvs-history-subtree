@@ -34,16 +34,17 @@
 #    c. run nmake -f makefile.win from the above directory
 #
 
-if($ENV{MOZ_SRC} eq "")
-{
-  print "Error: MOZ_SRC not set!";
-  exit(1);
-}
+use Cwd;
+use File::Copy;
+use File::Path;
+use IO::Handle;
 
 $inXpiURL = "";
 $inRedirIniURL = "";
+undef $topsrcdir;
 
 ParseArgv(@ARGV);
+
 if($inXpiURL eq "")
 {
   # archive url not supplied, set it to default values
@@ -55,31 +56,27 @@ if($inRedirIniURL eq "")
   $inRedirIniURL = $inXpiURL;
 }
 
-$DEPTH         = "$ENV{MOZ_SRC}\\mozilla";
-$cwdBuilder    = "$DEPTH\\xpinstall\\wizard\\windows\\builder";
-$cwdBuilder    =~ s/\//\\/g; # convert slashes to backslashes for Dos commands to work
+$DEPTH         = "$topsrcdir" if !defined($DEPTH);
+$cwdBuilder    = "$topsrcdir/xpinstall/wizard/windows/builder";
 $cwdDist       = GetCwd("dist",     $DEPTH, $cwdBuilder);
 $cwdDistWin    = GetCwd("distwin",  $DEPTH, $cwdBuilder);
 $cwdInstall    = GetCwd("install",  $DEPTH, $cwdBuilder);
-$cwdPackager   = GetCwd("packager", $DEPTH, $cwdBuilder);
+$cwdPackager   = GetCwd("packager", $topsrcdir, $cwdBuilder);
 $verPartial    = "5.0.0.";
 $ver           = $verPartial . GetVersion($DEPTH);
 
-if(-d "$DEPTH\\stage")
-{
-  system("perl $cwdPackager\\windows\\rdir.pl $DEPTH\\stage");
-}
+rmtree(["$DEPTH/stage"],0,0) if(-d "$DEPTH/stage");
 
 # The destination cannot be a sub directory of the source.
 # pkgcp.pl will get very unhappy.
 
-mkdir("$DEPTH\\stage", 775);
-system("perl $cwdPackager\\pkgcp.pl -s $cwdDistWin -d $DEPTH\\stage -f $cwdPackager\\packages-win -o dos -v");
+mkdir("$DEPTH/stage", 775);
+system("perl $cwdPackager/pkgcp.pl -s $cwdDistWin -d $DEPTH/stage -f $cwdPackager/packages-win -o dos -v");
 
-chdir("$cwdPackager\\windows");
-if(system("perl makeall.pl $ver $DEPTH\\stage $cwdDistWin\\install -aurl $inXpiURL -rurl $inRedirIniURL"))
+chdir("$cwdPackager/windows");
+if(system("perl makeall.pl $topsrcdir $ver $DEPTH/stage $cwdDistWin/install -aurl $inXpiURL -rurl $inRedirIniURL"))
 {
-  print "\n Error: perl makeall.pl $ver $DEPTH\\stage $cwdDistWin\\install $inXpiURL $inRedirIniURL\n";
+  print "\n Error: perl makeall.pl $topsrcdir $ver $DEPTH/stage $cwdDistWin/install $inXpiURL $inRedirIniURL\n";
   exit(1);
 }
 
@@ -89,21 +86,25 @@ chdir($cwdBuilder);
 # This is so that setup.exe can find the .xpi files
 # in the same directory and use them.
 #
-# Mozilla-win32-install.exe (a self extracting file) will use the .xpi
+# Mozilla-win32-installer.exe (a self extracting file) will use the .xpi
 # files from its current directory as well, but it is not a requirement
 # that they exist because it already contains the .xpi files within itself.
-if(system("copy $cwdDistWin\\install\\xpi\\*.* $cwdDistWin\\install"))
-{
-  print "Error: copy $cwdDistWin\\install\\xpi\\*.* $cwdDistWin\\install\n";
-  exit(1);
+my $SDIR = new IO::Handle;
+opendir($SDIR, "$cwdDistWin/install/xpi") || 
+    die "opendir($cwdDistWin/install/xpi): $!\n";
+while ($file = readdir($SDIR)) {
+    next if ( -d "$cwdDistWin/install/xpi/$file" );
+    copy("$cwdDistWin/install/xpi/$file", "$cwdDistWin/install") || 
+	die "\n Error: copy($cwdDistWin/install/xpi/file, $cwdDistWin/install): $!\n";
 }
+closedir($SDIR);
 
 print "\n";
 print "**\n";
 print "*\n";
 print "*  A self-extracting installer has been built and delivered:\n";
 print "*\n";
-print "*      $cwdDistWin\\install\\mozilla-win32-install.exe\n";
+print "*      $cwdDistWin/install/mozilla-win32-installer.exe\n";
 print "*\n";
 print "**\n";
 print "\n";
@@ -112,7 +113,7 @@ exit(0);
 
 sub PrintUsage
 {
-  die "usage: $0 [options]
+  die "usage: $0 -topsrcdir <path_to_mozilla> [options]
 
        options available are:
 
@@ -127,6 +128,8 @@ sub PrintUsage
                    This url can be the same as the archive url.
                    If -rurl is not supplied, it will be assumed that the redirect.ini
                    file is at -arul.
+           -topsrcdir location of the top of the Mozilla source tree
+           -DEPTH location of the top of the Mozilla build tree
        \n";
 }
 
@@ -158,7 +161,39 @@ sub ParseArgv
         $inRedirIniURL = $myArgv[$counter];
       }
     }
+    elsif($myArgv[$counter] =~ /^[-,\/]topsrcdir$/i)
+    {
+      if($#myArgv >= ($counter + 1))
+      {
+        ++$counter;
+        $topsrcdir = $myArgv[$counter];
+      }
+    }
+    elsif($myArgv[$counter] =~ /^[-,\/]depth$/i)
+    {
+      if($#myArgv >= ($counter + 1))
+      {
+        ++$counter;
+        $DEPTH = $myArgv[$counter];
+      }
+    }
   }
+  PrintUsage() if (!defined($topsrcdir));
+  $tmpdir = get_system_cwd();
+  chdir("$topsrcdir") || die "$topsrcdir: Directory does not exist!\n";
+  $topsrcdir = get_system_cwd();
+  chdir("$tmpdir") || die "$tmpdir: Cannot find our way back home\n";
+  if (defined($DEPTH)) {
+      chdir("$DEPTH") || die "$DEPTH: Directory does not exist!\n";
+      $DEPTH = get_system_cwd();
+      chdir("$tmpdir") || die "$tmpdir: Cannot find our way back home again\n";
+  }
+}
+
+sub get_system_cwd {
+  my $a = Cwd::getcwd()||`pwd`;
+  chomp($a);
+  return $a;
 }
 
 sub GetCwd
@@ -169,70 +204,53 @@ sub GetCwd
   my($distPath);
 
   # determine if build was built via gmake
-  if(-e "$depthPath\\dist\\install")
-  {
-    $distWinPathName = "dist";
-  }
-  else
-  {
-    # determine if build is debug or optimized
-    # (used only for nmake builds)
-    if($ENV{MOZ_DEBUG} eq "")
-    {
-      $distWinPathName = "dist\\Win32_o.obj";
-    }
-    else
-    {
-      $distWinPathName = "dist\\Win32_d.obj";
-    }
-  }
+  $distWinPathName = "dist";
 
   if($whichPath eq "dist")
   {
     # verify the existance of path
-    if(!(-e "$depthPath\\dist"))
+    if(!(-e "$depthPath/dist"))
     {
-      print "path not found: $depthPath\\dist\n";
+      print "path not found: $depthPath/dist\n";
       exit(1);
     }
 
-    $distPath = "$depthPath\\dist";
+    $distPath = "$depthPath/dist";
   }
   elsif($whichPath eq "distwin")
   {
     # verify the existance of path
-    if(!(-e "$depthPath\\$distWinPathName"))
+    if(!(-e "$depthPath/$distWinPathName"))
     {
-      print "path not found: $depthPath\\$distWinPathName\n";
+      print "path not found: $depthPath/$distWinPathName\n";
       exit(1);
     }
 
-    $distPath = "$depthPath\\$distWinPathName";
+    $distPath = "$depthPath/$distWinPathName";
   }
   elsif($whichPath eq "install")
   {
     # verify the existance of path
-    if(!(-e "$depthPath\\$distWinPathName\\install"))
+    if(!(-e "$depthPath/$distWinPathName/install"))
     {
-      print "path not found: $depthPath\\$distWinPathName\\install\n";
+      print "path not found: $depthPath/$distWinPathName/install\n";
       exit(1);
     }
 
-    $distPath = "$depthPath\\$distWinPathName\\install";
+    $distPath = "$depthPath/$distWinPathName/install";
   }
   elsif($whichPath eq "packager")
   {
     # verify the existance of path
-    if(!(-e "$depthPath\\xpinstall\\packager"))
+    if(!(-e "$depthPath/xpinstall/packager"))
     {
-      print "path not found: $depthPath\\xpinstall\\packager\n";
+      print "path not found: $depthPath/xpinstall/packager\n";
       exit(1);
     }
 
-    $distPath = "$depthPath\\xpinstall\\packager";
+    $distPath = "$depthPath/xpinstall/packager";
   }
 
-  $distPath =~ s/\//\\/g; # convert slashes to backslashes for Dos commands to work
   return($distPath);
 }
 
