@@ -20,10 +20,6 @@
 
 DEPTH = ..
 
-ifdef JS_THREADSAFE
-OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
-endif
-
 INCLUDES   += -I. -I..
 
 #
@@ -72,6 +68,14 @@ PROG_FILE = js
 
 include $(DEPTH)/config.mk
 include config/$(OS_CONFIG).mk
+
+ifdef JS_THREADSAFE
+ifdef USE_MSVC
+OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/libnspr21.lib
+else
+OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
+endif
+endif
 
 ifdef USE_MSVC
 LIBRARY = $(OBJDIR)/jsj.dll
