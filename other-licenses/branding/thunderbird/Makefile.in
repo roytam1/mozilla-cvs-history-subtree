@@ -42,7 +42,7 @@ export::
 	if [ ! -d $(DEPTH)/mail/app/icons/gtk ] ; then \
 		mkdir $(DEPTH)/mail/app/icons/gtk; \
 	fi
-	cp $(srcdir)/mozicon50.xpm  $(DEPTH)/mail/app/icons/gtk/mozicon50.xpm
+	cp $(srcdir)/mozicon50.xpm  $(DEPTH)/mail/app/icons/gtk/messengerWindow.xpm
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 	cp $(srcdir)/thunderbird.icns  $(DIST)/branding/thunderbird.icns
 endif
