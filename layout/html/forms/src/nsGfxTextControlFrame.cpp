@@ -2356,6 +2356,22 @@ nsGfxTextControlFrame::Reflow(nsIPresContext* aPresContext,
 #endif
       webShellWin->SetPositionAndSize(subBoundsInPixels.x, subBoundsInPixels.y,
          subBoundsInPixels.width, subBoundsInPixels.height, PR_FALSE);
+      nsCOMPtr<nsIPresShell> presShell;
+      rv = aPresContext->GetShell(getter_AddRefs(presShell));     
+      if (NS_FAILED(rv)) { return rv; }
+      if (!presShell) { return NS_ERROR_FAILURE; }
+      nsIView *view;
+      GetView(aPresContext, &view);
+      if (view)
+      {
+        nsCOMPtr<nsIViewManager> viewMan;
+        presShell->GetViewManager(getter_AddRefs(viewMan));  
+        if (!viewMan) { return NS_ERROR_FAILURE; }
+        nsIView* parView;
+        nsPoint origin;
+        GetOffsetFromView(aPresContext, origin, &parView);  
+        viewMan->MoveViewTo(view, origin.x, origin.y);
+      }
     }
     else
     {
