@@ -55,7 +55,6 @@ class nsMsgCompose : public nsIMsgCompose
 	/*** nsIMsgCompose pure virtual functions */
 	NS_DECL_NSIMSGCOMPOSE
 
-  MSG_ComposeType				        GetMessageType();
   nsresult                      ConvertAndLoadComposeWindow(nsIEditorShell *aEditorShell, nsString& aPrefix, nsString& aBuf, 
                                                             nsString& aSignature, PRBool aQuoted, PRBool aHTMLEditor);
 

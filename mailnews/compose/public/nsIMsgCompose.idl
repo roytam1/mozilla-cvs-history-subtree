@@ -143,7 +143,7 @@ interface nsIMsgCompose : nsISupports {
   void ResetNodeEventHandlers(in nsIDOMNode node);
 
 	/* ... */
-	attribute nsIEditorShell editor;
+	  attribute nsIEditorShell editor;
 
 	/* ... */
     readonly attribute nsIDOMWindowInternal domWindow;
@@ -153,6 +153,9 @@ interface nsIMsgCompose : nsISupports {
     
 	/* ... */
     readonly attribute boolean composeHTML;
+
+	/* ... */
+    readonly attribute MSG_ComposeType type;
 
 	/* ... */
     readonly attribute long wrapLength;

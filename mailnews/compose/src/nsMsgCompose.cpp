@@ -74,6 +74,7 @@
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
 #include "nsIPrompt.h"
+#include "nsMsgComposeService.h"
 #include "nsMsgUtils.h"
 
 // Defines....
@@ -102,7 +103,6 @@ static nsresult RemoveDuplicateAddresses(const char * addresses, const char * an
 
 	return rv;
 }
-
 
 nsMsgCompose::nsMsgCompose()
 {
@@ -371,6 +371,10 @@ nsresult nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorShell,
     editor->EnableUndo(PR_TRUE);
   SetBodyModified(PR_FALSE);
 
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  nsCOMPtr<nsIMsgComposeService> composeService (do_GetService(NS_MSGCOMPOSESERVICE_CONTRACTID));
+  composeService->TimeStamp("Finished inserting data into the editor. The window is finally ready!", PR_FALSE);
+#endif
   return NS_OK;
 }
 
@@ -1189,7 +1193,8 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
   
   if (mComposeObj) 
   {
-    MSG_ComposeType type = mComposeObj->GetMessageType();
+    MSG_ComposeType type;
+    mComposeObj->GetType(&type);
     
     // Assign cite information if available...
     if (!mCiteReference.IsEmpty())
@@ -1345,7 +1350,16 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
       }
     }
     
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+    nsCOMPtr<nsIMsgComposeService> composeService (do_GetService(NS_MSGCOMPOSESERVICE_CONTRACTID));
+    composeService->TimeStamp("done with mime. Lets update some UI element", PR_FALSE);
+#endif
+
     mComposeObj->NotifyStateListeners(nsMsgCompose::eComposeFieldsReady);
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+    composeService->TimeStamp("addressing widget, windows title and focus are now set, time to insert the body", PR_FALSE);
+#endif
 
     if (! mHeadersOnly)
       mMsgBody.AppendWithConversion("</html>");
@@ -1439,9 +1453,13 @@ NS_IMPL_ISUPPORTS1(QuotingOutputStreamListener, nsIStreamListener)
 // END OF QUOTING LISTENER
 ////////////////////////////////////////////////////////////////////////////////////
 
-MSG_ComposeType nsMsgCompose::GetMessageType()
+/* readonly attribute MSG_ComposeType type; */
+NS_IMETHODIMP nsMsgCompose::GetType(MSG_ComposeType *aType)
 {
-	return mType;
+  NS_ENSURE_ARG_POINTER(aType);
+
+  *aType = mType;
+  return NS_OK;
 }
 
 nsresult
@@ -1797,11 +1815,17 @@ nsMsgDocumentStateListener::SetComposeObj(nsMsgCompose *obj)
 nsresult
 nsMsgDocumentStateListener::NotifyDocumentCreated(void)
 {
-  // Ok, now the document has been loaded, so we are ready to setup
+  // Ok, now the document has been loaded, so we are ready to setup  
   // the compose window and let the user run hog wild!
 
   // Now, do the appropriate startup operation...signature only
   // or quoted message and signature...
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  nsCOMPtr<nsIMsgComposeService> composeService (do_GetService(NS_MSGCOMPOSESERVICE_CONTRACTID));
+  composeService->TimeStamp("Editor is done loading about::blank. Now let mime do its job", PR_FALSE);
+#endif
+
   if ( mComposeObj->QuotingToFollow() )
     return mComposeObj->BuildQuotedMessageAndSignature();
   else

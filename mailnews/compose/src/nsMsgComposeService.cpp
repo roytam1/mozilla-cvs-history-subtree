@@ -36,13 +36,58 @@
 #include "nsIMsgComposeParams.h"
 #include "nsEscape.h"
 
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+#include "nsAppDirectoryServiceDefs.h"
+#include "nsIFileStreams.h"
+#include "nsIPref.h"
+#include "nsIMsgHdr.h"
+#include "nsIMsgMessageService.h"
+#include "nsMsgUtils.h"
+#endif
+
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kMsgComposeCID, NS_MSGCOMPOSE_CID);
 
+#ifdef NS_DEBUG
+static PRBool _just_to_be_sure_we_create_only_on_compose_service_ = PR_FALSE;
+#endif
+
 #define DEFAULT_CHROME  "chrome://messenger/content/messengercompose/messengercompose.xul"
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+static PRUint32 GetMessageSizeFromURI(const char * originalMsgURI)
+{
+  PRUint32 msgSize = 0;
+
+  if (originalMsgURI && *originalMsgURI)
+  {
+    nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
+    nsCOMPtr <nsIMsgMessageService> msgMessageService;
+    nsresult rv = GetMessageServiceFromURI(originalMsgURI, getter_AddRefs(msgMessageService));
+    if (NS_SUCCEEDED(rv))
+    {
+       rv = msgMessageService->MessageURIToMsgHdr(originalMsgURI, getter_AddRefs(originalMsgHdr));
+       if (originalMsgHdr)
+        originalMsgHdr->GetMessageSize(&msgSize);
+    }
+  }
+  
+  return msgSize;
+}
+#endif
 
 nsMsgComposeService::nsMsgComposeService()
 {
+#ifdef NS_DEBUG
+  NS_ASSERTION(!_just_to_be_sure_we_create_only_on_compose_service_, "You cannot create several message compose service!");
+  _just_to_be_sure_we_create_only_on_compose_service_ = PR_TRUE;
+#endif
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  mTraceInitialized = PR_FALSE;
+  mStartTime = PR_IntervalNow();
+  mPreviousTime = mStartTime;
+#endif
 	NS_INIT_REFCNT();
 }
 
@@ -51,6 +96,10 @@ NS_IMPL_ISUPPORTS2(nsMsgComposeService, nsIMsgComposeService, nsICmdLineHandler)
 
 nsMsgComposeService::~nsMsgComposeService()
 {
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  if (mTraceOutputStream)
+    mTraceOutputStream->Close();
+#endif
 }
 
 // Utility function to open a message compose window and pass an nsIMsgComposeParams parameter to it.
@@ -121,7 +170,7 @@ nsresult nsMsgComposeService::OpenComposeWindow(const char *msgComposeWindowURL,
 		}
 		return rv;
 	}
-	
+
   nsCOMPtr<nsIMsgComposeParams> pMsgComposeParams (do_CreateInstance(NS_MSGCOMPOSEPARAMS_CONTRACTID, &rv));
   if (NS_SUCCEEDED(rv) && pMsgComposeParams)
   {
@@ -157,10 +206,14 @@ nsresult nsMsgComposeService::OpenComposeWindow(const char *msgComposeWindowURL,
         
       pMsgComposeParams->SetComposeFields(pMsgCompFields);
 
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+      char buff[256];
+      sprintf(buff, "Start opening the window, message size = %d", GetMessageSizeFromURI(originalMsgURI));
+      TimeStamp(buff, PR_TRUE);
+#endif
       rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
     }
   }
-
 	return rv;
 }
 
@@ -259,6 +312,9 @@ nsresult nsMsgComposeService::OpenComposeWindowWithCompFields(const char *msgCom
       pMsgComposeParams->SetIdentity(identity);
       pMsgComposeParams->SetComposeFields(compFields);    
 
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+      TimeStamp("Start opening the window", PR_TRUE);
+#endif
       rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
   }
 
@@ -287,8 +343,104 @@ nsresult nsMsgComposeService::InitCompose(nsIDOMWindowInternal *aWindow,
 
 nsresult nsMsgComposeService::DisposeCompose(nsIMsgCompose *compose)
 {
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  if (mTraceOutputStream)
+    mTraceOutputStream->Flush();
+#endif
 	return NS_OK;
 }
+
+
+NS_IMETHODIMP nsMsgComposeService::TimeStamp(const char * label, PRBool resetTime)
+{
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+  nsresult rv;
+
+  if (!mTraceInitialized)
+    InitTrace();
+
+  if (!mTraceToConsole && !mTraceToFile)
+    return NS_OK;
+
+  char buff[256];
+  PRUint32 byteCount;
+  PRIntervalTime now;
+
+  if (!label || !*label)
+  {
+    if (mTraceOutputStream)
+      mTraceOutputStream->Flush();
+    return NS_OK;
+  }
+
+  if (resetTime)
+  {      
+    if (mTraceToFile)
+      rv = mTraceOutputStream->Write("\r\n\r\n--------------------\r\n", 26, &byteCount);
+
+    mStartTime = PR_IntervalNow();
+    mPreviousTime = mStartTime;
+    now = mStartTime;
+  }
+  else
+    now = PR_IntervalNow();
+
+  PRIntervalTime totalTime = PR_IntervalToMilliseconds(now - mStartTime);
+  PRIntervalTime deltaTime = PR_IntervalToMilliseconds(now - mPreviousTime);
+
+  if (mTraceToConsole)
+    rv = printf(">>> Time Stamp: [%5d][%5d] - %s\n", totalTime, deltaTime, label);
+
+  if (mTraceToFile)
+  {
+    sprintf(buff, "[%5d][%5d] - %s\r\n", totalTime, deltaTime, label);
+    byteCount = strlen(buff);
+    rv = mTraceOutputStream->Write(buff, byteCount, &byteCount);
+  }
+
+  mPreviousTime = now;
+#endif
+  return NS_OK;
+}
+
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+nsresult nsMsgComposeService::InitTrace()
+{
+  nsresult rv;
+
+  mTraceToConsole = PR_FALSE;
+  mTraceToFile = PR_FALSE;
+
+  nsCOMPtr<nsIPref> prefs (do_GetService(NS_PREF_CONTRACTID));
+  if (prefs)
+  {
+		prefs->GetBoolPref("mail.compose.trace_to_console", &mTraceToConsole);
+		prefs->GetBoolPref("mail.compose.trace_to_file", &mTraceToFile);
+  }
+
+  if (mTraceToFile)
+  {
+    nsCOMPtr<nsIFile> localFile;
+    rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(localFile));
+    rv = localFile->Append("msgcomposetrace.txt");
+    rv = localFile->CreateUnique(nsnull, nsIFile::NORMAL_FILE_TYPE, 0644);
+
+    nsCOMPtr<nsIFileChannel> fileChannel = do_CreateInstance(NS_LOCALFILECHANNEL_CONTRACTID, &rv);
+    if (fileChannel)
+    {
+      rv = fileChannel->Init(localFile, -1, 0);
+      rv = fileChannel->OpenOutputStream(getter_AddRefs(mTraceOutputStream));
+    }
+    if (NS_FAILED(rv) || !mTraceOutputStream)
+      mTraceToFile = PR_FALSE;
+  }
+
+  mTraceInitialized = PR_TRUE;
+
+  return rv;
+}
+#endif
 
 CMDLINEHANDLER_IMPL(nsMsgComposeService, "-compose", "general.startup.messengercompose", DEFAULT_CHROME,
                     "Start with messenger compose.", NS_MSGCOMPOSESTARTUPHANDLER_CONTRACTID, "Messenger Compose Startup Handler",

@@ -617,8 +617,8 @@ function ComposeFieldsReady(msgType)
   		{
   			dump("### window.editorShell.wrapColumn exception text: " + e + " - failed\n");
   		}
-		    
-		CompFields2Recipients(msgCompose.compFields, msgType);
+
+		CompFields2Recipients(msgCompose.compFields, msgCompose.type);
 		SetComposeWindowTitle(13);
 		AdjustFocus();
 		try {
@@ -805,12 +805,10 @@ function ComposeStartup()
 function WizCallback(state)
 {
 	if (state){
-//		dump("true");
 		ComposeStartup();
 	}
 	else 
 	{
-//		dump("false ");
 		if (msgCompose)
 		  msgCompose.CloseWindow();
 		else
@@ -821,12 +819,11 @@ function WizCallback(state)
 
 function ComposeLoad()
 {
-	dump("\nComposeLoad from XUL\n");
-	
+  msgComposeService.TimeStamp("Start Initializing the compose window (ComposeLoad)", false);
   try {
-  	SetupCommandUpdateHandlers();
-	var wizardcallback = true;
-	var state =	verifyAccounts(wizardcallback);	// this will do migration, or create a new account if we need to.
+    SetupCommandUpdateHandlers();
+  	var wizardcallback = true;
+  	var state =	verifyAccounts(wizardcallback);	// this will do migration, or create a new account if we need to.
 
   	if (other_header != "") {
       var selectNode = document.getElementById('msgRecipientType#1');
@@ -857,6 +854,7 @@ function ComposeLoad()
     return;
   }
 	window.tryToClose=ComposeCanClose;
+  msgComposeService.TimeStamp("Done with the initialization (ComposeLoad). Waiting on editor to load about::blank", false);
 }
 
 function ComposeUnload(calledFromExit)

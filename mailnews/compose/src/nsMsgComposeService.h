@@ -17,13 +17,20 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
+ *  Jean-Francois Ducarroz <ducarroz@netscape.com>
  */
+
+#define MSGCOMP_TRACE_PERFORMANCE 1
 
 #include "nsIMsgComposeService.h"
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 #include "nsICmdLineHandler.h"
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+#include "nsIOutputStream.h"
+#endif
 
 class nsMsgComposeService : public nsIMsgComposeService, public nsICmdLineHandler
 {
@@ -36,4 +43,16 @@ public:
 
   NS_DECL_NSICMDLINEHANDLER
   CMDLINEHANDLER_REGISTERPROC_DECLS 
+
+#ifdef MSGCOMP_TRACE_PERFORMANCE
+private:
+  nsresult InitTrace();
+
+  PRBool                    mTraceInitialized;
+  PRBool                    mTraceToFile;
+  PRBool                    mTraceToConsole;
+  PRIntervalTime            mStartTime;
+  PRIntervalTime            mPreviousTime;
+  nsCOMPtr<nsIOutputStream> mTraceOutputStream;
+#endif
 };
