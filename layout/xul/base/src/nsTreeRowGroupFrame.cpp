@@ -191,9 +191,11 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
                                                  &mTopFrame);
     printf("Created a frame\n");
     mBottomFrame = mTopFrame;
-    nsTableFrame* tableFrame = nsnull;
-    nsTableFrame::GetTableFrame(this, tableFrame);
-    tableFrame->DidAppendRowGroup(this);
+    const nsStyleDisplay *rowDisplay;
+    mTopFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct *&)rowDisplay);
+    if (NS_STYLE_DISPLAY_TABLE_ROW==rowDisplay->mDisplay) {
+      ((nsTableRowFrame *)mTopFrame)->InitChildren();
+    }
     return mTopFrame;
   }
   
@@ -222,9 +224,11 @@ nsTreeRowGroupFrame::GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFram
                                                    aResult);
         printf("Created a frame\n");
         mBottomFrame = mFrames.FrameAt(i+1);
-        nsTableFrame* tableFrame = nsnull;
-        nsTableFrame::GetTableFrame(this, tableFrame);
-        tableFrame->DidAppendRowGroup(this);
+        const nsStyleDisplay *rowDisplay;
+        mBottomFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct *&)rowDisplay);
+        if (NS_STYLE_DISPLAY_TABLE_ROW==rowDisplay->mDisplay) {
+          ((nsTableRowFrame *)mBottomFrame)->InitChildren();
+        }
       }
     }
     return;
