@@ -1898,7 +1898,7 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommandResponse()
 				m_tempErrorStream->Write(outputBuffer, PL_strlen(outputBuffer), &count);
 			}
             
-            PR_snprintf(outputBuffer,OUTPUT_BUFFER_SIZE,"<P> <A HREF=\"%s/%s/%s?list-ids\">%s</A> </P>\n", kNewsRootURI, m_hostName, group_name, UNTIL_STRING_BUNDLES_XP_LIST_IDS_URL_TEXT);
+            PR_snprintf(outputBuffer,OUTPUT_BUFFER_SIZE,"<P> <A HREF=\"%s/%s/%s?list-ids\">%s</A> </P>\n", kNewsRootURI, (const char *)m_hostName, group_name, UNTIL_STRING_BUNDLES_XP_LIST_IDS_URL_TEXT);
             m_tempErrorStream->Write(outputBuffer, PL_strlen(outputBuffer), &count);
         }
   
