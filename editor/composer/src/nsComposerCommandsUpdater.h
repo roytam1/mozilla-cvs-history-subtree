@@ -50,8 +50,6 @@ public:
                                   nsComposerCommandsUpdater();
   virtual                         ~nsComposerCommandsUpdater();
 
-  NS_IMETHOD                      Init(nsIEditor* aEditor);
-
   // nsISupports
   NS_DECL_ISUPPORTS
   
@@ -82,6 +80,8 @@ public:
                       nsITransaction *aTransactionToMerge,
                       PRBool aDidMerge, nsresult aMergeResult);
 
+
+  nsresult      SetEditor(nsIEditor* aEditor);
 
 protected:
 

@@ -59,17 +59,6 @@ NS_IMPL_ISUPPORTS4(nsComposerCommandsUpdater, nsISelectionListener, nsIDocumentS
 #endif
 
 NS_IMETHODIMP
-nsComposerCommandsUpdater::Init(nsIEditor* aEditor)
-{
-  if (!aEditor)
-    return NS_ERROR_INVALID_ARG;
-
-  mEditor = aEditor;		// no addreffing here
-  
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsComposerCommandsUpdater::NotifyDocumentCreated()
 {
   return NS_OK;
@@ -200,6 +189,13 @@ NS_IMETHODIMP nsComposerCommandsUpdater::DidMerge(nsITransactionManager *aManage
 #endif
 
 nsresult
+nsComposerCommandsUpdater::SetEditor(nsIEditor* aEditor)
+{
+  mEditor = aEditor;		// no addreffing here
+  return NS_OK;
+}
+
+nsresult
 nsComposerCommandsUpdater::PrimeUpdateTimer()
 {
   nsresult rv = NS_OK;
@@ -326,7 +322,7 @@ nsresult NS_NewComposerCommandsUpdater(nsIEditor* aEditor, nsISelectionListener*
     return NS_ERROR_OUT_OF_MEMORY;
 
   *aInstancePtrResult = nsnull;
-  nsresult rv = newThang->Init(aEditor);
+  nsresult rv = newThang->SetEditor(aEditor);
   if (NS_FAILED(rv))
   {
     delete newThang;

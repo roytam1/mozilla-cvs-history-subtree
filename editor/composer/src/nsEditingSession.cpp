@@ -302,7 +302,7 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
 
   // now init the state maintainer
   // XXX this needs to swap out editors
-  rv = mStateMaintainer->Init(editor);
+  rv = mStateMaintainer->SetEditor(editor);
   if (NS_FAILED(rv)) return rv;
 
 	nsCOMPtr<nsISelection>	selection;
@@ -339,6 +339,9 @@ NS_IMETHODIMP
 nsEditingSession::TearDownEditorOnWindow(nsIDOMWindow *aWindow)
 {
   nsresult rv;
+
+  rv = mStateMaintainer->SetEditor(nsnull);
+  if (NS_FAILED(rv)) return rv;  
   
   // null out the editor on the controller
   rv = SetEditorOnControllers(aWindow, nsnull);
