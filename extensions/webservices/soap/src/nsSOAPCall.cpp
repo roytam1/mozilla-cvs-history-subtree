@@ -65,7 +65,7 @@ nsSOAPCall::GetTransport(nsISOAPTransport** aTransport)
   nsresult rv;
   nsCOMPtr<nsIURI> uri;
   nsXPIDLCString protocol;
-  nsCString transportURI(mTransportURI.ToNewCString());
+  nsCString transportURI(ToNewCString(mTransportURI));
 
   rv = NS_NewURI(getter_AddRefs(uri), transportURI.get());
   if (NS_FAILED(rv)) return rv;

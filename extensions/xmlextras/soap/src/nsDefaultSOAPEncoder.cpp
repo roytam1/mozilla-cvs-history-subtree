@@ -162,7 +162,7 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   PRUnichar* pointer;
   rc = object->GetData(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   if (aSchemaType) {
@@ -241,7 +241,8 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   char* pointer;
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string;
+  string.AssignWithConversion(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -280,7 +281,8 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   char* pointer;
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string;
+  string.AssignWithConversion(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -319,7 +321,8 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   char* pointer;
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string;
+  string.AssignWithConversion(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -358,7 +361,8 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   char* pointer;
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string;
+  string.AssignWithConversion(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -397,7 +401,8 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   char* pointer;
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string;
+  string.AssignWithConversion(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
@@ -436,7 +441,8 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   char* pointer;
   rc = object->ToString(&pointer);
   if (NS_FAILED(rc)) return rc;
-  nsSubsumeStr string(pointer, PR_TRUE);// Get the textual representation into string
+  nsAutoString string;
+  string.AssignWithConversion(pointer);
   nsAutoString schemaType;
   nsAutoString schemaNamespaceURI;
   rc = aSource->GetSchemaNamespaceURI(schemaNamespaceURI);
