@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *     Henry Jia <Henry.Jia@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -135,6 +136,10 @@ class nsPrefMigration: public nsIPrefMigration
       nsresult DoTheCopy(nsIFileSpec *oldPath, 
                          nsIFileSpec *newPath,
                          PRBool readSubdirs); 
+      nsresult DoTheCopy(nsIFileSpec *oldPath,
+                         nsIFileSpec *newPath,
+                         const char *fileOrDirName,
+                         PRBool isDirectory = PR_FALSE);
 
       nsresult DoTheCopyAndRename(nsIFileSpec *oldPath, 
                               nsIFileSpec *newPath,
