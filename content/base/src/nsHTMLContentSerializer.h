@@ -42,6 +42,7 @@
 #include "nsXMLContentSerializer.h"
 #include "nsIParserService.h"
 #include "nsIEntityConverter.h"
+#include "nsILineBreaker.h"
 
 class nsIContent;
 class nsIAtom;
@@ -122,6 +123,7 @@ class nsHTMLContentSerializer : public nsXMLContentSerializer {
   // continued on the same line while serializing source.  Otherwise,
   // the newline character acts as the whitespace and no space is needed.
   PRPackedBool  mAddSpace;
+  PRPackedBool  mMayEatLineBreakSequence;
 
   // To keep track of First LI child of OL in selected range 
   PRPackedBool  mIsFirstChildOfOL;
@@ -142,6 +144,7 @@ class nsHTMLContentSerializer : public nsXMLContentSerializer {
   PRInt32   mMaxColumn;
 
   nsString  mLineBreak;
+  nsCOMPtr<nsILineBreaker> mLineBreaker;
 
   nsCOMPtr<nsIAtom> mCharSet;
 
