@@ -174,10 +174,11 @@ void SetterMethodReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addByte(Explicit);
 }
 
-void SetterMethodReference::emitPreAssignment(ByteCodeGen *bcg) 
+bool SetterMethodReference::emitPreAssignment(ByteCodeGen *bcg) 
 {
     bcg->addByte(GetMethodOp);
     bcg->addLong(mIndex);
+    return true;
 }
 
 void SetterMethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
@@ -1190,8 +1191,8 @@ BinaryOpEquals:
                 else
                     addByte(DupOp);
             }
-            writeRef->emitPreAssignment(this);
-            addByte(SwapOp);
+            if (writeRef->emitPreAssignment(this))
+                addByte(SwapOp);
             readRef->emitCodeSequence(this);
             genExpr(b->op2);
             addByte(DoOperatorOp);
@@ -1219,8 +1220,8 @@ BinaryOpEquals:
             }
 
             uint32 labelAfterSecondExpr = getLabel();
-            writeRef->emitPreAssignment(this);
-            addByte(SwapOp);
+            if (writeRef->emitPreAssignment(this))
+                addByte(SwapOp);
             readRef->emitCodeSequence(this);
             addByte(DupOp);
             addByte(ToBooleanOp);
@@ -1251,8 +1252,8 @@ BinaryOpEquals:
             }
 
             uint32 labelAfterSecondExpr = getLabel();
-            writeRef->emitPreAssignment(this);
-            addByte(SwapOp);
+            if (writeRef->emitPreAssignment(this))
+                addByte(SwapOp);
             readRef->emitCodeSequence(this);
             addByte(DupOp);
             addByte(ToBooleanOp);
@@ -1282,7 +1283,8 @@ BinaryOpEquals:
                     addByte(DupOp);
             }
 
-            writeRef->emitPreAssignment(this);
+            if (writeRef->emitPreAssignment(this))
+                addByte(SwapOp);
             readRef->emitCodeSequence(this);
             genExpr(b->op2);
             addByte(LogicalXorOp);

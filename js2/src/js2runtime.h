@@ -270,7 +270,7 @@ static const double two31 = 2147483648.0;
 
         virtual void emitInvokeSequence(ByteCodeGen *bcg)   { emitCodeSequence(bcg); }
 
-        virtual void emitPreAssignment(ByteCodeGen *bcg)    { }
+        virtual bool emitPreAssignment(ByteCodeGen *bcg)    { return false; }
 
         virtual void emitCodeSequence(ByteCodeGen *bcg) 
                 { throw Exception(Exception::internalError, "gen code for base ref"); }
@@ -379,7 +379,7 @@ static const double two31 = 2147483648.0;
         bool needsThis() { return true; }
         void emitImplicitLoad(ByteCodeGen *bcg);
         uint32 baseExpressionDepth() { return 1; }
-        void emitPreAssignment(ByteCodeGen *bcg);
+        bool emitPreAssignment(ByteCodeGen *bcg);
     };
 
     // a function
