@@ -89,6 +89,9 @@ struct NumArgState{
     va_list ap;			/* point to the corresponding position on ap */
 };
 
+static PRBool  l10n_debug_init = PR_FALSE;
+static PRBool  l10n_debug = PR_FALSE;
+
 #define NAS_DEFAULT_NUM 20  /* default number of NumberedArgumentState array */
 
 
@@ -105,11 +108,11 @@ struct NumArgState{
 #define TYPE_INTSTR	10
 #define TYPE_UNKNOWN	20
 
-#define FLAG_LEFT	0x1
-#define FLAG_SIGNED	0x2
-#define FLAG_SPACED	0x4
-#define FLAG_ZEROS	0x8
-#define FLAG_NEG	0x10
+#define _LEFT		0x1
+#define _SIGNED		0x2
+#define _SPACED		0x4
+#define _ZEROS		0x8
+#define _NEG		0x10
 
 /*
 ** Fill into the buffer using the data in src
@@ -121,8 +124,8 @@ static int fill2(SprintfState *ss, const char *src, int srclen, int width,
     int rv;
 
     width -= srclen;
-    if ((width > 0) && ((flags & FLAG_LEFT) == 0)) {	/* Right adjusting */
-	if (flags & FLAG_ZEROS) {
+    if ((width > 0) && ((flags & _LEFT) == 0)) {	/* Right adjusting */
+	if (flags & _ZEROS) {
 	    space = '0';
 	}
 	while (--width >= 0) {
@@ -139,7 +142,7 @@ static int fill2(SprintfState *ss, const char *src, int srclen, int width,
 	return rv;
     }
 
-    if ((width > 0) && ((flags & FLAG_LEFT) != 0)) {	/* Left adjusting */
+    if ((width > 0) && ((flags & _LEFT) != 0)) {	/* Left adjusting */
 	while (--width >= 0) {
 	    rv = (*ss->stuff)(ss, &space, 1);
 	    if (rv < 0) {
@@ -166,13 +169,13 @@ static int fill_n(SprintfState *ss, const char *src, int srclen, int width,
     char sign;
 
     if ((type & 1) == 0) {
-	if (flags & FLAG_NEG) {
+	if (flags & _NEG) {
 	    sign = '-';
 	    signwidth = 1;
-	} else if (flags & FLAG_SIGNED) {
+	} else if (flags & _SIGNED) {
 	    sign = '+';
 	    signwidth = 1;
-	} else if (flags & FLAG_SPACED) {
+	} else if (flags & _SPACED) {
 	    sign = ' ';
 	    signwidth = 1;
 	}
@@ -186,14 +189,14 @@ static int fill_n(SprintfState *ss, const char *src, int srclen, int width,
 	}
     }
 
-    if ((flags & FLAG_ZEROS) && (prec < 0)) {
+    if ((flags & _ZEROS) && (prec < 0)) {
 	if (width > cvtwidth) {
 	    zerowidth = width - cvtwidth;	/* Zero filling */
 	    cvtwidth += zerowidth;
 	}
     }
 
-    if (flags & FLAG_LEFT) {
+    if (flags & _LEFT) {
 	if (width > cvtwidth) {
 	    /* Space filling on the right (i.e. left adjusting) */
 	    rightspaces = width - cvtwidth;
@@ -409,6 +412,20 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
     
 
     /*
+    ** set the l10n_debug flag
+    ** this routine should be executed only once
+    ** 'cause getenv does take time
+    */
+    if( !l10n_debug_init ){
+	l10n_debug_init = PR_TRUE;
+	p = getenv( "NETSCAPE_LOCALIZATION_DEBUG" );
+	if( ( p != NULL ) && ( *p == '1' ) ){
+	    l10n_debug = PR_TRUE;
+	}
+    }
+
+
+    /*
     **	first pass:
     **	detemine how many legal % I have got, then allocate space
     */
@@ -427,17 +444,23 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
 		if( c == '$' ){		/* numbered argument csae */
 		    if( i > 0 ){
 			*rv = -1;
+			if( l10n_debug )
+			    printf( "either no *OR* all arguments are numbered \"%s\"\n", fmt );
 			return NULL;
 		    }
 		    number++;
+		    break;
+
 		} else{			/* non-numbered argument case */
 		    if( number > 0 ){
+			if( l10n_debug )
+			    printf( "either no *OR* all arguments are numbered \"%s\"\n", fmt );
 			*rv = -1;
 			return NULL;
 		    }
 		    i = 1;
+		    break;
 		}
-		break;
 	    }
 
 	    c = *p++;
@@ -453,6 +476,8 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
 	nas = (struct NumArgState*)PR_MALLOC( number * sizeof( struct NumArgState ) );
 	if( !nas ){
 	    *rv = -1;
+	    if( l10n_debug )
+		printf( "PR_MALLOC() error for \"%s\"\n", fmt );
 	    return NULL;
 	}
     } else {
@@ -483,6 +508,8 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
 
 	if( !c || cn < 1 || cn > number ){
 	    *rv = -1;
+	    if( l10n_debug )
+		printf( "invalid argument number (valid range [1, %d]), \"%s\"\n", number, fmt );
 	    break;
         }
 
@@ -497,11 +524,13 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
         if (c == '*') {
 	    /* not supported feature, for the argument is not numbered */
 	    *rv = -1;
+	    if( l10n_debug )
+		printf( "* width specifier not support for numbered arguments \"%s\"\n", fmt );
 	    break;
-	}
-
-	while ((c >= '0') && (c <= '9')) {
-	    c = *p++;
+	} else {
+	    while ((c >= '0') && (c <= '9')) {
+	        c = *p++;
+	    }
 	}
 
 	/* precision */
@@ -509,12 +538,14 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
 	    c = *p++;
 	    if (c == '*') {
 	        /* not supported feature, for the argument is not numbered */
+		if( l10n_debug )
+		    printf( "* precision specifier not support for numbered arguments \"%s\"\n", fmt );
 	        *rv = -1;
 	        break;
-	    }
-
-	    while ((c >= '0') && (c <= '9')) {
-		c = *p++;
+	    } else {
+	        while ((c >= '0') && (c <= '9')) {
+		    c = *p++;
+		}
 	    }
 	}
 
@@ -591,6 +622,8 @@ static struct NumArgState* BuildArgArray( const char *fmt, va_list ap, int* rv, 
 
 	/* get a legal para. */
 	if( nas[ cn ].type == TYPE_UNKNOWN ){
+	    if( l10n_debug )
+		printf( "unknown type \"%s\"\n", fmt );
 	    *rv = -1;
 	    break;
 	}
@@ -724,6 +757,8 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 	    }
 
 	    if( nas[i-1].type == TYPE_UNKNOWN ){
+		if( l10n_debug )
+		    printf( "numbered argument type unknown\n" );
 		if( nas && ( nas != nasArray ) )
 		    PR_DELETE( nas );
 		return -1;
@@ -742,14 +777,14 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 	 * on this feature.
 	 */
 	while ((c == '-') || (c == '+') || (c == ' ') || (c == '0')) {
-	    if (c == '-') flags |= FLAG_LEFT;
-	    if (c == '+') flags |= FLAG_SIGNED;
-	    if (c == ' ') flags |= FLAG_SPACED;
-	    if (c == '0') flags |= FLAG_ZEROS;
+	    if (c == '-') flags |= _LEFT;
+	    if (c == '+') flags |= _SIGNED;
+	    if (c == ' ') flags |= _SPACED;
+	    if (c == '0') flags |= _ZEROS;
 	    c = *fmt++;
 	}
-	if (flags & FLAG_SIGNED) flags &= ~FLAG_SPACED;
-	if (flags & FLAG_LEFT) flags &= ~FLAG_ZEROS;
+	if (flags & _SIGNED) flags &= ~_SPACED;
+	if (flags & _LEFT) flags &= ~_ZEROS;
 
 	/* width */
 	if (c == '*') {
@@ -831,7 +866,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 		u.l = va_arg(ap, int);
 		if (u.l < 0) {
 		    u.l = -u.l;
-		    flags |= FLAG_NEG;
+		    flags |= _NEG;
 		}
 		goto do_long;
 	      case TYPE_UINT16:
@@ -841,7 +876,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 		u.l = va_arg(ap, int);
 		if (u.l < 0) {
 		    u.l = -u.l;
-		    flags |= FLAG_NEG;
+		    flags |= _NEG;
 		}
 		goto do_long;
 	      case TYPE_UINTN:
@@ -852,7 +887,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 		u.l = va_arg(ap, PRInt32);
 		if (u.l < 0) {
 		    u.l = -u.l;
-		    flags |= FLAG_NEG;
+		    flags |= _NEG;
 		}
 		goto do_long;
 	      case TYPE_UINT32:
@@ -868,7 +903,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 		u.ll = va_arg(ap, PRInt64);
 		if (!LL_GE_ZERO(u.ll)) {
 		    LL_NEG(u.ll, u.ll);
-		    flags |= FLAG_NEG;
+		    flags |= _NEG;
 		}
 		goto do_longlong;
 	      case TYPE_UINT64:
@@ -904,7 +939,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 
 	  case 'c':
 	    u.ch = va_arg(ap, int);
-            if ((flags & FLAG_LEFT) == 0) {
+            if ((flags & _LEFT) == 0) {
                 while (width-- > 1) {
                     rv = (*ss->stuff)(ss, " ", 1);
                     if (rv < 0) {
@@ -916,7 +951,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 	    if (rv < 0) {
 		return rv;
 	    }
-            if (flags & FLAG_LEFT) {
+            if (flags & _LEFT) {
                 while (width-- > 1) {
                     rv = (*ss->stuff)(ss, " ", 1);
                     if (rv < 0) {

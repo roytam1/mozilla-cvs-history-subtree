@@ -1,4 +1,4 @@
-# 
+#
 # The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -30,35 +30,9 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-MANIFEST_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
 
-CORE_DEPTH = ../../..
+#######################################################################
+# Master "Core Components" <platform> tag                             #
+#######################################################################
 
-# In 4.0, move nss*.h back to EXPORTS
-PRIVATE_EXPORTS = \
-	oiddata.h \
-	pki1.h	  \
-	pki1t.h	  \
-	nsspki1.h  \
-	nsspki1t.h \
-	$(NULL)
-
-EXPORTS =	   \
-	$(NULL)
-
-MODULE = nss
-
-CSRCS =		  \
-	atav.c	  \
-	genname.c \
-	gnseq.c	  \
-	name.c	  \
-	oid.c	  \
-	oiddata.c \
-	rdn.c	  \
-	rdnseq.c  \
-	$(NULL)
-
-REQUIRES = nspr
-
-LIBRARY_NAME = pki1
+PLATFORM = $(OBJDIR_NAME)

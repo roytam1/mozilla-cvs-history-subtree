@@ -46,7 +46,7 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 
 #ifdef LDAP_DEBUG
-int	ldap_debug = 0;
+int	ldap_debug;
 #endif
 
 #ifdef _WINDOWS

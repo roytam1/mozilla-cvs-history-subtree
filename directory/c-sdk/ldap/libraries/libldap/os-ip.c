@@ -50,7 +50,7 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 
 #include "ldap-int.h"
-#ifdef NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
+#ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #include <signal.h>
 #endif
 
@@ -335,8 +335,8 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 			tval.tv_usec = 1000 * ( msec % 1000 );
 		} else {
 			tval.tv_sec = 0;
-			tval.tv_usec = 0;
 		}
+		tval.tv_usec = 0;
 #endif /* NSLDAPI_HAVE_POLL */
 	}
 
@@ -346,7 +346,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 		errno = ETIMEDOUT;
 		return (-1);
 	}
-	if (pfd.revents & (POLLOUT|POLLERR|POLLHUP|POLLNVAL)) {
+	if (pfd.revents & POLLOUT) {
 		len = sizeof(error);
 		if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (char *)&error, &len)
 			< 0)
@@ -567,14 +567,8 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 
 		if (( address = inet_addr( host )) == -1 ) {
 			if ( ld->ld_dns_gethostbyname_fn == NULL ) {
-#ifdef GETHOSTBYNAME_R_RETURNS_INT
-				(void)GETHOSTBYNAME( host, &hent, hbuf,
-				    sizeof(hbuf), &hp, &err );
-#else
-				hp = GETHOSTBYNAME( host, &hent, hbuf,
-				    sizeof(hbuf), &err );
-#endif
-				if ( hp != NULL ) {
+				if (( hp = GETHOSTBYNAME( host, &hent, hbuf,
+				    sizeof(hbuf), &err )) != NULL ) {
 					addrlist = hp->h_addr_list;
 				}
 			} else {
@@ -654,12 +648,12 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 			    (char *) &address ), sizeof( sin.sin_addr.s_addr) );
 
 			{
-#ifdef NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
+#ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 /*
- * Block all of the signals that might interrupt connect() since
- * there is an OS bug that causes connect() to fail if it is restarted.
- * Look in ../../include/portable.h for the definition of
- * NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED.
+ * Block all of the signals that might interrupt connect() since there
+ * is an OS bug that causes connect() to fail if it is restarted.  Look in
+ * ns/netsite/ldap/include/portable.h for the definition of
+ * LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
  */
 				sigset_t	ints_off, oldset;
 
@@ -668,8 +662,8 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 				sigaddset( &ints_off, SIGIO );
 				sigaddset( &ints_off, SIGCLD );
 
-				NSLDAPI_MT_SAFE_SIGPROCMASK( SIG_BLOCK, &ints_off, &oldset );
-#endif /* NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED */
+				sigprocmask( SIG_BLOCK, &ints_off, &oldset );
+#endif /* LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED */
 
 				if ( NULL != connectwithtofn  ) {	
 					err = (*connectwithtofn)(s,
@@ -681,12 +675,12 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 						(struct sockaddr *)&sin,
 						sizeof(struct sockaddr_in));
 				}
-#ifdef NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
+#ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 /*
  * restore original signal mask
  */
-				NSLDAPI_MT_SAFE_SIGPROCMASK( SIG_SETMASK, &oldset, 0 );
-#endif /* NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED */
+				sigprocmask( SIG_SETMASK, &oldset, 0 );
+#endif /* LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED */
 
 			}
 			if ( err >= 0 ) {

@@ -1296,9 +1296,7 @@ ConvertUnixPathToMacPath(const char *unixPath, char **macPath)
 		
 		FSSpec		foundSpec;
 		short		pathBufferSize;
-#if DEBUG	
 		char		*temp;
-#endif
 		int		tempLen;
 
 		// Are we dealing with the temp folder?
