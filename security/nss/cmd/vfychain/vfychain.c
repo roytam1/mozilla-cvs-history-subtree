@@ -239,7 +239,6 @@ main(int argc, char *argv[], char *envp[])
     SECCertificateUsage  certUsage    = certificateUsageSSLServer;
     PLOptState *         optstate;
     PLOptStatus          status;
-    int                  rv = 1;
 
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
@@ -277,7 +276,7 @@ breakout:
     if (secStatus != SECSuccess) {
 	exitErr("NSS_Init");
     }
-    SECU_RegisterDynamicOids();
+
 
     while (status == PL_OPT_OK) {
 	switch(optstate->option) {
@@ -313,18 +312,15 @@ breakout:
 	fprintf(stderr, "Chain is bad, %d = %s\n", err, SECU_Strerror(err));
 	SECU_printCertProblems(stderr, defaultDB, firstCert, 
 			  PR_TRUE, certUsage, NULL, verbose);
-    	rv = 1;
     } else {
     	fprintf(stderr, "Chain is good!\n");
-	rv = 0;
     }
 
 punt:
     forgetCerts();
     if (NSS_Shutdown() != SECSuccess) {
-	SECU_PrintError(progName, "NSS_Shutdown");
-	rv = 1;
+	exit(1);
     }
     PR_Cleanup();
-    return rv;
+    return 0;
 }

@@ -3066,7 +3066,7 @@ CERT_GetOCSPAuthorityInfoAccessLocation(CERTCertificate *cert)
     if (arena == NULL)
 	goto loser;
 
-    authInfoAccess = CERT_DecodeAuthInfoAccessExtension(arena,
+    authInfoAccess = cert_DecodeAuthInfoAccessExtension(arena,
 							encodedAuthInfoAccess);
     if (authInfoAccess == NULL)
 	goto loser;

@@ -33,9 +33,9 @@
 
 CORE_DEPTH = ../../..
 
-MODULE = nss
-
-REQUIRES = dbm 
+# This next line is used by .mk files
+# and gets translated into $LINCS in manifest.mnw
+REQUIRES = nss seccmd dbm 
 
 # DIRS = 
 

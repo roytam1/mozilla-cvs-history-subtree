@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /*
  * Utilities for manageing the relationship between NSPR errors and
@@ -47,7 +32,7 @@
 void
 prldap_set_system_errno( int oserrno )
 {
-    PR_SetError( PR_GetError(), oserrno );
+    PR_SetError( PR_UNKNOWN_ERROR, oserrno );
 }
 
 
@@ -164,22 +149,57 @@ struct prldap_errormap_entry {
 #endif /* macintosh */
 
 #ifdef XP_OS2
+#ifdef XP_OS2_EMX
+#define SOCBASEERR      0
+#endif
+#ifndef ENOTSUP
 #define ENOTSUP         -1
+#endif
+#ifndef EOVERFLOW
 #define EOVERFLOW       -1
+#endif
+#ifndef EDEADLOCK
 #define EDEADLOCK       -1
+#endif
+#ifndef EFAULT
 #define EFAULT          SOCEFAULT
+#endif
+#ifndef EPIPE
 #define EPIPE           SOCEPIPE
+#endif
+#ifndef EIO
 #define EIO             (SOCBASEERR+5)
+#endif
+#ifndef EDEADLK
 #define EDEADLK         (SOCBASEERR+11)
+#endif
+#ifndef ENOTBLK
 #define ENOTBLK         (SOCBASEERR+15)
+#endif
+#ifndef EBUSY
 #define EBUSY           (SOCBASEERR+16)
+#endif
+#ifndef ENOTDIR
 #define ENOTDIR         (SOCBASEERR+20)
+#endif
+#ifndef EISDIR
 #define EISDIR          (SOCBASEERR+21)
+#endif
+#ifndef ENFILE
 #define ENFILE          (SOCBASEERR+23)
+#endif
+#ifndef ETXTBSY
 #define ETXTBSY         (SOCBASEERR+26)
+#endif
+#ifndef EFBIG
 #define EFBIG           (SOCBASEERR+27)
+#endif
+#ifndef ESPIPE
 #define ESPIPE          (SOCBASEERR+29)
+#endif
+#ifndef EROFS
 #define EROFS           (SOCBASEERR+30)
+#endif
 #endif
 
 #ifdef BEOS

@@ -924,7 +924,7 @@ CERT_GetCertificateEmailAddress(CERTCertificate *cert)
 		if (rawEmailAddr) {
 		    break;
 		}
-		current = CERT_GetNextGeneralName(current);
+		current = cert_get_next_general_name(current);
 	    } while (current != nameList);
 	}
     }
@@ -1038,7 +1038,7 @@ cert_GetCertificateEmailAddresses(CERTCertificate *cert)
 		} else if (current->type == certRFC822Name) {
 		    pBuf = appendItemToBuf(pBuf, &current->name.other, &maxLen);
 		}
-		current = CERT_GetNextGeneralName(current);
+		current = cert_get_next_general_name(current);
 	    } while (current != nameList);
 	}
 	SECITEM_FreeItem(&subAltName, PR_FALSE);

@@ -54,9 +54,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#if defined(WIN32)
+#include "io.h"
+#endif
+
 #include "secutil.h"
 
+#if defined(XP_UNIX)
+#include <unistd.h>
+#endif
+
 #include "nspr.h"
+#include "prtypes.h"
+#include "prtime.h"
+#include "prlong.h"
 
 #include "pk11func.h"
 #include "secasn1.h"
@@ -65,6 +76,9 @@
 #include "secoid.h"
 #include "certdb.h"
 #include "nss.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 typedef struct _KeyTypes {
     CK_KEY_TYPE	keyType;
@@ -105,31 +119,35 @@ static KeyTypes keyArray[] = {
 static int keyArraySize = sizeof(keyArray)/sizeof(keyArray[0]);
 
 int
-GetLen(PRFileDesc* fd)
+GetLen(int fd)
 {
-    PRFileInfo info;
+    struct stat buf;
+    int ret;
 
-    if (PR_SUCCESS != PR_GetOpenFileInfo(fd, &info)) {
-        return -1;
-    }
+    ret = fstat(fd,&buf);
+    if (ret < 0) return ret;
 
-    return info.size;
+    return buf.st_size;
 }
+
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
 
 int
 ReadBuf(char *inFile, SECItem *item)
 {
     int len;
     int ret;
-    PRFileDesc* fd = PR_Open(inFile, PR_RDONLY, 0);
-    if (NULL == fd) {
-        SECU_PrintError("symkeyutil", "PR_Open failed");
+    int fd = open(inFile, O_RDONLY|O_BINARY);
+    if (fd < 0) {
+	perror(inFile);
 	return -1;
     }
 
     len = GetLen(fd);
     if (len < 0) {
-	SECU_PrintError("symkeyutil", "PR_GetOpenFileInfo failed");
+	perror(inFile);
 	return -1;
     }
     item->data = (unsigned char *)PORT_Alloc(len);
@@ -138,14 +156,14 @@ ReadBuf(char *inFile, SECItem *item)
 	return -1;
     }
 
-    ret = PR_Read(fd,item->data,item->len);
+    ret = read(fd,item->data,item->len);
     if (ret < 0) {
-	SECU_PrintError("symkeyutil", "PR_Read failed");
 	PORT_Free(item->data);
 	item->data = NULL;
+	perror(inFile);
 	return -1;
     }
-    PR_Close(fd);
+    close(fd);
     item->len = len;
     return 0;
 }
@@ -154,18 +172,18 @@ int
 WriteBuf(char *inFile, SECItem *item)
 {
     int ret;
-    PRFileDesc* fd = PR_Open(inFile, PR_WRONLY|PR_CREATE_FILE, 0x200);
-    if (NULL == fd) {
-        SECU_PrintError("symkeyutil", "PR_Open failed");
+    int fd = open(inFile, O_WRONLY|O_CREAT|O_BINARY);
+    if (fd < 0) {
+	perror(inFile);
 	return -1;
     }
 
-    ret = PR_Write(fd,item->data,item->len);
+    ret = write(fd,item->data,item->len);
     if (ret < 0) {
-	SECU_PrintError("symkeyutil", "PR_Write failed");
+	perror(inFile);
 	return -1;
     }
-    PR_Close(fd);
+    close(fd);
     return 0;
 }
 
@@ -994,7 +1012,7 @@ main(int argc, char **argv)
 	    goto shutdown;
 	}
 
-	/* WriteBuf outputs it's own error using SECU_PrintError */
+	/* WriteBuf outputs it's own error using Perror */
 	ret = WriteBuf(symKeyUtil.options[opt_KeyFile].arg, &data);
 	if (ret < 0) {
 	    goto shutdown;

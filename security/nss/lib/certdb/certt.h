@@ -88,7 +88,6 @@ typedef struct CERTNameStr                       CERTName;
 typedef struct CERTNameConstraintStr             CERTNameConstraint;
 typedef struct CERTNameConstraintsStr            CERTNameConstraints;
 typedef struct CERTOKDomainNameStr               CERTOKDomainName;
-typedef struct CERTPrivKeyUsagePeriodStr         CERTPrivKeyUsagePeriod;
 typedef struct CERTPublicKeyAndChallengeStr      CERTPublicKeyAndChallenge;
 typedef struct CERTRDNStr                        CERTRDN;
 typedef struct CERTSignedCrlStr                  CERTSignedCrl;
@@ -253,8 +252,7 @@ struct CERTCertificateStr {
     unsigned int keyUsage;	/* what uses are allowed for this cert */
     unsigned int rawKeyUsage;	/* value of the key usage extension */
     PRBool keyUsagePresent;	/* was the key usage extension present */
-    PRUint32 nsCertType;	/* value of the ns cert type extension */
-				/* must be 32-bit for PR_AtomicSet */
+    unsigned int nsCertType;	/* value of the ns cert type extension */
 
     /* these values can be set by the application to bypass certain checks
      * or to keep the cert in memory for an entire session.
@@ -658,13 +656,6 @@ struct CERTNameConstraintsStr {
     SECItem             **DERExcluded;
 };
 
-
-/* Private Key Usage Period extension struct. */
-struct CERTPrivKeyUsagePeriodStr {
-    SECItem notBefore;
-    SECItem notAfter;
-    PRArenaPool *arena;
-};
 
 /* X.509 v3 Authority Key Identifier extension.  For the authority certificate
    issuer field, we only support URI now.

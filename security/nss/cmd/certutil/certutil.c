@@ -1659,7 +1659,7 @@ AddNscpCertType (void *extHandle)
 	fprintf(stdout, "%-25s 1 - SSL Server\n", "");
 	fprintf(stdout, "%-25s 2 - S/MIME\n", "");
 	fprintf(stdout, "%-25s 3 - Object Signing\n", "");   
-	fprintf(stdout, "%-25s 4 - Reserved for future use\n", "");
+	fprintf(stdout, "%-25s 4 - Reserved for futuer use\n", "");
 	fprintf(stdout, "%-25s 5 - SSL CA\n", "");   
 	fprintf(stdout, "%-25s 6 - S/MIME CA\n", "");
 	fprintf(stdout, "%-25s 7 - Object Signing CA\n", "");
@@ -2748,7 +2748,6 @@ secuCommandFlag certutil_options[] =
 	    rv = SECFailure;
 	    goto shutdown;
         }
-    	SECU_RegisterDynamicOids();
     }
     certHandle = CERT_GetDefaultCertDB();
 
@@ -2953,7 +2952,6 @@ secuCommandFlag certutil_options[] =
 	}
     }
 
-    /* -A -E or -S    Add the cert to the DB */
     if (certutil.commands[cmd_CreateAndAddCert].activated ||
          certutil.commands[cmd_AddCert].activated ||
 	 certutil.commands[cmd_AddEmailCert].activated) {

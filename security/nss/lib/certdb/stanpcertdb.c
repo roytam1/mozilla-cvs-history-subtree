@@ -412,28 +412,18 @@ CERT_FindCertByName(CERTCertDBHandle *handle, SECItem *name)
 CERTCertificate *
 CERT_FindCertByKeyID(CERTCertDBHandle *handle, SECItem *name, SECItem *keyID)
 {
-    CERTCertList *list;
+   CERTCertList *list =
+                        CERT_CreateSubjectCertList(NULL,handle,name,0,PR_FALSE);
     CERTCertificate *cert = NULL;
-    CERTCertListNode *node, *head;
+    CERTCertListNode *node = CERT_LIST_HEAD(list);
 
-    list = CERT_CreateSubjectCertList(NULL,handle,name,0,PR_FALSE);
     if (list == NULL) return NULL;
 
-    node = head = CERT_LIST_HEAD(list);
-    if (head) {
-	do {
-	    if (node->cert && 
-		SECITEM_ItemsAreEqual(&node->cert->subjectKeyID, keyID) ) {
-		cert = CERT_DupCertificate(node->cert);
-		goto done;
-	    }
-	    node = CERT_LIST_NEXT(node);
-	} while (node && head != node);
-    }
-    PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);
-done:
-    if (list) {
-        CERT_DestroyCertList(list);
+    for (node = CERT_LIST_HEAD(list); node ; node = CERT_LIST_NEXT(node)) {
+        if (SECITEM_ItemsAreEqual(&cert->subjectKeyID, keyID) ) {
+            cert = CERT_DupCertificate(node->cert);
+            break;
+        }
     }
     return cert;
 }

@@ -401,9 +401,7 @@ find_cert_issuer (
   NSSCertificate *c,
   NSSTime *timeOpt,
   NSSUsage *usage,
-  NSSPolicies *policiesOpt,
-  NSSTrustDomain *td,
-  NSSCryptoContext *cc
+  NSSPolicies *policiesOpt
 )
 {
     NSSArena *arena;
@@ -411,11 +409,15 @@ find_cert_issuer (
     NSSCertificate **ccIssuers = NULL;
     NSSCertificate **tdIssuers = NULL;
     NSSCertificate *issuer = NULL;
-
-    if (!cc)
-	cc = c->object.cryptoContext;
-    if (!td)
-	td = NSSCertificate_GetTrustDomain(c);
+    NSSTrustDomain *td;
+    NSSCryptoContext *cc;
+    cc = c->object.cryptoContext; /* NSSCertificate_GetCryptoContext(c); */
+    td = NSSCertificate_GetTrustDomain(c);
+#ifdef NSS_3_4_CODE
+    if (!td) {
+	td = STAN_GetDefaultTrustDomain();
+    }
+#endif
     arena = nssArena_Create();
     if (!arena) {
 	return (NSSCertificate *)NULL;
@@ -427,8 +429,7 @@ find_cert_issuer (
 	                                                       0,
 	                                                       arena);
     }
-    if (td)
-	tdIssuers = nssTrustDomain_FindCertificatesBySubject(td,
+    tdIssuers = nssTrustDomain_FindCertificatesBySubject(td,
                                                          &c->issuer,
                                                          NULL,
                                                          0,
@@ -441,10 +442,6 @@ find_cert_issuer (
 	if (dc) {
 	    issuerID = dc->getIssuerIdentifier(dc);
 	}
-	/* XXX review based on CERT_FindCertIssuer
-	 * this function is not using the authCertIssuer field as a fallback
-	 * if authority key id does not exist
-	 */
 	if (issuerID) {
 	    certs = filter_subject_certs_for_id(certs, issuerID);
 	}
@@ -459,9 +456,10 @@ find_cert_issuer (
     return issuer;
 }
 
-/* This function returns the built chain, as far as it gets,
-** even if/when it fails to find an issuer, and returns PR_FAILURE
-*/
+/* XXX review based on CERT_FindCertIssuer
+ * this function is not using the authCertIssuer field as a fallback
+ * if authority key id does not exist
+ */
 NSS_IMPLEMENT NSSCertificate **
 nssCertificate_BuildChain (
   NSSCertificate *c,
@@ -471,75 +469,72 @@ nssCertificate_BuildChain (
   NSSCertificate **rvOpt,
   PRUint32 rvLimit,
   NSSArena *arenaOpt,
-  PRStatus *statusOpt,
-  NSSTrustDomain *td,
-  NSSCryptoContext *cc 
+  PRStatus *statusOpt
 )
 {
-    NSSCertificate **rvChain = NULL;
-    NSSUsage issuerUsage = *usage;
-    nssPKIObjectCollection *collection;
-    PRUint32  rvCount = 0;
-    PRStatus  st;
-    PRStatus  ret = PR_SUCCESS;
-
-    if (!td)
-	td = NSSCertificate_GetTrustDomain(c);
-    if (!td || !c || !cc) 
-	goto loser;
+    NSSCertificate **rvChain;
 #ifdef NSS_3_4_CODE
+    NSSCertificate *cp;
+    CERTCertificate *cCert;
+#endif
+    NSSUsage issuerUsage = *usage;
+    NSSTrustDomain *td;
+    nssPKIObjectCollection *collection;
+
+    td = NSSCertificate_GetTrustDomain(c);
+#ifdef NSS_3_4_CODE
+    if (!td) {
+	td = STAN_GetDefaultTrustDomain();
+    }
     /* bump the usage up to CA level */
     issuerUsage.nss3lookingForCA = PR_TRUE;
 #endif
+    if (statusOpt) *statusOpt = PR_SUCCESS;
     collection = nssCertificateCollection_Create(td, NULL);
-    if (!collection)
-	goto loser;
-    st = nssPKIObjectCollection_AddObject(collection, (nssPKIObject *)c);
-    if (st != PR_SUCCESS)
-    	goto loser;
+    if (!collection) {
+	if (statusOpt) *statusOpt = PR_FAILURE;
+	return (NSSCertificate **)NULL;
+    }
+    nssPKIObjectCollection_AddObject(collection, (nssPKIObject *)c);
+    if (rvLimit == 1) {
+	goto finish;
+    }
     /* XXX This breaks code for which NSS_3_4_CODE is not defined (pure
      *     4.0 builds).  That won't affect the tip.  But be careful
      *     when merging 4.0!!!
      */
-    for (rvCount = 1; (!rvLimit || rvCount < rvLimit); ++rvCount) {
+    while (c != (NSSCertificate *)NULL) {
 #ifdef NSS_3_4_CODE
-	CERTCertificate *cCert = STAN_GetCERTCertificate(c);
+	cCert = STAN_GetCERTCertificate(c);
 	if (cCert->isRoot) {
 	    /* not including the issuer of the self-signed cert, which is,
 	     * of course, itself
 	     */
 	    break;
 	}
+	cp = c;
 #endif
-	c = find_cert_issuer(c, timeOpt, &issuerUsage, policiesOpt, td, cc);
-	if (!c) {
-	    ret = PR_FAILURE;
+	c = find_cert_issuer(c, timeOpt, &issuerUsage, policiesOpt);
+	if (c) {
+	    nssPKIObjectCollection_AddObject(collection, (nssPKIObject *)c);
+	    nssCertificate_Destroy(c); /* collection has it */
+	    if (rvLimit > 0 &&
+	        nssPKIObjectCollection_Count(collection) == rvLimit) 
+	    {
+		break;
+	    }
+	} else {
+	    nss_SetError(NSS_ERROR_CERTIFICATE_ISSUER_NOT_FOUND);
+	    if (statusOpt) *statusOpt = PR_FAILURE;
 	    break;
 	}
-	st = nssPKIObjectCollection_AddObject(collection, (nssPKIObject *)c);
-	nssCertificate_Destroy(c); /* collection has it */
-	if (st != PR_SUCCESS)
-	    goto loser;
     }
+finish:
     rvChain = nssPKIObjectCollection_GetCertificates(collection, 
                                                      rvOpt, 
                                                      rvLimit, 
                                                      arenaOpt);
-    if (rvChain) {
-	nssPKIObjectCollection_Destroy(collection);
-	if (statusOpt) 
-	    *statusOpt = ret;
-	if (ret != PR_SUCCESS)
-	    nss_SetError(NSS_ERROR_CERTIFICATE_ISSUER_NOT_FOUND);
-	return rvChain;
-    }
-
-loser:
-    if (collection)
-	nssPKIObjectCollection_Destroy(collection);
-    if (statusOpt) 
-	*statusOpt = PR_FAILURE;
-    nss_SetError(NSS_ERROR_CERTIFICATE_ISSUER_NOT_FOUND);
+    nssPKIObjectCollection_Destroy(collection);
     return rvChain;
 }
 
@@ -552,14 +547,11 @@ NSSCertificate_BuildChain (
   NSSCertificate **rvOpt,
   PRUint32 rvLimit, /* zero for no limit */
   NSSArena *arenaOpt,
-  PRStatus *statusOpt,
-  NSSTrustDomain *td,
-  NSSCryptoContext *cc 
+  PRStatus *statusOpt
 )
 {
     return nssCertificate_BuildChain(c, timeOpt, usage, policiesOpt,
-                                     rvOpt, rvLimit, arenaOpt, statusOpt,
-				     td, cc);
+                                     rvOpt, rvLimit, arenaOpt, statusOpt);
 }
 
 NSS_IMPLEMENT NSSCryptoContext *
