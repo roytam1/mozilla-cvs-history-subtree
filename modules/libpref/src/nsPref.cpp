@@ -22,6 +22,10 @@
 #include "nsIFactory.h"
 #include "nsRepository.h"
 #include "nsIPref.h"
+#ifdef XP_MAC
+#include "nsINetSupport.h"
+#include "nsIStreamListener.h"
+#endif
 
 class nsPref: public nsIPref {
   NS_DECL_ISUPPORTS
@@ -578,8 +582,12 @@ nsresult nsPrefFactory::CreateInstance(nsISupports *aDelegate,
   return res;
 }
 
-extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID,
-                                           nsIFactory **aFactory) {
+#ifdef XP_MAC
+extern "C" NS_EXPORT nsresult NSGetFactory_PREF_DLL(const nsCID &aCID, nsIFactory **aFactory)
+#else
+extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID, nsIFactory **aFactory)
+#endif
+{
   if (aFactory == NULL) {
     return NS_ERROR_NULL_POINTER;
   }
@@ -595,7 +603,12 @@ extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID,
   return NS_NOINTERFACE;
 }
 
-extern "C" NS_EXPORT PRBool NSCanUnload() {
+#ifdef XP_MAC
+extern "C" NS_EXPORT PRBool NSCanUnload_PREF_DLL()
+#else
+extern "C" NS_EXPORT PRBool NSCanUnload()
+#endif
+{
   return PRBool(g_InstanceCount == 0 && g_LockCount == 0);
 }
 
