@@ -100,6 +100,23 @@ public:
 	/* string MakeAbsolute (in string relativePart); */
 	NS_IMETHOD MakeAbsolute(const char *relativePart, char **_retval);
 
+	//////////////////////////////////////////////////////////////////////////////////
+	// nsIURI support
+	NS_IMETHOD GetDirectory(char * *aDirectory);
+	NS_IMETHOD SetDirectory(char * aDirectory);
+
+	/* attribute string FileName; */
+	NS_IMETHOD GetFileName(char * *aFileName);
+	NS_IMETHOD SetFileName(char * aFileName);
+
+	/* attribute string Query; */
+	NS_IMETHOD GetQuery(char * *aQuery);
+	NS_IMETHOD SetQuery(char * aQuery);
+
+	/* attribute string Ref; */
+	NS_IMETHOD GetRef(char * *aRef);
+	NS_IMETHOD SetRef(char * aRef);
+
 protected:
 	virtual ~nsMsgMailNewsUrl();
 	virtual void ReconstructSpec(void) = 0;
