@@ -724,7 +724,7 @@ typedef struct entryInfo
 
 typedef struct tagIdStr{
     EntryInfo   info;
-    char        str[1];
+    PRUnichar   str[1];
 } IdStr;
 
 int PR_CALLBACK
@@ -782,12 +782,12 @@ FnSortIdPRTime(const void *pItem1, const void *pItem2, void *privateData)
         return(-1);
 }
 
-/* better place for these? */
+// use these for guessing how much space to allocate when we start sorting 
+// guess 80 characters in a subject, or 160 bytes (since these are PRUnichars)
+// 80 for author, 40 for recipient.  if we guess wrong, we'll grows
 const int kMaxSubject = 160;
 const int kMaxAuthor = 160;
 const int kMaxRecipient = 80;
-const int kMaxMsgIdLen = 80;
-const int kMaxReferenceLen = 10 * kMaxMsgIdLen;
 
 nsresult nsMsgDBView::GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType)
 {
@@ -1007,18 +1007,19 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       }
 
       // could be a problem here if the ones that appear here are different than the ones already in the array
-      const char* pField = nsnull;
+      void *pField = nsnull;
       nsXPIDLString intlString;
       PRUint32 paddedFieldLen = 0;
       PRUint32 actualFieldLen = 0;
       if (fieldType == kString) {
+        //"Re:" might be encoded inside subject field using MIMEII encoding,
+        // It should be stripped before sorting
+        // we use to strip it here, but now we are stripping it off
+        // before creating the collation key, and only for subjects
         rv = GetStringField(msgHdr, sortType, getter_Copies(intlString));
         NS_ENSURE_SUCCESS(rv,rv);
-        pField = (const char *)((const PRUnichar *)intlString);
-        //"Re:" might be encoded inside subject field using MIMEII encoding,
-        //It should be stripped before sorting
-        NS_MsgStripRE(&pField, 0);
-        actualFieldLen = (pField) ? nsCRT::strlen(pField) + 1 : 1;
+        pField = (void *)((const PRUnichar *)intlString);
+        actualFieldLen = (pField) ? (nsCRT::strlen((const PRUnichar *)pField) * sizeof(PRUnichar)) + sizeof(PRUnichar) : 2;
         paddedFieldLen = actualFieldLen;
         PRUint32 mod4 = actualFieldLen % 4;
         if (mod4 > 0) {
@@ -1029,7 +1030,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
         rv = GetPRTimeField(msgHdr, sortType, &timeValue);
         NS_ENSURE_SUCCESS(rv,rv);
 
-        pField = (const char *) &timeValue;
+        pField = (void *) &timeValue;
         actualFieldLen = paddedFieldLen = maxLen;
       }
       else {
@@ -1040,7 +1041,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
             rv = GetLongField(msgHdr, sortType, &longValue);
             NS_ENSURE_SUCCESS(rv,rv);
         }
-        pField = (const char *) &longValue;
+        pField = (void *)&longValue;
         actualFieldLen = paddedFieldLen = maxLen;
       }
 
@@ -1073,14 +1074,14 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       pPtrBase[numSoFar] = (IdStr*)pTemp;
       EntryInfo *info = (EntryInfo *)pTemp;
       info->id = thisKey;
-      PRUint32 bits= 0;
+      PRUint32 bits = 0;
       bits = m_flags.GetAt(numSoFar);
       info->bits = bits;
       pTemp += sizeof(EntryInfo);
       PRInt32 bytesLeft = allocSize - (PRInt32)(pTemp - pBase);
       PRInt32 bytesToCopy = PR_MIN(bytesLeft, (PRInt32)actualFieldLen);
       if (pField && bytesToCopy > 0) {
-        nsCRT::memcpy((char *)pTemp, pField, bytesToCopy);
+        nsCRT::memcpy((void *)pTemp, pField, bytesToCopy);
         if (bytesToCopy < (PRInt32)actualFieldLen) {
           NS_ASSERTION(0, "wow, big block");
           *(pTemp + bytesToCopy - 1) = '\0';
@@ -1524,7 +1525,7 @@ nsMsgViewIndex nsMsgDBView::GetIndexForThread(nsIMsgDBHdr *hdr)
 					}
 					else
 					{
-						for (retIndex = i + 1; retIndex < GetSize(); retIndex++)
+						for (retIndex = i + 1; retIndex < (nsMsgViewIndex)GetSize(); retIndex++)
 						{
 							if (m_levels[retIndex] == 0)
 								break;
@@ -1573,12 +1574,12 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 		return 0;
 
 	PRUint16	maxLen;
-	nsXPIDLString	field1Str;
+	nsXPIDLString field1Str;
 	nsXPIDLString field2Str;
 	eFieldType fieldType;
   nsresult rv = GetFieldTypeAndLenForSort(m_sortType, &maxLen, &fieldType);
 	const void	*pValue1, *pValue2;
-	char *intlString1 = nsnull;
+	//char *intlString1 = nsnull;
 
 	if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) != 0)
 	{
@@ -1592,8 +1593,9 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	{
 		case kString:
 			comparisonFun = FnSortIdStr;
-      GetStringField(msgHdr, m_sortType, getter_Copies(field1Str));
-// ### TODO      strPtrInfo1.str = (char *) (const PRUnichar* ) field1Str;
+            GetStringField(msgHdr, m_sortType, getter_Copies(field1Str));
+            //note to dmb, still won't compile
+            //strPtrInfo1.str = (const PRUnichar *) field1Str;
 			msgHdr->GetMessageKey(&strPtrInfo1.info.id);
 			pValue1 = &strPtrInfo1;
 			break;
@@ -1613,13 +1615,14 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 		nsMsgKey	messageKey = GetAt(tryIndex);
 		nsCOMPtr <nsIMsgDBHdr> tryHdr;
     rv = m_db->GetMsgHdrForKey(messageKey, getter_AddRefs(tryHdr));
-		char	*intlString2 = nsnull;
+		//char	*intlString2 = nsnull;
 		if (!tryHdr)
 			break;
 		if (fieldType == kString)
 		{
 			GetStringField(tryHdr, m_sortType, getter_Copies(field2Str));
-// ### TODO      strPtrInfo2.str = (const char *) (const PRUnichar* ) field2Str;
+            //note to dmb, still won't compile
+            //strPtrInfo2.str = (const PRUnichar *) field2Str;
 			strPtrInfo2.info.id = messageKey;
 			pValue2 = &strPtrInfo2;
 		}
@@ -2307,8 +2310,8 @@ nsresult nsMsgDBView::FindNextUnread(nsMsgKey startId, nsMsgKey *pResultKey,
         }
         // check for collapsed thread with new children
         if (m_sortType == nsMsgViewSortType::byThread && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
-            nsMsgKey threadId = m_keys.GetAt(curIndex);
             printf("fix this\n");
+            //nsMsgKey threadId = m_keys.GetAt(curIndex);
             //rv = m_db->GetUnreadKeyInThread(threadId, pResultKey, resultThreadId);
             if (NS_SUCCEEDED(rv) && (*pResultKey != nsMsgKey_None))
                 break;
@@ -2341,8 +2344,8 @@ nsresult nsMsgDBView::FindPrevUnread(nsMsgKey startKey, nsMsgKey *pResultKey,
         PRUint32 flags = m_flags.GetAt(curIndex);
 
         if (curIndex != startIndex && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
-            nsMsgKey threadId = m_keys.GetAt(curIndex);
             printf("fix this\n");
+            //nsMsgKey threadId = m_keys.GetAt(curIndex);
             //rv = m_db->GetUnreadKeyInThread(threadId, pResultKey, resultThreadId);
             if (NS_SUCCEEDED(rv) && (*pResultKey != nsMsgKey_None))
                 break;
