@@ -33,7 +33,7 @@
  *
  */
 
-const __vnk_version        = "0.9.5";
+const __vnk_version        = "0.9.6";
 const __vnk_requiredLocale = "0.9.x";
 var   __vnk_versionSuffix  = "";
 
@@ -520,6 +520,17 @@ function destroy ()
     destroyHandlers();
     detachDebugger();
 }
+
+function paintHack ()
+{
+    /* when stopping at a timeout, we don't repaint correctly.
+     * by jamming a character into this hidden text box, we can force
+     * a repaint.
+     */
+    var textbox = document.getElementById("paint-hack");
+    textbox.value = " ";
+    textbox.value = "";
+}   
 
 function fetchLaunchCount()
 {

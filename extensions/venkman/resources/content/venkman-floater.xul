@@ -99,6 +99,9 @@
 
   <overlaytarget id="views-overlay-target"/>
 
-  <viewcontainer id="initial-container" flex="1" type="vertical"/>
+  <viewcontainer id="root-container" flex="1" type="horizontal">
+    <viewcontainer id="initial-container" type="vertical" flex="1"/>
+  </viewcontainer>
+
 </window>
 

@@ -1080,17 +1080,6 @@ function debugTrap (frame, type, rv)
 
 function eventLoopNested ()
 {
-    function paintHack ()
-    {
-        /* when stopping at a timeout, we don't repaint correctly.
-         * by jamming a character into this hidden text box, we can force
-         * a repaint.
-         */
-        var textbox = document.getElementById("paint-hack");
-        textbox.value = " ";
-        textbox.value = "";
-    };
-    
     setTimeout (paintHack, 500);
     setTimeout (paintHack, 1000);
     setTimeout (paintHack, 1500);

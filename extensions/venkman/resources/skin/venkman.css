@@ -208,7 +208,7 @@ tree {
 
 .view-container {
     -moz-box-orient: horizontal;
-    border-top: 2px black solid;
+    border-top: 2px red solid;
     border-bottom: 2px black solid;
 }
 
@@ -216,8 +216,8 @@ tree {
     -moz-box-orient: vertical;
     border-top: none;
     border-bottom: none;
-    border-left: 2px black solid;
-    border-right: 2px black solid;
+    border-left: 4px green solid;
+    border-right: 4px black solid;
 }
 
 .view-title-margin-left,

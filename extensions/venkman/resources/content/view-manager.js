@@ -490,6 +490,11 @@ function vmgr_move (parsedLocation, viewId)
         if ("before" in parsedLocation)
         {
             beforeNode = window.document.getElementById(parsedLocation.before);
+            if (beforeNode && beforeNode.parentNode.localName != "viewcontainer")
+            {
+                dd ("before is not visible");
+                beforeNode = null;
+            }
         }
         
         if (!container)
@@ -509,6 +514,7 @@ function vmgr_move (parsedLocation, viewId)
         }
         else if (beforeNode && beforeNode.parentNode != container)
         {
+            dd ("before is not in container");
             /* container portion of url wins in a mismatch situation */
             beforeNode = null;
         }   
@@ -523,6 +529,9 @@ function vmgr_move (parsedLocation, viewId)
                 (currentContent.nextSibling == beforeNode &&
                  container == currentContent.parentNode))
             {
+                dd (beforeNode == currentContent);
+                dd (currentContent.nextSibling == beforeNode);
+                dd (container == currentContent.parentNode);
                 dd ("TEASE!");
                 /* unless of course we're already where we are supposed to be. */
                 return;
@@ -541,8 +550,8 @@ function vmgr_move (parsedLocation, viewId)
         moveContent (content, container, beforeNode);
         view.currentContent = content;
         
-        //if ("onShow" in view)
-        //    view.onShow();
+        if ("onShow" in view)
+            view.onShow();
     };
 
     var view = console.views[viewId];
@@ -558,8 +567,6 @@ function vmgr_move (parsedLocation, viewId)
 ViewManager.prototype.groutContainer =
 function vmgr_groutcontainer (container)
 {
-    dd ("grouting: " + container.localName);
-    
     var type = container.getAttribute ("type");
     
     if (!ASSERT(type in this.groutFunctions, "unknown container type ``" +
@@ -584,7 +591,10 @@ function vmgr_groutbox (viewManager, container)
     
     function isContainerEmpty (container)
     {
-        return container.localName == "viewcontainer" && !container.firstChild;
+        var rv = container.localName == "viewcontainer" && 
+            "viewCount" in container && container.viewCount == 0;
+        dd ("isContainerEmpty: " + container.getAttribute("id") + ": " + rv);
+        return rv;
     };
     
     if (!container)
@@ -592,47 +602,46 @@ function vmgr_groutbox (viewManager, container)
 
     ASSERT(container.localName == "viewcontainer",
            "Attempt to grout something that is not a view container");
-    
+
+    dd ("grouting: " + container.getAttribute("id") +" {");
+
+    var lastViewCount = ("viewCount" in container) ? container.viewCount : 0;
+    container.viewCount = 0;
     var doc = container.ownerDocument;
     var content = container.firstChild;
-    
-    if (container.parentNode.localName == "viewcontainer")
-        viewManager.groutContainer(container.parentNode);
 
-    if (isContainerEmpty(container))
-    {
-        container.removeAttribute("flex");
-        if (container.parentNode.localName == "window" &&
-            !("isClosing" in container.ownerWindow))
-        {
-            setTimeout (closeWindow, 1, container.ownerWindow);
-        }
-        return;
-    }
-
-    container.setAttribute("flex", "1");
+    var previousContent;
+    var nextContent;
     
     while (content)
     {
-        var previousContent = content.previousSibling;
-        var nextContent = content.nextSibling;
+        previousContent = content.previousSibling;
+        nextContent = content.nextSibling;
 
         if (content.hasAttribute("grout"))
         {
             if (!previousContent || !nextContent ||
                 previousContent.hasAttribute("grout") ||
                 nextContent.hasAttribute("grout") ||
-                isContainerEmpty(previousContent) ||
-                (nextContent == container.lastChild &&
-                 isContainerEmpty(nextContent)))
+                isContainerEmpty(previousContent))
             {
                 container.removeChild(content);
             }
         }
         else
         {
+            if (content.localName == "floatingview")
+                ++container.viewCount;
+            else if (content.localName == "viewcontainer")
+            {
+                if (!("viewCount" in content))
+                    dd ("no viewCount in " + content.getAttribute("id"));
+                else
+                    container.viewCount += content.viewCount;
+            }
+
             if (nextContent && !nextContent.hasAttribute("grout") &&
-                !isContainerEmpty(nextContent))
+                !isContainerEmpty(nextContent) && !isContainerEmpty(content))
             {
                 var collapse;
                 if (content.hasAttribute("splitter-collapse"))
@@ -648,4 +657,39 @@ function vmgr_groutbox (viewManager, container)
         }
         content = nextContent;
     }
+
+    if (previousContent && previousContent.hasAttribute("grout") &&
+        isContainerEmpty(previousContent.nextSibling))
+    {
+        container.removeChild(previousContent);
+    }
+            
+
+    if (isContainerEmpty(container))
+    {
+        dd ("container is empty, hiding");
+        container.setAttribute("collapsed", "true");
+        if (container.parentNode.localName == "window" &&
+            container.ownerWindow != viewManager.mainWindow &&
+            !("isClosing" in container.ownerWindow) &&
+            lastViewCount > 0)
+        {
+            //container.ownerWindow.close();
+            setTimeout (closeWindow, 1, container.ownerWindow);
+            dd ("} no children, closing window");
+            return;
+        }
+    }
+    else
+    {
+        dd ("unhiding");
+        container.removeAttribute("collapsed");
+    }
+
+    if (container.parentNode.localName == "viewcontainer")
+        viewManager.groutContainer(container.parentNode);
+
+    dd ("} " + container.getAttribute("id") +
+        " view count: " + container.viewCount);
+
 }

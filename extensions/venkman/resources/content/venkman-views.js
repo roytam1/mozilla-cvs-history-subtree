@@ -278,7 +278,11 @@ function vpxy_drop (event, transferData, session)
             return next;
         
         var id = "vpxy-container-" + ++console.viewProxy.containerSequence;
-        var last = child.parentNode.lastChild;
+        var last;
+        if (child.parentNode.localName == "viewcontainer")
+            last = child.parentNode.lastChild;
+        else
+            last = child;
         var url = console.viewManager.computeLocation (last);
         var parsedLocation = console.viewManager.parseLocation (url);
 
@@ -297,7 +301,11 @@ function vpxy_drop (event, transferData, session)
             return prev;
         
         var id = "vpxy-container-" + ++console.viewProxy.containerSequence;
-        var first = child.parentNode.firstChild;
+        var first;
+        if (child.parentNode.localName == "viewcontainer")
+            first = child.parentNode.firstChild;
+        else
+            first = child;
         var url = console.viewManager.computeLocation (first);
         var parsedLocation = console.viewManager.parseLocation (url);
         parsedLocation.before = parsedLocation.id;
@@ -322,6 +330,12 @@ function vpxy_drop (event, transferData, session)
     var parsedTarget = console.viewManager.parseLocation(targetURL);
     if (!ASSERT(parsedTarget, "unable to parse " + targetURL))
         return false;
+
+    if (parsedSource.id == viewId)
+    {
+        dd ("wanker");
+        return false;
+    }
 
     var direction = this.getDropDirection (event, floatingView);
 
@@ -350,11 +364,13 @@ function vpxy_drop (event, transferData, session)
                 break;
                 
             case "left":
-                destContainer = getPreviousContainer (currentContainer);
+                destContainer = getPreviousContainer (currentContainer,
+                                                      "horizontal");
                 break;
                 
             case "right":
-                destContainer = getNextContainer (currentContainer);
+                destContainer = getNextContainer (currentContainer,
+                                                  "horizontal");
                 break;
         }
     }
@@ -363,11 +379,13 @@ function vpxy_drop (event, transferData, session)
         switch (direction)
         {
             case "up":
-                destContainer = getPreviousContainer (currentContainer);
+                destContainer = getPreviousContainer (currentContainer,
+                                                      "vertical");
                 break;
                 
             case "down":
-                destContainer = getNextContainer (currentContainer);
+                destContainer = getNextContainer (currentContainer,
+                                                  "vertical");
                 break;
                 
             case "left":
@@ -389,12 +407,19 @@ function vpxy_drop (event, transferData, session)
     dest.containerId = destContainer.getAttribute ("id");
     dest.before = destBefore ? destBefore.getAttribute("id") : null;
     console.viewManager.moveView (dest, parsedSource.id);
+
+    /* when moving into a new view, the parent view won't repaint until
+     * the mouse moves, or we do call the paintHack.
+     */
+    paintHack();
     return true;
 }
 
 console.viewProxy.onDragOver =
 function vpxy_dragover (event, flavor, session)
 {
+    session.canDrop = false;
+    
     if (flavor.contentType != "text/x-vloc")
         return false;
 
@@ -402,9 +427,19 @@ function vpxy_dragover (event, flavor, session)
     if (!target)
         return false;
 
+    /* COVER YOUR EYES!! */
+    var data = nsTransferable.get (this.getSupportedFlavours(),
+                                   console.dnd.getDragData, true);
+    data = data.first.first;
+    
+    var parsedLocation = console.viewManager.parseLocation(data.data);
+    if (target.getAttribute("id") == parsedLocation.id)
+        return false;
+    
     var proxyIcon = target.proxyIcon;
     proxyIcon.setAttribute ("dragover", this.getDropDirection(event, target));
 
+    session.canDrop = true;
     return true;
 }
 
@@ -412,7 +447,8 @@ console.viewProxy.onDragExit =
 function vpxy_dragexit (event, session)
 {
     var target = this.findFloatingView(event.originalTarget);
-    target.proxyIcon.removeAttribute ("dragover");
+    if (target)
+        target.proxyIcon.removeAttribute ("dragover");
 }
         
 console.viewProxy.getSupportedFlavours =
