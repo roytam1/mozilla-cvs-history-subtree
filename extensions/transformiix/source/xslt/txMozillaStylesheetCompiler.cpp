@@ -79,7 +79,6 @@ public:
 
 private:
     nsRefPtr<txStylesheetCompiler> mCompiler;
-    nsCOMArray<nsINameSpace> mNameSpaceStack;
 };
 
 txStylesheetSink::txStylesheetSink(txStylesheetCompiler* aCompiler)
@@ -100,90 +99,12 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
                                      PRUint32 aIndex,
                                      PRUint32 aLineNumber)
 {
-    nsCOMPtr<nsIAtom> prefix, localname;
-    XMLUtils::splitXMLName(nsDependentString(aName), getter_AddRefs(prefix),
-                           getter_AddRefs(localname));
-
-    nsAutoArrayPtr<txStylesheetAttr> atts;
-    if (aAttsCount > 0) {
-        atts = new txStylesheetAttr[aAttsCount];
-        NS_ENSURE_TRUE(atts, NS_ERROR_OUT_OF_MEMORY);
-    }
-
-    nsresult rv = NS_OK;
-    nsCOMPtr<nsINameSpace> nameSpace;
-    if (mNameSpaceStack.Count() > 0) {
-        nameSpace = mNameSpaceStack.ObjectAt(mNameSpaceStack.Count() - 1);
-    }
-    else {
-        extern nsINameSpaceManager* gTxNameSpaceManager;
-        rv = gTxNameSpaceManager->CreateRootNameSpace(*getter_AddRefs(nameSpace));
-        NS_ENSURE_SUCCESS(rv, rv);
-    }
-
-    NS_ENSURE_TRUE(nameSpace, NS_ERROR_UNEXPECTED);
-
-    PRInt32 attTotal = 0;
-    while (*aAtts) {
-        XMLUtils::splitXMLName(nsDependentString(aAtts[0]),
-                               getter_AddRefs(atts[attTotal].mPrefix),
-                               getter_AddRefs(atts[attTotal].mLocalName));
-
-        atts[attTotal].mValue.Append(aAtts[1]);
-
-        if (atts[attTotal].mPrefix == txXMLAtoms::xmlns) {
-            nsCOMPtr<nsINameSpace> child;
-            rv = nameSpace->CreateChildNameSpace(atts[attTotal].mLocalName,
-                                                 atts[attTotal].mValue,
-                                                 *getter_AddRefs(child));
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            nameSpace = child;
-        }
-        else if (!atts[attTotal].mPrefix &&
-                 atts[attTotal].mLocalName == txXMLAtoms::xmlns) {
-            nsCOMPtr<nsINameSpace> child;
-            rv = nameSpace->CreateChildNameSpace(nsnull,
-                                                 atts[attTotal].mValue,
-                                                 *getter_AddRefs(child));
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            nameSpace = child;
-        }
-
-        ++attTotal;
-        aAtts += 2;
-    }
-
-    rv = mNameSpaceStack.AppendObject(nameSpace);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    PRInt32 namespaceID = prefix ? kNameSpaceID_Unknown : kNameSpaceID_None;
-    nameSpace->FindNameSpaceID(prefix, namespaceID);
-
-    PRInt32 attCount;
-    for (attCount = 0; (PRUint32)attCount < attTotal; ++attCount) {
-        if (atts[attCount].mPrefix) {
-            nameSpace->FindNameSpaceID(atts[attCount].mPrefix,
-                                       atts[attCount].mNamespaceID);
-        }
-        else if (atts[attCount].mLocalName == txXMLAtoms::xmlns) {
-            atts[attCount].mNamespaceID = kNameSpaceID_XMLNS;
-        }
-        else {
-            atts[attCount].mNamespaceID = kNameSpaceID_None;
-        }
-    }
-
-    rv = mCompiler->startElement(namespaceID, localname, prefix, atts,
-                                 attTotal);
-    return rv;
+    return mCompiler->startElement(aName, aAtts, aAttsCount);
 }
 
 NS_IMETHODIMP
 txStylesheetSink::HandleEndElement(const PRUnichar *aName)
 {
-    mNameSpaceStack.RemoveObjectAt(mNameSpaceStack.Count() - 1);
     return mCompiler->endElement();
 }
 
