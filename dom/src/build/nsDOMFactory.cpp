@@ -44,6 +44,7 @@
 #include "nsIScriptContext.h"
 #include "nsDOMClassInfo.h"
 #include "nsGlobalWindow.h"
+#include "nsIObserverService.h"
 
 extern nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
                                        nsIScriptContext **aContext);
@@ -57,13 +58,17 @@ extern nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
 
 //////////////////////////////////////////////////////////////////////
 
-class nsDOMSOFactory : public nsIDOMScriptObjectFactory
+class nsDOMSOFactory : public nsIDOMScriptObjectFactory,
+                       public nsIObserver
 {
 public:
   nsDOMSOFactory();
   virtual ~nsDOMSOFactory();
 
   NS_DECL_ISUPPORTS
+
+  // nsIObserver
+  NS_DECL_NSIOBSERVER
 
   NS_IMETHOD NewScriptContext(nsIScriptGlobalObject *aGlobal,
                               nsIScriptContext **aContext);
@@ -82,6 +87,15 @@ public:
 nsDOMSOFactory::nsDOMSOFactory()
 {
   NS_INIT_REFCNT();
+
+  nsCOMPtr<nsIObserverService> observerService =
+    do_GetService(NS_OBSERVERSERVICE_CONTRACTID);
+
+  if (observerService) {
+    nsAutoString topic;
+    topic.AssignWithConversion(NS_XPCOM_SHUTDOWN_OBSERVER_ID);
+    observerService->AddObserver(this, topic.GetUnicode());
+  }
 }
 
 nsDOMSOFactory::~nsDOMSOFactory()
@@ -91,7 +105,8 @@ nsDOMSOFactory::~nsDOMSOFactory()
 
 NS_INTERFACE_MAP_BEGIN(nsDOMSOFactory)
   NS_INTERFACE_MAP_ENTRY(nsIDOMScriptObjectFactory)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIObserver)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMScriptObjectFactory)
 NS_INTERFACE_MAP_END
 
 
@@ -128,6 +143,37 @@ nsDOMSOFactory::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
   return nsDOMClassInfo::GetClassInfoInstance(aID, aGetIIDsFptr, aName);
 }
 
+#include "jsapi.h"
+#include "nsIJSContextStack.h"
+
+NS_IMETHODIMP
+nsDOMSOFactory::Observe(nsISupports *aSubject, const PRUnichar *aTopic,
+                        const PRUnichar *someData)
+{
+  nsAutoString topic;
+  topic.AssignWithConversion(NS_XPCOM_SHUTDOWN_OBSERVER_ID);
+  if (topic.EqualsWithConversion(aTopic)) {
+    nsCOMPtr<nsIThreadJSContextStack> stack =
+      do_GetService("@mozilla.org/js/xpc/ContextStack;1");
+
+    if (stack) {
+      JSContext *cx = nsnull;
+
+      stack->GetSafeJSContext(&cx);
+
+      if (cx) {
+        // Do one final GC to clean things up before shutdown.
+
+        ::JS_GC(cx);
+      }
+    }
+
+    GlobalWindowImpl::ShutDown();
+    nsDOMClassInfo::ShutDown();
+  }
+
+  return NS_OK;
+}
 //////////////////////////////////////////////////////////////////////
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMSOFactory);
