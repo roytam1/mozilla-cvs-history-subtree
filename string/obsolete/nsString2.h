@@ -55,6 +55,7 @@
 #ifndef nsAFlatString_h___
 #include "nsAFlatString.h"
 #endif
+#include "nsXPIDLString.h"
 
 #ifdef STANDALONE_MI_STRING_TESTS
   class nsAFlatString { public: virtual ~nsAString() { } };
@@ -457,10 +458,26 @@ public:
   PRInt32 CompareWithConversion(const char* aString,PRBool aIgnoreCase=PR_FALSE,PRInt32 aCount=-1) const;
   PRInt32 CompareWithConversion(const nsString& aString,PRBool aIgnoreCase=PR_FALSE,PRInt32 aCount=-1) const;
   PRInt32 CompareWithConversion(const PRUnichar* aString,PRBool aIgnoreCase=PR_FALSE,PRInt32 aCount=-1) const;
+  /* a hack to make sure things that used to compile continue to compile
+     even on compilers that don't have proper |explicit| support */
+  inline PRInt32
+  CompareWithConversion(const nsXPIDLString& aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aCount=-1) const
+    {
+      return CompareWithConversion(aString.get(), aIgnoreCase, aCount);
+    }
 
   PRBool  EqualsWithConversion(const nsString &aString,PRBool aIgnoreCase=PR_FALSE,PRInt32 aCount=-1) const;
   PRBool  EqualsWithConversion(const char* aString,PRBool aIgnoreCase=PR_FALSE,PRInt32 aCount=-1) const;
   PRBool  EqualsWithConversion(const PRUnichar* aString,PRBool aIgnoreCase=PR_FALSE,PRInt32 aCount=-1) const;
+  /* a hack to make sure things that used to compile continue to compile
+     even on compilers that don't have proper |explicit| support */
+  inline PRBool
+  EqualsWithConversion(const nsXPIDLString &aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aCount=-1) const
+    {
+      return EqualsWithConversion(aString.get(), aIgnoreCase, aCount);
+    }
+
+
   PRBool  EqualsAtom(/*FIX: const */nsIAtom* anAtom,PRBool aIgnoreCase) const;   
 
   PRBool  EqualsIgnoreCase(const nsString& aString) const;
@@ -566,11 +583,28 @@ class NS_COM NS_ConvertASCIItoUCS2
     */
   {
     public:
-      explicit NS_ConvertASCIItoUCS2( const nsACString& aCString );
+      explicit
+      NS_ConvertASCIItoUCS2( const nsACString& aCString );
 
-      explicit NS_ConvertASCIItoUCS2( const char* );
-      NS_ConvertASCIItoUCS2( const char*, PRUint32 );
-      explicit NS_ConvertASCIItoUCS2( char );
+      explicit
+      NS_ConvertASCIItoUCS2( const nsAFlatCString& aCString )
+        {
+          Init( aCString.get(), aCString.Length() );
+        }
+
+      explicit
+      NS_ConvertASCIItoUCS2( const char* aCString )
+        {
+          Init( aCString, ~PRUint32(0) /* MAXINT */ );
+        }
+
+      NS_ConvertASCIItoUCS2( const char* aCString, PRUint32 aLength )
+        {
+          Init( aCString, aLength );
+        }
+
+      explicit
+      NS_ConvertASCIItoUCS2( char );
 
 #if 0
       operator const nsDependentString() const
@@ -578,6 +612,9 @@ class NS_COM NS_ConvertASCIItoUCS2
           return nsDependentString(mUStr, mLength);
         }
 #endif
+
+    protected:
+      void Init( const char* aCString, PRUint32 aLength );
 
     private:
         // NOT TO BE IMPLEMENTED
@@ -589,9 +626,12 @@ class NS_COM NS_ConvertUTF8toUCS2
   {
     public:
       explicit
-      NS_ConvertUTF8toUCS2( const nsACString& aCString )
+      NS_ConvertUTF8toUCS2( const nsACString& aCString );
+
+      explicit
+      NS_ConvertUTF8toUCS2( const nsAFlatCString& aCString )
         {
-          Init( aCString );
+          Init( aCString.get(), aCString.Length() );
         }
 
       explicit
@@ -612,7 +652,6 @@ class NS_COM NS_ConvertUTF8toUCS2
         }
 
     protected:
-      void Init( const nsACString& aCString );
       void Init( const char* aCString, PRUint32 aLength );
 
     private:

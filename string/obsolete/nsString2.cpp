@@ -1639,7 +1639,8 @@ nsAutoString::nsAutoString(const CBufDescriptor& aBuffer) : nsString() {
     AddNullTerminator(*this);
 }
 
-NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( const char* aCString, PRUint32 aLength )
+void
+NS_ConvertASCIItoUCS2::Init( const char* aCString, PRUint32 aLength )
   {
     Initialize(*this,mBuffer,(sizeof(mBuffer)>>eTwoByte)-1,0,eTwoByte,PR_FALSE);
     AddNullTerminator(*this);
@@ -1661,13 +1662,6 @@ NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( const nsACString& aCString )
     }
   }
 
-NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( const char* aCString )
-  {
-    Initialize(*this,mBuffer,(sizeof(mBuffer)>>eTwoByte)-1,0,eTwoByte,PR_FALSE);
-    AddNullTerminator(*this);
-    AppendWithConversion(aCString);
-  }
-
 NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( char aChar )
   {
     Initialize(*this,mBuffer,(sizeof(mBuffer)>>eTwoByte)-1,0,eTwoByte,PR_FALSE);
@@ -1676,27 +1670,30 @@ NS_ConvertASCIItoUCS2::NS_ConvertASCIItoUCS2( char aChar )
   }
 
 void
-NS_ConvertUTF8toUCS2::Init( const nsACString& aCString )
+NS_ConvertUTF8toUCS2::Init( const char* aCString, PRUint32 aLength )
 {
+  // Handle null string by just leaving us as a brand-new
+  // uninitialized nsAutoString.
+  if (! aCString)
+    return;
+
   // Compute space required: do this once so we don't incur multiple
   // allocations. This "optimization" is probably of dubious value...
-  nsReadingIterator<char> p, end;
-  aCString.BeginReading(p);
-  aCString.EndReading(end);
+  const char* p;
   PRUint32 count;
-  for (count = 0; *p && p != end; ++count) {
+  for (p = aCString, count = 0; *p && count < aLength; ++count) {
     if ( 0 == (*p & 0x80) )
-      p.advance(1); // ASCII
+      p += 1; // ASCII
     else if ( 0xC0 == (*p & 0xE0) )
-      p.advance(2); // 2 byte UTF8
+      p += 2; // 2 byte UTF8
     else if ( 0xE0 == (*p & 0xF0) )
-      p.advance(3); // 3 byte UTF8
+      p += 3; // 3 byte UTF8
     else if ( 0xF0 == (*p & 0xF8) )
-      p.advance(4); // 4 byte UTF8
+      p += 4; // 4 byte UTF8
     else if ( 0xF8 == (*p & 0xFC) )
-      p.advance(5); // 5 byte UTF8
+      p += 5; // 5 byte UTF8
     else if ( 0xFC == (*p & 0xFE) )
-      p.advance(6);
+      p += 6;
     else {
       NS_ERROR("not a UTF-8 string");
       return;
@@ -1713,8 +1710,7 @@ NS_ConvertUTF8toUCS2::Init( const nsACString& aCString )
   PRUnichar* out = mUStr;
 
   // Convert the characters.
-  aCString.BeginReading(p);
-  for (count = 0; *p && p != end; ++count) {
+  for (p = aCString, count = 0; *p && count < aLength; ++count) {
     char c = *p++;
 
     if( 0 == (0x80 & c)) { // ASCII
@@ -1799,31 +1795,27 @@ NS_ConvertUTF8toUCS2::Init( const nsACString& aCString )
   mLength = count;
 }
 
-void
-NS_ConvertUTF8toUCS2::Init( const char* aCString, PRUint32 aLength )
+NS_ConvertUTF8toUCS2::NS_ConvertUTF8toUCS2( const nsACString& aCString )
 {
-  // Handle null string by just leaving us as a brand-new
-  // uninitialized nsAutoString.
-  if (! aCString)
-    return;
-
   // Compute space required: do this once so we don't incur multiple
   // allocations. This "optimization" is probably of dubious value...
-  const char* p;
+  nsACString::const_iterator p, end;
+  aCString.BeginReading(p);
+  aCString.EndReading(end);
   PRUint32 count;
-  for (p = aCString, count = 0; *p && count < aLength; ++count) {
+  for (count = 0; *p && p != end; ++count) {
     if ( 0 == (*p & 0x80) )
-      p += 1; // ASCII
+      p.advance(1); // ASCII
     else if ( 0xC0 == (*p & 0xE0) )
-      p += 2; // 2 byte UTF8
+      p.advance(2); // 2 byte UTF8
     else if ( 0xE0 == (*p & 0xF0) )
-      p += 3; // 3 byte UTF8
+      p.advance(3); // 3 byte UTF8
     else if ( 0xF0 == (*p & 0xF8) )
-      p += 4; // 4 byte UTF8
+      p.advance(4); // 4 byte UTF8
     else if ( 0xF8 == (*p & 0xFC) )
-      p += 5; // 5 byte UTF8
+      p.advance(5); // 5 byte UTF8
     else if ( 0xFC == (*p & 0xFE) )
-      p += 6;
+      p.advance(6);
     else {
       NS_ERROR("not a UTF-8 string");
       return;
@@ -1840,7 +1832,8 @@ NS_ConvertUTF8toUCS2::Init( const char* aCString, PRUint32 aLength )
   PRUnichar* out = mUStr;
 
   // Convert the characters.
-  for (p = aCString, count = 0; *p && count < aLength; ++count) {
+  aCString.BeginReading(p);
+  for (count = 0; p != end && *p; ++count) {
     char c = *p++;
 
     if( 0 == (0x80 & c)) { // ASCII
