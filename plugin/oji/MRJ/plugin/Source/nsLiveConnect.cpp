@@ -67,7 +67,7 @@ const char* kJavaScriptPrefix = "javascript:";
 
 NS_METHOD	
 nsLiveconnect::Eval(JNIEnv *env, jsobject obj, const jchar *script, jsize length, void* principalsArray[], 
- 		        int numPrincipals, void *securityContext, jobject *outResult)
+                    int numPrincipals, nsISupports *securitySupports, jobject *outResult)
 {
 	MRJPluginInstance* pluginInstance = (MRJPluginInstance*) obj;
 	nsIPluginStreamListener* listener = this;

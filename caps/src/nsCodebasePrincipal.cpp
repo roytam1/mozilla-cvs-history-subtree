@@ -184,7 +184,12 @@ nsCodebasePrincipal::Equals(nsIPrincipal *other, PRBool *result)
     if (NS_SUCCEEDED(rv) && PL_strcmp(otherScheme, myScheme) == 0) 
 	{
 
-		if (PL_strcmp(otherScheme, "imap")    == 0 ||
+        if (PL_strcmp(otherScheme, "file") == 0)
+        {
+            // All file: urls are considered to have the same origin.
+            *result = PR_TRUE;
+        }
+        else if (PL_strcmp(otherScheme, "imap")    == 0 ||
 	        PL_strcmp(otherScheme, "mailbox") == 0 ||
             PL_strcmp(otherScheme, "news")    == 0) 
         {

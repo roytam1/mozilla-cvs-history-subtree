@@ -52,7 +52,7 @@ public:
      */
     NS_IMETHOD
     GetMember(JNIEnv *env, jsobject jsobj, const jchar *name, jsize length, void* principalsArray[], 
-                     int numPrincipals, void *securityContext, jobject *pjobj)
+              int numPrincipals, nsISupports *securitySupports, jobject *pjobj)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -67,7 +67,7 @@ public:
      */
     NS_IMETHOD
     GetSlot(JNIEnv *env, jsobject jsobj, jint slot, void* principalsArray[], 
-                     int numPrincipals, void *securityContext, jobject *pjobj)
+            int numPrincipals, nsISupports *securitySupports, jobject *pjobj)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -83,7 +83,7 @@ public:
      */
     NS_IMETHOD
     SetMember(JNIEnv *env, jsobject jsobj, const jchar* name, jsize length, jobject jobj, void* principalsArray[], 
-                     int numPrincipals, void *securityContext)
+              int numPrincipals, nsISupports *securitySupports)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -99,7 +99,7 @@ public:
      */
     NS_IMETHOD
     SetSlot(JNIEnv *env, jsobject jsobj, jint slot, jobject jobj, void* principalsArray[], 
-                     int numPrincipals, void *securityContext)
+            int numPrincipals, nsISupports *securitySupports)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -112,7 +112,7 @@ public:
      */
     NS_IMETHOD
     RemoveMember(JNIEnv *env, jsobject jsobj, const jchar* name, jsize length,  void* principalsArray[], 
-                     int numPrincipals, void *securityContext)
+                 int numPrincipals, nsISupports *securitySupports)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -127,7 +127,7 @@ public:
      */
     NS_IMETHOD
     Call(JNIEnv *env, jsobject jsobj, const jchar* name, jsize length, jobjectArray jobjArr,  void* principalsArray[], 
-                     int numPrincipals, void *securityContext, jobject *pjobj)
+         int numPrincipals, nsISupports *securitySupports, jobject *pjobj)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -143,7 +143,7 @@ public:
      */
     NS_IMETHOD	
     Eval(JNIEnv *env, jsobject obj, const jchar *script, jsize length, void* principalsArray[], 
-         int numPrincipals, void *securityContext, jobject *outResult);
+         int numPrincipals, nsISupports *securitySupports, jobject *outResult);
 
     /**
      * Get the window object for a plugin instance.
@@ -156,7 +156,7 @@ public:
      */
     NS_IMETHOD
     GetWindow(JNIEnv *env, void *pJavaObject, void* principalsArray[], 
-                     int numPrincipals, void *securityContext, jsobject *pobj)
+              int numPrincipals, nsISupports *securitySupports, jsobject *pobj)
 	{
 		return NS_ERROR_NOT_IMPLEMENTED;
 	}
