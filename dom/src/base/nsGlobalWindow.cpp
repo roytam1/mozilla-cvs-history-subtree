@@ -1738,9 +1738,9 @@ NS_IMETHODIMP GlobalWindowImpl::Focus()
     }
   }
   else {
-    nsCOMPtr<nsIFocusController>focusController;
+    nsCOMPtr<nsIFocusController> focusController;
     GetRootFocusController(getter_AddRefs(focusController));
-    if ( focusController )
+    if (focusController)
       focusController->SetFocusedWindow(this);
   }
 
