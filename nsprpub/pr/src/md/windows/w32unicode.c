@@ -132,11 +132,15 @@ LPWSTR _PR_MD_A2W(LPCSTR inString, LPWSTR outWideString, int inWideStringChars)
 ** This is similar to what NT does to support the funcAs.
 */
 
-void OutputDebugStringA(LPCSTR inString)
+VOID
+WINAPI
+OutputDebugStringA(
+    LPCSTR lpOutputString
+    )
 {
     LPWSTR str = NULL;
 
-    str = _PR_MD_MALLOC_A2W(inString);
+    str = _PR_MD_MALLOC_A2W(lpOutputString);
     if(NULL != str)
     {
         OutputDebugStringW(str);
@@ -146,6 +150,91 @@ void OutputDebugStringA(LPCSTR inString)
     {
         PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
     }
+}
+
+HINSTANCE
+WINAPI
+LoadLibraryA(
+    LPCSTR lpLibFileName
+    )
+{
+    HINSTANCE retval = NULL;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpLibFileName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    if(NULL != wideStr)
+    {
+        retval = LoadLibraryW(wideStr);
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
+BOOL
+WINAPI
+CreateProcessA (
+    LPCSTR pszImageName,
+    LPCSTR pszCmdLine,
+    LPSECURITY_ATTRIBUTES psaProcess,
+    LPSECURITY_ATTRIBUTES psaThread,
+    BOOL fInheritHandles,
+    DWORD fdwCreate,
+    LPVOID pvEnvironment,
+    LPSTR pszCurDir,
+    LPSTARTUPINFO psiStartInfo,
+    LPPROCESS_INFORMATION pProcInfo
+    )
+{
+    BOOL retval = FALSE;
+    LPWSTR wideImageName = NULL;
+
+    wideImageName = _PR_MD_MALLOC_A2W(pszImageName);
+    if(NULL != wideImageName)
+    {
+        LPWSTR wideCmdLine = NULL;
+
+        wideCmdLine = _PR_MD_MALLOC_A2W(pszCmdLine);
+        if(NULL == pszCmdLine || NULL != wideCmdLine)
+        {
+            LPWSTR wideCurDir = NULL;
+            WCHAR widePath[MAX_PATH + 1];
+
+            wideCurDir = _PR_MD_A2W(pszCurDir, widePath, sizeof(widePath) / sizeof(WCHAR));
+            retval = CreateProcessW(
+                wideImageName,
+                wideCmdLine,
+                psaProcess,
+                psaThread,
+                fInheritHandles,
+                fdwCreate,
+                pvEnvironment,
+                wideCurDir,
+                psiStartInfo,
+                pProcInfo);
+
+            if(NULL != wideCmdLine)
+            {
+                PR_Free(wideCmdLine);
+            }
+        }
+        else
+        {
+            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+        }
+
+        PR_Free(wideImageName);
+    }
+    else
+    {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+    }
+
+    return retval;
 }
 
 #endif /* WINCE */

@@ -207,10 +207,9 @@ size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const stru
     /*
     ** FIXME TODO
     **
-    ** More here.
-    **
-    ** Use GetTimeFormat and GetDateFormat
+    ** Use GetTimeFormat and GetDateFormat to implement this for real.
     */
+    PR_ASSERT(0);
 
     return retval;
 }

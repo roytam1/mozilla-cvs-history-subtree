@@ -234,7 +234,11 @@ _PR_MD_EXIT_THREAD(PRThread *thread)
 void
 _PR_MD_EXIT(PRIntn status)
 {
+#if !defined(WINCE)
     _exit(status);
+#else
+    TerminateProcess(GetCurrentProcess(), status);
+#endif
 }
 
 PRInt32 _PR_MD_SETTHREADAFFINITYMASK(PRThread *thread, PRUint32 mask )
