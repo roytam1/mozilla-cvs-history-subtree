@@ -557,18 +557,19 @@ net_ProcessMocha(ActiveEntry * ae)
 	MochaDecoder * decoder;
 
 	HOLD_CON_DATA(con_data);
-	if (!LM_AttemptLockJS((JSLockReleaseFunc)net_process_mocha, con_data))
+	if (!LM_AttemptLockJS(context, 
+                              (JSLockReleaseFunc)net_process_mocha, con_data))
 	    return 0;
 	DROP_CON_DATA(con_data);
 	decoder = LM_GetMochaDecoder(context);
 	if (!decoder) {
-	    LM_UnlockJS();
+	    LM_UnlockJS(context);
 	    ae->status = MK_OUT_OF_MEMORY;
 	    goto done;
 	}
         stream = decoder->stream;
         LM_PutMochaDecoder(decoder);
-	LM_UnlockJS();
+	LM_UnlockJS(context);
     }
     else {
 	stream = con_data->stream;
@@ -721,7 +722,8 @@ net_InterruptMocha(ActiveEntry *ae)
     con_data->active_entry = NULL;
 
     /* ae is about to go away, better get it off the JS lock waiters list */
-    if (LM_ClearAttemptLockJS((JSLockReleaseFunc)net_process_mocha, con_data))
+    if (LM_ClearAttemptLockJS(con_data->context,
+                              (JSLockReleaseFunc)net_process_mocha, con_data))
 	DROP_CON_DATA(con_data);
 
     return ae->status = MK_INTERRUPTED;

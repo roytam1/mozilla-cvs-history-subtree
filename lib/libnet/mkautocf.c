@@ -784,6 +784,8 @@ retry:
 	PREF_GetConfigContext(&configContext);
 	PREF_GetGlobalConfigObject(&globalConfig);
 
+	JS_BeginRequest(configContext);
+
 	proxyConfig = JS_DefineObject(configContext, globalConfig, 
 						"ProxyConfig",
 						&pc_class, 
@@ -793,12 +795,14 @@ retry:
 		if (!JS_DefineProperties(configContext,
 					 proxyConfig,
 					 pc_props)) {
+		JS_EndRequest(configContext);
 		return;
 		}
 
 		if (!JS_DefineFunctions(configContext,
 					proxyConfig,
 					pc_methods)) {
+		JS_EndRequest(configContext);
 		return;
 		}
 
@@ -812,6 +816,7 @@ retry:
 	/*MOCHA_DefineNewObject(decoder->js_context, proxyConfig, "bindings",
 			      &pc_class, NULL, NULL, 0, no_props, 0); */
 
+	JS_EndRequest(configContext);
     }
 
     if (!pacf_src_buf) {
@@ -840,9 +845,11 @@ retry:
 	goto out;
     }
 
+		JS_BeginRequest(configContext);
 		ok = JS_EvaluateScript(configContext, proxyConfig, 
 			   pacf_src_buf, pacf_src_len, pacf_url, 0,
 			   &result);
+		JS_EndRequest(configContext);
 
     if (!ok) {
 		/* Something went wrong with the js evaluation. If we're using a
@@ -1178,8 +1185,11 @@ MODULE_PRIVATE char *pacf_find_proxies_for_url(MWContext *context,
 	    XP_SPRINTF(buf, "FindProxyForURL(\"%s\",\"%s\",\"%s\")", safe_url, host,
 	       method ? method : "" );
 
-    if (!JS_AddRoot(configContext, &rv))
+    JS_BeginRequest(configContext);
+    if (!JS_AddRoot(configContext, &rv))  {
+	JS_EndRequest(configContext);
 	goto out;
+    }
 
 		ok = JS_EvaluateScript(configContext, proxyConfig,
 			   buf, strlen(buf), 0, 0, &rv);
@@ -1194,6 +1204,7 @@ MODULE_PRIVATE char *pacf_find_proxies_for_url(MWContext *context,
     }
 
     JS_RemoveRoot(configContext, &rv);
+    JS_EndRequest(configContext);
 out:
     FREEIF(method);
     FREEIF(buf);

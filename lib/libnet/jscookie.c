@@ -376,6 +376,7 @@ initializeJSCookieFilterStuff()
     if (!filter_context)
         return NULL;
 
+    JS_BeginRequest(filter_context);
     /* create our "global" object.  We make the message object a child of this */
     filter_obj = JS_NewObject(filter_context, &global_class, NULL, NULL);
     
@@ -383,10 +384,12 @@ initializeJSCookieFilterStuff()
     if (!filter_obj
             || !JS_DefineFunctions(filter_context, filter_obj, filter_methods))
             {
+                JS_EndRequest(filter_context);
                 destroyJSCookieFilterStuff();
                 return NULL;
             }
 
+    JS_EndRequest(filter_context);
     return filter_context;
 }
 
@@ -537,12 +540,16 @@ JSCF_Execute(
     if (!initializeJSCookieFilterStuff())
         return JSCF_error;
 
+    JS_BeginRequest(filter_context);
+
     /* 
 	 * try loading (reloading if necessary) the filter file before bothering 
 	 *   to create any JS-objects
 	 */
-    if (!compileJSCookieFilters())
+    if (!compileJSCookieFilters())  {
+	JS_EndRequest(filter_context);
         return JSCF_error;
+    }
 
     if (!error_reporter_installed)
         {
@@ -553,8 +560,10 @@ JSCF_Execute(
 
 
     cookie_obj = newCookieObject();
-    if( (JSObject *)0 == cookie_obj )
+    if( (JSObject *)0 == cookie_obj )  {
+	JS_EndRequest(filter_context);
         return JSCF_error;
+    }
 
     cookie_data = (JSCookieData *)JS_GetPrivate(filter_context, cookie_obj);
     cookie_data->js_context = filter_context;
@@ -568,6 +577,8 @@ JSCF_Execute(
     filter_arg = OBJECT_TO_JSVAL(cookie_obj);
     JS_CallFunctionName(filter_context, filter_obj, script_name, 1, 
                         &filter_arg, &result);
+
+    JS_EndRequest(filter_context);
 
     *data_changed = cookie_data->property_changed;
     if( cookie_data->decision_made ) {
@@ -591,6 +602,7 @@ JSCF_Cleanup(void)
 
     if (filter_context)
     {
+	JS_BeginRequest(filter_context);
         if (error_reporter_installed)
             {
                 error_reporter_installed = JS_FALSE;
@@ -600,5 +612,6 @@ JSCF_Cleanup(void)
         JS_GC(filter_context);
 
         destroyJSCookieFilterStuff();
+	JS_EndRequest(filter_context);
 	}
 }
