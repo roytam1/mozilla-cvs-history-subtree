@@ -19,6 +19,23 @@
 #ifndef nsCom_h__
 #define nsCom_h__
 
+/*
+ * API Import/Export macros
+ */
+
+#ifdef _IMPL_NS_COM
+#ifdef XP_PC
+#define NS_COM _declspec(dllexport)
+#else  /* !XP_PC */
+#define NS_COM
+#endif /* !XP_PC */
+#else  /* !_IMPL_NS_COM */
+#ifdef XP_PC
+#define NS_COM _declspec(dllimport)
+#else  /* !XP_PC */
+#define NS_COM
+#endif /* !XP_PC */
+#endif /* !_IMPL_NS_COM */
 
 /*
  * DLL Export macro
@@ -28,8 +45,6 @@
 
 #define NS_EXPORT _declspec(dllexport)
 #define NS_EXPORT_(type) _declspec(dllexport) type __stdcall
-#define NS_IMPORT _declspec(dllimport)
-#define NS_IMPORT_(type) _declspec(dllimport) type __stdcall
 
 #define NS_IMETHOD_(type) virtual type __stdcall
 #define NS_IMETHOD virtual nsresult __stdcall
@@ -46,8 +61,6 @@
 
 #define NS_EXPORT __declspec(export)
 #define NS_EXPORT_(type) __declspec(export) type
-#define NS_IMPORT
-#define NS_IMPORT_(type) type
 
 #define NS_IMETHOD_(type) virtual type
 #define NS_IMETHOD virtual nsresult
@@ -64,8 +77,6 @@
 
 #define NS_EXPORT
 #define NS_EXPORT_(type) type
-#define NS_IMPORT
-#define NS_IMPORT_(type) type
 
 #define NS_IMETHOD_(type) virtual type
 #define NS_IMETHOD virtual nsresult
@@ -79,16 +90,6 @@
 #define NS_CALLBACK(_name) nsresult (* _name)
 
 #endif /* !XP_PC */
-
-/*
- * API Import/Export macros
- */
-
-#ifdef _IMPL_NS_COM
-#define NS_COM NS_EXPORT
-#else  /* !_IMPL_NS_COM */
-#define NS_COM NS_IMPORT
-#endif /* !_IMPL_NS_COM */
 
 /* use these functions to associate get/set methods with a
    C++ member variable
