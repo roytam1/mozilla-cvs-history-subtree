@@ -1328,6 +1328,17 @@ function gotoIRCURL (url)
 
 }
 
+function setTopicText (text)
+{
+    var topic = client.statusBar["channel-topic"];
+    var span = document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                         "html:span");
+    
+    span.appendChild(stringToMsg(text, client.currentObject));
+    topic.removeChild(topic.firstChild);
+    topic.appendChild(span);
+}
+    
 function updateNetwork(obj)
 {
     var o = getObjectDetails (client.currentObject);
@@ -2483,28 +2494,35 @@ function cli_quit (reason)
  * textbox.
  */
 client.performTabMatch =
-CIRCUser.prototype.performTabMatch =
 function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
 {
-    if (wordStart != 1 || line[0] != client.COMMAND_CHAR)
+    if (wordStart != 0 || line[0] != client.COMMAND_CHAR)
         return null;
 
-    var matches = client.commands.listNames(word);
+    var matches = client.commands.listNames(word.substr(1));
     if (matches.length == 1 && wordEnd == line.length)
-        matches[0] += " ";
+    {
+        matches[0] = client.COMMAND_CHAR + matches[0] + " ";
+    }
+    else
+    {
+        for (var i in matches)
+            matches[i] = client.COMMAND_CHAR + matches[i];
+    }
 
     return matches;
 }
 
 CIRCChannel.prototype.performTabMatch =
 CIRCNetwork.prototype.performTabMatch =
+CIRCUser.prototype.performTabMatch    =
 function gettabmatch_usr (line, wordStart, wordEnd, word, cursorpos)
 {
-    if (wordStart == 1 && line[0] == client.COMMAND_CHAR)
-        return client.performTabMatch (line, wordStart, wordEnd, word, 
+    if (wordStart == 0 && line[0] == client.COMMAND_CHAR)
+        return client.performTabMatch (line, wordStart, wordEnd, word,
                                        cursorpos);
     
-    if (!"users" in this)
+    if (!("users" in this))
         return [];
     
     var users = this.users;

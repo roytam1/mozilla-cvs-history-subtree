@@ -103,7 +103,7 @@ CIRCNetwork.prototype.INITIAL_DESC = "INITIAL_DESC";
 CIRCNetwork.prototype.INITIAL_CHANNEL = "#jsbot"; 
 /* set INITIAL_CHANNEL to "" if you don't want a primary channel */
 
-CIRCNetwork.prototype.MAX_CONNECT_ATTEMPTS = 20;
+CIRCNetwork.prototype.MAX_CONNECT_ATTEMPTS = 5;
 CIRCNetwork.prototype.stayingPower = false; 
 
 CIRCNetwork.prototype.TYPE = "IRCNetwork";
@@ -122,7 +122,7 @@ function net_conenct()
         return;
 
     this.connecting = true; /* connection is considered "made" when serve
-                             * sends a 001 message (see server.on001 */
+                             * sends a 001 message (see server.on001) */
     this.connectAttempt = 0;
     this.nextHost = 0;
     var ev = new CEvent ("network", "do-connect", this, "onDoConnect");

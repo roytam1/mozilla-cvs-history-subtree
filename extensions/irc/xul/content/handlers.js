@@ -333,9 +333,16 @@ function onOutputContextMenuCreate(e)
         }
         
         var server = getObjectDetails(client.currentObject).server;
-        if (server)
-            iAmOp = client.currentObject.users[server.me.nick].isOp ?
-                "yes" : "no";
+        if (server &&
+            server.me.nick in client.currentObject.users &&
+            client.currentObject.users[server.me.nick].isOp)
+        {
+            iAmOp =  "yes";
+        }
+        else
+        {
+            iAmOp = "no";
+        }
     }
 
     var popup = document.getElementById ("outputContext");
@@ -789,13 +796,13 @@ function onTabCompleteRequest (e)
         return;
     }
 
-    var wordStart = line.substr(0, selStart).search(/\W\w*$/);
+    var wordStart = line.substr(0, selStart).search(/\s\w*$/);
     if (wordStart == -1)
         wordStart = 0;
     else
         ++wordStart;
     
-    var wordEnd = line.substr(selStart).search(/\W/);
+    var wordEnd = line.substr(selStart).search(/\s/);
     if (wordEnd == -1)
         wordEnd = line.length;
     else
@@ -1451,10 +1458,9 @@ function cli_quit (e)
 client.onInputExit =
 function cli_exit (e)
 {
-    
     client.quit(e.inputData);    
     window.close();
-    
+    return true;
 }
 
 client.onInputDelete =
