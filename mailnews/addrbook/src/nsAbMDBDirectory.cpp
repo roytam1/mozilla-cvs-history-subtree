@@ -126,12 +126,14 @@ nsresult nsAbMDBDirectory::AddMailList(const char *uriName)
 	return rv;
 }
 
-nsresult nsAbMDBDirectory::RemoveCardFromAddressList(const nsIAbCard* card)
+nsresult nsAbMDBDirectory::RemoveCardFromAddressList(nsIAbCard* card)
 {
 	nsresult rv = NS_OK;
 	PRUint32 listTotal;
 	PRInt32 i, j;
 	rv = m_AddressList->Count(&listTotal);
+  NS_ENSURE_SUCCESS(rv,rv);
+
 	for (i = listTotal - 1; i >= 0; i--)
 	{						
 		nsCOMPtr<nsISupports> pSupport = getter_AddRefs(m_AddressList->ElementAt(i));
@@ -151,8 +153,11 @@ nsresult nsAbMDBDirectory::RemoveCardFromAddressList(const nsIAbCard* card)
 				{
 					nsCOMPtr<nsISupports> pSupport = getter_AddRefs(pAddressLists->ElementAt(j));
 					nsCOMPtr<nsIAbCard> cardInList(do_QueryInterface(pSupport, &rv));
-					if (card == cardInList.get())
+          PRBool equals;
+          nsresult rv = cardInList->Equals(card, &equals);
+          if (NS_SUCCEEDED(rv) && equals) {
 						pAddressLists->RemoveElementAt(j);
+          }
 				}
 			}
 		}
@@ -625,7 +630,8 @@ NS_IMETHODIMP nsAbMDBDirectory::DeleteCards(nsISupportsArray *cards)
 					}
 					else
 					{ 
-						RemoveCardFromAddressList(card);
+						rv = RemoveCardFromAddressList(card);
+            NS_ENSURE_SUCCESS(rv,rv);
 					}
 				}
 			}
@@ -820,6 +826,7 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard)
   nsCOMPtr<nsIAbCard> newCard;
   nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv));
 
+  // XXX fix me, need to copy if from another directory?
   if (NS_SUCCEEDED(rv)) {
     newCard = aCard;
   }  
