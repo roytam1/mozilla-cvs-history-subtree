@@ -174,6 +174,8 @@ pref("browser.tabs.opentabfor.middleclick", false);
 pref("browser.tabs.opentabfor.urlbar", false);
 pref("browser.tabs.opentabfor.windowopen", false);
 pref("browser.tabs.opentabfor.bookmarks", false);
+// 0 = blank, 1 = home page, 2 = last
+pref("browser.tabs.startPage", 0);
 
 // view source
 pref("view_source.syntax_highlight", true);
