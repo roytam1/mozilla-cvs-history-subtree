@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -51,7 +51,7 @@ class nsWinProfile
     /* Public Methods */
 
     nsWinProfile( nsInstall* suObj, const nsString& folder, const nsString& file );
-    ~nsWinProfile(); 
+    ~nsWinProfile();
 
     /**
      * Schedules a write into a windows "ini" file.  "Value" can be
@@ -62,7 +62,7 @@ class nsWinProfile
      * @return  false for failure, true for success
      */
     PRInt32 WriteString( nsString section, nsString key, nsString value, PRInt32* aReturn );
-    
+
     /**
      * Reads a value from a windows "ini" file.  We don't support using
      * a null "key" to return a list of keys--you have to know what you want
@@ -70,19 +70,19 @@ class nsWinProfile
      * @return  String value from INI, "" if not found, null if error
      */
     PRInt32 GetString( nsString section, nsString key, nsString* aReturn );
-    
-    nsString* GetFilename();
+
+    nsString& GetFilename();
     nsInstall* InstallObject();
-    
+
     PRInt32 FinalWriteString( nsString section, nsString key, nsString value );
 
-    
+
   private:
-    
+
     /* Private Fields */
-    nsString*  mFilename;
+    nsString   mFilename;
     nsInstall* mInstallObject;
-    
+
     /* Private Methods */
     PRInt32 NativeWriteString( nsString section, nsString key, nsString value );
     PRInt32 NativeGetString( nsString section, nsString key, nsString* aReturn );

@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -47,6 +47,9 @@
 #ifdef _WINDOWS
 #include <windows.h>
 #include "nsWinShortcut.h"
+
+extern nsresult UCS2toFS(const PRUnichar *aBuffer, char **aResult);
+extern nsresult FStoUCS2(const char* aBuffer, PRUnichar **aResult);
 #endif
 
 #ifdef XP_MAC
@@ -59,7 +62,7 @@
 #include "nsILocalFileMac.h"
 #endif
 
-static NS_DEFINE_CID(kIProcessCID, NS_PROCESS_CID); 
+static NS_DEFINE_CID(kIProcessCID, NS_PROCESS_CID);
 
 /* Public Methods */
 
@@ -80,12 +83,9 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
     mCommand      = aCommand;
     mFlags        = aFlags;
     mSrc          = nsnull;
-    mParams       = nsnull;
     mStrTarget    = nsnull;
     mShortcutPath = nsnull;
-    mDescription  = nsnull;
     mWorkingPath  = nsnull;
-    mParams       = nsnull;
     mIcon         = nsnull;
 }
 
@@ -104,13 +104,10 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
   mIObj       = aInstallObj;
   mCommand    = aCommand;
   mFlags      = 0;
-  mParams     = nsnull;
   mStrTarget  = nsnull;
   mAction     = ACTION_NONE;
   mShortcutPath = nsnull;
-  mDescription  = nsnull;
   mWorkingPath  = nsnull;
-  mParams       = nsnull;
   mIcon         = nsnull;
 }
 
@@ -125,16 +122,13 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
 
   *aReturn    = nsInstall::SUCCESS;
   mIObj       = aInstallObj;
-	mCommand    = aCommand;
-	mFlags      = 0;
-	mSrc        = nsnull;
-  mParams     = nsnull;
-	mStrTarget  = nsnull;
+  mCommand    = aCommand;
+  mFlags      = 0;
+  mSrc        = nsnull;
+  mStrTarget  = nsnull;
   mAction     = ACTION_NONE;
   mShortcutPath = nsnull;
-  mDescription  = nsnull;
   mWorkingPath  = nsnull;
-  mParams       = nsnull;
   mIcon         = nsnull;
 }
 
@@ -154,9 +148,7 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
     mFlags        = 0;
     mAction       = ACTION_NONE;
     mShortcutPath = nsnull;
-    mDescription  = nsnull;
     mWorkingPath  = nsnull;
-    mParams       = nsnull;
     mIcon         = nsnull;
 
     switch(mCommand)
@@ -165,7 +157,6 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
         case NS_FOP_FILE_RENAME:
             mSrc = a1;
             mTarget     = nsnull;
-            mParams     = nsnull;
             mStrTarget  = new nsString(a2);
 
             if (mSrc == nsnull || mStrTarget == nsnull)
@@ -178,7 +169,7 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
         default:
             mSrc        = nsnull;
             mTarget = a1;
-            mParams     = new nsString(a2);
+            mParams     = a2;
             mStrTarget  = nsnull;
 
     }
@@ -198,7 +189,9 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
  mTarget(aTarget),
  mShortcutPath(aShortcutPath),
  mWorkingPath(aWorkingPath),
- mIcon(aIcon)
+ mIcon(aIcon),
+ mDescription(aDescription),
+ mParams(aParams)
 {
     MOZ_COUNT_CTOR(nsInstallFileOpItem);
 
@@ -210,34 +203,12 @@ nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
   mSrc        = nsnull;
   mStrTarget  = nsnull;
   mAction     = ACTION_NONE;
-
-  mDescription = new nsString(aDescription);
-  if(mDescription == nsnull)
-    *aReturn = nsInstall::OUT_OF_MEMORY;
-
-  mParams = new nsString(aParams);
-  if(mParams == nsnull)
-    *aReturn = nsInstall::OUT_OF_MEMORY;
 }
 
 nsInstallFileOpItem::~nsInstallFileOpItem()
 {
-  //if(mSrc)
-  //  delete mSrc;
-  //if(mTarget)
-  //  delete mTarget;
   if(mStrTarget)
     delete mStrTarget;
-  if(mParams)
-    delete mParams;
-  //if(mShortcutPath)
-  //  delete mShortcutPath;
-  if(mDescription)
-    delete mDescription;
-  //if(mWorkingPath)
-  //  delete mWorkingPath;
-  //if(mIcon)
-  //  delete mIcon;
 
   MOZ_COUNT_DTOR(nsInstallFileOpItem);
 }
@@ -292,19 +263,19 @@ PRInt32 nsInstallFileOpItem::Complete()
 
   if ( (ret != nsInstall::SUCCESS) && (ret < nsInstall::GESTALT_INVALID_ARGUMENT || ret > nsInstall::REBOOT_NEEDED) )
     ret = nsInstall::UNEXPECTED_ERROR; /* translate to XPInstall error */
-  	
+
   return ret;
 }
-  
+
 #define RESBUFSIZE 4096
 char* nsInstallFileOpItem::toString()
 {
   nsString result;
   char*    resultCString = new char[RESBUFSIZE];
   char*    rsrcVal = nsnull;
-  char*    temp;
-  char*    srcPath;
-  char*    dstPath;
+  char*    temp    = nsnull;
+  char*    srcPath = nsnull;
+  char*    dstPath = nsnull;
 
     // STRING USE WARNING: perhaps |result| should be an |nsCAutoString| to avoid all this double converting
   *resultCString = nsnull;
@@ -337,7 +308,7 @@ char* nsInstallFileOpItem::toString()
 
       mTarget->GetPath(&dstPath);
 
-      temp = ToNewCString(*mParams);
+      temp = ToNewCString(mParams);
       if((temp != nsnull) && (*temp != '\0'))
       {
         rsrcVal = mInstall->GetResourcedString(NS_LITERAL_STRING("ExecuteWithArgs"));
@@ -350,10 +321,6 @@ char* nsInstallFileOpItem::toString()
         if(rsrcVal != nsnull)
           PR_snprintf(resultCString, RESBUFSIZE, rsrcVal, dstPath);
       }
-
-      if(temp != nsnull)
-        Recycle(temp);
-
       break;
 
     case NS_FOP_FILE_MOVE:
@@ -416,12 +383,11 @@ char* nsInstallFileOpItem::toString()
         mShortcutPath->GetPath(&temp);
         result.AssignWithConversion(temp);
         result.Append(NS_LITERAL_STRING("\\"));
-        result.Append(*mDescription);
+        result.Append(mDescription);
         dstPath = ToNewCString(result);
         if(dstPath)
         {
           PR_snprintf(resultCString, RESBUFSIZE, rsrcVal, dstPath );
-          Recycle(dstPath);
         }
       }
       break;
@@ -455,8 +421,10 @@ char* nsInstallFileOpItem::toString()
       break;
   }
 
-  if(rsrcVal)
-    Recycle(rsrcVal);
+  if (rsrcVal)  Recycle(rsrcVal);
+  if (temp)     Recycle(temp);
+  if (srcPath)  Recycle(srcPath);
+  if (dstPath)  Recycle(dstPath);
 
   return resultCString;
 }
@@ -557,7 +525,7 @@ void nsInstallFileOpItem::Abort()
 
 /* CanUninstall
 * InstallFileOpItem() does not install any files which can be uninstalled,
-* hence this function returns false. 
+* hence this function returns false.
 */
 PRBool
 nsInstallFileOpItem::CanUninstall()
@@ -647,7 +615,7 @@ nsInstallFileOpItem::NativeFileOpDirRemovePrepare()
     else
       return nsInstall::IS_FILE;
   }
-    
+
   return nsInstall::DOES_NOT_EXIST;
 }
 
@@ -676,8 +644,7 @@ nsInstallFileOpItem::NativeFileOpFileRenamePrepare()
       nsIFile* target;
 
       mSrc->GetParent(&target);
-      nsresult rv =
-          target->Append(NS_LossyConvertUCS2toASCII(*mStrTarget).get());
+      nsresult rv = target->AppendUnicode(mStrTarget->get());
       //90% of the failures during Append will be because the target wasn't in string form
       // which it must be.
       if (NS_FAILED(rv)) return nsInstall::INVALID_ARGUMENTS;
@@ -691,7 +658,7 @@ nsInstallFileOpItem::NativeFileOpFileRenamePrepare()
     else
       return nsInstall::SOURCE_IS_DIRECTORY;
   }
-    
+
   return nsInstall::SOURCE_DOES_NOT_EXIST;
 }
 
@@ -700,7 +667,7 @@ nsInstallFileOpItem::NativeFileOpFileRenameComplete()
 {
   PRInt32 ret = nsInstall::SUCCESS;
   PRBool flagExists, flagIsFile;
-  
+
   mSrc->Exists(&flagExists);
   if(flagExists)
   {
@@ -717,7 +684,7 @@ nsInstallFileOpItem::NativeFileOpFileRenameComplete()
 
             if (target)
             {
-                target->Append(NS_LossyConvertUCS2toASCII(*mStrTarget).get());
+                target->AppendUnicode(mStrTarget->get());
             }
             else
                 return nsInstall::UNEXPECTED_ERROR;
@@ -725,8 +692,7 @@ nsInstallFileOpItem::NativeFileOpFileRenameComplete()
             target->Exists(&flagExists);
             if(!flagExists)
             {
-                mSrc->MoveTo(parent,
-                             NS_LossyConvertUCS2toASCII(*mStrTarget).get());
+                mSrc->MoveToUnicode(parent, mStrTarget->get());
             }
             else
                 return nsInstall::ALREADY_EXISTS;
@@ -737,7 +703,7 @@ nsInstallFileOpItem::NativeFileOpFileRenameComplete()
     else
       ret = nsInstall::SOURCE_IS_DIRECTORY;
   }
-  else  
+  else
     ret = nsInstall::SOURCE_DOES_NOT_EXIST;
 
   return ret;
@@ -748,7 +714,6 @@ nsInstallFileOpItem::NativeFileOpFileRenameAbort()
 {
   PRInt32   ret  = nsInstall::SUCCESS;
   PRBool    flagExists;
-  char*     leafName;
   nsCOMPtr<nsIFile>  newFilename;
   nsCOMPtr<nsIFile>  parent;
 
@@ -761,14 +726,11 @@ nsInstallFileOpItem::NativeFileOpFileRenameAbort()
       mSrc->GetParent(getter_AddRefs(parent));
       if(parent)
       {
-        newFilename->Append(NS_LossyConvertUCS2toASCII(*mStrTarget).get());
-    
-        mSrc->GetLeafName(&leafName);
+        nsXPIDLString leafName;
+        mSrc->GetUnicodeLeafName(getter_Copies(leafName));
 
-        newFilename->MoveTo(parent, leafName);
-    
-        if(leafName)
-            nsCRT::free(leafName);
+        newFilename->AppendUnicode(mStrTarget->get());
+        newFilename->MoveToUnicode(parent, leafName);
       }
       else
         return nsInstall::UNEXPECTED_ERROR;
@@ -793,7 +755,7 @@ nsInstallFileOpItem::NativeFileOpFileCopyPrepare()
   // user has proper permissions to delete file.
   // Waiting on dougt's fix to nsFileSpec().
   // In the meantime, check as much as possible.
-  
+
   mSrc->Exists(&flagExists);
   if(flagExists)
   {
@@ -842,7 +804,7 @@ nsInstallFileOpItem::NativeFileOpFileCopyPrepare()
     else
       return nsInstall::SOURCE_IS_DIRECTORY;
   }
-    
+
   return nsInstall::SOURCE_DOES_NOT_EXIST;
 }
 
@@ -928,7 +890,7 @@ nsInstallFileOpItem::NativeFileOpFileDeletePrepare()
   // user has proper permissions to delete file.
   // Waiting on dougt's fix to nsFileSpec().
   // In the meantime, check as much as possible.
-  
+
   mTarget->Exists(&flagExists);
   if(flagExists)
   {
@@ -938,7 +900,7 @@ nsInstallFileOpItem::NativeFileOpFileDeletePrepare()
     else
       return nsInstall::IS_DIRECTORY;
   }
-    
+
   return nsInstall::DOES_NOT_EXIST;
 }
 
@@ -956,7 +918,7 @@ nsInstallFileOpItem::NativeFileOpFileDeleteComplete(nsIFile *aTarget)
     else
       return nsInstall::IS_DIRECTORY;
   }
-    
+
   // file went away on its own, not a problem
   return nsInstall::SUCCESS;
 }
@@ -980,15 +942,13 @@ nsInstallFileOpItem::NativeFileOpFileExecutePrepare()
     else
       return nsInstall::IS_DIRECTORY;
   }
-    
+
   return nsInstall::DOES_NOT_EXIST;
 }
 
 PRInt32
 nsInstallFileOpItem::NativeFileOpFileExecuteComplete()
 {
-  //mTarget->Execute(*mParams);
-  //mTarget->Spawn(NS_LossyConvertUCS2toASCII(*mParams).get(), 0);
   #define ARG_SLOTS 256
 
   char *cParams[ARG_SLOTS];
@@ -1003,10 +963,10 @@ nsInstallFileOpItem::NativeFileOpFileExecuteComplete()
     return nsInstall::INVALID_ARGUMENTS;
 
   nsCOMPtr<nsIProcess> process = do_CreateInstance(kIProcessCID);
-  
-  if (mParams && !mParams->IsEmpty())
+
+  if (!mParams.IsEmpty())
   {
-    arguments = ToNewCString(*mParams);
+    arguments = ToNewCString(mParams);
     argcount = xpi_PrepareProcessArguments(arguments, cParams, ARG_SLOTS);
   }
   if (argcount >= 0)
@@ -1049,7 +1009,7 @@ nsInstallFileOpItem::NativeFileOpFileMovePrepare()
         return nsInstall::DOES_NOT_EXIST;
       else
         return NativeFileOpFileCopyPrepare();
-    } 
+    }
     else
     {
       mTarget->IsFile(&flagIsFile);
@@ -1176,7 +1136,7 @@ nsInstallFileOpItem::NativeFileOpDirRenamePrepare()
       nsCOMPtr<nsIFile> target;
 
       mSrc->GetParent(getter_AddRefs(target));
-      target->Append(NS_LossyConvertUCS2toASCII(*mStrTarget).get());
+      target->AppendUnicode(mStrTarget->get());
 
       target->Exists(&flagExists);
       if(flagExists)
@@ -1187,7 +1147,7 @@ nsInstallFileOpItem::NativeFileOpDirRenamePrepare()
     else
       return nsInstall::IS_FILE;
   }
-    
+
   return nsInstall::SOURCE_DOES_NOT_EXIST;
 }
 
@@ -1206,15 +1166,14 @@ nsInstallFileOpItem::NativeFileOpDirRenameComplete()
       nsCOMPtr<nsIFile> target;
 
       mSrc->GetParent(getter_AddRefs(target));
-      target->Append(NS_LossyConvertUCS2toASCII(*mStrTarget).get());
+      target->AppendUnicode(mStrTarget->get());
 
       target->Exists(&flagExists);
       if(!flagExists)
       {
         nsCOMPtr<nsIFile> parent;
         mSrc->GetParent(getter_AddRefs(parent));
-        ret = mSrc->MoveTo(parent,
-                           NS_LossyConvertUCS2toASCII(*mStrTarget).get());
+        ret = mSrc->MoveToUnicode(parent, mStrTarget->get());
       }
       else
         return nsInstall::ALREADY_EXISTS;
@@ -1222,7 +1181,7 @@ nsInstallFileOpItem::NativeFileOpDirRenameComplete()
     else
       ret = nsInstall::SOURCE_IS_FILE;
   }
-  else  
+  else
     ret = nsInstall::SOURCE_DOES_NOT_EXIST;
 
   return ret;
@@ -1233,21 +1192,18 @@ nsInstallFileOpItem::NativeFileOpDirRenameAbort()
 {
   PRBool     flagExists;
   PRInt32    ret = nsInstall::SUCCESS;
-  char*      leafName;
   nsCOMPtr<nsIFile> newDirName;
   nsCOMPtr<nsIFile> parent;
 
   mSrc->Exists(&flagExists);
   if(!flagExists)
   {
+    nsXPIDLString leafName;
+    mSrc->GetUnicodeLeafName(getter_Copies(leafName));
     mSrc->GetParent(getter_AddRefs(newDirName));
-    newDirName->Append(NS_LossyConvertUCS2toASCII(*mStrTarget).get());
-    mSrc->GetLeafName(&leafName);
     mSrc->GetParent(getter_AddRefs(parent));
-    ret = newDirName->MoveTo(parent, leafName);
-    
-    if(leafName)
-      nsCRT::free(leafName);
+    newDirName->AppendUnicode(mStrTarget->get());
+    ret = newDirName->MoveToUnicode(parent, leafName);
   }
 
   return ret;
@@ -1299,46 +1255,40 @@ nsInstallFileOpItem::NativeFileOpWindowsShortcutComplete()
   PRInt32 ret = nsInstall::SUCCESS;
 
 #ifdef _WINDOWS
-  char *cDescription             = nsnull;
-  char *cParams                  = nsnull;
-  char *targetNativePathStr      = nsnull;
-  char *shortcutNativePathStr    = nsnull;
-  char *workingpathNativePathStr = nsnull;
-  char *iconNativePathStr        = nsnull;
+  nsresult          rv1,rv2;
+  nsXPIDLCString    description;
+  nsXPIDLCString    params;
+  nsXPIDLCString    targetPath;
+  nsXPIDLCString    shortcutPath;
+  nsXPIDLCString    workingPath;
+  nsXPIDLCString    iconPath;
 
-  if(mDescription)
-    cDescription = ToNewCString(*mDescription);
-  if(mParams)
-    cParams = ToNewCString(*mParams);
+  rv1 = UCS2toFS(mDescription.get(), getter_Copies(description));
+  rv2 = UCS2toFS(mParams.get(), getter_Copies(params));
 
-  if((cDescription == nsnull) || (cParams == nsnull))
-    ret = nsInstall::OUT_OF_MEMORY;
+  if (NS_FAILED(rv1) || NS_FAILED(rv2))
+      ret = nsInstall::UNEXPECTED_ERROR;
   else
   {
     if(mTarget)
-      mTarget->GetPath(&targetNativePathStr);
+      mTarget->GetPath(getter_Copies(targetPath));
     if(mShortcutPath)
-      mShortcutPath->GetPath(&shortcutNativePathStr);
+      mShortcutPath->GetPath(getter_Copies(shortcutPath));
     if(mWorkingPath)
-      mWorkingPath->GetPath(&workingpathNativePathStr);
+      mWorkingPath->GetPath(getter_Copies(workingPath));
     if(mIcon)
-      mIcon->GetPath(&iconNativePathStr);
+      mIcon->GetPath(getter_Copies(iconPath));
 
-    CreateALink(targetNativePathStr,
-                      shortcutNativePathStr,
-                      cDescription,
-                      workingpathNativePathStr,
-                      cParams,
-                      iconNativePathStr,
+    CreateALink(targetPath,
+                      shortcutPath,
+                      description,
+                      workingPath,
+                      params,
+                      iconPath,
                       mIconId);
 
     mAction = nsInstallFileOpItem::ACTION_SUCCESS;
   }
-
-  if(cDescription)
-    Recycle(cDescription);
-  if(cParams)
-    Recycle(cParams);
 #endif
 
   return ret;
@@ -1351,12 +1301,12 @@ nsInstallFileOpItem::NativeFileOpWindowsShortcutAbort()
   nsString   shortcutDescription;
   nsCOMPtr<nsIFile> shortcutTarget;
 
-  if(mShortcutPath && mDescription)
+  if(mShortcutPath)
   {
-    shortcutDescription = *mDescription;
+    shortcutDescription = mDescription;
     shortcutDescription.Append(NS_LITERAL_STRING(".lnk"));
     mShortcutPath->Clone(getter_AddRefs(shortcutTarget));
-    shortcutTarget->Append(NS_LossyConvertUCS2toASCII(shortcutDescription).get());
+    shortcutTarget->AppendUnicode(shortcutDescription.get());
 
     NativeFileOpFileDeleteComplete(shortcutTarget);
   }
@@ -1375,8 +1325,8 @@ nsInstallFileOpItem::NativeFileOpMacAliasPrepare()
   nsCOMPtr<nsILocalFileMac> sourceFile = do_QueryInterface(mSrc);
 
   nsresult      rv;
-  PRBool        exists;  
-   
+  PRBool        exists;
+
   // check if source file exists
   rv = sourceFile->Exists(&exists);
   if (NS_FAILED(rv) || !exists)
@@ -1387,13 +1337,13 @@ nsInstallFileOpItem::NativeFileOpMacAliasPrepare()
   rv = targetFile->Exists(&exists);
   if (NS_FAILED(rv))
     return nsInstall::INVALID_PATH_ERR;
-  
+
   // if file already exists: delete it before creating an updated alias
   if (exists) {
     rv = targetFile->Remove(PR_TRUE);
     if (NS_FAILED(rv))
         return nsInstall::FILENAME_ALREADY_USED;
-  }    
+  }
 #endif /* XP_MAC */
 
     return nsInstall::SUCCESS;
@@ -1405,44 +1355,44 @@ nsInstallFileOpItem::NativeFileOpMacAliasComplete()
 
 #ifdef XP_MAC
   // XXX gestalt to see if alias manager is around
-  
+
   nsCOMPtr<nsILocalFileMac> localFileMacTarget = do_QueryInterface(mTarget);
   nsCOMPtr<nsILocalFileMac> localFileMacSrc = do_QueryInterface(mSrc);
-  
+
   FSSpec        fsSource, fsAlias;
   PRBool        exists;
   AliasHandle   aliasH;
   FInfo         info;
   OSErr         err = noErr;
   nsresult      rv = NS_OK;
-  
+
   // check if source file exists
   rv = localFileMacSrc->Exists(&exists);
   if (NS_FAILED(rv) || !exists)
     return nsInstall::SOURCE_DOES_NOT_EXIST;
-      
+
   // check if file/folder already exists at target
   localFileMacTarget->SetFollowLinks(PR_FALSE);
   rv = localFileMacTarget->Exists(&exists);
   if (NS_FAILED(rv))
     return nsInstall::INVALID_PATH_ERR;
-  
+
   // if file already exists: delete it before creating an updated alias
   if (exists) {
     rv = localFileMacTarget->Remove(PR_TRUE);
     if (NS_FAILED(rv))
         return nsInstall::FILENAME_ALREADY_USED;
-  }    
+  }
 
   rv = localFileMacSrc->GetFSSpec(&fsSource);
   if (!NS_SUCCEEDED(rv)) return rv;
-  rv = localFileMacTarget->GetFSSpec(&fsAlias); 
+  rv = localFileMacTarget->GetFSSpec(&fsAlias);
   if (!NS_SUCCEEDED(rv)) return rv;
 
   err = NewAliasMinimal( &fsSource, &aliasH );
   if (err != noErr)  // bubble up Alias Manager error
-  	return err;
-  	
+    return err;
+
   // create the alias file
   FSpGetFInfo(&fsSource, &info);
   FSpCreateResFile(&fsAlias, info.fdCreator, info.fdType, smRoman);
@@ -1457,7 +1407,7 @@ nsInstallFileOpItem::NativeFileOpMacAliasComplete()
   }
   else
     return nsInstall::SUCCESS;  // non-fatal so prevent internal abort
-  
+
   // mark newly created file as an alias file
   FSpGetFInfo(&fsAlias, &info);
   info.fdFlags |= kIsAlias;
@@ -1469,10 +1419,10 @@ nsInstallFileOpItem::NativeFileOpMacAliasComplete()
 
 PRInt32
 nsInstallFileOpItem::NativeFileOpMacAliasAbort()
-{  
+{
 #ifdef XP_MAC
   NativeFileOpFileDeleteComplete(mTarget);
-#endif 
+#endif
 
   return nsInstall::SUCCESS;
 }
@@ -1489,12 +1439,12 @@ nsInstallFileOpItem::NativeFileOpWindowsRegisterServerPrepare()
   PRInt32 rv = nsInstall::SUCCESS;
 
 #ifdef _WINDOWS
-  char      *file = nsnull;
   FARPROC   DllReg;
   HINSTANCE hLib;
 
-  mTarget->GetPath(&file);
-  if(file != nsnull)
+  nsXPIDLCString file;
+  mTarget->GetPath(getter_Copies(file));
+  if(file)
   {
     if((hLib = LoadLibraryEx(file, NULL, LOAD_WITH_ALTERED_SEARCH_PATH)) != NULL)
     {
@@ -1519,12 +1469,12 @@ nsInstallFileOpItem::NativeFileOpWindowsRegisterServerComplete()
   PRInt32 rv = nsInstall::SUCCESS;
 
 #ifdef _WINDOWS
-  char      *file = nsnull;
   FARPROC   DllReg;
   HINSTANCE hLib;
 
-  mTarget->GetPath(&file);
-  if(file != nsnull)
+  nsXPIDLCString file;
+  mTarget->GetPath(getter_Copies(file));
+  if(file)
   {
     if((hLib = LoadLibraryEx(file, NULL, LOAD_WITH_ALTERED_SEARCH_PATH)) != NULL)
     {
@@ -1551,12 +1501,12 @@ nsInstallFileOpItem::NativeFileOpWindowsRegisterServerAbort()
   PRInt32 rv = nsInstall::SUCCESS;
 
 #ifdef _WINDOWS
-  char      *file = nsnull;
   FARPROC   DllUnReg;
   HINSTANCE hLib;
 
-  mTarget->GetPath(&file);
-  if(file != nsnull)
+  nsXPIDLCString file;
+  mTarget->GetPath(getter_Copies(file));
+  if(file)
   {
     if((hLib = LoadLibraryEx(file, NULL, LOAD_WITH_ALTERED_SEARCH_PATH)) != NULL)
     {

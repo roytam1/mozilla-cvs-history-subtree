@@ -10,34 +10,31 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * The Original Code is Mozilla Communicator client code, 
- * released March 31, 1998. 
+ * The Original Code is Mozilla Communicator client code,
+ * released March 31, 1998.
  *
- * The Initial Developer of the Original Code is Netscape Communications 
+ * The Initial Developer of the Original Code is Netscape Communications
  * Corporation.  Portions created by Netscape are
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *     Daniel Veditz <dveditz@netscape.com>
  *     Douglas Turner <dougt@netscape.com>
  */
 
 #include "nscore.h"
 #include "nsXPIDLString.h"
-#include "nsFileSpec.h"
-#include "nsFileStream.h"
 #include "nsInstall.h" // for error codes
 #include "prmem.h"
 #include "ScheduledTasks.h"
 #include "InstallCleanupDefines.h"
 
-#include "nsSpecialSystemDirectory.h"
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 
-static nsresult 
+static nsresult
 GetPersistentStringFromSpec(nsIFile* inSpec, char **string)
 {
     nsresult rv;
@@ -48,7 +45,7 @@ GetPersistentStringFromSpec(nsIFile* inSpec, char **string)
 
     if (NS_SUCCEEDED(rv)) {
         rv = LocalFile->GetPath(string);
-    } 
+    }
     else {
         *string = nsnull;
     }
@@ -67,7 +64,7 @@ PRInt32 ReplaceWindowsSystemFile(nsIFile* currentSpec, nsIFile* finalSpec)
 {
     PRInt32 err = -1;
 
-    // Get OS version info 
+    // Get OS version info
     DWORD dwVersion = GetVersion();
 
     char *final;
@@ -75,8 +72,8 @@ PRInt32 ReplaceWindowsSystemFile(nsIFile* currentSpec, nsIFile* finalSpec)
 
     finalSpec->GetPath(&final);
     currentSpec->GetPath(&current);
- 
-    // Get build numbers for Windows NT or Win32s 
+
+    // Get build numbers for Windows NT or Win32s
 
     if (dwVersion > 0x80000000)
     {
@@ -88,24 +85,24 @@ PRInt32 ReplaceWindowsSystemFile(nsIFile* currentSpec, nsIFile* finalSpec)
         int     strlen;
         char    Src[_MAX_PATH];   // 8.3 name
         char    Dest[_MAX_PATH];  // 8.3 name
-        
+
         strlen = GetShortPathName( (LPCTSTR)current, (LPTSTR)Src, (DWORD)sizeof(Src) );
-        if ( strlen > 0 ) 
+        if ( strlen > 0 )
         {
             free(current);
             current = strdup(Src);
         }
 
         strlen = GetShortPathName( (LPCTSTR) final, (LPTSTR) Dest, (DWORD) sizeof(Dest));
-        if ( strlen > 0 ) 
+        if ( strlen > 0 )
         {
             free(final);
             final = strdup(Dest);
         }
-        
+
         // NOTE: use OEM filenames! Even though it looks like a Windows
-        //       .INI file, WININIT.INI is processed under DOS 
-        
+        //       .INI file, WININIT.INI is processed under DOS
+
         AnsiToOem( final, final );
         AnsiToOem( current, current );
 
@@ -121,7 +118,7 @@ PRInt32 ReplaceWindowsSystemFile(nsIFile* currentSpec, nsIFile* finalSpec)
 
     free(final);
     free(current);
-    
+
     return err;
 }
 #endif
@@ -131,7 +128,7 @@ char* GetRegFilePath()
     nsresult rv;
     nsCOMPtr<nsILocalFile> iFileUtilityPath;
     //Get the program directory
-    nsCOMPtr<nsIProperties> directoryService = 
+    nsCOMPtr<nsIProperties> directoryService =
              do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
     if (NS_FAILED(rv))
         return nsnull;
@@ -141,7 +138,7 @@ char* GetRegFilePath()
         nsCOMPtr<nsIFile> tmp;
         rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(tmp));
 
-        if (NS_FAILED(rv) || !tmp) 
+        if (NS_FAILED(rv) || !tmp)
             return nsnull;
 
 #if defined (XP_MAC)
@@ -155,7 +152,7 @@ char* GetRegFilePath()
                                   NS_GET_IID(nsIFile),
                                   getter_AddRefs(iFileUtilityPath));
     }
-    if (NS_FAILED(rv) || !iFileUtilityPath) 
+    if (NS_FAILED(rv) || !iFileUtilityPath)
         return nsnull;
 
     iFileUtilityPath->Append(CLEANUP_REGISTRY);
@@ -164,23 +161,23 @@ char* GetRegFilePath()
     //When libreg is fixed to accept nsIFiles we'll change this to match.
     char* regFilePath;
     iFileUtilityPath->GetPath(&regFilePath);
-  
+
     return regFilePath;
 }
 
 
 PRInt32 DeleteFileNowOrSchedule(nsIFile* filename)
 {
-    PRBool flagExists;  
+    PRBool flagExists;
     PRInt32 result = nsInstall::SUCCESS;
 
     filename->Remove(PR_FALSE);
     filename->Exists(&flagExists);
     if (flagExists)
         result = ScheduleFileForDeletion(filename);
- 
+
     return result;
-} 
+}
 
 PRInt32 ScheduleFileForDeletion(nsIFile *filename)
 {
@@ -212,9 +209,9 @@ PRInt32 ScheduleFileForDeletion(nsIFile *filename)
                 if ( NS_SUCCEEDED(rv) && nameowner )
                 {
                     const char *fnamestr = nameowner;
-                    err = NR_RegSetEntry( reg, newkey, valname, 
-                                          REGTYPE_ENTRY_BYTES, 
-                                          (void*)fnamestr, 
+                    err = NR_RegSetEntry( reg, newkey, valname,
+                                          REGTYPE_ENTRY_BYTES,
+                                          (void*)fnamestr,
                                           strlen(fnamestr)+sizeof('\0'));
 
                     if ( err == REGERR_OK )
@@ -257,8 +254,7 @@ PRInt32 ReplaceFileNow(nsIFile* replacementFile, nsIFile* doomedFile )
     nsCOMPtr<nsIFile>      renamedDoomedFile;
     nsCOMPtr<nsILocalFile> tmpLocalFile;
     nsCOMPtr<nsIFile> parent;
-    nsXPIDLCString leafname;
-    
+
     doomedFile->Clone(getter_AddRefs(renamedDoomedFile));
     renamedDoomedFile->Exists(&flagExists);
     if ( flagExists )
@@ -266,36 +262,36 @@ PRInt32 ReplaceFileNow(nsIFile* replacementFile, nsIFile* doomedFile )
         tmpLocalFile = do_QueryInterface(renamedDoomedFile, &rv); // Convert to an nsILocalFile
 
         //get the leafname so we can convert its extension to .old
-        nsXPIDLCString uniqueLeafName;
-        tmpLocalFile->GetLeafName(getter_Copies(leafname));
-        nsCString newLeafName (leafname); 
+        nsXPIDLString uniqueLeafName;
+        tmpLocalFile->GetUnicodeLeafName(getter_Copies(uniqueLeafName));
+        nsString newLeafName (uniqueLeafName);
 
         PRInt32 extpos = newLeafName.RFindChar('.');
         if (extpos != -1)
         {
-            // We found the extension; 
+            // We found the extension;
             newLeafName.Truncate(extpos + 1); //strip off the old extension
         }
-        newLeafName.Append("old");
-        
-        //Now reset the leafname
-        tmpLocalFile->SetLeafName(newLeafName.get());
-        
-        MakeUnique(tmpLocalFile);                                 //  for the call to MakeUnique
-        
-        tmpLocalFile->GetParent(getter_AddRefs(parent)); //get the parent for later use in MoveTo
-        tmpLocalFile->GetLeafName(getter_Copies(uniqueLeafName));//this is the new "unique" leafname
+        newLeafName.Append(NS_LITERAL_STRING("old"));
 
-        rv = doomedFile->Clone(getter_AddRefs(renamedDoomedFile));// Reset renamedDoomed file so doomedfile isn't 
+        //Now reset the leafname
+        tmpLocalFile->SetUnicodeLeafName(newLeafName.get());
+
+        MakeUnique(tmpLocalFile);                                 //  for the call to MakeUnique
+
+        tmpLocalFile->GetParent(getter_AddRefs(parent)); //get the parent for later use in MoveTo
+        tmpLocalFile->GetUnicodeLeafName(getter_Copies(uniqueLeafName));//this is the new "unique" leafname
+
+        rv = doomedFile->Clone(getter_AddRefs(renamedDoomedFile));// Reset renamedDoomed file so doomedfile isn't
                                                                   //   changed during the MoveTo call
         if (NS_FAILED(rv)) result = nsInstall::UNEXPECTED_ERROR;
-        rv = renamedDoomedFile->MoveTo(parent, uniqueLeafName);        
+        rv = renamedDoomedFile->MoveToUnicode(parent, uniqueLeafName);
 
         if (NS_SUCCEEDED(rv))
         {
-            renamedDoomedFile = parent;                //MoveTo on Mac doesn't reset the tmpFile object to 
-            renamedDoomedFile->Append(uniqueLeafName); //the new name or location. That's why there's this 
-                                                       //explict assignment and Append call.
+            renamedDoomedFile = parent;                       //MoveTo on Mac doesn't reset the tmpFile object to
+            renamedDoomedFile->AppendUnicode(uniqueLeafName); //the new name or location. That's why there's this
+                                                              //explict assignment and Append call.
         }
 
         if (result == nsInstall::UNEXPECTED_ERROR)
@@ -309,6 +305,7 @@ PRInt32 ReplaceFileNow(nsIFile* replacementFile, nsIFile* doomedFile )
     {
         nsCOMPtr<nsIFile> parentofFinalFile;
         nsCOMPtr<nsIFile> parentofReplacementFile;
+        nsXPIDLString leafname;
 
         doomedFile->GetParent(getter_AddRefs(parentofFinalFile));
         replacementFile->GetParent(getter_AddRefs(parentofReplacementFile));
@@ -321,15 +318,15 @@ PRInt32 ReplaceFileNow(nsIFile* replacementFile, nsIFile* doomedFile )
         if(!flagIsEqual)
         {
             NS_WARNING("File unpacked into a non-dest dir" );
-            replacementFile->GetLeafName(getter_Copies(leafname));
-            rv = replacementFile->MoveTo(parentofFinalFile, leafname);
+            replacementFile->GetUnicodeLeafName(getter_Copies(leafname));
+            rv = replacementFile->MoveToUnicode(parentofFinalFile, leafname);
         }
-        	
-        rv = doomedFile->GetLeafName(getter_Copies(leafname));
-        if ( NS_SUCCEEDED(rv))
-            rv = replacementFile->MoveTo(parentofReplacementFile, leafname );
 
-        if ( NS_SUCCEEDED(rv) ) 
+        rv = doomedFile->GetUnicodeLeafName(getter_Copies(leafname));
+        if ( NS_SUCCEEDED(rv))
+            rv = replacementFile->MoveToUnicode(parentofReplacementFile, leafname);
+
+        if ( NS_SUCCEEDED(rv) )
         {
             // we replaced the old file OK, now we have to
             // get rid of it if it was renamed out of the way
@@ -339,7 +336,7 @@ PRInt32 ReplaceFileNow(nsIFile* replacementFile, nsIFile* doomedFile )
         {
             // couldn't rename file, try to put old file back
             renamedDoomedFile->GetParent(getter_AddRefs(parent));
-            renamedDoomedFile->MoveTo(parent, leafname);
+            renamedDoomedFile->MoveToUnicode(parent, leafname);
         }
     }
 
@@ -358,7 +355,7 @@ PRInt32 ReplaceFileNowOrSchedule(nsIFile* replacementFile, nsIFile* doomedFile, 
     {
         // if we couldn't replace the file schedule it for later
 #ifdef _WINDOWS
-        if ( (aMode & WIN_SYSTEM_FILE) && 
+        if ( (aMode & WIN_SYSTEM_FILE) &&
              (ReplaceWindowsSystemFile(replacementFile, doomedFile) == 0) )
                 return nsInstall::REBOOT_NEEDED;
 #endif
@@ -369,10 +366,10 @@ PRInt32 ReplaceFileNowOrSchedule(nsIFile* replacementFile, nsIFile* doomedFile, 
         REGERR  err;
 
         char* regFilePath = GetRegFilePath();
-        if ( REGERR_OK == NR_RegOpen(regFilePath, &reg) ) 
+        if ( REGERR_OK == NR_RegOpen(regFilePath, &reg) )
         {
             err = NR_RegAddKey( reg, ROOTKEY_PRIVATE, REG_REPLACE_LIST_KEY, &listkey );
-            if ( err == REGERR_OK ) 
+            if ( err == REGERR_OK )
             {
                 char     valname[20];
                 REGERR   err2;
@@ -394,10 +391,10 @@ PRInt32 ReplaceFileNowOrSchedule(nsIFile* replacementFile, nsIFile* doomedFile, 
 
                             const char *fsrc  = srcowner;
                             const char *fdest = destowner;
-                            err = NR_RegSetEntry( reg, filekey, 
+                            err = NR_RegSetEntry( reg, filekey,
                                                   REG_REPLACE_SRCFILE,
-                                                  REGTYPE_ENTRY_BYTES, 
-                                                  (void*)fsrc, 
+                                                  REGTYPE_ENTRY_BYTES,
+                                                  (void*)fsrc,
                                                   strlen(fsrc)+sizeof('\0'));
 
                             err2 = NR_RegSetEntry(reg, filekey,
@@ -453,7 +450,7 @@ void DeleteScheduledFiles( HREG reg )
     REGENUM state = 0;
     nsresult rv = NS_OK;
 
-    // perform scheduled file deletions  
+    // perform scheduled file deletions
     if (REGERR_OK == NR_RegGetKey(reg,ROOTKEY_PRIVATE,REG_DELETE_LIST_KEY,&key))
     {
         // the delete key exists, so we loop through its children
@@ -474,12 +471,12 @@ void DeleteScheduledFiles( HREG reg )
                 err = NR_RegGetEntry( reg, key, namebuf, valbuf, &bufsize );
                 if ( err == REGERR_OK )
                 {
-                    // no need to check return value of 
+                    // no need to check return value of
                     // SetPersistentDescriptorString, it's always NS_OK
                     //spec->SetPersistentDescriptorString(valbuf); //nsIFileXXX: Do we still need this instead of InitWithPath?
                     NS_NewLocalFile((char*)valbuf, PR_TRUE, getter_AddRefs(spec));
                     spec->Clone(getter_AddRefs(doomedFile));
-                    if (NS_SUCCEEDED(rv)) 
+                    if (NS_SUCCEEDED(rv))
                     {
                         PRBool flagExists;
                         doomedFile->Remove(PR_FALSE);
@@ -493,7 +490,7 @@ void DeleteScheduledFiles( HREG reg )
                 }
             }
 
-            // delete list node if empty 
+            // delete list node if empty
             state = 0;
             err = NR_RegEnumEntries(reg, key, &state, namebuf, sizeof(namebuf), 0);
             if ( err == REGERR_NOMORE )
@@ -510,7 +507,7 @@ void ReplaceScheduledFiles( HREG reg )
 {
     RKEY    key;
 
-    // replace files if any listed 
+    // replace files if any listed
     if (REGERR_OK == NR_RegGetKey(reg,ROOTKEY_PRIVATE,REG_REPLACE_LIST_KEY,&key))
     {
         char keyname[MAXREGNAMELEN];
@@ -525,7 +522,7 @@ void ReplaceScheduledFiles( HREG reg )
 
         uint32 bufsize;
         REGENUM state = 0;
-        while (REGERR_OK == NR_RegEnumSubkeys( reg, key, &state, 
+        while (REGERR_OK == NR_RegEnumSubkeys( reg, key, &state,
                                keyname, sizeof(keyname), REGENUM_CHILDREN))
         {
             bufsize = sizeof(srcFile);
@@ -560,7 +557,7 @@ void ReplaceScheduledFiles( HREG reg )
         }
 
 
-        // delete list node if empty 
+        // delete list node if empty
         state = 0;
         if (REGERR_NOMORE == NR_RegEnumSubkeys( reg, key, &state, keyname,
                                      sizeof(keyname), REGENUM_CHILDREN ))

@@ -60,8 +60,7 @@ function createShortcuts()
   winreg               = getWinRegistry();
   fWindows             = getFolder("Windows");
   fProgram             = getFolder("Program");
-  fTemp                = fProgram + "$MainExeFile$";
-  fileExe              = getFolder("file:///", fTemp);
+  fileExe              = getFolder(fProgram, "$MainExeFile$");
   scExeDesc            = "Mail";
   scParam              = "-mail";
   scFolderName         = "$ProductName$";

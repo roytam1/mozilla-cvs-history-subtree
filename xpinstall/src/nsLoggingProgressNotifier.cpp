@@ -229,7 +229,7 @@ nsLoggingProgressListener::OnInstallDone(const PRUnichar *aURL, PRInt32 aStatus)
 }
 
 NS_IMETHODIMP
-nsLoggingProgressListener::OnPackageNameSet(const PRUnichar *URL, const PRUnichar* UIPackageName)
+nsLoggingProgressListener::OnPackageNameSet(const PRUnichar *URL, const PRUnichar* UIPackageName, const PRUnichar* aVersion)
 {
     if (mLogStream == nsnull) return NS_ERROR_NULL_POINTER;
 
@@ -237,12 +237,13 @@ nsLoggingProgressListener::OnPackageNameSet(const PRUnichar *URL, const PRUnicha
 //    GetTime(&time);
 
     nsCString name; name.AssignWithConversion(UIPackageName);
+    nsCString version; version.AssignWithConversion(aVersion);
     nsCString uline;
     uline.SetCapacity(name.Length());
     for ( unsigned int i=0; i < name.Length(); ++i)
         uline.Append('-');
 
-    *mLogStream << "     " << name.get() << nsEndl;
+    *mLogStream << "     " << name.get() << " (version " << version.get() << ")" << nsEndl;
     *mLogStream << "     " << uline.get() << nsEndl;
 
     *mLogStream << nsEndl;

@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -36,7 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zlib.h"
-#include "nsFileSpec.h"
 #include "prmem.h"
 #include "nsXPIDLString.h"
 #include "nsInstall.h"
@@ -98,14 +97,13 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
 
     PRInt32 err = VR_GetPath( NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(inVRName).get()),
                               sizeof(tempTargetFile), tempTargetFile );
-    
+
     if (err != REGERR_OK)
     {
         *error = nsInstall::NO_SUCH_COMPONENT;
         return;
     }
-    nsString folderSpec; folderSpec.AssignWithConversion(tempTargetFile);
-	
+
     nsCOMPtr<nsILocalFile> tmp;
     NS_NewLocalFile((char*)tempTargetFile, PR_TRUE, getter_AddRefs(tmp));
 
@@ -116,7 +114,7 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
     mJarLocation    =   new nsString(inJarLocation);
     mVersionInfo    =   new nsInstallVersion();
     tmp->Clone(getter_AddRefs(mTargetFile));
-    
+
     if (mRegistryName == nsnull ||
         mJarLocation  == nsnull ||
         mTargetFile   == nsnull ||
@@ -142,12 +140,12 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
 {
     MOZ_COUNT_CTOR(nsInstallPatch);
 
-    if ((inInstall == nsnull) || (inVRName.IsEmpty()) || (inJarLocation.IsEmpty())) 
+    if ((inInstall == nsnull) || (inVRName.IsEmpty()) || (inJarLocation.IsEmpty()))
     {
         *error = nsInstall::INVALID_ARGUMENTS;
         return;
     }
-    
+
     nsCOMPtr<nsIFile> tmp = folderSpec->GetFileSpec();
     if (!tmp)
     {
@@ -171,11 +169,11 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
         *error = nsInstall::OUT_OF_MEMORY;
         return;
     }
-    
+
     mVersionInfo->Init(inVInfo);
-    
+
     if(! inPartialPath.IsEmpty())
-        mTargetFile->Append(NS_LossyConvertUCS2toASCII(inPartialPath).get());
+        mTargetFile->AppendUnicode(inPartialPath.get());
 }
 
 nsInstallPatch::~nsInstallPatch()
@@ -188,13 +186,13 @@ nsInstallPatch::~nsInstallPatch()
 
     if (mJarLocation)
         delete mJarLocation;
-    
+
     if (mRegistryName)
         delete mRegistryName;
 
     //if (mPatchedFile)
     //    delete mPatchedFile;
-    
+
     //if (mPatchFile)
     //    delete mPatchFile;
 
@@ -206,7 +204,7 @@ PRInt32 nsInstallPatch::Prepare()
 {
     PRInt32 err;
     PRBool deleteOldSrc, flagExists, flagIsFile;
-    
+
     if (mTargetFile == nsnull)
         return  nsInstall::INVALID_ARGUMENTS;
 
@@ -229,24 +227,24 @@ PRInt32 nsInstallPatch::Prepare()
     }
 
     if (err != nsInstall::SUCCESS)
-    {   
+    {
         return err;
     }
 
     err =  mInstall->ExtractFileFromJar(*mJarLocation, mTargetFile, getter_AddRefs(mPatchFile));
-   
-    
+
+
     nsCOMPtr<nsIFile> fileName = nsnull;
     //nsVoidKey ikey( HashFilePath( nsFilePath(*mTargetFile) ) );//nsIFileXXX: nsFilePath?
     nsVoidKey ikey( HashFilePath( mTargetFile ));
 
     mInstall->GetPatch(&ikey, getter_AddRefs(fileName));
 
-    if (fileName != nsnull) 
+    if (fileName != nsnull)
     {
         deleteOldSrc = PR_TRUE;
-    } 
-    else 
+    }
+    else
     {
         fileName     = mTargetFile;
         deleteOldSrc = PR_FALSE;
@@ -255,7 +253,7 @@ PRInt32 nsInstallPatch::Prepare()
     err = NativePatch(  fileName,           // the file to patch
                         mPatchFile,         // the patch that was extracted from the jarfile
                         getter_AddRefs(mPatchedFile));     // the new patched file
-    
+
     // clean up extracted diff data file
     mPatchFile->Exists(&flagExists);
     if ( (mPatchFile != nsnull) && (flagExists) )
@@ -265,44 +263,44 @@ PRInt32 nsInstallPatch::Prepare()
 
 
     if (err != nsInstall::SUCCESS)
-    {   
+    {
         // clean up tmp patched file since patching failed
-      mPatchFile->Exists(&flagExists);
- 		  if ((mPatchedFile != nsnull) && (flagExists))
-      {
-			    mPatchedFile->Remove(PR_FALSE);
-      }
-		return err;
+        mPatchFile->Exists(&flagExists);
+        if ((mPatchedFile != nsnull) && (flagExists))
+        {
+          mPatchedFile->Remove(PR_FALSE);
+        }
+        return err;
     }
 
     PR_ASSERT(mPatchedFile != nsnull);
     mInstall->AddPatch(&ikey, mPatchedFile );
 
-    if ( deleteOldSrc ) 
+    if ( deleteOldSrc )
     {
     DeleteFileNowOrSchedule(fileName );
     }
-  
+
     return err;
 }
 
 PRInt32 nsInstallPatch::Complete()
-{  
+{
     PRBool flagEquals;
 
-    if ((mInstall == nsnull) || (mVersionInfo == nsnull) || (mPatchedFile == nsnull) || (mTargetFile == nsnull)) 
+    if ((mInstall == nsnull) || (mVersionInfo == nsnull) || (mPatchedFile == nsnull) || (mTargetFile == nsnull))
     {
         return nsInstall::INVALID_ARGUMENTS;
     }
-    
+
     PRInt32 err = nsInstall::SUCCESS;
 
     nsCOMPtr<nsIFile> fileName = nsnull;
     //nsVoidKey ikey( HashFilePath( nsFilePath(*mTargetFile) )  );//nsIFileXXX: nsFilePath?
     nsVoidKey ikey( HashFilePath( mTargetFile ));
-    
+
     mInstall->GetPatch(&ikey, getter_AddRefs(fileName));
-    
+
     if (fileName == nsnull)
     {
         err = nsInstall::UNEXPECTED_ERROR;
@@ -310,19 +308,19 @@ PRInt32 nsInstallPatch::Complete()
     else
     {
       fileName->Equals(mPatchedFile, &flagEquals);
-      if (flagEquals) 
+      if (flagEquals)
       {
         // the patch has not been superceded--do final replacement
         err = ReplaceFileNowOrSchedule( mPatchedFile, mTargetFile, 0);
-        if ( 0 == err || nsInstall::REBOOT_NEEDED == err ) 
+        if ( 0 == err || nsInstall::REBOOT_NEEDED == err )
         {
             nsString tempVersionString;
             mVersionInfo->ToString(tempVersionString);
-            
+
             nsXPIDLCString tempPath;
             mTargetFile->GetPath(getter_Copies(tempPath));
 
-            // DO NOT propagate version registry errors, it will abort 
+            // DO NOT propagate version registry errors, it will abort
             // FinalizeInstall() leaving things hosed. These piddly errors
             // aren't worth that.
             VR_Install( NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(*mRegistryName).get()),
@@ -362,7 +360,7 @@ void nsInstallPatch::Abort()
 
 char* nsInstallPatch::toString()
 {
-	  char* buffer = new char[1024];
+    char* buffer = new char[1024];
     char* rsrcVal = nsnull;
 
     if (buffer == nsnull || !mInstall)
@@ -376,12 +374,12 @@ char* nsInstallPatch::toString()
         {
             char* temp;
             mTargetFile->GetPath(&temp);
-            sprintf( buffer, rsrcVal, temp); 
+            sprintf( buffer, rsrcVal, temp);
             nsCRT::free(rsrcVal);
         }
     }
 
-	return buffer;
+    return buffer;
 }
 
 
@@ -402,77 +400,73 @@ PRInt32
 nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **newFile)  //nsIFileXXX: changed & to *
 {
 
-	PRBool flagExists;
+  PRBool flagExists;
   nsresult rv;
-  DIFFDATA	  *dd;
-	PRInt32		  status		   = GDIFF_ERR_MEM;
-	char 		    *tmpurl		   = NULL;
-	//nsFileSpec  *outFileSpec = new nsFileSpec; 
-  //nsFileSpec  *tempSrcFile = new nsFileSpec;   // TODO: do you need to free?
+  DIFFDATA    *dd;
+  PRInt32     status       = GDIFF_ERR_MEM;
+  char        *tmpurl      = NULL;
   nsCOMPtr<nsIFile> outFileSpec;
   nsCOMPtr<nsIFile> tempSrcFile;
   nsCOMPtr<nsILocalFile> uniqueSrcFile;
   nsCOMPtr<nsILocalFile> patchFileLocal = do_QueryInterface(patchFile, &rv);
-  
+
   char*        realfile;
   sourceFile->GetPath(&realfile);
 
   sourceFile->Clone(getter_AddRefs(outFileSpec));
 
-	dd = (DIFFDATA *)PR_Calloc( 1, sizeof(DIFFDATA));
-	if (dd != NULL)
-	{
-		dd->databuf = (uchar*)PR_Malloc(BUFSIZE);
-		if (dd->databuf == NULL) 
-		{
-			status = GDIFF_ERR_MEM;
-			goto cleanup;
-		}
+  dd = (DIFFDATA *)PR_Calloc( 1, sizeof(DIFFDATA));
+  if (dd != NULL)
+  {
+    dd->databuf = (uchar*)PR_Malloc(BUFSIZE);
+    if (dd->databuf == NULL)
+    {
+      status = GDIFF_ERR_MEM;
+      goto cleanup;
+    }
 
 
-		dd->bufsize = BUFSIZE;
+    dd->bufsize = BUFSIZE;
 
-		// validate patch header & check for special instructions
+    // validate patch header & check for special instructions
     patchFileLocal->OpenNSPRFileDesc(PR_RDONLY, 0666, &dd->fDiff);
 
-		if (dd->fDiff != NULL)
-		{
-			status = gdiff_parseHeader(dd);
-		} 
-    else 
+    if (dd->fDiff != NULL)
     {
-			status = GDIFF_ERR_ACCESS;
-		}
+      status = gdiff_parseHeader(dd);
+    }
+    else
+    {
+      status = GDIFF_ERR_ACCESS;
+    }
 
 
     // in case we need to unbind Win32 images OR encode Mac file
     if (( dd->bWin32BoundImage || dd->bMacAppleSingle) && (status == GDIFF_OK ))
     {
         // make an unique tmp file  (FILENAME-src.EXT)
-        char* leafName;
-        rv = sourceFile->GetLeafName(&leafName);
-
-        nsString tmpName(NS_LITERAL_STRING("-src"));
-        nsString tmpFileName; tmpFileName.AssignWithConversion(leafName);
+        nsXPIDLString leafName;
+        rv = sourceFile->GetUnicodeLeafName(getter_Copies(leafName));
+        nsString tmpFileName(leafName);
 
         PRInt32 i;
         if ((i = tmpFileName.RFindChar('.')) > 0)
         {
             nsString ext;
             nsString fName;
-            tmpFileName.Right(ext, (tmpFileName.Length() - i) );        
+            tmpFileName.Right(ext, (tmpFileName.Length() - i) );
             tmpFileName.Left(fName, (tmpFileName.Length() - (tmpFileName.Length() - i)));
-            tmpFileName = fName + tmpName + ext;
+            tmpFileName = fName + NS_LITERAL_STRING("-src") + ext;
 
         } else {
-               tmpFileName += tmpName;
+               tmpFileName += NS_LITERAL_STRING("-src");
         }
-        
-    
+
+
         rv = sourceFile->Clone(getter_AddRefs(tempSrcFile));  //Clone the sourceFile
-        tempSrcFile->SetLeafName(NS_LossyConvertUCS2toASCII(tmpFileName).get()); //Append the new leafname
+        tempSrcFile->SetUnicodeLeafName(tmpFileName.get()); //Append the new leafname
         uniqueSrcFile = do_QueryInterface(tempSrcFile, &rv);  //Create an nsILocalFile version to pass to MakeUnique
-        MakeUnique(uniqueSrcFile); 
+        MakeUnique(uniqueSrcFile);
 
        char*        realfile;
        sourceFile->GetPath(&realfile);
@@ -500,8 +494,8 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
         nsCOMPtr<nsILocalFileMac> tempSourceFile;
         tempSourceFile = do_QueryInterface(sourceFile, &rv);
         tempSourceFile->GetFSSpec(&sourceSpec);
-    
-        status = PAS_EncodeFile(&sourceSpec, &tempSpec);   
+
+        status = PAS_EncodeFile(&sourceSpec, &tempSpec);
 
         if (status == noErr)
         {
@@ -517,16 +511,16 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
 
     // make a unique file at the same location of our source file  (FILENAME-ptch.EXT)
     nsString patchFileName(NS_LITERAL_STRING("-ptch"));
-    char* leafName;
-    sourceFile->GetLeafName(&leafName);
-    nsString newFileName; newFileName.AssignWithConversion(leafName);;
+    nsXPIDLString leafName;
+    sourceFile->GetUnicodeLeafName(getter_Copies(leafName));
+    nsString newFileName(leafName);
 
     PRInt32 index;
     if ((index = newFileName.RFindChar('.')) > 0)
     {
         nsString extention;
         nsString fileName;
-        newFileName.Right(extention, (newFileName.Length() - index) );        
+        newFileName.Right(extention, (newFileName.Length() - index) );
         newFileName.Left(fileName, (newFileName.Length() - (newFileName.Length() - index)));
         newFileName = fileName + patchFileName + extention;
 
@@ -537,8 +531,8 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
     }
 
 
-    outFileSpec->SetLeafName(NS_LossyConvertUCS2toASCII(newFileName).get());  //Set new leafname
-    nsCOMPtr<nsILocalFile> outFileLocal = do_QueryInterface(outFileSpec, &rv); //Create an nsILocalFile version 
+    outFileSpec->SetUnicodeLeafName(newFileName.get());  //Set new leafname
+    nsCOMPtr<nsILocalFile> outFileLocal = do_QueryInterface(outFileSpec, &rv); //Create an nsILocalFile version
                                                                                //to send to MakeUnique()
     MakeUnique(outFileLocal);
 
@@ -569,8 +563,8 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
             status = GDIFF_ERR_CHECKSUM_RESULT;
 
         rv = outFileSpec->Clone(newFile);
-    } 
-    else 
+    }
+    else
     {
         status = GDIFF_ERR_ACCESS;
     }
@@ -579,66 +573,65 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
 
 
 #ifdef XP_MAC
-  if ( dd->bMacAppleSingle && status == GDIFF_OK ) 
+  if ( dd->bMacAppleSingle && status == GDIFF_OK )
  {
         // create another file, so that we can decode somewhere
-        //nsFileSpec anotherName = *outFileSpec;
         nsCOMPtr<nsILocalFile> anotherName;
         nsCOMPtr<nsIFile> bsTemp;
-        
+
         outFileSpec->Clone(getter_AddRefs(bsTemp));   //Clone because we'll be changing the name
         anotherName = do_QueryInterface(bsTemp, &rv); //Set the old name
         MakeUnique(anotherName);  //Now give it the new name
-        
-		// Close the out file so that we can read it 		
-		PR_Close( dd->fOut );
-		dd->fOut = NULL;
-		
-		
-		FSSpec outSpec;
-		FSSpec anotherSpec;
-		nsCOMPtr<nsILocalFileMac> outSpecMacSpecific;
-		nsCOMPtr<nsILocalFileMac> anotherNameMacSpecific;
-		
-		anotherNameMacSpecific = do_QueryInterface(anotherName, &rv); //set value to nsILocalFileMac (sheesh)
-		outSpecMacSpecific = do_QueryInterface(outFileSpec, &rv); //ditto 
-		
-		anotherNameMacSpecific->GetFSSpec(&anotherSpec);
-		outSpecMacSpecific->GetFSSpec(&outSpec);
-		
-		outFileSpec->Exists(&flagExists);
-		if ( flagExists )
-		{
-		    PRInt64 fileSize;
-		    outFileSpec->GetFileSize(&fileSize);
-		}
-		
-			
+
+    // Close the out file so that we can read it
+    PR_Close( dd->fOut );
+    dd->fOut = NULL;
+
+
+    FSSpec outSpec;
+    FSSpec anotherSpec;
+    nsCOMPtr<nsILocalFileMac> outSpecMacSpecific;
+    nsCOMPtr<nsILocalFileMac> anotherNameMacSpecific;
+
+    anotherNameMacSpecific = do_QueryInterface(anotherName, &rv); //set value to nsILocalFileMac (sheesh)
+    outSpecMacSpecific = do_QueryInterface(outFileSpec, &rv); //ditto
+
+    anotherNameMacSpecific->GetFSSpec(&anotherSpec);
+    outSpecMacSpecific->GetFSSpec(&outSpec);
+
+    outFileSpec->Exists(&flagExists);
+    if ( flagExists )
+    {
+        PRInt64 fileSize;
+        outFileSpec->GetFileSize(&fileSize);
+    }
+
+
         status =  PAS_DecodeFile(&outSpec, &anotherSpec);
-		if (status != noErr)
-		{
-		   	goto cleanup;
+        if (status != noErr)
+        {
+            goto cleanup;
         }
-		
+
         nsCOMPtr<nsIFile> parent;
-        
+
         outFileSpec->GetParent(getter_AddRefs(parent));
-        
+
         outFileSpec->Remove(PR_FALSE);
-        
-        char* leaf;
-        anotherName->GetLeafName(&leaf);
-        anotherName->CopyTo(parent, leaf);
-        
+
+        nsXPIDLString leaf;
+        anotherName->GetUnicodeLeafName(getter_Copies(leaf));
+        anotherName->CopyToUnicode(parent, leaf.get());
+
         anotherName->Clone(newFile);
-        
-	}
-	
-#endif 
+
+  }
+
+#endif
 
 
 cleanup:
-    if ( dd != NULL ) 
+    if ( dd != NULL )
     {
         if ( dd->fSrc != nsnull )
             PR_Close( dd->fSrc );
@@ -669,7 +662,7 @@ cleanup:
     {
         PL_strfree(realfile);
     }
-    
+
     if (tempSrcFile)
     {
         tempSrcFile->Exists(&flagExists);
@@ -706,24 +699,24 @@ cleanup:
 
     return status;
 
-    // return -1;	//old return value
+    // return -1; //old return value
 }
 
 
-void* 
+void*
 nsInstallPatch::HashFilePath(nsIFile* aPath)
 {
     PRUint32 rv = 0;
 
     char* cPath;
     aPath->GetPath(&cPath);
-    
-    if(cPath != nsnull) 
+
+    if(cPath != nsnull)
     {
         char  ch;
         char* pathIndex = cPath;
 
-        while ((ch = *pathIndex++) != 0) 
+        while ((ch = *pathIndex++) != 0)
         {
             // FYI: rv = rv*37 + ch
             rv = ((rv << 5) + (rv << 2) + rv) + ch;
@@ -756,7 +749,7 @@ int32 gdiff_parseHeader( pDIFFDATA dd )
 
     /* Read the fixed-size part of the header */
 
-	nRead = PR_Read (dd->fDiff, header, GDIFF_HEADERSIZE);
+    nRead = PR_Read (dd->fDiff, header, GDIFF_HEADERSIZE);
     if ( nRead != GDIFF_HEADERSIZE ||
          memcmp( header, GDIFF_MAGIC, GDIFF_MAGIC_LEN ) != 0  ||
          header[GDIFF_VER_POS] != GDIFF_VER )
@@ -782,10 +775,10 @@ int32 gdiff_parseHeader( pDIFFDATA dd )
 
             if ( dd->oldChecksum != NULL && dd->newChecksum != NULL )
             {
-				nRead = PR_Read (dd->fDiff, dd->oldChecksum, oldcslen);
+                nRead = PR_Read (dd->fDiff, dd->oldChecksum, oldcslen);
                 if ( nRead == oldcslen )
                 {
-					nRead = PR_Read (dd->fDiff, dd->newChecksum, newcslen);
+          nRead = PR_Read (dd->fDiff, dd->newChecksum, newcslen);
                     if ( nRead != newcslen ) {
                         err = GDIFF_ERR_HEADER;
                     }
@@ -808,19 +801,19 @@ int32 gdiff_parseHeader( pDIFFDATA dd )
             uchar   *buf;
             uchar   lenbuf[GDIFF_APPDATALEN];
 
-			nRead = PR_Read(dd->fDiff, lenbuf, GDIFF_APPDATALEN);
-            if ( nRead == GDIFF_APPDATALEN ) 
+            nRead = PR_Read(dd->fDiff, lenbuf, GDIFF_APPDATALEN);
+            if ( nRead == GDIFF_APPDATALEN )
             {
                 appdataSize = getlong(lenbuf);
 
-                if ( appdataSize > 0 ) 
+                if ( appdataSize > 0 )
                 {
                     buf = (uchar *)PR_MALLOC( appdataSize );
 
                     if ( buf != NULL )
                     {
-						nRead = PR_Read (dd->fDiff, buf, appdataSize);
-                        if ( nRead == appdataSize ) 
+                        nRead = PR_Read (dd->fDiff, buf, appdataSize);
+                        if ( nRead == appdataSize )
                         {
                             if ( 0 == memcmp( buf, APPFLAG_W32BOUND, appdataSize ) )
                                 dd->bWin32BoundImage = TRUE;
@@ -852,16 +845,16 @@ int32 gdiff_parseHeader( pDIFFDATA dd )
 /*---------------------------------------------------------
  *  gdiff_validateFile()
  *
- *  computes the checksum of the file and compares it to 
+ *  computes the checksum of the file and compares it to
  *  the value stored in the GDIFF header
  *---------------------------------------------------------
  */
-static 
+static
 int32 gdiff_validateFile( pDIFFDATA dd, int file )
 {
-    int32		result;
-    PRFileDesc*	fh;
-    uchar*		chksum;
+    int32       result;
+    PRFileDesc* fh;
+    uchar*      chksum;
 
     /* which file are we dealing with? */
     if ( file == SRCFILE ) {
@@ -913,12 +906,12 @@ int32 gdiff_validateFile( pDIFFDATA dd, int file )
 /*---------------------------------------------------------
  *  gdiff_valCRC32()
  *
- *  computes the checksum of the file and compares it to 
+ *  computes the checksum of the file and compares it to
  *  the passed in checksum.  Assumes file is positioned at
  *  beginning.
  *---------------------------------------------------------
  */
-static 
+static
 int32 gdiff_valCRC32( pDIFFDATA dd, PRFileDesc* fh, uint32 chksum )
 {
     uint32 crc;
@@ -926,11 +919,11 @@ int32 gdiff_valCRC32( pDIFFDATA dd, PRFileDesc* fh, uint32 chksum )
 
     crc = crc32(0L, Z_NULL, 0);
 
-	nRead = PR_Read (fh, dd->databuf, dd->bufsize);
-    while ( nRead > 0 ) 
+    nRead = PR_Read (fh, dd->databuf, dd->bufsize);
+    while ( nRead > 0 )
     {
         crc = crc32( crc, dd->databuf, nRead );
-		nRead = PR_Read (fh, dd->databuf, dd->bufsize);
+        nRead = PR_Read (fh, dd->databuf, dd->bufsize);
     }
 
     if ( crc == chksum )
@@ -1073,7 +1066,7 @@ int32 gdiff_getdiff( pDIFFDATA dd, uchar *buffer, uint32 length )
 {
     uint32 bytesRead;
 
-	bytesRead = PR_Read (dd->fDiff, buffer, length);
+    bytesRead = PR_Read (dd->fDiff, buffer, length);
     if ( bytesRead != length )
         return GDIFF_ERR_BADDIFF;
 
@@ -1096,13 +1089,13 @@ int32 gdiff_add( pDIFFDATA dd, uint32 count )
 
     while ( count > 0 ) {
         chunksize = ( count > dd->bufsize) ? dd->bufsize : count;
-		nRead = PR_Read (dd->fDiff, dd->databuf, chunksize);
+        nRead = PR_Read (dd->fDiff, dd->databuf, chunksize);
         if ( nRead != chunksize ) {
             err = GDIFF_ERR_BADDIFF;
             break;
         }
 
-		PR_Write (dd->fOut, dd->databuf, chunksize);
+        PR_Write (dd->fOut, dd->databuf, chunksize);
 
         count -= chunksize;
     }
@@ -1125,18 +1118,18 @@ int32 gdiff_copy( pDIFFDATA dd, uint32 position, uint32 count )
     uint32 nRead;
     uint32 chunksize;
 
-	PR_Seek (dd->fSrc, position, PR_SEEK_SET);
+    PR_Seek (dd->fSrc, position, PR_SEEK_SET);
 
     while ( count > 0 ) {
         chunksize = (count > dd->bufsize) ? dd->bufsize : count;
 
-		nRead = PR_Read (dd->fSrc, dd->databuf, chunksize);
+        nRead = PR_Read (dd->fSrc, dd->databuf, chunksize);
         if ( nRead != chunksize ) {
             err = GDIFF_ERR_OLDFILE;
             break;
         }
 
-		PR_Write (dd->fOut, dd->databuf, chunksize);
+        PR_Write (dd->fOut, dd->databuf, chunksize);
 
         count -= chunksize;
     }
@@ -1153,7 +1146,7 @@ int32 gdiff_copy( pDIFFDATA dd, uint32 position, uint32 count )
  *  executables and .DLL's
  *---------------------------------------------------------
  */
-static 
+static
 PRBool su_unbind(char* oldfile, char* newfile)
 {
     PRBool bSuccess = FALSE;
@@ -1175,29 +1168,29 @@ PRBool su_unbind(char* oldfile, char* newfile)
     PIMAGE_IMPORT_DESCRIPTOR    pImp;
 
     typedef BOOL (__stdcall *BINDIMAGEEX)(DWORD Flags,
-									  LPSTR ImageName,
-									  LPSTR DllPath,
-									  LPSTR SymbolPath,
-									  PVOID StatusRoutine);
+                                      LPSTR ImageName,
+                                      LPSTR DllPath,
+                                      LPSTR SymbolPath,
+                                      PVOID StatusRoutine);
     HINSTANCE   hImageHelp;
     BINDIMAGEEX pfnBindImageEx;
 
     if ( oldfile != NULL && newfile != NULL &&
          CopyFile( oldfile, newfile, FALSE ) )
-    {   
+    {
         /* call BindImage() first to make maximum room for a possible
          * NT-style Bound Import Descriptors which can change various
          * offsets in the file */
-	    hImageHelp = LoadLibrary("IMAGEHLP.DLL");
-	    if ( hImageHelp > (HINSTANCE)HINSTANCE_ERROR ) {
-        	pfnBindImageEx = (BINDIMAGEEX)GetProcAddress(hImageHelp, "BindImageEx");
-    	    if (pfnBindImageEx) {
+        hImageHelp = LoadLibrary("IMAGEHLP.DLL");
+        if ( hImageHelp > (HINSTANCE)HINSTANCE_ERROR ) {
+            pfnBindImageEx = (BINDIMAGEEX)GetProcAddress(hImageHelp, "BindImageEx");
+            if (pfnBindImageEx) {
                 pfnBindImageEx(0, newfile, NULL, NULL, NULL);
             }
-		    FreeLibrary(hImageHelp);
-	    }
-        
-        
+            FreeLibrary(hImageHelp);
+        }
+
+
         fh = fopen( newfile, "r+b" );
         if ( fh == NULL )
             goto bail;
@@ -1213,9 +1206,9 @@ PRBool su_unbind(char* oldfile, char* newfile)
         /* read and validate the NT header */
         fseek( fh, mz.e_lfanew, SEEK_SET );
         nRead = fread( &nt, 1, sizeof(nt), fh );
-        if ( nRead != sizeof(nt) || 
+        if ( nRead != sizeof(nt) ||
              nt.Signature != IMAGE_NT_SIGNATURE ||
-             nt.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR_MAGIC ) 
+             nt.OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR_MAGIC )
         {
             goto bail;
         }
@@ -1225,7 +1218,7 @@ PRBool su_unbind(char* oldfile, char* newfile)
         for (i = nt.FileHeader.NumberOfSections; i > 0; i--)
         {
             nRead = fread( &sec, 1, sizeof(sec), fh );
-            if ( nRead != sizeof(sec) ) 
+            if ( nRead != sizeof(sec) )
                 goto bail;
 
             if ( memcmp( sec.Name, ".idata", 6 ) == 0 ) {
@@ -1236,7 +1229,7 @@ PRBool su_unbind(char* oldfile, char* newfile)
 
 
         /* Zap any binding in the imports section */
-        if ( bImports ) 
+        if ( bImports )
         {
             buf = (char*)malloc( sec.SizeOfRawData );
             if ( buf == NULL )
@@ -1248,7 +1241,7 @@ PRBool su_unbind(char* oldfile, char* newfile)
                 free( buf );
                 goto bail;
             }
-            
+
             pImp = (PIMAGE_IMPORT_DESCRIPTOR)buf;
             while ( pImp->OriginalFirstThunk != 0 )
             {
@@ -1258,10 +1251,10 @@ PRBool su_unbind(char* oldfile, char* newfile)
                     pImp->TimeDateStamp = 0;
                     pImp->ForwarderChain = 0;
                     bModified = TRUE;
-    
+
                     pOrigThunk = (PDWORD)(buf + (DWORD)(pImp->OriginalFirstThunk) - sec.VirtualAddress);
                     pBoundThunk = (PDWORD)(buf + (DWORD)(pImp->FirstThunk) - sec.VirtualAddress);
-    
+
                     for ( ; *pOrigThunk != 0; pOrigThunk++, pBoundThunk++ ) {
                         *pBoundThunk = *pOrigThunk;
                     }
@@ -1269,26 +1262,26 @@ PRBool su_unbind(char* oldfile, char* newfile)
                 pImp++;
             }
 
-            if ( bModified ) 
+            if ( bModified )
             {
                 /* it's been changed, write out the section */
                 fseek( fh, sec.PointerToRawData, SEEK_SET );
                 fwrite( buf, 1, sec.SizeOfRawData, fh );
             }
-    
+
             free( buf );
         }
 
 
         /* Check for a Bound Import Directory in the headers */
         pDir = &nt.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT];
-        if ( pDir->VirtualAddress != 0 ) 
+        if ( pDir->VirtualAddress != 0 )
         {
             /* we've got one, so stomp it */
             buf = (char*)calloc( pDir->Size, 1 );
             if ( buf == NULL )
                 goto bail;
-        
+
             fseek( fh, pDir->VirtualAddress, SEEK_SET );
             fwrite( buf, pDir->Size, 1, fh );
             free( buf );
@@ -1313,7 +1306,7 @@ PRBool su_unbind(char* oldfile, char* newfile)
     }
 
 bail:
-    if ( fh != NULL ) 
+    if ( fh != NULL )
         fclose(fh);
 
     return bSuccess;

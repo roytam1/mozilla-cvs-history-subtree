@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -38,7 +38,7 @@
 #ifndef __NS_WINREG_H__
 #define __NS_WINREG_H__
 
-#include "nsWinRegEnums.h" 
+#include "nsWinRegEnums.h"
 #include "nsWinRegValue.h"
 
 #include "nscore.h"
@@ -49,7 +49,6 @@
 #include "plevent.h"
 
 #include "nsString.h"
-#include "nsFileSpec.h"
 #include "nsHashtable.h"
 
 #include "nsSoftwareUpdate.h"
@@ -63,6 +62,9 @@
 #ifndef MAX_BUF
 #define MAX_BUF 4096
 #endif
+
+extern nsresult UCS2toFS(const PRUnichar *aBuffer, char **aResult);
+extern nsresult FStoUCS2(const char* aBuffer, PRUnichar **aResult);
 
 class nsWinReg
 {
@@ -115,25 +117,25 @@ class nsWinReg
     PRInt32           FinalSetValueNumber(PRInt32 root, const nsString& subkey, const nsString& valname, PRInt32 value, PRInt32* aReturn);
     PRInt32           FinalSetValue(PRInt32 root, const nsString& subkey, const nsString& valname, nsWinRegValue* value, PRInt32* aReturn);
 
-    
+
   private:
-    
+
     /* Private Fields */
     PRInt32    mRootKey;
     nsInstall* mInstallObject;
 
     /* Private Methods */
-    PRInt32           NativeKeyExists(const nsString& subkey);
-    PRInt32           NativeValueExists(const nsString& subkey, const nsString& valname);
-    PRInt32           NativeIsKeyWritable(const nsString& subkey);
+    PRBool            NativeKeyExists(const nsString& subkey);
+    PRBool            NativeValueExists(const nsString& subkey, const nsString& valname);
+    PRBool            NativeIsKeyWritable(const nsString& subkey);
     PRInt32           NativeCreateKey(const nsString& subkey, const nsString& classname);
     PRInt32           NativeDeleteKey(const nsString& subkey);
     PRInt32           NativeDeleteValue(const nsString& subkey, const nsString& valname);
 
     PRInt32           NativeSetValueString(const nsString& subkey, const nsString& valname, const nsString& value);
-    void              NativeGetValueString(const nsString& subkey, const nsString& valname, nsString* aReturn);
+    PRInt32           NativeGetValueString(const nsString& subkey, const nsString& valname, nsString* aReturn);
     PRInt32           NativeSetValueNumber(const nsString& subkey, const nsString& valname, PRInt32 value);
-    void              NativeGetValueNumber(const nsString& subkey, const nsString& valname, PRInt32* aReturn);
+    PRInt32           NativeGetValueNumber(const nsString& subkey, const nsString& valname, PRInt32* aReturn);
 
     PRInt32           NativeSetValue(const nsString& subkey, const nsString& valname, nsWinRegValue* value);
     nsWinRegValue*    NativeGetValue(const nsString& subkey, const nsString& valname);

@@ -10,22 +10,21 @@
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * The Original Code is Mozilla Communicator client code, 
- * released March 31, 1998. 
+ * The Original Code is Mozilla Communicator client code,
+ * released March 31, 1998.
  *
- * The Initial Developer of the Original Code is Netscape Communications 
+ * The Initial Developer of the Original Code is Netscape Communications
  * Corporation.  Portions created by Netscape are
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
  *     Daniel Veditz <dveditz@netscape.com>
  *     Douglas Turner <dougt@netscape.com>
  */
 
 #include "prprf.h"
 #include "nsInstallFile.h"
-#include "nsFileSpec.h"
 #include "VerReg.h"
 #include "ScheduledTasks.h"
 #include "nsInstall.h"
@@ -38,12 +37,12 @@
 
 /* Public Methods */
 
-/*	Constructor
+/*  Constructor
         inInstall    - softUpdate object we belong to
-        inComponentName	- full path of the registry component
-        inVInfo	        - full version info
+        inComponentName - full path of the registry component
+        inVInfo         - full version info
         inJarLocation   - location inside the JAR file
-        inFinalFileSpec	- final	location on disk
+        inFinalFileSpec - final location on disk
 */
 
 MOZ_DECL_CTOR_COUNTER(nsInstallFile)
@@ -56,7 +55,7 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
                              const nsString& inPartialPath,
                              PRInt32 mode,
                              PRBool  aRegister,
-                             PRInt32 *error) 
+                             PRInt32 *error)
   : nsInstallObject(inInstall),
     mVersionInfo(nsnull),
     mJarLocation(nsnull),
@@ -79,7 +78,7 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
     }
 
     *error = nsInstall::SUCCESS;
-    
+
     nsCOMPtr<nsIFile> tmp = folderSpec->GetFileSpec();
     if (!tmp)
     {
@@ -99,7 +98,7 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
     {
         // is there a file with the same name as the proposed folder?
         mFinalFile->IsFile(&flagIsFile);
-        if ( flagIsFile) 
+        if ( flagIsFile)
         {
             *error = nsInstall::ACCESS_DENIED;
             return;
@@ -131,8 +130,8 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
         {
             nodeLength = location - offset;
         }
-        
-        if (nodeLength > MAX_FILENAME) 
+
+        if (nodeLength > MAX_FILENAME)
         {
             *error = nsInstall::FILENAME_TOO_LONG;
             return;
@@ -140,7 +139,7 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
         else
         {
             nsresult rv = inPartialPath.Mid(subString, offset, nodeLength);
-            mFinalFile->Append(NS_LossyConvertUCS2toASCII(subString).get());
+            mFinalFile->AppendUnicode(subString.get());
             offset += nodeLength + 1;
             if (!finished)
                 location = inPartialPath.FindChar('/', offset);
@@ -150,8 +149,8 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
     mFinalFile->Exists(&mReplaceFile);
     mVersionRegistryName  = new nsString(inComponentName);
     mJarLocation          = new nsString(inJarLocation);
-    mVersionInfo	        = new nsString(inVInfo);
-     
+    mVersionInfo          = new nsString(inVInfo);
+
     if (mVersionRegistryName == nsnull ||
         mJarLocation         == nsnull ||
         mVersionInfo         == nsnull )
@@ -166,13 +165,13 @@ nsInstallFile::~nsInstallFile()
 {
     if (mVersionRegistryName)
         delete mVersionRegistryName;
-  
+
     if (mJarLocation)
         delete mJarLocation;
-  
+
     if (mVersionInfo)
         delete mVersionInfo;
-    
+
     //if(mFinalFile)
     //    mFinalFile = nsnull;
 
@@ -185,38 +184,35 @@ nsInstallFile::~nsInstallFile()
 
 
 
-void nsInstallFile::CreateAllFolders(nsInstall *inInstall, nsIFile *inFolderPath, PRInt32 *error)
+void nsInstallFile::CreateAllFolders(nsInstall *aInstall, nsIFile *aFolder, PRInt32 *aError)
 {
-    /* the nsFileSpecMac.cpp operator += requires "this" (the nsFileSpec)
-     * to be an existing dir
-     */
-
-    nsCOMPtr<nsIFile>   nsfsFolderPath;
-    nsString            nsStrFolder;
     PRBool              flagExists;
-    int                 result = 0;
     nsInstallLogComment *ilc   = nsnull;
 
-    inFolderPath->Exists(&flagExists);
+    nsresult rv = aFolder->Exists(&flagExists);
+    if (NS_FAILED(rv))
+    {
+        *aError = nsInstall::UNEXPECTED_ERROR;
+        return;
+    }
+
     if(!flagExists)
     {
-        char *szPath = nsnull;
+        nsCOMPtr<nsIFile> parent;
+        aFolder->GetParent(getter_AddRefs(parent));
+        CreateAllFolders(aInstall, parent, aError);
 
-        inFolderPath->GetParent(getter_AddRefs(nsfsFolderPath));
-        CreateAllFolders(inInstall, nsfsFolderPath, error);
-
-        inFolderPath->Create(nsIFile::DIRECTORY_TYPE, 0755); //nsIFileXXX: What kind of permissions are required here?
+        aFolder->Create(nsIFile::DIRECTORY_TYPE, 0755); //nsIFileXXX: What kind of permissions are required here?
         ++mFolderCreateCount;
 
-        inFolderPath->GetPath(&szPath);
-        nsStrFolder.AssignWithConversion(szPath);
-        nsMemory::Free(szPath);
-        ilc = new nsInstallLogComment(inInstall, NS_LITERAL_STRING("CreateFolder"), nsStrFolder, error);
+        nsXPIDLString folderPath;
+        aFolder->GetUnicodePath(getter_Copies(folderPath));
+        ilc = new nsInstallLogComment(aInstall, NS_LITERAL_STRING("CreateFolder"), folderPath, aError);
         if(ilc == nsnull)
-            *error = nsInstall::OUT_OF_MEMORY;
+            *aError = nsInstall::OUT_OF_MEMORY;
 
-        if(*error == nsInstall::SUCCESS) 
-            *error = mInstall->ScheduleForInstall(ilc);
+        if(*aError == nsInstall::SUCCESS)
+            *aError = mInstall->ScheduleForInstall(ilc);
     }
 }
 
@@ -272,7 +268,7 @@ PRInt32 nsInstallFile::Prepare()
             return error;
     }
 
-    return mInstall->ExtractFileFromJar(*mJarLocation, mFinalFile, getter_AddRefs(mExtractedFile)); 
+    return mInstall->ExtractFileFromJar(*mJarLocation, mFinalFile, getter_AddRefs(mExtractedFile));
 }
 
 /* Complete
@@ -284,14 +280,14 @@ PRInt32 nsInstallFile::Complete()
 {
     PRInt32 err;
 
-    if (mInstall == nsnull || mVersionRegistryName == nsnull || mFinalFile == nsnull ) 
+    if (mInstall == nsnull || mVersionRegistryName == nsnull || mFinalFile == nsnull )
     {
        return nsInstall::INVALID_ARGUMENTS;
     }
-   
+
     err = CompleteFileMove();
-    
-    if ( mRegister && (0 == err || nsInstall::REBOOT_NEEDED == err) ) 
+
+    if ( mRegister && (0 == err || nsInstall::REBOOT_NEEDED == err) )
     {
         nsXPIDLCString path;
         mFinalFile->GetPath(getter_Copies(path));
@@ -300,7 +296,7 @@ PRInt32 nsInstallFile::Complete()
                     NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(*mVersionInfo).get()),
                     PR_FALSE );
     }
-    
+
     return err;
 
 }
@@ -321,7 +317,7 @@ char* nsInstallFile::toString()
         return nsnull;
     else
         buffer[0] = '\0';
-    
+
     if (mReplaceFile)
     {
         if(mMode & WIN_SHARED_FILE)
@@ -376,20 +372,20 @@ PRInt32 nsInstallFile::CompleteFileMove()
 {
     int    result         = 0;
     PRBool bIsEqual = PR_FALSE;
-    
-    if (mExtractedFile == nsnull) 
+
+    if (mExtractedFile == nsnull)
     {
         return nsInstall::UNEXPECTED_ERROR;
     }
-   	
-    
+
+
     mExtractedFile->Equals(mFinalFile, &bIsEqual);
-    if ( bIsEqual ) 
+    if ( bIsEqual )
     {
         /* No need to rename, they are the same */
         result = nsInstall::SUCCESS;
-    } 
-    else 
+    }
+    else
     {
         result = ReplaceFileNowOrSchedule(mExtractedFile, mFinalFile, mMode );
     }
@@ -401,12 +397,12 @@ PRInt32 nsInstallFile::CompleteFileMove()
       RegisterSharedFile(path, mReplaceFile);
     }
 
-    return result;  
+    return result;
 }
 
 /* CanUninstall
 * InstallFile() installs files which can be uninstalled,
-* hence this function returns true. 
+* hence this function returns true.
 */
 PRBool
 nsInstallFile::CanUninstall()

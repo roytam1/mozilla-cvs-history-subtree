@@ -24,7 +24,6 @@
  */
 
 #include "nscore.h"
-#include "nsFileSpec.h"
 #include "pratom.h"
 #include "prmem.h"
 
@@ -50,7 +49,6 @@
 #include "nsXPInstallManager.h"
 #include "nsInstallTrigger.h"
 #include "nsInstallResources.h"
-#include "nsSpecialSystemDirectory.h"
 #include "nsIProxyObjectManager.h"
 #include "nsIWindowWatcher.h"
 #include "nsIDOMWindowInternal.h"
@@ -834,7 +832,6 @@ nsXPInstallManager::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
         if ( mItem->mFile )
         {
             PRBool flagExists;
-            nsFileSpec fspec;
             nsresult rv2 ;
             rv2 = mItem->mFile->Exists(&flagExists);
             if (NS_SUCCEEDED(rv2) && flagExists)
@@ -968,7 +965,7 @@ nsXPInstallManager::OnInstallStart(const PRUnichar *URL)
 }
 
 NS_IMETHODIMP
-nsXPInstallManager::OnPackageNameSet(const PRUnichar *URL, const PRUnichar *UIPackageName)
+nsXPInstallManager::OnPackageNameSet(const PRUnichar *URL, const PRUnichar *UIPackageName, const PRUnichar *aVersion)
 {
     // Don't need to do anything
     return NS_OK;

@@ -14,7 +14,7 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is 
+ * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
@@ -22,7 +22,7 @@
  * Contributor(s):
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -37,8 +37,64 @@
 
 #include "nsWinReg.h"
 #include "nsWinRegItem.h"
-#include <windows.h> /* is this needed? */
+#include <windows.h>
 #include "nsReadableUtils.h"
+
+nsresult UCS2toFS(const PRUnichar *aBuffer, char **aResult)
+{
+    NS_ENSURE_ARG_POINTER(aBuffer);
+
+    // includes null termination
+    size_t chars = ::WideCharToMultiByte(CP_ACP, 0,
+                                         aBuffer, -1,
+                                         NULL, 0, NULL, NULL);
+    if (chars == 0)
+        return NS_ERROR_FAILURE;
+
+    char *outbuf = (char*)nsMemory::Alloc(chars * sizeof(char));
+    if (!outbuf)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    chars = ::WideCharToMultiByte(CP_ACP, 0,
+                                  aBuffer, -1,
+                                  outbuf, chars, NULL, NULL);
+    if (chars == 0)
+    {
+        nsMemory::Free(outbuf);
+        return NS_ERROR_FAILURE;
+    }
+
+    *aResult = outbuf;
+    return NS_OK;
+}
+
+nsresult FStoUCS2(const char* aBuffer, PRUnichar **aResult)
+{
+    NS_ENSURE_ARG_POINTER(aBuffer);
+
+    // includes null termination
+    size_t chars = ::MultiByteToWideChar(CP_ACP, 0, aBuffer, -1, NULL, 0);
+
+    if (chars == 0)
+        return NS_ERROR_FAILURE;
+
+    PRUnichar *outbuf = (PRUnichar*)nsMemory::Alloc(chars * sizeof(PRUnichar));
+    if (!outbuf)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    chars = ::MultiByteToWideChar(CP_ACP, 0,
+                                  aBuffer, -1,
+                                  outbuf, chars);
+    if (chars == 0)
+    {
+        nsMemory::Free(outbuf);
+        return NS_ERROR_FAILURE;
+    }
+
+    *aResult = outbuf;
+    return NS_OK;
+}
+
 
 /* Public Methods */
 
@@ -49,7 +105,7 @@ nsWinReg::nsWinReg(nsInstall* suObj)
     MOZ_COUNT_CTOR(nsWinReg);
 
     mInstallObject      = suObj;
-	mRootKey = (PRInt32)HKEY_CLASSES_ROOT;
+    mRootKey = (PRInt32)HKEY_CLASSES_ROOT;
 }
 
 nsWinReg::~nsWinReg()
@@ -60,14 +116,14 @@ nsWinReg::~nsWinReg()
 PRInt32
 nsWinReg::SetRootKey(PRInt32 key)
 {
-	mRootKey = key;
+    mRootKey = key;
     return NS_OK;
 }
-  
+
 PRInt32
 nsWinReg::CreateKey(const nsAString& subkey, const nsAString& classname, PRInt32* aReturn)
 {
-	nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_CREATE, subkey, classname, NS_LITERAL_STRING("null"), aReturn);
+  nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_CREATE, subkey, classname, NS_LITERAL_STRING("null"), aReturn);
 
   if(wi == nsnull)
   {
@@ -85,15 +141,15 @@ nsWinReg::CreateKey(const nsAString& subkey, const nsAString& classname, PRInt32
   }
 
   if(mInstallObject)
-  	*aReturn = mInstallObject->ScheduleForInstall(wi);
-	
+    *aReturn = mInstallObject->ScheduleForInstall(wi);
+
   return 0;
 }
-  
+
 PRInt32
 nsWinReg::DeleteKey(const nsAString& subkey, PRInt32* aReturn)
 {
-	nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_DELETE, subkey, NS_LITERAL_STRING("null"), NS_LITERAL_STRING("null"), aReturn);
+  nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_DELETE, subkey, NS_LITERAL_STRING("null"), NS_LITERAL_STRING("null"), aReturn);
 
   if(wi == nsnull)
   {
@@ -119,7 +175,7 @@ nsWinReg::DeleteKey(const nsAString& subkey, PRInt32* aReturn)
 PRInt32
 nsWinReg::DeleteValue(const nsAString& subkey, const nsAString& valname, PRInt32* aReturn)
 {
-	nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_DELETE_VAL, subkey, valname, NS_LITERAL_STRING("null"), aReturn);
+  nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_DELETE_VAL, subkey, valname, NS_LITERAL_STRING("null"), aReturn);
 
   if(wi == nsnull)
   {
@@ -145,7 +201,7 @@ nsWinReg::DeleteValue(const nsAString& subkey, const nsAString& valname, PRInt32
 PRInt32
 nsWinReg::SetValueString(const nsAString& subkey, const nsAString& valname, const nsAString& value, PRInt32* aReturn)
 {
-	nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_SET_VAL_STRING, subkey, valname, value, aReturn);
+  nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_SET_VAL_STRING, subkey, valname, value, aReturn);
 
   if(wi == nsnull)
   {
@@ -164,17 +220,16 @@ nsWinReg::SetValueString(const nsAString& subkey, const nsAString& valname, cons
 
   if(mInstallObject)
     *aReturn = mInstallObject->ScheduleForInstall(wi);
-	
+
   return 0;
 }
 
 PRInt32
 nsWinReg::GetValueString(const nsString& subkey, const nsString& valname, nsString* aReturn)
 {
-   NativeGetValueString(subkey, valname, aReturn);
-   return NS_OK;
+   return NativeGetValueString(subkey, valname, aReturn);
 }
- 
+
 PRInt32
 nsWinReg::EnumValueNames(const nsString& aSubkey, PRInt32 aIndex, nsString &aReturn)
 {
@@ -183,32 +238,27 @@ nsWinReg::EnumValueNames(const nsString& aSubkey, PRInt32 aIndex, nsString &aRet
     HKEY           newkey;
     LONG           result;
     DWORD          namesize         = sizeof(namebuf);
-    char           subkeyCString[MAX_BUF];
-    unsigned short returnBuf[MAX_BUF];
-    PRInt32         rv = NS_ERROR_FAILURE;
+    PRInt32        rv = nsInstall::UNEXPECTED_ERROR;
 
-    subkeyCString[0] = 0;
-    returnBuf[0]     = 0;
-    namebuf[0]       = 0;
-
-    ::WideCharToMultiByte(CP_ACP, 0, 
-                          aSubkey.get(), -1,
-                          subkeyCString, sizeof subkeyCString, NULL, NULL); 
+    nsXPIDLCString subkey;
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_READ, &newkey );
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_READ, &newkey );
 
     if ( ERROR_SUCCESS == result ) {
         result = RegEnumValue( newkey, aIndex, namebuf, &namesize, nsnull, 0, 0, 0 );
         RegCloseKey( newkey );
 
         if ( ERROR_SUCCESS == result ) {
-            if ( ::MultiByteToWideChar(CP_ACP, 0, namebuf, -1, returnBuf, MAX_BUF) )
+            nsXPIDLString name;
+            if (NS_SUCCEEDED( FStoUCS2( (const char*)namebuf, getter_Copies(name) ) ) )
             {
-                aReturn.Assign(returnBuf);
-                rv = NS_OK;
+                aReturn.Assign(name);
+                rv = nsInstall::SUCCESS;
             }
-        } 
+        }
     }
 
     return rv;
@@ -222,30 +272,25 @@ nsWinReg::EnumKeys(const nsString& aSubkey, PRInt32 aIndex, nsString &aReturn)
     HKEY            newkey;
     LONG            result;
     DWORD           type            = REG_SZ;
-    char            subkeyCString[MAX_BUF];
-    unsigned short  returnBuf[MAX_BUF];
-    PRInt32         rv = NS_ERROR_FAILURE;
+    PRInt32         rv = nsInstall::UNEXPECTED_ERROR;
 
-    subkeyCString[0] = 0;
-    returnBuf[0] = 0;
-    keybuf[0] = 0;
-
-    ::WideCharToMultiByte(CP_ACP, 0, 
-                          aSubkey.get(), -1,
-                          subkeyCString, sizeof subkeyCString, NULL, NULL); 
+    nsXPIDLCString subkey;
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_READ, &newkey );
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_READ, &newkey );
 
     if ( ERROR_SUCCESS == result ) {
         result = RegEnumKey( newkey, aIndex, keybuf, sizeof keybuf );
         RegCloseKey( newkey );
-        
+
         if ( ERROR_SUCCESS == result ) {
-            if ( ::MultiByteToWideChar(CP_ACP, 0, keybuf, -1, returnBuf, MAX_BUF) )
+            nsXPIDLString key;
+            if (NS_SUCCEEDED( FStoUCS2( (const char*)keybuf, getter_Copies(key) ) ) )
             {
-                aReturn.Assign(returnBuf);
-                rv = NS_OK;
+                aReturn.Assign(key);
+                rv = nsInstall::SUCCESS;
             }
         }
     }
@@ -256,7 +301,7 @@ nsWinReg::EnumKeys(const nsString& aSubkey, PRInt32 aIndex, nsString &aReturn)
 PRInt32
 nsWinReg::SetValueNumber(const nsString& subkey, const nsString& valname, PRInt32 value, PRInt32* aReturn)
 {
-	nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_SET_VAL_NUMBER, subkey, valname, value, aReturn);
+  nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_SET_VAL_NUMBER, subkey, valname, value, aReturn);
 
   if(wi == nsnull)
   {
@@ -282,40 +327,39 @@ nsWinReg::SetValueNumber(const nsString& subkey, const nsString& valname, PRInt3
 PRInt32
 nsWinReg::GetValueNumber(const nsString& subkey, const nsString& valname, PRInt32* aReturn)
 {
-    NativeGetValueNumber(subkey, valname, aReturn);
-    return NS_OK;
+    return NativeGetValueNumber(subkey, valname, aReturn);
 }
- 
+
 PRInt32
 nsWinReg::SetValue(const nsString& subkey, const nsString& valname, nsWinRegValue* value, PRInt32* aReturn)
 {
   // fix: need to figure out what to do with nsWinRegValue class.
   //
-	// nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_SET_VAL, subkey, valname, (nsWinRegValue*)value, aReturn);
+  // nsWinRegItem* wi = new nsWinRegItem(this, mRootKey, NS_WIN_REG_SET_VAL, subkey, valname, (nsWinRegValue*)value, aReturn);
   //
-	// if(wi == nsnull)
+  // if(wi == nsnull)
   // {
   //   return NS_OK;
   // }
-	// mInstallObject->ScheduleForInstall(wi);
-	return 0;
+    // mInstallObject->ScheduleForInstall(wi);
+    return 0;
 }
-  
+
 PRInt32
 nsWinReg::GetValue(const nsString& subkey, const nsString& valname, nsWinRegValue** aReturn)
 {
   // fix:
   return NS_OK;
 }
-  
+
 nsInstall* nsWinReg::InstallObject()
 {
-	return mInstallObject;
+  return mInstallObject;
 }
-  
+
 PRInt32
 nsWinReg::KeyExists(const nsString& subkey,
-                    PRInt32* aReturn)
+                    PRBool* aReturn)
 {
   *aReturn = NativeKeyExists(subkey);
   return NS_OK;
@@ -324,15 +368,15 @@ nsWinReg::KeyExists(const nsString& subkey,
 PRInt32
 nsWinReg::ValueExists(const nsString& subkey,
                       const nsString& valname,
-                      PRInt32* aReturn)
+                      PRBool* aReturn)
 {
   *aReturn = NativeValueExists(subkey, valname);
   return NS_OK;
 }
- 
+
 PRInt32
 nsWinReg::IsKeyWritable(const nsString& subkey,
-                        PRInt32* aReturn)
+                        PRBool* aReturn)
 {
   *aReturn = NativeIsKeyWritable(subkey);
   return NS_OK;
@@ -370,7 +414,7 @@ nsWinReg::PrepareDeleteKey(PRInt32 root,
 
   return NS_OK;
 }
-  
+
 PRInt32
 nsWinReg::PrepareDeleteValue(PRInt32 root,
                              const nsString& subkey,
@@ -404,7 +448,7 @@ nsWinReg::PrepareSetValueString(PRInt32 root,
 
   return NS_OK;
 }
- 
+
 PRInt32
 nsWinReg::PrepareSetValueNumber(PRInt32 root,
                                 const nsString& subkey,
@@ -418,7 +462,7 @@ nsWinReg::PrepareSetValueNumber(PRInt32 root,
 
   return NS_OK;
 }
- 
+
 PRInt32
 nsWinReg::PrepareSetValue(PRInt32 root,
                           const nsString& subkey,
@@ -436,65 +480,68 @@ nsWinReg::PrepareSetValue(PRInt32 root,
 PRInt32
 nsWinReg::FinalCreateKey(PRInt32 root, const nsString& subkey, const nsString& classname, PRInt32* aReturn)
 {
-	SetRootKey(root);
-	*aReturn = NativeCreateKey(subkey, classname);
+  SetRootKey(root);
+  *aReturn = NativeCreateKey(subkey, classname);
   return NS_OK;
 }
-  
+
 PRInt32
 nsWinReg::FinalDeleteKey(PRInt32 root, const nsString& subkey, PRInt32* aReturn)
 {
-	SetRootKey(root);
-	*aReturn = NativeDeleteKey(subkey);
+  SetRootKey(root);
+  *aReturn = NativeDeleteKey(subkey);
   return NS_OK;
 }
-  
+
 PRInt32
 nsWinReg::FinalDeleteValue(PRInt32 root, const nsString& subkey, const nsString& valname, PRInt32* aReturn)
 {
-	SetRootKey(root);
-	*aReturn = NativeDeleteValue(subkey, valname);
+  SetRootKey(root);
+  *aReturn = NativeDeleteValue(subkey, valname);
   return NS_OK;
 }
 
 PRInt32
 nsWinReg::FinalSetValueString(PRInt32 root, const nsString& subkey, const nsString& valname, const nsString& value, PRInt32* aReturn)
 {
-	SetRootKey(root);
-	*aReturn = NativeSetValueString(subkey, valname, value);
+  SetRootKey(root);
+  *aReturn = NativeSetValueString(subkey, valname, value);
   return NS_OK;
 }
- 
+
 PRInt32
 nsWinReg::FinalSetValueNumber(PRInt32 root, const nsString& subkey, const nsString& valname, PRInt32 value, PRInt32* aReturn)
 {
-	SetRootKey(root);
-	*aReturn = NativeSetValueNumber(subkey, valname, value);
+  SetRootKey(root);
+  *aReturn = NativeSetValueNumber(subkey, valname, value);
   return NS_OK;
 }
- 
+
 PRInt32
 nsWinReg::FinalSetValue(PRInt32 root, const nsString& subkey, const nsString& valname, nsWinRegValue* value, PRInt32* aReturn)
 {
-	SetRootKey(root);
-	*aReturn = NativeSetValue(subkey, valname, value);
+  SetRootKey(root);
+  *aReturn = NativeSetValue(subkey, valname, value);
   return NS_OK;
 }
 
 
 /* Private Methods */
 
-PRInt32
-nsWinReg::NativeKeyExists(const nsString& subkey)
+PRBool
+nsWinReg::NativeKeyExists(const nsString& aSubkey)
 {
     HKEY    root, newkey;
     LONG    result;
-    PRInt32 keyExists     = PR_FALSE;
-    char*   subkeyCString = ToNewCString(subkey);
+    PRBool  keyExists     = PR_FALSE;
+    nsXPIDLCString subkey;
 
 #ifdef WIN32
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) )
+        return PR_FALSE;
+
     root   = (HKEY)mRootKey;
-    result = RegOpenKeyEx(root, subkeyCString, 0, KEY_READ, &newkey);
+    result = RegOpenKeyEx(root, subkey.get(), 0, KEY_READ, &newkey);
     switch(result)
     {
         case ERROR_SUCCESS:
@@ -509,31 +556,33 @@ nsWinReg::NativeKeyExists(const nsString& subkey)
     }
 #endif
 
-    if (subkeyCString)     Recycle(subkeyCString);
-
     return keyExists;
 }
 
-PRInt32
-nsWinReg::NativeValueExists(const nsString& subkey, const nsString& valname)
+PRBool
+nsWinReg::NativeValueExists(const nsString& aSubkey, const nsString& aValname)
 {
     HKEY          root;
     HKEY          newkey;
     LONG          result;
-    PRInt32       valueExists = PR_FALSE;
+    PRBool        valueExists = PR_FALSE;
     DWORD         length      = _MAXKEYVALUE_;
     unsigned char valbuf[_MAXKEYVALUE_];
-    char*         subkeyCString   = ToNewCString(subkey);
-    char*         valnameCString  = ToNewCString(valname);
-    
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+
 #ifdef WIN32
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+      return PR_FALSE;
+
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx(root, subkeyCString, 0, KEY_READ, &newkey);
+    result = RegOpenKeyEx(root, subkey.get(), 0, KEY_READ, &newkey);
     switch(result)
     {
         case ERROR_SUCCESS:
             result = RegQueryValueEx(newkey,
-                                     valnameCString,
+                                     valname.get(),
                                      0,
                                      NULL,
                                      valbuf,
@@ -559,20 +608,16 @@ nsWinReg::NativeValueExists(const nsString& subkey, const nsString& valname)
     }
 #endif
 
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
-
     return valueExists;
 }
- 
-PRInt32
-nsWinReg::NativeIsKeyWritable(const nsString& subkey)
+
+PRBool
+nsWinReg::NativeIsKeyWritable(const nsString& aSubkey)
 {
     HKEY     root;
     HKEY     newkey;
     LONG     result;
-    char*    subkeyCString;
-    nsString subkeyParent = subkey;
+    nsString subkeyParent = aSubkey;
     PRInt32  index;
     PRInt32  rv = PR_FALSE;
 
@@ -600,13 +645,13 @@ nsWinReg::NativeIsKeyWritable(const nsString& subkey)
     if(rv)
     {
         rv            = PR_FALSE;
-        subkeyCString = ToNewCString(subkeyParent);
-        if(!subkeyCString)
-            result = nsInstall::OUT_OF_MEMORY;
+        nsXPIDLCString subkey;
+        if ( NS_FAILED( UCS2toFS( subkeyParent.get(), getter_Copies(subkey) ) ) )
+            result = nsInstall::UNEXPECTED_ERROR;
         else
         {
             root   = (HKEY)mRootKey;
-            result = RegOpenKeyEx(root, subkeyCString, 0, KEY_WRITE, &newkey);
+            result = RegOpenKeyEx(root, subkey.get(), 0, KEY_WRITE, &newkey);
             switch(result)
             {
                 case ERROR_SUCCESS:
@@ -619,8 +664,6 @@ nsWinReg::NativeIsKeyWritable(const nsString& subkey)
                 default:
                     break;
             }
-            if(subkeyCString)
-                Recycle(subkeyCString);
         }
     }
 #endif
@@ -628,17 +671,22 @@ nsWinReg::NativeIsKeyWritable(const nsString& subkey)
 }
 
 PRInt32
-nsWinReg::NativeCreateKey(const nsString& subkey, const nsString& classname)
+nsWinReg::NativeCreateKey(const nsString& aSubkey, const nsString& aClassname)
 {
     HKEY    root, newkey;
     LONG    result;
     ULONG   disposition;
-    char*   subkeyCString     = ToNewCString(subkey);
-    char*   classnameCString  = ToNewCString(classname);
+    nsXPIDLCString subkey;
+    nsXPIDLCString classname;
+
+    if (NS_FAILED(UCS2toFS( aSubkey.get(), getter_Copies(subkey) )) ||
+        NS_FAILED(UCS2toFS( aClassname.get(), getter_Copies(classname) )) )
+        return nsInstall::UNEXPECTED_ERROR;
 
 #ifdef WIN32
     root   = (HKEY)mRootKey;
-    result = RegCreateKeyEx(root, subkeyCString, 0, classnameCString, REG_OPTION_NON_VOLATILE, KEY_WRITE, nsnull, &newkey, &disposition);
+    result = RegCreateKeyEx(root, subkey.get(), 0, (char*)classname.get(),
+                REG_OPTION_NON_VOLATILE, KEY_WRITE, nsnull, &newkey, &disposition);
 
     if(ERROR_SUCCESS == result)
     {
@@ -646,49 +694,48 @@ nsWinReg::NativeCreateKey(const nsString& subkey, const nsString& classname)
     }
 #endif
 
-    if (subkeyCString)     Recycle(subkeyCString);
-    if (classnameCString)  Recycle(classnameCString);
-
     return result;
 }
 
 PRInt32
-nsWinReg::NativeDeleteKey(const nsString& subkey)
+nsWinReg::NativeDeleteKey(const nsString& aSubkey)
 {
     HKEY  root;
     LONG  result;
-    char* subkeyCString = ToNewCString(subkey);
+    nsXPIDLCString subkey;
+
+    if (NS_FAILED(UCS2toFS( aSubkey.get(), getter_Copies(subkey) )) )
+        return nsInstall::UNEXPECTED_ERROR;
 
 #ifdef WIN32
     root   = (HKEY) mRootKey;
-    result = RegDeleteKey( root, subkeyCString );
+    result = RegDeleteKey( root, subkey.get() );
 #endif
-
-    if (subkeyCString)  Recycle(subkeyCString);
 
     return result;
 }
-  
+
 PRInt32
-nsWinReg::NativeDeleteValue(const nsString& subkey, const nsString& valname)
+nsWinReg::NativeDeleteValue(const nsString& aSubkey, const nsString& aValname)
 {
 #if defined (WIN32) || defined (XP_OS2)
     HKEY    root, newkey;
     LONG    result;
-    char*   subkeyCString   = ToNewCString(subkey);
-    char*   valnameCString  = ToNewCString(valname);
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_WRITE, &newkey);
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_WRITE, &newkey);
 
     if ( ERROR_SUCCESS == result )
     {
-        result = RegDeleteValue( newkey, valnameCString );
+        result = RegDeleteValue( newkey, valname.get() );
         RegCloseKey( newkey );
     }
-
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
 
     return result;
 #else
@@ -697,39 +744,40 @@ nsWinReg::NativeDeleteValue(const nsString& subkey, const nsString& valname)
 }
 
 PRInt32
-nsWinReg::NativeSetValueString(const nsString& subkey, const nsString& valname, const nsString& value)
+nsWinReg::NativeSetValueString(const nsString& aSubkey, const nsString& aValname, const nsString& aValue)
 {
     HKEY    root;
     HKEY    newkey;
     LONG    result;
     DWORD   length;
 
-    char*   subkeyCString   = ToNewCString(subkey);
-    char*   valnameCString  = ToNewCString(valname);
-    char*   valueCString    = ToNewCString(value);
-    
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+    nsXPIDLCString value;
+
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) ||
+         NS_FAILED( UCS2toFS( aValue.get(), getter_Copies(value) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
+
     length = value.Length();
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_WRITE, &newkey);
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_WRITE, &newkey);
 
     if(ERROR_SUCCESS == result)
     {
-        result = RegSetValueEx( newkey, valnameCString, 0, REG_SZ, (unsigned char*)valueCString, length );
+        result = RegSetValueEx( newkey, valname.get(), 0, REG_SZ, (unsigned char*)value.get(), length );
         RegCloseKey( newkey );
     }
 
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
-    if (valueCString)    Recycle(valueCString);
-
     return result;
 }
- 
+
 #define STRBUFLEN 255
- 
-void
-nsWinReg::NativeGetValueString(const nsString& subkey, const nsString& valname, nsString* aReturn)
+
+PRInt32
+nsWinReg::NativeGetValueString(const nsString& aSubkey, const nsString& aValname, nsString* aReturn)
 {
     unsigned char     valbuf[_MAXKEYVALUE_];
     HKEY              root;
@@ -737,55 +785,65 @@ nsWinReg::NativeGetValueString(const nsString& subkey, const nsString& valname, 
     LONG              result;
     DWORD             type            = REG_SZ;
     DWORD             length          = _MAXKEYVALUE_;
-    char*             subkeyCString   = ToNewCString(subkey);
-    char*             valnameCString  = ToNewCString(valname);
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_READ, &newkey );
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_READ, &newkey );
 
     if ( ERROR_SUCCESS == result ) {
-        result = RegQueryValueEx( newkey, valnameCString, nsnull, &type, valbuf, &length );
+        result = RegQueryValueEx( newkey, valname.get(), nsnull, &type, valbuf, &length );
 
         RegCloseKey( newkey );
 
-        if(type == REG_SZ)
-            aReturn->AssignWithConversion((char*)valbuf);
+        if( result == ERROR_SUCCESS && type == REG_SZ)
+        {
+            nsXPIDLString value;
+            if (NS_SUCCEEDED( FStoUCS2( (const char*)valbuf, getter_Copies(value) ) ))
+                aReturn->Assign(value);
+            else
+                result = nsInstall::UNEXPECTED_ERROR;
+        }
     }
 
     if(ERROR_ACCESS_DENIED == result)
         result = nsInstall::ACCESS_DENIED;
 
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
+    return result;
 }
 
 PRInt32
-nsWinReg::NativeSetValueNumber(const nsString& subkey, const nsString& valname, PRInt32 value)
+nsWinReg::NativeSetValueNumber(const nsString& aSubkey, const nsString& aValname, PRInt32 aValue)
 {
     HKEY    root;
     HKEY    newkey;
     LONG    result;
 
-    char*   subkeyCString   = ToNewCString(subkey);
-    char*   valnameCString  = ToNewCString(valname);
-    
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
+
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_WRITE, &newkey);
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_WRITE, &newkey);
 
     if(ERROR_SUCCESS == result)
     {
-        result = RegSetValueEx( newkey, valnameCString, 0, REG_DWORD, (LPBYTE)&value, sizeof(PRInt32));
+        result = RegSetValueEx( newkey, valname.get(), 0, REG_DWORD, (LPBYTE)&aValue, sizeof(PRInt32));
         RegCloseKey( newkey );
     }
 
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
-
     return result;
 }
- 
-void
-nsWinReg::NativeGetValueNumber(const nsString& subkey, const nsString& valname, PRInt32* aReturn)
+
+PRInt32
+nsWinReg::NativeGetValueNumber(const nsString& aSubkey, const nsString& aValname, PRInt32* aReturn)
 {
     PRInt32 valbuf;
     PRInt32 valbuflen;
@@ -794,15 +852,19 @@ nsWinReg::NativeGetValueNumber(const nsString& subkey, const nsString& valname, 
     LONG    result;
     DWORD   type            = REG_DWORD;
     DWORD   length          = _MAXKEYVALUE_;
-    char*   subkeyCString   = ToNewCString(subkey);
-    char*   valnameCString  = ToNewCString(valname);
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+        return nsInstall::UNEXPECTED_ERROR;
 
     valbuflen = sizeof(PRInt32);
     root      = (HKEY) mRootKey;
-    result    = RegOpenKeyEx( root, subkeyCString, 0, KEY_READ, &newkey );
+    result    = RegOpenKeyEx( root, subkey.get(), 0, KEY_READ, &newkey );
 
     if ( ERROR_SUCCESS == result ) {
-        result = RegQueryValueEx( newkey, valnameCString, nsnull, &type, (LPBYTE)&valbuf, (LPDWORD)&valbuflen);
+        result = RegQueryValueEx( newkey, valname.get(), nsnull, &type, (LPBYTE)&valbuf, (LPDWORD)&valbuflen);
 
         RegCloseKey( newkey );
 
@@ -810,15 +872,16 @@ nsWinReg::NativeGetValueNumber(const nsString& subkey, const nsString& valname, 
             *aReturn = valbuf;
     }
 
-    if(ERROR_ACCESS_DENIED == result)
-        result = nsInstall::ACCESS_DENIED;
+    if (ERROR_ACCESS_DENIED == result)
+        return nsInstall::ACCESS_DENIED;
+    else if (result != ERROR_SUCCESS)
+        return nsInstall::UNEXPECTED_ERROR;
 
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
+    return nsInstall::SUCCESS;
 }
 
 PRInt32
-nsWinReg::NativeSetValue(const nsString& subkey, const nsString& valname, nsWinRegValue* value)
+nsWinReg::NativeSetValue(const nsString& aSubkey, const nsString& aValname, nsWinRegValue* aValue)
 {
 #if defined (WIN32) || defined (XP_OS2)
     HKEY    root;
@@ -827,34 +890,34 @@ nsWinReg::NativeSetValue(const nsString& subkey, const nsString& valname, nsWinR
     DWORD   length;
     DWORD   type;
     unsigned char*    data;
-    char*   subkeyCString   = ToNewCString(subkey);
-    char*   valnameCString  = ToNewCString(valname);
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
 
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+      return nsnull;
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_WRITE, &newkey );
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_WRITE, &newkey );
 
     if(ERROR_SUCCESS == result)
     {
-        type = (DWORD)value->type;
-        data = (unsigned char*)value->data;
-        length = (DWORD)value->data_length;
+        type = (DWORD)aValue->type;
+        data = (unsigned char*)aValue->data;
+        length = (DWORD)aValue->data_length;
 
-        result = RegSetValueEx( newkey, valnameCString, 0, type, data, length);
+        result = RegSetValueEx( newkey, valname.get(), 0, type, data, length);
         RegCloseKey( newkey );
     }
-
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
 
     return result;
 #else
     return ERROR_INVALID_PARAMETER;
 #endif
 }
-  
+
 nsWinRegValue*
-nsWinReg::NativeGetValue(const nsString& subkey, const nsString& valname)
+nsWinReg::NativeGetValue(const nsString& aSubkey, const nsString& aValname)
 {
 #if defined (WIN32) || defined (XP_OS2)
     unsigned char    valbuf[STRBUFLEN];
@@ -865,32 +928,32 @@ nsWinReg::NativeGetValue(const nsString& subkey, const nsString& valname)
     DWORD   type;
     nsString* data;
     nsWinRegValue* value = nsnull;
-    char*   subkeyCString   = ToNewCString(subkey);
-    char*   valnameCString  = ToNewCString(valname);
+    nsXPIDLCString subkey;
+    nsXPIDLCString valname;
+
+    if ( NS_FAILED( UCS2toFS( aSubkey.get(), getter_Copies(subkey) ) ) ||
+         NS_FAILED( UCS2toFS( aValname.get(), getter_Copies(valname) ) ) )
+      return nsnull;
 
     root   = (HKEY) mRootKey;
-    result = RegOpenKeyEx( root, subkeyCString, 0, KEY_READ, &newkey );
+    result = RegOpenKeyEx( root, subkey.get(), 0, KEY_READ, &newkey );
 
     if(ERROR_SUCCESS == result)
     {
-        result = RegQueryValueEx( newkey, valnameCString, nsnull, &type, valbuf, &length );
+        result = RegQueryValueEx( newkey, valname.get(), nsnull, &type, valbuf, &length );
 
         if ( ERROR_SUCCESS == result ) {
             data = new nsString;
             data->AssignWithConversion((char *)valbuf);
-			      length = data->Length();
+                  length = data->Length();
             value = new nsWinRegValue(type, (void*)data, length);
         }
 
         RegCloseKey( newkey );
     }
 
-    if (subkeyCString)   Recycle(subkeyCString);
-    if (valnameCString)  Recycle(valnameCString);
-
     return value;
 #else
     return nsnull;
 #endif
 }
-
