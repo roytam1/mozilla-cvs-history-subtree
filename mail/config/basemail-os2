@@ -198,10 +198,9 @@ components\jar.xpt
 components\pref.xpt                     
 components\pref.dll
 
-; profile
-components\profile.dll                  
+; profile               
 components\profile.xpt
-components\profileimport.dll
+components\profilemigration.dll
 components\toolkitprofile.xpt
 
 ; rdf

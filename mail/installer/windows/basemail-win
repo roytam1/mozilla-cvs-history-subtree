@@ -236,10 +236,9 @@ thunderbird\components\jar.xpt
 thunderbird\components\pref.xpt                     
 thunderbird\components\xppref32.dll
 
-; profile
-thunderbird\components\profile.dll                  
+; profile              
 thunderbird\components\profile.xpt
-thunderbird\components\profileimport.dll
+thunderbird\components\profilemigration.dll
 thunderbird\components\toolkitprofile.xpt
 
 ; rdf
