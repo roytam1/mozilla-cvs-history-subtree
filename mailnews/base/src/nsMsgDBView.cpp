@@ -90,6 +90,18 @@ NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char 
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+/* void doCommand (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices); */
+NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numindices)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void getCommandStatus (in nsMsgViewCommandTypeValue command, out nsMsgViewIndex indices, in long numindices, out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p); */
+NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, nsMsgViewIndex *indices, PRInt32 numindices, PRBool *selectable_p, nsMsgViewCommandCheckStateValue *selected_p)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 // reversing threads involves reversing the threads but leaving the
 // expanded messages ordered relative to the thread, so we
 // make a copy of each array and copy them over.

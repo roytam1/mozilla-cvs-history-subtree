@@ -29,6 +29,8 @@ typedef long nsMsgViewSortOrderValue;
 typedef long nsMsgViewSortTypeValue;
 typedef long nsMsgDBViewTypeValue;
 typedef long nsMsgViewNotificationCodeValue;
+typedef long nsMsgViewCommandCheckStateValue;
+typedef long nsMsgViewCommandTypeValue;
 
 [scriptable, uuid(682a18be-fd18-11d4-a5be-0060b0fc04b7)]
 interface nsMsgViewSortOrder
@@ -108,6 +110,27 @@ interface nsMsgViewNotificationCode
 
 };
 
+[scriptable, uuid(4ec9248e-0108-11d5-a5be-0060b0fc04b7)]
+interface nsMsgViewCommandCheckState
+{
+  const nsMsgViewCommandCheckStateValue notUsed = 0;
+  const nsMsgViewCommandCheckStateValue checked = 1;
+  const nsMsgViewCommandCheckStateValue unchecked = 2;
+};
+
+[scriptable, uuid(ad36e6cc-0109-11d5-a5be-0060b0fc04b7)]
+interface nsMsgViewCommandType
+{
+  const nsMsgViewCommandTypeValue markMessagesRead = 0;
+  const nsMsgViewCommandTypeValue markMessagesUnread = 1;
+  const nsMsgViewCommandTypeValue toggleMessageRead = 2;
+								   
+  const nsMsgViewCommandTypeValue flagMessages = 3;
+  const nsMsgViewCommandTypeValue unflagMessages = 4;
+  const nsMsgViewCommandTypeValue toggleThreadKilled = 5;
+  const nsMsgViewCommandTypeValue toggleThreadWatched = 6;
+};
+
 [scriptable, uuid(4063bcf8-fd19-11d4-a5be-0060b0fc04b7)]
 interface nsMsgDBViewType
 {
@@ -145,6 +168,11 @@ interface nsIMsgDBView : nsISupports
 
     void sort(in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder);
 
+    void doCommand(in nsMsgViewCommandTypeValue command,
+						 out nsMsgViewIndex indices, in long numindices);
+    void getCommandStatus(in nsMsgViewCommandTypeValue command,
+						 out nsMsgViewIndex indices, in long numindices,
+						 out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p);
     /**
      * temporary, so we can inspect from js
      */
