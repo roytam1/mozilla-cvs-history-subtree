@@ -61,6 +61,7 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= nsProfileMigrator.cpp \
+            nsNetscapeProfileMigratorBase.cpp \
             nsDogbertProfileMigrator.cpp \
             nsOperaProfileMigrator.cpp \
             nsIEProfileMigrator.cpp \

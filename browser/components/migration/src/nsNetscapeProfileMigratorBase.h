@@ -35,43 +35,60 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef dogbertprofilemigrator___h___
-#define dogbertprofilemigrator___h___
+#ifndef netscapeprofilemigratorbase___h___
+#define netscapeprofilemigratorbase___h___
 
-#include "nsIBrowserProfileMigrator.h"
 #include "nsILocalFile.h"
-#include "nsISupportsArray.h"
-#include "nsNetscapeProfileMigratorBase.h"
+#include "nsIStringBundle.h"
 #include "nsString.h"
 
 class nsIFile;
+class nsIPrefBranch;
 
-class nsDogbertProfileMigrator : public nsNetscapeProfileMigratorBase, 
-                                 public nsIBrowserProfileMigrator
+class nsNetscapeProfileMigratorBase
 {
 public:
-  NS_DECL_NSIBROWSERPROFILEMIGRATOR
-  NS_DECL_ISUPPORTS
-
-  nsDogbertProfileMigrator();
-  virtual ~nsDogbertProfileMigrator();
+  nsNetscapeProfileMigratorBase();
+  virtual ~nsNetscapeProfileMigratorBase() { };
 
 public:
-  static nsresult GetHomepage(void* aTransform, nsIPrefBranch* aBranch);
-  static nsresult GetImagePref(void* aTransform, nsIPrefBranch* aBranch);
+  typedef nsresult(*prefConverter)(void*, nsIPrefBranch*);
+
+  typedef struct {
+    char*         sourcePrefName;
+    char*         targetPrefName;
+    prefConverter prefGetterFunc;
+    prefConverter prefSetterFunc;
+    union {
+      PRInt32     intValue;
+      PRBool      boolValue;
+      char*       stringValue;
+    };
+  } PREFTRANSFORM;
+
+  static nsresult GetString(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetString(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetWString(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult GetBool(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetBool(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult GetInt(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetInt(void* aTransform, nsIPrefBranch* aBranch);
 
 protected:
-  nsresult CopyPreferences(PRBool aReplace);
-  
-  nsresult CopyCookies(PRBool aReplace);
-#ifdef NEED_TO_FIX_4X_COOKIES
-  nsresult FixDogbertCookies();
-#endif
+  nsresult TransformPreferences(PREFTRANSFORM* aTransforms, 
+                                const nsAString& aSourcePrefFileName,
+                                const nsAString& aTargetPrefFileName);
 
-  nsresult CopyBookmarks(PRBool aReplace);
+  nsresult CreateTemplateProfile(const PRUnichar* aSuggestedName);
+  void     GetUniqueProfileName(nsIFile* aProfilesDir, const PRUnichar* aSuggestedName, PRUnichar** aUniqueName);
 
-private:
-  nsCOMPtr<nsISupportsArray> mProfiles;
+  nsresult CopyFile(const nsAString& aSourceFileName, const nsAString& aTargetFileName);
+
+protected:
+  nsCOMPtr<nsILocalFile> mSourceProfile;
+  nsCOMPtr<nsILocalFile> mTargetProfile;
+
+  nsCOMPtr<nsIStringBundle> mBundle;
 };
  
 #endif

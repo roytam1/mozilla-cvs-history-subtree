@@ -52,7 +52,6 @@
 #include "nsIProfileInternal.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
-#include "nsIStringBundle.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
 #include "nsNetUtil.h"
@@ -93,11 +92,6 @@
 #define COOKIES_FILE_NAME_IN_5x   NS_LITERAL_STRING("cookies.txt")
 #define BOOKMARKS_FILE_NAME_IN_5x NS_LITERAL_STRING("bookmarks.html")
 #define PREF_FILE_NAME_IN_5x      NS_LITERAL_STRING("prefs.js")
-
-#define PREF_CACHE_DIRECTORY      "browser.cache.directory"
-#define MIGRATION_BUNDLE          "chrome://browser/locale/migration/migration.properties"
-
-static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsDogbertProfileMigrator
@@ -185,69 +179,41 @@ nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsDogbertProfileMigrator
+#define F(a) nsDogbertProfileMigrator::a
 
-nsresult
-nsDogbertProfileMigrator::CreateTemplateProfile(const PRUnichar* aSuggestedName)
-{
-  nsCOMPtr<nsIFile> profilesDir;
-  NS_GetSpecialDirectory(NS_APP_USER_PROFILES_ROOT_DIR, getter_AddRefs(profilesDir));
-
-  nsXPIDLString profileName;
-  GetUniqueProfileName(profilesDir, aSuggestedName, getter_Copies(profileName));
-
-  nsAutoString profilesDirPath;
-  profilesDir->GetPath(profilesDirPath);
-
-  nsCOMPtr<nsIProfile> pm(do_GetService("@mozilla.org/profile/manager;1"));
-  pm->CreateNewProfile(profileName.get(), profilesDirPath.get(), nsnull, PR_TRUE);
-
-  nsCOMPtr<nsIProfileInternal> pmi(do_QueryInterface(pm));
-  nsCOMPtr<nsIFile> target;
-  pmi->GetProfileDir(profileName.get(), getter_AddRefs(target));
-  mTargetProfile = do_QueryInterface(target);
-  pmi->GetOriginalProfileDir(aSuggestedName, getter_AddRefs(mSourceProfile));
-
-  return NS_OK;
-}
-
-void
-nsDogbertProfileMigrator::GetUniqueProfileName(nsIFile* aProfilesDir, 
-                                               const PRUnichar* aSuggestedName,
-                                               PRUnichar** aUniqueName)
-{
-  nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
-
-  nsCOMPtr<nsIStringBundle> bundle;
-  bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
-
-  PRBool exists = PR_FALSE;
-  PRUint32 count = 1;
-  nsXPIDLString profileName;
-  nsAutoString profileNameStr(aSuggestedName);
+nsDogbertProfileMigrator::PREFTRANSFORM gTransforms[] = {
+  // Simple Copy Prefs
+  { "browser.anchor_color",           0, F(GetString),   F(SetString), -1 },
+  { "browser.visited_color",          0, F(GetString),   F(SetString), -1 },
+  { "browser.startup.homepage",       0, F(GetString),   F(SetString), -1 },
+  { "security.enable_java",           0, F(GetBool),     F(SetBool),   -1 },
+  { "network.cookie.cookieBehavior",  0, F(GetInt),      F(SetInt),    -1 },
+  { "network.cookie.warnAboutCookies",0, F(GetBool),     F(SetBool),   -1 },
+  { "javascript.enabled",             0, F(GetBool),     F(SetBool),   -1 },
+  { "network.proxy.type",             0, F(GetInt),      F(SetInt),    -1 },
+  { "network.proxy.no_proxies_on",    0, F(GetString),   F(SetString), -1 },
+  { "network.proxy.autoconfig_url",   0, F(GetString),   F(SetString), -1 },
+  { "network.proxy.ftp",              0, F(GetString),   F(SetString), -1 },
+  { "network.proxy.ftp_port",         0, F(GetInt),      F(SetInt),    -1 },
+  { "network.proxy.gopher",           0, F(GetString),   F(SetString), -1 },
+  { "network.proxy.gopher_port",      0, F(GetInt),      F(SetInt),    -1 },
+  { "network.proxy.http",             0, F(GetString),   F(SetString), -1 },
+  { "network.proxy.http_port",        0, F(GetInt),      F(SetInt),    -1 },
+  { "network.proxy.ssl",              0, F(GetString),   F(SetString), -1 },
+  { "network.proxy.ssl_port",         0, F(GetInt),      F(SetInt),    -1 },
   
-  nsCOMPtr<nsIFile> newProfileDir;
-  aProfilesDir->Clone(getter_AddRefs(newProfileDir));
-  newProfileDir->Append(profileNameStr);
-  newProfileDir->Exists(&exists);
-
-  while (exists) {
-    nsAutoString countString;
-    countString.AppendInt(count);
-    const PRUnichar* strings[2] = { aSuggestedName, countString.get() };
-    bundle->FormatStringFromName(NS_LITERAL_STRING("profileName_format").get(), strings, 2, getter_Copies(profileName));
-
-    nsCOMPtr<nsIFile> newProfileDir;
-    aProfilesDir->Clone(getter_AddRefs(newProfileDir));
-    newProfileDir->Append(profileName);
-    newProfileDir->Exists(&exists);
-
-    profileNameStr = profileName.get();
-    ++count;
-  }
-
-  *aUniqueName = ToNewUnicode(profileNameStr);
-}
-
+  // Prefs with Different Names
+  { "network.hosts.socks_server",           "network.proxy.socks",                F(GetString),   F(SetString),  -1 },
+  { "network.hosts.socks_serverport",       "network.proxy.socks_port",           F(GetInt),      F(SetInt),     -1 },
+  { "browser.background_color",             "browser.display.background_color",   F(GetString),   F(SetString),  -1 },
+  { "browser.foreground_color",             "browser.display.foreground_color",   F(GetString),   F(SetString),  -1 },
+  { "browser.wfe.use_windows_colors",       "browser.display.use_system_colors",  F(GetBool),     F(SetBool),    -1 },
+  { "browser.use_document_colors",          "browser.display.use_document_colors",F(GetBool),     F(SetBool),    -1 },
+  { "browser.use_document.fonts",           "browser.display.use_document_fonts", F(GetInt),      F(SetInt),     -1 },
+  { "browser.link_expiration",              "browser.history_expire_days",        F(GetInt),      F(SetInt),     -1 },
+  { "browser.startup.page",                 "browser.startup.homepage",           F(GetHomepage), F(SetWString), -1 },
+  { "general.always_load_images",           "network.image.imageBehavior",        F(GetImagePref),F(SetInt),     -1 },
+};
 
 nsresult
 nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
@@ -255,42 +221,7 @@ nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
   nsresult rv = NS_OK;
 
   // 1) Copy Preferences
-  TransformPreferences();
-
-#if 0
-  /* Copy the old prefs file to the new profile directory for modification and reading.  
-     after copying it, rename it to pref.js, the 5.x pref file name on all platforms */
-  nsCOMPtr<nsIFileSpec> oldPrefsFile;
-  rv = NS_NewFileSpec(getter_AddRefs(oldPrefsFile)); 
-  if (NS_FAILED(rv)) return rv;
-  
-  rv = oldPrefsFile->FromFileSpec(oldProfilePath);
-  if (NS_FAILED(rv)) return rv;
-  
-  rv = oldPrefsFile->AppendRelativeUnixPath(PREF_FILE_NAME_IN_4x);
-  if (NS_FAILED(rv)) return rv;
-
-
-  /* the new prefs file */
-  nsCOMPtr<nsIFileSpec> newPrefsFile;
-  rv = NS_NewFileSpec(getter_AddRefs(newPrefsFile)); 
-  if (NS_FAILED(rv)) return rv;
-  
-  rv = newPrefsFile->FromFileSpec(newProfilePath);
-  if (NS_FAILED(rv)) return rv;
-  
-  rv = newPrefsFile->Exists(&exists);
-  if (!exists)
-  {
-	  rv = newPrefsFile->CreateDir();
-  }
-
-  rv = oldPrefsFile->CopyToDir(newPrefsFile);
-  NS_ASSERTION(NS_SUCCEEDED(rv),"failed to copy prefs file");
-
-  rv = newPrefsFile->AppendRelativeUnixPath(PREF_FILE_NAME_IN_4x);
-  rv = newPrefsFile->Rename(PREF_FILE_NAME_IN_5x);
-#endif
+  TransformPreferences(gTransforms, PREF_FILE_NAME_IN_4x, PREF_FILE_NAME_IN_5x);
 
   // 2) Copy Certficates
   rv |= CopyFile(PSM_CERT7_DB,      PSM_CERT7_DB);
@@ -300,66 +231,8 @@ nsDogbertProfileMigrator::CopyPreferences(PRBool aReplace)
   return rv;
 }
 
-typedef nsresult(*prefConverter)(void*, nsIPrefBranch*);
-
-typedef struct {
-  char*         sourcePrefName;
-  char*         targetPrefName;
-  prefConverter prefGetterFunc;
-  prefConverter prefSetterFunc;
-  union {
-    PRInt32     intValue;
-    PRBool      boolValue;
-    char*       stringValue;
-  };
-} PREFTRANSFORM;
-
-nsresult GetString(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->GetCharPref(xform->sourcePrefName, &xform->stringValue);
-}
-
-nsresult SetString(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->SetCharPref(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, xform->stringValue);
-}
-
-nsresult SetWString(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  nsCOMPtr<nsIPrefLocalizedString> pls(do_CreateInstance("@mozilla.org/pref-localizedstring;1"));
-  nsAutoString data; data.AssignWithConversion(xform->stringValue);
-  pls->SetData(data.get());
-  return aBranch->SetComplexValue(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, NS_GET_IID(nsIPrefLocalizedString), pls);
-}
-
-nsresult GetBool(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->GetBoolPref(xform->sourcePrefName, &xform->boolValue);
-}
-
-nsresult SetBool(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->SetBoolPref(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, xform->boolValue);
-}
-
-nsresult GetInt(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->GetIntPref(xform->sourcePrefName, &xform->intValue);
-}
-
-nsresult SetInt(void* aTransform, nsIPrefBranch* aBranch)
-{
-  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
-  return aBranch->SetIntPref(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, xform->intValue);
-}
-
-nsresult GetHomepage(void* aTransform, nsIPrefBranch* aBranch)
+nsresult 
+nsDogbertProfileMigrator::GetHomepage(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
   PRInt32 val;
@@ -369,104 +242,14 @@ nsresult GetHomepage(void* aTransform, nsIPrefBranch* aBranch)
   return rv;
 }
 
-nsresult GetImagePref(void* aTransform, nsIPrefBranch* aBranch)
+nsresult 
+nsDogbertProfileMigrator::GetImagePref(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
   PRBool loadImages;
   nsresult rv = aBranch->GetBoolPref(xform->sourcePrefName, &loadImages);
   xform->intValue = loadImages ? 0 : 2;
   return rv;
-}
-
-PREFTRANSFORM gTransforms[] = {
-  // Simple Copy Prefs
-  { "browser.anchor_color",           0, GetString,   SetString, -1 },
-  { "browser.visited_color",          0, GetString,   SetString, -1 },
-  { "browser.startup.homepage",       0, GetString,   SetString, -1 },
-  { "security.enable_java",           0, GetBool,     SetBool,   -1 },
-  { "network.cookie.cookieBehavior",  0, GetInt,      SetInt,    -1 },
-  { "network.cookie.warnAboutCookies",0, GetBool,     SetBool,   -1 },
-  { "javascript.enabled",             0, GetBool,     SetBool,   -1 },
-  { "network.proxy.type",             0, GetInt,      SetInt,    -1 },
-  { "network.proxy.no_proxies_on",    0, GetString,   SetString, -1 },
-  { "network.proxy.autoconfig_url",   0, GetString,   SetString, -1 },
-  { "network.proxy.ftp",              0, GetString,   SetString, -1 },
-  { "network.proxy.ftp_port",         0, GetInt,      SetInt,    -1 },
-  { "network.proxy.gopher",           0, GetString,   SetString, -1 },
-  { "network.proxy.gopher_port",      0, GetInt,      SetInt,    -1 },
-  { "network.proxy.http",             0, GetString,   SetString, -1 },
-  { "network.proxy.http_port",        0, GetInt,      SetInt,    -1 },
-  { "network.proxy.ssl",              0, GetString,   SetString, -1 },
-  { "network.proxy.ssl_port",         0, GetInt,      SetInt,    -1 },
-  
-  // Prefs with Different Names
-  { "network.hosts.socks_server",           "network.proxy.socks",                GetString,   SetString,  -1 },
-  { "network.hosts.socks_serverport",       "network.proxy.socks_port",           GetInt,      SetInt,     -1 },
-  { "browser.background_color",             "browser.display.background_color",   GetString,   SetString,  -1 },
-  { "browser.foreground_color",             "browser.display.foreground_color",   GetString,   SetString,  -1 },
-  { "browser.wfe.use_windows_colors",       "browser.display.use_system_colors",  GetBool,     SetBool,    -1 },
-  { "browser.use_document_colors",          "browser.display.use_document_colors",GetBool,     SetBool,    -1 },
-  { "browser.use_document.fonts",           "browser.display.use_document_fonts", GetInt,      SetInt,     -1 },
-  { "browser.link_expiration",              "browser.history_expire_days",        GetInt,      SetInt,     -1 },
-  { "browser.startup.page",                 "browser.startup.homepage",           GetHomepage, SetWString, -1 },
-  { "general.always_load_images",           "network.image.imageBehavior",        GetImagePref,SetInt,     -1 },
-};
-
-nsresult
-nsDogbertProfileMigrator::TransformPreferences()
-{
-  PREFTRANSFORM* transform;
-  PREFTRANSFORM* end = gTransforms + sizeof(gTransforms)/sizeof(PREFTRANSFORM);
-
-  // Load the source pref file
-  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  psvc->ResetPrefs();
-
-  nsCOMPtr<nsIFile> dogbertPrefsFile;
-  mSourceProfile->Clone(getter_AddRefs(dogbertPrefsFile));
-  dogbertPrefsFile->Append(PREF_FILE_NAME_IN_4x);
-  psvc->ReadUserPrefs(dogbertPrefsFile);
-
-  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
-  for (transform = gTransforms; transform < end; ++transform)
-    transform->prefGetterFunc(transform, branch);
-
-  // Now that we have all the pref data in memory, load the target pref file,
-  // and write it back out
-  psvc->ResetPrefs();
-  for (transform = gTransforms; transform < end; ++transform)
-    transform->prefSetterFunc(transform, branch);
-
-  nsCOMPtr<nsIFile> firebirdPrefsFile;
-  mTargetProfile->Clone(getter_AddRefs(firebirdPrefsFile));
-  firebirdPrefsFile->Append(PREF_FILE_NAME_IN_5x);
-  psvc->SavePrefFile(firebirdPrefsFile);
-
-  return NS_OK;
-}
-
-
-nsresult
-nsDogbertProfileMigrator::CopyFile(const nsAString& aSourceFileName, const nsAString& aTargetFileName)
-{
-  nsCOMPtr<nsIFile> dogbertFile;
-  mSourceProfile->Clone(getter_AddRefs(dogbertFile));
-
-  dogbertFile->Append(aSourceFileName);
-  PRBool exists = PR_FALSE;
-  dogbertFile->Exists(&exists);
-  if (!exists)
-    return NS_ERROR_FILE_NOT_FOUND;
-
-  nsCOMPtr<nsIFile> firebirdFile;
-  mTargetProfile->Clone(getter_AddRefs(firebirdFile));
-  
-  firebirdFile->Append(aTargetFileName);
-  firebirdFile->Exists(&exists);
-  if (exists)
-    firebirdFile->Remove(PR_FALSE);
-
-  return dogbertFile->CopyTo(mTargetProfile, aTargetFileName);
 }
 
 nsresult
@@ -595,12 +378,8 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
   nsCOMPtr<nsIRDFResource> root;
   rdfs->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
 
-  nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
-  nsCOMPtr<nsIStringBundle> bundle;
-  bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
-
   nsXPIDLString importedDogbertBookmarksTitle;
-  bundle->GetStringFromName(NS_LITERAL_STRING("importedDogbertBookmarksTitle").get(), getter_Copies(importedDogbertBookmarksTitle));
+  mBundle->GetStringFromName(NS_LITERAL_STRING("importedDogbertBookmarksTitle").get(), getter_Copies(importedDogbertBookmarksTitle));
 
   nsCOMPtr<nsIRDFResource> folder;
   bms->CreateFolderInContainer(importedDogbertBookmarksTitle.get(), root, -1, getter_AddRefs(folder));
