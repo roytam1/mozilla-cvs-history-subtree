@@ -743,10 +743,7 @@ PRBool nsQBaseWidget::MouseButtonEvent(QMouseEvent *aEvent,PRBool aButtonDown,
 
     mWidget->DispatchMouseEvent(nsEvent);
   }
-  if (aButtonDown)
-    return PR_FALSE;
-  else
-    return PR_TRUE;
+  return PR_TRUE;
 }
 
 PRBool nsQBaseWidget::MouseMovedEvent(QMouseEvent *aEvent)
