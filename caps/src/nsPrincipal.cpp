@@ -158,9 +158,9 @@ nsPrincipal::nsPrincipal(nsPrincipalType type, void * key, PRUint32 key_len, cha
 
 nsPrincipal::~nsPrincipal(void)
 {
-#ifdef DEBUG_RAMAN
+#ifdef DEBUG_raman
   fprintf(stderr, "Deleting principal %s\n", itsKey);
-#endif /* DEBUG_RAMAN */
+#endif /* DEBUG_raman */
   if (itsKey) {
     delete []itsKey;
   }
@@ -434,9 +434,9 @@ void nsPrincipal::init(nsPrincipalType type, void * key, PRUint32 key_len)
   itsKey = new char[key_len+1];
   memcpy(itsKey, key, key_len);
   itsKey[key_len] = '\0';
-#ifdef DEBUG_RAMAN
+#ifdef DEBUG_raman
   fprintf(stderr, "Creating principal %d, %s\n", type, itsKey);
-#endif /* DEBUG_RAMAN */
+#endif /* DEBUG_raman */
   itsKeyLen = key_len;
   itsHashCode = computeHashCode();
   itsZig = NULL;
