@@ -341,6 +341,23 @@ public:
   NS_IMETHOD RemoveReference(void *aKey, nsISupports **aOldReference) = 0;
 };
 
+// IID for the nsIDocumentFragment interface
+#define NS_IDOCUMENTFRAGMENT_IID      \
+{ 0xd8fb2853, 0xf6d6, 0x4499, \
+  {0x9c, 0x60, 0x6c, 0xa2, 0x75, 0x35, 0x09, 0xeb} }
+
+// nsIDocumentFragment interface
+class nsIDocumentFragment : public nsISupports {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENTFRAGMENT_IID)
+
+  NS_IMETHOD DisconnectChildren() = 0;
+
+  NS_IMETHOD ReconnectChildren() = 0;
+
+  NS_IMETHOD DropChildReferences() = 0;
+};
+
 
 // XXX These belong somewhere else
 extern NS_LAYOUT nsresult

@@ -2193,9 +2193,16 @@ nsGenericElement::doInsertBefore(nsIDOMNode* aNewChild,
    */
   if (nodeType == nsIDOMNode::DOCUMENT_FRAGMENT_NODE) {
     nsCOMPtr<nsIContent> childContent;
-    PRInt32 count, i;
+    PRInt32 count, old_count, i;
+
+    nsCOMPtr<nsIDocumentFragment> doc_fragment(do_QueryInterface(newContent));
+    NS_ENSURE_TRUE(doc_fragment, NS_ERROR_UNEXPECTED);
+
+    doc_fragment->DisconnectChildren();
 
     newContent->ChildCount(count);
+
+    ChildCount(old_count);
 
     /*
      * Iterate through the fragments children, removing each from
@@ -2205,24 +2212,34 @@ nsGenericElement::doInsertBefore(nsIDOMNode* aNewChild,
     for (i = 0; i < count; i++) {
       // Always get and remove the first child, since the child indexes
       // change as we go along.
-      res = newContent->ChildAt(0, *getter_AddRefs(childContent));
+      res = newContent->ChildAt(i, *getter_AddRefs(childContent));
       if (NS_FAILED(res)) {
-        return res;
-      }
-
-      res = newContent->RemoveChildAt(0, PR_FALSE);
-
-      if (NS_FAILED(res)) {
-        return res;
+        break;
       }
 
       // Insert the child and increment the insertion position
-      res = InsertChildAt(childContent, refPos++, PR_TRUE, PR_TRUE);
+      res = InsertChildAt(childContent, refPos++, !!aRefChild, PR_TRUE);
 
       if (NS_FAILED(res)) {
-        return res;
+        break;
       }
     }
+
+    if (NS_FAILED(res)) {
+      // This should put the children that were moved out of the
+      // document fragment back into the document fragment and remove
+      // them from the element they were intserted into.
+
+      doc_fragment->ReconnectChildren();
+
+      return res;
+    }
+
+    if (!aRefChild && mDocument) {
+      mDocument->ContentAppended(this, old_count);
+    }
+
+    doc_fragment->DropChildReferences();
   } else {
     nsCOMPtr<nsIDOMNode> oldParent;
     res = aNewChild->GetParentNode(getter_AddRefs(oldParent));

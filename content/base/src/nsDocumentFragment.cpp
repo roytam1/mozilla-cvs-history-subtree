@@ -33,6 +33,7 @@
 
 
 class nsDocumentFragment : public nsGenericContainerElement,
+                           public nsIDocumentFragment,
                            public nsIDOMDocumentFragment,
                            public nsIDOM3Node
 {
@@ -42,6 +43,11 @@ public:
 
   // nsISupports
   NS_DECL_ISUPPORTS_INHERITED
+
+  // interface nsIDocumentFragment
+  NS_IMETHOD DisconnectChildren();
+  NS_IMETHOD ReconnectChildren();
+  NS_IMETHOD DropChildReferences();
 
   // interface nsIDOMDocumentFragment
   NS_IMETHOD    GetNodeName(nsAWritableString& aNodeName)
@@ -223,6 +229,7 @@ NS_CLASSINFO_MAP_END
 
 // QueryInterface implementation for nsDocumentFragment
 NS_INTERFACE_MAP_BEGIN(nsDocumentFragment)
+  NS_INTERFACE_MAP_ENTRY(nsIDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3Node)
@@ -235,6 +242,55 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF(nsDocumentFragment)
 NS_IMPL_RELEASE(nsDocumentFragment)
 
+NS_IMETHODIMP
+nsDocumentFragment::DisconnectChildren()
+{
+  nsCOMPtr<nsIContent> child;
+  PRInt32 i, count;
+
+  ChildCount(count);
+
+  for (i = 0; i < count; i++) {
+    ChildAt(i, *getter_AddRefs(child));
+    NS_ASSERTION(child, "Bad content container");
+
+    child->SetParent(nsnull);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::ReconnectChildren()
+{
+  nsCOMPtr<nsIContent> child;
+  PRInt32 i, count;
+
+  ChildCount(count);
+
+  for (i = 0; i < count; i++) {
+    ChildAt(i, *getter_AddRefs(child));
+    NS_ASSERTION(child, "Bad content container");
+
+    child->SetParent(this);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::DropChildReferences()
+{
+  PRInt32 count;
+
+  ChildCount(count);
+
+  while (--count >= 0) {
+    mChildren.RemoveElementAt(count);
+  }
+
+  return NS_OK;
+}
 
 NS_IMETHODIMP    
 nsDocumentFragment::GetNodeType(PRUint16* aNodeType)
