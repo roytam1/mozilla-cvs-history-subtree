@@ -72,12 +72,26 @@ public:
     PRInt32 mDepth;
 };
 
+class txACompileObserver
+{
+public:
+    virtual nsrefcnt AddRef() = 0;
+    virtual nsrefcnt Release() = 0;
+
+    virtual nsresult loadURI(const nsAString& aUri,
+                             txStylesheetCompiler* aCompiler) = 0;
+    virtual void onDoneCompiling(txStylesheetCompiler* aCompiler,
+                                 nsresult aResult) = 0;
+};
+
 class txStylesheetCompilerState : public txIParseContext
 {
 public:
-    txStylesheetCompilerState(const nsAString& aBase,
-                              txStylesheet* aStylesheet);
+    txStylesheetCompilerState(txACompileObserver* aObserver);
     ~txStylesheetCompilerState();
+    
+    nsresult init(const nsAString& aBaseURI, txStylesheet* aStylesheet,
+                  txListIterator* aInsertPosition);
 
     // Stack functions
     nsresult pushHandlerTable(txHandlerTable* aTable);
@@ -99,6 +113,9 @@ public:
     nsresult openInstructionContainer(txInstructionContainer* aContainer);
     void closeInstructionContainer();
     nsresult addInstruction(txInstruction* aInstruction);
+    nsresult loadIncludedStylesheet(const nsAString& aURI);
+    nsresult loadImportedStylesheet(const nsAString& aURI,
+                                    txStylesheet::ImportFrame* aFrame);
     
     // misc
     nsresult addGotoTarget(txInstruction** aTargetPointer);
@@ -112,13 +129,19 @@ public:
     void receiveError(const nsAString& aMsg, nsresult aRes);
 
 
-    nsVoidArray mInScopeVariables;
     nsRefPtr<txStylesheet> mStylesheet;
     txHandlerTable* mHandlerTable;
     nsAutoPtr<txElementContext> mElementContext;
     txPushNewContext* mSorter;
     nsAutoPtr<txList> mChooseGotoList;
-    MBool mDOE;
+    PRPackedBool mDOE;
+
+protected:
+    nsRefPtr<txACompileObserver> mObserver;
+    nsVoidArray mInScopeVariables;
+    nsVoidArray mChildCompilerList;
+    PRPackedBool mIsTopCompiler;
+    PRPackedBool mDoneWithThisStylesheet;
     
 private:
     txStack mObjectStack;
@@ -136,14 +159,18 @@ struct txStylesheetAttr
     nsString mValue;
 };
 
-class txStylesheetCompiler
+class txStylesheetCompiler : private txStylesheetCompilerState,
+                             public txACompileObserver
 {
 public:
-    txStylesheetCompiler(const nsAString& aBaseURI);
     txStylesheetCompiler(const nsAString& aBaseURI,
-                         txStylesheetCompiler* aParent);
-    nsrefcnt AddRef();
-    nsrefcnt Release();
+                         txACompileObserver* aObserver);
+    txStylesheetCompiler(const nsAString& aBaseURI,
+                         txStylesheet* aStylesheet,
+                         txListIterator* aInsertPosition,
+                         txACompileObserver* aObserver);
+    virtual nsrefcnt AddRef();
+    virtual nsrefcnt Release();
 
     nsresult startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                           nsIAtom* aPrefix, txStylesheetAttr* aAttributes,
@@ -156,12 +183,16 @@ public:
 
     txStylesheet* getStylesheet();
 
+    // txACompileObserver
+    nsresult loadURI(const nsAString& aUri, txStylesheetCompiler* aCompiler);
+    void onDoneCompiling(txStylesheetCompiler* aCompiler, nsresult aResult);
+
 private:
     nsresult flushCharacters();
     nsresult ensureNewElementContext();
+    nsresult maybeDoneCompiling();
 
     nsAutoRefCnt mRefCnt;
-    txStylesheetCompilerState mState;
     nsString mCharacters;
 };
 

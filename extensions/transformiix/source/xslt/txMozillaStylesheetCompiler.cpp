@@ -131,7 +131,7 @@ txStylesheetSink::Init(nsITransformMediator* aTransformMediator,
 
   nsCAutoString uri;
   aURL->GetSpec(uri);
-  mCompiler = new txStylesheetCompiler(NS_ConvertUTF8toUCS2(uri));
+  mCompiler = new txStylesheetCompiler(NS_ConvertUTF8toUCS2(uri), nsnull);
   NS_ENSURE_TRUE(mCompiler, NS_ERROR_OUT_OF_MEMORY);
 
   return NS_OK;
@@ -390,7 +390,7 @@ txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode)
     uri->GetSpec(baseURI);
 
     NS_ConvertUTF8toUCS2 base(baseURI);
-    nsRefPtr<txStylesheetCompiler> compiler = new txStylesheetCompiler(base);
+    nsRefPtr<txStylesheetCompiler> compiler = new txStylesheetCompiler(base, nsnull);
 
     handleNode(document, compiler);
     compiler->doneLoading();

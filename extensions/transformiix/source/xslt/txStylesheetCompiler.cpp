@@ -49,15 +49,20 @@
 #include "txStringUtils.h"
 #include "XSLTFunctions.h"
 
-txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI)
-    : mState(aBaseURI, nsnull)
+txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
+                                           txACompileObserver* aObserver)
+    : txStylesheetCompilerState(aObserver)
 {
+    init(aBaseURI, nsnull, nsnull);
 }
 
 txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
-                                           txStylesheetCompiler* aParent)
-    : mState(aBaseURI, aParent->mState.mStylesheet)
+                                           txStylesheet* aStylesheet,
+                                           txListIterator* aInsertPosition,
+                                           txACompileObserver* aObserver)
+    : txStylesheetCompilerState(aObserver)
 {
+    init(aBaseURI, aStylesheet, aInsertPosition);
 }
 
 nsrefcnt
@@ -87,8 +92,8 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 i;
-    for (i = mState.mInScopeVariables.Count() - 1; i >= 0; --i) {
-        ++((txInScopeVariable*)mState.mInScopeVariables[i])->mLevel;
+    for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
+        ++((txInScopeVariable*)mInScopeVariables[i])->mLevel;
     }
 
     // look for new namespace mappings
@@ -100,19 +105,18 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
             NS_ENSURE_SUCCESS(rv, rv);
 
             if (!hasOwnNamespaceMap) {
-                mState.mElementContext->mMappings =
-                    new txNamespaceMap(*mState.mElementContext->mMappings);
-                NS_ENSURE_TRUE(mState.mElementContext->mMappings,
+                mElementContext->mMappings =
+                    new txNamespaceMap(*mElementContext->mMappings);
+                NS_ENSURE_TRUE(mElementContext->mMappings,
                                NS_ERROR_OUT_OF_MEMORY);
                 hasOwnNamespaceMap = PR_TRUE;
             }
 
             if (attr->mLocalName == txXMLAtoms::xmlns) {
-                mState.mElementContext->mMappings->
-                    addNamespace(nsnull, attr->mValue);
+                mElementContext->mMappings->addNamespace(nsnull, attr->mValue);
             }
             else {
-                mState.mElementContext->mMappings->
+                mElementContext->mMappings->
                     addNamespace(attr->mLocalName, attr->mValue);
             }
         }
@@ -129,10 +133,10 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
             NS_ENSURE_SUCCESS(rv, rv);
 
             if (TX_StringEqualsAtom(attr->mValue, txXMLAtoms::preserve)) {
-                mState.mElementContext->mPreserveWhitespace = MB_TRUE;
+                mElementContext->mPreserveWhitespace = MB_TRUE;
             }
             else if (TX_StringEqualsAtom(attr->mValue, txXMLAtoms::_default)) {
-                mState.mElementContext->mPreserveWhitespace = MB_FALSE;
+                mElementContext->mPreserveWhitespace = MB_FALSE;
             }
             else {
                 return NS_ERROR_XSLT_PARSE_FAILURE;
@@ -147,8 +151,8 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
             NS_ENSURE_SUCCESS(rv, rv);
             
             nsAutoString uri;
-            URIUtils::resolveHref(attr->mValue, mState.mElementContext->mBaseURI, uri);
-            mState.mElementContext->mBaseURI = uri;
+            URIUtils::resolveHref(attr->mValue, mElementContext->mBaseURI, uri);
+            mElementContext->mBaseURI = uri;
         }
 
         // extension-element-prefixes
@@ -165,13 +169,13 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
 
             txTokenizer tok(attr->mValue);
             while (tok.hasMoreTokens()) {
-                PRInt32 namespaceID = mState.mElementContext->mMappings->
+                PRInt32 namespaceID = mElementContext->mMappings->
                     lookupNamespaceWithDefault(tok.nextToken());
                 
                 if (namespaceID == kNameSpaceID_Unknown)
                     return NS_ERROR_XSLT_PARSE_FAILURE;
 
-                if (!mState.mElementContext->mInstructionNamespaces.
+                if (!mElementContext->mInstructionNamespaces.
                         AppendElement(NS_INT32_TO_PTR(namespaceID))) {
                     return NS_ERROR_OUT_OF_MEMORY;
                 }
@@ -191,19 +195,19 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
             NS_ENSURE_SUCCESS(rv, rv);
 
             if (attr->mValue.Equals(NS_LITERAL_STRING("1.0"))) {
-                mState.mElementContext->mForwardsCompatibleParsing = MB_FALSE;
+                mElementContext->mForwardsCompatibleParsing = MB_FALSE;
             }
             else {
-                mState.mElementContext->mForwardsCompatibleParsing = MB_TRUE;
+                mElementContext->mForwardsCompatibleParsing = MB_TRUE;
             }
         }
     }
 
     // Find the right elementhandler and execute it
     MBool isInstruction = MB_FALSE;
-    PRInt32 count = mState.mElementContext->mInstructionNamespaces.Count();
+    PRInt32 count = mElementContext->mInstructionNamespaces.Count();
     for (i = 0; i < count; ++i) {
-        if (NS_PTR_TO_INT32(mState.mElementContext->mInstructionNamespaces[i]) ==
+        if (NS_PTR_TO_INT32(mElementContext->mInstructionNamespaces[i]) ==
             aNamespaceID) {
             isInstruction = MB_TRUE;
             break;
@@ -213,19 +217,19 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
     txElementHandler* handler;
     do {
         handler = isInstruction ?
-                  mState.mHandlerTable->find(aNamespaceID, aLocalName) :
-                  mState.mHandlerTable->mLREHandler;
+                  mHandlerTable->find(aNamespaceID, aLocalName) :
+                  mHandlerTable->mLREHandler;
 
         rv = (handler->mStartFunction)(aNamespaceID, aLocalName, aPrefix,
-                                       aAttributes, aAttrCount, mState);
+                                       aAttributes, aAttrCount, *this);
     } while (rv == NS_ERROR_XSLT_GET_NEW_HANDLER);
 
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = mState.pushPtr(handler);
+    rv = pushPtr(handler);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mState.mElementContext->mDepth++;
+    mElementContext->mDepth++;
 
     return NS_OK;
 }
@@ -237,30 +241,29 @@ txStylesheetCompiler::endElement()
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 i;
-    for (i = mState.mInScopeVariables.Count() - 1; i >= 0; --i) {
+    for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
         txInScopeVariable* var =
-            (txInScopeVariable*)mState.mInScopeVariables[i];
+            (txInScopeVariable*)mInScopeVariables[i];
         if (!--(var->mLevel)) {
             txInstruction* instr = new txRemoveVariable(var->mName);
             NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
-            rv = mState.addInstruction(instr);
+            rv = addInstruction(instr);
             NS_ENSURE_SUCCESS(rv, rv);
             
-            mState.mInScopeVariables.RemoveElementAt(i);
+            mInScopeVariables.RemoveElementAt(i);
             delete var;
         }
     }
 
     txElementHandler* handler =
-        (txElementHandler*)mState.popPtr();
-    rv = (handler->mEndFunction)(mState);
+        (txElementHandler*)popPtr();
+    rv = (handler->mEndFunction)(*this);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if(!--mState.mElementContext->mDepth) {
+    if(!--mElementContext->mDepth) {
         // this will delete the old object
-        mState.mElementContext =
-            (txElementContext*)mState.popObject();
+        mElementContext = (txElementContext*)popObject();
     }
 
     return NS_OK;
@@ -277,16 +280,31 @@ txStylesheetCompiler::characters(const nsAString& aStr)
 nsresult
 txStylesheetCompiler::doneLoading()
 {
-    // XXX Check if there are any parent or child sheets still loading and only
-    // call doneCompiling if we're really done.
-    // Otherwise just return NS_OK
-    return mState.mStylesheet->doneCompiling();
+    mDoneWithThisStylesheet = PR_TRUE;
+
+    return maybeDoneCompiling();
 }
 
 txStylesheet*
 txStylesheetCompiler::getStylesheet()
 {
-    return mState.mStylesheet;
+    return mStylesheet;
+}
+
+nsresult
+txStylesheetCompiler::loadURI(const nsAString& aUri,
+                              txStylesheetCompiler* aCompiler)
+{
+    return mObserver ? mObserver->loadURI(aUri, aCompiler) : NS_ERROR_FAILURE;
+}
+
+void
+txStylesheetCompiler::onDoneCompiling(txStylesheetCompiler* aCompiler,
+                                      nsresult aResult)
+{
+    mChildCompilerList.RemoveElement(aCompiler);
+
+    maybeDoneCompiling();
 }
 
 nsresult
@@ -301,7 +319,7 @@ txStylesheetCompiler::flushCharacters()
     nsresult rv = NS_OK;
 
     do {
-        rv = (mState.mHandlerTable->mTextHandler)(mCharacters, mState);
+        rv = (mHandlerTable->mTextHandler)(mCharacters, *this);
     } while (rv == NS_ERROR_XSLT_GET_NEW_HANDLER);
 
     NS_ENSURE_SUCCESS(rv, rv);
@@ -315,73 +333,96 @@ nsresult
 txStylesheetCompiler::ensureNewElementContext()
 {
     // Do we already have a new context?
-    if (!mState.mElementContext->mDepth)
+    if (!mElementContext->mDepth)
         return NS_OK;
     
     nsAutoPtr<txElementContext>
-        context(new txElementContext(*mState.mElementContext));
+        context(new txElementContext(*mElementContext));
     NS_ENSURE_TRUE(context, NS_ERROR_OUT_OF_MEMORY);
 
-    nsresult rv = mState.pushObject(mState.mElementContext);
+    nsresult rv = pushObject(mElementContext);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mState.mElementContext.forget();
-    mState.mElementContext = context;
+    mElementContext.forget();
+    mElementContext = context;
 
     return NS_OK;
 }
 
+nsresult
+txStylesheetCompiler::maybeDoneCompiling()
+{
+    if (!mDoneWithThisStylesheet || mChildCompilerList.Count()) {
+        return NS_OK;
+    }
+    
+    if (mIsTopCompiler) {
+        nsresult rv = mStylesheet->doneCompiling();
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    
+    if (mObserver) {
+        mObserver->onDoneCompiling(this, NS_OK);
+    }
+
+    return NS_OK;
+}
 
 /**
  * txStylesheetCompilerState
  */
 
 
-txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
-                                                     txStylesheet* aStylesheet)
-    : mStylesheet(aStylesheet),
-      mHandlerTable(nsnull),
+txStylesheetCompilerState::txStylesheetCompilerState(txACompileObserver* aObserver)
+    : mHandlerTable(nsnull),
       mSorter(nsnull),
-      mDOE(nsnull),
+      mDOE(PR_FALSE),
+      mObserver(aObserver),
+      mDoneWithThisStylesheet(PR_FALSE),
       mNextInstrPtr(nsnull),
       mToplevelIterator(nsnull)
 {
-    nsresult rv = NS_OK;
-
-    if (!mStylesheet) {
-        mStylesheet = new txStylesheet;
-        if (!mStylesheet) {
-            // XXX invalidate
-            return;
-        }
-        
-        rv = mStylesheet->init();
-        if (NS_FAILED(rv)) {
-            // XXX invalidate
-            return;
-        }
-        
-        txListIterator tmpIter(&mStylesheet->mRootFrame->mToplevelItems);
-        mToplevelIterator = tmpIter;
-        mToplevelIterator.next(); // go to the end of the list
-    }
-
-    
     // XXX Embedded stylesheets have another handler. Probably
     mHandlerTable = gTxRootHandler;
 
-    mElementContext = new txElementContext(aBaseURI);
-    if (!mElementContext || !mElementContext->mMappings) {
-        // XXX invalidate
-        return;
+}
+
+nsresult
+txStylesheetCompilerState::init(const nsAString& aBaseURI,
+                                txStylesheet* aStylesheet,
+                                txListIterator* aInsertPosition)
+{
+    NS_ASSERTION(!aStylesheet || aInsertPosition,
+                 "must provide insertposition if loading subsheet");
+    nsresult rv = NS_OK;
+    if (aStylesheet) {
+        mStylesheet = aStylesheet;
+        mToplevelIterator = *aInsertPosition;
+        mIsTopCompiler = PR_FALSE;
     }
+    else {
+        mStylesheet = new txStylesheet;
+        NS_ENSURE_TRUE(mStylesheet, NS_ERROR_OUT_OF_MEMORY);
+        
+        rv = mStylesheet->init();
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        mToplevelIterator =
+            txListIterator(&mStylesheet->mRootFrame->mToplevelItems);
+        mToplevelIterator.next(); // go to the end of the list
+        mIsTopCompiler = PR_TRUE;
+    }
+   
+    mElementContext = new txElementContext(aBaseURI);
+    if (!mElementContext || !mElementContext->mMappings)
+    NS_ENSURE_TRUE(mElementContext && mElementContext->mMappings,
+                   NS_ERROR_OUT_OF_MEMORY);
 
     // Push the "old" txElementContext
     rv = pushObject(0);
-    if (NS_FAILED(rv)) {
-        // XXX invalidate
-        return;
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    return NS_OK;
 }
 
 
@@ -484,11 +525,7 @@ txStylesheetCompilerState::fcp()
 nsresult
 txStylesheetCompilerState::addToplevelItem(txToplevelItem* aItem)
 {
-    nsresult rv = mToplevelIterator.addBefore(aItem);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    mToplevelIterator.next();
-    return NS_OK;
+    return mToplevelIterator.addBefore(aItem);
 }
 
 nsresult
@@ -523,6 +560,61 @@ txStylesheetCompilerState::addInstruction(txInstruction* aInstruction)
     mGotoTargetPointers.Clear();
 
     return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::loadIncludedStylesheet(const nsAString& aURI)
+{
+    nsAutoPtr<txToplevelItem> item = new txDummyItem;
+    NS_ENSURE_TRUE(item, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = mToplevelIterator.addBefore(item);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    item.forget();
+
+    // step back to the dummy-item
+    mToplevelIterator.previous();
+    
+    txACompileObserver* observer = NS_STATIC_CAST(txStylesheetCompiler*, this);
+
+    nsRefPtr<txStylesheetCompiler> compiler =
+        new txStylesheetCompiler(aURI, mStylesheet, &mToplevelIterator,
+                                 observer);
+    NS_ENSURE_TRUE(compiler, NS_ERROR_OUT_OF_MEMORY);
+
+    // step forward before calling the observer in case of syncronous loading
+    mToplevelIterator.next();
+
+    if (!mChildCompilerList.AppendElement(compiler)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    mObserver->loadURI(aURI, compiler);
+
+    return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::loadImportedStylesheet(const nsAString& aURI,
+                                                  txStylesheet::ImportFrame* aFrame)
+{
+    txListIterator iter(&aFrame->mToplevelItems);
+    iter.next(); // go to the end of the list
+
+    txACompileObserver* observer = NS_STATIC_CAST(txStylesheetCompiler*, this);
+
+    nsRefPtr<txStylesheetCompiler> compiler =
+        new txStylesheetCompiler(aURI, mStylesheet, &iter, observer);
+    NS_ENSURE_TRUE(compiler, NS_ERROR_OUT_OF_MEMORY);
+
+    if (!mChildCompilerList.AppendElement(compiler)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    mObserver->loadURI(aURI, compiler);
+
+    return NS_OK;  
 }
 
 nsresult
