@@ -307,12 +307,12 @@ sub SetupPath {
     
     if ($Settings::OS eq 'BSD_OS') {
         $ENV{PATH}        = "/usr/contrib/bin:/bin:/usr/bin:$ENV{PATH}";
-        $Settings::ConfigureArgs .= '--disable-shared';
-        $Settings::ConfigureEnvArgs = 'CC=shlicc2 CXX=shlicc2';
-        $Settings::Compiler = 'shlicc2';
-        $Settings::mail = '/usr/ucb/mail';
+        #$Settings::ConfigureArgs .= '--disable-shared';
+        #$Settings::ConfigureEnvArgs = 'CC=shlicc2 CXX=shlicc2';
+        #$Settings::Compiler = 'shlicc2';
+        #$Settings::mail = '/usr/ucb/mail';
         # Because ld dies if it encounters -include
-        $Settings::MakeOverrides = 'CPP_PROG_LINK=0 CCF=shlicc2';
+        #$Settings::MakeOverrides = 'CPP_PROG_LINK=0 CCF=shlicc2';
         $Settings::NSPRArgs .= 'NS_USE_GCC=1 NS_USE_NATIVE=';
     }
     
