@@ -44,8 +44,6 @@
 #include "nsInstallObject.h"
 #include "nsInstallVersion.h"
 
-static void PR_CALLBACK WinRegCleanup(JSContext *cx, JSObject *obj);
-
 class nsInstallInfo
 {
   public:
