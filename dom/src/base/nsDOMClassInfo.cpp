@@ -297,23 +297,6 @@ nsDOMClassInfo::nsDOMClassInfo(nsDOMClassInfoID aID) : mID(aID)
   NS_INIT_REFCNT();
 
   sInstanceCount++;
-
-  if (!sXPConnect) {
-    // Hmm, all this should be moved into an Init() method...
-
-    nsServiceManager::GetService(nsIXPConnect::GetCID(),
-                                 nsIXPConnect::GetIID(),
-                                 (nsISupports **)&sXPConnect);
-
-    if (sXPConnect) {
-      nsCOMPtr<nsIXPCFunctionThisTranslator> old;
-
-      nsEventListenerThisTranslator *elt = new nsEventListenerThisTranslator();
-
-      sXPConnect->SetFunctionThisTranslator(NS_GET_IID(nsIDOMEventListener),
-                                            elt, getter_AddRefs(old));
-    }
-  }
 }
 
 nsDOMClassInfo::~nsDOMClassInfo()
@@ -337,6 +320,20 @@ NS_INTERFACE_MAP_END
 nsresult
 nsDOMClassInfo::Init()
 {
+  if (!sXPConnect) {
+    nsresult rv = nsServiceManager::GetService(nsIXPConnect::GetCID(),
+                                               nsIXPConnect::GetIID(),
+                                               (nsISupports **)&sXPConnect);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsIXPCFunctionThisTranslator> old;
+
+    nsEventListenerThisTranslator *elt = new nsEventListenerThisTranslator();
+
+    sXPConnect->SetFunctionThisTranslator(NS_GET_IID(nsIDOMEventListener),
+                                          elt, getter_AddRefs(old));
+  }
+
   if (!sLocation_id) {
     // This method better be called from JS through XPConnect, if not
     // we're out of luck!
