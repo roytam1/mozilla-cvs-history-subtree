@@ -136,7 +136,6 @@ protected:
   nsresult  getArgumentN(nsISupportsArray *arguments, nsIRDFResource *res, PRInt32 offset, nsIRDFNode **argValue);
   PRBool    isMutableProperty(nsIRDFResource *aProperty);
   const char *getPropertySchemaName(nsIRDFResource *aProperty);
-  nsCOMPtr<nsIRDFResource> getLDAPUrl(nsIRDFResource *aSource);
   PRBool    isRemoteContainer(nsIRDFResource *aNode);
 
   enum { LDAP_READY=0, LDAP_SEARCH, LDAP_ADD, LDAP_DELETE, LDAP_MODIFY };

@@ -1335,13 +1335,12 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
           nsCOMPtr<nsIRDFResource> containerRes;
           rv = mContainer->GetResource(getter_AddRefs(containerRes));
           NS_ENSURE_SUCCESS(rv, rv);
-          nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(containerRes);
-          if (!rdfRes)
+          if (!containerRes)
             return(NS_ERROR_NULL_POINTER);
 
           nsresult rv;
           const char *uri = nsnull;
-          rv = rdfRes->GetValueConst(&uri);
+          rv = containerRes->GetValueConst(&uri);
           NS_ENSURE_SUCCESS(rv, rv);
           if (!uri)
             return(NS_ERROR_NULL_POINTER);
@@ -1781,18 +1780,17 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
     }
 
     // success, update the internal graph
-    nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(mNode);
     if (mOldTarget && mNewTarget)
     {
-      rv = mInner->Change(rdfRes, mProperty, mOldTarget, mNewTarget);
+      rv = mInner->Change(mNode, mProperty, mOldTarget, mNewTarget);
     }
     else if (mNewTarget)
     {
-      rv = mInner->Assert(rdfRes, mProperty, mNewTarget, PR_TRUE);
+      rv = mInner->Assert(mNode, mProperty, mNewTarget, PR_TRUE);
     }
     else if (mOldTarget)
     {
-      rv = mInner->Unassert(rdfRes, mProperty, mOldTarget);
+      rv = mInner->Unassert(mNode, mProperty, mOldTarget);
     }
     NS_ENSURE_SUCCESS(rv, rv);
     }
@@ -2000,10 +1998,9 @@ nsRemoteBookmarks::doLDAPQuery(nsILDAPConnection *ldapConnection,
   else if ((ldapOpcode == nsRemoteBookmarks::LDAP_DELETE) ||
     (ldapOpcode == nsRemoteBookmarks::LDAP_MODIFY))
   {
-    nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(aNode);
-    if (rdfRes)
+    if (aNode)
     {
-      rdfRes->GetValueConst(&srcURI);
+      aNode->GetValueConst(&srcURI);
     }
   }
   if (!srcURI)
@@ -2090,9 +2087,8 @@ nsRemoteBookmarks::doAuthentication(nsIRDFResource *aSource,
   NS_ENSURE_SUCCESS(rv, rv);
 
   const char *srcURI = nsnull;
-  nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(aSource);
-  if (rdfRes)
-    rdfRes->GetValueConst(&srcURI);
+  if (aSource)
+    aSource->GetValueConst(&srcURI);
   if (!srcURI)
     return(NS_ERROR_NULL_POINTER);
 
@@ -2259,11 +2255,11 @@ nsRemoteBookmarks::insertLDAPBookmarkItem(nsIRDFResource *aNode,
   if (NS_SUCCEEDED(rv = gRDFC->IsSeq(mInner, aNode, &isContainerFlag)) &&
     (isContainerFlag == PR_TRUE))
   {
-    rdfRes = getLDAPUrl(aNode);
+    rdfRes = aNode;
   }
   else
   {
-    rdfRes = getLDAPUrl(argParent);
+    rdfRes = argParent;
   }
   if (!rdfRes)
     return(NS_OK);
@@ -2329,10 +2325,9 @@ nsRemoteBookmarks::deleteLDAPBookmarkItem(nsIRDFResource *aNode,
   if (!argParent)
     return(NS_ERROR_NO_INTERFACE);
 
-  nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(aNode);
-  if (!rdfRes)
+  if (!aNode)
     return(NS_OK);
-  if (!isRemoteBookmarkURI(rdfRes))
+  if (!isRemoteBookmarkURI(aNode))
     return(NS_OK);
 
   // Get the ldap connection
@@ -2355,10 +2350,9 @@ nsRemoteBookmarks::updateLDAPBookmarkItem(nsIRDFResource *aSource,
                                           nsIRDFNode *aNewTarget)
 {
   nsresult rv;
-  nsCOMPtr<nsIRDFResource> rdfRes = getLDAPUrl(aSource);
-  if (!rdfRes)
+  if (!aSource)
     return(NS_OK);
-  if (!isRemoteBookmarkURI(rdfRes))
+  if (!isRemoteBookmarkURI(aSource))
     return(NS_OK);
 
   // Get the ldap connection
@@ -2454,15 +2448,6 @@ nsRemoteBookmarks::getPropertySchemaName(nsIRDFResource *aProperty)
   else if (mProperty == kNC_Description)  propName = MOZ_SCHEMA_DESCRIPTION;
 //  else if (mProperty == kNC_URL)        propName = MOZ_SCHEMA_URL;
   return(propName);
-}
-
-
-
-nsCOMPtr<nsIRDFResource>
-nsRemoteBookmarks::getLDAPUrl(nsIRDFResource *aSource)
-{
-  NS_IF_ADDREF(aSource);
-  return(aSource);
 }
 
 
