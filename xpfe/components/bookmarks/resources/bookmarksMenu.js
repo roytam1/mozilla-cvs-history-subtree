@@ -702,32 +702,3 @@ var BookmarksToolbar =
     return true; // show tooltip
   }
 }
-
-// Implement nsIRDFObserver so we can update our overflow state when items get
-// added/removed from the toolbar
-var BookmarksToolbarRDFObserver =
-{
-  onAssert: function (aDataSource, aSource, aProperty, aTarget)
-  {
-    this.setOverflowTimeout(aSource, aProperty);
-  },
-  onUnassert: function (aDataSource, aSource, aProperty, aTarget)
-  {
-    this.setOverflowTimeout(aSource, aProperty);
-  },
-  onChange: function (aDataSource, aSource, aProperty, aOldTarget, aNewTarget) {},
-  onMove: function (aDataSource, aOldSource, aNewSource, aProperty, aTarget) {},
-  beginUpdateBatch: function (aDataSource) {},
-  endUpdateBatch:   function (aDataSource) {},
-
-  _overflowTimerInEffect: false,
-  setOverflowTimeout: function (aSource, aProperty)
-  {
-    if (this._overflowTimerInEffect)
-      return;
-    if (aSource.Value != "NC:PersonalToolbarFolder" || aProperty.Value == NC_NS+"LastModifiedDate")
-      return;
-    this._overflowTimerInEffect = true;
-    setTimeout(BookmarksToolbar.resizeFunc, 0);
-  }
-}
