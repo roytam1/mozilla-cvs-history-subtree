@@ -221,6 +221,9 @@ nsFormHistory::GetValueAt(PRUint32 aIndex, nsAString &aValue)
 NS_IMETHODIMP
 nsFormHistory::AddEntry(const nsAString &aName, const nsAString &aValue)
 {
+  if (!FormHistoryEnabled())
+    return NS_OK;
+
   nsresult rv = OpenDatabase(); // lazily ensure that the database is open
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -256,7 +259,11 @@ nsFormHistory::RemoveEntriesForName(const nsAString &aName)
 NS_IMETHODIMP
 nsFormHistory::RemoveAllEntries()
 {
-  return RemoveEntriesInternal(nsnull);
+  nsresult rv = RemoveEntriesInternal(nsnull);
+  
+  rv |= Flush();
+  
+  return rv;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -525,7 +532,7 @@ nsFormHistory::CreateNewFile(const char *aPath)
 
   // Force a commit now to get it written out.
   nsCOMPtr<nsIMdbThumb> thumb;
-  err = mStore->LargeCommit(mEnv, getter_AddRefs(thumb));
+  err = mStore->CompressCommit(mEnv, getter_AddRefs(thumb));
   NS_ENSURE_TRUE(!err, NS_ERROR_FAILURE);
 
   PRBool done;
@@ -587,7 +594,7 @@ nsFormHistory::Flush()
   mdb_err err;
 
   nsCOMPtr<nsIMdbThumb> thumb;
-  err = mStore->LargeCommit(mEnv, getter_AddRefs(thumb));
+  err = mStore->CompressCommit(mEnv, getter_AddRefs(thumb));
 
   if (err == 0)
     err = UseThumb(thumb, nsnull);
