@@ -43,11 +43,11 @@
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
 #include "nsIByteArrayInputStream.h"
-#include "nslog.h"
 
-NS_IMPL_LOG_ENABLED(TestSocketIOLog)
-#define PRINTF NS_LOG_PRINTF(TestSocketIOLog)
-#define FLUSH  NS_LOG_FLUSH(TestSocketIOLog)
+#if defined(PR_LOGGING)
+static PRLogModuleInfo *gTestSocketIOLog;
+#endif
+#define LOG(args) PR_LOG(gTestSocketIOLog, PR_LOG_DEBUG, args)
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
@@ -82,7 +82,7 @@ NS_IMPL_ISUPPORTS2(TestListener,
 NS_IMETHODIMP
 TestListener::OnStartRequest(nsIChannel* channel, nsISupports* context)
 {
-  PRINTF("TestListener::OnStartRequest\n");
+  LOG(("TestListener::OnStartRequest\n"));
   return NS_OK;
 }
 
@@ -93,8 +93,8 @@ TestListener::OnDataAvailable(nsIChannel* channel,
                               PRUint32 aSourceOffset,
                               PRUint32 aLength)
 {
-    PRINTF("TestListener::OnDataAvailable [offset=%u length=%u]\n",
-            aSourceOffset, aLength);
+    LOG(("TestListener::OnDataAvailable [offset=%u length=%u]\n",
+        aSourceOffset, aLength));
     char buf[1025];
     PRUint32 amt;
     while (1) {
@@ -111,7 +111,7 @@ NS_IMETHODIMP
 TestListener::OnStopRequest(nsIChannel* channel, nsISupports* context,
                                  nsresult aStatus, const PRUnichar* aStatusArg)
 {
-    PRINTF("TestListener::OnStopRequest [aStatus=%x]\n", aStatus);
+    LOG(("TestListener::OnStopRequest [aStatus=%x]\n", aStatus));
     gKeepRunning = 0;
     return NS_OK;
 }
@@ -145,18 +145,18 @@ TestProvider::TestProvider(char *data)
 {
   NS_INIT_ISUPPORTS();
   NS_NewByteArrayInputStream(getter_AddRefs(mData), data, strlen(data));
-  PRINTF("Constructing TestProvider [this=%x]\n", this);
+  LOG(("Constructing TestProvider [this=%x]\n", this));
 }
 
 TestProvider::~TestProvider()
 {
-  PRINTF("Destroying TestProvider [this=%x]\n", this);
+  LOG(("Destroying TestProvider [this=%x]\n", this));
 }
 
 NS_IMETHODIMP
 TestProvider::OnStartRequest(nsIChannel* channel, nsISupports* context)
 {
-  PRINTF("TestProvider::OnStartRequest [this=%x]\n", this);
+  LOG(("TestProvider::OnStartRequest [this=%x]\n", this));
   return NS_OK;
 }
 
@@ -164,7 +164,7 @@ NS_IMETHODIMP
 TestProvider::OnStopRequest(nsIChannel* channel, nsISupports* context,
                                  nsresult aStatus, const PRUnichar* aStatusArg)
 {
-    PRINTF("TestProvider::OnStopRequest [status=%x]\n", aStatus);
+    LOG(("TestProvider::OnStopRequest [status=%x]\n", aStatus));
 
     nsCOMPtr<nsIStreamListener> listener = do_QueryInterface(new TestListener());
 
@@ -180,7 +180,7 @@ NS_IMETHODIMP
 TestProvider::OnProvideData(nsIChannel *channel, nsISupports *context,
                             nsIOutputStream *output, PRUint32 offset, PRUint32 count)
 {
-    PRINTF("TestProvider::OnProvideData [offset=%u, count=%u]\n", offset, count);
+    LOG(("TestProvider::OnProvideData [offset=%u, count=%u]\n", offset, count));
     PRUint32 writeCount;
     nsresult rv = output->WriteFrom(mData, count, &writeCount);
     // Zero bytes written on success indicates EOF
@@ -223,14 +223,14 @@ ReadResponse(nsIInputStream *is)
 void
 sighandler(int sig)
 {
-    PRINTF("got signal: %d\n", sig);
+    LOG(("got signal: %d\n", sig));
     NS_BREAK();
 }
 
 void
 usage(char **argv)
 {
-    PRINTF("usage: %s [-sync] <host> <path>\n", argv[0]);
+    printf("usage: %s [-sync] <host> <path>\n", argv[0]);
     exit(1);
 }
 
@@ -240,6 +240,8 @@ main(int argc, char* argv[])
     nsresult rv;
 
     signal(SIGSEGV, sighandler);
+
+    gTestSocketIOLog = PR_NewLogModule("TestSocketIO");
 
     if (argc < 3)
         usage(argv);
@@ -289,7 +291,7 @@ main(int argc, char* argv[])
                                "connection: keep-alive" CRLF
                                 CRLF,
                                 fileName, hostName);
-    PRINTF("Request [\n%s]\n", buffer);
+    LOG(("Request [\n%s]\n", buffer));
 
     // Create the socket transport...
     nsCOMPtr<nsIChannel> transport;
@@ -357,7 +359,7 @@ main(int argc, char* argv[])
 
     PRTime endTime; 
     endTime = PR_Now();
-    PRINTF("Elapsed time: %d\n", (PRInt32)(endTime/1000UL - gElapsedTime/1000UL));
+    LOG(("Elapsed time: %d\n", (PRInt32)(endTime/1000UL - gElapsedTime/1000UL)));
 
     sts->Shutdown();
     return 0;

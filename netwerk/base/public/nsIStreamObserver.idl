@@ -29,20 +29,6 @@ interface nsIEventQueue;
 interface nsIStreamObserver : nsISupports
 {
     /**
-     * Called to signify an asynchronous request that failed before it
-     * could be started.  This corresponds to an error condition being
-     * reached after AsyncRead/Write has returned but before the first
-     * onStartRequest has been called.
-     *
-     * @param channel - channel being observed
-     * @param ctxt - user specified data passed to AsyncRead/Write
-     */
-    // PENDING API REVIEW
-    //void onFailRequest(in nsIChannel channel,
-    //                   in nsISupports ctxt,
-    //                   in nsresult errorCode);
-
-    /**
      * Called to signify the beginning of an asynchronous request.
      *
      * @param channel - channel being observed
