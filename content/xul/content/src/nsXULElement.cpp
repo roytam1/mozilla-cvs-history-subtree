@@ -4998,92 +4998,97 @@ nsXULPrototypeElement::Deserialize(nsIObjectInputStream* aStream,
     // Read Attributes
     rv |= aStream->Read32(&number);
     mNumAttributes = PRInt32(number);
-    mAttributes = new nsXULPrototypeAttribute[mNumAttributes];
-    if (! mAttributes)
-        return NS_ERROR_OUT_OF_MEMORY;
 
-    nsXPIDLString attributeValue, attributeNamespaceURI, attributeName;
-    PRInt32 i;
-    for (i = 0; i < mNumAttributes; ++i) {
-        rv |= aStream->ReadWStringZ(getter_Copies(attributeNamespaceURI));
-        rv |= aStream->ReadWStringZ(getter_Copies(attributeName));
+    if (mNumAttributes > 0) {
+        mAttributes = new nsXULPrototypeAttribute[mNumAttributes];
+        if (! mAttributes)
+            return NS_ERROR_OUT_OF_MEMORY;
 
-        rv |= nimgr->GetNodeInfo(attributeName, attributeNamespaceURI, 
-                                 *getter_AddRefs(mAttributes[i].mNodeInfo));
+        nsXPIDLString attributeValue, attributeNamespaceURI, attributeName;
+        PRInt32 i;
+        for (i = 0; i < mNumAttributes; ++i) {
+            rv |= aStream->ReadWStringZ(getter_Copies(attributeNamespaceURI));
+            rv |= aStream->ReadWStringZ(getter_Copies(attributeName));
 
-        rv |= aStream->ReadWStringZ(getter_Copies(attributeValue));
-        mAttributes[i].mValue.SetValue(attributeValue);
-    }
+            rv |= nimgr->GetNodeInfo(attributeName, attributeNamespaceURI, 
+                                     *getter_AddRefs(mAttributes[i].mNodeInfo));
 
-    // Compute the element's class list if the element has a 'class' attribute.
-    nsAutoString value;
-    if (NS_SUCCEEDED(GetAttr(kNameSpaceID_None, nsXULAtoms::clazz, value)))
-        rv |= nsClassList::ParseClasses(&mClassList, value);
+            rv |= aStream->ReadWStringZ(getter_Copies(attributeValue));
+            mAttributes[i].mValue.SetValue(attributeValue);
+        }
 
-    // Parse the element's 'style' attribute
-    if (NS_SUCCEEDED(GetAttr(kNameSpaceID_None, nsXULAtoms::style, value))) {
-        nsICSSParser* parser = GetCSSParser();
+        // Compute the element's class list if the element has a 'class' attribute.
+        nsAutoString value;
+        if (NS_SUCCEEDED(GetAttr(kNameSpaceID_None, nsXULAtoms::clazz, value)))
+            rv |= nsClassList::ParseClasses(&mClassList, value);
 
-        rv |= parser->ParseStyleAttribute(value, aDocumentURI,
-                                          getter_AddRefs(mInlineStyleRule));
+        // Parse the element's 'style' attribute
+        if (NS_SUCCEEDED(GetAttr(kNameSpaceID_None, nsXULAtoms::style, value))) {
+            nsICSSParser* parser = GetCSSParser();
 
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to parse style rule");
+            rv |= parser->ParseStyleAttribute(value, aDocumentURI,
+                                              getter_AddRefs(mInlineStyleRule));
+
+            NS_ASSERTION(NS_SUCCEEDED(rv), "unable to parse style rule");
+        }
     }
 
     rv |= aStream->Read32(&number);
     mNumChildren = PRInt32(number);
     
-    mChildren = new nsXULPrototypeNode*[mNumChildren];
-    if (! mChildren)
-        return NS_ERROR_OUT_OF_MEMORY;
+    if (mNumChildren > 0) {
+        mChildren = new nsXULPrototypeNode*[mNumChildren];
+        if (! mChildren)
+            return NS_ERROR_OUT_OF_MEMORY;
 
 
-    for (i = 0; i < mNumChildren; i++) {
-        rv |= aStream->Read32(&number);
-        Type childType = (Type)number;
+        for (i = 0; i < mNumChildren; i++) {
+            rv |= aStream->Read32(&number);
+            Type childType = (Type)number;
 
-        nsXULPrototypeNode* child = nsnull;
+            nsXULPrototypeNode* child = nsnull;
 
-        switch (childType) {
-        case eType_Element:
-            child = new nsXULPrototypeElement(-1);
-            if (! child) 
-                return NS_ERROR_OUT_OF_MEMORY;
-            child->mType = childType;
+            switch (childType) {
+            case eType_Element:
+                child = new nsXULPrototypeElement(-1);
+                if (! child) 
+                    return NS_ERROR_OUT_OF_MEMORY;
+                child->mType = childType;
 
-            rv |= child->Deserialize(aStream, aContext, aDocumentURI);
-            break;
-        case eType_Text:
-            child = new nsXULPrototypeText(-1);
-            if (! child)
-                return NS_ERROR_OUT_OF_MEMORY;
-            child->mType = childType;
+                rv |= child->Deserialize(aStream, aContext, aDocumentURI);
+                break;
+            case eType_Text:
+                child = new nsXULPrototypeText(-1);
+                if (! child)
+                    return NS_ERROR_OUT_OF_MEMORY;
+                child->mType = childType;
           
-            rv |= child->Deserialize(aStream, aContext, aDocumentURI);
-            break;
-        case eType_Script:
-            // language version obtained during deserialization.
-            child = new nsXULPrototypeScript(-1, nsnull);
-            if (! child)
-                return NS_ERROR_OUT_OF_MEMORY;
-            child->mType = childType;
+                rv |= child->Deserialize(aStream, aContext, aDocumentURI);
+                break;
+            case eType_Script:
+                // language version obtained during deserialization.
+                child = new nsXULPrototypeScript(-1, nsnull);
+                if (! child)
+                    return NS_ERROR_OUT_OF_MEMORY;
+                child->mType = childType;
 
-            nsXULPrototypeScript* script = NS_STATIC_CAST(nsXULPrototypeScript*, child);
-            if (script) {
-                rv |= aStream->ReadBoolean(&script->mOutOfLine);
-                if (! script->mOutOfLine)
-                    rv |= script->Deserialize(aStream, aContext, aDocumentURI);
-                else {
-                    rv |= aStream->ReadObject(PR_TRUE, getter_AddRefs(script->mSrcURI));
+                nsXULPrototypeScript* script = NS_STATIC_CAST(nsXULPrototypeScript*, child);
+                if (script) {
+                    rv |= aStream->ReadBoolean(&script->mOutOfLine);
+                    if (! script->mOutOfLine)
+                        rv |= script->Deserialize(aStream, aContext, aDocumentURI);
+                    else {
+                        rv |= aStream->ReadObject(PR_TRUE, getter_AddRefs(script->mSrcURI));
 
-                    rv |= script->DeserializeOutOfLineScript(aStream, aContext);
+                        rv |= script->DeserializeOutOfLineScript(aStream, aContext);
+                    }
                 }
+
+                break;
             }
 
-            break;
+            mChildren[i] = child;
         }
-
-        mChildren[i] = child;
     }
 
     return rv;
@@ -5507,9 +5512,9 @@ nsXULPrototypeText::Deserialize(nsIObjectInputStream* aStream,
     rv = aStream->Read32(&number);
     mLineNo = (PRInt32)number;
     
-    nsXPIDLString str;
-    rv |= aStream->ReadWStringZ(getter_Copies(str));
-    mValue.Assign(str);
+    PRUnichar* str = nsnull;
+    rv |= aStream->ReadWStringZ(&str);
+    mValue.Adopt(str);
     
     return rv;
 }
