@@ -281,7 +281,11 @@ extern PRInt32 _MD_CloseSocket(PRInt32 osfd);
 #define _MD_ATOMIC_DECREMENT          _PR_MD_ATOMIC_DECREMENT
 #else /* non-x86 processors */
 #define _MD_ATOMIC_INCREMENT(x)       InterlockedIncrement((PLONG)x)
+#if defined(WINCE)
+#define _MD_ATOMIC_ADD(ptr,val)    (InterlockedExchange((PLONG)ptr, (*(PLONG)ptr) + (LONG)val) + val)
+#else
 #define _MD_ATOMIC_ADD(ptr,val)    (InterlockedExchangeAdd((PLONG)ptr, (LONG)val) + val)
+#endif
 #define _MD_ATOMIC_DECREMENT(x)       InterlockedDecrement((PLONG)x)
 #endif /* x86 */
 #define _MD_ATOMIC_SET(x,y)           InterlockedExchange((PLONG)x, (LONG)y)

@@ -94,6 +94,8 @@ PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
     }
     return (PRWord *)&t->md.gcContext;
 #elif defined(_ALPHA_)
+#elif defined(_ARM_)
+    return NULL;
 #endif /* defined(_X86_) */
 }
 
@@ -119,5 +121,7 @@ GetMyFiberID()
   
     return fiberData;
 #elif defined(_ALPHA_)
+#elif defined(_ARM_)
+    return NULL;
 #endif /* defined(_X86_) */
 }

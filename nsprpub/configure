@@ -3742,8 +3742,18 @@ EOF
 
         MKSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
     else
-        CC=cl
-        CXX=cl
+        if test "$OS_TARGET" = "WINCE"; then
+            if test "$TARGETCPU" = "ARM"; then
+                CC=clarm
+                CXX=clarm
+            else
+                CC=cl
+                CXX=cl
+            fi
+        else
+            CC=cl
+            CXX=cl
+        fi
         LD=link
         AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
@@ -3893,7 +3903,11 @@ EOF
     fi
 
     if test "$OS_TARGET" = "WINCE"; then
-        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
+        if test "$TARGETCPU" = "X86"; then
+            OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:IX86 -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
+        else
+            OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWSCE,3.00 -MACHINE:ARM -ENTRY:_DllMainCRTStartup -STACK:0x10000,0x1000 -NODEFAULTLIB:OLDNAMES.lib'
+        fi
     else
         OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
     fi
@@ -3916,32 +3930,58 @@ EOF
    	;;
     esac
 
-    case "$target_cpu" in
-    i?86)
-	    cat >> confdefs.h <<\EOF
+    if test "$OS_TARGET" = "WINCE"; then
+        case "$TARGETCPU" in
+        X86)
+	        cat >> confdefs.h <<\EOF
+#define _ARM_ 1
+EOF
+            ;;
+        ARM)
+	        cat >> confdefs.h <<\EOF
+#define _ARM_ 1
+EOF
+            ;;
+        *)
+	        cat >> confdefs.h <<\EOF
+#define _CPU_ARCH_NOT_DEFINED 1
+EOF
+            ;;
+        esac
+    else
+        case "$target_cpu" in
+        i?86)
+	        cat >> confdefs.h <<\EOF
 #define _X86_ 1
 EOF
 
-        ;;
-    alpha)
-	    cat >> confdefs.h <<\EOF
+            ;;
+        alpha)
+	        cat >> confdefs.h <<\EOF
 #define _ALPHA_ 1
 EOF
 
-   	    ;;
-    mips)
-	    cat >> confdefs.h <<\EOF
+   	        ;;
+        mips)
+	        cat >> confdefs.h <<\EOF
 #define _MIPS_ 1
 EOF
 
-	    ;;
-    *)
-	    cat >> confdefs.h <<\EOF
+	        ;;
+        arm)
+	        cat >> confdefs.h <<\EOF
+#define _ARM_ 1
+EOF
+
+	        ;;
+        *)
+	        cat >> confdefs.h <<\EOF
 #define _CPU_ARCH_NOT_DEFINED 1
 EOF
 
-	    ;;
-    esac
+	        ;;
+        esac
+    fi
 
     ;;
 
