@@ -35,6 +35,7 @@
 #include "nsNetUtil.h"
 #include "nsIPref.h"
 #include "nsIAllocator.h"
+#include "nsISupportsPrimitives.h"
 #include "nsXPIDLString.h"
 #include "nsIWebNavigation.h"
 #include "nsIURIContentListener.h"
@@ -896,21 +897,7 @@ NS_METHOD nsGtkMozRemoteHelper::OpenXULWindow (const char *aChromeURL, nsIDOMWin
   NS_ENSURE_ARG_POINTER(aWindowFeatures);
   NS_ENSURE_ARG_POINTER(aParent);
 
-  nsCOMPtr<nsIDOMWindowInternal> returnedWindow;
-  nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObj = do_QueryInterface(aParent);
-  JSContext *jsContext = nsnull;
-
-  if (!scriptGlobalObj)
-    return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIScriptContext> scriptcx;
-  scriptGlobalObj->GetContext(getter_AddRefs(scriptcx));
-  if (scriptcx)
-    jsContext = (JSContext *)scriptcx->GetNativeContext();
-
-  if (!jsContext)
-    return NS_ERROR_FAILURE;
-  
+  nsCOMPtr<nsIDOMWindow> returnedWindow;
   // make sure that we pass a valid name even if there isn't one
   // passed in.
   const PRUnichar *name;
@@ -920,22 +907,19 @@ NS_METHOD nsGtkMozRemoteHelper::OpenXULWindow (const char *aChromeURL, nsIDOMWin
   name = aName ? aName : kEmpty;
   url = aURL ? aURL : kEmpty;
 
-  jsval *jsargv;
-  void *mark;
-
-  jsargv = JS_PushArguments(jsContext, &mark, "sWsW", aChromeURL, name,
-			    aWindowFeatures, url);
-
-  if (!jsargv)
-    return NS_ERROR_FAILURE;
-  
   nsresult rv;
-
-  rv = aParent->OpenDialog(jsContext, jsargv, 4, getter_AddRefs(returnedWindow));
-  JS_PopArguments(jsContext, mark);
-
+  nsCOMPtr<nsISupportsWString> urlWrapper =
+      do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  urlWrapper->SetData(url);
+  
+  nsCOMPtr<nsIDOMWindowInternalEx> parentEx = do_QueryInterface(aParent, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = parentEx->OpenDialog(NS_ConvertASCIItoUCS2(aChromeURL),
+                            nsAutoString(name),
+                            NS_ConvertASCIItoUCS2(aWindowFeatures),
+                            urlWrapper, getter_AddRefs(returnedWindow));
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
-
   return NS_OK;
 }
