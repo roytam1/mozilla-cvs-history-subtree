@@ -438,14 +438,8 @@ nsLoadGroup::AddChannel(nsIChannel *channel, nsISupports* ctxt)
     nsCRT::free(uriStr);
 #endif
 
-///    rv = channel->SetLoadGroup(this);
-///    if (NS_FAILED(rv)) return rv;
-
     rv = mChannels->AppendElement(channel) ? NS_OK : NS_ERROR_FAILURE;	// XXX this method incorrectly returns a bool
     if (NS_FAILED(rv)) return rv;
-
-///    rv = channel->SetLoadAttributes(mDefaultLoadAttributes);
-///    if (NS_FAILED(rv)) return rv;
 
     nsLoadFlags flags;
     rv = channel->GetLoadAttributes(&flags);
@@ -509,6 +503,19 @@ nsLoadGroup::RemoveChannel(nsIChannel *channel, nsISupports* ctxt,
     nsCRT::free(uriStr);
 #endif
 
+    //
+    // Remove the channel from the group.  If this fails, it means that
+    // the channel was *not* in the group so do not update the foreground
+    // count or it will get messed up...
+    //
+    rv = mChannels->RemoveElement(channel) ? NS_OK : NS_ERROR_FAILURE;	// XXX this method incorrectly returns a bool
+    if (NS_FAILED(rv)) {
+        PR_LOG(gLoadGroupLog, PR_LOG_ERROR, 
+               ("LOADGROUP: %x Unable to remove channel %x. Not in group!\n", 
+                this, channel));
+        return rv;
+    }
+
     nsLoadFlags flags;
     rv = channel->GetLoadAttributes(&flags);
     if (NS_SUCCEEDED(rv)) {
@@ -547,12 +554,7 @@ nsLoadGroup::RemoveChannel(nsIChannel *channel, nsISupports* ctxt,
             }
         }
     }
-
-    // we don't remove the group from the channel here because the channels always
-    // remember their group, even after the load has completed
-
-    nsresult rv2 = mChannels->RemoveElement(channel) ? NS_OK : NS_ERROR_FAILURE;	// XXX this method incorrectly returns a bool
-    return rv || rv2;
+    return rv;
 }
 
 NS_IMETHODIMP
