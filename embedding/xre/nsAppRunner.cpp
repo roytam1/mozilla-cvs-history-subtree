@@ -1358,14 +1358,24 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp,
   NS_ASSERTION(NS_SUCCEEDED(rv), "Initializing AppleEvents failed");
 #endif
 
+  NS_TIMELINE_ENTER("setup registry");
+  // Ask XPInstall if we need to autoregister anything new.
+  PRBool needAutoReg = NS_SoftwareUpdateNeedsAutoReg();
+
 #ifdef DEBUG
   // _Always_ autoreg if we're in a debug build, under the assumption
   // that people are busily modifying components and will be angry if
   // their changes aren't noticed.
-    nsComponentManager::AutoRegister(nsIComponentManagerObsolete::NS_Startup,
-                                     NULL /* default */);
+  needAutoReg = PR_TRUE;
 #endif
 
+  if (needAutoReg) {
+    nsComponentManager::AutoRegister(nsIComponentManagerObsolete::NS_Startup,
+                                     NULL /* default */);
+    // XXX ...and autoreg was successful?
+    NS_SoftwareUpdateDidAutoReg();
+  }
+  NS_TIMELINE_LEAVE("setup registry");
 
   // remove the nativeApp as an XPCOM autoreg observer
   if (obsService)
