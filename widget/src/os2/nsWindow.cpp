@@ -21,6 +21,7 @@
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *   IBM Corp.
  *   Rich Walsh <dragtext@e-vertise.com>
+ *   Dainis Jonitis <Dainis_Jonitis@swh-t.lv> 
  *
  */
 
@@ -167,6 +168,20 @@ static int currentWindowIdentifier = 0;
 
 // set when any nsWindow is being dragged over
 static PRUint32  gDragStatus = 0;
+
+
+//
+// App Command messages for IntelliMouse and Natural Keyboard Pro
+//
+#define WM_APPCOMMAND  0x0319
+
+#define APPCOMMAND_BROWSER_BACKWARD       1
+#define APPCOMMAND_BROWSER_FORWARD        2
+#define APPCOMMAND_BROWSER_REFRESH        3
+#define APPCOMMAND_BROWSER_STOP           4
+
+#define FAPPCOMMAND_MASK  0xF000
+#define GET_APPCOMMAND_LPARAM(lParam) ((USHORT)(HIUSHORT(lParam) & ~FAPPCOMMAND_MASK))
 
 //-------------------------------------------------------------------------
 //
@@ -500,6 +515,24 @@ PRBool nsWindow::DispatchStandardEvent(PRUint32 aMsg)
   PRBool result = DispatchWindowEvent(&event);
   NS_RELEASE(event.widget);
   return result;
+}
+
+//-------------------------------------------------------------------------
+//
+// Dispatch app command event
+//
+//-------------------------------------------------------------------------
+PRBool nsWindow::DispatchAppCommandEvent(PRUint32 aEventCommand)
+{
+  nsAppCommandEvent event(NS_APPCOMMAND_START, this);
+
+  InitEvent(event);
+  event.appCommand = NS_APPCOMMAND_START + aEventCommand;
+
+  DispatchWindowEvent(&event);
+  NS_RELEASE(event.widget);
+
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -2568,6 +2601,30 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
         case WM_MOUSELEAVE:
           result = DispatchMouseEvent( NS_MOUSE_EXIT, mp1, mp2);
           break;
+
+        case WM_APPCOMMAND:
+        {
+          PRUint32 appCommand = GET_APPCOMMAND_LPARAM(mp2);
+
+          switch (appCommand)
+          {
+            case APPCOMMAND_BROWSER_BACKWARD:
+            case APPCOMMAND_BROWSER_FORWARD:
+            case APPCOMMAND_BROWSER_REFRESH:
+            case APPCOMMAND_BROWSER_STOP:
+              DispatchAppCommandEvent(appCommand);
+              // tell the driver that we handled the event
+              rc = (MRESULT)1;
+              result = PR_TRUE;
+              break;
+
+            default:
+              rc = (MRESULT)0;
+              result = PR_FALSE;
+              break;
+          }
+          break;
+        }
     
         case WM_HSCROLL:
         case WM_VSCROLL:
