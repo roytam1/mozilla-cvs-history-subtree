@@ -1143,9 +1143,12 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
 #ifdef INCLUDE_XUL
   IndentBy(out,aIndent);
   const nsStyleXUL* xul = (const nsStyleXUL*)GetStyleData(eStyleStruct_XUL);
-  fprintf(out, "<xul data=\"%d",
-    (int)xul->mBoxOrient);
-  fprintf(out, "\" />\n");
+  fprintf(out, "<xul data=\"%d %d %d %d %d",
+    (int)xul->mBoxAlign,
+    (int)xul->mBoxDirection,
+    (int)xul->mBoxFlex,
+    (int)xul->mBoxOrient,
+    (int)xul->mBoxPack);
 #endif
 
   // SVG
