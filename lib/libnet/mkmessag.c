@@ -16,6 +16,7 @@
  * Reserved.
  */
 
+#include "rosetta.h"
 #include "mkutils.h"
 #include "mktcp.h"
 #include "gui.h"

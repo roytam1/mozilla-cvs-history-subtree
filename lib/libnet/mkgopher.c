@@ -19,8 +19,9 @@
  * Designed and Implemented by Lou Montulli circa '94
  */
 
+#include "rosetta.h"
 #include "mkutils.h"
-#include 
+#include HG10299
  
 /* Gopher types:
  */

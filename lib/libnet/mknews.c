@@ -24,6 +24,7 @@
 
 /* Please leave outside of ifdef for windows precompiled headers */
 #define FORCE_PR_LOG /* Allow logging in the release build (sorry this breaks the PCH) */
+
 #include "rosetta.h"
 #include "mkutils.h"
 
@@ -47,7 +48,7 @@
 #include "mknewsgr.h"
 #include "libi18n.h"
 #include "gui.h"
-#include "ssl.h"
+#include HG10299
 #include "mknews.h"
 
 #include "msgcom.h"
@@ -383,7 +384,7 @@ typedef struct _NewsConData {
     char       *response_txt;    /* text returned from NNTP server */
     Bool     pause_for_read;  /* should we pause for the next read? */
 
-	char       *ssl_proxy_server;    /* ssl proxy server hostname */
+	HG82332
 	XP_Bool     proxy_auth_required; /* is auth required */
 	XP_Bool     sent_proxy_auth;     /* have we sent a proxy auth? */
 
@@ -502,12 +503,7 @@ PUBLIC void net_graceful_shutdown(PRFileDesc *sock, XP_Bool isSecure)
 		PREF_GetIntPref("network.socket_shutdown", &int_pref);
 	if (int_pref > 0 && int_pref < 4)
 	{
-		if (isSecure)
-			/* SSL is not working well with socket shutdown. An alternative of
-			 fixing this BSOD problem is to write a zero length data packet to
-			 flush out the queued data. -- jht 5/1/98 */
-			NET_BlockingWrite(sock, "", 0);
-		else
+		HG32949
 			XP_SOCK_SHUTDOWN(sock, (int)(int_pref-1));
 	}
 }
@@ -4253,17 +4249,13 @@ net_NewsLoad (ActiveEntry *ce)
 
   if(!ce->proxy_addr)
   {
-	/* look for an HTTPS proxy and use it if available,
-	 * but the passed in one takes precedence
-	 */
+	/* look for an HTTPS proxy and use it if available, */
+	 /* but the passed in one takes precedence */
     StrAllocCopy(ce->proxy_addr,
                  NET_FindProxyHostForUrl(SECURE_HTTP_TYPE_URL, 
                                          ce->URL_s->address));
   }
-  else
-  {
-  	StrAllocCopy(cd->ssl_proxy_server, ce->proxy_addr);
-  }
+  HG38737
 
   cd->pane = ce->URL_s->msg_pane;
   if (!cd->pane)
@@ -4735,13 +4727,12 @@ net_ProcessNews (ActiveEntry *ce)
 				if (nntp_are_connections_available(cd->control_con))
 				{
 					ce->status = NET_BeginConnect(
-						(cd->ssl_proxy_server && cd->control_con->secure ?
-						cd->ssl_proxy_server :cd->control_con->hostname), 
+						(HG29239 cd->control_con->hostname), 
 						NULL,
 						"NNTP", 
-						(cd->control_con->secure ? SECURE_NEWS_PORT : NEWS_PORT), 
+						(HG28287 NEWS_PORT), 
 						&ce->socket, 
-						(cd->ssl_proxy_server ? FALSE : cd->control_con->secure), 
+						(HG22999), 
 						&cd->tcp_con_data, 
 						ce->window_id,
 						&ce->URL_s->error_msg,
@@ -4790,10 +4781,9 @@ HG33086
 
             case NNTP_CONNECT_WAIT:
                 ce->status = NET_FinishConnect(
-							  (cd->ssl_proxy_server && cd->control_con->secure ?
-								cd->ssl_proxy_server : cd->control_con->hostname),
+							  (HG93230 cd->control_con->hostname),
 							  "NNTP", 
-							  (cd->control_con->secure ? SECURE_NEWS_PORT : NEWS_PORT), 
+							  (HG29399 NEWS_PORT), 
 							  &ce->socket, 
 							  &cd->tcp_con_data, 
 							  ce->window_id,
@@ -5249,7 +5239,7 @@ HG68092
                 FREEIF(cd->data_buf);
 
 				FREEIF(cd->output_buffer);
-				FREEIF(cd->ssl_proxy_server);
+				HG20900
                 FREEIF(cd->stream);  /* don't forget the stream */
             	if(cd->tcp_con_data)
                 	NET_FreeTCPConData(cd->tcp_con_data);

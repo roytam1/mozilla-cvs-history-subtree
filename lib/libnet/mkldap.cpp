@@ -28,6 +28,7 @@
 //        Address Book using changelog deltas
 // 
 
+#include "rosetta.h"
 #include "mkutils.h" 
 
 #include "mkgeturl.h"
@@ -42,7 +43,7 @@
 #include "dirprefs.h"
 #include "net.h"
 #include "xp_str.h"
-#include "cert.h"
+#include HG87373
 #include "secnav.h"
 #include "libi18n.h"
 #include "intl_csi.h"
@@ -91,8 +92,7 @@ extern "C"
 
 	extern int MK_LDAP_ADD_SERVER_TO_PREFS;
 	extern int MK_MALFORMED_URL_ERROR;
-	extern int MK_LDAP_USER_CERTIFICATE;
-	extern int MK_LDAP_SMIME_USER_CERTIFICATE;
+	HG73226
 	extern int MK_LDAP_HTML_TITLE;
 
 	extern int MK_LDAP_AUTH_PROMPT;
@@ -263,7 +263,7 @@ int net_LdapConnectionData::Load (ActiveEntry *ce)
 
 				AddLdapServerToPrefs (pDesc);
 
-				// Build an SSL connection if necessary
+				HG29237
 				if (ldapErr == 0)
 				{
 					// Initiate the search on the server
@@ -626,9 +626,8 @@ net_LdapToHtml::AttributeName net_LdapToHtml::m_names[kNumAttributeNames] = {
 	{ "sn",                       0 },
 	{ "street",                   0 },
 	{ "telephonenumber",          0 },
-	{ "title",                    0 },
-	{ "userCertificate;binary",   0 },
-	{ "userSMimeCertificate;binary",   0 }
+	{ "title",                    0 }
+	HG38731
 };
 
 
@@ -768,8 +767,8 @@ const char *net_LdapToHtml::LookupAttributeName (const char *attrib)
 		m_names[19].resourceId = MK_LDAP_STREET;        
 		m_names[20].resourceId = MK_LDAP_PHONE_NUMBER;  
 		m_names[21].resourceId = MK_LDAP_TITLE;         
-		m_names[22].resourceId = MK_LDAP_USER_CERTIFICATE;
-		m_names[23].resourceId = MK_LDAP_SMIME_USER_CERTIFICATE;
+		m_names[22].resourceId = HG87272;
+		m_names[23].resourceId = HG73272;
 	}
 
 	for (int i = 0; i < kNumAttributeNames; i++)
@@ -1108,40 +1107,8 @@ int net_LdapToHtml::WriteEntryToStream (LDAPMessage *message)
 		{
 			int valueIndex = 0;
 
-			if ((XP_STRCASECMP(attrib, "usercertificate;binary") == 0) || (XP_STRCASECMP(attrib, "usersmimecertificate;binary") == 0))
-			{
-				struct berval **bercerts = ldap_get_values_len(m_ldap, message, attrib);
-			    
-				while (bercerts[valueIndex])
-				{
-					char *certstr;
-					CERTCertificate *cert;
-				
-					cert = CERT_DecodeCertFromPackage(bercerts[valueIndex]->bv_val, bercerts[valueIndex]->bv_len);
-
-					if (cert)
-					{
-						certstr = CERT_HTMLCertInfo(cert, PR_FALSE, PR_TRUE);
-						CERT_DestroyCertificate(cert);
-						
-						if (certstr)
-						{
-							WritePlainLine ("<TR>");
-							if (valueIndex == 0)
-								WriteAttribute (attribName);
-
-							WriteLineToStream(certstr, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE);
-							XP_FREE(certstr);
-							WritePlainLine ("</TR>");
-						}
-
-					}
-					valueIndex++;
-				}
-			    
-				ldap_value_free_len(bercerts);
-			}
-			else if (XP_STRCASECMP(attrib, "jpegPhoto") == 0 || XP_STRCASECMP(attrib, "audio") == 0)
+			HG73211
+			if (XP_STRCASECMP(attrib, "jpegPhoto") == 0 || XP_STRCASECMP(attrib, "audio") == 0)
 			{
 				struct berval **berImages = ldap_get_values_len (m_ldap, message, attrib);
 				while (berImages[valueIndex])

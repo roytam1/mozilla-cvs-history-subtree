@@ -24,6 +24,7 @@
  * This file implements HTTP access authorization
  * and HTTP cookies
  */
+#include "rosetta.h"
 #include "mkutils.h"
 #include "mkparse.h"
 #include "mkaccess.h"

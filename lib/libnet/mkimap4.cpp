@@ -18,6 +18,7 @@
 
 #define FORCE_PR_LOG /* Allow logging in the release build */
 
+#include "rosetta.h"
 #include "mkutils.h" 
 
 #include "imap4pvt.h"
