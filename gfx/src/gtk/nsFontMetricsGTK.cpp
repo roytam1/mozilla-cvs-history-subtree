@@ -786,8 +786,10 @@ InitGlobals(void)
     return NS_ERROR_FAILURE;
   }
 
+
+  PRUint32 i; // xxx no local scope in |for| on some compilers
   // clear the "empty" char map
-  for (PRUint32 i=0; i<(sizeof(gEmptyMap)/sizeof(gEmptyMap[0])); i++)
+  for (i=0; i<(sizeof(gEmptyMap)/sizeof(gEmptyMap[0])); i++)
     gEmptyMap[i] = 0;
 
   // get the "disable double byte font special chars" setting
@@ -796,7 +798,7 @@ InitGlobals(void)
   if (NS_SUCCEEDED(rv))
     gAllowDoubleByteSpecialChars = val;
   // setup the double byte font special chars glyph map
-  for (int i=0; gDoubleByteSpecialChars[i]; i++) {
+  for (i=0; gDoubleByteSpecialChars[i]; i++) {
     SET_REPRESENTABLE(gDoubleByteSpecialCharsMap, gDoubleByteSpecialChars[i]);
   }
 
