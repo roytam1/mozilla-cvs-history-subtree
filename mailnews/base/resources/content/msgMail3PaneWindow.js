@@ -25,7 +25,7 @@
 /* This is where functions related to the 3 pane window are kept */
 
 const NC_NS = "http://home.netscape.com/NC-rdf#";
-
+const MSG_FOLDER_FLAG_ELIDED = 0x0010;
 
 var showPerformance = false;
 
@@ -359,7 +359,7 @@ function Create3PaneGlobals()
 {
 }
 
-function PerformExpandForAllOpenServers()
+function OpenAndExpandElidedServers()
 {
     var folderOutliner = GetFolderOutliner();
     var view = folderOutliner.outlinerBoxObject.view;
@@ -367,18 +367,20 @@ function PerformExpandForAllOpenServers()
     {
         if (view.isContainer(i))
         {
-            if (view.isContainerOpen(i))
+            var folderResource = GetFolderResource(i);
+            var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+            var open = msgFolder.getFlag(MSG_FOLDER_FLAG_ELIDED)
+            if (open)
             {
-                 var folderResource = GetFolderResource(i);
-                 var isServer = GetFolderAttribute(folderResource, "IsServer"); 
-                 if (isServer == "true")
-                 {
-                     var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-                     var server = msgFolder.server;
-                     // Don't do this for imap servers. See bug #41943
-                     if (server.type != "imap")
-                         server.PerformExpand(msgWindow);
-                 }
+                view.toggleOpenState(i);
+                var isServer = GetFolderAttribute(folderResource, "IsServer"); 
+                if (isServer == "true")
+                {
+                    var server = msgFolder.server;
+                    // Don't do this for imap servers. See bug #41943
+                    if (server.type != "imap")
+                        server.PerformExpand(msgWindow);
+                }
             }
         }
     }
@@ -386,6 +388,8 @@ function PerformExpandForAllOpenServers()
 
 function loadStartFolder(initialUri)
 {
+    OpenAndExpandElidedServers();
+
     var defaultServer = null;
     var startFolderResource = null;
     var isLoginAtStartUpEnabled = false;
@@ -453,10 +457,6 @@ function loadStartFolder(initialUri)
             if (defaultServer.type != "imap") 
               defaultServer.PerformBiff();
         } 
-
-        // because the "open" state persists, we'll call
-        // PerformExpand() for all servers that are open at startup.
-        PerformExpandForAllOpenServers();
     }
     catch(ex)
     {
@@ -468,7 +468,6 @@ function loadStartFolder(initialUri)
     {
         MsgGetMessagesForAllServers(defaultServer);
     }
-
 }
 
 function OpenTwistyForServer(server)
@@ -691,14 +690,17 @@ function FolderPaneOnClick(event)
 
     if (elt.value == "twisty")
     {
-        var view = folderOutliner.outlinerBoxObject.view;
-        if (! view.isContainerOpen(row.value))
+        var folderResource = GetFolderResource(row.value);
+        var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+
+        if (folderOutliner.outlinerBoxObject.view.isContainerOpen(row.value))
+            msgFolder.clearFlag(MSG_FOLDER_FLAG_ELIDED);
+        else
         {
-            var folderResource = GetFolderResource(row.value);
+            msgFolder.setFlag(MSG_FOLDER_FLAG_ELIDED);
             var isServer = GetFolderAttribute(folderResource, "IsServer");
             if (isServer == "true")
             {
-                var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
                 var server = msgFolder.server;
                 server.PerformExpand(msgWindow);
             }
@@ -719,28 +721,27 @@ function FolderPaneOnClick(event)
 
 function FolderPaneDoubleClick(folderIndex)
 {
+    var folderOutliner = GetFolderOutliner();
     var folderResource = GetFolderResource(folderIndex);
-    var isServer = GetFolderAttribute(folderResource, "IsServer");
-    if (isServer == "true")
+    var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    if (folderOutliner.outlinerBoxObject.view.isContainerOpen(folderIndex))
+        msgFolder.clearFlag(MSG_FOLDER_FLAG_ELIDED);
+    else
     {
-        var folderOutliner = GetFolderOutliner();
-        var view = folderOutliner.outlinerBoxObject.view;
-        if (view.isContainerOpen(folderIndex))
+        msgFolder.setFlag(MSG_FOLDER_FLAG_ELIDED);
+
+        var isServer = GetFolderAttribute(folderResource, "IsServer");
+        if (isServer == "true")
         {
-            // double clicking open, don't PerformExpand()
-        }
-        else {
-            // double clicking open, PerformExpand()
-            var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
             var server = msgFolder.server;
             server.PerformExpand(msgWindow);
         }
-    }
-    else
-    {
-        // Open a new msg window only if we are double clicking on folders or
-        // newsgorups.
-        MsgOpenNewWindowForFolder(folderResource.Value);
+        else
+        {
+            // Open a new msg window only if we are double clicking on folders or
+            // newsgorups.
+            MsgOpenNewWindowForFolder(folderResource.Value);
+        }
     }
 }
 
