@@ -266,8 +266,8 @@ protected:
   {
   }
 
-  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                             PRUint32 aIndex, nsISupports **aResult);
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
 
 public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
@@ -294,7 +294,7 @@ protected:
   {
   }
 
-  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
                                 nsISupports **aResult) = 0;
 
 public:
@@ -319,11 +319,11 @@ protected:
 
   // Override nsArraySH::GetItemAt() since our list isn't a
   // nsIDOMNodeList
-  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                             PRUint32 aIndex, nsISupports **aResult);
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
 
   // Override nsNamedArraySH::GetNamedItem()
-  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
                                 nsISupports **aResult);
 
 public:
@@ -349,7 +349,7 @@ protected:
 
   // Override nsNamedArraySH::GetNamedItem() since our NamedItem() can
   // return either a nsIDOMNode or a nsIHTMLCollection
-  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
                                 nsISupports **aResult);
 
 public:
@@ -477,11 +477,11 @@ protected:
 
   // Override nsArraySH::GetItemAt() since our list isn't a
   // nsIDOMNodeList
-  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                             PRUint32 aIndex, nsISupports **aResult);
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
 
   // Override nsNamedArraySH::GetNamedItem()
-  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
                                 nsISupports **aResult);
 
 public:
@@ -507,11 +507,11 @@ protected:
 
   // Override nsArraySH::GetItemAt() since our list isn't a
   // nsIDOMNodeList
-  virtual nsresult GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                             PRUint32 aIndex, nsISupports **aResult);
+  virtual nsresult GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult);
 
   // Override nsNamedArraySH::GetNamedItem()
-  virtual nsresult GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+  virtual nsresult GetNamedItem(nsISupports *aNative, jsval id,
                                 nsISupports **aResult);
 
 public:

@@ -1745,13 +1745,10 @@ nsElementSH::Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 // NodeList scriptable helper
 
 nsresult
-nsArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper, PRUint32 aIndex,
+nsArraySH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
                      nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMNodeList> list(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMNodeList> list(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
 
   nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
@@ -1774,9 +1771,12 @@ nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       return NS_ERROR_DOM_INDEX_SIZE_ERR;
     }
 
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
     nsCOMPtr<nsISupports> array_item;
 
-    nsresult rv = GetItemAt(wrapper, n, getter_AddRefs(array_item));
+    nsresult rv = GetItemAt(native, n, getter_AddRefs(array_item));
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = WrapNative(cx, ::JS_GetGlobalObject(cx), array_item,
@@ -1796,9 +1796,12 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                             PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
     nsCOMPtr<nsISupports> item;
 
-    nsresult rv = GetNamedItem(wrapper, id, getter_AddRefs(item));
+    nsresult rv = GetNamedItem(native, id, getter_AddRefs(item));
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Do we wanto fall through to nsArraySH::GetProperty() here if
@@ -1818,13 +1821,10 @@ nsNamedArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 // HTMLCollection helper
 
 nsresult
-nsHTMLCollectionSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                              PRUint32 aIndex, nsISupports **aResult)
+nsHTMLCollectionSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                              nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
 
   nsIDOMNode *node = nsnull; // Weak, transfer the ownership over to aResult
@@ -1836,13 +1836,10 @@ nsHTMLCollectionSH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
 }
 
 nsresult
-nsHTMLCollectionSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+nsHTMLCollectionSH::GetNamedItem(nsISupports *aNative, jsval id,
                                  nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMHTMLCollection> collection(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(collection, NS_ERROR_UNEXPECTED);
 
   JSString *jsstr = JSVAL_TO_STRING(id);
@@ -1863,13 +1860,10 @@ nsHTMLCollectionSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
 // FomrControlList helper
 
 nsresult
-nsFormControlListSH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+nsFormControlListSH::GetNamedItem(nsISupports *aNative, jsval id,
                                   nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMNSHTMLFormControlList> list(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMNSHTMLFormControlList> list(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
 
   JSString *jsstr = JSVAL_TO_STRING(id);
@@ -2120,13 +2114,10 @@ nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
 // PluginArray helper
 
 nsresult
-nsPluginArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                           PRUint32 aIndex, nsISupports **aResult)
+nsPluginArraySH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                           nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
 
   nsIDOMPlugin *plugin = nsnull;
@@ -2138,13 +2129,10 @@ nsPluginArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
 }
 
 nsresult
-nsPluginArraySH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+nsPluginArraySH::GetNamedItem(nsISupports *aNative, jsval id,
                               nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMPluginArray> array(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
 
   JSString *jsstr = JSVAL_TO_STRING(id);
@@ -2166,13 +2154,10 @@ nsPluginArraySH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
 // PluginArray helper
 
 nsresult
-nsMimeTypeArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
-                             PRUint32 aIndex, nsISupports **aResult)
+nsMimeTypeArraySH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                             nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
 
   nsIDOMMimeType *mime_type = nsnull;
@@ -2184,13 +2169,10 @@ nsMimeTypeArraySH::GetItemAt(nsIXPConnectWrappedNative *wrapper,
 }
 
 nsresult
-nsMimeTypeArraySH::GetNamedItem(nsIXPConnectWrappedNative *wrapper, jsval id,
+nsMimeTypeArraySH::GetNamedItem(nsISupports *aNative, jsval id,
                                 nsISupports **aResult)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(native));
+  nsCOMPtr<nsIDOMMimeTypeArray> array(do_QueryInterface(aNative));
   NS_ENSURE_TRUE(array, NS_ERROR_UNEXPECTED);
 
   JSString *jsstr = JSVAL_TO_STRING(id);
