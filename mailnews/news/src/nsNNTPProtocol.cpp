@@ -1158,22 +1158,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
     rv = msgUrl->GetOriginalSpec(getter_Copies(spec));
     NS_ENSURE_SUCCESS(rv,rv);
 
-    // if we are running the news_message:/ url from compose
-    // (for quoting, when doing reply) the original spec
-    // will not be set.  check the scheme to see if this is a 
-    // news_message:/ url.  if so, treat it like one.
-    if (spec.get() && spec.get()[0]) {
-        nsXPIDLCString scheme;
-	    rv = aURL->GetScheme(getter_Copies(scheme));
-        NS_ENSURE_SUCCESS(rv,rv);
-        
-        if (!nsCRT::strcmp(scheme.get(), "news_message")) {
-            rv = aURL->GetSpec(getter_Copies(spec));
-            NS_ENSURE_SUCCESS(rv,rv);
-        }
-    }
-
-    // if the spec is non empty, then use it.  
+    // if the original spec is non empty, use it to determine m_newsFolder and m_key
     if (spec.get() && spec.get()[0]) {
         PR_LOG(NNTP,PR_LOG_ALWAYS,("original message spec = %s",spec.get()));
 
@@ -1286,6 +1271,15 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 	  PR_FREEIF(command_specific_data);
   }
 
+  // if we are cancelling, we've got our message id, our m_key and our m_newsFolder.
+  // bail out now to prevent messing those up.
+  if (m_newsAction == nsINntpUrl::ActionCancelArticle) {
+    if (status < 0)
+      return NS_ERROR_FAILURE;
+    else
+      return NS_OK;
+  }
+
   nsXPIDLCString serverURI;
 
   if (*aMessageID) {
@@ -1306,6 +1300,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
   if (serverURI.get() && serverURI.get()[0]) {
     // if we get here, we, we are either doing:
     // news://host/message-id or news://host/*
+    // (but not news://host/message-id?cancel)
     // for authentication, we se set m_newsFolder to be the server's folder.
     // while we are here, we set m_nntpServer.
     rv = nntpService->DecomposeNewsURI(serverURI.get(), getter_AddRefs(folder), &m_key);
