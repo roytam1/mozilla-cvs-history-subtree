@@ -89,7 +89,7 @@ var gContextMenu = null;
 
 var gChromeState = null; // chrome state before we went into print preview
 
-var gSanitizePrefListener = null;
+var gSanitizeListener = null;
 
 var gFormFillPrefListener = null;
 var gFormHistory = null;
@@ -772,7 +772,7 @@ function delayedStartup()
   toolbox.customizeDone = BrowserToolboxCustomizeDone;
 
   // Set up Sanitize Item
-  gSanitizePrefListener = new SanitizePrefListener();
+  gSanitizeListener = new SanitizeListener();
 
   // Enable/Disable Form Fill
   gFormFillPrefListener = new FormFillPrefListener();
@@ -1035,31 +1035,77 @@ URLBarAutoFillPrefListener.prototype =
   }
 }
 
-function SanitizePrefListener()
+function SanitizeListener()
 {
+  var pbi = gPrefService.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+  pbi.addObserver(this.promptDomain, this, false);
+
   this._setSanitizeItem();
+  
+  if (gPrefService.prefHasUserValue(this.didSanitizeDomain))
+    gPrefService.clearUserPref(this.didSanitizeDomain)
+    
+  this._os = Components.classes["@mozilla.org/observer-service;1"]
+                       .getService(Components.interfaces.nsIObserverService);
+  this._os.addObserver(this, "quit-application-granted", false);
 }
 
-SanitizePrefListener.prototype =
+SanitizeListener.prototype =
 {
-  domain: "privacy.sanitize.promptOnSanitize",
+  promptDomain      : "privacy.sanitize.promptOnSanitize",
+  shutdownDomain    : "privacy.sanitize.sanitizeOnShutdown",
+  didSanitizeDomain : "privacy.sanitize.didShutdownSanitize",
+  
   observe: function (aSubject, aTopic, aPrefName)
   {
-    if (aTopic != "nsPref:changed" || aPrefName != this.domain)
-      return;
-    
-    this._setSanitizeItem();
+    switch (aTopic) {
+    case "nsPref:changed":
+      if (aPrefName != this.promptDomain)
+        return;
+      this._setSanitizeItem();
+      break;
+    case "quit-application-granted":
+      var pbi = gPrefService.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+      pbi.removeObserver(this.promptDomain, this);
+
+      this._os.removeObserver(this, "quit-application-granted");
+      
+      if (gPrefService.getBoolPref(this.shutdownDomain) &&
+          !gPrefService.prefHasUserValue(this.didSanitizeDomain)) {
+        this.sanitize(null);
+        gPrefService.setBoolPref(this.didSanitizeDomain, true);
+      }
+      break;
+    }
   },
   
   _setSanitizeItem: function ()
   {
-    var shouldPrompt = gPrefService.getBoolPref(this.domain);
-    var sanitizeItem = document.getElementById("sanitizeItem");
-    var bundleBrowser = document.getElementById("bundle_browser");
-    var bundleBrand = document.getElementById("bundle_brand");
-    var brandShortName = bundleBrand.getString("brandShortName");
-    sanitizeItem.label = bundleBrowser.getFormattedString("sanitizeWithPromptLabel", 
-                                                          [brandShortName]);
+    var shouldPrompt = gPrefService.getBoolPref(this.promptDomain);
+    if (shouldPrompt) {
+      var sanitizeItem = document.getElementById("sanitizeItem");
+      var bundleBrowser = document.getElementById("bundle_browser");
+      var bundleBrand = document.getElementById("bundle_brand");
+      var brandShortName = bundleBrand.getString("brandShortName");
+      sanitizeItem.label = bundleBrowser.getFormattedString("sanitizeWithPromptLabel", 
+                                                            [brandShortName]);
+    }
+  },
+  
+  sanitize: function (aParentWindow)
+  {
+    var promptOnSanitize = gPrefService.getBoolPref("privacy.sanitize.promptOnSanitize");
+    if (promptOnSanitize) { 
+      var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                         .getService(Components.interfaces.nsIWindowWatcher);
+      ww.openWindow(aParentWindow, 
+                    "chrome://browser/content/sanitize.xul", 
+                    "Sanitize", 
+                    "chrome,titlebar,centerscreen,modal",
+                    null);
+    }
+    else
+      (new Sanitizer()).sanitize();
   },
 }
 
@@ -3527,15 +3573,6 @@ function asyncFocusSearchBox(event)
   var searchBox = sidebar.contentDocument.getElementById("search-box");
   searchBox.focus();
   sidebar.removeEventListener("load", asyncFocusSearchBox, true);
-}
-
-function BrowserSanitize()
-{
-  var promptOnSanitize = gPrefService.getBoolPref("privacy.sanitize.promptOnSanitize");
-  if (promptOnSanitize)
-    openDialog("chrome://browser/content/sanitize.xul", "Sanitize", "chrome,titlebar,centerscreen,modal");
-  else
-    (new Sanitizer()).sanitize();
 }
 
 function openPreferences()

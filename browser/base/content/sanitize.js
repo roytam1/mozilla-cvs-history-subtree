@@ -56,6 +56,7 @@ Sanitizer.prototype = {
   
   sanitize: function ()
   {
+    dump("*** sanitizing!\n");
     var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                          .getService(Components.interfaces.nsIPrefService);
     var branch = psvc.getBranch(this._prefDomain);

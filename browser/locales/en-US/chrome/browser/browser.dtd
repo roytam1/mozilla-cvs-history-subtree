@@ -165,8 +165,8 @@
 <!ENTITY preferencesCmdUnix.label       "Preferences">
 <!ENTITY preferencesCmdUnix.accesskey     "n"> 
 
-<!ENTITY sanitizeCmd.accesskey            "Sanitize &brandShortName;">
-<!ENTITY sanitizeCmd.label                "z">
+<!ENTITY sanitizeCmd.label            "Sanitize &brandShortName;">
+<!ENTITY sanitizeCmd.accesskey        "z">
 
 <!ENTITY viewMenu.label         "View"> 
 <!ENTITY viewMenu.accesskey       "V"> 
