@@ -67,17 +67,12 @@ namespace JavaScript
     // A checked_cast acts as a static_cast that is checked in DEBUG mode.
     // It can only be used to downcast a class hierarchy that has at least one virtual function.
 #ifdef DEBUG
- #ifdef _WIN32
-    // In DEBUG mode checked_cast is a dynamic_cast with no null check due to a Microsoft Visual C++ 6.0 bug.
-  #define checked_cast dynamic_cast
- #else
     template <class Target, class Source> inline Target checked_cast(Source *s)
     {
         Target t = dynamic_cast<Target>(s);
         ASSERT(t);
         return t;
     }
- #endif
 #else
  #define checked_cast static_cast
 #endif
