@@ -5872,6 +5872,14 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       nsIFrame *target = NS_STATIC_CAST(nsIFrame*, mDirtyRoots[idx]);
       mDirtyRoots.RemoveElementAt(idx);
 
+      if (!(target->GetStateBits() &
+            (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
+        // It's not dirty anymore, which probably means the notification
+        // was posted in the middle of a reflow (perhaps with a reflow
+        // root in the middle).  Don't do anything.
+        continue;
+      }
+
       nsIFrame* root = mPresContext->FrameManager()->GetRootFrame();
 
       target->WillReflow(mPresContext);
