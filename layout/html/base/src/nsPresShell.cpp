@@ -6312,51 +6312,26 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       nsVoidArray *curr_path = curr->GetPath();
       void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
       nsReflowTree::Node *n = tree.MergeCommand(curr);
-      n->MakeTarget();
-      int i = 0;
+      int i;
 
       for (i = 1; i < mReflowCommands.Count(); i++) {
         nsHTMLReflowCommand *command = 
           NS_STATIC_CAST(nsHTMLReflowCommand *,
                          mReflowCommands.ElementAt(i));
+
         n = tree.MergeCommand(command);
         if (!n)
           continue;         // can't be merged...try next?
         
-        // note that this frame was specifically targetted
-        nsIFrame *target;
-        n->MakeTarget();
-        // add to list of targets of this command
-        command->GetTarget(target);
-        curr->AddTarget(target);
-            
         // remove merged command from the list
         mReflowCommands.RemoveElementAt(i);
         ReflowCommandRemoved(command);
         delete command;
         i--;  // account for the element removal and ensuing shift
       }
+      curr->SetReflowTree(&tree);
       curr->SetCurrentReflowNode(tree.Root());
       tree.Dump();
-
-#if 0
-      // attempt to coalesce incremental reflows with the same root
-      nsHTMLReflowCommand *next = (nsHTMLReflowCommand *)
-        mReflowCommands.ElementAt(1);
-      nsVoidArray *next_path = next->GetPath();
-      void *next_root = next_path->SafeElementAt(next_path->Count()-1);
-      
-      if (next_root == curr_root) {
-        // the next reflow command is for the same root.  Nuke it.
-        mReflowCommands.RemoveElementAt(1);
-        ReflowCommandRemoved(next);
-        delete next;
-        i++;
-      }
-      else {
-        break;  // stop on first non-match
-      }
-#endif
 
 #endif
       // removes the command when done

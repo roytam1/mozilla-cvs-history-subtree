@@ -107,6 +107,8 @@ public:
     void Dump();
 
     Node *Root() { return mRoot; }
+    PRBool AddTargettedFrame(nsIFrame *frame);
+    PRBool FrameIsTarget(const nsIFrame *frame);
 
 private:
     Node         *AddToTree(nsIFrame *frame);
@@ -122,4 +124,3 @@ nsReflowTree::Node::MakeTarget()
     mTargetCount++;
 }
 #endif
-

@@ -217,7 +217,6 @@ protected:
 private:
   nsReflowType    mType;
   nsIFrame*       mTargetFrame;
-  nsAutoVoidArray mTargetList;
   nsIFrame*       mChildFrame;
   nsIFrame*       mPrevSiblingFrame;
   nsIAtom*        mAttribute;

@@ -3,19 +3,23 @@
 #include "nsHTMLReflowCommand.h"
 #include "pldhash.h"
 
-struct TargettedFrameEntry : public PLDHashEntryStub
+// binary and semantically compatible with PLDHashEntryStub
+struct FrameEntry : PLDHashEntryHdr
 {
-    const nsReflowTree::Node *node;
+    nsIFrame *frame;
 };
 
 nsReflowTree::nsReflowTree() : mRoot(0)
 {
-#if 0
     /* XXX fallible */
     PL_DHashTableInit(&mTargettedFrames, PL_DHashGetStubOps(), 0,
-                      sizeof TargettedFrameEntry,
-                      45 /* SWAG, but aren't these all? */);
-#endif
+                      sizeof (FrameEntry), 64 /* SWAG, as always */);
+}
+
+nsReflowTree::~nsReflowTree()
+{
+    PL_DHashTableFinish(&mTargettedFrames);
+    delete mRoot;
 }
 
 /* static */ nsReflowTree::Node *
@@ -138,12 +142,13 @@ nsReflowTree::MergeCommand(nsHTMLReflowCommand *command)
         // XXX check that reflow types and other bits match
     }
     
-    return AddToTree(frame);
-}
-
-nsReflowTree::~nsReflowTree()
-{
-    delete mRoot;
+    Node *n = AddToTree(frame);
+    if (n) {
+        NS_ASSERTION(n->GetFrame() == frame, "node/frame mismatch");
+        n->MakeTarget();
+        AddTargettedFrame(frame);
+    }
+    return n;
 }
 
 nsReflowTree::Node *
@@ -215,7 +220,7 @@ nsReflowTree::Node::Iterator::NextChild(nsIFrame **aChildIFrame)
 {
   nsReflowTree::Node *result = NextChild();
   *aChildIFrame = (mPos && *mPos) ?
-    NS_STATIC_CAST(nsReflowTree::Node*,*mPos)->GetFrame() : nsnull;
+    NS_STATIC_CAST(nsReflowTree::Node*, *mPos)->GetFrame() : nsnull;
   return result;
 }
 
@@ -254,6 +259,29 @@ nsReflowTree::Node::Iterator::SelectChild(nsIFrame *aChildIFrame)
     }
 
     return nsnull;
+}
+
+PRBool
+nsReflowTree::AddTargettedFrame(nsIFrame *frame)
+{
+    FrameEntry *entry =
+        NS_STATIC_CAST(FrameEntry *,
+                       PL_DHashTableOperate(&mTargettedFrames, frame,
+                                            PL_DHASH_ADD));
+    if (!entry)
+        return PR_FALSE;
+    entry->frame = frame;
+    return PR_TRUE;
+}
+
+PRBool
+nsReflowTree::FrameIsTarget(const nsIFrame *frame)
+{
+    FrameEntry *entry = 
+        NS_STATIC_CAST(FrameEntry *, 
+                       PL_DHashTableOperate(&mTargettedFrames, frame,
+                                            PL_DHASH_LOOKUP));
+    return entry && PL_DHASH_ENTRY_IS_BUSY(entry);
 }
 
 void
