@@ -79,7 +79,7 @@
   <stringbundle id="bundle_viewZoom"/>
   <stringbundle id="findBundle" src="chrome://global/locale/finddialog.properties"/>
 
-  <box orient="vertical" flex="1">
+  <vbox flex="1">
 
     <!-- button bar -->
     <toolbox id="help-toolbox" class="toolbox-top" deferattached="true">
@@ -182,7 +182,7 @@
 
           </tabpanels>
         </tabbox>
-      </hbox>
+      </vbox>
 
       <splitter id="helpsidebar-splitter"
                 collapse="before"
@@ -194,9 +194,9 @@
       </splitter>
 
       <!-- this stuff lifted from navigator.xul -->
-      <box id="appcontent" align="vertical" flex="3">
+      <vbox id="appcontent" flex="3">
         <!-- this box is temporary, pending XBLified <browser> -->
-        <box id="browser" flex="1">
+        <hbox id="browser" flex="1">
           <!-- type attribute is used by frame construction to locate iframes
                intended to hold (html) content -->
           <browser context="contentAreaContextMenu" type="content-primary" id="help-content"
