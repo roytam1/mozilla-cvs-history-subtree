@@ -103,7 +103,8 @@ endif
 
 	@echo "Installing private include files"
 	$(NSINSTALL) -D $(INSTDIR)/include-private
-	$(NSINSTALL) $(PRIVATEINCDIR)/lber-int.h $(INSTDIR)/include-private
+	$(NSINSTALL) -D $(INSTDIR)/include-private/liblber
+	$(NSINSTALL) $(PRIVATEINCDIR)/lber-int.h $(INSTDIR)/include-private/liblber
 	$(NSINSTALL) $(PRIVATEINCDIR)/ldap-int.h $(INSTDIR)/include-private
 	$(NSINSTALL) $(PRIVATEINCDIR)/portable.h $(INSTDIR)/include-private
 	$(NSINSTALL) $(PRIVATEINCDIR)/ldaprot.h $(INSTDIR)/include-private
