@@ -136,3 +136,6 @@ export::
 	$(MAKE) -C mailnews export
 endif
 
+install::
+	echo "Hacking taskoverlay to include xmlterm"
+	(cd dist/bin; ./menuhack)
