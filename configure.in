@@ -1228,6 +1228,8 @@ case "$target" in
     DSO_PIC_CFLAGS=
     MOZ_DEBUG_LDFLAGS='-g'
     COMPAQ_CXX=1
+    CC_VERSION=`$CC -V 2>&1 | awk '/ C / { print $3 }'`
+    CXX_VERSION=`$CXX -V 2>&1 | awk '/ C\+\+ / { print $3 }'`
     ;;
 
 
@@ -3534,7 +3536,7 @@ dnl ========================================================
 
 MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices"
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin datetime finger cview" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview" 
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],
@@ -5234,7 +5236,6 @@ elif test "$OS_ARCH" = "Darwin"; then
   AC_DEFINE(UNIX_ASYNC_DNS)
 elif test "$OS_ARCH" = "OpenVMS"; then
   AC_DEFINE(XP_UNIX)
-  AC_DEFINE(UNIX_ASYNC_DNS)
 elif test "$OS_ARCH" != "WINNT" -a "$OS_ARCH" != "OS2"; then
   AC_DEFINE(XP_UNIX)
   AC_DEFINE(UNIX_ASYNC_DNS)

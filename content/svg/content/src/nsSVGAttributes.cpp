@@ -545,8 +545,7 @@ nsSVGAttributes::UpdateContentStyleRule()
   NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsCSSSelector());
   NS_ASSERTION(mContentStyleRule, "could not create contentstylerule");
 
-  nsCSSDeclaration* declaration = nsnull;
-  NS_NewCSSDeclaration(&declaration);
+  nsCSSDeclaration* declaration = new nsCSSDeclaration();
   NS_ASSERTION(declaration, "could not create css declaration");
 
   nsCOMPtr<nsIURI> baseURL;
