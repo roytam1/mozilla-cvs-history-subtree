@@ -85,6 +85,16 @@ public EventRegistrationImpl(WrapperFactory yourFactory,
     }
 }
 
+public void delete()
+{
+    // PENDING(ashuk): remove all listeners, making sure to set
+    // references to null
+
+    nativeEventThread = null;
+    
+    super.delete();
+}
+
 //
 // Class methods
 //
@@ -115,14 +125,6 @@ public void removeDocumentLoadListener(DocumentLoadListener listener)
     
     synchronized(myBrowserControl) {
     }
-}
-
-public void testListenerSubclass(WebclientEventListener listener)
-{
-    if (listener instanceof DocumentLoadListener) {
-        System.out.println("debug: edburns: EventRegistrationImpl.testListenerSubclass: DocumentLoadListener");
-    }
-
 }
 
 // ----VERTIGO_TEST_START

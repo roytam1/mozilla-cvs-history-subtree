@@ -157,7 +157,7 @@ public static void setAppData(String absolutePathToNativeBrowserBinDir) throws F
         }
         
         try {
-            BrowserControlImpl.initialize(absolutePathToNativeBrowserBinDir);
+            BrowserControlImpl.appInitialize(absolutePathToNativeBrowserBinDir);
         }
         catch (Exception e) {
             throw new ClassNotFoundException("Can't initialize native browser: " + 
@@ -183,6 +183,25 @@ public static BrowserControl newBrowserControl() throws InstantiationException, 
     }
 
     return result;
+}
+
+/**
+
+ * BrowserControlFactory.deleteBrowserControl is called with a
+ * BrowserControl instance obtained from
+ * BrowserControlFactory.newBrowserControl.  This method renders the
+ * argument instance completely un-usable.  It should be called when the
+ * BrowserControl instance is no longer needed.  This method simply
+ * calls through to the non-public BrowserControlImpl.delete() method.
+
+ * @see org.mozilla.webclient.ImplObject#delete
+
+ */
+
+public static void deleteBrowserControl(BrowserControl toDelete)
+{
+    ParameterCheck.nonNull(toDelete);
+    ((BrowserControlImpl)toDelete).delete();
 }
 
 //

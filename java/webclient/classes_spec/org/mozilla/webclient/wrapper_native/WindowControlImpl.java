@@ -62,6 +62,23 @@ public WindowControlImpl(WrapperFactory yourFactory,
     super(yourFactory, yourBrowserControl, false);
 }
 
+/**
+
+ * First, we delete our eventThread, which causes the eventThread to
+ * stop running.  Then we call nativeDestroyInitContext(), which
+ * deallocates native resources for this window.
+
+ */
+
+public void delete()
+{
+    Assert.assert(null != eventThread, "eventThread shouldn't be null at delete time");
+    eventThread.delete();
+    eventThread = null;
+    nativeDestroyInitContext(nativeWebShell);
+    nativeWebShell = -1;
+}
+
 //
 // Class methods
 //
@@ -200,6 +217,8 @@ public native void nativeSetBounds(int webShellPtr, int x, int y,
 
 public native int nativeCreateInitContext(int nativeWindow, 
                                           int x, int y, int width, int height, BrowserControl myBrowserControlImpl);
+
+public native void nativeDestroyInitContext(int nativeWindow);
 
 public native void nativeMoveWindowTo(int webShellPtr, int x, int y);
 
