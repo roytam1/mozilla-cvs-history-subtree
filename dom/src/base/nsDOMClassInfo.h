@@ -199,6 +199,7 @@ protected:
   static nsresult DefineStaticJSVals(JSContext *cx);
 
   static PRBool sIsInitialized;
+  static PRBool sDisableDocumentAllSupport;
 
   static jsval sTop_id;
   static jsval sParent_id;

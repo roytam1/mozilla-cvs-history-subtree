@@ -73,6 +73,7 @@
 #include "nsIDOMNSEvent.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMEventListener.h"
+#include "nsIPrefService.h"
 
 // Window scriptable helper includes
 #include "nsIDocShell.h"
@@ -878,6 +879,7 @@ static nsDOMClassInfoData sClassInfoData[] = {
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
 nsIScriptSecurityManager *nsDOMClassInfo::sSecMan = nsnull;
 PRBool nsDOMClassInfo::sIsInitialized = PR_FALSE;
+PRBool nsDOMClassInfo::sDisableDocumentAllSupport = PR_FALSE;
 
 
 
@@ -2386,6 +2388,15 @@ nsDOMClassInfo::Init()
   }
 
   RegisterExternalClasses();
+
+  nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  if (prefs) {
+    PRBool disabled;
+    if (NS_SUCCEEDED(prefs->GetBoolPref("browser.dom.document.all.disabled",
+                                        &disabled))) {
+      sDisableDocumentAllSupport = disabled;
+    }
+  }
 
   sIsInitialized = PR_TRUE;
 
@@ -5971,7 +5982,7 @@ nsHTMLDocumentSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       return fnc ? NS_OK : NS_ERROR_UNEXPECTED;
     }
 
-    if (id == sAll_id) {
+    if (id == sAll_id && !sDisableDocumentAllSupport) {
       JSObject *helper = GetDocumentAllHelper(cx, ::JS_GetPrototype(cx, obj));
 
       // If we don't already have a helper, and we're
