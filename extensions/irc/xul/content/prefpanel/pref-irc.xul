@@ -32,7 +32,7 @@
    - ***** END LICENSE BLOCK ***** -->
 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
-<!DOCTYPE window SYSTEM "chrome://chatzilla/locale/pref-irc.dtd">
+<!DOCTYPE page SYSTEM "chrome://chatzilla/locale/pref-irc.dtd">
 
 <page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
     onload="parent.initPanel('chrome://chatzilla/content/prefpanel/pref-irc.xul');"
@@ -42,7 +42,14 @@
   <![CDATA[
     var _elementIDs = ["czNickname", "czUsername", "czDesc", 
         "czNotify", "czDisplayCollapse", "czDisplayCopyMsgs",
-        "czReconnect", "czColorCodes", "czNickCompleteStr"];
+        "czReconnect", "czColorCodes", "czNickCompleteStr", "czCharset"];
+
+    const OSBS_CTRID = "@mozilla.org/observer-service;1";
+    const nsIObserverService = Components.interfaces.nsIObserverService;
+    var observerService =
+       Components.classes[OSBS_CTRID].getService(nsIObserverService);
+    observerService.notifyObservers(null, "charsetmenu-selected", "other");
+
   ]]>
   </script>
   
@@ -72,6 +79,7 @@
         </row>
       </rows>
     </grid>
+<!--
     <hbox id="czUserHelpButton">
       <button label="&userDetails.help.label;"
           accesskey="&userDetails.help.accesskey;" 
@@ -81,6 +89,7 @@
           "/>
       <spacer flex="1"/>
     </hbox>
+-->
     <label id="czUserHelpBox" hidden="true">&userDetails.help.desc;</label>
   </groupbox>
   
@@ -92,16 +101,16 @@
         prefstring="extensions.irc.notify.aggressive"/>
     <checkbox id="czDisplayCollapse" label="&global.collapse.label;" 
         accesskey="&global.collapse.accesskey;" prefdefval="false"
-        prefstring="extensions.irc.views.collapseMsgs"/>
+        prefstring="extensions.irc.collapseMsgs"/>
     <checkbox id="czDisplayCopyMsgs" label="&global.copyMsgs.label;" 
         accesskey="&global.copyMsgs.accesskey;" prefdefval="true" 
-        prefstring="extensions.irc.views.copyMessages"/>
+        prefstring="extensions.irc.copyMessages"/>
     <checkbox id="czReconnect" label="&global.reconnect.label;" 
         accesskey="&global.reconnect.accesskey;" prefdefval="true" 
         prefstring="extensions.irc.reconnect"/>
     <checkbox id="czColorCodes" label="&global.colorcodes.label;" 
         accesskey="&global.colorcodes.accesskey;" prefdefval="false" 
-        prefstring="extensions.irc.colorCodes"/>
+        prefstring="extensions.irc.outgoing.colorCodes"/>
     <separator/>
     <hbox align="center">
       <label value="&global.nickCompleteStr.label;" control="czNickCompleteStr" 
@@ -110,5 +119,20 @@
           prefstring="extensions.irc.nickCompleteStr"/>
     </hbox>
     <label>&global.nickCompleteStr.desc;</label>
+  </groupbox>
+  <groupbox align="start">
+    <caption label="&global.Charset.grouplabel;"/>
+    <hbox align="center">
+      <label value="&global.DefaultCharset.label;" accesskey="&global.DefaultCharset.accesskey;" control="DefaultCharsetList"/>
+      <menulist id="czCharset" ref="NC:DecodersRoot" datasources="rdf:charset-menu"
+          prefstring="extensions.irc.charset" preftype="localizedstring"
+          wsm_attributes="value">
+          <template>
+            <menupopup>
+              <menuitem label="rdf:http://home.netscape.com/NC-rdf#Name" value="..." uri="..."/>
+            </menupopup>
+          </template>
+      </menulist> 
+    </hbox>
   </groupbox>
 </page>
