@@ -176,6 +176,7 @@ namespace JavaScript {
             complement,                 // UnaryExprNode        ~ <op>
             logicalNot,                 // UnaryExprNode        ! <op>
 
+            juxtapose,                  // BinaryExprNode       <op1> <op2>   (used to combine attributes)
             add,                        // BinaryExprNode       <op1> + <op2>
             subtract,                   // BinaryExprNode       <op1> - <op2>
             multiply,                   // BinaryExprNode       <op1> * <op2>
@@ -470,7 +471,7 @@ namespace JavaScript {
 
     struct ExprList: ArenaObject {
         ExprList *next;                 // Next expression in linked list
-        ExprNode *expr;                 // Attribute expression; non-nil only
+        ExprNode *expr;                 // Expression; non-nil only
 
         explicit ExprList(ExprNode *expr): next(0), expr(expr) {ASSERT(expr);}
 
@@ -495,9 +496,9 @@ namespace JavaScript {
     };
 
     struct AttributeStmtNode: StmtNode {
-        ExprList *attributes;           // Linked list of block or definition's attributes
+        ExprNode *attributes;           // Block or definition's attributes; nil if none
 
-        AttributeStmtNode(size_t pos, Kind kind, ExprList *attributes): StmtNode(pos, kind), attributes(attributes) {}
+        AttributeStmtNode(size_t pos, Kind kind, ExprNode *attributes): StmtNode(pos, kind), attributes(attributes) {}
 
         void printAttributes(PrettyPrinter &f) const;
     };
@@ -505,7 +506,7 @@ namespace JavaScript {
     struct BlockStmtNode: AttributeStmtNode {
         StmtNode *statements;           // Linked list of block's statements
 
-        BlockStmtNode(size_t pos, Kind kind, ExprList *attributes, StmtNode *statements):
+        BlockStmtNode(size_t pos, Kind kind, ExprNode *attributes, StmtNode *statements):
                 AttributeStmtNode(pos, kind, attributes), statements(statements) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
@@ -578,12 +579,13 @@ namespace JavaScript {
         CatchClause *next;              // Next catch clause in a linked list of catch clauses
         const StringAtom &name;         // The name of the variable that will hold the exception
         ExprNode *type;                 // Type expression or nil if not provided
+        bool constant;                  // true for const variables
         StmtNode *stmt;                 // The catch clause's body; non-nil only
 
         JS2Runtime::Property *prop;     // the sematics/codegen passes stuff their data in here.
 
-        CatchClause(size_t pos, const StringAtom &name, ExprNode *type, StmtNode *stmt):
-                ParseNode(pos), next(0), name(name), type(type), stmt(stmt) {ASSERT(stmt);}
+        CatchClause(size_t pos, const StringAtom &name, ExprNode *type, bool constant, StmtNode *stmt):
+                ParseNode(pos), next(0), name(name), type(type), constant(constant), stmt(stmt) {ASSERT(stmt);}
     };
 
     struct TryStmtNode: StmtNode {
@@ -646,14 +648,14 @@ namespace JavaScript {
     struct ExportStmtNode: AttributeStmtNode {
         ExportBinding *bindings;        // Linked list of export bindings
 
-        ExportStmtNode(size_t pos, Kind kind, ExprList *attributes, ExportBinding *bindings):
+        ExportStmtNode(size_t pos, Kind kind, ExprNode *attributes, ExportBinding *bindings):
                 AttributeStmtNode(pos, kind, attributes), bindings(bindings) {}
     };
 
     struct VariableStmtNode: AttributeStmtNode {
         VariableBinding *bindings;      // Linked list of variable bindings
 
-        VariableStmtNode(size_t pos, Kind kind, ExprList *attributes, VariableBinding *bindings):
+        VariableStmtNode(size_t pos, Kind kind, ExprNode *attributes, VariableBinding *bindings):
                 AttributeStmtNode(pos, kind, attributes), bindings(bindings) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
@@ -663,7 +665,7 @@ namespace JavaScript {
         FunctionDefinition function;    // Function definition
         JS2Runtime::JSFunction *mFunction; // used by backend
 
-        FunctionStmtNode(size_t pos, Kind kind, ExprList *attributes): AttributeStmtNode(pos, kind, attributes) {}
+        FunctionStmtNode(size_t pos, Kind kind, ExprNode *attributes): AttributeStmtNode(pos, kind, attributes) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
     };
@@ -671,7 +673,7 @@ namespace JavaScript {
     struct NamespaceStmtNode: AttributeStmtNode {
         const StringAtom &name;         // The namespace's or class's name
 
-        NamespaceStmtNode(size_t pos, Kind kind, ExprList *attributes, const StringAtom &name):
+        NamespaceStmtNode(size_t pos, Kind kind, ExprNode *attributes, const StringAtom &name):
                 AttributeStmtNode(pos, kind, attributes), name(name) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
@@ -683,7 +685,7 @@ namespace JavaScript {
 
         JS2Runtime::JSType *mType;      // used by backend
 
-        ClassStmtNode(size_t pos, ExprList *attributes, const StringAtom &name, ExprNode *superclass, BlockStmtNode *body):
+        ClassStmtNode(size_t pos, ExprNode *attributes, const StringAtom &name, ExprNode *superclass, BlockStmtNode *body):
                 NamespaceStmtNode(pos, Class, attributes, name), superclass(superclass), body(body) {}
 
         void print(PrettyPrinter &f, bool noSemi) const;
@@ -790,7 +792,6 @@ namespace JavaScript {
       private:
         ExprNode *parseParenthesizedListExpression();
         ExprNode *parseTypeExpression(bool noIn=false);
-        const StringAtom &parseTypedIdentifier(ExprNode *&type);
         ExprNode *parseTypeBinding(Token::Kind kind, bool noIn);
         ExprList *parseTypeListBinding(Token::Kind kind);
         VariableBinding *parseVariableBinding(size_t pos, bool noIn, bool constant);
@@ -802,8 +803,8 @@ namespace JavaScript {
         StmtNode *parseBlockContents(bool inSwitch, bool noCloseBrace);
         BlockStmtNode *parseBody(bool *semicolonWanted);
         ExprNode::Kind validateOperatorName(const Token &name);
-        StmtNode *parseDefinition(size_t pos, ExprList *attributes, const Token &t, bool noIn, bool &semicolonWanted);
-        StmtNode *parseAttributesAndDefinition(size_t pos, ExprNode *e, AttributeStatement as, bool &semicolonWanted);
+        StmtNode *parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool &semicolonWanted);
+        StmtNode *parseAttributesAndDefinition(size_t pos, ExprNode *attribute, AttributeStatement as, bool &semicolonWanted);
         StmtNode *parseFor(size_t pos, bool &semicolonWanted);
         StmtNode *parseTry(size_t pos);
 

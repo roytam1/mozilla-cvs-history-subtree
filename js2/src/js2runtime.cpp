@@ -74,19 +74,71 @@ JSType *Void_Type;
 JSType *Unit_Type;
 JSArrayType *Array_Type;
 
-bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind, IdentifierExprNode **attrArg)
+// ***** REWRITE ME -- attribute expressions should be compile-time evaluated, not traversed looking
+// for keywords.
+// Here attributes is either nil or an expression that contains one or more attributes combined using
+// the juxtapose operator.
+bool hasAttribute(AttributeList *attributes, const StringAtom &name, IdentifierExprNode **attrArg)
 {
-    while (attrs) {
-        if (attrs->expr->getKind() == ExprNode::identifier) {
-            const StringAtom& name = (static_cast<IdentifierExprNode *>(attrs->expr))->name;
+    if (!attributes)
+        return false;
+    while (true) {
+        ExprNode *attribute = attributes;
+        if (attribute->hasKind(ExprNode::juxtapose))
+            attribute = static_cast<BinaryExprNode *>(attributes)->op1;
+        if (attribute->hasKind(ExprNode::identifier)) {
+            const StringAtom& idname = static_cast<IdentifierExprNode *>(attribute)->name;
+            if (idname == name)
+                return true;
+            //  else
+                // look up the name in the scopechain to see if it's a const definition
+                // whose value we can access.
+                // 
+        }
+        else
+            if (attribute->hasKind(ExprNode::call)) {
+                InvokeExprNode *i = static_cast<InvokeExprNode *>(attribute);        
+                ASSERT(i->op->getKind() == ExprNode::identifier);
+                const StringAtom& idname = static_cast<IdentifierExprNode *>(i->op)->name;
+                if (idname == name) {
+                    if (attrArg) {
+                        ExprPairList *p = i->pairs;
+                        ASSERT(p && p->value->hasKind(ExprNode::identifier));
+                        *attrArg = static_cast<IdentifierExprNode *>(p->value);
+                    }
+                    return true;
+                }
+            }
+            else
+                ASSERT(false);
+        if (attribute == attributes)
+            return false;
+        attributes = static_cast<BinaryExprNode *>(attributes)->op2;
+    }
+}
+
+// ***** REWRITE ME -- attribute expressions should be compile-time evaluated, not traversed looking
+// for keywords.
+// Here attributes is either nil or an expression that contains one or more attributes combined using
+// the juxtapose operator.
+bool hasAttribute(AttributeList *attributes, Token::Kind tokenKind, IdentifierExprNode **attrArg)
+{
+    if (!attributes)
+        return false;
+    while (true) {
+        ExprNode *attribute = attributes;
+        if (attribute->hasKind(ExprNode::juxtapose))
+            attribute = static_cast<BinaryExprNode *>(attributes)->op1;
+        if (attribute->hasKind(ExprNode::identifier)) {
+            const StringAtom& name = (static_cast<IdentifierExprNode *>(attribute))->name;
             if (name.tokenKind == tokenKind)
                 return true;
         }
         else
-            if (attrs->expr->getKind() == ExprNode::call) {
-                InvokeExprNode *i = static_cast<InvokeExprNode *>(attrs->expr);        
-                ASSERT(i->op->getKind() == ExprNode::identifier);
-                const StringAtom& name = (static_cast<IdentifierExprNode *>(i->op))->name;
+            if (attribute->hasKind(ExprNode::call)) {
+                InvokeExprNode *i = static_cast<InvokeExprNode *>(attribute);        
+                ASSERT(i->op->hasKind(ExprNode::identifier));
+                const StringAtom& name = static_cast<IdentifierExprNode *>(i->op)->name;
                 if (name.tokenKind == tokenKind) {
                     if (attrArg) {
                         ExprPairList *p = i->pairs;
@@ -98,42 +150,10 @@ bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind, IdentifierExprNod
             }
             else
                 ASSERT(false);
-        attrs = attrs->next;
+        if (attribute == attributes)
+            return false;
+        attributes = static_cast<BinaryExprNode *>(attributes)->op2;
     }
-    return false;
-}
-
-bool hasAttribute(AttributeList* attrs, const StringAtom &name, IdentifierExprNode **attrArg)
-{
-    while (attrs) {
-        if (attrs->expr->getKind() == ExprNode::identifier) {
-            const StringAtom& idname = (static_cast<IdentifierExprNode *>(attrs->expr))->name;
-            if (idname == name)
-                return true;
-            //  else
-                // look up the name in the scopechain to see if it's a const definition
-                // whose value we can access.
-                // 
-        }
-        else
-            if (attrs->expr->getKind() == ExprNode::call) {
-                InvokeExprNode *i = static_cast<InvokeExprNode *>(attrs->expr);        
-                ASSERT(i->op->getKind() == ExprNode::identifier);
-                const StringAtom& idname = (static_cast<IdentifierExprNode *>(i->op))->name;
-                if (idname == name) {
-                    if (attrArg) {
-                        ExprPairList *p = i->pairs;
-                        ASSERT(p && p->value->getKind() == ExprNode::identifier);
-                        *attrArg = static_cast<IdentifierExprNode *>(p->value);
-                    }
-                    return true;
-                }
-            }
-            else
-                ASSERT(false);
-        attrs = attrs->next;
-    }
-    return false;
 }
 
 JSType *ScopeChain::findType(const StringAtom& typeName) 
@@ -388,7 +408,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     }
 }
 
-JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeChain, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 /*argc*/)
 { 
     mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, mScopeChain,
                                             mArgumentBase, mThis, NULL, mCurModule));   // use NULL pc value to force interpret loop to exit
@@ -411,7 +431,12 @@ JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeCha
     mStackTop = 0;
 
     JSValue result = interpret(pc, endPC);
-    thisValue = mThis;                      // copy 'this' back out in case it got constructed
+
+    // ***** FIX ME -- The C++ standard requires thisValue to be const because in some places a
+    // temporary value is supplied to interpret.
+    // interpret shouldn't change the value of thisValue.
+    //thisValue = mThis;                      // copy 'this' back out in case it got constructed
+    ASSERT(thisValue == mThis);
 
     Activation *prev = mActivationStack.top();
     mActivationStack.pop();
@@ -1400,6 +1425,7 @@ void ScopeChain::collectNames(StmtNode *p)
             PropertyIterator it;
             if (hasProperty(name, classStmt->attributes, Read, &it))
                 throw Exception(Exception::referenceError, "Duplicate class definition");
+            
             defineVariable(name, classStmt->attributes, Type_Type, JSValue(thisClass));
             classStmt->mType = thisClass;
         }
@@ -1813,17 +1839,17 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
 }
 
-static JSValue numberPlus(Context *, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue numberPlus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     return JSValue(argv[0].f64 + argv[1].f64);
 }
 
-static JSValue numberMinus(Context *, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue numberMinus(Context *, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     return JSValue(argv[0].f64 - argv[1].f64);
 }
 
-static JSValue objectPlus(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1866,28 +1892,28 @@ static JSValue objectPlus(Context *cx, JSValue& /*thisValue*/, JSValue *argv, ui
     }
 }
 
-static JSValue objectMinus(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 - r2.toNumber(cx).f64);
 }
 
-static JSValue objectMultiply(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 * r2.toNumber(cx).f64);
 }
 
-static JSValue objectDivide(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.toNumber(cx).f64 / r2.toNumber(cx).f64);
 }
 
-static JSValue objectRemainder(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectRemainder(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1896,42 +1922,42 @@ static JSValue objectRemainder(Context *cx, JSValue& /*thisValue*/, JSValue *arg
 
 
 
-static JSValue objectShiftLeft(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-static JSValue objectShiftRight(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-static JSValue objectUShiftRight(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
-static JSValue objectBitAnd(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) & (int32)(r2.toInt32(cx).f64) ));
 }
 
-static JSValue objectBitXor(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectBitXor(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) ^ (int32)(r2.toInt32(cx).f64) ));
 }
 
-static JSValue objectBitOr(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectBitOr(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1959,7 +1985,7 @@ static JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
 
 }
 
-static JSValue objectLess(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectLess(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1970,7 +1996,7 @@ static JSValue objectLess(Context *cx, JSValue& /*thisValue*/, JSValue *argv, ui
         return result;
 }
 
-static JSValue objectLessEqual(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectLessEqual(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -2031,7 +2057,7 @@ static JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
     }
 }
 
-static JSValue objectEqual(Context *cx, JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectEqual(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue r1 = argv[0];
     JSValue r2 = argv[1];
@@ -2079,15 +2105,16 @@ void Context::initOperators()
     }
 }
 
-static JSValue Object_Constructor(Context *cx, JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue Object_Constructor(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
-    if (thisValue.isNull())
-        thisValue = Object_Type->newInstance(cx);
-    ASSERT(thisValue.isObject());
-    return thisValue;
+    JSValue v = thisValue;
+    if (v.isNull())
+        v = Object_Type->newInstance(cx);
+    ASSERT(v.isObject());
+    return v;
 }
 
-static JSValue Object_toString(Context *, JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue Object_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     if (thisValue.isObject())
         return JSValue(new String(widenCString("[object ") + widenCString("Object") + widenCString("]")));
@@ -2100,35 +2127,37 @@ static JSValue Object_toString(Context *, JSValue& thisValue, JSValue * /*argv*/
         }
 }
 
-static JSValue Function_Constructor(Context *cx, JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue Function_Constructor(Context *cx, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
-    if (thisValue.isNull())
-        thisValue = Function_Type->newInstance(cx);
+    JSValue v = thisValue;
+    if (v.isNull())
+        v = Function_Type->newInstance(cx);
     // XXX use the arguments to compile a string into a function
-    ASSERT(thisValue.isObject());
-    return thisValue;
+    ASSERT(v.isObject());
+    return v;
 }
 
-static JSValue Function_toString(Context *, JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue Function_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isFunction());
     return JSValue(new String(widenCString("function () { }")));
 }
 
-static JSValue Number_Constructor(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Number_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue.isNull())
-        thisValue = Number_Type->newInstance(cx);
-    ASSERT(thisValue.isObject());
-    JSObject *thisObj = thisValue.object;
+    JSValue v = thisValue;
+    if (v.isNull())
+        v = Number_Type->newInstance(cx);
+    ASSERT(v.isObject());
+    JSObject *thisObj = v.object;
     if (argc > 0)
         thisObj->mPrivate = (void *)(new double(argv[0].toNumber(cx).f64));
     else
         thisObj->mPrivate = (void *)(new double(0.0));
-    return thisValue;
+    return v;
 }
 
-static JSValue Number_toString(Context *, JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue Number_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -2137,20 +2166,21 @@ static JSValue Number_toString(Context *, JSValue& thisValue, JSValue * /*argv*/
 
 
 
-static JSValue Boolean_Constructor(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+static JSValue Boolean_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
-    if (thisValue.isNull())
-        thisValue = Boolean_Type->newInstance(cx);
-    ASSERT(thisValue.isObject());
-    JSObject *thisObj = thisValue.object;
+    JSValue v = thisValue;
+    if (v.isNull())
+        v = Boolean_Type->newInstance(cx);
+    ASSERT(v.isObject());
+    JSObject *thisObj = v.object;
     if (argc > 0)
         thisObj->mPrivate = (void *)(argv[0].toBoolean(cx).boolean);
     else
         thisObj->mPrivate = (void *)(false);
-    return thisValue;
+    return v;
 }
 
-static JSValue Boolean_toString(Context *, JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
+static JSValue Boolean_toString(Context *, const JSValue& thisValue, JSValue * /*argv*/, uint32 /*argc*/)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -2163,7 +2193,7 @@ static JSValue Boolean_toString(Context *, JSValue& thisValue, JSValue * /*argv*
 
 
               
-JSValue JSValue::valueToObject(Context *cx, JSValue& value)
+JSValue JSValue::valueToObject(Context *cx, const JSValue& value)
 {
     switch (value.tag) {
     case f64_tag:
@@ -2231,7 +2261,7 @@ float64 stringToNumber(const String *string)
     return stringToDouble(string->begin(), string->end(), numEnd);
 }
 
-JSValue JSValue::valueToNumber(Context *cx, JSValue& value)
+JSValue JSValue::valueToNumber(Context *cx, const JSValue& value)
 {
     switch (value.tag) {
     case f64_tag:
@@ -2258,7 +2288,7 @@ String *numberToString(float64 number)
     return new JavaScript::String(widenCString(chrp));
 }
               
-JSValue JSValue::valueToString(Context *cx, JSValue& value)
+JSValue JSValue::valueToString(Context *cx, const JSValue& value)
 {
     String *strp = NULL;
     JSObject *obj = NULL;
@@ -2430,7 +2460,7 @@ int JSValue::operator==(const JSValue& value) const
 }
 
 
-JSValue JSValue::valueToInt32(Context *, JSValue& value)
+JSValue JSValue::valueToInt32(Context *, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2463,7 +2493,7 @@ JSValue JSValue::valueToInt32(Context *, JSValue& value)
         return JSValue((float64)d);    
 }
 
-JSValue JSValue::valueToUInt32(Context *, JSValue& value)
+JSValue JSValue::valueToUInt32(Context *, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2496,7 +2526,7 @@ JSValue JSValue::valueToUInt32(Context *, JSValue& value)
     return JSValue((float64)d);
 }
 
-JSValue JSValue::valueToUInt16(Context *, JSValue& value)
+JSValue JSValue::valueToUInt16(Context *, const JSValue& value)
 {
     float64 d;
     switch (value.tag) {
@@ -2529,7 +2559,7 @@ JSValue JSValue::valueToUInt16(Context *, JSValue& value)
     return JSValue((float64)d);
 }
 
-JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
+JSValue JSValue::valueToBoolean(Context *cx, const JSValue& value)
 {
     JSObject *obj = NULL;
     switch (value.tag) {

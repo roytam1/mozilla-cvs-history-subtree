@@ -111,8 +111,8 @@ static const double two31 = 2147483648.0;
     extern JSType *Unit_Type;
     extern JSType *Function_Type;
 
-    bool hasAttribute(AttributeList* identifiers, Token::Kind tokenKind, IdentifierExprNode **attrArg = NULL);
-    bool hasAttribute(AttributeList* identifiers, const StringAtom &name, IdentifierExprNode **attrArg = NULL);
+    bool hasAttribute(AttributeList *attributes, Token::Kind tokenKind, IdentifierExprNode **attrArg = NULL);
+    bool hasAttribute(AttributeList *attributes, const StringAtom &name, IdentifierExprNode **attrArg = NULL);
 
     String *numberToString(float64 number);
     float64 stringToNumber(const String *string);
@@ -174,16 +174,16 @@ static const double two31 = 2147483648.0;
         bool isTrue() const                             { ASSERT(isBool()); return boolean; }
         bool isFalse() const                            { ASSERT(isBool()); return !boolean; }
 
-        JSType *getType();
+        JSType *getType() const;
 
-        JSValue toString(Context *cx)                   { return (isString() ? *this : valueToString(cx, *this)); }
-        JSValue toNumber(Context *cx)                   { return (isNumber() ? *this : valueToNumber(cx, *this)); }
-        JSValue toUInt32(Context *cx)                   { return valueToUInt32(cx, *this); }
-        JSValue toUInt16(Context *cx)                   { return valueToUInt16(cx, *this); }
-        JSValue toInt32(Context *cx)                    { return valueToInt32(cx, *this); }
-        JSValue toObject(Context *cx)                   { return ((isObject() || isType() || isFunction()) ?
+        JSValue toString(Context *cx) const             { return (isString() ? *this : valueToString(cx, *this)); }
+        JSValue toNumber(Context *cx) const             { return (isNumber() ? *this : valueToNumber(cx, *this)); }
+        JSValue toUInt32(Context *cx) const             { return valueToUInt32(cx, *this); }
+        JSValue toUInt16(Context *cx) const             { return valueToUInt16(cx, *this); }
+        JSValue toInt32(Context *cx) const              { return valueToInt32(cx, *this); }
+        JSValue toObject(Context *cx) const             { return ((isObject() || isType() || isFunction()) ?
                                                                 *this : valueToObject(cx, *this)); }
-        JSValue toBoolean(Context *cx)                  { return (isBool() ? *this : valueToBoolean(cx, *this)); }
+        JSValue toBoolean(Context *cx) const            { return (isBool() ? *this : valueToBoolean(cx, *this)); }
 
         /* These are for use in 'toPrimitive' calls */
         enum Hint {
@@ -191,13 +191,13 @@ static const double two31 = 2147483648.0;
         };
         JSValue toPrimitive(Context *cx, Hint hint = NoHint) const;
         
-        static JSValue valueToNumber(Context *cx, JSValue& value);
-        static JSValue valueToString(Context *cx, JSValue& value);
-        static JSValue valueToObject(Context *cx, JSValue& value);
-        static JSValue valueToUInt32(Context *cx, JSValue& value);
-        static JSValue valueToUInt16(Context *cx, JSValue& value);
-        static JSValue valueToInt32(Context *cx, JSValue& value);
-        static JSValue valueToBoolean(Context *cx, JSValue& value);
+        static JSValue valueToNumber(Context *cx, const JSValue& value);
+        static JSValue valueToString(Context *cx, const JSValue& value);
+        static JSValue valueToObject(Context *cx, const JSValue& value);
+        static JSValue valueToUInt32(Context *cx, const JSValue& value);
+        static JSValue valueToUInt16(Context *cx, const JSValue& value);
+        static JSValue valueToInt32(Context *cx, const JSValue& value);
+        static JSValue valueToBoolean(Context *cx, const JSValue& value);
         
         int operator==(const JSValue& value) const;
 
@@ -503,10 +503,12 @@ static const double two31 = 2147483648.0;
 
         // find a property by the given name, and then check to see if there's any
         // overlap between the supplied attribute list and the property's list.
-        PropertyIterator findAttributedProperty(const String &name, AttributeList *attrs)
+        // ***** REWRITE ME -- matching attribute lists for inclusion is a bad idea.
+        PropertyIterator findAttributedProperty(const String &name, AttributeList * /*attrs*/)
         {
             for (PropertyIterator i = mProperties.lower_bound(name), 
                             end = mProperties.upper_bound(name); (i != end); i++) {
+#if 0
                 if (attrs) {
                     AttributeList *propAttr = PROPERTY_ATTRLIST(i);
                     if (propAttr == NULL)
@@ -531,6 +533,7 @@ static const double two31 = 2147483648.0;
                     }
                 }
                 else
+#endif
                     return i;
             }
             return mProperties.end();
@@ -698,7 +701,7 @@ static const double two31 = 2147483648.0;
     
 
     // had to be after JSObject defn.
-    inline JSType *JSValue::getType() {
+    inline JSType *JSValue::getType() const {
         switch (tag) {
         case f64_tag: return Number_Type;
         case boolean_tag: return Boolean_Type;
@@ -1070,7 +1073,7 @@ static const double two31 = 2147483648.0;
         JSArrayInstance(Context *cx, JSType * /*type*/) : JSInstance(cx, NULL), mLength(0) { mType = (JSType *)Array_Type; }
 
         // XXX maybe could have implemented length as a getter/setter pair?
-        void setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v);
+        void setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v);
         void getProperty(Context *cx, const String &name, AttributeList *attr);
 
 
@@ -1428,7 +1431,7 @@ static const double two31 = 2147483648.0;
     protected:
         JSFunction() : mActivation(NULL), JSObject(Function_Type) { mPrototype = Function_Type->mPrototype; }        // for JSBoundFunction (XXX ask Patrick about this structure)
     public:
-        typedef JSValue (NativeCode)(Context *cx, JSValue &thisValue, JSValue argv[], uint32 argc);
+        typedef JSValue (NativeCode)(Context *cx, const JSValue &thisValue, JSValue argv[], uint32 argc);
 
         JSFunction(Context *cx, JSType *resultType,
                          uint32 argCount, ScopeChain *scopeChain) 
@@ -1616,7 +1619,7 @@ static const double two31 = 2147483648.0;
 
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
 
-        void switchToFunction(JSFunction *target, JSValue& thisValue, JSValue *argv, uint32 argc)
+        void switchToFunction(JSFunction *target, const JSValue& thisValue, JSValue *argv, uint32 argc)
         {
             if (target->isNative()) {
                 JSValue result = target->getNativeCode()(this, thisValue, argv, argc);
@@ -1727,7 +1730,7 @@ static const double two31 = 2147483648.0;
         void buildRuntimeForStmt(StmtNode *p);
         ByteCodeModule *genCode(StmtNode *p, String sourceName);
 
-        JSValue interpret(ByteCodeModule *bcm, ScopeChain *scopeChain, JSValue& thisValue, JSValue *argv, uint32 argc);
+        JSValue interpret(ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 argc);
         JSValue interpret(uint8 *pc, uint8 *endPC);
         
         
@@ -1919,7 +1922,7 @@ static const double two31 = 2147483648.0;
             JSInstance::getProperty(cx, name, attr);
     }
 
-    inline void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList *attr, JSValue &v)
+    inline void JSArrayInstance::setProperty(Context *cx, const String &name, AttributeList *attr, const JSValue &v)
     {
         if (name.compare(widenCString("length")) == 0) {
             uint32 newLength = (uint32)(v.toUInt32(cx).f64);

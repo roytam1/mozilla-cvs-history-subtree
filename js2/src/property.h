@@ -39,8 +39,8 @@
 
 namespace JavaScript {
 
-    struct ExprList;
-    typedef ExprList AttributeList;
+    struct ExprNode;
+    typedef ExprNode AttributeList;
 
 namespace JS2Runtime {
 

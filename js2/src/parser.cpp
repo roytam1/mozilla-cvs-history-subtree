@@ -963,24 +963,6 @@ JS::ExprNode *JS::Parser::parseTypeExpression(bool noIn)
 }
 
 
-// Parse a TypedIdentifier.  Return the identifier's name.
-// If a type was provided, set type to it; otherwise, set type to nil.
-// After parseTypedIdentifier finishes, the next token might have been peeked
-// with preferRegExp set to false.
-const JS::StringAtom &JS::Parser::parseTypedIdentifier(ExprNode *&type)
-{
-    const Token &t = lexer.get(true);
-    if (!t.hasIdentifierKind())
-        syntaxError("Identifier expected");
-    const StringAtom &name = t.getIdentifier();
-
-    type = 0;
-    if (lexer.eat(false, Token::colon))
-        type = parseNonAssignmentExpression(false);
-    return name;
-}
-
-
 // If the next token has the given kind, eat it and parse and return the
 // following TypeExpression; otherwise return nil.
 // If noIn is false, allow the in operator.
@@ -996,6 +978,7 @@ JS::ExprNode *JS::Parser::parseTypeBinding(Token::Kind kind, bool noIn)
 }
 
 
+// ***** DEAD CODE *****
 // If the next token has the given kind, eat it and parse and return the
 // following TypeExpressionList; otherwise return nil.
 //
@@ -1192,6 +1175,7 @@ JS::BlockStmtNode *JS::Parser::parseBody(bool *semicolonWanted)
 
 // Parse and return a Directive that takes zero or more initial attributes, which is either
 // a Definition or an AnnotatedBlock.  The initial attributes have already been parsed.
+// If there were no attributes, the attributes parameter is nil.
 // If noIn is false, allow the in operator.
 //
 // If the directive ends with an optional Semicolon production, then that semicolon is not parsed.
@@ -1201,9 +1185,8 @@ JS::BlockStmtNode *JS::Parser::parseBody(bool *semicolonWanted)
 //
 // pos is the position of the beginning of the directive (its first attribute if it has attributes).
 // The first token of the directive has already been read and is provided in t.
-// After parseDefinition finishes, the next token might have been peeked with
-// preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprList *attributes, const Token &t, bool noIn, bool &semicolonWanted)
+// After parseDefinition finishes, the next token might have been peeked with preferRegExp set to true.
+JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool &semicolonWanted)
 {
     semicolonWanted = false;
     StmtNode::Kind sKind;
@@ -1263,16 +1246,15 @@ JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprList *attributes, cons
 //   asConstVar Only a const or var definition can follow, and the 'in'
 //              operator is not allowed at its top level
 //
-// The first attribute has already been read and is provided in e.
+// The first attribute has already been read and is provided in the attribute parameter.
 // pos is the position of the first attribute.
 // If the next token was peeked, it should be have been done with preferRegExp set to true.
 // After parseAttributesAndDefinition finishes, the next token might have been peeked with
 // preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseAttributesAndDefinition(size_t pos, ExprNode *e, AttributeStatement as, bool &semicolonWanted)
+JS::StmtNode *JS::Parser::parseAttributesAndDefinition(size_t pos, ExprNode *attribute, AttributeStatement as, bool &semicolonWanted)
 {
-    NodeQueue<ExprList> attributes;
+    ASSERT(attribute);
     while (true) {
-        attributes += new(arena) ExprList(e);
         const Token &t = lexer.get(true);
         if (lineBreakBefore(t))
             syntaxError("Line break not allowed here");
@@ -1292,9 +1274,9 @@ JS::StmtNode *JS::Parser::parseAttributesAndDefinition(size_t pos, ExprNode *e, 
                     syntaxError("const or var expected");
                 break;
             }
-            return parseDefinition(pos, attributes.first, t, as == asConstVar, semicolonWanted);
+            return parseDefinition(pos, attribute, t, as == asConstVar, semicolonWanted);
         }
-        e = parseAttribute(t);
+        attribute = new(arena) BinaryExprNode(pos, ExprNode::juxtapose, attribute, parseAttribute(t));
     }
 }
 
@@ -1393,10 +1375,11 @@ JS::StmtNode *JS::Parser::parseTry(size_t pos)
     while ((t = lexer.eat(true, Token::Catch)) != 0) {
         size_t catchPos = t->getPos();
         require(true, Token::openParenthesis);
-        ExprNode *type;
-        const StringAtom &name = parseTypedIdentifier(type);
-        require(false, Token::closeParenthesis);
-        catches += new(arena) CatchClause(catchPos, name, type, parseBody(0));
+        bool constant = lexer.eat(true, Token::Const) != 0;
+        const StringAtom &name = parseIdentifier();
+        ExprNode *type = parseTypeBinding(Token::colon, true);
+        require(true, Token::closeParenthesis);
+        catches += new(arena) CatchClause(catchPos, name, type, constant, parseBody(0));
     }
     StmtNode *finally = 0;
     if (lexer.eat(true, Token::Finally))
@@ -1752,6 +1735,7 @@ const char *const JS::ExprNode::kindNames[kindsEnd] = {
     "~ ",                   // complement
     "! ",                   // logicalNot
 
+    " ",                    // juxtapose
     "+",                    // add
     "-",                    // subtract
     "*",                    // multiply
@@ -1955,18 +1939,18 @@ void JS::UnaryExprNode::print(PrettyPrinter &f) const
 
 void JS::BinaryExprNode::print(PrettyPrinter &f) const
 {
-    if (debugExprNodePrint)
+    if (debugExprNodePrint && !hasKind(juxtapose))
         f << '(';
     PrettyPrinter::Block b(f);
     f << op1;
-    uint32 nSpaces = hasKind(dot) || hasKind(dotParen) ? (uint32)0 : (uint32)1;
+    uint32 nSpaces = hasKind(dot) || hasKind(dotParen) || hasKind(juxtapose) ? (uint32)0 : (uint32)1;
     f.fillBreak(nSpaces);
     f << kindName(getKind());
     f.fillBreak(nSpaces);
     f << op2;
     if (hasKind(dotParen))
         f << ')';
-    if (debugExprNodePrint)
+    if (debugExprNodePrint && !hasKind(juxtapose))
         f << ')';
 }
 
@@ -2126,8 +2110,10 @@ void JS::StmtNode::printSubstatement(PrettyPrinter &f, bool noSemi, const char *
 // space.
 void JS::AttributeStmtNode::printAttributes(PrettyPrinter &f) const
 {
-    for (const ExprList *a = attributes; a; a = a->next)
-        f << a->expr << ' ';
+    const ExprNode *a = attributes;
+    if (a) {
+        f << a << ' ';
+    }
 }
 
 

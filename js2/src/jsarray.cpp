@@ -50,7 +50,7 @@
 namespace JavaScript {    
 namespace JS2Runtime {
 
-JSValue Array_Constructor(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue thatValue = thisValue;
     if (thatValue.isNull())
@@ -76,7 +76,7 @@ JSValue Array_Constructor(Context *cx, JSValue& thisValue, JSValue *argv, uint32
 }
 
 
-JSValue Array_toString(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_toString(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -102,7 +102,7 @@ JSValue Array_toString(Context *cx, JSValue& thisValue, JSValue *argv, uint32 ar
     
 }
 
-JSValue Array_toSource(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_toSource(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -130,7 +130,7 @@ JSValue Array_toSource(Context *cx, JSValue& thisValue, JSValue *argv, uint32 ar
     
 }
 
-JSValue Array_push(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_push(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -146,7 +146,7 @@ JSValue Array_push(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
     return JSValue((float64)arrInst->mLength);
 }
               
-JSValue Array_pop(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_pop(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(thisValue.isObject());
     JSObject *thisObj = thisValue.object;
@@ -168,7 +168,7 @@ JSValue Array_pop(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
         return kUndefinedValue;
 }
 
-JSValue Array_concat(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_concat(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     JSValue E = thisValue;
 
@@ -200,7 +200,7 @@ JSValue Array_concat(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc
     return JSValue(A);
 }
 
-JSValue Array_join(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
@@ -235,7 +235,7 @@ JSValue Array_join(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
     return JSValue(S);
 }
 
-JSValue Array_reverse(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
@@ -282,7 +282,7 @@ JSValue Array_reverse(Context *cx, JSValue& thisValue, JSValue *argv, uint32 arg
     return thisValue;
 }
 
-JSValue Array_shift(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
@@ -320,7 +320,7 @@ JSValue Array_shift(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
     return result;
 }
 
-JSValue Array_slice(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 
@@ -379,12 +379,12 @@ JSValue Array_slice(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
     return JSValue(A);
 }
 
-JSValue Array_sort(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_sort(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     return kUndefinedValue;
 }
 
-JSValue Array_splice(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     if (argc > 1) {
         uint32 k;
@@ -471,7 +471,7 @@ JSValue Array_splice(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc
     return kUndefinedValue;
 }
 
-JSValue Array_unshift(Context *cx, JSValue& thisValue, JSValue *argv, uint32 argc)
+JSValue Array_unshift(Context *cx, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ContextStackReplacement csr(cx);
 

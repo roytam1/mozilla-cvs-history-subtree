@@ -1112,8 +1112,10 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             while (eList) {
                 ExprNode *e = eList->expr;
                 if (e->getKind() == ExprNode::identifier) {
-                    AttributeList *id = new(m_cx->mArena) AttributeList(e);
-                    id->next = CURRENT_ATTR;
+                    NOT_REACHED("implement me");
+                    // ***** What is this supposed to do?  id is not used anywhere.
+                    // AttributeList *id = new(m_cx->mArena) AttributeList(e);
+                    // id->next = CURRENT_ATTR;
                 }
                 else
                     NOT_REACHED("implement me");
@@ -1193,9 +1195,13 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 ASSERT(q->op2->getKind() == ExprNode::identifier);
                 const StringAtom &fieldName = static_cast<IdentifierExprNode *>(q->op2)->name;
 //                const StringAtom &qualifierName = static_cast<IdentifierExprNode *>(q->op1)->name;
-                AttributeList id(q->op1);
-                id.next = CURRENT_ATTR;
-                Reference *ref = lType->genReference(fieldName, &id, acc, 0);
+                AttributeList *id = 0;
+                ASSERT(false);
+                // ***** Fix me: the original code below was corrupting the stack by leaving a dangling
+                // pointer to a temporary object.
+//                AttributeList id(q->op1);
+//                id.next = CURRENT_ATTR;
+                Reference *ref = lType->genReference(fieldName, id, acc, 0);
                 if (ref == NULL)
                     ref = new PropertyReference(fieldName, acc, Object_Type);
                 return ref;
