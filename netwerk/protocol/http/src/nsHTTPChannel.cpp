@@ -188,11 +188,7 @@ nsHTTPChannel::OpenInputStream(PRUint32 startPosition, PRInt32 readCount,
     return NS_OK;
 
 #else
-
-    if (m_pResponse)
-        return m_pResponse->GetInputStream(o_Stream);
-    NS_ERROR("No response!");
-    return NS_OK; // change to error ? or block till response is set up?
+    return NS_ERROR_NOT_IMPLEMENTED;
 #endif // if 0
 
 }
