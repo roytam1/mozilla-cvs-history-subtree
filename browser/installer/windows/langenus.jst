@@ -16,12 +16,10 @@ logComment("initInstall: platformNode=" + platformNode);
 
 // ----LOCALIZATION NOTE: translate only these ------
 var prettyName = "English (US) Language Pack";
-var langcode = "en";
-var chromeNode = langcode + "-US";
-// --- END CHANGABLE STUFF ---
+var chromeNode = "en-US";
+// --- END CHANGEABLE STUFF ---
 var regName    = "locales/mozilla/" + chromeNode;
 var chromeName = chromeNode + ".jar";
-var platformName = langcode + "-" + platformNode + ".jar";
 var localeName = "locale/" + chromeNode + "/";
 
 srDest = $SpaceRequired$:bin;
@@ -76,10 +74,9 @@ if(verifyDiskSpace(fProgram, srDest))
 
     // register chrome
     var cf = getFolder(fProgram, "chrome/"+chromeName);
-    var pf = getFolder(fProgram, "chrome/"+platformName);
 
     registerChrome(chromeType, cf, "locale/global/");
-    registerChrome(chromeType, pf, localeName + "global-platform/");
+    registerChrome(chromeType, cf, "locale/global-platform/");
     registerChrome(chromeType, cf, "locale/global-region/");
 
     registerChrome(chromeType, cf, "locale/browser/");
@@ -90,14 +87,8 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(chromeType, cf, "locale/necko/");
     registerChrome(chromeType, cf, "locale/autoconfig/");
     registerChrome(chromeType, cf, localeName + "cookie/");
-    registerChrome(chromeType, cf, localeName + "wallet/");
     registerChrome(chromeType, cf, localeName + "pippki/");
     registerChrome(chromeType, cf, localeName + "pipnss/");
-
-    // XXXben Soon to be obsolete.
-    registerChrome(chromeType, pf, localeName + "communicator-platform/");
-    registerChrome(chromeType, cf, localeName + "navigator/");
-    registerChrome(chromeType, pf, localeName + "navigator-platform/");
 
     err = performInstall(); 
     logComment("performInstall() returned: " + err);
