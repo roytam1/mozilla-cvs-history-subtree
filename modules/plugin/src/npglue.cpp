@@ -3993,7 +3993,7 @@ np_delete_instance(np_instance *instance)
             MWContext *context = (instance->cx != NULL)
                 ? instance->cx : XP_FindSomeContext();
 
-            if (XP_OK_ASSERT(context != NULL)) {
+            if (context != NULL) {
 
 #ifdef XP_MAC
                 /* turn scrollbars back on */
