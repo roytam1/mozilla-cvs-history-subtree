@@ -1004,9 +1004,13 @@ static PRBool pt_send_cont(pt_Continuation *op, PRInt16 revents)
         op->arg3.amount -= bytes;  /* and reduce the required count */
         return (0 == op->arg3.amount) ? PR_TRUE : PR_FALSE;
     }
-    else return ((-1 == bytes) &&
-        (EWOULDBLOCK == op->syserrno || EAGAIN == op->syserrno)) ? 
-        PR_FALSE : PR_TRUE;
+    else if ((-1 == bytes) && (EWOULDBLOCK != op->syserrno)
+    && (EAGAIN != op->syserrno))
+    {
+        op->result.code = -1;
+        return PR_TRUE;
+    }
+    else return PR_FALSE;
 }  /* pt_send_cont */
 
 static PRBool pt_write_cont(pt_Continuation *op, PRInt16 revents)
@@ -1030,9 +1034,13 @@ static PRBool pt_write_cont(pt_Continuation *op, PRInt16 revents)
         op->arg3.amount -= bytes;  /* and reduce the required count */
         return (0 == op->arg3.amount) ? PR_TRUE : PR_FALSE;
     }
-    else return ((-1 == bytes) &&
-        (EWOULDBLOCK == op->syserrno || EAGAIN == op->syserrno)) ? 
-        PR_FALSE : PR_TRUE;
+    else if ((-1 == bytes) && (EWOULDBLOCK != op->syserrno)
+    && (EAGAIN != op->syserrno))
+    {
+        op->result.code = -1;
+        return PR_TRUE;
+    }
+    else return PR_FALSE;
 }  /* pt_write_cont */
 
 static PRBool pt_writev_cont(pt_Continuation *op, PRInt16 revents)
@@ -1069,9 +1077,13 @@ static PRBool pt_writev_cont(pt_Continuation *op, PRInt16 revents)
         op->arg3.amount -= iov_index;  /* and array length */
         return (0 == op->arg3.amount) ? PR_TRUE : PR_FALSE;
     }
-    else return ((-1 == bytes) &&
-        (EWOULDBLOCK == op->syserrno || EAGAIN == op->syserrno)) ? 
-        PR_FALSE : PR_TRUE;
+    else if ((-1 == bytes) && (EWOULDBLOCK != op->syserrno)
+    && (EAGAIN != op->syserrno))
+    {
+        op->result.code = -1;
+        return PR_TRUE;
+    }
+    else return PR_FALSE;
 }  /* pt_writev_cont */
 
 static PRBool pt_sendto_cont(pt_Continuation *op, PRInt16 revents)
@@ -1089,9 +1101,13 @@ static PRBool pt_sendto_cont(pt_Continuation *op, PRInt16 revents)
         op->arg3.amount -= bytes;  /* and reduce the required count */
         return (0 == op->arg3.amount) ? PR_TRUE : PR_FALSE;
     }
-    else return ((-1 == bytes) && 
-        (EWOULDBLOCK == op->syserrno || EAGAIN == op->syserrno)) ?
-    PR_FALSE : PR_TRUE;
+    else if ((-1 == bytes) && (EWOULDBLOCK != op->syserrno)
+    && (EAGAIN != op->syserrno))
+    {
+        op->result.code = -1;
+        return PR_TRUE;
+    }
+    else return PR_FALSE;
 }  /* pt_sendto_cont */
 
 static PRBool pt_recvfrom_cont(pt_Continuation *op, PRInt16 revents)
