@@ -161,7 +161,7 @@ function SetProgressFinished(filename, networkStatus)
   {
     // XXX Interpret networkStatus and call SetStatusMessage() with 
     //  appropriate error description.
-    if (filename == gPublishData.filename)
+    if (!gPublishData.publishOtherFiles || filename == gPublishData.filename)
       gFinalMessage = GetString("PublishFailed");
     else
       gFinalMessage = GetString("PublishSomeFileFailed");
@@ -171,14 +171,32 @@ function SetProgressFinished(filename, networkStatus)
     gFinished = true;
     gDialog.Close.setAttribute("label", GetString("Close"));
     gFinalMessage = GetString("PublishCompleted");
+
+    // Now allow "Enter/Return" key to close the dialog
+    AllowDefaultButton();
   }
-  SetStatusMessage(gFinalMessage);
+  if (gFinalMessage)
+    SetStatusMessage(gFinalMessage);
 }
 
 function SetStatusMessage(message)
 {
   gDialog.StatusMessage.value = message;
   window.sizeToContent();
+}
+
+function AllowDefaultButton()
+{
+  gDialog.Close.setAttribute("default","true");
+  gAllowEnterKey = true;
+}
+
+function onEnterKey()
+{
+  if (gAllowEnterKey)
+    return CloseDialog();
+
+  return false;
 }
 
 function CheckKeepOpen()
@@ -218,6 +236,10 @@ function RequestCloseDialog()
     // Leave window open a minimum amount of time 
     gTimerID = setTimeout("CloseDialog();", 3000);
   }
+
+  // Now allow "Enter/Return" key to close the dialog
+  AllowDefaultButton();
+
   // If window remains open, be sure final message is set
   SetStatusMessage(gFinalMessage);
 }
