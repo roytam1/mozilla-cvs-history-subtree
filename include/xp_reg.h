@@ -66,6 +66,7 @@
 
 /* --------------------------- Public routines ---------------------------- */
 
+XP_BEGIN_PROTOS
 
 /*
  * shexp_valid takes a shell expression exp as input. It returns:
@@ -101,5 +102,7 @@ extern int XP_RegExpSearch(char *str, char *exp);
 /* same as above but uses case insensitive search
  */
 extern int XP_RegExpCaseSearch(char *str, char *exp);
+
+XP_END_PROTOS
 
 #endif
