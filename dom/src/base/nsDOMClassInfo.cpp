@@ -133,6 +133,8 @@
 
 // HTMLOptionCollection includes
 #include "nsIDOMHTMLOptionElement.h"
+#include "nsIDOMNSHTMLOptionElement.h"
+#include "nsIDOMHTMLOptionsCollection.h"
 #include "nsIDOMNSHTMLOptionCollectn.h"
 
 // ContentList includes
@@ -479,8 +481,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            nsIXPCScriptable::WANT_ENUMERATE)
   NS_DEFINE_CLASSINFO_DATA(HTMLCollection, nsHTMLCollectionSH,
                            ARRAY_SCRIPTABLE_FLAGS)
-  NS_DEFINE_CLASSINFO_DATA(HTMLOptionCollection,
-                           nsHTMLOptionCollectionSH,
+  NS_DEFINE_CLASSINFO_DATA(HTMLOptionsCollection,
+                           nsHTMLOptionsCollectionSH,
                            ARRAY_SCRIPTABLE_FLAGS |
                            nsIXPCScriptable::WANT_SETPROPERTY)
   NS_DEFINE_CLASSINFO_DATA_WITH_NAME(HTMLFormControlCollection, HTMLCollection,
@@ -1478,8 +1480,8 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLCollection)
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(HTMLOptionCollection,
-                                      nsIDOMHTMLCollection)
+  DOM_CLASSINFO_MAP_BEGIN(HTMLOptionsCollection, nsIDOMHTMLOptionsCollection)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLOptionsCollection)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLOptionCollection)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLCollection)
   DOM_CLASSINFO_MAP_END
@@ -1696,6 +1698,7 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(HTMLOptionElement, nsIDOMHTMLOptionElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLOptionElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLOptionElement)
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
@@ -5463,8 +5466,7 @@ nsHTMLSelectElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
     nsCOMPtr<nsIDOMHTMLSelectElement> s(do_QueryInterface(native));
 
-    nsCOMPtr<nsIDOMHTMLCollection> options;
-
+    nsCOMPtr<nsIDOMHTMLOptionsCollection> options;
     s->GetOptions(getter_AddRefs(options));
 
     if (options) {
@@ -5530,7 +5532,7 @@ nsHTMLSelectElementSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
     nsCOMPtr<nsIDOMHTMLSelectElement> select(do_QueryInterface(native));
     NS_ENSURE_TRUE(select, NS_ERROR_UNEXPECTED);
 
-    nsCOMPtr<nsIDOMHTMLCollection> options;
+    nsCOMPtr<nsIDOMHTMLOptionsCollection> options;
     select->GetOptions(getter_AddRefs(options));
 
     nsCOMPtr<nsIDOMNSHTMLOptionCollection> oc(do_QueryInterface(options));
@@ -5971,12 +5973,12 @@ nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
 }
 
 
-// HTMLOptionCollection helper
+// HTMLOptionsCollection helper
 
 NS_IMETHODIMP
-nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
-                                      JSContext *cx, JSObject *obj, jsval id,
-                                      jsval *vp, PRBool *_retval)
+nsHTMLOptionsCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                                       JSContext *cx, JSObject *obj, jsval id,
+                                       jsval *vp, PRBool *_retval)
 {
   int32 n = GetArrayIndexFromId(cx, id);
 

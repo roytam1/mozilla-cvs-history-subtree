@@ -43,16 +43,17 @@
 #include "nsIExpatSink.h"
 #include "nsIContentSink.h"
 #include "nsParserMsgUtils.h"
-#include "nsSpecialSystemDirectory.h"
 #include "nsIURL.h"
 #include "nsIUnicharInputStream.h"
 #include "nsNetUtil.h"
 #include "prprf.h"
 #include "prmem.h"
 #include "nsTextFormatter.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsCRT.h"
 
 static const char* kWhitespace = " \r\n\t"; // Optimized for typical cases
-static const char* kDTDDirectory = "res/dtd/";
+static const char kDTDDirectory[] = "res/dtd/";
 
 /***************************** EXPAT CALL BACKS *******************************/
 
@@ -267,14 +268,29 @@ IsLoadableDTD(const nsCatalogData* aCatalogData, nsCOMPtr<nsIURI>* aDTD)
       return PR_FALSE;
     }
   }
-  nsSpecialSystemDirectory dtdPath(nsSpecialSystemDirectory::OS_CurrentProcessDirectory);
-  dtdPath += PromiseFlatCString(nsDependentCString(kDTDDirectory) + fileName).get();
-  if (dtdPath.Exists()) {
+  
+  nsCOMPtr<nsIFile> dtdPath;
+  NS_GetSpecialDirectory(NS_OS_CURRENT_PROCESS_DIR, 
+                         getter_AddRefs(dtdPath));
+
+  if (!dtdPath)
+    return PR_FALSE;
+
+  nsCOMPtr<nsILocalFile> lfile = do_QueryInterface(dtdPath);
+
+  nsCAutoString path;
+  path = NS_LITERAL_CSTRING(kDTDDirectory) + fileName;
+  lfile->AppendRelativeNativePath(path);
+
+  PRBool exists;
+  dtdPath->Exists(&exists);
+
+  if (exists) {
     // The DTD was found in the local DTD directory.
-    // Set aDTD to a file: url pointing to the local DTD
-    nsFileURL dtdFile(dtdPath);
+    // Set aDTD to a file: url pointing to the local DT
     nsCOMPtr<nsIURI> dtdURI;
-    NS_NewURI(getter_AddRefs(dtdURI), dtdFile.GetURLString());
+    NS_NewFileURI(getter_AddRefs(dtdURI), dtdPath); 
+
     if (dtdURI) {
       *aDTD = dtdURI;
       isLoadable = PR_TRUE;
@@ -530,9 +546,9 @@ nsExpatDriver::HandleEndDoctypeDecl()
     // let the sink know any additional knowledge that we have about the document
     // (currently, from bug 124570, we only expect to pass additional agent sheets
     // needed to layout the XML vocabulary of the document)
-    nsIURI* data = nsnull;
+    nsCOMPtr<nsIURI> data;
     if (mCatalogData && mCatalogData->mAgentSheet) {
-      NS_NewURI(&data, mCatalogData->mAgentSheet);
+      NS_NewURI(getter_AddRefs(data), mCatalogData->mAgentSheet);
     }
   
     nsAutoString name;
@@ -548,15 +564,26 @@ nsExpatDriver::HandleEndDoctypeDecl()
       GetDocTypeToken(mDoctypeText, systemId, PR_TRUE);
     }
 
-    // The rest is the internal subset (minus whitespace)
+    // The rest is the internal subset with [] (minus whitespace)
     mDoctypeText.Trim(kWhitespace);
+    // Take out the brackets too, if any
+    if (mDoctypeText.Length() > 2) {
+      const nsAString& internalSubset = Substring(mDoctypeText, 1,
+			                                	          mDoctypeText.Length() - 2);
+      mInternalState = mSink->HandleDoctypeDecl(internalSubset, 
+                                                name, 
+                                                systemId, 
+                                                publicId, 
+                                                data);
+    } else {
+      // There's nothing but brackets, don't include them
+      mInternalState = mSink->HandleDoctypeDecl(nsString(),// !internalSubset
+                                                name, 
+                                                systemId, 
+                                                publicId, 
+                                                data);
+    }
 
-    mInternalState = mSink->HandleDoctypeDecl(mDoctypeText, 
-                                              name, 
-                                              systemId, 
-                                              publicId, 
-                                              data);
-    NS_IF_RELEASE(data);
   }
 
   mDoctypeText.SetCapacity(0);
@@ -570,6 +597,12 @@ nsExpatDriver::HandleExternalEntityRef(const PRUnichar *openEntityNames,
                                        const PRUnichar *systemId,
                                        const PRUnichar *publicId)
 {
+  if (mInDoctype && !mInExternalDTD && openEntityNames) {
+    mDoctypeText.Append(PRUnichar('%'));
+    mDoctypeText.Append(nsDependentString(openEntityNames));
+    mDoctypeText.Append(PRUnichar(';'));
+  }
+  
   int result = 1;
 
   // Load the external entity into a buffer

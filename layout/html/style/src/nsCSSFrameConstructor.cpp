@@ -115,6 +115,8 @@
 #include "nsISelectElement.h"
 #include "nsLayoutErrors.h"
 #include "nsAutoPtr.h"
+#include "nsScrollPortFrame.h"
+#include "nsXULAtoms.h"
 
 static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
@@ -5291,9 +5293,9 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
       aTag != nsHTMLAtoms::input &&
       aTag != nsHTMLAtoms::textarea &&
       aTag != nsHTMLAtoms::combobox &&
-      aTag != nsHTMLAtoms::isindex &&
+      aTag != nsHTMLAtoms::isindex
 #ifdef INCLUDE_XUL
-      aTag != nsXULAtoms::scrollbar
+      && aTag != nsXULAtoms::scrollbar
 #endif
       )
     return NS_OK;
@@ -12038,6 +12040,13 @@ nsresult
 nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
                                                 nsIContent* aContent)
 {
+  // If there is no document, we don't want to recreate frames for it.  (You
+  // shouldn't generally be giving this method content without a document
+  // anyway).
+  nsCOMPtr<nsIDocument> doc;
+  aContent->GetDocument(*getter_AddRefs(doc));
+  NS_ENSURE_TRUE(doc, NS_ERROR_FAILURE);
+
   // Is the frame `special'? If so, we need to reframe the containing
   // block *here*, rather than trying to remove and re-insert the
   // content (which would otherwise result in *two* nested reframe
