@@ -98,6 +98,24 @@ protected:
     PRUint32            mMsgIDBitVector[4];
 #endif /* XP_WIN */
 
+#if defined(XP_UNIX)
+    // The request queue 
+    nsCOMPtr<nsIRequest> mRequestQ;
+
+    // The DNS thread waits on this monitor for requests to process.
+    PRMonitor *mRequestQMonitor;
+
+    // Returns TRUE if there are requests in the queue.
+    PRBool RequestsPending();
+
+    // Puts a request on the queue and signals the DNS thread.
+    nsresult EnqueueRequest(nsIRequest *);
+
+    // Called by the DNS thread to get the next request to process.
+    // Blocks until a request is available.
+    nsresult DequeueRequest(nsIRequest **);
+#endif
+
 #ifdef DNS_TIMING
     double              mCount;
     double              mTimes;

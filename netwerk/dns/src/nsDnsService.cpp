@@ -26,7 +26,6 @@
 #include "nsError.h"
 #include "prnetdb.h"
 #include "nsString.h"
-//#include "nsIIOService.h"
 #include "nsIServiceManager.h"
 #include "netCore.h"
 #include "nsAutoLock.h"
@@ -37,8 +36,6 @@
 #include "prtime.h"
 #endif
 #include "prsystem.h"
-
-//static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Platform specific defines and includes
@@ -115,6 +112,10 @@ protected:
     nsresult                    mStatus;
 #ifdef DNS_TIMING
     PRIntervalTime              mStartTime;
+#endif
+
+#ifdef XP_UNIX
+    nsCOMPtr<nsIRequest>        mNextRequest;
 #endif
 };
 
@@ -405,7 +406,6 @@ nsDNSLookup::Reset(void)
     mComplete = PR_FALSE;
     mStatus = NS_OK;
     mExpires = LL_ZERO;
-//    fprintf(stderr, "DNS reset for %s\n", mHostName);
 }
 
 nsDNSLookup::~nsDNSLookup(void)
@@ -688,7 +688,6 @@ nsDNSLookup::Resume(nsDNSRequest* req)
     PRUint32 reqCount;
     
     if (mComplete && !IsExpired()) {
-//        fprintf(stderr, "\nDNS cache hit for %s\n", mHostName);
         rv = req->FireStop(mStatus);
         return rv;
     }
@@ -706,11 +705,7 @@ nsDNSLookup::Resume(nsDNSRequest* req)
     if (reqCount == 1) {
         // if this was the first request, then we need to kick off
         // the lookup
-//        fprintf(stderr, "\nDNS cache miss for %s\n", mHostName);
         rv = InitiateLookup();
-    }
-    else {
-//        fprintf(stderr, "DNS consolidating lookup for %s\n", mHostName);
     }
     return rv;
 }
@@ -726,9 +721,9 @@ nsDnsServiceNotifierRoutine(void * contextPtr, OTEventCode code,
                             OTResult result, void * cookie)
 {
 	OSStatus        errOT;
-        nsDNSService *  dnsService = (nsDNSService *)contextPtr;
-        nsDNSLookup *   dnsLookup = ((nsInetHostInfo *)cookie)->lookup;
-        PRThread *      thread;
+    nsDNSService *  dnsService = (nsDNSService *)contextPtr;
+    nsDNSLookup *   dnsLookup = ((nsInetHostInfo *)cookie)->lookup;
+    PRThread *      thread;
         
     dnsService->mThread->GetPRThread(&thread);
 	
@@ -1135,14 +1130,6 @@ nsDNSService::Lookup(const char*     hostName,
     nsresult rv;
     nsDNSRequest* req;
 
-    /* Hmmm... this check not necessary 
-    NS_WITH_SERVICE(nsIIOService, ios, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    PRBool offline;
-    rv = ios->GetOffline(&offline);
-    if (NS_FAILED(rv)) return rv;
-    if (offline) return NS_ERROR_OFFLINE;
-    */
     if (!mMonitor)
         return NS_ERROR_OFFLINE;
 
