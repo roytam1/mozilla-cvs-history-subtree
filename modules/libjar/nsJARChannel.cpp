@@ -36,6 +36,23 @@ static NS_DEFINE_CID(kMIMEServiceCID, NS_MIMESERVICE_CID);
 static NS_DEFINE_CID(kZipReaderCID, NS_ZIPREADER_CID);
 static NS_DEFINE_CID(kFileChannelCID, NS_FILECHANNEL_CID);
 
+#if defined(PR_LOGGING)
+#include "nsXPIDLString.h"
+//
+// Log module for SocketTransport logging...
+//
+// To enable logging (see prlog.h for full details):
+//
+//    set NSPR_LOG_MODULES=nsJarProtocol:5
+//    set NSPR_LOG_FILE=nspr.log
+//
+// this enables PR_LOG_DEBUG level information and places all output in
+// the file nspr.log
+//
+PRLogModuleInfo* gJarProtocolLog = nsnull;
+
+#endif /* PR_LOGGING */
+
 ////////////////////////////////////////////////////////////////////////////////
 
 class nsJARDownloadObserver : public nsIStreamObserver 
@@ -55,6 +72,19 @@ public:
         nsresult rv = NS_OK;
         nsAutoMonitor monitor(mJARChannel->mMonitor);
 
+#ifdef PR_LOGGING
+        nsCOMPtr<nsIURI> jarURI;
+        rv = jarCacheTransport->GetURI(getter_AddRefs(jarURI));
+        if (NS_SUCCEEDED(rv)) {
+            nsXPIDLCString jarURLStr;
+            rv = jarURI->GetSpec(getter_Copies(jarURLStr));
+            if (NS_SUCCEEDED(rv)) {
+                PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+                       ("nsJarProtocol: jar download complete %s status=%x",
+                        (const char*)jarURLStr, status));
+            }
+        }
+#endif
         if (NS_SUCCEEDED(status) && mJARChannel->mJarCacheTransport) {
             NS_ASSERTION(jarCacheTransport == (mJARChannel->mJarCacheTransport).get(),
                          "wrong transport");
@@ -107,6 +137,16 @@ nsJARChannel::nsJARChannel()
       mMonitor(nsnull)
 {
     NS_INIT_REFCNT();
+
+#if defined(PR_LOGGING)
+    //
+    // Initialize the global PRLogModule for socket transport logging
+    // if necessary...
+    //
+    if (nsnull == gJarProtocolLog) {
+        gJarProtocolLog = PR_NewLogModule("nsJarProtocol");
+    }
+#endif /* PR_LOGGING */
 }
 
 nsJARChannel::~nsJARChannel()
@@ -293,6 +333,14 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
 						nsIStreamListener* listener)
 {
     nsresult rv;
+
+#ifdef PR_LOGGING
+    nsXPIDLCString jarURLStr;
+    mURI->GetSpec(getter_Copies(jarURLStr));
+#endif
+    PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+           ("nsJarProtocol: AsyncRead %s", (const char*)jarURLStr));
+
     rv = mURI->GetJARFile(getter_AddRefs(mJARBaseURI));
     if (NS_FAILED(rv)) return rv;
 
@@ -314,6 +362,8 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
 
     if (NS_SUCCEEDED(rv)) {
         // then we've already got a local jar file -- no need to download it
+        PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+               ("nsJarProtocol: extracting local jar file %s", (const char*)jarURLStr));
         rv = ExtractJARElement(jarBaseFile);
     }
     else {
@@ -349,6 +399,8 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
                                    mBufferMaxSize);
             if (NS_FAILED(rv)) return rv;
 
+            PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+                   ("nsJarProtocol: jar file already in cache %s", (const char*)jarURLStr));
 		    rv = ExtractJARElement(fileChannel);
 			return rv;
 		}
@@ -373,6 +425,8 @@ nsJARChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
         if (downloadObserver == nsnull)
             return NS_ERROR_OUT_OF_MEMORY;
 
+        PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+               ("nsJarProtocol: downloading jar file %s", (const char*)jarURLStr));
         nsCOMPtr<nsIInputStream> jarBaseIn;
         rv = jarBaseChannel->OpenInputStream(0, -1, getter_AddRefs(jarBaseIn));
         if (NS_FAILED(rv)) return rv;
@@ -603,6 +657,16 @@ nsJARChannel::OnStopRequest(nsIChannel* jarExtractionTransport,
                             const PRUnichar* aMsg)
 {
     nsresult rv;
+#ifdef PR_LOGGING
+    nsCOMPtr<nsIURI> jarURI;
+    nsXPIDLCString jarURLStr;
+    rv = mURI->GetSpec(getter_Copies(jarURLStr));
+    if (NS_SUCCEEDED(rv)) {
+        PR_LOG(gJarProtocolLog, PR_LOG_DEBUG,
+               ("nsJarProtocol: jar extraction complete %s status=%x",
+                (const char*)jarURLStr, status));
+    }
+#endif
     rv = mUserListener->OnStopRequest(this, mUserContext, status, aMsg);
     mJarExtractionTransport = nsnull;
     return rv;
