@@ -200,7 +200,7 @@ protected:
   nsresult doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
                              nsISupports *native);
   nsresult doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
-                              nsISupports *native);
+                              nsISupports *native, PRBool aForceCheck);
 
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
@@ -208,6 +208,10 @@ public:
   NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
   NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+  NS_IMETHOD AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+  NS_IMETHOD DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
   NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, PRUint32 flags,

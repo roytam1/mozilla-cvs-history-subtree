@@ -209,7 +209,9 @@ nsDOMClassInfoData sClassInfoData[] = {
                            nsIXPCScriptable::WANT_SETPROPERTY |
                            nsIXPCScriptable::WANT_NEWRESOLVE |
                            nsIXPCScriptable::WANT_PRECREATE |
-                           nsIXPCScriptable::WANT_FINALIZE)
+                           nsIXPCScriptable::WANT_FINALIZE |
+                           nsIXPCScriptable::WANT_ADDPROPERTY |
+                           nsIXPCScriptable::WANT_DELPROPERTY)
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Navigator, nsDOMGenericSH,
@@ -1154,9 +1156,9 @@ static inline PRBool needsSecurityCheck(JSContext *cx, nsISupports *native)
 
 nsresult
 nsWindowSH::doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
-                               nsISupports *native)
+                               nsISupports *native, PRBool aForceCheck)
 {
-  if (!sSecMan || !needsSecurityCheck(cx, native)) {
+  if (!sSecMan || (!aForceCheck && !needsSecurityCheck(cx, native))) {
     return NS_OK;
   }
 
@@ -1304,7 +1306,7 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsCOMPtr<nsISupports> native;
   wrapper->GetNative(getter_AddRefs(native));
 
-  nsresult rv = doCheckWriteAccess(cx, obj, id, native);
+  nsresult rv = doCheckWriteAccess(cx, obj, id, native, PR_FALSE);
 
   if (NS_FAILED(rv)) {
     // Security check failed. The security manager set a JS
@@ -1344,6 +1346,40 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   return nsEventRecieverSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+NS_IMETHODIMP
+nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, jsval *vp,
+                        PRBool *_retval)
+{
+  // ::DelProperty() will re-use this code, so if this hook is changed
+  // to do anything more than the security check then make sure
+  // ::DelProperty() is changed to cope with that.
+
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsresult rv = doCheckWriteAccess(cx, obj, id, native, PR_TRUE);
+
+  if (NS_FAILED(rv)) {
+    // Security check failed. The security manager set a JS
+    // exception, we must make sure that exception is propagated.
+
+    *_retval = PR_FALSE;
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindowSH::DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, jsval *vp,
+                        PRBool *_retval)
+{
+  // Re-use the security manager logic in ::AddProperty()
+
+  return AddProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 static JSBool PR_CALLBACK
