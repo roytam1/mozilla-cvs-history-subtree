@@ -12,12 +12,14 @@ OBJS   = $(LIB_OBJS) $(PROG_OBJS)
 
 ifdef USE_MSVC
 # TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
-TARGETS = $(OBJDIR)/$(FDLIBM_LIBRARY) $(SHARED_LIBRARY) $(PROGRAM)  # it is now
+TARGETS = $(SHARED_LIBRARY) $(PROGRAM)  # it is now
 else
-TARGETS = $(OBJDIR)/$(FDLIBM_LIBRARY) $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM) 
+TARGETS = $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM) 
 endif
 
-all:	$(TARGETS)
+all:
+	+$(LOOP_OVER_PREDIRS) 
+	$(MAKE) -f Makefile.ref $(TARGETS)
 	+$(LOOP_OVER_DIRS)
 
 $(OBJDIR)/%: %.c
@@ -61,13 +63,6 @@ $(SHARED_LIBRARY): $(LIB_OBJS)
 endif
 endif
 
-$(OBJDIR)/$(FDLIBM_LIBRARY): fdlibm/$(OBJDIR)/$(FDLIBM_LIBRARY)
-	@$(MAKE_OBJDIR)
-	cp fdlibm/$(OBJDIR)/$(FDLIBM_LIBRARY) $(OBJDIR)/$(FDLIBM_LIBRARY)
-
-fdlibm/$(OBJDIR)/$(FDLIBM_LIBRARY):
-	cd fdlibm; gmake -f Makefile.ref
-
 define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); fi
 endef
@@ -86,7 +81,22 @@ LOOP_OVER_DIRS		=					\
 	done
 endif
 
-export:	
+ifdef PREDIRS
+LOOP_OVER_PREDIRS	=					\
+	@for d in $(PREDIRS); do				\
+		if test -d $$d; then				\
+			set -e;			\
+			echo "cd $$d; $(MAKE) -f Makefile.ref $@"; 		\
+			cd $$d; $(MAKE) -f Makefile.ref $@; cd ..;	\
+			set +e;					\
+		else						\
+			echo "Skipping non-directory $$d...";	\
+		fi;						\
+	done
+endif
+
+export:
+	+$(LOOP_OVER_PREDIRS)	
 	$(INSTALL) -m 644 $(HFILES) $(DIST)/include
 	$(INSTALL) -m 755 $(LIBRARY) $(DIST)/lib
 	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib

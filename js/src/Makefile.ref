@@ -24,15 +24,19 @@ include config.mk
 
 #NS_USE_NATIVE = 1
 
+ifdef USE_MSVC
+OTHER_LIBS += fdlibm/$(OBJDIR)/fdlibm.lib
+else
+OTHER_LIBS += -Lfdlibm/$(OBJDIR) -lfdm
+endif
+
 ifdef JS_THREADSAFE
 DEFINES += -DJS_THREADSAFE
 INCLUDES += -I../../dist/$(OBJDIR)/include
 ifdef USE_MSVC
 OTHER_LIBS += ../../dist/$(OBJDIR)/lib/libnspr21.lib
-OTHER_LIBS += fdlibm/$(OBJDIR)/fdlibm.lib
 else
 OTHER_LIBS += -L../../dist/$(OBJDIR)/lib -lnspr21
-OTHER_LIBS += -Lfdlibm/$(OBJDIR) -lfdm
 endif
 endif
 
@@ -49,7 +53,7 @@ endif
 #
 CFLAGS          += $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
                   -DJSFILE $(XCFLAGS)
-LDFLAGS		= -lm $(XLDFLAGS) -L$(OBJDIR) -lfdm
+LDFLAGS		= -lm $(XLDFLAGS)
 
 #
 # Ask perl what flags it was built with, so we can build js with similar flags
@@ -150,8 +154,9 @@ JS_CFILES =		\
 	prmjtime.c	\
 	$(NULL)
 
+PREDIRS   += fdlibm
 ifdef JS_LIVECONNECT
-DIRS	= liveconnect
+DIRS      += liveconnect
 endif
 
 ifdef JS_PERLCONNECT

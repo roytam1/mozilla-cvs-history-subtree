@@ -69,6 +69,12 @@ include config/$(OS_CONFIG).mk
 
 INCLUDES   += -I. -I.. -I../$(OBJDIR)
 
+ifdef USE_MSVC
+OTHER_LIBS += $(DEPTH)/fdlibm/$(OBJDIR)/fdlibm.lib
+else
+OTHER_LIBS += -L$(DEPTH)/fdlibm/$(OBJDIR) -lfdm
+endif
+
 ifdef JS_THREADSAFE
 ifdef USE_MSVC
 OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/libnspr21.lib

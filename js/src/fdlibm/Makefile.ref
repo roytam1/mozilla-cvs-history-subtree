@@ -118,6 +118,8 @@ endef
 
 all: $(LIBRARY) 
 
+export:
+
 $(OBJDIR)/%: %.c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ $(CFLAGS) $*.c $(LDFLAGS)
