@@ -1,4 +1,4 @@
-[gecko]
+[xpfe-browser browser gtkembed mfcembed winembed]
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
