@@ -30,7 +30,14 @@ MOD_DEPTH       = ../../..
 include $(NSPR_TREE)/config/rules.mk
 include         ../../../build.mk
 
+ifeq ($(HAVE_CCONF), 1)
+SRCS		= iutil-lock.c \
+		  utf.c \
+		  string.c \
+		  getdn.c
+else
 SRCS		= iutil-lock.c
+endif
 
 ifeq ($(OS_ARCH), WINNT)
 REALOBJS        = $(SRCS:.c=.obj)
@@ -53,6 +60,9 @@ INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include -I../../../../../dist/include
+ifeq ($(HAVE_CCONF), 1)
+INCLUDES	+= -I../libldap/
+endif
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
