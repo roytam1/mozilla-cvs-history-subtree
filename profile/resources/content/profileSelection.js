@@ -37,7 +37,7 @@ function StartUp()
   gProfileManagerBundle = document.getElementById("bundle_profileManager");
   gBrandBundle = document.getElementById("bundle_brand");
 
-  SetUpOKCancelButtons();
+  //SetUpOKCancelButtons();
   centerWindowOnScreen();
   if(window.location && window.location.search && window.location.search == "?manage=true" )
     SwitchProfileManagerMode();
@@ -218,9 +218,10 @@ function onStart()
         break;
   }
       promptService.alert(window, null, message);
-      return;
+      return false;
   }
     
+  window.close();
   return true;
 }
 

@@ -266,7 +266,7 @@ function DoEnabling()
   var renbutton = document.getElementById( "renbutton" );
   var delbutton = document.getElementById( "delbutton" );
 */
-  var start     = document.getElementById( "ok" );
+  var start     = document.getElementById( "start" );
   
   var profileList = document.getElementById( "profiles" );
   var item = profileList.selectedItem

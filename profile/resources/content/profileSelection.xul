@@ -60,7 +60,7 @@
   
   <keyset id="dialogKeys"/>
 
-  <dialogheader class="header-large" id="header" title="&profilemanager.label;" description="&windowtitle.label;"/>
+  <dialogheader class="header-large" hidden="true" id="header" title="&profilemanager.label;" description="&windowtitle.label;"/>
   
   <hbox class="wizard-box" flex="1">
 
@@ -124,7 +124,10 @@
     <button id="helpbutton" label="&helpButton.label;" disabled="true"/>
     <button id="manage" label="&manage.label;" oncommand="SwitchProfileManagerMode();"/>
     <spacer flex="1"/>
+    <button id="start" label="&start.label;" oncommand="onStart()"/>
+<!--
     <hbox id="okCancelButtons"/>
+-->
     <separator class="thin" orient="vertical"/>
   </hbox>
   

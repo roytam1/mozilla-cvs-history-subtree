@@ -39,7 +39,7 @@
 
 <!ENTITY            screenname.label      "Select Screen Name:">
 <!ENTITY            password.label        "Enter Password:">
-<!ENTITY            rememberpassword.label "Use Password Manager to remember this password">
+<!ENTITY            rememberpassword.label "Remember password">
 <!ENTITY            manageprofiles.label  "Manage Profiles">
 
 <!ENTITY            start.label           "Sign On">
