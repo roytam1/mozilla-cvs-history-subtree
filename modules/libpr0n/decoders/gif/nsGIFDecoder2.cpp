@@ -412,8 +412,9 @@ int HaveDecodedRow(
 #endif
 
 
-          if (*rowBufIndex == decoder->mGIFStruct.tpixel)
+          if (*rowBufIndex == decoder->mGIFStruct.tpixel) {
             decoder->alphaLine[x>>3] |= 1<<(7-x&0x7);
+          }
 
           ++rowBufIndex;
         }
