@@ -230,9 +230,8 @@ function GoNextMessage(type, startFromBeginning)
     var resultId = new Object;
     var resultIndex = new Object;
     var threadIndex = new Object;
-    var resultFolder = new Object;
 
-    gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
+    gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */);
 
     dump("XXX resultId = " + resultId.value + "\n");
     dump("XXX resultIndex = " + resultIndex.value + "\n");

@@ -232,7 +232,7 @@ interface nsIMsgDBView : nsISupports
      * this method will automatically expand the destination thread, 
      * if needs be. 
      */
-    void viewNavigate(in nsMsgNavigationTypeValue motion, out nsMsgKey resultId, out nsMsgViewIndex resultIndex, out nsMsgViewIndex threadIndex, in boolean wrap, out nsIMsgFolder resultFolderInfo);
+    void viewNavigate(in nsMsgNavigationTypeValue motion, out nsMsgKey resultId, out nsMsgViewIndex resultIndex, out nsMsgViewIndex threadIndex, in boolean wrap);
 
     /**
      * Indicates if navigation of the passed motion type is valid. 

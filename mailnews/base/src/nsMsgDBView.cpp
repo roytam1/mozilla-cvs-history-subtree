@@ -3137,12 +3137,11 @@ nsresult nsMsgDBView::MarkThreadRead(nsIMsgThread *threadHdr, nsMsgViewIndex thr
 // any marking read needed, and returns the resultId and resultIndex of the
 // destination of the navigation. If there are no more unread in the view,
 // it returns a resultId of nsMsgKey_None and an resultIndex of nsMsgViewIndex_None.
-NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgKey *pResultKey, nsMsgViewIndex *pResultIndex, nsMsgViewIndex *pThreadIndex, PRBool wrap, nsIMsgFolder **resultFolderInfo)
+NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgKey *pResultKey, nsMsgViewIndex *pResultIndex, nsMsgViewIndex *pThreadIndex, PRBool wrap)
 {
     NS_ENSURE_ARG_POINTER(pResultKey);
     NS_ENSURE_ARG_POINTER(pResultIndex);
     NS_ENSURE_ARG_POINTER(pThreadIndex);
-    NS_ENSURE_ARG_POINTER(resultFolderInfo);
 
     PRInt32 currentIndex; 
     nsMsgViewIndex startIndex;
@@ -3157,10 +3156,10 @@ NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgKe
       NS_ENSURE_SUCCESS(rv, rv);
     }
     startIndex = currentIndex;
-    return nsMsgDBView::NavigateFromPos(motion, startIndex, pResultKey, pResultIndex, pThreadIndex, wrap, resultFolderInfo);
+    return nsMsgDBView::NavigateFromPos(motion, startIndex, pResultKey, pResultIndex, pThreadIndex, wrap);
 }
 
-nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgViewIndex startIndex, nsMsgKey *pResultKey, nsMsgViewIndex *pResultIndex, nsMsgViewIndex *pThreadIndex, PRBool wrap, nsIMsgFolder **resultFolderInfo)
+nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgViewIndex startIndex, nsMsgKey *pResultKey, nsMsgViewIndex *pResultIndex, nsMsgViewIndex *pThreadIndex, PRBool wrap)
 {
     nsresult rv = NS_OK;
     nsMsgKey resultThreadKey;
@@ -3250,7 +3249,8 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
                 if (wrap) {
                     nsMsgKey startKey = GetAt(startIndex);
 
-                    rv = NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, nsMsgViewIndex_None, pResultKey, pResultIndex, pThreadIndex, PR_FALSE, resultFolderInfo);
+                    rv = NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, nsMsgViewIndex_None, pResultKey, pResultIndex, pThreadIndex, PR_FALSE);
+
                     if (*pResultKey == startKey) {   
                         // wrapped around and found start message!
                         *pResultIndex = nsMsgViewIndex_None;
@@ -3307,7 +3307,7 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
                 }
                 rv = MarkThreadOfMsgRead(m_keys.GetAt(startIndex), startIndex, idsMarkedRead, PR_TRUE);
                 if (NS_SUCCEEDED(rv)) 
-                    return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
+                    return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
                 break;
             }
         case nsMsgNavigationType::toggleThreadKilled:
@@ -3323,7 +3323,7 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
                 if (resultKilled) {
                     if (threadIndex != nsMsgViewIndex_None)
                         CollapseByIndex(threadIndex, nsnull);
-                    return NavigateFromPos(nsMsgNavigationType::nextUnreadThread, threadIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
+                    return NavigateFromPos(nsMsgNavigationType::nextUnreadThread, threadIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
                 }
                 else {
                     *pResultIndex = startIndex;
@@ -3337,7 +3337,7 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
                 break;
             }
             m_db->MarkLater(m_keys.GetAt(startIndex), LL_ZERO);
-            return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE, resultFolderInfo);
+            return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
         default:
             NS_ASSERTION(0, "unsupported motion");
             break;

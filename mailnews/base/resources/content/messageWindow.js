@@ -625,9 +625,8 @@ function performNavigation(type)
   var resultId = new Object;
   var resultIndex = new Object;
   var threadIndex = new Object;
-  var resultFolder = new Object;
 
-  gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
+  gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */);
   
   // if we found something....display it.
   if ((resultId.value != -1) && (resultIndex.value != -1)) 
