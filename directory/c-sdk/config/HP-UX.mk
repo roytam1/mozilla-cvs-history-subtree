@@ -46,11 +46,6 @@ ifeq ($(NS_USE_GCC), 1)
 	COMPILER_TAG        = _gcc
 else
 	CC				= cc -Ae
-ifeq ($(HAVE_CCONF), 1)
-ifeq ($(USE_64), 1)
-	CC			        = cc -Ae +DD64
-endif
-endif
 	CCC			        = CC -ext
 	OS_CFLAGS           = +ESlit
 endif
@@ -118,7 +113,7 @@ endif
 ifeq ($(OS_RELEASE),B.10.20)
 OS_CFLAGS		+= -DHPUX10 -DHPUX10_20
 ifneq ($(NS_USE_GCC), 1)
-OS_CFLAGS		+= +DAportable +DS1.1
+OS_CFLAGS		+= +DAportable
 endif
 DEFAULT_IMPL_STRATEGY = _PTH
 endif
