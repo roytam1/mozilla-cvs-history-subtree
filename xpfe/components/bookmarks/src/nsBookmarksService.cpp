@@ -4253,13 +4253,6 @@ nsBookmarksService::deleteBookmarkItem(nsIRDFResource *src, nsISupportsArray *aA
 	nsCOMPtr<nsIRDFResource>	argParent = do_QueryInterface(aNode);
 	if (!argParent)	return(NS_ERROR_NO_INTERFACE);
 
-	// make sure its an object of the correct type (bookmark, folder, separator, ...)
-	PRBool	isCorrectObjectType = PR_FALSE;
-	if (NS_FAILED(rv = mInner->HasAssertion(src, kRDF_type,
-			objType, PR_TRUE, &isCorrectObjectType)))
-		return(rv);
-	if (!isCorrectObjectType)	return(NS_ERROR_UNEXPECTED);
-
 	nsCOMPtr<nsIRDFContainer>	container;
 	if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRDFContainerCID, nsnull,
 			NS_GET_IID(nsIRDFContainer), getter_AddRefs(container))))
