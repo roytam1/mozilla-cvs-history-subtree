@@ -876,10 +876,23 @@ LRESULT CNSNavFrame::OnSizeParent(WPARAM, LPARAM lParam)
 	CRect dragRect(resizeRect);
 
 	if (m_dwOverDockStyle == DOCKSTYLE_VERTLEFT) {
+
 		resizeRect.right = lpLayout->rect.left + oldRect.Width();
 
 		if (oldDragRect.left != resizeRect.right) // we move the drag bar.  Need to resize here.
 			resizeRect.right += oldDragRect.left - resizeRect.right;
+
+		if (IsTreeVisible())
+		{
+			CWnd* pParent = GetParent();
+			CRect parentRect;
+			pParent->GetClientRect(&parentRect);
+
+			if (parentRect.Width() < resizeRect.Width() + DRAGWIDTH)
+			{
+				resizeRect.right = resizeRect.left + parentRect.Width() - DRAGWIDTH;
+			}
+		}
 
 		dragRect.left = resizeRect.right;
 		dragRect.right = dragRect.left + DRAGWIDTH;
