@@ -113,17 +113,20 @@ protected:
   PRUint32                    mOpcode;
 
 
-  PRBool   isRemoteBookmarkURI(nsIRDFResource *r);
-  nsresult showLDAPError(nsILDAPMessage *aMessage);
-  nsresult doLDAPRebind();
-  nsresult doLDAPQuery(nsILDAPConnection *ldapConnection, nsIRDFResource *aParent, nsIRDFResource *aNode, nsString bindDN, nsString password, PRUint32 ldapOpcode);
-  nsresult doAuthentication(nsIRDFResource *aNode, nsString &bindDN, nsString &password);
-  PRBool   GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAttrib, nsString &aValue);
-  nsresult GetLDAPExtension(nsIRDFResource *aNode, const char *name, nsCString &value, PRBool *important);
-  nsresult insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, nsISupportsArray *aArguments, nsIRDFResource *aItemType);
-  nsresult deleteLDAPBookmarkItem(nsIRDFResource *aNode, nsISupportsArray *aArguments, PRInt32 parentArgIndex, nsIRDFResource *aItemType);
-  nsresult updateLDAPBookmarkItem(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aOldTarget, nsIRDFNode *aNewTarget);
-  nsresult getArgumentN(nsISupportsArray *arguments, nsIRDFResource *res, PRInt32 offset, nsIRDFNode **argValue);
+  PRBool    isRemoteBookmarkURI(nsIRDFResource *r);
+  nsresult  showLDAPError(nsILDAPMessage *aMessage);
+  nsresult  doLDAPRebind();
+  nsresult  doLDAPQuery(nsILDAPConnection *ldapConnection, nsIRDFResource *aParent, nsIRDFResource *aNode, nsString bindDN, nsString password, PRUint32 ldapOpcode);
+  nsresult  doAuthentication(nsIRDFResource *aNode, nsString &bindDN, nsString &password);
+  PRBool    GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAttrib, nsString &aValue);
+  nsresult  GetLDAPExtension(nsIRDFResource *aNode, const char *name, nsCString &value, PRBool *important);
+  nsresult  insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, nsISupportsArray *aArguments, nsIRDFResource *aItemType);
+  nsresult  deleteLDAPBookmarkItem(nsIRDFResource *aNode, nsISupportsArray *aArguments, PRInt32 parentArgIndex, nsIRDFResource *aItemType);
+  nsresult  updateLDAPBookmarkItem(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aOldTarget, nsIRDFNode *aNewTarget);
+  nsresult  getArgumentN(nsISupportsArray *arguments, nsIRDFResource *res, PRInt32 offset, nsIRDFNode **argValue);
+  PRBool    isMutableProperty(nsIRDFResource *aProperty);
+  const char *getPropertySchemaName(nsIRDFResource *aProperty);
+  nsCOMPtr<nsIRDFResource> getLDAPUrl(nsIRDFResource *aSource);
 
   enum { LDAP_READY=0, LDAP_SEARCH, LDAP_ADD, LDAP_DELETE, LDAP_MODIFY };
 
