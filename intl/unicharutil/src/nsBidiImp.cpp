@@ -32,7 +32,7 @@
 
 #include "prmem.h"
 #include "prtypes.h"
-#include "nsbidiimp.h"
+#include "nsBidiImp.h"
 #include "nsCRT.h"
 #include "nsUUDll.h"
 #include "nsIServiceManager.h"
