@@ -33,6 +33,7 @@
 #include "pm2rdf.h"
 #include "scook.h"
 #include "atalk.h"
+#include "ht.h"
 
 	/* globals */
 RDFL		gAllDBs = 0;
@@ -765,7 +766,7 @@ itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType t
       } else if (type == RDF_STRING_TYPE) {
         if (gExactStringMatchMode == PR_TRUE)
         {
-          ok = (!strcasecmp(val, v));
+          ok = (!compareStrings(val, v));
         }
         else
         {
