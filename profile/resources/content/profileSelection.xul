@@ -72,11 +72,12 @@
         <separator/>
         <hbox>
           <vbox flex="1" id="managebuttons">
-            <button id="newbutton" label="&newButton.label;" oncommand="CreateProfileWizard();"/>
+            <spacer flex="2"/>            
+<!--
             <button id="renbutton" label="&renameButton.label;" oncommand="RenameProfile();"/>
             <button id="delbutton" label="&deleteButton.label;" oncommand="ConfirmDelete();"/>
+ -->           
           </vbox>
-          <spacer flex="2"/>
         </hbox>
       </vbox>
     </deck>  
@@ -94,9 +95,21 @@
         </listhead>
       </listbox>
 -->
-      <menulist id="profiles">
-        <menupopup id="profilesPopup"/>
-      </menulist>
+      <description class="label">&screenname.label;</description>
+      <hbox>
+        <menulist flex="1" id="profiles">
+          <menupopup id="profilesPopup"/>
+        </menulist>
+
+        <button id="newbutton" label="&newButton.label;" oncommand="CreateProfileWizard();"/>
+      </hbox>
+
+      <description class="label">&password.label;</description>
+      <textbox id="password" type="password" width="15"/>
+
+      <hbox align="start">
+        <checkbox id="rememberpassword" label="&rememberpassword.label;" /> 
+      </hbox>
 
 <!-- no offline checkbox anymore
       <hbox align="start">
@@ -108,6 +121,7 @@
   
   <hbox class="selection">
     <separator class="thin" orient="vertical"/>
+    <button id="helpbutton" label="&helpButton.label;" disabled="true"/>
     <button id="manage" label="&manage.label;" oncommand="SwitchProfileManagerMode();"/>
     <spacer flex="1"/>
     <hbox id="okCancelButtons"/>

@@ -25,7 +25,7 @@
   
 -->
 
-<!ENTITY            windowtitle.label     "Select User Profile">
+<!ENTITY            windowtitle.label     "Sign On">
 
 <!ENTITY            welcome.label         "Welcome to &brandShortName;">
 <!ENTITY            profilemanager.label  "&brandShortName; Profile Manager">
@@ -37,11 +37,12 @@
 
 <!ENTITY            workoffline.label     "Work Offline">
 
-<!ENTITY            password.label        "Password:">
-
+<!ENTITY            screenname.label      "Select Screen Name:">
+<!ENTITY            password.label        "Enter Password:">
+<!ENTITY            rememberpassword.label "Use Password Manager to remember this password">
 <!ENTITY            manageprofiles.label  "Manage Profiles">
 
-<!ENTITY            start.label           "Start &vendorShortName;">
+<!ENTITY            start.label           "Sign On">
 <!ENTITY            exit.label            "Exit">
 <!ENTITY            manage.label          "Manage Profiles...">
 
@@ -49,10 +50,11 @@
 
 <!ENTITY            deleteButton.label    "Delete Profile...">
 <!ENTITY            renameButton.label    "Rename Profile...">
-<!ENTITY            newButton.label       "Create Profile...">
+<!ENTITY            newButton.label       "New...">
+<!ENTITY            helpButton.label      "Help">
 
 <!-- manager entities -->
-<!ENTITY            pmTextA.label         "&brandShortName; stores information about your settings, preferences, bookmarks, stored messages and other user items in your user profile.">
+<!ENTITY            pmTextA.label         "Welcome to &brandShortName;">
 <!ENTITY            pmTextC.label         "You must select a profile, or create a new profile, the first time you start &brandShortName;.">
 <!ENTITY            pmTextB.label         "Indicates a profile created with a previous version of Netscape. These profiles must be copied and converted before they can be loaded with &brandShortName;. This is an automated process.">
 
