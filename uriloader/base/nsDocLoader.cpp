@@ -481,8 +481,8 @@ nsDocLoaderImpl::OnStartRequest(nsIRequest *request, nsISupports *aCtxt)
 
         if (1 == count) {
             // This channel is associated with the entire document...
-            mDocumentRequest = request;
-            mLoadGroup->SetDefaultLoadRequest(request); 
+            mDocumentRequest = do_QueryInterface(request);
+            mLoadGroup->SetDefaultLoadRequest(mDocumentRequest); 
         
             // Update the progress status state
             mProgressStateFlags = nsIWebProgressListener::STATE_START;
