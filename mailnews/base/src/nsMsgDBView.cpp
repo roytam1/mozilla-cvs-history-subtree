@@ -136,7 +136,7 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
   if (NS_SUCCEEDED(rv))
     rv = mDateFormater->FormatPRTime(nsnull /* nsILocale* locale */,
                                       kDateFormatShort,
-                                      kTimeFormatNone /* kTimeFormatSeconds */,
+                                      kTimeFormatSeconds,
                                       PRTime(dateOfMsg),
                                       formattedDateString);
 
@@ -144,6 +144,23 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
     *aDateString = formattedDateString.ToNewUnicode();
   
   return rv;
+}
+
+nsresult nsMsgDBView::FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString)
+{
+  // mscott -> i'll clean this up and used a cached string bundle value
+  // later...
+
+  if(aFlags & MSG_FLAG_REPLIED)
+    *aStatusString = nsCRT::strdup(NS_LITERAL_STRING("Replied"));
+	else if(aFlags & MSG_FLAG_FORWARDED)
+		*aStatusString = nsCRT::strdup(NS_LITERAL_STRING("Forwarded"));
+	else if(aFlags & MSG_FLAG_NEW)
+		*aStatusString = nsCRT::strdup(NS_LITERAL_STRING("New"));
+	else if(aFlags & MSG_FLAG_READ)
+		*aStatusString = nsCRT::strdup(NS_LITERAL_STRING("Read"));
+
+  return NS_OK;
 }
 
 // call this AFTER calling ::Sort.
@@ -226,12 +243,12 @@ nsresult nsMsgDBView::GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI)
 nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
 {
   nsAutoString currentView;
+
   // toggle threaded/unthreaded mode
   aElement->GetAttribute(NS_LITERAL_STRING("currentView"), currentView);
   if (currentView.Equals(NS_LITERAL_STRING("threaded")))
   {
     aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("unthreaded"));
-    // we must be a threaded view...create a new unthreaded view.
 
   }
   else
@@ -411,8 +428,10 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   case 's':
     if (aColID[1] == 'u') // subject
       rv = msgHdr->GetMime2DecodedSubject(aValue);
-    else // sender
+    else if (aColID[1] == 'e') // sender
       rv = FetchAuthor(msgHdr, aValue);
+    else
+      rv = FetchStatus(m_flags[aRow], aValue);
     break;
   case 'd':  // date
     rv = FetchDate(msgHdr, aValue);
@@ -472,9 +491,14 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
       sortType = nsMsgViewSortType::bySubject;
       performSort = PR_TRUE;
     }
-    else // sort by sender
+    else if (aColID[1] == 'e') // sort by sender
     {
       sortType = nsMsgViewSortType::byAuthor;
+      performSort = PR_TRUE;
+    }
+    else
+    {
+      sortType = nsMsgViewSortType::byStatus;
       performSort = PR_TRUE;
     }
     break;
@@ -580,7 +604,7 @@ NS_IMETHODIMP nsMsgDBView::Close()
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow * aMsgWindow /*, PRInt32 *pCount */)
+NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow * aMsgWindow)
 {
   mMsgWindow = aMsgWindow;
   mMessengerInstance = aMessengerInstance;

@@ -46,7 +46,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeV
 
 	if (pCount)
 		*pCount = 0;
-	return Init(pCount);
+	return InitThreadedView(pCount);
 }
 
 NS_IMETHODIMP nsMsgThreadedDBView::Close()
@@ -54,11 +54,11 @@ NS_IMETHODIMP nsMsgThreadedDBView::Close()
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
+nsresult nsMsgThreadedDBView::InitThreadedView(PRInt32 *pCount)
 {
 	nsresult rv;
 
-	m_keys.RemoveAll();
+  m_keys.RemoveAll();
 	m_flags.RemoveAll();
 	m_levels.RemoveAll(); 
 	m_prevKeys.RemoveAll();
@@ -151,7 +151,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgVi
 			else
 			{
 				// set sort info in anticipation of what Init will do.
-				Init(nsnull);	// build up thread list.
+				InitThreadedView(nsnull);	// build up thread list.
 				if (sortOrder != nsMsgViewSortOrder::ascending)
 					Sort(sortType, sortOrder);
 				return NS_OK;

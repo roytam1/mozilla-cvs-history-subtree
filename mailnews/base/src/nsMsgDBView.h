@@ -77,6 +77,7 @@ protected:
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
+  nsresult FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
 
   // toggles ascending/descending or adds the sort attribute
