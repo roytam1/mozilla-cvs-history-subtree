@@ -5673,92 +5673,107 @@ NS_METHOD nsWindow::SetTitle(const nsAString& aTitle)
 
 NS_METHOD nsWindow::SetIcon(const nsAString& anIconSpec) 
 {
-  // Start at app chrome directory.
+  nsresult rv;
+
+  // Given an icon spec, we'll look for the corresponding .ico file in
+  // the applet chrome directory or if not found there, we'll look in
+  // the application chrome directory.
+
   nsCOMPtr<nsIFile> chromeDir;
-  if ( NS_FAILED( NS_GetSpecialDirectory( NS_APP_CHROME_DIR,
-                                          getter_AddRefs( chromeDir ) ) ) ) {
-    return NS_ERROR_FAILURE;
-  }
-  // Get native file name of that directory.
-  nsAutoString iconPath;
-  chromeDir->GetPath( iconPath );
 
-  // Now take input path...
-  nsAutoString iconSpec( anIconSpec );
-  // ...append ".ico" to that.
-  iconSpec.Append( NS_LITERAL_STRING(".ico") );
-  // ...and figure out where /chrome/... is within that
-  // (and skip the "resource:///chrome" part).
-  nsAutoString key(NS_LITERAL_STRING("/chrome/"));
-  PRInt32 n = iconSpec.Find( key ) + key.Length();
-  // Convert / to \.
-  nsAutoString slash(NS_LITERAL_STRING("/"));
-  nsAutoString bslash(NS_LITERAL_STRING("\\"));
-  iconSpec.ReplaceChar( *(slash.get()), *(bslash.get()) );
+  static const char *kChromeDirKeys[] = { "AppletChrom", NS_APP_CHROME_DIR, NULL };
 
-  // Append that to icon resource path.
-  iconPath.Append( iconSpec.get() + n - 1 );
+  for (const char **dirKey = kChromeDirKeys; *dirKey; ++dirKey) {
 
-  ::SetLastError( 0 ); 
-  HICON bigIcon = (HICON)::LoadImageW( NULL,
-                                       (LPCWSTR)iconPath.get(),
-                                       IMAGE_ICON,
-                                       ::GetSystemMetrics(SM_CXICON),
-                                       ::GetSystemMetrics(SM_CYICON),
-                                       LR_LOADFROMFILE );
-  HICON smallIcon = (HICON)::LoadImageW( NULL,
+    NS_GetSpecialDirectory( *dirKey, getter_AddRefs(chromeDir) );
+    if (!chromeDir)
+      continue;
+
+    // Get native file name of that directory.
+    nsAutoString iconPath;
+    chromeDir->GetPath( iconPath );
+
+    // Now take input path...
+    nsAutoString iconSpec( anIconSpec );
+    // ...append ".ico" to that.
+    iconSpec.Append( NS_LITERAL_STRING(".ico") );
+    // ...and figure out where /chrome/... is within that
+    // (and skip the "resource:///chrome" part).
+    nsAutoString key(NS_LITERAL_STRING("/chrome/"));
+    PRInt32 n = iconSpec.Find( key ) + key.Length();
+    // Convert / to \.
+    nsAutoString slash(NS_LITERAL_STRING("/"));
+    nsAutoString bslash(NS_LITERAL_STRING("\\"));
+    iconSpec.ReplaceChar( *(slash.get()), *(bslash.get()) );
+
+    // Append that to icon resource path.
+    iconPath.Append( iconSpec.get() + n - 1 );
+
+    ::SetLastError( 0 ); 
+    HICON bigIcon = (HICON)::LoadImageW( NULL,
                                          (LPCWSTR)iconPath.get(),
                                          IMAGE_ICON,
-                                         ::GetSystemMetrics(SM_CXSMICON),
-                                         ::GetSystemMetrics(SM_CYSMICON),
+                                         ::GetSystemMetrics(SM_CXICON),
+                                         ::GetSystemMetrics(SM_CYICON),
                                          LR_LOADFROMFILE );
+    HICON smallIcon = (HICON)::LoadImageW( NULL,
+                                           (LPCWSTR)iconPath.get(),
+                                           IMAGE_ICON,
+                                           ::GetSystemMetrics(SM_CXSMICON),
+                                           ::GetSystemMetrics(SM_CYSMICON),
+                                           LR_LOADFROMFILE );
 
-  // See if unicode API not implemented and if not, try ascii version
-  if ( ::GetLastError() == ERROR_CALL_NOT_IMPLEMENTED ) {
-    nsCOMPtr<nsILocalFile> pathConverter;
-    if ( NS_SUCCEEDED( NS_NewLocalFile( iconPath,
-                                        PR_FALSE,
-                                        getter_AddRefs( pathConverter ) ) ) ) {
-      // Now try the char* path.
-      nsCAutoString aPath;
-      pathConverter->GetNativePath( aPath );
-      bigIcon = (HICON)::LoadImage( NULL,
-                                    aPath.get(),
-                                    IMAGE_ICON,
-                                    ::GetSystemMetrics(SM_CXICON),
-                                    ::GetSystemMetrics(SM_CYICON),
-                                    LR_LOADFROMFILE );
-      smallIcon = (HICON)::LoadImage( NULL,
+    // See if unicode API not implemented and if not, try ascii version
+    if ( ::GetLastError() == ERROR_CALL_NOT_IMPLEMENTED ) {
+      nsCOMPtr<nsILocalFile> pathConverter;
+      if ( NS_SUCCEEDED( NS_NewLocalFile( iconPath,
+                                          PR_FALSE,
+                                          getter_AddRefs( pathConverter ) ) ) ) {
+        // Now try the char* path.
+        nsCAutoString aPath;
+        pathConverter->GetNativePath( aPath );
+        bigIcon = (HICON)::LoadImage( NULL,
                                       aPath.get(),
                                       IMAGE_ICON,
-                                      ::GetSystemMetrics(SM_CXSMICON),
-                                      ::GetSystemMetrics(SM_CYSMICON),
+                                      ::GetSystemMetrics(SM_CXICON),
+                                      ::GetSystemMetrics(SM_CYICON),
                                       LR_LOADFROMFILE );
+        smallIcon = (HICON)::LoadImage( NULL,
+                                        aPath.get(),
+                                        IMAGE_ICON,
+                                        ::GetSystemMetrics(SM_CXSMICON),
+                                        ::GetSystemMetrics(SM_CYSMICON),
+                                        LR_LOADFROMFILE );
+      }
     }
-  }
 
-  if ( bigIcon ) {
-    HICON icon = (HICON) nsToolkit::mSendMessage(mWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)bigIcon);
-    if (icon)
-      ::DestroyIcon(icon);
-  }
-#ifdef DEBUG_law
-  else {
-    nsCAutoString cPath; cPath.AssignWithConversion(iconPath);
-    printf( "\nIcon load error; icon=%s, rc=0x%08X\n\n", (const char*)cPath, ::GetLastError() );
-  }
+    if ( bigIcon ) {
+      HICON icon = (HICON) nsToolkit::mSendMessage(mWnd, WM_SETICON, (WPARAM)ICON_BIG, (LPARAM)bigIcon);
+      if (icon)
+        ::DestroyIcon(icon);
+    }
+#ifdef DEBUG_SetIcon
+    else {
+      NS_LossyConvertUTF16toASCII cPath(iconPath);
+      printf( "\nIcon load error; icon=%s, rc=0x%08X\n\n", cPath.get(), ::GetLastError() );
+    }
 #endif
-  if ( smallIcon ) {
-    HICON icon = (HICON) nsToolkit::mSendMessage(mWnd, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)smallIcon);
-    if (icon)
-      ::DestroyIcon(icon);
-  }
-#ifdef DEBUG_law
-  else {
-    nsCAutoString cPath; cPath.AssignWithConversion(iconPath);
-    printf( "\nSmall icon load error; icon=%s, rc=0x%08X\n\n", (const char*)cPath, ::GetLastError() );
-  }
+    if ( smallIcon ) {
+      HICON icon = (HICON) nsToolkit::mSendMessage(mWnd, WM_SETICON, (WPARAM)ICON_SMALL, (LPARAM)smallIcon);
+      if (icon)
+        ::DestroyIcon(icon);
+    }
+#ifdef DEBUG_SetIcon
+    else {
+      NS_LossyConvertUTF16toASCII cPath(iconPath);
+      printf( "\nSmall icon load error; icon=%s, rc=0x%08X\n\n", cPath.get(), ::GetLastError() );
+    }
 #endif
+    
+    // if we found the icon, then we're done.
+    if (bigIcon || smallIcon)
+      break;
+  }
   return NS_OK;
 } 
 
