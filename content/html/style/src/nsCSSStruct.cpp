@@ -994,7 +994,7 @@ void nsCSSContent::List(FILE* out, PRInt32 aIndent) const
 // --- nsCSSUserInterface -----------------
 
 nsCSSUserInterface::nsCSSUserInterface(void)
-  : mKeyEquivalent(nsnull), mCursor(nsnull)
+  : mCursor(nsnull)
 {
   MOZ_COUNT_CTOR(nsCSSUserInterface);
 }
@@ -1003,7 +1003,6 @@ nsCSSUserInterface::nsCSSUserInterface(const nsCSSUserInterface& aCopy)
   : mUserInput(aCopy.mUserInput),
     mUserModify(aCopy.mUserModify),
     mUserSelect(aCopy.mUserSelect),
-    mKeyEquivalent(nsnull),
     mUserFocus(aCopy.mUserFocus),
     mResizer(aCopy.mResizer),
     mCursor(nsnull),
@@ -1011,13 +1010,11 @@ nsCSSUserInterface::nsCSSUserInterface(const nsCSSUserInterface& aCopy)
 {
   MOZ_COUNT_CTOR(nsCSSUserInterface);
   CSS_IF_COPY(mCursor, nsCSSValueList);
-  CSS_IF_COPY(mKeyEquivalent, nsCSSValueList);
 }
 
 nsCSSUserInterface::~nsCSSUserInterface(void)
 {
   MOZ_COUNT_DTOR(nsCSSUserInterface);
-  CSS_IF_DELETE(mKeyEquivalent);
   CSS_IF_DELETE(mCursor);
 }
 
@@ -1031,11 +1028,6 @@ void nsCSSUserInterface::List(FILE* out, PRInt32 aIndent) const
   mUserInput.AppendToString(buffer, eCSSProperty_user_input);
   mUserModify.AppendToString(buffer, eCSSProperty_user_modify);
   mUserSelect.AppendToString(buffer, eCSSProperty_user_select);
-  nsCSSValueList*  keyEquiv = mKeyEquivalent;
-  while (nsnull != keyEquiv) {
-    keyEquiv->mValue.AppendToString(buffer, eCSSProperty_key_equivalent);
-    keyEquiv= keyEquiv->mNext;
-  }
   mUserFocus.AppendToString(buffer, eCSSProperty_user_focus);
   mResizer.AppendToString(buffer, eCSSProperty_resizer);
   
