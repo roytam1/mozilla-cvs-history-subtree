@@ -205,6 +205,10 @@ PRInt32 nsInstallExecute::Complete()
          {
             if (mBlocking)
             {
+               process->GetExitValue(&result);
+               if (result != 0)
+                  rv = nsInstall::EXECUTION_ERROR;
+
                // should be OK to delete now since execution done
                DeleteFileNowOrSchedule( mExecutableFile );
             }
@@ -215,10 +219,10 @@ PRInt32 nsInstallExecute::Complete()
             }
          }
          else
-            rv = nsInstall::UNEXPECTED_ERROR;
+            rv = nsInstall::EXECUTION_ERROR;
       }
       else
-         rv = nsInstall::UNEXPECTED_ERROR;
+         rv = nsInstall::EXECUTION_ERROR;
    }
    else
       rv = nsInstall::UNEXPECTED_ERROR;
