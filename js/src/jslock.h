@@ -23,8 +23,6 @@
 #include "jstypes.h"
 #include "prlock.h"
 #include "prcvar.h"
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 
 #define Thin_GetWait(W) ((jsword)(W) & 0x1)
@@ -142,7 +140,7 @@ extern JSBool js_IsScopeLocked(JSScope *scope);
 	JS_LOCK_RUNTIME_VOID(_rt, e);                                         \
     JS_END_MACRO
 
-#if defined(JS_ONLY_NSPR_LOCKS) || !(defined(_WIN32) || defined(SOLARIS) || defined(AIX))
+#if defined(JS_USE_ONLY_NSPR_LOCKS) || !(defined(_WIN32) || defined(SOLARIS) || defined(AIX))
 
 #undef JS_LOCK0
 #undef JS_UNLOCK0

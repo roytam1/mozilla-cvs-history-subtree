@@ -23,8 +23,6 @@
  */
 #include <stddef.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 #include "jsapi.h"
 #include "jsprvtd.h"

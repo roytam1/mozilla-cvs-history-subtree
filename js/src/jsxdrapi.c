@@ -19,7 +19,6 @@
 
 #include <string.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsprf.h"
 #include "jsapi.h"

@@ -23,14 +23,11 @@
 #include <string.h>
 #include "jstypes.h"
 #include "jsbit.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 
 /* Compute the number of buckets in ht */
-#define NBUCKETS(ht)    JS_BIT(PR_HASH_BITS - (ht)->shift)
+#define NBUCKETS(ht)    JS_BIT(JS_HASH_BITS - (ht)->shift)
 
 /* The smallest table has 16 buckets */
 #define MINBUCKETSLOG2  4
@@ -97,7 +94,7 @@ JS_NewHashTable(uint32 n, JSHashFunction keyHash,
     if (!ht)
 	return NULL;
     memset(ht, 0, sizeof *ht);
-    ht->shift = PR_HASH_BITS - n;
+    ht->shift = JS_HASH_BITS - n;
     n = JS_BIT(n);
 #if defined(XP_PC) && defined _MSC_VER && _MSC_VER <= 800
     if (n > 16000) {
@@ -158,7 +155,7 @@ JS_HashTableRawLookup(JSHashTable *ht, JSHashNumber keyHash, const void *key)
 #ifdef HASHMETER
     ht->nlookups++;
 #endif
-    h = keyHash * PR_GOLDEN_RATIO;
+    h = keyHash * JS_GOLDEN_RATIO;
     h >>= ht->shift;
     hep = hep0 = &ht->buckets[h];
     while ((he = *hep) != NULL) {

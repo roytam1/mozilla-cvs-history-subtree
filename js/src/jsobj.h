@@ -27,8 +27,6 @@
  * is reference counted and the slot vector is malloc'ed.
  */
 #ifdef NETSCAPE_INTERNAL
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 #endif
 #include "jsprvtd.h"

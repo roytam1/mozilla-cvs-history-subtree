@@ -26,10 +26,7 @@
 #include <string.h>
 #include "jstypes.h"
 #include "jsbit.h"
-/* Removed by JSIFY: #include "plarena.h"
- */
 #include "jsarena.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 
 #ifdef JS_THREADSAFE

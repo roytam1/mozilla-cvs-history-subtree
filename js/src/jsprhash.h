@@ -31,9 +31,9 @@ typedef struct JSPRHashEntry  JSPRHashEntry;
 typedef struct JSPRHashTable  JSPRHashTable;
 typedef JSPRUint32 JSPRHashNumber;
 #define JSPR_HASH_BITS 32
-typedef JSPRHashNumber (JSCALLBACK *JSPRHashFunction)(const void *key);
-typedef JSPRIntn (JSCALLBACK *JSPRHashComparator)(const void *v1, const void *v2);
-typedef JSPRIntn (JSCALLBACK *JSPRHashEnumerator)(JSPRHashEntry *he, JSPRIntn i, void *arg);
+typedef JSPRHashNumber (JSJS_DLL_CALLBACK *JSPRHashFunction)(const void *key);
+typedef JSPRIntn (JSJS_DLL_CALLBACK *JSPRHashComparator)(const void *v1, const void *v2);
+typedef JSPRIntn (JSJS_DLL_CALLBACK *JSPRHashEnumerator)(JSPRHashEntry *he, JSPRIntn i, void *arg);
 
 /* Flag bits in JSPRHashEnumerator's return value */
 #define HT_ENUMERATE_NEXT       0       /* continue enumerating entries */
@@ -42,10 +42,10 @@ typedef JSPRIntn (JSCALLBACK *JSPRHashEnumerator)(JSPRHashEntry *he, JSPRIntn i,
 #define HT_ENUMERATE_UNHASH     4       /* just unhash the current entry */
 
 typedef struct JSPRHashAllocOps {
-    void *              (JSCALLBACK *allocTable)(void *pool, JSPRSize size);
-    void                (JSCALLBACK *freeTable)(void *pool, void *item);
-    JSPRHashEntry *       (JSCALLBACK *allocEntry)(void *pool, const void *key);
-    void                (JSCALLBACK *freeEntry)(void *pool, JSPRHashEntry *he, JSPRUintn flag);
+    void *              (JSJS_DLL_CALLBACK *allocTable)(void *pool, JSPRSize size);
+    void                (JSJS_DLL_CALLBACK *freeTable)(void *pool, void *item);
+    JSPRHashEntry *       (JSJS_DLL_CALLBACK *allocEntry)(void *pool, const void *key);
+    void                (JSJS_DLL_CALLBACK *freeEntry)(void *pool, JSPRHashEntry *he, JSPRUintn flag);
 } JSPRHashAllocOps;
 
 #define HT_FREE_VALUE   0               /* just free the entry's value */
@@ -79,51 +79,51 @@ struct JSPRHashTable {
  * Create a new hash table.
  * If allocOps is null, use default allocator ops built on top of malloc().
  */
-JS_EXTERN_API(JSPRHashTable *)
+JSJS_EXTERN_API(JSPRHashTable *)
 JSPR_NewHashTable(JSPRUint32 n, JSPRHashFunction keyHash,
                 JSPRHashComparator keyCompare, JSPRHashComparator valueCompare,
                 JSPRHashAllocOps *allocOps, void *allocPriv);
 
-JS_EXTERN_API(void)
+JSJS_EXTERN_API(void)
 JSPR_HashTableDestroy(JSPRHashTable *ht);
 
 /* Low level access methods */
-JS_EXTERN_API(JSPRHashEntry **)
+JSJS_EXTERN_API(JSPRHashEntry **)
 JSPR_HashTableRawLookup(JSPRHashTable *ht, JSPRHashNumber keyHash, const void *key);
 
-JS_EXTERN_API(JSPRHashEntry *)
+JSJS_EXTERN_API(JSPRHashEntry *)
 JSPR_HashTableRawAdd(JSPRHashTable *ht, JSPRHashEntry **hep, JSPRHashNumber keyHash,
                    const void *key, void *value);
 
-JS_EXTERN_API(void)
+JSJS_EXTERN_API(void)
 JSPR_HashTableRawRemove(JSPRHashTable *ht, JSPRHashEntry **hep, JSPRHashEntry *he);
 
 /* Higher level access methods */
-JS_EXTERN_API(JSPRHashEntry *)
+JSJS_EXTERN_API(JSPRHashEntry *)
 JSPR_HashTableAdd(JSPRHashTable *ht, const void *key, void *value);
 
-JS_EXTERN_API(JSPRBool)
+JSJS_EXTERN_API(JSPRBool)
 JSPR_HashTableRemove(JSPRHashTable *ht, const void *key);
 
-JS_EXTERN_API(JSPRIntn)
+JSJS_EXTERN_API(JSPRIntn)
 JSPR_HashTableEnumerateEntries(JSPRHashTable *ht, JSPRHashEnumerator f, void *arg);
 
-JS_EXTERN_API(void *)
+JSJS_EXTERN_API(void *)
 JSPR_HashTableLookup(JSPRHashTable *ht, const void *key);
 
-JS_EXTERN_API(JSPRIntn)
+JSJS_EXTERN_API(JSPRIntn)
 JSPR_HashTableDump(JSPRHashTable *ht, JSPRHashEnumerator dump, FILE *fp);
 
 /* General-purpose C string hash function. */
-JS_EXTERN_API(JSPRHashNumber)
+JSJS_EXTERN_API(JSPRHashNumber)
 JSPR_HashString(const void *key);
 
 /* Compare strings using strcmp(), return true if equal. */
-JS_EXTERN_API(int)
+JSJS_EXTERN_API(int)
 JSPR_CompareStrings(const void *v1, const void *v2);
 
 /* Stub function just returns v1 == v2 */
-JS_EXTERN_API(JSPRIntn)
+JSJS_EXTERN_API(JSPRIntn)
 JSPR_CompareValues(const void *v1, const void *v2);
 
 JSPR_END_EXTERN_C

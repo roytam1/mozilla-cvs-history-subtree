@@ -396,20 +396,13 @@ sub convert_includes {
     }
 
     if ($line =~ /prlog\.h/) {
-	chop $line;
-	$line  = "/* Removed by JSIFY: $line */\n";
-	$line .= '#include "jsutil.h"'. " /* Added by JSIFY */\n";
+	$line = '#include "jsutil.h"'. " /* Added by JSIFY */\n";
     } elsif ($line =~ /plhash\.h/) {
-	chop $line;
-	$line  = "/* Removed by JSIFY: $line */\n";
-	$line .= '#include "jshash.h"'. " /* Added by JSIFY */\n";
+	$line = '#include "jshash.h"'. " /* Added by JSIFY */\n";
     } elsif ($line =~ /plarena\.h/) {
-	chop $line;
-	$line  = "/* Removed by JSIFY: $line */\n";
-	$line .= '#include "jsarena.h"'. " /* Added by JSIFY */\n";
+	$line = '#include "jsarena.h"'. " /* Added by JSIFY */\n";
     } elsif ($line =~ /prmem\.h/) {
-	chop $line;
-	$line  = "/* Removed by JSIFY: $line */\n";
+	$line  = "";
     } elsif ($line =~ /jsmsg\.def/) {
 	$line  = '#include "js.msg"' . "\n";
     } elsif ($line =~ /shellmsg\.def/) {

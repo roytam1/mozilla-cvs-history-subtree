@@ -21,8 +21,6 @@
 /*
  * JS execution context.
  */
-/* Removed by JSIFY: #include "plarena.h"
- */
 #include "jsarena.h" /* Added by JSIFY */
 #include "jsclist.h"
 #include "jslong.h"

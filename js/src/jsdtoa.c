@@ -23,7 +23,6 @@
 #include "jstypes.h"
 #include "jsdtoa.h"
 #include "jsprf.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 
 #ifdef JS_THREADSAFE

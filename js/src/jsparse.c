@@ -36,10 +36,7 @@
 #include <string.h>
 #include <math.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "plarena.h"
- */
 #include "jsarena.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsapi.h"
 #include "jsatom.h"
@@ -381,7 +378,7 @@ js_CompileFunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun)
     }
 
     cx->gcDisabled--;
-    js_ResetCodeGenerator(cx, &funcg);
+    js_FinishCodeGenerator(cx, &funcg);
     return ok;
 }
 

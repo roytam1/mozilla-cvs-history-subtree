@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsdtoa.h"
 #include "jsprf.h"

@@ -28,10 +28,7 @@
 #include <stdlib.h>
 #include "jsprf.h"
 #include "jslong.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "jsmem.h"
- */
 
 /*
 ** Note: on some platforms va_list is defined as an array,

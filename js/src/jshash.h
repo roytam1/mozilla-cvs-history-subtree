@@ -32,8 +32,8 @@ typedef uint32 JSHashNumber;
 typedef struct JSHashEntry JSHashEntry;
 typedef struct JSHashTable JSHashTable;
 
-#define PR_HASH_BITS 32
-#define PR_GOLDEN_RATIO 0x9E3779B9U
+#define JS_HASH_BITS 32
+#define JS_GOLDEN_RATIO 0x9E3779B9U
 
 typedef JSHashNumber (*JSHashFunction)(const void *key);
 typedef intN (*JSHashComparator)(const void *v1, const void *v2);

@@ -22,8 +22,6 @@
  * JS symbol tables.
  */
 #include "jstypes.h"
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 #include "jsobj.h"
 #include "jsprvtd.h"

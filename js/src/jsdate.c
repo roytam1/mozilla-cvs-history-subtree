@@ -26,7 +26,6 @@
 #include "jstypes.h"
 #include "jsprf.h"
 #include "prmjtime.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsapi.h"
 #include "jsconfig.h"

@@ -25,10 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "plarena.h"
- */
 #include "jsarena.h" /* Added by JSIFY */
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsclist.h"
 #include "jsprf.h"
@@ -631,7 +628,7 @@ JS_SetVersion(JSContext *cx, JSVersion version)
 JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void)
 {
-    return "JavaScript-C 1.3 1998 06 30";
+    return "JavaScript-C 1.4 1998 09 21";
 }
 
 
@@ -792,8 +789,6 @@ JS_AddNamedRoot(JSContext *cx, void *rp, const char *name)
 
 #ifdef DEBUG
 
-/* Removed by JSIFY: #include "JShash.h"
- */
 #include "jshash.h" /* Added by JSIFY */
 
 typedef struct NamedRootDumpArgs {
@@ -1954,7 +1949,7 @@ CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
     }
 out:
     cg.tempMark = tempMark;
-    js_ResetCodeGenerator(cx, &cg);
+    js_FinishCodeGenerator(cx, &cg);
     return script;
 }
 
@@ -2709,7 +2704,7 @@ JS_IsAssigning(JSContext *cx)
 
 #ifdef XP_PC
 #include <windows.h>
-#ifdef XP_OS2_HACK
+#if defined(XP_OS2_HACK)
 /*DSR031297 - the OS/2 equiv is dll_InitTerm, but I don't see the need for it*/
 #else
 /*

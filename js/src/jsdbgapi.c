@@ -22,7 +22,6 @@
 #include "jsstddef.h"
 #include <string.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jsclist.h"
 #include "jsapi.h"

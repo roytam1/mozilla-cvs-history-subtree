@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "jstypes.h"
-/* Removed by JSIFY: #include "plarena.h"
- */
 #include "jsarena.h" /* Added by JSIFY */
 /* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
@@ -209,7 +207,7 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 	    }
 	}
 	cg.firstLine = ts->lineno;
-	js_ResetCodeGenerator(cx, &cg);
+	js_FinishCodeGenerator(cx, &cg);
 	RESET_TOKENBUF(ts);
     } while (!(ts->flags & TSF_EOF));
 

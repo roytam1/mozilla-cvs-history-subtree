@@ -26,7 +26,6 @@
 #include "jspubtd.h"
 #include "prthread.h"
 #include "pratom.h"
-/* Removed by JSIFY: #include "prlog.h" */
 #include "jsutil.h" /* Added by JSIFY */
 #include "jscntxt.h"
 #include "jsscope.h"
