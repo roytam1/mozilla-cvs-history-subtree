@@ -1101,7 +1101,7 @@ nsAppShellService::CreateStartupState(PRInt32 aWindowWidth, PRInt32 aWindowHeigh
 {
   NS_ENSURE_ARG_POINTER(_retval);
   nsresult rv;
-  
+#ifndef MOZ_THUNDERBIRD  
   nsCOMPtr<nsIPrefService> prefService(do_GetService(NS_PREFSERVICE_CONTRACTID));
   if (!prefService)
     return NS_ERROR_FAILURE;
@@ -1128,6 +1128,12 @@ nsAppShellService::CreateStartupState(PRInt32 aWindowWidth, PRInt32 aWindowHeigh
   }
   
   NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(childCount, childArray);
+#else
+  PRBool windowOpened;
+  rv = LaunchTask("mail", aWindowHeight, aWindowWidth, &windowOpened);
+  if (NS_SUCCEEDED(rv) && windowOpened)
+    *_retval = PR_TRUE;
+#endif
   
   return NS_OK;
 }
