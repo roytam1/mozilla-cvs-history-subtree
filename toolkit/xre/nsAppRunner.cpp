@@ -1495,7 +1495,7 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
     // create a default profile
     nsCOMPtr<nsIToolkitProfile> profile;
     nsresult rv = profileSvc->CreateProfile(nsnull, // choose a default dir for us
-                                            NS_LITERAL_CSTRING("primary"),
+                                            NS_LITERAL_CSTRING("default"),
                                             getter_AddRefs(profile));
     if (NS_SUCCEEDED(rv)) {
       profileSvc->Flush();
