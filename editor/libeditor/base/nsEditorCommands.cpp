@@ -466,7 +466,7 @@ nsGetContentsCommand::DoCommandParams(nsICommandParams *aParams, nsISupports *aC
     flags |= nsIDocumentEncoder::OutputPreformatted;
 
   nsAutoString selectedText;
-  nsresult rv = aEditor->OutputToString(formatStr, 0, selectedText);
+  nsresult rv = aEditor->OutputToString(formatStr, flags, selectedText);
   if (NS_FAILED(rv))
     return rv;
     
