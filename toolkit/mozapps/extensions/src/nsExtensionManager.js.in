@@ -227,12 +227,12 @@ function getItemType(aURI)
 
 function stripPrefix(aURI, aItemType)
 {
-  var val = "";
+  var val = aURI;
   if (aItemType == nsIUpdateItem.TYPE_ADDON)
     val = stripPrefix(aURI, getItemType(aURI));
   else {
     var prefix = getItemPrefix(aItemType);
-    if (prefix) 
+    if (prefix && aURI.substr(0, prefix.length) == prefix)  
       val = aURI.substr(prefix.length, aURI.length);
   }
   return val;
@@ -2566,15 +2566,22 @@ nsExtensionManager.prototype = {
       
   uninstallExtension: function nsExtensionManager_uninstallExtension (aExtensionID)
   {
-    this._ds.uninstallExtension(aExtensionID);
+    if (!this._ds.isDownloadItem(aExtensionID)) {
+      this._ds.uninstallExtension(aExtensionID);
 
-    var isProfile = this._ds.isProfileItem(aExtensionID);
+      var isProfile = this._ds.isProfileItem(aExtensionID);
 
-    // Update the Components Manifest
-    this._writeComponentManifest(isProfile);
+      // Update the Components Manifest
+      this._writeComponentManifest(isProfile);
 
-    // Update the Defaults Manifest
-    this._writeDefaults(isProfile);
+      // Update the Defaults Manifest
+      this._writeDefaults(isProfile);
+    }
+    else {
+      // Bad download entry - uri is url, e.g. "http://www.foo.com/test.xpi"
+      // ... just remove it from the list. 
+      this._ds.removeCorruptDLItem(aExtensionID, nsIUpdateItem.TYPE_EXTENSION);
+    }
   },
   
   enableExtension: function nsExtensionManager_enableExtension (aExtensionID)
@@ -2646,8 +2653,15 @@ nsExtensionManager.prototype = {
   
   uninstallTheme: function nsExtensionManager_uninstallTheme (aThemeID)
   {
-    this._ensureDS();
-    this._ds.uninstallTheme(aThemeID);
+    if (!this._ds.isDownloadItem(aThemeID)) {
+      this._ensureDS();
+      this._ds.uninstallTheme(aThemeID);
+    }
+    else {
+      // Bad download entry - uri is url, e.g. "http://www.foo.com/test.jar"
+      // ... just remove it from the list. 
+      this._ds.removeCorruptDLItem(aThemeID, nsIUpdateItem.TYPE_THEME);
+    }
   },
   
   moveTop: function nsExtensionManager_moveTop (aItemID)
@@ -3650,6 +3664,7 @@ nsExtensionsDataSource.prototype = {
     }
     else 
       return this._getItemProperty(item, aProperty);
+    return undefined;
   },
   
   _getItemProperty: function nsExtensionsDataSource__getItemProperty (aItemResource, aProperty)
@@ -3708,6 +3723,26 @@ nsExtensionsDataSource.prototype = {
   {
     this.removeItemMetadata(aItemID, aItemType);
     this.removeItemFromContainer(aItemID, aItemType, aIsProfile);
+  },
+
+  // Removes a corrupt download entry from the list.   
+  removeCorruptDLItem: function nsExtensionsDataSource_removeCorruptDLItem (aItemURI, aItemType)
+  {
+    var itemResource = gRDF.GetResource(aItemURI);
+    var itemRoot = gRDF.GetResource(getItemRoot(aItemType));
+    var dses = [this._profileExtensions, this._appExtensions];
+    var isProfile = [true, false];
+    for (var i = 0; i < dses.length; ++i) {
+      var ctr = Components.classes["@mozilla.org/rdf/container;1"]
+                          .createInstance(Components.interfaces.nsIRDFContainer);
+      ctr.Init(dses[i], itemRoot);
+      if (ctr.IndexOf(itemResource) != -1) {
+        ctr.RemoveElement(itemResource, true);
+        this._cleanResource(itemResource, dses[i]);
+        this._flush(isProfile[i]);
+        break;
+      }
+    }
   },
   
   addItemMetadata: function nsExtensionsDataSource_addItemMetadata (aItemID, aItemType, aSourceDS, aIsProfile)
@@ -3964,6 +3999,11 @@ nsExtensionsDataSource.prototype = {
       container.InsertElementAt(item, index + 1, true);
     }
     this._flush(this.isProfileItem(aItemID));
+  },
+  
+  isDownloadItem: function nsExtensionsDataSource_isDownloadItem (aItemID)
+  {
+    return this.getItemProperty(aItemID, "downloadURL") != "";
   },
 
   addDownload: function nsExtensionsDataSource_addDownload (aName, aURL, aIconURL, aItemType)

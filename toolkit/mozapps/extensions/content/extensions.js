@@ -13,6 +13,7 @@ var gGetMoreURL       = "";
 var gCurrentTheme     = "";
 var gDownloadManager  = null;
 var gObserverIndex    = -1;
+var gItemType         = -1;
 
 const PREF_APP_ID                           = "app.id";
 const PREF_EXTENSIONS_GETMORETHEMESURL      = "extensions.getMoreThemesURL";
@@ -26,9 +27,31 @@ const KEY_DEFAULT_THEME = "classic/1.0";
 
 ///////////////////////////////////////////////////////////////////////////////
 // Utility Functions 
-function stripPrefix(aResourceURI)
+
+const PREFIX_EXTENSION  = "urn:mozilla:extension:";
+const PREFIX_THEME      = "urn:mozilla:theme:";
+
+function getItemPrefix(aItemType)
 {
-  return aResourceURI.substr(gURIPrefix.length, aResourceURI.length);
+  var prefix = "";
+  if (aItemType & nsIUpdateItem.TYPE_EXTENSION) 
+    prefix = PREFIX_EXTENSION;
+  else if (aItemType & nsIUpdateItem.TYPE_THEME)
+    prefix = PREFIX_THEME;
+  return prefix;
+}
+
+function stripPrefix(aURI, aItemType)
+{
+  var val = aURI;
+  if (aItemType == nsIUpdateItem.TYPE_ADDON)
+    val = stripPrefix(aURI, getItemType(aURI));
+  else {
+    var prefix = getItemPrefix(aItemType);
+    if (prefix && aURI.substr(0, prefix.length) == prefix)  
+      val = aURI.substr(prefix.length, aURI.length);
+  }
+  return val;
 }
 
 function openURL(aURL)
@@ -87,6 +110,7 @@ function Startup()
   var isExtensions = gWindowState == "extensions";
   gURIPrefix  = isExtensions ? "urn:mozilla:extension:" : "urn:mozilla:theme:";
   gDSRoot     = isExtensions ? "urn:mozilla:extension:root" : "urn:mozilla:theme:root";
+  gItemType   = isExtensions ? nsIUpdateItem.TYPE_EXTENSION : nsIUpdateItem.TYPE_THEME;
   
   document.documentElement.setAttribute("windowtype", document.documentElement.getAttribute("windowtype") + "-" + gWindowState);
 
@@ -740,27 +764,27 @@ var gExtensionsViewController = {
     cmd_movetop: function (aSelectedItem)
     {
       var movingID = aSelectedItem.id;
-      gExtensionManager.moveTop(stripPrefix(movingID));
+      gExtensionManager.moveTop(stripPrefix(movingID, gItemType));
       gExtensionsView.selected = document.getElementById(movingID);
     },
     
     cmd_moveup: function (aSelectedItem)
     {
       var movingID = aSelectedItem.id;
-      gExtensionManager.moveUp(stripPrefix(movingID));
+      gExtensionManager.moveUp(stripPrefix(movingID, gItemType));
       gExtensionsView.selected = document.getElementById(movingID);
     },
     
     cmd_movedn: function (aSelectedItem)
     {
       var movingID = aSelectedItem.id;
-      gExtensionManager.moveDown(stripPrefix(movingID));
+      gExtensionManager.moveDown(stripPrefix(movingID, gItemType));
       gExtensionsView.selected = document.getElementById(movingID);
     },
     
     cmd_update: function (aSelectedItem)
     { 
-      var id = aSelectedItem ? stripPrefix(aSelectedItem.id) : null;
+      var id = aSelectedItem ? stripPrefix(aSelectedItem.id, gItemType) : null;
       var itemType = gWindowState == "extensions" ? nsIUpdateItem.TYPE_EXTENSION : nsIUpdateItem.TYPE_THEME;
       var items = gExtensionManager.getItemList(id, itemType, { });
       var updates = Components.classes["@mozilla.org/updates/update-service;1"]
@@ -797,24 +821,24 @@ var gExtensionsViewController = {
       nextElement = nextElement.id;
       
       if (gWindowState == "extensions")
-        gExtensionManager.uninstallExtension(stripPrefix(selectedID));
+        gExtensionManager.uninstallExtension(stripPrefix(selectedID, gItemType));
       else if (gWindowState == "themes")
-        gExtensionManager.uninstallTheme(stripPrefix(selectedID));
+        gExtensionManager.uninstallTheme(stripPrefix(selectedID, gItemType));
       
       gExtensionsView.selected = document.getElementById(nextElement);
     },
     
     cmd_disable: function (aSelectedItem)
     {
-      gExtensionManager.disableExtension(stripPrefix(aSelectedItem.id));
+      gExtensionManager.disableExtension(stripPrefix(aSelectedItem.id, gItemType));
     },
     
     cmd_enable: function (aSelectedItem)
     {
       if (gWindowState == "extensions")
-        gExtensionManager.enableExtension(stripPrefix(aSelectedItem.id));
+        gExtensionManager.enableExtension(stripPrefix(aSelectedItem.id, gItemType));
       else
-        gExtensionManager.enableTheme(stripPrefix(aSelectedItem.id));
+        gExtensionManager.enableTheme(stripPrefix(aSelectedItem.id, gItemType));
     },
 #ifdef MOZ_THUNDERBIRD
     cmd_install: function(aSelectedItem)
