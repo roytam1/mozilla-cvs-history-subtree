@@ -61,6 +61,7 @@ public:
 	NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec);
 
 	NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
+	NS_IMETHOD GetResolvedFSSpec(FSSpec *fileSpec);
 
 	NS_IMETHOD SetAppendedPath(const char *aPath);
 	NS_IMETHOD GetAppendedPath(char * *aPath);
@@ -91,9 +92,6 @@ private:
     
     // It's important we keep track of how we were initialized
     nsLocalFileMacInitType	mInitType;
-    
-    // Do we have to create the path hierarchy before the spec is usable?
-    PRBool	mMustCreate;
     
     void MakeDirty();
     nsresult ResolveAndStat(PRBool resolveTerminal);

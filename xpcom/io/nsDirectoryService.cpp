@@ -93,6 +93,9 @@ static nsresult GetCurrentProcessDirectory(nsILocalFile* aFile)
         if (!(err = GetProcessInformation(&psn, &pInfo)))
         {
             FSSpec appFSSpec = *(pInfo.processAppSpec);
+            
+            // Truncate the nsame so the spec is just to the app directory
+            appFSSpec.name[0] = 0;
 
         	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(aFile);
 			if (localFileMac) {
@@ -275,7 +278,11 @@ nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
         if (strncmp(prop, "xpcom.currentProcess.componentRegistry", 38) == 0)
         {
             nsLocalFile* localFile = new nsLocalFile;
-    
+
+    if (localFile == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(localFile);
+
             nsresult rv = GetCurrentProcessDirectory(localFile);
             if (NS_FAILED(rv)) 
                 return rv;
@@ -287,12 +294,18 @@ nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
 #endif /* XP_MAC */
     
             Set(prop, NS_STATIC_CAST(nsILocalFile*, localFile));
-            return localFile->QueryInterface(uuid, result);
+            rv =localFile->QueryInterface(uuid, result);
+            NS_RELEASE(localFile);
+            return rv;
         }
         else if (strncmp(prop, "xpcom.currentProcess.componentDirectory", 39) == 0)
         {
             nsLocalFile* localFile = new nsLocalFile;
-    
+
+    if (localFile == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(localFile);
+
             nsresult rv = GetCurrentProcessDirectory(localFile);
             if (NS_FAILED(rv)) 
                 return rv;
@@ -303,7 +316,9 @@ nsDirectoryService::Get(const char* prop, const nsIID & uuid, void* *result)
             localFile->Append("components");           
 #endif /* XP_MAC */
     
-            return localFile->QueryInterface(uuid, result);
+            rv =localFile->QueryInterface(uuid, result);
+            NS_RELEASE(localFile);
+            return rv;
         }
               
         return NS_ERROR_FAILURE;

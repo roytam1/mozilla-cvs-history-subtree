@@ -40,7 +40,8 @@
 
 
 typedef enum {
-	eInitWithPath = 0,
+	eNotInitialized = 0,
+	eInitWithPath,
 	eInitWithFSSpec
 } nsLocalFileMacInitType;
 
@@ -57,8 +58,9 @@ public:
 	// we provide a way to initialize an nsLocalFile with one
 	NS_IMETHOD InitWithFSSpec(const FSSpec *fileSpec) = 0;
 
-	// In case we need to get the FSSpec at the heart of an nsLocalFIleMac
-	NS_IMETHOD GetFSSpec(FSSpec *fileSpec) = 0;
+	// In case we need to get the FSSpecs at the heart of an nsLocalFileMac
+	NS_IMETHOD GetFSSpec(FSSpec *fileSpec) = 0;			// The one we were inited with
+	NS_IMETHOD GetResolvedFSSpec(FSSpec *fileSpec) = 0;	// The one we've resolved to
 	
 	// Since we may have both an FSSpec and an appended path we need methods
 	// to get/set just the appended path

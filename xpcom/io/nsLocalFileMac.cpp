@@ -60,6 +60,10 @@ static nsresult MacErrorMapper(OSErr inErr)
     
     switch (inErr)
     {
+        case noErr:
+            outErr = NS_OK;
+            break;
+
         case fnfErr:
             outErr = NS_ERROR_FILE_NOT_FOUND;
             break;
@@ -81,11 +85,9 @@ static nsresult MacErrorMapper(OSErr inErr)
             outErr = NS_ERROR_FAILURE;
             break;
 
-        case noErr:
-            outErr = NS_OK;
-
         default:    
             outErr = NS_ERROR_FAILURE;
+            break;
     }
     return outErr;
 }
@@ -182,7 +184,7 @@ static char * My_ReadDir(MyPRDir *mdDir, PRIntn flags)
 		
 		// Convert the Pascal string to a C string (actual allocation occurs in CStrFromPStr)
 		unsigned long len = pascalName[0];
-		returnedCStr = (char *)PR_MALLOC(len);
+		returnedCStr = (char *)PR_MALLOC(len + 1);
 		if (returnedCStr)
 		{
 			::BlockMoveData(&pascalName[1], returnedCStr, len);
@@ -338,7 +340,7 @@ class nsDirEnumerator : public nsISimpleEnumerator
         	
         	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(parent);
 			if (localFileMac) {
-            	localFileMac->GetFSSpec(&fileSpec);
+            	localFileMac->GetResolvedFSSpec(&fileSpec);
             }
         	
         	// See if we managed to get a FSSpec
@@ -369,10 +371,24 @@ class nsDirEnumerator : public nsISimpleEnumerator
                     *result = PR_FALSE;
                     return NS_OK;
                 }
-
-                nsCOMPtr<nsIFile> file;
-                mParent->Clone(getter_AddRefs(file));
-
+				
+				// Make a new nsILocalFile for the new element
+                nsCOMPtr<nsILocalFile> file;
+				rv =  NS_NewLocalFile("dummy:path", getter_AddRefs(file));
+                if (NS_FAILED(rv)) 
+                    return rv;
+                
+                // Init with the FSSpec for the current dir
+                FSSpec	tempSpec;
+				tempSpec.vRefNum = mDir->ioVRefNum;
+				tempSpec.parID = mDir->ioDirID;
+				tempSpec.name[0] = 0;
+	        	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(file);
+				if (localFileMac) {
+					localFileMac->InitWithFSSpec(&tempSpec);
+	            }
+				
+				// Now set the leaf name of the new nsILocalFile to the new element
                 rv = file->SetLeafName(name);
                 if (NS_FAILED(rv)) 
                     return rv;
@@ -421,6 +437,8 @@ nsLocalFile::nsLocalFile()
 
     MakeDirty();
     
+    mInitType = eNotInitialized;
+    
     mSpec.vRefNum = 0;
     mSpec.parID = 0;
     mSpec.name[0] = 0;
@@ -458,7 +476,7 @@ void
 nsLocalFile::MakeDirty()
 {
     mStatDirty = PR_TRUE;
-    mHaveValidSpec = PR_TRUE;
+    mHaveValidSpec = PR_FALSE;
 
     mResolvedSpec.vRefNum = 0;
     mResolvedSpec.parID = 0;
@@ -469,7 +487,7 @@ nsLocalFile::MakeDirty()
 NS_IMETHODIMP
 nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
 {
-	OSErr	err;
+	OSErr	err = noErr;
 	char	*filePath;
 	
     if (!mStatDirty)
@@ -673,79 +691,47 @@ nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
 NS_IMETHODIMP  
 nsLocalFile::Create(PRUint32 type, PRUint32 attributes)
 { 
+	OSErr	err;
+	char	*filePath;
+
     if (type != NORMAL_FILE_TYPE && type != DIRECTORY_TYPE)
         return NS_ERROR_FILE_UNKNOWN_TYPE;
 
-	OSErr	err = noErr;
-    char*	filePath = (char*) nsAllocator::Clone( mWorkingPath, strlen(mWorkingPath)+1 );
-	size_t	inLength = strlen(filePath);
-
-	if (inLength < 255)
-	{
-		Str255 pascalpath;
-		myPLstrcpy(pascalpath, filePath);
-		err = ::FSMakeFSSpec(0, 0, pascalpath, &mSpec);
-	}
-	else
-		err = FSpLocationFromFullPath(inLength, filePath, &mSpec);
-
-	if ((err == dirNFErr || err == bdNamErr))
-	{
-		const char* path = filePath;
-		mSpec.vRefNum = 0;
-		mSpec.parID = 0;
-
-		do
-		{
-			// Locate the colon that terminates the node.
-			// But if we've a partial path (starting with a colon), find the second one.
-			const char* nextColon = strchr(path + (*path == ':'), ':');
-			// Well, if there are no more colons, point to the end of the string.
-			if (!nextColon)
-				nextColon = path + strlen(path);
-
-			// Make a pascal string out of this node.  Include initial
-			// and final colon, if any!
-			Str255 ppath;
-			myPLstrncpy(ppath, path, nextColon - path + 1);
-			
-			// Use this string as a relative path using the directory created
-			// on the previous round (or directory 0,0 on the first round).
-			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, ppath, &mSpec);
-
-			// If this was the leaf node, then we are done.
-			if (!*nextColon)
-				break;
-
-			// Since there's more to go, we have to get the directory ID, which becomes
-			// the parID for the next round.
-			if (err == noErr)
-			{
-				// The directory (or perhaps a file) exists. Find its dirID.
-				long dirID;
-				Boolean isDirectory;
-				err = ::FSpGetDirectoryID(&mSpec, &dirID, &isDirectory);
-				if (!isDirectory)
-					err = dupFNErr; // oops! a file exists with that name.
-				if (err != noErr)
-					break;			// bail if we've got an error
-				mSpec.parID = dirID;
-			}
-			else if (err == fnfErr)
-			{
-				// If we got "file not found", then we need to create a directory.
-				err = ::FSpDirCreate(&mSpec, smCurrentScript, &mSpec.parID);
-				// For some reason, this usually returns fnfErr, even though it works.
-				if (err == fnfErr)
-					err = noErr;
-			}
-			if (err != noErr)
-				break;
-			path = nextColon; // next round
-		} while (true);
-	}
+    if (!mHaveValidSpec)
+    {
+	    switch (mInitType)
+	    {
+	    	case eInitWithPath:
+	    	{
+	    		filePath = (char *)nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+	    		err = ResolvePathAndSpec(filePath, nsnull, PR_FALSE, &mResolvedSpec);
+    			nsAllocator::Free(filePath);
+	    		break;
+	    	}
+	    	
+	    	case eInitWithFSSpec:
+	    	{
+	    		if (strlen(mAppendedPath))
+	    		{	// We've got an FSSpec and an appended path so pass 'em both to ResolvePathAndSpec
+		    		filePath = (char *)nsAllocator::Clone(mAppendedPath, strlen(mAppendedPath)+1);
+		    		err = ResolvePathAndSpec(filePath, &mSpec, PR_FALSE, &mResolvedSpec);
+	    			nsAllocator::Free(filePath);
+	    		}
+	    		else
+	    		{
+	    			err = ::FSMakeFSSpec(mSpec.vRefNum, mSpec.parID, mSpec.name, &mResolvedSpec);
+	    		}
+	    		break;
+	    	}
+	    		
+	    	default:
+	    		// !!!!! Danger Will Robinson !!!!!
+	    		// we really shouldn't get here
+	    		break;
+	    }
+    }
 	
-	if (err != noErr)
+	if (err != noErr && err != fnfErr)
 		return (MacErrorMapper(err));
 
 	switch (type)
@@ -850,6 +836,15 @@ nsLocalFile::GetLeafName(char * *aLeafName)
 			else
 			{
 				// We don't have an appended path so grab the leaf name from the FSSpec
+				// Convert the Pascal string to a C string
+				unsigned long len = mSpec.name[0];
+				char * tempStr = (char *)PR_MALLOC(len);
+				if (tempStr)
+				{
+					::BlockMoveData(&mSpec.name[1], tempStr, len);
+					tempStr[len] = NULL;
+		    		*aLeafName = (char*) nsAllocator::Clone(tempStr, strlen(tempStr)+1);
+				}
 			}
     		break;
     		
@@ -892,6 +887,7 @@ nsLocalFile::SetLeafName(const char * aLeafName)
 			else
 			{
 				// We don't have an appended path so directly modify the FSSpec
+				myPLstrcpy(mSpec.name, aLeafName);
 			}
     		break;
     		
@@ -916,8 +912,16 @@ nsLocalFile::GetPath(char **_retval)
     		break;
     	
     	case eInitWithFSSpec:
-    		// Now would be a good time to call the code that makes an FSSpec into a path
+    	{	// Now would be a good time to call the code that makes an FSSpec into a path
+    		short	fullPathLen;
+    		Handle	fullPathHandle;
+    		OSErr	err;
+    		ResolveAndStat(PR_TRUE);
+    		err = FSpGetFullPath(&mResolvedSpec, &fullPathLen, &fullPathHandle);
+    		*_retval = (char*) nsAllocator::Clone(*fullPathHandle, fullPathLen+1);
+    		DisposeHandle(fullPathHandle);
     		break;
+    	}
     		
     	default:
     		// !!!!! Danger Will Robinson !!!!!
@@ -1080,6 +1084,27 @@ nsLocalFile::GetFileSize(PRInt64 *aFileSize)
     
     aFileSize->hi = 0;
     aFileSize->lo = 0;
+
+    ResolveAndStat(PR_TRUE);
+    if (!mHaveValidSpec)
+    	return NS_ERROR_FILE_NOT_FOUND;
+    
+	CInfoPBRec	pb;
+	OSErr		err;
+	pb.dirInfo.ioCompletion = nsnull;
+	pb.dirInfo.ioFDirIndex = 0; // use dirID and name
+	pb.dirInfo.ioVRefNum = mResolvedSpec.vRefNum;
+	pb.dirInfo.ioDrDirID = mResolvedSpec.parID;
+	pb.dirInfo.ioNamePtr = mResolvedSpec.name;
+	err = ::PBGetCatInfoSync(&pb);
+    
+    if (err != noErr)
+		return MacErrorMapper(err);
+	
+	// For now we've only got 32 bits of file size info
+	PRInt64 tempInt64;
+	LL_I2L(tempInt64, pb.hFileInfo.ioFlLgLen);
+	*aFileSize = tempInt64;
 
     return NS_OK;
 }
@@ -1432,6 +1457,7 @@ NS_IMETHODIMP nsLocalFile::GetInitType(nsLocalFileMacInitType *type)
 
 NS_IMETHODIMP nsLocalFile::InitWithFSSpec(const FSSpec *fileSpec)
 {
+	MakeDirty();
 	mSpec = *fileSpec;
     mInitType = eInitWithFSSpec;
 	return NS_OK;
@@ -1441,6 +1467,14 @@ NS_IMETHODIMP nsLocalFile::GetFSSpec(FSSpec *fileSpec)
 {
     NS_ENSURE_ARG(fileSpec);
     *fileSpec = mSpec;
+    return NS_OK;
+
+}
+
+NS_IMETHODIMP nsLocalFile::GetResolvedFSSpec(FSSpec *fileSpec)
+{
+    NS_ENSURE_ARG(fileSpec);
+    *fileSpec = mResolvedSpec;
     return NS_OK;
 
 }
