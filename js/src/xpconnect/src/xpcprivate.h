@@ -1314,7 +1314,9 @@ public:
     JSClass*                        GetJSClass() {return &mJSClass;}
 
     XPCNativeScriptableShared(JSUint32 aFlags = 0, char* aName = nsnull)
-        : mFlags(aFlags) {mJSClass.name = aName;} // take ownership
+        : mFlags(aFlags) 
+        {memset(&mJSClass, 0, sizeof(JSClass));
+         mJSClass.name = aName;} // take ownership
 
     ~XPCNativeScriptableShared()
         {if(mJSClass.name)nsMemory::Free((void*)mJSClass.name);}
