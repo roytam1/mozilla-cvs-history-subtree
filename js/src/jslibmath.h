@@ -197,6 +197,7 @@ extern double fd_pow __P((double, double));
 #define fd_fmod fmod
 #define fd_erf erf
 #define fd_erfc erfc
+#define fd_floor floor
 #define fd_gamma gamma
 #define fd_hypot hypot
 #define fd_isnan isnan
@@ -223,7 +224,6 @@ extern double fd_tan __P((double));
 extern double fd_atan2 __P((double, double));
 extern double fd_pow __P((double, double));
 extern double fd_ceil __P((double));
-extern double fd_floor __P((double));
 extern double fd_copysign __P((double, double));
 
 #elif defined SOLARIS
