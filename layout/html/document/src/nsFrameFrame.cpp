@@ -624,7 +624,7 @@ nsHTMLFrameOuterFrame::AttributeChanged(nsIPresContext* aPresContext,
         
         nsCOMPtr<nsIDocShellTreeOwner> parentTreeOwner;
         parentAsItem->GetTreeOwner(getter_AddRefs(parentTreeOwner));
-        if (parentTreeOwner)
+        if (parentTreeOwner) {
           PRInt32 parentType;
           parentAsItem->GetItemType(&parentType);
           PRBool is_primary_content =
@@ -632,6 +632,7 @@ nsHTMLFrameOuterFrame::AttributeChanged(nsIPresContext* aPresContext,
             value.EqualsIgnoreCase("content-primary");
           parentTreeOwner->ContentShellAdded(docShellAsItem, is_primary_content,
                                              value.get());
+        }
       }
     }
   }
