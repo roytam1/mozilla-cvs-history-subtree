@@ -45,7 +45,7 @@ locale/global/security,                                   en-US/locale/global/se
 locale/global/webservices,                                en-US/locale/global/webservices
 locale/global/xml,                                        en-US/locale/global/xml
 locale/global/xpinstall,                                  en-US/locale/global/xpinstall
-
+locale/global-platform,                                   en-US/locale/global-platform
 
 #################################################################################################
 # communicator
