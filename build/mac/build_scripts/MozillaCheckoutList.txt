@@ -14,6 +14,6 @@ mozilla/security/manager,
 mozilla/accessible,
 DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
 mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/gfx2, IMG2_20010618_BRANCH
+mozilla/modules/libpr0n, IMG2_20010618_BRANCH
+SeaMonkeyAll, IMG2_20010618_BRANCH
