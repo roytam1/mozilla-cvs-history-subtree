@@ -2,6 +2,7 @@
 
 - FIX these things:
     ! FIX resolve in setProperty brendan bug 72354
+    ! FIX to only share protos if scriptable flag says so.
     - FIX nested enumerate with scriptable helper
     - FIX xpccomponets.cpp use of scriptable to deal better with prototype use
 
