@@ -766,15 +766,26 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
 PRBool
 fileDirectoryp(RDF_Resource u)
 {
+	PRFileInfo	info;
 	PRBool		retVal = PR_FALSE;
-	PRDir		*d;
+	PRStatus	err;
+	char		*pathname, *url;
 
 	if (startsWith("file:",  resourceID(u)))
 	{
-		if ((d = OpenDir(resourceID(u))) != NULL)
+		if ((pathname = resourceID(u)) != NULL)
 		{
-			PR_CloseDir(d);
-			retVal = PR_TRUE;
+			if ((url = unescapeURL(&pathname[FS_URL_OFFSET])) != NULL)
+			{
+				if ((err=PR_GetFileInfo(url, &info)) == PR_SUCCESS)
+				{
+					if (info.type == PR_FILE_DIRECTORY)
+					{
+						retVal = PR_TRUE;
+					}
+				}
+				XP_FREE(url);
+			}
 		}
 	}
 	return(retVal);
