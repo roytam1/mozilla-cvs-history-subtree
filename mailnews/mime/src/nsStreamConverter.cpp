@@ -33,6 +33,9 @@
 #include "nsIURL.h"
 #include "nsString.h"
 #include "nsIServiceManager.h"
+#include "nsXPIDLString.h"
+#include "nsIAllocator.h"
+#include "nsIBuffer.h"
 #include "nsMimeStringResources.h"
 
 ////////////////////////////////////////////////////////////////
@@ -238,17 +241,14 @@ nsStreamConverter::nsStreamConverter()
   NS_INIT_REFCNT();
 
   // Init member variables...
-  mOutStream = nsnull;
-  mOutListener = nsnull;
   mOverrideFormat = nsnull;
 
   mWrapperOutput = PR_FALSE;
   mBridgeStream = NULL;
   mTotalRead = 0;
   mOutputFormat = PL_strdup("text/html");
-  mEmitter = NULL;
-  mURI = nsnull;
   mDoneParsing = PR_FALSE;
+  mAlreadyKnowOutputType = PR_FALSE;
 }
 
 nsStreamConverter::~nsStreamConverter()
@@ -261,7 +261,7 @@ nsStreamConverter::~nsStreamConverter()
  * mime object class object....
  */
 nsresult 
-NS_NewStreamConverter(nsIStreamConverter ** aInstancePtrResult)
+NS_NewStreamConverter(const nsIID &aIID, void ** aInstancePtrResult)
 {
 	/* note this new macro for assertions...they can take 
      a string describing the assertion */
@@ -271,7 +271,7 @@ NS_NewStreamConverter(nsIStreamConverter ** aInstancePtrResult)
 	{
 		nsStreamConverter *obj = new nsStreamConverter();
 		if (obj)
-			return obj->QueryInterface(nsIStreamConverter::GetIID(), (void**) aInstancePtrResult);
+			return obj->QueryInterface(aIID, (void**) aInstancePtrResult);
 		else
 			return NS_ERROR_OUT_OF_MEMORY; /* we couldn't allocate the object */
 	}
@@ -279,156 +279,190 @@ NS_NewStreamConverter(nsIStreamConverter ** aInstancePtrResult)
 		return NS_ERROR_NULL_POINTER; /* aInstancePtrResult was NULL....*/
 }
 
-/* 
- * The following macros actually implement addref, release and 
- * query interface for our component. 
- */
-/* the following macro actually implement addref, release and query interface for our component. */
-NS_IMPL_ISUPPORTS(nsStreamConverter, nsIStreamConverter::GetIID());
+NS_IMPL_ADDREF(nsStreamConverter)
+NS_IMPL_RELEASE(nsStreamConverter)
+
+NS_IMETHODIMP nsStreamConverter::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+	if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
+	*aInstancePtr = nsnull;
+
+	if (aIID.Equals(nsCOMTypeInfo<nsIStreamConverter>::GetIID()) || 
+		aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))
+	{
+		*aInstancePtr = NS_STATIC_CAST(nsIStreamConverter*, this);
+	}              
+	else if(aIID.Equals(nsCOMTypeInfo<nsIMimeStreamConverter>::GetIID()))
+	{
+		*aInstancePtr = NS_STATIC_CAST(nsIMimeStreamConverter*, this);
+	}
+	else if (aIID.Equals(nsCOMTypeInfo<nsIBufferObserver>::GetIID()))
+	{
+		*aInstancePtr = NS_STATIC_CAST(nsIBufferObserver*, this);
+	}
+
+	if(*aInstancePtr)
+	{
+		NS_ADDREF_THIS();
+		return NS_OK;
+	}
+	else
+		return NS_ERROR_NO_INTERFACE;
+}
 
 ///////////////////////////////////////////////////////////////
 // nsStreamConverter definitions....
 ///////////////////////////////////////////////////////////////
-//
-// 
-// This is the output stream where the stream converter will write processed data after 
-// conversion. 
-// 
-nsresult 
-nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, nsMimeOutputType aType,
-                                   nsMimeOutputType * aOutFormat, char **aOutputContentType)
+
+NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutListener)
 {
-  nsresult            res;
-  nsMimeOutputType    newType;
+	nsresult rv = NS_OK;
+	if (!aURI || !aOutListener)
+		return NS_ERROR_NULL_POINTER;
 
-  if (!aURI)
-    return NS_ERROR_OUT_OF_MEMORY;
+	mOutListener = aOutListener;
 
-  newType = aType;
-  switch (aType) 
-  {
-  case nsMimeOutput::nsMimeMessageSplitDisplay:    // the wrapper HTML output to produce the split header/body display
-      mWrapperOutput = PR_TRUE;
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("text/html");
-      break;
+	// mscott --> we need to look at the url and figure out what the correct output type is...
+	nsXPIDLCString urlSpec;
+	nsMimeOutputType newType;
 
-  case nsMimeOutput::nsMimeMessageHeaderDisplay:   // the split header/body display
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("text/xml");
-      break;
+	rv = aURI->GetSpec(getter_Copies(urlSpec));
+	if (NS_FAILED(rv)) return rv;
+	
+	if (!mAlreadyKnowOutputType)
+	{
+		DetermineOutputFormat(urlSpec, &newType);
+		mAlreadyKnowOutputType = PR_TRUE;
+	}
+	else
+		newType = mOutputType;
 
-  case nsMimeOutput::nsMimeMessageBodyDisplay:   // the split header/body display
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("text/html");
-      break;
+	  switch (newType)
+	  {
+		case nsMimeOutput::nsMimeMessageSplitDisplay:    // the wrapper HTML output to produce the split header/body display
+			mWrapperOutput = PR_TRUE;
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("text/html");
+			break;
+		case nsMimeOutput::nsMimeMessageHeaderDisplay:   // the split header/body display
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("text/xml");
+			break;
 
-  case nsMimeOutput::nsMimeMessageQuoting:   // all HTML quoted output
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("text/html");
-      break;
+		case nsMimeOutput::nsMimeMessageBodyDisplay:   // the split header/body display
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("text/html");
+			break;
 
-  case nsMimeOutput::nsMimeMessageRaw:       // the raw RFC822 data (view source) and attachments
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("raw");
-      break;
+		case nsMimeOutput::nsMimeMessageQuoting:   // all HTML quoted output
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("text/html");
+			break;
 
-  case nsMimeOutput::nsMimeMessageDraftOrTemplate:       // Loading drafts & templates
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("message/draft");
-      break;
+		case nsMimeOutput::nsMimeMessageRaw:       // the raw RFC822 data (view source) and attachments
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("raw");
+			break;
 
-  case nsMimeOutput::nsMimeMessageEditorTemplate:       // Loading templates into editor
-      PR_FREEIF(mOutputFormat);
-      mOutputFormat = PL_strdup("text/html");
-      break;
+		case nsMimeOutput::nsMimeMessageDraftOrTemplate:       // Loading drafts & templates
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("message/draft");
+			break;
 
-  default:   // case nsMimeUnknown (// Don't know the format, figure it out from the URL)
-    {
-      char *url;
-      if (NS_FAILED(aURI->GetSpec(&url)))
-        return NS_ERROR_OUT_OF_MEMORY;
-      DetermineOutputFormat(url, &newType);
-      PR_FREEIF(url);
-    }
-  }
+		case nsMimeOutput::nsMimeMessageEditorTemplate:       // Loading templates into editor
+			PR_FREEIF(mOutputFormat);
+			mOutputFormat = PL_strdup("text/html");
+			break;
+		default:
+			NS_ASSERTION(0, "this means I made a mistake in my assumptions");
+	  }
+	
+	// We will first find an appropriate emitter in the repository that supports 
+	// the requested output format...note, the special exceptions are nsMimeMessageDraftOrTemplate
+	// or nsMimeMessageEditorTemplate where we don't need any emitters
+	//
 
-  // 
-  // We will first find an appropriate emitter in the repository that supports 
-  // the requested output format...note, the special exceptions are nsMimeMessageDraftOrTemplate
-  // or nsMimeMessageEditorTemplate where we don't need any emitters
-  //
-  if ( (newType != nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
-       (newType != nsMimeOutput::nsMimeMessageEditorTemplate) )
-  {
-    nsAutoString progID (eOneByte);
-    progID = "component://netscape/messenger/mimeemitter;type=";
-    if (mOverrideFormat)
-      progID += mOverrideFormat;
-    else
-      progID += mOutputFormat;
+	if ( (newType != nsMimeOutput::nsMimeMessageDraftOrTemplate) ||
+		 (newType != nsMimeOutput::nsMimeMessageEditorTemplate) )
+	{
+		nsAutoString progID (eOneByte);
+		progID = "component://netscape/messenger/mimeemitter;type=";
+		if (mOverrideFormat)
+		progID += mOverrideFormat;
+		else
+		progID += mOutputFormat;
 
-    res = nsComponentManager::CreateInstance(progID.GetBuffer(), nsnull,
+		rv = nsComponentManager::CreateInstance(progID.GetBuffer(), nsnull,
 										                         nsIMimeEmitter::GetIID(),
 										                         (void **) getter_AddRefs(mEmitter));
-    if ((NS_FAILED(res)) || (!mEmitter))
-    {
-  #ifdef NS_DEBUG
-	    printf("Unable to create the correct converter!\n");
-  #endif
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-  }
+		if ((NS_FAILED(rv)) || (!mEmitter))
+		{
+#ifdef DEBUG_rhp
+			printf("Unable to create the correct converter!\n");
+#endif
+		return NS_ERROR_OUT_OF_MEMORY;
+		}
+	}
 
-  // make sure to set these!
-  mOutStream = aOutStream;
-  SetStreamURI(aURI);
+	SetStreamURI(aURI);
+	// now we want to create a pipe which we'll use for converting the data...
+	rv = NS_NewPipe(getter_AddRefs(mInputStream), getter_AddRefs(mOutputStream),
+                    NS_STREAM_CONVERTER_SEGMENT_SIZE,
+                    NS_STREAM_CONVERTER_BUFFER_SIZE, PR_TRUE, this);
 
-  if (mEmitter)
-  {
-    mEmitter->Initialize(aURI);
-    mEmitter->SetOutputStream(aOutStream);
-  }
-  mBridgeStream = bridge_create_stream(mEmitter, this, aURI, newType);
+	// initialize our emitter
+	if (NS_SUCCEEDED(rv) && mEmitter)
+	{
+	  mEmitter->Initialize(aURI);
+	  mEmitter->SetPipe(mInputStream, mOutputStream);
+	  mEmitter->SetOutputListener(aOutListener);
+	}
+  
+	mBridgeStream = bridge_create_stream(mEmitter, this, aURI, newType);
 
-  // What type is libmime going to produce?
-  *aOutFormat = newType;
-  if (PL_strcasecmp(mOutputFormat, "raw") == 0)
-    *aOutputContentType = PL_strdup(UNKNOWN_CONTENT_TYPE);
-  else
-    *aOutputContentType = PL_strdup(mOutputFormat);
-
-  if (!mBridgeStream)
-    return NS_ERROR_OUT_OF_MEMORY;
-  else
-    return NS_OK;
+	if (!mBridgeStream)
+		return NS_ERROR_OUT_OF_MEMORY;
+	else
+		return rv;
 }
 
+NS_IMETHODIMP nsStreamConverter::GetContentType(char **aOutputContentType)
+{
+	if (!aOutputContentType)
+		return NS_ERROR_NULL_POINTER;
+
+	// since this method passes a string through an IDL file we need to use nsAllocator to allocate it 
+	// and not PL_strdup!
+	if (PL_strcasecmp(mOutputFormat, "raw") == 0)
+		*aOutputContentType = (char *) nsAllocator::Clone(UNKNOWN_CONTENT_TYPE, nsCRT::strlen(UNKNOWN_CONTENT_TYPE));
+	else
+		*aOutputContentType = (char *) nsAllocator::Clone(mOutputFormat, nsCRT::strlen(mOutputFormat));
+	return NS_OK;
+}
 
 // 
 // This is the type of output operation that is being requested by libmime. The types
 // of output are specified by nsIMimeOutputType enum
 // 
 nsresult 
-nsStreamConverter::SetOutputType(nsMimeOutputType aType)
+nsStreamConverter::SetMimeOutputType(nsMimeOutputType aType)
 {
+  mAlreadyKnowOutputType = PR_TRUE;
   mOutputType = aType;
   if (mBridgeStream)
     bridge_set_output_type(mBridgeStream, aType);
   return NS_OK;
 }
 
-// 
-// The output listener can be set to allow for the flexibility of having the stream converter 
-// directly notify the listener of the output stream for any processed/converter data. If 
-// this output listener is not set, the data will be written into the output stream but it is 
-// the responsibility of the client of the stream converter to handle the resulting data. 
-// 
-nsresult 
-nsStreamConverter::SetOutputListener(nsIStreamListener *aOutListener)
+NS_IMETHODIMP nsStreamConverter::GetMimeOutputType(nsMimeOutputType *aOutFormat)
 {
-  mOutListener = aOutListener;
-  return mEmitter->SetOutputListener(aOutListener);
+	nsresult rv = NS_OK;
+	if (aOutFormat)
+		*aOutFormat = mOutputType;
+	else
+		rv = NS_ERROR_NULL_POINTER;
+
+	return rv;
 }
 
 // 
@@ -517,13 +551,15 @@ char *output = "\
 // called only once, at the beginning of a URL load.
 //
 nsresult 
-nsStreamConverter::OnStartRequest(nsIChannel * /* aChannel */, nsISupports *ctxt)
+nsStreamConverter::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
 #ifdef NS_DEBUG
     printf("nsStreamConverter::OnStartRequest()\n");
 #endif
 
-  return NS_OK;
+	// forward the start rquest to any listeners
+	mOutListener->OnStartRequest(aChannel, ctxt);
+	return NS_OK;
 }
 
 //
@@ -531,7 +567,7 @@ nsStreamConverter::OnStartRequest(nsIChannel * /* aChannel */, nsISupports *ctxt
 // called once when the networking library has finished processing the 
 //
 nsresult 
-nsStreamConverter::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
+nsStreamConverter::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
 {
 #ifdef NS_DEBUG
     printf("nsStreamConverter::OnStopRequest()\n");
@@ -555,12 +591,33 @@ nsStreamConverter::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt,
   }
 
   // First close the output stream...
-  if (mOutStream)
-    mOutStream->Close();
+  if (mOutputStream)
+    mOutputStream->Close();
 
   // Make sure to do necessary cleanup!
   InternalCleanup();
 
+  // forward on top request to any listeners
+  mOutListener->OnStopRequest(aChannel, ctxt, status, errorMsg);
+
   // Time to return...
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamConverter::OnFull(nsIBuffer* buffer)
+{
+    return NS_OK;;
+}
+
+NS_IMETHODIMP
+nsStreamConverter::OnWrite(nsIBuffer* aBuffer, PRUint32 aCount)
+{
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsStreamConverter::OnEmpty(nsIBuffer* buffer)
+{
+    return NS_OK;
 }
