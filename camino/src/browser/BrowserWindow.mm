@@ -62,7 +62,8 @@ static const int kEscapeKeyCode = 53;
   // We need this hack because NSWindow::sendEvent will eat the escape key
   // and won't pass it down to the key handler of responders in the window.
   // We have to override sendEvent for all of our escape key needs.
-  if ([theEvent keyCode] == kEscapeKeyCode && [theEvent type] == NSKeyDown && [self firstResponder] == [mAutoCompleteTextField fieldEditor])
+  if ([theEvent type] == NSKeyDown &&
+      [theEvent keyCode] == kEscapeKeyCode && [self firstResponder] == [mAutoCompleteTextField fieldEditor])
     [mAutoCompleteTextField revertText];
   else
     [super sendEvent:theEvent];
