@@ -10,3 +10,7 @@ treeitem[Type="2"] {
 treeitem[Type="3"] {
   color: blue;
 }
+
+treeitem[Type="contentAttribute"] {
+  color: blue;
+}

@@ -29,8 +29,11 @@
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
 
-#include "nsIDOMNode.h"
 #include "nsIDOMDocument.h"
+
+// 
+#include "nsIDOMNode.h"
+#include "nsIContent.h"
 
 /* {c7cf77e8-245a-11d3-80f0-006008948010} */
 #define NS_RDF_DOMDATASOURCE_CID \
@@ -65,6 +68,7 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
 
  private:
 
+    // DOM stuff
     nsresult createDOMNodeArcs(nsIDOMNode *node,
                                nsISupportsArray *arcs);
     nsresult createDOMAttributeArcs(nsIDOMNode *node,
@@ -76,7 +80,23 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
                                    nsISupportsArray *arcs);
     nsresult createDOMNamedNodeMapArcs(nsIDOMNamedNodeMap *nodelist,
                                        nsISupportsArray *arcs);
-    
+
+
+    nsresult createDOMNodeTarget(nsIDOMNode *node,
+                                 nsIRDFResource *property,
+                                 nsString& result);
+    // nsIContent stuff
+    nsresult createContentArcs(nsIContent *content,
+                               nsISupportsArray *arcs);
+    nsresult createContentChildArcs(nsIContent *content,
+                                    nsISupportsArray *arcs);
+    nsresult createContentAttributeArcs(nsIContent *content,
+                                        nsISupportsArray *arcs);
+                                        
+    nsresult createContentTarget(nsIContent *content,
+                                 nsIRDFResource *property,
+                                 nsString& result);
+    // helper routine
     nsresult getResourceForObject(nsISupports *object,
                                   nsIRDFResource **resource);
     

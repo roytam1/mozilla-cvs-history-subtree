@@ -40,7 +40,7 @@
 #include "nsIDOMViewerElement.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMXULDocument.h"
-
+#include "nsRDFDOMViewerUtils.h"
 
 #include "prprf.h"
 
@@ -131,6 +131,8 @@ nsRDFDOMDataSource::GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty
          (const char*)propval);
 #endif
 
+  *_retval = nsnull;
+  
   nsresult rv;
   nsAutoString str;
   if (aSource == kNC_DOMRoot) {
@@ -142,41 +144,91 @@ nsRDFDOMDataSource::GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty
       str = "DOMRootType";
 
   } else {
+
     nsCOMPtr<nsIDOMViewerElement> nodeContainer =
       do_QueryInterface(aSource);
 
     nsCOMPtr<nsISupports> supports;
     nodeContainer->GetObject(getter_AddRefs(supports));
-    nsCOMPtr<nsIDOMNode> node =
-      do_QueryInterface(supports);
 
-    if (node) {
-      if (aProperty == kNC_Name)
-        node->GetNodeName(str);
-      else if (aProperty == kNC_Value)
-        node->GetNodeValue(str);
-      else if (aProperty == kNC_Type) {
-        PRUint16 type;
-        node->GetNodeType(&type);
-        str.Append(PRInt32(type));
-      }        
+    nsCOMPtr<nsIRDFDOMViewerObject> object =
+      do_QueryInterface(supports, &rv);
+
+    if (NS_SUCCEEDED(rv))
+      object->GetTarget(aProperty, _retval);
+    else {
+      switch (mMode) {
+      case nsIDOMDataSource::modeDOM:
+        {
+          nsCOMPtr<nsIDOMNode> node =
+            do_QueryInterface(supports, &rv);
+        
+          if (NS_SUCCEEDED(rv))
+            createDOMNodeTarget(node, aProperty, str);
+          break;
+        }
+
+      case nsIDOMDataSource::modeContent:
+        {
+          nsCOMPtr<nsIContent> content =
+            do_QueryInterface(supports, &rv);
+        
+          if (NS_SUCCEEDED(rv))
+            createContentTarget(content, aProperty, str);
+          break;
+        }
+      }
     }
   }
 
-  nsCOMPtr<nsIRDFLiteral> literal;
-
-  PRUnichar* uniStr = str.ToNewUnicode();
-  rv = getRDFService()->GetLiteral(uniStr,
-                                   getter_AddRefs(literal));
-  nsAllocator::Free(uniStr);
-  
-  *_retval = literal;
-  NS_IF_ADDREF(*_retval);
+  // if nobody set _retval, then create a literal from *str
+  if (!(*_retval)) {
+    nsCOMPtr<nsIRDFLiteral> literal;
+    
+    PRUnichar* uniStr = str.ToNewUnicode();
+    rv = getRDFService()->GetLiteral(uniStr,
+                                     getter_AddRefs(literal));
+    nsAllocator::Free(uniStr);
+    
+    *_retval = literal;
+    NS_IF_ADDREF(*_retval);
+  }
   
   return rv;
 }
 
+nsresult
+nsRDFDOMDataSource::createDOMNodeTarget(nsIDOMNode *node,
+                                        nsIRDFResource *aProperty,
+                                        nsString& str)
+{
+  if (aProperty == kNC_Name)
+    node->GetNodeName(str);
+  else if (aProperty == kNC_Value)
+    node->GetNodeValue(str);
+  else if (aProperty == kNC_Type) {
+    PRUint16 type;
+    node->GetNodeType(&type);
+    str.Append(PRInt32(type));
+  }
+  return NS_OK;
+}
 
+nsresult
+nsRDFDOMDataSource::createContentTarget(nsIContent *content,
+                                            nsIRDFResource *aProperty,
+                                            nsString& str)
+{
+  if (aProperty == kNC_Name) {
+    nsCOMPtr<nsIAtom> atom;
+    content->GetTag(*getter_AddRefs(atom));
+    atom->ToString(str);
+  }
+
+  return NS_OK;
+}
+
+                                        
 /* nsISimpleEnumerator GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
 NS_IMETHODIMP
 nsRDFDOMDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsISimpleEnumerator **_retval)
@@ -224,10 +276,90 @@ nsRDFDOMDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aPropert
   // node is now the node we're interested in.
 
   if (aProperty == kNC_Child && node ) {
-    createDOMNodeArcs(node, arcs);
-
+    switch (mMode) {
+    case nsIDOMDataSource::modeDOM:
+      createDOMNodeArcs(node, arcs);
+      break;
+      
+    case nsIDOMDataSource::modeContent:
+      {
+        nsCOMPtr<nsIContent> content =
+          do_QueryInterface(node, &rv);
+        if (NS_SUCCEEDED(rv))
+          createContentArcs(content, arcs);
+        else
+          createDOMNodeArcs(node, arcs);
+      }
+    }
   }
 
+  return NS_OK;
+}
+
+nsresult
+nsRDFDOMDataSource::createContentArcs(nsIContent *content,
+                                      nsISupportsArray* arcs)
+{
+  nsresult rv;
+  
+  rv = createContentChildArcs(content, arcs);
+  rv = createContentAttributeArcs(content, arcs);
+  return rv;
+}
+
+nsresult
+nsRDFDOMDataSource::createContentChildArcs(nsIContent *content,
+                                           nsISupportsArray* arcs)
+{
+  nsresult rv = NS_OK;
+  PRInt32 length;
+  content->ChildCount(length);
+  PRInt32 i;
+  for (i=0; i<length; i++) {
+    nsCOMPtr<nsIContent> child;
+    content->ChildAt(i, *getter_AddRefs(child));
+
+    nsCOMPtr<nsIRDFResource> resource;
+    rv = getResourceForObject(child, getter_AddRefs(resource));
+    rv = arcs->AppendElement(resource);
+  }
+
+  return rv;
+}
+
+nsresult
+nsRDFDOMDataSource::createContentAttributeArcs(nsIContent* content,
+                                               nsISupportsArray* arcs)
+{
+  nsresult rv;
+  PRInt32 attribs;
+
+  content->GetAttributeCount(attribs);
+
+  PRInt32 i;
+  for (i=0; i< attribs; i++) {
+    nsCOMPtr<nsIAtom> nameAtom;
+    PRInt32 nameSpace;
+    content->GetAttributeNameAt(i, nameSpace, *getter_AddRefs(nameAtom));
+
+    nsIRDFDOMViewerObject* viewerObject =
+      NS_STATIC_CAST(nsIRDFDOMViewerObject*,new nsDOMViewerObject);
+
+    nsString attribValue;
+    content->GetAttribute(nameSpace, nameAtom, attribValue);
+
+    nsString name; nameAtom->ToString(name);
+    nsString type("contentAttribute");
+
+    viewerObject->SetTargetLiteral(kNC_Name, name);
+    viewerObject->SetTargetLiteral(kNC_Value, attribValue);
+    viewerObject->SetTargetLiteral(kNC_Type, type);
+    
+    nsCOMPtr<nsIRDFResource> resource;
+    rv = getResourceForObject(viewerObject, getter_AddRefs(resource));
+    rv = arcs->AppendElement(resource);
+    
+  }
   return NS_OK;
 }
 
