@@ -51,12 +51,12 @@ public:
      */
     String();
 
-#ifdef TX_EXE
     /*
      * Copying constructor.
      */
     String(const String& aSource);
 
+#ifdef TX_EXE
     /*
      * Constructor, allocates a buffer and copies the supplied string buffer.
      * If aLength is zero it computes the length from the supplied string.

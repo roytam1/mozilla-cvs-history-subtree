@@ -50,6 +50,11 @@ inline String::String()
   MOZ_COUNT_CTOR(String);
 }
 
+inline String::String(const String& aSource) : mString(aSource.mString)
+{
+  MOZ_COUNT_CTOR(String);
+}
+
 inline String::String(const nsAString& aSource) : mString(aSource)
 {
   MOZ_COUNT_CTOR(String);
@@ -157,12 +162,14 @@ inline void String::truncate(PRUint32 aLength)
 
 inline String& String::subString(PRUint32 aStart, String& aDest) const
 {
-  PRUint32 length = mString.Length() - aStart;
-  if (length < 0) {
-    aDest.clear();
+  PRUint32 length = mString.Length();
+  if (aStart < length) {
+    aDest.mString.Assign(Substring(mString, aStart, length - aStart));
   }
   else {
-    aDest.mString.Assign(Substring(mString, aStart, length));
+    NS_ASSERTION(aStart == length,
+                 "Bonehead! Calling subString with negative length.");
+    aDest.clear();
   }
   return aDest;
 }
@@ -170,12 +177,13 @@ inline String& String::subString(PRUint32 aStart, String& aDest) const
 inline String& String::subString(PRUint32 aStart, PRUint32 aEnd,
                                  String& aDest) const
 {
-  PRUint32 length = aEnd - aStart;
-  if (length < 0) {
-    aDest.clear();
+  if (aStart < aEnd) {
+    aDest.mString.Assign(Substring(mString, aStart, aEnd - aStart));
   }
   else {
-    aDest.mString.Assign(Substring(mString, aStart, length));
+    NS_ASSERTION(aStart == aEnd,
+                 "Bonehead! Calling subString with negative length.");
+    aDest.clear();
   }
   return aDest;
 }
