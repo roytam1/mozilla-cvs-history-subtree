@@ -873,20 +873,14 @@ nsBindingManager::LoadBindingDocument(nsIDocument* aBoundDoc, const nsAReadableS
 {
   nsCAutoString url; url.AssignWithConversion(PromiseFlatString(aURL).get());
   
-  nsCOMPtr<nsIURL> uri;
-  nsComponentManager::CreateInstance("@mozilla.org/network/standard-url;1",
-                                     nsnull,
-                                     NS_GET_IID(nsIURL),
-                                     getter_AddRefs(uri));
-  uri->SetSpec(url);
-  
+  nsXPIDLCString otherScheme;
+  nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID);
+  if (!ioService) return NS_ERROR_FAILURE;
+  ioService->ExtractScheme(url, 0, 0, getter_Copies(otherScheme));
 
   nsCOMPtr<nsIURI> docURL = getter_AddRefs(aBoundDoc->GetDocumentURL());
   nsXPIDLCString scheme;
   docURL->GetScheme(getter_Copies(scheme));
-
-  nsXPIDLCString otherScheme;
-  uri->GetScheme(getter_Copies(otherScheme));
 
   // First we need to load our binding.
   *aResult = nsnull;

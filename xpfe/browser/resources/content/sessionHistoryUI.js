@@ -129,18 +129,34 @@ function addToUrlbarHistory()
           return;
        var index = 0;
        // create the nsIURI objects for comparing the 2 urls
-       var uriToAdd = Components.classes["@mozilla.org/network/standard-url;1"]
-                            .createInstance(Components.interfaces.nsIURI);
-       uriToAdd.spec = urlToAdd;
-       var rdfUri = Components.classes["@mozilla.org/network/standard-url;1"]
-                          .createInstance(Components.interfaces.nsIURI);
+       var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                     .getService(Components.interfaces.nsIIOService);
+       
+       var scheme = new Object();
+       var blah1 = new Object(); // fix - how do I avoid creating dummy object?
+       var blah2 = new Object();
+       try {
+        ioService.extractScheme(urlToAdd, blah1, blah2, scheme);
+       } catch(e) {
+        urlToAdd = "http://" + urlToAdd;
+       }
+       var uriToAdd  = ioService.newURI(urlToAdd, null);
+
        while(elements.hasMoreElements()) {
           entry = elements.getNext();
           if (entry) {
              index ++;
              entry= entry.QueryInterface(Components.interfaces.nsIRDFLiteral);
              var rdfValue = entry.Value;
-             rdfUri.spec = rdfValue;
+
+             try {
+                ioService.extractScheme(rdfValue, blah1, blah2, scheme);
+             } catch(e) {
+                rdfValue = "http://" + rdfValue;
+            }
+
+             var rdfUri = ioService.newURI(rdfValue, null);
+             
              if (rdfUri.equals(uriToAdd)) {
                  // URI already present in the database
                  // Remove it from its current position.
