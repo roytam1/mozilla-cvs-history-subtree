@@ -298,6 +298,10 @@ USE_IMG2=1
 CFLAGS=$(CFLAGS) -DUSE_IMG2
 #!endif
 
+!ifdef MOZ_STATIC_COMPONENT_LIBS
+CFLAGS=$(CFLAGS) -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT -DMOZ_STATIC_COMPONENT_LIBS
+!endif
+
 #//-----------------------------------------------------------------------
 #//
 #// build tools
