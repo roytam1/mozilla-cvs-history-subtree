@@ -290,6 +290,7 @@ NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult)
 NS_IMETHODIMP
 nsXULPrototypeDocument::Read(nsIObjectInputStream* aStream)
 {
+    NS_TIMELINE_MARK_FUNCTION("XUL PD deserialize");
     nsresult rv;
 
     PRUint32 version;
