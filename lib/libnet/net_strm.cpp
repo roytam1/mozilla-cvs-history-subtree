@@ -488,7 +488,7 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
             UnlockStream();
             do {
                 NET_PollSockets();
-                bytesRead += ReadBuffer(aBuf, aCount-bytesRead);
+                bytesRead += ReadBuffer(aBuf+bytesRead, aCount-bytesRead);
                 /* XXX m_bIsClosed is checked outside of the lock! */
             } while ((aCount > bytesRead) && !m_bIsClosed); 
             LockStream();
