@@ -48,8 +48,8 @@ nsImageLoader::~nsImageLoader()
 
 //#define IMAGE_THREADPOOL 1
 
-/* nsIImageRequest loadImage (in nsIURI uri, in gfx_dimension width, in gfx_dimension height); */
-NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageRequest **_retval)
+/* nsIImageRequest loadImage (in nsIURI uri, in nsIImageDecoderObserver aObserver); */
+NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aObserver, nsIImageRequest **_retval)
 {
 
 #ifdef IMAGE_THREADPOOL
@@ -73,7 +73,7 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageRequest **_retval)
 
   // XXX look at the progid
   nsCOMPtr<nsIImageRequest> imgRequest(do_CreateInstance("@mozilla.org/image/request;1"));
-  imgRequest->Init(newChannel);
+  imgRequest->Init(newChannel, aObserver);
 
 #ifdef IMAGE_THREADPOOL
   nsCOMPtr<nsIRunnable> run(do_QueryInterface(imgRequest));

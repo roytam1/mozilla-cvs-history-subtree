@@ -40,7 +40,8 @@
 
 #include "nspr.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS5(nsImageRequest, nsIImageRequest, nsIRequest, nsIStreamListener, nsIStreamObserver, nsIRunnable)
+NS_IMPL_THREADSAFE_ISUPPORTS6(nsImageRequest, nsIImageRequest, nsIRequest,
+                              nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver, nsIRunnable)
 
 nsImageRequest::nsImageRequest()
 {
@@ -56,13 +57,16 @@ nsImageRequest::~nsImageRequest()
 
 
 
-/* void init (in nsIChannel aChannel, in gfx_dimension width, in gfx_dimension height); */
-NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel)
+/* void init (in nsIChannel aChannel, in nsIImageDecoderObserver aObserver); */
+NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel, nsIImageDecoderObserver *aObserver)
 {
   if (mImage)
     return NS_ERROR_FAILURE; // XXX
 
   mChannel = aChannel;
+
+  mObserver = aObserver;
+  // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
 
   // XXX do not init the image here.  this has to be done from the image decoder.
   mImage = do_CreateInstance("@mozilla.org/gfx/image;2");

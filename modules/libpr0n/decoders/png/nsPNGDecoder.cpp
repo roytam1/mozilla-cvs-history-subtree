@@ -34,6 +34,7 @@
 
 #include "nsIStreamObserver.h"
 
+#include "nsRect2.h"
 
 // XXX we need to be sure to fire onStopDecode messages to mObserver in error cases.
 
@@ -402,6 +403,10 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
 
   if (new_row) {
     decoder->mFrame->SetBits((PRUint8*)line, bpr, row_num*bpr);
+    gfx_dimension width;
+    decoder->mFrame->GetWidth(&width);
+    nsRect2 r(0, row_num, width, 1);
+    decoder->mObserver->OnDataAvailable(nsnull, decoder->mFrame, &r);
   }
 }
 
