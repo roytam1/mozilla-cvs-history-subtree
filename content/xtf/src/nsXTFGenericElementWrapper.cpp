@@ -37,23 +37,17 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsCOMPtr.h"
+#include "nsXTFElementWrapper.h"
 #include "nsIXTFGenericElement.h"
-#include "nsString.h"
-#include "nsXMLElement.h"
-#include "nsXTFInterfaceAggregator.h"
 #include "nsXTFWeakTearoff.h"
-#include "nsIClassInfo.h"
 #include "nsIXTFGenericElementWrapper.h"
-//XXX get rid of this:
-#include "nsSVGAtoms.h"
 
-typedef nsXMLElement nsXTFGenericElementWrapperBase;
+typedef nsXTFElementWrapper nsXTFGenericElementWrapperBase;
 
 ////////////////////////////////////////////////////////////////////////
 // nsXTFGenericElementWrapper class
-class nsXTFGenericElementWrapper : public nsXTFGenericElementWrapperBase,    // :nsIHTMLContent:nsIStyledContent:nsIContent
-                              public nsIClassInfo,
-                              public nsIXTFGenericElementWrapper
+class nsXTFGenericElementWrapper : public nsXTFGenericElementWrapperBase,   
+                                   public nsIXTFGenericElementWrapper
 {
 protected:
   friend nsresult
@@ -63,45 +57,20 @@ protected:
 
   nsXTFGenericElementWrapper(nsINodeInfo* aNodeInfo, nsIXTFGenericElement* xtfElement);
   virtual ~nsXTFGenericElementWrapper();
-
   nsresult Init();
   
 public:
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
-  // nsIContent specialisations:
-  void SetDocument(nsIDocument* aDocument, PRBool aDeep,
-                   PRBool aCompileEventHandlers);
-  void SetParent(nsIContent* aParent);
-  nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                         PRBool aNotify, PRBool aDeepSetDocument);
-  nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify,
-                         PRBool aDeepSetDocument);
-  nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
-  nsIAtom *GetIDAttributeName() const;
-  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                   nsIAtom* aPrefix, const nsAString& aValue,
-                   PRBool aNotify);
-  nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                   nsAString& aResult)const;
-  PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const;
-  nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
-                     PRBool aNotify);
-  nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
-                         nsIAtom** aName, nsIAtom** aPrefix) const;
-  PRUint32 GetAttrCount() const;
-  
-  // nsIClassInfo interface
-  NS_DECL_NSICLASSINFO
-
   // nsIXTFGenericElementWrapper interface
   NS_DECL_NSIXTFGENERICELEMENTWRAPPER
+
+  // nsIXTFElementWrapper interface
+  NS_FORWARD_NSIXTFELEMENTWRAPPER(nsXTFGenericElementWrapperBase::)
   
 private:
-  // implementation helpers:  
-  PRBool AggregatesInterface(REFNSIID aIID);
-
+  virtual nsIXTFElement *GetXTFElement()const { return mXTFElement; }
   
   nsCOMPtr<nsIXTFGenericElement> mXTFElement;
 };
@@ -182,286 +151,15 @@ NS_NewXTFGenericElementWrapper(nsIXTFGenericElement* xtfElement,
 // nsISupports implementation
 
 
-NS_IMPL_ADDREF_INHERITED(nsXTFGenericElementWrapper,nsXTFGenericElementWrapperBase)
-NS_IMPL_RELEASE_INHERITED(nsXTFGenericElementWrapper,nsXTFGenericElementWrapperBase)
+NS_IMPL_ADDREF_INHERITED(nsXTFGenericElementWrapper, nsXTFGenericElementWrapperBase)
+NS_IMPL_RELEASE_INHERITED(nsXTFGenericElementWrapper, nsXTFGenericElementWrapperBase)
 
-NS_IMETHODIMP
-nsXTFGenericElementWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  nsresult rv;
+NS_INTERFACE_MAP_BEGIN(nsXTFGenericElementWrapper)
+  NS_INTERFACE_MAP_ENTRY(nsIXTFGenericElementWrapper)
+NS_INTERFACE_MAP_END_INHERITING(nsXTFGenericElementWrapperBase)
   
-  if(aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIClassInfo*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if(aIID.Equals(NS_GET_IID(nsIXTFGenericElementWrapper))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIXTFGenericElementWrapper*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if (NS_SUCCEEDED(rv = nsXTFGenericElementWrapperBase::QueryInterface(aIID, aInstancePtr))) {
-    return rv;
-  }
-  else if (AggregatesInterface(aIID)) {
-#ifdef DEBUG
-//    printf("nsXTFGenericElementWrapper::QueryInterface(): creating aggregation tearoff\n");
-#endif
-    return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
-                                        (nsISupports**)aInstancePtr);
-  }
-
-  return NS_ERROR_NO_INTERFACE;
-}
-
-//----------------------------------------------------------------------
-// nsIContent:
-
-void
-nsXTFGenericElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
-                                        PRBool aCompileEventHandlers)
-{
-  mXTFElement->WillChangeDocument(aDocument);
-  nsXTFGenericElementWrapperBase::SetDocument(aDocument, aDeep, aCompileEventHandlers);
-  mXTFElement->DocumentChanged(aDocument);
-}
-
-void
-nsXTFGenericElementWrapper::SetParent(nsIContent* aParent)
-{
-  mXTFElement->WillChangeParent(aParent);
-  nsXTFGenericElementWrapperBase::SetParent(aParent);
-  mXTFElement->ParentChanged(aParent);
-}
-
-nsresult
-nsXTFGenericElementWrapper::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                                          PRBool aNotify, PRBool aDeepSetDocument)
-{
-  nsresult rv;
-  mXTFElement->WillInsertChild(aKid, aIndex);
-  rv = nsXTFGenericElementWrapperBase::InsertChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
-  mXTFElement->ChildInserted(aKid, aIndex);
-  return rv;
-}
-
-nsresult
-nsXTFGenericElementWrapper::AppendChildTo(nsIContent* aKid, PRBool aNotify,
-                                          PRBool aDeepSetDocument)
-{
-  nsresult rv;
-  mXTFElement->WillAppendChild(aKid);
-  rv = nsXTFGenericElementWrapperBase::AppendChildTo(aKid, aNotify, aDeepSetDocument);
-  mXTFElement->ChildAppended(aKid);
-  return rv;
-}
-
-nsresult
-nsXTFGenericElementWrapper::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
-{
-  nsresult rv;
-  mXTFElement->WillRemoveChild(aIndex);
-  rv = nsXTFGenericElementWrapperBase::RemoveChildAt(aIndex, aNotify);
-  mXTFElement->ChildRemoved(aIndex);
-  return rv;
-}
-
-nsIAtom *
-nsXTFGenericElementWrapper::GetIDAttributeName() const
-{
-  // XXX:
-  return nsSVGAtoms::id;
-}
-
-nsresult
-nsXTFGenericElementWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                                    nsIAtom* aPrefix, const nsAString& aValue,
-                                    PRBool aNotify)
-{
-  nsAutoString name;
-  aName->ToString(name);
-  
-  nsresult rv = mXTFElement->SetAttribute(name, aValue);
-
-  // XXX mutation events?
-  
-  return rv;
-}
-
-nsresult
-nsXTFGenericElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                                    nsAString& aResult)const
-{
-  nsAutoString name;
-  aName->ToString(name);
-  nsresult rv = mXTFElement->GetAttribute(name, aResult);
-  if (NS_FAILED(rv)) return rv;
-  if (aResult.IsVoid()) return NS_CONTENT_ATTR_NOT_THERE;
-  // XXX when should we return NS_CONTENT_ATTR_NO_VALUE ???
-  
-  return NS_CONTENT_ATTR_HAS_VALUE;
-}
-
-PRBool
-nsXTFGenericElementWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
-{
-  nsAutoString name;
-  aName->ToString(name);
-  PRBool rval = PR_FALSE;
-  mXTFElement->HasAttribute(name, &rval);
-  
-  return rval;
-}
-
-
-nsresult
-nsXTFGenericElementWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
-                                      PRBool aNotify)
-{
-  nsAutoString name;
-  aAttr->ToString(name);
-  
-  nsresult rv = mXTFElement->UnsetAttribute(name);
-
-  // XXX mutation events?
-  
-  return rv;
-}
-
-nsresult
-nsXTFGenericElementWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
-                                          nsIAtom** aName, nsIAtom** aPrefix) const
-{
-  *aNameSpaceID = kNameSpaceID_None;
-  *aPrefix = nsnull;
-  
-  nsAutoString name;
-  nsresult rv = mXTFElement->GetAttributeNameAt(aIndex, name);
-  if (NS_SUCCEEDED(rv))
-    *aName = NS_NewAtom(name);
-  else
-    *aName = nsnull;
-  
-  return rv;
-}
-
-PRUint32
-nsXTFGenericElementWrapper::GetAttrCount() const
-{
-  PRUint32 rval = 0;
-  mXTFElement->GetAttributeCount(&rval);
-  return rval;
-}
-
-
-//----------------------------------------------------------------------
-// nsIClassInfo implementation
-
-/* void getInterfaces (out PRUint32 count, [array, size_is (count), retval] out nsIIDPtr array); */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetInterfaces(PRUint32 *count, nsIID * **array)
-{
-  return mXTFElement->GetScriptingInterfaces(count, array);
-}
-
-/* nsISupports getHelperForLanguage (in PRUint32 language); */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
-{
-  *_retval = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute string contractID; */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetContractID(char * *aContractID)
-{
-  *aContractID = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute string classDescription; */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetClassDescription(char * *aClassDescription)
-{
-  *aClassDescription = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute nsCIDPtr classID; */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetClassID(nsCID * *aClassID)
-{
-  *aClassID = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute PRUint32 implementationLanguage; */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetImplementationLanguage(PRUint32 *aImplementationLanguage)
-{
-  *aImplementationLanguage = nsIProgrammingLanguage::UNKNOWN;
-  return NS_OK;
-}
-
-/* readonly attribute PRUint32 flags; */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetFlags(PRUint32 *aFlags)
-{
-  *aFlags = nsIClassInfo::DOM_OBJECT;
-  return NS_OK;
-}
-
-/* [notxpcom] readonly attribute nsCID classIDNoAlloc; */
-NS_IMETHODIMP 
-nsXTFGenericElementWrapper::GetClassIDNoAlloc(nsCID *aClassIDNoAlloc)
-{
-  return NS_ERROR_NOT_AVAILABLE;
-}
-
 //----------------------------------------------------------------------
 // nsIXTFGenericElementWrapper implementation:
 
-/* readonly attribute nsIDOMElement elementNode; */
-NS_IMETHODIMP
-nsXTFGenericElementWrapper::GetElementNode(nsIDOMElement * *aElementNode)
-{
-  *aElementNode = (nsIDOMElement*)this;
-  NS_ADDREF(*aElementNode);
-  return NS_OK;
-}
+// XXX nothing yet
 
-
-//----------------------------------------------------------------------
-// implementation helpers:
-PRBool
-nsXTFGenericElementWrapper::AggregatesInterface(REFNSIID aIID)
-{
-  // We must ensure that the inner element has a distinct xpconnect
-  // identity, so we mustn't aggregate nsIXPConnectWrappedJS:
-  if (aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS))) return PR_FALSE;
-
-  nsCOMPtr<nsISupports> inst;
-  mXTFElement->QueryInterface(aIID, getter_AddRefs(inst));
-  return (inst!=nsnull);
-//   // we aggregate all interfaces declared as 'public' in our inner
-//   // object:
-//   // XXX we call this so often, it should almost certainly be hashed.
-//   PRUint32 count=0;
-//   nsIID **iids=nsnull;
-  
-//   mXTFElement->GetPublicInterfaces(&count, &iids);
-//   for (int i=0; i<count; ++i) {
-//     if(aIID.Equals(*(iids[i]))) {
-// #ifdef DEBUG
-//       printf("nsXTFGenericElementWrapper::AggregatesInterface(): found!\n");
-// #endif
-//       break;
-//     }
-//   }
-
-//   if (iids!=nsnull)
-//     NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, iids);
-  
-//   return i!=count;
-}

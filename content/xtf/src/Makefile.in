@@ -63,6 +63,7 @@ CPPSRCS		= \
 		nsXTFService.cpp \
 		nsXTFInterfaceAggregator.cpp \
 		nsXTFWeakTearoff.cpp \
+		nsXTFElementWrapper.cpp \
 		nsXTFGenericElementWrapper.cpp \
 		nsXTFSVGVisualWrapper.cpp \
 		nsXTFXMLVisualWrapper.cpp \

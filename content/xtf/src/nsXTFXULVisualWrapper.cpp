@@ -37,24 +37,18 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsCOMPtr.h"
+#include "nsXTFElementWrapper.h"
 #include "nsIXTFXULVisual.h"
-#include "nsString.h"
-#include "nsXMLElement.h"
 #include "nsIAnonymousContentCreator.h"
-#include "nsXTFInterfaceAggregator.h"
 #include "nsXTFWeakTearoff.h"
-#include "nsIClassInfo.h"
 #include "nsIXTFXULVisualWrapper.h"
-//XXX get rid of this:
-#include "nsSVGAtoms.h"
 #include "nsISupportsArray.h"
 
-typedef nsXMLElement nsXTFXULVisualWrapperBase;
+typedef nsXTFElementWrapper nsXTFXULVisualWrapperBase;
 
 ////////////////////////////////////////////////////////////////////////
 // nsXTFXULVisualWrapper class
 class nsXTFXULVisualWrapper : public nsXTFXULVisualWrapperBase,
-                              public nsIClassInfo,
                               public nsIAnonymousContentCreator,
                               public nsIXTFXULVisualWrapper
 {
@@ -72,33 +66,11 @@ public:
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
-  // nsIContent specialisations:
-  void SetDocument(nsIDocument* aDocument, PRBool aDeep,
-                   PRBool aCompileEventHandlers);
-  void SetParent(nsIContent* aParent);
-  nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                         PRBool aNotify, PRBool aDeepSetDocument);
-  nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify,
-                         PRBool aDeepSetDocument);
-  nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
-  nsIAtom *GetIDAttributeName() const;
-  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                   nsIAtom* aPrefix, const nsAString& aValue,
-                   PRBool aNotify);
-  nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                   nsAString& aResult)const;
-  PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const;
-  nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
-                     PRBool aNotify);
-  nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
-                         nsIAtom** aName, nsIAtom** aPrefix) const;
-  PRUint32 GetAttrCount() const;
-  
-  // nsIClassInfo interface
-  NS_DECL_NSICLASSINFO
-
   // nsIXTFXULVisualWrapper interface
   NS_DECL_NSIXTFXULVISUALWRAPPER
+  
+  // nsIXTFElementWrapper interface
+  NS_FORWARD_NSIXTFELEMENTWRAPPER(nsXTFXULVisualWrapperBase::)
   
   // nsIAnonymousContentCreator
   NS_IMETHOD CreateAnonymousContent(nsIPresContext* aPresContext,
@@ -112,10 +84,8 @@ public:
     if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
 
 private:
-  // implementation helpers:  
-  PRBool AggregatesInterface(REFNSIID aIID);
-
-  
+  virtual nsIXTFElement *GetXTFElement()const { return mXTFElement; }
+    
   nsCOMPtr<nsIXTFXULVisual> mXTFElement;
 };
 
@@ -198,263 +168,22 @@ NS_NewXTFXULVisualWrapper(nsIXTFXULVisual* xtfElement,
 NS_IMPL_ADDREF_INHERITED(nsXTFXULVisualWrapper,nsXTFXULVisualWrapperBase)
 NS_IMPL_RELEASE_INHERITED(nsXTFXULVisualWrapper,nsXTFXULVisualWrapperBase)
 
-NS_IMETHODIMP
-nsXTFXULVisualWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  nsresult rv;
-  
-  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIClassInfo*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if (aIID.Equals(NS_GET_IID(nsIAnonymousContentCreator))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIAnonymousContentCreator*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if (aIID.Equals(NS_GET_IID(nsIXTFXULVisualWrapper))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIXTFXULVisualWrapper*, this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  else if (NS_SUCCEEDED(rv = nsXTFXULVisualWrapperBase::QueryInterface(aIID, aInstancePtr))) {
-    return rv;
-  }
-  else if (AggregatesInterface(aIID)) {
-#ifdef DEBUG
-//    printf("nsXTFXULVisualWrapper::QueryInterface(): creating aggregation tearoff\n");
-#endif
-    return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
-                                        (nsISupports**)aInstancePtr);
-  }
-
-  return NS_ERROR_NO_INTERFACE;
-}
-
-//----------------------------------------------------------------------
-// nsIContent:
-
-void
-nsXTFXULVisualWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
-                                   PRBool aCompileEventHandlers)
-{
-  mXTFElement->WillChangeDocument(aDocument);
-  nsXTFXULVisualWrapperBase::SetDocument(aDocument, aDeep, aCompileEventHandlers);
-  mXTFElement->DocumentChanged(aDocument);
-}
-
-void
-nsXTFXULVisualWrapper::SetParent(nsIContent* aParent)
-{
-  mXTFElement->WillChangeParent(aParent);
-  nsXTFXULVisualWrapperBase::SetParent(aParent);
-  mXTFElement->ParentChanged(aParent);
-}
-
-nsresult
-nsXTFXULVisualWrapper::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                                     PRBool aNotify, PRBool aDeepSetDocument)
-{
-  nsresult rv;
-  mXTFElement->WillInsertChild(aKid, aIndex);
-  rv = nsXTFXULVisualWrapperBase::InsertChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
-  mXTFElement->ChildInserted(aKid, aIndex);
-  return rv;
-}
-
-nsresult
-nsXTFXULVisualWrapper::AppendChildTo(nsIContent* aKid, PRBool aNotify,
-                                     PRBool aDeepSetDocument)
-{
-  nsresult rv;
-  mXTFElement->WillAppendChild(aKid);
-  rv = nsXTFXULVisualWrapperBase::AppendChildTo(aKid, aNotify, aDeepSetDocument);
-  mXTFElement->ChildAppended(aKid);
-  return rv;
-}
-
-nsresult
-nsXTFXULVisualWrapper::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
-{
-  nsresult rv;
-  mXTFElement->WillRemoveChild(aIndex);
-  rv = nsXTFXULVisualWrapperBase::RemoveChildAt(aIndex, aNotify);
-  mXTFElement->ChildRemoved(aIndex);
-  return rv;
-}
-
-nsIAtom *
-nsXTFXULVisualWrapper::GetIDAttributeName() const
-{
-  // XXX:
-  return nsSVGAtoms::id;
-}
-
-nsresult
-nsXTFXULVisualWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                               nsIAtom* aPrefix, const nsAString& aValue,
-                               PRBool aNotify)
-{
-  nsAutoString name;
-  aName->ToString(name);
-  
-  nsresult rv = mXTFElement->SetAttribute(name, aValue);
-
-  // XXX mutation events?
-  
-  return rv;
-}
-
-nsresult
-nsXTFXULVisualWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                               nsAString& aResult)const
-{
-  nsAutoString name;
-  aName->ToString(name);
-  nsresult rv = mXTFElement->GetAttribute(name, aResult);
-  if (NS_FAILED(rv)) return rv;
-  if (aResult.IsVoid()) return NS_CONTENT_ATTR_NOT_THERE;
-  // XXX when should we return NS_CONTENT_ATTR_NO_VALUE ???
-  
-  return NS_CONTENT_ATTR_HAS_VALUE;
-}
-
-PRBool
-nsXTFXULVisualWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
-{
-  nsAutoString name;
-  aName->ToString(name);
-  PRBool rval = PR_FALSE;
-  mXTFElement->HasAttribute(name, &rval);
-  
-  return rval;
-}
-
-
-nsresult
-nsXTFXULVisualWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
-                                 PRBool aNotify)
-{
-  nsAutoString name;
-  aAttr->ToString(name);
-  
-  nsresult rv = mXTFElement->UnsetAttribute(name);
-
-  // XXX mutation events?
-  
-  return rv;
-}
-
-nsresult
-nsXTFXULVisualWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
-                                     nsIAtom** aName, nsIAtom** aPrefix) const
-{
-  *aNameSpaceID = kNameSpaceID_None;
-  *aPrefix = nsnull;
-  
-  nsAutoString name;
-  nsresult rv = mXTFElement->GetAttributeNameAt(aIndex, name);
-  if (NS_SUCCEEDED(rv))
-    *aName = NS_NewAtom(name);
-  else
-    *aName = nsnull;
-  
-  return rv;
-}
-
-PRUint32
-nsXTFXULVisualWrapper::GetAttrCount() const
-{
-  PRUint32 rval = 0;
-  mXTFElement->GetAttributeCount(&rval);
-  return rval;
-}
-
-//----------------------------------------------------------------------
-// nsIClassInfo implementation
-
-/* void getInterfaces (out PRUint32 count, [array, size_is (count), retval] out nsIIDPtr array); */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetInterfaces(PRUint32 *count, nsIID * **array)
-{
-  return mXTFElement->GetScriptingInterfaces(count, array);
-}
-
-/* nsISupports getHelperForLanguage (in PRUint32 language); */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
-{
-  *_retval = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute string contractID; */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetContractID(char * *aContractID)
-{
-  *aContractID = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute string classDescription; */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetClassDescription(char * *aClassDescription)
-{
-  *aClassDescription = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute nsCIDPtr classID; */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetClassID(nsCID * *aClassID)
-{
-  *aClassID = nsnull;
-  return NS_OK;
-}
-
-/* readonly attribute PRUint32 implementationLanguage; */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetImplementationLanguage(PRUint32 *aImplementationLanguage)
-{
-  *aImplementationLanguage = nsIProgrammingLanguage::UNKNOWN;
-  return NS_OK;
-}
-
-/* readonly attribute PRUint32 flags; */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetFlags(PRUint32 *aFlags)
-{
-  *aFlags = nsIClassInfo::DOM_OBJECT;
-  return NS_OK;
-}
-
-/* [notxpcom] readonly attribute nsCID classIDNoAlloc; */
-NS_IMETHODIMP 
-nsXTFXULVisualWrapper::GetClassIDNoAlloc(nsCID *aClassIDNoAlloc)
-{
-  return NS_ERROR_NOT_AVAILABLE;
-}
+NS_INTERFACE_MAP_BEGIN(nsXTFXULVisualWrapper)
+  NS_INTERFACE_MAP_ENTRY(nsIXTFXULVisualWrapper)
+  NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
+NS_INTERFACE_MAP_END_INHERITING(nsXTFXULVisualWrapperBase)
 
 //----------------------------------------------------------------------
 // nsIXTFXULVisualWrapper implementation:
 
-/* readonly attribute nsIDOMElement elementNode; */
-NS_IMETHODIMP
-nsXTFXULVisualWrapper::GetElementNode(nsIDOMElement * *aElementNode)
-{
-  *aElementNode = (nsIDOMElement*)this;
-  NS_ADDREF(*aElementNode);
-  return NS_OK;
-}
-
+// XXX nothing yet
 
 //----------------------------------------------------------------------
 // nsIAnonymousContentCreator implementation:
 
 NS_IMETHODIMP
 nsXTFXULVisualWrapper::CreateAnonymousContent(nsIPresContext* aPresContext,
-                                            nsISupportsArray& aAnonymousItems)
+                                              nsISupportsArray& aAnonymousItems)
 {
   nsCOMPtr<nsIDOMElement> element;
   mXTFElement->GetVisualContent(getter_AddRefs(element));
@@ -579,36 +308,3 @@ nsXTFXULVisualWrapper::CreateAnonymousContent(nsIPresContext* aPresContext,
 
 // }
 
-//----------------------------------------------------------------------
-// implementation helpers:
-PRBool
-nsXTFXULVisualWrapper::AggregatesInterface(REFNSIID aIID)
-{
-  // We must ensure that the inner element has a distinct xpconnect
-  // identity, so we mustn't aggregate nsIXPConnectWrappedJS:
-  if (aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS))) return PR_FALSE;
-
-  nsCOMPtr<nsISupports> inst;
-  mXTFElement->QueryInterface(aIID, getter_AddRefs(inst));
-  return (inst!=nsnull);
-//   // we aggregate all interfaces declared as 'public' in our inner
-//   // object:
-//   // XXX we call this so often, it should almost certainly be hashed.
-//   PRUint32 count=0;
-//   nsIID **iids=nsnull;
-  
-//   mXTFElement->GetPublicInterfaces(&count, &iids);
-//   for (int i=0; i<count; ++i) {
-//     if(aIID.Equals(*(iids[i]))) {
-// #ifdef DEBUG
-//       printf("nsXTFXULVisualWrapper::AggregatesInterface(): found!\n");
-// #endif
-//       break;
-//     }
-//   }
-
-//   if (iids!=nsnull)
-//     NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, iids);
-  
-//   return i!=count;
-}

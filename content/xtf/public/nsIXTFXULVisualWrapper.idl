@@ -36,13 +36,10 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsISupports.idl"
-
-interface nsIDOMElement;
+#include "nsIXTFElementWrapper.idl"
 
 [scriptable, uuid(b8bb0585-5b59-4e6f-9e0e-13569da1ad33)]
-interface nsIXTFXULVisualWrapper : nsISupports
+interface nsIXTFXULVisualWrapper : nsIXTFElementWrapper
 {  
-  readonly attribute nsIDOMElement elementNode;
 };
 

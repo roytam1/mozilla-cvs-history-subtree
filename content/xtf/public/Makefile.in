@@ -48,6 +48,7 @@ XPIDL_MODULE    = content_xtf
 XPIDLSRCS = \
 	nsIXTFElementFactory.idl \
 	nsIXTFElement.idl \
+	nsIXTFElementWrapper.idl \
 	nsIXTFSVGVisual.idl \
 	nsIXTFXMLVisual.idl \
 	nsIXTFXULVisual.idl \

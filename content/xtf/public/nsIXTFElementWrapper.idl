@@ -37,13 +37,12 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsISupports.idl"
-xxxx not used xxxx
-[scriptable, uuid(ebd3e8f4-b870-4559-bddd-42a35f74f368)]
+
+interface nsIDOMElement;
+
+[scriptable, uuid(94c05b72-997a-4bb0-a23d-63e40c55b02c)]
 interface nsIXTFElementWrapper : nsISupports
 {  
-  void setAttribute(in AString name, in AString value, in boolean notify);
-  AString getAttribute(in AString name);
-
-  void 
+  readonly attribute nsIDOMElement elementNode;
 };
 
