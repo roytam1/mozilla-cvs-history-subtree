@@ -36,7 +36,7 @@
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
 # 
-# ***** END LICENSE BLOCK *****
+# ***** END LICENSE BLOCK ***** 
 */
 
 /* This file implements the nsIHelperAppLauncherDialog interface.
@@ -377,7 +377,13 @@ nsUnknownContentTypeDialog.prototype = {
         var typeString = mimeInfo.Description;
         
         if (typeString == "") {
-          // 2. If there is none, use the extension to identify the file, e.g. "ZIP file"          var primaryExtension = "";          try {            primaryExtension = mimeInfo.primaryExtension;          }          catch (ex) {          }
+          // 2. If there is none, use the extension to identify the file, e.g. "ZIP file"
+          var primaryExtension = "";
+          try {
+            primaryExtension = mimeInfo.primaryExtension;
+          }
+          catch (ex) {
+          }
           if (primaryExtension != "")
             typeString = primaryExtension.toUpperCase() + " file";
           // 3. If we can't even do that, just give up and show the MIME type. 
@@ -437,6 +443,20 @@ nsUnknownContentTypeDialog.prototype = {
     // initAppAndSaveToDiskValues:
     initAppAndSaveToDiskValues: function() {
       var modeGroup = this.dialogElement("mode");
+
+      // We don't let users open .exe files or random binary data directly 
+      // from the browser at the moment because of security concerns. 
+      var openWithDefaultOK = this.openWithDefaultOK();
+      var mimeType = this.mLauncher.MIMEInfo.MIMEType;
+      if ((mimeType == "application/octet-stream" ||
+           mimeType == "application/x-msdownload") && !openWithDefaultOK) {
+        this.dialogElement("open").disabled = true;
+        var openHandler = this.dialogElement("openHandler");
+        openHandler.disabled = true;
+        openHandler.label = "";
+        modeGroup.selectedItem = this.dialogElement("save");
+        return;
+      }
     
       // Fill in helper app info, if there is any.
       this.chosenApp = this.mLauncher.MIMEInfo.preferredApplicationHandler;
@@ -469,7 +489,7 @@ nsUnknownContentTypeDialog.prototype = {
       }
       
       // If we don't have a "default app" then disable that choice.
-      if (!this.openWithDefaultOK()) {
+      if (!openWithDefaultOK) {
         var useDefault = this.dialogElement("defaultHandler");
         var isSelected = useDefault.selected;
         
