@@ -59,7 +59,7 @@ FILT_SRCS	= mimefilt.c mimestub.c
 FILT_OBJS	= $(addprefix $(OBJDIR)/,$(FILT_SRCS:.c=.o))
 
 ifndef NO_SECURITY
-INCLUDES	+= $(DEPTH)/../ns_include/libmime -I$(DEPTH)/lib/libmime
+INCLUDES	+= -I$(DEPTH)/lib/libmime
 endif
 
 #
