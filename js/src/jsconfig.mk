@@ -29,12 +29,11 @@ ifeq ($(OS_CONFIG), IRIX6.5)
   NSPR_OBJDIR   := $(subst 6.5,6.5_n32_PTH,$(NSPR_OBJDIR))
 endif
 ifeq ($(OS_ARCH), WINNT)
-  NSPR_OBJDIR   := $(subst WINNT,WIN95,$(NSPR_OBJDIR))
   ifeq ($(OBJDIR), WIN32_D.OBJ)
-    NSPR_OBJDIR  = WIN954.0_DBG.OBJ
+    NSPR_OBJDIR  = WINNT4.0_DBG.OBJ
   endif
   ifeq ($(OBJDIR), WIN32_O.OBJ)
-    NSPR_OBJDIR  = WIN954.0_OPT.OBJ
+    NSPR_OBJDIR  = WINNT4.0_OPT.OBJ
   endif
 endif
 NSPR_SHARED      = /share/builds/components/nspr20/$(NSPR_VERSION)/$(NSPR_OBJDIR)

@@ -61,6 +61,8 @@ endif
 
 SO_SUFFIX = so
 
+NS_USE_NATIVE = 1
+
 include $(DEPTH)/config/$(OS_CONFIG).mk
 
 # Name of the binary code directories
