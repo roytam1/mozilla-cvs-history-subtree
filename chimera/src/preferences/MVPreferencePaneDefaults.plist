@@ -1,7 +1,0 @@
-( Chimera.SitesPrefPane,
-  Chimera.BrowsingPrefPane,
-  Chimera.PersonalPrefPane, 
-  Chimera.HelpersPrefPane,
-  Chimera.PrivacyPrefPane,
-  Chimera.SecurityPrefPane
-)

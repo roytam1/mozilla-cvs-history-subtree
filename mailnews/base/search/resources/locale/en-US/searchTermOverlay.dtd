@@ -1,9 +1,0 @@
-<!ENTITY more.label         "More">
-<!ENTITY more.accesskey     "M">
-<!ENTITY less.label         "Fewer">
-<!ENTITY less.accesskey     "F">
-<!ENTITY matchAll.label     "Match all of the following">
-<!ENTITY matchAll.accesskey "a">
-<!ENTITY matchAny.label     "Match any of the following">
-<!ENTITY matchAny.accesskey "o">
-
