@@ -58,6 +58,8 @@ nsImageRequestProxy::~nsImageRequestProxy()
 
 nsresult nsImageRequestProxy::Init(nsImageRequest *request, nsIImageDecoderObserver *aObserver, nsISupports *cx)
 {
+  PR_ASSERT(request);
+
   mOwner = NS_STATIC_CAST(nsIImageRequest*, request);
 
   mObserver = aObserver;

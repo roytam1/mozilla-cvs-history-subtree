@@ -40,6 +40,8 @@
 
 #include "nsXPIDLString.h"
 
+#include "nspr.h"
+
 NS_IMPL_ISUPPORTS1(nsImageLoader, nsIImageLoader)
 
 nsImageLoader::nsImageLoader()
@@ -56,6 +58,8 @@ nsImageLoader::~nsImageLoader()
 /* nsIImageRequest loadImage (in nsIURI uri, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
 NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIImageRequest **_retval)
 {
+  PR_ASSERT(aURI);
+
   nsImageRequest *imgRequest = nsnull;
 
   ImageCache::Get(aURI, &imgRequest); // addrefs
@@ -67,6 +71,7 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
     ioserv->NewChannelFromURI(aURI, getter_AddRefs(newChannel));
     if (!newChannel) return NS_ERROR_FAILURE;
 
+    // XXX do we need to SetOwner here?
     newChannel->SetOwner(this); // the channel is now holding a strong ref to 'this'
 
     nsCOMPtr<nsIImageRequest> req(do_CreateInstance("@mozilla.org/image/request/real;1"));
@@ -95,6 +100,8 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 /* nsIImageRequest loadImageWithChannel(in nsIChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx, out nsIStreamListener); */
 NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIStreamListener **listener, nsIImageRequest **_retval)
 {
+  PR_ASSERT(channel);
+
   nsImageRequest *imgRequest = nsnull;
 
   nsCOMPtr<nsIURI> uri;

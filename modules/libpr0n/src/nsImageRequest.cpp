@@ -35,9 +35,6 @@
 
 #include "nsString.h"
 
-#include "nsIEventQueueService.h"
-#include "nsIEventQueue.h"
-
 #include "nspr.h"
 
 #include "ImageCache.h"
@@ -47,12 +44,10 @@ NS_IMPL_ISUPPORTS4(nsImageRequest, nsIImageRequest,
                    nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver)
 
 nsImageRequest::nsImageRequest() : 
-  mObservers(0), mState(0)
+  mObservers(0), mProcessing(PR_TRUE), mStatus(nsIImageRequest::STATUS_NONE), mState(0)
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
-  mProcessing = PR_TRUE;
-  mStatus = nsIImageRequest::STATUS_NONE;
 }
 
 nsImageRequest::~nsImageRequest()
@@ -65,8 +60,8 @@ nsresult nsImageRequest::Init(nsIChannel *aChannel)
 {
   // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
 
-  if (mImage)
-    return NS_ERROR_FAILURE; // XXX
+  PR_ASSERT(!mImage);
+  PR_ASSERT(aChannel);
 
   mChannel = aChannel;
 
@@ -84,6 +79,9 @@ nsresult nsImageRequest::AddObserver(nsIImageDecoderObserver *observer)
     observer->OnStartDecode(nsnull, nsnull);
   if (mState & onStartContainer)
     observer->OnStartContainer(nsnull, nsnull, mImage);
+
+  // XXX send the decoded rect in here
+
   if (mState & onStopContainer)
     observer->OnStopContainer(nsnull, nsnull, mImage);
   if (mState & onStopDecode)
@@ -96,11 +94,8 @@ nsresult nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, nsres
 {
   mObservers.RemoveElement(NS_STATIC_CAST(void*, observer));
 
-  if ((mObservers.Count() == 0) && mChannel) {
-    if (mProcessing) {
-      // XXX this is hacky :)
-      mChannel->Cancel(status);
-    } //otherwise we're done, no need to call cancel
+  if ((mObservers.Count() == 0) && mChannel && mProcessing) {
+    mChannel->Cancel(status);
   }
   return NS_OK;
 }
@@ -116,9 +111,8 @@ NS_IMETHODIMP nsImageRequest::Cancel(nsresult status)
   // XXX this method should not ever get called
 
   nsresult rv = NS_OK;
-  if (mChannel) {
+  if (mChannel && mProcessing) {
     nsresult rv = mChannel->Cancel(status);
-    mChannel = nsnull;
   }
   return rv;
 }
@@ -268,6 +262,8 @@ NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsISupports
 /* void onStartRequest (in nsIChannel channel, in nsISupports ctxt); */
 NS_IMETHODIMP nsImageRequest::OnStartRequest(nsIChannel *channel, nsISupports *ctxt)
 {
+  PR_ASSERT(!mDecoder);
+
   nsXPIDLCString contentType;
   channel->GetContentType(getter_Copies(contentType));
   printf("content type is %s\n", contentType.get());
@@ -293,12 +289,14 @@ NS_IMETHODIMP nsImageRequest::OnStartRequest(nsIChannel *channel, nsISupports *c
 /* void onStopRequest (in nsIChannel channel, in nsISupports ctxt, in nsresult status, in wstring statusArg); */
 NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ctxt, nsresult status, const PRUnichar *statusArg)
 {
+  PR_ASSERT(mChannel || mProcessing);
+
   mProcessing = PR_FALSE;
 
   // if we failed, we should remove ourself from the cache
   if (NS_FAILED(status)) {
     nsCOMPtr<nsIURI> uri;
-    mChannel->GetURI(getter_AddRefs(uri));
+    channel->GetURI(getter_AddRefs(uri));
     ImageCache::Remove(uri);
   }
 
@@ -306,12 +304,11 @@ NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ct
 
   if (!mDecoder) return NS_ERROR_FAILURE;
 
-  nsresult rv = mDecoder->Close();
+  mDecoder->Close();
 
   mDecoder = nsnull; // release the decoder so that it can rest peacefully ;)
 
-
-  return rv;
+  return NS_OK;
 }
 
 
@@ -322,7 +319,7 @@ NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ct
 /* void onDataAvailable (in nsIChannel channel, in nsISupports ctxt, in nsIInputStream inStr, in unsigned long sourceOffset, in unsigned long count); */
 NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
 {
-  if (!mDecoder) return NS_ERROR_FAILURE;
+  PR_ASSERT(mDecoder);
 
   PRUint32 wrote;
   return mDecoder->WriteFrom(inStr, count, &wrote);
