@@ -281,11 +281,13 @@ NS_IMETHODIMP nsProfile::GetProfileCount(int *numProfiles)
 
                 if (NS_SUCCEEDED(rv)) {
                     int numKeys=0;
-                    rv = enumKeys->First();
+
                     // Enumerate subkeys till done.
-                    while( NS_SUCCEEDED( rv ) && !enumKeys->IsDone() ) 
+                    PRBool hasMore;
+                    while( NS_SUCCEEDED( rv = enumKeys->HasMoreElements(&hasMore) ) && hasMore ) 
                     {
-                        rv = enumKeys->Next();
+                        nsCOMPtr<nsISupports> next;
+                        rv = enumKeys->GetNext(getter_AddRefs(next));
                         numKeys++;
                     }
                     *numProfiles = numKeys;
@@ -326,10 +328,10 @@ NS_IMETHODIMP nsProfile::GetSingleProfile(char **profileName)
                 rv = reg->EnumerateSubtrees( key, &enumKeys );
 
                 // Go to beginning.
-                rv = enumKeys->First();
-                if(NS_SUCCEEDED(rv)&& !enumKeys->IsDone() ) {
+                PRBool hasMore;
+                if(NS_SUCCEEDED(rv = enumKeys->HasMoreElements(&hasMore)) && hasMore) {
                     nsISupports *base;
-                    rv = enumKeys->CurrentItem( &base );
+                    rv = enumKeys->GetNext( &base );
                     
                     // Test result.
                     if (NS_SUCCEEDED(rv)) {
@@ -350,7 +352,9 @@ NS_IMETHODIMP nsProfile::GetSingleProfile(char **profileName)
                                 // Print name:
                                 printf( "\t\t%s", *profileName);
                             }
+                            NS_RELEASE(node);
                         }
+                        NS_RELEASE(base);
                     }
                 }
             }
