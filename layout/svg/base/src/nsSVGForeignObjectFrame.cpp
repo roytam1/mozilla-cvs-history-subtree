@@ -556,7 +556,7 @@ ArtUta* nsSVGForeignObjectFrame::DoReflow()
   nsHTMLReflowState reflowState(presContext, this, eReflowReason_Initial, renderingContext, availableSpace);
 
   nsCOMPtr<nsISpaceManager> spaceManager;
-  nsSpaceManager* rawPtr = new nsSpaceManager(this);
+  nsSpaceManager* rawPtr = nsSpaceManager::Create(this);
   if (!rawPtr) {
     return dirtyRegion;
   }
