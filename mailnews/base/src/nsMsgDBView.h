@@ -67,6 +67,7 @@ protected:
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
+  nsresult CycleThreadedColumn(nsIDOMElement * aElement);
 
 
   // routines used in building up view

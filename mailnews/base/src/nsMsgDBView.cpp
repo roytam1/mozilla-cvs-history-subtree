@@ -129,6 +129,23 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
   return rv;
 }
 
+nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
+{
+  nsAutoString currentView;
+  // toggle threaded/unthreaded mode
+  aElement->GetAttribute(NS_LITERAL_STRING("currentView"), currentView);
+  if (currentView.Equals(NS_LITERAL_STRING("threaded")))
+  {
+    aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("unthreaded"));
+  }
+  else
+   aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("threaded"));
+
+  // i think we need to create a new view and switch it in this circumstance since
+  // we are toggline between threaded and non threaded mode.
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgDBView::GetRowCount(PRInt32 *aRowCount)
 {
   *aRowCount = GetSize();
@@ -282,7 +299,9 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement * aElement)
     sortType = nsMsgViewSortType::byDate;
     performSort = PR_TRUE;
     break;
-
+  case 't': // thread column
+    CycleThreadedColumn(aElement);
+    break;
   default:
     break;
   }
