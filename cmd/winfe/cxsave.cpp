@@ -483,7 +483,7 @@ BOOL CSaveCX::Creator()
 
 void CSaveCX::AddFileExtension (char *& pFileName)
 {
-#ifndef MOZ_LITE
+#ifdef MOZ_MAIL_NEWS
 	char *ext = FE_FindFileExt(pFileName);
 
 	if (!ext) {
@@ -507,7 +507,7 @@ void CSaveCX::AddFileExtension (char *& pFileName)
 				StrAllocCat (pFileName, aExt);
 		}
 	}
-#endif
+#endif // MOZ_MAIL_NEWS
 }
 
 //	Determine if it's OK to create the dialog for the transfer.
