@@ -988,7 +988,9 @@
           </rule>
         </template>
         <treecols anonid="treecols">
-          <treecol id="Name" flex="1" primary="true" hideheader="true"/>
+          <treecol id="Name" flex="1" primary="true" hideheader="true"
+                   sort="rdf:http://home.netscape.com/NC-rdf#Name"
+                   sortActive="true" sortDirection="none"/>
         </treecols>
       </tree>
     </xbl:content>
@@ -1019,7 +1021,9 @@
           </rule>
         </template>
         <treecols anonid="treecols">
-          <treecol id="Name" flex="1" primary="true" hideheader="true"/>
+          <treecol id="Name" flex="1" primary="true" hideheader="true"
+                   sort="rdf:http://home.netscape.com/NC-rdf#Name"
+                   sortActive="true" sortDirection="none"/>
         </treecols>
       </tree>
     </xbl:content>
