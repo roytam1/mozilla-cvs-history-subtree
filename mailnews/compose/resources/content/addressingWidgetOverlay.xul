@@ -64,6 +64,7 @@ Rights Reserved.
                      autoFill="true" autoFillAfterMatch="true" forceComplete="true"
                      ontextcommand="awRecipientTextCommand(userAction, this)"
                      oninput="setupAutocomplete();" disableonsend="true"
+                     minResultsForPopup="3" 
                      onkeypress="awRecipientKeyPress(event, this)"
                      onkeydown="awRecipientKeyDown(event, this)">
               <image onclick="awNotAnEmptyArea(event)" class="person-icon"/>
