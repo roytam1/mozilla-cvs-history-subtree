@@ -34,7 +34,7 @@
  * platform-specific code, you can't throw across an XPCOM method boundary.)
  */
 
-const DEBUG = false; /* set to false to suppress debug messages */
+const DEBUG = true; /* set to false to suppress debug messages */
 const PANELS_RDF_FILE  = 66626; /* the magic number to find panels.rdf */
 
 const SIDEBAR_PROGID   = "component://mozilla/sidebar";
@@ -99,19 +99,13 @@ function (aTitle, aContentURL, aCustomizeURL)
         throw Components.results.NS_ERROR_NOT_INITIALIZED;
     }
 
-    // Create a "container" wrapper around the current panels to
-    // manipulate the RDF:Seq more easily.
-    var panel_list = this.datasource.GetTarget(this.rdf.GetResource(this.resource), this.rdf.GetResource(nsSidebar.prototype.nc+"panel-list"), true);
-    if (panel_list) {
-        panel_list.QueryInterface(Components.interfaces.nsIRDFResource);
-    } else {
-        // Datasource is busted. Start over.
-        debug("Sidebar datasource is busted\n");
-  }
-
-    var container = Components.classes[CONTAINER_PROGID].createInstance(nsIRDFContainer);
-    container.Init(this.datasource, panel_list);
-
+    /* Create a "container" wrapper around the
+     * "urn:sidebar:current-panel-list" object. This makes it easier
+     * to manipulate the RDF:Seq correctly. */
+    var container = 
+        Components.classes[CONTAINER_PROGID].createInstance(nsIRDFContainer);
+    container.Init(this.datasource, this.rdf.GetResource(this.resource));
+    
     /* Create a resource for the new panel and add it to the list */
     var panel_resource = 
         this.rdf.GetResource("urn:sidebar:3rdparty-panel:" + aContentURL);

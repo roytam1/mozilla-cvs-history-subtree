@@ -58,25 +58,16 @@ print '<?xml version="1.0"?>'."\n"
 print_entities(\%items);
 print "]>\n";
 
-print qq(<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  xmlns:nc="http://home.netscape.com/NC-rdf#">);
-print qq(
-  <rdf:Description about="urn:sidebar:master-panel-list">
-    <nc:panel-list>
-      <rdf:Seq>
-);
+print '<RDF:RDF xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#"'
+         .'  xmlns:NC="http://home.netscape.com/NC-rdf#">';
+print qq(  <RDF:Seq about="urn:sidebar:master-panel-list">\n);
 for my $child (@{$items{'master-panel-list'}->{children}}) {
-  print_structure($child, ' ' x 8);
+  print_structure($child, '  ');
 }
-
-print qq(
-      </rdf:Seq>
-    </nc:panel-list>
-  </rdf:Description>
-);
-
+print qq(  </RDF:Seq>\n);
 print_items(\%items);
-print "</rdf:RDF>\n";
+
+print "</RDF:RDF>\n";
 
 # end of main
 #############################################################
@@ -85,7 +76,7 @@ sub parse_line {
   my ($items, $line) = @_;
   local $_ = $line;
   my $rec;
-  my ($type, $label, $id, $parent, $url) = split /\|/;
+  my ($type, $label, $id, $parent, $content_url) = split /\|/;
 
   $label =~ s/&/&amp;/g;
   $label =~ s/>/&gt;/g;
@@ -105,9 +96,8 @@ sub parse_line {
 
   if (/^panel-group\|/) {
     $rec->{children} = [];
-    $rec->{resource_url} = $url if defined $url;
   } elsif (/^panel\|/) {
-    $rec->{content_url} = $url;
+    $rec->{content_url} = $content_url;
   }
   $items->{"$id"} = $rec;
   push @{$items->{$parent}->{children}}, $rec;
@@ -127,21 +117,15 @@ sub print_structure {
   $depth = '' unless defined $depth;
 
   if ($item->{type} eq 'panel-group') {
-    print qq($depth<rdf:li>\n);
-    print qq($depth  <rdf:Description about="$item->{urn}">\n);
-    if (@{$item->{children}}) {
-      print qq($depth    <nc:panel-list>\n);
-      print qq($depth      <rdf:Seq>\n);
-      for my $child (@{$item->{children}}) {
-        print_structure($child, $depth.' ' x 8);
-      }
-      print qq($depth      </rdf:Seq>\n);
-      print qq($depth    </nc:panel-list>\n);
+    print qq(\n  $depth<RDF:li>\n);
+    print qq(    $depth<RDF:Seq about="$item->{urn}">\n);
+    for my $child (@{$item->{children}}) {
+      print_structure($child, $depth.'    ');
     }
-    print qq($depth  </rdf:Description>\n);
-    print qq($depth</rdf:li>\n);
+    print qq(    $depth</RDF:Seq>\n);
+    print qq(  $depth</RDF:li>\n);
   } else {
-    print qq($depth<rdf:li><rdf:Description about="$item->{urn}"/></rdf:li>\n);
+    print qq(  $depth<RDF:li resource="$item->{urn}" />\n);
   }
 }
 
@@ -164,21 +148,17 @@ sub print_item {
   my ($item) = @_;
 
   my $output = "\n"
-             . "  <rdf:Description about='$item->{urn}'>\n"
-             . "    <nc:title>&$item->{entity};</nc:title>\n";
+             . "  <RDF:Description about='$item->{urn}'>\n"
+             . "    <NC:title>&$item->{entity};</NC:title>\n";
   if ($item->{type} eq 'panel') {
-    $output .= "    <nc:content>$item->{content_url}</nc:content>\n"
+    $output .= "    <NC:content>$item->{content_url}</NC:content>\n"
   } elsif ($item->{type} eq 'nc-panel') {
-    $output .= "    <nc:content>http://my.netscape.com/sidebar/wrapper.tmpl"
-             .        "?service=$item->{id}</nc:content>\n"
-             . "    <nc:customize>http://my.netscape.com/setup_frameset.tmpl"
-             .        "?mn_yes=1&amp;services=$item->{id}</nc:customize>\n";
+    $output .= "    <NC:content>http://my.netscape.com/sidebar/wrapper.tmpl"
+             .        "?service=$item->{id}</NC:content>\n"
+             . "    <NC:customize>http://my.netscape.com/setup_frameset.tmpl"
+             .        "?mn_yes=1&amp;services=$item->{id}</NC:customize>\n";
   }
-  if (defined $item->{resource_url}) {
-    $output .= "    <nc:link>$item->{resource_url}</nc:link>\n"
-             . "    <nc:haslink>true</nc:haslink>\n";
-  }
-  $output .= "  </rdf:Description>\n";
+  $output .= "  </RDF:Description>\n";
 
   print $output;
 }
@@ -268,4 +248,3 @@ panel-group|"Mozilla"|mozilla|technology
 nc-panel|"Mozilla.org"|net.404|mozilla
 nc-panel|"Mozilla" News|net.418|mozilla
 nc-panel|"MozillaZine"|net.254|mozilla
-panel-group|"MNNN"|mnnn|other|http://dunk/mnnn.rdf
