@@ -1544,9 +1544,14 @@ static pascal OSStatus _md_EventReceiverProc(EventHandlerCallRef nextHandler,
             
             PL_ProcessPendingEvents(queue);
 
-            SetPort(curPort);
-            SetOrigin(portBounds.left, portBounds.top);
-            SetPortClipRegion((CGrafPtr)curPort, portClip);
+            // printing can delete the curPort during the plevent handling,
+            // so need to check it here.
+            if (IsValidPort(curPort))
+            {
+                SetPort(curPort);
+                SetOrigin(portBounds.left, portBounds.top);
+                SetPortClipRegion((CGrafPtr)curPort, portClip);
+            }
             DisposeRgn(portClip);
             
             return noErr;
