@@ -1042,13 +1042,6 @@ PRUint32 nsDeviceContextMac::GetScreenResolution()
 		if (NS_SUCCEEDED(prefs->GetIntPref("browser.display.screen_resolution", &intVal)) && intVal > 0) {
 			mPixelsPerInch = intVal;
 		}
-#ifdef XP_MACOSX
-		else {
-			short hppi, vppi;
-			::ScreenRes(&hppi, &vppi);
-			mPixelsPerInch = hppi * 1.17f;
-		}
-#endif
 	}
 
 	return mPixelsPerInch;
