@@ -25,7 +25,12 @@ LIBRARY_SUFFIX=$(MOZ_BITS)
 !ifndef MAKE_OBJ_TYPE
 MAKE_OBJ_TYPE=DLL
 !else
+!ifdef MAKE_SPF
+OBJS= $(OBJS) .\$(OBJDIR)\spf2ldif.obj \
+              .\$(OBJDIR)\hashtable.obj
+!else
 OBJS= $(OBJS) .\$(OBJDIR)\test.obj
+!endif
 # LLIBS=$(LIBNSPR) 
 # !endif
 !ifndef	MOZ_DEBUG
@@ -35,10 +40,8 @@ LLIBS=$(LIBNSPR)
 !endif
 !endif
 
-
-PROGRAM=.\$(OBJDIR)\test.exe
-
-
+TESTPROG = .\$(OBJDIR)\test.exe
+SPFPROG = .\$(OBJDIR)\spf2ldif.exe
 
 MODULE=rdf 
 LIBRARY_NAME=rdf 
@@ -91,7 +94,11 @@ libs:: $(LIBRARY)
 
 test: 
 	echo make test
-	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE $(PROGRAM)
+	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE PROGRAM=$(TESTPROG) $(TESTPROG)
+	
+spf2ldif:
+	echo make spf2ldif
+	nmake /nologo -f makefile.win MAKE_OBJ_TYPE=EXE MAKE_SPF=1 PROGRAM=$(SPFPROG) $(SPFPROG)
 
 JNI_GEN_DIR = _jni
 

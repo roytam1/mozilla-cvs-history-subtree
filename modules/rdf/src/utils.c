@@ -37,6 +37,21 @@ extern	char	*profileDirURL;
 
 
 
+int
+compareStrings(char *s1, char *s2)
+{
+#ifdef	XP_WIN
+	return(stricmp(s1,s2));		/* case insignificant string compare */
+#endif
+
+#ifdef	XP_MAC
+	return(strcasecmp(s1,s2));
+#endif
+
+	return(strcmp(s1,s2));
+}
+
+
 RDF_Resource
 getMCFFrtop (char* furl)
 {
@@ -389,7 +404,7 @@ char *
 resourceID(RDF_Resource r)
 {
   return r->url;
-}
+ }
 
 
 

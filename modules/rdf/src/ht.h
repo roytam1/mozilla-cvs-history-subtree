@@ -237,7 +237,6 @@ void				htrdfNotifFunc (RDF_Event ns, void* pdata);
 void				bmkNotifFunc (RDF_Event ns, void* pdata);
 void				refreshItemListInt (HT_View view, HT_Resource node);
 PRBool				relatedLinksContainerp (HT_Resource node);
-int				compareStrings(char *s1, char *s2);
 int				nodeCompareRtn(HT_Resource *node1, HT_Resource *node2);
 void				sortNodes(HT_View view, HT_Resource parent, HT_Resource *children, uint32 numChildren);
 uint32				refreshItemList1(HT_View view, HT_Resource node);

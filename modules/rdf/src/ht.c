@@ -634,22 +634,6 @@ refreshItemListInt (HT_View view, HT_Resource node)
 
 
 int
-compareStrings(char *s1, char *s2)
-{
-#ifdef	XP_WIN
-	return(stricmp(s1,s2));		/* case insignificant string compare */
-#endif
-
-#ifdef	XP_MAC
-	return(strcasecmp(s1,s2));
-#endif
-
-	return(strcmp(s1,s2));
-}
-
-
-
-int
 nodeCompareRtn(HT_Resource *node1, HT_Resource *node2)
 {
 	PRBool		sortOnName = true, isSep1, isSep2;

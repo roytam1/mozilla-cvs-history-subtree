@@ -27,6 +27,23 @@
 #include "mcff2mcf.h"
 
 
+char* copyStringIgnoreWhiteSpace(char* string)
+{
+   char* buf = (char*)malloc(strlen(string) + 1);
+   char* token = strtok(string, " \t\n\r");
+
+   char* p = buf;
+   while(token)
+   {
+      strcpy(p, token);
+      p += strlen(token);
+      token = strtok(NULL, " \t\n\r");
+      if(token)
+         strcpy(p++, " ");
+   }
+
+   return buf;
+}
 
 char *
 getHref(char** attlist)
@@ -102,8 +119,12 @@ parseRDFProcessingInstruction (RDFFile f, char* token)
     char* url = getAttributeValue(attlist, "ns");
     if ((as != NULL) && (url != NULL)) {
       XMLNameSpace ns = (XMLNameSpace)getMem(sizeof(struct XMLNameSpaceStruct));
+      size_t urln = strlen(url);
+      XP_Bool addSlash = (url[urln-1] != '/');
+      if(addSlash) urln++;
+      ns->url = (char*)getMem(sizeof(char) * (urln + 1));
+      sprintf(ns->url, "%s%s", url, addSlash ? "/" : "");
       ns->as = XP_STRDUP(as);
-      ns->url = XP_STRDUP(url);
       ns->next = f->namespaces;
       f->namespaces = ns;
     }
@@ -159,7 +180,7 @@ addElementProps (char** attlist, char* elementName, RDFFile f, RDF_Resource obj)
     if ((attName == NULL) || (attValue == NULL)) break;
     if (!tagEquals(f, attName, "href") && !tagEquals(f, attName, "rdf:href") 
         && !tagEquals(f, attName, "id")) {
-      addSlotValue(f, obj, RDF_GetResource(NULL, attName, true), copyString(attValue), 
+      addSlotValue(f, obj, ResourceFromElementName(f, attName), copyStringIgnoreWhiteSpace(attValue), 
 		   RDF_STRING_TYPE, 1);
     }
   }
@@ -202,7 +223,7 @@ containerTagp (RDFFile f, char* elementName)
 RDF_Resource
 ResourceFromElementName (RDFFile f, char* elementName)
 {
-  if ((strchr(elementName, ':') == NULL) ) {
+  if(!elementName || (strchr(elementName, ':') == NULL) ) {
     return RDF_GetResource(NULL, elementName, 1);
   } else {
     XMLNameSpace ns = f->namespaces;
@@ -225,7 +246,6 @@ ResourceFromElementName (RDFFile f, char* elementName)
 }
         
 
-
 void
 parseNextRDFToken (RDFFile f, char* token)
 {
@@ -233,7 +253,7 @@ parseNextRDFToken (RDFFile f, char* token)
     if ((f->status == EXPECTING_OBJECT) && (f->depth > 1)) {
       RDF_Resource u = f->stack[f->depth-2];
       RDF_Resource s = f->stack[f->depth-1];
-      addSlotValue(f, u, s, copyString(token), RDF_STRING_TYPE, 1);
+      addSlotValue(f, u, s, copyStringIgnoreWhiteSpace(token), RDF_STRING_TYPE, 1);
     } 
   } else if  (startsWith("<!--", token)) {
     return;
@@ -262,7 +282,7 @@ parseNextRDFToken (RDFFile f, char* token)
       url = getHref(attlist);
       if (url == NULL) url = getAttributeValue(attlist, "id"); 
       if (url) url = possiblyMakeAbsolute(f, url);
-      obj =  RDF_GetResource(NULL, url, true);
+      obj =  ResourceFromElementName(f, url);
       if (url) freeMem(url);
       addToResourceList(f, obj);
       addElementProps (attlist, elementName, f, obj) ;
@@ -290,7 +310,7 @@ parseNextRDFToken (RDFFile f, char* token)
       if (url) {
         RDF_Resource eln = ResourceFromElementName(f, elementName);
         url = possiblyMakeAbsolute(f, url);
-        obj =  RDF_GetResource(NULL, url, true);
+        obj =  ResourceFromElementName(f, url);
         freeMem(url);
         addElementProps (attlist, elementName, f, obj) ;
         addToResourceList(f, obj);
@@ -298,7 +318,7 @@ parseNextRDFToken (RDFFile f, char* token)
 
       }
       if (!emptyElementp) {
-        f->stack[f->depth++] = RDF_GetResource(NULL, elementName, 1);
+        f->stack[f->depth++] = ResourceFromElementName(f, elementName);
         f->status = EXPECTING_OBJECT;
       }
     }
