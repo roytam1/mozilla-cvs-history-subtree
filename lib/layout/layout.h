@@ -813,7 +813,7 @@ struct lo_TopState_struct {
     JSVersion version;
     uint32 mocha_loading_applets_count;
     uint32 mocha_loading_embeds_count;
-    NET_StreamClass *mocha_write_stream;
+    NET_VoidStreamClass *mocha_write_stream;
     void *scriptData;
 #endif
 
