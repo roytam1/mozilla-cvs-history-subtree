@@ -12,4 +12,4 @@ mozilla/security/nss,   NSS_CLIENT_TAG
 mozilla/security/psm,   
 DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
 mozilla/lib/mac/Instrumentation
-SeaMonkeyAll
+SeaMonkeyAll            STRING_081_BRANCH
