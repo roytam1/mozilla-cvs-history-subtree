@@ -89,6 +89,39 @@
          
         ]]>
       </handler>
+	  <handler event="keypress" keycode="vk_up" modifiers="control">
+        <![CDATA[
+		 var c = this.currentIndex;
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+		 if (c == -1 || c == 0)
+		   return;
+		 this.outlinerBoxObject.selection.currentIndex = c-1;
+		 this.outlinerBoxObject.ensureRowIsVisible(c-1);
+        ]]>
+      </handler>
+      <handler event="keypress" keycode="vk_down" modifiers="control">
+        <![CDATA[
+		 var c = this.currentIndex;
+         this.isUpSelection=0;
+         this.isDownSelection=0;
+		 try { if (c+1 == this.outlinerBoxObject.view.rowCount)
+		   return;
+		 } catch (e) {}
+		 this.outlinerBoxObject.selection.currentIndex = c+1;
+		 this.outlinerBoxObject.ensureRowIsVisible(c+1);
+         
+        ]]>
+      </handler>
+	  <handler event="keypress">
+	    <![CDATA[
+		 if (event.keyCode == ' ') {
+			 var c = this.currentIndex;
+			 if (!this.outlinerBoxObject.selection.isSelected(c))
+			   this.outlinerBoxObject.selection.toggleSelect(c);
+		 }
+	     ]]>
+	  </handler>
     </handlers>    
   </binding>
 
