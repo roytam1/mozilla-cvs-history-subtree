@@ -22,11 +22,71 @@
 DEPTH		= ..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= @srcdir@$(VPS)@srcdir@/idl
 
-DIRS		= idl include src
+MODULE		= caps
+LIBRARY_NAME	= caps
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= nsSecurityManagerModule
+
+REQUIRES	= xpcom \
+		  string \
+		  pref \
+		  js \
+		  dom \
+		  xpconnect \
+		  necko \
+		  jar \
+		  widget \
+		  plugin \
+		  intl \
+		  docshell \
+		  windowwatcher \
+		  content \
+		  $(NULL)
+
+CPPSRCS		= \
+		src/nsBasePrincipal.cpp \
+		src/nsSystemPrincipal.cpp \
+		src/nsCertificatePrincipal.cpp \
+		src/nsCodebasePrincipal.cpp \
+		src/nsAggregatePrincipal.cpp \
+		src/nsJSPrincipals.cpp \
+		src/nsScriptSecurityManager.cpp \
+		src/nsSecurityManagerFactory.cpp \
+		$(NULL)
+
+EXPORTS		= \
+		include/nsBasePrincipal.h \
+		include/nsSystemPrincipal.h \
+		include/nsCertificatePrincipal.h \
+		include/nsCodebasePrincipal.h \
+		include/nsAggregatePrincipal.h \
+		include/nsJSPrincipals.h \
+		include/nsScriptSecurityManager.h \
+		$(NULL)
+
+XPIDLSRCS	= \
+		nsIScriptSecurityManager.idl \
+		nsIPrincipal.idl \
+		nsICodebasePrincipal.idl \
+		nsICertificatePrincipal.idl \
+		nsIAggregatePrincipal.idl \
+		nsISignatureVerifier.idl \
+		nsISecurityCheckedComponent.idl \
+		$(NULL)
+
+LOCAL_INCLUDES	= -I$(srcdir)/../include
+
+EXTRA_DSO_LDOPTS = \
+		$(LIBS_DIR) \
+		$(ZLIB_LIBS) \
+		$(MOZ_JS_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
