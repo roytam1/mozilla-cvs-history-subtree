@@ -42,7 +42,9 @@ PR_PUBLIC_API(const char *) zlibVersion()
 void z_error (m)
     char *m;
 {
+#ifndef XP_UNIX
     PR_ASSERT(0);	  	
+#endif
 }
 #endif
 
