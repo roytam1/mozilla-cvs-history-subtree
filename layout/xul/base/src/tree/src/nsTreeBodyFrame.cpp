@@ -281,7 +281,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::Reflow(nsIPresContext* aPresContext,
                                           const nsHTMLReflowState& aReflowState,
                                           nsReflowStatus& aStatus)
 {
-  if ( mView && aReflowState.reason == eReflowReason_Resize) {
+  if ( mView && mRowHeight && aReflowState.reason == eReflowReason_Resize) {
     mInnerBox = GetInnerBox();
     mPageCount = mInnerBox.height / mRowHeight;
 
