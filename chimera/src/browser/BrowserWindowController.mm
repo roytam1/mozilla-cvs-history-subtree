@@ -2053,7 +2053,7 @@ static NSArray* sToolbarDefaults = nil;
   BOOL oldResponderIsGecko = [self isResponderGeckoView:oldResponder];
   BOOL newResponderIsGecko = [self isResponderGeckoView:newResponder];
 
-  if (oldResponderIsGecko != newResponderIsGecko)
+  if (oldResponderIsGecko != newResponderIsGecko && [[self window] isKeyWindow])
     [[mBrowserView getBrowserView] setActive:newResponderIsGecko];
 }
 

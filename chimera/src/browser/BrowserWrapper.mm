@@ -65,8 +65,6 @@
 #include "nsIPrefService.h"
 #include "CHBrowserService.h"
 #include "nsIWebProgressListener.h"
-#include "nsIFocusController.h"
-#include "nsIDOMWindowInternal.h"
 
 #include <QuickDraw.h>
 
@@ -352,26 +350,14 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 {
   if (mActivateOnLoad) {
     // if we're the front/key window, focus the content area. If we're not,
-    // tell the focus controller that the content area should be focused when
-    // we do finally become the key window. If the user is typing in the
-    // urlBar, however, don't mess with the focus at all
-    if ( [[mBrowserView window] isKeyWindow] && ![mUrlbar userHasTyped] )
-      [mBrowserView setActive:YES];
-    else {
-      nsCOMPtr<nsIDOMWindow> domWindow;
-      nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([mBrowserView getWebBrowser]);
-      if ( webBrowser ) {
-        webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-        if ( domWindow ) {
-          nsCOMPtr<nsPIDOMWindow> piWindow ( do_QueryInterface(domWindow) );
-          nsCOMPtr<nsIFocusController> controller;
-          piWindow->GetRootFocusController(getter_AddRefs(controller));
-          if ( controller ) {
-            nsCOMPtr<nsIDOMWindowInternal> windowInt ( do_QueryInterface(domWindow) );
-            controller->SetFocusedWindow(windowInt);
-          }
-        }
-      }
+    // set gecko as the first responder so that it will be activated when
+    // the window is focused. If the user is typing in the urlBar, however,
+    // don't mess with the focus at all.
+    if ( ![mUrlbar userHasTyped] ) {
+      if ( [[mBrowserView window] isKeyWindow] )
+        [mBrowserView setActive:YES];
+      else
+        [[mBrowserView window] makeFirstResponder:mBrowserView];
     }
     mActivateOnLoad = NO;
   }
