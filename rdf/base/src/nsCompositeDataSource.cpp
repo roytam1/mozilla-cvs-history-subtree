@@ -61,7 +61,10 @@
 
 */
 
+#if !defined(WINCE)
 #include <new.h>
+#endif
+
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
 #include "nsIEnumerator.h"

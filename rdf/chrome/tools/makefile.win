@@ -15,7 +15,9 @@
 DEPTH=..\..\..
 
 !if !defined(MOZ_STATIC_COMPONENT_LIBS)
+!if "$(OS_TARGET)" != "WINCE"
 DIRS= chromereg
+!endif
 !endif
 
 include <$(DEPTH)\config\rules.mak>

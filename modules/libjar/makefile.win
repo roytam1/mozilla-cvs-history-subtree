@@ -28,7 +28,9 @@
 # this component is shared by installer
 !undef MOZ_STATIC_COMPONENT_LIBS
 
+!if "$(OS_TARGET)" != "WINCE"
 DIRS=standalone
+!endif
 
 MODULE=jar
 LIBRARY_NAME=jar$(VERSION_NUMBER)

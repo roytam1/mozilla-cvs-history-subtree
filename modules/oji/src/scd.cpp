@@ -102,7 +102,7 @@ extern "C" HWND FindNavigatorHiddenWindow(void);
 NS_METHOD
 nsSymantecDebugManager::SetDebugAgentPassword(PRInt32 pwd)
 {
-#if defined(XP_PC) && defined(_WIN32)
+#if defined(XP_PC) && defined(_WIN32) && !defined(WINCE)
     HWND win = NULL;
     /*
     ** TODO:amusil Get to a hidden window for symantec debugger to get its password from.
