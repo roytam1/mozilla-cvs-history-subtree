@@ -84,7 +84,7 @@ SSL_SecurityStatus(PRFileDesc *fd, int *op, char **cp, int *kp0, int *kp1,
 	*op = SSL_SECURITY_STATUS_OFF;
     }
 
-    if (ss->useSecurity && ss->firstHsDone) {
+    if (ss->useSecurity && ss->connected) {
 	PORT_Assert(ss->sec != 0);
 	sec = ss->sec;
 
