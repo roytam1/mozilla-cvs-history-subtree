@@ -282,10 +282,6 @@ SOURCE=..\mem.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\nodefactory.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\numerics.h
 # End Source File
 # Begin Source File
