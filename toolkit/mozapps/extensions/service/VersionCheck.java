@@ -12,7 +12,7 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Extension Manager.
+ * The Original Code is the Extension Update Service.
  *
  * The Initial Developer of the Original Code is Ben Goodger.
  * Portions created by the Initial Developer are Copyright (C) 2004
@@ -38,7 +38,6 @@
 package org.mozilla.update.extensions;
 
 import java.sql.*;
-import java.util.*;
 
 public class VersionCheck
 {
@@ -46,38 +45,59 @@ public class VersionCheck
   {
   }
 
-  /*
-   public static void main(String[] args)
-   {
-   VersionCheck impl = new VersionCheck();
-   // int id = impl.getNewestExtension("{bb8ee064-ccb9-47fc-94ae-ec335af3fe2d}", "3.0", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}", "0.8.0+");
-   int id = impl.getNewestExtension("{93c4cb22-bf10-40a2-adff-c4c64a38df0c}", "1.5", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}", "0.8.0+");
-   System.out.println("result row = " + id + ", xpiUrl = " + impl.getProperty(id, "xpiurl"));
-   }
-   */
-
-  public UpdateItemSet getExtensionUpdates(UpdateItem aInstalledItem, 
-                                           String aTargetApp, 
-                                           String aTargetAppVersion)
+/*
+  public static void main(String[] args)
   {
-    UpdateItemSet set = new UpdateItemSet();
-    set.currentItem = this.getExtensionUpdates(aInstalledItem, aTargetApp, aTargetAppVersion, false);
-    set.newestItem  = this.getExtensionUpdates(aInstalledItem, aTargetApp, aTargetAppVersion, true);
-    return set;    
+    VersionCheck impl = new VersionCheck();
+
+    UpdateItem item = new UpdateItem();
+    item.setId("{1ffc34af-6d8b-45a8-9765-92887262edfe}");
+    item.setVersion("3.0");
+    item.setMinAppVersion("0.9");
+    item.setMaxAppVersion("0.10");
+    item.setName("NewExtension 5");
+    item.setRow(-1);
+    item.setXpiURL("");
+    item.setIconURL("");
+    item.setUserCookie("Goats");
+    item.setItemCookie("Goats 2");
+    UpdateItem newer = impl.getNewestExtension(item, "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}", "0.9");
+    if (newer != null) {
+      System.out.println("*** result row = " + newer.getRow() + ", xpiUrl = " + newer.getXpiURL());
+    }
+    else {
+      System.out.println("*** NADA NOTHING ZILCH");
+    }
+  }
+*/
+
+  public UpdateItem getNewestExtension(UpdateItem aInstalledItem,
+                                       String aTargetApp,
+                                       String aTargetAppVersion,
+                                       String aUserCookie,
+                                       String aSessionCookie)
+  {
+    return getExtensionUpdates(aInstalledItem, aTargetApp, aTargetAppVersion, true);
   }
     
-  public UpdateItem getExtensionUpdates(UpdateItem aInstalledItem, 
-                                        String aTargetApp, 
-                                        String aTargetAppVersion,
-                                        boolean aNewest)
+  public UpdateItem getVersionUpdate(UpdateItem aInstalledItem,
+                                     String aTargetApp,
+                                     String aTargetAppVersion,
+                                     String aUserCookie,
+                                     String aSessionCookie)
+  {
+    return getExtensionUpdates(aInstalledItem, aTargetApp, aTargetAppVersion, false);
+  }
+    
+  protected UpdateItem getExtensionUpdates(UpdateItem aInstalledItem, 
+                                           String aTargetApp, 
+                                           String aTargetAppVersion,
+                                           boolean aNewest)
   {
     UpdateItem remoteItem = new UpdateItem();
 
-    int installedVersionParts = getPartCount(aInstalledItem.getVersion());
-    int targetAppVersionParts = getPartCount(aTargetAppVersion);
-
-    int installedVersion = parseVersion(aInstalledItem.getVersion(), installedVersionParts);
-    int targetAppVersion = parseVersion(aTargetAppVersion, targetAppVersionParts);
+    Version installedVersion = new Version(aInstalledItem.getVersion());
+    Version targetAppVersion = new Version(aTargetAppVersion);
 
     Connection c;
     Statement sMain, sVersion, sApps;
@@ -95,11 +115,11 @@ public class VersionCheck
       boolean temp = sMain.execute(sqlMain);
       rsMain = sMain.getResultSet();
       
-      int newestRemoteVersion = installedVersion;
+      Version newestRemoteVersion = installedVersion;
       while (rsMain.next()) 
       {
         String sqlVersion = "SELECT * FROM t_version WHERE ID = '" + rsMain.getInt("ID") + "'";
-        
+
         sVersion = c.createStatement();
         temp = sVersion.execute(sqlVersion);
         rsVersion = sVersion.getResultSet();
@@ -114,29 +134,30 @@ public class VersionCheck
           
           if (rsApps.next())
           {
-            int minTargetAppVersion = parseVersion(rsVersion.getString("MinAppVer"), targetAppVersionParts);
-            int maxTargetAppVersion = parseVersion(rsVersion.getString("MaxAppVer"), targetAppVersionParts);
-        
-            int currentRemoteVersion = parseVersion(rsVersion.getString("Version"), installedVersionParts);
+            Version minTargetAppVersion = new Version(rsVersion.getString("MinAppVer"));
+            Version maxTargetAppVersion = new Version(rsVersion.getString("MaxAppVer"));
+            
+            Version currentRemoteVersion = new Version(rsVersion.getString("Version"));
 
             boolean suitable = false;
             if (aNewest) 
             {
               // If we're looking for the _newest_ version only, check to see if it's really newer
-              suitable = currentRemoteVersion > installedVersion && 
-                         currentRemoteVersion > newestRemoteVersion &&
-                         minTargetAppVersion <= targetAppVersion && 
-                         targetAppVersion < maxTargetAppVersion;
-              newestRemoteVersion = currentRemoteVersion;
+              suitable = currentRemoteVersion.compare(installedVersion)     >   0 && 
+                         currentRemoteVersion.compare(newestRemoteVersion)  >   0 &&
+                          minTargetAppVersion.compare(targetAppVersion)     <=  0 && 
+                             targetAppVersion.compare(maxTargetAppVersion)  <=  0;
+              if (suitable)
+                newestRemoteVersion = currentRemoteVersion;
             }
             else 
             {
               // ... otherwise, if the version exactly matches...
-              suitable = currentRemoteVersion == installedVersion && 
-                         minTargetAppVersion <= targetAppVersion &&
-                         targetAppVersion < maxTargetAppVersion;
+              suitable = currentRemoteVersion.compare(installedVersion)     ==  0 && 
+                          minTargetAppVersion.compare(targetAppVersion)     <=  0 &&
+                             targetAppVersion.compare(maxTargetAppVersion)  <=  0;
             }
-            
+
             if (suitable) 
             {
               remoteItem.setRow(rsMain.getInt("ID"));
@@ -145,7 +166,7 @@ public class VersionCheck
               remoteItem.setVersion(rsVersion.getString("Version"));
               remoteItem.setMinAppVersion(rsVersion.getString("MinAppVer"));
               remoteItem.setMaxAppVersion(rsVersion.getString("MaxAppVer"));
-              remoteItem.setUpdateURL(rsMain.getString("URI"));
+              remoteItem.setXpiURL(rsVersion.getString("URI"));
               remoteItem.setIconURL("");
             }
           }
@@ -166,39 +187,10 @@ public class VersionCheck
     return remoteItem;
   }
 
-  protected int parseVersion(String aVersionString, int aPower)
-  {
-    int version = 0;
-    StringTokenizer tokenizer = new StringTokenizer(aVersionString, ".");
-
-    if (aPower == 0)
-      aPower = tokenizer.countTokens();
-    
-    for (int i = 0; tokenizer.hasMoreTokens(); ++i) 
-    {
-      String token = tokenizer.nextToken();
-      if (token.endsWith("+")) 
-      {
-        token = token.substring(0, token.lastIndexOf("+"));
-        version += 1;
-        if (token.length() == 0)
-          continue;
-      }
-
-      version += Integer.parseInt(token) * Math.pow(10, aPower - i);
-    }
-    return version;
-  }
-
-  protected int getPartCount(String aVersionString)
-  {
-    return (new StringTokenizer(aVersionString, ".")).countTokens();
-  }
-
   protected Connection getConnection() throws Exception
   {
     Class.forName("com.mysql.jdbc.Driver");
-    return DriverManager.getConnection("jdbc:mysql://localhost/umo_extensions", "root", "");
+    return DriverManager.getConnection("jdbc:mysql://localhost/update", "root", "");
   }
 }
 
