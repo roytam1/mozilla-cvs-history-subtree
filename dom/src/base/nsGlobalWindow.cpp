@@ -4717,25 +4717,27 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
 
   if (divertOpen) { // no such named window
     divertOpen = PR_FALSE; // more tests to pass:
-    nsCOMPtr<nsIDOMChromeWindow> thisChrome =
-      do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
-    if (!aExtraArgument && !thisChrome) {
+    if (!aExtraArgument) {
+      nsCOMPtr<nsIDOMChromeWindow> thisChrome =
+        do_QueryInterface(NS_STATIC_CAST(nsIDOMWindow *, this));
+      if (!thisChrome) {
 
-      PRInt32 restrictionPref = 2;
-      gPrefBranch->GetIntPref("browser.link.open_newwindow", &containerPref);
-      gPrefBranch->GetIntPref("browser.link.open_newwindow.restriction",
-                              &restrictionPref);
-      /* The restriction pref is a power-user's fine-tuning pref. values:
-         0: no restrictions - divert everything
-         1: don't divert window.open at all
-         2: don't divert window.open with features */
+        PRInt32 restrictionPref = 2;
+        gPrefBranch->GetIntPref("browser.link.open_newwindow", &containerPref);
+        gPrefBranch->GetIntPref("browser.link.open_newwindow.restriction",
+                                &restrictionPref);
+        /* The restriction pref is a power-user's fine-tuning pref. values:
+          0: no restrictions - divert everything
+          1: don't divert window.open at all
+          2: don't divert window.open with features */
 
-      if (containerPref == nsIBrowserDOMWindow::OPEN_NEWTAB ||
-          containerPref == nsIBrowserDOMWindow::OPEN_CURRENTWINDOW) {
+        if (containerPref == nsIBrowserDOMWindow::OPEN_NEWTAB ||
+            containerPref == nsIBrowserDOMWindow::OPEN_CURRENTWINDOW) {
 
-        divertOpen = restrictionPref != 1;
-        if (divertOpen && !aOptions.IsEmpty() && restrictionPref == 2)
-          divertOpen = PR_FALSE;
+          divertOpen = restrictionPref != 1;
+          if (divertOpen && !aOptions.IsEmpty() && restrictionPref == 2)
+            divertOpen = PR_FALSE;
+        }
       }
     }
   }
