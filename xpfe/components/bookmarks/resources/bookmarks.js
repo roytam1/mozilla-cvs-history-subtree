@@ -131,7 +131,7 @@ function initBMService()
  * to change a command name. 
  *   1) the controller...
  *      - in bookmarksTree.xml if the command is tree-specifc
- *      - in bookmarksToolbar.xml if the command is DOM-specific
+ *      - in bookmarksMenu.js if the command is DOM-specific
  *      - in bookmarks.js otherwise
  *   2) the command nodes in the overlay or xul file
  *   3) the command human-readable name key in bookmarks.properties
