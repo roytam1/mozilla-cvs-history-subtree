@@ -440,6 +440,13 @@ txEndElement::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
+nsresult
+txErrorInstruction::execute(txExecutionState& aEs)
+{
+    // XXX ErrorReport: unknown instruction executed
+    return NS_ERROR_XSLT_EXECUTION_FAILURE;
+}
+
 txForEach::txForEach()
     : mEndTarget(nsnull)
 {

@@ -64,6 +64,7 @@ txHandlerTable* gTxChooseHandler = 0;
 txHandlerTable* gTxParamHandler = 0;
 txHandlerTable* gTxImportHandler = 0;
 txHandlerTable* gTxAttributeSetHandler = 0;
+txHandlerTable* gTxFallbackHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -1624,6 +1625,36 @@ txFnEndElement(txStylesheetCompilerState& aState)
 }
 
 /*
+    xsl:fallback
+
+    [children]
+*/
+nsresult
+txFnStartFallback(PRInt32 aNamespaceID,
+                  nsIAtom* aLocalName,
+                  nsIAtom* aPrefix,
+                  txStylesheetAttr* aAttributes,
+                  PRInt32 aAttrCount,
+                  txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    aState.mSearchingForFallback = PR_FALSE;
+
+    return aState.pushHandlerTable(gTxTemplateHandler);
+}
+
+nsresult
+txFnEndFallback(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    NS_ASSERTION(!aState.mSearchingForFallback,
+                 "bad nesting of unknown-instruction and fallback handlers");
+    return NS_OK;
+}
+
+/*
   xsl:for-each
 
   txPushNewContext  (holds <xsl:sort>s)
@@ -2432,6 +2463,48 @@ txFnEndWithParam(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+/*
+    Unknown instruction
+
+    [fallbacks]           if one or more xsl:fallbacks are found
+    or
+    txErrorInstruction    otherwise
+*/
+nsresult
+txFnStartUnknownInstruction(PRInt32 aNamespaceID,
+                            nsIAtom* aLocalName,
+                            nsIAtom* aPrefix,
+                            txStylesheetAttr* aAttributes,
+                            PRInt32 aAttrCount,
+                            txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    NS_ASSERTION(!aState.mSearchingForFallback,
+                 "bad nesting of unknown-instruction and fallback handlers");
+    aState.mSearchingForFallback = PR_TRUE;
+
+    return aState.pushHandlerTable(gTxFallbackHandler);
+}
+
+nsresult
+txFnEndUnknownInstruction(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    if (aState.mSearchingForFallback) {
+        nsAutoPtr<txInstruction> instr = new txErrorInstruction;
+        NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+        nsresult rv = aState.addInstruction(instr);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    aState.mSearchingForFallback = PR_FALSE;
+
+    return NS_OK;
+}
+
 /**
  * Table Datas
  */
@@ -2502,7 +2575,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "variable", txFnStartVariable, txFnEndVariable },
     { 0, 0, 0, 0 } },
   // Other
-  { 0, 0, txFnStartElementIgnore, txFnEndElementIgnore },
+  { 0, 0, txFnStartUnknownInstruction, txFnEndUnknownInstruction },
   // LRE
   { 0, 0, txFnStartLRE, txFnEndLRE },
   // Text
@@ -2628,6 +2701,18 @@ txHandlerTableData gTxAttributeSetTableData = {
   txFnTextError
 };
 
+txHandlerTableData gTxFallbackTableData = {
+  // Handlers
+  { { kNameSpaceID_XSLT, "fallback", txFnStartFallback, txFnEndFallback },
+    { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore },
+  // LRE
+  { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore },
+  // Text
+  txFnTextIgnore
+};
+
 
 
 /**
@@ -2703,6 +2788,7 @@ txHandlerTable::init()
     INIT_HANDLER(Param);
     INIT_HANDLER(Import);
     INIT_HANDLER(AttributeSet);
+    INIT_HANDLER(Fallback);
 
     return MB_TRUE;
 }
@@ -2725,4 +2811,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(Param);
     SHUTDOWN_HANDLER(Import);
     SHUTDOWN_HANDLER(AttributeSet);
+    SHUTDOWN_HANDLER(Fallback);
 }

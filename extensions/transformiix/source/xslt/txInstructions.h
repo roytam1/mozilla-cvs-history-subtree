@@ -166,6 +166,12 @@ public:
     TX_DECL_TXINSTRUCTION
 };
 
+class txErrorInstruction : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};
+
 class txForEach : public txInstruction
 {
 public:

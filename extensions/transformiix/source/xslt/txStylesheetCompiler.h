@@ -135,6 +135,7 @@ public:
     txPushNewContext* mSorter;
     nsAutoPtr<txList> mChooseGotoList;
     PRPackedBool mDOE;
+    PRPackedBool mSearchingForFallback;
 
 protected:
     nsRefPtr<txACompileObserver> mObserver;
@@ -177,7 +178,7 @@ public:
                           PRInt32 aAttrCount);
     nsresult startElement(const PRUnichar *aName,
                           const PRUnichar **aAtts,
-                          PRInt32 aAttsCount);
+                          PRInt32 aAttrCount);
     nsresult endElement();
     nsresult characters(const nsAString& aStr);
     nsresult doneLoading(); // XXX do we want to merge this with cancel?

@@ -466,6 +466,7 @@ txStylesheetCompilerState::txStylesheetCompilerState(txACompileObserver* aObserv
     : mHandlerTable(nsnull),
       mSorter(nsnull),
       mDOE(PR_FALSE),
+      mSearchingForFallback(PR_FALSE),
       mObserver(aObserver),
       mDoneWithThisStylesheet(PR_FALSE),
       mNextInstrPtr(nsnull),
