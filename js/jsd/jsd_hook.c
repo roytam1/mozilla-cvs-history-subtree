@@ -126,14 +126,14 @@ jsd_ThrowHandler(JSContext *cx, JSScript *script, jsbytecode *pc,
 JSTrapStatus
 jsd_CallExecutionHook(JSDContext* jsdc,
                       JSContext *cx,
-                      uintN type,
+                      JSDHookType type,
                       JSD_ExecutionHookProc hook,
                       void* hookData,
                       jsval* rval)
 {
-    uintN hookanswer = JSD_HOOK_THROW == type ? 
-                            JSD_HOOK_RETURN_CONTINUE_THROW :
-                            JSD_HOOK_RETURN_CONTINUE;
+    JSDHookResult hookanswer = JSD_HOOK_THROW == type ? 
+                                    JSD_HOOK_RETURN_CONTINUE_THROW :
+                                    JSD_HOOK_RETURN_CONTINUE;
     JSDThreadState* jsdthreadstate;
 
     if(hook && NULL != (jsdthreadstate = jsd_NewThreadState(jsdc,cx)))

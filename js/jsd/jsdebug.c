@@ -912,7 +912,7 @@ JSD_GetPropertyAlias(JSDContext* jsdc, JSDProperty* jsdprop)
     return jsd_GetPropertyAlias(jsdc, jsdprop);
 }
 
-JSD_PUBLIC_API(uintN)
+JSD_PUBLIC_API(JSDPropertyFlags)
 JSD_GetPropertyFlags(JSDContext* jsdc, JSDProperty* jsdprop)
 {
     JSD_ASSERT_VALID_CONTEXT(jsdc);

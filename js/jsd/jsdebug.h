@@ -23,7 +23,7 @@
 #ifndef jsdebug_h___
 #define jsdebug_h___
 
-/* Get jstypes.h included first. After that we can use PR macros for doing
+/* Get jstypes.h included first. After that we can use JS macros for doing
 *  this extern "C" stuff!
 */
 #ifdef __cplusplus
@@ -36,6 +36,7 @@ extern "C"
 #endif
 
 JS_BEGIN_EXTERN_C
+#include "jsdenums.h"
 #include "jsapi.h"
 #ifdef LIVEWIRE
 #include "lwdbgapi.h"
@@ -321,20 +322,6 @@ JSD_ScriptDestroyed(JSDContext* jsdc,
 * loaded).
 */
 
-/* these coorespond to netscape.jsdebug.SourceTextItem.java values -
-*  change in both places if anywhere
-*/
-
-typedef enum
-{
-    JSD_SOURCE_INITED       = 0, /* initialized, but contains no source yet */
-    JSD_SOURCE_PARTIAL      = 1, /* some source loaded, more expected */
-    JSD_SOURCE_COMPLETED    = 2, /* all source finished loading */
-    JSD_SOURCE_ABORTED      = 3, /* user aborted loading, some may be loaded */
-    JSD_SOURCE_FAILED       = 4, /* loading failed, some may be loaded */
-    JSD_SOURCE_CLEARED      = 5  /* text has been cleared by debugger */
-} JSDSourceStatus;
-
 /*
 * Lock the entire source text subsystem. This grabs a highlevel lock that
 * protects the JSD internal information about sources. It is important to
@@ -502,28 +489,13 @@ JSD_AddFullSourceText(JSDContext* jsdc,
 /***************************************************************************/
 /* Execution/Interrupt Hook functions */
 
-/* possible 'type' params for JSD_ExecutionHookProc */
-#define JSD_HOOK_INTERRUPTED            0
-#define JSD_HOOK_BREAKPOINT             1
-#define JSD_HOOK_DEBUG_REQUESTED        2
-#define JSD_HOOK_DEBUGGER_KEYWORD       3
-#define JSD_HOOK_THROW                  4
-
-/* legal return values for JSD_ExecutionHookProc */
-#define JSD_HOOK_RETURN_HOOK_ERROR      0
-#define JSD_HOOK_RETURN_CONTINUE        1
-#define JSD_HOOK_RETURN_ABORT           2
-#define JSD_HOOK_RETURN_RET_WITH_VAL    3
-#define JSD_HOOK_RETURN_THROW_WITH_VAL  4
-#define JSD_HOOK_RETURN_CONTINUE_THROW  5
-
 /*
 * Implement a callback of this form in order to hook execution.
 */
-typedef uintN
+typedef JSDHookResult
 (*JSD_ExecutionHookProc)(JSDContext*     jsdc,
                          JSDThreadState* jsdthreadstate,
-                         uintN           type,
+                         JSDHookType     type,
                          void*           callerdata,
                          jsval*          rval);
 
@@ -734,16 +706,10 @@ JSD_SetException(JSDContext* jsdc, JSDThreadState* jsdthreadstate,
 *     Fully support exceptions.
 */
 
-/* legal return values for JSD_ErrorReporter */
-#define JSD_ERROR_REPORTER_PASS_ALONG   0 /* pass along to regular reporter */
-#define JSD_ERROR_REPORTER_RETURN       1 /* don't pass to error reporter */
-#define JSD_ERROR_REPORTER_DEBUG        2 /* force call to DebugBreakHook */
-#define JSD_ERROR_REPORTER_CLEAR_RETURN 3 /* clear exception and don't pass */
-
 /*
 * Implement a callback of this form in order to hook the ErrorReporter
 */
-typedef uintN
+typedef JSDErrorReporterResult
 (*JSD_ErrorReporter)(JSDContext*     jsdc,
                      JSContext*      cx,
                      const char*     message,
@@ -1032,19 +998,6 @@ JSD_GetValueClassName(JSDContext* jsdc, JSDValue* jsdval);
 
 /**************************************************/
 
-/* possible or'd together bitflags returned by JSD_GetPropertyFlags
- *
- * XXX these must stay the same as the JSPD_ flags in jsdbgapi.h
- */
-#define JSDPD_ENUMERATE  0x01    /* visible to for/in loop */
-#define JSDPD_READONLY   0x02    /* assignment is error */
-#define JSDPD_PERMANENT  0x04    /* property cannot be deleted */
-#define JSDPD_ALIAS      0x08    /* property has an alias id */
-#define JSDPD_ARGUMENT   0x10    /* argument to function */
-#define JSDPD_VARIABLE   0x20    /* local variable in function */
-/* this is not one of the JSPD_ flags in jsdbgapi.h  - careful not to overlap*/
-#define JSDPD_HINTED     0x800   /* found via explicit lookup */
-
 /*
 * Release this JSDProperty
 * *** new for version 1.1 ****
@@ -1080,7 +1033,7 @@ JSD_GetPropertyAlias(JSDContext* jsdc, JSDProperty* jsdprop);
 * Get the flags for this property
 * *** new for version 1.1 ****
 */
-extern JSD_PUBLIC_API(uintN)
+extern JSD_PUBLIC_API(JSDPropertyFlags)
 JSD_GetPropertyFlags(JSDContext* jsdc, JSDProperty* jsdprop);
 
 /*

@@ -574,7 +574,7 @@ jsd_GetPropertyAlias(JSDContext* jsdc, JSDProperty* jsdprop)
     return jsdprop->alias;
 }
 
-uintN
+JSDPropertyFlags
 jsd_GetPropertyFlags(JSDContext* jsdc, JSDProperty* jsdprop)
 {
     return jsdprop->flags;

@@ -496,7 +496,7 @@ jsd_ClearDebuggerHook(JSDContext* jsdc);
 extern JSTrapStatus
 jsd_CallExecutionHook(JSDContext* jsdc,
                       JSContext *cx,
-                      uintN type,
+                      JSDHookType type,
                       JSD_ExecutionHookProc hook,
                       void* hookData,
                       jsval* rval);
@@ -826,7 +826,7 @@ jsd_GetPropertyValue(JSDContext* jsdc, JSDProperty* jsdprop);
 extern JSDValue*
 jsd_GetPropertyAlias(JSDContext* jsdc, JSDProperty* jsdprop);
 
-extern uintN
+extern JSDPropertyFlags
 jsd_GetPropertyFlags(JSDContext* jsdc, JSDProperty* jsdprop);
 
 extern uintN
