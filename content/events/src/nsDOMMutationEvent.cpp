@@ -45,8 +45,10 @@ nsDOMMutationEvent::nsDOMMutationEvent(nsIPresContext* aPresContext,
                                        nsEvent* aEvent)
 :nsDOMEvent(aPresContext, aEvent, NS_LITERAL_STRING("MutationEvent")) 
 {  
-  nsMutationEvent* mutation = (nsMutationEvent*)aEvent;
-  SetTarget(mutation->mTarget);
+  if ( aEvent ) {
+    nsMutationEvent* mutation = (nsMutationEvent*)aEvent;
+    SetTarget(mutation->mTarget);
+  }
 }
 
 nsDOMMutationEvent::~nsDOMMutationEvent() {

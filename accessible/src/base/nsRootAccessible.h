@@ -26,12 +26,18 @@
 #include "nsAccessible.h"
 #include "nsIAccessibleEventReceiver.h"
 #include "nsIAccessibleEventListener.h"
+#include "nsIDOMFormListener.h"
 #include "nsIDOMFocusListener.h"
+#include "nsIDOMTextListener.h"
+#include "nsIDOMMutationListener.h"
 #include "nsIDocument.h"
 
 class nsRootAccessible : public nsAccessible,
                          public nsIAccessibleEventReceiver,
-                         public nsIDOMFocusListener
+                         public nsIDOMFocusListener,
+						 public nsIDOMFormListener,
+						 public nsIDOMTextListener,
+						 public nsIDOMMutationListener
 
 {
   
@@ -47,15 +53,35 @@ class nsRootAccessible : public nsAccessible,
     NS_IMETHOD GetAccParent(nsIAccessible * *aAccParent);
     NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
 
-    // ----- nsIAccessibleEventReceiver ------
+    // ----- nsIAccessibleEventReceiver -------------------
 
     NS_IMETHOD AddAccessibleEventListener(nsIAccessibleEventListener *aListener);
     NS_IMETHOD RemoveAccessibleEventListener(nsIAccessibleEventListener *aListener);
 
-    // ----- nsIDOMEventListener --------
+    // ----- nsIDOMEventListener --------------------------
     virtual nsresult HandleEvent(nsIDOMEvent* anEvent);
     virtual nsresult Focus(nsIDOMEvent* aEvent);
     virtual nsresult Blur(nsIDOMEvent* aEvent);
+
+	// ----- nsIDOMFormListener ---------------------------
+    virtual nsresult Submit(nsIDOMEvent* aEvent);
+    virtual nsresult Reset(nsIDOMEvent* aEvent);
+    virtual nsresult Change(nsIDOMEvent* aEvent);
+    virtual nsresult Select(nsIDOMEvent* aEvent);
+    virtual nsresult Input(nsIDOMEvent* aEvent);
+
+	// ----- nsIDOMTextListener ---------------------------
+	virtual nsresult HandleText(nsIDOMEvent* aTextEvent);
+
+	// ----- nsIDOMMutationEventListener ------------------
+    NS_IMETHOD SubtreeModified(nsIDOMEvent* aMutationEvent);
+    NS_IMETHOD NodeInserted(nsIDOMEvent* aMutationEvent);
+    NS_IMETHOD NodeRemoved(nsIDOMEvent* aMutationEvent);
+    NS_IMETHOD NodeRemovedFromDocument(nsIDOMEvent* aMutationEvent);
+    NS_IMETHOD NodeInsertedIntoDocument(nsIDOMEvent* aMutationEvent);
+    NS_IMETHOD AttrModified(nsIDOMEvent* aMutationEvent);
+    NS_IMETHOD CharacterDataModified(nsIDOMEvent* aMutationEvent);
+
 
 protected:
   virtual void GetBounds(nsRect& aRect);

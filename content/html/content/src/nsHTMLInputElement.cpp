@@ -65,6 +65,10 @@
 #include "nsIRadioControlFrame.h"
 #include "nsIFormManager.h"
 
+#include "nsIDOMMutationEvent.h"
+#include "nsIDOMEventReceiver.h"
+#include "nsMutationEvent.h"
+
 // XXX align=left, hspace, vspace, border? other nav4 attrs
 
 static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
@@ -207,6 +211,9 @@ protected:
 
   nsresult GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd);
   nsresult MouseClickForAltText(nsIPresContext* aPresContext);
+  //Helper method
+  nsresult FireEventForAccessibility(nsIPresContext* aPresContext,
+			    		             nsString& aEventType);
 
   void SelectAll(nsIPresContext* aPresContext);
   PRBool IsImage() const
@@ -1047,7 +1054,10 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
           PRBool checked;
           GetChecked(&checked);
           SetChecked(!checked);
-        }
+		  // Fire an event to notify accessibility
+		  nsString checkboxStateChange(NS_LITERAL_STRING("CheckboxStateChange"));
+		  FireEventForAccessibility( aPresContext, checkboxStateChange);  
+		}
         break;
 
       case NS_FORM_INPUT_RADIO:
@@ -1063,6 +1073,9 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
             }
           }
           SetChecked(PR_TRUE);
+		  // Fire an event to notify accessibility
+		  nsString radiobuttonStateChange(NS_LITERAL_STRING("RadiobuttonStateChange"));
+		  FireEventForAccessibility( aPresContext, radiobuttonStateChange);
         }
         break;
 
@@ -1644,3 +1657,50 @@ nsHTMLInputElement::GetSelectionRange(PRInt32* aSelectionStart,
   return NS_OK;
 }
 
+nsresult
+nsHTMLInputElement::FireEventForAccessibility(nsIPresContext* aPresContext,
+								              nsString& aEventType)
+{
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  nsCOMPtr<nsIEventListenerManager> listenerManager;
+
+  nsresult rv = GetListenerManager(getter_AddRefs(listenerManager));
+  if ( NS_FAILED(rv) )
+    return rv;
+
+  // Create the DOM event
+  nsMutationEvent* event = nsnull;
+  nsString mutationEvent(NS_LITERAL_STRING("MutationEvent"));
+  rv = listenerManager->CreateEvent(aPresContext, 
+	                                event, 
+	                                mutationEvent,
+									getter_AddRefs(domEvent) );
+  if ( NS_FAILED(rv) )
+    return rv;
+  if ( !domEvent )
+    return NS_ERROR_FAILURE;
+
+  // Initialize the mutation event
+  nsCOMPtr<nsIDOMMutationEvent> mutEvent(do_QueryInterface(domEvent));
+  if ( !mutEvent )
+    return NS_ERROR_FAILURE;
+  nsAutoString empty;
+  mutEvent->InitMutationEvent( aEventType, PR_TRUE, PR_TRUE, nsnull, empty, empty, empty);
+
+  // Set the target of the event to this nsHTMLInputElement, which should be checkbox content??
+  nsCOMPtr<nsIPrivateDOMEvent> privEvent(do_QueryInterface(domEvent));
+  if ( ! privEvent )
+    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDOMEventTarget> targ(do_QueryInterface(NS_STATIC_CAST(nsIDOMHTMLInputElement *, this)));
+  if ( ! targ )
+    return NS_ERROR_FAILURE;
+  privEvent->SetTarget(targ);
+		  
+  // Dispatch the event
+  nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(listenerManager));
+  if ( ! eventReceiver )
+    return NS_ERROR_FAILURE;
+  eventReceiver->DispatchEvent(domEvent);
+
+  return NS_OK;
+}
