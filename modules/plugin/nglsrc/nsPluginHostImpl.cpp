@@ -31,9 +31,8 @@
 #include "nsIPlugin.h"
 #include "nsIPluginStreamListener.h"
 #include "nsIHTTPHeaderListener.h" 
-#include "nsIHTTPHeader.h"
 #include "nsIObserverService.h"
-#include "nsIHTTPProtocolHandler.h"
+#include "nsIHttpProtocolHandler.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
@@ -46,7 +45,7 @@
 #include "nsIIOService.h"
 #include "nsIURL.h"
 #include "nsIChannel.h"
-#include "nsIHTTPChannel.h"
+#include "nsIHttpChannel.h"
 #include "nsIFileStream.h" // for nsIRandomAccessStore
 #include "nsNetUtil.h"
 #include "nsIProgressEventSink.h"
@@ -137,9 +136,10 @@ static NS_DEFINE_CID(kCookieServiceCID, NS_COOKIESERVICE_CID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIStreamListenerIID, NS_ISTREAMLISTENER_IID);
 static NS_DEFINE_IID(kIRequestObserverIID, NS_IREQUESTOBSERVER_IID);
+static NS_DEFINE_IID(kIHttpHeaderVisitorIID, NS_IHTTPHEADERVISITOR_IID);
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
-static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
+static NS_DEFINE_CID(kHTTPHandlerCID, NS_HTTPPROTOCOLHANDLER_CID);
 
 static NS_DEFINE_IID(kIFileUtilitiesIID, NS_IFILEUTILITIES_IID);
 static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
@@ -214,7 +214,6 @@ void DisplayNoDefaultPluginDialog(const char *mimeType)
   nsCOMPtr<nsIStringBundle> bundle;
   nsCOMPtr<nsIStringBundle> regionalBundle;
   nsCOMPtr<nsIURI> uri;
-  char *spec = nsnull;
   nsILocale* locale = nsnull;
   PRBool displayDialogPrefValue = PR_FALSE, checkboxState = PR_FALSE;
 
@@ -1002,7 +1001,8 @@ nsPluginStreamInfo::SetURL(const char* url)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 class nsPluginStreamListenerPeer : public nsIStreamListener,
-                                   public nsIProgressEventSink
+                                   public nsIProgressEventSink,
+                                   public nsIHttpHeaderVisitor
 {
 public:
   nsPluginStreamListenerPeer();
@@ -1012,6 +1012,7 @@ public:
   NS_DECL_NSIPROGRESSEVENTSINK
   NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
+  NS_DECL_NSIHTTPHEADERVISITOR
 
   // Called by GetURL and PostURL (via NewStream)
   nsresult Initialize(nsIURI *aURL, 
@@ -1028,10 +1029,6 @@ public:
   nsresult OnFileAvailable(const char* aFilename);
 
   nsILoadGroup* GetLoadGroup();
-
-  NS_IMETHOD
-  ReadHeadersFromChannelAndPostToListener(nsIHTTPChannel *httpChannel,
-                                          nsIHTTPHeaderListener *list);
 
   nsresult SetLocalFile(const char* aFilename);
 
@@ -1202,6 +1199,13 @@ nsresult nsPluginStreamListenerPeer::QueryInterface(const nsIID& aIID,
   if (aIID.Equals(kIRequestObserverIID))
   {
     *aInstancePtrResult = (void *)((nsIRequestObserver *)this);
+    AddRef();
+    return NS_OK;
+  }
+
+  if (aIID.Equals(kIHttpHeaderVisitorIID))
+  {
+    *aInstancePtrResult = (void *)((nsIHttpHeaderVisitor *)this);
     AddRef();
     return NS_OK;
   }
@@ -1566,16 +1570,15 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
 
   // get httpChannel to retrieve some info we need for nsIPluginStreamInfo setup
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
-  nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(channel);
+  nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(channel);
 
   /*
    * Assumption
    * By the time nsPluginStreamListenerPeer::OnDataAvailable() gets
    * called, all the headers have been read.
    */
-  nsCOMPtr<nsIHTTPHeaderListener> headerListener = do_QueryInterface(mPStreamListener);
-  if (headerListener && httpChannel) 
-    ReadHeadersFromChannelAndPostToListener(httpChannel, headerListener);
+  if (httpChannel)
+    httpChannel->VisitResponseHeaders(this);
   
   mSetUpListener = PR_TRUE;
   
@@ -1584,8 +1587,7 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
   if (httpChannel)
   {
     nsXPIDLCString range;
-    nsCOMPtr<nsIAtom> header(dont_AddRef(NS_NewAtom("accept-ranges")));
-    if(NS_SUCCEEDED(httpChannel->GetResponseHeader(header, getter_Copies(range))))
+    if(NS_SUCCEEDED(httpChannel->GetResponseHeader("accept-ranges", getter_Copies(range))))
     {
       if (0 == PL_strcmp(range.get(), "bytes"))
         bSeekable = PR_TRUE;
@@ -1597,8 +1599,7 @@ nsresult nsPluginStreamListenerPeer::SetUpStreamListener(nsIRequest *request,
   if (httpChannel) 
   {
     char * lastModified;
-    nsCOMPtr<nsIAtom> header(dont_AddRef(NS_NewAtom("last-modified")));
-    httpChannel->GetResponseHeader(header, &lastModified);
+    httpChannel->GetResponseHeader("last-modified", &lastModified);
     if (lastModified) 
     {
       PRTime time64;
@@ -1657,58 +1658,14 @@ nsPluginStreamListenerPeer::GetLoadGroup()
   return loadGroup;
 }
 
-
 NS_IMETHODIMP
-nsPluginStreamListenerPeer::
-ReadHeadersFromChannelAndPostToListener(nsIHTTPChannel *httpChannel,
-                                        nsIHTTPHeaderListener *listener)
+nsPluginStreamListenerPeer::VisitHeader(const char *header, const char *value)
 {
-  nsresult rv = NS_ERROR_FAILURE;
+  nsCOMPtr<nsIHTTPHeaderListener> listener = do_QueryInterface(mPStreamListener);
+  if (!listener)
+    return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsISimpleEnumerator>	enumerator;
-  if (NS_FAILED(rv = httpChannel->
-                GetResponseHeaderEnumerator(getter_AddRefs(enumerator)))) {
-    return rv;
-  }
-  PRBool			bMoreHeaders;
-  nsCOMPtr<nsISupports>   item;
-  nsCOMPtr<nsIHTTPHeader>	header;
-  char                    *name = nsnull;
-  char	                  *val = nsnull;
-  
-  while (NS_SUCCEEDED(rv = enumerator->HasMoreElements(&bMoreHeaders))
-         && (bMoreHeaders == PR_TRUE)) {
-    enumerator->GetNext(getter_AddRefs(item));
-    header = do_QueryInterface(item);
-    NS_ASSERTION(header, "nsPluginHostImpl::ReadHeadersFromChannelAndPostToListener - Bad HTTP header.");
-    if (header)	{
-
-      /*
-
-       * Assumption: 
-
-       * The return value from nsIHTTPHeader->{GetFieldName,GetValue}()
-       * must be freed.
-
-       */
-
-      header->GetFieldName(&name);
-      header->GetValue(&val);
-      if (NS_FAILED(rv = listener->NewResponseHeader(name, val))) {
-        break;
-      }
-      nsCRT::free(name); 
-      name = nsnull;
-      nsCRT::free(val); 
-      val = nsnull;
-    }
-    else {
-      rv = NS_ERROR_NULL_POINTER;
-      break;
-    }
-  }
-  
-  return rv;
+  return listener->NewResponseHeader(header, value);
 }
 
 nsresult nsPluginStreamListenerPeer::SetLocalFile(const char* aFilename)
@@ -1931,26 +1888,18 @@ nsresult nsPluginHostImpl::UserAgent(const char **retstring)
   static char resultString[NS_RETURN_UASTRING_SIZE];
   nsresult res;
 
-  nsCOMPtr<nsIHTTPProtocolHandler> http = do_GetService(kHTTPHandlerCID, &res);
+  nsCOMPtr<nsIHttpProtocolHandler> http = do_GetService(kHTTPHandlerCID, &res);
   if (NS_FAILED(res)) 
     return res;
 
-  PRUnichar *UAString = nsnull;
-  res = http->GetUserAgent(&UAString);
+  nsXPIDLCString uaString;
+  res = http->GetUserAgent(getter_Copies(uaString));
 
   if (NS_SUCCEEDED(res)) 
   {
-    nsAutoString ua(UAString);
-    char * newString = ua.ToNewCString();
-    if (!newString) 
+    if(NS_RETURN_UASTRING_SIZE > PL_strlen(uaString))
     {
-      *retstring = nsnull;
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-    
-    if(NS_RETURN_UASTRING_SIZE > PL_strlen(newString))
-    {
-      PL_strcpy(resultString, newString);
+      PL_strcpy(resultString, uaString);
       *retstring = resultString;
     }
     else
@@ -1958,8 +1907,6 @@ nsresult nsPluginHostImpl::UserAgent(const char **retstring)
       *retstring = nsnull;
       res = NS_ERROR_OUT_OF_MEMORY;
     }
-
-    nsCRT::free(newString);
   } 
   else
     *retstring = nsnull;
@@ -4007,7 +3954,7 @@ NS_IMETHODIMP nsPluginHostImpl::NewPluginURLStream(const nsString& aURL,
       }
 
       // deal with headers and post data
-      nsCOMPtr<nsIHTTPChannel> httpChannel(do_QueryInterface(channel));
+      nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
       if(httpChannel)
       {
 
@@ -4062,8 +4009,7 @@ NS_IMETHODIMP nsPluginHostImpl::NewPluginURLStream(const nsString& aURL,
           if (postDataRandomAccess)
             postDataRandomAccess->Seek(PR_SEEK_SET, 0);
           
-          nsCOMPtr<nsIAtom> method(dont_AddRef(NS_NewAtom("POST")));
-          httpChannel->SetRequestMethod(method);
+          httpChannel->SetRequestMethod("POST");
           httpChannel->SetUploadStream(postDataStream);
 
           if (newPostData)
@@ -4142,7 +4088,7 @@ nsPluginHostImpl::AddHeadersToChannel(const char *aHeadersData,
 {
   nsresult rv = NS_OK;
 
-  nsCOMPtr<nsIHTTPChannel> aChannel = do_QueryInterface(aGenericChannel);
+  nsCOMPtr<nsIHttpChannel> aChannel = do_QueryInterface(aGenericChannel);
   if (!aChannel) {
     return NS_ERROR_NULL_POINTER;
   }
@@ -4162,7 +4108,7 @@ nsPluginHostImpl::AddHeadersToChannel(const char *aHeadersData,
 
   //
   // Iterate over the nsString: for each "\r\n" delimeted chunk,
-  // add the value as a header to the nsIHTTPChannel
+  // add the value as a header to the nsIHttpChannel
   //
   
   while (PR_TRUE) {
@@ -4182,17 +4128,12 @@ nsPluginHostImpl::AddHeadersToChannel(const char *aHeadersData,
     oneHeader.Left(headerName, colon);
     colon++;
     oneHeader.Mid(headerValue, colon, oneHeader.Length() - colon);
-    nsCOMPtr<nsIAtom> headerAtom(dont_AddRef(NS_NewAtom(headerName.get())));
-    if (!headerAtom) {
-      rv = NS_ERROR_NULL_POINTER;
-      return rv;
-    }
     
     //
     // FINALLY: we can set the header!
     // 
     
-    rv =aChannel->SetRequestHeader(headerAtom, headerValue.get());
+    rv =aChannel->SetRequestHeader(headerName.get(), headerValue.get());
     if (NS_FAILED(rv)) {
       rv = NS_ERROR_NULL_POINTER;
       return rv;
