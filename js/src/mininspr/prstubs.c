@@ -23,16 +23,31 @@
  * There is no peer to this file in the full-blown version of NSPR.
  */
 #include "prstubs.h"
-
-PR_IMPLEMENT(PRLock*) PR_NewLock(void) { return NULL; }
-
-PR_IMPLEMENT(void) PR_DestroyLock(PRLock *lock) { }
-PR_IMPLEMENT(void) PR_Lock(PRLock *lock) { }
-PR_IMPLEMENT(PRStatus) PR_Unlock(PRLock *lock) { return PR_SUCCESS;}
+#include <stdlib.h>
+#include <stdio.h>
 
 PRBool _pr_initialized;
 
+/* Stubbed-out functions */
 void _PR_ImplicitInitialization(void)
 {
     _pr_initialized = PR_TRUE;
 }
+
+/* Implementation of PR_Assert() is here to avoid building prlog.c */
+PR_IMPLEMENT(void) PR_Assert(const char *s, const char *file, PRIntn ln)
+{
+#if defined(XP_UNIX) || defined(XP_OS2)
+    fprintf(stderr, "Assertion failure: %s, at %s:%d\n", s, file, ln);
+#endif
+#ifdef XP_MAC
+    dprintf("Assertion failure: %s, at %s:%d\n", s, file, ln);
+#endif
+#ifdef WIN32
+    DebugBreak();
+#endif
+#ifndef XP_MAC
+    abort();
+#endif
+}
+
