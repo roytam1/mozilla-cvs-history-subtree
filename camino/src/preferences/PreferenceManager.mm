@@ -135,6 +135,8 @@ static BOOL gMadePrefManager;
 - (void) dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+  if (self == gSharedInstance)
+    gSharedInstance = nil;
   [super dealloc];
 }
 

@@ -137,11 +137,12 @@
 -(IBAction) addFolder:(id)aSender;
 -(IBAction) addSeparator:(id)aSender;
 
-//Window menu actions
+// Window menu actions
 -(IBAction) newTab:(id)aSender;
 -(IBAction) closeTab:(id)aSender;
+-(IBAction) downloadsWindow:(id)aSender;
 
-//Help menu actions
+// Help menu actions
 -(IBAction) infoLink:(id)aSender;
 -(IBAction) feedbackLink:(id)aSender;
 
