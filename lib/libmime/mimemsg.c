@@ -35,7 +35,9 @@ static int MimeMessage_parse_eof (MimeObject *, XP_Bool);
 static int MimeMessage_close_headers (MimeObject *obj);
 static int MimeMessage_write_headers_html (MimeObject *);
 
+#ifndef NO_SECURITY
 extern MimeObjectClass mimeFilterClass;
+#endif /* NO_SECURITY */
 
 #ifdef XP_UNIX
 extern void MimeHeaders_do_unix_display_hook_hack(MimeHeaders *);
@@ -439,6 +441,7 @@ MimeMessage_parse_eof (MimeObject *obj, XP_Bool abort_p)
 		}
 	}
 
+#ifndef NO_SECURITY
 #ifdef MIME_DRAFTS
   if ( obj->options &&
 	   obj->options->decompose_file_p &&
@@ -452,6 +455,7 @@ MimeMessage_parse_eof (MimeObject *obj, XP_Bool abort_p)
 	if ( status < 0 ) return status;
   }
 #endif /* MIME_DRAFTS */
+#endif /* NO_SECURITY */
 
 
   /* Put out a separator after every message/rfc822 object. */
@@ -476,6 +480,7 @@ MimeMessage_add_child (MimeObject *parent, MimeObject *child)
   XP_ASSERT(cont->nchildren == 0);
   if (cont->nchildren != 0) return -1;
 
+#ifndef NO_SECURITY
 #ifdef MIME_DRAFTS
   if ( parent->options &&
 	   parent->options->decompose_file_p &&
@@ -489,6 +494,7 @@ MimeMessage_add_child (MimeObject *parent, MimeObject *child)
 	if ( status < 0 ) return status;
   }
 #endif /* MIME_DRAFTS */
+#endif /* NO_SECURITY */
   
   return ((MimeContainerClass*)&MIME_SUPERCLASS)->add_child (parent, child);
 }

@@ -71,7 +71,7 @@ PUBLIC void INTL_CCCReportMetaCharsetTag(MWContext *context, char *charset_tag)
 	INTL_CSIReportMetaCharsetTag(c, charset_tag, context->type);
 }
 
-#if MOZ_MAIL_NEWS || MOZ_MAIL_COMPOSE
+#if defined(MOZ_MAIL_NEWS) || defined(MOZ_MAIL_COMPOSE)
 
 #if 0
 /* 

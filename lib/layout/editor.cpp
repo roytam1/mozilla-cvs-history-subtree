@@ -1112,8 +1112,8 @@ void EDT_ResetLayoutElement( ED_Element* /* pElement */, intn /* iEditOffset */,
 }
 
 #ifdef DEBUG
-void EDT_VerifyLayoutElement( MWContext *pContext, LO_Element *pLoElement,
-        XP_Bool bPrint ){
+void EDT_VerifyLayoutElement( MWContext * /*pContext*/, LO_Element *pLoElement,
+        XP_Bool /*bPrint*/ ){
     CEditElement *pElement = pLoElement->lo_any.edit_element;
     if( pElement ){
         if( !pElement->IsLeaf() ){
