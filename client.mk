@@ -57,8 +57,8 @@ NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
 NSS_CO_TAG = NSS_CLIENT_TAG
 LDAPCSDK_CO_TAG = ldapcsdk_50_client_branch
-ACCESSIBLE_CO_TAG = 
-IMGLIB2_CO_TAG = 
+ACCESSIBLE_CO_TAG = MINOTAUR_20030218_BRANCH
+IMGLIB2_CO_TAG = MINOTAUR_20030218_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
