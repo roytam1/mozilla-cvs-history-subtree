@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributors(s):
+ *   Jan Varga <varga@utcru.sk>
+ *   Hakan Waara <hwaara@chello.se>
  */
 
 
@@ -101,18 +105,17 @@ function LoadMessageByUri(uri)
 
 }
 
-function ChangeFolderByDOMNode(folderNode)
+function ChangeFolderByIndex(index)
 {
-  var uri = folderNode.getAttribute('id');
-  dump(uri + "\n");
-  if (!uri) return;
+  var folderResource = GetFolderResource(index);
+  if (! folderResource)
+    return;
 
   var sortType = 0;
   var sortOrder = 0;
   var viewFlags = 0;
   var viewType = 0;
-  var resource = RDF.GetResource(uri);
-  var msgfolder = resource.QueryInterface(Components.interfaces.nsIMsgFolder);
+  var msgfolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
   if (msgfolder)
   {
     var msgdb = msgfolder.getMsgDatabase(msgWindow);
@@ -125,7 +128,7 @@ function ChangeFolderByDOMNode(folderNode)
       viewType = dbFolderInfo.viewType;
     }
   }
-  ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder);
+  ChangeFolderByURI(folderResource.Value, viewType, viewFlags, sortType, sortOrder);
 }
 
 function setTitleFromFolder(msgfolder, subject)
@@ -684,27 +687,25 @@ function OnClickThreadAndMessagePaneSplitterGrippy()
 
 function FolderPaneSelectionChange()
 {
-  var tree = GetFolderTree();
-  if(tree)
-  {
-    var selArray = tree.selectedItems;
-    if ( selArray && (selArray.length == 1) )
+    var folderOutliner = GetFolderOutliner();
+    if (folderOutliner.outlinerBoxObject.selection.count == 1)
     {
-      ChangeFolderByDOMNode(selArray[0]);
-    }
+        var startIndex = {};
+        var endIndex = {};
+        folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+        ChangeFolderByIndex(startIndex.value);
+     }
     else
-    {
-      ClearThreadPane();
-    }
-  }
+        ClearThreadPane();
 
-  if (!gAccountCentralLoaded)
-    ClearMessagePane();
-  if (gDisplayStartupPage)
-  {
-    loadStartPage();
-    gDisplayStartupPage = false;
-  }
+    if (!gAccountCentralLoaded)
+        ClearMessagePane();
+
+    if (gDisplayStartupPage)
+    {
+        loadStartPage();
+        gDisplayStartupPage = false;
+    }
 }
 
 function ClearThreadPane()

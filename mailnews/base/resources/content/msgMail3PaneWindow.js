@@ -24,6 +24,8 @@
 
 /* This is where functions related to the 3 pane window are kept */
 
+const NC_NS = "http://home.netscape.com/NC-rdf#";
+
 
 var showPerformance = false;
 
@@ -400,7 +402,7 @@ function PerformExpandForAllOpenServers(tree)
 function loadStartFolder(initialUri)
 {
     var defaultServer = null;
-    var startFolderUri = initialUri;
+    var startFolderResource = null;
     var isLoginAtStartUpEnabled = false;
     var enabledNewMailCheckOnce = false;
     var mailCheckOncePref = "mail.startup.enabledMailCheckOnce";
@@ -408,7 +410,9 @@ function loadStartFolder(initialUri)
     //First get default account
     try
     {
-        if(!startFolderUri)
+        if(initialUri)
+            startFolderResource = RDF.GetResource(initialUri);
+        else
         {
             var defaultAccount = accountManager.defaultAccount;
 
@@ -416,8 +420,7 @@ function loadStartFolder(initialUri)
             var rootFolder = defaultServer.RootFolder;
             var rootMsgFolder = rootFolder.QueryInterface(Components.interfaces.nsIMsgFolder);
 
-            var folderResource = rootMsgFolder.QueryInterface(Components.interfaces.nsIRDFResource);
-            startFolderUri = folderResource.Value;
+            startFolderResource = rootMsgFolder.QueryInterface(Components.interfaces.nsIRDFResource);
 
             enabledNewMailCheckOnce = pref.GetBoolPref(mailCheckOncePref);
 
@@ -441,23 +444,22 @@ function loadStartFolder(initialUri)
                 var inboxFolder = rootMsgFolder.getFoldersWithFlag(0x1000, 1, outNumFolders); 
                 if(!inboxFolder) return;
 
-                var resource = inboxFolder.QueryInterface(Components.interfaces.nsIRDFResource);
-                startFolderUri = resource.Value;
+                startFolderResource = inboxFolder.QueryInterface(Components.interfaces.nsIRDFResource);
             }
         }
 
-        var startFolder = document.getElementById(startFolderUri);
+        var startFolderIndex = GetFolderIndex(startFolderResource);
 
         //if it's not here we will have to make sure it's open.
-        if(!startFolder && startFolderUri && isLoginAtStartUpEnabled)
+        if(startFolderIndex < 0 && startFolderResource && isLoginAtStartUpEnabled)
         {
             // Opens the twisty for the default account 
             OpenTwistyForServer(defaultServer);
-            startFolder = document.getElementById(startFolderUri);
+            startFolderIndex = GetFolderIndex(startFolderResource);
         }
 
-        var folderTree= GetFolderTree();
-        ChangeSelection(folderTree, startFolder);
+        var folderOutliner = GetFolderOutliner();
+        ChangeSelection(folderOutliner, startFolderIndex);
                 
         // only do this on startup, when we pass in null
         if (!initialUri && isLoginAtStartUpEnabled)
@@ -469,7 +471,7 @@ function loadStartFolder(initialUri)
 
         // because the "open" state persists, we'll call
         // PerformExpand() for all servers that are open at startup.
-        PerformExpandForAllOpenServers(folderTree);
+        PerformExpandForAllOpenServers(folderOutliner);
     }
     catch(ex)
     {
@@ -486,39 +488,29 @@ function loadStartFolder(initialUri)
 
 function OpenTwistyForServer(server)
 {
-    var treeNode = GetTreeNodeForServerURI(server.serverURI); 
+    var folderIndex = GetFolderIndexForServerURI(server.serverURI);
 
-    if (treeNode)
-        treeNode.setAttribute('open', 'true');
+    if (folderIndex >= 0)
+    {
+        var folderOutliner = GetFolderOutliner();
+        var isContainerOpen = folderOutliner.outlinerBoxObject.view.isContainerOpen(folderIndex);
+        if (! isContainerOpen)
+            folderOutliner.outlinerBoxObject.view.toggleOpenState(folderIndex);
+    }
 }
 
 
-function GetTreeNodeForServerURI(serverURI)
+function GetFolderIndexForServerURI(serverURI)
 {
-    var treeNode = null;
-
-    var tree = GetFolderTree();     
-
-    // Iterate through folder tree to find the node associated with given serverURI
-    if ( tree && tree.childNodes ) {
-        for ( var i = tree.childNodes.length - 1; i >= 0; i-- ) {
-            var treechild = tree.childNodes[i];
-            if (treechild.localName == 'treechildren') {
-                var treeitems = treechild.childNodes;
-                for ( var j = treeitems.length - 1; j >= 0; j--) {
-                    var isServer = treeitems[j].getAttribute('IsServer');
-                    if (isServer == "true") {
-                        var uri = treeitems[j].getAttribute('id');
-                        if (uri == serverURI) {
-                            treeNode = treeitems[j];
-                            break; 
-                        }
-                    }
-                }
-            } 
-        }
-    }
-    return treeNode;
+    var folderResource = RDF.GetResource(serverURI);
+    var isServer = GetFolderAttribute(folderResource, "IsServer");
+    if (isServer == "true")
+    {
+        var folderIndex = GetFolderIndex(folderResource);
+        return folderIndex;
+     }
+    else
+        return -1;
 }
 
 function TriggerGetMessages(server)
@@ -788,14 +780,13 @@ function FolderPaneDoubleClick(treeitem)
 	}
 }
 
-function ChangeSelection(tree, newSelection)
+function ChangeSelection(outliner, newIndex)
 {
-	if(newSelection)
-	{
-		tree.clearItemSelection();
-		tree.selectItem(newSelection);
-		tree.ensureElementIsVisible(newSelection);
-	}
+    if(newIndex >= 0)
+    {
+        outliner.outlinerBoxObject.selection.select(newIndex);
+        outliner.outlinerBoxObject.ensureRowIsVisible(newIndex);
+    }
 }
 
 function SetActiveThreadPaneSortColumn(column)
@@ -954,4 +945,28 @@ function SetBusyCursor(window, enable)
 function GetDBView()
 {
     return gDBView;
+}
+
+function GetFolderResource(index)
+{
+    var folderOutliner = GetFolderOutliner();
+    var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+    return folderOutlinerBuilder.getResourceAtIndex(index);
+}
+
+function GetFolderIndex(resource)
+{
+    var folderOutliner = GetFolderOutliner();
+    var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
+    return folderOutlinerBuilder.getIndexOfResource(resource);
+}
+
+function GetFolderAttribute(source, attribute)
+{
+    var property = RDF.GetResource(NC_NS + attribute);
+    var folderOutliner = GetFolderOutliner();
+    var target = folderOutliner.outlinerBoxObject.outlinerBody.database.GetTarget(source, property, true);
+    if (target)
+        target = target.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+    return target;
 }

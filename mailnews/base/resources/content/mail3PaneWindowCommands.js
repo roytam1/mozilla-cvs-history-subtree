@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-2000 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributors(s):
+ *   Jan Varga <varga@utcru.sk>
+ *   Hakan Waara <hwaara@chello.se>
  */
 
 // Controller object for folder pane
@@ -790,7 +794,7 @@ function SetupCommandUpdateHandlers()
 	var widget;
 	
 	// folder pane
-	widget = GetFolderTree();
+	widget = GetFolderOutliner();
 	if ( widget )
 		widget.controllers.appendController(FolderPaneController);
 	
