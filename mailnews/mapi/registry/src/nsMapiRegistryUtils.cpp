@@ -272,29 +272,27 @@ nsresult CopyMozMapiToWinSysDir()
     nsAutoString mapiFilePath;
     nsSpecialSystemDirectory sysDir(nsSpecialSystemDirectory::Win_SystemDirectory);
     ((nsFileSpec*)&sysDir)->GetNativePathString(mapiFilePath);
-    nsCAutoString filePath;
+    nsAutoString filePath;
     if (!mapiFilePath.IsEmpty()) {
-        filePath.AppendWithConversion(mapiFilePath.get());
-        filePath.Append("Mapi32_moz_bak.dll");
+        filePath.Append(mapiFilePath.get());
+        filePath.AppendWithConversion("Mapi32_moz_bak.dll");
     }
 
     nsCOMPtr<nsILocalFile> pCurrentMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv) || !pCurrentMapiFile) return rv;        
-    pCurrentMapiFile->InitWithPath(filePath.get());
+    pCurrentMapiFile->InitWithUnicodePath(filePath.get());
 
     nsAutoString mozFilePath;
     nsSpecialSystemDirectory binDir(nsSpecialSystemDirectory::Moz_BinDirectory);
     ((nsFileSpec*)&binDir)->GetNativePathString(mozFilePath);
 
-    nsCAutoString mozFile;
     if (!mozFilePath.IsEmpty()) {
-        mozFile.AppendWithConversion(mozFilePath.get());
-        mozFile.Append("mozMapi32.dll");
+        mozFilePath.AppendWithConversion("mozMapi32.dll");
     }
 
     nsCOMPtr<nsILocalFile> pMozMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv) || !pMozMapiFile) return rv;
-    pMozMapiFile->InitWithPath(mozFile.get());
+    pMozMapiFile->InitWithUnicodePath(mozFilePath.get());
 
     PRBool bExist;
     rv = pMozMapiFile->Exists(&bExist);
@@ -306,9 +304,9 @@ nsresult CopyMozMapiToWinSysDir()
         rv = pCurrentMapiFile->Remove(PR_FALSE);
     }
     if (NS_FAILED(rv)) return rv;
-    filePath.AssignWithConversion(mapiFilePath.get());
-    filePath.Append("Mapi32.dll");
-    pCurrentMapiFile->InitWithPath(filePath.get());
+    filePath.Assign(mapiFilePath.get());
+    filePath.AppendWithConversion("Mapi32.dll");
+    pCurrentMapiFile->InitWithUnicodePath(filePath.get());
     rv = pCurrentMapiFile->Exists(&bExist);
     if (NS_SUCCEEDED(rv) && bExist)
     {
@@ -318,15 +316,17 @@ nsresult CopyMozMapiToWinSysDir()
     
     nsAutoString fileName;
     fileName.AssignWithConversion("Mapi32.dll");
-    filePath.AssignWithConversion(mapiFilePath.get());
-    pCurrentMapiFile->InitWithPath(filePath.get());
+    filePath.Assign(mapiFilePath.get());
+    pCurrentMapiFile->InitWithUnicodePath(filePath.get());
     rv = pMozMapiFile->CopyToUnicode(pCurrentMapiFile, fileName.get());
     if (NS_SUCCEEDED(rv)) {
-        filePath.Append("Mapi32_moz_bak.dll");
+        nsCAutoString fullFilePath;
+        fullFilePath.AssignWithConversion(filePath.get());
+        fullFilePath.Append("Mapi32_moz_bak.dll");
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                             "Software\\Mozilla\\Desktop", 
                             "Mapi_backup_dll", 
-                            (char *)filePath.get());
+                            (char *)fullFilePath.get());
     }
     return rv;
 }
@@ -377,11 +377,11 @@ nsresult RestoreBackedUpMapiDll()
 nsresult setDefaultMailClient()
 {
     nsresult rv;
-    if (!NS_SUCCEEDED(CopyMozMapiToWinSysDir())) return NS_ERROR_FAILURE;
+    if (NS_FAILED(CopyMozMapiToWinSysDir())) return NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     rv = saveDefaultMailClient();
-    if (!NS_SUCCEEDED(saveUserDefaultMailClient()) ||
-        !NS_SUCCEEDED(rv)) return NS_ERROR_FAILURE;
+    if (NS_FAILED(saveUserDefaultMailClient()) ||
+        NS_FAILED(rv)) return NS_ERROR_FAILURE;
     nsCAutoString keyName("Software\\Clients\\Mail\\");
 
     nsCAutoString appName(brandName());
@@ -444,7 +444,7 @@ nsresult setDefaultMailClient()
  */
 nsresult unsetDefaultMailClient() {
     nsresult result = NS_OK;
-    if (!NS_SUCCEEDED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
+    if (NS_FAILED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     nsCAutoString name(GetRegistryKey(HKEY_LOCAL_MACHINE, 
                                       "Software\\Mozilla\\Desktop", 
