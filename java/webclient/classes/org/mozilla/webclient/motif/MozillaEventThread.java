@@ -43,7 +43,6 @@ public class MozillaEventThread extends Thread {
     // A mapping of gtkWindowID <-> WebShellInitContext structs
     static private Hashtable webShellContextMapping = null;
 
-
     protected MotifBrowserControlCanvas browserCanvas;
 
     // Calling this will process any GTK / Mozilla events which have been pending
@@ -80,9 +79,11 @@ public class MozillaEventThread extends Thread {
         // Infinite loop to eternity.
 	    while (true) {
             // PENDING(mark): Do we need to yield?
-            Thread.currentThread().yield();
+            // Thread.currentThread().yield();
 
-            this.processNativeEventQueue(getContext(this.browserCanvas.getGTKWinPtr()));
+            synchronized(this.browserCanvas.getTreeLock()) {
+                this.processNativeEventQueue(getContext(this.browserCanvas.getGTKWinPtr()));
+            }
         }
     }
 

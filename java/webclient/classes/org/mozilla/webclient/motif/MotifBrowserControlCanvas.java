@@ -83,9 +83,6 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
                 this.reparentWindow(this.gtkWinID, this.canvasWinID);
 
                 firstTime = false;
-
-                Thread mozillaEventThread = new MozillaEventThread(this);
-                mozillaEventThread.start();
             }
         }
     }
@@ -123,6 +120,9 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
                                            screenSize.height);
             
             this.gtkWinID = this.getGTKWinID(gtkWinPtr);
+
+            Thread mozillaEventThread = new MozillaEventThread(this);
+            mozillaEventThread.start();
         }
 
 		return this.gtkWinPtr;
