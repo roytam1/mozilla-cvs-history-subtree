@@ -51,6 +51,7 @@
 // Interfaces Needed
 #include "nsIBaseWindow.h"
 #include "nsICharsetConverterManager.h"
+#include "nsIChildWindow.h"
 #include "nsICodebasePrincipal.h"
 #include "nsIContent.h"
 #include "nsIContentViewerFile.h"
@@ -97,6 +98,7 @@
 #include "nsIWebBrowser.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIWebShell.h"
+#include "nsIWindow.h"
 #include "nsIComputedDOMStyle.h"
 #include "nsDOMCID.h"
 #include "nsDOMError.h"
@@ -1417,9 +1419,9 @@ NS_IMETHODIMP GlobalWindowImpl::GetScrollX(PRInt32* aScrollX)
 
   GetScrollInfo(&view, &p2t, &t2p);
   if (view) {
-    nscoord xPos, yPos;
+    gfx_coord xPos, yPos;
     result = view->GetScrollPosition(xPos, yPos);
-    *aScrollX = NSTwipsToIntPixels(xPos, t2p);
+    *aScrollX = xPos; // pixels
   }
 
   return result;
@@ -1438,9 +1440,9 @@ NS_IMETHODIMP GlobalWindowImpl::GetScrollY(PRInt32* aScrollY)
 
   GetScrollInfo(&view, &p2t, &t2p);
   if (view) {
-    nscoord xPos, yPos;
+    gfx_coord xPos, yPos;
     result = view->GetScrollPosition(xPos, yPos);
-    *aScrollY = NSTwipsToIntPixels(yPos, t2p);
+    *aScrollY = yPos; // pixels
   }
 
   return result;
@@ -1560,6 +1562,8 @@ NS_IMETHODIMP GlobalWindowImpl::Prompt(JSContext* cx, jsval* argv,
 
 NS_IMETHODIMP GlobalWindowImpl::Focus()
 {
+  // XXX pav -- child windows only?
+
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
   if (treeOwnerAsWin)
@@ -1574,10 +1578,17 @@ NS_IMETHODIMP GlobalWindowImpl::Focus()
     nsCOMPtr<nsIViewManager> vm;
     presShell->GetViewManager(getter_AddRefs(vm));
     if (vm) {
-      nsCOMPtr<nsIWidget> widget;
-      vm->GetWidget(getter_AddRefs(widget));
-      if (widget)
-        result = widget->SetFocus();
+      nsCOMPtr<nsIWindow> window;
+      vm->GetWidget(getter_AddRefs(window));
+      if (window) {
+        nsresult rv;
+        nsCOMPtr<nsIChildWindow> cw = do_QueryInterface(window, &rv);
+        if (NS_SUCCEEDED(rv)) {
+          result = cw->TakeFocus();
+        } else {
+          NS_ASSERTION(cw, "not a child window (XXX pav)\n");
+        }
+      }
     }
   }
 
@@ -1668,7 +1679,7 @@ NS_IMETHODIMP GlobalWindowImpl::Print()
     if (viewer) {
       nsCOMPtr<nsIContentViewerFile> viewerFile(do_QueryInterface(viewer));
       if (viewerFile)
-        return viewerFile->Print(PR_FALSE, nsnull);
+        return viewerFile->PrintWith(PR_FALSE, nsnull, nsnull);
     }
   }
   return NS_OK;
@@ -1771,10 +1782,15 @@ NS_IMETHODIMP GlobalWindowImpl::GetAttention()
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
   NS_ENSURE_TRUE(treeOwnerAsWin, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsIWidget> widget;
-  treeOwnerAsWin->GetMainWidget(getter_AddRefs(widget));
-  NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
-  NS_ENSURE_SUCCESS(widget->GetAttention(), NS_ERROR_FAILURE);
+  nsCOMPtr<nsIWindow> window;
+  treeOwnerAsWin->GetMainWindow(getter_AddRefs(window));
+  NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+
+
+  // XXX pav
+#if 0
+  NS_ENSURE_SUCCESS(window->GetAttention(), NS_ERROR_FAILURE);
+#endif
 
   return NS_OK;
 }
@@ -1793,8 +1809,8 @@ NS_IMETHODIMP GlobalWindowImpl::ScrollTo(PRInt32 aXScroll, PRInt32 aYScroll)
   result = GetScrollInfo(&view, &p2t, &t2p);
 
   if (view) {
-    result = view->ScrollTo(NSIntPixelsToTwips(aXScroll, p2t),
-                            NSIntPixelsToTwips(aYScroll, p2t),
+    result = view->ScrollTo(aXScroll,
+                            aYScroll,
                             NS_VMREFRESH_IMMEDIATE);
   }
 
@@ -1811,11 +1827,11 @@ NS_IMETHODIMP GlobalWindowImpl::ScrollBy(PRInt32 aXScrollDif,
   result = GetScrollInfo(&view, &p2t, &t2p);
 
   if (view) {
-    nscoord xPos, yPos;
+    gfx_coord xPos, yPos;
     result = view->GetScrollPosition(xPos, yPos);
     if (NS_SUCCEEDED(result)) {
-      result = view->ScrollTo(xPos + NSIntPixelsToTwips(aXScrollDif, p2t),
-                              yPos + NSIntPixelsToTwips(aYScrollDif, p2t),
+      result = view->ScrollTo(xPos + aXScrollDif,
+                              yPos + aYScrollDif,
                               NS_VMREFRESH_IMMEDIATE);
     }
   }
@@ -1995,12 +2011,12 @@ NS_IMETHODIMP GlobalWindowImpl::SetCursor(const nsAReadableString& aCursor)
       vm->GetRootView(rootView);
       NS_ENSURE_TRUE(rootView, NS_ERROR_FAILURE);
 
-      nsCOMPtr<nsIWidget> widget;
-      rootView->GetWidget(*getter_AddRefs(widget));
-      NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
+      nsCOMPtr<nsIWindow> window;
+      rootView->GetWidget(*getter_AddRefs(window));
+      NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
       // Call esm and set cursor.
-      ret = esm->SetCursor(cursor, widget, PR_TRUE);
+      ret = esm->SetCursor(cursor, window, PR_TRUE);
     }
   }
 
@@ -2711,9 +2727,9 @@ NS_IMETHODIMP GlobalWindowImpl::Activate()
   vm->GetRootView(rootView);
   NS_ENSURE_TRUE(rootView, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsIWidget> widget;
-  rootView->GetWidget(*getter_AddRefs(widget));
-  NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIWindow> window;
+  rootView->GetWidget(*getter_AddRefs(window));
+  NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
   nsEventStatus status;
   nsGUIEvent guiEvent;
@@ -2724,7 +2740,7 @@ NS_IMETHODIMP GlobalWindowImpl::Activate()
   guiEvent.time = PR_IntervalNow();
   guiEvent.nativeMsg = nsnull;
   guiEvent.message = NS_ACTIVATE;
-  guiEvent.widget = widget;
+  guiEvent.window = window;
 
   vm->DispatchEvent(&guiEvent, &status);
 
@@ -2750,9 +2766,9 @@ NS_IMETHODIMP GlobalWindowImpl::Deactivate()
   vm->GetRootView(rootView);
   NS_ENSURE_TRUE(rootView, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsIWidget> widget;
-  rootView->GetWidget(*getter_AddRefs(widget));
-  NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIWindow> window;
+  rootView->GetWidget(*getter_AddRefs(window));
+  NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
 
   nsEventStatus status;
   nsGUIEvent guiEvent;
@@ -2763,7 +2779,7 @@ NS_IMETHODIMP GlobalWindowImpl::Deactivate()
   guiEvent.time = PR_IntervalNow();
   guiEvent.nativeMsg = nsnull;
   guiEvent.message = NS_DEACTIVATE;
-  guiEvent.widget = widget;
+  guiEvent.window = window;
 
   vm->DispatchEvent(&guiEvent, &status);
 
@@ -3647,8 +3663,8 @@ NS_IMETHODIMP GlobalWindowImpl::SetTimeoutOrInterval(JSContext *cx,
     return err;
   }
 
-  err = timeout->timer->Init(nsGlobalWindow_RunTimeout, timeout,
-                             (PRInt32) interval, NS_PRIORITY_LOWEST);
+  err = timeout->timer->InitOld(nsGlobalWindow_RunTimeout, (void*)timeout,
+                                (PRInt32) interval, nsITimer::NS_PRIORITY_LOWEST, nsITimer::NS_TYPE_ONE_SHOT);
   if (NS_OK != err) {
     DropTimeout(timeout);
     return err;
@@ -3836,8 +3852,8 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
           return PR_TRUE;
         }
 
-        err = timeout->timer->Init(nsGlobalWindow_RunTimeout, timeout,
-                                   delay32, NS_PRIORITY_LOWEST);
+        err = timeout->timer->InitOld(nsGlobalWindow_RunTimeout, (void*)timeout,
+                                      delay32, nsITimer::NS_PRIORITY_LOWEST, nsITimer::NS_TYPE_ONE_SHOT);
         if (NS_OK != err) {
           NS_RELEASE(temp);
           NS_RELEASE(tempContext);
