@@ -200,7 +200,12 @@ DBArcsInOutCursor::DBArcsInOutCursor (DataBase* db, nsIRDFNode* node, PRBool arc
         mTarget = node;
     }
     NS_IF_ADDREF(node); 
+
+    // XXX there better be at least _one_ datasource in this here
+    // database, else this'll be a real short ride...
+    PR_ASSERT(db->mDataSources.Count() > 0);
     nsIRDFDataSource* ds = (nsIRDFDataSource*) db->mDataSources[mCount++];
+
     if (mTarget) {
         ds->ArcLabelsIn(mTarget,  &mInCursor);
     } else {
@@ -240,12 +245,19 @@ DBArcsInOutCursor::Advance(void)
     nsIRDFDataSource* ds;
     while (mInCursor || mOutCursor) {
         nsresult result = (mInCursor ? mInCursor->Advance() : mOutCursor->Advance());
-        if (NS_ERROR_RDF_CURSOR_EMPTY != result) return NS_OK;
-        ds =  (nsIRDFDataSource*) mDataBase->mDataSources[mCount++];
+        if (NS_ERROR_RDF_CURSOR_EMPTY != result)
+            return NS_OK;
+
+        if (mCount >= mDataBase->mDataSources.Count())
+            break;
+
+        ds = (nsIRDFDataSource*) mDataBase->mDataSources[mCount];
+        ++mCount;
+
         if (mTarget) {
-            ds->ArcLabelsIn(mTarget,  &mInCursor);
+            ds->ArcLabelsIn(mTarget, &mInCursor);
         } else {
-            ds->ArcLabelsOut(mSource,  &mOutCursor);
+            ds->ArcLabelsOut(mSource, &mOutCursor);
         }
     }
     return NS_ERROR_RDF_CURSOR_EMPTY;
@@ -259,7 +271,7 @@ DBArcsInOutCursor::Advance(void)
 class DBGetSTCursor : public nsIRDFAssertionCursor
 {
 private:
-    DataBase* mDataBase;
+    DataBase*       mDataBase;
     nsIRDFResource* mSource;
     nsIRDFResource* mLabel;    
     nsIRDFNode*     mTarget;
@@ -311,7 +323,10 @@ DBGetSTCursor::DBGetSTCursor (DataBase* db, nsIRDFNode* u,
                               nsIRDFResource* property, PRBool inversep, 
                               PRBool tv)
     : mDataBase(db),
+      mSource(nsnull),
       mLabel(property),
+      mTarget(nsnull),
+      mCount(0),
       mTruthValue(tv)
 {
     if (!inversep) {
@@ -323,8 +338,9 @@ DBGetSTCursor::DBGetSTCursor (DataBase* db, nsIRDFNode* u,
     NS_IF_ADDREF(mSource);
     NS_IF_ADDREF(mTarget);
     NS_IF_ADDREF(mLabel);
-	mCount = 0;
-    nsIRDFDataSource* ds =  (nsIRDFDataSource*) db->mDataSources[mCount++];
+
+    // XXX assume that at least one data source exists in the database.
+    nsIRDFDataSource* ds = (nsIRDFDataSource*) db->mDataSources[mCount++];
     if (mSource)
         ds->GetTargets(mSource, mLabel, mTruthValue, &mCurrentCursor);
     else 
@@ -375,11 +391,17 @@ DBGetSTCursor::Advance(void)
                 result = mCurrentCursor->Advance();
             }            
         }
-        ds =  (nsIRDFDataSource*) mDataBase->mDataSources[mCount++];
+
+        if (mCount >= mDataBase->mDataSources.Count())
+            break;
+
+        ds = (nsIRDFDataSource*) mDataBase->mDataSources[mCount];
+        ++mCount;
+
         if (mSource)
             ds->GetTargets(mSource, mLabel, mTruthValue, &mCurrentCursor);
         else 
-            ds->GetSources( mLabel, mTarget, mTruthValue, &mCurrentCursor);
+            ds->GetSources(mLabel, mTarget, mTruthValue, &mCurrentCursor);
     }
     return NS_ERROR_RDF_CURSOR_EMPTY;
 }
@@ -405,9 +427,6 @@ DataBase::~DataBase(void)
 
 ////////////////////////////////////////////////////////////////////////
 // nsISupports interface
-
-//NS_IMPL_ADDREF(DataBase);
-//NS_IMPL_RELEASE(DataBase);
 
 NS_IMPL_ADDREF(DataBase);
 NS_IMPL_RELEASE(DataBase);
