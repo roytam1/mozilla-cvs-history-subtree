@@ -823,7 +823,7 @@ public:
  * nsIClassInfo helper macros
  */
 
-#define NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(_class)                          \
+#define NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(_class)                          \
   if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
     foundInterface =                                                          \
       nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::e##_class##_id,    \

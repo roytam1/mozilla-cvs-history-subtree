@@ -158,6 +158,11 @@ public:
     eXULNamedNodeMap_id,
     eXULAttr_id,
 
+    // Crypto classes
+    eCrypto_id,
+    eCRMFObject_id,
+    ePkcs11_id,
+
     eDOMClassInfoIDCount // This one better be the last one in this list
   };
 };
