@@ -226,11 +226,6 @@ ifdef MOZ_IPCD
 tier_9_dirs += ipc/ipcd
 endif
 
-ifdef MOZ_PROFILESHARING
-tier_9_dirs += modules/transactionmngr
-endif
-
-
 #
 # tier 9x - application features
 #

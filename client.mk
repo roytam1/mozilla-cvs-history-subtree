@@ -296,19 +296,6 @@ endif
 CVSCO_IPC = $(CVS) $(CVS_FLAGS) co $(IPC_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IPC_CO_MODULE)
 
 ####################################
-# CVS defines for transaction manager module
-#
-XACTIONMGR_CO_MODULE = mozilla/modules/transactionmngr
-XACTIONMGR_CO_FLAGS := -P
-ifdef MOZ_CO_FLAGS
-  XACTIONMGR_CO_FLAGS := $(MOZ_CO_FLAGS)
-endif
-ifdef XACTIONMGR_CO_TAG
-  XACTIONMGR_CO_FLAGS := $(XACTIONMGR_CO_FLAGS) -r $(XACTIONMGR_CO_TAG)
-endif
-CVSCO_XACTIONMGR = $(CVS) $(CVS_FLAGS) co $(XACTIONMGR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(XACTIONMGR_CO_MODULE)
-
-####################################
 # CVS defines for Calendar 
 #
 CVSCO_CALENDAR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/calendar mozilla/other-licenses/libical

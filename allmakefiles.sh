@@ -924,14 +924,14 @@ ipc/ipcd/extensions/lock/src/Makefile
 ipc/ipcd/extensions/lock/src/module/Makefile
 "
 
-MAKEFILES_transactionmngr="
-modules/transactionmngr/Makefile
-modules/transactionmngr/build/Makefile
-modules/transactionmngr/tests/Makefile
-modules/transactionmngr/src/Makefile
-modules/transactionmngr/public/Makefile
-modules/transactionmngr/common/Makefile
-modules/transactionmngr/module/Makefile
+MAKEFILES_transmngr="
+ipc/ipcd/extensions/transmngr/Makefile
+ipc/ipcd/extensions/transmngr/public/Makefile
+ipc/ipcd/extensions/transmngr/src/Makefile
+ipc/ipcd/extensions/transmngr/build/Makefile
+ipc/ipcd/extensions/transmngr/test/Makefile
+ipc/ipcd/extensions/transmngr/common/Makefile
+ipc/ipcd/extensions/transmngr/module/Makefile
 "
 
 MAKEFILES_profilesharingsetup="
@@ -1333,7 +1333,7 @@ if test -n "$MOZ_IPCD"; then
 fi
 
 if test -n "$MOZ_PROFILESHARING"; then
-    add_makefiles "$MAKEFILES_transactionmngr"
+    add_makefiles "$MAKEFILES_transmngr"
     add_makefiles "$MAKEFILES_profilesharingsetup"
 fi
 
