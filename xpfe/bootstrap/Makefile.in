@@ -62,6 +62,7 @@ ifndef NO_STATIC_LIB
 XP_LIBS		+= \
 		$(TK_LIBS) \
 		$(MOZ_GDK_PIXBUF_LIBS) \
+		$(MOZ_XIE_LIBS) \
 		-L/usr/X11R6/bin -lXt \
 		$(JPEG_LIBS) \
 		$(MNG_LIBS) \
