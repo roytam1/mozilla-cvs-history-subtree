@@ -206,7 +206,7 @@ nsresult nsAppShellService::ClearXPConnectSafeContext()
   nsCOMPtr<nsIThreadJSContextStack> cxstack =
     do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
   if (NS_FAILED(rv)) {
-    NS_ASSERTION(0, "XPConnect ContextStack gone before XPCOM shutdown?");
+    NS_ERROR("XPConnect ContextStack gone before XPCOM shutdown?");
     return rv;
   }
 
