@@ -379,12 +379,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessReplicationData)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPChangeLogQuery)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessChangeLogData)
 #endif
-#ifdef XP_MACOSX
-    { "OSX OS Integration", NS_MESSENGEROSXINTEGRATION_CID,
-      NS_MESSENGEROSINTEGRATION_CONTRACTID,
-      nsMessengerOSXIntegrationConstructor,
-    },
-#endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
@@ -778,6 +772,12 @@ static const nsModuleComponentInfo gComponents[] = {
     { "OS/2 OS Integration", NS_MESSENGEROS2INTEGRATION_CID,
       NS_MESSENGEROSINTEGRATION_CONTRACTID,
       nsMessengerOS2IntegrationConstructor,
+    },
+#endif
+#ifdef XP_MACOSX
+    { "OSX OS Integration", NS_MESSENGEROSXINTEGRATION_CID,
+      NS_MESSENGEROSINTEGRATION_CONTRACTID,
+      nsMessengerOSXIntegrationConstructor,
     },
 #endif
     { "x-message-display content handler",
