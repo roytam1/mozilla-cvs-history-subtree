@@ -46,11 +46,14 @@ sub new
   my $initialReturn = $conn->search($base, "base", "objectclass=*");
   my @attributeArray = $initialReturn->getValues("attributetypes");
   my @objectarray = $initialReturn->getValues("objectclasses");
-
+  
+  
   foreach (@attributeArray)  {
     $attr = new Mozilla::LDAP::Schema::Attribute($_);
     $schema{"attributes"}{$attr->name()} = $attr;
   }
+  $schema{"searchvalue"} = $initialReturn;
+  $schema{"connection"} = $conn;
   foreach (@objectarray) {
     $objectclass = new Mozilla::LDAP::Schema::ObjectClass($_);
     $schema{"objectclass"}{$objectclass->name()} = $objectclass;
@@ -62,7 +65,29 @@ sub new
 
 sub add
 {
+  my ($self, $attr) = @_;
 
+ my ($schema) = $self->{"searchvalue"};
+  my ($conn) = $self->{"connection"};
+  my $finalString;
+  my $ref = ref($attr);
+
+  if ($ref eq 'Mozilla::LDAP::Schema::Attribute') {
+   $finalString =  $attr->formatValue();
+  
+   $schema->addValue("attributetypes",$finalString);
+  return $schema;
+  }
+}
+
+sub update
+{
+  my ($self) = shift;
+  my ($conn) = $self->{"connection"};
+  my ($attributes) = $self->{"searchvalue"};
+
+  return $conn->update($attributes);
+  
 }
 
 sub attributes
@@ -159,6 +184,15 @@ sub make_attributes {
 	push(@att,defined($attr->{$_}) ? qq/$key="$attr->{$_}"/ : qq/$key/);
     }
     return @att;
+}
+
+sub formatValue
+{
+  my $self = shift;
+  my $finalString = "( ";
+  $finalString .= $self->oid()." NAME \'".$self->name()."\' DESC \'".$self->desc."\' SYNTAX \'".$self->syntax."\' )";
+  print $finalString;
+  return $finalString;
 }
 
 sub new 
