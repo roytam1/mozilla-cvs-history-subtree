@@ -551,8 +551,10 @@
                 oldPane.selected = !(aPaneElement.selected = true);
                 if (!this._initialized || oldPane.id != aPaneElement.id) {
                   this.lastSelected = aPaneElement.id;
-                  aPaneElement.style.opacity = 0.0;
-                  this.animate(oldPane, aPaneElement);
+                  if (this._shouldAnimate) {
+                    aPaneElement.style.opacity = 0.0;
+                    this.animate(oldPane, aPaneElement);
+                  }
                   this._initialized = true;
                 }
               }
@@ -562,6 +564,16 @@
         ]]>
         </body>
       </method>
+      
+      <property name="_shouldAnimate">
+        <getter>
+        <![CDATA[
+          var psvc = Components.classes["@mozilla.org/preferences-service;1"]
+                               .getService(Components.interfaces.nsIPrefBranch);
+          return psvc.getBoolPref("browser.preferences.animateFadeIn");
+        ]]>
+        </getter>
+      </property>
       
       <method name="animate">
         <parameter name="aOldPane"/>

@@ -60,7 +60,15 @@
 #endif
 #endif
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-            style="&prefWindow.width;">
+#ifdef XP_WIN
+            style="&prefWindow.widthWin;">
+#else
+#ifdef XP_MACOSX
+            style="&prefWindow.widthMac;">
+#else
+            style="&prefWindow.widthUnix;">
+#endif
+#endif
   
     <stringbundle id="bundlePreferences"
                   src="chrome://browser/locale/preferences/preferences.properties"/>

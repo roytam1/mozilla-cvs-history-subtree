@@ -210,7 +210,6 @@ var gChangeActionDialog = {
     // look at the disabled types list and ensure that this type isn't in it.
     if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
       var disabledList = prefs.getCharPref(kDisabledPluginTypesPref);
-      dump("*** enabling for type = " + aContentType + " = " + kDisabledPluginTypesPref + "\n");
       if (disabledList == aContentType)
         prefs.clearUserPref(kDisabledPluginTypesPref);
       else {
@@ -235,20 +234,23 @@ var gChangeActionDialog = {
   onAccept: function ()
   {
     var bundleUCT = document.getElementById("bundleUCT");
+    var oldValue, newValue;
 
     var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
     var handlerGroup = document.getElementById("handlerGroup");
     if (handlerGroup.selectedItem.value == "plugin") {
       this._enableType(mimeInfo.MIMEType);
+
+      this._helperApps.enableFullPagePluginForType(mimeInfo.MIMEType, true);
       // We need to force the view in the parent window to refresh, since we've
       // effectively made a change to the datasource (even though we haven't
       // changed the actual data stored in the RDF datasource). 
       var pluginName = document.getElementById("pluginName");
       var openWith = bundleUCT.getFormattedString("openWith", [pluginName.label]);
-      var newHandler = this._rdf.GetLiteral(openWith);
-      var oldHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
-      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldHandler, newHandler);
-      return;
+      newValue = this._rdf.GetLiteral(openWith);
+      oldValue = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
+      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldValue, newValue);
+      return true;
     }
     
     this._disableType(mimeInfo.MIMEType);
@@ -299,12 +301,11 @@ var gChangeActionDialog = {
       // "FileHandler" property has been updated. (NC:FileHandler is a property
       // that our wrapper DS uses, its value is built dynamically based on real
       // values of other properties.
+      this._helperApps.enableFullPagePluginForType(mimeInfo.MIMEType, false);
       var bundleUCT = document.getElementById("bundleUCT");
-      var pluginName = document.getElementById("pluginName");
-      var openWith = bundleUCT.getFormattedString("openWith", [pluginName.label]);
-      var newHandler = this._rdf.GetLiteral(openWith);
-      var oldHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
-      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldHandler, newHandler);
+      newValue = this._rdf.GetLiteral(fileHandlerString);
+      oldValue = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
+      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldValue, newValue);
 
       // Restore selection
       for (i = 0; i < ranges.length; ++i)
@@ -383,6 +384,7 @@ var gChangeActionDialog = {
     if (fp.show() == nsIFilePicker.returnOK && fp.file) {
       var customApp = document.getElementById("customApp");
       customApp.label = this._getDisplayNameForFile(fp.file);
+      dump("*** customApp.label = " + customApp.label + " = " + this._getDisplayNameForFile(fp.file) + "\n");
       customApp.file = fp.file;
       customApp.image = this._getIconURLForFile(fp.file);
 
@@ -418,6 +420,7 @@ var gChangeActionDialog = {
   {
 #ifdef XP_WIN
     var lfw = aFile.QueryInterface(Components.interfaces.nsILocalFileWin);
+    dump("*** boaty = |" + lfw.getVersionInfoField("FileDescription") + "|\n");
     return lfw.getVersionInfoField("FileDescription"); 
 #else
     // XXXben - Read the bundle name on OS X.

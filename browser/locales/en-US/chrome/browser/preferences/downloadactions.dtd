@@ -15,3 +15,5 @@
 <!ENTITY  edit.label                          "Change Action...">
 <!ENTITY  edit.accesskey                      "C">
 
+<!ENTITY  windowClose.key                     "w">
+

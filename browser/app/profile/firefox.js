@@ -341,5 +341,6 @@ pref("plugin.default_plugin_disabled", true);
 pref("pfs.datasource.url", "chrome://mozapps/locale/plugins/plugins.properties");
 
 pref("browser.preferences.instantApply", true);
+pref("browser.preferences.animateFadeIn", true);
 pref("browser.display.screen_resolution", 96);
 

@@ -70,8 +70,8 @@ var gDownloadActionsDialog = {
     (this._removeButton = document.getElementById("removeFileHandler")).disabled = true;
     
     var indexToSelect = parseInt(this._handlersList.getAttribute("lastSelected"));
-    this._handlersList.view.selection.select(indexToSelect);
-    
+    if (this._handlersList.view)
+      this._handlersList.view.selection.select(indexToSelect);
     this._handlersList.focus();
   },
   
@@ -85,6 +85,8 @@ var gDownloadActionsDialog = {
     var canRemove = true;
     
     var cv = this._handlersList.contentView;
+    if (!cv)
+      return;
     var rangeCount = selection.getRangeCount();
     var min = { }, max = { };
     var setLastSelected = false;
@@ -192,8 +194,8 @@ var gDownloadActionsDialog = {
     var cv = this._handlersList.contentView;
     var item = cv.getItemAtIndex(selection.currentIndex);
     var itemResource = gRDF.GetResource(item.id);
-    document.documentElement.openSubDialog("chrome://browser/content/preferences/changeaction.xul",
-                                           "", itemResource);
+    openDialog("chrome://browser/content/preferences/changeaction.xul", 
+               "_blank", "modal,centerscreen", itemResource);
   }
 };
 

@@ -219,6 +219,11 @@ HelperApps.prototype = {
     }
     return "";
   },
+  
+  enableFullPagePluginForType: function (aContentType, aEnabled)
+  {
+    this._availableTypes[aContentType].pluginEnabled = aEnabled;
+  },
 
   /* nsIRDFDataSource */
   get URI() {
@@ -465,39 +470,33 @@ HelperApps.prototype = {
   },
   
   onAssert: function (aDataSource, aSource, aProperty, aTarget) {
-    for (var i = 0; i < this._observers.length; ++i) {
+    for (var i = 0; i < this._observers.length; ++i)
       this._observers[i].onAssert(aDataSource, aSource, aProperty, aTarget);
-    }
   },
 
   onUnassert: function (aDataSource, aSource, aProperty, aTarget) {
-    for (var i = 0; i < this._observers.length; ++i) {
+    for (var i = 0; i < this._observers.length; ++i)
       this._observers[i].onUnassert(aDataSource, aSource, aProperty, aTarget);
-    }
   },
   
   onChange: function (aDataSource, aSource, aProperty, aOldTarget, aNewTarget) {
-    for (var i = 0; i < this._observers.length; ++i) {
+    for (var i = 0; i < this._observers.length; ++i)
       this._observers[i].onChange(aDataSource, aSource, aProperty, aOldTarget, aNewTarget);
-    }
   },
   
   onMove: function (aDataSource, aOldSource, aNewSource, aProperty, aTarget) {
-    for (var i = 0; i < this._observers.length; ++i) {
+    for (var i = 0; i < this._observers.length; ++i)
       this._observers[i].onMove(aDataSource, aOldSource, aNewSource, aProperty, aTarget);
-    }
   },
   
   beginUpdateBatch: function (aDataSource) {
-    for (var i = 0; i < this._observers.length; ++i) {
+    for (var i = 0; i < this._observers.length; ++i)
       this._observers[i].beginUpdateBatch(aDataSource);
-    }
   },
   
   endUpdateBatch: function (aDataSource) {
-    for (var i = 0; i < this._observers.length; ++i) {
+    for (var i = 0; i < this._observers.length; ++i)
       this._observers[i].endUpdateBatch(aDataSource);
-    }
   },
 
   flush: function () {

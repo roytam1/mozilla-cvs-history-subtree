@@ -46,7 +46,7 @@
 <dialog id="ChangeActionDialog" title="&changeAction.title;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         onload="gChangeActionDialog.init();" 
-        ondialogaccept="gChangeActionDialog.onAccept();" 
+        ondialogaccept="return gChangeActionDialog.onAccept();" 
         style="width: 36em;"
         persist="screenX screenY">
 

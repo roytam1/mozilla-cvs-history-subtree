@@ -2954,9 +2954,11 @@ nsDocument::SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject)
   } else {
     nsCOMPtr<nsISupports> supp;
     mBoxObjectTable->Remove(&key, getter_AddRefs(supp));
-    nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(supp));
-    if (boxObject) {
-      boxObject->SetDocument(nsnull);
+    if (supp) {
+      nsCOMPtr<nsPIBoxObject> boxObject(do_QueryInterface(supp));
+      if (boxObject) {
+        boxObject->SetDocument(nsnull);
+      }
     }
   }
 
