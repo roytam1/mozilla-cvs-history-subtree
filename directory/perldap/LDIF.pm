@@ -319,10 +319,6 @@ sub put
 #############################################################################
 # Utilities
 
-sub _eval { return eval $_[$[]; }
-sub _call { return &{$_[$[]} ($_); }
-sub _undef { return; }
-
 sub next_attribute
 {
     my ($record, $offset) = @_;
@@ -337,21 +333,22 @@ ATTRIBUTE:
 	next unless defined $$value; # ignore comments and "-" lines
 	my $option;
 	for ($option = $[ + 2; $option < $#_; $option += 2) {
-	    my ($keyword, $expression) = (lc $_[$option], $_[$option+1]);
+	    my ($keyword, $expression) = ((lc $_[$option]), $_[$option+1]);
+	    next ATTRIBUTE unless defined $expression;
 	    my $exprType = ref $expression;
-	    my $evaluate = $exprType ? (($exprType eq "CODE") ? \&_call
-	                                                      : \&_undef)
-	                             : \&_eval;
+	    next if ($exprType and ($exprType ne "CODE")); # unsupported expression
 	    my $OK = 0;
 	    if  ("name" eq $keyword or "type" eq $keyword) {
 		foreach $_ (${$record}[$i]) {
-		    last if ($OK = &$evaluate ($expression));
+		    last if ($OK = $exprType ? &$expression ($_) : eval $expression);
 		}
 	    } elsif ("value" eq $keyword) {
 		foreach $_ (((ref $$value) eq "ARRAY") ? @$$value : $$value) {
-		    last if ($OK = &$evaluate ($expression));	
+		    last if ($OK = $exprType ? &$expression ($_) : eval $expression);
 		}
-	    } # else unsupported keyword
+	    } else { # unsupported keyword
+		last;
+	    }
 	    next ATTRIBUTE unless $OK;
 	}
 	return $i - $[;
