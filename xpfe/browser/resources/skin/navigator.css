@@ -5,14 +5,6 @@
 	display: none;
 }
 
-titledbutton#translate-button {
-	list-style-image:url(chrome://navigator/skin/location.gif);
-}
-
-titledbutton#print-button {
-	list-style-image:url(chrome://navigator/skin/print.gif);
-}
-
 titledbutton#back-button {
 	list-style-image:url(chrome://navigator/skin/back.gif);
 }
@@ -25,38 +17,18 @@ titledbutton#stop-button {
 	list-style-image:url(chrome://navigator/skin/stop.gif);
 } 
 
-titledbutton#search-button {
-	list-style-image:url(chrome://navigator/skin/search.gif);
-}
-
 titledbutton#reload-button {
 	list-style-image:url(chrome://navigator/skin/reload.gif);
 }
 
-titledbutton#home-button {
-	list-style-image:url(chrome://navigator/skin/home.gif);
-}
-
-titledbutton#netscape-button {
-	list-style-image:url(chrome://navigator/skin/mynetscape.gif);
-}
-
-titledbutton#bugzilla-button {
-	list-style-image:url(chrome://navigator/skin/location.gif);
-}
-
-titledbutton#tinderbox-button {
-	list-style-image:url(chrome://navigator/skin/location.gif);
-}
-
-titledbutton#Throbber
-{
-	list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
-}
-
-titledbutton#Throbber[busy="true"] {
-	list-style-image:url(chrome://navigator/skin/animthrob.gif);
-}
+titledbutton#search-button { 
+ list-style-image:none;
+ margin: 0px;
+ margin-right: 2px;
+ background-color: #99CCCC;
+ border: 2px solid #99CCCC;
+ -moz-border-radius: 4px;
+} 
 
 box#status-bar titledbutton {
      border: none;
@@ -106,33 +78,78 @@ input[type="text"]#urlbar {
 }
 
 
-/* Rules for the personal toolbar. The <titledbutton> and <menu> elements
-   that are direct children of the <toolbar> are slightly different than
-   recursively generated submenus */
-
-toolbar.main-bar > titledbutton,
-toolbar.main-bar .menu-left
-{
-  list-style-image: url('chrome://navigator/skin/location.gif');
+/**
+ * PersonalToolbar
+ */
+toolbar#PersonalToolbar {
+	overflow: hidden;
+	min-width: 10px;
+    color: white;
+    background-color: #003366;
+    padding: 0px;
+    padding-right: 0px;
+    min-height: 1em;
+    border: none;
 }
 
-toolbar.main-bar > titledbutton:hover,
-toolbar.main-bar .menu-left:hover
-{
-  list-style-image: url('chrome://navigator/skin/location-hover.gif');
+toolbar#PersonalToolbar box#endcap {
+	min-width: 69px; 
+	background-image: url("chrome://navigator/skin/bmbar-bg-endcap.gif"); 
+	background-repeat: no-repeat;
 }
 
-toolbar.main-bar > menu > titledbutton,
-toolbar.main-bar menu > .menu-left
-{
-  list-style-image: url('chrome://bookmarks/skin/bookmark-folder-closed.gif');
+toolbar#PersonalToolbar titledbutton {
+   margin: 0px;
+   margin-right: 1em;
+   max-width: 8em;
+   font: inherit;
+   font-size: smaller;
+   color: #99CCCC;
+   border: none;
+   padding: 1px;
+}
+
+toolbar#PersonalToolbar titledbutton:hover {
+   color: #CCFFFF;
+}
+
+toolbar#PersonalToolbar titledbutton.popup:hover {
+   color: #CCFFFF;
+   text-decoration: none;
+}
+
+toolbar#PersonalToolbar titledbutton:active {
+   color: #CCFFFF;
+   padding-left: 2px;
+   padding-top: 2px;
+   padding-right: 0px;
+   padding-bottom: 0px;
 }
 
 /**
- * Make sure the personal toolbar can get small enought
+ * Navigation Toolbar
  */
-toolbar#PersonalToolBar {
-   min-width: 10px;
+toolbar#nav-bar {
+	background-image: url("chrome://navigator/skin/navbar-bg.gif");
+	background-repeat: repeat-x;
+	background-position: 0% 0%;
+	background-color: #CCCCCC;
+	min-height: 39px;
+	max-height: 39px;
+	padding: 0px;
+	padding-bottom: 4px;
 }
 
+toolbar#nav-bar box#endcap {
+	min-width: 8px; 
+	background-image: url("chrome://navigator/skin/navbar-endcap.gif"); 
+	background-position: 0% 0%;
+	background-repeat: no-repeat;
+}
 
+/**
+ * removing image from toolbox
+ */
+:toolbox-normal {
+	background-image: none;
+}

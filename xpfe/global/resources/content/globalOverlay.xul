@@ -128,9 +128,21 @@
 		</menupopup>
 	</menu>
 	
+	<!-- Gray horizontal splitter -->
+	<splitter id="gray_horizontal_splitter" class="gray-horizontal-splitter">
+		<box id="begincap" align="horizontal">
+			<spring flex="100%"/>
+		</box>
+		<spring flex="100%"/>
+		<grippy/>
+		<spring flex="100%"/>
+		<box id="endcap" align="horizontal">
+			<spring flex="100%"/>
+		</box>
+	</splitter>
+
 	<!-- Toolbar boxes -->
-	<box id="toolbar_button_box" align="horizontal" flex="100%" style="overflow:hidden">
-	</box>
+	<box id="toolbar_button_box" align="horizontal" flex="100%" style="overflow:hidden"/>
 	
 	<box id="toolbar_throbber_box" align="vertical" width="59px">
 		<titledbutton id="Throbber" onclick="MsgHome('http://www.mozilla.org/')">

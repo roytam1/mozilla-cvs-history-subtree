@@ -26,7 +26,6 @@ Rights Reserved.
 <?xul-overlay href="chrome://messenger/content/folderPane.xul"?>
 <?xml-stylesheet href="chrome://messenger/skin/folderPane.css" type="text/css"?>
 <?xul-overlay href="chrome://sidebar/content/sidebarOverlay.xul"?>
-<?xml-stylesheet href="chrome://sidebar/skin/sidebarOverlay.css" type="text/css"?> 
 
 <!DOCTYPE window SYSTEM "chrome://messenger/locale/messenger.dtd">
                      
@@ -480,7 +479,7 @@ Rights Reserved.
           
           <splitter id="sidebar-splitter" collapse="before" persist="state"/>
           
-          <box align="vertical"  flex="1"  style="border-left:solid black 1px">
+          <box align="vertical" flex="1">
      
       <toolbox>
         <toolbar id="msgToolbar" class="standard" persist="collapsed">
@@ -502,12 +501,11 @@ Rights Reserved.
       </toolbox>
 
 
-		<html:div style="width:100px;height:0px" flex="2" >
+		<html:div id="results_box" style="width:100px;height:0px" flex="2" >
 		  <tree id="threadTree"/>
 		 </html:div>
 
-	    <splitter id="messagePaneSplitter" collapse="after" persist="state"
-                  style="border-top:solid black 1px; border-bottom:solid black 1px;" />
+	    <splitter id="gray_horizontal_splitter" collapse="after" persist="state"/>
 			
     	<!-- message view -->
 		  <html:iframe flex="3" style="height:0px" name="messagepane" src="about:blank"/>
@@ -525,15 +523,15 @@ Rights Reserved.
 			<spring flex="100%"/>
 		  </box>
 
-		  <titledbutton id="statusText" align="left" flex="100%" value="&statusText.label;" style="font-family:sans-serif;font-size:2.5mm">
-                       <observes element="Messenger:Status" attribute="value" onbroadcast="onStatus()"/>         
+		  <titledbutton id="statusText" align="left" flex="100%" value="&statusText.label;">
+              <observes element="Messenger:Status" attribute="value" onbroadcast="onStatus()"/>         
 		  </titledbutton>
 		 </box>
 
       </box>
     </box>
 
-	<toolbox id="taskbox"/>
+	<toolbar id="taskbar"/>
 
 </window>
 

@@ -222,26 +222,25 @@ Rights Reserved.
 		
 		<splitter collapse="before"/>
 		
-		<box align="vertical" flex="100%" style="border-left:solid black 1px">
+		<box align="vertical" flex="100%">
 			<!-- results tree -->
-			<box flex="50%" align="vertical"
-				 style="background-color:white; border-bottom:solid black 1px">
+			<box id="results_box" flex="50%" align="vertical">
 				<!-- FIX ME - div is hack to make tree scroll properly -->
-				<html:div style="width:100px;height:100px" flex="1">
+				<html:div flex="1">
 					<tree id="resultsTree"/>
 				</html:div>
 			</box>
 			
-			<splitter collapse="after"/>
+			<splitter id="gray_horizontal_splitter" collapse="after"/>
 			
 			<!-- card view -->
-			<box style="height:170px; border-top:solid black 1px">
+			<box style="height:170px">
 				<box id="CardViewBox"/>
 			</box>
 		</box>
 	</box>
 	
-	<toolbox id="taskbox"/>
+	<toolbar id="taskbar"/>
 
 </window>
 

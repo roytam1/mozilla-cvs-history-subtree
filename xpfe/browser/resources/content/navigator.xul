@@ -26,7 +26,6 @@ Contributor(s): ______________________________________. -->
 <?xul-overlay href="chrome://navigator/content/navigatorOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://sidebar/content/sidebarOverlay.xul"?>
-<?xml-stylesheet href="chrome://sidebar/skin/sidebarOverlay.css" type="text/css"?> 
 
 <!DOCTYPE window SYSTEM "chrome://navigator/locale/navigator.dtd" >
 
@@ -52,13 +51,13 @@ Contributor(s): ______________________________________. -->
 
 <!-- broadcasters are appended from the overlay -->
 <broadcasterset id="broadcasterset">
-  <broadcaster id="canReload" value="&reloadCmd.label;"  oncommand="BrowserReallyReload(0);"/>
+  <broadcaster id="canReload" oncommand="BrowserReallyReload(0);"/>
   <broadcaster id="canStop"/>
   <broadcaster id="canPrint"/>
   <broadcaster id="Browser:LoadingProgress"/>
   <broadcaster id="Browser:Status"/>
   <broadcaster id="Browser:ProtocolIcon" uri=""/>
-  <broadcaster id="Browser:Throbber" busy="false"/>
+  <broadcaster id="broadcaster_throbber"/>
   <broadcaster id="args" value=""/>
 </broadcasterset>
 
@@ -206,52 +205,20 @@ Contributor(s): ______________________________________. -->
   var gBookmarkPopup = null;
 </html:script>
 
+<!-- Menu -->
+<menubar id="main-menubar"/>
+
+<!-- sidebar/toolbar/content/status -->
+<box id="sidebar-parent" align="horizontal" flex="100%">
+  <!-- toolbar/content/status -->
+ 
+  <box id="sidebar-box" chromeclass="extrachrome"/>
+  <splitter id="sidebar-splitter" chromeclass="extrachrome" />
+  
+  <box id="appcontent" align="vertical" flex="100%">
+
 <toolbox id="main-toolbox">
-
-  <!-- Menu -->
-  <menubar id="main-menubar"/>
-
-  <toolbar id="nav-bar" class="main-bar" chromeclass="toolbar" persist="collapsed">
-    <titledbutton id="back-button" crop="right" flex="1" align="top" value="&backButton.label;" observes="canGoBack" />  
-
-    <titledbutton id="forward-button" crop="right" flex="1" align="top" value="&forwardButton.label;" observes="canGoForward" />
-    
-
-    <!-- Right now only regular reload is supported.  When the
-    functionality is available, look for 'Shift' key pressed state
-    and pass on appropriate reload type. (The shift functionality
-    is available.  There's a shiftDown field in the event object.)
-    -->
-    <titledbutton id="reload-button" crop="right" flex="1" align="top"
-      value="&reloadButton.label;" observes="canReload"/>
-   
-
-    <titledbutton id="stop-button" crop="right" flex="1" align="top"
-      value="&stopButton.label;" onclick="BrowserStop()">
-      <observes element="canStop" attribute="disabled"
-        onbroadcast="BrowserCanStop()"/>
-    </titledbutton>
-
-    <box align="vertical" flex="9999999">
-      <spring flex="1"/>
-      <html:input id="urlbar" type="text" chromeclass="location"
-        onkeyup="if (event.which == 13) { BrowserLoadURL(); }"/>   
-      <spring flex="1"/>
-    </box>
-
-    <titledbutton id="search-button" crop="right" flex="1" align="top"
-      value="&searchButton.label;" onclick="OpenSearch('internet', document.getElementById('urlbar').value);" />
-
-    <titledbutton id="print-button" crop="right" flex="1" align="top" 
-      value="&printButton.label;" onclick="BrowserPrint()">
-      <observes element="canPrint" attribute="disabled"/>
-    </titledbutton>
-
-    <titledbutton id="Throbber" 
-      onclick="window.content.location.href='&throbber.url;'">
-      <observes element="Browser:Throbber" attribute="busy"/>
-    </titledbutton>
-  </toolbar>
+  
   <toolbar class="main-bar" chromeclass="toolbar" persist="collapsed"
     datasources="rdf:bookmarks" id="PersonalToolbar"
     ref="NC:PersonalToolbarFolder" 
@@ -292,25 +259,90 @@ Contributor(s): ______________________________________. -->
       </rule>
     </template>
 
-    <titledbutton id="home-button" align="left" flex="1"
+    <titledbutton id="home-button" align="left"
       value="&homeButton.label;" 
       defaultURL="&defaultHomepage.url;"
       onclick="BrowserHome(); event.preventBubble();"/>
-    <titledbutton id="netscape-button" crop="right" flex="1" align="left"
+    <titledbutton id="netscape-button" crop="right" align="left"
       value="&netscapeButton.label;" 
       onclick="window.content.location.href='&myNetscape.url;'; event.preventBubble();"/>
-    <spring flex="9999999"/>
   </toolbar>
-</toolbox>
 
-<!-- sidebar/toolbar/content/status -->
-<box id="sidebar-parent" align="horizontal" flex="100%">
-  <!-- toolbar/content/status -->
- 
-  <box id="sidebar-box" chromeclass="extrachrome"/>
-  <splitter id="sidebar-splitter" chromeclass="extrachrome" />
+  <toolbar id="nav-bar" class="main-bar" chromeclass="toolbar" persist="collapsed">
+    <box id="toolbar_button_box">
+      <titledbutton id="back-button" crop="right" align="top" observes="canGoBack" />  
+
+      <titledbutton id="forward-button" crop="right" align="top" observes="canGoForward" />
+    
+      <titledbutton id="stop-button" crop="right" align="top" onclick="BrowserStop()">
+        <observes element="canStop" attribute="disabled"
+                  onbroadcast="BrowserCanStop()"/>
+      </titledbutton>
+
+      <!-- Right now only regular reload is supported.  When the
+      functionality is available, look for 'Shift' key pressed state
+      and pass on appropriate reload type. (The shift functionality
+      is available.  There's a shiftDown field in the event object.)
+      -->
+      <titledbutton id="reload-button" crop="right" align="top" observes="canReload"/>
+   
+          <!-- changed : the url field is now grouped with search -->
+          <box align="vertical" flex="100%">
+            <spring style="height: 4px;"/>
+            <!-- used for vertically positioning the url field contraption w/i the nav toolbar   -->
+              
+            <box id="url-bar-box" align="horizontal" style="width: 100%;"> 
   
-  <box id="appcontent" align="vertical" flex="100%">
+             <!-- this is the little page proxy icon --> 
+             <!-- display should be turned off right now until functionality is implemented --> 
+              <titledbutton id="page-proxy-button"/> 
+  
+               <!-- this is the urlbar --> 
+             <html:input id="urlbar" type="text" chromeclass="location" 
+                onkeyup="if (event.which == 13) { BrowserLoadURL(); }" 
+                flex = "100%" /> 
+  
+                <!-- this is the urlbar session history popup --> 
+                <!-- display should be turned off right now until functionality is implemented --> 
+                <titledbutton id="sessionhist-popup"/> 
+  
+                <!-- this is the search/go button --> 
+                <titledbutton id="search-button" value="&searchButton.label;"
+                  onclick="OpenSearch('internet',document.getElementById('urlbar').value);" 
+                /> 
+  
+             <!-- this is for other functionality --> 
+             <titledbutton id="action-popup" align="right"/> 
+  
+             <!-- end url bar box -->
+            </box>
+            
+            <!-- used for vertically positioning the url field contraption w/i the nav toolbar   -->
+          </box>
+				
+      <!-- FIX ME - remove this
+      <box align="vertical" flex="9999999">
+        <spring flex="1"/>
+        <html:input id="urlbar" type="text" chromeclass="location"
+                    onkeyup="if (event.which == 13) { BrowserLoadURL(); }"/>   
+        <spring flex="1"/>
+      </box>
+
+      <titledbutton id="search-button" crop="right" flex="1" align="top"
+                    value="&searchButton.label;"
+                    onclick="OpenSearch('internet', document.getElementById('urlbar').value);"/>
+
+      <titledbutton id="print-button" crop="right" flex="1" align="top" 
+                    value="&printButton.label;" onclick="BrowserPrint()">
+        <observes element="canPrint" attribute="disabled"/>
+      </titledbutton>
+      -->
+    </box>
+
+    <box id="toolbar_throbber_box"/>
+  </toolbar>
+
+</toolbox>
 
     <!-- type attribute is used by frame construction to locate iframes
          intended to hold (html) content -->
@@ -326,7 +358,7 @@ Contributor(s): ______________________________________. -->
           <progressmeter id="statusbar-icon" mode="normal"
             align="horizontal" value="0" onclick="dumpProgress()">
               <observes element="Browser:LoadingProgress" attribute="mode"/>
-              <observes element="Browser:Throbber" attribute="busy" 
+              <observes element="broadcaster_throbber" attribute="busy" 
                 onbroadcast="onProgress()"/>
           </progressmeter>
           <spring flex="100%"/>
@@ -350,6 +382,6 @@ Contributor(s): ______________________________________. -->
     </box><!-- status -->
   </box><!-- toolbar/content/status -->
 </box><!-- sidebar and tools/content/status -->
-<toolbox id="taskbox" chromeclass="extrachrome" />
+<toolbar id="taskbar" chromeclass="extrachrome" />
 
 </window>

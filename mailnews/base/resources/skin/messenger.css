@@ -44,6 +44,13 @@ iframe {
 }
 
 /**
+ * boxes
+ */
+#results_box {
+	border-left: 8px solid #CCCCCC;
+}
+ 
+/**
  * toolbar button images
  */
 #getmsg-btn {

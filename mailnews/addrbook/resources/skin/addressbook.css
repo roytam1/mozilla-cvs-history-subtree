@@ -69,6 +69,10 @@ tree[class="abResults"] treeitem > treerow > treecell > .tree-icon {
 
 /* Address Book specific style */
 
+#results_box {
+	border-left: 8px solid #CCCCCC;
+}
+ 
 [hide] {
 	display: none;
 }
