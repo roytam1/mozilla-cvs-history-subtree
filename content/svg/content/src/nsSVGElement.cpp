@@ -445,26 +445,6 @@ nsSVGElement::SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const
 
 
 //----------------------------------------------------------------------
-// nsIXMLContent methods
-
-NS_IMETHODIMP
-nsSVGElement::SetContainingNameSpace(nsINameSpace* aNameSpace)
-{
-  mNameSpace = aNameSpace;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGElement::GetContainingNameSpace(nsINameSpace*& aNameSpace) const
-{
-  aNameSpace = mNameSpace;
-  NS_IF_ADDREF(aNameSpace);
-
-  return NS_OK;  
-}
-
-
-//----------------------------------------------------------------------
 // nsIStyledContent methods
 
 NS_IMETHODIMP
@@ -487,19 +467,14 @@ nsSVGElement::WalkContentStyleRules(nsRuleWalker* aRuleWalker)
 }
 
 NS_IMETHODIMP
-nsSVGElement::WalkInlineStyleRules(nsRuleWalker* aRuleWalker)
+nsSVGElement::GetInlineStyleRule(nsIStyleRule** aStyleRule)
 {
-  nsCOMPtr<nsIStyleRule> rule;
-  mStyle->GetStyleRule(mDocument, getter_AddRefs(rule));
-  if (aRuleWalker && rule) {
-    aRuleWalker->Forward(rule, PR_TRUE);
-  }
-  return NS_OK;
+  return mStyle->GetStyleRule(mDocument, aStyleRule);
 }
 
 NS_IMETHODIMP
 nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
-                                       PRInt32& aHint) const
+                                       nsChangeHint& aHint) const
 {
   // we don't rely on the cssframeconstructor to map attribute changes
   // to changes in our frames. an exception is css.

@@ -857,7 +857,7 @@ const PRInt32 nsCSSProps::kStrokeLinecapKTable[] = {
 };
 
 const PRInt32 nsCSSProps::kStrokeLinejoinKTable[] = {
-  eCSSKeyword_butt, NS_STYLE_STROKE_LINEJOIN_MITER,
+  eCSSKeyword_miter, NS_STYLE_STROKE_LINEJOIN_MITER,
   eCSSKeyword_round, NS_STYLE_STROKE_LINEJOIN_ROUND,
   eCSSKeyword_bevel, NS_STYLE_STROKE_LINEJOIN_BEVEL,
   -1, -1
@@ -1313,7 +1313,7 @@ PRBool nsCSSProps::GetColorName(PRInt32 aPropValue, nsCString &aStr)
 
 // define array of all CSS property hints
 #define CSS_PROP(_name, _id, _hint) NS_STYLE_HINT_##_hint,
-const PRInt32 nsCSSProps::kHintTable[eCSSProperty_COUNT] = {
+const nsChangeHint nsCSSProps::kHintTable[eCSSProperty_COUNT] = {
 #include "nsCSSPropList.h"
 };
 #undef CSS_PROP

@@ -186,6 +186,10 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/base/src/nsSVGPathGeometryFrame.h          \
 	layout/svg/base/src/nsSVGTextFrame.cpp                \
 	layout/svg/base/src/nsSVGTSpanFrame.cpp               \
+	layout/svg/base/src/resources/jar.mn                  \
+	layout/svg/base/src/resources/Makefile.in             \
+	layout/svg/base/src/resources/content/contents.rdf    \
+	layout/svg/base/src/resources/content/svgBindings.xml \
 	layout/svg/renderer/Makefile.in                       \
 	layout/svg/renderer/public/Makefile.in                \
 	layout/svg/renderer/public/nsISVGGeometrySource.idl   \

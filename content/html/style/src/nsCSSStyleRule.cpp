@@ -58,7 +58,6 @@
 #include "nsStyleConsts.h"
 #include "nsHTMLAtoms.h"
 #include "nsUnitConversion.h"
-#include "nsStyleUtil.h"
 #include "nsIFontMetrics.h"
 #include "nsIDOMCSSStyleSheet.h"
 #include "nsIDOMCSSRule.h"
@@ -69,6 +68,7 @@
 #include "nsINameSpace.h"
 #include "nsILookAndFeel.h"
 #include "nsRuleNode.h"
+#include "nsUnicharUtils.h"
 
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
@@ -117,7 +117,6 @@ nsAtomList::nsAtomList(nsIAtom* aAtom)
     mNext(nsnull)
 {
   MOZ_COUNT_CTOR(nsAtomList);
-  NS_IF_ADDREF(mAtom);
 }
 
 nsAtomList::nsAtomList(const nsString& aAtomValue)
@@ -125,7 +124,7 @@ nsAtomList::nsAtomList(const nsString& aAtomValue)
     mNext(nsnull)
 {
   MOZ_COUNT_CTOR(nsAtomList);
-  mAtom = NS_NewAtom(aAtomValue);
+  mAtom = do_GetAtom(aAtomValue);
 }
 
 nsAtomList::nsAtomList(const nsAtomList& aCopy)
@@ -133,14 +132,12 @@ nsAtomList::nsAtomList(const nsAtomList& aCopy)
     mNext(nsnull)
 {
   MOZ_COUNT_CTOR(nsAtomList);
-  NS_IF_ADDREF(mAtom);
   NS_IF_COPY(mNext, aCopy.mNext, nsAtomList);
 }
 
 nsAtomList::~nsAtomList(void)
 {
   MOZ_COUNT_DTOR(nsAtomList);
-  NS_IF_RELEASE(mAtom);
   NS_IF_DELETE(mNext);
 }
 
@@ -158,6 +155,63 @@ PRBool nsAtomList::Equals(const nsAtomList* aOther) const
     }
   }
   return PR_FALSE;
+}
+
+MOZ_DECL_CTOR_COUNTER(nsAtomStringList)
+
+nsAtomStringList::nsAtomStringList(nsIAtom* aAtom, const PRUnichar* aString)
+  : mAtom(aAtom),
+    mString(nsnull),
+    mNext(nsnull)
+{
+  MOZ_COUNT_CTOR(nsAtomStringList);
+  if (aString)
+    mString = nsCRT::strdup(aString);
+}
+
+nsAtomStringList::nsAtomStringList(const nsString& aAtomValue,
+                                   const PRUnichar* aString)
+  : mAtom(nsnull),
+    mString(nsnull),
+    mNext(nsnull)
+{
+  MOZ_COUNT_CTOR(nsAtomStringList);
+  mAtom = do_GetAtom(aAtomValue);
+  if (aString)
+    mString = nsCRT::strdup(aString);
+}
+
+nsAtomStringList::nsAtomStringList(const nsAtomStringList& aCopy)
+  : mAtom(aCopy.mAtom),
+    mString(nsnull),
+    mNext(nsnull)
+{
+  MOZ_COUNT_CTOR(nsAtomStringList);
+  if (aCopy.mString)
+    mString = nsCRT::strdup(aCopy.mString);
+  NS_IF_COPY(mNext, aCopy.mNext, nsAtomStringList);
+}
+
+nsAtomStringList::~nsAtomStringList(void)
+{
+  MOZ_COUNT_DTOR(nsAtomStringList);
+  if (mString)
+    nsCRT::free(mString);
+  NS_IF_DELETE(mNext);
+}
+
+PRBool nsAtomStringList::Equals(const nsAtomStringList* aOther) const
+{
+  return (this == aOther) ||
+         (aOther &&
+          mAtom == aOther->mAtom &&
+          !mString == !aOther->mString &&
+          !mNext == !aOther->mNext &&
+          (!mNext || mNext->Equals(aOther->mNext)) &&
+          // Check strings last, since it's the slowest check.
+          (!mString || nsDependentString(mString).Equals(
+                                        nsDependentString(aOther->mString),
+                                        nsCaseInsensitiveStringComparator())));
 }
 
 MOZ_DECL_CTOR_COUNTER(nsAttrSelector)
@@ -336,10 +390,9 @@ nsCSSSelector::nsCSSSelector(const nsCSSSelector& aCopy)
     mNext(nsnull)
 {
   MOZ_COUNT_CTOR(nsCSSSelector);
-  NS_IF_ADDREF(mTag);
   NS_IF_COPY(mIDList, aCopy.mIDList, nsAtomList);
   NS_IF_COPY(mClassList, aCopy.mClassList, nsAtomList);
-  NS_IF_COPY(mPseudoClassList, aCopy.mPseudoClassList, nsAtomList);
+  NS_IF_COPY(mPseudoClassList, aCopy.mPseudoClassList, nsAtomStringList);
   NS_IF_COPY(mAttrList, aCopy.mAttrList, nsAttrSelector);
   NS_IF_COPY(mNegations, aCopy.mNegations, nsCSSSelector);
   
@@ -362,7 +415,6 @@ nsCSSSelector::~nsCSSSelector(void)
 
 nsCSSSelector& nsCSSSelector::operator=(const nsCSSSelector& aCopy)
 {
-  NS_IF_RELEASE(mTag);
   NS_IF_DELETE(mIDList);
   NS_IF_DELETE(mClassList);
   NS_IF_DELETE(mPseudoClassList);
@@ -373,12 +425,11 @@ nsCSSSelector& nsCSSSelector::operator=(const nsCSSSelector& aCopy)
   mTag          = aCopy.mTag;
   NS_IF_COPY(mIDList, aCopy.mIDList, nsAtomList);
   NS_IF_COPY(mClassList, aCopy.mClassList, nsAtomList);
-  NS_IF_COPY(mPseudoClassList, aCopy.mPseudoClassList, nsAtomList);
+  NS_IF_COPY(mPseudoClassList, aCopy.mPseudoClassList, nsAtomStringList);
   NS_IF_COPY(mAttrList, aCopy.mAttrList, nsAttrSelector);
   mOperator     = aCopy.mOperator;
   NS_IF_COPY(mNegations, aCopy.mNegations, nsCSSSelector);
 
-  NS_IF_ADDREF(mTag);
   return *this;
 }
 
@@ -446,7 +497,7 @@ PRBool nsCSSSelector::Equals(const nsCSSSelector* aOther) const
 void nsCSSSelector::Reset(void)
 {
   mNameSpace = kNameSpaceID_Unknown;
-  NS_IF_RELEASE(mTag);
+  mTag = nsnull;
   NS_IF_DELETE(mIDList);
   NS_IF_DELETE(mClassList);
   NS_IF_DELETE(mPseudoClassList);
@@ -462,10 +513,10 @@ void nsCSSSelector::SetNameSpace(PRInt32 aNameSpace)
 
 void nsCSSSelector::SetTag(const nsString& aTag)
 {
-  NS_IF_RELEASE(mTag);
-  if (!aTag.IsEmpty()) {
-    mTag = NS_NewAtom(aTag);
-  }
+  if (aTag.IsEmpty())
+    mTag = nsnull;
+  else
+    mTag = do_GetAtom(aTag);
 }
 
 void nsCSSSelector::AddID(const nsString& aID)
@@ -490,25 +541,27 @@ void nsCSSSelector::AddClass(const nsString& aClass)
   }
 }
 
-void nsCSSSelector::AddPseudoClass(const nsString& aPseudoClass)
+void nsCSSSelector::AddPseudoClass(const nsString& aPseudoClass,
+                                   const PRUnichar* aString)
 {
   if (!aPseudoClass.IsEmpty()) {
-    nsAtomList** list = &mPseudoClassList;
+    nsAtomStringList** list = &mPseudoClassList;
     while (nsnull != *list) {
       list = &((*list)->mNext);
     }
-    *list = new nsAtomList(aPseudoClass);
+    *list = new nsAtomStringList(aPseudoClass, aString);
   }
 }
 
-void nsCSSSelector::AddPseudoClass(nsIAtom* aPseudoClass)
+void nsCSSSelector::AddPseudoClass(nsIAtom* aPseudoClass,
+                                   const PRUnichar* aString)
 {
   if (nsnull != aPseudoClass) {
-    nsAtomList** list = &mPseudoClassList;
+    nsAtomStringList** list = &mPseudoClassList;
     while (nsnull != *list) {
       list = &((*list)->mNext);
     }
-    *list = new nsAtomList(aPseudoClass);
+    *list = new nsAtomStringList(aPseudoClass, aString);
   }
 }
 
@@ -557,10 +610,10 @@ PRInt32 nsCSSSelector::CalcWeight(void) const
     weight += 0x000100;
     list = list->mNext;
   }
-  list = mPseudoClassList;
-  while (nsnull != list) {
+  nsAtomStringList *plist = mPseudoClassList;
+  while (nsnull != plist) {
     weight += 0x000100;
-    list = list->mNext;
+    plist = plist->mNext;
   }
   nsAttrSelector* attr = mAttrList;
   while (nsnull != attr) {
@@ -647,7 +700,7 @@ void nsCSSSelector::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     }
   }
   if(mPseudoClassList && uniqueItems->AddItem(mPseudoClassList)){
-    nsAtomList *pNext = nsnull;
+    nsAtomStringList *pNext = nsnull;
     pNext = mPseudoClassList;    
     while(pNext){
       if(pNext->mAtom && uniqueItems->AddItem(pNext->mAtom)){
@@ -832,11 +885,16 @@ nsresult nsCSSSelector::ToString( nsAString& aString, nsICSSStyleSheet* aSheet, 
 
   // Append each pseudo-class in the linked list
   if (mPseudoClassList) {
-    nsAtomList* list = mPseudoClassList;
+    nsAtomStringList* list = mPseudoClassList;
     while (list != nsnull) {
       list->mAtom->GetUnicode(&temp);
       NS_IF_NEGATED_START(aIsNegated, aString)
       aString.Append(temp);
+      if (nsnull != list->mString) {
+        aString.Append(PRUnichar('('));
+        aString.Append(list->mString);
+        aString.Append(PRUnichar(')'));
+      }
       NS_IF_NEGATED_END(aIsNegated, aString)
       list = list->mNext;
     }
@@ -887,13 +945,7 @@ public:
 
   NS_DECL_ISUPPORTS
 
-//  NS_IMETHOD Equals(const nsIStyleRule* aRule, PRBool& aResult) const;
-//  NS_IMETHOD HashValue(PRUint32& aValue) const;
-
   NS_IMETHOD GetStyleSheet(nsIStyleSheet*& aSheet) const;
-
-  // Strength is an out-of-band weighting, useful for mapping CSS ! important
-  NS_IMETHOD GetStrength(PRInt32& aStrength) const;
 
   // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
@@ -927,35 +979,11 @@ CSSImportantRule::~CSSImportantRule(void)
 
 NS_IMPL_ISUPPORTS1(CSSImportantRule, nsIStyleRule)
 
-#if 0
-NS_IMETHODIMP
-CSSImportantRule::Equals(const nsIStyleRule* aRule, PRBool& aResult) const
-{
-  aResult = PRBool(aRule == this);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-CSSImportantRule::HashValue(PRUint32& aValue) const
-{
-  aValue = PRUint32(mDeclaration);
-  return NS_OK;
-}
-#endif
-
 NS_IMETHODIMP
 CSSImportantRule::GetStyleSheet(nsIStyleSheet*& aSheet) const
 {
   NS_IF_ADDREF(mSheet);
   aSheet = mSheet;
-  return NS_OK;
-}
-
-// Strength is an out-of-band weighting, useful for mapping CSS ! important
-NS_IMETHODIMP
-CSSImportantRule::GetStrength(PRInt32& aStrength) const
-{
-  aStrength = 1;
   return NS_OK;
 }
 
@@ -1256,7 +1284,7 @@ DOMCSSDeclarationImpl::ParsePropertyValue(const nsAString& aPropName,
     return result;
   }
   
-  PRInt32 hint;
+  nsChangeHint hint;
   if (owningDoc) {
     owningDoc->BeginUpdate();
   }
@@ -1320,7 +1348,7 @@ DOMCSSDeclarationImpl::ParseDeclaration(const nsAString& aDecl,
         }
       }
 
-      PRInt32 hint;
+      nsChangeHint hint;
       result = cssParser->ParseAndAppendDeclaration(aDecl, baseURI, decl,
                                                     aParseOnlyOneDecl, &hint);
 
@@ -1370,11 +1398,6 @@ public:
   CSSStyleRuleImpl(const CSSStyleRuleImpl& aCopy); 
 
   NS_DECL_ISUPPORTS_INHERITED
-
-//  NS_IMETHOD Equals(const nsIStyleRule* aRule, PRBool& aResult) const;
-//  NS_IMETHOD HashValue(PRUint32& aValue) const;
-  // Strength is an out-of-band weighting, useful for mapping CSS ! important
-  NS_IMETHOD GetStrength(PRInt32& aStrength) const;
 
   virtual nsCSSSelector* FirstSelector(void);
   virtual void AddSelector(const nsCSSSelector& aSelector);
@@ -1526,60 +1549,6 @@ NS_INTERFACE_MAP_END
 NS_IMPL_ADDREF_INHERITED(CSSStyleRuleImpl, nsCSSRule);
 NS_IMPL_RELEASE_INHERITED(CSSStyleRuleImpl, nsCSSRule);
 
-
-#if 0
-NS_IMETHODIMP CSSStyleRuleImpl::Equals(const nsIStyleRule* aRule, PRBool& aResult) const
-{
-  nsICSSStyleRule* iCSSRule;
-
-  if (this == aRule) {
-    aResult = PR_TRUE;
-  }
-  else {
-    aResult = PR_FALSE;
-    if ((nsnull != aRule) && 
-        (NS_OK == ((nsIStyleRule*)aRule)->QueryInterface(NS_GET_IID(nsICSSStyleRule), (void**) &iCSSRule))) {
-
-      CSSStyleRuleImpl* rule = (CSSStyleRuleImpl*)iCSSRule;
-      const nsCSSSelector* local = &mSelector;
-      const nsCSSSelector* other = &(rule->mSelector);
-      aResult = PR_TRUE;
-
-      if ((rule->mDeclaration != mDeclaration) || 
-          (rule->mWeight != mWeight)) {
-        aResult = PR_FALSE;
-      }
-      while ((PR_TRUE == aResult) && (nsnull != local) && (nsnull != other)) {
-        if (! local->Equals(other)) {
-          aResult = PR_FALSE;
-        }
-        local = local->mNext;
-        other = other->mNext;
-      }
-      if ((nsnull != local) || (nsnull != other)) { // more were left
-        aResult = PR_FALSE;
-      }
-      NS_RELEASE(iCSSRule);
-    }
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-CSSStyleRuleImpl::HashValue(PRUint32& aValue) const
-{
-  aValue = (PRUint32)this;
-  return NS_OK;
-}
-#endif
-
-// Strength is an out-of-band weighting, useful for mapping CSS ! important
-NS_IMETHODIMP
-CSSStyleRuleImpl::GetStrength(PRInt32& aStrength) const
-{
-  aStrength = 0;
-  return NS_OK;
-}
 
 nsCSSSelector* CSSStyleRuleImpl::FirstSelector(void)
 {

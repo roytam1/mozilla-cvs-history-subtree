@@ -51,7 +51,6 @@
 #include "nsSVGAttributes.h"
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
-#include "nsINameSpace.h"
 #include "nsWeakReference.h"
 #include "nsISVGStyleValue.h"
 
@@ -136,8 +135,6 @@ public:
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;  
 
   // nsIXMLContent
-  NS_IMETHOD SetContainingNameSpace(nsINameSpace* aNameSpace);
-  NS_IMETHOD GetContainingNameSpace(nsINameSpace*& aNameSpace) const;
 //   NS_IMETHOD MaybeTriggerAutoLink(nsIWebShell *aShell);
 
   // nsIStyledContent
@@ -146,10 +143,10 @@ public:
 //   NS_IMETHOD HasClass(nsIAtom* aClass) const;
   
   NS_IMETHOD WalkContentStyleRules(nsRuleWalker* aRuleWalker);
-  NS_IMETHOD WalkInlineStyleRules(nsRuleWalker* aRuleWalker);
+  NS_IMETHOD GetInlineStyleRule(nsIStyleRule** aStyleRule);
   
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
-                                      PRInt32& aHint) const;
+                                      nsChangeHint& aHint) const;
   
   // nsIDOMNode
   NS_DECL_NSIDOMNODE
@@ -175,7 +172,6 @@ protected:
   
   nsVoidArray                  mChildren;   
   nsSVGAttributes*             mAttributes;
-  nsCOMPtr<nsINameSpace>       mNameSpace;
   nsCOMPtr<nsISVGStyleValue>   mStyle;
 };
 

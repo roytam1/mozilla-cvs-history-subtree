@@ -196,6 +196,17 @@ intl/strres/src/Makefile
 intl/strres/tests/Makefile
 "
 
+if [ "$SUNCTL" ] ; then
+MAKEFILES_intl="$MAKEFILES_intl
+intl/ctl/Makefile
+intl/ctl/public/Makefile
+intl/ctl/src/Makefile
+intl/ctl/src/pangoLite/Makefile
+intl/ctl/src/thaiShaper/Makefile
+intl/ctl/src/hindShaper/Makefile
+"
+fi
+
 MAKEFILES_js="
 js/Makefile
 js/src/Makefile
@@ -809,6 +820,13 @@ extensions/transformiix/source/Makefile
 extensions/transformiix/Makefile
 "
 
+MAKEFILES_typeaheadfind="
+extensions/typeaheadfind/public/Makefile
+extensions/typeaheadfind/resources/Makefile
+extensions/typeaheadfind/src/Makefile
+extensions/typeaheadfind/Makefile
+"
+
 MAKEFILES_phoenix="
 browser/Makefile
 browser/base/Makefile
@@ -820,6 +838,14 @@ toolkit/Makefile
 toolkit/skin/unix/Makefile
 toolkit/skin/win/Makefile
 "
+
+MAKEFILES_minotaur="
+mail/Makefile
+mail/base/Makefile
+mail/components/Makefile
+mail/components/compose/Makefile
+"
+
 
 if [ "$MACOSX" ]; then
     MAKEFILES_macmorefiles="
@@ -1038,13 +1064,6 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/cookie/Makefile
             extensions/cookie/tests/Makefile
             " ;;
-        ctl ) MAKEFILES_extensions="$MAKEFILES_extensions
-            extensions/ctl/Makefile
-            extensions/ctl/public/Makefile
-            extensions/ctl/src/Makefile
-            extensions/ctl/src/pangoLite/Makefile
-            extensions/ctl/src/thaiShaper/Makefile
-            " ;;
         cview ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/cview/Makefile
             extensions/cview/resources/Makefile
@@ -1055,6 +1074,9 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         inspector ) MAKEFILES_extensions="$MAKEFILES_extensions
             $MAKEFILES_inspector"
+            ;;
+        typeaheadfind ) MAKEFILES_extensions="$MAKEFILES_extensions
+            $MAKEFILES_typeaheadfind"
             ;;
         irc ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/irc/Makefile
@@ -1226,6 +1248,10 @@ fi
 
 if test -n "$MOZ_PHOENIX"; then
     add_makefiles "$MAKEFILES_phoenix"
+fi
+
+if test -n "$MOZ_MINOTAUR"; then
+    add_makefiles "$MAKEFILES_minotaur"
 fi
 
 else

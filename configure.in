@@ -40,7 +40,7 @@ AC_CANONICAL_SYSTEM
 TARGET_CPU="${target_cpu}"
 TARGET_VENDOR="${target_vendor}"
 TARGET_OS="${target_os}"
-MOZILLA_VERSION='1.1b'
+MOZILLA_VERSION='1.2a'
 AC_SUBST(MOZILLA_VERSION)
 
 dnl ========================================================
@@ -625,7 +625,7 @@ if test "$GNU_CC"; then
     _PEDANTIC=1
     _IGNORE_LONG_LONG_WARNINGS=1
 
-    _DEFINES_CFLAGS='-include $(DEPTH)/config-defs.h -DMOZILLA_CLIENT'
+    _DEFINES_CFLAGS='-include $(DEPTH)/mozilla-config.h -DMOZILLA_CLIENT'
     _USE_CPP_INCLUDE_FLAG=1
 else
     MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
@@ -645,7 +645,7 @@ if test "$GNU_CXX"; then
     	_WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS}"
 	fi
 
-    _DEFINES_CXXFLAGS='-DMOZILLA_CLIENT -include $(DEPTH)/config-defs.h'
+    _DEFINES_CXXFLAGS='-DMOZILLA_CLIENT -include $(DEPTH)/mozilla-config.h'
     _USE_CPP_INCLUDE_FLAG=1
 else
     _DEFINES_CXXFLAGS='-DMOZILLA_CLIENT $(ACDEFINES)'
@@ -867,6 +867,11 @@ case "$target" in
     AC_DEFINE(_POSIX_SOURCE)
     AC_DEFINE(_SVID_SOURCE)
     TARGET_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
+    MOZ_DEBUG_FLAGS="-g -fno-inline"  # most people on linux use gcc/gdb,
+                                      # and that combo is not yet good at
+                                      # debugging inlined functions (even
+                                      # when using DWARF2 as the debugging
+                                      # format)    
 
     case "${target_cpu}" in
     alpha*)
@@ -959,6 +964,7 @@ case "$target" in
     AC_DEFINE_UNQUOTED(WINVER,0x400)
     AC_DEFINE(MSVC4)
     AC_DEFINE(STDC_HEADERS)
+    AC_DEFINE(NEW_H, <new>)
     TARGET_MD_ARCH=win32
     _PLATFORM_DEFAULT_TOOLKIT='windows'
     BIN_SUFFIX='.exe'
@@ -1036,8 +1042,8 @@ case "$target" in
 	USE_PTHREADS=1
 	_PEDANTIC=
 	LIBS="$LIBS -lsocket -lstdc++"
-	_DEFINES_CFLAGS='-Wp,-include -Wp,$(DEPTH)/config-defs.h -DMOZILLA_CLIENT -D_POSIX_C_SOURCE=199506'
-	_DEFINES_CXXFLAGS='-DMOZILLA_CLIENT -Wp,-include -Wp,$(DEPTH)/config-defs.h -D_POSIX_C_SOURCE=199506'
+	_DEFINES_CFLAGS='-Wp,-include -Wp,$(DEPTH)/mozilla-config.h -DMOZILLA_CLIENT -D_POSIX_C_SOURCE=199506'
+	_DEFINES_CXXFLAGS='-DMOZILLA_CLIENT -Wp,-include -Wp,$(DEPTH)/mozilla-config.h -D_POSIX_C_SOURCE=199506'
 	if test "$with_x" != "yes"
 	then
 		_PLATFORM_DEFAULT_TOOLKIT="photon"
@@ -1150,8 +1156,8 @@ case "$target" in
         AS_DASH_C_FLAG=''
         LD='-ilink'
         TARGET_MD_ARCH=os2
-        CFLAGS="/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9"
-        CXXFLAGS="/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9 /Gx+"
+        CFLAGS="/Q /qlibansi /Gm+ /Su4 /Mp /Tl9"
+        CXXFLAGS="/Q /qlibansi /Gm+ /Su4 /Mp /Tl9 /Gx+"
         MOZ_DEBUG_FLAGS="/Ti+"
         MOZ_OPTIMIZE_FLAGS="/O+ /qtune=pentium /qarch=pentium"
         LDFLAGS="/NOL /M"
@@ -1614,6 +1620,14 @@ AC_CHECK_HEADERS(X11/XKBlib.h)
 
 dnl These are all the places some variant of statfs can be hiding.
 AC_CHECK_HEADERS(sys/statvfs.h sys/statfs.h sys/vfs.h sys/mount.h)
+
+dnl Check whether the compiler supports the new-style C++ standard
+dnl library headers (i.e. <new>) or needs the old "new.h"
+AC_LANG_CPLUSPLUS
+NEW_H=new.h
+AC_CHECK_HEADER(new, [NEW_H=new])
+AC_DEFINE_UNQUOTED(NEW_H, <$NEW_H>)
+AC_LANG_C
 
 case $target in
 *-aix4.3*|*-aix5*)
@@ -3257,14 +3271,9 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet typeaheadfind"
 
-dnl Check if Thai Rendering Extension needs to be enabled
-if test -n "$SUNCTL"; then
-  MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT ctl"
-fi
-
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin ctl p3p interfaceinfo" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin p3p interfaceinfo" 
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],
@@ -3883,13 +3892,6 @@ else
 fi], 
     AC_DEFINE(MOZ_USER_DIR,".mozilla") )
 
-dnl Need the contents of config-defs.h in the build logs
-VERBOSE_CONFIG_DEFS=1
-MOZ_ARG_ENABLE_BOOL(verbose-config-defs,
-[  --disable-verbose-config-defs
-                          Do not output the contents of config-defs.h],
-    VERBOSE_CONFIG_DEFS=)
-
 dnl ========================================================
 dnl = Doxygen configuration
 dnl ========================================================
@@ -4272,7 +4274,11 @@ MOZ_ARG_WITHOUT_BOOL(libIDL,
 
 if test "$SKIP_IDL_CHECK" = "no"
 then
-    AM_PATH_LIBIDL($LIBIDL_VERSION,,_LIBIDL_NOT_FOUND=1)
+    if test "$MOZ_ENABLE_GTK2"; then
+        AM_PATH_LIBIDL_2($LIBIDL_VERSION,,_LIBIDL_NOT_FOUND=1)
+    else
+        AM_PATH_LIBIDL($LIBIDL_VERSION,,_LIBIDL_NOT_FOUND=1)
+    fi
     dnl
     dnl If we don't have a libIDL config program & not cross-compiling, 
     dnl     look for orbit-config instead.
@@ -4313,7 +4319,7 @@ if test -n "$CROSS_COMPILE"; then
     fi
 fi
 
-if test -z "$SKIP_PATH_CHECKS"; then
+if test -z "$SKIP_PATH_CHECKS" && test -z "$MOZ_ENABLE_GTK2"; then
 if test -z "${GLIB_CFLAGS}" || test -z "${GLIB_LIBS}" ; then
     AM_PATH_GLIB(${GLIB_VERSION})
 fi
@@ -4331,17 +4337,6 @@ AC_SUBST(GLIB_GMODULE_LIBS)
 AC_SUBST(HOST_LIBIDL_CONFIG)
 AC_SUBST(HOST_LIBIDL_CFLAGS)
 AC_SUBST(HOST_LIBIDL_LIBS)
-
-dnl older versions of glib do not seem to have gmodule which ctl needs
-if test "`echo $MOZ_EXTENSIONS | grep -c ctl 2>/dev/null`" != 0; then
-_SAVE_CFLAGS=$CFLAGS
-CFLAGS="$CFLAGS $GLIB_CFLAGS"
-AC_TRY_COMPILE([#include <gmodule.h>],
-    [ int x = 1; x++; ],,
-    [AC_MSG_WARN([Cannot build ctl without gmodule support in glib. Removing ctl from MOZ_EXTENSIONS.])
-    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|ctl||'` ])
-CFLAGS=$_SAVE_CFLAGS
-fi
 
 dnl ========================================================
 dnl Check for libart
@@ -4565,6 +4560,11 @@ COMPILE_CXXFLAGS=`echo \
 	$_DEPEND_CFLAGS \
     $COMPILE_CXXFLAGS`
 
+if test "$TX_EXE"; then
+  COMPILE_CFLAGS=`echo $COMPILE_CFLAGS | sed 's/MOZILLA_CLIENT/XML_UNICODE/'`
+  COMPILE_CXXFLAGS=`echo $COMPILE_CXXFLAGS | sed 's/MOZILLA_CLIENT/XML_UNICODE/'`
+fi
+
 dnl 
 dnl It is perfectly legal to build with both -O and -g even though
 dnl some compilers/platforms might not support this.
@@ -4707,6 +4707,7 @@ AC_SUBST(MOZ_MOVEMAIL)
 
 AC_DEFINE(JS_THREADSAFE)
 AC_DEFINE(NS_PRINT_PREVIEW)
+AC_DEFINE(NS_PRINTING)
 
 if test "$MOZ_DEBUG"; then
     AC_DEFINE(MOZ_REFLOW_PERF)
@@ -4732,31 +4733,36 @@ dnl ========================================================
 
 # Save the defines header file before autoconf removes it.
 # (Do not add AC_DEFINE calls after this line.)
-if test "$_USE_CPP_INCLUDE_FLAG"; then
   _CONFIG_TMP=confdefs-tmp.h
-  _CONFIG_DEFS_H=config-defs.h
+  _CONFIG_DEFS_H=mozilla-config.h
 
   cat > $_CONFIG_TMP <<\EOF
 /* List of defines generated by configure. Included with preprocessor flag,
  * -include, to avoid long list of -D defines on the compile command-line.
  * Do not edit.
  */
+
+#ifndef _MOZILLA_CONFIG_H_
+#define _MOZILLA_CONFIG_H_
 EOF
   sort confdefs.h >> $_CONFIG_TMP
 
-  # Only write config-defs.h when something changes (or it doesn't exist)
+  cat >> $_CONFIG_TMP <<\EOF
+
+#endif /* _MOZILLA_CONFIG_H_ */
+
+EOF
+
+  # Only write mozilla-config.h when something changes (or it doesn't exist)
   if cmp -s $_CONFIG_TMP $_CONFIG_DEFS_H; then
     rm $_CONFIG_TMP
   else
     AC_MSG_RESULT("creating $_CONFIG_DEFS_H")
     mv -f $_CONFIG_TMP $_CONFIG_DEFS_H
 
-    if test "$VERBOSE_CONFIG_DEFS"; then
-      echo ==== $_CONFIG_DEFS_H =================================
-      cat $_CONFIG_DEFS_H
-    fi
+    echo ==== $_CONFIG_DEFS_H =================================
+    cat $_CONFIG_DEFS_H
   fi
-fi
 
 AC_SUBST(MOZ_DEFINES)
 

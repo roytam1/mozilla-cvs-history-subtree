@@ -26,8 +26,51 @@
 
 @namespace url(http://www.w3.org/2000/svg);
 
+a {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#a');
+}
+
+a * {
+  cursor: pointer;
+}
+               
+circle {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#circle');
+}
+
+ellipse {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#ellipse');
+}
+
+g {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#g');
+}
+
+line {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#line');
+}
+
+path {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#path');
+}
+
+polygon {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#polygon');
+}
+
+polyline {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#polyline');
+}
+
+rect {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#rect');
+}
+
 svg {
-  
+
+  //XXX can't have binding on outermost element. see bug#71191
+  //  -moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
+    
   /* We give svg elements block display style, so that they reflow
      correctly when given a relative width/height: */  
   display: block;
@@ -35,5 +78,19 @@ svg {
   font-family: Helvetica;
 }
 
+svg:not(:root) {
+	/* <svg> isn't the root element - safe to apply bindings */
+	-moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
+}
+
+               
+text {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#text');
+}
+
+tspan {
+  -moz-binding:url('chrome://svg/content/svgBindings.xml#tspan');
+}
 
 
+  
