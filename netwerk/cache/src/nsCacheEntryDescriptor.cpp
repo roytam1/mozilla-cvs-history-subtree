@@ -267,7 +267,7 @@ nsCacheEntryDescriptor::GetStoragePolicy(nsCacheStoragePolicy *result)
     NS_ENSURE_ARG_POINTER(result);
     if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
     
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return mCacheEntry->StoragePolicy();
 }
 
 
@@ -275,8 +275,10 @@ NS_IMETHODIMP
 nsCacheEntryDescriptor::SetStoragePolicy(nsCacheStoragePolicy policy)
 {
     if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
+    // XXX validate policy against session?
+    mCacheEntry->SetStoragePolicy(policy);
 
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 

@@ -102,18 +102,15 @@ public:
 
 
     enum CacheEntryFlags {
-        eDoomedMask          = 0x00000001,
-        eEntryDirtyMask      = 0x00000002,
-        eDataDirtyMask       = 0x00000004,
-        eMetaDataDirtyMask   = 0x00000008,
-        eStreamDataMask      = 0x00000010,
-        eActiveMask          = 0x00000020,
-        eInitializedMask     = 0x00000040,
-        eValidMask           = 0x00000080,
-        //        eStoragePolicyMask = 0x00000300
-        eAllowedInMemoryMask = 0x00000100,
-        eAllowedOnDiskMask   = 0x00000200
-        
+        eStoragePolicyMask   = 0x000000FF,
+        eDoomedMask          = 0x00000100,
+        eEntryDirtyMask      = 0x00000200,
+        eDataDirtyMask       = 0x00000400,
+        eMetaDataDirtyMask   = 0x00000800,
+        eStreamDataMask      = 0x00001000,
+        eActiveMask          = 0x00002000,
+        eInitializedMask     = 0x00004000,
+        eValidMask           = 0x00008000
     };
 
     void MarkEntryDirty()      { mFlags |=  eEntryDirtyMask; }
@@ -125,8 +122,8 @@ public:
     void MarkStreamData()      { mFlags |=  eStreamDataMask; }
     void MarkValid()           { mFlags |=  eValidMask; }
     void MarkInvalid()         { mFlags &= ~eValidMask; }
-    void MarkAllowedInMemory() { mFlags |=  eAllowedInMemoryMask; }
-    void MarkAllowedOnDisk()   { mFlags |=  eAllowedOnDiskMask; }
+    //    void MarkAllowedInMemory() { mFlags |=  eAllowedInMemoryMask; }
+    //    void MarkAllowedOnDisk()   { mFlags |=  eAllowedOnDiskMask; }
 
     PRBool IsDoomed()          { return (mFlags & eDoomedMask) != 0; }
     PRBool IsEntryDirty()      { return (mFlags & eEntryDirtyMask) != 0; }
@@ -137,12 +134,36 @@ public:
     PRBool IsInitialized()     { return (mFlags & eInitializedMask) != 0; }
     PRBool IsValid()           { return (mFlags & eValidMask) != 0; }
     PRBool IsInvalid()         { return (mFlags & eValidMask) == 0; }
-    PRBool IsAllowedInMemory() { return (mFlags & eAllowedInMemoryMask) != 0; }
-    PRBool IsAllowedOnDisk()   { return (mFlags & eAllowedOnDiskMask) !=0; }
     PRBool IsInUse()           { return !(PR_CLIST_IS_EMPTY(&mRequestQ) &&
                                           PR_CLIST_IS_EMPTY(&mDescriptorQ)); }
     PRBool IsNotInUse()        { return (PR_CLIST_IS_EMPTY(&mRequestQ) &&
                                          PR_CLIST_IS_EMPTY(&mDescriptorQ)); }
+
+
+    PRBool IsAllowedInMemory()
+    {
+        return (StoragePolicy() ==  nsICache::STORE_ANYWHERE) ||
+            (StoragePolicy() == nsICache::STORE_IN_MEMORY);
+    }
+
+    PRBool IsAllowedOnDisk()
+    {
+        return (StoragePolicy() == nsICache::STORE_ON_DISK) ||
+            (StoragePolicy() == nsICache::STORE_ON_DISK_AS_FILE);
+    }
+
+    nsCacheStoragePolicy  StoragePolicy()
+    {
+        return (nsCacheStoragePolicy)(mFlags & eStoragePolicyMask);
+    }
+
+    void SetStoragePolicy(nsCacheStoragePolicy policy)
+    {
+        NS_ASSERTION(policy <= 0xFF, "too many bits in nsCacheStoragePolicy");
+        mFlags &= ~eStoragePolicyMask; // clear storage policy bits
+        mFlags |= policy;
+    }
+
 
     // methods for nsCacheService
     nsresult RequestAccess( nsCacheRequest * request, nsCacheAccessMode *accessGranted);

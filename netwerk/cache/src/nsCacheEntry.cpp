@@ -57,16 +57,7 @@ nsCacheEntry::nsCacheEntry(nsCString *          key,
     mLastFetched = ConvertPRTimeToSeconds(PR_Now());
     
     if (streamBased) MarkStreamBased();
-
-    if ((storagePolicy == nsICache::STORE_IN_MEMORY) ||
-        (storagePolicy == nsICache::STORE_ANYWHERE)) {
-        MarkAllowedInMemory();
-    }
-    
-    if ((storagePolicy == nsICache::STORE_ON_DISK) ||
-        (storagePolicy == nsICache::STORE_ANYWHERE)) {
-        MarkAllowedOnDisk();
-    }
+    SetStoragePolicy(storagePolicy);
 }
 
 
@@ -303,12 +294,12 @@ nsCacheEntry::DetachDescriptors(void)
         (nsCacheEntryDescriptor *)PR_LIST_HEAD(&mDescriptorQ);
 
     while (descriptor != &mDescriptorQ) {
-        nsCacheEntryDescriptor * next =
+        nsCacheEntryDescriptor * nextDescriptor =
             (nsCacheEntryDescriptor *)PR_NEXT_LINK(descriptor);
         
         descriptor->ClearCacheEntry();
         PR_REMOVE_AND_INIT_LINK(descriptor);
-        descriptor = next;
+        descriptor = nextDescriptor;
     }
 }
 
