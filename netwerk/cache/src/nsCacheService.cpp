@@ -503,8 +503,7 @@ nsCacheService::CreateSession(const char *          clientID,
 {
     *result = nsnull;
 
-    if ((this == nsnull) || !(mEnableDiskDevice || mEnableMemoryDevice))
-        return NS_ERROR_NOT_AVAILABLE;
+    if (this == nsnull)  return NS_ERROR_NOT_AVAILABLE;
 
     nsCacheSession * session = new nsCacheSession(clientID, storagePolicy, streamBased);
     if (!session)  return NS_ERROR_OUT_OF_MEMORY;
@@ -1263,6 +1262,7 @@ nsCacheService::DeactivateEntry(nsCacheEntry * entry)
 {
     nsresult  rv = NS_OK;
     NS_ASSERTION(entry->IsNotInUse(), "### deactivating an entry while in use!");
+    nsCacheDevice * device = nsnull;
 
     if (mMaxDataSize < entry->DataSize() )     mMaxDataSize = entry->DataSize();
     if (mMaxMetaSize < entry->MetaDataSize() ) mMaxMetaSize = entry->MetaDataSize();
@@ -1270,17 +1270,22 @@ nsCacheService::DeactivateEntry(nsCacheEntry * entry)
     if (entry->IsDoomed()) {
         // remove from Doomed list
         PR_REMOVE_AND_INIT_LINK(entry);
-    } else {
-        if (entry->IsActive()) {
+    } else if (entry->IsActive()) {
             // remove from active entries
             mActiveEntries.RemoveEntry(entry);
             entry->MarkInactive();
-        } else {
-            // XXX bad state
+
+        // bind entry if necessary to store meta-data
+        device = EnsureEntryHasDevice(entry); 
+        if (!device) {
+            NS_WARNING("DeactivateEntry: unable to bind active entry\n");
+            return;
         }
+    } else {
+        NS_WARNING("DeactivateEntry: bad cache entry state\n");
     }
 
-    nsCacheDevice * device = entry->CacheDevice();
+    device = entry->CacheDevice();
     if (device) {
         rv = device->DeactivateEntry(entry);
         if (NS_FAILED(rv)) {
