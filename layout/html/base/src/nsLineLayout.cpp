@@ -923,7 +923,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   if (NS_FRAME_FIRST_REFLOW & state) {
     reason = eReflowReason_Initial;
   }  
-  else if (*aNextRCFrame == aFrame) {
+  else if (aNextRCFrame && *aNextRCFrame == aFrame) {
     reason = eReflowReason_Incremental;
     // Make sure we only incrementally reflow once
     *aNextRCFrame = nsnull;

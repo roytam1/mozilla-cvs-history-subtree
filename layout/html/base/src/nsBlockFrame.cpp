@@ -599,6 +599,15 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 {
   DO_GLOBAL_REFLOW_COUNT("nsBlockFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
+
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  nsIFrame *childFrame;
+
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
+
 #ifdef DEBUG
   if (gNoisyReflow) {
     nsCAutoString reflow;
@@ -611,9 +620,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       aReflowState.reflowCommand->GetType(type);
       reflow += kReflowCommandType[type];
 
-      nsIFrame* target;
-      aReflowState.reflowCommand->GetTarget(target);
-      reflow += nsPrintfCString("@%p", target);
+      reflow += nsPrintfCString("%s", amTarget ? " target" : "");
 
       reflow += ")";
     }
@@ -647,6 +654,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     CalculateContainingBlock(aReflowState, mRect.width, mRect.height,
                              containingBlockWidth, containingBlockHeight);
     
+    // XXX FIX! need to SetCurrentReflowNode?
     mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
                                          containingBlockWidth, containingBlockHeight,
                                          handled, childBounds);
@@ -685,6 +693,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       } else {
         mState &= ~NS_FRAME_OUTSIDE_CHILDREN;
       }
+      // XXX fix? do we need to check children?
       return NS_OK;
     }
   }
@@ -765,7 +774,6 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
   nsresult rv = NS_OK;
   PRBool isStyleChange = PR_FALSE;
 
-  nsIFrame* target;
   switch (aReflowState.reason) {
   case eReflowReason_Initial:
 #ifdef NOISY_REFLOW_REASON
@@ -781,9 +789,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     // Do nothing; the dirty lines will already have been marked.
     break;
 
-  case eReflowReason_Incremental:  // should call GetNext() ?
-    aReflowState.reflowCommand->GetTarget(target);
-    if (this == target) {
+  case eReflowReason_Incremental:
+    if (amTarget) {
       nsReflowType type;
       aReflowState.reflowCommand->GetType(type);
 #ifdef NOISY_REFLOW_REASON
@@ -804,9 +811,13 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
         break;
       }
     }
-    else {
-      // Get next frame in reflow command chain
-      aReflowState.reflowCommand->GetNext(state.mNextRCFrame);
+
+    // now handle any targets that are children of this node
+    while (reflowIterator.NextChild(&childFrame))
+    {
+      // set reflow state for child
+      aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+      state.mNextRCFrame = childFrame;
 #ifdef NOISY_REFLOW_REASON
       ListTag(stdout);
       printf(": reflow=incremental");
@@ -2118,22 +2129,26 @@ PRBool nsBlockFrame::IsIncrementalDamageConstrained(const nsBlockReflowState& aS
   // because we know the text control won't change size.
   if (aState.mReflowState.reflowCommand)
   {
-    nsIFrame *target;
-    aState.mReflowState.reflowCommand->GetTarget(target);
-    while (target)
-    { // starting with the target's parent, scan for a text control
-      nsIFrame *parent;
-      target->GetParent(&parent);
-      if ((nsIFrame*)this==parent || !parent)  // the null check is paranoia, it should never happen
-        break;  // we found ourself, so we know there's no text control between us and target
-      nsCOMPtr<nsIAtom> frameType;
-      parent->GetFrameType(getter_AddRefs(frameType));
-      if (frameType)
-      {
-        if (nsLayoutAtoms::textInputFrame == frameType.get())
-          return PR_TRUE; // damage is constrained to the text control innards
+    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    // See if the reflow command is targeted at us
+    if (reflowIterator.IsTarget()) {
+      nsIFrame *target = reflowIterator.CurrentNode()->GetFrame();
+
+      while (target)
+      { // starting with the target's parent, scan for a text control
+        nsIFrame *parent;
+        target->GetParent(&parent);
+        if ((nsIFrame*)this==parent || !parent)  // the null check is paranoia, it should never happen
+          break;  // we found ourself, so we know there's no text control between us and target
+        nsCOMPtr<nsIAtom> frameType;
+        parent->GetFrameType(getter_AddRefs(frameType));
+        if (frameType)
+        {
+          if (nsLayoutAtoms::textInputFrame == frameType.get())
+            return PR_TRUE; // damage is constrained to the text control innards
+        }
+        target = parent;  // advance the loop up the frame tree
       }
-      target = parent;  // advance the loop up the frame tree
     }
   }
   return PR_FALSE;  // default case, damage is not constrained (or unknown)

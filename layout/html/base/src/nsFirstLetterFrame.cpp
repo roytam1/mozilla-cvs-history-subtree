@@ -214,15 +214,16 @@ nsFirstLetterFrame::Reflow(nsIPresContext*          aPresContext,
   // Grab overflow list
   DrainOverflowFrames(aPresContext);
 
+  // This frame has only one child ever
   nsIFrame* kid = mFrames.FirstChild();
-  nsIFrame* nextRCFrame = nsnull;
-  if (aReflowState.reason == eReflowReason_Incremental) {
-    nsIFrame* target;
-    aReflowState.reflowCommand->GetTarget(target);
-    if (this != target) {
-      aReflowState.reflowCommand->GetNext(nextRCFrame);
-    }
-  }
+
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  nsIFrame *childFrame;
+
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
 
   // Setup reflow state for our child
   nsSize availSize(aReflowState.availableWidth, aReflowState.availableHeight);
@@ -235,6 +236,13 @@ nsFirstLetterFrame::Reflow(nsIPresContext*          aPresContext,
   if (NS_UNCONSTRAINEDSIZE != availSize.height) {
     availSize.height -= tb;
   }
+
+  reflowIterator.NextChild(&childFrame);
+  NS_ASSERTION((!childFrame && amTarget) ||
+               (childFrame && childFrame == kid),
+               "incorrect or no reflow child in nsFirstLetterFrame");
+  // set reflow state for child
+  aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
 
   // Reflow the child
   if (!aReflowState.mLineLayout) {
@@ -260,7 +268,7 @@ nsFirstLetterFrame::Reflow(nsIPresContext*          aPresContext,
     PRBool        pushedFrame;
 
     ll->BeginSpan(this, &aReflowState, bp.left, availSize.width);
-    ll->ReflowFrame(kid, &nextRCFrame, aReflowStatus, &aMetrics, pushedFrame);
+    ll->ReflowFrame(kid, &childFrame, aReflowStatus, &aMetrics, pushedFrame);
     nsSize size;
     ll->EndSpan(this, size, aMetrics.maxElementSize);
   }

@@ -493,12 +493,18 @@ CanvasFrame::Reflow(nsIPresContext*          aPresContext,
   PRBool  isStyleChange = PR_FALSE;
   PRBool  isDirtyChildReflow = PR_FALSE;
 
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  nsIFrame *childFrame;
+
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
+
   // Check for an incremental reflow
   if (eReflowReason_Incremental == aReflowState.reason) {
     // See if we're the target frame
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
-    if (this == targetFrame) {
+    if (amTarget) {
       // Get the reflow type
       nsReflowType  reflowType;
       aReflowState.reflowCommand->GetType(reflowType);
@@ -518,10 +524,11 @@ CanvasFrame::Reflow(nsIPresContext*          aPresContext,
       }
 
     } else {
-      nsIFrame* nextFrame;
-      // Get the next frame in the reflow chain
-      aReflowState.reflowCommand->GetNext(nextFrame);
-      NS_ASSERTION(nextFrame == mFrames.FirstChild(), "unexpected next reflow command frame");
+      // no need to loop, we have only one child frame
+      // set reflow state for child
+      aReflowState.SetCurrentReflowNode(reflowIterator.NextChild(&childFrame));
+
+      NS_ASSERTION(childFrame == mFrames.FirstChild(), "unexpected next reflow command frame");
     }
   }
 

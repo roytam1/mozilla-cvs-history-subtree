@@ -702,7 +702,9 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   PRBool needsReflow = PR_FALSE;
   PRBool redrawNow = PR_FALSE;
   nsReflowReason reason;
-  
+
+  // this handles reflow tree issues, and if a child (mFrame) is the
+  // target, sets the current tree node before returning.
   HandleIncrementalReflow(aState, 
                           aReflowState, 
                           reason,
@@ -963,23 +965,31 @@ nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState,
       // if incremental see if the next child in the chain is the child. If so then
       // we will just let it go down. If not then convert it to a dirty. It will get converted back when 
       // needed in the case just below this one.
-      nsIFrame* incrementalChild = nsnull;
-      aReflowState.reflowCommand->GetNext(incrementalChild, PR_FALSE);
-      
-      // if the increment child is our child then
-      // pop it off and continue sending it down
-      if (incrementalChild == mFrame ) {
-          aNeedsReflow = PR_TRUE;
 
-          if (aPopOffIncremental)
-             aReflowState.reflowCommand->GetNext(incrementalChild);
+      // this lets me iterate through the reflow children; initialized
+      // from state within the reflowCommand
+      nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+      // See if the reflow command is targeted at us
+      PRBool amTarget = reflowIterator.IsTarget();
 
-          // if we hit the target then we have used up the chain.
-          // next time a layout 
-          break;
+      // Get the next frame in the reflow chain, and verify that it's our
+      // child frame (we have only one)
+      nsIFrame *childFrame;
+
+      if (!amTarget && reflowIterator.NextChild(&childFrame) &&
+          childFrame == mFrame) {
+
+        aNeedsReflow = PR_TRUE;
+
+        // set reflow state for child
+        aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+
+        // if we hit the target then we have used up the chain.
+        // next time a layout 
+        break;
       } 
 
-      // fall into dirty if the incremental child was use. It should be treated as a 
+      // fall into dirty if we're the target (or the child isn't our mFrame)
    }
 
    // if its dirty then see if the child we want to reflow is dirty. If it is then

@@ -6304,48 +6304,45 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     PRBool firstTime = PR_TRUE;
     while (0 != mReflowCommands.Count()) {
 #if 1
-      if (mReflowCommands.Count() > 1)
+      // Construct tree against which we will merge.
+      nsReflowTree tree;
+
+      // XXX remove this
+      if (mReflowCommands.Count() > /* 1 */ 0)
       {
         nsHTMLReflowCommand *curr = (nsHTMLReflowCommand *)
                                     mReflowCommands.ElementAt(0);
-        curr->BuildPath();
         nsVoidArray *curr_path = curr->GetPath();
         void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
         int i = 0;
 
-        while (mReflowCommands.Count() > 1) {
-          if (firstTime) {
-            firstTime = PR_FALSE;
-
-            // Construct tree against which we will merge.
-            nsReflowTree tree;
-            for (i = 0; i < mReflowCommands.Count(); i++) {
-              nsHTMLReflowCommand *command = 
-                NS_STATIC_CAST(nsHTMLReflowCommand *,
-                               mReflowCommands.ElementAt(i));
-              nsReflowTree::Node *n = tree.MergeCommand(command);
-              if (!n)
-                continue;         // can't be merged...try next?
-              
-              // note that this frame was specifically targetted
-              n->MakeTarget();
-              
-              // remove merged command from the list
-#ifdef shaver_notyet
-              mReflowCommands.RemoveElementAt(i);
-              ReflowCommandRemoved(command);
-              delete command;
-              i--;  // account for the element removal and ensuing shift
-#endif
-            }
+        while (mReflowCommands.Count() > /* 1 */ 0) {
+          for (i = 0; i < /*mReflowCommands.Count()*/ 1; i++) {
+            nsHTMLReflowCommand *command = 
+              NS_STATIC_CAST(nsHTMLReflowCommand *,
+                             mReflowCommands.ElementAt(i));
+            nsReflowTree::Node *n = tree.MergeCommand(command);
+            if (!n)
+              continue;         // can't be merged...try next?
             
+            // note that this frame was specifically targetted
+            n->MakeTarget();
+            
+            // remove merged command from the list
+#ifdef shaver_notyet
+            mReflowCommands.RemoveElementAt(i);
+            ReflowCommandRemoved(command);
+            delete command;
+            i--;  // account for the element removal and ensuing shift
+#endif
             tree.Dump();
+            curr->SetCurrentReflowNode(tree.Root());
           }
 
+#if 0
           // attempt to coalesce incremental reflows with the same root
           nsHTMLReflowCommand *next = (nsHTMLReflowCommand *)
                                       mReflowCommands.ElementAt(1);
-          next->BuildPath();
           nsVoidArray *next_path = next->GetPath();
           void *next_root = next_path->SafeElementAt(next_path->Count()-1);
           
@@ -6359,6 +6356,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
           else {
             break;  // stop on first non-match
           }
+#endif
         }
         if (i)
           fprintf(stderr,"removed %d reflow commands\n",i);

@@ -1,8 +1,15 @@
+#ifndef NSREFLOWTREE_H
+#define NSREFLOWTREE_H
 ////// Iteration:
-// nsReflowTree::Iterator iter;
-// nsReflowTree::Node *node, *current = GetCurrentTarget();
-// while (node = current->NextChild(iter)) {
-//    DoIt();
+// nsReflowTree::Iterator iter(reflowcmd->GetCurrentTarget());
+// PRBool amTarget = reflowIterator.IsTarget();
+// if (amTarget) {
+//    reflowcmd->SetCurrentReflowNode(nsnull);
+//    DoIt(me);
+// }
+// while (iter.NextChild(&childIFrame)) {
+//    reflowcmd->SetCurrentReflowNode(iter.CurrentChild());
+//    DoIt(childIFrame);
 // }
 
 #include "nscore.h"
@@ -51,10 +58,16 @@ public:
         {
             // This is just here for the constructor, really
         public:
-            Iterator(Node *node) : mNode(node), mPos(0) { }
+            Iterator(Node *node) : mNode(node), mPos(nsnull) { }
             ~Iterator() { }
             Node *NextChild();
-            Node *CurrentChild() { return mPos ? *mPos : nsnull; }
+            Node *NextChild(nsIFrame **aChildIFrame);
+	    // Set the mPos to the node with this nsIFrame, or null
+            Node *SelectChild(nsIFrame *aChildIFrame);
+            inline Node *CurrentChild() { return mPos ? *mPos : nsnull; }
+            inline Node *CurrentNode()  { return mNode; }
+	    inline PRBool IsTarget()
+	      { return mNode ? mNode->IsTarget() : PR_FALSE; }
         private:
             Node *mNode;
             Node **mPos;
@@ -90,7 +103,9 @@ public:
     Node *MergeCommand(nsHTMLReflowCommand *command);
 
     void Dump();
-    
+
+    Node *Root() { return mRoot; }
+
 private:
     Node *AddToTree(nsIFrame *frame);
     Node *mRoot;
@@ -103,3 +118,5 @@ nsReflowTree::Node::MakeTarget()
     mFlags |= NODE_IS_TARGET;
     mTargetCount++;
 }
+#endif
+

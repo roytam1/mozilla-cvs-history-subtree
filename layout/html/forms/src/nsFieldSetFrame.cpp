@@ -300,20 +300,25 @@ nsFieldSetFrame::Reflow(nsIPresContext*          aPresContext,
   }
   
    //------------ Handle Incremental Reflow -----------------
-   nsIFrame* incrementalChild = nsnull;
    PRBool reflowContent = PR_TRUE;
    PRBool reflowLegend = PR_TRUE;
    nsReflowReason reason = aReflowState.reason;
+
+   // this lets me iterate through the reflow children; initialized
+   // from state within the reflowCommand
+   nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
 
     if ( aReflowState.reason == eReflowReason_Incremental ) {
         nsReflowType  reflowType;
         aReflowState.reflowCommand->GetType(reflowType);
 
-        // See if it's targeted at us
-        nsIFrame* targetFrame;    
-        aReflowState.reflowCommand->GetTarget(targetFrame);
+        // See if the reflow command is targeted at us
+        PRBool amTarget = reflowIterator.IsTarget();
 
-        if (this == targetFrame) {
+        if (amTarget) {
+          // Assume that this will handle all children, cut off treewalk here
+          aReflowState.SetCurrentReflowNode(nsnull);
+
             switch (reflowType) {
 
               case eReflowType_StyleChanged: 
@@ -336,17 +341,18 @@ nsFieldSetFrame::Reflow(nsIPresContext*          aPresContext,
                   default:
                     NS_ERROR("Unexpected Reflow Type");
             }
-        } else {
-             aReflowState.reflowCommand->GetNext(incrementalChild);
-
-             reflowContent = PR_FALSE;
-             reflowLegend = PR_FALSE;
-
-             if (incrementalChild == mLegendFrame)
-                 reflowLegend = PR_TRUE;
-             else if (incrementalChild == mContentFrame)
-                 reflowContent = PR_TRUE;       
         }
+        nsIFrame *childFrame;
+        reflowContent = PR_FALSE;
+        reflowLegend = PR_FALSE;
+          
+        while (reflowIterator.NextChild(&childFrame)) {
+          if (childFrame == mLegendFrame)
+            reflowLegend = PR_TRUE;
+          else if (childFrame == mContentFrame)
+            reflowContent = PR_TRUE;
+        }
+        // we may have BOTH Content and Legend set!
     }
 
     // if dirty then check dirty flags
@@ -391,6 +397,9 @@ nsFieldSetFrame::Reflow(nsIPresContext*          aPresContext,
           legendReflowState.mComputedWidth = NS_INTRINSICSIZE;
           legendReflowState.mComputedHeight = NS_INTRINSICSIZE;
           legendReflowState.reason = reason;
+
+          // set reflow state for child
+          aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(mLegendFrame));
 
           nsHTMLReflowMetrics legendDesiredSize(0,0);
 
@@ -462,6 +471,9 @@ nsFieldSetFrame::Reflow(nsIPresContext*          aPresContext,
                                              availSize);
 
             kidReflowState.reason = reason;
+
+            // set reflow state for child
+            aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(mContentFrame));
 
             nsHTMLReflowMetrics kidDesiredSize(aDesiredSize.maxElementSize, aDesiredSize.mFlags);
             // Reflow the frame

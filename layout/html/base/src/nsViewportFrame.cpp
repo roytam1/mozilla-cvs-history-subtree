@@ -508,7 +508,10 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
   // Initialize OUT parameter
   aStatus = NS_FRAME_COMPLETE;
 
-  nsIFrame* nextFrame = nsnull;
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+
   PRBool    isHandled = PR_FALSE;
   
   nsReflowType reflowType = eReflowType_ContentChanged;
@@ -522,10 +525,10 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
 
     // Otherwise check for an incremental reflow
   } else if (eReflowReason_Incremental == aReflowState.reason) {
-    // See if we're the target frame
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
-    if (this == targetFrame) {
+    // See if the reflow command is targeted at us
+    PRBool amTarget = reflowIterator.IsTarget();
+
+    if (amTarget) {
       nsIAtom*  listName;
       PRBool    isFixedChild;
       
@@ -540,48 +543,56 @@ ViewportFrame::Reflow(nsIPresContext*          aPresContext,
         IncrementalReflow(aPresContext, aReflowState);
         isHandled = PR_TRUE;
       }
-
-    } else {
-      // Get the next frame in the reflow chain
-      aReflowState.reflowCommand->GetNext(nextFrame);
     }
   }
 
   nsRect kidRect(0,0,aReflowState.availableWidth,aReflowState.availableHeight);
 
   if (!isHandled) {
-    if ((eReflowReason_Incremental == aReflowState.reason) &&
-        (mFixedFrames.ContainsFrame(nextFrame))) {
-      // Reflow the 'fixed' frame that's the next frame in the reflow path
-      nsReflowStatus  kidStatus;
-      ReflowFixedFrame(aPresContext, aReflowState, nextFrame, PR_FALSE,
-                       kidStatus);
+    nsIFrame* kidFrame = mFrames.NotEmpty() ? mFrames.FirstChild() : nsnull;
 
-    } else {
-      // Reflow our one and only principal child frame
-      if (mFrames.NotEmpty()) {
-        nsIFrame*           kidFrame = mFrames.FirstChild();
-        nsHTMLReflowMetrics kidDesiredSize(nsnull);
-        nsSize              availableSpace(aReflowState.availableWidth,
-                                           aReflowState.availableHeight);
-        nsHTMLReflowState   kidReflowState(aPresContext, aReflowState,
-                                           kidFrame, availableSpace);
+    if (eReflowReason_Incremental == aReflowState.reason) {
+      nsIFrame *childFrame;
 
-        // Reflow the frame
-        kidReflowState.mComputedHeight = aReflowState.availableHeight;
-        ReflowChild(kidFrame, aPresContext, kidDesiredSize, kidReflowState,
-                    0, 0, 0, aStatus);
-        kidRect.width = kidDesiredSize.width;
-        kidRect.height = kidDesiredSize.height;
+      while (reflowIterator.NextChild(&childFrame)) {
+        if (childFrame != kidFrame) { // we'll do kidframe last if needed
+          // set reflow state for child
+          aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
 
-        FinishReflowChild(kidFrame, aPresContext, nsnull, kidDesiredSize, 0, 0, 0);
+          NS_ASSERTION(mFixedFrames.ContainsFrame(childFrame),
+                       "Reflow tree frame in viewport not Fixed and not child");
+          // Reflow the 'fixed' frame that's the next frame in the reflow path
+          nsReflowStatus  kidStatus;
+          ReflowFixedFrame(aPresContext, aReflowState, childFrame, PR_FALSE,
+                           kidStatus);
+        }
       }
+      // set up iterator to reflow main child if needed, or to none
+      // XXX fix?
+      aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild(kidFrame));
+    }
+    // Reflow our one and only principal child frame
+    if (mFrames.NotEmpty()) {
+      nsHTMLReflowMetrics kidDesiredSize(nsnull);
+      nsSize              availableSpace(aReflowState.availableWidth,
+                                         aReflowState.availableHeight);
+      nsHTMLReflowState   kidReflowState(aPresContext, aReflowState,
+                                         kidFrame, availableSpace);
 
-      // If it's a 'initial', 'resize', or 'style change' reflow command (anything
-      // but incremental), then reflow all the fixed positioned child frames
-      if (eReflowReason_Incremental != aReflowState.reason) {
-        ReflowFixedFrames(aPresContext, aReflowState);
-      }
+      // Reflow the frame
+      kidReflowState.mComputedHeight = aReflowState.availableHeight;
+      ReflowChild(kidFrame, aPresContext, kidDesiredSize, kidReflowState,
+                  0, 0, 0, aStatus);
+      kidRect.width = kidDesiredSize.width;
+      kidRect.height = kidDesiredSize.height;
+      
+      FinishReflowChild(kidFrame, aPresContext, nsnull, kidDesiredSize, 0, 0, 0);
+    }
+
+    // If it's a 'initial', 'resize', or 'style change' reflow command (anything
+    // but incremental), then reflow all the fixed positioned child frames
+    if (eReflowReason_Incremental != aReflowState.reason) {
+      ReflowFixedFrames(aPresContext, aReflowState);
     }
   }
 

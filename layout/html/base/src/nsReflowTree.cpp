@@ -160,6 +160,9 @@ nsReflowTree::AddToTree(nsIFrame *frame)
 nsReflowTree::Node *
 nsReflowTree::Node::Iterator::NextChild()
 {
+    if (!mNode)
+      return nsnull;
+
     if (!mPos) {
         if (mNode->HasSingleChild()) {
             mPos = &mNode->mKidU.mChild;
@@ -189,6 +192,14 @@ nsReflowTree::Node::Iterator::NextChild()
     }
 
     return *mPos;
+}
+
+nsReflowTree::Node *
+nsReflowTree::Node::Iterator::NextChild(nsIFrame **aChildIFrame)
+{
+  nsReflowTree::Node *result = NextChild();
+  *aChildIFrame = mPos ? NS_STATIC_CAST(nsReflowTree::Node*,*mPos)->GetFrame() : nsnull;
+  return result;
 }
 
 void

@@ -2706,29 +2706,30 @@ nsTableFrame::IncrementalReflow(nsIPresContext*          aPresContext,
   nsTableReflowState state(*aPresContext, aReflowState, *this, eReflowReason_Incremental,
                            lastWidth, aReflowState.availableHeight); 
 
-  // determine if this frame is the target or not
-  nsIFrame* target = nsnull;
-  rv = aReflowState.reflowCommand->GetTarget(target);
-  if (NS_SUCCEEDED(rv) && target) {
-    nsReflowType type;
-    aReflowState.reflowCommand->GetType(type);
-    // this is the target if target is either this or the outer table frame containing this inner frame
-    nsIFrame* outerTableFrame = nsnull;
-    GetParent(&outerTableFrame);
-    if ((this == target) || (outerTableFrame == target)) {
-      rv = IR_TargetIsMe(aPresContext, state, aStatus);
-    }
-    else {
-      // Get the next frame in the reflow chain
-      nsIFrame* nextFrame;
-      aReflowState.reflowCommand->GetNext(nextFrame);
-      if (nextFrame) {
-        rv = IR_TargetIsChild(aPresContext, state, aStatus, nextFrame);
-      }
-      else {
-        NS_ASSERTION(PR_FALSE, "next frame in reflow command is null"); 
-      }
-    }
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+  // See if the reflow command is targeted at us
+  PRBool amTarget = reflowIterator.IsTarget();
+
+  nsReflowType type;
+  aReflowState.reflowCommand->GetType(type);
+  // this is the target if target is either this or the outer table frame containing this inner frame
+  nsIFrame* outerTableFrame = nsnull;
+  GetParent(&outerTableFrame);
+  // XXX FIX!!!!!!!!!!  How do we decide if the outerframe is a target?
+  if (amTarget /*|| (outerTableFrame == target)*/) {
+    aReflowState.SetCurrentReflowNode(nsnull);
+    rv = IR_TargetIsMe(aPresContext, state, aStatus);
+  }
+
+  nsIFrame *childFrame;
+  // now handle any targets that are children of this node
+  while (reflowIterator.NextChild(&childFrame))
+  {
+    // set reflow state for child
+    aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+    rv = IR_TargetIsChild(aPresContext, state, aStatus, childFrame);
   }
   return rv;
 }

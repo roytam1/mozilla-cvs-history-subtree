@@ -185,76 +185,78 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
 }
 
 
+// NOTE: this walks it's way down the tree.  Since we have to deal
+// with a tree now and not a list, we need to recurse (or use a more complex
+// treewalk setup.  Keep state minimal so recursing is cheap.
 void
 nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
 {
-  // if incremental unwindow the chain
-  nsIFrame* incrementalChild = nsnull;
-  nsIFrame* target = nsnull;
-  aCommand->GetTarget(target);
-  nsReflowType  type;
-  mReflowState->reflowCommand->GetType(type);
+  // this lets me iterate through the reflow children; initialized
+  // from state within the reflowCommand
+  nsReflowTree::Node::Iterator reflowIterator(aCommand->GetCurrentReflowNode());
+  nsIFrame* currFrame = reflowIterator.CurrentNode()->GetFrame();
 
-  while(1)
-  {
-    aCommand->GetNext(incrementalChild, PR_FALSE);
-    if (incrementalChild == nsnull)
-      return;
+  { // hide in here to minimize stack
+    nsFrameState state;
+    currFrame->GetFrameState(&state);
+    state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;
+    currFrame->SetFrameState(state);
 
-    // get the box for the given incrementalChild. If adaptor is true then
-    // it is some wrapped HTML frame.
     PRBool isAdaptor = PR_FALSE;
-    nsIBox* ibox = GetBoxForFrame(incrementalChild, isAdaptor);
-    if (ibox) {
-      nsFrameState state;
-      incrementalChild->GetFrameState(&state);
-      state &= ~NS_FRAME_HAS_DIRTY_CHILDREN;
-      incrementalChild->SetFrameState(state);
+    nsIBox* ibox = GetBoxForFrame(currFrame, isAdaptor);
 
-      // ok we got a box is it the target?
-      if (incrementalChild == target) {
+    if (reflowIterator.IsTarget()) {
+      // get the box for the given currFrame. If adaptor is true then
+      // it is some wrapped HTML frame.
+      if (ibox) {
 
         nsFrameState boxState;
         nsIFrame* frame;
         aBox->GetFrame(&frame);
         frame->GetFrameState(&boxState);
-
+        
         boxState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
+        
         frame->SetFrameState(boxState);
-
+        
         // the target is a box?
-         // mark it dirty generating a new reflow command targeted
-         // at us and coelesce out this one.
-
-         if (type == eReflowType_StyleChanged) {
-            ibox->MarkStyleChange(*this);
-
-            // could be a visiblity change. Like collapse so we need to dirty
-            // parent so it gets redrawn. But be carefull we
-            // don't want to just mark dirty that would notify the
-            // box and it would notify its layout manager. This would 
-            // be really bad for grid because it would blow away
-            // all is cached infomation for is colums and rows. Because the
-            // our parent is most likely a rows or columns and it will think
-            // its child is getting bigger or something.
-            nsIBox* parent;
-            ibox->GetParentBox(&parent);
-            if (parent) {
-              nsFrameState parentState;
-              nsIFrame* parentFrame;
-              parent->GetFrame(&parentFrame);
-              parentFrame->GetFrameState(&parentState);
-              parentState |= NS_FRAME_IS_DIRTY;
-              parentFrame->SetFrameState(parentState);
-            }
-
-         } else {
-            ibox->MarkDirty(*this);      
-         }
-
-         return;
+        // mark it dirty generating a new reflow command targeted
+        // at us and coelesce out this one.
+        nsReflowType  type;
+        mReflowState->reflowCommand->GetType(type);
+        if (type == eReflowType_StyleChanged) {
+          ibox->MarkStyleChange(*this);
+          
+          // could be a visiblity change. Like collapse so we need to dirty
+          // parent so it gets redrawn. But be carefull we
+          // don't want to just mark dirty that would notify the
+          // box and it would notify its layout manager. This would 
+          // be really bad for grid because it would blow away
+          // all is cached infomation for is colums and rows. Because the
+          // our parent is most likely a rows or columns and it will think
+          // its child is getting bigger or something.
+          nsIBox* parent;
+          ibox->GetParentBox(&parent);
+          if (parent) {
+            nsFrameState parentState;
+            nsIFrame* parentFrame;
+            parent->GetFrame(&parentFrame);
+            parentFrame->GetFrameState(&parentState);
+            parentState |= NS_FRAME_IS_DIRTY;
+            parentFrame->SetFrameState(parentState);
+          }
+          
+        } else {
+          ibox->MarkDirty(*this);      
+        }
+        
+        // don't return here - we should handle possible child targets
+      } else {
+        NS_ERROR("This should not happen! We should always get a box");
       }
+    }
+    else {
+      // we're not the target...
 
       // was the child html?
       if (isAdaptor) {
@@ -267,24 +269,26 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
         frame->GetFrameState(&state);
         state |= NS_FRAME_HAS_DIRTY_CHILDREN;
         frame->SetFrameState(state);
-
-        incrementalChild->GetFrameState(&state);
-        state &= ~NS_FRAME_IS_DIRTY;
-        incrementalChild->SetFrameState(state);
-
+        
         // mark the adaptor dirty
         ibox->MarkDirty(*this);      
         
         // we are done and we did not coelesce
         return;
       }
-
-    } else {
-      NS_ERROR("This should not happen! We should always get a box");
-      break;
     }
-  
-    aCommand->GetNext(incrementalChild);
+  }
+
+  // done with amTarget, and it also does not have isAdaptor set
+
+  // if incremental unwindow the chain
+  // now handle any targets that are children of this node (unless this
+  // node was an adaptor)
+  while (reflowIterator.NextChild(&currFrame))
+  {
+    // set reflow state for child
+    aCommand->SetCurrentReflowNode(reflowIterator.CurrentChild());
+    UnWind(aCommand,aBox);
   }
 }
 
@@ -331,14 +335,6 @@ nsBoxLayoutState::UnWind(nsHTMLReflowCommand* aCommand, nsIBox* aBox)
   
 }
 */
-
-nsIBox*
-nsBoxLayoutState::GetTargetBox(nsHTMLReflowCommand* mCommand, PRBool& aIsAdaptor)
-{
-  nsIFrame* target = nsnull;
-  mReflowState->reflowCommand->GetTarget(target);
-  return GetBoxForFrame(target, aIsAdaptor);
-}
 
 nsIBox*
 nsBoxLayoutState::GetBoxForFrame(nsIFrame* aFrame, PRBool& aIsAdaptor)

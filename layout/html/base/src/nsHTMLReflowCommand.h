@@ -37,6 +37,7 @@
 #ifndef nsHTMLReflowCommand_h___
 #define nsHTMLReflowCommand_h___
 #include "nsReflowType.h"
+#include "nsReflowTree.h"
 #include "nsVoidArray.h"
 
 class  nsIAtom;
@@ -100,13 +101,6 @@ public:
                     nsIRenderingContext& aRendContext);
 
   /**
-   * Get the next frame in the command processing path. If requested removes the
-   * the frame from the path. You must remove the frame from the path before
-   * dispatching the reflow command to the next frame in the chain.
-   */
-  nsresult GetNext(nsIFrame*& aNextFrame, PRBool aRemove = PR_TRUE);
-
-  /**
    * Get the target of the reflow command.
    */
   nsresult GetTarget(nsIFrame*& aTargetFrame) const;
@@ -132,12 +126,7 @@ public:
    * the array is the target frame, the last element in the array is
    * the current frame.
    */
-  nsVoidArray *GetPath() { return &mPath; }
-
-  /**
-   * Get the child frame associated with the reflow command.
-   */
-  nsresult GetChildFrame(nsIFrame*& aChildFrame) const;
+  nsVoidArray *GetPath() { BuildPath(); return &mPath; }
 
   /**
    * Returns the name of the child list to which the child frame belongs.
@@ -174,11 +163,27 @@ public:
   nsresult SetFlags(PRInt32 aFlags);
 
   /*
+   * 
+   */
+  nsresult SetCurrentReflowNode(nsReflowTree::Node *node)
+  {
+    mReflowNode = node;
+  }
+
+  /*
+   * 
+   */
+  nsReflowTree::Node *GetCurrentReflowNode()
+  {
+    return mReflowNode;
+  }
+
+protected:
+  /*
    * build the path for this reflow
    */
   nsresult BuildPath();
 
-protected:
   nsIFrame* GetContainingBlock(nsIFrame* aFloater) const;
 
 private:
@@ -189,6 +194,7 @@ private:
   nsIAtom*        mAttribute;
   nsIAtom*        mListName;
   nsAutoVoidArray mPath;
+  nsReflowTree::Node* mReflowNode;
   PRInt32         mFlags;
 };
 

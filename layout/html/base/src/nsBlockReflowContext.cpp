@@ -287,9 +287,9 @@ nsBlockReflowContext::ReflowBlock(nsIFrame* aFrame,
         nsReflowType type;
         rc->GetType(type);
         if (type == eReflowType_StyleChanged) {
-          nsIFrame* target;
-          rc->GetTarget(target);
-          if (target == mOuterReflowState.frame) {
+          nsReflowTree::Node::Iterator reflowIterator(mOuterReflowState.GetCurrentReflowNode());
+          // See if the reflow command is targeted at us
+          if (reflowIterator.IsTarget()) {
             reason = eReflowReason_StyleChange;
           }
         }

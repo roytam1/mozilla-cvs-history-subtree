@@ -39,10 +39,10 @@
 
 #include "nsMargin.h"
 #include "nsStyleCoord.h"
+#include "nsHTMLReflowCommand.h"
 
 class nsIFrame;
 class nsIPresContext;
-class nsHTMLReflowCommand;
 class nsIRenderingContext;
 class nsSpaceManager;
 class nsLineLayout;
@@ -358,6 +358,11 @@ struct nsHTMLReflowState {
   void CalculateBlockSideMargins(nscoord aAvailWidth,
                                  nscoord aComputedWidth);
 
+  // 
+  nsReflowTree::Node *GetCurrentReflowNode(void) const;
+
+  // 
+  void SetCurrentReflowNode(nsReflowTree::Node *aReflowNode) const;
 
 protected:
 
@@ -428,6 +433,7 @@ protected:
   //   the width/height and it is removed due to box sizing) then it is driven to 0
   void AdjustComputedHeight(void);
   void AdjustComputedWidth(void);
+
 };
 
 #endif /* nsHTMLReflowState_h___ */

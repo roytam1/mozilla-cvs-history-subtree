@@ -113,6 +113,7 @@ nsHTMLReflowCommand::nsHTMLReflowCommand(nsIFrame*    aTargetFrame,
     mPrevSiblingFrame(nsnull),
     mAttribute(aAttribute),
     mListName(nsnull),
+    mReflowNode(nsnull),
     mFlags(0)
 {
   MOZ_COUNT_CTOR(nsHTMLReflowCommand);
@@ -232,35 +233,6 @@ nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
 }
 
 nsresult
-nsHTMLReflowCommand::GetNext(nsIFrame*& aNextFrame, PRBool aRemove)
-{
-  PRInt32 count = mPath.Count();
-
-  aNextFrame = nsnull;
-  if (count > 0) {
-    aNextFrame = (nsIFrame*)mPath[count - 1];
-    if (aRemove) {
-      mPath.RemoveElementAt(count - 1);
-    }
-  }
-  return NS_OK;
-}
-
-nsresult
-nsHTMLReflowCommand::GetTarget(nsIFrame*& aTargetFrame) const
-{
-  aTargetFrame = mTargetFrame;
-  return NS_OK;
-}
-
-nsresult
-nsHTMLReflowCommand::SetTarget(nsIFrame* aTargetFrame)
-{
-  mTargetFrame = aTargetFrame;
-  return NS_OK;
-}
-
-nsresult
 nsHTMLReflowCommand::GetType(nsReflowType& aReflowType) const
 {
   aReflowType = mType;
@@ -273,13 +245,6 @@ nsHTMLReflowCommand::GetAttribute(nsIAtom *& aAttribute) const
   aAttribute = mAttribute;
   if (nsnull!=aAttribute)
     NS_ADDREF(aAttribute);
-  return NS_OK;
-}
-
-nsresult
-nsHTMLReflowCommand::GetChildFrame(nsIFrame*& aChildFrame) const
-{
-  aChildFrame = mChildFrame;
   return NS_OK;
 }
 

@@ -312,11 +312,13 @@ nsGfxButtonControlFrame::DoNavQuirksReflow(nsIPresContext*          aPresContext
   reflowState.mComputedHeight = desiredSize.height;
   // XXX Proper handling of incremental reflow...
   if (eReflowReason_Incremental == aReflowState.reason) {
-    nsIFrame* targetFrame;
+    // this lets me iterate through the reflow children; initialized
+    // from state within the reflowCommand
+    nsReflowTree::Node::Iterator reflowIterator(aReflowState.GetCurrentReflowNode());
+    // See if the reflow command is targeted at us
+    PRBool amTarget = reflowIterator.IsTarget();
 
-    // See if it's targeted at us
-    aReflowState.reflowCommand->GetTarget(targetFrame);
-    if (this == targetFrame) {
+    if (amTarget) {
       Invalidate(aPresContext, nsRect(0,0,mRect.width,mRect.height), PR_FALSE);
 
       nsReflowType  reflowType;
@@ -327,11 +329,14 @@ nsGfxButtonControlFrame::DoNavQuirksReflow(nsIPresContext*          aPresContext
       else {
         reflowState.reason = eReflowReason_Resize;
       }
+      // Assume that this will handle all children, cut off treewalk here
+      aReflowState.SetCurrentReflowNode(nsnull);
     } else {
-      nsIFrame* nextFrame;
-
-      // Remove the next frame from the reflow path
-      aReflowState.reflowCommand->GetNext(nextFrame);  
+      // Get the next frame in the reflow chain, and verify that it's our
+      // child frame (we have only one)
+      nsIFrame *childFrame;
+      aReflowState.SetCurrentReflowNode(reflowIterator.NextChild(&childFrame));
+      NS_ASSERTION(childFrame == firstKid, "Reflow GfxButtonFrame - wrong child");
     }
   }
 
