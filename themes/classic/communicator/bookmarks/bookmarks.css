@@ -29,7 +29,7 @@
     {
       list-style-image    : url("chrome://communicator/skin/bookmarks/bookmark-item.gif");
     }
- 
+
   .bookmark-item[container="true"]
     {
       list-style-image    : url("chrome://communicator/skin/bookmarks/bookmark-folder-closed.gif");
@@ -49,6 +49,33 @@
     {
       list-style-image    : url("chrome://communicator/skin/bookmarks/bookmark-item-updated.gif") ! important ;
     }
+
+  outlinerbody:-moz-outliner-image(Name)
+    {
+      padding-right       : 2px;
+      list-style-image    : url("chrome://communicator/skin/bookmarks/bookmark-item.gif");
+    }
+ 
+  outlinerbody:-moz-outliner-image(Name, container)
+    {
+      padding-right       : 2px;
+      list-style-image    : url("chrome://communicator/skin/bookmarks/bookmark-folder-closed.gif");
+    }
+
+  outlinerbody:-moz-outliner-image(Name, open)
+    {
+      padding-right       : 2px;
+      list-style-image    : url("chrome://communicator/skin/bookmarks/bookmark-folder-open.gif");
+    }
+
+  outlinerbody:-moz-outliner-image(Name, open, loading)
+    {
+      padding-right       : 2px;
+      list-style-image    : url("chrome://global/skin/loading.gif") ! important;
+    }
+
+  /* need to do status & file system objects */
+
 
 /**
  * XXX - need to create some different icons for file system objects
