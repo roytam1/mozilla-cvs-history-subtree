@@ -24,7 +24,7 @@
 /* Public Methods */
 
 nsWinRegItem::nsWinRegItem(nsWinReg* regObj, PRInt32 root, PRInt32 action, nsString sub, nsString valname, nsString val)
-: nsInstallObject(regObj->InstallObject())
+: nsInstallObject(regObj->installObject())
 {
 	reg     = regObj;
 	command = action;
@@ -55,19 +55,19 @@ PRInt32 nsWinRegItem::Complete()
   switch (command)
   {
     case NS_WIN_REG_CREATE:
-			reg->FinalCreateKey(rootkey, *subkey, *name, &aReturn);
+			reg->finalCreateKey(rootkey, *subkey, *name, &aReturn);
       break;
     case NS_WIN_REG_DELETE:
-      reg->FinalDeleteKey(rootkey, *subkey, &aReturn);
+      reg->finalDeleteKey(rootkey, *subkey, &aReturn);
       break;
     case NS_WIN_REG_DELETE_VAL:
-      reg->FinalDeleteValue(rootkey, *subkey, *name, &aReturn);
+      reg->finalDeleteValue(rootkey, *subkey, *name, &aReturn);
       break;
     case NS_WIN_REG_SET_VAL_STRING:
-      reg->FinalSetValueString(rootkey, *subkey, *name, *(nsString*)value, &aReturn);
+      reg->finalSetValueString(rootkey, *subkey, *name, *(nsString*)value, &aReturn);
       break;
     case NS_WIN_REG_SET_VAL:
-      reg->FinalSetValue(rootkey, *subkey, *name, (nsWinRegValue*)value, &aReturn);
+      reg->finalSetValue(rootkey, *subkey, *name, (nsWinRegValue*)value, &aReturn);
       break;
   }
 	return aReturn;

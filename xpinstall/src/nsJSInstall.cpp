@@ -1436,7 +1436,7 @@ WinRegSetRootKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
 
   if(argc >= 1)
   {
-    //  public int SetRootKey(PRInt32 key);
+    //  public int setRootKey(PRInt32 key);
 
     if(!JS_ValueToInt32(cx, argv[0], (int32 *)&b0))
     {
@@ -1444,7 +1444,7 @@ WinRegSetRootKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
       return JS_FALSE;
     }
 
-    if(NS_OK != nativeThis->SetRootKey(b0))
+    if(NS_OK != nativeThis->setRootKey(b0))
     {
       return JS_FALSE;
     }
@@ -1453,7 +1453,7 @@ WinRegSetRootKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
   }
   else
   {
-    JS_ReportError(cx, "Function SetRootKey requires 1 parameters");
+    JS_ReportError(cx, "Function setRootKey requires 1 parameter");
     return JS_FALSE;
   }
 
@@ -1482,13 +1482,13 @@ WinRegCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
 
   if(argc >= 2)                             
   {
-    //  public int CreateKey ( String subKey,
+    //  public int createKey ( String subKey,
     //                         String className);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->CreateKey(b0, b1, &nativeRet))
+    if(NS_OK != nativeThis->createKey(b0, b1, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1497,7 +1497,7 @@ WinRegCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
   }
   else
   {
-    JS_ReportError(cx, "WinReg.CreateKey() parameters error");
+    JS_ReportError(cx, "WinReg.createKey() parameters error");
     return JS_FALSE;
   }
 
@@ -1524,11 +1524,11 @@ WinRegDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
 
   if(argc >= 1)                             
   {
-    //  public int DeleteKey ( String subKey);
+    //  public int deleteKey ( String subKey);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
 
-    if(NS_OK != nativeThis->DeleteKey(b0, &nativeRet))
+    if(NS_OK != nativeThis->deleteKey(b0, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1537,7 +1537,7 @@ WinRegDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rv
   }
   else
   {
-    JS_ReportError(cx, "WinReg.DeleteKey() parameters error");
+    JS_ReportError(cx, "WinReg.deleteKey() parameters error");
     return JS_FALSE;
   }
 
@@ -1566,13 +1566,13 @@ WinRegDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 
   if(argc >= 2)                             
   {
-    //  public int DeleteValue ( String subKey,
+    //  public int deleteValue ( String subKey,
     //                           String valueName);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->DeleteValue(b0, b1, &nativeRet))
+    if(NS_OK != nativeThis->deleteValue(b0, b1, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1581,7 +1581,7 @@ WinRegDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
   }
   else
   {
-    JS_ReportError(cx, "WinReg.DeleteValue() parameters error");
+    JS_ReportError(cx, "WinReg.deleteValue() parameters error");
     return JS_FALSE;
   }
 
@@ -1610,7 +1610,7 @@ WinRegSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 
   if(argc >= 3)
   {
-    //  public int SetValueString ( String subKey,
+    //  public int setValueString ( String subKey,
     //                              String valueName,
     //                              String value);
 
@@ -1618,7 +1618,7 @@ WinRegSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
 
-    if(NS_OK != nativeThis->SetValueString(b0, b1, b2, &nativeRet))
+    if(NS_OK != nativeThis->setValueString(b0, b1, b2, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1627,7 +1627,7 @@ WinRegSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
   }
   else
   {
-    JS_ReportError(cx, "WinReg.SetValueString() parameters error");
+    JS_ReportError(cx, "WinReg.setValueString() parameters error");
     return JS_FALSE;
   }
 
@@ -1655,13 +1655,13 @@ WinRegGetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 
   if(argc >= 2)                             
   {
-    //  public int GetValueString ( String subKey,
+    //  public int getValueString ( String subKey,
     //                              String valueName);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->GetValueString(b0, b1, &nativeRet))
+    if(NS_OK != nativeThis->getValueString(b0, b1, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1670,7 +1670,7 @@ WinRegGetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
   }
   else
   {
-    JS_ReportError(cx, "WinReg.GetValueString() parameters error");
+    JS_ReportError(cx, "WinReg.getValueString() parameters error");
     return JS_FALSE;
   }
 
@@ -1699,7 +1699,7 @@ WinRegSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 
   if(argc >= 3)
   {
-    //  public int SetValue ( String        subKey,
+    //  public int setValue ( String        subKey,
     //                        String        valueName,
     //                        nsWinRegItem  *value);
 
@@ -1710,7 +1710,7 @@ WinRegSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
     // A way needs to be figured out to convert the JSVAL to this object type
 //    nsCvrtJSValToStr(b2, cx, argv[2]);
 
-//    if(NS_OK != nativeThis->SetValue(b0, b1, b2, &nativeRet))
+//    if(NS_OK != nativeThis->setValue(b0, b1, b2, &nativeRet))
 //    {
 //      return JS_FALSE;
 //    }
@@ -1719,7 +1719,7 @@ WinRegSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
   }
   else
   {
-    JS_ReportError(cx, "WinReg.SetValue() parameters error");
+    JS_ReportError(cx, "WinReg.setValue() parameters error");
     return JS_FALSE;
   }
 
@@ -1747,13 +1747,13 @@ WinRegGetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 
   if(argc >= 2)                             
   {
-    //  public int GetValue ( String subKey,
+    //  public int getValue ( String subKey,
     //                        String valueName);
 
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->GetValue(b0, b1, &nativeRet))
+    if(NS_OK != nativeThis->getValue(b0, b1, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1762,7 +1762,7 @@ WinRegGetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
   }
   else
   {
-    JS_ReportError(cx, "WinReg.GetValue() parameters error");
+    JS_ReportError(cx, "WinReg.getValue() parameters error");
     return JS_FALSE;
   }
 
@@ -1788,9 +1788,9 @@ WinRegInstallObject(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
   }
 
-  //  public int InstallObject ();
+  //  public int installObject ();
 
-  nativeRet = nativeThis->InstallObject();
+  nativeRet = nativeThis->installObject();
 
   *rval = INT_TO_JSVAL(nativeRet);
   return JS_TRUE;
@@ -1818,7 +1818,7 @@ WinRegFinalCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 
   if(argc >= 3)
   {
-    //  public int FinalCreateKey ( PRInt32 root,
+    //  public int finalCreateKey ( PRInt32 root,
     //                              String  subKey,
     //                              String  className);
 
@@ -1831,7 +1831,7 @@ WinRegFinalCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
 
-    if(NS_OK != nativeThis->FinalCreateKey(b0, b1, b2, &nativeRet))
+    if(NS_OK != nativeThis->finalCreateKey(b0, b1, b2, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1840,7 +1840,7 @@ WinRegFinalCreateKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
   }
   else
   {
-    JS_ReportError(cx, "WinReg.FinalCreateKey() parameters error");
+    JS_ReportError(cx, "WinReg.finalCreateKey() parameters error");
     return JS_FALSE;
   }
 
@@ -1869,7 +1869,7 @@ WinRegFinalDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 
   if(argc >= 3)
   {
-    //  public int FinalDeleteKey ( PRInt32 root,
+    //  public int finalDeleteKey ( PRInt32 root,
     //                              String  subKey);
 
     if(!JS_ValueToInt32(cx, argv[0], (int32 *)&b0))
@@ -1880,7 +1880,7 @@ WinRegFinalDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 
     nsCvrtJSValToStr(b1, cx, argv[1]);
 
-    if(NS_OK != nativeThis->FinalDeleteKey(b0, b1, &nativeRet))
+    if(NS_OK != nativeThis->finalDeleteKey(b0, b1, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1889,7 +1889,7 @@ WinRegFinalDeleteKey(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
   }
   else
   {
-    JS_ReportError(cx, "WinReg.FinalDeleteKey() parameters error");
+    JS_ReportError(cx, "WinReg.finalDeleteKey() parameters error");
     return JS_FALSE;
   }
 
@@ -1918,7 +1918,7 @@ WinRegFinalDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 
   if(argc >= 3)
   {
-    //  public int FinalDeleteValue ( PRInt32 root,
+    //  public int finalDeleteValue ( PRInt32 root,
     //                                String  subKey,
     //                                String  className);
 
@@ -1931,7 +1931,7 @@ WinRegFinalDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
     nsCvrtJSValToStr(b1, cx, argv[1]);
     nsCvrtJSValToStr(b2, cx, argv[2]);
 
-    if(NS_OK != nativeThis->FinalDeleteValue(b0, b1, b2, &nativeRet))
+    if(NS_OK != nativeThis->finalDeleteValue(b0, b1, b2, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1940,7 +1940,7 @@ WinRegFinalDeleteValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
   }
   else
   {
-    JS_ReportError(cx, "WinReg.FinalDeleteValue() parameters error");
+    JS_ReportError(cx, "WinReg.finalDeleteValue() parameters error");
     return JS_FALSE;
   }
 
@@ -1970,7 +1970,7 @@ WinRegFinalSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
   if(argc >= 3)
   {
-    //  public int FinalSetValueString ( PRInt32 root,
+    //  public int finalSetValueString ( PRInt32 root,
     //                                   String  subKey,
     //                                   String  valueName,
     //                                   String  value);
@@ -1985,7 +1985,7 @@ WinRegFinalSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
 
-    if(NS_OK != nativeThis->FinalSetValueString(b0, b1, b2, b3, &nativeRet))
+    if(NS_OK != nativeThis->finalSetValueString(b0, b1, b2, b3, &nativeRet))
     {
       return JS_FALSE;
     }
@@ -1994,7 +1994,7 @@ WinRegFinalSetValueString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   }
   else
   {
-    JS_ReportError(cx, "WinReg.FinalSetValueString() parameters error");
+    JS_ReportError(cx, "WinReg.finalSetValueString() parameters error");
     return JS_FALSE;
   }
 
@@ -2024,7 +2024,7 @@ WinRegFinalSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 
   if(argc >= 3)
   {
-    //  public int FinalSetValue ( PRInt32      root,
+    //  public int finalSetValue ( PRInt32      root,
     //                             String       subKey,
     //                             String       valueName);
     //                             nsWinRegItem *value);
@@ -2042,7 +2042,7 @@ WinRegFinalSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     // A way need to be figured out to convert the JSVAL to this object type
 //    nsCvrtJSValToStr(b3, cx, argv[3]);
 
-//    if(NS_OK != nativeThis->FinalSetValue(b0, b1, b2, b3, &nativeRet))
+//    if(NS_OK != nativeThis->finalSetValue(b0, b1, b2, b3, &nativeRet))
 //    {
 //      return JS_FALSE;
 //    }
@@ -2051,7 +2051,7 @@ WinRegFinalSetValue(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   }
   else
   {
-    JS_ReportError(cx, "WinReg.FinalSetValue() parameters error");
+    JS_ReportError(cx, "WinReg.finalSetValue() parameters error");
     return JS_FALSE;
   }
 

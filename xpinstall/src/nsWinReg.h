@@ -61,24 +61,25 @@ class nsWinReg
     /* Public Fields */
 
     /* Public Methods */
+
                       nsWinReg(nsInstall* suObj);
-    PRInt32           SetRootKey(PRInt32 key);
-    PRInt32           CreateKey(nsString subkey, nsString classname, PRInt32* aReturn);
-    PRInt32           DeleteKey(nsString subkey, PRInt32* aReturn);
-    PRInt32           DeleteValue(nsString subkey, nsString valname, PRInt32* aReturn);
-    PRInt32           SetValueString(nsString subkey, nsString valname, nsString value, PRInt32* aReturn);
-    PRInt32           GetValueString(nsString subkey, nsString valname, nsString** aReturn);
-    PRInt32           SetValue(nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn);
-    PRInt32           GetValue(nsString subkey, nsString valname, nsWinRegValue** aReturn);
-    nsInstall*        InstallObject(void);
 
-    PRInt32           FinalCreateKey(PRInt32 root, nsString subkey, nsString classname, PRInt32* aReturn);
+    PRInt32           setRootKey(PRInt32 key);
+    PRInt32           createKey(nsString subkey, nsString classname, PRInt32* aReturn);
+    PRInt32           deleteKey(nsString subkey, PRInt32* aReturn);
+    PRInt32           deleteValue(nsString subkey, nsString valname, PRInt32* aReturn);
+    PRInt32           setValueString(nsString subkey, nsString valname, nsString value, PRInt32* aReturn);
+    PRInt32           getValueString(nsString subkey, nsString valname, nsString** aReturn);
+    PRInt32           setValue(nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn);
+    PRInt32           getValue(nsString subkey, nsString valname, nsWinRegValue** aReturn);
 
-    PRInt32           FinalDeleteKey(PRInt32 root, nsString subkey, PRInt32* aReturn);
+    nsInstall*        installObject(void);
 
-    PRInt32           FinalDeleteValue(PRInt32 root, nsString subkey, nsString valname, PRInt32* aReturn);
-    PRInt32           FinalSetValueString(PRInt32 root, nsString subkey, nsString valname, nsString value, PRInt32* aReturn);
-    PRInt32           FinalSetValue(PRInt32 root, nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn);
+    PRInt32           finalCreateKey(PRInt32 root, nsString subkey, nsString classname, PRInt32* aReturn);
+    PRInt32           finalDeleteKey(PRInt32 root, nsString subkey, PRInt32* aReturn);
+    PRInt32           finalDeleteValue(PRInt32 root, nsString subkey, nsString valname, PRInt32* aReturn);
+    PRInt32           finalSetValueString(PRInt32 root, nsString subkey, nsString valname, nsString value, PRInt32* aReturn);
+    PRInt32           finalSetValue(PRInt32 root, nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn);
 
     
   private:

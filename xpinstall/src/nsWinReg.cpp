@@ -37,14 +37,14 @@ nsWinReg::nsWinReg(nsInstall* suObj)
 }
 
 PRInt32
-nsWinReg::SetRootKey(PRInt32 key)
+nsWinReg::setRootKey(PRInt32 key)
 {
 	rootkey = key;
   return NS_OK;
 }
   
 PRInt32
-nsWinReg::CreateKey(nsString subkey, nsString classname, PRInt32* aReturn)
+nsWinReg::createKey(nsString subkey, nsString classname, PRInt32* aReturn)
 {
 //	resolvePrivileges();
 
@@ -60,7 +60,7 @@ nsWinReg::CreateKey(nsString subkey, nsString classname, PRInt32* aReturn)
 }
   
 PRInt32
-nsWinReg::DeleteKey(nsString subkey, PRInt32* aReturn)
+nsWinReg::deleteKey(nsString subkey, PRInt32* aReturn)
 {
 //	resolvePrivileges();
 
@@ -76,7 +76,7 @@ nsWinReg::DeleteKey(nsString subkey, PRInt32* aReturn)
 }
 
 PRInt32
-nsWinReg::DeleteValue(nsString subkey, nsString valname, PRInt32* aReturn)
+nsWinReg::deleteValue(nsString subkey, nsString valname, PRInt32* aReturn)
 {
 //	resolvePrivileges();
 
@@ -92,7 +92,7 @@ nsWinReg::DeleteValue(nsString subkey, nsString valname, PRInt32* aReturn)
 }
 
 PRInt32
-nsWinReg::SetValueString(nsString subkey, nsString valname, nsString value, PRInt32* aReturn)
+nsWinReg::setValueString(nsString subkey, nsString valname, nsString value, PRInt32* aReturn)
 {
 //	resolvePrivileges();
 
@@ -108,7 +108,7 @@ nsWinReg::SetValueString(nsString subkey, nsString valname, nsString value, PRIn
 }
 
 PRInt32
-nsWinReg::GetValueString(nsString subkey, nsString valname, nsString** aReturn)
+nsWinReg::getValueString(nsString subkey, nsString valname, nsString** aReturn)
 {
 //	resolvePrivileges();
 
@@ -117,7 +117,7 @@ nsWinReg::GetValueString(nsString subkey, nsString valname, nsString** aReturn)
 }
   
 PRInt32
-nsWinReg::SetValue(nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn)
+nsWinReg::setValue(nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn)
 {
 //	resolvePrivileges();
 
@@ -134,7 +134,7 @@ nsWinReg::SetValue(nsString subkey, nsString valname, nsWinRegValue* value, PRIn
 }
   
 PRInt32
-nsWinReg::GetValue(nsString subkey, nsString valname, nsWinRegValue** aReturn)
+nsWinReg::getValue(nsString subkey, nsString valname, nsWinRegValue** aReturn)
 {
 //	resolvePrivileges();
 
@@ -142,47 +142,47 @@ nsWinReg::GetValue(nsString subkey, nsString valname, nsWinRegValue** aReturn)
   return NS_OK;
 }
   
-nsInstall* nsWinReg::InstallObject()
+nsInstall* nsWinReg::installObject()
 {
 	return su;
 }
   
 PRInt32
-nsWinReg::FinalCreateKey(PRInt32 root, nsString subkey, nsString classname, PRInt32* aReturn)
+nsWinReg::finalCreateKey(PRInt32 root, nsString subkey, nsString classname, PRInt32* aReturn)
 {
-	SetRootKey(root);
+	setRootKey(root);
 	*aReturn = nativeCreateKey(subkey, classname);
   return NS_OK;
 }
   
 PRInt32
-nsWinReg::FinalDeleteKey(PRInt32 root, nsString subkey, PRInt32* aReturn)
+nsWinReg::finalDeleteKey(PRInt32 root, nsString subkey, PRInt32* aReturn)
 {
-	SetRootKey(root);
+	setRootKey(root);
 	*aReturn = nativeDeleteKey(subkey);
   return NS_OK;
 }
   
 PRInt32
-nsWinReg::FinalDeleteValue(PRInt32 root, nsString subkey, nsString valname, PRInt32* aReturn)
+nsWinReg::finalDeleteValue(PRInt32 root, nsString subkey, nsString valname, PRInt32* aReturn)
 {
-	SetRootKey(root);
+	setRootKey(root);
 	*aReturn = nativeDeleteValue(subkey, valname);
   return NS_OK;
 }
   
 PRInt32 
-nsWinReg::FinalSetValueString(PRInt32 root, nsString subkey, nsString valname, nsString value, PRInt32* aReturn)
+nsWinReg::finalSetValueString(PRInt32 root, nsString subkey, nsString valname, nsString value, PRInt32* aReturn)
 {
-	SetRootKey(root);
+	setRootKey(root);
 	*aReturn = nativeSetValueString(subkey, valname, value);
   return NS_OK;
 }
  
 PRInt32
-nsWinReg::FinalSetValue(PRInt32 root, nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn)
+nsWinReg::finalSetValue(PRInt32 root, nsString subkey, nsString valname, nsWinRegValue* value, PRInt32* aReturn)
 {
-	SetRootKey(root);
+	setRootKey(root);
 	*aReturn = nativeSetValue(subkey, valname, value);
   return NS_OK;
 }
