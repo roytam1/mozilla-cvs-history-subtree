@@ -40,7 +40,9 @@ require Exporter;
 			   encodeBase64
 			   decodeBase64
 			   str2Scope
-			   ldapArgs)]
+			   askPassword
+			   ldapArgs
+			   unixCrypt)]
 		);
 
 
@@ -225,4 +227,19 @@ sub ldapArgs
     }
 
   return %ld;
+}
+
+
+#################################################################################
+# Create a Unix-type password, using the "crypt" function. A random salt
+# is always generated, perhaps it should be an optional argument?
+#
+sub unixCrypt
+{
+   my $ascii =
+      "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+   my $salt = substr($ascii, rand(62), 1) . substr($ascii, rand(62), 1);
+
+   srand(time ^ $$);
+   crypt($_[0], $salt);
 }
