@@ -958,6 +958,7 @@ ProfileNameChangedFunc(const char *pref, void *data)
 	return FALSE;
 }
 
+#ifdef NEW_PREF_ARCH
 int login_NewProfilePreInit() {
     /* There's still some wacky stuff that the WinFE needs to do that
        hasn't been rolled into the new profile/preference management.  This is
@@ -985,7 +986,6 @@ int login_NewProfilePreInit() {
     return 0;
 }
 
-#ifdef NEW_PREF_ARCH
 
 int login_NewProfilePostInit(CProfile *pProfile) {
     /* There's still some wacky stuff that the WinFE needs to do that
