@@ -112,7 +112,7 @@ dnl =
 dnl = Check options that may affect the compiler
 dnl =
 dnl ========================================================
-dist_prefix='${MOD_DEPTH}/dist'
+dist_prefix='${MOD_DEPTH}/../../dist'
 dist_bindir='${dist_prefix}/bin'
 dist_libdir='${dist_prefix}/lib'
 
@@ -1172,6 +1172,7 @@ case "$target" in
 *-mingw*|*-cygwin*|*-msvc*|*-mksnt*)
     AC_DEFINE(XP_PC)
     AC_DEFINE(WIN32)
+    AC_DEFINE(_WINDOWS)
     PR_MD_ARCH_DIR=windows
     RESOLVE_LINK_SYMBOLS=1
 
@@ -1192,6 +1193,7 @@ case "$target" in
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
 	    DLL_SUFFIX=dll
+        PROG_SUFFIX=.exe
         
         CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
 
@@ -2242,6 +2244,7 @@ AC_SUBST(OBJ_SUFFIX)
 AC_SUBST(LIB_SUFFIX)
 AC_SUBST(DLL_SUFFIX)
 AC_SUBST(ASM_SUFFIX)
+AC_SUBST(PROG_SUFFIX)
 AC_SUBST(MKSHLIB)
 AC_SUBST(DSO_CFLAGS)
 AC_SUBST(DSO_LDOPTS)

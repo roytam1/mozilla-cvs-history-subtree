@@ -70,8 +70,6 @@ NOMD_CFLAGS	= $(CC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
 NOMD_CCFLAGS	= $(CCC_ONLY_FLAGS) $(OPTIMIZER) $(NOMD_OS_CFLAGS)\
 		  $(XP_DEFINE) $(DEFINES) $(INCLUDES) $(XCFLAGS)
 
-NSINSTALL	= $(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall
-
 ifeq ($(NSDISTMODE),copy)
 # copy files, but preserve source mtime
 INSTALL		= $(NSINSTALL) -t

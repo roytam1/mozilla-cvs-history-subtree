@@ -81,4 +81,4 @@ $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
 install::	$(LIBLDIF)
-	$(INSTALL) -m 444 $(LIBLDIF) $(INSTALLDIR)/lib
+	$(INSTALL) -m 444 $(LIBLDIF) $(dist_libdir)

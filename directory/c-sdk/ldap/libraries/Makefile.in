@@ -29,7 +29,7 @@ include $(MOD_DEPTH)/config/autoconf.mk
 DIRS		= liblber libldif libiutil libldap libprldap libssldap
 
 ifeq ($(OS_ARCH),WINNT)
-DIRS		+= libutil 
+DIRS		+= libutil
 endif
 
 all:: export install

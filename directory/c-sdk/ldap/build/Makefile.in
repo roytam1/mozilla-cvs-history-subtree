@@ -28,13 +28,13 @@ include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
 
 CSRCS	= dirver.c
-PROGRAM = dirver$(BIN_SUFFIX)
+PROGRAM = dirver$(PROG_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
 
 
 export:: $(PROGRAM)
-	$(INSTALL) -m 555 $(PROGRAM) $(DIST)/bin
+	$(INSTALL) -m 555 $(PROGRAM) $(dist_bindir)
 
 install:: export
 
