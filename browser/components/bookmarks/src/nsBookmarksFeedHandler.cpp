@@ -540,8 +540,10 @@ nsFeedLoadListener::FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNod
         if (nodeType == nsIDOMNode::TEXT_NODE)
             break;
 
-        rv = childNode->GetNextSibling(getter_AddRefs(childNode));
+        nsCOMPtr<nsIDOMNode> temp;
+        rv = childNode->GetNextSibling(getter_AddRefs(temp));
         if (NS_FAILED(rv)) return rv;
+        childNode = temp;
     } while (childNode);
 
     if (nodeType == nsIDOMNode::TEXT_NODE) {
@@ -637,9 +639,11 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
             if (!lookingForChannel) {
                 if (nname.Equals(NS_LITERAL_STRING("rss"))) {
                     lookingForChannel = PR_TRUE;
-                    rv = node->GetFirstChild(getter_AddRefs(node));
-                    if (!node) return NS_ERROR_UNEXPECTED;
+                    nsCOMPtr<nsIDOMNode> temp;
+                    rv = node->GetFirstChild(getter_AddRefs(temp));
+                    if (!temp) return NS_ERROR_UNEXPECTED;
                     if (NS_FAILED(rv)) return rv;
+                    node = temp;
                     continue;
                 }
                 if (nname.Equals(NS_LITERAL_STRING("feed"))) {
@@ -655,9 +659,11 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
             }
         }
 
-        rv = node->GetNextSibling(getter_AddRefs(node));
-        if (!node) return NS_ERROR_UNEXPECTED;
+        nsCOMPtr<nsIDOMNode> temp;
+        rv = node->GetNextSibling(getter_AddRefs(temp));
+        if (!temp) return NS_ERROR_UNEXPECTED;
         if (NS_FAILED(rv)) return rv;
+        node = temp;
     }
 
     // we didn't find a rss/feed/channel or whatever
@@ -737,7 +743,9 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                     if (!titleStr.IsEmpty() && !linkStr.IsEmpty())
                         break;
 
-                    rv = childNode->GetNextSibling(getter_AddRefs(childNode));
+                    nsCOMPtr<nsIDOMNode> temp;
+                    rv = childNode->GetNextSibling(getter_AddRefs(temp));
+                    childNode = temp;
                     if (!childNode || NS_FAILED(rv)) break;
                 }
 
@@ -756,8 +764,10 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
             }
         }
 
-        rv = node->GetNextSibling(getter_AddRefs(node));
+        nsCOMPtr<nsIDOMNode> temp;
+        rv = node->GetNextSibling(getter_AddRefs(temp));
         if (NS_FAILED(rv)) return rv;
+        node = temp;
     }
 
 
