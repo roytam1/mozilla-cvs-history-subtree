@@ -44,6 +44,11 @@ const char **DIR_GetAttributeStrings (DIR_Server *server, DIR_AttributeId id)
   return 0 ;
 }
 
+const char *DIR_GetFirstAttributeString (DIR_Server *server, DIR_AttributeId id)
+{
+  return 0 ;
+}
+
 #else
 
 #ifndef MOZADDRSTANDALONE
