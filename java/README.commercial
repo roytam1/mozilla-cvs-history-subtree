@@ -72,6 +72,8 @@ RUN INSTRUCTIONS
 PLUGLETS 
 - Launch the browser using the shell script "netscape_pluglets"
 - Navigate to the url file:///<your_Netscape6_install_dir>/res/javadev/pluglets/test.html
+- If you wish to observe Mozilla debug messages on your shell prompt, launch Pluglets
+  using the script "netscape_debug_pluglets"
   
 This contains several Pluglet examples.
 
