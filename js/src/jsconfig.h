@@ -69,7 +69,6 @@
 #define JS_HAS_ARGS_OBJECT      0       /* has minimal ECMA arguments object */
 #define JS_HAS_DEBUGGER_KEYWORD 0       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
-#define JS_HAS_FDLIBM_MATH      0       /* use fdlibm math library */
 
 #elif JS_VERSION == 110
 
@@ -117,7 +116,6 @@
 #define JS_HAS_ARGS_OBJECT      0       /* has minimal ECMA arguments object */
 #define JS_HAS_DEBUGGER_KEYWORD 0       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
-#define JS_HAS_FDLIBM_MATH      0       /* use fdlibm math library */
 
 #elif JS_VERSION == 120
 
@@ -165,7 +163,6 @@
 #define JS_HAS_ARGS_OBJECT      0       /* has minimal ECMA arguments object */
 #define JS_HAS_DEBUGGER_KEYWORD 0       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
-#define JS_HAS_FDLIBM_MATH      0       /* use fdlibm math library */
 
 #elif JS_VERSION == 130
 
@@ -213,7 +210,6 @@
 #define JS_HAS_ARGS_OBJECT      1       /* has minimal ECMA arguments object */
 #define JS_HAS_DEBUGGER_KEYWORD 1       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 0       /* has error object hierarchy */
-#define JS_HAS_FDLIBM_MATH      0       /* use fdlibm math library */
 
 #elif JS_VERSION == 140
 
@@ -261,7 +257,6 @@
 #define JS_HAS_ARGS_OBJECT      1       /* has minimal ECMA arguments object */
 #define JS_HAS_DEBUGGER_KEYWORD 1       /* has hook for debugger keyword */
 #define JS_HAS_ERROR_EXCEPTIONS 1       /* rt errors reflected as exceptions */
-#define JS_HAS_FDLIBM_MATH      1       /* use fdlibm math library */
 
 #define JS_HAS_DFLT_MSG_STRINGS 1       /* provides English error messages */
 

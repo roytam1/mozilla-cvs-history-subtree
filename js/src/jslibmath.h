@@ -27,6 +27,12 @@
 #include <math.h>
 #include "jsconfig.h"
 
+#ifdef XP_MAC
+#define JS_HAS_FDLIBM_MATH 0
+#else
+#define JS_HAS_FDLIBM_MATH 1
+#endif
+
 #if !JS_HAS_FDLIBM_MATH
 
 /*
