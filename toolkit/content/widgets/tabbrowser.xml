@@ -1010,6 +1010,11 @@
 
             var l = this.mTabContainer.childNodes.length;
             if (l == 1) {
+              if (!this.mPrefs.getBoolPref("browser.tabs.autoHide")) {
+                // blank the tab
+                this.loadURI("about:blank");
+                return;
+              }
               // hide the tab bar
               this.mPrefs.setBoolPref("browser.tabs.forceHide", true);
               this.setStripVisibilityTo(false);
