@@ -6277,8 +6277,7 @@ HT_Properties (HT_Resource node)
 
 		/* dynamic property lookup */
 
-		if ((c = RDF_GetTargets(node->view->pane->db, node->node, gCoreVocab->RDF_slotsHere,
-					RDF_RESOURCE_TYPE, 1)) != NULL)
+		if ((c = RDF_ArcLabelsOut (node->view->pane->db, node->node)) != NULL)
 		{
 			while ((r = RDF_NextValue(c)) != NULL)
 			{

@@ -376,7 +376,7 @@ remoteStoreArcLabelsIn (RDFT mcf, RDF_Resource u)
   if (u->rarg2) {
     RDF_Cursor c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct));
     c->u = u;
-    c->type = RDF_ARC_LABELS_IN_QUERY;
+    c->queryType = RDF_ARC_LABELS_IN_QUERY;
     c->pdata = u->rarg2;
     return c;
   } else return NULL;
@@ -390,8 +390,8 @@ remoteStoreArcLabelsOut (RDFT mcf, RDF_Resource u)
   if (u->rarg1) {
     RDF_Cursor c = (RDF_Cursor)getMem(sizeof(struct RDF_CursorStruct));
     c->u = u;
-    c->type = RDF_ARC_LABELS_OUT_QUERY;
-    c->pdata = u->rarg2;
+    c->queryType = RDF_ARC_LABELS_OUT_QUERY;
+    c->pdata = u->rarg1;
     return c;
   } else return NULL;
 }
