@@ -9,6 +9,8 @@
   locale/messenger/h2.png                                       (@AB_CD@/chrome/messenger/h2.png)
   locale/messenger/back.png                                     (@AB_CD@/chrome/messenger/back.png)
   locale/messenger/aboutDialog.dtd                              (@AB_CD@/chrome/messenger/aboutDialog.dtd)
+  locale/messenger/virtualFolderProperties.dtd                  (@AB_CD@/chrome/messenger/virtualFolderProperties.dtd)
+  locale/messenger/virtualFolderListDialog.dtd                  (@AB_CD@/chrome/messenger/virtualFolderListDialog.dtd)
   locale/messenger/junkMail.dtd                                 (@AB_CD@/chrome/messenger/junkMail.dtd)
   locale/messenger/mailOverlay.dtd                              (@AB_CD@/chrome/messenger/mailOverlay.dtd)
   locale/messenger/messenger.dtd                                (@AB_CD@/chrome/messenger/messenger.dtd)
