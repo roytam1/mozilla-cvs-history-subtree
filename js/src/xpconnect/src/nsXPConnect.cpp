@@ -43,7 +43,6 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPConnect,nsIXPConnect,nsISupportsWeakReference)
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool       nsXPConnect::gOnceAliveNowDead = JS_FALSE;
 PRThread*    nsXPConnect::gMainThread = nsnull;
-nsXPConnect::XPCIDispatchExtension* nsXPConnect::mIDispatchExtension = nsnull;
 
 const char XPC_CONTEXT_STACK_CONTRACTID[] = "@mozilla.org/js/xpc/ContextStack;1";
 const char XPC_RUNTIME_CONTRACTID[]       = "@mozilla.org/js/xpc/RuntimeService;1";
@@ -222,7 +221,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
         {
             FILE* oldFileHandle = js_DumpGCHeap;
             js_DumpGCHeap = stdout;
-            js_GC(ccx);
+            JS_GC(ccx);
             js_DumpGCHeap = oldFileHandle;
         }
 #endif
@@ -395,31 +394,13 @@ static nsresult FindInfo(InfoTester tester, const void* data,
 nsresult
 nsXPConnect::GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info)
 {
-    nsresult rv = FindInfo(IIDTester, aIID, mInterfaceInfoManager, info);
-    // See if we were looking up info on IDispatch, if so, return our
-    // specialized interface info
-#ifdef XPC_IDISPATCH_SUPPORT
-    if(NS_FAILED(rv))
-    {
-        return mIDispatchExtension->GetInfoForIID(*aIID, info);
-    }
-#endif
-    return rv;
+    return FindInfo(IIDTester, aIID, mInterfaceInfoManager, info);
 }
 
 nsresult
 nsXPConnect::GetInfoForName(const char * name, nsIInterfaceInfo** info)
 {
-    nsresult rv = FindInfo(NameTester, name, mInterfaceInfoManager, info);
-    // See if we were looking up info on IDispatch, if so, return our
-    // specialized interface info
-#ifdef XPC_IDISPATCH_SUPPORT
-    if(NS_FAILED(rv))
-    {
-        return mIDispatchExtension->GetInfoForName(name, info);
-    }
-#endif
-    return rv;
+    return FindInfo(NameTester, name, mInterfaceInfoManager, info);
 }
 
 /***************************************************************************/
@@ -461,14 +442,8 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
 #ifdef XPC_IDISPATCH_SUPPORT
-    // Add IDispatch support objects
-    if(!mIDispatchExtension)
-    {
-        mIDispatchExtension = new XPCIDispatchExtension;
-        if (!mIDispatchExtension)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
-    mIDispatchExtension->Initialize(ccx, aGlobalJSObj);
+    // Initialize any properties IDispatch needs on the global object
+    XPCIDispatchExtension::Initialize(ccx, aGlobalJSObj);
 #endif
     return NS_OK;
 }

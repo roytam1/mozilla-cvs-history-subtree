@@ -227,10 +227,6 @@ XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
     return JS_TRUE;
 }
 
-/******************************************************************************
- * IDispatch callbacks
- */
-
 /***************************************************************************/
 
 // This is our shared function to define properties on our JSObjects.
@@ -259,6 +255,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     JSBool found;
     const char* name;
     jsid id;
+
     if(set)
     {
         if(iface)
@@ -271,9 +268,6 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     if(!found)
     {
-        AutoMarkingNativeInterfacePtr iface2(ccx);
-        XPCWrappedNativeTearOff* to;
-        JSObject* jso;
         HANDLE_POSSIBLE_NAME_CASE_ERROR(ccx, set, iface, idval);
 
         if(reflectToStringAndToSource)
@@ -322,26 +316,29 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
         if(wrapperToReflectInterfaceNames)
         {
-            if(JSVAL_IS_STRING(idval) &&
-               nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))))
-            {
-                if((iface2 = XPCNativeInterface::GetNewOrUsed(ccx, name), iface2) &&
-                    nsnull != (to = wrapperToReflectInterfaceNames->
-                                        FindTearOff(ccx, iface2, JS_TRUE)) &&
-                    nsnull != (jso = to->GetJSObject()))
+            AutoMarkingNativeInterfacePtr iface2(ccx);
+            XPCWrappedNativeTearOff* to;
+            JSObject* jso;
 
-                {
-                    AutoResolveName arn(ccx, idval);
-                    if(resolved)
-                        *resolved = JS_TRUE;
-                    return JS_ValueToId(ccx, idval, &id) &&
-                           OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
-                                               nsnull, nsnull,
-                                               propFlags & ~JSPROP_ENUMERATE,
-                                               nsnull);
-                }
+            if(JSVAL_IS_STRING(idval) &&
+               nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
+               (iface2 = XPCNativeInterface::GetNewOrUsed(ccx, name), iface2) &&
+               nsnull != (to = wrapperToReflectInterfaceNames->
+                                    FindTearOff(ccx, iface2, JS_TRUE)) &&
+               nsnull != (jso = to->GetJSObject()))
+
+            {
+                AutoResolveName arn(ccx, idval);
+                if(resolved)
+                    *resolved = JS_TRUE;
+                return JS_ValueToId(ccx, idval, &id) &&
+                       OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
+                                           nsnull, nsnull,
+                                           propFlags & ~JSPROP_ENUMERATE,
+                                           nsnull);
             }
         }
+
         // This *might* be a double wrapped JSObject
         if(wrapperToReflectDoubleWrap &&
            idval == rt->GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT) &&
@@ -378,15 +375,15 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
 #ifdef XPC_IDISPATCH_SUPPORT
         // Check to see if there's an IDispatch tearoff     
-        if(nsXPConnect::IsIDispatchSupported() &&
-                wrapperToReflectInterfaceNames &&
-                nsXPConnect::GetIDispatchExtension()->DefineProperty(ccx, obj, 
-                    idval, wrapperToReflectInterfaceNames, propFlags, resolved))
+        if(wrapperToReflectInterfaceNames &&
+            nsXPConnect::IsIDispatchEnabled() &&
+            XPCIDispatchExtension::DefineProperty(ccx, obj, 
+                idval, wrapperToReflectInterfaceNames, propFlags, resolved))
             return JS_TRUE;
 #endif
-        else
-            if(resolved)
-                *resolved = JS_FALSE;
+        
+        if(resolved)
+            *resolved = JS_FALSE;
         return JS_TRUE;
     }
 
@@ -417,7 +414,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         return JS_TRUE;
     }
 
-    if(member && member->IsConstant())
+    if(member->IsConstant())
     {
         jsval val;
         AutoResolveName arn(ccx, idval);
@@ -435,11 +432,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         propFlags &= ~JSPROP_ENUMERATE;
 
     jsval funval;
-    if(member)
-    {
-        if(!member->GetValue(ccx, iface, &funval))
-            return JS_FALSE;
-    }
+    if(!member->GetValue(ccx, iface, &funval))
+        return JS_FALSE;
+
     JSObject* funobj = JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval), obj);
     if(!funobj)
         return JS_FALSE;
@@ -452,7 +447,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     }
 #endif
 
-    if(member && member->IsMethod())
+    if(member->IsMethod())
     {
         AutoResolveName arn(ccx, idval);
         if(resolved)
@@ -464,9 +459,10 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     // else...
 
-    NS_ASSERTION(!member || member->IsAttribute(), "way broken!");
+    NS_ASSERTION(member->IsAttribute(), "way broken!");
+
     propFlags |= JSPROP_GETTER | JSPROP_SHARED;
-    if(member && member->IsWritableAttribute())
+    if(member->IsWritableAttribute())
     {
         propFlags |= JSPROP_SETTER;
         propFlags &= ~JSPROP_READONLY;
@@ -595,7 +591,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 
     PRUint16 interface_count = set->GetInterfaceCount();
     XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
-    for(PRUint32 i = 0; i < interface_count; i++)
+    for(PRUint16 i = 0; i < interface_count; i++)
     {
         XPCNativeInterface* interface = interfaceArray[i];
         PRUint16 member_count = interface->GetMemberCount();
@@ -614,9 +610,9 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
         }
     }
 #ifdef XPC_IDISPATCH_SUPPORT
-    if(nsXPConnect::GetXPConnect()->IsIDispatchSupported())
+    if(nsXPConnect::GetXPConnect()->IsIDispatchEnabled())
     {
-        return nsXPConnect::GetIDispatchExtension()->Enumerate(ccx, obj, wrapper);
+        return XPCIDispatchExtension::Enumerate(ccx, obj, wrapper);
     }
 #endif
     return JS_TRUE;

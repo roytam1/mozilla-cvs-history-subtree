@@ -82,6 +82,7 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
         *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
         return NS_OK;
     }
+
     nsISupports* outer = GetAggregatedNativeObject();
     if(outer)
         return outer->QueryInterface(aIID, aInstancePtr);

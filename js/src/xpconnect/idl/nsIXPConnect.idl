@@ -121,8 +121,8 @@
 
 #ifdef XPC_IDISPATCH_SUPPORT
 // IDispatch support related errors
-#define NS_ERROR_XPC_COM_UNKNOWN                       GENERATE_XPC_FAILURE(1000)
-#define NS_ERROR_XPC_COM_ERROR                         GENERATE_XPC_FAILURE(1001)
+#define NS_ERROR_XPC_COM_UNKNOWN                       GENERATE_XPC_FAILURE(54)
+#define NS_ERROR_XPC_COM_ERROR                         GENERATE_XPC_FAILURE(55)
 #endif
 // any new errors here should have an associated entry added in xpc.msg
 /***************************************************************************/
@@ -585,5 +585,3 @@ interface nsIXPConnect : nsISupports
 
     void releaseJSContext(in JSContextPtr aJSContext, in PRBool noGC);
 };
-
-

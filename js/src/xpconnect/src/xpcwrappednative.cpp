@@ -196,58 +196,62 @@ static void DEBUG_TrackShutdownWrapper(XPCWrappedNative* wrapper)
 /***************************************************************************/
 
 // static
-nsresult XPCWrappedNative::FindWrapper(XPCCallContext& ccx,
-                     nsISupports* Object,
-                     XPCWrappedNativeScope* Scope,
-                     XPCNativeInterface* Interface,
-                     Native2WrappedNativeMap * Map,
-                     XPCWrappedNative** result)
-{
-    XPCWrappedNative* wrapper;
-
-    {   // scoped lock
-        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
-        wrapper = Map->Find(Object);
-        if(!wrapper)
-        {
-            *result = nsnull;
-            return NS_OK;
-        }
-        NS_ADDREF(wrapper);
-    }
-
-    nsresult rv;
-    if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
-    {
-        NS_RELEASE(wrapper);
-        NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
-        return rv;
-    }
-
-    *result = wrapper;
-    return NS_OK;
-}
-
-// static
 nsresult
-XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
+XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                nsISupports* Object,
                                XPCWrappedNativeScope* Scope,
                                XPCNativeInterface* Interface,
                                XPCWrappedNative** resultWrapper)
 {
+    nsresult rv;
+
+    nsCOMPtr<nsISupports> identity;
+#ifdef XPC_IDISPATCH_SUPPORT
+    // XXX This is done for the benefit of some warped COM implementations
+    // where QI(IID_IUnknown, a.b) == QI(IID_IUnknown, a). If someone passes
+    // in a pointer that hasn't been QI'd to IDispatch properly this could
+    // create multiple wrappers for the same object, creating a fair bit of
+    // confusion.
+    if(!nsXPConnect::IsIDispatchEnabled() && Interface->GetIID()->Equals(NSID_IDISPATCH))
+        identity = Object;
+    else
+#endif
+        identity = do_QueryInterface(Object);
+
+    if(!identity)
+    {
+        NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
+        return NS_ERROR_FAILURE;
+    }
+
     XPCLock* mapLock = Scope->GetRuntime()->GetMapLock();
     
     // We use an AutoMarkingPtr here because it is possible for JS gc to happen
     // after we have Init'd the wrapper but *before* we add it to the hashtable.
     // This would cause the mSet to get collected and we'd later crash. I've
     // *seen* this happen.
-    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
-    nsresult rv = FindWrapper(ccx, Object, Scope, Interface, map, resultWrapper);
-    if (NS_FAILED(rv) || *resultWrapper)
-        return rv;
-
     AutoMarkingWrappedNativePtr wrapper(ccx);
+
+    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
+    {   // scoped lock
+        XPCAutoLock lock(mapLock);
+        wrapper = map->Find(identity);
+        if(wrapper)
+            wrapper->AddRef();
+    }
+
+    if(wrapper)
+    {
+        if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
+        {
+            NS_RELEASE(wrapper);
+            NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+            return rv;
+        }
+        DEBUG_CheckWrapperThreadSafety(wrapper);
+        *resultWrapper = wrapper;
+        return NS_OK;
+    }
 
     // There is a chance that the object wants to have the self-same JSObject
     // reflection regardless of the scope into which we are reflecting it.
@@ -258,7 +262,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
     // It is possible that we will then end up forwarding this entire call
     // to this same function but with a different scope.
 
-    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(Object));
+    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(identity));
 
     // If we are making a wrapper for the nsIClassInfo interface then
     // We *don't* want to have it use the prototype meant for instances
@@ -268,7 +272,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
     XPCNativeScriptableCreateInfo sciProto;
     XPCNativeScriptableCreateInfo sciWrapper;
 
-    if(NS_FAILED(GatherScriptableCreateInfo(Object,
+    if(NS_FAILED(GatherScriptableCreateInfo(identity,
                                             isClassInfo ? nsnull : info.get(),
                                             &sciProto, &sciWrapper)))
         return NS_ERROR_FAILURE;
@@ -278,7 +282,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
     if(sciWrapper.GetFlags().WantPreCreate())
     {
         JSObject* plannedParent = parent;
-        nsresult rv = sciWrapper.GetCallback()->PreCreate(Object, ccx,
+        nsresult rv = sciWrapper.GetCallback()->PreCreate(identity, ccx,
                                                           parent, &parent);
         if(NS_FAILED(rv))
             return rv;
@@ -288,7 +292,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
             XPCWrappedNativeScope* betterScope =
                 XPCWrappedNativeScope::FindInJSObjectScope(ccx, parent);
             if(betterScope != Scope)
-                return GetNewOrUsed(ccx, Object, betterScope, Interface,
+                return GetNewOrUsed(ccx, identity, betterScope, Interface,
                                     resultWrapper);
         }
 
@@ -298,7 +302,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
 
         {   // scoped lock
             XPCAutoLock lock(mapLock);
-            wrapper = map->Find(Object);
+            wrapper = map->Find(identity);
             if(wrapper)
                 wrapper->AddRef();
         }
@@ -332,7 +336,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
         if(!proto)
             return NS_ERROR_FAILURE;
 
-        wrapper = new XPCWrappedNative(Object, proto);
+        wrapper = new XPCWrappedNative(identity, proto);
         if(!wrapper)
             return NS_ERROR_FAILURE;
     }
@@ -344,7 +348,7 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
         if(!set)
             return NS_ERROR_FAILURE;
 
-        wrapper = new XPCWrappedNative(Object, Scope, set);
+        wrapper = new XPCWrappedNative(identity, Scope, set);
         if(!wrapper)
             return NS_ERROR_FAILURE;
 
@@ -411,6 +415,56 @@ XPCWrappedNative::GetNewOrUsedImpl(XPCCallContext& ccx,
         return NS_ERROR_FAILURE;
 
     DEBUG_CheckClassInfoClaims(wrapper);
+    *resultWrapper = wrapper;
+    return NS_OK;
+}
+
+// static
+nsresult
+XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
+                              nsISupports* Object,
+                              XPCWrappedNativeScope* Scope,
+                              XPCNativeInterface* Interface,
+                              XPCWrappedNative** resultWrapper)
+{
+    NS_ASSERTION(Object, "XPCWrappedNative::GetUsedOnly was called with a null Object");
+    nsCOMPtr<nsISupports> identity;
+#ifdef XPC_IDISPATCH_SUPPORT
+    // XXX See GetNewOrUsed for more info on this
+    if(!nsXPConnect::IsIDispatchEnabled() && Interface->GetIID()->Equals(NSID_IDISPATCH))
+        identity = Object;
+    else
+#endif
+        identity = do_QueryInterface(Object);
+
+    if(!identity)
+    {
+        NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
+        return NS_ERROR_FAILURE;
+    }
+
+    XPCWrappedNative* wrapper;
+    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
+
+    {   // scoped lock
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
+        wrapper = map->Find(identity);
+        if(!wrapper)
+        {
+            *resultWrapper = nsnull;
+            return NS_OK;
+        }
+        NS_ADDREF(wrapper);
+    }
+
+    nsresult rv;
+    if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
+    {
+        NS_RELEASE(wrapper);
+        NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+        return rv;
+    }
+
     *resultWrapper = wrapper;
     return NS_OK;
 }
@@ -1416,7 +1470,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
     aTearOff->SetNative(obj);
 #ifdef XPC_IDISPATCH_SUPPORT
     // Are we building a tearoff for IDispatch?
-    if(ccx.GetXPConnect()->IsIDispatchSupported() && iid->Equals(NSID_IDISPATCH))
+    if(ccx.GetXPConnect()->IsIDispatchEnabled() && iid->Equals(NSID_IDISPATCH))
     {
         aTearOff->SetIDispatch(ccx);
     }  

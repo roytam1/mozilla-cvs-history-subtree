@@ -84,18 +84,14 @@ CPPSRCS		= \
 		xpcwrappednativeproto.cpp \
 		xpcwrappednativescope.cpp
 ifdef XPC_IDISPATCH_SUPPORT
-CPPSRCS +=	IDispObject.cpp	\
-		IDispatchInfo.cpp	\
-		IDispatchInterface.cpp	\
-		IDispConvert.cpp \
-		IDispTypeInfo.cpp	\
-		IDispIDArray.cpp \
-		IDispThrower.cpp \
-		IDispCallContext.cpp \
-		IDispatchTearOff.cpp \
+CPPSRCS +=	XPCDispObject.cpp	\
+		XPCDispInterface.cpp	\
+		XPCDispConvert.cpp \
+		XPCDispTypeInfo.cpp	\
+		XPCDispTearOff.cpp \
 		XPCIDispatchExtension.cpp
 endif
-CPPSRCS += $(NULL)
+CPPSRCS	+=	$(NULL)
 
 include $(topsrcdir)/config/config.mk
 
@@ -114,7 +110,7 @@ REQUIRES	+= xpctools
 endif
 
 ifdef XPC_IDISPATCH_SUPPORT
-DEFINES			+=	-DXPC_IDISPATCH_SUPPORT
+DEFINES		+= -DXPC_IDISPATCH_SUPPORT
 endif
 
 ifeq ($(OS_ARCH),WINNT)

@@ -563,18 +563,49 @@ inline void XPCNativeSet::ASSERT_NotMarked()
 /***************************************************************************/
 
 inline
-XPCWrappedNativeTearOff::XPCJSObjectExt const &
-XPCWrappedNativeTearOff::GetJSObject() const 
+JSObject* XPCWrappedNativeTearOff::GetJSObject() const 
 {
+#ifdef XPC_IDISPATCH_SUPPORT
+    return IsIDispatch() ? GetIDispatchInfo()->GetJSObject() : mJSObject; 
+#else
     return mJSObject;
+#endif
 }
 
 inline
 void XPCWrappedNativeTearOff::SetJSObject(JSObject*  JSObj)                
 {
-    mJSObject.Set(JSObj);
+#ifdef XPC_IDISPATCH_SUPPORT
+    if(IsIDispatch())
+        GetIDispatchInfo()->SetJSObject(JSObj);
+    else
+#endif
+        mJSObject = JSObj;
 }
 
+#ifdef XPC_IDISPATCH_SUPPORT
+inline void
+XPCWrappedNativeTearOff::SetIDispatch(JSContext* cx) 
+{
+    mJSObject = (JSObject*)(((jsword)
+        ::XPCDispInterface::NewInstance(cx, 
+                                          mNative)) | 2); 
+}
+
+inline XPCDispInterface* 
+XPCWrappedNativeTearOff::GetIDispatchInfo() const 
+{
+    return NS_REINTERPRET_CAST(XPCDispInterface*,
+                               (((jsword)mJSObject) & ~JSOBJECT_MASK));
+}
+
+inline JSBool 
+XPCWrappedNativeTearOff::IsIDispatch() const 
+{
+    return (JSBool)(((jsword)mJSObject) & IDISPATCH_BIT);
+}
+
+#endif
 /***************************************************************************/
 
 inline JSBool
@@ -619,42 +650,6 @@ XPCWrappedNative::SweepTearOffs()
     }
 }
 
-inline
-nsresult
-XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
-                               nsISupports* Object,
-                               XPCWrappedNativeScope* Scope,
-                               XPCNativeInterface* Interface,
-                               XPCWrappedNative** resultWrapper)
-{
-    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
-    if(!identity)
-    {
-        NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
-        return NS_ERROR_FAILURE;
-    }
-    return GetNewOrUsedImpl(ccx, Object, Scope, Interface, resultWrapper);
-}
-
-// static
-inline
-nsresult
-XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
-                              nsISupports* Object,
-                              XPCWrappedNativeScope* Scope,
-                              XPCNativeInterface* Interface,
-                              XPCWrappedNative** resultWrapper)
-{
-    nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
-    if(!identity)
-        return NS_ERROR_FAILURE;
-
-    Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
-
-    return FindWrapper(ccx, Object, Scope, Interface, map, resultWrapper);
-}
-
-
 /***************************************************************************/
 
 inline JSBool
@@ -684,82 +679,6 @@ void ThrowBadResult(nsresult result, XPCCallContext& ccx)
 {
     XPCThrower::ThrowBadResult(NS_ERROR_XPC_NATIVE_RETURNED_FAILURE,
                                result, ccx);
-}
-
-
-inline 
-JSExceptionState* DoPreScriptEvaluated(JSContext* cx)
-{
-    if(JS_GetContextThread(cx))
-        JS_BeginRequest(cx);
-
-    // Saving the exception state keeps us from interfering with another script
-    // that may also be running on this context.  This occurred first with the
-    // js debugger, as described in
-    // http://bugzilla.mozilla.org/show_bug.cgi?id=88130 but presumably could
-    // show up in any situation where a script calls into a wrapped js component
-    // on the same context, while the context has a nonzero exception state.
-    // Because JS_SaveExceptionState/JS_RestoreExceptionState use malloc
-    // and addroot, we avoid them if possible by returning null (as opposed to
-    // a JSExceptionState with no information) when there is no pending
-    // exception.
-    if(JS_IsExceptionPending(cx))
-    {
-        JSExceptionState* state = JS_SaveExceptionState(cx);
-        JS_ClearPendingException(cx);
-        return state;
-    }
-    return nsnull;
-}
-
-inline 
-void DoPostScriptEvaluated(JSContext* cx, JSExceptionState* state)
-{
-    if(state)
-        JS_RestoreExceptionState(cx, state);
-    else
-        JS_ClearPendingException(cx);
-
-    if(JS_GetContextThread(cx))
-        JS_EndRequest(cx);
-
-    // If this is a JSContext that has a private context that provides a
-    // nsIXPCScriptNotify interface, then notify the object the script has
-    // been executed.
-    //
-    // Note: We rely on the rule that if any JSContext in our JSRuntime has
-    // private data that points to an nsISupports subclass, it has also set
-    // the JSOPTION_PRIVATE_IS_NSISUPPORTS option.
-
-    nsISupports *supports =
-        (JS_GetOptions(cx) & JSOPTION_PRIVATE_IS_NSISUPPORTS)
-        ? NS_STATIC_CAST(nsISupports*, JS_GetContextPrivate(cx))
-        : nsnull;
-    if(supports)
-    {
-        nsCOMPtr<nsIXPCScriptNotify> scriptNotify = 
-            do_QueryInterface(supports);
-        if(scriptNotify)
-            scriptNotify->ScriptExecuted();
-    }
-}
-
-// It turns out that some errors may be not worth reporting. So, this
-// function is factored out to manage that.
-inline JSBool IsReportableErrorCode(nsresult code)
-{
-    if(NS_SUCCEEDED(code))
-        return JS_FALSE;
-
-    switch(code)
-    {
-        // Error codes that we don't want to report as errors...
-        // These generally indicate bad interface design AFAIC. 
-        case NS_ERROR_FACTORY_REGISTER_AGAIN:
-        case NS_BASE_STREAM_WOULD_BLOCK:
-            return JS_FALSE;
-    }
-    return JS_TRUE;
 }
 
 /***************************************************************************/
