@@ -563,20 +563,22 @@ mime_generate_headers (nsMsgCompFields *fields,
 		PRUnichar * appInfo = nsnull;
 
 		pNetService->GetAppCodeName(&appInfo);
-		if (appInfo) {
+		nsCAutoString cStr(appInfo);
+		if (!cStr.IsEmpty()) 
+		{
 			// PUSH_STRING ("X-Mailer: ");  // To be more standards compliant
 			PUSH_STRING ("User-Agent: ");  
-			// mscott....this is wrong!!!
-			printf("fix me in nsMsgCompUtils line 557");
-			PUSH_STRING((char *) appInfo);
+			PUSH_STRING(cStr);
 			nsCRT::free(appInfo);
 
 			pNetService->GetAppVersion(&appInfo);
-			if (appInfo) {
+			cStr = appInfo;
+			if (!cStr.IsEmpty()) 
+			{
 				PUSH_STRING (" ");
-				PUSH_STRING((char *) appInfo);
-				nsCRT::free(appInfo);
+				PUSH_STRING(cStr);
 			}
+			nsCRT::free(appInfo);
 			PUSH_NEWLINE ();
 		}
 	}
@@ -1728,13 +1730,14 @@ nsMsgMIMEGenerateMailtoFormPostHeaders (const char *old_post_url,
 		if (NS_SUCCEEDED(rv) && pNetService)
 			pNetService->GetAppCodeName(&sAppName);
 
-	  /* If the URL didn't provide a subject, we will. */
-	  StrAllocCat (extra_headers, "Subject: Form posted from ");
-	  NS_ASSERTION (sAppName, "null AppCodeName");
-	  // mscott -- this cast is wrong!!!!
-	  StrAllocCat (extra_headers, (char *) sAppName);
-	  StrAllocCat (extra_headers, CRLF);
-	  nsCRT::free(sAppName);
+		nsCAutoString cstr(sAppName);
+
+		/* If the URL didn't provide a subject, we will. */
+		StrAllocCat (extra_headers, "Subject: Form posted from ");
+		NS_ASSERTION (!cstr.IsEmpty(), "null AppCodeName");
+		StrAllocCat (extra_headers, cstr);
+		StrAllocCat (extra_headers, CRLF);
+		nsCRT::free(sAppName);
 	}
 
   /* Note: the `encrypt', `sign', and `body' parameters are currently
