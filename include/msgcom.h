@@ -23,6 +23,7 @@
 #ifndef _MSGCOM_H_
 #define _MSGCOM_H_
 
+#include "rosetta.h"
 #include "libmime.h"
 
 #define SUBSCRIBE_USE_OLD_API
@@ -2816,8 +2817,7 @@ extern MSG_Pane* MSG_ComposeMessage(MWContext *old_context,
 									const char *attachment,
 									const char *newspost_url,
 									const char *body,
-									XP_Bool encrypt_p,
-									XP_Bool sign_p,
+									HG00282
 									XP_Bool force_plain_text,
 									const char* html_part);
 
@@ -2836,9 +2836,8 @@ extern MSG_CompositionFields* MSG_CreateCompositionFields(
 									const char *other_random_headers,
 									const char *priority,
 									const char *attachment,
-									const char *newspost_url,
-									XP_Bool encrypt_p,
-									XP_Bool sign_p);
+									const char *newspost_url
+									HG66663);
 
 extern void MSG_DestroyCompositionFields(MSG_CompositionFields *fields);
 
