@@ -1373,11 +1373,6 @@ PRIVATE char *proxy_dns_resolve(const char *host) {
     PRHostEnt *hp = NULL;
     PRHostEnt hpbuf;
     char dbbuf[PR_NETDB_BUF_SIZE];
-#if defined(XP_UNIX) || defined(XP_WIN32)
-    struct hostent hpbuf;
-    char dbbuf[PR_NETDB_BUF_SIZE];
-#endif
-#endif /* xNSPR20 */
 
     if (host) {
 	const char *p;
