@@ -167,9 +167,11 @@ nsresult nsPrefService::Init()
       rv = observerService->AddObserver(this, "profile-do-change", PR_TRUE);
     }
   }
-  
+
+#ifdef MOZ_PROFILESHARING  
   rv = NS_CreateSharedPrefHandler(this);
-  
+#endif
+
   return(rv);
 }
 
