@@ -34,7 +34,9 @@ REQUIRES	= xpcom \
 		  unicharutil \
 		  layout \
 		  gfx \
+		  uconv \
 		  $(NULL)
+
 LIBRARY_NAME=contentshared_s 
 DEFINES=-D_IMPL_NS_LAYOUT -DWIN32_LEAN_AND_MEAN
 !if defined(XP_NEW_SELECTION)
@@ -46,6 +48,7 @@ CPPSRCS =				\
   nsCSSKeywords.cpp \
   nsCSSProps.cpp \
   nsHTMLAtoms.cpp \
+  nsHTMLUtils.cpp \
   nsHTMLValue.cpp \
   nsImageMapUtils.cpp \
   nsLayoutAtoms.cpp \
@@ -65,6 +68,7 @@ CPP_OBJS=					\
   .\$(OBJDIR)\nsCSSKeywords.obj \
   .\$(OBJDIR)\nsCSSProps.obj \
   .\$(OBJDIR)\nsHTMLAtoms.obj \
+  .\$(OBJDIR)\nsHTMLUtils.obj \
   .\$(OBJDIR)\nsHTMLValue.obj \
   .\$(OBJDIR)\nsImageMapUtils.obj \
   .\$(OBJDIR)\nsLayoutAtoms.obj \
