@@ -21,8 +21,12 @@
  * Designed and implemented by Lou Montulli '94
  * Additions/Changes by Judson Valeski, Gagan Saksena 1997
  */
+
 #include "rosetta.h"
 #include "mkutils.h"
+#include "plstr.h"
+#include "plstr2.h"
+#include "pllist.h"
 #include "mkpadpac.h"
 
 #include "merrors.h"
@@ -103,7 +107,7 @@ PUBLIC CONST char *XP_AppPlatform = 0;
 
 PUBLIC char * FE_UsersFromField=0;    /* User's name/email address not used yet */
 
-PRIVATE XP_List * http_connection_list=0;
+PRIVATE PLList * http_connection_list=0;
 PRIVATE IdentifyMeEnum http_identification_method = DoNotIdentifyMe;
 PRIVATE Bool sendRefererHeader=TRUE;
 
@@ -134,9 +138,9 @@ HG93634
 typedef struct _HTTPConnection {
     char   *hostname;       /* hostname string (may contain :port) */
     PRFileDesc *sock;           /* socket */
-    XP_Bool busy;           /* is the connection in use already? */
-    XP_Bool prev_cache;     /* did this connection come from the cache? */
-    XP_Bool secure;         /* is it a secure connection? */
+    PRBool busy;           /* is the connection in use already? */
+    PRBool prev_cache;     /* did this connection come from the cache? */
+    PRBool secure;         /* is it a secure connection? */
 } HTTPConnection;
 
 typedef enum {
@@ -261,7 +265,7 @@ int ReturnErrorStatus (int status)
 #define PUTBLOCK(b, l)  (*cd->stream->put_block) \
                                     (cd->stream, b, l)
 #define PUTSTRING(s)    (*cd->stream->put_block) \
-                                    (cd->stream, s, XP_STRLEN(s))
+                                    (cd->stream, s, PL_strlen(s))
 #define COMPLETE_STREAM (*cd->stream->complete) \
                                     (cd->stream)
 #define ABORT_STREAM(s) (*cd->stream->abort) \
@@ -297,7 +301,7 @@ net_check_for_company_hostname(ActiveEntry *ce)
     HTTPConData * cd = (HTTPConData *)ce->con_data;
 	Bool add_www = FALSE;
 	Bool add_com = FALSE;
-	Bool goBrowsing = FALSE;
+	PRBool goBrowsing = FALSE;
    
     if (PREF_GetBoolPref("browser.goBrowsingEnabled", &goBrowsing) != PREF_OK) goBrowsing = 0;
 
@@ -313,11 +317,11 @@ net_check_for_company_hostname(ActiveEntry *ce)
 	 	*/
 		char * host = NET_ParseURL(CE_URL_S->address, GET_HOST_PART);
 	
-		if(host && *host && !(dot = XP_STRCHR(host, '.')))
+		if(host && *host && !(dot = PL_strchr(host, '.')))
 	  	  {
 			add_www = add_com = TRUE;
 		  }
-		else if(dot && !XP_STRCHR(dot+1, '.'))
+		else if(dot && !PL_strchr(dot+1, '.'))
 		  {
 			/* there is only one dot in the host name
 			 * so it's probably of the form of "netscape.com"
@@ -329,13 +333,13 @@ net_check_for_company_hostname(ActiveEntry *ce)
 
 		if(add_www) {
 		  /* no dots in hostname */
-		  if (goBrowsing && !XP_STRCHR(CE_URL_S->address, '/')) {			
+		  if (goBrowsing && !PL_strchr(CE_URL_S->address, '/')) {			
 			char *pUrl;
 			PREF_CopyCharPref("network.search.url",&pUrl);
 			if (pUrl) {
 			  char *tmp = NET_ParseURL(CE_URL_S->address, GET_HOST_PART);
 			  char* new_address = PR_smprintf("%sgo+%s", pUrl, tmp);
-			  XP_FREE(pUrl);
+			  PR_Free(pUrl);
 			  FREE(CE_URL_S->address);
 			  FREEIF(tmp);  
 			  CE_URL_S->address = new_address;
@@ -706,7 +710,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
     StrAllocCopy(command, "CONNECT ");
 	StrAllocCat(command, host);
 
-	if(!XP_STRCHR(host, ':'))
+	if(!PL_strchr(host, ':'))
       {
 	    char small_buf[20];
 		XP_SPRINTF(small_buf, ":%d", DEF_HTTPS_PORT);
@@ -725,11 +729,11 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 											   CE_URL_S,
 											   CD_PROXY_SERVER)))
 	  {
-		  char *line = (char *)XP_ALLOC(strlen(auth) + 30);
+		  char *line = (char *)PR_Malloc(strlen(auth) + 30);
 		  if (line) {
 			  XP_SPRINTF(line, "Proxy-authorization: %s%c%c", auth, CR, LF);
 			  StrAllocCat(command, line);
-			  XP_FREE(line);
+			  PR_Free(line);
 		  }
 		  CD_SENT_PROXY_AUTH = TRUE;
 		  TRACEMSG(("HTTP: Sending proxy-authorization: %s", auth));
@@ -749,7 +753,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 	TRACEMSG(("Tx: %s", command));
 
 	SSL_SetSockPeerID(cd->connection->sock, command);
-    CE_STATUS = NET_HTTPNetWrite(cd->connection->sock, command, XP_STRLEN(command));
+    CE_STATUS = NET_HTTPNetWrite(cd->connection->sock, command, PL_strlen(command));
 
 	FREE(command);
 
@@ -763,7 +767,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 #define POST_DATA_BUFFER_SIZE 2048
 
 PRIVATE int32
-net_get_size_with_crlf( char *filename, XP_FileType file_type, XP_Bool add_crlf )
+net_get_size_with_crlf( char *filename, XP_FileType file_type, PRBool add_crlf )
 {
 	XP_File xpfileptr;
 	uint32 return_value = 0;
@@ -787,7 +791,7 @@ net_get_size_with_crlf( char *filename, XP_FileType file_type, XP_Bool add_crlf 
 	if (!xpfileptr)
 		return -1;
 	
-	buffer = (char *) XP_ALLOC(POST_DATA_BUFFER_SIZE);
+	buffer = (char *) PR_Malloc(POST_DATA_BUFFER_SIZE);
 	if (!buffer)
 		return -1;
 	
@@ -796,7 +800,7 @@ net_get_size_with_crlf( char *filename, XP_FileType file_type, XP_Bool add_crlf 
 	  if (!line)
 		break;
 
-	  line_length = XP_STRLEN(line);
+	  line_length = PL_strlen(line);
 
 	  if (line_length > 1 && line[line_length-2] == CR && line[line_length-1] == LF)
 	 	{
@@ -811,7 +815,7 @@ net_get_size_with_crlf( char *filename, XP_FileType file_type, XP_Bool add_crlf 
 	  return_value += line_length;
 	} while (line);
 
-	XP_FREE( buffer );
+	PR_Free( buffer );
 	
 	return return_value;
 }
@@ -837,7 +841,7 @@ net_begin_upload_file (ActiveEntry *ce)
 		return(0);
 	  }
 
-	XP_ASSERT(ce->URL_s->files_to_post && ce->URL_s->files_to_post[0]);
+	PR_ASSERT(ce->URL_s->files_to_post && ce->URL_s->files_to_post[0]);
 	if(!ce->URL_s->files_to_post || !ce->URL_s->files_to_post[0])
 		return MK_UNABLE_TO_LOCATE_FILE;
 
@@ -846,7 +850,7 @@ net_begin_upload_file (ActiveEntry *ce)
 	for(i=0; ce->URL_s->files_to_post[i]; i++)
 		; /* find the end */
 
-	XP_ASSERT(i>0);
+	PR_ASSERT(i>0);
 
 	file_to_post = ce->URL_s->files_to_post[i-1];
 
@@ -854,11 +858,11 @@ net_begin_upload_file (ActiveEntry *ce)
 	ce->URL_s->files_to_post[i-1] = NULL;
 
 #ifdef XP_MAC
-    filename = XP_STRRCHR(file_to_post, '/');
+    filename = PL_strrchr(file_to_post, '/');
 #elif defined(XP_WIN)
-    filename = XP_STRRCHR(file_to_post, '\\');
+    filename = PL_strrchr(file_to_post, '\\');
 #else
-    filename = XP_STRRCHR(file_to_post, '/');
+    filename = PL_strrchr(file_to_post, '/');
 #endif
 
     if(!filename)
@@ -896,7 +900,7 @@ net_begin_upload_file (ActiveEntry *ce)
     /* If the destination URL is explicitly specified in the post_to array, use it, otherwise
      * generate destination from URL_s->address and filename.  hardts */
     if (ce->URL_s->post_to && ce->URL_s->post_to[i - 1]) {
-        XP_FREE(ce->URL_s->address); /* We don't use it at all. */
+        PR_Free(ce->URL_s->address); /* We don't use it at all. */
         ce->URL_s->address = ce->URL_s->post_to[i - 1];
         ce->URL_s->post_to[i - 1] = NULL;  /* zero the element */
     }
@@ -904,7 +908,7 @@ net_begin_upload_file (ActiveEntry *ce)
 	     /* strip the filename from the last slash and append the
 	     * new filename to the URL
 	     */
-	    last_slash = XP_STRRCHR(ce->URL_s->address, '/');
+	    last_slash = PL_strrchr(ce->URL_s->address, '/');
 	    if(last_slash)
 		    *last_slash = '\0';
 	    StrAllocCat(ce->URL_s->address, "/");
@@ -916,11 +920,11 @@ net_begin_upload_file (ActiveEntry *ce)
          /* Strip out username and password. from address */
         char *pLocation = NULL;
         if (!NET_ParseUploadURL( ce->URL_s->address, &pLocation, NULL,NULL )) {
-            XP_ASSERT(0);
+            PR_ASSERT(0);
         }        
         if (CLEAR_CACHE_BIT(ce->format_out) != FO_LOCATION_INDEPENDENCE)
             FE_SaveDialogSetFilename(ce->window_id, pLocation);
-        XP_FREE(pLocation);
+        PR_Free(pLocation);
    }
 #endif /* EDITOR */
 
@@ -1025,7 +1029,7 @@ net_build_http_request (URL_Struct * URL_s,
 			break;
 
 		default:
-			XP_ASSERT(0);
+			PR_ASSERT(0);
 			/* fall through to GET */
 
     	case URL_GET_METHOD:
@@ -1057,9 +1061,9 @@ net_build_http_request (URL_Struct * URL_s,
 			| GET_SEARCH_PART);
 		if(url_minus_hash)
 		{
-			BlockAllocCat(*command, (size_t) csize, url_minus_hash, XP_STRLEN(url_minus_hash));
-			csize += XP_STRLEN(url_minus_hash);
-			XP_FREE(url_minus_hash);
+			BlockAllocCat(*command, (size_t) csize, url_minus_hash, PL_strlen(url_minus_hash));
+			csize += PL_strlen(url_minus_hash);
+			PR_Free(url_minus_hash);
 		}
 
 	  }
@@ -1069,10 +1073,10 @@ net_build_http_request (URL_Struct * URL_s,
 		 */
     	char *path = NET_ParseURL(URL_s->address, 
 										GET_PATH_PART | GET_SEARCH_PART);
-        BlockAllocCat(*command, csize, path, XP_STRLEN(path));
-		csize += XP_STRLEN(path);
+        BlockAllocCat(*command, csize, path, PL_strlen(path));
+		csize += PL_strlen(path);
 
-    	XP_FREE(path);
+    	PR_Free(path);
 	  }
 
     if(http1) 
@@ -1081,8 +1085,8 @@ net_build_http_request (URL_Struct * URL_s,
 		csize += 1;
         BlockAllocCat(*command, csize, 
 					  VERSION_STRING, 
-					  XP_STRLEN(VERSION_STRING));
-		csize += XP_STRLEN(VERSION_STRING);
+					  PL_strlen(VERSION_STRING));
+		csize += PL_strlen(VERSION_STRING);
         /* finish the line */
         BlockAllocCat(*command, csize, CRLF, 2); /* CR LF, as in rfc 977 */
 		csize += 2;
@@ -1090,14 +1094,14 @@ net_build_http_request (URL_Struct * URL_s,
 		if ((URL_s->etag) && (URL_s->force_reload != NET_SUPER_RELOAD))
 		{
 			/* add the If-None-Match header */
-			XP_STRCPY(line_buffer, "If-None-Match: \"");
+			PL_strcpy(line_buffer, "If-None-Match: \"");
 			BlockAllocCat(*command, csize,
-				line_buffer, XP_STRLEN(line_buffer));
-			csize += XP_STRLEN(line_buffer);
+				line_buffer, PL_strlen(line_buffer));
+			csize += PL_strlen(line_buffer);
 			BlockAllocCat(*command, csize, 
 				URL_s->etag,
-				XP_STRLEN(URL_s->etag));
-			csize += XP_STRLEN(URL_s->etag);
+				PL_strlen(URL_s->etag));
+			csize += PL_strlen(URL_s->etag);
 			/* Closing " */
 			BlockAllocCat(*command, csize,
 				"\"",
@@ -1128,29 +1132,15 @@ net_build_http_request (URL_Struct * URL_s,
                 * use the NSPR time functions.  URL_Struct should really be changed
                 * to use the NSPR time type instead of time_t.
                 */
-#ifndef NSPR20
-               uint64   timeInSec;
-               uint64	timeInUSec;
-               uint64   secToUSec;
-               PRTime	expandedTime;
-#else
                PRTime   timeInSec;
                PRTime	timeInUSec;
                PRTime   secToUSec;
                PRExplodedTime	expandedTime;
-#endif /* NSPR20 */
 
                LL_I2L(timeInSec, URL_s->last_modified);
                LL_I2L(secToUSec, PR_USEC_PER_SEC);
                LL_MUL(timeInUSec, timeInSec, secToUSec);
-#ifndef NSPR20
-#ifndef XP_MAC
-               timeInUSec = PR_ToGMT(timeInUSec);
-#endif /* XP_MAC */
-               PR_ExplodeTime(&expandedTime, timeInUSec);
-#else
                PR_ExplodeTime(timeInUSec, PR_GMTParameters, &expandedTime);
-#endif /* NSPR20 */
                PR_FormatTimeUSEnglish(line_buffer, 400,
                                       "If-Modified-Since: %a, %d %b %Y %H:%M:%S GMT",
                                       &expandedTime);
@@ -1160,16 +1150,16 @@ net_build_http_request (URL_Struct * URL_s,
 			 * or else I screwed up the cache logic 
 			 */
 #ifndef AIX
-			XP_ASSERT(strncasecomp(URL_s->address, tmp_str, 4)
+			PR_ASSERT(PL_strncasecmp(URL_s->address, tmp_str, 4)
 					  || URL_s->real_content_length > 0);
 #endif
 
 			if(URL_s->real_content_length)
-            	XP_SPRINTF(&line_buffer[XP_STRLEN(line_buffer)], 
+            	XP_SPRINTF(&line_buffer[PL_strlen(line_buffer)], 
 							"; length=%ld" CRLF,
 							URL_s->real_content_length);
-            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-			csize += XP_STRLEN(line_buffer);
+            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+			csize += PL_strlen(line_buffer);
 
             /* reset the expires since we will want to
              * either get a new one from the server or
@@ -1181,8 +1171,8 @@ net_build_http_request (URL_Struct * URL_s,
         if(URL_s->http_headers)  /* use headers that were passed in */
           {
 
-            BlockAllocCat(*command, csize, URL_s->http_headers, XP_STRLEN(URL_s->http_headers));
-			csize += XP_STRLEN(URL_s->http_headers);
+            BlockAllocCat(*command, csize, URL_s->http_headers, PL_strlen(URL_s->http_headers));
+			csize += PL_strlen(URL_s->http_headers);
           }
         else
           {
@@ -1196,7 +1186,7 @@ net_build_http_request (URL_Struct * URL_s,
 				int len=0;
 				if(meth == URL_MOVE_METHOD) {
 					XP_SPRINTF(line_buffer, "New-uri: %s", URL_s->destination);
-					len=XP_STRLEN(line_buffer);
+					len=PL_strlen(line_buffer);
 					BlockAllocCat(*command, csize, line_buffer, len);
 					csize+=len;
 				}
@@ -1204,8 +1194,8 @@ net_build_http_request (URL_Struct * URL_s,
 					;/* some http copy syntax */
 				}
 
-				BlockAllocCat(*command, csize, CRLF, XP_STRLEN(CRLF));
-                csize += XP_STRLEN(CRLF);
+				BlockAllocCat(*command, csize, CRLF, PL_strlen(CRLF));
+                csize += PL_strlen(CRLF);
 			}
 			/* sendRefererHeader is set in NET_SetSendRefererHeaderPref in mkhttp.c. 
 			   This condition is set via a javascript pref and was implemented to 
@@ -1219,12 +1209,12 @@ net_build_http_request (URL_Struct * URL_s,
 					&& url_type != FILE_TYPE_URL)
 				  {
 					TRACEMSG(("Sending referer field"));
-            		XP_STRCPY(line_buffer, "Referer: ");
-					BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-					csize += XP_STRLEN(line_buffer);
+            		PL_strcpy(line_buffer, "Referer: ");
+					BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+					csize += PL_strlen(line_buffer);
 					BlockAllocCat(*command,  csize, URL_s->referer,
-								  XP_STRLEN(URL_s->referer));
-					csize += XP_STRLEN(URL_s->referer);
+								  PL_strlen(URL_s->referer));
+					csize += PL_strlen(URL_s->referer);
 					BlockAllocCat(*command, csize, CRLF, 2);
 					csize += 2;
 				  }
@@ -1234,15 +1224,15 @@ net_build_http_request (URL_Struct * URL_s,
 			assert (XP_AppVersion);
 
 			if(proxy_server)
-            	XP_STRCPY(line_buffer, "Proxy-Connection: Keep-Alive" CRLF);
+            	PL_strcpy(line_buffer, "Proxy-Connection: Keep-Alive" CRLF);
 			else
-            	XP_STRCPY(line_buffer, "Connection: Keep-Alive" CRLF);
+            	PL_strcpy(line_buffer, "Connection: Keep-Alive" CRLF);
 
-            XP_SPRINTF (&line_buffer[XP_STRLEN(line_buffer)], 
+            XP_SPRINTF (&line_buffer[PL_strlen(line_buffer)], 
 						"User-Agent: %.100s/%.90s" CRLF,
 						XP_AppCodeName, XP_AppVersion);
-            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-			csize += XP_STRLEN(line_buffer);
+            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+			csize += PL_strlen(line_buffer);
 
             if(URL_s->force_reload)
 			  {
@@ -1254,20 +1244,20 @@ net_build_http_request (URL_Struct * URL_s,
 			  {
 #ifndef AIX
 				char *tmp_str = CRLF;
-				XP_ASSERT(!XP_STRSTR(URL_s->range_header, tmp_str));
+				PR_ASSERT(!PL_strstr(URL_s->range_header, tmp_str));
 #endif
 #define REQUEST_RANGE_HEADER "Range: "
             	BlockAllocCat(*command, csize, 
 							  REQUEST_RANGE_HEADER,
-							  XP_STRLEN(REQUEST_RANGE_HEADER));
-				csize += XP_STRLEN(REQUEST_RANGE_HEADER);
+							  PL_strlen(REQUEST_RANGE_HEADER));
+				csize += PL_strlen(REQUEST_RANGE_HEADER);
             	BlockAllocCat(*command, csize, 
 							  URL_s->range_header,
-							  XP_STRLEN(URL_s->range_header));
-				csize += XP_STRLEN(URL_s->range_header);
+							  PL_strlen(URL_s->range_header));
+				csize += PL_strlen(URL_s->range_header);
             	BlockAllocCat(*command, csize, 
-							  CRLF, XP_STRLEN(CRLF));
-				csize += XP_STRLEN(CRLF);
+							  CRLF, PL_strlen(CRLF));
+				csize += PL_strlen(CRLF);
 			  }
 
 #define OLD_RANGE_SUPPORT
@@ -1280,21 +1270,21 @@ net_build_http_request (URL_Struct * URL_s,
               {
 #ifndef AIX
 		char *tmp_str = CRLF;
-                XP_ASSERT(!XP_STRSTR(URL_s->range_header, tmp_str));
+                PR_ASSERT(!PL_strstr(URL_s->range_header, tmp_str));
 #endif
 #undef REQUEST_RANGE_HEADER
 #define REQUEST_RANGE_HEADER "Request-Range: "
                 BlockAllocCat(*command, csize,
                               REQUEST_RANGE_HEADER,
-                              XP_STRLEN(REQUEST_RANGE_HEADER));
-                csize += XP_STRLEN(REQUEST_RANGE_HEADER);
+                              PL_strlen(REQUEST_RANGE_HEADER));
+                csize += PL_strlen(REQUEST_RANGE_HEADER);
                 BlockAllocCat(*command, csize,
                               URL_s->range_header,
-                              XP_STRLEN(URL_s->range_header));
-                csize += XP_STRLEN(URL_s->range_header);
+                              PL_strlen(URL_s->range_header));
+                csize += PL_strlen(URL_s->range_header);
                 BlockAllocCat(*command, csize,
-                              CRLF, XP_STRLEN(CRLF));
-                csize += XP_STRLEN(CRLF);
+                              CRLF, PL_strlen(CRLF));
+                csize += PL_strlen(CRLF);
               }
 #endif
 
@@ -1312,7 +1302,7 @@ net_build_http_request (URL_Struct * URL_s,
 									HOST_HEADER, 	
 									sizeof(HOST_HEADER)-1);
 					csize += sizeof(HOST_HEADER)-1;
-					len = XP_STRLEN(host);
+					len = PL_strlen(host);
                 	BlockAllocCat(*command, csize, host, len);
 	
 					csize += len;
@@ -1327,8 +1317,8 @@ net_build_http_request (URL_Struct * URL_s,
 #ifdef SEND_FROM_FIELD
             XP_SPRINTF(line_buffer, "From: %.256s%c%c", 
                 			FE_UsersMailAddress() ? FE_UsersMailAddress() : "unregistered", CR,LF);
-            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-			csize += XP_STRLEN(line_buffer);
+            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+			csize += PL_strlen(line_buffer);
 #endif /* SEND_FROM_FIELD */
 
 
@@ -1336,22 +1326,22 @@ net_build_http_request (URL_Struct * URL_s,
 			  {
 				/* send Accept: *(slash)* as well as the others
 				 */
-				XP_SPRINTF(line_buffer, "Accept: %s, %s, %s, %s, %s, */*" CRLF, 
+				XP_SPRINTF(line_buffer, "Accept: %s, %s, %s, %s, */*" CRLF, 
 						    IMAGE_GIF, IMAGE_XBM, IMAGE_JPG, IMAGE_PJPG, IMAGE_PNG);
 			  }
 			else
 			  {
-				XP_SPRINTF(line_buffer, "Accept: %s, %s, %s, %s, %s" CRLF, 
+				XP_SPRINTF(line_buffer, "Accept: %s, %s, %s, %s" CRLF, 
 						    IMAGE_GIF, IMAGE_XBM, IMAGE_JPG, IMAGE_PJPG, IMAGE_PNG);
 			  }
 
-            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-			csize += XP_STRLEN(line_buffer);
+            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+			csize += PL_strlen(line_buffer);
 
 			/* add Accept-Encoding Header */
 			XP_SPRINTF(line_buffer, "Accept-Encoding: %s" CRLF, ENCODING_GZIP2);
-            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-			csize += XP_STRLEN(line_buffer);
+            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+			csize += PL_strlen(line_buffer);
 
 #ifdef MOZILLA_CLIENT
 #define SEND_ACCEPT_LANGUAGE 1
@@ -1362,8 +1352,8 @@ net_build_http_request (URL_Struct * URL_s,
 				{
 					XP_SPRINTF(line_buffer, "Accept-Language: %s" CRLF, 
 							  	 acceptlang );
-		            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-					csize += XP_STRLEN(line_buffer);
+		            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+					csize += PL_strlen(line_buffer);
 				}
 			}
 #endif /* SEND_ACCEPT_LANGUAGE */
@@ -1376,8 +1366,8 @@ net_build_http_request (URL_Struct * URL_s,
 				{
 					XP_SPRINTF(line_buffer, "Accept-Charset: %s" CRLF, 
 							  	 acceptCharset );
-		            BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-					csize += XP_STRLEN(line_buffer);
+		            BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+					csize += PL_strlen(line_buffer);
 				}
 			}
 #endif /* SEND_ACCEPT_CHARSET */
@@ -1410,11 +1400,11 @@ net_build_http_request (URL_Struct * URL_s,
 													   proxyServer)))
               {
 				if (tempURL)
-					XP_FREE(proxyServer);
+					PR_Free(proxyServer);
 				*sent_proxy_auth = TRUE;
                 XP_SPRINTF(line_buffer, "Proxy-authorization: %.3840s%c%c", auth, CR, LF);
-            	BlockAllocCat(*command, csize, line_buffer, XP_STRLEN(line_buffer));
-				csize += XP_STRLEN(line_buffer);
+            	BlockAllocCat(*command, csize, line_buffer, PL_strlen(line_buffer));
+				csize += PL_strlen(line_buffer);
                 TRACEMSG(("HTTP: Sending proxy-authorization: %s", auth));
               }
             else 
@@ -1433,8 +1423,8 @@ net_build_http_request (URL_Struct * URL_s,
             if (NULL!=(auth=NET_BuildAuthString(window_id, URL_s))) 
               {
 				*sent_authorization = TRUE;
-            	BlockAllocCat(*command, csize, auth, XP_STRLEN(auth));
-				csize += XP_STRLEN(auth);
+            	BlockAllocCat(*command, csize, auth, PL_strlen(auth));
+				csize += PL_strlen(auth);
                 TRACEMSG(("HTTP: Sending authorization: %s", auth));
               }
             else 
@@ -1445,18 +1435,18 @@ net_build_http_request (URL_Struct * URL_s,
             if (NULL!=(auth=NET_GetCookie(window_id, URL_s->address))) 
 			  {
 				int len;
-                XP_STRCPY(line_buffer, "Cookie: ");
+                PL_strcpy(line_buffer, "Cookie: ");
                 BlockAllocCat(*command, csize, 
-							  line_buffer, XP_STRLEN(line_buffer));
+							  line_buffer, PL_strlen(line_buffer));
 				
-                csize += XP_STRLEN(line_buffer);
-				len = XP_STRLEN(auth);
+                csize += PL_strlen(line_buffer);
+				len = PL_strlen(auth);
                 BlockAllocCat(*command, csize, auth, len);
                 csize += len;
-                BlockAllocCat(*command, csize, CRLF, XP_STRLEN(CRLF));
-                csize += XP_STRLEN(CRLF);
+                BlockAllocCat(*command, csize, CRLF, PL_strlen(CRLF));
+                csize += PL_strlen(CRLF);
                 TRACEMSG(("HTTP: Sending Cookie: %s", auth));
-		XP_FREE(auth);
+		PR_Free(auth);
               }
             else
               {
@@ -1564,7 +1554,7 @@ net_send_http_request (ActiveEntry *ce)
 	  }
 #endif /* DEBUG */
 #endif /* JAVA */
-    XP_FREE (command);  /* freeing the request */
+    PR_Free (command);  /* freeing the request */
 
 	if (CE_STATUS < 0) 
 	  {
@@ -1621,9 +1611,9 @@ net_send_http_request (ActiveEntry *ce)
 									nonProxyHost);
 			if (msg) {
 				NET_Progress(CE_WINDOW_ID, msg);
-				XP_FREE(msg);
+				PR_Free(msg);
 			}
-			XP_FREE(nonProxyHost);
+			PR_Free(nonProxyHost);
 		}
 	}
 
@@ -1636,7 +1626,7 @@ net_http_send_post_data (ActiveEntry *ce)
 {
     HTTPConData * cd = (HTTPConData *)ce->con_data;
     /* Default to not add_crlf_to_line_endings for HTTP. */
-    XP_Bool add_crlf = FALSE;
+    PRBool add_crlf = FALSE;
   
 
 	/* make sure the line buffer is large enough
@@ -1645,7 +1635,7 @@ net_http_send_post_data (ActiveEntry *ce)
 	if(cd->line_buffer_size < 200)
 	  {
 		FREEIF(cd->line_buffer);
-		cd->line_buffer = (char*)XP_ALLOC(256);
+		cd->line_buffer = (char*)PR_Malloc(256);
 		cd->line_buffer_size = 256;
 	  }
 
@@ -1693,9 +1683,9 @@ net_http_send_post_data (ActiveEntry *ce)
 										nonProxyHost);
 				if (msg) {
 					NET_Progress(CE_WINDOW_ID, msg);
-					XP_FREE(msg);
+					PR_Free(msg);
 				}
-				XP_FREE(nonProxyHost);
+				PR_Free(nonProxyHost);
 			}
 		}
 
@@ -1885,7 +1875,7 @@ HG07606
         return(0);
       }
 
-	value = XP_STRCHR(line, ':');
+	value = PL_strchr(line, ':');
 	if(value)
 		value++;
 	NET_ParseMimeHeader(CE_FORMAT_OUT, CE_WINDOW_ID, CE_URL_S, line, value, TRUE);
@@ -2023,7 +2013,7 @@ net_parse_first_http_line (ActiveEntry *ce)
     
         /* Try and make sure this is an HTTP/1.0 reply
 	 	 */
-        if (num_fields == 2 || !XP_STRNCMP("HTTP/", server_version, 5))
+        if (num_fields == 2 || !PL_strncmp("HTTP/", server_version, 5))
           {
 			double ver = atof(server_version+5);
 
@@ -2034,14 +2024,14 @@ net_parse_first_http_line (ActiveEntry *ce)
 
 				net_setup_http11_defaults(ce);
 
-				XP_ASSERT(ver == 1.1);
+				PR_ASSERT(ver == 1.1);
 			}
 			else
 			{
             	/* HTTP1 */
     			cd->protocol_version = ONE_POINT_O;
 
-				XP_ASSERT(ver == 1.0  || ver == 0.0); /* allow 0 bug */
+				PR_ASSERT(ver == 1.0  || ver == 0.0); /* allow 0 bug */
 			}
           }
 
@@ -2162,7 +2152,7 @@ net_parse_first_http_line (ActiveEntry *ce)
 
 					cd->line_buffer_size -= cur_line_size;
 					if(cd->line_buffer_size)
-						XP_MEMMOVE(cd->line_buffer, end_of_line+1, cd->line_buffer_size); 
+						PL_memmove(cd->line_buffer, end_of_line+1, cd->line_buffer_size); 
 
 					/* by not setting CD_NEXT_STATE to something different
 					 * we will come back to this function and look for another
@@ -2388,13 +2378,13 @@ net_revert_post_data(ActiveEntry * ce)
 			; /* null body */
 
 		/* this will not explode even if the malloc fails */
-		ce->URL_s->files_to_post[index] = XP_STRDUP(ce->URL_s->post_data);					
+		ce->URL_s->files_to_post[index] = PL_strdup(ce->URL_s->post_data);					
 
 		ce->URL_s->files_to_post[index+1] = NULL;
 
 		if(ce->URL_s->post_to)
 		{
-			ce->URL_s->post_to[index] = XP_STRDUP(ce->URL_s->address);
+			ce->URL_s->post_to[index] = PL_strdup(ce->URL_s->address);
 
 			ce->URL_s->post_to[index+1] = NULL;
 		}
@@ -2410,7 +2400,7 @@ PRIVATE int
 net_setup_http_stream(ActiveEntry * ce)
 {
     HTTPConData * cd = (HTTPConData *)ce->con_data;
-	XP_Bool need_to_do_again = FALSE;
+	PRBool need_to_do_again = FALSE;
 	MWContext * stream_context;
 
     TRACEMSG(("NET_ProcessHTTP: setting up stream"));
@@ -2496,7 +2486,7 @@ net_setup_http_stream(ActiveEntry * ce)
 
 #define COMPUSERVE_HEADER_NAME "Remote-Passphrase"
 
-	else if(CE_URL_S->authenticate && !strncasecomp(CE_URL_S->authenticate, 
+	else if(CE_URL_S->authenticate && !PL_strncasecmp(CE_URL_S->authenticate, 
 						 							COMPUSERVE_HEADER_NAME, 
 						 							sizeof(COMPUSERVE_HEADER_NAME) - 1))
 	  {
@@ -2547,7 +2537,7 @@ net_setup_http_stream(ActiveEntry * ce)
 		 * pointing to it. 
 		 */
 		if (tempURL)
-			XP_FREEIF(proxyServer);
+			PR_FREEIF(proxyServer);
 	  }
 
 	if (need_to_do_again)
@@ -2578,7 +2568,7 @@ net_setup_http_stream(ActiveEntry * ce)
     else if (CD_DOING_REDIRECT && CE_URL_S->redirecting_url &&
             /* try and prevent a circular loop. wont work for dual doc loop
              */
-                XP_STRCMP(CE_URL_S->redirecting_url, CE_URL_S->address))
+                PL_strcmp(CE_URL_S->redirecting_url, CE_URL_S->address))
       {
 		Bool do_redirect=TRUE;
 		char *curURLHost, *redirectURLHost;
@@ -2597,25 +2587,25 @@ net_setup_http_stream(ActiveEntry * ce)
 			if( !(curURLHost = NET_ParseURL(CE_URL_S->address, GET_HOST_PART)) )
 				return MK_INTERRUPTED;
 			if( !(redirectURLHost = NET_ParseURL(CE_URL_S->redirecting_url, GET_HOST_PART)) ) {
-				XP_FREE(curURLHost);
+				PR_Free(curURLHost);
 				return MK_INTERRUPTED;
 			}
 
-			if ( (curPort = XP_STRCHR(curURLHost, ':')) != NULL)
+			if ( (curPort = PL_strchr(curURLHost, ':')) != NULL)
 				*curPort='\0';
-			if ( (redirectPort = XP_STRCHR(redirectURLHost, ':')) != NULL)
+			if ( (redirectPort = PL_strchr(redirectURLHost, ':')) != NULL)
 				*redirectPort='\0';
 
-			if(strcasecomp(curURLHost, redirectURLHost)) {
-				XP_FREE(curURLHost);
-				XP_FREE(redirectURLHost);
+			if(PL_strcasecmp(curURLHost, redirectURLHost)) {
+				PR_Free(curURLHost);
+				PR_Free(redirectURLHost);
 				FREE_AND_CLEAR(CE_URL_S->redirecting_url);
 				CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_REDIRECT_ATTEMPT_NOT_ALLOWED);
 				return MK_REDIRECT_ATTEMPT_NOT_ALLOWED;
 			}
 
-			XP_FREE(curURLHost);
-			XP_FREE(redirectURLHost);		
+			PR_Free(curURLHost);
+			PR_Free(redirectURLHost);		
 			
 		} /* End URL_s->dontAllowDiffHostRedirect */
 
@@ -2693,7 +2683,7 @@ net_setup_http_stream(ActiveEntry * ce)
         && !CE_URL_S->history_num)
       {
         History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
-		XP_Bool warn = FALSE;
+		PRBool warn = FALSE;
 		
 		if (h == NULL) {
 			/* Deal with frames.  If the window doesn't have history,
@@ -2741,7 +2731,7 @@ net_setup_http_stream(ActiveEntry * ce)
 		  {
 			Chrome chrome_struct;
 
-		    XP_MEMSET(&chrome_struct, 0, sizeof(Chrome));
+		    PL_memset(&chrome_struct, 0, sizeof(Chrome));
 
 			
    			chrome_struct.is_modal = TRUE;
@@ -2812,7 +2802,7 @@ HG94794
 
 		if(ce->URL_s->files_to_post)
 		  {
-		  	char * tmp_string = XP_STRDUP("<h2>Error uploading files</h2><b>The server responded:<b><hr><p>\n");
+		  	char * tmp_string = PL_strdup("<h2>Error uploading files</h2><b>The server responded:<b><hr><p>\n");
 
 			if(tmp_string)
 				PUTSTRING(tmp_string);
@@ -2824,7 +2814,7 @@ HG94794
 		 * if it is then we need to do some magic to
 		 * strip the multipart
 		 */
-        if(!strncasecomp(ce->URL_s->content_type, "multipart", 9))
+        if(!PL_strncasecmp(ce->URL_s->content_type, "multipart", 9))
         {
 		    /* reset the state to parse_mime_headers to strip
 		     * the multipart headers off
@@ -2854,7 +2844,7 @@ HG94794
     	if(CD_ACTING_AS_PROXY && CD_SERVER_HEADERS)
 	  	  {
 			CE_STATUS = PUTBLOCK(CD_SERVER_HEADERS, 
-								 XP_STRLEN(CD_SERVER_HEADERS));
+								 PL_strlen(CD_SERVER_HEADERS));
 			CD_DISPLAYED_SOME_DATA = TRUE;
 	  	  }
 
@@ -2865,9 +2855,9 @@ HG94794
 										nonProxyHost);
 				if (msg) {
 					NET_Progress(CE_WINDOW_ID, msg);
-					XP_FREE(msg);
+					PR_Free(msg);
 				}
-				XP_FREE(nonProxyHost);
+				PR_Free(nonProxyHost);
 			}
 		}
 
@@ -2946,7 +2936,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
 
 		/* add a request-range header
 		 */
-		XP_ASSERT(!ce->URL_s->range_header);
+		PR_ASSERT(!ce->URL_s->range_header);
 		ce->URL_s->range_header = PR_smprintf("bytes=%ld-", 
 											  cd->partial_needed);
 
@@ -3135,8 +3125,8 @@ PRIVATE int32
 net_HTTPLoad (ActiveEntry * ce)
 {
     /* get memory for Connection Data */
-    HTTPConData * cd = XP_NEW(HTTPConData);
-	XP_Bool url_is_secure = FALSE;
+    HTTPConData * cd = PR_NEW(HTTPConData);
+	PRBool url_is_secure = FALSE;
 	char *use_host;
 
     ce->con_data = cd;
@@ -3148,11 +3138,11 @@ net_HTTPLoad (ActiveEntry * ce)
       }
 
     /* kill any returns in the URL */
-    XP_STRTOK(ce->URL_s->address, "\r");
-    XP_STRTOK(ce->URL_s->address, "\n");
+    PL_strtok(ce->URL_s->address, "\r");
+    PL_strtok(ce->URL_s->address, "\n");
 
     /* init */
-    XP_MEMSET(cd, 0, sizeof(HTTPConData));
+    PL_memset(cd, 0, sizeof(HTTPConData));
     CD_PROXY_SERVER     = ce->proxy_addr;
 	CD_PROXY_CONF       = ce->proxy_conf;
     CD_SEND_HTTP1       = TRUE;
@@ -3167,20 +3157,20 @@ net_HTTPLoad (ActiveEntry * ce)
 
 #ifdef MOZILLA_CLIENT
 		/* if this isn't true then partial cacheing is screwed */
-		XP_ASSERT(NET_IsPartialCacheFile(ce->URL_s));
+		PR_ASSERT(NET_IsPartialCacheFile(ce->URL_s));
 #else
-		XP_ASSERT(0);
+		PR_ASSERT(0);
 #endif /* MOZILLA_CLIENT */
 	  }
   
 	if(CD_PROXY_SERVER)
 	  {
-		use_host = XP_STRDUP(CD_PROXY_SERVER);
+		use_host = PL_strdup(CD_PROXY_SERVER);
 	  }
 	else
 	  {
 		use_host = NET_ParseURL(ce->URL_s->address, GET_HOST_PART);
-		if(!strncasecomp(ce->URL_s->address, "https:", 6))
+		if(!PL_strncasecmp(ce->URL_s->address, "https:", 6))
 			url_is_secure = TRUE;
 	  }
 
@@ -3199,7 +3189,7 @@ net_HTTPLoad (ActiveEntry * ce)
 	 */
 	if(ce->URL_s->files_to_post)
 	  {
-		int32 end = XP_STRLEN(ce->URL_s->address)-1;
+		int32 end = PL_strlen(ce->URL_s->address)-1;
 		XP_StatStruct stat_entry;
 		int i;
 
@@ -3239,7 +3229,7 @@ net_HTTPLoad (ActiveEntry * ce)
     if(http_connection_list)
       {
         HTTPConnection * tmp_con;
-        XP_List * list_entry = http_connection_list;
+        PL_ListEnumReset(http_connection_list);
 
         /* If the url is secure and we are using a proxy server 
 	 	 * then never use a cached connection
@@ -3247,7 +3237,8 @@ net_HTTPLoad (ActiveEntry * ce)
 		if(!cd->use_proxy_tunnel)
           {
 
-            while((tmp_con = (HTTPConnection *)XP_ListNextObject(list_entry))
+            while((tmp_con = (HTTPConnection *)
+                   PL_ListEnumNext(http_connection_list))
                   != NULL)
               {
                 /* if the hostnames match up exactly 
@@ -3255,7 +3246,7 @@ net_HTTPLoad (ActiveEntry * ce)
 			     * and the connection
                  * is not busy at the moment then reuse this connection.
                  */
-                if(!XP_STRCMP(tmp_con->hostname, use_host)
+                if(!PL_strcmp(tmp_con->hostname, use_host)
                    && url_is_secure == tmp_con->secure
                    && !tmp_con->busy)
                   {
@@ -3269,8 +3260,8 @@ net_HTTPLoad (ActiveEntry * ce)
 				    /* reorder the connection in the list to keep most recently
 				     * used connections at the end
 				     */
-				    XP_ListRemoveObject(http_connection_list, tmp_con);
-				    XP_ListAddObjectToEnd(http_connection_list, tmp_con);
+				    PL_ListRemove(http_connection_list, tmp_con);
+				    PL_ListAddLast(http_connection_list, tmp_con);
 
                     break;
                   }
@@ -3281,7 +3272,7 @@ net_HTTPLoad (ActiveEntry * ce)
       {
         /* initialize the connection list
          */
-        http_connection_list = XP_ListNew();
+        http_connection_list = PL_ListNew();
       }
 
     if(cd->connection)
@@ -3303,7 +3294,7 @@ net_HTTPLoad (ActiveEntry * ce)
         /* build a control connection structure so we
          * can store the data as we go along
          */
-        cd->connection = XP_NEW(HTTPConnection);
+        cd->connection = PR_NEW(HTTPConnection);
         if(!cd->connection)
           {
             CE_STATUS = MK_OUT_OF_MEMORY;
@@ -3312,7 +3303,7 @@ net_HTTPLoad (ActiveEntry * ce)
 			FREE(ce->con_data);
 			return(-1);
           }
-        XP_MEMSET(cd->connection, 0, sizeof(HTTPConnection));
+        PL_memset(cd->connection, 0, sizeof(HTTPConnection));
   
         StrAllocCopy(cd->connection->hostname, use_host);
   
@@ -3329,7 +3320,7 @@ net_HTTPLoad (ActiveEntry * ce)
          * list.  No one else will be able to use it since
          * we will mark it busy.
          */
-        XP_ListAddObject(http_connection_list, cd->connection);
+        PL_ListAdd(http_connection_list, cd->connection);
 
         /* set the connection busy
          */
@@ -3338,26 +3329,27 @@ net_HTTPLoad (ActiveEntry * ce)
 		/* if the connection list is larger than MAX_CACHED_HTTP_CONNECTIONS 
 		 * trim it down
 		 */
-		if(XP_ListCount(http_connection_list) > MAX_CACHED_HTTP_CONNECTIONS)
+		if(PL_ListCount(http_connection_list) > MAX_CACHED_HTTP_CONNECTIONS)
 		  {
 			HTTPConnection *tmp_con;
-        	XP_List * list_entry = http_connection_list;
+        	PL_ListEnumReset(http_connection_list);
 
 			TRACEMSG(("More than %d cached connections.  Deleteing one...",
 					  MAX_CACHED_HTTP_CONNECTIONS));
 	
-        	while((tmp_con = (HTTPConnection *)XP_ListNextObject(list_entry)) != NULL)
+        	while((tmp_con = (HTTPConnection *)
+                   PL_ListEnumNext(http_connection_list)) != NULL)
           	  {
 				if(!tmp_con->busy)
 				  {
 
- 					if(!strncasecomp(tmp_con->hostname, "rl.", 3)
-     					&& strcasestr(tmp_con->hostname+2, ".netscape.com"))
+ 					if(!PL_strncasecmp(tmp_con->hostname, "rl.", 3)
+     					&& PL_strcasestr(tmp_con->hostname+2, ".netscape.com"))
 					  {
 						/* if there is max plus one we are done, else
 						 * continue on and remove one 
 						 */
-						if(XP_ListCount(http_connection_list) 
+						if(PL_ListCount(http_connection_list) 
 										== MAX_CACHED_HTTP_CONNECTIONS+1)
 						  {
 							break; /* from while */
@@ -3367,7 +3359,7 @@ net_HTTPLoad (ActiveEntry * ce)
 					else
 					  {
 						/* remove the object */
-						XP_ListRemoveObject(http_connection_list, tmp_con);
+						PL_ListRemove(http_connection_list, tmp_con);
             			PR_Close(tmp_con->sock);
 						FREE(tmp_con->hostname);
 						FREE(tmp_con);
@@ -3475,7 +3467,7 @@ HG51096
             	/* remove the connection from the cache list
              	 * and free the data
              	 */
-                XP_ListRemoveObject(http_connection_list, cd->connection);
+                PL_ListRemove(http_connection_list, cd->connection);
                 if(cd->connection)
                   {
                     FREEIF(cd->connection->hostname);
@@ -3569,7 +3561,7 @@ HG51096
                 /* remove the connection from the cache list
                  * and free the data
                  */
-                XP_ListRemoveObject(http_connection_list, cd->connection);
+                PL_ListRemove(http_connection_list, cd->connection);
                 FREEIF(cd->connection->hostname);
                 FREE(cd->connection);
 			  }
@@ -3701,11 +3693,11 @@ net_InterruptHTTP(ActiveEntry * ce)
 	 */
 	if(CD_NEXT_STATE == HTTP_PULL_DATA 
 		&& CE_URL_S->content_type
-		 && !strcasecomp(CE_URL_S->content_type, TEXT_HTML))
+		 && !PL_strcasecmp(CE_URL_S->content_type, TEXT_HTML))
 	  {
 		char buffer[127];
 
-		if(!strcasecomp(CE_URL_S->content_type, TEXT_HTML))
+		if(!PL_strcasecmp(CE_URL_S->content_type, TEXT_HTML))
 			PR_snprintf(buffer, sizeof(buffer),
 				XP_GetString(XP_HR_TRANSFER_INTERRUPTED));
 		else
