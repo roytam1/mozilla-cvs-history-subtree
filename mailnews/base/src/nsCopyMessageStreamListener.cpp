@@ -157,14 +157,14 @@ NS_IMETHODIMP nsCopyMessageStreamListener::Init(nsIMsgFolder *srcFolder, nsICopy
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsCopyMessageStreamListener::OnDataAvailable(nsISupports *ctxt, nsIInputStream *aIStream, PRUint32 sourceOffset, PRUint32 aLength)
+NS_IMETHODIMP nsCopyMessageStreamListener::OnDataAvailable(nsIChannel * /* aChannel */, nsISupports *ctxt, nsIInputStream *aIStream, PRUint32 sourceOffset, PRUint32 aLength)
 {
 	nsresult rv;
 	rv = mDestination->CopyData(aIStream, aLength);
 	return rv;
 }
 
-NS_IMETHODIMP nsCopyMessageStreamListener::OnStartRequest(nsISupports *ctxt)
+NS_IMETHODIMP nsCopyMessageStreamListener::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
 	nsCOMPtr<nsIMessage> message;
 	nsresult rv = NS_OK;
@@ -178,7 +178,7 @@ NS_IMETHODIMP nsCopyMessageStreamListener::OnStartRequest(nsISupports *ctxt)
 	return rv;
 }
 
-NS_IMETHODIMP nsCopyMessageStreamListener::OnStopRequest(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
+NS_IMETHODIMP nsCopyMessageStreamListener::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
 	nsresult rv = NS_OK;
 	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt, &rv);
