@@ -49,29 +49,4 @@ interface nsIHttpEventSink : nsISupports
      */
     void onRedirect(in nsIHttpChannel httpChannel, 
                     in nsIChannel newChannel);
-
-    /**
-     * Called when authentication is required due to a HTTP response like 401.
-     *
-     * @return failure cancels authentication
-     */
-    void onAuthenticate(in nsIHttpChannel httpChannel,
-                        in string host,
-                        in long port,
-                        in boolean isProxy,
-                        in string realm,
-                        inout string username,
-                        inout string password);
-
-    /**
-     * Called when authentication failed, so username/password caches can be
-     * cleared.
-     */
-    void onAuthenticationFailed(in nsIHttpChannel httpChannel,
-                                in string host,
-                                in long port,
-                                in boolean isProxy,
-                                in string realm,
-                                in string username,
-                                in string password);
 };
