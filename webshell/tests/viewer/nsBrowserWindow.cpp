@@ -816,10 +816,9 @@ static NS_DEFINE_IID(kIRDFServiceIID,           NS_IRDFSERVICE_IID);
 
   result = nsnull; // reasonable default
 
-  if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFBookmarkDataSourceCID,
-                                                  nsnull,
-                                                  kIRDFDataSourceIID,
-                                                  (void**) &ds)))
+  if (NS_FAILED(rv = nsServiceManager::GetService(kRDFServiceCID,
+                                                  kIRDFServiceIID,
+                                                  (nsISupports**) &service)))
     goto done;
 
   if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFTreeDocumentCID,
@@ -834,12 +833,10 @@ static NS_DEFINE_IID(kIRDFServiceIID,           NS_IRDFSERVICE_IID);
   if (NS_FAILED(rv = doc->GetDataBase(db)))
     goto done;
 
-  if (NS_FAILED(rv = db->AddDataSource(ds)))
+  if (NS_FAILED(rv = service->GetNamedDataSource("rdf:bookmarks", &ds)))
     goto done;
 
-  if (NS_FAILED(rv = nsServiceManager::GetService(kRDFServiceCID,
-                                                  kIRDFServiceIID,
-                                                  (nsISupports**) &service)))
+  if (NS_FAILED(rv = db->AddDataSource(ds)))
     goto done;
 
   if (NS_FAILED(rv = service->GetResource("rdf:bookmarks", &root)))
