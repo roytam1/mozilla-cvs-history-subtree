@@ -34,9 +34,9 @@
  *
  * In an object graph that's serialized and deserialized via nsISerializable,
  * nsIObjectOutputStream, and nsIObjectInputStream, if any object reference is
- * via an nsFastLoadPtr, then *all references* must be via nsFastLoadPtrs (no
- * weak refs allowed).  Otherwise a slow ref will cause a duplicate object to
- * be deserialized.
+ * made via an nsFastLoadPtr, then all references to that object in the stream
+ * must be made via nsFastLoadPtrs (no weak refs allowed).  Otherwise a slow
+ * reference will cause a duplicate object to be deserialized.
  *
  * XXXbe fix this, or at least add duplicate detection
  */
@@ -60,12 +60,26 @@ class nsFastLoadPtr : public nsCOMPtr<T> {
         return NS_REINTERPRET_CAST(nsDerivedSafe<T>*, mRawPtr);
     }
 
+    /**
+     * Deserialize an nsFastLoadPtr from aInputStream, skipping the referent
+     * object, but saving the object's offset for later deserialization.
+     *
+     * Lowercase name _a la_ get, because it's called the same way -- not via
+     * operator->().
+     */
     nsresult read(nsIObjectInputStream* aInputStream) {
         return gFastLoadService_->ReadFastLoadPtr(aInputStream,
                                                   NS_STATIC_CAST(nsISupports**,
                                                                  &mRawPtr));
     }
 
+    /**
+     * Serialize an nsFastLoadPtr reference and possibly the referent object,
+     * if that object has not yet been serialized.
+     *
+     * Lowercase name _a la_ get, because it's called the same way -- not via
+     * operator->().
+     */
     nsresult write(nsIObjectOutputStream* aOutputStream, const nsCID& aCID) {
         return gFastLoadService_->WriteFastLoadPtr(aOutputStream,
                                                    NS_STATIC_CAST(nsISupports*,
@@ -75,8 +89,11 @@ class nsFastLoadPtr : public nsCOMPtr<T> {
 };
 
 /**
- * Template class, so we don't want a static service pointer -- use a global
- * weak ref set by the service singleton's ctor and cleared by its dtor.
+ * nsFastLoadPtr is a template class, so we don't want a class static service
+ * pointer member declared in nsFastLoadPtr, above.  Plus, we need special
+ * declaration magic to export data across DLL/DSO boundaries.  So we use an
+ * old-fashioned global variable that refers weakly to the one true FastLoad
+ * service.  This pointer is maintained by that singleton's ctor and dtor.
  */
 PR_EXPORT_DATA(nsIFastLoadService*) gFastLoadService_;
 
