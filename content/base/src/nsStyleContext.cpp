@@ -110,10 +110,6 @@ public:
 
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize);
 
-#ifdef DEBUG
-  virtual void DumpRegressionData(nsIPresContext* aPresContext, FILE* out, PRInt32 aIndent);
-#endif
-
 protected:
   void AppendChild(StyleContextImpl* aChild);
   void RemoveChild(StyleContextImpl* aChild);

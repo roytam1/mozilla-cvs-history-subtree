@@ -86,10 +86,6 @@ public:
 
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize) = 0;
 
-#ifdef DEBUG
-  virtual void DumpRegressionData(nsIPresContext* aPresContext, FILE* out, PRInt32 aIndent) = 0;
-#endif
-
   // -------------------------------------------------------------
   // DEPRECATED METHODS - these are all going away, stop using them
   // get a style data struct by ID, may return null 
