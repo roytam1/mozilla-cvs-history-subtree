@@ -78,7 +78,7 @@ protected:
   NSArray  *GenerateFilterList();
   void     SetDialogTitle(const nsString& inTitle, id aDialog);
   NSString *PanelDefaultDirectory();
-                                                
+
   PRBool                 mAllFilesDisplayed;
   nsString               mTitle;
   PRInt16                mMode;
