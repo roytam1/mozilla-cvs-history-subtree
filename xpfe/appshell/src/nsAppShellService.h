@@ -97,7 +97,7 @@ protected:
   PR_STATIC_CALLBACK(void) DestroyExitEvent(PLEvent* aEvent);
 
 private:
-#ifndef MOZ_XUL_APP
+#ifndef MOZ_PHOENIX
   nsresult CheckAndRemigrateDefunctProfile();
 #endif
 
