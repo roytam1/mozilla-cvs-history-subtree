@@ -1684,10 +1684,8 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
 
     // Always leave space for the twisty.
     nsRect twistyRect(currX, cellRect.y, remainingWidth, cellRect.height);
-    nsRect dirtyRect;
-    if (dirtyRect.IntersectRect(aDirtyRect, twistyRect))
-      PaintTwisty(aRowIndex, aColumn, twistyRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer,
-                  remainingWidth, currX);
+    PaintTwisty(aRowIndex, aColumn, twistyRect, aPresContext, aRenderingContext, aDirtyRect, aWhichLayer,
+                remainingWidth, currX);
 
     // Resolve the style to use for the connecting lines.
     nsCOMPtr<nsIStyleContext> lineContext;
@@ -1723,6 +1721,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
       for (PRInt32 i = level; i > 0; i--) {
         if (i <= maxLevel) {
           // Get size of parent image to line up.
+
           PrefillPropertyArray(currentParent, aColumn);
           mView->GetCellProperties(currentParent, aColumn->GetID(), mScratchArray);
 
@@ -1743,9 +1742,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
           PRBool hasNextSibling;
           mView->HasNextSibling(currentParent, aRowIndex, &hasNextSibling);
           if (hasNextSibling)
-            aRenderingContext.DrawLine(x - (maxLevel - i + 1) * mIndentation, y, x - (maxLevel - i + 1) * mIndentation, y + mRowHeight);
+            aRenderingContext.DrawLine(x - (level - i + 1) * mIndentation, y, x - (level - i + 1) * mIndentation, y + mRowHeight);
           else if (i == level)
-            aRenderingContext.DrawLine(x - (maxLevel - i + 1) * mIndentation, y, x - (maxLevel - i + 1) * mIndentation, y + mRowHeight / 2);
+            aRenderingContext.DrawLine(x - (level - i + 1) * mIndentation, y, x - (level - i + 1) * mIndentation, y + mRowHeight / 2);
         }
 
         PRInt32 parent;
