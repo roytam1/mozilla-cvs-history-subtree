@@ -95,6 +95,7 @@
 #include "nsIDOMNSLocation.h"
 #include "nsIDOMLocation.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDOMJSWindow.h"
 #include "nsIDOMWindowCollection.h"
 #include "nsIDOMHistory.h"
@@ -880,7 +881,7 @@ nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
 nsIScriptSecurityManager *nsDOMClassInfo::sSecMan = nsnull;
 PRBool nsDOMClassInfo::sIsInitialized = PR_FALSE;
 PRBool nsDOMClassInfo::sDisableDocumentAllSupport = PR_FALSE;
-
+PRBool nsDOMClassInfo::sDisableGlobalScopePollutionSupport = PR_FALSE;
 
 
 jsval nsDOMClassInfo::sTop_id             = JSVAL_VOID;
@@ -951,7 +952,7 @@ jsval nsDOMClassInfo::sAdd_id             = JSVAL_VOID;
 jsval nsDOMClassInfo::sAll_id             = JSVAL_VOID;
 jsval nsDOMClassInfo::sTags_id            = JSVAL_VOID;
 
-const JSClass *nsDOMClassInfo::sObjectClass   = nsnull;
+const JSClass *nsDOMClassInfo::sObjectClass = nsnull;
 
 PRBool nsDOMClassInfo::sDoSecurityCheckInAddProperty = PR_TRUE;
 
@@ -2396,6 +2397,11 @@ nsDOMClassInfo::Init()
                                         &disabled))) {
       sDisableDocumentAllSupport = disabled;
     }
+
+    if (NS_SUCCEEDED(prefs->GetBoolPref("browser.dom.global_scope_pollution.disabled",
+                                        &disabled))) {
+      sDisableGlobalScopePollutionSupport = disabled;
+    }
   }
 
   sIsInitialized = PR_TRUE;
@@ -2579,10 +2585,6 @@ nsDOMClassInfo::PostCreate(nsIXPConnectWrappedNative *wrapper,
   JSObject *proto_proto = ::JS_GetPrototype(cx, proto);
 
   JSClass *proto_proto_class = JS_GET_CLASS(cx, proto_proto);
-
-  if (!sObjectClass) {
-    sObjectClass = proto_proto_class;
-  }
 
   if (proto_proto_class != sObjectClass) {
     // We've just wrapped an object of a type that has been wrapped on
@@ -3098,9 +3100,23 @@ nsDOMClassInfo::doCheckPropertyAccess(JSContext *cx, JSObject *obj, jsval id,
 }
 
 NS_IMETHODIMP
-nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext * cx,
-                      JSObject * globalObj, JSObject * *parentObj)
+nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
+                      JSObject *globalObj, JSObject **parentObj)
 {
+  // Since this is one of the first calls we'll get from XPConnect,
+  // grab the pointer to the Object class so we'll have it later on.
+
+  if (!sObjectClass) {
+    JSObject *obj, *proto = globalObj;
+
+    do {
+      obj = proto;
+      proto = ::JS_GetPrototype(cx, obj);
+    } while (proto);
+
+    sObjectClass = JS_GET_CLASS(cx, obj);
+  }
+
   // Normally ::PreCreate() is used to give XPConnect the parent
   // object for the object that's being wrapped, this parent object is
   // set as the parent of the wrapper and it's also used to find the
@@ -3129,6 +3145,173 @@ nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext * cx,
   // know we're called on the correct context so we return globalObj
 
   *parentObj = globalObj;
+
+  return NS_OK;
+}
+
+
+static JSClass sGlobalScopePolluterClass = {
+  "Global Scope Polluter",
+  JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS | JSCLASS_NEW_RESOLVE,
+  nsWindowSH::SecurityCheckOnSetProp, nsWindowSH::SecurityCheckOnSetProp,
+  nsWindowSH::GlobalScopePolluterGetProperty,
+  nsWindowSH::SecurityCheckOnSetProp, JS_EnumerateStub,
+  (JSResolveOp)nsWindowSH::GlobalScopePolluterNewResolve, JS_ConvertStub,
+  nsHTMLDocumentSH::ReleaseDocument
+};
+
+
+// static
+JSBool JS_DLL_CALLBACK
+nsWindowSH::GlobalScopePolluterGetProperty(JSContext *cx, JSObject *obj,
+                                           jsval id, jsval *vp)
+{
+  // Someone is accessing a element by referencing its name/id in the
+  // global scope, do a security check to make sure that's ok.
+
+  nsresult rv =
+    sSecMan->CheckPropertyAccess(cx, GetGlobalJSObject(cx, obj), "Window", id,
+                                 nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
+
+  // If !NS_SUCCEEDED(rv) the security check failed. The security
+  // manager set a JS exception for us.
+  return NS_SUCCEEDED(rv);
+}
+
+// static
+JSBool JS_DLL_CALLBACK
+nsWindowSH::SecurityCheckOnSetProp(JSContext *cx, JSObject *obj, jsval id,
+                                   jsval *vp)
+{
+  // Someone is accessing a element by referencing its name/id in the
+  // global scope, do a security check to make sure that's ok.
+
+  nsresult rv =
+    sSecMan->CheckPropertyAccess(cx, GetGlobalJSObject(cx, obj), "Window", id,
+                                 nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
+
+  // If !NS_SUCCEEDED(rv) the security check failed. The security
+  // manager set a JS exception for us.
+  return NS_SUCCEEDED(rv);
+}
+
+// static
+JSBool JS_DLL_CALLBACK
+nsWindowSH::GlobalScopePolluterNewResolve(JSContext *cx, JSObject *obj,
+                                          jsval id, uintN flags,
+                                          JSObject **objp)
+{
+  if (flags & JSRESOLVE_ASSIGNING || JSVAL_IS_INT(id)) {
+    // Nothing to do here if we're assigning, or resolving a number
+
+    return JS_TRUE;
+  }
+
+  nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, obj);
+
+  if (!doc || doc->GetCompatibilityMode() != eCompatibility_NavQuirks) {
+    // If we don't have a document, or if the document is not in
+    // quirks mode, return early.
+
+    return JS_TRUE;
+  }
+
+  JSObject *proto = ::JS_GetPrototype(cx, obj);
+  JSString *jsstr = JSVAL_TO_STRING(id);
+  JSBool hasProp;
+
+  if (!proto || !::JS_HasUCProperty(cx, proto, ::JS_GetStringChars(jsstr),
+                                    ::JS_GetStringLength(jsstr), &hasProp) ||
+      hasProp) {
+    // No prototype, or the property exists on the prototype. Do
+    // nothing.
+
+    return JS_TRUE;
+  }
+
+  nsDependentJSString str(jsstr);
+  nsCOMPtr<nsISupports> result;
+
+  {
+    nsCOMPtr<nsIDOMDocument> dom_doc(do_QueryInterface(doc));
+    nsCOMPtr<nsIDOMElement> element;
+
+    dom_doc->GetElementById(str, getter_AddRefs(element));
+
+    result = element;
+  }
+
+  if (!result) {
+    doc->ResolveName(str, nsnull, getter_AddRefs(result));
+  }
+
+  if (result) {
+    jsval v;
+    nsresult rv = WrapNative(cx, GetGlobalJSObject(cx, obj), result,
+                             NS_GET_IID(nsISupports), &v);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(jsstr),
+                               ::JS_GetStringLength(jsstr), v, nsnull, nsnull,
+                               0)) {
+      nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
+
+      return JS_FALSE;
+    }
+
+    *objp = obj;
+  }
+
+  return JS_TRUE;
+}
+
+// static
+nsresult
+nsWindowSH::InstallGlobalScopePolluter(JSContext *cx, JSObject *obj,
+                                       nsIHTMLDocument *doc)
+{
+  // If we didn't get a document, don't bother setting up a global
+  // scope polluter.
+  if (!doc || sDisableGlobalScopePollutionSupport) {
+    return NS_OK;
+  }
+
+  JSObject *gsp = ::JS_NewObject(cx, &sGlobalScopePolluterClass, nsnull, obj);
+  if (!gsp) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  JSObject *o = obj, *proto;
+
+  // Find the place in the prototype chain where we want this global
+  // scope polluter (right before Object.prototype).
+
+  while ((proto = ::JS_GetPrototype(cx, o))) {
+    if (JS_GET_CLASS(cx, proto) == sObjectClass) {
+      // Set the global scope polluters prototype to Object.prototype
+      if (!::JS_SetPrototype(cx, gsp, proto)) {
+        return NS_ERROR_UNEXPECTED;
+      }
+
+      break;
+    }
+
+    o = proto;
+  }
+
+  // And then set the ptototype of the object whose prototype was
+  // Object.prototype to be the global scope polluter.
+  if (!::JS_SetPrototype(cx, o, gsp)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  if (!::JS_SetPrivate(cx, gsp, doc)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  // The global scope polluter will release doc on destruction (or
+  // reinitialzation).
+  NS_ADDREF(doc);
 
   return NS_OK;
 }
@@ -4081,8 +4264,8 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
 
 // static
 nsresult
-nsWindowSH::CacheDocumentProperty(JSContext *cx, JSObject *obj,
-                                  nsIDOMWindow *window)
+nsWindowSH::OnDocumentChanged(JSContext *cx, JSObject *obj,
+                              nsIDOMWindow *window)
 {
   nsCOMPtr<nsIDOMDocument> document;
   nsresult rv = window->GetDocument(getter_AddRefs(document));
@@ -4101,7 +4284,9 @@ nsWindowSH::CacheDocumentProperty(JSContext *cx, JSObject *obj,
     return NS_ERROR_FAILURE;
   }
 
-  return NS_OK;
+  nsCOMPtr<nsIHTMLDocument> html_doc(do_QueryInterface(document));
+
+  return InstallGlobalScopePolluter(cx, obj, html_doc);
 }
 
 NS_IMETHODIMP
@@ -4356,7 +4541,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
         NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
 
-        rv = CacheDocumentProperty(cx, obj, window);
+        rv = OnDocumentChanged(cx, obj, window);
         NS_ENSURE_SUCCESS(rv, rv);
 
         *objp = obj;
@@ -5403,7 +5588,7 @@ nsHTMLDocumentSH::DocumentOpen(JSContext *cx, JSObject *obj, uintN argc,
 
 static JSClass sHTMLDocumentAllClass = {
   "HTML document.all class",
-  JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE | JSCLASS_PRIVATE_IS_NSISUPPORTS |
+  JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS | JSCLASS_NEW_RESOLVE |
   JSCLASS_HAS_RESERVED_SLOTS(1),
   JS_PropertyStub, JS_PropertyStub, nsHTMLDocumentSH::DocumentAllGetProperty,
   JS_PropertyStub, JS_EnumerateStub,
@@ -5602,8 +5787,8 @@ nsHTMLDocumentSH::DocumentAllGetProperty(JSContext *cx, JSObject *obj,
 }
 
 JSBool JS_DLL_CALLBACK
-nsHTMLDocumentSH::DocumentAllNewResolve(JSContext *cx, JSObject *obj,
-                                        jsval id, uintN flags, JSObject **objp)
+nsHTMLDocumentSH::DocumentAllNewResolve(JSContext *cx, JSObject *obj, jsval id,
+                                        uintN flags, JSObject **objp)
 {
   if (flags & JSRESOLVE_ASSIGNING) {
     // Nothing to do here if we're assigning
@@ -5983,37 +6168,44 @@ nsHTMLDocumentSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
 
     if (id == sAll_id && !sDisableDocumentAllSupport) {
-      JSObject *helper = GetDocumentAllHelper(cx, ::JS_GetPrototype(cx, obj));
+      wrapper->GetNative(getter_AddRefs(result));
+      nsCOMPtr<nsIHTMLDocument> doc(do_QueryInterface(result));
 
-      // If we don't already have a helper, and we're
-      // resolving document.all qualified, and we're *not* detecting
-      // document.all, e.g. if (document.all), create a helper.
-      if (!helper && flags & JSRESOLVE_QUALIFIED &&
-          !(flags & JSRESOLVE_DETECTING)) {
-        helper = JS_NewObject(cx, &sHTMLDocumentAllHelperClass,
-                              ::JS_GetPrototype(cx, obj),
-                              GetGlobalJSObject(cx, obj));
+      if (doc->GetCompatibilityMode() == eCompatibility_NavQuirks) {
+        JSObject *helper =
+          GetDocumentAllHelper(cx, ::JS_GetPrototype(cx, obj));
 
-        if (!helper) {
-          return NS_ERROR_OUT_OF_MEMORY;
+        // If we don't already have a helper, and we're resolving
+        // document.all qualified, and we're *not* detecting
+        // document.all, e.g. if (document.all), create a helper.
+        if (!helper && flags & JSRESOLVE_QUALIFIED &&
+            !(flags & JSRESOLVE_DETECTING)) {
+          helper = JS_NewObject(cx, &sHTMLDocumentAllHelperClass,
+                                ::JS_GetPrototype(cx, obj),
+                                GetGlobalJSObject(cx, obj));
+
+          if (!helper) {
+            return NS_ERROR_OUT_OF_MEMORY;
+          }
+
+          // Insert the helper into our prototype chain. helper's prototype
+          // is already obj's current prototype.
+          if (!::JS_SetPrototype(cx, obj, helper)) {
+            nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
+
+            return NS_ERROR_UNEXPECTED;
+          }
         }
 
-        // Insert the helper into our prototype chain. helper's prototype
-        // is already obj's current prototype.
-        if (!::JS_SetPrototype(cx, obj, helper)) {
+        // If we have (or just created) a helper, pass the resolve flags
+        // to the helper as its private data.
+        if (helper &&
+            !::JS_SetPrivate(cx, helper,
+                             JSVAL_TO_PRIVATE(INT_TO_JSVAL(flags)))) {
           nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
 
           return NS_ERROR_UNEXPECTED;
         }
-      }
-
-      // If we have (or just created) a helper, pass the resolve flags
-      // to the helper as its private data.
-      if (helper && !::JS_SetPrivate(cx, helper,
-                                     JSVAL_TO_PRIVATE(INT_TO_JSVAL(flags)))) {
-        nsDOMClassInfo::ThrowJSException(cx, NS_ERROR_UNEXPECTED);
-
-        return NS_ERROR_UNEXPECTED;
       }
 
       return NS_OK;
