@@ -37,9 +37,9 @@
 #define IDS_MESSAGES                    34
 #define IDS_GROUPS_SERVER               35
 #define IDS_DOWNLOAD                    36
-#define IDS_ASK_ME                      37
+#define IDS_NEVER                       37
 #define IDS_AUTOMATICALLY               38
-#define IDS_NEVER                       39
+#define IDS_ASK_ME                      39
 #define IDS_FOLDER_MAIL                 40
 #define IDS_FOLDER_NEWS                 41
 #define IDS_FOLDER_DRAFT                42
@@ -133,15 +133,13 @@
 #define IDC_ATTACH_VCARD                250
 #define IDC_RADIO_FIXED                 251
 #define IDC_RADIO_VARIABLE              252
-#define IDC_ONLINE_MODE                 1000
 #define IDC_NOT_TOCC                    1000
+#define IDC_PREVIOUS_STATE              1001
+#define IDC_ASK_ME                      1002
 #define IDC_OUTSIDE_DOMAIN              1001
-#define IDC_OFFLINE_MODE                1001
 #define IDC_AUTO_SELECT                 1001
 #define IDC_DOWNLOAD_BY_MSG             1001
-#define IDC_PREVIOUS_STATE              1001
 #define IDC_GENERAL                     1002
-#define IDC_ASK_ME                      1002
 #define IDC_DOWNLOAD_BY_DATE            1003
 #define IDC_RADIO_FROM                  1004
 #define IDC_RADIO_SINCE                 1005
@@ -153,31 +151,27 @@
 #define IDC_SELECT_DOWNLOAD             1008
 #define IDC_EDIT_MSG_DAYS               1008
 #define IDC_STATIC_SELECT_NO            1009
-#define IDC_EDIT_MSG_NO                 1009
-#define IDC_EDIT_REMOVE_DAYS            1009
 #define IDC_EDIT_MSG_COOUNT             1009
+#define IDC_EDIT_REMOVE_DAYS            1009
 #define IDC_CHECK_MSG_SIZE              1010
 #define IDC_UNREAD_ONLY                 1010
 #define IDC_CHECK_MSG_DAYS              1011
-#define IDC_KEEP_MSG_DAYS               1011
 #define IDC_CHECK_MSG_READ              1012
-#define IDC_KEEP_UNREAD                 1012
 #define IDC_EDIT_MSG_SIZE               1013
 #define IDC_CHECK_COMPACT_SIZE          1014
 #define IDC_EDIT_COMPACT_SIZE           1015
-#define IDC_KEEP_MSG_NO                 1016
-#define IDC_BUTTON1                     1016
-#define IDC_MORE_MESSAGES               1016
-#define IDC_CUSTOMIZE                   1016
+#define IDC_KEEP_MSG_DAYS               1016
 #define IDC_KEEP_ALL                    1017
 #define IDC_EXPAND_BOTH                 1017
+#define IDC_KEEP_COUNT                  1018
 #define IDC_SECURE                      1018
 #define IDC_EXPAND_NICKNAME             1018
-#define IDC_KEEP_COUNT                  1018
 #define IDC_SAVE_PASSWORD               1019
 #define IDC_RADIO_8BITS                 1019
 #define IDC_RADIO_MIME                  1020
+#define IDC_KEEP_UNREAD                 1020
 #define IDC_ASK                         1021
+#define IDC_CUSTOMIZE                   1021
 #define IDC_PLAIN                       1022
 #define IDC_STATIC_DAYS_AGO             1022
 #define IDC_FONT_SIZE                   1023
@@ -256,9 +250,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        307
+#define _APS_NEXT_RESOURCE_VALUE        308
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1050
+#define _APS_NEXT_CONTROL_VALUE         1056
 #define _APS_NEXT_SYMED_VALUE           300
 #endif
 #endif
