@@ -42,14 +42,12 @@
 #include "nsForwardReference.h"
 #include "nsICSSLoader.h"
 #include "nsICSSStyleSheet.h"
-#include "nsIContent.h"
 #include "nsIContentSink.h"
 #include "nsIContentViewerContainer.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMXULDocument.h"
 #include "nsIDOMEventListener.h"
-#include "nsIDOMEventReceiver.h"
 #include "nsIDOMHTMLFormElement.h"
+#include "nsIDOMXULDocument.h"
 #include "nsIDocument.h"
 #include "nsIDocumentLoader.h"
 #include "nsIFormControl.h"
@@ -163,10 +161,13 @@ protected:
     static nsINameSpaceManager*   gNameSpaceManager;
     static nsIXULContentUtils*    gXULUtils;
 
+    static nsIAtom* kAttributeAtom;
     static nsIAtom* kCommandUpdaterAtom;
     static nsIAtom* kDataSourcesAtom;
+    static nsIAtom* kElementAtom;
     static nsIAtom* kIdAtom;
     static nsIAtom* kKeysetAtom;
+    static nsIAtom* kObservesAtom;
     static nsIAtom* kOverlayAtom;
     static nsIAtom* kPositionAtom;
     static nsIAtom* kRefAtom;
@@ -205,17 +206,6 @@ protected:
     nsresult OpenOverlayRoot(const nsIParserNode& aNode, PRInt32 aNameSpaceID, nsIAtom* aTag);
     nsresult OpenTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, nsIAtom* aTag);
     nsresult OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, nsIAtom* aTag);
-
-    static
-    nsresult
-    Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode);
-
-    static
-    nsresult
-    InsertElement(nsIContent* aParent, nsIContent* aChild);
-
-    nsresult
-    AddElementToMap(nsIContent* aElement);
 
     // Script tag handling
     nsresult OpenScript(const nsIParserNode& aNode);
@@ -278,22 +268,6 @@ protected:
     friend class ContextStack;
     ContextStack mContextStack;
 
-
-    class OverlayForwardReference : public nsForwardReference
-    {
-    protected:
-        nsCOMPtr<nsIContent> mContent;
-
-    public:
-        OverlayForwardReference(nsIContent* aElement) : mContent(aElement) {}
-
-        virtual ~OverlayForwardReference() {}
-
-        virtual Result Resolve();
-    };
-
-    friend class OverlayForwardReference;
-
     nsCOMPtr<nsIURI> mDocumentURL;         // [OWNER]
     nsCOMPtr<nsIURI> mDocumentBaseURL;     // [OWNER]
 
@@ -318,10 +292,13 @@ nsIXMLElementFactory* XULContentSinkImpl::gXMLElementFactory;
 nsINameSpaceManager* XULContentSinkImpl::gNameSpaceManager;
 nsIXULContentUtils* XULContentSinkImpl::gXULUtils;
 
+nsIAtom* XULContentSinkImpl::kAttributeAtom;
 nsIAtom* XULContentSinkImpl::kCommandUpdaterAtom;
 nsIAtom* XULContentSinkImpl::kDataSourcesAtom;
+nsIAtom* XULContentSinkImpl::kElementAtom;
 nsIAtom* XULContentSinkImpl::kIdAtom;
 nsIAtom* XULContentSinkImpl::kKeysetAtom;
+nsIAtom* XULContentSinkImpl::kObservesAtom;
 nsIAtom* XULContentSinkImpl::kOverlayAtom;
 nsIAtom* XULContentSinkImpl::kPositionAtom;
 nsIAtom* XULContentSinkImpl::kRefAtom;
@@ -421,46 +398,6 @@ XULContentSinkImpl::ContextStack::IsInsideXULTemplate()
 ////////////////////////////////////////////////////////////////////////
 
 
-nsForwardReference::Result
-XULContentSinkImpl::OverlayForwardReference::Resolve()
-{
-    nsresult rv;
-
-    nsCOMPtr<nsIDocument> doc;
-    rv = mContent->GetDocument(*getter_AddRefs(doc));
-    if (NS_FAILED(rv)) return eResolveError;
-
-    nsCOMPtr<nsIDOMXULDocument> xuldoc = do_QueryInterface(doc);
-    if (! xuldoc)
-        return eResolveError;
-
-    nsAutoString id;
-    rv = mContent->GetAttribute(kNameSpaceID_XUL, kIdAtom, id);
-    if (NS_FAILED(rv)) return eResolveError;
-
-    nsCOMPtr<nsIDOMElement> domoverlay;
-    rv = xuldoc->GetElementById(id, getter_AddRefs(domoverlay));
-    if (NS_FAILED(rv)) return eResolveError;
-
-    if (! domoverlay)
-        return eResolveLater;
-
-    nsCOMPtr<nsIContent> overlay = do_QueryInterface(domoverlay);
-    if (! overlay)
-        return eResolveError;
-
-    rv = Merge(mContent, overlay);
-    if (NS_FAILED(rv)) return eResolveError;
-
-    return eResolveSucceeded;
-}
-
-
-
-
-////////////////////////////////////////////////////////////////////////
-
-
 XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
     : mText(nsnull),
       mTextLength(0),
@@ -511,10 +448,13 @@ XULContentSinkImpl::XULContentSinkImpl(nsresult& rv)
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register XUL namespace");
         if (NS_FAILED(rv)) return;
 
+        kAttributeAtom      = NS_NewAtom("attribute");
         kCommandUpdaterAtom = NS_NewAtom("commandupdater");
         kDataSourcesAtom    = NS_NewAtom("datasources");
+        kElementAtom        = NS_NewAtom("element");
         kIdAtom             = NS_NewAtom("id");
         kKeysetAtom         = NS_NewAtom("keyset");
+        kObservesAtom       = NS_NewAtom("observes");
         kOverlayAtom        = NS_NewAtom("overlay");
         kPositionAtom       = NS_NewAtom("position");
         kRefAtom            = NS_NewAtom("ref");
@@ -608,10 +548,13 @@ XULContentSinkImpl::~XULContentSinkImpl()
             gXULUtils = nsnull;
         }
 
+        NS_IF_RELEASE(kAttributeAtom);
         NS_IF_RELEASE(kCommandUpdaterAtom);
         NS_IF_RELEASE(kDataSourcesAtom);
+        NS_IF_RELEASE(kElementAtom);
         NS_IF_RELEASE(kIdAtom);
         NS_IF_RELEASE(kKeysetAtom);
+        NS_IF_RELEASE(kObservesAtom);
         NS_IF_RELEASE(kOverlayAtom);
         NS_IF_RELEASE(kPositionAtom);
         NS_IF_RELEASE(kRefAtom);
@@ -1419,7 +1362,7 @@ XULContentSinkImpl::GetXULIDAttribute(const nsIParserNode& aNode, nsString& aID)
         }
     }
 
-    // Otherwise, we couldn't find anything, so just gensym one...
+    // Otherwise, we couldn't find anything
     aID.Truncate();
     return NS_OK;
 }
@@ -1784,6 +1727,7 @@ XULContentSinkImpl::OpenRoot(const nsIParserNode& aNode, PRInt32 aNameSpaceID, n
     rv = AddAttributes(aNode, element);
     if (NS_FAILED(rv)) return rv;
 
+#if 0
     // Create the document's "hidden form" element which will wrap all
     // HTML form elements that turn up.
     nsCOMPtr<nsIHTMLContent> form;
@@ -1819,6 +1763,7 @@ XULContentSinkImpl::OpenRoot(const nsIParserNode& aNode, PRInt32 aNameSpaceID, n
     // Add the element to the XUL document's ID-to-element map.
     rv = AddElementToMap(element);
     if (NS_FAILED(rv)) return rv;
+#endif
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -1886,6 +1831,7 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, ns
     rv = AddAttributes(aNode, element);
     if (NS_FAILED(rv)) return rv;
 
+#if 0
     // Insert the element into the content model
     nsCOMPtr<nsIContent> parent;
     rv = mContextStack.GetTopElement(getter_AddRefs(parent));
@@ -1893,6 +1839,22 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, ns
 
     rv = InsertElement(parent, element);
     if (NS_FAILED(rv)) return rv;
+
+    // Handle broadcaster hookup. We _always_ "forward resolve" these,
+    // because the hookup needs to be done after all of the overlays
+    // are applied.
+    if ((aNameSpaceID == kNameSpaceID_XUL) && (aTag == kObservesAtom)) {
+        BroadcasterHookup* fwdref =
+            new BroadcasterHookup(element);
+
+        nsCOMPtr<nsIXULDocument> xuldoc = do_QueryInterface(mDocument);
+        if (! xuldoc)
+            return NS_ERROR_UNEXPECTED;
+
+        // transferring ownership to ya...
+        rv = xuldoc->AddForwardReference(fwdref);
+        if (NS_FAILED(rv)) return rv;
+    }
 
     // Check for an 'id' attribute.  If we're inside a XUL template,
     // then _everything_ needs to have an ID for the 'template'
@@ -1912,14 +1874,10 @@ XULContentSinkImpl::OpenTag(const nsIParserNode& aNode, PRInt32 aNameSpaceID, ns
     rv = AddElementToMap(element);
     if (NS_FAILED(rv)) return rv;
 
-    // Check for a 'commandupdater' attribute, in which case we'll
-    // hook the node up as a command updater.
-    nsAutoString value;
-    rv = element->GetAttribute(kNameSpaceID_None, kCommandUpdaterAtom, value);
-    if ((rv == NS_CONTENT_ATTR_HAS_VALUE) && value.Equals("true")) {
-        rv = gXULUtils->SetCommandUpdater(mDocument, element);
-        if (NS_FAILED(rv)) return rv;
-    }
+    // Deal with any magic attributes
+    rv = ProcessCommonAttributes(element);
+    if (NS_FAILED(rv)) return rv;
+#endif
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -2002,6 +1960,7 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
         rv = xml->SetContainingNameSpace(ns);
         if (NS_FAILED(rv)) return rv;
 
+#if 0
         OverlayForwardReference* fwdref = new OverlayForwardReference(element);
         if (! fwdref)
             return NS_ERROR_OUT_OF_MEMORY;
@@ -2013,7 +1972,7 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
         // transferring ownership to ya...
         rv = xuldoc->AddForwardReference(fwdref);
         if (NS_FAILED(rv)) return rv;
-
+#endif
         // No match, just push the overlay element onto the context
         // stack so we have somewhere to hang its child nodes off'n.
     }
@@ -2022,20 +1981,18 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
     rv = AddAttributes(aNode, element);
     if (NS_FAILED(rv)) return rv;
 
+#if 0
     rv = AddElementToMap(element);
     if (NS_FAILED(rv)) return rv;
 
     if (domparent) {
-        // Check for a 'commandupdater' attribute, in which case we'll
-        // hook the node up as a command updater. We only do this in
-        // the case that the element was already in the document.
-        nsAutoString value;
-        rv = element->GetAttribute(kNameSpaceID_None, kCommandUpdaterAtom, value);
-        if ((rv == NS_CONTENT_ATTR_HAS_VALUE) && value.Equals("true")) {
-            rv = gXULUtils->SetCommandUpdater(mDocument, element);
-            if (NS_FAILED(rv)) return rv;
-        }
+        // Process any common attributes, but only if the element was
+        // hooked up to the content model. If it _Wasn't_, we'll defer
+        // this until forward references are resolved.
+        rv = ProcessCommonAttributes(element);
+        if (NS_FAILED(rv)) return rv;
     }
+#endif
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -2043,140 +2000,6 @@ XULContentSinkImpl::OpenOverlayTag(const nsIParserNode& aNode, PRInt32 aNameSpac
     if (NS_FAILED(rv)) return rv;
 
     mState = eInDocumentElement;
-
-    return NS_OK;
-}
-
-
-nsresult
-XULContentSinkImpl::Merge(nsIContent* aOriginalNode, nsIContent* aOverlayNode)
-{
-    nsresult rv;
-
-    {
-        // Whack the attributes from aOverlayNode onto aOriginalNode
-        PRInt32 count;
-        rv = aOverlayNode->GetAttributeCount(count);
-        if (NS_FAILED(rv)) return rv;
-
-        for (PRInt32 i = 0; i < count; ++i) {
-            PRInt32 nameSpaceID;
-            nsCOMPtr<nsIAtom> tag;
-            rv = aOverlayNode->GetAttributeNameAt(i, nameSpaceID, *getter_AddRefs(tag));
-            if (NS_FAILED(rv)) return rv;
-
-            nameSpaceID = kNameSpaceID_None;
-
-            if (nameSpaceID == kNameSpaceID_None && tag.get() == kIdAtom)
-                continue;
-
-            nsAutoString value;
-            rv = aOverlayNode->GetAttribute(nameSpaceID, tag, value);
-            if (NS_FAILED(rv)) return rv;
-
-            rv = aOriginalNode->SetAttribute(nameSpaceID, tag, value, PR_FALSE);
-            if (NS_FAILED(rv)) return rv;
-        }
-
-        // Check for a 'commandupdater' attribute, in which case we'll
-        // hook the node up as a command updater. We need to do this
-        // _here_, because it's possible that an overlay has added the
-        // 'commandupdater' attribute, or even altered the 'targets'
-        // or 'events' attributes.
-        nsAutoString value;
-        rv = aOriginalNode->GetAttribute(kNameSpaceID_None, kCommandUpdaterAtom, value);
-        if ((rv == NS_CONTENT_ATTR_HAS_VALUE) && value.Equals("true")) {
-            nsCOMPtr<nsIDocument> doc;
-            rv = aOriginalNode->GetDocument(*getter_AddRefs(doc));
-            if (NS_FAILED(rv)) return rv;
-
-            rv = gXULUtils->SetCommandUpdater(doc, aOriginalNode);
-            if (NS_FAILED(rv)) return rv;
-        }
-    }
-
-    {
-        // Now move any kids
-        PRInt32 count;
-        rv = aOverlayNode->ChildCount(count);
-        if (NS_FAILED(rv)) return rv;
-
-        for (PRInt32 i = 0; i < count; ++i) {
-            nsCOMPtr<nsIContent> child;
-            rv = aOverlayNode->ChildAt(i, *getter_AddRefs(child));
-            if (NS_FAILED(rv)) return rv;
-
-            rv = InsertElement(aOriginalNode, child);
-            if (NS_FAILED(rv)) return rv;
-        }
-
-        // Ok, now we _don't_ need to add these to the
-        // document-to-element map because normal construction of the
-        // nodes in OpenTag() will have done this.
-    }
-
-    return NS_OK;
-}
-
-
-nsresult
-XULContentSinkImpl::InsertElement(nsIContent* aParent, nsIContent* aChild)
-{
-    // Insert aChild appropriately into aParent, accountinf for a
-    // 'pos' attribute set on aChild.
-    nsresult rv;
-
-    nsAutoString posStr;
-    rv = aChild->GetAttribute(kNameSpaceID_None, kPositionAtom, posStr);
-    if (NS_FAILED(rv)) return rv;
-
-    PRBool wasInserted = PR_FALSE;
-
-    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-        PRInt32 pos = posStr.ToInteger(NS_REINTERPRET_CAST(PRInt32*, &rv));
-        if (NS_SUCCEEDED(rv)) {
-            rv = aParent->InsertChildAt(aChild, pos, PR_FALSE);
-            if (NS_FAILED(rv)) return rv;
-
-            wasInserted = PR_TRUE;
-        }
-    }
-
-    if (! wasInserted) {
-        rv = aParent->AppendChildTo(aChild, PR_FALSE);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    return NS_OK;
-}
-
-
-nsresult
-XULContentSinkImpl::AddElementToMap(nsIContent* aElement)
-{
-    // Add the specified element to the document's ID-to-element map
-    nsresult rv;
-
-    nsCOMPtr<nsIXULDocument> xuldoc = do_QueryInterface(mDocument);
-    if (! xuldoc)
-        return NS_ERROR_UNEXPECTED;
-
-    nsAutoString id;
-    rv = aElement->GetAttribute(kNameSpaceID_None, kIdAtom, id);
-    if (NS_FAILED(rv)) return rv;
-
-    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-        rv = xuldoc->AddElementForID(id, aElement);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    rv = aElement->GetAttribute(kNameSpaceID_None, kRefAtom, id);
-    if (NS_FAILED(rv)) return rv;
-
-    if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-        rv = xuldoc->AddElementForID(id, aElement);
-        if (NS_FAILED(rv)) return rv;
-    }
 
     return NS_OK;
 }
