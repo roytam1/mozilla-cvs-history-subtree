@@ -89,7 +89,7 @@
 		   // XXX Again, we need to check the cycler.
 		   var b = this.parentNode.outlinerBoxObject;
 		   b.getCellAt(event.clientX, event.clientY, row, col);
-		   if (b.isContainer(row.value))
+		   if (b.view.isContainer(row.value))
 		     b.toggleOpenState(row.value);
       ]]>
       </handler>
