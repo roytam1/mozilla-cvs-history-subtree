@@ -129,7 +129,7 @@ nsresult nsSafeSaveFile::PostProcessSave(void)
                 fileName.Truncate(mTargetNameLen + (sizeof(BACKUP_FILE_EXTENSION) - 1));
                 fileName.AppendInt(backupCount);
                 // fail silently because it's not important enough to bail on the save for
-                backupFile->MoveTo(0, fileName);
+                backupFile->MoveToNative(0, fileName);
             }
             fileName.Truncate(mTargetNameLen + (sizeof(BACKUP_FILE_EXTENSION) - 1));
         };
@@ -142,7 +142,7 @@ nsresult nsSafeSaveFile::PostProcessSave(void)
     }
 
     // finally rename the temp file to the original name (i.e. <filename.tmp> to <filename.js>)
-    rv = mTempFile->MoveTo(0, mTargetFileName);
+    rv = mTempFile->MoveToNative(0, mTargetFileName);
     return rv;
 }
 
