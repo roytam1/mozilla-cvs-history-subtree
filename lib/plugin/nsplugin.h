@@ -704,7 +704,7 @@ public:
     // Get the complete text of the HTML tag that was
     // used to instantiate this plugin
     NS_IMETHOD_(const char *)
-    GetTagText() = 0;
+    GetTagText(void) = 0;
 
     // Get the type of the HTML tag that was used ot instantiate this
     // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
@@ -713,7 +713,7 @@ public:
     //    typedef enum { TAG_EMBED, TAG_OBJECT, TAG_APPLET } tag_id;
     //
     NS_IMETHOD_(tag_id) 
-    GetTagType() = 0;
+    GetTagType(void) = 0;
 #else
      // (Corresponds to NPP_New's argc argument.)
      NS_IMETHOD_(PRUint16)
