@@ -18,15 +18,18 @@
 DEPTH=..\..\..
 MODULE=mime
 
+XPIDLSRCS = \
+	.\nsIStreamConverter.idl			\
+	.\nsIMimeEmitter.idl				\
+	.\nsIMimeURLUtils.idl				\
+	.\nsIMsgHeaderParser.idl			\
+        $(NULL)
+
 EXPORTS =							\
-	nsIStreamConverter.h			\
 	nsIMimeObjectClassAccess.h		\
 	nsIMimeConverter.h				\
-	nsIMimeEmitter.h				\
 	nsMailHeaders.h					\
-	nsIMsgHeaderParser.h			\
 	nsIMimeContentTypeHandler.h		\
-	NSIMimeURLUtils.h				\
         $(NULL)
 
 
