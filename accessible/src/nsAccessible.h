@@ -31,8 +31,13 @@
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsWeakReference.h"
+#include "nsRect.h"
+#include "nsPoint.h"
 
 class nsIFrame;
+class nsIDocShell;
+class nsIWebShell;
+class nsIContent;
 
 class nsAccessible : public nsIAccessible
 //                     public nsIAccessibleWidgetAccess
@@ -50,6 +55,30 @@ class nsAccessible : public nsIAccessible
 
     virtual void GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aList) { aList = nsnull; }
 
+    // Helper Routines for Sub-Docs
+    nsresult GetDocShellFromPS(nsIPresShell* aPresShell, nsIDocShell** aDocShell);
+    nsresult GetDocShellObjects(nsIDocShell*     aDocShell,
+                                nsIPresShell**   aPresShell, 
+                                nsIPresContext** aPresContext, 
+                                nsIContent**     aContent);
+    PRBool FindContentForWebShell(nsIPresShell* aParentPresShell,
+                                  nsIContent*   aParentContent,
+                                  nsIWebShell*  aWebShell,
+                                  nsIContent**  aFoundContent);
+    nsresult CalcOffset(nsIFrame* aFrame,
+                        nsIPresContext * aPresContext,
+                        nsRect& aRect);
+    nsresult GetAbsPosition(nsIPresShell* aPresShell, nsPoint& aPoint);
+    nsresult GetDocShells(nsIPresShell* aPresShell,
+                          nsIDocShell** aDocShell,
+                          nsIDocShell** aParentDocShell);
+    nsresult GetParentPresShellAndContent(nsIPresShell*  aPresShell,
+                                          nsIPresShell** aParentPresShell,
+                                          nsIContent**   aSubShellContent);
+    nsresult GetAbsoluteFramePosition(nsIPresContext* aPresContext,
+                                      nsIFrame *aFrame, 
+                                      nsRect& aAbsoluteTwipsRect, 
+                                      nsRect& aAbsolutePixelRect);
 protected:
   virtual nsIFrame* GetFrame();
   virtual nsIFrame* GetBoundsFrame();
@@ -61,6 +90,12 @@ protected:
   virtual nsIAccessible* CreateNewLastAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
   virtual nsIAccessible* CreateNewAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
 
+  virtual nsresult GetAccParent(nsIPresContext*   aPresContext,
+                                nsIWeakReference* aPresShell,
+                                nsIFrame*         aFrame,
+                                nsIAccessible **  aAccParent);
+
+  // Data Members
   nsCOMPtr<nsIContent> mContent;
   nsCOMPtr<nsIWeakReference> mPresShell;
   nsCOMPtr<nsIAccessible> mAccessible;

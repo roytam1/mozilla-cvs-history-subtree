@@ -39,12 +39,17 @@
 #include "nsSelectAccessible.h"
 #include "nsHTMLTextAccessible.h"
 
+// IFrame
+#include "nsIDocShell.h"
+#include "nsIFrameRootAccessible.h"
+
 //--------------------
 
 
 nsAccessibilityService::nsAccessibilityService()
 {
 	NS_INIT_REFCNT();
+  //printf("################################## nsAccessibilityService\n");
 }
 
 nsAccessibilityService::~nsAccessibilityService()
@@ -74,6 +79,7 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
 
   nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
 
+  //printf("################################## CreateRootAccessible\n");
   *_retval = new nsRootAccessible(wr,f);
   if (*_retval) {
     NS_ADDREF(*_retval);
@@ -85,6 +91,7 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
 NS_IMETHODIMP 
 nsAccessibilityService::CreateMutableAccessible(nsISupports* aNode, nsIMutableAccessible **_retval)
 {
+  //printf("################################## CreateMutableAccessible\n");
   *_retval = new nsMutableAccessible(aNode);
   if (*_retval) {
     NS_ADDREF(*_retval);
@@ -108,6 +115,7 @@ nsAccessibilityService::CreateHTMLBlockAccessible(nsIAccessible* aAccessible, ns
   NS_ASSERTION(s,"Error not presshell!!");
 
   nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
+  //printf("################################## CreateHTMLBlockAccessible\n");
 
   *_retval = new nsHTMLBlockAccessible(aAccessible, n,wr);
   if (*_retval) {
@@ -201,6 +209,7 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLTextAccessible(nsISupports *aFra
   if (NS_FAILED(rv))
     return rv;
 
+  //printf("################################## CreateHTMLTextAccessible\n");
   *_retval = new nsHTMLTextAccessible(shell, node);
   if (*_retval) {
     NS_ADDREF(*_retval);
@@ -232,6 +241,46 @@ NS_IMETHODIMP nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aR
   return NS_OK;
 }
 
+NS_IMETHODIMP 
+nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports* aPresContext, nsIAccessible **_retval)
+{
+  *_retval = nsnull;
+
+  nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+  NS_ASSERTION(content,"Error non nsIContent passed to accessible factory!!!");
+
+  nsCOMPtr<nsIPresContext> presContext = do_QueryInterface(aPresContext);
+  NS_ASSERTION(presContext,"Error non prescontext passed to accessible factory!!!");
+
+  nsCOMPtr<nsIPresShell> presShell;
+  presContext->GetShell(getter_AddRefs(presShell)); 
+  NS_ASSERTION(presShell,"Error non PresShell passed to accessible factory!!!");
+
+  nsCOMPtr<nsIWeakReference> weakRef = getter_AddRefs(NS_GetWeakReference(presShell));
+
+  nsCOMPtr<nsIDocument> doc;
+  if (NS_SUCCEEDED(content->GetDocument(*getter_AddRefs(doc))) && doc) {
+    nsCOMPtr<nsIPresShell> presShell = getter_AddRefs(doc->GetShellAt(0));
+    if (presShell) {
+      nsCOMPtr<nsISupports> supps;
+      presShell->GetSubShellFor(content, getter_AddRefs(supps));
+      if (supps) {
+        nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(supps));
+        if (docShell) {
+          nsCOMPtr<nsIPresShell> ps;
+          docShell->GetPresShell(getter_AddRefs(ps));
+          if (ps) {
+            nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(ps));
+            //printf("################################## CreateHTMLIFrameAccessible\n");
+            *_retval = new nsIFrameRootAccessible(wr);
+            return NS_OK;
+          }
+        }
+      }
+    }
+  }
+  return NS_ERROR_FAILURE;
+}
 
 //////////////////////////////////////////////////////////////////////
 

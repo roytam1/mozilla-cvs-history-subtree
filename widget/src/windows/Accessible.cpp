@@ -424,14 +424,8 @@ STDMETHODIMP Accessible::accLocation(
   PRInt32 x,y,w,h;
   mAccessible->AccGetBounds(&x,&y,&w,&h);
 
-  POINT cpos;
-  cpos.x = x;
-  cpos.y = y;
-
-  ::ClientToScreen(mWnd, &cpos);
-
-  *pxLeft = cpos.x;
-  *pyTop = cpos.y;
+  *pxLeft = x;
+  *pyTop = y;
   *pcxWidth = w;
   *pcyHeight = h;
 
@@ -496,13 +490,8 @@ STDMETHODIMP Accessible::accHitTest(
   // convert to window coords
   nsCOMPtr<nsIAccessible> a;
 
-  POINT cpos;
-  cpos.x = xLeft;
-  cpos.y = yTop;
-
-  ::ScreenToClient(mWnd, &cpos);
-  xLeft = cpos.x;
-  yTop = cpos.y;
+  xLeft = xLeft;
+  yTop = yTop;
 
   mAccessible->AccGetAt(xLeft,yTop, getter_AddRefs(a));
 

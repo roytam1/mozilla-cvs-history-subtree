@@ -30,12 +30,25 @@
 #include "nsIScrollableView.h"
 #include "nsRootAccessible.h"
 
+#include "nsIEventStateManager.h"
+
+// IFrame Helpers
+#include "nsIDocShell.h"
+#include "nsIWebShell.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMHTMLIFrameElement.h"
+#include "nsIDocShellTreeItem.h"
+
+#ifdef NS_DEBUG
+#include "nsIFrameDebug.h"
+#include "nsIDOMCharacterData.h"
+#endif
+
 //#define DEBUG_LEAKS
 
 #ifdef DEBUG_LEAKS
 static gnsAccessibles = 0;
 #endif
-
 
 class nsFrameTreeWalker {
 public:
@@ -48,8 +61,8 @@ public:
   nsIFrame* GetChildBefore(nsIFrame* aParent, nsIFrame* aChild);
   PRInt32 GetCount(nsIFrame* aFrame);
 
-  static PRBool ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, nsIFrame* aStart, nsIFrame* aNext);
-  static void GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>& aAccessible, nsCOMPtr<nsIContent>& aContent);
+  static PRBool IsSameContent(nsIFrame* aFrame1, nsIFrame* aFrame2);
+  void GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>& aAccessible, nsCOMPtr<nsIContent>& aContent);
 
   nsCOMPtr<nsIPresContext> mPresContext;
   nsCOMPtr<nsIAccessible> mAccessible;
@@ -85,6 +98,7 @@ nsIFrame* nsFrameTreeWalker::GetParent(nsIFrame* aFrame)
   return GetParent(parent);
 }
 
+
 nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
 {
   //printf("Get next\n");
@@ -92,14 +106,10 @@ nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
   // get next sibling
   nsIFrame* next = nsnull;
   aFrame->GetNextSibling(&next);
-  nsIAtom* list = nsnull;
-  mOwner->GetListAtomForFrame(aFrame, list);
 
-  
   // skip any frames with the same content node
-  while(ShouldSkip(mPresContext, list, aFrame, next)) 
+  while(IsSameContent(aFrame,next)) 
     next->GetNextSibling(&next);
-  
 
   // if failed
   if (!next)
@@ -125,11 +135,7 @@ nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
       return nsnull;
     } else {
       // next on parent
-      nsIFrame* n = GetNextSibling(parent);
-      if (ShouldSkip(mPresContext, list, aFrame, n))
-        return GetNextSibling(n);
-      else 
-        return n;
+      return GetNextSibling(parent);
     }
   }
 
@@ -147,19 +153,11 @@ nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
   nsIFrame* first = GetFirstChild(next);
 
   // if found
-  if (first) {
-    if (ShouldSkip(mPresContext, list, aFrame, first))
-      return GetNextSibling(first);
-    else 
-      return first;
-  }
+  if (first)
+    return first;
 
   // call next on next
-  nsIFrame* n =  GetNextSibling(next);
-  if (ShouldSkip(mPresContext, list, aFrame, next))
-    return GetNextSibling(n);
-  else 
-    return n;
+  return GetNextSibling(next);
 }
 
 nsIFrame* nsFrameTreeWalker::GetFirstChild(nsIFrame* aFrame)
@@ -198,10 +196,7 @@ nsIFrame* nsFrameTreeWalker::GetFirstChild(nsIFrame* aFrame)
     child->GetNextSibling(&next);
 
     // skip children with duplicate content nodes
-    nsIAtom* list = nsnull;
-    mOwner->GetListAtomForFrame(child, list);
-
-    while(ShouldSkip(mPresContext, list, child, next)) 
+    while(IsSameContent(child,next)) 
       next->GetNextSibling(&next);
 
     child = next;
@@ -287,6 +282,10 @@ void nsFrameTreeWalker::GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>&
   if (!aContent)
     return;
 
+#if 1
+  nsCOMPtr<nsIPresShell> shell;
+  mPresContext->GetShell(getter_AddRefs(shell));
+#else
   nsCOMPtr<nsIDocument> document;
   aContent->GetDocument(*getter_AddRefs(document));
   if (!document)
@@ -295,6 +294,7 @@ void nsFrameTreeWalker::GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>&
   PRInt32 shells = document->GetNumberOfShells();
   NS_ASSERTION(shells > 0,"Error no shells!");
   nsIPresShell* shell = document->GetShellAt(0);
+#endif
   nsIFrame* frame = nsnull;
   shell->GetPrimaryFrameFor(aContent, &frame);
 
@@ -310,27 +310,19 @@ void nsFrameTreeWalker::GetAccessible(nsIFrame* aFrame, nsCOMPtr<nsIAccessible>&
  //   printf("Found accessible!\n");
 }
 
-PRBool nsFrameTreeWalker::ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, nsIFrame* aStart, nsIFrame* aNext)
+PRBool nsFrameTreeWalker::IsSameContent(nsIFrame* aFrame1, nsIFrame* aFrame2)
 {
-  if (!aStart || !aNext)
+  if (!aFrame1 || !aFrame2)
     return PR_FALSE;
 
-  // is content the same? If so skip it
   nsCOMPtr<nsIContent> content1;
   nsCOMPtr<nsIContent> content2;
 
-  aStart->GetContent(getter_AddRefs(content1));
-  aNext->GetContent(getter_AddRefs(content2));
+  aFrame1->GetContent(getter_AddRefs(content1));
+  aFrame2->GetContent(getter_AddRefs(content2));
 
-  if (content1 == content2 && content1 != nsnull) {
-    // does it have childen? It it does then don't skip it
-    nsIFrame* child = nsnull;
-    aNext->FirstChild(aContext, aList, &child);
-    if (child)
-      return PR_FALSE;
-
+  if (content1 == content2 && content1 != nsnull)
     return PR_TRUE;
-  }
   
   return PR_FALSE;
 }
@@ -346,6 +338,23 @@ nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsI
 {
    NS_INIT_REFCNT();
 
+#ifdef NS_DEBUG_X
+   {
+     nsCOMPtr<nsIPresShell> shell = do_QueryReferent(aShell);
+     printf(">>> %p Created Acc - Con: %p  Acc: %p  PS: %p", 
+             (nsIAccessible*)this, aContent, aAccessible, shell.get());
+     if (shell && aContent != nsnull) {
+       nsIFrame* frame;
+       shell->GetPrimaryFrameFor(aContent, &frame);
+       char * name;
+       if (GetNameForFrame(frame, &name)) {
+         printf(" Name:[%s]", name);
+         nsMemory::Free(name);
+       }
+     }
+     printf("\n");
+   }
+#endif
    // get frame and node
    mContent = aContent;
    mAccessible = aAccessible;
@@ -370,9 +379,15 @@ nsAccessible::~nsAccessible()
 //NS_IMPL_ISUPPORTS2(nsAccessible, nsIAccessible, nsIAccessibleWidgetAccess);
 NS_IMPL_ISUPPORTS1(nsAccessible, nsIAccessible);
 
-  /* readonly attribute nsIAccessible accParent; */
-NS_IMETHODIMP nsAccessible::GetAccParent(nsIAccessible * *aAccParent) 
-{ 
+nsresult nsAccessible::GetAccParent(nsIPresContext*   aPresContext,
+                                    nsIWeakReference* aPresShell,
+                                    nsIFrame*         aFrame,
+                                    nsIAccessible **  aAccParent)
+{
+  NS_ENSURE_ARG_POINTER(aFrame);
+  NS_ENSURE_ARG_POINTER(aPresShell);
+  NS_ENSURE_ARG_POINTER(aAccParent);
+
   // delegate
   if (mAccessible) {
     nsresult rv = mAccessible->GetAccParent(aAccParent);
@@ -380,24 +395,46 @@ NS_IMETHODIMP nsAccessible::GetAccParent(nsIAccessible * *aAccParent)
       return rv;
   }
 
-  nsCOMPtr<nsIPresContext> context;
-  GetPresContext(context);
-
-  if (context) {
-    nsFrameTreeWalker walker(context, this); 
+  if (aPresContext) {
+    nsFrameTreeWalker walker(aPresContext, this); 
 
     // failed? Lets do some default behavior
-    walker.GetParent(GetFrame());
+    walker.GetParent(aFrame);
 
     // if no content or accessible then we hit the root
     if (!walker.mContent || !walker.mAccessible)
     {
-      *aAccParent = new nsRootAccessible(mPresShell);
+
+      if (aPresContext) {
+        nsCOMPtr<nsIPresShell> presShell;
+        aPresContext->GetShell(getter_AddRefs(presShell));
+        if (presShell) {
+          nsCOMPtr<nsIPresShell> parentPresShell;
+          nsCOMPtr<nsIContent> content;
+          if (NS_SUCCEEDED(GetParentPresShellAndContent(presShell,
+                                                        getter_AddRefs(parentPresShell),
+                                                        getter_AddRefs(content)))) {
+           nsIFrame* frame;
+           parentPresShell->GetPrimaryFrameFor(content, &frame);
+           nsCOMPtr<nsIAccessible> accessible(do_QueryInterface(frame));
+            if (!accessible)
+              accessible = do_QueryInterface(content);
+            if (accessible) {
+              nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(parentPresShell));
+              *aAccParent = CreateNewParentAccessible(accessible, content, wr);
+              NS_ADDREF(*aAccParent);
+              return NS_OK;
+            }
+          }
+        }
+      }
+
+      *aAccParent = new nsRootAccessible(aPresShell);
       NS_ADDREF(*aAccParent);
       return NS_OK;
     }
 
-    *aAccParent = CreateNewParentAccessible(walker.mAccessible, walker.mContent, mPresShell);
+    *aAccParent = CreateNewParentAccessible(walker.mAccessible, walker.mContent, aPresShell);
     NS_ADDREF(*aAccParent);
     return NS_OK;
   }
@@ -405,6 +442,17 @@ NS_IMETHODIMP nsAccessible::GetAccParent(nsIAccessible * *aAccParent)
   *aAccParent = nsnull;
   return NS_OK;
 }
+
+  /* readonly attribute nsIAccessible accParent; */
+NS_IMETHODIMP nsAccessible::GetAccParent(nsIAccessible * *aAccParent) 
+{ 
+
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(presContext);
+
+  return GetAccParent(presContext, mPresShell, GetFrame(), aAccParent);
+}
+
   /* readonly attribute nsIAccessible accNextSibling; */
 NS_IMETHODIMP nsAccessible::GetAccNextSibling(nsIAccessible * *aAccNextSibling) 
 { 
@@ -692,7 +740,6 @@ NS_IMETHODIMP nsAccessible::AccGetAt(PRInt32 tx, PRInt32 ty, nsIAccessible **_re
 
     while(child) {
       child->AccGetBounds(&cx,&cy,&cw,&ch);
-      
       if (tx > cx && tx < cx + cw && ty > cy && ty < cy + ch) 
       {
         *_retval = child;
@@ -725,6 +772,7 @@ NS_IMETHODIMP nsAccessible::AccNavigateUp(nsIAccessible **_retval) { return NS_O
 
   /* void navigateDown (); */
 NS_IMETHODIMP nsAccessible::AccNavigateDown(nsIAccessible **_retval) { return NS_OK;  }
+
 
 
   /* void addSelection (); */
@@ -805,29 +853,451 @@ NS_IMETHODIMP nsAccessible::AccDoDefaultAction(void)
   return NS_ERROR_FAILURE;  
 }
 
-  /* void accGetBounds (out long x, out long y, out long width, out long height); */
-NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
+
+// Calculate a frame's position in screen coordinates
+static nsresult
+GetAbsoluteFramePosition(nsIPresContext* aPresContext,
+                         nsIFrame *aFrame, 
+                         nsRect& aAbsoluteTwipsRect, 
+                         nsRect& aAbsolutePixelRect)
 {
-  nsCOMPtr<nsIPresContext> context;
-  GetPresContext(context);
+  //XXX: This code needs to take the view's offset into account when calculating
+  //the absolute coordinate of the frame.
+  nsresult rv = NS_OK;
+ 
+  aFrame->GetRect(aAbsoluteTwipsRect);
+  // zero these out, 
+  // because the GetOffsetFromView figures them out
+  aAbsoluteTwipsRect.x = 0;
+  aAbsoluteTwipsRect.y = 0;
 
-  nsIFrame* frame = GetBoundsFrame();
+    // Get conversions between twips and pixels
+  float t2p;
+  float p2t;
+  aPresContext->GetTwipsToPixels(&t2p);
+  aPresContext->GetPixelsToTwips(&p2t);
+  
+   // Add in frame's offset from it it's containing view
+  nsIView *containingView = nsnull;
+  nsPoint offset;
+  rv = aFrame->GetOffsetFromView(aPresContext, offset, &containingView);
+  if (NS_SUCCEEDED(rv) && (nsnull != containingView)) {
+    aAbsoluteTwipsRect.x += offset.x;
+    aAbsoluteTwipsRect.y += offset.y;
 
-  if (!frame || !context)
-  {
-    *x = *y = *width = *height = 0;
+    nsPoint viewOffset;
+    containingView->GetPosition(&viewOffset.x, &viewOffset.y);
+    nsIView * parent;
+    containingView->GetParent(parent);
+
+    // if we don't have a parent view then 
+    // check to see if we have a widget and adjust our offset for the widget
+    if (parent == nsnull) {
+      nsIWidget * widget;
+      containingView->GetWidget(widget);
+      if (nsnull != widget) {
+        // Add in the absolute offset of the widget.
+        nsRect absBounds;
+        nsRect lc;
+        widget->WidgetToScreen(lc, absBounds);
+        // Convert widget coordinates to twips   
+        //aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
+        //aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
+        NS_RELEASE(widget);
+      }
+      rv = NS_OK;
+    } else {
+
+      while (nsnull != parent) {
+        nsPoint po;
+        parent->GetPosition(&po.x, &po.y);
+        viewOffset.x += po.x;
+        viewOffset.y += po.y;
+        nsIScrollableView * scrollView;
+        if (NS_OK == containingView->QueryInterface(NS_GET_IID(nsIScrollableView), (void **)&scrollView)) {
+          nscoord x;
+          nscoord y;
+          scrollView->GetScrollPosition(x, y);
+          viewOffset.x -= x;
+          viewOffset.y -= y;
+        }
+        nsIWidget * widget;
+        parent->GetWidget(widget);
+        if (nsnull != widget) {
+          // Add in the absolute offset of the widget.
+          nsRect absBounds;
+          nsRect lc;
+          widget->WidgetToScreen(lc, absBounds);
+          // Convert widget coordinates to twips   
+          aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
+          aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
+          NS_RELEASE(widget);
+          break;
+        }
+        parent->GetParent(parent);
+      }
+      aAbsoluteTwipsRect.x += viewOffset.x;
+      aAbsoluteTwipsRect.y += viewOffset.y;
+    }
+  }
+
+   // convert to pixel coordinates
+  if (NS_SUCCEEDED(rv)) {
+   aAbsolutePixelRect.x = NSTwipsToIntPixels(aAbsoluteTwipsRect.x, t2p);
+   aAbsolutePixelRect.y = NSTwipsToIntPixels(aAbsoluteTwipsRect.y, t2p);
+   aAbsolutePixelRect.width = NSTwipsToIntPixels(aAbsoluteTwipsRect.width, t2p);
+   aAbsolutePixelRect.height = NSTwipsToIntPixels(aAbsoluteTwipsRect.height, t2p);
+  }
+
+  return rv;
+}
+
+nsresult nsAccessible::GetDocShellFromPS(nsIPresShell* aPresShell, nsIDocShell** aDocShell)
+{
+  *aDocShell = nsnull;
+  if (aPresShell) {
+    nsCOMPtr<nsIDocument> doc;
+    aPresShell->GetDocument(getter_AddRefs(doc));
+    if (doc) {
+      nsCOMPtr<nsIScriptGlobalObject> scriptObj;
+      doc->GetScriptGlobalObject(getter_AddRefs(scriptObj));
+      if (scriptObj) {
+        scriptObj->GetDocShell(aDocShell);
+        return *aDocShell != nsnull?NS_OK:NS_ERROR_FAILURE;
+      }
+    }
+  }
+  return NS_ERROR_FAILURE;
+}
+  
+//-------------------------------------------------------
+// This gets ref counted copies of the PresShell, PresContext, 
+// and Root Content for a given nsIDocShell
+nsresult 
+nsAccessible::GetDocShellObjects(nsIDocShell*     aDocShell,
+                                 nsIPresShell**   aPresShell, 
+                                 nsIPresContext** aPresContext, 
+                                 nsIContent**     aContent)
+{
+  NS_ENSURE_ARG_POINTER(aDocShell);
+  NS_ENSURE_ARG_POINTER(aPresShell);
+  NS_ENSURE_ARG_POINTER(aPresContext);
+  NS_ENSURE_ARG_POINTER(aContent);
+
+
+  aDocShell->GetPresShell(aPresShell); // this addrefs
+  if (*aPresShell == nsnull) return NS_ERROR_FAILURE;
+
+  aDocShell->GetPresContext(aPresContext); // this addrefs
+  if (*aPresContext == nsnull) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIDocument> doc;
+  (*aPresShell)->GetDocument(getter_AddRefs(doc));
+  if (!doc) return NS_ERROR_FAILURE;
+
+  *aContent = doc->GetRootContent(); // this addrefs
+  return NS_OK;
+}
+
+//-------------------------------------------------------
+// 
+nsresult 
+nsAccessible::GetDocShells(nsIPresShell* aPresShell,
+                           nsIDocShell** aDocShell,
+                           nsIDocShell** aParentDocShell)
+{
+  NS_ENSURE_ARG_POINTER(aPresShell);
+  NS_ENSURE_ARG_POINTER(aDocShell);
+  NS_ENSURE_ARG_POINTER(aParentDocShell);
+
+  *aDocShell = nsnull;
+
+  // Start by finding our PresShell and from that
+  // we get our nsIDocShell in order to walk the DocShell tree
+  if (NS_SUCCEEDED(GetDocShellFromPS(aPresShell, aDocShell))) {
+    // Now that we have the DocShell QI 
+    // it to a tree item to find it's parent
+    nsCOMPtr<nsIDocShell> docShell = *aDocShell;
+    nsCOMPtr<nsIDocShellTreeItem> item(do_QueryInterface(docShell));
+    if (item) {
+      nsCOMPtr<nsIDocShellTreeItem> itemParent;
+      item->GetParent(getter_AddRefs(itemParent));
+      // QI to get the WebShell for the parent document
+      nsCOMPtr<nsIDocShell> pDocShell(do_QueryInterface(itemParent));
+      if (pDocShell) {
+        *aParentDocShell = pDocShell.get();
+        NS_ADDREF(*aParentDocShell);
+        return NS_OK;
+      }
+    }
+  }
+
+  NS_IF_RELEASE(*aDocShell);
+  return NS_ERROR_FAILURE;
+}
+
+//-------------------------------------------------------
+// 
+nsresult 
+nsAccessible::GetParentPresShellAndContent(nsIPresShell*  aPresShell,
+                                           nsIPresShell** aParentPresShell,
+                                           nsIContent**   aSubShellContent)
+{
+  NS_ENSURE_ARG_POINTER(aPresShell);
+  NS_ENSURE_ARG_POINTER(aParentPresShell);
+  NS_ENSURE_ARG_POINTER(aSubShellContent);
+
+  *aParentPresShell = nsnull;
+  *aSubShellContent = nsnull;
+
+  nsCOMPtr<nsIDocShell> docShell;
+  nsCOMPtr<nsIDocShell> parentDocShell;
+  if (NS_FAILED(GetDocShells(aPresShell, 
+                             getter_AddRefs(docShell), 
+                             getter_AddRefs(parentDocShell)))) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIPresContext> parentPresContext;
+  nsCOMPtr<nsIContent> parentRootContent;
+  if (NS_FAILED(GetDocShellObjects(parentDocShell, 
+                                   aParentPresShell,
+                                   getter_AddRefs(parentPresContext),
+                                   getter_AddRefs(parentRootContent)))) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(docShell));
+  if (FindContentForWebShell(*aParentPresShell, parentRootContent, 
+                              webShell, aSubShellContent)) {
     return NS_OK;
   }
 
+  return NS_ERROR_FAILURE;
+}
+ 
+PRBool 
+nsAccessible::FindContentForWebShell(nsIPresShell* aParentPresShell,
+                                     nsIContent*   aParentContent,
+                                     nsIWebShell*  aWebShell,
+                                     nsIContent**  aFoundContent)
+{
+  NS_ASSERTION(aWebShell, "Pointer is null!");
+  NS_ASSERTION(aParentPresShell, "Pointer is null!");
+  NS_ASSERTION(aParentContent, "Pointer is null!");
+  NS_ASSERTION(aFoundContent, "Pointer is null!");
+
+  nsCOMPtr<nsIDOMHTMLIFrameElement> iFrame(do_QueryInterface(aParentContent));
+#ifdef NS_DEBUG_X
+  {
+    printf("** FindContent - Content %p",aParentContent);
+    nsIFrame* frame;
+    aParentPresShell->GetPrimaryFrameFor(aParentContent, &frame);
+    if (frame) {
+      char * name;
+      GetNameForFrame(frame, &name);
+      printf("  [%s]", name?name:"<no name>");
+      if (name) nsMemory::Free(name);
+    }
+    printf("\n");
+  }
+#endif
+
+  if (iFrame) {
+    //printf("********* Found IFrame %p\n", aParentContent);
+    nsCOMPtr<nsISupports> supps;
+    aParentPresShell->GetSubShellFor(aParentContent, getter_AddRefs(supps));
+    if (supps) {
+      nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(supps));
+      //printf("********* Checking %p == %p (parent)\n", webShell.get(), aWebShell);
+      if (webShell.get() == aWebShell) {
+        //printf("********* Found WebShell %p \n", aWebShell);
+        *aFoundContent = aParentContent;
+        NS_ADDREF(aParentContent);
+        return PR_TRUE;
+      }
+    }
+  }
+
+  // walk children content
+  PRInt32 count;
+  aParentContent->ChildCount(count);
+  for (PRInt32 i=0;i<count;i++) {
+    nsIContent* child;
+    aParentContent->ChildAt(i, child);
+    if (FindContentForWebShell(aParentPresShell, child, aWebShell, aFoundContent)) {
+      return PR_TRUE;
+    }
+  }
+  return PR_FALSE;
+}
+
+// Calculate a frame's position in screen coordinates
+nsresult
+nsAccessible::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
+                                       nsIFrame *aFrame, 
+                                       nsRect& aAbsoluteTwipsRect, 
+                                       nsRect& aAbsolutePixelRect)
+{
+  //XXX: This code needs to take the view's offset into account when calculating
+  //the absolute coordinate of the frame.
+  nsresult rv = NS_OK;
+ 
+  aFrame->GetRect(aAbsoluteTwipsRect);
+  // zero these out, 
+  // because the GetOffsetFromView figures them out
+  aAbsoluteTwipsRect.x = 0;
+  aAbsoluteTwipsRect.y = 0;
+
+    // Get conversions between twips and pixels
+  float t2p;
+  float p2t;
+  aPresContext->GetTwipsToPixels(&t2p);
+  aPresContext->GetPixelsToTwips(&p2t);
+  
+   // Add in frame's offset from it it's containing view
+  nsIView *containingView = nsnull;
+  nsPoint offset(0,0);
+  rv = aFrame->GetOffsetFromView(aPresContext, offset, &containingView);
+  if (containingView == nsnull) {
+    aFrame->GetView(aPresContext, &containingView);
+    nsRect r;
+    aFrame->GetRect(r);
+    offset.x = r.x;
+    offset.y = r.y;
+  }
+  if (NS_SUCCEEDED(rv) && (nsnull != containingView)) {
+    aAbsoluteTwipsRect.x += offset.x;
+    aAbsoluteTwipsRect.y += offset.y;
+
+    nsPoint viewOffset;
+    containingView->GetPosition(&viewOffset.x, &viewOffset.y);
+    nsIView * parent;
+    containingView->GetParent(parent);
+
+    // if we don't have a parent view then 
+    // check to see if we have a widget and adjust our offset for the widget
+    if (parent == nsnull) {
+      nsIWidget * widget;
+      containingView->GetWidget(widget);
+      if (nsnull != widget) {
+        // Add in the absolute offset of the widget.
+        nsRect absBounds;
+        nsRect lc;
+        widget->WidgetToScreen(lc, absBounds);
+        // Convert widget coordinates to twips   
+        aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
+        aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
+        NS_RELEASE(widget);
+      }
+      rv = NS_OK;
+    } else {
+
+      while (nsnull != parent) {
+        nsPoint po;
+        parent->GetPosition(&po.x, &po.y);
+        viewOffset.x += po.x;
+        viewOffset.y += po.y;
+        nsIScrollableView * scrollView;
+        if (NS_OK == containingView->QueryInterface(NS_GET_IID(nsIScrollableView), (void **)&scrollView)) {
+          nscoord x;
+          nscoord y;
+          scrollView->GetScrollPosition(x, y);
+          viewOffset.x -= x;
+          viewOffset.y -= y;
+        }
+        nsIWidget * widget;
+        parent->GetWidget(widget);
+        if (nsnull != widget) {
+          // Add in the absolute offset of the widget.
+          nsRect absBounds;
+          nsRect lc;
+          widget->WidgetToScreen(lc, absBounds);
+          // Convert widget coordinates to twips   
+          aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
+          aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
+          NS_RELEASE(widget);
+          break;
+        }
+        parent->GetParent(parent);
+      }
+      aAbsoluteTwipsRect.x += viewOffset.x;
+      aAbsoluteTwipsRect.y += viewOffset.y;
+    }
+  }
+
+   // convert to pixel coordinates
+  if (NS_SUCCEEDED(rv)) {
+   aAbsolutePixelRect.x = NSTwipsToIntPixels(aAbsoluteTwipsRect.x, t2p);
+   aAbsolutePixelRect.y = NSTwipsToIntPixels(aAbsoluteTwipsRect.y, t2p);
+   aAbsolutePixelRect.width = NSTwipsToIntPixels(aAbsoluteTwipsRect.width, t2p);
+   aAbsolutePixelRect.height = NSTwipsToIntPixels(aAbsoluteTwipsRect.height, t2p);
+  }
+
+  return rv;
+}
+
+
+nsresult  
+nsAccessible::GetAbsPosition(nsIPresShell* aPresShell, nsPoint& aPoint)
+{
+  NS_ENSURE_ARG_POINTER(aPresShell);
+
+  nsCOMPtr<nsIPresShell> parentPresShell;
+  nsCOMPtr<nsIContent> content;
+  if (NS_FAILED(GetParentPresShellAndContent(aPresShell,
+                                             getter_AddRefs(parentPresShell),
+                                             getter_AddRefs(content)))) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsIFrame* frame;
+  parentPresShell->GetPrimaryFrameFor(content, &frame);
+  if (frame == nsnull) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIPresContext> parentPresContext;
+  parentPresShell->GetPresContext(getter_AddRefs(parentPresContext));
+  nsRect rect;
+  if (!parentPresContext || NS_FAILED(CalcOffset(frame, parentPresContext, rect))) {
+    return NS_ERROR_FAILURE;
+  }
+
+#ifdef NS_DEBUG
+  printf("Frame: %p  Offset: %d,%d\n", frame, rect.x, rect.y);
+#endif
+
+  aPoint.x += rect.x;
+  aPoint.y += rect.y;
+
+  // return code here doesn't matter
+  // because the last call to this will always fail 
+  // when you are at the root.
+  GetAbsPosition(parentPresShell, aPoint);
+
+  return NS_OK;
+}
+
+nsresult 
+nsAccessible::CalcOffset(nsIFrame* aFrame,
+                         nsIPresContext * aPresContext,
+                         nsRect& aRect)
+{
+  NS_ENSURE_ARG_POINTER(aFrame);
+  NS_ENSURE_ARG_POINTER(aPresContext);
+
+  aRect.SetRect(0,0,0,0);
+
    // sum up all rects of frames with the same content node
-  nsRect r;
-  nsIFrame* start = frame;
-  nsIFrame* next = nsnull;
+  nsIFrame* start = aFrame;
+  nsIFrame* next  = nsnull;
   start->GetNextSibling(&next);
 
+  nsRect r;
   start->GetRect(r);
   
-  while (nsFrameTreeWalker::ShouldSkip(context,nsnull, start, next))
+  while (nsFrameTreeWalker::IsSameContent(start, next))
   {
     nsRect r2;
     next->GetRect(r2);
@@ -835,39 +1305,95 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
     next->GetNextSibling(&next);
   }
 
-  nsPoint offset(r.x,r.y);
+  nsPoint offset(r.x, r.y);
 
-  frame->GetParent(&frame);
+  nsIFrame* parent;
+  aFrame->GetParent(&parent);
 
   nsPoint pos(0,0);
-  while(frame) {
-    nsIScrollableView* scrollingView;
-    nsIView*           view;
+  while (parent) {
     // XXX hack
-    frame->GetView(context, &view);
+    nsIView* view;
+    parent->GetView(aPresContext, &view);
     if (view) {
-     nsresult result = view->QueryInterface(NS_GET_IID(nsIScrollableView), (void**)&scrollingView);
-     if (NS_SUCCEEDED(result)) {
-         nscoord xoff = 0;
-         nscoord yoff = 0;
-         scrollingView->GetScrollPosition(xoff, yoff);
-         offset.x -= xoff;
-         offset.y -= yoff;
-     }
+      nsIScrollableView* scrollingView;
+      nsresult result = view->QueryInterface(NS_GET_IID(nsIScrollableView), (void**)&scrollingView);
+      if (NS_SUCCEEDED(result)) {
+        nscoord xoff = 0;
+        nscoord yoff = 0;
+        scrollingView->GetScrollPosition(xoff, yoff);
+        offset.x -= xoff;
+        offset.y -= yoff;
+      }
     }
 
-    frame->GetOrigin(pos);
+    parent->GetOrigin(pos);
     offset += pos;
-    frame->GetParent(&frame);
+    parent->GetParent(&parent);
   }
 
   float t2p;
-  context->GetTwipsToPixels(&t2p);
+  aPresContext->GetTwipsToPixels(&t2p);
 
-  *x = (PRInt32)(offset.x*t2p);
-  *y = (PRInt32)(offset.y*t2p);
-  *width = (PRInt32)(r.width*t2p);
-  *height = (PRInt32)(r.height*t2p);
+  aRect.x      = PRInt32(offset.x*t2p);
+  aRect.y      = PRInt32(offset.y*t2p);
+  aRect.width  = PRInt32(r.width*t2p);
+  aRect.height = PRInt32(r.height*t2p);
+
+  return NS_OK;
+}
+
+  /* void accGetBounds (out long x, out long y, out long width, out long height); */
+NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
+{
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(presContext);
+
+  nsIFrame* frame = GetBoundsFrame();
+
+  float t2p;
+  presContext->GetTwipsToPixels(&t2p);
+
+  nsIFrame* start = frame;
+  nsIFrame* next  = nsnull;
+  start->GetNextSibling(&next);
+
+  nsRect rect;
+  nsRect twips;
+
+  nsRect orgRectTwips;
+  nsRect unionRectTwips;
+  nsRect orgRectPixels;
+
+  start->GetRect(orgRectTwips);
+  unionRectTwips = orgRectTwips;
+
+  if (presContext && NS_SUCCEEDED(GetAbsoluteFramePosition(presContext, start, twips, rect))) {
+    orgRectPixels = rect;
+    orgRectPixels.x -= NSTwipsToIntPixels(orgRectTwips.x, t2p);
+    orgRectPixels.y -= NSTwipsToIntPixels(orgRectTwips.y, t2p);
+  }
+
+  while (nsFrameTreeWalker::IsSameContent(start, next))
+  {
+    nsRect r2;
+    next->GetRect(r2);
+    unionRectTwips.UnionRect(unionRectTwips, r2);
+    next->GetNextSibling(&next);
+  }
+
+  nsRect rectPixels;
+
+  rectPixels.x      = NSTwipsToIntPixels(unionRectTwips.x, t2p) + orgRectPixels.x; 
+  rectPixels.y      = NSTwipsToIntPixels(unionRectTwips.y, t2p) + orgRectPixels.y;
+  rectPixels.width  = NSTwipsToIntPixels(unionRectTwips.width, t2p);
+  rectPixels.height = NSTwipsToIntPixels(unionRectTwips.height, t2p);
+
+  *x      = rectPixels.x;
+  *y      = rectPixels.y;
+  *width  = rectPixels.width;
+  *height = rectPixels.height;
+
 
   return NS_OK;
 }
@@ -927,7 +1453,6 @@ nsIAccessible* nsAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsI
   NS_ASSERTION(aAccessible && aContent,"Error not accessible or content");
   return new nsAccessible(aAccessible, aContent, aShell);
 }
-
 
 // ------- nsHTMLBlockAccessible ------
 
