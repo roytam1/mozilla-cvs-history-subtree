@@ -1141,11 +1141,6 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	     * catch (v)
 	     * catch (v : <boolean_expression>)
 	     */
-	    if (!catchtail->pn_kid1->pn_expr) {
-		js_ReportCompileErrorNumber(cx, ts, JSREPORT_WARNING,
-					    JSMSG_CATCH_AFTER_GENERAL);
-		return NULL;
-	    }
 
 	    /* catch node */
 	    pn2 = NewParseNode(cx, &ts->token, PN_TERNARY);
