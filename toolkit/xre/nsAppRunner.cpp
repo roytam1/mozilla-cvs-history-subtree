@@ -1255,7 +1255,6 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   PPIB ppib;
   PTIB ptib;
   char exePath[MAXPATHLEN];
-  char* p;
   DosGetInfoBlocks( &ptib, &ppib);
   DosQueryModuleName( ppib->pib_hmte, MAXPATHLEN, exePath);
 
