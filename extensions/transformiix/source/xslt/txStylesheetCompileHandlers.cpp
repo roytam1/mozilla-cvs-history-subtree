@@ -484,11 +484,11 @@ txFnStartLREStylesheet(PRInt32 aNamespaceID,
                                                        nullExpr, prio));
     NS_ENSURE_TRUE(templ, NS_ERROR_OUT_OF_MEMORY);
 
+    aState.openInstructionContainer(templ);
     rv = aState.addToplevelItem(templ);
     NS_ENSURE_SUCCESS(rv, rv);
 
     templ.forget();
-    aState.openInstructionContainer(templ);
 
     rv = aState.pushHandlerTable(gTxTemplateHandler);
     NS_ENSURE_SUCCESS(rv, rv);
