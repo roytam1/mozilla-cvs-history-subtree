@@ -264,7 +264,7 @@
         <rdf:li> <rdf:Description ID="menu-file-open-location" nc:name="Open Location..." nc:link="menu_reference.xhtml#open_location"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-open-file" nc:name="Open File..." nc:link="menu_reference.xhtml#open_file"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-close-tab" nc:name="Close Tab" nc:link="menu_reference.xhtml#close_tab"/> </rdf:li>
-        <rdf:li> <rdf:Description ID="menu-file-close" nc:name="Close Window" nc:link="menu_reference.xhtml#close"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-file-close" nc:name="Close (Window)" nc:link="menu_reference.xhtml#close"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-save-page-as" nc:name="Save Page As..." nc:link="menu_reference.xhtml#save_page_as"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-send-page" nc:name="Send Link..." nc:link="menu_reference.xhtml#send_page"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-page-setup" nc:name="Page Setup..." nc:link="menu_reference.xhtml#page_setup"/> </rdf:li>
@@ -284,10 +284,12 @@
         <rdf:li> <rdf:Description ID="menu-view-redo" nc:name="Redo" nc:link="menu_reference.xhtml#redo"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-view-cut" nc:name="Cut" nc:link="menu_reference.xhtml#cut"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-view-copy" nc:name="Copy" nc:link="menu_reference.xhtml#copy"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-view-paste" nc:name="Paste" nc:link="menu_reference.xhtml#paste"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-view-delete" nc:name="Delete" nc:link="menu_reference.xhtml#delete"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-view-select-all" nc:name="Select All" nc:link="menu_reference.xhtml#select_all"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-view-find-in-this-page" nc:name="Find in This Page..." nc:link="menu_reference.xhtml#find_in_this_page"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-view-find-again" nc:name="Find Again" nc:link="menu_reference.xhtml#find_again"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-view-preferences" nc:name="Preferences" nc:link="menu_reference.xhtml#prefs"/> </rdf:li>
       </rdf:Seq>
     </nc:subheadings>
   </rdf:Description>
@@ -368,7 +370,9 @@
       <rdf:Seq>
         <rdf:li> <rdf:Description ID="menu-help-help-contents" nc:name="Help Contents" nc:link="menu_reference.xhtml#help_contents"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-help-for-ie-users" nc:name="For Internet Explorer Users" nc:link="menu_reference.xhtml#for_ie_users"/> </rdf:li>
-        <rdf:li> <rdf:Description ID="menu-help-release-notes" nc:name="Release Notes" nc:link="menu_reference.xhtml#release_notes"/> </rdf:li>
+        <!--rdf:li> <rdf:Description ID="menu-help-release-notes" nc:name="Release Notes" nc:link="menu_reference.xhtml#release_notes"/> </rdf:li-->
+        <rdf:li> <rdf:Description ID="menu-help-tell-a-friend" nc:name="Tell a Friend" nc:link="menu_reference.xhtml#tell_friend"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-help-promote" nc:name="Promote &brandShortName;" nc:link="menu_reference.xhtml#promote"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-help-about-mozilla-firebird" nc:name="About &brandFullName;" nc:link="menu_reference.xhtml#about_mozilla_firebird"/> </rdf:li>
       </rdf:Seq>
     </nc:subheadings>
