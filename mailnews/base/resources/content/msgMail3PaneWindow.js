@@ -908,10 +908,8 @@ function GetCompositeDataSource(command)
 
 function SetNextMessageAfterDelete()
 {
-    var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
-    var selection = outlinerView.selection;
-    dump("setting next msg view index after delete to " + selection.currentIndex + "\n");
-    gNextMessageViewIndexAfterDelete = selection.currentIndex;
+    dump("setting next msg view index after delete to " + gDBView.firstSelected + "\n");
+    gNextMessageViewIndexAfterDelete = gDBView.firstSelected;
 }
 
 function SelectFolder(folderUri)
