@@ -126,9 +126,11 @@
 
   <binding id="toolbar" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
     <content>
+<!-- no toolbargrippy for me
       <xul:toolbargrippy xbl:inherits="last-toolbar,hidden=grippyhidden"
                          tbattr="toolbar-grippy"
                          class="toolbar-grippy"/>
+-->
       <xul:hbox flex="1" class="toolbar-holder" align="center"
                 xbl:inherits="collapsed,last-toolbar,orient=tborient,align=tbalign,pack=tbpack">
         <children/>
@@ -171,8 +173,10 @@
     </resources>
 
     <content>
+<!-- no toolbargrippy for me
       <xul:toolbargrippy xbl:inherits="tooltiptext=grippytooltiptext,last-toolbar,hidden=grippyhidden"
                          tbattr="toolbar-grippy" class="toolbar-grippy"/>
+-->
       <xul:hbox flex="1" class="toolbar-holder" xbl:inherits="collapsed,last-toolbar" align="center">
         <children/>
       </xul:hbox>
