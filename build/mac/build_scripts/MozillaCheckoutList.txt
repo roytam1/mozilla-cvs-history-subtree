@@ -1,0 +1,22 @@
+# List of modules to check out. Format is
+#   module, (tag), (date)
+# where tag and date are optional (non-trailing commas are required)
+#
+# Examples:
+#   mozilla/nsprpub, NSPRPUB_CLIENT_TAG
+#   mozilla/gc, , 10/25/2000 12:00:00
+#
+
+mozilla/nsprpub,        	MOZILLA_1_0_RELEASE
+mozilla/security/nss,   	MOZILLA_1_0_RELEASE
+mozilla/security/manager,	MOZILLA_1_0_RELEASE
+mozilla/accessible,		MOZILLA_1_0_RELEASE
+mozilla/directory/c-sdk,	MOZILLA_1_0_RELEASE
+mozilla/lib/mac/Instrumentation, 	MOZILLA_1_0_RELEASE
+mozilla/gfx2, 			MOZILLA_1_0_RELEASE
+mozilla/modules/libpr0n,	MOZILLA_1_0_RELEASE
+SeaMonkeyAll, 			MOZILLA_1_0_RELEASE
+
+## You need this if you want to be able to use SVG
+## Note that this library is under the LGPL, not the MPL
+#mozilla/other-licenses/libart_lgpl

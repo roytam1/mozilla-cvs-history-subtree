@@ -1,0 +1,6 @@
+
+DEPTH=..
+
+DIRS= xmltok xmlparse
+
+include <$(DEPTH)\config\rules.mak>

@@ -1,0 +1,5 @@
+nsIHttpChannel.idl
+nsIHttpProtocolHandler.idl
+nsIHttpAuthenticator.idl
+nsIHttpNotify.idl
+nsIHttpEventSink.idl

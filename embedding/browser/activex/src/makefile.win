@@ -1,0 +1,7 @@
+#!nmake
+
+DEPTH=..\..\..\..
+
+DIRS=control control_kicker
+
+include <$(DEPTH)\config\rules.mak>

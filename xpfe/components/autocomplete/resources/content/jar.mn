@@ -1,0 +1,7 @@
+# Windows-specific manifest providing a rule to hide the popup widget.
+# This is to fix a windows-specific bug (120155) and at time of writing
+# actually prevents the widget from ever showing up on the Mac, so
+# this jar file is intended for use only on Windows.
+toolkit.jar:
++   content/global/autocomplete.css  (autocomplete-win.css)
+
