@@ -2616,9 +2616,11 @@ if test "${enable_md+set}" = set; then
   enableval="$enable_md"
   :
 else
-  _cpp_md_flag=1
+        if test "$GNU_CC"; then
+     _cpp_md_flag=1
+   fi
 fi
-   
+
 if test "$_cpp_md_flag"; then
   COMPILER_DEPEND=1
   MDDEPDIR='.deps'

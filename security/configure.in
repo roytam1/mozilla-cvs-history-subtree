@@ -485,13 +485,12 @@ fi
 
 _cpp_md_flag=
 AC_ARG_ENABLE(md,
-[  --disable-md            Do not use compiler-based dependencies ],
-  [],
-  [_cpp_md_flag=1],
+[  --disable-md            Do not use compiler-based dependencies ],[],
   [dnl Default is to turn on -MD if using GNU-compatible compilers
-   if test "$GNU_CC" -a "$GNU_CXX"; then
+   dnl XXX make this check GNU_CXX when that test is hooked up
+   if test "$GNU_CC"; then
      _cpp_md_flag=1
-   fi])   
+   fi])
 if test "$_cpp_md_flag"; then
   COMPILER_DEPEND=1
   MDDEPDIR='.deps'
