@@ -26,4 +26,9 @@ FILES_java =\
 	sun/jvmp/mozilla/MozillaAppletPeer.java \
 	sun/jvmp/mozilla/MozillaHostObjectPeer.java \
 	sun/jvmp/mozilla/MozillaPeerFactory.java \
-	sun/jvmp/mozilla/MozillaSecurityManager.java 
+	sun/jvmp/mozilla/MozillaSecurityManager.java \
+	sun/jvmp/mozilla/JSObject.java \
+	sun/jvmp/mozilla/SecureInvocation.java \
+	sun/jvmp/mozilla/JavaScriptProtectionDomain.java \
+	sun/jvmp/mozilla/JSPermission.java
+
