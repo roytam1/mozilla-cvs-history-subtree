@@ -37,7 +37,7 @@ Rights Reserved.
         buttonalign="right"
         windowtype="mailnews:mailview"
         title="&mailViewSetupTitle.label;"
-        style="width: 52em; height: 19em;"
+        style="width: 52em; height: 22em;"
         persist="screenX screenY width height">
 
   <stringbundleset id="stringbundleset">
