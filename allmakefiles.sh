@@ -917,6 +917,8 @@ if [ "$MOZ_MATHML" ]; then
 	layout/mathml/Makefile
 	layout/mathml/base/Makefile
 	layout/mathml/base/src/Makefile
+	layout/mathml/content/Makefile
+	layout/mathml/content/src/Makefile
 "
 fi
 
