@@ -47,16 +47,6 @@
 #include "nsXPathException.h"
 #include "nsIDOMDocument.h"
 
-NS_IMPL_ADDREF(nsXPathResult)
-NS_IMPL_RELEASE(nsXPathResult)
-NS_INTERFACE_MAP_BEGIN(nsXPathResult)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMXPathResult)
-  NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
-  NS_INTERFACE_MAP_ENTRY(nsIXPathResult)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMXPathResult)
-  NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XPathResult)
-NS_INTERFACE_MAP_END
-
 nsXPathResult::nsXPathResult() : mNumberValue(0),
                                  mDocument(0),
                                  mCurrentPos(0),
@@ -69,6 +59,16 @@ nsXPathResult::~nsXPathResult()
 {
     Reset();
 }
+
+NS_IMPL_ADDREF(nsXPathResult)
+NS_IMPL_RELEASE(nsXPathResult)
+NS_INTERFACE_MAP_BEGIN(nsXPathResult)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMXPathResult)
+  NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
+  NS_INTERFACE_MAP_ENTRY(nsIXPathResult)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMXPathResult)
+  NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XPathResult)
+NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP
 nsXPathResult::GetResultType(PRUint16 *aResultType)
