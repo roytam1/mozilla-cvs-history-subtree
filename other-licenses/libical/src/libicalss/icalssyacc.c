@@ -76,7 +76,7 @@ void ssyacc_add_from(struct icalgauge_impl* impl, char* str1);
 void set_logic(struct icalgauge_impl* impl,icalgaugelogic l);
 void sserror(char *s); /* Don't know why I need this.... */
 
-
+extern char* sstext;
 
 
 #line 52 "icalssyacc.y"
@@ -1181,5 +1181,5 @@ void ssyacc_add_from(struct icalgauge_impl* impl, char* str1)
 
 
 void sserror(char *s){
-    fprintf(stderr,"Parse error \'%s\'\n", s);
+    icalerror_set_errno(ICAL_MALFORMEDDATA_ERROR);
 }

@@ -68,6 +68,8 @@ struct icalvalue_impl {
 	/*struct icaltimetype v_datetime;*/
 	/*struct icaltimetype v_datetimedate;*/
 	
+        struct icalreqstattype v_requeststatus;
+
 	/* struct icalrecurrencetype was once included
 	   directly ( not referenced ) in this union, but it
 	   contributes 2000 bytes to every value, so now it is

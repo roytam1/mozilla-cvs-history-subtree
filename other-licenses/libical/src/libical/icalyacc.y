@@ -367,12 +367,12 @@ plusminus: '+' { utcsign = 1; }
 utcoffset_value: 
 	plusminus INTNUMBER INTNUMBER
 	{
-	    icalparser_yy_value = icalvalue_new_utcoffset( utcsign * ($2*3600) + ($3*60) );
+	    icalparser_yy_value = icalvalue_new_utcoffset( utcsign * (($2*3600) + ($3*60)) );
   	}
 
 	| plusminus INTNUMBER INTNUMBER INTNUMBER
 	{
-	    icalparser_yy_value = icalvalue_new_utcoffset(utcsign * ($2*3600) + ($3*60) +($4));
+	    icalparser_yy_value = icalvalue_new_utcoffset(utcsign * (($2*3600) + ($3*60) +($4)));
   	}
 
 %%

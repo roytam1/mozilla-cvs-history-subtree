@@ -41,6 +41,7 @@
 
 #include "icalvcal.h"
 #include <string.h>   
+
 #ifdef WIN32
 #define snprintf	_snprintf
 #define strcasecmp	stricmp

@@ -39,7 +39,7 @@ char* icalgauge_as_sql(icalcomponent* gauge);
 
 void icalgauge_dump(icalcomponent* gauge);
 
-/* Return true is comp matches the gauge. The component must be in
+/* Return true if comp matches the gauge. The component must be in
    cannonical form -- a VCALENDAR with one VEVENT, VTODO or VJOURNAL
    sub component */
 int icalgauge_compare(icalgauge* g, icalcomponent* comp);

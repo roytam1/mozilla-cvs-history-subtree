@@ -97,9 +97,12 @@ struct icalperiodtype icalperiodtype_from_string (const char* str)
 
     icalerrno = e;
 
+	free(s);
+
     return p;
 
  error:
+	free(s);
     icalerror_set_errno(ICAL_MALFORMEDDATA_ERROR);
     return null_p;
 }
@@ -133,6 +136,7 @@ const char* icalperiodtype_as_ical_string(struct icalperiodtype p)
 
     icalmemory_append_string(&buf, &buf_ptr, &buf_size, end); 
     
+	icalmemory_add_tmp_buffer(buf);
 
     return buf;
 }

@@ -60,7 +60,7 @@
 #include <stdlib.h> /* for malloc, realloc */
 #include <string.h> /* for memset(), strdup */
 
-#define BUFFER_RING_SIZE 25
+#define BUFFER_RING_SIZE 2500
 #define MIN_BUFFER_SIZE 200
 
 void icalmemory_free_tmp_buffer (void* buf);

@@ -30,7 +30,6 @@
 #include "icalspanlist.h"
 #include "pvl.h" 
 #include <stdlib.h> /* for free and malloc */
-#include <string.h>
 
 struct icalspanlist_impl {
 	pvl_list spans;
@@ -213,6 +212,8 @@ void icalspanlist_free(icalspanlist* s)
     pvl_free(impl->spans);
     
     impl->spans = 0;
+
+	free(impl);
 }
 
 

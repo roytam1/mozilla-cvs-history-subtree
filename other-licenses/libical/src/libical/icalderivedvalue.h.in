@@ -55,4 +55,6 @@ icalvalue* icalvalue_new_datetimeperiod (struct icaldatetimeperiodtype v);
 void icalvalue_set_datetimeperiod(icalvalue* value, struct icaldatetimeperiodtype v);
 struct icaldatetimeperiodtype icalvalue_get_datetimeperiod(icalvalue* value);
 
+void icalvalue_reset_kind(icalvalue* value);
+
 /* Everything below this line is machine generated. Do not edit. */

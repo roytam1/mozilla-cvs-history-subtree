@@ -43,7 +43,6 @@
 #include <stdlib.h>
 /*#include "icalheapset.h"*/
 /*#include "icalmysqlset.h"*/
-#include <string.h>
 
 #define ICALSET_ID "set "
 
@@ -266,7 +265,7 @@ void icalset_free(icalset* set)
     struct icalset_impl impl = icalset_get_impl(set);
     (*(impl.fp->free))(impl.derived_impl);
 
-   if(strcmp((char*)set,ICALSET_ID)) {    
+   if(!strcmp((char*)set,ICALSET_ID)) {    
        free(set);
    }
 }
