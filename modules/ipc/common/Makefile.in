@@ -54,6 +54,7 @@ REQUIRES	= \
 
 CPPSRCS		= \
 			ipcLog.cpp \
+			ipcConfig.cpp \
 			ipcMessage.cpp \
 			ipcMessagePrimitives.cpp \
 			ipcStringList.cpp \

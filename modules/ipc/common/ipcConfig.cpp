@@ -15,7 +15,7 @@
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Portions created by the Initial Developer are Copyright (C) 2003
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -35,47 +35,41 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef ipcProto_h__
-#define ipcProto_h__
+#ifdef XP_WIN
+#else
+#include <string.h>
+#include "ipcConfig.h"
+#include "ipcLog.h"
+#include "prenv.h"
+#include "plstr.h"
 
-#if defined(XP_WIN)
-//
-// use WM_COPYDATA messages
-//
-#include "prprf.h"
+static const char kDefaultSocketPrefix[] = "/tmp/.mozilla";
+static const char kDefaultSocketSuffix[] = "-ipc/ipcd";
 
-#define IPC_WINDOW_CLASS              "Mozilla:IPCWindowClass"
-#define IPC_WINDOW_NAME               "Mozilla:IPCWindow"
-#define IPC_CLIENT_WINDOW_CLASS       "Mozilla:IPCAppWindowClass"
-#define IPC_CLIENT_WINDOW_NAME_PREFIX "Mozilla:IPCAppWindow:"
-#define IPC_SYNC_EVENT_NAME           "Local\\MozillaIPCSyncEvent"
-#define IPC_DAEMON_APP_NAME           "mozipcd.exe"
-#define IPC_PATH_SEP_CHAR             '\\'
-#define IPC_MODULES_DIR               "ipc\\modules"
-
-#define IPC_CLIENT_WINDOW_NAME_MAXLEN (sizeof(IPC_CLIENT_WINDOW_NAME_PREFIX) + 20)
-
-// writes client name into buf.  buf must be at least
-// IPC_CLIENT_WINDOW_NAME_MAXLEN bytes in length.
-inline void IPC_GetClientWindowName(PRUint32 pid, char *buf)
+void IPC_GetDefaultSocketPath(char *buf, PRUint32 bufLen)
 {
-    PR_snprintf(buf, IPC_CLIENT_WINDOW_NAME_MAXLEN, "%s%u",
-                IPC_CLIENT_WINDOW_NAME_PREFIX, pid);
+    const char *logName;
+    int len;
+
+    PL_strncpyz(buf, kDefaultSocketPrefix, bufLen);
+    buf    += (sizeof(kDefaultSocketPrefix) - 1);
+    bufLen -= (sizeof(kDefaultSocketPrefix) - 1);
+
+    logName = PR_GetEnv("LOGNAME");
+    if (!logName || !logName[0]) {
+        logName = PR_GetEnv("USER");
+        if (!logName || !logName[0]) {
+            LOG(("could not determine username from environment\n"));
+            goto end;
+        }
+    }
+    PL_strncpyz(buf, logName, bufLen);
+    len = strlen(logName);
+    buf    += len;
+    bufLen -= len;
+
+end:
+    PL_strncpyz(buf, kDefaultSocketSuffix, bufLen);
 }
 
-#else
-#include "prtypes.h"
-//
-// use UNIX domain socket
-//
-#define IPC_PORT                0
-#define IPC_SOCKET_TYPE         "ipc"
-#define IPC_DAEMON_APP_NAME     "mozipcd"
-#define IPC_PATH_SEP_CHAR       '/'
-#define IPC_MODULES_DIR         "ipc/modules"
-
-void IPC_GetDefaultSocketPath(char *buf, PRUint32 bufLen);
-
 #endif
-
-#endif // !ipcProto_h__

@@ -393,14 +393,6 @@ ipcService::CancelQuery(PRUint32 queryID)
     return NS_OK;
 }
 
-#if 0
-NS_IMETHODIMP
-ipcService::WaitQuery(PRUint32 queryID)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-#endif
-
 NS_IMETHODIMP
 ipcService::SetClientObserver(ipcIClientObserver *observer)
 {
@@ -466,90 +458,6 @@ ipcService::SendMessage(PRUint32 clientID,
 
     return mTransport->SendMsg(msg, sync);
 }
-
-#if 0
-NS_IMETHODIMP
-ipcService::WaitMessage(const nsID &target)
-{
-    LOG(("ipcService::WaitMessage\n"));
-
-    // make sure we can proceed... (XXX maybe debug only?)
-    if (mWaiting) {
-        NS_ERROR("WaitMessage: already waiting");
-        return NS_ERROR_IN_PROGRESS;
-    }
-    nsIDKey key(target);
-    ipcIMessageObserver *observer = (ipcIMessageObserver *) mObserverDB.Get(&key);
-    if (!observer) {
-        NS_ERROR("WaitMessage: message observer not registered");
-        return NS_ERROR_UNEXPECTED;
-    }
-
-    // push event queue
-    //   create timer w/ specified timeout (XXX)
-    //   waitforevent
-    // pop event queue
-
-    nsresult rv;
-    nsCOMPtr<nsIEventQueueService> eqs = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIEventQueue> eventQ;
-
-    LOG(("  WaitMessage: pushing event queue...\n"));
-    rv = eqs->PushThreadEventQueue(getter_AddRefs(eventQ));
-    if (NS_FAILED(rv)) return rv;
-
-    mWaiting = PR_TRUE;
-    mWaitingTarget = target;
-    mInWaitMessage = PR_TRUE;
-
-    PLEvent *ev;
-    while (mWaiting) {
-        eventQ->WaitForEvent(&ev);
-        eventQ->HandleEvent(ev);
-    }
-
-    eventQ->StopAcceptingEvents();
-
-    // flush remaining events if any
-    for (;;) {
-        PRBool hasEvent;
-        eventQ->EventAvailable(hasEvent);
-        if (!hasEvent)
-            break;
-        LOG(("  processing event...\n"));
-        eventQ->GetEvent(&ev);
-        eventQ->HandleEvent(ev);
-    }
-
-    LOG(("  WaitMessage: popping event queue...\n"));
-    eqs->PopThreadEventQueue(eventQ);
-    mInWaitMessage = PR_FALSE;
-
-    if (mDelayedMsgQ) {
-        // asynchronously dispatch delayed messages (avoids recursion)
-        rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ), eqs);
-        if (NS_FAILED(rv)) return rv;
-
-        ev = new ProcessDelayedMsgQ_Event(this, mDelayedMsgQ);
-        if (!ev)
-            return NS_ERROR_OUT_OF_MEMORY;
-        mDelayedMsgQ = nsnull; // event now owns this list
-
-        PL_InitEvent(ev, nsnull, ProcessDelayedMsgQ_EventHandler,
-                                 ProcessDelayedMsgQ_EventCleanup);
-
-        if (eventQ->PostEvent(ev) == PR_FAILURE) {
-            NS_ERROR("PostEvent failed");
-            delete ev;
-        }
-    }
-
-    LOG(("  WaitMessage: done\n"));
-    return NS_OK;
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // nsIObserver impl
@@ -618,23 +526,7 @@ ipcService::OnConnectionLost()
 void
 ipcService::OnMessageAvailable(const ipcMessage *msg)
 {
-    LOG(("ipcService::OnMessageAvailable\n"));
-
-#if 0
-    if (mInWaitMessage) {
-        if (mWaiting && msg->Target().Equals(mWaitingTarget))
-            mWaiting = PR_FALSE;
-        else {
-            // queue this message up for later delivery
-            if (!mDelayedMsgQ) {
-                mDelayedMsgQ = new ipcMessageQ();
-                if (!mDelayedMsgQ) return;
-            }
-            mDelayedMsgQ->Append(msg->Clone());
-            return;
-        }
-    }
-#endif
+    LOG(("ipcService::OnMessageAvailable [msg=%p]\n", msg));
 
     if (msg->Target().Equals(IPCM_TARGET)) {
         //

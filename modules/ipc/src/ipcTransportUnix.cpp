@@ -74,10 +74,10 @@ enum {
 nsresult
 ipcTransport::PlatformInit()
 {
-    nsresult rv = GetSocketPath(mSocketPath);
-    if (NS_FAILED(rv)) return rv;
+    PRNetAddr addr; // this way we know our buffer is large enough ;-)
+    IPC_GetDefaultSocketPath(addr.local.path, sizeof(addr.local.path));
 
-    ipcSocketProviderUnix::SetSocketPath(mSocketPath);
+    ipcSocketProviderUnix::SetSocketPath(addr.local.path);
     return NS_OK;
 }
 
@@ -105,10 +105,10 @@ static NS_METHOD ipcWriteMessage(nsIOutputStream *stream,
 nsresult
 ipcTransport::SendMsg_Internal(ipcMessage *msg)
 {
-    LOG(("ipcTransport::SendMsg_Internal [dataLen=%u]\n", msg->DataLen()));
+    LOG(("ipcTransport::SendMsg_Internal [msg=%p dataLen=%u]\n", msg, msg->DataLen()));
     
     if (nsIThread::IsMainThread()) {
-        // proxy to socket thread
+        LOG(("  proxy to socket thread\n"));
         nsresult rv;
         nsCOMPtr<nsISocketTransportService> sts(
                 do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
@@ -143,7 +143,7 @@ ipcTransport::Connect()
 
     nsresult rv;
     if (nsIThread::IsMainThread()) {
-        // proxy to socket thread
+        LOG(("  proxy to socket thread\n"));
         nsCOMPtr<nsISocketTransportService> sts(
                 do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service
         if (NS_FAILED(rv)) return rv;
@@ -179,7 +179,7 @@ nsresult
 ipcTransport::Disconnect()
 {
     if (nsIThread::IsMainThread()) {
-        // proxy to socket thread
+        LOG(("  proxy to socket thread\n"));
         nsresult rv;
         nsCOMPtr<nsISocketTransportService> sts(
                 do_GetService(kSocketTransportServiceCID, &rv)); // XXX cache service

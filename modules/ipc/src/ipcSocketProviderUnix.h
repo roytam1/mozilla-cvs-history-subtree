@@ -52,7 +52,7 @@ public:
     //
     // called to initialize the socket path
     //
-    static void SetSocketPath(const nsACString &socketPath);
+    static void SetSocketPath(const char *socketPath);
 };
 
 #endif // !ipcSocketProviderUnix_h__

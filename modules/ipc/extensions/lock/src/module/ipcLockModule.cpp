@@ -41,7 +41,7 @@ struct ipcLockContext
 static void
 ipcLockModule_AcquireLock(PRUint32 cid, PRUint8 flags, const char *key)
 {
-    printf("*** acquiring lock [key=%s]\n", key);
+    printf("$$$ acquiring lock [key=%s]\n", key);
 
     if (!gLockTable)
         return;
@@ -85,7 +85,7 @@ ipcLockModule_AcquireLock(PRUint32 cid, PRUint8 flags, const char *key)
 static void
 ipcLockModule_ReleaseLock(PRUint32 cid, const char *key)
 {
-    printf("*** releasing lock [key=%s]\n", key);
+    printf("$$$ releasing lock [key=%s]\n", key);
 
     if (!gLockTable)
         return;
@@ -150,7 +150,7 @@ ipcLockModule_ReleaseByCID(PLHashEntry *he, PRIntn i, void *arg)
 static void
 ipcLockModule_Init()
 {
-    printf("*** ipcLockModule_Init\n");
+    printf("$$$ ipcLockModule_Init\n");
 
     gLockTable = PL_NewHashTable(32,
                                  PL_HashString,
@@ -163,7 +163,7 @@ ipcLockModule_Init()
 static void
 ipcLockModule_Shutdown()
 {
-    printf("*** ipcLockModule_Shutdown\n");
+    printf("$$$ ipcLockModule_Shutdown\n");
     
     if (gLockTable) {
         // XXX walk table destroying all ipcLockContext objects
@@ -181,7 +181,7 @@ ipcLockModule_HandleMsg(ipcClientHandle client,
 {
     PRUint32 cid = IPC_GetClientID(client);
 
-    printf("*** ipcLockModule_HandleMsg [cid=%u]\n", cid);
+    printf("$$$ ipcLockModule_HandleMsg [cid=%u]\n", cid);
 
     ipcLockMsg msg;
     IPC_UnflattenLockMsg((const PRUint8 *) data, dataLen, &msg);
@@ -201,7 +201,7 @@ ipcLockModule_HandleMsg(ipcClientHandle client,
 static void
 ipcLockModule_ClientUp(ipcClientHandle client)
 {
-    printf("*** ipcLockModule_ClientUp [%u]\n", IPC_GetClientID(client));
+    printf("$$$ ipcLockModule_ClientUp [%u]\n", IPC_GetClientID(client));
 }
 
 static void
@@ -209,7 +209,7 @@ ipcLockModule_ClientDown(ipcClientHandle client)
 {
     PRUint32 cid = IPC_GetClientID(client);
 
-    printf("*** ipcLockModule_ClientDown [%u]\n", cid);
+    printf("$$$ ipcLockModule_ClientDown [%u]\n", cid);
 
     //
     // enumerate lock table, release any locks held by this client.

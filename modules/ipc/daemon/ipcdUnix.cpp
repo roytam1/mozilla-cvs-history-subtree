@@ -388,13 +388,14 @@ int main(int argc, char **argv)
     //LOG(("sleeping for 2 seconds...\n"));
     //PR_Sleep(PR_SecondsToInterval(2));
 
-    const char *socket_path;
+    // set socket address
+    addr.local.family = PR_AF_LOCAL;
     if (argc < 2)
-        socket_path = IPC_DEFAULT_SOCKET_PATH;
+        IPC_GetDefaultSocketPath(addr.local.path, sizeof(addr.local.path));
     else
-        socket_path = argv[1];
+        PL_strncpyz(addr.local.path, argv[1], sizeof(addr.local.path));
 
-    if (!InitDaemonDir(socket_path)) {
+    if (!InitDaemonDir(addr.local.path)) {
         LOG(("InitDaemonDir failed\n"));
         goto end;
     }
@@ -404,9 +405,6 @@ int main(int argc, char **argv)
         LOG(("PR_OpenUDPSocket failed [%d]\n", PR_GetError()));
         goto end;
     }
-
-    addr.local.family = PR_AF_LOCAL;
-    PL_strncpyz(addr.local.path, socket_path, sizeof(addr.local.path));
 
     if (PR_Bind(listenFD, &addr) != PR_SUCCESS) {
         LOG(("PR_Bind failed [%d]\n", PR_GetError()));

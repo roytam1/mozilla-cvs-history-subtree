@@ -56,9 +56,6 @@
 #include "ipcTransport.h"
 #include "ipcm.h"
 
-// sync call timeout
-#define IPC_SYNC_TIMEOUT PR_SecondsToInterval(5)
-
 //-----------------------------------------------------------------------------
 // ipcTransport
 //-----------------------------------------------------------------------------
@@ -91,7 +88,7 @@ ipcTransport::SendMsg(ipcMessage *msg, PRBool sync)
     NS_ENSURE_ARG_POINTER(msg);
     NS_ENSURE_TRUE(mObserver, NS_ERROR_NOT_INITIALIZED);
 
-    LOG(("ipcTransport::SendMsg [dataLen=%u]\n", msg->DataLen()));
+    LOG(("ipcTransport::SendMsg [msg=%p dataLen=%u]\n", msg, msg->DataLen()));
 
     ipcMessage *syncReply = nsnull;
     {
@@ -114,11 +111,15 @@ ipcTransport::SendMsg(ipcMessage *msg, PRBool sync)
         }
 
         if (sync) {
-            if (!mSyncReplyMsg)
-                mon.Wait(IPC_SYNC_TIMEOUT);
+            if (!mSyncReplyMsg) {
+                LOG(("  waiting for response...\n"));
+                mon.Wait();
+            }
 
-            if (!mSyncReplyMsg)
+            if (!mSyncReplyMsg) {
+                LOG(("  sync request timed out or was canceled\n"));
                 return NS_ERROR_FAILURE;
+            }
 
             syncReply = mSyncReplyMsg;
             mSyncReplyMsg = nsnull;
@@ -195,7 +196,8 @@ ipcTransport::Generic_EventCleanup(PLEvent *ev)
 void
 ipcTransport::OnMessageAvailable(ipcMessage *rawMsg)
 {
-    LOG(("ipcTransport::OnMessageAvailable [dataLen=%u]\n", rawMsg->DataLen()));
+    LOG(("ipcTransport::OnMessageAvailable [msg=%p dataLen=%u]\n",
+        rawMsg, rawMsg->DataLen()));
 
     //
     // XXX FIX COMMENTS XXX
@@ -236,6 +238,9 @@ ipcTransport::OnMessageAvailable(ipcMessage *rawMsg)
             return;
         }
 
+        LOG(("  mSyncWaiting=%u MSG_FLAG_SYNC_REPLY=%u\n",
+             mSyncWaiting, rawMsg->TestFlag(IPC_MSG_FLAG_SYNC_REPLY) != 0));
+
         if (mSyncWaiting && rawMsg->TestFlag(IPC_MSG_FLAG_SYNC_REPLY)) {
             mSyncReplyMsg = rawMsg;
             mSyncWaiting = PR_FALSE;
@@ -250,6 +255,9 @@ ipcTransport::OnMessageAvailable(ipcMessage *rawMsg)
             }
             mIncomingMsgQ->Append(rawMsg);
         }
+
+        LOG(("  connectEvent=%u dispatchEvent=%u mSyncReplyMsg=%p mIncomingMsgQ=%p\n",
+            connectEvent, dispatchEvent, mSyncReplyMsg, mIncomingMsgQ));
     }
 
     if (connectEvent)
@@ -261,6 +269,8 @@ ipcTransport::OnMessageAvailable(ipcMessage *rawMsg)
 void
 ipcTransport::ProxyToMainThread(PLHandleEventProc proc)
 {
+    LOG(("ipcTransport::ProxyToMainThread\n"));
+
     nsCOMPtr<nsIEventQueue> eq;
     NS_GetMainEventQ(getter_AddRefs(eq));
     if (eq) {
@@ -268,7 +278,7 @@ ipcTransport::ProxyToMainThread(PLHandleEventProc proc)
         PL_InitEvent(ev, this, proc, Generic_EventCleanup);
         NS_ADDREF_THIS();
         if (eq->PostEvent(ev) == PR_FAILURE) {
-            LOG(("PostEvent failed"));
+            LOG(("  PostEvent failed"));
             NS_RELEASE_THIS();
             delete ev;
         }
@@ -296,12 +306,7 @@ ipcTransport::SpawnDaemon()
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 pid;
-#ifdef XP_UNIX
-    const char *args[] = { mSocketPath.get() };
-    return proc->Run(PR_FALSE, args, 1, &pid);
-#else
-    return proc->Run(PR_FALSE, NULL, 0, &pid);
-#endif
+    return proc->Run(PR_FALSE, nsnull, 0, &pid);
 }
 
 // called on a background thread

@@ -86,9 +86,6 @@ public:
         , mSpawnedDaemon(PR_FALSE)
         , mConnectionAttemptCount(0)
         , mClientID(0)
-#ifdef XP_UNIX
-        , mFD(nsnull)
-#endif
         {}
 
     virtual ~ipcTransport()
@@ -152,8 +149,6 @@ private:
     nsCOMPtr<nsISocketTransport>   mTransport;
     nsCOMPtr<nsIInputStream>       mInputStream;
     nsCOMPtr<nsIOutputStream>      mOutputStream;
-    nsCString                      mSocketPath;
-    PRFileDesc                    *mFD;
 
     //
     // unix specific helpers
@@ -168,7 +163,6 @@ public:
     // internal helper methods
     //
     void OnConnectionLost(nsresult reason);
-    PRFileDesc *FD() { return mFD; }
 #endif
 };
 

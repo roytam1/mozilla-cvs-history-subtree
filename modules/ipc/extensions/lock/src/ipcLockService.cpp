@@ -47,7 +47,10 @@ ipcLockService::AcquireLock(const char *lockName, ipcILockNotify *notify, PRBool
 
     nsresult rv = mIPCService->SendMessage(0, kLockTargetID, buf, bufLen, (notify == nsnull));
     free(buf);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv)) {
+        LOG(("  SendMessage failed [rv=%x]\n", rv));
+        return rv;
+    }
 
     if (notify) {
         nsCStringKey hashKey(lockName);

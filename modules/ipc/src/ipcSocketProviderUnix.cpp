@@ -38,6 +38,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "private/pprio.h"
 #include "plstr.h"
@@ -59,7 +61,7 @@ ipcIOLayerConnect(PRFileDesc* fd, const PRNetAddr* a, PRIntervalTime timeout)
 
     PRStatus status;
 
-    if (ipcIOSocketPath == NULL || ipcIOSocketPath[0] == '\0') {
+    if (!ipcIOSocketPath || !ipcIOSocketPath[0]) {
         NS_ERROR("not initialized");
         return PR_FAILURE;
     }
@@ -145,7 +147,7 @@ ipcSocketProviderUnix::NewSocket(const char *host,
     PRFileDesc *layer = PR_CreateIOLayerStub(ipcIOLayerIdentity, &ipcIOLayerMethods);
     if (!layer)
         goto loser;
-    layer->secret = NULL;
+    layer->secret = nsnull;
 
     if (PR_PushIOLayer(sock, PR_GetLayersIdentity(sock), layer) != PR_SUCCESS)
         goto loser;
@@ -177,9 +179,9 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(ipcSocketProviderUnix, nsISocketProvider)
 
 
 void
-ipcSocketProviderUnix::SetSocketPath(const nsACString &socketPath)
+ipcSocketProviderUnix::SetSocketPath(const char *socketPath)
 {
     if (ipcIOSocketPath)
-        nsMemory::Free(ipcIOSocketPath);
-    ipcIOSocketPath = ToNewCString(socketPath);
+        free(ipcIOSocketPath);
+    ipcIOSocketPath = socketPath ? strdup(socketPath) : nsnull;
 }
