@@ -51,7 +51,10 @@
 ** Note: on some platforms va_list is defined as an array,
 ** and requires array notation.
 */
+
 #if (defined(LINUX) && defined(__x86_64__))
+#define VARARGS_ASSIGN(foo, bar) __va_copy((foo), (bar))
+#elif (defined(SOLARIS) && defined(__x86_64))
 #define VARARGS_ASSIGN(foo, bar) __va_copy((foo), (bar))
 #elif (defined(LINUX) && defined(__powerpc__)) || \
     (defined(LINUX) && defined(__s390__)) || \
