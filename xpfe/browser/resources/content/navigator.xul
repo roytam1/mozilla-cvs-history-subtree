@@ -560,17 +560,17 @@
         <menuitem name="&ver13Cmd.label;"  onclick="window.frames[0].frames[1].location.href='http://www.hotwired.com'"/>
         <menuitem name="&ver14Cmd.label;"    onclick="window.frames[0].frames[1].location.href='http://www.hotbot.com'"/>
 	    <separator />
-        <menuitem name="&ver15Cmd.label;"  onclick="window.frames[0].frames[1].location.href='http://slip/projects/marvin/bft/browser/bft_frame_index.html'"/>
+        <menuitem name="&ver15Cmd.label;"  onclick="window.frames[0].frames[1].location.href='http://www.mozilla.org/quality/browser/debugtc/bft_frame_index.html'"/>
         <menuitem name="&ver16Cmd.label;"  onclick="window.frames[0].frames[1].location.href='resource:/res/samples/test6.html'"/>
-        <menuitem name="&ver17Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://slip/projects/marvin/bft/browser/bft_browser_applet.htm'"/>
+        <menuitem name="&ver17Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://www.mozilla.org/quality/browser/debugtc/bft_browser_applet.htm'"/>
         <menuitem name="&ver18Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://www.abcnews.com'"/>
-        <menuitem name="&ver19Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://slip/projects/marvin/bft/browser/bft_browser_imagemap.html'"/>
+        <menuitem name="&ver19Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://www.mozilla.org/quality/browser/debugtc/bft_browser_imagemap.html'"/>
         <menuitem name="&ver20Cmd.label;" onclick="window.frames[0].frames[1].location.href='resource:/res/samples/test2.html'"/>
         <menuitem name="&ver21Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://www.cdrom.com/pub/png/png-MagnoliaAlpha.html'"/>
         <menuitem name="&ver22Cmd.label;" onclick="window.frames[0].frames[1].location.href='resource:/res/samples/test13.html'"/>
         <menuitem name="&ver23Cmd.label;" onclick="window.frames[0].frames[1].location.href='resource:/res/samples/test2.html'"/>
-        <menuitem name="&ver24Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://slip/projects/marvin/bft/browser/bft_browser_html_mix3.html'"/>
-        <menuitem name="&ver25Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://slip/projects/marvin/bft/browser/bft_browser_link.html'"/>
+        <menuitem name="&ver24Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://www.mozilla.org/quality/browser/debugtc/bft_browser_html_mix3.html'"/>
+        <menuitem name="&ver25Cmd.label;" onclick="window.frames[0].frames[1].location.href='http://www.mozilla.org/quality/browser/debugtc/bft_browser_link.html'"/>
       </menu>
 
 	  <menu name="&viewDemoMenu.label;">  // Viewer tests.
