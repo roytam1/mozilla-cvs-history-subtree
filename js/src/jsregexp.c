@@ -1040,9 +1040,13 @@ backref:
 		    num <<= 4;
 		    num += JS7_UNHEX(c);
 		} else {
-		    cp--;	/* back up so cp points to last hex char */
+                    if (state->context->version == JSVERSION_1_2)
+		        cp--;	/* back up so cp points to last hex char */
+                    else
+                        goto nothex; /* ECMA 2 insists on pairs */
 		}
 	    } else {
+nothex:
 		cp = ocp;	/* \xZZ is xZZ (Perl does \0ZZ!) */
 		num = 'x';
 	    }
