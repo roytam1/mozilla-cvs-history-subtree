@@ -62,8 +62,8 @@ nsStorageStream::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 }
 
 NS_IMETHODIMP
-nsStorageStream::Initialize(PRUint32 segmentSize, PRUint32 maxSize,
-                            nsIAllocator *segmentAllocator)
+nsStorageStream::Init(PRUint32 segmentSize, PRUint32 maxSize,
+                      nsIAllocator *segmentAllocator)
 {
     mSegmentedBuffer = new nsSegmentedBuffer();
     if (!mSegmentedBuffer)
@@ -354,5 +354,19 @@ nsStorageInputStream::Seek(PRUint32 aPosition)
     PRUint32 available = length - aPosition;
     mSegmentEnd = mReadCursor + PR_MIN(mSegmentSize - segmentOffset, available);
     mLogicalCursor = aPosition;
+    return NS_OK;
+}
+
+NS_COM nsresult
+NS_NewStorageStream(PRUint32 segmentSize, PRUint32 maxSize, nsIStorageStream **result)
+{
+    NS_ENSURE_ARG(result);
+
+    nsStorageStream* storageStream = new nsStorageStream();
+    if (!storageStream) return NS_ERROR_OUT_OF_MEMORY;
+    
+    storageStream->Init(segmentSize, maxSize);
+    NS_ADDREF(storageStream);
+    *result = storageStream;
     return NS_OK;
 }

@@ -32,10 +32,6 @@ interface nsIOutputStream;
 [scriptable, uuid(604ad9d0-753e-11d3-90ca-0040056a906e)]
 interface nsIStorageStream : nsISupports
 {
-    void Initialize(in unsigned long segmentSize,
-                    in unsigned long maxSize,
-                    in nsIAllocator segmentAllocator);
-
     /**
      * Get a reference to the one and only output stream for this instance.
      * The zero-based <code>startPosition</code> argument is used is used to
@@ -66,3 +62,8 @@ interface nsIStorageStream : nsISupports
     readonly attribute boolean WriteInProgress;
 };
 
+%{C++
+// Factory method
+NS_COM nsresult
+NS_NewStorageStream(PRUint32 segmentSize, PRUint32 maxSize, nsIStorageStream **result);
+%}
