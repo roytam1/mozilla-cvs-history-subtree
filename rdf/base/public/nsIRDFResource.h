@@ -21,7 +21,7 @@
 #define nsIRDFResource_h__
 
 #if defined(USE_XPIDL_INTERFACES)
-#include "nsRDFInterface.h"
+#include "nsRDFInterfaces.h"
 #else
 
 #include "nsIRDFNode.h"
