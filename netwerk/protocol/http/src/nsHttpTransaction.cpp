@@ -85,9 +85,12 @@ nsHttpTransaction::SetConnection(nsHttpConnection *conn)
 nsHttpResponseHead *
 nsHttpTransaction::TakeResponseHead()
 {
+    /*
     nsHttpResponseHead *head = mResponseHead;
     mResponseHead = nsnull;
     return head;
+    */
+    return mResponseHead;
 }
 
 // called on the socket transport thread

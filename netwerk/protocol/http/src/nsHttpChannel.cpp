@@ -12,7 +12,7 @@
 static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
 
 //-----------------------------------------------------------------------------
-// nsHttpChannel
+// nsHttpChannel <public>
 //-----------------------------------------------------------------------------
 
 nsHttpChannel::nsHttpChannel()
@@ -29,6 +29,8 @@ nsHttpChannel::nsHttpChannel()
 
 nsHttpChannel::~nsHttpChannel()
 {
+    if (mResponseHead)
+        delete mResponseHead;
 }
 
 nsresult
@@ -96,6 +98,10 @@ nsHttpChannel::Init(nsIURI *uri,
     return NS_OK;
 }
 
+//-----------------------------------------------------------------------------
+// nsHttpChannel <private>
+//-----------------------------------------------------------------------------
+
 nsresult
 nsHttpChannel::Connect()
 {
@@ -155,6 +161,77 @@ nsHttpChannel::BuildStreamListenerProxy(nsIStreamListener **result)
     if (NS_FAILED(rv)) return rv;
 
     return CallQueryInterface(proxy, result);
+}
+
+nsresult
+nsHttpChannel::ProcessServerResponse()
+{
+    NS_PRECONDITION(mResponseHead, "null response head");
+
+    nsresult rv = NS_OK;
+    PRUint32 httpStatus = mResponseHead->Status();
+
+    // handle different server response categories
+    switch (httpStatus) {
+    case 200:
+    case 203:
+        rv = ProcessNormal();
+        break;
+    case 300:
+    case 301:
+        rv = ProcessRedirection(httpStatus);
+        break;
+    case 302:
+    case 303:
+    case 305:
+    case 307:
+        // XXX doom cache entry
+        rv = ProcessRedirection(httpStatus);
+        break;
+    case 304:
+        rv = ProcessNotModified();
+        break;
+    case 401:
+    case 407:
+        // XXX doom cache entry
+        rv = ProcessAuthentication(httpStatus);
+        break;
+    default:
+        // XXX doom cache entry
+        rv = ProcessNormal();
+        break;
+    }
+
+    return rv;
+}
+
+nsresult
+nsHttpChannel::ProcessNormal()
+{
+    // XXX install cache listener tee
+    // XXX install stream converter(s)
+    return mListener->OnStartRequest(this, mListenerContext);
+}
+
+nsresult
+nsHttpChannel::ProcessNotModified()
+{
+    NS_NOTREACHED("not implemented");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult
+nsHttpChannel::ProcessRedirection(PRUint32 httpStatus)
+{
+    NS_NOTREACHED("not implemented");
+    return ProcessNormal();
+}
+
+nsresult
+nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
+{
+    NS_NOTREACHED("not implemented");
+    return ProcessNormal();
 }
 
 //-----------------------------------------------------------------------------
@@ -272,22 +349,28 @@ nsHttpChannel::GetURI(nsIURI **URI)
 NS_IMETHODIMP
 nsHttpChannel::GetOwner(nsISupports **owner)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(owner);
+    *owner = mOwner;
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetOwner(nsISupports *owner)
 {
+    mOwner = owner;
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetNotificationCallbacks(nsIInterfaceRequestor **callbacks)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG_POINTER(callbacks);
+    *callbacks = mCallbacks;
+    return NS_OK;
 }
 NS_IMETHODIMP
 nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
 {
+    mCallbacks = callbacks;
     return NS_OK;
 }
 
@@ -439,49 +522,57 @@ nsHttpChannel::SetRequestHeader(const char *header, const char *value)
 NS_IMETHODIMP
 nsHttpChannel::VisitRequestHeaders(nsIHttpHeaderVisitor *visitor)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return mRequestHead.Headers().VisitHeaders(visitor);
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetResponseStatus(PRUint32 *aResponseStatus)
+nsHttpChannel::GetResponseStatus(PRUint32 *value)
 {
-    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    NS_ENSURE_ARG_POINTER(value);
+    *value = mResponseHead->Status();
+    return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetResponseStatusText(char **aResponseStatusText)
+nsHttpChannel::GetResponseStatusText(char **value)
 {
-    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    return DupString(mResponseHead->StatusText(), value);
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetResponseHeader(const char *header, char **_retval)
+nsHttpChannel::GetResponseHeader(const char *header, char **value)
 {
-    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    nsHttpAtom atom = nsHttp::ResolveAtom(header);
+    if (!atom)
+        return NS_ERROR_NOT_AVAILABLE;
+    return mResponseHead->GetHeader(atom, value);
 }
 
 NS_IMETHODIMP
 nsHttpChannel::SetResponseHeader(const char *header, const char *value)
 {
-    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    nsHttpAtom atom = nsHttp::ResolveAtom(header);
+    if (!atom)
+        return NS_ERROR_NOT_AVAILABLE;
+    return mResponseHead->SetHeader(atom, value);
 }
 
 NS_IMETHODIMP
 nsHttpChannel::VisitResponseHeaders(nsIHttpHeaderVisitor *visitor)
 {
-    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    return mResponseHead->Headers().VisitHeaders(visitor);
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetCharset(char **aCharset)
+nsHttpChannel::GetCharset(char **value)
 {
-    NS_ENSURE_TRUE(!mIsPending, NS_ERROR_NOT_AVAILABLE);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    return DupString(mResponseHead->ContentCharset(), value);
 }
 
 //-----------------------------------------------------------------------------
@@ -539,9 +630,7 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     // of them from the transaction.
     mResponseHead = mTransaction->TakeResponseHead();
 
-    NS_POSTCONDITION(mResponseHead, "null response head");
- 
-    return mListener->OnStartRequest(this, mListenerContext);
+    return ProcessServerResponse();
 }
 
 NS_IMETHODIMP
@@ -558,6 +647,7 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
 
     // at this point, we're done with the transaction
     NS_RELEASE(mTransaction);
+    mTransaction = nsnull;
 
     mListener->OnStopRequest(this, mListenerContext, status);
 

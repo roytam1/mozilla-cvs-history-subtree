@@ -6,6 +6,7 @@
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
 #include "nsILoadGroup.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 
@@ -36,31 +37,40 @@ public:
                   const char *proxyHost=0,
                   PRInt32 proxyPort=-1,
                   const char *proxyType=0);
+
+private:
     nsresult Connect();
     nsresult SetupTransaction();
     nsresult BuildConnectionInfo(nsHttpConnectionInfo **);
     nsresult BuildStreamListenerProxy(nsIStreamListener **);
+    nsresult ProcessServerResponse();
+    nsresult ProcessNormal();
+    nsresult ProcessNotModified();
+    nsresult ProcessRedirection(PRUint32 httpStatus);
+    nsresult ProcessAuthentication(PRUint32 httpStatus);
 
 private:
-    nsCOMPtr<nsIURI>            mURI;
-    nsCOMPtr<nsIStreamListener> mListener;
-    nsCOMPtr<nsISupports>       mListenerContext;
-    nsCOMPtr<nsILoadGroup>      mLoadGroup;
-    nsCOMPtr<nsIURI>            mReferrer;
+    nsCOMPtr<nsIURI>                mURI;
+    nsCOMPtr<nsIStreamListener>     mListener;
+    nsCOMPtr<nsISupports>           mListenerContext;
+    nsCOMPtr<nsILoadGroup>          mLoadGroup;
+    nsCOMPtr<nsISupports>           mOwner;
+    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
+    nsCOMPtr<nsIURI>                mReferrer;
 
-    nsHttpRequestHead           mRequestHead;
-    nsHttpResponseHead         *mResponseHead;
+    nsHttpRequestHead               mRequestHead;
+    nsHttpResponseHead             *mResponseHead;
 
-    nsHttpTransaction          *mTransaction;    // hard ref
-    nsHttpConnectionInfo       *mConnectionInfo; // hard ref
+    nsHttpTransaction              *mTransaction;    // hard ref
+    nsHttpConnectionInfo           *mConnectionInfo; // hard ref
 
-    nsXPIDLCString              mSpec;
+    nsXPIDLCString                  mSpec;
 
-    PRUint32                    mLoadFlags;
-    PRUint32                    mCapabilities;
-    PRUint32                    mStatus;
+    PRUint32                        mLoadFlags;
+    PRUint32                        mCapabilities;
+    PRUint32                        mStatus;
 
-    PRPackedBool                mIsPending;
+    PRPackedBool                    mIsPending;
 };
 
 #endif
