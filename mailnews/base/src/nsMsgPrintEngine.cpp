@@ -677,6 +677,7 @@ nsMsgPrintEngine::PrintMsgWindow()
       } 
       else 
       {
+        mPrintSettings->SetPrintSilent(mCurrentlyPrintingURI != 0);
         nsCOMPtr<nsIContentViewerFile> contentViewerFile(do_QueryInterface(mWebBrowserPrint));
         if (contentViewerFile && mParentWindow) 
         {
