@@ -234,7 +234,28 @@ void stub_complete(NET_StreamClass *stream)
 
 void stub_abort(NET_StreamClass *stream, int status)
 {
+    nsConnectionInfo *pConn = (nsConnectionInfo *)stream->data_object;
+
     TRACEMSG(("+++ stream abort.  Status = %d\n", status));
+
+    pConn->pNetStream->Close();
+
+    /* Notify the Data Consumer that the Binding has completed... */
+    /* 
+     * XXX:  Currently, there is no difference between complete and
+     * abort...
+     */
+    if (pConn->pConsumer) {
+        pConn->pConsumer->OnStopBinding();
+        pConn->pConsumer->Release();
+        pConn->pConsumer = NULL;
+    }
+
+    /* Free the nsConnectionInfo object hanging off of the data_object */
+    pConn->pNetStream->Release();
+    pConn->pNetStream = NULL;
+    pConn->Release();
+    stream->data_object = NULL;
 }
 
 int stub_put_block(NET_StreamClass *stream, const char *buffer, int32 length)
@@ -330,6 +351,7 @@ NET_StreamBuilder  (FO_Present_Types format_out,
 
             /* Notify the data consumer that Binding is beginning...*/
             /* XXX: check result to terminate connection if necessary */
+            printf("+++ Created a stream for %s\n", URL_s->address);
             if (pConn->pConsumer) {
                 pConn->pConsumer->OnStartBinding();
             }
