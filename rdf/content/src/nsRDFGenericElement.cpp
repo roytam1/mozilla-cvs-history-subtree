@@ -160,13 +160,11 @@ public:
     virtual PRBool Convert(JSContext *aContext, jsval aID);
     virtual void   Finalize(JSContext *aContext);
 
-	// nsIDOMXULElement
-	NS_IMETHOD DoCommand();
+	  // nsIDOMXULElement
+	  NS_IMETHOD DoCommand();
 
-	NS_IMETHOD AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
-	NS_IMETHOD RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
-
-	NS_IMETHOD GetNodeWithID(const nsString& id, nsIDOMNode** aNode);
+	  NS_IMETHOD AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
+	  NS_IMETHOD RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
 
 protected:
     /** The document in which the element lives. */
@@ -273,7 +271,8 @@ RDFGenericElementImpl::QueryInterface(REFNSIID iid, void** result)
         *result = NS_STATIC_CAST(nsIContent*, this);
     }
     else if (iid.Equals(kIDOMElementIID) ||
-             iid.Equals(kIDOMNodeIID)) {
+             iid.Equals(kIDOMNodeIID) ||
+             iid.Equals(nsIDOMXULElement::IID())) {
         *result = NS_STATIC_CAST(nsIDOMElement*, this);
     }
     else if (iid.Equals(kIScriptObjectOwnerIID)) {
@@ -1355,11 +1354,5 @@ RDFGenericElementImpl::RemoveBroadcastListener(const nsString& attr, nsIDOMNode*
 		}
 	}
 
-	return NS_OK;
-}
-
-NS_IMETHODIMP
-RDFGenericElementImpl::GetNodeWithID(const nsString& id, nsIDOMNode** node)
-{
 	return NS_OK;
 }

@@ -75,6 +75,10 @@
 #include "nsRDFContentUtils.h"
 #include "nsRDFDOMNodeList.h"
 
+// The XUL interfaces implemented by the RDF content node.
+#include "nsIDOMXULElement.h"
+// End of XUL interface includes
+
 ////////////////////////////////////////////////////////////////////////
 
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
@@ -99,10 +103,20 @@ static NS_DEFINE_CID(kEventListenerManagerCID, NS_EVENTLISTENERMANAGER_CID);
 static NS_DEFINE_CID(kNameSpaceManagerCID,     NS_NAMESPACEMANAGER_CID);
 static NS_DEFINE_CID(kRDFServiceCID,           NS_RDFSERVICE_CID);
 
+struct XULBroadcastListener
+{
+	nsString mAttribute;
+	nsCOMPtr<nsIDOMNode> mListener;
+
+	XULBroadcastListener(const nsString& attr, nsIDOMNode* listen)
+		: mAttribute(attr), mListener(listen)
+	{ // Nothing else to do 
+	}
+};
 
 ////////////////////////////////////////////////////////////////////////
 
-class RDFResourceElementImpl : public nsIDOMElement,
+class RDFResourceElementImpl : public nsIDOMXULElement,
                                public nsIDOMEventReceiver,
                                public nsIScriptObjectOwner,
                                public nsIJSScriptObject,
@@ -199,6 +213,12 @@ public:
     virtual PRBool Convert(JSContext *aContext, jsval aID);
     virtual void   Finalize(JSContext *aContext);
 
+    // nsIDOMXULElement
+	  NS_IMETHOD DoCommand();
+
+	  NS_IMETHOD AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
+	  NS_IMETHOD RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode);
+
 protected:
     /** The document in which the element lives. */
     nsIDocument*      mDocument;
@@ -233,6 +253,12 @@ protected:
      * Dynamically generate the element's children from the RDF graph
      */
     nsresult EnsureContentsGenerated(void) const;
+
+    /** A pointer to a broadcaster. Only non-null if we are observing someone. **/
+	  nsIDOMNode*		  mBroadcaster;
+
+	  /** An array of broadcast listeners. **/
+	  nsVoidArray		  mBroadcastListeners;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -253,7 +279,8 @@ RDFResourceElementImpl::RDFResourceElementImpl(nsIRDFResource* aResource,
       mListenerManager(nsnull),
       mAttributes(nsnull),
       mResource(aResource),
-      mContentsMustBeGenerated(PR_FALSE)
+      mContentsMustBeGenerated(PR_FALSE),
+      mBroadcaster(nsnull)
 {
     NS_INIT_REFCNT();
     NS_ADDREF(aResource);
@@ -307,6 +334,14 @@ RDFResourceElementImpl::~RDFResourceElementImpl()
 
     nsrefcnt refcnt;
     NS_RELEASE2(kIdAtom, refcnt);
+
+    // Release our broadcast listeners
+	  PRInt32 count = mBroadcastListeners.Count();
+	  for (PRInt32 i = 0; i < count; i++)
+	  {
+		  XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[0];
+		  RemoveBroadcastListener(xulListener->mAttribute, xulListener->mListener);
+	  }
 }
 
 
@@ -1700,4 +1735,69 @@ RDFResourceElementImpl::EnsureContentsGenerated(void) const
     return rv;
 }
 
+// nsIDOMXULElement
+NS_IMETHODIMP
+RDFResourceElementImpl::DoCommand()
+{
+	return NS_OK;
+}
 
+NS_IMETHODIMP
+RDFResourceElementImpl::AddBroadcastListener(const nsString& attr, nsIDOMNode* aNode) 
+{ 
+	// Add ourselves to the array.
+	NS_ADDREF(aNode);
+	mBroadcastListeners.AppendElement(new XULBroadcastListener(attr, aNode));
+
+	// We need to sync up the initial attribute value.
+  nsCOMPtr<nsIContent> pListener(aNode);
+
+  // Retrieve our namespace
+  PRInt32 namespaceID;
+  GetNameSpaceID(namespaceID);
+
+  // Find out if the attribute is even present at all.
+  nsString attrValue;
+  nsIAtom* kAtom = NS_NewAtom(attr);
+	nsresult result = GetAttribute(namespaceID, kAtom, attrValue);
+	PRBool attrPresent = (result == NS_CONTENT_ATTR_NO_VALUE ||
+                        result == NS_CONTENT_ATTR_HAS_VALUE);
+
+	if (attrPresent)
+  {
+    // Set the attribute 
+    pListener->SetAttribute(namespaceID, kAtom, attrValue, PR_TRUE);
+  }
+  else
+  {
+    // Unset the attribute
+    pListener->UnsetAttribute(namespaceID, kAtom, PR_TRUE);
+  }
+
+  NS_RELEASE(kAtom);
+
+	return NS_OK; 
+}
+	
+
+NS_IMETHODIMP
+RDFResourceElementImpl::RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode) 
+{ 
+	// Find the node.
+	PRInt32 count = mBroadcastListeners.Count();
+	for (PRInt32 i = 0; i < count; i++)
+	{
+		XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
+		
+		if (xulListener->mAttribute == attr &&
+			xulListener->mListener == aNode)
+		{
+			// Do the removal.
+			mBroadcastListeners.RemoveElementAt(i);
+			delete xulListener;
+			return NS_OK;
+		}
+	}
+
+	return NS_OK;
+}
