@@ -30,6 +30,3 @@ CLOBBERFILES = $(FILES)
 include $(topsrcdir)/config/rules.mk
 
 # vim: ft=make
-
-
-
