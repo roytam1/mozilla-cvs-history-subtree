@@ -505,7 +505,6 @@ function QuoteSelectedMessage(){
 }
 
 
-    goUpdateCommand("cmd_sendNow");
 function SetupCommandUpdateHandlers()
 {
 //  dump("SetupCommandUpdateHandlers\n");
@@ -520,6 +519,7 @@ function CommandUpdate_MsgCompose()
 function updateComposeItems() {
   try {
   //Edit Menu
+  goUpdateCommand("cmd_sendNow");
 
   //Insert Menu
   if (msgCompose && msgCompose.composeHTML)
