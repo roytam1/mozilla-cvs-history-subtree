@@ -674,7 +674,7 @@ get_keypassword( PK11SlotInfo *slot, PRBool retry, void *sessionarg )
 	return( NULL );
     }
 
-    return( ssip->lssei_keypasswd );
+    return( PL_strdup(ssip->lssei_keypasswd) );
 }
 
 
