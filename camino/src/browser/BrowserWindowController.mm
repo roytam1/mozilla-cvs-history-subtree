@@ -225,12 +225,9 @@ static NSArray* sToolbarDefaults = nil;
 - (id)initWithWindowNibName:(NSString *)windowNibName
 {
     if ( (self = [super initWithWindowNibName:(NSString *)windowNibName]) ) {
-        // this won't correctly cascade windows on multiple monitors. RADAR bug 2972893 
-        // filed since it also happens in Terminal.app
-        if ( CHBrowserService::sNumBrowsers == 0 )
-            [self setShouldCascadeWindows:NO];
-        else
-            [self setShouldCascadeWindows:YES];
+        // we cannot rely on the OS to correctly cascade new windows (RADAR bug 2972893)
+        // so we turn off the cascading. We do it at the end of |windowDidLoad|
+        [self setShouldCascadeWindows:NO];
         mInitialized = NO;
         mMoveReentrant = NO;
         mShouldAutosave = YES;
@@ -422,7 +419,30 @@ static NSArray* sToolbarDefaults = nil;
     }
     
     if (mustResizeChrome)
-      [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];      
+      [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];
+      
+    // stagger window from last browser, if there is one. we can't just use autoposition
+    // because it doesn't work on multiple monitors (radar bug 2972893). |getFrontmostBrowserWindow|
+    // only gets fully chromed windows, so this will do the right thing for popups (yay!).
+    NSWindow* lastBrowser = [[NSApp delegate] getFrontmostBrowserWindow];
+    if ( lastBrowser != [self window] ) {
+      NSRect lastBrowserFrame = [lastBrowser frame];
+      NSPoint topLeft = NSMakePoint(NSMinX(lastBrowserFrame), NSMaxY(lastBrowserFrame));
+      topLeft.x += 15; topLeft.y -= 15;
+      [[self window] setFrameTopLeftPoint:topLeft];
+      
+      // check if this new topLeft will overlap the dock or go off the screen, if so,
+      // force to 0,0 of the current monitor. We test this by unioning the window rect
+      // with the visible screen rect (excluding dock). If the result isn't the same
+      // as the screen rect, the window juts out somewhere and needs to be repositioned.
+      NSRect newBrowserFrame = [[self window] frame];
+      NSRect screenRect = [[lastBrowser screen] visibleFrame];
+      NSRect unionRect = NSUnionRect(newBrowserFrame, screenRect);
+      if ( !NSEqualRects(unionRect, screenRect) ) {
+        topLeft = NSMakePoint(NSMinX(screenRect), NSMaxY(screenRect));
+        [[self window] setFrameTopLeftPoint:topLeft];
+      }
+    }
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize
