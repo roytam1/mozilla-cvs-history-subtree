@@ -112,22 +112,6 @@
 #include "nsIXPCToolsProfiler.h"
 #endif
 
-#ifdef XPC_IDISPATCH_SUPPORT
-#include <atlbase.h>
-#include <comdef.h>
-
-extern CComModule _Module;
-
-#include <atlcom.h>
-// MS clutters the global namespace with so many macro names :-(
-// I tried to keep these includes in the CPP's but it became too
-// convoluted
-#undef GetClassInfo
-#undef GetClassName
-#undef interface
-#undef GetMessage
-#endif
-
 /***************************************************************************/
 // Compile time switches for instrumentation and stuff....
 
@@ -2095,9 +2079,6 @@ class nsXPCWrappedJS : public nsXPTCStubBase,
                        public nsIXPConnectWrappedJS,
                        public nsSupportsWeakReference,
                        public nsIPropertyBag
-#ifdef XPC_IDISPATCH_SUPPORT
-                       ,public IDispatch
-#endif
 {
 public:
     NS_DECL_ISUPPORTS
@@ -2151,19 +2132,6 @@ public:
     nsISupports* GetAggregatedNativeObject() const {return mRoot->mOuter;}
 
     virtual ~nsXPCWrappedJS();
-#ifdef XPC_IDISPATCH_SUPPORT
-    // IDispatch methods
-    STDMETHOD(QueryInterface)(const struct _GUID & IID,void ** pPtr);
-    STDMETHOD(GetTypeInfoCount)(unsigned int * pctinfo);
-    STDMETHOD(GetTypeInfo)(unsigned int iTInfo, LCID lcid, 
-                           ITypeInfo FAR* FAR* ppTInfo);
-    STDMETHOD(GetIDsOfNames)(REFIID riid, OLECHAR FAR* FAR* rgszNames, 
-                             unsigned int cNames, LCID  lcid, 
-                             DISPID FAR* rgDispId);
-    STDMETHOD(Invoke)(DISPID dispIdMember, REFIID riid, LCID lcid, WORD wFlags,
-                      DISPPARAMS FAR* pDispParams, VARIANT FAR* pVarResult, 
-                      EXCEPINFO FAR* pExcepInfo, unsigned int FAR* puArgErr);
-#endif
 
 protected:
     nsXPCWrappedJS();   // not implemented
@@ -2179,11 +2147,6 @@ private:
     nsXPCWrappedJS* mRoot;
     nsXPCWrappedJS* mNext;
     nsISupports* mOuter;    // only set in root
-#ifdef XPC_IDISPATCH_SUPPORT
-    IDispTypeInfo * mCOMTypeInfo;
-
-    IDispTypeInfo * GetCOMTypeInfo();
-#endif
 };
 
 /***************************************************************************/

@@ -303,9 +303,6 @@ nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
       mRoot(root ? root : this),
       mNext(nsnull),
       mOuter(root ? nsnull : aOuter)
-#ifdef XPC_IDISPATCH_SUPPORT
-      ,mCOMTypeInfo(0)
-#endif
 {
 #ifdef DEBUG_stats_jband
     static int count = 0;

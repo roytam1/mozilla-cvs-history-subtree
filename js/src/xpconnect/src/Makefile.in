@@ -91,7 +91,8 @@ CPPSRCS +=	idispobject.cpp	\
 		idisptypeinfo.cpp	\
 		idispidarray.cpp \
 		idispthrower.cpp \
-		idispcallcontext.cpp
+		idispcallcontext.cpp \
+		idispatchtearoff.cpp
 endif
 CPPSRCS += $(NULL)
 

@@ -468,8 +468,7 @@ nsXPCWrappedJSClass::DelegatedQueryInterface(nsXPCWrappedJS* self,
             *aInstancePtr = nsnull;
             return NS_NOINTERFACE;
         }
-        NS_ADDREF(root);
-        *aInstancePtr = (void*) NS_STATIC_CAST(IDispatch*, root);
+        *aInstancePtr = NS_STATIC_CAST(IDispatchTearOff*, new IDispatchTearOff(root));
         return NS_OK;
     }
 #endif
