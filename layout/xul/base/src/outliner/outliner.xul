@@ -14,7 +14,8 @@
         getColumnProperties : function(index, col, prop) {},
 	outliner : null,
 	setOutliner : function(out) { this.outliner = out; },
-	getCellText : function(i, col) { return "Text at row #" + i + " in col " + col; }
+	getCellText : function(i, col) { return "Text at row #" + i + " in col " + col; },
+	getLevel : function(i) { return i/1000; }
 	});
   
   function setView(outliner, v) {
@@ -29,7 +30,7 @@
   <spring style="height: 16px"/>
 
   <outliner id="out" flex="1">
-    <outlinercol id="Col1" value="Col1" flex="1"/>
+    <outlinercol id="Col1" primary="true" value="Col1" flex="1"/>
     <outlinercol id="Col2" value="Col2" flex="1"/>
     <outlinercol id="Col3" value="Col3" flex="1"/>
     <outlinercol id="Col4" value="Col4" flex="1"/>
