@@ -600,7 +600,7 @@ extern JSBool
 lm_MouseInputEvent(MWContext *context, LO_Element *element, JSEvent *pEvent,
             jsval *rval);
 
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 lm_DocCacheConverter(MWContext * context, URL_Struct * url,
 		     const char * wysiwyg_url);
 
