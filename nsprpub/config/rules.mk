@@ -190,11 +190,11 @@ clobber::
 	+$(LOOP_OVER_DIRS)
 
 realclean clobber_all::
-	rm -rf $(wildcard *.OBJ *.OBJD) $(ALL_TRASH)
+	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH)
 	+$(LOOP_OVER_DIRS)
 
 distclean::
-	rm -rf $(wildcard *.OBJ *.OBJD) $(ALL_TRASH) $(DIST_GARBAGE)
+	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH) $(DIST_GARBAGE)
 	+$(LOOP_OVER_DIRS)
 
 release:: export
