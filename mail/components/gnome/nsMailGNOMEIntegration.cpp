@@ -42,10 +42,13 @@
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "prenv.h"
+#include "nsIFile.h"
 #include "nsIStringBundle.h"
 #include "nsIPromptService.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
+#include "nsDirectoryServiceDefs.h"
+#include "nsDirectoryServiceUtils.h"
 
 #include <glib.h>
 #include <limits.h>
@@ -64,6 +67,8 @@ static const char* const sNewsProtocols[] = {
 nsresult
 nsMailGNOMEIntegration::Init()
 {
+  nsresult rv;
+
   // GConf _must_ be available, or we do not allow CreateInstance to succeed.
 
   nsCOMPtr<nsIGConfService> gconf = do_GetService(NS_GCONFSERVICE_CONTRACTID);
@@ -75,13 +80,9 @@ nsMailGNOMEIntegration::Init()
   // the locale encoding.  If it's not set, they use UTF-8.
   mUseLocaleFilenames = PR_GetEnv("G_BROKEN_FILENAMES") != nsnull;
 
-  nsCOMPtr<nsIProperties> dirSvc
-    (do_GetService("@mozilla.org/file/directory_service;1"));
-  NS_ENSURE_TRUE(dirSvc, NS_ERROR_NOT_AVAILABLE);
-
-  nsCOMPtr<nsILocalFile> appPath;
-  rv = dirSvc->Get(NS_XPCOM_CURRENT_PROCESS_DIR, NS_GET_IID(nsILocalFile),
-                   getter_AddRefs(appPath));
+  nsCOMPtr<nsIFile> appPath;
+  rv = NS_GetSpecialDirectory(NS_XPCOM_CURRENT_PROCESS_DIR,
+                              getter_AddRefs(appPath));
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = appPath->AppendNative(NS_LITERAL_CSTRING("thunderbird"));
