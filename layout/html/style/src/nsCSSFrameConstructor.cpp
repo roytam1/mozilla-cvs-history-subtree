@@ -10263,6 +10263,15 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
 #endif
   }
 
+  // first see if we need to manage the style system: 
+  //  inlineStyle changes require us to clear out style data associated with the style attribute
+  if (inlineStyle && 
+      (reconstruct || reframe || restyle)) {
+    nsCOMPtr<nsIStyleSet> set;
+    shell->GetStyleSet(getter_AddRefs(set));
+    set->ClearStyleData(aPresContext, rule, styleContext);
+  }
+
   // apply changes
   if (primaryFrame && aHint == NS_STYLE_HINT_ATTRCHANGE)
     result = primaryFrame->AttributeChanged(aPresContext, aContent, aNameSpaceID, aAttribute, aModType, aHint);
@@ -10273,12 +10282,6 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     result = RecreateFramesForContent(aPresContext, aContent, inlineStyle, rule, styleContext);
   }
   else if (restyle) {
-    if (inlineStyle) {
-      nsCOMPtr<nsIStyleSet> set;
-      shell->GetStyleSet(getter_AddRefs(set));
-      set->ClearStyleData(aPresContext, rule, styleContext);
-    }
-
     // If there is no frame then there is no point in re-styling it,
     // is there?
     if (primaryFrame) {
