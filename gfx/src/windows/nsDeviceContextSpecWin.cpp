@@ -52,6 +52,8 @@
 
 // For NS_CopyNativeToUnicode
 #include "nsNativeCharsetUtils.h"
+#include "nsIWindowWatcher.h"
+#include "nsIDOMWindow.h"
 
 // File Picker
 #include "nsILocalFile.h"

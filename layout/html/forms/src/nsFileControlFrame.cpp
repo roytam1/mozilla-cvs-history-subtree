@@ -295,9 +295,8 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
   if (!doc)
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIDOMWindowInternal> parentWindow = do_QueryInterface(doc->GetScriptGlobalObject());
-  if (!parentWindow)
-    return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDOMWindow> parentWindow =
+    do_QueryInterface(doc->GetScriptGlobalObject());
 
   // Get Loc title
   nsString title;
@@ -308,7 +307,7 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
   if (!filePicker)
     return NS_ERROR_FAILURE;
 
-  result = filePicker->Init(parentWindow, title.get(), nsIFilePicker::modeOpen);
+  result = filePicker->Init(parentWindow, title, nsIFilePicker::modeOpen);
   if (NS_FAILED(result))
     return result;
 
@@ -326,7 +325,7 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
       nsAutoString leafName;
       currentFile->GetLeafName(leafName);
       if (!leafName.IsEmpty()) {
-        filePicker->SetDefaultString(leafName.get());
+        filePicker->SetDefaultString(leafName);
       }
 
       // set directory
