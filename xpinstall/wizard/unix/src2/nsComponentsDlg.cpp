@@ -477,11 +477,7 @@ nsComponentsDlg::RowSelected(GtkWidget *aWidget, gint aRow, gint aColumn,
 
     sCurrRowSelected = aRow;
 
-    // only toggle row selection state for clicks on the row
-    if (aColumn == -1 && !aEvent)
-        return;
-
-    ToggleRowSelection(aWidget, aRow);
+    ToggleRowSelection(aWidget, aRow, aColumn);
 }
 
 void
@@ -491,11 +487,12 @@ nsComponentsDlg::KeyPressed(GtkWidget *aWidget, GdkEventKey *aEvent,
   DUMP("KeyPressed");
 
   if (aEvent->keyval == GDK_space)
-      ToggleRowSelection(aWidget, sCurrRowSelected);
+      ToggleRowSelection(aWidget, sCurrRowSelected, 0);
 }
 
 void
-nsComponentsDlg::ToggleRowSelection(GtkWidget *aWidget, gint aRow)
+nsComponentsDlg::ToggleRowSelection(GtkWidget *aWidget, gint aRow, 
+                                    gint aColumn)
 {
     int numRows = 0, currRow = 0;
     GtkStyle *style = NULL;
@@ -522,6 +519,10 @@ nsComponentsDlg::ToggleRowSelection(GtkWidget *aWidget, gint aRow)
                 gtk_label_set_text(GTK_LABEL(sDescLong),
                                    currComp->GetDescLong());
                 gtk_widget_show(sDescLong);
+
+                // don't toggle checkbox for clicks on component text
+                if (aColumn != 0)
+                   break;
 
                 if (currComp->IsSelected())
                 {
