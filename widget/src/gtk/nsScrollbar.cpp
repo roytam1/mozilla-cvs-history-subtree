@@ -54,7 +54,7 @@ nsScrollbar::~nsScrollbar ()
 // Create the native scrollbar widget
 //
 //-------------------------------------------------------------------------
-NS_IMETHODIMP nsScrollbar::CreateNative (GtkWidget * parentWindow)
+NS_IMETHODIMP nsScrollbar::CreateNative (GtkObject * parentWindow)
 {
   // Create scrollbar, random default values
   mAdjustment = GTK_ADJUSTMENT (gtk_adjustment_new (0, 0, 100, 1, 25, 25));

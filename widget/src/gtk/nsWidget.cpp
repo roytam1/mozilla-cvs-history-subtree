@@ -982,7 +982,7 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
                                 nsWidgetInitData *aInitData,
                                 nsNativeWidget aNativeParent)
 {
-  GtkWidget *parentWidget = nsnull;
+  GtkObject *parentWidget = nsnull;
 
 #ifdef NOISY_DESTROY
   if (aParent)
@@ -1009,10 +1009,10 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   NS_IF_ADDREF(mParent);
 
   if (aNativeParent) {
-    parentWidget = GTK_WIDGET(aNativeParent);
+    parentWidget = GTK_OBJECT(aNativeParent);
   } else if (aParent) {
     // this ups the refcount of the gtk widget, we must unref later.
-    parentWidget = GTK_WIDGET(aParent->GetNativeData(NS_NATIVE_WIDGET));
+    parentWidget = GTK_OBJECT(aParent->GetNativeData(NS_NATIVE_WIDGET));
   }
 
   mBounds = aRect;

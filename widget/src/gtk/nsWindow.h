@@ -118,7 +118,7 @@ protected:
   //////////////////////////////////////////////////////////////////////
 
   virtual void InitCallbacks(char * aName = nsnull);
-  NS_IMETHOD CreateNative(GtkWidget *parentWidget);
+  NS_IMETHOD CreateNative(GtkObject *parentWidget);
 
   nsIFontMetrics *mFontMetrics;
   PRBool      mVisible;

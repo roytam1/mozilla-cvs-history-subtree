@@ -162,7 +162,7 @@ protected:
   virtual void InitCallbacks(char * aName = nsnull);
   virtual void OnDestroy();
 
-  NS_IMETHOD CreateNative(GtkWidget *parentWindow) { return NS_OK; }
+  NS_IMETHOD CreateNative(GtkObject *parentWindow) { return NS_OK; }
 
   nsresult CreateWidget(nsIWidget *aParent,
                         const nsRect &aRect,

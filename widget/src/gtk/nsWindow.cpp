@@ -216,7 +216,7 @@ gint nsWindow::ConvertBorderStyles(nsBorderStyle bs)
 // Create the native widget
 //
 //-------------------------------------------------------------------------
-NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
+NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
 {
 #ifndef USE_GTK_FIXED
   mWidget = gtk_layout_new(PR_FALSE, PR_FALSE);
@@ -292,9 +292,9 @@ NS_METHOD nsWindow::CreateNative(GtkWidget *parentWidget)
 
   if (mIsToplevel)
   {
-    if (parentWidget)
+    if (parentWidget && GTK_IS_WIDGET(parentWidget))
     {
-      GtkWidget *tlw = gtk_widget_get_toplevel(parentWidget);
+      GtkWidget *tlw = gtk_widget_get_toplevel(GTK_WIDGET(parentWidget));
       if (GTK_IS_WINDOW(tlw))
       {
         gtk_window_set_transient_for(GTK_WINDOW(mShell), GTK_WINDOW(tlw));
