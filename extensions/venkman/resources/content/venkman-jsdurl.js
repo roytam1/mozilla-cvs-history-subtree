@@ -999,5 +999,5 @@ function jsdr_end ()
         dd ("channel had no load group");
     this.channel._isPending = false;
     this.hasEnded = true;
-    dd ("response ended");
+    //dd ("response ended");
 }

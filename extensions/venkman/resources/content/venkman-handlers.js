@@ -95,7 +95,7 @@ function con_winopen (win)
     if (isWindowFiltered(win))
         return;
     
-    dd ("window opened: " + win + " ``" + win.location + "''");
+    //dd ("window opened: " + win + " ``" + win.location + "''");
     console.hookedWindows.push(win);
     dispatch ("hook-window-opened", {window: win});
     win.addEventListener ("load", console.onWindowLoad, false);

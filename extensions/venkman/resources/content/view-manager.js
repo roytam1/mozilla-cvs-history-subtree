@@ -385,7 +385,7 @@ function vmgr_remake (ary, startIndex)
         {
             if (!(parsedLocation.windowId in this.windows))
             {
-                dd ("loading window " + parsedLocation.windowId);
+                //dd ("loading window " + parsedLocation.windowId);
                 this.createWindow (parsedLocation.windowId, onWindowLoaded);
                 return;
             }
@@ -501,7 +501,7 @@ function vmgr_getlocation (parsedLocation)
 {
     if (parsedLocation.windowId == VMGR_HIDDEN)
     {
-        dd ("getLocation: location is hidden");
+        //dd ("getLocation: location is hidden");
         return null;
     }
     
@@ -566,7 +566,7 @@ function vmgr_move (parsedLocation, viewId, height, width)
             content.originalParent = content.parentNode;
         }
         
-        dd ("OFF moveContent {");
+        //dd ("OFF moveContent {");
         
         var previousParent = content.parentNode;
         previousParent.removeChild(content);
@@ -575,18 +575,18 @@ function vmgr_move (parsedLocation, viewId, height, width)
 
         if (newParent)
         {
-            dd ("placing in new parent");
+            //dd ("placing in new parent");
             newParent.insertBefore (content, before);
             viewManager.groutContainer (newParent);
         }
         else
         {
-            dd ("hiding");
+            //dd ("hiding");
             content.originalParent.appendChild(content);
             content.setAttribute ("containertype", "hidden");
         }
 
-        dd ("}");
+        //dd ("}");
     };
 
     function onLocationFound (window, container)
@@ -639,14 +639,14 @@ function vmgr_move (parsedLocation, viewId, height, width)
         }
         else if (beforeNode && beforeNode.parentNode != container)
         {
-            dd ("before is not in container");
+            //dd ("before is not in container");
             /* container portion of url wins in a mismatch situation */
             beforeNode = null;
         }   
         
         if (currentContent)
         {
-            dd ("have content");
+            //dd ("have content");
             /* view is already visible, fire an onHide().  If we're destined for
              * a new document, return the current content to it's hiding place.
              */
@@ -662,7 +662,7 @@ function vmgr_move (parsedLocation, viewId, height, width)
                 view.onHide();
             if (currentContent != content)
             {
-                dd ("returning content to home");
+                //dd ("returning content to home");
                 moveContent (currentContent, null);
             }
         }
@@ -717,7 +717,7 @@ function vmgr_groutbox (viewManager, container, noclose)
     {
         var rv = container.localName == "viewcontainer" && 
             "viewCount" in container && container.viewCount == 0;
-        dd ("isContainerEmpty: " + container.getAttribute("id") + ": " + rv);
+        //dd ("isContainerEmpty: " + container.getAttribute("id") + ": " + rv);
         return rv;
     };
     
@@ -727,7 +727,7 @@ function vmgr_groutbox (viewManager, container, noclose)
     ASSERT(container.localName == "viewcontainer",
            "Attempt to grout something that is not a view container");
 
-    dd ("OFF grouting: " + container.getAttribute("id") +" {");
+    //dd ("OFF grouting: " + container.getAttribute("id") +" {");
 
     var lastViewCount = ("viewCount" in container) ? container.viewCount : 0;
     container.viewCount = 0;
@@ -758,10 +758,10 @@ function vmgr_groutbox (viewManager, container, noclose)
                 ++container.viewCount;
             else if (content.localName == "viewcontainer")
             {
-                if (!("viewCount" in content))
-                    dd ("no viewCount in " + content.getAttribute("id"));
-                else
+                if ("viewCount" in content)
                     container.viewCount += content.viewCount;
+                //else
+                    //dd ("no viewCount in " + content.getAttribute("id"));
             }
 
             if (nextContent && !nextContent.hasAttribute("grout") &&
@@ -791,7 +791,7 @@ function vmgr_groutbox (viewManager, container, noclose)
 
     if (isContainerEmpty(container))
     {
-        dd ("container is empty, hiding");
+        //dd ("container is empty, hiding");
         container.setAttribute("collapsed", "true");
         if (!noclose && container.parentNode.localName == "window" &&
             container.ownerWindow != viewManager.mainWindow &&
@@ -799,21 +799,21 @@ function vmgr_groutbox (viewManager, container, noclose)
             lastViewCount > 0)
         {
             setTimeout (closeWindow, 1, container.ownerWindow);
-            dd ("} no children, closing window");
+            //dd ("} no children, closing window");
             return;
         }
     }
     else
     {
-        dd ("unhiding");
+        //dd ("unhiding");
         container.removeAttribute("collapsed");
     }
 
     if (container.parentNode.localName == "viewcontainer")
         viewManager.groutContainer(container.parentNode, noclose);
 
-    dd ("} " + container.getAttribute("id") +
-        " view count: " + container.viewCount);
+    //dd ("} " + container.getAttribute("id") +
+    //    " view count: " + container.viewCount);
 
 }
 
@@ -956,7 +956,7 @@ function vmgr_ondrop (event, transferData, session)
     
     if (parsedSource.id == viewId)
     {
-        dd ("wanker");
+        //dd ("wanker");
         return false;
     }
 

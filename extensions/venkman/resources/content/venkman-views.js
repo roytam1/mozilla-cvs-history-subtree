@@ -127,7 +127,7 @@ function syncTreeView (treeContent, treeView, cb)
 
 function getTreeContext (view, cx, recordContextGetter)
 {
-    dd ("getTreeContext {");
+    //dd ("getTreeContext {");
 
     var i = 0;
     var selection = view.tree.selection;
@@ -139,7 +139,7 @@ function getTreeContext (view, cx, recordContextGetter)
         rec = view.childData.locateChildByVisualRow (row);
         if (!rec)
         {
-            dd ("} no record at currentIndex " + row);
+            //dd ("} no record at currentIndex " + row);
             return cx;
         }
     }
@@ -153,7 +153,7 @@ function getTreeContext (view, cx, recordContextGetter)
     recordContextGetter(cx, rec, i++);
     var rangeCount = selection.getRangeCount();
 
-    dd ("walking ranges {");
+    //dd ("walking ranges {");
     for (var range = 0; range < rangeCount; ++range)
     {
         var min = new Object();
@@ -178,16 +178,16 @@ function getTreeContext (view, cx, recordContextGetter)
             recordContextGetter(cx, rec, i++);
         }
     }
-    dd ("}");
-    dd ("cleaning up {");
+    //dd ("}");
+    //dd ("cleaning up {");
     /* delete empty arrays as that may have been left behind. */
     for (var p in cx)
     {
         if (cx[p] instanceof Array && !cx[p].length)
             delete cx[p];
     }
-    dd ("}");
-    dd ("}");
+    //dd ("}");
+    //dd ("}");
     
     return cx;
 }
@@ -634,7 +634,7 @@ function lv_hide ()
 console.views.locals.onDblClick =
 function lv_dblclick ()
 {
-    dd ("locals double click");
+    //dd ("locals double click");
 }
 
 console.views.locals.getCellProperties =
@@ -786,7 +786,7 @@ function scv_hookChromeFilter(e)
     var nodes = scriptsView.childData;
     scriptsView.freeze();
 
-    dd ("e.toggle is " + e.toggle);
+    //dd ("e.toggle is " + e.toggle);
 
     for (var m in console.scriptManagers)
     {
@@ -809,8 +809,10 @@ function scv_hookChromeFilter(e)
                         continue;
                     }
                     /* filter is on, remove chrome file from scripts view */
+                    /*
                     dd ("removing " + console.scriptManagers[m].url + 
                         " kid at " + rec.childIndex);
+                    */
                     nodes.removeChildAtIndex(rec.childIndex);
                 }
                 else
@@ -929,7 +931,7 @@ function scv_dblclick (e)
 
     if (rowIndex == -1 || rowIndex > scriptsView.rowCount)
     {
-        dd ("row out of bounds");
+        //dd ("row out of bounds");
         return;
     }
     
@@ -972,7 +974,7 @@ function scv_click (e)
         var scriptsRoot = console.views.scripts.childData;
         var dir = (prop == scriptsRoot._share.sortColumn) ?
             scriptsRoot._share.sortDirection * -1 : 1;
-        dd ("sort direction is " + dir);
+        //dd ("sort direction is " + dir);
         scriptsRoot.setSortColumn (prop, dir);
     }
 }
@@ -1577,6 +1579,13 @@ console.views.stack.viewId = VIEW_STACK;
 console.views.stack.init =
 function skv_init()
 {
+    var debugIf = "'scriptWrapper' in cx && " +
+        "cx.scriptWrapper.jsdScript.isValid && " +
+        "cx.scriptWrapper.jsdScript.flags & SCRIPT_NODEBUG";
+    var profileIf = "'scriptWrapper' in cx && " +
+        "cx.scriptWrapper.jsdScript.isValid && " +
+        "cx.scriptWrapper.jsdScript.flags & SCRIPT_NOPROFILE";
+
     console.menuSpecs["context:stack"] = {
         getContext: this.getContext,
         items:
@@ -1584,8 +1593,8 @@ function skv_init()
          ["find-script"],
          ["where"],
          ["-"],
-         ["debug-script"],
-         ["profile-script"]
+         ["debug-script", {type: "checkbox", checkedif: debugIf}],
+         ["profile-script", {type: "checkbox", checkedif: profileIf}],
         ]
     };
 }
@@ -1636,9 +1645,9 @@ function skv_hookFrame (e)
     var stackView = console.views.stack;    
     var childData = stackView.childData.childData;
 
-    childData[e.frameIndex].property = FrameRecord.prototype.atomCurrent;
     if ("lastFrameIndex" in stackView)
         delete childData[stackView.lastFrameIndex].property;
+    childData[e.frameIndex].property = FrameRecord.prototype.atomCurrent;
 
     stackView.lastFrameIndex = e.frameIndex;
 
@@ -1857,7 +1866,7 @@ function cmdSaveTab (e)
     if (!e.targetFile || e.targetFile == "?")
     {
         var fileName = sourceText.url;
-        dd ("fileName is " + fileName);
+        //dd ("fileName is " + fileName);
         if (fileName.search(/^\w+:/) != -1)
         {
             var shortName = getFileFromPath(fileName);
@@ -1998,7 +2007,7 @@ function s2v_scrollto (sourceTab, line, align)
     
     if (!sourceTab.content)
     {
-        dd ("scrollTabTo: sourceTab not loaded yet");
+        //dd ("scrollTabTo: sourceTab not loaded yet");
         sourceTab.scrollPosition = [line, align];
         return;
     }
@@ -2130,7 +2139,7 @@ function s2v_marktab (sourceTab, currentFrame)
     
     if (!sourceTab.content)
     {
-        dd ("sourceTab not loaded yet");
+        //dd ("markStopLine: sourceTab not loaded yet");
         return;
     }
         
@@ -2151,9 +2160,9 @@ function s2v_marktab (sourceTab, currentFrame)
 
     if (line != -1)
     {
-        dd ("marking stop line " + line);
+        //dd ("marking stop line " + line);
         var stopNode = sourceTab.content.childNodes[line * 2 - 1];
-        dd ("stopNode: " + stopNode.localName);
+        //dd ("stopNode: " + stopNode.localName);
         stopNode.setAttribute ("stoppedAt", "true");
         sourceTab.stopNode = stopNode;
     }    
@@ -2164,13 +2173,13 @@ function s2v_unmarktab (sourceTab)
 {
     if ("stopNode" in sourceTab)
     {
-        dd ("unmarking stop line");
+        //dd ("unmarking stop line");
         sourceTab.stopNode.removeAttribute ("stoppedAt");
         delete sourceTab.stopNode;
     }
     else
     {
-        dd ("unmarkStopLine: sourceTab had no stop line");
+        //dd ("unmarkStopLine: sourceTab had no stop line");
     }
 }
 
@@ -2179,7 +2188,7 @@ function s2v_markhigh ()
 {
     if (!this.highlightTab.content)
     {
-        dd ("highlight tab is not loaded yet");
+        //dd ("highlight tab is not loaded yet");
         return;
     }
 
@@ -2261,7 +2270,7 @@ function s2v_tabloaded (sourceTab, status)
 
     if (!sourceTab.content)
     {
-        dd ("tab loaded, but had no content, about:blank crap?");
+        //dd ("tab loaded, but had no content, about:blank crap?");
         return;
     }
     
@@ -2291,7 +2300,7 @@ function s2v_syncframe (iframe)
 
     function tryAgain ()
     {
-        dd ("source2 view trying again...");
+        //dd ("source2 view trying again...");
         source2View.syncOutputFrame(iframe);
     };
 
@@ -2319,8 +2328,8 @@ function s2v_syncframe (iframe)
     }
     catch (ex)
     {
-        dd ("caught exception showing session view, will try again later.");
-        dd (dumpObjectTree(ex));
+        //dd ("caught exception showing session view, will try again later.");
+        //dd (dumpObjectTree(ex));
         setTimeout (tryAgain, 500);
     }
 
@@ -2588,7 +2597,7 @@ console.views.source2.progressListener = new Object();
 console.views.source2.progressListener.QueryInterface =
 function s2v_qi ()
 {
-    dd ("qi!");
+    //dd ("qi!");
     return this;
 }
 
@@ -2605,7 +2614,7 @@ function s2v_statechange (webProgress, request, stateFlags, status)
     var sourceTab;
     if (stateFlags & START)
     {
-        dd ("start load");
+        //dd ("start load");
         sourceTab = source2View.getSourceTabForDOMWindow(webProgress.DOMWindow);
         if (!ASSERT(sourceTab, "can't find tab for window"))
         {
@@ -2617,8 +2626,10 @@ function s2v_statechange (webProgress, request, stateFlags, status)
     }
     else if (stateFlags == 786448)
     {
+        /*
         dd ("stop load " + stateFlags + " " + 
             webProgress.DOMWindow.location.href);
+        */
         sourceTab = source2View.getSourceTabForDOMWindow(webProgress.DOMWindow);
         if (!ASSERT(sourceTab, "can't find tab for window"))
         {
@@ -2635,25 +2646,25 @@ console.views.source2.progressListener.onProgressChange =
 function s2v_progresschange (webProgress, request, currentSelf, totalSelf,
                              currentMax, selfMax)
 {
-    dd ("progress change ");
+    //dd ("progress change ");
 }
 
 console.views.source2.progressListener.onLocationChange =
 function s2v_statechange (webProgress, request, uri)
 {
-    dd ("location change " + uri);
+    //dd ("location change " + uri);
 }
 
 console.views.source2.progressListener.onStatusChange =
 function s2v_statechange (webProgress, request, status, message)
 {
-    dd ("status change " + status + ", " + message);
+    //dd ("status change " + status + ", " + message);
 }
 
 console.views.source2.progressListener.onSecurityChange =
 function s2v_statechange (webProgress, request, state)
 {
-    dd ("security change");
+    //dd ("security change");
 }
 
 console.views.source2.hooks = new Object();
@@ -2761,7 +2772,7 @@ function s2v_show ()
     var source2View = this;
     function tryAgain ()
     {
-        dd ("source2 view trying again...");
+        //dd ("source2 view trying again...");
         source2View.onShow();
     };
 
@@ -2778,8 +2789,8 @@ function s2v_show ()
     }
     catch (ex)
     {
-        dd ("caught exception showing source2 view...");
-        dd (dumpObjectTree(ex));
+        //dd ("caught exception showing source2 view...");
+        //dd (dumpObjectTree(ex));
     }
     
     if (!this.deck || !this.tabs)
@@ -3452,7 +3463,7 @@ function wv_refresh()
 console.views.watches.onDblClick =
 function wv_dblclick ()
 {
-    dd ("watches double click");
+    //dd ("watches double click");
 }
 
 function cmdWatchExpr (e)
@@ -3618,7 +3629,7 @@ function winv_getcx(cx)
     
     if (!rec)
     {
-        dd ("no current index.");
+        //dd ("no current index.");
         return cx;
     }
 
