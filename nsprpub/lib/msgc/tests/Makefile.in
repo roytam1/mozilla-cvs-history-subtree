@@ -52,8 +52,8 @@ INCLUDES = -I$(dist_includedir)
 # Setting the variables LDOPTS and LIBPR.  We first initialize
 # them to the default values, then adjust them for some platforms.
 LDOPTS = -L$(dist_libdir)
-NSPR_VERSION = $(MOD_VERSION)
-GC_VERSION = $(MOD_VERSION)
+NSPR_VERSION = $(MOD_MAJOR_VERSION)
+GC_VERSION = $(MOD_MAJOR_VERSION)
 LIBPR = -lnspr$(NSPR_VERSION)
 LIBPLC = -lplc$(NSPR_VERSION)
 LIBGC = -lmsgc$(GC_VERSION)

@@ -247,8 +247,8 @@ ifeq ($(OS_ARCH), OSF1)
 # I haven't figured out how to pass -rpath to cc on OSF1 V3.2, so
 # we do static linking.
     ifeq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
-        LIBNSPR = $(dist_libdir)/libnspr$(MOD_VERSION).a
-        LIBPLC = $(dist_libdir)/libplc$(MOD_VERSION).a
+        LIBNSPR = $(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).a
+        LIBPLC = $(dist_libdir)/libplc$(MOD_MAJOR_VERSION).a
         EXTRA_LIBS = -lc_r
     else
         LDOPTS += -rpath $(ABSOLUTE_LIB_DIR)
@@ -267,8 +267,8 @@ endif
 ifeq ($(OS_ARCH),AIX)
     LDOPTS += -blibpath:$(ABSOLUTE_LIB_DIR):/usr/lib:/lib
     ifeq ($(OS_ARCH)$(OS_RELEASE),AIX4.1)
-        LIBNSPR = -lnspr$(MOD_VERSION)_shr
-        LIBPLC = -lplc$(MOD_VERSION)_shr
+        LIBNSPR = -lnspr$(MOD_MAJOR_VERSION)_shr
+        LIBPLC = -lplc$(MOD_MAJOR_VERSION)_shr
     else
         LDOPTS += -brtl
         EXTRA_LIBS = -ldl
@@ -336,8 +336,8 @@ ifeq ($(OS_ARCH), NEWS-OS)
 # libnspr.so etc. at program startup.  Equivalent to the -R or -rpath 
 # option for ld on other platforms.
 #export LD_RUN_PATH = $(ABSOLUTE_LIB_DIR)
-    LIBNSPR = $(dist_libdir)/libnspr$(MOD_VERSION).a
-    LIBPLC = $(dist_libdir)/libplc$(MOD_VERSION).a
+    LIBNSPR = $(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).a
+    LIBPLC = $(dist_libdir)/libplc$(MOD_MAJOR_VERSION).a
     EXTRA_LIBS = -lsocket -lnsl -lgen -lresolv
 endif
 
@@ -450,7 +450,7 @@ ifeq ($(AIX_PRE_4_2),1)
 $(OBJDIR)/%: $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
 	rm -f $@ $(AIX_TMP)
-	$(CC) $(AIX_LINK_OPTS) -o $(AIX_TMP) $< $(dist_libdir)/libnspr$(MOD_VERSION).a
+	$(CC) $(AIX_LINK_OPTS) -o $(AIX_TMP) $< $(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).a
 	$(CC) -o $@ $(AIX_TMP) $(AIX_WRAP)
 	rm -f $(AIX_TMP)
 

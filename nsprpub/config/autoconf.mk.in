@@ -7,7 +7,7 @@ MOZILLA_CLIENT	= @MOZILLA_CLIENT@
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
 bindir		= @bindir@
-includedir	= @includedir@
+includedir	= @includedir@/nspr
 libdir		= @libdir@
 
 dist_prefix	= @dist_prefix@
@@ -22,8 +22,11 @@ OBJDIR		= @OBJDIR@
 OBJ_SUFFIX	= @OBJ_SUFFIX@
 LIB_SUFFIX	= @LIB_SUFFIX@
 DLL_SUFFIX	= @DLL_SUFFIX@
-MOD_VERSION	= @NSPR_VERSION@
 MOD_NAME	= @NSPR_MODNAME@
+
+MOD_MAJOR_VERSION = @MOD_MAJOR_VERSION@
+MOD_MINOR_VERSION = @MOD_MINOR_VERSION@
+MOD_REVISION_VERSION = @MOD_REVISION_VERSION@
 
 LIBNSPR		= @LIBNSPR@
 LIBPLC		= @LIBPLC@

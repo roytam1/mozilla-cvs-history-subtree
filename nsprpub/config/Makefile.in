@@ -29,7 +29,7 @@ INTERNAL_TOOLS	= 1
 
 # autoconf.mk must be deleted last (from the top-level directory)
 # because it is included by every makefile.
-DIST_GARBAGE	= nsprincl.mk nsprincl.sh
+DIST_GARBAGE	= nsprincl.mk nsprincl.sh nspr-config
 
 include $(topsrcdir)/config/config.mk
 

@@ -68,7 +68,7 @@ CXXSRCS = \
 OBJS = $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX)) $(CXXSRCS:.cpp=.$(OBJ_SUFFIX)))
 
 LIBRARY_NAME    = prstrms
-LIBRARY_VERSION = $(MOD_VERSION)
+LIBRARY_VERSION = $(MOD_MAJOR_VERSION)
 
 RELEASE_HEADERS = $(HEADERS)
 RELEASE_HEADERS_DEST = $(RELEASE_INCLUDE_DIR)
@@ -112,7 +112,7 @@ ifeq ($(OS_ARCH),SCOOS)
     EXTRA_LIBS =
 endif
 ifeq ($(OS_ARCH),BeOS)
-    EXTRA_LIBS = -lstdc++.r4 -L$(dist_libdir) -lnspr$(MOD_VERSION)
+    EXTRA_LIBS = -lstdc++.r4 -L$(dist_libdir) -lnspr$(MOD_MAJOR_VERSION)
 endif
 
 ifeq ($(OS_ARCH), UNIXWARE)

@@ -32,7 +32,9 @@ AC_DEFINE(USE_AUTOCONF)
 dnl ========================================================
 dnl = Defaults
 dnl ========================================================
-NSPR_VERSION=4
+MOD_MAJOR_VERSION=4
+MOD_MINOR_VERSION=0
+MOD_REVISION_VERSION=1
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
 USE_PTHREADS=
@@ -51,8 +53,8 @@ OBJDIR=.
 OBJDIR_NAME=.
 NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
 NOSUCHFILE=/no-such-file
-LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_VERSION)'
-LIBPLC='-L$(dist_libdir) -lplc$(MOD_VERSION)'
+LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_MAJOR_VERSION)'
+LIBPLC='-L$(dist_libdir) -lplc$(MOD_MAJOR_VERSION)'
 
 dnl Link in libraries necessary to resolve all symbols for shared libs
 RESOLVE_LINK_SYMBOLS=
@@ -526,7 +528,7 @@ case "$target" in
         DSO_LDOPTS=
         USE_PTHREADS=1
         AIX_LINK_OPTS='-bnso -berok'
-        LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_VERSION)_shr'
+        LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_MAJOR_VERSION)_shr'
         ;;
     aix4.3*)
         AC_DEFINE(AIX_HAVE_ATOMIC_OP_H)
@@ -1003,11 +1005,11 @@ case "$target" in
         
         if test "$OS_TARGET" = "WINNT"; then
             CFLAGS="$CFLAGS -GT"
-            LIBNSPR='$(dist_libdir)/libnspr$(MOD_VERSION).$(LIB_SUFFIX)'
-            LIBPLC='$(dist_libdir)/libplc$(MOD_VERSION).$(LIB_SUFFIX)'
+            LIBNSPR='$(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+            LIBPLC='$(dist_libdir)/libplc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
         else
-            LIBNSPR='$(dist_libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)'
-            LIBPLC='$(dist_libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)'
+            LIBNSPR='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+            LIBPLC='$(dist_libdir)/plc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
         fi
     fi # GNU_CC
 
@@ -1529,8 +1531,8 @@ mips-sony-newsos*)
           DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /nologo'
           EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /nologo'
         fi
-        LIBNSPR='$(dist_libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)'
-        LIBPLC='$(dist_libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)'
+        LIBNSPR='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+        LIBPLC='$(dist_libdir)/plc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
         ;;
     esac
 
@@ -1943,7 +1945,9 @@ AC_SUBST(USE_NSPR_THREADS)
 AC_SUBST(LIBNSPR)
 AC_SUBST(LIBPLC)
 
-AC_SUBST(NSPR_VERSION)
+AC_SUBST(MOD_MAJOR_VERSION)
+AC_SUBST(MOD_MINOR_VERSION)
+AC_SUBST(MOD_REVISION_VERSION)
 AC_SUBST(NSPR_MODNAME)
 AC_SUBST(MDCPUCFG_H)
 AC_SUBST(MOZ_WIN32_TARGET)
@@ -2006,6 +2010,7 @@ config/Makefile
 config/autoconf.mk
 config/nsprincl.mk
 config/nsprincl.sh
+config/nspr-config
 lib/Makefile 
 lib/ds/Makefile 
 lib/libc/Makefile 
@@ -2045,4 +2050,4 @@ if test -n "$USE_CPLUS"; then
     MAKEFILES="$MAKEFILES pr/src/cplus/Makefile pr/src/cplus/tests/Makefile"
 fi
 
-AC_OUTPUT([$MAKEFILES])
+AC_OUTPUT([$MAKEFILES], [chmod +x config/nspr-config])
