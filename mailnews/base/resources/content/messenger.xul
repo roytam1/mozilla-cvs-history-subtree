@@ -278,9 +278,9 @@ platformMailnewsOverlay.xul
 
     <vbox flex="1">
 
-      <vbox id="accountCentralBox" flex="1">
-                     <iframe name="accountCentralPane" flex="1" src="about:blank"/>
-                  </vbox>
+      <vbox id="accountCentralBox" flex="1" collapsed="true">
+        <iframe name="accountCentralPane" flex="1" src="about:blank"/>
+      </vbox>
       <vbox id="messagesBox" flex="1">
       <hbox id="searchBox"/>
 

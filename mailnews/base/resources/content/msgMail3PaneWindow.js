@@ -485,17 +485,25 @@ var gThreePaneIncomingServerListener = {
     }
 }
 
+function OnLoadMessenger()
+{
+  setTimeout(delayedOnLoadMessenger, 0);
+}
 
 /* Functions related to startup */
-function OnLoadMessenger()
+function delayedOnLoadMessenger()
 {
   AddMailOfflineObserver();
   CreateMailWindowGlobals();
   Create3PaneGlobals();
   verifyAccounts(null);
-    
-  HideAccountCentral();
-  loadStartPage();
+   
+  // skip these for now, since account central is hidden
+  // and we are selecting the inbox by default
+  // and the start page is about:blank
+  //HideAccountCentral();
+  //loadStartPage();
+
   InitMsgWindow();
 
   messenger.SetWindow(window, msgWindow);

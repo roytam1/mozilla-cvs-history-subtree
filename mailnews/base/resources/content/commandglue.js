@@ -735,8 +735,10 @@ function FolderPaneSelectionChange()
 
     if (gDisplayStartupPage)
     {
-        loadStartPage();
-        gDisplayStartupPage = false;
+        if (window.frames["messagepane"].location != "about:blank") { 
+          loadStartPage();
+          gDisplayStartupPage = false;
+        }
         UpdateMailToolbar("gDisplayStartupPage");
     }    
 }

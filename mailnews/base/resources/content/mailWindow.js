@@ -441,6 +441,7 @@ function StopUrls()
 }
 
 function loadStartPage() {
+    //dump("XXX loadStartPage\n");
     try {
         var startpageenabled = pref.getBoolPref("mailnews.start_page.enabled");
 
