@@ -62,5 +62,7 @@ include <$(DEPTH)\config\rules.mak>
 msgMapi.h msgMapi_p.c msgMapi_i.c dlldata.c : msgMapi.idl
     midl $(UNICODE_FLAGS) msgMapi.idl
 
+clobber::
+	rm -f dlldata.c msgMapi_i.c msgMapi_p.c msgMapi.h
 
 
