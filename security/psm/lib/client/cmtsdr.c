@@ -87,7 +87,8 @@ tmp_SendMessage(PCMT_CONTROL control, CMTItem *message)
 /* End test code */
 
 CMTStatus
-CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
+CMT_SDREncrypt(PCMT_CONTROL control, void *ctx,
+               const unsigned char *key, CMUint32 keyLen,
                const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen)
 {
@@ -99,7 +100,7 @@ CMT_SDREncrypt(PCMT_CONTROL control, const unsigned char *key, CMUint32 keyLen,
   /* Fill in the request */
   request.keyid = CMT_CopyDataToItem(key, keyLen);
   request.data = CMT_CopyDataToItem(data, dataLen);
-  request.ctx = CMT_CopyPtrToItem((void *)0);
+  request.ctx = CMT_CopyPtrToItem(ctx);
 
   reply.item.data = 0;
   reply.item.len = 0;
@@ -141,7 +142,8 @@ loser:
 }
 
 CMTStatus
-CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen,
+CMT_SDRDecrypt(PCMT_CONTROL control, void *ctx,
+               const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen)
 {
   CMTStatus rv;
@@ -151,7 +153,7 @@ CMT_SDRDecrypt(PCMT_CONTROL control, const unsigned char *data, CMUint32 dataLen
 
   /* Fill in the request */
   request.data = CMT_CopyDataToItem(data, dataLen);
-  request.ctx = CMT_CopyPtrToItem((void*)0);
+  request.ctx = CMT_CopyPtrToItem(ctx);
 
   reply.item.data = 0;
   reply.item.len = 0;

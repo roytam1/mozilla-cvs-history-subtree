@@ -2181,6 +2181,9 @@ CMTStatus CMT_FlushPendingRandomData(PCMT_CONTROL control);
  * INPUTS
  *    control
  *        A control connection that has been established with the psm server.
+ *    ctx
+ *        A pointer to application defined context.  It will be returned with
+ *        the password callback request.
  *    key
  *        A buffer containing the key identifier to use for encrypting. May
  *        be NULL if keyLen is 0, which uses the "default" key.
@@ -2201,7 +2204,7 @@ CMTStatus CMT_FlushPendingRandomData(PCMT_CONTROL control);
  *     CMTSuccess - the encryption worked.
  *     CMTFailure - some (unspecified) error occurred  (needs work)
  */
-CMTStatus CMT_SDREncrypt(PCMT_CONTROL control, 
+CMTStatus CMT_SDREncrypt(PCMT_CONTROL control, void *ctx,
                const unsigned char *key, CMUint32 keyLen,
                const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen);
@@ -2212,6 +2215,9 @@ CMTStatus CMT_SDREncrypt(PCMT_CONTROL control,
  * INPUTS
  *    control
  *        A control connection that has been established with the psm server.
+ *    ctx
+ *        A pointer to application defined context.  It will be returned with
+ *        the password callback request.
  *    data
  *        A buffer containing the the results of a call to SDREncrypt
  *    dataLen
@@ -2227,7 +2233,7 @@ CMTStatus CMT_SDREncrypt(PCMT_CONTROL control,
  *     CMTSuccess - the encryption worked.
  *     CMTFailure - some (unspecified) error occurred  (needs work)
  */
-CMTStatus CMT_SDRDecrypt(PCMT_CONTROL control, 
+CMTStatus CMT_SDRDecrypt(PCMT_CONTROL control, void *ctx,
                const unsigned char *data, CMUint32 dataLen,
                unsigned char **result, CMUint32 *resultLen);
 
