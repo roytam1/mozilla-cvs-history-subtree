@@ -111,6 +111,7 @@ private:
     static nsIAtom* kTreeCellAtom;
     static nsIAtom* kTreeChildrenAtom;
     static nsIAtom* kTreeHeadAtom;
+    static nsIAtom* kTreeIndentationAtom;
     static nsIAtom* kTreeItemAtom;
 
     static PRInt32  kNameSpaceID_RDF;
@@ -215,6 +216,7 @@ nsIAtom* RDFTreeBuilderImpl::kTreeBodyAtom;
 nsIAtom* RDFTreeBuilderImpl::kTreeCellAtom;
 nsIAtom* RDFTreeBuilderImpl::kTreeChildrenAtom;
 nsIAtom* RDFTreeBuilderImpl::kTreeHeadAtom;
+nsIAtom* RDFTreeBuilderImpl::kTreeIndentationAtom;
 nsIAtom* RDFTreeBuilderImpl::kTreeItemAtom;
 
 PRInt32  RDFTreeBuilderImpl::kNameSpaceID_RDF;
@@ -257,16 +259,17 @@ RDFTreeBuilderImpl::RDFTreeBuilderImpl(void)
     if (gRefCnt == 0) {
         kContentsGeneratedAtom = NS_NewAtom("contentsGenerated");
 
-        kIdAtom           = NS_NewAtom("ID");
-        kOpenAtom         = NS_NewAtom("OPEN");
-        kResourceAtom     = NS_NewAtom("resource");
+        kIdAtom              = NS_NewAtom("ID");
+        kOpenAtom            = NS_NewAtom("OPEN");
+        kResourceAtom        = NS_NewAtom("resource");
 
-        kTreeAtom         = NS_NewAtom("tree");
-        kTreeBodyAtom     = NS_NewAtom("treebody");
-        kTreeCellAtom     = NS_NewAtom("treecell");
-        kTreeChildrenAtom = NS_NewAtom("treechildren");
-        kTreeHeadAtom     = NS_NewAtom("treehead");
-        kTreeItemAtom     = NS_NewAtom("treeitem");
+        kTreeAtom            = NS_NewAtom("tree");
+        kTreeBodyAtom        = NS_NewAtom("treebody");
+        kTreeCellAtom        = NS_NewAtom("treecell");
+        kTreeChildrenAtom    = NS_NewAtom("treechildren");
+        kTreeHeadAtom        = NS_NewAtom("treehead");
+        kTreeIndentationAtom = NS_NewAtom("treeindentation");
+        kTreeItemAtom        = NS_NewAtom("treeitem");
 
         nsresult rv;
 
@@ -346,6 +349,7 @@ RDFTreeBuilderImpl::~RDFTreeBuilderImpl(void)
         NS_RELEASE(kTreeCellAtom);
         NS_RELEASE(kTreeChildrenAtom);
         NS_RELEASE(kTreeHeadAtom);
+        NS_RELEASE(kTreeIndentationAtom);
         NS_RELEASE(kTreeItemAtom);
 
         NS_RELEASE(kNC_Title);
@@ -1023,7 +1027,6 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
     // Iterate through all the columns that have been specified,
     // constructing a cell in the content model for each one.
     for (PRInt32 i = 0; i < count; ++i) {
-
         nsCOMPtr<nsIContent> kid;
         if (NS_FAILED(rv = treeItem->ChildAt(i, *getter_AddRefs(kid))))
             return rv; // XXX fatal
@@ -1070,6 +1073,25 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
             if (NS_FAILED(rv = aTreeItemElement->AppendChildTo(cellElement, PR_FALSE))) {
                 NS_ERROR("unable to appen xul:treecell to treeitem");
                 return rv;
+            }
+
+            if (i == 0) {
+                // The first column gets a <xul:treeindentation> element.
+
+                // XXX This is bogus: dogfood ready crap. We need to
+                // figure out a better way to specify this.
+                nsCOMPtr<nsIContent> indentationElement;
+                if (NS_FAILED(rv = NS_NewRDFGenericElement(getter_AddRefs(indentationElement),
+                                                           kNameSpaceID_XUL,
+                                                           kTreeIndentationAtom))) {
+                    NS_ERROR("unable to create indentation node");
+                    return rv;
+                }
+
+                if (NS_FAILED(rv = cellElement->AppendChildTo(indentationElement, PR_FALSE))) {
+                    NS_ERROR("unable to append indentation element");
+                    return rv;
+                }
             }
 
             // Set its value, if we know it.
