@@ -169,7 +169,6 @@ namespace JavaScript {
             superStmt,                  // InvokeExprNode       super(<field>:<value>, <field>:<value>, ..., <field>:<value>)
                                         // A superStmt will only appear at the top level of an expression StmtNode.
 
-            Const,                      // UnaryExprNode        const <op>
             Delete,                     // UnaryExprNode        delete <op>
             Void,                       // UnaryExprNode        void <op>
             Typeof,                     // UnaryExprNode        typeof <op>

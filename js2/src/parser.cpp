@@ -598,10 +598,6 @@ JS::ExprNode *JS::Parser::parseUnaryExpression(SuperState superState)
     const Token &t = lexer.peek(true);
     size_t pos = t.getPos();
     switch (t.getKind()) {
-      case Token::Const:
-        eKind = ExprNode::Const;
-        goto getPostfixExpression;
-
       case Token::Delete:
         eKind = ExprNode::Delete;
         goto getPostfixExpression;
@@ -2107,7 +2103,6 @@ const char *const JS::ExprNode::kindNames[kindsEnd] = {
     0,                      // superExpr
     0,                      // superStmt
 
-    "const ",               // Const
     "delete ",              // Delete
     "void ",                // Void
     "typeof ",              // Typeof

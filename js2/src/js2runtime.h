@@ -240,7 +240,6 @@ static const double two31 = 2147483648.0;
         Complement,
         Increment,
         Decrement,
-        Const,
         Call,
         New,
         Index,

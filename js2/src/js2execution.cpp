@@ -66,6 +66,13 @@ JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &n
     Lexer operatorLexer(mWorld, name, widenCString("Operator name"), 0); // XXX get source and line number from function ???   
     const Token &t = operatorLexer.get(false);  // XXX what's correct for preferRegExp parameter ???
 
+    // ***** Please don't use a lexer to do this.  There are a couple of problems here:
+    // 1.  A lexer will skip spaces, etc.  We want to check for an exact string match here.
+    // 2.  The above code doesn't check that the operator isn't followed by anything else.
+    // A better implementation would be to look up the string in a hash table prepopulated with operators.
+    // This could be the same hash table used for interning identifiers or a different one.
+    ASSERT(false);
+
     switch (t.getKind()) {
     case Token::complement:
         return JS2Runtime::Complement;
@@ -73,8 +80,6 @@ JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &n
         return JS2Runtime::Increment;
     case Token::decrement:
         return JS2Runtime::Decrement;
-    case Token::Const:
-        return JS2Runtime::Const;
     case Token::times:
         return JS2Runtime::Multiply;
     case Token::divide:
