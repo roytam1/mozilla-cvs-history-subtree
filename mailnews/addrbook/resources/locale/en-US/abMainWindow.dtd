@@ -64,19 +64,11 @@ Rights Reserved.
 <!ENTITY stopSearchingCmd.label				".Stop Searching"> 
 
 <!-- Toolbar items -->  
-<!ENTITY newcardButton.img "chrome://addressbook/skin/newcard.gif">
 <!ENTITY newcardButton.label "New Card">  
-<!ENTITY newlistButton.img "chrome://addressbook/skin/newlist.gif">
 <!ENTITY newlistButton.label ".New List">  
-<!ENTITY editButton.img "chrome://addressbook/skin/edit.gif">
 <!ENTITY editButton.label "Edit">  
-<!ENTITY newmsgButton.img "chrome://addressbook/skin/newmsgab.gif">
 <!ENTITY newmsgButton.label "New Msg">  
-<!ENTITY deleteButton.img "chrome://messenger/skin/trash.gif">
 <!ENTITY deleteButton.label "Delete">  
 <!ENTITY stopButton.label ".Stop">  
-<!ENTITY searchButton.img "chrome://navigator/skin/search.gif">
 <!ENTITY searchButton.label ".Search">  
 <!ENTITY showNames.label "Show names containing:">  
-<!ENTITY throbber.img "resource:/res/throbber/anims00.gif">
-<!ENTITY throbber.url "http://www.mozilla.org/"> 

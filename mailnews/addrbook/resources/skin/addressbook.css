@@ -18,6 +18,7 @@ Communications Corporation. Portions created by Netscape are
 Rights Reserved.
 */
  
+ 
 /* CardEdit styles - used in the Card Edit Dialog */
 
 box[class="CardEditWidth"] {
@@ -72,11 +73,30 @@ tree[class="abResults"] treeitem > treerow > treecell > .tree-icon {
 	display: none;
 }
 
-titledbutton#Throbber
-{
-	list-style-image:url(chrome://navigator/skin/animthrob_single.gif);
-} 
+#button_newcard {
+	list-style-image:url("chrome://addressbook/skin/newcard.gif");
+}
+
+#button_newlist {
+	list-style-image:url("chrome://addressbook/skin/newlist.gif");
+}
+
+#button_editcard {
+	list-style-image:url("chrome://addressbook/skin/edit.gif");
+}
+
+#button_newmessage {
+	list-style-image:url("chrome://addressbook/skin/newmsgab.gif");
+}
+
+#button_delete {
+	list-style-image:url("chrome://messenger/skin/trash.gif");
+}
 
 #button_stop {
-	list-style-image:url("chrome://messenger/skin/stop.gif");
+	list-style-image:url("chrome://global/skin/stop.gif");
+}
+
+#button_search {
+	list-style-image:url("chrome://navigator/skin/search.gif");
 }

@@ -6,8 +6,8 @@
    CHANGES REVIEWED BY hyatt@netscape.com.
 **/
 
-@namespace url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul); /* set default namespace to HTML */
-@namespace html url(http://www.w3.org/TR/REC-html40); /* namespace for XUL elements */
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"); /* set default namespace to HTML */
+@namespace html url("http://www.w3.org/TR/REC-html40"); /* namespace for XUL elements */
 
 /**********************************
  * Window
@@ -19,7 +19,7 @@
  */
 window { 
   background-color: white;
-  font: 8pt arial,helvetica,sans-serif;
+  font: 9pt arial,helvetica,sans-serif;
   padding: 0px;
 }
 
