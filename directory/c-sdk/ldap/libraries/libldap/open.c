@@ -198,7 +198,7 @@ get_ld_error ( char **matched, char **errmsg, void *dummy )
 	}
 
 	if ( errmsg != NULL ) {
-		*errmsg = le->le_errmgs;
+		*errmsg = le->le_errmsg;
 	}
 
 	return( le->le_errno );
