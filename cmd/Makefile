@@ -16,7 +16,7 @@
 #
 
 DEPTH	= ..
-ifeq ($(subst /,_,$(shell uname -s)),OS2)
+ifeq ($(subst /,,$(shell uname -s)),OS2)
 # until we have an FE...
 DIRS	=
 else
