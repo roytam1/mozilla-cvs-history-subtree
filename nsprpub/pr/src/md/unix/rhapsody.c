@@ -36,7 +36,7 @@ void _MD_EarlyInit(void)
 
 PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
 {
-#ifndef _PR_PTHREADS
+#ifndef _PR_CTHREADS
     if (isCurrent) {
 	(void) sigsetjmp(CONTEXT(t), 1);
     }
@@ -48,7 +48,7 @@ PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
 #endif
 }
 
-#ifndef _PR_PTHREADS
+#ifndef _PR_CTHREADS
 void
 _MD_SET_PRIORITY(_MDThread *thread, PRUintn newPri)
 {
@@ -78,11 +78,11 @@ _MD_WAKEUP_WAITER(PRThread *thread)
     return PR_SUCCESS;
 }
 
-/* These functions should not be called for OSF1 */
+/* These functions should not be called for rhapsody */
 void
 _MD_YIELD(void)
 {
-    PR_NOT_REACHED("_MD_YIELD should not be called for OSF1.");
+    PR_NOT_REACHED("_MD_YIELD should not be called for rhapsody.");
 }
 
 PRStatus
@@ -94,10 +94,10 @@ _MD_CREATE_THREAD(
     PRThreadState state,
     PRUint32 stackSize)
 {
-    PR_NOT_REACHED("_MD_CREATE_THREAD should not be called for OSF1.");
+    PR_NOT_REACHED("_MD_CREATE_THREAD should not be called for rhapsody.");
 	return PR_FAILURE;
 }
-#endif /* ! _PR_PTHREADS */
+#endif /* ! _PR_CTHREADS */
 
 #if defined(_PR_NEED_FAKE_POLL)
 

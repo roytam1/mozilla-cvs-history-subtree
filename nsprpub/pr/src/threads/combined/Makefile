@@ -32,6 +32,10 @@ ifdef USE_PTHREADS
 CSRCS =         \
 	$(NULL)
 else
+ifdef USE_CTHREADS
+CSRCS =		\
+	$(NULL)
+else
 CSRCS =         \
     prucpu.c      \
 	prucv.c      \
@@ -39,6 +43,7 @@ CSRCS =         \
 	pruthr.c     \
     prustack.c    \
 	$(NULL)
+endif
 endif
 
 TARGETS	= $(OBJS)

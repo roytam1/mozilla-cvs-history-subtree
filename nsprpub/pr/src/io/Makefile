@@ -41,6 +41,7 @@ CSRCS = \
 	$(NULL)
 
 ifndef USE_PTHREADS
+ifndef USE_CTHREADS
     CSRCS += \
 	    prdir.c \
 	    prfile.c \
@@ -51,6 +52,7 @@ ifndef USE_PTHREADS
 	    prsocket.c \
 	    prstdio.c \
 	    $(NULL)
+endif
 endif
 
 ifdef USE_IPV6

@@ -41,6 +41,8 @@
 #define HAVE_DLL
 #define USE_RLD
 
+#ifndef _PR_CTHREADS
+
 #define USE_SETJMP
 
 #include <setjmp.h>
@@ -127,6 +129,8 @@ struct _MDCPU {
 #define _MD_SUSPEND_THREAD(thread)      _MD_suspend_thread
 #define _MD_RESUME_THREAD(thread)       _MD_resume_thread
 #define _MD_CLEAN_THREAD(_thread)
+
+#endif /* _PR_CTHREADS */
 
 #define _MD_EARLY_INIT                  _MD_EarlyInit
 #define _MD_FINAL_INIT			_PR_UnixInit

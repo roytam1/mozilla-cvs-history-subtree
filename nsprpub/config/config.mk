@@ -88,6 +88,10 @@ ifeq ($(PTHREADS_USER), 1)
 OS_CFLAGS += -DPTHREADS_USER -UHAVE_CVAR_BUILT_ON_SEM
 endif
 
+ifeq ($(USE_CTHREADS), 1)
+OS_CFLAGS += -D_PR_CTHREADS
+endif
+
 ifeq ($(USE_IPV6),1)
 OS_CFLAGS += -D_PR_INET6
 endif

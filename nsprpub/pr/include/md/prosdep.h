@@ -116,6 +116,10 @@ PR_BEGIN_EXTERN_C
 #include "md/_pth.h"
 #endif
 
+#ifdef _PR_CTHREADS
+#include "md/_cth.h"
+#endif
+
 PR_END_EXTERN_C
 
 #endif /* prosdep_h___ */

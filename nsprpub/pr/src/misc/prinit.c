@@ -33,7 +33,7 @@ PRFileDesc *_pr_stdin;
 PRFileDesc *_pr_stdout;
 PRFileDesc *_pr_stderr;
 
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
 
 PRCList _pr_active_local_threadQ =
 			PR_INIT_STATIC_CLIST(&_pr_active_local_threadQ);
@@ -61,7 +61,7 @@ PRInt32 	_pr_intsOff;
 /* Lock protecting all "termination" condition variables of all threads */
 PRLock *_pr_terminationCVLock;
 
-#endif /* !defined(_PR_PTHREADS) */
+#endif /* !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS) */
 
 static void _PR_InitCallOnce(void);
 static void _PR_InitStuff(void);
@@ -162,7 +162,7 @@ void _PR_ImplicitInitialization()
 
 PR_IMPLEMENT(void) PR_DisableClockInterrupts(void)
 {
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
 	if (!_pr_initialized) {
 		_PR_InitStuff();
 	} else {
@@ -173,14 +173,14 @@ PR_IMPLEMENT(void) PR_DisableClockInterrupts(void)
 
 PR_IMPLEMENT(void) PR_BlockClockInterrupts(void)
 {
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
     	_PR_MD_BLOCK_CLOCK_INTERRUPTS();
 #endif
 }
 
 PR_IMPLEMENT(void) PR_UnblockClockInterrupts(void)
 {
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
     	_PR_MD_UNBLOCK_CLOCK_INTERRUPTS();
 #endif
 }
@@ -223,8 +223,8 @@ PR_IMPLEMENT(PRIntn) PR_Initialize(
  *
  *-----------------------------------------------------------------------
  */
-#if defined(_PR_PTHREADS)
-    /* see ptthread.c */
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
+    /* see ptthread.c or ctthread.c */
 #else
 static void
 _PR_CleanupBeforeExit(void)
@@ -244,7 +244,7 @@ thread is destroyed, can not access current thread any more.
 
     _PR_MD_CLEANUP_BEFORE_EXIT();
 }
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 
 /*
  *----------------------------------------------------------------------
@@ -270,7 +270,7 @@ thread is destroyed, can not access current thread any more.
  *
  *----------------------------------------------------------------------
  */
-#if defined(_PR_PTHREADS)
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
     /* see ptthread.c */
 #else
 
@@ -337,7 +337,7 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
     }
     return PR_FAILURE;
 }
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 
 /*
  *------------------------------------------------------------------------
@@ -352,7 +352,7 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
  *------------------------------------------------------------------------
  */
 
-#if defined(_PR_PTHREADS)
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
     /* see ptthread.c */
 #else
 PR_IMPLEMENT(void) PR_ProcessExit(PRIntn status)
@@ -360,7 +360,7 @@ PR_IMPLEMENT(void) PR_ProcessExit(PRIntn status)
     _PR_MD_EXIT(status);
 }
 
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 
 PR_IMPLEMENT(PRProcessAttr *)
 PR_NewProcessAttr(void)

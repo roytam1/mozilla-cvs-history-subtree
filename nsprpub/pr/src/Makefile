@@ -173,6 +173,13 @@ OBJS = \
     misc/$(OBJDIR)/prthinfo.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prtime.$(OBJ_SUFFIX)
 
+ifdef USE_CTHREADS
+OBJS += \
+    cthreads/$(OBJDIR)/ctsynch.$(OBJ_SUFFIX) \
+    cthreads/$(OBJDIR)/ctio.$(OBJ_SUFFIX) \
+    cthreads/$(OBJDIR)/ctthread.$(OBJ_SUFFIX) \
+    cthreads/$(OBJDIR)/ctmisc.$(OBJ_SUFFIX)
+else
 ifdef USE_PTHREADS
 OBJS += \
     pthreads/$(OBJDIR)/ptsynch.$(OBJ_SUFFIX) \
@@ -195,7 +202,8 @@ OBJS += \
 	threads/combined/$(OBJDIR)/prulock.$(OBJ_SUFFIX) \
 	threads/combined/$(OBJDIR)/prustack.$(OBJ_SUFFIX) \
 	threads/combined/$(OBJDIR)/pruthr.$(OBJ_SUFFIX)
-endif
+endif # USE_PTHREADS
+endif # USE_CTHREADS
 
 ifeq ($(USE_IPV6), 1)
 OBJS += io/$(OBJDIR)/pripv6.$(OBJ_SUFFIX)

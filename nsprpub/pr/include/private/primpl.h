@@ -39,8 +39,11 @@
 #include <pthread.h>
 #endif
 
+#if defined(_PR_CTHREADS)
+#include <mach/cthreads.h>
+#endif
+
 #ifdef WINNT
-/* Need to force service-pack 3 extensions to be defined by
 ** setting _WIN32_WINNT to NT 4.0 for winsock.h, winbase.h, winnt.h.
 */
 #ifndef  _WIN32_WINNT
@@ -197,7 +200,61 @@ PR_EXTERN(PTDebug) PT_GetStats(void);
 
 #endif /* defined(DEBUG) */
 
-#else /* defined(_PR_PTHREADS) */
+#elif defined _PR_CTHREADS
+
+/* 
+** The following definitions are unique to implementing NSPR using cthreads.
+** Since cthreads defines most of the thread and thread synchronization
+** stuff, this is a pretty small set.
+*/
+   
+struct _CT_Bookeeping
+{  
+    PRLock *ml;                 /* a lock to protect ourselves */
+    PRCondVar *cv;              /* used to signal global things */
+    PRUint16 system, user;      /* a count of the two different types */
+    PRUintn this_many;          /* number of threads allowed for exit */
+    cthread_key_t key;          /* private private data key */
+    cthread_key_t highwater;    /* ordinal value of next key to beF allocated */
+    PRThread *first, *last;     /* list of threads we know about */
+    PRInt32 minPrio, maxPrio;   /* range of scheduling priorities */
+};
+
+#define CT_CV_NOTIFIED_LENGTH 6
+typedef struct _CT_Notified _CT_Notified;
+struct _CT_Notified
+{
+    PRIntn length;              /* # of used entries in this structure */
+    struct
+    {
+        PRCondVar *cv;          /* the condition variable notified */
+        PRIntn times;           /* and the number of times notified */
+    } cv[CT_CV_NOTIFIED_LENGTH];
+    _CT_Notified *link;         /* link to another of these | NULL */
+}; 
+   
+/*
+ * bits defined for cthreads 'state' field
+ */
+#define CT_THREAD_DETACHED  0x01    /* thread can't be joined */
+#define CT_THREAD_GLOBAL    0x02    /* a global thread (unlikely) */
+#define CT_THREAD_SYSTEM    0x04    /* system (not user) thread */
+#define CT_THREAD_PRIMORD   0x08    /* this is the primordial thread */
+#define CT_THREAD_ABORTED   0x10    /* thread has been interrupted */
+#define CT_THREAD_GCABLE    0x20    /* thread is garbage collectible */
+#define CT_THREAD_SUSPENDED 0x40        /* thread has been suspended */
+
+/* 
+** Possible values for thread's suspend field
+** Note that the first two can be the same as they are really mutually exclusive
+,
+** i.e. both cannot be happening at the same time. We have two symbolic names
+** just as a mnemonic.
+**/
+#define CT_THREAD_RESUMED   0x80    /* thread has been resumed */
+#define CT_THREAD_SETGCABLE 0x100   /* set the GCAble flag */
+
+#else /* defined(_PR_PTHREADS) || defined(_PR_CTHREAD) */
 
 /*
 ** This section is contains those parts needed to implement NSPR on
@@ -1168,7 +1225,7 @@ PR_EXTERN(void *) _PR_MD_GET_SP(PRThread *thread);
 
 #endif /* NO_NSPR_10_SUPPORT */
 
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 
 /************************************************************************/
 /*************************************************************************
@@ -1203,14 +1260,18 @@ struct PRLock {
         pthread_mutex_t mutex;      /* the underlying lock */
         _PT_Notified notified;      /* array of conditions notified */
     pthread_t owner;                /* current lock owner */
-#else  /* defined(_PR_PTHREADS) */
+#elif defined(_PR_CTHREADS)
+        mutex_t mutex;      /* the underlying lock */
+        _CT_Notified notified;      /* array of conditions notified */
+    cthread_t owner;            /* current lock owner */
+#else  /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     PRCList links;                  /* linkage for PRThread.lockList */
     struct PRThread *owner;         /* current lock owner */
     PRCList waitQ;                  /* list of threads waiting for lock */
     PRThreadPriority priority;      /* priority of lock */ 
     PRThreadPriority boostPriority; /* boosted priority of lock owner */
     _MDLock ilock;                  /* Internal Lock to protect user-level fields */
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 };
 
 PR_EXTERN(void) _PR_InitLocks(void);
@@ -1219,11 +1280,13 @@ struct PRCondVar {
     PRLock *lock;               /* associated lock that protects the condition */
 #if defined(_PR_PTHREADS)
         pthread_cond_t cv;
-#else  /* defined(_PR_PTHREADS) */
+#elif defined(_PR_CTHREADS)     
+        condition_t cv;
+#else  /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     PRCList condQ;              /* Condition variable wait Q */
     _MDLock ilock;              /* Internal Lock to protect condQ */
     _MDCVar md;
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 };
 
 /************************************************************************/
@@ -1234,9 +1297,13 @@ struct PRMonitor {
         PRLock lock;                /* the lock struture structure */
     pthread_t owner;            /* the owner of the lock or zero */
     PRCondVar cvar;             /* condition variable queue */
-#else  /* defined(_PR_PTHREADS) */
+#elif defined(_PR_CTHREADS)
+        PRLock lock;                /* the lock struture structure */
+    cthread_t owner;            /* the owner of the lock or zero */
+    PRCondVar cvar;             /* condition variable queue */
+#else  /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     PRCondVar *cvar;            /* associated lock and condition variable queue */
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     PRUint32 entryCount;        /* # of times re-entered */
 };
 
@@ -1246,10 +1313,10 @@ struct PRSemaphore {
     PRCondVar *cvar;        /* associated lock and condition variable queue */
     PRUintn count;            /* the value of the counting semaphore */
     PRUint32 waiters;            /* threads waiting on the semaphore */
-#if defined(_PR_PTHREADS)
-#else  /* defined(_PR_PTHREADS) */
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
+#else  /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     _MDSemaphore md;
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */ 
 };
 
 PR_EXTERN(void) _PR_InitSem(void);
@@ -1270,10 +1337,10 @@ struct PRThreadStack {
     PRSegment *seg;
         PRThread* thr;          /* back pointer to thread owning this stack */
 
-#if defined(_PR_PTHREADS)
-#else /* defined(_PR_PTHREADS) */
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
+#else /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     _MDThreadStack md;
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 };
 
 
@@ -1307,7 +1374,18 @@ struct PRThread {
     pthread_mutex_t suspendResumeMutex;
     pthread_cond_t suspendResumeCV;
 #endif
-#else /* defined(_PR_PTHREADS) */
+#elif defined(_PR_CTHREADS)
+        cthread_t id;                   /* pthread identifier for the thread */
+    PRBool okToDelete;              /* ok to delete the PRThread struct? */
+        PRCondVar *waiting;             /* where the thread is waiting | NULL */
+        void *sp;                                               /* recorded sp for garbage collection */
+        PRThread *next, *prev;          /* simple linked list of all threads */
+        PRUint32 suspend;                       /* used to store suspend and resume flags */
+#ifdef PT_NO_SIGTIMEDWAIT
+    mutex_t suspendResumeMutex;
+    condition_t suspendResumeCV;
+#endif
+#else /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     _MDLock threadLock;             /* Lock to protect thread state variables.
                                     * Protects the following fields:
                                     *     state
@@ -1365,7 +1443,7 @@ struct PRThread {
     PRBool io_suspended;
 
     _MDThread md;
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS)*/
 };
 
 struct PRProcessAttr {
@@ -1431,10 +1509,10 @@ struct PRSegment {
     void *vaddr;
     PRUint32 size;
     PRUintn flags;
-#if defined(_PR_PTHREADS)
-#else  /* defined(_PR_PTHREADS) */
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
+#else  /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     _MDSegment md;
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 };
 
 /* PRSegment.flags */

@@ -72,7 +72,7 @@ static PRLock *_pr_logLock;
 
 #if defined(_PR_USE_STDIO_FOR_LOGGING)
 #define _PUT_LOG(fd, buf, nb) fputs(buf, fd)
-#elif defined(_PR_PTHREADS)
+#elif defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
 #define _PUT_LOG(fd, buf, nb) PR_Write(fd, buf, nb)
 #elif defined(XP_MAC)
 #define _PUT_LOG(fd, buf, nb) _PR_MD_WRITE_SYNC(fd, buf, nb)

@@ -21,6 +21,19 @@
 
 include $(MOD_DEPTH)/config/UNIX.mk
 
+#
+# The default implementation strategy for Rhapsody is classic nspr.
+#
+ifeq ($(USE_CTHREADS),1)
+IMPL_STRATEGY = _CTH
+DEFINES += -D_PR_GLOBAL_THREADS_ONLY -D_PR_NO_CTHREAD_KEY_T
+else
+DEFINES += -D_PR_LOCAL_THREADS_ONLY
+endif
+
+DEFINES			+= -D_PR_NEED_FAKE_POLL
+
+
 CC			= cc
 CCC			= cc++
 RANLIB			= ranlib
@@ -32,8 +45,6 @@ CPU_ARCH		= ppc
 #CPU_ARCH		= x86
 
 OS_CFLAGS		= $(DSO_CFLAGS) $(OS_REL_CFLAGS) -pipe -DRHAPSODY -DHAVE_STRERROR -DHAVE_BSD_FLOCK
-
-DEFINES			+= -D_PR_LOCAL_THREADS_ONLY -D_PR_NEED_FAKE_POLL
 
 ARCH			= rhapsody
 

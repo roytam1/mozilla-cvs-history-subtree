@@ -128,9 +128,9 @@ PR_ThreadScanStackPointers(PRThread* t,
     ** Mark all of the per-thread-data items attached to this thread
     */
 
-#if defined(_PR_PTHREADS)
+#if defined(_PR_PTHREADS) || defined(_PR_CTHREADS)
 /*    PR_ASSERT(!"I can't do this!"); */
-#else /* defined(_PR_PTHREADS) */
+#else /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS)*/
 	
     /* the execution environment better be accounted for otherwise it will be collected */
     status = scanFun(t, (void**)&t->environment, 1, scanClosure);
@@ -143,7 +143,7 @@ PR_ThreadScanStackPointers(PRThread* t,
         if (status != PR_SUCCESS)
             return status;
     }
-#endif /* defined(_PR_PTHREADS) */
+#endif /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
 
     return PR_SUCCESS;
 }

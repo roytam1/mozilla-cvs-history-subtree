@@ -69,7 +69,7 @@ static PRLock *_pr_md_lock = NULL;
 
 sigset_t timer_set;
 
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
 
 static sigset_t empty_set;
 
@@ -2394,7 +2394,7 @@ static void sigbushandler() {
 }
 #endif /* SOLARIS, IRIX */
 
-#endif  /* !defined(_PR_PTHREADS) */
+#endif  /* !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS) */
 
 void _PR_UnixInit()
 {
@@ -2403,7 +2403,7 @@ void _PR_UnixInit()
 
 	sigemptyset(&timer_set);
 
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
 
 	sigaddset(&timer_set, SIGALRM);
 	sigemptyset(&empty_set);
@@ -2434,7 +2434,7 @@ void _PR_UnixInit()
 	}
 
 #endif
-#endif  /* !defined(_PR_PTHREADS) */
+#endif  /* !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS) */
 
     /*
      * Under HP-UX DCE threads, sigaction() installs a per-thread
@@ -2849,7 +2849,7 @@ _PR_HPUXTransmitFile(PRFileDesc *sd, PRFileDesc *fd,
 
 #endif /* HPUX11 && !_PR_PTHREADS */
 
-#if !defined(_PR_PTHREADS)
+#if !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS)
 /*
 ** Wait for I/O on a single descriptor.
  *
@@ -2994,7 +2994,7 @@ void _PR_Unblock_IO_Wait(PRThread *thr)
     _PR_THREAD_UNLOCK(thr);
     _PR_MD_WAKEUP_WAITER(thr);
 }
-#endif  /* !defined(_PR_PTHREADS) */
+#endif  /* !defined(_PR_PTHREADS) && !defined(_PR_CTHREADS) */
 
 /*
  * When a nonblocking connect has completed, determine whether it
