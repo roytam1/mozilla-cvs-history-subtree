@@ -384,6 +384,8 @@ NS_IMETHODIMP nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aR
   nsCOMPtr<nsIDocument> document;
   content->GetDocument(*getter_AddRefs(document));
   if (!document)
+    return NS_ERROR_FAILURE;
+  if (!document)
      return NS_ERROR_FAILURE;
 
 #ifdef DEBUG

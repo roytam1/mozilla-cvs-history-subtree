@@ -40,6 +40,7 @@
 #include "nsIAtom.h"
 #include "nsHTMLAtoms.h"
 #include "nsINameSpaceManager.h"
+#include "nsGUIEvent.h"
 
 /* Implementation file */
 NS_IMPL_ISUPPORTS1(nsGenericAccessible, nsIAccessible)
@@ -496,6 +497,27 @@ NS_IMETHODIMP nsLinkableAccessible::GetAccDefaultAction(PRUnichar **_retval)
 
 NS_IMETHODIMP nsLinkableAccessible::AccDoDefaultAction()
 {
+  if (IsALink()) {
+    nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+    nsCOMPtr<nsIPresContext> presContext;
+    shell->GetPresContext(getter_AddRefs(presContext));
+    if (presContext) {
+      nsMouseEvent linkClickEvent;
+      linkClickEvent.eventStructType = NS_EVENT;
+      linkClickEvent.message = NS_MOUSE_LEFT_CLICK;
+      linkClickEvent.isShift = PR_FALSE;
+      linkClickEvent.isControl = PR_FALSE;
+      linkClickEvent.isAlt = PR_FALSE;
+      linkClickEvent.isMeta = PR_FALSE;
+      linkClickEvent.clickCount = 0;
+      linkClickEvent.widget = nsnull;
+
+      nsEventStatus eventStatus =  nsEventStatus_eIgnore;
+      mLinkContent->HandleDOMEvent(presContext, &linkClickEvent, 
+        nsnull, NS_EVENT_FLAG_INIT, &eventStatus);
+      return NS_OK;
+    }
+  }
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
