@@ -89,9 +89,6 @@ PROGRAM = .\$(OBJDIR)\mozilla.exe
 RESFILE = splash.res
 
 LCFLAGS = \
-#!ifdef MOZ_STATIC_COMPONENT_LIBS
-#	/INCREMENTAL:NO \
-#!endif
         $(LCFLAGS) \
         $(DEFINES) \
         $(NULL)
@@ -108,9 +105,9 @@ MOZ_WINCONSOLE=0
 
 # Set subsystem type according to whether we want a console.
 !if $(MOZ_WINCONSOLE)
-LFLAGS= $(LFLAGS) /subsystem:console /incremental:no
+LFLAGS= $(LFLAGS) /subsystem:console
 !else
-LFLAGS= $(LFLAGS) /subsystem:windows /incremental:no
+LFLAGS= $(LFLAGS) /subsystem:windows
 !endif
 
 # These are the libraries we need to link with to create the exe
@@ -118,15 +115,11 @@ LLIBS=                               \
  $(DIST)\lib\xpcom.lib               \
  $(DIST)\lib\nsldap32v40.lib         \
  $(DIST)\lib\js3250.lib              \
- $(DIST)\lib\jsj3250.lib             \
- $(DIST)\lib\img3250.lib             \
  $(DIST)\lib\util.lib                \
  $(DIST)\lib\gkgfxwin.lib            \
  $(DIST)\lib\expat.lib               \
  $(DIST)\lib\png.lib                 \
- $(DIST)\lib\jpeg3250.lib            \
  $(DIST)\lib\mng.lib                 \
- $(DIST)\lib\zlib.lib                \
  $(DIST)\lib\mpfilelocprovider_s.lib \
 !ifdef GC_LEAK_DETECTOR
  $(DIST)\lib\boehm.lib               \
@@ -166,10 +159,11 @@ nsStaticComponents.cpp: nsStaticComponents.cpp.in $(FINAL_LINK_COMP_NAMES) $(SED
         sed -f $(SEDCMDS) nsStaticComponents.cpp.in > $@
         rm -f $(SEDCMDS)
 
-$(LIBFILE):: $(FINAL_LINK_COMPONENTS)
+$(LIBFILE): $(FINAL_LINK_COMPONENTS) $(FINAL_LINK_LIBS)
         echo +++ make: Creating list of component libraries: $@
         rm -f $@
-        sed -e "s/^/$(DIST:\=\\\)\\\lib\\\/" -e "s/$$/.lib/" $(FINAL_LINK_COMPS) > $@
+        sed -e "s/^/$(DIST:\=\\\)\\\lib\\\/" -e "s/$$/.lib/" $(FINAL_LINK_COMPS)  > $@
+        sed -e "s/^/$(DIST:\=\\\)\\\lib\\\/" -e "s/$$/.lib/" $(FINAL_LINK_LIBS)  >> $@
 
 !endif
 
