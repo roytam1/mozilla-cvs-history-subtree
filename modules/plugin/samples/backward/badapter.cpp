@@ -115,7 +115,7 @@ public:
      *  @return number of bytes read or -1 if error
      */   
     NS_IMETHOD
-    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount); 
+    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount, PRInt32 *aWriteCount); 
 
     //////////////////////////////////////////////////////////////////////////
     //
@@ -719,7 +719,9 @@ NPP_Write(NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer)
     if( theStream == 0 )
         return -1;
 		
-    return theStream->Write((const char* )buffer, offset, len);
+    PRInt32 count;
+    nsresult err = theStream->Write((const char* )buffer, offset, len, &count);
+    return (err == NS_OK) ? count : -1;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1294,13 +1296,15 @@ CPluginManagerStream::~CPluginManagerStream(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 
 NS_METHOD
-CPluginManagerStream::Write(const char* buffer, PRInt32 offset, PRInt32 len)
+CPluginManagerStream::Write(const char* buffer, PRInt32 offset, PRInt32 len, 
+                            PRInt32 *aWriteCount)
 {
     assert( npp != NULL );
     assert( pstream != NULL );
 
     assert(offset == 0);    // XXX need to handle the non-sequential write case
-    return NPN_Write(npp, pstream, len, (void* )buffer);
+    *aWriteCount = NPN_Write(npp, pstream, len, (void* )buffer);
+    return *aWriteCount >= 0 ? NS_OK : NS_ERROR_FAILURE;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
