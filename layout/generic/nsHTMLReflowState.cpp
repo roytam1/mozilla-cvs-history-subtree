@@ -1613,44 +1613,27 @@ nsHTMLReflowState::InitConstraints(nsPresContext* aPresContext,
     } else if (NS_CSS_FRAME_TYPE_FLOATING == mFrameType) {
       // Floating non-replaced element. First calculate the computed width
       if (eStyleUnit_Auto == widthUnit) {
-        if ((NS_UNCONSTRAINEDSIZE == aContainingBlockWidth) &&
-            (eStyleUnit_Percent == mStylePosition->mWidth.GetUnit())) {
-          // The element has a percentage width, but since the containing
-          // block width is unconstrained we set 'widthUnit' to 'auto'
-          // above. However, we want the element to be unconstrained, too
-          mComputedWidth = NS_UNCONSTRAINEDSIZE;
-
-        } else if (NS_STYLE_DISPLAY_TABLE == mStyleDisplay->mDisplay) {
-          // It's an outer table because an inner table is not positioned
-          // shrink wrap its width since the outer table is anonymous
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
-
+        nscoord availWidth = aContainingBlockWidth - 
+                             mComputedMargin.left -
+                             mComputedBorderPadding.left -
+                             mComputedBorderPadding.right -
+                             mComputedMargin.right;
+        if (availWidth < 0)
+          availWidth = 0;
+        nscoord prefWidth = frame->GetPrefWidth();
+        if (prefWidth < availWidth) {
+          mComputedWidth = prefWidth;
         } else {
-          // The CSS2 spec says the computed width should be 0; however, that's
-          // not what Nav and IE do and even the spec doesn't really want that
-          // to happen.
-          //
-          // Instead, have the element shrink wrap its width
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
-
-          // Limnit the width to the containing block width
-          nscoord widthFromCB = aContainingBlockWidth;
-          if (NS_UNCONSTRAINEDSIZE != widthFromCB) {
-            widthFromCB -= mComputedBorderPadding.left + mComputedBorderPadding.right +
-                           mComputedMargin.left + mComputedMargin.right;
-          }
-          if (mComputedMaxWidth > widthFromCB) {
-            mComputedMaxWidth = widthFromCB;
-          }
+          nscoord minWidth = frame->GetMinWidth();
+          mComputedWidth = PR_MAX(minWidth, availWidth);
         }
-
       } else {
         ComputeHorizontalValue(aContainingBlockWidth, widthUnit,
                                mStylePosition->mWidth, mComputedWidth);
       }
 
       // Take into account minimum and maximum sizes
-      AdjustComputedWidth(PR_TRUE);
+      AdjustComputedWidth(eStyleUnit_Auto != widthUnit);
 
       // Now calculate the computed height
       if (eStyleUnit_Auto == heightUnit) {

@@ -558,6 +558,8 @@ nsBlockFrame::GetMinWidth()
 
   nscoord result = 0;
 
+  // XXX Don't forget floats.  They're the hard part.
+
   for (line_iterator line = begin_lines(), line_end = end_lines();
        line != line_end; ++line)
   {
@@ -584,6 +586,8 @@ nsBlockFrame::GetPrefWidth()
     return mPrefWidth;
 
   nscoord result = 0;
+
+  // XXX Don't forget floats.  They're the hard part.
 
   for (line_iterator line = begin_lines(), line_end = end_lines();
        line != line_end; ++line)
@@ -4819,30 +4823,6 @@ nsBlockFrame::DeleteNextInFlowChild(nsPresContext* aPresContext,
 ////////////////////////////////////////////////////////////////////////
 // Float support
 
-static void InitReflowStateForFloat(nsHTMLReflowState* aState, nsPresContext* aPresContext)
-{
-  /* We build a different reflow context based on the width attribute of the block
-   * when it's a float.
-   * Auto-width floats need to have their containing-block size set explicitly.
-   * factoring in other floats that impact it.  
-   * It's possible this should be quirks-only.
-   */
-  // XXXldb We should really fix this in nsHTMLReflowState::InitConstraints instead.
-  const nsStylePosition* position = aState->frame->GetStylePosition();
-  nsStyleUnit widthUnit = position->mWidth.GetUnit();
-
-  if (eStyleUnit_Auto == widthUnit) {
-    // Initialize the reflow state and constrain the containing block's 
-    // width and height to the available width and height.
-    aState->Init(aPresContext, aState->availableWidth, aState->availableHeight);
-  } else {
-    // Initialize the reflow state and use the containing block's
-    // computed width and height (or derive appropriate values for an
-    // absolutely positioned frame).
-    aState->Init(aPresContext);
-  }
-}
-
 nsresult
 nsBlockFrame::ReflowFloat(nsBlockReflowState& aState,
                           nsPlaceholderFrame* aPlaceholder,
@@ -4898,16 +4878,6 @@ nsBlockFrame::ReflowFloat(nsBlockReflowState& aState,
                         ? NS_UNCONSTRAINEDSIZE 
                         : PR_MAX(0, aState.mContentArea.height - aState.mY);
 
-  // If the float's width is automatic, we can't let the float's
-  // width shrink below its maxElementWidth.
-  const nsStylePosition* position = floatFrame->GetStylePosition();
-  PRBool isAutoWidth = (eStyleUnit_Auto == position->mWidth.GetUnit());
-
-  // We'll need to compute the max element size if either 1) we're
-  // auto-width or 2) the state wanted us to compute it anyway.
-  PRBool computeMaxElementWidth =
-    isAutoWidth || aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH);
-
   nsRect availSpace(aState.BorderPadding().left,
                     aState.BorderPadding().top,
                     availWidth, availHeight);
@@ -4916,15 +4886,10 @@ nsBlockFrame::ReflowFloat(nsBlockReflowState& aState,
   // initialize it.
   nsHTMLReflowState floatRS(aState.mPresContext, aState.mReflowState,
                             floatFrame, 
-                            nsSize(availSpace.width, availSpace.height), 
-                            aState.mReflowState.reason, PR_FALSE);
-
-  InitReflowStateForFloat(&floatRS, aState.mPresContext);
+                            nsSize(availSpace.width, availSpace.height));
 
   // Setup a block reflow state to reflow the float.
-  nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState,
-                           computeMaxElementWidth,
-                           aState.GetFlag(BRS_COMPUTEMAXWIDTH));
+  nsBlockReflowContext brc(aState.mPresContext, aState.mReflowState);
 
   // Reflow the float
   PRBool isAdjacentWithTop = aState.IsAdjacentWithTop();
@@ -4968,46 +4933,6 @@ nsBlockFrame::ReflowFloat(nsBlockReflowState& aState,
     }
   }
 
-  if (NS_SUCCEEDED(rv) && isAutoWidth) {
-    nscoord maxElementWidth = brc.GetMaxElementWidth();
-    if (maxElementWidth > availSpace.width) {
-      // The float's maxElementWidth is larger than the available
-      // width. Reflow it again, this time pinning the width to the
-      // maxElementWidth.
-      availSpace.width = maxElementWidth;
-      nsCollapsingMargin marginMEW;
-      // construct the html reflow state for the float. 
-      // ReflowBlock will initialize it.
-      nsHTMLReflowState redoFloatRS(aState.mPresContext, aState.mReflowState,
-                                    floatFrame, 
-                                    nsSize(availSpace.width, availSpace.height), 
-                                    aState.mReflowState.reason, PR_FALSE);
-
-      InitReflowStateForFloat(&redoFloatRS, aState.mPresContext);
-
-      clearanceFrame = nsnull;
-      do {
-        nsCollapsingMargin marginMEW;
-        PRBool mayNeedRetry = PR_FALSE;
-        nsBlockReflowContext::ComputeCollapsedTopMargin(redoFloatRS, &marginMEW, clearanceFrame, &mayNeedRetry);
-
-        if (mayNeedRetry && !clearanceFrame) {
-          redoFloatRS.mDiscoveredClearance = &clearanceFrame;
-          // We don't need to push the space manager state because the
-          // the block has its own space manager that will be
-          // destroyed and recreated
-        } else {
-          redoFloatRS.mDiscoveredClearance = nsnull;
-        }
-
-        rv = brc.ReflowBlock(availSpace, PR_TRUE, marginMEW,
-                             0, isAdjacentWithTop,
-                             aFloatCache->mOffsets, redoFloatRS,
-                             aReflowStatus);
-      } while (NS_SUCCEEDED(rv) && clearanceFrame);
-    }
-  }
-
   if (floatFrame->GetType() == nsLayoutAtoms::letterFrame) {
     // We never split floating first letters; an incomplete state for
     // such frames simply means that there is more content to be
@@ -5015,10 +4940,6 @@ nsBlockFrame::ReflowFloat(nsBlockReflowState& aState,
     if (NS_FRAME_IS_NOT_COMPLETE(aReflowStatus)) 
       aReflowStatus = NS_FRAME_COMPLETE;
   }
-
-  // Remove the float from the reflow tree.
-  if (aState.mReflowState.path)
-    aState.mReflowState.path->RemoveChild(floatFrame);
 
   if (NS_FAILED(rv)) {
     return rv;
@@ -5052,19 +4973,6 @@ nsBlockFrame::ReflowFloat(nsBlockReflowState& aState,
   floatFrame->DidReflow(aState.mPresContext, &floatRS,
                         NS_FRAME_REFLOW_FINISHED);
 
-  // If we computed it, then stash away the max-element-width for later
-  if (aState.GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
-    nscoord mew = brc.GetMaxElementWidth() +
-                  aFloatCache->mMargins.left + aFloatCache->mMargins.right;
-
-    // This is all we need to do to include the float
-    // max-element-width since we don't require that we end up with
-    // content next to floats.
-    aState.UpdateMaxElementWidth(mew); // fix for bug 13553
-
-    // Allow the float width to be restored in state recovery.
-    aFloatCache->mMaxElementWidth = mew;
-  }
 #ifdef NOISY_FLOAT
   printf("end ReflowFloat %p, sized to %d,%d\n",
          floatFrame, metrics.width, metrics.height);
