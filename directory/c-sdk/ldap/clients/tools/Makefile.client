@@ -43,7 +43,9 @@ ifdef HAVE_LIBNLS
 INCLUDES	+= -I$(LIBNLS_INCLUDES)
 endif
 
+ifeq ($(OS_ARCH), WINNT)
 DEFS		+= -DXP_WIN -DXP_WIN32
+endif
 DEFINES         += $(DEFS)
 
 CXXSRCS		= convutf8.cpp
