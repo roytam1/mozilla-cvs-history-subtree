@@ -1976,7 +1976,7 @@ int CSearchOutliner::TranslateIconFolder (void * pData)
     return ( OUTLINER_ITEM );
 }
 
-void * CSearchOutliner::AquireLineData ( int line )
+void * CSearchOutliner::AcquireLineData ( int line )
 {
 	MSG_ResultElement *elem = NULL;
 	MSG_GetResultElement (m_pSearchPane, line, &elem);
