@@ -220,9 +220,9 @@ NS_IMETHODIMP nsRegion::GetRects(nsRect ***aRects, PRUint32 *npoints)
 #if 0
   nsRegionRectSet *rects;
   nsRegionRect    *rect;
-	LPRECT          pRects;
-	DWORD           dwCount, dwResult;
-	unsigned int    num_rects;
+  LPRECT          pRects;
+  DWORD           dwCount, dwResult;
+  unsigned int    num_rects;
 
   NS_ASSERTION(!(nsnull == aRects), "bad ptr");
 
@@ -233,33 +233,33 @@ NS_IMETHODIMP nsRegion::GetRects(nsRect ***aRects, PRUint32 *npoints)
 
   // code lifted from old winfe. MMP
 
-	/* Get the size of the region data */
-	dwCount = GetRegionData(mRegion, 0, NULL);
+  /* Get the size of the region data */
+  dwCount = GetRegionData(mRegion, 0, NULL);
 
-	NS_ASSERTION(!(dwCount == 0), "bad region");
+  NS_ASSERTION(!(dwCount == 0), "bad region");
 
-	if (dwCount == 0)
-	  return NS_OK;
+  if (dwCount == 0)
+    return NS_OK;
 
   if (dwCount > mDataSize)
   {
     if (NULL != mData)
       PR_Free(mData);
 
-	  mData = (LPRGNDATA)PR_Malloc(dwCount);
+    mData = (LPRGNDATA)PR_Malloc(dwCount);
   }
 
-	NS_ASSERTION(!(nsnull == mData), "failed allocation");
+  NS_ASSERTION(!(nsnull == mData), "failed allocation");
 
-	if (mData == NULL)
-	  return NS_OK;
+  if (mData == NULL)
+    return NS_OK;
 
-	dwResult = GetRegionData(mRegion, dwCount, mData);
+  dwResult = GetRegionData(mRegion, dwCount, mData);
 
-	NS_ASSERTION(!(dwResult == 0), "get data failed");
+  NS_ASSERTION(!(dwResult == 0), "get data failed");
 
-	if (dwResult == 0)
-		return NS_OK;
+  if (dwResult == 0)
+    return NS_OK;
 
   if ((nsnull == rects) || (rects->mRectsLen < mData->rdh.nCount))
   {
@@ -282,16 +282,16 @@ NS_IMETHODIMP nsRegion::GetRects(nsRect ***aRects, PRUint32 *npoints)
   rect = &rects->mRects[0];
 
   for (pRects = (LPRECT)mData->Buffer, num_rects = 0; 
-		   num_rects < mData->rdh.nCount; 
-		   num_rects++, pRects++, rect++)
+       num_rects < mData->rdh.nCount; 
+       num_rects++, pRects++, rect++)
   {
-		rect->x = pRects->left;
-		rect->y = pRects->top;
-		rect->width = pRects->right - rect->x;
-		rect->height = pRects->bottom - rect->y;
+    rect->x = pRects->left;
+    rect->y = pRects->top;
+    rect->width = pRects->right - rect->x;
+    rect->height = pRects->bottom - rect->y;
 
     rects->mArea += rect->width * rect->height;
-	}
+  }
 
   *aRects = rects;
 

@@ -28,6 +28,12 @@
 #include "windows.h"
 
 #define NS_REGION_CID \
+{ /* 9cb3d640-1dd1-11b2-9518-d76af15f2e31 */         \
+     0x9cb3d640,                                     \
+     0x1dd1,                                         \
+     0x11b2,                                         \
+    {0x95, 0x18, 0xd7, 0x6a, 0xf1, 0x5f, 0x2e, 0x31} \
+}
 
 class nsRegion : public nsIRegion
 {
