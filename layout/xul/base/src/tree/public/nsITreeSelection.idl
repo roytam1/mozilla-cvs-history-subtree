@@ -23,18 +23,14 @@
  */
 
 interface nsIOutlinerBoxObject;
-interface nsIOutlinerRangeList;
 
-#include "nsISupports.idl"
+#include "nsISecurityCheckedComponent.idl"
 
 [scriptable, uuid(F848D7CF-F3D6-4775-8C9F-135546E61E1E)]
-interface nsIOutlinerSelection : nsISupports
+interface nsIOutlinerSelection : nsISecurityCheckedComponent
 {
   // The outliner widget for this selection.
   attribute nsIOutlinerBoxObject outliner;
-
-  // The current selected indices.
-  attribute nsIOutlinerRangeList selectedRows;
 
   // Indicates whether or not the row at the specified index is
   // part of the selection.
@@ -43,11 +39,16 @@ interface nsIOutlinerSelection : nsISupports
   // Deselect all rows and select the row at the specified index. 
   void select(in long index);
 
+  // Perform a timed select.
+  void timedSelect(in long index, in long delay);
+
   // Toggle the selection state of the row at the specified index.
   void toggleSelect(in long index);
 
-  // Select the range specified by the indices.
-  void rangedSelect(in long startIndex, in long endIndex);
+  // Select the range specified by the indices.  If augment is true,
+  // then we add the range to the selection without clearing out anything
+  // else.  If augment is false, everything is cleared except for the specified range.
+  void rangedSelect(in long startIndex, in long endIndex, in boolean augment);
 
   // Clears the selection.
   void clearSelection();
@@ -57,6 +58,21 @@ interface nsIOutlinerSelection : nsISupports
 
   // Selects all rows.
   void selectAll();
+
+  // Iterate the selection using these methods.
+  long getRangeCount();
+  void getRangeAt(in long i, out long min, out long max);
+
+  // This attribute is a boolean indicating whether or not the
+  // "select" event should fire when the selection is changed using
+  // one of our methods.  A view can use this to temporarily suppress
+  // the selection while manipulating all of the indices, e.g., on 
+  // a sort.
+  attribute boolean selectEventsSuppressed;
+
+  // The current item (the one that gets a focus rect in addition to being
+  // selected).
+  attribute long currentIndex;
 };
 
 %{C++

@@ -78,10 +78,13 @@ XUL_ATOM(open, "open") // Whether or not a menu, tree, etc. is open
 XUL_ATOM(outliner, "outliner")
 XUL_ATOM(outlinerbody, "outlinerbody")
 XUL_ATOM(outlinercol, "outlinercol")
+
 XUL_ATOM(cycler, "cycler")
 XUL_ATOM(primary, "primary")
+XUL_ATOM(current, "current")
 XUL_ATOM(mozoutlinerrow, ":-moz-outliner-row")
 XUL_ATOM(mozoutlinercell, ":-moz-outliner-cell")
+XUL_ATOM(mozoutlinercolumn, ":-moz-outliner-column")
 XUL_ATOM(mozoutlinercelltext, ":-moz-outliner-cell-text")
 XUL_ATOM(mozoutlinertwisty, ":-moz-outliner-twisty")
 XUL_ATOM(mozoutlinerindentation, ":-moz-outliner-indentation")

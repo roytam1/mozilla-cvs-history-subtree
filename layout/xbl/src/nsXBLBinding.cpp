@@ -668,7 +668,7 @@ nsXBLBinding::GenerateAnonymousContent(nsIContent* aBoundElement)
             }
 
             if (!insertionPoint) {
-              NS_ERROR("Filtered insertion point wasn't properly constructed.\n");
+              // NS_ERROR("Filtered insertion point wasn't properly constructed.\n");
               return NS_ERROR_FAILURE;
             }
             else 

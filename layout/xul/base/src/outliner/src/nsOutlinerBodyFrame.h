@@ -25,7 +25,6 @@
 #include "nsLeafBoxFrame.h"
 #include "nsIOutlinerBoxObject.h"
 #include "nsIOutlinerView.h"
-#include "nsIOutlinerRangeList.h"
 #include "nsICSSPseudoComparator.h"
 #include "nsIScrollbarMediator.h"
 #include "nsIWidget.h"
@@ -140,6 +139,8 @@ public:
   void SetNext(nsOutlinerColumn* aNext) { mNext = aNext; };
   nsOutlinerColumn* GetNext() { return mNext; };
 
+  nsIContent* GetElement() { return mColElement; };
+
   nscoord GetWidth();
   const PRUnichar* GetID() { return mID.GetUnicode(); };
 };
@@ -172,6 +173,14 @@ public:
                    nsIRenderingContext& aRenderingContext,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
+
+  // This method paints a specific column background of the outliner.
+  NS_IMETHOD PaintColumn(nsOutlinerColumn*    aColumn,
+                         const nsRect& aCellRect,
+                         nsIPresContext*      aPresContext,
+                         nsIRenderingContext& aRenderingContext,
+                         const nsRect&        aDirtyRect,
+                         nsFramePaintLayer    aWhichLayer);
 
   // This method paints a single row in the outliner.
   NS_IMETHOD PaintRow(int aRowIndex, const nsRect& aRowRect,
@@ -212,7 +221,7 @@ protected:
   virtual ~nsOutlinerBodyFrame();
 
   // Returns the height of rows in the tree.
-  PRInt32 GetRowHeight(nsIPresContext* aPresContext);
+  PRInt32 GetRowHeight();
 
   // Returns our width/height once border and padding have been removed.
   nsRect GetInnerBox();
@@ -222,7 +231,11 @@ protected:
   nsresult GetPseudoStyleContext(nsIPresContext* aPresContext, nsIAtom* aPseudoElement, nsIStyleContext** aResult);
 
   // Builds our cache of column info.
-  void EnsureColumns(nsIPresContext* aContext);
+  void EnsureColumns();
+
+  // Use to auto-fill some of the common properties without the view having to do it.
+  // Examples include container, open, selected, and focused.
+  void PrefillPropertyArray(PRInt32 aRowIndex, const PRUnichar* aColID);
 
 protected: // Data Members
   // Our cached pres context.
