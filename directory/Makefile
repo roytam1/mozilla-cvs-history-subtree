@@ -26,8 +26,8 @@ NSS_TREE	= ../security
 MOD_DEPTH	= ../nsprpub
 CORECONFDIR	= ../coreconf
 ALTCORECONFDIR	= ../../coreconf
-NSPR_VERSION	= 4.1
-NSS_VERSION	= 3.2
+NSPR_VERSION	= 4.1.1
+NSS_VERSION	= 3.2.1
 DEPTH		= ..
 CONFIGDIR	= c-sdk/config
 
@@ -151,8 +151,8 @@ ifeq ($(HAVE_CCONF), 1)
 		echo "No $(CORECONFDIR) directory found"; \
 	fi
 ifeq ($(OS_ARCH), WINNT)
-	cd $(CORECONFDIR)/dbm; \
-	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
+#	cd $(CORECONFDIR)/dbm; \
+#	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/nspr20; \
 	$(MAKE) VERSION=$(NSPR_RELEASE_TAG)    $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/security; \
@@ -160,8 +160,8 @@ ifeq ($(OS_ARCH), WINNT)
 	cd $(CORECONFDIR)/svrcore; \
 	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) USE_FTP=YES import
 else
-	cd $(CORECONFDIR)/dbm; \
-	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) import
+#	cd $(CORECONFDIR)/dbm; \
+#	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) import
 	cd $(CORECONFDIR)/nspr20; \
 	$(MAKE) VERSION=$(NSPR_RELEASE_TAG)    $(MFLAGS) import
 	cd $(CORECONFDIR)/security; \
