@@ -585,6 +585,7 @@ int CSearchObject::More(int* moreCount, BOOL bLogicType)
 		for (int i = 0; i < COL_COUNT; i++) {
 			nID = ChoicesTable[(*moreCount)][i];
 			widget = m_wnd->GetDlgItem(nID);
+ 	        if(widget == NULL) continue;
 			if (i == 3 && bLogicType)
 			{
 				strLogicText.LoadString(IDS_ANDTHE);
@@ -665,6 +666,7 @@ int CSearchObject::Fewer(int* iMoreCount, BOOL bLogicTyp)
 	if (*iMoreCount > 0) {
 		for (int i = 0; i < COL_COUNT; i++) {
 			widget = m_wnd->GetDlgItem(ChoicesTable[*iMoreCount][i]);
+  	        if(widget == NULL) continue;
 			widget->ShowWindow(SW_HIDE);
 		}
 		(*iMoreCount)--;
@@ -857,7 +859,7 @@ int CSearchObject::New(CWnd* window)
 	for (int j = 1; j < 5; j++) {
 		for (int i = 0; i < COL_COUNT; i++) {
 			widget = m_wnd->GetDlgItem(ChoicesTable[j][i]);
-			ASSERT(widget);
+		    if(widget == NULL) continue;
 			widget->ShowWindow(SW_HIDE);
 		}
 	}
