@@ -69,6 +69,7 @@ static char  gStyleTags[]={
   eHTMLTag_bdo,
   eHTMLTag_big,
   eHTMLTag_blink,
+  eHTMLTag_center,
   eHTMLTag_cite,
   eHTMLTag_code,
   eHTMLTag_del,
@@ -229,7 +230,7 @@ eHTMLTags CTagStack::Last() const {
 class nsCTokenRecycler : public nsITokenRecycler {
 public:
   
-      enum {eCacheMaxSize=50}; 
+      enum {eCacheMaxSize=100}; 
 
                   nsCTokenRecycler();
   virtual         ~nsCTokenRecycler();
@@ -239,6 +240,7 @@ public:
 protected:
     CToken* mTokenCache[eToken_last-1][eCacheMaxSize];
     PRInt32 mCount[eToken_last-1];
+    PRInt32 mTotals[eToken_last-1];
 };
 
 
@@ -250,6 +252,7 @@ protected:
 nsCTokenRecycler::nsCTokenRecycler() : nsITokenRecycler() {
   nsCRT::zero(mTokenCache,sizeof(mTokenCache));
   nsCRT::zero(mCount,sizeof(mCount));    
+  nsCRT::zero(mTotals,sizeof(mTotals));    
 }
 
 /**
@@ -257,6 +260,14 @@ nsCTokenRecycler::nsCTokenRecycler() : nsITokenRecycler() {
  * @update  gess7/25/98
  */
 nsCTokenRecycler::~nsCTokenRecycler() {
+  //begin by deleting all the known (recycled tokens)...
+  int index1,index2;
+  for(index1=0;index1<eToken_last-1;index1++){
+    for(index2=0;index2<mCount[index1];index2++){
+      if(mTokenCache[index1][index2])
+        delete mTokenCache[index1][index2];
+    }
+  }
 }
 
 
@@ -293,12 +304,14 @@ CToken* nsCTokenRecycler::CreateTokenOfType(eHTMLTokenTypes aType,eHTMLTags aTag
   CToken* result;
 
   if(0<mCount[aType-1]) {
+    int cnt=CToken::GetTokenCount();
     result=mTokenCache[aType-1][mCount[aType-1]-1];
     result->Reinitialize(aTag,aString);
     mTokenCache[aType-1][mCount[aType-1]-1]=0;
     mCount[aType-1]--;
   }
   else {
+    mTotals[aType-1]++;
     switch(aType){
       case eToken_start:      result=new CStartToken(aTag); break;
       case eToken_end:        result=new CEndToken(aTag); break;
@@ -476,6 +489,7 @@ CNavDTD::CNavDTD() : nsIDTD(), mContextStack(), mTokenDeque(gTokenKiller)  {
   mSink = nsnull;
   mDTDDebug=0;
   mLineNumber=1;
+  mParseMode=eParseMode_navigator;
   mStyleStack=new CTagStack();
   nsCRT::zero(mTokenHandlers,sizeof(mTokenHandlers));
   mHasOpenForm=PR_FALSE;
@@ -875,7 +889,7 @@ nsresult CNavDTD::HandleEndToken(CToken* aToken) {
   // we have to handle explicit styles the way it does. That means
   // that we keep an internal style stack.When an EndToken occurs, 
   // we should see if it is an explicit style tag. If so, we can 
-  // close the explicit style tag (goofy, huh?)
+  // close the explicit style tag (goofy, huh?).
 
 
     //now check to see if this token should be omitted, or 
@@ -1200,14 +1214,18 @@ CITokenHandler* CNavDTD::AddTokenHandler(CITokenHandler* aHandler) {
 }
 
 /**
- * 
+ *  The parser calls this method after it's selected
+ *  an constructed a DTD.
  *  
  *  @update  gess 3/25/98
- *  @param   
- *  @return 
+ *  @param   aParser is a ptr to the controlling parser.
+ *  @return  nada
  */
 void CNavDTD::SetParser(nsIParser* aParser) {
   mParser=(nsParser*)aParser;
+  if(aParser)
+    mParseMode=aParser->GetParseMode();
+//  mParseMode=eParseMode_noquirks;
 }
 
 /**
@@ -1364,7 +1382,7 @@ static char  gTagSet3[]={
  *  @param   aChild -- tag enum of child container
  *  @return  PR_TRUE if parent can contain child
  */
-PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) {
+PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const {
 
   PRBool result=PR_FALSE;
 
@@ -1787,6 +1805,16 @@ PRBool CNavDTD::CanOmit(eHTMLTags aParent,eHTMLTags aChild) const {
         result=PR_TRUE;
       break;
 
+    case eHTMLTag_table:
+
+      if(eParseMode_noquirks!=mParseMode) {
+        if(eHTMLTag_table==GetTopNode()) {
+          result=PR_TRUE;
+        }
+        break;
+      }
+      //otherwise, we intentionally fall through...
+
     default:
       if(eHTMLTag_unknown==aParent)
         result=PR_FALSE;
@@ -1834,6 +1862,10 @@ PRBool CNavDTD::CanOmitEndTag(eHTMLTags aParent,eHTMLTags aChild) const {
     case eHTMLTag_userdefined:
     case eHTMLTag_comment:
       result=PR_TRUE; 
+      break;
+
+    case eHTMLTag_a:
+      result=!HasOpenContainer(aChild);
       break;
 
     case eHTMLTag_html:
@@ -2041,6 +2073,7 @@ PRBool CNavDTD::ForwardPropagate(CTagStack& aStack,eHTMLTags aParentTag,eHTMLTag
 }
 
 
+
 /**
  * This method tries to design a context map (without actually
  * changing our parser state) from the child up to the parent.
@@ -2059,6 +2092,11 @@ PRBool CNavDTD::BackwardPropagate(CTagStack& aStack,eHTMLTags aParentTag,eHTMLTa
   do {
     theParentTag=(eHTMLTags)GetDefaultParentTagFor(theParentTag);
     if(theParentTag!=eHTMLTag_unknown) {
+      aStack.Push(theParentTag);
+    }
+    if(CanContain(aParentTag,theParentTag)) {
+      //we've found a complete sequence, so push the parent...
+      theParentTag=aParentTag;
       aStack.Push(theParentTag);
     }
   } while((theParentTag!=eHTMLTag_unknown) && (theParentTag!=aParentTag));
@@ -2600,7 +2638,7 @@ CNavDTD::CloseContainersTo(PRInt32 anIndex,eHTMLTags aTag,
   NS_PRECONDITION(mContextStack.mCount > 0, kInvalidTagStackPos);
   nsresult result=NS_OK;
 
-  CEndToken aToken(gEmpty);
+  static CEndToken aToken(gEmpty);
   nsCParserNode theNode(&aToken,mLineNumber);
 
   if((anIndex<mContextStack.mCount) && (anIndex>=0)) {
@@ -2710,7 +2748,8 @@ nsresult CNavDTD::CreateContextStackFor(eHTMLTags aChildTag){
   if(PR_FALSE==bResult){
 
     if(eHTMLTag_unknown!=theTop) {
-      bResult=BackwardPropagate(kPropagationStack,theTop,aChildTag);
+      if(theTop!=aChildTag) //dont even bother if we're already inside a similar element...
+        bResult=BackwardPropagate(kPropagationStack,theTop,aChildTag);
 
      /*****************************************************************************
         OH NOOOO!...
@@ -3100,7 +3139,7 @@ nsresult
 CNavDTD::ConsumeWhitespace(PRUnichar aChar,
                            CScanner& aScanner,
                            CToken*& aToken) {
-  aToken = gTokenRecycler.CreateTokenOfType(eToken_whitespace,eHTMLTag_unknown,gEmpty);
+  aToken = gTokenRecycler.CreateTokenOfType(eToken_whitespace,eHTMLTag_whitespace,gEmpty);
   nsresult result=kNoError;
   if(aToken) {
      result=aToken->Consume(aChar,aScanner);

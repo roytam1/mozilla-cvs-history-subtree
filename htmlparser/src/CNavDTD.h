@@ -79,6 +79,7 @@
 #define NS_NAVHTMLDTD__
 
 #include "nsIDTD.h"
+#include "nsIParser.h"
 #include "nsISupports.h"
 #include "nsHTMLTokens.h"
 #include "nshtmlpars.h"
@@ -303,7 +304,7 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
      *  @param   aChild -- int tag of child container
      *  @return  PR_TRUE if parent can contain child
      */
-    virtual PRBool CanContain(PRInt32 aParent,PRInt32 aChild);
+    virtual PRBool CanContain(PRInt32 aParent,PRInt32 aChild) const;
 
     /**
      *  This method is called to determine whether a tag
@@ -611,7 +612,7 @@ protected:
     nsString            mFilename;
     nsIDTDDebug*		    mDTDDebug;
     PRInt32             mLineNumber;
-
+    eParseMode          mParseMode;
 };
 
 extern NS_HTMLPARS nsresult NS_NewNavHTMLDTD(nsIDTD** aInstancePtrResult);
