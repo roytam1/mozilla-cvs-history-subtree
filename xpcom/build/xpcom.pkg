@@ -14,13 +14,6 @@ dist/bin/@DLLP@xpcom@DLLS@
 !xpt dist/bin/components/proxyObjInst.xpt
 #endif
 
-[gecko xpi-bootstrap]
-dist/bin/@DLLP@xpcom_compat@DLLS@
-dist/bin/components/@DLLP@xpcom_compat_c@DLLS@
-
-[gecko]
-!xpt dist/bin/components/xpcom_obsolete.xpt
-
 [gecko-support]
 dist/bin/regxpcom@BINS@
 dist/bin/xpt_dump@BINS@

@@ -1,0 +1,5 @@
+[gecko xpi-bootstrap]
+dist/bin/@SHARED_LIBRARY@
+
+[gecko]
+!xpt dist/bin/components/xpcom_obsolete.xpt

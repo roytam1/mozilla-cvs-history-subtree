@@ -1,0 +1,2 @@
+[gecko xpi-bootstrap]
+dist/bin/components/@SHARED_LIBRARY@
