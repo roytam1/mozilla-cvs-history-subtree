@@ -113,7 +113,6 @@
                 oncommand="gDownloadsPane.showFileTypeActions();"/>
       </hbox>
     </groupbox>
-
   </prefpane>
 
 </overlay>

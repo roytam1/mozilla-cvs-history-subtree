@@ -114,8 +114,6 @@
                 oncommand="showLanguages();"/>
       </hbox>
     </groupbox>
-
-              
   </prefpane>
 
 </overlay>

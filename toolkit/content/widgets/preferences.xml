@@ -478,10 +478,11 @@
             if (this.childNodes[i] == aPaneElement) {
               var oldPane = document.getElementById(this.lastSelected);
               oldPane.selected = !(aPaneElement.selected = true);
+              oldPane.style.opacity = 0.0;
               if (!this._initialized || oldPane.id != aPaneElement.id) {
                 this._paneDeck.setAttribute("selectedIndex", i);
                 this.lastSelected = aPaneElement.id;
-                aPaneElement.style.opacity = "0.0";
+                aPaneElement.style.opacity = 0.0;
                 this.animate(oldPane, aPaneElement);
                 this._initialized = true;
               }
@@ -500,6 +501,8 @@
           this._multiplier = aNewPane.contentHeight > aOldPane.contentHeight ? 1 : -1;
           var sizeDelta = Math.abs(aOldPane.contentHeight - aNewPane.contentHeight);
           this._needsSizing = sizeDelta > this._animateIncrement;
+          
+          this._animateRemainder = sizeDelta % this._animateIncrement;
 
           // Compute the opacity step, using 0.2 as a maximum step size. 
           this._opacityStepSize = sizeDelta != 0 ? this._animateIncrement / sizeDelta : 1.0;
@@ -511,42 +514,52 @@
         </body>
       </method>
       
-      <property name="_stillAnimating" readonly="true">
+      <property name="_sizeIncrement" readonly="true">
         <getter>
         <![CDATA[
           var lastSelectedPane = document.getElementById(this.lastSelected);
-          if (this._needsSizing)
-            return (this._multiplier > 0 && this._currentHeight < lastSelectedPane.contentHeight) || 
-                   (this._multiplier < 0 && this._currentHeight > lastSelectedPane.contentHeight);
-          return parseFloat(window.getComputedStyle(lastSelectedPane, "").opacity) < 1.0;
+          var increment = this._animateIncrement * this._multiplier;
+          var newHeight = this._currentHeight + increment;
+          if ((this._multiplier > 0 && this._currentHeight >= lastSelectedPane.contentHeight) ||
+              (this._multiplier < 0 && this._currentHeight <= lastSelectedPane.contentHeight))
+            return 0;
+          
+          if ((this._multiplier > 0 && newHeight > lastSelectedPane.contentHeight) ||
+              (this._multiplier < 0 && newHeight < lastSelectedPane.contentHeight))
+            increment = this._animateRemainder * this._multiplier;
+          return increment;
         ]]>
         </getter>
       </property>
-                
+      
+      <field name="_animateState">0</field>
       <method name="notify">
         <parameter name="aTimer"/>
         <body>
         <![CDATA[
-          if (this._stillAnimating) {
-            if (this._needsSizing) {
-              window.innerHeight += (this._animateIncrement * this._multiplier);
-              this._currentHeight += (this._animateIncrement * this._multiplier);
-            }
-            else
-              window.sizeToContent();
+          const STATE_START    = 0;
+          const STATE_SIZE     = 1;
+          const STATE_OPACITY  = 2;
+          const STATE_DONE     = STATE_SIZE | STATE_OPACITY;
+          
+          var increment = this._sizeIncrement;
+          if (increment != 0) {
+            window.innerHeight += increment;
+            this._currentHeight += increment;
+          }
+          else 
+            this._animateState |= STATE_SIZE;
+          
+          var lastSelectedPane = document.getElementById(this.lastSelected);
+          if (parseFloat(window.getComputedStyle(lastSelectedPane, "").opacity) < 1.0) {
             var elt = document.getElementById(this.lastSelected);
             elt.style.opacity = parseFloat(window.getComputedStyle(elt, "").opacity) + this._opacityStepSize;
           }
-          else {
-            // Do this check first because rounding errors may cause the opacity
-            // set by the code above to be > 1.0, which will result in an ugly
-            // flicker if we set it back to 1.0 here. This code exists only to
-            // correct any < 1.0 opacity states that may exist. 
-            var elt = document.getElementById(this.lastSelected);
-            if (parseFloat(window.getComputedStyle(elt, "").opacity) < 1.0) 
-              document.getElementById(this.lastSelected).style.opacity = "1.0";
+          else
+            this._animateState |= STATE_OPACITY;
+          
+          if (this._animateState == STATE_DONE)
             this._timer.cancel();
-          }
         ]]>
         </body>
       </method>
@@ -561,6 +574,7 @@
           else
             this._timer.cancel();
           this._currentHeight = aStartHeight;
+          this._animateState = 0;
           
           this._timer.initWithCallback(this, this._animateDelay, 
                                        Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
@@ -571,6 +585,7 @@
       <field name="_timer">null</field>
       <field name="_animateDelay">50</field>
       <field name="_animateIncrement">10</field>
+      <field name="_animateRemainder">0</field>
       <field name="_currentHeight">0</field>
       <field name="_multiplier">0</field>
       <field name="_opacityStepSize">0</field>
