@@ -6730,19 +6730,21 @@ nsImapCacheStreamListener::OnStartRequest(nsIRequest *request, nsISupports * aCt
 {
   nsCOMPtr <nsILoadGroup> loadGroup;
   mChannelToUse->GetLoadGroup(getter_AddRefs(loadGroup));
+  nsCOMPtr<nsIRequest> ourRequest = do_QueryInterface(mChannelToUse);
   if (loadGroup)
-    loadGroup->AddRequest(request, nsnull /* context isupports */);
-  return mListener->OnStartRequest(request, aCtxt);
+    loadGroup->AddRequest(ourRequest, nsnull /* context isupports */);
+  return mListener->OnStartRequest(ourRequest, aCtxt);
 }
 
 NS_IMETHODIMP
 nsImapCacheStreamListener::OnStopRequest(nsIRequest *request, nsISupports * aCtxt, nsresult aStatus, const PRUnichar* aMsg)
 {
-  nsresult rv = mListener->OnStopRequest(request, aCtxt, aStatus, aMsg);
+  nsCOMPtr<nsIRequest> ourRequest = do_QueryInterface(mChannelToUse);
+  nsresult rv = mListener->OnStopRequest(ourRequest, aCtxt, aStatus, aMsg);
   nsCOMPtr <nsILoadGroup> loadGroup;
   mChannelToUse->GetLoadGroup(getter_AddRefs(loadGroup));
   if (loadGroup)
-			loadGroup->RemoveRequest(request, nsnull, aStatus, nsnull);
+			loadGroup->RemoveRequest(ourRequest, nsnull, aStatus, nsnull);
 
   mListener = nsnull;
   mChannelToUse = nsnull;
@@ -6752,7 +6754,8 @@ nsImapCacheStreamListener::OnStopRequest(nsIRequest *request, nsISupports * aCtx
 NS_IMETHODIMP
 nsImapCacheStreamListener::OnDataAvailable(nsIRequest *request, nsISupports * aCtxt, nsIInputStream * aInStream, PRUint32 aSourceOffset, PRUint32 aCount)
 {
-  return mListener->OnDataAvailable(request, aCtxt, aInStream, aSourceOffset, aCount);
+  nsCOMPtr<nsIRequest> ourRequest = do_QueryInterface(mChannelToUse);
+  return mListener->OnDataAvailable(ourRequest, aCtxt, aInStream, aSourceOffset, aCount);
 }
 
 NS_IMPL_THREADSAFE_ADDREF(nsImapMockChannel)
