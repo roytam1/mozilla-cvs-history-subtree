@@ -1085,6 +1085,14 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
         break;
     } //switch
   }
+  
+  // If NS_EVENT_FLAG_NO_CONTENT_DISPATCH is set we will not allow content to handle
+  // this event.  But to allow middle mouse button paste to work we must allow 
+  // middle clicks to go to text fields anyway.
+  PRBool noContentDispatch = aEvent->flags & NS_EVENT_FLAG_NO_CONTENT_DISPATCH;
+  if (type == NS_FORM_INPUT_TEXT && aEvent->message == NS_MOUSE_MIDDLE_CLICK) {
+    aEvent->flags &= ~NS_EVENT_FLAG_NO_CONTENT_DISPATCH;
+  }
 
   // Try script event handlers first if its not a focus/blur event
   //we dont want the doc to get these
@@ -1093,6 +1101,10 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
                                                               aDOMEvent,
                                                               aFlags,
                                                               aEventStatus);
+
+  // Reset the flag for other content besides this text field
+  aEvent->flags |= noContentDispatch ? NS_EVENT_FLAG_NO_CONTENT_DISPATCH : NS_EVENT_FLAG_NONE;
+
 
   // now check to see if the event was "cancelled"
   if (nsEventStatus_eConsumeNoDefault == *aEventStatus && checkWasSet &&
