@@ -673,12 +673,12 @@ void CGenericFrame::FinishMenuExpansion(HT_Resource pRoot)
 			CTreeMenu *pSubMenu=new CTreeMenu;
 			pSubMenu->CreatePopupMenu();
 
-			IconType nIconType = DetermineIconType(pEntry, FALSE, HT_SMALLICON);
+			IconType nIconType = DetermineIconType(pEntry, FALSE);
 			void* pCustomIcon = NULL;
 			if (nIconType == LOCAL_FILE)
 				pCustomIcon = FetchLocalFileIcon(pEntry);
 			else if (nIconType == ARBITRARY_URL)
-				pCustomIcon = FetchCustomIcon(pEntry, pMenu, FALSE, HT_SMALLICON);
+				pCustomIcon = FetchCustomIcon(pEntry, pMenu, FALSE);
 			CTreeItem *item= new CTreeItem(m_pBookmarkFolderBitmap, m_pBookmarkFolderOpenBitmap,
 										   (UINT)pSubMenu->GetSafeHmenu(),csAmpersandName, pSubMenu);
 
@@ -695,7 +695,7 @@ void CGenericFrame::FinishMenuExpansion(HT_Resource pRoot)
 		else
 		{
 			// We're an URL
-			IconType nIconType = DetermineIconType(pEntry, FALSE, HT_SMALLICON);
+			IconType nIconType = DetermineIconType(pEntry, FALSE);
 			void* pCustomIcon = NULL;
 			if (nIconType == LOCAL_FILE)
 				pCustomIcon = FetchLocalFileIcon(pEntry);

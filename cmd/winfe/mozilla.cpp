@@ -21,6 +21,8 @@
 //	Various startup/shutdown functions.
 void STARTUP_np(void);
 void SHUTDOWN_np(void);
+void STARTUP_cvffc(void);
+void SHUTDOWN_cvffc(void);
 #ifdef MOZ_LOC_INDEP
 void STARTUP_li(void);
 void SHUTDOWN_li(void);
@@ -875,6 +877,7 @@ BOOL CNetscapeApp::InitInstance()
     theApp.m_bUseVirtualFont = TRUE;
 #endif
 
+    STARTUP_cvffc();	
 
 	// Set version and application names
     //  We have to get around it's const status.
@@ -997,6 +1000,7 @@ BOOL CNetscapeApp::InitInstance()
 	INTL_ChangeDefaultCharSetID((int16)csid);
 
 #ifndef MOZ_NGLAYOUT
+	STARTUP_cvffc();
 
 	VERIFY( FONTERR_OK == theGlobalNSFont.InitFontModule() );
 #endif /* MOZ_NGLAYOUT */
@@ -2337,6 +2341,9 @@ int CNetscapeApp::ExitInstance()
     Ctl3dUnregister(m_hInstance);
 #endif
 
+#ifndef MOZ_NGLAYOUT
+	SHUTDOWN_cvffc();
+#endif /* MOZ_NGLAYOUT */
     //  Free off various allocated memory.
     if(XP_AppName)    {
 	XP_FREE(XP_AppName);

@@ -17,14 +17,7 @@
  */
 
 #include <stdlib.h>
-
-#ifndef XP_MAC
-	// including this on mac causes odd link errors in static initialization stuff that we
-	// (pinkerton & scc) don't yet understand. If you want to turn this on for mac, talk
-	// to one of us.
-	#include <iostream.h>
-#endif
-
+#include <iostream.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif

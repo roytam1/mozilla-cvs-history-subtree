@@ -367,30 +367,19 @@ PREF_Init(char *filename)
 			return 0;
 		}
 
-		JS_BeginRequest(m_mochaContext);
-
-		m_GlobalConfigObject = JS_NewObject(m_mochaContext, &global_class, NULL, NULL);
-		if (!m_GlobalConfigObject)  {
-		    JS_EndRequest(m_mochaContext);
-		    return 0;
-                }
-
-                /* MLM - need a global object for set version call now. */
-                JS_SetGlobalObject(m_mochaContext, m_GlobalConfigObject);
-
 		JS_SetVersion(m_mochaContext, JSVERSION_1_2);
 
-		if (!JS_InitStandardClasses(m_mochaContext, 
-					    m_GlobalConfigObject))  {
-		    JS_EndRequest(m_mochaContext);
+		m_GlobalConfigObject = JS_NewObject(m_mochaContext, &global_class, NULL, NULL);
+		if (!m_GlobalConfigObject) 
 		    return 0;
-	 	}
+
+		if (!JS_InitStandardClasses(m_mochaContext, m_GlobalConfigObject))
+		    return 0;
 
 		JS_SetBranchCallback(m_mochaContext, pref_BranchCallback);
 		JS_SetErrorReporter(m_mochaContext, NULL);
 
-		m_mochaPrefObject = JS_DefineObject(m_mochaContext, 
-						    m_GlobalConfigObject, 
+		m_mochaPrefObject = JS_DefineObject(m_mochaContext, m_GlobalConfigObject, 
 						    "PrefConfig",
 						    &autoconf_class, 
 						    NULL, 
@@ -400,14 +389,12 @@ PREF_Init(char *filename)
 		    if (!JS_DefineProperties(m_mochaContext,
 					     m_mochaPrefObject,
 					     autoconf_props)) {
-		        JS_EndRequest(m_mochaContext);
 			return 0;
 		    }
 
 		    if (!JS_DefineFunctions(m_mochaContext,
 					    m_mochaPrefObject,
 					    autoconf_methods)) {
-		        JS_EndRequest(m_mochaContext);
 			return 0;
 		    }
 
@@ -416,8 +403,6 @@ PREF_Init(char *filename)
 #if !defined(XP_WIN) && !defined(XP_OS2)
 		ok = pref_InitInitialObjects();
 #endif
-	}  else  {
-	    JS_BeginRequest(m_mochaContext);
 	}
 
 	if (ok && filename) {
@@ -426,7 +411,6 @@ PREF_Init(char *filename)
 	else if (!ok) {
 		m_ErrorOpeningUserPrefs = TRUE;
 	}
-	JS_EndRequest(m_mochaContext);
 	return ok;
 }
 
@@ -436,10 +420,8 @@ PREF_GetConfigContext(JSContext **js_context)
 	if (!js_context) return FALSE;
 
 	*js_context = NULL;
-    if (m_mochaContext)  {
+    if (m_mochaContext)
 		*js_context = m_mochaContext;
-		JS_SetContextThread(m_mochaContext);
-    }
 
 	return TRUE;
 }
@@ -522,7 +504,6 @@ PREF_EvaluateConfigScript(const char * js_buffer, size_t length,
 	if (!m_mochaContext || !scope)
 		return JS_FALSE;
 
-	JS_BeginRequest(m_mochaContext);
 	errReporter = JS_SetErrorReporter(m_mochaContext, pref_ErrorReporter);
 	m_CallbacksEnabled = bCallbacks;
 
@@ -532,7 +513,6 @@ PREF_EvaluateConfigScript(const char * js_buffer, size_t length,
 	m_CallbacksEnabled = TRUE;		/* ?? want to enable after reading user/lock file */
 	JS_SetErrorReporter(m_mochaContext, errReporter);
 	
-	JS_EndRequest(m_mochaContext);
 	return ok;
 }
 
@@ -556,11 +536,9 @@ PREF_QuietEvaluateJSBuffer(const char * js_buffer, size_t length)
 	if (!m_mochaContext || !m_mochaPrefObject)
 		return PREF_NOT_INITIALIZED;
 
-	JS_BeginRequest(m_mochaContext);
 	ok = JS_EvaluateScript(m_mochaContext, m_mochaPrefObject,
 			js_buffer, length, NULL, 0, &result);
 	
-	JS_EndRequest(m_mochaContext);
 	/* Hey, this really returns a JSBool */
 	return ok;
 }
@@ -574,10 +552,8 @@ PREF_QuietEvaluateJSBufferWithGlobalScope(const char * js_buffer, size_t length)
 	if (!m_mochaContext || !m_GlobalConfigObject)
 		return PREF_NOT_INITIALIZED;
 	
-	JS_BeginRequest(m_mochaContext);
 	ok = JS_EvaluateScript(m_mochaContext, m_GlobalConfigObject,
 			js_buffer, length, NULL, 0, &result);
-	JS_EndRequest(m_mochaContext);
 	
 	/* Hey, this really returns a JSBool */
 	return ok;
