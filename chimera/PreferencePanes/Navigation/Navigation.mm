@@ -68,9 +68,6 @@ const int kDefaultExpireDays = 9;
 
   [checkboxUseSystemHomePage setState:useSystemHomePage];
   [textFieldHomePage setStringValue: [self getCurrentHomePage]];
-  
-  BOOL enablePopupBlocking = [self getBooleanPref:"dom.disable_open_during_load" withSuccess:&gotPref] && gotPref;  
-  [checkboxEnablePopupBlocking setState:enablePopupBlocking];
 }
 
 - (void) didUnselect
@@ -230,29 +227,6 @@ const int kDefaultExpireDays = 9;
   nsCOMPtr<nsICacheService> cacheServ ( do_GetService("@mozilla.org/network/cache-service;1") );
   if ( cacheServ )
     cacheServ->EvictEntries(nsICache::STORE_ON_DISK);
-}
-
-
-//
-// checkboxEnablePopupBlocking
-//
-// Enable and disable mozilla's popup blocking feature. We use a combination of 
-// two prefs to suppress bad popups.
-//
-- (IBAction)checkboxEnablePopupBlocking:(id)sender
-{
-  if (!mPrefService)
-    return;
-
-  if ( [sender state] ) {
-    [self setPref:"dom.disable_open_during_load" toBoolean: YES];
-    [self setPref:"dom.disable_open_click_delay" toInt: 1000];
-  }
-  else {
-    [self setPref:"dom.disable_open_during_load" toBoolean: NO];
-    [self setPref:"dom.disable_open_click_delay" toInt: 0];
-  }
-
 }
 
 @end

@@ -38,8 +38,6 @@
   
   IBOutlet NSSlider *sliderHistoryDays;
   IBOutlet NSTextField *textFieldHistoryDays;
-
-  IBOutlet NSButton *checkboxEnablePopupBlocking;
 }
 
 - (IBAction)openSystemInternetPanel:(id)sender;
@@ -48,7 +46,6 @@
 - (IBAction)checkboxStartPageClicked:(id)sender;
 - (IBAction)historyDaysModified:(id)sender;
 - (IBAction)clearGlobalHistory:(id)sender;
-- (IBAction)checkboxEnablePopupBlocking:(id)sender;
 
 - (NSString*)getSystemHomePage;
 - (NSString*)getCurrentHomePage;

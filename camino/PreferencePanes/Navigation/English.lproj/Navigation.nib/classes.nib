@@ -15,7 +15,6 @@
         {
             ACTIONS = {
                 checkboxClicked = id; 
-                checkboxEnablePopupBlocking = id; 
                 checkboxStartPageClicked = id; 
                 checkboxUseSystemHomePageClicked = id; 
                 clearDiskCache = id; 
@@ -26,7 +25,6 @@
             CLASS = OrgMozillaChimeraPreferenceNavigation; 
             LANGUAGE = ObjC; 
             OUTLETS = {
-                checkboxEnablePopupBlocking = NSButton; 
                 checkboxLoadTabsInBackground = NSButton; 
                 checkboxNewTabBlank = NSButton; 
                 checkboxNewWindowBlank = NSButton; 

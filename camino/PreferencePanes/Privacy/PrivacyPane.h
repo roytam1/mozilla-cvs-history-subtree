@@ -9,13 +9,6 @@ class nsIPref;
   IBOutlet id mCookies;
   IBOutlet NSButton* mPromptForCookie;
   
-  IBOutlet NSButton* mEnableJS;
-  IBOutlet NSButton* mEnableJava;
-  
-  IBOutlet NSButton* mLeaveEncrypted;
-  IBOutlet NSButton* mLoadLowGrade;
-  IBOutlet NSButton* mViewMixed;  
-
   IBOutlet NSButton* mStorePasswords;
   IBOutlet NSButton* mAutoFillPasswords;
 }
@@ -24,12 +17,6 @@ class nsIPref;
 
 -(IBAction) clickPromptForCookie:(id)sender;
 -(IBAction) clickEnableCookies:(id)sender;
--(IBAction) clickEnableJS:(id)sender;
--(IBAction) clickEnableJava:(id)sender;
-
--(IBAction) clickEnableLeaveEncrypted:(id)sender;
--(IBAction) clickEnableLoadLowGrade:(id)sender;
--(IBAction) clickEnableViewMixed:(id)sender;
 
 -(IBAction) clickStorePasswords:(id)sender;
 -(IBAction) clickAutoFillPasswords:(id)sender;
