@@ -395,7 +395,7 @@ NS_IMETHODIMP nsImapUrl::GetCommand(char **result)
 NS_IMETHODIMP nsImapUrl::GetCustomAttributeToFetch(char **result)
 {
   NS_ENSURE_ARG_POINTER(result);
-  *result = nsCRT::strdup(m_msgFetchAttribute.get());
+  *result = ToNewCString(m_msgFetchAttribute);
   return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
@@ -409,6 +409,19 @@ NS_IMETHODIMP nsImapUrl::GetCustomAttributeResult(char **result)
 NS_IMETHODIMP nsImapUrl::SetCustomAttributeResult(const char *result)
 {
   m_customAttributeResult = result;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImapUrl::GetCustomCommandResult(char **result)
+{
+  NS_ENSURE_ARG_POINTER(result);
+  *result = ToNewCString(m_customCommandResult);
+  return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+NS_IMETHODIMP nsImapUrl::SetCustomCommandResult(const char *result)
+{
+  m_customCommandResult = result;
   return NS_OK;
 }
 
