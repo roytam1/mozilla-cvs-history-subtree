@@ -71,6 +71,12 @@ class nsEventStateManager : public nsSupportsWeakReference,
                             public nsIObserver
 {
 
+  enum nsTextfieldSelectModel {
+    eTextfieldSelect_unset = -1,
+    eTextfieldSelect_manual = 0,
+    eTextfieldSelect_auto = 1,   // select textfields when focused with keyboard
+  };
+
 public:
   nsEventStateManager();
   virtual ~nsEventStateManager();
@@ -265,6 +271,8 @@ protected:
 
   // Recursion guard for tabbing
   PRBool mTabbedThroughDocument;
+
+  static PRInt8  sTextfieldSelectModel;
 
 #ifdef CLICK_HOLD_CONTEXT_MENUS
   enum { kClickHoldDelay = 500 } ;        // 500ms == 1/2 second
