@@ -61,16 +61,16 @@ endef
 
 ifdef DIRS
 ifeq ($(OS_ARCH), WINNT)
-SETOLDDIR = set oldDir='pwd'
+SETOLDDIR = set oldDir
 else
-SETOLDDIR = oldDir='pwd'
+SETOLDDIR = oldDir
 endif
 LOOP_OVER_DIRS		=					\
 	@for d in $(DIRS); do					\
 		if test -d $$d; then				\
 			set -e;			\
 			echo "cd $$d; $(MAKE) -f Makefile.ref $@"; 		\
-			$(SETOLDDIR);				\
+			$(SETOLDDIR)=`pwd`;				\
 			cd $$d; $(MAKE) -f Makefile.ref $@; cd $$oldDir;	\
 			set +e;					\
 		else						\
