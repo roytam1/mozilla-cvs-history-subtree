@@ -1402,6 +1402,7 @@ function Shutdown()
     pbi.removeObserver(gFormFillPrefListener.domain, gFormFillPrefListener);
     pbi.removeObserver(gURLBarAutoFillPrefListener.domain, gURLBarAutoFillPrefListener);
     pbi.removeObserver(gHomeButton.prefDomain, gHomeButton);
+    pbi.removeObserver(gTypeAheadFind.prefDomain, gTypeAheadFind);
   } catch (ex) {
   }
 
