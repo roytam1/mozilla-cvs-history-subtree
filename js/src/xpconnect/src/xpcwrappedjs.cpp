@@ -162,7 +162,8 @@ do_decrement:
         // If we are not the root wrapper or if we are not being used from a 
         // weak reference, then this extra ref is not needed and we can let 
         // ourself be deleted.
-        if(this != mRoot || !HasWeakReferences())
+        // Note: HasWeakReferences() could only return true for the root.
+        if(!HasWeakReferences())
             goto do_decrement;
     }
     return cnt;
