@@ -14,10 +14,11 @@
  *
  * The Initial Developer of the Original Code is Netscape Communications
  * Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Copyright (C) 2001 Netscape Communications Corporation. All
  * Rights Reserved.
  *
  * Contributor(s): 
+ *   Johnny Stenback <jst@netscape.com> (original author)
  */
 #include "nsDOMClassInfo.h"
 
@@ -59,18 +60,17 @@ nsDOMClassInfo::GetInterfaces(PRUint32 *aCount, nsIID * **aArray)
   NS_ENSURE_TRUE(*aArray, NS_ERROR_OUT_OF_MEMORY);
 
   for (i = 0; i < count; i++) {
-    *aArray[i] = NS_STATIC_CAST(nsIID *, nsMemory::Alloc(sizeof(nsIID)));
+    nsIID *iid = NS_STATIC_CAST(nsIID *, nsMemory::Alloc(sizeof(nsIID)));
 
-    if (!*aArray[i])
-      break;
+    if (!iid) {
+      NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(i, *aArray);
 
-    *(*aArray[i]) = *NS_STATIC_CAST(nsIID *, void_array.ElementAt(i));
-  }
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
 
-  if (i != count) {
-    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(i, *aArray);
+    *iid = *NS_STATIC_CAST(nsIID *, void_array.ElementAt(i));
 
-    return NS_ERROR_OUT_OF_MEMORY;
+    *((*aArray) + i) = iid;
   }
 
   return NS_OK;
