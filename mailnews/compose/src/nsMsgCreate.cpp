@@ -111,19 +111,17 @@ NS_NewMsgDraft(const nsIID &aIID, void ** aInstancePtrResult)
 static NS_DEFINE_CID(kStreamConverterCID,    NS_MAILNEWS_MIME_STREAM_CONVERTER_CID);
 
 nsIMessage *
-GetIMessageFromURI(const PRUnichar *msgURI)
+GetIMessageFromURI(const char *msgURI)
 {
   nsresult                  rv;
   nsIRDFResource            *myRDFNode = nsnull;
-  nsCAutoString              convertString; convertString.AssignWithConversion(msgURI);
-
   nsIMessage                *returnMessage;
 
   NS_WITH_SERVICE(nsIRDFService, rdfService, kRDFServiceCID, &rv); 
 	if (NS_FAILED(rv) || (!rdfService))
 		return nsnull;
 
-  rdfService->GetResource(convertString, &myRDFNode);
+  rdfService->GetResource(msgURI, &myRDFNode);
   if (!myRDFNode)
     return nsnull;
 
@@ -133,7 +131,7 @@ GetIMessageFromURI(const PRUnichar *msgURI)
 }
 
 nsresult    
-nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutputType aOutType, 
+nsMsgDraft::ProcessDraftOrTemplateOperation(const char *msgURI, nsMimeOutputType aOutType, 
                                             nsIMsgIdentity * identity, nsIMessage **aMsgToReplace)
 {
   nsresult  rv;
@@ -143,8 +141,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutpu
   if (!msgURI)
     return NS_ERROR_INVALID_ARG;
 
-  nsString        convertString(msgURI);
-  mURI = convertString.ToNewCString();
+  mURI = nsCRT::strdup(msgURI);
 
   if (!mURI)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -251,7 +248,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutpu
 }
 
 nsresult
-nsMsgDraft::OpenDraftMsg(const PRUnichar *msgURI, nsIMessage **aMsgToReplace,
+nsMsgDraft::OpenDraftMsg(const char *msgURI, nsIMessage **aMsgToReplace,
                          nsIMsgIdentity * identity, PRBool addInlineHeaders)
 {
   // We should really never get here, but if we do, just return 
@@ -265,7 +262,7 @@ nsMsgDraft::OpenDraftMsg(const PRUnichar *msgURI, nsIMessage **aMsgToReplace,
 }
 
 nsresult
-nsMsgDraft::OpenEditorTemplate(const PRUnichar *msgURI, nsIMessage **aMsgToReplace,
+nsMsgDraft::OpenEditorTemplate(const char *msgURI, nsIMessage **aMsgToReplace,
 							   nsIMsgIdentity * identity)
 {
   return ProcessDraftOrTemplateOperation(msgURI, nsMimeOutput::nsMimeMessageEditorTemplate, 

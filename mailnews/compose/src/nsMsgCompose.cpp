@@ -419,7 +419,7 @@ nsresult nsMsgCompose::Initialize(nsIDOMWindowInternal *aWindow,
   MSG_ComposeType type;
   params->GetType(&type);
 
-  nsXPIDLString originalMsgURI;
+  nsXPIDLCString originalMsgURI;
   params->GetOriginalMsgURI(getter_Copies(originalMsgURI));
   
   nsCOMPtr<nsIMsgCompFields> composeFields;
@@ -445,12 +445,10 @@ nsresult nsMsgCompose::Initialize(nsIDOMWindowInternal *aWindow,
   return CreateMessage(originalMsgURI, type, format, composeFields);
 }
 
-nsresult nsMsgCompose::SetDocumentCharset(const PRUnichar *charset) 
+nsresult nsMsgCompose::SetDocumentCharset(const char *charset) 
 {
 	// Set charset, this will be used for the MIME charset labeling.
-	nsCAutoString charsetStr;
-	charsetStr.AssignWithConversion(charset);
-	m_compFields->SetCharacterSet(charsetStr);
+	m_compFields->SetCharacterSet(charset);
 	
 	return NS_OK;
 }
@@ -871,7 +869,7 @@ nsresult nsMsgCompose::GetWrapLength(PRInt32 *aWrapLength)
   return prefs->GetIntPref("mailnews.wraplength", aWrapLength);
 }
 
-nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
+nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
                                      MSG_ComposeType type,
                                      MSG_ComposeFormat format,
                                      nsIMsgCompFields * compFields)
@@ -935,7 +933,7 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
   
     /* In case of forwarding multiple messages, originalMsgURI will contains several URI separated by a comma. */
     /* we need to extract only the first URI*/
-    nsAutoString  firstURI(originalMsgURI);
+    nsCAutoString  firstURI(originalMsgURI);
     PRInt32 offset = firstURI.FindChar(',');
     if (offset >= 0)
     	firstURI.Truncate(offset);
@@ -945,16 +943,13 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
 
     mOriginalMsgURI = firstURI;
     
-    printf("we need to fix this hackFoo.  we need to treat all message uris a char *, not prunichar *, but that will involve peeling too much of the onion.\n");
-    nsCAutoString hackFoo;
-    hackFoo.AssignWithConversion(firstURI);
     nsCOMPtr <nsIMsgMessageService> msgMessageService;
-    rv = GetMessageServiceFromURI(hackFoo.get(), getter_AddRefs(msgMessageService));
+    rv = GetMessageServiceFromURI(firstURI, getter_AddRefs(msgMessageService));
     NS_ENSURE_SUCCESS(rv,rv);
     if (!msgMessageService) return NS_ERROR_FAILURE;
 
     nsCOMPtr <nsIMsgDBHdr> msgHdr;
-    rv = msgMessageService->MessageURIToMsgHdr(hackFoo.get(), getter_AddRefs(msgHdr));
+    rv = msgMessageService->MessageURIToMsgHdr(firstURI, getter_AddRefs(msgHdr));
     NS_ENSURE_SUCCESS(rv,rv);
 
     if (msgHdr)
@@ -1051,8 +1046,7 @@ nsresult nsMsgCompose::CreateMessage(const PRUnichar * originalMsgURI,
         
           // Setup quoting callbacks for later...
           mQuotingToFollow = PR_FALSE;	//We don't need to quote the original message.
-          //Fix this, need to go direcly from char * to char *
-          m_compFields->SetAttachments(nsAutoCString(nsAutoString(originalMsgURI)));
+          m_compFields->SetAttachments(originalMsgURI);
         
           break;
         }
@@ -1070,7 +1064,7 @@ QuotingOutputStreamListener::~QuotingOutputStreamListener()
 {
 }
 
-QuotingOutputStreamListener::QuotingOutputStreamListener(const PRUnichar * originalMsgURI,
+QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMsgURI,
                                                          PRBool quoteHeaders,
                                                          PRBool headersOnly,
                                                          nsIMsgIdentity *identity) 
@@ -1085,12 +1079,9 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const PRUnichar * origi
    // For the built message body...
    nsCOMPtr <nsIMsgDBHdr> originalMsgHdr;
    nsCOMPtr <nsIMsgMessageService> msgMessageService;
-   printf("we need to fix this hackFoo.  we need to treat all message uris a char *, not prunichar *, but that will involve peeling too much of the onion.\n");
-   nsCAutoString hackFoo;
-   hackFoo.AssignWithConversion(originalMsgURI);
-   rv = GetMessageServiceFromURI(hackFoo.get(), getter_AddRefs(msgMessageService));
+   rv = GetMessageServiceFromURI(originalMsgURI, getter_AddRefs(msgMessageService));
    if (NS_SUCCEEDED(rv)) {
-       rv = msgMessageService->MessageURIToMsgHdr(hackFoo.get(), getter_AddRefs(originalMsgHdr));
+       rv = msgMessageService->MessageURIToMsgHdr(originalMsgURI, getter_AddRefs(originalMsgHdr));
    }
    if (NS_SUCCEEDED(rv) && originalMsgHdr && !quoteHeaders)
     {
@@ -1454,7 +1445,7 @@ MSG_ComposeType nsMsgCompose::GetMessageType()
 }
 
 nsresult
-nsMsgCompose::QuoteOriginalMessage(const PRUnichar *originalMsgURI, PRInt32 what) // New template
+nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // New template
 {
   nsresult    rv;
 
@@ -1486,11 +1477,7 @@ nsMsgCompose::QuoteOriginalMessage(const PRUnichar *originalMsgURI, PRInt32 what
   NS_ADDREF(this);
   mQuoteStreamListener->SetComposeObj(this);
 
-//Fix this, msgCharSet need to go from char* to char*
-  nsAutoString msgCharSet;
-  msgCharSet.AssignWithConversion(m_compFields->GetCharacterSet());
-
-  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, mQuoteStreamListener, msgCharSet.GetUnicode());
+  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, mQuoteStreamListener, m_compFields->GetCharacterSet());
   return rv;
 }
 
@@ -1557,16 +1544,13 @@ nsresult nsMsgCompose::ProcessReplyFlags()
   {
     if (!mOriginalMsgURI.IsEmpty())
     {
-      printf("we need to fix this hackFoo.  we need to treat all message uris a char *, not prunichar *, but that will involve peeling too much of the onion.\n");
-      nsCAutoString hackFoo;
-      hackFoo.AssignWithConversion(mOriginalMsgURI);
       nsCOMPtr <nsIMsgMessageService> msgMessageService;
-      rv = GetMessageServiceFromURI(hackFoo.get(), getter_AddRefs(msgMessageService));
+      rv = GetMessageServiceFromURI(mOriginalMsgURI, getter_AddRefs(msgMessageService));
       NS_ENSURE_SUCCESS(rv,rv);
       if (!msgMessageService) return NS_ERROR_FAILURE;
 
       nsCOMPtr <nsIMsgDBHdr> msgHdr;
-      rv = msgMessageService->MessageURIToMsgHdr(hackFoo.get(), getter_AddRefs(msgHdr));
+      rv = msgMessageService->MessageURIToMsgHdr(mOriginalMsgURI, getter_AddRefs(msgHdr));
       NS_ENSURE_SUCCESS(rv,rv);
       if (msgHdr)
       {
@@ -1930,7 +1914,7 @@ nsMsgCompose::BuildQuotedMessageAndSignature(void)
 
   // We will fire off the quote operation and wait for it to
   // finish before we actually do anything with Ender...
-  return QuoteOriginalMessage(mQuoteURI.GetUnicode(), mWhatHolder);
+  return QuoteOriginalMessage(mQuoteURI, mWhatHolder);
 }
 
 //
@@ -2200,20 +2184,22 @@ nsresult nsMsgCompose::NotifyStateListeners(TStateListenerNotification aNotifica
   return NS_OK;
 }
 
-nsresult nsMsgCompose::AttachmentPrettyName(const PRUnichar* url, PRUnichar** _retval)
+nsresult nsMsgCompose::AttachmentPrettyName(const char* url, PRUnichar** _retval)
 {
-	nsCAutoString unescapeURL; unescapeURL.AssignWithConversion(url);
+	nsCAutoString unescapeURL(url);
 	nsUnescape(unescapeURL);
 	if (unescapeURL.IsEmpty())
 	{
-		*_retval = nsCRT::strdup(url);
+	  nsAutoString unicodeUrl;
+	  unicodeUrl.AssignWithConversion(url);
+
+		*_retval = unicodeUrl.ToNewUnicode();
 		return NS_OK;
 	}
 	
 	if (PL_strncasestr(unescapeURL, "file:", 5))
 	{
-	  nsAutoString urlString(url);
-		nsFileURL fileUrl(urlString);
+		nsFileURL fileUrl(url);
 		nsFileSpec fileSpec(fileUrl);
 		char * leafName = fileSpec.GetLeafName();
 		if (leafName && *leafName)
@@ -2761,7 +2747,7 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
 	return rv;
 }
 
-nsresult nsMsgCompose::GetNoHtmlNewsgroups(const PRUnichar *newsgroups, PRUnichar **_retval)
+nsresult nsMsgCompose::GetNoHtmlNewsgroups(const char *newsgroups, char **_retval)
 {
     //FIX ME: write me
     nsresult rv = NS_ERROR_NOT_IMPLEMENTED;

@@ -39,6 +39,8 @@
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_CID(kMsgComposeCID, NS_MSGCOMPOSE_CID);
 
+#define DEFAULT_CHROME  "chrome://messenger/content/messengercompose/messengercompose.xul"
+
 nsMsgComposeService::nsMsgComposeService()
 {
 	NS_INIT_REFCNT();
@@ -52,7 +54,7 @@ nsMsgComposeService::~nsMsgComposeService()
 }
 
 // Utility function to open a message compose window and pass an nsIMsgComposeParams parameter to it.
-static nsresult openWindow( const PRUnichar *chrome, nsIMsgComposeParams *params )
+static nsresult openWindow( const char *chrome, nsIMsgComposeParams *params )
 {
   nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
   JSContext *jsContext;
@@ -68,8 +70,8 @@ static nsresult openWindow( const PRUnichar *chrome, nsIMsgComposeParams *params
       void *stackPtr;
       jsval *argv = JS_PushArguments( jsContext,
                                       &stackPtr,
-                                      "Wss%ip",
-                                      chrome,
+                                      "sss%ip",
+                                      (chrome && *chrome) ? chrome : DEFAULT_CHROME,
                                       "_blank",
                                       "chrome,dialog=no,all",
                                       (const nsIID*) (&NS_GET_IID(nsIMsgComposeParams)),
@@ -88,7 +90,7 @@ static nsresult openWindow( const PRUnichar *chrome, nsIMsgComposeParams *params
   return rv;
 }
 
-nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindowURL, const PRUnichar *originalMsgURI,
+nsresult nsMsgComposeService::OpenComposeWindow(const char *msgComposeWindowURL, const char *originalMsgURI,
 	MSG_ComposeType type, MSG_ComposeFormat format, nsIMsgIdentity * identity)
 {
 	nsresult rv;
@@ -101,20 +103,19 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
     nsCOMPtr<nsIMsgDraft> pMsgDraft (do_CreateInstance(NS_MSGDRAFT_CONTRACTID, &rv));
     if (NS_SUCCEEDED(rv) && pMsgDraft)
 		{
-      nsAutoString uriToOpen(originalMsgURI);
-      uriToOpen.Append((const PRUnichar*)
-             NS_LITERAL_STRING("?fetchCompleteMessage=true").get()); 
+      nsCAutoString uriToOpen(originalMsgURI);
+      uriToOpen.Append("?fetchCompleteMessage=true"); 
 
 			switch(type)
 			{
 				case nsIMsgCompType::ForwardInline:
-	    			rv = pMsgDraft->OpenDraftMsg(uriToOpen.GetUnicode(), nsnull, identity, PR_TRUE);
+	    			rv = pMsgDraft->OpenDraftMsg(uriToOpen.get(), nsnull, identity, PR_TRUE);
 					break;
 				case nsIMsgCompType::Draft:
-	    			rv = pMsgDraft->OpenDraftMsg(uriToOpen.GetUnicode(), nsnull, identity, PR_FALSE);
+	    			rv = pMsgDraft->OpenDraftMsg(uriToOpen.get(), nsnull, identity, PR_FALSE);
 					break;
 				case nsIMsgCompType::Template:
-	    			rv = pMsgDraft->OpenEditorTemplate(uriToOpen.GetUnicode(), nsnull, identity);
+	    			rv = pMsgDraft->OpenEditorTemplate(uriToOpen.get(), nsnull, identity);
 					break;
 			}
 		}
@@ -134,14 +135,10 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
   	  if (originalMsgURI && *originalMsgURI)
   		  if (type == nsIMsgCompType::NewsPost) 
         {
-          nsCAutoString newsURI;
+          nsCAutoString newsURI(originalMsgURI);
           nsCAutoString group;
           nsCAutoString host;
         
-          //Fix this. originalMsgURI should be passed as char*
-          nsAutoString tempUnicode(originalMsgURI);
-          
-          newsURI = nsAutoCString(tempUnicode);
           PRInt32 slashpos = newsURI.FindChar('/');
           if (slashpos > 0 )
           {
@@ -150,7 +147,7 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
             newsURI.Right(group, newsURI.Length() - slashpos - 1);
           }
           else
-            group = nsAutoCString(tempUnicode);
+            group = originalMsgURI;
 
           pMsgCompFields->SetNewsgroups(group);
           pMsgCompFields->SetNewshost(host);
@@ -160,19 +157,14 @@ nsresult nsMsgComposeService::OpenComposeWindow(const PRUnichar *msgComposeWindo
         
       pMsgComposeParams->SetComposeFields(pMsgCompFields);
 
-
-	    if (msgComposeWindowURL && *msgComposeWindowURL)
-        rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
-	    else
-        rv = openWindow(NS_ConvertASCIItoUCS2("chrome://messenger/content/messengercompose/messengercompose.xul").GetUnicode(),
-                        pMsgComposeParams);
+      rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
     }
   }
 
 	return rv;
 }
 
-NS_IMETHODIMP nsMsgComposeService::OpenComposeWindowWithURI(const PRUnichar * aMsgComposeWindowURL, nsIURI * aURI)
+NS_IMETHODIMP nsMsgComposeService::OpenComposeWindowWithURI(const char * aMsgComposeWindowURL, nsIURI * aURI)
 {
   nsresult rv = NS_OK;
   if (aURI)
@@ -210,10 +202,10 @@ NS_IMETHODIMP nsMsgComposeService::OpenComposeWindowWithURI(const PRUnichar * aM
        									NS_ConvertASCIItoUCS2(aToPart).GetUnicode(), 
                         NS_ConvertASCIItoUCS2(aCcPart).GetUnicode(),
                         NS_ConvertASCIItoUCS2(aBccPart).GetUnicode(), 
-                        NS_ConvertASCIItoUCS2(aNewsgroup).GetUnicode(), 
+                        aNewsgroup, 
                         NS_ConvertASCIItoUCS2(aSubjectPart).GetUnicode(),
                         NS_ConvertASCIItoUCS2(aBodyPart).GetUnicode(), 
-                        NS_ConvertASCIItoUCS2(aAttachmentPart).GetUnicode(),
+                        aAttachmentPart,
                         nsnull);
     }
   }
@@ -221,16 +213,16 @@ NS_IMETHODIMP nsMsgComposeService::OpenComposeWindowWithURI(const PRUnichar * aM
   return rv;
 }
 
-nsresult nsMsgComposeService::OpenComposeWindowWithValues(const PRUnichar *msgComposeWindowURL,
+nsresult nsMsgComposeService::OpenComposeWindowWithValues(const char *msgComposeWindowURL,
 														  MSG_ComposeType type,
 														  MSG_ComposeFormat format,
 														  const PRUnichar *to,
 														  const PRUnichar *cc,
 														  const PRUnichar *bcc,
-														  const PRUnichar *newsgroups,
+														  const char *newsgroups,
 														  const PRUnichar *subject,
 														  const PRUnichar *body,
-														  const PRUnichar *attachment,
+														  const char *attachment,
 														  nsIMsgIdentity *identity)
 {
 	nsresult rv;
@@ -240,11 +232,9 @@ nsresult nsMsgComposeService::OpenComposeWindowWithValues(const PRUnichar *msgCo
 		if (to)			    {pCompFields->SetTo(to);}
 		if (cc)			    {pCompFields->SetCc(cc);}
 		if (bcc)		    {pCompFields->SetBcc(bcc);}
-		//Fix this, need to go from char* to char * directly
-		if (newsgroups)	{pCompFields->SetNewsgroups(nsAutoCString(nsAutoString(newsgroups)));}
+		if (newsgroups)	{pCompFields->SetNewsgroups(newsgroups);}
 		if (subject)	  {pCompFields->SetSubject(subject);}
-		//Fix this, need to go from char* to char * directly
-		if (attachment)	{pCompFields->SetAttachments(nsAutoCString(nsAutoString(attachment)));}
+		if (attachment)	{pCompFields->SetAttachments(attachment);}
 		if (body)		    {pCompFields->SetBody(body);}
 	
 		rv = OpenComposeWindowWithCompFields(msgComposeWindowURL, type, format, pCompFields, identity);
@@ -253,7 +243,7 @@ nsresult nsMsgComposeService::OpenComposeWindowWithValues(const PRUnichar *msgCo
   return rv;
 }
 
-nsresult nsMsgComposeService::OpenComposeWindowWithCompFields(const PRUnichar *msgComposeWindowURL,
+nsresult nsMsgComposeService::OpenComposeWindowWithCompFields(const char *msgComposeWindowURL,
 														  MSG_ComposeType type,
 														  MSG_ComposeFormat format,
 														  nsIMsgCompFields *compFields,
@@ -269,11 +259,7 @@ nsresult nsMsgComposeService::OpenComposeWindowWithCompFields(const PRUnichar *m
       pMsgComposeParams->SetIdentity(identity);
       pMsgComposeParams->SetComposeFields(compFields);    
 
-	    if (msgComposeWindowURL && *msgComposeWindowURL)
-        rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
-	    else
-        rv = openWindow(NS_ConvertASCIItoUCS2("chrome://messenger/content/messengercompose/messengercompose.xul").GetUnicode(),
-                        pMsgComposeParams);
+      rv = openWindow(msgComposeWindowURL, pMsgComposeParams);
   }
 
 	return rv;
@@ -304,5 +290,7 @@ nsresult nsMsgComposeService::DisposeCompose(nsIMsgCompose *compose)
 	return NS_OK;
 }
 
-CMDLINEHANDLER_IMPL(nsMsgComposeService,"-compose","general.startup.messengercompose","chrome://messenger/content/messengercompose/messengercompose.xul","Start with messenger compose.",NS_MSGCOMPOSESTARTUPHANDLER_CONTRACTID,"Messenger Compose Startup Handler", PR_TRUE, "about:blank", PR_TRUE)
+CMDLINEHANDLER_IMPL(nsMsgComposeService, "-compose", "general.startup.messengercompose", DEFAULT_CHROME,
+                    "Start with messenger compose.", NS_MSGCOMPOSESTARTUPHANDLER_CONTRACTID, "Messenger Compose Startup Handler",
+                    PR_TRUE, "about:blank", PR_TRUE)
 

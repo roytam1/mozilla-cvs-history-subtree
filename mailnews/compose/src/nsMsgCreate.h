@@ -39,7 +39,7 @@ public:
 
 	NS_DECL_NSIMSGDRAFT
 
-  nsresult    ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutputType aOutType,
+  nsresult    ProcessDraftOrTemplateOperation(const char *msgURI, nsMimeOutputType aOutType,
                                               nsIMsgIdentity * identity, nsIMessage **aMsgToReplace);
 
   // 
@@ -54,7 +54,7 @@ public:
 // Will be used by factory to generate a nsMsgQuote class...
 nsresult      NS_NewMsgDraft(const nsIID &aIID, void ** aInstancePtrResult);
 
-nsIMessage * GetIMessageFromURI(const PRUnichar *msgURI);
+nsIMessage * GetIMessageFromURI(const char *msgURI);
 
 
 #endif /* _nsMsgCreate_H_ */
