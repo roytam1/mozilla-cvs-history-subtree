@@ -4612,12 +4612,12 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 		NET_DisplayMemCacheInfoAsHTML(cur_entry);
 		return(-1);
 	  }
-	else if(!PL_strcasecmp(which, "image-cache"))
+	else if(!PL_strcasecmp(which, "logout"))
 	  {
 		NET_RemoveAllAuthorizations();
 		return(-1);
 	  }
-	else if(!strcasecomp(which, "image-cache"))
+	else if(!PL_strcasecmp(which, "image-cache"))
 	  {
 	IL_DisplayMemCacheInfoAsHTML(cur_entry->format_out, cur_entry->URL_s,
 				     cur_entry->window_id);
