@@ -74,9 +74,8 @@ public:
     };
     
 private:
-    union nsDiskCacheBucket {
+    struct nsDiskCacheBucket {
         nsDiskCacheRecord   mRecords[kRecordsPerBucket];
-        nsDiskCacheHeader   mHeader;
     };
     
     nsDiskCacheHeader mHeader;
