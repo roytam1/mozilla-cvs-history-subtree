@@ -21,7 +21,11 @@
 
 #include "nsplugin.h"
 #include "prlink.h"  // for PRLibrary
+#ifdef XP_MAC
+#include "npupp.h"
+#else
 #include "../src/npupp.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 
