@@ -64,10 +64,13 @@
 #define _PR_HAVE_LARGE_OFF_T
 #define _PR_HAVE_GETIPNODEBYNAME
 #define _PR_HAVE_GETIPNODEBYADDR
+#define _PR_HAVE_GETADDRINFO
 #define _PR_INET6_PROBE
 #ifdef _PR_INET6
 #define _PR_HAVE_INET_NTOP
 #else
+struct addrinfo
+#define AI_CANONNAME
 #define AF_INET6 26
 #define AI_V4MAPPED 0x00000010
 #define AI_ALL      0x00000008
