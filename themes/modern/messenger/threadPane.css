@@ -18,6 +18,31 @@
  * Rights Reserved.
  */
 
+
+/* temporary outliner styles */
+outlinerbody {
+  background-color: white;
+  color: black;
+}
+
+:-moz-outliner-row
+{
+  height: 19px;
+}
+
+:-moz-outliner-cell
+{
+  
+}
+
+:-moz-outliner-cell-text
+{
+  color: inherit;
+}
+
+/* end temporary outliner styles */
+
+
 .tree-thread-row.unread-true {
 	font-weight: bold;
 }
