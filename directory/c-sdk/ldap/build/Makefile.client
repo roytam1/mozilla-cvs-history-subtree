@@ -1,8 +1,10 @@
 DEPTH	= ../../../..
+MOD_DEPTH	= ../../../../nsprpub
+NSPR_TREE = ../../../../nsprpub
 
 CSRCS	= dirver.c
 
-include $(DEPTH)/config/rules.mk
+include $(NSPR_TREE)/config/rules.mk
 
 TARGETS	= $(OBJDIR)/dirver$(BIN_SUFFIX)
 
@@ -20,4 +22,7 @@ export:: $(TARGETS)
 	$(INSTALL) -m 555 $(TARGETS) $(DIST)/bin
 
 install:: export
+
+clean::
+	rm -rf $(OBJDIR_NAME)
 

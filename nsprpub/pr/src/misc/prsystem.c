@@ -1,65 +1,24 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
 #include "prsystem.h"
 #include "prprf.h"
-
-#if defined(BEOS)
-#include <kernel/OS.h>
-#endif
-
-#if defined(OS2)
-#define INCL_DOS
-#include <os2.h>
-/* define the required constant if it is not already defined in the headers */
-#ifndef QSV_NUMPROCESSORS
-#define QSV_NUMPROCESSORS 26
-#endif
-#endif
-
-/* BSD-derived systems use sysctl() to get the number of processors */
-#if defined(BSDI) || defined(FREEBSD) || defined(NETBSD) \
-    || defined(OPENBSD) || defined(RHAPSODY)
-#define _PR_HAVE_SYSCTL
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#endif
-
-#if defined(HPUX)
-#include <sys/mp.h>
-#endif
 
 #if defined(XP_UNIX)
 #include <unistd.h>
@@ -154,66 +113,3 @@ PR_IMPLEMENT(PRStatus) PR_GetSystemInfo(PRSysInfo cmd, char *buf, PRUint32 bufle
     }
     return PR_SUCCESS;
 }
-
-/*
-** PR_GetNumberOfProcessors()
-** 
-** Implementation notes:
-**   Every platform does it a bit different.
-**     numCpus is the returned value.
-**   for each platform's "if defined" section
-**     declare your local variable
-**     do your thing, assign to numCpus
-**   order of the if defined()s may be important,
-**     especially for unix variants. Do platform
-**     specific implementations before XP_UNIX.
-** 
-*/
-PR_IMPLEMENT(PRInt32) PR_GetNumberOfProcessors( void )
-{
-    PRInt32     numCpus;
-#if defined(WIN32)
-    SYSTEM_INFO     info;
-
-    GetSystemInfo( &info );
-    numCpus = info.dwNumberOfProcessors;
-#elif defined(XP_MAC)
-/* Hard-code the number of processors to 1 on the Mac
-** MacOS/9 will always be 1. The MPProcessors() call is for
-** MacOS/X, when issued. Leave it commented out for now. */
-/*  numCpus = MPProcessors(); */
-    numCpus = 1;
-#elif defined(BEOS)
-    system_info sysInfo;
-
-    get_system_info(&sysInfo);
-    numCpus = sysInfo.cpu_count;
-#elif defined(OS2)
-    DosQuerySysInfo( QSV_NUMPROCESSORS, QSV_NUMPROCESSORS, &numCpus, sizeof(numCpus));
-#elif defined(_PR_HAVE_SYSCTL)
-    int mib[2];
-    int rc;
-    size_t len = sizeof(numCpus);
-
-    mib[0] = CTL_HW;
-    mib[1] = HW_NCPU;
-    rc = sysctl( mib, 2, &numCpus, &len, NULL, 0 );
-    if ( -1 == rc )  {
-        numCpus = -1; /* set to -1 for return value on error */
-        _PR_MD_MAP_DEFAULT_ERROR( _MD_ERRNO() );
-    }
-#elif defined(HPUX)
-    numCpus = mpctl( MPC_GETNUMSPUS, 0, 0 );
-    if ( numCpus < 1 )  {
-        numCpus = -1; /* set to -1 for return value on error */
-        _PR_MD_MAP_DEFAULT_ERROR( _MD_ERRNO() );
-    }
-#elif defined(IRIX)
-    numCpus = sysconf( _SC_NPROC_ONLN );
-#elif defined(XP_UNIX)
-    numCpus = sysconf( _SC_NPROCESSORS_ONLN );
-#else
-#error "An implementation is required"
-#endif
-    return(numCpus);
-} /* end PR_GetNumberOfProcessors() */
