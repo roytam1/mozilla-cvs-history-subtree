@@ -1984,15 +1984,11 @@ nsRenderingContextGTK::my_gdk_draw_text (GdkDrawable *drawable,
 
 
 
-#include "nsSize2.h"
-#include "nsRect2.h"
-#include "nsPoint2.h"
-#include "nsUnitConverters.h"
 #include "nsIImageContainer.h"
 #include "nsIImageFrame.h"
 
-/* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsPoint2 aDestPoint); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint)
+/* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
 
   // XXX there are some rounding problems in this code (or in the image frame)
@@ -2007,12 +2003,12 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
 
 #if 1
   // XXX this is ugly.
-  nsPoint2 pt;
-  nsRect2 sr;
+  nsPoint pt;
+  nsRect sr;
 
-	pt = *aDestPoint;
+  pt = *aDestPoint;
   //printf("{\n %f, %f, %f, %f\n", pt.x, pt.y, aSrcRect->x, aSrcRect->y);
-  mTranMatrix->Transform(&pt.x, &pt.y);
+  mTranMatrix->TransformCoord(&pt.x, &pt.y);
 
   sr = *aSrcRect;
 //	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
@@ -2030,19 +2026,14 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
   gfx_dimension frHeight;
   img->GetHeight(&frHeight);
 
-  PRInt32 height;
-  if (GFXCoordToIntCeil(sr.height) + GFXCoordToIntFloor(sr.y) > GFXCoordToIntFloor(frHeight)) {
-    height = GFXCoordToIntFloor(sr.height);
-  } else {
-    height = GFXCoordToIntCeil(sr.height);
-  }
+  PRInt32 height = sr.height;
 
   gfx_dimension frWidth;
   img->GetWidth(&frWidth);
   PRInt32 width = frWidth; // XXX round up, down, ???
 
-  PRInt32 x = GFXCoordToIntFloor(sr.x);
-  PRInt32 y = GFXCoordToIntFloor(sr.y);
+  PRInt32 x = sr.x;
+  PRInt32 y = sr.y;
 #if 0
   GdkPixmap *image = gdk_pixmap_new(mSurface->GetDrawable(), width, height, gdk_rgb_get_visual()->depth);
 #endif
@@ -2065,20 +2056,20 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
   return NS_OK;
 }
 
-/* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect2 aSrcRect, [const] in nsRect2 aDestRect); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect)
+/* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect2 aTargetRect); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect)
+/* [noscript] void drawTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect2 aTargetRect); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect)
+/* [noscript] void drawScaledTile (in nsIImageContainer aImage, in gfx_coord aXOffset, in gfx_coord aYOffset, in gfx_dimension aTileWidth, in gfx_dimension aTileHeight, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
