@@ -45,6 +45,7 @@ public:
   nsHashtable(PRUint32 aSize = 256);
   ~nsHashtable();
 
+  PRInt32 Count(void) { return hashtable->nentries; }
   void *Put(nsHashKey *aKey, void *aData);
   void *Get(nsHashKey *aKey);
   void *Remove(nsHashKey *aKey);
