@@ -1,3 +1,18 @@
+1999-08-26  Leif Hedstrom  <leif@netscape.com>
+
+	* Conn.pm (nextEntry): Cleaned up return codes when no entries found.
+
+1999-08-25  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (setValues): Removed separate function, this is now
+	handled entirely by the values() method.
+	(getValues): Ditto.
+	(values): This is the new, combined method for all xxxValues()
+	handling.
+	(move): Changed to use values().
+	(copy): Ditto.
+	Updated documentation for values(), setValues() and getValues().
+
 1999-08-24  Leif Hedstrom  <leif@netscape.com>
 
 	* Merged v1.3.x into trunk, tagged it as v1.4, and released it!

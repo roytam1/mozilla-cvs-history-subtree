@@ -247,7 +247,7 @@ require AutoLoader;
 # Add Everything in %EXPORT_TAGS to @EXPORT_OK
 Exporter::export_ok_tags(keys %EXPORT_TAGS);
 
-$VERSION = '1.4';
+$VERSION = '2.0';
 
 # The XS 'constant' routine returns an integer.  There are all constants
 # we want to return something else.

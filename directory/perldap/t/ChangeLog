@@ -1,3 +1,7 @@
+1999-08-26  Leif Hedstrom  <leif@netscape.com>
+
+	* conn.pl: Cleaned up $entry tests (if defined($entry)).
+
 1999-08-06  Leif Hedstrom  <leif@netscape.com>
 
 	* conn.pl: Added support for browse() and compare().
