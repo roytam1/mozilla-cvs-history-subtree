@@ -126,6 +126,7 @@ nsHttpTransaction::nsHttpTransaction()
     , mReceivedData(PR_FALSE)
     , mStatusEventPending(PR_FALSE)
     , mHasRequestBody(PR_FALSE)
+    , mSSLConnectFailed(PR_FALSE)
 {
     LOG(("Creating nsHttpTransaction @%x\n", this));
 }

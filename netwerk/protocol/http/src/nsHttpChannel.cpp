@@ -1945,8 +1945,26 @@ nsHttpChannel::ProcessAuthentication(PRUint32 httpStatus)
     const char *challenges;
     PRBool proxyAuth = (httpStatus == 407);
 
-    if (proxyAuth)
+    if (proxyAuth) {
+        // only allow a proxy challenge if we have a proxy server configured.
+        // otherwise, we could inadvertantly expose the user's proxy
+        // credentials to an origin server.  We could attempt to proceed as
+        // if we had received a 401 from the server, but why risk flirting
+        // with trouble?  IE similarly rejects 407s when a proxy server is
+        // not configured, so there's no reason not to do the same.
+        if (!mConnectionInfo->UsingHttpProxy()) {
+            LOG(("rejecting 407 when proxy server not configured!\n"));
+            return NS_ERROR_UNEXPECTED;
+        }
+        if (mConnectionInfo->UsingSSL() && !mTransaction->SSLConnectFailed()) {
+            // we need to verify that this challenge came from the proxy
+            // server itself, and not some server on the other side of the
+            // SSL tunnel.
+            LOG(("rejecting 407 from origin server!\n"));
+            return NS_ERROR_UNEXPECTED;
+        }
         challenges = mResponseHead->PeekHeader(nsHttp::Proxy_Authenticate);
+    }
     else
         challenges = mResponseHead->PeekHeader(nsHttp::WWW_Authenticate);
     NS_ENSURE_TRUE(challenges, NS_ERROR_UNEXPECTED);
@@ -2057,12 +2075,8 @@ nsHttpChannel::GetCredentialsForChallenge(const char *challenge,
     nsHttpAuthIdentity *ident;
     nsCAutoString path, scheme;
 
-    // it is possible for the origin server to fake a proxy challenge.  if
-    // that happens we need to be sure to use the origin server as the auth
-    // domain.  otherwise, we could inadvertantly expose the user's proxy
-    // credentials to an origin server.
-
-    if (proxyAuth && mConnectionInfo->UsingHttpProxy()) {
+    if (proxyAuth) {
+        NS_ASSERTION (mConnectionInfo->UsingHttpProxy(), "proxyAuth is true, but no HTTP proxy is configured!");
         host = mConnectionInfo->ProxyHost();
         port = mConnectionInfo->ProxyPort();
         ident = &mProxyIdent;
