@@ -52,6 +52,8 @@
 #include "nsIHttpEventSink.h"
 #include "nsIUploadChannel.h"
 #include "nsISecurityEventSink.h"
+#include "nsIJSContextStack.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsScriptSecurityManager.h"
 #include "nsDocumentCharsetInfoCID.h"
 #include "nsICanvasFrame.h"
@@ -239,6 +241,7 @@ nsDocShell::nsDocShell():
     mURIResultedInDocument(PR_FALSE),
     mUseExternalProtocolHandler(PR_FALSE),
     mDisallowPopupWindows(PR_FALSE),
+    mValidateOrigin(PR_TRUE), // validate frame origins by default
     mIsBeingDestroyed(PR_FALSE),
     mIsExecutingOnLoadHandler(PR_FALSE),
     mEditorData(nsnull),
@@ -934,7 +937,8 @@ PRBool SameOrSubdomainOfTarget(nsIURI* aOriginURI, nsIURI* aTargetURI, PRBool aD
 // of loading in the hands of the target, which is more secure. (per Nav 4.x)
 //
 static
-PRBool ValidateOrigin(nsIDocShellTreeItem* aOriginTreeItem, nsIDocShellTreeItem* aTargetTreeItem)
+PRBool ValidateOrigin(nsIDocShellTreeItem* aOriginTreeItem,
+                      nsIDocShellTreeItem* aTargetTreeItem)
 {
   // Get origin document uri (ignoring document.domain)
   nsCOMPtr<nsIWebNavigation> originWebNav(do_QueryInterface(aOriginTreeItem));
@@ -946,14 +950,12 @@ PRBool ValidateOrigin(nsIDocShellTreeItem* aOriginTreeItem, nsIDocShellTreeItem*
 
   // Get target principal uri (including document.domain)
   nsCOMPtr<nsIDOMDocument> targetDOMDocument(do_GetInterface(aTargetTreeItem));
-  NS_ENSURE_TRUE(targetDOMDocument, NS_ERROR_FAILURE);
-
   nsCOMPtr<nsIDocument> targetDocument(do_QueryInterface(targetDOMDocument));
   NS_ENSURE_TRUE(targetDocument, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIPrincipal> targetPrincipal;
   rv = targetDocument->GetPrincipal(getter_AddRefs(targetPrincipal));
-  NS_ENSURE_TRUE(NS_SUCCEEDED(rv) && targetPrincipal, rv);
+  NS_ENSURE_TRUE(targetPrincipal, PR_TRUE);
 
   nsCOMPtr<nsICodebasePrincipal> targetCodebasePrincipal(do_QueryInterface(targetPrincipal));
   NS_ENSURE_TRUE(targetCodebasePrincipal, PR_TRUE);
@@ -973,7 +975,8 @@ PRBool ValidateOrigin(nsIDocShellTreeItem* aOriginTreeItem, nsIDocShellTreeItem*
 
   // Is origin same principal or a subdomain of target's document.domain
   // Compare actual URI of origin document, not origin principal's URI. (Per Nav 4.x)
-  return SameOrSubdomainOfTarget(originDocumentURI, targetPrincipalURI, documentDomainSet);
+  return SameOrSubdomainOfTarget(originDocumentURI, targetPrincipalURI,
+                                 documentDomainSet);
 }
 
 nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
@@ -1050,27 +1053,43 @@ nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
         // Check to see if pref is true
         if (mValidateOrigin && treeItem)
         {
+            nsCOMPtr<nsIDocShellTreeItem> tmp;
+            treeItem->GetSameTypeRootTreeItem(getter_AddRefs(tmp));
 
-            // Is origin frame from the same domain as target frame?
-            if (! ValidateOrigin(this, treeItem))
-            {
+            nsCOMPtr<nsIDocShellTreeItem> sameTypeRoot;
+            GetSameTypeRootTreeItem(getter_AddRefs(sameTypeRoot));
 
-                // No.  Is origin frame from the same domain as target's parent?
-                nsCOMPtr<nsIDocShellTreeItem> targetParentTreeItem;
-                
-                rv = treeItem->GetSameTypeParent(getter_AddRefs(targetParentTreeItem));
-                if (NS_SUCCEEDED(rv) && targetParentTreeItem) 
-                {
-                    if (! ValidateOrigin(this, targetParentTreeItem)) 
-                    {
+            if (sameTypeRoot != tmp && treeItem != tmp) {
+                // The load was targeted at a frame and initiated in
+                // another toplevel window. Assume we'll need to make
+                // a new window until we find that the target, or one
+                // of its ancestors, are from the same origin as the
+                // loading docshell.
+                mustMakeNewWindow = PR_TRUE;
 
-                        // Neither is from the origin domain, send load to a new window (_blank)
-                        mustMakeNewWindow = PR_TRUE;
-                        name.Assign(NS_LITERAL_STRING(""));
-                    } // else (target's parent from origin domain) allow this load
-                } // else (no parent) allow this load since shell is a toplevel window
-            } // else (target from origin domain) allow this load
-        } // else (pref is false) allow this load
+                tmp = treeItem;
+
+                do {
+                    // Is origin frame from the same domain as target frame?
+                    if (ValidateOrigin(this, tmp)) {
+                        mustMakeNewWindow = PR_FALSE;
+
+                        break;
+                    }
+
+                    nsCOMPtr<nsIDocShellTreeItem> t;
+                    tmp->GetSameTypeParent(getter_AddRefs(t));
+                    tmp.swap(t);
+                } while (tmp);
+
+                if (mustMakeNewWindow) {
+                    // Origin mismatch, open the URL in a new blank
+                    // window.
+                    treeItem = nsnull;
+                    name.Truncate();
+                }
+            }
+        }
     }
 
     if (mustMakeNewWindow)
@@ -4892,6 +4911,125 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
     return NS_OK;
 }
 
+nsresult
+nsDocShell::CheckLoadingPermissions()
+{
+    nsresult rv = NS_OK, sameOrigin = NS_OK;
+
+    if (!mValidateOrigin || !IsFrame()) {
+        // Origin validation was turned off, or we're not a frame.
+        // Permit all loads.
+
+        return rv;
+    }
+
+    // We're a frame. Check that the caller has write permission to
+    // the parent before allowing it to load anything into this
+    // docshell.
+
+    nsCOMPtr<nsIScriptSecurityManager> securityManager =
+        do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    PRBool ubwEnabled = PR_FALSE;
+    rv = securityManager->IsCapabilityEnabled("UniversalBrowserWrite",
+                                              &ubwEnabled);
+    if (NS_FAILED(rv) || ubwEnabled) {
+        return rv;
+    }
+
+    nsCOMPtr<nsIPrincipal> subjPrincipal;
+    rv = securityManager->GetSubjectPrincipal(getter_AddRefs(subjPrincipal));
+    NS_ENSURE_TRUE(NS_SUCCEEDED(rv) && subjPrincipal, rv);
+
+    // Check if the caller is from the same origin as this docshell,
+    // or any of it's ancestors.
+    nsCOMPtr<nsIDocShellTreeItem> item(this);
+    do {
+        nsCOMPtr<nsIScriptGlobalObject> sgo(do_GetInterface(item));
+        nsCOMPtr<nsIScriptObjectPrincipal> sop(do_QueryInterface(sgo));
+
+        nsCOMPtr<nsIPrincipal> p;
+        if (!sop || NS_FAILED(sop->GetPrincipal(getter_AddRefs(p))) || !p) {
+            return NS_ERROR_UNEXPECTED;
+        }
+
+        // Compare origins
+        sameOrigin =
+            securityManager->CheckSameOriginPrincipal(subjPrincipal, p);
+        if (NS_SUCCEEDED(sameOrigin)) {
+            // Same origin, permit load
+
+            return sameOrigin;
+        }
+
+        nsCOMPtr<nsIDocShellTreeItem> tmp;
+        item->GetSameTypeParent(getter_AddRefs(tmp));
+        item.swap(tmp);
+    } while (item);
+
+    // The caller is not from the same origin as this item, or any if
+    // this items ancestors. Only permit loading content if both are
+    // part of the same window, assuming we can find the window of the
+    // caller.
+
+    nsCOMPtr<nsIJSContextStack> stack =
+        do_GetService("@mozilla.org/js/xpc/ContextStack;1");
+    if (!stack) {
+        // No context stack available. Should never happen, but in
+        // case it does, return the sameOrigin error from the security
+        // check above.
+
+        return sameOrigin;
+    }
+
+    JSContext *cx = nsnull;
+    stack->Peek(&cx);
+
+    if (!cx) {
+        // No caller docshell reachable, return the sameOrigin error
+        // from the security check above.
+
+        return sameOrigin;
+    }
+
+    nsCOMPtr<nsIScriptContext> currentCX;
+
+    // Replaced with GetScriptContextFromJSContext() in later versions.
+    if (::JS_GetOptions(cx) & JSOPTION_PRIVATE_IS_NSISUPPORTS) {
+      currentCX = do_QueryInterface(NS_STATIC_CAST(nsISupports *,
+                                                   ::JS_GetContextPrivate(cx)));
+    }
+
+    if (currentCX) {
+        nsCOMPtr<nsIScriptGlobalObject> sgo;
+        currentCX->GetGlobalObject(getter_AddRefs(sgo));
+        if (sgo) {
+            nsCOMPtr<nsIDocShell> sgoDocShell;
+            sgo->GetDocShell(getter_AddRefs(sgoDocShell));
+
+            nsCOMPtr<nsIDocShellTreeItem> callerTreeItem =
+                do_QueryInterface(sgoDocShell);
+
+            if (callerTreeItem) {
+                nsCOMPtr<nsIDocShellTreeItem> callerRoot;
+                callerTreeItem->GetSameTypeRootTreeItem(getter_AddRefs(callerRoot));
+
+                nsCOMPtr<nsIDocShellTreeItem> ourRoot;
+                GetSameTypeRootTreeItem(getter_AddRefs(ourRoot));
+
+                if (ourRoot == callerRoot) {
+                    // The running JS is in the same window as the target
+                    // frame, permit load.
+                    sameOrigin = NS_OK;
+                }
+            }
+        }
+    }
+
+    return sameOrigin;
+}
+
 
 //*****************************************************************************
 // nsDocShell: Site Loading
@@ -5114,6 +5252,11 @@ nsDocShell::InternalLoad(nsIURI * aURI,
     if (mIsBeingDestroyed) {
         return NS_ERROR_FAILURE;
     }
+
+    rv = CheckLoadingPermissions();
+    if (NS_FAILED(rv)) {
+        return rv;
+    }
     
     mURIResultedInDocument = PR_FALSE;  // reset the clock...
    
@@ -5245,10 +5388,9 @@ nsDocShell::InternalLoad(nsIURI * aURI,
     return rv;
 }
 
-NS_IMETHODIMP
+void
 nsDocShell::GetCurrentDocumentOwner(nsISupports ** aOwner)
 {
-    nsresult rv;
     *aOwner = nsnull;
     nsCOMPtr<nsIDocument> document;
     //-- Get the current document
@@ -5256,33 +5398,32 @@ nsDocShell::GetCurrentDocumentOwner(nsISupports ** aOwner)
         nsCOMPtr<nsIDocumentViewer>
             docViewer(do_QueryInterface(mContentViewer));
         if (!docViewer)
-            return NS_ERROR_FAILURE;
-        rv = docViewer->GetDocument(*getter_AddRefs(document));
+            return;
+        docViewer->GetDocument(*getter_AddRefs(document));
     }
     else //-- If there's no document loaded yet, look at the parent (frameset)
     {
         nsCOMPtr<nsIDocShellTreeItem> parentItem;
-        rv = GetSameTypeParent(getter_AddRefs(parentItem));
-        if (NS_FAILED(rv) || !parentItem)
-            return rv;
+        GetSameTypeParent(getter_AddRefs(parentItem));
+        if (!parentItem)
+            return;
         nsCOMPtr<nsIDOMWindowInternal>
             parentWindow(do_GetInterface(parentItem));
         if (!parentWindow)
-            return NS_OK;
+            return;
         nsCOMPtr<nsIDOMDocument> parentDomDoc;
-        rv = parentWindow->GetDocument(getter_AddRefs(parentDomDoc));
+        parentWindow->GetDocument(getter_AddRefs(parentDomDoc));
         if (!parentDomDoc)
-            return NS_OK;
+            return;
         document = do_QueryInterface(parentDomDoc);
     }
 
     //-- Get the document's principal
-    nsCOMPtr<nsIPrincipal> principal;
-    rv = document->GetPrincipal(getter_AddRefs(principal));
-    if (NS_FAILED(rv) || !principal)
-        return NS_ERROR_FAILURE;
-    rv = principal->QueryInterface(NS_GET_IID(nsISupports), (void **) aOwner);
-    return rv;
+    if (document) {
+        nsIPrincipal *principal;
+        document->GetPrincipal(&principal);  // AddRefs for us.
+        *aOwner = NS_STATIC_CAST(nsISupports*, principal);
+    }
 }
 
 nsresult
