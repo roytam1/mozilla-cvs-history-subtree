@@ -1790,7 +1790,7 @@ mips-sony-newsos*)
         MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
         DSO_CFLAGS=
         DSO_LDOPTS='-Zomf -Zdll -Zmtd'
-        _OPTIMIZE_FLAGS=-O3
+        _OPTIMIZE_FLAGS="-O2 -s"
         _DEBUG_FLAGS="-g -fno-inline"
         if test -n "$MOZ_OPTIMIZE"; then
           DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
