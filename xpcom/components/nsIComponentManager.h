@@ -118,10 +118,6 @@ public:
   NS_IMETHOD UnregisterFactory(const nsCID &aClass,
                                nsIFactory *aFactory) = 0;
 
-  // Manually unregister a dynamically loaded factory for a class
-  NS_IMETHOD UnregisterFactory(const nsCID &aClass,
-                               const char *aLibrary) = 0;
-
   // Manually unregister a dynamically loaded component
   NS_IMETHOD UnregisterComponent(const nsCID &aClass,
                                  const char *aLibrary) = 0;
@@ -212,10 +208,6 @@ public:
   // Manually unregister a factory for a class
   static nsresult UnregisterFactory(const nsCID &aClass,
                                     nsIFactory *aFactory);
-
-  // Manually unregister a dynamically loaded factory for a class
-  static nsresult UnregisterFactory(const nsCID &aClass,
-                                    const char *aLibrary);
 
   // Manually unregister a dynamically loaded component
   static nsresult UnregisterComponent(const nsCID &aClass,

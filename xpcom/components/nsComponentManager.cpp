@@ -1476,62 +1476,6 @@ nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
     return res;
 }
 
-nsresult
-nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
-                                          const char *aLibrary)
-{
-#ifdef NS_DEBUG
-    if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
-    {
-        char *buf = aClass.ToString();
-        PR_LogPrint("nsComponentManager: Unregistering Factory.");
-        PR_LogPrint("nsComponentManager: + %s in \"%s\".", buf, aLibrary);
-        delete [] buf;
-    }
-#endif
-    	
-    nsIDKey key(aClass);
-    nsFactoryEntry *old = (nsFactoryEntry *) mFactories->Get(&key);
-    	
-    nsresult res = NS_ERROR_FACTORY_NOT_REGISTERED;
-    	
-    PR_EnterMonitor(mMon);
-    	
-    if (old != NULL && old->dll != NULL)
-    {
-        if (old->dll->GetFullPath() != NULL &&
-#ifdef XP_UNIX
-            PL_strcasecmp(old->dll->GetFullPath(), aLibrary)
-#else
-            PL_strcmp(old->dll->GetFullPath(), aLibrary)
-#endif
-            )
-        {
-            nsFactoryEntry *entry = (nsFactoryEntry *) mFactories->Remove(&key);
-            delete entry;
-            res = NS_OK;
-        }
-#ifdef USE_REGISTRY
-        // XXX temp hack until we get the dll to give us the entire
-        // XXX NSQuickRegisterClassData
-        QuickRegisterData cregd = {0};
-        cregd.CIDString = aClass.ToString();
-        res = PlatformUnregister(&cregd, aLibrary);
-        delete [] (char *)cregd.CIDString;
-#endif
-    }
-    	
-    PR_ExitMonitor(mMon);
-    	
-#ifdef NS_DEBUG
-    PR_LOG(nsComponentManagerLog, PR_LOG_WARNING,
-           ("nsComponentManager: ! Factory unregister %s.", 
-            NS_SUCCEEDED(res) ? "succeeded" : "failed"));
-#endif /* NS_DEBUG */
-    	
-    return res;
-}
-
 static PRBool
 nsFreeLibraryEnum(nsHashKey *aKey, void *aData, void* closure) 
 {

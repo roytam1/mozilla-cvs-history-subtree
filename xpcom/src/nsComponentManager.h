@@ -100,10 +100,6 @@ public:
     NS_IMETHOD UnregisterFactory(const nsCID &aClass,
                                  nsIFactory *aFactory);
 
-    // Manually unregister a dynamically loaded factory for a class
-    NS_IMETHOD UnregisterFactory(const nsCID &aClass,
-                                      const char *aLibrary);
-
     // Manually unregister a dynamically loaded component
     NS_IMETHOD UnregisterComponent(const nsCID &aClass,
                                    const char *aLibrary);
@@ -166,8 +162,8 @@ protected:
     PRMonitor*       mMon;
     nsHashtable*     mDllStore;
     nsIRegistry*     mRegistry;
-	nsIRegistry::Key mXPCOMKey;
-	nsIRegistry::Key mClassesKey;
+    nsIRegistry::Key mXPCOMKey;
+    nsIRegistry::Key mClassesKey;
 };
 
 #define NS_MAX_FILENAME_LEN	1024
