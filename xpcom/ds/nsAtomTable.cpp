@@ -58,7 +58,7 @@ NS_COM void NS_PurgeAtomTable(void)
   if (gAtomHashTable) {
 #if defined(DEBUG) && (defined(XP_UNIX) || defined(XP_PC))
     if (gAtoms) {
-      if (getenv("MOZ_DUMP_ATOM_LEAKS")) {
+      if (NS_LOG_ENABLED(nsAtomTableLog)) {
         PRINTF("*** leaking %d atoms\n", gAtoms);
         PL_HashTableEnumerateEntries(gAtomHashTable, DumpAtomLeaks, 0);
       }

@@ -396,12 +396,6 @@ nsLog::Init(const char* name, PRUint32 controlFlags, nsILogEventSink* sink)
     if (level != 0) {
         mControlFlags |= nsILog::DEFAULT_ENABLED;
     }
-#if 0
-    PRStatus status = PR_NewThreadPrivateIndex(&mThreadTimingDataIndex,
-                                               DeleteTimingData);
-    if (status != PR_SUCCESS)
-        return NS_ERROR_FAILURE;
-#endif
     return NS_OK;
 }
 
