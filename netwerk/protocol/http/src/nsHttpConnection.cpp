@@ -339,6 +339,10 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
 
         NS_RELEASE(mTransaction);
         mTransaction = 0;
+
+        // don't need these anymore
+        mCallbacks = 0;
+        mProgressSink = 0;
     }
     return NS_OK;
 }
@@ -397,7 +401,10 @@ nsHttpConnection::GetInterface(const nsIID &iid, void **result)
     if (iid.Equals(NS_GET_IID(nsIProgressEventSink)))
         return QueryInterface(iid, result);
 
-    return mCallbacks->GetInterface(iid, result);
+    if (mCallbacks)
+        return mCallbacks->GetInterface(iid, result);
+
+    return NS_ERROR_NO_INTERFACE;
 }
 
 //-----------------------------------------------------------------------------

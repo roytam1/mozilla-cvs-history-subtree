@@ -167,7 +167,12 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
         mListener->OnStartRequest(this, nsnull); 
     }
 
-    return mListener->OnStopRequest(this, nsnull, status);
+    mListener->OnStopRequest(this, nsnull, status);
+
+    mListener = 0;
+    mCallbacks = 0;
+
+    return NS_OK;
 }
 
 nsresult
@@ -268,21 +273,12 @@ nsHttpTransaction::HandleContent(char *buf,
     NS_PRECONDITION(mConnection, "no connection");
 
     if (!mFiredOnStart) {
-        // notify the transaction sink first
-        if (mConnection)
-            mConnection->OnHeadersAvailable(this);
-
-        LOG(("nsHttpTransaction [this=%x] sending OnStartRequest\n", this));
-
-        mFiredOnStart = PR_TRUE;
-
-        rv = mListener->OnStartRequest(this, nsnull);
-        if (NS_FAILED(rv)) {
-            LOG(("OnStartRequest failed with [rv=%x]\n", rv));
-            return rv;
-        }
 
         if (mResponseHead) {
+            // notify the connection first
+            if (mConnection)
+                mConnection->OnHeadersAvailable(this);
+
             // grab the content-length from the response headers
             mContentLength = mResponseHead->ContentLength();
 
@@ -299,6 +295,15 @@ nsHttpTransaction::HandleContent(char *buf,
                     return NS_ERROR_OUT_OF_MEMORY;
                 LOG(("chunked decoder created\n"));
             }
+        }
+
+        LOG(("nsHttpTransaction [this=%x] sending OnStartRequest\n", this));
+        mFiredOnStart = PR_TRUE;
+
+        rv = mListener->OnStartRequest(this, nsnull);
+        if (NS_FAILED(rv)) {
+            LOG(("OnStartRequest failed with [rv=%x]\n", rv));
+            return rv;
         }
     }
 

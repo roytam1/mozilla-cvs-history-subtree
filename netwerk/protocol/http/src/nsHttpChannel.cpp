@@ -47,13 +47,19 @@ nsHttpChannel::nsHttpChannel()
     , mIsPending(PR_FALSE)
     , mApplyConversion(PR_TRUE)
 {
+    LOG(("Creating nsHttpChannel @%x\n", this));
+
     NS_INIT_ISUPPORTS();
 }
 
 nsHttpChannel::~nsHttpChannel()
 {
+    LOG(("Destroying nsHttpChannel @%x\n", this));
+
+    /*
     if (mResponseHead)
         delete mResponseHead;
+    */
 }
 
 nsresult

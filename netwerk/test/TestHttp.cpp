@@ -152,14 +152,18 @@ int main(int argc, char **argv)
     RETURN_IF_FAILED(rv, "GetThreadEventQueue");
 
     nsCOMPtr<nsIURI> uri;
+    nsCOMPtr<nsIChannel> chan;
     MyListener *listener = new MyListener();
     MyNotifications *callbacks = new MyNotifications();
 
     rv = NS_NewURI(getter_AddRefs(uri), argv[1]);
     RETURN_IF_FAILED(rv, "NS_NewURI");
 
-    rv = NS_OpenURI(listener, nsnull, uri, nsnull, nsnull, callbacks);
+    rv = NS_OpenURI(getter_AddRefs(chan), uri, nsnull, nsnull, callbacks);
     RETURN_IF_FAILED(rv, "NS_OpenURI");
+
+    rv = chan->AsyncOpen(listener, nsnull);
+    RETURN_IF_FAILED(rv, "AsyncOpen");
 
     while (gKeepRunning)
         gEventQ->ProcessPendingEvents();

@@ -287,6 +287,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
 
     nsHttpConnection *conn = nsnull;
 
+#if 0
     // search the idle connection list
     PRCList *node = PR_LIST_HEAD(&mIdleConnections);
     while (node != &mIdleConnections) {
@@ -310,11 +311,14 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
             }
         }
     }
+#endif
 
     if (!conn) {
+#if 0
         PRUint32 connectionsPerHost = CountActiveConnections(connectionInfo);
         if (connectionsPerHost == PRUint32(mMaxConnectionsPerServer))
             return EnqueueTransaction(transaction, connectionInfo);
+#endif
 
         LOG(("creating new connection...\n"));
         NS_NEWXPCOM(conn, nsHttpConnection);
@@ -329,7 +333,7 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
     rv = conn->SetTransaction(transaction);
     if (NS_FAILED(rv)) goto failed;
 
-    PR_APPEND_LINK(conn, &mActiveConnections);
+//    PR_APPEND_LINK(conn, &mActiveConnections);
     mNumActiveConnections++;
     return NS_OK;
 
@@ -346,6 +350,7 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
     LOG(("nsHttpHandler::ReclaimConnection [conn=%x keep-alive=%d]\n",
         conn, conn->CanReuse()));
 
+#if 0
     // remove connection from the active connection list
     PR_REMOVE_AND_INIT_LINK(conn);
 
@@ -368,9 +373,12 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
         }
     }
     else {
+#endif
         LOG(("closing connection: connection can't be reused\n"));
         NS_RELEASE(conn);
+#if 0
     }
+#endif
 
     // process the pending transaction queue...
     mNumActiveConnections--;
@@ -1343,7 +1351,6 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
     NS_ADDREF(httpChannel);
 
     rv = httpChannel->Init(aURI, mCapabilities);
-    if (NS_FAILED(rv)) goto failed;
 
     /* XXX implement NewProxyChannel
     if (mProxySvc) {
@@ -1356,9 +1363,11 @@ nsHttpHandler::NewChannel(nsIURI *aURI, nsIChannel **aChannel)
         }
     }
     */
-    rv = httpChannel->QueryInterface(NS_GET_IID(nsIChannel), (void **) aChannel);
 
-failed:
+    if (NS_SUCCEEDED(rv))
+        rv = httpChannel->QueryInterface(NS_GET_IID(nsIChannel),
+                                         (void **) aChannel);
+
     NS_RELEASE(httpChannel);
     return rv;
 }
