@@ -62,6 +62,7 @@
 #include "nsIBinaryInputStream.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIByteArrayInputStream.h"
+#include "nsReadableUtils.h"
 #ifdef DEBUG
 #include "pure.h"
 #endif
@@ -141,4 +142,10 @@ void XXXNeverCalled()
     nsLinebreakConverter::eLinebreakAny, nsLinebreakConverter::eLinebreakContent);
     NS_NewLocalFile(NULL, PR_FALSE, NULL);
     NS_NewByteArrayInputStream (NULL, NULL, 0);
+    nsAutoString str1;
+    nsCAutoString str2;
+    ToNewUnicode(str1);
+    ToNewUnicode(str2);
+    ToNewCString(str1);
+    ToNewCString(str2);
 }
