@@ -22,7 +22,22 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= \
+	@srcdir@ \
+	@srcdir@/../base/public \
+	@srcdir@/../dns/public \
+	@srcdir@/../cookie/public \
+	@srcdir@/../cache/public \
+	@srcdir@/../socket/base \
+	@srcdir@/../mime/public \
+	@srcdir@/../streamconv/public \
+	@srcdir@/../protocol/http/public \
+	@srcdir@/../protocol/file/public \
+	@srcdir@/../protocol/data/public \
+	@srcdir@/../protocol/jar/public \
+	@srcdir@/../protocol/res/public \
+	@srcdir@/../protocol/about/public \
+	$(NULL)
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -31,6 +46,7 @@ LIBRARY_NAME	= necko
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= necko_core_and_primary_protocols
+
 REQUIRES	= xpcom \
 		  string \
 		  nkcache \
@@ -42,28 +58,300 @@ REQUIRES	= xpcom \
 		  intl \
 		  uconv \
 		  caps \
+		  exthandler \
+		  unicharutil \
+		  imglib2 \
+		  necko2 \
+		  js \
+		  xpconnect \
 		  $(ZLIB_REQUIRES) \
 		  $(NULL)
 
-CPPSRCS		= nsNetModule.cpp
-EXPORTS		= nsNetCID.h
-
-SHARED_LIBRARY_LIBS = \
-		$(DIST)/lib/$(LIB_PREFIX)neckobase_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)neckodns_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)neckosocket_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkconv_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkcnvts_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkmime_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkhttp_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkfile_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkdata_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkjar_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkres_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkabout_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkkwd_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)nkcache_s.$(LIB_SUFFIX) \
+CPPSRCS		= \
+		nsNetModule.cpp \
+		../base/src/nsAsyncStreamListener.cpp \
+		../base/src/nsBufferedStreams.cpp \
+		../base/src/nsDirectoryIndexStream.cpp \
+		../base/src/nsDownloader.cpp \
+		../base/src/nsFileStreams.cpp \
+		../base/src/nsFileTransport.cpp \
+		../base/src/nsFileTransportService.cpp \
+		../base/src/nsInputStreamChannel.cpp \
+		../base/src/nsIOService.cpp \
+		../base/src/nsLoadGroup.cpp \
+		../base/src/nsMIMEInputStream.cpp \
+		../base/src/nsNetModRegEntry.cpp \
+		../base/src/nsNetModuleMgr.cpp \
+		../base/src/nsProtocolProxyService.cpp \
+		../base/src/nsProxyAutoConfigUtils.cpp \
+		../base/src/nsRequestObserverProxy.cpp \
+		../base/src/nsResumableEntityID.cpp \
+		../base/src/nsSimpleStreamListener.cpp \
+		../base/src/nsSimpleStreamProvider.cpp \
+		../base/src/nsSimpleURI.cpp \
+		../base/src/nsStandardURL.cpp \
+		../base/src/nsSocketTransport.cpp \
+		../base/src/nsSocketTransportService.cpp \
+		../base/src/nsStorageTransport.cpp \
+		../base/src/nsStreamListenerProxy.cpp \
+		../base/src/nsStreamListenerTee.cpp \
+		../base/src/nsStreamLoader.cpp \
+		../base/src/nsUnicharStreamLoader.cpp \
+		../base/src/nsStreamProviderProxy.cpp \
+		../base/src/nsURIChecker.cpp \
+		../base/src/nsURLHelper.cpp \
+		../base/src/nsURLParsers.cpp \
+		../cache/src/nsCache.cpp \
+		../cache/src/nsCacheEntry.cpp \
+		../cache/src/nsCacheEntryDescriptor.cpp \
+		../cache/src/nsCacheMetaData.cpp \
+		../cache/src/nsCacheService.cpp \
+		../cache/src/nsCacheSession.cpp \
+		../cache/src/nsDiskCacheBinding.cpp \
+		../cache/src/nsDiskCacheBlockFile.cpp \
+		../cache/src/nsDiskCacheDevice.cpp \
+		../cache/src/nsDiskCacheEntry.cpp \
+		../cache/src/nsDiskCacheMap.cpp \
+		../cache/src/nsDiskCacheStreams.cpp \
+		../cache/src/nsMemoryCacheDevice.cpp \
+		../dns/src/nsDnsService.cpp \
+		../dns/src/nsIDNService.cpp \
+		../socket/base/nsSocketProviderService.cpp \
+		../socket/base/nsSOCKSSocketProvider.cpp \
+		../socket/base/nsSOCKS4SocketProvider.cpp \
+		../socket/base/nsSOCKSIOLayer.cpp \
+		../mime/src/nsMIMEInfoImpl.cpp \
+		../streamconv/src/nsStreamConverterService.cpp \
+		../streamconv/converters/ParseFTPList.cpp \
+		../streamconv/converters/nsMultiMixedConv.cpp \
+		../streamconv/converters/nsFTPDirListingConv.cpp \
+		../streamconv/converters/nsGopherDirListingConv.cpp \
+		../streamconv/converters/mozTXTToHTMLConv.cpp \
+		../streamconv/converters/nsUnknownDecoder.cpp \
+		../streamconv/converters/nsHTTPCompressConv.cpp \
+		../streamconv/converters/nsTXTToHTMLConv.cpp \
+		../streamconv/converters/nsDirIndex.cpp \
+		../streamconv/converters/nsDirIndexParser.cpp \
+		../streamconv/converters/nsIndexedToHTML.cpp \
+		../protocol/http/src/nsHttp.cpp \
+		../protocol/http/src/nsHttpHandler.cpp \
+		../protocol/http/src/nsHttpHeaderArray.cpp \
+		../protocol/http/src/nsHttpConnection.cpp \
+		../protocol/http/src/nsHttpTransaction.cpp \
+		../protocol/http/src/nsHttpChannel.cpp \
+		../protocol/http/src/nsHttpRequestHead.cpp \
+		../protocol/http/src/nsHttpResponseHead.cpp \
+		../protocol/http/src/nsHttpChunkedDecoder.cpp \
+		../protocol/http/src/nsHttpAuthCache.cpp \
+		../protocol/http/src/nsHttpBasicAuth.cpp \
+		../protocol/http/src/nsHttpDigestAuth.cpp \
+		../protocol/http/src/nsHttpPipeline.cpp \
+		../protocol/file/src/nsFileChannel.cpp \
+		../protocol/file/src/nsFileProtocolHandler.cpp \
+		../protocol/data/src/nsDataHandler.cpp \
+		../protocol/data/src/nsDataChannel.cpp \
+		../protocol/jar/src/nsJARProtocolHandler.cpp \
+		../protocol/jar/src/nsJARChannel.cpp  \
+		../protocol/jar/src/nsJARURI.cpp  \
+		../protocol/res/src/nsResProtocolHandler.cpp \
+		../protocol/about/src/nsAboutProtocolHandler.cpp \
+		../protocol/about/src/nsAboutBlank.cpp \
+		../protocol/about/src/nsAboutBloat.cpp \
+		../protocol/about/src/nsAboutCache.cpp \
+		../protocol/about/src/nsAboutCacheEntry.cpp \
+		../protocol/about/src/nsAboutRedirector.cpp \
+		../protocol/keyword/src/nsKeywordProtocolHandler.cpp \
 		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS		+= \
+		../streamconv/src/nsAppleFileDecoder.cpp \
+		../streamconv/converters/nsBinHexDecoder.cpp \
+		$(NULL)
+endif
+
+ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+	CPPSRCS += ../base/src/nsURLHelperOS2.cpp
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+	CPPSRCS += ../base/src/nsURLHelperWin.cpp
+	CPPSRCS += ../base/src/nsNativeConnectionHelper.cpp
+	CPPSRCS += ../base/src/nsAutodialWin.cpp
+else
+	CPPSRCS += ../base/src/nsURLHelperUnix.cpp
+endif
+endif
+
+EXPORTS		= \
+		nsNetCID.h \
+		../base/public/netCore.h \
+		../base/public/nsNetUtil.h \
+		../base/public/nsUnixColorPrintf.h \
+		../base/public/nsReadLine.h \
+		../base/public/nsCPasswordManager.h \
+		../base/public/nsCPasswordManagerInternal.h \
+		$(NULL)
+
+EXPORTS_SUB_MODULES = nkcache mimetype
+
+nkcache_EXPORTS = $(srcdir)/../cache/src/nsCacheService.h
+
+mimetype_EXPORTS = $(srcdir)/../mime/public/nsMimeTypes.h
+
+SDK_XPIDLSRCS   = \
+		nsIChannel.idl \
+		nsILoadGroup.idl \
+		nsIProtocolHandler.idl \
+		nsIRequest.idl \
+		nsIRequestObserver.idl \
+		nsIStreamListener.idl \
+		nsIURI.idl \
+		nsIURL.idl \
+		nsIFileURL.idl \
+		$(NULL)
+
+XPIDLSRCS	= \
+		nsIAuthenticator.idl \
+		nsIAuthPrompt.idl \
+		nsIDirectoryListing.idl \
+		nsIDownloader.idl \
+		nsIEncodedChannel.idl \
+		nsIFileChannel.idl \
+		nsIFileStreams.idl \
+		nsIFileTransportService.idl \
+		nsIIOService.idl \
+		nsIMIMEInputStream.idl \
+		nsINetModRegEntry.idl \
+		nsINetModuleMgr.idl \
+		nsINetNotify.idl \
+		nsIPasswordManager.idl \
+		nsIPasswordManagerInternal.idl \
+		nsIProgressEventSink.idl \
+		nsIPrompt.idl \
+		nsIProtocolProxyService.idl \
+		nsIProxiedProtocolHandler.idl \
+		nsIProxy.idl \
+		nsIProxyAutoConfig.idl \
+		nsIProxyAutoConfigUtils.idl \
+		nsIProxyInfo.idl \
+		nsITransport.idl \
+		nsISocketTransport.idl \
+		nsISocketTransportService.idl \
+		nsIStreamIO.idl \
+		nsIStreamIOChannel.idl \
+		nsIResumableChannel.idl \
+		nsIResumableEntityID.idl \
+		nsIRequestObserverProxy.idl \
+		nsIStreamListenerProxy.idl \
+		nsIStreamListenerTee.idl \
+		nsIStreamProvider.idl \
+		nsIStreamProviderProxy.idl \
+		nsISimpleStreamListener.idl \
+		nsISimpleStreamProvider.idl \
+		nsIStreamLoader.idl \
+		nsIUnicharStreamLoader.idl \
+		nsIUploadChannel.idl \
+		nsIStandardURL.idl \
+		nsIURLParser.idl \
+		nsIURIChecker.idl \
+		nsIWebFilters.idl \
+		nsISecurityEventSink.idl \
+		nsISecretDecoderRing.idl \
+		nsISecureBrowserUI.idl \
+		nsICachingChannel.idl \
+		nsIByteRangeRequest.idl \
+		nsIMultiPartChannel.idl \
+		$(NULL)
+
+XPIDLSRCS_SUB_MODULES	= \
+		cookie \
+		necko_cache \
+		necko_dns \
+		necko_socket \
+		mimetype \
+		necko_strconv \
+		necko_http \
+		necko_file \
+		necko_data \
+		necko_jar \
+		necko_res \
+		necko_about \
+		$(NULL)
+
+cookie_XPIDLSRCS	= nsICookieService.idl 
+
+necko_cache_MODULE = nkcache
+necko_cache_XPIDLSRCS	= \
+		nsICache.idl \
+		nsICacheEntryDescriptor.idl \
+		nsICacheListener.idl \
+		nsICacheService.idl \
+		nsICacheSession.idl \
+		nsICacheVisitor.idl \
+	        $(NULL)
+
+necko_dns_XPIDLSRCS	= \
+		nsIDNSListener.idl \
+		nsIDNSService.idl \
+		nsIIDNService.idl \
+		$(NULL)
+
+necko_socket_XPIDLSRCS	= \
+		nsISocketProvider.idl \
+		nsISocketProviderService.idl \
+		nsISOCKSSocketProvider.idl \
+		nsISOCKSSocketInfo.idl \
+		nsISOCKS4SocketProvider.idl \
+		nsISOCKS4SocketInfo.idl \
+		nsISSLSocketProvider.idl \
+		nsITransportSecurityInfo.idl \
+                nsISSLSocketControl.idl \
+		$(NULL)
+
+mimetype_MODULE	= mimetype
+mimetype_XPIDLSRCS	= \
+		nsIMIMEService.idl \
+		nsIMIMEInfo.idl \
+		$(NULL)
+
+necko_strconv_XPIDLSRCS = \
+		nsIStreamConverter.idl \
+		nsIStreamConverterService.idl \
+		mozITXTToHTMLConv.idl \
+		nsITXTToHTMLConv.idl \
+		nsIDirIndex.idl \
+		nsIDirIndexListener.idl \
+		$(NULL)
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+necko_strconv_XPIDLSRCS += \
+		nsIAppleFileDecoder.idl \
+		$(NULL)
+endif
+
+necko_http_XPIDLSRCS	= \
+		nsIHttpChannel.idl \
+		nsIHttpChannelInternal.idl \
+		nsIHttpHeaderVisitor.idl \
+		nsIHttpNotify.idl \
+		nsIHttpProtocolHandler.idl \
+		nsIHttpEventSink.idl \
+		nsIHttpAuthenticator.idl \
+		$(NULL)
+
+necko_file_XPIDLSRCS	= nsIFileProtocolHandler.idl
+
+necko_data_XPIDLSRCS	= nsIDataChannel.idl
+
+necko_jar_XPIDLSRCS	= \
+		nsIJARChannel.idl \
+		nsIJARURI.idl \
+		nsIJARProtocolHandler.idl \
+		$(NULL)
+
+necko_res_XPIDLSRCS	= nsIResProtocolHandler.idl
+
+necko_about_XPIDLSRCS 	= nsIAboutModule.idl
+
 
 LOCAL_INCLUDES	= \
 		-I$(srcdir)/../base/src \
@@ -97,7 +385,22 @@ EXTRA_DSO_LDOPTS = \
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 EXTRA_DSO_LDOPTS += \
 		$(TK_LIBS) \
-	$(NULL)
+		$(NULL)
 endif
 
+EXTRA_COMPONENTS = \
+		$(srcdir)/../base/src/nsProxyAutoConfig.js \
+		$(NULL)
+
+PREF_JS_EXPORTS = $(srcdir)/../base/public/security-prefs.js
+
 include $(topsrcdir)/config/rules.mk
+
+# For fruncate
+ifeq ($(OS_ARCH),Linux)
+DEFINES += -D_BSD_SOURCE
+endif
+
+ifeq ($(OS_ARCH),WINNT)
+DEFINES		+= -DZLIB_DLL
+endif
