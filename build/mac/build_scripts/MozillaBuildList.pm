@@ -279,6 +279,9 @@ sub InstallComponentFiles()
     # embedding UI
     InstallResources(":mozilla:embedding:components:ui:helperAppDlg:MANIFEST",             "$components_dir");
 
+    # intl
+    InstallResources(":mozilla:embedding:components:intl:MANIFEST",                        "$components_dir");
+    
     print("--- Done Text Components copying ----\n");
 }
 
@@ -1245,6 +1248,7 @@ sub BuildRuntimeProjects()
     if ( $main::options{carbon} )
     {
         BuildProject(":mozilla:lib:mac:InterfaceLib:Interface.mcp",            "Carbon Interfaces");       
+        BuildProject(":mozilla:lib:mac:InterfaceLib:InterfaceOSX.mcp",         "MacOS X Interfaces");       
     }
     else
     {
@@ -1253,6 +1257,7 @@ sub BuildRuntimeProjects()
         } else {
     	    BuildProject(":mozilla:lib:mac:InterfaceLib:Interface.mcp",            "MacOS Interfaces");
 	    }
+        BuildProject(":mozilla:lib:mac:InterfaceLib:InterfaceOSX.mcp",             "MacOS Interfaces");       
     }
     
     #// Build all of the startup libraries, for Application, Component, and Shared Libraries. These are
@@ -1784,6 +1789,7 @@ sub BuildXPAppProjects()
     BuildOneProject(":mozilla:xpfe:components:regviewer:RegViewer.mcp", "RegViewer$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:xpfe:components:shistory:macbuild:shistory.mcp", "shistory$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:xpfe:components:macbuild:appcomps.mcp", "appcomps$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
+    InstallFromManifest(":mozilla:xpfe:appshell:src:MANIFEST_COMPONENTS", "${dist_dir}Components:");
 
     # Applications
     BuildOneProject(":mozilla:xpfe:appshell:macbuild:AppShell.mcp",             "AppShell$D.$S", 1, $main::ALIAS_SYM_FILES, 1);

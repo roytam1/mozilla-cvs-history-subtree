@@ -71,7 +71,7 @@ nsSVGElementFactory::~nsSVGElementFactory()
 }
 
 
-NS_IMPL_ISUPPORTS(nsSVGElementFactory, NS_GET_IID(nsIElementFactory));
+NS_IMPL_ISUPPORTS1(nsSVGElementFactory, nsIElementFactory);
 
 
 nsresult
