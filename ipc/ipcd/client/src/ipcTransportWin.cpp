@@ -168,19 +168,22 @@ ipcThreadInit(ipcTransport *transport)
     if (ipcThread)
         return PR_FAILURE;
 
-    NS_ADDREF(ipcTrans = transport);
     ipcShutdown = PR_FALSE;
 
     ipcMonitor = PR_NewMonitor();
     if (!ipcMonitor)
         return PR_FAILURE;
 
+    NS_ADDREF(ipcTrans = transport);
     // spawn message thread
     ipcThread = PR_CreateThread(PR_USER_THREAD, ipcThreadFunc, NULL,
                                 PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
                                 PR_JOINABLE_THREAD, 0);
     if (!ipcThread) {
         NS_WARNING("thread creation failed");
+        PR_DestroyMonitor(ipcMonitor);
+        ipcMonitor = NULL;
+        NS_RELEASE(ipcTrans);
         return PR_FAILURE;
     }
 
