@@ -1192,11 +1192,11 @@ sub BuildImglib2Projects()
     BuildOneProject(":mozilla:gfx2:macbuild:gfx2.mcp",                          "gfx2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:modules:libpr0n:macbuild:libimg2.mcp",             "libimg2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:modules:libpr0n:macbuild:pngdecoder2.mcp",         "pngdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:modules:libpr0n:macbuild:gifdecoder2.mcp",        "gifdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     
     #BuildOneProject(":mozilla:jpeg:macbuild:JPEG.mcp",                          "JPEG$D.o", 0, 0, 0);
     #BuildOneProject(":mozilla:modules:libimg:macbuild:png.mcp",                 "png$D.o", 0, 0, 0);
     
-    #BuildOneProject(":mozilla:modules:libpr0n:macbuild:gifdecoder2.mcp",        "gifdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     #BuildOneProject(":mozilla:modules:libpr0n:macbuild:jpgdecoder2.mcp",        "jpgdecoder2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
 
     # MNG
