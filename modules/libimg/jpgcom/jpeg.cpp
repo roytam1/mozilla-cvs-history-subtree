@@ -144,7 +144,7 @@ il_error_exit (j_common_ptr cinfo)
 
 #ifdef DEBUG
 #if 0
-  //ptn fix later
+  /*ptn fix later */
     if (il_debug >= 1) {
         char buffer[JMSG_LENGTH_MAX];
 
