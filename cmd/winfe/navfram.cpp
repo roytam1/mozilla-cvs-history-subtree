@@ -467,7 +467,8 @@ void CNSNavFrame::ForceFloat(BOOL show)
 	CFrameWnd *pLayout = GetParentFrame();
 	
 	nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_CHILD, WS_OVERLAPPEDWINDOW);
-		
+	nsModifyStyle( GetSafeHwnd(), GWL_EXSTYLE, 0, WS_EX_CLIENTEDGE);
+	
 	if (show)
 	{	
 		MoveWindow( m_rectDrag);
@@ -532,7 +533,9 @@ void CNSNavFrame::DockFrame(CNSGenFrame* pParent, short dockStyle)
 			{ // if the parent frame has a docked frame, tell this frame to float.
 				pFrame->DeleteNavCenter();
 			}
-			nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_OVERLAPPEDWINDOW , WS_CHILD);
+			nsModifyStyle( GetSafeHwnd(), GWL_STYLE, WS_OVERLAPPEDWINDOW, WS_CHILD);
+			nsModifyStyle( GetSafeHwnd(), GWL_EXSTYLE, WS_EX_CLIENTEDGE, 0);
+
 			SetParent(pParent);
 
 			//  Tell XP layer that we are now docked.
@@ -874,8 +877,10 @@ LRESULT CNSNavFrame::OnSizeParent(WPARAM, LPARAM lParam)
 	m_DragWnd->GetRect(oldDragRect);
 
 	CRect dragRect(resizeRect);
-
+	
 	if (m_dwOverDockStyle == DOCKSTYLE_VERTLEFT) {
+		//dragRect.top += 10;
+		//dragRect.bottom -= 10;
 
 		resizeRect.right = lpLayout->rect.left + oldRect.Width();
 

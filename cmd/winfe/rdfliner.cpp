@@ -1721,6 +1721,9 @@ void CRDFOutliner::OnPaint()
 	GetClientRect(&rcClient);
     CPaintDC pdc ( this );
 
+	if (m_View == NULL)
+		return;
+
 	// Read in all the properties
 	HT_Resource top = HT_TopNode(m_View);
 	void* data;
@@ -3452,6 +3455,9 @@ void CRDFOutlinerParent::OnPaint ( )
 	// Read in our values.
 	CRDFOutliner* pRDFLiner = (CRDFOutliner*)m_pOutliner;
 	HT_View view = pRDFLiner->GetHTView();
+	if (view == NULL)
+		return;
+
 	HT_Resource top = HT_TopNode(view);
 
 	// Foreground color
