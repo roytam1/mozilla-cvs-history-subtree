@@ -81,7 +81,7 @@ typedef struct PrefParseState {
 } PrefParseState;
 
 /**
- * pref_InitParseState
+ * PREF_InitParseState
  *
  * Called to initialize a PrefParseState instance.
  * 
@@ -96,7 +96,7 @@ typedef struct PrefParseState {
 void PREF_InitParseState(PrefParseState *ps, PrefReader reader, void *closure);
 
 /**
- * pref_FinalizeParseState
+ * PREF_FinalizeParseState
  *
  * Called to release any memory in use by the PrefParseState instance.
  *
@@ -106,7 +106,7 @@ void PREF_InitParseState(PrefParseState *ps, PrefReader reader, void *closure);
 void PREF_FinalizeParseState(PrefParseState *ps);
 
 /**
- * pref_ParseBuf
+ * PREF_ParseBuf
  *
  * Called to parse a buffer containing some portion of a preference file.  This
  * function may be called repeatedly as new data is made available.  The
