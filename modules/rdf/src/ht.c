@@ -4235,7 +4235,7 @@ HT_GetNodeData (HT_Resource node, void *token, uint32 tokenType, void **nodeData
 		{
 			if (token == gWebData->RDF_URL)
 			{
-				data = resourceID(node->node);
+				data = copyString(resourceID(node->node));
 			}
 			else
 			{
