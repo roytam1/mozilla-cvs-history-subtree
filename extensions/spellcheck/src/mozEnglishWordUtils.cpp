@@ -44,7 +44,6 @@
 #include "nsCRT.h"
 #include "cattable.h"
 
-
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 static NS_DEFINE_CID(kUnicharUtilCID, NS_UNICHARUTIL_CID);
 
@@ -55,6 +54,9 @@ mozEnglishWordUtils::mozEnglishWordUtils()
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
   mLanguage.Assign(NS_LITERAL_STRING("en"));
+
+  nsresult rv;
+  mURLDetector = do_CreateInstance(MOZ_TXTTOHTMLCONV_CONTRACTID, &rv);
 }
 
 mozEnglishWordUtils::~mozEnglishWordUtils()
@@ -283,6 +285,8 @@ static PRBool ucIsAlpha(PRUnichar c)
 /* void FindNextWord (in wstring word, in PRUint32 length, in PRUint32 offset, out PRUint32 begin, out PRUint32 end); */
 NS_IMETHODIMP mozEnglishWordUtils::FindNextWord(const PRUnichar *word, PRUint32 length, PRUint32 offset, PRInt32 *begin, PRInt32 *end)
 {
+  static const char* kUrlIdentifiers = ":@."; 
+
   const PRUnichar *p = word + offset;
   const PRUnichar *endbuf = word + length;
   const PRUnichar *startWord=p;
@@ -296,6 +300,36 @@ NS_IMETHODIMP mozEnglishWordUtils::FindNextWord(const PRUnichar *word, PRUint32 
       { 
         p++;
       }
+    
+    // we could be trying to break down a url, we don't want to break a url into parts,
+    // instead we want to find out if it really is a url and if so, skip it, advancing startWord 
+    // to a point after the url.
+
+    // before we spend more time looking to see if the word is a url, look for a url identifer
+    // and make sure that identifer isn't the last character in the word fragment.
+    if ( (*p == ':' || *p == '@' || *p == '.') &&  p < endbuf - 1) {
+
+        // ok, we have a possible url...do more research to find out if we really have one
+        // and determine the length of the url so we can skip over it.
+       
+        if (mURLDetector)
+        {
+          PRInt32 startPos = -1;
+          PRInt32 endPos = -1;        
+
+          mURLDetector->FindURLInPlaintext(startWord, endbuf - startWord, p - startWord, &startPos, &endPos);
+
+          // ok, if we got a url, adjust the array bounds, skip the current url text and find the next word again
+          if (startPos != -1 && endPos != -1) { 
+            startWord = p + endPos + 1; // skip over the url
+            p = startWord; // reset p
+
+            // now recursively call FindNextWord to search for the next word now that we have skipped the url
+            return FindNextWord(word, length, startWord - word, begin, end);
+          }
+        }
+    }
+
     while((p > startWord)&&(*(p-1) == '\'')){  // trim trailing apostrophes
       p--;
     }
