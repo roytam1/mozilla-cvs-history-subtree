@@ -81,6 +81,7 @@
 #include "nsIWebBrowserFind.h"
 #include "nsIHttpChannel.h"
 #include "nsDocShellTransferableHooks.h"
+#include "nsIAuthPromptProvider.h"
 
 
 #define MAKE_LOAD_TYPE(type, flags) ((type) | ((flags) << 16))
@@ -177,6 +178,7 @@ class nsDocShell : public nsIDocShell,
                    public nsIWebProgressListener,
                    public nsIEditorDocShell,
                    public nsIWebPageDescriptor,
+                   public nsIAuthPromptProvider,
                    public nsSupportsWeakReference
 {
 friend class nsDSURIContentListener;
@@ -203,6 +205,7 @@ public:
     NS_DECL_NSICONTENTVIEWERCONTAINER
     NS_DECL_NSIEDITORDOCSHELL
     NS_DECL_NSIWEBPAGEDESCRIPTOR
+    NS_DECL_NSIAUTHPROMPTPROVIDER
 
     nsresult SetLoadCookie(nsISupports * aCookie);
     nsresult GetLoadCookie(nsISupports ** aResult);
