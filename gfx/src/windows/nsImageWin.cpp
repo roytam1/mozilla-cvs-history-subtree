@@ -634,7 +634,6 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
                                    PRInt32 aSXOffset, PRInt32 aSYOffset,
                                    const nsRect &aTileRect)
 {
-  // XXX this code below is quite slow.  need to make it faster
   PRInt32
     validX = 0,
     validY = 0,
@@ -663,24 +662,29 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
           aY1 = aTileRect.y + aTileRect.height,
           aX1 = aTileRect.x + aTileRect.width;
 
+
+#if 0
+  // XXX this code below is quite slow.  need to make it faster
+
   for (PRInt32 y = aY0; y < aY1; y += mBHead->biHeight)
     for (PRInt32 x = aX0; x < aX1; x += mBHead->biWidth)
       Draw(aContext, aSurface,
            0, 0, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y),
            x, y, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y));
 
-  return PR_TRUE;
+#else
 
-#if 0
+  nscoord aWidth = mBHead->biWidth;
+  nscoord aHeight = mBHead->biHeight;
 
-  nscoord aX0 = aTileRect.x + aSXOffset;
-  nscoord aY0 = aTileRect.y + aSYOffset;
+  nscoord tileWidth = aTileRect.width;
+  nscoord tileHeight = aTileRect.height;
 
-  nscoord aX1 = aX0 + aTileRect.width;
-  nscoord aY1 = aY0 + aTileRect.height;
+  nsRect              destRect,srcRect,tvrect;
+  HDC                 TheHDC,offDC,maskDC;
+  PRInt32             x,y,width,height,canRaster,TileBufferWidth,TileBufferHeight;
+  HBITMAP             maskBits,tileBits,oldBits,oldMaskBits; 
 
-  nscoord aWidth = aTileRect.width;
-  nscoord aHeight = aTileRect.height;
 
   // The slower tiling will need to be used for the following cases:
   // 1.) Printers 2.) When in 256 color mode 3.) when the tile is larger than the buffer
@@ -689,10 +693,12 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
 
   // we have to use the old way.. for 256 color mode and printing.. slow, but will always work.
   if ((mAlphaDepth>1) || (canRaster==DT_RASPRINTER) || (256==mNumPaletteColors)
-      || (aWidth>MAX_BUFFER_WIDTH) || (aHeight>MAX_BUFFER_HEIGHT)){
+      || (tileWidth>MAX_BUFFER_WIDTH) || (tileHeight>MAX_BUFFER_HEIGHT)){
     for(y=aY0;y<aY1;y+=aHeight){
       for(x=aX0;x<aX1;x+=aWidth){
-        this->Draw(aContext,aSurface,x,y,aWidth,aHeight);
+      Draw(aContext, aSurface,
+           0, 0, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y),
+           x, y, PR_MIN(validWidth, aX1-x), PR_MIN(validHeight, aY1-y));
       }
     } 
     return(PR_TRUE);
@@ -712,16 +718,16 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
     return (PR_FALSE);
   }
 
-  if (aWidth < tvrect.width){
+  if (tileWidth < tvrect.width){
     TileBufferWidth = MAX_BUFFER_WIDTH;
   } else {
-    TileBufferWidth = aWidth;
+    TileBufferWidth = tileWidth;
   }
 
-  if (aHeight < tvrect.height){
+  if (tileHeight < tvrect.height){
     TileBufferHeight = MAX_BUFFER_HEIGHT;
   } else {
-    TileBufferHeight = aHeight;
+    TileBufferHeight = tileHeight;
   }
 
   tileBits = ::CreateCompatibleBitmap(TheHDC, TileBufferWidth,TileBufferHeight);
@@ -810,9 +816,11 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
   ::SelectObject(offDC,oldBits);
   ::DeleteObject(tileBits);
   ::DeleteObject(offDC);
+
+
 #endif
 
-  return PR_TRUE;
+  return NS_OK;
 }
 
 /** ---------------------------------------------------
