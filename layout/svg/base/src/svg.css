@@ -23,9 +23,6 @@
  *
  */
 
-/* XXX most xul bindings are switched of because there are too many
- * issues (see bug #111317) */ 
-
 @namespace url(http://www.w3.org/2000/svg);
 
 a {
@@ -36,65 +33,15 @@ a * {
   cursor: pointer;
 }
                
-circle {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#circle'); */
-}
-
-ellipse {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#ellipse'); */
-}
-
-g {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#g'); */
-}
-
-line {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#line'); */
-}
-
-path {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#path'); */
-}
-
-polygon {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#polygon'); */
-}
-
-polyline {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#polyline'); */
-}
-
-rect {
-/*  -moz-binding:url('chrome://svg/content/svgBindings.xml#rect'); */
-}
-
 svg {
-
-  /* XXX can't have binding on outermost element. see bug#71191
-     -moz-binding:url('chrome://svg/content/svgBindings.xml#svg');
+  /* XXX see bugs #71191 and #172574 before applying xbl binding to
+     either 'svg' or 'svg:not(:root)'
   */
-  
+
   /* give svg elements block display style, so that they reflow
      correctly when given a relative width/height: */
   display: block;
 
   font-family: sans-serif;
 }
-
-svg:not(:root) {
-	/* <svg> isn't the root element - we could apply binding if it
-   * wasn't for bug#172574 */
-	/* -moz-binding:url('chrome://svg/content/svgBindings.xml#svg'); */
-}
-
-               
-text {
-  /* -moz-binding:url('chrome://svg/content/svgBindings.xml#text'); */
-}
-
-tspan {
-  /* -moz-binding:url('chrome://svg/content/svgBindings.xml#tspan'); */
-}
-
-
   
