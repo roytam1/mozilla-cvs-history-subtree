@@ -91,12 +91,14 @@ LIBS		= \
 		$(NSPR_LIBS) \
 		$(NULL)
 
+ifneq ($(OS_TARGET),WINCE)
 OS_LIBS		+= \
 		ole32.lib \
 		comdlg32.lib \
 		shell32.lib \
 		version.lib \
 		$(NULL)
+endif # WINCE
 
 LOCAL_INCLUDES	= -I$(srcdir)/components
 
@@ -115,7 +117,10 @@ LDFLAGS += /HEAP:0x40000
 include $(topsrcdir)/config/rules.mk
 
 CXXFLAGS	+= /D "_AFXDLL" /D "USE_SINGLE_SIGN_ON"
+
+ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= -SUBSYSTEM:windows
+endif # WINCE
 
 libs:: mfcembed.htm
 	$(INSTALL) $^ $(DIST)/bin

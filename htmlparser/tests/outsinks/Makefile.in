@@ -44,6 +44,10 @@ LIBS		= \
 		$(NSPR_LIBS) \
 		$(NULL)
 
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
+
 TEST_FILES      = \
 		plain.html \
 		plainwrap.out \
@@ -77,7 +81,9 @@ install::
 	$(SYSINSTALL) $(addprefix $(srcdir)/, $(TEST_FILES)) $(DESTDIR)$(mozappdir)/OutTestData
 
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 ifndef GNU_CC
 LDFLAGS		+= -SUBSYSTEM:CONSOLE
 endif
+endif # WINCE
 endif

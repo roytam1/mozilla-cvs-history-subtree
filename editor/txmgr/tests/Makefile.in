@@ -36,6 +36,10 @@ CPPSRCS		= TestTXMgr.cpp
 
 LIBS		= $(MOZ_COMPONENT_LIBS)
 
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
+
 DEFINES		+= -DUSE_NSREG
 
 include $(topsrcdir)/config/rules.mk

@@ -56,6 +56,10 @@
   #define BREAK_TO_DEBUGGER
 #endif  
 
+#if defined(VERIFY)
+#undef VERIFY
+#endif /* VERIFY */
+
 #ifdef GFX_DEBUG
   #define VERIFY(exp)                 ((exp) ? 0: (GetLastError(), BREAK_TO_DEBUGGER))
 #else   // !_DEBUG
@@ -489,6 +493,7 @@ nsresult nsRenderingContextWin :: SetupDC(HDC aOldDC, HDC aNewDC)
     ::SelectClipRgn(aNewDC, pstate->mClipRegion);
 #endif
   
+#if !defined(WINCE)
   // If this is a palette device, then select and realize the palette
   if (palInfo.isPaletteDevice && palInfo.palette)
   {
@@ -496,6 +501,7 @@ nsresult nsRenderingContextWin :: SetupDC(HDC aOldDC, HDC aNewDC)
     ::SelectPalette(aNewDC, (HPALETTE)palInfo.palette, PR_TRUE);
     ::RealizePalette(aNewDC);
   }
+#endif /* WINCE */
 
   return NS_OK;
 }
@@ -521,7 +527,6 @@ NS_IMETHODIMP nsRenderingContextWin :: LockDrawingSurface(PRInt32 aX, PRInt32 aY
                                                           PRInt32 *aWidthBytes, PRUint32 aFlags)
 {
   PRBool        destructive;
-  nsPaletteInfo palInfo;
 
   PushState();
 
@@ -540,12 +545,15 @@ NS_IMETHODIMP nsRenderingContextWin :: LockDrawingSurface(PRInt32 aX, PRInt32 aY
     if (nsnull != mOrigSolidPen)
       mCurrPen = (HPEN)::SelectObject(mDC, mOrigSolidPen);
 
+#if !defined(WINCE)
+    nsPaletteInfo palInfo;
     mContext->GetPaletteInfo(palInfo);
     if(palInfo.isPaletteDevice && palInfo.palette){
       ::SelectPalette(mDC,(HPALETTE)palInfo.palette,PR_TRUE);
       ::RealizePalette(mDC);
       ::UpdateColors(mDC);                                                      
     }
+#endif /* WINCE */
   }
 
   mSurface->ReleaseDC();
@@ -1530,7 +1538,11 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const char* aString,
     SIZE  size;
 
     SetupFontAndColor();
+#if !defined(WINCE)
     ::GetTextExtentPoint32(mDC, aString, aLength, &size);
+#else /* WINCE */
+    _GetTextExtentExPointA(mDC, aString, aLength, 0, NULL, NULL, &size);
+#endif /* WINCE */
     aWidth = NSToCoordRound(float(size.cx) * mP2T);
 
     return NS_OK;
@@ -1670,7 +1682,11 @@ nsRenderingContextWin::GetTextDimensions(const char*       aString,
       } 
       else if (numChars > 0) {
         SIZE  size;
+#if !defined(WINCE)
         ::GetTextExtentPoint32(mDC, &aString[start], numChars, &size);
+#else /* WINCE */
+        _GetTextExtentExPointA(mDC, &aString[start], numChars, 0, NULL, NULL, &size);
+#endif /* WINCE */
         twWidth = NSToCoordRound(float(size.cx) * mP2T);
       }
 
@@ -1724,7 +1740,11 @@ nsRenderingContextWin::GetTextDimensions(const char*       aString,
           } 
           else if (numChars > 0) {
             SIZE  size;
+#if !defined(WINCE)
             ::GetTextExtentPoint32(mDC, &aString[start], numChars, &size);
+#else /* WINCE */
+            _GetTextExtentExPointA(mDC, &aString[start], numChars, 0, NULL, NULL, &size);
+#endif /* WINCE */
             twWidth = NSToCoordRound(float(size.cx) * mP2T);
           }
 
@@ -2248,7 +2268,11 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawString(const char *aString, PRUint32 
     mTranMatrix->ScaleXCoords(aSpacing, aLength, dx0);
   }
   mTranMatrix->TransformCoord(&x, &y);
+#if !defined(WINCE)
   ::ExtTextOut(mDC, x, y, 0, NULL, aString, aLength, dx0);
+#else /* WINCE */
+  _ExtTextOutA(mDC, x, y, 0, NULL, aString, aLength, dx0);
+#endif /* WINCE */
 
   if (dx0 && (dx0 != dxMem)) {
     delete [] dx0;
@@ -2632,6 +2656,7 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsDrawingSurface aSrcSu
         ::DeleteObject(tregion);
       }
 
+#if !defined(WINCE)
       // If there's a palette make sure it's selected.
       // XXX This doesn't seem like the best place to be doing this...
 
@@ -2649,6 +2674,7 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsDrawingSurface aSrcSu
         //::RealizePalette(destdc);
         ::UpdateColors(mDC);                                                      
       }
+#endif /* WINCE */
 
       if (aCopyFlags & NS_COPYBITS_XFORM_SOURCE_VALUES)
         mTranMatrix->TransformCoord(&x, &y);
@@ -2886,7 +2912,13 @@ HPEN nsRenderingContextWin :: SetupDottedPen(void)
 {
   if ((mCurrentColor != mCurrPenColor) || (NULL == mCurrPen) || (mCurrPen != mStates->mDottedPen))
   {
-    HPEN  tpen = ::CreatePen(PS_DOT, 0, PALETTERGB_COLORREF(mColor));
+    HPEN  tpen = ::CreatePen(
+#if !defined(WINCE)
+        PS_DOT
+#else /* WINCE */
+        PS_DASH
+#endif /* WINCE */
+        , 0, PALETTERGB_COLORREF(mColor));
 
     ::SelectObject(mDC, tpen);
 

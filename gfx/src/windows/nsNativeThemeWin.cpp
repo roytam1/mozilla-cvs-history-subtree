@@ -137,7 +137,7 @@ static GetThemeSysFontPtr getThemeSysFont = NULL;
 static GetThemeColorPtr getThemeColor = NULL;
 static GetThemeTextMetricsPtr getThemeTextMetrics = NULL;
 
-static const char kThemeLibraryName[] = "uxtheme.dll";
+static const TCHAR kThemeLibraryName[] = _T("uxtheme.dll");
 
 nsNativeThemeWin::nsNativeThemeWin() {
   NS_INIT_ISUPPORTS();
@@ -156,13 +156,13 @@ nsNativeThemeWin::nsNativeThemeWin() {
 
   mThemeDLL = ::LoadLibrary(kThemeLibraryName);
   if (mThemeDLL) {
-    openTheme = (OpenThemeDataPtr)GetProcAddress(mThemeDLL, "OpenThemeData");
-    closeTheme = (CloseThemeDataPtr)GetProcAddress(mThemeDLL, "CloseThemeData");
-    drawThemeBG = (DrawThemeBackgroundPtr)GetProcAddress(mThemeDLL, "DrawThemeBackground");
-    getThemeContentRect = (GetThemeContentRectPtr)GetProcAddress(mThemeDLL, "GetThemeBackgroundContentRect");
-    getThemePartSize = (GetThemePartSizePtr)GetProcAddress(mThemeDLL, "GetThemePartSize");
-    getThemeSysFont = (GetThemeSysFontPtr)GetProcAddress(mThemeDLL, "GetThemeSysFont");
-    getThemeColor = (GetThemeColorPtr)GetProcAddress(mThemeDLL, "GetThemeColor");
+    openTheme = (OpenThemeDataPtr)GetProcAddress(mThemeDLL, _T("OpenThemeData"));
+    closeTheme = (CloseThemeDataPtr)GetProcAddress(mThemeDLL, _T("CloseThemeData"));
+    drawThemeBG = (DrawThemeBackgroundPtr)GetProcAddress(mThemeDLL, _T("DrawThemeBackground"));
+    getThemeContentRect = (GetThemeContentRectPtr)GetProcAddress(mThemeDLL, _T("GetThemeBackgroundContentRect"));
+    getThemePartSize = (GetThemePartSizePtr)GetProcAddress(mThemeDLL, _T("GetThemePartSize"));
+    getThemeSysFont = (GetThemeSysFontPtr)GetProcAddress(mThemeDLL, _T("GetThemeSysFont"));
+    getThemeColor = (GetThemeColorPtr)GetProcAddress(mThemeDLL, _T("GetThemeColor"));
 
     mCheckedAtom = getter_AddRefs(NS_NewAtom("checked"));
     mInputAtom = getter_AddRefs(NS_NewAtom("input"));

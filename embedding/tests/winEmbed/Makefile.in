@@ -70,12 +70,14 @@ LIBS		= \
 		$(NSPR_LIBS) \
 		$(NULL)
 
+ifneq ($(OS_TARGET),WINCE)
 OS_LIBS		+= \
 		ole32.lib \
 		comdlg32.lib \
 		shell32.lib \
 		version.lib \
 		$(NULL)
+endif # WINCE
 
 #
 # Control the default heap size.

@@ -1129,6 +1129,14 @@ FileSystemDataSource::GetVolumeList(nsISimpleEnumerator** aResult)
 #endif
 
 #ifdef  XP_WIN
+#if defined(WINCE)
+    //
+    //  Hmmm... We could possibly traverse compact flash cards and the
+    //      nethood, but for now....
+    //
+    gRDFService->GetResource("file:///", getter_AddRefs(vol));
+    volumes->AppendElement(vol);
+#else /* WINCE */
     PRInt32         driveType;
     char            drive[32];
     PRInt32         volNum;
@@ -1150,6 +1158,7 @@ FileSystemDataSource::GetVolumeList(nsISimpleEnumerator** aResult)
             }
         }
     }
+#endif /* WINCE */
 #endif
 
 #if defined(XP_UNIX) || defined(XP_BEOS)

@@ -1091,7 +1091,7 @@ PRBool nsImageWin::CanAlphaBlend(void)
     // to avoid Win98 AlphaBlend() bug
     if (VER_PLATFORM_WIN32_WINDOWS != os.dwPlatformId ||
         os.dwMajorVersion != 4 || os.dwMinorVersion != 10) {
-      gAlphaBlend = (ALPHABLENDPROC)::GetProcAddress(::LoadLibrary("msimg32"),
+      gAlphaBlend = (ALPHABLENDPROC)::GetProcAddress(::LoadLibrary(_T("msimg32")),
               "AlphaBlend");
     }
     alreadyChecked = PR_TRUE;
@@ -1278,7 +1278,7 @@ nsImageWin::ConvertDDBtoDIB()
 
 
     if (mHBitmap != nsnull){
-      memPrDC = ::CreateDC("DISPLAY",NULL,NULL,NULL);
+      memPrDC = ::CreateDC(_T("DISPLAY"),NULL,NULL,NULL);
       oldbits = (HBITMAP)::SelectObject(memPrDC,mHBitmap);
 
 

@@ -152,7 +152,11 @@ endif
 
 endif
 
+ifneq ($(OS_TARGET),WINCE)
 OS_CONFIG	:= $(OS_ARCH)$(OS_RELEASE)
+else # WINCE
+OS_CONFIG	:= $(OS_TARGET)$(OS_RELEASE)
+endif # WINCE
 
 FINAL_LINK_LIBS = $(DEPTH)/config/final-link-libs
 FINAL_LINK_COMPS = $(DEPTH)/config/final-link-comps

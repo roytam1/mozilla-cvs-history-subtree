@@ -169,7 +169,9 @@ typedef void * nsPalette;
      PRPackedBool  isPaletteDevice;
      PRUint16      sizePalette;  // number of entries in the palette
      PRUint16      numReserved;  // number of reserved palette entries
+#if !defined(WINCE)
      nsPalette     palette;      // native palette handle
+#endif /* WINCE */
   };
 
   typedef enum {

@@ -213,7 +213,11 @@ ifeq ($(MOZ_OS2_TOOLS),EMX)
 BIN_FLAGS	:= -Zlinker /PM:VIO -Zlinker /Stack:0x30000
 endif
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= /SUBSYSTEM:CONSOLE
+else # WINCE
+OS_LIBS += wince_console.lib
+endif # WINCE
 endif
 else # MOZ_WINCONSOLE
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -223,7 +227,9 @@ ifeq ($(MOZ_OS2_TOOLS),EMX)
 BIN_FLAGS	:= -Zlinker /PM:PM -Zlinker /Stack:0x30000
 endif
 ifeq ($(OS_ARCH),WINNT)
+ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= /SUBSYSTEM:WINDOWS
+endif # WINCE
 endif
 endif
 

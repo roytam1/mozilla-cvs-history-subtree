@@ -52,6 +52,10 @@
   #define BREAK_TO_DEBUGGER
 #endif  
 
+#if defined(VERIFY)
+#undef VERIFY
+#endif /* VERIFY */
+
 #ifdef GFX_DEBUG
   #define VERIFY(exp)                 ((exp) ? 0: (GetLastError(), BREAK_TO_DEBUGGER))
 #else   // !_DEBUG

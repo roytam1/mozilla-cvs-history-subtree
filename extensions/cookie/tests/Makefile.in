@@ -37,6 +37,10 @@ CPPSRCS		= TestCookie.cpp
 
 LIBS		= $(XPCOM_LIBS) $(NSPR_LIBS)
 
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
+
 ifeq ($(OS_ARCH),WINNT)
 MAPFILE		= TestCookie.map
 endif

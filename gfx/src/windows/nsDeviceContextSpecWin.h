@@ -61,7 +61,7 @@ public:
   // To get the DevMode from the Global memory Handle it must lock it 
   // So this call must be paired with a call to UnlockGlobalHandle
   void GetDevMode(LPDEVMODE &aDevMode);
-  void UnlockDevMode()  { if (mIsDEVMODEGlobalHandle && mGlobalDevMode) ::GlobalUnlock(mGlobalDevMode); }
+  void UnlockDevMode()  { if (mIsDEVMODEGlobalHandle && mGlobalDevMode) GlobalUnlock(mGlobalDevMode); }
 
   // helper functions
   nsresult GetDataFromPrinter(const PRUnichar * aName, nsIPrintSettings* aPS = nsnull);

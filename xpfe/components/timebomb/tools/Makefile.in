@@ -17,6 +17,10 @@ LIBS            = \
                 $(NSPR_LIBS) \
                 $(NULL)
 
+ifeq ($(OS_TARGET),WINCE)
+OS_LIBS += wince_console.lib
+endif # WINCE
+
 EXTRA_DSO_LDOPTS += \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)

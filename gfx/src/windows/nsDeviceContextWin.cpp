@@ -73,7 +73,9 @@ nsDeviceContextWin :: nsDeviceContextWin()
   mPaletteInfo.isPaletteDevice = PR_FALSE;
   mPaletteInfo.sizePalette = 0;
   mPaletteInfo.numReserved = 0;
+#if !defined(WINCE)
   mPaletteInfo.palette = NULL;
+#endif /* WINCE */
   mDC = NULL;
   mPixelScale = 1.0f;
   mWidth = -1;
@@ -101,8 +103,10 @@ nsDeviceContextWin :: ~nsDeviceContextWin()
   NS_IF_RELEASE(surf);    //this clears the surf pointer...
   mSurface = nsnull;
 
+#if !defined(WINCE)
   if (NULL != mPaletteInfo.palette)
     ::DeleteObject((HPALETTE)mPaletteInfo.palette);
+#endif /* WINCE */
 
   if (NULL != mDC)
   {
@@ -368,12 +372,16 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
 {
   PRUnichar name[LF_FACESIZE];
   name[0] = 0;
+#if defined(UNICODE)
+    memcpy(name, ptrLogFont->lfFaceName, sizeof(ptrLogFont->lfFaceName));
+#else
   if (aIsWide)
     memcpy(name, ptrLogFont->lfFaceName, LF_FACESIZE*2);
   else {
     MultiByteToWideChar(CP_ACP, 0, ptrLogFont->lfFaceName,
       strlen(ptrLogFont->lfFaceName) + 1, name, sizeof(name)/sizeof(name[0]));
   }
+#endif
   aFont->name = name;
 
   // Do Style
@@ -428,6 +436,7 @@ nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLo
 
 nsresult nsDeviceContextWin :: GetSysFontInfo(HDC aHDC, nsSystemFontID anID, nsFont* aFont) const
 {
+#if !defined(WINCE)
   NONCLIENTMETRICS ncm;
   HGDIOBJ hGDI;
 
@@ -514,6 +523,26 @@ nsresult nsDeviceContextWin :: GetSysFontInfo(HDC aHDC, nsSystemFontID anID, nsF
   }
 
   return CopyLogFontToNSFont(&aHDC, ptrLogFont, aFont);
+#else /* WINCE */
+  LOGFONT logFont;
+  LOGFONT* ptrLogFont = NULL;
+  
+  HGDIOBJ hGDI = ::GetStockObject(SYSTEM_FONT);
+  if (hGDI != NULL)
+  {
+      if (::GetObject(hGDI, sizeof(logFont), &logFont) > 0)
+      { 
+          ptrLogFont = &logFont;
+      }
+  }
+  
+  if (nsnull == ptrLogFont)
+  {
+      return NS_ERROR_FAILURE;
+  }
+  
+  return CopyLogFontToNSFont(&aHDC, ptrLogFont, aFont);
+#endif /* WINCE */
 }
 
 NS_IMETHODIMP nsDeviceContextWin :: GetSystemFont(nsSystemFontID anID, nsFont *aFont) const
@@ -589,10 +618,10 @@ NS_IMETHODIMP nsDeviceContextWin :: CheckFontExistence(const nsString& aFontName
   HDC     hdc = ::GetDC(hwnd);
   PRBool  isthere = PR_FALSE;
 
-  char    fontName[LF_FACESIZE];
-
   const PRUnichar* unicodefontname = aFontName.get();
 
+#if !defined(UNICODE)
+  char    fontName[LF_FACESIZE];
   int outlen = ::WideCharToMultiByte(CP_ACP, 0, aFontName.get(), aFontName.Length(), 
                                    fontName, LF_FACESIZE, NULL, NULL);
   if(outlen > 0)
@@ -601,8 +630,13 @@ NS_IMETHODIMP nsDeviceContextWin :: CheckFontExistence(const nsString& aFontName
   // somehow the WideCharToMultiByte failed, let's try the old code
   if(0 == outlen) 
     aFontName.ToCString(fontName, LF_FACESIZE);
+#endif /* UNICODE */
 
+#if !defined(UNICODE)
   ::EnumFontFamilies(hdc, fontName, (FONTENUMPROC)fontcallback, (LPARAM)&isthere);
+#else /* UNICODE */
+  ::EnumFontFamilies(hdc, unicodefontname, (FONTENUMPROC)fontcallback, (LPARAM)&isthere);
+#endif /* UNICODE */
 
   ::ReleaseDC(hwnd, hdc);
 
@@ -625,6 +659,7 @@ NS_IMETHODIMP nsDeviceContextWin::GetPaletteInfo(nsPaletteInfo& aPaletteInfo)
   aPaletteInfo.sizePalette = mPaletteInfo.sizePalette;
   aPaletteInfo.numReserved = mPaletteInfo.numReserved;
 
+#if !defined(WINCE)
   if (NULL == mPaletteInfo.palette) {
     HWND    hwnd = (HWND)mWidget;
     HDC     hdc = ::GetDC(hwnd);
@@ -633,7 +668,8 @@ NS_IMETHODIMP nsDeviceContextWin::GetPaletteInfo(nsPaletteInfo& aPaletteInfo)
   }
 
   aPaletteInfo.palette = mPaletteInfo.palette;
-                                         
+#endif /* WINCE */
+
   return NS_OK;
 }
 
@@ -735,7 +771,11 @@ NS_IMETHODIMP nsDeviceContextWin :: GetDeviceContextFor(nsIDeviceContextSpec *aD
   devSpecWin->GetDevMode(devmode);
   NS_ASSERTION(devmode, "DevMode can't be NULL here");
   if (devmode) {
+#if !defined(WINCE)
     dc = ::CreateDC(drivername, devicename, NULL, devmode);
+#else /* WINCE */
+    dc = _CreateDCA2(drivername, devicename, NULL, devmode);
+#endif /* WINCE */
   }
   devSpecWin->UnlockDevMode();
 
@@ -780,6 +820,7 @@ NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle, PRUnichar*
       titleStr.SetLength(DOC_TITLE_LENGTH-3);
       titleStr.AppendWithConversion("...");
     }
+#if !defined(WINCE)
     char *title = GetACPString(titleStr);
 
     char* docName = nsnull;
@@ -787,7 +828,6 @@ NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle, PRUnichar*
     if (str.Length() > 0) {
       docName = ToNewCString(str);
     }
-    docinfo.cbSize = sizeof(docinfo);
     docinfo.lpszDocName = title != nsnull?title:"Mozilla Document";
 
 #ifdef DEBUG_rods
@@ -795,7 +835,12 @@ NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle, PRUnichar*
 #else
     docinfo.lpszOutput = docName;
 #endif
+#else /* WINCE */
+    docinfo.lpszDocName = aTitle != nsnull ? aTitle : _T("Mozilla Document");
+    docinfo.lpszOutput = aPrintToFileName;
+#endif /* WINCE */
 
+    docinfo.cbSize = sizeof(docinfo);
     docinfo.lpszDatatype = NULL;
     docinfo.fwType = 0;
 
@@ -807,8 +852,10 @@ NS_IMETHODIMP nsDeviceContextWin :: BeginDocument(PRUnichar * aTitle, PRUnichar*
       PR_PL(("nsDeviceContextWin::BeginDocument - StartDoc Error!\n"));
     }
 
+#if !defined(WINCE)
     if (title != nsnull) delete [] title;
     if (docName != nsnull) nsMemory::Free(docName);
+#endif /* WINCE */
   }
 
   return rv;
