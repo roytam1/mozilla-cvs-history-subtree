@@ -388,7 +388,7 @@ nsHistoryDataSource::ReadOneHistoryFile(const char* fileName)
         int n = 0;
         char *title, *url, *referer, *date;
         PRTime time;
-        PRTime fileTime = 0;
+        PRTime fileTime = LL_ZERO;
         while (fgets(buffer, 1024 * 4, f) != 0) {
             // url<tab>title<tab>referer<tab>date
             url = buffer;
@@ -400,7 +400,7 @@ nsHistoryDataSource::ReadOneHistoryFile(const char* fileName)
             date = strchr(referer, '\t') + 1;         
 			*(date -1 ) = '\0';
             PR_ParseTimeString (date, 0, &time);
-            if (!fileTime) { 
+            if (LL_IS_ZERO(fileTime)) { 
                 PRExplodedTime etime;
                 fileTime = time;
                 PR_ExplodeTime(time, PR_LocalTimeParameters, &etime);

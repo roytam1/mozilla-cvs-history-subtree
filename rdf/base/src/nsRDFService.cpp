@@ -322,7 +322,7 @@ DateImpl::EqualsDate(const nsIRDFDate* date, PRBool* result) const
     if (NS_FAILED(rv = date->GetValue(&p)))
         return rv;
 
-    *result = (p == mValue);
+    *result = LL_EQ(p, mValue);
     return NS_OK;
 }
 
