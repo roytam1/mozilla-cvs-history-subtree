@@ -302,7 +302,7 @@ nsresult nsNntpTestDriver::RunDriver()
 	 // if running url
 #ifdef XP_UNIX
 
-        PL_ProcessPendingEvents(m_eventQueue);
+        m_eventQueue->ProcessPendingEvents();
 
 #endif
 #ifdef XP_PC	

@@ -917,11 +917,8 @@ net_CallExitRoutineProxy(Net_GetUrlExitFunc* exit_routine,
     if (nsnull != ev) {
       
 			nsIEventQueue* eventQueue = (nsIEventQueue*)(URL_s->owner_data);
-			ev->Fire(eventQueue);
-
-			/* Release and zero out the owner_data */
-			NS_IF_RELEASE(eventQueue);
-			URL_s->owner_data = NULL;
+			if (eventQueue)
+			  ev->Fire(eventQueue);
     }
   } else {
     net_CallExitRoutine(exit_routine, URL_s, status, format_out, window_id);

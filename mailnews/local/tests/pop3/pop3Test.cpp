@@ -196,7 +196,7 @@ nsresult nsPop3TestDriver::RunDriver()
 		}  // if running url
 #ifdef XP_UNIX
         printf(".");
-        PL_ProcessPendingEvents(m_eventQueue);
+        m_eventQueue->ProcessPendingEvents();
 #endif
 #ifdef XP_PC	
 		MSG msg;
