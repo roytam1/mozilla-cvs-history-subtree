@@ -140,7 +140,7 @@
 #include <io.h>
 #include <limits.h>
 
-#ifndef XP_OS2_VACPP
+#ifndef XP_OS2
 #define MAXPATHLEN 	1024               
 #else
 #include "os2file.h"  /* includes dirent.h */
