@@ -553,7 +553,7 @@ char *output = "\
 nsresult 
 nsStreamConverter::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 {
-#ifdef NS_DEBUG
+#ifdef DEBUG_rhp
     printf("nsStreamConverter::OnStartRequest()\n");
 #endif
 
@@ -569,7 +569,7 @@ nsStreamConverter::OnStartRequest(nsIChannel * aChannel, nsISupports *ctxt)
 nsresult 
 nsStreamConverter::OnStopRequest(nsIChannel * aChannel, nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
 {
-#ifdef NS_DEBUG
+#ifdef DEBUG_rhp
     printf("nsStreamConverter::OnStopRequest()\n");
 #endif
 
