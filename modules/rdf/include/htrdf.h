@@ -284,6 +284,7 @@ PR_PUBLIC_API(char *)	HT_GetWorkspaceLargeIconURL (HT_View view);
 PR_PUBLIC_API(char *)	HT_GetWorkspaceSmallIconURL (HT_View view);
 PR_PUBLIC_API(char *)	HT_GetNodeLargeIconURL (HT_Resource r);
 PR_PUBLIC_API(char *)	HT_GetNodeSmallIconURL (HT_Resource r);
+PR_PUBLIC_API(char *)	HT_GetIconURL(HT_Resource r, PRBool isLargeIcon, PRBool isWorkspace, int buttonState);
 
 PR_PUBLIC_API(char *)	HT_GetLargeIconURL (HT_Resource r);	/* obsolete! */
 PR_PUBLIC_API(char *)	HT_GetSmallIconURL (HT_Resource r);	/* obsolete! */

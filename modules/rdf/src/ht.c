@@ -4958,7 +4958,7 @@ buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,
 {
 	HT_Icon			theURL, *urlEntry;
 	RDF_BT			targetType;
-	char			buffer[128], *object="", *objectType="", *objectInfo="";
+	char			buffer[128], *object="", *objectType="", *objectInfo="", *objectState="";
 
 	XP_ASSERT(node != NULL);
 	XP_ASSERT(volatileURLFlag != NULL);
@@ -5115,15 +5115,36 @@ buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,
 
 
 char *
-getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag)
+getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag, int state)
 {
 
 	RDF_Resource	res;
 	PRBool		volatileURLFlag;
 	int		iconIndex;
 
+	XP_ASSERT(node != NULL);
+	XP_ASSERT(node->node != NULL);
+
 	iconIndex = (largeIconFlag) ? 0:1;
-	res = (largeIconFlag) ? gNavCenter->RDF_largeIcon : gNavCenter->RDF_smallIcon;
+
+	switch (state)
+	{
+		case 0:
+			res = (largeIconFlag) ? gNavCenter->RDF_largeIcon : gNavCenter->RDF_smallIcon;
+			break;
+		case 1:
+			res = (largeIconFlag) ? gNavCenter->RDF_largeRolloverIcon : gNavCenter->RDF_smallRolloverIcon;
+			break;
+		case 2:
+			res = (largeIconFlag) ? gNavCenter->RDF_largePressedIcon : gNavCenter->RDF_smallPressedIcon;
+			break;
+		case 3:
+			res = (largeIconFlag) ? gNavCenter->RDF_largeDisabledIcon : gNavCenter->RDF_smallDisabledIcon;
+			break;
+		default:
+			res = (largeIconFlag) ? gNavCenter->RDF_largeIcon : gNavCenter->RDF_smallIcon;
+			break;
+	}
 
 	/* if volatile URL, flush if needed and re-create */
 
@@ -5158,15 +5179,16 @@ getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag)
 	return(node->url[iconIndex]);
 }
 
-
+PR_PUBLIC_API(char *)
+HT_GetIconURL(HT_Resource r, PRBool isLargeIcon, PRBool isWorkspace, int state)
+{
+	return getIconURL(r, isLargeIcon, isWorkspace, state);
+}
 
 PR_PUBLIC_API(char *)
 HT_GetNodeLargeIconURL (HT_Resource r)
 {
-	XP_ASSERT(r != NULL);
-	XP_ASSERT(r->node != NULL);
-
-	return (getIconURL( r, true, false));
+	return (getIconURL( r, true, false, 0));
 }
 
 
@@ -5174,10 +5196,7 @@ HT_GetNodeLargeIconURL (HT_Resource r)
 PR_PUBLIC_API(char *)
 HT_GetNodeSmallIconURL (HT_Resource r)
 {
-	XP_ASSERT(r != NULL);
-	XP_ASSERT(r->node != NULL);
-
-	return (getIconURL( r, false, false));
+	return (getIconURL( r, false, false, 0));
 }
 
 
@@ -5187,7 +5206,7 @@ HT_GetWorkspaceLargeIconURL (HT_View view)
 {
 	XP_ASSERT(view != NULL);
 
-	return (getIconURL( view->top, true, true));
+	return (getIconURL( view->top, true, true, 0));
 }
 
 
@@ -5197,7 +5216,7 @@ HT_GetWorkspaceSmallIconURL (HT_View view)
 {
 	XP_ASSERT(view != NULL);
 
-	return (getIconURL( view->top, false, true));
+	return (getIconURL( view->top, false, true, 0));
 }
 
 
