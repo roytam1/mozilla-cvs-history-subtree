@@ -76,6 +76,7 @@
         </body>
       </method>
       
+<!-- no grippy, slows us down
       <method name="createCollapsedGrippy">
         <parameter name="aToolbar"/>
         <body>
@@ -107,6 +108,7 @@
         ]]>        
         </body>
       </method>
+-->
 
       <property name="deferAttached">
         <getter>
@@ -126,9 +128,11 @@
 
   <binding id="toolbar" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
     <content>
+<!-- no grippy, slows us down
       <xul:toolbargrippy xbl:inherits="last-toolbar,hidden=grippyhidden"
                          tbattr="toolbar-grippy"
                          class="toolbar-grippy"/>
+-->
       <xul:hbox class="toolbar-prefix" 
                 xbl:inherits="onclick=prefixonclick,tooltiptext=prefixtooltip,hidden=prefixhidden,prefixopen"/>
       <xul:hbox flex="1" class="toolbar-holder" align="center"
@@ -138,6 +142,7 @@
     </content>
     
     <implementation>
+<!-- no grippy, slows us down
       <constructor>
         <![CDATA[
           if (this.getAttribute("moz-collapsed") == "true" &&
@@ -145,6 +150,7 @@
             this.parentNode.createCollapsedGrippy(this);
         ]]>
       </constructor>
+-->
 
       <method name="findNodeByAttribute">
         <parameter name="aAttribute"/>
@@ -173,8 +179,10 @@
     </resources>
 
     <content>
+<!-- no grippy, slows us down
       <xul:toolbargrippy xbl:inherits="tooltiptext=grippytooltiptext,last-toolbar,hidden=grippyhidden"
                          tbattr="toolbar-grippy" class="toolbar-grippy"/>
+-->
       <xul:hbox flex="1" class="toolbar-holder" xbl:inherits="collapsed,last-toolbar" align="center">
         <children/>
       </xul:hbox>
@@ -190,6 +198,7 @@
         </getter>
        </property>
 
+<!-- no grippy, slows us down
       <constructor>
         <![CDATA[
           if (this.getAttribute("moz-collapsed") == "true" &&
@@ -197,6 +206,7 @@
             this.parentNode.createCollapsedGrippy(this);
         ]]>
       </constructor>
+-->
 
       <method name="findNodeByAttribute">
         <parameter name="aAttribute"/>
@@ -219,6 +229,7 @@
     </implementation>
   </binding>
 
+<!-- no grippy, slows us down
   <binding id="toolbargrippy" display="xul:button"
            extends="chrome://global/content/bindings/toolbar.xml#toolbar-base">
     <content>
@@ -277,6 +288,7 @@
       </handler>
     </handlers>
   </binding>  
+-->
 
   <binding id="toolbarseparator" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base"/>
 
