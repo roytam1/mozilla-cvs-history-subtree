@@ -2993,6 +2993,12 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
 
       nsCOMPtr<nsIContent> content = do_QueryInterface(node);
       aContent->AppendChildTo(content, PR_TRUE);
+
+      nsCOMPtr<nsIAtom> vertical = dont_AddRef(NS_NewAtom("align"));
+      nsCOMPtr<nsIAtom> style = dont_AddRef(NS_NewAtom("style"));
+
+      content->SetAttribute(kNameSpaceID_None, vertical, "vertical", PR_FALSE);
+      
       ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
     }
   }
