@@ -1024,6 +1024,23 @@ extern void NET_RegisterCookiePrefCallbacks(void);
  */
 extern int NET_SaveCookies(char *filename);
 
+/* Start an anonymous list of cookies */
+extern void NET_AnonymizeCookies();
+
+/* Restore original list of cookies */
+extern void NET_UnanonymizeCookies();
+
+/* Should referer by supressed for anonymity sake */
+extern Bool NET_SupressRefererForAnonymity();
+
+#if defined(CookieManagement)
+extern void NET_DisplayCookieInfoAsHTML(MWContext *context);
+#endif
+
+#if defined(SingleSignon)
+extern void SI_DisplaySignonInfoAsHTML(MWContext *context);
+#endif
+
 /* returns a malloc'd string containing a unique id 
  * generated from the sec random stuff.
  */
@@ -2179,5 +2196,3 @@ extern XP_Bool NET_IsOffline();
 XP_END_PROTOS
 
 #endif /* _NET_PROTO_H_ */
-
-
