@@ -977,7 +977,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
             if (mEditor->HasSameBlockNodeParent(node, priorNode)) 
             {
               // are they same type?
-              if (mEditor->NodesSameType(node, priorNode))
+              if (mEditor->IsTextNode(priorNode))
               {
                 // if so, join them!
                 nsCOMPtr<nsIDOMNode> topParent;
@@ -986,9 +986,9 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
                 if (NS_FAILED(res)) return res;
                 // fix up selection
                 res = aSelection->Collapse(selNode,selOffset);
-                return res;
               }
             }
+            return res;
           }
           // is prior node a text node?
           else if ( mEditor->IsTextNode(priorNode) )
@@ -1087,7 +1087,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
             if (mEditor->HasSameBlockNodeParent(node, nextNode)) 
             {
               // are they same type?
-              if (mEditor->NodesSameType(node, nextNode))
+              if ( mEditor->IsTextNode(nextNode) )
               {
                 // if so, join them!
                 nsCOMPtr<nsIDOMNode> topParent;
@@ -1096,9 +1096,9 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
                 if (NS_FAILED(res)) return res;
                 // fix up selection
                 res = aSelection->Collapse(selNode,selOffset);
-                return res;
               }
             }
+            return res;
           }
           // is next node a text node?
           else if ( mEditor->IsTextNode(nextNode) )
@@ -1178,13 +1178,42 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
       res = IsEmptyNode(node, &bIsEmptyNode, PR_TRUE, PR_FALSE);
       if (bIsEmptyNode && !mEditor->IsTableElement(node))
         nodeToDelete = node;
-      else if (aAction == nsIEditor::ePrevious)
-        res = mEditor->GetPriorHTMLNode(node, offset, &nodeToDelete);
-      else if (aAction == nsIEditor::eNext)
-        res = mEditor->GetNextHTMLNode(node, offset, &nodeToDelete);
-      else
-        return NS_OK;
+      else 
+      {
+        // see if we are on empty lineand need to delete it.  This is true
+        // when a break is after a block and we are deleting backwards; or
+        // when a break is before a block and we are delting forwards.  In
+        // these cases, we want to delete the break when we are between it
+        // and the block element, even though the break is on the "wrong"
+        // side of us.
+        nsCOMPtr<nsIDOMNode> maybeBreak;
+        nsCOMPtr<nsIDOMNode> maybeBlock;
         
+        if (aAction == nsIEditor::ePrevious)
+        {
+          res = mEditor->GetPriorHTMLSibling(node, offset, &maybeBlock);
+          if (NS_FAILED(res)) return res;
+          res = mEditor->GetNextHTMLSibling(node, offset, &maybeBreak);
+          if (NS_FAILED(res)) return res;
+        }
+        else if (aAction == nsIEditor::eNext)
+        {
+          res = mEditor->GetPriorHTMLSibling(node, offset, &maybeBreak);
+          if (NS_FAILED(res)) return res;
+          res = mEditor->GetNextHTMLSibling(node, offset, &maybeBlock);
+          if (NS_FAILED(res)) return res;
+        }
+        
+        if (nsHTMLEditUtils::IsBreak(maybeBreak) && nsEditor::IsBlockNode(maybeBlock))
+          nodeToDelete = maybeBreak;
+        else if (aAction == nsIEditor::ePrevious)
+          res = mEditor->GetPriorHTMLNode(node, offset, &nodeToDelete);
+        else if (aAction == nsIEditor::eNext)
+          res = mEditor->GetNextHTMLNode(node, offset, &nodeToDelete);
+        else
+          return NS_OK;
+      } 
+      
       if (NS_FAILED(res)) return res;
       if (!nodeToDelete) return NS_ERROR_NULL_POINTER;
       if (mBody == nodeToDelete) 
