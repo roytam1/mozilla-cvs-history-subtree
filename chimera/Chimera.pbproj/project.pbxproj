@@ -277,6 +277,7 @@
 				F5F24BDB022B88EF010001CA,
 				F55A4D8E03806CF601A80166,
 				F56610CD0394779F01A9666E,
+				F5F0BDD803C0A7CE01202892,
 				29B9732DFDCFA39411CA2CEA,
 			);
 			buildSettings = {
@@ -650,6 +651,7 @@
 				F583E3B803B8204901A80166,
 				F583E3BD03B820AC01A80166,
 				F5F415E403B97C6101A80166,
+				F5F0BDD603C0A76F01202892,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4569,6 +4571,7 @@
 		F56610A40394767101A9666E = {
 			children = (
 				F56610BC0394775201A9666E,
+				F5F0BDC803C0A76F01202892,
 			);
 			isa = PBXGroup;
 			name = Plugins;
@@ -7202,6 +7205,7 @@
 				F5BAAC3B02AC6AA201A967F3,
 				F56610DB0394790701A9666E,
 				F55A4DFD03808BB401A80166,
+				F5F0BDDA03C0A83601202892,
 				F5BAAB1D02AC45D301A967F3,
 			);
 			buildSettings = {
@@ -7585,6 +7589,7 @@
 				F583E3BA03B8204901A80166,
 				F583E3BE03B820AC01A80166,
 				F5F415E503B97C6101A80166,
+				F5F0BDD703C0A76F01202892,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9732,6 +9737,56 @@
 		};
 		F5EB9378030C92450100010C = {
 			fileRef = F5EB9376030C92450100010C;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5F0BDC803C0A76F01202892 = {
+			isa = PBXBundleReference;
+			name = PrintPDE.plugin;
+			path = ../dist/PrintPDE.plugin;
+			refType = 2;
+		};
+		F5F0BDD603C0A76F01202892 = {
+			fileRef = F5F0BDC803C0A76F01202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5F0BDD703C0A76F01202892 = {
+			fileRef = F5F0BDC803C0A76F01202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5F0BDD803C0A7CE01202892 = {
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F5F0BDD903C0A7FA01202892,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5F0BDD903C0A7FA01202892 = {
+			fileRef = F5F0BDC803C0A76F01202892;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5F0BDDA03C0A83601202892 = {
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F5F0BDDB03C0A85601202892,
+			);
+			isa = PBXCopyFilesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5F0BDDB03C0A85601202892 = {
+			fileRef = F5F0BDC803C0A76F01202892;
 			isa = PBXBuildFile;
 			settings = {
 			};
