@@ -25,7 +25,7 @@
 
 #include "prtypes.h"
 #include "nsMailHeaders.h"
-#include "nsIStreamConverter.h"
+#include "nsIMimeStreamConverter.h"
 #include "nsIPref.h"
 
 #define MIME_DRAFTS
