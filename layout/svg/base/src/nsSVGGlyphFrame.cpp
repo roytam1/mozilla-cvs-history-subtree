@@ -434,6 +434,7 @@ nsSVGGlyphFrame::GetPresContext(nsIPresContext * *aPresContext)
 {
   // XXX gcc 3.2.2 requires the explicit 'nsSVGGlyphFrameBase::' qualification
   *aPresContext = nsSVGGlyphFrameBase::GetPresContext();
+  NS_ADDREF(*aPresContext);
   return NS_OK;
 }
 
