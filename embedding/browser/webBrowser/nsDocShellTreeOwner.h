@@ -75,6 +75,7 @@ public:
 
 
 class nsDocShellTreeOwner : public nsIDocShellTreeOwner,
+                            public nsIDocShellTreeOwnerTmp,
                             public nsIBaseWindow,
                             public nsIInterfaceRequestor,
                             public nsIWebProgressListener,
@@ -89,6 +90,7 @@ public:
 
     NS_DECL_NSIBASEWINDOW
     NS_DECL_NSIDOCSHELLTREEOWNER
+    NS_DECL_NSIDOCSHELLTREEOWNERTMP
     NS_DECL_NSIINTERFACEREQUESTOR
     NS_DECL_NSIWEBPROGRESSLISTENER
 
@@ -107,8 +109,11 @@ protected:
 
     nsresult   FindChildWithName(const PRUnichar *aName, 
                  PRBool aRecurse, nsIDocShellTreeItem* aRequestor, 
+                 nsIDocShellTreeItem* aOriginalRequestor,
                  nsIDocShellTreeItem **aFoundItem);
     nsresult   FindItemWithNameAcrossWindows(const PRUnichar* aName,
+                 nsIDocShellTreeItem* aRequestor,
+                 nsIDocShellTreeItem* aOriginalRequestor,
                  nsIDocShellTreeItem **aFoundItem);
 
     void       EnsurePrompter();

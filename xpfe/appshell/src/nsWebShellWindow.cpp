@@ -1372,9 +1372,11 @@ nsCOMPtr<nsIDOMDocument> nsWebShellWindow::GetNamedDOMDoc(const nsAString & aWeb
     childDocShell = mDocShell;
   } else {
     nsCOMPtr<nsIDocShellTreeItem> docShellAsItem;
-    nsCOMPtr<nsIDocShellTreeNode> docShellAsNode(do_QueryInterface(mDocShell));
-    docShellAsNode->FindChildWithName(PromiseFlatString(aWebShellName).get(), 
-      PR_TRUE, PR_FALSE, nsnull, getter_AddRefs(docShellAsItem));
+    nsCOMPtr<nsIDocShellTreeNodeTmp> docShellAsNode =
+      do_QueryInterface(mDocShell);
+    docShellAsNode->FindChildWithNameTmp(PromiseFlatString(aWebShellName).get(), 
+                                         PR_TRUE, PR_FALSE, nsnull, nsnull,
+                                         getter_AddRefs(docShellAsItem));
     childDocShell = do_QueryInterface(docShellAsItem);
     if (!childDocShell)
       return domDoc;

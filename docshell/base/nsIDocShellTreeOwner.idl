@@ -21,6 +21,7 @@
  */
 
 #include "nsISupports.idl"
+#include "nsIDocShellTreeOwnerTmp.idl"
 
 /**
  * The nsIDocShellTreeOwner
@@ -32,15 +33,7 @@ interface nsIDocShellTreeItem;
 interface nsIDocShellTreeOwner : nsISupports
 {
 	/*
-	Return the child DocShellTreeItem with the specified name.
-	name - This is the name of the item that is trying to be found.
-	aRequestor - This is the docshellTreeItem that is requesting the find.  This
-	parameter is used to identify when the child is asking its parent to find
-	a child with the specific name.  The parent uses this parameter to ensure
-	a resursive state does not occur by not again asking the requestor for find
-	a shell by the specified name.  Inversely the child uses it to ensure it
-	does not ask its parent to do the search if its parent is the one that
-	asked it to search.
+	Deprecated method signature, see nsIDocShellTreeOwnerTmp for details
 	*/
 	nsIDocShellTreeItem findItemWithName(in wstring name, 
 		in nsIDocShellTreeItem aRequestor);

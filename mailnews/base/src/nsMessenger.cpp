@@ -377,13 +377,13 @@ nsMessenger::SetWindow(nsIDOMWindowInternal *aWin, nsIMsgWindow *aMsgWindow)
   nsCOMPtr<nsIDocShellTreeItem> rootDocShellAsItem;
   docShellAsItem->GetSameTypeRootTreeItem(getter_AddRefs(rootDocShellAsItem));
   
-  nsCOMPtr<nsIDocShellTreeNode> rootDocShellAsNode(do_QueryInterface(rootDocShellAsItem));
+  nsCOMPtr<nsIDocShellTreeNodeTmp> rootDocShellAsNode(do_QueryInterface(rootDocShellAsItem));
 
   if (rootDocShellAsNode) 
   {
     nsCOMPtr<nsIDocShellTreeItem> childAsItem;
-    nsresult rv = rootDocShellAsNode->FindChildWithName(NS_LITERAL_STRING("messagepane").get(),
-      PR_TRUE, PR_FALSE, nsnull, getter_AddRefs(childAsItem));
+    nsresult rv = rootDocShellAsNode->FindChildWithNameTmp(NS_LITERAL_STRING("messagepane").get(),
+      PR_TRUE, PR_FALSE, nsnull, nsnull, getter_AddRefs(childAsItem));
     
     mDocShell = do_QueryInterface(childAsItem);
     
