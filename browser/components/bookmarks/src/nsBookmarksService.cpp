@@ -2427,14 +2427,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
             if (NS_FAILED(rv)) return rv;
             suppArray->AppendElement(suppString);
     
-            nsCOMPtr<nsIBrowserHandler> handler(do_GetService("@mozilla.org/browser/clh;1", &rv));    
-            if (NS_FAILED(rv)) return rv;
-   
-            nsCAutoString chromeUrl;
-            rv = handler->GetStartPage(chromeUrl);
-            if (NS_FAILED(rv)) return rv;
-
-            wwatch->OpenWindow(0, chromeUrl.get(), "_blank", "chrome,dialog=no,all", 
+            wwatch->OpenWindow(0, "chrome://browser/content/", "_blank", "chrome,dialog=no,all", 
                                suppArray, getter_AddRefs(newWindow));
                     }
                 }
