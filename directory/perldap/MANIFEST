@@ -12,6 +12,8 @@ LDIF.pm
 Utils.pm
 README
 INSTALL
+CREDITS
+RELEASE
 MPL-1.0.txt
 test_api/search.pl
 test_api/write.pl
@@ -30,3 +32,4 @@ examples/modattr.pl
 examples/rename.pl
 examples/psoftsync.pl
 examples/changes2ldif.pl
+examples/rand_mods.pl
