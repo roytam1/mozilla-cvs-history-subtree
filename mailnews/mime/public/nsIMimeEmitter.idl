@@ -17,10 +17,10 @@
  */
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
-#include "nsIFileSpec.idl"
-#include "nsIOutputStream.idl"
-#include "nsIURI.idl"
-#include "nsIStreamListener.idl"
+
+interface nsIOutputStream;
+interface nsIURI;
+interface nsIStreamListener;
 
 [scriptable, uuid(39E329E2-357F-11d3-8EFD-00A024A7D144)] 
 interface nsMimeHeaderDisplayTypes 

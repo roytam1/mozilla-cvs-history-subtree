@@ -18,9 +18,9 @@
 
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
-#include "nsIFileSpec.idl"
-#include "nsIOutputStream.idl"
 #include "nsIStreamListener.idl"
+
+interface nsIOutputStream;
 
 %{C++
 // {588595CB-2012-11d3-8EF0-00A024A7D144}
