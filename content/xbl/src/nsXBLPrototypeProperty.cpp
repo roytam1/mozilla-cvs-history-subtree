@@ -48,6 +48,7 @@ nsIAtom* nsXBLPrototypeProperty::kMethodAtom = nsnull;
 nsIAtom* nsXBLPrototypeProperty::kParameterAtom = nsnull;
 nsIAtom* nsXBLPrototypeProperty::kBodyAtom = nsnull;
 nsIAtom* nsXBLPrototypeProperty::kPropertyAtom = nsnull;
+nsIAtom* nsXBLPrototypeProperty::kFieldAtom = nsnull;
 nsIAtom* nsXBLPrototypeProperty::kOnSetAtom = nsnull;
 nsIAtom* nsXBLPrototypeProperty::kOnGetAtom = nsnull;
 nsIAtom* nsXBLPrototypeProperty::kGetterAtom = nsnull;
@@ -107,7 +108,7 @@ RemoveJSGCRoot(void* aScriptObjectRef)
 }
 
 nsXBLPrototypeProperty::nsXBLPrototypeProperty(nsIXBLPrototypeBinding * aPrototypeBinding)
-: mJSMethod(nsnull), mJSGetterObject(nsnull), mJSSetterObject(nsnull), mPropertyIsCompiled(PR_FALSE)
+: mJSMethodObject(nsnull), mJSGetterObject(nsnull), mJSSetterObject(nsnull), mPropertyIsCompiled(PR_FALSE)
 {
   NS_INIT_REFCNT();
   mClassObject = nsnull;
@@ -118,6 +119,7 @@ nsXBLPrototypeProperty::nsXBLPrototypeProperty(nsIXBLPrototypeBinding * aPrototy
     kParameterAtom = NS_NewAtom("parameter");
     kBodyAtom = NS_NewAtom("body");
     kPropertyAtom = NS_NewAtom("property");
+    kFieldAtom = NS_NewAtom("field");
     kOnSetAtom = NS_NewAtom("onset");
     kOnGetAtom = NS_NewAtom("onget");
     kGetterAtom = NS_NewAtom("getter");
@@ -132,8 +134,8 @@ nsXBLPrototypeProperty::nsXBLPrototypeProperty(nsIXBLPrototypeBinding * aPrototy
 
 nsXBLPrototypeProperty::~nsXBLPrototypeProperty()
 {
-  if (mJSMethod)
-    RemoveJSGCRoot(&mJSMethod);
+  if (mJSMethodObject)
+    RemoveJSGCRoot(&mJSMethodObject);
   if (mJSGetterObject)
     RemoveJSGCRoot(&mJSGetterObject);
   if (mJSSetterObject)
@@ -146,6 +148,7 @@ nsXBLPrototypeProperty::~nsXBLPrototypeProperty()
     NS_RELEASE(kParameterAtom);
     NS_RELEASE(kBodyAtom);
     NS_RELEASE(kPropertyAtom); 
+    NS_RELEASE(kFieldAtom); 
     NS_RELEASE(kOnSetAtom);
     NS_RELEASE(kOnGetAtom);
     NS_RELEASE(kGetterAtom);
@@ -232,13 +235,16 @@ nsXBLPrototypeProperty::InstallProperty(nsIScriptContext * aContext, nsIContent 
 
   JSContext* cx = (JSContext*) aContext->GetNativeContext();
   JSObject * scriptObject = (JSObject *) aScriptObject;
+  NS_ASSERTION(scriptObject, "uhoh, script Object should NOT be null or bad things will happen");
+
   JSObject * targetClassObject = (JSObject *) aTargetClassObject;
+  JSObject * globalObject = ::JS_GetGlobalObject(cx);
 
   // now we want to re-evaluate our property using aContext and the script object for this window...
 
-  if (mJSMethod && targetClassObject)
+  if (mJSMethodObject && targetClassObject)
   {
-    JSObject * method = ::JS_CloneFunctionObject(cx, (JSObject *) mJSMethod, JS_GetGlobalObject(cx));
+    JSObject * method = ::JS_CloneFunctionObject(cx, mJSMethodObject, globalObject);
     ::JS_DefineUCProperty(cx, targetClassObject, NS_REINTERPRET_CAST(const jschar*, mName.get()),  mName.Length(), OBJECT_TO_JSVAL(method),
                           NULL, NULL, JSPROP_ENUMERATE);
 
@@ -253,25 +259,25 @@ nsXBLPrototypeProperty::InstallProperty(nsIScriptContext * aContext, nsIContent 
     
     JSObject * getter = nsnull;
     if (mJSGetterObject)
-      getter = ::JS_CloneFunctionObject(cx, (JSObject *) mJSGetterObject, JS_GetGlobalObject(cx));
+      getter = ::JS_CloneFunctionObject(cx, mJSGetterObject, globalObject);
     
     JSObject * setter = nsnull;
     if (mJSSetterObject)
-      setter = ::JS_CloneFunctionObject(cx, (JSObject *) mJSSetterObject, JS_GetGlobalObject(cx));
+      setter = ::JS_CloneFunctionObject(cx, mJSSetterObject, globalObject);
 
     ::JS_DefineUCProperty(cx, targetClassObject, NS_REINTERPRET_CAST(const jschar*, mName.get()), 
                           mName.Length(), JSVAL_VOID,  (JSPropertyOp) getter, 
                           (JSPropertyOp) setter, mJSAttributes); 
   }
-  else if (!mLiteralPropertyString.IsEmpty())
+  else if (!mFieldString.IsEmpty())
   {
     // compile the literal string 
     jsval result = nsnull;
     PRBool undefined;
-    aContext->EvaluateStringWithValue(mLiteralPropertyString, 
-                                           scriptObject,
-                                           nsnull, nsnull, 0, nsnull,
-                                           (void*) &result, &undefined);
+    aContext->EvaluateStringWithValue(mFieldString, 
+                                      scriptObject,
+                                      nsnull, nsnull, 0, nsnull,
+                                      (void*) &result, &undefined);
               
     if (!undefined) 
     {
@@ -316,14 +322,12 @@ nsresult nsXBLPrototypeProperty::DelayedPropertyConstruction()
   binding->GetCompiledClassObject(mClassStr, context, (void *) scopeObject, &classObject);
   mClassObject = (JSObject *) classObject;
 
-  if (tagName.get() == kMethodAtom /* && mClassObject */) 
-  {
-    ParseMethod(context, mPropertyElement, mClassStr);
-  }
+  if (tagName.get() == kMethodAtom) 
+    ParseMethod(context);
   else if (tagName.get() == kPropertyAtom) 
-  {
-    ParseProperty(context, mPropertyElement, mClassStr);
-  }
+    ParseProperty(context);
+  else if (tagName.get() == kFieldAtom)
+    ParseField(context);
 
   mPropertyIsCompiled = PR_TRUE;
   mInterfaceElement = nsnull;
@@ -359,20 +363,19 @@ nsXBLPrototypeProperty::ConstructProperty(nsIContent * aInterfaceElement, nsICon
 
 const char* gPropertyArgs[] = { "val" };
 
-nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIContent* aPropertyElement, const char * aClassStr)
+nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext)
 {
   // Obtain our name attribute.
-  nsAutoString name;
   nsresult rv = NS_OK;
-  aPropertyElement->GetAttr(kNameSpaceID_None, kNameAtom, mName);
+  mPropertyElement->GetAttr(kNameSpaceID_None, kNameAtom, mName);
 
   if (!mName.IsEmpty()) 
   {
     // We have a property.
     nsAutoString getter, setter, readOnly;
-    aPropertyElement->GetAttr(kNameSpaceID_None, kOnGetAtom, getter);
-    aPropertyElement->GetAttr(kNameSpaceID_None, kOnSetAtom, setter);
-    aPropertyElement->GetAttr(kNameSpaceID_None, kReadOnlyAtom, readOnly);
+    mPropertyElement->GetAttr(kNameSpaceID_None, kOnGetAtom, getter);
+    mPropertyElement->GetAttr(kNameSpaceID_None, kOnSetAtom, setter);
+    mPropertyElement->GetAttr(kNameSpaceID_None, kReadOnlyAtom, readOnly);
 
     mJSAttributes = JSPROP_ENUMERATE;
 
@@ -383,12 +386,12 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
     if (getter.IsEmpty()) 
     {
       PRInt32 childCount;
-      aPropertyElement->ChildCount(childCount);
+      mPropertyElement->ChildCount(childCount);
 
       nsCOMPtr<nsIContent> getterElement;
       for (PRInt32 j=0; j<childCount; j++) 
       {
-        aPropertyElement->ChildAt(j, *getter_AddRefs(getterElement));
+        mPropertyElement->ChildAt(j, *getter_AddRefs(getterElement));
         
         if (!getterElement) continue;
         
@@ -407,7 +410,7 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
     if (!getter.IsEmpty() && mClassObject) 
     {
       nsCAutoString functionUri;
-      functionUri.Assign(aClassStr);
+      functionUri.Assign(mClassStr);
       functionUri += ".";
       functionUri.AppendWithConversion(mName.get());
       functionUri += " (getter)";
@@ -419,7 +422,7 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
                                     functionUri.get(),
                                     0,
                                     PR_FALSE,
-                                    &mJSGetterObject);
+                                    (void **) &mJSGetterObject);
       if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
       mJSAttributes |= JSPROP_GETTER | JSPROP_SHARED;
       if (mJSGetterObject) 
@@ -438,12 +441,12 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
     if (setter.IsEmpty()) 
     {
       PRInt32 childCount;
-      aPropertyElement->ChildCount(childCount);
+      mPropertyElement->ChildCount(childCount);
 
       nsCOMPtr<nsIContent> setterElement;
       for (PRInt32 j=0; j<childCount; j++) 
       {
-        aPropertyElement->ChildAt(j, *getter_AddRefs(setterElement));
+        mPropertyElement->ChildAt(j, *getter_AddRefs(setterElement));
         
         if (!setterElement) continue;
         
@@ -459,7 +462,7 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
           
     if (!setter.IsEmpty() && mClassObject) 
     {
-      nsCAutoString functionUri (aClassStr);
+      nsCAutoString functionUri (mClassStr);
       functionUri += ".";
       functionUri.AppendWithConversion(mName.get());
       functionUri += " (setter)";
@@ -471,7 +474,7 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
                                     functionUri.get(),
                                     0,
                                     PR_FALSE,
-                                    &mJSSetterObject);
+                                    (void **) &mJSSetterObject);
       if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
       mJSAttributes |= JSPROP_SETTER | JSPROP_SHARED;
       if (mJSSetterObject) 
@@ -491,53 +494,64 @@ nsresult nsXBLPrototypeProperty::ParseProperty(nsIScriptContext * aContext, nsIC
     if (mJSSetterObject || mJSGetterObject) 
       return NS_OK;
     
-    return ParseLiteral(aContext, aPropertyElement);
+    return ParseField(aContext);
   } // if name isn't empty
 
   return rv;
 }
 
-nsresult nsXBLPrototypeProperty::ParseLiteral(nsIScriptContext * aContext, nsIContent* aPropertyElement)
+nsresult nsXBLPrototypeProperty::ParseField(nsIScriptContext * aContext)
 {
+  nsresult rv = NS_OK;
+  mPropertyElement->GetAttr(kNameSpaceID_None, kNameAtom, mName);
+  if (mName.IsEmpty())
+    return NS_OK;
+
+  nsAutoString readOnly;
+  mPropertyElement->GetAttr(kNameSpaceID_None, kReadOnlyAtom, readOnly);
+  mJSAttributes = JSPROP_ENUMERATE;
+  if (readOnly == NS_LITERAL_STRING("true"))
+    mJSAttributes |= JSPROP_READONLY; // Fields can be read-only.
+
   // Look for a normal value and just define that.
   nsCOMPtr<nsIContent> textChild;
   PRInt32 textCount;
-  aPropertyElement->ChildCount(textCount);
+  mPropertyElement->ChildCount(textCount);
   for (PRInt32 j = 0; j < textCount; j++) 
   {
     // Get the child.
-    aPropertyElement->ChildAt(j, *getter_AddRefs(textChild));
+    mPropertyElement->ChildAt(j, *getter_AddRefs(textChild));
     nsCOMPtr<nsIDOMText> text(do_QueryInterface(textChild));
     if (text)
     {
       nsAutoString data;
       text->GetData(data);
-      mLiteralPropertyString += data;
+      mFieldString += data;
     }
   } // for each element
 
   return NS_OK;
 }
 
-nsresult nsXBLPrototypeProperty::ParseMethod(nsIScriptContext * aContext, nsIContent* aPropertyElement, const char * aClassStr)
+nsresult nsXBLPrototypeProperty::ParseMethod(nsIScriptContext * aContext)
 {
   // TO DO: fix up class name and class object
 
   // Obtain our name attribute.
   nsAutoString body;
   nsresult rv = NS_OK;
-  aPropertyElement->GetAttr(kNameSpaceID_None, kNameAtom, mName);
+  mPropertyElement->GetAttr(kNameSpaceID_None, kNameAtom, mName);
 
   // Now walk all of our args.
   // XXX I'm lame. 32 max args allowed.
   char* args[32];
   PRUint32 argCount = 0;
   PRInt32 kidCount;
-  aPropertyElement->ChildCount(kidCount);
+  mPropertyElement->ChildCount(kidCount);
   for (PRInt32 j = 0; j < kidCount; j++)
   {
     nsCOMPtr<nsIContent> arg;
-    aPropertyElement->ChildAt(j, *getter_AddRefs(arg));
+    mPropertyElement->ChildAt(j, *getter_AddRefs(arg));
     nsCOMPtr<nsIAtom> kidTagName;
     arg->GetTag(*getter_AddRefs(kidTagName));
     
@@ -576,7 +590,7 @@ nsresult nsXBLPrototypeProperty::ParseMethod(nsIScriptContext * aContext, nsICon
   if (!body.IsEmpty()) 
   {
     nsCAutoString cname; cname.AssignWithConversion(mName.get());
-    nsCAutoString functionUri (aClassStr);
+    nsCAutoString functionUri (mClassStr);
     functionUri += ".";
     functionUri += cname;
     functionUri += "()";
@@ -589,17 +603,16 @@ nsresult nsXBLPrototypeProperty::ParseMethod(nsIScriptContext * aContext, nsICon
                                   functionUri.get(),
                                   0,
                                   PR_FALSE,
-                                  &mJSMethod);
+                                  (void **) &mJSMethodObject);
 
-    if (mJSMethod) 
+    if (mJSMethodObject) 
     {
       // Root the compiled prototype script object.
       JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
                                           aContext->GetNativeContext());
       if (!cx) return NS_ERROR_UNEXPECTED;
 
-      rv = AddJSGCRoot(&mJSMethod, "nsXBLPrototypeProperty::mJSMethod");
-      if (NS_FAILED(rv)) return rv;
+      rv = AddJSGCRoot(&mJSMethodObject, "nsXBLPrototypeProperty::mJSMethod");
     }
   }
   
