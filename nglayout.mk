@@ -95,6 +95,7 @@ pull_all: pull_lizard pull_xpcom pull_imglib pull_netlib pull_nglayout pull_plug
 pull_lizard:
 	cd $(MOZ_SRC)/.; \
 	$(CVSCO_LIZARD) mozilla/config; \
+	$(CVSCO_LIZARD) mozilla/build; \
 	$(CVSCO_LIZARD) mozilla/dbm; \
 	$(CVSCO_LIZARD) mozilla/build/build_number; \
 	$(CVSCO_LIZARD) mozilla/cmd/xfe/icons/icondata.h; \
