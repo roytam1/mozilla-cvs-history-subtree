@@ -63,6 +63,7 @@ CPPSRCS  = \
            nsEditorShellMouseListener.cpp \
            nsEditorParserObserver.cpp     \
            nsInterfaceState.cpp           \
+           nsEditingSession.cpp           \
            nsComposerUtils.cpp            \
            nsComposerController.cpp       \
            nsComposerCommands.cpp         \

@@ -36,10 +36,11 @@ CPPSRCS =                                \
           nsEditorParserObserver.cpp     \
           $(NULL)
 
-CPP_OBJS =                                            \
+CPP_OBJS =                                           \
           .\$(OBJDIR)\nsEditorShell.obj              \
           .\$(OBJDIR)\nsEditorShellMouseListener.obj \
           .\$(OBJDIR)\nsInterfaceState.obj           \
+          .\$(OBJDIR)\nsEditingSession.obj           \
           .\$(OBJDIR)\nsComposerUtils.obj            \
           .\$(OBJDIR)\nsComposerController.obj       \
           .\$(OBJDIR)\nsComposerCommands.obj         \
