@@ -20,6 +20,10 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Daniel Matejka
+ *     (Original Author)
+ *   Ben Goodger <ben@bengoodger.com> 
+ *     (History, Favorites, Passwords, Form Data, some settings)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -73,6 +77,7 @@
 #include "nsIRDFRemoteDataSource.h"
 #include "nsIURI.h"
 #include "nsIPasswordManager.h"
+#include "nsIFormHistory.h"
 #include "nsCRT.h"
 #endif
 
@@ -80,7 +85,7 @@
 #define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
 #define MIGRATION_STARTED           "Migration:Started"
 #define MIGRATION_ENDED             "Migration:Ended"
-
+ 
 const int sInitialCookieBufferSize = 1024; // but it can grow
 const int sUsernameLengthLimit     = 80;
 const int sHostnameLengthLimit     = 255;
@@ -535,14 +540,63 @@ nsTridentPreferencesWin::CopyHistory(PRBool aReplace) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// IE PASSWORDS AND FORM DATA - PRIMER
+// IE PASSWORDS AND FORM DATA - A PROTECTED STORAGE SYSTEM PRIMER
 //
 // Internet Explorer 4.0 and up store sensitive form data (saved through form
 // autocomplete) and saved passwords in a special area of the Registry called
 // the Protected Storage System. The data IE stores in the Protected Storage 
 // System is located under:
 //
-// HKEY_CURRENT_USER\Software\Microsoft\Protected Storage System Provider\//   <USER_ID>\Data\<IE_PSS_GUID>\<IE_PSS_GUID>\//// <USER_ID> is a long string that uniquely identifies the current user// <IE_PSS_GUID> is a GUID that identifies a subsection of the Protected Storage// System specific to MSIE. This GUID is defined below ("IEPStoreGUID").//// Data is stored in the Protected Strage System ("PStore") in the following// format:// // <IE_PStore_Key> \//                  fieldName1:StringData \ ItemData = <REG_BINARY>//                  fieldName2:StringData \ ItemData = <REG_BINARY>//                  http://foo.com/login.php:StringData \ ItemData = <REG_BINARY>//                  ... etc ...// // Each key represents either the identifier of a web page text field that // data was saved from (e.g. <input name="fieldName1">), or a URL that a login// (username + password) was saved at (e.g. "http://foo.com/login.php")//// Data is stored for each of these cases in the following format://// for both types of data, the Value ItemData is REG_BINARY data format encrypted with // a 3DES cipher. //// for FormData: the decrypted data is in the form://                  value1\0value2\0value3\0value4 ...// for Signons:  the decrypted data is in the form://                  username\0password//// We cannot read the PStore directly by using Registry functions because the // keys have limited read access such that only System process can read from them.// In order to read from the PStore we need to use Microsoft's undocumented PStore// API(*). //// (* Sparse documentation became available as of the January 2004 MSDN Library//    release)//// The PStore API lets us read decrypted data from the PStore. Encryption does not// appear to be strong.// // Details on how each type of data is read from the PStore and migrated appropriately// is discussed in more detail below.
+// HKEY_CURRENT_USER\Software\Microsoft\Protected Storage System Provider\
+//   <USER_ID>\Data\<IE_PSS_GUID>\<IE_PSS_GUID>\
+//
+// <USER_ID> is a long string that uniquely identifies the current user
+// <IE_PSS_GUID> is a GUID that identifies a subsection of the Protected Storage
+// System specific to MSIE. This GUID is defined below ("IEPStoreGUID").
+//
+// Data is stored in the Protected Strage System ("PStore") in the following
+// format:
+// 
+// <IE_PStore_Key> \
+//                  fieldName1:StringData \ ItemData = <REG_BINARY>
+//                  fieldName2:StringData \ ItemData = <REG_BINARY>
+//                  http://foo.com/login.php:StringData \ ItemData = <REG_BINARY>
+//                  ... etc ...
+// 
+// Each key represents either the identifier of a web page text field that 
+// data was saved from (e.g. <input name="fieldName1">), or a URL that a login
+// (username + password) was saved at (e.g. "http://foo.com/login.php")
+//
+// Data is stored for each of these cases in the following format:
+//
+// for both types of data, the Value ItemData is REG_BINARY data format encrypted with 
+// a 3DES cipher. 
+//
+// for FormData: the decrypted data is in the form:
+//                  value1\0value2\0value3\0value4 ...
+// for Signons:  the decrypted data is in the form:
+//                  username\0password
+//
+// We cannot read the PStore directly by using Registry functions because the 
+// keys have limited read access such that only System process can read from them.
+// In order to read from the PStore we need to use Microsoft's undocumented PStore
+// API(*). 
+//
+// (* Sparse documentation became available as of the January 2004 MSDN Library
+//    release)
+//
+// The PStore API lets us read decrypted data from the PStore. Encryption does not
+// appear to be strong.
+// 
+// Details on how each type of data is read from the PStore and migrated appropriately
+// is discussed in more detail below.
+//
+// For more information about the PStore, read:
+//
+// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/devnotes/winprog/pstore.asp
+//
+
+
 typedef HRESULT (WINAPI *PStoreCreateInstancePtr)(IPStore**, DWORD, DWORD, DWORD);
 
 typedef struct {
@@ -790,7 +844,7 @@ nsTridentPreferencesWin::CopyFormData(PRBool aReplace)
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
           char* realm = nsnull;
           if (!KeyIsURI(key, &realm))
-            AddDataToFormHistory(key, (PRUnichar*)data, count);
+            AddDataToFormHistory(key, (PRUnichar*)data, (count/sizeof(PRUnichar)));
         }
       }
     }
@@ -801,7 +855,22 @@ nsTridentPreferencesWin::CopyFormData(PRBool aReplace)
 nsresult
 nsTridentPreferencesWin::AddDataToFormHistory(const nsAString& aKey, PRUnichar* aData, unsigned long aCount)
 {
-  printf("*** add to form history\n");
+  nsCOMPtr<nsIFormHistory> formHistory(do_GetService("@mozilla.org/satchel/form-history;1"));
+
+  PRUnichar* cursor = aData;
+  PRInt32 offset = 0;
+
+  while (offset < aCount) {
+    nsAutoString curr; curr = cursor;
+
+    formHistory->AddEntry(aKey, curr);
+
+    // Advance the cursor
+    PRInt32 advance = curr.Length() + 1;
+    cursor += advance; // Advance to next string (length of curr string + 1 PRUnichar for null separator)
+    offset += advance;
+  } 
+
   return NS_OK;
 }
 
