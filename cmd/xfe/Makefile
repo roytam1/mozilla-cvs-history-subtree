@@ -168,6 +168,7 @@ GUESS_CONFIG	:= $(shell $(DEPTH)/config/config.guess | sed 's/i[23456]86/x86/')
 CCLD		= $(CCC)
 LDFLAGS		= $(CFLAGS)
 NOMD_LDFLAGS	= $(NOMD_CFLAGS)
+BASIC_DSOS      = -L$(DIST)/bin
 
 ifdef MOZILLA_GPROF
 CSRCS		+= gmon.c
@@ -205,7 +206,9 @@ XFE_WIDGETS_BM_LIB	= $(DIST)/lib/libXfeBm.a
 ifeq ($(OS_ARCH),AIX)
 NSPR_LIB	= 
 else
-NSPR_LIB	= $(DIST)/lib/libplds21.a $(DIST)/lib/libplc21.a $(DIST)/lib/libmsgc21.a $(DIST)/lib/libnspr21.a
+# XXX To a DSO...
+#NSPR_LIB	= $(DIST)/lib/libplds21.a $(DIST)/lib/libplc21.a $(DIST)/lib/libmsgc21.a $(DIST)/lib/libnspr21.a
+BASIC_DSOS     += -lplds21 -lplc21 -lmsgc21 -lnspr21
 endif
 
 ifdef DBMALLOC
@@ -323,13 +326,18 @@ endif
 
 BASIC_LIBS += $(DIST)/lib/libxpcom.a
 
+########################################################################
+# Java
+#
 ifdef JAVA_OR_OJI
 
 BASIC_LIBS	+= $(DIST)/lib/libcaps.a
 
+#
+# Monolithic Java
+#
 ifdef MOZ_JAVA
 
-# Monolithic Java
 BASIC_LIBS	+= \
 		  $(DIST)/lib/lib$(LITE_PREFIX)applet.a \
 		  $(DIST)/lib/libjrt.a \
@@ -367,7 +375,10 @@ BASIC_LIBS	+= $(DIST)/lib/libjrt.a
 
 else  # MOZ_JAVA
 
+#
 # OJI
+#
+
 BASIC_LIBS      += $(DIST)/lib/liboji.a
 
 ifdef EDITOR
@@ -382,7 +393,9 @@ endif # MOZ_JAVA
 
 else  # JAVA_OR_OJI
 
+#
 # No Monolithic Java, no OJI, just stubs.
+#
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libstubsj.a \
 		  $(DIST)/lib/libstubnj.a \
@@ -390,10 +403,15 @@ BASIC_LIBS	+= \
 
 endif  # JAVA_OR_OJI
 
-BASIC_LIBS	+= $(DIST)/lib/libzlib.a
+# XXX To a DSO...
+#BASIC_LIBS	+= $(DIST)/lib/libzlib.a
+BASIC_DSOS      += -lzlib
 
 ifndef NO_MOCHA
-BASIC_LIBS	+= $(DIST)/lib/libjs.a $(DIST)/lib/libjsj.a $(DIST)/lib/libmocha.a
+# XXX To a DSO...
+#BASIC_LIBS      += $(DIST)/lib/libjs.a $(DIST)/lib/libjsj.a 
+BASIC_DSOS      += -ljs -ljsj
+BASIC_LIBS	+= $(DIST)/lib/libmocha.a
 endif
 
 # Post-Java libs
@@ -505,7 +523,7 @@ MCS_CMD		= true
 # Only IRIX 5.x uses this.
 EXTRA_POST_LINK_CMD	= echo
 
-EXPORT_LDFLAGS	= $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) $(OTHER_LIBS) $(NSPR_LIB)
+EXPORT_LDFLAGS	= $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) $(BASIC_DSOS) $(OTHER_LIBS) $(NSPR_LIB)
 EXPORT_DEPLIBS	= $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) $(NSPR_LIB)
 
 DSO_EX_LIBS	= $(EXPORT_LDFLAGS:$(DIST)/lib/lib%.a=-l%)
@@ -941,7 +959,7 @@ $(OBJDIR)/$(DSO_PROGNAME)-export.quantify: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLI
 $(OBJDIR)/$(XFE_PROGNAME)-export: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLIBS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-	$(CCLD) -o $@ $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(EXPORT_LDFLAGS) $(DNS_LIB)
+	$(CCLD) -o $@ -rdynamic $(LDFLAGS) $(OBJS) $(EXPORT_OBJS) $(EXPORT_LDFLAGS) $(DNS_LIB)
 	@$(EXTRA_POST_LINK_CMD) $@
 
 $(OBJDIR)/$(XFE_PROGNAME)-export.pure: $(OBJS) $(EXPORT_OBJS) $(EXPORT_DEPLIBS)
