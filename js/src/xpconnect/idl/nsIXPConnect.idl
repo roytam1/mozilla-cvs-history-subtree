@@ -189,6 +189,7 @@ interface nsIXPCNativeCallContext : nsISupports
     readonly attribute nsISupports                  Callee;
     readonly attribute PRUint16                     CalleeMethodIndex;
     readonly attribute nsIXPConnectWrappedNative    CalleeWrapper;
+    readonly attribute XPCNativeInterface           CalleeInterface;
     readonly attribute JSContextPtr                 JSContext;
     readonly attribute PRUint32                     Argc;
     readonly attribute JSValPtr                     ArgvPtr;

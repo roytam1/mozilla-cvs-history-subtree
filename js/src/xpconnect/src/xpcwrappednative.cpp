@@ -204,7 +204,7 @@ XPCWrappedNative::Init(XPCCallContext& ccx)
         if(helper)
         {
             JSUint32 flags;
-            nsresult rv = helper->GetFlags(&flags);
+            nsresult rv = helper->GetScriptableFlags(&flags);
             if(NS_FAILED(rv))
                 return JS_FALSE;
 

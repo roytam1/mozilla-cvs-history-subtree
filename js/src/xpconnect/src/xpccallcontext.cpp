@@ -339,6 +339,14 @@ XPCCallContext::GetCalleeWrapper(nsIXPConnectWrappedNative * *aCalleeWrapper)
     return NS_OK;
 }
 
+/* readonly attribute XPCNativeInterface CalleeInterface; */
+NS_IMETHODIMP 
+XPCCallContext::GetCalleeInterface(nsIXPCNativeInterface * *aCalleeInterface)
+{
+    *aCalleeInterface = mInterface;
+    return NS_OK;
+}
+
 /* readonly attribute JSContextPtr JSContext; */
 NS_IMETHODIMP
 XPCCallContext::GetJSContext(JSContext * *aJSContext)

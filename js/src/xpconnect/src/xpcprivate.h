@@ -993,7 +993,8 @@ private:
 /***************************************************************************/
 
 extern JSClass XPC_WN_NoHelper_JSClass;
-extern JSClass XPC_WN_Proto_JSClass;
+extern JSClass XPC_WN_NoMods_Proto_JSClass;
+extern JSClass XPC_WN_ModsAllowed_Proto_JSClass;
 extern JSClass XPC_WN_Tearoff_JSClass;
 
 extern JSObjectOps * JS_DLL_CALLBACK
@@ -1689,8 +1690,9 @@ public:
     JSBool DontEnumStaticProps()          const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ENUM_STATIC_PROPS);}
     JSBool DontAskInstanceForScriptable() const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE);}
     JSBool HideQueryInterface()           const {return (JSBool)(mFlags & nsIXPCScriptable::HIDE_QUERY_INTERFACE);}
-    JSBool NoTearoffs()                   const {return (JSBool)(mFlags & nsIXPCScriptable::NO_TEAROFFS);}
+    JSBool ClassInfoInterfacesOnly()      const {return (JSBool)(mFlags & nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY);}
     JSBool AllowPropModsDuringResolve()   const {return (JSBool)(mFlags & nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE);}
+    JSBool AllowPropModsToPrototype()     const {return (JSBool)(mFlags & nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE);}
 
     ~XPCNativeScriptableInfo();
 

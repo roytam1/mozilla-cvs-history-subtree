@@ -63,12 +63,13 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 DONT_ENUM_STATIC_PROPS           = 1 << 19;
     const PRUint32 DONT_ASK_INSTANCE_FOR_SCRIPTABLE = 1 << 20;
     const PRUint32 HIDE_QUERY_INTERFACE             = 1 << 21;
-    const PRUint32 NO_TEAROFFS                      = 1 << 22;
+    const PRUint32 CLASSINFO_INTERFACES_ONLY        = 1 << 22;
     const PRUint32 ALLOW_PROP_MODS_DURING_RESOLVE   = 1 << 23;
+    const PRUint32 ALLOW_PROP_MODS_TO_PROTOTYPE     = 1 << 24;
 
 
     readonly attribute string   className;
-    readonly attribute PRUint32 flags;
+    readonly attribute PRUint32 scriptableFlags;
 
     void   preCreate(in nsISupports nativeObj, in JSContextPtr cx, 
                      in JSObjectPtr globalObj, out JSObjectPtr parentObj);

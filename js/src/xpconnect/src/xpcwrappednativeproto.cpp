@@ -72,7 +72,7 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx)
             if(helper)
             {
                 JSUint32 flags;
-                rv = helper->GetFlags(&flags);
+                rv = helper->GetScriptableFlags(&flags);
                 if(NS_FAILED(rv))
                     return JS_FALSE;
 
@@ -83,8 +83,13 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx)
         }
     }
 
+    JSClass* jsclazz = mScriptableInfo && 
+                       mScriptableInfo->AllowPropModsToPrototype() ?
+                            &XPC_WN_ModsAllowed_Proto_JSClass :
+                            &XPC_WN_NoMods_Proto_JSClass;
+
     mJSProtoObject = JS_NewObject(ccx.GetJSContext(),
-                                  &XPC_WN_Proto_JSClass,
+                                  jsclazz,
                                   mScope->GetPrototypeJSObject(),
                                   mScope->GetGlobalJSObject());
     return mJSProtoObject &&

@@ -1025,11 +1025,12 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
 /***************************************************************************/
 
 JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
+XPC_WN_Shared_Proto_Enumerate(JSContext *cx, JSObject *obj)
 {
-    // Could support a lazier lookup here.
-    
-    NS_ASSERTION(JS_InstanceOf(cx, obj, &XPC_WN_Proto_JSClass, nsnull), "bad proto");
+    NS_ASSERTION(
+        JS_InstanceOf(cx, obj, &XPC_WN_ModsAllowed_Proto_JSClass, nsnull) ||
+        JS_InstanceOf(cx, obj, &XPC_WN_NoMods_Proto_JSClass, nsnull), 
+                 "bad proto");
     XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
     if(!self)
         return JS_FALSE;
@@ -1072,11 +1073,30 @@ XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
+XPC_WN_Shared_Proto_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
+{
+    // XXX ?
+    return JS_TRUE;
+}
+
+JS_STATIC_DLL_CALLBACK(void)
+XPC_WN_Shared_Proto_Finalize(JSContext *cx, JSObject *obj)
+{
+    XPCWrappedNativeProto* p = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+    if(p)
+        p->JSProtoObjectFinalized(cx, obj);
+}
+
+/*****************************************************/
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
     CHECK_IDVAL(cx, idval);
     
-    NS_ASSERTION(JS_InstanceOf(cx, obj, &XPC_WN_Proto_JSClass, nsnull), "bad proto");
+    NS_ASSERTION(
+        JS_InstanceOf(cx, obj, &XPC_WN_ModsAllowed_Proto_JSClass, nsnull),
+                 "bad proto");
 
     XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
     if(!self)
@@ -1097,35 +1117,21 @@ XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
                                  enumFlag);
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_Proto_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
-{
-    // XXX ?
-    return JS_TRUE;
-}
 
-JS_STATIC_DLL_CALLBACK(void)
-XPC_WN_Proto_Finalize(JSContext *cx, JSObject *obj)
-{
-    XPCWrappedNativeProto* p = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
-    if(p)
-        p->JSProtoObjectFinalized(cx, obj);
-}
-
-JSClass XPC_WN_Proto_JSClass = {
-    "XPCWrappedNative_Proto",       // name;
+JSClass XPC_WN_ModsAllowed_Proto_JSClass = {
+    "XPC_WN_ModsAllowed_Proto_JSClass", // name;
     JSCLASS_HAS_PRIVATE |
-    JSCLASS_PRIVATE_IS_NSISUPPORTS, // flags;
+    JSCLASS_PRIVATE_IS_NSISUPPORTS,     // flags;
 
     /* Mandatory non-null function pointer members. */
     JS_PropertyStub,                // addProperty;
     JS_PropertyStub,                // delProperty;
     JS_PropertyStub,                // getProperty;
     JS_PropertyStub,                // setProperty;
-    XPC_WN_Proto_Enumerate,         // enumerate;
-    XPC_WN_Proto_Resolve,           // resolve;
-    XPC_WN_Proto_Convert,           // convert;
-    XPC_WN_Proto_Finalize,          // finalize;
+    XPC_WN_Shared_Proto_Enumerate,         // enumerate;
+    XPC_WN_ModsAllowed_Proto_Resolve,      // resolve;
+    XPC_WN_Shared_Proto_Convert,           // convert;
+    XPC_WN_Shared_Proto_Finalize,          // finalize;
 
     /* Optionally non-null members start here. */
     nsnull,                         // getObjectOps;
@@ -1139,7 +1145,86 @@ JSClass XPC_WN_Proto_JSClass = {
 };
 
 /***************************************************************************/
-// XXX fix me
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_OnlyIWrite_Proto_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
+{
+    CHECK_IDVAL(cx, idval);
+    
+    NS_ASSERTION(
+        JS_InstanceOf(cx, obj, &XPC_WN_NoMods_Proto_JSClass, nsnull),
+                 "bad proto");
+
+    XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+    if(!self)
+        return JS_FALSE;
+
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
+        return JS_FALSE;
+
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
+    return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+}
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
+{
+    CHECK_IDVAL(cx, idval);
+    
+    NS_ASSERTION(
+        JS_InstanceOf(cx, obj, &XPC_WN_NoMods_Proto_JSClass, nsnull),
+                 "bad proto");
+
+    XPCWrappedNativeProto* self = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+    if(!self)
+        return JS_FALSE;
+
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
+        return JS_FALSE;
+
+    uintN enumFlag = self->GetScriptableInfo() &&
+                     self->GetScriptableInfo()->DontEnumStaticProps() ?
+                        0 : JSPROP_ENUMERATE;
+
+    return DefinePropertyIfFound(ccx, obj, idval, 
+                                 self->GetSet(), nsnull, self->GetScope(),
+                                 JS_TRUE, nsnull,
+                                 JSPROP_READONLY |
+                                 JSPROP_PERMANENT |
+                                 enumFlag);
+}
+
+JSClass XPC_WN_NoMods_Proto_JSClass = {
+    "XPC_WN_NoMods_Proto_JSClass",      // name;
+    JSCLASS_HAS_PRIVATE |
+    JSCLASS_PRIVATE_IS_NSISUPPORTS,     // flags;
+
+    /* Mandatory non-null function pointer members. */
+    XPC_WN_OnlyIWrite_Proto_PropertyStub,  // addProperty;
+    XPC_WN_CannotModifyPropertyStub,       // delProperty;
+    JS_PropertyStub,                       // getProperty;
+    XPC_WN_OnlyIWrite_Proto_PropertyStub,  // setProperty;
+    XPC_WN_Shared_Proto_Enumerate,         // enumerate;
+    XPC_WN_NoMods_Proto_Resolve,           // resolve;
+    XPC_WN_Shared_Proto_Convert,           // convert;
+    XPC_WN_Shared_Proto_Finalize,          // finalize;
+
+    /* Optionally non-null members start here. */
+    nsnull,                         // getObjectOps;
+    nsnull,                         // checkAccess;
+    nsnull,                         // call;
+    nsnull,                         // construct;
+    nsnull,                         // xdrObject;
+    nsnull,                         // hasInstance;
+    nsnull,                         // mark;
+    nsnull                          // spare;
+};
+
+/***************************************************************************/
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_TearOff_Enumerate(JSContext *cx, JSObject *obj)

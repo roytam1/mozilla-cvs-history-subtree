@@ -53,7 +53,7 @@ NS_IMETHODIMP XPC_MAP_CLASSNAME::GetClassName(char * *aClassName)
 
 /**************************************************************/
 
-NS_IMETHODIMP XPC_MAP_CLASSNAME::GetFlags(PRUint32 *aFlags)
+NS_IMETHODIMP XPC_MAP_CLASSNAME::GetScriptableFlags(PRUint32 *aFlags)
 {
     *aFlags =
 #ifdef XPC_MAP_WANT_PRECREATE
