@@ -1060,8 +1060,9 @@ static PRBool pt_solaris_sendfile_cont(pt_Continuation *op, PRInt16 revents)
     ssize_t count;
 
     count = SOLARIS_SENDFILEV(op->arg1.osfd, vec, op->arg3.amount, &xferred);
-    op->syserrno = errno;
     PR_ASSERT((count == -1) || (count == xferred));
+    PR_ASSERT(xferred <= op->nbytes_to_send);
+    op->syserrno = errno;
 
     if (count == -1) {
         if (op->syserrno != EWOULDBLOCK && op->syserrno != EAGAIN
@@ -1071,7 +1072,6 @@ static PRBool pt_solaris_sendfile_cont(pt_Continuation *op, PRInt16 revents)
         }
         count = xferred;
     }
-    PR_ASSERT(count <= op->nbytes_to_send);
     
     op->result.code += count;
     if (count < op->nbytes_to_send) {

@@ -41,8 +41,6 @@
  * $Id$
  */
 
-#if !defined(_WIN32_WCE)
-
 #include "prerror.h"
 #include "prlog.h"
 #include <errno.h>
@@ -373,4 +371,3 @@ void nss_MD_win32_map_default_error(PRInt32 err)
     PR_SetError(prError, err);
 }
 
-#endif

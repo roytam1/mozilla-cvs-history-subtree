@@ -73,6 +73,7 @@ all export::	$(INCLUDEDIR) $(GENHEADERS)
 	$(NSINSTALL) -D $(NSPRINCDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(PRIVATEHEADERS) $(PRIVATEINCDIR)
+	rm -rf $(NSPRINCDIR)/*
 	cp -r $(DIST)/$(OBJDIR_NAME)/include/nspr/* $(NSPRINCDIR)
 
 $(INCLUDEDIR):	FORCE
@@ -84,7 +85,5 @@ $(INCLUDEDIR)/ldap-standard.h:	ldap-standard-tmpl.h
 			LDAP_VENDOR_NAME="$(VENDOR_NAME)" \
 			LDAP_VENDOR_VERSION="$(VENDOR_VERSION)" \
 			< $< > $@
-
-install::	export
 
 FORCE:

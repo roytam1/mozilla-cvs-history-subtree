@@ -34,12 +34,8 @@
 #include "nss.h"
 #include <winver.h>
 
-#define MY_LIBNAME "softokn"
-#ifdef MOZ_CLIENT
-#define MY_FILEDESCRIPTION "NSS Builtin Crypto PKCS #11 Library for Clients"
-#else
-#define MY_FILEDESCRIPTION "NSS Builtin Crypto PKCS #11 Library"
-#endif
+#define MY_LIBNAME "nsspki"
+#define MY_FILEDESCRIPTION "NSS PKI Base Library"
 
 #define STRINGIZE(x) #x
 #define STRINGIZE2(x) STRINGIZE(x)

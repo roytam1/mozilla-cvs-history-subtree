@@ -9,11 +9,11 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 # 
-# The Original Code is the Netscape Portable Runtime (NSPR).
+# The Original Code is the Netscape security libraries.
 # 
 # The Initial Developer of the Original Code is Netscape
 # Communications Corporation.  Portions created by Netscape are 
-# Copyright (C) 1998-2000 Netscape Communications Corporation.  All
+# Copyright (C) 1994-2000 Netscape Communications Corporation.  All
 # Rights Reserved.
 # 
 # Contributor(s):
@@ -29,59 +29,20 @@
 # the GPL.  If you do not delete the provisions above, a recipient
 # may use your version of this file under either the MPL or the
 # GPL.
-# 
+#
+CONFIG_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
+
+ifdef BUILD_IDG
+DEFINES += -DNSSDEBUG
+endif
 
 #
-# Config stuff for NetBSD
+#  Override TARGETS variable so that only static libraries
+#  are specifed as dependencies within rules.mk.
 #
 
-include $(MOD_DEPTH)/config/UNIX.mk
+TARGETS        = $(LIBRARY)
+SHARED_LIBRARY =
+IMPORT_LIBRARY =
+PROGRAM        =
 
-CC			= gcc
-CCC			= g++
-RANLIB			= ranlib
-
-ifndef OBJECT_FMT
-OBJECT_FMT		:= $(shell if echo __ELF__ | $${CC:-cc} -E - | grep -q __ELF__ ; then echo a.out ; else echo ELF ; fi)
-endif
-
-OS_REL_CFLAGS		=
-ifeq (86,$(findstring 86,$(OS_TEST)))
-CPU_ARCH		= x86
-else
-CPU_ARCH		= $(OS_TEST)
-endif
-
-OS_CFLAGS		= $(DSO_CFLAGS) $(OS_REL_CFLAGS) -ansi -Wall -pipe -DNETBSD -DHAVE_STRERROR -DHAVE_BSD_FLOCK
-
-ifeq ($(USE_PTHREADS),1)
-OS_LIBS			= -lc_r
-# XXX probably should define _THREAD_SAFE too.
-else
-OS_LIBS			= -lc
-DEFINES			+= -D_PR_LOCAL_THREADS_ONLY
-endif
-
-ARCH			= netbsd
-
-ifeq ($(OBJECT_FMT),ELF)
-DLL_SUFFIX		= so
-else
-DLL_SUFFIX		= so.1.0
-# XXX work around a bug in the a.out ld(1).
-OS_LIBS			=
-endif
-
-DSO_CFLAGS		= -fPIC -DPIC
-DSO_LDOPTS		= -shared
-ifeq ($(OBJECT_FMT),ELF)
-DSO_LDOPTS		+=-Wl,-soname,lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
-endif
-
-ifdef LIBRUNPATH
-DSO_LDOPTS		+= -Wl,-R$(LIBRUNPATH)
-endif
-
-MKSHLIB			= $(CC) $(DSO_LDOPTS)
-
-G++INCLUDES		= -I/usr/include/g++
