@@ -19,6 +19,9 @@ import org.mozilla.util.Assert;
 import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+
 /**
  *
  *  <B>BrowserControlCanvasFactory</B> creates concrete instances of BrowserControlCanvas
@@ -44,6 +47,10 @@ public class BrowserControlCanvasFactory extends Object
 // Class Variables
 //
 
+    private static boolean appDataHasBeenSet = false;
+    private static Class browserControlCanvasClass = null;
+    private static String platformCanvasClassName = null;
+
 //
 // Instance Variables
 //
@@ -65,57 +72,76 @@ public BrowserControlCanvasFactory()
 // Class methods
 //
 
-public static BrowserControlCanvas newBrowserControlCanvas()
+    /**
+
+     * This method is used to set per-application instance data, such as
+     * the location of the browser binary.
+
+     * @param absolutePathToNativeBrowserBinDir the path to the bin dir
+     * of the native browser, including the bin.  ie:
+     * "D:\Projects\mozilla\dist\win32_d.obj\bin"
+
+     */
+
+public static void setAppData(String absolutePathToNativeBrowserBinDir) throws FileNotFoundException, ClassNotFoundException
 {
-    Class browserControlCanvasClass = null;
-    String className = null;
-    
-    BrowserControlCanvas result = null;
-    // PENDING(edburns): do some magic to determine the right kind of
-    // MozWebShellCanvas to instantiate
+    if (!appDataHasBeenSet) {
+        ParameterCheck.nonNull(absolutePathToNativeBrowserBinDir);
+        
+        // verify that the directory exists:
+        File binDir = new File(absolutePathToNativeBrowserBinDir);
+        if (!binDir.exists()) {
+            throw new FileNotFoundException("Directory " + absolutePathToNativeBrowserBinDir + " is not found.");
+        }
 
-    // How about this:
-    // I try loading sun.awt.windows.WDrawingSurfaceInfo. If it doesn't
-    // load, then I try loading sun.awt.motif.MDrawingSufaceInfo. If
-    // none loads, then I return a error message.
-    // If you think up of a better way, let me know.
-    // -- Mark
-
-    try {
+        // cause the native library to be loaded
+        // PENDING(edburns): do some magic to determine the right kind of
+        // MozWebShellCanvas to instantiate
+        
+        // How about this:
+        // I try loading sun.awt.windows.WDrawingSurfaceInfo. If it doesn't
+        // load, then I try loading sun.awt.motif.MDrawingSufaceInfo. If
+        // none loads, then I return a error message.
+        // If you think up of a better way, let me know.
+        // -- Mark
+        
         Class win32DrawingSurfaceInfoClass = 
             Class.forName("sun.awt.windows.WDrawingSurfaceInfo");
         
         if (win32DrawingSurfaceInfoClass != null) {
-            className = "org.mozilla.webclient.win32.Win32BrowserControlCanvas";
+            platformCanvasClassName = "org.mozilla.webclient.win32.Win32BrowserControlCanvas";
         }
-    } catch (Exception e) {
-        // Do nothing????
-    }
-
-    try {
-        Class motifDrawingSurfaceInfoClass = 
-            Class.forName("sun.awt.motif.MDrawingSurfaceInfo");
         
-        if (motifDrawingSurfaceInfoClass != null) {
-            className = "org.mozilla.webclient.motif.MotifBrowserControlCanvas";
-        }
-    } catch (Exception e) {
-        // Do nothing????
-    }
-
-    if (className != null) {
-        try {
-            if (null != (browserControlCanvasClass = Class.forName(className))) {
-                result = (BrowserControlCanvas) browserControlCanvasClass.newInstance();
+        if (null == platformCanvasClassName) {
+            Class motifDrawingSurfaceInfoClass = 
+                Class.forName("sun.awt.motif.MDrawingSurfaceInfo");
+            
+            if (motifDrawingSurfaceInfoClass != null) {
+                platformCanvasClassName = "org.mozilla.webclient.motif.MotifBrowserControlCanvas";
             }
-        } catch (Exception e) {
-            System.out.println("Got Exception: " + e.getMessage());
-            e.printStackTrace();
         }
-    } else {
-        System.out.println("Could not determine WebShellCanvas class to load\n");
+        if (platformCanvasClassName != null) {
+            browserControlCanvasClass = Class.forName(platformCanvasClassName);
+        }
+        else {
+            throw new ClassNotFoundException("Could not determine WebShellCanvas class to load\n");
+        }
+        
+        BrowserControlCanvas.initialize(absolutePathToNativeBrowserBinDir);
+        appDataHasBeenSet = true;
     }
-	
+}
+
+public static BrowserControlCanvas newBrowserControlCanvas() throws InstantiationException, IllegalAccessException, IllegalStateException
+{
+    if (!appDataHasBeenSet) {
+        throw new IllegalStateException("Can't create BrowserControlCanvasInstance: setAppData() has not been called.");
+    }
+    Assert.assert(null != browserControlCanvasClass);
+    
+    BrowserControlCanvas result = null;
+    result = (BrowserControlCanvas) browserControlCanvasClass.newInstance();
+    
     return result;
 }
 
@@ -137,7 +163,14 @@ public static void main(String [] args)
     Log.setApplicationVersion("0.0");
     Log.setApplicationVersionDate("$Id$");
 
-	BrowserControlCanvas canvas = BrowserControlCanvasFactory.newBrowserControlCanvas();
+    BrowserControlCanvas canvas = null;
+    try {
+        BrowserControlCanvasFactory.setAppData(args[0]);
+        canvas = BrowserControlCanvasFactory.newBrowserControlCanvas();
+    }
+    catch (Exception e) {
+        System.out.println(e.getMessage());
+    }
 
 	Assert.assert(null != canvas);
 }

@@ -69,7 +69,8 @@ public class BrowserControlImpl extends Object implements BrowserControl
 
 public BrowserControlImpl(int windowPtr, Rectangle bounds) throws Exception 
 {
-	nativeWebShell = BrowserControlMozillaShim.webShellCreate(windowPtr, bounds);
+	nativeWebShell = BrowserControlMozillaShim.webShellCreate(windowPtr, 
+                                                              bounds);
 }
 
 //

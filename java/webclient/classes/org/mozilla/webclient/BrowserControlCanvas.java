@@ -93,7 +93,7 @@ private Rectangle		windowRelativeBounds;
  * Initialize the BrowserControlMozillaShim. For now,
  * this initializes the Mozilla registry.
  */
-public BrowserControlCanvas () 
+protected BrowserControlCanvas () 
 {
 	nativeWindow = 0;
 	webShell = null;
@@ -101,14 +101,17 @@ public BrowserControlCanvas ()
 	boundsValid = false;
 	hasFocus = false;
 	
+} // BrowserControlCanvas() ctor
+
+protected static void initialize(String verifiedBinDirAbsolutePath)
+{
 	try {
-		BrowserControlMozillaShim.initialize();
+		BrowserControlMozillaShim.initialize(verifiedBinDirAbsolutePath);
 	} catch (Exception e) {
 		System.out.println(e.toString());
 	}
-} // BrowserControlCanvas() ctor
-	
-	
+}
+
 /**
   * Obtain the native window handle for this component's
   * peer.
@@ -137,7 +140,7 @@ public void addNotify ()
 	// accessing its native window handle.
 	dsi.lock();
 	nativeWindow = getWindow(dsi);
-	
+
 	try {
 		Rectangle r = new Rectangle(getBoundsRelativeToWindow());
 		webShell = new BrowserControlImpl(nativeWindow, r);
