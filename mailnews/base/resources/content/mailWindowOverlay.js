@@ -987,8 +987,23 @@ function MsgCreateFilter()
   var msgHdr = gDBView.hdrForFirstSelectedMessage;
   var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
   var emailAddress = headerParser.extractHeaderAddressMailboxes(null, msgHdr.author);
-  if (emailAddress)
-    top.MsgFilters(emailAddress);
+  var accountKey = msgHdr.accountKey;
+  var folder;
+  if (accountKey.length > 0)
+  {
+    var account = accountManager.getAccount(accountKey);
+    if (account)
+    {
+      server = account.incomingServer;
+      if (server)
+        folder = server.rootFolder;
+    }
+  }
+  if (!folder)
+    folder = GetFirstSelectedMsgFolder();
+  
+    if (emailAddress)
+     top.MsgFilters(emailAddress, folder);
 }
 
 function MsgHome(url)
@@ -1321,9 +1336,10 @@ function MsgCanFindAgain()
   return canFindAgainInPage();
 }
 
-function MsgFilters(emailAddress)
+function MsgFilters(emailAddress, folder)
 {
-    var preselectedFolder = GetFirstSelectedMsgFolder();
+    if (!folder)
+      folder = GetFirstSelectedMsgFolder();
     var args;
     if (emailAddress)
     {
@@ -1331,7 +1347,7 @@ function MsgFilters(emailAddress)
          launch the filterEditor dialog
          and prefill that with the emailAddress */
          
-      var curFilterList = preselectedFolder.getFilterList(msgWindow);
+      var curFilterList = folder.getFilterList(msgWindow);
       args = {filterList: curFilterList};
       args.filterName = emailAddress;
       window.openDialog("chrome://messenger/content/FilterEditor.xul", "", 
@@ -1348,7 +1364,7 @@ function MsgFilters(emailAddress)
     }
     else  // just launch filterList dialog
     {
-      args = { refresh: false, folder: preselectedFolder };
+      args = { refresh: false, folder: folder };
       MsgFilterList(args);
     }
 }
@@ -1833,7 +1849,7 @@ function GetFolderMessages()
     // should shift click get mail for all (authenticated) accounts?
     // see bug #125885
     if (!folder.server.isDeferredTo)
-    folder = defaultAccountRootFolder;
+      folder = defaultAccountRootFolder;
   }
 
   var folders = new Array(1);
