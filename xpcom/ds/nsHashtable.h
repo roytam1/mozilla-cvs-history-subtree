@@ -192,7 +192,7 @@ class NS_COM nsSupportsHashtable
 
 #include "nsISupports.h"
 
-class nsISupportsKey : public nsHashKey {
+class NS_COM nsISupportsKey : public nsHashKey {
   protected:
     nsISupports* mKey;
     
