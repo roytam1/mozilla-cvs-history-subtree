@@ -5705,7 +5705,7 @@ function AddKeywordForSearchField()
       if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" || 
           e.localName.toLowerCase() == "textarea") 
         postData += escape(e.name + "=" + (e == node ? "%s" : e.value)) + "&";
-      else if (e.localName.toLowerCase() == "select")
+      else if (e.localName.toLowerCase() == "select" && e.selectedIndex >= 0)
         postData += escape(e.name + "=" + e.options[e.selectedIndex].value) + "&";
     }
   }
@@ -5719,7 +5719,7 @@ function AddKeywordForSearchField()
       if (e.type.toLowerCase() == "text" || e.type.toLowerCase() == "hidden" || 
           e.localName.toLowerCase() == "textarea")
         spec += "&" + escape(e.name) + "=" + escape(e.value);
-      else if (e.localName.toLowerCase() == "select")
+      else if (e.localName.toLowerCase() == "select" && e.selectedIndex >= 0)
         spec += "&" + escape(e.name) + "=" + escape(e.options[e.selectedIndex].value);
     }
   }
