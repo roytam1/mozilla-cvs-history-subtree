@@ -20,25 +20,15 @@
 
 
 /* temporary outliner styles */
-outlinerbody {
-  background-color: white;
-  color: black;
+
+outlinercell.threadColumnHeader[currentView="threaded"] {
+  list-style-image: url("chrome://messenger/skin/threadcol.gif");
 }
 
-:-moz-outliner-row
-{
-  height: 19px;
+outlinercell.threadColumnHeader[currentView="unthreaded"] {
+  list-style-image: url("chrome://messenger/skin/unthreadcol.gif");
 }
 
-:-moz-outliner-cell
-{
-  
-}
-
-:-moz-outliner-cell-text
-{
-  color: inherit;
-}
 
 /* end temporary outliner styles */
 
