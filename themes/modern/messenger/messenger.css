@@ -515,6 +515,7 @@ searchterm {
   border-top: none;
   border-left: none;
   border-right: none;
+  border-bottom: none;
 }
 
 #threadpane-splitter[state="collapsed"]
@@ -634,6 +635,7 @@ searchterm {
 #messagepanebox
 {
   border-left: 1px solid #63717B;
+  border-top: 1px solid #63717B;
   border-bottom: 1px solid #000000;
 }
 
@@ -646,6 +648,7 @@ searchterm {
 #messagepane
 {
   border-left: 1px solid #000000;
+  border-top: 1px solid #000000;
   border-bottom: none;
 }
 
