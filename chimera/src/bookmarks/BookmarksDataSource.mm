@@ -50,8 +50,6 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
 #include "nsINamespaceManager.h"
-#include "nsIPrefBranch.h"
-#include "nsIServiceManager.h"
 
 #include "nsVoidArray.h"
 
@@ -395,11 +393,7 @@ const int kBookmarksRootItemTag = -2;
   if (!item)
     return;
 
-  nsIContent* content = [item contentNode];
-  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(content));
-  nsAutoString group;
-  content->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);
-  if (!group.IsEmpty())
+  if ([item isGroup])
   {
     NSArray* groupURLs = [[BookmarksManager sharedBookmarksManager] getBookmarkGroupURIs:item];
     [mBrowserWindowController openTabGroup:groupURLs replaceExistingTabs:YES];
@@ -413,14 +407,59 @@ const int kBookmarksRootItemTag = -2;
   }
   else
   {
-    nsAutoString href;
-    content->GetAttr(kNameSpaceID_None, BookmarksService::gHrefAtom, href);
-    if (!href.IsEmpty())
+    // if the command key is down, follow the command-click pref
+    if (([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask) &&
+        [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL])
     {
-      NSString* url = [NSString stringWith_nsAString: href];
-      [[mBrowserWindowController getBrowserWrapper] loadURI: url referrer:nil flags: NSLoadFlagsNone activate:YES];
+      BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+      [mBrowserWindowController openNewTabWithURL:[item url] referrer:nil loadInBackground: loadInBackground];
     }
+    else
+      [[mBrowserWindowController getBrowserWrapper] loadURI:[item url] referrer:nil flags:NSLoadFlagsNone activate:YES];
   }
+}
+
+-(IBAction)openBookmarkInNewTab:(id)aSender
+{
+  int index = [mOutlineView selectedRow];
+  if (index == -1)
+    return;
+
+  if ([mOutlineView numberOfSelectedRows] == 1)
+  {
+    BookmarkItem* item = [mOutlineView itemAtRow: index];
+    BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+    [mBrowserWindowController openNewTabWithURL:[item url] referrer:nil loadInBackground: loadInBackground];
+  }
+}
+
+-(IBAction)openBookmarkInNewWindow:(id)aSender
+{
+  int index = [mOutlineView selectedRow];
+  if (index == -1)
+    return;
+  if ([mOutlineView numberOfSelectedRows] == 1)
+  {
+    BookmarkItem* item = [mOutlineView itemAtRow: index];
+
+    BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+
+    if ([item isGroup]) 
+      [mBrowserWindowController openNewWindowWithGroup:[item contentNode] loadInBackground:loadInBackground];
+    else
+      [mBrowserWindowController openNewWindowWithURL:[item url] referrer: nil loadInBackground: loadInBackground];
+  }
+}
+
+-(IBAction)showBookmarkInfo:(id)aSender
+{
+  BookmarkInfoController *bic = [BookmarkInfoController sharedBookmarkInfoController]; 
+
+  int index = [mOutlineView selectedRow];
+  BookmarkItem* item = [mOutlineView itemAtRow: index];
+  [bic setBookmark:item];
+
+  [bic showWindow:bic];
 }
 
 -(NSString*) resolveKeyword: (NSString*) aKeyword
@@ -675,6 +714,7 @@ const int kBookmarksRootItemTag = -2;
   if (!mRegisteredClient) return NSDragOperationNone;
   
   NSArray* types = [[info draggingPasteboard] types];
+  BOOL    isCopy = ([info draggingSourceOperationMask] == NSDragOperationCopy);
 
   //  if the index is -1, deny the drop
   if (index == NSOutlineViewDropOnItemIndex)
@@ -685,7 +725,7 @@ const int kBookmarksRootItemTag = -2;
     NSArray *draggedIDs = [[info draggingPasteboard] propertyListForType: @"MozBookmarkType"];
 
     BookmarkItem* parent = (item) ? item : BookmarksService::GetRootItem();
-    return (BookmarksService::IsBookmarkDropValid(parent, index, draggedIDs)) ? NSDragOperationGeneric : NSDragOperationNone;
+    return (BookmarksService::IsBookmarkDropValid(parent, index, draggedIDs, isCopy)) ? NSDragOperationGeneric : NSDragOperationNone;
   }
   
   if ([types containsObject: @"MozURLType"])
@@ -780,70 +820,6 @@ const int kBookmarksRootItemTag = -2;
     [mOutlineView reloadData];
   else
     [mOutlineView reloadItem: item reloadChildren: aReloadChildren];
-}
-
--(IBAction)openBookmarkInNewTab:(id)aSender
-{
-  int index = [mOutlineView selectedRow];
-  if (index == -1)
-    return;
-  if ([mOutlineView numberOfSelectedRows] == 1) {
-    nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
-    if (!pref)
-        return; // Something bad happened if we can't get prefs.
-
-    BookmarkItem* item = [mOutlineView itemAtRow: index];
-    nsAutoString hrefAttr;
-    [item contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gHrefAtom, hrefAttr);
-  
-    // stuff it into the string
-    NSString* hrefStr = [NSString stringWith_nsAString:hrefAttr];
-
-    PRBool loadInBackground;
-    pref->GetBoolPref("browser.tabs.loadInBackground", &loadInBackground);
-
-    [mBrowserWindowController openNewTabWithURL: hrefStr referrer:nil loadInBackground: loadInBackground];
-  }
-}
-
--(IBAction)openBookmarkInNewWindow:(id)aSender
-{
-  int index = [mOutlineView selectedRow];
-  if (index == -1)
-    return;
-  if ([mOutlineView numberOfSelectedRows] == 1) {
-    nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
-    if (!pref)
-        return; // Something bad happened if we can't get prefs.
-
-    BookmarkItem* item = [mOutlineView itemAtRow: index];
-    nsAutoString hrefAttr;
-    [item contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gHrefAtom, hrefAttr);
-  
-    // stuff it into the string
-    NSString* hrefStr = [NSString stringWith_nsAString:hrefAttr];
-
-    PRBool loadInBackground;
-    pref->GetBoolPref("browser.tabs.loadInBackground", &loadInBackground);
-
-    nsAutoString group;
-    [item contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);
-    if (group.IsEmpty()) 
-      [mBrowserWindowController openNewWindowWithURL: hrefStr referrer: nil loadInBackground: loadInBackground];
-    else
-      [mBrowserWindowController openNewWindowWithGroup:[item contentNode] loadInBackground:loadInBackground];
-  }
-}
-
--(IBAction)showBookmarkInfo:(id)aSender
-{
-  BookmarkInfoController *bic = [BookmarkInfoController sharedBookmarkInfoController]; 
-
-  int index = [mOutlineView selectedRow];
-  BookmarkItem* item = [mOutlineView itemAtRow: index];
-  [bic setBookmark:item];
-
-  [bic showWindow:bic];
 }
 
 - (BOOL)haveSelectedRow

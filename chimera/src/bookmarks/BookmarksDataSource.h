@@ -77,6 +77,7 @@
 
 -(NSString*)resolveKeyword:(NSString*)aKeyword;
 
+- (IBAction)openBookmark: (id)aSender;
 - (IBAction)openBookmarkInNewTab:(id)aSender;
 - (IBAction)openBookmarkInNewWindow:(id)aSender;
 

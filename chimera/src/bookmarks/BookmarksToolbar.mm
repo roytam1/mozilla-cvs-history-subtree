@@ -420,7 +420,8 @@
 - (BOOL)dropDestinationValid:(id <NSDraggingInfo>)sender
 {
   NSPasteboard* draggingPasteboard = [sender draggingPasteboard];
-  NSArray*      types = [draggingPasteboard types];
+  NSArray*      types  = [draggingPasteboard types];
+  BOOL          isCopy = ([sender draggingSourceOperationMask] == NSDragOperationCopy);
 
   if (!BookmarksService::gToolbarRoot)
     return NO;
@@ -451,7 +452,7 @@
     // we rely on IsBookmarkDropValid to filter out drops where the source
     // and destination are the same. 
     BookmarkItem* toolbarFolderItem = BookmarksService::GetWrapperFor(destinationContent);
-    if (!BookmarksService::IsBookmarkDropValid(toolbarFolderItem, index, draggedIDs)) {
+    if (!BookmarksService::IsBookmarkDropValid(toolbarFolderItem, index, draggedIDs, isCopy)) {
       return NO;
     }
   }

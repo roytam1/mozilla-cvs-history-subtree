@@ -1140,7 +1140,7 @@ BookmarksService::FilterOutDescendantsForDrag(NSArray* nodes)
 #endif
 
 bool
-BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, NSArray* draggedIDs)
+BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, NSArray* draggedIDs, bool isCopy)
 {
   if ( !draggedIDs )
     return false;
@@ -1183,7 +1183,7 @@ BookmarksService::IsBookmarkDropValid(BookmarkItem* proposedParent, int index, N
     // XXX bail for now if > 1 being dragged. For the correct feedback when > 1 item is
     // selected, we should reject drags when the source items are contiguous (under the
     // same parent), and the target is within their range.
-    if ([draggedItems count] == 1)
+    if (!isCopy && [draggedItems count] == 1)
     {
       BookmarkItem* draggedItem = [draggedItems objectAtIndex:0];
       nsCOMPtr<nsIContent> parentContent;

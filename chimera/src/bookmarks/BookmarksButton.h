@@ -42,5 +42,11 @@ class BookmarksService;
 -(nsIDOMElement*)element;
 
 -(IBAction)openBookmark:(id)aSender;
+-(IBAction)openBookmarkInNewTab:(id)aSender;
+-(IBAction)openBookmarkInNewWindow:(id)aSender;
+-(IBAction)showBookmarkInfo:(id)aSender;
+-(IBAction)deleteBookmarks: (id)aSender;
+-(IBAction)addFolder:(id)aSender;
+
 
 @end

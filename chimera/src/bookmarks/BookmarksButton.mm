@@ -29,9 +29,6 @@
 #include "nsCOMPtr.h"
 #include "nsIContent.h"
 #include "nsIDOMElement.h"
-#include "nsINamespaceManager.h"
-#include "nsIPrefBranch.h"
-#include "nsIServiceManager.h"
 #include "nsString.h"
 #include "nsCRT.h"
 
@@ -87,15 +84,19 @@
     return;
   }
 
+  // if the command key is down, follow the command-click pref
+  if (([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask) &&
+      [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL])
+  {
+    [self openBookmarkInNewTab:aSender];
+    return;
+  }
+
   [brController loadURL:[mBookmarkItem url] referrer:nil activate:YES];
 }
 
 -(IBAction)openBookmarkInNewTab:(id)aSender
 {
-  nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
-  if (!pref)
-   return; // Something bad happened if we can't get prefs.
-
   if (!mElement) return;
 
   // Get the href attribute.  This is the URL we want to load.
@@ -103,8 +104,7 @@
   mElement->GetAttribute(NS_LITERAL_STRING("href"), hrefAttr);
   NSString* hrefStr = [NSString stringWith_nsAString:hrefAttr];
 
-  PRBool loadInBackground;
-  pref->GetBoolPref("browser.tabs.loadInBackground", &loadInBackground);
+  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
 
   BrowserWindowController* brController = [[self window] windowController];
   [brController openNewTabWithURL: hrefStr referrer:nil loadInBackground: loadInBackground];
@@ -112,10 +112,6 @@
 
 -(IBAction)openBookmarkInNewWindow:(id)aSender
 {
-  nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
-  if (!pref)
-    return; // Something bad happened if we can't get prefs.
-
   if (!mElement) return;
 
   // Get the href attribute.  This is the URL we want to load.
@@ -123,8 +119,7 @@
   mElement->GetAttribute(NS_LITERAL_STRING("href"), hrefAttr);
   NSString* hrefStr = [NSString stringWith_nsAString:hrefAttr];
 
-  PRBool loadInBackground;
-  pref->GetBoolPref("browser.tabs.loadInBackground", &loadInBackground);
+  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
 
   nsAutoString group;
   mElement->GetAttribute(NS_LITERAL_STRING("group"), group);
