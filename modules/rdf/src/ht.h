@@ -265,6 +265,7 @@ void				refreshItemList (HT_Resource node, HT_Event whatHappened);
 void				refreshPanes();
 PRBool				initToolbars (HT_Pane pane);
 HT_Pane				paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag);
+void				htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx);
 void				htSetBookmarkAddDateToNow(RDF_Resource r);
 RDF				newHTPaneDB();
 RDF				HTRDF_GetDB();
@@ -298,6 +299,7 @@ PRBool				htVerifyUniqueToken(HT_Resource node, void *token, uint32 tokenType, c
 PRBool				ht_isURLReal(HT_Resource node);
 char *				buildInternalIconURL(HT_Resource node, PRBool *volatileURLFlag,	PRBool largeIconFlag, PRBool workspaceFlag);
 char *				getIconURL( HT_Resource node, PRBool largeIconFlag, PRBool workspaceFlag, int state);
+PRBool				htIsPropertyInMoreOptions(RDF_Resource r);
 void				addHtmlElement(HT_Resource node, RDF_Resource token, uint32 tokenType);
 void				freeHtmlElementList();
 _htmlElementPtr			findHtmlElement(void *token);

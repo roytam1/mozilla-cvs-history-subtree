@@ -1251,10 +1251,57 @@ HT_AddToContainer (HT_Resource container, char *url, char *optionalTitle)
 
 
 
+void
+htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx)
+{
+	NET_AllHeaders		*headers;
+	RDF_Resource		r;
+	unsigned long		headerNum=0,matchNum;
+
+struct	{
+	char		*name;
+	RDF_Resource	r;
+	} matches[5];
+
+	matches[0].name = "description";	matches[0].r = gWebData->RDF_description;
+	matches[1].name = "keyword";		matches[1].r = gWebData->RDF_keyword;
+	matches[2].name = "smallIcon";		matches[2].r = gNavCenter->RDF_smallIcon;
+	matches[3].name = "largeIcon";		matches[3].r = gNavCenter->RDF_largeIcon;
+	matches[4].name = NULL;			matches[4].r = NULL;
+
+	if (urls != NULL)
+	{
+		if ((headers = &(urls->all_headers)) != NULL)
+		{
+			if ((r = (RDF_Resource)urls->owner_data) != NULL)
+			{
+				while (headers->key[headerNum] != NULL)
+				{
+					for (matchNum=0; matches[matchNum].name != NULL; matchNum++)
+					{
+						if (!strcmp(headers->key[headerNum], matches[matchNum].name))
+						{
+							if (headers->value[headerNum] != NULL)
+							{
+								RDF_Assert(gNCDB, r, matches[matchNum].r,
+									headers->value[headerNum], RDF_STRING_TYPE);
+							}
+						}
+					}
+					++headerNum;
+				}
+			}
+		}
+	}
+}
+
+
+
 PR_PUBLIC_API(void)
 HT_AddBookmark (char *url, char *optionalTitle)
 {
 	RDF_Resource		nbFolder, r;
+	URL_Struct      	*urls;
 
 	XP_ASSERT(url != NULL);
 
@@ -1269,6 +1316,15 @@ HT_AddBookmark (char *url, char *optionalTitle)
 			}
 			htSetBookmarkAddDateToNow(r);
 			RDF_Assert(gNCDB, r, gCoreVocab->RDF_parent, nbFolder, RDF_RESOURCE_TYPE);
+
+			/* look for META tags */
+
+			if ((urls = NET_CreateURLStruct(url,  NET_DONT_RELOAD)) != NULL)
+			{
+				urls->owner_data = r;
+				NET_GetURL(urls, FO_ONLY_FROM_CACHE_AND_PRESENT,
+					gRDFMWContext(), htMetaTagURLExitFunc);
+			}
 		}
 	}
 }
@@ -5452,6 +5508,39 @@ HT_GetSmallIconURL (HT_Resource r)
 
 
 
+PRBool
+htIsPropertyInMoreOptions(RDF_Resource r)
+{
+	PRBool			retVal = PR_FALSE;
+
+	if ((r == gNavCenter->viewFGColor) || (r == gNavCenter->viewBGColor) ||
+	    (r == gNavCenter->viewBGURL) || (r == gNavCenter->showTreeConnections) ||
+	    (r == gNavCenter->treeConnectionFGColor) || (r == gNavCenter->treeOpenTriggerIconURL) ||
+	    (r == gNavCenter->treeClosedTriggerIconURL) || (r == gNavCenter->selectionFGColor) ||
+	    (r == gNavCenter->selectionBGColor) || (r == gNavCenter->columnHeaderFGColor) ||
+	    (r == gNavCenter->columnHeaderBGColor) || (r == gNavCenter->columnHeaderBGURL) ||
+	    (r == gNavCenter->showColumnHeaders) || (r == gNavCenter->showColumnHeaderDividers) ||
+	    (r == gNavCenter->sortColumnFGColor) || (r == gNavCenter->sortColumnBGColor) ||
+	    (r == gNavCenter->titleBarFGColor) || (r == gNavCenter->titleBarBGColor) ||
+	    (r == gNavCenter->titleBarBGURL) || (r == gNavCenter->dividerColor) ||
+	    (r == gNavCenter->showDivider) || (r == gNavCenter->selectedColumnHeaderFGColor) ||
+	    (r == gNavCenter->selectedColumnHeaderBGColor) || (r == gNavCenter->showColumnHilite) ||
+	    (r == gNavCenter->triggerPlacement) || (r == gNavCenter->viewRolloverColor) ||
+	    (r == gNavCenter->viewPressedColor) || (r == gNavCenter->viewDisabledColor) ||
+	    (r == gNavCenter->toolbarBitmapPosition) || (r == gNavCenter->toolbarButtonsFixedSize) ||
+	    (r == gNavCenter->RDF_smallDisabledIcon) || (r == gNavCenter->RDF_largeDisabledIcon) ||
+	    (r == gNavCenter->RDF_smallRolloverIcon) || (r == gNavCenter->RDF_largeRolloverIcon) ||
+	    (r == gNavCenter->RDF_smallPressedIcon) || (r == gNavCenter->RDF_largePressedIcon) ||
+	    (r == gNavCenter->buttonTooltipText) || (r == gNavCenter->buttonStatusbarText) ||
+	    (r == gNavCenter->urlBar) || (r == gNavCenter->urlBarWidth))
+	{
+		retVal = PR_TRUE;
+	}
+	return(retVal);
+}
+
+
+
 static PRBool
 rdfColorProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
 {
@@ -6479,7 +6568,10 @@ HT_Properties (HT_Resource node)
 		{
 			while ((r = RDF_NextValue(c)) != NULL)
 			{
-				dynStr = constructHTML(dynStr, node, (void *)r, HT_COLUMN_STRING);
+				if (htIsPropertyInMoreOptions(r) == PR_FALSE)
+				{
+					dynStr = constructHTML(dynStr, node, (void *)r, HT_COLUMN_STRING);
+				}
 			}
 			RDF_DisposeCursor(c);
 		}

@@ -215,32 +215,32 @@ createNavCenterVocab () {
   gNavCenter->showColumnHilite = newResource("showColumnHilite", RDF_SHOW_COLUMN_HILITING_STR);
   gNavCenter->triggerPlacement = newResource("triggerPlacement", RDF_TRIGGER_PLACEMENT_STR);
 
+  /* Toolbars */
+
   /* Toolbar Appearance Styles */
-  gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", 0 /* "Toolbar Bitmap Position" */ );
+  gNavCenter->toolbarBitmapPosition = newResource("toolbarBitmapPosition", 0 /* XXX "Toolbar Bitmap Position" */ );
+  gNavCenter->toolbarButtonsFixedSize = newResource("toolbarButtonsFixedSize", 0 /* XXX "Toolbar Bitmap Position" */ );
+  gNavCenter->RDF_smallDisabledIcon = newResource("smallDisabledIcon", 0 /* XXX */);
+  gNavCenter->RDF_largeDisabledIcon  = newResource("largeDisabledIcon", 0 /* XXX */);
+  gNavCenter->RDF_smallRolloverIcon = newResource("smallRolloverIcon", 0 /* XXX */);
+  gNavCenter->RDF_largeRolloverIcon  = newResource("largeRolloverIcon", 0 /* XXX */);
+  gNavCenter->RDF_smallPressedIcon = newResource("smallPressedIcon", 0 /* XXX */);
+  gNavCenter->RDF_largePressedIcon  = newResource("largePressedIcon", 0 /* XXX */);
+  gNavCenter->buttonTooltipText = newResource("buttonTooltipText", 0 /* XXX */);
+  gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0 /* XXX */);
+  gNavCenter->urlBar = newResource("urlBar", 0 /* XXX */);
+  gNavCenter->urlBarWidth = newResource("urlBarWidth", 0 /* XXX */);
+  gNavCenter->viewRolloverColor = newResource("viewRolloverColor", 0 /* XXX */);
+  gNavCenter->viewPressedColor = newResource("viewPressedColor", 0 /* XXX */);
+  gNavCenter->viewDisabledColor = newResource("viewDisabledColor", 0 /* XXX */);
 
-  gNavCenter->toolbarButtonsFixedSize = newResource("toolbarButtonsFixedSize", 0 /* "Toolbar Bitmap Position" */ );
-  gNavCenter->RDF_smallDisabledIcon = newResource("smallDisabledIcon", 0);
-  gNavCenter->RDF_largeDisabledIcon  = newResource("largeDisabledIcon", 0);
-  gNavCenter->RDF_smallRolloverIcon = newResource("smallRolloverIcon", 0);
-  gNavCenter->RDF_largeRolloverIcon  = newResource("largeRolloverIcon", 0);
-  gNavCenter->RDF_smallPressedIcon = newResource("smallPressedIcon", 0);
-  gNavCenter->RDF_largePressedIcon  = newResource("largePressedIcon", 0);
-  gNavCenter->buttonTooltipText = newResource("buttonTooltipText", 0);
-  gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0);
-  gNavCenter->urlBar = newResource("urlBar", 0);
-  gNavCenter->urlBarWidth = newResource("urlBarWidth", 0);
-
-  gNavCenter->cookieDomain = newResource("cookieDomain", 0);
-  gNavCenter->cookieValue = newResource("cookieValue", 0);
-  gNavCenter->cookieHost  = newResource("cookieHost", 0);
-  gNavCenter->cookiePath  = newResource("cookiePath", 0);
-  gNavCenter->cookieSecure = newResource("cookieSecure", 0);
-  gNavCenter->cookieExpires = newResource("cookieExpiration", 0);
-
-  gNavCenter->viewRolloverColor = newResource("viewRolloverColor", 0);
-  gNavCenter->viewPressedColor = newResource("viewPressedColor", 0);
-  gNavCenter->viewDisabledColor = newResource("viewDisabledColor", 0);
-
+  /* Cookies */
+  gNavCenter->cookieDomain = newResource("cookieDomain", 0 /* XXX */);
+  gNavCenter->cookieValue = newResource("cookieValue", 0 /* XXX */);
+  gNavCenter->cookieHost  = newResource("cookieHost", 0 /* XXX */);
+  gNavCenter->cookiePath  = newResource("cookiePath", 0 /* XXX */);
+  gNavCenter->cookieSecure = newResource("cookieSecure", 0 /* XXX */);
+  gNavCenter->cookieExpires = newResource("cookieExpiration", 0 /* XXX */);
 
 #endif /* MOZILLA_CLIENT */
 }
