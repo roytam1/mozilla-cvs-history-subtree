@@ -1767,10 +1767,6 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
   nsCOMPtr<nsISupports> srcSupport(do_QueryInterface(srcFolder, &rv));
   if (NS_FAILED(rv)) return rv;
 
-  // make sure we turn notifications on when the move is done!
-  if (isMove)
-    srcFolder->EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_FALSE /*dbBatching*/);  //dest folder doesn't need db batching);
-
   // don't update the counts in the dest folder until it is all over
   EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_FALSE /*dbBatching*/);  //dest folder doesn't need db batching);
 

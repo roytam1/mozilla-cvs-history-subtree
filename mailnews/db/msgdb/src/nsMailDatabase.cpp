@@ -358,7 +358,10 @@ void nsMailDatabase::UpdateFolderFlag(nsIMsgDBHdr *mailHdr, PRBool bSet,
       fileStream = new nsIOFileStream(nsFileSpec(*m_folderSpec));
     }
     else if (!m_ownFolderStream)
+    {
+      m_folderStream->flush();
       folderStreamPos = m_folderStream->tell();
+    }
     if (fileStream) 
     {
       PRUint32 msgOffset;
