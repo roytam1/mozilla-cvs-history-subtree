@@ -77,8 +77,6 @@ public:
                     nsRect&                  aInFlowBounds,
                     nsRect&                  aCombinedRect);
 
-  void AlignBlockHorizontally(nscoord aWidth, nsBlockHorizontalAlign&);
-
   nsCollapsingMargin& GetCarriedOutBottomMargin() {
     return mMetrics.mCarriedOutBottomMargin;
   }

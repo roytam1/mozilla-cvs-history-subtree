@@ -157,105 +157,6 @@ nsBlockReflowContext::ComputeCollapsedTopMargin(const nsHTMLReflowState& aRS,
   return dirtiedLine;
 }
 
-struct nsBlockHorizontalAlign {
-  nscoord mXOffset;  // left edge
-  nscoord mLeftMargin;
-  nscoord mRightMargin;
-};
-
-// Given the width of the block frame and a suggested x-offset calculate
-// the actual x-offset taking into account horizontal alignment. Also returns
-// the actual left and right margin
-void
-nsBlockReflowContext::AlignBlockHorizontally(nscoord                 aWidth,
-                                             nsBlockHorizontalAlign &aAlign)
-{
-  // Initialize OUT parameters
-  aAlign.mLeftMargin = mMargin.left;
-  aAlign.mRightMargin = mMargin.right;
-
-  // Get style unit associated with the left and right margins
-  nsStyleUnit leftUnit = mStyleMargin->mMargin.GetLeftUnit();
-  nsStyleUnit rightUnit = mStyleMargin->mMargin.GetRightUnit();
-
-  // Apply post-reflow horizontal alignment. When a block element
-  // doesn't use it all of the available width then we need to
-  // align it using the text-align property.
-  if (NS_UNCONSTRAINEDSIZE != mSpace.width &&
-      NS_UNCONSTRAINEDSIZE != mOuterReflowState.mComputedWidth) {
-    // It is possible that the object reflowed was given a
-    // constrained width and ended up picking a different width
-    // (e.g. a table width a set width that ended up larger
-    // because its contents required it). When this happens we
-    // need to recompute auto margins because the reflow state's
-    // computations are no longer valid.
-    if (aWidth != mComputedWidth) {
-      if (eStyleUnit_Auto == leftUnit) {
-        aAlign.mXOffset = mSpace.x;
-        aAlign.mLeftMargin = 0;
-      }
-      if (eStyleUnit_Auto == rightUnit) {
-        aAlign.mRightMargin = 0;
-      }
-    }
-
-    // Compute how much remaining space there is, and in special
-    // cases apply it (normally we should get zero here because of
-    // the logic in nsHTMLReflowState).
-    nscoord remainingSpace = mSpace.XMost() - (aAlign.mXOffset + aWidth +
-                             aAlign.mRightMargin);
-    if (remainingSpace > 0) {
-      // The block/table frame didn't use all of the available
-      // space. Synthesize margins for its horizontal placement.
-      if (eStyleUnit_Auto == leftUnit) {
-        if (eStyleUnit_Auto == rightUnit) {
-          // When both margins are auto, we center the block
-          aAlign.mXOffset += remainingSpace / 2;
-        }
-        else {
-          // When the left margin is auto we right align the block
-          aAlign.mXOffset += remainingSpace;
-        }
-      }
-      else if (eStyleUnit_Auto != rightUnit) {
-        // The block/table doesn't have auto margins.
-
-        // For normal (non-table) blocks we don't get here because
-        // nsHTMLReflowState::CalculateBlockSideMargins handles this.
-        // (I think there may be an exception to that, though...)
-
-        // We use a special value of the text-align property for
-        // HTML alignment (the CENTER element and DIV ALIGN=...)
-        // since it acts on blocks and tables rather than just
-        // being a text-align.
-        // So, check the text-align value from the parent to see if
-        // it has one of these special values.
-        const nsStyleText* styleText = mOuterReflowState.mStyleText;
-        if (styleText->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_RIGHT) {
-          aAlign.mXOffset += remainingSpace;
-        } else if (styleText->mTextAlign == NS_STYLE_TEXT_ALIGN_MOZ_CENTER) {
-          aAlign.mXOffset += remainingSpace / 2;
-        } else {
-          // If we don't have a special text-align value indicating
-          // HTML alignment, then use the CSS rules.
-
-          // When neither margin is auto then the block is said to
-          // be over constrained, Depending on the direction, choose
-          // which margin to treat as auto.
-          PRUint8 direction = mOuterReflowState.mStyleVisibility->mDirection;
-          if (NS_STYLE_DIRECTION_RTL == direction) {
-            // The left margin becomes auto
-            aAlign.mXOffset += remainingSpace;
-          }
-          //else {
-            // The right margin becomes auto which is a no-op
-          //}
-        }
-      }
-    }
-  }
-}
-
 static void
 nsPointDtor(void *aFrame, nsIAtom *aPropertyName,
             void *aPropertyValue, void *aDtorData)
@@ -355,27 +256,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
   }
   mX = x;
   mY = y;
-
-  // XXX We should always be doing AlignBlockHorizontally here now, if we
-  // need the function at all.  It should probably be replaced by code in
-  // nsHTMLReflowState, though.
-
-  // If it's an auto-width table, then it doesn't behave like other blocks
-  // XXX why not for a floating table too?
-  if (aFrameRS.mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE &&
-      !aFrameRS.mStyleDisplay->IsFloating()) {
-    // If this isn't the table's initial reflow, then use its existing
-    // width to determine where it will be placed horizontally
-    if (aFrameRS.reason != eReflowReason_Initial) {
-      nsBlockHorizontalAlign  align;
-
-      align.mXOffset = x;
-      AlignBlockHorizontally(mFrame->GetSize().width, align);
-      // Don't reset "mX". because PlaceBlock() will recompute the
-      // x-offset and expects "mX" to be at the left margin edge
-      x = align.mXOffset;
-    }
-  }
 
    // Compute the translation to be used for adjusting the spacemanagager
    // coordinate system for the frame.  The spacemanager coordinates are
@@ -525,15 +405,6 @@ nsBlockReflowContext::PlaceBlock(const nsHTMLReflowState& aReflowState,
     // fits.
     if (aForceFit || (y + mMetrics.height <= mSpace.YMost())) 
     {
-      // Calculate the actual x-offset and left and right margin
-      nsBlockHorizontalAlign  align;
-      
-      align.mXOffset = x;
-      AlignBlockHorizontally(mMetrics.width, align);
-      x = align.mXOffset;
-      mMargin.left = align.mLeftMargin;
-      mMargin.right = align.mRightMargin;
-
       // Update the in-flow bounds rectangle
       aInFlowBounds.SetRect(x, y,
                             mMetrics.width,
