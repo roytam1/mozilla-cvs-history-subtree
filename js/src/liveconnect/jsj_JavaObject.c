@@ -54,6 +54,7 @@ static JSJHashTable *java_obj_reflections = NULL;
 
 #ifdef JSJ_THREADSAFE
 static PRMonitor *java_obj_reflections_monitor = NULL;
+static int java_obj_reflections_mutation_count = 0;
 #endif
 
 JSBool
@@ -91,6 +92,7 @@ jsj_WrapJavaObject(JSContext *cx,
     JavaObjectWrapper *java_wrapper;
     JavaClassDescriptor *class_descriptor;
     JSJHashEntry *he, **hep;
+    int mutation_count;
 
     js_wrapper_obj = NULL;
 
@@ -103,16 +105,26 @@ jsj_WrapJavaObject(JSContext *cx,
     hep = JSJ_HashTableRawLookup(java_obj_reflections,
                                  hash_code, java_obj, (void*)jEnv);
     he = *hep;
+
+#ifdef JSJ_THREADSAFE
+    /* Track mutations to hash table */
+    mutation_count = java_obj_reflections_mutation_count;
+
+    /* We must temporarily release this monitor so as to avoid
+       deadlocks with the JS GC.  See Bugsplat #354852 */
+    PR_ExitMonitor(java_obj_reflections_monitor);
+#endif
+
     if (he) {
         js_wrapper_obj = (JSObject *)he->value;
         if (js_wrapper_obj)
-            goto done;
+            return js_wrapper_obj;
     }
 
     /* No existing reflection found.  Construct a new one */
     class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_class);
     if (!class_descriptor)
-        goto done;
+        return NULL;
     if (class_descriptor->type == JAVA_SIGNATURE_ARRAY) {
         js_class = &JavaArray_class;
     } else {
@@ -123,14 +135,14 @@ jsj_WrapJavaObject(JSContext *cx,
     /* Create new JS object to reflect Java object */
     js_wrapper_obj = JS_NewObject(cx, js_class, NULL, NULL);
     if (!js_wrapper_obj)
-        goto done;
+        return NULL;
 
     /* Create private, native portion of JavaObject */
     java_wrapper =
         (JavaObjectWrapper *)JS_malloc(cx, sizeof(JavaObjectWrapper));
     if (!java_wrapper) {
         jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
-        goto done;
+        return NULL;
     }
     JS_SetPrivate(cx, js_wrapper_obj, java_wrapper);
     java_wrapper->class_descriptor = class_descriptor;
@@ -140,26 +152,44 @@ jsj_WrapJavaObject(JSContext *cx,
     if (!java_obj)
         goto out_of_memory;
 
+#ifdef JSJ_THREADSAFE
+    PR_EnterMonitor(java_obj_reflections_monitor);
+
+    /* We may need to do the hash table lookup again, since some other
+       thread may have updated it while the lock wasn't being held. */
+    if (mutation_count != java_obj_reflections_mutation_count) {
+        hep = JSJ_HashTableRawLookup(java_obj_reflections,
+                                     hash_code, java_obj, (void*)jEnv);
+        he = *hep;
+        if (he) {
+            js_wrapper_obj = (JSObject *)he->value;
+            if (js_wrapper_obj)
+                return js_wrapper_obj;
+        }
+    }
+
+#endif
+
     /* Add the JavaObject to the hash table */
     he = JSJ_HashTableRawAdd(java_obj_reflections, hep, hash_code,
                              java_obj, js_wrapper_obj, (void*)jEnv);
+    java_obj_reflections_mutation_count++;
+
+#ifdef JSJ_THREADSAFE
+    PR_ExitMonitor(java_obj_reflections_monitor);
+#endif
+
     if (!he) {
         (*jEnv)->DeleteGlobalRef(jEnv, java_obj);
         goto out_of_memory;
     } 
 
-done:
-#ifdef JSJ_THREADSAFE
-        PR_ExitMonitor(java_obj_reflections_monitor);
-#endif
-        
     return js_wrapper_obj;
 
 out_of_memory:
     /* No need to free js_wrapper_obj, as it will be finalized by GC. */
     JS_ReportOutOfMemory(cx);
-    js_wrapper_obj = NULL;
-    goto done;
+    return NULL;
 }
 
 static void
@@ -183,6 +213,8 @@ remove_java_obj_reflection_from_hashtable(jobject java_obj, JNIEnv *jEnv)
         JSJ_HashTableRawRemove(java_obj_reflections, hep, he, (void*)jEnv);
 
 #ifdef JSJ_THREADSAFE
+    java_obj_reflections_mutation_count++;
+
     PR_ExitMonitor(java_obj_reflections_monitor);
 #endif
 }
