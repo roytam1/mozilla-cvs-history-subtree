@@ -820,25 +820,29 @@ void
 nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
 {
   XEvent    config_event;
+
   while (XCheckTypedWindowEvent(event->xany.display, 
                                 event->xany.window, 
                                 ConfigureNotify,
                                 &config_event) == True) {
     // make sure that we don't get other types of events.  
     // StructureNotifyMask includes other kinds of events, too.
-    if (config_event.type == ConfigureNotify) 
-      {
-        *event = config_event;
-#if 0        
-        g_print("Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
-                event->xconfigure.window,
-                event->xconfigure.x, 
-                event->xconfigure.y,
-                event->xconfigure.width, 
-                event->xconfigure.height);
+    gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
+    *event = config_event;
+    // make sure that if we remove a configure event from the queue
+    // that it gets pulled out of the superwin tranlate queue,
+    // too.
+#if 0
+    g_print("Extra ConfigureNotify event for window 0x%lx %d %d %d %d\n",
+            event->xconfigure.window,
+            event->xconfigure.x, 
+            event->xconfigure.y,
+            event->xconfigure.width, 
+            event->xconfigure.height);
 #endif
-      }
   }
+
+  gdk_superwin_clear_translate_queue(mSuperWin, event->xany.serial);
 
   nsSizeEvent sevent;
   sevent.message = NS_SIZE;
