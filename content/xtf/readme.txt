@@ -81,4 +81,39 @@ visual content tree), all JS object references to the element should
 be re-resolved at the time of the first layout (listen in to
 DidLayout() notifications).
 
-26/08/2004 Alex Fritze <alex@croczilla.com>
+
+Bugs
+====
+
+1.
+Constructing a visual's visualContent using the same document as the
+visual's leads to some nasty reference cycle which prevents the
+wrapper, inner xtf element, anonymous content and possibly the
+whole document from ever getting destroyed. A workaround is to
+construct the visualContent in a different document (e.g. setting the
+document in nsXMLContentBuilder to null, or not setting the document
+at all, will lead to new content being build in a new temporary
+document).
+
+2.
+XBL-bound elements behave strangely if *any* XUL content underneath
+them is accessed from JS too early.
+Example: 
+
+<groupbox>
+ <caption><xtf:foo/></caption>
+ <label value="label text"/>
+</groupbox>
+
+If the JS-implemented xtf element 'foo' accesses any xul content
+before it receives the 'didLayout' notification, the groupbox will not
+be properly build (it will not contain the label text). 'Accessing xul
+content' includes any operation that leads to a js wrapper being
+constructed for a xul element. E.g. if the xtf element listens in to
+parentChanged-notifications, a wrapper will be build for the
+notification's 'parent' parameter and groupbox construction
+mysteriously fails.
+
+
+
+04/09/2004 Alex Fritze <alex@croczilla.com>
