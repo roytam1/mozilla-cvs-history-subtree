@@ -104,7 +104,7 @@ GET_SIMPLE(float, GetAsFloat, PyFloat_FromDouble);
 GET_SIMPLE(double, GetAsDouble, PyFloat_FromDouble);
 GET_SIMPLE(PRBool, GetAsBool, MyBool);
 GET_SIMPLE(char, GetAsChar, MyChar);
-GET_SIMPLE(wchar_t, GetAsWChar, MyWChar);
+GET_SIMPLE(PRUnichar, GetAsWChar, MyWChar);
 GET_SIMPLE(nsISupports *, GetAsISupports, MyISupports);
 GET_SIMPLE(nsIID, GetAsID, Py_nsIID::PyObjectFromIID);
 
