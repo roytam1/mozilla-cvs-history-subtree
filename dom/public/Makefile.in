@@ -44,8 +44,6 @@ EXPORTS=nsIScriptContext.h		\
 	nsIScriptEventListener.h	\
 	nsIDOMScriptObjectFactory.h	\
 	nsDOMCID.h			\
-	nsDOMPropEnums.h		\
-	nsDOMPropNames.h		\
 	nsIScriptExternalNameSet.h	\
 	nsIScriptNameSpaceManager.h	\
 	nsDOMError.h			\
