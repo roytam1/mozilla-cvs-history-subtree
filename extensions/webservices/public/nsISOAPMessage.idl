@@ -88,6 +88,14 @@ interface nsISOAPMessage : nsISupports {
   readonly attribute nsIDOMElement body;
 
   /**
+   * An optional URI that can be used to add a SOAPAction HTTP
+   * header field to the protocol parameters during parameter
+   * marshalling. If this attribute is NULL (the default case),
+   * no SOAPAction header will be added.
+   */
+  attribute DOMString actionURI;
+
+  /**
    * The encodingStyle to be used for the envelope. This URI is used
    * by the marshaller to set the initial encoding style of the
    * envelope.  This should be set by applications desiring alternate

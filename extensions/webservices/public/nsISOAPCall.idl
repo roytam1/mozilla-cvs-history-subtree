@@ -52,14 +52,6 @@ interface nsISOAPCall : nsISOAPMessage {
   attribute DOMString transportURI;
 
   /**
-   * An optional URI that can be used to add a SOAPAction HTTP
-   * header field to the protocol parameters during parameter
-   * marshalling. If this attribute is NULL (the default case),
-   * no SOAPAction header will be added.
-   */
-  attribute DOMString actionURI;
-
-  /**
    * Synchronously invoke the call. The method returns only when 
    * we receive a response (or an error occurs).  The
    * <code>transportURI</code> must have been set, the 
