@@ -51,8 +51,10 @@
 %brandDTD;
 <!ENTITY % sourceDTD SYSTEM "chrome://global/locale/viewSource.dtd" >
 %sourceDTD;
+#ifdef MOZ_PHOENIX
 <!ENTITY % browserDTD SYSTEM "chrome://browser/locale/browser.dtd" >
 %browserDTD;
+#endif
 <!ENTITY % findDTD SYSTEM "chrome://global/locale/finddialog.dtd" >
 %findDTD;
 ]>
@@ -73,17 +75,17 @@
 
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
   <script type="application/x-javascript" src="chrome://global/content/printUtils.js"/>
-  <script type="application/x-javascript" src="chrome://global/content/findBar.js"/>
   <script type="application/x-javascript" src="chrome://global/content/viewSource.js"/>
   <script type="application/x-javascript" src="chrome://global/content/viewZoomOverlay.js"/>
 #ifdef MOZ_PHOENIX
+  <script type="application/x-javascript" src="chrome://global/content/findBar.js"/>
   <script type="application/x-javascript" src="chrome://browser/content/contentAreaUtils.js"/>
+  <stringbundle id="bundle_findBar" src="chrome://browser/locale/browser.properties"/>
 #else
+  <script type="application/x-javascript" src="chrome://global/content/findUtils.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/contentAreaUtils.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/utilityOverlay.js"/>
 #endif
-
-  <stringbundle id="bundle_findBar" src="chrome://browser/locale/browser.properties"/>
   <stringbundle id="viewSourceBundle" src="chrome://global/locale/viewSource.properties"/>
 
   <command id="cmd_savePage" oncommand="ViewSourceSavePage();"/>
@@ -92,9 +94,15 @@
   <command id="cmd_pagesetup" oncommand="PrintUtils.showPageSetup();"/>
   <command id="cmd_close" oncommand="window.close();"/>
   <commandset id="editMenuCommands"/>
+#ifdef MOZ_PHONEIX
   <command id="cmd_find" oncommand="onFindCmd();"/>
   <command id="cmd_findAgain" oncommand="onFindAgainCmd();"/>
   <command id="cmd_findPrevious" oncommand="onFindPreviousCmd();"/>    
+#else
+  <command id="cmd_find" oncommand="getBrowser().find();"/>
+  <command id="cmd_findAgain" oncommand="getBrowser().findAgain()"/>
+  <command id="cmd_findPrevious" oncommand="getBrowser().findPrevious()"/>
+#endif
   <command id="cmd_goToLine" oncommand="ViewSourceGoToLine();" disabled="true"/>
   <command id="cmd_highlightSyntax" oncommand="highlightSyntax();"/>
   <command id="cmd_wrapLongLines" oncommand="wrapLongLines()"/>
@@ -112,11 +120,13 @@
     <key id="key_textZoomEnlarge2" key="&textEnlarge.commandkey2;" command="cmd_textZoomEnlarge" modifiers="accel"/>
     <key id="key_textZoomReduce"  key="&textReduce.commandkey;" command="cmd_textZoomReduce" modifiers="accel"/>
     <key id="key_textZoomReset" key="&textReset.commandkey;" oncommand="ZoomManager.prototype.getInstance().reset();" modifiers="accel"/>
+#ifdef MOZ_PHOENIX
     <key id="key_find" key="&findOnCmd.commandkey;" command="cmd_find" modifiers="accel"/>
     <key id="key_findAgain" key="&findAgainCmd.commandkey;" command="cmd_findAgain" modifiers="accel"/>
     <key id="key_findPrevious" key="&findAgainCmd.commandkey;" command="cmd_findPrevious" modifiers="accel,shift"/>
     <key keycode="&findAgainCmd.commandkey2;" command="cmd_findAgain"/>
     <key keycode="&findAgainCmd.commandkey2;"  command="cmd_findPrevious" modifiers="shift"/>
+#endif
   </keyset>
 
   <popup id="viewSourceContextMenu">
@@ -191,9 +201,9 @@
 
     <browser id="content" type="content-primary" name="content" src="about:blank" flex="1"
              context="viewSourceContextMenu"/>
-
+#ifdef MOZ_PHOENIX
 #include ../../typeaheadfind/content/findBar.inc
-
+#endif
 
   </vbox> 
 
