@@ -80,7 +80,7 @@ class NS_COM nsTDefaultStringComparator_CharT
    * other main abstract classes in the string hierarchy.
    */
 
-class NS_COM nsTAString_CharT
+class nsTAString_CharT
   {
     public:
 
@@ -106,7 +106,7 @@ class NS_COM nsTAString_CharT
     public:
 
         // this acts like a virtual destructor
-      ~nsTAString_CharT();
+      NS_COM ~nsTAString_CharT();
 
       inline const_iterator& BeginReading( const_iterator& iter ) const
         {
@@ -140,35 +140,35 @@ class NS_COM nsTAString_CharT
           return iter;
         }
 
-      size_type Length() const;
+      NS_COM size_type Length() const;
       PRBool IsEmpty() const { return Length() == 0; }
 
-      PRBool Equals( const self_type& ) const;
-      PRBool Equals( const self_type&, const comparator_type& ) const;
-      PRBool Equals( const char_type* ) const;
-      PRBool Equals( const char_type*, const comparator_type& ) const;
+      NS_COM PRBool Equals( const self_type& ) const;
+      NS_COM PRBool Equals( const self_type&, const comparator_type& ) const;
+      NS_COM PRBool Equals( const char_type* ) const;
+      NS_COM PRBool Equals( const char_type*, const comparator_type& ) const;
 
-      PRBool IsVoid() const;
-      void SetIsVoid( PRBool );
+      NS_COM PRBool IsVoid() const;
+      NS_COM void SetIsVoid( PRBool );
 
-      PRBool IsTerminated() const;
+      NS_COM PRBool IsTerminated() const;
 
         /**
          * these are contant time since nsTAString_CharT uses flat storage
          */
-      char_type First() const;
-      char_type Last() const;
+      NS_COM char_type First() const;
+      NS_COM char_type Last() const;
 
-      size_type CountChar( char_type ) const;
+      NS_COM size_type CountChar( char_type ) const;
 
-      PRInt32 FindChar( char_type, index_type offset = 0 ) const;
+      NS_COM PRInt32 FindChar( char_type, index_type offset = 0 ) const;
 
         /**
          * |SetCapacity| is not required to do anything; however, it can be
          * used as a hint to the implementation to reduce allocations.
          * |SetCapacity(0)| is a suggestion to discard all associated storage.
          */
-      void SetCapacity( size_type );
+      NS_COM void SetCapacity( size_type );
 
         /**
          * |SetLength| is used in two ways:
@@ -190,14 +190,13 @@ class NS_COM nsTAString_CharT
          * This distinction makes me think the two different uses should
          * be split into two distinct functions.
          */
-      void SetLength( size_type );
+      NS_COM void SetLength( size_type );
 
 
         /**
          * Can't use Truncate to make a string longer!
          */
-      void
-      Truncate( size_type aNewLength=0 ) { SetLength(aNewLength); }
+      NS_COM void Truncate( size_type aNewLength=0 ) { SetLength(aNewLength); }
 
 
         /**
@@ -208,11 +207,11 @@ class NS_COM nsTAString_CharT
          * the buffer into their own buffer.
          */
 
-      void Assign( const self_type& readable );
-      void Assign( const substring_tuple_type& tuple );
-      void Assign( const char_type* data );
-      void Assign( const char_type* data, size_type length );
-      void Assign( char_type c );
+      NS_COM void Assign( const self_type& readable );
+      NS_COM void Assign( const substring_tuple_type& tuple );
+      NS_COM void Assign( const char_type* data );
+      NS_COM void Assign( const char_type* data, size_type length );
+      NS_COM void Assign( char_type c );
 
         // copy-assignment operator.  I must define my own if I don't want the compiler to make me one
       self_type& operator=( const self_type& readable )                                             { Assign(readable); return *this; }
@@ -226,11 +225,11 @@ class NS_COM nsTAString_CharT
          * |Append()|, |operator+=()|
          */ 
 
-      void Append( const self_type& readable );
-      void Append( const substring_tuple_type& tuple );
-      void Append( const char_type* data );
-      void Append( const char_type* data, size_type length );
-      void Append( char_type c );
+      NS_COM void Append( const self_type& readable );
+      NS_COM void Append( const substring_tuple_type& tuple );
+      NS_COM void Append( const char_type* data );
+      NS_COM void Append( const char_type* data, size_type length );
+      NS_COM void Append( char_type c );
 
       self_type& operator+=( const self_type& readable )                                            { Append(readable); return *this; }
       self_type& operator+=( const substring_tuple_type& tuple )                                    { Append(tuple); return *this; }
@@ -242,16 +241,16 @@ class NS_COM nsTAString_CharT
          *  Note: I would really like to move the |pos| parameter to the front of the argument list
          */ 
 
-      void Insert( const self_type& readable, index_type pos );
-      void Insert( const substring_tuple_type& tuple, index_type pos );
-      void Insert( const char_type* data, index_type pos );
-      void Insert( const char_type* data, index_type pos, size_type length );
-      void Insert( char_type c, index_type pos );
+      NS_COM void Insert( const self_type& readable, index_type pos );
+      NS_COM void Insert( const substring_tuple_type& tuple, index_type pos );
+      NS_COM void Insert( const char_type* data, index_type pos );
+      NS_COM void Insert( const char_type* data, index_type pos, size_type length );
+      NS_COM void Insert( char_type c, index_type pos );
 
-      void Cut( index_type cutStart, size_type cutLength );
+      NS_COM void Cut( index_type cutStart, size_type cutLength );
 
-      void Replace( index_type cutStart, size_type cutLength, const self_type& readable );
-      void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& readable );
+      NS_COM void Replace( index_type cutStart, size_type cutLength, const self_type& readable );
+      NS_COM void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& readable );
 
     private:
         // NOT TO BE IMPLEMENTED
@@ -328,8 +327,8 @@ class NS_COM nsTAString_CharT
          * get pointer to internal string buffer (may not be null terminated).
          * return length of buffer.
          */
-      size_type GetReadableBuffer( const char_type **data ) const;
-      size_type GetWritableBuffer(       char_type **data );
+      NS_COM size_type GetReadableBuffer( const char_type **data ) const;
+      NS_COM size_type GetWritableBuffer(       char_type **data );
 
         /**
          * returns true if this tuple is dependent on (i.e., overlapping with)

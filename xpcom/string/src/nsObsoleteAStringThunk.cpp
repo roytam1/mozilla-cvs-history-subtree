@@ -74,5 +74,5 @@ get_nsObsoleteACStringThunk_vptr()
   return result;
 }
 
-const void *nsObsoleteAString::sCanonicalVTable = get_nsObsoleteAStringThunk_vptr();
-const void *nsObsoleteACString::sCanonicalVTable = get_nsObsoleteACStringThunk_vptr();
+NS_COM const void *nsObsoleteAString::sCanonicalVTable = get_nsObsoleteAStringThunk_vptr();
+NS_COM const void *nsObsoleteACString::sCanonicalVTable = get_nsObsoleteACStringThunk_vptr();

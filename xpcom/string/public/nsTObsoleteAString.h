@@ -42,14 +42,14 @@
    *
    * @status FROZEN
    */
-class NS_COM nsTObsoleteAString_CharT
+class nsTObsoleteAString_CharT
   {
     public:
       /**
        * This is holds the address of the vtable for the canonical string
        * implementation (i.e., nsTString).
        */
-      static const void *sCanonicalVTable;
+      NS_COM static const void *sCanonicalVTable;
 
         /**
          * An |nsFragmentRequest| is used to tell |GetReadableFragment| and

@@ -47,7 +47,7 @@
    * codebase.  If you need to refer to this string class, use the typedef
    * nsASingleFragment[C]String instead.
    */
-class NS_COM nsTSubstring_CharT : public nsTAString_CharT
+class nsTSubstring_CharT : public nsTAString_CharT
   {
     public:
 
@@ -180,22 +180,22 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
           return mData[mLength - 1];
         }
 
-      size_type CountChar( char_type ) const;
-      PRInt32 FindChar( char_type, index_type offset = 0 ) const;
+      NS_COM size_type CountChar( char_type ) const;
+      NS_COM PRInt32 FindChar( char_type, index_type offset = 0 ) const;
 
 
         /**
          * equality
          */
 
-      PRBool Equals( const self_type& ) const;
-      PRBool Equals( const self_type&, const comparator_type& ) const;
+      NS_COM PRBool Equals( const self_type& ) const;
+      NS_COM PRBool Equals( const self_type&, const comparator_type& ) const;
 
-      PRBool Equals( const abstract_string_type& readable ) const;
-      PRBool Equals( const abstract_string_type& readable, const comparator_type& comp ) const;
+      NS_COM PRBool Equals( const abstract_string_type& readable ) const;
+      NS_COM PRBool Equals( const abstract_string_type& readable, const comparator_type& comp ) const;
 
-      PRBool Equals( const char_type* data ) const;
-      PRBool Equals( const char_type* data, const comparator_type& comp ) const;
+      NS_COM PRBool Equals( const char_type* data ) const;
+      NS_COM PRBool Equals( const char_type* data, const comparator_type& comp ) const;
 
 
         /**
@@ -203,10 +203,10 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
          */
 
       void Assign( char_type c )                                                                { Assign(&c, 1); }
-      void Assign( const char_type* data, size_type length = size_type(-1) );
-      void Assign( const self_type& );
-      void Assign( const substring_tuple_type& );
-      void Assign( const abstract_string_type& );
+      NS_COM void Assign( const char_type* data, size_type length = size_type(-1) );
+      NS_COM void Assign( const self_type& );
+      NS_COM void Assign( const substring_tuple_type& );
+      NS_COM void Assign( const abstract_string_type& );
 
       self_type& operator=( char_type c )                                                       { Assign(c);        return *this; }
       self_type& operator=( const char_type* data )                                             { Assign(data);     return *this; }
@@ -214,18 +214,18 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
       self_type& operator=( const substring_tuple_type& tuple )                                 { Assign(tuple);    return *this; }
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
 
-      void Adopt( char_type* data, size_type length = size_type(-1) );
+      NS_COM void Adopt( char_type* data, size_type length = size_type(-1) );
 
 
         /**
          * buffer manipulation
          */
 
-      void Replace( index_type cutStart, size_type cutLength, char_type c )                      { Replace(cutStart, cutLength, &c, 1); }
-      void Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length = size_type(-1) );
-      void Replace( index_type cutStart, size_type cutLength, const self_type& str )             { Replace(cutStart, cutLength, str.Data(), str.Length()); }
-      void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& tuple );
-      void Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable );
+             void Replace( index_type cutStart, size_type cutLength, char_type c )               { Replace(cutStart, cutLength, &c, 1); }
+      NS_COM void Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length = size_type(-1) );
+             void Replace( index_type cutStart, size_type cutLength, const self_type& str )      { Replace(cutStart, cutLength, str.Data(), str.Length()); }
+      NS_COM void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& tuple );
+      NS_COM void Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable );
 
       void Append( char_type c )                                                                 { Replace(mLength, 0, c); }
       void Append( const char_type* data, size_type length = size_type(-1) )                     { Replace(mLength, 0, data, length); }
@@ -252,9 +252,9 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
          * buffer sizing
          */
 
-      void SetCapacity( size_type capacity );
+      NS_COM void SetCapacity( size_type capacity );
 
-      void SetLength( size_type );
+      NS_COM void SetLength( size_type );
 
       void Truncate( size_type newLength = 0 )
         {
@@ -268,7 +268,7 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
          * string will be truncated.  @see nsTSubstring_CharT::IsVoid
          */
 
-      void SetIsVoid( PRBool );
+      NS_COM void SetIsVoid( PRBool );
 
 
     public:
@@ -313,7 +313,8 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
       PRBool    MutatePrep( size_type, char_type**, PRUint32* );
       void      ReplacePrep( index_type cutStart, size_type cutLength, size_type newLength);
       size_type Capacity() const;
-      void      EnsureMutable();
+
+      NS_COM void EnsureMutable();
 
         /**
          * returns true if this string overlaps with the given string fragment.
