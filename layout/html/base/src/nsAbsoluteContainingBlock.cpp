@@ -327,10 +327,10 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
         }
       }
 
-      // Indicate we handled the reflow command
+      // Indicate we handled the reflow command.
       aWasHandled = PR_TRUE;
       
-      // Calculate the total child bounds
+      // Calculate the total child bounds.
       CalculateChildBounds(aPresContext, aChildBounds);
     }
   }
@@ -359,6 +359,10 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
 
         // Calculate the total child bounds
         CalculateChildBounds(aPresContext, aChildBounds);
+
+        // Prune the path so we don't flow the block frame _again_
+        // when returning to the caller.
+        aReflowState.path->Remove(iter);
       }
       else {
         // At least one of the frames along the reflow path wasn't
