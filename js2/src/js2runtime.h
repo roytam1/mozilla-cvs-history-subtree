@@ -1393,7 +1393,7 @@ static const double two31 = 2147483648.0;
         void initOperators();
         void initAttributeValue(char *name, uint32 trueFlags, uint32 falseFlags);
         
-        JSInstance *Context::executeAttributes(ExprNode *attr);
+        JSInstance *executeAttributes(ExprNode *attr);
 
         void defineOperator(Operator which, JSType *t1, JSType *t2, JSFunction *imp)
         {
