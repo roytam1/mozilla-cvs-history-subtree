@@ -253,7 +253,7 @@ nsProfileMigrator::GetDefaultBrowserMigratorKey(nsACString& aKey,
   // XXXben - until we figure out what to do here with default browsers on MacOS and
   // GNOME, simply copy data from a previous Seamonkey install. 
   PRBool exists = PR_FALSE;
-  bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "phoenix");
+  bpm = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert");
   if (bpm)
     bpm->GetSourceExists(&exists);
   if (exists) {
