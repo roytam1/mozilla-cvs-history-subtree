@@ -50,9 +50,11 @@ public class ProfileManagerTest extends WebclientTestCase {
 	    i = 0,
 	    len = 0;
 	final String 
+	    startupProfile = "testStartupProfile",
 	    name = "testProfile",
 	    newName = "testProfile2";
 	BrowserControl firstBrowserControl = null;
+	BrowserControlFactory.setProfile(startupProfile);
 	BrowserControlFactory.setAppData(getBrowserBinDir());
 	firstBrowserControl = BrowserControlFactory.newBrowserControl();
 	assertNotNull(firstBrowserControl);
@@ -61,6 +63,8 @@ public class ProfileManagerTest extends WebclientTestCase {
 	ProfileManager profileManager = (ProfileManager)
 	    firstBrowserControl.queryInterface(BrowserControl.PROFILE_MANAGER_NAME);
 	assertNotNull(profileManager);
+
+	assertEquals(startupProfile, profileManager.getCurrentProfile());
 	
 	// create a new profile
 	profileManager.createNewProfile(name, null, null, false);
@@ -74,6 +78,9 @@ public class ProfileManagerTest extends WebclientTestCase {
 	
 	// test that we can set the current profile to the new profile
 	profileManager.setCurrentProfile(name);
+	
+	// delete the startupProfile
+	profileManager.deleteProfile(startupProfile, true);
 	
 	// test that the current profile is the new profile
 	String currentProfile = profileManager.getCurrentProfile();

@@ -74,6 +74,11 @@ private BrowserControlFactory()
 // Class methods
 //
 
+public static void setProfile(String profileName) 
+{
+    getInstance().setProfile(profileName);
+}
+
 /**
  *
  * <p>Initialize the webclient API passing in the path to the browser
