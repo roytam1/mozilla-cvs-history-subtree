@@ -35,7 +35,7 @@ BUILD_STATIC_LIBS=
 BUILD_SHARED_LIBS=1
 
 # Linux and Solaris installer needs standalone libjar
-ifdef MOZ_INSTALLER
+ifneq (,$(filter Linux SunOS WINNT,$(OS_ARCH)))
 DIRS		= standalone
 endif
 
