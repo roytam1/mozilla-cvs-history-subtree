@@ -108,7 +108,6 @@ OBJS =../base/ArrayList.$(OBJ_SUFFIX) \
   ../xslt/txXMLOutput.$(OBJ_SUFFIX) \
   ../xslt/txXSLTPatterns.$(OBJ_SUFFIX) \
   ../xslt/txPatternParser.$(OBJ_SUFFIX) \
-  ../xslt/VariableBinding.$(OBJ_SUFFIX) \
   ../xslt/XSLTProcessor.$(OBJ_SUFFIX) \
   ../xslt/functions/CurrentFunctionCall.$(OBJ_SUFFIX) \
   ../xslt/functions/DocumentFunctionCall.$(OBJ_SUFFIX) \

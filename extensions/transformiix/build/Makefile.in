@@ -131,7 +131,6 @@ LOBJS =../source/base/ArrayList.$(OBJ_SUFFIX) \
   ../source/xslt/txMozillaXMLOutput.$(OBJ_SUFFIX) \
   ../source/xslt/txRtfHandler.$(OBJ_SUFFIX) \
   ../source/xslt/txTextHandler.$(OBJ_SUFFIX) \
-  ../source/xslt/VariableBinding.$(OBJ_SUFFIX) \
   ../source/xslt/txXSLTPatterns.$(OBJ_SUFFIX) \
   ../source/xslt/txPatternParser.$(OBJ_SUFFIX) \
   ../source/xslt/XSLTProcessor.$(OBJ_SUFFIX) \

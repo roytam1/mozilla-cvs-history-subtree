@@ -39,12 +39,14 @@
 #include "XMLUtils.h"
 #include "XMLDOMUtils.h"
 #include "Tokenizer.h"
-#include "VariableBinding.h"
 #include "ExprResult.h"
 #include "Names.h"
 #include "XMLParser.h"
 #include "TxLog.h"
 #include "txAtoms.h"
+#include "XSLTProcessor.h"
+#include "txSingleNodeContext.h"
+#include "txVariableMap.h"
 
 /**
  * Creates a new ProcessorState for the given XSL document
@@ -58,16 +60,13 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
       mEvalContext(0),
       mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
-      resultDocument(aResultDocument)
+      resultDocument(aResultDocument),
+      mLocalVariables(0),
+      mGlobalVariableValues(MB_TRUE)
 {
     NS_ASSERTION(aSourceDocument, "missing source document");
     NS_ASSERTION(aXslDocument, "missing xslt document");
     NS_ASSERTION(aResultDocument, "missing result document");
-
-    // add global variable set
-    NamedMap* globalVars = new NamedMap();
-    globalVars->setObjectDeletion(MB_TRUE);
-    variableSets.push(globalVars);
 
     /* turn object deletion on for some of the Maps (NamedMap) */
     mExprHashes[SelectAttr].setOwnership(Map::eOwnsItems);
@@ -93,10 +92,6 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
 **/
 ProcessorState::~ProcessorState()
 {
-  while (! variableSets.empty()) {
-      delete (NamedMap*) variableSets.pop();
-  }
-
   // Delete all ImportFrames
   txListIterator iter(&mImportFrames);
   while (iter.hasNext())
@@ -640,9 +635,37 @@ Document* ProcessorState::getResultDocument()
     return resultDocument;
 }
 
-Stack* ProcessorState::getVariableSetStack()
+/*
+ * Add a global variable
+ */
+nsresult ProcessorState::addGlobalVariable(Element* aVarElem,
+                                           ImportFrame* aImportFrame)
 {
-    return &variableSets;
+    nsresult rv;
+    txExpandedName varName;
+    String qName;
+    aVarElem->getAttr(txXSLTAtoms::name, kNameSpaceID_None, qName);
+    rv = varName.init(qName, aVarElem, MB_FALSE);
+    if (NS_FAILED(rv))
+        return rv;
+
+    return aImportFrame->mVariables.add(varName, aVarElem);
+}
+
+/*
+ * Returns map on top of the stack of local variable-bindings
+ */
+txVariableMap* ProcessorState::getLocalVariables()
+{
+    return mLocalVariables;
+}
+
+/*
+ * Sets top map of the local variable-bindings stack
+ */
+void ProcessorState::setLocalVariables(txVariableMap* aMap)
+{
+    mLocalVariables = aMap;
 }
 
 /*
@@ -915,21 +938,71 @@ txDecimalFormat* ProcessorState::getDecimalFormat(const txExpandedName& aName)
 nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
                                      ExprResult*& aResult)
 {
-    String name;
-    // XXX TODO, bug 117658
-    TX_GET_ATOM_STRING(aLName, name);
-    txStackIterator iter(&variableSets);
-    ExprResult* exprResult = 0;
-    while (iter.hasNext()) {
-        NamedMap* map = (NamedMap*)iter.next();
-        if (map->get(name)) {
-            exprResult = ((VariableBinding*)map->get(name))->getValue();
-            break;
+    nsresult rv;
+    aResult = 0;
+    ExprResult* exprResult;
+    txExpandedName varName(aNamespace, aLName);
+    
+    // Check local variables
+    if (mLocalVariables) {
+        exprResult = mLocalVariables->getVariable(varName);
+        if (exprResult) {
+            aResult = exprResult;
+            return NS_OK;
         }
     }
-    aResult = exprResult;
-    return aResult ? NS_OK : NS_ERROR_INVALID_ARG;
-} //-- getVariable
+
+    // Check if global variable is already evaluated
+    GlobalVariableValue* globVar;
+    globVar = (GlobalVariableValue*)mGlobalVariableValues.get(varName);
+    if (globVar) {
+        if (globVar->mEvaluating) {
+            String err("Cyclic variable-value detected");
+            receiveError(err, NS_ERROR_FAILURE);
+            return NS_ERROR_FAILURE;
+        }
+        aResult = globVar->mValue;
+        return NS_OK;
+    }
+
+    // We need to evaluate the variable
+
+    // Search ImportFrames for the variable
+    ImportFrame* frame;
+    txListIterator frameIter(&mImportFrames);
+    Element* varElem = 0;
+    while (!varElem && (frame = (ImportFrame*)frameIter.next()))
+        varElem = (Element*)frame->mVariables.get(varName);
+
+    if (!varElem)
+        return NS_ERROR_FAILURE;
+
+    // Evaluate the variable
+    globVar = new GlobalVariableValue();
+    if (!globVar)
+        return NS_ERROR_OUT_OF_MEMORY;
+    globVar->mEvaluating = MB_TRUE;
+    rv = mGlobalVariableValues.add(varName, globVar);
+    if (NS_FAILED(rv)) {
+        delete globVar;
+        return rv;
+    }
+
+    // Set up the state we have at the beginning of the transformation
+    txVariableMap *oldVars = mLocalVariables;
+    mLocalVariables = 0;
+    txSingleNodeContext evalContext(mSourceDocument, this);
+    txIEvalContext* priorEC = setEvalContext(&evalContext);
+    XSLTProcessor processor;
+    globVar->mValue = processor.processVariable(mSourceDocument, varElem,
+                                                this);
+    setEvalContext(priorEC);
+    mLocalVariables = oldVars;
+
+    globVar->mEvaluating = MB_FALSE;
+    aResult = globVar->mValue;
+    return NS_OK;
+}
 
 /**
  * Determines if the given XML node allows Whitespace stripping
@@ -1091,7 +1164,8 @@ ProcessorState::ImportFrame::ImportFrame(ImportFrame* aFirstNotImported)
     : mNamedTemplates(MB_FALSE),
       mMatchableTemplates(MB_TRUE),
       mNamedAttributeSets(MB_TRUE),
-      mFirstNotImported(aFirstNotImported)
+      mFirstNotImported(aFirstNotImported),
+      mVariables(MB_FALSE)
 {
 }
 
@@ -1143,4 +1217,13 @@ nsresult txPSParseContext::resolveFunctionCall(txAtom* aName, PRInt32 aID,
 void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)
 {
     mPS->receiveError(aMsg, aRes);
+}
+
+/*
+ * GlobalVariableValue, Used avoid circular dependencies of variables
+ */
+
+ProcessorState::GlobalVariableValue::~GlobalVariableValue()
+{
+    delete mValue;
 }

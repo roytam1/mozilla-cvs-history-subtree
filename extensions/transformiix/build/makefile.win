@@ -118,7 +118,6 @@ CPP_OBJS=							\
 	..\source\xslt\$(OBJDIR)\txMozillaXMLOutput.obj \
 	..\source\xslt\$(OBJDIR)\txRtfHandler.obj \
 	..\source\xslt\$(OBJDIR)\txTextHandler.obj \
-	..\source\xslt\$(OBJDIR)\VariableBinding.obj \
 	..\source\xslt\$(OBJDIR)\txXSLTPatterns.obj \
 	..\source\xslt\$(OBJDIR)\txPatternParser.obj \
 	..\source\xslt\$(OBJDIR)\XSLTProcessor.obj \
