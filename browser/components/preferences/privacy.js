@@ -49,7 +49,10 @@ var gPrivacyPane = {
       this._sanitizer = new Sanitizer();
     this._updateClearButtons();
     
-    window.addEventListenre("unload", this.uninit, false);
+    window.addEventListener("unload", this.uninit, false);
+    
+    // Update the MP buttons
+    this.updateMasterPasswordButton();
   },
   
   uninit: function ()
@@ -155,6 +158,31 @@ var gPrivacyPane = {
   {
     document.documentElement.openSubDialog("chrome://passwordmgr/content/passwordManager.xul",
                                            "resizable", "8");
+  },
+  
+  changeMasterPassword: function ()
+  {
+    document.documentElement.openSubDialog("chrome://browser/content/pref/pref-masterpass.xul",
+                                           "", null);
+    this.updateMasterPasswordButton();
+  },
+  
+  updateMasterPasswordButton: function ()
+  {
+    // See if there's a master password and set the button label accordingly
+    var secmodDB = Components.classes["@mozilla.org/security/pkcs11moduledb;1"]
+                             .getService(Components.interfaces.nsIPKCS11ModuleDB);
+    var slot = secmodDB.findSlotByName("");
+    if (slot) {
+      const nsIPKCS11Slot = Components.interfaces.nsIPKCS11Slot;
+      var status = slot.status;
+      var noMP = status == nsIPKCS11Slot.SLOT_UNINITIALIZED || 
+                 status == nsIPKCS11Slot.SLOT_READY;
+
+      var bundle = document.getElementById("bundlePreferences");
+      var button = document.getElementById("setMasterPassword");
+      button.label = bundle.getString(noMP ? "setMasterPassword" : "changeMasterPassword");
+    }
   },
 };
 

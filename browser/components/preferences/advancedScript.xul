@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+
 # -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 # 
@@ -12,10 +13,10 @@
 # for the specific language governing rights and limitations under the
 # License.
 # 
-# The Original Code is the Firefox Preferences.
+# The Original Code is the Firefox Preferences System.
 # 
 # The Initial Developer of the Original Code is Ben Goodger.
-# Portions created by the Initial Developer are Copyright (C) 2004
+# Portions created by the Initial Developer are Copyright (C) 2005
 # the Initial Developer. All Rights Reserved.
 # 
 # Contributor(s):
@@ -35,63 +36,51 @@
 # 
 # ***** END LICENSE BLOCK *****
 
+<!DOCTYPE prefwindow SYSTEM "chrome://browser/locale/preferences/advancedScript.dtd">
+
 <?xml-stylesheet href="chrome://global/skin/"?>
 
-<!DOCTYPE dialog SYSTEM "chrome://browser/locale/preferences/advancedScript.dtd">
+<prefwindow id="AdvancedScriptDialog" type="child"
+            xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+            title="&allowScripts.title;"
+            dlgbuttons="accept,cancel">
 
-<dialog id="advancedScripts"
-        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        title="&allowScripts.title;"
-        onload="onDialogLoad();" ondialogaccept="onDialogAccept();">
+  <prefpane id="AdvancedScriptDialogPane">  
+    <preferences>
+      <preference id="dom.event.contextmenu.enabled"  name="dom.event.contextmenu.enabled"  type="bool"/>
+      <preference id="dom.disable_window_move_resize" name="dom.disable_window_move_resize" type="bool" inverted="true"/>
+      <preference id="dom.disable_window_flip"        name="dom.disable_window_flip"        type="bool" inverted="true"/>
+      <preference id="dom.disable_image_src_set"      name="dom.disable_image_src_set"      type="bool" inverted="true"/>
+      <preference id="dom.disable_window_open_feature.status"
+                  name="dom.disable_window_open_feature.status"
+                  type="bool" inverted="true"/>
+      <preference id="dom.disable_window_status_change"
+                  name="dom.disable_window_status_change"
+                  type="bool" inverted="true"/>
+    </preferences>
+    
+    <groupbox align="start">
+      <caption label="&allowScripts.label;"/>
 
-  <script type="application/x-javascript">
-  <![CDATA[
-    var elements = ["allowWindowMoveResize", "allowWindowFlip", "allowControlContextMenu", 
-                    "allowHideStatusBar", "allowWindowStatusChange", "allowImageSrcChange"];
+      <checkbox id="allowWindowMoveResize" 
+                preference="dom.disable_window_move_resize"
+                label="&allowWindowMoveResize.label;"/>          
+      <checkbox id="allowWindowFlip" 
+                preference="dom.disable_window_flip"
+                label="&allowWindowFlip.label;"/>          
+      <checkbox id="allowControlContextMenu" 
+                preference="dom.event.contextmenu.enabled"
+                label="&allowControlContextMenu.label;"/>
+      <checkbox id="allowHideStatusBar" 
+                preference="dom.disable_window_open_feature.status"
+                label="&allowHideStatusBar.label;"/>          
+      <checkbox id="allowWindowStatusChange" 
+                preference="dom.disable_window_status_change"
+                label="&allowWindowStatusChange.label;"/>   
+      <checkbox id="allowImageSrcChange" 
+                preference="dom.disable_image_src_set"
+                label="&allowWindowImageSrcChange.label;"/>     
+    </groupbox>
+  </prefpane>
+</prefwindow>
 
-    function onDialogLoad()
-    {
-      for (var i = 0; i < elements.length; ++i) {
-        var element = document.getElementById(elements[i]);
-        var prefElt = window.opener.document.getElementById(element.getAttribute("preference"));
-        var checkbox = document.getElementById(elements[i]);
-        checkbox.setAttribute("checked", prefElt.value);
-      }
-    }
-  
-    function onDialogAccept()
-    {
-      for (var i = 0; i < elements.length; ++i) {
-        var element = document.getElementById(elements[i]);
-        var prefElt = window.opener.document.getElementById(element.getAttribute("preference"));
-        var checkbox = document.getElementById(elements[i]);
-        prefElt.value = checkbox.checked;
-      }
-    }
-  ]]>
-  </script>
-
-  <groupbox align="start">
-    <caption label="&allowScripts.label;"/>
-
-    <checkbox id="allowWindowMoveResize" 
-              preference="dom.disable_window_move_resize"
-              label="&allowWindowMoveResize.label;"/>          
-    <checkbox id="allowWindowFlip" 
-              preference="dom.disable_window_flip"
-              label="&allowWindowFlip.label;"/>          
-    <checkbox id="allowControlContextMenu" 
-              preference="dom.event.contextmenu.enabled"
-              label="&allowControlContextMenu.label;"/>
-    <checkbox id="allowHideStatusBar" 
-              preference="dom.disable_window_open_feature.status"
-              label="&allowHideStatusBar.label;"/>          
-    <checkbox id="allowWindowStatusChange" 
-              preference="dom.disable_window_status_change"
-              label="&allowWindowStatusChange.label;"/>   
-    <checkbox id="allowImageSrcChange" 
-              preference="dom.disable_image_src_set"
-              label="&allowWindowImageSrcChange.label;"/>     
-  </groupbox>
-
-</dialog>

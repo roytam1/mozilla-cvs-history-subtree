@@ -10,6 +10,8 @@ browser.jar:
 *   content/browser/preferences/downloads.js
 *   content/browser/preferences/general.xul
 *   content/browser/preferences/general.js
+*   content/browser/preferences/languages.xul
+*   content/browser/preferences/languages.js
 *   content/browser/preferences/ocsp.xul
 *   content/browser/preferences/ocsp.js
 *   content/browser/preferences/preferences.xul

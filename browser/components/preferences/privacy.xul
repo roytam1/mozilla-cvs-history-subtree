@@ -107,7 +107,7 @@
                       preference="signon.rememberSignons" flex="1"/>
             <!-- XXXben - check for keychain access use -->
             <button id="setMasterPassword" label="&setMasterPassword.label;"
-                    oncommand="gPrivacyPane.setMasterPassword();"/>
+                    oncommand="gPrivacyPane.changeMasterPassword();"/>
           </hbox>
           <separator flex="1"/>
           <hbox>

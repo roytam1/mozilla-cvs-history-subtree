@@ -52,6 +52,9 @@
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             style="&prefWindow.width;">
   
+    <stringbundle id="bundlePreferences"
+                  src="chrome://browser/locale/preferences/preferences.properties"/>
+
     <prefpane id="paneGeneral" label="&paneGeneral.title;"
               src="chrome://browser/content/preferences/general.xul"/>
     <prefpane id="panePrivacy" label="&panePrivacy.title;"

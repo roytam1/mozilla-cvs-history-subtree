@@ -100,4 +100,16 @@ var gContentPane = {
     button.disabled = preference.value != true;
     return undefined;
   },
+  
+  showFontsAndColors: function ()
+  {
+    document.documentElement.openSubDialog("chrome://browser/content/preferences/fontsandcolors.xul",
+                                           "", null);  
+  },
+  
+  showLanguages: function ()
+  {
+    document.documentElement.openSubDialog("chrome://browser/content/preferences/languages.xul",
+                                           "", null);  
+  },
 };

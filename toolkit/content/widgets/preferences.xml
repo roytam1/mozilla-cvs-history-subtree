@@ -47,11 +47,16 @@
         <body>
         <![CDATA[
           // Value changed, synthesize an event
-          var event = document.createEvent("Events");
-          event.initEvent("change", false, true);
-          aPreference.dispatchEvent(event);
-          if (aPreference.hasAttribute("onchange"))
-            (new Function ("event", aPreference.getAttribute("onchange")))(event);
+          try {
+            var event = document.createEvent("Events");
+            event.initEvent("change", false, true);
+            aPreference.dispatchEvent(event);
+            if (aPreference.hasAttribute("onchange"))
+              (new Function ("event", aPreference.getAttribute("onchange")))(event);
+          }
+          catch (e) {
+            dump(e);
+          }
         ]]>
         </body>
       </method>
@@ -267,11 +272,16 @@
           var rv = undefined;
           if (aElement.hasAttribute("onpreferenceread")) {
             // Value changed, synthesize an event
-            var event = document.createEvent("Events");
-            event.initEvent("preferenceread", false, true);
-            var f = new Function ("event", 
-                                  aElement.getAttribute("onpreferenceread"));
-            rv = f(event);
+            try {
+              var event = document.createEvent("Events");
+              event.initEvent("preferenceread", false, true);
+              var f = new Function ("event", 
+                                    aElement.getAttribute("onpreferenceread"));
+              rv = f(event);
+            }
+            catch (e) {
+              dump(e);
+            }
           }
           if (rv !== undefined)
             aElement.value = rv;
@@ -290,13 +300,18 @@
         <![CDATA[
           if (aElement.hasAttribute("onpreferencewrite")) {
             // Value changed, synthesize an event
-            var event = document.createEvent("Events");
-            event.initEvent("preferencewrite", false, true);
-            var f = new Function ("event", 
-                                  aElement.getAttribute("onpreferencewrite"));
-            var rv = f(event);
-            if (rv !== undefined) 
-              return rv;
+            try {
+              var event = document.createEvent("Events");
+              event.initEvent("preferencewrite", false, true);
+              var f = new Function ("event", 
+                                    aElement.getAttribute("onpreferencewrite"));
+              var rv = f(event);
+              if (rv !== undefined) 
+                return rv;
+            }
+            catch (e) {
+              dump(e);
+            }
           }
           switch (this.type) {
           case "int":
@@ -318,6 +333,7 @@
           case "radiogroup":
           case "textbox":
           case "listitem":
+          case "listbox":
           case "menulist":
             return true;
           }
@@ -477,15 +493,21 @@
         <body>
         <![CDATA[
           // Panel loaded, synthesize a load event. 
-          var event = document.createEvent("Events");
-          event.initEvent(aEventName, false, true);
-          var cancel = !aTarget.dispatchEvent(event);
-          if (aTarget.hasAttribute("on" + aEventName)) {
-            var rv = (new Function ("event", aTarget.getAttribute("on" + aEventName)))(event);
-            if (rv == false)
-              cancel = true;
+          try {
+            var event = document.createEvent("Events");
+            event.initEvent(aEventName, false, true);
+            var cancel = !aTarget.dispatchEvent(event);
+            if (aTarget.hasAttribute("on" + aEventName)) {
+              var rv = (new Function ("event", aTarget.getAttribute("on" + aEventName)))(event);
+              if (rv == false)
+                cancel = true;
+            }
+            return !cancel;  
           }
-          return !cancel;  
+          catch (e) { 
+            dump(e);
+          }
+          return false;
         ]]>
         </body>
       </method>
@@ -497,8 +519,9 @@
         <![CDATA[
           // Find this pane's index in the deck and set the deck's 
           // selectedIndex to that value to switch to it.
-          for (var i = 0; i < this.childNodes.length; ++i) {
-            if (this.childNodes[i] == aPaneElement) {
+          var prefpanes = this.preferencePanes;
+          for (var i = 0; i < prefpanes.length; ++i) {
+            if (prefpanes[i] == aPaneElement) {
               this._paneDeck.setAttribute("selectedIndex", i);
               
               if (this.type != "child") {
@@ -633,7 +656,7 @@
         <parameter name="aFeatures"/>
         <parameter name="aParams"/>
         <body>
-          return openDialog(aURL, "", "modal" + (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
+          return openDialog(aURL, "", "modal,centerscreen" + (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
         </body>
       </method>
       
@@ -840,7 +863,7 @@
 # for the specific language governing rights and limitations under the
 # License.
 # 
-# The Original Code is the Firefox Preferences System.
+# The Original Code is the Preferences System.
 # 
 # The Initial Developer of the Original Code is Ben Goodger.
 # Portions created by the Initial Developer are Copyright (C) 2005
