@@ -776,6 +776,9 @@ net_FindAddress (const char *host_ptr,
 			char dbbuf[PR_NETDB_BUF_SIZE];
 			PRHostEnt dpbuf;
 #endif
+
+
+#if !defined(SMOOTH_PROGRESS)
 			/* malloc the string to prevent overflow */
 			char *msg = PR_smprintf(XP_GetString(XP_PROGRESS_LOOKUPHOST), host_port);
 
@@ -783,7 +786,7 @@ net_FindAddress (const char *host_ptr,
         		NET_Progress(window_id, msg);
 				PR_Free(msg);
 			  }
-
+#endif /* defined(SMOOTH_PROGRESS) */
             TIMING_STARTCLOCK_NAME("dns:lookup", (remapped_host_port ? remapped_host_port : host_port));
 
 #ifndef ASYNC_DNS
@@ -895,6 +898,7 @@ net_start_first_connect(const char   *host,
 						char        **error_msg)
 {
 
+#if !defined(SMOOTH_PROGRESS)
     /* malloc the string to prevent overflow
      */
     int32 len = PL_strlen(XP_GetString(XP_PROGRESS_CONTACTHOST));
@@ -910,6 +914,7 @@ net_start_first_connect(const char   *host,
         NET_Progress(window_id, buf);
         FREE(buf);
       }
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 	HG26300
 	/* set the begining time to be the current time.
@@ -1168,6 +1173,7 @@ HG28879
 			{
 				len += PL_strlen(prefSocksHost);
 
+#if !defined(SMOOTH_PROGRESS)
 				buf = (char *)PR_Malloc((len+10)*sizeof(char));
 				if(buf)
 				  {
@@ -1176,6 +1182,7 @@ HG28879
 					NET_Progress(window_id, buf);
 					FREE(buf);
 				  }
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 				/* Tell the user about the failure */
 				*error_msg = NET_ExplainErrorDetails(MK_UNABLE_TO_LOCATE_SOCKS_HOST, prefSocksHost);
@@ -1225,6 +1232,7 @@ HG71089
 	  }
     else if (status < 0)
       {
+#if !defined(SMOOTH_PROGRESS)
         {
             /* malloc the string to prevent overflow
              */
@@ -1242,6 +1250,7 @@ HG71089
                 FREE(buf);
               }
         }
+#endif /* !defined(SMOOTH_PROGRESS) */
 
 		NET_FreeTCPConData(*tcp_con_data);
 		*tcp_con_data = 0;
@@ -1353,6 +1362,7 @@ NET_FinishConnect (CONST char   *url,
           }
         else if (status < 0)
           {
+#if !defined(SMOOTH_PROGRESS)
         	{
             	/* malloc the string to prevent overflow
              	 */
@@ -1370,6 +1380,7 @@ NET_FinishConnect (CONST char   *url,
                 	FREE(buf);
               	  }
         	}
+#endif /* !defined(SMOOTH_PROGRESS) */
 
             NET_FreeTCPConData(*tcp_con_data);
             *tcp_con_data = 0;

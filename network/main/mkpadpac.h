@@ -48,6 +48,8 @@
 #define pref_padPacURL "network.padPacURL"
 #define pref_enablePad "network.enablePad"
 
+XP_BEGIN_PROTOS
+
 /* Global pad variables */
 extern PRBool foundPADPAC;
 extern char *MK_padPacURL;
@@ -88,6 +90,7 @@ MODULE_PRIVATE int PR_CALLBACK net_EnablePadPrefChanged(const char *pref, void *
 /* Registers the above callbacks with js prefs. */
 PUBLIC void NET_RegisterPadPrefCallbacks(void);
 
+XP_END_PROTOS
 /* ***** END FUNCTION PROTOTYPES */
 
 #endif /* MKPADPAC_H */

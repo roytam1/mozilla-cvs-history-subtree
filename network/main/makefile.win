@@ -76,7 +76,6 @@ CSRCS =	\
 	mkconect.c	\
 	mkformat.c	\
 	mkfsort.c	\
-	mkgeturl.c	\
 	singsign.c	\
 	mkhelp.c	\
 	mkinit.c	\
@@ -96,6 +95,7 @@ CSRCS =	\
 
 CPPSRCS = \
 	win-dns.cpp	\
+	mkgeturl.cpp	\
 	$(NULL)
 
 MODULE=network 

@@ -25,6 +25,8 @@
 #include "xp_mcom.h"
 #include "xp.h"
 
+XP_BEGIN_PROTOS
+
 /*
  * Called by netlib to get a single string of "host:port" format,
  * given the XP_List containing opaque proxy config objects.
@@ -93,6 +95,8 @@ MODULE_PRIVATE int NET_LoadProxyConfig(char *autoconf_url,
  * Returns TRUE if we're not allowing proxy failover.
  */
 MODULE_PRIVATE Bool NET_GetNoProxyFailover(void);
+
+XP_END_PROTOS
 
 #endif /* ! MK_PROXY_AUTO_CONFIG */
 

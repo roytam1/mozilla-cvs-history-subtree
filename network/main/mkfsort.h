@@ -27,6 +27,8 @@
 #include <sys/types.h>
 #endif /* XP_UNIX */
 
+PR_BEGIN_EXTERN_C
+
 extern void NET_FreeEntryInfoStruct(NET_FileEntryInfo *entry_info);
 extern NET_FileEntryInfo * NET_CreateFileEntryInfoStruct (void);
 extern int NET_CompareEntryInfoStructs (void *ent1, void *ent2);
@@ -34,5 +36,7 @@ extern void NET_DoFileSort (SortStruct * sort_list);
 
 extern int
 NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path, URL_Struct *URL_s);
+
+PR_END_EXTERN_C
 
 #endif /* MKFSORT_H */

@@ -38,6 +38,8 @@ typedef struct HelpInfoStruct_ {
 
 #define HELP_INFO_PTR(MW_CTX)		((HelpInfoStruct *) (MW_CTX).pHelpInfo)
 
+XP_BEGIN_PROTOS
+
 /* Called by netlib to parse a nethelp URL.  ParseNetHelpURL alters the
    URL struct passed in to point to the location of the help project file
    specified by the nethelp URL. */
@@ -53,6 +55,8 @@ NET_HTMLHelpMapToURL(int         format_out,
                      void       *data_object,
                      URL_Struct *URL_s,
                      MWContext  *window_id);
+
+XP_END_PROTOS
 
 #endif /* MKHELP_H */
 

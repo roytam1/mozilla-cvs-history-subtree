@@ -24,6 +24,7 @@ typedef struct _SortStruct {
     void ** list;
 } SortStruct;
 
+PR_BEGIN_EXTERN_C
 
 extern SortStruct * NET_SortInit (void);
 extern Bool NET_SortAdd (SortStruct * sort_struct, void * add_object);
@@ -36,5 +37,7 @@ extern Bool NET_SortInsert(SortStruct * sort_struct, void * insert_before, void 
 
 
 extern void NET_SortFree(SortStruct * sort_struct);
+
+PR_END_EXTERN_C
 
 #endif /* MKSORT_H */
