@@ -53,8 +53,6 @@ function GetMsgFolderFromURI(folderURI)
 	}
 
 	return null;
-
-
 }
 
 function GetServer(uri)

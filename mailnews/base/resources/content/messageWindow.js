@@ -366,7 +366,7 @@ function SelectFolder(folderUri)
 
 function ReloadMessage()
 {
-	OpenURL(gCurrentMessageUri);
+  gDBView.reloadMessage();
 }
 
 function MsgDeleteMessageFromMessageWindow(reallyDelete, fromToolbar)

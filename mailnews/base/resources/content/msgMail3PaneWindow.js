@@ -930,10 +930,7 @@ function SelectMessage(messageUri)
 
 function ReloadMessage()
 {
-	var msgToLoad = gCurrentDisplayedMessage;
-	//null it out so it will work.
-	gCurrentDisplayedMessage = null;
-	LoadMessageByUri(msgToLoad);
+  gDBView.reloadMessage();
 }
 
 function SetBusyCursor(window, enable)
