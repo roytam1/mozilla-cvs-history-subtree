@@ -20,28 +20,64 @@
  * Author: Aaron Leventhal (aaronl@netscape.com)
  */
 
-cpp_quote("//=--------------------------------------------------------------------------=")
-cpp_quote("// ISimpleDOMNode.h")
-cpp_quote("//=--------------------------------------------------------------------------=")
+cpp_quote("///////////////////////////////////////////////////////////////////////////////////////////////////////")
+cpp_quote("//")
+cpp_quote("// ISimpleDOMNode.h ")
+cpp_quote("// ---------------------------------------------------------------------------------------------------=")
+cpp_quote("//")
+cpp_quote("// get_nodeInfo(")
+cpp_quote("//  /* [out] */ BSTR  *nodeName,   // For elements, this is the tag name")
+cpp_quote("//  /* [out] */ short  *nameSpaceID,")
+cpp_quote("//  /* [out] */ unsigned short  *nodeType,")
+cpp_quote("//  /* [out] */ BSTR  *nodeValue, ")
+cpp_quote("//  /* [out] */ unsigned int  *numChildren); ") 
+cpp_quote("// ---------------------------------------------------------------------------------------------------=")
+cpp_quote("// Get the basic information about a node.")
+cpp_quote("// The namespace ID can be mapped to an URI using nsISimpleDOMDocument::get_nameSpaceURIForID()")
+cpp_quote("//")
+cpp_quote("// get_attributes(")
+cpp_quote("//  /* [in]  */ unsigned short maxAttribs,")
+cpp_quote("//  /* [out] */ unsigned short  *numAttribs,")
+cpp_quote("//  /* [out] */ BSTR  *attribNames,")
+cpp_quote("//  /* [out] */ short  *nameSpaceID,")
+cpp_quote("//  /* [out] */ BSTR  *attribValues);")
+cpp_quote("// ---------------------------------------------------------------------------------------------------=")
+cpp_quote("// Returns 3 arrays - the attribute names and values, and a namespace ID for each")
+cpp_quote("// If the namespace ID is 0, it's the same namespace as the node's namespace")
+cpp_quote("//")
+cpp_quote("// computedStyle(  ")
+cpp_quote("//  /* [in]  */ unsigned short maxStyleProperties,")
+cpp_quote("//  /* [out] */ unsigned short *numStyleProperties, ")
+cpp_quote("//  /* [in]  */ boolean useAlternateView,  // If TRUE, returns properites for media as set in nsIDOMDocument::set_alternateViewMediaTypes")
+cpp_quote("//  /* [out] */ BSTR *styleProperties, ")
+cpp_quote("//  /* [out] */ BSTR *styleValues);")
+cpp_quote("// ---------------------------------------------------------------------------------------------------=")
+cpp_quote("// Returns 2 arrays -- the style properties and their values")
+cpp_quote("//  useAlternateView=FALSE: gets properties for the default media type (usually screen)")
+cpp_quote("//  useAlternateView=TRUE: properties for media types set w/ nsIDOMSimpleDocument::set_alternateViewMediaTypes()")
+cpp_quote("//")
+cpp_quote("// computedStyleForProperties(  ")
+cpp_quote("//  /* [in] */  unsigned short numStyleProperties, ")
+cpp_quote("//  /* [in] */  boolean useAlternateView,  // If TRUE, returns properites for media as set in nsIDOMDocument::set_alternateViewMediaTypes")
+cpp_quote("//  /* [in] */  BSTR *styleProperties, ")
+cpp_quote("//  /* [out] */ BSTR *styleValues);")
+cpp_quote("// ---------------------------------------------------------------------------------------------------=")
+cpp_quote("// Returns style property values for those properties in the styleProperties [in] array")
+cpp_quote("// Returns 2 arrays -- the style properties and their values")
+cpp_quote("//  useAlternateView=FALSE: gets properties for the default media type (usually screen)")
+cpp_quote("//  useAlternateView=TRUE: properties for media types set w/ nsIDOMSimpleDocument::set_alternateViewMediaTypes()")
+cpp_quote("//")
+cpp_quote("// get_parentNode     (/* [in] */ ISimpleDOMNode *newNodePtr);")
+cpp_quote("// get_firstChild     (/* [in] */ ISimpleDOMNode *newNodePtr);")
+cpp_quote("// get_lastChild      (/* [in] */ ISimpleDOMNode *newNodePtr);")
+cpp_quote("// get_previousSibling(/* [in] */ ISimpleDOMNode *newNodePtr);")
+cpp_quote("// get_nextSibling    (/* [in] */ ISimpleDOMNode *newNodePtr);")
+cpp_quote("// ---------------------------------------------------------------------------------------------------=")
+cpp_quote("// DOM navigation - get a different node.")
+cpp_quote("//")
+cpp_quote("//")
+cpp_quote("///////////////////////////////////////////////////////////////////////////////////////////////////////")
 cpp_quote("")
-cpp_quote("// ISimpleDOMNode:")
-cpp_quote("// use get_nodeInfo(), get_attributes(), get_computedStyle() to get DOM info from the element")
-cpp_quote("")
-cpp_quote("  /* W3C media Types:")
-cpp_quote("   * all:        Suitable for all devices. ")
-cpp_quote("   * aural:      Intended for speech synthesizers. See the section on aural style sheets for details. ")
-cpp_quote("   * braille:    Intended for braille tactile feedback devices. ")
-cpp_quote("   * embossed:   Intended for paged braille printers. ")
-cpp_quote("   * handheld:   Intended for handheld devices - typically small screen, monochrome, limited bandwidth. ")
-cpp_quote("   * print:      Intended for paged, opaque material and for documents viewed on screen in print preview mode. Please consult the section on paged media for information about formatting issues that are specific to paged media. ")
-cpp_quote("   * projection: Intended for projected presentations, for example projectors or print to transparencies. Please consult the section on paged media for information about formatting issues that are specific to paged media. ")
-cpp_quote("   * screen:     Intended primarily for color computer screens. ")
-cpp_quote("   * tty:        intended for media using a fixed-pitch character grid, such as teletypes, terminals, or portable devices with limited display capabilities. Authors should not use pixel units with the tty media type. ")
-cpp_quote("   * tv:         Intended for television-type devices - low resolution, color, limited-scrollability screens, sound")
-cpp_quote("   * See latest W3C CSS specs for complete list of media types")
-cpp_quote("   */")
-cpp_quote("")
-cpp_quote("//=--------------------------------------------------------------------------=")
 cpp_quote("")
 
 import "objidl.idl";
@@ -49,8 +85,8 @@ import "oaidl.idl";
         
 const long DISPID_NODE_NODEINFO   = -5900;
 const long DISPID_NODE_ATTRIBUTES = -5901;
-const long DISPID_NODE_STYLEPROPS = -5902;
-const long DISPID_NODE_STYLEPROPSMEDIA = -5903;
+const long DISPID_NODE_COMPSTYLE  = -5902;
+const long DISPID_NODE_COMPSTYLEFORPROPS = -5903;
 
 [object, uuid(96917748-8922-4fd9-8a73-d72e8aad671a)]
 interface ISimpleDOMNode : IUnknown
@@ -84,19 +120,19 @@ interface ISimpleDOMNode : IUnknown
     [out, size_is(maxAttribs), length_is(*numAttribs)] BSTR *attribValues
   );
 
-  [hidden, propget, id(DISPID_NODE_STYLEPROPS)] HRESULT computedStyle(  
+  [hidden, propget, id(DISPID_NODE_COMPSTYLE)] HRESULT computedStyle(  
     [in] unsigned short maxStyleProperties,
     [out] unsigned short *numStyleProperties, 
+    [in] boolean useAlternateView,  // If TRUE, returns properites for media as set in nsIDOMDocument::set_alternateViewMediaTypes
     [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleProperties, 
     [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleValues
   );
 
-  [hidden, propget, id(DISPID_NODE_STYLEPROPSMEDIA)] HRESULT computedStyleForMedia(
-    [in] BSTR *mediaType,  // W3C media type such as aural, braille, embossed, handheld, print, projection, screen, tty
-    [in] unsigned short maxStyleProperties,
-    [out] unsigned short *numStyleProperties, 
-    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleProperties, 
-    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleValues
+  [hidden, propget, id(DISPID_NODE_COMPSTYLEFORPROPS)] HRESULT computedStyleForProperties(  
+    [in] unsigned short numStyleProperties, 
+    [in] boolean useAlternateView,  // If TRUE, returns properites for media as set in nsIDOMDocument::set_alternateViewMediaTypes
+    [in, size_is(numStyleProperties), length_is(numStyleProperties)] BSTR *styleProperties, 
+    [out, size_is(numStyleProperties), length_is(numStyleProperties)] BSTR *styleValues
   );
 
   [propget] HRESULT parentNode([out] ISimpleDOMNode **node);
