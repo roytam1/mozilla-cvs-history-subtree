@@ -45,6 +45,8 @@
 
 class nsIFile;
 
+#define NEED_TO_FIX_4X_COOKIES 1
+
 class nsDogbertProfileMigrator : public nsIBrowserProfileMigrator
 {
 public:
@@ -57,6 +59,10 @@ public:
 protected:
   nsresult CopyPreferences(PRBool aReplace);
   nsresult CopyCookies(PRBool aReplace);
+#ifdef NEED_TO_FIX_4X_COOKIES
+  nsresult FixDogbertCookies();
+#endif
+
   nsresult CopyBookmarks(PRBool aReplace);
 
   nsresult CreateTemplateProfile(const PRUnichar* aSuggestedName);

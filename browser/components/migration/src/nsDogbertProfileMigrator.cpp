@@ -37,10 +37,14 @@
 
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsBrowserProfileMigratorUtils.h"
+#include "nsCRT.h"
 #include "nsDogbertProfileMigrator.h"
 #include "nsIBookmarksService.h"
 #include "nsIFile.h"
+#include "nsIInputStream.h"
+#include "nsILineInputStream.h"
 #include "nsIObserverService.h"
+#include "nsIOutputStream.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
 #include "nsIRDFService.h"
@@ -48,7 +52,16 @@
 #include "nsIStringBundle.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
+#include "nsNetUtil.h"
 #include "nsReadableUtils.h"
+#include "prprf.h"
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
+#define NEED_TO_FIX_4X_COOKIES 1
+#endif /* XP_MAC */
+#ifdef NEED_TO_FIX_4X_COOKIES
+#define SECONDS_BETWEEN_1900_AND_1970 2208988800UL
+#endif
 
 #define PREF_FILE_HEADER_STRING "# Mozilla User Preferences    " 
 
@@ -153,6 +166,7 @@ nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
     nsCOMPtr<nsIProfileInternal> pmi(do_CreateInstance("@mozilla.org/profile/manager;1"));
     PRUnichar** profileNames = nsnull;
     PRUint32 profileCount = 0;
+    // Lordy, this API sucketh.
     rv = pmi->GetProfileListX(nsIProfileInternal::LIST_FOR_IMPORT, &profileCount, &profileNames);
     if (NS_FAILED(rv)) return rv;
 
@@ -161,6 +175,7 @@ nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
       string->SetData(nsDependentString(profileNames[i]));
       mProfiles->AppendElement(string);
     }
+    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(profileCount, profileNames);
   }
   
   NS_IF_ADDREF(*aResult = mProfiles);
@@ -295,10 +310,95 @@ nsDogbertProfileMigrator::CopyFile(const nsAString& aSourceFileName, const nsASt
 nsresult
 nsDogbertProfileMigrator::CopyCookies(PRBool aReplace)
 {
-  CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
+#ifdef NEED_TO_FIX_4X_COOKIES
+  nsresult rv = CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
+  if (NS_FAILED(rv)) return rv;
 
-  return NS_OK;
+  return FixDogbertCookies();
+#else
+  return CopyFile(COOKIES_FILE_NAME_IN_4x, COOKIES_FILE_NAME_IN_5x);
+#endif
 }
+
+#ifdef NEED_TO_FIX_4X_COOKIES
+nsresult
+nsDogbertProfileMigrator::FixDogbertCookies()
+{
+  nsCOMPtr<nsIFile> dogbertCookiesFile;
+  mSourceProfile->Clone(getter_AddRefs(dogbertCookiesFile));
+  dogbertCookiesFile->Append(COOKIES_FILE_NAME_IN_4x);
+
+  nsCOMPtr<nsIInputStream> fileInputStream;
+  NS_NewLocalFileInputStream(getter_AddRefs(fileInputStream), dogbertCookiesFile);
+  if (!fileInputStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsIFile> firebirdCookiesFile;
+  mTargetProfile->Clone(getter_AddRefs(firebirdCookiesFile));
+  firebirdCookiesFile->Append(COOKIES_FILE_NAME_IN_5x);
+
+  nsCOMPtr<nsIOutputStream> fileOutputStream;
+  NS_NewLocalFileOutputStream(getter_AddRefs(fileOutputStream), firebirdCookiesFile);
+  if (!fileOutputStream) return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsILineInputStream> lineInputStream(do_QueryInterface(fileInputStream));
+  nsAutoString buffer, outBuffer;
+  PRBool moreData = PR_FALSE;
+  PRUint32 written = 0;
+  do {
+    nsresult rv = lineInputStream->ReadLine(buffer, &moreData);
+    if (NS_FAILED(rv)) return rv;
+
+    /* skip line if it is a comment or null line */
+    if (buffer.IsEmpty() || buffer.CharAt(0) == '#' ||
+        buffer.CharAt(0) == nsCRT::CR || buffer.CharAt(0) == nsCRT::LF) {
+      fileOutputStream->Write((const char*)buffer.get(), buffer.Length(), &written);
+      continue;
+    }
+
+    /* locate expire field, skip line if it does not contain all its fields */
+    int hostIndex, isDomainIndex, pathIndex, xxxIndex, expiresIndex, nameIndex, cookieIndex;
+    hostIndex = 0;
+    if ((isDomainIndex = buffer.FindChar('\t', hostIndex)+1) == 0 ||
+        (pathIndex = buffer.FindChar('\t', isDomainIndex)+1) == 0 ||
+        (xxxIndex = buffer.FindChar('\t', pathIndex)+1) == 0 ||
+        (expiresIndex = buffer.FindChar('\t', xxxIndex)+1) == 0 ||
+        (nameIndex = buffer.FindChar('\t', expiresIndex)+1) == 0 ||
+        (cookieIndex = buffer.FindChar('\t', nameIndex)+1) == 0 )
+      continue;
+
+    /* separate the expires field from the rest of the cookie line */
+    nsAutoString prefix, expiresString, suffix;
+    buffer.Mid(prefix, hostIndex, expiresIndex-hostIndex-1);
+    buffer.Mid(expiresString, expiresIndex, nameIndex-expiresIndex-1);
+    buffer.Mid(suffix, nameIndex, buffer.Length()-nameIndex);
+
+    /* correct the expires field */
+    char* expiresCString = ToNewCString(expiresString);
+    unsigned long expires = strtoul(expiresCString, nsnull, 10);
+    nsCRT::free(expiresCString);
+
+    /* if the cookie is supposed to expire at the end of the session
+     * expires == 0.  don't adjust those cookies.
+     */
+    if (expires)
+    	expires -= SECONDS_BETWEEN_1900_AND_1970;
+    char dateString[36];
+    PR_snprintf(dateString, sizeof(dateString), "%lu", expires);
+
+    /* generate the output buffer and write it to file */
+    outBuffer = prefix;
+    outBuffer.Append(PRUnichar('\t'));
+    outBuffer.AppendWithConversion(dateString);
+    outBuffer.Append(PRUnichar('\t'));
+    outBuffer.Append(suffix);
+
+    fileOutputStream->Write((const char*)outBuffer.get(), outBuffer.Length(), &written);
+  }
+  while (moreData);
+}
+
+#endif /* NEED_TO_FIX_4X_COOKIES */
+
 
 nsresult
 nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
