@@ -138,6 +138,18 @@ static void notify_ioq(PRThreadPool *tp);
 static void notify_timerq(PRThreadPool *tp);
 
 /*
+ * locks are acquired in the following order
+ *
+ *	tp->ioq.lock,tp->timerq.lock
+ *			|
+ *			V
+ *		tp->jobq->lock		
+ *			|
+ *			V
+ *		jobp->jlock
+ */
+
+/*
  * worker thread function
  */
 static void wstart(void *arg)
@@ -233,7 +245,9 @@ add_to_jobq(PRThreadPool *tp, PRJob *jobp)
 #else
 	PR_Lock(tp->jobq.lock);
 	PR_APPEND_LINK(&jobp->links,&tp->jobq.list);
+	PR_Lock(jobp->jlock);
 	jobp->status = JOB_QUEUED;
+	PR_Unlock(jobp->jlock);
 	tp->jobq.cnt++;
 	if ((tp->idle_threads < tp->jobq.cnt) &&
 					(tp->current_threads < tp->max_threads)) {
@@ -391,6 +405,7 @@ PRIntervalTime now;
 				jobp = polljobs[index];	
 
                 if ((revents & PR_POLL_NVAL) ||  /* busted in all cases */
+                	(revents & PR_POLL_ERR) ||
                 			((events & PR_POLL_WRITE) &&
 							(revents & PR_POLL_HUP))) { /* write op & hup */
 					PR_Lock(tp->ioq.lock);
@@ -403,6 +418,8 @@ PRIntervalTime now;
 						jobp->iod->error = PR_BAD_DESCRIPTOR_ERROR;
                     else if (PR_POLL_HUP & revents)
 						jobp->iod->error = PR_CONNECT_RESET_ERROR;
+                    else 
+						jobp->iod->error = PR_IO_ERROR;
 
 					/*
 					 * add to jobq
