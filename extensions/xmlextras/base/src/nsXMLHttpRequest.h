@@ -117,6 +117,18 @@ protected:
                 PRUint32 count,
                 PRUint32 *writeCount);
 
+  // used to implement getAllResponseHeaders()
+  class nsHeaderVisitor : public nsIHttpHeaderVisitor {
+  public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIHTTPHEADERVISITOR
+    nsHeaderVisitor() { NS_INIT_ISUPPORTS(); }
+    virtual ~nsHeaderVisitor() {}
+    const nsACString &Headers() { return mHeaders; }
+  private:
+    nsCString mHeaders;
+  };
+
 #if 1 // When nsCString::Append()/Length() works for strings that contain nulls, remove this buffer impl
   class ResponseBodyBuffer {
   public:

@@ -769,36 +769,18 @@ nsXMLHttpRequest::GetAllResponseHeaders(char **_retval)
   NS_ENSURE_ARG_POINTER(_retval);
   *_retval = nsnull;
   if (mChannel) {
-#if 0
-    nsCOMPtr<nsISimpleEnumerator> enumerator;
-    nsCAutoString headers;
+    nsHeaderVisitor *visitor = nsnull;
+    NS_NEWXPCOM(visitor, nsHeaderVisitor);
+    if (!visitor)
+      return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(visitor);
 
-    nsresult rv = mChannel->GetResponseHeaderEnumerator(getter_AddRefs(enumerator));
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-    
-    PRBool hasMore;
-    while(NS_SUCCEEDED(enumerator->HasMoreElements(&hasMore)) && hasMore) {
-      nsCOMPtr<nsISupports> isup;
-      
-      rv = enumerator->GetNext(getter_AddRefs(isup));
-      if (NS_FAILED(rv)) {
-        break;
-      }
-      nsCOMPtr<nsIHTTPHeader> header(do_QueryInterface(isup));
-      if (header) {
-        nsXPIDLCString name, value;
-        header->GetFieldName(getter_Copies(name));
-        header->GetValue(getter_Copies(value));
-        headers.Append((const char*)name);
-        headers.Append(": ");
-        headers.Append((const char*)value);
-        headers.Append("\n");
-      }
-    }
-    *_retval = headers.ToNewCString();
-#endif
+    nsresult rv = mChannel->VisitResponseHeaders(visitor);
+    if (NS_SUCCEEDED(rv))
+      *_retval = ToNewCString(visitor->Headers());
+
+    NS_RELEASE(visitor);
+    return rv;
   }
   
   return NS_OK;
@@ -1439,4 +1421,16 @@ nsXMLHttpRequest::CanSetProperty(const nsIID * iid, const PRUnichar *propertyNam
   }
 
   return NS_OK;
+}
+
+NS_IMPL_ISUPPORTS1(nsXMLHttpRequest::nsHeaderVisitor, nsIHttpHeaderVisitor)
+
+NS_IMETHODIMP nsXMLHttpRequest::
+nsHeaderVisitor::VisitHeader(const char *header, const char *value)
+{
+    mHeaders.Append(header);
+    mHeaders.Append(": ");
+    mHeaders.Append(value);
+    mHeaders.Append('\n');
+    return NS_OK;
 }
