@@ -1254,6 +1254,9 @@ NS_IMETHODIMP nsLocalFile::InitWithNativePath(const nsACString& filePath)
 {
   if (filePath.First() != '/' || filePath.Length() == 0)
     return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+  // On 10.2, huge paths crash CFURLGetFSRef()
+  if (filePath.Length() > PATH_MAX)
+    return NS_ERROR_FILE_NAME_TOO_LONG;
 
   mNonExtantNodes.clear();
   mIdentityDirty = PR_TRUE;
