@@ -1863,7 +1863,12 @@ nsHTMLEditRules::WillDeleteSelection(nsISelection *aSelection,
         so--; 
         eo--; 
       }
-      return nsWSRunObject::PrepareToDeleteRange(mHTMLEditor, address_of(visNode), &so, address_of(visNode), &eo);
+      res = nsWSRunObject::PrepareToDeleteRange(mHTMLEditor, address_of(visNode), &so, address_of(visNode), &eo);
+      if (NS_FAILED(res)) return res;
+      nsCOMPtr<nsIDOMCharacterData> nodeAsText(do_QueryInterface(visNode));
+      res = mHTMLEditor->DeleteText(nodeAsText,so,1);
+      *aHandled = PR_TRUE;
+      return res;
     }
     else if ( (wsType==nsWSRunObject::eSpecial)  || 
               (wsType==nsWSRunObject::eBreak)    ||
