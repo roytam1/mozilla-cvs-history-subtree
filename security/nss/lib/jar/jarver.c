@@ -65,6 +65,23 @@ char *xp_HUGE_STRCPY (char *to, char ZHUGEP *from);
 /* from certdb.h */
 #define CERTDB_USER (1<<6)
 
+#if 0
+/* from certdb.h */
+extern PRBool SEC_CertNicknameConflict
+   (char *nickname, CERTCertDBHandle *handle);
+/* from certdb.h */
+extern SECStatus SEC_AddTempNickname
+   (CERTCertDBHandle *handle, char *nickname, SECItem *certKey);
+/* from certdb.h */
+typedef SECStatus (* PermCertCallback)(CERTCertificate *cert, SECItem *k, void *pdata);
+
+/* from certdb.h */
+SECStatus SEC_TraversePermCerts
+   (CERTCertDBHandle *handle, PermCertCallback certfunc, void *udata);
+#endif
+
+
+
 #define SZ 512
 
 static int jar_validate_pkcs7 
@@ -1390,11 +1407,8 @@ char *JAR_cert_html
   if (cert == NULL || *result < 0)
     return NULL;
 
-  *result = -1;
+  *result = 0;
 
-   return NULL;
-
-#ifdef notdef
   html = CERT_HTMLCertInfo (cert, /* show images */ PR_TRUE,
 		/*show issuer*/PR_TRUE);
 
@@ -1402,7 +1416,6 @@ char *JAR_cert_html
     *result = -1;
 
   return html;
-#endif
   }
 
 /*

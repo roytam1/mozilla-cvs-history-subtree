@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -54,7 +50,6 @@
 
 #define NISTALGS    USGOV, 3, 4
 #define AES         NISTALGS, 1
-#define SHAXXX      NISTALGS, 2
 
 /**
  ** The Netscape OID space is allocated by Terry Hayes.  If you need
@@ -157,14 +152,6 @@
 /* { 1.3.6.1.4.1.311 } */
 #define MICROSOFT_OID 0x2b, 0x6, 0x1, 0x4, 0x1, 0x82, 0x37
 
-#define CERTICOM_OID            0x2b, 0x81, 0x04
-#define SECG_OID                CERTICOM_OID, 0x00
-
-#define ANSI_X962_OID           0x2a, 0x86, 0x48, 0xce, 0x3d
-#define ANSI_X962_CURVE_OID     ANSI_X962_OID, 0x03
-#define ANSI_X962_GF2m_OID      ANSI_X962_CURVE_OID, 0x00
-#define ANSI_X962_GFp_OID       ANSI_X962_CURVE_OID, 0x01
-
 #define CONST_OID static const unsigned char
 
 CONST_OID md2[]        				= { DIGEST, 0x02 };
@@ -192,9 +179,6 @@ CONST_OID pkcs1MD2WithRSAEncryption[]  		= { PKCS1, 0x02 };
 CONST_OID pkcs1MD4WithRSAEncryption[]  		= { PKCS1, 0x03 };
 CONST_OID pkcs1MD5WithRSAEncryption[]  		= { PKCS1, 0x04 };
 CONST_OID pkcs1SHA1WithRSAEncryption[] 		= { PKCS1, 0x05 };
-CONST_OID pkcs1SHA256WithRSAEncryption[] 	= { PKCS1, 11 };
-CONST_OID pkcs1SHA384WithRSAEncryption[] 	= { PKCS1, 12 };
-CONST_OID pkcs1SHA512WithRSAEncryption[] 	= { PKCS1, 13 };
 
 CONST_OID pkcs5PbeWithMD2AndDEScbc[]  		= { PKCS5, 0x01 };
 CONST_OID pkcs5PbeWithMD5AndDEScbc[]  		= { PKCS5, 0x03 };
@@ -415,7 +399,6 @@ CONST_OID aes128_CBC[] 				= { AES, 2 };
 CONST_OID aes128_OFB[] 				= { AES, 3 };
 CONST_OID aes128_CFB[] 				= { AES, 4 };
 #endif
-CONST_OID aes128_KEY_WRAP[]			= { AES, 5 };
 
 CONST_OID aes192_ECB[] 				= { AES, 21 };
 CONST_OID aes192_CBC[] 				= { AES, 22 };
@@ -423,7 +406,6 @@ CONST_OID aes192_CBC[] 				= { AES, 22 };
 CONST_OID aes192_OFB[] 				= { AES, 23 };
 CONST_OID aes192_CFB[] 				= { AES, 24 };
 #endif
-CONST_OID aes192_KEY_WRAP[]			= { AES, 25 };
 
 CONST_OID aes256_ECB[] 				= { AES, 41 };
 CONST_OID aes256_CBC[] 				= { AES, 42 };
@@ -431,41 +413,6 @@ CONST_OID aes256_CBC[] 				= { AES, 42 };
 CONST_OID aes256_OFB[] 				= { AES, 43 };
 CONST_OID aes256_CFB[] 				= { AES, 44 };
 #endif
-CONST_OID aes256_KEY_WRAP[]			= { AES, 45 };
-
-CONST_OID sha256[]                              = { SHAXXX, 1 };
-CONST_OID sha384[]                              = { SHAXXX, 2 };
-CONST_OID sha512[]                              = { SHAXXX, 3 };
-
-CONST_OID ansix962ECPublicKey[]                 = { ANSI_X962_OID, 0x02, 0x01 };
-CONST_OID ansix962ECDSASignaturewithSHA1Digest[] = { ANSI_X962_OID, 0x04, 0x01 };
-
-/* ANSI X9.62 prime curve OIDs */
-/* NOTE: prime192v1 is the same as secp192r1, prime256v1 is the
- * same as secp256r1
- */
-CONST_OID ansiX962prime192v1[] = { ANSI_X962_GFp_OID, 0x01 };
-CONST_OID ansiX962prime192v2[] = { ANSI_X962_GFp_OID, 0x02 };
-CONST_OID ansiX962prime192v3[] = { ANSI_X962_GFp_OID, 0x03 };
-CONST_OID ansiX962prime239v1[] = { ANSI_X962_GFp_OID, 0x04 };
-CONST_OID ansiX962prime239v2[] = { ANSI_X962_GFp_OID, 0x05 };
-CONST_OID ansiX962prime239v3[] = { ANSI_X962_GFp_OID, 0x06 };
-CONST_OID ansiX962prime256v1[] = { ANSI_X962_GFp_OID, 0x07 };
-
-/* SECG prime curve OIDs */
-CONST_OID secgECsecp112r1[] = { SECG_OID, 0x06 };
-CONST_OID secgECsecp112r2[] = { SECG_OID, 0x07 };
-CONST_OID secgECsecp128r1[] = { SECG_OID, 0x1c };
-CONST_OID secgECsecp128r2[] = { SECG_OID, 0x1d };
-CONST_OID secgECsecp160k1[] = { SECG_OID, 0x09 };
-CONST_OID secgECsecp160r1[] = { SECG_OID, 0x08 };
-CONST_OID secgECsecp160r2[] = { SECG_OID, 0x1e };
-CONST_OID secgECsecp192k1[] = { SECG_OID, 0x1f };
-CONST_OID secgECsecp224k1[] = { SECG_OID, 0x20 };
-CONST_OID secgECsecp224r1[] = { SECG_OID, 0x21 };
-CONST_OID secgECsecp256k1[] = { SECG_OID, 0x0a };
-CONST_OID secgECsecp384r1[] = { SECG_OID, 0x22 };
-CONST_OID secgECsecp521r1[] = { SECG_OID, 0x23 };
 
 #define OI(x) { siDEROID, (unsigned char *)x, sizeof x }
 #ifndef SECOID_NO_STRINGS
@@ -1062,127 +1009,9 @@ const static SECOidData oids[] = {
     OD( sdn702DSASignature, SEC_OID_SDN702_DSA_SIGNATURE, 
 	"SDN.702 DSA Signature", CKM_DSA_SHA1, INVALID_CERT_EXTENSION ),
 
-    OD( ms_smimeEncryptionKeyPreference, 
-        SEC_OID_MS_SMIME_ENCRYPTION_KEY_PREFERENCE,
+    OD( ms_smimeEncryptionKeyPreference, SEC_OID_MS_SMIME_ENCRYPTION_KEY_PREFERENCE,
 	"Microsoft S/MIME Encryption Key Preference", 
 	CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
-
-    OD( sha256, SEC_OID_SHA256, "SHA-256", CKM_SHA256, INVALID_CERT_EXTENSION),
-    OD( sha384, SEC_OID_SHA384, "SHA-384", CKM_SHA384, INVALID_CERT_EXTENSION),
-    OD( sha512, SEC_OID_SHA512, "SHA-512", CKM_SHA512, INVALID_CERT_EXTENSION),
-
-    OD( pkcs1SHA256WithRSAEncryption, SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION,
-	"PKCS #1 SHA-256 With RSA Encryption", CKM_SHA256_RSA_PKCS,
-	INVALID_CERT_EXTENSION ),
-    OD( pkcs1SHA384WithRSAEncryption, SEC_OID_PKCS1_SHA384_WITH_RSA_ENCRYPTION,
-	"PKCS #1 SHA-384 With RSA Encryption", CKM_SHA384_RSA_PKCS,
-	INVALID_CERT_EXTENSION ),
-    OD( pkcs1SHA512WithRSAEncryption, SEC_OID_PKCS1_SHA512_WITH_RSA_ENCRYPTION,
-	"PKCS #1 SHA-512 With RSA Encryption", CKM_SHA512_RSA_PKCS,
-	INVALID_CERT_EXTENSION ),
-
-    OD( aes128_KEY_WRAP, SEC_OID_AES_128_KEY_WRAP,
-	"AES-128 Key Wrap", CKM_NETSCAPE_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
-    OD( aes192_KEY_WRAP, SEC_OID_AES_192_KEY_WRAP,
-	"AES-192 Key Wrap", CKM_NETSCAPE_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
-    OD( aes256_KEY_WRAP, SEC_OID_AES_256_KEY_WRAP,
-	"AES-256 Key Wrap", CKM_NETSCAPE_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
-
-    /* Elliptic Curve Cryptography (ECC) OIDs */
-    OD( ansix962ECPublicKey, SEC_OID_ANSIX962_EC_PUBLIC_KEY,
-	"X9.62 elliptic curve public key", CKM_ECDH1_DERIVE,
-	INVALID_CERT_EXTENSION ),
-    OD( ansix962ECDSASignaturewithSHA1Digest, 
-	SEC_OID_ANSIX962_ECDSA_SIGNATURE_WITH_SHA1_DIGEST,
-	"X9.62 ECDSA signature with SHA1", CKM_ECDSA_SHA1,
-	INVALID_CERT_EXTENSION ),
-
-    /* Named curves */
-
-    /* ANSI X9.62 named elliptic curves (prime field) */
-    OD( ansiX962prime192v1, SEC_OID_ANSIX962_EC_PRIME192V1,
-	"ANSI X9.62 elliptic curve prime192v1 (aka secp192r1, NIST P-192)", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( ansiX962prime192v2, SEC_OID_ANSIX962_EC_PRIME192V2,
-	"ANSI X9.62 elliptic curve prime192v2", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( ansiX962prime192v3, SEC_OID_ANSIX962_EC_PRIME192V3,
-	"ANSI X9.62 elliptic curve prime192v3", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( ansiX962prime239v1, SEC_OID_ANSIX962_EC_PRIME239V1,
-	"ANSI X9.62 elliptic curve prime239v1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( ansiX962prime239v2, SEC_OID_ANSIX962_EC_PRIME239V2,
-	"ANSI X9.62 elliptic curve prime239v2", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( ansiX962prime239v3, SEC_OID_ANSIX962_EC_PRIME239V3,
-	"ANSI X9.62 elliptic curve prime239v3", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( ansiX962prime256v1, SEC_OID_ANSIX962_EC_PRIME256V1,
-	"ANSI X9.62 elliptic curve prime256v1 (aka secp256r1, NIST P-256)", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-
-    /* SECG named elliptic curves (prime field) */
-    OD( secgECsecp112r1, SEC_OID_SECG_EC_SECP112R1,
-	"SECG elliptic curve secp112r1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp112r2, SEC_OID_SECG_EC_SECP112R2,
-	"SECG elliptic curve secp112r2", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp128r1, SEC_OID_SECG_EC_SECP128R1,
-	"SECG elliptic curve secp128r1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp128r2, SEC_OID_SECG_EC_SECP128R2,
-	"SECG elliptic curve secp128r2", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp160k1, SEC_OID_SECG_EC_SECP160K1,
-	"SECG elliptic curve secp160k1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp160r1, SEC_OID_SECG_EC_SECP160R1,
-	"SECG elliptic curve secp160r1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp160r2, SEC_OID_SECG_EC_SECP160R2,
-	"SECG elliptic curve secp160r2", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp192k1, SEC_OID_SECG_EC_SECP192K1,
-	"SECG elliptic curve secp192k1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp224k1, SEC_OID_SECG_EC_SECP224K1,
-	"SECG elliptic curve secp224k1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp224r1, SEC_OID_SECG_EC_SECP224R1,
-	"SECG elliptic curve secp224r1 (aka NIST P-224)", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp256k1, SEC_OID_SECG_EC_SECP256K1,
-	"SECG elliptic curve secp256k1", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp384r1, SEC_OID_SECG_EC_SECP384R1,
-	"SECG elliptic curve secp384r1 (aka NIST P-384)", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-    OD( secgECsecp521r1, SEC_OID_SECG_EC_SECP521R1,
-	"SECG elliptic curve secp521r1 (aka NIST P-521)", 
-	CKM_INVALID_MECHANISM,
-	INVALID_CERT_EXTENSION ),
-
 };
 
 /*
@@ -1336,16 +1165,12 @@ secoid_HashNumber(const void *key)
 }
 
 
-SECStatus
-secoid_Init(void)
+static SECStatus
+InitOIDHash(void)
 {
     PLHashEntry *entry;
     const SECOidData *oid;
     int i;
-
-    if (oidhash) {
-	return PR_SUCCESS;
-    }
     
     oidhash = PL_NewHashTable(0, SECITEM_Hash, SECITEM_HashCompare,
 			PL_CompareValues, NULL, NULL);
@@ -1392,8 +1217,13 @@ SECOID_FindOIDByMechanism(unsigned long mechanism)
     SECOidData *ret;
     int rv;
 
-    PR_ASSERT(oidhash != NULL);
-
+    if ( !oidhash ) {
+        rv = InitOIDHash();
+	if ( rv != SECSuccess ) {
+	    PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
+	    return NULL;
+	}
+    }
     ret = PL_HashTableLookupConst ( oidmechhash, (void *)mechanism);
     if ( ret == NULL ) {
         PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
@@ -1408,7 +1238,13 @@ SECOID_FindOID(SECItem *oid)
     SECOidData *ret;
     int rv;
     
-    PR_ASSERT(oidhash != NULL);
+    if ( !oidhash ) {
+	rv = InitOIDHash();
+	if ( rv != SECSuccess ) {
+	    PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
+	    return NULL;
+	}
+    }
     
     ret = PL_HashTableLookupConst ( oidhash, oid );
     if ( ret == NULL ) {

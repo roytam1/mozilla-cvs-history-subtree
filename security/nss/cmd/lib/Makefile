@@ -72,5 +72,4 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
 
-$(OBJDIR)/secerror$(OBJ_SUFFIX): NSPRerrs.h SECerrs.h SSLerrs.h 
 

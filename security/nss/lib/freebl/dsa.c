@@ -179,8 +179,7 @@ dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
     mp_int p, q, g;  /* PQG parameters */
     mp_int x, k;     /* private key & pseudo-random integer */
     mp_int r, s;     /* tuple (r, s) is signature) */
-    mp_err err   = MP_OKAY;
-    SECStatus rv = SECSuccess;
+    mp_err err;
 
     /* FIPS-compliance dictates that digest is a SHA1 hash. */
     /* Check args. */
@@ -236,7 +235,7 @@ dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
     */
     if (mp_cmp_z(&r) == 0 || mp_cmp_z(&s) == 0) {
 	PORT_SetError(SEC_ERROR_NEED_RANDOM);
-	rv = SECFailure;
+	err = MP_UNDEF;
 	goto cleanup;
     }
     /*
@@ -245,11 +244,10 @@ dsa_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest,
     ** Signature is tuple (r, s)
     */
     err = mp_to_fixlen_octets(&r, signature->data, DSA_SUBPRIME_LEN);
-    if (err < 0) goto cleanup; 
+    if (err < 0) goto cleanup; else err = MP_OKAY;
     err = mp_to_fixlen_octets(&s, signature->data + DSA_SUBPRIME_LEN, 
                                   DSA_SUBPRIME_LEN);
-    if (err < 0) goto cleanup; 
-    err = MP_OKAY;
+    if (err < 0) goto cleanup; else err = MP_OKAY;
 cleanup:
     mp_clear(&p);
     mp_clear(&q);
@@ -260,9 +258,9 @@ cleanup:
     mp_clear(&s);
     if (err) {
 	translate_mpi_error(err);
-	rv = SECFailure;
+	return SECFailure;
     }
-    return rv;
+    return SECSuccess;
 }
 
 /* signature is caller-supplied buffer of at least 20 bytes.
@@ -275,18 +273,15 @@ SECStatus
 DSA_SignDigest(DSAPrivateKey *key, SECItem *signature, const SECItem *digest)
 {
     SECStatus rv;
-    int       retries = 10;
-    unsigned char kSeed[DSA_SUBPRIME_LEN];
-
-    PORT_SetError(0);
+    int prerr = 0;
+    unsigned char KSEED[DSA_SUBPRIME_LEN];
+    rv = DSA_GenerateGlobalRandomBytes(KSEED, DSA_SUBPRIME_LEN, 
+                                       key->params.subPrime.data);
+    if (rv) return rv;
     do {
-	rv = DSA_GenerateGlobalRandomBytes(kSeed, DSA_SUBPRIME_LEN, 
-					   key->params.subPrime.data);
-	if (rv != SECSuccess) 
-	    break;
-	rv = dsa_SignDigest(key, signature, digest, kSeed);
-    } while (rv != SECSuccess && PORT_GetError() == SEC_ERROR_NEED_RANDOM &&
-	     --retries > 0);
+	rv = dsa_SignDigest(key, signature, digest, KSEED);
+	if (rv) prerr = PORT_GetError();
+    } while (prerr == SEC_ERROR_NEED_RANDOM);
     return rv;
 }
 

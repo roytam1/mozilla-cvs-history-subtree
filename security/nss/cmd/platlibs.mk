@@ -33,7 +33,6 @@
 
 
 ifdef USE_STATIC_LIBS
-
 # can't do this in manifest.mn because OS_ARCH isn't defined there.
 ifeq ($(OS_ARCH), WINNT)
 
@@ -51,6 +50,8 @@ endif
 EXTRA_LIBS += \
 	$(DIST)/lib/smime.lib \
 	$(DIST)/lib/ssl.lib \
+	$(DIST)/lib/jar.lib \
+	$(DIST)/lib/zlib.lib \
 	$(DIST)/lib/nss.lib \
 	$(DIST)/lib/ssl.lib \
 	$(DIST)/lib/sectool.lib \
@@ -78,10 +79,6 @@ EXTRA_LIBS += \
 	wsock32.lib \
 	winmm.lib \
 	$(NULL)
-
-JAR_LIBS = $(DIST)/lib/jar.lib \
-	$(DIST)/lib/zlib.lib \
-	$(NULL)
 else
 
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
@@ -96,6 +93,8 @@ endif
 EXTRA_LIBS += \
 	$(DIST)/lib/$(LIB_PREFIX)smime.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)ssl.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)nss.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)ssl.$(LIB_SUFFIX) \
 	$(DIST)/lib/$(LIB_PREFIX)sectool.$(LIB_SUFFIX) \
@@ -140,11 +139,7 @@ EXTRA_SHARED_LIBS += \
 endif
 endif
 
-JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
-	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
-	$(NULL)
-
-else # USE_STATIC_LIBS
+else
 # can't do this in manifest.mn because OS_ARCH isn't defined there.
 ifeq ($(OS_ARCH), WINNT)
 
@@ -163,10 +158,6 @@ EXTRA_LIBS += \
 #OS_LIBS += \
 	wsock32.lib \
 	winmm.lib \
-	$(NULL)
-
-JAR_LIBS = $(DIST)/lib/jar.lib \
-	$(DIST)/lib/zlib.lib \
 	$(NULL)
 else
 
@@ -196,7 +187,6 @@ EXTRA_SHARED_LIBS += -B/usr/ccs/bin/
 endif
 endif
 
-
 # $(PROGRAM) has NO explicit dependencies on $(EXTRA_SHARED_LIBS)
 # $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
 EXTRA_SHARED_LIBS += \
@@ -208,10 +198,6 @@ EXTRA_SHARED_LIBS += \
 	-lplds4 \
 	-lnspr4 \
 	$(NULL)
-
-JAR_LIBS = $(DIST)/lib/$(LIB_PREFIX)jar.$(LIB_SUFFIX) \
-	$(DIST)/lib/$(LIB_PREFIX)zlib.$(LIB_SUFFIX) \
-	$(NULL)
 endif
 
-endif # USE_STATIC_LIBS
+endif

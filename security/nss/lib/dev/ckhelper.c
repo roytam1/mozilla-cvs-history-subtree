@@ -319,7 +319,8 @@ nssCryptokiCertificate_GetAttributes
   NSSDER *encodingOpt,
   NSSDER *issuerOpt,
   NSSDER *serialOpt,
-  NSSDER *subjectOpt
+  NSSDER *subjectOpt,
+  NSSASCII7 **emailOpt
 )
 {
     PRStatus status;
@@ -328,7 +329,7 @@ nssCryptokiCertificate_GetAttributes
     NSSSlot *slot;
     CK_ULONG template_size;
     CK_ATTRIBUTE_PTR attr;
-    CK_ATTRIBUTE cert_template[6];
+    CK_ATTRIBUTE cert_template[7];
     /* Set up a template of all options chosen by caller */
     NSS_CK_TEMPLATE_START(cert_template, attr, template_size);
     if (certTypeOpt) {
@@ -348,6 +349,9 @@ nssCryptokiCertificate_GetAttributes
     }
     if (subjectOpt) {
 	NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_SUBJECT);
+    }
+    if (emailOpt) {
+	NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_NETSCAPE_EMAIL);
     }
     NSS_CK_TEMPLATE_FINISH(cert_template, attr, template_size);
     if (template_size == 0) {
@@ -392,6 +396,9 @@ nssCryptokiCertificate_GetAttributes
     }
     if (subjectOpt) {
 	NSS_CK_ATTRIBUTE_TO_ITEM(&cert_template[i], subjectOpt); i++;
+    }
+    if (emailOpt) {
+	NSS_CK_ATTRIBUTE_TO_UTF8(&cert_template[i], *emailOpt); i++;
     }
     return PR_SUCCESS;
 }

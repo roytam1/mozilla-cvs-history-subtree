@@ -66,7 +66,7 @@ static char *progName;
 
 char *dbDir  =  NULL;
 
-static char *dbName[]={"secmod.db", "cert8.db", "key3.db"}; 
+static char *dbName[]={"secmod.db", "cert7.db", "key3.db"}; 
 static char* dbprefix = "";
 static char* secmodName = "secmod.db";
 PRBool verbose;
@@ -169,9 +169,6 @@ int main(int argc, char **argv)
         SECU_PrintPRandOSError(progName);
         ret=NSS_INITIALIZE_FAILED_ERR;
     } else {
-        if (NSS_Shutdown() != SECSuccess) {
-            exit(1);
-        }
         ret=SUCCESS;
     }
 

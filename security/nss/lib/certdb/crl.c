@@ -639,7 +639,6 @@ crl_storeCRL (PK11SlotInfo *slot,char *url,
                   CERTSignedCrl *newCrl, SECItem *derCrl, int type)
 {
     CERTSignedCrl *oldCrl = NULL, *crl = NULL;
-    PRBool deleteOldCrl = PR_FALSE;
     CK_OBJECT_HANDLE crlHandle;
 
     PORT_Assert(newCrl);
@@ -687,9 +686,10 @@ crl_storeCRL (PK11SlotInfo *slot,char *url,
 	    url = oldCrl->url;
         }
 
+
         /* really destroy this crl */
         /* first drum it out of the permanment Data base */
-	deleteOldCrl = PR_TRUE;
+        SEC_DeletePermCRL(oldCrl);
     }
 
     /* invalidate CRL cache for this issuer */
@@ -706,12 +706,7 @@ crl_storeCRL (PK11SlotInfo *slot,char *url,
     }
 
 done:
-    if (oldCrl) {
-	if (deleteOldCrl && crlHandle != CK_INVALID_HANDLE) {
-	    SEC_DeletePermCRL(oldCrl);
-	}
-	SEC_DestroyCrl(oldCrl);
-    }
+    if (oldCrl) SEC_DestroyCrl(oldCrl);
 
     return crl;
 }

@@ -385,7 +385,8 @@ launch_thread(
     	PR_WaitCondVar(threadStartQ, PR_INTERVAL_NO_TIMEOUT);
     }
     for (i = 0; i < numUsed; ++i) {
-    	if (threads[i].running == rs_idle) 
+	slot = threads + i;
+    	if (slot->running == rs_idle) 
 	    break;
     }
     if (i >= numUsed) {
@@ -397,9 +398,9 @@ launch_thread(
 	}
 	++numUsed;
 	PORT_Assert(numUsed == i + 1);
+	slot = threads + i;
     }
 
-    slot = threads + i;
     slot->a = a;
     slot->b = b;
     slot->c = c;
@@ -1144,10 +1145,7 @@ main(int argc, char **argv)
 
     exitVal = ( exitVal || failed_already );
     SSL_ClearSessionCache();
-    if (NSS_Shutdown() != SECSuccess) {
-        exit(1);
-    }
-
+    NSS_Shutdown();
     PR_Cleanup();
     return exitVal;
 }

@@ -18,11 +18,7 @@
  * Copyright (C) 2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
  * Contributor(s):
- *      Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -117,74 +113,9 @@ static const struct FREEBLVectorStr vector = {
     PQG_ParamGen,
     PQG_ParamGenSeedLen,
     PQG_VerifyParams,
-
-    /* End of Version 3.001. */
-
     RSA_PrivateKeyOpDoubleChecked,
     RSA_PrivateKeyCheck,
     BL_Cleanup,
-
-    /* End of Version 3.002. */
-
-    SHA256_NewContext,
-    SHA256_DestroyContext,
-    SHA256_Begin,
-    SHA256_Update,
-    SHA256_End,
-    SHA256_HashBuf,
-    SHA256_Hash,
-    SHA256_TraceState,
-    SHA256_FlattenSize,
-    SHA256_Flatten,
-    SHA256_Resurrect,
-
-    SHA512_NewContext,
-    SHA512_DestroyContext,
-    SHA512_Begin,
-    SHA512_Update,
-    SHA512_End,
-    SHA512_HashBuf,
-    SHA512_Hash,
-    SHA512_TraceState,
-    SHA512_FlattenSize,
-    SHA512_Flatten,
-    SHA512_Resurrect,
-
-    SHA384_NewContext,
-    SHA384_DestroyContext,
-    SHA384_Begin,
-    SHA384_Update,
-    SHA384_End,
-    SHA384_HashBuf,
-    SHA384_Hash,
-    SHA384_TraceState,
-    SHA384_FlattenSize,
-    SHA384_Flatten,
-    SHA384_Resurrect,
-
-    /* End of Version 3.003. */
-
-    AESKeyWrap_CreateContext,
-    AESKeyWrap_DestroyContext,
-    AESKeyWrap_Encrypt,
-    AESKeyWrap_Decrypt,
-
-    /* End of Version 3.004. */
-
-    BLAPI_SHVerify,
-    BLAPI_VerifySelf,
-
-    /* End of Version 3.005. */
-
-    EC_NewKey,
-    EC_NewKeyFromSeed,
-    EC_ValidatePublicKey,
-    ECDH_Derive,
-    ECDSA_SignDigest,
-    ECDSA_VerifyDigest,
-    ECDSA_SignDigestWithSeed,
-
-    /* End of Version 3.006. */
 };
 
 

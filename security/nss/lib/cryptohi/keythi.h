@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved. 
- *
- * Contributor(s): 
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -48,8 +44,7 @@ typedef enum {
     dsaKey = 2, 
     fortezzaKey = 3,
     dhKey = 4, 
-    keaKey = 5,
-    ecKey = 6
+    keaKey = 5
 } KeyType;
 
 /*
@@ -122,25 +117,6 @@ struct SECKEYDHPublicKeyStr {
 };
 typedef struct SECKEYDHPublicKeyStr SECKEYDHPublicKey;
 
-/*
-** Elliptic curve Public Key structure
-** The PKCS#11 layer needs DER encoding of ANSI X9.62
-** parameters value
-*/
-typedef SECItem SECKEYECParams;
-
-struct SECKEYECPublicKeyStr {
-    SECKEYECParams DEREncodedParams;
-    int     size;             /* size in bits */
-    SECItem publicValue;      /* encoded point */
-    /* XXX Even though the PKCS#11 interface takes encoded parameters,
-     * we may still wish to decode them above PKCS#11 for things like
-     * printing key information. For named curves, which is what
-     * we initially support, we ought to have the curve name at the
-     * very least.
-     */
-};
-typedef struct SECKEYECPublicKeyStr SECKEYECPublicKey;
 
 /*
 ** FORTEZZA Public Key structures
@@ -197,7 +173,6 @@ struct SECKEYPublicKeyStr {
 	SECKEYDHPublicKey  dh;
         SECKEYKEAPublicKey kea;
         SECKEYFortezzaPublicKey fortezza;
-	SECKEYECPublicKey  ec;
     } u;
 };
 typedef struct SECKEYPublicKeyStr SECKEYPublicKey;

@@ -736,7 +736,7 @@ chop(char *str)
 		}
 
 		/* Nip trailing whitespace */
-		if(*start) {
+		if(strlen(start) > 0) {
 			end = start + strlen(start) - 1;
 			while(isspace(*end) && end > start) {
 				end--;

@@ -618,7 +618,11 @@ CERT_DestroyOCSPCertID(CERTOCSPCertID* certID)
  * Create and fill-in a CertID.  This function fills in the hash values
  * (issuerNameHash and issuerKeyHash), and is hardwired to use SHA1.
  * Someday it might need to be more flexible about hash algorithm, but
- * for now we have no intention/need to create anything else.
+ * for now we have no intention/need to create anything else, and until
+ * we have more flexible underlying interfaces, it's just not as easy
+ * as it should be to just take an algorithm id and call some helper
+ * functions to do all the work (no algid->length translation, no function
+ * to hash from and into a SECItem, etc.).
  *
  * Error causes a null to be returned; most likely cause is trouble
  * finding the certificate issuer (SEC_ERROR_UNKNOWN_ISSUER).
@@ -2316,7 +2320,7 @@ static PRBool
 ocsp_matchcert(SECItem *certIndex,CERTCertificate *testCert)
 {
     SECItem item;
-    unsigned char buf[HASH_LENGTH_MAX];
+    unsigned char buf[SHA1_LENGTH]; /* MAX Hash Len */
 
     item.data = buf;
     item.len = SHA1_LENGTH;
@@ -2439,7 +2443,7 @@ ocsp_CheckSignature(ocspSignature *signature, void *tbs,
     } else {
 	/*
 	 * The signer is either 1) a known issuer CA we passed in,
-	 * 2) the default OCSP responder, or 3) an intermediate CA
+	 * 2) the default OCSP responder, or 3) and intermediate CA
 	 * passed in the cert list to use. Figure out which it is.
 	 */
 	responder = ocsp_CertGetDefaultResponder(handle,NULL);
@@ -3895,6 +3899,28 @@ CERT_DisableOCSPDefaultResponder(CERTCertDBHandle *handle)
     statusContext->useDefaultResponder = PR_FALSE;
     return SECSuccess;
 }
+static const SECHashObject *
+OidTagToDigestObject(SECOidTag digestAlg)
+{
+    const SECHashObject *rawDigestObject;
+
+    switch (digestAlg) {
+      case SEC_OID_MD2:
+        rawDigestObject = &SECHashObjects[HASH_AlgMD2];
+        break;
+      case SEC_OID_MD5:
+        rawDigestObject = &SECHashObjects[HASH_AlgMD5];
+        break;
+      case SEC_OID_SHA1:
+        rawDigestObject = &SECHashObjects[HASH_AlgSHA1];
+        break;
+      default:
+        PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
+        rawDigestObject = NULL;
+        break;
+    }
+    return(rawDigestObject);
+}
 
 /*
  * Digest the cert's subject public key using the specified algorithm.
@@ -3917,7 +3943,7 @@ CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
         mark = PORT_ArenaMark(arena);
     }
 
-    digestObject = HASH_GetHashObjectByOidTag(digestAlg);
+    digestObject = OidTagToDigestObject(digestAlg);
     if ( digestObject == NULL ) {
         goto loser;
     }

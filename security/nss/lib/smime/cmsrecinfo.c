@@ -61,11 +61,10 @@ nss_cmsrecipientinfo_usessubjectkeyid(NSSCMSRecipientInfo *ri)
 }
 
 
-static SECOidData fakeContent = { 0 };
 NSSCMSRecipientInfo *
 nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
                             CERTCertificate *cert, SECKEYPublicKey *pubKey, 
-                            SECItem *subjKeyID, void* pwfn_arg, SECItem* DERinput)
+                            SECItem *subjKeyID)
 {
     NSSCMSRecipientInfo *ri;
     void *mark;
@@ -78,16 +77,6 @@ nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
     PLArenaPool *poolp;
     CERTSubjectPublicKeyInfo *spki, *freeSpki = NULL;
     NSSCMSRecipientIdentifier *rid;
-    extern const SEC_ASN1Template NSSCMSRecipientInfoTemplate[];
-
-    if (!cmsg) {
-	/* a CMSMessage wasn't supplied, create a fake one to hold the pwfunc
-	 * and a private arena pool */
-	cmsg = NSS_CMSMessage_Create(NULL);
-        cmsg->pwfn_arg = pwfn_arg;
-	/* mark it as a special cms message */
-	cmsg->contentInfo.contentTypeTag = &fakeContent;
-    }
 
     poolp = cmsg->poolp;
 
@@ -98,43 +87,14 @@ nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
 	goto loser;
 
     ri->cmsg = cmsg;
-
-    if (DERinput) {
-        /* decode everything from DER */
-        SECItem newinput;
-        SECStatus rv = SECITEM_CopyItem(poolp, &newinput, DERinput);
-        if (SECSuccess != rv)
-            goto loser;
-        rv = SEC_QuickDERDecodeItem(poolp, ri, NSSCMSRecipientInfoTemplate, &newinput);
-        if (SECSuccess != rv)
-            goto loser;
-    }
-
-    switch (type) {
-        case NSSCMSRecipientID_IssuerSN:
-        {
-            ri->cert = CERT_DupCertificate(cert);
-            if (NULL == ri->cert)
-                goto loser;
-            spki = &(cert->subjectPublicKeyInfo);
-            break;
-        }
-        
-        case NSSCMSRecipientID_SubjectKeyID:
-        {
-            PORT_Assert(pubKey);
-            spki = freeSpki = SECKEY_CreateSubjectPublicKeyInfo(pubKey);
-            break;
-        }
-
-	case NSSCMSRecipientID_BrandNew:
-	    goto done;
-	    break;
-
-        default:
-            /* unkown type */
-            goto loser;
-            break;
+    if (type == NSSCMSRecipientID_IssuerSN) {
+	ri->cert = CERT_DupCertificate(cert);
+	if (ri->cert == NULL)
+	    goto loser;
+	spki = &(cert->subjectPublicKeyInfo);
+    } else {
+	PORT_Assert(pubKey);
+	spki = freeSpki = SECKEY_CreateSubjectPublicKeyInfo(pubKey);
     }
 
     certalgtag = SECOID_GetAlgorithmTag(&(spki->algorithm));
@@ -278,20 +238,15 @@ nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
     
     }
 
-done:
     PORT_ArenaUnmark (poolp, mark);
     if (freeSpki)
       SECKEY_DestroySubjectPublicKeyInfo(freeSpki);
     return ri;
 
 loser:
-    if (freeSpki) {
+    if (freeSpki)
       SECKEY_DestroySubjectPublicKeyInfo(freeSpki);
-    }
     PORT_ArenaRelease (poolp, mark);
-    if (cmsg->contentInfo.contentTypeTag == &fakeContent) {
-	NSS_CMSMessage_Destroy(cmsg);
-    }
     return NULL;
 }
 
@@ -306,23 +261,8 @@ NSSCMSRecipientInfo *
 NSS_CMSRecipientInfo_Create(NSSCMSMessage *cmsg, CERTCertificate *cert)
 {
     return nss_cmsrecipientinfo_create(cmsg, NSSCMSRecipientID_IssuerSN, cert, 
-                                       NULL, NULL, NULL, NULL);
+                                       NULL, NULL);
 }
-
-NSSCMSRecipientInfo *
-NSS_CMSRecipientInfo_CreateNew(void* pwfn_arg)
-{
-    return nss_cmsrecipientinfo_create(NULL, NSSCMSRecipientID_BrandNew, NULL, 
-                                       NULL, NULL, pwfn_arg, NULL);
-}
-
-NSSCMSRecipientInfo *
-NSS_CMSRecipientInfo_CreateFromDER(SECItem* input, void* pwfn_arg)
-{
-    return nss_cmsrecipientinfo_create(NULL, NSSCMSRecipientID_BrandNew, NULL, 
-                                       NULL, NULL, pwfn_arg, input);
-}
-
 
 NSSCMSRecipientInfo *
 NSS_CMSRecipientInfo_CreateWithSubjKeyID(NSSCMSMessage   *cmsg, 
@@ -330,7 +270,7 @@ NSS_CMSRecipientInfo_CreateWithSubjKeyID(NSSCMSMessage   *cmsg,
                                      SECKEYPublicKey *pubKey)
 {
     return nss_cmsrecipientinfo_create(cmsg, NSSCMSRecipientID_SubjectKeyID, 
-                                       NULL, pubKey, subjKeyID, NULL, NULL);
+                                       NULL, pubKey, subjKeyID);
 }
 
 NSSCMSRecipientInfo *
@@ -366,9 +306,6 @@ done:
 void
 NSS_CMSRecipientInfo_Destroy(NSSCMSRecipientInfo *ri)
 {
-    if (!ri) {
-        return;
-    }
     /* version was allocated on the pool, so no need to destroy it */
     /* issuerAndSN was allocated on the pool, so no need to destroy it */
     if (ri->cert != NULL)
@@ -380,10 +317,8 @@ NSS_CMSRecipientInfo_Destroy(NSSCMSRecipientInfo *ri)
 	if (extra->pubKey)
 	    SECKEY_DestroyPublicKey(extra->pubKey);
     }
-    if (ri->cmsg && ri->cmsg->contentInfo.contentTypeTag == &fakeContent) {
-	NSS_CMSMessage_Destroy(ri->cmsg);
-    }
 
+    /* recipientInfo structure itself was allocated on the pool, so no need to destroy it */
     /* we're done. */
 }
 
@@ -443,7 +378,7 @@ NSS_CMSRecipientInfo_GetEncryptedKey(NSSCMSRecipientInfo *ri, int subIndex)
 SECOidTag
 NSS_CMSRecipientInfo_GetKeyEncryptionAlgorithmTag(NSSCMSRecipientInfo *ri)
 {
-    SECOidTag encalgtag = SEC_OID_UNKNOWN; /* an invalid encryption alg */
+    SECOidTag encalgtag = SEC_OID_SHA1; /* set to not a valid encryption alg */
 
     switch (ri->recipientInfoType) {
     case NSSCMSRecipientInfoID_KeyTrans:
@@ -471,7 +406,7 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey,
     NSSCMSOriginatorIdentifierOrKey *oiok;
     CERTSubjectPublicKeyInfo *spki, *freeSpki = NULL;
     PLArenaPool *poolp;
-    NSSCMSKeyTransRecipientInfoEx *extra = NULL;
+    NSSCMSKeyTransRecipientInfoEx *extra;
     PRBool usesSubjKeyID;
 
     poolp = ri->cmsg->poolp;
@@ -508,7 +443,6 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey,
  	    if (rv != SECSuccess)
 		break;
 	} else if (usesSubjKeyID) {
-	    PORT_Assert(extra != NULL);
 	    rv = NSS_CMSUtil_EncryptSymKey_RSAPubKey(poolp, extra->pubKey,
 	                         bulkkey, &ri->ri.keyTransRecipientInfo.encKey);
  	    if (rv != SECSuccess)
@@ -640,94 +574,4 @@ NSS_CMSRecipientInfo_UnwrapBulkKey(NSSCMSRecipientInfo *ri, int subIndex,
 
 loser:
     return NULL;
-}
-
-SECStatus NSS_CMSRecipientInfo_GetCertAndKey(NSSCMSRecipientInfo *ri,
-                                             CERTCertificate** retcert,
-                                             SECKEYPrivateKey** retkey)
-{
-    CERTCertificate* cert = NULL;
-    NSSCMSRecipient** recipients = NULL;
-    NSSCMSRecipientInfo* recipientInfos[2];
-    SECStatus rv = SECSuccess;
-    SECKEYPrivateKey* key = NULL;
-
-    if (!ri)
-        return SECFailure;
-    
-    if (!retcert && !retkey) {
-        /* nothing requested, nothing found, success */
-        return SECSuccess;
-    }
-
-    if (retcert) {
-        *retcert = NULL;
-    }
-    if (retkey) {
-        *retkey = NULL;
-    }
-
-    if (ri->cert) {
-        cert = CERT_DupCertificate(ri->cert);
-        if (!cert) {
-            rv = SECFailure;
-        }
-    }
-    if (SECSuccess == rv && !cert) {
-        /* we don't have the cert, we have to look for it */
-        /* first build an NSS_CMSRecipient */
-        recipientInfos[0] = ri;
-        recipientInfos[1] = NULL;
-
-        recipients = nss_cms_recipient_list_create(recipientInfos);
-        if (recipients) {
-            /* now look for the cert and key */
-            if (0 == PK11_FindCertAndKeyByRecipientListNew(recipients,
-                ri->cmsg->pwfn_arg)) {
-                cert = CERT_DupCertificate(recipients[0]->cert);
-                key = SECKEY_CopyPrivateKey(recipients[0]->privkey);
-            } else {
-                rv = SECFailure;
-            }
-
-            nss_cms_recipient_list_destroy(recipients);
-        }
-        else {
-            rv = SECFailure;
-        }            
-    } else if (SECSuccess == rv && cert && retkey) {
-        /* we have the cert, we just need the key now */
-        key = PK11_FindPrivateKeyFromCert(cert->slot, cert, ri->cmsg->pwfn_arg);
-    }
-    if (retcert) {
-        *retcert = cert;
-    } else {
-        if (cert) {
-            CERT_DestroyCertificate(cert);
-        }
-    }
-    if (retkey) {
-        *retkey = key;
-    } else {
-        if (key) {
-            SECKEY_DestroyPrivateKey(key);
-        }
-    }
-
-    return rv;
-}
-
-SECStatus NSS_CMSRecipientInfo_Encode(PRArenaPool* poolp,
-                                      const NSSCMSRecipientInfo *src,
-                                      SECItem* returned)
-{
-    extern const SEC_ASN1Template NSSCMSRecipientInfoTemplate[];
-    SECStatus rv = SECFailure;
-    if (!src || !returned) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-    } else if (SEC_ASN1EncodeItem(poolp, returned, src,
-        NSSCMSRecipientInfoTemplate))   {
-        rv = SECSuccess;
-    }
-    return rv;
 }

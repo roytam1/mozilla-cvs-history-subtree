@@ -1264,7 +1264,8 @@ loser:
     return SECFailure;
 }
 
-#define IN_BUF_LEN	HASH_LENGTH_MAX
+/* IN_BUF_LEN should be larger than SHA1_LENGTH */
+#define IN_BUF_LEN		80
 
 /* verify the hmac by reading the data from the temporary file
  * using the routines specified when the decodingContext was 

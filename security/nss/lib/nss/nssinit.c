@@ -397,8 +397,6 @@ nss_FindExternalRoot(const char *dbpath, const char* secmodprefix)
 
 static PRBool nss_IsInitted = PR_FALSE;
 
-extern SECStatus secoid_Init(void);
-
 static SECStatus
 nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
 		 const char *secmodName, PRBool readOnly, PRBool noCertDB, 
@@ -468,9 +466,6 @@ loser:
     }
 
     if (rv == SECSuccess) {
-	if (secoid_Init() != SECSuccess) {
-	    return SECFailure;
-	}
 	if (STAN_LoadDefaultNSS3TrustDomain() != PR_SUCCESS) {
 	    return SECFailure;
 	}
@@ -486,6 +481,7 @@ loser:
 #endif
 	pk11sdr_Init();
 	cert_CreateSubjectKeyIDHashTable();
+	SECMOD_InitCallOnce();
 	nss_IsInitted = PR_TRUE;
     }
     return rv;
@@ -559,6 +555,7 @@ NSS_Shutdown(void)
     SECOID_Shutdown();
     status = STAN_Shutdown();
     cert_DestroySubjectKeyIDHashTable();
+    SECMOD_CleanupCallOnce();
     rv = SECMOD_Shutdown();
     pk11sdr_Shutdown();
     if (status == PR_FAILURE) {

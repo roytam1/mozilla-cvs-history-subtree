@@ -451,7 +451,6 @@ secmod_EncodeData(DBT *data, char * module)
     pk11_argSetNewCipherFlags(&ssl[0], ciphers);
     SECMOD_PUTLONG(encoded->ssl,ssl[0]);
     SECMOD_PUTLONG(&encoded->ssl[4],ssl[1]);
-    if (ciphers) PORT_Free(ciphers);
 
     offset = (unsigned short) &(((secmodData *)0)->names[0]);
     SECMOD_PUTSHORT(encoded->nameStart,offset);
@@ -497,7 +496,6 @@ loser:
     if (dllName) PORT_Free(dllName);
     if (param) PORT_Free(param);
     if (slotInfo) PORT_Free(slotInfo);
-    if (nss) PORT_Free(nss);
     return rv;
 
 }
