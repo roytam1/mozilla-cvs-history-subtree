@@ -483,89 +483,39 @@ nsPluginTag::nsPluginTag(nsPluginInfo* aPluginInfo)
 }
 
 
-static PRBool
-NextVariant(const char*& aCursor, char** aSlot)
-{
-  if (! aCursor)
-    return PR_FALSE;
-
-  for (const char* p = aCursor; *p && *p != '|'; ++p)
-    ;
-
-  PRInt32 len = (p - aCursor);
-
-  if (len) {
-    PRInt32 size = len + 1;
-    *aSlot = new char[size];
-    PL_strncpyz(*aSlot, aCursor, size);
-  }
-  else {
-    *aSlot = nsnull;
-  }
-
-  if (! *p)
-    return PR_FALSE;
-
-  aCursor = p + 1;
-  return PR_TRUE;
-}
-
-
-
 nsPluginTag::nsPluginTag(const char* aName,
                          const char* aDescription,
-                         const char* aMimeTypes,
-                         const char* aMimeDescriptions,
-                         const char* aExtensions,
-                         const char* aFileName)
-  : mVariants(0),
+                         const char* aFileName,
+                         const char* const* aMimeTypes,
+                         const char* const* aMimeDescriptions,
+                         const char* const* aExtensions,
+                         PRInt32 aVariants)
+  : mNext(nsnull),
+    mMimeType(nsnull),
+    mMimeDescription(nsnull),
+    mExtensions(nsnull),
+    mVariants(aVariants),
     mMimeTypeArray(nsnull),
     mMimeDescriptionArray(nsnull),
     mExtensionsArray(nsnull),
     mLibrary(nsnull),
     mEntryPoint(nsnull),
-    mNext(nsnull)
+    mFlags(0)
 {
   mName            = new_str(aName);
   mDescription     = new_str(aDescription);
-  mMimeType        = new_str(aMimeTypes);
-  mMimeDescription = new_str(aMimeDescriptions);
-  mExtensions      = new_str(aExtensions);
   mFileName        = new_str(aFileName);
-
-  if (aMimeTypes) {
-    // Count how many variants we have. We'll use the MIME type array
-    // as the baseline. It should be separated with '|' characters.
-    const char* p;
-    for (p = aMimeTypes; p != nsnull; p = PL_strchr(p, '|'), ++mVariants)
-      ;
-  }
 
   if (mVariants) {
     mMimeTypeArray        = new char*[mVariants];
     mMimeDescriptionArray = new char*[mVariants];
     mExtensionsArray      = new char*[mVariants];
 
-    {
-      for (PRInt32 i = 0; i < mVariants; ++i)
-        mMimeTypeArray[i]
-          = mMimeDescriptionArray[i]
-          = mExtensionsArray[i]
-          = nsnull;
+    for (PRInt32 i = 0; i < aVariants; ++i) {
+      mMimeTypeArray[i]        = new_str(aMimeTypes[i]);
+      mMimeDescriptionArray[i] = new_str(aMimeDescriptions[i]);
+      mExtensionsArray[i]      = new_str(aExtensions[i]);
     }
-
-    const char* mimetype = aMimeTypes;
-    const char* mimedescription = aMimeDescriptions;
-    const char* extension = aExtensions;
-
-    PRBool more;
-    PRInt32 i = 0;
-    do {
-      more = NextVariant(mimetype, &mMimeTypeArray[i]);
-      more = NextVariant(mimedescription, &mMimeDescriptionArray[i]) && more;
-      more = NextVariant(extension, &mExtensionsArray[i]) && more;
-      ++i;
-    } while (more);
   }
 }
 
@@ -1549,6 +1499,75 @@ NS_IMETHODIMP nsPluginHostImpl::PostURL(nsISupports* pluginInst,
   }
 
   return rv;
+}
+
+static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
+
+NS_IMETHODIMP nsPluginHostImpl::RegisterPlugin(REFNSIID aCID,
+                                               const char* aPluginName,
+                                               const char* aDescription,
+                                               const char** aMimeTypes,
+                                               const char** aMimeDescriptions,
+                                               const char** aFileExtensions,
+                                               PRInt32 aCount)
+{
+  nsCOMPtr<nsIRegistry> registry = do_CreateInstance(kRegistryCID);
+  if (! registry)
+    return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCAutoString path = "software/plugins/";
+  char* cid = aCID.ToString();
+  if (! cid)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  path += cid;
+  nsMemory::Free(cid);
+
+  nsRegistryKey pluginKey;
+  rv = registry->AddSubtree(nsIRegistry::Common, path, &pluginKey);
+  if (NS_FAILED(rv)) return rv;
+
+  registry->SetStringUTF8(pluginKey, "name", aPluginName);
+  registry->SetStringUTF8(pluginKey, "description", aDescription);
+
+  for (PRInt32 i = 0; i < aCount; ++i) {
+    nsCAutoString mimepath;
+    mimepath.AppendInt(i);
+
+    nsRegistryKey key;
+    registry->AddSubtree(pluginKey, mimepath, &key);
+
+    registry->SetStringUTF8(key, "mimetype",    aMimeTypes[i]);
+    registry->SetStringUTF8(key, "description", aMimeDescriptions[i]);
+    registry->SetStringUTF8(key, "extension",   aFileExtensions[i]);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsPluginHostImpl::UnregisterPlugin(REFNSIID aCID)
+{
+  nsCOMPtr<nsIRegistry> registry = do_CreateInstance(kRegistryCID);
+  if (! registry)
+    return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCAutoString path = "software/plugins/";
+  char* cid = aCID.ToString();
+  if (! cid)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  path += cid;
+  nsMemory::Free(cid);
+
+  return registry->RemoveSubtree(nsIRegistry::Common, path);
 }
 
 NS_IMETHODIMP nsPluginHostImpl::BeginWaitCursor(void)
@@ -2828,15 +2847,6 @@ LoadXPCOMPlugin(nsIComponentManager* aComponentManager,
   nsXPIDLCString description;
   aRegistry->GetStringUTF8(aPluginKey, "description", getter_Copies(description));
 
-  nsXPIDLCString mimetypes;
-  aRegistry->GetStringUTF8(aPluginKey, "mimetypes", getter_Copies(mimetypes));
-
-  nsXPIDLCString mimedescriptions;
-  aRegistry->GetStringUTF8(aPluginKey, "mimedescriptions", getter_Copies(mimedescriptions));
-
-  nsXPIDLCString extensions;
-  aRegistry->GetStringUTF8(aPluginKey, "extensions", getter_Copies(extensions));
-
   nsXPIDLCString filename;
 
   // To figure out the filename of the plugin, we'll need to get the
@@ -2866,20 +2876,101 @@ LoadXPCOMPlugin(nsIComponentManager* aComponentManager,
     }
   }
 
-  // All done! Create the new nsPluginTag info and send it back.
-  nsPluginTag* tag
-    = new nsPluginTag(name,
-                      description,
-                      mimetypes,
-                      mimedescriptions,
-                      extensions,
-                      filename);
+  nsCOMPtr<nsIEnumerator> enumerator;
+  rv = aRegistry->EnumerateAllSubtrees(aPluginKey, getter_AddRefs(enumerator));
+  if (NS_FAILED(rv)) return rv;
 
-  if (! tag)
-    return NS_ERROR_OUT_OF_MEMORY;
+  nsCOMPtr<nsISimpleEnumerator> subtrees;
+  rv = NS_NewAdapterEnumerator(getter_AddRefs(subtrees), enumerator);
+  if (NS_FAILED(rv)) return rv;
 
-  *aResult = tag;
-  return NS_OK;
+  char** mimetypes = nsnull;
+  char** mimedescriptions = nsnull;
+  char** extensions = nsnull;
+  PRInt32 count = 0;
+  PRInt32 capacity = 0;
+
+  for (;;) {
+    PRBool hasmore;
+    subtrees->HasMoreElements(&hasmore);
+    if (! hasmore)
+      break;
+
+    nsCOMPtr<nsISupports> isupports;
+    subtrees->GetNext(getter_AddRefs(isupports));
+
+    nsCOMPtr<nsIRegistryNode> node = do_QueryInterface(isupports);
+    NS_ASSERTION(node != nsnull, "not an nsIRegistryNode");
+    if (! node)
+      continue;
+
+    nsRegistryKey key;
+    node->GetKey(&key);
+
+    if (count >= capacity) {
+      capacity += capacity ? capacity : 4;
+
+      char** newmimetypes        = new char*[capacity];
+      char** newmimedescriptions = new char*[capacity];
+      char** newextensions       = new char*[capacity];
+
+      if (!newmimetypes || !newmimedescriptions || !newextensions) {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+        delete[] newmimetypes;
+        delete[] newmimedescriptions;
+        delete[] newextensions;
+        break;
+      }
+
+      for (PRInt32 i = 0; i < count; ++i) {
+        newmimetypes[i]        = mimetypes[i];
+        newmimedescriptions[i] = mimedescriptions[i];
+        newextensions[i]       = extensions[i];
+      }
+
+      delete[] mimetypes;
+      delete[] mimedescriptions;
+      delete[] extensions;
+
+      mimetypes        = newmimetypes;
+      mimedescriptions = newmimedescriptions;
+      extensions       = newextensions;
+    }
+
+    aRegistry->GetStringUTF8(key, "mimetype",    &mimetypes[count]);
+    aRegistry->GetStringUTF8(key, "description", &mimedescriptions[count]);
+    aRegistry->GetStringUTF8(key, "extension",   &extensions[count]);
+    ++count;
+  }
+
+  if (NS_SUCCEEDED(rv)) {
+    // All done! Create the new nsPluginTag info and send it back.
+    nsPluginTag* tag
+      = new nsPluginTag(name,
+                        description,
+                        filename,
+                        mimetypes,
+                        mimedescriptions,
+                        extensions,
+                        count);
+
+    if (! tag)
+      rv = NS_ERROR_OUT_OF_MEMORY;
+
+    *aResult = tag;
+  }
+
+  for (PRInt32 i = 0; i < count; ++i) {
+    CRTFREEIF(mimetypes[i]);
+    CRTFREEIF(mimedescriptions[i]);
+    CRTFREEIF(extensions[i]);
+  }
+
+  delete[] mimetypes;
+  delete[] mimedescriptions;
+  delete[] extensions;
+
+  return rv;
 }
 
 nsresult

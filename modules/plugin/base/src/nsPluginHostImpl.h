@@ -52,10 +52,11 @@ public:
 
   nsPluginTag(const char* aName,
               const char* aDescription,
-              const char* aMimeTypes,
-              const char* aMimeDescriptions,
-              const char* aExtensions,
-              const char* aFileName);
+              const char* aFileName,
+              const char* const* aMimeTypes,
+              const char* const* aMimeDescriptions,
+              const char* const* aExtensions,
+              PRInt32 aVariants);
 
   ~nsPluginTag();
 
@@ -163,6 +164,18 @@ public:
             PRBool forceJSEnabled = PR_FALSE,
             PRUint32 postHeadersLength = 0, 
             const char* postHeaders = NULL);
+
+  NS_IMETHOD
+  RegisterPlugin(REFNSIID aCID,
+                 const char* aPluginName,
+                 const char* aDescription,
+                 const char** aMimeTypes,
+                 const char** aMimeDescriptions,
+                 const char** aFileExtensions,
+                 PRInt32 aCount);
+
+  NS_IMETHOD
+  UnregisterPlugin(REFNSIID aCID);
 
   //nsIPluginHost interface - used to communicate to the nsPluginInstanceOwner
 
