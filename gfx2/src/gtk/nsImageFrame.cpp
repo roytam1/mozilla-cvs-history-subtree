@@ -30,6 +30,8 @@
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
+#include "drawers.h"
+
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
 nsImageFrame::nsImageFrame() :
@@ -387,7 +389,10 @@ nsresult nsImageFrame::DrawImage(GdkDrawable *aDest, const GdkGC *aGC, const nsR
   return NS_OK;
 }
 
-nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *aGC, const nsRect * aSrcRect, const nsRect * aDestRect)
+#define USE_XIE 1
+//#define USE_PIXBUF 1
+
+nsresult nsImageFrame::DrawScaledImage(GdkDrawable *aDrawable, const GdkGC *aGC, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
   nsTransform2D trans;
   trans.SetToScale((float(mRect.width) / float(aDestRect->width)), (float(mRect.height) / float(aDestRect->height)));
@@ -396,9 +401,52 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *aGC, 
   nsRect dest(*aDestRect);
 
   trans.TransformCoord(&source.x, &source.y, &source.width, &source.height);
-//  trans.TransformCoord(&dest.x, &dest.y, &dest.width, &dest.height);
+
+#ifdef USE_XIE
+  Display *display = GDK_WINDOW_XDISPLAY(aDrawable);
+
+  GdkPixmap *gdkpixmap = gdk_pixmap_new(aDrawable, mRect.width, mRect.height, gdk_rgb_get_visual()->depth);
+  GdkGC *gdkgc = gdk_gc_new(aDrawable);
+  gdk_draw_rgb_image(gdkpixmap, gdkgc,
+                     0, 0,
+                     mRect.width, mRect.height,
+                     GDK_RGB_DITHER_MAX,
+                     mImageData.data,
+                     mImageData.bytesPerRow);
 
 
+  GdkBitmap *alphaMask = GetAlphaBitmap();
+
+  DrawScaledImageXIE(display, aDrawable, NS_CONST_CAST(GdkGC*, aGC), gdkpixmap, alphaMask,
+                     mRect.width, mRect.height,
+                     source.x, source.y, source.width, source.height,
+                     dest.x, dest.y, dest.width, dest.height);
+
+
+  if (alphaMask)
+    gdk_pixmap_unref(alphaMask);
+
+  gdk_gc_unref(gdkgc);
+  gdk_pixmap_unref(gdkpixmap);
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#ifdef USE_PIXBUF
 
   GdkPixbuf *pb =
     gdk_pixbuf_new_from_data(mImageData.data + (source.y * mImageData.bytesPerRow),
@@ -418,13 +466,14 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *aGC, 
                    0, 0,
                    double(double(aDestRect->width) / double(mRect.width)),
                    double(double(aDestRect->height) / double(mRect.height)),
-                   GDK_INTERP_BILINEAR);
-                   
+                   //                   GDK_INTERP_BILINEAR);
+                   GDK_INTERP_NEAREST);
+
 
   gdk_pixbuf_unref(pb);
 
   gdk_pixbuf_render_to_drawable(npb,
-                                drawable, NS_CONST_CAST(GdkGC*, aGC),
+                                aDrawable, NS_CONST_CAST(GdkGC*, aGC),
                                 0, 0,
                                 (aDestRect->x + aSrcRect->x),
                                 (aDestRect->y + aSrcRect->y),
@@ -434,27 +483,6 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *aGC, 
 
 
   gdk_pixbuf_unref(npb);
-
-#if 0
-
-  gdk_draw_rgb_image(drawable, NS_CONST_CAST(GdkGC *, gc),
-                     (aDestRect->x + aSrcRect->x), (aDestRect->y + aSrcRect->y),
-                     mRect.width, source.height,
-                     GDK_RGB_DITHER_MAX,
-                     mImageData.data + (source.y * mImageData.bytesPerRow),
-                     mImageData.bytesPerRow);
-#endif
-
-#if 0
-  printf(" (%f, %f), (%i, %i), %i, %i\n}\n", pt.x, pt.y, x, y, width, height);
-
-  gdk_window_copy_area(GDK_ROOT_PARENT(), mGC, 0, 0,
-                       image, 0, 0, width, height);
-
-  gdk_window_copy_area(mSurface->GetDrawable(), mGC, pt.x + x, pt.y + y,
-                       image, sr.x, 0, sr.width, height);
-
-  gdk_pixmap_unref(image);
 #endif
 
   return NS_OK;
