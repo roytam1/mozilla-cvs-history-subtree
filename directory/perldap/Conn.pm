@@ -152,13 +152,7 @@ sub init
 #
 sub newEntry
 {
-  my (%entry);
-  my ($obj);
-
-  tie %entry, 'Mozilla::LDAP::Entry';
-  $obj = bless \%entry, 'Mozilla::LDAP::Entry';
-
-  return $obj;
+  return new Mozilla::LDAP::Entry;
 }
 
 
@@ -204,10 +198,23 @@ sub getRes
 #
 sub getErrorCode
 {
-  my ($self, $match, $msg) = @_;
-  my ($ret);
+  my $self = shift;
+  my ($match, $msg);
 
   return LDAP_SUCCESS unless defined($self->{"ld"});
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my ($hash) = $_[$[];
+
+      $match = $hash->{"match"} if defined($hash->{"match"});
+      $msg = $hash->{"mesg"} if defined($hash->{"mesg"});
+    }
+  else
+    {
+      ($match, $msg) = @_;
+    }
+
   return $self->{"searchres"} if defined($self->{"searchres"});
   return ldap_get_lderrno($self->{"ld"}, $match, $msg);
 }
@@ -256,10 +263,26 @@ sub printError
 #
 sub search
 {
-  my ($self, $basedn, $scope, $filter, $attrsonly, @attrs) = @_;
-  my ($res);
+  my $self = shift;
+  my ($basedn, $scope, $filter, $attrsonly, @attrs);
+  my $res;
 
-  $scope = Mozilla::LDAP::Utils::str2Scope($scope);
+  if (ref $_[$[] eq "HASH")
+    {
+      my ($hash) = $_[$[];
+
+      $basedn = $hash->{"base"} || "";
+      $scope = Mozilla::LDAP::Utils::str2Scope($hash->{"scope"});
+      $filter = $hash->{"filter"} || "(objectclass=*)";
+      $attrsonly = $hash->{"attrsonly"} || 0;
+      @attrs = @{$hash->{"attrs"}};
+    }
+  else
+    {
+      ($basedn, $scope, $filter, $attrsonly, @attrs) = @_;
+      $scope = Mozilla::LDAP::Utils::str2Scope($scope);
+      $attrsonly = 0 unless defined($attrsonly);
+    }
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
 
   if (defined($self->{"ldres"}))
@@ -267,6 +290,7 @@ sub search
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+  $self->{"ldres"} = 0;		# This gets rid of the annoying warning
   if (defined($self->{"searchres"}))
     {
       undef $self->{"searchres"};
@@ -309,19 +333,31 @@ sub search
 #
 sub searchURL
 {
-  my ($self, $url, $attrsonly) = @_;
-  my ($res);
+  my $self = shift;
+  my ($url, $attrsonly, $res);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my ($hash) = $_[$[];
+
+      $url = $hash->{"url"};
+      $attrsonly = $hash->{"attrsonly"} || 0;
+    }
+  else
+    {
+      ($url, $attrsonly) = @_;
+    }
 
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+  $self->{"ldres"} = 0;		# This avoids the annoying warnings
   if (defined($self->{"searchres"}))
     {
       undef $self->{"searchres"};
     }
-
       
   $res = ldap_url_search_s($self->{"ld"}, $url,
                            defined($attrsonly) ? $attrsonly : 0,
@@ -346,13 +382,25 @@ sub searchURL
 #
 sub browse
 {
-  my ($self, $basedn, @attrs) = @_;
-  my ($scope, $filter);
+  my $self = shift;
+  my ($basedn, @attrs, $scope, $attrsonly);
 
+  if (ref $_[$[] eq "HASH")
+    {
+      my ($hash) = $_[$[];
+
+      $basedn = $hash->{"base"} || "";
+      $attrsonly = $hash->{"attrsonly"} || 0;
+      @attrs = @{$hash->{"attrs"}} if defined($hash->{"attrs"});
+    }
+  else
+    {
+      ($basedn, @attrs) = @_;
+      $attrsonly = 0;
+    }
   $scope = Mozilla::LDAP::Utils::str2Scope("BASE");
-  $filter = "(objectclass=*)" ;
 
-  return $self->search($basedn, $scope, $filter, 0, @attrs);
+  return $self->search($basedn, $scope, "(objectclass=*)", $attrsonly, @attrs);
 }
 
 
@@ -362,7 +410,21 @@ sub browse
 #
 sub compare
 {
-  my ($self, $dn, $attr, $value) = @_;
+  my $self = shift;
+  my ($dn, $attr, $value);
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my ($hash) = $_[$[];
+
+      $dn = $hash->{"dn"} if defined($hash->{"dn"});
+      $attr = $hash->{"attr"} if defined($hash->{"attr"});
+      $value = $hash->{"value"} if defined($hash->{"value"});
+    }
+  else
+    {
+      ($dn, $attr, $value) = @_;
+    }
 
   return ldap_compare_s($self->{"ld"}, $dn, $attr, $value) ==
     LDAP_COMPARE_TRUE;
@@ -548,9 +610,22 @@ sub add
 #
 sub modifyRDN
 {
-  my ($self, $rdn, $dn, $del) = ($_[$[], $_[$[ + 1], $_[$[ + 2], $_[$[ + 3]);
-  my (@vals);
+  my $self = shift;
+  my ($rdn, $dn, $del, @vals);
   my ($ret) = 1;
+
+  if (ref $_[$[] eq "HASH")
+    {
+      my ($hash) = $_[$[];
+
+      $rdn = $hash->{"rdn"} if defined($hash->{"rdn"});
+      $dn = $hash->{"dn"} if defined($hash->{"dn"});
+      $del = $hash->{"delete"} if defined($hash->{"delete"});
+    }
+  else
+    {
+      ($rdn, $dn, $del) = @_;
+    }
 
   $del = 1 unless (defined($del) && ($del ne ""));
   $dn = $self->{"dn"} unless (defined($dn) && ($dn ne ""));
@@ -651,7 +726,7 @@ sub update
 	}
     }
 
-  $ret = ldap_modify_ext_s($self->{"ld"}, $entry->{"dn"}, \%mod, undef, undef)
+  $ret = ldap_modify_s($self->{"ld"}, $entry->{"dn"}, \%mod)
     if %mod;
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
@@ -701,20 +776,50 @@ sub simpleAuth
 
 
 #############################################################################
-# Set LDAP protocol version
+# Set/get LDAP protocol version
 #
 sub setVersion
 {
   my ($self, $ver) = @_;
   my $ret = LDAP_SUCCESS;
 
-  if ($ver eq "2") {
-    $self->{"version"} = LDAP_VERSION2;
-  } else {
-    $self->{"version"} = LDAP_VERSION3;
-  }
+  if ($ver eq "1")
+    {
+      $self->{"version"} = LDAP_VERSION1;
+    }
+  elsif ($ver eq "2")
+    {
+      $self->{"version"} = LDAP_VERSION2;
+    }
+  else
+    {
+      $self->{"version"} = LDAP_VERSION3;
+    }
+
   $ret = ldap_set_option($self->{"ld"}, LDAP_OPT_PROTOCOL_VERSION,
                          $self->{"version"});
+
+  return (($ret == LDAP_SUCCESS) ? 1 : 0);
+}
+
+sub getVersion
+{
+  my $self = shift;
+
+  return $self->{"version"};
+}
+
+
+#############################################################################
+# Install NSPR I/O, threading, and DNS functions so they will be used by
+# the LDAP * handle (ld)
+sub installNSPR
+{
+  my ($self, $shared) = @_;
+  my $ret;
+
+  $shared = 0 unless defined($shared) || $shared eq '';
+  $ret = prldap_install_routines($self->{"ld"}, $shared);
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
 }
@@ -1281,6 +1386,18 @@ the connection to LDAP v2 if necessary using this function. Example:
 
     $conn->setVersion(2);
    
+
+=item B<getVersion>
+
+Return the protocol version currently in used by the connection.
+
+=item B<installNSPR>
+
+Install NSPR I/O, threading, and DNS functions so they will be used by
+'ld'.
+
+Pass a non-zero value for the 'shared' parameter if you plan to use
+this LDAP * handle from more than one thread.
 
 =back
 

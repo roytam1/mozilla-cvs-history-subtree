@@ -244,7 +244,9 @@ require AutoLoader;
 	ldapssl_enable_clientauth
 	ldapssl_clientauth_init
 	ldapssl_init
-	ldapssl_install_routines)]
+	ldapssl_install_routines)],
+        nspr => [qw(
+        prldap_install_routines)]
 );
 
 # Add Everything in %EXPORT_TAGS to @EXPORT_OK
@@ -321,6 +323,8 @@ __END__
   use Mozilla::LDAP::API qw(:api :ssl :constant);
        or
   use Mozilla::LDAP::API qw(:api :ssl :apiv3 :constant);
+       or
+  use Mozilla::LDAP::API qw(:api :ssl :apiv3 :nspr :constant);
 
 =head1 DESCRIPTION
 
@@ -2823,6 +2827,25 @@ AVAILABILITY: V2/V3
 EXAMPLE:
 
   $status = ldap_url_search_st($ld,$url,$attrsonly,$timeout,$res);
+
+=item B<prldap_install_routines>(ld,shared)
+
+DESCRIPTION:
+
+Install NSPR I/O, threading, and DNS functions so they can be used by
+the LDAP connection (ld).
+
+If 'ld' is NULL, the functions are installed as the default functions
+for all new LDAP * handles).
+
+INPUT:
+  ld - LDAP Session Handle
+  shared - True if the LDAP * handle is used in an MT context
+
+OUTPUT:
+  status - Integer
+
+AVAILABILITY: V3
 
 =head1 CREDITS
 

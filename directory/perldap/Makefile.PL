@@ -29,6 +29,7 @@
 require 5.005;
 
 use ExtUtils::MakeMaker;
+use ExtUtils::Liblist;
 use Config;
 use Carp;
 
@@ -37,6 +38,7 @@ $osname   = $Config{'osname'};
 $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # N to exclude SSL
 $ldapsdk_ver = $ENV{"LDAPV3ON"};   # N to exclude LDAP v3 features
+$ldapsdk_pr = $ENV{"LDAPPR"};      # Y to include prldap_ functions
 
 $libexts = "so|sl|a|lib";
 
@@ -65,6 +67,7 @@ if ($osname =~ /mswin/i)
 }
 
 $include_ldap = $ldapsdk_loc . $dir_sep . "include";
+$include_nspr = $ldapsdk_loc . $dir_sep . "include-nspr";
 $lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
 
 print "Using LDAPv3 Developer Kit (default: yes)?  ";
@@ -73,7 +76,7 @@ if (!$ldapsdk_ver)
    $silent = 0;
    chomp ($ldapsdk_ver = <STDIN>);
 } else {
-  print "YES\n";
+  print "$ldapsdk_ver\n";
 }
 $v3_def = "-DLDAPV3" unless ($ldapsdk_ver =~ /^n/i);
 
@@ -84,15 +87,25 @@ if (!$ldapsdk_ssl)
    $silent = 0;
    chomp ($ldapsdk_ssl = <STDIN>);
 } else {
-  print "YES\n";
+  print "$ldapsdk_ssl\n";
 }
 $ssl_def = "-DUSE_SSL" unless ($ldapsdk_ssl =~ /^n/i);
+
+print "Support NSPR API versions (default: no)?  ";
+if (!$ldapsdk_pr)
+{
+   $silent = 0;
+   chomp ($ldapsdk_pr = <STDIN>);
+} else {
+  print "$ldapsdk_pr\n";
+}
+$pr_def = "-DPRLDAP" if ($ldapsdk_pr =~ /^y/i);
 
 
 opendir(DIR,$lib_ldap);
 if ($ssl_def)
 {
-   @libfiles = grep{/ldap|lber|ssl/} readdir(DIR);
+   @libfiles = grep{/ldap|lber|ssl|nss|pl[cd]|nspr/} readdir(DIR);
 } else {
    @libfiles = grep{/ldap|lber/} readdir(DIR);
  }
@@ -108,9 +121,16 @@ foreach $candidate (@libfiles) {
 if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
 {
    @ldaplib = grep{/^ldap.*$/} @libs;
+   @prldaplib = grep{/^prldap.*$/} @libs;
    @lberlib = grep{/^lber.*$/} @libs;
+
    @ldapslib = grep{/^ssldap.*$/} @libs if $ssl_def;
    @ssllib = grep{/^ssl[0-9].*$/} @libs if $ssl_def;
+   @nsslib = grep{/^nss[0-9].*$/} @libs if $ssl_def;
+   @plclib = grep{/^plc[0-9].*$/} @libs if $ssl_def;
+   @pldslib = grep{/^plds[0-9].*$/} @libs if $ssl_def;
+
+   @nsprlib = grep{/^nspr[0-9].*$/} @libs if $pr_def;
 }
 
 if ($#ldaplib < 0)
@@ -128,9 +148,11 @@ if ($#ldaplib > 0)
 }
 
 #
-# Add "main" LDAP library to link line
+# Add "main" LDAP library to link line, and the NSPR version
+# as well (if available).
 #
 $lline = "-l$ldaplib[0]";
+$lline .= " -l$prldaplib[0]" if ($#prldaplib >= 0);
 
 #
 # I think this is obsolete, and will never trigger, but I'll keep it.
@@ -145,6 +167,12 @@ if ($#lberlib >= 0 && $lline =~ /ldap$/)
 #
 $lline .= " -l$ldapslib[0]" if ($#ldapslib >= 0);
 $lline .= " -l$ssllib[0]" if ($#ssllib >= 0);
+
+# Add the NSS/NSPR libraries, if needed
+$lline .= " -l$nsslib[0]" if ($#nsslib >= 0);
+$lline .= " -l$plclib[0]" if ($#plclib >= 0);
+$lline .= " -l$pldslib[0]" if ($#pldslib >= 0);
+$lline .= " -l$nsprlib[0]" if ($#nsprlib >= 0);
 
 print "Libraries to link with (default: $lline):  ";
 if (!$silent)
@@ -161,7 +189,7 @@ $lib_line = "-L$lib_ldap $lib_line";
 # Include directories etc.
 $my_includes = "";
 $my_includes .= " -I$include_ldap" unless ($include_ldap eq "/usr/include");
-
+$my_includes .= " -I$include_nspr" if $pr_def;
 
 # Add system dependant stuff here...
 @extras = ();
@@ -179,22 +207,37 @@ if ($^O eq 'MSWin32' and $Config{archname} =~ /-object\b/i) {
    push(@extras, CAPI => 'TRUE');
 }
 
-push(@extras,
-     ABSTRACT => 'Perl methods for LDAP C API calls',
-     AUTHOR   => 'Leif Hedstrom');
+
+#
+# See if we need to add an LD_RUN_PATH. This seems to have changed
+# somewhere between Perl 5.8.0 and 5.8.5. So, on some systems this
+# will add an extra LD_RUN_PATH ...
+#
+@liblist = ExtUtils::Liblist->ext($lib_line);
+if ($liblist[3] ne "")
+{
+  use Config;
+  push(@extras,
+       'LD'	=> 'LD_RUN_PATH=$(LD_RUN_PATH)' . " $Config{ld}",
+       );
+}
+
 
 #
 # Ok, let's do it!
 #
 WriteMakefile(
-	      'NAME'		=> 	'Mozilla::LDAP::API',
-	      'DISTNAME'	=>	'PerLDAP',
-	      'VERSION_FROM'	=> 	'API.pm',
-	      'INC'		=>	$my_includes,
-	      'LIBS'		=> 	[$lib_line],
-	      'MYEXTLIB'	=>	$my_extlib,
-	      'DEFINE'		=> 	"$v3_def $ssl_def",
-	      'XSOPT'		=>	"-nolinenumbers",
+              'ABSTRACT'	=> 'Perl methods for LDAP C API calls',
+              'AUTHOR'		=> 'Leif Hedstrom <leif@ogre.com>',
+	      'NAME'		=> 'Mozilla::LDAP::API',
+	      'DISTNAME'	=> 'PerLDAP',
+
+	      'VERSION_FROM'	=> 'API.pm',
+	      'INC'		=> $my_includes,
+	      'LIBS'		=> [$lib_line],
+	      'MYEXTLIB'	=> $my_extlib,
+	      'DEFINE'		=> "$v3_def $ssl_def $pr_def",
+	      'XSOPT'		=> "-nolinenumbers",
 	      @extras
 );
 

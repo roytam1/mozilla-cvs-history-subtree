@@ -38,11 +38,9 @@ no strict "vars";
 # Configurations, modify these as needed.
 #
 $BIND	= "uid=ldapadmin";
-$BASE	= "o=Netscape Communications Corp.,c=US";
+$BASE	= "o=ogre.com";
 $PEOPLE	= "ou=people";
-$GROUPS	= "ou=groups";
 $UID	= "leif-test";
-$CN	= "test-group-1";
 
 
 #################################################################################
@@ -102,7 +100,7 @@ sub dotPrint
 
 sub attributeEQ
 {
-  my @a, @b;
+  my (@a, @b);
   my $i;
 
   @a = @{$_[0]};
@@ -124,6 +122,8 @@ sub attributeEQ
 #################################################################################
 # Setup the test entries.
 #
+undef $reuseConn;
+
 $filter = "(uid=$UID)";
 $conn = getConn();
 $nentry = $conn->newEntry();
@@ -146,5 +146,7 @@ $nentry->addValue("mail", "leif\@ogre.com");
 $ent = $conn->search($ld{root}, $ld{scope}, $filter);
 $conn->delete($ent->getDN()) if $ent;
 $conn->add($nentry);
+
+$nentry->printLDIF();
 
 $conn->close();

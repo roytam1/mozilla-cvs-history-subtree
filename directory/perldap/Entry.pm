@@ -81,7 +81,8 @@ sub DESTROY
 
   if (defined($self))
     {
-      undef %{$self} if (%{$self});
+# This casuses Perl to segfault ... Go figure.
+#      undef %{$self} if (%{$self});
       undef $self;
     }
 }

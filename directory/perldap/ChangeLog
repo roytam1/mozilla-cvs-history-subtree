@@ -1,3 +1,31 @@
+2004-10-14  Leif Hedstrom  <leif@ogre.com>
+
+	* Conn.pm (newEntry): Simplified this to use the normal constructor.
+	(searchURL): Avoid the warnings...
+
+	* Entry.pm (DESTROY): Fixed core dump during destructor.
+
+	* Conn.pm (getErrorCode): Added support for hash-style args.
+	(browse): Added support for hash-style args.
+	(browse): The hash-style arguments now also supports attrsonly.
+	(compare): Added hash-style args.
+	(search): Got rid of the annoying warning finally, for undefined hash
+	value.
+
+	* API.xs (prldap_install_routines): New function, to modify an existing
+	LDAP * handle (ld) to use NSPR I/O, threading etc.
+
+	* API.pm: Added the NSPR section to symbols.
+
+	* Conn.pm (installNSPR): Added this function, to support NSPR.
+
+	* Makefile.PL: Added all the NSPR/NSS dependt libraries as well, for
+	better compiling results.
+
+	* Conn.pm (getVersion): Added this getter as well.
+
+	* Makefile.PL: Added LD_RUN_PATH stuff.
+
 2004-10-13  Leif Hedstrom  <leif@ogre.com>
 
 	* Conn.pm (search): Fix for bug 4633, we can now return some
@@ -5,6 +33,9 @@
 	(searchURL): Dito.
 	(getErrorCode): Dito.
 	(getErrorString): Dito.
+	(modifyRDN): Changed argument handling.
+	(search): Support hash style arguments now.
+	(searchURL): Support hash style arguments.
 
 	* Entry.pm (addDNValue): Added a "nocase" (optional) argument.
 	(addValue): Dito.

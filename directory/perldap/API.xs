@@ -1795,3 +1795,14 @@ ldapssl_install_routines(ld)
 	LDAP *		ld
 
 #endif
+
+#ifdef PRLDAP
+
+#include <ldappr.h>
+
+int
+prldap_install_routines(ld, shared)
+	LDAP *		ld
+	int		shared
+
+#endif
