@@ -22,6 +22,7 @@
  */
 
 #include "nsIImageContainer.h"
+#include "nsPIImageContainerXlib.h"
 
 #include "nsSize2.h"
 
@@ -35,11 +36,13 @@
     {0xb0, 0xb4, 0xd4, 0x0a, 0xab, 0x84, 0x11, 0x50} \
 }
 
-class nsImageContainer : public nsIImageContainer
+class nsImageContainer : public nsIImageContainer,
+                         public nsPIImageContainerXlib
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGECONTAINER
+  NS_DECL_NSPIIMAGECONTAINERXLIB
 
   nsImageContainer();
   virtual ~nsImageContainer();

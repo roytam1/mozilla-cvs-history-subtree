@@ -127,3 +127,12 @@ NS_IMETHODIMP nsImageContainer::SetLoopCount(PRInt32 aLoopCount)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+
+/** nsPIImageContainerXlib methods **/
+
+/* void drawImage (in Display display, in Drawable dest, [const] in GC gc, in PRInt32 width, in PRInt32 height); */
+NS_IMETHODIMP nsImageContainer::DrawImage(Display * display, Drawable dest, const GC gc, PRInt32 width, PRInt32 height)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

@@ -28,8 +28,13 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= gfx2
+XPIDL_MODULE	= gfx2xlib
 LIBRARY_NAME	= gfx2
 IS_COMPONENT	= 1
+
+XPIDLSRCS	= \
+		nsPIImageContainerXlib.idl \
+		$(NULL)
 
 CPPSRCS		= \
 		nsGfxFactory.cpp \
