@@ -1349,26 +1349,6 @@ nsMsgIncomingServer::GetSearchScope(nsMsgSearchScopeValue *searchScope)
    return NS_OK;
 }
 
-NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, 
-                        IfPossibleEncryptMail, 
-                        "encrypt_mail_if_possible");
-
-NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, 
-                        AlwaysEncryptMail, 
-                        "encrypt_mail_always");
-
-NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, 
-                        EncryptionCertName, 
-                        "encryption_cert_name");
-
-NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, 
-                        SignMail, 
-                        "sign_mail");
-
-NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, 
-                        SigningCertName, 
-                        "signing_cert_name");
-
 // use the convenience macros to implement the accessors
 NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, Username, "userName");
 NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, PrefPassword, "password");

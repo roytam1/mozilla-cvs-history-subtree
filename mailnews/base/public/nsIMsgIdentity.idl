@@ -112,6 +112,16 @@ interface nsIMsgIdentity : nsISupports {
    * for the message send
    */
   attribute string smtpServerKey;
+
+  /* Security attributes... */
+  /* ...encryption        */
+  attribute boolean ifPossibleEncryptMessage;
+  attribute boolean alwaysEncryptMessage;
+  attribute wstring encryptionCertName;
+  /* ...signing           */
+  attribute boolean signMessage;
+  attribute wstring signingCertName;
+
   
   /* copy the attributes of the identity we pass in */
   void copy(in nsIMsgIdentity identity);

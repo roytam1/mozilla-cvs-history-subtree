@@ -21,6 +21,7 @@
 
 var gIncomingServer;
 var gServerType;
+var gIdentity;
 var gPref = null;
 var gLockedPref = null;
 
@@ -29,27 +30,29 @@ function onInit()
     onLockPreference();	
 
     // init values here
-    document.getElementById("encryption.ifPossibleEncryptMail").checked =  gIncomingServer.ifPossibleEncryptMail;
-    document.getElementById("encryption.alwaysEncryptMail").checked =  gIncomingServer.alwaysEncryptMail;
-    document.getElementById("encryption.certificateName").setAttribute("value", gIncomingServer.encryptionCertName);
-    document.getElementById("signing.signMail").checked =  gIncomingServer.signMail;
-    document.getElementById("signing.certificateName").setAttribute("value", gIncomingServer.signingCertName);
+    document.getElementById("encryption.ifPossibleEncryptMessage").checked =  gIdentity.ifPossibleEncryptMessage;
+    document.getElementById("encryption.alwaysEncryptMessage").checked =  gIdentity.alwaysEncryptMessage;
+    if (gIdentity.encryptionCertName) {
+        document.getElementById("encryption.certificateName").setAttribute("value", gIdentity.encryptionCertName);
+    } else {
+        document.getElementById("encryption.certificateName").setAttribute("value", "");
+    }
+    document.getElementById("signing.signMessage").checked =  gIdentity.signMessage;
+    if (gIdentity.signingCertName) {
+        document.getElementById("signing.certificateName").setAttribute("value", gIdentity.signingCertName);
+    } else {
+        document.getElementById("encryption.certificateName").setAttribute("value", "");
+    }
 
     // Disable the encrypt if possibe check box.
-    document.getElementById("encryption.ifPossibleEncryptMail").setAttribute("disabled", "true");
+    document.getElementById("encryption.ifPossibleEncryptMessage").setAttribute("disabled", "true");
 }
 
 function onPreInit(account, accountValues)
 {
-
     gServerType = getAccountValue(account, accountValues, "server", "type");
     hideShowControls(gServerType);
-    gIncomingServer= account.incomingServer;
-    gIncomingServer.type = gServerType;
-
-    var prefBundle = document.getElementById("bundle_prefs");
-    var headertitle = document.getElementById("headertitle");
-    headertitle.setAttribute('title',prefBundle.getString("prefPanel-security"));
+    gIdentity = account.defaultIdentity;
 }
 
 function hideShowControls(type)
@@ -115,11 +118,15 @@ function getEnclosingContainer(startNode) {
 function onSave()
 {
 
-    gIncomingServer.ifPossibleEncryptMail = document.getElementById("encryption.ifPossibleEncryptMail").checked;
-    gIncomingServer.alwaysEncryptMail = document.getElementById("encryption.alwaysEncryptMail").checked;
-    gIncomingServer.encryptionCertName = document.getElementById("encryption.certificateName").value;
-    gIncomingServer.signMail = document.getElementById("signing.signMail").checked;
-    gIncomingServer.signingCertName = document.getElementById("signing.certificateName").value;
+    gIdentity.ifPossibleEncryptMessage = document.getElementById("encryption.ifPossibleEncryptMessage").checked;
+    gIdentity.alwaysEncryptMessage = document.getElementById("encryption.alwaysEncryptMessage").checked;
+    if (document.getElementById("encryption.certificateName").value) {
+        gIdentity.encryptionCertName = document.getElementById("encryption.certificateName").value;
+    }
+    gIdentity.signMessage = document.getElementById("signing.signMessage").checked;
+    if (document.getElementById("signing.certificateName").value) {
+        gIdentity.signingCertName = document.getElementById("signing.certificateName").value;
+    }
 }
 
 // Does the work of disabling an element given the array which contains xul id/prefstring pairs.
@@ -159,14 +166,14 @@ function onLockPreference()
     // the load/unload/disable.  keep in mind new prefstrings and changes
     // to code in AccountManager, and update these as well.
     var allPrefElements = [
-      { prefstring:"encrypt_if_possible", id:"encryption.ifPossibleEncryptMail"},
-      { prefstring:"encrypt_always", id:"encryption.alwaysEncryptMail"},
+      { prefstring:"encrypt_if_possible", id:"encryption.ifPossibleEncryptMessage"},
+      { prefstring:"encrypt_always", id:"encryption.alwaysEncryptMessage"},
       { prefstring:"encryption_cert_name", id:"encryption.certificateName"},
-      { prefstring:"sign", id:"signing.signMail"},
+      { prefstring:"sign", id:"signing.signMessage"},
       { prefstring:"signing_cert_name", id:"signing.certificateName"}
     ];
 
-    finalPrefString = initPrefString + "." + gIncomingServer.key + ".";
+    finalPrefString = initPrefString + "." + gIdentity.key + ".";
     gPref = prefService.getBranch(finalPrefString);
 
     disableIfLocked( allPrefElements );

@@ -1,10 +1,11 @@
+<!ENTITY securityTitle.label "Security">
 <!ENTITY encryptionGroupTitle.label "Encryption">
-<!ENTITY ifPossibleEncryptMail.label "Encrypt messages if possible">
-<!ENTITY alwaysEncryptMail.label "Always encrypt messages">
+<!ENTITY ifPossibleEncryptMessage.label "Encrypt messages if possible">
+<!ENTITY alwaysEncryptMessage.label "Always encrypt messages">
 <!ENTITY encryptionCert.message "Personal certificate used for encryption">
 <!ENTITY encryptionCert.notselected "No certificate set">
 <!ENTITY certificate.button "Select Certificate">
 <!ENTITY signingGroupTitle.label "Signing">
-<!ENTITY signMail.label "Digitally sign messages">
+<!ENTITY signMessage.label "Digitally sign messages">
 <!ENTITY signingCert.message "Personal certificate used for signing">
 <!ENTITY signingCert.notselected "No certificate set">

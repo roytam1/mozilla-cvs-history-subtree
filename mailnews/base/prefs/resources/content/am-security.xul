@@ -37,20 +37,21 @@ Contributors:
     <script type="application/x-javascript" src="chrome://messenger/content/AccountManager.js"/>
     <script type="application/x-javascript" src="chrome://messenger/content/am-security.js"/>
     
-    <hbox id="headertitle" class="box-smallheader"/>
+    <hbox class="box-smallheader" title="&securityTitle.label;" />
 
     <groupbox orient="vertical" id="encryption.titlebox"  hidable="true" hidefor="nntp">
       <label value="&encryptionGroupTitle.label;"/>
 
     <checkbox iscontrolcontainer="true" hidable="true" hidefor="nntp" 
-              id="encryption.ifPossibleEncryptMail" disabled="true" label="&ifPossibleEncryptMail.label;" />
+              id="encryption.ifPossibleEncryptMessage" disabled="true" label="&ifPossibleEncryptMessage.label;" />
 
     <checkbox iscontrolcontainer="true" hidable="true" hidefor="nntp" 
-              id="encryption.alwaysEncryptMail" label="&alwaysEncryptMail.label;" />
+              id="encryption.alwaysEncryptMessage" label="&alwaysEncryptMessage.label;" />
 
+    <separator class="thin" hidable="true" hidefor="nntp"/>
     <html iscontrolcontainer="true" hidable="true" hidefor="nntp"> &encryptionCert.message;</html>
     <separator class="thin" hidable="true" hidefor="nntp"/>
-    <textbox iscontrolcontainer="true" hidable="true" hidefor="nntp" id="encryption.certificateName" value="&encryptionCert.notselected;" readonly="true" disabled="true"/>
+    <textbox iscontrolcontainer="true" hidable="true" hidefor="nntp" id="encryption.certificateName" value="" readonly="true" disabled="true"/>
     <separator class="thin" hidable="true" hidefor="nntp"/>
     <hbox iscontrolcontainer="true" hidable="true" hidefor="nntp">
       <spacer flex="1"/>
@@ -64,11 +65,12 @@ Contributors:
     <groupbox orient="vertical" id="signing.titlebox">
       <label value="&signingGroupTitle.label;"/>
       
-    <checkbox iscontrolcontainer="true" id="signing.signMail" label="&signMail.label;" />
+    <checkbox iscontrolcontainer="true" id="signing.signMessage" label="&signMessage.label;" />
 
+    <separator class="thin"/>
     <html>&signingCert.message;</html>
     <separator class="thin"/>
-    <textbox id="signing.certificateName" value="&signingCert.notselected;" readonly="true" disabled="true"/>
+    <textbox id="signing.certificateName" value="" readonly="true" disabled="true"/>
     <separator class="thin"/>
     <hbox>
       <spacer flex="1"/>
