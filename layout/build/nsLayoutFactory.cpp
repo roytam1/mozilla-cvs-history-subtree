@@ -107,6 +107,7 @@ static NS_DEFINE_CID(kLayoutDocumentLoaderFactoryCID, NS_LAYOUT_DOCUMENT_LOADER_
 static NS_DEFINE_CID(kLayoutDebuggerCID, NS_LAYOUT_DEBUGGER_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID, NS_HTML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kTextEncoderCID, NS_TEXT_ENCODER_CID);
+static NS_DEFINE_CID(kHTMLCopyTextEncoderCID, NS_HTMLCOPY_TEXT_ENCODER_CID);
 
 static NS_DEFINE_CID(kXMLContentSerializerCID, NS_XMLCONTENTSERIALIZER_CID);
 static NS_DEFINE_CID(kHTMLContentSerializerCID, NS_HTMLCONTENTSERIALIZER_CID);
@@ -148,7 +149,7 @@ extern nsresult NS_NewLayoutDebugger(nsILayoutDebugger** aResult);
 extern nsresult NS_NewHTMLElementFactory(nsIElementFactory** aResult);
 extern nsresult NS_NewXMLElementFactory(nsIElementFactory** aResult);
 
-extern nsresult NS_NewHTMLEncoder(nsIDocumentEncoder** aResult);
+extern nsresult NS_NewHTMLCopyTextEncoder(nsIDocumentEncoder** aResult);
 extern nsresult NS_NewTextEncoder(nsIDocumentEncoder** aResult);
 
 extern nsresult NS_NewXBLService(nsIXBLService** aResult);
@@ -417,6 +418,13 @@ nsLayoutFactory::CreateInstance(nsISupports *aOuter,
     res = NS_NewTextEncoder((nsIDocumentEncoder**) &inst);
     if (NS_FAILED(res)) {
       LOG_NEW_FAILURE("NS_NewTextEncoder", res);
+      return res;
+    }
+  }
+  else if (mClassID.Equals(kHTMLCopyTextEncoderCID)) {
+    res = NS_NewHTMLCopyTextEncoder((nsIDocumentEncoder**) &inst);
+    if (NS_FAILED(res)) {
+      LOG_NEW_FAILURE("NS_NewHTMLCopyTextEncoder", res);
       return res;
     }
   }

@@ -52,6 +52,13 @@ class nsISupportsArray;
 
 #define NS_DOC_ENCODER_CONTRACTID_BASE "@mozilla.org/layout/documentEncoder;1?type="
 
+// {7f915b01-98fc-11d4-8eb0-a803f80ff1bc}
+#define NS_HTMLCOPY_TEXT_ENCODER_CID                      \
+{ 0x7f915b01, 0x98fc, 0x11d4, { 0x8e, 0xb0, 0xa8, 0x03, 0xf8, 0x0f, 0xf1, 0xbc } }
+
+
+#define NS_HTMLCOPY_ENCODER_CONTRACTID "@mozilla.org/layout/htmlCopyEncoder"
+
 class nsIDocumentEncoder : public nsISupports
 {
 public:
@@ -155,6 +162,16 @@ public:
    */
   NS_IMETHOD EncodeToStream(nsIOutputStream* aStream) = 0;
   NS_IMETHOD EncodeToString(nsAWritableString& aOutputString) = 0;
+
+  /**
+   *  The document is encoded, the result is sent to the 
+   *  to aEncodedString.  Parent heirarchy information is encoded
+   *  to aContextString.  Extra context info is encoded in aInfoString.
+   * 
+   */
+  NS_IMETHOD EncodeToStringWithContext(nsAWritableString& aEncodedString, 
+                                       nsAWritableString& aContextString, 
+                                       nsAWritableString& aInfoString) = 0;
 };
 
 #endif /* nsIDocumentEncoder_h__ */

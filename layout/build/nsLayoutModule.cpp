@@ -359,7 +359,8 @@ static Components gComponents[] = {
     NS_DOC_ENCODER_CONTRACTID_BASE "text/plain", },
   { "XIF document encoder", NS_TEXT_ENCODER_CID,
     NS_DOC_ENCODER_CONTRACTID_BASE "text/xif", },
-
+  { "HTML copy encoder", NS_HTMLCOPY_TEXT_ENCODER_CID,
+    NS_HTMLCOPY_ENCODER_CONTRACTID, },
   { "XML content serializer", NS_XMLCONTENTSERIALIZER_CID,
     NS_CONTENTSERIALIZER_CONTRACTID_PREFIX "text/xml", },
   { "HTML content serializer", NS_HTMLCONTENTSERIALIZER_CID,

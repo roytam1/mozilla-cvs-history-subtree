@@ -48,10 +48,13 @@
 #include "nsITextContent.h"
 #include "nsIEnumerator.h"
 #include "nsISelectionPrivate.h"
+#include "nsIContentIterator.h"
+#include "nsISupportsArray.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID,
                      NS_ICHARSETCONVERTERMANAGER_CID);
 
+nsresult NS_NewContentSubtreeIterator(nsIContentIterator** aInstancePtrResult);
 
 enum nsRangeIterationDirection {
   kDirectionOut = -1,
@@ -97,12 +100,8 @@ protected:
   nsresult SerializeNodeEnd(nsIDOMNode* aNode, nsAWritableString& aStr);
   nsresult SerializeRangeToString(nsIDOMRange *aRange,
                                   nsAWritableString& aOutputString);
-  nsresult SerializeRangeNodes(nsVoidArray& aAncestors,
-                               nsIDOMNode *aCommonParent,
-                               nsIDOMNode* aStart,
-                               PRInt32 aStartOffset,
-                               nsIDOMNode* aEnd,
-                               PRInt32 aEndOffset,
+  nsresult SerializeRangeNodes(nsIDOMRange* aRange, 
+                               nsIDOMNode* aCommonParent, 
                                nsAWritableString& aString);
   nsresult SerializeRangeContextStart(const nsVoidArray& aAncestorArray,
                                       nsAWritableString& aString);
@@ -498,127 +497,101 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
   return NS_OK;
 }
 
-nsresult
-nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
-                                       nsIDOMNode* aCommonParent,
-                                       nsIDOMNode* aStart,
-                                       PRInt32 aStartOffset,
-                                       nsIDOMNode* aEnd,
-                                       PRInt32 aEndOffset,
-                                       nsAWritableString& aOutputString)
+static PRBool IsTextNode(nsIDOMNode *aNode)
 {
-  PRInt32 i = aAncestors.Count();
-  nsCOMPtr<nsIDOMNode> node;
-  nsresult rv = NS_OK;
+  if (!aNode) return PR_FALSE;
+  PRUint16 nodeType;
+  aNode->GetNodeType(&nodeType);
+  if (nodeType == nsIDOMNode::TEXT_NODE)
+    return PR_TRUE;
+  return PR_FALSE;
+}
 
-  // remember how deep into the tag stack the selection really starts.
-  // Note that this will end up only saving the value for the last
-  // range in the selection.  
-  mStartDepth = i;
-
-  node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
-
-  while (node) {
-    SerializeNodeStart(node, 0, -1, aOutputString);
-
-    node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
+static nsresult GetLengthOfDOMNode(nsIDOMNode *aNode, PRUint32 &aCount) 
+{
+  aCount = 0;
+  if (!aNode) { return NS_ERROR_NULL_POINTER; }
+  nsresult result=NS_OK;
+  nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
+  nodeAsChar = do_QueryInterface(aNode);
+  if (nodeAsChar) {
+    nodeAsChar->GetLength(&aCount);
   }
-
-  nsCOMPtr<nsIDOMNode> start, endContainer, lastNode, rememberedNode;
-
-  nsRangeIterationDirection dir = kDirectionIn;
-
-  PRUint16 type;
-  aStart->GetNodeType(&type);
-
-  if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
-    rv = ChildAt(aStart, aStartOffset, *getter_AddRefs(start));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (!start) {
-      start = aStart;
-
-      dir = kDirectionOut;
-    }
-
-    aStartOffset = 0;
-  } else {
-    start = aStart;
-  }
-
-  aEnd->GetNodeType(&type);
-
-  if (type == nsIDOMNode::ELEMENT_NODE || type == nsIDOMNode::DOCUMENT_NODE) {
-    rv = ChildAt(aEnd, aEndOffset, *getter_AddRefs(lastNode));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (!lastNode) {
-      // The endpoint of the range points to the end of the last child in
-      // a container, in this case we set the endContainer to the container.
-
-      endContainer = aEnd;
-    } else {
-      aEndOffset = -1;
-    }
-  } else {
-    lastNode = aEnd;
-  }
-
-  if (start.get() == lastNode) {
-    SerializeNodeStart(start, aStartOffset, aEndOffset, aOutputString); // Is this correct?
-  } else {
-    nsVoidArray offsets;
-
-    SerializeNodeStart(start, aStartOffset, -1, aOutputString);
-
-    GetNextNode(start, offsets, *getter_AddRefs(node), dir);
-
-    while (node) {
-      if (dir == kDirectionIn) {
-        if (node == endContainer || node == lastNode) {
-          if (aEndOffset > 0)
-          {
-            SerializeNodeStart(node, 0, aEndOffset, aOutputString);
-            rememberedNode = node;  // remember the last node we opened
-          }
-          if (endContainer) {
-            if (GetIndex(offsets) >= aEndOffset)
-              break;
-          } else {
-            break;
-          }
-        } else {
-          SerializeNodeStart(node, 0, -1, aOutputString);
-          rememberedNode = node;  // remember the last node we opened
-        }
-      } else {
-        if (node.get() == aEnd) {
-          break;
-        }
-
-        SerializeNodeEnd(node, aOutputString);
-        node->GetParentNode(getter_AddRefs(rememberedNode));  // remember the parent of last node we closed
-        NS_ENSURE_TRUE(node, NS_ERROR_FAILURE);
+  else
+  {
+    PRBool hasChildNodes;
+    aNode->HasChildNodes(&hasChildNodes);
+    if (PR_TRUE==hasChildNodes)
+    {
+      nsCOMPtr<nsIDOMNodeList>nodeList;
+      result = aNode->GetChildNodes(getter_AddRefs(nodeList));
+      if (NS_SUCCEEDED(result) && nodeList) {
+        nodeList->GetLength(&aCount);
       }
-
-      nsIDOMNode *tmpNode = node;
-      GetNextNode(tmpNode, offsets, *getter_AddRefs(node), dir);
     }
   }
+  return result;
+}
 
-  // remember how deep into the tag stack the selection really ends.
-  // Note that this will end up only saving the value for the last
-  // range in the selection.
-  mEndDepth = 0;
+nsresult
+nsDocumentEncoder::SerializeRangeNodes(nsIDOMRange* aRange, 
+                                       nsIDOMNode* aNode, 
+                                       nsAWritableString& aString)
+{
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+  NS_ENSURE_TRUE(content, NS_ERROR_FAILURE);
   
-  if (rememberedNode) node = rememberedNode;
-  while (node && aCommonParent && node.get() != aCommonParent) {
-    SerializeNodeEnd(node, aOutputString);
-    mEndDepth++;
-    nsIDOMNode *tmpNode = node;
-    tmpNode->GetParentNode(getter_AddRefs(node));
-  }
+  if (IsNodeIntersectsRange(content, aRange))
+  {
+    PRBool nodeBefore, nodeAfter;
+    nsresult rv = CompareNodeToRange(content, aRange, &nodeBefore, &nodeAfter);
+    if (!nodeBefore && !nodeAfter) // node completely contained
+    {
+      rv = SerializeToStringRecursive(aNode, aString);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else // node intersects range, but is not contained.  recurse if needed.
+    {
+      if (IsTextNode(aNode))
+      {
+        if (nodeBefore)
+        {
+          PRInt32 startOffset;
+          aRange->GetStartOffset(&startOffset);
+          rv = SerializeNodeStart(aNode, startOffset, -1, aString);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+        else
+        {
+          PRInt32 endOffset;
+          aRange->GetEndOffset(&endOffset);
+          rv = SerializeNodeStart(aNode, 0, endOffset, aString);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+      }
+      else
+      {
+        if (nodeBefore) mStartDepth++;
+        if (nodeAfter) mEndDepth++;
+        
+        rv = SerializeNodeStart(aNode, 0, -1, aString);
+        NS_ENSURE_SUCCESS(rv, rv);
+      
+        nsCOMPtr<nsIDOMNode> child, tmp;
+        aNode->GetFirstChild(getter_AddRefs(child));
+        while (child)
+        {
+          rv = SerializeRangeNodes(aRange, child, aString);
+          NS_ENSURE_SUCCESS(rv, rv);
+          child->GetNextSibling(getter_AddRefs(tmp));
+          child = tmp;
+        }
 
+        rv = SerializeNodeEnd(aNode, aString);
+        NS_ENSURE_SUCCESS(rv, rv); 
+      }     
+    }
+  }
   return NS_OK;
 }
 
@@ -690,39 +663,21 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
   if (collapsed)
     return NS_OK;
 
-  nsCOMPtr<nsIDOMNode> start, end, commonParent;
-  PRInt32 startOffset = 0, endOffset = 0;
-
-  aRange->GetStartContainer(getter_AddRefs(start));
-  NS_ENSURE_TRUE(start, NS_ERROR_FAILURE);
-
-  aRange->GetStartOffset(&startOffset);
-
-  aRange->GetEndContainer(getter_AddRefs(end));
-  NS_ENSURE_TRUE(end, NS_ERROR_FAILURE);
-
-  aRange->GetEndOffset(&endOffset);
-
+  nsCOMPtr<nsIDOMNode> commonParent, startParent, endParent;
+  PRInt32 startOffset, endOffset;
+  
   aRange->GetCommonAncestorContainer(getter_AddRefs(commonParent));
 
   if (!commonParent)
     return NS_OK;
 
-  nsVoidArray startAncestors;
+  aRange->GetStartContainer(getter_AddRefs(startParent));
+  NS_ENSURE_TRUE(startParent, NS_ERROR_FAILURE);
+  aRange->GetStartOffset(&startOffset);
 
-  nsRange::FillArrayWithAncestors(&startAncestors, start);
-  startAncestors.RemoveElementAt(0); // Remove 'start'
-
-  PRInt32 i = startAncestors.Count();
-
-  while (i--) {
-    nsIDOMNode *node = NS_STATIC_CAST(nsIDOMNode *, startAncestors.ElementAt(i));
-
-    startAncestors.RemoveElementAt(i);
-
-    if (!node || node == commonParent.get())
-      break;
-  }
+  aRange->GetEndContainer(getter_AddRefs(endParent));
+  NS_ENSURE_TRUE(endParent, NS_ERROR_FAILURE);
+  aRange->GetEndOffset(&endOffset);
 
   mCommonAncestors.Clear();
 
@@ -733,16 +688,26 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
   rv = SerializeRangeContextStart(mCommonAncestors, aOutputString);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = SerializeRangeNodes(startAncestors, commonParent, start, startOffset,
-                             end, endOffset, aOutputString);
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  if ((startParent == endParent) && IsTextNode(startParent))
+  {
+    rv = SerializeNodeStart(startParent, startOffset, endOffset, aOutputString);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  else
+  {
+    nsCOMPtr<nsIDOMNode> child, tmp;
+    commonParent->GetFirstChild(getter_AddRefs(child));
+    while (child)
+    {
+      rv = SerializeRangeNodes(aRange, child, aOutputString);
+      NS_ENSURE_SUCCESS(rv, rv);
+      child->GetNextSibling(getter_AddRefs(tmp));
+      child = tmp;
+    }
+  }
+  
   rv = SerializeRangeContextEnd(mCommonAncestors, aOutputString);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCAutoString tmpStr; tmpStr.AssignWithConversion(aOutputString);
-  tmpStr.ReplaceChar('\r','\n');
-  printf ("range = '%s'\n", (const char *)tmpStr);
 
   return rv;
 }
@@ -889,13 +854,11 @@ protected:
   nsresult GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 aOffset, 
                                   nsCOMPtr<nsIDOMNode> *outNode, PRInt32 *outOffset);
   nsCOMPtr<nsIDOMNode> GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset);
-  PRBool IsTextNode(nsIDOMNode *aNode);
   PRBool IsBody(nsIDOMNode* aNode);
   PRBool IsMozBR(nsIDOMNode* aNode);
   nsresult GetNodeLocation(nsIDOMNode *inChild, nsCOMPtr<nsIDOMNode> *outParent, PRInt32 *outOffset);
   PRBool IsFirstNode(nsIDOMNode *aNode);
   PRBool IsLastNode(nsIDOMNode *aNode);
-  nsresult GetLengthOfDOMNode(nsIDOMNode *aNode, PRUint32 &aCount); 
   PRBool IsEmptyTextContent(nsIDOMNode* aNode);
 };
 
@@ -1175,17 +1138,6 @@ nsHTMLCopyEncoder::GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset)
   return resultNode;
 }
 
-PRBool
-nsHTMLCopyEncoder::IsTextNode(nsIDOMNode *aNode)
-{
-  if (!aNode) return PR_FALSE;
-  PRUint16 nodeType;
-  aNode->GetNodeType(&nodeType);
-  if (nodeType == nsIDOMNode::TEXT_NODE)
-    return PR_TRUE;
-  return PR_FALSE;
-}
-
 PRBool 
 nsHTMLCopyEncoder::IsBody(nsIDOMNode* aNode)
 {
@@ -1230,9 +1182,9 @@ nsHTMLCopyEncoder::IsMozBR(nsIDOMNode* aNode)
         {
           nsAutoString typeAttrName; typeAttrName.AssignWithConversion("type");
           nsAutoString typeAttrVal;
-          nsresult res = elem->GetAttribute(typeAttrName, typeAttrVal);
+          nsresult rv = elem->GetAttribute(typeAttrName, typeAttrVal);
           typeAttrVal.ToLowerCase();
-          if (NS_SUCCEEDED(res) && (typeAttrVal.EqualsWithConversion("_moz")))
+          if (NS_SUCCEEDED(rv) && (typeAttrVal.EqualsWithConversion("_moz")))
             return PR_TRUE;
         }
         return PR_FALSE;
@@ -1343,33 +1295,6 @@ nsHTMLCopyEncoder::IsLastNode(nsIDOMNode *aNode)
       return PR_FALSE;
   }
   return PR_TRUE;
-}
-
-nsresult
-nsHTMLCopyEncoder::GetLengthOfDOMNode(nsIDOMNode *aNode, PRUint32 &aCount) 
-{
-  aCount = 0;
-  if (!aNode) { return NS_ERROR_NULL_POINTER; }
-  nsresult result=NS_OK;
-  nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
-  nodeAsChar = do_QueryInterface(aNode);
-  if (nodeAsChar) {
-    nodeAsChar->GetLength(&aCount);
-  }
-  else
-  {
-    PRBool hasChildNodes;
-    aNode->HasChildNodes(&hasChildNodes);
-    if (PR_TRUE==hasChildNodes)
-    {
-      nsCOMPtr<nsIDOMNodeList>nodeList;
-      result = aNode->GetChildNodes(getter_AddRefs(nodeList));
-      if (NS_SUCCEEDED(result) && nodeList) {
-        nodeList->GetLength(&aCount);
-      }
-    }
-  }
-  return result;
 }
 
 PRBool

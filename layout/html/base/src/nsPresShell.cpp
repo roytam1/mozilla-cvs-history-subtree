@@ -149,6 +149,10 @@ static nsresult CtlStyleWatch(PRUint32 aCtlValue, nsIStyleSet *aStyleSet);
 #define kStyleWatchStop    16
 #define kStyleWatchReset   32
 
+// private clipboard data flavors for html copy, used by editor when pasting
+#define kHTMLContext   "text/_moz_htmlcontext"
+#define kHTMLInfo      "text/_moz_htmlinfo"
+
 // Class ID's
 static NS_DEFINE_CID(kFrameSelectionCID, NS_FRAMESELECTION_CID);
 static NS_DEFINE_CID(kCRangeCID, NS_RANGE_CID);
@@ -3059,7 +3063,6 @@ PresShell::DoCopy()
   GetDocument(getter_AddRefs(doc));
   if (!doc) return NS_ERROR_FAILURE;
   
-  nsString buffer;
   nsresult rv;
 
   nsCOMPtr<nsISelection> sel;
@@ -3103,60 +3106,64 @@ PresShell::DoCopy()
 
   nsCOMPtr<nsIDocumentEncoder> docEncoder;
 
-  docEncoder = do_CreateInstance(NS_DOC_ENCODER_CONTRACTID_BASE "text/html");
+  docEncoder = do_CreateInstance(NS_HTMLCOPY_ENCODER_CONTRACTID);
   NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
 
   docEncoder->Init(doc, NS_LITERAL_STRING("text/html"), 0);
   docEncoder->SetSelection(sel);
 
-  docEncoder->EncodeToString(buffer);
+  nsString buffer, parents, info;
+  
+  rv = docEncoder->EncodeToStringWithContext(buffer, parents, info);
+  if (NS_FAILED(rv)) 
+    return rv;
   
   // Get the Clipboard
   NS_WITH_SERVICE(nsIClipboard, clipboard, kCClipboardCID, &rv);
   if (NS_FAILED(rv)) 
     return rv;
 
-  if ( clipboard ) {
+  if ( clipboard ) 
+  {
     // Create a transferable for putting data on the Clipboard
     nsCOMPtr<nsITransferable> trans;
     rv = nsComponentManager::CreateInstance(kCTransferableCID, nsnull, 
                                             NS_GET_IID(nsITransferable), 
                                             getter_AddRefs(trans));
-    if ( trans ) {
-      // The data on the clipboard will be in "XIF" format
-      // so give the clipboard transferable a "XIFConverter" for 
-      // converting from XIF to other formats
-      nsCOMPtr<nsIFormatConverter> converter;
-      rv = nsComponentManager::CreateInstance(kCXIFConverterCID, nsnull, 
-                                              NS_GET_IID(nsIFormatConverter),
-                                              getter_AddRefs(converter));
-      if ( converter ) {
-        // Add the XIF DataFlavor to the transferable
-        // this tells the transferable that it can handle receiving the XIF format
-        trans->AddDataFlavor(kHTMLMime);
+    if ( trans ) 
+    {
+      // Add the html DataFlavor to the transferable
+      trans->AddDataFlavor(kHTMLMime);
+      // Add the htmlcontext DataFlavor to the transferable
+      trans->AddDataFlavor(kHTMLContext);
+      // Add the htmlinfo DataFlavor to the transferable
+      trans->AddDataFlavor(kHTMLInfo);
+      
+      // get wStrings to hold clip data
+      nsCOMPtr<nsISupportsWString> dataWrapper, contextWrapper, infoWrapper;
+      dataWrapper = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+      NS_ENSURE_TRUE(dataWrapper, NS_ERROR_FAILURE);
+      contextWrapper = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+      NS_ENSURE_TRUE(contextWrapper, NS_ERROR_FAILURE);
+      infoWrapper = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
+      NS_ENSURE_TRUE(infoWrapper, NS_ERROR_FAILURE);
 
-        // Add the converter for going from XIF to other formats
-        trans->SetConverter(converter);
+      // populate the strings
+      dataWrapper->SetData ( NS_CONST_CAST(PRUnichar*,buffer.GetUnicode()) );
+      contextWrapper->SetData ( NS_CONST_CAST(PRUnichar*,parents.GetUnicode()) );
+      infoWrapper->SetData ( NS_CONST_CAST(PRUnichar*,info.GetUnicode()) );
+      
+      // QI the data object an |nsISupports| so that when the transferable holds
+      // onto it, it will addref the correct interface.
+      nsCOMPtr<nsISupports> genericDataObj ( do_QueryInterface(dataWrapper) );
+      trans->SetTransferData(kHTMLMime, genericDataObj, buffer.Length()*2);
+      genericDataObj = do_QueryInterface(contextWrapper);
+      trans->SetTransferData(kHTMLContext, genericDataObj, parents.Length()*2);
+      genericDataObj = do_QueryInterface(infoWrapper);
+      trans->SetTransferData(kHTMLInfo, genericDataObj, info.Length()*2);
 
-        // Now add the XIF data to the transferable, placing it into a nsISupportsWString object.
-        // the transferable wants the number bytes for the data and since it is double byte
-        // we multiply by 2. 
-        nsCOMPtr<nsISupportsWString> dataWrapper;
-        rv = nsComponentManager::CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID,
-                                                nsnull, 
-                                                NS_GET_IID(nsISupportsWString),
-                                                getter_AddRefs(dataWrapper));
-        if ( dataWrapper ) {
-          dataWrapper->SetData ( NS_CONST_CAST(PRUnichar*,buffer.GetUnicode()) );
-          // QI the data object an |nsISupports| so that when the transferable holds
-          // onto it, it will addref the correct interface.
-          nsCOMPtr<nsISupports> genericDataObj ( do_QueryInterface(dataWrapper) );
-          trans->SetTransferData(kHTMLMime, genericDataObj, buffer.Length()*2);
-        }
-        
-        // put the transferable on the clipboard
-        clipboard->SetData(trans, nsnull, nsIClipboard::kGlobalClipboard);
-      }
+      // put the transferable on the clipboard
+      clipboard->SetData(trans, nsnull, nsIClipboard::kGlobalClipboard);
     }
   }
   
