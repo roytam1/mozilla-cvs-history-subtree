@@ -1285,7 +1285,7 @@ _PR_MD_RMDIR(const char *name)
 #if !defined(WINCE)
         RemoveDirectory(name)
 #else
-        RemoveDirectoryA(name)
+        _MD_RemoveDirectoryA(name)
 #endif
         ) {
         return 0;

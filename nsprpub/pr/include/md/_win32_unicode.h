@@ -107,6 +107,12 @@ _MD_CreateDirectoryA(
     LPSECURITY_ATTRIBUTES lpSecurityAttributes
     );
 
+BOOL
+WINAPI
+_MD_RemoveDirectoryA(
+    LPCSTR lpPathName
+    );
+
 #endif /* WINCE */
 
 #endif /* nspr_win32_unicode_h___ */

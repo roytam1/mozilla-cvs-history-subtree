@@ -381,4 +381,29 @@ _MD_CreateDirectoryA(
     return retval;
 }
 
+BOOL
+WINAPI
+_MD_RemoveDirectoryA(
+    LPCSTR lpPathName
+    )
+{
+    BOOL retval = FALSE;
+    LPWSTR wideStr = NULL;
+    WCHAR widePath[MAX_PATH + 1];
+
+    wideStr = _PR_MD_A2W(lpPathName, widePath, sizeof(widePath) / sizeof(WCHAR));
+    if(NULL != wideStr)
+    {
+        retval = RemoveDirectoryW(
+            wideStr
+            );
+    }
+    else
+    {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+    }
+
+    return retval;
+}
+
 #endif /* WINCE */
