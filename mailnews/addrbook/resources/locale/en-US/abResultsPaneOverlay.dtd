@@ -32,7 +32,7 @@ Original Author:
 <!ENTITY SecondEmail.label "Additional Email">
 <!ENTITY SecondEmail.accesskey "d">
 <!ENTITY Department.label "Department">
-<!ENTITY Department.accesskey "e">
+<!ENTITY Department.accesskey "r">
 <!ENTITY JobTitle.label "Title">
 <!ENTITY JobTitle.accesskey "T">
 <!ENTITY CellularNumber.label "Cellular">
