@@ -272,7 +272,7 @@ ac_help="$ac_help
 ac_help="$ac_help
   --disable-xul           Disable XUL (standalone modules only)"
 ac_help="$ac_help
-  --enable-profilesharing Enable profile sharing"
+  --disable-profilesharing           Disable profile sharing"
 
 # Initialize some variables set by options.
 # The variables have the same names as the options, with
@@ -14496,14 +14496,14 @@ EOF
 fi
 
 
-MOZ_PROFILESHARING=0
-MOZ_IPCD=0
+MOZ_PROFILESHARING=1
+MOZ_IPCD=
 # Check whether --enable-profilesharing or --disable-profilesharing was given.
 if test "${enable_profilesharing+set}" = set; then
   enableval="$enable_profilesharing"
-  if test "$enableval" = "yes"; then
-    MOZ_PROFILESHARING=1
-  elif test "$enableval" = "no"; then
+  if test "$enableval" = "no"; then
+    MOZ_PROFILESHARING= 
+  elif test "$enableval" = "yes"; then
     :
   else
     { echo "configure: error: Option, profilesharing, does not take an argument ($enableval)." 1>&2; exit 1; }

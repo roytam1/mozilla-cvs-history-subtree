@@ -4608,13 +4608,13 @@ fi
 AC_SUBST(MOZ_XUL)
 
 dnl ========================================================
-dnl enable profile sharing
+dnl disable profile sharing
 dnl ========================================================
-MOZ_PROFILESHARING=0
-MOZ_IPCD=0
-MOZ_ARG_ENABLE_BOOL(profilesharing,
-[  --enable-profilesharing Enable profile sharing],
-    MOZ_PROFILESHARING=1)
+MOZ_PROFILESHARING=1
+MOZ_IPCD=
+MOZ_ARG_DISABLE_BOOL(profilesharing,
+[  --disable-profilesharing           Disable profile sharing],
+    MOZ_PROFILESHARING= )
 if test "$MOZ_PROFILESHARING"; then
   MOZ_IPCD=1
   AC_DEFINE(MOZ_PROFILESHARING)
