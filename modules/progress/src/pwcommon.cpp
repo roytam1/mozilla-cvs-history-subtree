@@ -272,7 +272,7 @@ XP_Bool pw_Confirm(MWContext* context, const char* msg)
 
 char* pw_Prompt(MWContext * /*context*/, const char * Msg, const char * dflt)
 {
-#if defined(XP_WIN) || defined(XP_MAC)
+#if defined(XP_MAC)
 	return XP_Prompt(NULL, Msg, dflt);
 #else
 	XP_ASSERT(FALSE);
@@ -298,7 +298,12 @@ XP_Bool pw_PromptUsernameAndPassword(MWContext * c,const char * prompt,char ** u
 
 char * pw_PromptPassword(MWContext *context, const char * Msg)
 {
+#if defined(XP_MAC) || defined(XP_UNIX)
 	return XP_PromptPassword(context, Msg);
+#else
+	XP_ASSERT(FALSE);
+	return NULL;
+#endif
 }
 void pw_EnableClicking(MWContext * /*context*/)
 {
