@@ -687,7 +687,7 @@ nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
 
     JSObject *parent = ::JS_GetGlobalObject(cx); // Is this correct?
 
-    rv = xpc->WrapNative(cx, XXXXXparent, aObject, NS_GET_IID(nsISupports),
+    rv = xpc->WrapNative(cx, parent, aObject, NS_GET_IID(nsISupports),
                          getter_AddRefs(holder));
     NS_ENSURE_SUCCESS(rv, rv);
 
