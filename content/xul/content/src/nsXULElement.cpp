@@ -1036,7 +1036,7 @@ nsXULElement::SetPrefix(const nsAReadableString& aPrefix)
     nsINodeInfo *newNodeInfo = nsnull;
     nsCOMPtr<nsIAtom> prefix;
 
-    if (aPrefix.Length()) {
+    if (aPrefix.Length() && !DOMStringIsNull(aPrefix)) {
         prefix = dont_AddRef(NS_NewAtom(aPrefix));
         NS_ENSURE_TRUE(prefix, NS_ERROR_OUT_OF_MEMORY);
     }

@@ -423,7 +423,7 @@ nsDOMAttribute::SetPrefix(const nsAReadableString& aPrefix)
   nsCOMPtr<nsIAtom> prefix;
   nsresult rv = NS_OK;
 
-  if (aPrefix.Length())
+  if (aPrefix.Length() && !DOMStringIsNull(aPrefix))
     prefix = dont_AddRef(NS_NewAtom(aPrefix));
 
   rv = mNodeInfo->PrefixChanged(prefix, *getter_AddRefs(newNodeInfo));

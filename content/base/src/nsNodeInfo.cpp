@@ -26,6 +26,7 @@
 #include "nsString.h"
 #include "nsIAtom.h"
 #include "nsINameSpaceManager.h"
+#include "domstubs.h" // for SetDOMStringToNull();
 
 
 nsNodeInfo::nsNodeInfo()
@@ -129,7 +130,7 @@ nsNodeInfo::GetLocalName(nsAWritableString& aLocalName)
     return mInner.mName->ToString(aLocalName);
   }
 
-  aLocalName.Truncate();
+  SetDOMStringToNull(aLocalName);
 
   return NS_OK;
 #else
@@ -144,7 +145,7 @@ nsNodeInfo::GetPrefix(nsAWritableString& aPrefix)
   if (mInner.mPrefix) {
     mInner.mPrefix->ToString(aPrefix);
   } else {
-    aPrefix.Truncate();
+    SetDOMStringToNull(aPrefix);
   }
 
   return NS_OK;
@@ -175,7 +176,7 @@ nsNodeInfo::GetNamespaceURI(nsAWritableString& aNameSpaceURI)
 
     rv = nsm->GetNameSpaceURI(mInner.mNamespaceID, aNameSpaceURI);
   } else {
-    aNameSpaceURI.Truncate();
+    SetDOMStringToNull(aNameSpaceURI);
   }
 
   return rv;

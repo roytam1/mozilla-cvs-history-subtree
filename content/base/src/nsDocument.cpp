@@ -2400,7 +2400,8 @@ nsDocument::GetNodeName(nsAWritableString& aNodeName)
 NS_IMETHODIMP    
 nsDocument::GetNodeValue(nsAWritableString& aNodeValue)
 {
-  aNodeValue.Truncate();
+  SetDOMStringToNull(aNodeValue);
+
   return NS_OK;
 }
 
@@ -2518,14 +2519,16 @@ nsDocument::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 NS_IMETHODIMP
 nsDocument::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 { 
-  aNamespaceURI.Truncate();
+  SetDOMStringToNull(aNamespaceURI);
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDocument::GetPrefix(nsAWritableString& aPrefix)
 {
-  aPrefix.Truncate();
+  SetDOMStringToNull(aPrefix);
+
   return NS_OK;
 }
 
@@ -2538,7 +2541,8 @@ nsDocument::SetPrefix(const nsAReadableString& aPrefix)
 NS_IMETHODIMP
 nsDocument::GetLocalName(nsAWritableString& aLocalName)
 {
-  aLocalName.Truncate();
+  SetDOMStringToNull(aLocalName);
+
   return NS_OK;
 }
 

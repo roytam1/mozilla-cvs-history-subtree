@@ -118,6 +118,7 @@ struct nsGenericDOMDataNode {
   }
   nsresult    GetOwnerDocument(nsIDOMDocument** aOwnerDocument);
   nsresult    GetNamespaceURI(nsAWritableString& aNamespaceURI);
+  nsresult    GetLocalName(nsAWritableString& aLocalName);
   nsresult    GetPrefix(nsAWritableString& aPrefix);
   nsresult    SetPrefix(const nsAReadableString& aPrefix);
   nsresult    Normalize();
@@ -281,7 +282,7 @@ struct nsGenericDOMDataNode {
 #define NS_IMPL_NSIDOMNODE_USING_GENERIC_DOM_DATA(_g)                   \
   NS_IMETHOD GetNodeName(nsAWritableString& aNodeName);                 \
   NS_IMETHOD GetLocalName(nsAWritableString& aLocalName) {              \
-    return GetNodeName(aLocalName);                                     \
+    return _g.GetLocalName(aLocalName);                                 \
   }                                                                     \
   NS_IMETHOD GetNodeValue(nsAWritableString& aNodeValue) {              \
     return _g.GetNodeValue(aNodeValue);                                 \

@@ -205,14 +205,16 @@ nsGenericDOMDataNode::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 nsresult
 nsGenericDOMDataNode::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 {
-  aNamespaceURI.Truncate();
+  SetDOMStringToNull(aNamespaceURI);
+
   return NS_OK;
 }
 
 nsresult
 nsGenericDOMDataNode::GetPrefix(nsAWritableString& aPrefix)
 {
-  aPrefix.Truncate();
+  SetDOMStringToNull(aPrefix);
+
   return NS_OK;
 }
 
@@ -220,6 +222,14 @@ nsresult
 nsGenericDOMDataNode::SetPrefix(const nsAReadableString& aPrefix)
 {
   return NS_ERROR_DOM_NAMESPACE_ERR;
+}
+
+nsresult
+nsGenericDOMDataNode::GetLocalName(nsAWritableString& aLocalName)
+{
+  SetDOMStringToNull(aLocalName);
+
+  return NS_OK;
 }
 
 nsresult
@@ -312,14 +322,14 @@ nsGenericDOMDataNode::SetData(nsIContent *aOuterContent, const nsAReadableString
   return result;
 }
 
-nsresult    
+nsresult
 nsGenericDOMDataNode::GetLength(PRUint32* aLength)
 {
   *aLength = mText.GetLength();
   return NS_OK;
 }
 
-nsresult    
+nsresult
 nsGenericDOMDataNode::SubstringData(PRUint32 aStart,
                                     PRUint32 aCount,
                                     nsAWritableString& aReturn)

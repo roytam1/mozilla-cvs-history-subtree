@@ -3350,7 +3350,8 @@ nsXULDocument::GetNodeName(nsAWritableString& aNodeName)
 NS_IMETHODIMP
 nsXULDocument::GetNodeValue(nsAWritableString& aNodeValue)
 {
-    aNodeValue.Truncate();
+    SetDOMStringToNull(aNodeValue);
+
     return NS_OK;
 }
 
@@ -3531,36 +3532,40 @@ nsXULDocument::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 NS_IMETHODIMP
 nsXULDocument::GetNamespaceURI(nsAWritableString& aNamespaceURI)
 { 
-  aNamespaceURI.Truncate();
-  return NS_OK;
+    SetDOMStringToNull(aNamespaceURI);
+
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 nsXULDocument::GetPrefix(nsAWritableString& aPrefix)
 {
-  aPrefix.Truncate();
-  return NS_OK;
+    SetDOMStringToNull(aPrefix);
+
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 nsXULDocument::SetPrefix(const nsAReadableString& aPrefix)
 {
-  return NS_ERROR_DOM_NO_MODIFICATION_ALLOWED_ERR;
+    return NS_ERROR_DOM_NO_MODIFICATION_ALLOWED_ERR;
 }
 
 
 NS_IMETHODIMP
 nsXULDocument::GetLocalName(nsAWritableString& aLocalName)
 {
-  aLocalName.Truncate();
-  return NS_OK;
+    SetDOMStringToNull(aLocalName);
+
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
-nsXULDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild, nsIDOMNode** aReturn)
+nsXULDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
+                            nsIDOMNode** aReturn)
 {
     NS_NOTREACHED("nsXULDocument::InsertBefore");
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -3568,7 +3573,8 @@ nsXULDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild, nsIDOM
 
 
 NS_IMETHODIMP
-nsXULDocument::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
+nsXULDocument::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild,
+                            nsIDOMNode** aReturn)
 {
     NS_NOTREACHED("nsXULDocument::ReplaceChild");
     return NS_ERROR_NOT_IMPLEMENTED;
