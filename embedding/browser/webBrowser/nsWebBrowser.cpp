@@ -55,7 +55,6 @@
 #include "nsCWebBrowserPersist.h"
 #include "nsIWebBrowserPrint.h"
 #include "nsIServiceManager.h"
-#include "nsIEventSink.h"
 
 // for painting the background window
 #include "nsIRenderingContext.h"
@@ -74,6 +73,7 @@
 #if (defined(XP_MAC) || defined(XP_MACOSX)) && !defined(MOZ_WIDGET_COCOA)
 #include <MacWindows.h>
 #include "nsWidgetSupport.h"
+#include "nsIEventSink.h"
 #endif
 
 static NS_DEFINE_CID(kWebShellCID, NS_WEB_SHELL_CID);
