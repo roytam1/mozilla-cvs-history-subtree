@@ -867,7 +867,30 @@ public:
    * instead.
    */
   NS_IMETHOD IntrinsicWidthsDirty() = 0;
-                                  
+
+  /**
+   * Get the intrinsic minimum width of the frame.
+   *
+   * This is *not* affected by the CSS 'min-width', 'width', and
+   * 'max-width' properties on this frame, but it is affected by the
+   * values of those properties on this frame's descendants.
+   *
+   * Note that many frames will cache the result of this function call
+   * unless IntrinsicWidthsDirty is called.
+   */
+  NS_IMETHOD_(nscoord) GetMinWidth() = 0;
+
+  /**
+   * Get the intrinsic width of the frame.
+   *
+   * This is *not* affected by the CSS 'min-width', 'width', and
+   * 'max-width' properties on this frame, but it is affected by the
+   * values of those properties on this frame's descendants.
+   *
+   * Note that many frames will cache the result of this function call
+   * unless IntrinsicWidthsDirty is called.
+   */
+  NS_IMETHOD_(nscoord) GetPrefWidth() = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.
