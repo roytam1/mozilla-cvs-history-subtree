@@ -156,12 +156,14 @@ NS_IMETHODIMP nsInternetConfigService::HasProtocolHandler(const char *protocol, 
   
 #if defined(TARGET_CARBON) || defined(XP_MACOSX)
   // Use LaunchServices directly when we're running under OS X to avoid the problem of some protocols
-  // apparently not being reflected into the IC mappings (webcal for one)
+  // apparently not being reflected into the IC mappings (webcal for one).  Even better, it seems
+  // LaunchServices under 10.1.x will often fail to find an app when using LSGetApplicationForURL
+  // so we only use it for 10.2 or later.
   
   // Since protocol comes in with _just_ the protocol we have to add a ':' to the end of it or
   // LaunchServices will be very unhappy with the CFURLRef created from it (crashes trying to look
   // up a handler for it with LSGetApplicationForURL, at least under 10.2.1)
-  if (mRunningOSX && ((UInt32)LSGetApplicationForURL != (UInt32)kUnresolvedCFragSymbolAddress))
+  if (mRunningJaguar)
   {
     nsCAutoString scheme(protocol);
     scheme += ":";
