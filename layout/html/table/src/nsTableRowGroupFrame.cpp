@@ -394,6 +394,10 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
   nsSize    kidMaxElementSize;
   nsSize*   pKidMaxElementSize = (nsnull != aDesiredSize.maxElementSize) ? &kidMaxElementSize : nsnull;
   nsresult  rv = NS_OK;
+
+  if (!ContinueReflow(aReflowState.y, aReflowState.availSize.height))
+      return rv;
+
   nsIFrame*  kidFrame;
   if (nsnull==aStartFrame) {
     kidFrame = GetFirstFrame(aPresContext);
@@ -404,7 +408,7 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
     kidFrame = aStartFrame;
                    
   PRUint8 borderStyle = aReflowState.tableFrame->GetBorderCollapseStyle();
-  
+ 
   for ( ; nsnull != kidFrame; ) 
   {
     if (ExcludeFrameFromReflow(kidFrame)) {
@@ -438,9 +442,7 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
       kidFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)rowDisplay));
       if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == rowDisplay->mDisplay &&
           aReflowState.availSize.height != NS_UNCONSTRAINEDSIZE) {
-        kidReflowState.availableHeight = aReflowState.availSize.height - aReflowState.y;
-        if (kidReflowState.availableHeight < 0)
-          kidReflowState.availableHeight = 0;
+        kidReflowState.availableHeight = aReflowState.availSize.height;
       }
     }
 
@@ -460,11 +462,6 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
     nsRect kidRect (0, aReflowState.y, desiredSize.width, desiredSize.height);
     PlaceChild(aPresContext, aReflowState, kidFrame, kidRect, aDesiredSize.maxElementSize,
                kidMaxElementSize);
-
-    if (aReflowState.tableFrame->RowGroupsShouldBeConstrained() &&
-        aReflowState.availSize.height != NS_UNCONSTRAINEDSIZE &&
-        aReflowState.availSize.height < 0)
-        aReflowState.availSize.height = 0;
 
     /* if the table has collapsing borders, we need to reset the length of the shared vertical borders
      * for the table and the cells that overlap this row
@@ -764,7 +761,7 @@ void nsTableRowGroupFrame::CalculateRowHeights(nsIPresContext& aPresContext,
         rowGroupHeight += rowHeights[rowIndex];
         rowIndex++;
       }
-      else {
+      else if (!ExcludeFrameFromReflow(rowFrame)) {
         // Anything that isn't a row contributes to the row group's total height.
         nsSize frameSize;
         rowFrame->GetSize(frameSize);
