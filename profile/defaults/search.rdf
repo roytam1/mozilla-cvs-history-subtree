@@ -58,10 +58,5 @@
   	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:dmoz.src" />
   </RDF:Seq>
 
-  <RDF:Seq about="NC:SearchCategory?category=urn:search:category:2">
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:mozilla.src" />
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:bugzilla.src" />
-  	<RDF:li resource="NC:SearchCategory?engine=urn:search:engine:lxrmozilla.src" />
-  </RDF:Seq>
 
 </RDF:RDF>
