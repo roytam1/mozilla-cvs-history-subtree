@@ -1416,10 +1416,12 @@ MSG_RegisterConverters (void)
 									NULL, MIME_VCardConverter);
 
   /* Decoders from mimejul.c for text/calendar */
+#ifdef MOZ_CALENDAR
   NET_RegisterContentTypeConverter (TEXT_CALENDAR, FO_PRESENT,
 									NULL, MIME_JulianConverter);
   NET_RegisterContentTypeConverter (TEXT_CALENDAR, FO_PRINT,
 									NULL, MIME_JulianConverter);
+#endif
 
 
 }
