@@ -30,7 +30,7 @@ endif
 CVS_CMD		= cvs $(CVS_FLAGS)
 TARGETS		= export libs install
 LDAP_MODULE      = DirectorySDKSource
-
+NSPRPUBVER     = mozilla/nsprpub
 
 #
 # Environment variables.
@@ -44,9 +44,9 @@ CVS_BRANCH      = -r $(MOZ_BRANCH)
 endif
 
 
-ifndef MOZ_LDAPVER
-MOZ_LDAPVER = -r DIRECTORY_C_SDK_30_BRANCH
-endif
+#ifndef MOZ_LDAPVER
+#MOZ_LDAPVER = -r DIRECTORY_C_SDK_30_BRANCH
+#endif
 
 
 all: setup build
@@ -56,9 +56,11 @@ all: setup build
 setup:
 ifdef LDAP_MODULE
 	$(CVS_CMD) -q co $(MOZ_LDAPVER) $(LDAP_MODULE)
+	$(CVS_CMD) -q co $(NSPRPUBVER)
 endif
 
 build:
+	mkdir build
 	cd config; $(MAKE)
 	cd directory; $(MAKE) $(TARGETS)
 
