@@ -131,13 +131,13 @@ extern JSD_PUBLIC_API(void)
 JSD_DebuggerOff(JSDContext* jsdc);
 
 /*
-* Get the Major Version (initial JSd release used major version = 1)
+* Get the Major Version (initial JSD release used major version = 1)
 */
 extern JSD_PUBLIC_API(uintN)
 JSD_GetMajorVersion(void);
 
 /*
-* Get the Minor Version (initial JSd release used minor version = 0)
+* Get the Minor Version (initial JSD release used minor version = 0)
 */
 extern JSD_PUBLIC_API(uintN)
 JSD_GetMinorVersion(void);
@@ -170,11 +170,11 @@ JSD_JSDContextForJSContext(JSContext* context);
 /*
 * Lock the entire script subsystem. This grabs a highlevel lock that
 * protects the JSD internal information about scripts. It is important
-* wrap script related calls in this lock in multithreaded situations
+* to wrap script related calls in this lock in multithreaded situations
 * -- i.e. where the debugger is running on a different thread than the
 * interpreter -- or when multiple debugger threads may be accessing this
 * subsystem. It is safe (and best) to use this locking even if the
-* environment might not be multi-threaded. Safely Nestable.
+* environment might not be multi-threaded. Safely nestable.
 */
 extern JSD_PUBLIC_API(void)
 JSD_LockScriptSubsystem(JSDContext* jsdc);
@@ -222,7 +222,7 @@ extern JSD_PUBLIC_API(const char*)
 JSD_GetScriptFunctionName(JSDContext* jsdc, JSDScript *jsdscript);
 
 /*
-* Get the linenumber from of the sourcefile from which this script was loaded.
+* Get the base linenumber of the sourcefile from which this script was loaded.
 * This is one-based -- i.e. the first line of a file is line '1'. This may
 * return 0 if this infomation is unknown.
 */
@@ -263,8 +263,8 @@ JSD_GetScriptHook(JSDContext* jsdc, JSD_ScriptHookProc* hook, void** callerdata)
 
 /*
 * Get a 'Program Counter' value for a given line. This represents the location
-* first bit of executable code for this line of source. This 'pc' should be
-* considered an opaque handle.
+* of the first bit of executable code for this line of source. This 'pc' should 
+* be considered an opaque handle.
 * 0 is returned for invalid scripts, or lines that lie outside the script.
 * If no code is on the given line, then the returned pc represents the first
 * code within the script (if any) after the given line.
@@ -274,8 +274,8 @@ extern JSD_PUBLIC_API(jsuword)
 JSD_GetClosestPC(JSDContext* jsdc, JSDScript* jsdscript, uintN line);
 
 /*
-* Get the source line for a given 'Program COunter' loaction.
-* returns 0 if no source line information is appropriate (or available) for
+* Get the source line number for a given 'Program Counter' location.
+* Returns 0 if no source line information is appropriate (or available) for
 * the given pc.
 */
 extern JSD_PUBLIC_API(uintN)
@@ -286,9 +286,9 @@ JSD_GetClosestLine(JSDContext* jsdc, JSDScript* jsdscript, jsuword pc);
 /*
 * Direct call to notify JSD that a script has been created.
 * Embeddings that use the normal jsapi script functions need not call this.
-* Any embedding that follows the (discouraged!) practise of contructing script
+* Any embedding that follows the (discouraged!) practice of contructing script
 * structures manually should call this function to inform JSD. (older ssjs
-* system do this).
+* systems do this).
 */
 extern JSD_PUBLIC_API(void)
 JSD_ScriptCreated(JSDContext* jsdc,
@@ -310,7 +310,7 @@ JSD_ScriptDestroyed(JSDContext* jsdc,
 /* Source Text functions */
 
 /*
-* In some embeddings (e.g. mozilla) JavaScript source code from a 'file' may
+* In some embeddings (e.g. mozilla) JavaScript source code from a 'file' may be
 * execute before the entire 'file' has even been loaded. This system supports
 * access to such incrmentally loaded source. It also allows for the possibility
 * that source loading may fail or be aborted (though the source that did load
@@ -337,7 +337,7 @@ typedef enum
 
 /*
 * Lock the entire source text subsystem. This grabs a highlevel lock that
-* protects the JSD internal information about sources. It is important
+* protects the JSD internal information about sources. It is important to
 * wrap source text related calls in this lock in multithreaded situations
 * -- i.e. where the debugger is running on a different thread than the
 * interpreter (or the loader of sources) -- or when multiple debugger
