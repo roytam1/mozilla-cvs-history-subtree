@@ -22,26 +22,33 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= nkcache 
-LIBRARY_NAME	= nkcachemgr_s
+MODULE		= nkcache
+LIBRARY_NAME	= nkcache
+IS_COMPONENT	= 1
 
-REQUIRES	= nspr
+CPPSRCS		= nsNetDataCacheModule.cpp
 
-CPPSRCS		= \
-        nsCacheManager.cpp \
-        nsCachedNetData.cpp \
-        nsReplacementPolicy.cpp \
-        nsCacheEntryChannel.cpp \
+SHARED_LIBRARY_LIBS = \
+		$(DIST)/lib/libnkcachemgr_s.a \
+		$(DIST)/lib/libnkfilecache_s.a \
+		$(DIST)/lib/libnkmemcache_s.a \
+        $(DIST)/lib/libmozdbm_s.a     \
+        $(DIST)/lib/libxpcomio_s.a \
 		$(NULL)
 
-LOCAL_INCLUDES	= -I$(srcdir)/../public -I$(srcdir)/../include
+LOCAL_INCLUDES	= \
+		-I$(DEPTH)/netwerk/cache/memcache \
+		-I$(DEPTH)/netwerk/cache/filecache \
+		-I$(DEPTH)/netwerk/cache/mgr \
+		$(NULL)
 
-EXTRA_LIBS	= $(NSPR_LIBS)
-
-# we don't want the shared lib, but we want to force the creation of a
-# static lib.
-override NO_SHARED_LIB=1
-override NO_STATIC_LIB=
+EXTRA_DSO_LDOPTS = \
+		$(MKSHLIB_FORCE_ALL) \
+		$(SHARED_LIBRARY_LIBS) \
+		$(MKSHLIB_UNFORCE_ALL) \
+		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
+
+$(LIBRARY) $(SHARED_LIBRARY): $(SHARED_LIBRARY_LIBS) Makefile
 

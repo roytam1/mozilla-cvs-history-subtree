@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.0 (the "NPL"); you may not use this file except in
@@ -17,26 +18,24 @@
 
 DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
+VPATH       = @srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= nkcache 
-LIBRARY_NAME	= nkcachemgr_s
+MODULE = nkcache
 
-REQUIRES	= nspr
+LIBRARY_NAME = nkmemcache_s
+
+REQUIRES	= nspr dbm 
+
+EXPORTS=nsMemCacheCID.h
 
 CPPSRCS		= \
-        nsCacheManager.cpp \
-        nsCachedNetData.cpp \
-        nsReplacementPolicy.cpp \
-        nsCacheEntryChannel.cpp \
+        nsMemCache.cpp \
+        nsMemCacheRecord.cpp \
+        nsMemCacheChannel.cpp \
 		$(NULL)
-
-LOCAL_INCLUDES	= -I$(srcdir)/../public -I$(srcdir)/../include
-
-EXTRA_LIBS	= $(NSPR_LIBS)
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.
