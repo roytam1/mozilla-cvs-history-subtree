@@ -295,8 +295,8 @@ sub searchURL
 sub nextEntry
 {
   my $self = shift;
-  my (%entry, @ocorder);
-  my ($attr, @vals, $obj, $ldentry, $berv, $dn, $count);
+  my (%entry, @ocorder, @vals);
+  my ($attr, $lcattr, $obj, $ldentry, $berv, $dn, $count);
   my $ber = \$berv;
 
   # I use the object directly, to avoid setting the "change" flags
@@ -323,20 +323,22 @@ sub nextEntry
   $obj->{"dn"} = $dn;
   $self->{"dn"} = $dn;
 
-  $attr = lc ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
+  $attr = ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
   return (bless \%entry, Mozilla::LDAP::Entry) unless $attr;
 
+  $lcattr = lc $attr;
   @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
-  $obj->{$attr} = [@vals];
-  push(@ocorder, $attr);
+  $obj->{$lcattr} = [@vals];
+  push(@ocorder, $lcattr);
 
   $count = 1;
-  while ($attr = lc ldap_next_attribute($self->{"ld"},
-					$self->{"ldentry"}, $ber))
+  while ($attr = ldap_next_attribute($self->{"ld"},
+				     $self->{"ldentry"}, $ber))
     {
+      $lcattr = lc $attr;
       @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
-      $obj->{$attr} = [@vals];
-      push(@ocorder, $attr);
+      $obj->{$lcattr} = [@vals];
+      push(@ocorder, $lcattr);
       $count++;
     }
 
