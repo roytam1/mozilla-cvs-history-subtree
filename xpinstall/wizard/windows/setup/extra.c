@@ -5030,7 +5030,7 @@ HRESULT DecryptVariable(LPSTR szVariable, DWORD dwVariableSize)
   else if(lstrcmpi(szVariable, "JRE PATH") == 0)
   {
     /* Locate the "c:\Program Files\JavaSoft\JRE\1.3" directory */
-    GetWinReg(HKEY_LOCAL_MACHINE, "Software\\JavaSoft\\Java Plug-in\\1.3", "JavaHome", szVariable, dwVariableSize);
+    GetWinReg(HKEY_LOCAL_MACHINE, "Software\\JavaSoft\\Java Runtime Environment\\1.3", "JavaHome", szVariable, dwVariableSize);
     if(*szVariable == '\0')
       return(FALSE);
   }

@@ -56,6 +56,7 @@ void              DrawCheck(LPDRAWITEMSTRUCT lpdis, DWORD dwACFlag);
 void              InvalidateLBCheckbox(HWND hwndListBox);
 void              ProcessWindowsMessages(void);
 BOOL              CheckWizardStateCustom(DWORD dwDefault);
+void              SunJavaDependencyHack(DWORD dwIndex, BOOL bSelected, DWORD dwACFlag);
 LPSTR             GetStartInstallMessage(void);
 void              AppendStringWOAmpersand(LPSTR szInputString, DWORD dwInputStringSize, LPSTR szString);
 void              TruncateString(HWND hWnd, LPSTR szInPath, DWORD dwInPathBufSize, LPSTR szOutPath, DWORD dwOutPathBufSize);
