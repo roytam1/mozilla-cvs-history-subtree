@@ -1753,8 +1753,8 @@ nsresult nsSmtpProtocol::RequestOverrideInfo(nsISmtpServer * aSmtpServer)
     if (requiresPassword)
 		  GetPassword(getter_Copies(password));
 
-    nsCOMPtr<nsIAuthPrompt> prompter;
-    m_runningURL->GetAuthPrompt(getter_AddRefs(prompter));
+    nsCOMPtr<nsIPrompt> prompter;
+    m_runningURL->GetPrompt(getter_AddRefs(prompter));
 		rv = m_logonRedirector->Logon(userName, password, prompter, NS_STATIC_CAST(nsIMsgLogonRedirectionRequester *, this), nsMsgLogonRedirectionServiceIDs::Smtp);
 	}
 

@@ -2169,9 +2169,9 @@ nsresult nsImapIncomingServer::RequestOverrideInfo(nsIMsgWindow *aMsgWindow)
         }
       }
 
-      nsCOMPtr<nsIAuthPrompt> dialogPrompter;
+      nsCOMPtr<nsIPrompt> dialogPrompter;
       if (aMsgWindow)
-        aMsgWindow->GetAuthPromptDialog(getter_AddRefs(dialogPrompter));
+        aMsgWindow->GetPromptDialog(getter_AddRefs(dialogPrompter));
   		rv = m_logonRedirector->Logon(userName, password, dialogPrompter, logonRedirectorRequester, nsMsgLogonRedirectionServiceIDs::Imap);
       if (NS_FAILED(rv)) return OnLogonRedirectionError(nsnull, PR_TRUE);
 		}
