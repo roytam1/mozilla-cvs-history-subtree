@@ -97,8 +97,6 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
   }
 #endif
 
-
-
   nsCOMPtr<nsPIImageRequest> imgRequest;
 
   nsIURIKey key(aURI);
@@ -134,6 +132,48 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
   nsCOMPtr<nsIRunnable> run(do_QueryInterface(imgRequest));
   mThreadPool->DispatchRequest(run);
 #endif
+
+  nsCOMPtr<nsIImageRequest> ret(do_QueryInterface(proxyRequest));
+  *_retval = ret;
+  NS_ADDREF(*_retval);
+
+  return NS_OK;
+}
+
+/* nsIImageRequest loadImageWithChannel(in nsIChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx, out nsIStreamListener); */
+NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIStreamListener **listener, nsIImageRequest **_retval)
+{
+  nsCOMPtr<nsPIImageRequest> imgRequest;
+
+  nsCOMPtr<nsIURI> uri;
+  channel->GetURI(getter_AddRefs(uri));
+  nsIURIKey key(uri);
+  nsISupports *sup = mRequests.Get(&key);
+  if (sup) {
+    imgRequest = do_QueryInterface(sup);
+    NS_RELEASE(sup);
+
+    // we have this in our cache already.. cancel the current (document) load
+
+    // XXX
+    // if *listener is null when we return here, the caller should probably cancel
+    // the channel instead of us doing it here.
+    channel->Cancel(NS_BINDING_ABORTED); // this should fire an OnStopRequest
+
+    *listener = nsnull; // give them back a null nsIStreamListener
+  } else {
+    imgRequest = do_CreateInstance("@mozilla.org/image/request/real;1");
+    imgRequest->Init(channel);
+
+    mRequests.Put(&key, imgRequest);
+
+    nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
+    *listener = streamList;
+    NS_IF_ADDREF(*listener);
+  }
+
+  nsCOMPtr<nsPIImageRequestProxy> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
+  proxyRequest->Init(imgRequest, aObserver, cx); // init adds itself to imgRequest's list of observers
 
   nsCOMPtr<nsIImageRequest> ret(do_QueryInterface(proxyRequest));
   *_retval = ret;
