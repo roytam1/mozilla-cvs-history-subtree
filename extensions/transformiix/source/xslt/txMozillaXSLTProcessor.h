@@ -77,7 +77,7 @@ public:
         }
         NS_ENSURE_TRUE(mTxValue, NS_ERROR_FAILURE);
 
-        *aValue = mTxValue->clone();
+        *aValue = mTxValue;
         NS_ENSURE_TRUE(*aValue, NS_ERROR_FAILURE);
 
         return NS_OK;
