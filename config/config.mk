@@ -161,6 +161,7 @@ OS_CONFIG	:= $(OS_ARCH)$(OS_RELEASE)
 
 FINAL_LINK_LIBS = $(DEPTH)/config/final-link-libs
 FINAL_LINK_COMPS = $(DEPTH)/config/final-link-comps
+FINAL_LINK_COMP_NAMES = $(DEPTH)/config/final-link-comp-names
 
 # 
 # NSS libs needed for final link in static build

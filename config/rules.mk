@@ -522,6 +522,9 @@ ifdef EXPORT_LIBRARY
 ifdef IS_COMPONENT
 ifdef BUILD_STATIC_LIBS
 	@$(PERL) $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMPS) $(LIBRARY_NAME)
+ifdef COMPONENT_NAME
+	@$(PERL) $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMP_NAMES) $(COMPONENT_NAME)
+endif
 endif
 else
 	$(PERL) $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_LIBS) $(LIBRARY_NAME)
