@@ -35,25 +35,35 @@
 typedef const nsLocalString       nsLiteralString;
 typedef const nsLocalCString      nsLiteralCString;
 
-#ifndef nsStringTraits_h___
-#include "nsStringTraits.h"
+#if 0
+inline
+const nsLocalString
+literal_string( const PRUnichar* aPtr )
+  {
+    return nsLocalString(aPtr);
+  }
+
+inline
+const nsLocalString
+literal_string( const PRUnichar* aPtr, PRUint32 aLength )
+  {
+    return nsLocalString(aPtr, aLength);
+  }
+
+inline
+const nsLocalCString
+literal_string( const char* aPtr )
+  {
+    return nsLocalCString(aPtr);
+  }
+
+inline
+const nsLocalCString
+literal_string( const char* aPtr, PRUint32 aLength )
+  {
+    return nsLocalCString(aPtr, aLength);
+  }
 #endif
-
-template <class CharT>
-inline
-const typename nsStringTraits<CharT>::literal_string_type
-literal_string( const CharT* aPtr )
-  {
-    return nsStringTraits<CharT>::literal_string_type(aPtr);
-  }
-
-template <class CharT>
-inline
-const typename nsStringTraits<CharT>::literal_string_type
-literal_string( const CharT* aPtr, PRUint32 aLength )
-  {
-    return nsStringTraits<CharT>::literal_string_type(aPtr, aLength);
-  }
 
 #ifdef HAVE_CPP_2BYTE_WCHAR_T
   #define NS_L(s)                                 L##s
