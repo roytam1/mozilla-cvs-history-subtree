@@ -263,25 +263,6 @@
   { 0x8a, 0xfe, 0x0, 0x60, 0xb0, 0xfc, 0x4, 0xd2}}
 
 //
-// nsMessage
-//
-
-/* {44C0D336-796D-42ee-B8B7-6FA3DE372E7E} */
-#define NS_MESSAGE_CID \
-  { 0x44c0d336, 0x796d, 0x42ee, \
-   { 0xb8, 0xb7, 0x6f, 0xa3, 0xde, 0x37, 0x2e, 0x7e } }
-
-
-#define NS_MESSAGE_MAILBOX_CONTRACTID \
-  NS_RDF_RESOURCE_FACTORY_CONTRACTID_PREFIX "mailbox_message"
-
-#define NS_MESSAGE_NEWS_CONTRACTID \
-  NS_RDF_RESOURCE_FACTORY_CONTRACTID_PREFIX "news_message"
-
-#define NS_MESSAGE_IMAP_CONTRACTID \
-  NS_RDF_RESOURCE_FACTORY_CONTRACTID_PREFIX "imap_message"
-
-//
 // Print Engine...
 //
 #define NS_MSGPRINTENGINE_CONTRACTID \
