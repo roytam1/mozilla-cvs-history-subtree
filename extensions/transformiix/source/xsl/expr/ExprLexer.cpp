@@ -638,6 +638,8 @@ void ExprLexer::parse(const String& pattern) {
                 case ASTERIX:
                     matchToken(tokenBuffer, ch);
                     switch ( prevToken->type ) {
+                        case Token::PARENT_OP :
+                        case Token::ANCESTOR_OP:
                         case Token::AT_SIGN :
                         case Token::NULL_TOKEN:
                         case Token::L_PAREN:
