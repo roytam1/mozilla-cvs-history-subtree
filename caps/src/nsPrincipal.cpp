@@ -215,9 +215,8 @@ nsPrincipal::Equals(nsIPrincipal *aOther, PRBool *aResult)
       aOther->GetURI(getter_AddRefs(otherOrigin));
     }
 
-    return nsScriptSecurityManager::SecurityCompareURIs(origin,
-                                                        otherOrigin,
-                                                        aResult);
+    return nsScriptSecurityManager::GetScriptSecurityManager()
+           ->SecurityCompareURIs(origin, otherOrigin, aResult);
   }
 
   *aResult = PR_TRUE;
