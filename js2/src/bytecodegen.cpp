@@ -1992,7 +1992,7 @@ BinaryOpEquals:
             JSType *type = genExpr(i->op);
 
             ExprPairList *p = i->pairs;
-            uint32 argCount = 0;
+            int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -2003,7 +2003,7 @@ BinaryOpEquals:
             // and type value
             stretchStack(1);
             addOpAdjustDepth(NewInstanceOp, -argCount);
-            addLong(argCount);
+            addLong(toUInt32(argCount));
             return type;
         }
     case ExprNode::index:
@@ -2031,7 +2031,7 @@ BinaryOpEquals:
             ref->emitInvokeSequence(this);
 
             ExprPairList *p = i->pairs;
-            uint32 argCount = 0;
+            int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
                 argCount++;
@@ -2040,12 +2040,12 @@ BinaryOpEquals:
 
             if (ref->needsThis()) {
                 addOpAdjustDepth(InvokeOp, -(argCount + 1));
-                addLong(argCount);
+                addLong(toUInt32(argCount));
                 addByte(Explicit);
             }
             else {
                 addOpAdjustDepth(InvokeOp, -argCount);
-                addLong(argCount);
+                addLong(toUInt32(argCount));
                 addByte(NoThis);
             }
             JSType *type = ref->mType;
@@ -2194,7 +2194,7 @@ BinaryOpEquals:
             addPointer(currentClass->mSuperType->getDefaultConstructor());
 
             ExprPairList *p = i->pairs;
-            uint32 argCount = 1;
+            int32 argCount = 1;
             addOp(LoadThisOp);
             while (p) {
                 genExpr(p->value);
@@ -2203,7 +2203,7 @@ BinaryOpEquals:
             }
 
             addOpAdjustDepth(InvokeOp, -argCount);
-            addLong(argCount);
+            addLong(toUInt32(argCount));
             addByte(Explicit);
             return currentClass;
         }

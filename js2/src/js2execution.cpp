@@ -1366,7 +1366,7 @@ static JSValue numberPlus(Context *, const JSValue& /*thisValue*/, JSValue *argv
     return JSValue(r1.f64 + r2.f64);
 }
 
-static JSValue integerPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerPlus(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1417,7 +1417,7 @@ static JSValue objectPlus(Context *cx, const JSValue& /*thisValue*/, JSValue *ar
 
 
 
-static JSValue integerMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerMinus(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1440,14 +1440,14 @@ static JSValue objectMinus(Context *cx, const JSValue& /*thisValue*/, JSValue *a
 
 
 
-static JSValue integerMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerMultiply(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
     return JSValue(r1.f64 * r2.f64);
 }
 
-static JSValue objectMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue objectMultiply(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1456,7 +1456,7 @@ static JSValue objectMultiply(Context *cx, const JSValue& /*thisValue*/, JSValue
 
 
 
-static JSValue integerDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerDivide(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1476,7 +1476,7 @@ static JSValue objectDivide(Context *cx, const JSValue& /*thisValue*/, JSValue *
 
 
 
-static JSValue integerRemainder(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerRemainder(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1496,7 +1496,7 @@ static JSValue objectRemainder(Context *cx, const JSValue& /*thisValue*/, JSValu
 
 
 
-static JSValue integerShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerShiftLeft(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1512,7 +1512,7 @@ static JSValue objectShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValu
 
 
 
-static JSValue integerShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerShiftRight(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1528,7 +1528,7 @@ static JSValue objectShiftRight(Context *cx, const JSValue& /*thisValue*/, JSVal
 
 
 
-static JSValue integerUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerUShiftRight(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1544,7 +1544,7 @@ static JSValue objectUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSVa
 
 
 
-static JSValue integerBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerBitAnd(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1560,7 +1560,7 @@ static JSValue objectBitAnd(Context *cx, const JSValue& /*thisValue*/, JSValue *
 
 
 
-static JSValue integerBitXor(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerBitXor(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
@@ -1576,7 +1576,7 @@ static JSValue objectBitXor(Context *cx, const JSValue& /*thisValue*/, JSValue *
 
 
 
-static JSValue integerBitOr(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
+static JSValue integerBitOr(Context * /*cx*/, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];

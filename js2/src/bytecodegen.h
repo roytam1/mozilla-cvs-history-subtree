@@ -171,9 +171,9 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         void operator delete(void* t)   { trace_release("ByteCodeModule", t); STD::free(t); }
 #endif
 
-        uint32 getLong(int index) const             { return *((uint32 *)&mCodeBase[index]); }
-        uint16 getShort(int index) const            { return *((uint16 *)&mCodeBase[index]); }
-        int32 getOffset(int index) const            { return *((int32 *)&mCodeBase[index]); }
+        uint32 getLong(uint32 index) const          { return *((uint32 *)&mCodeBase[index]); }
+        uint16 getShort(uint32 index) const         { return *((uint16 *)&mCodeBase[index]); }
+        int32 getOffset(uint32 index) const         { return *((int32 *)&mCodeBase[index]); }
         const String *getString(uint32 index) const { return &mStringPoolContents[index]; }
         float64 getNumber(uint32 index) const       { return mNumberPoolContents[index]; }
 
@@ -321,7 +321,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
                                     { addByte(op); mStackTop = depth; ASSERT(mStackTop >= 0); }
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
-        void addShort(uint16 v)     { mBuffer->push_back(v >> 8); mBuffer->push_back(v); }
+        void addShort(uint16 v)     { mBuffer->push_back((uint8)(v >> 8)); mBuffer->push_back((uint8)(v)); }
 
         void addPointer(void *v)    { ASSERT(sizeof(void *) == sizeof(uint32)); addLong((uint32)(v)); }   // XXX Pointer size dependant !!!
         
