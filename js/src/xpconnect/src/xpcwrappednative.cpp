@@ -938,8 +938,8 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
 
         if(wrapper->HasProto())
         {
-            XPCNativeScriptableCreateInfo ci(*oldProto->GetScriptableInfo());
             oldProto = wrapper->GetProto();
+            XPCNativeScriptableCreateInfo ci(*oldProto->GetScriptableInfo());
             newProto =
                 XPCWrappedNativeProto::GetNewOrUsed(ccx, aNewScope,
                                                     oldProto->GetClassInfo(),
