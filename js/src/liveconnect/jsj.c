@@ -113,7 +113,7 @@ jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashCode() *
 
 jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
-jmethodID njJSException_JSException;    /* netscape.javascript.JSException constructor */
+jmethodID njJSException_JSException;    /* netscape.javascript.JSexception constructor */
 jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
@@ -225,53 +225,39 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_CLASS(java/lang/String,                jlString);
     LOAD_CLASS(java/lang/Void,                  jlVoid);
 
-    LOAD_METHOD(java.lang.Class, getMethods, "()[Ljava/lang/reflect/Method;",
-                jlClass);
-    LOAD_METHOD(java.lang.Class, getConstructors,
-                "()[Ljava/lang/reflect/Constructor;",jlClass);
-    LOAD_METHOD(java.lang.Class, getFields, "()[Ljava/lang/reflect/Field;", 
-                jlClass);
-    LOAD_METHOD(java.lang.Class, getName, "()Ljava/lang/String;", jlClass);
-    LOAD_METHOD(java.lang.Class, isArray, "()Z", jlClass);
-    LOAD_METHOD(java.lang.Class, getComponentType,"()Ljava/lang/Class;", 
-                jlClass);
-    LOAD_METHOD(java.lang.Class, getModifiers, "()I", jlClass);
+    LOAD_METHOD(java.lang.Class,            getMethods,         "()[Ljava/lang/reflect/Method;",jlClass);
+    LOAD_METHOD(java.lang.Class,            getConstructors,    "()[Ljava/lang/reflect/Constructor;",jlClass);
+    LOAD_METHOD(java.lang.Class,            getFields,          "()[Ljava/lang/reflect/Field;", jlClass);
+    LOAD_METHOD(java.lang.Class,            getName,            "()Ljava/lang/String;",         jlClass);
+    LOAD_METHOD(java.lang.Class,            isArray,            "()Z",                          jlClass);
+    LOAD_METHOD(java.lang.Class,            getComponentType,   "()Ljava/lang/Class;",          jlClass);
+    LOAD_METHOD(java.lang.Class,            getModifiers,       "()I",                          jlClass);
 
-    LOAD_METHOD(java.lang.reflect.Method, getName, "()Ljava/lang/String;",
-                jlrMethod);
-    LOAD_METHOD(java.lang.reflect.Method, getParameterTypes, 
-                "()[Ljava/lang/Class;", jlrMethod);
-    LOAD_METHOD(java.lang.reflect.Method, getReturnType, 
-                "()Ljava/lang/Class;", jlrMethod);
-    LOAD_METHOD(java.lang.reflect.Method, getModifiers, "()I", jlrMethod);
+    LOAD_METHOD(java.lang.reflect.Method,   getName,            "()Ljava/lang/String;",         jlrMethod);
+    LOAD_METHOD(java.lang.reflect.Method,   getParameterTypes,  "()[Ljava/lang/Class;",         jlrMethod);
+    LOAD_METHOD(java.lang.reflect.Method,   getReturnType,      "()Ljava/lang/Class;",          jlrMethod);
+    LOAD_METHOD(java.lang.reflect.Method,   getModifiers,       "()I",                          jlrMethod);
 
-    LOAD_METHOD(java.lang.reflect.Constructor, getParameterTypes, 
-                "()[Ljava/lang/Class;", jlrConstructor);
-    LOAD_METHOD(java.lang.reflect.Constructor, getModifiers, "()I", 
-                jlrConstructor);
-    LOAD_METHOD(java.lang.reflect.Field, getName, "()Ljava/lang/String;", 
-                jlrField);
-    LOAD_METHOD(java.lang.reflect.Field, getType, "()Ljava/lang/Class;", 
-                jlrField);
-    LOAD_METHOD(java.lang.reflect.Field, getModifiers, "()I", jlrField);
-
-    LOAD_METHOD(java.lang.Throwable, toString, "()Ljava/lang/String;",
-                jlThrowable);
-    LOAD_METHOD(java.lang.Throwable, getMessage, "()Ljava/lang/String;", 
-                jlThrowable);
-
-    LOAD_METHOD(java.lang.Double, doubleValue, "()D", jlDouble);
-
-    LOAD_METHOD(java.lang.Boolean, booleanValue, "()Z", 
-                jlBoolean);
+    LOAD_METHOD(java.lang.reflect.Constructor,  getParameterTypes,  "()[Ljava/lang/Class;",     jlrConstructor);
+    LOAD_METHOD(java.lang.reflect.Constructor,  getModifiers,       "()I",                      jlrConstructor);
     
-    LOAD_STATIC_METHOD(java.lang.System, identityHashCode,
-                       "(Ljava/lang/Object;)I", jlSystem);
+    LOAD_METHOD(java.lang.reflect.Field,    getName,            "()Ljava/lang/String;",         jlrField);
+    LOAD_METHOD(java.lang.reflect.Field,    getType,            "()Ljava/lang/Class;",          jlrField);
+    LOAD_METHOD(java.lang.reflect.Field,    getModifiers,       "()I",                          jlrField);
 
-    LOAD_CONSTRUCTOR(java.lang.Boolean, Boolean, "(Z)V", jlBoolean);
-    LOAD_CONSTRUCTOR(java.lang.Double, Double, "(D)V", jlDouble);
+    LOAD_METHOD(java.lang.Throwable,        toString,           "()Ljava/lang/String;",         jlThrowable);
+    LOAD_METHOD(java.lang.Throwable,        getMessage,         "()Ljava/lang/String;",         jlThrowable);
 
-    LOAD_FIELD_OBJ(java.lang.Void, TYPE, "Ljava/lang/Class;", jlVoid);
+    LOAD_METHOD(java.lang.Double,           doubleValue,        "()D",                          jlDouble);
+
+    LOAD_METHOD(java.lang.Boolean,          booleanValue,       "()Z",                          jlBoolean);
+    
+    LOAD_STATIC_METHOD(java.lang.System,    identityHashCode,   "(Ljava/lang/Object;)I",        jlSystem);
+
+    LOAD_CONSTRUCTOR(java.lang.Boolean,     Boolean,            "(Z)V",                         jlBoolean);
+    LOAD_CONSTRUCTOR(java.lang.Double,      Double,             "(D)V",                         jlDouble);
+
+    LOAD_FIELD_OBJ(java.lang.Void,          TYPE,               "Ljava/lang/Class;",            jlVoid);
   
     return JS_TRUE;
 }
@@ -300,7 +286,7 @@ static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
         "toString", "()Ljava/lang/String;", (void*)&Java_netscape_javascript_JSObject_toString,
         "getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow,
         "finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize,
-        "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals,
+        "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals
     };
     (*jEnv)->RegisterNatives(jEnv, njJSObject, nativeMethods, sizeof(nativeMethods) / sizeof(JNINativeMethod));
     if ((*jEnv)->ExceptionOccurred(jEnv)) {
@@ -317,33 +303,33 @@ static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 static JSBool
 init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 {
-    LOAD_CLASS(netscape/javascript/JSObject, njJSObject);
+    LOAD_CLASS(netscape/javascript/JSObject,    njJSObject);
     LOAD_CLASS(netscape/javascript/JSException, njJSException);
-    LOAD_CLASS(netscape/javascript/JSUtil, njJSUtil);
+    LOAD_CLASS(netscape/javascript/JSUtil,      njJSUtil);
 
 #if XP_MAC
     JSObject_RegisterNativeMethods(jEnv);
 #endif
 
-    LOAD_CONSTRUCTOR(netscape.javascript.JSObject, JSObject, "(I)V",
-                     njJSObject);
-    LOAD_CONSTRUCTOR(netscape.javascript.JSException, JSException, 
-                     "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
-                     njJSException);
-    LOAD_CONSTRUCTOR(netscape.javascript.JSException, JSException, 
-                     "(Ljava/lang/Object;)V", njJSException);
-    LOAD_FIELDID(netscape.javascript.JSObject, internal, "I", njJSObject);
-    LOAD_FIELDID(netscape.javascript.JSException, lineno, "I", njJSException);
-    LOAD_FIELDID(netscape.javascript.JSException, tokenIndex, "I", 
-                 njJSException);
-    LOAD_FIELDID(netscape.javascript.JSException, source, 
-                 "Ljava/lang/String;", njJSException);
-    LOAD_FIELDID(netscape.javascript.JSException, filename, 
-                 "Ljava/lang/String;", njJSException);
-    LOAD_FIELDID(netscape.javascript.JSException, wrappedException, 
-                 "Ljava/lang/Object;", njJSException);
-    LOAD_STATIC_METHOD(netscape.javascript.JSUtil, getStackTrace,     
-                       "(Ljava/lang/Throwable;)Ljava/lang/String;", njJSUtil);
+    LOAD_CONSTRUCTOR(netscape.javascript.JSObject,
+                                            JSObject,           "(I)V",                         njJSObject);
+    LOAD_CONSTRUCTOR(netscape.javascript.JSException,
+                                            JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
+                                                                                                njJSException);
+    LOAD_FIELDID(netscape.javascript.JSObject,  
+                                            internal,           "I",                            njJSObject);
+    LOAD_FIELDID(netscape.javascript.JSException,  
+                                            lineno,             "I",                            njJSException);
+    LOAD_FIELDID(netscape.javascript.JSException,  
+                                            tokenIndex,         "I",                            njJSException);
+    LOAD_FIELDID(netscape.javascript.JSException,  
+                                            source,             "Ljava/lang/String;",           njJSException);
+    LOAD_FIELDID(netscape.javascript.JSException,  
+                                            filename,           "Ljava/lang/String;",           njJSException);
+
+    LOAD_STATIC_METHOD(netscape.javascript.JSUtil,
+                                            getStackTrace,      "(Ljava/lang/Throwable;)Ljava/lang/String;",
+                                                                                                njJSUtil);
 
     return JS_TRUE;
 }
