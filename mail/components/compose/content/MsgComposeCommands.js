@@ -1262,6 +1262,7 @@ function ComposeStartup(recycled, aParams)
         dump("Failed to get editor element!\n");
         return;
       }
+
       document.getElementById("returnReceiptMenu").setAttribute('checked', 
                                          gMsgCompose.compFields.returnReceipt);
       document.getElementById("cmd_attachVCard").setAttribute('checked', 
@@ -1387,9 +1388,13 @@ var gMsgEditorCreationObserver =
     {
       var editor = GetCurrentEditor();
       if (editor && GetCurrentCommandManager() == aSubject)
+      {
+        var editorStyle = editor.QueryInterface(Components.interfaces.nsIEditorStyleSheets);
+        editorStyle.addStyleSheet("chrome://messenger/skin/messageQuotes.css");
         gMsgCompose.initEditor(editor, window.content);
     }
   }
+}
 }
 
 function WizCallback(state)
