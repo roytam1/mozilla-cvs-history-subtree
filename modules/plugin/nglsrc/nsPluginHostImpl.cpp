@@ -43,6 +43,12 @@
 #include "nsNetUtil.h"
 #include "nsIProgressEventSink.h"
 #include "nsIDocument.h"
+
+// Friggin' X11 has to "#define None". Lame!
+#ifdef None
+#undef None
+#endif
+
 #include "nsIRegistry.h"
 #include "nsEnumeratorUtils.h"
 
@@ -117,6 +123,8 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 static NS_DEFINE_IID(kIFileUtilitiesIID, NS_IFILEUTILITIES_IID);
 static NS_DEFINE_IID(kIOutputStreamIID, NS_IOUTPUTSTREAM_IID);
+
+static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
 
 // for the dialog
 static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
@@ -1500,8 +1508,6 @@ NS_IMETHODIMP nsPluginHostImpl::PostURL(nsISupports* pluginInst,
 
   return rv;
 }
-
-static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
 
 NS_IMETHODIMP nsPluginHostImpl::RegisterPlugin(REFNSIID aCID,
                                                const char* aPluginName,
@@ -2983,7 +2989,6 @@ nsPluginHostImpl::LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFi
   //
   // Enumerate through that list now, creating an nsPluginTag for
   // each.
-  static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
   nsCOMPtr<nsIRegistry> registry = do_CreateInstance(kRegistryCID);
   if (! registry)
     return NS_ERROR_FAILURE;
