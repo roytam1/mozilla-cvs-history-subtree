@@ -1,0 +1,4 @@
+1999-01-05  Leif Hedstrom  <leif@netscape.com>
+
+	* conn.pl (attributeEQ): Added test for modifyRDN().
+
