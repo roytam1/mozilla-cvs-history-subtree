@@ -43,18 +43,4 @@ public:
 extern nsresult
 NS_NewRDFElement(nsIRDFContent** aResult);
 
-
-
-// {A32C0BF0-82B3-11d2-B52B-000000000000}
-#define NS_IRDFCONTAINERCONTENT_IID \
-{ 0xa32c0bf0, 0x82b3, 0x11d2, { 0xb5, 0x2b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 } }
-
-class nsIRDFContainerContent : public nsIRDFContent {
-public:
-  NS_IMETHOD GetElementCount(PRUint32& rCount) = 0;
-};
-
-extern nsresult
-NS_NewRDFContainerElement(nsIRDFContainerContent** aResult);
-
 #endif // nsIRDFContent_h___
