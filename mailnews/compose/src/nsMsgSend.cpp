@@ -2182,9 +2182,9 @@ nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity                    *aUserIndenti
   /* string GetBody(); */
   PRInt32       bodyLen;
   const char    *msgBody = ((nsMsgCompFields*)fields)->GetBody();
+  char *body = nsnull;
   if (!msgBody)
   {
-    char *body = nsnull;
     url->GetSpec(&body);
     msgBody = (char *)body;
   }
@@ -2204,7 +2204,7 @@ nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity                    *aUserIndenti
 						  nsnull,  // const struct nsMsgAttachedFile    *preloaded_attachments,
 						  nsnull, // void                              *relatedPart,
               aListenerArray);  
-  nsCRT::free(msgBody);
+  nsCRT::free(body);
   return rv;
 }
 
