@@ -49,7 +49,11 @@
 #include <OpenTptInternet.h>
 #elif defined (XP_WIN)
 #include <windows.h>
+#if !defined(WINCE)
 #include <Winsock2.h>
+#else
+#include <winsock.h>
+#endif
 #endif
 #include "nsCOMPtr.h"
 #include "nsIIDNService.h"
@@ -57,8 +61,17 @@
 #include "prcvar.h"
 #include "pldhash.h"
 
-#ifdef DEBUG
+#if defined(DEBUG) && !defined(WINCE)
 #define DNS_TIMING 1
+#endif
+
+#if defined(XP_WIN) && !defined(WINCE)
+/*
+ * Most flavors of Win32 use the async dns support provide by WinSock.
+ * Unfortuanately, the WinSock provided with WinCE does *not* support async
+ * dns...  So, WinCE uses the same DNS strategy as unix platforms...
+*/
+#define DNS_USE_ASYNC_WINSOCK 1
 #endif
 
 class nsIDNSListener;
@@ -141,7 +154,7 @@ public:
 private:
 #endif /* XP_MAC */
 
-#if defined(XP_WIN)
+#if defined(DNS_USE_ASYNC_WINSOCK) && !defined(WINCE)
     friend static
     LRESULT CALLBACK        nsDNSEventProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 public:
@@ -154,7 +167,7 @@ private:
 	LRESULT                 ProcessLookup( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
  
     PRUint32                mMsgIDBitVector[4];
-#endif /* XP_WIN */
+#endif /* DNS_USE_ASYNC_WINSOCK */
 
 
 #ifdef DNS_TIMING
