@@ -174,11 +174,12 @@ txDriver::parse(istream& aInputStream, const nsAString& aUri)
     const int bufferSize = 1024;
     char buf[bufferSize];
     PRBool done;
+    int success;
     do {
         aInputStream.read(buf, bufferSize);
         done = aInputStream.eof();
-
-        if (!XML_Parse(mExpatParser, buf, aInputStream.gcount(), done)) {
+        success = XML_Parse(mExpatParser, buf, aInputStream.gcount(), done);
+        if (!success) {
             createErrorString();
             done = MB_TRUE;
         }
@@ -188,6 +189,9 @@ txDriver::parse(istream& aInputStream, const nsAString& aUri)
     // clean up
     XML_ParserFree(mExpatParser);
     mCompiler->doneLoading();
+    if (!success) {
+        return NS_ERROR_FAILURE;
+    }
     return NS_OK;
 }
 

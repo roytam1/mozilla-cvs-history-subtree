@@ -76,6 +76,8 @@ public:
     }
     int runTransform ()
     {
+        if (!mXML || !mStylesheet || !mOut)
+            return 1;
         nsresult rv = transform(mXML, mStylesheet, *mOut, mObserver);
         return NS_FAILED(rv);
     }
