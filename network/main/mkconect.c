@@ -526,7 +526,7 @@ net_dns_lookup(MWContext *windowID,
     TIMING_MSG(("netlib: net_dns_lookup: begin PR_GetHostByName: host=\"%s\"", host));
 	status = PR_GetHostByName(host, dbbuf, PR_NETDB_BUF_SIZE, hpbuf);
     TIMING_MSG(("netlib: net_dns_lookup: end PR_GetHostByName: host=\"%s\" result=%s",
-                 host, (rv == PR_SUCCESS) ? "success" : "failure"));
+                 host, (status == PR_SUCCESS) ? "success" : "failure"));
 
 
 	if(status == PR_SUCCESS) {
