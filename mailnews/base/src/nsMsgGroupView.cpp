@@ -372,6 +372,8 @@ nsresult nsMsgGroupView::OnNewHeader(nsIMsgDBHdr *newHdr, nsMsgKey aParentKey, P
       else
         m_flags[threadIndex] |= MSG_VIEW_FLAG_HASCHILDREN | MSG_VIEW_FLAG_ISTHREAD;
 
+      PRInt32 numRowsToInvalidate = 1;
+
       if (! (m_flags[threadIndex] & MSG_FLAG_ELIDED))
       {
         PRUint32 msgIndexInThread = thread->m_keys.IndexOf(msgKey);
@@ -413,8 +415,10 @@ nsresult nsMsgGroupView::OnNewHeader(nsIMsgDBHdr *newHdr, nsMsgKey aParentKey, P
         // as NoteChange() will call RowCountChanged() which will call our GetRowCount()
         NoteChange((newThread && GroupViewUsesDummyRow()) ? threadIndex + msgIndexInThread - 1 : threadIndex + msgIndexInThread,
                       numRowsInserted, nsMsgViewNotificationCode::insertOrDelete);
+
+        numRowsToInvalidate = msgIndexInThread;
       }
-      NoteChange(threadIndex, 1, nsMsgViewNotificationCode::changed);
+      NoteChange(threadIndex, numRowsToInvalidate, nsMsgViewNotificationCode::changed);
     }
   }
   // if thread is expanded, we need to add hdr to view...
