@@ -3,7 +3,7 @@ Name: %{name}
 Vendor: Sun Microsystems, Inc.
 Version: %{version}
 Release: %{release}
-Copyright: MPL/GPL
+Copyright: Copyright 2004 Sun Microsystems, Inc.  All rights reserved.  Use is subject to license terms.  Also under other license(s) as shown at the Description field.
 Distribution: Sun Java(TM) Enterprise System
 URL: http://www.sun.com
 Group: System Environment/Base
@@ -20,6 +20,8 @@ memory management (malloc and free) and shared library linking.
 
 See: http://www.mozilla.org/projects/nspr/about-nspr.html
 
+Under "MPL/GPL" license.
+
 %package devel
 Summary: Development Libraries for the Netscape Portable Runtime
 Group: Development/Libraries
@@ -27,6 +29,8 @@ Requires: %{name} = %{version}-%{release}
 
 %description devel
 Header files for doing development with the Netscape Portable Runtime.
+
+Under "MPL/GPL" license.
 
 %prep
 %setup -c
