@@ -536,8 +536,6 @@ ParseAltern(CompilerState *state)
 	return NULL;
     flags = 0;
     cp = state->cp;
-//    /* (balance: */
-//    while ((c = *cp) != 0 && c != '|' && c != ')') {
     /* (balance: */
     while ((cp < state->cpend) && (c = *cp) != '|' && c != ')') {
 	ren2 = ParseItem(state);
