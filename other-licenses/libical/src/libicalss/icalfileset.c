@@ -375,6 +375,8 @@ icalerrorenum icalfileset_commit(icalfileset* cluster)
     if(ftruncate(impl->fd,write_size) < 0){
 	return ICAL_FILE_ERROR;
     }
+#else
+    chsize( impl->fd, tell( impl->fd ) );
 #endif
     
     return ICAL_NO_ERROR;
