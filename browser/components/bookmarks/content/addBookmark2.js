@@ -102,7 +102,6 @@ var WSucks;
 
 function Startup()
 {
-  sizeToContent(); //XXXpch buggy imo, we shouldn't need it
   initServices();
   initBMService();
   gName = document.getElementById("name");
@@ -126,6 +125,7 @@ function Startup()
     if (gKeywordRequired)
       gRequiredFields.push(gKeyword);
   }
+  sizeToContent();
   onFieldInput();
   gSelectedFolder = RDF.GetResource(gMenulist.selectedItem.id);
   gExpander.setAttribute("tooltiptext", gExpander.getAttribute("tooltiptextdown"));
