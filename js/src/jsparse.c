@@ -1672,13 +1672,13 @@ LookupArgOrVar(JSContext *cx, JSAtom *atom, JSTreeContext *tc,
 
     obj = js_FindVariableScope(cx, &fun);
     clasp = OBJ_GET_CLASS(cx, obj);
+    *opp = JSOP_NAME;
     if (clasp != &js_FunctionClass && clasp != &js_CallClass)
 	return JS_TRUE;
     if (InWithStatement(tc))
 	return JS_TRUE;
     if (!js_LookupProperty(cx, obj, (jsid)atom, &pobj, (JSProperty **)&sprop))
 	return JS_FALSE;
-    *opp = JSOP_NAME;
     *slotp = -1;
     if (sprop) {
 	if (sprop->getter == js_GetArgument) {
