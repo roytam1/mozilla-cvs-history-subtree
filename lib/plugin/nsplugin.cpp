@@ -27,7 +27,7 @@
 #include "npglue.h" 
 
 #ifdef OJI
-#include "nsplugin.h"
+#include "nsIPlug.h"
 #include "jvmmgr.h" 
 #endif
 #include "plstr.h" /* PL_strcasecmp */
