@@ -187,7 +187,7 @@ public:
                           PRInt32 aAttrCount);
     nsresult endElement();
     nsresult characters(const nsAString& aStr);
-    nsresult doneLoading(); // XXX do we want to merge this with cancel?
+    nsresult doneLoading();
 
     void cancel(nsresult aError);
 
@@ -209,6 +209,7 @@ private:
 
     nsAutoRefCnt mRefCnt;
     nsString mCharacters;
+    nsresult mStatus;
 };
 
 class txInScopeVariable {

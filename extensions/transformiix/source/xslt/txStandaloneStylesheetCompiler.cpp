@@ -215,6 +215,7 @@ txDriver::StartElement(const XML_Char *aName, const XML_Char **aAtts)
                                 NS_STATIC_CAST(const PRUnichar**, aAtts),
                                 attcount/2);
     if (NS_FAILED(rv)) {
+        mCompiler->cancel(rv);
         return XML_ERROR_SYNTAX;
     }
     return XML_ERROR_NONE;
@@ -225,6 +226,7 @@ txDriver::EndElement(const XML_Char* aName)
 {
     nsresult rv = mCompiler->endElement();
     if (NS_FAILED(rv)) {
+        mCompiler->cancel(rv);
         return XML_ERROR_SYNTAX;
     }
     return XML_ERROR_NONE;
@@ -235,7 +237,10 @@ txDriver::CharacterData(const XML_Char* aChars, int aLength)
 {
     const PRUnichar* pChars = NS_STATIC_CAST(const PRUnichar*, aChars);
     // ignore rv, as this expat handler returns void
-    mCompiler->characters(Substring(pChars, pChars + aLength));
+    nsresult rv = mCompiler->characters(Substring(pChars, pChars + aLength));
+    if (NS_FAILED(rv)) {
+        mCompiler->cancel(rv);
+    }
 }
 
 int

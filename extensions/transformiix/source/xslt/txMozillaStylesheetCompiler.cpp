@@ -99,13 +99,25 @@ txStylesheetSink::HandleStartElement(const PRUnichar *aName,
                                      PRUint32 aIndex,
                                      PRUint32 aLineNumber)
 {
-    return mCompiler->startElement(aName, aAtts, aAttsCount);
+    nsresult rv = mCompiler->startElement(aName, aAtts, aAttsCount);
+    if (NS_FAILED(rv)) {
+        mCompiler->cancel(rv);
+        return rv;
+    }
+    
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 txStylesheetSink::HandleEndElement(const PRUnichar *aName)
 {
-    return mCompiler->endElement();
+    nsresult rv = mCompiler->endElement();
+    if (NS_FAILED(rv)) {
+        mCompiler->cancel(rv);
+        return rv;
+    }
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -118,7 +130,7 @@ NS_IMETHODIMP
 txStylesheetSink::HandleCDataSection(const PRUnichar *aData,
                                      PRUint32 aLength)
 {
-    return mCompiler->characters(Substring(aData, aData + aLength));
+    return HandleCharacterData(aData, aLength);
 }
 
 NS_IMETHODIMP
@@ -135,7 +147,13 @@ NS_IMETHODIMP
 txStylesheetSink::HandleCharacterData(const PRUnichar *aData,
                                       PRUint32 aLength)
 {
-    return mCompiler->characters(Substring(aData, aData + aLength));
+    nsresult rv = mCompiler->characters(Substring(aData, aData + aLength));
+    if (NS_FAILED(rv)) {
+        mCompiler->cancel(rv);
+        return rv;
+    }
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -156,7 +174,7 @@ NS_IMETHODIMP
 txStylesheetSink::ReportError(const PRUnichar *aErrorText,
                               const PRUnichar *aSourceText)
 {
-    //mCompiler->cancel(NS_ERROR_FAILURE);
+    mCompiler->cancel(NS_ERROR_FAILURE);
     return NS_OK;
 }
 
@@ -328,6 +346,7 @@ TX_LoadSheet(nsIURI* aUri, txMozillaXSLTProcessor* aProcessor,
 static nsresult
 handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
 {
+    nsresult rv = NS_OK;
     PRUint16 nodetype;
     aNode->GetNodeType(&nodetype);
     switch (nodetype) {
@@ -349,7 +368,8 @@ handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
             nsAutoArrayPtr<txStylesheetAttr> atts;
             if (attsCount > 0) {
                 atts = new txStylesheetAttr[attsCount];
-                //NS_ENSURE_TRUE(atts, NS_ERROR_OUT_OF_MEMORY);
+                NS_ENSURE_TRUE(atts, NS_ERROR_OUT_OF_MEMORY);
+
                 PRInt32 counter;
                 for (counter = 0; counter < attsCount; ++counter) {
                     txStylesheetAttr& att = atts[counter];
@@ -360,8 +380,9 @@ handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
                 }
             }
 
-            aCompiler->startElement(namespaceID, localname, prefix, atts,
-                                    attsCount);
+            rv = aCompiler->startElement(namespaceID, localname, prefix, atts,
+                                         attsCount);
+            NS_ENSURE_SUCCESS(rv, rv);
 
             // explicitly destroy the attrs here since we no longer need it
             atts = nsnull;
@@ -373,11 +394,14 @@ handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
                 nsCOMPtr<nsIContent> child;
                 while (NS_SUCCEEDED(element->ChildAt(counter++, *getter_AddRefs(child))) && child) {
                     nsCOMPtr<nsIDOMNode> childNode = do_QueryInterface(child);
-                    handleNode(childNode, aCompiler);
+                    rv = handleNode(childNode, aCompiler);
+                    NS_ENSURE_SUCCESS(rv, rv);
                 }
             }
 
-            aCompiler->endElement();
+            rv = aCompiler->endElement();
+            NS_ENSURE_SUCCESS(rv, rv);
+
             break;
         }
         case nsIDOMNode::CDATA_SECTION_NODE:
@@ -385,7 +409,9 @@ handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
         {
             nsAutoString chars;
             aNode->GetNodeValue(chars);
-            aCompiler->characters(chars);
+            rv = aCompiler->characters(chars);
+            NS_ENSURE_SUCCESS(rv, rv);
+
             break;
         }
         case nsIDOMNode::DOCUMENT_NODE:
@@ -398,7 +424,8 @@ handleNode(nsIDOMNode* aNode, txStylesheetCompiler* aCompiler)
                 nsCOMPtr<nsIContent> child;
                 while (NS_SUCCEEDED(document->ChildAt(counter++, *getter_AddRefs(child))) && child) {
                     nsCOMPtr<nsIDOMNode> childNode = do_QueryInterface(child);
-                    handleNode(childNode, aCompiler);
+                    rv = handleNode(childNode, aCompiler);
+                    NS_ENSURE_SUCCESS(rv, rv);
                 }
             }
             break;
@@ -492,7 +519,11 @@ txSyncCompileObserver::loadURI(const nsAString& aUri,
                                     getter_AddRefs(document));
     NS_ENSURE_SUCCESS(rv, rv);
     rv = handleNode(document, aCompiler);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(rv)) {
+        aCompiler->cancel(rv);
+        return rv;
+    }
+
     rv = aCompiler->doneLoading();
     return rv;
 }
@@ -520,7 +551,10 @@ TX_CompileStylesheet(nsIDOMNode* aNode, txStylesheet** aStylesheet)
     NS_ENSURE_TRUE(compiler, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = handleNode(document, compiler);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(rv)) {
+        compiler->cancel(rv);
+        return rv;
+    }
 
     rv = compiler->doneLoading();
     NS_ENSURE_SUCCESS(rv, rv);

@@ -54,7 +54,7 @@ txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
                                            txACompileObserver* aObserver)
     : txStylesheetCompilerState(aObserver)
 {
-    init(aBaseURI, nsnull, nsnull);
+    mStatus = init(aBaseURI, nsnull, nsnull);
 }
 
 txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
@@ -63,7 +63,7 @@ txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
                                            txACompileObserver* aObserver)
     : txStylesheetCompilerState(aObserver)
 {
-    init(aBaseURI, aStylesheet, aInsertPosition);
+    mStatus = init(aBaseURI, aStylesheet, aInsertPosition);
 }
 
 nsrefcnt
@@ -89,6 +89,10 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
                                    txStylesheetAttr* aAttributes,
                                    PRInt32 aAttrCount)
 {
+    if (NS_FAILED(mStatus)) {
+        return mStatus;
+    }
+
     nsresult rv = flushCharacters();
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -128,6 +132,10 @@ txStylesheetCompiler::startElement(const PRUnichar *aName,
                                    const PRUnichar **aAttrs,
                                    PRInt32 aAttrCount)
 {
+    if (NS_FAILED(mStatus)) {
+        return mStatus;
+    }
+
     nsresult rv = flushCharacters();
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -331,6 +339,10 @@ txStylesheetCompiler::startElementInternal(PRInt32 aNamespaceID,
 nsresult
 txStylesheetCompiler::endElement()
 {
+    if (NS_FAILED(mStatus)) {
+        return mStatus;
+    }
+
     nsresult rv = flushCharacters();
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -365,6 +377,10 @@ txStylesheetCompiler::endElement()
 nsresult
 txStylesheetCompiler::characters(const nsAString& aStr)
 {
+    if (NS_FAILED(mStatus)) {
+        return mStatus;
+    }
+
     mCharacters.Append(aStr);
 
     return NS_OK;
@@ -373,9 +389,28 @@ txStylesheetCompiler::characters(const nsAString& aStr)
 nsresult
 txStylesheetCompiler::doneLoading()
 {
+    if (NS_FAILED(mStatus)) {
+        return mStatus;
+    }
+
     mDoneWithThisStylesheet = PR_TRUE;
 
     return maybeDoneCompiling();
+}
+
+void
+txStylesheetCompiler::cancel(nsresult aError)
+{
+    if (NS_SUCCEEDED(mStatus)) {
+        mStatus = aError;
+    }
+
+    if (mObserver) {
+        mObserver->onDoneCompiling(this, mStatus);
+        // This will ensure that we don't call onDoneCompiling twice. Also
+        // ensures that we don't keep the observer alive longer then necessary.
+        mObserver = nsnull;
+    }
 }
 
 txStylesheet*
@@ -395,6 +430,11 @@ void
 txStylesheetCompiler::onDoneCompiling(txStylesheetCompiler* aCompiler,
                                       nsresult aResult)
 {
+    if (NS_FAILED(aResult)) {
+        cancel(aResult);
+        return;
+    }
+
     mChildCompilerList.RemoveElement(aCompiler);
 
     maybeDoneCompiling();
@@ -452,11 +492,17 @@ txStylesheetCompiler::maybeDoneCompiling()
     
     if (mIsTopCompiler) {
         nsresult rv = mStylesheet->doneCompiling();
-        NS_ENSURE_SUCCESS(rv, rv);
+        if (NS_FAILED(rv)) {
+            cancel(rv);
+            return rv;
+        }
     }
     
     if (mObserver) {
-        mObserver->onDoneCompiling(this, NS_OK);
+        mObserver->onDoneCompiling(this, mStatus);
+        // This will ensure that we don't call onDoneCompiling twice. Also
+        // ensures that we don't keep the observer alive longer then necessary.
+        mObserver = nsnull;
     }
 
     return NS_OK;
@@ -691,7 +737,11 @@ txStylesheetCompilerState::loadIncludedStylesheet(const nsAString& aURI)
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    mObserver->loadURI(aURI, compiler);
+    rv = mObserver->loadURI(aURI, compiler);
+    if (NS_FAILED(rv)) {
+        mChildCompilerList.RemoveElement(compiler);
+        return rv;
+    }
 
     return NS_OK;
 }
@@ -715,7 +765,11 @@ txStylesheetCompilerState::loadImportedStylesheet(const nsAString& aURI,
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    mObserver->loadURI(aURI, compiler);
+    nsresult rv = mObserver->loadURI(aURI, compiler);
+    if (NS_FAILED(rv)) {
+        mChildCompilerList.RemoveElement(compiler);
+        return rv;
+    }
 
     return NS_OK;  
 }

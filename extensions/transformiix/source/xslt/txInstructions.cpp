@@ -546,6 +546,8 @@ txLoopNodeSet::execute(txExecutionState& aEs)
 
     context->next();
     aEs.gotoInstruction(mTarget);
+    
+    return NS_OK;
 }
 
 txLREAttribute::txLREAttribute(PRInt32 aNamespaceID, nsIAtom* aLocalName,
