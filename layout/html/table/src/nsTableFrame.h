@@ -41,6 +41,7 @@ class nsTableColGroupFrame;
 class nsTableBorderCollapser;
 class nsITableLayoutStrategy;
 class nsHTMLValue;
+class nsIDrawable;
 
 struct InnerTableReflowState;
 struct nsStylePosition;
@@ -104,10 +105,6 @@ public:
                   nsIFrame*        aParent,
                   nsIStyleContext* aContext,
                   nsIFrame*        aPrevInFlow);
-
-
-  static nscoord RoundToPixel(nscoord aValue,
-                              float   aPixelToTwips);
 
   NS_IMETHOD IsPercentageBase(PRBool& aBase) const;
 
@@ -186,7 +183,7 @@ public:
 
   /** @see nsIFrame::Paint */
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 

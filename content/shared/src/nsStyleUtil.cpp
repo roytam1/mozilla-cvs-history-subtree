@@ -280,23 +280,18 @@ static nscoord NewCalcFontPointSize(PRInt32 aHTMLSize, PRInt32 aBasePointSize,
     case eFontSize_CSS:  column = sCSSColumns;  break;
   }
 
-  float t2p;
-  aPresContext->GetTwipsToPixels(&t2p);
-  PRInt32 fontSize = NSTwipsToIntPixels(aBasePointSize, t2p);
+  PRInt32 fontSize = aBasePointSize;
 
   if ((fontSize >= sFontSizeTableMin) && (fontSize <= sFontSizeTableMax))
   {
-    float p2t;
-    aPresContext->GetPixelsToTwips(&p2t);
-
     PRInt32 row = fontSize - sFontSizeTableMin;
 
 		nsCompatibility mode;
 	  aPresContext->GetCompatibilityMode(&mode);
 	  if (mode == eCompatibility_NavQuirks) {
-	    dFontSize = NSIntPixelsToTwips(sQuirksFontSizeTable[row][column[aHTMLSize]], p2t);
+	    dFontSize = sQuirksFontSizeTable[row][column[aHTMLSize]];
 	  } else {
-	    dFontSize = NSIntPixelsToTwips(sStrictFontSizeTable[row][column[aHTMLSize]], p2t);
+	    dFontSize = sStrictFontSizeTable[row][column[aHTMLSize]];
 	  }
   }
   else
@@ -344,7 +339,7 @@ PRInt32 nsStyleUtil::FindNextSmallerFontSize(nscoord aFontSize, PRInt32 aBasePoi
   PRInt32 index;
   PRInt32 indexMin;
   PRInt32 indexMax;
-  PRInt32 fontSize = NSTwipsToFloorIntPoints(aFontSize);
+  PRInt32 fontSize = aFontSize; // XXX pav convert aFontSize to _points_
 
 	if (aFontSizeType == eFontSize_HTML) {
 		indexMin = 1;
@@ -354,10 +349,11 @@ PRInt32 nsStyleUtil::FindNextSmallerFontSize(nscoord aFontSize, PRInt32 aBasePoi
 		indexMax = 6;
 	}
 
-  if (NSTwipsToFloorIntPoints(CalcFontPointSize(indexMin, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType)) < fontSize) {
-    if (fontSize <= NSTwipsToFloorIntPoints(CalcFontPointSize(indexMax, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType))) { // in HTML table
+  // XXX pav CalcFontPointSize() needs to be converted to points!... or is it since there are no twips?
+  if (CalcFontPointSize(indexMin, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType) < fontSize) {
+    if (fontSize <= CalcFontPointSize(indexMax, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType)) { // in HTML table
       for (index = indexMax; index > indexMin; index--)
-        if (fontSize > NSTwipsToFloorIntPoints(CalcFontPointSize(index, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType)))
+        if (fontSize > CalcFontPointSize(index, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType))
           break;
     }
     else {  // larger than HTML table
@@ -391,7 +387,7 @@ PRInt32 nsStyleUtil::FindNextLargerFontSize(nscoord aFontSize, PRInt32 aBasePoin
   PRInt32 index;
   PRInt32 indexMin;
   PRInt32 indexMax;
-  PRInt32 fontSize = NSTwipsToFloorIntPoints(aFontSize);
+  PRInt32 fontSize = aFontSize; // XXX pav convert to points!
 
 	if (aFontSizeType == eFontSize_HTML) {
 		indexMin = 1;
@@ -400,11 +396,11 @@ PRInt32 nsStyleUtil::FindNextLargerFontSize(nscoord aFontSize, PRInt32 aBasePoin
 		indexMin = 0;
 		indexMax = 6;
 	}
-
-  if (NSTwipsToFloorIntPoints(CalcFontPointSize(indexMin, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType)) <= fontSize) {
-    if (fontSize < NSTwipsToFloorIntPoints(CalcFontPointSize(indexMax, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType))) { // in HTML table
+  // XXX pav
+  if (CalcFontPointSize(indexMin, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType) <= fontSize) {
+    if (fontSize < CalcFontPointSize(indexMax, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType)) { // in HTML table
       for (index = indexMin; index < indexMax; index++)
-        if (fontSize < NSTwipsToFloorIntPoints(CalcFontPointSize(index, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType)))
+        if (fontSize < CalcFontPointSize(index, aBasePointSize, aScalingFactor, aPresContext, aFontSizeType))
           break;
     }
     else {  // larger than HTML table
@@ -617,7 +613,8 @@ PRBool nsStyleUtil::IsSimpleXlink(nsIContent *aContent, nsIPresContext *aPresCon
 #include "nsIDeviceContext.h"
 PRInt32 RoundSize(nscoord aVal, nsIPresContext* aPresContext, bool aWinRounding)
 {
-
+  // XXX pav
+#if 0
 	PRInt32 lfHeight;
 	nsIDeviceContext* dc;
 	aPresContext->GetDeviceContext(&dc);
@@ -646,6 +643,9 @@ PRInt32 RoundSize(nscoord aVal, nsIPresContext* aPresContext, bool aWinRounding)
 	}
 	else
 		return NSToIntRound(aVal*app2dev);
+#else
+  return 0;
+#endif
 }
 #endif
 

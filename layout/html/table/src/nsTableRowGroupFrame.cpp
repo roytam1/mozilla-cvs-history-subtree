@@ -24,7 +24,7 @@
 #include "nsTableRowFrame.h"
 #include "nsTableFrame.h"
 #include "nsTableCellFrame.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
@@ -32,7 +32,6 @@
 #include "nsIView.h"
 #include "nsIReflowCommand.h"
 #include "nsHTMLIIDs.h"
-#include "nsIDeviceContext.h"
 #include "nsHTMLAtoms.h"
 #include "nsIStyleSet.h"
 #include "nsIPresShell.h"
@@ -187,7 +186,7 @@ nsTableRowGroupFrame::InitRepeatedFrame(nsIPresContext*       aPresContext,
 }
 
 NS_METHOD nsTableRowGroupFrame::Paint(nsIPresContext*      aPresContext,
-                                      nsIRenderingContext& aRenderingContext,
+                                      nsIDrawable*         aDrawable,
                                       const nsRect&        aDirtyRect,
                                       nsFramePaintLayer    aWhichLayer)
 {
@@ -209,7 +208,7 @@ NS_METHOD nsTableRowGroupFrame::Paint(nsIPresContext*      aPresContext,
           return rv;
         }
         nsRect rect(0,0,mRect.width, mRect.height);
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *color, *spacing, 0, 0);
       }
     }
@@ -218,12 +217,12 @@ NS_METHOD nsTableRowGroupFrame::Paint(nsIPresContext*      aPresContext,
 #ifdef DEBUG
   // for debug...
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    aRenderingContext.SetColor(NS_RGB(0,255,0));
-    aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
+    aDrawable->SetForegroundColor(NS_RGB(0,255,0));
+    aDrawable->DrawRectangle(0, 0, mRect.width, mRect.height);
   }
 #endif
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   return NS_OK;
   /*nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);*/
 
@@ -248,7 +247,7 @@ nsTableRowGroupFrame::GetSkipSides() const
   * we don't want to clip our children, so a cell can do a rowspan
   */
 void nsTableRowGroupFrame::PaintChildren(nsIPresContext*      aPresContext,
-                                         nsIRenderingContext& aRenderingContext,
+                                         nsIDrawable*         aDrawable,
                                          const nsRect&        aDirtyRect,
                                          nsFramePaintLayer    aWhichLayer)
 {
@@ -265,17 +264,19 @@ void nsTableRowGroupFrame::PaintChildren(nsIPresContext*      aPresContext,
       // Translate damage area into kid's coordinate system
       nsRect kidDamageArea(damageArea.x - kidRect.x, damageArea.y - kidRect.y,
                            damageArea.width, damageArea.height);
-      aRenderingContext.PushState();
-      aRenderingContext.Translate(kidRect.x, kidRect.y);
-      kid->Paint(aPresContext, aRenderingContext, kidDamageArea, aWhichLayer);
+
+      // XXX pav
+      //      aRenderingContext.PushState();
+      //      aRenderingContext.Translate(kidRect.x, kidRect.y);
+      kid->Paint(aPresContext, aDrawable, kidDamageArea, aWhichLayer);
 #ifdef DEBUG
       if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) &&
           GetShowFrameBorders()) {
-        aRenderingContext.SetColor(NS_RGB(255,0,0));
-        aRenderingContext.DrawRect(0, 0, kidRect.width, kidRect.height);
+        aDrawable->SetForegroundColor(NS_RGB(255,0,0));
+        aDrawable->DrawRectangle(0, 0, kidRect.width, kidRect.height);
       }
 #endif
-      aRenderingContext.PopState(clipState);
+      //      aRenderingContext.PopState(clipState);
     }
     GetNextFrame(kid, &kid);
   }
@@ -558,7 +559,7 @@ AllocateSpecialHeight(nsIPresContext* aPresContext,
         nsSize cellDesSize = ((nsTableCellFrame*)cellFrame)->GetDesiredSize();
         ((nsTableRowFrame*)aRowFrame)->CalculateCellActualSize(cellFrame, cellDesSize.width, 
                                                                cellDesSize.height, cellDesSize.width);
-        PRInt32 propHeight = NSToCoordRound((float)cellDesSize.height / (float)rowSpan);
+        PRInt32 propHeight = (float)cellDesSize.height / (float)rowSpan;
         // special rows store the largest negative value 
         aHeight = PR_MIN(aHeight, -propHeight); 
       }
@@ -742,7 +743,7 @@ void nsTableRowGroupFrame::CalculateRowHeights(nsIPresContext*          aPresCon
                       // the remainder
                       excessForRow = (rowX == rowIndex) 
                                      ? excessAvail  
-                                     : NSToCoordRound(((float)(excessBasis)) * percent);
+                                     : ((float)(excessBasis)) * percent;
                       // update the row height
                       rowHeights[rowX] += excessForRow;
                       excessAvail -= excessForRow;
@@ -1107,14 +1108,13 @@ nsTableRowGroupFrame::Reflow(nsIPresContext*          aPresContext,
         if ((NS_STYLE_OVERFLOW_SCROLL == display->mOverflow) ||
             (NS_STYLE_OVERFLOW_AUTO   == display->mOverflow)) {
           float sbWidth, sbHeight;
-          nsCOMPtr<nsIDeviceContext> dc;
-          aPresContext->GetDeviceContext(getter_AddRefs(dc));
 
-          dc->GetScrollBarDimensions(sbWidth, sbHeight);
-          aDesiredSize.maxElementSize->width += NSToCoordRound(sbWidth);
+          // XXX pav
+          //          dc->GetScrollBarDimensions(sbWidth, sbHeight);
+          aDesiredSize.maxElementSize->width += sbWidth;
           // If scrollbars are always visible then add in the hor sb height 
           if (NS_STYLE_OVERFLOW_SCROLL == display->mOverflow) {
-            aDesiredSize.maxElementSize->height += NSToCoordRound(sbHeight);
+            aDesiredSize.maxElementSize->height += sbHeight;
           }
         }
       }

@@ -24,7 +24,7 @@
 #define nsROCSSPrimitiveValue_h___
 
 #include "nsIDOMCSSPrimitiveValue.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsUnitConversion.h"
 #include "nsIScriptObjectOwner.h"
 
@@ -49,7 +49,7 @@ public:
   NS_IMETHOD SetScriptObject(void* aScriptObject);
 
   // nsROCSSPrimitiveValue
-  nsROCSSPrimitiveValue(nsISupports *aOwner, float aP2T);
+  nsROCSSPrimitiveValue(nsISupports *aOwner);
   virtual ~nsROCSSPrimitiveValue();
 
   void SetTwips(nscoord aValue)
@@ -76,8 +76,6 @@ private:
   nsString mString;
 
   nsISupports *mOwner;
-
-  float mT2P;
 
   void* mScriptObject;
 };

@@ -111,7 +111,7 @@ public:
   NS_NewTableCellFrame(nsIPresShell* aPresShell, nsIFrame** aResult);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 

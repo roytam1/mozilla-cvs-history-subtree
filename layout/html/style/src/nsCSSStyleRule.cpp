@@ -32,7 +32,6 @@
 #include "nsIMutableStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsIDocument.h"
-#include "nsIDeviceContext.h"
 #include "nsIArena.h"
 #include "nsIAtom.h"
 #include "nsCRT.h"
@@ -50,7 +49,8 @@
 #include "nsIScriptObjectOwner.h"
 #include "nsDOMCSSDeclaration.h"
 #include "nsINameSpaceManager.h"
-#include "nsILookAndFeel.h"
+#include "nsIServiceManager.h"
+#include "nsISystemLook.h"
 
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
@@ -1382,7 +1382,7 @@ nscoord CalcLength(const nsCSSValue& aValue,
       NS_ASSERTION(nsnull != fm, "can't get font metrics");
       nscoord xHeight;
       if (nsnull != fm) {
-        fm->GetXHeight(xHeight);
+        fm->GetXHeight(&xHeight);
         NS_RELEASE(fm);
       }
       else {
@@ -1396,9 +1396,7 @@ nscoord CalcLength(const nsCSSValue& aValue,
       return NSToCoordRound(aValue.GetFloatValue() * (float)capHeight);
     }
     case eCSSUnit_Pixel:
-      float p2t;
-      aPresContext->GetScaledPixelsToTwips(&p2t);
-      return NSFloatPixelsToTwips(aValue.GetFloatValue(), p2t);
+      return aValue.GetFloatValue();
 
     default:
       break;
@@ -1511,13 +1509,13 @@ static PRBool SetColor(const nsCSSValue& aValue, const nscolor aParentColor,
     }
   }
   else if (eCSSUnit_Integer == unit) {
-    nsILookAndFeel* look = nsnull;
-    if (NS_SUCCEEDED(aPresContext->GetLookAndFeel(&look)) && look) {
-      nsILookAndFeel::nsColorID colorID = (nsILookAndFeel::nsColorID)aValue.GetIntValue();
-      if (NS_SUCCEEDED(look->GetColor(colorID, aResult))) {
+    nsCOMPtr<nsISystemLook> look(do_GetService("@mozilla.org/gfx/systemlook;2"));
+    if (look) {
+      // XXX pav -- is this really safe?  how do you know that the value matches with the order of the colors in nsISystemLook ???
+      PRInt32 colorID = aValue.GetIntValue();
+      if (NS_SUCCEEDED(look->GetColor(colorID, &aResult))) {
         result = PR_TRUE;
       }
-      NS_RELEASE(look);
     }
   }
   else if (eCSSUnit_Inherit == unit) {
@@ -1595,55 +1593,55 @@ MapDeclarationFontInto(nsICSSDeclaration* aDeclaration,
 
         // font-family: string list, enum, inherit
         if (eCSSUnit_String == ourFont->mFamily.GetUnit()) {
-          nsCOMPtr<nsIDeviceContext> dc;
-          aPresContext->GetDeviceContext(getter_AddRefs(dc));
-          if (dc) {
-            nsAutoString  familyList;
+          nsAutoString  familyList;
 
-            ourFont->mFamily.GetStringValue(familyList);
+          ourFont->mFamily.GetStringValue(familyList);
 
-            font->mFont.name = familyList;
-            nsAutoString  face;
+          font->mFont.name = familyList;
+          nsAutoString  face;
 
-            // MJA: bug 31816
-            // if we are not using document fonts, but this is a xul document,
-            // then we set the chromeOverride bit so we use the document fonts anyway
-            PRBool chromeOverride = PR_FALSE;
-            PRBool useDocumentFonts = PR_TRUE;
-            aPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts,useDocumentFonts);
-            if (!useDocumentFonts) {
-              // check if the prefs have been disabled for this shell
-              // - if prefs are disabled then we use the document fonts anyway (yet another override)
-              PRBool prefsEnabled = PR_TRUE;
-              nsCOMPtr<nsIPresShell> shell;
-              aPresContext->GetShell(getter_AddRefs(shell));
-              if (shell) {
-                shell->ArePrefStyleRulesEnabled(prefsEnabled);
-              }
-              if (!prefsEnabled) {
-                useDocumentFonts = PR_TRUE;
-              } else {
-                // see if we are in the chrome, if so, use the document fonts (override the useDocFonts setting)
-                nsresult result = NS_OK;
-                nsCOMPtr<nsISupports> container;
-                result = aPresContext->GetContainer(getter_AddRefs(container));
-                if (NS_SUCCEEDED(result) && container) {
-                  nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
-                  if (NS_SUCCEEDED(result) && docShell){
-                    PRInt32 docShellType;
-                    result = docShell->GetItemType(&docShellType);
-                    if (NS_SUCCEEDED(result)){
-                      if (nsIDocShellTreeItem::typeChrome == docShellType){
-                        chromeOverride = PR_TRUE;
-                      }
-                    }      
-                  }
+          // MJA: bug 31816
+          // if we are not using document fonts, but this is a xul document,
+          // then we set the chromeOverride bit so we use the document fonts anyway
+          PRBool chromeOverride = PR_FALSE;
+          PRBool useDocumentFonts = PR_TRUE;
+          aPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts,useDocumentFonts);
+          if (!useDocumentFonts) {
+            // check if the prefs have been disabled for this shell
+            // - if prefs are disabled then we use the document fonts anyway (yet another override)
+            PRBool prefsEnabled = PR_TRUE;
+            nsCOMPtr<nsIPresShell> shell;
+            aPresContext->GetShell(getter_AddRefs(shell));
+            if (shell) {
+              shell->ArePrefStyleRulesEnabled(prefsEnabled);
+            }
+            if (!prefsEnabled) {
+              useDocumentFonts = PR_TRUE;
+            } else {
+              // see if we are in the chrome, if so, use the document fonts (override the useDocFonts setting)
+              nsresult result = NS_OK;
+              nsCOMPtr<nsISupports> container;
+              result = aPresContext->GetContainer(getter_AddRefs(container));
+              if (NS_SUCCEEDED(result) && container) {
+                nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
+                if (NS_SUCCEEDED(result) && docShell){
+                  PRInt32 docShellType;
+                  result = docShell->GetItemType(&docShellType);
+                  if (NS_SUCCEEDED(result)){
+                    if (nsIDocShellTreeItem::typeChrome == docShellType){
+                      chromeOverride = PR_TRUE;
+                    }
+                  }      
                 }
               }
             }
 
             // find the correct font if we are usingDocumentFonts OR we are overriding for XUL
             // MJA: bug 31816
+
+
+            // XXX pav -- devicecontext font stuff
+#if 0
             if ((chromeOverride || useDocumentFonts)  && 
                 (NS_OK == dc->FirstExistingFont(font->mFont, face))) {
               if (face.EqualsIgnoreCase("-moz-fixed")) {
@@ -1653,59 +1651,62 @@ MapDeclarationFontInto(nsICSSDeclaration* aDeclaration,
 								font->mFlags &= ~NS_STYLE_FONT_USE_FIXED;
 							}
             }
-            else {
+            else
+#else
+            {
               font->mFont.name = defaultFont.name;
               font->mFixedFont.name = defaultFixedFont.name;
+#endif
             }
             font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
           }
         }
         else if (eCSSUnit_Enumerated == ourFont->mFamily.GetUnit()) {
-        	nsSystemAttrID sysID;
+        	PRInt32 sysID;
           switch (ourFont->mFamily.GetIntValue()) {
-            case NS_STYLE_FONT_CAPTION:       sysID = eSystemAttr_Font_Caption;       break;    // css2
-            case NS_STYLE_FONT_ICON:          sysID = eSystemAttr_Font_Icon;          break;
-            case NS_STYLE_FONT_MENU:          sysID = eSystemAttr_Font_Menu;          break;
-            case NS_STYLE_FONT_MESSAGE_BOX:   sysID = eSystemAttr_Font_MessageBox;    break;
-            case NS_STYLE_FONT_SMALL_CAPTION: sysID = eSystemAttr_Font_SmallCaption;  break;
-            case NS_STYLE_FONT_STATUS_BAR:    sysID = eSystemAttr_Font_StatusBar;     break;
-            case NS_STYLE_FONT_WINDOW:        sysID = eSystemAttr_Font_Window;        break;    // css3
-            case NS_STYLE_FONT_DOCUMENT:      sysID = eSystemAttr_Font_Document;      break;
-            case NS_STYLE_FONT_WORKSPACE:     sysID = eSystemAttr_Font_Workspace;     break;
-            case NS_STYLE_FONT_DESKTOP:       sysID = eSystemAttr_Font_Desktop;       break;
-            case NS_STYLE_FONT_INFO:          sysID = eSystemAttr_Font_Info;          break;
-            case NS_STYLE_FONT_DIALOG:        sysID = eSystemAttr_Font_Dialog;        break;
-            case NS_STYLE_FONT_BUTTON:        sysID = eSystemAttr_Font_Button;        break;
-            case NS_STYLE_FONT_PULL_DOWN_MENU:sysID = eSystemAttr_Font_PullDownMenu;  break;
-            case NS_STYLE_FONT_LIST:          sysID = eSystemAttr_Font_List;          break;
-            case NS_STYLE_FONT_FIELD:         sysID = eSystemAttr_Font_Field;         break;
+            case NS_STYLE_FONT_CAPTION:       sysID = nsISystemLook::font_Caption;       break;    // css2
+            case NS_STYLE_FONT_ICON:          sysID = nsISystemLook::font_Icon;          break;
+            case NS_STYLE_FONT_MENU:          sysID = nsISystemLook::font_Menu;          break;
+            case NS_STYLE_FONT_MESSAGE_BOX:   sysID = nsISystemLook::font_MessageBox;    break;
+            case NS_STYLE_FONT_SMALL_CAPTION: sysID = nsISystemLook::font_SmallCaption;  break;
+            case NS_STYLE_FONT_STATUS_BAR:    sysID = nsISystemLook::font_StatusBar;     break;
+            case NS_STYLE_FONT_WINDOW:        sysID = nsISystemLook::font_Window;        break;    // css3
+            case NS_STYLE_FONT_DOCUMENT:      sysID = nsISystemLook::font_Document;      break;
+            case NS_STYLE_FONT_WORKSPACE:     sysID = nsISystemLook::font_Workspace;     break;
+            case NS_STYLE_FONT_DESKTOP:       sysID = nsISystemLook::font_Desktop;       break;
+            case NS_STYLE_FONT_INFO:          sysID = nsISystemLook::font_Info;          break;
+            case NS_STYLE_FONT_DIALOG:        sysID = nsISystemLook::font_Dialog;        break;
+            case NS_STYLE_FONT_BUTTON:        sysID = nsISystemLook::font_Button;        break;
+            case NS_STYLE_FONT_PULL_DOWN_MENU:sysID = nsISystemLook::font_PullDownMenu;  break;
+            case NS_STYLE_FONT_LIST:          sysID = nsISystemLook::font_List;          break;
+            case NS_STYLE_FONT_FIELD:         sysID = nsISystemLook::font_Field;         break;
           }
 
           nsCompatibility mode;
           aPresContext->GetCompatibilityMode(&mode);
-				  nsCOMPtr<nsIDeviceContext> dc;
-          aPresContext->GetDeviceContext(getter_AddRefs(dc));
-          if (dc) {
-          	SystemAttrStruct sysInfo;
-          	sysInfo.mFont = &font->mFont;
-          	font->mFont.size = defaultFont.size; // GetSystemAttribute sets the font face but not necessarily the size
-          	if (NS_FAILED(dc->GetSystemAttribute(sysID, &sysInfo))) {
-              font->mFont.name = defaultFont.name;
-              font->mFixedFont.name = defaultFixedFont.name;
-          	}
-            font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
+          font->mFont.size = defaultFont.size; // GetSystemAttribute sets the font face but not necessarily the size
+          nsCOMPtr<nsISystemLook> look(do_GetService("@mozilla.org/gfx/systemlook;2"));
+          nsFont *sysFont;
+          look->GetFont(sysID, &sysFont);
+          // XXX pav
+          if (sysFont) {
+            font->mFont = *sysFont;
+          } else {
+            font->mFont.name = defaultFont.name;
+            font->mFixedFont.name = defaultFixedFont.name;
           }
+          font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
 
           // NavQuirks uses sans-serif instead of whatever the native font is
           if (eCompatibility_NavQuirks == mode) {
 #ifdef XP_MAC
             switch (sysID) {
-              case eSystemAttr_Font_Field:
-              case eSystemAttr_Font_List:
+              case nsISystemLook::font_Field:
+              case nsISystemLook::font_List:
                 font->mFont.name.AssignWithConversion("monospace");
                 font->mFont.size = defaultFixedFont.size;
                 break;
-              case eSystemAttr_Font_Button:
+              case nsISystemLook::font_Button:
                 font->mFont.name.AssignWithConversion("serif");
                 font->mFont.size = defaultFont.size;
                 break;
@@ -1714,26 +1715,26 @@ MapDeclarationFontInto(nsICSSDeclaration* aDeclaration,
 
 #ifdef XP_PC
             switch (sysID) {
-              case eSystemAttr_Font_Field:
+              case nsISystemLook::font_Field:
                 font->mFont.name.AssignWithConversion("monospace");
                 font->mFont.size = defaultFixedFont.size;
                 break;
-              case eSystemAttr_Font_Button:
-              case eSystemAttr_Font_List:
+              case nsISystemLook::font_Button:
+              case nsISystemLook::font_List:
                 font->mFont.name.AssignWithConversion("sans-serif");
-                font->mFont.size = PR_MAX(defaultFont.size - NSIntPointsToTwips(2), 0);
+                font->mFont.size = PR_MAX(defaultFont.size - 2, 0);
                 break;
             }
 #endif
 
 #ifdef XP_UNIX
             switch (sysID) {
-              case eSystemAttr_Font_Field:
+              case nsISystemLook::font_Field:
                 font->mFont.name.AssignWithConversion("monospace");
                 font->mFont.size = defaultFixedFont.size;
                 break;
-              case eSystemAttr_Font_Button:
-              case eSystemAttr_Font_List:
+              case nsISystemLook::font_Button:
+              case nsISystemLook::font_List:
                 font->mFont.name.AssignWithConversion("serif");
                 font->mFont.size = defaultFont.size;
                 break;

@@ -25,7 +25,7 @@
 
 #include "nscore.h"
 #include "BasicTableLayoutStrategy.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 
 class nsVoidArray;
 class nsTableFrame;
@@ -98,8 +98,7 @@ protected:
     */
   virtual PRBool AssignNonPctColumnWidths(nsIPresContext*          aPresContext,
                                           nscoord                  aComputedWidth,
-                                          const nsHTMLReflowState& aReflowState,
-                                          float                    aPixelToTwips);
+                                          const nsHTMLReflowState& aReflowState);
 
 
 };

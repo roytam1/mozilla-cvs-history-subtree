@@ -20,7 +20,7 @@
  * Contributor(s): 
  */
 #include "nsTableRowFrame.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
@@ -509,7 +509,7 @@ PRBool IsFirstRow(nsIPresContext*  aPresContext,
 
 
 NS_METHOD nsTableRowFrame::Paint(nsIPresContext* aPresContext,
-                                 nsIRenderingContext& aRenderingContext,
+                                 nsIDrawable* aDrawable,
                                  const nsRect& aDirtyRect,
                                  nsFramePaintLayer aWhichLayer)
 {
@@ -534,7 +534,7 @@ NS_METHOD nsTableRowFrame::Paint(nsIPresContext* aPresContext,
         // every row is short by the ending cell spacing X
         nsRect rect(0, 0, mRect.width + cellSpacingX, mRect.height);
 
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *color, *spacing, 0, 0);
       }
     }
@@ -543,12 +543,12 @@ NS_METHOD nsTableRowFrame::Paint(nsIPresContext* aPresContext,
 #ifdef DEBUG
   // for debug...
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    aRenderingContext.SetColor(NS_RGB(0,255,0));
-    aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
+    aDrawable->SetForegroundColor(NS_RGB(0,255,0));
+    aDrawable->DrawRectangle(0, 0, mRect.width, mRect.height);
   }
 #endif
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   return NS_OK;
 
 }
@@ -570,7 +570,7 @@ nsTableRowFrame::GetSkipSides() const
   * we don't want to clip our children, so a cell can do a rowspan
   */
 void nsTableRowFrame::PaintChildren(nsIPresContext*      aPresContext,
-                                    nsIRenderingContext& aRenderingContext,
+                                    nsIDrawable*         aDrawable,
                                     const nsRect&        aDirtyRect,
                                     nsFramePaintLayer aWhichLayer)
 {
@@ -590,18 +590,20 @@ void nsTableRowFrame::PaintChildren(nsIPresContext*      aPresContext,
         nsRect kidDamageArea(damageArea.x - kidRect.x,
                              damageArea.y - kidRect.y,
                              damageArea.width, damageArea.height);
-        aRenderingContext.PushState();
-        aRenderingContext.Translate(kidRect.x, kidRect.y);
-        kid->Paint(aPresContext, aRenderingContext, kidDamageArea,
+
+        // XXX pav
+        //        aRenderingContext.PushState();
+        //        aRenderingContext.Translate(kidRect.x, kidRect.y);
+        kid->Paint(aPresContext, aDrawable, kidDamageArea,
                    aWhichLayer);
 #ifdef DEBUG
         if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) &&
             GetShowFrameBorders()) {
-          aRenderingContext.SetColor(NS_RGB(255,0,0));
-          aRenderingContext.DrawRect(0, 0, kidRect.width, kidRect.height);
+          aDrawable->SetForegroundColor(NS_RGB(255,0,0));
+          aDrawable->DrawRectangle(0, 0, kidRect.width, kidRect.height);
         }
 #endif
-        aRenderingContext.PopState(clipState);
+        //        aRenderingContext.PopState(clipState);
       }
     }
     kid->GetNextSibling(&kid);
@@ -764,7 +766,7 @@ nsTableRowFrame::CalculateCellActualSize(nsIFrame* aCellFrame,
         nscoord basis = table->GetPercentBasisForRows();
         if (basis > 0) {
           float percent = position->mHeight.GetPercentValue();
-          specifiedHeight = NSToCoordRound(percent * ((float)basis));
+          specifiedHeight = percent * (float)basis;
         }
       }
       break;

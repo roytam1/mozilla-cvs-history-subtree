@@ -28,7 +28,7 @@
 #include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsCSSRendering.h"
 #include "nsIContent.h"
 #include "nsIHTMLContent.h"
@@ -49,7 +49,8 @@
 
 //TABLECELL SELECTION
 #include "nsIFrameSelection.h"
-#include "nsILookAndFeel.h"
+#include "nsISystemLook.h"
+#include "nsIServiceManager.h"
 
 static NS_DEFINE_IID(kIHTMLTableCellElementIID, NS_IHTMLTABLECELLELEMENT_IID);
 static NS_DEFINE_IID(kIDOMHTMLTableCellElementIID, NS_IDOMHTMLTABLECELLELEMENT_IID);
@@ -241,7 +242,7 @@ void nsTableCellFrame::SetBorderEdgeLength(PRUint8 aSide,
 
 
 NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
-                                  nsIRenderingContext& aRenderingContext,
+                                  nsIDrawable* aDrawable,
                                   const nsRect& aDirtyRect,
                                   nsFramePaintLayer aWhichLayer)
 {
@@ -284,10 +285,9 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
               }
               else
               {
-  	            nsILookAndFeel* look = nsnull;
-	              if (NS_SUCCEEDED(aPresContext->GetLookAndFeel(&look)) && look) {
-	                look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, ((nsStyleColor *)myColor)->mBackgroundColor);//VERY BAD CAST..TEMPORARY
-	                NS_RELEASE(look);
+                nsCOMPtr<nsISystemLook> look(do_GetService("@mozilla.org/gfx/systemlook;2"));
+	              if (look) {
+	                look->GetColor(nsISystemLook::color_TextSelectBackground, &((nsStyleColor *)myColor)->mBackgroundColor);//VERY BAD CAST..TEMPORARY
 	              }
               }
             }
@@ -307,7 +307,7 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
 
       // only non empty cells render their background
       if (PR_FALSE == GetContentEmpty()) {
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *myColor, *mySpacing, 0, 0);
       }
     
@@ -329,12 +329,12 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
           tableFrame->GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)tableStyle)); 
           if (NS_STYLE_BORDER_SEPARATE == tableFrame->GetBorderCollapseStyle())
           {
-            nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+            nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *mySpacing, mStyleContext, skipSides);
           }
           else
           {
-            nsCSSRendering::PaintBorderEdges(aPresContext, aRenderingContext, this,
+            nsCSSRendering::PaintBorderEdges(aPresContext, aDrawable, this,
                                              aDirtyRect, rect, mBorderEdges, mStyleContext, skipSides);
           }
         }
@@ -345,8 +345,8 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
 #ifdef DEBUG
   // for debug...
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    aRenderingContext.SetColor(NS_RGB(0, 0, 128));
-    aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
+    aDrawable->SetForegroundColor(NS_RGB(0, 0, 128));
+    aDrawable->DrawRectangle(0, 0, mRect.width, mRect.height);
   }
 #endif
 
@@ -357,14 +357,15 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
   nsPoint offset;
   GetCollapseOffset(aPresContext, offset);
   if ((0 != offset.x) || (0 != offset.y)) {
-    aRenderingContext.PushState();
-    aRenderingContext.Translate(offset.x, offset.y);
-    aRenderingContext.SetClipRect(nsRect(-offset.x, -offset.y, mRect.width, mRect.height),
-                                nsClipCombine_kIntersect, clipState);
+    // XXX pav
+    //    aDrawable->PushState();
+    //    aDrawable->Translate(offset.x, offset.y);
+    //    aDrawable->SetClipRect(nsRect(-offset.x, -offset.y, mRect.width, mRect.height),
+    //                                nsClipCombine_kIntersect, clipState);
   }
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   if ((0 != offset.x) || (0 != offset.y)) {
-    aRenderingContext.PopState(clipState);
+    //    aRenderingContext.PopState(clipState);
   }
   
   return NS_OK;
@@ -834,29 +835,26 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
   GetStyleData(eStyleStruct_Position, ((const nsStyleStruct *&)pos));
 
   // calculate the min cell width
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t); 
-  nscoord smallestMinWidth = onePixel;
+  nscoord smallestMinWidth = 1;
   if (eCompatibility_NavQuirks == compatMode) {
     if ((pos->mWidth.GetUnit() != eStyleUnit_Coord)   &&
         (pos->mWidth.GetUnit() != eStyleUnit_Percent)) {
       if (PR_TRUE == GetContentEmpty()) {
         if (border.left > 0) 
-          smallestMinWidth += onePixel;
+          smallestMinWidth += 1;
         if (border.right > 0) 
-          smallestMinWidth += onePixel;
+          smallestMinWidth += 1;
       }
     }
   }
   PRInt32 colspan = tableFrame->GetEffectiveColSpan(*this);
   if (colspan > 1) {
-    smallestMinWidth = PR_MAX(smallestMinWidth, colspan * onePixel);
+    smallestMinWidth = PR_MAX(smallestMinWidth, colspan);
     nscoord spacingX = tableFrame->GetCellSpacingX();
     nscoord spacingExtra = spacingX * (colspan - 1);
     smallestMinWidth += spacingExtra;
     if (aReflowState.mComputedPadding.left > 0) {
-      smallestMinWidth -= onePixel;
+      smallestMinWidth -= 1;
     }
   }
  
@@ -869,7 +867,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
         (pos->mHeight.GetUnit() != eStyleUnit_Percent)) {
       // Standard mode should probably be 0 pixels high instead of 1
       PRInt32 pixHeight = (eCompatibility_Standard == compatMode) ? 1 : 2;
-      kidSize.height = NSIntPixelsToTwips(pixHeight, p2t);
+      kidSize.height = pixHeight;
       if ((nsnull != aDesiredSize.maxElementSize) && (0 == pMaxElementSize->height))
         pMaxElementSize->height = kidSize.height;
     }
@@ -1005,14 +1003,11 @@ void nsTableCellFrame::MapBorderPadding(nsIPresContext* aPresContext)
   tableFrame->GetStyleData(eStyleStruct_Spacing,(const nsStyleStruct *&)tableSpacingStyle);
   nsStyleSpacing* spacingData = (nsStyleSpacing*)mStyleContext->GetMutableStyleData(eStyleStruct_Spacing);
 
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
-
   // Get the table's cellpadding or use 2 pixels as the default if it is not set.
   // This assumes that ua.css does not set padding for the cell.
   nscoord defaultPadding = tableFrame->GetCellPadding();
   if (-1 == defaultPadding) { // not set in table
-    defaultPadding = NSIntPixelsToTwips(1, p2t);
+    defaultPadding = 1;
   }
 
   // if the padding is not already set, set it to the table's cellpadding

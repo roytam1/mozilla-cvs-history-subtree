@@ -24,7 +24,7 @@
 #include "nsVoidArray.h"
 #include "nsTableFrame.h"
 #include "nsTableBorderCollapser.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIContent.h"
@@ -50,7 +50,6 @@
 #include "nsHTMLIIDs.h"
 #include "nsIReflowCommand.h"
 #include "nsLayoutAtoms.h"
-#include "nsIDeviceContext.h"
 #include "nsIStyleSet.h"
 #include "nsIPresShell.h"
 #include "nsIDOMElement.h"
@@ -266,26 +265,6 @@ nsTableFrame::Destroy(nsIPresContext* aPresContext)
 {
   mColGroups.DestroyFrames(aPresContext);
   return nsHTMLContainerFrame::Destroy(aPresContext);
-}
-
-nscoord 
-nsTableFrame::RoundToPixel(nscoord aValue,
-                           float   aPixelToTwips)
-{
-  nscoord halfPixel = NSToCoordRound(aPixelToTwips / 2.0f);
-  nscoord fullPixel = NSToCoordRound(aPixelToTwips);
-  PRInt32 excess = aValue % fullPixel;
-  if (0 == excess) {
-    return aValue;
-  }
-  else {
-    if (excess > halfPixel) {
-      return aValue + (fullPixel - excess);
-    }
-    else {
-      return aValue - excess;
-    }
-  }
 }
 
 // Helper function. It marks the table frame as dirty and generates
@@ -1310,7 +1289,7 @@ nsTableFrame::GetAdditionalChildListName(PRInt32   aIndex,
 
 /* SEC: TODO: adjust the rect for captions */
 NS_METHOD nsTableFrame::Paint(nsIPresContext* aPresContext,
-                              nsIRenderingContext& aRenderingContext,
+                              nsIDrawable *aDrawable,
                               const nsRect& aDirtyRect,
                               nsFramePaintLayer aWhichLayer)
 {
@@ -1329,20 +1308,20 @@ NS_METHOD nsTableFrame::Paint(nsIPresContext* aPresContext,
       nsCompatibility mode;
       aPresContext->GetCompatibilityMode(&mode);
       if (eCompatibility_NavQuirks != mode) {
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *color, *spacing, 0, 0);
       }
       // paint the column groups and columns
       nsIFrame* colGroupFrame = mColGroups.FirstChild();
       while (nsnull != colGroupFrame) {
-        PaintChild(aPresContext, aRenderingContext, aDirtyRect, colGroupFrame, aWhichLayer);
+        PaintChild(aPresContext, aDrawable, aDirtyRect, colGroupFrame, aWhichLayer);
         colGroupFrame->GetNextSibling(&colGroupFrame);
       }
 
       PRIntn skipSides = GetSkipSides();
       if (NS_STYLE_BORDER_SEPARATE == GetBorderCollapseStyle())
       {
-        nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                     aDirtyRect, rect, *spacing, mStyleContext, skipSides);
       }
       else
@@ -1352,7 +1331,7 @@ NS_METHOD nsTableFrame::Paint(nsIPresContext* aPresContext,
         if (mBorderCollapser) {
           edges = mBorderCollapser->GetEdges();
         }
-        nsCSSRendering::PaintBorderEdges(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBorderEdges(aPresContext, aDrawable, this,
                                          aDirtyRect, rect,  edges, mStyleContext, skipSides);
       }
     }
@@ -1361,12 +1340,12 @@ NS_METHOD nsTableFrame::Paint(nsIPresContext* aPresContext,
 #ifdef DEBUG
   // for debug...
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    aRenderingContext.SetColor(NS_RGB(0,255,0));
-    aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
+    aDrawable->SetForegroundColor(NS_RGB(0,255,0));
+    aDrawable->DrawRectangle(0, 0, mRect.width, mRect.height);
   }
 #endif
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   return NS_OK;
   /*nsFrame::Paint(aPresContext,
                         aRenderingContext,
@@ -3514,7 +3493,7 @@ void nsTableFrame::DistributeSpaceToRows(nsIPresContext*   aPresContext,
       nsRect rowRect;
       rowFrame->GetRect(rowRect);
       float percent = ((float)(rowRect.height)) / (float)aSumOfRowHeights;
-      nscoord excessForRow = NSToCoordRound((float)aExcess * percent);
+      nscoord excessForRow = (float)aExcess * percent;
 
       if (rowGroupFrame->RowsDesireExcessSpace()) {
         nsRect newRowRect(rowRect.x, y, rowRect.width, excessForRow + rowRect.height);
@@ -3894,7 +3873,7 @@ CalcPercentPadding(nscoord      aBasis,
 {
   float percent = (NS_UNCONSTRAINEDSIZE == aBasis)
                   ? 0 : aStyleCoord.GetPercentValue();
-  return NSToCoordRound(((float)aBasis) * percent);
+  return (float)aBasis * percent;
 }
 
 void 

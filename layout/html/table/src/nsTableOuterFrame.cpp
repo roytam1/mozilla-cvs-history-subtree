@@ -26,7 +26,7 @@
 #include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsCSSRendering.h"
 #include "nsIContent.h"
 #include "nsVoidArray.h"
@@ -313,15 +313,15 @@ nsTableOuterFrame::RemoveFrame(nsIPresContext* aPresContext,
 }
 
 NS_METHOD nsTableOuterFrame::Paint(nsIPresContext*      aPresContext,
-                                   nsIRenderingContext& aRenderingContext,
+                                   nsIDrawable*         aDrawable,
                                    const nsRect&        aDirtyRect,
                                    nsFramePaintLayer    aWhichLayer)
 {
 #ifdef DEBUG
   // for debug...
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
-    aRenderingContext.SetColor(NS_RGB(255,0,0));
-    aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
+    aDrawable->SetForegroundColor(NS_RGB(255,0,0));
+    aDrawable->DrawRectangle(0, 0, mRect.width, mRect.height);
   }
 #endif
 
@@ -338,22 +338,24 @@ NS_METHOD nsTableOuterFrame::Paint(nsIPresContext*      aPresContext,
   // If overflow is hidden then set the clip rect so that children
   // don't leak out of us
   if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
-    aRenderingContext.PushState();
-    aRenderingContext.SetClipRect(nsRect(0, 0, mRect.width, mRect.height),
-                                  nsClipCombine_kIntersect, clipState);
+    //    aRenderingContext.PushState();
+    // XXX pav
+    //    aDrawable->SetClipRect(nsRect(0, 0, mRect.width, mRect.height),
+    //                                  nsClipCombine_kIntersect, clipState);
   }
 
   if (mCaptionFrame) {
-    PaintChild(aPresContext, aRenderingContext, aDirtyRect, mCaptionFrame, aWhichLayer);
+    PaintChild(aPresContext, aDrawable, aDirtyRect, mCaptionFrame, aWhichLayer);
   }
   nsIFrame* kid = mFrames.FirstChild();
   while (nsnull != kid) {
-    PaintChild(aPresContext, aRenderingContext, aDirtyRect, kid, aWhichLayer);
+    PaintChild(aPresContext, aDrawable, aDirtyRect, kid, aWhichLayer);
     kid->GetNextSibling(&kid);
   }
 
   if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
-    aRenderingContext.PopState(clipState);
+    // XXX pav
+    //    aRenderingContext.PopState(clipState);
   }
   
   return NS_OK;

@@ -25,7 +25,7 @@
 
 #include "nscore.h"
 #include "nsITableLayoutStrategy.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 
 class nsVoidArray;
 class nsTableFrame;
@@ -103,8 +103,7 @@ protected:
     */
   virtual PRBool AssignNonPctColumnWidths(nsIPresContext*          aPresContext,
                                           nscoord                  aComputedWidth,
-                                          const nsHTMLReflowState& aReflowState,
-                                          float                    aPixelToTwips);
+                                          const nsHTMLReflowState& aReflowState);
 
   /** 
     * Calculate the adjusted widths (min, desired, fixed, or pct) for a cell
@@ -116,8 +115,7 @@ protected:
     * @param aConsiderPct - if true, consider columns that have pct widths and are spanned by the cell
     */
   void ComputeNonPctColspanWidths(const nsHTMLReflowState& aReflowState,
-                                  PRBool                   aConsiderPct,
-                                  float                    aPixelToTwips);
+                                  PRBool                   aConsiderPct);
 
   /** 
     * main helper for above. For min width calculations, it can get called up to
@@ -134,13 +132,11 @@ protected:
                                     nscoord           aCellWidth,
                                     PRInt32           aColIndex,
                                     PRInt32           aColSpan,
-                                    PRInt32&          aLimitType,
-                                    float             aPixelToTwips);
+                                    PRInt32&          aLimitType);
 
   nscoord AssignPctColumnWidths(const nsHTMLReflowState aReflowState,
                                 nscoord                 aBasis,
-                                PRBool                  aTableIsAutoWidth,
-                                float                   aPixelToTwips);
+                                PRBool                  aTableIsAutoWidth);
 
   void ReduceOverSpecifiedPctCols(nscoord aExcess);
 
@@ -159,13 +155,11 @@ protected:
   void AllocateConstrained(PRInt32  aAvailWidth,
                            PRInt32  aWidthType,
                            PRBool   aStartAtMin,        
-                           PRInt32* aAllocTypes,
-                           float    aPixelToTwips);
+                           PRInt32* aAllocTypes);
 
   void AllocateUnconstrained(PRInt32  aAllocAmount,
                              PRInt32* aAllocTypes,
-                             PRBool   aSkip0Proportional,
-                             float    aPixelToTwips);
+                             PRBool   aSkip0Proportional);
 
   /** return true if the colIndex is in the list of colIndexes */
   virtual PRBool IsColumnInList(const PRInt32 colIndex, 

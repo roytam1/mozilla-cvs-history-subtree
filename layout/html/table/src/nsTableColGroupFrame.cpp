@@ -432,7 +432,7 @@ nsTableColGroupFrame::RemoveFrame(nsIPresContext* aPresContext,
 }
 
 NS_METHOD nsTableColGroupFrame::Paint(nsIPresContext*      aPresContext,
-                                      nsIRenderingContext& aRenderingContext,
+                                      nsIDrawable*         aDrawable,
                                       const nsRect&        aDirtyRect,
                                       nsFramePaintLayer    aWhichLayer)
 {
@@ -448,12 +448,12 @@ NS_METHOD nsTableColGroupFrame::Paint(nsIPresContext*      aPresContext,
         const nsStyleColor* color =
           (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
         nsRect rect(0, 0, mRect.width, mRect.height);
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *color, *spacing, 0, 0);
       }
     }
   }
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   return NS_OK;
 }
 

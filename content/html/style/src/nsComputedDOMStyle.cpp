@@ -80,8 +80,6 @@ private:
   nsCOMPtr<nsIContent> mContent;
   nsString mPseudo;
 
-  float mT2P; // For unit conversions
-
   void* mScriptObject;
 };
 
@@ -102,7 +100,6 @@ NS_NewComputedDOMStyle(nsIComputedDOMStyle** aComputedStyle)
 
 nsComputedDOMStyle::nsComputedDOMStyle() : mPresShell(nsnull),
                                            mContent(nsnull),
-                                           mT2P(0.0f),
                                            mScriptObject(nsnull)
 {
   NS_INIT_REFCNT();
@@ -174,8 +171,6 @@ nsComputedDOMStyle::Init(nsIDOMElement *aElement, const nsAReadableString& aPseu
   nsCOMPtr<nsIPresContext> presCtx;
   mPresShell->GetPresContext(getter_AddRefs(presCtx));
   NS_ENSURE_TRUE(presCtx, NS_ERROR_FAILURE);
-
-  presCtx->GetTwipsToPixels(&mT2P);
 
   return NS_OK;
 }
@@ -366,7 +361,7 @@ nsComputedDOMStyle::GetBehavior(nsIFrame *aFrame,
 {
   nsISupports *tmp = NS_STATIC_CAST(nsIComputedDOMStyle *, this);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   nsStyleUserInterface uiStyle;
@@ -542,7 +537,7 @@ nsComputedDOMStyle::GetBottom(nsIFrame *aFrame,
   nsRect rect;
   GetAbsoluteFrameRect(aFrame, rect);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   val->SetTwips(rect.y + rect.height);
@@ -637,7 +632,7 @@ nsComputedDOMStyle::GetDisplay(nsIFrame *aFrame,
 {
   nsISupports *tmp = NS_STATIC_CAST(nsIComputedDOMStyle *, this);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
 
@@ -771,7 +766,7 @@ nsComputedDOMStyle::GetHeight(nsIFrame *aFrame,
   nsRect rect;
   GetAbsoluteFrameRect(aFrame, rect);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   val->SetTwips(rect.height);
@@ -789,7 +784,7 @@ nsComputedDOMStyle::GetLeft(nsIFrame *aFrame,
   nsRect rect;
   GetAbsoluteFrameRect(aFrame, rect);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   val->SetTwips(rect.x);
@@ -1075,7 +1070,7 @@ nsComputedDOMStyle::GetRight(nsIFrame *aFrame,
   nsRect rect;
   GetAbsoluteFrameRect(aFrame, rect);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   val->SetTwips(rect.x + rect.width);
@@ -1173,7 +1168,7 @@ nsComputedDOMStyle::GetTop(nsIFrame *aFrame,
   nsRect rect;
   GetAbsoluteFrameRect(aFrame, rect);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   val->SetTwips(rect.y);
@@ -1311,7 +1306,7 @@ nsComputedDOMStyle::GetWidth(nsIFrame *aFrame,
   nsRect rect;
   GetAbsoluteFrameRect(aFrame, rect);
 
-  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp, mT2P);
+  nsROCSSPrimitiveValue *val = new nsROCSSPrimitiveValue(tmp);
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
   val->SetTwips(rect.width);

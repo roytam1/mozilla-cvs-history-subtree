@@ -3135,6 +3135,8 @@ GetPath(nsPoint aPoints[],nsPoint aPolyPath[],PRInt32 *aCurIndex,ePathTypes  aPa
 void 
 QBCurve::SubDivide(nsIDrawable *aDrawable,nsPoint aPointArray[],PRInt32 *aCurIndex)
 {
+  // XXX pav
+#if 0
 QBCurve   curve1,curve2;
 float     fx,fy,smag;
 
@@ -3172,6 +3174,7 @@ float     fx,fy,smag;
       aDrawable->DrawLine((nscoord)curve1.mAnc2.x,(nscoord)curve1.mAnc2.y,(nscoord)curve2.mAnc2.x,(nscoord)curve2.mAnc2.y);
     }
 	}
+#endif
 }
 
 /** ---------------------------------------------------

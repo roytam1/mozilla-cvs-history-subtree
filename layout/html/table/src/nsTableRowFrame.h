@@ -103,7 +103,7 @@ public:
 
   /** @see nsIFrame::Paint */
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
 
@@ -112,7 +112,7 @@ public:
     * @see nsIFrame::Paint 
     */
   virtual void PaintChildren(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsRect&        aDirtyRect,
                              nsFramePaintLayer    aWhichLayer);
 

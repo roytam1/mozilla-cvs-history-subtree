@@ -27,8 +27,8 @@
 #include "prprf.h"
 
 
-nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(nsISupports *aOwner, float aT2P)
-  : mType(CSS_PX), mTwips(0), mString(), mOwner(aOwner), mT2P(aT2P),
+nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(nsISupports *aOwner)
+  : mType(CSS_PX), mString(), mOwner(aOwner), mTwips(0),
     mScriptObject(nsnull)
 {
   NS_INIT_REFCNT();
@@ -92,6 +92,8 @@ nsROCSSPrimitiveValue::GetCssText(nsAWritableString& aCssText)
   aCssText.Truncate();
 
   switch (mType) {
+    // XXX pav
+#if 0
     case CSS_PX :
       {
         PRInt32 px = NSTwipsToIntPixels(mTwips, mT2P);
@@ -137,6 +139,7 @@ nsROCSSPrimitiveValue::GetCssText(nsAWritableString& aCssText)
         tmpStr.Append(mString);
         break;
       }
+#endif
     case CSS_PC :
     case CSS_UNKNOWN :
     case CSS_NUMBER :
@@ -212,6 +215,8 @@ nsROCSSPrimitiveValue::GetFloatValue(PRUint16 aUnitType, float* aReturn)
   }
 
   switch(aUnitType) {
+    // XXX pav
+#if 0
     case CSS_PX :
       *aReturn = NSTwipsToFloatPixels(mTwips, mT2P);
       break;
@@ -227,6 +232,7 @@ nsROCSSPrimitiveValue::GetFloatValue(PRUint16 aUnitType, float* aReturn)
     case CSS_PT :
       *aReturn = NSTwipsToFloatPoints(mTwips);
       break;
+#endif
     case CSS_PC :
     case CSS_UNKNOWN :
     case CSS_NUMBER :
