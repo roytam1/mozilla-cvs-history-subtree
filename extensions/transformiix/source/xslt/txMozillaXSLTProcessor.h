@@ -51,8 +51,8 @@
 #include "nsIDOMNode.h"
 #include "txXMLEventHandler.h"
 #include "nsIDOMDocument.h"
-#include "nsITransformObserver.h"
 #include "nsIDOMDocumentFragment.h"
+#include "nsIXSLTProcessorObsolete.h"
 
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define TRANSFORMIIX_XSLT_PROCESSOR_CID   \
@@ -109,8 +109,9 @@ private:
 /**
  * txMozillaXSLTProcessor is a front-end to the XSLT Processor.
  */
-class txMozillaXSLTProcessor : public nsIDocumentTransformer,
-                               public nsIXSLTProcessor
+class txMozillaXSLTProcessor : public nsIXSLTProcessor,
+                               public nsIXSLTProcessorObsolete,
+                               public nsIDocumentTransformer
 {
 public:
     /**
@@ -126,11 +127,17 @@ public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsIDocumentTransformer interface
-    NS_DECL_NSIDOCUMENTTRANSFORMER
-
     // nsIXSLTProcessor interface
     NS_DECL_NSIXSLTPROCESSOR
+
+    // nsIXSLTProcessorObsolete interface
+    NS_DECL_NSIXSLTPROCESSOROBSOLETE
+
+    // nsIDocumentTransformer interface
+    NS_IMETHOD TransformDocument(nsIDOMNode *aSourceDOM,
+                                 nsIDOMNode *aStyleDOM,
+                                 nsITransformObserver *aObserver,
+                                 nsIDOMDocument **_retval);
 
 protected:
     nsCOMPtr<nsIDOMNode> mStylesheet;

@@ -53,7 +53,7 @@
 #include "nsIRefreshURI.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsITextContent.h"
-#include "nsITransformObserver.h"
+#include "nsIDocumentTransformer.h"
 #include "nsIXMLContent.h"
 #include "nsContentCID.h"
 #include "nsNetUtil.h"
@@ -77,6 +77,7 @@ txMozillaXMLOutput::txMozillaXMLOutput(const String& aRootName,
                                        PRInt32 aRootNsID,
                                        txOutputFormat* aFormat,
                                        nsIDOMDocument* aSourceDocument,
+                                       nsIDOMDocument* aResultDocument,
                                        nsITransformObserver* aObserver)
     : mStyleSheetCount(0),
       mDontAddCurrent(PR_FALSE),
@@ -91,7 +92,7 @@ txMozillaXMLOutput::txMozillaXMLOutput(const String& aRootName,
 
     mObserver = do_GetWeakReference(aObserver);
 
-    createResultDocument(aRootName, aRootNsID, aSourceDocument);
+    createResultDocument(aRootName, aRootNsID, aSourceDocument, aResultDocument);
 }
 
 txMozillaXMLOutput::txMozillaXMLOutput(txOutputFormat* aFormat,
@@ -598,23 +599,30 @@ void txMozillaXMLOutput::wrapChildren(nsIDOMNode* aCurrentNode,
 
 nsresult
 txMozillaXMLOutput::createResultDocument(const String& aName, PRInt32 aNsID,
-                                         nsIDOMDocument* aSourceDocument)
+                                         nsIDOMDocument* aSourceDocument,
+                                         nsIDOMDocument* aResultDocument)
 {
     nsresult rv;
 
-    // Create the document
     nsCOMPtr<nsIDocument> doc;
-    if (mOutputFormat.mMethod == eHTMLOutput) {
-        doc = do_CreateInstance(kHTMLDocumentCID, &rv);
-        NS_ENSURE_SUCCESS(rv, rv);
+    if (!aResultDocument) {
+        // Create the document
+        if (mOutputFormat.mMethod == eHTMLOutput) {
+            doc = do_CreateInstance(kHTMLDocumentCID, &rv);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+        else {
+            // We should check the root name/namespace here and create the
+            // appropriate document
+            doc = do_CreateInstance(kXMLDocumentCID, &rv);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+        mDocument = do_QueryInterface(doc);
     }
     else {
-        // We should check the root name/namespace here and create the
-        // appropriate document
-        doc = do_CreateInstance(kXMLDocumentCID, &rv);
-        NS_ENSURE_SUCCESS(rv, rv);
+        mDocument = aResultDocument;
+        doc = do_QueryInterface(aResultDocument);
     }
-    mDocument = do_QueryInterface(doc);
     mCurrentNode = mDocument;
     doc->GetNameSpaceManager(*getter_AddRefs(mNameSpaceManager));
     NS_ASSERTION(mNameSpaceManager, "Can't get namespace manager.");

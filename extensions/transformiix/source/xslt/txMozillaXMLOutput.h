@@ -60,6 +60,7 @@ public:
                        PRInt32 aRootNsID,
                        txOutputFormat* aFormat,
                        nsIDOMDocument* aSourceDocument,
+                       nsIDOMDocument* aResultDocument,
                        nsITransformObserver* aObserver);
     txMozillaXMLOutput(txOutputFormat* aFormat,
                        nsIDOMDocumentFragment* aFragment);
@@ -175,7 +176,8 @@ private:
     void processHTTPEquiv(nsIAtom* aHeader, const nsAString& aValue);
     void wrapChildren(nsIDOMNode* aCurrentNode, nsIDOMElement* aWrapper);
     nsresult createResultDocument(const String& aName, PRInt32 aNsID,
-                                  nsIDOMDocument* aSourceDocument);
+                                  nsIDOMDocument* aSourceDocument,
+                                  nsIDOMDocument* aResultDocument);
     void SignalTransformEnd();
 
     nsCOMPtr<nsIDOMDocument> mDocument;

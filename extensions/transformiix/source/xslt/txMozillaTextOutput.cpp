@@ -43,20 +43,20 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMText.h"
-#include "nsITransformObserver.h"
+#include "nsIDocumentTransformer.h"
 #include "TxString.h"
 #include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
 txMozillaTextOutput::txMozillaTextOutput(nsIDOMDocument* aSourceDocument,
+                                         nsIDOMDocument* aResultDocument,
                                          nsITransformObserver* aObserver)
 {
     NS_INIT_ISUPPORTS();
 
     mObserver = do_GetWeakReference(aObserver);
-    
-    createResultDocument(aSourceDocument);
+    createResultDocument(aSourceDocument, aResultDocument);
 }
 
 txMozillaTextOutput::txMozillaTextOutput(nsIDOMDocumentFragment* aDest)
@@ -126,7 +126,8 @@ void txMozillaTextOutput::startDocument()
 {
 }
 
-void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument)
+void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument,
+                                               nsIDOMDocument* aResultDocument)
 {
     nsresult rv = NS_OK;
     
@@ -141,14 +142,23 @@ void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument)
      * </html>
      */
 
-    // Create document
     nsCOMPtr<nsIDocument> doc;
-    doc = do_CreateInstance(kXMLDocumentCID, &rv);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create document");
-    if (NS_FAILED(rv)) {
+    if (!aResultDocument) {
+        // Create the document
+        doc = do_CreateInstance(kXMLDocumentCID, &rv);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create document");
+        mDocument = do_QueryInterface(doc);
+    }
+    else {
+        mDocument = aResultDocument;
+        nsCOMPtr<nsIDocument> doc = do_QueryInterface(aResultDocument);
+        NS_ASSERTION(doc, "Couldn't QI to nsIDocument");
+    }
+
+    if (!doc) {
         return;
     }
-    mDocument = do_QueryInterface(doc);
+
     NS_ASSERTION(mDocument, "Need document");
 
     // Reset and set up document

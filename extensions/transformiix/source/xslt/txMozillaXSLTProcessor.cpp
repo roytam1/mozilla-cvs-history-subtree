@@ -44,7 +44,6 @@
 #include "nsIDocument.h"
 #include "nsIDOMClassInfo.h"
 #include "nsIScriptLoader.h"
-#include "nsITransformObserver.h"
 #include "nsNetUtil.h"
 #include "ProcessorState.h"
 #include "txMozillaTextOutput.h"
@@ -63,8 +62,10 @@ class txToDocHandlerFactory : public txIOutputHandlerFactory
 public:
     txToDocHandlerFactory(ProcessorState* aPs,
                           nsIDOMDocument* aSourceDocument,
+                          nsIDOMDocument* aResultDocument,
                           nsITransformObserver* aObserver)
-        : mPs(aPs), mSourceDocument(aSourceDocument), mObserver(aObserver)
+        : mPs(aPs), mSourceDocument(aSourceDocument),
+          mResultDocument(aResultDocument), mObserver(aObserver)
     {
     }
 
@@ -77,6 +78,7 @@ public:
 private:
     ProcessorState* mPs;
     nsCOMPtr<nsIDOMDocument> mSourceDocument;
+    nsCOMPtr<nsIDOMDocument> mResultDocument;
     nsCOMPtr<nsITransformObserver> mObserver;
 };
 
@@ -112,16 +114,17 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
         case eHTMLOutput:
             aHandler = new txMozillaXMLOutput(String(), kNameSpaceID_None,
                                               aFormat, mSourceDocument,
-                                              mObserver);
+                                              mResultDocument, mObserver);
             break;
 
         case eTextOutput:
-            // if we don't have an observer we are parsing into a non-displayed
-            // new document, so textoutput doesn't make sence
-            if (!mObserver) {
+            // If we don't have an observer we are parsing into a non-displayed
+            // new document, so textoutput doesn't make sence.
+            // But still support if there is a result document, for compability
+            if (!mObserver && !mResultDocument) {
                 return NS_ERROR_FAILURE;
             }
-            aHandler = new txMozillaTextOutput(mSourceDocument, mObserver);
+            aHandler = new txMozillaTextOutput(mSourceDocument, mResultDocument, mObserver);
             break;
     }
     NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
@@ -143,16 +146,18 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
         case eXMLOutput:
         case eHTMLOutput:
             aHandler = new txMozillaXMLOutput(aName, aNsID, aFormat,
-                                              mSourceDocument, mObserver);
+                                              mSourceDocument, mResultDocument,
+                                              mObserver);
             break;
 
         case eTextOutput:
-            // if we don't have an observer we are parsing into a non-displayed
-            // new document, so textoutput doesn't make sence
-            if (!mObserver) {
+            // If we don't have an observer we are parsing into a non-displayed
+            // new document, so textoutput doesn't make sence.
+            // but still support if there is a result document, for compability
+            if (!mObserver && !mResultDocument) {
                 return NS_ERROR_FAILURE;
             }
-            aHandler = new txMozillaTextOutput(mSourceDocument, mObserver);
+            aHandler = new txMozillaTextOutput(mSourceDocument, mResultDocument, mObserver);
             break;
     }
     NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
@@ -216,6 +221,7 @@ NS_IMPL_ADDREF(txMozillaXSLTProcessor)
 NS_IMPL_RELEASE(txMozillaXSLTProcessor)
 NS_INTERFACE_MAP_BEGIN(txMozillaXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessor)
+    NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessorObsolete)
     NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XSLTProcessor)
@@ -228,6 +234,79 @@ txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mVariables(PR_TRUE)
 
 txMozillaXSLTProcessor::~txMozillaXSLTProcessor()
 {
+}
+
+NS_IMETHODIMP
+txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
+                                          nsIDOMNode* aStyleDOM,
+                                          nsIDOMDocument* aOutputDoc,
+                                          nsISupports* aObserver)
+{
+    NS_ENSURE_ARG(aSourceDOM);
+    NS_ENSURE_ARG(aStyleDOM);
+    NS_ENSURE_ARG(aOutputDoc);
+    NS_ENSURE_FALSE(aObserver, NS_ERROR_NOT_IMPLEMENTED);
+
+    if (!URIUtils::CanCallerAccess(aSourceDOM) ||
+        !URIUtils::CanCallerAccess(aStyleDOM) ||
+        !URIUtils::CanCallerAccess(aOutputDoc)) {
+        return NS_ERROR_DOM_SECURITY_ERR;
+    }
+
+    // Create wrapper for the source document.
+    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
+    aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
+    if (!sourceDOMDocument) {
+        sourceDOMDocument = do_QueryInterface(aSourceDOM);
+        NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
+    }
+    Document sourceDocument(sourceDOMDocument);
+    Node* sourceNode = sourceDocument.createWrapper(aSourceDOM);
+    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
+
+    // Create wrapper for the style document.
+    nsCOMPtr<nsIDOMDocument> styleDOMDocument;
+    aStyleDOM->GetOwnerDocument(getter_AddRefs(styleDOMDocument));
+    if (!styleDOMDocument) {
+        styleDOMDocument = do_QueryInterface(aStyleDOM);
+    }
+    Document xslDocument(styleDOMDocument);
+
+    // Create a new ProcessorState. Must be done after creating the documents
+    // so that C++ will ensure that it is destroyed before the documents.
+    ProcessorState ps(&sourceDocument, &xslDocument);
+
+    // XXX Need to add error observers
+
+    // Set current txIEvalContext
+    txSingleNodeContext evalContext(&sourceDocument, &ps);
+    ps.setEvalContext(&evalContext);
+
+    // Index templates and process top level xslt elements
+    nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
+    nsresult rv;
+    if (styleDoc) {
+        rv = txXSLTProcessor::processStylesheet(&xslDocument,
+                                                &mVariables, &ps);
+    }
+    else {
+        nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
+        NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
+        Element* element = xslDocument.createElement(styleElem);
+        NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
+        rv = txXSLTProcessor::processTopLevel(element, &mVariables,
+                                              &ps);
+    }
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument, aOutputDoc,
+                                         nsnull);
+    ps.mOutputHandlerFactory = &handlerFactory;
+
+    // Process root of XML source document
+    txXSLTProcessor::transform(&ps);
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -293,7 +372,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument,
+    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument, nsnull,
                                          aObserver);
     ps.mOutputHandlerFactory = &handlerFactory;
 
@@ -380,7 +459,8 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     }
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument, nsnull);
+    txToDocHandlerFactory handlerFactory(&ps, sourceDOMDocument, nsnull,
+                                         nsnull);
     ps.mOutputHandlerFactory = &handlerFactory;
 
     // Process root of XML source document
@@ -456,7 +536,6 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     NS_ENSURE_SUCCESS(rv, rv);
     txToFragmentHandlerFactory handlerFactory(*aResult);
     ps.mOutputHandlerFactory = &handlerFactory;
-
 
     // Process root of XML source document
     txXSLTProcessor::transform(&ps);

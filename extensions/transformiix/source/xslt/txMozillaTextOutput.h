@@ -53,7 +53,9 @@ class nsITransformObserver;
 class txMozillaTextOutput : public txIOutputXMLEventHandler
 {
 public:
-    txMozillaTextOutput(nsIDOMDocument* aSourceDocument, nsITransformObserver* aObserver);
+    txMozillaTextOutput(nsIDOMDocument* aSourceDocument,
+                        nsIDOMDocument* aResultDocument,
+                        nsITransformObserver* aObserver);
     txMozillaTextOutput(nsIDOMDocumentFragment* aDest);
     virtual ~txMozillaTextOutput();
 
@@ -151,7 +153,8 @@ public:
     void getOutputDocument(nsIDOMDocument** aDocument);
 
 private:
-    void createResultDocument(nsIDOMDocument* aSourceDocument);
+    void createResultDocument(nsIDOMDocument* aSourceDocument,
+                              nsIDOMDocument* aResultDocument);
 
     nsCOMPtr<nsIDOMCharacterData> mTextNode;
     nsWeakPtr mObserver;
