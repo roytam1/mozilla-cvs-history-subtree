@@ -180,15 +180,15 @@ NS_IMPL_ISUPPORTS(AsyncReadStreamAdaptor,  NS_GET_IID(nsIInputStream))
 
 // The only purpose of this output stream wrapper is to adjust the cache's
 // overall occupancy as new data flows into the cache entry.
-class WriteStreamWrapper : public nsIOutputStream {
+class MemCacheWriteStreamWrapper : public nsIOutputStream {
 public:
-    WriteStreamWrapper(nsMemCacheChannel* aChannel, nsIOutputStream *aBaseStream):
+    MemCacheWriteStreamWrapper(nsMemCacheChannel* aChannel, nsIOutputStream *aBaseStream):
         mChannel(aChannel), mBaseStream(aBaseStream)
         { NS_INIT_REFCNT(); }
     
     static nsresult
     Create(nsMemCacheChannel* aChannel, nsIOutputStream *aBaseStream, nsIOutputStream* *aWrapper) {
-        WriteStreamWrapper *wrapper = new WriteStreamWrapper(aChannel, aBaseStream);
+        MemCacheWriteStreamWrapper *wrapper = new MemCacheWriteStreamWrapper(aChannel, aBaseStream);
         if (!wrapper) return NS_ERROR_OUT_OF_MEMORY;
         NS_ADDREF(wrapper);
         *aWrapper = wrapper;
@@ -216,7 +216,7 @@ private:
     nsMemCacheChannel*          mChannel;
 };
 
-NS_IMPL_ISUPPORTS(WriteStreamWrapper,  NS_GET_IID(nsIOutputStream))
+NS_IMPL_ISUPPORTS(MemCacheWriteStreamWrapper,  NS_GET_IID(nsIOutputStream))
 
 nsMemCacheChannel::nsMemCacheChannel(nsMemCacheRecord *aRecord, nsILoadGroup *aLoadGroup)
     : mRecord(aRecord), mLoadGroup(aLoadGroup)
@@ -264,6 +264,13 @@ nsMemCacheChannel::Resume(void)
 }
 
 NS_IMETHODIMP
+nsMemCacheChannel::GetOriginalURI(nsIURI * *aURI)
+{
+    // Not required
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
 nsMemCacheChannel::GetURI(nsIURI * *aURI)
 {
     // Not required
@@ -300,7 +307,7 @@ nsMemCacheChannel::OpenOutputStream(PRUint32 startPosition, nsIOutputStream* *aR
     if (startPosition < oldLength)
         NotifyStorageInUse(startPosition - oldLength);
 
-    return WriteStreamWrapper::Create(this, outputStream, aResult);
+    return MemCacheWriteStreamWrapper::Create(this, outputStream, aResult);
 }
 
 NS_IMETHODIMP

@@ -52,7 +52,7 @@ protected:
     nsCOMPtr<nsISupports>        mOwner;
     nsCOMPtr<AsyncReadStreamAdaptor>  mAsyncReadStream;
 
-    friend class WriteStreamWrapper;
+    friend class MemCacheWriteStreamWrapper;
 };
 
 #endif // _nsMemCacheChannel_h_

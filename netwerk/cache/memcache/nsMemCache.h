@@ -45,6 +45,7 @@ class nsMemCache : public nsINetDataCache
 public:
     nsMemCache();
     ~nsMemCache();
+    nsresult Init();
 
     // nsISupports methods
     NS_DECL_ISUPPORTS
@@ -71,7 +72,6 @@ protected:
     // Used to assign record ID's
     static PRInt32   gRecordSerialNumber;
 
-    nsresult Init();
     NS_METHOD Delete(nsMemCacheRecord* aRecord);
 
     friend class nsMemCacheRecord;
