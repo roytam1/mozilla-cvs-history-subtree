@@ -38,6 +38,8 @@ Rights Reserved.
 			<vbox flex="1" style="width:200px">
 				<vbox id="cvbName" class="cardViewGroup">
 					<description class="CardViewHeading" hide="true" id="cvhName"/>
+                                        <description class="CardViewLink" hide="true" id="cvListNameBox">
+						<html:p><html:a href="" id="cvListName"/></html:p></description>
                                         <description class="CardViewText" hide="true" id="cvDisplayName"/>
                                         <description class="CardViewText" hide="true" id="cvNickname"/>
                                         <description class="CardViewLink" hide="true" id="cvEmail1Box">

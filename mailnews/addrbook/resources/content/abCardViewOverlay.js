@@ -28,7 +28,6 @@
 var zName;
 var zNickname;
 var zDisplayName;
-var zListName;
 var zWork;
 var zHome;
 var zFax;
@@ -46,7 +45,6 @@ function OnLoadCardView()
   zName = gAddressBookBundle.getString("propertyName") + ": ";
   zNickname = gAddressBookBundle.getString("propertyNickname") + ": ";
   zDisplayName = gAddressBookBundle.getString("propertyDisplayName") + ": ";
-  zListName = gAddressBookBundle.getString("propertyListName") + ": ";
   zWork = gAddressBookBundle.getString("propertyWork") + ": ";
   zHome = gAddressBookBundle.getString("propertyHome") + ": ";
   zFax = gAddressBookBundle.getString("propertyFax") + ": ";
@@ -75,6 +73,8 @@ function OnLoadCardView()
 	cvData.cvDisplayName	= doc.getElementById("cvDisplayName");
 	cvData.cvEmail1Box		= doc.getElementById("cvEmail1Box");
 	cvData.cvEmail1			= doc.getElementById("cvEmail1");
+	cvData.cvListNameBox		= doc.getElementById("cvListNameBox");
+	cvData.cvListName               = doc.getElementById("cvListName");
 	cvData.cvEmail2Box		= doc.getElementById("cvEmail2Box");
 	cvData.cvEmail2			= doc.getElementById("cvEmail2");
 	// Home section
@@ -172,10 +172,14 @@ function DisplayCardViewPane(card)
 	cvSetNodeWithLabel(data.cvNickname, zNickname, card.nickName);
 
   if (card.isMailList) {
-    cvSetNodeWithLabel(data.cvDisplayName, zListName, card.displayName);
-    visible = HandleLink(data.cvEmail1, card.displayName, data.cvEmail1Box, "mailto:") || visible;
+    // email1 and display name always hidden when a mailing list.
+    cvSetVisible(data.cvEmail1Box, false);
+    cvSetVisible(data.cvDisplayName, false);
+    visible = HandleLink(data.cvListName, card.displayName, data.cvListNameBox, "mailto:") || visible;
   }
   else { 
+    // listname always hidden if not a mailing list
+    cvSetVisible(data.cvListNameBox, false);
     cvSetNodeWithLabel(data.cvDisplayName, zDisplayName, card.displayName);
         visible = HandleLink(data.cvEmail1, card.primaryEmail, data.cvEmail1Box, "mailto:") || visible;
   }
