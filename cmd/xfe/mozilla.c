@@ -2148,8 +2148,6 @@ main
 	  PR_BlockClockInterrupts();
   }
 
-  PR_Init("mozilla", 24, 1, 0);
-
 #ifdef JAVA
   LJ_SetProgramName(argv[0]);
 #endif
