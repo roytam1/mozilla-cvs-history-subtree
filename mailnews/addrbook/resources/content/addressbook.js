@@ -47,6 +47,7 @@ function OnLoadAddressBook()
 	
 function ChangeDirectoryByDOMNode(dirNode)
 {
+	dump("-----------------ChangeDirectoryByDOMNode----------------\n");
 	var uri = dirNode.getAttribute('id');
 	dump(uri + "\n");
 	ChangeDirectoryByURI(uri);
@@ -55,7 +56,26 @@ function ChangeDirectoryByDOMNode(dirNode)
 function ChangeDirectoryByURI(uri)
 {
 	var tree = frames[0].frames[1].document.getElementById('resultTree');
-	tree.childNodes[7].setAttribute('id', uri);
+	dump("tree = " + tree + "\n");
+
+	var body;
+	/*
+	var treechildrenList = tree.getElementsByTagName('treechildren');
+	if ( treechildrenList.length == 1 )
+		body = treechildrenList[0];
+	*/
+	
+	// old style
+	body = tree.childNodes[8];
+		
+	dump("body = " + body + "\n");
+	dump("body.name = " + body.getAttribute('name') + "\n");
+	dump("body.id = " + body.getAttribute('id') + "\n");
+
+	dump(uri + "\n");
+	body.setAttribute('id', uri);
+	dump("body.id = " + body.getAttribute('id') + "\n");
+	dump("------------end--ChangeDirectoryByDOMNode---end----------\n");
 }
 
 
@@ -70,9 +90,9 @@ function saChangeDirectoryByURI(uri)
 {
 	var tree = frames["browser.selAddrResultPane"].document.getElementById('resultTree');
 	dump("tree = " + tree + "\n");
-	dump("tree.childNodes[7].id = " + tree.childNodes[7].getAttribute('id') + "\n");
-	tree.childNodes[7].setAttribute('id', uri);
-	dump("tree.childNodes[7].id = " + tree.childNodes[7].getAttribute('id') + "\n");
+	dump("tree.childNodes['cardTreeBody'].id = " + tree.childNodes['cardTreeBody'].getAttribute('id') + "\n");
+	tree.childNodes["cardTreeBody"].setAttribute('id', uri);
+	dump("tree.childNodes['cardTreeBody'].id = " + tree.childNodes['cardTreeBody'].getAttribute('id') + "\n");
 }
 
 
