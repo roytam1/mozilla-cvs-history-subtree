@@ -65,6 +65,7 @@ CPPSRCS		= \
 		nsXFormsControl.cpp \
 		nsXFormsModelElement.cpp \
 		nsXFormsInputElement.cpp \
+		nsXFormsStubElement.cpp \
 		nsXFormsAtoms.cpp \
 		nsXFormsModule.cpp \
 		$(NULL)

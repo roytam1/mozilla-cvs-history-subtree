@@ -36,26 +36,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXFormsElementFactory.h"
-#include "nsXFormsModelElement.h"
-#include "nsXFormsStubElement.h"
-#include "nsString.h"
+#include "nsIXTFGenericElement.h"
+#include "nsXFormsElement.h"
 
-NS_HIDDEN_(nsresult) NS_NewXFormsInputElement(nsIXTFElement **aElement);
-
-NS_IMPL_ISUPPORTS1(nsXFormsElementFactory, nsIXTFElementFactory)
-
-NS_IMETHODIMP
-nsXFormsElementFactory::CreateElement(const nsAString& aTagName,
-				      nsIXTFElement **aElement)
+class nsXFormsStubElement : public nsXFormsElement,
+                            public nsIXTFGenericElement
 {
-  if (aTagName.Equals(NS_LITERAL_STRING("model")))
-    return NS_NewXFormsModelElement(aElement);
-  else if (aTagName.Equals(NS_LITERAL_STRING("bind")))
-    return NS_NewXFormsStubElement(aElement);
-  else if (aTagName.Equals(NS_LITERAL_STRING("input")))
-    return NS_NewXFormsInputElement(aElement);
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXTFELEMENT
+  NS_DECL_NSIXTFGENERICELEMENT
+};
 
-  *aElement = nsnull;
-  return NS_ERROR_FAILURE;
-}
+NS_HIDDEN_(nsresult)
+NS_NewXFormsStubElement(nsIXTFElement **aResult);
