@@ -264,7 +264,8 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
 
         txInstruction* prevInstr = mNextInstruction;
         // set return to nsnull to stop execution
-        rv = runTemplate(var->mFirstInstruction, nsnull);
+        mNextInstruction = nsnull;
+        rv = runTemplate(var->mFirstInstruction);
         NS_ENSURE_SUCCESS(rv, rv);
 
         rv = pushTemplateRule(nsnull, txExpandedName(), nsnull);
@@ -504,10 +505,6 @@ txExecutionState::getKeyNodes(const txExpandedName& aKeyName,
 txExecutionState::TemplateRule*
 txExecutionState::getCurrentTemplateRule()
 {
-    if (!mTemplateRules[mTemplateRuleCount - 1].mFrame) {
-        return nsnull;
-    }
-    
     return mTemplateRules + mTemplateRuleCount - 1;
 }
 
@@ -525,20 +522,13 @@ txExecutionState::getNextInstruction()
 nsresult
 txExecutionState::runTemplate(txInstruction* aTemplate)
 {
-    return runTemplate(aTemplate, mNextInstruction);
-}
-
-nsresult
-txExecutionState::runTemplate(txInstruction* aTemplate,
-                              txInstruction* aReturnTo)
-{
     nsresult rv = mLocalVarsStack.push(mLocalVariables);
     NS_ENSURE_SUCCESS(rv, rv);
 
     mLocalVariables = new txVariableMap;
     NS_ENSURE_TRUE(mLocalVariables, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = mReturnStack.push(aReturnTo);
+    rv = mReturnStack.push(mNextInstruction);
     NS_ENSURE_SUCCESS(rv, rv);
     
     mNextInstruction = aTemplate;

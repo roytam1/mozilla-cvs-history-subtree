@@ -74,6 +74,12 @@ public:
     virtual nsresult execute(txExecutionState& aEs);
 
 
+class txApplyDefaultElementTemplate : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};
+
 class txApplyImportsEnd : public txInstruction
 {
 public:

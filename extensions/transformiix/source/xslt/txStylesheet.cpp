@@ -79,9 +79,9 @@ txStylesheet::init()
     *instrp = pushContext;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 
-    // XXX ToDo: need special instruction that gets the correct mode
     instrp = &(*instrp)->mNext;
-    txApplyTemplates* applyTemplates = new txApplyTemplates(txExpandedName());
+    txApplyDefaultElementTemplate* applyTemplates =
+        new txApplyDefaultElementTemplate;
     *instrp = applyTemplates;
     NS_ENSURE_TRUE(*instrp, NS_ERROR_OUT_OF_MEMORY);
 

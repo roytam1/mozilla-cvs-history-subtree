@@ -53,6 +53,22 @@
 #include "txExecutionState.h"
 
 nsresult
+txApplyDefaultElementTemplate::execute(txExecutionState& aEs)
+{
+    txExecutionState::TemplateRule* rule = aEs.getCurrentTemplateRule();
+    txExpandedName mode(rule->mModeNsId, rule->mModeLocalName);
+    txStylesheet::ImportFrame* frame = 0;
+    txInstruction* templ =
+        aEs.mStylesheet->findTemplate(aEs.getEvalContext()->getContextNode(),
+                                      mode, &aEs, nsnull, &frame);
+
+    nsresult rv = aEs.pushTemplateRule(frame, mode, aEs.mTemplateParams);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aEs.runTemplate(templ);
+}
+
+nsresult
 txApplyImportsEnd::execute(txExecutionState& aEs)
 {
     aEs.popTemplateRule();
@@ -65,7 +81,10 @@ nsresult
 txApplyImportsStart::execute(txExecutionState& aEs)
 {
     txExecutionState::TemplateRule* rule = aEs.getCurrentTemplateRule();
-    if (!rule) {
+    // The frame is set to null when there is no current template rule, or
+    // when the current template rule is a default template. However this
+    // instruction isn't used in default templates.
+    if (!rule->mFrame) {
         // XXX ErrorReport: apply-imports instantiated without a current rule
         return NS_ERROR_XSLT_EXECUTION_FAILURE;
     }
