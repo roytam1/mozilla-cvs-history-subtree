@@ -156,13 +156,13 @@ nsInlineFrame::RemoveFrame(nsIPresContext* aPresContext,
   if (aOldFrame) {
     // Loop and destroy the frame and all of its continuations.
     PRBool generateReflowCommand = PR_FALSE;
-#ifdef IBMBIDI
-    if (nsLayoutAtoms::nextBidi != aListName) {
-#endif // IBMBIDI
     nsIFrame* oldFrameParent;
     aOldFrame->GetParent(&oldFrameParent);
     nsInlineFrame* parent = (nsInlineFrame*) oldFrameParent;
     while (nsnull != aOldFrame) {
+#ifdef IBMBIDI
+      if (nsLayoutAtoms::nextBidi != aListName) {
+#endif // IBMBIDI
       // If the frame being removed has zero size then don't bother
       // generating a reflow command, otherwise make sure we do.
       nsRect bbox;
@@ -171,7 +171,7 @@ nsInlineFrame::RemoveFrame(nsIPresContext* aPresContext,
         generateReflowCommand = PR_TRUE;
       }
 #ifdef IBMBIDI
-    }
+      }
 #endif // IBMBIDI
 
       // When the parent is an inline frame we have a simple task - just
