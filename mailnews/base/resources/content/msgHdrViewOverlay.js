@@ -347,11 +347,6 @@ var messageHeaderSink = {
 
     onEndMsgDownload: function(url)
     {
-      var msgFolder;
-      if (url)
-      {
-        msgFolder = url.folder;
-      }
     },
 
     mSecurityInfo  : null,
