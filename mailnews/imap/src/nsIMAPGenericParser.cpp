@@ -554,6 +554,8 @@ char *nsIMAPGenericParser::CreateLiteral()
 			}
 			else
 				AdvanceToNextLine();
+      if (ContinueParse())
+      {
 			currentLineLength = strlen(terminatedLine ? fCurrentLine : fCurrentTokenPlaceHolder);
 			bytesToCopy = (currentLineLength > numberOfCharsInMessage - charsReadSoFar ?
 						   numberOfCharsInMessage - charsReadSoFar : currentLineLength);
@@ -564,6 +566,7 @@ char *nsIMAPGenericParser::CreateLiteral()
 				memcpy(returnString + charsReadSoFar, terminatedLine ? fCurrentLine : fCurrentTokenPlaceHolder, bytesToCopy); 
 				charsReadSoFar += bytesToCopy;
 			}
+      }
 		}
 		
 		if (ContinueParse())
