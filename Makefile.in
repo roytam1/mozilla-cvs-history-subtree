@@ -179,7 +179,6 @@ tier_9_dirs	+= \
 		gfx \
 		modules/libpr0n \
 		sun-java \
-		modules/plugin \
 		dom \
 		view \
 		widget \
@@ -193,6 +192,10 @@ tier_9_dirs	+= \
 		embedding \
 		editor \
 		$(NULL)
+
+ifndef MOZ_THUNDERBIRD
+tier_9_dirs	+= modules/plugin
+endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 tier_9_dirs	+= xpfe/bootstrap/appleevents
