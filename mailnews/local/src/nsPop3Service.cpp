@@ -176,7 +176,14 @@ nsresult nsPop3Service::BuildPop3Url(char * urlSpec,
 		{
 			rv = pop3Url->QueryInterface(nsCOMTypeInfo<nsIURI>::GetIID(), (void **) aUrl);
 			if (*aUrl)
+			{
 				(*aUrl)->SetSpec(urlSpec);
+				// the following is only a temporary work around hack because necko
+				// is loosing our port when the url is just scheme://host:port.
+				// when they fix this bug I can remove the following code where we
+				// manually set the port.
+				(*aUrl)->SetPort(POP3_PORT);
+			}
 		}
 	}
 
