@@ -25,6 +25,8 @@ MODULE  = netlib
 EXPORTS = nsIStreamObserver.h           \
           nsIStreamListener.h           \
           nsIURL.h                      \
+		  nsICoolURL.h                  \
+          nsIURI.h                      \
           nsIPostToServer.h             \
           nsIHttpURL.h                  \
           nsILoadAttribs.h              \
