@@ -203,7 +203,6 @@ static NSArray* sToolbarDefaults = nil;
   [[NSApp delegate] adjustBookmarksMenuItemsEnabling:NO];
 }
 
-
 -(void)mouseMoved:(NSEvent*)aEvent
 {
     if (mMoveReentrant)
@@ -409,7 +408,7 @@ static NSArray* sToolbarDefaults = nil;
 }
 
 
-#define RESIZE_WINDOW_FOR_DRAWER
+//#define RESIZE_WINDOW_FOR_DRAWER
 
 - (void)drawerWillOpen: (NSNotification*)aNotification
 {
@@ -444,9 +443,6 @@ static NSArray* sToolbarDefaults = nil;
 
 - (void)drawerDidOpen:(NSNotification *)aNotification
 {
-  // XXXdwh This is temporary.
-  //  [[mSidebarBrowserView getBrowserView] loadURI: @"http://tinderbox.mozilla.org/SeaMonkey/panel.html" referrer: nil flags:NSLoadFlagsNone];
-
   // Toggle the sidebar icon.
   if(mSidebarToolbarItem)
     [mSidebarToolbarItem setImage:[NSImage imageNamed:@"sidebarOpened"]];
@@ -457,9 +453,6 @@ static NSArray* sToolbarDefaults = nil;
   // Unload the Gecko web page in "My Panels" to save memory.
   if(mSidebarToolbarItem)
     [mSidebarToolbarItem setImage:[NSImage imageNamed:@"sidebarClosed"]];
-
-  // XXXdwh ignore for now.
-  //  [[mSidebarBrowserView getBrowserView] loadURI: @"about:blank" referrer:nil flags:NSLoadFlagsNone];
 
 #ifdef RESIZE_WINDOW_FOR_DRAWER
   if (mDrawerCachedFrame) {
@@ -479,7 +472,6 @@ static NSArray* sToolbarDefaults = nil;
     }
   }
 #endif
-
 }
 
 - (void)setupToolbar
@@ -996,12 +988,7 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)toggleSidebar:(id)aSender
 {
-  if ( ([mSidebarDrawer state] == NSDrawerClosedState) || ([mSidebarDrawer state] == NSDrawerClosingState) ) {
-    // XXXHack to bypass sidebar crashes.
-    [mSidebarDrawer openOnEdge: NSMaxXEdge];
-  }
-  else
-    [mSidebarDrawer close];
+  [mSidebarDrawer toggle:aSender];
 }
 
 -(void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer activate:(BOOL)activate
