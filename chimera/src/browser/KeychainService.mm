@@ -204,14 +204,15 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
   if ( inPort == -1 )
     inPort = kAnyPort;
-  if(kcfindinternetpassword([realm cString], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
+  if(kcfindinternetpassword([realm UTF8String], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
                             kBufferLen, buffer, &actualSize, outItemRef) != noErr)
     return false;
 
   //
   // Set password and username
   //
-  [pwd setString:[NSString stringWithCString:buffer length:actualSize]];
+  buffer[actualSize] = NULL;
+  [pwd setString:[NSString stringWithUTF8String:buffer]];
 
   KCAttribute attr;
   attr.tag = kAccountKCItemAttr;
@@ -219,7 +220,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   attr.data = buffer;
   status = KCGetAttribute( *outItemRef, &attr, &actualSize );
   
-  [username setString:[NSString stringWithCString:buffer length:actualSize]];
+  buffer[actualSize] = NULL;
+  [username setString:[NSString stringWithUTF8String:buffer]];
   
   return true;
 }
@@ -249,7 +251,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   if ( !inItemRef ) {
     if ( inPort == -1 )
       inPort = kAnyPort;
-    if(kcfindinternetpassword([realm cString], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
+    if(kcfindinternetpassword([realm UTF8String], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
                               kBufferLen, buffer, &actualSize, &inItemRef) != noErr)
       return;
   }
@@ -259,13 +261,13 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   // Update item username and password.
   //
   attr.tag = kAccountKCItemAttr;
-  attr.length = [username length];
-  attr.data = (char*)[username cString];
+  attr.length = strlen([username UTF8String];
+  attr.data = (char*)[username UTF8String];
   status = KCSetAttribute(inItemRef, &attr);
   if(status != noErr)
     NSLog(@"Couldn't update keychain item account");
 
-  status = KCSetData(inItemRef, [pwd length], [pwd cString]);
+  status = KCSetData(inItemRef, strlen([pwd UTF8String]), [pwd UTF8String]);
   if(status != noErr)
     NSLog(@"Couldn't update keychain item data");
 
@@ -287,8 +289,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 {
   if ( inPort == -1 )
     inPort = kAnyPort;
-  kcaddinternetpassword([realm cString], 0, [username cString], inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest,
-                        [pwd length], [pwd cString], 0);
+  kcaddinternetpassword([realm UTF8String], 0, [username UTF8String], inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest,
+                        strlen([pwd UTF8String]), [pwd UTF8String], 0);
 }
 
 
@@ -306,7 +308,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     const int kBufferLen = 255;
     char buffer[kBufferLen];
     UInt32 actualSize;
-    kcfindinternetpassword([realm cString], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
+    kcfindinternetpassword([realm UTF8String], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
                             kBufferLen, buffer, &actualSize, &inItemRef);
   }
                             
