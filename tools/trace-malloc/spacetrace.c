@@ -5781,7 +5781,7 @@ int serverMode(void)
                 /*
                 ** Output a little message saying we are receiving.
                 */
-                PR_snprintf(message, sizeof(message), "server accepting connections on port %u....", globals.mCommandLineOptions.mHttpdPort);
+                PR_snprintf(message, sizeof(message), "server accepting connections at http://localhost:%u/", globals.mCommandLineOptions.mHttpdPort);
                 REPORT_INFO(message);
 
                 PR_fprintf(PR_STDOUT, "Peak memory used: %s bytes\n", FormatNumber(globals.mPeakMemoryUsed));
