@@ -81,12 +81,15 @@ public:
 
     nsresult Init();
     nsresult AddStandardRequestHeaders(nsHttpHeaderArray *,
-                                       PRUint32 capabilities);
+                                       PRUint32 capabilities,
+                                       PRBool useProxy);
     PRBool   IsAcceptableEncoding(const char *encoding);
 
     const char   *UserAgent();
     nsHttpVersion DefaultVersion()  { return (nsHttpVersion) mHttpVersion; }
     PRUint32      ReferrerLevel()   { return mReferrerLevel; }
+
+    PRUint32      IdleTimeout() { return mIdleTimeout; }
 
     nsHttpAuthCache *AuthCache() { return mAuthCache; }
 
