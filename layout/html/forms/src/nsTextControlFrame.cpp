@@ -2511,6 +2511,8 @@ nsTextControlFrame::SelectAllContents()
   if (!mEditor)
     return NS_OK;
 
+  ReallyInitEditor();  // Ensure that editor is initialized fully
+
   nsCOMPtr<nsIDOMElement> rootElement;
   nsresult rv = mEditor->GetRootElement(getter_AddRefs(rootElement));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -2540,6 +2542,8 @@ nsTextControlFrame::SetSelectionEndPoints(PRInt32 aSelStart, PRInt32 aSelEnd)
 
   if (aSelStart > aSelEnd)
     return NS_ERROR_FAILURE;
+
+  ReallyInitEditor();  // Ensure that editor is initialized fully
 
   nsCOMPtr<nsIDOMNode> startNode, endNode;
   PRInt32 startOffset, endOffset;
@@ -2798,6 +2802,8 @@ nsTextControlFrame::GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelect
 {
   // make sure we have an editor
   NS_ENSURE_TRUE(mEditor, NS_ERROR_NOT_INITIALIZED);
+
+  ReallyInitEditor();  // Ensure that editor is initialized fully
 
   *aSelectionStart = 0;
   *aSelectionEnd = 0;
