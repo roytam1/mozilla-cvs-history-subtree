@@ -213,7 +213,7 @@ JSBool PR_CALLBACK asd_start_update
 		XP_Bool result = SU_StartSoftwareUpdate( cx, url,
 			NULL, NULL, NULL, JSVAL_TO_INT(argv[1]) );
 #else
-		XP_Bool result = false;
+		XP_Bool result = FALSE;
 #endif
 		*rval = BOOLEAN_TO_JSVAL(result);
 		return JS_TRUE;
@@ -254,7 +254,7 @@ JSBool PR_CALLBACK asd_conditional_update
 				XP_Bool result = SU_StartSoftwareUpdate( cx, url,
 					NULL, NULL, NULL, JSVAL_TO_INT(argv[3]) );
 #else
-				XP_Bool result = false;
+				XP_Bool result = FALSE;
 #endif
 				*rval = BOOLEAN_TO_JSVAL(result);
 				return JS_TRUE;
