@@ -274,7 +274,8 @@ typedef enum {
 	NPPVpluginWindowBool,
 	NPPVpluginTransparentBool,
   NPPVjavaClass,
-  NPPVpluginWindowSize
+  NPPVpluginWindowSize,
+  NPPVpluginTimerInterval
 } NPPVariable;
 
 /*

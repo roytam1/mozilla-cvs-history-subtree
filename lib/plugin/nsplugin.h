@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -190,7 +190,8 @@ enum NPPluginVariable {
     NPPluginVariable_WindowBool,        // XXX go away
     NPPluginVariable_TransparentBool,   // XXX go away?
     NPPluginVariable_JavaClass,         // XXX go away
-    NPPluginVariable_WindowSize
+    NPPluginVariable_WindowSize,
+    NPPluginVariable_TimerInterval
     // XXX add MIMEDescription (for unix) (but GetValue is on the instance, not the class)
 };
 
@@ -342,12 +343,21 @@ enum NPPluginError {
     NPPluginError_StreamNotSeekable
 };
 
+#define NPCallFailed( code ) ((code) != NPPluginError_NoError)
+
 enum NPPluginReason {
     NPPluginReason_Base = 0,
     NPPluginReason_Done = 0,
     NPPluginReason_NetworkErr,
     NPPluginReason_UserBreak,
     NPPluginReason_NoReason
+};
+
+enum NPTagType { 
+	NPTagType_Unknown = 0, 
+	NPTagType_Embed,
+	NPTagType_Object, 
+	NPTagType_Applet 
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -419,7 +429,7 @@ public:
 
     // (Corresponds to NPP_Write and NPN_Write.)
     NS_IMETHOD_(PRInt32)
-    Write(PRInt32 len, void* buffer) = 0;
+    Write(PRInt32 len, const char* buffer) = 0;
 
 };
 
@@ -461,13 +471,9 @@ public:
     NS_IMETHOD_(NPPluginError)
     NewInstance(NPIPluginInstancePeer* peer, NPIPluginInstance* *result) = 0;
 
-#ifdef XP_UNIX  // XXX why can't this be XP?
-
     // (Corresponds to NPP_GetMIMEDescription.)
     NS_IMETHOD_(const char*)
     GetMIMEDescription(void) = 0;
-
-#endif /* XP_UNIX */
 
 };
 
@@ -673,17 +679,41 @@ public:
     NS_IMETHOD_(NPPluginType)
     GetMode(void) = 0;
 
-    // (Corresponds to NPP_New's argc argument.)
-    NS_IMETHOD_(PRUint16)
-    GetArgCount(void) = 0;
+    // Get a ptr to the paired list of attribute names and values,
+    // returns the length of the array.
+    //
+    // Each name or value is a null-terminated string.
+    NS_IMETHOD_(NPPluginError)
+    GetAttributes(PRUint16& n, const char*const*& names, const char*const*& values) = 0;
 
-    // (Corresponds to NPP_New's argn argument.)
-    NS_IMETHOD_(const char**)
-    GetArgNames(void) = 0;
+    // Get the value for the named attribute.  Returns null
+    // if the attribute was not set.
+    NS_IMETHOD_(const char*)
+    GetAttribute(const char* name) = 0;
 
-    // (Corresponds to NPP_New's argv argument.)
-    NS_IMETHOD_(const char**)
-    GetArgValues(void) = 0;
+    // Get a ptr to the paired list of parameter names and values,
+    // returns the length of the array.
+    //
+    // Each name or value is a null-terminated string.
+    NS_IMETHOD_(NPPluginError)
+    GetParameters(PRUint16& n, const char*const*& names, const char*const*& values) = 0;
+
+    // Get the value for the named parameter.  Returns null
+    // if the parameter was not set.
+    NS_IMETHOD_(const char*)
+    GetParameter(const char* name) = 0;
+
+    // Get the complete text of the HTML tag that was
+    // used to instantiate this plugin
+    NS_IMETHOD_(const char *)
+    GetTagText(void) = 0;
+
+    // Get the type of the HTML tag that was used ot instantiate this
+    // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
+    // 
+    // returns a NPTagType.
+    NS_IMETHOD_(NPTagType) 
+    GetTagType(void) = 0;
 
     NS_IMETHOD_(NPIPluginManager*)
     GetPluginManager(void) = 0;
@@ -767,9 +797,11 @@ public:
     UnregisterWindow(void* window) = 0;
 
 	// Menu ID allocation calls for Mac:
-
+#ifdef XP_MAC
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu) = 0;
+#endif // XP_MAC
+
 };
 
 #define NP_IPLUGININSTANCEPEER_IID                   \
@@ -845,6 +877,22 @@ public:
 class NPIPluginStreamPeer : public nsISupports {
 public:
 
+    // (Corresponds to NPStream's url field.)
+    NS_IMETHOD_(const char*)
+    GetURL(void) = 0;
+
+    // (Corresponds to NPStream's end field.)
+    NS_IMETHOD_(PRUint32)
+    GetEnd(void) = 0;
+
+    // (Corresponds to NPStream's lastmodified field.)
+    NS_IMETHOD_(PRUint32)
+    GetLastModified(void) = 0;
+
+    // (Corresponds to NPStream's notifyData field.)
+    NS_IMETHOD_(void*)
+    GetNotifyData(void) = 0;
+
     // (Corresponds to NPP_DestroyStream's reason argument.)
     NS_IMETHOD_(NPPluginReason)
     GetReason(void) = 0;
@@ -855,31 +903,7 @@ public:
 
     NS_IMETHOD_(PRUint32)
     GetContentLength(void) = 0;
-#if 0
-    NS_IMETHOD_(const char*)
-    GetContentEncoding(void) = 0;
 
-    NS_IMETHOD_(const char*)
-    GetCharSet(void) = 0;
-
-    NS_IMETHOD_(const char*)
-    GetBoundary(void) = 0;
-
-    NS_IMETHOD_(const char*)
-    GetContentName(void) = 0;
-
-    NS_IMETHOD_(time_t)
-    GetExpires(void) = 0;
-
-    NS_IMETHOD_(time_t)
-    GetLastModified(void) = 0;
-
-    NS_IMETHOD_(time_t)
-    GetServerDate(void) = 0;
-
-    NS_IMETHOD_(NPServerStatus)
-    GetServerStatus(void) = 0;
-#endif
     NS_IMETHOD_(PRUint32)
     GetHeaderFieldCount(void) = 0;
 
