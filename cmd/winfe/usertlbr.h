@@ -81,7 +81,7 @@ public:
     int GetRow() { return currentRow; }
     void SetRow(int i) { currentRow = i; }
 
-	BOOL foundOnRDFToolbar() { return TRUE; } // RDF Buttons must ALWAYS reside on RDF toolbars.  (Derived
+	virtual BOOL foundOnRDFToolbar() { return TRUE; } // RDF Buttons must ALWAYS reside on RDF toolbars.  (Derived
 											  // classes could have different behavior, but base-class buttons
 											  // make the assumption that they sit on an RDF toolbar.
 
@@ -196,6 +196,10 @@ private:
 
 	COLORREF m_BackgroundColor;
 	COLORREF m_ForegroundColor;
+	COLORREF m_RolloverColor;
+	COLORREF m_PressedColor;
+	COLORREF m_DisabledColor;
+
 	CRDFImage* m_pBackgroundImage;
 
 	static int m_nMinToolbarButtonChars;
@@ -246,9 +250,16 @@ public:
 	
 	COLORREF GetBackgroundColor() { return m_BackgroundColor; }
 	COLORREF GetForegroundColor() { return m_ForegroundColor; }
+	COLORREF GetRolloverColor() { return m_RolloverColor; }
+	COLORREF GetPressedColor() { return m_PressedColor; }
+	COLORREF GetDisabledColor() { return m_DisabledColor; }
+
 	CRDFImage* GetBackgroundImage() { return m_pBackgroundImage; }
 	void SetBackgroundColor(COLORREF c) { m_BackgroundColor = c; }
 	void SetForegroundColor(COLORREF c) { m_ForegroundColor = c; }
+	void SetRolloverColor(COLORREF c) { m_RolloverColor = c; }
+	void SetPressedColor(COLORREF c) { m_PressedColor = c; }
+	void SetDisabledColor(COLORREF c) { m_DisabledColor = c; }
 	void SetBackgroundImage(CRDFImage* p) { m_pBackgroundImage = p; }
 
 	virtual BOOL ShouldClipChildren() { return FALSE; }
@@ -262,6 +273,7 @@ protected:
 	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 	afx_msg BOOL OnCommand( WPARAM wParam, LPARAM lParam );
 	afx_msg void OnPaint(void);
+	afx_msg BOOL OnEraseBkgnd( CDC* pDC );
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

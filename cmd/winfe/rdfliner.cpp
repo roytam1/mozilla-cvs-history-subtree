@@ -1708,13 +1708,13 @@ void CRDFOutliner::OnPaint()
 	PRBool foundData = FALSE;
 	
 	// Foreground color
-	HT_GetNodeData(top, gNavCenter->treeFGColor, HT_COLUMN_STRING, &data);
+	HT_GetNodeData(top, gNavCenter->viewFGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_ForegroundColor);
 	else m_ForegroundColor = RGB(0,0,0);
 
 	// background color
-	HT_GetNodeData(top, gNavCenter->treeBGColor, HT_COLUMN_STRING, &data);
+	HT_GetNodeData(top, gNavCenter->viewBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_BackgroundColor);
 	else m_BackgroundColor = RGB(240,240,240);
@@ -1754,7 +1754,7 @@ void CRDFOutliner::OnPaint()
 
 	// Background image URL
 	m_BackgroundImageURL = "";
-	HT_GetNodeData(top, gNavCenter->treeBGURL, HT_COLUMN_STRING, &data);
+	HT_GetNodeData(top, gNavCenter->viewBGURL, HT_COLUMN_STRING, &data);
 	if (data)
 		m_BackgroundImageURL = (char*)data;
 	m_pBackgroundImage = NULL; // Clear out the BG image.
