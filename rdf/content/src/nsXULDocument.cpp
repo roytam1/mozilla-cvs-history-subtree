@@ -4097,6 +4097,7 @@ nsXULDocument::ContextStack::IsInsideXULTemplate()
 nsresult
 nsXULDocument::PrepareToWalk()
 {
+    // Prepare to walk the mCurrentPrototype
     nsresult rv;
 
     // Keep an owning reference to the prototype document so that its
@@ -4274,7 +4275,7 @@ nsXULDocument::ResumeWalk()
                     rv = AddElementToMap(child);
                     if (NS_FAILED(rv)) return rv;
                 }
-                else if (mContextStack.Depth() == 1) {
+                else {
                     // We're in the "first ply" of an overlay: the
                     // "hookup" nodes. Create an 'overlay' element so
                     // that we can continue to build content, and
@@ -4282,11 +4283,6 @@ nsXULDocument::ResumeWalk()
                     // later.
                     rv = CreateOverlayElement(protoele, getter_AddRefs(child));
                     if (NS_FAILED(rv)) return rv;
-                }
-                else {
-                    // We're at the root of an overlay document. Just
-                    // fall through and allow the context stack 'push'
-                    // to happen normally.
                 }
 
                 // If it has children, push the element onto the context
@@ -4364,7 +4360,7 @@ nsXULDocument::ResumeWalk()
 
         nsCOMPtr<nsIURI> uri = dont_AddRef(NS_REINTERPRET_CAST(nsIURI*, mOverlays->ElementAt(0)));
 
-        // If there are no URIs in the queue, then we're done.
+        // If there are no overlay URIs in the queue, then we're done.
         if (! uri)
             break;
 
@@ -4397,7 +4393,9 @@ nsXULDocument::ResumeWalk()
             if (NS_FAILED(rv)) return rv;
 
             // Return to the main event loop and eagerly await the
-            // overlay load's completion
+            // overlay load's completion. When the content sink
+            // completes, it will trigger an EndLoad(), which'll wind
+            // us back up here, in ResumeWalk().
             return NS_OK;
         }
     }
@@ -4454,6 +4452,10 @@ nsXULDocument::LoadScript(nsIURI* aURI, PRBool* aBlock)
                                        this);
         if (NS_FAILED(rv)) return rv;
 
+        // AddRef ourself so that the completion routine will be able
+        // to find us.
+        NS_ADDREF(this);
+
         *aBlock = PR_TRUE;
     }
 
@@ -4482,6 +4484,8 @@ nsXULDocument::DoneLoadingScript(nsIUnicharStreamLoader* aLoader,
     NS_RELEASE(aLoader);
 
     rv = doc->ResumeWalk();
+
+    NS_RELEASE(doc);
     return rv;
 }
 
