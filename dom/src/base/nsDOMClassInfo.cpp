@@ -3172,41 +3172,6 @@ nsDOMClassInfo::doCheckPropertyAccess(JSContext *cx, JSObject *obj, jsval id,
                                       accessMode);
 }
 
-// static
-PRBool
-nsDOMClassInfo::IsChromeAccessingContent(nsIScriptGlobalObject *sgo,
-                                         JSContext *cx)
-{
-  nsIScriptContext *scx = sgo->GetContext();
-
-  if (scx && cx != scx->GetNativeContext()) {
-    // We're called from a different context...
-
-    PRBool callerIsSystem = PR_FALSE;
-    nsresult rv = sSecMan->SubjectPrincipalIsSystem(&callerIsSystem);
-    // Fall back to assuming chrome is accessing content if the above
-    // call fails, just to err on the side of caution.
-    NS_ENSURE_SUCCESS(rv, PR_TRUE);
-
-    if (callerIsSystem) {
-      // And the caller is system, i.e. chrome.
-
-      nsCOMPtr<nsIDOMChromeWindow> chromeWindow =
-        do_QueryInterface(sgo);
-
-      if (!chromeWindow) {
-        // The script global object being accessed is not a chrome
-        // window, thus it's a content window.
-
-        return PR_TRUE;
-      }
-    }
-  }
-
-  return PR_FALSE;
-}
-
-
 NS_IMETHODIMP
 nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
                       JSObject *globalObj, JSObject **parentObj)
@@ -3244,14 +3209,6 @@ nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
     *parentObj = sgo->GetGlobalJSObject();
 
     if (*parentObj) {
-      if (IsChromeAccessingContent(sgo, cx)) {
-        // Chrome code is accessing a non-chrome window. Don't let it
-        // share scopes with the non-chrome window, let it live in its
-        // own scope.
-
-        *parentObj = globalObj;
-      }
-
       return NS_OK;
     }
   }
@@ -5117,16 +5074,6 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   if (!doc) {
     // There's no baseclass that cares about this call so we just
     // return here.
-
-    return NS_OK;
-  }
-
-  nsIScriptGlobalObject *sgo = doc->GetScriptGlobalObject();
-  if (sgo && IsChromeAccessingContent(sgo, cx)) {
-    // Chrome is accessing content DOM objects, that means we've
-    // created a chrome scope specific wrapper for the DOM object, and
-    // we only want content DOM objects to load their XBL bindings in
-    // content code. We're done here.
 
     return NS_OK;
   }

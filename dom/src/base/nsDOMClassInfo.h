@@ -186,9 +186,6 @@ protected:
             id == sName_id);
   }
 
-  static PRBool IsChromeAccessingContent(nsIScriptGlobalObject *sgo,
-                                         JSContext *cx);
-
   nsresult doCheckPropertyAccess(JSContext *cx, JSObject *obj, jsval id,
                                  nsIXPConnectWrappedNative *wrapper,
                                  PRUint32 accessMode, PRBool isWindow);
