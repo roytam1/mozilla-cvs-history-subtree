@@ -329,25 +329,7 @@ nsSimpleURI::Clone(nsIURI* *result)
 NS_IMETHODIMP
 nsSimpleURI::Resolve(const nsACString &relativePath, nsACString &result) 
 {
-    if (!relativePath.IsEmpty() && relativePath.First() == '#') {
-        nsCAutoString spec;
-        GetSpec(spec);
-
-        nsCAutoString::const_iterator start, end;
-        spec.BeginReading(start);
-        spec.EndReading(end);
-
-        nsCAutoString::const_iterator iter(start);
-
-        if (FindCharInReadable('#', iter, end)) {
-            --iter; // Step back to before the '#'
-        }
-
-        result = Substring(start, iter) + relativePath;
-    } else {
-        result = relativePath;
-    }
-
+    result = relativePath;
     return NS_OK;
 }
 
