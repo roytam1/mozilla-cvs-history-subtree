@@ -36,37 +36,58 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXFormsAtoms.h"
-#include "nsMemory.h"
+/**
+ * nsXFormsInstanceElement implements the xforms <instance> element.
+ * It creates an instance document by either cloning the inline instance data
+ * or loading an external xml document given by the src attribute.
+ */
 
-nsIAtom* nsXFormsAtoms::src;
-nsIAtom* nsXFormsAtoms::bind;
-nsIAtom* nsXFormsAtoms::type;
-nsIAtom* nsXFormsAtoms::readonly;
-nsIAtom* nsXFormsAtoms::required;
-nsIAtom* nsXFormsAtoms::relevant;
-nsIAtom* nsXFormsAtoms::calculate;
-nsIAtom* nsXFormsAtoms::constraint;
-nsIAtom* nsXFormsAtoms::p3ptype;
-nsIAtom* nsXFormsAtoms::modelListProperty;
-nsIAtom *nsXFormsAtoms::ref;
+#ifndef nsXFormsInstanceElement_h_
+#define nsXFormsInstanceElement_h_
 
-const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
-  { "src",                      &nsXFormsAtoms::src },
-  { "bind",                     &nsXFormsAtoms::bind },
-  { "type",                     &nsXFormsAtoms::type },
-  { "readonly",                 &nsXFormsAtoms::readonly },
-  { "required",                 &nsXFormsAtoms::required },
-  { "relevant",                 &nsXFormsAtoms::relevant },
-  { "calculate",                &nsXFormsAtoms::calculate },
-  { "constraint",               &nsXFormsAtoms::constraint },
-  { "p3ptype",                  &nsXFormsAtoms::p3ptype },
-  { "ModelListProperty",        &nsXFormsAtoms::modelListProperty },
-  { "ref",                      &nsXFormsAtoms::ref },
+#include "nsIXTFGenericElement.h"
+#include "nsIXTFPrivate.h"
+#include "nsXFormsElement.h"
+#include "nsIDOMDocument.h"
+#include "nsCOMPtr.h"
+#include "nsIXTFGenericElementWrapper.h"
+#include "nsIDOMLoadListener.h"
+#include "nsXFormsModelElement.h"
+
+class nsXFormsInstanceElement : public nsXFormsElement,
+                                public nsIXTFGenericElement,
+                                public nsIXTFPrivate,
+                                public nsIDOMLoadListener
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIXTFELEMENT
+  NS_DECL_NSIXTFGENERICELEMENT
+  NS_DECL_NSIXTFPRIVATE
+
+  // nsIDOMEventListener
+  NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
+
+  // nsIDOMLoadListener
+  NS_IMETHOD Load(nsIDOMEvent *aEvent);
+  NS_IMETHOD BeforeUnload(nsIDOMEvent *aEvent);
+  NS_IMETHOD Unload(nsIDOMEvent *aEvent);
+  NS_IMETHOD Abort(nsIDOMEvent *aEvent);
+  NS_IMETHOD Error(nsIDOMEvent *aEvent);
+
+  NS_HIDDEN_(nsIDOMDocument*) GetDocument() { return mDocument; }
+
+private:
+  NS_HIDDEN_(nsresult) CloneInlineInstance();
+  NS_HIDDEN_(void) LoadExternalInstance(const nsAString &aSrc);
+  NS_HIDDEN_(nsresult) CreateInstanceDocument();
+  NS_HIDDEN_(nsXFormsModelElement*) GetModel();
+
+  nsCOMPtr<nsIDOMDocument>              mDocument;
+  nsCOMPtr<nsIXTFGenericElementWrapper> mWrapper;
 };
 
-void
-nsXFormsAtoms::InitAtoms()
-{
-  NS_RegisterStaticAtoms(Atoms_info, NS_ARRAY_LENGTH(Atoms_info));
-}
+NS_HIDDEN_(nsresult)
+NS_NewXFormsInstanceElement(nsIXTFElement **aResult);
+
+#endif

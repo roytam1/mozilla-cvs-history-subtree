@@ -44,6 +44,9 @@
 
 // base class for all XForms elements
 
+#define NS_NAMESPACE_XFORMS  "http://www.w3.org/2002/xforms"
+#define NS_NAMESPACE_XHTML   "http://www.w3.org/1999/xhtml"
+
 class nsXFormsElement
 {
 protected:

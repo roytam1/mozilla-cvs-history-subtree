@@ -70,6 +70,7 @@ CPPSRCS		= \
 		nsXFormsInputElement.cpp \
 		nsXFormsSubmissionElement.cpp \
 		nsXFormsStubElement.cpp \
+		nsXFormsInstanceElement.cpp \
 		nsXFormsAtoms.cpp \
 		nsXFormsModule.cpp \
 		nsXFormsMDG.cpp \

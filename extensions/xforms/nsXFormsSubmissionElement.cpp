@@ -76,7 +76,6 @@
 #include "nsIMIMEInputStream.h"
 #include "nsINameSpaceManager.h"
 #include "nsIDocument.h"
-#include "nsIContent.h"
 #include "nsIFileURL.h"
 #include "nsIMIMEService.h"
 #include "nsLinebreakConverter.h"
@@ -125,10 +124,10 @@ static const SubmissionFormat sSubmissionFormats[] = {
 };
 
 static PRUint32
-GetSubmissionFormat(nsIContent *content)
+GetSubmissionFormat(nsIDOMElement *aElement)
 {
   nsAutoString method;
-  content->GetAttr(kNameSpaceID_None, nsXFormsAtoms::method, method);
+  aElement->GetAttribute(NS_LITERAL_STRING("method"), method);
 
   NS_ConvertUTF16toUTF8 utf8method(method);
   for (PRUint32 i=0; i<NS_ARRAY_LENGTH(sSubmissionFormats); ++i)
@@ -247,7 +246,7 @@ NS_IMPL_ISUPPORTS3(nsXFormsSubmissionElement,
 NS_IMETHODIMP
 nsXFormsSubmissionElement::OnDestroyed()
 {
-  mContent = nsnull;
+  mElement = nsnull;
   return NS_OK;
 }
 
@@ -379,26 +378,24 @@ nsXFormsSubmissionElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
   nsCOMPtr<nsIDOMElement> node;
   aWrapper->GetElementNode(getter_AddRefs(node));
 
-  // It's ok to keep a weak pointer to mContent.  mContent will have an
-  // owning reference to this object, so as long as we null out mContent in
+  // It's ok to keep a weak pointer to mElement.  mElement will have an
+  // owning reference to this object, so as long as we null out mElement in
   // OnDestroyed, it will always be valid.
 
-  nsCOMPtr<nsIContent> content = do_QueryInterface(node);
-  mContent = content;
-
-  NS_ASSERTION(mContent, "Wrapper is not an nsIContent, we'll crash soon");
+  mElement = node;
+  NS_ASSERTION(mElement, "Wrapper is not an nsIDOMElement, we'll crash soon");
 
   // We listen on the system event group so that we can check
   // whether preventDefault() was called by any content listeners.
 
-  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mElement);
   NS_ASSERTION(receiver, "xml elements must be event receivers");
 
   nsCOMPtr<nsIDOMEventGroup> systemGroup;
   receiver->GetSystemEventGroup(getter_AddRefs(systemGroup));
   NS_ASSERTION(systemGroup, "system event group must exist");
 
-  nsCOMPtr<nsIDOM3EventTarget> target = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOM3EventTarget> target = do_QueryInterface(mElement);
 
   target->AddGroupedEventListener(NS_LITERAL_STRING("xforms-submit"),
                                   this, PR_FALSE, systemGroup);
@@ -452,7 +449,7 @@ nsXFormsSubmissionElement::Submit()
 
   // 4. serialize instance data
 
-  PRUint32 format = GetSubmissionFormat(mContent);
+  PRUint32 format = GetSubmissionFormat(mElement);
   if (format == 0)
   {
     NS_WARNING("unknown submission format");
@@ -481,7 +478,9 @@ nsXFormsSubmissionElement::Submit()
 nsresult
 nsXFormsSubmissionElement::SubmitEnd(PRBool succeeded)
 {
-  nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(mContent->GetDocument());
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+  nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(domDoc);
 
   nsCOMPtr<nsIDOMEvent> event;
   doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
@@ -493,7 +492,7 @@ nsXFormsSubmissionElement::SubmitEnd(PRBool succeeded)
 
   nsCOMPtr<nsIDOMEventTarget> target;
   if (succeeded)
-    target = do_QueryInterface(mContent);
+    target = do_QueryInterface(mElement);
   //else
   //  target = GetModel();
 
@@ -512,16 +511,17 @@ nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
   NS_ENSURE_TRUE(instance, NS_ERROR_UNEXPECTED);
 
   nsAutoString value;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::bind, value);
+  mElement->GetAttribute(NS_LITERAL_STRING("bind"), value);
   if (value.IsEmpty())
   {
     // inspect 'ref' attribute
-    mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::ref, value);
+    mElement->GetAttribute(NS_LITERAL_STRING("ref"), value);
   }
   else
   {
     // ok, value contains the 'ID' of a <bind> element.
-    nsCOMPtr<nsIDOMDocument> doc = do_QueryInterface(mContent->GetDocument());
+    nsCOMPtr<nsIDOMDocument> doc;
+    mElement->GetOwnerDocument(getter_AddRefs(doc));
 
     nsCOMPtr<nsIDOMElement> bindElement;
     doc->GetElementById(value, getter_AddRefs(bindElement));
@@ -540,8 +540,9 @@ nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
 
   // evaluate 'value' as an xpath expression
 
-  nsCOMPtr<nsIDOMXPathEvaluator> xpath =
-      do_QueryInterface(mContent->GetDocument());
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+  nsCOMPtr<nsIDOMXPathEvaluator> xpath = do_QueryInterface(domDoc);
   NS_ENSURE_TRUE(xpath, NS_ERROR_UNEXPECTED);
 
   nsCOMPtr<nsIDOMXPathNSResolver> resolver;
@@ -559,10 +560,11 @@ nsXFormsSubmissionElement::GetSelectedInstanceData(nsIDOMNode **result)
 }
 
 PRBool
-nsXFormsSubmissionElement::GetBooleanAttr(nsIAtom *name, PRBool defaultVal)
+nsXFormsSubmissionElement::GetBooleanAttr(const nsAString &name,
+                                          PRBool defaultVal)
 {
   nsAutoString value;
-  mContent->GetAttr(kNameSpaceID_None, name, value);
+  mElement->GetAttribute(name, value);
 
   // use defaultVal when value does not match a legal literal
 
@@ -585,10 +587,8 @@ nsXFormsSubmissionElement::GetDefaultInstanceData(nsIDOMNode **result)
   // default <instance> element is the first <instance> child node of 
   // our parent, which should be a <model> element.
 
-  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent);
-
   nsCOMPtr<nsIDOMNode> parent;
-  node->GetParentNode(getter_AddRefs(parent));
+  mElement->GetParentNode(getter_AddRefs(parent));
   if (!parent)
   {
     NS_WARNING("no parent node!");
@@ -620,7 +620,7 @@ nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data,
 {
   // initialize uri to the given action
   nsAutoString action;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::action, action);
+  mElement->GetAttribute(NS_LITERAL_STRING("action"), action);
   CopyUTF16toUTF8(action, uri);
 
   // 'get' method:
@@ -655,14 +655,14 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
                                             SubmissionAttachmentArray *attachments)
 {
   nsAutoString mediaType;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::mediaType, mediaType);
+  mElement->GetAttribute(NS_LITERAL_STRING("mediaType"), mediaType);
   if (mediaType.IsEmpty())
     contentType.AssignLiteral("application/xml");
   else
     CopyUTF16toUTF8(mediaType, contentType);
 
   nsAutoString encoding;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::encoding, encoding);
+  mElement->GetAttribute(NS_LITERAL_STRING("encoding"), encoding);
   if (encoding.IsEmpty())
     encoding.AssignLiteral("UTF-8");
 
@@ -705,13 +705,13 @@ nsXFormsSubmissionElement::CreateSubmissionDoc(nsIDOMDocument *source,
                                                SubmissionAttachmentArray *attachments,
                                                nsIDOMDocument **result)
 {
-  PRBool indent = GetBooleanAttr(nsXFormsAtoms::indent, PR_FALSE);
+  PRBool indent = GetBooleanAttr(NS_LITERAL_STRING("indent"), PR_FALSE);
   PRBool omit_xml_declaration
-      = GetBooleanAttr(nsXFormsAtoms::omit_xml_declaration, PR_FALSE);
+      = GetBooleanAttr(NS_LITERAL_STRING("omit-xml-declaration"), PR_FALSE);
 
   nsAutoString cdataElements;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::cdata_section_elements,
-                    cdataElements);
+  mElement->GetAttribute(NS_LITERAL_STRING("cdata-section-elements"),
+                         cdataElements);
 
   // XXX cdataElements contains space delimited QNames.  these may have
   //     namespace prefixes relative to our document.  we need to translate
@@ -852,7 +852,7 @@ nsXFormsSubmissionElement::SerializeDataURLEncoded(nsIDOMNode *data,
   nsCAutoString separator;
   {
     nsAutoString temp;
-    mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::separator, temp);
+    mElement->GetAttribute(NS_LITERAL_STRING("separator"), temp);
     if (temp.IsEmpty())
     {
       separator.AssignLiteral(";");
@@ -1312,7 +1312,7 @@ nsXFormsSubmissionElement::SendData(PRUint32 format,
   //     xforms-submit-done or xforms-submit-error when appropriate.
 
   nsAutoString replace;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::replace, replace);
+  mElement->GetAttribute(NS_LITERAL_STRING("replace"), replace);
   if (!replace.IsEmpty() && !replace.EqualsLiteral("all"))
   {
     NS_WARNING("replace != 'all' not implemented");
@@ -1344,7 +1344,10 @@ nsXFormsSubmissionElement::SendData(PRUint32 format,
     NS_ENSURE_TRUE(bufferedStream, NS_ERROR_UNEXPECTED);
   }
 
-  nsIDocument *doc = mContent->GetDocument();
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
 
   nsCOMPtr<nsISupports> container = doc->GetContainer();
   nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(container);

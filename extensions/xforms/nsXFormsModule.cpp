@@ -46,7 +46,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsXFormsElementFactory)
 static const nsModuleComponentInfo components[] = {
   { "XForms element factory",
     NS_XFORMSELEMENTFACTORY_CID,
-    NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX "http://www.w3.org/2002/xforms",
+    NS_XTF_ELEMENT_FACTORY_CONTRACTID_PREFIX NS_NAMESPACE_XFORMS,
     nsXFormsElementFactoryConstructor }
 };
 

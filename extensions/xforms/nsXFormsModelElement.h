@@ -54,9 +54,27 @@
 #include "nsISchemaLoader.h"
 #include "nsISchema.h"
 
+class nsIDOMElement;
+class nsIDOMNode;
 class nsIDOMXPathEvaluator;
-class nsIContent;
 class nsXFormsControl;
+class nsXFormsInstanceElement;
+
+enum nsXFormsModelEvent {
+  eEvent_ModelConstruct,
+  eEvent_ModelConstructDone,
+  eEvent_Ready,
+  eEvent_ModelDestruct,
+  eEvent_Rebuild,
+  eEvent_Refresh,
+  eEvent_Revalidate,
+  eEvent_Recalculate,
+  eEvent_Reset,
+  eEvent_BindingException,
+  eEvent_LinkException,
+  eEvent_LinkError,
+  eEvent_ComputeExeception
+};
 
 class nsXFormsModelElement : public nsXFormsElement,
                              public nsIXTFGenericElement,
@@ -83,13 +101,18 @@ public:
   NS_IMETHOD Abort(nsIDOMEvent* aEvent);
   NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
-  NS_HIDDEN_(nsresult) DispatchEvent(unsigned int aEvent);
+  NS_HIDDEN_(nsresult) DispatchEvent(nsXFormsModelEvent aEvent);
 
   NS_HIDDEN_(already_AddRefed<nsISchemaType>)
     GetTypeForControl(nsXFormsControl *aControl);
 
   NS_HIDDEN_(void) AddFormControl(nsXFormsControl *aControl);
   NS_HIDDEN_(void) RemoveFormControl(nsXFormsControl *aControl);
+
+  NS_HIDDEN_(void) AddPendingInstance() { ++mPendingInstanceCount; }
+  NS_HIDDEN_(void) RemovePendingInstance();
+
+  NS_HIDDEN_(nsIDOMDocument*) FindInstanceDocument(const nsAString &aID);
 
   // Called after nsXFormsAtoms is registered
   static NS_HIDDEN_(void) Startup();
@@ -99,20 +122,20 @@ private:
 
   NS_HIDDEN_(nsresult) FinishConstruction();
   NS_HIDDEN_(PRBool)   ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
-                                   nsIContent *aBindElement);
+                                   nsIDOMNode           *aContextNode,
+                                   nsIDOMElement        *aBindElement);
 
   NS_HIDDEN_(void)     RemoveModelFromDocument();
 
-  PRBool IsComplete() const { return (mSchemas.Count() == mSchemaCount)
-                                && mInstanceDataLoaded; }
+  PRBool IsComplete() const { return (mSchemas.Count() == mSchemaCount
+                                      && mPendingInstanceCount == 0);  }
 
-  nsIContent              *mContent;
+  nsIDOMElement           *mElement;
   nsCOMArray<nsISchema>    mSchemas;
-  nsCOMPtr<nsIDOMDocument> mInstanceDocument;
   nsVoidArray              mFormControls;
 
   PRInt32 mSchemaCount;
-  PRBool  mInstanceDataLoaded;
+  PRInt32 mPendingInstanceCount;
   
   nsXFormsMDG mMDG;
 };

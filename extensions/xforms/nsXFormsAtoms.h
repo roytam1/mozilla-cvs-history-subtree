@@ -41,11 +41,8 @@
 class nsXFormsAtoms
 {
  public:
-  static NS_HIDDEN_(nsIAtom *) schema;
-  static NS_HIDDEN_(nsIAtom *) instance;
   static NS_HIDDEN_(nsIAtom *) src;
   static NS_HIDDEN_(nsIAtom *) bind;
-  static NS_HIDDEN_(nsIAtom *) nodeset;
   static NS_HIDDEN_(nsIAtom *) type;
   static NS_HIDDEN_(nsIAtom *) readonly;
   static NS_HIDDEN_(nsIAtom *) required;
@@ -53,19 +50,8 @@ class nsXFormsAtoms
   static NS_HIDDEN_(nsIAtom *) calculate;
   static NS_HIDDEN_(nsIAtom *) constraint;
   static NS_HIDDEN_(nsIAtom *) p3ptype;
-  static NS_HIDDEN_(nsIAtom *) model;
   static NS_HIDDEN_(nsIAtom *) modelListProperty;
   static NS_HIDDEN_(nsIAtom *) ref;
-  static NS_HIDDEN_(nsIAtom *) action;
-  static NS_HIDDEN_(nsIAtom *) method;
-  static NS_HIDDEN_(nsIAtom *) replace;
-  static NS_HIDDEN_(nsIAtom *) separator;
-  static NS_HIDDEN_(nsIAtom *) mediaType;
-  static NS_HIDDEN_(nsIAtom *) indent;
-  static NS_HIDDEN_(nsIAtom *) encoding;
-  static NS_HIDDEN_(nsIAtom *) omit_xml_declaration;
-  static NS_HIDDEN_(nsIAtom *) cdata_section_elements;
-  static NS_HIDDEN_(nsIAtom *) includenamespaceprefixes;
 
   static NS_HIDDEN_(void) InitAtoms();
 

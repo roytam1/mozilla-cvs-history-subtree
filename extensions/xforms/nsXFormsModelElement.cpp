@@ -45,6 +45,7 @@
 #include "nsIDOMEventTarget.h"
 #include "nsIDOMElement.h"
 #include "nsIDOM3Node.h"
+#include "nsIDOMNodeList.h"
 #include "nsString.h"
 #include "nsIDocument.h"
 #include "nsXFormsAtoms.h"
@@ -67,6 +68,7 @@
 #include "nsXFormsTypes.h"
 #include "nsXFormsXPathParser.h"
 #include "nsXFormsXPathAnalyzer.h"
+#include "nsXFormsInstanceElement.h"
 
 #include "nsISchemaLoader.h"
 #include "nsAutoPtr.h"
@@ -87,22 +89,6 @@ struct EventData
   const char *name;
   PRBool      canCancel;
   PRBool      canBubble;
-};
-
-enum {
-  eEvent_ModelConstruct,
-  eEvent_ModelConstructDone,
-  eEvent_Ready,
-  eEvent_ModelDestruct,
-  eEvent_Rebuild,
-  eEvent_Refresh,
-  eEvent_Revalidate,
-  eEvent_Recalculate,
-  eEvent_Reset,
-  eEvent_BindingException,
-  eEvent_LinkException,
-  eEvent_LinkError,
-  eEvent_ComputeExeception
 };
 
 static const EventData sModelEvents[] = {
@@ -129,9 +115,8 @@ struct nsXFormsModelElement::ModelItemProperties
 };
 
 nsXFormsModelElement::nsXFormsModelElement()
-  : mContent(nsnull),
-    mSchemaCount(0),
-    mInstanceDataLoaded(PR_FALSE)
+  : mElement(nsnull),
+    mSchemaCount(0)
 {
 }
 
@@ -152,14 +137,14 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsXFormsModelElement::OnDestroyed()
 {
-  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mElement);
   NS_ASSERTION(receiver, "xml elements must be event receivers");
 
   nsCOMPtr<nsIDOMEventGroup> systemGroup;
   receiver->GetSystemEventGroup(getter_AddRefs(systemGroup));
   NS_ASSERTION(systemGroup, "system event group must exist");
   
-  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mElement);
   for (unsigned int i = 0; i < NS_ARRAY_LENGTH(sModelEvents); ++i) {
     targ->RemoveGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[i].name),
                                      this, PR_FALSE, systemGroup);
@@ -167,7 +152,7 @@ nsXFormsModelElement::OnDestroyed()
 
   RemoveModelFromDocument();
 
-  mContent = nsnull;
+  mElement = nsnull;
   return NS_OK;
 }
 
@@ -175,12 +160,15 @@ void
 nsXFormsModelElement::RemoveModelFromDocument()
 {
   // Find out if we are handling the model-construct-done for this document.
-  nsIDocument *doc = mContent->GetDocument();
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
   nsIScriptGlobalObject *window = nsnull;
   if (doc)
     window = doc->GetScriptGlobalObject();
-  nsCOMPtr<nsIDOMEventTarget> targ2 = do_QueryInterface(window);
-  if (targ2) {
+  nsCOMPtr<nsIDOMEventTarget> targ = do_QueryInterface(window);
+  if (targ) {
     nsVoidArray *models = NS_STATIC_CAST(nsVoidArray*,
                           doc->GetProperty(nsXFormsAtoms::modelListProperty));
 
@@ -189,10 +177,10 @@ nsXFormsModelElement::RemoveModelFromDocument()
         nsXFormsModelElement *next =
           NS_STATIC_CAST(nsXFormsModelElement*, models->SafeElementAt(1));
         if (next) {
-          targ2->AddEventListener(NS_LITERAL_STRING("load"), next, PR_TRUE);
+          targ->AddEventListener(NS_LITERAL_STRING("load"), next, PR_TRUE);
         }
 
-        targ2->RemoveEventListener(NS_LITERAL_STRING("load"), this, PR_TRUE);
+        targ->RemoveEventListener(NS_LITERAL_STRING("load"), this, PR_TRUE);
       }
 
       models->RemoveElement(this);
@@ -256,7 +244,10 @@ nsXFormsModelElement::DocumentChanged(nsISupports* aNewDocument)
   if (!aNewDocument)
     return NS_OK;
 
-  nsIDocument *doc = mContent->GetDocument();
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
 
   nsVoidArray *models = NS_STATIC_CAST(nsVoidArray*,
                   doc->GetProperty(nsXFormsAtoms::modelListProperty));
@@ -273,7 +264,7 @@ nsXFormsModelElement::DocumentChanged(nsISupports* aNewDocument)
   }
 
   models->AppendElement(this);
-                                 
+  
   return NS_OK;
 }
 
@@ -367,14 +358,15 @@ nsXFormsModelElement::DoneAddingChildren()
   // 1. load xml schemas
 
   nsAutoString schemaList;
-  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::schema, schemaList);
+  mElement->GetAttribute(NS_LITERAL_STRING("schema"), schemaList);
   if (!schemaList.IsEmpty()) {
     nsCOMPtr<nsISchemaLoader> loader = do_GetService(NS_SCHEMALOADER_CONTRACTID);
     NS_ENSURE_TRUE(loader, NS_ERROR_FAILURE);
 
     // Parse the space-separated list.
     PRUint32 offset = 0;
-    nsRefPtr<nsIURI> baseURI = mContent->GetBaseURI();
+    nsCOMPtr<nsIContent> content = do_QueryInterface(mElement);
+    nsRefPtr<nsIURI> baseURI = content->GetBaseURI();
 
     while (1) {
       ++mSchemaCount;
@@ -393,87 +385,11 @@ nsXFormsModelElement::DoneAddingChildren()
   }
 
   // 2. construct an XPath data model from inline or external initial instance
-  // data.
-
-  // XXX the spec says there can be any number of <instance> nodes, but
-  // I can't see how it makes sense to have more than one per model.
+  // data.  This is done by our child instance elements as they are inserted
+  // into the document, and all of the instances will be processed by this
+  // point.
 
   // XXX schema and external instance data loads should delay document onload
-
-  PRUint32 childCount = mContent->GetChildCount();
-  for (PRUint32 i = 0; i < childCount; ++i) {
-    nsIContent *child = mContent->GetChildAt(i);
-    nsINodeInfo *ni = child->GetNodeInfo();
-    if (ni && ni->Equals(nsXFormsAtoms::instance, kNameSpaceID_XForms)) {
-      // Create a document which will hold the live instance data.
-      nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(child->GetDocument());
-      nsCOMPtr<nsIDOMDOMImplementation> domImpl;
-      domDoc->GetImplementation(getter_AddRefs(domImpl));
-                              
-      nsAutoString src;
-      child->GetAttr(kNameSpaceID_None, nsXFormsAtoms::src, src);
-
-      rv = domImpl->CreateDocument(EmptyString(), EmptyString(), nsnull,
-                                   getter_AddRefs(mInstanceDocument));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      if (src.IsEmpty()) {
-        // No src means we should use the inline instance data, using the
-        // first child element of the instance node as the root.
-
-        PRUint32 instanceChildCount = child->GetChildCount();
-        nsCOMPtr<nsIDOMNode> root;
-
-        for (PRUint32 j = 0; j < instanceChildCount; ++j) {
-          nsIContent *node = child->GetChildAt(j);
-          if (node->IsContentOfType(nsIContent::eELEMENT)) {
-            root = do_QueryInterface(node);
-            break;
-          }
-        }
-
-        if (root) {
-          nsCOMPtr<nsIDOMNode> newNode;
-          rv = mInstanceDocument->ImportNode(root, PR_TRUE,
-                                             getter_AddRefs(newNode));
-          NS_ENSURE_SUCCESS(rv, rv);
-
-          nsCOMPtr<nsIDOMNode> nodeReturn;
-          rv = mInstanceDocument->AppendChild(newNode,
-                                              getter_AddRefs(nodeReturn));
-          NS_ENSURE_SUCCESS(rv, rv);
-
-          mInstanceDataLoaded = PR_TRUE;
-        }
-      } else {
-        // We're using external instance data, so we need to load
-        // the data into a new document which becomes our live instance data.
-
-        // XXX We need to come up with a mechanism so that the content sink
-        // can use xmlns declarations in effect for the <model> to resolve
-        // tag prefixes in the external instance data.
-
-        // Hook up load an error listeners so we'll know when the document
-        // is done loading.
-
-        nsCOMPtr<nsIDOMEventReceiver> rec =
-          do_QueryInterface(mInstanceDocument);
-        rec->AddEventListenerByIID(this, NS_GET_IID(nsIDOMLoadListener));
-
-        nsCOMPtr<nsIDOMXMLDocument> xmlDoc =
-          do_QueryInterface(mInstanceDocument);
-
-        PRBool success;
-        xmlDoc->Load(src, &success);
-        if (!success) {
-          DispatchEvent(eEvent_LinkException);
-          return NS_OK;
-        }
-      }
-
-      break;
-    }
-  }
 
   if (IsComplete()) {
     return FinishConstruction();
@@ -488,14 +404,12 @@ nsXFormsModelElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
   nsCOMPtr<nsIDOMElement> node;
   aWrapper->GetElementNode(getter_AddRefs(node));
 
-  // It's ok to keep a weak pointer to mContent.  mContent will have an
-  // owning reference to this object, so as long as we null out mContent in
+  // It's ok to keep a weak pointer to mElement.  mElement will have an
+  // owning reference to this object, so as long as we null out mElement in
   // OnDestroyed, it will always be valid.
 
-  nsCOMPtr<nsIContent> content = do_QueryInterface(node);
-  mContent = content;
-
-  NS_ASSERTION(mContent, "Wrapper is not an nsIContent, we'll crash soon");
+  mElement = node;
+  NS_ASSERTION(mElement, "Wrapper is not an nsIDOMElement, we'll crash soon");
 
   nsresult rv = mMDG.Init();
   NS_ENSURE_SUCCESS(rv, rv);
@@ -518,11 +432,10 @@ NS_IMETHODIMP
 nsXFormsModelElement::GetInstanceDocument(const nsAString& aInstanceID,
                                           nsIDOMDocument **aDocument)
 {
-  if (!mInstanceDocument)
-    return NS_ERROR_FAILURE; // what sort of exception should this be?
+  NS_ENSURE_ARG_POINTER(aDocument);
 
-  NS_ADDREF(*aDocument = mInstanceDocument);
-  return NS_OK;
+  NS_IF_ADDREF(*aDocument = FindInstanceDocument(aInstanceID));
+  return *aDocument ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -653,7 +566,6 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsXFormsModelElement::Load(nsIDOMEvent* aEvent)
 {
-  // This could be a load event for us or for the document.
   nsCOMPtr<nsIDOMEventTarget> target;
   aEvent->GetTarget(getter_AddRefs(target));
 
@@ -670,14 +582,6 @@ nsXFormsModelElement::Load(nsIDOMEvent* aEvent)
     for (PRInt32 i = 0; i < models->Count(); ++i) {
       NS_STATIC_CAST(nsXFormsModelElement*, models->ElementAt(i))
         ->DispatchEvent(eEvent_ModelConstructDone);
-    }
-  } else {
-    mInstanceDataLoaded = PR_TRUE;
-    if (IsComplete()) {
-      nsresult rv = FinishConstruction();
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      DispatchEvent(eEvent_Refresh);
     }
   }
 
@@ -712,6 +616,61 @@ nsXFormsModelElement::Error(nsIDOMEvent* aEvent)
 
 // internal methods
 
+nsIDOMDocument*
+nsXFormsModelElement::FindInstanceDocument(const nsAString &aID)
+{
+  nsCOMPtr<nsIDOMNodeList> children;
+  mElement->GetChildNodes(getter_AddRefs(children));
+
+  if (!children)
+    return nsnull;
+
+  PRUint32 childCount = 0;
+  children->GetLength(&childCount);
+
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIDOMElement> element;
+  nsAutoString id;
+
+  for (PRUint32 i = 0; i < childCount; ++i) {
+    children->Item(i, getter_AddRefs(node));
+    NS_ASSERTION(node, "incorrect NodeList length?");
+
+    element = do_QueryInterface(node);
+    if (!element)
+      continue;
+
+    element->GetAttribute(NS_LITERAL_STRING("id"), id);
+    if (aID.IsEmpty() || aID.Equals(id)) {
+      // make sure this is an xforms instance element
+      nsAutoString namespaceURI, localName;
+      element->GetNamespaceURI(namespaceURI);
+      element->GetLocalName(localName);
+
+      if (localName.EqualsLiteral("instance") &&
+          namespaceURI.EqualsLiteral(NS_NAMESPACE_XFORMS)) {
+
+        // This is the requested instance, so get its document.
+        nsCOMPtr<nsIXTFPrivate> xtfPriv = do_QueryInterface(element);
+        NS_ENSURE_TRUE(xtfPriv, nsnull);
+
+        nsCOMPtr<nsISupports> instanceInner;
+        xtfPriv->GetInner(getter_AddRefs(instanceInner));
+        NS_ENSURE_TRUE(instanceInner, nsnull);
+
+        nsISupports *isupp = NS_STATIC_CAST(nsISupports*, instanceInner.get());
+        nsXFormsInstanceElement *instance =
+          NS_STATIC_CAST(nsXFormsInstanceElement*,
+                         NS_STATIC_CAST(nsIXTFGenericElement*, isupp));
+
+        return instance->GetDocument();
+      }
+    }
+  }
+
+  return nsnull;
+}
+
 nsresult
 nsXFormsModelElement::FinishConstruction()
 {
@@ -720,19 +679,40 @@ nsXFormsModelElement::FinishConstruction()
   // 4. construct instance data from initial instance data.  apply all
   // <bind> elements in document order.
 
-  // The instance data is in our mInstanceDocument.
+  // we get the instance data from our instance child nodes
 
-  PRUint32 childCount = mContent->GetChildCount();
-  nsCOMPtr<nsIDOMXPathEvaluator> xpath = do_QueryInterface(mInstanceDocument);
+  nsIDOMDocument *firstInstanceDoc = FindInstanceDocument(EmptyString());
+  if (!firstInstanceDoc)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMElement> firstInstanceRoot;
+  firstInstanceDoc->GetDocumentElement(getter_AddRefs(firstInstanceRoot));
+
+  nsCOMPtr<nsIDOMXPathEvaluator> xpath = do_QueryInterface(firstInstanceDoc);
+  
+  nsCOMPtr<nsIDOMNodeList> children;
+  mElement->GetChildNodes(getter_AddRefs(children));
+
+  PRUint32 childCount = 0;
+  if (children)
+    children->GetLength(&childCount);
+
+  nsAutoString namespaceURI, localName;
 
   for (PRUint32 i = 0; i < childCount; ++i) {
-    nsIContent *child = mContent->GetChildAt(i);
-    nsINodeInfo *ni = child->GetNodeInfo();
+    nsCOMPtr<nsIDOMNode> child;
+    children->Item(i, getter_AddRefs(child));
+    NS_ASSERTION(child, "there can't be null items in the NodeList!");
 
-    if (ni && ni->Equals(nsXFormsAtoms::bind, kNameSpaceID_XForms)) {
-      if (!ProcessBind(xpath, child)) {
-        DispatchEvent(eEvent_BindingException);
-        return NS_OK;
+    child->GetLocalName(localName);
+    if (localName.EqualsLiteral("bind")) {
+      child->GetNamespaceURI(namespaceURI);
+      if (namespaceURI.EqualsLiteral(NS_NAMESPACE_XFORMS)) {
+        if (!ProcessBind(xpath, firstInstanceRoot,
+                         nsCOMPtr<nsIDOMElement>(do_QueryInterface(child)))) {
+          DispatchEvent(eEvent_BindingException);
+          return NS_OK;
+        }
       }
     }
   }
@@ -743,14 +723,14 @@ nsXFormsModelElement::FinishConstruction()
   // these events.  We listen on the system event group so that we can check
   // whether preventDefault() was called by any content listeners.
 
-  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(mElement);
   NS_ASSERTION(receiver, "xml elements must be event receivers");
 
   nsCOMPtr<nsIDOMEventGroup> systemGroup;
   receiver->GetSystemEventGroup(getter_AddRefs(systemGroup));
   NS_ASSERTION(systemGroup, "system event group must exist");
   
-  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mElement);
   for (unsigned int j = 0; j < NS_ARRAY_LENGTH(sModelEvents); ++j) {
     targ->AddGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[j].name),
                                   this, PR_FALSE, systemGroup);
@@ -779,27 +759,30 @@ ReleaseExpr(void    *aElement,
 
 PRBool
 nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
-                                  nsIContent *aBindElement)
+                                  nsIDOMNode    *aContextNode,
+                                  nsIDOMElement *aBindElement)
 {
   // Get the expression for the nodes that this <bind> applies to.
   nsAutoString expr;
-  aBindElement->GetAttr(kNameSpaceID_None, nsXFormsAtoms::nodeset, expr);
+  aBindElement->GetAttribute(NS_LITERAL_STRING("nodeset"), expr);
   if (expr.IsEmpty())
     return PR_TRUE;
 
   nsCOMPtr<nsIDOMXPathNSResolver> resolver;
-  aEvaluator->CreateNSResolver(nsCOMPtr<nsIDOMNode>(do_QueryInterface(aBindElement)),
-                               getter_AddRefs(resolver));
+  aEvaluator->CreateNSResolver(aBindElement, getter_AddRefs(resolver));
 
   // Get the model item properties specified by this <bind>.
   nsCOMPtr<nsIDOMXPathExpression> props[eModel__count];
   nsAutoString exprStrings[eModel__count];
   PRInt32 propCount = 0;
   nsresult rv = NS_OK;
+  nsAutoString attrStr;
 
   for (int i = 0; i < eModel__count; ++i) {
-    if (aBindElement->GetAttr(kNameSpaceID_None, sModelPropsList[i], exprStrings[i]) != NS_CONTENT_ATTR_NOT_THERE) {
+    sModelPropsList[i]->ToString(attrStr);
 
+    aBindElement->GetAttribute(attrStr, exprStrings[i]);
+    if (!exprStrings[i].IsEmpty()) {
       rv = aEvaluator->CreateExpression(exprStrings[i], resolver,
                                         getter_AddRefs(props[i]));
       if (NS_FAILED(rv))
@@ -813,9 +796,7 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
     return PR_TRUE;  // successful, but nothing to do
 
   nsCOMPtr<nsIDOMXPathResult> result;
-  nsCOMPtr<nsIDOMElement> docElement;
-  mInstanceDocument->GetDocumentElement(getter_AddRefs(docElement));
-  rv = aEvaluator->Evaluate(expr, docElement, resolver,
+  rv = aEvaluator->Evaluate(expr, aContextNode, resolver,
                             nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
                             nsnull, getter_AddRefs(result));
   if (NS_FAILED(rv))
@@ -878,18 +859,22 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
 }
 
 nsresult
-nsXFormsModelElement::DispatchEvent(unsigned int aEvent)
+nsXFormsModelElement::DispatchEvent(nsXFormsModelEvent aEvent)
 {
-  const EventData *data = &sModelEvents[aEvent];
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(domDoc));
+
+  nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(domDoc);
+
   nsCOMPtr<nsIDOMEvent> event;
-  nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(mContent->GetDocument());
   doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
   NS_ENSURE_TRUE(event, NS_ERROR_OUT_OF_MEMORY);
 
+  const EventData *data = &sModelEvents[aEvent];
   event->InitEvent(NS_ConvertUTF8toUTF16(data->name),
                    data->canBubble, data->canCancel);
 
-  nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mContent);
+  nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mElement);
   PRBool cancelled;
   return target->DispatchEvent(event, &cancelled);
 }
@@ -911,6 +896,17 @@ void
 nsXFormsModelElement::RemoveFormControl(nsXFormsControl *aControl)
 {
   mFormControls.RemoveElement(aControl);
+}
+
+void
+nsXFormsModelElement::RemovePendingInstance()
+{
+  --mPendingInstanceCount;
+  if (IsComplete()) {
+    nsresult rv = FinishConstruction();
+    if (NS_SUCCEEDED(rv))
+      DispatchEvent(eEvent_Refresh);
+  }
 }
 
 /* static */ void

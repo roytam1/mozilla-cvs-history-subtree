@@ -38,7 +38,6 @@
 
 #include "nsXFormsControl.h"
 #include "nsXFormsModelElement.h"
-#include "nsIContent.h"
 #include "nsString.h"
 #include "nsXFormsAtoms.h"
 #include "nsIDOMElement.h"
@@ -61,15 +60,13 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
   nsCOMPtr<nsIDOMElement> node;
   mWrapper->GetElementNode(getter_AddRefs(node));
 
-  nsCOMPtr<nsIContent> content(do_QueryInterface(node));
-  NS_ASSERTION(content, "wrapper must implement nsIContent");
-
-  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(content->GetDocument());
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  node->GetOwnerDocument(getter_AddRefs(domDoc));
   if (!domDoc)
     return nsnull;
 
   nsAutoString bindId;
-  content->GetAttr(kNameSpaceID_None, nsXFormsAtoms::bind, bindId);
+  node->GetAttribute(NS_LITERAL_STRING("bind"), bindId);
 
   nsCOMPtr<nsIDOMNode> modelWrapper;
 
@@ -77,29 +74,34 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
     // Get the bind element with the given id.
     domDoc->GetElementById(bindId, aBindElement);
 
-    nsCOMPtr<nsIContent> bindContent = do_QueryInterface(*aBindElement);
-    nsIContent *modelContent = bindContent;
+    if (*aBindElement) {
+      // Walk up the tree looking for the containing model.
+      (*aBindElement)->GetParentNode(getter_AddRefs(modelWrapper));
 
-    if (modelContent) {
-      while ((modelContent = modelContent->GetParent())) {
-        nsINodeInfo *nodeInfo = modelContent->GetNodeInfo();
-        if (nodeInfo &&
-            nodeInfo->NamespaceEquals(NS_LITERAL_STRING("http://www.w3.org/2002/xforms")) &&
-            nodeInfo->NameAtom() == nsXFormsAtoms::model)
-          break;
+      nsAutoString localName, namespaceURI;
+      nsCOMPtr<nsIDOMNode> temp;
+
+      while (modelWrapper) {
+        modelWrapper->GetLocalName(localName);
+        if (localName.EqualsLiteral("model")) {
+          modelWrapper->GetNamespaceURI(namespaceURI);
+          if (namespaceURI.EqualsLiteral(NS_NAMESPACE_XFORMS))
+            break;
+        }
+
+        temp.swap(modelWrapper);
+        temp->GetParentNode(getter_AddRefs(modelWrapper));
       }
     }
-
-    modelWrapper = do_QueryInterface(modelContent);
   } else {
     // If no bind was given, we use model.
     nsAutoString modelId;
-    content->GetAttr(kNameSpaceID_None, nsXFormsAtoms::model, modelId);
+    node->GetAttribute(NS_LITERAL_STRING("model"), modelId);
 
     if (modelId.IsEmpty()) {
       // No model given, so use the first one in the document.
       nsCOMPtr<nsIDOMNodeList> nodes;
-      domDoc->GetElementsByTagNameNS(NS_LITERAL_STRING("http://www.w3.org/2002/xforms"),
+      domDoc->GetElementsByTagNameNS(NS_LITERAL_STRING(NS_NAMESPACE_XFORMS),
                                      NS_LITERAL_STRING("model"),
                                      getter_AddRefs(nodes));
 
@@ -170,6 +172,8 @@ nsXFormsControl::EvaluateBinding(PRUint16               aResultType,
 
   nsCOMPtr<nsIDOMElement> docElement;
   instanceDoc->GetDocumentElement(getter_AddRefs(docElement));
+  if (!docElement)
+    return nsnull;   // this will happen if the doc is still loading
 
   nsCOMPtr<nsISupports> result;
   eval->Evaluate(expr, docElement, resolver, aResultType, nsnull,

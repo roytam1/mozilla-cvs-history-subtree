@@ -38,6 +38,7 @@
 
 #include "nsXFormsElementFactory.h"
 #include "nsXFormsModelElement.h"
+#include "nsXFormsInstanceElement.h"
 #include "nsXFormsSubmissionElement.h"
 #include "nsXFormsStubElement.h"
 #include "nsString.h"
@@ -52,6 +53,8 @@ nsXFormsElementFactory::CreateElement(const nsAString& aTagName,
 {
   if (aTagName.EqualsLiteral("model"))
     return NS_NewXFormsModelElement(aElement);
+  if (aTagName.EqualsLiteral("instance"))
+    return NS_NewXFormsInstanceElement(aElement);
   if (aTagName.EqualsLiteral("bind"))
     return NS_NewXFormsStubElement(aElement);
   if (aTagName.EqualsLiteral("input"))

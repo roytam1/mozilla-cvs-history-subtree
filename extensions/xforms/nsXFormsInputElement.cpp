@@ -110,7 +110,7 @@ nsXFormsInputElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
   node->GetOwnerDocument(getter_AddRefs(domDoc));
 
   nsCOMPtr<nsIDOMElement> inputElement;
-  domDoc->CreateElementNS(NS_LITERAL_STRING("http://www.w3.org/1999/xhtml"),
+  domDoc->CreateElementNS(NS_LITERAL_STRING(NS_NAMESPACE_XHTML),
                           NS_LITERAL_STRING("input"),
                           getter_AddRefs(inputElement));
 

@@ -45,7 +45,7 @@
 
 class nsIMultiplexInputStream;
 class nsIInputStream;
-class nsIContent;
+class nsIDOMElement;
 class nsIFile;
 class nsCString;
 class nsString;
@@ -63,12 +63,12 @@ public:
   NS_DECL_NSIDOMEVENTLISTENER
 
   nsXFormsSubmissionElement()
-    : mContent(nsnull)
+    : mElement(nsnull)
   {}
 
   NS_HIDDEN_(void)     Submit();
   NS_HIDDEN_(nsresult) SubmitEnd(PRBool succeeded);
-  NS_HIDDEN_(PRBool)   GetBooleanAttr(nsIAtom *attrName, PRBool defaultVal = PR_FALSE);
+  NS_HIDDEN_(PRBool)   GetBooleanAttr(const nsAString &attrName, PRBool defaultVal = PR_FALSE);
   NS_HIDDEN_(void)     GetDefaultInstanceData(nsIDOMNode **result);
   NS_HIDDEN_(nsresult) GetSelectedInstanceData(nsIDOMNode **result);
   NS_HIDDEN_(nsresult) SerializeData(nsIDOMNode *data, PRUint32 format, nsCString &uri, nsIInputStream **, nsCString &contentType);
@@ -86,7 +86,7 @@ public:
   NS_HIDDEN_(nsresult) SendData(PRUint32 format, const nsCString &uri, nsIInputStream *stream, const nsCString &contentType);
 
 private:
-  nsIContent *mContent;
+  nsIDOMElement *mElement;
 };
 
 NS_HIDDEN_(nsresult)
