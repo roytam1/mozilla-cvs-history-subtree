@@ -71,7 +71,7 @@ static void GetAttribute( nsIXULWindow* inWindow,
 static void GetWindowType( nsIXULWindow* inWindow, nsAutoString& outType );
 static PRUint32 GetWindowZ( nsIXULWindow *inWindow );
 
-nsresult NS_NewRDFContainer(nsIRDFDataSource* aDataSource,
+static nsresult appshell_NS_NewRDFContainer(nsIRDFDataSource* aDataSource,
                    nsIRDFResource* aResource,
                    nsIRDFContainer** aResult)
 {
@@ -253,14 +253,14 @@ void nsWindowInfo::ReferenceSelf( PRBool inAge, PRBool inZ ) {
   }
 }
 
-class nsWindowEnumerator : public nsISimpleEnumerator
+class appshell_nsWindowEnumerator : public nsISimpleEnumerator
 {
 
 public:
-  nsWindowEnumerator ( const PRUnichar* inTypeString,
+  appshell_nsWindowEnumerator ( const PRUnichar* inTypeString,
                        nsWindowMediator& inMediator,
                        PRBool enumXULWindow );
-  virtual ~nsWindowEnumerator();
+  virtual ~appshell_nsWindowEnumerator();
   NS_IMETHOD HasMoreElements(PRBool *retval);
   NS_IMETHOD GetNext(nsISupports **retval);
 
@@ -278,7 +278,7 @@ private:
   PRBool            mEnumXULWindow;
 };
 
-nsWindowEnumerator::nsWindowEnumerator ( const PRUnichar* inTypeString,
+appshell_nsWindowEnumerator::appshell_nsWindowEnumerator ( const PRUnichar* inTypeString,
                                          nsWindowMediator& inMediator,
                                          PRBool enumXULWindow )
   : mWindowMediator(&inMediator), mType(inTypeString),
@@ -295,13 +295,13 @@ nsWindowEnumerator::nsWindowEnumerator ( const PRUnichar* inTypeString,
     mCurrentPosition = FindNext();
 }
 
-nsWindowEnumerator::~nsWindowEnumerator()
+appshell_nsWindowEnumerator::~appshell_nsWindowEnumerator()
 {
   mWindowMediator->RemoveEnumerator( this );
   mWindowMediator->Release();
 }
 
-NS_IMETHODIMP nsWindowEnumerator::HasMoreElements(PRBool *retval)
+NS_IMETHODIMP appshell_nsWindowEnumerator::HasMoreElements(PRBool *retval)
 {
   if ( !retval )
     return NS_ERROR_INVALID_ARG;
@@ -312,7 +312,7 @@ NS_IMETHODIMP nsWindowEnumerator::HasMoreElements(PRBool *retval)
   return NS_OK;
 }
 	
-NS_IMETHODIMP nsWindowEnumerator::GetNext(nsISupports **retval)
+NS_IMETHODIMP appshell_nsWindowEnumerator::GetNext(nsISupports **retval)
 {
   if (!retval)
     return NS_ERROR_INVALID_ARG;
@@ -331,7 +331,7 @@ NS_IMETHODIMP nsWindowEnumerator::GetNext(nsISupports **retval)
   return NS_OK;
 }
 
-nsWindowInfo * nsWindowEnumerator::FindNext() {
+nsWindowInfo * appshell_nsWindowEnumerator::FindNext() {
 
   nsWindowInfo *info,
                *listEnd;
@@ -360,7 +360,7 @@ nsWindowInfo * nsWindowEnumerator::FindNext() {
 }
 
 // if a window is being removed adjust the iterator's current position
-void nsWindowEnumerator::WindowRemoved( nsWindowInfo *inInfo ) {
+void appshell_nsWindowEnumerator::WindowRemoved( nsWindowInfo *inInfo ) {
 
   if (mCurrentPosition == inInfo)
     mCurrentPosition = mCurrentPosition != inInfo->mYounger ?
@@ -370,9 +370,9 @@ void nsWindowEnumerator::WindowRemoved( nsWindowInfo *inInfo ) {
 /* 
  * Implementations of nsISupports interface methods...
  */
-NS_IMPL_ADDREF(nsWindowEnumerator);
-NS_IMPL_RELEASE(nsWindowEnumerator);
-NS_IMPL_QUERY_INTERFACE1(nsWindowEnumerator, nsISimpleEnumerator);
+NS_IMPL_ADDREF(appshell_nsWindowEnumerator);
+NS_IMPL_RELEASE(appshell_nsWindowEnumerator);
+NS_IMPL_QUERY_INTERFACE1(appshell_nsWindowEnumerator, nsISimpleEnumerator);
 
 
 nsIRDFResource	*nsWindowMediator::kNC_WindowMediatorRoot = NULL;
@@ -472,11 +472,11 @@ NS_IMETHODIMP nsWindowMediator::UnregisterWindow( nsWindowInfo *inInfo )
   // Inform the iterators
   PRInt32 index = -1;
   while (++index < mEnumeratorList.Count() ) 
-    ((nsWindowEnumerator*)mEnumeratorList[ index ] )->WindowRemoved ( inInfo );
+    ((appshell_nsWindowEnumerator*)mEnumeratorList[ index ] )->WindowRemoved ( inInfo );
 
   // Remove From RDF
   nsCOMPtr<nsIRDFContainer> container;
-  nsresult rv = NS_NewRDFContainer(mInner, kNC_WindowMediatorRoot, getter_AddRefs(container));
+  nsresult rv = appshell_NS_NewRDFContainer(mInner, kNC_WindowMediatorRoot, getter_AddRefs(container));
   if (NS_SUCCEEDED(rv))
     container->RemoveElement( inInfo->mRDFID, PR_TRUE );
  	
@@ -514,7 +514,7 @@ NS_METHOD nsWindowMediator::GetEnumerator( const PRUnichar* inType, nsISimpleEnu
     return NS_ERROR_INVALID_ARG;
 
   nsAutoLock lock(mListLock);
-  nsWindowEnumerator* enumerator = new nsWindowEnumerator( inType, *this, PR_FALSE );
+  appshell_nsWindowEnumerator* enumerator = new appshell_nsWindowEnumerator( inType, *this, PR_FALSE );
   if (enumerator )
     return enumerator->QueryInterface( NS_GET_IID(nsISimpleEnumerator) , (void**)outEnumerator );
 
@@ -527,7 +527,7 @@ NS_METHOD nsWindowMediator::GetXULWindowEnumerator( const PRUnichar* inType, nsI
     return NS_ERROR_INVALID_ARG;
 
   nsAutoLock lock(mListLock);
-  nsWindowEnumerator* enumerator = new nsWindowEnumerator( inType, *this, PR_TRUE );
+  appshell_nsWindowEnumerator* enumerator = new appshell_nsWindowEnumerator( inType, *this, PR_TRUE );
   if (enumerator )
     return enumerator->QueryInterface( NS_GET_IID(nsISimpleEnumerator) , (void**)outEnumerator );
 
@@ -535,12 +535,12 @@ NS_METHOD nsWindowMediator::GetXULWindowEnumerator( const PRUnichar* inType, nsI
 }	
  
 
-PRInt32 nsWindowMediator::AddEnumerator( nsWindowEnumerator* inEnumerator )
+PRInt32 nsWindowMediator::AddEnumerator( appshell_nsWindowEnumerator* inEnumerator )
 {
   return mEnumeratorList.AppendElement(inEnumerator);
 }
 
-PRInt32 nsWindowMediator::RemoveEnumerator( nsWindowEnumerator* inEnumerator)
+PRInt32 nsWindowMediator::RemoveEnumerator( appshell_nsWindowEnumerator* inEnumerator)
 {
   return mEnumeratorList.RemoveElement(inEnumerator);
 }
@@ -1111,7 +1111,7 @@ nsresult nsWindowMediator::AddWindowToRDF( nsWindowInfo* ioWindowInfo )
 	#endif
 	// Add the element to the container
   nsCOMPtr<nsIRDFContainer> container;
-  rv = NS_NewRDFContainer(mInner, kNC_WindowMediatorRoot, getter_AddRefs(container));
+  rv = appshell_NS_NewRDFContainer(mInner, kNC_WindowMediatorRoot, getter_AddRefs(container));
   if (NS_FAILED(rv))
   	return rv;
 

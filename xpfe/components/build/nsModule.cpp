@@ -136,4 +136,4 @@ static nsModuleComponentInfo components[] = {
 #endif // Windows
 };
 
-NS_IMPL_NSGETMODULE("application", components)
+NS_IMPL_NSGETMODULE(application, components)

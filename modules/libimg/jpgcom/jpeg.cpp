@@ -180,7 +180,7 @@ il_error_exit (j_common_ptr cinfo)
 }
 
 
-void PR_CALLBACK
+static void PR_CALLBACK
 init_source (j_decompress_ptr jd)
 {
 }
@@ -213,7 +213,7 @@ init_source (j_decompress_ptr jd)
  *  TRUE if additional data is available, FALSE if no data present and
  *   the JPEG library should therefore suspend processing of input stream
  *---------------------------------------------------------------------------*/
-boolean PR_CALLBACK
+static boolean PR_CALLBACK
 fill_input_buffer (j_decompress_ptr jd)
 {
     il_source_mgr *src = (il_source_mgr *)jd->src;
@@ -325,7 +325,7 @@ fill_input_buffer (j_decompress_ptr jd)
     return FALSE;
 }
 
-void PR_CALLBACK
+static void PR_CALLBACK
 skip_input_data (j_decompress_ptr jd, long num_bytes)
 {
     il_source_mgr *src = (il_source_mgr *)jd->src;
@@ -357,7 +357,7 @@ skip_input_data (j_decompress_ptr jd, long num_bytes)
  * Terminate source --- called by jpeg_finish_decompress() after all
  * data has been read to clean up JPEG source manager.
  */
-void PR_CALLBACK
+static void PR_CALLBACK
 term_source (j_decompress_ptr jd)
 {
     /* No work necessary here */

@@ -71,12 +71,6 @@ static PRLogModuleInfo *SMTPLogModule = nsnull;
 
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
 
-extern "C" 
-{
-	char * NET_SACopy (char **destination, const char *source);
-	char * NET_SACat (char **destination, const char *source);
-}
-
 /* the output_buffer_size must be larger than the largest possible line
  * 2000 seems good for news
  *
@@ -92,9 +86,9 @@ extern "C"
 // TEMPORARY HARD CODED FUNCTIONS 
 ///////////////////////////////////////////////////////////////////////////////////////////
 #if defined (XP_WIN) || defined(XP_OS2)
-char *XP_AppCodeName = "Mozilla";
+static char *XP_AppCodeName = "Mozilla";
 #else
-const char *XP_AppCodeName = "Mozilla";
+static const char *XP_AppCodeName = "Mozilla";
 #endif
 #define NET_IS_SPACE(x) ((((unsigned int) (x)) > 0x7f) ? 0 : isspace(x))
 
@@ -143,7 +137,7 @@ nsresult nsExplainErrorDetails(nsISmtpUrl * aSmtpUrl, int code, ...)
 	return rv;
 }
 
-char * NET_SACopy (char **destination, const char *source)
+static char * NET_SACopy (char **destination, const char *source)
 {
 	if(*destination)
 	  {
@@ -167,7 +161,7 @@ char * NET_SACopy (char **destination, const char *source)
 
 /*  Again like strdup but it concatinates and free's and uses Realloc
 */
-char * NET_SACat (char **destination, const char *source)
+static char * NET_SACat (char **destination, const char *source)
 {
     if (source && *source)
       {

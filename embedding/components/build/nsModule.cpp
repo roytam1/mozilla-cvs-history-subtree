@@ -39,4 +39,4 @@ static nsModuleComponentInfo components[] = {
   { NS_APPSTARTUPNOTIFIER_CLASSNAME, NS_APPSTARTUPNOTIFIER_CID, NS_APPSTARTUPNOTIFIER_CONTRACTID, nsAppStartupNotifierConstructor }
 };
 
-NS_IMPL_NSGETMODULE("embedcomponents", components)
+NS_IMPL_NSGETMODULE(embedcomponents, components)

@@ -31,8 +31,8 @@ extern "C" PRBool   EmitThisHeaderForPrefSetting(PRInt32 dispType, const char *h
 // Create a file spec or file name using the name passed
 // in as a template
 //
-nsFileSpec  *nsMsgCreateTempFileSpec(char *tFileName);
-char        *nsMsgCreateTempFileName(char *tFileName);
+extern nsFileSpec  *nsMsgCreateTempFileSpec(char *tFileName);
+extern char        *nsMsgCreateTempFileName(char *tFileName);
 
 #endif // _nsEmitterUtils_h_
 

@@ -84,7 +84,7 @@ static PRBool MIME_WrapLongLines;
 static PRBool MIME_VariableWidthPlaintext;
 
 // For string bundle access routines...
-nsCOMPtr<nsIStringBundle>   stringBundle = nsnull;
+static nsCOMPtr<nsIStringBundle>   stringBundle = nsnull;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Attachment handling routines

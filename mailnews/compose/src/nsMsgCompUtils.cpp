@@ -50,6 +50,33 @@ static NS_DEFINE_CID(kNntpServiceCID, NS_NNTPSERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
 
+/*  Again like strdup but it concatinates and free's and uses Realloc
+*/
+static char * NET_SACat (char **destination, const char *source)
+{
+    if (source && *source)
+      {
+        if (*destination)
+          {
+            int length = PL_strlen (*destination);
+            *destination = (char *) PR_Realloc (*destination, length + PL_strlen(source) + 1);
+            if (*destination == NULL)
+            return(NULL);
+
+            PL_strcpy (*destination + length, source);
+          }
+        else
+          {
+            *destination = (char *) PR_Malloc (PL_strlen(source) + 1);
+            if (*destination == NULL)
+                return(NULL);
+
+             PL_strcpy (*destination, source);
+          }
+      }
+    return *destination;
+}
+
 //
 // Hopefully, someone will write and XP call like this eventually!
 //

@@ -183,7 +183,7 @@ static nsViewModule *gModule = NULL;
 //////////////////////////////////////////////////////////////////////
 // Module entry point
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT nsresult NSGetModule_nsViewFactory(nsIComponentManager *servMgr,
                                           nsIFile* aPath,
                                           nsIModule** return_cobj)
 {

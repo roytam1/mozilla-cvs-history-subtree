@@ -148,14 +148,6 @@ protected:
     PRUint32    mLength;
 };
 
-// todo:  get rid of this
-extern "C"
-{
-char * NET_SACopy (char **destination, const char *source);
-char * NET_SACat (char **destination, const char *source);
-
-}
-
 static NS_DEFINE_CID(kIStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kCHeaderParserCID, NS_MSGHEADERPARSER_CID);
 static NS_DEFINE_CID(kNNTPArticleListCID, NS_NNTPARTICLELIST_CID);
@@ -309,13 +301,13 @@ char *stateLabels[] = {
 // TEMPORARY HARD CODED FUNCTIONS 
 ///////////////////////////////////////////////////////////////////////////////////////////
 #ifdef XP_WIN
-char *XP_AppCodeName = "Mozilla";
+static char *XP_AppCodeName = "Mozilla";
 #else
-const char *XP_AppCodeName = "Mozilla";
+static const char *XP_AppCodeName = "Mozilla";
 #endif
 #define NET_IS_SPACE(x) ((x)==' ' || (x)=='\t')
 
-char * NET_SACopy (char **destination, const char *source)
+static char * NET_SACopy (char **destination, const char *source)
 {
 	if(*destination)
 	  {
@@ -339,7 +331,7 @@ char * NET_SACopy (char **destination, const char *source)
 
 /*  Again like strdup but it concatinates and free's and uses Realloc
 */
-char * NET_SACat (char **destination, const char *source)
+static char * NET_SACat (char **destination, const char *source)
 {
     if (source && *source)
       {

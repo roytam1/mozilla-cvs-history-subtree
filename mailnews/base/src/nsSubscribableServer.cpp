@@ -132,7 +132,7 @@ nsSubscribableServer::SetAsSubscribed(const char *path)
 }
 
 // copied code, this needs to be put in msgbaseutil.
-nsresult 
+static nsresult 
 CreateUnicodeStringFromUtf7(const char *aSourceString, PRUnichar **aUnicodeStr)
 {
   if (!aUnicodeStr)

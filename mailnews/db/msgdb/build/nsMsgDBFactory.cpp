@@ -258,7 +258,7 @@ NS_IMETHODIMP nsMsgDBModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *ok
 
 static nsMsgDBModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT nsresult NSGetModule_nsMsgDBModule(nsIComponentManager *servMgr,
                                           nsIFile* aPath,
                                           nsIModule** return_cobj)
 {

@@ -35,9 +35,111 @@ else
 PROGRAM		= mozilla-bin
 endif
 
-EXTRA_DSO_LIBS	= gkgfx \
-		mpfilelocprovider_s \
-		$(NULL)
+EXTRA_DSO_LDOPTS = -L$(DEPTH)/dist/lib/components
+
+EXTRA_DSO_LIBS	= \
+		absyncsvc \
+		addrbook \
+		appcomps \
+		caps \
+		chardet \
+		chrome \
+		cookie \
+		docshell \
+		editor \
+		embedcomponents \
+		gfx_gtk \
+		gfxps \
+		gkcontent \
+		gkgfx \
+		gklayout \
+		gkplugin \
+		gkview \
+		gtkembedmoz \
+		gtksuperwin \
+		gtkxtbin \
+		htmlpars \
+		impText \
+		import \
+		jar50 \
+		jsdom \
+		jsj \
+		jsloader \
+		jsurl \
+		localmail \
+		lwbrk \
+		mailnews \
+		mime \
+		mimeemitter \
+		mork \
+		mozbrwsr \
+		mozfind \
+		mozjs \
+		mozucth \
+		mozxfer \
+		mozz_s \
+		msgcompose \
+		msgdb \
+		msgimap \
+		msgnews \
+		necko \
+		necko2 \
+		nsappshell \
+		nsgif \
+		nsjpg \
+		nslocale \
+		nsmng \
+		nspng \
+		nspr4 \
+		nsprefm \
+		nullplugin \
+		oji \
+		plc4 \
+		plds4 \
+		pref \
+		profile \
+		rdf \
+		regviewer \
+		shistory \
+		signed \
+		smime \
+		strres \
+		timer_gtk \
+		txmgr \
+		txtsvc \
+		uconv \
+		ucvcn \
+		ucvibm \
+		ucvja \
+		ucvko \
+		ucvlatin \
+		ucvtw \
+		ucvtw2 \
+		unicharutil \
+		uriloader \
+		vcard \
+		wallet \
+		walletviewers \
+		webbrwsr \
+		widget_gtk \
+		xmlextras \
+		xpcom \
+		xpconnect \
+		xpinstall \
+		xpistub \
+		xremote_client \
+		mozmng \
+		gtksuperwin \
+		gkgfx \
+		gfx2 \
+		imggif \
+		imgjpeg \
+		imgpng \
+		imgppm \
+		imglib2 \
+		nkcache \
+		accessibility \
+		msgbaseutil
 
 CPPSRCS		= \
 		nsAppRunner.cpp \
@@ -48,11 +150,30 @@ CPPSRCS		= \
 
 XP_LIBS		= \
 		$(EXTRA_DSO_LDOPTS) \
+		--start-group \
 		$(EXTRA_DSO_LIBS) \
 		$(XPCOM_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(OJI_LIBS) \
 		$(NSPR_LIBS) \
+		--end-group \
+		-L/usr/X11R6/lib \
+		-lXIE \
+		-lICE \
+		-lSM \
+		-lX11 \
+		-lXext \
+		-lXi \
+		-lXt \
+		-ldl \
+		-lgtk \
+		-lgdk \
+		-lglib \
+		-lgmodule \
+		-liberty \
+		-ljpeg \
+		-lpng \
+		-lm \
 		$(NULL)
 
 ifdef MOZ_FULLCIRCLE

@@ -28,13 +28,13 @@
 #include "nsIWindowWatcher.h"
 #include "nsXPIDLString.h"
 
-class nsWindowEnumerator;
+class appshell_nsWindowEnumerator;
 struct nsWindowInfo;
 struct PRLock;
 
 class nsWindowMediator : public nsIWindowMediator
 {
-friend class nsWindowEnumerator;
+friend class appshell_nsWindowEnumerator;
 
 public:
 	nsWindowMediator();
@@ -171,8 +171,8 @@ public:
 private:
   // Helper functions
   nsresult AddWindowToRDF( nsWindowInfo* ioWindowInfo );
-  PRInt32 AddEnumerator( nsWindowEnumerator* inEnumerator );
-  PRInt32 RemoveEnumerator( nsWindowEnumerator* inEnumerator);
+  PRInt32 AddEnumerator( appshell_nsWindowEnumerator* inEnumerator );
+  PRInt32 RemoveEnumerator( appshell_nsWindowEnumerator* inEnumerator);
   nsWindowInfo *MostRecentWindowInfo(const PRUnichar* inType);
 
   NS_IMETHOD UnregisterWindow( nsWindowInfo *inInfo );

@@ -77,7 +77,7 @@ struct DirectoryTable
     PRInt32 folderEnum;             /* Directory ID */
 };
 
-struct DirectoryTable DirectoryTable[] = 
+static struct DirectoryTable DirectoryTable[] = 
 {
 // Preferences:
 
