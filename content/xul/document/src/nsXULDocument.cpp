@@ -141,6 +141,7 @@
 #include "nsIFastLoadService.h"
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
+#include "nsIPref.h"
 
 
 //----------------------------------------------------------------------
@@ -4455,6 +4456,24 @@ nsXULFastLoadFileIO::GetOutputStream(nsIOutputStream** aResult)
 }
 
 
+static PRBool gDisableXULFastLoad = PR_TRUE;    // disabled by default, for now
+static const char kDisableXULFastLoadPref[] = "nglayout.debug.disable_xul_fastload";
+
+PR_STATIC_CALLBACK(int)
+DisableXULFastLoadChangedCallback(const char* aPref, void* aClosure)
+{
+    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
+    if (prefs) {
+        PRBool wasEnabled = !gDisableXULFastLoad;
+        prefs->GetBoolPref(kDisableXULFastLoadPref, &gDisableXULFastLoad);
+
+        if (wasEnabled && gDisableXULFastLoad)
+            nsXULDocument::AbortFastLoads();
+    }
+    return 0;
+}
+
+
 nsresult
 nsXULDocument::StartFastLoad()
 {
@@ -4478,11 +4497,18 @@ nsXULDocument::StartFastLoad()
     NS_ASSERTION(!gFastLoadService,
                  "gFastLoadList null but gFastLoadService non-null!");
 
+    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+    if (prefs) {
+        prefs->GetBoolPref(kDisableXULFastLoadPref, &gDisableXULFastLoad);
+        prefs->RegisterCallback(kDisableXULFastLoadPref, DisableXULFastLoadChangedCallback, nsnull);
+        if (gDisableXULFastLoad)
+            return NS_ERROR_NOT_AVAILABLE;
+    }
+
     // Use a local to refer to the service till we're sure we succeeded, then
     // commit to gFastLoadService.  Same for gFastLoadFile, which is used to
     // delete the FastLoad file on abort.
-    nsCOMPtr<nsIFastLoadService> fastLoadService =
-        do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID);
+    nsCOMPtr<nsIFastLoadService> fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
     if (! fastLoadService)
         return NS_ERROR_FAILURE;
 
@@ -4641,12 +4667,14 @@ nsXULDocument::AbortFastLoads()
     while (gFastLoadList)
         gFastLoadList->EndFastLoad();
 
+    if (gFastLoadFile) {
 #ifdef DEBUG
-    gFastLoadFile->MoveTo(nsnull, "Aborted.mfasl");
+        gFastLoadFile->MoveTo(nsnull, "Aborted.mfasl");
 #else
-    gFastLoadFile->Delete(PR_FALSE);
+        gFastLoadFile->Delete(PR_FALSE);
 #endif
-    NS_RELEASE(gFastLoadFile);
+        NS_RELEASE(gFastLoadFile);
+    }
     return NS_OK;
 }
 
