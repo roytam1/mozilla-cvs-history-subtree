@@ -64,7 +64,8 @@ public:
     NS_IMETHOD GetOperations(PRInt32 *aOperations);
     NS_IMETHOD GetChildNodes(nsIEnumerator* *result);
     NS_IMETHOD GetChildCards(nsIEnumerator* *result);
-     NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
+    NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
+    NS_IMETHOD GetSupportsMailingLists(PRBool *aSupportsMailingsLists);
 
     // nsAbLDAPDirectoryQuery methods
     nsresult GetLDAPConnection (nsILDAPConnection** connection);

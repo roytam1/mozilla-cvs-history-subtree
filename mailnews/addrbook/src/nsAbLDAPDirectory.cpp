@@ -345,3 +345,8 @@ nsresult nsAbLDAPDirectory::OnSearchFoundCard (nsIAbCard* card)
     return NS_OK;
 }
 
+NS_IMETHODIMP nsAbLDAPDirectory::GetSupportsMailingLists(PRBool *aSupportsMailingsLists)
+{
+  *aSupportsMailingsLists = PR_FALSE;
+  return NS_OK;
+}

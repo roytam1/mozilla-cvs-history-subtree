@@ -67,6 +67,7 @@ public:
 
   NS_IMETHOD GetValueForCard(nsIAbCard *card, const char *name, PRUnichar **value);
   NS_IMETHOD SetValueForCard(nsIAbCard *card, const char *name, const PRUnichar *value);
+
 protected:
 
 	PRUint32 m_dbRowID;

@@ -3171,27 +3171,16 @@ nsresult nsMsgCompose::AttachmentPrettyName(const char* url, PRUnichar** _retval
   return NS_OK;
 }
 
-static nsresult OpenAddressBook(const char * dbUri, nsIAddrDatabase** aDatabase, nsIAbDirectory** aDirectory)
+static nsresult OpenAddressBook(const char * dbUri, nsIAddrDatabase** aDatabase)
 {
-  if (!aDatabase || !aDirectory)
-    return NS_ERROR_NULL_POINTER;
+  NS_ENSURE_ARG_POINTER(aDatabase);
 
   nsresult rv;
-  nsCOMPtr<nsIAddressBook> addressBook (do_GetService(NS_ADDRESSBOOK_CONTRACTID)); 
-  if (addressBook)
-    rv = addressBook->GetAbDatabaseFromURI(dbUri, aDatabase);
+  nsCOMPtr<nsIAddressBook> addressBook = do_GetService(NS_ADDRESSBOOK_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
-  nsCOMPtr<nsIRDFService> rdfService (do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
-  if (NS_FAILED(rv)) 
-    return rv;
-
-  nsCOMPtr <nsIRDFResource> resource;
-  rv = rdfService->GetResource(dbUri, getter_AddRefs(resource));
-  if (NS_FAILED(rv)) 
-    return rv;
-
-  // query interface 
-  rv = resource->QueryInterface(nsIAbDirectory::GetIID(), (void **)aDirectory);
+  rv = addressBook->GetAbDatabaseFromURI(dbUri, aDatabase);
+  NS_ENSURE_SUCCESS(rv,rv);
   return rv;
 }
 
@@ -3459,8 +3448,13 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
       rv = source->GetValue(getter_Copies(uri));
       NS_ENSURE_SUCCESS(rv, rv);
 
-      rv = OpenAddressBook((const char *)uri, getter_AddRefs(abDataBase), getter_AddRefs(abDirectory));
-      if (NS_FAILED(rv) || !abDataBase || !abDirectory)
+      PRBool supportsMailingLists;
+      rv = abDirectory->GetSupportsMailingLists(&supportsMailingLists);
+      if (NS_FAILED(rv) || !supportsMailingLists)
+        continue;
+
+      rv = OpenAddressBook(uri.get(), getter_AddRefs(abDataBase));
+      if (NS_FAILED(rv) || !abDataBase)
         continue;
 
       /* Collect all mailing list defined in this address book */

@@ -250,6 +250,7 @@
 //
 // nsAbOutlookCard
 //
+// XXX no longer rdf
 #define NS_ABOUTLOOKCARD_CONTRACTID \
   NS_RDF_RESOURCE_FACTORY_CONTRACTID_PREFIX "moz-aboutlookcard"
 
@@ -328,6 +329,7 @@
 //
 // nsAbLDAPCard
 //
+// XXX no longer rdf
 #define NS_ABLDAPCARD_CONTRACTID \
   NS_RDF_RESOURCE_FACTORY_CONTRACTID_PREFIX "moz-abldapcard"
 

@@ -56,64 +56,63 @@ class nsAbOutlookDirectory : public nsAbDirectoryRDFResource, // nsIRDFResource
                              public nsAbDirSearchListenerContext
 {
 public:
-	NS_DECL_ISUPPORTS_INHERITED
-
-	nsAbOutlookDirectory(void) ;
-	virtual ~nsAbOutlookDirectory(void) ;
-	
-	// nsAbDirProperty methods
-	NS_IMETHOD GetChildCards(nsIEnumerator **aCards) ;
-	NS_IMETHOD GetChildNodes(nsIEnumerator **aNodes) ;
-    NS_IMETHOD HasCard(nsIAbCard *aCard, PRBool *aHasCard) ;
-    NS_IMETHOD HasDirectory(nsIAbDirectory *aDirectory, PRBool *aHasDirectory) ;
-    NS_IMETHOD DeleteCards(nsISupportsArray *aCardList) ;
-    NS_IMETHOD DeleteDirectory(nsIAbDirectory *aDirectory) ;
+  NS_DECL_ISUPPORTS_INHERITED
+    
+  nsAbOutlookDirectory(void) ;
+  virtual ~nsAbOutlookDirectory(void) ;
+  
+  // nsAbDirProperty methods
+  NS_IMETHOD GetChildCards(nsIEnumerator **aCards) ;
+  NS_IMETHOD GetChildNodes(nsIEnumerator **aNodes) ;
+  NS_IMETHOD HasCard(nsIAbCard *aCard, PRBool *aHasCard) ;
+  NS_IMETHOD HasDirectory(nsIAbDirectory *aDirectory, PRBool *aHasDirectory) ;
+  NS_IMETHOD DeleteCards(nsISupportsArray *aCardList) ;
+  NS_IMETHOD DeleteDirectory(nsIAbDirectory *aDirectory) ;
   NS_IMETHOD AddCard(nsIAbCard *aData);
   NS_IMETHOD DropCard(nsIAbCard *aData) ;
-    NS_IMETHOD AddMailList(nsIAbDirectory *aMailList) ;
-    NS_IMETHOD EditMailListToDatabase(const char *aUri, nsIAbCard *listCard) ;
-    // nsAbDirectoryRDFResource method
-    NS_IMETHOD Init(const char *aUri) ;
-    // nsIAbDirectoryQuery methods
-    NS_DECL_NSIABDIRECTORYQUERY
-    // nsIAbDirectorySearch methods
-    NS_DECL_NSIABDIRECTORYSEARCH
-    // nsAbDirSearchListenerContext methods
-    nsresult OnSearchFinished(PRInt32 aResult) ;
-    nsresult OnSearchFoundCard(nsIAbCard *aCard) ;
-    // Perform a MAPI query (function executed in a separate thread)
-    nsresult ExecuteQuery(nsIAbDirectoryQueryArguments *aArguments,
-                          nsIAbDirectoryQueryResultListener *aListener,
-                          PRInt32 aResultLimit, PRInt32 aTimeout,
-                          PRInt32 aThreadId) ;
-
+  NS_IMETHOD AddMailList(nsIAbDirectory *aMailList) ;
+  NS_IMETHOD EditMailListToDatabase(const char *aUri, nsIAbCard *listCard) ;
+  
+  // nsAbDirectoryRDFResource method
+  NS_IMETHOD Init(const char *aUri) ;
+  // nsIAbDirectoryQuery methods
+  NS_DECL_NSIABDIRECTORYQUERY
+  // nsIAbDirectorySearch methods
+  NS_DECL_NSIABDIRECTORYSEARCH
+  // nsAbDirSearchListenerContext methods
+  nsresult OnSearchFinished(PRInt32 aResult) ;
+  nsresult OnSearchFoundCard(nsIAbCard *aCard) ;
+  // Perform a MAPI query (function executed in a separate thread)
+  nsresult ExecuteQuery(nsIAbDirectoryQueryArguments *aArguments,
+    nsIAbDirectoryQueryResultListener *aListener,
+    PRInt32 aResultLimit, PRInt32 aTimeout,
+    PRInt32 aThreadId) ;
+  
 protected:
-    // Retrieve hierarchy as cards, with an optional restriction
-    nsresult GetChildCards(nsISupportsArray **aCards, void *aRestriction) ;
-    // Retrieve hierarchy as directories
-    nsresult GetChildNodes(nsISupportsArray **aNodes) ;
-    // Create a new card
-    nsresult CreateCard(nsIAbCard *aData, nsIAbCard **aNewCard) ;
-    // Notification for the UI
-    nsresult NotifyItemDeletion(nsISupports *aItem) ;
-    nsresult NotifyItemAddition(nsISupports *aItem) ;
-    // Force update of MAPI repository for mailing list
-    nsresult CommitAddressList(void) ;
-    // Read MAPI repository
-    nsresult UpdateAddressList(void) ;
-
-    nsMapiEntry *mMapiData ;
-    // Container for the query threads
-    nsHashtable mQueryThreads ;
-    PRInt32 mCurrentQueryId ;
-    PRLock *mProtector ;
-    // Data for the search interfaces
-	nsSupportsHashtable mCardList ;
-    PRInt32 mSearchContext ;
-    // Windows AB type
-    PRUint32 mAbWinType ;
-
-private:
+  // Retrieve hierarchy as cards, with an optional restriction
+  nsresult GetChildCards(nsISupportsArray **aCards, void *aRestriction) ;
+  // Retrieve hierarchy as directories
+  nsresult GetChildNodes(nsISupportsArray **aNodes) ;
+  // Create a new card
+  nsresult CreateCard(nsIAbCard *aData, nsIAbCard **aNewCard) ;
+  // Notification for the UI
+  nsresult NotifyItemDeletion(nsISupports *aItem) ;
+  nsresult NotifyItemAddition(nsISupports *aItem) ;
+  // Force update of MAPI repository for mailing list
+  nsresult CommitAddressList(void) ;
+  // Read MAPI repository
+  nsresult UpdateAddressList(void) ;
+  
+  nsMapiEntry *mMapiData ;
+  // Container for the query threads
+  nsHashtable mQueryThreads ;
+  PRInt32 mCurrentQueryId ;
+  PRLock *mProtector ;
+  // Data for the search interfaces
+  nsSupportsHashtable mCardList ;
+  PRInt32 mSearchContext ;
+  // Windows AB type
+  PRUint32 mAbWinType ;
 };
 
 #endif // nsAbOutlookDirectory_h___

@@ -284,15 +284,25 @@ NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)
   nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  PRUint32 dbTableID;
-  rv = mdbcard->GetDbTableID(&dbTableID);
-  NS_ENSURE_SUCCESS(rv,rv);
-
   PRUint32 dbRowID;
   rv = mdbcard->GetDbRowID(&dbRowID);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  *result = ((m_dbTableID == dbTableID) && (m_dbRowID == dbRowID));
+  if (dbRowID != m_dbRowID) {
+    *result = PR_FALSE;
+    return NS_OK;
+  }
+
+  PRUint32 dbTableID;
+  rv = mdbcard->GetDbTableID(&dbTableID);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  if (dbTableID != m_dbTableID) {
+    *result = PR_FALSE;
+    return NS_OK;
+  }
+
+  *result = PR_TRUE;
   return NS_OK;
 }
 

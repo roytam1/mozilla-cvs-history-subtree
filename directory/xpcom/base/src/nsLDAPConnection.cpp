@@ -540,16 +540,7 @@ nsLDAPConnection::InvokeMessageCallback(LDAPMessage *aMsgHandle,
 
     // invoke the callback 
     //
-    nsCOMPtr<nsIProxyObjectManager> proxyMgr = 
-	         do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
-	  NS_ENSURE_SUCCESS(rv, rv);
-    
-    nsCOMPtr<nsILDAPMessageListener> proxyListener;
-    rv = proxyMgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsILDAPMessageListener),
-									listener, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(proxyListener));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    proxyListener->OnLDAPMessage(aMsg);
+    listener->OnLDAPMessage(aMsg);
 
     // if requested (ie the operation is done), remove the operation
     // from the connection queue.

@@ -277,3 +277,9 @@ NS_IMETHODIMP nsAbDirProperty::GetValueForCard(nsIAbCard *card, const char *name
 
 NS_IMETHODIMP nsAbDirProperty::SetValueForCard(nsIAbCard *card, const char *name, const PRUnichar *value)
 { return NS_ERROR_NOT_IMPLEMENTED; }
+
+NS_IMETHODIMP nsAbDirProperty::GetSupportsMailingLists(PRBool *aSupportsMailingsLists)
+{
+  *aSupportsMailingsLists = PR_TRUE;
+  return NS_OK;
+}

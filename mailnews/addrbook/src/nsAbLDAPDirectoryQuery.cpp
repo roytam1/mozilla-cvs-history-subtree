@@ -18,9 +18,12 @@
  * Sun Microsystems, Inc.
  * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
+ * 
+ * Original Author: 
+ *   Paul Sandoz   <paul.sandoz@sun.com>
  *
  * Contributor(s):
- * Created by: Paul Sandoz   <paul.sandoz@sun.com> 
+ *   Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -45,6 +48,7 @@
 
 #include "nsXPIDLString.h"
 #include "nsAutoLock.h"
+#include "nsIProxyObjectManager.h"
 
 class nsAbQueryLDAPMessageListener : public nsILDAPMessageListener
 {
@@ -247,7 +251,16 @@ NS_IMETHODIMP nsAbQueryLDAPMessageListener::OnLDAPInit(nsresult aStatus)
         do_CreateInstance(NS_LDAPOPERATION_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = ldapOperation->Init(mConnection, this);
+    nsCOMPtr<nsIProxyObjectManager> proxyMgr = 
+	    do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
+	  NS_ENSURE_SUCCESS(rv, rv);
+    
+    nsCOMPtr<nsILDAPMessageListener> proxyListener;
+    rv = proxyMgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsILDAPMessageListener),
+									this, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(proxyListener));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = ldapOperation->Init(mConnection, proxyListener);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Bind
@@ -267,7 +280,16 @@ nsresult nsAbQueryLDAPMessageListener::OnLDAPMessageBind (nsILDAPMessage *aMessa
     mSearchOperation = do_CreateInstance(NS_LDAPOPERATION_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = mSearchOperation->Init (mConnection, this);
+    nsCOMPtr<nsIProxyObjectManager> proxyMgr = 
+	    do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
+	  NS_ENSURE_SUCCESS(rv, rv);
+    
+    nsCOMPtr<nsILDAPMessageListener> proxyListener;
+    rv = proxyMgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsILDAPMessageListener),
+									this, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(proxyListener));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = mSearchOperation->Init (mConnection, proxyListener);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsXPIDLCString dn;
