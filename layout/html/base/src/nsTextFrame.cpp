@@ -2599,7 +2599,7 @@ nsTextFrame::RenderString(nsIRenderingContext& aRenderingContext,
         // Measure previous run of characters using the previous font
         //aRenderingContext.SetColor(aTextStyle.mColor->mColor); commenting out redundat(and destructive) call to setcolor
         aRenderingContext.DrawString2(runStart, pendingCount,
-                                     aX, lastY + mAscent, -1,
+                                     aX, aY/*lastY*/ + mAscent, -1,
                                      spacing ? sp0 : nsnull);
 
         // Note: use aY not small-y so that decorations are drawn with
@@ -2624,7 +2624,7 @@ nsTextFrame::RenderString(nsIRenderingContext& aRenderingContext,
   pendingCount = bp - runStart;
   if (0 != pendingCount) {
     // Measure previous run of characters using the previous font
-    aRenderingContext.DrawString2(runStart, pendingCount, aX, lastY + mAscent, -1,
+    aRenderingContext.DrawString2(runStart, pendingCount, aX, aY/*lastY*/ + mAscent, -1,
                                  spacing ? sp0 : nsnull);
 
     // Note: use aY not small-y so that decorations are drawn with
