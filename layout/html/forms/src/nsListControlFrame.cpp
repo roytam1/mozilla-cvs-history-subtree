@@ -3043,7 +3043,6 @@ NS_IMETHODIMP nsListControlFrame::MoveTo(nsIPresContext* aPresContext, nscoord a
   }
 }
 
-#ifdef IBMBIDI
 NS_IMETHODIMP
 nsListControlFrame::GetFrameType(nsIAtom** aType) const
 {
@@ -3052,7 +3051,6 @@ nsListControlFrame::GetFrameType(nsIAtom** aType) const
   NS_ADDREF(*aType);
   return NS_OK;
 }
-#endif // IBMBIDI
 
 //---------------------------------------------------------
 NS_IMETHODIMP 

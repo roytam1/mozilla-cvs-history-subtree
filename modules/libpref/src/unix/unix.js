@@ -50,6 +50,8 @@ pref("middlemouse.scrollbarPosition", true);
 // Clipboard behavior
 pref("clipboard.autocopy", true);
 
+pref("browser.urlbar.clickSelectsAll", false);
+
 // Most Unix people think modal pref windows are stupid:
 pref("browser.prefWindowModal", false);
 

@@ -98,7 +98,7 @@ pref("browser.search.last_search_category", "NC:SearchCategory?category=urn:sear
 pref("browser.search.mode", 0);
 pref("browser.search.powermode", 0);
 pref("browser.urlbar.autocomplete.enabled", true);
-pref("browser.urlbar.clickSelectsAll",false);
+pref("browser.urlbar.clickSelectsAll", true);
 
 pref("browser.history.last_page_visited", "");
 pref("browser.history_expire_days", 9);
