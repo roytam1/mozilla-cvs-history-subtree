@@ -92,9 +92,9 @@ function open() {
 	        browser.loadUrl( url );
 	    } else if ( dialog.newWindow.checked ) {
 		    /* User wants new window. */
-            window.opener.openDialog( "chrome://navigator/content/navigator.xul", "_blank", "all,dialog=no", url );
+              window.opener.delayedOpenWindow("chrome://navigator/content/navigator.xul","all,dialog=no",url);
 	    } else if ( dialog.editNewWindow.checked ) {
-            window.opener.openDialog( "chrome://editor/content", "_blank", "chrome,all,dialog=no", url );
+              window.opener.delayedOpenWindow("chrome://editor/content", "chrome,all,dialog=no", url);
         }
     } catch( exception ) {
 	    // XXX l10n
