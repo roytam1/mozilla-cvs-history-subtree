@@ -76,7 +76,7 @@ sub CallNM {
 
 	foreach (sort(keys(%unique))) {
 		$symbol = FilterUnwantedPrefix($_);
-		push(@{$symbols}, ($symbol)); 
+		push(@{$symbols}, ($symbol)) if $symbol ne ""; 
 	}
 		
 }
