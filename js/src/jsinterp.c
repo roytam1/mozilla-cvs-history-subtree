@@ -1537,30 +1537,18 @@ js_Interpret(JSContext *cx, jsval *result)
     }                                                                         \
 }
 
-	  case JSOP_SETNAME:
-	    /* Get an immediate atom naming the variable to set. */
-	    atom = GET_ATOM(cx, script, pc);
-	    id   = (jsid)atom;
-
-	    SAVE_SP(fp);
-	    ok = js_FindVariable(cx, id, &obj, &obj2, &prop);
-	    if (!ok)
-		goto out;
-	    JS_ASSERT(prop);
-
-	    OBJ_DROP_PROPERTY(cx, obj2, prop);
-
-	    /* Pop the right-hand side and set obj[id] to it. */
-	    rval = POP();
-
-	    /* Try to hit the property cache, FindVariable primes it. */
-	    CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval));
-	    if (!ok)
-		goto out;
-
-	    /* Push the right-hand side as our result. */
-	    PUSH_OPND(rval);
-	    break;
+	  case JSOP_SETCONST:
+            obj = js_FindVariableScope(cx, &fun);
+            atom = GET_ATOM(cx, script, pc);
+            rval = POP();
+            ok = OBJ_DEFINE_PROPERTY(cx, obj, (jsid)atom, rval, NULL, NULL,
+                                     JSPROP_ENUMERATE | JSPROP_PERMANENT |
+                                     JSPROP_READONLY,
+                                     NULL);
+            if (!ok)
+                goto out;
+            PUSH_OPND(rval);
+            break;
 
 	  case JSOP_BINDNAME:
 	    atom = GET_ATOM(cx, script, pc);
@@ -1572,7 +1560,7 @@ js_Interpret(JSContext *cx, jsval *result)
 	    PUSH_OPND(OBJECT_TO_JSVAL(obj));
 	    break;
 
-	  case JSOP_SETNAME2:
+	  case JSOP_SETNAME:
 	    atom = GET_ATOM(cx, script, pc);
 	    id   = (jsid)atom;
 	    rval = POP();
@@ -2685,7 +2673,7 @@ js_Interpret(JSContext *cx, jsval *result)
             cs = &js_CodeSpec[op2];
             len = cs->length;
             switch (op2) {
-              case JSOP_SETNAME2:
+              case JSOP_SETNAME:
               case JSOP_SETPROP:
                 atom = GET_ATOM(cx, script, pc);
                 id   = (jsid)atom;

@@ -65,6 +65,7 @@ js_InitCodeGenerator(JSContext *cx, JSCodeGenerator *cg,
 {
     memset(cg, 0, sizeof *cg);
     cg->codeMark = JS_ARENA_MARK(&cx->codePool);
+    cg->noteMark = JS_ARENA_MARK(&cx->notePool);
     cg->tempMark = JS_ARENA_MARK(&cx->tempPool);
     cg->current = &cg->main;
     cg->filename = filename;
@@ -79,7 +80,9 @@ JS_FRIEND_API(void)
 js_FinishCodeGenerator(JSContext *cx, JSCodeGenerator *cg)
 {
     JS_ARENA_RELEASE(&cx->codePool, cg->codeMark);
+    JS_ARENA_RELEASE(&cx->notePool, cg->noteMark);
     JS_ARENA_RELEASE(&cx->tempPool, cg->tempMark);
+    TREE_CONTEXT_FREE(&cg->treeContext);
 }
 
 static ptrdiff_t
@@ -490,7 +493,7 @@ FixupFinallyJumps(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t tryStart,
 	    ptrdiff_t index = GET_JUMP_OFFSET(pc);
 	    if (index <= 0) {
 		if (index == 0)
-		    index = finallyIndex - (pc - CG_BASE(cg));
+		    index = finallyIndex - PTRDIFF(pc, CG_BASE(cg), jsbytecode);
 		else
 		    index++;
 		CHECK_AND_SET_JUMP_OFFSET(cx, cg, pc, index);
@@ -509,7 +512,9 @@ FixupCatchJumps(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t tryStart,
     pc = CG_BASE(cg) + tryStart;
     BYTECODE_ITER(pc, CG_NEXT(cg),
 	if (*pc == JSOP_GOTO && !GET_JUMP_OFFSET(pc)) {
-	    CHECK_AND_SET_JUMP_OFFSET(cx, cg, pc, postCatch - (pc - CG_BASE(cg)));
+	    CHECK_AND_SET_JUMP_OFFSET(cx, cg, pc,
+                                      postCatch - PTRDIFF(pc, CG_BASE(cg),
+                                                          jsbytecode));
 	}
     );
     return JS_TRUE;
@@ -1246,9 +1251,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             }
             else {
                 /*
-                    for 'for(x[i]...)' there's only the object on the stack,
-                    so we need to hide the pop.
-                */
+                 * For 'for(x[i]...)' there's only the object on the stack,
+                 * so we need to hide the pop.
+                 */
 	        if (js_NewSrcNote(cx, cg, SRC_HIDDEN) < 0)
 		    return JS_FALSE;
                 if (js_Emit1(cx, cg, JSOP_POP) < 0)
@@ -1608,13 +1613,18 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		CG_SWITCH_TO_MAIN(cg);
 	    }
 	    if (pn2->pn_expr) {
-		if (op == JSOP_SETNAME2)
+		if (op == JSOP_SETNAME)
 		    EMIT_ATOM_INDEX_OP(JSOP_BINDNAME, atomIndex);
 		if (!js_EmitTree(cx, cg, pn2->pn_expr))
 		    return JS_FALSE;
 	    }
-	    if (pn2 == pn->pn_head && js_NewSrcNote(cx, cg, SRC_VAR) < 0)
-		return JS_FALSE;
+            if (pn2 == pn->pn_head &&
+                js_NewSrcNote(cx, cg,
+                              (pn->pn_op == JSOP_DEFCONST)
+                              ? SRC_CONST
+                              : SRC_VAR) < 0) {
+                return JS_FALSE;
+            }
 	    EMIT_ATOM_INDEX_OP(op, atomIndex);
 	    tmp = CG_OFFSET(cg);
 	    if (noteIndex >= 0) {
@@ -1775,7 +1785,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	if (op != JSOP_NOP) {
 	    switch (pn2->pn_type) {
 	      case TOK_NAME:
-		if (pn2->pn_op != JSOP_SETNAME2) {
+		if (pn2->pn_op != JSOP_SETNAME) {
 		    EMIT_ATOM_INDEX_OP((pn2->pn_op == JSOP_SETARG)
 				       ? JSOP_GETARG
 				       : JSOP_GETVAR,
@@ -2233,7 +2243,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
       case TOK_OBJECT:
 	/*
 	 * The scanner and parser associate JSOP_NAME with TOK_NAME, although
-	 * other bytecodes may result instead (JSOP_BINDNAME/JSOP_SETNAME2,
+	 * other bytecodes may result instead (JSOP_BINDNAME/JSOP_SETNAME,
 	 * JSOP_FORNAME2, etc.).  Among JSOP_*NAME* variants, only JSOP_NAME
 	 * may generate the first operand of a call or new expression, so only
 	 * it sets the "obj" virtual machine register to the object along the
@@ -2285,6 +2295,10 @@ JS_FRIEND_DATA(const char *) js_SrcNoteName[] = {
     "funcdef",
     "tryfin",
     "catch",
+    "const",
+    "reserved1",
+    "reserved2",
+    "reserved3",
     "newline",
     "setline",
     "xdelta"
@@ -2313,6 +2327,10 @@ uint8 js_SrcNoteArity[] = {
     1,  /* SRC_FUNCDEF */
     1,  /* SRC_TRYFIN */
     1,  /* SRC_CATCH */
+    0,  /* SRC_CONST */
+    0,  /* SRC_RESERVED1 */
+    0,  /* SRC_RESERVED2 */
+    0,  /* SRC_RESERVED3 */
     0,  /* SRC_NEWLINE */
     1,  /* SRC_SETLINE */
     0   /* SRC_XDELTA */
@@ -2326,8 +2344,8 @@ AllocSrcNote(JSContext *cx, JSCodeGenerator *cg)
     size_t incr, size;
 
     index = cg->noteCount;
-    if (index % SNINCR == 0) {
-	pool = &cx->tempPool;
+    if ((uintN)index % SNINCR == 0) {
+	pool = &cx->notePool;
 	incr = SNINCR * sizeof(jssrcnote);
 	if (!cg->notes) {
 	    JS_ARENA_ALLOCATE(cg->notes, pool, incr);
@@ -2371,7 +2389,7 @@ js_NewSrcNote(JSContext *cx, JSCodeGenerator *cg, JSSrcNoteType type)
 	    xdelta = JS_MIN(delta, SN_XDELTA_MASK);
 	    SN_MAKE_XDELTA(sn, xdelta);
 	    delta -= xdelta;
-	    index = js_NewSrcNote(cx, cg, SRC_NULL);
+	    index = AllocSrcNote(cx, cg);
 	    if (index < 0)
 		return -1;
 	    sn = &cg->notes[index];
@@ -2385,7 +2403,7 @@ js_NewSrcNote(JSContext *cx, JSCodeGenerator *cg, JSSrcNoteType type)
      */
     SN_MAKE_NOTE(sn, type, delta);
     for (n = (intN)js_SrcNoteArity[type]; n > 0; n--) {
-	if (js_NewSrcNote(cx, cg, SRC_NULL) < 0)
+	if (AllocSrcNote(cx, cg) < 0)
 	    return -1;
     }
     return index;
@@ -2427,7 +2445,7 @@ GrowSrcNotes(JSContext *cx, JSCodeGenerator *cg)
     JSArenaPool *pool;
     size_t incr, size;
 
-    pool = &cx->tempPool;
+    pool = &cx->notePool;
     incr = SNINCR * sizeof(jssrcnote);
     size = cg->noteCount * sizeof(jssrcnote);
     JS_ARENA_GROW(cg->notes, pool, size, incr);
@@ -2497,7 +2515,7 @@ js_SetSrcNoteOffset(JSContext *cx, JSCodeGenerator *cg, uintN index,
 	/* Maybe this offset was already set to a three-byte value. */
 	if (!(*sn & SN_3BYTE_OFFSET_FLAG)) {
 	    /* Losing, need to insert another two bytes for this offset. */
-	    index = sn - cg->notes;
+	    index = PTRDIFF(sn, cg->notes, jssrcnote);
 	    cg->noteCount += 2;
 
 	    /*
@@ -2548,6 +2566,11 @@ js_AllocTryNotes(JSContext *cx, JSCodeGenerator *cg)
     if (size <= cg->tryNoteSpace)
 	return JS_TRUE;
 
+    /*
+     * Allocate trynotes from cx->tempPool.
+     * XXX too much growing and we bloat, as other tempPool allocators block
+     * in-place growth, and we never recycle old free space in an arena.
+     */
     if (!cg->tryBase) {
 	size = JS_ROUNDUP(size, TNINCR);
 	JS_ARENA_ALLOCATE(cg->tryBase, &cx->tempPool, size);
@@ -2556,7 +2579,7 @@ js_AllocTryNotes(JSContext *cx, JSCodeGenerator *cg)
 	cg->tryNoteSpace = size;
 	cg->tryNext = cg->tryBase;
     } else {
-	delta = (char *)cg->tryNext - (char *)cg->tryBase;
+	delta = PTRDIFF((char *)cg->tryNext, (char *)cg->tryBase, char);
 	incr = size - cg->tryNoteSpace;
 	incr = JS_ROUNDUP(incr, TNINCR);
 	size = cg->tryNoteSpace;
@@ -2590,7 +2613,7 @@ js_FinishTakingTryNotes(JSContext *cx, JSCodeGenerator *cg, JSTryNote **tryp)
     uintN count;
     JSTryNote *tmp, *final;
 
-    count = cg->tryNext - cg->tryBase;
+    count = PTRDIFF(cg->tryNext, cg->tryBase, JSTryNote);
     if (!count) {
 	*tryp = NULL;
 	return JS_TRUE;

@@ -188,6 +188,7 @@ struct JSContext {
 
     /* Temporary arena pools used while compiling and decompiling. */
     JSArenaPool         codePool;
+    JSArenaPool         notePool;
     JSArenaPool         tempPool;
 
     /* Top-level object and pointer to top stack frame's scope chain. */
@@ -229,7 +230,12 @@ struct JSContext {
     /* Exception state (NB: throwing is packed with gcActive above). */
     JSPackedBool        throwing;           /* is there a pending exception? */
     jsval               exception;          /* most-recently-thrown exceptin */
+
+    uint32              options;            /* see jsapi.h for JSOPTION_* */
 };
+
+/* Slightly more readable macros, also to hide bitset implementation detail. */
+#define JS_HAS_STRICT_OPTION(cx)    ((cx)->options & JSOPTION_STRICT)
 
 extern JSContext *
 js_NewContext(JSRuntime *rt, size_t stacksize);

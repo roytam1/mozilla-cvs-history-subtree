@@ -396,6 +396,21 @@ JS_VersionToString(JSVersion version);
 extern JS_PUBLIC_API(JSVersion)
 JS_StringToVersion(const char *string);
 
+/*
+ * JS options are orthogonal to version, and may be freely composed with one
+ * another as well as with version.
+ */
+#define JSOPTION_STRICT         JS_BIT(0)
+
+extern JS_PUBLIC_API(uint32)
+JS_GetOptions(JSContext *cx);
+
+extern JS_PUBLIC_API(uint32)
+JS_SetOptions(JSContext *cx, uint32 options);
+
+extern JS_PUBLIC_API(uint32)
+JS_ToggleOptions(JSContext *cx, uint32 options);
+
 extern JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void);
 

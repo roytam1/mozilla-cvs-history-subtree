@@ -299,12 +299,10 @@ js_CompileTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
 
 out:
     JS_ENABLE_GC(cx->runtime);
-    ts->flags &= ~TSF_BADCOMPILE;
+    ts->flags &= ~TSF_ERROR;
     cx->fp = fp;
     return ok;
 }
-
-#ifdef CHECK_RETURN_EXPR
 
 /*
  * Insist on a final return before control flows out of pn, but don't be too
@@ -351,8 +349,6 @@ CheckFinalReturn(JSParseNode *pn)
     }
 }
 
-#endif /* CHECK_RETURN_EXPR */
-
 static JSParseNode *
 FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
 	     JSTreeContext *tc)
@@ -374,16 +370,14 @@ FunctionBody(JSContext *cx, JSTokenStream *ts, JSFunction *fun,
     tc->flags |= TCF_IN_FUNCTION;
     pn = Statements(cx, ts, tc);
 
-#ifdef CHECK_RETURN_EXPR
     /* Check for falling off the end of a function that returns a value. */
-    if (pn && (tc->flags & TCF_RETURN_EXPR)) {
+    if (pn && JS_HAS_STRICT_OPTION(cx) && (tc->flags & TCF_RETURN_EXPR)) {
 	if (!CheckFinalReturn(pn)) {
 	    js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
 					JSMSG_NO_RETURN_VALUE);
 	    pn = NULL;
 	}
     }
-#endif
 
     cx->fp = fp;
     tc->flags = oldflags;
@@ -449,6 +443,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     JSObject *pobj;
     JSScopeProperty *sprop;
     JSTreeContext funtc;
+    jsid oldArgId;
 
     /* Make a TOK_FUNCTION node. */
     pn = NewParseNode(cx, &CURRENT_TOKEN(ts), PN_FUNC);
@@ -489,20 +484,21 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
             }
 	    if (sprop && pobj == fun->object) {
 		if (SPROP_GETTER(sprop, pobj) == js_GetArgument) {
-#ifdef CHECK_ARGUMENT_HIDING
-		    OBJ_DROP_PROPERTY(cx, pobj, (JSProperty *)sprop);
-		    js_ReportCompileErrorNumber(cx, ts, JSREPORT_WARNING,
-						JSMSG_DUPLICATE_FORMAL,
-						ATOM_BYTES(argAtom));
-		    return NULL;
-#else
+                    if (JS_HAS_STRICT_OPTION(cx)) {
+                        OBJ_DROP_PROPERTY(cx, pobj, (JSProperty *)sprop);
+                        js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                                    JSMSG_DUPLICATE_FORMAL,
+                                                    ATOM_BYTES(argAtom));
+                        return NULL;
+                    }
+
 		    /*
 		     * A duplicate parameter name. We create a dummy symbol
 		     * entry with property id of the parameter number and set
 		     * the id to the name of the parameter.
 		     * The decompiler will know to treat this case specially.
 		     */
-		    jsid oldArgId = (jsid) sprop->id;
+		    oldArgId = (jsid) sprop->id;
 		    OBJ_DROP_PROPERTY(cx, pobj, (JSProperty *)sprop);
 		    sprop = NULL;
 		    if (!js_DefineProperty(cx, fun->object,
@@ -513,7 +509,6 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 			return NULL;
                     }
 		    sprop->id = (jsid) argAtom;
-#endif
 		}
 	    }
 	    if (sprop) {
@@ -549,6 +544,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     pn->pn_fun = fun;
     pn->pn_body = pn2;
     pn->pn_tryCount = funtc.tryCount;
+    TREE_CONTEXT_FREE(&funtc);
 
 #if JS_HAS_LEXICAL_CLOSURE
     if (lambda)
@@ -618,12 +614,13 @@ Condition(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
      * XXX not ECMA, but documented in several books -- need a compile option
      */
     if (pn->pn_type == TOK_ASSIGN && pn->pn_op == JSOP_NOP) {
+        JSBool rewrite = JS_HAS_STRICT_OPTION(cx) ||
+                         !JSVERSION_IS_ECMA(cx->version);
 	js_ReportCompileErrorNumber(cx, ts, JSREPORT_WARNING,
 				    JSMSG_EQUAL_AS_ASSIGN,
-				    JSVERSION_IS_ECMA(cx->version) ? ""
-				    : "\nAssuming equality test");
-	if (JSVERSION_IS_ECMA(cx->version))
-	    goto no_rewrite;
+				    rewrite ? "\nAssuming equality test" : "");
+	if (!rewrite)
+	    return pn;
 	pn->pn_type = TOK_EQOP;
 	pn->pn_op = (JSOp)cx->jsop_eq;
 	pn2 = pn->pn_left;
@@ -634,7 +631,7 @@ Condition(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	  case JSOP_SETVAR:
 	    pn2->pn_op = JSOP_GETVAR;
 	    break;
-	  case JSOP_SETNAME2:
+	  case JSOP_SETNAME:
 	    pn2->pn_op = JSOP_NAME;
 	    break;
 	  case JSOP_SETPROP:
@@ -647,7 +644,6 @@ Condition(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    JS_ASSERT(0);
 	}
     }
-  no_rewrite:
     return pn;
 }
 
@@ -1030,11 +1026,11 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    stmtInfo.type = STMT_FOR_IN_LOOP;
 
 	    /* Check that the left side of the 'in' is valid. */
-	    if ((pn1->pn_type == TOK_VAR)
-                ? pn1->pn_count > 1
+            if ((pn1->pn_type == TOK_VAR)
+                ? (pn1->pn_count > 1 || pn1->pn_op == JSOP_DEFCONST)
                 : (pn1->pn_type != TOK_NAME &&
-		   pn1->pn_type != TOK_DOT &&
-		   pn1->pn_type != TOK_LB)) {
+                   pn1->pn_type != TOK_DOT &&
+                   pn1->pn_type != TOK_LB)) {
 		js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
 					    JSMSG_BAD_FOR_LEFTSIDE);
 		return NULL;
@@ -1362,14 +1358,13 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    pn->pn_kid = NULL;
 	}
 
-#ifdef CHECK_RETURN_EXPR
-	if ((tc->flags & (TCF_RETURN_EXPR | TCF_RETURN_VOID)) ==
+	if (JS_HAS_STRICT_OPTION(cx) &&
+            (tc->flags & (TCF_RETURN_EXPR | TCF_RETURN_VOID)) ==
 	    (TCF_RETURN_EXPR | TCF_RETURN_VOID)) {
 	    js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
 					JSMSG_NO_RETURN_VALUE);
 	    return NULL;
 	}
-#endif
 	break;
 
       case TOK_LC:
@@ -1470,6 +1465,7 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     JSClass *clasp;
     JSPropertyOp getter, setter, currentGetter, currentSetter;
     JSAtom *atom;
+    JSAtomListElement *ale;
     JSProperty *prop;
     JSScopeProperty *sprop;
     JSBool ok;
@@ -1514,6 +1510,26 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	MUST_MATCH_TOKEN(TOK_NAME, JSMSG_NO_VARIABLE_NAME);
 	atom = CURRENT_TOKEN(ts).t_atom;
 
+        ATOM_LIST_SEARCH(ale, &tc->decls, atom);
+        if (ale &&
+            (JS_HAS_STRICT_OPTION(cx) ||
+             pn->pn_op == JSOP_DEFCONST ||
+             ale->index == JSOP_DEFCONST))
+        {
+            js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                        JSMSG_REDECLARED_VAR,
+                                        (ale->index == JSOP_DEFCONST)
+                                        ? js_const_str
+                                        : js_var_str,
+                                        ATOM_BYTES(atom));
+            return NULL;
+        }
+
+        ale = js_IndexAtom(cx, atom, &tc->decls);
+        if (!ale)
+            return NULL;
+        ale->index = (jsatomid) pn->pn_op;
+
 	pn2 = NewParseNode(cx, &CURRENT_TOKEN(ts), PN_NAME);
 	if (!pn2)
 	    return NULL;
@@ -1531,12 +1547,12 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    if (SPROP_GETTER(sprop, pobj) == js_GetArgument) {
 		currentGetter = js_GetArgument;
 		currentSetter = js_SetArgument;
-#ifdef CHECK_ARGUMENT_HIDING
-		js_ReportCompileErrorNumber(cx, ts, JSREPORT_WARNING,
-					    JSMSG_VAR_HIDES_ARG,
-					    ATOM_BYTES(atom));
-		ok = JS_FALSE;
-#endif
+                if (JS_HAS_STRICT_OPTION(cx)) {
+                    js_ReportCompileErrorNumber(cx, ts, JSREPORT_ERROR,
+                                                JSMSG_VAR_HIDES_ARG,
+                                                ATOM_BYTES(atom));
+                    ok = JS_FALSE;
+                }
 	    } else {
 		ok = JS_TRUE;
 		if (fun) {
@@ -1616,10 +1632,12 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 		ok = JS_FALSE;
 	    } else {
 		pn2->pn_expr = AssignExpr(cx, ts, tc);
-		if (pn2->pn_expr)
-		    pn2->pn_op = JSOP_SETNAME2;
-		else
+		if (!pn2->pn_expr)
 		    ok = JS_FALSE;
+                else if (pn->pn_op == JSOP_DEFCONST)
+                    pn2->pn_op = JSOP_SETCONST;
+                else
+                    pn2->pn_op = JSOP_SETNAME;
 	    }
 	}
 
@@ -1756,7 +1774,7 @@ AssignExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             else
                 pn2->pn_op = JSOP_SETVAR;
         } else {
-            pn2->pn_op = JSOP_SETNAME2;
+            pn2->pn_op = JSOP_SETNAME;
         }
         break;
       case TOK_DOT:

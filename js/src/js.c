@@ -262,7 +262,7 @@ Process(JSContext *cx, JSObject *obj, char *filename)
     JSScript *script;
     jsval result;
     JSString *str;
-    char buffer[4098];
+    char buffer[4096];
     char *bufp;
     int lineno;
     int startline;
@@ -324,8 +324,8 @@ Process(JSContext *cx, JSObject *obj, char *filename)
             }
             bufp += strlen(bufp);
             lineno++;
-        } while (!JS_BufferIsCompilableUnit(cx, obj,
-                                            buffer, strlen(buffer)));
+        } while (!JS_BufferIsCompilableUnit(cx, obj, buffer, strlen(buffer)));
+
         /* Clear any pending exception from previous failed compiles.  */
         JS_ClearPendingException(cx);
         script = JS_CompileScript(cx, obj, buffer, strlen(buffer),
@@ -376,7 +376,7 @@ static int
 usage(void)
 {
     fprintf(gErrFile, "%s\n", JS_GetImplementationVersion());
-    fprintf(gErrFile, "usage: js [-w] [-v version] [-f scriptfile] [scriptfile] [scriptarg...]\n");
+    fprintf(gErrFile, "usage: js [-ws] [-v version] [-f scriptfile] [scriptfile] [scriptarg...]\n");
     return 2;
 }
 
@@ -401,8 +401,13 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
 		JS_SetVersion(cx, atoi(argv[i+1]));
 		i++;
 		break;
+
 	    case 'w':
 		reportWarnings++;
+		break;
+
+	    case 's':
+		JS_ToggleOptions(cx, JSOPTION_STRICT);
 		break;
 
 	    case 'f':
@@ -422,6 +427,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
                 isInteractive = JS_FALSE;
 		i++;
 		break;
+
 	    default:
 		return usage();
 	    }
@@ -468,6 +474,69 @@ Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	*rval = INT_TO_JSVAL(JS_SetVersion(cx, JSVAL_TO_INT(argv[0])));
     else
 	*rval = INT_TO_JSVAL(JS_GetVersion(cx));
+    return JS_TRUE;
+}
+
+static struct {
+    const char  *name;
+    uint32      flag;
+} js_options[] = {
+    {"strict",  JSOPTION_STRICT},
+    {0}
+};
+
+static JSBool
+Options(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    uint32 optset, flag;
+    uintN i, j, found;
+    JSString *str;
+    const char *opt;
+    char *names;
+
+    optset = 0;
+    for (i = 0; i < argc; i++) {
+        str = JS_ValueToString(cx, argv[i]);
+        if (!str)
+            return JS_FALSE;
+        opt = JS_GetStringBytes(str);
+        for (j = 0; js_options[j].name; j++) {
+            if (strcmp(js_options[j].name, opt) == 0) {
+                optset |= js_options[j].flag;
+                break;
+            }
+        }
+    }
+    optset = JS_ToggleOptions(cx, optset);
+
+    names = NULL;
+    found = 0;
+    while (optset != 0) {
+        flag = optset;
+        optset &= optset - 1;
+        flag &= ~optset;
+        for (j = 0; js_options[j].name; j++) {
+            if (js_options[j].flag == flag) {
+                names = JS_sprintf_append(names, "%s%s",
+                                          names ? "," : "", js_options[j].name);
+                found++;
+                break;
+            }
+        }
+    }
+    if (!found)
+        names = strdup("");
+    if (!names) {
+        JS_ReportOutOfMemory(cx);
+        return JS_FALSE;
+    }
+
+    str = JS_NewString(cx, names, strlen(names));
+    if (!str) {
+        free(names);
+        return JS_FALSE;
+    }
+    *rval = STRING_TO_JSVAL(str);
     return JS_TRUE;
 }
 
@@ -1236,6 +1305,7 @@ BuildDate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
 static JSFunctionSpec shell_functions[] = {
     {"version",         Version,        0},
+    {"options",         Options,        0},
     {"load",            Load,           1},
     {"print",           Print,          0},
     {"help",            Help,           0},
@@ -1266,6 +1336,7 @@ static JSFunctionSpec shell_functions[] = {
 
 static char *shell_help_messages[] = {
     "version [number]       Get or set JavaScript version number",
+    "options [option ...]   Get or set JavaScript options",
     "load ['foo.js' ...]    Load files named by string arguments",
     "print [expr ...]       Evaluate and print expressions",
     "help [name ...]        Display usage and help messages",
@@ -1547,7 +1618,7 @@ static void
 my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 {
     int i, j, k, n;
-    char *prefix = NULL, *tmp;
+    char *prefix, *tmp;
     const char *ctmp;
 
     if (!report) {
@@ -1556,9 +1627,10 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     }
 
     /* Conditionally ignore reported warnings. */
-    if ((JSREPORT_IS_WARNING(report->flags) && !reportWarnings))
+    if (JSREPORT_IS_WARNING(report->flags) && !reportWarnings)
 	return;
 
+    prefix = NULL;
     if (report->filename)
 	prefix = JS_smprintf("%s:", report->filename);
     if (report->lineno) {
@@ -1575,10 +1647,12 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     /* embedded newlines -- argh! */
     while ((ctmp = strchr(message, '\n')) != 0) {
 	ctmp++;
-	if (prefix) fputs(prefix, gErrFile);
+	if (prefix)
+            fputs(prefix, gErrFile);
 	fwrite(message, 1, ctmp - message, gErrFile);
 	message = ctmp;
     }
+
     /* If there were no filename or lineno, the prefix might be empty */
     if (prefix)
         fputs(prefix, gErrFile);
@@ -1589,7 +1663,13 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
 	goto out;
     }
 
-    fprintf(gErrFile, ":\n%s%s\n%s", prefix, report->linebuf, prefix);
+    /* report->linebuf usually ends with a newline. */
+    n = strlen(report->linebuf);
+    fprintf(gErrFile, ":\n%s%s%s%s",
+            prefix,
+            report->linebuf,
+            (n > 0 && report->linebuf[n-1] == '\n') ? "" : "\n",
+            prefix);
     n = report->tokenptr - report->linebuf;
     for (i = j = 0; i < n; i++) {
 	if (report->linebuf[i] == '\t') {

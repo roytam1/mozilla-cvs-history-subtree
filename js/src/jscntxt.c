@@ -111,6 +111,7 @@ js_NewContext(JSRuntime *rt, size_t stacksize)
     cx->jsop_ne = JSOP_NE;
     JS_InitArenaPool(&cx->stackPool, "stack", stacksize, sizeof(jsval));
     JS_InitArenaPool(&cx->codePool, "code", 1024, sizeof(jsbytecode));
+    JS_InitArenaPool(&cx->notePool, "note", 256, sizeof(jssrcnote));
     JS_InitArenaPool(&cx->tempPool, "temp", 1024, sizeof(jsdouble));
 
 #if JS_HAS_REGEXPS
@@ -189,6 +190,7 @@ js_DestroyContext(JSContext *cx, JSGCMode gcmode)
     /* Free the stuff hanging off of cx. */
     JS_FinishArenaPool(&cx->stackPool);
     JS_FinishArenaPool(&cx->codePool);
+    JS_FinishArenaPool(&cx->notePool);
     JS_FinishArenaPool(&cx->tempPool);
     if (cx->lastMessage)
 	free(cx->lastMessage);
@@ -396,8 +398,8 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
 
 void
 js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
-			void *userRef, const uintN errorNumber,
-                        JSBool charArgs, va_list ap)
+                       void *userRef, const uintN errorNumber,
+                       JSBool charArgs, va_list ap)
 {
     JSStackFrame *fp;
     JSErrorReport report;

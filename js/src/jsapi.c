@@ -895,6 +895,28 @@ JS_StringToVersion(const char *string)
     return JSVERSION_UNKNOWN;
 }
 
+JS_PUBLIC_API(uint32)
+JS_GetOptions(JSContext *cx)
+{
+    return cx->options;
+}
+
+JS_PUBLIC_API(uint32)
+JS_SetOptions(JSContext *cx, uint32 options)
+{
+    uint32 oldopts = cx->options;
+    cx->options = options;
+    return oldopts;
+}
+
+JS_PUBLIC_API(uint32)
+JS_ToggleOptions(JSContext *cx, uint32 options)
+{
+    uint32 oldopts = cx->options;
+    cx->options ^= options;
+    return oldopts;
+}
+
 JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void)
 {
@@ -2239,10 +2261,12 @@ static JSScript *
 CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
 		   void *tempMark, JSBool *eofp)
 {
+    JSBool eof;
     JSCodeGenerator cg;
     JSScript *script;
 
     CHECK_REQUEST(cx);
+    eof = JS_FALSE;
     if (!js_InitCodeGenerator(cx, &cg, ts->filename, ts->lineno,
 			      ts->principals)) {
 	script = NULL;
@@ -2250,12 +2274,13 @@ CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
     }
     if (!js_CompileTokenStream(cx, obj, ts, &cg)) {
 	script = NULL;
-        if (eofp)
-            *eofp = (ts->flags & TSF_EOF) != 0;
+        eof = (ts->flags & TSF_EOF) != 0;
 	goto out;
     }
     script = js_NewScriptFromCG(cx, &cg, NULL);
 out:
+    if (eofp)
+        *eofp = eof;
     if (!js_CloseTokenStream(cx, ts)) {
         if (script)
 	    js_DestroyScript(cx, script);
@@ -2338,8 +2363,7 @@ JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
     void *mark;
     JSTokenStream *ts;
     JSErrorReporter older;
-    JSBool hitEOF;
-    JSBool result;
+    JSBool hitEOF, result;
     JSExceptionState *exnState;
 
     CHECK_REQUEST(cx);
@@ -2354,7 +2378,6 @@ JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
         goto out;
     }
 
-    hitEOF = JS_FALSE;
     older = JS_SetErrorReporter(cx, NULL);
     script = CompileTokenStream(cx, obj, ts, mark, &hitEOF);
     JS_SetErrorReporter(cx, older);

@@ -1754,6 +1754,12 @@ js_FindVariable(JSContext *cx, jsid id, JSObject **objp, JSObject **pobjp,
     /*
      * Make a top-level variable.
      */
+    if (JS_HAS_STRICT_OPTION(cx)) {
+        JSString *str = JSVAL_TO_STRING(js_IdToValue(id));
+        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                             JSMSG_UNDECLARED_VAR, JS_GetStringBytes(str));
+        return JS_FALSE;
+    }
     if (!OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID, NULL, NULL,
 			     JSPROP_ENUMERATE, &prop)) {
 	return JS_FALSE;
@@ -2033,9 +2039,10 @@ read_only:
 	if (JSVERSION_IS_ECMA(cx->version))
 	    return JS_TRUE;
 	str = js_DecompileValueGenerator(cx, JS_FALSE, js_IdToValue(id), NULL);
-	if (str)
-	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
-				 JSMSG_READ_ONLY, JS_GetStringBytes(str));
+        if (str) {
+            JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                 JSMSG_READ_ONLY, JS_GetStringBytes(str));
+        }
 	return JS_FALSE;
     }
 

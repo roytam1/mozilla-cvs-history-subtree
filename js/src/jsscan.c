@@ -90,15 +90,15 @@ static struct keyword {
     {js_this_str,       TOK_PRIMARY,            JSOP_THIS},
     {js_true_str,       TOK_PRIMARY,            JSOP_TRUE},
     {js_typeof_str,     TOK_UNARYOP,            JSOP_TYPEOF},
-    {"var",             TOK_VAR,                JSOP_DEFVAR},
+    {js_var_str,        TOK_VAR,                JSOP_DEFVAR},
     {js_void_str,       TOK_UNARYOP,            JSOP_VOID},
     {"while",           TOK_WHILE,              JSOP_NOP},
     {"with",            TOK_WITH,               JSOP_NOP},
 
 #if JS_HAS_CONST
-    {"const",           TOK_VAR,                JSOP_DEFCONST},
+    {js_const_str,      TOK_VAR,                JSOP_DEFCONST},
 #else
-    {"const",           TOK_RESERVED,           JSOP_NOP},
+    {js_const_str,      TOK_RESERVED,           JSOP_NOP},
 #endif
 
 #if JS_HAS_EXCEPTIONS
@@ -459,68 +459,6 @@ MatchChar(JSTokenStream *ts, int32 expect)
     return JS_FALSE;
 }
 
-#if 0
-/* XXX js_ReportCompileError is unused */
-void
-js_ReportCompileError(JSContext *cx, JSTokenStream *ts, uintN flags,
-		      const char *format, ...)
-{
-    va_list ap;
-    char *message;
-    jschar *limit, lastc;
-    JSErrorReporter onError;
-    JSErrorReport report;
-    jschar *tokenptr;
-    JSString *linestr;
-
-    va_start(ap, format);
-    message = JS_vsmprintf(format, ap);
-    va_end(ap);
-    if (!message) {
-	JS_ReportOutOfMemory(cx);
-	return;
-    }
-
-    JS_ASSERT(ts->linebuf.limit < ts->linebuf.base + JS_LINE_LIMIT);
-    limit = ts->linebuf.limit;
-    lastc = limit[-1];
-    if (lastc == '\n')
-	limit[-1] = 0;
-    onError = cx->errorReporter;
-    if (onError) {
-	report.filename = ts->filename;
-	report.lineno = ts->lineno;
-	linestr = js_NewStringCopyZ(cx, ts->linebuf.base, 0);
-	report.linebuf  = linestr
-			  ? JS_GetStringBytes(linestr)
-			  : NULL;
-        tokenptr = CURRENT_TOKEN(ts).ptr;
-	report.tokenptr = linestr
-			  ? report.linebuf + (tokenptr - ts->linebuf.base)
-			  : NULL;
-	report.uclinebuf = ts->linebuf.base;
-	report.uctokenptr = tokenptr;
-	report.flags = flags;
-        report.errorNumber = 0;
-
-	(*onError)(cx, message, &report);
-#if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
-    } else {
-	if (ts->filename)
-	    fprintf(stderr, "%s, ", ts->filename);
-	if (ts->lineno)
-	    fprintf(stderr, "line %u: ", ts->lineno);
-	fprintf(stderr, "%s:\n%s\n",message,
-		js_DeflateString(cx, ts->linebuf.base,
-				 ts->linebuf.limit - ts->linebuf.base));
-#endif
-    }
-    if (lastc == '\n')
-	limit[-1] = lastc;
-    free(message);
-}
-#endif
-
 void
 js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
 			    const uintN errorNumber, ...)
@@ -541,8 +479,9 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
     va_start(ap, errorNumber);
     if (!js_ExpandErrorArguments(cx, js_GetErrorMessage, NULL,
 				errorNumber, &message, &report,
-                                JS_TRUE, ap))
+                                JS_TRUE, ap)) {
 	return;
+    }
     va_end(ap);
 
     JS_ASSERT(ts->linebuf.limit < ts->linebuf.base + JS_LINE_LIMIT);
@@ -583,10 +522,8 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
          * otherwise the exception will describe only the last compile error,
          * which is likely spurious.
          */
-        if (!(ts->flags & TSF_BADCOMPILE)) {
-            if (js_ErrorToException(cx, message, &report))
-                ts->flags |= TSF_BADCOMPILE;
-        }
+        if (!(ts->flags & TSF_ERROR))
+            (void) js_ErrorToException(cx, message, &report);
 
         /*
          * Suppress any compiletime errors that don't occur at the top level.
@@ -630,6 +567,11 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
     }
     if (report.ucmessage)
         JS_free(cx, (void *)report.ucmessage);
+
+    if (!JSREPORT_IS_WARNING(flags)) {
+        /* Set the error flag to suppress spurious reports. */
+        ts->flags |= TSF_ERROR;
+    }
 }
 
 JSTokenType
