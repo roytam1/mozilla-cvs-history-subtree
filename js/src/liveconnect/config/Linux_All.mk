@@ -17,7 +17,7 @@
 # JDK_DIR should be the directory you put the JDK in, and should have
 # the appropriate lib/ and include/ dirs on it.
 # If you're not using the `Blackdown' JDK, try changing the following line:
-JDK=/usr/lib/jdk-1.1.5
+JDK=/share/builds/components/jdk/1.1.7/Linux
 
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/md \
 	      -I$(JDK)/include/genunix
