@@ -1156,18 +1156,6 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
   nsresult rv = NS_OK;
 
-  JSString* jsstr = JSVAL_TO_STRING(id);
-  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar*,
-                                           ::JS_GetStringChars(jsstr)),
-                       ::JS_GetStringLength(jsstr));
-
-
-
-
-
-#if 0 // Do we really need to do this???
-
-
   nsIScriptContext *script_cx = (nsIScriptContext *)::JS_GetContextPrivate(cx);
 
   nsCOMPtr<nsIScriptContext> my_context;
@@ -1176,8 +1164,18 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   NS_ENSURE_TRUE(my_context, NS_ERROR_UNEXPECTED);
 
   rv = my_context->IsContextInitialized();
-  NS_ENSURE_SUCCESS(rv, rv);
-#endif
+
+  if (NS_FAILED(rv)) {
+    // The context is not yet initialized so there's nothing we can do
+    // here yet.
+
+    return NS_OK;
+  }
+
+  JSString* jsstr = JSVAL_TO_STRING(id);
+  nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar*,
+                                           ::JS_GetStringChars(jsstr)),
+                       ::JS_GetStringLength(jsstr));
 
   const nsGlobalNameStruct *name_struct = nsnull;
 
@@ -1188,8 +1186,10 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeConstructor) {
-    JSFunction * f = ::JS_DefineFunction(cx, obj, JS_GetStringBytes(jsstr),
-                                         StubConstructor, 0, JSPROP_READONLY);
+    // If there was a JS_DefineUCFunction() I could use it here, but
+    // no big deal...
+    JSFunction *f = ::JS_DefineFunction(cx, obj, JS_GetStringBytes(jsstr),
+                                        StubConstructor, 0, JSPROP_READONLY);
 
     *_retval = !!f;
 
