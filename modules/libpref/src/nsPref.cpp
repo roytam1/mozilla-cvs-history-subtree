@@ -582,6 +582,13 @@ NS_IMETHODIMP nsPref::ReadUserPrefsFrom(nsIFileSpec* inFile)
 } // nsPref::ReadUserPrefsFrom
 
 //----------------------------------------------------------------------------------------
+NS_IMETHODIMP nsPref::ResetUserPrefs()
+{
+    PREF_ClearAllUserPrefs();
+    return NS_OK;
+}
+
+//----------------------------------------------------------------------------------------
 NS_IMETHODIMP nsPref::ResetPrefs()
 //----------------------------------------------------------------------------------------
 {
