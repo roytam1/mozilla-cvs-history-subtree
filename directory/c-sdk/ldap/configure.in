@@ -39,3 +39,5 @@ libraries/libldap/Makefile
 libraries/liblber/Makefile
 "
 AC_OUTPUT([$MAKEFILES])
+
+cp ../../../nsprpub/config/autoconf.mk build/nspr-autoconf.mk

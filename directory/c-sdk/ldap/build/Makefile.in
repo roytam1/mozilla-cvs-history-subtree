@@ -5,11 +5,12 @@ ldaptopsrcdir = @top_srcdir@
 CSRCS	= dirver.c
 
 include autoconf.mk
-include $(NSPR_TREE)/config/rules.mk
 
 TARGETS	= $(OBJDIR)/dirver$(BIN_SUFFIX)
 
 GARBAGE	+= $(TARGETS)
+
+include $(NSPR_TREE)/config/rules.mk
 
 ifeq ($(OS_ARCH), OS2)
 $(OBJS) = $(addprefix $(OBJDIR)/, $(CSRCS:.c=.o))
@@ -29,5 +30,5 @@ export:: $(TARGETS)
 install:: export
 
 clean::
-	rm -rf $(OBJDIR_NAME)
+	rm -rf $(filter-out . ..,$(OBJDIR_NAME))
 
