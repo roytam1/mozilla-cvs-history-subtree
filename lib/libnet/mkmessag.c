@@ -22,6 +22,7 @@
 #include "merrors.h"
 #include "xpgetstr.h"
 #include "plstr.h"
+#include "prprf.h"
 /*
  * hack alert: this file contains a switch statement with a gazillion cases,
  * so I'd prefer to use enums instead of extern ints in this case -- erik

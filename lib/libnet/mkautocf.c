@@ -47,15 +47,7 @@
 #undef WANT_ENUM_STRING_IDS
 #include "xp_reg.h"
 
-#ifndef NSPR20
-#if defined(XP_UNIX) || defined(XP_WIN32)
 #include "prnetdb.h"
-#else
-#define PRHostEnt struct hostent
-#endif
-#else
-#include "prnetdb.h"
-#endif
 
 #include "net.h"
 #include "libmocha.h"
@@ -387,28 +379,14 @@ PRIVATE Bool fill_return_values(PACF_Type   type,
 	    node->socks_addr = inet_addr(host);
 	}
 	else {
-#ifdef NSPR20
 		PRStatus rv;
 	    PRHostEnt  *hp;
 	    PRHostEnt  hpbuf;
 	    char dbbuf[PR_NETDB_BUF_SIZE];
-#else
-	    struct hostent  *hp;
-#if defined(XP_UNIX) || defined(XP_WIN32) 
-	    struct hostent hpbuf;
-	    char dbbuf[PR_NETDB_BUF_SIZE];
-#endif
-#endif /* NSPR20 */
 
 	    NET_InGetHostByName++; /* global semaphore */
-#ifdef NSPR20
 	    rv = PR_GetHostByName(host, dbbuf, sizeof(dbbuf),  &hpbuf);
 	    hp = (rv == PR_SUCCESS ? &hpbuf : NULL);
-#elif defined(XP_UNIX) || defined(XP_WIN32)
-	    hp = PR_gethostbyname(host, &hpbuf, dbbuf, sizeof(dbbuf), 0); 
-#else
-	    hp = gethostbyname(host); 
-#endif
 	    NET_InGetHostByName--; /* global semaphore */
 
 	    if (!hp)
@@ -1344,27 +1322,16 @@ proxy_isResolvable(JSContext *mc, JSObject *obj, unsigned int argc,
     if (argc >= 1 && JSVAL_IS_STRING(argv[0])) {
 	const char *h = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
 	PRHostEnt *hp = NULL;
-#ifdef NSPR20
 	PRStatus rv;
     PRHostEnt hpbuf;
     char dbbuf[PR_NETDB_BUF_SIZE];
-#elif defined(XP_UNIX) || defined(XP_WIN32)
-	PRHostEnt hpbuf;
-	char dbbuf[PR_NETDB_BUF_SIZE];
-#endif
 
 	if (h) {
 	    char *safe = PL_strdup(h);
 	    if (PL_strlen(safe) > 64)
 		safe[64] = '\0';
-#ifdef NSPR20
 	    rv = PR_GetHostByName(safe, dbbuf, sizeof(dbbuf),  &hpbuf);
 	    hp = (rv == PR_SUCCESS ? &hpbuf : NULL);
-#elif defined(XP_UNIX) || defined(XP_WIN32)
-	    hp = PR_gethostbyname(safe, &hpbuf, dbbuf, sizeof(dbbuf), 0);
-#else
-	    hp = gethostbyname(safe);
-#endif
 	    PR_Free(safe);
 	}
 
@@ -1389,18 +1356,10 @@ proxy_isResolvable(JSContext *mc, JSObject *obj, unsigned int argc,
 PRIVATE char *proxy_dns_resolve(const char *host) {
     static char *cache_host = NULL;
     static char *cache_ip = NULL;
-#ifdef NSPR20
 	PRStatus rv;
     PRHostEnt *hp = NULL;
     PRHostEnt hpbuf;
     char dbbuf[PR_NETDB_BUF_SIZE];
-#else
-    struct hostent *hp = NULL;
-#if defined(XP_UNIX) || defined(XP_WIN32)
-    struct hostent hpbuf;
-    char dbbuf[PR_NETDB_BUF_SIZE];
-#endif
-#endif /* xNSPR20 */
 
     if (host) {
 	const char *p;
@@ -1425,14 +1384,8 @@ PRIVATE char *proxy_dns_resolve(const char *host) {
 	    if (PL_strlen(safe) > 64)
 		safe[64] = '\0';
 
-#ifdef NSPR20
 	    rv = PR_GetHostByName(safe, dbbuf, sizeof(dbbuf),  &hpbuf);
 	    hp = (rv == PR_SUCCESS ? &hpbuf : NULL);
-#elif defined(XP_UNIX) || defined(XP_WIN32)
-	    hp = PR_gethostbyname(safe, &hpbuf, dbbuf, sizeof(dbbuf), 0);
-#else
-	    hp = gethostbyname(safe);
-#endif
 	    PR_Free(safe);
 	}
 	if (hp) {
@@ -1487,15 +1440,9 @@ proxy_myIpAddress(JSContext *mc, JSObject *obj, unsigned int argc,
 	char name[100];
 
 	initialized = TRUE;
-#ifndef NSPR20
-	if (gethostname(name, sizeof(name)) == 0) {
-	    my_address = proxy_dns_resolve(name);
-	}
-#else
 	if (PR_GetSystemInfo(PR_SI_HOSTNAME, name, sizeof(name)) == PR_SUCCESS) {
 	    my_address = proxy_dns_resolve(name);
 	}
-#endif
     }
 
     TRACEMSG(("~~~~~~~~~~~~~~~~~~ myIpAddress() returns %s\n", my_address ? my_address : "(null)"));
