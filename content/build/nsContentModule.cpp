@@ -53,6 +53,8 @@
 // XXX
 #include "nsIServiceManager.h"
 
+#include "nsIGenericFactory.h"
+
 #include "nsRange.h"
 #include "nsGenericElement.h"
 #include "nsContentHTTPStartup.h"
@@ -73,7 +75,8 @@
 
 static nsContentModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT 
+nsresult NSGETMODULE_ENTRY_POINT(nsContentModule) (nsIComponentManager *servMgr,
                                           nsIFile* location,
                                           nsIModule** return_cobj)
 {

@@ -53,6 +53,8 @@
 #include "nsIContentSerializer.h"
 #include "nsIHTMLToTextSink.h"
 
+#include "nsIGenericFactory.h"
+
 // SVG
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
@@ -72,7 +74,8 @@
 
 static nsLayoutModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT 
+nsresult NSGETMODULE_ENTRY_POINT(nsLayoutModule)(nsIComponentManager *servMgr,
                                           nsIFile* location,
                                           nsIModule** return_cobj)
 {

@@ -1495,7 +1495,7 @@ DECL_MODULE(nsChromeModule);
 DECL_MODULE(nsContentModule);
 DECL_MODULE(nsCookieModule);
 DECL_MODULE(nsEditorModule);
-DECL_MODULE(nsFindComponentModule);
+DECL_MODULE(nsFindComponent);
 DECL_MODULE(nsGIFModule);
 DECL_MODULE(nsGIFModule2);
 DECL_MODULE(nsGfx2Module);
@@ -1544,7 +1544,6 @@ DECL_MODULE(nsUCvLatinModule);
 DECL_MODULE(nsUCvTW2Module);
 DECL_MODULE(nsUCvTWModule);
 DECL_MODULE(nsURILoaderModule);
-DECL_MODULE(nsUnknownContentTypeHandler);
 DECL_MODULE(nsVCardModule);
 DECL_MODULE(nsViewModule);
 DECL_MODULE(nsWalletModule);
@@ -1581,7 +1580,7 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
   MODULE(nsContentModule),
   MODULE(nsCookieModule),
   MODULE(nsEditorModule),
-  MODULE(nsFindComponentModule),
+  MODULE(nsFindComponent),
   MODULE(nsGIFModule),
   MODULE(nsGIFModule2),
   MODULE(nsGfx2Module),
@@ -1630,7 +1629,6 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
   MODULE(nsUCvTW2Module),
   MODULE(nsUCvTWModule),
   MODULE(nsURILoaderModule),
-  MODULE(nsUnknownContentTypeHandler),
   MODULE(nsVCardModule),
   MODULE(nsViewModule),
   MODULE(nsWalletModule),

@@ -327,7 +327,8 @@ nsParserModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 
 static nsParserModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT 
+nsresult NSGETMODULE_ENTRY_POINT(nsParserModule) (nsIComponentManager *servMgr,
                                           nsIFile* location,
                                           nsIModule** return_cobj)
 {
