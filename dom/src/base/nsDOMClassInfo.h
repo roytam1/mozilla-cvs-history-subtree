@@ -65,6 +65,10 @@ protected:
 
   static nsresult Init();
 
+  static nsresult WrapNative(JSContext *cx, JSObject *scope,
+                             nsISupports *native, const nsIID& aIID,
+                             jsval *vp);
+
   nsDOMClassInfoID mID;
 
   static nsDOMClassInfoData *sClassInfoData;
@@ -172,9 +176,14 @@ protected:
   }
 
   // XXX does this need to be a member???
-  nsresult GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, PRUint32 flags,
-                         JSObject **objp, PRBool *_retval);
+  static JSBool PR_CALLBACK StubConstructor(JSContext *cx, JSObject *obj,
+                                            uintN argc, jsval *argv,
+                                            jsval *rval);
+
+  static nsresult GlobalResolve(nsIXPConnectWrappedNative *wrapper,
+                                JSContext *cx, JSObject *obj, jsval id,
+                                PRUint32 flags, JSObject **objp,
+                                PRBool *_retval);
 
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,

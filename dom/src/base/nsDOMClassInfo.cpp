@@ -252,6 +252,34 @@ nsDOMClassInfo::DefineStaticJSStrings(JSContext *cx)
   return NS_OK;
 }
 
+// static
+nsresult
+nsDOMClassInfo::WrapNative(JSContext *cx, JSObject *scope, nsISupports *native,
+                           const nsIID& aIID, jsval *vp)
+{
+  if (!native) {
+    *vp = JSVAL_NULL;
+
+    return NS_OK;
+  }
+
+  NS_ENSURE_TRUE(sXPConnect, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+  nsresult rv = sXPConnect->WrapNative(cx, scope, native, aIID,
+                                       getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject* obj = nsnull;
+  rv = holder->GetJSObject(&obj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  *vp = OBJECT_TO_JSVAL(obj);
+
+  return rv;
+}
+
 nsDOMClassInfo::nsDOMClassInfo(nsDOMClassInfoID aID) : mID(aID)
 {
   NS_INIT_REFCNT();
@@ -911,8 +939,6 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // Look for a child frame with the name of the property we're
     // getting, if we find one we'll return that child frame.
 
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
 
@@ -947,21 +973,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         // We found a subframe of the right name.  The rest of this code
         // is to get its script object.
 
-        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-        rv = sXPConnect->WrapNative(cx, obj, child_window,
-                                    NS_GET_IID(nsIDOMWindow),
-                                    getter_AddRefs(holder));
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        JSObject* child_obj = nsnull; // XPConnect-wrapped property value.
-
-        rv = holder->GetJSObject(&child_obj);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        *vp = OBJECT_TO_JSVAL(child_obj);
-
-        return NS_OK;
+        return WrapNative(cx, obj, child_window, NS_GET_IID(nsIDOMWindow), vp);
       }
     }
 
@@ -979,33 +991,19 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       nsresult rv = window->GetContent(getter_AddRefs(content));
       NS_ENSURE_SUCCESS(rv, rv);
 
-      if (content) {
-        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-        rv = sXPConnect->WrapNative(cx, obj, content, NS_GET_IID(nsISupports),
-                                    getter_AddRefs(holder));
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        JSObject* content_obj = nsnull; // XPConnect-wrapped property value.
-
-        rv = holder->GetJSObject(&content_obj);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        *vp = OBJECT_TO_JSVAL(content_obj);
-      }
+      return WrapNative(cx, obj, content, NS_GET_IID(nsISupports), vp);
     }
   }
 
   return nsEventRecieverSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
-static JSBool PR_CALLBACK
-StubConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
-                jsval *rval)
+// static
+JSBool PR_CALLBACK
+nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
+                            jsval *argv, jsval *rval)
 {
-  JSFunction *fun;
-  
-  fun = ::JS_ValueToFunction(cx, argv[-2]);
+  JSFunction *fun = ::JS_ValueToFunction(cx, argv[-2]);
   if (!fun)
     return JS_FALSE;
 
@@ -1055,24 +1053,9 @@ StubConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
     return rv;
   }
-    
-  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-  NS_ENSURE_SUCCESS(rv, JS_FALSE);
 
-  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-  rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), native,
-                       NS_GET_IID(nsISupports), getter_AddRefs(holder));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  JSObject* new_obj = nsnull; // XPConnect-wrapped property value.
-
-  rv = holder->GetJSObject(&new_obj);
-  NS_ENSURE_SUCCESS(rv, JS_FALSE);
-
-  *rval = OBJECT_TO_JSVAL(new_obj);
-
-  return JS_TRUE;
+  return WrapNative(cx, ::JS_GetGlobalObject(cx), native,
+                    NS_GET_IID(nsISupports), rval);
 }
 
 nsresult
@@ -1136,7 +1119,7 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     nsCOMPtr<nsISupports> native(do_CreateInstance(name_struct->mCID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    JSObject* prop = nsnull; // XPConnect-wrapped property value.
+    jsval prop_val; // XPConnect-wrapped property value.
 
     nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(native));
     if (owner) {
@@ -1145,27 +1128,26 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                           getter_AddRefs(context));
       NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
 
-      rv = owner->GetScriptObject(context, (void**)&prop);
+      JSObject *prop_obj = nsnull;
+
+      rv = owner->GetScriptObject(context, (void**)&prop_obj);
+      NS_ENSURE_TRUE(prop_obj, NS_ERROR_UNEXPECTED);
+
+      prop_val = OBJECT_TO_JSVAL(prop_obj);
     } else {
-      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-      rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), native,
-                                  NS_GET_IID(nsISupports),
-                                  getter_AddRefs(holder));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = holder->GetJSObject(&prop);
+      rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native,
+                      NS_GET_IID(nsISupports), &prop_val);
     }
 
     NS_ENSURE_SUCCESS(rv, rv);
 
     *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(jsstr),
                                      ::JS_GetStringLength(jsstr),
-                                     OBJECT_TO_JSVAL(prop), nsnull, nsnull, 
+                                     prop_val, nsnull, nsnull,
                                      JSPROP_ENUMERATE | JSPROP_READONLY);
     *objp = obj;
 
-    return NS_OK;
+    return *_retval ? NS_OK : NS_ERROR_FAILURE;
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeDynamicNameSet) {
@@ -1186,7 +1168,9 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     sgo->GetContext(getter_AddRefs(context));
     NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
 
-    return nameset->InitializeClasses(context);
+    rv = nameset->InitializeClasses(context);
+
+    *objp = obj;
   }
 
   return rv;
@@ -1198,8 +1182,6 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                        JSObject **objp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
     JSString *str = JSVAL_TO_STRING(id);
 
     nsCOMPtr<nsISupports> native;
@@ -1342,20 +1324,16 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
     p = sgo;
   }
 
-  NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-  rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), p,
-                              NS_GET_IID(nsISupports), getter_AddRefs(holder));
-  NS_ENSURE_SUCCESS(rv, rv);
+  jsval v;
 
-  // We've wrapped the parent, return the parent wrapper as our parent
-  // object.
-  rv = holder->GetJSObject(parentObj);
-  NS_ENSURE_SUCCESS(rv, rv);
+  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), p, NS_GET_IID(nsISupports),
+                  &v);
 
-  return NS_OK;
+  *parentObj = JSVAL_TO_OBJECT(v);
+
+  return rv;
 }
 
 
@@ -1583,8 +1561,6 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       return NS_ERROR_DOM_INDEX_SIZE_ERR;
     }
       
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
 
@@ -1596,23 +1572,9 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     nsresult rv = list->Item(n, getter_AddRefs(node));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (node) {
-      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-      rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), node,
-                                  NS_GET_IID(nsIDOMNode),
-                                  getter_AddRefs(holder));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      JSObject* node_obj = nsnull;
-
-      rv = holder->GetJSObject(&node_obj);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      *vp = OBJECT_TO_JSVAL(node_obj);
-    } else {
-      *vp = JSVAL_NULL;
-    }
+    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), node, NS_GET_IID(nsIDOMNode),
+                    vp);
+    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   return NS_OK;
@@ -1627,8 +1589,6 @@ nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
     JSString *jsstr = JSVAL_TO_STRING(id);
 
     nsLiteralString name(NS_REINTERPRET_CAST(const PRUnichar *,
@@ -1646,23 +1606,9 @@ nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     nsresult rv = list->NamedItem(name, getter_AddRefs(item));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (item) {
-      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-      rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), item,
-                                  NS_GET_IID(nsISupports),
-                                  getter_AddRefs(holder));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      JSObject* item_obj = nsnull;
-
-      rv = holder->GetJSObject(&item_obj);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      *vp = OBJECT_TO_JSVAL(item_obj);
-    } else {
-      *vp = JSVAL_NULL;
-    }
+    rv = WrapNative(cx, ::JS_GetGlobalObject(cx), item,
+                    NS_GET_IID(nsISupports), vp);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
   }
@@ -1703,8 +1649,6 @@ nsDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     JSString *jsstr = JSVAL_TO_STRING(id);
 
     if (jsstr == sLocation_id) {
-      NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
       nsCOMPtr<nsISupports> native;
 
       wrapper->GetNative(getter_AddRefs(native));
@@ -1717,24 +1661,8 @@ nsDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
       doc->GetLocation(getter_AddRefs(l));
 
-      if (l) {
-        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-        nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
-                                             l, NS_GET_IID(nsIDOMLocation),
-                                             getter_AddRefs(holder));
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        JSObject* location_obj = nsnull;
-        rv = holder->GetJSObject(&location_obj);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        *vp = OBJECT_TO_JSVAL(location_obj);
-      } else {
-        *vp = JSVAL_NULL;
-      }
-
-      return NS_OK;
+      return WrapNative(cx, ::JS_GetGlobalObject(cx), l,
+                        NS_GET_IID(nsIDOMLocation), vp);
     }
   }
 
@@ -1749,8 +1677,6 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     JSString *jsstr = JSVAL_TO_STRING(id);
 
     if (jsstr == sLocation_id && JSVAL_IS_STRING(*vp)) {
-      NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
       nsCOMPtr<nsISupports> native;
 
       wrapper->GetNative(getter_AddRefs(native));
@@ -1795,8 +1721,6 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                               jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
     nsCOMPtr<nsISupports> native;
 
     wrapper->GetNative(getter_AddRefs(native));
@@ -1816,20 +1740,8 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     doc->ResolveName(name, nsnull, getter_AddRefs(result));
 
     if (result) {
-      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
-      nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
-                                           result, NS_GET_IID(nsISupports),
-                                           getter_AddRefs(holder));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      JSObject* prop_obj = nsnull;
-      rv = holder->GetJSObject(&prop_obj);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      *vp = OBJECT_TO_JSVAL(prop_obj);
-
-      return NS_OK;
+      return WrapNative(cx, ::JS_GetGlobalObject(cx), result,
+                        NS_GET_IID(nsISupports), vp);
     }
   }
 
@@ -1845,8 +1757,6 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
-    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
     nsCOMPtr<nsISupports> native;
 
     wrapper->GetNative(getter_AddRefs(native));
@@ -1879,20 +1789,10 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     }
 
     if (result) {
-      nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-
       // Wrap result, result can be either an element or a list of
       // elements
-      nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
-                                           result, NS_GET_IID(nsISupports),
-                                           getter_AddRefs(holder));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      JSObject* prop_obj = nsnull;
-      holder->GetJSObject(&prop_obj);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      *vp = OBJECT_TO_JSVAL(prop_obj);
+      return WrapNative(cx, ::JS_GetGlobalObject(cx), result,
+                        NS_GET_IID(nsISupports), vp);
     }
   }
 
