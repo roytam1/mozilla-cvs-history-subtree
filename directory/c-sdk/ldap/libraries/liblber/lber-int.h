@@ -121,13 +121,15 @@ typedef struct seqorset {
 
 #define MAX_TAG_SIZE (1 + sizeof(long)) /* One byte for the length of the tag */
 #define MAX_LEN_SIZE (1 + sizeof(long)) /* One byte for the length of the length */
-#define MAX_VALUE_PREFIX_SIZE 4
-#define BER_ARRAY_QUANTITY 5 /* 0:Tag   1:Length   2:Value-prefix   3:Value   4:Value-suffix  */
-#define BER_STRUCT_TAG 0
+#define MAX_VALUE_PREFIX_SIZE (2 + sizeof(long)) /* 1 byte for the tag and 1 for the len (msgid) */
+#define BER_ARRAY_QUANTITY 7 /* 0:Tag   1:Length   2:Value-prefix   3:Value   4:Value-suffix  */
+#define BER_STRUCT_TAG 0     /* 5:ControlA   6:ControlB */
 #define BER_STRUCT_LEN 1
 #define BER_STRUCT_PRE 2
 #define BER_STRUCT_VAL 3
 #define BER_STRUCT_SUF 4
+#define BER_STRUCT_CO1 5
+#define BER_STRUCT_CO2 6
 
 struct berelement {
   ldap_x_iovec  ber_struct[BER_ARRAY_QUANTITY];   /* See above */
@@ -135,6 +137,7 @@ struct berelement {
   char          ber_tag_contents[MAX_TAG_SIZE];
   char          ber_len_contents[MAX_LEN_SIZE];
   char          ber_pre_contents[MAX_VALUE_PREFIX_SIZE];
+  char          ber_suf_contents[MAX_LEN_SIZE+1];
 
   char          *ber_buf; /* update the value value when writing in case realloc is called */
   char		*ber_ptr;
@@ -154,8 +157,6 @@ struct berelement {
 };
 
 #define BER_CONTENTS_STRUCT_SIZE (sizeof(ldap_x_iovec) * BER_ARRAY_QUANTITY)
-
-
 
 #define NULLBER	((BerElement *)NULL)
 

@@ -314,73 +314,39 @@ int
 LDAP_CALL
 ber_flush( Sockbuf *sb, BerElement *ber, int freeit )
 {
-	long	nwritten = 0, towrite, rc, total;
+	long	nwritten = 0, towrite, rc;
 	int     i = 0;
-	ldap_x_iovec ber_struct_copy[BER_ARRAY_QUANTITY];
 	
 	if (ber->ber_rwptr == NULL) {
 	  ber->ber_rwptr = ber->ber_buf;
+	} else if (ber->ber_rwptr >= ber->ber_end) {
+	  /* we will use the ber_rwptr to continue an exited flush,
+	     so if rwptr is not within the buffer we return an error. */
+	  return( -1 );
 	}
 	
-	/* loop until it's all written */
+	/* writev section - for iDAR only!!! This section ignores freeit!!! */
 	if (sb->sb_ext_io_fns.lbextiofn_writev != NULL) {
 
-	  /* build the copy of the ber_struct */
-	  memcpy(&(ber_struct_copy), &(ber->ber_struct), sizeof(ber_struct_copy));
-	  ber_struct_copy[BER_STRUCT_TAG].ldapiov_base = &(ber->ber_tag_contents[0]);
-	  ber_struct_copy[BER_STRUCT_LEN].ldapiov_base = &(ber->ber_len_contents[0]);
-	  ber_struct_copy[BER_STRUCT_PRE].ldapiov_base = &(ber->ber_pre_contents[0]);
-	  if (ber->ber_rwptr > ber->ber_buf) {
-	    ber_struct_copy[BER_STRUCT_VAL].ldapiov_base = ber->ber_rwptr;
-	  } else {
-	    ber_struct_copy[BER_STRUCT_VAL].ldapiov_base = ber->ber_buf;
-	  }
-	  ber_struct_copy[BER_STRUCT_VAL].ldapiov_len = ber->ber_ptr - ber->ber_rwptr;
-	  
 	  /* add the sizes of the different buffers to write with writev */
-	  for(total = 0, i = 0; i < BER_ARRAY_QUANTITY; ++i) {
-	    total += ber_struct_copy[i].ldapiov_len;
-	  }
-	  towrite = total;
-	  
-	  /* begin loop here */
-	  while (1) {
-	    if ((rc = sb->sb_ext_io_fns.lbextiofn_writev
-		(sb->sb_sd, ber_struct_copy, BER_ARRAY_QUANTITY, 
-		sb->sb_ext_io_fns.lbextiofn_socket_arg)) == 0) {
-	      return(towrite);
-	    } else if (rc < 0) {
-	      return(rc);
-	    } else {
-	      towrite -= rc;
-	      if (towrite > 0) {
-		nwritten = towrite;
-		/* go backwards through the buffers finding the place you stopped... */
-		for (i = BER_ARRAY_QUANTITY - 1; i >= 0; --i) {
-		  if (ber_struct_copy[i].ldapiov_len >= nwritten) {
-		    ber_struct_copy[i].ldapiov_base = ber_struct_copy[i].ldapiov_base + ber_struct_copy[i].ldapiov_len - nwritten;
-		    ber_struct_copy[i].ldapiov_len = nwritten;
-		    /* ... then set all of the other buffers to 0 size because they've already been written */
-		    for (--i; i >= 0; --i) {
-		      ber_struct_copy[i].ldapiov_len = 0;
-		    }
-		    break; /* Not necessary */
-		  }
-		  else {
-		    nwritten -= ber_struct_copy[i].ldapiov_len;
-		  }
-		}
-	      }
-	      else {
-		ber->ber_rwptr = NULL;
-		if( freeit ) {
-		  ber_free( ber, 1 );
-		}
-		return(0);
-	      }
+	  for (towrite = 0, i = 0; i < BER_ARRAY_QUANTITY; ++i) {
+	    /* don't add lengths of null buffers - writev will ignore them */
+	    if (ber->ber_struct[i].ldapiov_base) {
+	      towrite += ber->ber_struct[i].ldapiov_len;
 	    }
 	  }
-	}
+	  
+	  rc = sb->sb_ext_io_fns.lbextiofn_writev(sb->sb_sd, ber->ber_struct, BER_ARRAY_QUANTITY, 
+						  sb->sb_ext_io_fns.lbextiofn_socket_arg);
+	  
+	  if (rc >= 0) {
+	    /* return the number of bytes TO BE written */
+	    return (towrite - rc);
+	  } else {
+	    /* otherwise it's an error */
+	    return (rc);
+	  }
+	} /* end writev section */
 
 	towrite = ber->ber_ptr - ber->ber_rwptr;
 
@@ -727,13 +693,17 @@ ber_get_next( Sockbuf *sb, unsigned long *len, BerElement *ber )
 	    return( LBER_DEFAULT );
 	  }
 	  
-	  if ( (ber->ber_buf = (char *)NSLBERI_CALLOC( 1,(size_t)newlen ))
-	       == NULL ) {
-	    return( LBER_DEFAULT );
+	  /* check to see if we already have enough memory allocated */
+	  if ( (ber->ber_end - ber->ber_buf) < (size_t)newlen) {	  
+	    if ( (ber->ber_buf = (char *)NSLBERI_CALLOC( 1,(size_t)newlen ))
+		 == NULL ) {
+	      return( LBER_DEFAULT );
+	    }
+	    ber->ber_flags &= ~LBER_FLAG_NO_FREE_BUFFER;
 	  }
+	  
 
 	  ber->ber_len = newlen;
-	  ber->ber_flags &= ~LBER_FLAG_NO_FREE_BUFFER;
 	  ber->ber_ptr = ber->ber_buf;
 	  ber->ber_end = ber->ber_buf + newlen;
 	  ber->ber_rwptr = ber->ber_buf;
