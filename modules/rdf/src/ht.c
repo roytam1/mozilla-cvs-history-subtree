@@ -2702,11 +2702,11 @@ sendColumnNotification (HT_View view, void *token, uint32 tokenType, HT_Event wh
 	if (view == NULL)			return;
 	if ((pane = view->pane) == NULL)	return;
 	if ((ns = pane->ns) == NULL)		return;
-	if (ns->notifyProc == NULL)		return;
+	if (ns->columnNotifyProc == NULL)	return;
   
 	if (pane->mask & whatHappened) 
 	{
-		(*ns->notifyProc)(ns, (void *)token, whatHappened);
+		(*ns->columnNotifyProc)(ns, HT_TopNode(view), whatHappened, token, tokenType);
 	}
 }
 
@@ -2987,7 +2987,9 @@ HT_SetSortColumn(HT_View view, void *token, uint32 tokenType, PRBool descendingF
 	view->sortToken = token;
 	view->sortTokenType = tokenType;
 	view->descendingFlag = descendingFlag;
-	sendColumnNotification(view, token, tokenType, HT_EVENT_VIEW_SORTING_CHANGED);
+
+	/* sendColumnNotification(view, token, tokenType, HT_EVENT_VIEW_SORTING_CHANGED); */
+	refreshItemList(HT_TopNode(view), HT_EVENT_VIEW_SORTING_CHANGED);
 }
 
 

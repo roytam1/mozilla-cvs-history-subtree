@@ -95,10 +95,13 @@ struct _HT_NotificationStruct;
 
 typedef void (*HT_NotificationProc)(struct _HT_NotificationStruct*, 
 				 HT_Resource node, HT_Event whatHappened);
+typedef void (*HT_ColumndNotificationProc)(struct _HT_NotificationStruct*, 
+				 HT_Resource node, HT_Event whatHappened, void *param, uint32 tokenType);
 
 typedef struct _HT_NotificationStruct {
-        HT_NotificationProc notifyProc;
-        void* data;
+        HT_NotificationProc		notifyProc;
+        void				*data;
+        HT_ColumndNotificationProc	columnNotifyProc;
 } HT_NotificationStruct;
 
 
