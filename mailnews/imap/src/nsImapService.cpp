@@ -447,6 +447,9 @@ nsImapService::CreateStartOfImapUrl(nsIImapUrl * &imapUrl,
         urlSpec.Append('@');
 #endif
         urlSpec.Append(hostname);
+		urlSpec.Append(':');
+		urlSpec.Append("143"); // mscott -- i know this is bogus...i'm i a hurry =)
+
         // *** jefft - force to parse the urlSpec in order to search for
         // the correct incoming server
         nsCOMPtr <nsIURI> url = do_QueryInterface(imapUrl, &rv);
