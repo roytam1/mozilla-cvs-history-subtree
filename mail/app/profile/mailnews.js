@@ -66,6 +66,10 @@ pref("news.wrap_long_lines",                true);
 pref("mail.inline_attachments",             true);
 pref("mailnews.auto_unzip_saved_attachments", false);
 
+// hidden pref to ensure a certain number of headers in the message pane
+// to avoid the height of the header area from changing when headers are present / not present
+pref("mailnews.headers.minNumHeaders", 0); // 0 means we ignore this pref
+
 // hidden pref for controlling if the user agent string
 // is displayed in the message pane or not...
 pref("mailnews.headers.showUserAgent",       false);
