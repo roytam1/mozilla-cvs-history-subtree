@@ -21,7 +21,7 @@
 # Contributor(s):
 #
 # DESCRIPTION
-#    "finger" version using LDAP information (using RFC 2307 objectclass).
+#    Quick Search, like ldapsearch, but in Perl. Look how simple it is.
 #
 #############################################################################
 
