@@ -236,6 +236,8 @@ enumerate_remove_java_obj(JSJHashEntry *he, JSIntn i, void *arg)
 void
 jsj_DiscardJavaObjReflections(JNIEnv *jEnv)
 {
+#if 0
+    /* Causes assert-botch in JS_GetPrivate, so disable for now */
     if (java_obj_reflections) {
         JSJ_HashTableEnumerateEntries(java_obj_reflections,
                                       enumerate_remove_java_obj,
@@ -243,6 +245,7 @@ jsj_DiscardJavaObjReflections(JNIEnv *jEnv)
         JSJ_HashTableDestroy(java_obj_reflections);
         java_obj_reflections = NULL;
     }
+#endif
 }
 
 JS_DLL_CALLBACK JSBool
