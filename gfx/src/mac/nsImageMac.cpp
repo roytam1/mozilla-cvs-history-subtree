@@ -679,7 +679,11 @@ void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits,
       ::SetClip(newClip);
     }
 
-    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, ditherCopy, nsnull);
+    if (maskDepth > 1) {
+      ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, ditherCopy, nsnull);
+    } else {
+      ::CopyMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect);
+    }
 
     if (inDrawingToPort)
     {
