@@ -185,7 +185,7 @@ NS_IMETHODIMP FileImpl::QueryInterface(REFNSIID aIID, void** aInstancePtr)
       NS_ADDREF_THIS();
       return NS_OK;
   }
-  if (aIID.Equals(((nsIBaseStream*)(nsIOutputStream*)this)->IID()))
+  if (aIID.Equals(((nsISupports*)(nsIOutputStream*)this)->IID()))
   {
       *aInstancePtr = (void*)((nsISupports*)(nsIOutputStream*)this);
       NS_ADDREF_THIS();
