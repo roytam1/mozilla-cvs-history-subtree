@@ -24,28 +24,8 @@ include <$(DEPTH)/config/config.mak>
 
 DIRS = wallet \
 	cookie \
-	inspector \
-!if defined(BUILD_CHATZILLA)
-	irc \
-!endif
-!if !defined(DISABLE_JSD) && !defined(DISABLE_VENKMAN)
-    venkman \
-!endif
 	content-packs \
 	help \
-!if defined(MOZ_ENABLE_P3P)
-  p3p \
-!endif
-	pref \
-!if !defined(DISABLE_XSLT)
-	transformiix \
-!endif 
-	universalchardet \
-	xml-rpc \
-!if defined(MOZ_ENABLE_IIX)
-    interfaceinfo \
-!endif
-	xmlextras \
 	$(NULL)
 
 
