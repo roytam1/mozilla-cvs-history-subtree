@@ -87,6 +87,12 @@ nsEventQueueImpl::GetEvent(PLEvent** aResult)
 	return NS_OK;
 }
 
+NS_IMETHODIMP_(PRInt32) 
+nsEventQueueImpl::GetEventQueueSelectFD() 
+{
+  return PL_GetEventQueueSelectFD(mEventQueue);
+}
+
 NS_METHOD
 nsEventQueueImpl::Create(nsISupports *aOuter,
                             REFNSIID aIID,

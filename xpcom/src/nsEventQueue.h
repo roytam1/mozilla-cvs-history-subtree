@@ -38,6 +38,8 @@ public:
 	NS_IMETHOD EventAvailable(PRBool& aResult);
 	NS_IMETHOD GetEvent(PLEvent** aResult);
 
+  NS_IMETHOD_(PRInt32) GetEventQueueSelectFD();
+
 	NS_IMETHOD Init();
 	NS_IMETHOD InitFromPLQueue(PLEventQueue* aQueue);
 

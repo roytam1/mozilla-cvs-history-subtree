@@ -44,6 +44,8 @@ public:
 	NS_IMETHOD EventAvailable(PRBool& aResult) = 0;
 	NS_IMETHOD GetEvent(PLEvent** aResult) = 0;
 
+  NS_IMETHOD_(PRInt32) GetEventQueueSelectFD() = 0;
+
 	NS_IMETHOD Init() = 0;
 	NS_IMETHOD InitFromPLQueue(PLEventQueue* aQueue) = 0;
 };
