@@ -63,6 +63,8 @@ XPIDLSRCS	= \
 
 EXPORTS		= \
 		nsColor.h \
+		nsColorNameList.h \
+		nsColorNames.h \
 		nsGUIEvent.h \
 		nsMargin.h \
 		nsMatrix.h \

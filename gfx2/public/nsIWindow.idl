@@ -28,6 +28,12 @@ interface nsICursor;
 interface nsIGUIEventListener;
 interface nsIImage;
 interface nsIRegion;
+interface nsIRollupListener;
+
+/*! @verbatim */
+// remove this later...
+[ref] native nsRectRef(nsRect);
+/*! @endverbatim */
 
 /**
  * nsIWindow interface
@@ -114,6 +120,36 @@ interface nsIWindow : nsISupports
                  out gfx_coord aY,
                  out gfx_dimension aWidth,
                  out gfx_dimension aHeight);
+
+
+
+  /**
+   * Convert from this widget coordinates to screen coordinates.
+   *
+   * @param aOldRect widget coordinates stored in the x,y members
+   * @param aNewRect (out) screen coordinates stored in the x,y members
+   *
+   * @attention this should be scriptable and use nsPoint's
+   */
+  [noscript] void widgetToScreen([const] in nsRectRef aOldRect, in nsRectRef aNewRect );
+
+
+
+	/**
+	 * Enables/Disables system capture of any and all events that would cause a
+	 * dropdown to be rolled up, This method ignores the aConsumeRollupEvent 
+   * parameter when aDoCapture is FALSE
+   *
+   * @param aListener the rollup listener.
+	 * @param aCapture PR_TRUE enables capture, PR_FALSE disables capture 
+	 * @param aConsumeRollupEvent PR_TRUE consumes the rollup event, PR_FALSE dispatches rollup event
+   *
+   * @attention FIX DOCS to reflect that this captures all events for this widget and any children
+   *  of it dealing with mouse and keyboard events.
+	 */
+  void captureRollupEvents(in nsIRollupListener aListener,
+                           in boolean aDoCapture,
+                           in boolean aConsumeRollupEvent);
 
 
   /**

@@ -36,6 +36,7 @@ interface nsIImage;
 interface nsICursor : nsISupports
 {
   /**
+   * @attention renumber this in order
    * CSS cursors
    * @name cursors
    * @see http://www.w3.org/TR/REC-CSS2/ui.html#cursor-props
@@ -62,6 +63,12 @@ interface nsICursor : nsISupports
   /// north/south sizing, usually rendered as sizeWE rotated 90 degrees
   const long sizeNS              = 5;
 
+  ///(corner sizing)
+  const long sizeNW              = 50;
+  const long sizeSE              = 51;
+  const long sizeNE              = 52;
+  const long sizeSW              = 53;
+
   const long arrow_north         = 6;
   const long arrow_north_plus    = 7;
   const long arrow_south         = 8;
@@ -76,6 +83,18 @@ interface nsICursor : nsISupports
   const long move                = 15;
 
   const long help                = 16;
+
+
+  const long copy                = 17;
+  const long alias               = 18;
+  const long context_menu        = 19;
+  const long cell                = 20;
+  const long grab                = 21;
+  const long grabbing            = 22;
+  const long spinning            = 23;
+  const long count_up            = 24;
+  const long count_down          = 25;
+  const long count_up_down       = 26;
   //@}
 
   /**

@@ -33,12 +33,12 @@ interface nsIRollupListener : nsISupports
    * Notifies the object to rollup
    * @result NS_Ok if no errors
    */
-  void Rollup();
+  void rollup();
 
   /**
    * Asks the RoolupListener if it should rollup on mousevents
    * @result NS_Ok if no errors
    */
-  void ShouldRollupOnMouseWheelEvent(out PRBool aShould);
+  void shouldRollupOnMouseWheelEvent(out PRBool aShould);
 
 };
