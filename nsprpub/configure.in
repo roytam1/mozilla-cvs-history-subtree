@@ -1272,13 +1272,13 @@ case "$target" in
 
             if test -n "$MOZ_PROFILE"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
-                DLLFLAGS="$DLLFLAGS -DEBUG -DEBUGTYPE:CV"
-                LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
+                DLLFLAGS="$DLLFLAGS -DEBUG -DEBUGTYPE:CV -OPT:REF"
+                LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV -OPT:REF"
             fi
             if test -n "$MOZ_PDB"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
-                DLLFLAGS="$DLLFLAGS -DEBUG"
-                LDFLAGS="$LDFLAGS -DEBUG"
+                DLLFLAGS="$DLLFLAGS -DEBUG -OPT:REF"
+                LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
             fi
         else
             if test -n "$USE_DEBUG_RTL"; then
