@@ -698,7 +698,7 @@ NS_IMETHODIMP nsImageWin :: Draw(nsIRenderingContext &aContext, nsDrawingSurface
 NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
                                    nsDrawingSurface aSurface,
                                    PRInt32 aSXOffset, PRInt32 aSYOffset,
-                                   const nsRect &aTileRect)
+                                   const nsRect &aDestRect)
 {
   float            scale;
 
@@ -743,18 +743,18 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
 
   // put the width and hieght into the devices coordinates
 
-  PRInt32 aY0 = aTileRect.y - aSYOffset,
-          aX0 = aTileRect.x - aSXOffset,
-          aY1 = aTileRect.y + aTileRect.height,
-          aX1 = aTileRect.x + aTileRect.width;
+  PRInt32 aY0 = aDestRect.y - aSYOffset,
+          aX0 = aDestRect.x - aSXOffset,
+          aY1 = aDestRect.y + aDestRect.height,
+          aX1 = aDestRect.x + aDestRect.width;
 
   // this is the width and height of the image in pixels
   // we need to map this to the pixel height of the device
   nscoord imageScaledWidth = PR_MAX(int(mBHead->biWidth*scale), 1);
   nscoord imageScaledHeight = PR_MAX(int(mBHead->biHeight*scale), 1);
 
-  nscoord tileWidth = aTileRect.width;
-  nscoord tileHeight = aTileRect.height;
+  nscoord tileWidth = aDestRect.width;
+  nscoord tileHeight = aDestRect.height;
 
   PRBool              tryAgain = PR_FALSE;
   nsRect              destRect,srcRect,tvrect;
@@ -796,7 +796,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
       tryAgain = PR_TRUE;
     } else {
       // Copy from the HDC to the memory DC
-      ::StretchBlt(memDC, 0, 0, width, height,TheHDC, 0, 0, width, height, SRCCOPY);
+      ::StretchBlt(memDC, 0, 0, width, height,TheHDC, aDestRect.x, aDestRect.y, width, height, SRCCOPY);
   
       PRInt32 targetRowBytes = ((width * 3) + 3) & ~3;
       unsigned char *targetRow,*imageRow,*alphaRow;
@@ -831,7 +831,7 @@ NS_IMETHODIMP nsImageWin::DrawTile(nsIRenderingContext &aContext,
       }
 
       // Copy back to the HDC 
-      ::StretchBlt(TheHDC, 0, 0, width, height,memDC, 0, 0, width, height, SRCCOPY);
+      ::StretchBlt(TheHDC,aDestRect.x, aDestRect.y, width, height,memDC, 0, 0, width, height, SRCCOPY);
 
       ::SelectObject(memDC, oldBitmap);
       ::DeleteObject(tmpBitmap);
