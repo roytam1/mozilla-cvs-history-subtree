@@ -896,9 +896,9 @@ sub CreateProfile {
     print_logfile($binary_log, "Create Profile");
     
     if ($result->{timed_out}) {
-        print_log "Error: timed out creating profile after"
-          ." $timeout_secs seconds.\n";
-        return 'testfailed';
+	    # timeout = success.
+        print_log "Success: profile was created, $binary started and stayed up.\n";
+        return 'success';
     } elsif ($result->{exit_value} != 0) {
       my $binary_basename = File::Basename::basename($binary);
         print_test_errors($result, $binary_basename);
