@@ -1822,7 +1822,9 @@ RDFGenericBuilderImpl::EnsureElementHasGenericChild(nsIContent* parent,
         if (NS_FAILED(rv = NS_NewRDFElement(nameSpaceID, tag, getter_AddRefs(element))))
             return rv;
 
-        if (NS_FAILED(rv = parent->AppendChildTo(element, PR_FALSE)))
+        if (NS_FAILED(rv = parent->AppendChildTo(element, PR_TRUE))) 
+          // XXX Note that the notification ensures we won't batch insertions! This could be bad! - Dave
+
             return rv;
 
         *result = element;
