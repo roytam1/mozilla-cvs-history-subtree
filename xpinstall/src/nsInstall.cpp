@@ -151,10 +151,8 @@ nsInstallInfo::~nsInstallInfo()
 void
 nsInstallInfo::MakeTempFile(nsString aURL, nsString& tempFileString)
 {
-    // Checking to see if the url is local is a hack.  I should see if 
-    // netlib could do this for me: given a url, give me path on the users
-    // if it is local otherwise return null to indicate that I need to 
-    // create a tempfile.
+    // Checking to see if the url is local
+
     if (aURL.Compare(nsString("file://"), false, 7) == 0)
     {       
         tempFileString = nsFilePath(nsFileURL(aURL));

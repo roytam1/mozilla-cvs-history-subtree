@@ -96,8 +96,10 @@ char* nsInstallUninstall::toString()
 {
     char* buffer = new char[1024];
     
-    sprintf( buffer, nsInstallResources::GetUninstallString(), nsAutoCString(mUIName));
-    
+    char* temp = mUIName.ToNewCString();
+    sprintf( buffer, nsInstallResources::GetUninstallString(), temp);
+    delete [] temp;
+
     return buffer;
 }
 
