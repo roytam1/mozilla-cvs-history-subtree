@@ -95,6 +95,10 @@ OBJS=                         \
 	.\$(OBJDIR)\cmtsdr.obj \
     $(NULL)
 
+EXPORTS = \
+    .\cmtcmn.h \
+    $(NULL)
+
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Targets here (ie. PROGRAM, LIBRARY, DLL, ...)
