@@ -1195,6 +1195,8 @@ if [ "$MOZ_XTF" ]; then
 	content/xtf/js/Makefile
 	content/xtf/tests/Makefile
 	content/xtf/tests/smiley/Makefile
+	content/xtf/tests/canvas/Makefile
+	content/xtf/tests/perf/Makefile
 "
     MAKEFILES_layout="$MAKEFILES_layout
 	layout/xtf/Makefile

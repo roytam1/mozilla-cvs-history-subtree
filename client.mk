@@ -70,7 +70,15 @@ XTF_BRANCH_MODIFIED_FILES = \
 	config/autoconf.mk.in \
 	config/rules.mk \
 	content/Makefile.in \
+	content/base/src/nsDocument.h \
+	content/base/src/nsDocument.cpp \
+	content/base/src/nsDocumentViewer.cpp \
+	content/base/src/nsIDocumentViewerPrint.h \
 	content/base/src/nsNameSpaceManager.cpp \
+	content/base/src/nsPrintEngine.cpp \
+	content/base/src/nsStyleSet.h \
+	content/base/src/nsStyleSet.cpp \
+	content/html/document/src/nsHTMLDocument.cpp \
 	js/src/xpconnect/Makefile.in \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
