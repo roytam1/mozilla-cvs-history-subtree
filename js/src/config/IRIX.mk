@@ -45,7 +45,7 @@ ifeq ($(OS_RELEASE),6.5)
 CC	= cc -n32 -DIRIX6_5
 endif
 CCC = CC
-LD  = CC
+# LD  = CC
 ODD_CFLAGS = -fullwarn -xansi
 ifdef BUILD_OPT
 OPTIMIZER += -Olimit 4000

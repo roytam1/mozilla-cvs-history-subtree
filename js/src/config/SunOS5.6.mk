@@ -28,7 +28,7 @@ else
   CC = cc
   CCC = CC
   CFLAGS += -mt -Kpic
-  LD = CC
+#  LD = CC
 endif
 
 RANLIB = echo

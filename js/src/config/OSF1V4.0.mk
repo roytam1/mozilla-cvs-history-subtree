@@ -31,7 +31,7 @@ else
 CC  = cc
 CCC = cxx
 CFLAGS += -ieee -std
-LD  = cxx
+# LD  = cxx
 endif
 
 RANLIB = echo
