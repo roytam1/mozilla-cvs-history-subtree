@@ -8269,16 +8269,16 @@ RDF_GetNavCenterDB()
 
 
 
-void
+RDFT
 HTADD(HT_Pane pane, RDF_Resource u, RDF_Resource s, void *v)
 {
-	remoteStoreAdd(pane->htdb, u, s, v, 
-		((s == gCoreVocab->RDF_parent) ?
-		RDF_RESOURCE_TYPE : RDF_STRING_TYPE), PR_TRUE);
+   RDF_ValueType type = ((s == gCoreVocab->RDF_parent) ? RDF_RESOURCE_TYPE : RDF_STRING_TYPE);
+	remoteStoreAdd(pane->htdb, u, s, v, type, 1);
 	if ((s == gCoreVocab->RDF_parent) && (containerp(u)))
 	{
-		RDF_AddDataSource(pane->db, resourceID(u));
+	return	RDF_AddDataSource(pane->db, resourceID(u));
 	}
+        return NULL;
 }
 
 
@@ -8362,11 +8362,15 @@ RetainOldSitemaps (HT_Pane htPane, char *pUrl)
             nsmp->origin =  GUESS_FROM_PREVIOUS_PAGE;
             nsmp->onDisplayp = 1;
             HTADD(htPane, nu, gCoreVocab->RDF_name, copyString(nsmp->name));
-            HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top);
+            nsmp->db = HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top);
           }
         } else if (nsmp->onDisplayp) {
           HTDEL(sp, nsmp->sitemap, gCoreVocab->RDF_parent,
                         gNavCenter->RDF_Top, RDF_RESOURCE_TYPE);
+          if (nsmp->db) {
+			  RDF_ReleaseDataSource(htPane->db, nsmp->db);
+			nsmp->db = NULL;
+		  }
           nsmp->onDisplayp = 0;
         }
     }
@@ -8388,6 +8392,10 @@ HT_ExitPage(HT_Pane htPane, char *pUrl)
     HT_URLSiteMapAssoc *next;
     HTDEL(sp, nsmp->sitemap, gCoreVocab->RDF_parent,
                   gNavCenter->RDF_Sitemaps, RDF_RESOURCE_TYPE);      
+    if (nsmp->db) {
+		RDF_ReleaseDataSource(htPane->db, nsmp->db);
+		nsmp->db = NULL;
+	}
     next = nsmp->next;
     freeMem(nsmp->url);
     freeMem(nsmp->sitemapUrl);

@@ -54,8 +54,8 @@
 #define RDF_RELATED_LINKS		2
 #define FROM_PAGE			1
 #define GUESS_FROM_PREVIOUS_PAGE	2
-#define HTDEL				remoteStoreRemove
 
+#define HTDEL remoteStoreRemove
 
 
 	/* external string references in allxpstr */
@@ -234,6 +234,7 @@ typedef struct _HT_URLSiteMapAssoc {
 	RDF_Resource		sitemap;
     char*               name;
     char*               sitemapUrl;
+    RDFT                db;
 	struct _HT_URLSiteMapAssoc	*next;
 } HT_URLSiteMapAssoc;
 
@@ -327,7 +328,7 @@ HT_DropAction			copyRDFLinkURLAt (HT_Resource dropx, char* objURL, char *objTitl
 HT_DropAction			uploadLFSURL (HT_Resource dropTarget, char* objURL);
 HT_DropAction			uploadRDFFileURL (HT_Resource dropTarget, char* objURL);
 HT_DropAction			esfsCopyMoveContentURL (HT_Resource dropTarget, char* objURL);
-void				HTADD(HT_Pane pane, RDF_Resource u, RDF_Resource s, void* v);
+RDFT				HTADD(HT_Pane pane, RDF_Resource u, RDF_Resource s, void* v);
 HT_URLSiteMapAssoc *		makeNewSMP (HT_Pane htPane, char* pUrl, char* sitemapurl);
 void				RetainOldSitemaps (HT_Pane htPane, char *pUrl);
 void				populateSBProviders (HT_Pane htPane);
