@@ -25,7 +25,7 @@
 #include "timer.h"
 #include "dialog.h"
 #if defined(SMOOTH_PROGRESS)
-#include "nsProgressManager.h"
+#include "progress.h"
 #endif
 
 CStubsCX::CStubsCX()    {
@@ -245,11 +245,7 @@ STDMETHODIMP_(ULONG) CStubsCX::Release(void)
 
 void CStubsCX::AllConnectionsComplete(MWContext *pContext)	{
 #if defined(SMOOTH_PROGRESS)
-    // clean up the progress manager
-    if (pContext->progressManager) {
-        pContext->progressManager->Release();
-        pContext->progressManager = NULL;
-    }
+    PM_ReleaseProgressManager(pContext);
 #endif
 }
 

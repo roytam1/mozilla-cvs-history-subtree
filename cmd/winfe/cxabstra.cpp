@@ -47,7 +47,7 @@
 #include "timing.h"
 
 #if defined(SMOOTH_PROGRESS)
-#include "nsProgressManager.h"
+#include "progress.h"
 #endif
 
 CAbstractCX::CAbstractCX()  {
@@ -159,6 +159,11 @@ void CAbstractCX::DestroyContext()	{
         //      from memory.
         //  This lock is removed in the destructor.
         AfxOleLockApp();
+
+#if defined(SMOOTH_PROGRESS)
+        // Destroy the progress manager if one exists.
+        PM_ReleaseProgressManager(m_pXPCX);
+#endif
 
 	    //	Have the document interrupt.
 	    //	We call again when we get the mocha complete callback, but that 
@@ -677,13 +682,7 @@ int CAbstractCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bRea
         			winfeInProcessNet = TRUE;
         			StartAnimation();
 #if defined(SMOOTH_PROGRESS)
-                    {
-                        nsITransferObserver* progressManager =
-                            new nsProgressManager(GetContext(), pUrl->address);
-                        if (progressManager)
-                            progressManager->AddRef();
-                        GetContext()->progressManager = progressManager;
-                    }
+                    PM_EnsureProgressManager(GetContext());
 #endif
 					if ( m_cxType == IconCX)
         				iRetval = NET_GetURL(pUrl, iFormatOut, GetContext(), Icon_GetUrlExitRoutine);
