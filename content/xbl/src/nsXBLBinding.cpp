@@ -1417,7 +1417,6 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
 
             nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
 
-            // XXX Don't use the global object here!!!
             rv = xpc->WrapNative(jscontext, ::JS_GetGlobalObject(jscontext),
                                  mBoundElement, NS_GET_IID(nsISupports),
                                  getter_AddRefs(wrapper));
@@ -1435,6 +1434,10 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
             JSObject* ourProto = ::JS_GetPrototype(jscontext, scriptObject);
             JSObject* grandProto = ::JS_GetPrototype(jscontext, ourProto);
             ::JS_SetPrototype(jscontext, scriptObject, grandProto);
+
+            // Don't remove the reference from the document to the
+            // wrapper here since it'll be removed by the element
+            // itself when that's taken out of the document.
           }
         }
       }
@@ -1446,7 +1449,8 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
     if (anonymous) {
       // Also kill the default content within all our insertion points.
       if (mInsertionPointTable)
-        mInsertionPointTable->Enumerate(ChangeDocumentForDefaultContent, nsnull);
+        mInsertionPointTable->Enumerate(ChangeDocumentForDefaultContent,
+                                        nsnull);
 
       // To make XUL templates work (and other XUL-specific stuff),
       // we'll need to notify it using its add & remove APIs. Grab the
@@ -1578,7 +1582,7 @@ nsXBLBinding::InitClass(const nsCString& aClassName, nsIScriptContext* aContext,
   if ((! ::JS_LookupProperty(jscontext, global, aClassName, &vp)) ||
       JSVAL_IS_PRIMITIVE(vp)) {
     // We need to initialize the class.
-    
+
     nsXBLJSClass* c;
     void* classObject;
     nsCStringKey key(aClassName);
@@ -1649,6 +1653,20 @@ nsXBLBinding::InitClass(const nsCString& aClassName, nsIScriptContext* aContext,
 
   // Set the prototype of our object to be the new class.
   ::JS_SetPrototype(jscontext, object, proto);
+
+  // Root mBoundElement so that it doesn't loose it's binding
+  nsCOMPtr<nsIDocument> doc;
+
+  mBoundElement->GetDocument(*getter_AddRefs(doc));
+
+  if (doc) {
+    nsCOMPtr<nsIXPConnectWrappedNative> native_wrapper =
+      do_QueryInterface(wrapper);
+
+    if (native_wrapper) {
+      doc->AddReference(mBoundElement, native_wrapper);
+    }
+  }
 
   return NS_OK;
 }
