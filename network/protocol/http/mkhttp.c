@@ -21,7 +21,6 @@
  * Designed and implemented by Lou Montulli '94
  * Additions/Changes by Judson Valeski, Gagan Saksena 1997
  */
-
 #include "rosetta.h"
 #include "xp.h"
 #include "netutils.h"
@@ -37,14 +36,14 @@
 #include "shist.h"
 #include "glhist.h"
 #include "mkparse.h"
-#include "mkstream.h"
+#include "netstream.h"
 #include "mkformat.h"
 #include "mkaccess.h"
 #include "cookies.h"
 #include "netcache.h"
 #include "mkautocf.h"
 #include "secnav.h"
-#include HG23929
+#include "ssl.h"
 #include "jscookie.h"
 #include "prefapi.h"
 #include "libi18n.h"
@@ -145,7 +144,7 @@ typedef struct _HTTPConnection {
     PRFileDesc *sock;           /* socket */
     XP_Bool busy;           /* is the connection in use already? */
     XP_Bool prev_cache;     /* did this connection come from the cache? */
-    HG23298
+    XP_Bool secure;         /* is it a secure connection? */
 } HTTPConnection;
 
 typedef enum {
@@ -180,7 +179,7 @@ typedef struct _HTTPConData {
 	
 	HTTPConnection *connection;   /* struct to hold info about connection */
 
-    NET_StreamClass * stream; /* The output stream */
+    NET_VoidStreamClass * stream; /* The output stream */
     Bool     pause_for_read;   /* Pause now for next read? */
     Bool     send_http1;       /* should we send http/1.1? */
     Bool     acting_as_proxy;  /* are we acting as a proxy? */
@@ -267,13 +266,13 @@ int ReturnErrorStatus (int status)
 }
 #define STATUS(Status)			ReturnErrorStatus (Status)
 
-#define PUTBLOCK(b, l)  (*cd->stream->put_block) \
+#define PUTBLOCK(b, l)  NET_StreamPutBlock \
                                     (cd->stream, b, l)
-#define PUTSTRING(s)    (*cd->stream->put_block) \
+#define PUTSTRING(s)    NET_StreamPutBlock \
                                     (cd->stream, s, PL_strlen(s))
-#define COMPLETE_STREAM (*cd->stream->complete) \
+#define COMPLETE_STREAM NET_StreamComplete \
                                     (cd->stream)
-#define ABORT_STREAM(s) (*cd->stream->abort) \
+#define ABORT_STREAM(s) NET_StreamAbort \
                                     (cd->stream, s)
 PUBLIC void
 NET_SetSendRefererHeader(Bool b)
@@ -474,7 +473,7 @@ net_start_http_connect(ActiveEntry * ce)
 									  "HTTP", 
 									  def_port, 
 									  &cd->connection->sock, 
-									  HG38738 
+									  HG38738, 
 									  &CD_TCP_CON_DATA, 
 									  CE_WINDOW_ID, 
 									  &CE_URL_S->error_msg,
@@ -488,7 +487,7 @@ net_start_http_connect(ActiveEntry * ce)
 									  "HTTP", 
 									  def_port, 
 							          &cd->connection->sock, 
-									  HG02873  
+									  HG02873,  
 									  &CD_TCP_CON_DATA, 
 									  CE_WINDOW_ID, 
 									  &CE_URL_S->error_msg,
@@ -541,7 +540,6 @@ net_start_http_connect(ActiveEntry * ce)
 				}
 #endif	/* MOZILLA_CLIENT */
 		  }
-		HG93288
 
 		if(CE_STATUS == MK_UNABLE_TO_CONNECT && CD_PROXY_SERVER)
 		  {
@@ -621,7 +619,7 @@ net_finish_http_connect(ActiveEntry * ce)
 									  &CE_URL_S->error_msg);
       }
 
-	HG21090
+
     if (CE_STATUS < 0)
       {
 		if(CE_STATUS == MK_UNABLE_TO_LOCATE_HOST 
@@ -742,7 +740,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 	  }
 
 	StrAllocCat(command, " "VERSION_STRING"\n");
-    HG20092
+    
 	/*
 	 * Check if proxy is requiring authorization.
 	 * If NULL, not necessary, or the proxy will return 407 to
@@ -776,7 +774,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 
 	TRACEMSG(("Tx: %s", command));
 
-	HG82300
+	SSL_SetSockPeerID(cd->connection->sock, command);
     CE_STATUS = NET_HTTPNetWrite(cd->connection->sock, command, PL_strlen(command));
 
 	PR_Free(command);
@@ -995,7 +993,6 @@ net_build_http_request (URL_Struct * URL_s,
 	 */
 	switch(URL_s->method)
 	  {
-		HG29398
 		case URL_MKDIR_METHOD:
 #define MKDIR_WORD "MKDIR "
         	BlockAllocCopy(*command, MKDIR_WORD, 5);
@@ -1547,11 +1544,11 @@ net_send_http_request (ActiveEntry *ce)
 		|| CE_URL_S->method == URL_PUT_METHOD) {
         CD_POSTING = YES;
 #ifdef MOZILLA_CLIENT
-		HG92871
+		SECNAV_Posting(cd->connection->sock);
 #endif /* MOZILLA_CLIENT */
 	} else if (CE_URL_S->method == URL_HEAD_METHOD) {
 #ifdef MOZILLA_CLIENT
-		HG82772
+		SECNAV_HTTPHead(cd->connection->sock);
 #endif /* MOZILLA_CLIENT */
 	}
 	
@@ -1693,7 +1690,7 @@ net_http_send_post_data (ActiveEntry *ce)
          which is the current file being uploaded. */      
       add_crlf = CE_URL_S->add_crlf[n];
     }
-	HG83273
+
     /* returns 0 on done and negative on error
      * positive if it needs to continue.
      */
@@ -1816,7 +1813,7 @@ net_parse_http_mime_headers (ActiveEntry *ce)
 			 *
 			 * now we need to give the file descriptor
 			 * to the xxx library and let it initiate
-			 * a connection
+			 * a secure connection
 			 * after that we need to send a normal
 			 * http request
 			 *
@@ -2271,7 +2268,7 @@ net_parse_first_http_line (ActiveEntry *ce)
                             History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
                     
                             HG03903
-                          }
+						}
 #endif /* MOZILLA_CLIENT */
 
 					   	CD_USE_COPY_FROM_CACHE = TRUE;
@@ -2631,9 +2628,7 @@ net_setup_http_stream(ActiveEntry * ce)
 			
 		} /* End URL_s->dontAllowDiffHostRedirect */
 
-        if(CE_FORMAT_OUT == FO_CACHE_AND_PRESENT) {
-			HG10877
-			}
+        HG92871
 
         /* OK, now we've got the redirection URL stored
          * in redirecting_url.
@@ -2687,7 +2682,7 @@ net_setup_http_stream(ActiveEntry * ce)
 	  }
 
 #ifdef MOZILLA_CLIENT
-     HG22087
+    HG22087
 #endif /* MOZILLA_CLIENT */
 
     /* set a default content type if one wasn't given 
@@ -2771,7 +2766,7 @@ net_setup_http_stream(ActiveEntry * ce)
           }
 
     	/* Set up the stream stack to handle the body of the message */
-    	CD_STREAM = NET_StreamBuilder(CE_FORMAT_OUT, 
+    	CD_STREAM = NET_VoidStreamBuilder(CE_FORMAT_OUT, 
 									  CE_URL_S, 
 									  stream_context);
 
@@ -2851,7 +2846,7 @@ HG94794
 			/* @@@ bug, check return status and only send
 		 	* up to the return value
 		 	*/
-    		(*CD_STREAM->is_write_ready)(CD_STREAM);
+    		NET_StreamIsWriteReady(CD_STREAM);
         	CE_STATUS = PUTBLOCK(CD_LINE_BUFFER, CD_LINE_BUFFER_SIZE);
 			CE_BYTES_RECEIVED = CD_LINE_BUFFER_SIZE;
         	FE_GraphProgress(CE_WINDOW_ID, 
@@ -2891,7 +2886,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
     HTTPConData * cd = (HTTPConData *)ce->con_data;
 	int32 write_ready, status;
 	
-	write_ready = (*cd->stream->is_write_ready)(cd->stream);
+	write_ready = NET_StreamIsWriteReady(cd->stream);
 
 	write_ready = MIN(write_ready, NET_Socket_Buffer_Size);
 
@@ -2960,7 +2955,7 @@ net_http_push_partial_cache_file(ActiveEntry *ce)
 
 	/* else, push the data read up the stream 
 	 */	
-	status = (*cd->stream->put_block)(cd->stream, 
+	status = NET_StreamPutBlock(cd->stream, 
 									  NET_Socket_Buffer, 
 									  status);
 
@@ -3014,7 +3009,7 @@ net_pull_http_data(ActiveEntry * ce)
 
     /* check to see if the stream is ready for writing
 	 */
-    write_ready = (*CD_STREAM->is_write_ready)(CD_STREAM);
+    write_ready = NET_StreamIsWriteReady(CD_STREAM);
 
 	if(!write_ready)
 	  {
@@ -3111,7 +3106,7 @@ net_HTTPLoad (ActiveEntry * ce)
 {
     /* get memory for Connection Data */
     HTTPConData * cd = PR_NEW(HTTPConData);
- 	HG21092
+	HG21092
 	char *use_host;
 
     ce->con_data = cd;
@@ -3155,7 +3150,7 @@ net_HTTPLoad (ActiveEntry * ce)
 	else
 	  {
 		use_host = NET_ParseURL(ce->URL_s->address, GET_HOST_PART);
- 		HG09309
+		HG09309
 	  }
 
 	if(!use_host)
@@ -3225,10 +3220,11 @@ net_HTTPLoad (ActiveEntry * ce)
                   != NULL)
               {
                 /* if the hostnames match up exactly 
+			     * and security matches up.
 			     * and the connection
                  * is not busy at the moment then reuse this connection.
                  */
-                if(HG29802
+                if(HG29802 
                    && !tmp_con->busy)
                   {
                     cd->connection = tmp_con;
@@ -3584,7 +3580,7 @@ HG51096
 										CE_BYTES_RECEIVED);
       
             PR_FREEIF(CD_LINE_BUFFER);
-            PR_FREEIF(CD_STREAM); /* don't forget the stream */
+            NET_StreamFree(CD_STREAM); /* don't forget the stream */
 			PR_FREEIF(CD_SERVER_HEADERS);
 			PR_FREEIF(cd->orig_host);
 			if(CD_TCP_CON_DATA)
@@ -3643,7 +3639,7 @@ HG51096
                 cd->connection->sock = NULL;
 
                 if(CD_STREAM)
-                    (*CD_STREAM->abort) (CD_STREAM, CE_STATUS);
+                    NET_StreamAbort(CD_STREAM, CE_STATUS);
                 CD_SEND_HTTP1 = FALSE;
                 /* go back and send an HTTP0 request */
                 CD_NEXT_STATE = HTTP_START_CONNECT;
