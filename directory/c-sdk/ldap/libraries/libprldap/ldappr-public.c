@@ -87,6 +87,90 @@ prldap_install_routines( LDAP *ld, int shared )
 
 
 /*
+ * Function: prldap_set_session_option().
+ * 
+ * Given an LDAP session handle or a session argument such is passed to
+ * SOCKET, POLL, NEWHANDLE, or DISPOSEHANDLE extended I/O callbacks, set
+ * an option that affects the prldap layer.
+ * 
+ * If 'ld' and 'session" are both NULL, the option is set as the default
+ * for all new prldap sessions. 
+ * 
+ * Returns an LDAP API error code (LDAP_SUCCESS if all goes well).
+ */
+int LDAP_CALL
+prldap_set_session_option( LDAP *ld, void *sessionarg, int option, ... )
+{
+    int				rc = LDAP_SUCCESS;	/* optimistic */
+    PRLDAPIOSessionArg		*prsessp = NULL;
+    va_list			ap;
+
+    if ( NULL != ld ) {
+	if ( LDAP_SUCCESS !=
+		( rc = prldap_session_arg_from_ld( ld, &prsessp ))) {
+	    return( rc );
+	}
+    } else if ( NULL != sessionarg ) {
+	prsessp = (PRLDAPIOSessionArg *)sessionarg;
+    }
+
+    va_start( ap, option );
+    switch ( option ) {
+    case PRLDAP_OPT_IO_MAX_TIMEOUT:
+	rc = prldap_set_io_max_timeout( prsessp, va_arg( ap, int ));
+	break;
+    default:
+	rc = LDAP_PARAM_ERROR;
+    }
+    va_end( ap );
+
+    return( rc );
+}
+
+
+/*
+ * Function: prldap_get_session_option().
+ *
+ * Given an LDAP session handle or a session argument such is passed to
+ * SOCKET, POLL, NEWHANDLE, or DISPOSEHANDLE extended I/O callbacks, retrieve
+ * the setting for an option that affects the prldap layer.
+ *
+ * If 'ld' and 'session" are both NULL, the default option value for all new
+ * new prldap sessions is retrieved.
+ *
+ * Returns an LDAP API error code (LDAP_SUCCESS if all goes well).
+ */
+int LDAP_CALL prldap_get_session_option( LDAP *ld, void *sessionarg,
+        int option, ... )
+{
+    int				rc = LDAP_SUCCESS;	/* optimistic */
+    PRLDAPIOSessionArg		*prsessp = NULL;
+    va_list			ap;
+
+    if ( NULL != ld ) {
+	if ( LDAP_SUCCESS !=
+		( rc = prldap_session_arg_from_ld( ld, &prsessp ))) {
+	    return( rc );
+	}
+    } else if ( NULL != sessionarg ) {
+	prsessp = (PRLDAPIOSessionArg *)sessionarg;
+    }
+
+    va_start( ap, option );
+    switch ( option ) {
+    case PRLDAP_OPT_IO_MAX_TIMEOUT:
+	rc = prldap_get_io_max_timeout( prsessp, va_arg( ap, int * ));
+	break;
+    default:
+	rc = LDAP_PARAM_ERROR;
+    }
+    va_end( ap );
+
+    return( rc );
+}
+
+
+/*
  * Function: prldap_set_session_info().
  *
  * Given an LDAP session handle, set some application-specific data.

@@ -37,7 +37,7 @@
 /*
  * Local function prototypes:
  */
-static PRIntervalTime prldap_timeout2it( int ms_timeout );
+static PRIntervalTime prldap_timeout2it( int ms_timeout, int ms_maxtimeout );
 static int LDAP_CALLBACK prldap_read( int s, void *buf, int bufsize,
 	struct lextiof_socket_private *socketarg );
 static int LDAP_CALLBACK prldap_write( int s, const void *buf, int len,
@@ -60,7 +60,7 @@ static void LDAP_CALLBACK prldap_shared_disposehandle( LDAP *ld,
 	struct lextiof_session_private *sessionarg );
 static PRLDAPIOSessionArg *prldap_session_arg_alloc( void );
 static void prldap_session_arg_free( PRLDAPIOSessionArg **prsesspp );
-static PRLDAPIOSocketArg *prldap_socket_arg_alloc( void );
+static PRLDAPIOSocketArg *prldap_socket_arg_alloc( PRLDAPIOSessionArg *sessionarg );
 static void prldap_socket_arg_free( PRLDAPIOSocketArg **prsockpp );
 static void *prldap_safe_realloc( void *ptr, PRUint32 size );
 
@@ -72,6 +72,11 @@ static void *prldap_safe_realloc( void *ptr, PRUint32 size );
 /* given a socket-specific arg, return the corresponding PRFileDesc * */
 #define PRLDAP_GET_PRFD( socketarg )	\
 		(((PRLDAPIOSocketArg *)(socketarg))->prsock_prfd)
+
+/*
+ * Static variables.
+ */
+static int prldap_default_io_max_timeout = LDAP_X_IO_TIMEOUT_NO_TIMEOUT;
 
 
 /*
@@ -125,7 +130,7 @@ prldap_install_io_functions( LDAP *ld, int shared )
 
 
 static PRIntervalTime
-prldap_timeout2it( int ms_timeout )
+prldap_timeout2it( int ms_timeout, int ms_maxtimeout )
 {
     PRIntervalTime	prit;
 
@@ -137,6 +142,27 @@ prldap_timeout2it( int ms_timeout )
 	prit = PR_MillisecondsToInterval( ms_timeout );
     }
 
+    /* cap at maximum I/O timeout */
+    if ( LDAP_X_IO_TIMEOUT_NO_WAIT == ms_maxtimeout ) {
+	prit = LDAP_X_IO_TIMEOUT_NO_WAIT;
+    } else if ( LDAP_X_IO_TIMEOUT_NO_TIMEOUT != ms_maxtimeout ) {
+	if ( LDAP_X_IO_TIMEOUT_NO_TIMEOUT == ms_timeout ||
+		    ms_timeout > ms_maxtimeout ) {
+	    prit = PR_MillisecondsToInterval( ms_maxtimeout );
+	}
+    }
+
+#ifdef PRLDAP_DEBUG
+    if ( PR_INTERVAL_NO_WAIT == prit ) {
+	fprintf( stderr, "prldap_timeout2it: NO_WAIT\n" );
+    } else if ( PR_INTERVAL_NO_TIMEOUT == prit ) {
+	fprintf( stderr, "prldap_timeout2it: NO_TIMEOUT\n" );
+    } else {
+	fprintf( stderr, "prldap_timeout2it: %dms\n",
+		PR_IntervalToMilliseconds(prit));
+    }
+#endif /* PRLDAP_DEBUG */
+
     return( prit );
 }
 
@@ -145,7 +171,11 @@ static int LDAP_CALLBACK
 prldap_read( int s, void *buf, int bufsize,
 	struct lextiof_socket_private *socketarg )
 {
-    return( PR_Read( PRLDAP_GET_PRFD(socketarg), buf, bufsize ));
+    PRIntervalTime	prit;
+
+    prit = prldap_timeout2it( LDAP_X_IO_TIMEOUT_NO_TIMEOUT,
+			socketarg->prsock_io_max_timeout );
+    return( PR_Recv( PRLDAP_GET_PRFD(socketarg), buf, bufsize, 0, prit ));
 }
 
 
@@ -153,21 +183,16 @@ static int LDAP_CALLBACK
 prldap_write( int s, const void *buf, int len,
 	struct lextiof_socket_private *socketarg )
 {
-    PRErrorCode pr_err;
-    PRInt32	rc;
+    PRIntervalTime	prit;
 
-    /* Note the 4th parameter flags has been obsoleted and must */
-    /* always be 0 */
-    if (( rc = PR_Send( PRLDAP_GET_PRFD(socketarg), buf, len, 0,
-	PR_MillisecondsToInterval( 120000 ))) < 0) {
-	/* Did PR_Send operation return a failure? */
-	if (rc == -1) {
-	    if ((pr_err = PR_GetError()) == PR_IO_TIMEOUT_ERROR)
-		return (-1);
-	}
-    } 
+    prit = prldap_timeout2it( LDAP_X_IO_TIMEOUT_NO_TIMEOUT,
+			socketarg->prsock_io_max_timeout );
 
-    return ((int) rc);
+    /*
+     * Note the 4th parameter (flags) to PR_Send() has been obsoleted and
+     * must always be 0
+     */
+    return( PR_Send( PRLDAP_GET_PRFD(socketarg), buf, len, 0, prit ));
 }
 
 
@@ -236,7 +261,8 @@ prldap_poll( LDAP_X_PollFD fds[], int nfds, int timeout,
     }
 
     /* call PR_Poll() to do the real work */
-    rc = PR_Poll( pds, nfds, prldap_timeout2it( timeout ));
+    rc = PR_Poll( pds, nfds,
+	    prldap_timeout2it( timeout, prsessp->prsess_io_max_timeout ));
 
     /* populate LDAP info. based on NSPR results */
     for ( i = 0; i < nfds; ++i ) {
@@ -314,7 +340,7 @@ prldap_try_one_address( struct lextiof_socket_private *prsockp,
      * Try to open the TCP connection itself:
      */
     if ( PR_SUCCESS != PR_Connect( prsockp->prsock_prfd, addrp,
-		prldap_timeout2it( timeout ))) {
+		prldap_timeout2it( timeout, prsockp->prsock_io_max_timeout ))) {
 	PR_Close( prsockp->prsock_prfd );
 	prsockp->prsock_prfd = NULL;
 	return( -1 );
@@ -351,7 +377,7 @@ prldap_connect( const char *hostlist, int defport, int timeout,
 	return( -1 );
     }
 
-    if ( NULL == ( prsockp = prldap_socket_arg_alloc())) {
+    if ( NULL == ( prsockp = prldap_socket_arg_alloc( sessionarg ))) {
 	prldap_set_system_errno( prldap_prerr2errno());
 	return( -1 );
     }
@@ -493,6 +519,12 @@ prldap_session_arg_alloc( void )
     PRLDAPIOSessionArg		*prsessp;
 
     prsessp = PR_Calloc( 1, sizeof( PRLDAPIOSessionArg ));
+
+    if ( NULL != prsessp ) {
+	/* copy global defaults to the new session handle */
+	prsessp->prsess_io_max_timeout = prldap_default_io_max_timeout;
+    }
+
     return( prsessp );
 }
 
@@ -546,11 +578,17 @@ prldap_session_arg_from_ld( LDAP *ld, PRLDAPIOSessionArg **sessargpp )
  * Allocate a socket argument.
  */
 static PRLDAPIOSocketArg *
-prldap_socket_arg_alloc( void )
+prldap_socket_arg_alloc( PRLDAPIOSessionArg *sessionarg )
 {
     PRLDAPIOSocketArg		*prsockp;
 
     prsockp = PR_Calloc( 1, sizeof( PRLDAPIOSocketArg ));
+
+    if ( NULL != prsockp && NULL != sessionarg ) {
+	/* copy socket defaults from the session */
+	prsockp->prsock_io_max_timeout = sessionarg->prsess_io_max_timeout;
+    }
+
     return( prsockp );
 }
 
@@ -577,4 +615,39 @@ prldap_safe_realloc( void *ptr, PRUint32 size )
     }
 
     return( p );
+}
+
+
+
+/* returns an LDAP result code */
+int
+prldap_set_io_max_timeout( PRLDAPIOSessionArg *prsessp, int io_max_timeout )
+{
+    int	rc = LDAP_SUCCESS;	/* optimistic */
+
+    if ( NULL == prsessp ) {
+	prldap_default_io_max_timeout = io_max_timeout;
+    } else {
+	prsessp->prsess_io_max_timeout = io_max_timeout;
+    }
+
+    return( rc );
+}
+
+
+/* returns an LDAP result code */
+int
+prldap_get_io_max_timeout( PRLDAPIOSessionArg *prsessp, int *io_max_timeoutp )
+{
+    int	rc = LDAP_SUCCESS;	/* optimistic */
+
+    if ( NULL == io_max_timeoutp ) {
+	rc = LDAP_PARAM_ERROR;
+    } else if ( NULL == prsessp ) {
+	*io_max_timeoutp = prldap_default_io_max_timeout;
+    } else {
+	*io_max_timeoutp = prsessp->prsess_io_max_timeout;
+    }
+
+    return( rc );
 }

@@ -65,6 +65,55 @@ LDAP * LDAP_CALL prldap_init( const char *defhost, int defport, int shared );
 int LDAP_CALL prldap_install_routines( LDAP *ld, int shared );
 
 
+/*
+ * Function: prldap_set_session_option().
+ *
+ * Given an LDAP session handle or a session argument such is passed to
+ * SOCKET, POLL, NEWHANDLE, or DISPOSEHANDLE extended I/O callbacks, set
+ * an option that affects the prldap layer.
+ *
+ * If 'ld' and 'session" are both NULL, the option is set as the default
+ * for all new prldap sessions.
+ *
+ * Returns an LDAP API error code (LDAP_SUCCESS if all goes well).
+ */
+int LDAP_CALL prldap_set_session_option( LDAP *ld, void *sessionarg,
+	int option, ... );
+
+
+/*
+ * Function: prldap_get_session_option().
+ *
+ * Given an LDAP session handle or a session argument such is passed to
+ * SOCKET, POLL, NEWHANDLE, or DISPOSEHANDLE extended I/O callbacks, retrieve
+ * the setting for an option that affects the prldap layer.
+ *
+ * If 'ld' and 'session" are both NULL, the default option value for all new
+ * new prldap sessions is retrieved.
+ *
+ * Returns an LDAP API error code (LDAP_SUCCESS if all goes well).
+ */
+int LDAP_CALL prldap_get_session_option( LDAP *ld, void *sessionarg,
+	int option, ... );
+
+
+/*
+ * Available options.
+ */
+/*
+ * PRLDAP_OPT_IO_MAX_TIMEOUT: set the maximum time in milliseconds to
+ * block waiting for a network I/O operation to complete.
+ *
+ * Data type: int.
+ *
+ * These two special values from ldap-extension.h can also be used;
+ *
+ *    LDAP_X_IO_TIMEOUT_NO_TIMEOUT
+ *    LDAP_X_IO_TIMEOUT_NO_WAIT
+ */
+#define PRLDAP_OPT_IO_MAX_TIMEOUT		1
+
+
 /**
  ** Note: the types and functions below are only useful for developers
  ** who need to layer one or more custom extended I/O functions on top of

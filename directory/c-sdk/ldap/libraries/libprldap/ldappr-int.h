@@ -32,6 +32,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <stdarg.h>
 
 /*
  * Macros:
@@ -54,12 +55,14 @@
 typedef struct lextiof_session_private {
 	PRPollDesc	*prsess_pollds;		/* for poll callback */
 	int		prsess_pollds_count;	/* # of elements in pollds */
+	int		prsess_io_max_timeout;	/* in milliseconds */
 	void		*prsess_appdata;	/* application specific data */
 } PRLDAPIOSessionArg;
 
 /* data structure that populates the I/O callback socket-specific arg. */
 typedef struct lextiof_socket_private {
 	PRFileDesc	*prsock_prfd;		/* associated NSPR file desc. */
+	int		prsock_io_max_timeout;	/* in milliseconds */
 	void		*prsock_appdata;	/* application specific data */
 } PRLDAPIOSocketArg;
 
@@ -73,6 +76,10 @@ typedef struct lextiof_socket_private {
  */
 int prldap_install_io_functions( LDAP *ld, int shared );
 int prldap_session_arg_from_ld( LDAP *ld, PRLDAPIOSessionArg **sessargpp );
+int prldap_set_io_max_timeout( PRLDAPIOSessionArg *prsessp,
+	int io_max_timeout );
+int prldap_get_io_max_timeout( PRLDAPIOSessionArg *prsessp,
+	int *io_max_timeoutp );
 
 
 /*
