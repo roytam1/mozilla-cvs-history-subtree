@@ -65,7 +65,11 @@ function ThreadPaneOnClick(event)
         }
         else if (colID.value == "junkStatusCol") {
           MsgJunkMailInfo(true);
-        }
+       }
+       else if (colID.value == "threadCol" && !event.shiftKey && (event.ctrlKey || event.metaKey)) {
+         gDBView.ExpandAndSelectThreadByIndex(row.value, true);
+         event.preventBubble();
+       }
       }      
     }
 }
