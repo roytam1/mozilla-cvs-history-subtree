@@ -79,6 +79,7 @@
 #include "nsICheckboxControlFrame.h"
 #include "nsIRadioControlFrame.h"
 #include "nsIFormManager.h"
+#include "nsIImageControlFrame.h"
 
 #include "nsIDOMMutationEvent.h"
 #include "nsIDOMEventReceiver.h"
@@ -107,8 +108,8 @@ public:
   NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLLeafFormElement::)
 
   // nsIDOMElement
-    // can't use the macro here because input type=text needs to notify up to 
-    // frame system on SetAttribute("value");
+  // can't use the macro here because input type=text needs to set the
+  // value on SetAttribute("value");
   NS_IMETHOD GetTagName(nsAWritableString& aTagName) {
     return nsGenericHTMLLeafFormElement::GetTagName(aTagName);
   }
@@ -201,7 +202,15 @@ public:
 
   // Overriden nsIFormControl methods
   NS_IMETHOD GetType(PRInt32* aType);
+  NS_IMETHOD Reset();
+  NS_IMETHOD IsSuccessful(nsIContent* aSubmitElement, PRBool *_retval);
+  NS_IMETHOD GetMaxNumValues(PRInt32 *_retval);
+  NS_IMETHOD GetNamesValues(PRInt32 aMaxNumValues,
+                            PRInt32& aNumValues,
+                            nsString* aValues,
+                            nsString* aNames);
 
+  // nsIContent
   NS_IMETHOD SetFocus(nsIPresContext* aPresContext);
   NS_IMETHOD RemoveFocus(nsIPresContext* aPresContext);
 
@@ -223,6 +232,8 @@ protected:
   // Helper method
   void SetPresStateChecked(nsIHTMLContent * aHTMLContent, 
                            PRBool aValue);
+  NS_IMETHOD SetValueInternal(const nsAReadableString& aValue,
+                              PRBool aCheckSecurity);
 
   nsresult GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd);
   nsresult MouseClickForAltText(nsIPresContext* aPresContext);
@@ -476,11 +487,18 @@ nsHTMLInputElement::GetValue(nsAWritableString& aValue)
 NS_IMETHODIMP 
 nsHTMLInputElement::SetValue(const nsAReadableString& aValue)
 {
+  return SetValueInternal(aValue, PR_TRUE);
+}
+
+NS_IMETHODIMP
+nsHTMLInputElement::SetValueInternal(const nsAReadableString& aValue,
+                                     PRBool aCheckSecurity)
+{
   PRInt32 type;
   GetType(&type);
   if (NS_FORM_INPUT_TEXT == type || NS_FORM_INPUT_PASSWORD == type ||
       NS_FORM_INPUT_FILE == type) {
-    if (NS_FORM_INPUT_FILE == type) {
+    if (aCheckSecurity && NS_FORM_INPUT_FILE == type) {
       nsresult result;
       nsCOMPtr<nsIScriptSecurityManager> securityManager = 
                do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &result);
@@ -1104,17 +1122,17 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
   // Try script event handlers first if its not a focus/blur event
   //we dont want the doc to get these
-  nsresult ret = nsGenericHTMLLeafFormElement::HandleDOMEvent(aPresContext,
-                                                              aEvent,
-                                                              aDOMEvent,
-                                                              aFlags,
-                                                              aEventStatus);
-
+  rv = nsGenericHTMLLeafFormElement::HandleDOMEvent(aPresContext,
+                                                    aEvent,
+                                                    aDOMEvent,
+                                                    aFlags,
+                                                    aEventStatus);
+  // XXX Should we check if the event failed?
   // now check to see if the event was "cancelled"
-  if (nsEventStatus_eConsumeNoDefault == *aEventStatus && checkWasSet &&
-      (type == NS_FORM_INPUT_CHECKBOX || type == NS_FORM_INPUT_RADIO)) {
+  if (nsEventStatus_eConsumeNoDefault == *aEventStatus && checkWasSet
+      && (type == NS_FORM_INPUT_CHECKBOX || type == NS_FORM_INPUT_RADIO)) {
     // if it was cancelled and a radio button, then set the old
-    // selceted btn to TRUE. if it is a checkbox then set it to it's
+    // selected btn to TRUE. if it is a checkbox then set it to its
     // original value
     if (selectedRadiobtn) {
       nsCOMPtr<nsIDOMHTMLInputElement> inputElement(do_QueryInterface(selectedRadiobtn));
@@ -1692,3 +1710,228 @@ nsHTMLInputElement::FireEventForAccessibility(nsIPresContext* aPresContext,
   return NS_OK;
 }
 #endif
+
+nsresult
+nsHTMLInputElement::Reset()
+{
+  nsresult rv = NS_OK;
+  PRInt32 type;
+  GetType(&type);
+
+  // Seems like a dumb idea to reset image.
+  switch (type) {
+    case NS_FORM_INPUT_CHECKBOX:
+    case NS_FORM_INPUT_RADIO:
+    {
+      PRBool resetVal;
+      GetDefaultChecked(&resetVal);
+      rv = SetChecked(resetVal);
+      break;
+    }
+    case NS_FORM_INPUT_HIDDEN:
+    case NS_FORM_INPUT_PASSWORD:
+    case NS_FORM_INPUT_TEXT:
+    {
+      nsAutoString resetVal;
+      GetDefaultValue(resetVal);
+      rv = SetValue(resetVal);
+      break;
+    }
+    case NS_FORM_INPUT_FILE:
+    {
+      // Resetting it to blank should not perform security check
+      rv = SetValueInternal(NS_LITERAL_STRING(""), PR_FALSE);
+      break;
+    }
+    default:
+      break;
+  }
+  return rv;
+}
+
+nsresult
+nsHTMLInputElement::IsSuccessful(nsIContent* aSubmitElement,
+                                 PRBool *_retval)
+{
+  *_retval = PR_FALSE;
+
+  // if it's disabled, it won't submit
+  PRBool disabled;
+  nsresult rv = GetDisabled(&disabled);
+  if (disabled) {
+    return NS_OK;
+  }
+
+  PRInt32 type;
+  GetType(&type);
+  
+  // if it dosn't have a name it we don't submit
+  if (type != NS_FORM_INPUT_IMAGE) {
+    nsAutoString val;
+    rv = GetAttr(kNameSpaceID_None, nsHTMLAtoms::name, val);
+    if (rv == NS_CONTENT_ATTR_NOT_THERE) {
+      return NS_OK;
+    }
+  }
+
+  switch (type) {
+    case NS_FORM_INPUT_CHECKBOX:
+    case NS_FORM_INPUT_RADIO:
+    {
+      GetChecked(_retval);
+      break;
+    }
+    case NS_FORM_INPUT_HIDDEN:
+    case NS_FORM_INPUT_PASSWORD:
+    case NS_FORM_INPUT_TEXT:
+    {
+      *_retval = PR_TRUE;
+      break;
+    }
+    case NS_FORM_INPUT_FILE:
+    {
+      nsAutoString val;
+      GetValue(val);
+      *_retval = !val.IsEmpty();
+      break;
+    }
+    case NS_FORM_INPUT_RESET:
+    case NS_FORM_INPUT_BUTTON:
+    {
+      *_retval = PR_FALSE;
+      break;
+    }
+    case NS_FORM_INPUT_SUBMIT:
+    case NS_FORM_INPUT_IMAGE:
+    {
+      *_retval = (this == aSubmitElement);
+    }
+  }
+
+  return NS_OK;
+}
+
+nsresult
+nsHTMLInputElement::GetMaxNumValues(PRInt32 *_retval)
+{
+  PRInt32 type;
+  GetType(&type);
+  *_retval = type == NS_FORM_INPUT_IMAGE ? 2 : 1;
+  return NS_OK;
+}
+
+nsresult
+nsHTMLInputElement::GetNamesValues(PRInt32 aMaxNumValues,
+                                   PRInt32& aNumValues,
+                                   nsString* aValues,
+                                   nsString* aNames)
+{
+  nsresult rv;
+
+  PRInt32 type;
+  GetType(&type);
+  
+  switch (type) {
+    case NS_FORM_INPUT_CHECKBOX:
+    case NS_FORM_INPUT_RADIO:
+    {
+      NS_ENSURE_TRUE(aMaxNumValues >= 1, NS_ERROR_UNEXPECTED);
+      
+      GetName(aNames[0]);
+      GetValue(aValues[0]);
+      aNumValues = 1;
+      
+      break;
+    }
+    case NS_FORM_INPUT_HIDDEN:
+    case NS_FORM_INPUT_PASSWORD:
+    case NS_FORM_INPUT_TEXT:
+    {
+      NS_ENSURE_TRUE(aMaxNumValues >= 1, NS_ERROR_UNEXPECTED);
+      
+      GetName(aNames[0]);
+      GetValue(aValues[0]);
+      aNumValues = 1;
+      
+      break;
+    }
+    case NS_FORM_INPUT_FILE:
+    {
+      NS_ENSURE_TRUE(aMaxNumValues >= 1, NS_ERROR_UNEXPECTED);
+      
+      GetName(aNames[0]);
+      GetValue(aValues[0]);
+      aNumValues = 1;
+      
+      break;
+    }
+    case NS_FORM_INPUT_IMAGE:
+    {
+      NS_ENSURE_TRUE(aMaxNumValues >= 2, NS_ERROR_UNEXPECTED);
+
+      // Go to the frame to find out where it was clicked.  This is the only
+      // case where I can actually see using the frame, because you're talking
+      // about a value--mouse click--that is rightfully the domain of the frame.
+      //
+      // If the frame isn't there or isn't an ImageControlFrame, then we're not
+      // submitting these values no matter *how* nicely you ask.
+      PRInt32 clickedX;
+      PRInt32 clickedY;
+      nsIFormControlFrame* formControlFrame = nsnull;
+      rv = GetPrimaryFrame(this, formControlFrame);
+      nsCOMPtr<nsIImageControlFrame> imageControlFrame(
+          do_QueryInterface(formControlFrame));
+      if (imageControlFrame) {
+        imageControlFrame->GetClickedX(&clickedX);
+        imageControlFrame->GetClickedY(&clickedY);
+      } else {
+        aNumValues = 0;
+        return NS_OK;
+      }
+     
+      // Convert the values to strings for submission
+      char buf[20];
+      sprintf(&buf[0], "%d", clickedX);
+      aValues[0].AssignWithConversion(&buf[0]);
+      sprintf(&buf[0], "%d", clickedY);
+      aValues[1].AssignWithConversion(&buf[0]);
+  
+      // Figure out the proper name of the x and y values
+      nsAutoString name;
+      rv = GetName(name);
+      aNumValues = 2;
+      if (!name.IsEmpty()) {
+        aNames[0] = name;
+        aNames[0].AppendWithConversion(".x");
+        aNames[1] = name;
+        aNames[1].AppendWithConversion(".y");
+      } else {
+        // If the Image Element has no name, simply return x and y
+        // to Nav and IE compatability.
+        aNames[0].AssignWithConversion("x");
+        aNames[1].AssignWithConversion("y");
+      }
+
+      break;
+    }
+    case NS_FORM_INPUT_RESET:
+    case NS_FORM_INPUT_BUTTON:
+    {
+      aNumValues = 0;
+
+      break;
+    }
+    case NS_FORM_INPUT_SUBMIT:
+    {
+      NS_ENSURE_TRUE(aMaxNumValues >= 1, NS_ERROR_UNEXPECTED);
+      
+      GetName(aNames[0]);
+      GetValue(aValues[0]);
+      aNumValues = 1;
+
+      break;
+    }
+  }
+
+  return NS_OK;
+}

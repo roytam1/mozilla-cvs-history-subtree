@@ -97,8 +97,8 @@ NS_MakeAbsoluteURIWithCharset(char* *aResult,
     PRInt32 pos = aSpec.FindChar(':');
     static const char kJavaScript[] = "javascript";
     nsAutoString scheme;
+    aSpec.Left(scheme, pos);
     if ((pos == (PRInt32)(sizeof kJavaScript - 1)) &&
-        (aSpec.Left(scheme, pos) != -1) &&
          scheme.EqualsIgnoreCase(kJavaScript)) {
       char buf[6+1];	// space for \uXXXX plus a NUL at the end
       spec.Truncate(0);
@@ -117,8 +117,8 @@ NS_MakeAbsoluteURIWithCharset(char* *aResult,
       // because the charset cannot be passes to mailnews code, 
       // use UTF-8 instead and apply URL escape.
       static const char kMailToURI[] = "mailto";
+      aSpec.Left(scheme, pos);
       if ((pos == (PRInt32)(sizeof kMailToURI - 1)) &&
-          (aSpec.Left(scheme, pos) != -1) &&
            scheme.EqualsIgnoreCase(kMailToURI)) {
         spec = NS_ConvertUCS2toUTF8(aSpec.get());
       }
@@ -153,7 +153,7 @@ NS_MakeAbsoluteURIWithCharset(char* *aResult,
           encoder->GetMaxLength(aSpec.get(), len, &maxlen);
 
           char buf[64], *p = buf;
-          if (maxlen > sizeof(buf) - 1)
+          if (maxlen > ((PRInt32)sizeof(buf) - 1))
             p = new char[maxlen + 1];
 
           if (! p)

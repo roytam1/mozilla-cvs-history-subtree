@@ -512,6 +512,14 @@ public:
   NS_IMETHOD SetForm(nsIDOMHTMLFormElement* aForm,
                      PRBool aRemoveFromForm = PR_TRUE);
   NS_IMETHOD Init();
+  NS_IMETHOD SaveState(nsIPresContext* aPresContext, nsIPresState** aState)
+  {
+    return NS_OK;
+  }
+  NS_IMETHOD RestoreState(nsIPresContext* aPresContext, nsIPresState* aState)
+  {
+    return NS_OK;
+  }
 
   // nsIContent
   NS_IMETHOD SetParent(nsIContent *aParent);
@@ -554,6 +562,14 @@ public:
   NS_IMETHOD SetForm(nsIDOMHTMLFormElement* aForm,
                      PRBool aRemoveFromForm = PR_TRUE);
   NS_IMETHOD Init();
+  NS_IMETHOD SaveState(nsIPresContext* aPresContext, nsIPresState** aState)
+  {
+    return NS_OK;
+  }
+  NS_IMETHOD RestoreState(nsIPresContext* aPresContext, nsIPresState* aState)
+  {
+    return NS_OK;
+  }
 
   // nsIContent
   NS_IMETHOD SetParent(nsIContent *aParent);

@@ -431,7 +431,7 @@ public:
       frameDebug->GetFrameName(tmp);
     }
     fputs(tmp, out);
-    fprintf(out, "@%p", aFrame);
+    fprintf(out, "@%p", (void*)aFrame);
   }
 
   static void IndentBy(FILE* out, PRInt32 aIndent) {

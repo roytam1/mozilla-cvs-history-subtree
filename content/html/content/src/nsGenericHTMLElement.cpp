@@ -2256,7 +2256,7 @@ nsGenericHTMLElement::List(FILE* out, PRInt32 aIndent) const
     fputs(buf, out);
     NS_RELEASE(tag);
   }
-  fprintf(out, "@%p", this);
+  fprintf(out, "@%p", (void*)this);
 
   ListAttributes(out);
 
@@ -2526,7 +2526,7 @@ nsGenericHTMLElement::ParseValueOrPercentOrProportional(const nsAReadableString&
   nsAutoString tmp(aString);
   tmp.CompressWhitespace(PR_TRUE, PR_TRUE);
   PRInt32 ec, val = tmp.ToInteger(&ec);
-  if ((NS_ERROR_ILLEGAL_VALUE == ec) && (tmp.Length() > 0)) {
+  if ((NS_ERROR_ILLEGAL_VALUE == (PRUint32)ec) && !tmp.IsEmpty()) {
     // NOTE: we need to allow non-integer values for the '*' case,
     //       so we allow for the ILLEGAL_VALUE error and set val to 0
     val = 0;

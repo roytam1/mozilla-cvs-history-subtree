@@ -208,6 +208,7 @@ optgroup:before {
 input[disabled],
 textarea[disabled],
 option[disabled],
+optgroup[disabled],
 select[disabled],
 select[disabled] > :-moz-display-comboboxcontrol-frame {
   color: GrayText;

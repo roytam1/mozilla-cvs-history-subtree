@@ -392,20 +392,6 @@ nsFormControlFrame::GetScrollbarWidth(float aPixToTwip)
    return NSIntPixelsToTwips(19, aPixToTwip);  // XXX this is windows
 }
 
-PRInt32
-nsFormControlFrame::GetMaxNumValues()
-{
-  return 0;
-}
-
-PRBool
-nsFormControlFrame::GetNamesValues(PRInt32 aMaxNumValues, PRInt32& aNumValues, 
-                                   nsString* aValues, nsString* aNames)
-{
-  aNumValues = 0;
-  return PR_FALSE;
-}
-
 void 
 nsFormControlFrame::SetClickPoint(nscoord aX, nscoord aY)
 {
@@ -704,7 +690,7 @@ nsFormControlFrame::GetType(PRInt32* aType) const
 }
 
 NS_IMETHODIMP
-nsFormControlFrame::GetName(nsString* aResult)
+nsFormControlFrame::GetName(nsAString* aResult)
 {
   nsresult result = NS_FORM_NOTOK;
   if (mContent) {
@@ -726,7 +712,7 @@ nsFormControlFrame::GetName(nsString* aResult)
 
 
 NS_IMETHODIMP
-nsFormControlFrame::GetValue(nsString* aResult)
+nsFormControlFrame::GetValue(nsAString* aResult)
 {
   nsresult result = NS_FORM_NOTOK;
   if (mContent) {
@@ -746,20 +732,6 @@ nsFormControlFrame::GetValue(nsString* aResult)
   return result;
 }
 
-
-PRBool
-nsFormControlFrame::IsSuccessful(nsIFormControlFrame* aSubmitter)
-{
-  nsAutoString name;
-  PRBool disabled = PR_FALSE;
-  nsFormControlHelper::GetDisabled(mContent, &disabled);
-
-  // Since JS Submit() calls are not linked to an element, aSubmitter is null.
-  // Return success to allow the call to go through.
-  if (aSubmitter == nsnull) return PR_TRUE;
-
-  return !disabled && (NS_CONTENT_ATTR_HAS_VALUE == GetName(&name));
-}
 
 NS_METHOD
 nsFormControlFrame::HandleEvent(nsIPresContext* aPresContext, 
@@ -819,11 +791,6 @@ nsFormControlFrame::GetStyleSize(nsIPresContext* aPresContext,
   else {
     aSize.height = CSS_NOTSET;
   }
-}
-
-void
-nsFormControlFrame::Reset(nsIPresContext* aPresContext)
-{
 }
 
 NS_IMETHODIMP

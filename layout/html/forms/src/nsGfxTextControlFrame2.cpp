@@ -2390,7 +2390,7 @@ nsGfxTextControlFrame2::GetSkipSides() const
 
 //IMPLEMENTING NS_IFORMCONTROLFRAME
 NS_IMETHODIMP
-nsGfxTextControlFrame2::GetName(nsString* aResult)
+nsGfxTextControlFrame2::GetName(nsAString* aResult)
 {
   nsresult rv = NS_FORM_NOTOK;
   if (mContent) {
@@ -2475,34 +2475,6 @@ void    nsGfxTextControlFrame2::ScrollIntoView(nsIPresContext* aPresContext)
 
 void    nsGfxTextControlFrame2::MouseClicked(nsIPresContext* aPresContext){}
 
-void    nsGfxTextControlFrame2::Reset(nsIPresContext* aPresContext)
-{
-  nsAutoString temp;
-  GetText(&temp, PR_TRUE);
-  SetTextControlFrameState(temp);
-}
-
-PRInt32 nsGfxTextControlFrame2::GetMaxNumValues(){return 1;}/**/
-
-PRBool  nsGfxTextControlFrame2::GetNamesValues(PRInt32 aMaxNumValues, PRInt32& aNumValues,
-                                nsString* aValues, nsString* aNames)
-{
-  if (!aValues || !aNames) { return PR_FALSE; }
-
-  nsAutoString name;
-  nsresult result = GetName(&name);
-  if ((aMaxNumValues <= 0) || (NS_CONTENT_ATTR_NOT_THERE == result)) {
-    return PR_FALSE;
-  }
-
-  aNames[0] = name;  
-  aNumValues = 1;
-
-  GetText(&(aValues[0]), PR_FALSE);
-  // XXX: error checking
-  return PR_TRUE;
-}
-
 nscoord 
 nsGfxTextControlFrame2::GetVerticalInsidePadding(nsIPresContext* aPresContext,
                                              float aPixToTwip, 
@@ -2529,16 +2501,6 @@ nsGfxTextControlFrame2::SetFormFrame(nsFormFrame* aFormFrame)
   mFormFrame = aFormFrame; 
 }
 
-
-//---------------------------------------------------------
-PRBool
-nsGfxTextControlFrame2::IsSuccessful(nsIFormControlFrame* aSubmitter)
-{
-  nsAutoString name;
-  PRBool disabled = PR_FALSE;
-  nsFormControlHelper::GetDisabled(mContent, &disabled);
-  return !disabled && (NS_CONTENT_ATTR_HAS_VALUE == GetName(&name));
-}
 
 NS_IMETHODIMP 
 nsGfxTextControlFrame2::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
@@ -3547,3 +3509,8 @@ nsGfxTextControlFrame2::IsScrollable() const
   return PR_FALSE;
 }
 
+NS_IMETHODIMP
+nsGfxTextControlFrame2::OnContentReset()
+{
+  return NS_OK;
+}
