@@ -188,6 +188,9 @@ bin/components/nsBackgroundUpdateService.js
 bin/components/extensions.xpt
 bin/components/update.xpt
 
+; Kerberos NegotiateAuth
+bin/components/libnegotiateauth.so
+
 ; [Browser Chrome Files]
 bin/chrome/browser.jar
 bin/chrome/classic.jar
