@@ -444,8 +444,6 @@ nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
                                      NS_FRAME_PAINT_LAYER_FOREGROUND,
                                      0);
 
-  ctx->Translate(-mRect.x, -mRect.y);
-
   renderingContext->UnlockMozRenderingContext();
   
   return NS_OK;
@@ -572,7 +570,8 @@ ArtUta* nsSVGForeignObjectFrame::DoReflow()
   mPresShell->CreateRenderingContext(this,getter_AddRefs(renderingContext));
 
   // XXX we always pass this off as an initial reflow. is that a problem?
-  nsHTMLReflowState reflowState(presContext, this, eReflowReason_Initial, renderingContext, availableSpace);
+  nsHTMLReflowState reflowState(presContext, this, eReflowReason_Initial,
+                                renderingContext, availableSpace);
 
   nsSpaceManager* spaceManager = new nsSpaceManager(mPresShell, this);
   if (!spaceManager) {

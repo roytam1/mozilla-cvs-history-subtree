@@ -74,6 +74,7 @@ public:
                     nsReflowStatus&          aStatus);
 
   NS_IMETHOD  DidReflow(nsIPresContext*   aPresContext,
+                        const nsHTMLReflowState*  aReflowState,
                         nsDidReflowStatus aStatus);
 
 
@@ -447,6 +448,7 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
 
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::DidReflow(nsIPresContext*   aPresContext,
+                              const nsHTMLReflowState*  aReflowState,
                               nsDidReflowStatus aStatus)
 {
   // Set the viewport. We want the x, y coords relative to the
@@ -493,7 +495,7 @@ nsSVGOuterSVGFrame::DidReflow(nsIPresContext*   aPresContext,
 //         mRect.height * pxPerTwips);
 #endif
   
-  return NS_OK;
+  return nsSVGOuterSVGFrameBase::DidReflow(aPresContext,aReflowState,aStatus);
 }
 
 //----------------------------------------------------------------------
@@ -799,6 +801,7 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
 
   
   if (aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND) return NS_OK;
+  if (aDirtyRect.width<=0 || aDirtyRect.height<=0) return NS_OK;
 
   nsSVGRenderingContext SVGCtx(aPresContext, &aRenderingContext, aDirtyRect);
   Paint(&SVGCtx);
@@ -848,7 +851,6 @@ nsSVGOuterSVGFrame::DidModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::Paint(nsSVGRenderingContext* renderingContext)
 {
-  renderingContext->ClearBuffer(NS_RGB(255,255,255));
   return NS_OK;
 }
 

@@ -26,29 +26,6 @@
 #ifndef __NS_SVGRENDERINGCONTEXT_H__
 #define __NS_SVGRENDERINGCONTEXT_H__
 
-
-// SVG_USE_SURFACE: this macro needs to be defined for
-// <foreignObject>s to work. They need to be able to access the pixel
-// buffer through device context calls, which cannot easily be
-// accomplished when our pixel buffer is wrapped by an nsImage (which
-// is the alternative mechanism to surfaces). The disadvantage of
-// using surfaces is that there isn't (yet) a x-platform mechanism for
-// getting a surface with a preset color-format. Thus - when setting
-// this macro - on some platforms SVG might not render for display
-// settings other than 24bit...  
-
-// Drawing to nsIImages is an ugly hack, but at least it should work
-// on every platform. In particular for XServer-based platforms
-// (Linux!), the 24bit surface approach can't easily be made to work
-// (at least not efficiently). We'll have to live without
-// <foreignObject>s on Linux then until we think of something clever
-// (XRENDER?)
-
-#if defined(XP_PC) || defined(XP_MAC)
-#define SVG_USE_SURFACE
-#endif
-
-
 #include "nsCOMPtr.h"
 #include "nsIRenderingContext.h"
 #include "nsTransform2D.h"
@@ -58,13 +35,13 @@
 
 #include "libart-incs.h"
 
-#ifndef SVG_USE_SURFACE
-#include "nsIImage.h"
-#endif
-
 class nsSVGRenderItem;
 
-
+/* This is a rendering context wrapper. Grabbing one of these LOCKS the context
+ * To draw to it directly (or to the underlying buffer), you need
+ * to call LockMozRenderingContext, and then call UnlockMozRenderingContext
+ * before drawing to it again.
+ */
 class nsSVGRenderingContext
 {
 public:
@@ -76,8 +53,8 @@ public:
   void PaintSVGRenderItem(nsSVGRenderItem* item);
   void ClearBuffer(nscolor color);
 
-  // return an nsIRenderingContext for our pixel buffer.  XXX this
-  // function currently fails on platforms that don't use SVG_USE_SURFACE.
+  // return an nsIRenderingContext for our pixel buffer.
+  // Calling these can be expensive.
   nsIRenderingContext* LockMozRenderingContext();
   void UnlockMozRenderingContext();
 
@@ -86,25 +63,25 @@ public:
   
   void Render(); // blt our pixel buffer to the rendering context
   
-  void DumpImage();
-  
 protected:
   ArtRender* NewRender();
   void InvokeRender(ArtRender* render); 
   
   void InitializeBuffer();
+
+  void DumpImage();
   
   nsCOMPtr<nsIRenderingContext> mRenderingContext;
   nsCOMPtr<nsIPresContext>      mPresContext;
   nsRect mDirtyRect;
   nsRect mDirtyRectTwips;
 
-#ifdef SVG_USE_SURFACE
   nsCOMPtr<nsIDrawingSurface> mBuffer;  
   nsDrawingSurface mTempBuffer; // temp storage for during DC locking 
-#else
-  nsCOMPtr<nsIImage> mBuffer;
-#endif
+  int mArtPixelFormat;
+  PRInt32 mStride;
+  PRUint8* mBitBuf;
 };
 
 #endif // __NS_SVGRENDERINGCONTEXT_H__
+
