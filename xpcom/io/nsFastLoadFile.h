@@ -208,10 +208,12 @@ class NS_COM nsFastLoadFileReader
     nsFastLoadFileReader(nsIInputStream *aStream)
       : nsBinaryInputStream(aStream),
         mCurrentDocumentMapEntry(nsnull) {
-        NS_INIT_REFCNT();
+        MOZ_COUNT_CTOR(nsFastLoadFileReader);
     }
 
-    virtual ~nsFastLoadFileReader() { }
+    virtual ~nsFastLoadFileReader() {
+        MOZ_COUNT_DTOR(nsFastLoadFileReader);
+    }
 
     PRUint32 GetChecksum() { return mHeader.mChecksum; }
 
@@ -238,7 +240,7 @@ class NS_COM nsFastLoadFileReader
     /**
      * In-memory representation of an indexed nsFastLoadSharpObjectInfo record.
      */
-    struct nsFastLoadSharpObjectEntry : public nsFastLoadSharpObjectInfo {
+    struct nsObjectMapEntry : public nsFastLoadSharpObjectInfo {
         nsCOMPtr<nsISupports>   mObject;
         PRUint32                mSkipOffset;
     };
@@ -271,9 +273,9 @@ class NS_COM nsFastLoadFileReader
             return mIDMap[index];
         }
 
-        nsFastLoadSharpObjectEntry&
+        nsObjectMapEntry&
         GetSharpObjectEntry(NSFastLoadOID aOID) const {
-            static nsFastLoadSharpObjectEntry dummy;
+            static nsObjectMapEntry dummy;
             PRUint32 index = MFL_OID_TO_SHARP_INDEX(aOID);
             NS_ASSERTION(index < mNumSharpObjects, "aOID out of range");
             if (index >= mNumSharpObjects)
@@ -300,7 +302,7 @@ class NS_COM nsFastLoadFileReader
 
         // Map from dense, zero-based MFL_OID_TO_SHARP_INDEX(oid) to sharp
         // object offset and refcnt information.
-        nsFastLoadSharpObjectEntry* mObjectMap;
+        nsObjectMapEntry* mObjectMap;
 
         // Map from URI spec string to nsDocumentMapReadEntry, which helps us
         // demultiplex a document's objects from among the interleaved object
@@ -332,6 +334,8 @@ class NS_COM nsFastLoadFileReader
     nsFastLoadFooter mFooter;
 
     nsDocumentMapReadEntry* mCurrentDocumentMapEntry;
+
+    friend class nsFastLoadFileUpdater;
 };
 
 NS_COM nsresult
@@ -352,8 +356,8 @@ class NS_COM nsFastLoadFileWriter
     nsFastLoadFileWriter(nsIOutputStream *aStream)
       : nsBinaryOutputStream(aStream),
         mCurrentDocumentMapEntry(nsnull) {
-        NS_INIT_REFCNT();
         mIDMap.ops = mObjectMap.ops = mDocumentMap.ops = mURIMap.ops = nsnull;
+        MOZ_COUNT_CTOR(nsFastLoadFileWriter);
     }
 
     virtual ~nsFastLoadFileWriter() {
@@ -365,6 +369,7 @@ class NS_COM nsFastLoadFileWriter
             PL_DHashTableFinish(&mDocumentMap);
         if (mURIMap.ops)
             PL_DHashTableFinish(&mURIMap);
+        MOZ_COUNT_DTOR(nsFastLoadFileWriter);
     }
 
     nsresult StartMuxedDocument(nsISupports* aURI, const char* aURISpec);
@@ -407,6 +412,7 @@ class NS_COM nsFastLoadFileWriter
     nsresult WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo);
     nsresult WriteMuxedDocumentInfo(const nsFastLoadMuxedDocumentInfo& aInfo);
 
+    nsresult   Init();
     nsresult   Open();
     NS_IMETHOD Close(void);
 
@@ -446,5 +452,45 @@ class NS_COM nsFastLoadFileWriter
 NS_COM nsresult
 NS_NewFastLoadFileWriter(nsIObjectOutputStream* *aResult,
                          nsIOutputStream* aDestStream);
+
+/**
+ * Subclass of nsFastLoadFileWriter, friend of nsFastLoadFileReader which it
+ * wraps when a FastLoad file needs to be updated.  The wrapped reader can be
+ * used to demulitplex data for documents already in the FastLoad file, while
+ * the updater writes new data over the old footer, then writes a new footer
+ * that maps all data on Close.
+ */
+class NS_COM nsFastLoadFileUpdater
+    : public nsFastLoadFileWriter
+{
+  public:
+    nsFastLoadFileUpdater(nsIOutputStream* aOutputStream)
+      : nsFastLoadFileWriter(aOutputStream) {
+        MOZ_COUNT_CTOR(nsFastLoadFileUpdater);
+    }
+
+    virtual ~nsFastLoadFileUpdater() {
+        MOZ_COUNT_DTOR(nsFastLoadFileUpdater);
+    }
+
+  private:
+    // nsISupports methods
+    NS_DECL_ISUPPORTS_INHERITED
+
+    nsresult   Open(nsFastLoadFileReader* aReader);
+
+    static PLDHashOperator PR_CALLBACK
+    CopyReadDocumentMapEntryToUpdater(PLDHashTable *aTable,
+                                      PLDHashEntryHdr *aHdr,
+                                      PRUint32 aNumber,
+                                      void *aData);
+
+    friend class nsFastLoadFileReader;
+};
+
+NS_COM nsresult
+NS_NewFastLoadFileUpdater(nsIObjectOutputStream* *aResult,
+                          nsIOutputStream* aOutputStream,
+                          nsFastLoadFileReader* aReader);
 
 #endif // nsFastLoadFile_h___

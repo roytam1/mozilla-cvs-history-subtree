@@ -29,6 +29,13 @@ interface nsIOutputStream;
 interface nsIObjectInputStream;
 interface nsIObjectOutputStream;
 
+[scriptable, uuid(715577db-d9c5-464a-a32e-0a40c29b22d4)]
+interface nsIFastLoadFileIO : nsISupports
+{
+    readonly attribute nsIInputStream  inputStream;
+    readonly attribute nsIOutputStream outputStream;
+};
+
 [scriptable, uuid(759e475e-0c23-4dbf-b1b8-78c9369e3072)]
 interface nsIFastLoadService : nsISupports
 {
@@ -40,7 +47,14 @@ interface nsIFastLoadService : nsISupports
 
     attribute nsIObjectInputStream  currentInputStream;
     attribute nsIObjectOutputStream currentOutputStream;
+    attribute nsIFastLoadFileIO     currentFileIO;
 
+    /**
+     * Consumers of currentInputStream and currentOutputStream should
+     * attempt to demultiplex data from the current input stream only if
+     * startMuxedDocument succeeds; otherwise they should slow-load the
+     * document and multiplex its data to the current output stream.
+     */
     void   startMuxedDocument(in nsISupports aURI, in string aURISpec);
     void   selectMuxedDocument(in nsISupports aURI);
     void   endMuxedDocument(in nsISupports aURI);

@@ -128,6 +128,8 @@ NS_IMPL_ISUPPORTS_INHERITED2(nsFastLoadFileReader,
                              nsIObjectInputStream,
                              nsISeekableStream)
 
+MOZ_DECL_CTOR_COUNTER(nsFastLoadFileReader)
+
 nsresult
 nsFastLoadFileReader::ReadHeader(nsFastLoadHeader *aHeader)
 {
@@ -159,6 +161,7 @@ nsFastLoadFileReader::ReadHeader(nsFastLoadHeader *aHeader)
 
 struct nsDocumentMapEntry : public PLDHashEntryHdr {
     const char* mURISpec;               // key, must come first
+    PRUint32    mInitialSegmentOffset;  // offset of URI's first segment in file
 };
 
 struct nsDocumentMapReadEntry : public nsDocumentMapEntry {
@@ -238,10 +241,8 @@ nsFastLoadFileReader::StartMuxedDocument(nsISupports* aURI, const char* aURISpec
         NS_STATIC_CAST(nsDocumentMapReadEntry*,
                        PL_DHashTableOperate(&mFooter.mDocumentMap, aURISpec,
                                             PL_DHASH_LOOKUP));
-    NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(docMapEntry),
-                 "aURISpec not multiplexed in FastLoad file!");
     if (PL_DHASH_ENTRY_IS_FREE(docMapEntry))
-        return NS_ERROR_UNEXPECTED;
+        return NS_ERROR_NOT_AVAILABLE;
 
     nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
     nsURIMapReadEntry* uriMapEntry =
@@ -268,6 +269,18 @@ nsFastLoadFileReader::SelectMuxedDocument(nsISupports* aURI)
 {
     nsresult rv;
 
+    // Find the given URI's entry and select it for more reading.
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+    nsURIMapReadEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapReadEntry*,
+                       PL_DHashTableOperate(&mFooter.mURIMap, key,
+                                            PL_DHASH_LOOKUP));
+
+    // If the URI isn't in the map, return NS_ERROR_NOT_AVAILABLE so the
+    // FastLoad service can try for a file update.
+    if (PL_DHASH_ENTRY_IS_FREE(uriMapEntry))
+        return NS_ERROR_NOT_AVAILABLE;
+
     // If we're interrupting another document's segment, save its offset so
     // we can seek back when it's reselected.
     nsDocumentMapReadEntry* docMapEntry = mCurrentDocumentMapEntry;
@@ -275,17 +288,6 @@ nsFastLoadFileReader::SelectMuxedDocument(nsISupports* aURI)
         rv = Tell(&docMapEntry->mSaveOffset);
         if (NS_FAILED(rv)) return rv;
     }
-
-    // Find the given URI's entry and select it for more reading.
-    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
-    nsURIMapReadEntry* uriMapEntry =
-        NS_STATIC_CAST(nsURIMapReadEntry*,
-                       PL_DHashTableOperate(&mFooter.mURIMap, key,
-                                            PL_DHASH_LOOKUP));
-    NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(uriMapEntry),
-                 "SelectMuxedDocument without prior StartMuxedDocument?");
-    if (PL_DHASH_ENTRY_IS_FREE(uriMapEntry))
-        return NS_ERROR_UNEXPECTED;
 
     // It turns out we get a fair amount of redundant select calls, thanks to
     // non-blocking hunks of data from the parser that are devoid of scripts.
@@ -324,16 +326,23 @@ nsresult
 nsFastLoadFileReader::EndMuxedDocument(nsISupports* aURI)
 {
     nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
-#ifdef NS_DEBUG
     nsURIMapReadEntry* uriMapEntry =
         NS_STATIC_CAST(nsURIMapReadEntry*,
                        PL_DHashTableOperate(&mFooter.mURIMap, key,
                                             PL_DHASH_LOOKUP));
-    NS_ASSERTION(uriMapEntry && uriMapEntry->mDocMapEntry,
-                 "unknown aURI passed to EndMuxedDocument!");
-#endif
 
-    PL_DHashTableOperate(&mFooter.mURIMap, key, PL_DHASH_REMOVE);
+    // If the URI isn't in the map, return NS_ERROR_NOT_AVAILABLE so the
+    // FastLoad service can try for a file update.
+    if (PL_DHASH_ENTRY_IS_FREE(uriMapEntry))
+        return NS_ERROR_NOT_AVAILABLE;
+
+    // Shrink the table if half the entries are removed sentinels.
+    PRUint32 size = PR_BIT(mFooter.mURIMap.sizeLog2);
+    if (mFooter.mURIMap.removedCount >= (size >> 2))
+        PL_DHashTableOperate(&mFooter.mURIMap, key, PL_DHASH_REMOVE);
+    else
+        PL_DHashTableRawRemove(&mFooter.mURIMap, uriMapEntry);
+
     TRACE_MUX(('r', "end %p (%p)\n", aURI, key.get()));
     return NS_OK;
 }
@@ -411,13 +420,12 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
         if (NS_FAILED(rv)) return rv;
     }
 
-    aFooter->mObjectMap =
-        new nsFastLoadSharpObjectEntry[aFooter->mNumSharpObjects];
+    aFooter->mObjectMap = new nsObjectMapEntry[aFooter->mNumSharpObjects];
     if (!aFooter->mObjectMap)
         return NS_ERROR_OUT_OF_MEMORY;
 
     for (i = 0, n = aFooter->mNumSharpObjects; i < n; i++) {
-        nsFastLoadSharpObjectEntry* entry = &aFooter->mObjectMap[i];
+        nsObjectMapEntry* entry = &aFooter->mObjectMap[i];
 
         rv = ReadSharpObjectInfo(entry);
         if (NS_FAILED(rv)) return rv;
@@ -458,6 +466,7 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
 
         NS_ASSERTION(!entry->mURISpec, "duplicate URISpec in MuxedDocumentMap");
         entry->mURISpec = info.mURISpec;
+        entry->mInitialSegmentOffset = info.mInitialSegmentOffset;
         entry->mNextSegmentOffset = info.mInitialSegmentOffset;
         entry->mBytesLeft = 0;
         entry->mSaveOffset = 0;
@@ -586,6 +595,8 @@ nsFastLoadFileReader::Open()
 
     if (mHeader.mVersion != MFL_FILE_VERSION)
         return NS_ERROR_UNEXPECTED;
+    if (mHeader.mFooterOffset == 0)
+        return NS_ERROR_UNEXPECTED;
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_END, 0);
     if (NS_FAILED(rv)) return rv;
@@ -615,7 +626,7 @@ nsFastLoadFileReader::Close()
 
     // Give up any dangling strong refs, after asserting there aren't any.
     for (PRUint32 i = 0, n = mFooter.mNumSharpObjects; i < n; i++) {
-        nsFastLoadSharpObjectEntry* entry = &mFooter.mObjectMap[i];
+        nsObjectMapEntry* entry = &mFooter.mObjectMap[i];
 
         strongTotal += entry->mStrongRefCnt;
         weakTotal += entry->mWeakRefCnt;
@@ -666,9 +677,9 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
     if (NS_FAILED(rv)) return rv;
     oid ^= MFL_OID_XOR_KEY;
 
-    nsFastLoadSharpObjectEntry* entry = (oid != MFL_DULL_OBJECT_OID)
-                                        ? &mFooter.GetSharpObjectEntry(oid)
-                                        : nsnull;
+    nsObjectMapEntry* entry = (oid != MFL_DULL_OBJECT_OID)
+                              ? &mFooter.GetSharpObjectEntry(oid)
+                              : nsnull;
     nsCOMPtr<nsISupports> object;
 
     if (!entry) {
@@ -826,6 +837,8 @@ NS_IMPL_ISUPPORTS_INHERITED2(nsFastLoadFileWriter,
                              nsIObjectOutputStream,
                              nsISeekableStream)
 
+MOZ_DECL_CTOR_COUNTER(nsFastLoadFileWriter)
+
 struct nsIDMapEntry : public PLDHashEntryHdr {
     NSFastLoadID    mFastID;            // 1 + nsFastLoadFooter::mIDMap index
     nsID            mSlowID;            // key, used by PLDHashTableOps below
@@ -916,7 +929,6 @@ nsFastLoadFileWriter::WriteHeader(nsFastLoadHeader *aHeader)
 }
 
 struct nsDocumentMapWriteEntry : public nsDocumentMapEntry {
-    PRUint32    mInitialSegmentOffset;      // offset of URI's first segment
     PRUint32    mCurrentSegmentOffset;      // last written segment's offset
 };
 
@@ -1307,18 +1319,8 @@ nsFastLoadFileWriter::WriteFooter()
 }
 
 nsresult
-nsFastLoadFileWriter::Open()
+nsFastLoadFileWriter::Init()
 {
-    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
-    if (!seekable)
-        return NS_ERROR_UNEXPECTED;
-
-    nsresult rv;
-
-    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
-                        sizeof(nsFastLoadHeader));
-    if (NS_FAILED(rv)) return rv;
-
     if (!PL_DHashTableInit(&mIDMap, &idmap_DHashTableOps, (void *)this,
                            sizeof(nsIDMapEntry), PL_DHASH_MIN_SIZE)) {
         mIDMap.ops = nsnull;
@@ -1345,6 +1347,22 @@ nsFastLoadFileWriter::Open()
     }
 
     return NS_OK;
+}
+
+nsresult
+nsFastLoadFileWriter::Open()
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+    if (!seekable)
+        return NS_ERROR_UNEXPECTED;
+
+    nsresult rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                        sizeof(nsFastLoadHeader));
+    if (NS_FAILED(rv)) return rv;
+
+    return Init();
 }
 
 NS_IMETHODIMP
@@ -1590,6 +1608,156 @@ NS_NewFastLoadFileWriter(nsIObjectOutputStream* *aResult,
     nsCOMPtr<nsIObjectOutputStream> stream(writer);
 
     nsresult rv = writer->Open();
+    if (NS_FAILED(rv))
+        return rv;
+
+    *aResult = stream;
+    NS_ADDREF(*aResult);
+    return NS_OK;
+}
+
+// -------------------------- nsFastLoadFileUpdater --------------------------
+
+NS_IMPL_ISUPPORTS_INHERITED0(nsFastLoadFileUpdater,
+                             nsFastLoadFileWriter)
+
+PLDHashOperator PR_CALLBACK
+nsFastLoadFileUpdater::CopyReadDocumentMapEntryToUpdater(PLDHashTable *aTable,
+                                                         PLDHashEntryHdr *aHdr,
+                                                         PRUint32 aNumber,
+                                                         void *aData)
+{
+    nsDocumentMapReadEntry* readEntry =
+        NS_STATIC_CAST(nsDocumentMapReadEntry*, aHdr);
+    nsFastLoadFileUpdater* updater =
+        NS_REINTERPRET_CAST(nsFastLoadFileUpdater*, aData);
+
+    void* spec = nsMemory::Clone(readEntry->mURISpec,
+                                 strlen(readEntry->mURISpec) + 1);
+    if (!spec)
+        return PL_DHASH_STOP;
+
+    nsDocumentMapWriteEntry* writeEntry =
+        NS_STATIC_CAST(nsDocumentMapWriteEntry*,
+                       PL_DHashTableOperate(&updater->mDocumentMap, spec,
+                                            PL_DHASH_ADD));
+    if (!writeEntry) {
+        nsMemory::Free(spec);
+        return PL_DHASH_STOP;
+    }
+
+    writeEntry->mURISpec = NS_REINTERPRET_CAST(const char*, spec);
+    writeEntry->mInitialSegmentOffset = readEntry->mInitialSegmentOffset;
+    writeEntry->mCurrentSegmentOffset = 0;
+    return PL_DHASH_NEXT;
+}
+
+nsresult
+nsFastLoadFileUpdater::Open(nsFastLoadFileReader* aReader)
+{
+    nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
+    if (!seekable)
+        return NS_ERROR_UNEXPECTED;
+
+    nsresult rv;
+    rv = nsFastLoadFileWriter::Init();
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 i, n;
+
+    // Map from dense, zero-based, uint32 NSFastLoadID in reader to 16-byte
+    // nsID in updater.
+    nsID* readIDMap = aReader->mFooter.mIDMap;
+    for (i = 0, n = aReader->mFooter.mNumIDs; i < n; i++) {
+        NSFastLoadID fastID;
+        rv = MapID(readIDMap[i], &fastID);
+        NS_ASSERTION(fastID == i + 1, "huh?");
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    // Map from reader dense, zero-based MFL_OID_TO_SHARP_INDEX(oid) to sharp
+    // object offset and refcnt information in updater.
+    PRUint32 saveReadOffset;
+    rv = aReader->Tell(&saveReadOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    nsFastLoadFileReader::nsObjectMapEntry* readObjectMap =
+        aReader->mFooter.mObjectMap;
+    for (i = 0, n = aReader->mFooter.mNumSharpObjects; i < n; i++) {
+        nsFastLoadFileReader::nsObjectMapEntry* readEntry = &readObjectMap[i];
+        if (!readEntry->mObject) {
+            rv = aReader->Seek(nsISeekableStream::NS_SEEK_SET,
+                               readEntry->mCIDOffset);
+            if (NS_FAILED(rv)) return rv;
+
+            rv = aReader->DeserializeObject(getter_AddRefs(readEntry->mObject));
+            if (NS_FAILED(rv)) return rv;
+
+            rv = aReader->Tell(&readEntry->mSkipOffset);
+            if (NS_FAILED(rv)) return rv;
+        }
+
+        nsSharpObjectMapEntry* writeEntry =
+            NS_STATIC_CAST(nsSharpObjectMapEntry*,
+                           PL_DHashTableOperate(&mObjectMap, readEntry->mObject,
+                                                PL_DHASH_ADD));
+        if (!writeEntry)
+            return NS_ERROR_OUT_OF_MEMORY;
+        writeEntry->mInfo = NS_STATIC_CAST(nsFastLoadSharpObjectInfo, *readEntry);
+    }
+
+    rv = aReader->Seek(nsISeekableStream::NS_SEEK_SET, saveReadOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    // Copy URI spec string and initial segment offset in FastLoad file from
+    // nsDocumentMapReadEntry in reader to mDocumentMapWriteEntry in updater.
+    // If we didn't enumerate all entries, we ran out of memory.
+    n = PL_DHashTableEnumerate(&aReader->mFooter.mDocumentMap,
+                               CopyReadDocumentMapEntryToUpdater,
+                               this);
+    if (n != aReader->mFooter.mDocumentMap.entryCount)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    // Copy source filename dependencies from reader to updater.
+    nsFastLoadDependencyArray& readDeps = aReader->mFooter.mDependencies;
+    for (i = 0, n = readDeps.Count(); i < n; i++) {
+        const char* s = NS_REINTERPRET_CAST(const char*,
+                                            readDeps.ElementAt(PRInt32(i)));
+        if (!mDependencies.AppendDependency(s))
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    // Seek to the reader's footer offset so we overwrite the footer.  First,
+    // update the header to have a zero mFooterOffset, which will invalidate
+    // the FastLoad file on next startup read attempt, should we crash before
+    // completing this update.
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                        offsetof(nsFastLoadHeader, mFooterOffset));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = Write32(0);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                        aReader->mHeader.mFooterOffset);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+NS_COM nsresult
+NS_NewFastLoadFileUpdater(nsIObjectOutputStream* *aResult,
+                          nsIOutputStream* aOutputStream,
+                          nsFastLoadFileReader* aReader)
+{
+    nsFastLoadFileUpdater* updater = new nsFastLoadFileUpdater(aOutputStream);
+    if (!updater)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    // Stabilize updater's refcnt.
+    nsCOMPtr<nsIObjectOutputStream> stream(updater);
+
+    nsresult rv = updater->Open(aReader);
     if (NS_FAILED(rv))
         return rv;
 

@@ -204,47 +204,82 @@ nsFastLoadService::SetCurrentOutputStream(nsIObjectOutputStream* aStream)
 }
 
 NS_IMETHODIMP
+nsFastLoadService::GetCurrentFileIO(nsIFastLoadFileIO* *aResult)
+{
+    NS_IF_ADDREF(*aResult = mFileIO);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::SetCurrentFileIO(nsIFastLoadFileIO* aFileIO)
+{
+    nsAutoLock lock(mLock);
+    mFileIO = aFileIO;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsFastLoadService::StartMuxedDocument(nsISupports* aURI, const char* aURISpec)
 {
-    nsresult rv;
+    nsresult rv = NS_ERROR_NOT_AVAILABLE;
     nsAutoLock lock(mLock);
 
+    // Try for an input stream first, in case aURISpec's data is multiplexed
+    // in the current FastLoad file.
+    if (mObjectInputStream) {
+        nsFastLoadFileReader* reader = GetReader(mObjectInputStream);
+        rv = reader->StartMuxedDocument(aURI, aURISpec);
+        if (NS_SUCCEEDED(rv) || rv != NS_ERROR_NOT_AVAILABLE)
+            return rv;
+
+        // If aURISpec is not found in the reader, wrap it with an updater
+        // and store the updater at mObjectOutputStream.
+        if (!mObjectOutputStream && mFileIO) {
+            nsCOMPtr<nsIOutputStream> output;
+            rv = mFileIO->GetOutputStream(getter_AddRefs(output));
+            if (NS_FAILED(rv)) return rv;
+
+            rv = NS_NewFastLoadFileUpdater(getter_AddRefs(mObjectOutputStream),
+                                           output,
+                                           reader);
+            if (NS_FAILED(rv)) return rv;
+        }
+    }
+
+    // Otherwise, or if we created an updater, prepare to save document data
+    // for aURISpec/aURI in the FastLoad file.
     if (mObjectOutputStream)
         rv = GetWriter(mObjectOutputStream)->StartMuxedDocument(aURI, aURISpec);
-    else if (mObjectInputStream)
-        rv = GetReader(mObjectInputStream)->StartMuxedDocument(aURI, aURISpec);
-    else
-        rv = NS_ERROR_NOT_AVAILABLE;
     return rv;
 }
 
 NS_IMETHODIMP
 nsFastLoadService::SelectMuxedDocument(nsISupports* aURI)
 {
-    nsresult rv;
+    nsresult rv = NS_ERROR_NOT_AVAILABLE;
     nsAutoLock lock(mLock);
 
-    if (mObjectOutputStream)
-        rv = GetWriter(mObjectOutputStream)->SelectMuxedDocument(aURI);
-    else if (mObjectInputStream)
+    // Try to select the reader, if any; then only if the URI was not in the
+    // file already, select the writer/updater.
+    if (mObjectInputStream)
         rv = GetReader(mObjectInputStream)->SelectMuxedDocument(aURI);
-    else
-        rv = NS_ERROR_NOT_AVAILABLE;
+    if (rv == NS_ERROR_NOT_AVAILABLE && mObjectOutputStream)
+        rv = GetWriter(mObjectOutputStream)->SelectMuxedDocument(aURI);
     return rv;
 }
 
 NS_IMETHODIMP
 nsFastLoadService::EndMuxedDocument(nsISupports* aURI)
 {
-    nsresult rv;
+    nsresult rv = NS_ERROR_NOT_AVAILABLE;
     nsAutoLock lock(mLock);
 
-    if (mObjectOutputStream)
-        rv = GetWriter(mObjectOutputStream)->EndMuxedDocument(aURI);
-    else if (mObjectInputStream)
+    // Try to end the document identified by aURI in the reader, if any; then
+    // only if the URI was not in the file already, select the writer/updater.
+    if (mObjectInputStream)
         rv = GetReader(mObjectInputStream)->EndMuxedDocument(aURI);
-    else
-        rv = NS_ERROR_NOT_AVAILABLE;
+    if (rv == NS_ERROR_NOT_AVAILABLE && mObjectOutputStream)
+        rv = GetWriter(mObjectOutputStream)->EndMuxedDocument(aURI);
     return rv;
 }
 

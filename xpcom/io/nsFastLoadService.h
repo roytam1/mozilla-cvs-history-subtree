@@ -47,4 +47,5 @@ class NS_COM nsFastLoadService : public nsIFastLoadService
 
     nsCOMPtr<nsIObjectInputStream>  mObjectInputStream;
     nsCOMPtr<nsIObjectOutputStream> mObjectOutputStream;
+    nsCOMPtr<nsIFastLoadFileIO>     mFileIO;
 };
