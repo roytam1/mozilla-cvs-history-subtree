@@ -2216,7 +2216,7 @@ DefineUCProperty(JSContext *cx, JSObject *obj,
 {
     JSAtom *atom;
 
-    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0);
+    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0);
     if (!atom)
         return JS_FALSE;
     if (flags != 0 && OBJ_IS_NATIVE(obj)) {
@@ -2324,7 +2324,7 @@ LookupUCProperty(JSContext *cx, JSObject *obj,
 {
     JSAtom *atom;
 
-    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0);
+    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0);
     if (!atom)
         return JS_FALSE;
     return OBJ_LOOKUP_PROPERTY(cx, obj, (jsid)atom, objp, propp);
@@ -2464,6 +2464,23 @@ JS_SetPropertyAttributes(JSContext *cx, JSObject *obj, const char *name,
 }
 
 JS_PUBLIC_API(JSBool)
+JS_HasProperty(JSContext *cx, JSObject *obj, const char *name, JSBool *foundp)
+{
+    JSBool ok;
+    JSObject *obj2;
+    JSProperty *prop;
+
+    CHECK_REQUEST(cx);
+    ok = LookupProperty(cx, obj, name, &obj2, &prop);
+    if (ok) {
+        *foundp = (prop != NULL);
+        if (prop)
+            OBJ_DROP_PROPERTY(cx, obj2, prop);
+    }
+    return ok;
+}
+
+JS_PUBLIC_API(JSBool)
 JS_LookupProperty(JSContext *cx, JSObject *obj, const char *name, jsval *vp)
 {
     JSBool ok;
@@ -2472,6 +2489,31 @@ JS_LookupProperty(JSContext *cx, JSObject *obj, const char *name, jsval *vp)
 
     CHECK_REQUEST(cx);
     ok = LookupProperty(cx, obj, name, &obj2, &prop);
+    if (ok)
+        *vp = LookupResult(cx, obj, obj2, prop);
+    return ok;
+}
+
+JS_PUBLIC_API(JSBool)
+JS_LookupPropertyWithFlags(JSContext *cx, JSObject *obj, const char *name,
+                           uintN flags, jsval *vp)
+{
+    JSAtom *atom;
+    JSBool ok;
+    JSObject *obj2;
+    JSProperty *prop;
+
+    CHECK_REQUEST(cx);
+    atom = js_Atomize(cx, name, strlen(name), 0);
+    if (!atom)
+        return JS_FALSE;
+    ok = OBJ_IS_NATIVE(obj)
+         ? js_LookupPropertyWithFlags(cx, obj, (jsid)atom, flags, &obj2, &prop
+#if defined JS_THREADSAFE && defined DEBUG
+                                      , __FILE__, __LINE__
+#endif
+                                      )
+         : OBJ_LOOKUP_PROPERTY(cx, obj, (jsid)atom, &obj2, &prop);
     if (ok)
         *vp = LookupResult(cx, obj, obj2, prop);
     return ok;
@@ -2541,7 +2583,7 @@ JS_GetUCPropertyAttributes(JSContext *cx, JSObject *obj,
 {
     CHECK_REQUEST(cx);
     return GetPropertyAttributes(cx, obj,
-                    js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0),
+                    js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0),
                     attrsp, foundp);
 }
 
@@ -2552,7 +2594,7 @@ JS_SetUCPropertyAttributes(JSContext *cx, JSObject *obj,
 {
     CHECK_REQUEST(cx);
     return SetPropertyAttributes(cx, obj,
-                    js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0),
+                    js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0),
                     attrs, foundp);
 }
 
@@ -2566,6 +2608,25 @@ JS_DefineUCPropertyWithTinyId(JSContext *cx, JSObject *obj,
     CHECK_REQUEST(cx);
     return DefineUCProperty(cx, obj, name, namelen, value, getter, setter,
                             attrs, SPROP_HAS_SHORTID, tinyid);
+}
+
+JS_PUBLIC_API(JSBool)
+JS_HasUCProperty(JSContext *cx, JSObject *obj,
+                 const jschar *name, size_t namelen,
+                 JSBool *vp)
+{
+    JSBool ok;
+    JSObject *obj2;
+    JSProperty *prop;
+
+    CHECK_REQUEST(cx);
+    ok = LookupUCProperty(cx, obj, name, namelen, &obj2, &prop);
+    if (ok) {
+        *vp = (prop != NULL);
+        if (prop)
+            OBJ_DROP_PROPERTY(cx, obj2, prop);
+    }
+    return ok;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -2592,7 +2653,7 @@ JS_GetUCProperty(JSContext *cx, JSObject *obj,
     JSAtom *atom;
 
     CHECK_REQUEST(cx);
-    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0);
+    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0);
     if (!atom)
         return JS_FALSE;
     return OBJ_GET_PROPERTY(cx, obj, (jsid)atom, vp);
@@ -2606,7 +2667,7 @@ JS_SetUCProperty(JSContext *cx, JSObject *obj,
     JSAtom *atom;
 
     CHECK_REQUEST(cx);
-    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0);
+    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0);
     if (!atom)
         return JS_FALSE;
     return OBJ_SET_PROPERTY(cx, obj, (jsid)atom, vp);
@@ -2620,7 +2681,7 @@ JS_DeleteUCProperty2(JSContext *cx, JSObject *obj,
     JSAtom *atom;
 
     CHECK_REQUEST(cx);
-    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name,namelen), 0);
+    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0);
     if (!atom)
         return JS_FALSE;
     return OBJ_DELETE_PROPERTY(cx, obj, (jsid)atom, rval);
@@ -2700,6 +2761,23 @@ JS_AliasElement(JSContext *cx, JSObject *obj, const char *name, jsint alias)
                                sprop->shortid)
           != NULL);
     OBJ_DROP_PROPERTY(cx, obj, prop);
+    return ok;
+}
+
+JS_PUBLIC_API(JSBool)
+JS_HasElement(JSContext *cx, JSObject *obj, jsint index, JSBool *foundp)
+{
+    JSBool ok;
+    JSObject *obj2;
+    JSProperty *prop;
+
+    CHECK_REQUEST(cx);
+    ok = OBJ_LOOKUP_PROPERTY(cx, obj, INT_TO_JSVAL(index), &obj2, &prop);
+    if (ok) {
+        *foundp = (prop != NULL);
+        if (prop)
+            OBJ_DROP_PROPERTY(cx, obj2, prop);
+    }
     return ok;
 }
 
@@ -2995,6 +3073,19 @@ JS_DefineFunction(JSContext *cx, JSObject *obj, const char *name, JSNative call,
 
     CHECK_REQUEST(cx);
     atom = js_Atomize(cx, name, strlen(name), 0);
+    if (!atom)
+        return NULL;
+    return js_DefineFunction(cx, obj, atom, call, nargs, attrs);
+}
+
+JS_PUBLIC_API(JSFunction *)
+JS_DefineUCFunction(JSContext *cx, JSObject *obj,
+                    const jschar *name, size_t namelen, JSNative call,
+                    uintN nargs, uintN attrs)
+{
+    JSAtom *atom;
+
+    atom = js_AtomizeChars(cx, name, AUTO_NAMELEN(name, namelen), 0);
     if (!atom)
         return NULL;
     return js_DefineFunction(cx, obj, atom, call, nargs, attrs);
@@ -4084,6 +4175,17 @@ JS_ClearPendingException(JSContext *cx)
 #if JS_HAS_EXCEPTIONS
     cx->throwing = JS_FALSE;
     cx->exception = JSVAL_VOID;
+#endif
+}
+
+JS_PUBLIC_API(JSBool)
+JS_ReportPendingException(JSContext *cx)
+{
+#if JS_HAS_EXCEPTIONS
+    CHECK_REQUEST(cx);
+    return js_ReportUncaughtException(cx);
+#else
+    return JS_TRUE;
 #endif
 }
 

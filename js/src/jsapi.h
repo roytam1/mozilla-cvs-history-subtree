@@ -821,6 +821,9 @@ JS_IdToValue(JSContext *cx, jsid id, jsval *vp);
 
 #define JSRESOLVE_QUALIFIED     0x01    /* resolve a qualified property id */
 #define JSRESOLVE_ASSIGNING     0x02    /* resolve on the left of assignment */
+#define JSRESOLVE_DETECTING     0x04    /* 'if (o.p)...' or '(o.p) ?...:...' */
+#define JSRESOLVE_DECLARING     0x08    /* var, const, or function prolog op */
+#define JSRESOLVE_CLASSNAME     0x10    /* class name used when constructing */
 
 extern JS_PUBLIC_API(JSBool)
 JS_PropertyStub(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
@@ -978,7 +981,14 @@ JS_AliasProperty(JSContext *cx, JSObject *obj, const char *name,
                  const char *alias);
 
 extern JS_PUBLIC_API(JSBool)
+JS_HasProperty(JSContext *cx, JSObject *obj, const char *name, JSBool *foundp);
+
+extern JS_PUBLIC_API(JSBool)
 JS_LookupProperty(JSContext *cx, JSObject *obj, const char *name, jsval *vp);
+
+extern JS_PUBLIC_API(JSBool)
+JS_LookupPropertyWithFlags(JSContext *cx, JSObject *obj, const char *name,
+                           uintN flags, jsval *vp);
 
 extern JS_PUBLIC_API(JSBool)
 JS_GetProperty(JSContext *cx, JSObject *obj, const char *name, jsval *vp);
@@ -1030,6 +1040,11 @@ JS_DefineUCPropertyWithTinyId(JSContext *cx, JSObject *obj,
                               uintN attrs);
 
 extern JS_PUBLIC_API(JSBool)
+JS_HasUCProperty(JSContext *cx, JSObject *obj,
+                 const jschar *name, size_t namelen,
+                 JSBool *vp);
+
+extern JS_PUBLIC_API(JSBool)
 JS_LookupUCProperty(JSContext *cx, JSObject *obj,
                     const jschar *name, size_t namelen,
                     jsval *vp);
@@ -1070,6 +1085,9 @@ JS_DefineElement(JSContext *cx, JSObject *obj, jsint index, jsval value,
 
 extern JS_PUBLIC_API(JSBool)
 JS_AliasElement(JSContext *cx, JSObject *obj, const char *name, jsint alias);
+
+extern JS_PUBLIC_API(JSBool)
+JS_HasElement(JSContext *cx, JSObject *obj, jsint index, JSBool *foundp);
 
 extern JS_PUBLIC_API(JSBool)
 JS_LookupElement(JSContext *cx, JSObject *obj, jsint index, jsval *vp);
@@ -1197,6 +1215,11 @@ JS_DefineFunctions(JSContext *cx, JSObject *obj, JSFunctionSpec *fs);
 extern JS_PUBLIC_API(JSFunction *)
 JS_DefineFunction(JSContext *cx, JSObject *obj, const char *name, JSNative call,
                   uintN nargs, uintN attrs);
+
+extern JS_PUBLIC_API(JSFunction *)
+JS_DefineUCFunction(JSContext *cx, JSObject *obj,
+                    const jschar *name, size_t namelen, JSNative call,
+                    uintN nargs, uintN attrs);
 
 extern JS_PUBLIC_API(JSObject *)
 JS_CloneFunctionObject(JSContext *cx, JSObject *funobj, JSObject *parent);
@@ -1696,6 +1719,9 @@ JS_SetPendingException(JSContext *cx, jsval v);
 
 extern JS_PUBLIC_API(void)
 JS_ClearPendingException(JSContext *cx);
+
+extern JS_PUBLIC_API(JSBool)
+JS_ReportPendingException(JSContext *cx);
 
 /*
  * Save the current exception state.  This takes a snapshot of cx's current

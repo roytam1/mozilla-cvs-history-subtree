@@ -156,8 +156,6 @@ obj_getSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     uintN attrs;
 
     slot = (uint32) JSVAL_TO_INT(id);
-    if (JS_HAS_STRICT_OPTION(cx) && !ReportStrictSlot(cx, slot))
-        return JS_FALSE;
     if (id == INT_TO_JSVAL(JSSLOT_PROTO)) {
         id = (jsid)cx->runtime->atomState.protoAtom;
         mode = JSACC_PROTO;
@@ -1951,8 +1949,15 @@ FindConstructor(JSContext *cx, JSObject *scope, const char *name, jsval *vp)
         }
     }
 
-    if (!OBJ_LOOKUP_PROPERTY(cx, obj, (jsid)atom, &pobj, (JSProperty**)&sprop))
+    JS_ASSERT(OBJ_IS_NATIVE(obj));
+    if (!js_LookupPropertyWithFlags(cx, obj, (jsid)atom, JSRESOLVE_CLASSNAME,
+                                    &pobj, (JSProperty **)&sprop
+#if defined JS_THREADSAFE && defined DEBUG
+                                    , __FILE__, __LINE__
+#endif
+                                    )) {
         return JS_FALSE;
+    }
     if (!sprop)  {
         *vp = JSVAL_VOID;
         return JS_TRUE;
@@ -2333,15 +2338,66 @@ bad:
     return JS_FALSE;
 }
 
+/*
+ * Given pc pointing after a property accessing bytecode, return true if the
+ * access is a "object-detecting" in the sense used by web pages, e.g., when
+ * checking whether document.all is defined.
+ */
+static JSBool
+Detecting(JSContext *cx, jsbytecode *pc)
+{
+    JSScript *script;
+    jsbytecode *endpc;
+    JSOp op;
+    JSAtom *atom;
+
+    script = cx->fp->script;
+    for (endpc = script->code + script->length; pc < endpc; pc++) {
+        /* General case: a branch or equality op follows the access. */
+        op = (JSOp) *pc;
+        if (js_CodeSpec[op].format & JOF_DETECTING)
+            return JS_TRUE;
+
+        /*
+         * Special case #1: handle (document.all == null).  Don't sweat about
+         * JS1.2's revision of the equality operators here.
+         */
+        if (op == JSOP_NULL) {
+            if (++pc < endpc)
+                return *pc == JSOP_EQ || *pc == JSOP_NE;
+            break;
+        }
+
+        /*
+         * Special case #2: handle (document.all == undefined).  Don't worry
+         * about someone redefining undefined, which was added by Edition 3,
+         * so was read/write for backward compatibility.
+         */
+        if (op == JSOP_NAME) {
+            atom = GET_ATOM(cx, script, pc);
+            if (atom == cx->runtime->atomState.typeAtoms[JSTYPE_VOID] &&
+                (pc += js_CodeSpec[op].length) < endpc) {
+                op = (JSOp) *pc;
+                return op == JSOP_EQ || op == JSOP_NE ||
+                       op == JSOP_NEW_EQ || op == JSOP_NEW_NE;
+            }
+            break;
+        }
+
+        /* At this point, anything but grouping means we're not detecting. */
+        if (op != JSOP_GROUP)
+            break;
+    }
+    return JS_FALSE;
+}
+
+JSBool
+js_LookupPropertyWithFlags(JSContext *cx, JSObject *obj, jsid id, uintN flags,
+                           JSObject **objp, JSProperty **propp
 #if defined JS_THREADSAFE && defined DEBUG
-JS_FRIEND_API(JSBool)
-_js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
-                   JSProperty **propp, const char *file, uintN line)
-#else
-JS_FRIEND_API(JSBool)
-js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
-                  JSProperty **propp)
+                           , const char *file, uintN line
 #endif
+                           )
 {
     JSObject *start, *obj2, *proto;
     JSScope *scope;
@@ -2352,7 +2408,8 @@ js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
     JSResolvingEntry *entry;
     uint32 generation;
     JSNewResolveOp newresolve;
-    uintN flags;
+    jsbytecode *pc;
+    const JSCodeSpec *cs;
     uint32 format;
     JSBool ok;
 
@@ -2406,15 +2463,21 @@ js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
 
                 if (clasp->flags & JSCLASS_NEW_RESOLVE) {
                     newresolve = (JSNewResolveOp)resolve;
-                    flags = 0;
-                    if (cx->fp && cx->fp->pc) {
-                        format = js_CodeSpec[*cx->fp->pc].format;
+                    if (cx->fp && (pc = cx->fp->pc)) {
+                        cs = &js_CodeSpec[*pc];
+                        format = cs->format;
                         if ((format & JOF_MODEMASK) != JOF_NAME)
                             flags |= JSRESOLVE_QUALIFIED;
                         if ((format & JOF_ASSIGNING) ||
                             (cx->fp->flags & JSFRAME_ASSIGNING)) {
                             flags |= JSRESOLVE_ASSIGNING;
+                        } else {
+                            pc += cs->length;
+                            if (Detecting(cx, pc))
+                                flags |= JSRESOLVE_DETECTING;
                         }
+                        if (format & JOF_DECLARING)
+                            flags |= JSRESOLVE_DECLARING;
                     }
                     obj2 = (clasp->flags & JSCLASS_NEW_RESOLVE_GETS_START)
                            ? start
@@ -2508,6 +2571,22 @@ out:
     *propp = NULL;
     return JS_TRUE;
 }
+
+#if defined JS_THREADSAFE && defined DEBUG
+JS_FRIEND_API(JSBool)
+_js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
+                   JSProperty **propp, const char *file, uintN line)
+{
+    return js_LookupPropertyWithFlags(cx, obj, id, 0, objp, propp, file, line);
+}
+#else
+JS_FRIEND_API(JSBool)
+js_LookupProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
+                  JSProperty **propp)
+{
+    return js_LookupPropertyWithFlags(cx, obj, id, 0, objp, propp);
+}
+#endif
 
 JS_FRIEND_API(JSBool)
 js_FindProperty(JSContext *cx, jsid id, JSObject **objp, JSObject **pobjp,
@@ -2638,21 +2717,15 @@ js_GetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
             cx->fp && cx->fp->pc &&
             (*cx->fp->pc == JSOP_GETPROP || *cx->fp->pc == JSOP_GETELEM))
         {
-            jsbytecode *pc, *endpc;
+            jsbytecode *pc;
             JSString *str;
 
             /* Kludge to allow (typeof foo == "undefined") tests. */
             JS_ASSERT(cx->fp->script);
             pc = cx->fp->pc;
             pc += js_CodeSpec[*pc].length;
-            endpc = cx->fp->script->code + cx->fp->script->length;
-            while (pc < endpc) {
-                if (*pc == JSOP_TYPEOF)
-                    return JS_TRUE;
-                if (*pc != JSOP_GROUP)
-                    break;
-                pc++;
-            }
+            if (Detecting(cx, pc))
+                return JS_TRUE;
 
             /* Ok, bad undefined property reference: whine about it. */
             str = js_DecompileValueGenerator(cx, JS_FALSE, ID_TO_VALUE(id),
