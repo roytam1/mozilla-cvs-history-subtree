@@ -310,7 +310,7 @@ int icalfileset_unlock(icalfileset *cluster)
 }
 
 #ifdef ICAL_SAFESAVES
-int icalfileset_safe_saves=1;
+int icalfileset_safe_saves=0;
 #else
 int icalfileset_safe_saves=0;
 #endif
