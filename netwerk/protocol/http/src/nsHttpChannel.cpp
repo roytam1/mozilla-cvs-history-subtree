@@ -122,9 +122,6 @@ nsHttpChannel::Init(nsIURI *uri,
     rv = mURI->GetPort(&port);
     if (NS_FAILED(rv)) return rv;
 
-    if (port == -1)
-        port = 80;
-
     LOG(("host=%s port=%d\n", host.get(), port));
 
     mConnectionInfo = new nsHttpConnectionInfo(host, port,
@@ -146,7 +143,7 @@ nsHttpChannel::Init(nsIURI *uri,
     //
     nsCString hostLine;
     hostLine.Assign(host.get());
-    if (port != -1 && port != mConnectionInfo->DefaultPort()) {
+    if (port != -1 && port != 80) { //mConnectionInfo->DefaultPort()) {
         hostLine.Append(':');
         hostLine.AppendInt(port);
     }

@@ -131,11 +131,10 @@ class nsHttpConnectionInfo : public nsISupports
 public:
     NS_DECL_ISUPPORTS
 
-    nsHttpConnectionInfo(const char *host, PRInt32 port,
+    nsHttpConnectionInfo(const char *host, PRInt32 port=-1,
                          const char *proxyHost=0, PRInt32 proxyPort=-1,
                          const char *proxyType=0, PRBool usingSSL=0)
-        : mPort(port)
-        , mProxyPort(proxyPort)
+        : mProxyPort(proxyPort)
         , mUsingSSL(usingSSL)
     {
         LOG(("Creating nsHttpConnectionInfo @%x\n", this));
@@ -143,6 +142,7 @@ public:
         NS_INIT_ISUPPORTS();
 
         mHost = host;
+        mPort = port == -1 ? DefaultPort() : port;
         mProxyHost = proxyHost;
         mProxyType = proxyType;
     }
