@@ -417,7 +417,14 @@ PRIntervalTime now;
 					tp->ioq.cnt--;
 					PR_Unlock(tp->ioq.lock);
 
-					jobp->iod->error = 0;
+					if (jobp->io_op == JOB_IO_CONNECT) {
+						if (PR_GetConnectStatus(&pollfds[index]) == PR_SUCCESS)
+							jobp->iod->error = 0;
+						else
+							jobp->iod->error = PR_GetError();
+					} else
+						jobp->iod->error = 0;
+
 					add_to_jobq(tp, jobp);
 				}
 			}
@@ -806,21 +813,34 @@ PR_QueueJob_Write(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn,void * arg,
 
 /* queue a job, when a socket has a pending connection */
 PR_IMPLEMENT(PRJob *)
-PR_QueueJob_Accept(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn, void * arg,
-												PRBool joinable)
+PR_QueueJob_Accept(PRThreadPool *tpool, PRJobIoDesc *iod, PRJobFn fn,
+								void * arg, PRBool joinable)
 {
 	return (queue_io_job(tpool, iod, fn, arg, joinable, JOB_IO_ACCEPT));
 }
 
 /* queue a job, when a socket can be connected */
 PR_IMPLEMENT(PRJob *)
-PR_QueueJob_Connect(PRThreadPool *tpool, PRJobIoDesc *iod, PRNetAddr *addr,
-				PRJobFn fn, void * arg, PRBool joinable)
+PR_QueueJob_Connect(PRThreadPool *tpool, PRJobIoDesc *iod,
+			const PRNetAddr *addr, PRJobFn fn, void * arg, PRBool joinable)
 {
-	/*
-	 * not implemented
-	 */
-	 return NULL;
+	PRStatus rv;
+	PRErrorCode err;
+
+	rv = PR_Connect(iod->socket, addr, PR_INTERVAL_NO_WAIT);
+	if ((rv == PR_FAILURE) && ((err = PR_GetError()) == PR_IN_PROGRESS_ERROR)){
+		/* connection pending */
+		return(queue_io_job(tpool, iod, fn, arg, joinable, JOB_IO_CONNECT));
+	} else {
+		/*
+		 * connection succeeded or failed; add to jobq right away
+		 */
+		if (rv == PR_FAILURE)
+			iod->error = err;
+		else
+			iod->error = 0;
+		return(PR_QueueJob(tpool, fn, arg, joinable));
+	}
 }
 
 /* queue a job, when a timer expires */
