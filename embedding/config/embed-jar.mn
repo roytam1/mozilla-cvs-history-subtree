@@ -11,6 +11,8 @@
 content/global, toolkit/content/global
 content/global/bindings, toolkit/content/global/bindings
 content/global-platform, toolkit/content/global-platform
+skin/classic/global/arrow, classic/skin/classic/global/arrow
+skin/classic/global/icons, classic/skin/classic/global/icons
 skin/classic/global, classic/skin/classic/global
 skin/classic/communicator/contents.rdf, classic/skin/classic/communicator/contents.rdf
 skin/classic/communicator/dialogOverlay.css, classic/skin/classic/communicator/dialogOverlay.css
