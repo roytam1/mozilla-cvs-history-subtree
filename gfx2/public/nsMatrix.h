@@ -72,7 +72,7 @@ class nsMatrix {
    *
    * @return The resulting matrix.
    */
-  nsMatrix *Multiply(nsMatrix secondMatrix);
+  nsMatrix *Multiply(const nsMatrix &secondMatrix);
 
   /**
    * Returns the inverse matrix.
@@ -122,11 +122,11 @@ class nsMatrix {
 
   /**
    * Post-multiplies a rotation transformation on the current matrix and returns the resulting matrix.
-   * The rotation angle is determined by taking (+/-) atan(\a y/ \a x). The direction of the vector (\a x, \ay) determines
+   * The rotation angle is determined by taking (+/-) atan(\a y/ \a x). The direction of the vector (\a x, \a y) determines
    * whether the positive or negative angle value is used.
    *
-   * @param x The X coordinate of the vector (\a x,\a y). Must not be zero. 
-   * @param y The Y coordinate of the vector (\a x,\a y). Must not be zero. 
+   * @param x The X coordinate of the vector (\a x, \a y). Must not be zero. 
+   * @param y The Y coordinate of the vector (\a x, \a y). Must not be zero. 
    *
    * @return The resulting matrix.
    */
