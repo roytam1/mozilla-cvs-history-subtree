@@ -88,6 +88,9 @@ nsBulletFrame::Destroy(nsIPresContext* aPresContext)
     mImageRequest = nsnull;
   }
 
+  if (mListener)
+    NS_REINTERPRET_CAST(nsBulletListener*, mListener.get())->SetFrame(nsnull);
+
   // Let base class do the rest
   return nsFrame::Destroy(aPresContext);
 }
@@ -99,36 +102,36 @@ nsBulletFrame::Init(nsIPresContext*  aPresContext,
                     nsIStyleContext* aContext,
                     nsIFrame*        aPrevInFlow)
 {
-  nsresult  rv = nsFrame::Init(aPresContext, aContent, aParent,
-                               aContext, aPrevInFlow);
+  nsresult  rv = nsFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
 
-  const nsStyleList* myList = (const nsStyleList*)
-    mStyleContext->GetStyleData(eStyleStruct_List);
+  const nsStyleList* myList = (const nsStyleList*)mStyleContext->GetStyleData(eStyleStruct_List);
 
-  nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
-  if (NS_FAILED(rv))
-    return rv;
+  if (!myList->mListStyleImage.IsEmpty()) {
+    nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+    if (NS_FAILED(rv))
+      return rv;
 
-  nsCOMPtr<nsILoadGroup> loadGroup;
-  GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
 
-  nsCOMPtr<nsIURI> baseURI;
-  GetBaseURI(getter_AddRefs(baseURI));
+    nsCOMPtr<nsIURI> baseURI;
+    GetBaseURI(getter_AddRefs(baseURI));
 
-  nsCOMPtr<nsIURI> imgURI;
-  NS_NewURI(getter_AddRefs(imgURI), myList->mListStyleImage, baseURI);
+    nsCOMPtr<nsIURI> imgURI;
+    NS_NewURI(getter_AddRefs(imgURI), myList->mListStyleImage, baseURI);
 
-  if (!mListener) {
-    nsBulletListener *listener;
-    NS_NEWXPCOM(listener, nsBulletListener);
-    NS_ADDREF(listener);
-    listener->SetFrame(this);
-    listener->QueryInterface(NS_GET_IID(imgIDecoderObserver), getter_AddRefs(mListener));
-    NS_ASSERTION(mListener, "queryinterface for the listener failed");
-    NS_RELEASE(listener);
+    if (!mListener) {
+      nsBulletListener *listener;
+      NS_NEWXPCOM(listener, nsBulletListener);
+      NS_ADDREF(listener);
+      listener->SetFrame(this);
+      listener->QueryInterface(NS_GET_IID(imgIDecoderObserver), getter_AddRefs(mListener));
+      NS_ASSERTION(mListener, "queryinterface for the listener failed");
+      NS_RELEASE(listener);
+    }
+
+    il->LoadImage(imgURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
   }
-
-  il->LoadImage(imgURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
 
   return NS_OK;
 }
@@ -163,13 +166,12 @@ nsBulletFrame::Paint(nsIPresContext*      aPresContext,
 
   PRBool isVisible;
   if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && isVisible) {
-    const nsStyleList* myList =
-      (const nsStyleList*)mStyleContext->GetStyleData(eStyleStruct_List);
+    const nsStyleList* myList = (const nsStyleList*)mStyleContext->GetStyleData(eStyleStruct_List);
     PRUint8 listStyleType = myList->mListStyleType;
 
     if (myList->mListStyleImage.Length() > 0 && mImageRequest) {
       PRUint32 status;
-      mImageRequest->GetStatus(&status);
+      mImageRequest->GetImageStatus(&status);
       if (status & imgIRequest::STATUS_LOAD_COMPLETE) {
         nsCOMPtr<imgIContainer> imageCon;
         mImageRequest->GetImage(getter_AddRefs(imageCon));
@@ -185,10 +187,8 @@ nsBulletFrame::Paint(nsIPresContext*      aPresContext,
       }
     }
 
-    const nsStyleFont* myFont =
-      (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
-    const nsStyleColor* myColor =
-      (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
+    const nsStyleFont* myFont = (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
+    const nsStyleColor* myColor = (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
 
     nsCOMPtr<nsIFontMetrics> fm;
     aRenderingContext.SetColor(myColor->mColor);
@@ -1081,11 +1081,10 @@ nsBulletFrame::GetDesiredSize(nsIPresContext*  aCX,
                               const nsHTMLReflowState& aReflowState,
                               nsHTMLReflowMetrics& aMetrics)
 {
-  const nsStyleList* myList =
-    (const nsStyleList*)mStyleContext->GetStyleData(eStyleStruct_List);
+  const nsStyleList* myList = (const nsStyleList*)mStyleContext->GetStyleData(eStyleStruct_List);
   nscoord ascent;
 
-  if (myList->mListStyleImage.Length() > 0) {
+  if (!myList->mListStyleImage.IsEmpty()) {
     nscoord widthConstraint = NS_INTRINSICSIZE;
     nscoord heightConstraint = NS_INTRINSICSIZE;
     PRBool fixedContentWidth = PR_FALSE;
@@ -1182,6 +1181,10 @@ nsBulletFrame::GetDesiredSize(nsIPresContext*  aCX,
     }
 
 #endif
+
+    aMetrics.ascent = aMetrics.height;
+    aMetrics.descent = 0;
+
     return;
 
   }
@@ -1289,53 +1292,59 @@ nsBulletFrame::Reflow(nsIPresContext* aPresContext,
   if (eReflowReason_Incremental == aReflowState.reason) {
     nsIReflowCommand::ReflowType type;
     aReflowState.reflowCommand->GetType(type);
+
+    /* if the style changed, see if we need to load a new url */
     if (nsIReflowCommand::StyleChanged == type) {
       nsCOMPtr<nsIURI> baseURI;
       GetBaseURI(getter_AddRefs(baseURI));
 
-      const nsStyleList* myList = (const nsStyleList*)
-        mStyleContext->GetStyleData(eStyleStruct_List);
+      const nsStyleList* myList = (const nsStyleList*)mStyleContext->GetStyleData(eStyleStruct_List);
 
-      nsCOMPtr<nsIURI> newURI;
-      NS_NewURI(getter_AddRefs(newURI), myList->mListStyleImage, baseURI);
+      if (!myList->mListStyleImage.IsEmpty()) {
 
-      PRBool needNewRequest = PR_TRUE;
+        if (!mListener) {
+          nsBulletListener *listener;
+          NS_NEWXPCOM(listener, nsBulletListener);
+          NS_ADDREF(listener);
+          listener->SetFrame(this);
+          listener->QueryInterface(NS_GET_IID(imgIDecoderObserver), getter_AddRefs(mListener));
+          NS_ASSERTION(mListener, "queryinterface for the listener failed");
+          NS_RELEASE(listener);
+        }
 
-      if (mImageRequest) {
-        // Reload the image, maybe...
-        nsCOMPtr<nsIURI> oldURI;
-        mImageRequest->GetURI(getter_AddRefs(oldURI));
-        if (oldURI) {
-          PRBool same;
-          newURI->Equals(oldURI, &same);
-          if (same) {
-            needNewRequest = PR_FALSE;
-          } else {
-            mImageRequest->Cancel(NS_ERROR_FAILURE);
-            mImageRequest = nsnull;
+
+        nsCOMPtr<nsIURI> newURI;
+        NS_NewURI(getter_AddRefs(newURI), myList->mListStyleImage, baseURI);
+
+        PRBool needNewRequest = PR_TRUE;
+
+        if (mImageRequest) {
+          // Reload the image, maybe...
+          nsCOMPtr<nsIURI> oldURI;
+          mImageRequest->GetURI(getter_AddRefs(oldURI));
+          if (oldURI) {
+            PRBool same;
+            newURI->Equals(oldURI, &same);
+            if (same) {
+              needNewRequest = PR_FALSE;
+            } else {
+              mImageRequest->Cancel(NS_ERROR_FAILURE);
+              mImageRequest = nsnull;
+            }
           }
         }
-      }
 
-      if (needNewRequest) {
-        nsresult rv;
-        nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
-        if (NS_FAILED(rv))
-          return rv;
+        if (needNewRequest) {
+          nsresult rv;
+          nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+          if (NS_FAILED(rv))
+            return rv;
 
-        nsCOMPtr<nsILoadGroup> loadGroup;
-        GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+          nsCOMPtr<nsILoadGroup> loadGroup;
+          GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
 
-        il->LoadImage(newURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
-
-#if 0
-        // XXX - invlidate here is fragile as our parent can choose to change our size
-        //       however currently the parent accepts our size so this works.
-        //       Also, it might be better to invalidate when the image has actually loaded
-        //       instead of when we request the image to load...
-        //       This, however, works as it is currently used (bug 8862 is fixed)
-        Invalidate(aPresContext, nsRect(0, 0, mRect.width, mRect.height));
-#endif
+          il->LoadImage(newURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
+        }
       }
     }
   }
