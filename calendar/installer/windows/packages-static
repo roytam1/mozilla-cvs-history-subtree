@@ -33,6 +33,9 @@ bin\defaults\profile\extensions\Extensions.rdf
 bin\defaults\profile\extensions\installed-extensions.txt
 ;!4sunbird bin\defaults\profile\extensions\{641d8d09-7dda-4850-8228-ac0ab65e2ac9}\install.rdf
 bin\defaults\profile\extensions\{8af2d0a7-e394-4de2-ae55-2dae532a7a9b}\install.rdf
+bin\extensions\Extensions.rdf
+bin\extensions\installed-extensions-processed.txt
+bin\extensions\{8af2d0a7-e394-4de2-ae55-2dae532a7a9b}\install.rdf
 
 [xpcom]
 bin\js3250.dll
@@ -60,6 +63,7 @@ bin\components\alerts.xpt
 bin\components\accessibility.xpt
 bin\components\accessibility-msaa.xpt
 bin\components\appshell.xpt
+bin\components\appstartup.xpt
 bin\components\autocomplete.xpt
 bin\components\autoconfig.xpt
 bin\components\bookmarks.xpt
@@ -193,6 +197,24 @@ bin\components\calendarService.js
 
 ; [Browser Chrome Files]
 bin\chrome\calendar.jar
+bin\chrome\calendar-ca-AD.jar
+bin\chrome\calendar-cs-CZ.jar
+bin\chrome\calendar-cy-GB.jar
+bin\chrome\calendar-de-AT.jar
+bin\chrome\calendar-es-ES.jar
+bin\chrome\calendar-fr-FR.jar
+bin\chrome\calendar-hu-HU.jar
+bin\chrome\calendar-it-IT.jar
+bin\chrome\calendar-ja-JP.jar
+bin\chrome\calendar-lt-LT.jar
+bin\chrome\calendar-nl-NL.jar
+bin\chrome\calendar-pl-PL.jar
+bin\chrome\calendar-pt-BR.jar
+bin\chrome\calendar-sk-SK.jar
+bin\chrome\calendar-sl-SI.jar
+bin\chrome\calendar-sv-SE.jar
+bin\chrome\calendar-tr-TR.jar
+bin\chrome\calendar-wen-DE.jar
 bin\chrome\classic.jar
 bin\chrome\comm.jar
 bin\chrome\toolkit.jar
