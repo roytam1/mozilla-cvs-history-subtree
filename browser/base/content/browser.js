@@ -5914,7 +5914,20 @@ function missingPluginInstaller(){
   this.missingPlugins = new Object();
 }
 
+missingPluginInstaller.prototype.installSinglePlugin = function(aEvent){
+  var tabbrowser = getBrowser();
+  var missingPluginsArray = new Object;
+  missingPluginsArray[aEvent.target.type] = {mimetype: aEvent.target.type, pluginsPage: aEvent.target.getAttribute("pluginspage")};
+
+  if (missingPluginsArray) {
+    window.openDialog("chrome://mozapps/content/plugins/pluginInstallerWizard.xul",
+      "_blank", "chrome,resizable=yes", {plugins: missingPluginsArray, tab: tabbrowser.mCurrentTab});
+    }            
+
+}
 missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
+  aEvent.target.addEventListener("mousedown", gMissingPluginInstaller.installSinglePlugin, false);
+
   var tabbrowser = getBrowser();
   const browsers = tabbrowser.mPanelContainer.childNodes;
 

@@ -30,5 +30,5 @@ toolkit.jar:
   content/mozapps/plugins/pluginInstallerWizard.xul             (plugins/content/pluginInstallerWizard.xul)
   content/mozapps/plugins/pluginInstallerWizard.js              (plugins/content/pluginInstallerWizard.js)
   content/mozapps/plugins/pluginInstallerWizard.css             (plugins/content/pluginInstallerWizard.css)
-  content/mozapps/plugins/pluginWSConnection.js                 (plugins/content/pluginWSConnection.js)
+  content/mozapps/plugins/pluginInstallerDatasource.js          (plugins/content/pluginInstallerDatasource.js)
   content/mozapps/plugins/pluginInstallerService.js             (plugins/content/pluginInstallerService.js)

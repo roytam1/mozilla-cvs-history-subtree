@@ -59,8 +59,6 @@ function nsPluginInstallerWizard(){
   //     a reference to the tab that needs them, so we can reload it
 
   if ("arguments" in window) {
-
-
     for (var item in window.arguments[0].plugins){
       this.mPluginRequestArray[window.arguments[0].plugins[item].mimetype] = new nsPluginRequest(window.arguments[0].plugins[item]);
       this.mPluginRequestArrayLength++;
@@ -74,24 +72,18 @@ function nsPluginInstallerWizard(){
 }
 
 nsPluginInstallerWizard.prototype.getPluginData = function (){
-  // for each mPluginRequestArray item, call the webservice
+  // for each mPluginRequestArray item, call the datasource
   this.WSPluginCounter = 0;
  
-  // initiate the web service call
-  var wsdlUrl = this.getString("pluginInstallationWebService.wsdl");
-  ws_start(wsdlUrl);
-}
-
-nsPluginInstallerWizard.prototype.proxyLoaded = function (){
-  var clientOS = this.getOS();
-  var chromeLocale = this.getChromeLocale();
+  // initiate the datasource call
+  var rdfUpdater = new nsRDFItemUpdater(this.getOS(), this.getChromeLocale());
 
   for (item in this.mPluginRequestArray) {
-    gWSProxy.getPluginInfo(this.mPluginRequestArray[item].mimetype, clientOS, chromeLocale);
+    rdfUpdater.checkForPlugin(this.mPluginRequestArray[item]);
   }
-}  
+}
 
-// aPluginInfo is null if the WS call failed, and pid is -1 if
+// aPluginInfo is null if the datasource call failed, and pid is -1 if
 // no matching plugin was found.
 nsPluginInstallerWizard.prototype.pluginInfoReceived = function (aPluginInfo){
   this.WSPluginCounter++;
@@ -99,12 +91,7 @@ nsPluginInstallerWizard.prototype.pluginInfoReceived = function (aPluginInfo){
   if (aPluginInfo && (aPluginInfo.pid != -1) ) {
     // hash by id
     this.mPluginInfoArray[aPluginInfo.pid] = new PluginInfo(aPluginInfo);
-
-    // only add if a license is provided
-    if (aPluginInfo.licenseURL)
-      this.mPluginLicenseArray.push(aPluginInfo.pid);
-
-    this.mPluginInfoArrayLength++
+    this.mPluginInfoArrayLength++;
   }
 
   var progressMeter = document.getElementById("ws_request_progress");
@@ -152,7 +139,7 @@ nsPluginInstallerWizard.prototype.showPluginList = function (){
     
     myPluginList.appendChild(myRow);
     
-    if (pluginInfo.InstallerShowsUI)
+    if (pluginInfo.InstallerShowsUI == "true")
       hasPluginWithInstallerUI = true;
   }
 
@@ -191,10 +178,18 @@ nsPluginInstallerWizard.prototype.canCancel = function (aBool){
   document.documentElement.getButton("cancel").disabled = !aBool;
 }
 
-
 nsPluginInstallerWizard.prototype.showLicenses = function (){
   this.canAdvance(true);
   this.canRewind(false);
+
+  // only add if a license is provided and the plugin was selected to
+  // be installed
+  for (pluginInfoItem in this.mPluginInfoArray){
+    var myPluginInfoItem = this.mPluginInfoArray[pluginInfoItem];
+
+    if (myPluginInfoItem.toBeInstalled && (myPluginInfoItem.licenseURL != ""))
+      this.mPluginLicenseArray.push(myPluginInfoItem.pid);
+  }
 
   if (this.mPluginLicenseArray.length == 0) {
     // no plugins require licenses  
@@ -220,15 +215,17 @@ nsPluginInstallerWizard.prototype.showLicense = function (){
 nsPluginInstallerWizard.prototype.showNextLicense = function (){
   var rv = true;
 
-  this.storeLicenseRadioGroup();
+  if (this.mPluginLicenseArray.length > 0) {
+    this.storeLicenseRadioGroup();
 
-  this.licenseAcceptCounter++;
+    this.licenseAcceptCounter++;
 
-  if (this.licenseAcceptCounter < this.mPluginLicenseArray.length) {
-    this.showLicense();
+    if (this.licenseAcceptCounter < this.mPluginLicenseArray.length) {
+      this.showLicense();
 
-    rv = false;
-    this.canRewind(true);
+      rv = false;
+      this.canRewind(true);
+    }
   }
   
   return rv;
@@ -251,7 +248,6 @@ nsPluginInstallerWizard.prototype.showPreviousLicense = function (){
 
 nsPluginInstallerWizard.prototype.storeLicenseRadioGroup = function (){
   var pluginInfo = this.mPluginInfoArray[this.mPluginLicenseArray[this.licenseAcceptCounter]];
-
   pluginInfo.licenseAccepted = !document.getElementById("licenseRadioGroup").selectedIndex;
 }
 
