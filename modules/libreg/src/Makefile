@@ -34,19 +34,27 @@ ifeq ($(OS_ARCH)$(OS_RELEASE),IRIX5)
 CC		= cc
 endif
 
+ifdef XP_OS2_EMX
+# Tweak options so non-standard stricmp/strnicmp functions get declared.
+LOCAL_INCLUDES=-U__STRICT_ANSI__
+endif
+
 INCLUDES	+= -I$(DEPTH)/include
 GARBAGE		+= $(PROGRAM)
 
 PROGRAM		= $(OBJDIR)/vreg$(BIN_SUFFIX)
 
-ifneq ($(OS_ARCH),OS2)
 $(PROGRAM): $(BIN_OBJS)
 	@$(MAKE_OBJDIR)
+ifdef XP_OS2_VACPP
+	$(LINK) -OUT:$@ $(BIN_OBJS) $(LDFLAGS) $(OS_LFLAGS) $(DIST)/lib/lib$(LITE_PREFIX)xp.$(LIB_SUFFIX)
+else
 	$(CCF) -o $@ $(BIN_OBJS) $(LDFLAGS) $(DIST)/lib/lib$(LITE_PREFIX)xp.$(LIB_SUFFIX)
+endif
 
 $(OBJDIR)/R_VerReg.o:	VerReg.c
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH), OS2)
+ifdef XP_OS2_VACPP
 	$(CC) -Fo$@ -c $(CFLAGS) -DSTANDALONE_REGISTRY $<
 else
 	$(CC) -o $@ -c $(CFLAGS) -DSTANDALONE_REGISTRY $<
@@ -54,7 +62,7 @@ endif
 
 $(OBJDIR)/R_reg.o:	reg.c
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH), OS2)
+ifdef XP_OS2_VACPP
 	$(CC) -Fo$@ -c $(CFLAGS) -DSTANDALONE_REGISTRY $<
 else
 	$(CC) -o $@ -c $(CFLAGS) -DSTANDALONE_REGISTRY $<
@@ -62,7 +70,7 @@ endif
 
 $(OBJDIR)/R_vr_stubs.o:	vr_stubs.c
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH), OS2)
+ifdef XP_OS2_VACPP
 	$(CC) -Fo$@ -c $(CFLAGS) -DSTANDALONE_REGISTRY $<
 else
 	$(CC) -o $@ -c $(CFLAGS) -DSTANDALONE_REGISTRY $<
@@ -72,4 +80,3 @@ $(BIN_OBJS): $(BIN_SRCS)
 
 install:: $(PROGRAM)
 	$(INSTALL) -m 444 $(PROGRAM) $(DIST)/bin
-endif	

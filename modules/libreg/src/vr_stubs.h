@@ -29,10 +29,14 @@
 #ifdef XP_MAC
 #include <stat.h>
 #else
-#if defined(BSDI) && !defined(BSDI_2)
+#if ( defined(BSDI) && !defined(BSDI_2) ) || defined(XP_OS2_EMX)
 #include <sys/types.h>
 #endif
 #include <sys/stat.h>
+#endif
+
+#ifdef XP_OS2_VACPP
+#include <direct.h>
 #endif
 
 #ifndef FALSE
@@ -87,15 +91,19 @@
 #define XP_MEMCPY(d, s, l)	memcpy((d), (s), (l))
 #define XP_MEMSET(d, c, l)      memset((d), (c), (l))
 
-#ifdef XP_PC
+#if defined(XP_PC) && !defined(XP_OS2)
 #define XP_STRCASECMP(x,y)  strcmpi((x),(y))
-
-#ifdef XP_OS2
-#define XP_STRNCASECMP(x,y,n) strnicmp((x),(y),(n))
-#else
 #define XP_STRNCASECMP(x,y,n) strncmpi((x),(y),(n))
 #endif
 
+#ifdef XP_OS2_VACPP
+#define XP_STRCASECMP(x,y)  strcmpi((x),(y))
+#define XP_STRNCASECMP(x,y,n) strnicmp((x),(y),(n))
+#endif
+
+#ifdef XP_OS2_EMX
+#define XP_STRCASECMP(x,y)  stricmp((x),(y))
+#define XP_STRNCASECMP(x,y,n) strnicmp((x),(y),(n))
 #endif
 
 #ifdef XP_MAC

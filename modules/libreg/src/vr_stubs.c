@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
 
 
     strcpy(buff, TheRegistry);
-    if ( p = strrchr( buff, '/' ))
+    if ( (p = strrchr( buff, '/' )) )
     {
        char pwd[1024];
 
