@@ -71,8 +71,8 @@ EXE_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  /subsystem:console /debug /pdb:none\
  /machine:I386
 
-CAFEDIR = t:/cafe
-JCLASSPATH = $(CAFEDIR)/Java/Lib/classes.zip
-JAVAC = $(CAFEDIR)/Bin/sj.exe
-JAVAH = $(CAFEDIR)/Java/Bin/javah.exe
-JCFLAGS = -I$(CAFEDIR)/Java/Include -I$(CAFEDIR)/Java/Include/win32
+# CAFEDIR = t:/cafe
+# JCLASSPATH = $(CAFEDIR)/Java/Lib/classes.zip
+# JAVAC = $(CAFEDIR)/Bin/sj.exe
+# JAVAH = $(CAFEDIR)/Java/Bin/javah.exe
+# JCFLAGS = -I$(CAFEDIR)/Java/Include -I$(CAFEDIR)/Java/Include/win32
