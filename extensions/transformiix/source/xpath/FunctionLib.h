@@ -30,22 +30,15 @@
  * $Id$
  */
 
+#ifndef TRANSFRMX_FUNCTIONLIB_H
+#define TRANSFRMX_FUNCTIONLIB_H
+
+
 #include "TxString.h"
 #include "primitives.h"
-#include "NodeSet.h"
-#include "List.h"
-#include "dom.h"
 #include "ExprResult.h"
 #include "baseutils.h"
 #include "Expr.h"
-#include "XMLDOMUtils.h"
-#include "Names.h"
-#include "XMLUtils.h"
-#include <math.h>
-
-
-#ifndef TRANSFRMX_FUNCTIONLIB_H
-#define TRANSFRMX_FUNCTIONLIB_H
 
 
 class XPathNames {

@@ -24,19 +24,17 @@
  */
 
 
+#ifndef TRANSFRMX_NODESORTER_H
+#define TRANSFRMX_NODESORTER_H
+
 #include "TxString.h"
-#include "StringComparator.h"
-#include "NamedMap.h"
 #include "dom.h"
 #include "NodeSet.h"
 #include "ProcessorState.h"
-#include "Names.h"
+
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
  */
-
-#ifndef TRANSFRMX_NODESORTER_H
-#define TRANSFRMX_NODESORTER_H
 
 class NodeSorter {
 

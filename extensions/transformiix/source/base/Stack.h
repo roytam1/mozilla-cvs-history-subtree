@@ -30,12 +30,11 @@
  * @version $Revision$ $Date$
 **/
 
-#include "List.h"
-#include "baseutils.h"
-
-
 #ifndef MITRE_STACK_H
 #define MITRE_STACK_H
+
+#include "List.h"
+#include "baseutils.h"
 
 typedef ListIterator StackIterator;
 

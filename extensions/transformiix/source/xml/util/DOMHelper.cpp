@@ -29,7 +29,7 @@
 **/
 
 #include "DOMHelper.h"
-
+#include "primitives.h"
 
 /**
  * Creates a new DOMHelper
@@ -115,12 +115,12 @@ Node* DOMHelper::getParentNode(Node* node) {
     if (node->getNodeType() != Node::ATTRIBUTE_NODE)
         return node->getParentNode();
 
-    MITREObjectWrapper* wrapper = 0;
+    TxObjectWrapper* wrapper = 0;
 
-    wrapper = (MITREObjectWrapper*) parents.get(node);
+    wrapper = (TxObjectWrapper*) parents.get(node);
     if (!wrapper) {
         continueIndexing(node);
-        wrapper = (MITREObjectWrapper*) parents.get(node);
+        wrapper = (TxObjectWrapper*) parents.get(node);
     }
 
     if (wrapper) return (Node*)wrapper->object;
@@ -137,9 +137,9 @@ Node* DOMHelper::getParentNode(Node* node) {
  * Adds the given child/parent mapping
 **/
 void DOMHelper::addParentReference(Node* child, Node* parent) {
-    MITREObjectWrapper* wrapper = (MITREObjectWrapper*) parents.get(child);
+    TxObjectWrapper* wrapper = (TxObjectWrapper*) parents.get(child);
     if (!wrapper) {
-        wrapper = new MITREObjectWrapper();
+        wrapper = new TxObjectWrapper();
         parents.put(wrapper, child);
     } 
     wrapper->object = parent;
@@ -153,7 +153,7 @@ void DOMHelper::addParentReference(Node* child, Node* parent) {
 void DOMHelper::continueIndexing(Node* node) {
     if (!node) return;
 
-    MITREObjectWrapper* wrapper = 0;
+    TxObjectWrapper* wrapper = 0;
 
     //-- get indexing information
     Document* doc = 0;
@@ -322,7 +322,7 @@ IndexState::~IndexState() {};
 /**
  * Creates a new OrderInfo
 **/
-OrderInfo::OrderInfo() : MITREObject() {
+OrderInfo::OrderInfo() : TxObject() {
    order = 0;
    size  = 0;
 } //-- OrderInfo

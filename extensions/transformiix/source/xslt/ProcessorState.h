@@ -29,21 +29,15 @@
 #ifndef TRANSFRMX_PROCESSORSTATE_H
 #define TRANSFRMX_PROCESSORSTATE_H
 
-#include "dom.h"
 #include "DOMHelper.h"
-#include "XMLUtils.h"
-#include "Names.h"
 #include "NodeSet.h"
 #include "NodeStack.h"
 #include "Stack.h"
 #include "ErrorObserver.h"
-#include "List.h"
 #include "NamedMap.h"
 #include "ExprParser.h"
 #include "Expr.h"
 #include "StringList.h"
-#include "Tokenizer.h"
-#include "VariableBinding.h"
 #include "OutputFormat.h"
 
 /**

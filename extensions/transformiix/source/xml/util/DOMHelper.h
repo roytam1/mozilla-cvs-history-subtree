@@ -27,11 +27,9 @@
 
 #include "baseutils.h"
 #include "TxString.h"
-#include "List.h"
 #include "dom.h"
 #include "Map.h"
-#include "MITREObject.h"
-#include "primitives.h"
+#include "TxObject.h"
 
 
 //----------------------/
@@ -42,7 +40,7 @@
  * A class used by DOMHelper to hold document order information
  * for DOM Nodes
 **/
-class OrderInfo : public MITREObject {
+class OrderInfo : public TxObject {
 
  public:
 

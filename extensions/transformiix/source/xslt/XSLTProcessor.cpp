@@ -42,10 +42,20 @@
  */
 
 #include "XSLTProcessor.h"
+#include "Names.h"
+#include "XMLParser.h"
+#include "VariableBinding.h"
+#include "XMLUtils.h"
+#include "XMLDOMUtils.h"
+#include "NodeSorter.h"
+#include "Numbering.h"
+#include "Tokenizer.h"
+#include "URIUtils.h"
 #ifdef MOZ_XSL
 #include "nsIObserverService.h"
 //#include "nslog.h"
 #else
+#include "printers.h"
 #include "TxLog.h"
 #endif
 

@@ -35,12 +35,10 @@
 
 #include "baseutils.h"
 #include "TxString.h"
-#include "dom.h"
 #include "ProcessorState.h"
 #include "Expr.h"
 #include "primitives.h"
 #include "ExprResult.h"
-#include "Names.h"
 
 class Numbering {
 

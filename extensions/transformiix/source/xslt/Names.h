@@ -30,10 +30,10 @@
  * $Id$
  */
 
-#include "TxString.h"
-
 #ifndef TRANSFRMX_NAMES_H
 #define TRANSFRMX_NAMES_H
+
+#include "TxString.h"
 
 //-- Global Strings
 extern const String HTML;

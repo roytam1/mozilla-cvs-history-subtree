@@ -35,6 +35,7 @@
 **/
 
 #include "Expr.h"
+#include <math.h>
 
 /**
  * Creates a new MultiplicativeExpr using the default operator (MULTIPLY)

@@ -25,6 +25,7 @@
  */
 
 #include "Expr.h"
+#include "XMLDOMUtils.h"
 
 /*
   This class represents a Attribute Expression as defined by the XPath

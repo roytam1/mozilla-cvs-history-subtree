@@ -29,7 +29,7 @@
  */
 
 /**
- * A Named Map for MITREObjects
+ * A Named Map for TxObjects
  * @author <a href="kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/

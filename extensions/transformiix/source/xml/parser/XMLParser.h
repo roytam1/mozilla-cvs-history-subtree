@@ -26,6 +26,9 @@
  * $Id$
  */
 
+#ifndef MITRE_XMLPARSER_H
+#define MITRE_XMLPARSER_H
+
 #include <iostream.h>
 #ifndef XML_UNICODE
 #define XML_UNICODE
@@ -90,4 +93,6 @@ void startElement(void *userData, const XML_Char* name, const XML_Char** atts);
 void endElement(void *userData, const XML_Char* name);
 void piHandler(void *userData, const XML_Char *target, const XML_Char *data);
 void piHandler(void *userData, const XML_Char *s);
+#endif
+
 #endif

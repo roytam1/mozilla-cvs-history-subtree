@@ -25,6 +25,7 @@
  */
 
 #include "Expr.h"
+#include "XMLDOMUtils.h"
 
 /*
  This class represents a ElementExpr as defined by XPath 1.0

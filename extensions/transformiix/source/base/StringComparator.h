@@ -23,11 +23,11 @@
  * $Id$
  */
 
- #include "TxString.h"
- #include "TxObject.h"
+#ifndef TRANSFRMX_STRING_COMPARATOR_H
+#define TRANSFRMX_STRING_COMPARATOR_H
 
- #ifndef TRANSFRMX_STRING_COMPARATOR_H
- #define TRANSFRMX_STRING_COMPARATOR_H
+#include "TxString.h"
+#include "TxObject.h"
 
 /*
    An interface for handling String comparisons

@@ -36,7 +36,6 @@
 #ifndef TRANSFRMX_NODESET_H
 #define TRANSFRMX_NODESET_H
 
-#include "MITREObject.h"
 #include "dom.h"
 #include "ExprResult.h"
 

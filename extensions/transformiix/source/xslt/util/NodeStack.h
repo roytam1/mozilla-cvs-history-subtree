@@ -28,16 +28,11 @@
  */
 
 
-/**
- * NodeStack
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
-**/
-#include "dom.h"
-#include "baseutils.h"
-
 #ifndef NODESTACK_H
 #define NODESTACK_H
+
+#include "dom.h"
+#include "baseutils.h"
 
 class NodeStack {
 
