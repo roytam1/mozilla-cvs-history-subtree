@@ -1,0 +1,69 @@
+<!ENTITY certmgr.detail.general_tab.title "Основное">
+<!ENTITY certmgr.details.label "Поля сертификатов">
+<!ENTITY certmgr.ocsp_info "Действительность сертификатов не была проверена с помощью OCSP. Щелкните по кнопке &quot;Просмотр&quot;, чтобы произвести эту проверку.">
+<!ENTITY certmgr.websites "У вас хранятся сертификаты, которые идентифицируют эти сайты:">
+<!ENTITY certmgr.certdetail.title "Подробности сертификата">
+<!ENTITY certmgr.editsslcert.donttrust "Не доверять этому сертификату.">
+<!ENTITY certmgr.fingerprints.label "Отпечатки">
+<!ENTITY certmgr.deleteusercert.beforename "Вы собираетесь удалить сертификат:">
+<!ENTITY certmgr.editemailcert.edittrust "Укажите степень доверия сертификату:">
+<!ENTITY certmgr.editsslcert.dotrust "Доверять этому сертификату.">
+<!ENTITY certmgr.cas "У вас хранятся сертификаты, которые идентифицируют эти центры:">
+<!ENTITY certmgr.editcert.trustemail "Этот сертификат может идентифицировать пользователей эл. почты.">
+<!ENTITY certmgr.add.label "Добавить">
+<!ENTITY certmgr.ok.label "OK">
+<!ENTITY certmgr.tokenname "Устройство защиты">
+<!ENTITY certmgr.editsslcert.edittrust "Изменить доверие сертификату:">
+<!ENTITY certmgr.tab.ca "Центры сертификации">
+<!ENTITY certmgr.purpose "Цели">
+<!ENTITY certmgr.certdetail.serialnumber "Серийный номер">
+<!ENTITY certmgr.deleteusercert.title "Удаление собственного сертификата">
+<!ENTITY certmgr.certdetail.sha1fingerprint "Отпечаток SHA1">
+<!ENTITY certmgr.editemailcert.dotrust "Доверять подлинности сертификата.">
+<!ENTITY certmgr.closeWindowAccessKey "З">
+<!ENTITY certmgr.cancel.label "Отмена">
+<!ENTITY certmgr.editca.label "Изменить доверие центру">
+<!ENTITY certmgr.helpButtonAccessKey "С">
+<!ENTITY certmgr.restore.label "Восстановить">
+<!ENTITY certmgr.delete.label "Удалить">
+<!ENTITY certmgr.backup.label "Резервная копия">
+<!ENTITY certmgr.editcert.title "Изменение параметров сертификата">
+<!ENTITY certmgr.editcert.edittrust "Изменить степень доверия:">
+<!ENTITY certmgr.issued "Выдан">
+<!ENTITY certmgr.expires "Срок действия">
+<!ENTITY certmgr.others "У вас хранятся сертификаты, которые идентифицируют этих людей:">
+<!ENTITY certmgr.certdetail.ou "Организационная единица (OU)">
+<!ENTITY certmgr.mine "У вас хранятся сертификаты от организаций, которые идентифицируют вас:">
+<!ENTITY certmgr.certname "Имя сертификата">
+<!ENTITY certmgr.subjectinfo.label "Кому выдано">
+<!ENTITY certmgr.detail.prettyprint_tab.title "Подробности">
+<!ENTITY certmgr.view.label "Просмотр">
+<!ENTITY certmgr.deleteusercert.aftername "Удалив этот сертификат, вы не сможете читать почту, зашифрованную с его помощью.">
+<!ENTITY certmgr.help.label "Справка">
+<!ENTITY certmgr.serial "Серийный номер">
+<!ENTITY certmgr.title "Менеджер сертификатов">
+<!ENTITY certmgr.deletecert.title "Удаление сертификата">
+<!ENTITY certmgr.certdetail.md5fingerprint "Отпечаток MD5">
+<!ENTITY certmgr.validity.label "Действителен">
+<!ENTITY certmgr.edit.label "Изменить">
+<!ENTITY certmgr.backupall.label "Резервные копии всех">
+<!ENTITY certmgr.issuerinfo.label "Кем выдано">
+<!ENTITY certmgr.tab.websites "Сайты">
+<!ENTITY certmgr.editsslcert.title "Изменение степени доверия сертификату сайта">
+<!ENTITY certmgr.tab.others "Другие">
+<!ENTITY certmgr.certdetail.o "Организация (O)">
+<!ENTITY certmgr.certdetail.cn "Общее имя">
+<!ENTITY certmgr.editcacert.title "Изменение степени доверия сертификату CA">
+<!ENTITY certmgr.deletecert.beforename "Вы собираетесь удалить этот сертификат:">
+<!ENTITY certmgr.ca.mycas "Центры, управляемые вами">
+<!ENTITY certmgr.ca.builtins "Встроенные центры">
+<!ENTITY certmgr.editemailcert.title "Изменение доверия сертификатам электронной почты">
+<!ENTITY certmgr.editcert.trustobjsign "Этот сертификат может идентифицировать программное обеспечение.">
+<!ENTITY certmgr.email "Адрес эл. почты">
+<!ENTITY certmgr.editcert.trustssl "Этот сертификат может идентифицировать сайты.">
+<!ENTITY certmgr.close.label "Закрыть">
+<!ENTITY certmgr.hierarchy.label "Иерархия сертификатов">
+<!ENTITY certmgr.tab.mine "Ваши сертификаты">
+<!ENTITY certmgr.deletecert.aftername "Вы действительно хотите удалить его?">
+<!ENTITY certmgr.editemailcert.donttrust "Не доверять подлинности сертификата.">
+<!ENTITY certmgr.fields.label "Значение поля">

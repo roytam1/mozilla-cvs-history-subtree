@@ -1,0 +1,16 @@
+<!ENTITY textInput.accesskey "И">
+<!ENTITY filterMenuList.label "Тип файлов:">
+<!ENTITY showHiddenFiles.accesskey "П">
+<!ENTITY lookInMenuList.accesskey "С">
+<!ENTITY lastModified.label "Последнее изменение">
+<!ENTITY noPermissionError.label "У вас нет необходимых прав для просмотра этого каталога.">
+<!ENTITY folderUp.tooltiptext "Перейти на уровень выше">
+<!ENTITY folderNew.tooltiptext "Создать новый каталог">
+<!ENTITY folderHome.tooltiptext "Перейти к началу">
+<!ENTITY lookInMenuList.label "Смотреть в:">
+<!ENTITY filterMenuList.accesskey "Т">
+<!ENTITY name.label "Имя">
+<!ENTITY showHiddenFiles.label "Показывать скрытые файлы и каталоги">
+<!ENTITY permissions.label "Права">
+<!ENTITY size.label "Размер">
+<!ENTITY textInput.label "Имя файла:">

@@ -1,0 +1,16 @@
+<!ENTITY autoSelect.label "Не спрашивать при следующем запуске">
+<!ENTITY offlineState.accesskey "а">
+<!ENTITY exit.label "Выход">
+<!ENTITY start.label "Запуск &brandShortName;">
+<!ENTITY newButton.accesskey "С">
+<!ENTITY renameButton.accesskey "П">
+<!ENTITY windowtitle.label "&brandShortName; - выбор профиля пользователя">
+<!ENTITY newButton.label "Создать профиль...">
+<!ENTITY availprofiles.label "Доступные профили">
+<!ENTITY renameButton.label "Переименовать профиль...">
+<!ENTITY deleteButton.label "Удалить профиль...">
+<!ENTITY autoSelect.accesskey "е">
+<!ENTITY profilename.label "Имя профиля:">
+<!ENTITY deleteButton.accesskey "У">
+<!ENTITY pmDescription.label "&brandShortName; хранит информацию о ваших настройках, закладках и т. д. в личном профиле.">
+<!ENTITY offlineState.label "Работать автономно">

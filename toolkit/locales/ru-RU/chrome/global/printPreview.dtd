@@ -1,0 +1,29 @@
+<!ENTITY p70.label "70&#037;">
+<!ENTITY portrait.label "Книжная">
+<!ENTITY close.label "Закрыть">
+<!ENTITY p60.label "60&#037;">
+<!ENTITY print.accesskey "е">
+<!ENTITY print.label "Печать...">
+<!ENTITY pageSetup.accesskey "а">
+<!ENTITY p50.label "50&#037;">
+<!ENTITY landscape.label "Альбомная">
+<!ENTITY portrait.accesskey "К">
+<!ENTITY Custom.label "Настройка...">
+<!ENTITY p100.label "100&#037;">
+<!ENTITY p150.label "150&#037;">
+<!ENTITY page.label "Страница:">
+<!ENTITY close.accesskey "З">
+<!ENTITY p40.label "40&#037;">
+<!ENTITY customPrompt.title "Настройка масштаба...">
+<!ENTITY landscape.accesskey "л">
+<!ENTITY p90.label "90&#037;">
+<!ENTITY p200.label "200&#037;">
+<!ENTITY scale.label "Масштаб:">
+<!ENTITY p125.label "125&#037;">
+<!ENTITY p30.label "30&#037;">
+<!ENTITY ShrinkToFit.label "Сжать до ширины страницы">
+<!ENTITY p175.label "175&#037;">
+<!ENTITY p80.label "80&#037;">
+<!ENTITY percent.label "&#037;">
+<!ENTITY of.label "из">
+<!ENTITY pageSetup.label "Параметры страницы...">

@@ -1,0 +1,66 @@
+<!ENTITY cipher.tab.ssl2 "SSL2">
+<!ENTITY SSLClientAuthMethod "Выбор сертификата клиента">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_256_sha "AES-шифрование с 256-битным ключом с использованием RSA, DHE и SHA1 MAC">
+<!ENTITY cipher.details "Подробности...">
+<!ENTITY cipher.ssl3.dhe_dss_aes_128_sha "AES-шифрование со 128-битным ключом с использованием DSA, DHE и SHA1 MAC">
+<!ENTITY cipher.ssl2.rc4_128 "RC4-шифрование со 128-битным ключом с использованием RSA и MD5 MAC">
+<!ENTITY cipher.ssl2.rc4_40 "RC4-шифрование с 40-битным ключом с использованием RSA и MD5 MAC (экспорт)">
+<!ENTITY cipher.ssl3.rsa_1024_rc4_56_sha "RC4-шифрование с 56-битным ключом с использование RSA и SHA-1 MAC (экспорт)">
+<!ENTITY cipher.keySize "Эффективный размер ключа:">
+<!ENTITY cipher.ssl3_extra.label "Дополнительные наборы шифров SSL3/TLS">
+<!ENTITY cipher.tab.ssl3tls "SSL3/TLS">
+<!ENTITY cipher.ssl2.rc2_128 "RC2-шифрование со 128-битным ключом с использованием RSA и MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_128_sha "RC4-шифрование со 128-битным ключом с использованием RSA и SHA1 MAC">
+<!ENTITY certselect.description "Определите, как &brandShortName; будет выбирать сертификат, если сайт запросит его:">
+<!ENTITY cipher.name "Шифр">
+<!ENTITY cipher.ssl3.rsa_null_sha "Нет способов шифрования с использованием алгоритма аутентификации RSA и SHA1 MAC">
+<!ENTITY cipher.encryption "Алгоритм шифрования:">
+<!ENTITY cipher.authAlg "Алгоритм аутентификации:">
+<!ENTITY SSLProtocolVersions "Версии протокола SSL">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_128_sha "AES-шифрование со 128-битным ключом с использованием RSA, DHE и SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_sha "DES-шифрование со 56-битным ключом с использованием RSA, DHE и SHA1 MAC">
+<!ENTITY cipher.macAlg "Алгоритм MAC:">
+<!ENTITY cipher.ssl3.rsa_aes_256_sha "AES-шифрование с 256-битным ключом с использованием RSA и SHA1 MAC">
+<!ENTITY warn.insecurepost "отправлением данных формы с незашифрованной страницы на незашифрованную">
+<!ENTITY warn.viewmixed "просмотром страницы со смешанным содержанием">
+<!ENTITY cipher.ssl3.dhe_dss_des_ede3_sha "Тройное DES-шифрование со 168-битным ключом с использованием DSA, DHE и SHA1 MAC">
+<!ENTITY warn.secureredirecttoinsecure "перенаправлением с зашифрованной страницы на незашифрованную">
+<!ENTITY cipher.title "SSL: изменение шифров">
+<!ENTITY cipher.ssl3.dhe_rsa_des_ede3_sha "Тройное DES-шифрование со 168-битным ключом с использованием RSA, DHE и SHA1 MAC">
+<!ENTITY edit.sslciphers.accesskey "И">
+<!ENTITY cipher.ssl3.rsa_des_sha "DES-шифрование с 56-битным ключом с использованием RSA и SHA-1 MAC">
+<!ENTITY cipher.ssl3.rsa_fips_des_sha "DES-шифрование с 56-битным ключом с использованием RSA и SHA-1 MAC (FIPS)">
+<!ENTITY warn.description "&brandShortName; может сообщать вам об уровне безопасности просматриваемой вами страницы. &brandShortName; будет выводить предупреждения и запрашивать разрешение перед:">
+<!ENTITY cipher.keyAlg "Алгоритм ключа:">
+<!ENTITY cipher.ssl2.des_64 "DES-шифрование с 56-битным ключом с использованием RSA и MD5 MAC">
+<!ENTITY cipher.fips "FIPS">
+<!ENTITY cipher.ssl3.rsa_aes_128_sha "AES-шифрование со 128-битным ключом с использованием RSA и SHA1 MAC">
+<!ENTITY enable.tls "Включить TLS">
+<!ENTITY enable.ssl3 "Включить SSL версии 3">
+<!ENTITY warn.enteringweak "загрузкой страницы, использующей слабое шифрование">
+<!ENTITY cipher.ssl3.rsa_1024_des_cbc_sha "DES-шифрование в с 56-битным ключом с использованием RSA и SHA-1 MAC (экспорт)">
+<!ENTITY enable.ssl2 "Включить SSL версии 2">
+<!ENTITY cipher.ssl2.label "Наборы шифров SSL2">
+<!ENTITY cipherinfo.title "Подробности о шифре">
+<!ENTITY cipher.ssl3.rsa_des_ede3_sha "Тройное DES-шифрование со 168-битным ключом с использованием RSA и SHA-1 MAC">
+<!ENTITY SSLWarnings "Предупреждения SSL">
+<!ENTITY cipher.ssl3.rsa_rc4_128_md5 "RC4-шифрование со 128-битным ключом с использованием RSA и MD5 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_aes_256_sha "AES-шифрование с 256-битным ключом с использованием DSA, DHE и SHA1 MAC">
+<!ENTITY certselect.auto "Выбирать автоматически">
+<!ENTITY cipher.exportable "На экспорт">
+<!ENTITY certselect.ask "Спрашивать каждый раз">
+<!ENTITY cipher.ssl3.rsa_null_md5 "Нет способов шифрования с использованием алгоритма аутентификации RSA и MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_40_md5 "RC4-шифрование с 40-битным ключом с использованием RSA и MD5 MAC (экспорт)">
+<!ENTITY warn.enteringsecure "загрузкой страницы, поддерживающей шифрование">
+<!ENTITY cipher.ssl3.rsa_rc2_40_md5 "RC2-шифрование с 40-битным ключом с использованием RSA и MD5 MAC (экспорт)">
+<!ENTITY edit.sslciphers "Изменить шифры...">
+<!ENTITY cipher.tab.ssl3tls_extra "Дополнительные наборы SSL3/TLS">
+<!ENTITY cipher.ssl3.rsa_fips_des_ede3_sha "Тройное DES-шифрование со 168-битным ключом с использованием RSA и SHA-1 MAC (FIPS)">
+<!ENTITY cipher.other "Другие свойства:">
+<!ENTITY cipher.ssl2.rc2_40 "RC2-шифрование с 40-битным ключом с использованием RSA и MD5 MAC (экспорт)">
+<!ENTITY warn.leavingsecure "уходом со страницы, поддерживающей шифрование">
+<!ENTITY cipher.ssl3.label "Наборы шифров SSL3/TLS">
+<!ENTITY warn.secureredirect "перенаправлением с одной зашифрованной страницы на другую">
+<!ENTITY cipher.ssl2.des_ede3_192 "Тройное DES-шифрование со 168-битным ключом с использованием RSA и MD5 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_des_sha "DES-шифрование с 56-битным ключом с использованием DSA, DHE и SHA1 MAC">
+<!ENTITY prefheader.title "Протокол защищенных сокетов (SSL)">

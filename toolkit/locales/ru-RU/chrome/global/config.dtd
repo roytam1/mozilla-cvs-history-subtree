@@ -1,0 +1,28 @@
+<!ENTITY prefColumn.label "Имя настройки">
+<!ENTITY typeColumn.label "Тип">
+<!ENTITY filterPrefs.accesskey "Ф">
+<!ENTITY showAll.label "Показать все">
+<!ENTITY boolean.label "Булево">
+<!ENTITY string.label "Строка">
+<!ENTITY new.accesskey "С">
+<!ENTITY reset.accesskey "р">
+<!ENTITY copyName.label "Копировать имя">
+<!ENTITY new.label "Создать">
+<!ENTITY columnChooser.tooltip "Нажмите, чтобы выбрать колонки для отображения">
+<!ENTITY filterPrefs.label "Фильтр:">
+<!ENTITY prefColumnHeader.tooltip "Нажмите для сортировки">
+<!ENTITY modify.label "Изменить">
+<!ENTITY copyName.accesskey "К">
+<!ENTITY string.accesskey "т">
+<!ENTITY integer.label "Целое">
+<!ENTITY modify.accesskey "И">
+<!ENTITY boolean.accesskey "Б">
+<!ENTITY valueColumn.label "Значение">
+<!ENTITY copyValue.accesskey "з">
+<!ENTITY showAll.accesskey "П">
+<!ENTITY lockColumn.label "Состояние">
+<!ENTITY copyValue.label "Копировать значение">
+<!ENTITY integer.accesskey "Ц">
+<!ENTITY reset.label "Сбросить">
+<!ENTITY toggle.label "Переключить">
+<!ENTITY toggle.accesskey "П">

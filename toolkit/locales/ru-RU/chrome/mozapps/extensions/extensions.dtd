@@ -1,0 +1,51 @@
+<!ENTITY previewNoThemeSelected.label "Тема не выбрана">
+<!ENTITY extensions.title "Расширения">
+<!ENTITY cmd.optionsUnix.accesskey "Н">
+<!ENTITY about.tooltip "О расширении">
+<!ENTITY cmd.enable.label "Включить">
+<!ENTITY cmd.enable.accesskey "В">
+<!ENTITY cmd.disable.label "Отключить">
+<!ENTITY cmd.moveDn.accesskey "н">
+<!ENTITY cmd.homepage.accesskey "д">
+<!ENTITY cmd.about.label "Об этом расширении">
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY homepage.tooltip "Домашняя страница">
+<!ENTITY cmd.useTheme.accesskey "И">
+<!ENTITY extensionItem.waiting.label "Ожидание...">
+<!ENTITY cmd.update.tooltip "Проверить наличие обновлений для ваших расширений">
+<!ENTITY getMoreExtensions.tooltip "Загрузить расширения с update.mozilla.org">
+<!ENTITY extensionItem.installing.label "Идет установка...">
+<!ENTITY extensionItem.toBeUninstalled.label "Данное расширение будет удалено после перезапуска &brandShortName;.">
+<!ENTITY cmd.about.accesskey "О">
+<!ENTITY cmd.optionsUnix.label "Настройки">
+<!ENTITY getMoreThemes.label "Загрузить темы">
+<!ENTITY cmd.options.label "Настройки">
+<!ENTITY cmd.options.commandKey ",">
+<!ENTITY options.tooltip "Настройки">
+<!ENTITY getMoreExtensions.label "Загрузить расширения">
+<!ENTITY cmd.uninstall.accesskey "У">
+<!ENTITY getMoreThemes.tooltip "Загрузить темы с update.mozilla.org">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY cmd.uninstall.tooltip "Удалить выделенное расширение">
+<!ENTITY cmd.homepage.label "Посетить домашнюю страницу">
+<!ENTITY cmd.moveUp.label "Вверх">
+<!ENTITY previewNoPreviewImage.label "Для данной темы предварительный просмотр невозможен">
+<!ENTITY cmd.moveUp.accesskey "в">
+<!ENTITY extensionItem.toBeInstalled.label "Данное расширение будет установлено после перезапуска &brandShortName;.">
+<!ENTITY cmd.useTheme.label "Использовать тему">
+<!ENTITY cmd.options.accesskey "с">
+<!ENTITY extensionItem.toBeDisabled.label "Данное расширение будет отключено после перезапуска &brandShortName;.">
+<!ENTITY cmd.install.accesskey "У">
+<!ENTITY cmd.update.label "Обновить">
+<!ENTITY cmd.install.tooltip "Установить расширение">
+<!ENTITY extensionItem.done.label "Установка произошла успешно">
+<!ENTITY cmd.moveDn.label "Вниз">
+<!ENTITY cmd.disable.accesskey "О">
+<!ENTITY extensionItem.toBeEnabled.label "Данное расширение будет включено после перезапуска &brandShortName;.">
+<!ENTITY cmd.moveToTop.label "Переместить в начало">
+<!ENTITY cmd.update.accesskey "О">
+<!ENTITY cmd.uninstall.label "Удалить">
+<!ENTITY cmd.moveToTop.accesskey "н">
+<!ENTITY cmd.install.label "Установить">
+<!ENTITY optionsUnix.tooltip "Настройки">
+<!ENTITY cmd.useTheme.tooltip "Изменяет тему &brandShortName; ">

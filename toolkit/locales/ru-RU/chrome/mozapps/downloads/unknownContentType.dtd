@@ -1,0 +1,18 @@
+<!ENTITY actionQuestion.label "Как &brandShortName; следует обработать этот файл?">
+<!ENTITY save.label "Сохранить на диск">
+<!ENTITY openWith.accesskey "О">
+<!ENTITY whichIsA.label "являющийся">
+<!ENTITY settingsChangeMac.label "Параметры могут быть изменены в разделе Загрузки в настройках &brandShortName;,.">
+<!ENTITY save.accesskey "С">
+<!ENTITY openWith.label "Открыть с помощью">
+<!ENTITY rememberChoice.label "Выполнять для всех таких файлов автоматически.">
+<!ENTITY rememberChoice.accesskey "В">
+<!ENTITY settingsChangeUnix.label "Параметры могут быть изменены в разделе Загрузки меню Правка - Настройки.">
+<!ENTITY other.label "Выбрать...">
+<!ENTITY intro.label "Вы собираетесь открыть файл">
+<!ENTITY settingsChange.label "Параметры могут быть изменены в разделе &quot;Загрузки&quot; меню &quot;Инструменты -&gt; Настройки&quot;">
+<!ENTITY from.label "из">
+<!ENTITY chooseHandler.accesskey "О">
+<!ENTITY chooseHandler.label "Обзор...">
+<!ENTITY chooseHandlerMac.accesskey "В">
+<!ENTITY chooseHandlerMac.label "Выбрать...">

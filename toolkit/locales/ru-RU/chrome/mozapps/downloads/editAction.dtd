@@ -1,0 +1,10 @@
+<!ENTITY changeAppWindowTitle.label "Выберите приложение...">
+<!ENTITY customAppPath.label "Нажмите &quot;Измнеить...&quot;, чтобы выбрать другое приложение.">
+<!ENTITY changeAction.title "Изменение действия">
+<!ENTITY saveToDisk.label "Сохранять на диск">
+<!ENTITY changeApp.label "Изменить...">
+<!ENTITY changeApp.accesskey "И">
+<!ENTITY whenDownloading.label "При загрузке файлов типа:">
+<!ENTITY openDefault.label "Открывать их с помощью приложения по умолчанию:">
+<!ENTITY always.label "автоматически:">
+<!ENTITY openApplication.label "Открывать их с помощью приложения:">

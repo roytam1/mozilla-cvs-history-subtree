@@ -1,0 +1,5 @@
+<!ENTITY ssl.label "SSL">
+<!ENTITY certs.label "Сертификаты">
+<!ENTITY validation.label "Подтверждение">
+<!ENTITY security.label "Приватность и безопасность">
+<!ENTITY masterpass.label "Мастер-пароли">

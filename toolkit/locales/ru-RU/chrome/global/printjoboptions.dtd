@@ -1,0 +1,12 @@
+<!ENTITY cmdInput.label "Команда печати:">
+<!ENTITY paperInput.label "Размер бумаги:">
+<!ENTITY topInput.label "Сверху:">
+<!ENTITY leftInput.label "Слева:">
+<!ENTITY edgeMarginInput.label "Ширина поля (в дюймах)">
+<!ENTITY colorRadio.label "Цвет">
+<!ENTITY grayRadio.label "В серых тонах">
+<!ENTITY colorGroup.label "Цвет:">
+<!ENTITY plexInput.label "Режим:">
+<!ENTITY printJobOptions.title "Свойства принтера">
+<!ENTITY bottomInput.label "Снизу:">
+<!ENTITY rightInput.label "Справа:">

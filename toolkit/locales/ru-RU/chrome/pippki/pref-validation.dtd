@@ -1,0 +1,42 @@
+<!ENTITY validation.crlnextupdate.label "Следующее обновление">
+<!ENTITY validation.crlautoupdatestatus.label "Статус автообновления">
+<!ENTITY validation.crllastupdate.label "Последнее обновление">
+<!ENTITY crl.import.nextupdate.label "Следующее обновление:">
+<!ENTITY validation.crl.autoupdate.title "Настройки автоматического обновления CRL">
+<!ENTITY crl.issuer.label "CRL выдан:">
+<!ENTITY signingCA.accesskey "П">
+<!ENTITY disableOCSP.label "Не использовать OCSP для проверки действительности сертификатов">
+<!ENTITY crl.import.success.message "Список отозванных сертификатов (CRL) был успешно импортирован.">
+<!ENTITY validation.crlautoupdateenabled.label "Автообновление">
+<!ENTITY validation.deletecrl.label "Удалить">
+<!ENTITY serviceURL.label "URL службы:">
+<!ENTITY serviceURL.accesskey "с">
+<!ENTITY help.button "Справка">
+<!ENTITY proxyOCSP.label "Использовать OCSP для проверки всех сертификатов с помощью этого URL:">
+<!ENTITY validation.crl.autoupdate.enable.label "Использовать автоматическое обновление этого CRL">
+<!ENTITY edit.button "Параметры">
+<!ENTITY ok.button "OK">
+<!ENTITY validation.crl.autoupdate.time.label2 "Дней до следующего обновления">
+<!ENTITY validation.crl.autoupdate.time.label1 "Обновление">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY validation.title "Подтверждение действительности">
+<!ENTITY crl.autoupdate.fail.cnt.label "Предыдущие последовательные ошибки обновлений:">
+<!ENTITY crl.import.status.title "Статус импорта CRL">
+<!ENTITY validation.crlname.label "Имя">
+<!ENTITY validation.managecrls.accesskey "У">
+<!ENTITY validation.crlmanager.label "Упорядочение CRL">
+<!ENTITY crl.issuer.orgunit.label "Единица:">
+<!ENTITY validation.crl.autoupdate.url.label "CRL будет импортирован с:">
+<!ENTITY validation.updatecrl.label "Обновить">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Дней">
+<!ENTITY crl.autoupdate.fail.reason.label "Подробности последней ошибки обновления:">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Обновлять каждые">
+<!ENTITY signingCA.label "Подписавшаяся сторона:">
+<!ENTITY validation.crl.description "Используйте Менеджер сертификатов для упорядочения списков отозванных сертификатов (CRL), хранящихся в вашей базе сертификатов.">
+<!ENTITY validation.ocsp.description "&brandShortName; может использовать протокол просмотра статуса сертификатов (OCSP) для верификации. Использовать OSCP так:">
+<!ENTITY cancel.button "Отмена">
+<!ENTITY validation.managecrls.button "Упорядочить CRL...">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY certOCSP.label "Использовать OCSP для проверки только тех сертификатов, в которых указан URL службы OCSP">
+<!ENTITY crl.issuer.org.label "Организация:">
+<!ENTITY validation.advanced.label "Параметры">

@@ -1,0 +1,21 @@
+<!ENTITY neverAsk.label "Сохранять все файлы в папку:">
+<!ENTITY fileTypes.label "Типы файлов">
+<!ENTITY showWhenStarting.label "Открывать окно Менеджера загрузок">
+<!ENTITY closeWhenDone.label "Закрывать окно Менеджера загрузок после завершения загрузки">
+<!ENTITY removeFileHandler.label "Удалить">
+<!ENTITY plugins.accesskey "М">
+<!ENTITY fileTypesDescription.label "Автоматически выполнять нужные действия при открытии файлов следующих типов:">
+<!ENTITY plugins.label "Модули...">
+<!ENTITY editFileHandler.label "Изменить действие...">
+<!ENTITY showFolder.label "Открыть папку">
+<!ENTITY editFileHandler.accesskey "И">
+<!ENTITY downloads.label "Мои загрузки">
+<!ENTITY downloadManagerWindow.label "Менеджер загрузок">
+<!ENTITY choose.label "Выбрать...">
+<!ENTITY fileTypeColName.label "Тип файлов">
+<!ENTITY removeFileHandler.accesskey "У">
+<!ENTITY alwaysAsk.label "Спрашивать, куда сохранять каждый файл">
+<!ENTITY askOnSave.label "Папка загрузок">
+<!ENTITY lHeader "Загрузки">
+<!ENTITY fileHandlerColName.label "Приложение">
+<!ENTITY desktop.label "Рабочий стол">

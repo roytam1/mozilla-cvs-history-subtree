@@ -1,0 +1,11 @@
+<!ENTITY dialog.title "Настройка панели инструментов">
+<!ENTITY undoChanges.label "Отменить изменения">
+<!ENTITY addNewToolbar.label "Добавить панель инструментов">
+<!ENTITY text.label "Текст">
+<!ENTITY restoreDefaultSet.label "Восстановить">
+<!ENTITY show.label "Показывать:">
+<!ENTITY instructions.description "Вы можете добавлять или  удалять элементы на панелях инструментов перетаскивая их мышью.">
+<!ENTITY icons.label "Значки">
+<!ENTITY saveChanges.label "Готово">
+<!ENTITY useSmallIcons.label "Маленькие значки">
+<!ENTITY iconsAndText.label "Значки и текст">

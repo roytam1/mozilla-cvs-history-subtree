@@ -1,0 +1,14 @@
+<!ENTITY copyCmd.label "Копировать">
+<!ENTITY redoCmd.label "Повторить">
+<!ENTITY cutCmd.accesskey "В">
+<!ENTITY deleteCmd.accesskey "У">
+<!ENTITY selectAllCmd.label "Выделить все">
+<!ENTITY selectAllCmd.accesskey "ы">
+<!ENTITY pasteCmd.label "Вставить">
+<!ENTITY undoCmd.label "Отменить">
+<!ENTITY copyCmd.accesskey "К">
+<!ENTITY redoCmd.accesskey "П">
+<!ENTITY undoCmd.accesskey "О">
+<!ENTITY cutCmd.label "Вырезать">
+<!ENTITY deleteCmd.label "Удалить">
+<!ENTITY pasteCmd.accesskey "с">

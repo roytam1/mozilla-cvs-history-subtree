@@ -1,0 +1,20 @@
+<!ENTITY charsetMenu.accesskey "К">
+<!ENTITY charsetMenuMore4.label "Юговосточная и югозападная азиатская">
+<!ENTITY charsetMenuMore.accesskey "Е">
+<!ENTITY charsetMenuUnicode.label "Unicode">
+<!ENTITY charsetMenu.label "Кодировка">
+<!ENTITY charsetMenuMore.label "Еще">
+<!ENTITY charsetCustomize.accesskey "Н">
+<!ENTITY charsetMenuMore3.label "Восточноазиатская">
+<!ENTITY charsetCustomize.label "Настроить...">
+<!ENTITY charsetMenuMore5.accesskey "С">
+<!ENTITY charsetMenuMore4.accesskey "Ю">
+<!ENTITY charsetMenuMore3.accesskey "а">
+<!ENTITY charsetMenuMore2.accesskey "В">
+<!ENTITY charsetMenuMore1.accesskey "З">
+<!ENTITY charsetMenuMore2.label "Восточноевропейская">
+<!ENTITY charsetMenuAutodet.accesskey "А">
+<!ENTITY charsetMenuAutodet.label "Автоопределение">
+<!ENTITY charsetMenuUnicode.accesskey "U">
+<!ENTITY charsetMenuMore5.label "Средневосточная">
+<!ENTITY charsetMenuMore1.label "Западноевропейская">

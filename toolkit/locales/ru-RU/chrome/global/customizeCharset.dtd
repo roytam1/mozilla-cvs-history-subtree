@@ -1,0 +1,6 @@
+<!ENTITY add.label "Добавить">
+<!ENTITY current.label "Активные кодировки:">
+<!ENTITY additional.label "Доступные кодировки:">
+<!ENTITY left.header "Кодировка">
+<!ENTITY remove.label "Удалить">
+<!ENTITY title.label "Настройка кодировки">

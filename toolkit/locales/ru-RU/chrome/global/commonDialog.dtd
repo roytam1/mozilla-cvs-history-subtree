@@ -1,0 +1,6 @@
+<!ENTITY header.label "Краткий заголовок">
+<!ENTITY editfield1.label "Пароль:">
+<!ENTITY editfield0.label "Имя пользователя:">
+<!ENTITY checkbox.label "Установить флажок">
+<!ENTITY message.label "Пример какого-либо текста.">
+<!ENTITY editfield2.label "Подтверждение пароля:">

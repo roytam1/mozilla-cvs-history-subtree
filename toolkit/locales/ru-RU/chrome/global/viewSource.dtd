@@ -1,0 +1,35 @@
+<!ENTITY menu_textReduce.label "Уменьшить размер шрифта">
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY savePageCmd.label "Сохранить страницу как...">
+<!ENTITY menu_textEnlarge.label "Увеличить размер шрифта">
+<!ENTITY goToLineCmd.commandkey "l">
+<!ENTITY menu_textEnlarge.accesskey "в">
+<!ENTITY printCmd.label "Печать...">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY savePageCmd.accesskey "С">
+<!ENTITY fileMenu.accesskey "Ф">
+<!ENTITY closeCmd.label "Закрыть">
+<!ENTITY printPreviewCmd.label "Предварительный просмотр">
+<!ENTITY goToLineCmd.label "Перейти к строке...">
+<!ENTITY printPreviewCmd.accesskey "р">
+<!ENTITY mainWindow.preface "Исходный код: ">
+<!ENTITY pageSetupCmd.accesskey "с">
+<!ENTITY menu_highlightSyntax.accesskey "с">
+<!ENTITY menu_textReduce.accesskey "м">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY menu_wrapLongLines.title "Переносить длинные строки">
+<!ENTITY menu_highlightSyntax.label "Подсветка синтаксиса">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY closeCmd.accesskey "З">
+<!ENTITY menu_wrapLongLines.accesskey "П">
+<!ENTITY printCmd.accesskey "е">
+<!ENTITY goToLineCmd.accesskey "П">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY textReset.commandkey "0">
+<!ENTITY fileMenu.label "Файл">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY viewMenu.accesskey "В">
+<!ENTITY viewMenu.label "Вид">
+<!ENTITY pageSetupCmd.label "Параметры страницы...">
+<!ENTITY mainWindow.titlemodifierseparator " - ">

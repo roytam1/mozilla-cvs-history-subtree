@@ -1,0 +1,27 @@
+<!ENTITY launch "Открыть файл">
+<!ENTITY unknownSavingTitle "Сохранение #1">
+<!ENTITY progress "Прогресс:">
+<!ENTITY savingTarget "В:">
+<!ENTITY resume "Возобновить">
+<!ENTITY timeElapsed "Затраченное время:">
+<!ENTITY shortTimeFormat "#2:#3">
+<!ENTITY progressMsg "#1 Кб из #2 Кб (#3 Кб/сек.)">
+<!ENTITY unknownOpeningTitle "Открытие #1">
+<!ENTITY cancel "Отмена">
+<!ENTITY reveal "Открыть папку">
+<!ENTITY keep "Не закрывать это окно после завершения загрузки.">
+<!ENTITY savingTitle "Сохранено #2&#037; из #1">
+<!ENTITY openingTarget "С помощью:">
+<!ENTITY unknownTime "Неизвестно">
+<!ENTITY openingTitle "Завершено #2&#037; из #1">
+<!ENTITY timeLeft "Оставшееся время:">
+<!ENTITY close "Закрыть">
+<!ENTITY percentMsg "#1&#037;">
+<!ENTITY savingSource "Сохранение из:">
+<!ENTITY status "Состояние:">
+<!ENTITY completeMsg "Загрузка завершена (затрачено времени: #1)">
+<!ENTITY defaultTitle "Сохранение">
+<!ENTITY longTimeFormat "#1:#2:#3">
+<!ENTITY pausedMsg "Загрузка приостановлена">
+<!ENTITY openingSource "Открытие из:">
+<!ENTITY pause "Приостановить">

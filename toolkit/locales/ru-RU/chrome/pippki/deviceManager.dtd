@@ -1,0 +1,18 @@
+<!ENTITY loaddevice.modname.default "Новый модуль PKCS#11">
+<!ENTITY devmgr.button.unload.label "Выгрузить">
+<!ENTITY devmgr.button.load.label "Загрузить">
+<!ENTITY devmgr.title "Менеджер устройств">
+<!ENTITY loaddevice.filename "Имя файла:">
+<!ENTITY devmgr.button.login.label "Начать сеанс">
+<!ENTITY loaddevice.info "Введите информацию о модуле, который хотите добавить.">
+<!ENTITY devmgr.button.changeslotname.label "Сменить имя разъема">
+<!ENTITY devmgr.details.title "Подробности">
+<!ENTITY devmgr.button.changepw.label "Сменить пароль">
+<!ENTITY devmgr.devlist.label "Модули и устройства защиты">
+<!ENTITY devmgr.button.logout.label "Закончить сеанс">
+<!ENTITY devmgr.status.label "Состояние">
+<!ENTITY devmgr.version.label "Версия">
+<!ENTITY devmgr.details.title2 "Значение">
+<!ENTITY loaddevice.title "Загрука устройства PKCS#11">
+<!ENTITY loaddevice.browse "Обзор...">
+<!ENTITY loaddevice.modname "Имя модуля:">

@@ -1,0 +1,9 @@
+<!ENTITY newserver.reason2 "- Сертификат сайта неполон из-за неправильной настройки сервера.">
+<!ENTITY newserver.reason1 "- Ваш браузер &quot;не знает&quot; центр сертификации, выдавший сертификат сайта.">
+<!ENTITY newserver.notify "Пожалуйста, сообщите о проблеме веб-мастеру сайта.">
+<!ENTITY newserver.session "Принять этот сертификат только на время текущего сеанса">
+<!ENTITY newserver.examine "Проверить сертификат...">
+<!ENTITY newserver.title "Сайт сертифицирован неизвестным центром">
+<!ENTITY newserver.remember "Всегда принимать этот сертификат">
+<!ENTITY newserver.refuse "Не принимать этот сертификат и не соединяться с сайтом">
+<!ENTITY newserver.reasons "Возможные причины ошибки:">

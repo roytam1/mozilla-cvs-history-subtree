@@ -1,0 +1,7 @@
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY path.label "Локальный путь:">
+<!ENTITY window.title "Свойства">
+<!ENTITY dateStarted.label "Начало:">
+<!ENTITY acceptButton.label "Закрыть">
+<!ENTITY downloadedFrom.label "Источник:">
+<!ENTITY dateEnded.label "Завершение:">

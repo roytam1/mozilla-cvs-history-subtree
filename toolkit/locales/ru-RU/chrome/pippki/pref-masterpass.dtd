@@ -1,0 +1,15 @@
+<!ENTITY resetpassword.text "Если вы сбросите мастер-пароль, все ваши сохраненные почтовые и веб-пароли, данные форм, личные сертификаты и закрытые ключи будут утеряны.">
+<!ENTITY lheader "Мастер-пароли">
+<!ENTITY changepassword.text "Ваш мастер-пароль защищает личную информацию (например, пароли для сайтов и сертификаты).">
+<!ENTITY managepassword.asktimeout "Если он не использовался ">
+<!ENTITY managepassword.askfirsttime "В первый раз, когда он понадобится">
+<!ENTITY changepassword.label "Смена мастер-пароля">
+<!ENTITY resetpassword.accesskey "п">
+<!ENTITY managepassword.timeout.unit "минут или дольше">
+<!ENTITY managepassword.text "&brandShortName; будет спрашивать мастер-пароль:">
+<!ENTITY changepassword.accesskey "С">
+<!ENTITY resetpassword.button "Сброс пароля">
+<!ENTITY managepassword.askeverytime "Каждый раз, когда он понадобится">
+<!ENTITY resetpassword.label "Сброс мастер-пароля">
+<!ENTITY managepassword.label "Временной лимит мастер-пароля">
+<!ENTITY changepassword.button "Сменить пароль...">

@@ -1,0 +1,36 @@
+<!ENTITY cmd.properties.label "Свойства">
+<!ENTITY cmd.change.accesskey "И">
+<!ENTITY cmd.pause.label "Приостановить">
+<!ENTITY cmd.openWith.label "Открыть с помощью...">
+<!ENTITY cmd.change.label "Изменить...">
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY starting.label "Начинаю...">
+<!ENTITY cmd.properties.accesskey "й">
+<!ENTITY cmd.change.tooltip "Изменить где и как сохранять файлы">
+<!ENTITY cmd.show.accesskey "п">
+<!ENTITY cmd.open.accesskey "О">
+<!ENTITY installing.label "Идет установка...">
+<!ENTITY cmd.show.label "Показать">
+<!ENTITY cmd.retry.label "Попытаться снова">
+<!ENTITY showFolder.label "Открыть эту папку">
+<!ENTITY cmd.resume.accesskey "з">
+<!ENTITY cmd.remove.accesskey "д">
+<!ENTITY cmd.cleanUp.tooltip "Удаляет завершенные, отмененные и неудавшиеся загрузки из списка">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY failed.label "Ошибка">
+<!ENTITY canceled.label "Отменено">
+<!ENTITY cmd.cancel.label "Отмена">
+<!ENTITY closeWhenDone.tooltip "Закрыть окно со списком загрузок после загрузки всех файлов">
+<!ENTITY cmd.resume.label "Возобновить">
+<!ENTITY done.label "Готово">
+<!ENTITY cmd.cleanUp.accesskey "ч">
+<!ENTITY filesSavedTo.label "Сохранять все закачанные файлы в:">
+<!ENTITY cmd.open.label "Открыть">
+<!ENTITY closeWhenDone.label "Закрыть после завершения загрузок">
+<!ENTITY downloads.title "Загрузки">
+<!ENTITY cmd.cleanUp.label "Очистить">
+<!ENTITY cmd.cancel.accesskey "т">
+<!ENTITY cmd.openWith.accesskey "п">
+<!ENTITY cmd.pause.accesskey "о">
+<!ENTITY cmd.retry.accesskey "с">
+<!ENTITY cmd.remove.label "Удалить">

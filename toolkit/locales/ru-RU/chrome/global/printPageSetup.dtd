@@ -1,0 +1,37 @@
+<!ENTITY shrinkToFit.label "Сжать до ширины страницы">
+<!ENTITY marginTop.label "Сверху:">
+<!ENTITY hfURL.code "[&amp;U]">
+<!ENTITY basic.tab "Формат и свойства">
+<!ENTITY hfPage.code "[&amp;P]">
+<!ENTITY customPrompt.prompt "Введите собственный текст колонтитула">
+<!ENTITY formatGroup.label "Формат">
+<!ENTITY marginLeft.label "Слева:">
+<!ENTITY marginRight.label "Справа:">
+<!ENTITY landscape "Альбомная">
+<!ENTITY headerFooter.label "Колонтитулы">
+<!ENTITY printSetup.title "Параметры страницы">
+<!ENTITY hfPage "Страница #">
+<!ENTITY portrait "Книжная">
+<!ENTITY hfTitle "Заголовок">
+<!ENTITY hfTitle.code "[&amp;T]">
+<!ENTITY hfBlank "--пусто--">
+<!ENTITY marginBottom.label "Снизу:">
+<!ENTITY hfPageAndTotal "Страница # из #">
+<!ENTITY advanced.tab "Поля и колонтитулы">
+<!ENTITY hfLeft.label "Слева:">
+<!ENTITY scalePercent "&#037;">
+<!ENTITY hfPageAndTotal.code "[&amp;PT]">
+<!ENTITY marginUnits.metric "миллиметров">
+<!ENTITY printBG.label "Печать фона (цвета и изображения)">
+<!ENTITY hfDateAndTime.code "&amp;D">
+<!ENTITY hfRight.label "Справа:">
+<!ENTITY hfURL "URL">
+<!ENTITY marginUnits.inches "дюймов">
+<!ENTITY scale.label "Масштаб:">
+<!ENTITY hfCenter.label "По центру:">
+<!ENTITY optionsGroup.label "Свойства">
+<!ENTITY customPrompt.title "Настройка...">
+<!ENTITY marginGroup.label "Поля (#1)">
+<!ENTITY hfCustom "Настройка...">
+<!ENTITY orientation.label "Ориентация:">
+<!ENTITY hfDateAndTime "Дата/время">

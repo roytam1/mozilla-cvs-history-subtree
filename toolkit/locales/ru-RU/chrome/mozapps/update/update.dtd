@@ -1,0 +1,46 @@
+<!ENTITY checking.title "Проверяется наличие обновлений...">
+<!ENTITY noupdates.intro.user.label "&brandShortName; не смог найти доступные обновления.">
+<!ENTITY updateWizard.title "Обновление &brandShortName;">
+<!ENTITY updateCheckError.label "Подробности">
+<!ENTITY errors.intro.label "&brandShortName; столкнулся с проблемами при обновлении, в результате
+                                       не все компоненты были обновлены.">
+<!ENTITY finished.updated.label "&brandShortName; завершил установку доступных обновлений.">
+<!ENTITY found.title "Найдены обновления">
+<!ENTITY mismatch.intro2.label "Они будут отключены до тех пор пока не будут установлены их совместимые версии.">
+<!ENTITY errors.details.accesskey "д">
+<!ENTITY errors.details.label "Подробности">
+<!ENTITY finished.error.label "&brandShortName; не смог загрузить и
+                                                     установить некоторые обновления.">
+<!ENTITY appupdate.intro.label "&brandShortName; Сейчас процесс обновления завершит свою работу и                                       откроет сайт где вы можете скачать последнюю версию                                       &brandShortName;.">
+<!ENTITY installing.disclaimer.label "XXXben - this will not work until we have a scriptable API to XPInstall.">
+<!ENTITY found.instructions.label "Выберите те, что вы хотите установить и нажмите кнопку Установить сейчас для их установки.">
+<!ENTITY noupdates.intro.mismatch.label "&brandShortName; не смог найти доступные обновления -                                             совместимые версии могут быть недоступны в данное время.">
+<!ENTITY noupdates.enableChecking.label "Разрешить &brandShortName; проверять наличие обновлений.">
+<!ENTITY finished.mismatch.label "Нажмите Готово для продолжения загрузки &brandShortName;.">
+<!ENTITY finished.remaining2.label "Некоторые несовместимые компоненты не смогли быть обновлены, возможно                           из-за того, что их совместимые версии недоступны в данное время.                           &brandShortName; будет периодически проверять и информировать                            вас о появлении обновленных версий данных компонентов.">
+<!ENTITY appupdate.title "Обновление &brandShortName;">
+<!ENTITY updateCheckError.description "&brandShortName; столкнулся с проблемами при поиске
+                                        обновлений для некоторых компонентов.">
+<!ENTITY noupdates.intro2.mismatch.label "&brandShortName; будет периодически проверять наличие обновлений и информировать                                       вас о появлении совместимых версий.">
+<!ENTITY updateCheckError.accesskey "п">
+<!ENTITY errors.title "Проблемы произошедшие во время обновления">
+<!ENTITY noupdates.title "Обновления не найдены">
+<!ENTITY finished.enableChecking.label "Разрешить &brandShortName; проверять наличие обновлений.">
+<!ENTITY mismatch.title "Несовместимые компоненты">
+<!ENTITY checking.intro.label "&brandShortName; проверяет наличие доступных обновлений...">
+<!ENTITY from.label "от:">
+<!ENTITY noupdates.intro3.mismatch.label "&brandShortName; будет периодически проверять наличие обновлений и информировать                                        вас о появлении совместимых версий.">
+<!ENTITY installing.intro.label "Идет загрузка и установка обновлений...">
+<!ENTITY mismatch.intro1.label "Следующие компоненты не совместимы с новой версией                                              &brandShortName; которую вы только что установили:">
+<!ENTITY installing.title "Установка обновлений">
+<!ENTITY finished.title "Обновление завершено">
+<!ENTITY appInfo.label "Данное обновление должно быть установлено отдельно от остальных. ">
+<!ENTITY mismatch.intro3.label "&brandShortName; может проверить наличие новых, совместимых                                        версий данных компонентов и установить их.">
+<!ENTITY finished.remaining.label "Некоторые несовместимые компоненты не смогли быть обновлены, возможно                          из-за того, что их совместимые версии недоступны в данное время.                          &brandShortName; будет периодически проверять и информировать                           вас о появлении обновленных версий данных компонентов.">
+<!ENTITY found.intro.label "&brandShortName; нашел следующие доступные обновления:">
+<!ENTITY resolveMaxVersion.intro1.label "&brandShortName; проверяет наличие обновлений совместимости для ваших расширений и тем...">
+<!ENTITY version.title "Проверяется наличие обновлений совместимости">
+<!ENTITY resolveMaxVersion.title "Проверяется наличие обновлений совместимости для ваших расширений и тем...">
+<!ENTITY version.status "Это может занять несколько минут...">
+<!ENTITY checking.status "Это может занять несколько минут...">
+<!ENTITY version.intro.label "&brandShortName; проверяет наличие обновлений совместимости для ваших расширений и тем...">
