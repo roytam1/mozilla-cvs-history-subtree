@@ -1925,7 +1925,7 @@ void DrawBGSubimage(CRDFImage* pImage, HDC hDC, int xSrcOffset, int ySrcOffset, 
 #define WHITE		RGB(255, 255, 255)
 #define BLACK		RGB(0, 0, 0)
 
-static void
+void
 GetSystem3DColors(COLORREF rgbBackground, COLORREF& rgbLightColor, COLORREF& rgbDarkColor)
 {
 #ifdef XP_WIN32

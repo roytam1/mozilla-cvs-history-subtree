@@ -1947,15 +1947,15 @@ void CRDFToolbar::OnPaint(void)
 	HT_Resource top = HT_TopNode(GetHTView());
 	void* data;
 	COLORREF backgroundColor = GetSysColor(COLOR_BTNFACE);
-	COLORREF shadowColor = GetSysColor(COLOR_3DSHADOW);
-	COLORREF highlightColor = GetSysColor(COLOR_3DLIGHT);
+	COLORREF shadowColor = backgroundColor;
+	COLORREF highlightColor = backgroundColor;
 
 	HT_GetNodeData(top, gNavCenter->viewBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 	{
 		WFE_ParseColor((char*)data, &backgroundColor);
-		Compute3DColors(backgroundColor, highlightColor, shadowColor);
 	}
+	Compute3DColors(backgroundColor, highlightColor, shadowColor);
 	SetBackgroundColor(backgroundColor);
 	SetShadowColor(shadowColor);
 	SetHighlightColor(highlightColor);
