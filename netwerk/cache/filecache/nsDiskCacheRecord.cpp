@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -69,7 +70,6 @@ nsDiskCacheRecord::nsDiskCacheRecord(nsIDBAccessor* db, nsNetDiskCache* aCache) 
   mNumChannels(0) ,
   mDiskCache(aCache) 
 {
-
   NS_INIT_REFCNT();
   NS_ASSERTION(mDiskCache, "Must have an nsNetDiskCache");
   NS_ADDREF(mDiskCache);
@@ -77,7 +77,7 @@ nsDiskCacheRecord::nsDiskCacheRecord(nsIDBAccessor* db, nsNetDiskCache* aCache) 
 
 // mem alloced. so caller should do free() on key. 
 NS_IMETHODIMP
-nsDiskCacheRecord::Init(const char* key, PRUint32 length) 
+nsDiskCacheRecord::Init(const char* key, PRUint32 length, PRInt32 ID) 
 {
   NS_NewFileSpec(getter_AddRefs(mFile));
   if(!mFile)
@@ -92,9 +92,7 @@ nsDiskCacheRecord::Init(const char* key, PRUint32 length)
   memcpy(mKey, key, length) ;
 
   // get RecordID
-  // FUR!! Another disk access ?  If called from GetCachedData, ID is already known
-  mDB->GetID(key, length, &mRecordID) ;
-  // FUR - check for GetID failure
+  mRecordID = ID ;
 
   // setup the file name
   nsCOMPtr<nsIFileSpec> dbFolder ;
@@ -107,12 +105,10 @@ nsDiskCacheRecord::Init(const char* key, PRUint32 length)
   // dir is a hash result of mRecordID%32, hope it's enough 
   char filename[9], dirName[3] ;
   
-  // FUR!! - should the format string be "%.02x".  How does this work !?
-  PR_snprintf(dirName, 3, "%.2x", (((PRUint32)mRecordID) % 32)) ;
+  PR_snprintf(dirName, 3, "%02x", (((PRUint32)mRecordID) % 32)) ;
   mFile->AppendRelativeUnixPath(dirName) ;
 
-  // FUR!! - should the format string be "%.08x".  How does this work !?
-  PR_snprintf(filename, 9, "%.8x", mRecordID) ;
+  PR_snprintf(filename, 9, "%08x", mRecordID) ;
   mFile->AppendRelativeUnixPath(filename) ;
 
   return NS_OK ;
@@ -120,11 +116,12 @@ nsDiskCacheRecord::Init(const char* key, PRUint32 length)
 
 nsDiskCacheRecord::~nsDiskCacheRecord()
 {
-//  printf(" ~nsDiskCacheRecord()\n") ;
   if(mKey)
     nsAllocator::Free(mKey) ;
   if(mMetaData)
     nsAllocator::Free(mMetaData) ;
+  if(mInfo) 
+    nsAllocator::Free(mInfo) ;
 
   NS_IF_RELEASE(mDiskCache);
 }
@@ -205,7 +202,6 @@ nsDiskCacheRecord::SetMetaData(PRUint32 length, const char* data)
   // write through into mDB
   rv = mDB->Put(mRecordID, mInfo, mInfoSize) ;
 
-  // FUR - mInfo leaking ?
   return rv ;
 }
 
