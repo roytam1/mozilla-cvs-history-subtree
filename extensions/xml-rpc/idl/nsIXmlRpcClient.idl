@@ -44,6 +44,20 @@ interface nsIXmlRpcClient: nsISupports {
     void init(in string serverURL);
 
     /**
+     * Set authentication info if needed.  Both parameters must be
+     * specified for authentication to be enabled.
+     *
+     * @param username  username to be used if asked to authenticate
+     * @param password  password to be used if asked to authenticate
+     */
+    void setAuthentication(in string username, in string password);
+
+    /**
+     * Clear authentication info.
+     */
+    void clearAuthentication(in string username, in string password);
+
+    /**
      * The URL of the XML-RPC server
      */
     readonly attribute nsIURL serverURL;
