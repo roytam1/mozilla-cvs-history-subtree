@@ -155,9 +155,10 @@ protected:
   // not start on an odd bit boundary. If mSpan is 0 then mOrigCell is in effect 
   // and the data does not represent a span. If mSpan is 1, then mBits is in
   // effect and the data represents a span.
+  // mBits *must* be an unsigned long to work across platforms (32 and 64 bits)
   union {
     nsTableCellFrame* mOrigCell;
-    PRUint32          mBits;
+    unsigned long     mBits;
   };
 };
 
