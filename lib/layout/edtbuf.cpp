@@ -6174,6 +6174,9 @@ void CEditBuffer::ChangeTableSelection(ED_HitType iHitType, ED_MoveSelType iMove
                 if( !pCell )
                     pCell = pTable->GetLastCellInColumn(pCurrentCell);
                 break;
+
+			default:
+				break;
         }
     } 
     else if( iMoveType == ED_MOVE_NEXT )
@@ -6201,6 +6204,9 @@ void CEditBuffer::ChangeTableSelection(ED_HitType iHitType, ED_MoveSelType iMove
                     // At last row end -- wrap to first cell of current column
                     pCell = pTable->GetFirstCellInColumn(pCurrentCell);
                 break;
+
+			default:
+				break;
         }
     }
 
