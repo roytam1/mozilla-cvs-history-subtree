@@ -1503,24 +1503,18 @@ static void _md_CreateEventQueue( PLEventQueue *eventQueue )
     /* Must have HMQ for this & can't assume we already have appshell */
     if( FALSE == WinQueryQueueInfo( HMQ_CURRENT, NULL, 0))
     {
+       PPIB pPib;
+       PTIB pTib;
        HAB hab;
        HMQ hmq;
+
+       /* Set our app to be a PM app before attempting Win calls */
+       DosGetInfoBlocks(&pTib, &pPib);
+       pPib->pib_ultype = 3;
+
        hab = WinInitialize(0);
        hmq = WinCreateMsgQueue(hab, 0);
-       if (!hmq) {
-         /* There seem to be cases where our code in NSPR */
-         /* to make us a PM app isn't working.  If creating */
-         /* the message queue fails because we are not PM, */
-         /* try the NSPR code again. */
-         if (WinGetLastError(0) == PMERR_NOT_IN_A_PM_SESSION) {
-           PPIB pPib;
-           PTIB pTib;
-           DosGetInfoBlocks(&pTib, &pPib);
-           pPib->pib_ultype = 3; /* PM */
-           hmq = WinCreateMsgQueue(hab, 0);
-           PR_ASSERT(hmq);
-         }
-       }
+       PR_ASSERT(hmq);
     }
 
     if( !_pr_PostEventMsgId)
