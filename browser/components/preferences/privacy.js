@@ -147,7 +147,7 @@ var gPrivacyPane = {
   {
     document.documentElement.openWindow("Browser:Cookies",
                                         "chrome://browser/content/preferences/cookies.xul",
-                                        "", "cookieManager");
+                                        "", null);
   },
   viewDownloads: function (aCategory) 
   {

@@ -349,21 +349,24 @@ const gPopupBlockerObserver = {
     }
     catch (e) { } 
 
+    var bundlePreferences = document.getElementById("bundle_preferences");
+    var params = { blockVisible   : false, 
+                   sessionVisible : false, 
+                   allowVisible   : true, 
+                   prefilledHost  : host, 
+                   permissionType : "popup",
+                   windowTitle    : bundlePreferences.getString("popuppermissionstitle"),
+                   introText      : bundlePreferences.getString("popuppermissionstext") };
     var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Components.interfaces.nsIWindowMediator);
-    var existingWindow = wm.getMostRecentWindow("exceptions");
+    var existingWindow = wm.getMostRecentWindow("Browser:Permissions");
     if (existingWindow) {
-      existingWindow.setHost(host);
+      existingWindow.initWithParams(params);
       existingWindow.focus();
     }
-    else {
-      var params = { blockVisible: false, 
-                     allowVisible: true, 
-                     prefilledHost: host, 
-                     permissionType: "popup" };
-      window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=popup",
-                        "_blank", "chrome,modal,resizable=yes", params);
-    }
+    else
+      window.openDialog("chrome://browser/content/preferences/permissions.xul",
+                        "_blank", "resizable,dialog=no,centerscreen", params);
   },
   
   dontShowMessage: function ()
@@ -479,22 +482,25 @@ const gXPInstallObserver = {
     case "xpinstall-install-edit-permissions":
       var browser = this._getBrowser(aSubject.QueryInterface(Components.interfaces.nsIDocShell));
       if (browser) {
-        var webNav = aSubject.QueryInterface(Components.interfaces.nsIWebNavigation);
+        var bundlePreferences = document.getElementById("bundle_preferences");
+        var params = { blockVisible   : false, 
+                       sessionVisible : false, 
+                       allowVisible   : true, 
+                       prefilledHost  : webNav.currentURI.host, 
+                       permissionType : "install",
+                       windowTitle    : bundlePreferences.getString("installpermissionstitle"),
+                       introText      : bundlePreferences.getString("installpermissionstext") };
+       var webNav = aSubject.QueryInterface(Components.interfaces.nsIWebNavigation);
         var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                           .getService(Components.interfaces.nsIWindowMediator);
-        var existingWindow = wm.getMostRecentWindow("exceptions");
+        var existingWindow = wm.getMostRecentWindow("Browser:Permissions");
         if (existingWindow) {
-          existingWindow.setHost(webNav.currentURI.host);
+          existingWindow.initWithParams(params);
           existingWindow.focus();
         }
-        else {
-          var params = { blockVisible:    false,
-                         allowVisible:    true,
-                         prefilledHost:   webNav.currentURI.host,
-                         permissionType:  "install" };
-          window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=install",
-                            "_blank", "chrome,modal,resizable=yes", params);
-        }
+        else
+          window.openDialog("chrome://browser/content/preferences/permissions.xul",
+                            "_blank", "resizable,dialog=no,centerscreen", params);
               
         var tabbrowser = getBrowser();
         tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");

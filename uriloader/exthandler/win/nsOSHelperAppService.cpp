@@ -51,6 +51,10 @@
 #include "plstr.h"
 #include "nsAutoPtr.h"
 #include "nsNativeCharsetUtils.h"
+#include "nsRDFCID.h"
+#include "rdf.h"
+#include "nsIRDFService.h"
+#include "nsHelperAppRDF.h"
 
 // we need windows.h to read out registry information...
 #include <windows.h>
@@ -59,6 +63,8 @@
 #include <shellapi.h>
 
 #define LOG(args) PR_LOG(mLog, PR_LOG_DEBUG, args)
+
+static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 // helper methods: forward declarations...
 static BYTE * GetValueBytes( HKEY hKey, const char *pValueName, DWORD *pLen=0);
@@ -573,6 +579,59 @@ already_AddRefed<nsMIMEInfoWin> nsOSHelperAppService::GetByExtension(const nsAFl
   return nsnull;
 }
 
+already_AddRefed<nsMIMEInfoWin> nsOSHelperAppService::GetByUsingOverrideDatabase(const char* aMIMEType)
+{
+  nsMIMEInfoWin* mi = nsnull;
+  nsresult rv = InitDataSource();
+  if (NS_FAILED(rv)) return nsnull;
+
+  if (mOverRideDataSource)
+  {
+    // Get the RDF service.
+    nsCOMPtr<nsIRDFService> rdfService(do_GetService(kRDFServiceCID, &rv));
+    if (NS_FAILED(rv)) return nsnull;
+    
+    // Build uri for the mimetype resource.
+    nsCAutoString contentTypeNodeName(NC_CONTENT_NODE_PREFIX);
+    nsCAutoString contentType(aMIMEType);
+    ToLowerCase(contentType);
+    contentTypeNodeName.Append(contentType);
+    
+    // Get the mime type resource.
+    nsCOMPtr<nsIRDFResource> contentTypeNodeResource;
+    rdfService->GetResource(contentTypeNodeName, getter_AddRefs(contentTypeNodeResource));
+    nsCOMPtr<nsIRDFResource> fileExtensionsArc;
+    rdfService->GetResource(NS_LITERAL_CSTRING(NC_RDF_FILEEXTENSIONS), getter_AddRefs(fileExtensionsArc));
+
+    nsCOMPtr<nsISimpleEnumerator> targets;
+    rv = mOverRideDataSource->GetTargets(contentTypeNodeResource, fileExtensionsArc, PR_TRUE, getter_AddRefs(targets));
+    if (NS_FAILED(rv) || !targets)
+      return nsnull;
+
+    do {
+      PRBool hasMore = PR_FALSE;
+      targets->HasMoreElements(&hasMore);
+      if (!hasMore)
+        break;
+
+      nsCOMPtr<nsISupports> supp;
+      targets->GetNext(getter_AddRefs(supp));
+      nsCOMPtr<nsIRDFLiteral> extension(do_QueryInterface(supp));
+      if (extension) {
+        const PRUnichar* extensionValue;
+        extension->GetValueConst(&extensionValue);
+        nsDependentString extensionStr(extensionValue);
+        mi = GetByExtension(extensionStr, aMIMEType).get();
+        if (mi)
+          break;
+      }
+    }
+    while (1);
+  }
+
+  return mi;
+}
+
 already_AddRefed<nsIMIMEInfo> nsOSHelperAppService::GetMIMEInfoFromOS(const nsACString& aMIMEType, const nsACString& aFileExt, PRBool *aFound)
 {
   *aFound = PR_TRUE;
@@ -603,6 +662,9 @@ already_AddRefed<nsIMIMEInfo> nsOSHelperAppService::GetMIMEInfoFromOS(const nsAC
   nsMIMEInfoWin* mi = nsnull;
   if (!fileExtension.IsEmpty())
     mi = GetByExtension(fileExtension, flatType.get()).get();
+  else {
+    mi = GetByUsingOverrideDatabase(flatType.get()).get();
+  }
   LOG(("Extension lookup on '%s' found: 0x%p\n", fileExtension.get(), mi));
 
   PRBool hasDefault = PR_FALSE;

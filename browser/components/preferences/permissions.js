@@ -19,6 +19,7 @@
 # 
 # Contributor(s):
 #   Ben Goodger <ben@mozilla.org>
+#   Blake Ross <firefox@blakeross.com>
 # 
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,9 +38,8 @@
 const nsIPermissionManager = Components.interfaces.nsIPermissionManager;
 const nsICookiePermission = Components.interfaces.nsICookiePermission;
 
-function Permission(id, host, rawHost, type, capability, perm) 
+function Permission(host, rawHost, type, capability, perm) 
 {
-  this.id = id;
   this.host = host;
   this.rawHost = rawHost;
   this.type = type;
@@ -83,6 +83,23 @@ var gPermissionManager = {
     getCellProperties: function(row,column,prop){}
   },
   
+  _getCapabilityString: function (aPermission)
+  {
+    var stringKey = null;
+    switch (aPermission.capability) {
+    case nsIPermissionManager.ALLOW_ACTION:
+      stringKey = "can";
+      break;
+    case nsIPermissionManager.DENY_ACTION:
+      stringKey = "cannot";
+      break;
+    case nsICookiePermission.ACCESS_SESSION:
+      stringKey = "canSession";
+      break;
+    }
+    return this._bundle.getString(stringKey);
+  },
+  
   addPermission: function (aPermission)
   {
     var textbox = document.getElementById("url");
@@ -100,36 +117,24 @@ var gPermissionManager = {
       promptservice.alert(window,title,message);
     }
 
-    // we need this whether the perm exists or not
-    var stringKey = null;
-    switch (aPermission) {
-    case nsIPermissionManager.ALLOW_ACTION:
-      stringKey = "can";
-      break;
-    case nsIPermissionManager.DENY_ACTION:
-      stringKey = "cannot";
-      break;
-    case nsICookiePermission.ACCESS_SESSION:
-      stringKey = "canSession";
-      break;
-    } 
+    var capabilityString = this._getCapabilityString(aPermission);
+
     // check whether the permission already exists, if not, add it
     var exists = false;
     for (var i = 0; i < this._permissions.length; ++i) {
       if (this._permissions[i].rawHost == host) {
         exists = true;
-        this._permissions[i].capability = this._bundle.getString(stringKey);
+        this._permissions[i].capability = capabilityString;
         this._permissions[i].perm = aPermission;
         break;
       }
     }
     
     if (!exists) {
-      var p = new Permission(this._permissions.length, 
-                             host, 
+      var p = new Permission(host, 
                              (host.charAt(0) == ".") ? host.substring(1,host.length) : host, 
                              this._type, 
-                             this._bundle.getString(stringKey), 
+                             capabilityString,
                              aPermission);
       this._permissions.push(p);
       
@@ -173,7 +178,7 @@ var gPermissionManager = {
   init: function (aParams)
   {
     this._type = aParams.permissionType;
-
+    
     var permissionsText = document.getElementById("permissionsText");
     while (permissionsText.hasChildNodes())
       permissionsText.removeChild(permissionsText.firstChild);
@@ -208,7 +213,39 @@ var gPermissionManager = {
   
   observe: function (aSubject, aTopic, aData)
   {
-    if (aTopic == "perm-changed") dump("*** permission changed - WRITEME\n"); ;
+    if (aTopic == "perm-changed") {
+      var permission = aSubject.QueryInterface(Components.interfaces.nsIPermission);
+      if (aData == "added") {
+        this._addPermissionToList(permission);
+        ++this._view._rowCount;
+        this._tree.treeBoxObject.rowCountChanged(this._view.rowCount - 1, 1);        
+        // Re-do the sort, since we inserted this new item at the end. 
+        gTreeUtils.sort(this._tree, this._view, this._permissions, 
+                        this._lastPermissionSortColumn, 
+                        this._lastPermissionSortAscending);        
+      }
+      else if (aData == "changed") {
+        for (var i = 0; i < this._permissions.length; ++i) {
+          if (this._permissions[i].host == permission.host) {
+            this._permissions[i].capability = this._getCapabilityString(permission);
+            break;
+          }
+        }
+        // Re-do the sort, if the status changed from Block to Allow
+        // or vice versa, since if we're sorted on status, we may no
+        // longer be in order. 
+        if (this._lastPermissionSortColumn.id == "statusCol") {
+          gTreeUtils.sort(this._tree, this._view, this._permissions, 
+                          this._lastPermissionSortColumn, 
+                          this._lastPermissionSortAscending);
+        }
+        this._tree.treeBoxObject.invalidate();
+      }
+      // No UI other than this window causes this method to be sent a "deleted"
+      // notification, so we don't need to implement it since Delete is handled
+      // directly by the Permission Removal handlers. If that ever changes, those
+      // implementations will have to move into here. 
+    }
   },
   
   onPermissionSelected: function ()
@@ -277,29 +314,7 @@ var gPermissionManager = {
     var enumerator = this._pm.enumerator;
     while (enumerator.hasMoreElements()) {
       var nextPermission = enumerator.getNext().QueryInterface(Components.interfaces.nsIPermission);
-      if (nextPermission.type == this._type) {
-        var host = nextPermission.host;
-        var capability = null;
-        switch (nextPermission.capability) {
-        case nsIPermissionManager.ALLOW_ACTION:
-          capability = "can";
-          break;
-        case nsIPermissionManager.DENY_ACTION:
-          capability = "cannot";
-          break;
-        // we should only ever hit this for cookies
-        case nsICookiePermission.ACCESS_SESSION:
-          capability = "canSession";
-          break;
-        } 
-        var capabilityString = this._bundle.getString(capability);
-        var p = new Permission(count++, host,
-                               (host.charAt(0) == ".") ? host.substring(1,host.length) : host,
-                               nextPermission.type,
-                               capabilityString, 
-                               nextPermission.capability);
-        this._permissions.push(p);
-      }
+      this._addPermissionToList(nextPermission);
     }
    
     this._view._rowCount = this._permissions.length;
@@ -310,6 +325,20 @@ var gPermissionManager = {
 
     // disable "remove all" button if there are none
     document.getElementById("removeAllPermissions").disabled = this._permissions.length == 0;
+  },
+  
+  _addPermissionToList: function (aPermission)
+  {
+    if (aPermission.type == this._type) {
+      var host = aPermission.host;
+      var capabilityString = this._getCapabilityString(aPermission);
+      var p = new Permission(host,
+                             (host.charAt(0) == ".") ? host.substring(1,host.length) : host,
+                             aPermission.type,
+                             capabilityString, 
+                             aPermission.capability);
+      this._permissions.push(p);
+    }  
   },
   
   setHost: function (aHost)

@@ -710,8 +710,9 @@ var gDownloadActionsWindow = {
   {
     this._view._filterValue = aFilterValue;
     var actions = [];
-    for (var i = 0; i < this._actions.length; ++i) {
-      var action = this._actions[i];
+    var collection = this._view._usingExclusionSet ? this._view._exclusionSet : this._actions;
+    for (var i = 0; i < collection.length; ++i) {
+      var action = collection[i];
       if (this._actionMatchesFilter(action)) 
         actions.push(action);
     }

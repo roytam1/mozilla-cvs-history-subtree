@@ -75,6 +75,7 @@ protected:
   // Lookup a mime info by extension, using an optional type hint
   already_AddRefed<nsMIMEInfoWin> GetByExtension(const nsAFlatString& aFileExt, const char *aTypeHint = nsnull);
   nsresult FindOSMimeInfoForType(const char * aMimeContentType, nsIURI * aURI, char ** aFileExtension, nsIMIMEInfo ** aMIMEInfo);
+  already_AddRefed<nsMIMEInfoWin> GetByUsingOverrideDatabase(const char* aMIMEType);
 
   /** Whether we're running on an OS that supports the *W registry functions */
   static PRBool mIsNT;

@@ -80,47 +80,52 @@
         <groupbox orient="vertical" flex="1">
           <caption label="&itemHistory.label;"/>
           <hbox align="center">
-            <label>&rememberPages.label;</label>
+            <label control="historyDays" accesskey="&rememberPages.accesskey;">&rememberPages.label;</label>
             <textbox id="historyDays" size="2" preference="browser.history_expire_days"/>
             <label>&rememberDays.label;</label>
           </hbox>
           <separator flex="1"/>
           <hbox pack="end">
-            <button label="&clearHistory.label;" oncommand="gPrivacyPane.clear(this);"
-                    item="history"/>
+            <button label="&clearHistory.label;" accesskey="&clearHistory.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="history"/>
           </hbox>
         </groupbox>
         <groupbox orient="vertical" flex="1">
           <caption label="&itemFormData.label;"/>
           <description>&savedFormData.intro;</description>
           <vbox align="start">
-            <checkbox id="saveFormHistory" label="&enableFormFill.label;" preference="browser.formfill.enable"/>
+            <checkbox id="saveFormHistory" preference="browser.formfill.enable"
+                      label="&enableFormFill.label;" accesskey="&enableFormFill.accesskey;"/>
           </vbox>
           <separator flex="1"/>
           <hbox pack="end">
-            <button label="&clearFormData.label;" oncommand="gPrivacyPane.clear(this);"
-                    item="formdata"/>
+            <button label="&clearFormData.label;" accesskey="&clearFormData.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="formdata"/>
           </hbox>
         </groupbox>
         <groupbox orient="vertical" flex="1">
           <caption label="&itemPasswords.label;"/>
           <description>&savedPasswords.intro;</description>
           <hbox align="center">
-            <checkbox id="savePasswords" label="&enablePasswords.label;" 
+            <checkbox id="savePasswords" 
+                      label="&enablePasswords.label;" accesskey="&enablePasswords.accesskey;"
                       preference="signon.rememberSignons" flex="1"/>
             <!-- XXXben - check for keychain access use -->
-            <button id="setMasterPassword" label="&setMasterPassword.label;"
+            <button id="setMasterPassword" 
+                    label="&setMasterPassword.label;" accesskey="&setMasterPassword.accesskey;"
                     oncommand="gPrivacyPane.changeMasterPassword();"/>
           </hbox>
           <separator flex="1"/>
           <hbox>
-            <button label="&viewPasswords.label;" oncommand="gPrivacyPane.viewPasswords();"/>
+            <button label="&viewPasswords.label;" accesskey="&viewPasswords.accesskey;"
+                    oncommand="gPrivacyPane.viewPasswords();"/>
           </hbox>
         </groupbox>
         <groupbox orient="vertical" flex="1">
           <caption label="&itemDownloads.label;"/>
           <description>&downloadManager.intro;</description>
-          <description control="downloadsRetentionPolicy">&downloadsRetentionPolicy.label;</description> 
+          <label accesskey="&downloadsRetentionPolicy.accesskey;" 
+                 control="downloadsRetentionPolicy">&downloadsRetentionPolicy.label;</label> 
           <hbox>
             <menulist id="downloadsRetentionPolicy" 
                       preference="browser.download.manager.retention">
@@ -133,10 +138,11 @@
           </hbox>
           <separator flex="1"/>
           <hbox>
-            <button label="&viewDownloads.label;" oncommand="gPrivacyPane.viewDownloads();"/>
+            <button label="&viewDownloads.label;" accesskey="&viewDownloads.accesskey;"
+                    oncommand="gPrivacyPane.viewDownloads();"/>
             <spring flex="1"/>
-            <button label="&clearDownloads.label;" oncommand="gPrivacyPane.clear(this);"
-                    item="downloads"/>
+            <button label="&clearDownloads.label;" accesskey="&clearDownloads.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="downloads"/>
           </hbox>
         </groupbox>
         <groupbox orient="vertical" flex="1">
@@ -147,26 +153,29 @@
           <vbox>
             <description>&cookies.intro;</description>
             <hbox>
-              <checkbox id="enableCookies" label="&enableCookies.label;"
-                        preference="network.cookie.cookieBehavior"
+              <checkbox id="enableCookies" preference="network.cookie.cookieBehavior"
+                        label="&enableCookies.label;" accesskey="&enableCookies.accesskey;"
                         onpreferenceread="return gPrivacyPane.readEnableCookiesPref();"
                         onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
               <spring flex="1"/>
-              <button id="cookieExceptions" label="&exceptions.label;"
-                      oncommand="gPrivacyPane.viewCookieExceptions();"/>
+              <button id="cookieExceptions" oncommand="gPrivacyPane.viewCookieExceptions();"
+                      label="&exceptions.label;" accesskey="&cookieExceptions.accesskey;"/>
             </hbox>
             <vbox align="start">
               <checkbox id="enableCookiesForOriginating" class="indent"
                         label="&enableCookiesForOriginating.label;"
+                        accesskey="&enableCookiesForOriginating.accesskey;"
                         preference="network.cookie.cookieBehavior"
                         onpreferenceread="return gPrivacyPane.readEnableRestrictedPref();"
                         onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
               <checkbox id="enableCookiesNotRemoved" class="indent"
                         label="&enableCookiesNotRemoved.label;"
+                        accesskey="&enableCookiesNotRemoved.accesskey;"
                         preference="network.cookie.blockFutureCookies"/>
               <separator class="thin"/>
               <hbox align="center" class="indent">
-                <label preference="network.cookie.lifetimePolicy">&keepCookies.label;</label>
+                <label control="networkCookieLifetime" 
+                       accesskey="&keepCookies.accesskey;">&keepCookies.label;</label>
                 <menulist id="networkCookieLifetime" 
                           preference="network.cookie.lifetimePolicy">
                   <menupopup>
@@ -184,15 +193,15 @@
             <button label="&viewCookies.label;" accesskey="&viewCookies.accesskey;"
                     oncommand="gPrivacyPane.viewCookies();"/>
             <spring flex="1"/>
-            <button label="&clearCookies.label;" oncommand="gPrivacyPane.clear(this);"
-                    item="cookies"/>
+            <button label="&clearCookies.label;" accesskey="&clearCookies.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="cookies"/>
           </hbox>
         </groupbox>
         <groupbox orient="vertical" flex="1">
           <caption label="&itemCache.label;"/>
           <description>&cache.intro;</description>
           <hbox align="center">
-            <label>&cacheUseUpTo.label;</label>
+            <label accesskey="&cacheUseUpTo.accesskey;" control="cacheSize">&cacheUseUpTo.label;</label>
             <textbox id="cacheSize" size="2" preference="browser.cache.disk.capacity"
                      onpreferenceread="return gPrivacyPane.readCacheSizePref();"
                      onpreferencewrite="return gPrivacyPane.writeCacheSizePref();"/>
@@ -200,15 +209,16 @@
           </hbox>
           <separator flex="1"/>
           <hbox pack="end">
-            <button label="&clearCache.label;" oncommand="gPrivacyPane.clear(this);"
-                    item="cache"/>
+            <button label="&clearCache.label;" accesskey="&clearCache.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="cache"/>
           </hbox>
         </groupbox>
       </deck>
     </hbox>
     <separator class="thin"/>
     <hbox align="center">
-      <button label="&sanitizeSettings.label;" oncommand="gPrivacyPane.showSanitizeSettings();"/>
+      <button label="&sanitizeSettings.label;" accesskey="&sanitizeSettings.accesskey;"
+              oncommand="gPrivacyPane.showSanitizeSettings();"/>
       <description flex="1">&sanitize.intro;</description>
     </hbox>
     <separator/>

@@ -81,13 +81,13 @@ var gTreeUtils = {
     selection.selectEventsSuppressed = false;
   },
   
-  sort: function (aTree, aView, aTable, aColumn, 
+  sort: function (aTree, aView, aDataSet, aColumn, 
                   aLastSortColumn, aLastSortAscending) 
   {
     var ascending = (aColumn == aLastSortColumn) ? !aLastSortAscending : true;
-    aTable.sort(function (a, b) { return a[aColumn].toLowerCase().localeCompare(b[aColumn].toLowerCase()); });
+    aDataSet.sort(function (a, b) { return a[aColumn].toLowerCase().localeCompare(b[aColumn].toLowerCase()); });
     if (!ascending)
-      aTable.reverse();
+      aDataSet.reverse();
     
     aTree.view.selection.select(-1);
     aTree.view.selection.select(0);

@@ -709,7 +709,7 @@
             win.focus();
           }
           else 
-            win = openDialog(aURL, "_blank", "resizable,dialog=no,centerscreen", (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
+            win = openDialog(aURL, "_blank", "resizable,dialog=no,centerscreen" + (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
           return win;
         </body>
       </method>
