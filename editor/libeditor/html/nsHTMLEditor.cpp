@@ -2575,6 +2575,8 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
   res = iter.AppendList(functor, nodeList);
   NS_ENSURE_SUCCESS(res, res);   
 
+  // are there any table elements in the list?
+  
   // node and offset for insertion
   nsCOMPtr<nsIDOMNode> parentNode;
   PRInt32 offsetOfNewNode;
@@ -2649,11 +2651,100 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
       parentNode = temp;
     }
 
-    // Loop over the node list and paste the nodes:
-    nsCOMPtr<nsIDOMNode> lastInsertNode, insertedContextParent;
-    PRBool bDidInsert = PR_FALSE;
+    // scan insertion list for table elements (other than table).  
+    PRBool bHaveTableGuts = PR_FALSE;
+    PRBool bHaveListGuts  = PR_FALSE;
     PRUint32 listCount, j;
     nodeList->Count(&listCount);
+    for (j=0; j<listCount; j++)
+    {
+      nsCOMPtr<nsISupports> isupports = nodeList->ElementAt(j);
+      nsCOMPtr<nsIDOMNode> curNode( do_QueryInterface(isupports) );
+
+      NS_ENSURE_TRUE(curNode, NS_ERROR_FAILURE);
+      if (nsHTMLEditUtils::IsTableElement(curNode) && !nsHTMLEditUtils::IsTable(curNode))
+      {
+        bHaveTableGuts = PR_TRUE;
+      }
+      if (nsHTMLEditUtils::IsListItem(curNode))
+      {
+        bHaveListGuts = PR_TRUE;
+      }
+      if (bHaveTableGuts && bHaveListGuts) break; // no need to continue
+    }
+    
+    // if we have pieces of tables to be inserted, then make sure beginning content
+    // is not in a table.  If it is, let's force the paste to deal with table elements
+    // right away, so that it doesn't orphan some table contents outside the table.
+    if (bHaveTableGuts)
+    {
+      nsCOMPtr<nsISupports> isupports = nodeList->ElementAt(0);
+      nsCOMPtr<nsIDOMNode> curNode( do_QueryInterface(isupports) );
+      if (!nsHTMLEditUtils::IsTableElement(curNode))
+      {
+        nsCOMPtr<nsIDOMNode> parent, tmp;
+        curNode->GetParentNode(getter_AddRefs(parent));
+        while (parent)
+        {
+          if (nsHTMLEditUtils::IsTableElement(parent))
+          {
+            isupports = do_QueryInterface(parent);
+            nodeList->ReplaceElementAt(isupports, 0);
+            // postprocess list to remove any descendants of this node
+            // so that we dont insert them twice.
+            do
+            {
+              isupports = nodeList->ElementAt(1);
+              tmp = do_QueryInterface(isupports);
+              if (nsHTMLEditUtils::IsDescendantOf(tmp, parent))
+                nodeList->RemoveElementAt(1);
+              else
+                break;
+            } while(tmp);
+            break;
+          }
+          parent->GetParentNode(getter_AddRefs(curNode));
+          parent = curNode;
+        }
+      }
+    }
+    // same story as above, only for pieces of lists.
+    if (bHaveListGuts)
+    {
+      nsCOMPtr<nsISupports> isupports = nodeList->ElementAt(0);
+      nsCOMPtr<nsIDOMNode> curNode( do_QueryInterface(isupports) );
+      if (!nsHTMLEditUtils::IsListItem(curNode))
+      {
+        nsCOMPtr<nsIDOMNode> parent;
+        curNode->GetParentNode(getter_AddRefs(parent));
+        while (parent)
+        {
+          if (nsHTMLEditUtils::IsListItem(parent))
+          {
+            isupports = do_QueryInterface(parent);
+            nodeList->ReplaceElementAt(isupports, 0);
+            // postprocess list to remove any descendants of this node
+            // so that we dont insert them twice.
+            do
+            {
+              isupports = nodeList->ElementAt(1);
+              tmp = do_QueryInterface(isupports);
+              if (nsHTMLEditUtils::IsDescendantOf(tmp, parent))
+                nodeList->RemoveElementAt(1);
+              else
+                break;
+            } while(tmp);
+            break;
+          }
+          parent->GetParentNode(getter_AddRefs(curNode));
+          parent = curNode;
+        }
+      }
+    }
+    
+    // Loop over the node list and paste the nodes:
+    PRBool bDidInsert = PR_FALSE;
+    nsCOMPtr<nsIDOMNode> lastInsertNode, insertedContextParent;
     for (j=0; j<listCount; j++)
     {
       nsCOMPtr<nsISupports> isupports = nodeList->ElementAt(j);
@@ -2749,37 +2840,31 @@ nsHTMLEditor::StripFormattingNodes(nsIDOMNode *aNode)
 {
   NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
 
-  // use a contnet iterator over the node
-  nsTrivialFunctor functor;
-  nsDOMIterator iter;
-  nsCOMPtr<nsISupportsArray> nodeList;
-  nsresult res = NS_NewISupportsArray(getter_AddRefs(nodeList));
-  NS_ENSURE_SUCCESS(res, res);
-  res = iter.Init(aNode);
-  NS_ENSURE_SUCCESS(res, res);
-  res = iter.AppendList(functor, nodeList);
-  NS_ENSURE_SUCCESS(res, res);   
-  
-  // now go throught the list and remove anything that isn't editable
-  PRUint32 listCount, j;
-  nodeList->Count(&listCount);
-  for (j=0; j<listCount; j++)
+  nsresult res = NS_OK;
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+  if (IsEmptyTextContent(content))
   {
-    nsCOMPtr<nsISupports> isupports = nodeList->ElementAt(j);
-    nsCOMPtr<nsIDOMNode> curNode( do_QueryInterface(isupports) );
-
-    NS_ENSURE_TRUE(curNode, NS_ERROR_FAILURE);
-    nsCOMPtr<nsIContent> content = do_QueryInterface(curNode);
-    if (IsEmptyTextContent(content))
+    nsCOMPtr<nsIDOMNode> parent, ignored;
+    aNode->GetParentNode(getter_AddRefs(parent));
+    if (parent)
     {
-      nsCOMPtr<nsIDOMNode> parent, ignored;
-      PRInt32 offset;
-      GetNodeLocation(curNode, &parent, &offset);
-      if (parent)
-      {
-        res = parent->RemoveChild(curNode, getter_AddRefs(ignored));
-        NS_ENSURE_SUCCESS(res, res);
-      }
+      res = parent->RemoveChild(aNode, getter_AddRefs(ignored));
+      return res;
+    }
+  }
+  
+  if (!nsHTMLEditUtils::IsPre(aNode))
+  {
+    nsCOMPtr<nsIDOMNode> child;
+    aNode->GetLastChild(getter_AddRefs(child));
+  
+    while (child)
+    {
+      nsCOMPtr<nsIDOMNode> tmp;
+      child->GetPreviousSibling(getter_AddRefs(tmp));
+      res = StripFormattingNodes(child);
+      NS_ENSURE_SUCCESS(res, res);
+      child = tmp;
     }
   }
   return res;
