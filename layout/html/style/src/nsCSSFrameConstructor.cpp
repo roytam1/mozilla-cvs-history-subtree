@@ -1602,9 +1602,10 @@ nsCSSFrameConstructor::TableProcessChildren(nsIPresContext*          aPresContex
         parentStyleContext->GetStyleData(eStyleStruct_Display);
   if (aTableCreator.IsTreeCreator() &&
       (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP)) {
-      // Stop the processing. The tree row group frame builds its children
+      // Stop the processing if we're lazy. The tree row group frame builds its children
       // as needed.
-      return NS_OK;
+      if (((nsTreeRowGroupFrame*)aParentFrame)->IsLazy())
+        return NS_OK;
   }
   
   aContent->ChildCount(count);
@@ -2990,7 +2991,10 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
     aContent->GetParent(*getter_AddRefs(grandPappy));
     nsCOMPtr<nsIAtom> tag;
     grandPappy->GetTag(*getter_AddRefs(tag));
-    if (tag.get() == nsXULAtoms::tree) {
+    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(grandPappy);
+    nsString mode;
+    element->GetAttribute("mode", mode);
+    if (tag.get() == nsXULAtoms::tree && mode == "lazy") {
       // Create an anonymous scrollbar node.
       nsCOMPtr<nsIDocument> idocument;
       aContent->GetDocument(*getter_AddRefs(idocument));
