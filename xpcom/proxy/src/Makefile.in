@@ -43,5 +43,8 @@ DEFINES		+=  -D_IMPL_NS_COM -D_IMPL_NS_BASE -DEXPORT_XPTC_API
 # No shared lib; Force creation of static lib
 FORCE_STATIC_LIB = 1
 
+# Force use of PIC
+FORCE_USE_PIC	= 1
+
 include $(topsrcdir)/config/rules.mk
 

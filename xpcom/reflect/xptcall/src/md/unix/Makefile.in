@@ -34,6 +34,9 @@ LIBRARY_NAME	= xptcmd
 #
 CPPSRCS		:= xptcinvoke_unsupported.cpp xptcstubs_unsupported.cpp
 
+# Force use of PIC
+FORCE_USE_PIC	= 1
+
 include $(topsrcdir)/config/config.mk
 
 ######################################################################

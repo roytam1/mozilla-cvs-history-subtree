@@ -277,10 +277,13 @@ MOZ_META_COMPONENTS_crypto_comps = pippki pipnss
 # Build using PIC by default
 # Do not use PIC if not building a shared lib (see exceptions below)
 #
+ifneq (,$(BUILD_SHARED_LIBS)$(FORCE_SHARED_LIB)$(FORCE_USE_PIC))
 _ENABLE_PIC=1
-ifndef BUILD_SHARED_LIBS
-_ENABLE_PIC=
 endif
+
+# If module is going to be merged into the nsStaticModule, 
+# make sure that the entry points are translated and 
+# the module is built static.
 
 ifdef IS_COMPONENT
 ifneq (,$(MOZ_STATIC_COMPONENT_LIBS)$(findstring $(LIBRARY_NAME), $(MOZ_STATIC_COMPONENTS)))
@@ -293,6 +296,7 @@ endif
 
 # Determine if module being compiled is destined 
 # to be merged into a meta module in the future
+
 ifneq (, $(findstring $(META_COMPONENT), $(MOZ_META_COMPONENTS)))
 ifdef IS_COMPONENT
 ifdef COMPONENT_NAME

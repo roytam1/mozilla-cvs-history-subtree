@@ -39,6 +39,9 @@ PROGOBJS        = $(addprefix R_,$(BIN_SRCS:.c=.o))
 # We don't want a shared lib.  Static lib only.
 FORCE_STATIC_LIB = 1
 
+# Force use of PIC
+FORCE_USE_PIC	= 1
+
 include $(topsrcdir)/config/config.mk
 
 DEFINES         += -DUSE_BUFFERED_REGISTRY_IO	
