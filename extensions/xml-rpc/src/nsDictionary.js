@@ -103,7 +103,7 @@ var nsDictionaryModule = {
 
 /* nsDictionary Class Factory */
 var nsDictionaryFactory = {
-    CreateInstance: function(outer, iid) {
+    createInstance: function(outer, iid) {
         if (outer != null)
             throw Components.results.NS_ERROR_NO_AGGREGATION;
     

@@ -1269,7 +1269,7 @@ var nsXmlRpcClientModule = {
 
 /* nsXmlRpcClient Class Factory */
 var nsXmlRpcClientFactory = {
-    CreateInstance: function(outer, iid) {
+    createInstance: function(outer, iid) {
         if (outer != null)
             throw Components.results.NS_ERROR_NO_AGGREGATION;
     
@@ -1283,7 +1283,7 @@ var nsXmlRpcClientFactory = {
 
 /* nsXmlRpcFault Class Factory */
 var nsXmlRpcFaultFactory = {
-    CreateInstance: function(outer, iid) {
+    createInstance: function(outer, iid) {
         if (outer != null)
             throw Components.results.NS_ERROR_NO_AGGREGATION;
 
