@@ -3,8 +3,8 @@ load("verify.js");
 class C {
         var a:String;
 
-        constructor C(p:String) {this.a = "New "+p}
-        constructor make(p:String) {this.a = "Make "+p}
+        constructor function C(p:String) {this.a = "New "+p}
+        constructor function make(p:String) {this.a = "Make "+p}
         static function obtain(p:String):C {return new C(p)}
       }
 
