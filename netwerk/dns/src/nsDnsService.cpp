@@ -352,17 +352,6 @@ nsDNSRequest::Resume(void)
     return NS_OK;
 }
 
-
-/* attribute nsISupports parent; */
-NS_IMETHODIMP nsDNSRequest::GetParent(nsISupports * *aParent)
-{
-    NS_ADDREF(*aParent = this);
-    return NS_OK;
-}
-NS_IMETHODIMP nsDNSRequest::SetParent(nsISupports * aParent)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
 ////////////////////////////////////////////////////////////////////////////////
 // nsDNSLookup methods:
 ////////////////////////////////////////////////////////////////////////////////
