@@ -38,6 +38,8 @@ Contributor(s): ______________________________________. -->
 %buildDTD;
 <!ENTITY % navigatorDTD SYSTEM "chrome://navigator/locale/navigator.dtd" >
 %navigatorDTD;
+<!ENTITY % navigatorTitleDTD SYSTEM "chrome://navigator/locale/navigator-title.dtd" >
+%navigatorTitleDTD;
 ]>
 
 <window id="main-window"

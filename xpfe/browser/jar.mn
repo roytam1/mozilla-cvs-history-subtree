@@ -31,6 +31,7 @@ en-US.jar:
         locale/en-US/navigator/pageInfo.dtd                 (resources/locale/en-US/pageInfo.dtd)
         locale/en-US/navigator/pageInfo.properties          (resources/locale/en-US/pageInfo.properties)
         locale/en-US/navigator/navigator.dtd                (resources/locale/en-US/navigator.dtd)
+        locale/en-US/navigator/navigator-title.dtd          (resources/locale/en-US/navigator-title.dtd)
         locale/en-US/navigator/navigator.properties         (resources/locale/en-US/navigator.properties)
         locale/en-US/navigator/metadata.dtd                 (resources/locale/en-US/metadata.dtd)
         locale/en-US/navigator/metadata.properties          (resources/locale/en-US/metadata.properties)
