@@ -32,9 +32,10 @@
 #include "nsCaps.h"
 #ifdef OJI
 #include "jni.h"
-#include "nsJVMManager.h"
+#include "jvmmgr.h"
 #include "nsPluginInputStream.h"
 #include "nsPluginInstancePeer.h"
+#include "nsIJVMPluginInstance.h"
 #endif
 
 #ifdef ANTHRAX
