@@ -246,7 +246,6 @@ XPInstallDownloadManager.prototype = {
   {
     const nsIXPIProgressDialog = Components.interfaces.nsIXPIProgressDialog;
     var element = document.getElementById(aURL);
-    dump("*** aURL = " + aURL + "\n");
     if (!element) return;
     switch (aState) {
     case nsIXPIProgressDialog.DOWNLOAD_START:

@@ -139,6 +139,19 @@ function dumpFile(aFile)
   dump("*** file = " + aFile.path + ", exists = " + aFile.exists() + "\n");
 }
 
+// We use this to force RDF to bypass the cache when loading certain types
+// of files. 
+function getRandomFileName(aName, aExtension)
+{
+  var characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+  var nameString = aName + "-";
+  for (var i = 0; i < 3; ++i) {
+    var index = Math.round((Math.random()) * characters.length);
+    nameString += characters.charAt(index);
+  }
+  return nameString + "." + aExtension;
+}
+
 const PREFIX_EXTENSION  = "urn:mozilla:extension:";
 const PREFIX_THEME      = "urn:mozilla:theme:";
 const ROOT_EXTENSION    = "urn:mozilla:extension:root";
@@ -632,7 +645,6 @@ nsExtensionInstaller.prototype = {
                              this._extensionID + ".xpi"]);
     var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
                               .createInstance(Components.interfaces.nsIZipReader);
-    dumpFile(sourceXPI);
     zipReader.init(sourceXPI);
     zipReader.open();
 
@@ -894,8 +906,6 @@ nsThemeInstaller.prototype = {
 
   install: function (aJARFile, aIsProfile)
   {
-    dumpFile(aJARFile);
-    
     var extDirKey = getDirKey(aIsProfile);
 
     // Since we're installing a "new type" theme, we assume a file layout
@@ -912,7 +922,7 @@ nsThemeInstaller.prototype = {
     zipReader.open();
     
     var themeManifest = getFile(extDirKey,
-                                [DIR_EXTENSIONS, DIR_TEMP, FILE_INSTALL_MANIFEST]);
+                                [DIR_EXTENSIONS, DIR_TEMP, getRandomFileName("install", "rdf")]);
     zipReader.extract(FILE_INSTALL_MANIFEST, themeManifest);
     
     var chromeManifest = getFile(extDirKey,
@@ -1271,6 +1281,10 @@ nsExtensionManager.prototype = {
           cr.setAllowOverlaysForPackage(name, false);
         }
       }
+
+      // Re-select the default theme to prevent any incompatibilities with old-style
+      // themes.
+      cr.selectSkin(KEY_DEFAULT_THEME, true);
       win.close();
       
       if (disabled) {
@@ -1653,7 +1667,6 @@ nsExtensionManager.prototype = {
     //         components/ 
     //         defaults/
     //                  prefs/
-    dumpFile(aXPIFile);
     var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
                               .createInstance(Components.interfaces.nsIZipReader);
     zipReader.init(aXPIFile);
@@ -1661,8 +1674,8 @@ nsExtensionManager.prototype = {
     
     var installProfile = aFlags & nsIExtensionManager.FLAG_INSTALL_PROFILE;
     var tempManifest = getFile(getDirKey(installProfile),
-                               [DIR_EXTENSIONS, DIR_TEMP, FILE_INSTALL_MANIFEST]);
-    if (!tempManifest)
+                               [DIR_EXTENSIONS, DIR_TEMP, getRandomFileName("install", "rdf")]);
+    if (!tempManifest.exists())
       tempManifest.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
     zipReader.extract(FILE_INSTALL_MANIFEST, tempManifest);
     
