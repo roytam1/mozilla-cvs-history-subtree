@@ -315,6 +315,9 @@ txStylesheetCompiler::ensureNewElementContext()
 txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
                                                      txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
+      mHandlerTable(nsnull),
+      mElementContext(nsnull),
+      mSorter(nsnull),
       mNextInstrPtr(nsnull),
       mToplevelIterator(nsnull)
 {
@@ -387,6 +390,23 @@ void
 txStylesheetCompilerState::popHandlerTable()
 {
     mHandlerTable = (txHandlerTable*)popPtr();
+}
+
+nsresult
+txStylesheetCompilerState::pushSorter(txPushNewContext* aSorter)
+{
+    nsresult rv = pushPtr(mSorter);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mSorter = aSorter;
+
+    return NS_OK;
+}
+
+void
+txStylesheetCompilerState::popSorter()
+{
+    mSorter = (txPushNewContext*)popPtr();
 }
 
 nsresult

@@ -45,6 +45,7 @@
 #include "ExprResult.h"
 #include "Expr.h"
 #include "txStringUtils.h"
+#include "NodeSet.h"
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
@@ -170,11 +171,10 @@ txNodeSorter::addSortElement(Expr* aSelectExpr, Expr* aLangExpr,
     return NS_OK;
 }
 
-#if 0
-MBool txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
+nsresult txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
 {
     if (mNKeys == 0)
-        return MB_TRUE;
+        return NS_OK;
 
     txList sortedNodes;
     txListIterator iter(&sortedNodes);
@@ -193,7 +193,7 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
                 sNode->clear(mNKeys);
                 delete sNode;
             }
-            return MB_FALSE;
+            return NS_ERROR_OUT_OF_MEMORY;
         }
         iter.reset();
         SortableNode* compNode = (SortableNode*)iter.next();
@@ -216,7 +216,7 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes, txExecutionState* aEs)
         delete sNode;
     }
     
-    return MB_TRUE;
+    return NS_OK;
 }
 
 int txNodeSorter::compareNodes(SortableNode* aSNode1,
@@ -294,4 +294,3 @@ void txNodeSorter::SortableNode::clear(int aNValues)
 
     delete [] mSortValues;
 }
-#endif

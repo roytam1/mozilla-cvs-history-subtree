@@ -48,6 +48,7 @@
 #include "txStringUtils.h"
 #include "txAtoms.h"
 #include "txRtfHandler.h"
+#include "txNodeSorter.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -386,11 +387,18 @@ txPushNewContext::txPushNewContext(Expr* aSelect)
 txPushNewContext::~txPushNewContext()
 {
     delete mSelect;
+
+    PRInt32 i;
+    for (i = 0; i < mSortKeys.Count(); ++i)
+    {
+        delete (SortKey*)mSortKeys[i];
+    }
 }
 
 nsresult
 txPushNewContext::execute(txExecutionState& aEs)
 {
+    nsresult rv = NS_OK;
     ExprResult* exprRes = mSelect->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
@@ -402,7 +410,20 @@ txPushNewContext::execute(txExecutionState& aEs)
     
     NodeSet* nodes = (NodeSet*)exprRes;
     
-    // XXX ToDo: Sort nodes if non-empty
+    if (!nodes->isEmpty()) {
+        txNodeSorter sorter;
+        PRInt32 i, count = mSortKeys.Count();
+        for (i = 0; i < count; ++i) {
+            SortKey* sort = (SortKey*)mSortKeys[i];
+            rv = sorter.addSortElement(sort->mSelectExpr, sort->mLangExpr,
+                                       sort->mDataTypeExpr, sort->mOrderExpr,
+                                       sort->mCaseOrderExpr,
+                                       aEs.getEvalContext());
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+        rv = sorter.sortNodeSet(nodes, &aEs);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
     
     txNodeSetContext* context = new txOwningNodeSetContext(nodes, &aEs);
     if (!context) {
@@ -410,13 +431,47 @@ txPushNewContext::execute(txExecutionState& aEs)
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    nsresult rv = aEs.pushEvalContext(context);
+    rv = aEs.pushEvalContext(context);
     if (NS_FAILED(rv)) {
         delete context;
         return rv;
     }
     
     return NS_OK;
+}
+
+nsresult
+txPushNewContext::addSort(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExpr,
+                          Expr* aOrderExpr, Expr* aCaseOrderExpr)
+{
+    SortKey* sort = new SortKey(aSelectExpr, aLangExpr, aDataTypeExpr,
+                                aOrderExpr, aCaseOrderExpr);
+    NS_ENSURE_TRUE(sort, NS_ERROR_OUT_OF_MEMORY);
+
+    if (!mSortKeys.AppendElement(sort)) {
+        delete sort;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+   
+    return NS_OK;
+}
+
+txPushNewContext::SortKey::SortKey(Expr* aSelectExpr, Expr* aLangExpr,
+                                   Expr* aDataTypeExpr, Expr* aOrderExpr,
+                                   Expr* aCaseOrderExpr)
+    : mSelectExpr(aSelectExpr), mLangExpr(aLangExpr),
+      mDataTypeExpr(aDataTypeExpr), mOrderExpr(aOrderExpr),
+      mCaseOrderExpr(aCaseOrderExpr)
+{
+}
+
+txPushNewContext::SortKey::~SortKey()
+{
+    delete mSelectExpr;
+    delete mLangExpr;
+    delete mDataTypeExpr;
+    delete mOrderExpr;
+    delete mCaseOrderExpr;
 }
 
 nsresult

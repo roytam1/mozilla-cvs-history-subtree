@@ -201,11 +201,25 @@ public:
 
     TX_DECL_TXINSTRUCTION
     
-    //addSort(Expr* aSelectExpr, Expr* aLangExpr,
-    //        Expr* aDataTypeExpr, Expr* aOrderExpr,
-    //        Expr* aCaseOrderExpr, txIEvalContext* aContext);
+    
+    nsresult addSort(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExpr,
+                     Expr* aOrderExpr, Expr* aCaseOrderExpr);
 
     Expr* mSelect;
+
+    struct SortKey {
+        SortKey(Expr* aSelectExpr, Expr* aLangExpr, Expr* aDataTypeExpr,
+                Expr* aOrderExpr, Expr* aCaseOrderExpr);
+        ~SortKey();
+
+        Expr* mSelectExpr;
+        Expr* mLangExpr;
+        Expr* mDataTypeExpr;
+        Expr* mOrderExpr;
+        Expr* mCaseOrderExpr;
+    };
+    
+    nsVoidArray mSortKeys;
 };
 
 class txPushRTFHandler : public txInstruction

@@ -53,6 +53,7 @@ class txStylesheet;
 class txInstructionContainer;
 class txInstruction;
 class txToplevelItem;
+class txPushNewContext;
 
 class txInScopeVariable {
 public:
@@ -72,6 +73,8 @@ public:
     // Stack functions
     nsresult pushHandlerTable(txHandlerTable* aTable);
     void popHandlerTable();
+    nsresult pushSorter(txPushNewContext* aSorter);
+    void popSorter();
     nsresult pushObject(TxObject* aObject);
     TxObject* popObject();
     nsresult pushPtr(void* aPtr);
@@ -101,6 +104,7 @@ public:
     txStylesheet* mStylesheet;
     txHandlerTable* mHandlerTable;
     txElementContext* mElementContext;
+    txPushNewContext* mSorter;
     MBool mDOE;
     
 private:

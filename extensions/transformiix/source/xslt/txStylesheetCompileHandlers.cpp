@@ -55,6 +55,7 @@ txHandlerTable* gTxTextHandler = 0;
 txHandlerTable* gTxApplyTemplatesHandler = 0;
 txHandlerTable* gTxCallTemplateHandler = 0;
 txHandlerTable* gTxVariableHandler = 0;
+txHandlerTable* gTxForEachHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -647,7 +648,12 @@ txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:apply-templates
+/*
+  xsl:apply-templates
+
+  txPushNewContext  (holds <xsl:sort>s)
+  txApplyTemplates
+*/
 nsresult
 txFnStartApplyTemplates(PRInt32 aNamespaceID,
                         nsIAtom* aLocalName,
@@ -682,10 +688,13 @@ txFnStartApplyTemplates(PRInt32 aNamespaceID,
         NS_ENSURE_TRUE(select, NS_ERROR_OUT_OF_MEMORY);
     }
 
-    instr = new txPushNewContext(select);
-    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+    txPushNewContext* pushcontext = new txPushNewContext(select);
+    NS_ENSURE_TRUE(pushcontext, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState.pushObject(instr);
+    rv = aState.pushSorter(pushcontext);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.pushObject(pushcontext);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return aState.pushHandlerTable(gTxApplyTemplatesHandler);
@@ -699,6 +708,8 @@ txFnEndApplyTemplates(txStylesheetCompilerState& aState)
     // txPushNewContext
     nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
     NS_ENSURE_SUCCESS(rv, rv);
+
+    aState.popSorter();
 
     // txApplyTemplates
     rv = aState.addInstruction((txInstruction*)aState.popObject());
@@ -866,7 +877,15 @@ txFnEndElement(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
-// xsl:for-each
+/*
+  xsl:for-each
+
+  txPushNewContext  (holds <xsl:sort>s)
+  txForEach  -+  <-+
+  [children]  |    |
+  txGoTo      |  --+
+            <-+
+*/
 nsresult
 txFnStartForEach(PRInt32 aNamespaceID,
                  nsIAtom* aLocalName,
@@ -882,12 +901,15 @@ txFnStartForEach(PRInt32 aNamespaceID,
                      aState, select);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    txInstruction* instr = new txPushNewContext(select);
-    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+    txPushNewContext* pushcontext = new txPushNewContext(select);
+    NS_ENSURE_TRUE(pushcontext, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = aState.addInstruction(instr);
+    rv = aState.pushSorter(pushcontext);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    rv = aState.addInstruction(pushcontext);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
     txForEach* forEach = new txForEach();
     NS_ENSURE_TRUE(forEach, NS_ERROR_OUT_OF_MEMORY);
 
@@ -897,26 +919,55 @@ txFnStartForEach(PRInt32 aNamespaceID,
     rv = aState.addInstruction(forEach);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    instr = new txGoTo(forEach);
+    txInstruction* instr = new txGoTo(forEach);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     rv = aState.pushObject(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    return NS_OK;
+    return aState.pushHandlerTable(gTxForEachHandler);
 }
 
 nsresult
 txFnEndForEach(txStylesheetCompilerState& aState)
 {
+    aState.popHandlerTable();
+
     // txGoTo
     nsresult rv = aState.addInstruction((txInstruction*)aState.popObject());
     NS_ENSURE_SUCCESS(rv, rv);
 
     txForEach* forEach = (txForEach*)aState.popPtr();
-    aState.addGotoTarget(&forEach->mEndTarget);
+    rv = aState.addGotoTarget(&forEach->mEndTarget);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aState.popSorter();
 
     return NS_OK;
+}
+
+nsresult
+txFnStartElementConinueTemplate(PRInt32 aNamespaceID,
+                                nsIAtom* aLocalName,
+                                nsIAtom* aPrefix,
+                                txStylesheetAttr* aAttributes,
+                                PRInt32 aAttrCount,
+                                txStylesheetCompilerState& aState)
+{
+    aState.mHandlerTable = gTxTemplateHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
+}
+
+nsresult
+txFnTextConinueTemplate(const nsAString& aStr,
+                        txStylesheetCompilerState& aState)
+{
+    TX_RETURN_IF_WHITESPACE(aStr, aState);
+
+    aState.mHandlerTable = gTxTemplateHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
 }
 
 // xsl:if
@@ -1038,6 +1089,68 @@ txFnEndPI(txStylesheetCompilerState& aState)
     txInstruction* instr = (txInstruction*)aState.popObject();
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+/*
+    xsl:sort
+    
+    (no instructions)
+*/
+nsresult
+txFnStartSort(PRInt32 aNamespaceID,
+              nsIAtom* aLocalName,
+              nsIAtom* aPrefix,
+              txStylesheetAttr* aAttributes,
+              PRInt32 aAttrCount,
+              txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    Expr* select;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
+                     aState, select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!select) {
+        txNodeTest* nt = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+        NS_ENSURE_TRUE(nt, NS_ERROR_OUT_OF_MEMORY);
+
+        select = new LocationStep(nt, LocationStep::SELF_AXIS);
+        NS_ENSURE_TRUE(select, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    Expr* lang;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::lang, PR_FALSE,
+                    aState, lang);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* dataType;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::dataType, PR_FALSE,
+                    aState, dataType);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* order;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::order, PR_FALSE,
+                    aState, order);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* caseOrder;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::caseOrder, PR_FALSE,
+                    aState, caseOrder);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.mSorter->addSort(select, lang, dataType, order, caseOrder);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndSort(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
 
     return NS_OK;
 }
@@ -1314,7 +1427,8 @@ txHandlerTableData gTxTextTableData = {
 
 txHandlerTableData gTxApplyTemplatesTableData = {
   // Handlers
-  { { 0, 0, 0, 0 } },
+  { { kNameSpaceID_XSLT, "sort", txFnStartSort, txFnEndSort },
+    { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore }, // should this be error?
   // LRE
@@ -1343,6 +1457,18 @@ txHandlerTableData gTxVariableTableData = {
   { 0, 0, txFnStartElementStartRTF, 0 },
   // Text
   txFnTextStartRTF
+};
+
+txHandlerTableData gTxForEachTableData = {
+  // Handlers
+  { { kNameSpaceID_XSLT, "sort", txFnStartSort, txFnEndSort },
+    { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  // LRE
+  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  // Text
+  txFnTextConinueTemplate
 };
 
 
@@ -1414,6 +1540,7 @@ txHandlerTable::init()
     INIT_HANDLER(ApplyTemplates);
     INIT_HANDLER(CallTemplate);
     INIT_HANDLER(Variable);
+    INIT_HANDLER(ForEach);
 
     return MB_TRUE;
 }
@@ -1430,4 +1557,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(ApplyTemplates);
     SHUTDOWN_HANDLER(CallTemplate);
     SHUTDOWN_HANDLER(Variable);
+    SHUTDOWN_HANDLER(ForEach);
 }
