@@ -30,6 +30,7 @@ require Exporter;
 @EXPORT_OK = qw(get_LDIF put_LDIF unpack_LDIF pack_LDIF set_Entry
 	references sort_attributes sort_entry
 	delist_values enlist_values condense
+	LDIF_get_DN get_DN
 	read_v0 read_file_name read_v1 read_file_URL read_file_URL_or_name);
 
 use strict;
@@ -103,9 +104,10 @@ sub unpack_LDIF
     my ($str, $read_ref, $option) = @_;
     if ((defined $option) and ("comments" eq lc $option)) {
 	# Move comments down to the end of a complete value:
-	$str =~ s"(^#.*$/)( .*($/|$))"$2$1"gm;
-    } else { # Ignore comments:
-	$str =~ s"^#.*($/|$)""gm;
+	while ($str =~ s"((^#.*$/)+)(( .*$/)+)"$3$1"m) {}
+	$str =~ s"((^#.*$/)+)( .*$)"$3$/$1"m;
+    } else {
+	$str =~ s"^#.*($/|$)""gm; # ignore comments
     }
     $str =~ s"$/ ""g; # combine continuation lines
     my (@record, $attr, $value);
@@ -360,20 +362,22 @@ sub enlist_values
     }
     my @results;
     foreach my $record ($single ? \@_ : @_) {
-	my $isEntry = (lc ${$record}[$[]) eq "dn";
-	if ($isEntry) {
-	    $isEntry = (lc ${$record}[$[+2]) ne "changetype";
-	    $isEntry = (lc ${$record}[$[+3]) eq "add" unless $isEntry;
-	} # A single Boolean expression would be better, except it makes
-	  # SunOS Perl 5 carp "Useless use of string ne in void context".
-	my ($i, @result, %first);
+	my ($i, @result, %first, $isEntry);
 	for ($i = $[+1; $i <= $#$record; $i += 2) {
 	    my ($attr, $value) = (${$record}[$i-1], ${$record}[$i]);
 	    if (not defined $value) {
 		%first = () # Don't enlist values separated by a "-" line.
-			 unless ($value =~ /^#/); # but comments don't matter.
+			 unless ($attr =~ /^#/); # but comments don't matter.
 		push @result, ($attr, $value);
 	    } else {
+		if (not defined $isEntry) { # Decide whether this is an entry:
+		    $isEntry = (lc ${$record}[$[]) eq "dn";
+		    if ($isEntry) {
+			$isEntry = (lc ${$record}[$[+2]) ne "changetype";
+			$isEntry = (lc ${$record}[$[+3]) eq "add" unless $isEntry;
+		    } # A single Boolean expression would be better, except it makes
+		      # SunOS Perl 5 carp "Useless use of string ne in void context".
+		}
 		my $firstValue = $first{lc $attr};
 		if (not defined $firstValue) {
 		    $firstValue = [];
@@ -450,7 +454,25 @@ sub _byAttrValue
  or ((_k $a->[$[+1]) cmp (_k $b->[$[+1]));
 }
 
+sub _shiftAttr
+    # Given an reference to an LDIF record, remove the first two elements
+    # (usually an attribute type and value) and also any subsequent
+    # non-attributes (comments, "-" lines or non-LDIF lines).
+    # Return a reference to an array containing the removed values.
+{
+    my ($from) = @_;
+    my @into;
+    while (1) {
+	my ($attr, $value) = splice @$from, 0, 2;
+	push @into, ($attr, $value);
+	last unless @$from and not defined $$from[$[+1];
+    }
+    return \@into;
+}
+
 sub sort_attributes
+    # Comments, "-" lines and non-LDIF lines are sorted with the attribute that
+    # immediately precedes them.
 {
     use integer;
     my $single = _to_LDIF_records \@_;
@@ -461,14 +483,14 @@ sub sort_attributes
     foreach my $record ($single ? \@_ : @_) {
 	@result = @{(delist_values ($record))[$[]};
 	@preamble = ();
-	while (($result[$[] =~ /^#/) and (not defined $result[$[+1])) {
-	    push @preamble, (splice @result, 0, 2);
+	if (@result > 1 and not defined $result[$[+1]) { # initial comments
+	    push @preamble, @{_shiftAttr \@result};
 	}
 	if (@result and ("dn" eq lc $result[$[])) {
-	    push @preamble, (splice @result, 0, 2); # dn => "cn=etc..."
+	    push @preamble, @{_shiftAttr \@result}; # dn => "cn=etc..."
 	    if ("changetype" eq lc $result[$[]) { # this is a change, not an entry.
 		if ("add" eq lc $result[$[+1]) {
-		    push @preamble, (splice @result, 0, 2); # changetype => "add"
+		    push @preamble, @{_shiftAttr \@result}; # changetype => "add"
 		} else { # It's possible to sort this, but it doesn't seem useful.
 		    next; # So just return it, unmodified.
 		}
@@ -477,7 +499,7 @@ sub sort_attributes
 
 	my @pairs = ();
 	while (@result >= 2) {
-	    push @pairs, [(splice @result, 0, 2)];
+	    push @pairs, (_shiftAttr \@result);
 	}
 	@pairs = sort _byAttrValue @pairs;
 
@@ -492,6 +514,28 @@ sub sort_attributes
     return $single ? @{$results[$[]} : @results;
 }
 *sort_entry = \&sort_attributes; # for compatibility with prior versions.
+
+sub get_DN
+{
+    use integer;
+    my $single = _to_LDIF_records \@_;
+    if ($^W and not $single and @_ > 1 and not wantarray) {
+	_carpf ($_uselessUseOf, "get_DN");
+    }
+    my @DNs;
+    foreach my $record ($single ? \@_ : @_) {
+	my ($i, $value);
+	for ($i = $[+1; $i <= $#$record; $i += 2) {
+	    $value = $record->[$i];
+	    next if not defined $value; # ignore leading comments
+	    $value = undef unless ("dn" eq lc $record->[$i-1]);
+	    last;
+	}
+	push @DNs, $value;
+    }
+    return $single ? $DNs[$[] : @DNs;
+}
+*LDIF_get_DN = \&get_DN;
 
 sub read_file_name
 {
@@ -543,6 +587,7 @@ sub set_Entry
     }
     while (@$record >= 2) {
 	my ($attr, $value) = splice @$record, 0, 2;
+	next unless defined $value; # ignore comments and non-LDIF lines
 	if ("dn" eq lc $attr) { $entry->setDN ($value);
 	} else { $entry->{$attr} = ((ref $value) eq "ARRAY") ? $value : [$value];
 	}
@@ -690,6 +735,9 @@ Mozilla::LDAP::LDIF - read or write LDIF (LDAP Data Interchange Format)
 
  @references = references (@record);
  @references = references (\@record, \object ...);
+
+ $DN  = LDIF_get_DN (@record); # alias get_DN
+ @DNS = LDIF_get_DN (\@record, \object ...); # alias get_DN
 
  $success = read_v1 (\$url);  # alias read_file_URL
  $success = read_v0 (\$name); # alias read_file_name
@@ -989,6 +1037,22 @@ In list context, return a list of references to each of the references
 to external data sources, in the given records.
 In scalar context, return the length of that list; that is, the total
 number of references to external data sources.
+
+=item LDIF_get_DN (@record)
+
+=item      get_DN (@record)
+
+Return the DN of the given record.
+Return undef if the first attribute of the record isn't a DN.
+
+=item LDIF_get_DN (\@record, \object ...)
+
+=item      get_DN (\@record, \object ...)
+
+Return the DN of each of the given records,
+as an array with one element for each parameter.
+If a given record's first attribute isn't a DN,
+the corresponding element of the returned array is undef.
 
 =back
 
