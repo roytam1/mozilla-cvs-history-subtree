@@ -646,49 +646,11 @@ function SortFolderPane(column, sortKey)
     dump('Couldnt find sort column\n');
     return false;
   }
-  SortColumn(node, sortKey, null, null);
-  //Remove the sortActive attribute because we don't want this pane to have any
-  //sort styles.
-  node.setAttribute("sortActive", "false");
-  return true;
-}
 
-function SortColumn(node, sortKey, secondarySortKey, direction)
-{
-	var xulSortService = Components.classes["@mozilla.org/xul/xul-sort-service;1"].getService();
-
-  if (xulSortService)
-  {
-    xulSortService = xulSortService.QueryInterface(Components.interfaces.nsIXULSortService);
-    if (xulSortService)
-    {
-      // sort!!!
-      var sortDirection;
-      if(direction)
-        sortDirection = direction;
-      else
-      {
-        var currentDirection = node.getAttribute('sortDirection');
-        if (currentDirection == "ascending")
-            sortDirection = "descending";
-        else if (currentDirection == "descending")
-            sortDirection = "ascending";
-        else    sortDirection = "ascending";
-      }
-
-      try
-      {
-        if(secondarySortKey)
-          node.setAttribute('resource2', secondarySortKey);
-        xulSortService.Sort(node, sortKey, sortDirection);
-      }
-      catch(e)
-      {
-                    //dump("Sort failed: " + e + "\n");
-      }
-    }
-  }
-
+  node.setAttribute("sort", sortKey);
+  node.setAttribute("sortDirection", "natural");
+  var folderOutliner = GetFolderOutliner();
+  folderOutliner.outlinerBoxObject.view.cycleHeader(column, node);
 }
 
 function GetSelectedFolderResource()
