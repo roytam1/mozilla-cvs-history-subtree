@@ -35,12 +35,8 @@ TBX_EXIT=50             # in case we are running on a tinderbox build, any
                         # early exit needs to return an error
 . `dirname $0`/header   # utilities, shellfunctions etc, global to NSS QA
 
-if [ -z "$O_TBX" -o "$O_TBX" != "ON" ] ; then
-    is_running ${TMP}/nssqa 
-                        # checks if the file exists, if yes Exits, if not 
+is_running ${TMP}/nssqa # checks if the file exists, if yes Exits, if not 
                         # creates to implement a primitive locking mechanism
-fi
-
 KILL_SELFSERV=ON        # cleanup will also kill the leftover selfserv processes
 
 ################################ check_distdir #########################
@@ -255,7 +251,7 @@ nssqa_main()
   
 TEST_LEVEL=0
 
-while [ $TEST_LEVEL -lt 2 ] ; do
+while [ $TEST_LEVEL -lt 3 ] ; do
     export TEST_LEVEL
     unset BUILD_OPT;export BUILD_OPT;Debug "BUILD_OPT $BUILD_OPT"
     unset USE_64;export USE_64;Debug "USE_64 $USE_64"

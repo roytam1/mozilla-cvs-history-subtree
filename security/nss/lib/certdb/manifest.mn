@@ -56,10 +56,12 @@ CSRCS = \
 	$(CERTINIT) \
 	certxutl.c \
 	crl.c \
+	dbmshim.c \
 	genname.c \
 	pcertdb.c \
 	polcyxtn.c \
 	secname.c \
+	syserr.c  \
 	xauthkid.c \
 	xbsconst.c \
 	xconst.c \

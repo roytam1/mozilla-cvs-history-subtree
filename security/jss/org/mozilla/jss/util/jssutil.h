@@ -238,6 +238,70 @@ JSS_SECItemToByteArray(JNIEnv *env, SECItem *item);
 SECItem*
 JSS_ByteArrayToSECItem(JNIEnv *env, jbyteArray byteArray);
 
+/***********************************************************************
+ * J S S _ s t r e r r o r
+ *
+ * Provides string representations for NSPR, SEC, and SSL errors.
+ * Swiped from PSM.
+ *
+ * RETURNS
+ *      A UTF-8 encoded constant error string for errNum.
+ *      NULL if errNum is unknown.
+ */
+const char *
+JSS_strerror(PRErrorCode errNum);
+
+
+/***********************************************************************
+**
+** J S S _ t h r o w M s g P r E r r A r g
+**
+** Throw an exception in native code.  You should return right after
+** calling this function.
+**
+** throwableClassName is the name of the throwable you are throwing in
+** JNI class name format (xxx/xx/xxx/xxx). It must not be NULL.
+**
+** message is the message parameter of the throwable. It must not be NULL.
+** If you don't have a message, call JSS_throw.
+**
+** errCode is a PRErrorCode returned from PR_GetError().
+**
+** Example:
+**      JSS_throwMsg(env, ILLEGAL_ARGUMENT_EXCEPTION, PR_GetError());
+**      return -1;
+*/
+void
+JSS_throwMsgPrErrArg(JNIEnv *env, char *throwableClassName, char *message,
+    PRErrorCode errCode);
+
+#define JSS_throwMsgPrErr(e, cn, m) \
+    JSS_throwMsgPrErrArg((e), (cn), (m), PR_GetError())
+
+/************************************************************************
+**
+** J S S _ i n i t E r r c o d e T r a n s l a t i o n T a b l e.
+**
+** Initializes the error code translation table. This should be called
+** by CryptoManager.initialize(), and must be called before any calls to
+** JSS_ConvertNativeErrcodeToJava.
+**
+*/
+void JSS_initErrcodeTranslationTable();
+
+/************************************************************************
+**
+** J S S _ C o n v e r t N a t i v e E r r c o d e T o J a v a
+**
+** Converts an NSPR or NSS error code to a Java error code.
+** (defined in the class o.m.util.NativeErrcodes)
+**
+** Returns
+**  The Java error code, or -1 if a corresponding Java error code could
+**  not be found.
+*/
+int JSS_ConvertNativeErrcodeToJava(int nativeErrcode);
+
 PR_END_EXTERN_C
 
 #endif

@@ -51,9 +51,9 @@ RANLIB			= /bin/true
 CPU_ARCH_TAG		= _$(CPU_ARCH)
 
 OS_CFLAGS              = -DVMS -DVMS_AS_IS -Wc,names=\(short,as\) \
-                         -DGENERIC_PTHREAD_REDEFINES -D_SOCKADDR_LEN
+                         -DGENERIC_PTHREAD_REDEFINES
 OS_CXXFLAGS            = -DVMS -DVMS_AS_IS -Wc,names=\(short,as\) \
-                         -DGENERIC_PTHREAD_REDEFINES -D_SOCKADDR_LEN
+                         -DGENERIC_PTHREAD_REDEFINES
 
 #
 # XCFLAGS are the only CFLAGS that are used during a link operation. Defining

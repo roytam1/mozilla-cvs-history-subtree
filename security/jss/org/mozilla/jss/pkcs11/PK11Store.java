@@ -69,6 +69,9 @@ public final class PK11Store implements CryptoStore {
     public native void deletePrivateKey(PrivateKey key)
         throws NoSuchItemOnTokenException, TokenException;
 
+    public native byte[] getEncryptedPrivateKeyInfo(X509Certificate cert,
+        PBEAlgorithm pbeAlg, Password pw, int iteration);
+
     ////////////////////////////////////////////////////////////
     // Certs
     ////////////////////////////////////////////////////////////
@@ -94,7 +97,7 @@ public final class PK11Store implements CryptoStore {
 	////////////////////////////////////////////////////////////
     protected boolean updated;
 	public PK11Store(TokenProxy proxy) {
-        Assert.assert(proxy!=null);
+        Assert._assert(proxy!=null);
 		this.storeProxy = proxy;
 	}
 

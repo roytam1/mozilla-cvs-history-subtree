@@ -1,27 +1,27 @@
-/* 
+/*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
  * the License at http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS
  * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
- * 
+ *
  * The Original Code is the Netscape Security Services for Java.
- * 
+ *
  * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
+ * Communications Corporation.  Portions created by Netscape are
  * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
+ * "GPL"), in which case the provisions of the GPL are applicable
+ * instead of those above.  If you wish to allow use of your
  * version of this file only under the terms of the GPL and not to
  * allow others to use your version of this file under the MPL,
  * indicate your decision by deleting the provisions above and
@@ -39,7 +39,6 @@
 #include <key.h>
 #include <ocsp.h>
 #include <pk11func.h>
-#include <secrng.h>
 #include <nspr.h>
 #include <plstr.h>
 #include <pkcs11.h>
@@ -49,6 +48,7 @@
 #include <jssutil.h>
 #include <java_ids.h>
 #include <jss_exceptions.h>
+#include <jssver.h>
 
 #include "pk11util.h"
 
@@ -65,11 +65,12 @@
 /*                                                                  */
 /********************************************************************/
 
-static const char* DLL_JSS_VERSION     = "JSS_VERSION = JSS_3_0";
-static const char* DLL_JDK_VERSION     = "JDK_VERSION = JDK 1.2.2";
-static const char* DLL_NSS_VERSION     = "NSS_VERSION = NSS_3_2_RTM";
-static const char* DLL_DBM_VERSION     = "DBM_VERSION = NSS_3_1_1_RTM";
-static const char* DLL_NSPR_VERSION    = "NSPR_VERSION = NSPRPUB_RELEASE_4_1";
+static const char* DLL_JSS_VERSION     = "JSS_VERSION = JSS_3_1_3";
+static const char* DLL_JDK_VERSION     = "JDK_VERSION = JDK 1.4.0";
+static const char* DLL_NSS_VERSION     = "NSS_VERSION = NSS_3_3_10";
+static const char* DLL_DBM_VERSION     = "DBM_VERSION = NSS_3_3_10";
+static const char* DLL_NSPR_VERSION    = "NSPR_VERSION = NSPRPUB_RELEASE_4_1_6_RTM";
+static const char* DLL_SECURITY_VERSION= "SECURITY_VERSION = SECURITY_3_3_10_RTM";
 
 static jobject
 makePWCBInfo(JNIEnv *env, PK11SlotInfo *slot);
@@ -111,94 +112,119 @@ handleSigChild(JNIEnv *env) {
 }
 
 #endif
-        
 
-int ConfigureOCSP( 
-		JNIEnv *env,
-		jboolean ocspCheckingEnabled,
+
+int ConfigureOCSP(
+        JNIEnv *env,
+        jboolean ocspCheckingEnabled,
         jstring ocspResponderURL,
         jstring ocspResponderCertNickname )
 {
-	char *ocspResponderURL_string=NULL;
-	char *ocspResponderCertNickname_string=NULL;
-	SECStatus status;
-	int result = SECSuccess;
+    char *ocspResponderURL_string=NULL;
+    char *ocspResponderCertNickname_string=NULL;
+    SECStatus status;
+    int result = SECSuccess;
     CERTCertDBHandle *certdb = CERT_GetDefaultCertDB();
 
 
-	/* if caller specified default responder, get the
-	 * strings associated with these args
-	 */
+    /* if caller specified default responder, get the
+     * strings associated with these args
+     */
 
-	if (ocspResponderURL) {
-    	ocspResponderURL_string = 
-			(char*) (*env)->GetStringUTFChars(env, ocspResponderURL, NULL);
-		if (ocspResponderURL_string == NULL) {
-       		JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
-            		"OCSP invalid URL");
-			result = SECFailure;
-			goto loser;
-		}
-	}
+    if (ocspResponderURL) {
+        ocspResponderURL_string =
+            (char*) (*env)->GetStringUTFChars(env, ocspResponderURL, NULL);
+        if (ocspResponderURL_string == NULL) {
+            JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
+                    "OCSP invalid URL");
+            result = SECFailure;
+            goto loser;
+        }
+    }
 
-	if (ocspResponderCertNickname) {
-    	ocspResponderCertNickname_string = 
-			(char*) (*env)->GetStringUTFChars(env, ocspResponderCertNickname, NULL);
-		if (ocspResponderCertNickname_string == NULL) {
-       		JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
-            		"OCSP invalid nickname");
-			result = SECFailure;
-			goto loser;
-		}
-	}
+    if (ocspResponderCertNickname) {
+        ocspResponderCertNickname_string =
+            (char*) (*env)->GetStringUTFChars(env, ocspResponderCertNickname, NULL);
+        if (ocspResponderCertNickname_string == NULL) {
+            JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
+                    "OCSP invalid nickname");
+            result = SECFailure;
+            goto loser;
+        }
+    }
 
-	/* first disable OCSP - we'll enable it later */
+    /* first disable OCSP - we'll enable it later */
 
-	CERT_DisableOCSPChecking(certdb);
+    CERT_DisableOCSPChecking(certdb);
 
-	/* if they set the default responder, then set it up
-	 * and enable it
-	 */
-	if (ocspResponderURL) {
-		status = 
-			CERT_SetOCSPDefaultResponder(	certdb, 
-											ocspResponderURL_string,
-											ocspResponderCertNickname_string
-										);
-		if (status == SECFailure) {
-			/* deal with error */
-       		JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
-            		"OCSP Could not set responder");
-			result = SECFailure;
-			goto loser;
-		}
-		CERT_EnableOCSPDefaultResponder(certdb);
-	}
-	else {
-		/* if no defaultresponder is set, disable it */
-		CERT_DisableOCSPDefaultResponder(certdb);
-	}
-		
+    /* if they set the default responder, then set it up
+     * and enable it
+     */
+    if (ocspResponderURL) {
+        /* if ocspResponderURL is set they must specify the
+           ocspResponderCertNickname */
+                if (ocspResponderCertNickname == NULL ) {
+                JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
+                "if OCSP responderURL is set, the Responder Cert nickname must be set");
+                        result = SECFailure;
+                        goto loser;
+                } else {
+                        CERTCertificate *cert;
+                        /* if the nickname is set */
+       cert = CERT_FindCertByNickname(certdb, ocspResponderCertNickname_string);
+                        if (cert == NULL) {
+                          /*
+                           * look for the cert on an external token.
+                        */
+       cert = PK11_FindCertFromNickname(ocspResponderCertNickname_string, NULL);
+                       }
+                        if (cert == NULL) {
+                                JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
+                    "Unable to find the OCSP Responder Certificate nickname.");
+                        result = SECFailure;
+                        goto loser;
+                   }
+            CERT_DestroyCertificate(cert);
+    }
+        status =
+            CERT_SetOCSPDefaultResponder(   certdb,
+                                            ocspResponderURL_string,
+                                            ocspResponderCertNickname_string
+                                        );
+        if (status == SECFailure) {
+            /* deal with error */
+            JSS_throwMsg(env, GENERAL_SECURITY_EXCEPTION,
+                    "OCSP Could not set responder");
+            result = SECFailure;
+            goto loser;
+        }
+        CERT_EnableOCSPDefaultResponder(certdb);
+    }
+    else {
+        /* if no defaultresponder is set, disable it */
+        CERT_DisableOCSPDefaultResponder(certdb);
+    }
 
-	/* enable OCSP checking if requested */
 
-	if (ocspCheckingEnabled) {
-		CERT_EnableOCSPChecking(certdb);
-	}
-	
+    /* enable OCSP checking if requested */
+
+    if (ocspCheckingEnabled) {
+        CERT_EnableOCSPChecking(certdb);
+    }
+
 loser:
-		
-	if (ocspResponderURL_string)  {
-        (*env)->ReleaseStringUTFChars(env, 
-			ocspResponderURL, ocspResponderURL_string);
-	}
 
-	if (ocspResponderCertNickname_string)  {
-        (*env)->ReleaseStringUTFChars(env, 
-			ocspResponderCertNickname, ocspResponderCertNickname_string);
-	}
+    if (ocspResponderURL_string)  {
+        (*env)->ReleaseStringUTFChars(env,
+            ocspResponderURL, ocspResponderURL_string);
+    }
 
-	return result;
+    if (ocspResponderCertNickname_string)  {
+        (*env)->ReleaseStringUTFChars(env,
+            ocspResponderCertNickname, ocspResponderCertNickname_string);
+    }
+
+    return result;
 
 }
 
@@ -231,9 +257,55 @@ Java_org_mozilla_jss_CryptoManager_initializeAllNative
         jstring keySlotString,
         jstring fipsString,
         jstring fipsKeyString,
-		jboolean ocspCheckingEnabled,
-		jstring ocspResponderURL,
-		jstring ocspResponderCertNickname )
+        jboolean ocspCheckingEnabled,
+        jstring ocspResponderURL,
+        jstring ocspResponderCertNickname )
+{
+    Java_org_mozilla_jss_CryptoManager_initializeAllNative2(
+        env,
+        clazz,
+        configDir,
+        certPrefix,
+        keyPrefix,
+        secmodName,
+        readOnly,
+        manuString,
+        libraryString,
+        tokString,
+        keyTokString,
+        slotString,
+        keySlotString,
+        fipsString,
+        fipsKeyString,
+        ocspCheckingEnabled,
+        ocspResponderURL,
+        ocspResponderCertNickname,
+        JNI_FALSE /*initializeJavaOnly*/
+        );
+}
+
+
+JNIEXPORT void JNICALL
+Java_org_mozilla_jss_CryptoManager_initializeAllNative2
+    (JNIEnv *env, jclass clazz,
+        jstring configDir,
+        jstring certPrefix,
+        jstring keyPrefix,
+        jstring secmodName,
+        jboolean readOnly,
+        jstring manuString,
+        jstring libraryString,
+        jstring tokString,
+        jstring keyTokString,
+        jstring slotString,
+        jstring keySlotString,
+        jstring fipsString,
+        jstring fipsKeyString,
+        jboolean ocspCheckingEnabled,
+        jstring ocspResponderURL,
+        jstring ocspResponderCertNickname,
+        jboolean initializeJavaOnly
+        )
 {
     SECStatus rv = SECFailure;
     JavaVM *VMs[5];
@@ -276,6 +348,32 @@ Java_org_mozilla_jss_CryptoManager_initializeAllNative
     }
 
     /*
+     * Save the JavaVM pointer so we can retrieve the JNI environment
+     * later. This only works if there is only one Java VM.
+     */
+    if( (*env)->GetJavaVM(env, &JSS_javaVM) != 0 ) {
+        JSS_trace(env, JSS_TRACE_ERROR,
+                    "Unable to to access Java virtual machine");
+        PR_ASSERT(PR_FALSE);
+        goto finish;
+    }
+
+    /*
+     * Initialize the errcode translation table.
+     */
+    JSS_initErrcodeTranslationTable();
+
+    /*
+     * The rest of the initialization (the NSS stuff) is skipped if
+     * the initializeJavaOnly flag is set.
+     */
+    if( initializeJavaOnly) {
+        initialized = PR_TRUE;
+        goto finish;
+    }
+
+
+    /*
      * Set the PKCS #11 strings
      */
     manuChars = (char*) (*env)->GetStringUTFChars(env, manuString, NULL);
@@ -298,14 +396,14 @@ Java_org_mozilla_jss_CryptoManager_initializeAllNative
     PR_ASSERT( strlen(keySlotChars) == 65 );
     PR_ASSERT( strlen(fipsChars) == 65 );
     PR_ASSERT( strlen(fipsKeyChars) == 65 );
-    PK11_ConfigurePKCS11(   PL_strdup(manuChars),
-                            PL_strdup(libraryChars),
-                            PL_strdup(tokChars),
-                            PL_strdup(keyTokChars),
-                            PL_strdup(slotChars),
-                            PL_strdup(keySlotChars),
-                            PL_strdup(fipsChars),
-                            PL_strdup(fipsKeyChars),
+    PK11_ConfigurePKCS11(   manuChars,
+                            libraryChars,
+                            tokChars,
+                            keyTokChars,
+                            slotChars,
+                            keySlotChars,
+                            fipsChars,
+                            fipsKeyChars,
                             0, /* minimum pin length */
                             PR_FALSE /* password required */
                         );
@@ -343,43 +441,32 @@ Java_org_mozilla_jss_CryptoManager_initializeAllNative
         goto finish;
     }
 
-	/*
-	 * Set default password callback.  This is the only place this
-	 * should ever be called if you are using Ninja.
+    /*
+     * Set default password callback.  This is the only place this
+     * should ever be called if you are using Ninja.
      */
-	PK11_SetPasswordFunc(getPWFromCallback);
+    PK11_SetPasswordFunc(getPWFromCallback);
 
-	/*
-	 * Setup NSS to call the specified OCSP responder
-	 */
-	rv = ConfigureOCSP( 
-		env,
-		ocspCheckingEnabled,
+    /*
+     * Setup NSS to call the specified OCSP responder
+     */
+    rv = ConfigureOCSP(
+        env,
+        ocspCheckingEnabled,
         ocspResponderURL,
         ocspResponderCertNickname );
 
-	if (rv != SECSuccess) {
-		goto finish;
-	}
-
-    /*
-     * Save the JavaVM pointer so we can retrieve the JNI environment
-     * later. This only works if there is only one Java VM.
-	 */
-    if( JNI_GetCreatedJavaVMs(VMs, 5, &numVMs) != 0) {
-        JSS_trace(env, JSS_TRACE_ERROR,
-                    "Unable to to access Java virtual machine");
-        PR_ASSERT(PR_FALSE);
+    if (rv != SECSuccess) {
         goto finish;
     }
-    if(numVMs != 1) {
-        char *str;
-        PR_smprintf(str, "Invalid number of Java VMs: %d", numVMs);
-        JSS_trace(env, JSS_TRACE_ERROR, str);
-        PR_smprintf_free(str);
-        PR_ASSERT(PR_FALSE);
+
+    /*
+     * Set up policy. We're always domestic now. Thanks to the US Government!
+     */
+    if( NSS_SetDomesticPolicy() != SECSuccess ) {
+        JSS_throwMsg(env, SECURITY_EXCEPTION, "Unable to set security policy");
+        goto finish;
     }
-    JSS_javaVM = VMs[0];
 
     initialized = PR_TRUE;
 
@@ -414,7 +501,7 @@ finish:
 }
 
 /**********************************************************************
- * 
+ *
  * JSS_setPasswordCallback
  *
  * Sets the global PasswordCallback object, which will be used to
@@ -440,7 +527,7 @@ JSS_setPasswordCallback(JNIEnv *env, jobject callback)
 }
 
 /**********************************************************************
- * 
+ *
  * CryptoManager.setNativePasswordCallback
  *
  * Sets the global PasswordCallback object, which will be used to
@@ -477,24 +564,24 @@ Java_org_mozilla_jss_CryptoManager_setNativePasswordCallback
 static char*
 getPWFromCallback(PK11SlotInfo *slot, PRBool retry, void *arg)
 {
-	jobject pwcbInfo;
+    jobject pwcbInfo;
     jobject pwObject;
-	jbyteArray pwArray=NULL;
-	char* pwchars;
-	char* returnchars=NULL;
-	jclass callbackClass;
+    jbyteArray pwArray=NULL;
+    char* pwchars;
+    char* returnchars=NULL;
+    jclass callbackClass;
     jclass passwordClass;
-	jmethodID getPWMethod;
+    jmethodID getPWMethod;
     jmethodID getByteCopyMethod;
     jmethodID clearMethod;
-	jthrowable exception;
+    jthrowable exception;
     jobject callback;
-	JNIEnv *env;
+    JNIEnv *env;
 
-	PR_ASSERT(slot!=NULL);
-	if(slot==NULL) {
-		return NULL;
-	}
+    PR_ASSERT(slot!=NULL);
+    if(slot==NULL) {
+        return NULL;
+    }
 
     /* Get the callback from the arg, or use the default */
     PR_ASSERT(sizeof(void*) == sizeof(jobject));
@@ -512,64 +599,64 @@ getPWFromCallback(PK11SlotInfo *slot, PRBool retry, void *arg)
         PR_ASSERT(PR_FALSE);
         goto finish;
     }
-	PR_ASSERT(env != NULL);
+    PR_ASSERT(env != NULL);
 
-	/*****************************************
-	 * Construct the JSS_PasswordCallbackInfo
- 	 *****************************************/
-	pwcbInfo = makePWCBInfo(env, slot);
-	if(pwcbInfo==NULL) {
-		goto finish;
-	}
+    /*****************************************
+     * Construct the JSS_PasswordCallbackInfo
+     *****************************************/
+    pwcbInfo = makePWCBInfo(env, slot);
+    if(pwcbInfo==NULL) {
+        goto finish;
+    }
 
-	/*****************************************
-	 * Get the callback class and methods
- 	 *****************************************/
-	callbackClass = (*env)->GetObjectClass(env, callback);
+    /*****************************************
+     * Get the callback class and methods
+     *****************************************/
+    callbackClass = (*env)->GetObjectClass(env, callback);
     if(callbackClass == NULL) {
         JSS_trace(env, JSS_TRACE_ERROR, "Failed to find password "
             "callback class");
-	    PR_ASSERT(PR_FALSE);
+        PR_ASSERT(PR_FALSE);
     }
-	if(retry) {
-		getPWMethod = (*env)->GetMethodID(
-						env,
-						callbackClass,
-						PW_CALLBACK_GET_PW_AGAIN_NAME,
-						PW_CALLBACK_GET_PW_AGAIN_SIG);
-	} else {
-		getPWMethod = (*env)->GetMethodID(
-						env,
-						callbackClass,
-						PW_CALLBACK_GET_PW_FIRST_NAME,
-						PW_CALLBACK_GET_PW_FIRST_SIG);
-	}
-	if(getPWMethod == NULL) {
+    if(retry) {
+        getPWMethod = (*env)->GetMethodID(
+                        env,
+                        callbackClass,
+                        PW_CALLBACK_GET_PW_AGAIN_NAME,
+                        PW_CALLBACK_GET_PW_AGAIN_SIG);
+    } else {
+        getPWMethod = (*env)->GetMethodID(
+                        env,
+                        callbackClass,
+                        PW_CALLBACK_GET_PW_FIRST_NAME,
+                        PW_CALLBACK_GET_PW_FIRST_SIG);
+    }
+    if(getPWMethod == NULL) {
         JSS_trace(env, JSS_TRACE_ERROR,
             "Failed to find password callback accessor method");
-		ASSERT_OUTOFMEM(env);
-		goto finish;
-	}
+        ASSERT_OUTOFMEM(env);
+        goto finish;
+    }
 
-	/*****************************************
-	 * Get the password from the callback
- 	 *****************************************/
-	pwObject = (*env)->CallObjectMethod(
-										env,
-										callback,
-										getPWMethod,
-										pwcbInfo);
+    /*****************************************
+     * Get the password from the callback
+     *****************************************/
+    pwObject = (*env)->CallObjectMethod(
+                                        env,
+                                        callback,
+                                        getPWMethod,
+                                        pwcbInfo);
     if( (*env)->ExceptionOccurred(env) != NULL) {
         goto finish;
     }
-	if( pwObject == NULL ) {
-		JSS_throw(env, GIVE_UP_EXCEPTION);
-		goto finish;
-	}
+    if( pwObject == NULL ) {
+        JSS_throw(env, GIVE_UP_EXCEPTION);
+        goto finish;
+    }
 
-	/*****************************************
-	 * Get Password class and methods
- 	 *****************************************/
+    /*****************************************
+     * Get Password class and methods
+     *****************************************/
     passwordClass = (*env)->GetObjectClass(env, pwObject);
     if(passwordClass == NULL) {
         JSS_trace(env, JSS_TRACE_ERROR, "Failed to find Password class");
@@ -599,32 +686,32 @@ getPWFromCallback(PK11SlotInfo *slot, PRBool retry, void *arg)
     pwArray = (*env)->CallObjectMethod( env, pwObject, getByteCopyMethod);
     (*env)->CallVoidMethod(env, pwObject, clearMethod);
 
-	exception = (*env)->ExceptionOccurred(env);
-	if(exception == NULL) {
-		PR_ASSERT(pwArray != NULL);
+    exception = (*env)->ExceptionOccurred(env);
+    if(exception == NULL) {
+        PR_ASSERT(pwArray != NULL);
 
-		/*************************************************************
-	 	 * Copy the characters out of the byte array,
-		 * then erase it
- 	 	*************************************************************/
-		pwchars = (char*) (*env)->GetByteArrayElements(env, pwArray, NULL);
-		PR_ASSERT(pwchars!=NULL);
+        /*************************************************************
+         * Copy the characters out of the byte array,
+         * then erase it
+        *************************************************************/
+        pwchars = (char*) (*env)->GetByteArrayElements(env, pwArray, NULL);
+        PR_ASSERT(pwchars!=NULL);
 
-		returnchars = PL_strdup(pwchars);
-		JSS_wipeCharArray(pwchars);
-		(*env)->ReleaseByteArrayElements(env, pwArray, (jbyte*)pwchars, 0);
-	} else {
-		returnchars = NULL;
-	}
+        returnchars = PL_strdup(pwchars);
+        JSS_wipeCharArray(pwchars);
+        (*env)->ReleaseByteArrayElements(env, pwArray, (jbyte*)pwchars, 0);
+    } else {
+        returnchars = NULL;
+    }
 
 finish:
-	if( (exception=(*env)->ExceptionOccurred(env)) != NULL) {
+    if( (exception=(*env)->ExceptionOccurred(env)) != NULL) {
 #ifdef DEBUG
         jclass giveupClass;
         jmethodID printStackTrace;
         jclass excepClass;
 #endif
-		(*env)->ExceptionClear(env);
+        (*env)->ExceptionClear(env);
 #ifdef DEBUG
         giveupClass = (*env)->FindClass(env, GIVE_UP_EXCEPTION);
         PR_ASSERT(giveupClass != NULL);
@@ -635,10 +722,10 @@ finish:
             (*env)->CallVoidMethod(env, exception, printStackTrace);
             PR_ASSERT( PR_FALSE );
         }
-		PR_ASSERT(returnchars==NULL);
+        PR_ASSERT(returnchars==NULL);
 #endif
-	}
-	return returnchars;
+    }
+    return returnchars;
 }
 
 /**********************************************************************
@@ -651,54 +738,54 @@ finish:
 static jobject
 makePWCBInfo(JNIEnv *env, PK11SlotInfo *slot)
 {
-	jclass infoClass;
-	jmethodID constructor;
-	jstring name;
-	jobject pwcbInfo=NULL;
+    jclass infoClass;
+    jmethodID constructor;
+    jstring name;
+    jobject pwcbInfo=NULL;
 
-	PR_ASSERT(env!=NULL && slot!=NULL);
+    PR_ASSERT(env!=NULL && slot!=NULL);
 
-	/*****************************************
+    /*****************************************
      * Turn the token name into a Java String
- 	 *****************************************/
-	name = (*env)->NewStringUTF(env, PK11_GetTokenName(slot));
-	if(name == NULL) {
-		ASSERT_OUTOFMEM(env);
-		goto finish;
-	}
+     *****************************************/
+    name = (*env)->NewStringUTF(env, PK11_GetTokenName(slot));
+    if(name == NULL) {
+        ASSERT_OUTOFMEM(env);
+        goto finish;
+    }
 
-	/*****************************************
-	 * Look up the class and constructor
- 	 *****************************************/
-	infoClass = (*env)->FindClass(env, TOKEN_CBINFO_CLASS_NAME);
-	if(infoClass == NULL) {
+    /*****************************************
+     * Look up the class and constructor
+     *****************************************/
+    infoClass = (*env)->FindClass(env, TOKEN_CBINFO_CLASS_NAME);
+    if(infoClass == NULL) {
         JSS_trace(env, JSS_TRACE_ERROR, "Unable to find TokenCallbackInfo "
             "class");
-		ASSERT_OUTOFMEM(env);
-		goto finish;
-	}
-	constructor = (*env)->GetMethodID(	env,
-										infoClass,
-										TOKEN_CBINFO_CONSTRUCTOR_NAME,
-										TOKEN_CBINFO_CONSTRUCTOR_SIG);
-	if(constructor == NULL) {
+        ASSERT_OUTOFMEM(env);
+        goto finish;
+    }
+    constructor = (*env)->GetMethodID(  env,
+                                        infoClass,
+                                        TOKEN_CBINFO_CONSTRUCTOR_NAME,
+                                        TOKEN_CBINFO_CONSTRUCTOR_SIG);
+    if(constructor == NULL) {
         JSS_trace(env, JSS_TRACE_ERROR, "Unable to find "
             "TokenCallbackInfo constructor");
-		ASSERT_OUTOFMEM(env);
-		goto finish;
-	}
+        ASSERT_OUTOFMEM(env);
+        goto finish;
+    }
 
-	/*****************************************
-	 * Create the CallbackInfo object
- 	 *****************************************/
-	pwcbInfo = (*env)->NewObject(env, infoClass, constructor, name);
+    /*****************************************
+     * Create the CallbackInfo object
+     *****************************************/
+    pwcbInfo = (*env)->NewObject(env, infoClass, constructor, name);
     if(pwcbInfo == NULL) {
         JSS_trace(env, JSS_TRACE_ERROR, "Unable to create TokenCallbackInfo");
         ASSERT_OUTOFMEM(env);
     }
 
 finish:
-	return pwcbInfo;
+    return pwcbInfo;
 }
 
 /**********************************************************************
@@ -839,3 +926,28 @@ Java_org_mozilla_jss_DatabaseCloser_closeDatabases
 {
     NSS_Shutdown();
 }
+
+/**********************************************************************
+* configureOCSPNative
+*
+* Allows configuration of the OCSP responder during runtime.
+*/
+JNIEXPORT void JNICALL
+Java_org_mozilla_jss_CryptoManager_configureOCSPNative(
+        JNIEnv *env, jobject this,
+        jboolean ocspCheckingEnabled,
+        jstring ocspResponderURL,
+        jstring ocspResponderCertNickname )
+{
+    SECStatus rv = SECFailure;
+
+    rv =  ConfigureOCSP(env,ocspCheckingEnabled,
+        ocspResponderURL, ocspResponderCertNickname);
+
+    if (rv != SECSuccess) {
+        JSS_throwMsgPrErr(env,
+                     GENERAL_SECURITY_EXCEPTION,
+                     "Failed to configure OCSP");
+    }
+}
+

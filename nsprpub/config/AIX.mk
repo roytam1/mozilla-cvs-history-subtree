@@ -124,13 +124,13 @@ OS_CFLAGS	+= -DAIX4_1
 else
 DSO_LDOPTS	= -brtl -bM:SRE -bnoentry -bexpall
 MKSHLIB		= $(LD) $(DSO_LDOPTS)
-ifeq ($(OS_RELEASE),4.3)
-OS_CFLAGS	+= -DAIX4_3
+ifeq (4.3,$(firstword $(sort 4.3 $(OS_RELEASE))))
+OS_CFLAGS	+= -DAIX4_3_PLUS
 endif
 endif
 
 # Have the socklen_t data type
-ifeq ($(OS_RELEASE),4.3)
+ifeq (4.3,$(firstword $(sort 4.3 $(OS_RELEASE))))
 OS_CFLAGS	+= -DHAVE_SOCKLEN_T
 endif
 
@@ -138,7 +138,7 @@ ifneq (,$(filter-out 3.2 4.1 4.2,$(OS_RELEASE)))
 OS_CFLAGS	+= -DHAVE_FCNTL_FILE_LOCKING
 endif
 
-ifeq (,$(filter-out 4.2 4.3,$(OS_RELEASE)))
+ifeq (4.2,$(firstword $(sort 4.2 $(OS_RELEASE))))
 # On these OS revisions, localtime_r() is declared if _THREAD_SAFE
 # is defined.
 ifneq ($(CLASSIC_NSPR),1)
@@ -146,7 +146,7 @@ OS_CFLAGS	+= -DHAVE_POINTER_LOCALTIME_R
 endif
 endif
 
-ifeq (,$(filter-out 4.3,$(OS_RELEASE)))
+ifeq (4.3,$(firstword $(sort 4.3 $(OS_RELEASE))))
 # On these OS revisions, gethostbyXXX() returns result in thread
 # specific storage.
 ifeq ($(USE_PTHREADS),1)

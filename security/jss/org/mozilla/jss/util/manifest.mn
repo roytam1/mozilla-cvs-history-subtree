@@ -60,12 +60,11 @@ JSRCS =	                                    \
             ConsolePasswordCallback.java    \
             Debug.java                      \
             IncorrectPasswordException.java \
-            InvalidDERException.java        \
 			InvalidNicknameException.java   \
             NativeProxy.java                \
+            NativeErrcodes.java                \
 			NotImplementedException.java	\
             NullPasswordCallback.java       \
-            ObjectNotFoundException.java    \
 			Password.java                   \
 			PasswordCallback.java           \
 			PasswordCallbackInfo.java       \
@@ -82,17 +81,20 @@ CLASSES =									\
             IncorrectPasswordException      \
 			InvalidNicknameException		\
 			NativeProxy        				\
+            NativeErrcodes                \
 			NotImplementedException			\
             NullPasswordCallback            \
 			Password                        \
 			PasswordCallback                \
 			PasswordCallbackInfo            \
             Tunnel                          \
-			UTF8Converter					\
+			UTF8Converter	      				\
 			$(NULL)
 
 CSRCS =     jssutil.c                    \
             jssver.c                     \
+            errstrings.c                 \
+            NativeErrcodes.c             \
             $(NULL)
 
 LIBRARY_NAME = jssutil
