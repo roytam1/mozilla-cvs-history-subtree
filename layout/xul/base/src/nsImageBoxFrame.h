@@ -26,7 +26,7 @@
 #include "nsLeafBoxFrame.h"
 
 
-#define USE_IMG2 1
+//#define USE_IMG2 1
 
 #ifdef USE_IMG2
 #include "nsIImageLoader.h"

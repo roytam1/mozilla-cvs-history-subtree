@@ -151,12 +151,7 @@ NS_IMETHODIMP nsImageFrame::GetHeight(nscoord *aHeight)
 /* readonly attribute nsRect rect; */
 NS_IMETHODIMP nsImageFrame::GetRect(nsRect **aRect)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
-
-  if (!mInitalized)
-    return NS_ERROR_NOT_INITIALIZED;
-
-//  *aRect = mRect;
+  *aRect = &mRect;
   return NS_OK;
 }
 

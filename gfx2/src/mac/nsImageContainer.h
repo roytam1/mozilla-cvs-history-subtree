@@ -54,6 +54,7 @@ private:
   nsSupportsArray mFrames;
   nsSize mSize;
   PRUint32 mCurrentFrame;
+  PRUint32 mCurrentAnimationFrame;
   PRBool   mCurrentFrameIsFinishedDecoding;
   PRBool   mDoneDecoding;
   

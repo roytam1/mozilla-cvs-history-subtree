@@ -33,6 +33,7 @@ nsImageContainer::nsImageContainer()
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
   mCurrentFrame = 0;
+  mCurrentAnimationFrame = 0;
   mCurrentFrameIsFinishedDecoding = PR_FALSE;
   mDoneDecoding = PR_FALSE;
 }
@@ -127,7 +128,7 @@ NS_IMETHODIMP nsImageContainer::AppendFrame(nsIImageFrame *item)
         
         mTimer->Init(
           sAnimationTimerCallback, this, timeout, 
-          NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+          NS_PRIORITY_NORMAL, NS_TYPE_ONE_SHOT);
       }
     }
   }
@@ -185,37 +186,60 @@ void nsImageContainer::sAnimationTimerCallback(nsITimer *aTimer, void *aImageCon
 {
   nsImageContainer* self = NS_STATIC_CAST(nsImageContainer*, aImageContainer);
   nsCOMPtr<nsIImageFrame> nextFrame;
-  PRInt32 timeout;
+  PRInt32 timeout = 100;
       
+  printf("timer callback ");
+  
   // If we're done decoding the next frame, go ahead and display it now and reinit
   // the timer with the next frame's delay time.
-  if(self->mCurrentFrameIsFinishedDecoding) {
+  if(self->mCurrentFrameIsFinishedDecoding && !self->mDoneDecoding) {
     // If we have the next frame in the sequence set the timer callback from it
-
-    self->GetFrameAt(self->mCurrentFrame + 1, getter_AddRefs(nextFrame));
+    self->GetFrameAt(self->mCurrentAnimationFrame + 1, getter_AddRefs(nextFrame));
     if(nextFrame) {
       // Go to next frame in sequence
       nextFrame->GetTimeout(&timeout);
+      self->mCurrentAnimationFrame++;
     } else if (self->mDoneDecoding) {
       // Go back to the beginning of the loop
       self->GetFrameAt(0, getter_AddRefs(nextFrame));
       nextFrame->GetTimeout(&timeout);
-      self->mCurrentFrame = 0;
+      self->mCurrentAnimationFrame = 0;
     } else {
       // twiddle our thumbs
-      self->GetFrameAt(self->mCurrentFrame, getter_AddRefs(nextFrame));
+      self->GetFrameAt(self->mCurrentAnimationFrame, getter_AddRefs(nextFrame));
       nextFrame->GetTimeout(&timeout);
     }
+  } else if(self->mDoneDecoding){
+    PRUint32 numFrames;
+    self->GetNumFrames(&numFrames);
+    if(numFrames == self->mCurrentAnimationFrame) {
+      self->GetFrameAt(0, getter_AddRefs(nextFrame));
+      self->mCurrentAnimationFrame = 0;
+      self->mCurrentFrame = 0;
+      nextFrame->GetTimeout(&timeout);
+    } else {
+      self->GetFrameAt(self->mCurrentAnimationFrame++, getter_AddRefs(nextFrame));
+      self->mCurrentFrame = self->mCurrentAnimationFrame;
+      nextFrame->GetTimeout(&timeout);
+    }
+  } else {
+      self->GetFrameAt(self->mCurrentFrame, getter_AddRefs(nextFrame));
+      nextFrame->GetTimeout(&timeout);
   }
+  
+  printf(" mCurrentAnimationFrame = %d\n", self->mCurrentAnimationFrame);
   
   // XXX do notification to FE to draw this frame
   nsRect* dirtyRect;
   nextFrame->GetRect(&dirtyRect);
+  
+  printf("x=%d, y=%d, w=%d, h=%d\n", dirtyRect->x, dirtyRect->y, dirtyRect->width, dirtyRect->height);
   self->mObserver->FrameChanged(
     self, nsnull, 
     nextFrame, dirtyRect);
   
+  
   self->mTimer->Init(
     sAnimationTimerCallback, aImageContainer, timeout, 
-    NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+    NS_PRIORITY_NORMAL, NS_TYPE_ONE_SHOT);
 }
