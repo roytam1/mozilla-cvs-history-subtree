@@ -153,6 +153,8 @@ nsPrefLDAP::OnLDAPInit(nsresult aStatus)
         FinishLDAPQuery();
         return NS_ERROR_FAILURE;
     }
+    
+    return NS_OK;
 }
 
 nsresult
