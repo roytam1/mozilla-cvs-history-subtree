@@ -1,0 +1,10 @@
+<!ENTITY window.title                 "Vyjímky">
+<!ENTITY treehead.sitename.label      "Server">
+<!ENTITY treehead.status.label        "Stav">
+<!ENTITY addpermission.label          "Nový server">
+<!ENTITY removepermission.label       "Odebrat server">
+<!ENTITY removeallpermissions.label   "Odebrat všechny servery">
+<!ENTITY address.label                "Adresa serveru:">
+<!ENTITY block.label                  "Blokovat">
+<!ENTITY session.label                "Allow for Session">
+<!ENTITY allow.label                  "Povolit">

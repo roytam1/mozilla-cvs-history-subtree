@@ -1,0 +1,33 @@
+<search 
+   name="Vltava"
+   description="Hledani na Vltavì"
+   method="GET"
+   action="http://www.vltava.cz/store/Search.asp"
+   searchForm="http://www.vltava.cz/store/Search.asp?nDepartmentID=0"
+>
+
+<input name="SearchName" user>
+<input name="Ok.x" value="0">
+<input name="Ok.y" value="0">
+<input name="nDepartmentID" value="0">
+
+<interpret 
+   browserResultType="category" 
+   charset="Windows-1250"
+   resultItemStart="<!--c-->" 
+   resultItemEnd="<!--d-->"
+>
+
+<interpret 
+   browserResultType="result" 
+   charset="Windows-1250"
+   resultItemStart="<!--m-->" 
+   resultItemEnd="<!--n-->"
+>
+</search>
+
+<browser
+   update="http://www.woodstock.wz.cz/public/Vltava.cz.src"
+   updateIcon="http://www.woodstock.wz.cz/public/Vltava.cz.gif"
+   updateCheckDays="10"
+>

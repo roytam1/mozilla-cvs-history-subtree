@@ -1,0 +1,97 @@
+<!--LOCALIZATION NOTE : FILE 'Advanced' prefs settings -->
+<!ENTITY lHeader                      "Ostatní">
+
+<!ENTITY accessibility.label          "Usnadnění">
+<!ENTITY moveSystemCaret.label        "Přesunout systémový znak se změnami zaměření/výběru">
+<!ENTITY browsing.label               "Prohlížení">
+<!ENTITY hideTabBar.label             "Skrýt lištu s panely, pokud je otevřena pouze jedna stránka">
+<!ENTITY loadInBackground.label       "Otevírat odkazy do nových panelů">
+<!ENTITY useAutoScrolling.label       "Používat automatické posunování">
+<!ENTITY useSmoothScrolling.label     "Používat jemné posunování">
+<!ENTITY multimedia.label             "Multimédia">
+<!ENTITY enableAutoImageResizing.label "Změnit velikost větších obrázků tak, aby se vešly do okna prohlížeče">
+<!ENTITY security.label               "Zabezpečení">
+<!ENTITY useSSL2.label                "Použít SSL 2.0">
+<!ENTITY useSSL3.label                "Použít SSL 3.0">
+<!ENTITY useTLS1.label                "Použít TLS 1.0">
+<!ENTITY useTypeAheadFind.label       "Psaním vyhledávat text na stránce">
+<!ENTITY linksOnlyTypeAheadFind.label "vyhledávat pouze odkazy">
+
+<!-- Certs -->
+<!ENTITY certs.label                  "Certifikáty">
+<!ENTITY SSLClientAuthMethod          "Výběr certifikátu pro klienta">
+<!ENTITY certselect.description       "Rozhodněte, jaký bezpečnostní certifikát má aplikace &brandShortName; předkládat stránkám, které jej vyžadují">
+<!ENTITY certselect.auto              "Vybrat automaticky">
+<!ENTITY certselect.ask               "Pokaždé se dotázat">
+<!ENTITY  managecerts.label           "Správa certifikátů">
+<!ENTITY  managecerts.text            "Použijte správce certifikátů pro správu osobních certifikátů, certifkátů ostatních lidí a certikačních autorit.">
+<!ENTITY  managecerts.button          "Spravovat certifikáty...">
+<!ENTITY  managecerts.accesskey       "c">
+<!ENTITY  managedevices.label         "Správa bezpečnostních zařízení">
+<!ENTITY  managedevices.text          "Použijte toto tlačítko pro správu certifikačních zařízení, jako jsou chytré karty.">
+<!ENTITY  managedevices.button        "Spravovat bezpečností zařízení...">
+<!ENTITY  managedevices.accesskey     "b">
+
+<!ENTITY  validation.label            "Ověřování">
+
+<!-- Validation -->
+<!ENTITY  validation.title          "Ověřování platnosti">
+
+<!ENTITY  validation.crl.label      "Seznam uložených certifikátů">
+<!ENTITY  validation.crl.description "Správce CRL používejte pro správu seznamu uložených certifikátů (Certificate Revocation Lists - CRL), které jsou ve vaší databázi certifikátů.">
+<!ENTITY  validation.managecrls.button      "Spravovat seznam CRL...">
+<!ENTITY  validation.managecrls.accesskey   "M">
+<!ENTITY  validation.crlmanager.label       "Spravovat seznam CRL">
+<!ENTITY  validation.crlname.label          "Název">
+<!ENTITY  validation.crllastupdate.label    "Datum poslední aktualizace">
+<!ENTITY  validation.crlnextupdate.label    "Následující aktualizace">
+<!ENTITY  validation.crlautoupdateenabled.label   "Automatická aktualizace">
+<!ENTITY  validation.crlautoupdatestatus.label    "Stav automatické aktualizace">
+<!ENTITY  validation.deletecrl.label        "Smazat">
+<!ENTITY  validation.updatecrl.label        "Aktualizovat">
+<!ENTITY  validation.advanced.label         "Nastavení">
+
+<!ENTITY  validation.crl.autoupdate.title            "Předvolby automatické aktualizace CRL">
+<!ENTITY  validation.crl.autoupdate.enable.label     "Povolít automatickou aktualizaci pro tento CRL">
+<!ENTITY  validation.crl.autoupdate.time.label1      "Aktualizovat">
+<!ENTITY  validation.crl.autoupdate.time.label2      "dní před další aktualizací">
+<!ENTITY  validation.crl.autoupdate.freq.label1      "Aktualizovat každých">
+<!ENTITY  validation.crl.autoupdate.freq.label2      "dnů">
+<!ENTITY  validation.crl.autoupdate.url.label        "CRL bude importován z:">
+<!ENTITY  crl.import.status.title         "Stav importu CRL">
+<!ENTITY  crl.import.success.message      "Seznam certifikatů (CRL) byl úspěšně importován.">
+<!ENTITY  crl.issuer.label                "CRL vydal:">
+<!ENTITY  crl.issuer.org.label            "Organizace:">
+<!ENTITY  crl.issuer.orgunit.label        "Jednotka:">
+<!ENTITY  crl.import.nextupdate.label     "Příští aktualizace:">
+<!ENTITY  crl.autoupdate.fail.cnt.label      "Předchozí selhání postupných aktualizací:">
+<!ENTITY  crl.autoupdate.fail.reason.label   "Detaily posledního selhání aktualizace:">
+<!ENTITY  ok.button        "OK">
+<!ENTITY  cancel.button    "Zrušit">
+<!ENTITY  help.button      "Nápověda">
+<!ENTITY  edit.button      "Nastavení">
+
+<!ENTITY validation.ocsp.label      "Online ověření stavu certifikátů">
+<!ENTITY validation.ocsp.description "&brandShortName; může použít Online Certificate Status Protocol (OCSP) pro ověřování certifikátů. Aplikaci &brandShortName; lze nastavit pro použití OSCP:">
+<!ENTITY disableOCSP.label "Nepoužívat OSCP pro ověření platnosti certifikátu">
+<!ENTITY certOCSP.label "Použít OCSP pro ověření pouze těch certifikátů, které mají zadáno URL služby">
+<!ENTITY proxyOCSP.label "Použít OCSP pro ověření všech certifikátů pomocí tohoto URL a podpisu:">
+<!ENTITY serviceURL.label "URL služby:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY signingCA.label "Podpis vydavatele:">
+<!ENTITY signingCA.accesskey "P">
+
+<!-- Software Update -->
+<!ENTITY softwareupdate.label             "Aktualizace softwaru">
+<!ENTITY softwareupdateinfo.label         "Opakovaně kontrolovat aktualize:">
+<!ENTITY enableSmartUpdate.label          "&brandShortName;">
+<!ENTITY enableSmartUpdate.accesskey      "F">
+<!ENTITY enableExtensionUpdate.label      "Má rozšíření">
+<!ENTITY enableExtensionUpdate.accesskey  "M">
+<!ENTITY enableAutoInstall.label          "Automaticky stáhnout a nainstalovat aktualizace rozšířeních">
+<!ENTITY enableAutoInstall.accesskey      "t">
+<!ENTITY checkNow.label                   "Zkontrolovat">
+<!ENTITY checkNow.accesskey               "Z">
+
+<!ENTITY xpinstall.allowedSites.label     "Allowed Sites">
+<!ENTITY xpinstall.allowedSites.accesskey "S">

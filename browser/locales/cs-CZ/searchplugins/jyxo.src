@@ -1,0 +1,22 @@
+# Jyxo Mozilla plugin by list@illich.cz
+
+<search
+  name="Jyxo"
+  description="Jyxo"
+  method="GET"
+  action="http://jyxo.cz/s" >
+  <input name="s" user>
+  <input name="i" value="mozilla">
+  <input name="stem" value="1">
+  <inputnext name="skip" factor="15">
+  <inputprev name="skip" factor="15">
+  <interpret
+    browserResultType="result"
+    resultItemStart="<!--m-->"
+    resultItemEnd="<!--n-->" >
+</search>
+
+<browser
+  update="http://jyxo.cz/misc/jyxo.src"
+  updateIcon="http://jyxo.cz/misc/jyxo.gif"
+  updateCheckDays="1" >

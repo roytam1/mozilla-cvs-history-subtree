@@ -1,0 +1,29 @@
+<!ENTITY newBookmark.title          "Přidat záložku">
+<!ENTITY newbookmark.label          "&brandShortName; přidá tuto stránku mezi záložky.">
+<!ENTITY name.label                 "Název:">
+<!ENTITY name.accesskey             "N">
+<!ENTITY keyword.label              "Keyword:">
+<!ENTITY keyword.accesskey          "K">
+<!ENTITY url.label                  "Umístění:">
+<!ENTITY url.accesskey              "m">
+<!ENTITY button.createin.label      "Vytvořit v &gt;&gt;">
+<!ENTITY button.createin.accesskey  "t">
+<!ENTITY button.createin2.label     "Vytvořit v &lt;&lt;">
+<!ENTITY createin.label             "Vytvořit v:">
+<!ENTITY createin.accesskey         "i">
+<!ENTITY button.newfolder.label     "Nová složka...">
+<!ENTITY button.newfolder.accesskey "N">
+<!ENTITY alwayscreateinfolder.label "Tento dialog již nezobrazovat">
+<!ENTITY alwayscreateinfolder.accesskey "T">
+<!ENTITY dontshowmessage.tooltip    "Pokud je tato volba aktivována, budou se záložky ukládat pod názvem specifikovaným v záhlaví stránky.">
+<!ENTITY button.defaultfolder.label "Použít výchozí">
+<!ENTITY button.defaultfolder.accesskey "v">
+<!ENTITY selectFolder.label         "Vybrat složku">
+
+<!ENTITY expanderDown.tooltip    "Zobrazí všechny složky se záložkama">
+<!ENTITY expanderUp.tooltip      "Skrýt">
+<!ENTITY addGroup.label          "Přidat všechny panely ve složce k záložkám">
+<!ENTITY addGroup.accesskey      "d">
+<!ENTITY newFolder.label         "Nová složka">
+<!ENTITY newFolder.accesskey     "s">
+<!ENTITY acceptButton.label      "Přidat">

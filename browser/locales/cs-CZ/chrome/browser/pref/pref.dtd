@@ -1,0 +1,24 @@
+<!-- extracted from content/PrefsWindow.xul -->
+
+<!-- LOCALIZATION NOTE : FILE UI for the outer parts of the Prefs dialog -->
+<!ENTITY  prefWindow.title            "Předvolby">
+<!ENTITY  prefWindowUnix.title        "Předvolby">
+
+<!-- LOCALIZATION NOTE : this is part of an inline-style attribute on the
+     preference dialog's <window> node, which specifies the width and height
+     in em units of the dialog. Localizers ONLY can increase these widths 
+     if they are having difficulty getting panel content to fit. 1em = the 
+     width of the letter 'm' in the selected font.
+     XUL/FE DEVELOPERS: DO NOT MODIFY THIS VALUE. It represents the correct
+     size of this window for en-US. -->
+<!ENTITY  prefWindow.size             "width: 62em; height: 41em;">
+<!--LOCALIZATION NOTE : FILE Lists preferences categories that appear on the left of the preferences dialog -->
+<!ENTITY themes.label "Motivy vzhledu">
+<!ENTITY ext.label    "Rozšíření">
+<!ENTITY general.label "Obecné">
+<!ENTITY privacy.label "Soukromí">
+<!ENTITY downloads.label "Stahování">
+<!ENTITY features.label "Webové stránky">
+<!ENTITY advanced.label "Ostatní">
+
+

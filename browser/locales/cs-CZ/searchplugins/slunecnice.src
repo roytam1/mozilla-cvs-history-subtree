@@ -1,0 +1,32 @@
+# Slunecnice search plug-in
+# sidebars@czilla.cz
+# $Id$
+
+<search 
+   name="Slunecnice"
+   description="Slunecnice - nejlepsi download"
+   method="GET"
+   action="http://www.slunecnice.cz/search.php4"
+   searchForm="http://www.slunecnice.cz/"
+>
+
+<input name="qs" user>
+<input name="sourceid" value="mozilla-search">
+<input name="search" value="1">
+<input name="where[all]" value="1">
+<input name="p" value="5">
+
+<interpret 
+   browserResultType="result" 
+   charset="iso-8859-2"
+   resultItemStart="<h4>" 
+   resultItemEnd="</h4>"
+>
+
+</search>
+
+<browser
+   update="http://www.czilla.cz/sidebars/search/slunecnice.src"
+   updateIcon="http://www.czilla.cz/sidebars/search/slunecnice.png"
+   updateCheckDays="3"
+>

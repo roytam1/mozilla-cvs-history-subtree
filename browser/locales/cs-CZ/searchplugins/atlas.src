@@ -1,0 +1,31 @@
+# Search file for atlas.cz
+# sidebars@czilla.cz
+# $Id$
+
+<search
+   name="Atlas"
+   description="Atlas - vase brana do Internetu"
+   method="GET"
+   action="http://www.atlas.cz/search/"
+   searchForm="http://www.atlas.cz/"
+   queryEncoding="windows-1250"
+   queryCharset="windows-1250"
+>
+
+<input name="q" user>
+<input name="sourceid" value="mozilla-search">
+<inputnext name="f" factor="10">
+<inputprev>
+
+<interpret 
+   browserResultType="result" 
+   charset="windows-1250"
+>
+
+</search>
+
+<browser
+   update="http://www.czilla.cz/sidebars/search/atlas.src"
+   updateIcon="http://www.czilla.cz/sidebars/search/atlas.png"
+   updateCheckDays="3"
+>

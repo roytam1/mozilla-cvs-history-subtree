@@ -1,0 +1,62 @@
+<!ENTITY lHeader                           "Soukromí">
+
+<!ENTITY privacyDescription.label          "Prohlížíte-li si webové stránky, ukládádají se informace o tom, kde jste byli, co jste tam viděli atd., do následujcích oblastí.">
+
+<!ENTITY history.label                     "Historie">
+<!ENTITY pageHis.label                     "Platnost stránek v historii vyprší za">
+<!ENTITY pageHis.accesskey                 "P">
+<!ENTITY days.label                        "dnů">
+<!ENTITY clearHistory.label                "Vymazat">
+
+<!ENTITY cache.label                       "Vyrovnávací disková paměť">
+<!ENTITY cacheExplanation.label            "Navštívené stránky jsou ukládány do vyrovnávací paměti a při další návštěvě se zobrazí rychleji.">
+<!ENTITY diskCache.label                   "Použít nejvíce:">
+<!ENTITY diskCache.accesskey               "u">
+<!ENTITY kbytes                            "KB na disku pro vyrovnávací paměť.">
+<!ENTITY clearCache.label                  "Vymazat">
+
+<!ENTITY cookies.label                     "Soubory cookie">
+<!ENTITY enableCookies.label               "Povolit cookie soubory">
+<!ENTITY enableCookies.accesskey           "c">
+<!ENTITY forOriginatingSiteOnly.label      "pouze pro zdrojový server">
+<!ENTITY forOriginatingSiteOnly.accesskey  "z">
+<!ENTITY forCurrentSessionOnly.label       "pouze pro aktuální relaci">
+<!ENTITY forCurrentSessionOnly.accesskey   "a">
+<!ENTITY cookieExplanation.label           "Krátké soubory s různými informacemi.">
+<!ENTITY butAskFirst.label                 "dotázat se před přijetím">
+<!ENTITY butAskFirst.accesskey             "d">
+<!ENTITY clearCookies.label                "Vymazat">
+<!ENTITY viewCookies.label                 "Uložené cookie...">
+<!ENTITY exceptions.label                  "Výjimky...">
+
+<!ENTITY cookieRetention.label             "Keep Cookies:">
+<!ENTITY acceptNormally.label              "Přijmout soubory cookie normálně">
+<!ENTITY acceptForSession.label            "Přijmout pouze pro tuto relaci">
+<!ENTITY askAboutCookies.label             "Upozornit před přijetím souboru cookie">
+
+<!ENTITY formfill.label                    "Informace z fomulářů">
+<!ENTITY formfillDescription.label         "Informace zadané do formulářů webových stránek a do vyhledávací lišty jsou ukládány pro snažší vyhledávání a pohodlné vyplnění formulářů.">
+<!ENTITY formfillEnable.label              "Povolit ukládání informací zadaných do fomulářů na stránkách a ve vyhledávací liště">
+<!ENTITY formfillEnable.accesskey          "f">
+<!ENTITY clearFormfill.label               "Vymazat">
+
+<!ENTITY downloads.label                   "Historie správce stahování">
+<!ENTITY downloadsDescription.label        "Správce stahování souborů udržuje seznam naposledy stažených souborů.">
+<!ENTITY downloadsRetentionPolicy.label    "Odebrat soubory ze správce stahování:">
+<!ENTITY downloadsRemoveImmediately.label  "Po úspěšném stažení">
+<!ENTITY downloadsRemoveExit.label         "Při ukončení aplikace ">
+<!ENTITY downloadsRemoveManually.label     "Ručně">
+<!ENTITY clearDownloads.label              "Vymazat">
+
+<!ENTITY passwords.label                   "Uložená hesla">
+<!ENTITY passwordsDescription.label        "Informace o přihlašování k webovým stránkám spravuje Správce hesel. Při opakované návštěvě stránky tak není nutné se znovu přihlašovat.">
+<!ENTITY passwordsEnable.label             "Pamatovat si hesla">
+<!ENTITY passwordsEnable.accesskey         "m">
+<!ENTITY clearPasswords.label              "Vymazat">
+<!ENTITY viewPasswords.label               "Zobrazit uložená hesla...">
+
+<!ENTITY clearAll.label                    "Vymazat vše">
+<!ENTITY clearAllDescription.label         "Vymazat všechny informace">
+
+
+

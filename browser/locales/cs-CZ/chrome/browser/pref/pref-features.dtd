@@ -1,0 +1,20 @@
+<!ENTITY  lHeader                           "Webové stránky">
+
+<!ENTITY  enbJavaCheck.label                "Povolit jazyk Java">
+<!ENTITY  enbJavaCheck.accesskey            "J">
+<!ENTITY  enableJavaScript.label            "Povolit JavaScript">
+<!ENTITY  enableJavaScript.accesskey        "s">
+<!ENTITY  advancedJavaScript.label          "Rozšířené...">
+<!ENTITY  advancedJavaScript.accesskey      "o">
+
+<!ENTITY  enableImages.label                "Načíst obrázky">
+<!ENTITY  enableImages.accesskey            "n">
+<!ENTITY  forOriginatingSiteOnly.label      "pouze pro zdrojový server">
+<!ENTITY  forOriginatingSiteOnly.accesskey  "z">
+<!ENTITY  popupReject.label                 "Blokovat pop-up okna">
+<!ENTITY  popupReject.accesskey             "B">
+<!ENTITY  enableSoftwareUpdate.label        "Allow web sites to install software">
+<!ENTITY  enableSoftwareUpdate.accesskey    "i">
+
+<!ENTITY  allowedSites.label                "Allowed Sites">
+<!ENTITY  exceptions.label                  "Exceptions">

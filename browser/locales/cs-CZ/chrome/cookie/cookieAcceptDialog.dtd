@@ -1,0 +1,20 @@
+<!ENTITY     props.box.label                "O tomto cookie">
+<!ENTITY     props.name.label               "Název:">
+<!ENTITY     props.value.label              "Informace:">
+<!ENTITY     props.domain.label             "Server:">
+<!ENTITY     props.path.label               "Cesta:">
+<!ENTITY     props.secure.label             "Typ spojení:">
+<!ENTITY     props.expires.label            "Platnost do:">
+<!ENTITY     props.policy.label             "Zásady:"> 
+
+<!ENTITY     button.allow.label             "Povolit">
+<!ENTITY     button.allow.accesskey         "P">
+<!ENTITY     button.session.label           "Povolit pro relaci">
+<!ENTITY     button.session.accesskey       "r">
+<!ENTITY     button.deny.label              "Zakázat">
+<!ENTITY     button.deny.accesskey          "Z">
+
+<!ENTITY     dialog.title                   "Potvrzení">
+<!ENTITY     dialog.remember.label          "Použít moji volbu pro všechny cookie soubory z tohoto serveru">
+<!ENTITY     dialog.remember.accesskey      "P">
+

@@ -1,0 +1,38 @@
+<!ENTITY  lHeader                   "Obecné">
+
+<!ENTITY  header2.label             "Domovská stránka">
+<!ENTITY  location.label            "Adresa(y):">
+<!ENTITY  location.accesskey        "a">
+<!ENTITY  useCurrent.label          "Použít aktuální stránku">
+<!ENTITY  useCurrent.accesskey      "a">
+<!ENTITY  useCurrentMultiple.label  "Použít aktuální stránky">
+<!ENTITY  useBookmark.label         "Použít záložku...">
+<!ENTITY  useBookmark.accesskey     "z">
+<!ENTITY  useBlank.label            "Použít prázdnou stránku">
+<!ENTITY  useBlank.accesskey        "p">
+
+<!ENTITY defaultBrowserGroup.label  "Výchozí prohlížeč">
+<!ENTITY defaultBrowserButton.label "Nastavit výchozí prohlížeč">
+<!ENTITY makeDefaultText            "Nastavit aplikaci &brandShortName; jako výchozí prohlížeč.">
+
+<!-- XXXben oh please, can we do better than this text-wise? -->
+<!ENTITY showConnections.label      "Nastavení připojení...">
+<!ENTITY showConnections.accesskey  "s">
+<!ENTITY proxiesInfo.label          "Nastavení proxy serverů pro přístup na Internet.">
+<!ENTITY connectionsInfo.caption    "Připojení">
+
+<!ENTITY fonts.caption                      "Písma &amp; Barvy">
+<!ENTITY fontsInfo.label                    "Zvolte výchozí písmo a barvy pro zobrazované stránky.">
+<!ENTITY showFontsAndColors.label           "Písma &amp; Barvy...">
+<!ENTITY showFontsAndColors.accesskey       "b">
+
+<!ENTITY languages.caption                  "Jazyky">
+<!ENTITY languagesInfo.label                "Zvolte výchozí jazyk a znakovou sadu pro zobrazované stránky.">
+<!ENTITY showLanguages.label                "Jazyky...">
+<!ENTITY showLanguages.accesskey            "J">
+
+<!ENTITY checkForDefault.label              "Při startu kontrolovat, zda-li je &brandShortName; výchozím prohlížečem.">
+<!ENTITY checkForDefault.accesskey          "d">
+<!ENTITY checkNow.label                     "Zkontrolovat">
+<!ENTITY checkNow.accesskey                 "Z">
+

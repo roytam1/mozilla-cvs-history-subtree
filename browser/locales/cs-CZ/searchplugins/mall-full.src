@@ -1,0 +1,28 @@
+# webmaster@mall.cz
+
+<search
+   name="obchody @Mall"
+   description="obchody Internet Mall"
+   method="GET"
+   action="http://www.mall.cz/search.php"
+   searchForm="http://www.mall.cz/"
+>
+
+<input name="full" user>
+<input name="sourceid" value="mozilla-search">
+<inputnext name="pozice" factor="10">
+<inputprev>
+
+<interpret
+   browserResultType="result"
+   charset="windows-1250"
+   resultItemStart="<!--m-->"
+   resultItemEnd="<!--n-->"
+>
+</search>
+
+<browser
+   update="http://www.mall.cz/ext/mozilla/mall-full.src"
+   updateIcon="http://www.mall.cz/ext/mozilla/mall-full.png"
+   updateCheckDays="3"
+>

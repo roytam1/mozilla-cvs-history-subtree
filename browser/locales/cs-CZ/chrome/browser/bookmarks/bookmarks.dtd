@@ -1,0 +1,98 @@
+# The contents of this file are subject to the Mozilla Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
+# The Original Code is Mozilla Communicator.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corp. Portions created by Netscape Communications
+# Corp. are Copyright (C) 1999 Netscape Communications Corp. All
+# Rights Reserved.
+# 
+# Contributor(s):
+#   Stephen Lamm <slamm@netscape.com>
+#   Blake Ross <blaker@netscape.com>
+
+<!ENTITY fileMenu.label                 "Soubor">
+<!ENTITY fileMenu.accesskey             "S">
+<!ENTITY viewMenu.label                 "Zobrazit">
+<!ENTITY viewMenu.accesskey             "b">
+
+<!ENTITY closeCmd.label "Zavřít">
+<!ENTITY closeCmd.accesskey "Z">
+<!ENTITY closeCmd.commandkey "W">
+                                                                                             
+<!ENTITY menuitem.newBookmark.label    "Nová záložka...">
+<!ENTITY menuitem.newBookmark.accesskey "z">
+<!ENTITY menuitem.newLivemark.label    "New Live Bookmark...">
+<!ENTITY menuitem.newLivemark.accesskey "L">
+<!ENTITY menuitem.newFolder.label        "Nová složka...">
+<!ENTITY menuitem.newFolder.accesskey    "N">
+<!ENTITY menuitem.newSeparator.label     "Nový oddělovač">
+<!ENTITY menuitem.newSeparator.accesskey "o">
+<!ENTITY menuitem.import.label         "Importovat...">
+<!ENTITY menuitem.import.accesskey     "I">
+<!ENTITY menuitem.export.label         "Exportovat...">
+<!ENTITY menuitem.export.accesskey     "x">
+<!ENTITY menuitem.find.label           "Hledat záložky...">
+<!ENTITY command.findBookmarks.label   "Hledat...">
+<!ENTITY menuitem.find.accesskey       "l">
+<!ENTITY edit.find.keybinding          "f">
+<!ENTITY command.properties.label      "Vlastnosti...">
+<!ENTITY command.properties.accesskey  "i">
+<!ENTITY edit.properties.keybinding    "i">
+<!ENTITY command.rename.label          "Přejmenovat...">
+<!ENTITY command.rename.accesskey      "P">
+<!ENTITY command.delete.label          "Smazat">
+<!ENTITY command.delete.accesskey      "m">
+<!ENTITY command.moveBookmark.label    "Přesunout záložku(y)...">
+<!ENTITY command.moveBookmarkShort.label "Přesunout...">
+<!ENTITY command.moveBookmark.accesskey "u">
+<!ENTITY command.addBookmark.label     "Přidat...">
+<!ENTITY command.manageBookmarks.label "Spravovat">
+<!ENTITY command.refreshLivemark.label "Refresh Live Bookmark">
+
+<!ENTITY menuitem.view.command.toolbar.label        "Nástrojová lišta">
+<!ENTITY menuitem.view.command.toolbar.accesskey    "r">
+<!ENTITY menuitem.view.show_columns.label           "Zobrazit sloupce">
+<!ENTITY menuitem.view.show_columns.accesskey       "Z">
+<!ENTITY menuitem.view.unsorted.label               "Nesetříděno">
+<!ENTITY menuitem.view.unsorted.accesskey           "N">
+<!ENTITY menuitem.view.ascending.label              "Vzestupně">
+<!ENTITY menuitem.view.ascending.accesskey          "V">
+<!ENTITY menuitem.view.descending.label             "Sestupně">
+<!ENTITY menuitem.view.descending.accesskey         "S">
+<!ENTITY menuitem.personaltoolbarfolder.label       "Nastavit složku pro nástrojovou lištu záložek">
+<!ENTITY menuitem.personaltoolbarfolder.accesskey   "t">
+
+<!ENTITY treecol.name.label             "Název">
+<!ENTITY treecol.name.accesskey         "N">
+<!ENTITY treecol.url.label              "Umístění">
+<!ENTITY treecol.url.accesskey          "m">
+<!ENTITY treecol.shortcut.label         "Klíčové slovo">
+<!ENTITY treecol.shortcut.accesskey     "K">
+<!ENTITY treecol.addedon.label          "Přidáno">
+<!ENTITY treecol.addedon.accesskey      "P">
+<!ENTITY treecol.lastmod.label          "Poslední změna">
+<!ENTITY treecol.lastmod.accesskey      "m">
+<!ENTITY treecol.lastvisit.label        "Poslední návštěva">
+<!ENTITY treecol.lastvisit.accesskey    "l">
+<!ENTITY treecol.description.label      "Popis">
+<!ENTITY treecol.description.accesskey  "P">
+
+<!ENTITY bookmarksRoot.label            "Bookmarks">
+
+<!ENTITY bookmarksWindowTitle.label     "Správce záložek">
+
+<!ENTITY search.label                   "Hledat:">
+<!ENTITY search.accesskey               "H">
+
+<!-- selectBookmark.xul -->
+<!ENTITY selectBookmark.title      "Nastavit domovskou stránku">
+<!ENTITY selectBookmark.label      "Vyberte si záložku, která bude nastavena jako domovská stránka. Pokud si vyberete složku, budou všechny záložky ve složce otevřeny do panelů.">

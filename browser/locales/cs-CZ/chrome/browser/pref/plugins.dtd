@@ -1,0 +1,9 @@
+<!ENTITY  plugins.title                 "Zásuvné moduly">
+<!ENTITY  pluginInfo.label              "Zásuvné moduly jsou nyní dostupné pro tyto typy souborů:">
+
+<!ENTITY  pluginInfo2.label             "Zakázání zásuvných modulů daného typu způsobí, že tyto soubory budou místo zobrazení nabídnuty ke stažení.">
+
+<!ENTITY  typeHeader.label              "Typ souboru">
+<!ENTITY  enabledHeader.label           "Povoleno">
+<!ENTITY  extensionsHeader.label        "Přípona"> 
+

@@ -1,0 +1,96 @@
+<!-- extracted from content/pref-fonts.xul -->
+
+<!ENTITY  prefFontsDialog.title                   "Písma &amp; Barvy">
+
+<!ENTITY  language.label                          "Znaková sada:">
+<!ENTITY  language.accesskey                      "z">
+
+<!ENTITY  typefaces.label                         "Řez písma">
+<!ENTITY  sizes.label                             "Velikost (bodů)">
+
+<!ENTITY  proportional.label                      "Proporcionální:">
+<!ENTITY  proportional.accesskey                  "r">
+
+<!ENTITY  serif.label                             "Patkové:">
+<!ENTITY  serif.accesskey                         "t">
+<!ENTITY  sans-serif.label                        "Bezpatkové:">
+<!ENTITY  sans-serif.accesskey                    "B">
+<!ENTITY  monospace.label                         "Neproporcionální:">
+<!ENTITY  monospace.accesskey                     "N">
+<!-- LOCALIZATION NOTE (fantasy.label): 'Fantasy' means 'Ornate' -->
+<!ENTITY  fantasy.label                           "Ozdobné:">
+<!ENTITY  fantasy.accesskey                       "O">
+<!ENTITY  cursive.label                           "Kurzíva:">
+<!ENTITY  cursive.accesskey                       "K">
+
+<!ENTITY  fontsize.units                          "bodů">
+
+<!ENTITY  font.langGroup.latin1                   "Západní jazyky">
+<!ENTITY  font.langGroup.latin2                   "Středoevropské jazyky">
+<!ENTITY  font.langGroup.japanese                 "Japonština">
+<!ENTITY  font.langGroup.trad-chinese             "Tradiční čínština (Taiwan)">
+<!ENTITY  font.langGroup.simpl-chinese            "Zjednodušená čínština">
+<!ENTITY  font.langGroup.trad-chinese-hk          "Tradiční čínština (Hong Kong)">
+<!ENTITY  font.langGroup.korean                   "Korejština">
+<!ENTITY  font.langGroup.cyrillic                 "Azbuka">
+<!ENTITY  font.langGroup.baltic                   "Baltské jazyky">
+<!ENTITY  font.langGroup.el                       "Řečtina">
+<!ENTITY  font.langGroup.turkish                  "Turecká">
+<!ENTITY  font.langGroup.unicode                  "Unicode">
+<!ENTITY  font.langGroup.user-def                 "Definovaná uživatelem">
+<!ENTITY  font.langGroup.thai                     "Thajština">
+<!ENTITY  font.langGroup.hebrew                   "Hebrejština">
+<!ENTITY  font.langGroup.arabic                   "Arabština">
+<!ENTITY  font.langGroup.devanagari               "Devanagari">
+<!ENTITY  font.langGroup.tamil                    "Tamil">
+<!-- Minimum font size -->
+<!ENTITY minSize.label                            "Minimální velikost fontů:">
+<!ENTITY minSize.accesskey                        "M">
+<!ENTITY minSize.none                             "Žádná">
+
+<!-- default font type -->
+<!ENTITY  useDefaultFontSerif.label               "Patkové">
+<!ENTITY  useDefaultFontSansSerif.label           "Bezpatkové">
+
+<!ENTITY  newLanguages.label                      "Nové jazyky mohou být nastaveny pomocí panelu jazyků.">
+
+<!-- leaving this stuff in for now -->
+
+<!ENTITY  header2                                 "Určuje-li si stránka vlastní písma">
+<!-- font scaling -->
+<!ENTITY  resolution.label                        "Rozlišení obrazovky:">
+<!ENTITY  resolution.accesskey                    "R">
+<!-- LOCALIZATION NOTE (resolution.dpi): dpi stands for "dots per inch" -->
+<!ENTITY  resolution.dpi                          "dpi">
+<!-- LOCALIZATION NOTE (resolution.dpi): $val will be replaced by a numeric dpi value. -->
+<!ENTITY  resolution.dpival                       "$val &resolution.dpi;">
+<!ENTITY  resolution.system.label                 "Systémové nastavení">
+<!ENTITY  resolution.other                        "Další...">
+
+<!-- screen calibration dialog -->
+<!ENTITY  calibrateDialog.title                   "Kalibrace rozlišení">
+<!ENTITY  calibrate.instructions                  "Délka linky výše je:">
+<!ENTITY  units.inches                            "palce">
+<!ENTITY  units.centimetres                       "centimetry">
+
+<!ENTITY  color                           "Text a pozadí">
+<!ENTITY  textColor.label                 "Text:">
+<!ENTITY  textColor.accesskey             "t">
+<!ENTITY  backgroundColor.label           "Pozadí:">
+<!ENTITY  backgroundColor.accesskey       "P">
+<!ENTITY  useSystemColors.label           "Použít systémové barvy ">
+<!ENTITY  useSystemColors.accesskey       "s">
+
+<!ENTITY  underlineLinks.label            "Podtrhávat odkazy">
+<!ENTITY  underlineLinks.accesskey        "d">
+<!ENTITY  links                           "Barvy odkazů">
+<!ENTITY  linkColor.label                 "Nenavštívené odkazy:">
+<!ENTITY  linkColor.accesskey             "d">
+<!ENTITY  visitedLinkColor.label          "Navštívené odkazy:">
+<!ENTITY  visitedLinkColor.accesskey      "N">
+<!ENTITY  someProvColors                  "Pokud stránka nabízí vlastní barvy a pozadí:">
+<!ENTITY  useMyColors.label   "Barvy">
+<!ENTITY  useMyColors.accesskey "B">
+<!ENTITY  useMyFonts.label                  "Písma">
+<!ENTITY  useMyFonts.accesskey              "P">
+<!ENTITY  alwaysUseMy.label                 "Vždy používat má:">
