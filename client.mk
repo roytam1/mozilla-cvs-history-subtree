@@ -710,6 +710,11 @@ statictag_svg:
 diff_svg:
 	cvs -z3 diff -u $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES)
 
+# write the file 'svg_branch_files' which can then be used in greps,
+# etc.  
+create_file_list_svg:
+	echo $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_NEW_FILES) > svg_branch_files
+
 #branchtag_svg:
 #	cvs -z3 tag -b SVG_20020806_BRANCH $(SVG_BRANCH_MODIFIED_FILES) $(SVG_BRANCH_OBSOLETE_FILES)
 
