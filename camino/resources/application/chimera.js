@@ -59,3 +59,6 @@ pref("intl.charset.detector", "universal_charset_detector");
 
 pref("chimera.store_passwords_with_keychain", true);
 pref("chimera.keychain_passwords_autofill", true);
+
+// enable plugins by default
+pref("chimera.enable_plugins", true);
