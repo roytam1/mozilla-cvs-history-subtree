@@ -1373,6 +1373,7 @@ static SSMStatus ssm_enable_security_prefs(SSMControlConnection* ctrl)
     }
     SSL_EnableDefault(SSL_ENABLE_TLS, prefval);
 
+
     /* set password values */
     if (PREF_GetIntPref(ctrl->m_prefs, "security.ask_for_password", &ask) !=
         PR_SUCCESS) {

@@ -306,7 +306,7 @@ void SSMP7DecodeConnection_ServiceThread(void * arg)
 			if (read < LINESIZE) {
 				break;
 			}
-#endif			
+#endif						
         } else {
             /* either EOF or an error condition */
 		    /* If we have a decoder in progress, stop it. */
