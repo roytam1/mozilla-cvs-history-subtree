@@ -778,7 +778,7 @@ BookmarkParser::ProcessLine(nsIRDFContainer *container, nsIRDFResource *nodeType
         offset = line.FindChar('<');
         if (offset < 0)
         {
-            if (description.Length() > 0)
+            if (!description.IsEmpty())
             {
                 description.Append(PRUnichar('\n'));
             }
@@ -1045,7 +1045,7 @@ BookmarkParser::ParseMetaTag(const nsString &aLine, nsIUnicodeDecoder **decoder)
         nsAutoString    charsetName;
         if (NS_SUCCEEDED(rv = gCharsetAlias->GetPreferred(charset, charsetName)))
         {
-            if (charsetName.Length() > 0)
+            if (!charsetName.IsEmpty())
             {
                 charset = charsetName;
             }
@@ -1170,7 +1170,7 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
                     attrStart = termQuote + 1;
                     fieldFound = PR_TRUE;
 
-                    if (data.Length() > 0)
+                    if (!data.IsEmpty())
                     {
                         // XXX Bug 58421 We should not ever hit this assertion
                         NS_ASSERTION(!field->mValue, "Field already has a value");
@@ -1279,7 +1279,7 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
             {
                 nsAutoString    name;
                 aLine.Mid(name, attrStart, nameEnd-attrStart);
-                if (name.Length() > 0)
+                if (!name.IsEmpty())
                 {
                     Unescape(name);
 
@@ -1402,7 +1402,7 @@ BookmarkParser::ParseDate(nsIRDFResource *arc, nsString& aValue, nsIRDFNode** aR
     *aResult = nsnull;
 
     PRInt32 theDate = 0;
-    if (aValue.Length() > 0)
+    if (!aValue.IsEmpty())
     {
         PRInt32 err;
         theDate = aValue.ToInteger(&err); // ignored.
@@ -1481,7 +1481,7 @@ BookmarkParser::ParseBookmarkSeparator(const nsString &aLine, const nsCOMPtr<nsI
             ++attrStart;
 
         if (aLine.Find(kNameEquals, PR_TRUE, attrStart, 1) == attrStart) {
-            attrStart += strlen(kNameEquals);
+            attrStart += sizeof(kNameEquals) - 1;
 
             // skip to terminating quote of string
             PRInt32 termQuote = aLine.FindChar(PRUnichar('\"'), attrStart);
@@ -1489,7 +1489,7 @@ BookmarkParser::ParseBookmarkSeparator(const nsString &aLine, const nsCOMPtr<nsI
                 nsAutoString name;
                 aLine.Mid(name, attrStart, termQuote - attrStart);
                 attrStart = termQuote + 1;
-                if (name.Length() > 0) {
+                if (!name.IsEmpty()) {
                     nsCOMPtr<nsIRDFLiteral> nameLiteral;
                     rv = gRDF->GetLiteral(name.get(), getter_AddRefs(nameLiteral));
                     if (NS_FAILED(rv))
@@ -1669,12 +1669,12 @@ nsBookmarksService::Init()
             prefVal = nsnull;
         }
 
-        if (mPersonalToolbarName.Length() == 0)
+        if (mPersonalToolbarName.IsEmpty())
         {
             // rjc note: always try to get the string bundle (see above) before trying this
             rv = mBundle->GetStringFromName(NS_LITERAL_STRING("bookmarks_root").get(), 
                                             getter_Copies(mPersonalToolbarName));
-            if (NS_FAILED(rv) || mPersonalToolbarName.Length() == 0) {
+            if (NS_FAILED(rv) || mPersonalToolbarName.IsEmpty()) {
               // no preference, so fallback to a well-known name
               mPersonalToolbarName.Assign(NS_LITERAL_STRING("Personal Toolbar Folder"));
             }
@@ -1887,7 +1887,7 @@ nsBookmarksService::ExamineBookmarkSchedule(nsIRDFResource *theBookmark, PRBool 
 #endif
 
     if ((startHour <= nowInfo.tm_hour) && (endHour >= nowInfo.tm_hour) &&
-        (duration >= 1) && (notificationMethod.Length() > 0))
+        (duration >= 1) && (!notificationMethod.IsEmpty()))
     {
         // OK, we're with the start/end time range, check the duration
         // against the last time we've "pinged" the server (if ever)
@@ -2097,7 +2097,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
         {
             if ((respStatus >= 200) && (respStatus <= 299))
             {
-                if (eTagValue.Length() > 0)
+                if (!eTagValue.IsEmpty())
                 {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
                     printf("eTag: '%s'\n", NS_LossyConvertASCIItoUCS2(eTagValue).get());
@@ -2143,7 +2143,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
             }
         }
 
-        if ((changedFlag == PR_FALSE) && (lastModValue.Length() > 0))
+        if ((changedFlag == PR_FALSE) && (!lastModValue.IsEmpty()))
         {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
             printf("Last-Modified: '%s'\n", lastModValue.get());
@@ -2187,7 +2187,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
             }
         }
 
-        if ((changedFlag == PR_FALSE) && (contentLengthValue.Length() > 0))
+        if ((changedFlag == PR_FALSE) && (!contentLengthValue.IsEmpty()))
         {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
             printf("Content-Length: '%s'\n", contentLengthValue.get());
@@ -2370,7 +2370,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                     
                     nsAutoString    temp;
                     getLocaleString("WebPageAskDisplay", temp);
-                    if (temp.Length() > 0)
+                    if (!temp.IsEmpty())
                     {
                         promptStr.Append(NS_LITERAL_STRING("\n\n"));
                         promptStr += temp;
@@ -2683,7 +2683,7 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName,
         return rv;
 
     // Literal: Shortcut URL
-    if (aShortcutURL && !nsDependentString(aShortcutURL).IsEmpty()) {
+    if (aShortcutURL && *aShortcutURL) {
         nsCOMPtr<nsIRDFLiteral> shortcutLiteral;
         rv = gRDF->GetLiteral(aShortcutURL, getter_AddRefs(shortcutLiteral));
         if (NS_FAILED(rv)) 
@@ -2694,7 +2694,7 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName,
     }
 
     // Literal: Description
-    if (aDescription && !nsDependentString(aDescription).IsEmpty()) {
+    if (aDescription && *aDescription) {
         nsCOMPtr<nsIRDFLiteral> descriptionLiteral;
         rv = gRDF->GetLiteral(aDescription, getter_AddRefs(descriptionLiteral));
         if (NS_FAILED(rv)) 
@@ -3060,7 +3060,7 @@ nsBookmarksService::UpdateLastVisitedDate(const char *aURL,
                     return rv;
 
                 // Piggy-backing last charset.
-                if (aCharset && !nsDependentString(aCharset).IsEmpty()) {
+                if (aCharset && *aCharset) {
                     nsCOMPtr<nsIRDFLiteral> charsetliteral;
                     rv = gRDF->GetLiteral(aCharset,
                                           getter_AddRefs(charsetliteral));
@@ -3465,7 +3465,7 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
         else if (aSource == kNC_BookmarkCommand_Export)
             getLocaleString("Export", name);
 
-        if (name.Length() > 0)
+        if (!name.IsEmpty())
         {
             *aTarget = nsnull;
             nsCOMPtr<nsIRDFLiteral> literal;
@@ -3546,7 +3546,7 @@ nsBookmarksService::ProcessCachedBookmarkIcon(nsIRDFResource* aSource,
     }
 
     // if no internal icon reference, try and synthesize a URL
-    if (!path.Length())
+    if (path.IsEmpty())
     {
         const char  *uri;
         if (NS_FAILED(rv = aSource->GetValueConst( &uri )))
@@ -4682,7 +4682,7 @@ nsBookmarksService::LoadBookmarks()
         PRBool foundPTFolder = PR_FALSE;
         parser.ParserFoundPersonalToolbarFolder(&foundPTFolder);
         // try to ensure that we end up with a personal toolbar folder
-        if ((foundPTFolder == PR_FALSE) && (mPersonalToolbarName.Length() > 0))
+        if ((foundPTFolder == PR_FALSE) && (!mPersonalToolbarName.IsEmpty()))
         {
             nsCOMPtr<nsIRDFLiteral>   ptNameLiteral;
             rv = gRDF->GetLiteral(mPersonalToolbarName.get(), getter_AddRefs(ptNameLiteral));
@@ -5281,7 +5281,7 @@ nsBookmarksService::WriteBookmarkProperties(nsIRDFDataSource *ds, nsOutputFileSt
                 }
                 if (property == kNC_Description)
                 {
-                    if (literalString.Length() > 0)
+                    if (!literalString.IsEmpty())
                     {
                         char *escapedAttrib = nsEscapeHTML(attribute);
                         if (escapedAttrib)

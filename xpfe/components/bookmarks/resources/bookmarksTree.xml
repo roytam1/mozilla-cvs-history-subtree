@@ -684,17 +684,18 @@
             target = this.mOuter.getTreeTarget(rItem, rParent, orientation);
           }
           var firstVisibleRow = this.mOuter.treeBoxObject.getFirstVisibleRow()
-          this.mOuter.treeBoxObject.selection.selectEventsSuppressed = true;
+          //this.mOuter.treeBoxObject.selection.selectEventsSuppressed = true;
           // Notify the datasource that we're about to begin a batch operation
-          var observer = this.mOuter.tree.builder.QueryInterface(Components.interfaces.nsIRDFObserver);
-          observer.beginUpdateBatch(this.db);
+          //var observer = this.mOuter.tree.builder.QueryInterface(Components.interfaces.nsIRDFObserver);
+          //observer.beginUpdateBatch(this.db);
           const kDSIID = Components.interfaces.nsIDragService;
           const kCopyAction = kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_LINK;
           if (dragSession.dragAction & kCopyAction)
             BookmarksUtils.insertSelection("drag", selection, target, true);
           else
             BookmarksUtils.moveSelection  ("drag", selection, target);
-          observer.endUpdateBatch(this.db);
+          //observer.endUpdateBatch(this.db);
+/*
           this.mOuter.treeBoxObject.selection.currentIndex=-1;
           this.mOuter.treeBuilder.rebuild();
           // temporary hack: for an unknown reason, rebuilding cause a scroll to the bottom
@@ -704,6 +705,7 @@
           // use of a timer to speedup
           var This = this.mOuter;
           setTimeout( function (){This.treeBoxObject.selection.selectEventsSuppressed = false}, 100)
+*/
           dump("6:"+(Date.now()-date)+"\n")
         },
 
