@@ -11,13 +11,13 @@
 <h1>
 Release Notes for LDAP C SDK 5.x</h1>
 <i>Michael Hein <a href="mailto:mhein@netscape.com">mhein@netscape.com</a></i>
-<p><br>
-<font size=+1><a href="#LDAP C SDK 5.0">LDAP C&nbsp;SDK 5.0 (3/28/2001)</a></font>
-<br><font size=+1><a href="#LDAP C SDK 5.1">LDAP&nbsp;C&nbsp;SDK 5.1 (06/13/2001)</a></font>
-<br><font size=+1><a href="#LDAP C SDK 5.2">LDAP&nbsp;C&nbsp;SDK 5.2 (07/03/2001)</a></font>
 <br>&nbsp;
-<p><a NAME="LDAP C SDK 5.0"></a><b><font size=+2>LDAP&nbsp;C&nbsp;SDK 5.0
-(3/28/2001)</font></b>
+<p><font size=+1><a href="#LDAP C SDK 5.0">LDAP C SDK 5.0 (3/28/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.1">LDAP C SDK 5.1 (06/13/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.2">LDAP C SDK 5.2 (07/03/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.3">LDAP&nbsp;C&nbsp;SDK 5.3 (07/xx/2001)</a></font>
+<br>&nbsp;
+<p><a NAME="LDAP C SDK 5.0"></a><b><font size=+2>LDAP C SDK 5.0 (3/28/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 
@@ -41,8 +41,7 @@ Build system rewritten to accommodate move to mozilla</li>
 Various bugs reported through Mozilla.org fixed in this release</li>
 </ul>
 
-<p><br><a NAME="LDAP C SDK 5.1"></a><b><font size=+2>LDAP&nbsp;C&nbsp;SDK
-5.1 (06/13/2001)</font></b>
+<p><br><a NAME="LDAP C SDK 5.1"></a><b><font size=+2>LDAP C SDK 5.1 (06/13/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 
@@ -86,8 +85,7 @@ for Solaris x86 support</li>
 misc changes for i86 support</li>
 </ul>
 
-<p><br><a NAME="LDAP C SDK 5.2"></a><b><font size=+2>LDAP&nbsp;C&nbsp;SDK
-5.2 (07/03/2001)</font></b>
+<p><br><a NAME="LDAP C SDK 5.2"></a><b><font size=+2>LDAP C SDK 5.2 (07/03/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 &nbsp;
@@ -152,6 +150,27 @@ with the static liblber library as well)</li>
 Cannot use the __declspec (thread) semantics for thread local storage if
 one want to use LoadLibrary to dynamically load DLL at runtime.&nbsp; This
 issue was found on NT only and cause PerLdap to fail.</li>
+</ul>
+
+<p><br><a NAME="LDAP C SDK 5.3"></a><b><font size=+2>LDAP C SDK 5.3 (07/xx/2001)</font></b>
+<h2>
+Bugs/enhancements fixed in this release:</h2>
+
+<ul>
+<li>
+345002 - Implement persistent search (345002)</li>
+
+<li>
+550410 - "-s" scope implementation</li>
+
+<li>
+550409 - fix for false success report in verbose mode</li>
+
+<li>
+Include liblber functions in Linux libldap build</li>
+
+<li>
+BER speedup changes (via writev)</li>
 </ul>
 
 </body>
