@@ -31,9 +31,17 @@
 
 #include "prtypes.h"
 
+/* NSPR1 compatibility definitions */
+#ifdef NSPR20
 #   include "prprf.h"
 #   include "prlog.h"
 #   include "plhash.h"          /* NSPR hash-tables      */
+#else
+#   include "prprintf.h"
+#   include "prassert.h"
+#   include "prhash.h"          /* NSPR hash-tables      */
+#   define PRHashNumber prhashcode
+#endif
 
 #ifdef XP_MAC
 #include "macstdlibextras.h"  /* for strdup() */
@@ -322,8 +330,7 @@ jsj_ConvertJavaObjectToJSBoolean(JSContext *cx, JNIEnv *jEnv,
                                  jobject java_obj, jsval *vp);
 extern JSJavaThreadState *
 jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
-         JSContext **cxp, JSObject **js_objp, JavaToJSSavedState* saved_state, 
-         void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext);
+         JSContext **cxp, JSObject **js_objp, JavaToJSSavedState* saved_state);
 extern JSBool
 jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JavaToJSSavedState* original_state);
 

@@ -19,6 +19,12 @@
 /*
  * This file is part of the Java-vendor-neutral implementation of LiveConnect
  *
+ * It contains class definition implementing the public interface.
+ *
+ */
+/*
+ * This file is part of the Java-vendor-neutral implementation of LiveConnect
+ *
  * It contains the class definition to implement nsILiveconnect XP-COM interface.
  *
  */
@@ -28,6 +34,7 @@
 #define nsCLiveconnect_h___
 
 #include "nsILiveconnect.h"
+#include "nsISecureLiveconnect.h"
 #include "nsAgg.h"
 
 
@@ -35,7 +42,8 @@
  * nsCLiveconnect implements nsILiveconnect interface for navigator.
  * This is used by a JVM to implement netscape.javascript.JSObject functionality.
  */
-class nsCLiveconnect :public nsILiveconnect {
+class nsCLiveconnect :public nsILiveconnect
+                     ,public nsISecureLiveconnect{
 public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsISupports and AggregatedQueryInterface:
@@ -56,8 +64,7 @@ public:
      *                     wrapped up as java wrapper netscape.javascript.JSObject.
      */
     NS_IMETHOD	
-    GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext, jobject *pjobj);
+    GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobject *pjobj);
 
     /**
      * get member of a Native JSObject for a given index.
@@ -68,8 +75,7 @@ public:
      *                     the member. 
      */
     NS_IMETHOD	
-    GetSlot(JNIEnv *jEnv, jsobject obj, jint slot, void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext,  jobject *pjobj);
+    GetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject *pjobj);
 
     /**
      * set member of a Native JSObject for a given name.
@@ -81,8 +87,7 @@ public:
      *                     then a internal mapping is consulted to convert to a NJSObject.
      */
     NS_IMETHOD	
-    SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobject jobj, void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext);
+    SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobject jobj);
 
     /**
      * set member of a Native JSObject for a given index.
@@ -94,8 +99,7 @@ public:
      *                     then a internal mapping is consulted to convert to a NJSObject.
      */
     NS_IMETHOD	
-    SetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject jobj,  void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext);
+    SetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject jobj);
 
     /**
      * remove member of a Native JSObject for a given name.
@@ -104,8 +108,7 @@ public:
      * @param name       - Name of a member.
      */
     NS_IMETHOD	
-    RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length,  void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext);
+    RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length);
 
     /**
      * call a method of Native JSObject. 
@@ -116,8 +119,7 @@ public:
      * @param pjobj      - return value.
      */
     NS_IMETHOD	
-    Call(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobjectArray jobjArr, void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext, jobject *pjobj);
+    Call(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length, jobjectArray jobjArr, jobject *pjobj);
 
     /**
      * Evaluate a script with a Native JS Object representing scope.
@@ -129,8 +131,7 @@ public:
      * @param pjobj              - return value.
      */
     NS_IMETHOD	
-    Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize length, void* principalsArray[], 
-         int numPrincipals, void *pNSISecurityContext, jobject *pjobj);
+    Eval(JNIEnv *jEnv, jsobject jsobj, const char* codebase, const jchar* script, jsize length, jobject *pjobj);
 
     /**
      * Get the window object for a plugin instance.
@@ -142,8 +143,7 @@ public:
      *                             in which a applet/bean resides.
      */
     NS_IMETHOD	
-    GetWindow(JNIEnv *jEnv, void *pJavaObject,  void* principalsArray[], 
-                     int numPrincipals, void *pNSISecurityContext, jsobject *pobj);
+    GetWindow(JNIEnv *jEnv, void *pJavaObject, jsobject *pobj);
 
     /**
      * Get the window object for a plugin instance.
@@ -154,6 +154,12 @@ public:
     NS_IMETHOD	
     FinalizeJSObject(JNIEnv *jEnv, jsobject obj);
 
+    ////////////////////////////////////////////////////////////////////////////
+    // from nsISecureLiveconnect:
+    NS_IMETHOD	
+    Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize length, void **pNSIPrincipaArray, 
+         int numPrincipals, void *pNSISecurityContext, jobject *pjobj);
+   
     ////////////////////////////////////////////////////////////////////////////
     // from nsCLiveconnect:
 
