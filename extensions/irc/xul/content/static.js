@@ -659,7 +659,8 @@ function playSounds (list)
     ary = list.split (" ");
     if (ary.length == 0)
         return;
-    playSound (ary[1]);
+    
+    playSound (ary[0]);
     for (var i = 1; i < ary.length; ++i)
         setTimeout (playSound, 250 * i, ary[i]);
 }
