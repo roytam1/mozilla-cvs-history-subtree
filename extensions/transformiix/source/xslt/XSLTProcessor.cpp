@@ -1534,9 +1534,11 @@ NamedMap* XSLTProcessor::processParameters(Element* xslAction, Node* context, Pr
 {
     NamedMap* params = new NamedMap();
 
-    if ( !xslAction ) {
+    if (!xslAction || !params) {
       return params;
     }
+
+    params->setObjectDeletion(MB_TRUE);
 
     //-- handle xsl:with-param elements
     Node* tmpNode = xslAction->getFirstChild();
@@ -1618,6 +1620,26 @@ void XSLTProcessor::processTemplate(Node* node, Node* xslTemplate, ProcessorStat
         processAction(node,tmp,ps);
         tmp = tmp->getNextSibling();
     }
+    
+    if (params) {
+        StringList* keys = params->keys();
+        if (keys) {
+            StringListIterator keyIter(keys);
+            String* key;
+            while (keyIter.hasNext()) {
+                key = keyIter.next();
+                localBindings.remove(*key);
+            }
+        }
+        else {
+            // out of memory so we can't get the keys
+            // don't delete any variables since it's better we leak then
+            // crash
+            localBindings.setObjectDeletion(MB_FALSE);
+        }
+        delete keys;
+    }
+    
     bindings->pop();
 } //-- processTemplate
 
