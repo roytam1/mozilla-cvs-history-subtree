@@ -26,30 +26,11 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-CHROME_DIR=packages/core
-CHROME_CONTENT_DIR=communicator/content
-CHROME_MISC_DIR=.
-CHROME_TYPE=content
-
-CHROME_MISC = \
-		manifest.rdf \
-		$(NULL)
-
-CHROME_CONTENT = \
-		builtinURLs.js \
-		communicatorOverlay.xul \
-		utilityOverlay.xul \
-		utilityOverlay.js \
-		utilityOverlay.css \
-		taskbarOverlay.xul \
-		tasksOverlay.js \
-		tasksOverlay.xul \
-		dialogBindings.xml \
-		browserBindings.xul \
-		editorBindings.xul \
-		$(NULL)
-
 DIRS 		= unix
 
 include $(topsrcdir)/config/rules.mk
 
+
+chrome::
+	@$(REGCHROME) content communicator comm.jar; \
+	$(REGCHROME) locale en-US/communicator en-US.jar

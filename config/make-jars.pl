@@ -200,14 +200,14 @@ sub EnsureFileInDir
     return 0;
 }
 
-while (<>) {
+while (<STDIN>) {
     chomp;
   start: 
     if (/^([\w\d.\-\\\/]+)\:\s*$/) {
         my $jarfile = $1;
         my $args = "";
         my $overrides = "";
-        while (<>) {
+        while (<STDIN>) {
             if (/^\s+([\w\d.\-\\\/]+)\s*(\([\w\d.\-\\\/]+\))?$\s*/) {
                 my $dest = $1;
                 my $srcPath = $2;

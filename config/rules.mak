@@ -598,7 +598,6 @@ chrome::
         $(PERL) $(DEPTH)\config\make-jars.pl -c -d $(DIST)\bin\chrome < $(JAR_MANIFEST)
 !endif
 
-# add to chrome:: rule:
 REGCHROME = @perl $(DEPTH)\config\add-chrome.pl $(DIST)\bin\chrome\installed-chrome.txt
 
 regchrome:
