@@ -34,6 +34,9 @@ IS_COMPONENT	= 1
 MODULE_NAME	= nsGfxGTKModule
 GRE_MODULE	= 1
 
+PACKAGE_FILE = gfxgtk.pkg
+PACKAGE_VARS += MOZ_ENABLE_XFT
+
 REQUIRES	= xpcom \
 		  string \
 		  widget \
@@ -72,7 +75,7 @@ X11SHARED_LCPPSRCS = \
 		nsXFontAAScaledBitmap.cpp \
 		nsXFontNormal.cpp \
 		$(NULL)
-                
+
 CPPSRCS		= \
 		nsDeviceContextGTK.cpp \
 		nsDeviceContextSpecFactoryG.cpp \

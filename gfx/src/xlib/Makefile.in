@@ -35,6 +35,8 @@ IS_COMPONENT	= 1
 MODULE_NAME	= nsGfxXlibModule
 GRE_MODULE	= 1
 
+PACKAGE_FILE = xlib.pkg
+
 REQUIRES	= xpcom \
 		  string \
 		  xlibrgb \
@@ -137,4 +139,3 @@ else
 # export:: $(addprefix $(srcdir)/../x11shared/,$(X11SHARED_LCPPSRCS))
 #	$(INSTALL) $^ .
 endif
-

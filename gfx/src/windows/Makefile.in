@@ -33,6 +33,8 @@ IS_COMPONENT	= 1
 MODULE_NAME	= nsGfxModule
 GRE_MODULE	= 1
 
+PACKAGE_FILE = gfxwin.pkg
+
 REQUIRES	= xpcom \
 		  string \
 		  gfx \

@@ -32,6 +32,8 @@ DIRS += common
 # ActiveX control
 DIRS += control control_kicker
 
+PACKAGE_FILE = activex.pkg
+
 # ActiveX plugin
 ifdef MOZ_ACTIVEX_SCRIPTING_SUPPORT
 DIRS += plugin

@@ -45,7 +45,7 @@ REQUIRES	= xpcom \
 		  intl \
 		  necko \
 		  $(NULL)
-      
+
 ifdef MOZ_PROFILESHARING
 REQUIRES	+= ipcd \
 		  profilesharingsetup \
@@ -53,6 +53,13 @@ REQUIRES	+= ipcd \
 endif
 
 include $(topsrcdir)/config/config.mk
+
+PACKAGE_FILE = libpref.pkg
+PACKAGE_VARS += \
+	MOZ_WIDGET_TOOLKIT \
+	OS_ARCH \
+	MOZ_PROFILESHARING \
+	$(NULL)
 
 CPPSRCS		= nsPref.cpp \
 			  nsPrefBranch.cpp	\

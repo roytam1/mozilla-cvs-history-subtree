@@ -9,6 +9,8 @@ include $(DEPTH)/config/autoconf.mk
 MODULE	= libart_lgpl
 LIBRARY_NAME = moz_art_lgpl
 
+PACKAGE_FILE = libart.pkg
+
 ifeq ($(OS_ARCH),WINNT)
 DEFFILE	= $(srcdir)/libart.def
 endif

@@ -34,6 +34,8 @@ IS_COMPONENT	= 1
 MODULE_NAME	= nsGfxXprintModule
 GRE_MODULE	= 1
 
+PACKAGE_FILE = xprint.pkg
+
 EXTRA_DSO_LIBS	= gfxshared_s gkgfx
 
 REQUIRES	= xpcom \

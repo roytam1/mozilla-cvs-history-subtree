@@ -30,7 +30,9 @@ MODULE		= rdf
 DIRS		= base util datasource resources build
 
 ifndef MOZ_XUL_APP
+ifndef MINIMO
 DIRS            += chrome
+endif
 endif
 
 ifdef ENABLE_TESTS

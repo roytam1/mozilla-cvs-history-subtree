@@ -33,6 +33,9 @@ IS_COMPONENT	= 1
 MODULE_NAME	= nsGfxPSModule
 GRE_MODULE	= 1
 EXTRA_DSO_LIBS = mozutil_s
+
+PACKAGE_FILE = gfxps.pkg
+
 REQUIRES	= xpcom \
 		  string \
 		  widget \
