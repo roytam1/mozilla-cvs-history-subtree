@@ -154,12 +154,41 @@ rdf_MakeAlt(nsIRDFDataSource* ds,
 
 
 /**
- * Add an element to the container.
+ * Add an element to the end of container.
  */
 PR_EXTERN(nsresult)
-rdf_ContainerAddElement(nsIRDFDataSource* ds,
-                        nsIRDFResource* container,
-                        nsIRDFNode* element);
+rdf_ContainerAppendElement(nsIRDFDataSource* ds,
+                           nsIRDFResource* container,
+                           nsIRDFNode* element);
+
+
+/**
+ * Remove an element from a container
+ */
+PR_EXTERN(nsresult)
+rdf_ContainerRemoveElement(nsIRDFDataSource* aDataSource,
+                           nsIRDFResource* aContainer,
+                           nsIRDFNode* aElement);
+
+
+/**
+ * Insert an element into a container at the specified index.
+ */
+PR_EXTERN(nsresult)
+rdf_ContainerInsertElementAt(nsIRDFDataSource* aDataSource,
+                             nsIRDFResource* aContainer,
+                             nsIRDFNode* aElement,
+                             PRInt32 aIndex);
+
+/**
+ * Determine the index of an element in a container.
+ */
+PR_EXTERN(nsresult)
+rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
+                     nsIRDFResource* aContainer,
+                     nsIRDFNode* aElement,
+                     PRInt32* aIndex);
+
 
 /**
  * Create a cursor on a container that enumerates its contents in
