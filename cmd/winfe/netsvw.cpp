@@ -143,7 +143,6 @@ CNetscapeView::CNetscapeView()
     m_pSaveFileDlg = NULL;
 
 #ifdef MOZ_RAPTOR
-    m_pWebWidget = NULL;
     m_bNoWebWidgetHack = FALSE;
 #endif
 
@@ -224,7 +223,11 @@ CNetscapeView::~CNetscapeView()
     }
 
 #ifdef MOZ_RAPTOR
-    NS_IF_RELEASE(m_pWebWidget);
+    nsIWebWidget *ww = GetContext()->GetWebWidget();
+    if (nsnull != ww) {
+      NS_RELEASE(ww);
+      GetContext()->SetWebWidget(nsnull);
+    }
 #endif
 
 #ifdef EDITOR
@@ -663,7 +666,9 @@ void CNetscapeView::checkCreateWebWidget() {
         return;
     }
 
-    if (m_pWebWidget) {
+    // Dont' create if our CAbstractCX hasn't been created yet, 
+    // or if we already have a web widget.
+    if (!GetContext() || GetContext()->GetWebWidget()) {
         return;
     }
 
@@ -671,24 +676,25 @@ void CNetscapeView::checkCreateWebWidget() {
     RECT r;
     ::GetClientRect(m_hWnd, &r);
     nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
+    nsIWebWidget* ww = nsnull;
     if (rr.IsEmpty()) {
         goto chCrFail;
     }
-    rv = NS_NewWebWidget(&m_pWebWidget);
+    rv = NS_NewWebWidget(&ww);
     if (!NS_SUCCEEDED(rv)) {
         goto chCrFail;
     }
-    rv = m_pWebWidget->Init(m_hWnd, rr);
+    rv = ww->Init(m_hWnd, rr);
     if (!NS_SUCCEEDED(rv)) {
         goto chCrFail;
     }
-    m_pWebWidget->Show();
-//    m_pWebWidget->LoadURL(nsString(START_URL));
+    ww->Show();
+    GetContext()->SetWebWidget(ww);
     GetContext()->NormalGetUrl(START_URL);
     return;  
 
     chCrFail:
-      NS_IF_RELEASE(m_pWebWidget);    
+      NS_IF_RELEASE(ww);    
 }
 #endif /* MOZ_RAPTOR */
 
@@ -1071,13 +1077,14 @@ void CNetscapeView::OnSize ( UINT nType, int cx, int cy )
         GetClientRect(rect);
         m_pChild->MoveWindow ( rect );
     }
+    // Actually update the size.
 #ifdef MOZ_RAPTOR
-    if (m_pWebWidget) {
+    if (GetContext() && GetContext()->GetWebWidget()) {
       RECT r;
       ::GetClientRect(m_hWnd, &r);      
       nsRect rr(r.left,r.top,PRInt32(r.right - r.left),PRInt32(r.bottom - r.top));
       if (!rr.IsEmpty()) {
-        m_pWebWidget->SetBounds(rr);
+        GetContext()->GetWebWidget()->SetBounds(rr);
       }
     }
 #endif

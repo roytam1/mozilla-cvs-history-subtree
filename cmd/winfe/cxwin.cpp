@@ -3703,8 +3703,7 @@ CWnd *CWinCX::GetDialogOwner() const    {
 int CWinCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLoading, BOOL bForceNew)   
 {
 #ifdef MOZ_RAPTOR
-  CNetscapeView *nsv = (CNetscapeView*)GetView();
-  nsIWebWidget* ww = nsv->GetWebWidget();
+  nsIWebWidget* ww = GetWebWidget();
   if (!ww) {
     return MK_NO_ACTION;
   }

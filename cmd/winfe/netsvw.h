@@ -297,14 +297,11 @@ protected:
 #ifdef MOZ_RAPTOR
 private:
   void checkCreateWebWidget();
-  nsIWebWidget *m_pWebWidget;
   BOOL m_bNoWebWidgetHack;
 
 public:
   void NoWebWidgetHack() {m_bNoWebWidgetHack = TRUE;}
   // Hack to disable it for the RDF window.
-
-  nsIWebWidget* GetWebWidget() {return m_pWebWidget;}
 #endif /* MOZ_RAPTOR */
 };
 

@@ -71,6 +71,10 @@ typedef enum ContextType    {
     MaxContextTypes   //  Leave as last entry please
 } ContextType;
 
+#ifdef MOZ_RAPTOR
+class nsIWebWidget;
+#endif
+
 //  The abstract windows context
 class CAbstractCX: public IMWContext {
 private:
@@ -200,6 +204,16 @@ public:
     }
 	// Override to allow XP Context->Frame matching
 	virtual CFrameGlue *GetFrame() const { return NULL; }
+
+#ifdef MOZ_RAPTOR
+    // Convenience to get/set WebWidget from MWContext.
+    nsIWebWidget *GetWebWidget() const {        
+        return((nsIWebWidget*)m_pXPCX->fe.webWidget);
+    } 
+    void SetWebWidget(nsIWebWidget *pWW) {
+        m_pXPCX->fe.webWidget = pWW;
+    }
+#endif
 
 	//	Named contexts and grid stuff.
 	void SetContextName(const char *pName);
