@@ -1452,8 +1452,12 @@ lo_reload_cell_from_history(lo_GridCellRec *cell_ptr,
 	 */
 	if ((hist != NULL)&&(cell_ptr->context != NULL))
 	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		FE_LoadGridCellFromHistory(cell_ptr->context, hist,
 			force_reload);
+#endif
 	}
 }
 
@@ -1473,7 +1477,11 @@ lo_MakeGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 
 	width = state->win_width;
 	height = state->win_height;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	FE_GetFullWindowSize(context, &width, &height);
+#endif
 
 	if (width <= 0)
 		width = 1;
@@ -1483,6 +1491,10 @@ lo_MakeGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 
 	grid->main_width = width;
 	grid->main_height = height;
+
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 
 #ifdef NO_FRAMESET_BORDER
 	edge_size = 1;
@@ -1511,6 +1523,9 @@ lo_MakeGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 		edge_size = 0;
 	}
 #endif /* NO_FRAMESET_BORDER */
+
+#endif /* MOZ_NGLAYOUT */
+
 	grid->grid_cell_border = (edge_size + 1) / 2;
 	grid->grid_cell_min_dim = (2 * grid->grid_cell_border) + 1;
 
@@ -1618,6 +1633,9 @@ lo_MakeGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 				}
 			}
 			reconnecting_cell = cell_ptr;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 			cell_ptr->context = FE_MakeGridWindow (context,
 				hist_list,
 				history,
@@ -1627,6 +1645,7 @@ lo_MakeGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 				cell_ptr->scrolling,
 				FORCE_RELOAD_FLAG(state->top_state),
 				cell_ptr->no_edges);
+#endif /* MOZ_NGLAYOUT */
 			reconnecting_cell = NULL;
 			if (cell_ptr->context)
 			{
@@ -2937,9 +2956,13 @@ LO_MoveGridEdge(MWContext *context, LO_EdgeStruct *fe_edge, int32 x, int32 y)
 			 */
 			if (cell->context != NULL)
 			{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 				FE_RestructureGridWindow (cell->context,
 					cell->x, cell->y,
 					cell->width, cell->height);
+#endif
 			}
 		}
 		edge->y = y;
@@ -3007,9 +3030,13 @@ LO_MoveGridEdge(MWContext *context, LO_EdgeStruct *fe_edge, int32 x, int32 y)
 			 */
 			if (cell->context != NULL)
 			{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 				FE_RestructureGridWindow (cell->context,
 					cell->x, cell->y,
 					cell->width, cell->height);
+#endif
 			}
 		}
 		edge->x = x;
@@ -3209,7 +3236,11 @@ lo_RecreateGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 
 	width = state->win_width;
 	height = state->win_height;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	FE_GetFullWindowSize(context, &width, &height);
+#endif
 
 	if (width <= 0)
 		width = 1;
@@ -3255,6 +3286,9 @@ lo_RecreateGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 			grid->current_cell_margin_width = cell_ptr->margin_width;
 			grid->current_cell_margin_height = cell_ptr->margin_height;
 			reconnecting_cell = cell_ptr;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 			cell_ptr->context = FE_MakeGridWindow (context,
 				hist_list,
 				history,
@@ -3264,6 +3298,7 @@ lo_RecreateGrid(MWContext *context, lo_DocState *state, lo_GridRec *grid)
 				cell_ptr->scrolling,
 				FORCE_RELOAD_FLAG(state->top_state),
 				cell_ptr->no_edges);
+#endif /* MOZ_NGLAYOUT */
 			reconnecting_cell = NULL;
 			grid->current_cell_margin_width = 0;
 			grid->current_cell_margin_height = 0;
@@ -4266,9 +4301,13 @@ lo_RestructureCells(MWContext *context,
       if (cell_list->needs_restructuring &&
 	  cell_list->context != NULL)
 	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	  FE_RestructureGridWindow (cell_list->context,
 				    cell_list->x, cell_list->y,
 				    cell_list->width, cell_list->height);
+#endif
 	}
 
       cell_list = cell_list->next;

@@ -42,8 +42,10 @@ typedef struct fe_functions {
 
 	void (*GetJavaAppSize)(void *fe_context,
 			LO_JavaAppStruct *java, URL_ReloadMethod force_reload);
+#ifndef MOZ_NGLAYOUT
 	void (*GetEmbedSize)(void *fe_context,
 			LO_EmbedStruct *embed, URL_ReloadMethod force_reload);
+#endif /* MOZ_NGLAYOUT */
 	void (*GetImageInfo)(void *fe_context,
 			LO_ImageStruct *image, URL_ReloadMethod force_reload);
 
@@ -98,8 +100,10 @@ typedef struct fe_functions {
 
 	void (*FreeEdgeElement)(void *fe_context,
 			LO_EdgeStruct *edge);
+#ifndef MOZ_NGLAYOUT
 	void (*FreeEmbedElement)(void *fe_context,
 			LO_EmbedStruct *embed);
+#endif /* MOZ_NGLAYOUT */
 	void (*HideJavaAppElement)(void *fe_context,
 			void *session_data);
 	void (*FreeImageElement)(void *fe_context,

@@ -537,31 +537,7 @@ HINSTANCE CFormElement::GetSegment()
 }
 #endif
 
-extern "C" void FE_RaiseWindow(MWContext *pContext)    {
-    //  Make sure this is possible.
-    if(pContext && ABSTRACTCX(pContext) && !ABSTRACTCX(pContext)->IsDestroyed()
-        && ABSTRACTCX(pContext)->IsFrameContext() && PANECX(pContext)->GetPane()
-        && WINCX(pContext)->GetFrame() && WINCX(pContext)->GetFrame()->GetFrameWnd()) {
-        CWinCX *pWinCX = WINCX(pContext);
-        CFrameWnd *pFrameWnd = pWinCX->GetFrame()->GetFrameWnd();
-
-        //  Bring the frame to the top first.
-		if(pFrameWnd->IsIconic())	{
-			pFrameWnd->ShowWindow(SW_RESTORE);
-		}
-        ::SetWindowPos(pFrameWnd->GetSafeHwnd(), HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-#ifdef XP_WIN32
-        pFrameWnd->SetForegroundWindow();
-#endif
-
-        //  Now, set focus to the view being raised,
-        //      possibly a frame cell.
-        pWinCX->
-            GetFrame()->
-            GetFrameWnd()->
-            SetActiveView(pWinCX->GetView(), TRUE);
-    }
-}
+// FE_RaisWindow moved to cfe.cpp so MOZ_NGLAYOUT can build.
 
 extern "C" void FE_LowerWindow(MWContext *pContext)    {
     //  Make sure this is possible.

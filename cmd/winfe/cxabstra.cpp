@@ -753,7 +753,11 @@ void CAbstractCX::NiceReload(int usePassInType, NET_ReloadMethod iReloadType )	{
 //	Comments:	Standard stuff.
 
 	MWContext * context = GetContext();
-	if(XP_IsContextBusy(context) == TRUE || LO_LayingOut(context))	{
+	if(XP_IsContextBusy(context) == TRUE 
+#ifndef MOZ_NGLAYOUT
+|| LO_LayingOut(context)
+#endif
+)	{
 		FEU_RequestIdleProcessing(context);
 		context->reSize = TRUE;
 	}
@@ -786,7 +790,9 @@ void CAbstractCX::Back()	{
 
 	History_entry *pHist = SHIST_GetPrevious(GetContext());
 	if (GetContext()->grid_children) {
-#ifndef MOZ_NGLAYOUT
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 	    if (LO_BackInGrid(GetDocumentContext())) {
 		return;
 	    }
@@ -805,9 +811,13 @@ void CAbstractCX::Forward()	{
 
 	History_entry *pHist = SHIST_GetNext(GetContext());
 	if (GetContext()->grid_children) {
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 	    if (LO_ForwardInGrid(GetDocumentContext())) {
 		return;
 	    }
+#endif
 	}
 	if(pHist)	{
 		GetUrl(SHIST_CreateURLStructFromHistoryEntry(GetContext(), pHist), FO_CACHE_AND_PRESENT);
@@ -1195,6 +1205,9 @@ void CAbstractCX::AddToBookmarks()
 }
 
 void CAbstractCX::CopySelection()	{
+#ifdef MOZ_NGLAYOUT
+    ASSERT(0);
+#else
 	if(CanCopySelection() == FALSE)	{
 		return;
 	}
@@ -1248,6 +1261,7 @@ void CAbstractCX::CopySelection()	{
 
 	::CloseClipboard();
 	XP_FREE(text);
+#endif
 }
 
 BOOL CAbstractCX::CanCopySelection()	{
@@ -1260,8 +1274,13 @@ BOOL CAbstractCX::CanCopySelection()	{
 			bRetval = FALSE;
 	}
 	else	{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+    bRetval = FALSE;
+#else
 		//	Is there anything selected to be copied?
 		bRetval = LO_HaveSelection(GetDocumentContext());
+#endif
 	}
 
 	return(bRetval);
@@ -1299,6 +1318,10 @@ CAbstractCX *CAbstractCX::FindContextByID(DWORD dwID)
 //	It's off by default, so be careful out there.
 URL_Struct *CAbstractCX::CreateUrlFromHist(BOOL bClearStateData, SHIST_SavedData *pSavedData, BOOL bWysiwyg)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return NULL;
+#else
 	TRACE("Creating URL from the current history entry.\n");
 
 	//	Make sure that we're not destroyed.
@@ -1344,6 +1367,7 @@ URL_Struct *CAbstractCX::CreateUrlFromHist(BOOL bClearStateData, SHIST_SavedData
 	}
 
 	return(pUrl);
+#endif /* MOZ_NGLAYOUT */
 }
 
 //	Used mainly in cmdui enablers to determine if we could load from 

@@ -515,9 +515,13 @@ void CDCCX::ClearFontCache()	{
 
 	}
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     //  Tell layout to get rid of all of it's cached FE font data
     //      in the LO_TextAttr.
     LO_InvalidateFontData(GetDocumentContext());
+#endif
 
 
     //  Go through our context list of cached fonts and get rid of them all.
@@ -962,7 +966,11 @@ void CDCCX::ChangeFontOffset(int iIncrementor)
 
 	m_iOffset += iIncrementor;
 	if(GetContext()){
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		GetContext()->fontScalingPercentage = LO_GetScalingFactor(m_iOffset);
+#endif
 	}
 
 	NiceReload();
@@ -2214,9 +2222,13 @@ void CDCCX::DisplayIcon(int32 x0, int32 y0, int icon_number)
 				if (cxLoadBitmap(MAKEINTRESOURCE(bitmapID), image_bits, &imageInfo)) {
 					if(maskID) {
 						BOOL fillBack = TRUE;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 #ifdef XP_WIN32
 						CPrintCX* pPrintCx = (CPrintCX*)this;
 						fillBack = pPrintCx->IsPrintingBackground() ? FALSE : TRUE;
+#endif
 #endif
 						cxLoadBitmap(MAKEINTRESOURCE(maskID), mask_bits, &maskInfo);
 						WFE_StretchDIBitsWithMask(hdc,TRUE, m_pImageDC,
@@ -2691,11 +2703,7 @@ void CDCCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEm
 	if(wfe_IsTypePlugin(pEmbeddedApp)) {
         if (NPL_IsEmbedWindowed(pEmbeddedApp)) {
             DisplayPlugin(pContext, pEmbed, pEmbeddedApp, iLocation);
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
             (void)NPL_EmbedSize(pEmbeddedApp);
-#endif
         }
         else
             DisplayWindowlessPlugin(pContext, pEmbed, pEmbeddedApp, iLocation);
@@ -2770,7 +2778,7 @@ void CDCCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *pEm
 		ReleaseContextDC(hdc);
 	}
 }
-#endif
+#endif /* MOZ_NGLAYOUT */
 
 void CDCCX::DisplayHR(MWContext *pContext, int iLocation, LO_HorizRuleStruct *pHorizRule)	
 {
@@ -3689,6 +3697,7 @@ moved into DrawTextPostDecoration()
 	}
 }	// void CDCCX::DisplayText()
 
+#ifndef MOZ_NGLAYOUT
 void CDCCX::FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pEmbed)	{
 	//	We have our OLE document handle this.
 	GetDocument()->FreeEmbedElement(pContext, pEmbed);
@@ -3699,6 +3708,7 @@ void CDCCX::GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pEmbed, NET_Reload
 	//	We have our OLE document handle this.
 	GetDocument()->GetEmbedSize(pContext, pEmbed, bReload);
 }
+#endif /* MOZ_NGLAYOUT */
 
 #ifdef LAYERS
 void CDCCX::GetTextFrame(MWContext *pContext, LO_TextStruct *pText,

@@ -967,12 +967,16 @@ BOOL CDCCX::OnOpenDocumentCX(const char *pPathName)	{
 }
 
 void CDCCX::ViewImages()	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	if(IsDestroyed() == FALSE)	{
         // Tell layout that all images are to be force loaded.
         LO_SetForceLoadImage(NULL, TRUE);
 
 		ExplicitlyLoadAllImages();
 	}
+#endif /* MOZ_NGLAYOUT */
 }
 
 BOOL CDCCX::CanViewImages()	{
@@ -1031,6 +1035,7 @@ URL_Struct *CDCCX::CreateUrlFromHist(BOOL bClearStateData, SHIST_SavedData *pSav
 	return(pUrl);
 }
 
+#ifndef MOZ_NGLAYOUT
 //
 // Make the given form element visible on the screen
 //
@@ -1123,6 +1128,7 @@ void CDCCX::SetFormElementToggle(MWContext *pContext, LO_FormElementStruct *pFor
 		pFormClass->SetFormElementToggle(iState);
 	}
 }
+#endif
 
 //  Do a fill rect type operation.
 void CDCCX::FloodRect(LTRB& Rect, HBRUSH hColor)

@@ -5981,8 +5981,12 @@ lo_InternalDiscardDocument(MWContext *context, lo_DocState *state,
 				    cell_ptr->hist_list = NULL;
 				    if (cell_ptr->context != NULL)
 				    {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 					cell_ptr->hist_list = FE_FreeGridWindow(
 						cell_ptr->context, TRUE);
+#endif
 				    }
 				}
 				else
@@ -5991,8 +5995,12 @@ lo_InternalDiscardDocument(MWContext *context, lo_DocState *state,
 				    cell_ptr->hist_list = NULL;
 				    if (cell_ptr->context != NULL)
 				    {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 					(void)FE_FreeGridWindow(
 						cell_ptr->context, FALSE);
+#endif
 				    }
 				}
 				cell_ptr->context = NULL;
@@ -6044,8 +6052,12 @@ lo_InternalDiscardDocument(MWContext *context, lo_DocState *state,
 					 * free it.
 					 */
 					cell_ptr->hist_list = NULL;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 					(void)FE_FreeGridWindow(
 						cell_ptr->context, FALSE);
+#endif
 				}
 				tmp_cell = cell_ptr;
 				cell_ptr = cell_ptr->next;

@@ -427,6 +427,7 @@ HBRUSH CGenericView::OnCtlColor( CDC* pDC, CWnd* pWnd, UINT nCtlColor )
 	// Assume the document background color
     COLORREF rgbCurrentColor = GetContext()->m_rgbBackgroundColor;
 
+#ifndef MOZ_NGLAYOUT
 	// We need to use the background associated with the form element if there is one
 	// (e.g. a form element in a table cell with a specified background color)
 	if (pWnd->IsKindOf(RUNTIME_CLASS(CNetscapeButton))) {
@@ -435,6 +436,7 @@ HBRUSH CGenericView::OnCtlColor( CDC* pDC, CWnd* pWnd, UINT nCtlColor )
 		if (pElement && pElement->text_attr && pElement->text_attr->no_background == FALSE)
 			rgbCurrentColor = RGB(pElement->text_attr->bg.red, pElement->text_attr->bg.green, pElement->text_attr->bg.blue);
 	}
+#endif
 
     if(m_hCtlBrush == NULL) {
 	// was no brush, just make a new one
@@ -906,7 +908,11 @@ void CGenericView::OnUpdateEditPaste(CCmdUI* pCmdUI)
 
 void CGenericView::OnSelectAll() 
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     LO_SelectAll(GetContext()->GetDocumentContext());
+#endif
 }
 
 //#ifndef NO_TAB_NAVIGATION

@@ -761,11 +761,15 @@ lo_FormatEmbedInternal(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	embed->layer =
 	  lo_CreateEmbeddedObjectLayer(context, state, (LO_Element*)embed);
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	/*
 	 * Have the front end fetch this embed data, and tell us
 	 * the embed's dimensions if it knows them.
 	 */
 	FE_GetEmbedSize(context, embed, state->top_state->force_reload);
+#endif /* MOZ_NGLAYOUT */
 
 	/*
 	 * Hidden embeds always have 0 width and height

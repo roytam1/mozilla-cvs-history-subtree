@@ -551,7 +551,11 @@ lo_DisplayEdge(MWContext *context, LO_EdgeStruct *edge)
 {
 	if (edge->visible != FALSE)
 	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		FE_DisplayEdge(context, FE_VIEW, edge);
+#endif
 	}
 }
 
@@ -630,7 +634,11 @@ lo_DisplayFormElement(MWContext *context, LO_FormElementStruct *form_element)
 	CL_Layer *layer;
 
 	if (! context->compositor) {
+#ifdef MOZ_NGLAYOUT
+      XP_ASSERT(0);
+#else
 	    FE_DisplayFormElement(context, FE_VIEW, form_element);
+#endif
 	    return;
 	}
 

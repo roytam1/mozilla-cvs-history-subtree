@@ -546,8 +546,10 @@ int INTL_DocCharSetID(MWContext *context)
 		return theApp.m_iCSID;
 	else if (doccsid = INTL_GetCSIDocCSID(LO_GetDocumentCharacterSetInfo(context)))
 		return doccsid;
+#ifndef MOZ_NGLAYOUT
 	else if (context->type == MWContextPrint && ((CPrintCX *)((context)->fe.cx))->m_iCSID)
 		return ((CPrintCX *)((context)->fe.cx))->m_iCSID;
+#endif
 	else if (GetFrame(context) && GetFrame(context)->m_iCSID)
 		return GetFrame(context)->m_iCSID;
 	else
@@ -565,8 +567,10 @@ extern int16 INTL_DefaultDocCharSetID(MWContext * context)
 		return theApp.m_iCSID;
 	else if (doccsid = INTL_GetCSIDocCSID(LO_GetDocumentCharacterSetInfo(context)))
 		return doccsid;
+#ifndef MOZ_NGLAYOUT
 	else if (context->type == MWContextPrint && ((CPrintCX *)((context)->fe.cx))->m_iCSID)
 		return ((CPrintCX *)((context)->fe.cx))->m_iCSID;
+#endif
 	else if (context->type == MWContextSaveToDisk && ((CSaveCX*)((context)->fe.cx))->m_iCSID)
 		return ((CSaveCX *)((context)->fe.cx))->m_iCSID;
 	else  if (GetFrame(context) && ((CMainFrame *)GetFrame(context))->m_iCSID)
@@ -579,8 +583,10 @@ extern "C" uint16 FE_DefaultDocCharSetID(MWContext * context)
 {
 	if (context == NULL)
 		return theApp.m_iCSID;
+#ifndef MOZ_NGLAYOUT
 	else if (context->type == MWContextPrint && ((CPrintCX *)((context)->fe.cx))->m_iCSID)
 		return ((CPrintCX *)((context)->fe.cx))->m_iCSID;
+#endif
 	else if (context->type == MWContextSaveToDisk && ((CSaveCX*)((context)->fe.cx))->m_iCSID)
 		return ((CSaveCX *)((context)->fe.cx))->m_iCSID;
 	else if (GetFrame(context) && ((CMainFrame *)GetFrame(context))->m_iCSID)

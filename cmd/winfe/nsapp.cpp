@@ -1821,8 +1821,12 @@ BOOL CNetscapeApp::OnDDECommand(char *pszCommand)
 	char *pArg3 = FEU_ExtractCommaDilimetedQuotedString(pszCommand, 3);
 	char *pArg4 = FEU_ExtractCommaDilimetedQuotedString(pszCommand, 4);
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	//  Do it.
 	CPrintCX::AutomatedPrint(pArg1, pArg2, pArg3, pArg4);
+#endif
 
 	//  Get rid of any allocations that FEU did for us.
 	if(pArg1)   {

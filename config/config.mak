@@ -72,7 +72,7 @@ PUBLIC=$(XPDIST)\public
 #//-----------------------------------------------------------------------
 
 
-!ifdef RAPTOR_BUILD_PREFIX
+!ifdef NGLAYOUT_BUILD_PREFIX
 DIST_PREFIX=RAP
 !else
 !ifdef MOZ_NAV_BUILD_PREFIX
@@ -106,12 +106,12 @@ DIST=$(XPDIST)\$(DIST_PREFIX)$(MOZ_BITS)_O.OBJ
 DIST=$(XPDIST)\$(DIST_PREFIX)$(MOZ_BITS)_D.OBJ
 !endif
 
-# This will always give the location of Raptor's dist, even if "RAPTOR" is not defined.
-!if defined(MOZ_RAPTOR)
+# This will always give the location of NGLayout's dist, even if "NGLAYOUT_BUILD_PREFIX" is not defined.
+!if defined(MOZ_NGLAYOUT)
 !ifndef MOZ_DEBUG
-RAPTOR_DIST=$(XPDIST)\RAP$(MOZ_BITS)_O.OBJ
+NGLAYOUT_DIST=$(XPDIST)\RAP$(MOZ_BITS)_O.OBJ
 !else
-RAPTOR_DIST=$(XPDIST)\RAP$(MOZ_BITS)_D.OBJ
+NGLAYOUT_DIST=$(XPDIST)\RAP$(MOZ_BITS)_D.OBJ
 !endif
 !endif
 

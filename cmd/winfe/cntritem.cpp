@@ -126,6 +126,9 @@ void CNetscapeCntrItem::OnActivate()
 
 void CNetscapeCntrItem::OnChange(OLE_NOTIFICATION nCode, DWORD dwParam)
 {
+#ifdef MOZ_NGLAYOUT
+        XP_ASSERT(0);
+#else
 	COleClientItem::OnChange(nCode, dwParam);
 
 	// this is a hack to test if we need to ask user to save the file or not.
@@ -150,13 +153,10 @@ void CNetscapeCntrItem::OnChange(OLE_NOTIFICATION nCode, DWORD dwParam)
             CL_UpdateLayerRect(CL_GetLayerCompositor(pLayoutData->layer),
                                pLayoutData->layer, &rect, PR_FALSE);
         }
-#ifdef MOZ_NGLAYOUT
-        ASSERT(0);
-#else
         else
             pContext->funcs->DisplayEmbed(pContext, FE_VIEW, pLayoutData);
-#endif
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 BOOL CNetscapeCntrItem::OnChangeItemPosition(const CRect& rectPos)

@@ -1224,7 +1224,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\animecho.cpp
 	$(DEPTH)\cmd\winfe\askmedlg.cpp 
 	$(DEPTH)\cmd\winfe\authdll.cpp
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\button.cpp 
+!endif
 	$(DEPTH)\cmd\winfe\cfe.cpp
 	$(DEPTH)\cmd\winfe\cmdparse.cpp
 	$(DEPTH)\cmd\winfe\cntritem.cpp   
@@ -1242,8 +1244,10 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\cxmeta.cpp 
 	$(DEPTH)\cmd\winfe\cxnet1.cpp 
 	$(DEPTH)\cmd\winfe\cxpane.cpp
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\cxprint.cpp
 	$(DEPTH)\cmd\winfe\cxprndlg.cpp   
+!endif
 	$(DEPTH)\cmd\winfe\cxsave.cpp 
 	$(DEPTH)\cmd\winfe\cxstubs.cpp
 	$(DEPTH)\cmd\winfe\cxwin.cpp
@@ -1255,7 +1259,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\dialog.cpp 
 	$(DEPTH)\cmd\winfe\display.cpp
 	$(DEPTH)\cmd\winfe\dragbar.cpp   
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\drawable.cpp   
+!endif
 	$(DEPTH)\cmd\winfe\dropmenu.cpp   
 	$(DEPTH)\cmd\winfe\edcombtb.cpp   
 	$(DEPTH)\cmd\winfe\extgen.cpp
@@ -1274,6 +1280,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\feselect.cpp 
 	$(DEPTH)\cmd\winfe\feutil.cpp 
 	$(DEPTH)\cmd\winfe\findrepl.cpp   
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\fmabstra.cpp   
 	$(DEPTH)\cmd\winfe\fmbutton.cpp   
 	$(DEPTH)\cmd\winfe\fmfile.cpp 
@@ -1283,6 +1290,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\fmselone.cpp   
 	$(DEPTH)\cmd\winfe\fmtext.cpp 
 	$(DEPTH)\cmd\winfe\fmtxarea.cpp
+!endif
 	$(DEPTH)\cmd\winfe\frameglu.cpp   
 	$(DEPTH)\cmd\winfe\framinit.cpp   
 	$(DEPTH)\cmd\winfe\genchrom.cpp   
@@ -1292,7 +1300,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\genfram2.cpp   
 	$(DEPTH)\cmd\winfe\prefs.cpp   
 	$(DEPTH)\cmd\winfe\genview.cpp
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\gridedge.cpp   
+!endif
 	$(DEPTH)\cmd\winfe\helpers.cpp
 	$(DEPTH)\cmd\winfe\hiddenfr.cpp   
 	$(DEPTH)\cmd\winfe\histbld.cpp   
@@ -1305,7 +1315,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\lastacti.cpp
 	$(DEPTH)\cmd\winfe\logindg.cpp   
 	$(DEPTH)\cmd\winfe\mainfrm.cpp
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\medit.cpp  
+!endif
 	$(DEPTH)\cmd\winfe\mozock.cpp 
 	$(DEPTH)\cmd\winfe\mucwiz.cpp  
 	$(DEPTH)\cmd\winfe\mucproc.cpp 
@@ -1316,14 +1328,19 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\navigate.cpp   
 	$(DEPTH)\cmd\winfe\ncapiurl.cpp 
 	$(DEPTH)\cmd\winfe\nethelp.cpp  
+	$(DEPTH)\cmd\winfe\nglglue.cpp  
 	$(DEPTH)\cmd\winfe\mozilla.cpp   
 	$(DEPTH)\cmd\winfe\nsapp.cpp   
 	$(DEPTH)\cmd\winfe\netsdoc.cpp
 	$(DEPTH)\cmd\winfe\nsfont.cpp
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\netsprnt.cpp   
+!endif
 	$(DEPTH)\cmd\winfe\netsvw.cpp 
 	$(DEPTH)\cmd\winfe\nsshell.cpp
+!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\odctrl.cpp
+!endif
 	$(DEPTH)\cmd\winfe\olectc.cpp 
 	$(DEPTH)\cmd\winfe\olehelp.cpp 
 	$(DEPTH)\cmd\winfe\oleprot1.cpp   

@@ -330,6 +330,7 @@ UINT GetChildID()
     return s_uChildID++;
 }
 
+#ifndef MOZ_NGLAYOUT
 //  Get the size of an embedded item.
 void CGenericDoc::GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pLayoutData, NET_ReloadMethod Reload) {
     //  First, see if we've already got what Layout is asking for.
@@ -488,11 +489,7 @@ void CGenericDoc::GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pLayoutData,
 
 
         // Create and init new structures for managing an embedded plugin
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
 		pEmbeddedApp = NPL_EmbedCreate(pContext, pLayoutData);
-#endif
 		if(pEmbeddedApp == NULL)
 			return;
 
@@ -599,9 +596,6 @@ void CGenericDoc::GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pLayoutData,
 		//  Go ahead and assign it into the layout data for use in other functions.
 		pLayoutData->FE_Data = (void *)pEmbeddedApp;
 
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
 		// Now that we've set the NPEmbeddedApp's fe_data and layout's FE_Data we can start the embed
 		if (NPL_EmbedStart(pContext, pLayoutData, pEmbeddedApp) != NPERR_NO_ERROR) {
 			// Something went wrong. Time to clean up. The XP code has already deleted
@@ -610,11 +604,13 @@ void CGenericDoc::GetEmbedSize(MWContext *pContext, LO_EmbedStruct *pLayoutData,
 			pItem->m_bLoading = FALSE;
 			delete pItem;
 		}
-#endif
     }
 
 }
+#endif /* MOZ_NGLAYOUT */
 
+
+#ifndef MOZ_NGLAYOUT
 void CGenericDoc::FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pLayoutData)
 {
     NPEmbeddedApp* 		pEmbeddedApp = (NPEmbeddedApp*)pLayoutData->FE_Data;
@@ -628,12 +624,8 @@ void CGenericDoc::FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pLayoutD
 	if (! pEmbeddedApp)
         return;
 
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
     // this thing is going to be decremented in NPL_EmbedDelete, so 
     iRefCountIndicator = NPL_GetEmbedReferenceCount(pEmbeddedApp);
-#endif
 
     pItem = (CNetscapeCntrItem *)pEmbeddedApp->fe_data;
 
@@ -654,11 +646,7 @@ void CGenericDoc::FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pLayoutD
     if (pEmbeddedApp->type == NP_OLE)
         curItem = (CNetscapeCntrItem*)pEmbeddedApp->fe_data;
 
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
     NPL_EmbedDelete(pContext, pLayoutData);
-#endif
     pLayoutData->FE_Data = NULL;
 
 	//	If the item is already gone, bail now.
@@ -767,6 +755,7 @@ void CGenericDoc::FreeEmbedElement(MWContext *pContext, LO_EmbedStruct *pLayoutD
 
     }
 }
+#endif /* MOZ_NGLAYOUT */
 
 
 /////////////////////////////////////////////////////////////////////////////

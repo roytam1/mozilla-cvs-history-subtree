@@ -594,7 +594,11 @@ lo_EndForm(MWContext *context, lo_DocState *state)
 
 	if (single_text_ele != NULL)
 	{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 		FE_FormTextIsSubmit(context, single_text_ele);
+#endif
 	}
 
 #ifdef MOCHA
@@ -785,8 +789,12 @@ new_form_element(MWContext *context, lo_DocState *state, int32 type)
 	}
 #ifdef XP_WIN
 	attr_change = FALSE;
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 	attr_change = FE_CheckFormTextAttributes(context,
 			form_element->text_attr, &tmp_attr, type);
+#endif
 	if (attr_change != FALSE)
 	{
 		form_element->text_attr = lo_FetchTextAttr(state, &tmp_attr);
@@ -1881,7 +1889,11 @@ lo_LayoutInflowFormElement(MWContext *context,
 		form_element->y = state->y;
 	}
 	form_element->baseline = 0;
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 	FE_GetFormElementInfo(context, form_element);
+#endif
 
 	if ((state->x + form_element->width) > state->right_margin)
 	{
@@ -2543,7 +2555,11 @@ lo_get_form_element_data(MWContext *context,
 	    (form_element->element_data->type != FORM_TYPE_BUTTON) &&
 	    (form_element->element_data->type != FORM_TYPE_OBJECT))
 	{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 		FE_GetFormElementValue(context, form_element, FALSE);
+#endif
 	}
 
 	switch (form_element->element_data->type)
@@ -3305,7 +3321,11 @@ lo_save_form_element_data(MWContext *context, LO_Element *element,
 	if ((form_element->element_data->type != FORM_TYPE_HIDDEN)&&
 	    (form_element->element_data->type != FORM_TYPE_KEYGEN))
 	{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 		FE_GetFormElementValue(context, form_element, discard_element);
+#endif
 	}
 }
 
@@ -3377,8 +3397,12 @@ lo_RedoHistoryForms(MWContext *context)
 			    {
 				if (data_list[i] != NULL)
 				{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 					FE_FreeFormElement(context,
 						(LO_FormElementData *)data_list[i]);
+#endif
 				}
 			    }
 			}
@@ -3408,6 +3432,9 @@ lo_redo_form_elements_in_form_list(MWContext *context, lo_FormData *form_list)
 			form_ele = (LO_FormElementStruct *)(ele_list[i]);
 			if (form_ele != NULL)
 			{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 				if (form_ele->element_data != NULL)
 				{
 #ifdef OLD_WAY
@@ -3419,6 +3446,7 @@ lo_redo_form_elements_in_form_list(MWContext *context, lo_FormData *form_list)
 #endif
 				}
 				FE_GetFormElementInfo(context, form_ele);
+#endif
 			}
 		}
 		PA_UNLOCK(form_list->form_elements);
@@ -3491,7 +3519,11 @@ form_reset_closure(MWContext * context, LO_Element * ele, int32 event,
 		    (form_ele->element_data->type != FORM_TYPE_READONLY)&&
 		    (form_ele->element_data->type != FORM_TYPE_BUTTON))
 		{
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 			FE_ResetFormElement(context, form_ele);
+#endif
 		}
 	}
 	PA_UNLOCK(form_list->form_elements);
@@ -3659,7 +3691,11 @@ LO_FormRadioSet(MWContext *context, LO_FormElementStruct *form_element)
 			prev_ele = form_ele;
 		}
 		form_data2->toggled = FALSE;
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 		FE_SetFormElementToggle(context, form_ele, FALSE);
+#endif
 	}
 	PA_UNLOCK(form_list->form_elements);
 	PA_UNLOCK(form_data1->name);

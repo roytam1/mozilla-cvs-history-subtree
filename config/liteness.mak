@@ -155,6 +155,6 @@ MOZ_SPELLCHK=1
 
 
 ### This probably isn't the best place to put this.
-!if defined(MOZ_RAPTOR)
-MOZ_LITENESS_FLAGS=$(MOZ_LITENESS_FLAGS) -DMOZ_RAPTOR
+!if defined(MOZ_NGLAYOUT)
+MOZ_LITENESS_FLAGS=$(MOZ_LITENESS_FLAGS) -DMOZ_NGLAYOUT
 !endif

@@ -89,6 +89,7 @@ IMPLEMENT_DYNCREATE(CNetscapeView, CGenericView)
 BEGIN_MESSAGE_MAP(CNetscapeView, CGenericView)
     //{{AFX_MSG_MAP(CNetscapeView)
     ON_WM_RBUTTONDOWN()
+#ifndef MOZ_NGLAYOUT
     ON_UPDATE_COMMAND_UI(ID_NAVIGATE_REPAINT, OnUpdateNavigateRepaint)
     ON_WM_CREATE()
     ON_COMMAND(ID_NAVIGATE_REPAINT, OnNavigateRepaint)
@@ -110,13 +111,16 @@ BEGIN_MESSAGE_MAP(CNetscapeView, CGenericView)
     ON_COMMAND(ID_CANCEL_EDIT, OnDeactivateEmbed)
 	ON_COMMAND(ID_POPUP_INTERNETSHORTCUT, OnPopupInternetShortcut)
 	ON_COMMAND(ID_POPUP_MAILTO, OnPopupMailTo)
+#endif /* MOZ_NGLAYOUT */
     //}}AFX_MSG_MAP
     // Standard printing commands
     ON_WM_SIZE()
     ON_COMMAND(ID_FILE_PRINT_PREVIEW, OnFilePrintPreview)
     ON_WM_KEYDOWN()
     ON_WM_KEYUP()
+#ifndef MOZ_NGLAYOUT
     ON_COMMAND(ID_DRAG_THIS_URL, OnCopyCurrentURL)
+#endif /* MOZ_NGLAYOUT */
 #ifdef EDITOR
 	ON_UPDATE_COMMAND_UI(ID_DRAG_THIS_URL, OnCanInteract)
     ON_COMMAND(ID_POPUP_EDIT_IMAGE, OnPopupEditImage )       //Implemented in popup.cpp
@@ -260,6 +264,7 @@ BOOL CNetscapeView::PreCreateWindow(CREATESTRUCT & cs)
     return (CGenericView::PreCreateWindow(cs));
 }
 
+#ifndef MOZ_NGLAYOUT
 /////////////////////////////////////////////////////////////////////////////
 // CNetscapeView drawing
 
@@ -275,6 +280,7 @@ void CNetscapeView::OnPrepareDC(CDC *pDC, CPrintInfo * pInfo /* = NULL */)
 #endif
           
 }
+#endif /* MOZ_NGLAYOUT */
 
 /////////////////////////////////////////////////////////////////////////////
 // CNetscapeView printing
@@ -360,6 +366,9 @@ void CNetscapeView::OnFilePrintPreview()
 #endif
 #endif //MOZ_MAIL_NEWS
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	//	Must outlive this function.
 	CPrintPreviewState *pState = new CPrintPreviewState;
 
@@ -374,9 +383,13 @@ void CNetscapeView::OnFilePrintPreview()
 		//	Do this last.
 		m_bInPrintPreview = FALSE;
 	}
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CNetscapeView::OnEndPrintPreview(CDC *pDC, CPrintInfo *pInfo, POINT pXY, CPreviewView *pPreView)	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	CNetscapePreviewView *pView = (CNetscapePreviewView *)pPreView;
 
 	if (pView->m_pPrintView != NULL)
@@ -462,6 +475,7 @@ void CNetscapeView::OnEndPrintPreview(CDC *pDC, CPrintInfo *pInfo, POINT pXY, CP
 
 	//	Do this last.
 	m_bInPrintPreview = FALSE;
+#endif /* MOZ_NGLAYOUT */
 }
 
 BOOL CNetscapeView::OnPreparePrinting(CPrintInfo *pInfo)	{
@@ -471,6 +485,9 @@ BOOL CNetscapeView::OnPreparePrinting(CPrintInfo *pInfo)	{
 }
 
 void CNetscapeView::OnPrint(CDC *pDC, CPrintInfo *pInfo)	{
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	//	This only gets called in print preview mode.
 	//	Never in print only mode.
 	if(m_pPreviewContext == NULL)	{
@@ -507,13 +524,9 @@ void CNetscapeView::OnPrint(CDC *pDC, CPrintInfo *pInfo)	{
             return;
         }
 #endif
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
 		// Copy the necessary information into the URL's saved data so that we don't
 		// make a copy of the plug-ins when printing
 		NPL_PreparePrint(pContext->GetContext(), &pUrl->savedData);
-#endif
 
 		CPrintCX::PreviewAnchorObject(m_pPreviewContext, pUrl, this, pDC, pInfo, &SavedData, pDisplayUrl);
         XP_FREEIF(pDisplayUrl);
@@ -522,11 +535,15 @@ void CNetscapeView::OnPrint(CDC *pDC, CPrintInfo *pInfo)	{
 	//	Either the page is loading in the print context, or it's done loading.
 	//	In any event, attempt to have it print the page.
 	m_pPreviewContext->PrintPage(pInfo->m_nCurPage, pDC->GetSafeHdc(), pInfo);
+#endif /* MOZ_NGLAYOUT */
 }
 
 BOOL CNetscapeView::DoPrintPreview(UINT nIDResource, CView* pPrintView,
 	CRuntimeClass* pPreviewViewClass, CPrintPreviewState* pState)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	ASSERT_VALID_IDR(nIDResource);
 	ASSERT_VALID(pPrintView);
 	ASSERT(pPreviewViewClass != NULL);            
@@ -610,6 +627,7 @@ BOOL CNetscapeView::DoPrintPreview(UINT nIDResource, CView* pPrintView,
 	pParent->RecalcLayout();            // position and size everything
 	pParent->UpdateWindow();
 
+#endif /* MOZ_NGLAYOUT */
 	return TRUE;
 }
 
@@ -641,6 +659,7 @@ CGenericDoc* CNetscapeView::GetDocument()	{
 /////////////////////////////////////////////////////////////////////////////
 // CNetscapeView message handlers
 
+#ifndef MOZ_NGLAYOUT
 int CNetscapeView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
     if (CGenericView::OnCreate(lpCreateStruct) == -1)
@@ -663,6 +682,7 @@ int CNetscapeView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
     return 0;
 }
+#endif /* MOZ_NGLAYOUT */
 
 #ifdef MOZ_NGLAYOUT
 void CNetscapeView::checkCreateWebWidget() {
@@ -702,6 +722,7 @@ void CNetscapeView::checkCreateWebWidget() {
 }
 #endif /* MOZ_NGLAYOUT */
 
+#ifndef MOZ_NGLAYOUT
 // Force a window repaint
 // Don't do this by hand (i.e. by calling LO_RefreshArea()) or we will be
 //  unable to cache the pDC
@@ -716,6 +737,7 @@ void CNetscapeView::OnUpdateNavigateRepaint(CCmdUI* pCmdUI)
 {
     pCmdUI->Enable(TRUE);
 }
+#endif /* MOZ_NGLAYOUT */
 
 // Block of Editor functions removed from here
 // Following are formerly editor functions that are useful in Browser
@@ -858,6 +880,7 @@ void CNetscapeView::EditImage(char *pImage)
 // *** end of "formerly editor functions"
 #endif /* EDITOR */
 
+#ifndef MOZ_NGLAYOUT
 void CNetscapeView::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
     // Pass it off to the context to handle if it can.
@@ -925,6 +948,7 @@ void CNetscapeView::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
         CWnd::OnKeyDown(nChar, nRepCnt, nFlags);
     }
 }
+#endif /* MOZ_NGLAYOUT */
 
 void CNetscapeView::OnInitialUpdate() 
 {
@@ -937,11 +961,13 @@ void CNetscapeView::OnInitialUpdate()
 }
 
 
+#ifndef MOZ_NGLAYOUT
 void CNetscapeView::OnDeactivateEmbed() {
 	if(m_pContext != NULL)	{
 		m_pContext->OnDeactivateEmbedCX();
 	}
 }
+#endif /* MOZ_NGLAYOUT */
 
 //
 // Focus management to support international forms
@@ -985,6 +1011,7 @@ void CNetscapeView::OnActivateFrame(UINT nState, CFrameWnd* /*pFrameWnd*/)
 FILE * fpSeriousHackery = NULL;
 
 
+#ifndef MOZ_NGLAYOUT
 // We just got focus
 // See who wants it
 //
@@ -1026,6 +1053,7 @@ void CNetscapeView::OnCopyCurrentURL()
         GetContext()->CopyCurrentURL();
     }
 }
+#endif /* MOZ_NGLAYOUT */
 
 /////////////////////////////////////////////////////////////////////////
 CViewDropSource::CViewDropSource(UINT nDragType)

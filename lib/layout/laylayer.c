@@ -2098,7 +2098,11 @@ lo_update_embedded_object_window(CL_Layer *layer)
     case LO_FORM_ELE:
         any->x -= tptr->lo_form.border_horiz_space;
         any->y -= tptr->lo_form.border_vert_space;
+#ifdef MOZ_NGLAYOUT
+      XP_ASSERT(0);
+#else
 	FE_DisplayFormElement(context, FE_VIEW, &tptr->lo_form);
+#endif
 	break;
     case LO_EMBED:
 #ifdef MOZ_NGLAYOUT

@@ -1864,7 +1864,6 @@ void CPrintCX::DisplayEmbed(MWContext *pContext, int iLocation, LO_EmbedStruct *
 	}
 	CDCCX::DisplayEmbed(pContext, iLocation, pEmbed);
 }
-#endif
 
 void CPrintCX::DisplayFormElement(MWContext *pContext, int iLocation, LO_FormElementStruct *pFormElement)	{
     if (GetDisplayMode() == BLOCK_DISPLAY)
@@ -1887,6 +1886,7 @@ void CPrintCX::DisplayFormElement(MWContext *pContext, int iLocation, LO_FormEle
 #endif
 	CDCCX::DisplayFormElement(pContext, iLocation, pFormElement);
 }
+#endif
 
 void CPrintCX::DisplayHR(MWContext *pContext, int iLocation, LO_HorizRuleStruct *pHorizRule)	{
     if (GetDisplayMode() == BLOCK_DISPLAY)

@@ -24,6 +24,7 @@
 
 #define VIEW_SOURCE_TARGET_WINDOW_NAME "%ViewSourceWindow"	/* from ns/lib/libnet/cvcolor.c */
 
+#ifndef MOZ_NGLAYOUT
 MWContext *FE_MakeGridWindow(MWContext *pOldContext, void *hist_list, void *pHistory,
 	int32 lX, int32 lY,
 	int32 lWidth, int32 lHeight, char *pUrlStr, char *pWindowName, int8 iScrollType,
@@ -250,6 +251,7 @@ void *FE_FreeGridWindow(MWContext *pContext, XP_Bool bSaveHistory)	{
 
 	return(pRetval);
 }
+#endif /* MOZ_NGLAYOUT */
 
 void FE_GetFullWindowSize(MWContext *pContext, int32 *plWidth, int32 *plHeight)	{
 
@@ -285,6 +287,7 @@ void FE_GetFullWindowSize(MWContext *pContext, int32 *plWidth, int32 *plHeight)	
 	}
 }
 
+#ifndef MOZ_NGLAYOUT
 void FE_RestructureGridWindow(MWContext *pContext, int32 lX, int32 lY, int32 lWidth, int32 lHeight)	{
 	TRACE("FE_RestructureGridWindow(%p, %ld, %ld, %ld, %ld)\n", pContext, lX, lY, lWidth, lHeight);
 
@@ -308,6 +311,7 @@ void FE_RestructureGridWindow(MWContext *pContext, int32 lX, int32 lY, int32 lWi
 
 	//	Dynamic scroll bars are handled internally, as is resize.
 }
+#endif /* MOZ_NGLAYOUT */
 
 void FE_SetWindowLoading(MWContext *pContext, URL_Struct *pUrl, Net_GetUrlExitFunc **ppExitRoutine)	{
 
@@ -321,6 +325,7 @@ void FE_SetWindowLoading(MWContext *pContext, URL_Struct *pUrl, Net_GetUrlExitFu
 	ABSTRACTCX(pContext)->GetUrl(pUrl, FO_CACHE_AND_PRESENT, FALSE);
 }
 
+#ifndef MOZ_NGLAYOUT
 void FE_GetEdgeMinSize(MWContext *pContext, int32 *pSize, Bool no_edge)	{
 	TRACE("FE_GetEdgeMinSize(%p, %p)\n", pContext, pSize);
 
@@ -331,6 +336,7 @@ void FE_GetEdgeMinSize(MWContext *pContext, int32 *pSize, Bool no_edge)	{
 		*pSize = 5;
     }
 }
+#endif /* MOZ_NGLAYOUT */
 
 MWContext *FE_MakeBlankWindow(MWContext *pOldContext, URL_Struct *pUrl, char *pContextName)	{
 //	TRACE("FE_MakeBlankWindow(%p, %p, %s)\n", pOldContext, pUrl, pContextName);

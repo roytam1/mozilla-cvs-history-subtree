@@ -352,6 +352,9 @@ et_HandleEvent_ManipulateForm(MozillaEvent_ManipulateForm* e)
     if(e->docID != XP_DOCID(e->ce.context))
 	return;
 
+#ifdef MOZ_NGLAYOUT
+      XP_ASSERT(0);
+#else
     switch(e->action) {
     case EVENT_BLUR:
         FE_BlurInputElement(e->ce.context, e->pForm);
@@ -371,6 +374,7 @@ et_HandleEvent_ManipulateForm(MozillaEvent_ManipulateForm* e)
     default:
         XP_ASSERT(0);
     }
+#endif
 }
 
 PR_STATIC_CALLBACK(void)

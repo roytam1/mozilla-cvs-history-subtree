@@ -6058,8 +6058,12 @@ XP_TRACE(("lo_LayoutTag(%d)\n", tag->type));
 
 					    width = state->win_width;
 					    height = state->win_height;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 					    FE_GetFullWindowSize(context,
 						&width, &height);
+#endif
 
 					    savedGridData =
 					      state->top_state->savedData.Grid;

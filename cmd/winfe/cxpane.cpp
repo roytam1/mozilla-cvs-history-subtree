@@ -86,6 +86,9 @@ CPaneCX::CPaneCX(HWND hPane, BOOL bDestroyOnWMDestroy)
 
 CPaneCX::~CPaneCX()
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     SetPane(NULL);
 
     // Destroy the compositor associated with the context
@@ -112,6 +115,7 @@ CPaneCX::~CPaneCX()
         m_lpTextElementHeap = NULL;
     }
 #endif
+#endif /* MOZ_NGLAYOUT */
 }
 
 //  Set current pane for context.
@@ -305,6 +309,7 @@ void CPaneCX::DestroyContext()
 
 void CPaneCX::Initialize(BOOL bOwnDC, RECT *pRect, BOOL bInitialPalette, BOOL bNewMemDC)
 {
+#ifndef MOZ_NGLAYOUT
     MWContext *pContext = GetContext();
 
     //  Top of the document.
@@ -358,10 +363,14 @@ void CPaneCX::Initialize(BOOL bOwnDC, RECT *pRect, BOOL bInitialPalette, BOOL bN
 
     ReleaseContextDC(hDC);
     hDC = NULL;
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CPaneCX::SetDrawable(MWContext *pContext, CL_Drawable *pDrawable)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     if(pDrawable) {
         CDrawable *pFEDrawable = (CDrawable *)CL_GetDrawableClientData(pDrawable);
         m_pDrawable = pFEDrawable;
@@ -369,6 +378,7 @@ void CPaneCX::SetDrawable(MWContext *pContext, CL_Drawable *pDrawable)
     else {
         m_pDrawable = m_pOnscreenDrawable;
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 FE_Region CPaneCX::GetDrawingClip()
@@ -383,16 +393,23 @@ FE_Region CPaneCX::GetDrawingClip()
 
 void CPaneCX::GetDrawingOrigin(int32 *plOrgX, int32 *plOrgY)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     if(m_pDrawable)  {
         m_pDrawable->GetOrigin(plOrgX, plOrgY);
     }
     else {
         *plOrgX = *plOrgY = 0;
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CPaneCX::RefreshArea(int32 lLeft, int32 lTop, uint32 ulWidth, uint32 ulHeight)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     MWContext *pContext = GetContext();
 
     //  Simple validation, can pass in 0 for all.
@@ -420,6 +437,7 @@ void CPaneCX::RefreshArea(int32 lLeft, int32 lTop, uint32 ulWidth, uint32 ulHeig
     tempRect.bottom += GetWindowsYPos();
     BltToScreen(tempRect, NULL);
 #endif
+#endif /* MOZ_NGLAYOUT */
 }
 
 //  Window handle is about to go away; let go of it.
@@ -435,6 +453,9 @@ void CPaneCX::AftWMDestroy(PaneMessage *pMessage)
 
 void CPaneCX::PreWMErasebkgnd(PaneMessage *pMessage)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     HDC hEraseDC = (HDC)pMessage->wParam;
     HDC hOldSubst = NULL;
     if(hEraseDC != m_hClassDC && hEraseDC != m_hOwnDC) {
@@ -459,6 +480,7 @@ void CPaneCX::PreWMErasebkgnd(PaneMessage *pMessage)
         //  Someone forget to unsubst their DC?
         ASSERT(hUnSubst == hEraseDC);
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CPaneCX::PreWMPaint(PaneMessage *pMessage)
@@ -499,6 +521,9 @@ void CPaneCX::PreWMPaint(PaneMessage *pMessage)
 
 void CPaneCX::AftWMSize(PaneMessage *pMessage)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     UINT uSizeType = (UINT)pMessage->wParam;
     int iWidth = LOWORD(pMessage->lParam);
     int iHeight = HIWORD(pMessage->lParam);
@@ -580,6 +605,7 @@ void CPaneCX::AftWMSize(PaneMessage *pMessage)
 #endif
         }
     }
+#endif /* MOZ_NGLAYOUT */
 }
 
 static void resize_reload_timeout(void *closure)

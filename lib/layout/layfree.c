@@ -445,7 +445,11 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 			break;
 
 		case LO_EDGE:
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 			FE_FreeEdgeElement(context, (LO_EdgeStruct *)element);
+#endif
 			break;
 
 		case LO_FORM_ELE:
@@ -456,7 +460,11 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 			break;
 
 		case LO_EMBED:
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 			FE_FreeEmbedElement(context, (LO_EmbedStruct *)element);
+#endif /* MOZ_NGLAYOUT */
 			if (element->lo_embed.embed_src != NULL)
 			{
 				PA_FREE(element->lo_embed.embed_src);
@@ -859,7 +867,11 @@ lo_FreeDocumentFormListData(MWContext *context, lo_SavedFormListData *fptr)
 	    {
 		if (data_list[i] != NULL)
 		{
+#ifdef MOZ_NGLAYOUT
+      XP_ASSERT(0);
+#else
 			FE_FreeFormElement(context, (LO_FormElementData *)data_list[i]);
+#endif
 			lo_FreeFormElementData(data_list[i]);
 			XP_DELETE(data_list[i]);
 		}
