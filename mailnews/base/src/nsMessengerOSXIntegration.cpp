@@ -150,7 +150,7 @@ nsMessengerOSXIntegration::OnItemUnicharPropertyChanged(nsISupports *, nsIAtom *
 }
 
 NS_IMETHODIMP
-nsMessengerWinIntegration::OnItemRemoved(nsISupports *, nsISupports *, const char *)
+nsMessengerOSXIntegration::OnItemRemoved(nsISupports *, nsISupports *, const char *)
 {
   return NS_OK;
 }
