@@ -429,7 +429,13 @@ libs:: $(PROGRAM)
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
 	cp -R $(DIST)/package/PrintPDE.plugin $(DIST)/$(APP_NAME).app/Contents/Plug-Ins/
-	cp -RL $(srcdir)/macbuild/mach.icns $(DIST)/$(APP_NAME).app/Contents/Resources/mach.icns
+	cp -RL $(srcdir)/macbuild/Contents/command.icns $(DIST)/$(APP_NAME).app/Contents/Resources/command.icns
+	cp -RL $(srcdir)/macbuild/Contents/component.icns $(DIST)/$(APP_NAME).app/Contents/Resources/component.icns
+	cp -RL $(srcdir)/macbuild/Contents/html.icns $(DIST)/$(APP_NAME).app/Contents/Resources/html.icns
+	cp -RL $(srcdir)/macbuild/Contents/mozilla.icns $(DIST)/$(APP_NAME).app/Contents/Resources/mozilla.icns
+	cp -RL $(srcdir)/macbuild/Contents/plugin.icns $(DIST)/$(APP_NAME).app/Contents/Resources/plugin.icns
+	cp -RL $(srcdir)/macbuild/Contents/pref.icns $(DIST)/$(APP_NAME).app/Contents/Resources/pref.icns
+	cp -RL $(srcdir)/macbuild/Contents/text.icns $(DIST)/$(APP_NAME).app/Contents/Resources/text.icns
 	cp -RL $(DIST)/package/mozillaSuite.rsrc $(DIST)/$(APP_NAME).app/Contents/Resources/$(PROGRAM).rsrc
 	echo -n APPLMOZZ > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
 
