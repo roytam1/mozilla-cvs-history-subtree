@@ -199,9 +199,15 @@ void
 nsTAString_CharT::Assign( const string_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Assign(tuple);
+      {
+        AsString()->Assign(tuple);
+      }
     else
-      AsObsoleteString()->do_AssignFromReadable(*nsTAutoString_CharT(tuple).AsObsoleteString());
+      {
+        // XXX MSVC refuses access to AsObsoleteString on a subclass of nsTAString_CharT :-(
+        const nsTAString_CharT& temp = nsTAutoString_CharT(tuple);
+        AsObsoleteString()->do_AssignFromReadable(*temp.AsObsoleteString());
+      }
   }
 
 void
@@ -244,9 +250,15 @@ void
 nsTAString_CharT::Append( const string_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Append(tuple);
+      {
+        AsString()->Append(tuple);
+      }
     else
-      AsObsoleteString()->do_AppendFromReadable(*nsTAutoString_CharT(tuple).AsObsoleteString());
+      {
+        // XXX MSVC refuses access to AsObsoleteString on a subclass of nsTAString_CharT :-(
+        const nsTAString_CharT& temp = nsTAutoString_CharT(tuple);
+        AsObsoleteString()->do_AppendFromReadable(*temp.AsObsoleteString());
+      }
   }
 
 void
@@ -289,9 +301,15 @@ void
 nsTAString_CharT::Insert( const string_tuple_type& tuple, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Insert(tuple, pos);
+      {
+        AsString()->Insert(tuple, pos);
+      }
     else
-      AsObsoleteString()->do_InsertFromReadable(*nsTAutoString_CharT(tuple).AsObsoleteString(), pos);
+      {
+        // XXX MSVC refuses access to AsObsoleteString on a subclass of nsTAString_CharT :-(
+        const nsTAString_CharT& temp = nsTAutoString_CharT(tuple);
+        AsObsoleteString()->do_InsertFromReadable(*temp.AsObsoleteString(), pos);
+      }
   }
 
 void
@@ -343,9 +361,15 @@ void
 nsTAString_CharT::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->Replace(cutStart, cutLength, tuple);
+      {
+        AsString()->Replace(cutStart, cutLength, tuple);
+      }
     else
-      AsObsoleteString()->do_ReplaceFromReadable(cutStart, cutLength, *nsTAutoString_CharT(tuple).AsObsoleteString());
+      {
+        // XXX MSVC refuses access to AsObsoleteString on a subclass of nsTAString_CharT :-(
+        const nsTAString_CharT& temp = nsTAutoString_CharT(tuple);
+        AsObsoleteString()->do_ReplaceFromReadable(cutStart, cutLength, *temp.AsObsoleteString());
+      }
   }
 
 nsTAString_CharT::size_type
