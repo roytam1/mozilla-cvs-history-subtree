@@ -59,7 +59,9 @@ class XPCNativeSet;
 class XPCWrappedNative;
 class XPCWrappedNativeProto;
 class XPCWrappedNativeTearOff;
+class XPCNativeScriptableShared;
 class XPCNativeScriptableInfo;
+class XPCNativeScriptableCreateInfo;
 
 class JSObject2WrappedJSMap;
 class Native2WrappedNativeMap;
@@ -70,6 +72,7 @@ class ClassInfo2NativeSetMap;
 class ClassInfo2WrappedNativeProtoMap;
 class NativeSetMap;
 class IID2ThisTranslatorMap;
+class XPCNativeScriptableSharedMap;
 
 class nsXPCComponents;
 class nsXPCComponents_Interfaces;

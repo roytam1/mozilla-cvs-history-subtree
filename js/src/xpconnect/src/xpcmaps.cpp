@@ -484,4 +484,112 @@ IID2ThisTranslatorMap::~IID2ThisTranslatorMap()
         JS_DHashTableDestroy(mTable);
 }
 
+/***************************************************************************/
 
+JSDHashNumber JS_DLL_CALLBACK 
+XPCNativeScriptableSharedMap::Entry::Hash(JSDHashTable *table, const void *key)
+{
+    JSDHashNumber h;
+    const unsigned char *s;
+    
+    XPCNativeScriptableShared* obj = 
+        (XPCNativeScriptableShared*) key;
+
+    // hash together the flags and the classname string
+
+    h = (JSDHashNumber) obj->GetFlags();
+    for (s = (const unsigned char*) obj->GetJSClass()->name; *s != '\0'; s++)
+        h = (h >> (JS_DHASH_BITS - 4)) ^ (h << 4) ^ *s;
+    return h;
+}
+
+JSBool JS_DLL_CALLBACK 
+XPCNativeScriptableSharedMap::Entry::Match(JSDHashTable *table,
+                                         const JSDHashEntryHdr *entry,
+                                         const void *key)
+{
+    XPCNativeScriptableShared* obj1 = 
+        ((XPCNativeScriptableSharedMap::Entry*) entry)->key;
+
+    XPCNativeScriptableShared* obj2 = 
+        (XPCNativeScriptableShared*) key;
+
+    // match the flags and the classname string
+
+    if(obj1->GetFlags() != obj2->GetFlags())
+        return JS_FALSE;
+
+    const char* name1 = obj1->GetJSClass()->name;
+    const char* name2 = obj2->GetJSClass()->name;
+    
+    if(!name1 || !name2)
+        return name1 == name2;
+
+    return 0 == strcmp(name1, name2);
+}
+
+struct JSDHashTableOps XPCNativeScriptableSharedMap::Entry::sOps =
+{
+    JS_DHashAllocTable,
+    JS_DHashFreeTable,
+    JS_DHashGetKeyStub,
+    Hash,
+    Match,
+    JS_DHashMoveEntryStub,
+    JS_DHashClearEntryStub,
+    JS_DHashFinalizeStub
+};
+
+// static
+XPCNativeScriptableSharedMap*
+XPCNativeScriptableSharedMap::newMap(int size)
+{
+    XPCNativeScriptableSharedMap* map = 
+        new XPCNativeScriptableSharedMap(size);
+    if(map && map->mTable)
+        return map;
+    delete map;
+    return nsnull;
+}
+
+XPCNativeScriptableSharedMap::XPCNativeScriptableSharedMap(int size)
+{
+    mTable = JS_NewDHashTable(&Entry::sOps, nsnull, sizeof(Entry), size);
+}
+
+XPCNativeScriptableSharedMap::~XPCNativeScriptableSharedMap()
+{
+    if(mTable)
+        JS_DHashTableDestroy(mTable);
+}
+
+JSBool 
+XPCNativeScriptableSharedMap::GetNewOrUsed(JSUint32 flags,
+                                           char* name,
+                                           XPCNativeScriptableInfo* si)
+{
+    NS_PRECONDITION(name,"bad param");
+    NS_PRECONDITION(si,"bad param");
+
+    XPCNativeScriptableShared key(flags, name);
+    
+    Entry* entry = (Entry*)
+        JS_DHashTableOperate(mTable, &key, JS_DHASH_ADD);
+    if(!entry)
+        return JS_FALSE;
+
+    XPCNativeScriptableShared* shared = entry->key;
+
+    if(!shared)
+    {
+        entry->key = shared = 
+            new XPCNativeScriptableShared(flags, key.TransferNameOwnership());
+        if(!shared)
+            return JS_FALSE;
+        shared->PopulateJSClass();
+    }
+    si->GetScriptableShared(shared);
+    return JS_TRUE;
+}
+
+/***************************************************************************/

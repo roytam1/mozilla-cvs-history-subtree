@@ -73,18 +73,20 @@ XPCWrappedNativeProto::~XPCWrappedNativeProto()
 }
 
 JSBool
-XPCWrappedNativeProto::Init(XPCCallContext& ccx,
-                            const XPCNativeScriptableInfo* scriptableInfo)
+XPCWrappedNativeProto::Init(
+                XPCCallContext& ccx,
+                const XPCNativeScriptableCreateInfo* scriptableCreateInfo)
 {
-    if(scriptableInfo && scriptableInfo->GetScriptable())
+    if(scriptableCreateInfo && scriptableCreateInfo->GetCallback())
     {
-        mScriptableInfo = scriptableInfo->Clone();
-        if(!mScriptableInfo || !mScriptableInfo->BuildJSClass())
+        mScriptableInfo = 
+            XPCNativeScriptableInfo::Construct(ccx, scriptableCreateInfo);
+        if(!mScriptableInfo)
             return JS_FALSE;
     }
 
     JSClass* jsclazz = mScriptableInfo &&
-                       mScriptableInfo->AllowPropModsToPrototype() ?
+                       mScriptableInfo->GetFlags().AllowPropModsToPrototype() ?
                             &XPC_WN_ModsAllowed_Proto_JSClass :
                             &XPC_WN_NoMods_Proto_JSClass;
 
@@ -154,7 +156,7 @@ XPCWrappedNativeProto*
 XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
                                     XPCWrappedNativeScope* Scope,
                                     nsIClassInfo* ClassInfo,
-                                    const XPCNativeScriptableInfo* ScriptableInfo,
+                                    const XPCNativeScriptableCreateInfo* ScriptableCreateInfo,
                                     JSBool ForceNoSharing)
 {
     NS_ASSERTION(Scope, "bad param");
@@ -175,7 +177,8 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
     }
     
     if(ForceNoSharing || (ciFlags & nsIClassInfo::PLUGIN_OBJECT) ||
-       (ScriptableInfo && ScriptableInfo->DontSharePrototype()))
+       (ScriptableCreateInfo && 
+        ScriptableCreateInfo->GetFlags().DontSharePrototype()))
     {
         ciFlags |= XPC_PROTO_DONT_SHARE;
         shared = JS_FALSE;
@@ -206,7 +209,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
 
     proto = new XPCWrappedNativeProto(Scope, ClassInfo, ciFlags, set);
 
-    if(!proto || !proto->Init(ccx, ScriptableInfo))
+    if(!proto || !proto->Init(ccx, ScriptableCreateInfo))
     {
         delete proto;
         return nsnull;
@@ -239,7 +242,7 @@ XPCWrappedNativeProto::DebugDump(PRInt16 depth)
         if(depth && mScriptableInfo)
         {
             XPC_LOG_INDENT();
-            XPC_LOG_ALWAYS(("mScriptable @ %x", mScriptableInfo->GetScriptable()));
+            XPC_LOG_ALWAYS(("mScriptable @ %x", mScriptableInfo->GetCallback()));
             XPC_LOG_ALWAYS(("mFlags of %x", mScriptableInfo->GetFlags()));
             XPC_LOG_ALWAYS(("mJSClass @ %x", mScriptableInfo->GetJSClass()));
             XPC_LOG_OUTDENT();

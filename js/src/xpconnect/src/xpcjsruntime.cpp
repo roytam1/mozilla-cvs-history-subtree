@@ -166,6 +166,33 @@ NativeSetSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
     return JS_DHASH_REMOVE;
 }
 
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+JSClassSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
+               uint32 number, void *arg)
+{
+    XPCNativeScriptableShared* shared = 
+        ((XPCNativeScriptableSharedMap::Entry*) hdr)->key;
+    if(shared->IsMarked())
+    {
+#ifdef off_XPC_REPORT_JSCLASS_FLUSHING
+        printf("+ Marked XPCNativeScriptableShared for: %s @ %x\n", 
+               shared->GetJSClass()->name,
+               shared->GetJSClass());
+#endif
+        shared->Unmark();
+        return JS_DHASH_NEXT;
+    }
+
+#ifdef XPC_REPORT_JSCLASS_FLUSHING
+    printf("- Destroying XPCNativeScriptableShared for: %s @ %x\n", 
+           shared->GetJSClass()->name,
+           shared->GetJSClass());
+#endif
+
+    delete shared;
+    return JS_DHASH_REMOVE;
+}
+
 // static
 JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 {
@@ -217,13 +244,11 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 int ifacesBefore = (int) self->mIID2NativeInterfaceMap->Count();
 #endif
 
-                // We use this occasion to mark and sweep NativeInterfaces
-                // and NativeSets...
-
-                CX_AND_XPCRT_Data data = {cx, self};
+                // We use this occasion to mark and sweep NativeInterfaces, 
+                // NativeSets, and the WrappedNativeJSClasses...
 
                 // Do the marking...
-                XPCWrappedNativeScope::MarkAllInterfaceSets();
+                XPCWrappedNativeScope::MarkAllWrappedNativesAndProtos();
 
                 // Mark the sets used in the call contexts. There is a small
                 // chance that a wrapper's set will change *while* a call is
@@ -263,11 +288,23 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 }
 
                 // Do the sweeping...
+
+                // We don't want to sweep the JSClasses at shutdown time.
+                // At this point there may be JSObjects using them that have
+                // been removed from the other maps.
+                if(!self->GetXPConnect()->IsShuttingDown())
+                {
+                    self->mNativeScriptableSharedMap->
+                        Enumerate(JSClassSweeper, nsnull);
+                }
+
                 self->mClassInfo2NativeSetMap->
                     Enumerate(NativeUnMarkedSetRemover, nsnull);
 
                 self->mNativeSetMap->
                     Enumerate(NativeSetSweeper, nsnull);
+
+                CX_AND_XPCRT_Data data = {cx, self};
 
                 self->mIID2NativeInterfaceMap->
                     Enumerate(NativeInterfaceSweeper, &data);
@@ -478,16 +515,28 @@ XPCJSRuntime::~XPCJSRuntime()
         XPCAutoLock::DestroyLock(mMapLock);
     NS_IF_RELEASE(mJSRuntimeService);
 
+    if(mThisTranslatorMap)
+    {
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
-    int LiveWrapperCount = 0;
-    JS_DHashTableEnumerate(DEBUG_WrappedNativeHashtable,
-                           DEBUG_WrapperChecker, &LiveWrapperCount);
-    if(LiveWrapperCount)
-        printf("deleting XPCJSRuntime with %d live XPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);
-    JS_DHashTableDestroy(DEBUG_WrappedNativeHashtable);
+        int LiveWrapperCount = 0;
+        JS_DHashTableEnumerate(DEBUG_WrappedNativeHashtable,
+                               DEBUG_WrapperChecker, &LiveWrapperCount);
+        if(LiveWrapperCount)
+            printf("deleting XPCJSRuntime with %d live XPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);
+        JS_DHashTableDestroy(DEBUG_WrappedNativeHashtable);
 #endif
+        delete mThisTranslatorMap;
+    }
 
-    delete mThisTranslatorMap;
+    if(mNativeScriptableSharedMap)
+    {
+#ifdef XPC_DUMP_AT_SHUTDOWN
+        uint32 count = mNativeScriptableSharedMap->Count();
+        if(count)
+            printf("deleting XPCJSRuntime with %d live XPCNativeScriptableShared\n", (int)count);
+#endif
+        delete mNativeScriptableSharedMap;
+    }
 
     // unwire the readable/JSString sharing magic
     XPCStringConvert::ShutdownDOMStringFinalizer();
@@ -505,6 +554,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
    mClassInfo2NativeSetMap(ClassInfo2NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mNativeSetMap(NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mThisTranslatorMap(IID2ThisTranslatorMap::newMap(XPC_THIS_TRANSLATOR_MAP_SIZE)),
+   mNativeScriptableSharedMap(XPCNativeScriptableSharedMap::newMap(XPC_NATIVE_JSCLASS_MAP_SIZE)),
    mMapLock(XPCAutoLock::NewLock("XPCJSRuntime::mMapLock")),
    mWrappedJSToReleaseArray()
 {
@@ -548,15 +598,16 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
     self = new XPCJSRuntime(aXPConnect,
                             aJSRuntimeService);
 
-    if(self                              &&
-       self->GetJSRuntime()              &&
-       self->GetContextMap()             &&
-       self->GetWrappedJSMap()           &&
-       self->GetWrappedJSClassMap()      &&
-       self->GetIID2NativeInterfaceMap() &&
-       self->GetClassInfo2NativeSetMap() &&
-       self->GetNativeSetMap()           &&
-       self->GetThisTraslatorMap()       &&
+    if(self                                 &&
+       self->GetJSRuntime()                 &&
+       self->GetContextMap()                &&
+       self->GetWrappedJSMap()              &&
+       self->GetWrappedJSClassMap()         &&
+       self->GetIID2NativeInterfaceMap()    &&
+       self->GetClassInfo2NativeSetMap()    &&
+       self->GetNativeSetMap()              &&
+       self->GetThisTraslatorMap()          &&
+       self->GetNativeScriptableSharedMap() &&
        self->GetMapLock())
     {
         return self;

@@ -69,6 +69,11 @@ interface nsIXPCScriptable : nsISupports
     const PRUint32 ALLOW_PROP_MODS_TO_PROTOTYPE     = 1 << 25;
     const PRUint32 DONT_SHARE_PROTOTYPE             = 1 << 26;
 
+    // The high order bit is RESERVED for consumers of these flags. 
+    // No implementor of this interface should ever return flags 
+    // with this bit set.
+    // const PRUint32 RESERVED                      = 1 << 31;
+
     readonly attribute string   className;
     readonly attribute PRUint32 scriptableFlags;
 

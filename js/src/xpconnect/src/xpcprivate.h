@@ -142,6 +142,7 @@
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1
 //#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
+//#define XPC_REPORT_JSCLASS_FLUSHING
 #endif
 
 /***************************************************************************/
@@ -189,6 +190,7 @@ void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper);
 #define XPC_NATIVE_PROTO_MAP_SIZE        16
 #define XPC_NATIVE_INTERFACE_MAP_SIZE    64
 #define XPC_NATIVE_SET_MAP_SIZE          64
+#define XPC_NATIVE_JSCLASS_MAP_SIZE      32
 #define XPC_THIS_TRANSLATOR_MAP_SIZE      8
 
 /***************************************************************************/
@@ -454,6 +456,9 @@ public:
     IID2ThisTranslatorMap* GetThisTraslatorMap() const
         {return mThisTranslatorMap;}
 
+    XPCNativeScriptableSharedMap* GetNativeScriptableSharedMap() const
+        {return mNativeScriptableSharedMap;}
+
     XPCLock* GetMapLock() const {return mMapLock;}
 
     XPCContext* GetXPCContext(JSContext* cx);
@@ -543,6 +548,7 @@ private:
     ClassInfo2NativeSetMap*  mClassInfo2NativeSetMap;
     NativeSetMap*            mNativeSetMap;
     IID2ThisTranslatorMap*   mThisTranslatorMap;
+    XPCNativeScriptableSharedMap* mNativeScriptableSharedMap;
     XPCLock* mMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
 };
@@ -882,7 +888,7 @@ public:
     FinishedFinalizationPhaseOfGC(JSContext* cx);
 
     static void
-    MarkAllInterfaceSets();
+    MarkAllWrappedNativesAndProtos();
 
 #ifdef DEBUG
     static void
@@ -1044,9 +1050,12 @@ public:
 
     void DebugDump(PRInt16 depth);
 
-    void Mark()       {mMemberCount |= 0x8000;}
-    void Unmark()     {mMemberCount &= ~0x8000;}
-    JSBool IsMarked() const {return (JSBool)(mMemberCount & 0x8000);}
+#define XPC_NATIVE_IFACE_MARK_FLAG 0x8000 // only high bit of 16 is set
+
+    void Mark()     {mMemberCount |= XPC_NATIVE_IFACE_MARK_FLAG;}
+    void Unmark()   {mMemberCount &= ~XPC_NATIVE_IFACE_MARK_FLAG;}
+    JSBool IsMarked() const 
+                    {return 0 != (mMemberCount & XPC_NATIVE_IFACE_MARK_FLAG);}
 
     static void DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
                                 XPCNativeInterface* inst);
@@ -1166,12 +1175,15 @@ public:
     inline JSBool MatchesSetUpToInterface(const XPCNativeSet* other,
                                           XPCNativeInterface* iface) const;
 
+#define XPC_NATIVE_SET_MARK_FLAG 0x8000 // only high bit of 16 is set
+
     inline void Mark();
 private:
-    void MarkSelfOnly() {mInterfaceCount |= 0x8000;}
+    void MarkSelfOnly() {mInterfaceCount |= XPC_NATIVE_SET_MARK_FLAG;}
 public:
-    void Unmark()     {mInterfaceCount &= ~0x8000;}
-    JSBool IsMarked() const {return (JSBool)(mInterfaceCount & 0x8000);}
+    void Unmark()       {mInterfaceCount &= ~XPC_NATIVE_SET_MARK_FLAG;}
+    JSBool IsMarked() const 
+                  {return 0 != (mInterfaceCount & XPC_NATIVE_SET_MARK_FLAG);}
 
 #ifdef DEBUG
     inline void ASSERT_NotMarked();
@@ -1199,30 +1211,37 @@ private:
 };
 
 /***************************************************************************/
-// XPCNativeScriptableInfo is used to hold the nsIXPCScritpable state for a
-// given class or instance.
 
-class XPCNativeScriptableInfo
+#define XPC_WN_SJSFLAGS_MARK_FLAG 0x80000000 // only high bit of 32 is set
+
+class XPCNativeScriptableFlags
 {
+private:
+    JSUint32 mFlags;
+
 public:
-    nsIXPCScriptable* GetScriptable() const {return mScriptable;}
-    JSUint32          GetFlags() const      {return mFlags;}
-    JSClass*          GetJSClass()          {return &mJSClass;}
 
-    JSBool            BuildJSClass();
+    XPCNativeScriptableFlags(JSUint32 flags = 0) : mFlags(flags) {}
 
-    void              SetScriptable(nsIXPCScriptable* s)
-                                {NS_ASSERTION(!ClassBuilt(), "too late!");
-                                 mScriptable = s;}
+    JSUint32 GetFlags() const {return mFlags & ~XPC_WN_SJSFLAGS_MARK_FLAG;}
+    JSUint32 SetFlags(JSUint32 flags) {mFlags = flags;}
 
-    void              SetFlags(JSUint32 f)
-                                {NS_ASSERTION(!ClassBuilt(), "too late!");
-                                 mFlags = f;}
+    operator JSUint32() const {return GetFlags();}
+
+    XPCNativeScriptableFlags(const XPCNativeScriptableFlags& r)
+        {mFlags = r.GetFlags();}
+    
+    XPCNativeScriptableFlags& operator= (const XPCNativeScriptableFlags& r)
+        {mFlags = r.GetFlags(); return *this;}
+
+    void Mark()       {mFlags |= XPC_WN_SJSFLAGS_MARK_FLAG;}
+    void Unmark()     {mFlags &= ~XPC_WN_SJSFLAGS_MARK_FLAG;}
+    JSBool IsMarked() const {return 0 != (mFlags & XPC_WN_SJSFLAGS_MARK_FLAG);}
 
 #ifdef GET_IT
 #undef GET_IT
 #endif
-#define GET_IT(f_) const {return (JSBool)(mFlags & nsIXPCScriptable:: f_ );}
+#define GET_IT(f_) const {return 0 != (mFlags & nsIXPCScriptable:: f_ );}
 
     JSBool WantPreCreate()                GET_IT(WANT_PRECREATE)
     JSBool WantCreate()                   GET_IT(WANT_CREATE)
@@ -1253,25 +1272,119 @@ public:
     JSBool DontSharePrototype()           GET_IT(DONT_SHARE_PROTOTYPE)
 
 #undef GET_IT
+};
 
-    ~XPCNativeScriptableInfo();
-    XPCNativeScriptableInfo(nsIXPCScriptable* scriptable = nsnull,
-                            JSUint32 flags = 0);
+/***************************************************************************/
 
-    XPCNativeScriptableInfo* Clone() const
-        {return new XPCNativeScriptableInfo(mScriptable, mFlags);}
+// XPCNativeScriptableShared is used to hold the JSClass and the
+// associated scriptable flags for XPCWrappedNatives. These are shared across 
+// the runtime and are garbage collected by xpconnect. We *used* to just store
+// this inside the XPCNativeScriptableInfo (usually owned by instances of 
+// XPCWrappedNativeProto. This had two problems... It was wasteful, and it
+// was a big problem when wrappers are reparented to different scopes (and
+// thus different protos (the DOM does this).
+
+class XPCNativeScriptableShared
+{
+public:
+    const XPCNativeScriptableFlags& GetFlags() const {return mFlags;}
+    JSClass*                        GetJSClass() {return &mJSClass;}
+
+    XPCNativeScriptableShared(JSUint32 aFlags = 0, char* aName = nsnull)
+        : mFlags(aFlags) {mJSClass.name = aName;} // take ownership
+
+    ~XPCNativeScriptableShared()
+        {if(mJSClass.name)nsMemory::Free((void*)mJSClass.name);}
+
+    char* TransferNameOwnership()
+        {char* name=(char*)mJSClass.name; mJSClass.name = nsnull; return name;}
+
+    void PopulateJSClass();
+
+    void Mark()       {mFlags.Mark();}
+    void Unmark()     {mFlags.Unmark();}
+    JSBool IsMarked() const {return mFlags.IsMarked();}
 
 private:
-    JSBool ClassBuilt() const {return mJSClass.name != 0;}
+    XPCNativeScriptableFlags mFlags;
+    JSClass                  mJSClass;
+};
+
+/***************************************************************************/
+// XPCNativeScriptableInfo is used to hold the nsIXPCScriptable state for a
+// given class or instance.
+
+class XPCNativeScriptableInfo
+{
+public:
+    static XPCNativeScriptableInfo* 
+    Construct(XPCCallContext& ccx, const XPCNativeScriptableCreateInfo* sci);
+
+    nsIXPCScriptable* 
+    GetCallback() const {return mCallback;}
+
+    const XPCNativeScriptableFlags&
+    GetFlags() const      {return mShared->GetFlags();}
+    
+    JSClass*          
+    GetJSClass()          {return mShared->GetJSClass();}
+
+    XPCNativeScriptableShared* 
+    GetScriptableShared() {return mShared;}
+
+    void              
+    SetCallback(nsIXPCScriptable* s) {mCallback = s;}
+
+    void
+    GetScriptableShared(XPCNativeScriptableShared* shared) {mShared = shared;}
+
+    ~XPCNativeScriptableInfo() {}
+
+private:
+    XPCNativeScriptableInfo(nsIXPCScriptable* scriptable = nsnull,
+                            XPCNativeScriptableShared* shared = nsnull)
+        : mCallback(scriptable), mShared(shared) {}
 
     // disable copy ctor and assignment
     XPCNativeScriptableInfo(const XPCNativeScriptableInfo& r); // not implemented
     XPCNativeScriptableInfo& operator= (const XPCNativeScriptableInfo& r); // not implemented
 
 private:
-    nsCOMPtr<nsIXPCScriptable> mScriptable;
-    JSUint32                   mFlags;
-    JSClass                    mJSClass;
+    nsCOMPtr<nsIXPCScriptable>  mCallback;
+    XPCNativeScriptableShared*        mShared;
+};
+
+/***************************************************************************/
+// XPCNativeScriptableCreateInfo is used in creating new wrapper and protos.
+// it abstracts out the scriptable interface pointer and the flags. After
+// creation these are factored differently using XPCNativeScriptableInfo.
+
+class XPCNativeScriptableCreateInfo
+{
+public:
+
+    XPCNativeScriptableCreateInfo(const XPCNativeScriptableInfo& si)
+        : mCallback(si.GetCallback()), mFlags(si.GetFlags()) {}
+
+    XPCNativeScriptableCreateInfo(nsIXPCScriptable* callback = nsnull,
+                                  XPCNativeScriptableFlags flags = 0)
+        : mCallback(callback), mFlags(flags) {}
+
+    nsIXPCScriptable* 
+    GetCallback() const {return mCallback;}
+
+    const XPCNativeScriptableFlags&
+    GetFlags() const      {return mFlags;}
+
+    void              
+    SetCallback(nsIXPCScriptable* callback) {mCallback = callback;}
+
+    void    
+    SetFlags(const XPCNativeScriptableFlags& flags)  {mFlags = flags;}
+
+private:
+    nsCOMPtr<nsIXPCScriptable>  mCallback;
+    XPCNativeScriptableFlags    mFlags;
 };
 
 /***********************************************/
@@ -1285,7 +1398,7 @@ public:
     GetNewOrUsed(XPCCallContext& ccx,
                  XPCWrappedNativeScope* Scope,
                  nsIClassInfo* ClassInfo,
-                 const XPCNativeScriptableInfo* ScriptableInfo,
+                 const XPCNativeScriptableCreateInfo* ScriptableCreateInfo,
                  JSBool ForceNoSharing);
 
     XPCWrappedNativeScope*   
@@ -1348,7 +1461,9 @@ public:
 
     void DebugDump(PRInt16 depth);
 
-    void MarkSet() const {mSet->Mark();}
+    void Mark() const 
+        {mSet->Mark(); 
+         if(mScriptableInfo) mScriptableInfo->GetScriptableShared()->Mark();}
 
 #ifdef DEBUG
     void ASSERT_SetNotMarked() const {mSet->ASSERT_NotMarked();}
@@ -1368,7 +1483,7 @@ protected:
     ~XPCWrappedNativeProto();
 
     JSBool Init(XPCCallContext& ccx,
-                const XPCNativeScriptableInfo* scriptableInfo);
+                const XPCNativeScriptableCreateInfo* scriptableCreateInfo);
 
 private:
 #ifdef DEBUG
@@ -1498,7 +1613,7 @@ public:
     GetScriptableInfo() const {return mScriptableInfo;}
     
     nsIXPCScriptable*      // call this wrong and you deserve to crash
-    GetScriptable() const  {return mScriptableInfo->GetScriptable();}
+    GetScriptableCallback() const  {return mScriptableInfo->GetCallback();}
 
     void** 
     GetSecurityInfoAddr() {return HasProto() ? 
@@ -1594,10 +1709,11 @@ public:
                                          XPCNativeInterface* aInterface,
                                          JSBool needJSObject = JS_FALSE,
                                          nsresult* pError = nsnull);
-
     void 
-    MarkSets() const 
-        {mSet->Mark(); if(HasProto()){mMaybeProto->MarkSet();}}
+    Mark() const 
+        {mSet->Mark(); 
+         if(mScriptableInfo) mScriptableInfo->GetScriptableShared()->Mark();
+         if(HasProto()) mMaybeProto->Mark();}
 
 #ifdef DEBUG
     void ASSERT_SetsNotMarked() const
@@ -1632,7 +1748,7 @@ protected:
 
 private:
     JSBool Init(XPCCallContext& ccx, JSObject* parent,
-                const XPCNativeScriptableInfo& scriptableInfo);
+                const XPCNativeScriptableCreateInfo* sci);
 
     JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
 
@@ -1644,10 +1760,11 @@ private:
     JSBool InitTearOffJSObject(XPCCallContext& ccx,
                                 XPCWrappedNativeTearOff* to);
 
-    static nsresult GatherScriptableInfo(nsISupports* obj,
-                                         nsIClassInfo* classInfo,
-                                         XPCNativeScriptableInfo* siProto,
-                                         XPCNativeScriptableInfo* siWrapper);
+    static nsresult GatherScriptableInfo(
+                        nsISupports* obj,
+                        nsIClassInfo* classInfo,
+                        XPCNativeScriptableCreateInfo* sciProto,
+                        XPCNativeScriptableCreateInfo* sciWrapper);
 
 private:
     XPCWrappedNativeScope*       mScopeOrHasProtoIfNull;

@@ -571,6 +571,41 @@ private:
     JSDHashTable *mTable;
 };
 
+/***************************************************************************/
 
+class XPCNativeScriptableSharedMap
+{
+public:
+    struct Entry : public JSDHashEntryHdr
+    {
+        XPCNativeScriptableShared* key;
+
+        static JSDHashNumber JS_DLL_CALLBACK 
+        Hash(JSDHashTable *table, const void *key);
+
+        static JSBool JS_DLL_CALLBACK
+        Match(JSDHashTable *table,
+              const JSDHashEntryHdr *entry,
+              const void *key);
+
+        static struct JSDHashTableOps sOps;
+    };
+
+    static XPCNativeScriptableSharedMap* newMap(int size);
+
+    JSBool GetNewOrUsed(JSUint32 flags, char* name,
+                        XPCNativeScriptableInfo* si);
+
+    inline uint32 Count() {return mTable->entryCount;}
+    inline uint32 Enumerate(JSDHashEnumerator f, void *arg)
+        {return JS_DHashTableEnumerate(mTable, f, arg);}
+
+    ~XPCNativeScriptableSharedMap();
+private:
+    XPCNativeScriptableSharedMap();    // no implementation
+    XPCNativeScriptableSharedMap(int size);
+private:
+    JSDHashTable *mTable;
+};
 
 #endif /* xpcmaps_h___ */

@@ -248,21 +248,21 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     // of that class.
     JSBool isClassInfo = Interface->GetIID()->Equals(NS_GET_IID(nsIClassInfo));
 
-    XPCNativeScriptableInfo siProto;
-    XPCNativeScriptableInfo siWrapper;
+    XPCNativeScriptableCreateInfo sciProto;
+    XPCNativeScriptableCreateInfo sciWrapper;
 
     if(NS_FAILED(GatherScriptableInfo(identity,
                                       isClassInfo ? nsnull : info.get(),
-                                      &siProto, &siWrapper)))
+                                      &sciProto, &sciWrapper)))
         return NS_ERROR_FAILURE;
 
     JSObject* parent = Scope->GetGlobalJSObject();
 
-    if(siWrapper.WantPreCreate())
+    if(sciWrapper.GetFlags().WantPreCreate())
     {
         JSObject* plannedParent = parent;
-        nsresult rv = siWrapper.GetScriptable()->PreCreate(identity, ccx,
-                                                           parent, &parent);
+        nsresult rv = sciWrapper.GetCallback()->PreCreate(identity, ccx,
+                                                          parent, &parent);
         if(NS_FAILED(rv))
             return rv;
 
@@ -308,7 +308,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     if(info)
     {
-        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &siProto, 
+        proto = XPCWrappedNativeProto::GetNewOrUsed(ccx, Scope, info, &sciProto, 
                                                     isClassInfo);
         if(!proto)
             return NS_ERROR_FAILURE;
@@ -335,7 +335,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         DEBUG_ReportShadowedMembers(set, wrapper, nsnull);
     }
 
-    if(!wrapper->Init(ccx, parent, siWrapper))
+    if(!wrapper->Init(ccx, parent, &sciWrapper))
     {
         // If the JSObject got created then it owns one of the references
         if(!wrapper->GetFlatJSObject())
@@ -385,9 +385,9 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         // Our newly created wrapper is the one that we just added to the table.
         // All is well. Call PostCreate as necessary.
         XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
-        if(si && si->WantPostCreate())
+        if(si && si->GetFlags().WantPostCreate())
         {
-            si->GetScriptable()->
+            si->GetCallback()->
                 PostCreate(wrapper, ccx, wrapper->GetFlatJSObject());
         }
     }
@@ -419,7 +419,10 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
         XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());
         wrapper = map->Find(identity);
         if(!wrapper)
-            return NS_ERROR_FAILURE;
+        {
+            *resultWrapper = nsnull;
+            return NS_OK;
+        }
         NS_ADDREF(wrapper);
     }
 
@@ -503,15 +506,16 @@ XPCWrappedNative::~XPCWrappedNative()
 
 // static
 nsresult
-XPCWrappedNative::GatherScriptableInfo(nsISupports* obj,
-                                       nsIClassInfo* classInfo,
-                                       XPCNativeScriptableInfo* siProto,
-                                       XPCNativeScriptableInfo* siWrapper)
+XPCWrappedNative::GatherScriptableInfo(
+                        nsISupports* obj,
+                        nsIClassInfo* classInfo,
+                        XPCNativeScriptableCreateInfo* sciProto,
+                        XPCNativeScriptableCreateInfo* sciWrapper)
 {
     nsCOMPtr<nsIXPCScriptable> helper;
 
-    NS_ASSERTION(siProto   && !siProto->GetScriptable(), "bad param");
-    NS_ASSERTION(siWrapper && !siWrapper->GetScriptable(), "bad param");
+    NS_ASSERTION(sciProto   && !sciProto->GetCallback(), "bad param");
+    NS_ASSERTION(sciWrapper && !sciWrapper->GetCallback(), "bad param");
 
     // Get the class scriptable helper (if present)
     if(classInfo)
@@ -530,13 +534,13 @@ XPCWrappedNative::GatherScriptableInfo(nsISupports* obj,
                 if(NS_FAILED(rv))
                     return rv;
 
-                siProto->SetScriptable(helper);
-                siProto->SetFlags(flags);
+                sciProto->SetCallback(helper);
+                sciProto->SetFlags(flags);
 
-                siWrapper->SetScriptable(helper);
-                siWrapper->SetFlags(flags);
+                sciWrapper->SetCallback(helper);
+                sciWrapper->SetFlags(flags);
 
-                if(siProto->DontAskInstanceForScriptable())
+                if(sciProto->GetFlags().DontAskInstanceForScriptable())
                     return NS_OK;
             }
         }
@@ -551,60 +555,60 @@ XPCWrappedNative::GatherScriptableInfo(nsISupports* obj,
         if(NS_FAILED(rv))
             return rv;
 
-        siWrapper->SetScriptable(helper);
-        siWrapper->SetFlags(flags);
+        sciWrapper->SetCallback(helper);
+        sciWrapper->SetFlags(flags);
 
         // A whole series of assertions to catch bad uses of scriptable flags on
         // the siWrapper...
 
-        NS_ASSERTION(!(siWrapper->WantPreCreate() && 
-                        !siProto->WantPreCreate()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().WantPreCreate() && 
+                        !sciProto->GetFlags().WantPreCreate()),
                      "Can't set WANT_PRECREATE on an instance scriptable "
                      "without also setting it on the class scriptable");
 
-        NS_ASSERTION(!(siWrapper->DontEnumStaticProps() &&
-                        !siProto->DontEnumStaticProps() &&
-                        siProto->GetScriptable() && 
-                        !siProto->DontSharePrototype()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontEnumStaticProps() &&
+                        !sciProto->GetFlags().DontEnumStaticProps() &&
+                        sciProto->GetCallback() && 
+                        !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set DONT_ENUM_STATIC_PROPS on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(siWrapper->DontEnumQueryInterface() && 
-                        !siProto->DontEnumQueryInterface() &&
-                        siProto->GetScriptable() && 
-                        !siProto->DontSharePrototype()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontEnumQueryInterface() && 
+                        !sciProto->GetFlags().DontEnumQueryInterface() &&
+                        sciProto->GetCallback() && 
+                        !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set DONT_ENUM_QUERY_INTERFACE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(siWrapper->DontAskInstanceForScriptable() && 
-                        !siProto->DontAskInstanceForScriptable()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontAskInstanceForScriptable() && 
+                        !sciProto->GetFlags().DontAskInstanceForScriptable()),
                      "Can't set DONT_ASK_INSTANCE_FOR_SCRIPTABLE on an instance scriptable "
                      "without also setting it on the class scriptable");
 
-        NS_ASSERTION(!(siWrapper->ClassInfoInterfacesOnly() && 
-                        !siProto->ClassInfoInterfacesOnly() &&
-                        siProto->GetScriptable() && 
-                        !siProto->DontSharePrototype()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().ClassInfoInterfacesOnly() && 
+                        !sciProto->GetFlags().ClassInfoInterfacesOnly() &&
+                        sciProto->GetCallback() && 
+                        !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set CLASSINFO_INTERFACES_ONLY on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(siWrapper->AllowPropModsDuringResolve() && 
-                        !siProto->AllowPropModsDuringResolve() &&
-                        siProto->GetScriptable() && 
-                        !siProto->DontSharePrototype()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().AllowPropModsDuringResolve() && 
+                        !sciProto->GetFlags().AllowPropModsDuringResolve() &&
+                        sciProto->GetCallback() && 
+                        !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set ALLOW_PROP_MODS_DURING_RESOLVE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(siWrapper->AllowPropModsToPrototype() && 
-                        !siProto->AllowPropModsToPrototype() &&
-                        siProto->GetScriptable() && 
-                        !siProto->DontSharePrototype()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().AllowPropModsToPrototype() && 
+                        !sciProto->GetFlags().AllowPropModsToPrototype() &&
+                        sciProto->GetCallback() && 
+                        !sciProto->GetFlags().DontSharePrototype()),
                      "Can't set ALLOW_PROP_MODS_TO_PROTOTYPE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
 
-        NS_ASSERTION(!(siWrapper->DontSharePrototype() && 
-                        !siProto->DontSharePrototype() &&
-                        siProto->GetScriptable()),
+        NS_ASSERTION(!(sciWrapper->GetFlags().DontSharePrototype() && 
+                        !sciProto->GetFlags().DontSharePrototype() &&
+                        sciProto->GetCallback()),
                      "Can't set DONT_SHARE_PROTOTYPE on an instance scriptable "
                      "without also setting it on the class scriptable (if present and shared)");
     }
@@ -614,7 +618,7 @@ XPCWrappedNative::GatherScriptableInfo(nsISupports* obj,
 
 JSBool
 XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
-                       const XPCNativeScriptableInfo& scriptableInfo)
+                       const XPCNativeScriptableCreateInfo* sci)
 {
     // Do double addref first. So failure here means object can be deleted
     // by double release.
@@ -629,18 +633,20 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
 
     // setup our scriptable info...
 
-    if(scriptableInfo.GetScriptable())
+    if(sci->GetCallback())
     {
         if(HasProto())
         {
             XPCNativeScriptableInfo* siProto = GetProto()->GetScriptableInfo();
-            if(siProto && siProto->GetScriptable() == scriptableInfo.GetScriptable())
+            if(siProto && siProto->GetCallback() == sci->GetCallback())
                 mScriptableInfo = siProto;
         }
         if(!mScriptableInfo)
         {
-            mScriptableInfo = scriptableInfo.Clone();
-            if(!mScriptableInfo || !mScriptableInfo->BuildJSClass())
+            mScriptableInfo = 
+                XPCNativeScriptableInfo::Construct(ccx, sci);
+            
+            if(!mScriptableInfo)
                 return JS_FALSE;
 
             // If we have a one-off proto, then it should share our scriptable.
@@ -677,8 +683,8 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
     if(!mFlatJSObject || !JS_SetPrivate(ccx, mFlatJSObject, this))
         return JS_FALSE;
 
-    if(si && si->WantCreate() &&
-       NS_FAILED(si->GetScriptable()->Create(this, ccx, mFlatJSObject)))
+    if(si && si->GetFlags().WantCreate() &&
+       NS_FAILED(si->GetCallback()->Create(this, ccx, mFlatJSObject)))
     {
         return JS_FALSE;
     }
@@ -905,7 +911,6 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
                                          nsISupports* aCOMObj,
                                          XPCWrappedNative** aWrapper)
 {
-
     XPCNativeInterface* iface =
         XPCNativeInterface::GetISupports(ccx);
 
@@ -916,14 +921,12 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
     XPCWrappedNative* wrapper;
 
     rv = XPCWrappedNative::GetUsedOnly(ccx, aCOMObj, aOldScope, iface, &wrapper);
-    if(!NS_FAILED(rv))
-        return NS_ERROR_FAILURE;
+    if(NS_FAILED(rv))
+        return rv;
 
-    if(wrapper && !wrapper->IsValid())
-        NS_RELEASE(wrapper);  // sets wrapper to nsnull (handled below)
-
-    if(!wrapper)
+    if(!wrapper || !wrapper->IsValid())
     {
+        NS_IF_RELEASE(wrapper);
         *aWrapper = nsnull;
         return NS_OK;
     }
@@ -937,11 +940,12 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
 
         if(wrapper->HasProto())
         {
+            XPCNativeScriptableCreateInfo ci(*oldProto->GetScriptableInfo());
             oldProto = wrapper->GetProto();
             newProto =
                 XPCWrappedNativeProto::GetNewOrUsed(ccx, aNewScope,
                                                     oldProto->GetClassInfo(),
-                                                    oldProto->GetScriptableInfo(),
+                                                    &ci,
                                                     !oldProto->IsShared());
             if(!newProto)
             {
@@ -983,18 +987,33 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
             if(wrapper->HasProto())
                 wrapper->mMaybeProto = newProto;
 
-            if(wrapper->mScriptableInfo == oldProto->GetScriptableInfo())
+            // If the wrapper has no scriptable or it has a non-shared
+            // scriptable, then we don't need to mess with it.
+            // Otherwise...
+
+            if(wrapper->mScriptableInfo &&
+               wrapper->mScriptableInfo == oldProto->GetScriptableInfo())
+            {
+                // The new proto had better have the same JSClass stuff as the 
+                // old one! We maintain a runtime wide unique map of this stuff.
+                // So, if these don't match then the caller is doing something 
+                // bad here.
+
+                NS_ASSERTION(
+                     oldProto->GetScriptableInfo()->GetScriptableShared() ==
+                     newProto->GetScriptableInfo()->GetScriptableShared(),
+                    "Changing proto is also changing JSObject Classname or "
+                    "helper's nsIXPScriptable flags. This is not allowed!");
+
                 wrapper->mScriptableInfo = newProto->GetScriptableInfo();
+            }
 
             if(wrapper->HasProto())
                 oldProto->Release();
 
-#ifdef DEBUG
-            XPCWrappedNative* prevWrapper = newMap->Add(wrapper);
-            NS_ASSERTION(!prevWrapper, "wrapper already in map!");
-#else
+            NS_ASSERTION(!newMap->Find(wrapper), "wrapper already in new scope!");
+
             (void) newMap->Add(wrapper);
-#endif
         }
     }
 
@@ -1207,7 +1226,8 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
 
     // If the scriptable helper forbids us from reflecting additional
     // interfaces, then don't even try the QI, just fail.
-    if(mScriptableInfo && mScriptableInfo->ClassInfoInterfacesOnly() &&
+    if(mScriptableInfo && 
+       mScriptableInfo->GetFlags().ClassInfoInterfacesOnly() &&
        !mSet->HasInterface(aInterface) && 
        !mSet->HasInterfaceWithAncestor(aInterface))
     {
@@ -2100,7 +2120,7 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
         if(depth && mScriptableInfo)
         {
             XPC_LOG_INDENT();
-            XPC_LOG_ALWAYS(("mScriptable @ %x", mScriptableInfo->GetScriptable()));
+            XPC_LOG_ALWAYS(("mScriptable @ %x", mScriptableInfo->GetCallback()));
             XPC_LOG_ALWAYS(("mFlags of %x", mScriptableInfo->GetFlags()));
             XPC_LOG_ALWAYS(("mJSClass @ %x", mScriptableInfo->GetJSClass()));
             XPC_LOG_OUTDENT();
@@ -2303,7 +2323,7 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
         clsInfo->GetContractID(&contractID);
         if(wrapper->GetScriptableInfo())
         {
-            wrapper->GetScriptableInfo()->GetScriptable()->
+            wrapper->GetScriptableInfo()->GetCallback()->
                 GetClassName(&className);
         }
 
@@ -2351,7 +2371,7 @@ static void DEBUG_PrintShadowObjectInfo(const char* header,
             wrapper->GetScriptableInfo() :
             proto->GetScriptableInfo();    
     if(si)
-        si->GetScriptable()->GetClassName(&className);
+        si->GetCallback()->GetClassName(&className);
 
     printf("   classname: %s \n"
            "   contractid: %s \n",
@@ -2536,7 +2556,7 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
 
         PRBool quit = JS_FALSE;
         char* className = nsnull;
-        si->GetScriptable()->GetClassName(&className);
+        si->GetCallback()->GetClassName(&className);
         if(className)
         {
             for(const char** name = skipClasses; *name; name++)
