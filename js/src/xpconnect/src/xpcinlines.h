@@ -174,41 +174,41 @@ XPCCallContext::GetScriptableInfo() const
 inline XPCNativeSet*
 XPCCallContext::GetSet() const
 {
-    CHECK_STATE(HAVE_JSID);
+    CHECK_STATE(HAVE_NAME);
     return mSet;
 }
 
 inline XPCNativeInterface*
 XPCCallContext::GetInterface() const
 {
-    CHECK_STATE(HAVE_JSID);
+    CHECK_STATE(HAVE_NAME);
     return mInterface;
 }
 
 inline XPCNativeMember*
 XPCCallContext::GetMember() const
 {
-    CHECK_STATE(HAVE_JSID);
+    CHECK_STATE(HAVE_NAME);
     return mMember;
 }
 
 inline JSBool
 XPCCallContext::HasInterfaceAndMember() const
 {
-    return mState >= HAVE_JSID && mInterface && mMember;
+    return mState >= HAVE_NAME && mInterface && mMember;
 }
 
-inline jsid
-XPCCallContext::GetJSID() const
+inline jsval
+XPCCallContext::GetName() const
 {
-    CHECK_STATE(HAVE_JSID);
-    return mJSID;
+    CHECK_STATE(HAVE_NAME);
+    return mName;
 }
 
 inline JSBool
 XPCCallContext::GetStaticMemberIsLocal() const
 {
-    CHECK_STATE(HAVE_JSID);
+    CHECK_STATE(HAVE_NAME);
     return mStaticMemberIsLocal;
 }
 
@@ -255,18 +255,18 @@ XPCCallContext::SetRetVal(jsval val)
         *mRetVal = val;
 }
 
-inline jsword
-XPCCallContext::GetResolveID() const
+inline jsval
+XPCCallContext::GetResolveName() const
 {
     CHECK_STATE(HAVE_CONTEXT);
-    return mThreadData->GetResolveID();
+    return mThreadData->GetResolveName();
 }
 
-inline jsword
-XPCCallContext::SetResolveID(jsword id)
+inline jsval
+XPCCallContext::SetResolveName(jsval name)
 {
     CHECK_STATE(HAVE_CONTEXT);
-    return mThreadData->SetResolveID(id);
+    return mThreadData->SetResolveName(name);
 }
 
 inline XPCWrappedNative* 
@@ -305,17 +305,17 @@ inline const nsIID* XPCNativeInterface::GetIID() const
     return NS_SUCCEEDED(mInfo->GetIIDShared(&iid)) ? iid : nsnull;
 }
 
-inline const char* XPCNativeInterface::GetName() const
+inline const char* XPCNativeInterface::GetNameString() const
 {
     const char* name;
     return NS_SUCCEEDED(mInfo->GetNameShared(&name)) ? name : nsnull;
 }
 
-inline XPCNativeMember* XPCNativeInterface::FindMember(jsid id) const
+inline XPCNativeMember* XPCNativeInterface::FindMember(jsval name) const
 {
     int count = (int) mMemberCount;
     for(int i = 0; i < count; i++)
-        if(mMembers[i].GetID() == id)
+        if(mMembers[i].GetName() == name)
             return (XPCNativeMember*) &mMembers[i];
     return nsnull;
 }
@@ -323,7 +323,7 @@ inline XPCNativeMember* XPCNativeInterface::FindMember(jsid id) const
 /***************************************************************************/
 
 inline JSBool
-XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
+XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
                          PRUint16* pInterfaceIndex) const
 {
     int count = (int) mInterfaceCount;
@@ -333,7 +333,7 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
 
     for(i = 0; i < count; i++)
     {
-        if(id == mInterfaces[i]->GetNameID())
+        if(name == mInterfaces[i]->GetName())
         {
             if(pMember) 
                 *pMember = nsnull;
@@ -346,7 +346,7 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
     // look for method names
     for(i = 0; i < count; i++)
     {
-        XPCNativeMember* member = mInterfaces[i]->FindMember(id);
+        XPCNativeMember* member = mInterfaces[i]->FindMember(name);
         if(member)
         {
             if(pMember) 
@@ -360,24 +360,24 @@ XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
 }
 
 inline JSBool
-XPCNativeSet::FindMember(jsid id, XPCNativeMember** pMember,
+XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
                          XPCNativeInterface** pInterface) const
 {
     PRUint16 index;
-    if(!FindMember(id, pMember, &index))
+    if(!FindMember(name, pMember, &index))
         return JS_FALSE;
     *pInterface = mInterfaces[index];
     return JS_TRUE;
 }
 
-inline XPCNativeInterface* XPCNativeSet::FindNamedInterface(jsid id) const
+inline XPCNativeInterface* XPCNativeSet::FindNamedInterface(jsval name) const
 {
     int count = (int) mInterfaceCount;
     int i;
 
     for(i = 0; i < count; i++)
     {
-        if(id == mInterfaces[i]->GetNameID())
+        if(name == mInterfaces[i]->GetName())
             return mInterfaces[i];
     }
     return nsnull;

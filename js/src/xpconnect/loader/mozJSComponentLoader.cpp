@@ -945,6 +945,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
     rv = xpc->InitClassesWithNewWrappedGlobal(cx, backstagePass,
                                               NS_GET_IID(nsISupports),
+                                              PR_TRUE,
                                               getter_AddRefs(holder));
     if (NS_FAILED(rv))
         return nsnull;
@@ -953,8 +954,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     if (NS_FAILED(rv))
         return nsnull;
 
-    if (!JS_InitStandardClasses(cx, global) ||
-        !JS_DefineFunctions(cx, global, gGlobalFun)) {
+    if (!JS_DefineFunctions(cx, global, gGlobalFun)) {
         return nsnull;
     }
 

@@ -150,11 +150,11 @@ class nsIXPCNativeInterface
 {
 public:
     inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
-    inline jsid              GetNameID()        const {return mNameID;}
+    inline jsval             GetName()          const {return mName;}
 
 protected:
-    nsIXPCNativeInterface(nsIInterfaceInfo* aInfo, jsid aNameID)
-        : mInfo(aInfo), mNameID(aNameID) {}
+    nsIXPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
+        : mInfo(aInfo), mName(aName) {}
     ~nsIXPCNativeInterface() {}
 
     nsIXPCNativeInterface(const nsIXPCNativeInterface& r); // not implemented
@@ -162,7 +162,7 @@ protected:
 
 protected:
     nsCOMPtr<nsIInterfaceInfo> mInfo;
-    jsid                       mNameID;
+    jsval                      mName;
 };
 
 %}

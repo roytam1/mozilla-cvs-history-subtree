@@ -435,14 +435,14 @@ XPCJSRuntime::GenerateStringIDs(JSContext* cx)
     NS_PRECONDITION(!mStrIDs[0],"string ids generated twice!");
     for(uintN i = 0; i < IDX_TOTAL_COUNT; i++)
     {
-        JS_ValueToId(cx,
-                     STRING_TO_JSVAL(JS_InternString(cx, mStrings[i])),
-                     &mStrIDs[i]);
-        if(!mStrIDs[i])
+        JSString* str = JS_InternString(cx, mStrings[i]);
+        if(!str || !JS_ValueToId(cx, STRING_TO_JSVAL(str), &mStrIDs[i]))
         {
             mStrIDs[0] = 0;
             return JS_FALSE;
         }
+
+        mStrJSVals[i] = STRING_TO_JSVAL(str);
     }
     return JS_TRUE;
 }

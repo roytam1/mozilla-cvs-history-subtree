@@ -41,7 +41,7 @@
 XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
                                JSContext* cx   /* = nsnull  */,
                                JSObject* obj   /* = nsnull  */,
-                               jsid id         /* = 0       */,
+                               jsval name      /* = 0       */,
                                uintN argc      /* = NO_ARGS */,
                                jsval *argv     /* = nsnull  */,
                                jsval *rval     /* = nsnull  */)
@@ -125,8 +125,8 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     else
         mScriptableInfo = mWrapper->GetScriptableInfo();
 
-    if(id)
-        SetJSID(id);
+    if(name)
+        SetName(name);
 
     if(argc != NO_ARGS)
         SetArgsAndResultPtr(argc, argv, rval);
@@ -135,17 +135,17 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
 }
 
 void
-XPCCallContext::SetJSID(jsid id)
+XPCCallContext::SetName(jsval name)
 {
     CHECK_STATE(HAVE_OBJECT);
 
-    mJSID = id;
+    mName = name;
 
     if(mTearOff)
     {
         mSet = nsnull;
         mInterface = mTearOff->GetInterface();
-        mMember = mInterface->FindMember(id);
+        mMember = mInterface->FindMember(name);
         mStaticMemberIsLocal = JS_TRUE;
         if(mMember && !mMember->IsConstant())
             mMethodIndex = mMember->GetIndex();
@@ -154,7 +154,7 @@ XPCCallContext::SetJSID(jsid id)
     {
         mSet = mWrapper->GetSet();
 
-        if(mSet->FindMember(id, &mMember, &mInterface))
+        if(mSet->FindMember(name, &mMember, &mInterface))
         {
             if(mMember && !mMember->IsConstant())
                 mMethodIndex = mMember->GetIndex();
@@ -164,18 +164,14 @@ XPCCallContext::SetJSID(jsid id)
             XPCNativeSet* mProtoSet = mWrapper->GetProto()->GetSet();
 
             mStaticMemberIsLocal =
-                        !mMember ||
-                        (mProtoSet != mSet &&
-                         (!mProtoSet->FindMember(id, &protoMember, &ignored) ||
-                          protoMember != mMember));
+                    !mMember ||
+                     (mProtoSet != mSet &&
+                      (!mProtoSet->FindMember(name, &protoMember, &ignored) ||
+                       protoMember != mMember));
         }
         else
         {
-            // XXX Need to add support for looking up tearoffs by interface name
-            // This will have a to check if our scriptable allows this, then
-            // do a lookup in the jsid -> iid/interface map to find the
-            // interface and then use FindTearoff to try to QI for this
-            // interface. If found, we'll have to mutate our wrapper's set.
+            // XXX do we need to lookup tearoff names here?
 
             mMember = nsnull;
             mInterface = nsnull;
@@ -183,7 +179,7 @@ XPCCallContext::SetJSID(jsid id)
         }
     }
 
-    mState = HAVE_JSID;
+    mState = HAVE_NAME;
 }
 
 void
@@ -200,10 +196,10 @@ XPCCallContext::SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter)
     mInterface = ci->GetInterface();
     mMember = ci->GetMember();
     mMethodIndex = mMember->GetIndex() + (isSetter ? 1 : 0);
-    mJSID = mMember->GetID();
+    mName = mMember->GetName();
 
-    if(mState < HAVE_JSID)
-        mState = HAVE_JSID;
+    if(mState < HAVE_NAME)
+        mState = HAVE_NAME;
 }
 
 void

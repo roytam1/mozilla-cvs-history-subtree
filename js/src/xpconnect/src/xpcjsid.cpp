@@ -432,7 +432,10 @@ nsJSIID::Enumerate(nsIXPConnectWrappedNative *wrapper,
         {
             JSObject* obj2;
             JSProperty* prop;
-            if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
+            jsid id;
+
+            if(!JS_ValueToId(cx, member->GetName(), &id) ||
+               !OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
                 return NS_ERROR_UNEXPECTED;
         }
     }
@@ -735,7 +738,7 @@ nsJSCID::Construct(nsIXPConnectWrappedNative *wrapper,
 
     // 'push' a call context and call on it
     XPCCallContext ccx(JS_CALLER, cx, obj,
-                       rt->GetStringID(XPCJSRuntime::IDX_CREATE_INSTANCE),
+                       rt->GetStringJSVal(XPCJSRuntime::IDX_CREATE_INSTANCE),
                        argc, argv, vp);
 
     *_retval = XPCWrappedNative::CallMethod(ccx);

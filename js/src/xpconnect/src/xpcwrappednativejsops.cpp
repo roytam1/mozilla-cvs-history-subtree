@@ -172,7 +172,7 @@ XPC_WN_Shared_ToSource(JSContext *cx, JSObject *obj,
 
 static JSBool
 DefinePropertyIfFound(XPCCallContext& ccx, 
-                      JSObject *obj, jsid id, 
+                      JSObject *obj, jsval idval, 
                       XPCNativeSet* set, 
                       XPCNativeInterface* iface,
                       XPCWrappedNativeScope* scope,
@@ -183,15 +183,16 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     JSContext* cx = ccx.GetJSContext();
     XPCNativeMember* member;
     JSBool found;
+    jsid id;
 
     if(set)
-        found = set->FindMember(id, &member, &iface);
+        found = set->FindMember(idval, &member, &iface);
     else
-        found = (nsnull != (member = iface->FindMember(id)));
+        found = (nsnull != (member = iface->FindMember(idval)));
 
     if(!found)
     {
-        HANDLE_POSSIBLE_NAME_CASE_ERROR(cx, set, iface, id);
+        HANDLE_POSSIBLE_NAME_CASE_ERROR(cx, set, iface, idval);
             
         if(reflectToStringAndToSource)
         {
@@ -199,16 +200,19 @@ DefinePropertyIfFound(XPCCallContext& ccx,
             const char* name;
             XPCJSRuntime* rt = ccx.GetRuntime();
 
-            if(id == rt->GetStringID(XPCJSRuntime::IDX_TO_STRING))
+            if(idval == rt->GetStringJSVal(XPCJSRuntime::IDX_TO_STRING))
             {
                 call = XPC_WN_Shared_ToString;
                 name = rt->GetStringName(XPCJSRuntime::IDX_TO_STRING);
+                id   = rt->GetStringID(XPCJSRuntime::IDX_TO_STRING);
             }
-            else if(id == rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE))
+            else if(idval == rt->GetStringJSVal(XPCJSRuntime::IDX_TO_SOURCE))
             {
                 call = XPC_WN_Shared_ToSource;
                 name = rt->GetStringName(XPCJSRuntime::IDX_TO_SOURCE);
+                id   = rt->GetStringID(XPCJSRuntime::IDX_TO_SOURCE);
             }
+
             else
                 call = nsnull;
 
@@ -221,7 +225,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                     return JS_FALSE;
                 }
                 
-                AutoResolveID arid(ccx, id);
+                AutoResolveName arn(ccx, idval);
                 return OBJ_DEFINE_PROPERTY(cx, obj, id, 
                                            OBJECT_TO_JSVAL(JS_GetFunctionObject(fun)),
                                            nsnull, nsnull,
@@ -236,12 +240,11 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
             if(wrapperToReflectInterfaceNames)
             {
-                jsval idval;
                 const char* name;
                 XPCWrappedNativeTearOff* to;
                 JSObject* jso;
                 
-                if(JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
+                if(JSVAL_IS_STRING(idval) &&
                    nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
                    nsnull != (iface = XPCNativeInterface::GetNewOrUsed(ccx, name)) &&
                    nsnull != (to = wrapperToReflectInterfaceNames->
@@ -249,8 +252,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                    nsnull != (jso = to->GetJSObject()))
 
                 {
-                    AutoResolveID arid(ccx, id);
-                    return OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
+                    AutoResolveName arn(ccx, idval);
+                    return JS_ValueToId(cx, idval, &id) &&
+                           OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
                                                nsnull, nsnull, 
                                                propFlags & ~JSPROP_ENUMERATE, 
                                                nsnull);
@@ -273,8 +277,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
             if(!jso)
                 return JS_FALSE;
 
-            AutoResolveID arid(ccx, id);
-            return OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
+            AutoResolveName arn(ccx, idval);
+            return JS_ValueToId(cx, idval, &id) &&
+                   OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
                                        nsnull, nsnull, 
                                        propFlags & ~JSPROP_ENUMERATE, 
                                        nsnull);
@@ -285,8 +290,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     if(member->IsConstant())
     {
         jsval val;
-        AutoResolveID arid(ccx, id);
+        AutoResolveName arn(ccx, idval);
         return member->GetValue(ccx, iface, &val) &&
+               JS_ValueToId(cx, idval, &id) &&
                OBJ_DEFINE_PROPERTY(cx, obj, id, val, nsnull, nsnull,
                                    propFlags, nsnull);
     }
@@ -303,8 +309,9 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     if(member->IsMethod())
     {
-        AutoResolveID arid(ccx, id);
-        return OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(funobj),
+        AutoResolveName arn(ccx, idval);
+        return JS_ValueToId(cx, idval, &id) &&
+               OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(funobj),
                                    nsnull, nsnull, propFlags, nsnull);
     }
 
@@ -313,18 +320,22 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     NS_ASSERTION(member->IsAttribute(), "way broken!");
 
     // Avoid infinite recursion on getter/setter re-lookup.
-    if(ccx.GetResolveID() == id)
+    if(ccx.GetResolveName() == idval)
         return JS_TRUE;
+    
+    propFlags |= JSPROP_GETTER | JSPROP_SHARED;
+    if(member->IsWritableAttribute())
+    {
+        propFlags |= JSPROP_SETTER;
+        propFlags &= ~JSPROP_READONLY;
+    }
 
-    AutoResolveID arid(ccx, id);
-    return OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID,
+    AutoResolveName arn(ccx, idval);
+    return JS_ValueToId(cx, idval, &id) &&
+           OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID,
                                (JSPropertyOp) funobj,
                                (JSPropertyOp) funobj,
-                               propFlags |
-                               JSPROP_GETTER |
-                               (member->IsWritableAttribute() ?
-                               JSPROP_SETTER : 0),
-                               nsnull);
+                               propFlags, nsnull);
 }
 
 /***************************************************************************/
@@ -333,15 +344,15 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
-    jsid id;
-    if(!JS_ValueToId(cx, idval, &id))
-        return JS_FALSE;
-
-    XPCCallContext ccx(JS_CALLER, cx);
-    if(!ccx.IsValid())
-        return JS_FALSE;
+    XPCCallContext ccx(JS_CALLER, cx, obj, idval);
+    XPCWrappedNative* wrapper = ccx.GetWrapper();
+    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
     
-    if(ccx.GetResolveID() == id)
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
+    if(ccx.GetInterface() && ccx.GetMember() && 
+       ccx.GetMember()->IsWritableAttribute())
         return JS_TRUE;
     
     return Throw(NS_ERROR_XPC_CANT_MODIFY_PROP_ON_WN, cx);
@@ -390,7 +401,7 @@ XPC_WN_Shared_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         case JSTYPE_VOID:
         case JSTYPE_STRING:
         {
-            ccx.SetJSID(ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_TO_STRING));
+            ccx.SetName(ccx.GetRuntime()->GetStringJSVal(XPCJSRuntime::IDX_TO_STRING));
             ccx.SetArgsAndResultPtr(0, nsnull, vp);
 
             XPCNativeMember* member = ccx.GetMember();
@@ -417,8 +428,6 @@ XPC_WN_Shared_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 {
-    // Could support a lazier lookup scheme here.
-    
     XPCCallContext ccx(JS_CALLER, cx, obj);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
@@ -439,6 +448,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 
     JSProperty* prop;
     JSObject* obj2;
+    jsid id;
 
     PRUint16 interface_count = set->GetInterfaceCount();
     XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
@@ -449,16 +459,19 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
         for(PRUint16 k = 0; k < member_count; k++)
         {
             XPCNativeMember* member = interface->GetMemberAt(k);
-            jsid id = member->GetID();
+            jsval name = member->GetName();
 
             // Skip if this member is going to come from the proto.
             PRUint16 index;
-            if(protoSet->FindMember(id, nsnull, &index) && index == i)
+            if(protoSet->FindMember(name, nsnull, &index) && index == i)
                 continue;
 
             // The Lookup will force a Resolve and eager Define of the property
-            if(!OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
+            if(!JS_ValueToId(cx, name, &id) ||
+               !OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
+            {
                 return JS_FALSE;
+            }
         }
     }
     return JS_TRUE;
@@ -478,11 +491,7 @@ XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
-    jsid id;
-    if(!JS_ValueToId(cx, idval, &id))
-        return JS_FALSE;
-
-    XPCCallContext ccx(JS_CALLER, cx, obj, id);
+    XPCCallContext ccx(JS_CALLER, cx, obj, idval);
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
@@ -494,7 +503,7 @@ XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(ccx.GetInterface() && !ccx.GetStaticMemberIsLocal())
         return JS_TRUE;
 
-    return DefinePropertyIfFound(ccx, obj, id, 
+    return DefinePropertyIfFound(ccx, obj, idval, 
                                  set, nsnull, wrapper->GetScope(),
                                  JS_TRUE, wrapper,
                                  JSPROP_ENUMERATE |
@@ -783,17 +792,14 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
-    jsid id;
-    if(!JS_ValueToId(cx, idval, &id))
-        return JS_FALSE;
-
     // XXX This nonsense is here because the JS engine will call my resolve
     // if I try to define a property with a getter or setter. This is a
     // problem since I'm already servicing resolve and we risk infinite
     // recursion.
-    if(ccx.GetResolveID() == id)
+    if(ccx.GetResolveName() == idval)
         return JS_TRUE;
-    jsword old = ccx.SetResolveID(id);
+
+    jsval old = ccx.SetResolveName(idval);
 
     // Since I can't always tell if the scriptable did anything on resolve,
     // I'll do my part first and if the scriptable overwrites, then fine.
@@ -823,8 +829,8 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
             (void)ccx.SetResolvingWrapper(oldResolvingWrapper);
     }
 
-    old = ccx.SetResolveID(old);
-    NS_ASSERTION(old == id, "bad nest");
+    old = ccx.SetResolveName(old);
+    NS_ASSERTION(old == idval, "bad nest");
 
     if(NS_FAILED(rv))
         Throw(rv, cx);
@@ -972,7 +978,10 @@ XPC_WN_GetterSetter(JSContext *cx, JSObject *obj,
     if(JS_IsAssigning(cx))
     {
         ccx.SetCallableInfo(ci, JS_TRUE);
-        return XPCWrappedNative::SetAttribute(ccx);
+        JSBool retval = XPCWrappedNative::SetAttribute(ccx);
+        if(retval && vp && argc)
+            *vp = argv[0];
+        return retval;
     }
     // else...
 
@@ -1006,6 +1015,7 @@ XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
 
     JSProperty* prop;
     JSObject* obj2;
+    jsid id;
 
     PRUint16 interface_count = set->GetInterfaceCount();
     XPCNativeInterface** interfaceArray = set->GetInterfaceArray();
@@ -1019,8 +1029,8 @@ XPC_WN_Proto_Enumerate(JSContext *cx, JSObject *obj)
             XPCNativeMember* member = interface->GetMemberAt(k);
 
             // The Lookup will force a Resolve and eager Define of the property
-
-            if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
+            if(!JS_ValueToId(cx, member->GetName(), &id) ||
+               !OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
                 return JS_FALSE;
         }
     }
@@ -1037,10 +1047,6 @@ XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!self)
         return JS_FALSE;
 
-    jsid id;
-    if(!JS_ValueToId(cx, idval, &id))
-        return JS_FALSE;
-
     XPCCallContext ccx(JS_CALLER, cx);
     if(!ccx.IsValid())
         return JS_FALSE;
@@ -1050,7 +1056,7 @@ XPC_WN_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
                         0 : JSPROP_ENUMERATE;
 
 
-    return DefinePropertyIfFound(ccx, obj, id, 
+    return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
                                  JS_TRUE, nsnull,
                                  enumFlag);
@@ -1115,16 +1121,19 @@ XPC_WN_TearOff_Enumerate(JSContext *cx, JSObject *obj)
     
     JSProperty* prop;
     JSObject* obj2;
+    jsid id;
 
     PRUint16 member_count = iface->GetMemberCount();
     for(PRUint16 k = 0; k < member_count; k++)
     {
         XPCNativeMember* member = iface->GetMemberAt(k);
-        jsid id = member->GetID();
 
         // The Lookup will force a Resolve and eager Define of the property
-        if(!OBJ_LOOKUP_PROPERTY(cx, obj, member->GetID(), &obj2, &prop))
+        if(!JS_ValueToId(cx, member->GetName(), &id) ||
+           !OBJ_LOOKUP_PROPERTY(cx, obj, id, &obj2, &prop))
+        {
             return JS_FALSE;
+        }
     }
 
     return JS_TRUE;
@@ -1143,11 +1152,7 @@ XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!to || nsnull == (iface = to->GetInterface()))    
         return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);                   \
 
-    jsid id;
-    if(!JS_ValueToId(cx, idval, &id))
-        return JS_FALSE;
-
-    return DefinePropertyIfFound(ccx, obj, id, nsnull, iface, 
+    return DefinePropertyIfFound(ccx, obj, idval, nsnull, iface, 
                                  wrapper->GetScope(),
                                  JS_TRUE, nsnull,
                                  JSPROP_READONLY |

@@ -153,8 +153,8 @@ interface nsIXPConnectWrappedNative : nsIXPConnectJSObjectHolder
      */
 
     readonly attribute nsIXPConnect XPConnect;
-    XPCNativeInterface FindInterfaceWithMember(in JSID nameID);
-    XPCNativeInterface FindInterfaceWithName(in JSID nameID);
+    XPCNativeInterface FindInterfaceWithMember(in JSVal nameID);
+    XPCNativeInterface FindInterfaceWithName(in JSVal nameID);
 
     void debugDump(in short depth);
 };

@@ -514,10 +514,10 @@ void
 XPCWrappedNative::HandlePossibleNameCaseError(JSContext* cx,
                                               XPCNativeSet* set,
                                               XPCNativeInterface* iface,
-                                              jsid id)
+                                              jsval name)
 {
     XPCCallContext ccx(JS_CALLER, cx);
-    HandlePossibleNameCaseError(ccx, set, iface, id);
+    HandlePossibleNameCaseError(ccx, set, iface, name);
 }
 
 // static
@@ -525,24 +525,21 @@ void
 XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
                                               XPCNativeSet* set,
                                               XPCNativeInterface* iface,
-                                              jsid id)
+                                              jsval name)
 {
     if(!ccx.IsValid())
         return;
 
-    jsval val;
     JSString* oldJSStr;
     JSString* newJSStr;
     PRUnichar* oldStr;
     PRUnichar* newStr;
-    jsid newID;
     JSContext* cx = ccx.GetJSContext();
     XPCNativeMember* member;
     XPCNativeInterface* interface;
 
-    if(JS_IdToValue(cx, id, &val) &&
-       JSVAL_IS_STRING(val) &&
-       nsnull != (oldJSStr = JSVAL_TO_STRING(val)) &&
+    if(JSVAL_IS_STRING(name) &&
+       nsnull != (oldJSStr = JSVAL_TO_STRING(name)) &&
        nsnull != (oldStr = (PRUnichar*) JS_GetStringChars(oldJSStr)) &&
        oldStr[0] != 0 &&
        nsCRT::IsUpper(oldStr[0]) &&
@@ -551,13 +548,12 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
         newStr[0] = nsCRT::ToLower(newStr[0]);
         newJSStr = JS_NewUCStringCopyZ(cx, (const jschar*)newStr);
         nsCRT::free(newStr);
-        if(newJSStr &&
-           JS_ValueToId(cx, STRING_TO_JSVAL(newJSStr), &newID) &&
-           newID && (set ? set->FindMember(newID, &member, &interface) :
-                           (JSBool) iface->FindMember(newID)))
+        if(newJSStr && (set ? 
+             set->FindMember(STRING_TO_JSVAL(newJSStr), &member, &interface) :
+             (JSBool) iface->FindMember(STRING_TO_JSVAL(newJSStr))))
         {
             // found it!
-            const char* ifaceName = interface->GetName();
+            const char* ifaceName = interface->GetNameString();
             const char* goodName = JS_GetStringBytes(newJSStr);
             const char* badName = JS_GetStringBytes(oldJSStr);
             char* locationStr = nsnull;
@@ -749,7 +745,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
     uint16 vtblIndex = ccx.GetMethodIndex();
     nsIInterfaceInfo* ifaceInfo = ccx.GetInterface()->GetInterfaceInfo();
     const nsIID& iid = *ccx.GetInterface()->GetIID();
-    jsid nameID = ccx.GetMember()->GetID();
+    jsval name = ccx.GetMember()->GetName();
     jsval* argv = ccx.GetArgv();
 
 #ifdef DEBUG_stats_jband
@@ -774,7 +770,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_CALL_METHOD);
             if(sm && NS_OK != sm->CanCallMethod(cx, iid, callee,
-                                                ifaceInfo, vtblIndex, nameID))
+                                                ifaceInfo, vtblIndex, name))
             {
                 // the security manager vetoed. It should have set an exception.
                 goto done;
@@ -785,7 +781,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_GET_PROPERTY);
             if(sm && NS_OK != sm->CanGetProperty(cx, iid, callee,
-                                                 ifaceInfo, vtblIndex, nameID))
+                                                 ifaceInfo, vtblIndex, name))
             {
                 // the security manager vetoed. It should have set an exception.
                 goto done;
@@ -796,7 +792,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
             sm = xpcc->GetAppropriateSecurityManager(
                                 nsIXPCSecurityManager::HOOK_SET_PROPERTY);
             if(sm && NS_OK != sm->CanSetProperty(cx, iid, callee,
-                                                 ifaceInfo, vtblIndex, nameID))
+                                                 ifaceInfo, vtblIndex, name))
             {
                 // the security manager vetoed. It should have set an exception.
                 goto done;
@@ -1349,14 +1345,14 @@ NS_IMETHODIMP XPCWrappedNative::GetXPConnect(nsIXPConnect * *aXPConnect)
     return NS_OK;
 }
 
-/* XPCNativeInterface FindInterfaceWithMember (in JSID nameID); */
-NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithMember(jsid nameID, nsIXPCNativeInterface * *_retval)
+/* XPCNativeInterface FindInterfaceWithMember (in JSVal name); */
+NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithMember(jsval name, nsIXPCNativeInterface * *_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* XPCNativeInterface FindInterfaceWithName (in JSID nameID); */
-NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithName(jsid nameID, nsIXPCNativeInterface * *_retval)
+/* XPCNativeInterface FindInterfaceWithName (in JSVal name); */
+NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithName(jsval name, nsIXPCNativeInterface * *_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -271,6 +271,11 @@ public:
         NS_ASSERTION(index < IDX_TOTAL_COUNT, "index out of range");
         return mStrIDs[index];
     }
+    jsval GetStringJSVal(uintN index) const
+    {
+        NS_ASSERTION(index < IDX_TOTAL_COUNT, "index out of range");
+        return mStrJSVals[index];
+    }
     const char* GetStringName(uintN index) const
     {
         NS_ASSERTION(index < IDX_TOTAL_COUNT, "index out of range");
@@ -309,6 +314,7 @@ private:
 private:
     static const char* mStrings[IDX_TOTAL_COUNT];
     jsid mStrIDs[IDX_TOTAL_COUNT];
+    jsval mStrJSVals[IDX_TOTAL_COUNT];
 
     nsXPConnect* mXPConnect;
     JSRuntime*  mJSRuntime;
@@ -437,7 +443,7 @@ public:
     XPCCallContext(XPCContext::LangType callerLanguage,
                    JSContext* cx   = nsnull,
                    JSObject* obj   = nsnull,
-                   jsid id         = 0,
+                   jsval id        = 0,
                    uintN argc      = NO_ARGS,
                    jsval *argv     = nsnull,
                    jsval *rval     = nsnull);
@@ -470,7 +476,7 @@ public:
     inline XPCNativeInterface*          GetInterface() const ;
     inline XPCNativeMember*             GetMember() const ;
     inline JSBool                       HasInterfaceAndMember() const ;
-    inline jsid                         GetJSID() const ;
+    inline jsval                        GetName() const ;
     inline JSBool                       GetStaticMemberIsLocal() const ;
     inline uintN                        GetArgc() const ;
     inline jsval*                       GetArgv() const ;
@@ -481,15 +487,15 @@ public:
     inline PRUint16                     GetMethodIndex() const ;
     inline void                         SetMethodIndex(PRUint16 index) ;
 
-    inline jsword GetResolveID() const;
-    inline jsword SetResolveID(jsword id);
+    inline jsval GetResolveName() const;
+    inline jsval SetResolveName(jsval name);
 
     inline XPCWrappedNative* GetResolvingWrapper() const;
     inline XPCWrappedNative* SetResolvingWrapper(XPCWrappedNative* w);
 
     inline void SetRetVal(jsval val);
 
-    void SetJSID(jsid id);
+    void SetName(jsval name);
     void SetArgsAndResultPtr(uintN argc, jsval *argv, jsval *rval);
     void SetCallableInfo(XPCCallableInfo* ci, JSBool isSetter);
 
@@ -510,7 +516,7 @@ private:
         SYSTEM_SHUTDOWN,
         HAVE_CONTEXT,
         HAVE_OBJECT,
-        HAVE_JSID,
+        HAVE_NAME,
         HAVE_ARGS,
         READY_TO_CALL,
         CALL_DONE
@@ -549,7 +555,7 @@ private:
     XPCNativeInterface*             mInterface;
     XPCNativeMember*                mMember;
 
-    jsid                            mJSID;
+    jsval                           mName;
     JSBool                          mStaticMemberIsLocal;
 
     uintN                           mArgc;
@@ -1141,9 +1147,9 @@ public:
     XPCCallContext*  SetCallContext(XPCCallContext* ccx)
         {XPCCallContext* old = mCallContext; mCallContext = ccx; return old;}
 
-    jsword GetResolveID() const {return mResolveID;}
-    jsword SetResolveID(jsword id)
-        {jsword old = mResolveID; mResolveID = id; return old;}
+    jsval GetResolveName() const {return mResolveName;}
+    jsval SetResolveName(jsval name)
+        {jsval old = mResolveName; mResolveName = name; return old;}
 
     XPCWrappedNative* GetResolvingWrapper() const {return mResolvingWrapper;}
     XPCWrappedNative* SetResolvingWrapper(XPCWrappedNative* w)
@@ -1162,7 +1168,7 @@ private:
     XPCJSContextStack*  mJSContextStack;
     XPCPerThreadData*   mNextThread;
     XPCCallContext*     mCallContext;
-    jsword              mResolveID;
+    jsval               mResolveName;
     XPCWrappedNative*   mResolvingWrapper;
 
     static PRLock*           gLock;
@@ -1404,21 +1410,21 @@ private:
 
 
 /***************************************************************************/
-class AutoResolveID
+class AutoResolveName
 {
 public:
-    AutoResolveID(XPCCallContext& ccx, jsid id)
+    AutoResolveName(XPCCallContext& ccx, jsval name)
         : mTLS(ccx.GetThreadData()), 
-          mOld(mTLS->SetResolveID(id)),
-          mCheck(id) {}
-    ~AutoResolveID()
-        {jsid old = mTLS->SetResolveID(mOld); 
+          mOld(mTLS->SetResolveName(name)),
+          mCheck(name) {}
+    ~AutoResolveName()
+        {jsval old = mTLS->SetResolveName(mOld); 
          NS_ASSERTION(old == mCheck, "Bad Nesting!");}
 
 private:
     XPCPerThreadData* mTLS;
-    jsid mOld;
-    jsid mCheck;
+    jsval mOld;
+    jsval mCheck;
 };
 
 /***************************************************************************/
@@ -1453,7 +1459,7 @@ class XPCNativeMember
 public:
     static XPCCallableInfo* GetCallableInfo(XPCCallContext& ccx, JSObject* funobj);
 
-    jsid   GetID() const {return mID;}
+    jsval   GetName() const {return mName;}
 
     PRUint16 GetIndex() const {return mIndex;}
 
@@ -1477,7 +1483,7 @@ public:
         {return IsAttribute() && !IsWritableAttribute();}
 
 
-    void SetID(jsid a) {mID = a;}
+    void SetName(jsval a) {mName = a;}
 
     void SetMethod(PRUint16 index)
         {mVal = JSVAL_NULL; mFlags = METHOD; mIndex = index;}
@@ -1518,7 +1524,7 @@ private:
 
 private:
     // our only data...
-    jsid     mID;
+    jsval    mName;
     jsval    mVal;
     PRUint16 mIndex;
     PRUint16 mFlags;
@@ -1539,11 +1545,11 @@ public:
 
     // inherited from public class
     // inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
-    // inline jsid         GetNameID() const {return mNameID;}
+    // inline jsval             GetName() const {return mNameID;}
 
     inline const nsIID* GetIID() const;
-    inline const char*  GetName() const;
-    inline XPCNativeMember* FindMember(jsid id) const;
+    inline const char*  GetNameString() const;
+    inline XPCNativeMember* FindMember(jsval name) const;
 
     const char* GetMemberName(XPCCallContext& ccx,
                               const XPCNativeMember* member) const;
@@ -1565,14 +1571,14 @@ private:
     static void DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst);
 
     XPCNativeInterface();   // not implemented
-    XPCNativeInterface(nsIInterfaceInfo* aInfo, jsid aNameID);
+    XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName);
     ~XPCNativeInterface() {}
     void* operator new(size_t, void* p) {return p;}
 
 private:
     // inherited from public class
     // nsCOMPtr<nsIInterfaceInfo> mInfo;
-    // jsid              mNameID;
+    // jsval                      mName;
 
     PRUint16          mMemberCount;
     XPCNativeMember   mMembers[1]; // always last - object sized for array
@@ -1612,15 +1618,15 @@ public:
                                       XPCNativeInterface* newInterface,
                                       PRUint16 position);
 
-    inline JSBool FindMember(jsid id, XPCNativeMember** pMember,
+    inline JSBool FindMember(jsval name, XPCNativeMember** pMember,
                              PRUint16* pInterfaceIndex) const;
 
-    inline JSBool FindMember(jsid id, XPCNativeMember** pMember,
+    inline JSBool FindMember(jsval name, XPCNativeMember** pMember,
                              XPCNativeInterface** pInterface) const;
 
     inline JSBool HasInterface(XPCNativeInterface* aInterface) const;
 
-    inline XPCNativeInterface* FindNamedInterface(jsid id) const;
+    inline XPCNativeInterface* FindNamedInterface(jsval name) const;
 
     PRUint16 GetMemberCount() const {return mMemberCount;}
     PRUint16 GetInterfaceCount() const {return mInterfaceCount;}
@@ -1855,17 +1861,17 @@ public:
     HandlePossibleNameCaseError(XPCCallContext& ccx,
                                 XPCNativeSet* set, 
                                 XPCNativeInterface* iface,
-                                jsid id);
+                                jsval name);
     static void
     HandlePossibleNameCaseError(JSContext* cx,
                                 XPCNativeSet* set, 
                                 XPCNativeInterface* iface,
-                                jsid id);
+                                jsval name);
 
-#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, iface, id) \
-    XPCWrappedNative::HandlePossibleNameCaseError(context, set, iface, id)
+#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, iface, name) \
+    XPCWrappedNative::HandlePossibleNameCaseError(context, set, iface, name)
 #else
-#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, iface, id) ((void)0)
+#define  HANDLE_POSSIBLE_NAME_CASE_ERROR(context, set, iface, name) ((void)0)
 #endif
 
     enum CallMode {CALL_METHOD, CALL_GETTER, CALL_SETTER};

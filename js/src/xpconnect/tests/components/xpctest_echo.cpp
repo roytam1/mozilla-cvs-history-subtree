@@ -348,6 +348,7 @@ xpctestEcho::DebugDumpJSStack()
 NS_IMETHODIMP 
 xpctestEcho::GetAString(char * *aAString)
 {
+    printf(">>>> xpctestEcho::GetAString called\n");
     if(mString)
         *aAString = (char*) nsMemory::Clone(mString, strlen(mString)+1);
     else
@@ -357,6 +358,7 @@ xpctestEcho::GetAString(char * *aAString)
 NS_IMETHODIMP 
 xpctestEcho::SetAString(const char * aAString)
 {
+    printf("<<<< xpctestEcho::SetAString called\n");
     if(mString)
         nsMemory::Free(mString);
     if(aAString)

@@ -271,8 +271,8 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const char* name)
     return GetNewOrUsed(ccx, info);
 }
 
-XPCNativeInterface::XPCNativeInterface(nsIInterfaceInfo* aInfo, jsid aNameID)
-    : nsIXPCNativeInterface(aInfo, aNameID)
+XPCNativeInterface::XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
+    : nsIXPCNativeInterface(aInfo, aName)
 {
 }
 
@@ -293,9 +293,9 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     PRUint16 totalCount;
     PRUint16 realTotalCount = 0;
     XPCNativeMember* cur;
-    jsval idval;
-    jsid id;
-    jsid nameID;
+    JSString*  str;
+    jsval name;
+    jsval interfaceName;
 
 
     // XXX Investigate lazy init? This is a problem given the
@@ -346,20 +346,21 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
         if(!XPCConvert::IsMethodReflectable(*info))
             continue;
 
-        idval = STRING_TO_JSVAL(JS_InternString(cx, info->GetName()));
-        if(!idval || !JS_ValueToId(cx, idval, &id) || !id)
+        str = JS_InternString(cx, info->GetName());
+        if(!str)
         {
             NS_ASSERTION(0,"bad method name");
             failed = JS_TRUE;
             break;
         }
-
+        name = STRING_TO_JSVAL(str);
+        
         if(info->IsSetter())
         {
             NS_ASSERTION(realTotalCount,"bad setter");
             // XXX ASSUMES Getter/Setter pairs are next to each other
             cur = &members[realTotalCount-1];
-            NS_ASSERTION(cur->GetID() == id,"bad setter");
+            NS_ASSERTION(cur->GetName() == name,"bad setter");
             NS_ASSERTION(cur->IsReadOnlyAttribute(),"bad setter");
             NS_ASSERTION(cur->GetIndex() == i-1,"bad setter");
             cur->SetWritableAttribute();
@@ -367,9 +368,9 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
         else
         {
             // XXX need better way to find dups
-            // NS_ASSERTION(!LookupMemberByID(id),"duplicate method name");
+            // NS_ASSERTION(!LookupMemberByID(name),"duplicate method name");
             cur = &members[realTotalCount++];
-            cur->SetID(id);
+            cur->SetName(name);
             if(info->IsGetter())
                 cur->SetReadOnlyAttribute(i);
             else
@@ -388,34 +389,35 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
                 break;
             }
 
-            idval = STRING_TO_JSVAL(JS_InternString(cx, constant->GetName()));
-            if(!idval || !JS_ValueToId(cx, idval, &id) || !id)
+            str = JS_InternString(cx, constant->GetName());
+            if(!str)
             {
                 NS_ASSERTION(0,"bad constant name");
                 failed = JS_TRUE;
                 break;
             }
+            name = STRING_TO_JSVAL(str);
 
             // XXX need better way to find dups
-            //NS_ASSERTION(!LookupMemberByID(id),"duplicate method/constant name");
+            //NS_ASSERTION(!LookupMemberByID(name),"duplicate method/constant name");
 
             cur = &members[realTotalCount++];
-            cur->SetID(id);
+            cur->SetName(name);
             cur->SetConstant(i);
         }
     }
 
     if(!failed)
     {
-        const char* name;
-        if(NS_FAILED(aInfo->GetNameShared(&name)) ||
-           !name ||
-           !(idval = STRING_TO_JSVAL(JS_InternString(cx, name))) ||
-           !JS_ValueToId(cx, idval, &nameID) || !nameID)
+        const char* bytes;
+        if(NS_FAILED(aInfo->GetNameShared(&bytes)) || !bytes ||
+           nsnull == (str = JS_InternString(cx, bytes)))
         {
             failed = JS_TRUE;
         }
+        interfaceName = STRING_TO_JSVAL(str);
     }
+
 
 
     if(!failed)
@@ -427,7 +429,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
             size += (realTotalCount - 1) * sizeof(XPCNativeMember);
         void* place = new char[size];
         if(place)
-            obj = new(place) XPCNativeInterface(aInfo, nameID);
+            obj = new(place) XPCNativeInterface(aInfo, interfaceName);
 
         if(obj)
         {
@@ -462,16 +464,7 @@ const char*
 XPCNativeInterface::GetMemberName(XPCCallContext& ccx,
                                   const XPCNativeMember* member) const
 {
-    // XXX Is this necessary?  can we ever get here w/o being in a request?
-    AutoJSRequest req(ccx); // scoped JS Request
-
-    jsval idval;
-    if(JS_IdToValue(ccx.GetJSContext(), member->GetID(), &idval) &&
-       JSVAL_IS_STRING(idval))
-    {
-        return JS_GetStringBytes(JSVAL_TO_STRING(idval));
-    }
-    return nsnull;
+    return JS_GetStringBytes(JSVAL_TO_STRING(member->GetName()));
 }
 
 void 
@@ -481,7 +474,7 @@ XPCNativeInterface::DebugDump(PRInt16 depth)
     depth--;
     XPC_LOG_ALWAYS(("XPCNativeInterface @ %x", this));
         XPC_LOG_INDENT();
-        XPC_LOG_ALWAYS(("name is %s", GetName()));
+        XPC_LOG_ALWAYS(("name is %s", GetNameString()));
         XPC_LOG_ALWAYS(("mMemberCount is %d", mMemberCount));
         XPC_LOG_ALWAYS(("mInfo @ %x", mInfo.get()));
         XPC_LOG_OUTDENT();

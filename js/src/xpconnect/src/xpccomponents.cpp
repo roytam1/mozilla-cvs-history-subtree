@@ -1564,21 +1564,21 @@ nsXPCComponents::NewResolve(nsIXPConnectWrappedNative *wrapper,
         return NS_ERROR_FAILURE;
 
     jsid idid;
-    if(!JS_ValueToId(cx, id, &idid))
-        return NS_ERROR_OUT_OF_MEMORY;
 
-    if(idid == rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT) ||
-       idid == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
-    {
-        *objp = obj;
-        *_retval = OBJ_DEFINE_PROPERTY(cx, obj, idid, JSVAL_VOID,
-                                       nsnull, nsnull,
-                                       JSPROP_ENUMERATE |
-                                       JSPROP_READONLY |
-                                       JSPROP_PERMANENT,
-                                       nsnull);
-    }
-
+    if(id == rt->GetStringJSVal(XPCJSRuntime::IDX_LAST_RESULT))
+        idid = rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT);
+    else if(id == rt->GetStringJSVal(XPCJSRuntime::IDX_RETURN_CODE))
+        idid = rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE);
+    else   
+        return NS_OK;
+    
+    *objp = obj;
+    *_retval = OBJ_DEFINE_PROPERTY(cx, obj, idid, JSVAL_VOID,
+                                   nsnull, nsnull,
+                                   JSPROP_ENUMERATE |
+                                   JSPROP_READONLY |
+                                   JSPROP_PERMANENT,
+                                   nsnull);
     return NS_OK;
 }
 
@@ -1592,19 +1592,15 @@ nsXPCComponents::GetProperty(nsIXPConnectWrappedNative *wrapper,
     if(!xpcc)
         return NS_ERROR_FAILURE;
 
-    jsid idid;
-    if(!JS_ValueToId(cx, id, &idid))
-        return NS_ERROR_OUT_OF_MEMORY;
-
     PRBool doResult = JS_FALSE;
     nsresult res;
     XPCJSRuntime* rt = xpcc->GetRuntime();
-    if(idid == rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT))
+    if(id == rt->GetStringJSVal(XPCJSRuntime::IDX_LAST_RESULT))
     {
         res = xpcc->GetLastResult();
         doResult = JS_TRUE;
     }
-    else if(idid == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
+    else if(id == rt->GetStringJSVal(XPCJSRuntime::IDX_RETURN_CODE))
     {
         res = xpcc->GetPendingResult();
         doResult = JS_TRUE;
@@ -1633,11 +1629,7 @@ nsXPCComponents::SetProperty(nsIXPConnectWrappedNative *wrapper,
     if(!rt)
         return NS_ERROR_FAILURE;
 
-    jsid idid;
-    if(!JS_ValueToId(cx, id, &idid))
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    if(idid == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
+    if(id == rt->GetStringJSVal(XPCJSRuntime::IDX_RETURN_CODE))
     {
         nsresult rv;
         if(JS_ValueToECMAUint32(cx, *vp, (uint32*)&rv))
