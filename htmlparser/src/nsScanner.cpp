@@ -360,9 +360,19 @@ nsresult nsScanner::Append(const char* aBuffer, PRUint32 aLen){
 
       totalChars += unicharLength;
       // Continuation of failure case
-		  if(NS_FAILED(res)) {
+      if(NS_FAILED(res)) {
         // if we failed, we consume one byte, replace it with U+FFFD
         // and try the conversion again.
+
+        // This is only needed because some decoders don't follow the
+        // nsIUnicodeDecoder contract: they return a failure when *aDestLength
+        // is 0 rather than the correct NS_OK_UDEC_MOREOUTPUT.  See bug 244177
+        PRUnichar *bufferEnd = start + unicharBufLen + 1;
+        if ((unichars + unicharLength) >= bufferEnd) {
+          NS_ERROR("Unexpected end of destination buffer");
+          break;
+        }
+
         unichars[unicharLength++] = (PRUnichar)0xFFFD;
         unichars = unichars + unicharLength;
         unicharLength = unicharBufLen - (++totalChars);
