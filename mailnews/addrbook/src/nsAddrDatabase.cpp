@@ -1578,7 +1578,7 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewCardAndAddToDBWithKey(nsIAbCard *newCard,
   return err;
 }
 
-NS_IMETHODIMP nsAddrDatabase::CreateNewListCardAndAddToDB(PRUint32 listRowID, nsIAbCard *newCard, PRBool notify /* = FALSE */)
+NS_IMETHODIMP nsAddrDatabase::CreateNewListCardAndAddToDB(nsIAbDirectory *aList, PRUint32 listRowID, nsIAbCard *newCard, PRBool notify /* = FALSE */)
 {
 	if (!newCard || !m_mdbPabTable)
 		return NS_ERROR_NULL_POINTER;
@@ -1587,20 +1587,28 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewListCardAndAddToDB(PRUint32 listRowID, ns
 	mdbOid listRowOid;
 	listRowOid.mOid_Scope = m_ListRowScopeToken;
 	listRowOid.mOid_Id = listRowID;
-	nsresult err = GetStore()->GetRow(GetEnv(), &listRowOid, &pListRow);
-  NS_ENSURE_SUCCESS(err,err);
+	nsresult rv = GetStore()->GetRow(GetEnv(), &listRowOid, &pListRow);
+  NS_ENSURE_SUCCESS(rv,rv);
   if (!pListRow)
     return NS_OK;
   
   PRUint32 totalAddress = GetListAddressTotal(pListRow) + 1;
   SetListAddressTotal(pListRow, totalAddress);
   nsCOMPtr<nsIAbCard> pNewCard;
-  err = AddListCardColumnsToRow(newCard, pListRow, totalAddress, getter_AddRefs(pNewCard));
-  NS_ENSURE_SUCCESS(err,err);
+  rv = AddListCardColumnsToRow(newCard, pListRow, totalAddress, getter_AddRefs(pNewCard));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCOMPtr <nsISupportsArray> addressList;
+  rv = aList->GetAddressLists(getter_AddRefs(addressList));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // XXX todo, check if card is already there?
+  addressList->AppendElement(newCard);
+
   if (notify)
     NotifyCardEntryChange(AB_NotifyInserted, newCard, nsnull); 
   
-	return err;
+	return rv;
 }
 
 nsresult nsAddrDatabase::AddListCardColumnsToRow

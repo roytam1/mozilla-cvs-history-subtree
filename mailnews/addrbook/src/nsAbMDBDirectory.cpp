@@ -721,6 +721,7 @@ NS_IMETHODIMP nsAbMDBDirectory::AddMailList(nsIAbDirectory *list)
 	nsCOMPtr<nsIAbMDBDirectory> dblist(do_QueryInterface(list, &rv));
 	if (NS_FAILED(rv))
 	{
+    // XXX fix this.
 		nsAbMDBDirProperty* dblistproperty = new nsAbMDBDirProperty ();
 		NS_ADDREF(dblistproperty);
 		nsCOMPtr<nsIAbDirectory> newlist = getter_AddRefs(NS_STATIC_CAST(nsIAbDirectory*, dblistproperty));
@@ -783,7 +784,7 @@ NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card)
 	
 	dbcard->SetAbDatabase (mDatabase);
 	if (mIsMailingList == 1)
-		mDatabase->CreateNewListCardAndAddToDB(m_dbRowID, card, PR_TRUE);
+		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, card, PR_TRUE);
 	else
 		mDatabase->CreateNewCardAndAddToDB(card, PR_TRUE);
 	mDatabase->Commit(kLargeCommit);
@@ -833,9 +834,9 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard)
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
-	dbcard->SetAbDatabase (mDatabase);
+	dbcard->SetAbDatabase(mDatabase);
 	if (mIsMailingList == 1)
-		mDatabase->CreateNewListCardAndAddToDB(m_dbRowID, newCard, PR_TRUE);
+		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, newCard, PR_TRUE);
 	else
 		mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE);
 	mDatabase->Commit(kLargeCommit);

@@ -130,12 +130,12 @@ function getAddressesFromURI(uri)
   var addresses = "";
 
   var editList = GetDirectoryFromURI(uri);
-  
-  if (editList.addressLists) {
-    var total = editList.addressLists.Count();
+  var addressList = editList.addressLists;
+  if (addressList) {
+    var total = addressList.Count();
     if (total) {
       for ( var i = 0;  i < total; i++ ) {
-        var current = editList.addressLists.GetElementAt(i).QueryInterface(Components.interfaces.nsIAbCard);
+        var current = addressList.GetElementAt(i).QueryInterface(Components.interfaces.nsIAbCard);
         
         if (i == 0)
           addresses = current.primaryEmail;
