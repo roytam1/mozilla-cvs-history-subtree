@@ -22,6 +22,8 @@ MAKE_OBJ_TYPE=DLL
 DLLNAME=rdf
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
 
+DEFINES=-DUSE_XPIDL_INTERFACES
+
 EXPORTS=\
         nsRDFCID.h                      \
         $(NULL)
