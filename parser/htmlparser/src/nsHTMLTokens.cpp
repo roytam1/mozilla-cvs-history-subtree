@@ -1518,6 +1518,7 @@ nsresult ConsumeAttributeEntity(nsString& aString,
     }
     else if (ch==kHashsign && !(aFlag & NS_IPARSER_FLAG_VIEW_SOURCE)) {
       aScanner.GetChar(amp); // Discard '&'
+      aScanner.GetChar(ch); // Consume #
       PRInt32 err;
       result=CEntityToken::ConsumeEntity(ch,entity,aScanner);
       if (NS_SUCCEEDED(result)) {
