@@ -6024,53 +6024,76 @@ NavigatorImpl::GetUserAgent(nsAString& aUserAgent)
 NS_IMETHODIMP
 NavigatorImpl::GetAppCodeName(nsAString& aAppCodeName)
 {
-  nsresult res;
+  nsresult rv;
   nsCOMPtr<nsIHttpProtocolHandler>
-    service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && service) {
+    service(do_GetService(kHTTPHandlerCID, &rv));
+  if (NS_SUCCEEDED(rv)) {
     nsCAutoString appName;
-    res = service->GetAppName(appName);
-    CopyASCIItoUCS2(appName, aAppCodeName);
+    rv = service->GetAppName(appName);
+    CopyASCIItoUTF16(appName, aAppCodeName);
   }
 
-  return res;
+  return rv;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetAppVersion(nsAString& aAppVersion)
 {
-  nsresult res;
+  nsresult rv;
+  if (gPrefBranch) {
+    nsXPIDLCString override;
+    rv = gPrefBranch->GetCharPref("general.appversion.override",
+      getter_Copies(override));
+    if (NS_SUCCEEDED(rv)) {
+      CopyASCIItoUTF16(override, aAppVersion);
+      return NS_OK;
+    }
+  }
+
   nsCOMPtr<nsIHttpProtocolHandler>
-    service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && service) {
+    service(do_GetService(kHTTPHandlerCID, &rv));
+  if (NS_SUCCEEDED(rv)) {
     nsCAutoString str;
-    res = service->GetAppVersion(str);
-    CopyASCIItoUCS2(str, aAppVersion);
+    rv = service->GetAppVersion(str);
+    CopyASCIItoUTF16(str, aAppVersion);
+    if (NS_FAILED(rv))
+      return rv;
 
     aAppVersion.Append(NS_LITERAL_STRING(" ("));
-    res = service->GetPlatform(str);
-    if (NS_FAILED(res))
-      return res;
 
+    rv = service->GetPlatform(str);
+    if (NS_FAILED(rv))
+      return rv;
     AppendASCIItoUTF16(str, aAppVersion);
 
     aAppVersion.Append(NS_LITERAL_STRING("; "));
-    res = service->GetLanguage(str);
-    if (NS_FAILED(res))
-      return res;
+
+    rv = service->GetLanguage(str);
+    if (NS_FAILED(rv))
+      return rv;
 
     AppendASCIItoUTF16(str, aAppVersion);
 
     aAppVersion.Append(PRUnichar(')'));
   }
 
-  return res;
+  return rv;
 }
 
 NS_IMETHODIMP
 NavigatorImpl::GetAppName(nsAString& aAppName)
 {
-  aAppName.Assign(NS_LITERAL_STRING("Netscape"));
+  if (gPrefBranch) {
+    nsXPIDLCString override;
+    nsresult rv = gPrefBranch->GetCharPref("general.appname.override",
+      getter_Copies(override));
+    if (NS_SUCCEEDED(rv)) {
+      CopyASCIItoUTF16(override, aAppName);
+      return NS_OK;
+    }
+  }
+
+  aAppName = NS_LITERAL_STRING("Netscape");
   return NS_OK;
 }
 
@@ -6092,10 +6115,20 @@ NavigatorImpl::GetLanguage(nsAString& aLanguage)
 NS_IMETHODIMP
 NavigatorImpl::GetPlatform(nsAString& aPlatform)
 {
-  nsresult res;
+  nsresult rv;
+  if (gPrefBranch) {
+    nsXPIDLCString override;
+    rv = gPrefBranch->GetCharPref("general.platform.override",
+      getter_Copies(override));
+    if (NS_SUCCEEDED(rv)) {
+      CopyASCIItoUTF16(override, aPlatform);
+      return NS_OK;
+    }
+  }
+
   nsCOMPtr<nsIHttpProtocolHandler>
-    service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && service) {
+    service(do_GetService(kHTTPHandlerCID, &rv));
+  if (NS_SUCCEEDED(rv)) {
     // sorry for the #if platform ugliness, but Communicator is
     // likewise hardcoded and we're seeking backward compatibility
     // here (bug 47080)
@@ -6112,12 +6145,12 @@ NavigatorImpl::GetPlatform(nsAString& aPlatform)
     // to indicate the platform it was compiled *for*, not what it is
     // currently running *on* which is what this does.
     nsCAutoString plat;
-    res = service->GetOscpu(plat);
-    CopyASCIItoUCS2(plat, aPlatform);
+    rv = service->GetOscpu(plat);
+    CopyASCIItoUTF16(plat, aPlatform);
 #endif
   }
 
-  return res;
+  return rv;
 }
 
 NS_IMETHODIMP
