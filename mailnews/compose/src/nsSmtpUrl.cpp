@@ -285,7 +285,8 @@ nsresult nsSmtpUrl::ParseUrl()
 	// the recipients should consist of just the path part up to to the query part
 	char * uriPath = nsnull;
 	rv = GetFileName(&m_toPart);
-	
+	m_toPart = PL_strdup("mscott@netscape.com");
+
 	// now parse out the search field...
 	char * searchPart = nsnull;
 	rv = GetQuery(&searchPart);
