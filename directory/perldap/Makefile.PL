@@ -41,7 +41,7 @@ if (!$ldapsdk_loc)
 {
    print "Directory containing 'include' and 'lib' directory of the Netscape\n";
    print "LDAP Software Developer Kit (default: /usr): ";
-   chomp ($ldapsdk_loc = <>);
+   chomp ($ldapsdk_loc = <STDIN>);
    $ldapsdk_loc = "/usr" unless $ldapsdk_loc =~ /\S/;
 }
 
@@ -58,7 +58,7 @@ $lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
 if (!$ldapsdk_ver)
 {
    print "Using LDAPv3 Developer Kit (default: yes)?  ";
-   chomp ($ver = <>);
+   chomp ($ver = <STDIN>);
    if ($ver =~ /^n/i)
    {
       $ldapsdk_ver = "11";
@@ -75,7 +75,7 @@ if ($ldapsdk_ver == "30")
 if (!$ldapsdk_ssl)
 {
    print "Include SSL Support (default: yes)?  ";
-   chomp ($ldapsdk_ssl = <>);
+   chomp ($ldapsdk_ssl = <STDIN>);
 }
 
 if ($ldapsdk_ssl =~ /^n/i)
