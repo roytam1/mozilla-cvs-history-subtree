@@ -48,6 +48,7 @@ CSRCS			= \
 			  $(NULL)
 
 CPPSRCS			= \
+                          nsURL.cpp \
 			  bamwrap.cpp \
 			  moz_depend.cpp \
 			  net_serv.cpp \
@@ -93,7 +94,7 @@ endif
 
 include $(DEPTH)/config/rules.mk
 
-DEFINES			+= -DNEW_DECODERS -DB1M
+DEFINES			+= -DNEW_DECODERS -DB1M -D_IMPL_NS_NET
 INCLUDES		+= -I$(DEPTH)/base/src
 
 ifndef NO_UNIX_ASYNC_DNS
