@@ -389,8 +389,10 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
     if (NS_FAILED(rv) || (!pMsgComposeParams) ) return rv ;
 
     // populate the compose params
+    PRBool forcePlainText;
+    aCompFields->GetForcePlainText(&forcePlainText);
     pMsgComposeParams->SetType(nsIMsgCompType::New);
-    pMsgComposeParams->SetFormat(nsIMsgCompFormat::Default);
+    pMsgComposeParams->SetFormat(forcePlainText ? nsIMsgCompFormat::PlainText : nsIMsgCompFormat::HTML);
     pMsgComposeParams->SetIdentity(pMsgId);
     pMsgComposeParams->SetComposeFields(aCompFields); 
     pMsgComposeParams->SetSendListener(sendListener) ;
@@ -506,6 +508,10 @@ nsresult nsMapiHook::PopulateCompFields(lpnsMapiMessage aMessage,
         Body.AssignWithConversion(aMessage->lpszNoteText);
         if (Body.Last() != nsCRT::LF)
           Body.AppendWithConversion(CRLF);
+
+        if (Body.Find("<html>") == kNotFound)
+          aCompFields->SetForcePlainText(PR_TRUE);
+
         rv = aCompFields->SetBody(Body.get()) ;
     }
 
@@ -712,6 +718,10 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
         if (NS_FAILED(rv)) return rv ;
         if (Body.Last() != nsCRT::LF)
           Body.AppendWithConversion(CRLF);
+
+        if (Body.Find("<html>") == kNotFound)
+          aCompFields->SetForcePlainText(PR_TRUE);
+
         rv = aCompFields->SetBody(Body.get()) ;
     }
 
@@ -860,6 +870,9 @@ nsresult nsMapiHook::ShowComposerWindow (unsigned long aSession, nsIMsgCompField
     nsCOMPtr<nsIMsgComposeParams> pMsgComposeParams (do_CreateInstance(NS_MSGCOMPOSEPARAMS_CONTRACTID, &rv));
     if (NS_FAILED(rv) || (!pMsgComposeParams) ) return rv ;
 
+    PRBool forcePlainText;
+    aCompFields->GetForcePlainText(&forcePlainText);
+    pMsgComposeParams->SetFormat(forcePlainText ? nsIMsgCompFormat::Default : nsIMsgCompFormat::HTML);
     // populate the compose params
     pMsgComposeParams->SetType(nsIMsgCompType::New);
     pMsgComposeParams->SetFormat(nsIMsgCompFormat::Default);
