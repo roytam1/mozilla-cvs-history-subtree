@@ -130,6 +130,6 @@
 // multiple profiles. If not defined, a standalone directory service provider
 // will be used to provide "profile" locations to one specified directory.
 // In the case, the mozilla profile DLL is not needed.
-#define USE_PROFILES 1
+// #define USE_PROFILES 1
 
 #endif //_STDAFX_H

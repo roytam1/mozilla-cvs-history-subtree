@@ -64,6 +64,9 @@
 #include "nsProfileDirServiceProvider.h"
 #endif
 
+#ifdef MOZ_PROFILESHARING
+#include "nsIProfileSharingSetup.h"
+#endif
 
 #ifdef _BUILD_STATIC_BIN
 #include "nsStaticComponent.h"
@@ -564,6 +567,12 @@ int CMfcEmbedApp::ExitInstance()
 
 #ifdef USE_PROFILES
     delete m_ProfileMgr;
+#else
+    if (m_ProfileDirServiceProvider)
+    {
+        m_ProfileDirServiceProvider->Shutdown();
+        NS_RELEASE(m_ProfileDirServiceProvider);
+    }
 #endif
 
     NS_TermEmbedding();
@@ -615,6 +624,21 @@ void CMfcEmbedApp::OnEditPreferences()
 
 BOOL CMfcEmbedApp::InitializeProfiles()
 {
+
+#ifdef MOZ_PROFILESHARING
+    // If we are using profile sharing, get the sharing setup service
+    nsCOMPtr<nsIProfileSharingSetup> sharingSetup =
+        do_GetService("@mozilla.org/embedcomp/profile-sharing-setup;1");
+    if (sharingSetup)
+    {
+        USES_CONVERSION;
+        CString strRes;
+        strRes.LoadString(IDS_PROFILES_NONSHARED_NAME);
+        nsDependentString nonSharedName(T2W(strRes));
+        sharingSetup->EnableSharing(nonSharedName);
+    }
+#endif
+
 #ifdef USE_PROFILES
     m_ProfileMgr = new CProfileMgr;
     if (!m_ProfileMgr)
@@ -639,24 +663,12 @@ BOOL CMfcEmbedApp::InitializeProfiles()
     NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(profProvider));
     if (!profProvider)
         return FALSE;
-    // Directory service holds a strong reference to any
-    // provider that is registered with it.
-    profProvider->Register();
-
-#ifdef MOZ_PROFILESHARING
-    {
-        USES_CONVERSION;
-        CString strRes;
-        strRes.LoadString(IDS_PROFILES_NONSHARED_NAME);
-        nsDependentString nonSharedName(T2W(strRes));
-        profProvider->InitSharing(nonSharedName);
-    }
-#endif
-    
+    profProvider->Register();    
     nsCOMPtr<nsILocalFile> localAppDataDir(do_QueryInterface(appDataDir));
     rv = profProvider->SetProfileDir(localAppDataDir);
     if (NS_FAILED(rv))
         return FALSE;
+    NS_ADDREF(m_ProfileDirServiceProvider = profProvider);
 #endif
 
     return TRUE;
