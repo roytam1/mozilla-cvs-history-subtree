@@ -1690,10 +1690,6 @@ nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox)
   // frames we find.
   // XXX PERFORMANCE: set a bit per-span to avoid the extra work
   // (propagate it upward too)
-#ifdef DEBUG
-  int frameCount = 0;
-#endif
-
   for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
     PerSpanData* span = pfd->mSpan;
 #ifdef DEBUG
@@ -1774,8 +1770,12 @@ nsLineLayout::GetLineMaxElementWidth(nsLineBox* aLineBox)
   PRBool prevFrameAccumulates = PR_FALSE;
   nscoord accumulatedWidth = 0;
   nscoord indent = mTextIndent; // Used for the first frame.
+  PerSpanData* psd = mRootSpan;
+#ifdef DEBUG
+  int frameCount = 0;
+#endif
 
-  for (PerFrameData* pfd = mRootSpan->mFirstFrame; pfd; pfd = pfd->mNext) {
+  for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
     nscoord mw = pfd->mMaxElementWidth +
       pfd->mMargin.left + pfd->mMargin.right + indent;
     // Zero |indent| after including the 'text-indent' only for the
