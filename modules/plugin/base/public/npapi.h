@@ -308,12 +308,15 @@ typedef enum {
  * List of variable names for which NPN_GetValue is implemented by Mozilla
  */
 typedef enum {
-	NPNVxDisplay = 1,
-	NPNVxtAppContext,
-    NPNVnetscapeWindow,
-	NPNVjavascriptEnabledBool,
-	NPNVasdEnabledBool,
-	NPNVisOfflineBool
+  NPNVxDisplay = 1,
+  NPNVxtAppContext,
+  NPNVnetscapeWindow,
+  NPNVjavascriptEnabledBool,
+  NPNVasdEnabledBool,
+  NPNVisOfflineBool,
+
+   // 10 and over are available on Mozilla builds starting with 0.9.4
+  NPNVserviceManager = 10
 } NPNVariable;
 
 /*
