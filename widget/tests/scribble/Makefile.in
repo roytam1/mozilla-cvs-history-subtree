@@ -46,7 +46,6 @@ ifdef MOZ_OJI
 endif
 
 LIBS := \
-	-lraptorbase    \
 	-lpref \
 	-lxmltok \
 	-lexpat \

@@ -51,7 +51,6 @@
 // For JS Execution
 #include "nsIScriptContextOwner.h"
 
-#include "nsXPComCIID.h"
 #include "nsIEventQueueService.h"
 #include "plevent.h"
 #include "prmem.h"

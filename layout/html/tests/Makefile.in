@@ -47,7 +47,6 @@ LIBS = \
 	-lgophurl \
 	-lremoturl \
 	-lnetcnvts \
-	-lraptorbase \
 	-labouturl \
 	-lhttpurl \
 	-lmimetype \

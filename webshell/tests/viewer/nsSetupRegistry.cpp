@@ -20,7 +20,6 @@
 #include "nsIPref.h"
 #include "nsIComponentManager.h"
 #include "nsWidgetsCID.h"
-#include "nsGfxCIID.h"
 #include "nsViewsCID.h"
 #include "nsPluginsCID.h"
 #include "nsRDFCID.h"
@@ -30,7 +29,6 @@
 #include "nsIDocumentLoader.h"
 #include "nsIThrobber.h"
 
-#include "nsXPComCIID.h"
 #include "nsParserCIID.h"
 #include "nsDOMCID.h"
 #include "nsINetService.h"
@@ -55,13 +53,15 @@
 #include "nsIProfile.h"
 #include "nsIAllocator.h"
 #include "nsIEventQueue.h"
+#include "nsIEventQueueService.h"
 #include "nsIGenericFactory.h"
+#include "nsGfxCIID.h"
 
 #include "prprf.h"
 #include "prmem.h"
 
 #ifdef XP_PC
-    #define XPCOM_DLL  "xpcom32.dll"
+    #define XPCOM_DLL  "xpcom.dll"
     #define WIDGET_DLL "raptorwidget.dll"
     #define GFXWIN_DLL "raptorgfxwin.dll"
     #define VIEW_DLL   "raptorview.dll"
@@ -217,10 +217,6 @@ static NS_DEFINE_IID(kUnicharUtilCID,             NS_UNICHARUTIL_CID);
 extern "C" void
 NS_SetupRegistry()
 {
-	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kAllocatorCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-  nsComponentManager::RegisterComponent(kGenericFactoryCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kLookAndFeelCID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kCWindowIID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kCScrollbarIID, NULL, NULL, WIDGET_DLL, PR_FALSE, PR_FALSE);

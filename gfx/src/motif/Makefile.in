@@ -36,7 +36,6 @@ EXTRA_DSO_LDOPTS+=\
 	-L$(DIST)/bin \
 	-lxpcom \
 	-lraptorgfx \
-	-lraptorbase \
 	-lreg \
 	$(NSPR_LIBS)
 

@@ -41,7 +41,6 @@
 
 #if 0
 #include "nsIEventQueueService.h"
-#include "nsXPComCIID.h"
 
 #include "nsIURL.h"
 

@@ -33,7 +33,6 @@ TOOLKIT_WIDGET_LIB	:= -lwidget$(MOZ_TOOLKIT)
 TOOLKIT_BASE_LIB	:= -lgmbase$(MOZ_TOOLKIT)
 
 BASE_LIBS =	     \
-	-lraptorbase \
 	-lpref	     \
 	$(ZLIB_LIBS) \
 	-lreg	     \

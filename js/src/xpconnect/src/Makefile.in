@@ -73,7 +73,6 @@ EXTRA_DSO_LDOPTS = \
 	-lxptinfo \
 	-lxptcall \
 	-lxptcmd \
-	-lraptorbase \
 	-lreg \
 	$(NSPR_LIBS) \
 	$(NULL)

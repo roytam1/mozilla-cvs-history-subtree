@@ -46,7 +46,6 @@ LIBS = \
 	-lpwcac \
 	-lnetcache \
 	-lnetwork \
-	-lraptorbase \
 	-lraptorhtml \
 	-lpref \
 	-lsecfree \

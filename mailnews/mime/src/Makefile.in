@@ -94,7 +94,6 @@ EXTRA_DSO_LDOPTS =	\
 	-L$(DIST)/bin	\
 	$(NSPR_LIBS)	\
 	-lmozjs			\
-	-lraptorbase	\
 	-lsecfree		\
 	-lxpcom			\
 	-lreg			\

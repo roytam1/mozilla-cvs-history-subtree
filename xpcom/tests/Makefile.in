@@ -66,7 +66,6 @@ LIBS		= \
 	-lnetcnvts    \
 	-lnetlib      \
 	-lnetwork     \
-	-lraptorbase  \
 	-lxp	      \
 	-lxpcom       \
 	-lreg       \

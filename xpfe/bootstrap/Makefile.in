@@ -37,7 +37,6 @@ LIBS = \
 	-L$(DIST)/bin	\
 	-lnsappshell	\
 	-lxpcom		\
-	-lraptorbase	\
 	$(TOOLKIT_WIDGET_LIB)\
 	-lraptorgfx	\
 	$(TOOLKIT_GFX_LIB)\
@@ -63,7 +62,6 @@ LIBS = \
 	-lxmltok \
 	-ljsdom		\
 	-ljsurl		\
-	-lraptorbase	\
 	-lsecfree	\
 	-l$(MOZ_LIB_JS_PREFIX)js		\
 	$(JSJ_LIB)	\

@@ -94,7 +94,6 @@ ifdef MOZ_OJI
 endif
 
 BASE_LIBS =	     \
-	-lraptorbase \
 	-lpref	     \
 	$(ZLIB_LIBS) \
 	-lreg	     \
