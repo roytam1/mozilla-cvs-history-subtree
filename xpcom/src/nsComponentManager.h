@@ -81,15 +81,6 @@ public:
                               const nsIID &aIID,
                               void **aResult);
 
-    // Creates a class instance for a specific class ID
-    /*
-      NS_IMETHOD CreateInstance2(const nsCID &aClass, 
-      nsISupports *aDelegate,
-      const nsIID &aIID,
-      void *aSignature,
-      void **aResult);
-    */
-
     // Manually registry a factory for a class
     NS_IMETHOD RegisterFactory(const nsCID &aClass,
                                const char *aClassName,
