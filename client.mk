@@ -71,11 +71,9 @@ SVG_BRANCH_MODIFIED_FILES = \
 	configure                                             \
 	config/autoconf.mk.in                                 \
 	content/base/public/nsIElementFactory.h               \
+	content/base/public/nsContentCID.h                    \
 	content/base/src/nsRuleNode.cpp                       \
 	content/base/src/nsStyleContext.cpp                   \
-	content/build/Makefile.in                             \
-	content/build/nsContentCID.h                          \
-	content/build/nsContentModule.cpp                     \
 	content/html/style/src/nsCSSDeclaration.cpp           \
 	content/html/style/src/nsCSSDeclaration.h             \
 	content/html/style/src/nsCSSParser.cpp                \
