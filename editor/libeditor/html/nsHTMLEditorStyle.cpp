@@ -581,7 +581,7 @@ nsHTMLEditor::SetInlinePropertyOnNode( nsIDOMNode *aNode,
       {
         isupports = dont_AddRef(arrayOfNodes->ElementAt(0));
         node = do_QueryInterface(isupports);
-        res = SetInlinePropertyOnNode(node, aProperty, aAttribute, aValue);
+        res = SetInlinePropertyOnNode(node, aProperty, aAttribute, aValue, aDontOverride);
         if (NS_FAILED(res)) return res;
         arrayOfNodes->RemoveElementAt(0);
       }
