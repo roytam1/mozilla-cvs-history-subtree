@@ -550,9 +550,12 @@ ldap_init( const char *defhost, int defport )
 	if ( ld->ld_extread_fn != NULL || ld->ld_extwrite_fn != NULL ) {
 		struct lber_x_ext_io_fns lberiofns;
 
+		memset( &lberiofns, 0, sizeof( lberiofns ));
+
 		lberiofns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
 		lberiofns.lbextiofn_read = ld->ld_extread_fn;
 		lberiofns.lbextiofn_write = ld->ld_extwrite_fn;
+		lberiofns.lbextiofn_writev = ld->ld_extwritev_fn;
 		lberiofns.lbextiofn_socket_arg = NULL;
 		ber_sockbuf_set_option( ld->ld_sbp, LBER_SOCKBUF_OPT_EXT_IO_FNS,
 			(void *)&lberiofns );
