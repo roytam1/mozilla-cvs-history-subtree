@@ -298,7 +298,7 @@ typedef enum JSSrcNoteType {
 
 extern JS_FRIEND_DATA(const char *) js_SrcNoteName[];
 extern JS_FRIEND_DATA(uint8) js_SrcNoteArity[];
-extern JS_FRIEND_DATA(uintN) js_SrcNoteLength(jssrcnote *sn);
+extern JS_FRIEND_API(uintN) js_SrcNoteLength(jssrcnote *sn);
 
 #define SN_LENGTH(sn)           ((js_SrcNoteArity[SN_TYPE(sn)] == 0) ? 1      \
 				 : js_SrcNoteLength(sn))
