@@ -4477,7 +4477,7 @@ nsImapMailFolder::CopyMessagesWithStream(nsIMsgFolder* srcFolder,
   msgSupport = getter_AddRefs(messages->ElementAt(0));
   if (msgSupport)
   {
-    nsCOMPtr<nsIMessage> aMessage;
+    nsCOMPtr<nsIMsgDBHdr> aMessage;
     aMessage = do_QueryInterface(msgSupport, &rv);
     if (NS_SUCCEEDED(rv))
       CopyStreamMessage(aMessage, this, msgWindow, isMove);
@@ -5030,7 +5030,7 @@ nsImapMailFolder::CopyFileMessage(nsIFileSpec* fileSpec,
 }
 
 nsresult 
-nsImapMailFolder::CopyStreamMessage(nsIMessage* message,
+nsImapMailFolder::CopyStreamMessage(nsIMsgDBHdr* message,
                                     nsIMsgFolder* dstFolder, // should be this
                                     nsIMsgWindow *aMsgWindow,
                                     PRBool isMove)
@@ -5056,10 +5056,11 @@ nsImapMailFolder::CopyStreamMessage(nsIMessage* message,
     rv = copyStreamListener->Init(srcFolder, copyListener, nsnull);
     if (NS_FAILED(rv)) return rv;
        
-    nsCOMPtr<nsIRDFResource> messageNode(do_QueryInterface(message));
-    if (!messageNode) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsIMsgDBHdr> msgHdr(do_QueryInterface(message));
+    if (!msgHdr) return NS_ERROR_FAILURE;
+
     nsXPIDLCString uri;
-    messageNode->GetValue(getter_Copies(uri));
+    srcFolder->GetUriForMsg(msgHdr, getter_Copies(uri));
 
     if (!m_copyState->m_msgService)
     {

@@ -242,7 +242,7 @@ interface nsIMsgDBView : nsISupports
 	attribute nsIDOMElement sortedColumn;
    
     readonly attribute nsIMsgFolder msgFolder;
-
+    nsIMsgFolder getFolderForViewIndex(in nsMsgViewIndex index); // mainly for search
     void getURIsForSelection([array, size_is(count)] out string uris, out unsigned long count);
 
     readonly attribute string URIForFirstSelectedMessage;

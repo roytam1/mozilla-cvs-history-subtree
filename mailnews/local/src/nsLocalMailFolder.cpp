@@ -2305,11 +2305,8 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     //  the mCopyState->m_message will be always null for file message
 
     nsCOMPtr<nsIMsgDBHdr> newHdr;
-    nsCOMPtr<nsIMsgDBHdr> msgDBHdr;
-    nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(mCopyState->m_message,
+    nsCOMPtr<nsIMsgDBHdr> msgDBHdr (do_QueryInterface(mCopyState->m_message,
                                                        &rv));
-    
-    rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
     
     if(!mCopyState->m_parseMsgState)
     {
@@ -2603,15 +2600,21 @@ nsresult nsMsgLocalMailFolder::CopyMessageTo(nsISupports *message,
   if (!mCopyState) return NS_ERROR_OUT_OF_MEMORY;
 
 	nsresult rv;
-	nsCOMPtr<nsIRDFResource> messageNode(do_QueryInterface(message));
-	if(!messageNode)
+	nsCOMPtr<nsIMsgDBHdr> msgHdr(do_QueryInterface(message));
+	if(!msgHdr)
 		return NS_ERROR_FAILURE;
 
-  if (message)
-    mCopyState->m_message = do_QueryInterface(message, &rv);
+  if (msgHdr)
+    mCopyState->m_message = do_QueryInterface(msgHdr, &rv);
 
 	nsXPIDLCString uri;
-	messageNode->GetValue(getter_Copies(uri));
+  nsCOMPtr <nsIMsgFolder> srcFolderForMsg;
+
+  msgHdr->GetFolder(getter_AddRefs(srcFolderForMsg));
+  if (!srcFolderForMsg)
+    return NS_ERROR_FAILURE;
+
+  srcFolderForMsg->GetUriForMsg(msgHdr, getter_Copies(uri));
 
 	nsCOMPtr<nsICopyMessageStreamListener> copyStreamListener; 
 	rv = nsComponentManager::CreateInstance(kCopyMessageStreamListenerCID, NULL,

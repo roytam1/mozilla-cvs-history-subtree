@@ -74,7 +74,7 @@ public:
     nsCOMPtr<nsISupports> m_srcSupport; // source file spec or folder
     nsCOMPtr<nsISupportsArray> m_messages; // array of source messages
     nsCOMPtr<nsMsgTxn> m_undoMsgTxn; // undo object with this copy operation
-    nsCOMPtr<nsIMessage> m_message; // current message to be copied
+    nsCOMPtr<nsIMsgDBHdr> m_message; // current message to be copied
     nsCOMPtr<nsIMsgCopyServiceListener> m_listener; // listener of this copy
                                                     // operation 
     nsCOMPtr<nsIFileSpec> m_tmpFileSpec; // temp file spec for copy operation
@@ -316,7 +316,7 @@ protected:
                          PRBool isCrossServerOp,
                          nsIMsgWindow *msgWindow,
                          nsIMsgCopyServiceListener* listener);
-  nsresult CopyStreamMessage(nsIMessage* message, nsIMsgFolder* dstFolder,
+  nsresult CopyStreamMessage(nsIMsgDBHdr* message, nsIMsgFolder* dstFolder,
                              nsIMsgWindow *msgWindow, PRBool isMove);
   nsresult InitCopyState(nsISupports* srcSupport, 
                          nsISupportsArray* messages,

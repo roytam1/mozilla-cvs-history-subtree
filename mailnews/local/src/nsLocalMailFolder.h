@@ -53,7 +53,7 @@ struct nsLocalMailCopyState
   nsCOMPtr<nsISupports> m_srcSupport;
   nsCOMPtr<nsISupportsArray> m_messages;
   nsCOMPtr<nsMsgTxn> m_undoMsgTxn;
-  nsCOMPtr<nsIMessage> m_message; // current copy message
+  nsCOMPtr<nsIMsgDBHdr> m_message; // current copy message
   nsCOMPtr<nsIMsgParseMailMsgState> m_parseMsgState;
   nsCOMPtr<nsIMsgCopyServiceListener> m_listener;
   

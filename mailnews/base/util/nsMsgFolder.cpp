@@ -2506,3 +2506,20 @@ NS_IMETHODIMP nsMsgFolder::GetBaseMessageURI(char **baseMessageURI)
   else                                                                        
     return NS_ERROR_FAILURE;
 }
+
+NS_IMETHODIMP nsMsgFolder::GetUriForMsg(nsIMsgDBHdr *msgHdr, char **aURI)
+{
+  NS_ENSURE_ARG(msgHdr);
+  NS_ENSURE_ARG(aURI);
+  nsMsgKey msgKey;
+  msgHdr->GetMessageKey(&msgKey);
+  nsCAutoString uri;
+  uri.Assign(mBaseMessageURI);
+
+  // append a "#" followed by the message key.
+  uri.Append('#');
+  uri.AppendInt(msgKey);
+
+  *aURI = uri.ToNewCString();
+  return NS_OK;
+}

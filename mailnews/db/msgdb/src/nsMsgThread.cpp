@@ -1063,9 +1063,6 @@ NS_IMETHODIMP nsMsgThread::GetFirstUnreadChild(nsIMsgDBHdr **result)
 		if (NS_SUCCEEDED(rv) && child)
 		{
 			nsMsgKey msgKey;
-			// we're only doing one level of threading, so check if caller is
-			// asking for children of the first message in the thread or not.
-			// if not, we will tell him there are no children.
 			child->GetMessageKey(&msgKey);
 
       PRBool isRead;

@@ -40,7 +40,7 @@ public:
   // override to get location
   NS_IMETHOD GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue);
   virtual nsresult GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr);
-  nsresult GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder **folder);
+  NS_IMETHOD GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder **folder);
 protected:
   nsresult FetchLocation(nsIMsgDBHdr * aHdr, PRUnichar ** aSizeString);
 

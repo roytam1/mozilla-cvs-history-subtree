@@ -4638,7 +4638,7 @@ void nsImapProtocol::OnAppendMsgFromFile()
             nsCOMPtr<nsImapMailCopyState> mailCopyState = do_QueryInterface(copyState, &rv);
             if (mailCopyState)
             {
-              nsCOMPtr <nsIMessage> curMsg = mailCopyState->m_message;
+              nsCOMPtr <nsIMsgDBHdr> curMsg = mailCopyState->m_message;
               PRUint32 flags;
 
               if (curMsg)
