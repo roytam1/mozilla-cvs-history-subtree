@@ -27,6 +27,7 @@
 #include "nsIRDFContentSink.h"
 #include "nsIRDFService.h"
 #include "nsIXULContentSink.h"
+#include "nsIXULPrototypeCache.h"
 #include "nsISupports.h"
 #include "nsRDFBaseDataSources.h"
 #include "nsRDFBuiltInDataSources.h"
@@ -68,6 +69,7 @@ static NS_DEFINE_CID(kXULDocumentCID,                     NS_XULDOCUMENT_CID);
 static NS_DEFINE_CID(kXULSortServiceCID,                  NS_XULSORTSERVICE_CID);
 static NS_DEFINE_CID(kXULDocumentInfoCID,                 NS_XULDOCUMENTINFO_CID);
 static NS_DEFINE_CID(kXULPopupListenerCID,                NS_XULPOPUPLISTENER_CID);
+static NS_DEFINE_CID(kXULPrototypeCacheCID,               NS_XULPROTOTYPECACHE_CID);
 static NS_DEFINE_CID(kXULKeyListenerCID,                  NS_XULKEYLISTENER_CID);
 static NS_DEFINE_CID(kXULCommandDispatcherCID,            NS_XULCOMMANDDISPATCHER_CID);
 static NS_DEFINE_CID(kXULControllersCID,                  NS_XULCONTROLLERS_CID);
@@ -256,6 +258,9 @@ nsRDFModule::GetClassObject(nsIComponentManager *aCompMgr,
     else if (aClass.Equals(kXULContentUtilsCID)) {
         rv = NS_NewGenericFactory(getter_AddRefs(fact), NS_NewXULContentUtils);
     }
+    else if (aClass.Equals(kXULPrototypeCacheCID)) {
+        rv = NS_NewGenericFactory(getter_AddRefs(fact), NS_NewXULPrototypeCache);
+    }
     else {
 		rv = NS_ERROR_FACTORY_NOT_REGISTERED;
 #ifdef DEBUG
@@ -330,6 +335,8 @@ static Components gComponents[] = {
       NS_RDF_PROGID "/xul-controllers", },
     { "XUL Content Utilities", &kXULContentUtilsCID,
       NS_RDF_PROGID "/xul-content-utils", },
+    { "XUL Prototype Cache", &kXULPrototypeCacheCID,
+      NS_RDF_PROGID "/xul-prototype-cache", },
 };
 #define NUM_COMPONENTS (sizeof(gComponents) / sizeof(gComponents[0]))
 
