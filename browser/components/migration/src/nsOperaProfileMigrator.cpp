@@ -993,6 +993,10 @@ nsOperaProfileMigrator::CopyBookmarks(PRBool aReplace)
   nsCOMPtr<nsILineInputStream> lineInputStream(do_QueryInterface(fileInputStream));
 
   nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  NS_ENSURE_TRUE(bms, NS_ERROR_FAILURE);
+  PRBool dummy;
+  bms->ReadBookmarks(&dummy);
+
   nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
   nsCOMPtr<nsIStringBundle> bundle;
   bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));

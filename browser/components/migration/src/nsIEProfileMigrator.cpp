@@ -1040,6 +1040,10 @@ nsIEProfileMigrator::CopyFavorites(PRBool aReplace) {
   rdf->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
 
   nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  NS_ENSURE_TRUE(bms, NS_ERROR_FAILURE);
+  PRBool dummy;
+  bms->ReadBookmarks(&dummy);
+
   nsAutoString personalToolbarFolderName;
 
   nsCOMPtr<nsIRDFResource> folder;
