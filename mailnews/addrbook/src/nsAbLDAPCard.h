@@ -39,11 +39,10 @@
 #ifndef nsAbLDAPCard_h__
 #define nsAbLDAPCard_h__
 
-#include "nsRDFResource.h"
 #include "nsAbCardProperty.h"
 #include "nsISupportsArray.h"
 
-class nsAbLDAPCard : public nsRDFResource, public nsAbCardProperty
+class nsAbLDAPCard : public nsAbCardProperty
 {
 public:
     NS_DECL_ISUPPORTS_INHERITED

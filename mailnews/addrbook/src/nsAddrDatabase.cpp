@@ -3084,15 +3084,15 @@ NS_IMETHODIMP nsListAddressEnumerator::Next(void)
 
 NS_IMETHODIMP nsListAddressEnumerator::CurrentItem(nsISupports **aItem)
 {
-    if (mCurrentRow) 
-	{
-        nsresult rv;
+  if (mCurrentRow) 
+  {
+    nsresult rv;
     rv = mDB->CreateABCard(mCurrentRow, mListRowID, getter_AddRefs(mResultCard));
-		*aItem = mResultCard;
-		NS_IF_ADDREF(*aItem);
-        return NS_OK;
-    }
-    return NS_ERROR_FAILURE;
+    *aItem = mResultCard;
+    NS_IF_ADDREF(*aItem);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP nsListAddressEnumerator::IsDone(void)
@@ -3191,8 +3191,8 @@ nsresult nsAddrDatabase::CreateCard(nsIMdbRow* cardRow, mdb_id listRowID, nsIAbC
 		nsCOMPtr<nsIAbCard> personCard;
 		nsCOMPtr<nsIAbMDBDirectory> dbm_dbDirectory(do_QueryInterface(m_dbDirectory,&rv));
     if (NS_SUCCEEDED(rv) && dbm_dbDirectory) {
-        personCard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
-        NS_ENSURE_SUCCESS(rv,rv);
+      personCard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv,rv);
     }
 
 		nsCOMPtr<nsIAbMDBCard> dbpersonCard (do_QueryInterface(personCard, &rv));

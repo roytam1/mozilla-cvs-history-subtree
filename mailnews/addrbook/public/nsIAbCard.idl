@@ -110,6 +110,4 @@ interface nsIAbCard : nsISupports {
 	//
 	// XXX FIX ME, this should not be a the card, it should be on the addressbook.
 	void  editCardToDatabase(in string uri);
-
-	boolean equals(in nsIAbCard card);
 };

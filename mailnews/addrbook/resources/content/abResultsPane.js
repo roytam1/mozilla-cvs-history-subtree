@@ -49,6 +49,7 @@ function AbResultsPaneOnClick(event)
       SortAndUpdateIndicators(t.id, sortDirection);
     }
     else if (t.localName == "outlinerbody") {
+       // XXX check if gAbView
        var row = new Object;
        var colID = new Object;
        var childElt = new Object;

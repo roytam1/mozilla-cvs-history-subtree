@@ -55,7 +55,6 @@ public:
 
 	// nsIAbCard methods
 	NS_IMETHODIMP EditCardToDatabase(const char *uri);
-  NS_IMETHODIMP Equals(nsIAbCard *card, PRBool *result);
 
 protected:
 	nsresult GetCardDatabase(const char *uri);

@@ -212,46 +212,17 @@ nsresult nsAbLDAPDirectory::GetLDAPURL (nsILDAPURL** url)
     return rv;
 }
 
-nsresult nsAbLDAPDirectory::CreateCard (nsILDAPURL* uri, const char* dn, nsIAbCard** card)
+nsresult nsAbLDAPDirectory::CreateCard (nsILDAPURL* uri, const char* dn, nsIAbCard** result)
 {
     nsresult rv;
+    
+    nsCOMPtr <nsIAbCard> card = do_CreateInstance(NS_ABLDAPCARD_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
 
-    nsXPIDLCString cardUri;
-    rv = CreateCardURI (uri, dn, getter_Copies (cardUri));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIRDFResource> res;
-    rv = gRDFService->GetResource(cardUri, getter_AddRefs(res));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = res->QueryInterface(NS_GET_IID(nsIAbCard), NS_REINTERPRET_CAST(void**, card));
-    NS_IF_ADDREF(*card);
-
-    return rv;
+    *result = card;
+    NS_IF_ADDREF(*result);
+    return NS_OK;
 }
-
-nsresult nsAbLDAPDirectory::CreateCardURI (nsILDAPURL* uri, const char* dn, char** cardUri)
-{
-    nsresult rv;
-
-    nsXPIDLCString host;
-    rv = uri->GetHost(getter_Copies (host));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    PRInt32 port;
-    rv = uri->GetPort(&port);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    *cardUri = PR_smprintf("moz-abldapcard://%s:%d/%s", host.get (), port, dn);
-    if(!cardUri)
-    {
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    return rv;
-}
-
-
 
 /* 
  *

@@ -919,9 +919,7 @@ PRInt32 nsAbView::FindIndexForCard(nsIAbCard *card)
   // could be the collation key.
   for (i=0; i < count; i++) {
     AbCard *abcard = (AbCard*) (mCards.ElementAt(i));
-    PRBool match;
-    nsresult rv = card->Equals(abcard->card, &match);
-    if (NS_SUCCEEDED(rv) && match) {
+    if (card == abcard->card) {
       return i;
     }
   }

@@ -70,7 +70,6 @@ public:
     nsresult GetLDAPConnection (nsILDAPConnection** connection);
     nsresult GetLDAPURL (nsILDAPURL** url);
     nsresult CreateCard (nsILDAPURL* uri, const char* dn, nsIAbCard** card);
-    nsresult CreateCardURI (nsILDAPURL* uri, const char* dn, char** cardUri);
 
     // nsIAbDirectorySearch methods
     NS_DECL_NSIABDIRECTORYSEARCH

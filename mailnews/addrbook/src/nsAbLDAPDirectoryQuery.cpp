@@ -337,14 +337,12 @@ nsresult nsAbQueryLDAPMessageListener::OnLDAPMessageSearchEntry (nsILDAPMessage 
         else if (n.EqualsWithConversion ("card:nsIAbCard"))
         {
             // Meta property
-            //
-
             nsXPIDLString dn;
             rv = aMessage->GetDn (getter_Copies (dn));
             NS_ENSURE_SUCCESS(rv, rv);
 
             nsCOMPtr<nsIAbCard> card;
-            rv = mDirectoryQuery->CreateCard (mUrl, NS_ConvertUCS2toUTF8(dn).get(), getter_AddRefs (card));
+            rv = mDirectoryQuery->CreateCard(mUrl, NS_ConvertUCS2toUTF8(dn).get(), getter_AddRefs (card));
             NS_ENSURE_SUCCESS(rv, rv);
 
             PRBool hasSetCardProperty = PR_FALSE;

@@ -168,7 +168,8 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 				{
 					if (m_sizeLimitEnabled) 
 					{
-            // there has to be a better way to do this, perhaps with
+            // XXX there has to be a better way to do this
+            // delete the card
 						m_historyAB->DeleteCard(existingCard, PR_TRUE /* notify */);
 						SetNamesForCard(existingCard, curName);
 						// append it to the bottom.
@@ -383,8 +384,11 @@ nsresult nsAbAddressCollecter::Init(void)
 	nsCOMPtr<nsIPref> pPref(do_GetService(NS_PREF_CONTRACTID, &rv)); 
 	NS_ENSURE_SUCCESS(rv,rv);
   
-	pPref->RegisterCallback(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, collectEmailAddressEnableSizeLimitPrefChanged, this);
-	pPref->RegisterCallback(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, collectEmailAddressSizeLimitPrefChanged, this);
+	rv = pPref->RegisterCallback(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, collectEmailAddressEnableSizeLimitPrefChanged, this);
+	NS_ENSURE_SUCCESS(rv,rv);
+  
+  rv = pPref->RegisterCallback(PREF_COLLECT_EMAIL_ADDRESS_SIZE_LIMIT, collectEmailAddressSizeLimitPrefChanged, this);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   rv = pPref->GetBoolPref(PREF_COLLECT_EMAIL_ADDRESS_ENABLE_SIZE_LIMIT, &m_sizeLimitEnabled);
 	NS_ENSURE_SUCCESS(rv,rv);
