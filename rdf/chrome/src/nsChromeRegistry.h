@@ -39,6 +39,7 @@ class nsIDocument;
 #include "nsICSSStyleSheet.h"
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
+#include "nsString.h"
 
 class nsChromeRegistry : public nsIChromeRegistry,
                          public nsIObserver,
@@ -55,6 +56,8 @@ public:
   // nsChromeRegistry methods:
   nsChromeRegistry();
   virtual ~nsChromeRegistry();
+  
+  nsresult Init();
 
 public:
   static nsresult FollowArc(nsIRDFDataSource *aDataSource,

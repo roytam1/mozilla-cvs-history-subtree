@@ -225,56 +225,6 @@ nsChromeRegistry::nsChromeRegistry()
   mInstallInitialized = PR_FALSE;
   mProfileInitialized = PR_FALSE;
   mDataSourceTable = nsnull;
-
-  nsresult rv;
-  rv = nsServiceManager::GetService(kRDFServiceCID,
-                                    NS_GET_IID(nsIRDFService),
-                                    (nsISupports**)&mRDFService);
-  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF service");
-
-  rv = nsServiceManager::GetService(kRDFContainerUtilsCID,
-                                    NS_GET_IID(nsIRDFContainerUtils),
-                                    (nsISupports**)&mRDFContainerUtils);
-  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF container utils");
-
-  if (mRDFService) {
-    rv = mRDFService->GetResource(kURICHROME_selectedSkin, getter_AddRefs(mSelectedSkin));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_selectedLocale, getter_AddRefs(mSelectedLocale));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_baseURL, getter_AddRefs(mBaseURL));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_packages, getter_AddRefs(mPackages));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_package, getter_AddRefs(mPackage));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_name, getter_AddRefs(mName));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_image, getter_AddRefs(mImage));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_locType, getter_AddRefs(mLocType));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-
-    rv = mRDFService->GetResource(kURICHROME_allowScripts, getter_AddRefs(mAllowScripts));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
-  }
-
-  NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
-  if (observerService) {
-    // Our refcnt must be > 0 when we call this or else we'll get deleted!
-    ++mRefCnt;
-    observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
-    --mRefCnt;
-  }
-
-  CheckForNewChrome();
 }
 
 
@@ -320,6 +270,57 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsChromeRegistry, nsIChromeRegistry, nsIObserver, 
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChromeRegistry methods:
+
+nsresult
+nsChromeRegistry::Init()
+{
+  nsresult rv;
+  rv = nsServiceManager::GetService(kRDFServiceCID,
+                                    NS_GET_IID(nsIRDFService),
+                                    (nsISupports**)&mRDFService);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = nsServiceManager::GetService(kRDFContainerUtilsCID,
+                                    NS_GET_IID(nsIRDFContainerUtils),
+                                    (nsISupports**)&mRDFContainerUtils);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = mRDFService->GetResource(kURICHROME_selectedSkin, getter_AddRefs(mSelectedSkin));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_selectedLocale, getter_AddRefs(mSelectedLocale));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_baseURL, getter_AddRefs(mBaseURL));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_packages, getter_AddRefs(mPackages));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_package, getter_AddRefs(mPackage));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_name, getter_AddRefs(mName));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_image, getter_AddRefs(mImage));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_locType, getter_AddRefs(mLocType));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  rv = mRDFService->GetResource(kURICHROME_allowScripts, getter_AddRefs(mAllowScripts));
+  NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF resource");
+
+  NS_WITH_SERVICE(nsIObserverService, observerService, NS_OBSERVERSERVICE_CONTRACTID, &rv);
+  if (observerService)
+    observerService->AddObserver(this, PROFILE_DO_CHANGE_TOPIC);
+
+  CheckForNewChrome();
+  
+  return NS_OK;
+}
+
 
 static nsresult
 SplitURL(nsIURI* aChromeURI, nsCString& aPackage, nsCString& aProvider, nsCString& aFile)
@@ -2749,21 +2750,4 @@ NS_IMETHODIMP nsChromeRegistry::Observe(nsISupports *aSubject, const PRUnichar *
         rv = LoadProfileDataSource();
 
     return rv;
-}
-
-//////////////////////////////////////////////////////////////////////
-
-nsresult
-NS_NewChromeRegistry(nsIChromeRegistry** aResult)
-{
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
-    if (! aResult)
-        return NS_ERROR_NULL_POINTER;
-
-    nsChromeRegistry* chromeRegistry = new nsChromeRegistry();
-    if (chromeRegistry == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(chromeRegistry);
-    *aResult = chromeRegistry;
-    return NS_OK;
 }
