@@ -45,7 +45,7 @@
 #ifdef USE_MOZ_THREAD
 #include "jarevil.h"
 #endif
-/*#include "cdbhdl.h" */
+#include "cdbhdl.h"
 #include "secder.h"
 
 /* to use huge pointers in win16 */
@@ -74,18 +74,19 @@ extern SECStatus SEC_AddTempNickname
    (CERTCertDBHandle *handle, char *nickname, SECItem *certKey);
 /* from certdb.h */
 typedef SECStatus (* PermCertCallback)(CERTCertificate *cert, SECItem *k, void *pdata);
+#endif
 
 /* from certdb.h */
 SECStatus SEC_TraversePermCerts
    (CERTCertDBHandle *handle, PermCertCallback certfunc, void *udata);
-#endif
-
 
 
 #define SZ 512
 
 static int jar_validate_pkcs7 
      (JAR *jar, JAR_Signer *signer, char *data, long length);
+
+static int jar_decode (JAR *jar, char *data, long length);
 
 static void jar_catch_bytes
      (void *arg, const char *buf, unsigned long len);
@@ -119,9 +120,7 @@ static char *jar_basename (const char *path);
 static int jar_signal 
      (int status, JAR *jar, const char *metafile, char *pathname);
 
-#ifdef DEBUG
 static int jar_insanity_check (char ZHUGEP *data, long length);
-#endif
 
 int jar_parse_mf
     (JAR *jar, char ZHUGEP *raw_manifest, 
@@ -857,7 +856,6 @@ static int jar_add_cert
      (JAR *jar, JAR_Signer *signer, int type, CERTCertificate *cert)
   {
   JAR_Cert *fing;
-  unsigned char *keyData;
 
   if (cert == NULL)
     return JAR_ERR_ORDER;
@@ -875,18 +873,14 @@ static int jar_add_cert
 
   /* get the certkey */
 
-  fing->length = cert->derIssuer.len + 2 + cert->serialNumber.len;
+  fing->length = cert->certKey.len;
 
-  keyData = (unsigned char *) PORT_ZAlloc (fing->length);
-  fing->key = keyData;
+  fing->key = (char *) PORT_ZAlloc (fing->length);
 
   if (fing->key == NULL)
     goto loser;
-  keyData[0] = ((cert->derIssuer.len) >> 8) & 0xff;
-  keyData[1] = ((cert->derIssuer.len) & 0xff);
-  PORT_Memcpy (&keyData[2], cert->derIssuer.data, cert->derIssuer.len);
-  PORT_Memcpy (&keyData[2+cert->derIssuer.len], cert->serialNumber.data,
-						 cert->serialNumber.len);
+
+  PORT_Memcpy (fing->key, cert->certKey.data, fing->length);
 
   ADDITEM (signer->certs, type, 
     /* pathname */ NULL, fing, sizeof (JAR_Cert));
@@ -1524,7 +1518,7 @@ extern int PR_CALLBACK JAR_stash_cert
 
 void *JAR_fetch_cert (long length, void *key)
   {
-  CERTIssuerAndSN issuerSN;
+  SECItem seckey;
   CERTCertificate *cert = NULL;
 
   CERTCertDBHandle *certdb;
@@ -1533,16 +1527,13 @@ void *JAR_fetch_cert (long length, void *key)
 
   if (certdb)
     {
-    unsigned char *keyData = (unsigned char *)key;
-    issuerSN.derIssuer.len = (keyData[0] << 8) + keyData[0];
-    issuerSN.derIssuer.data = &keyData[2];
-    issuerSN.serialNumber.len = length - (2 + issuerSN.derIssuer.len);
-    issuerSN.serialNumber.data = &keyData[2+issuerSN.derIssuer.len];
+    seckey.len = length;
+    seckey.data = (unsigned char*)key;
 
 #ifdef USE_MOZ_THREAD
-    cert = jar_moz_certkey (certdb, &issuerSN);
+    cert = jar_moz_certkey (certdb, &seckey);
 #else
-    cert = CERT_FindCertByIssuerAndSN (certdb, &issuerSN);
+    cert = CERT_FindCertByKey (certdb, &seckey);
 #endif
 
     JAR_close_database (certdb);
@@ -1667,7 +1658,7 @@ static int jar_validate_pkcs7
   {
   SECItem detdig;
 
-  SEC_PKCS7ContentInfo *cinfo = NULL;
+  SEC_PKCS7ContentInfo *cinfo;
   SEC_PKCS7DecoderContext *dcx;
 
   int status = 0;
@@ -1693,14 +1684,11 @@ static int jar_validate_pkcs7
            (jar_catch_bytes, NULL /*cb_arg*/, NULL /*getpassword*/, jar->mw,
             NULL, NULL, NULL);
 
-  if (dcx == NULL) 
+  if (dcx != NULL) 
     {
-    /* strange pkcs7 failure */
-    return JAR_ERR_PK7;
+    SEC_PKCS7DecoderUpdate (dcx, data, length);
+    cinfo = SEC_PKCS7DecoderFinish (dcx);
     }
-
-  SEC_PKCS7DecoderUpdate (dcx, data, length);
-  cinfo = SEC_PKCS7DecoderFinish (dcx);
 
   if (cinfo == NULL)
     {
@@ -1825,7 +1813,20 @@ CERTCertDBHandle *JAR_open_database (void)
   int keepcerts = 0;
   CERTCertDBHandle *certdb;
 
+  /* local_certdb will only be used if calling from a command line tool */
+  static CERTCertDBHandle local_certdb;
+
   certdb = CERT_GetDefaultCertDB();
+
+  if (certdb == NULL) 
+    {
+    if (CERT_OpenCertDBFilename (&local_certdb, NULL, (PRBool)!keepcerts) != 
+	                                                           SECSuccess)
+      {
+      return NULL;
+      }
+    certdb = &local_certdb;
+    }
 
   return certdb;
   }
@@ -1840,7 +1841,6 @@ CERTCertDBHandle *JAR_open_database (void)
 
 int JAR_close_database (CERTCertDBHandle *certdb)
   {
-#ifdef notdef
   CERTCertDBHandle *defaultdb;
 
   /* This really just retrieves the handle, nothing more */
@@ -1851,7 +1851,6 @@ int JAR_close_database (CERTCertDBHandle *certdb)
 
   if (defaultdb == NULL && certdb != NULL)
     CERT_ClosePermCertDB (certdb);
-#endif
 
   return 0;
   }
@@ -1871,7 +1870,7 @@ static CERTCertificate *jar_get_certificate
   int found = 0;
 
   JAR_Item *it;
-  JAR_Cert *fing = NULL;
+  JAR_Cert *fing;
 
   JAR_Context *ctx;
 
@@ -1908,7 +1907,6 @@ static CERTCertificate *jar_get_certificate
     return NULL;
     }
 
-  PORT_Assert(fing != NULL);
   *result = 0;
   return fing->cert;
   }

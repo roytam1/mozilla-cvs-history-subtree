@@ -39,7 +39,7 @@ static int do_abandon( LDAP *ld, int origid, int msgid,
     LDAPControl **serverctrls, LDAPControl **clientctrls );
 
 /*
- * ldap_abandon - perform an ldap (and X.500) abandon operation. Parameters:
+ * ldap_abandon - perform an ldap abandon operation. Parameters:
  *
  *	ld		LDAP descriptor
  *	msgid		The message id of the operation to abandon
@@ -80,8 +80,8 @@ ldap_abandon_ext( LDAP *ld, int msgid, LDAPControl **serverctrls,
 		return( LDAP_PARAM_ERROR );
 	}
 
-	LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
 	LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
+	LDAP_MUTEX_LOCK( ld, LDAP_REQ_LOCK );
 	rc = do_abandon( ld, msgid, msgid, serverctrls, clientctrls );
 
 	/*
@@ -89,8 +89,8 @@ ldap_abandon_ext( LDAP *ld, int msgid, LDAPControl **serverctrls,
 	 */
 	ldap_memcache_abandon( ld, msgid );
 
-	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 	LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
+	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 
 	return( rc );
 }
@@ -230,7 +230,8 @@ do_abandon( LDAP *ld, int origid, int msgid, LDAPControl **serverctrls,
 
 	if ( lr != NULL ) {
 		if ( sendabandon ) {
-			nsldapi_free_connection( ld, lr->lr_conn, 0, 1 );
+			nsldapi_free_connection( ld, lr->lr_conn, NULL, NULL,
+			    0, 1 );
 		}
 		if ( origid == msgid ) {
 			nsldapi_free_request( ld, lr, 0 );

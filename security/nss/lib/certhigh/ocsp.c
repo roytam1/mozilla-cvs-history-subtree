@@ -653,28 +653,6 @@ ocsp_CreateCertID(PRArenaPool *arena, CERTCertificate *cert, int64 time)
     if (rv != SECSuccess) {
 	goto loser; 
     }
-    certID->issuerSHA1NameHash.data = certID->issuerNameHash.data;
-    certID->issuerSHA1NameHash.len = certID->issuerNameHash.len;
-    /* cache the other two hash algorithms as well */
-    if (SECITEM_AllocItem(arena, &(certID->issuerMD5NameHash),
-			  MD5_LENGTH) == NULL) {
-	goto loser;
-    }
-    rv = PK11_HashBuf(SEC_OID_MD5, certID->issuerMD5NameHash.data,
-		      tempItem->data, tempItem->len);
-    if (rv != SECSuccess) {
-	goto loser; 
-    }
-    if (SECITEM_AllocItem(arena, &(certID->issuerMD2NameHash),
-			  MD2_LENGTH) == NULL) {
-	goto loser;
-    }
-    rv = PK11_HashBuf(SEC_OID_MD2, certID->issuerMD2NameHash.data,
-		      tempItem->data, tempItem->len);
-    if (rv != SECSuccess) {
-	goto loser; 
-    }
-
     SECITEM_FreeItem(tempItem, PR_TRUE);
     tempItem = NULL;
 
@@ -682,18 +660,6 @@ ocsp_CreateCertID(PRArenaPool *arena, CERTCertificate *cert, int64 time)
 				   &(certID->issuerKeyHash)) == NULL) {
 	goto loser;
     }
-    certID->issuerSHA1KeyHash.data = certID->issuerKeyHash.data;
-    certID->issuerSHA1KeyHash.len = certID->issuerKeyHash.len;
-    /* cache the other two hash algorithms as well */
-    if (CERT_SPKDigestValueForCert(arena, issuerCert, SEC_OID_MD5,
-				   &(certID->issuerMD5KeyHash)) == NULL) {
-	goto loser;
-    }
-    if (CERT_SPKDigestValueForCert(arena, issuerCert, SEC_OID_MD2,
-				   &(certID->issuerMD2KeyHash)) == NULL) {
-	goto loser;
-    }
-
 
     /* now we are done with issuerCert */
     CERT_DestroyCertificate(issuerCert);
@@ -2402,40 +2368,6 @@ ocsp_CertHasNoCheckExtension(CERTCertificate *cert)
 }
 #endif	/* LATER */
 
-static PRBool
-ocsp_matchcert(SECItem *certIndex,CERTCertificate *testCert)
-{
-    SECItem item;
-    unsigned char buf[SHA1_LENGTH]; /* MAX Hash Len */
-
-    item.data = buf;
-    item.len = SHA1_LENGTH;
-
-    if (CERT_SPKDigestValueForCert(NULL,testCert,SEC_OID_SHA1, &item) == NULL) {
-	return PR_FALSE;
-    }
-    if  (SECITEM_ItemsAreEqual(certIndex,&item)) {
-	return PR_TRUE;
-    }
-    if (CERT_SPKDigestValueForCert(NULL,testCert,SEC_OID_MD5, &item) == NULL) {
-	return PR_FALSE;
-    }
-    if  (SECITEM_ItemsAreEqual(certIndex,&item)) {
-	return PR_TRUE;
-    }
-    if (CERT_SPKDigestValueForCert(NULL,testCert,SEC_OID_MD2, &item) == NULL) {
-	return PR_FALSE;
-    }
-    if  (SECITEM_ItemsAreEqual(certIndex,&item)) {
-	return PR_TRUE;
-    }
-
-    return PR_FALSE;
-}
-
-static CERTCertificate *
-ocsp_CertGetDefaultResponder(CERTCertDBHandle *handle,CERTOCSPCertID *certID);
-
 /*
  * Check the signature on some OCSP data.  This is a helper function that
  * can be used to check either a request or a response.  The result is
@@ -2465,18 +2397,15 @@ ocsp_CheckSignature(ocspSignature *signature, void *tbs,
 		    const SEC_ASN1Template *encodeTemplate,
 		    CERTCertDBHandle *handle, SECCertUsage certUsage,
 		    int64 checkTime, PRBool lookupByName, void *certIndex,
-		    void *pwArg, CERTCertificate **pSignerCert,
-		    CERTCertificate *issuer)
+		    void *pwArg, CERTCertificate **pSignerCert)
 {
     SECItem rawSignature;
     SECItem *encodedTBS = NULL;
-    CERTCertificate *responder = NULL;
     CERTCertificate *signerCert = NULL;
     SECKEYPublicKey *signerKey = NULL;
     CERTCertificate **certs = NULL;
     SECStatus rv = SECFailure;
     int certCount;
-    int i;
 
     /*
      * If this signature has already gone through verification, just
@@ -2503,7 +2432,6 @@ ocsp_CheckSignature(ocspSignature *signature, void *tbs,
     if (signature->derCerts != NULL) {
 	for (; signature->derCerts[certCount] != NULL; certCount++) {
 	    /* just counting */
-	    /*IMPORT CERT TO SPKI TABLE */
 	}
     }
     rv = CERT_ImportCerts(handle, certUsage, certCount,
@@ -2527,22 +2455,7 @@ ocsp_CheckSignature(ocspSignature *signature, void *tbs,
 	signerCert = CERT_FindCertByName(handle, encodedName);
 	SECITEM_FreeItem(encodedName, PR_TRUE);
     } else {
-	/*
-	 * The signer is either 1) a known issuer CA we passed in,
-	 * 2) the default OCSP responder, or 3) and intermediate CA
-	 * passed in the cert list to use. Figure out which it is.
-	 */
-	responder = ocsp_CertGetDefaultResponder(handle,NULL);
-	if (responder && ocsp_matchcert(certIndex,responder)) {
-	    signerCert = CERT_DupCertificate(responder);
-	} else if (issuer && ocsp_matchcert(certIndex,issuer)) {
-	    signerCert = CERT_DupCertificate(issuer);
-	} 
-	for (i=0; (signerCert == NULL) && (i < certCount); i++) {
-	    if (ocsp_matchcert(certIndex,certs[i])) {
-		signerCert = CERT_DupCertificate(certs[i]);
-	    }
-	}
+	signerCert = CERT_FindCertBySPKDigest(handle, certIndex);
     }
 
     if (signerCert == NULL) {
@@ -2633,7 +2546,6 @@ finish:
 
     if (certs != NULL)
 	CERT_DestroyCertArray(certs, certCount);
-	/* Free CERTS from SPKDigest Table */
 
     return rv;
 }
@@ -2671,8 +2583,7 @@ finish:
 SECStatus
 CERT_VerifyOCSPResponseSignature(CERTOCSPResponse *response,	
 				 CERTCertDBHandle *handle, void *pwArg,
-				 CERTCertificate **pSignerCert,
-				 CERTCertificate *issuer)
+				 CERTCertificate **pSignerCert)
 {
     ocspResponseData *tbsData;		/* this is what is signed */
     PRBool byName;
@@ -2712,7 +2623,7 @@ CERT_VerifyOCSPResponseSignature(CERTOCSPResponse *response,
     return ocsp_CheckSignature(ocsp_GetResponseSignature(response),
 			       tbsData, ocsp_ResponseDataTemplate,
 			       handle, certUsageStatusResponder, producedAt,
-			       byName, certIndex, pwArg, pSignerCert, issuer);
+			       byName, certIndex, pwArg, pSignerCert);
 }
 
 /*
@@ -2724,10 +2635,12 @@ ocsp_CertIDsMatch(CERTCertDBHandle *handle,
 		  CERTOCSPCertID *certID1, CERTOCSPCertID *certID2)
 {
     PRBool match = PR_FALSE;
+    CERTCertificate *issuer1 = NULL;
+    CERTCertificate *issuer2 = NULL;
     SECItem *foundHash = NULL;
+    CERTCertificate *found;
     SECOidTag hashAlg;
-    SECItem *keyHash;
-    SECItem *nameHash;
+    SECItem *givenHash;
 
     /*
      * In order to match, they must have the same issuer and the same
@@ -2755,34 +2668,63 @@ ocsp_CertIDsMatch(CERTCertDBHandle *handle,
 	goto done;
     }
 
-    hashAlg = SECOID_FindOIDTag(&certID2->hashAlgorithm.algorithm);
-    switch (hashAlg) {
-    case SEC_OID_SHA1:
-	keyHash = &certID1->issuerSHA1KeyHash;
-	nameHash = &certID1->issuerSHA1NameHash;
-	break;
-    case SEC_OID_MD5:
-	keyHash = &certID1->issuerMD5KeyHash;
-	nameHash = &certID1->issuerMD5NameHash;
-	break;
-    case SEC_OID_MD2:
-	keyHash = &certID1->issuerMD2KeyHash;
-	nameHash = &certID1->issuerMD2NameHash;
-	break;
-    default:
-	foundHash == NULL;
+    /*
+     * The hash algorithms are different; this is harder.  We have
+     * to do a lookup of each one and compare them.
+     */
+    issuer1 = CERT_FindCertBySPKDigest(handle, &certID1->issuerKeyHash);
+    issuer2 = CERT_FindCertBySPKDigest(handle, &certID2->issuerKeyHash);
+
+    if (issuer1 == NULL && issuer2 == NULL) {
+	/* If we cannot find an issuer cert, we have no way to compare. */
+	goto done;
     }
 
+    if (issuer1 != NULL && issuer2 != NULL) {
+	/* If we found a cert for each hash, we can just compare them. */
+	if (issuer1 == issuer2)
+	    match = PR_TRUE;
+	goto done;
+    }
+
+    /*
+     * We found one issuer, but not both.  So we have to use the other certID
+     * hash algorithm on the key in the found issuer cert to see if they match.
+     */
+
+    if (issuer1 != NULL) {
+	found = issuer1;
+	hashAlg = SECOID_FindOIDTag(&certID2->hashAlgorithm.algorithm);
+	givenHash = &certID2->issuerKeyHash;
+    } else {
+	found = issuer2;
+	hashAlg = SECOID_FindOIDTag(&certID1->hashAlgorithm.algorithm);
+	givenHash = &certID1->issuerKeyHash;
+    }
+
+    foundHash = CERT_SPKDigestValueForCert(NULL, found, hashAlg, NULL);
     if (foundHash == NULL) {
 	goto done;
     }
 
-    if ((SECITEM_CompareItem(nameHash, &certID2->issuerNameHash) == SECEqual)
-      && (SECITEM_CompareItem(keyHash, &certID2->issuerKeyHash) == SECEqual)) {
+    if (SECITEM_CompareItem(foundHash, givenHash) == SECEqual) {
+	/*
+	 * Strictly speaking, we should compare the issuerNameHash, too,
+	 * but I think the added complexity doesn't actually buy anything.
+	 */
 	match = PR_TRUE;
     }
 
 done:
+    if (issuer1 != NULL) {
+	CERT_DestroyCertificate(issuer1);
+    }
+    if (issuer2 != NULL) {
+	CERT_DestroyCertificate(issuer2);
+    }
+    if (foundHash != NULL) {
+	SECITEM_FreeItem(foundHash, PR_TRUE);
+    }
     return match;
 }
 
@@ -2846,12 +2788,15 @@ ocsp_GetCheckingContext(CERTCertDBHandle *handle)
 
     return ocspcx;
 }
+
 /*
  * Return true if the given signerCert is the default responder for
  * the given certID.  If not, or if any error, return false.
  */
-static CERTCertificate *
-ocsp_CertGetDefaultResponder(CERTCertDBHandle *handle,CERTOCSPCertID *certID)
+static PRBool
+ocsp_CertIsDefaultResponderForCertID(CERTCertDBHandle *handle,
+				     CERTCertificate *signerCert,
+				     CERTOCSPCertID *certID)
 {
     ocspCheckingContext *ocspcx;
 
@@ -2869,26 +2814,12 @@ ocsp_CertGetDefaultResponder(CERTCertDBHandle *handle,CERTOCSPCertID *certID)
     */
     if (ocspcx->useDefaultResponder) {
 	PORT_Assert(ocspcx->defaultResponderCert != NULL);
-	return ocspcx->defaultResponderCert;
+	if (ocspcx->defaultResponderCert == signerCert)
+	    return PR_TRUE;
     }
 
 loser:
-    return NULL;
-}
-
-/*
- * Return true if the given signerCert is the default responder for
- * the given certID.  If not, or if any error, return false.
- */
-static PRBool
-ocsp_CertIsDefaultResponderForCertID(CERTCertDBHandle *handle,
-				     CERTCertificate *signerCert,
-				     CERTOCSPCertID *certID)
-{
-    CERTCertificate *defaultResponderCert;
-
-    defaultResponderCert = ocsp_CertGetDefaultResponder(handle, certID);
-    return (PRBool) (defaultResponderCert == signerCert);
+    return PR_FALSE;
 }
 
 /*
@@ -3369,7 +3300,6 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
     CERTOCSPRequest *request = NULL;
     CERTOCSPResponse *response = NULL;
     CERTCertificate *signerCert = NULL;
-    CERTCertificate *issuerCert = NULL;
     ocspResponseData *responseData;
     int64 producedAt;
     CERTOCSPCertID *certID;
@@ -3483,9 +3413,7 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
      * If we've made it this far, we expect a response with a good signature.
      * So, check for that.
      */
-    issuerCert = CERT_FindCertIssuer(cert, time, certUsageAnyCA);
-    rv = CERT_VerifyOCSPResponseSignature(response, handle, pwArg, &signerCert,
-			issuerCert);
+    rv = CERT_VerifyOCSPResponseSignature(response, handle, pwArg, &signerCert);
     if (rv != SECSuccess)
 	goto loser;
 
@@ -3543,8 +3471,6 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
     rv = ocsp_CertHasGoodStatus(single, time);
 
 loser:
-    if (issuerCert != NULL)
-	CERT_DestroyCertificate(issuerCert);
     if (signerCert != NULL)
 	CERT_DestroyCertificate(signerCert);
     if (response != NULL)
@@ -3782,7 +3708,7 @@ CERT_SetOCSPDefaultResponder(CERTCertDBHandle *handle,
       /*
        * look for the cert on an external token.
        */
-      cert = PK11_FindCertFromNickname((char *)name, NULL);
+      cert = PK11_FindCertFromNickname(name, NULL);
     }
     if (cert == NULL)
 	return SECFailure;
@@ -3979,97 +3905,3 @@ CERT_DisableOCSPDefaultResponder(CERTCertDBHandle *handle)
     statusContext->useDefaultResponder = PR_FALSE;
     return SECSuccess;
 }
-static const SECHashObject *
-OidTagToDigestObject(SECOidTag digestAlg)
-{
-    const SECHashObject *rawDigestObject;
-
-    switch (digestAlg) {
-      case SEC_OID_MD2:
-        rawDigestObject = &SECHashObjects[HASH_AlgMD2];
-        break;
-      case SEC_OID_MD5:
-        rawDigestObject = &SECHashObjects[HASH_AlgMD5];
-        break;
-      case SEC_OID_SHA1:
-        rawDigestObject = &SECHashObjects[HASH_AlgSHA1];
-        break;
-      default:
-        PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
-        rawDigestObject = NULL;
-        break;
-    }
-    return(rawDigestObject);
-}
-
-/*
- * Digest the cert's subject public key using the specified algorithm.
- * The necessary storage for the digest data is allocated.  If "fill" is
- * non-null, the data is put there, otherwise a SECItem is allocated.
- * Allocation from "arena" if it is non-null, heap otherwise.  Any problem
- * results in a NULL being returned (and an appropriate error set).
- */
-SECItem *
-CERT_SPKDigestValueForCert(PRArenaPool *arena, CERTCertificate *cert,
-                           SECOidTag digestAlg, SECItem *fill)
-{
-    const SECHashObject *digestObject;
-    void *digestContext;
-    SECItem *result = NULL;
-    void *mark = NULL;
-    SECItem spk;
-
-    if ( arena != NULL ) {
-        mark = PORT_ArenaMark(arena);
-    }
-
-    digestObject = OidTagToDigestObject(digestAlg);
-    if ( digestObject == NULL ) {
-        goto loser;
-    }
-
-    if ((fill == NULL) || (fill->data == NULL)) {
-	result = SECITEM_AllocItem(arena, fill, digestObject->length);
-	if ( result == NULL ) {
-	   goto loser;
-	}
-	fill = result;
-    }
-
-    /*
-     * Copy just the length and data pointer (nothing needs to be freed)
-     * of the subject public key so we can convert the length from bits
-     * to bytes, which is what the digest function expects.
-     */
-    spk = cert->subjectPublicKeyInfo.subjectPublicKey;
-    DER_ConvertBitString(&spk);
-
-    /*
-     * Now digest the value, using the specified algorithm.
-     */
-    digestContext = digestObject->create();
-    if ( digestContext == NULL ) {
-        goto loser;
-    }
-    digestObject->begin(digestContext);
-    digestObject->update(digestContext, spk.data, spk.len);
-    digestObject->end(digestContext, fill->data, &(fill->len), fill->len);
-    digestObject->destroy(digestContext, PR_TRUE);
-
-    if ( arena != NULL ) {
-        PORT_ArenaUnmark(arena, mark);
-    }
-    return(fill);
-
-loser:
-    if ( arena != NULL ) {
-        PORT_ArenaRelease(arena, mark);
-    } else {
-        if ( result != NULL ) {
-            SECITEM_FreeItem(result, (fill == NULL) ? PR_TRUE : PR_FALSE);
-        }
-    }
-    return(NULL);
-}
-
-

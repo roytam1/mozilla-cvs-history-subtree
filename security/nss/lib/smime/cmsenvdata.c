@@ -46,7 +46,6 @@
 #include "secoid.h"
 #include "pk11func.h"
 #include "secerr.h"
-/*#include "secpkcs5.h" */
 
 /*
  * NSS_CMSEnvelopedData_Create - create an enveloped data message
@@ -316,7 +315,7 @@ NSS_CMSEnvelopedData_Decode_BeforeData(NSSCMSEnvelopedData *envd)
     SECAlgorithmID *bulkalg;
     SECStatus rv = SECFailure;
     NSSCMSContentInfo *cinfo;
-    NSSCMSRecipient **recipient_list = NULL;
+    NSSCMSRecipient **recipient_list;
     NSSCMSRecipient *recipient;
     int rlIndex;
 

@@ -47,7 +47,7 @@
      				/* the add certificate code needs to get */
                            	/* rewritten/abstracted and then this */
       				/* include should be removed! */
-/*#include "cdbhdl.h" */
+#include "cdbhdl.h"
 #include "cryptohi.h"
 #include "key.h"
 #include "secasn1.h"
@@ -58,7 +58,6 @@
 #include "secerr.h"
 #include "sechash.h"	/* for HASH_GetHashObject() */
 #include "secder.h"
-/*#include "secpkcs5.h" */
 
 struct sec_pkcs7_decoder_worker {
     int depth;
@@ -462,7 +461,7 @@ sec_pkcs7_decoder_get_recipient_key (SEC_PKCS7DecoderContext *p7dcx,
     PK11SymKey *bulkkey;
     SECOidTag keyalgtag, bulkalgtag, encalgtag;
     PK11SlotInfo *slot;
-    int bulkLength = 0;
+    int i, bulkLength = 0;
 
     if (recipientinfos == NULL || recipientinfos[0] == NULL) {
 	p7dcx->error = SEC_ERROR_NOT_A_RECIPIENT;
@@ -1449,7 +1448,7 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
     SEC_PKCS7SignerInfo **signerinfos, *signerinfo;
     CERTCertificate *cert, **certs;
     PRBool goodsig;
-    CERTCertDBHandle *certdb, *defaultdb; 
+    CERTCertDBHandle local_certdb, *certdb, *defaultdb;
     SECOidData *algiddata;
     int i, certcount;
     SECKEYPublicKey *publickey;
@@ -1541,7 +1540,10 @@ sec_pkcs7_verify_signature(SEC_PKCS7ContentInfo *cinfo,
      */
     certdb = defaultdb;
     if (certdb == NULL) {
-	goto done;
+	if (CERT_OpenCertDBFilename (&local_certdb, NULL,
+				     (PRBool)!keepcerts) != SECSuccess)
+	    goto done;
+	certdb = &local_certdb;
     }
 
     certcount = 0;
@@ -1911,6 +1913,9 @@ done:
 
     if (certs != NULL)
 	CERT_DestroyCertArray (certs, certcount);
+
+    if (defaultdb == NULL && certdb != NULL)
+	CERT_ClosePermCertDB (certdb);
 
     if (publickey != NULL)
 	SECKEY_DestroyPublicKey (publickey);

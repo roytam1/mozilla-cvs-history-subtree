@@ -445,12 +445,12 @@ static int is_dir (char *filename)
  *
  */
 SECItem *
-password_hardcode(void *arg, void *handle)
+password_hardcode(void *arg, SECKEYKeyDBHandle *handle)
 {
   SECItem *pw = NULL;
   if (password) {
     pw = SECITEM_AllocItem(NULL, NULL, PL_strlen(password));
-    pw->data = (unsigned char *)PL_strdup(password);
+    pw->data = PL_strdup(password);
     password = NULL;
   }
   return pw;
@@ -461,8 +461,7 @@ pk11_password_hardcode(PK11SlotInfo *slot, PRBool retry, void *arg)
 {
   char *pw;
   pw = password ? PORT_Strdup (password) : NULL;
-  /* XXX don't do this, or FIPS won't work */
-  /*password = NULL;*/
+  password = NULL;
   return pw;
 }
 

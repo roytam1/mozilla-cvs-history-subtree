@@ -33,6 +33,11 @@
 #define OTUNIXERRORS 1
 #endif
 
+
+/* Read standard Mac prefix header */
+#include "MacPrefix.h"
+
+#if 0 /* These are picked up from the MacPrefix file */
 #ifndef macintosh
 #define macintosh
 #endif 
@@ -42,3 +47,4 @@
 #include "IDE_Options.h"
 // #define NO_USERINTERFACE
 // #define LDAP_DEBUG
+#endif /* 0 */
