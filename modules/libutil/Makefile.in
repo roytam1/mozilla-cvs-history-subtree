@@ -22,11 +22,28 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= @srcdir@ @srcdir@/public
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src
+MODULE		= util
+LIBRARY_NAME	= mozutil_s
+
+REQUIRES	= xpcom \
+		  $(NULL)
+
+CSRCS		= src/obs.c
+CPPSRCS		= src/stopwatch.cpp
+
+EXPORTS		= \
+		public/xp_obs.h \
+		public/stopwatch.h \
+		public/nsTimer.h \
+		$(NULL)
+
+XPIDLSRCS	= nsITimeRecorder.idl
+
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 
