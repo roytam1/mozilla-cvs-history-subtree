@@ -1577,8 +1577,8 @@ sub fork_and_log {
 
     unless ($pid) { # child
 
-        # Chimera don't want to reset home dir.
-        unless ($Settings::ResetHomeDirForTests) {
+        # Chimera doesn't want to reset home dir.
+        if ($Settings::ResetHomeDirForTests) {
             $ENV{HOME} = $home if ($Settings::OS ne "BeOS");
         }
             
