@@ -42,10 +42,6 @@
 #include "nsLocalFile.h"
 #include "nsDebug.h"
 
-#ifdef XP_MACOSX
-#include <CoreServices/CoreServices.h>
-#endif
-
 #if defined(XP_MAC)
 #include <Folders.h>
 #include <Files.h>
@@ -63,6 +59,7 @@
 #include <sys/param.h>
 #include "prenv.h"
 #ifdef XP_MACOSX
+#include <CoreServices/CoreServices.h>
 #include <Folders.h>
 #include <Files.h>
 #include <Memory.h>
