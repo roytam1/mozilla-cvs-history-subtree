@@ -76,6 +76,6 @@ install:: $(LIBRARY)
 	$(MAKE_INSTALL) fontEncoding.properties $(DIST)\bin\res\fonts
 
 clobber::
-	rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
+	rm -f $(DIST)\lib\$(LIBRARY)
 	rm -f $(PDBFILE).pdb
 	rm -f $(DIST)\bin\res\fonts\fontEncoding.properties
