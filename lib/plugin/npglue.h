@@ -383,10 +383,11 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class nsPluginInstancePeer :
-    virtual public nsIPluginInstancePeer2,
-    virtual public nsILiveConnectPluginInstancePeer,
-    virtual public nsIWindowlessPluginInstancePeer
+class nsPluginTagInfo;
+
+class nsPluginInstancePeer : public nsIPluginInstancePeer2,
+                             public nsILiveConnectPluginInstancePeer,
+                             public nsIWindowlessPluginInstancePeer
 {
 public:
 
@@ -484,7 +485,8 @@ protected:
     // npglue.c routines wherever possible.
     NPP npp;
 
-    nsIPluginInstance* userInst;
+    nsIPluginInstance*  userInst;
+    nsPluginTagInfo*    tagInfo;
 
 };
 

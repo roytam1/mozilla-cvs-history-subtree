@@ -355,10 +355,14 @@ nsPluginInstancePeer::nsPluginInstancePeer(NPP npp)
     : npp(npp), userInst(NULL)
 {
     NS_INIT_AGGREGATED(NULL);
+    tagInfo = new nsPluginTagInfo(npp);
+    tagInfo->AddRef();
 }
 
 nsPluginInstancePeer::~nsPluginInstancePeer(void)
 {
+    tagInfo->Release();
+    tagInfo = NULL;
 }
 
 NS_IMPL_AGGREGATED(nsPluginInstancePeer);
@@ -376,8 +380,7 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
         AddRef(); 
         return NS_OK; 
     }
-    // XXX delegate to nsPluginTagInfo
-    return NS_NOINTERFACE;
+    return tagInfo->QueryInterface(aIID, aInstancePtr);
 }
 
 NS_METHOD_(nsMIMEType)
