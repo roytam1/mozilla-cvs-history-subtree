@@ -159,8 +159,9 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource viewRolloverColor;   /* What to display when an item is rolled over in a view.*/
   RDF_Resource viewPressedColor; /* What to display when an item is pressed in a view. */
   RDF_Resource viewDisabledColor; /* Color to use when item is disabled in a view. */
+  RDF_Resource urlBar; /* Whether or not the button is a URL bar. */
+  RDF_Resource urlBarWidth; /* The width of the URL bar. */
   
-
 } RDF_NCVocabStruct;
 
 typedef RDF_NCVocabStruct* RDF_NCVocab;

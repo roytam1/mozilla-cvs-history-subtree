@@ -216,8 +216,8 @@ createNavCenterVocab () {
   gNavCenter->RDF_largePressedIcon  = newResource("largePressedIcon", 0);
   gNavCenter->buttonTooltipText = newResource("buttonTooltipText", 0);
   gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0);
-
-
+  gNavCenter->urlBar = newResource("urlBar", 0);
+  gNavCenter->urlBarWidth = newResource("urlBarWidth", 0);
 
   gNavCenter->cookieDomain = newResource("cookieDomain", 0);
   gNavCenter->cookieValue = newResource("cookieValue", 0);
@@ -225,8 +225,6 @@ createNavCenterVocab () {
   gNavCenter->cookiePath  = newResource("cookiePath", 0);
   gNavCenter->cookieSecure = newResource("cookieSecure", 0);
   gNavCenter->cookieExpires = newResource("cookieExpiration", 0);
-
-
 
   gNavCenter->viewRolloverColor = newResource("viewRolloverColor", 0);
   gNavCenter->viewPressedColor = newResource("viewPressedColor", 0);

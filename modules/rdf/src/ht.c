@@ -4595,6 +4595,19 @@ HT_IsContainerOpen (HT_Resource node)
 }
 
 
+PR_PUBLIC_API(PRBool)
+HT_IsURLBar(HT_Resource node)
+{
+	void* data;
+	char* strData;
+
+	HT_GetNodeData(node, gNavCenter->urlBar, HT_COLUMN_STRING, &data);
+	strData = (char*)data;
+	if (strData && (strData[0] == 'Y' || strData[0] == 'y'))
+		return true;
+
+	return false;
+}
 
 PR_PUBLIC_API(PRBool)
 HT_IsSeparator (HT_Resource node)

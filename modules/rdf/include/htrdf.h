@@ -375,6 +375,12 @@ PR_PUBLIC_API(char*) HT_GetNodeName(HT_Resource node);
 /*-----------------------------------------------------------------------*/
 
 /*
+ * HT_IsURLBar
+ * determine whether node is a URL bar
+ */
+PR_PUBLIC_API(PRBool) HT_IsURLBar (HT_Resource node);
+
+/*
  * HT_IsSeparator
  * determine whether node is a separator
  */
