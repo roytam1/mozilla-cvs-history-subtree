@@ -243,6 +243,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
             eventRegistration.addDocumentLoadListener(this);
             eventRegistration.addMouseListener(this);
 
+            /*********
             // PENDING(edburns): test code, replace with production code
             bookmarks = 
                 (Bookmarks)
@@ -250,7 +251,6 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
             System.out.println("debug: edburns: got Bookmarks instance");
 
             bookmarksTree = bookmarks.getBookmarks();
-            /*********
             TreeNode bookmarksRoot = (TreeNode) bookmarksTree.getRoot();
 
             System.out.println("debug: edburns: testing the Enumeration");
