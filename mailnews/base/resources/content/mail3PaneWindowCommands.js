@@ -1116,5 +1116,9 @@ function IsFakeAccount() {
 function SendCommandToThreadPane(command)
 {
   ThreadPaneController.doCommand(command);
+ 
+  // if we are sending the command so the thread pane
+  // we should focus the thread pane
+  SetFocusThreadPane();
 }
 
