@@ -65,11 +65,7 @@ static XP_Bool gForcingRedraw = FALSE;
 #define NP_GET_URL_APP(urls)    ((NPEmbeddedApp*)((urls)->fe_data))
 #define NP_SET_URL_APP(urls, a) ((urls)->fe_data = (void*)(a))
 
-#ifdef OJI_OLD_ACCESSOR
-#define NP_GET_PLUGIN_INSTANCE(npp) (((nsPluginInstancePeer*)(npp)->pdata)->GetPluginInstance())
-#else
 #define NP_GET_PLUGIN_INSTANCE(npp) ((nsIPluginInstance*)((np_data*)((np_instance*)(npp)->ndata)->app->np_data)->sdata)
-#endif
 
 NPNetscapeFuncs npp_funcs;
 
@@ -189,19 +185,11 @@ np_processURLNode(np_urlsnode* node, np_instance* instance, int status)
 
 #else // !NEW_PLUGIN_STREAM_API
 
-#ifdef OJI_OLD_ACCESSOR
-                nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-                nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
                 nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(instance->npp);
-#endif
                 if (pluginInst != NULL) {
                     pluginInst->URLNotify(node->urls->address, node->urls->window_target,
                                           (nsPluginReason)np_statusToReason(status),
                                           node->notifyData);
-#ifdef OJI_OLD_ACCESSOR
-                    pluginInst->Release();
-#endif
                 }
 
 #endif // !NEW_PLUGIN_STREAM_API
@@ -2702,12 +2690,7 @@ np_setwindow(np_instance *instance, NPWindow *appWin)
     {
         TRACEMSG(("npglue.c: CallNPP_SetWindowProc"));
         if (instance->handle->userPlugin) {
-#ifdef OJI_OLD_ACCESSOR
-            nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-            nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
             nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(instance->npp);
-#endif
             if (pluginInst != NULL) {
                 pluginInst->SetWindow((nsPluginWindow*)appWin);
 
@@ -2715,19 +2698,11 @@ np_setwindow(np_instance *instance, NPWindow *appWin)
                 // the plugin's Start() method.
                 if (lo_struct && ! (lo_struct->objTag.ele_attrmask & LO_ELE_DRAWN)) {
                     nsresult err = pluginInst->Start();
-#ifdef OJI_OLD_ACCESSOR
-                    pluginInst->Release();
-#endif
                     if (err != NS_OK) {
                         np_delete_instance(instance);
                         return PR_FALSE;
                     }
                 } 
-#ifdef OJI_OLD_ACCESSOR
-                else {
-                    pluginInst->Release();
-                }
-#endif
             }
         }
         else if (ISFUNCPTR(instance->handle->f->setwindow)) {
@@ -2902,20 +2877,11 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
                                                             (void**)&pluginInst);
                 if (err2 == NS_OK && pluginInst != NULL) {
 
-#ifdef OJI_OLD_ACCESSOR
-                    // SetPluginInstance adds a pointer from the peer back to the plugin
-                    // instance, but does not add a refcount. 
-                    peerInst->SetPluginInstance(pluginInst);
-#endif
                     // The main reference to the peer will be held by the instance
                     // via Initialize. 
                     nsresult err3 = pluginInst->Initialize(peerInst);
 
                     if (err3 == NS_OK) {
-#ifdef OJI_OLD_ACCESSOR
-                        // XXX Is this pointer to the peer now bogus?
-                        npp->pdata = peerInst;
-#endif
                         // The user's plugin instance is stored in the saved data of the np_data
                         // structure. This is _the_ main reference to the instance, and the one
                         // that holds the refcount (initialized to 1 by CreateInstance).
@@ -3164,12 +3130,7 @@ np_newstream(URL_Struct *urls, np_handle *handle, np_instance *instance)
 
 #else // !NEW_PLUGIN_STREAM_API
 
-#ifdef OJI_OLD_ACCESSOR
-        nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-        nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
         nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(instance->npp);
-#endif
         nsPluginStreamPeer* peerStream = new nsPluginStreamPeer(urls, stream);
         if (peerStream == NULL) {
             /* XXX where's the error go? */
@@ -3189,9 +3150,6 @@ np_newstream(URL_Struct *urls, np_handle *handle, np_instance *instance)
                 /* XXX where's the error go? */
             }
         }
-#ifdef OJI_OLD_ACCESSOR
-        pluginInst->Release();
-#endif
 
 #endif // !NEW_PLUGIN_STREAM_API
     }
@@ -3971,30 +3929,15 @@ np_delete_instance(np_instance *instance)
 
             TRACEMSG(("npglue.c: CallNPP_DestroyProc"));
             if (np_is50StylePlugin(instance->handle)) {
-#ifdef OJI_OLD_ACCESSOR
-                nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-                nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
                 nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(instance->npp);
-#endif
                 pluginInst->SetWindow(NULL);
                 
                 // tell the plugin instance the browser is through with it.
                 nsresult err = pluginInst->Destroy();
                 XP_ASSERT(err == NS_OK);
-#ifdef OJI_OLD_ACCESSOR
-                pluginInst->Release();
-#endif
                 
-#ifdef OJI_OLD_ACCESSOR
-                // break the reference cycle and release the instance peer.
-                peerInst->SetPluginInstance(NULL);
-                nsrefcnt cnt = peerInst->Release();
-                XP_ASSERT(cnt == 0);
-#else
                 // releasing the instance will release the peer
                 pluginInst->Release();
-#endif
 
                 // XXX Any other bookkeeping we need to do here?
 
@@ -4280,12 +4223,7 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
             if (handle) {
                 TRACEMSG(("npglue.c: CallNPP_HandleEventProc"));
                 if (handle->userPlugin) {
-#ifdef OJI_OLD_ACCESSOR
-                    nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)ndata->instance->npp->pdata;
-                    nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
                     nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(ndata->instance->npp);
-#endif
                     if (pluginInst == NULL)
                         return 0;
 
@@ -4312,9 +4250,6 @@ NPL_HandleEvent(NPEmbeddedApp *app, void *event, void* window)
 #endif
                     PRBool eventHandled = PR_FALSE;
                     nsresult result = pluginInst->HandleEvent(&newEvent, &eventHandled);
-#ifdef OJI_OLD_ACCESSOR
-                    pluginInst->Release();
-#endif
                     return eventHandled;
                 }
                 else if (handle->f && ISFUNCPTR(handle->f->event)) {
@@ -4414,16 +4349,8 @@ NPL_Print(NPEmbeddedApp *app, void *pdata)
 
                     TRACEMSG(("npglue.c: CallNPP_PrintProc(1)"));
                     if (handle->userPlugin) {
-#ifdef OJI_OLD_ACCESSOR
-                        nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)ndata->instance->npp->pdata;
-                        nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
                         nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(ndata->instance->npp);
-#endif
                         pluginInst->Print((nsPluginPrint*)pdata);
-#ifdef OJI_OLD_ACCESSOR
-                        pluginInst->Release();
-#endif
                     }
                     else if (handle->f && ISFUNCPTR(handle->f->print)) {
                         CallNPP_PrintProc(handle->f->print, ndata->instance->npp, (NPPrint*)pdata);
@@ -4437,16 +4364,8 @@ NPL_Print(NPEmbeddedApp *app, void *pdata)
                 else{
                     TRACEMSG(("npglue.c: CallNPP_PrintProc(2)"));
                     if (handle->userPlugin) {
-#ifdef OJI_OLD_ACCESSOR
-                        nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)ndata->instance->npp->pdata;
-                        nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
                         nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(ndata->instance->npp);
-#endif
                         pluginInst->Print((nsPluginPrint*)pdata);
-#ifdef OJI_OLD_ACCESSOR
-                        pluginInst->Release();
-#endif
                     }
                     else if (handle->f && ISFUNCPTR(handle->f->print)) {
                         CallNPP_PrintProc(handle->f->print, ndata->instance->npp, (NPPrint*)pdata);
@@ -4537,17 +4456,9 @@ NPL_EmbedDelete(MWContext* cx, LO_EmbedStruct* embed_struct)
                 /* XXX We could just get the _real_ instance by
                    traversing ndata->sdata, but that scares me for
                    some reason. */
-#ifdef OJI_OLD_ACCESSOR
-                nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*) ndata->instance->npp->pdata;
-                nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
                 nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(ndata->instance->npp);
-#endif
 
                 nsresult err = pluginInst->Stop();
-#ifdef OJI_OLD_ACCESSOR
-                pluginInst->Release();
-#endif
                 if (err == NS_OK) {
                     /* XXX So I'm going out on a limb here and saying that
                        by keeping the plugin in a "cached" state, we
@@ -4752,12 +4663,7 @@ NPL_GetText(LO_CommonPluginStruct* lo_embed)
     if (instance == NULL)
         return NULL;
 
-#ifdef OJI_OLD_ACCESSOR
-    nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-    nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
     nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(instance->npp);
-#endif
     if (pluginInst == NULL)
         return NULL;
 
@@ -4767,9 +4673,6 @@ NPL_GetText(LO_CommonPluginStruct* lo_embed)
         PR_ASSERT(err == NS_OK);
         jvmInst->Release();
     }
-#ifdef OJI_OLD_ACCESSOR
-    pluginInst->Release();
-#endif
 #endif
     return text;
 }
@@ -4787,12 +4690,7 @@ NPL_GetJavaObject(LO_CommonPluginStruct* lo_embed)
     if (instance == NULL)
         return NULL;
 
-#ifdef OJI_OLD_ACCESSOR
-    nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*)instance->npp->pdata;
-    nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
-#else
     nsIPluginInstance* pluginInst = NP_GET_PLUGIN_INSTANCE(instance->npp);
-#endif
     if (pluginInst == NULL)
         return NULL;
 
@@ -4802,9 +4700,6 @@ NPL_GetJavaObject(LO_CommonPluginStruct* lo_embed)
         PR_ASSERT(err == NS_OK);
         jvmInst->Release();
     }
-#ifdef OJI_OLD_ACCESSOR
-    pluginInst->Release();
-#endif
 #endif
     return javaobject;
 }
