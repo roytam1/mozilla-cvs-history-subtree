@@ -90,9 +90,8 @@ public EventRegistrationImpl(WrapperFactory yourFactory,
 
 public void delete()
 {
-    // PENDING(ashuk): remove all listeners, making sure to set
-    // references to null
-
+    // this removes all listeners
+    nativeEventThread.removeListener(null);
     nativeEventThread = null;
     
     super.delete();
