@@ -33,8 +33,8 @@
 
 // --- area -----
 
-nsHTMLAreaAccessible::nsHTMLAreaAccessible(nsIDOMNode *aDomNode, nsIAccessible *aAccParent):
-nsGenericAccessible(), mDOMNode(aDomNode), mAccParent(aAccParent)
+nsHTMLAreaAccessible::nsHTMLAreaAccessible(nsIPresShell *aPresShell, nsIDOMNode *aDomNode, nsIAccessible *aAccParent):
+nsGenericAccessible(), mPresShell(aPresShell), mDOMNode(aDomNode), mAccParent(aAccParent)
 { 
 }
 
@@ -99,7 +99,26 @@ NS_IMETHODIMP nsHTMLAreaAccessible::GetAccDefaultAction(PRUnichar **_retval)
 
 NS_IMETHODIMP nsHTMLAreaAccessible::AccDoDefaultAction()
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsIPresContext> presContext;
+  mPresShell->GetPresContext(getter_AddRefs(presContext));
+  if (presContext) {
+    nsMouseEvent linkClickEvent;
+    linkClickEvent.eventStructType = NS_EVENT;
+    linkClickEvent.message = NS_MOUSE_LEFT_CLICK;
+    linkClickEvent.isShift = PR_FALSE;
+    linkClickEvent.isControl = PR_FALSE;
+    linkClickEvent.isAlt = PR_FALSE;
+    linkClickEvent.isMeta = PR_FALSE;
+    linkClickEvent.clickCount = 0;
+    linkClickEvent.widget = nsnull;
+
+    nsEventStatus eventStatus =  nsEventStatus_eIgnore;
+    nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
+    content->HandleDOMEvent(presContext, &linkClickEvent, 
+      nsnull, NS_EVENT_FLAG_INIT, &eventStatus);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP nsHTMLAreaAccessible::GetAccState(PRUint32 *_retval) 
@@ -143,7 +162,7 @@ nsIAccessible *nsHTMLAreaAccessible::CreateAreaAccessible(nsIDOMNode *aDOMNode)
   NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
   if (accService) {
     nsIAccessible* acc = nsnull;
-    accService->CreateHTMLAreaAccessible(aDOMNode, mAccParent, &acc);
+    accService->CreateHTMLAreaAccessible(mPresShell, aDOMNode, mAccParent, &acc);
     return acc;
   }
   return nsnull;

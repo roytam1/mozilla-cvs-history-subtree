@@ -33,7 +33,6 @@
 #include "nsIFrame.h"
 #include "nsRootAccessible.h"
 #include "nsINameSpaceManager.h"
-#include "nsMutableAccessible.h"
 #include "nsHTMLFormControlAccessible.h"
 #include "nsLayoutAtoms.h"
 #include "nsSelectAccessible.h"
@@ -42,7 +41,7 @@
 #include "nsHTMLImageAccessible.h"
 #include "nsHTMLAreaAccessible.h"
 #include "nsHTMLLinkAccessible.h"
-#include "nsHTMLFrameAccessible.h"
+#include "nsMutableAccessible.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -328,10 +327,12 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLImageAccessible(nsISupports *aFr
 }
 
 /* nsIAccessible createHTMLAreaAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
-NS_IMETHODIMP nsAccessibilityService::CreateHTMLAreaAccessible(nsIDOMNode *aDOMNode, nsIAccessible *aAccParent, 
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLAreaAccessible(nsISupports *aShell, nsIDOMNode *aDOMNode, nsIAccessible *aAccParent, 
                                                                nsIAccessible **_retval)
 {
-  *_retval = new nsHTMLAreaAccessible(aDOMNode, aAccParent);
+  nsCOMPtr<nsIPresShell> shell(do_QueryInterface(aShell));
+
+  *_retval = new nsHTMLAreaAccessible(shell, aDOMNode, aAccParent);
 
   if (*_retval) {
     NS_ADDREF(*_retval);

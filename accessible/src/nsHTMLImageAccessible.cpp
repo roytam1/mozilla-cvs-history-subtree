@@ -33,8 +33,8 @@
 
 // --- image -----
 
-nsHTMLImageAccessible::nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDOMNode, nsIImageFrame *imageFrame):
-nsLinkableAccessible(aShell, aDOMNode)  
+nsHTMLImageAccessible::nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDOMNode, nsIImageFrame *aImageFrame):
+nsLinkableAccessible(aShell, aDOMNode), mPresShell(aShell)
 { 
   nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aDOMNode));
   nsCOMPtr<nsIDocument> doc;
@@ -103,7 +103,8 @@ nsIAccessible *nsHTMLImageAccessible::CreateAreaAccessible(PRUint32 areaNum)
   NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
   if (accService) {
     nsIAccessible* acc = nsnull;
-    accService->CreateHTMLAreaAccessible(domNode, this, &acc);
+    nsCOMPtr<nsISupports> presShell(do_QueryInterface(mPresShell));
+    accService->CreateHTMLAreaAccessible(presShell, domNode, this, &acc);
     return acc;
   }
   return nsnull;

@@ -48,6 +48,7 @@ public:
 protected:
   nsIAccessible *CreateAreaAccessible(PRUint32 areaNum);
   nsCOMPtr<nsIDOMHTMLMapElement> mMapElement;
+  nsCOMPtr<nsIPresShell> mPresShell;
 };
 
 #endif  
