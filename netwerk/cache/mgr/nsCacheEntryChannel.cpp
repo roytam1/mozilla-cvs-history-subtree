@@ -124,7 +124,8 @@ class LoadGroupInterceptor: public nsIStreamListener  {
 
     NS_IMETHOD
     OnStartRequest(nsIChannel *channel, nsISupports *aContext) {
-        mLoadGroup->AddChannel(mChannel, aContext);
+        if (mLoadGroup)
+            mLoadGroup->AddChannel(mChannel, aContext);
         return mListener->OnStartRequest(mChannel, aContext);
     }
 
@@ -133,7 +134,8 @@ class LoadGroupInterceptor: public nsIStreamListener  {
                   nsresult status, const PRUnichar *errorMsg) {
         nsresult rv;
         rv = mListener->OnStopRequest(mChannel, aContext, status, errorMsg);
-        mLoadGroup->RemoveChannel(mChannel, aContext, status, errorMsg);
+        if (mLoadGroup)
+            mLoadGroup->RemoveChannel(mChannel, aContext, status, errorMsg);
         return rv;
     }
 
