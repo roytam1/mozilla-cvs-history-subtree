@@ -2521,14 +2521,13 @@ nsHTMLPluginObjElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
     PRUint32 flags;
     ci->GetFlags(&flags);
 
-    // XXX: that code goes here
-#if 0
-    if (flags & SHARE_MY_PROTO) {
-      // The plugin has a shared proto, can't do this prototype setup then.
+    if (!(flags & nsIClassInfo::PLUGIN_OBJECT)) {
+      // The plugin classinfo doesn't claim it's a plugin object, this
+      // means the plugin object's proto might be shared, can't do
+      // this prototype setup then.
 
       return NS_OK;
     }
-#endif
   }
 
   // notify the PluginManager that this one is scriptable -- 
