@@ -184,6 +184,7 @@ XTF_BRANCH_NEW_FILES = \
 	layout/xtf/Makefile.in \
 	layout/xtf/src/Makefile.in \
 	layout/xtf/src/nsXTFSVGDisplayFrame.cpp \
+	layout/xtf/src/nsXTFXMLDisplayFrame.cpp \
 	layout/xtf/src/nsXTFXULDisplayFrame.cpp
 
 
