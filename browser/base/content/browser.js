@@ -201,7 +201,6 @@ const gPopupBlockerObserver = {
       this._reportButton = document.getElementById("page-report-button");
     
     if (gBrowser.selectedBrowser.pageReport) {
-    dump("*** intergoat\n");
       this._reportButton.setAttribute("blocked", "true");
       if (gPrefService && gPrefService.getBoolPref("privacy.popups.showBrowserMessage")) {
         var bundle_browser = document.getElementById("bundle_browser");

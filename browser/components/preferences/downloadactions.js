@@ -188,18 +188,16 @@ var gDownloadActionsWindow = {
       for (var j = 0; j < plugin.length; ++j) {
         var actionName = this._bundle.getFormattedString("openWith", [plugin.name])
         var type = plugin[j].type;
-        var action = this._createAction(type, actionName, true, 
-                                        FILEACTION_OPEN_PLUGIN, null,
-                                        true, disabled.indexOf(type) == -1);
-        this._plugins[action.type] = action;
-        action.handledOnlyByPlugin = true;
+        this._createAction(type, actionName, true, FILEACTION_OPEN_PLUGIN, 
+                           null, true, disabled.indexOf(type) == -1, true);
       }
     }
   },
 
   _createAction: function (aMIMEType, aActionName, 
                            aIsEditable, aHandleMode, aCustomHandler,
-                           aPluginAvailable, aPluginEnabled)
+                           aPluginAvailable, aPluginEnabled, 
+                           aHandledOnlyByPlugin)
   {
     var newAction = !(aMIMEType in this._plugins);
     var action = newAction ? new FileAction() : this._plugins[aMIMEType];
@@ -248,9 +246,12 @@ var gDownloadActionsWindow = {
     action.handleMode       = aHandleMode;
     action.customHandler    = aCustomHandler;
     action.mimeInfo         = info;
+    action.handledOnlyByPlugin  = aHandledOnlyByPlugin
     
-    if (newAction)
+    if (newAction && !(action.handledOnlyByPlugin && !action.pluginEnabled)) {
       this._actions.push(action);
+      this._plugins[action.type] = action;
+    }      
     return action;
   },
   
@@ -375,8 +376,8 @@ var gDownloadActionsWindow = {
         actionName = null;
       }
       var action = this._createAction(mimeType, actionName, editable, handleMode, 
-                                      customHandler, pluginAvailable, pluginEnabled);
-      action.handledOnlyByPlugin = false;
+                                      customHandler, pluginAvailable, pluginEnabled,
+                                      false);
     }
   },
   
@@ -458,6 +459,72 @@ var gDownloadActionsWindow = {
 
   removeFileHandler: function ()
   {
+    var selection = this._tree.view.selection; 
+    if (selection.count < 1)
+      return;
+      
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                                  .getService(Components.interfaces.nsIPromptService);
+    var flags = promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0;
+    flags += promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1;
+
+    var title = this._bundle.getString("removeTitle" + (selection.count > 1 ? "Multiple" : "Single"));
+    var message = this._bundle.getString("removeMessage" + (selection.count > 1 ? "Multiple" : "Single"));
+    var button = this._bundle.getString("removeButton" + (selection.count > 1 ? "Multiple" : "Single"));
+    rv = promptService.confirmEx(window, title, message, flags, button, 
+                                 null, null, null, { value: 0 });
+    if (rv != 0)
+      return;     
+
+    var rangeCount = selection.getRangeCount();
+    var lastSelected = 0;
+    var mimeDSDirty = false;
+    for (var i = 0; i < rangeCount; ++i) {
+      var min = { }; var max = { };
+      selection.getRangeAt(i, min, max);
+      for (var j = min.value; j <= max.value; ++j) {
+        var item = this._view.getItemAtIndex(j);
+        if (!item.handledOnlyByPlugin) {
+          // There is data for this type in the MIME registry, so make sure we
+          // remove it from the MIME registry. We don't disable the plugin here because
+          // if we do there's currently no way through the UI to re-enable it. We may
+          // come up with some sort of solution for that at a later date. 
+          var typeRes = this._rdf.GetResource(MIME_URI(item.type));
+          var handlerRes = this._getChildResource(typeRes, "handlerProp");
+          var extAppRes = this._getChildResource(handlerRes, "externalApplication");
+          this._cleanResource(extAppRes);
+          this._cleanResource(handlerRes);
+          this._cleanResource(typeRes); 
+          mimeDSDirty = true;         
+        }
+        lastSelected = (j + 1) >= this._view.rowCount ? j-1 : j;
+      }
+    }
+    if (mimeDSDirty) {
+      var rds = this._mimeDS.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource)
+      rds.Flush();
+    }
+        
+    var oldCount = this._view.rowCount;
+    this._view._rowCount = 0;
+    this._tree.treeBoxObject.rowCountChanged(0, -oldCount);
+
+    // Just reload the list to make sure deletions are respected
+    this._loadView();
+    this._updateExclusions();    
+    this._tree.treeBoxObject.rowCountChanged(0, this._view.rowCount);
+
+    selection.select(lastSelected);
+  },
+  
+  _cleanResource: function (aResource)
+  {
+    var labels = this._mimeDS.ArcLabelsOut(aResource);
+    while (labels.hasMoreElements()) {
+      var arc = labels.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var target = this._mimeDS.GetTarget(aResource, arc, true);
+      this._mimeDS.Unassert(aResource, arc, target);
+    }
   },
   
   _disablePluginForItem: function (aItem)
@@ -609,9 +676,11 @@ var gDownloadActionsWindow = {
     var selected = selection.count;
     this._removeButton.disabled = selected == 0;
     this._editButton.disabled = selected != 1;
-    this._removeButton.label = this._bundle.getString(selected > 1 ? "removeActions" : "removeAction");
+    var stringKey = selected > 1 ? "removeButtonMultiple" : "removeButtonSingle";
+    this._removeButton.label = this._bundle.getString(stringKey);
     
     var canRemove = true;
+    var canEdit = true;
     
     var rangeCount = selection.getRangeCount();
     var min = { }, max = { };
@@ -627,15 +696,21 @@ var gDownloadActionsWindow = {
         }
 
         var item = this._view.getItemAtIndex(j);
-        if (item && (!item.editable || item.handleMode == FILEACTION_OPEN_INTERNALLY))
+        if (item && 
+            (!item.editable || item.handleMode == FILEACTION_OPEN_INTERNALLY))
+          canEdit = false;
+        
+        if (item && 
+            (!item.editable || item.handleMode == FILEACTION_OPEN_INTERNALLY ||
+             item.handledOnlyByPlugin))
           canRemove = false;
       }
     }
     
-    if (!canRemove) {
+    if (!canRemove)
       this._removeButton.disabled = true;
+    if (!canEdit)
       this._editButton.disabled = true;
-    }
   },
   
   _lastSortProperty : "",
