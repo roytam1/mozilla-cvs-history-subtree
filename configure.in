@@ -3127,6 +3127,9 @@ then
        QTINCDIR="/include/X11/qt"
     fi
     if test ! -d "$QTDIR$QTINCDIR"; then
+       QTINCDIR="/include/qt3"
+    fi
+    if test ! -d "$QTDIR$QTINCDIR"; then
        QTINCDIR="/include"
     fi
 
