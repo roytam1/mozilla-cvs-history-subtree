@@ -158,12 +158,13 @@ pref("news.directory",                  "");
 pref("browser.editor.disabled", false);
 pref("spellchecker.dictionary", "");
 
-pref("autoupdate.enabled",                    true);
 pref("xpinstall.dialog.confirm",              "chrome://communicator/content/xpinstall/institems.xul");
 pref("xpinstall.dialog.progress.skin",        "chrome://communicator/content/xpinstall/xpistatus.xul");
 pref("xpinstall.dialog.progress.chrome",      "chrome://communicator/content/xpinstall/xpistatus.xul");
 pref("xpinstall.dialog.progress.type.skin",   "");
 pref("xpinstall.dialog.progress.type.chrome", "");
+pref("xpinstall.whitelist.add", "mozilla.org, mozdev.org, texturizer.net");
+pref("xpinstall.blacklist.add", "");
 
 // Customizable toolbar stuff
 pref("custtoolbar.personal_toolbar_folder", "");
