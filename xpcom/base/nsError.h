@@ -23,9 +23,8 @@
 #ifndef nsError_h
 #define nsError_h
 
-#ifndef prtypes_h___
+#include "nsCom.h"
 #include "prtypes.h"
-#endif
 
 /**
  * Generic result data type
