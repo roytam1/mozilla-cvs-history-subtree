@@ -35,8 +35,8 @@
  * @version $Revision$ $Date$
 **/
 
-#ifndef MITREXSL_EXPR_H
-#define MITREXSL_EXPR_H
+#ifndef TRANSFRMX_EXPR_H
+#define TRANSFRMX_EXPR_H
 
 #include <math.h>
 #include "String.h"
@@ -51,7 +51,10 @@
 #include "primitives.h"
 
 class ContextState : public ErrorObserver {
+
 public:
+
+     
      /**
       * Returns the value of a given variable binding within the current scope
       * @param the name to which the desired variable value has been bound
@@ -66,15 +69,25 @@ public:
     **/
     virtual Stack* getNodeSetStack() = 0;
 
-    virtual MBool isStripSpaceAllowed(Node* node) = 0;
-
     /**
      * handles finding the parent of a node, since in DOM some
      * nodes such as Attribute Nodes do not have parents
      * @param node the Node to search for the parent of
      * @return the parent of the given node, or null
     **/
-    virtual Node* findParent(Node* node) = 0;
+    virtual Node* getParentNode(Node* node) = 0;
+
+
+    virtual MBool isStripSpaceAllowed(Node* node) = 0;
+
+
+    /**
+     * Sorts the given NodeSet by DocumentOrder. 
+     * @param nodes the NodeSet to sort
+     * <BR />
+     * <B>Note:</B> I will be moving this functionality elsewhere soon
+	**/
+    virtual void sortByDocumentOrder(NodeSet* nodes) = 0;
 
 }; //-- ContextState
 

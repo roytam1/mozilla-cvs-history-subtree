@@ -230,7 +230,7 @@ MBool PathExpr::matches(Node* node, Node* context, ContextState* cs) {
                 case ANCESTOR_OP:
                 {
                     Node* parent = tnode;
-                    while (parent = cs->findParent(parent))  {
+                    while (parent = cs->getParentNode(parent))  {
                         if (pxi->pExpr->matches(tnode, parent, cs))
                             tmpNodes.add(parent);
                     }
@@ -238,7 +238,7 @@ MBool PathExpr::matches(Node* node, Node* context, ContextState* cs) {
                 }
                 case PARENT_OP:
                 {
-                    Node* parent = cs->findParent(tnode);
+                    Node* parent = cs->getParentNode(tnode);
                     if (parent) {
                         if (pxi->pExpr->matches(tnode, parent, cs))
                             tmpNodes.add(parent);

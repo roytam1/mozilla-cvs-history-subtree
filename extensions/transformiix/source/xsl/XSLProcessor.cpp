@@ -59,7 +59,7 @@ XSLProcessor::XSLProcessor() {
 
     xslVersion.append("1.0");
     appName.append("TransforMiiX");
-    appVersion.append("1.0 [beta v20000218]");
+    appVersion.append("1.0 [beta v20000222]");
 
 
     //-- create XSL element types
@@ -883,6 +883,10 @@ void XSLProcessor::processAction
                 NodeSet* nodeSet = 0;
                 if ( exprResult->getResultType() == ExprResult::NODESET ) {
                     nodeSet = (NodeSet*)exprResult;
+
+					//-- make sure nodes are in DocumentOrder
+                    ps->sortByDocumentOrder(nodeSet);
+
                     //-- push nodeSet onto context stack
                     ps->getNodeSetStack()->push(nodeSet);
                     for (int i = 0; i < nodeSet->size(); i++) {
