@@ -85,6 +85,8 @@ public:
     void     SetConnection(nsAHttpConnection *conn) { NS_IF_ADDREF(mConnection = conn); }
     void     SetSecurityInfo(nsISupports *info) { mSecurityInfo = info; }
     void     GetNotificationCallbacks(nsIInterfaceRequestor **cb) { NS_IF_ADDREF(*cb = mCallbacks); }
+    PRUint32 GetRequestSize();
+    PRUint32 GetContentRead() { return mContentRead; }
     nsresult OnDataWritable(nsIOutputStream *);
     nsresult OnDataReadable(nsIInputStream *);
     nsresult OnStopTransaction(nsresult);
@@ -98,7 +100,7 @@ private:
     void     ParseLineSegment(char *seg, PRUint32 len);
     nsresult ParseHead(char *, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContentStart();
-    nsresult HandleContent(char *, PRUint32 count, PRUint32 *countRead);
+    nsresult HandleContent(char *, PRUint32 count, PRUint32 *contentRead, PRUint32 *bufRead);
     void     DeleteSelfOnConsumerThread();
 
     static void *PR_CALLBACK DeleteThis_EventHandlerFunc(PLEvent *);

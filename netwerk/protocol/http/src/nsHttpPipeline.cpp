@@ -149,8 +149,6 @@ nsHttpPipeline::nsHttpPipeline()
     , mLock(nsnull)
     , mStatus(NS_OK)
 {
-    NS_INIT_ISUPPORTS();
-
     memset(mTransactionQ,     0, sizeof(PRUint32) * NS_HTTP_MAX_PIPELINED_REQUESTS);
     memset(mTransactionFlags, 0, sizeof(PRUint32) * NS_HTTP_MAX_PIPELINED_REQUESTS);
 }
@@ -224,7 +222,6 @@ NS_INTERFACE_MAP_END
 // called on the socket thread
 nsresult
 nsHttpPipeline::OnHeadersAvailable(nsAHttpTransaction *trans,
-                                   nsHttpRequestHead *requestHead,
                                    nsHttpResponseHead *responseHead,
                                    PRBool *reset)
 {
@@ -232,7 +229,7 @@ nsHttpPipeline::OnHeadersAvailable(nsAHttpTransaction *trans,
 
     NS_ASSERTION(mConnection, "no connection");
     // trans has now received its response headers; forward to the real connection
-    return mConnection->OnHeadersAvailable(trans, requestHead, responseHead, reset);
+    return mConnection->OnHeadersAvailable(trans, responseHead, reset);
 }
 
 // called on any thread

@@ -43,7 +43,7 @@ public:
     nsresult AppendTransaction(nsAHttpTransaction *);
 
     // nsAHttpConnection methods:
-    nsresult OnHeadersAvailable(nsAHttpTransaction *, nsHttpRequestHead *, nsHttpResponseHead *, PRBool *reset);
+    nsresult OnHeadersAvailable(nsAHttpTransaction *, nsHttpResponseHead *, PRBool *reset);
     nsresult OnTransactionComplete(nsAHttpTransaction *, nsresult status);
     nsresult OnSuspend();
     nsresult OnResume();
