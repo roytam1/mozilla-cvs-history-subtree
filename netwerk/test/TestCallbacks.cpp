@@ -199,9 +199,7 @@ nsresult
 Consumer::Validate(nsIRequest* request, nsISupports *aContext) {
     nsresult rv = NS_OK;
     nsCOMPtr<nsIURI> uri;
-    nsCOMPtr<nsIChannel> aChannel;
-
-    request->GetParent(getter_AddRefs(aChannel));
+    nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
 
     rv = aChannel->GetURI(getter_AddRefs(uri));
     if (NS_FAILED(rv)) return rv;
@@ -315,6 +313,5 @@ nsresult StartLoad(char *aURISpec) {
 
     // kick off the load
     nsCOMPtr<nsIRequest> request;
-    return channel->AsyncRead(NS_STATIC_CAST(nsIStreamListener*, consumer),
-                              contextSup, 0, -1, getter_AddRefs(request));
+    return channel->AsyncOpen(NS_STATIC_CAST(nsIStreamListener*, consumer), contextSup);
 }

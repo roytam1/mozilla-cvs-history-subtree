@@ -21,7 +21,8 @@
  */
 
 #include "nsIFileTransportService.h"
-#include "nsIChannel.h"
+#include "nsITransport.h"
+#include "nsIRequest.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsCOMPtr.h"
@@ -29,7 +30,6 @@
 #include "nsString.h"
 #include "nsIFileStreams.h"
 #include "nsIStreamListener.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
 #include "nsNetUtil.h"
@@ -146,7 +146,7 @@ TestAsyncRead(const char* fileName, PRUint32 offset, PRInt32 length)
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsIChannel* fileTrans;
+    nsITransport* fileTrans;
     nsCOMPtr<nsILocalFile> file;
     rv = NS_NewLocalFile(fileName, PR_FALSE, getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
@@ -162,7 +162,7 @@ TestAsyncRead(const char* fileName, PRUint32 offset, PRInt32 length)
 
     gDone = PR_FALSE;
     nsCOMPtr<nsIRequest> request;
-    rv = fileTrans->AsyncRead(listener, nsnull, offset, length, getter_AddRefs(request));
+    rv = fileTrans->AsyncRead(listener, nsnull, offset, length, 0, getter_AddRefs(request));
     if (NS_FAILED(rv)) return rv;
 
     while (!gDone) {
@@ -192,7 +192,7 @@ TestAsyncWrite(const char* fileName, PRUint32 offset, PRInt32 length)
 
     nsCAutoString outFile(fileName);
     outFile.Append(".out");
-    nsIChannel* fileTrans;
+    nsITransport* fileTrans;
     nsCOMPtr<nsILocalFile> file;
     rv = NS_NewLocalFile(outFile, PR_FALSE, getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
@@ -217,7 +217,7 @@ TestAsyncWrite(const char* fileName, PRUint32 offset, PRInt32 length)
 
     gDone = PR_FALSE;
     nsCOMPtr<nsIRequest> request;
-    rv = NS_AsyncWriteFromStream(getter_AddRefs(request), fileTrans, inStr, offset, length, listener);
+    rv = NS_AsyncWriteFromStream(getter_AddRefs(request), fileTrans, inStr, offset, length, 0, listener);
     if (NS_FAILED(rv)) return rv;
 
     while (!gDone) {
@@ -235,6 +235,7 @@ TestAsyncWrite(const char* fileName, PRUint32 offset, PRInt32 length)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#if 0
 class MyOpenObserver : public nsIStreamObserver
 {
 public:
@@ -266,6 +267,7 @@ public:
 };
 
 NS_IMPL_ISUPPORTS1(MyOpenObserver, nsIStreamObserver);
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -2101,9 +2101,42 @@ nsSocketTransport::OnStopLookup(nsISupports *aContext,
 
 //
 // --------------------------------------------------------------------------
-// nsIChannel implementation...
+// nsITransport implementation...
 // --------------------------------------------------------------------------
 //
+
+NS_IMETHODIMP
+nsSocketTransport::GetHost(char **host)
+{
+    NS_ENSURE_ARG_POINTER(host);
+
+    // XXX: not sure this is correct behavior, but we should somehow
+    // prevent reusing the same nsSocketTransport for different SSL hosts
+    // in proxied case.
+    if (mProxyHost && !(mProxyTransparent || mSSLProxy))
+        *host = nsCRT::strdup(mProxyHost);
+    else
+        *host = nsCRT::strdup(mHostName);
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransport::GetPort(PRInt32 *port)
+{
+    NS_ENSURE_ARG_POINTER(port);
+
+    // XXX: not sure this is correct behavior, but we should somehow
+    // prevent reusing the same nsSocketTransport for different SSL hosts
+    // in proxied case.
+    if (mProxyHost && !(mProxyTransparent || mSSLProxy))
+        *port = mProxyPort;
+    else
+        *port = mPort;
+
+    return NS_OK;
+}
+
 #if 0
 NS_IMETHODIMP
 nsSocketTransport::GetOriginalURI(nsIURI* *aURL)

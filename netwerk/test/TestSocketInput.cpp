@@ -33,7 +33,8 @@
 #include "nsISocketTransportService.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
-#include "nsIChannel.h"
+#include "nsITransport.h"
+#include "nsIRequest.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
 
@@ -159,12 +160,12 @@ main(int argc, char* argv[])
   NS_WITH_SERVICE(nsISocketTransportService, sts, kSocketTransportServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
 
-  nsIChannel* transport;
+  nsITransport* transport;
 
   rv = sts->CreateTransport(hostName, port, nsnull, -1, 0, 0, &transport);
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIRequest> request;
-    transport->AsyncRead(nsnull, new InputTestConsumer, 0, -1, getter_AddRefs(request));
+    transport->AsyncRead(nsnull, new InputTestConsumer, 0, 0, 0, getter_AddRefs(request));
 
     NS_RELEASE(transport);
   }

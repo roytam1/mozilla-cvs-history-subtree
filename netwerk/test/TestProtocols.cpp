@@ -43,7 +43,6 @@
 #include "nsIInputStream.h"
 #include "nsCRT.h"
 #include "nsIChannel.h"
-#include "nsIStreamContentInfo.h"
 #include "nsIURL.h"
 #include "nsIHTTPChannel.h"
 #include "nsIHTTPEventSink.h" 
@@ -138,14 +137,13 @@ TestHTTPEventSink::OnHeadersAvailable(nsISupports* context)
 {
     nsCOMPtr<nsISimpleEnumerator> enumerator;
     nsCOMPtr<nsIHTTPChannel> pHTTPCon(do_QueryInterface(context));
-    nsCOMPtr<nsIStreamContentInfo> pContentRequest(do_QueryInterface(pHTTPCon));
     PRBool bMoreHeaders;
 
     if (pHTTPCon) {
         nsXPIDLCString value;
 
         printf("Channel Info:\n");
-        pContentRequest->GetContentType(getter_Copies(value));
+        pHTTPCon->GetContentType(getter_Copies(value));
         printf("\tContent-Type: %s\n", (const char*)value);
 
         pHTTPCon->GetCharset(getter_Copies(value));
@@ -168,7 +166,7 @@ TestHTTPEventSink::OnHeadersAvailable(nsISupports* context)
                 header->GetField(getter_AddRefs(key));
                 key->ToString(field);
                 nsCAutoString theField;
-		theField.AssignWithConversion(field);
+                theField.AssignWithConversion(field);
                 printf("\t%s: ", theField.GetBuffer());
 
                 header->GetValue(getter_Copies(value));
@@ -196,7 +194,7 @@ TestHTTPEventSink::OnHeadersAvailable(nsISupports* context)
                 header->GetField(getter_AddRefs(key));
                 key->ToString(field);
                 nsCAutoString theField;
-		theField.AssignWithConversion(field);
+                theField.AssignWithConversion(field);
                 printf("\t%s: ", theField.GetBuffer());
 
                 header->GetValue(getter_Copies(value));
@@ -214,7 +212,7 @@ TestHTTPEventSink::OnHeadersAvailable(nsISupports* context)
         if (pHTTPCon) {
             char* type;
             //optimize later TODO allow atoms here...! intead of just the header strings
-            pContentRequest->GetContentType(&type);
+            pHTTPCon->GetContentType(&type);
             if (type) {
                 printf("\nReceiving ... %s\n", type);
                 nsCRT::free(type);
@@ -268,15 +266,15 @@ NS_IMPL_ISUPPORTS1(OpenObserver, nsIStreamObserver);
 NS_IMETHODIMP
 OpenObserver::OnStartRequest(nsIRequest *request, nsISupports* context)
 {
-    printf("\n+++ OpenObserver::OnStartRequest +++. Context = %p\n", context);
+    printf("\n+++ OpenObserver::OnStartRequest +++. Context = %p\n", (void*)context);
 
     char* type;
     PRInt32 length = -1;
     nsresult rv;
-    nsCOMPtr<nsIStreamContentInfo> pContentRequest(do_QueryInterface(context));
-    rv = pContentRequest->GetContentType(&type);
+    nsCOMPtr<nsIChannel> pChan(do_QueryInterface(context));
+    rv = pChan->GetContentType(&type);
     NS_ASSERTION(NS_SUCCEEDED(rv), "GetContentType failed");
-    rv = pContentRequest->GetContentLength(&length);
+    rv = pChan->GetContentLength(&length);
     NS_ASSERTION(NS_SUCCEEDED(rv), "GetContentLength failed");
     printf("    contentType = %s length = %d\n", type, length);
     nsCRT::free(type);
@@ -290,7 +288,7 @@ OpenObserver::OnStopRequest(nsIRequest *request, nsISupports* context,
 {
     printf("\n+++ OpenObserver::OnStopRequest (status = %x) +++."
            "\tContext = %p\n", 
-           aStatus, context);
+           aStatus, (void*)context);
     return NS_OK;
 }
 
@@ -549,9 +547,8 @@ nsresult StartLoadingURL(const char* aUrlString)
             return NS_ERROR_OUT_OF_MEMORY;
         }
         
-        nsCOMPtr<nsIRequest> request;
-        rv = pChannel->AsyncRead(listener,  // IStreamListener consumer
-                                 info, 0, -1, getter_AddRefs(request));     // ISupports context
+        rv = pChannel->AsyncOpen(listener,  // IStreamListener consumer
+                                 info);
 
         if (NS_SUCCEEDED(rv)) {
             gKeepRunning += 1;
@@ -613,7 +610,7 @@ nsresult LoadURLFromConsole()
 {
     char buffer[1024];
     printf("Enter URL (\"q\" to start): ");
-    scanf("%s", &buffer);
+    scanf("%s", buffer);
     if (buffer[0]=='q') 
         gAskUserForInput = PR_FALSE;
     else

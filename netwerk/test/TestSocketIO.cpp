@@ -34,7 +34,8 @@
 #include "nsISocketTransportService.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
-#include "nsIChannel.h"
+#include "nsITransport.h"
+#include "nsIRequest.h"
 #include "nsIStreamProvider.h"
 #include "nsIStreamListener.h"
 #include "nsIPipe.h"
@@ -169,12 +170,12 @@ TestProvider::OnStopRequest(nsIRequest* request, nsISupports* context,
     nsCOMPtr<nsIStreamListener> listener = do_QueryInterface(new TestListener());
 
     if (NS_SUCCEEDED(aStatus)) {
-        nsCOMPtr<nsISupports> parent;
-        request->GetParent(getter_AddRefs(parent));
-        nsCOMPtr<nsIChannel> channel = do_QueryInterface(parent);
-        if (channel) {
-            nsCOMPtr<nsIRequest> request;
-            channel->AsyncRead(listener, nsnull, 0, -1, getter_AddRefs(request));
+        nsCOMPtr<nsITransportRequest> treq = do_QueryInterface(request);
+        nsCOMPtr<nsITransport> transport;
+        treq->GetTransport(getter_AddRefs(transport));
+        if (transport) {
+            nsCOMPtr<nsIRequest> readRequest;
+            transport->AsyncRead(listener, nsnull, 0, 0, 0, getter_AddRefs(readRequest));
         }
     } else
         gKeepRunning = 0;
@@ -306,7 +307,7 @@ main(int argc, char* argv[])
     LOG(("Request [\n%s]\n", buffer));
 
     // Create the socket transport...
-    nsCOMPtr<nsIChannel> transport;
+    nsCOMPtr<nsITransport> transport;
     rv = sts->CreateTransport(hostName, port, nsnull, -1, 0, 0, getter_AddRefs(transport));
     if (NS_FAILED(rv)) {
         NS_WARNING("failed to create: socket transport!");
@@ -317,7 +318,7 @@ main(int argc, char* argv[])
 
     if (!sync) {
         nsCOMPtr<nsIRequest> request;
-        rv = transport->AsyncWrite(new TestProvider(buffer), nsnull, 0, -1, getter_AddRefs(request));
+        rv = transport->AsyncWrite(new TestProvider(buffer), nsnull, 0, 0, 0, getter_AddRefs(request));
         if (NS_FAILED(rv)) {
             NS_WARNING("failed calling: AsyncWrite!");
             return rv;
@@ -352,7 +353,7 @@ main(int argc, char* argv[])
         // synchronous write
         {
             nsCOMPtr<nsIOutputStream> os;
-            rv = transport->OpenOutputStream(0, -1, getter_AddRefs(os));
+            rv = transport->OpenOutputStream(0, 0, 0, getter_AddRefs(os));
             if (NS_FAILED(rv)) return rv;
             rv = WriteRequest(os, buffer);
             if (NS_FAILED(rv)) return rv;
@@ -360,7 +361,7 @@ main(int argc, char* argv[])
         // synchronous read
         {
             nsCOMPtr<nsIInputStream> is;
-            rv = transport->OpenInputStream(0, -1, getter_AddRefs(is));
+            rv = transport->OpenInputStream(0, 0, 0, getter_AddRefs(is));
             if (NS_FAILED(rv)) return rv;
             rv = ReadResponse(is);
             if (NS_FAILED(rv)) return rv;
