@@ -415,3 +415,31 @@ nsHTMLEditUtils::IsLeafNode(nsIDOMNode *aNode)
   aNode->HasChildNodes(&hasChildren);
   return !hasChildren;
 }
+
+PRBool
+nsHTMLEditUtils::SupportsAlignAttr(nsIDOMNode * aNode)
+{
+  NS_PRECONDITION(aNode, "null node passed to nsHTMLEditUtils::SupportsAlignAttr");
+  nsAutoString tag;
+  nsEditor::GetTagString(aNode, tag);
+  tag.ToLowerCase();
+  if (tag.Equals(NS_LITERAL_STRING("hr")) ||
+      tag.Equals(NS_LITERAL_STRING("table")) ||
+      tag.Equals(NS_LITERAL_STRING("tbody")) ||
+      tag.Equals(NS_LITERAL_STRING("tfoot")) ||
+      tag.Equals(NS_LITERAL_STRING("thead")) ||
+      tag.Equals(NS_LITERAL_STRING("tr")) ||
+      tag.Equals(NS_LITERAL_STRING("td")) ||
+      tag.Equals(NS_LITERAL_STRING("th")) ||
+      tag.Equals(NS_LITERAL_STRING("div")) ||
+      tag.Equals(NS_LITERAL_STRING("p")) ||
+      tag.Equals(NS_LITERAL_STRING("h1")) ||
+      tag.Equals(NS_LITERAL_STRING("h2")) ||
+      tag.Equals(NS_LITERAL_STRING("h3")) ||
+      tag.Equals(NS_LITERAL_STRING("h4")) ||
+      tag.Equals(NS_LITERAL_STRING("h5")) ||
+      tag.Equals(NS_LITERAL_STRING("h6"))) {
+    return PR_TRUE;
+  }
+  return PR_FALSE;
+}

@@ -3337,7 +3337,7 @@ nsHTMLEditRules::WillAlign(nsISelection *aSelection,
     if (NS_FAILED(res)) return res;
     
     // if it's a div, don't nest it, just set the alignment
-    if (nsHTMLEditUtils::IsDiv(curNode))
+    if (nsHTMLEditUtils::SupportsAlignAttr(curNode))
     {
       nsCOMPtr<nsIDOMElement> divElem = do_QueryInterface(curNode);
       nsAutoString attr; attr.AssignWithConversion("align");
