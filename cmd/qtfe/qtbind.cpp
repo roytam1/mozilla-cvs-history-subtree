@@ -1541,3 +1541,80 @@ ED_CharsetEncode FE_EncodingDialog(MWContext* context, char* newCharset)
 
     return retval;
 }
+
+// Mail specific FE functions
+// Included because of compilation problems
+#include <msgcom.h>
+extern "C"
+MSG_Pane*
+FE_CreateCompositionPane(MWContext* old_context,
+                         MSG_CompositionFields* fields,
+                         const char* initialText,
+                         MSG_EditorType editorType)
+{
+   return 0;
+}
+
+extern "C"
+void
+FE_UpdateCompToolbar(MSG_Pane* comppane)
+{
+}
+
+extern "C"
+const char *
+FE_UsersOrganization()
+{
+   return 0;
+}
+
+extern "C"
+void
+FE_DestroyMailCompositionContext(MWContext* context)
+{
+}
+
+extern "C"
+void
+FE_MsgShowHeaders(MSG_Pane *pPane,
+                  MSG_HEADER_SET mhsHeaders)
+{
+}
+
+extern "C"
+const char *
+FE_UsersRealMailAddress()
+{
+   return 0;
+}
+
+#ifdef XP_UNIX
+extern "C" 
+void XFE_InitializePrintSetup (PrintSetup *p)
+{
+}
+#endif /* XP_UNIX */
+
+
+/* If we're set up to deliver mail/news by running a program rather
+   than by talking to SMTP/NNTP, this does it.
+   
+   Returns positive if delivery via program was successful;
+   Returns negative if delivery failed;
+   Returns 0 if delivery was not attempted (in which case we
+   should use SMTP/NNTP instead.)
+ 
+   $NS_MSG_DELIVERY_HOOK names a program which is invoked with one argument,
+   a tmp file containing a message.  (Lines are terminated with CRLF.)
+   This program is expected to parse the To, CC, BCC, and Newsgroups headers,
+   and effect delivery to mail and/or news.  It should exit with status 0
+    iff successful.
+    
+    #### This really wants to be defined in libmsg, but it wants to
+    be able to use fe_perror, so...
+*/
+extern "C"
+int
+msg_DeliverMessageExternally(MWContext *context, const char *msg_file)
+{
+}
