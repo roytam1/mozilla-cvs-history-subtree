@@ -37,12 +37,12 @@
  * ***** END LICENSE BLOCK ***** */
 
  /*
-  * nsIDownloadItem implements nsIWebProgressListener and acts as a "master
+  * nsIDownload implements nsIWebProgressListener and acts as a "master
   * listener" for the ongoing transfer. If clients provide a persist object,
   * the item will automatically be set as the persist's listener. Otherwise,
   * clients should set this themselves on whatever download mechanism they're
   * using.  Clients may have their own UI for a download as well, in which case
-  * they may set the listener attribute.  nsIDownloadItem will forward
+  * they may set the listener attribute.  nsIDownload will forward
   * notifications to that listener.
   */
   
@@ -54,48 +54,41 @@ interface nsIObserver;
 interface nsIWebBrowserPersist;
 
 [scriptable, uuid(06cb92f2-1dd2-11b2-95f2-96dfdfb804a1)]
-interface nsIDownloadItem : nsIWebProgressListener {
+interface nsIDownload : nsIWebProgressListener {
     
     /**
-     * prettyName
      * The user-readable description of the download.
      */
-    readonly attribute wstring prettyName;
+    attribute wstring displayName;
     
     /**
-     * source
      * The source of the download.
      */
     readonly attribute nsIURI source;
     
     /**
-     * target
-     * The local file where the download is being saved.
+     * The local file to which the download is being saved.
      */
     readonly attribute nsILocalFile target;
     
     /**
-     * percentComplete
      * The percentage of completion of the download.
      */
     readonly attribute PRInt32 percentComplete;
 
 
     /**
-     * startTime
      * The time a download was started; necessary for more accurate measurements.
      */
     attribute long long startTime;
 
     /**
-     * listener
      * Optional; downloading information is passed to this listener and used to
      * update client UI.
      */
     attribute nsIWebProgressListener listener;
    
     /**
-     * persist
      * Optional. If set, it will be used for cancellation, and the download item
      * will be set as its listener.  If not, |observer| should be set to listen
      * and respond accordingly to topics like oncancel, and the client promises
@@ -106,7 +99,6 @@ interface nsIDownloadItem : nsIWebProgressListener {
     readonly attribute nsIWebBrowserPersist persist;
     
     /**
-     * observer
      * If set, receives notifications of events like cancel ("oncancel").
      * Must be set if no persist object is specified (see above).
      */
