@@ -1023,107 +1023,91 @@ void CRDFToolbarButton::DrawButtonBitmap(HDC hDC, CRect rcImg)
 		eState = eDISABLED;
 
 	UpdateIconInfo();
-	if(m_hBmpImg != NULL)
+	
+	// Create a scratch DC and select our bitmap into it.
+	HDC pBmpDC  = ::CreateCompatibleDC(hDC);
+	HPALETTE hPalette = WFE_GetUIPalette(GetParentFrame());
+	CBitmap BmpImg;
+	CPoint ptDst;
+	
+	HBITMAP hOldBmp;
+	HPALETTE hOldPal;
+	if (m_hBmpImg != NULL)
 	{
-		// Create a scratch DC and select our bitmap into it.
-		HDC pBmpDC  = ::CreateCompatibleDC(hDC);
-		HPALETTE hPalette = WFE_GetUIPalette(GetParentFrame());
-		CBitmap BmpImg;
-		CPoint ptDst;
 		HINSTANCE hInst = AfxGetResourceHandle();
 		HBITMAP hBmpImg;
 		hBmpImg = m_hBmpImg;
-		HBITMAP hOldBmp = (HBITMAP)::SelectObject(pBmpDC, hBmpImg);
-		HPALETTE hOldPal = ::SelectPalette(pBmpDC, WFE_GetUIPalette(NULL), TRUE);
+		hOldBmp = (HBITMAP)::SelectObject(pBmpDC, hBmpImg);
+		hOldPal = ::SelectPalette(pBmpDC, WFE_GetUIPalette(NULL), TRUE);
 		::RealizePalette(pBmpDC);
-		// Get the image dimensions
-		CSize sizeImg;
-		BITMAP bmp;
-		::GetObject(hBmpImg, sizeof(bmp), &bmp);
-		sizeImg.cx = bmp.bmWidth;
-		sizeImg.cy = bmp.bmHeight;
+	}
 
-		int realBitmapHeight;
+	// Get the image dimensions
+		
+	int realBitmapHeight;
+	if(m_nIconType == LOCAL_FILE)
+	{
+		realBitmapHeight = 16;
+		m_bitmapSize.cx = 16;
+	}
+	else if (m_nIconType == ARBITRARY_URL)
+	{
+		realBitmapHeight = m_bitmapSize.cy;
+	}
+	else 
+	{
+		if (m_nBitmapID == IDB_PICTURES)
+			realBitmapHeight = 21;	// Height of command buttons
+		else realBitmapHeight = 17; // Height of personal toolbar button bitmaps.
+	}
+
+	// Center the image within the button	
+	ptDst.x = (rcImg.Width() >= m_bitmapSize.cx) ?
+		rcImg.left + (((rcImg.Width() - m_bitmapSize.cx) + 1) / 2) : rcImg.left;
+	
+	ptDst.y = (rcImg.Height() >= realBitmapHeight) ?
+		rcImg.top + (((rcImg.Height() - realBitmapHeight) + 1) / 2) : rcImg.top;
+
+	// If we're in the checked state, shift the image one pixel
+	if (m_eState == eBUTTON_CHECKED || (m_eState == eBUTTON_UP && m_nChecked == 1))
+	{
+		ptDst.x += 1;
+		ptDst.y += 1;
+	}
+
+	// Call the handy transparent blit function to paint the bitmap over
+	// whatever colors exist.
+	
+	CPoint bitmapStart;
+
+    if(m_bIsResourceID)
+		bitmapStart = CPoint(m_nBitmapIndex * m_bitmapSize.cx, m_bEnabled ? realBitmapHeight * eState : realBitmapHeight);
+
+	if(m_bIsResourceID)  
+	{
+		
 		if(m_nIconType == LOCAL_FILE)
 		{
-			realBitmapHeight = 16;
-			m_bitmapSize.cx = 16;
+			DrawLocalIcon(hDC, ptDst.x, ptDst.y);
 		}
 		else if (m_nIconType == ARBITRARY_URL)
 		{
-			realBitmapHeight = m_bitmapSize.cy;
+			DrawCustomIcon(hDC, ptDst.x, ptDst.y);
 		}
 		else 
-		{
-			if (m_nBitmapID == IDB_PICTURES)
-				realBitmapHeight = 21;	// Height of command buttons
-			else realBitmapHeight = 17; // Height of personal toolbar button bitmaps.
-		}
+			FEU_TransBlt( hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight,
+				pBmpDC, bitmapStart.x, bitmapStart.y ,WFE_GetUIPalette(NULL), 
+				GetSysColor(COLOR_BTNFACE));   
+            //::BitBlt(hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight, 
+			//	 pBmpDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
+	}
 
-		// Center the image within the button	
-		ptDst.x = (rcImg.Width() >= m_bitmapSize.cx) ?
-			rcImg.left + (((rcImg.Width() - m_bitmapSize.cx) + 1) / 2) : rcImg.left;
-		
-		ptDst.y = (rcImg.Height() >= realBitmapHeight) ?
-			rcImg.top + (((rcImg.Height() - realBitmapHeight) + 1) / 2) : rcImg.top;
-
-		// If we're in the checked state, shift the image one pixel
-		if (m_eState == eBUTTON_CHECKED || (m_eState == eBUTTON_UP && m_nChecked == 1))
-		{
-			ptDst.x += 1;
-			ptDst.y += 1;
-		}
-	
-		// Call the handy transparent blit function to paint the bitmap over
-		// whatever colors exist.
-		
-		CPoint bitmapStart;
-
-        if(m_bIsResourceID)
-			bitmapStart = CPoint(m_nBitmapIndex * m_bitmapSize.cx, m_bEnabled ? realBitmapHeight * eState : realBitmapHeight);
-
-		if(m_bIsResourceID)  
-		{
-			
-			if(m_nIconType == LOCAL_FILE)
-			{
-				DrawLocalIcon(hDC, ptDst.x, ptDst.y);
-			}
-			else if (m_nIconType == ARBITRARY_URL)
-			{
-				DrawCustomIcon(hDC, ptDst.x, ptDst.y);
-			}
-			else 
-				FEU_TransBlt( hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight,
-					pBmpDC, bitmapStart.x, bitmapStart.y ,WFE_GetUIPalette(NULL), 
-					GetSysColor(COLOR_BTNFACE));   
-                //::BitBlt(hDC, ptDst.x, ptDst.y, m_bitmapSize.cx, realBitmapHeight, 
-				//	 pBmpDC, bitmapStart.x, bitmapStart.y, SRCCOPY);
-		}
-		else
-		{
-			CSize destSize;
-
-			if(sizeImg.cx > sizeImg.cy)
-			{
-				destSize.cx = m_bitmapSize.cx;
-				destSize.cy = (int)(realBitmapHeight * ((double)sizeImg.cy / sizeImg.cx));
-			}
-			else
-			{
-				destSize.cx = (int)(m_bitmapSize.cx * ((double)sizeImg.cx/ sizeImg.cy));
-				destSize.cy = m_bitmapSize.cy;
-			}
-			StretchBlt(hDC, ptDst.x, ptDst.y, destSize.cx, destSize.cy,
-						pBmpDC, 0, 0, sizeImg.cx, sizeImg.cy, SRCCOPY);
-		}
-
+	if (m_hBmpImg != NULL)
+	{
 		// Cleanup
-
 		::SelectObject(pBmpDC, hOldBmp);
 		::SelectPalette(pBmpDC, hOldPal, TRUE);
 		::DeleteDC(pBmpDC);
-
 	}
 }
 

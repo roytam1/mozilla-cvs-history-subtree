@@ -240,7 +240,7 @@ public:
 	virtual void UpdateURLBar(char* url) {}
 
 	BOOL IsResourceID(void) { return m_bIsResourceID; }
-	UINT GetBitmapID(void) { return m_nBitmapID; }
+	virtual UINT GetBitmapID(void) { return m_nBitmapID; }
 	UINT GetBitmapIndex(void) { return m_nBitmapIndex; }
 	LPCTSTR GetBitmapFile(void) { return m_pBitmapFile; }
 	CSize GetBitmapSize(void) { return m_bitmapSize; }

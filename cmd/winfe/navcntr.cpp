@@ -199,9 +199,10 @@ int CSelectorButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButton
 							DWORD dwButtonStyle)
 {	
 	BOOKMARKITEM bookmark; // For now, create with the pictures style. No text ever.
-	return CRDFToolbarButton::Create(pParent, TB_PICTURES, noviceButtonSize, advancedButtonSize,
+	BOOL bResult = CRDFToolbarButton::Create(pParent, TB_PICTURES, noviceButtonSize, advancedButtonSize,
 		   pButtonText, pToolTipText, pStatusText, bitmapSize, nMaxTextChars, nMinTextChars,
 		   bookmark, pNode, dwButtonStyle);
+	return bResult;
 }
 
 CRDFContentView* CSelectorButton::GetContentView()

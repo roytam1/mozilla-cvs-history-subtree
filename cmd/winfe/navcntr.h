@@ -82,6 +82,8 @@ public:
 
 	CRDFContentView* GetContentView();
 
+	virtual UINT GetBitmapID() { return 0; }
+
 	virtual BOOL UseLargeIcons() { return TRUE; }
 
 	virtual void OnAction(void);
