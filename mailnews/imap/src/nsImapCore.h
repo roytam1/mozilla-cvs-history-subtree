@@ -151,9 +151,9 @@ struct mailbox_spec {
 	
 	PRUint32			box_flags;
 	
-	char          *allocatedPathName;
+	char			*allocatedPathName;
 	char			hierarchySeparator;
-	const char		*hostName;
+	char			*hostName;
 	
 	nsImapProtocol *connection;	// do we need this? It seems evil.
 	nsImapFlagAndUidState     *flagState;
