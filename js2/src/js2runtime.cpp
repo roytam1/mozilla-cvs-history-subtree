@@ -1487,7 +1487,7 @@ static JSValue ExtendAttribute_Invoke(Context *cx, const JSValue& /*thisValue*/,
     ASSERT(argc == 1);
 
     Attribute *x = new Attribute(Property::Extend, Property::Extend | Property::Virtual);
-    ASSERT(argv[0].isType);
+    ASSERT(argv[0].isType());
     x->mExtendArgument = (JSType *)(argv[0].type);
 
     return JSValue(x);
@@ -1646,30 +1646,30 @@ struct OperatorInitData {
     JS2Runtime::Operator op;
 } operatorInitData[] = 
 {
-        "~",            JS2Runtime::Complement,
-        "++",           JS2Runtime::Increment,
-        "--",           JS2Runtime::Decrement,
-        "()",           JS2Runtime::Call,
-        "new",          JS2Runtime::New,
-        "[]",           JS2Runtime::Index,
-        "[]=",          JS2Runtime::IndexEqual,
-        "delete []",    JS2Runtime::DeleteIndex,
-        "+",            JS2Runtime::Plus,
-        "-",            JS2Runtime::Minus,
-        "*",            JS2Runtime::Multiply,
-        "/",            JS2Runtime::Divide,
-        "%",            JS2Runtime::Remainder,
-        "<<",           JS2Runtime::ShiftLeft,
-        ">>",           JS2Runtime::ShiftRight,
-        ">>>",          JS2Runtime::UShiftRight,
-        "<",            JS2Runtime::Less,
-        "<=",           JS2Runtime::LessEqual,
-        "in",           JS2Runtime::In,
-        "==",           JS2Runtime::Equal,
-        "===",          JS2Runtime::SpittingImage,
-        "&",            JS2Runtime::BitAnd,
-        "^",            JS2Runtime::BitXor,
-        "|",            JS2Runtime::BitOr,
+    { "~",            JS2Runtime::Complement,       },
+    { "++",           JS2Runtime::Increment,        },
+    { "--",           JS2Runtime::Decrement,        },
+    { "()",           JS2Runtime::Call,             },
+    { "new",          JS2Runtime::New,              },
+    { "[]",           JS2Runtime::Index,            },
+    { "[]=",          JS2Runtime::IndexEqual,       },
+    { "delete []",    JS2Runtime::DeleteIndex,      },
+    { "+",            JS2Runtime::Plus,             },
+    { "-",            JS2Runtime::Minus,            },
+    { "*",            JS2Runtime::Multiply,         },
+    { "/",            JS2Runtime::Divide,           },
+    { "%",            JS2Runtime::Remainder,        },
+    { "<<",           JS2Runtime::ShiftLeft,        },
+    { ">>",           JS2Runtime::ShiftRight,       },
+    { ">>>",          JS2Runtime::UShiftRight,      },
+    { "<",            JS2Runtime::Less,             },
+    { "<=",           JS2Runtime::LessEqual,        },
+    { "in",           JS2Runtime::In,               },
+    { "==",           JS2Runtime::Equal,            },
+    { "===",          JS2Runtime::SpittingImage,    },
+    { "&",            JS2Runtime::BitAnd,           },
+    { "^",            JS2Runtime::BitXor,           },
+    { "|",            JS2Runtime::BitOr,            },
 };
 
 void initOperatorTable()
