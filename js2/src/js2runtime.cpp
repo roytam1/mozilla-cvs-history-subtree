@@ -72,7 +72,7 @@ static bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
 
 JSType *Context::findType(const StringAtom& typeName) 
 {
-    const JSValue type = getGlobalObject()->getProperty(typeName);
+    const JSValue type = mGlobal->getProperty(typeName);
     if (type.isType())
         return type.type;
     return Object_Type;
@@ -88,41 +88,6 @@ JSType *Context::extractType(ExprNode *t)
     return type;
 }
 
-JSValue defaultGetterImp(JSValueList args)
-{
-    // arg[0] is this
-    // arg[1] is slot
-    ASSERT(args[0].isObject());
-    JSInstance *inst = static_cast<JSInstance *>(args[0].object);
-    ASSERT(args[1].isSlot());
-    Slot *slot = args[1].slot;
-    return inst->mInstanceValues[slot->mIndex];
-}
-JSValue defaultSetterImp(JSValueList args)
-{
-    // arg[0] is this
-    // arg[1] is slot
-    // arg[2] is new value
-    ASSERT(args[0].isObject());
-    JSInstance *inst = static_cast<JSInstance *>(args[0].object);
-    ASSERT(args[1].isSlot());
-    Slot *slot = args[1].slot;
-    inst->mInstanceValues[slot->mIndex] = args[2];
-    return args[2];
-}
-JSValue methodGetterImp(JSValueList args)
-{
-    // arg[0] is this
-    // arg[1] is slot
-    ASSERT(args[0].isObject());
-    JSType *cl = args[0].object->getType();
-    ASSERT(args[1].isSlot());
-    Slot *slot = args[1].slot;
-    return JSValue(cl->mMethods[slot->mIndex]);
-}
-JSFunction *Context::defaultGetter = new JSFunction(defaultGetterImp);
-JSFunction *Context::defaultSetter = new JSFunction(defaultSetterImp);
-JSFunction *Context::methodGetter = new JSFunction(methodGetterImp);
 
 JS2Runtime::Operator simpleLookup[ExprNode::kindsEnd] = {
    JS2Runtime::None,                    // none,
@@ -206,7 +171,7 @@ JS2Runtime::Operator simpleLookup[ExprNode::kindsEnd] = {
 
 JS2Runtime::Operator Context::getOperator(uint32 parameterCount, String &name)
 {
-    Lexer operatorLexer(getWorld(), name, widenCString("Operator name"), 0); // XXX get source and line number from function ???   
+    Lexer operatorLexer(mWorld, name, widenCString("Operator name"), 0); // XXX get source and line number from function ???   
     const Token &t = operatorLexer.get(false);  // XXX what's correct for preferRegExp parameter ???
 
     JS2Runtime::Operator op = simpleLookup[t.getKind()];
@@ -346,7 +311,7 @@ JSValue Context::interpret(ByteCodeModule *bcm, JSValueList args)
 
 void Context::buildRuntime(StmtNode *p)
 {
-//    mScopeChain.addScope(mGlobalObject);
+    mScopeChain.addScope(mGlobal);
     buildRuntimeForStmt(p);
 }
 
@@ -362,7 +327,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
                     JSType *type = extractType(v->type);
-//                    mScopeChain.defineVariable(i->name, type, defaultGetter, defaultSetter);
+                    mScopeChain.defineVariable(i->name, type);
                     if (v->initializer) {
                         // assign value from v->initializer to the variable just defined
                     }
@@ -387,7 +352,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 ASSERT(classStmt->superclass->getKind() == ExprNode::identifier);   // XXX
                 IdentifierExprNode *superclassExpr = static_cast<IdentifierExprNode*>(classStmt->superclass);
 
-                JSValue superclassValue = getGlobalObject()->getProperty(superclassExpr->name);
+                JSValue superclassValue = mGlobal->getProperty(superclassExpr->name);
             
             
                 ASSERT(superclassValue.isType() && !superclassValue.isNull());
@@ -397,7 +362,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 
             // is it ok for a partially defined class to appear in global scope? this is needed
             // to handle recursive types, such as linked list nodes.
-            getGlobalObject()->setProperty(nameExpr->name, JSValue(thisClass));
+            mGlobal->setProperty(nameExpr->name, JSValue(thisClass));
 
 /*
     Declare all the methods & fields
@@ -419,18 +384,12 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                                     IdentifierExprNode* idExpr = static_cast<IdentifierExprNode*>(v->name);
                                     JSType *type = extractType(v->type);
                                     if (isStatic)
-                                        thisClass->defineStaticVariable(idExpr->name, type, 
-                                                                        defaultGetter, 
-                                                                        defaultSetter);
+                                        thisClass->defineStaticVariable(idExpr->name, type);
                                     else {
                                         if (hasAttribute(vs->attributes, VirtualKeyWord))
-                                            thisClass->defineVariable(idExpr->name, type,
-                                                                        defaultGetter, 
-                                                                        defaultSetter);
+                                            thisClass->defineVariable(idExpr->name, type);
                                         else
-                                            thisClass->defineVariable(idExpr->name, type,
-                                                                        defaultGetter, 
-                                                                        defaultSetter);
+                                            thisClass->defineVariable(idExpr->name, type);
                                         if (v->initializer)
                                             needsInstanceInitializer = true;
                                     }
@@ -456,10 +415,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                                 if (f->function.name->getKind() == ExprNode::identifier) {
                                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
                                     if (isConstructor)
-                                        thisClass->defineConstructor(name, NULL, methodGetter);
+                                        thisClass->defineConstructor(name, NULL, NULL);
                                     else
                                         if (isStatic)
-                                            thisClass->defineStaticMethod(name, NULL, methodGetter);
+                                            thisClass->defineStaticMethod(name, NULL, NULL);
                                         else {
                                             switch (f->function.prefix) {
 /*
@@ -471,7 +430,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                                                 break;
 */
                                             case FunctionName::normal:
-                                                thisClass->defineMethod(name, NULL, methodGetter);
+                                                thisClass->defineMethod(name, NULL, NULL);
                                                 break;
                                             default:
                                                 NOT_REACHED("unexpected prefix");
@@ -689,10 +648,15 @@ Formatter& operator<<(Formatter& f, const Access& slot)
     }
     return f;
 }
-Formatter& operator<<(Formatter& f, const Slot& slot)
+Formatter& operator<<(Formatter& f, const PropertyFlag& flg)
 {
-    f << "index = " << slot.mIndex << "\n";
-    printFormat(f, "code @ 0x%08X\n", slot.mAccessor);
+    switch (flg) {
+    case ValuePointer : f << "ValuePointer\n"; break;
+    case FunctionPair : f << "FunctionPair\n"; break;
+    case IndexPair : f << "IndexPair\n"; break;
+    case Slot : f << "Slot\n"; break;
+    case Method : f << "Method\n"; break;
+    }
     return f;
 }
 
