@@ -514,11 +514,7 @@ var BookmarksCommand = {
       return;
     for (var i=0; i<aSelection.length; ++i) {
       var type = aSelection.type[i];
-      if (aTargetBrowser == "save") {
-        var item = aSelection.item[i];
-        saveURL(item.Value, BookmarksUtils.getProperty(item, "Name"), null, true);
-      }      
-      else if (type == "Bookmark" || type == "")
+      if (type == "Bookmark" || type == "")
         this.openOneBookmark(aSelection.item[i].Value, aTargetBrowser, aDS);
       else if (type == "FolderGroup" || type == "Folder" || type == "PersonalToolbarFolder")
         this.openGroupBookmark(aSelection.item[i].Value, aTargetBrowser);
