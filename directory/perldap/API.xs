@@ -479,7 +479,9 @@ ldap_add(ld,dn,attrs)
 	const char *	dn
 	LDAPMod **	attrs = hash2mod($arg,1,"$func_name");
 	CLEANUP:
-	ldap_mods_free(attrs,1);
+	
+	if (attrs)
+	  ldap_mods_free(attrs, 1);
 
 #ifdef LDAPV3
 
@@ -495,7 +497,8 @@ ldap_add_ext(ld,dn,attrs,serverctrls,clientctrls,msgidp)
 	RETVAL
 	msgidp
 	CLEANUP:
-	ldap_mods_free(attrs,1);
+	if (attrs)
+	  ldap_mods_free(attrs, 1);
 
 int
 ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
@@ -505,7 +508,8 @@ ldap_add_ext_s(ld,dn,attrs,serverctrls,clientctrls)
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
 	CLEANUP:
-	ldap_mods_free(attrs,1);
+	if (attrs)
+	  ldap_mods_free(attrs, 1);
 
 #endif
 
@@ -515,7 +519,8 @@ ldap_add_s(ld,dn,attrs)
 	const char *	dn
 	LDAPMod **	attrs = hash2mod($arg,1,"$func_name");
 	CLEANUP:
-	ldap_mods_free(attrs,1);
+	if (attrs)
+	  ldap_mods_free(attrs, 1);
 
 void
 ldap_ber_free(ber,freebuf)
@@ -525,7 +530,7 @@ ldap_ber_free(ber,freebuf)
 	{
 	   if (ber)
 	   {
-	      ldap_ber_free(ber,freebuf);
+	      ldap_ber_free(ber, freebuf);
 	   }
 	}
 
@@ -1032,7 +1037,8 @@ ldap_modify(ld,dn,mods)
 	const char *	dn
 	LDAPMod **	mods = hash2mod($arg,0,"$func_name");
 	CLEANUP:
-	ldap_mods_free(mods,1);
+	if (mods)
+	  ldap_mods_free(mods, 1);
 
 #ifdef LDAPV3
 
@@ -1048,7 +1054,8 @@ ldap_modify_ext(ld,dn,mods,serverctrls,clientctrls,msgidp)
 	RETVAL
 	msgidp
 	CLEANUP:
-	ldap_mods_free(mods,1);
+	if (mods)
+	  ldap_mods_free(mods, 1);
 
 int
 ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
@@ -1058,7 +1065,8 @@ ldap_modify_ext_s(ld,dn,mods,serverctrls,clientctrls)
 	LDAPControl **	serverctrls
 	LDAPControl **	clientctrls
 	CLEANUP:
-	ldap_mods_free(mods,1);
+	if (mods)
+	  ldap_mods_free(mods, 1);
 
 #endif
 
@@ -1068,7 +1076,8 @@ ldap_modify_s(ld,dn,mods)
 	const char *	dn
 	LDAPMod **	mods = hash2mod($arg,0,"$func_name");
 	CLEANUP:
-	ldap_mods_free(mods,1);
+	if (mods)
+	  ldap_mods_free(mods, 1);
 
 int
 ldap_modrdn(ld,dn,newrdn)
