@@ -51,8 +51,8 @@ int DefaultStringComparator::compare(const String& str1, const String& str2) {
 
     int c = 0;
     while ((c < len1) && (c < len2)) {
-        Int32 ch1 = str1.charAt(c);
-        Int32 ch2 = str2.charAt(c);
+        PRInt32 ch1 = str1.charAt(c);
+        PRInt32 ch2 = str2.charAt(c);
         if (ch1 < ch2) return -1;
         else if (ch2 < ch1) return 1;
         ++c;

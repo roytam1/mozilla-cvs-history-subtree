@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     cerr << copyright <<endl;
 
     //-- print banner line
-    Int32 fillSize = 1;
+    PRInt32 fillSize = 1;
     fillSize += copyright.length();
     String fill;
     fill.setLength(fillSize, '-');

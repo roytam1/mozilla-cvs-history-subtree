@@ -220,7 +220,7 @@ void URIUtils::resolveHref(const String& href, const String& base, String& dest)
 } //-- resolveHref
 
 void URIUtils::getFragmentIdentifier(const String& href, String& frag) {
-    Int32 pos;
+    PRInt32 pos;
     pos = href.lastIndexOf('#');
     if(pos != NOT_FOUND)
         href.subString(pos+1, frag);
@@ -229,7 +229,7 @@ void URIUtils::getFragmentIdentifier(const String& href, String& frag) {
 } //-- getFragmentIdentifier
 
 void URIUtils::getDocumentURI(const String& href, String& docUri) {
-    Int32 pos;
+    PRInt32 pos;
     pos = href.lastIndexOf('#');
     if(pos != NOT_FOUND)
         href.subString(0,pos,docUri);

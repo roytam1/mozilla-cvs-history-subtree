@@ -52,7 +52,7 @@ void CommandLineUtils::getOptions
                 //-- check full flag, otherwise try to find
                 //-- flag within string
                 if (!flags.contains(flag)) {
-                    Int32 idx = 1;
+                    PRInt32 idx = 1;
                     String tmpFlag;
                     while(idx <= flag.length()) {
                         flag.subString(0,idx, tmpFlag);

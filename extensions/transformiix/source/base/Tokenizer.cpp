@@ -44,7 +44,7 @@
  * Larry Fitzpartick, OpenText, lef@opentext.com
  *  -- 19990806
  *    -- added void return type declaration for ::nextToken()
- *    -- added proper cast from Int32 to char in ::nextToken()
+ *    -- added proper cast from PRInt32 to char in ::nextToken()
  * $Id$
  */
 

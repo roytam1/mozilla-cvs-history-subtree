@@ -70,7 +70,7 @@ ExprResult* AttributeExpr::evaluate(Node* context, ContextState* cs) {
     if ( !context ) return nodeSet;
     NamedNodeMap* atts = context->getAttributes();
     if ( atts ) {
-        UInt32 i = 0;
+        PRUint32 i = 0;
         if ( isNameWild && isNamespaceWild ) {
             for ( ; i < atts->getLength(); i++ )
                 nodeSet->add(atts->item(i));

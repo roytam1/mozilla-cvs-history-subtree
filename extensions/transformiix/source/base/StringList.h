@@ -58,7 +58,7 @@ class StringList {
       /**
        * Returns the number of Strings in this List
       **/
-      Int32 getLength();
+      PRInt32 getLength();
 
       /**
        * Returns a StringListIterator for this StringList
@@ -92,7 +92,7 @@ private:
 
       StringListItem* firstItem;
       StringListItem* lastItem;
-      Int32 itemCount;
+      PRInt32 itemCount;
 
       void insertAfter(String* strptr, StringListItem* sItem);
       void insertBefore(String* strptr, StringListItem* sItem);

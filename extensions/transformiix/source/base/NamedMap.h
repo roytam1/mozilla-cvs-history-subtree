@@ -167,8 +167,8 @@ private:
     // map table
     BucketItem** elements;
 
-    Int32 numberOfBuckets;
-    Int32 numberOfElements;
+    PRInt32 numberOfBuckets;
+    PRInt32 numberOfElements;
     MBool doObjectDeletion;
 
       //-------------------/

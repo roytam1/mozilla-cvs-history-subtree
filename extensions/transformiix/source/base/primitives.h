@@ -143,7 +143,7 @@ public:
     /**
      * Creates a new Integer initialized to the given int value.
     **/
-    Integer(Int32 integer);
+    Integer(PRInt32 integer);
 
     /**
      * Creates a new Integer based on the value of the given String
@@ -167,7 +167,7 @@ public:
 
 private:
 
-    Int32 value;
+    PRInt32 value;
 
     /**
      * converts the given String to an int

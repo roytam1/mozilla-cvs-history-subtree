@@ -142,8 +142,8 @@ private:
     // map table
     BucketItem** elements;
 
-    Int32 numberOfBuckets;
-    Int32 numberOfElements;
+    PRInt32 numberOfBuckets;
+    PRInt32 numberOfElements;
 
     /**
      * The ownership flag. Used to decide which objects are

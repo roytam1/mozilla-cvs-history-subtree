@@ -45,8 +45,8 @@ class TxObject {
     /**
      * Returns the Hashcode for this TxObject
     **/
-    virtual Int32 hashCode() {
-        return (Int32)this;
+    virtual PRInt32 hashCode() {
+        return (PRInt32)this;
     } //-- hashCode
 
     /**

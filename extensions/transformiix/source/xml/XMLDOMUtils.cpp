@@ -45,7 +45,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
     //-- document nodes
     if (nodeType != Node::DOCUMENT_NODE && !owner) return 0;
     Node* newNode = 0;
-    UInt32 i = 0;
+    PRUint32 i = 0;
     switch ( nodeType ) {
 
         case Node::ATTRIBUTE_NODE :

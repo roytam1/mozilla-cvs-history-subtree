@@ -978,7 +978,7 @@ void ProcessorState::initialize() {
 	    //-- process namespace nodes
 	    NamedNodeMap* atts = element->getAttributes();
 	    if ( atts ) {
-	        for (UInt32 i = 0; i < atts->getLength(); i++) {
+	        for (PRUint32 i = 0; i < atts->getLength(); i++) {
 	            Attr* attr = (Attr*)atts->item(i);
 	            String attName = attr->getName();
 	            String attValue = attr->getValue();

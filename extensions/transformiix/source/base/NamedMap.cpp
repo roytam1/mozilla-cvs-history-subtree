@@ -63,7 +63,7 @@ NamedMap::NamedMap(int size) {
 /**
  * Helper method for Constructors
 **/
-void NamedMap::initialize(Int32 size) {
+void NamedMap::initialize(PRInt32 size) {
 
     //-- by default the NamedMap will not delete it's
     //-- object references
@@ -73,7 +73,7 @@ void NamedMap::initialize(Int32 size) {
     elements = new BucketItem*[size];
 
     //-- initialize all elements to 0;
-    for ( Int32 i = 0; i < size; i++ ) elements[i] = 0;
+    for ( PRInt32 i = 0; i < size; i++ ) elements[i] = 0;
 
     numberOfBuckets = size;
     numberOfElements = 0;
@@ -350,13 +350,13 @@ NamedMap::BucketItem* NamedMap::getBucketItem(const String& key) {
 **/
 unsigned long NamedMap::hashKey(const String& key) {
 
-    Int32 len = key.length();
+    PRInt32 len = key.length();
     UNICODE_CHAR* chars = new UNICODE_CHAR[len];
     key.toUnicode(chars);
 
     unsigned long hashCode = 0;
-    for (Int32 i = 0; i < len; i++) {
-        hashCode +=  ((Int32)chars[i]) << 3;
+    for (PRInt32 i = 0; i < len; i++) {
+        hashCode +=  ((PRInt32)chars[i]) << 3;
     }
     delete [] chars;
     return hashCode;

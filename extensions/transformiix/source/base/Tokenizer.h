@@ -79,8 +79,8 @@ public:
 
 private:
 
-    Int32 currentPos;
-    Int32 size;
+    PRInt32 currentPos;
+    PRInt32 size;
     String str;
     String delimiters;
 
