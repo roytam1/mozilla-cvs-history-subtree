@@ -40,7 +40,6 @@ static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
 static NS_DEFINE_CID(kRDFBookmarkDataSourceCID,  NS_RDFBOOKMARKDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFContentSinkCID,         NS_RDFCONTENTSINK_CID);
-static NS_DEFINE_CID(kRDFDocumentCID,            NS_RDFDOCUMENT_CID);
 static NS_DEFINE_CID(kRDFHTMLBuilderCID,         NS_RDFHTMLBUILDER_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,  NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
@@ -48,6 +47,7 @@ static NS_DEFINE_CID(kRDFTreeBuilderCID,         NS_RDFTREEBUILDER_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID,       NS_RDFXMLDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFXULBuilderCID,          NS_RDFXULBUILDER_CID);
 static NS_DEFINE_CID(kXULDataSourceCID,			 NS_XULDATASOURCE_CID);
+static NS_DEFINE_CID(kXULDocumentCID,            NS_XULDOCUMENT_CID);
 static NS_DEFINE_CID(kXULContentSinkCID,         NS_XULCONTENTSINK_CID);
 
 class RDFFactoryImpl : public nsIFactory
@@ -148,8 +148,8 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
         if (NS_FAILED(rv = NS_NewRDFCompositeDataSource((nsIRDFCompositeDataSource**) &inst)))
             return rv;
     }
-    else if (mClassID.Equals(kRDFDocumentCID)) {
-        if (NS_FAILED(rv = NS_NewRDFDocument((nsIRDFDocument**) &inst)))
+    else if (mClassID.Equals(kXULDocumentCID)) {
+        if (NS_FAILED(rv = NS_NewXULDocument((nsIRDFDocument**) &inst)))
             return rv;
     }
     else if (mClassID.Equals(kRDFHTMLBuilderCID)) {
