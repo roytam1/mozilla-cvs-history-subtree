@@ -56,6 +56,7 @@
 #include <AppleEvents.h>
 #include <AEDataModel.h>
 #include <Processes.h>
+#include <Carbon/Carbon.h>
 
 // Unix Includes
 #include <sys/stat.h>
