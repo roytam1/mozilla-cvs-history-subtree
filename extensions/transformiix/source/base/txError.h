@@ -68,4 +68,7 @@ typedef PRUint32 nsresult;
 
 #endif // TX_EXE
 
+#define NS_ERROR_XPATH_EVAL_FAILED         NS_ERROR_FAILURE
+#define NS_ERROR_XPATH_INVALID_ARG         NS_ERROR_INVALID_ARG
+
 #endif // __TX_ERROR
