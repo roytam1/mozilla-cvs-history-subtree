@@ -193,7 +193,7 @@ nsLocalFile::~nsLocalFile()
 NS_IMPL_ISUPPORTS2(nsLocalFile, nsIFile, nsILocalFile);
 
 nsresult
-nsLocalFile::Create(nsISupports *outer, const nsIID &aIID, void **aInstancePtr)
+nsLocalFile::nsLocalFileConstructor(nsISupports *outer, const nsIID &aIID, void **aInstancePtr)
 {
     NS_ENSURE_ARG_POINTER(aInstancePtr);
     NS_ENSURE_PROPER_AGGREGATION(outer, aIID);

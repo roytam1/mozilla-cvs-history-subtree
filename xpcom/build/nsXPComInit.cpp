@@ -463,7 +463,7 @@ nsresult NS_COM NS_InitXPCOM(nsIServiceManager* *result,
     rv = RegisterGenericFactory(compMgr, nsLocalFile::GetCID(),
                                 NS_LOCAL_FILE_CLASSNAME,
                                 NS_LOCAL_FILE_PROGID,
-                                nsLocalFile::Create);
+                                nsLocalFile::nsLocalFileConstructor);
     if (NS_FAILED(rv)) return rv;
 
     rv = RegisterGenericFactory(compMgr, nsDirectoryService::GetCID(),

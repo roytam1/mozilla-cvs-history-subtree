@@ -249,7 +249,7 @@ nsLocalFile::~nsLocalFile()
 /* nsISupports interface implementation. */
 NS_IMPL_ISUPPORTS2(nsLocalFile, nsILocalFile, nsIFile)
 NS_METHOD
-nsLocalFile::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
+nsLocalFile::nsLocalFileConstructor(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 {
     NS_ENSURE_ARG_POINTER(aInstancePtr);
     NS_ENSURE_PROPER_AGGREGATION(outer, aIID);

@@ -44,7 +44,7 @@ public:
     nsLocalFile();
     virtual ~nsLocalFile();
 
-    static NS_METHOD Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
+    static NS_METHOD nsLocalFileConstructor(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
