@@ -71,6 +71,7 @@
 #include "nsIDocShell.h"
 #include "nsIMarkupDocumentViewer.h"
 #include "nsITreeFrame.h"
+#include "nsIOutlinerBoxObject.h"
 #include "nsIScrollableViewProvider.h"
 
 //we will use key binding by default now. this wil lbreak viewer for now
@@ -824,12 +825,18 @@ nsEventStateManager::DoWheelScroll(nsIPresContext* aPresContext,
   
   // Special case for tree/list frames - they handle their own scrolling
   nsITreeFrame* treeFrame = nsnull;
+  nsCOMPtr<nsIOutlinerBoxObject> outlinerBoxObject;
   nsIFrame* curFrame = aTargetFrame;
   
   while (curFrame) {
     if (NS_OK == curFrame->QueryInterface(NS_GET_IID(nsITreeFrame),
                                           (void**) &treeFrame))
       break;
+
+    outlinerBoxObject = do_QueryInterface(curFrame);
+    if (outlinerBoxObject)
+      break;
+
     curFrame->GetParent(&curFrame);
   }
   
@@ -854,6 +861,14 @@ nsEventStateManager::DoWheelScroll(nsIPresContext* aPresContext,
     }
     
     treeFrame->ScrollToIndex(scrollIndex);
+    return NS_OK;
+  }
+
+  if (outlinerBoxObject) {
+    if (scrollPage)
+      outlinerBoxObject->ScrollByPages((numLines > 0) ? 1 : -1);
+    else
+      outlinerBoxObject->ScrollByLines(numLines);
     return NS_OK;
   }
   
