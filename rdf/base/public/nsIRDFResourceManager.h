@@ -21,8 +21,10 @@
 
 #include "nscore.h"
 #include "nsISupports.h"
-class nsIRDFResource;
+class nsIRDFDataBase;
+class nsIRDFDataSource;
 class nsIRDFLiteral;
+class nsIRDFResource;
 
 /**
  * An RDF resource manager. This should be a singleton object, obtained
