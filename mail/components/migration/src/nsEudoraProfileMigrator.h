@@ -35,11 +35,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef oeprofilemigrator___h___
-#define oeprofilemigrator___h___
+#ifndef eudoraprofilemigrator___h___
+#define eudoraprofilemigrator___h___
 
 #include "nsIMailProfileMigrator.h"
+#include "nsILocalFile.h"
+#include "nsIObserverService.h"
+#include "nsISupportsArray.h"
+#include "nsString.h"
 #include "nsITimer.h"
+#include "nsIImportGeneric.h"
+#include "nsIImportModule.h"
+#include "nsIMsgAccount.h"
 #include "nsProfileMigratorBase.h"
 
 class nsIFile;
@@ -47,7 +54,7 @@ class nsIPrefBranch;
 class nsIPrefService;
 class nsVoidArray;
 
-class nsOEProfileMigrator : public nsIMailProfileMigrator,
+class nsEudoraProfileMigrator : public nsIMailProfileMigrator,
                             public nsITimerCallback,
                             public nsProfileMigratorBase
 {
@@ -56,8 +63,8 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSITIMERCALLBACK
 
-  nsOEProfileMigrator();
-  virtual ~nsOEProfileMigrator();
+  nsEudoraProfileMigrator();
+  virtual ~nsEudoraProfileMigrator();
 
   virtual nsresult ContinueImport();
 

@@ -36,12 +36,17 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsMailProfileMigratorUtils.h"
+#include "nsCRT.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsIObserverService.h"
+#include "nsIPrefLocalizedString.h"
+#include "nsIPrefService.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
-#include "nsOEProfileMigrator.h"
+#include "nsNetCID.h"
+#include "nsNetUtil.h"
+#include "nsEudoraProfileMigrator.h"
 #include "nsIProfileMigrator.h"
 #include "nsVoidArray.h"
 
@@ -49,21 +54,21 @@
 #include "nsIFileSpec.h" // needed for an obsolete API
 
 
-NS_IMPL_ISUPPORTS2(nsOEProfileMigrator, nsIMailProfileMigrator, nsITimerCallback)
+NS_IMPL_ISUPPORTS2(nsEudoraProfileMigrator, nsIMailProfileMigrator, nsITimerCallback)
 
 
-nsOEProfileMigrator::nsOEProfileMigrator()
+nsEudoraProfileMigrator::nsEudoraProfileMigrator()
 {
   mProcessingMailFolders = PR_FALSE;
   // get the import service
-  mImportModule = do_CreateInstance("@mozilla.org/import/import-oe;1");
+  mImportModule = do_CreateInstance("@mozilla.org/import/import-eudora;1");
 }
 
-nsOEProfileMigrator::~nsOEProfileMigrator()
+nsEudoraProfileMigrator::~nsEudoraProfileMigrator()
 {           
 }
 
-nsresult nsOEProfileMigrator::ContinueImport()
+nsresult nsEudoraProfileMigrator::ContinueImport()
 {
   return Notify(nsnull);
 }
@@ -72,7 +77,7 @@ nsresult nsOEProfileMigrator::ContinueImport()
 // nsITimerCallback
 
 NS_IMETHODIMP
-nsOEProfileMigrator::Notify(nsITimer *timer)
+nsEudoraProfileMigrator::Notify(nsITimer *timer)
 {
   PRInt32 progress;
   mGenericImporter->GetProgress(&progress);
@@ -102,7 +107,7 @@ nsOEProfileMigrator::Notify(nsITimer *timer)
 // nsIMailProfileMigrator
 
 NS_IMETHODIMP
-nsOEProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const PRUnichar* aProfile)
+nsEudoraProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const PRUnichar* aProfile)
 {
   nsresult rv = NS_OK;
 
@@ -128,7 +133,7 @@ nsOEProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const
 }
 
 NS_IMETHODIMP
-nsOEProfileMigrator::GetMigrateData(const PRUnichar* aProfile, 
+nsEudoraProfileMigrator::GetMigrateData(const PRUnichar* aProfile, 
                                            PRBool aReplace, 
                                            PRUint16* aResult)
 {
@@ -139,7 +144,7 @@ nsOEProfileMigrator::GetMigrateData(const PRUnichar* aProfile,
 }
 
 NS_IMETHODIMP
-nsOEProfileMigrator::GetSourceExists(PRBool* aResult)
+nsEudoraProfileMigrator::GetSourceExists(PRBool* aResult)
 {
   *aResult = PR_FALSE;
   
@@ -157,14 +162,14 @@ nsOEProfileMigrator::GetSourceExists(PRBool* aResult)
 }
 
 NS_IMETHODIMP
-nsOEProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
+nsEudoraProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
 {
   *aResult = PR_FALSE;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsOEProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
+nsEudoraProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 {
   *aResult = nsnull;
   return NS_OK;

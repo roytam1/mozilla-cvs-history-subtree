@@ -312,6 +312,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsOutlookProfileMigrator)
 
 #endif
 
+#if defined (XP_WIN32) || defined (XP_MACOSX)
+#include "nsEudoraProfileMigrator.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsEudoraProfileMigrator)
+#endif
 
 static const nsModuleComponentInfo components[] =
 {
@@ -336,6 +340,12 @@ static const nsModuleComponentInfo components[] =
     NS_OUTLOOKPROFILEMIGRATOR_CID,
     NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "outlook",
     nsOutlookProfileMigratorConstructor },
+#endif
+#if defined (XP_WIN32) || defined (XP_MACOSX)
+  { "Eudora Profile Migrator",
+    NS_EUDORAPROFILEMIGRATOR_CID,
+    NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "eudora",
+    nsEudoraProfileMigratorConstructor },
 #endif
 };
 

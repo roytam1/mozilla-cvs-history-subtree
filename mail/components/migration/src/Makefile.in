@@ -46,7 +46,12 @@ CPPSRCS += \
 	nsProfileMigratorBase.cpp \
 	nsOEProfileMigrator.cpp \
 	nsOutlookProfileMigrator.cpp \
+	nsEudoraProfileMigrator.cpp \
 	$(NULL)
+endif
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS += nsEudoraProfileMigrator.cpp
 endif
 
 EXTRA_DSO_LDOPTS += \
