@@ -1178,6 +1178,32 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
     // We need to do the save/open immediately, then.
     PRInt32 action = nsIMIMEInfo::saveToDisk;
     mMimeInfo->GetPreferredAction( &action );
+#ifdef XP_WIN
+    /* We need to see whether the file we've got here could be
+     * executable.  If it could, we had better not try to open it!
+     * This code mirrors the code in
+     * nsExternalAppHandler::LaunchWithApplication so that what we
+     * test here is as close as possible to what will really be
+     * happening if we decide to execute
+     */
+    nsCOMPtr<nsIFile> fileToTest;
+    nsCOMPtr<nsIURI> garbageURI;
+    PRInt64 garbageTimestamp;
+    GetDownloadInfo(getter_AddRefs(garbageURI), &garbageTimestamp,
+                    getter_AddRefs(fileToTest));
+    if (fileToTest) {
+      PRBool isExecutable;
+      rv = fileToTest->IsExecutable(&isExecutable);
+      if ((NS_SUCCEEDED(rv) && isExecutable) ||
+          NS_FAILED(rv)) {  // Paranoia is good
+        action = nsIMIMEInfo::saveToDisk;
+      }
+    } else {   // Paranoia is good here too, though this really should not happen
+      NS_WARNING("GetDownloadInfo returned a null file after the temp file has been set up! ");
+      action = nsIMIMEInfo::saveToDisk;
+    }
+
+#endif
     if ( action == nsIMIMEInfo::saveToDisk )
     {
         rv = SaveToDisk(nsnull, PR_FALSE);
