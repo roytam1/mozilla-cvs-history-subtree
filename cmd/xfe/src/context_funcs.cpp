@@ -346,6 +346,36 @@ fe_initialize_stderr (void)
 #define CHECK_CONTEXT_AND_DATA(c) \
 ((c) && CONTEXT_DATA(c) && !CONTEXT_DATA(context)->being_destroyed)
 
+#if defined(GLUE_COMPO_CONTEXT)
+//
+// Return either the context's component or the current active component
+//
+static XFE_Component * 
+fe_compoFromMWContext(MWContext *context)
+{
+    XFE_Component * compo = NULL;
+
+    // Sanity check for possible invocation of this function from a compo
+    // that was just destroyed (or is being destroyed)
+    if (!CHECK_CONTEXT_AND_DATA(context))
+    {
+		return NULL;
+    }
+
+    // Try to use context's frame
+    compo = ViewGlue_getCompo(XP_GetNonGridContext(context));
+    
+	// Make sure the frame is alive
+	if (compo && !compo->isAlive())
+	{
+		compo = NULL;
+	}
+
+    return compo;
+}
+
+#endif /* GLUE_COMPO_CONTEXT */
+
 //
 // Return either the context's frame or the current active frame
 //
@@ -448,12 +478,12 @@ XFE_EnableClicking(MWContext *context)
   D( printf("XFE_EnableClicking(context = 0x%x) running_p = %d\n",
             context, running_p); )
 
-  if (f)
+  if (f && f->isAlive())
     {
       f->notifyInterested(XFE_View::commandNeedsUpdating,
 						   (void*)xfeCmdStopLoading);
 
-	  f->notifyInterested(running_p ?
+	  f->notifyInterested(running_p?
 						  XFE_Frame::frameBusyCallback:
 						  XFE_Frame::frameNotBusyCallback);
     }
@@ -2098,7 +2128,7 @@ static void fe_frameNotifyLogoStartAnimation	(MWContext *);
 static void fe_frameNotifyProgressUpdateText	(MWContext *,char *);
 static void fe_frameNotifyProgressUpdatePercent	(MWContext *,int);
 
-static void	fe_frameNotifyProgressTickCylon		(MWContext *);
+static void	fe_frameNotifyProgressTickCylon	(MWContext *);
 
 static void fe_frameNotifyStatusUpdateText		(MWContext *,char *);
 
@@ -2359,11 +2389,11 @@ fe_progress_dialog_timer (XtPointer closure, XtIntervalId * /* id */)
      the length, only update every 1/2 second.
    */
   CONTEXT_DATA (context)->thermo_timer_id =
-	  XtAppAddTimeOut (fe_XtAppContext,
+    XtAppAddTimeOut (fe_XtAppContext,
 					   (CONTEXT_DATA (context)->thermo_lo_percent <= 0
-						? 100
-						: 500),
-					   fe_progress_dialog_timer, closure);
+		       ? 100
+		       : 500),
+		     fe_progress_dialog_timer, closure);
 }
 
 /* Start blinking the light and drawing the thermometer.
