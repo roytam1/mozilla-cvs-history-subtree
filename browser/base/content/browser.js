@@ -713,7 +713,6 @@ const gPopupBlockerObserver = {
       }
     }
     catch (e) {
-      dump("*** e = " + e + "\n");
       blockedPopupAllowSite.setAttribute("hidden", "true");
     }
     
@@ -930,7 +929,6 @@ const gXPInstallObserver = {
         var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                           .getService(Components.interfaces.nsIWindowMediator);
         var existingWindow = wm.getMostRecentWindow("exceptions");
-        dump("*** edit-perms, existingWindow = " + existingWindow + "\n");
         if (existingWindow) {
           existingWindow.setHost(webNav.currentURI.host);
           existingWindow.focus();
@@ -1040,13 +1038,11 @@ function Startup()
   if (!document.documentElement.hasAttribute("width")) {
     var defaultWidth = 994, defaultHeight;
     if (screen.availHeight <= 600) {
-      dump("*** screen res < 600px high\n");
       document.documentElement.setAttribute("sizemode", "maximized");
       defaultWidth = 610;
       defaultHeight = 450;
     }
     else {
-      dump("*** screen res > 600px high\n");
       // Create a narrower window for large or wide-aspect displays, to suggest
       // side-by-side page view. 
       if ((screen.availWidth / 2) >= 800)
@@ -3334,8 +3330,9 @@ nsBrowserStatusHandler.prototype =
     // <a href="#" onclick="return install();">Install Foo</a>
     //
     // - which fires a onLocationChange message to uri + '#'...
-    if (this.lastURI) {
-      var oldSpec = this.lastURI.spec;
+    var selectedBrowser = getBrowser().selectedBrowser;
+    if (selectedBrowser.lastURI) {
+      var oldSpec = selectedBrowser.lastURI.spec;
       var oldIndexOfHash = oldSpec.indexOf("#");
       if (oldIndexOfHash != -1)
         oldSpec = oldSpec.substr(0, oldIndexOfHash);
@@ -3343,13 +3340,12 @@ nsBrowserStatusHandler.prototype =
       var newIndexOfHash = newSpec.indexOf("#");
       if (newIndexOfHash != -1)
         newSpec = newSpec.substr(0, newSpec.indexOf("#"));
-      if (newSpec == oldSpec) {
+      if (newSpec != oldSpec) {
         var tabbrowser = getBrowser();
         tabbrowser.hideMessage(tabbrowser.selectedBrowser, "both");
       }
     }
-    
-    this.lastURI = aLocation;
+    selectedBrowser.lastURI = aLocation;
 
     this.setOverLink("", null);
 
