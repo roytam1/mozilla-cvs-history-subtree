@@ -20,17 +20,23 @@
 //
 #include "nsHTTPInstance.h"
 
-nsHTTPInstance::nsHTTPInstance(nsICoolURL* i_URL):m_pURL(i_URL)
+nsHTTPInstance::nsHTTPInstance(nsICoolURL* i_URL):
+    m_pURL(i_URL),
+    m_bConnected(PR_FALSE)
 {
+    //TODO think if we need to make a copy of the URL and keep it here
+    //since it might get deleted off the creators thread. And the
+    //stream listener could be elsewhere...
 }
 
 nsHTTPInstance::~nsHTTPInstance()
 {
+    //TODO if we keep our copy of m_pURL, then delete it too.
 }
 
 NS_IMPL_ADDREF(nsHTTPInstance);
 
-nsresult
+NS_METHOD
 nsHTTPInstance::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
     if (NULL == aInstancePtr)
@@ -60,20 +66,103 @@ nsHTTPInstance::QueryInterface(REFNSIID aIID, void** aInstancePtr)
  
 NS_IMPL_RELEASE(nsHTTPInstance);
 
-nsresult
-nsHTTPInstance::GetInputStream( nsIInputStream* *o_Stream)
+NS_METHOD
+nsHTTPInstance::GetInputStream(nsIInputStream* *o_Stream)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-nsresult
-nsHTTPInstance::SetHeader(const char* i_Header, const char* i_Value)
+NS_METHOD
+nsHTTPInstance::Interrupt(void)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-nsresult
-nsHTTPInstance::GetHeader(const char* i_Header, const char* *o_Value)
+NS_METHOD
+nsHTTPInstance::Load(void)
 {
+    if (m_bConnected) 
+        return NS_ERROR_ALREADY_CONNECTED;
+
+
+
+    m_bConnected = PR_TRUE;
+
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+//nsIHTTPInstance functions now...
+
+NS_METHOD
+nsHTTPInstance::SetAccept(const char* i_AcceptHeader)
+{
+    if (m_bConnected) 
+        return NS_ERROR_ALREADY_CONNECTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_METHOD
+nsHTTPInstance::SetCookie(const char* i_Cookie)
+{
+    if (m_bConnected) 
+        return NS_ERROR_ALREADY_CONNECTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_METHOD
+nsHTTPInstance::SetUserAgent(const char* i_UserAgent)
+{
+    if (m_bConnected) 
+        return NS_ERROR_ALREADY_CONNECTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_METHOD
+nsHTTPInstance::SetHTTPVersion(HTTPVersion i_Version)
+{
+    if (m_bConnected) 
+        return NS_ERROR_ALREADY_CONNECTED;
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+PRInt32
+nsHTTPInstance::GetContentLength(void) const
+{
+    if (!m_bConnected) 
+        ((nsHTTPInstance*)this)->Load();
+
+    return -1;
+}
+
+NS_METHOD
+nsHTTPInstance::GetContentType(const char* *o_Type) const
+{
+    if (!m_bConnected) 
+        ((nsHTTPInstance*)this)->Load();
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+PRInt32
+nsHTTPInstance::GetResponseStatus(void) const
+{
+    if (!m_bConnected) 
+        ((nsHTTPInstance*)this)->Load();
+    return -1;
+}
+
+NS_METHOD
+nsHTTPInstance::GetResponseString(const char* *o_String) const
+{
+    if (!m_bConnected) 
+        ((nsHTTPInstance*)this)->Load();
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_METHOD
+nsHTTPInstance::GetServer(const char* *o_String) const
+{
+    if (!m_bConnected) 
+        ((nsHTTPInstance*)this)->Load();
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+

@@ -45,17 +45,27 @@ public:
 
 
     // Functions from nsIProtocolInstance
-    NS_METHOD          GetInputStream( nsIInputStream* *o_Stream);
+    NS_METHOD               GetInputStream( nsIInputStream* *o_Stream);
+    NS_METHOD               Interrupt(void);
+    NS_METHOD               Load(void);
 
     // Functions from nsIHTTPInstance
-    NS_METHOD          SetHeader(const char* i_Header, const char* i_Value);
+    NS_METHOD               SetAccept(const char* i_AcceptHeader);
+    //NS_METHOD             SetAcceptType();
+    NS_METHOD               SetCookie(const char* i_Cookie);
+    NS_METHOD               SetUserAgent(const char* i_UserAgent);
+    NS_METHOD               SetHTTPVersion(HTTPVersion i_Version = HTTP_ONE_ONE);
 
-    NS_METHOD          GetHeader(const char* i_Header, const char* *o_Value);
-
+    NS_METHOD_(PRInt32)     GetContentLength(void) const;
+    NS_METHOD               GetContentType(const char* *o_Type) const;
+    //NS_METHOD_(PRTime)    GetDate(void) const;
+    NS_METHOD_(PRInt32)     GetResponseStatus(void) const;
+    NS_METHOD               GetResponseString(const char* *o_String) const;
+    NS_METHOD               GetServer(const char* *o_String) const;
 
 private:
-    nsICoolURL* m_pURL;
-
+    nsICoolURL*     m_pURL;
+    PRBool          m_bConnected;
 };
 
 #endif /* _nsHTTPInstance_h_ */

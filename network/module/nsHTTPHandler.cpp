@@ -18,6 +18,8 @@
 
 #include "nsHTTPHandler.h"
 #include "nsHTTPInstance.h"
+#include "nsITimer.h" 
+#include "nsIProxy.h"
 #include "plstr.h" // For PL_strcasecmp maybe DEBUG only... TODO check
 
 NS_METHOD CreateOrGetHTTPHandler(nsIHTTPHandler* *o_HTTPHandler)
@@ -26,12 +28,14 @@ NS_METHOD CreateOrGetHTTPHandler(nsIHTTPHandler* *o_HTTPHandler)
     return NS_OK;
 }
 
-nsHTTPHandler::nsHTTPHandler()
+nsHTTPHandler::nsHTTPHandler():
+    m_pTimer(nsnull)
 {
 }
 
 nsHTTPHandler::~nsHTTPHandler()
 {
+    NS_IF_RELEASE(m_pTimer);
 }
 
 NS_IMPL_ADDREF(nsHTTPHandler);

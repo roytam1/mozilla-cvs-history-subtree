@@ -19,10 +19,6 @@
 #ifndef _nsHTTPHandler_h_
 #define _nsHTTPHandler_h_
 
-#include "nsIHTTPHandler.h"
-#include "nsIProxy.h"
-
-
 /* 
     The nsHTTPHandler class is an example implementation of how a 
     pluggable protocol would be written by an external party. As 
@@ -41,6 +37,9 @@
 
 #include "nsIHTTPHandler.h"
 #include "nsIProtocolInstance.h"
+
+//Forward decl.
+class nsITimer; //TODO check with pnunn if a new version is available, where?
 
 class nsHTTPHandler : public nsIHTTPHandler//, public nsIProxy 
 {
@@ -80,6 +79,8 @@ protected:
     nsHTTPHandler(void);
     ~nsHTTPHandler();
 
+    //This is the timer that polls on the sockets.
+    nsITimer* m_pTimer; 
 
 };
 
