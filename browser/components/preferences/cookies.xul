@@ -64,8 +64,10 @@
   <vbox flex="1" class="contentPane">
     <hbox align="center">
       <label accesskey="&filter.accesskey;" control="filter">&filter.label;</label>
-      <textbox id="filter" flex="1" oninput="gCookiesWindow.onFilterInput();"/>
-      <button label="&clear.label;" accesskey="&clear.accesskey;" oncommand="gCookiesWindow.clearFilter();"/>
+      <textbox id="filter" flex="1" oninput="gCookiesWindow.onFilterInput();" 
+               onkeypress="gCookiesWindow.onFilterKeyPress(event);"/>
+      <button id="clearFilter" label="&clear.label;" accesskey="&clear.accesskey;" 
+              oncommand="gCookiesWindow.clearFilter();" disabled="true"/>
     </hbox>
     <separator class="thin"/>
     <label id="cookiesIntro" value="&cookiesonsystem.label;"/>
@@ -127,7 +129,7 @@
       <button id="removeCookie" disabled="true" 
               label="&button.removecookie.label;" accesskey="&button.removecookie.accesskey;"
               oncommand="gCookiesWindow.deleteCookie();"/>
-      <button id="removeAllCookies" 
+      <button id="removeAllCookies" disabled="true" 
               label="&button.removeallcookies.label;" accesskey="&button.removeallcookies.accesskey;"
               oncommand="gCookiesWindow.deleteAllCookies();"/>
     </hbox>

@@ -145,7 +145,7 @@ var gPrivacyPane = {
   
   viewCookies: function (aCategory) 
   {
-    document.documentElement.openWindow("Browser:Cookies",
+    document.documentElement.openWindow("Browser:Cookies2",
                                         "chrome://browser/content/preferences/cookies.xul",
                                         "", "cookieManager");
   },
