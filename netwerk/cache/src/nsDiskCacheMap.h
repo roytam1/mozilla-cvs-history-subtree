@@ -86,10 +86,16 @@ public:
         return mBuckets[index].mRecords;
     }
     
+    PRUint32 GetBucketIndex(PRUint32 hashNumber)
+    {
+        PRUint32 index = (hashNumber & (kBucketsPerTable - 1));
+        if (!index) index = (kBucketsPerTable - 1);
+        return index;
+    }
+        
     PRUint32 GetBucketIndex(nsDiskCacheRecord* record)
     {
-        PRUint32 hashNumber = record->HashNumber();
-        return (hashNumber & (kBucketsPerTable - 1));
+        return GetBucketIndex(record->HashNumber());
     }
     
     nsresult Read(nsIInputStream* input);

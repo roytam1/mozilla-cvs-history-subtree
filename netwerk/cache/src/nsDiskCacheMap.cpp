@@ -48,7 +48,7 @@ void nsDiskCacheMap::Reset()
 
 nsDiskCacheRecord* nsDiskCacheMap::GetRecord(PRUint32 hashNumber)
 {
-    nsDiskCacheBucket& bucket = mBuckets[(hashNumber & (kBucketsPerTable - 1))];
+    nsDiskCacheBucket& bucket = mBuckets[GetBucketIndex(hashNumber)];
     nsDiskCacheRecord* oldestRecord = &bucket.mRecords[0];
 
     for (int r = 0; r < kRecordsPerBucket; ++r) {
@@ -66,7 +66,7 @@ nsDiskCacheRecord* nsDiskCacheMap::GetRecord(PRUint32 hashNumber)
 void nsDiskCacheMap::DeleteRecord(nsDiskCacheRecord* deletedRecord)
 {
     PRUint32 hashNumber = deletedRecord->HashNumber();
-    nsDiskCacheBucket& bucket = mBuckets[(hashNumber & (kBucketsPerTable - 1))];
+    nsDiskCacheBucket& bucket = mBuckets[GetBucketIndex(hashNumber)];
     NS_ASSERTION(deletedRecord >= &bucket.mRecords[0] &&
                  deletedRecord < &bucket.mRecords[kRecordsPerBucket],
                  "invalid record to delete.");
