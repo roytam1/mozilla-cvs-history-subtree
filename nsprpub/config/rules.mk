@@ -315,7 +315,7 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 		| sort -u >> $(OBJDIR)/lib$(LIBRARY_NAME)_syms
 	$(LD) $(XCFLAGS) -o $@ $(OBJS) -bE:$(OBJDIR)/lib$(LIBRARY_NAME)_syms \
 		-bM:SRE -bnoentry $(OS_LIBS) $(EXTRA_LIBS)
-else
+else	# AIX 4.1
 ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WIN16)
 	echo system windows dll initinstance >w16link
@@ -333,7 +333,7 @@ ifeq ($(OS_TARGET), WIN16)
 	echo libfile libentry >>w16link
 	$(LINK) @w16link.
 	rm w16link
-else
+else	# WIN16
 ifeq ($(OS_TARGET), OS2)
 # append ( >> ) doesn't seem to be working under OS/2 gmake. Run through OS/2 shell instead.	
 	@cmd /C "echo LIBRARY $(notdir $(basename $(SHARED_LIBRARY))) INITINSTANCE TERMINSTANCE >$@.def"
@@ -345,13 +345,23 @@ ifeq ($(OS_TARGET), OS2)
 	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $@.def
 else
 	$(LINK_DLL) -MAP $(DLLBASE) $(OS_LIBS) $(EXTRA_LIBS) $(OBJS)
-endif
-endif
-else
+endif	# OS2
+endif	# WIN16
+else	# WINNT
+ifeq ($(OS_TARGET), OpenVMS)
+	@if test ! -f $(OBJDIR)/VMSuni.opt; then \
+	    echo "Creating universal symbol option file $(OBJDIR)/VMSuni.opt";\
+	    create_opt_uni $(OBJS); \
+	    mv VMSuni.opt $(OBJDIR); \
+	fi
+	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS) $(OBJDIR)/VMSuni.opt
+	@echo "`translate $@`" > $(@:.$(DLL_SUFFIX)=.vms)
+else	# OpenVMS
 	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
-endif
-endif
-endif
+endif	# OpenVMS
+endif	# WINNT
+endif	# AIX 4.1
+endif   # USE_AUTOCONF
 
 $(PURE_LIBRARY):
 	rm -f $@
