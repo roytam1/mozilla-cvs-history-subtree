@@ -173,7 +173,6 @@ pref("capability.policy.default.History.current", "UniversalBrowserRead");
 pref("capability.policy.default.History.forward", "allAccess");
 pref("capability.policy.default.History.go", "allAccess");
 pref("capability.policy.default.History.item", "UniversalBrowserRead");
-pref("capability.policy.default.History.length", "UniversalBrowserRead");
 pref("capability.policy.default.History.next", "UniversalBrowserRead");
 pref("capability.policy.default.History.previous", "UniversalBrowserRead");
 pref("capability.policy.default.History.toString", "UniversalBrowserRead");
