@@ -3415,6 +3415,15 @@ if test "$MOZ_XPINSTALL"; then
 fi
 
 dnl ========================================================
+dnl Single profile support off by default
+dnl ========================================================
+MOZ_SINGLE_PROFILE=
+MOZ_ARG_ENABLE_BOOL(single-profile,
+[  --enable-single-profile Enable single profile support ],
+    MOZ_SINGLE_PROFILE=1,
+    MOZ_SINGLE_PROFILE= )
+
+dnl ========================================================
 dnl xpcom js loader support on by default
 dnl ========================================================
 MOZ_JSLOADER=1
@@ -3424,6 +3433,7 @@ MOZ_ARG_DISABLE_BOOL(jsloader,
 if test "$MOZ_JSLOADER"; then
     AC_DEFINE(MOZ_JSLOADER)
 fi
+
 
 dnl ========================================================
 dnl Libeditor can be build as plaintext-only,
@@ -4762,6 +4772,7 @@ AC_SUBST(IBMBIDI)
 AC_SUBST(SUNCTL)
 AC_SUBST(ACCESSIBILITY)
 AC_SUBST(MOZ_XPINSTALL)
+AC_SUBST(MOZ_SINGLE_PROFILE)
 AC_SUBST(MOZ_USER_DIR)
 
 AC_SUBST(ENABLE_STRIP)
