@@ -77,7 +77,6 @@ public:
                                  void** aScriptObject);
   NS_IMETHOD       ExecuteScript(void* aScriptObject,
                                  void *aScopeObject,
-                                 const char* aVersion,
                                  nsString* aRetValue,
                                  PRBool* aIsUndefined);
   NS_IMETHOD       CompileFunction(void *aObj, nsIAtom *aName,

@@ -65,7 +65,7 @@ public:
    * @param aScript a string representing the script to be executed
    * @param aObj a JavaScript JSObject for the scope to execute in, or nsnull
    *             to use a default scope
-   * @param principal the principal that produced the script
+   * @param aPrincipal the principal that produced the script
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number for the script for error messages
    * @param aVersion the script language version to use when executing
@@ -78,7 +78,7 @@ public:
    **/
   NS_IMETHOD EvaluateString(const nsString& aScript,
                             void *aObj,
-                            nsIPrincipal *principal,
+                            nsIPrincipal *aPrincipal,
                             const char *aURL,
                             PRUint32 aLineNo,
                             const char* aVersion,
@@ -92,7 +92,7 @@ public:
    * @param aTextLength number of characters in aText
    * @param aScopeObject an object telling the scope in which to execute,
    *                     or nsnull to use a default scope
-   * @param principal the principal that produced the script
+   * @param aPrincipal the principal that produced the script
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number for the script for error messages
    * @param aVersion the script language version to use when executing
@@ -106,7 +106,7 @@ public:
   NS_IMETHOD CompileScript(const PRUnichar* aText,
                            PRInt32 aTextLength,
                            void *aScopeObject,
-                           nsIPrincipal *principal,
+                           nsIPrincipal *aPrincipal,
                            const char *aURL,
                            PRUint32 aLineNo,
                            const char* aVersion,
@@ -118,7 +118,6 @@ public:
    * @param aScriptObject an object representing the script to be executed
    * @param aScopeObject an object telling the scope in which to execute,
    *                     or nsnull to use a default scope
-   * @param aVersion the script language version to use when executing
    * @param aRetValue the result of executing the script, may be null in
    *                  which case no result string is computed
    * @param aIsUndefined true if the result of executing the script is the 
@@ -129,7 +128,6 @@ public:
    */ 
   NS_IMETHOD ExecuteScript(void* aScriptObject,
                            void *aScopeObject,
-                           const char* aVersion,
                            nsString* aRetValue,
                            PRBool* aIsUndefined) = 0;
 

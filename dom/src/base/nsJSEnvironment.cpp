@@ -285,6 +285,7 @@ nsJSContext::CompileScript(const PRUnichar* aText,
     return NS_ERROR_FAILURE;
   }
 
+  *aScriptObject = nsnull;
   if (ok) {
     JSVersion newVersion;
 
@@ -328,7 +329,6 @@ nsJSContext::CompileScript(const PRUnichar* aText,
 NS_IMETHODIMP
 nsJSContext::ExecuteScript(void* aScriptObject,
                            void *aScopeObject,
-                           const char* aVersion,  // XXXbe should be in script!
                            nsString* aRetValue,
                            PRBool* aIsUndefined)
 {
@@ -349,31 +349,15 @@ nsJSContext::ExecuteScript(void* aScriptObject,
   // callback or from ScriptEvaluated.  TODO: use JS_Begin/EndRequest to keep
   // the GC from racing with JS execution on any thread.
   jsval val;
-  JSVersion newVersion;
   JSBool ok;
 
-  // Don't execute if aVersion is specified and unknown.  Do execute with the
-  // default version (and avoid thrashing the context's version) if aVersion
-  // is not specified.
-  if (!aVersion ||
-      (newVersion = JS_StringToVersion(aVersion)) != JSVERSION_UNKNOWN) {
-    JSVersion oldVersion;
-
-    if (aVersion)
-      oldVersion = JS_SetVersion(mContext, newVersion);
-    mRef = nsnull;
-    mTerminationFunc = nsnull;
-    ok = ::JS_ExecuteScript(mContext,
-                            (JSObject*) aScopeObject,
-                            (JSScript*) JS_GetPrivate(mContext,
-                                                      (JSObject*)aScriptObject),
-                            &val);
-    if (aVersion)
-      JS_SetVersion(mContext, oldVersion);
-  }
-  else {
-    ok = JS_FALSE;
-  }
+  mRef = nsnull;
+  mTerminationFunc = nsnull;
+  ok = ::JS_ExecuteScript(mContext,
+			  (JSObject*) aScopeObject,
+			  (JSScript*) JS_GetPrivate(mContext,
+						    (JSObject*)aScriptObject),
+			  &val);
 
   if (ok) {
     // If all went well, convert val to a string (XXXbe unless undefined?).
