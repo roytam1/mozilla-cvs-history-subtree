@@ -60,7 +60,7 @@ REQUIRES		= netcast parse js dbm nspr security htmldlgs ldap softupdt \
 			  zlib li msg progress xpcom
 
 EXPORTS			= \
-			  nsIStreamNotification.h \
+			  nsIStreamListener.h \
 			  nsINetService.h \
 			  nsIURL.h \
 			  $(NULL)
