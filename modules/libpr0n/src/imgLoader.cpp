@@ -165,7 +165,7 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI, nsILoadGroup *aLoadGroup, imgID
           rv = reqChannel->GetURI(getter_AddRefs(referrer));
           if (NS_SUCCEEDED(rv)) {
             // Set the referrer
-            httpChannel->SetReferrer(referrer);
+            httpChannel->SetReferrer(referrer, nsIHttpChannel::REFERRER_INLINES);
           }   
         }
       }
