@@ -38,7 +38,7 @@ sub InitVars {
     $FullCircleDir = '/usr/local/lib';	# If you even have it, which is very unlikely.
 
     # These shouldn't really need to be changed
-    $BinaryName = '/dist/bin/mozilla-bin';
+    $BinaryName = '/dist/bin/apprunner';
     $BuildName = '';
     $BuildObjName = '';
     $BuildSleep = 10;  # Minimum wait period from start of build to start of next build in minutes.
@@ -49,7 +49,7 @@ sub InitVars {
     $ConfigureEnvArgs = '';
     $ConfigureArgs = '--with-nspr=' . $NSPRDir . ' --cache-file=/dev/null ';
     $ConfigGuess = './build/autoconf/config.guess';
-    $FE = 'mozilla-bin'; 
+    $FE = 'apprunner'; 
     $Logfile = '${BuildDir}.log';
     $NSCommModule = 'CommercialClient50All';
     $NSPRArgs = 'DIST=' . $NSPRDir . ' MOZILLA_CLIENT=1 NSDISTMODE=copy NO_MDUPDATE=1 ';

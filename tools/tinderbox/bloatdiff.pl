@@ -7,8 +7,7 @@ sub processFile {
     my ($FILENAME, $map, $prevMap) = @_;
     open(FH, $FILENAME);
     while (<FH>) {
-        if (/^\s+(\d+) ([\w\:]+)\s+([\-\d]+)\s+([\-\d]+)\s+([\-\d]+)\s+([\-\d]+) \(\s+([\-\d\.]+) \+\/\-\s+([\w\.]+)\)\s+([\-\d]+)\s+([\-\d]+) \(\s+([\-\d\.]+) \+\/\-\s+([\w\.]+)\)/)
-        {
+        if (/^\s+(\d+) (\w+)\s+([\-\d]+)\s+([\-\d]+)\s+([\-\d]+)\s+([\-\d]+) \(\s+([\-\d\.]+) \+\/\-\s+([\-\d\.]+)\)\s+([\-\d]+)\s+([\-\d]+) \(\s+([\-\d\.]+) \+\/\-\s+([\-\d\.]+)\)/) {
             my $name = $2;
             my $size = $3;
             my $leaked = $4;
@@ -33,9 +32,6 @@ sub processFile {
                              refMean => $refMean,
                              refStdDev => $refStdDev,
                              bloat => $bloat };
-        }
-        else {
-#            print "failed to parse: $_\n";
         }
     }
     close(FH);
@@ -204,7 +200,7 @@ foreach $key (@keys) {
     }
 }
 if (!$needsHeading) {
-#    printf "%-20s %10s\n", ("TOTAL", $total);
+    printf "%-20s %10s\n", ("TOTAL", $total);
 }
 
 # ALL BLOAT
@@ -226,7 +222,7 @@ foreach $key (@keys) {
     }
 }
 if (!$needsHeading) {
-#    printf "%-20s %10s\n", ("TOTAL", $total);
+    printf "%-20s %10s\n", ("TOTAL", $total);
 }
 
 # NEW CLASSES

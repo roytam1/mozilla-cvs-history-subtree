@@ -1,23 +1,19 @@
 /* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; -*-  
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Netscape
+ * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
- * Rights Reserved.
- *
- * Contributor(s): 
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*******************************************************************************
@@ -328,19 +324,12 @@ sm_InitPages(SMPageMgr* pm, SMPageCount minPages, SMPageCount maxPages)
     SMPageCount size = maxPages;
     int zero_fd;
 
-#ifdef MAP_ANON
-    zero_fd = -1;
-#else
     zero_fd = open("/dev/zero", O_RDWR);
-#endif
 
     while (addr == NULL) {
         /* let the system place the heap */
         addr = (SMPage*)mmap(0, size << SM_PAGE_BITS,
                              PROT_READ | PROT_WRITE,
-#ifdef MAP_ANON
-                             MAP_ANON | 
-#endif
                              MAP_PRIVATE,
                              zero_fd, 0);
         if (addr == (SMPage*)MAP_FAILED) {
@@ -351,11 +340,6 @@ sm_InitPages(SMPageMgr* pm, SMPageCount minPages, SMPageCount maxPages)
             }
         }
     }
-
-#ifndef MAP_ANON
-    close(zero_fd);
-#endif
-
     SM_ASSERT(SM_IS_ALIGNED(addr, SM_PAGE_BITS));
     pm->memoryBase = addr;
     pm->pageCount = size;
