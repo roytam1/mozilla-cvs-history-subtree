@@ -83,7 +83,7 @@ foreach $search (@srch)
   while($entry)
     {
       $entry->printLDIF();
-      $entry = $conn->entry;
+      $entry = $conn->nextEntry;
     }
   print "\n";
 }

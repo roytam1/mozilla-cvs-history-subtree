@@ -329,7 +329,7 @@ while ($entry)
     }
 
   $conn->update($entry) if ($changed && ! $opt_n);
-  $entry = $conn->entry();
+  $entry = $conn->nextEntry();
 }
 
 
