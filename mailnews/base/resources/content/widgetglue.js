@@ -29,6 +29,7 @@
 
 //NOTE: gMessengerBundle must be defined and set or this Overlay won't work
 
+/* not used
 function ConvertDOMListToResourceArray(nodeList)
 {
     var result = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
@@ -39,48 +40,35 @@ function ConvertDOMListToResourceArray(nodeList)
 
     return result;
 }
+*/
 
 function GetSelectedFolderURI()
 {
-	var uri = null;
-	var selectedFolder = null;
-	try {
-		var folderTree = GetFolderTree(); 
-		var selectedFolderList = folderTree.selectedItems;
+    var uri = null;
+  
+    var folderOutliner = GetFolderOutliner();
+    var startRange = {value: 0};
+    var endRange = {value: 0};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
 	
-		//  you can only select one folder / server to add new folder / subscribe to
-		if (selectedFolderList.length == 1) {
-			selectedFolder = selectedFolderList[0];
-		}
-		else {
-			//dump("number of selected folder was " + selectedFolderList.length + "\n");
-		}
-	}
-	catch (ex) {
-		// dump("failed to get the selected folder\n");
-		uri = null;
-	}
-
-	try {
-       		if (selectedFolder) {
-			uri = selectedFolder.getAttribute('id');
-			// dump("folder to preselect: " + preselectedURI + "\n");
-		}
-	}
-	catch (ex) {
-		uri = null;
-	}
-
-	return uri;
+    //  you can only select one folder / server to add new folder / subscribe to
+    if (startRange.value >= 0 && startRange.value == endRange.value)
+    {
+        var resource = GetFolderResource(startRange.value);
+        if (resource)
+            uri = resource.Value;
+    }
+  
+    return uri;
 }
 
 
 function MsgRenameFolder() 
 {
 	var preselectedURI = GetSelectedFolderURI();
-	var folderTree = GetFolderTree();
+	var folderOutliner = GetFolderOutliner();
 
-	var name = GetFolderNameFromUri(preselectedURI, folderTree);
+	var name = GetFolderNameFromUri(preselectedURI, folderOutliner);
 
 	dump("preselectedURI = " + preselectedURI + "\n");
 	var dialog = window.openDialog(
@@ -94,8 +82,8 @@ function MsgRenameFolder()
 function RenameFolder(name,uri)
 {
     dump("uri,name = " + uri + "," + name + "\n");
-    var folderTree = GetFolderTree();
-    if (folderTree)
+    var folderOutliner = GetFolderOutliner();
+    if (folderOutliner)
     {
 	if (uri && (uri != "") && name && (name != "")) {
                 var selectedFolder = GetResourceFromUri(uri);
@@ -111,7 +99,7 @@ function RenameFolder(name,uri)
 
                 ClearThreadPane();
                 ClearMessagePane();
-                folderTree.clearItemSelection();
+                folderOutliner.outlinerBoxObject.selection.clearSelection();
         }
         else {
                 dump("no name or nothing selected\n");
@@ -124,9 +112,10 @@ function RenameFolder(name,uri)
 
 function MsgEmptyTrash() 
 {
-    var tree = GetFolderTree();
-    if (tree)
-    {
+    var folderOutliner = GetFolderOutliner();
+
+    var selectedFolderURI = GetSelectedFolderURI();
+
         var folderList = tree.selectedItems;
         if (folderList)
         {
@@ -134,7 +123,7 @@ function MsgEmptyTrash()
             folder = folderList[0];
             if (folder)
 			{
-                var trashUri = GetSelectTrashUri(folder);
+                var trashUri = GetSelectTrashUri(index);
                 if (trashUri)
                 {
                     var trashElement = document.getElementById(trashUri);
@@ -164,7 +153,6 @@ function MsgEmptyTrash()
                 }
 			}
         }
-    }
 }
 
 function MsgCompactFolder(isAll) 
@@ -228,9 +216,9 @@ function MsgCompactFolder(isAll)
 function MsgFolderProperties() 
 {
 	var preselectedURI = GetSelectedFolderURI();
-	var folderTree = GetFolderTree();
+	var folderOutliner = GetFolderOutliner();
 
-	var name = GetFolderNameFromUri(preselectedURI, folderTree);
+	var name = GetFolderNameFromUri(preselectedURI, folderOutliner);
 
 	dump("preselectedURI = " + preselectedURI + "\n");
 	var windowTitle = gMessengerBundle.getString("folderProperties");
@@ -289,14 +277,13 @@ function NotifyQuitApplication()
 
 function LastToClose()
 {
-	var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
-	var	windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
-	var enumerator = windowManagerInterface.getEnumerator( null );
+    var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
+    var enumerator = windowManagerInterface.getEnumerator(null);
     var count = 0;
-
-	while ( enumerator.hasMoreElements() && count < 2 )
-	{
-		var  windowToClose = enumerator.getNext();
+    while ( enumerator.hasMoreElements() && count < 2 )
+    {
+        var windowToClose = enumerator.getNext();
         count++;
     }
     if (count == 1)
@@ -308,8 +295,8 @@ function LastToClose()
 function MsgSetFolderCharset() 
 {
   var preselectedURI = GetSelectedFolderURI();
-  var folderTree = GetFolderTree();
-  var name = GetFolderNameFromUri(preselectedURI, folderTree);
+  var folderOutliner = GetFolderOutliner();
+  var name = GetFolderNameFromUri(preselectedURI, folderOutliner);
   var windowTitle = gMessengerBundle.getString("folderProperties");
   var dialog = window.openDialog(
                       "chrome://messenger/content/imapFolderProps.xul",

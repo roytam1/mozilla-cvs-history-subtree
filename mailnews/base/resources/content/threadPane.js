@@ -104,14 +104,14 @@ function HandleColumnClick(columnID)
 
 function PersistViewAttributesOnFolder()
 {
-  var folder = GetSelectedFolder();
+    var folderIndex = GetSelectedFolderIndex();
 
-  if (folder) {
-    folder.setAttribute("viewType", gDBView.viewType);
-    folder.setAttribute("viewFlags", gDBView.viewFlags);
-    folder.setAttribute("sortType", gDBView.sortType);
-    folder.setAttribute("sortOrder", gDBView.sortOrder);
-  }
+    if (folderIndex >= 0) {
+        SetFolderRowAttribute(folderIndex, "viewType", gDBView.viewType);
+        SetFolderRowAttribute(folderIndex, "viewFlags", gDBView.viewFlags);
+        SetFolderRowAttribute(folderIndex, "sortType", gDBView.sortType);
+        SetFolderRowAttribute(folderIndex, "sortOrder", gDBView.sortOrder);
+     }
 }
 
 function MsgComposeDraftMessage()

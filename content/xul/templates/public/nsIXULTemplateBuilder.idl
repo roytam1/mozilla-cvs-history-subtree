@@ -120,7 +120,18 @@ interface nsIXULOutlinerBuilder : nsISupports
     /**
      * Retrieve the index associated with specified RDF resource.
      */
-    long getIndexOfResource(in nsIRDFResource resource);
+    long getIndexOfResource(in nsIRDFResource aResource);
+
+    /**
+     * Set the attribute of specified row.
+     * The Attribute is automatically persisted.
+     */
+    void setRowAttribute(in long aRowIndex, in wstring aAttrName, in wstring aAttrValue);
+
+    /**
+     * Retrieve the attribute associated with speciefied row.
+     */
+    wstring getRowAttribute(in long aRowIndex, in wstring aAttrName);
 
     /** 
      * Add a Outliner Builder Observer to handle Outliner View 

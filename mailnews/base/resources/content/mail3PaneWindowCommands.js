@@ -52,32 +52,34 @@ var FolderPaneController =
 			case "button_delete":
 				if ( command == "cmd_delete" )
 					goSetMenuValue(command, 'valueFolder');
-				var folderTree = GetFolderTree();
-				if ( folderTree && folderTree.selectedItems &&
-                     folderTree.selectedItems.length > 0)
-                {
+				var folderOutliner = GetFolderOutliner();
+				var startRange = {value: 0};
+				var endRange = {value: 0};
+				folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
+				if (startRange.value >= 0)
+				{
 					var specialFolder = null;
 					var isServer = null;
 					var serverType = null;
 					try {
-						var selectedFolder = folderTree.selectedItems[0];
-                    	specialFolder = selectedFolder.getAttribute('SpecialFolder');
-                    	isServer = selectedFolder.getAttribute('IsServer');
-						serverType = selectedFolder.getAttribute('ServerType');
+						var folderResource = GetFolderResource(startRange.value);
+                    				specialFolder = GetFolderAttribute(folderResource, 'SpecialFolder');
+                    				isServer = GetFolderAttribute(folderResource, 'IsServer');
+						serverType = GetFolderAttribute(folderResource, 'ServerType');
             
-                        if (serverType == "nntp") {
-				            if ( command == "cmd_delete" )
-					            goSetMenuValue(command, 'valueNewsgroup');
-                        }
+			                        if (serverType == "nntp") {
+						            if ( command == "cmd_delete" )
+							                goSetMenuValue(command, 'valueNewsgroup');
+			                        }
 					}
 					catch (ex) {
 						//dump("specialFolder failure: " + ex + "\n");
 					}
-                    if (specialFolder == "Inbox" || specialFolder == "Trash" || isServer == "true")
-                       return false;
-                    else
-					   return true;
-                }
+		                        if (specialFolder == "Inbox" || specialFolder == "Trash" || isServer == "true")
+                				return false;
+		                        else
+						return true;
+		                }
 				else
 					return false;
 
@@ -612,7 +614,7 @@ function FocusRingUpdate_Mail()
             GetMessagePane().setAttribute("focusring","false");
         }
 
-        else if(currentFocusedElement==GetFolderTree()) {
+        else if(currentFocusedElement==GetFolderOutliner()) {
             // XXX fix me
             GetThreadOutliner().setAttribute("focusring","false");
             GetMessagePane().setAttribute("focusring","false");
@@ -734,13 +736,13 @@ function WhichPaneHasFocus(){
 	var whichPane= null;
 	var currentNode = top.document.commandDispatcher.focusedElement;	
 
-  var threadTree = GetThreadOutliner();
-  var folderTree = GetFolderTree();
+  var threadOutliner = GetThreadOutliner();
+  var folderOutliner = GetFolderOutliner();
   var messagePane = GetMessagePane();
     
 	while (currentNode) {
-        if (currentNode === threadTree ||
-            currentNode === folderTree ||
+        if (currentNode === threadOutliner ||
+            currentNode === folderOutliner ||
             currentNode === messagePane)
             return currentNode;
 					
@@ -757,7 +759,7 @@ function SetupCommandUpdateHandlers()
 	var widget;
 	
 	// folder pane
-	widget = GetFolderTree();
+	widget = GetFolderOutliner();
 	if ( widget )
 		widget.controllers.appendController(FolderPaneController);
 	
@@ -771,17 +773,19 @@ function SetupCommandUpdateHandlers()
 
 function IsRenameFolderEnabled()
 {
-	var tree = GetFolderTree();
-	var folderList = tree.selectedItems;
+  var folderOutliner = GetFolderOutliner();
+  var startRange = {value: 0};
+  var endRange = {value: 0};
+  folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
 
-	if(folderList.length == 1)
-	{
-		var folderNode = folderList[0];
-		return(folderNode.getAttribute("CanRename") == "true");
-	}
-	else
-		return false;
-
+  if (startRange.value >= 0 && startRange.value == endRange.value)
+  {
+    var folderResource = GetFolderResource(startRange.value);
+    var canRename = GetFolderAttribute(folderResource, 'CanRename');
+    return canRename == 'true';
+  }
+  else
+    return false;
 }
 
 function IsFolderCharsetEnabled()
@@ -796,16 +800,19 @@ function IsViewNavigationItemEnabled()
 
 function IsFolderSelected()
 {
-	var tree = GetFolderTree();
-	var folderList = tree.selectedItems;
+  var folderOutliner = GetFolderOutliner();
+  var startRange = {value: 0};
+  var endRange = {value: 0};
+  folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
 
-	if(folderList.length == 1)
-	{
-		var folderNode = folderList[0];
-		return(folderNode.getAttribute("IsServer") != "true");
-	}
-	else
-		return false;
+  if (startRange.value >= 0 && startRange.value == endRange.value)
+  {
+    var folderResource = GetFolderResource(startRange.value);
+    var isServer = GetFolderAttribute(folderResource, 'IsServer');
+    return isServer == 'true';
+  }
+  else
+    return false;
 }
 
 function IsFindEnabled()
@@ -815,36 +822,36 @@ function IsFindEnabled()
 
 function MsgDeleteFolder()
 {
-	//get the selected elements
-	var tree = GetFolderTree();
-	var folderList = tree.selectedItems;
-	var i;
-	var folder, parent;
-    var specialFolder;
-	for(i = 0; i < folderList.length; i++)
-	{
-		folder = folderList[i];
-	    folderuri = folder.getAttribute('id');
-        specialFolder = folder.getAttribute('SpecialFolder');
-        if (specialFolder != "Inbox" && specialFolder != "Trash")
-        {
-            if (isNewsURI(folderuri)) {
-              var msgfolder = GetMsgFolderFromURI(folderuri);
-              var unsubscribe = ConfirmUnsubscribe(msgfolder);
-              if (unsubscribe) {
-                UnSubscribe(msgfolder);
-              }
-            }
-            else {
-              parent = folder.parentNode.parentNode;	
-              var parenturi = parent.getAttribute('id');
-              messenger.DeleteFolders(tree.database,
-                                    parent.resource, folder.resource);
-            }
-        }
+  dump('In MsgDeleteFolder\n');
+  //get the selected elements
+  var folderOutliner = GetFolderOutliner();
+  var startRange = {value: 0};
+  var endRange = {value: 0};
+  folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
+       
+  if (startRange.value >= 0) {
+    var i;
+    for(i = startRange.value; i <= endRange.value; i++)
+    {
+      var folderResource = GetFolderResource(i);
+      var specialFolder = GetFolderAttribute(folderResource, 'SpecialFolder');
+      if (specialFolder != "Inbox" && specialFolder != "Trash")
+      {
+        if (isNewsURI(folderResource.Value)) {
+  	  var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+          var unsubscribe = ConfirmUnsubscribe(msgFolder);
+          if (unsubscribe)
+            UnSubscribe(msgfolder);
 	}
-
-
+        else {
+	  var parentIndex = folderOutliner.outlinerBoxObject.view.getParentIndex(i);
+	  var parentResource = GetFolderResource(parentIndex);
+	  var datasource = GetFolderDatasource();
+          messenger.DeleteFolders(datasource, parentResource, folderResource);
+        }
+      }
+    }
+  }
 }
 
 // 3pane related commands.  Need to go in own file.  Putting here for the moment.
@@ -891,60 +898,62 @@ function MsgViewAllMsgs()
 	{
 		gDBView.viewType = nsMsgViewType.eShowAllThreads;
 
-        var folder = GetSelectedFolder();
-        if(folder) {
-            folder.setAttribute("viewType", nsMsgViewType.eShowAllThreads);
+        var folderIndex = GetSelectedFolderIndex();
+        if(folderIndex >= 0) {
+            SetFolderRowAttribute(folderIndex, "viewType", nsMsgViewType.eShowAllThreads);
         }
 	}
 }
 
-
-function FillInFolderTooltip(cellNode)
+function FillInFolderTooltip(event)
 {
-	var folderNode = cellNode.parentNode.parentNode;
-	var uri = folderNode.getAttribute('id');
-	var folderTree = GetFolderTree();
+    dump('In FillInFolderTooltip\n');
 
-	var name = GetFolderNameFromUri(uri, folderTree);
+    var folderOutliner = GetFolderOutliner();
+    var row = { };
+    var col = { };
+    var elt = { };
+    // XXX this is only workaround
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY - 20, row, col, elt);
 
-	var folderResource = RDF.GetResource(uri);
-	var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-	var unreadCount = msgFolder.getNumUnread(false);
-	if(unreadCount < 0)
-		unreadCount = 0;
+    var folderResource = GetFolderResource(row.value);
 
-	var totalCount = msgFolder.getTotalMessages(false);
-	if(totalCount < 0)
-		totalCount = 0;
+    var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+    var unreadCount = msgFolder.getNumUnread(false);
+    if(unreadCount < 0)
+        unreadCount = 0;
 
-	var textNode = document.getElementById("foldertooltipText");
-	var folderTooltip = name;
-	if(!msgFolder.isServer)
-		folderTooltip += " ("  + unreadCount + "/" + totalCount +")";
-	textNode.setAttribute('value', folderTooltip);
-	return true;
-	
+    var totalCount = msgFolder.getTotalMessages(false);
+    if(totalCount < 0)
+        totalCount = 0;
 
+    var folderTooltip = GetFolderAttribute(folderResource, 'Name');
+    if(!msgFolder.isServer)
+        folderTooltip += ' ('  + unreadCount + '/' + totalCount +')';
+    var textNode = document.getElementById('foldertooltipText');
+    textNode.setAttribute('value', folderTooltip);
+
+    return true;
 }
 
-function GetFolderNameFromUri(uri, tree)
+function GetFolderNameFromUri(uri, outliner)
 {
-	var folderResource = RDF.GetResource(uri);
+    dump('In GetFolderNameFromUri\n');
 
-	var db = tree.database;
+    var folderResource = RDF.GetResource(uri);
+    var db = outliner.outlinerBoxObject.outlinerBody.database;
+    var nameProperty = RDF.GetResource('http://home.netscape.com/NC-rdf#Name');
 
-	var nameProperty = RDF.GetResource('http://home.netscape.com/NC-rdf#Name');
+    var nameResult;
+    try {
+        nameResult = db.GetTarget(folderResource, nameProperty , true);
+    }
+    catch (ex) {
+        return "";
+    }
 
-	var nameResult;
-	try {
-		nameResult = db.GetTarget(folderResource, nameProperty , true);
-	}
-	catch (ex) {
-		return "";
-	}
-
-	nameResult = nameResult.QueryInterface(Components.interfaces.nsIRDFLiteral);
-	return nameResult.Value;
+    nameResult = nameResult.QueryInterface(Components.interfaces.nsIRDFLiteral);
+    return nameResult.Value;
 }
 
 function SwitchPaneFocus(direction)
@@ -978,7 +987,7 @@ function SwitchPaneFocus(direction)
 						  SetFocusMessagePane();
 					}
 				}
-				else if(focusedElementId == "folderTree")
+				else if(focusedElementId == "folderOutliner")
 				{
 					if (!(IsThreadAndMessagePaneSplitterCollapsed()))
 						SetFocusMessagePane();
@@ -1030,7 +1039,7 @@ function SwitchPaneFocus(direction)
 						SetFocusFolderPane();
 
 				}
-				else if(focusedElementId == "folderTree")
+				else if(focusedElementId == "folderOutliner")
 					SetFocusThreadPane();
 			}
 			catch(e) 
@@ -1044,23 +1053,20 @@ function SwitchPaneFocus(direction)
 
 function SetFocusFolderPane()
 {
-  var folderTree = GetFolderTree();
-  folderTree.focus();
-	return;
+  var folderOutliner = GetFolderOutliner();
+  folderOutliner.focus();
 }
 
 function SetFocusThreadPane()
 {
-  var threadTree = GetThreadOutliner();
-  threadTree.focus();
-	return;
+  var threadOutliner = GetThreadOutliner();
+  threadOutliner.focus();
 }
 
 function SetFocusMessagePane()
 {
-	var messagePaneFrame = GetMessagePane();
+  var messagePaneFrame = GetMessagePane();
   messagePaneFrame.focus();
-	return;
 }
 
 function is_collapsed(element) 

@@ -138,7 +138,8 @@ Rights Reserved.
     <box orient="vertical" flex="1">
       <box align ="horizontal" persist="height" flex="1">
         <box flex="1">
-         <tree id="folderTree" flex="1" style="width:0px;" context="folderPaneContext" persist="collapsed width" />
+<!--         <tree id="folderTree" flex="1" style="width:0px;" context="folderPaneContext" persist="collapsed width" /> -->
+         <outliner id="folderOutliner" flex="1" style="width:0px;" context="folderPaneContext" persist="collapsed width"/>
          <splitter id="gray_vertical_splitter" collapse="before"  persist="state"/>
          <box id="threadpaneBox" flex="2">
           <outliner id="threadOutliner" flex="2" persist="width" style="width:0px" context="threadPaneContext" class="window-focusborder" focusring="false"/>

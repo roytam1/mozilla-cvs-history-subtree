@@ -34,6 +34,9 @@
 #include "nsIOutlinerSelection.h"
 #include "nsIOutlinerView.h"
 #include "nsIServiceManager.h"
+#include "nsIRDFService.h"
+#include "nsRDFCID.h"
+#include "nsIRDFRemoteDataSource.h"
 
 // For sorting
 #include "nsICollation.h"
@@ -51,6 +54,8 @@
 #include "nsXULContentUtils.h"
 #include "nsXULTemplateBuilder.h"
 #include "nsVoidArray.h"
+
+static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 /**
  * A XUL template builder that serves as an outliner view, allowing
@@ -248,6 +253,8 @@ protected:
      */
     Direction mSortDirection;
 
+    nsCOMPtr<nsIRDFService> mRDFService;
+
     /**
      * The current collation
      */
@@ -297,6 +304,9 @@ nsXULOutlinerBuilder::nsXULOutlinerBuilder()
 nsresult
 nsXULOutlinerBuilder::Init()
 {
+    mRDFService = do_GetService(kRDFServiceCID);
+    NS_ASSERTION(mRDFService, "unable to get RDF service");
+
     // Try to acquire a collation object for sorting
     nsCOMPtr<nsILocaleService> ls = do_GetService(NS_LOCALESERVICE_CONTRACTID);
     if (ls) {
@@ -312,12 +322,17 @@ nsXULOutlinerBuilder::Init()
                 cfact->CreateCollation(locale, getter_AddRefs(mCollation));
         }
     }
-
+ 
     return nsXULTemplateBuilder::Init();
 }
 
 nsXULOutlinerBuilder::~nsXULOutlinerBuilder()
 {
+    if (mPersistStateStore) {
+        nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(mPersistStateStore);
+        if (remote)
+            remote->Flush();
+    }
 }
 
 //----------------------------------------------------------------------
@@ -343,6 +358,62 @@ nsXULOutlinerBuilder::GetIndexOfResource(nsIRDFResource* aResource, PRInt32* aRe
         *aResult = -1;
     else
         *aResult = iter.GetRowIndex();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULOutlinerBuilder::SetRowAttribute(PRInt32 aRowIndex, const PRUnichar *aAttrName, const PRUnichar *aAttrValue)
+{
+    NS_PRECONDITION(aRowIndex >= 0 && aRowIndex < mRows.Count(), "bad row");
+    if (aRowIndex < 0 || aRowIndex >= mRows.Count())
+        return NS_ERROR_INVALID_ARG;
+
+    if (mPersistStateStore) {
+        nsIRDFResource* source = GetResourceFor(aRowIndex);
+        nsCOMPtr<nsIRDFResource> property;
+        mRDFService->GetUnicodeResource(aAttrName, getter_AddRefs(property));
+        nsCOMPtr<nsIRDFNode> target;
+        nsCOMPtr<nsIRDFLiteral> literal;
+        mRDFService->GetLiteral(aAttrValue, getter_AddRefs(literal));
+    
+        mPersistStateStore->GetTarget(source, property, PR_TRUE, getter_AddRefs(target));
+        if (target)
+            mPersistStateStore->Change(source, property, target, literal);
+        else
+            mPersistStateStore->Assert(source, property, literal, PR_TRUE);
+
+        // XXX temp hack for testing
+        nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(mPersistStateStore);
+        if (remote)
+            remote->Flush();
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULOutlinerBuilder::GetRowAttribute(PRInt32 aRowIndex, const PRUnichar *aAttrName, PRUnichar **_retval)
+{
+    NS_PRECONDITION(aRowIndex >= 0 && aRowIndex < mRows.Count(), "bad row");
+    if (aRowIndex < 0 || aRowIndex >= mRows.Count())
+        return NS_ERROR_INVALID_ARG;
+
+    *_retval = nsnull;
+
+    if (mPersistStateStore) {
+        nsIRDFResource* source = GetResourceFor(aRowIndex);
+        nsCOMPtr<nsIRDFResource> property;
+        mRDFService->GetUnicodeResource(aAttrName, getter_AddRefs(property));
+        nsCOMPtr<nsIRDFNode> target;
+    
+        mPersistStateStore->GetTarget(source, property, PR_TRUE, getter_AddRefs(target));
+        if (target) {
+            nsCOMPtr<nsIRDFLiteral> literal(do_QueryInterface(target));
+            if (literal)
+                literal->GetValue(_retval);
+        }
+    }
+
     return NS_OK;
 }
 
@@ -581,8 +652,9 @@ nsXULOutlinerBuilder::SetOutliner(nsIOutlinerBoxObject* outliner)
         //
         // XXX We should fix this so that if the document is
         // ``trusted'', we use the localstore.
-        mPersistStateStore =
-            do_CreateInstance("@mozilla.org/rdf/datasource;1?name=in-memory-datasource");
+//        mPersistStateStore =
+//            do_CreateInstance("@mozilla.org/rdf/datasource;1?name=in-memory-datasource");
+        mRDFService->GetDataSource("rdf:localstore", getter_AddRefs(mPersistStateStore));
 
         if (! mPersistStateStore)
             return NS_ERROR_FAILURE;

@@ -970,18 +970,19 @@ function IsEmptyTrashEnabled()
 
 function IsCompactFolderEnabled()
 {
-    var folderTree = GetFolderTree();
-    var selectedFolders = folderTree.selectedItems;
-    var numFolders = selectedFolders.length;
-
-    if (numFolders <= 0 )
+    dump('In IsCompactFolderEnabled\n');
+    var folderOutliner = GetFolderOutliner();
+    var startRange = {value: 0};
+    var endRange = {value: 0};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
+    if (startRange.value < 0 )
         return false;
 
-    var folder = selectedFolders[0];
-    if (!folder)
+    var folderResource = GetFolderResource(startRange.value);
+    if (!folderResource)
         return false;
 
-    return (folder.getAttribute('CanCompact') == "true");
+    return (GetFolderAttribute(folderResource, 'CanCompact') == "true");
 }
 
 var gDeleteButton = null;
