@@ -215,7 +215,7 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
         return NS_OK; 
     }
     if (fMalloc == NULL) {
-        if (nsMalloc::Create(this, kISupportsIID, (void**)fMalloc) != NS_OK)
+        if (nsMalloc::Create(this, kISupportsIID, (void**)&fMalloc) != NS_OK)
             return NS_NOINTERFACE;
     }
     return fMalloc->QueryInterface(aIID, aInstancePtr);
