@@ -241,6 +241,7 @@
               persist="open" clearhidden="true" align="left">
       <label>&softwareupdateinfo.label;</label>
       <vbox class="indent" align="left">
+<!--
         <checkbox id="enableSmartUpdate"
                   label="&enableSmartUpdate.label;" accesskey="&enableSmartUpdate.accesskey;"
                   prefstring="app.update.autoUpdateEnabled"/>
@@ -248,6 +249,7 @@
                   label="&enableExtensionUpdate.label;" accesskey="&enableExtensionUpdate.accesskey;"
                   prefstring="extensions.update.autoUpdateEnabled"/>      
         <separator class="thin"/>
+-->
         <button label="&checkNow.label;" accesskey="&checkNow.accesskey;"
                 oncommand="checkForUpdates();"/>
       </vbox>

@@ -58,7 +58,7 @@
 
 <!-- Software Update -->
 <!ENTITY softwareupdate.label             "Software Update">
-<!ENTITY softwareupdateinfo.label         "Periodically check for updates to:">
+<!ENTITY softwareupdateinfo.label         "Check for updates to My Extensions and Themes:">
 <!ENTITY enableSmartUpdate.label          "&brandShortName;">
 <!ENTITY enableSmartUpdate.accesskey      "F">
 <!ENTITY enableExtensionUpdate.label      "My Extensions and Themes">
