@@ -41,13 +41,18 @@ resource 'Mcmd' (mcmd_BrowserShellContextMenuCmds, "BrowserShellContextMenu") { 
 	msg_Nothing,
 	cmd_ViewPageSource,
 	cmd_ViewImage,
+	cmd_ViewBackgroundImage,
 	msg_Nothing,
 	cmd_SelectAll,
 	cmd_Copy,
+	msg_Nothing,
+	cmd_CopyImage,
 	cmd_CopyLinkLocation,
 	cmd_CopyImageLocation,
 	msg_Nothing,
-	cmd_DownloadLinkTarget,
+	cmd_SaveLinkTarget,
+	cmd_SaveImage,
+	msg_Nothing,
 	cmd_PrefillForm
 } };
 
@@ -70,7 +75,10 @@ resource 'MENU' (menu_Buzzwords, "Buzzwords") {
 		"Stop",						noIcon, noKey,	noMark, plain,
 		"View Page Source",			noIcon,	noKey,	noMark,	plain,
 		"View Image",		        noIcon, noKey,	noMark, plain,
-		"Download Target of Link",  noIcon, noKey,	noMark, plain,
+		"View Background Image",    noIcon, noKey,	noMark, plain,
+		"Copy Image",		        noIcon, noKey,	noMark, plain,
+		"Save Link Target As…",  noIcon, noKey,	noMark, plain,
+		"Save Image As…",       noIcon, noKey,	noMark, plain,
 		"Copy Link Location",		noIcon, noKey,	noMark, plain,
 		"Copy Image Location",		noIcon, noKey,	noMark, plain,
 	}
@@ -84,7 +92,10 @@ resource 'Mcmd' (menu_Buzzwords, "Buzzwords") { {
 	cmd_Stop,
 	cmd_ViewPageSource,
 	cmd_ViewImage,
-	cmd_DownloadLinkTarget,
+	cmd_ViewBackgroundImage,
+	cmd_CopyImage,
+	cmd_SaveLinkTarget,
+	cmd_SaveImage,
 	cmd_CopyLinkLocation,
 	cmd_CopyImageLocation,
 } };

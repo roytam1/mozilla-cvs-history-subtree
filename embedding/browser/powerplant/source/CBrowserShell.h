@@ -49,6 +49,7 @@ class nsIContentViewer;
 class nsIClipboardCommands;
 class nsIDOMEvent;
 class nsIDOMNode;
+class nsIContextMenuInfo;
 
 //*****************************************************************************
 //***    CBrowserShell
@@ -183,8 +184,7 @@ protected:
     virtual void            DoDragReceive( DragReference inDragRef );
 
     NS_IMETHOD              OnShowContextMenu(PRUint32 aContextFlags,
-                                              nsIDOMEvent *aEvent,
-                                              nsIDOMNode *aNode);
+                                              nsIContextMenuInfo *aInfo);
                                               
     NS_IMETHOD              OnShowTooltip(PRInt32 aXCoords,
                                           PRInt32 aYCoords,
@@ -206,7 +206,6 @@ protected:
    NS_METHOD                GetClipboardHandler(nsIClipboardCommands **aCommand);
    
    Boolean                  HasFormElements();
-   NS_METHOD                GetHRefFromDOMNode(nsIDOMNode *aNode, nsAString& outHRef);
 
    virtual void             PostOpenURLEvent(const nsACString& url, const nsACString& referrer);
     
@@ -227,8 +226,8 @@ protected:
         // These are stored only during OnShowContextMenu so that they can
         // be used by FindCommandStatus and ObeyCommand which get called
         // during OnShowContextMenu.
-    PRUint32                        mContextMenuContext;
-    nsIDOMNode                      *mContextMenuDOMNode;
+    PRUint32                        mContextMenuFlags;
+    nsIContextMenuInfo             *mContextMenuInfo;
     
     nsCOMPtr<nsIPrintSettings>      mPrintSettings;
 };

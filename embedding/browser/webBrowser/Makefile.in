@@ -43,6 +43,9 @@ REQUIRES	= xpcom \
 		  appcomps \
 		  webbrowserpersist \
 		  unicharutil \
+		  imglib2 \
+		  gfx2 \
+		  locale \
 		  $(NULL)
 
 include $(DEPTH)/config/autoconf.mk
@@ -59,6 +62,7 @@ XPIDLSRCS	= \
 		nsIWebBrowserSetup.idl			\
 		nsICommandHandler.idl			\
 		nsIContextMenuListener.idl		\
+		nsIContextMenuListener2.idl		\
 		nsIEmbeddingSiteWindow.idl  \
 		nsIEmbeddingSiteWindow2.idl \
 		nsITooltipListener.idl		\
@@ -74,6 +78,7 @@ CPPSRCS		= \
 		nsWebBrowser.cpp		\
 		nsCommandHandler.cpp		\
                 nsWebBrowserContentPolicy.cpp   \
+		nsContextMenuInfo.cpp		\
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a

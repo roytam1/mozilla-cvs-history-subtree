@@ -38,6 +38,9 @@ REQUIRES	= xpcom \
 		  history \
 		  webbrowserpersist \
 		  unicharutil \
+		  imglib2 \
+		  gfx2 \
+		  locale \
 		  $(NULL)
 
 EXPORTS =                  \
@@ -46,6 +49,7 @@ EXPORTS =                  \
 
 XPIDLSRCS=                        \
     .\nsIContextMenuListener.idl   \
+    .\nsIContextMenuListener2.idl  \
     .\nsITooltipListener.idl       \
     .\nsITooltipTextProvider.idl   \
     .\nsCWebBrowser.idl            \
@@ -69,6 +73,7 @@ CPP_OBJS=                            \
     .\$(OBJDIR)\nsWebBrowser.obj            \
     .\$(OBJDIR)\nsCommandHandler.obj        \
     .\$(OBJDIR)\nsWebBrowserContentPolicy.obj \
+    .\$(OBJDIR)\nsContextMenuInfo.obj \
     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
