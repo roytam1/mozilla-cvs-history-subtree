@@ -1537,7 +1537,7 @@ nsImageFrame::SizeOf(nsISizeOfHandler* aHandler, PRUint32* aResult) const
 
 
 #ifdef USE_IMG2
-NS_IMPL_ISUPPORTS1(nsImageListener, nsIImageDecoderObserver)
+NS_IMPL_ISUPPORTS2(nsImageListener, nsIImageDecoderObserver, nsIImageContainerObserver)
 
 nsImageListener::nsImageListener()
 {

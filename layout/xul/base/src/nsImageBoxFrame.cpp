@@ -643,7 +643,7 @@ NS_IMETHODIMP nsImageBoxFrame::FrameChanged(nsIImageContainer *container, nsIPre
 
 
 #ifdef USE_IMG2
-NS_IMPL_ISUPPORTS1(nsImgListener, nsIImageDecoderObserver)
+NS_IMPL_ISUPPORTS2(nsImgListener, nsIImageDecoderObserver, nsIImageContainerObserver)
 
 nsImgListener::nsImgListener()
 {
