@@ -262,7 +262,7 @@ NS_IMETHODIMP_(ArtRender*)
 nsSVGLibartCanvas::NewRender(int x0, int y0, int x1, int y1)
 {
   NS_ASSERTION(x0<x1 && y0<y1, "empty rect passed to NewRender()");
-  if (x0>=x1 || y0>=y1) return;
+  if (x0>=x1 || y0>=y1) return nsnull;
 
   // only construct a render object if there is overlap with the dirty rect:
   if (x1<mDirtyRect.x || x0>mDirtyRect.x+mDirtyRect.width ||
