@@ -214,7 +214,7 @@ private UniversalDialog           uniDialog = null;
         stopButton.setEnabled(false);
 		refreshButton = makeItem(buttonsPanel, "Refresh", 3, 0, 1, 1, 0.0, 0.0);
         refreshButton.setEnabled(false);
-        //makeItem(buttonsPanel, "DOMViewer",    6, 1, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "DOMViewer",    4, 0, 1, 1, 0.0, 0.0);
 
 		// Create the control panel
 		controlPanel = new Panel();
