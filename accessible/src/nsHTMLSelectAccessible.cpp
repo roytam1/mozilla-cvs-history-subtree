@@ -339,9 +339,6 @@ NS_IMETHODIMP nsMenuListenerAccessible::Create(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsMenuListenerAccessible::Destroy(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
-#ifdef DEBUG
-  printf("Close\n");
-#endif
 
   /* TBD send state change event */ 
 
@@ -351,9 +348,6 @@ NS_IMETHODIMP nsMenuListenerAccessible::Destroy(nsIDOMEvent* aEvent)
 NS_IMETHODIMP nsMenuListenerAccessible::Close(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
-#ifdef DEBUG
-  printf("Close\n");
-#endif
 
   /* TBD send state change event */ 
 
