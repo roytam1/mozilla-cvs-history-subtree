@@ -25,9 +25,11 @@ include $(DEPTH)/config/autoconf.mk
 include $(DEPTH)/config/config.mk
 
 ifneq ($(PACKAGE_BUILD),)
-	PLUGLETS_DIR=$(DIST)/javadev/example
-	MISC_DIR=$(DIST)/javadev/misc
-	HTML_DIR=$(DIST)/javadev/html
+	JAVADEV=$(DIST)/javadev
+	PLUGLETS_DIR=$(JAVADEV)/example
+	MISC_DIR=$(JAVADEV)/misc
+	HTML_DIR=$(JAVADEV)/misc
+	INSTALL = $(DEPTH)/config/nsinstall -m 666
 else 
 	PLUGLETS_DIR=$(DIST)/bin/plugins
 	MISC_DIR=$(DIST)/bin/res/javadev/pluglets
@@ -41,27 +43,33 @@ $(PLUGLET).jar: $(CLASSES) manifest
 .java.class:
 	$(JDKHOME)/bin/javac -classpath .:../../classes:$(CLASSPATH):JavaDOM.jar $<
 clobber:
-	rm *.class *.jar
+	rm -f *.class *.jar
+
 clean : clobber
 
+ifneq ($(PLUGLET),)
+      INSTALL_DEPS += install_pluglet
+endif
 
 ifneq ($(HTML),)
-      EXPORT_DEPS += export_html
+      INSTALL_DEPS += install_html
 endif
 
 ifneq ($(MISC),)
-      EXPORT_DEPS += export_misc
+      INSTALL_DEPS += install_misc
 endif
 
-export: $(PLUGLET).jar $(EXPORT_DEPS)
+
+install_pluglet: $(PLUGLET).jar
 	$(INSTALL) $(PLUGLET).jar $(PLUGLETS_DIR)
 
-export_html :
+install_html :
 	$(INSTALL) $(HTML) $(HTML_DIR)
 
-export_misc :
+install_misc :
 	$(INSTALL) $(MISC) $(MISC_DIR)
 
-install: export
+install:  $(INSTALL_DEPS)
 
+export: install
 

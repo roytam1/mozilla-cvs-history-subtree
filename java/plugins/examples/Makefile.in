@@ -29,6 +29,7 @@ DIRS=   \
         zip \
 	rtf \
 	dom \
+	demo \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
