@@ -68,6 +68,12 @@
 #ifdef EXTENSION_PREF
         <em:locale>locale/autoconfig/</em:locale>
 #endif
+#ifdef LOCALE_HAS_DOMI
+        <em:locale>locale/inspector/</em:locale>
+#endif
+#ifdef LOCALE_HAS_HELP
+        <em:locale>locale/help/</em:locale>
+#endif
       </Description>
     </em:file>
 
