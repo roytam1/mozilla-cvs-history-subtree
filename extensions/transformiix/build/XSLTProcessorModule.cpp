@@ -27,6 +27,7 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIExceptionService.h"
 #include "nsIGenericFactory.h"
+#include "nsIObserver.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranchInternal.h"
 #include "nsIScriptNameSpaceManager.h"

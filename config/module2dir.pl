@@ -32,7 +32,6 @@ my %map = (
   'chardet',            'intl/chardet',
   'chrome',             'rdf/chrome',
   'content',            'content',
-  'content_xsl',        'content/xsl/document',
   'cookie',             'extensions/cookie',
   'dbm',                'dbm',
   'docshell',           'docshell',
