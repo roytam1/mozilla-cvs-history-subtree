@@ -27,9 +27,10 @@
 #include "baseutils.h"
 #include "StringList.h"
 #include "NamedMap.h"
+#include "TxString.h"
 
-#ifndef MITRE_COMMANDLINEUTILS_H
-#define MITRE_COMMANDLINEUTILS_H
+#ifndef TRANSFRMX_COMMANDLINEUTILS_H
+#define TRANSFRMX_COMMANDLINEUTILS_H
 
 /**
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
