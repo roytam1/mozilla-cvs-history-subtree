@@ -49,22 +49,22 @@ var smimeHeaderSink =
 
     gSMIMEContainer.collapsed = false;
     gSignedUINode.collapsed = false;
-    gSignedStatusPanel.collapsed = false;
+    if (gSignedStatusPanel) gSignedStatusPanel.collapsed = false;
   
     if (nsICMSMessageErrors.SUCCESS == aSignatureStatus)
     {
       gSignedUINode.setAttribute("signed", "ok");
-      gStatusBar.setAttribute("signed", "ok");      
+      if (gStatusBar) gStatusBar.setAttribute("signed", "ok");      
     }
     else if(nsICMSMessageErrors.VERIFY_NOT_YET_ATTEMPTED == aSignatureStatus)
     {
       gSignedUINode.setAttribute("signed", "unknown");
-      gStatusBar.setAttribute("signed", "unknown");
+      if (gStatusBar) gStatusBar.setAttribute("signed", "unknown");
     }
     else
     {
       gSignedUINode.setAttribute("signed", "notok");
-      gStatusBar.setAttribute("signed", "notok");
+      if (gStatusBar) gStatusBar.setAttribute("signed", "notok");
     }
   },
 
@@ -80,17 +80,17 @@ var smimeHeaderSink =
 
     gSMIMEContainer.collapsed = false; 
     gEncryptedUINode.collapsed = false;
-    gEncryptedStatusPanel.collapsed = false; 
+    if (gEncryptedStatusPanel) gEncryptedStatusPanel.collapsed = false; 
 
     if (nsICMSMessageErrors.SUCCESS == aEncryptionStatus)
     {
       gEncryptedUINode.setAttribute("encrypted", "ok");
-      gStatusBar.setAttribute("encrypted", "ok");
+      if (gStatusBar) gStatusBar.setAttribute("encrypted", "ok");
     }
     else
     {
       gEncryptedUINode.setAttribute("encrypted", "notok");
-      gStatusBar.setAttribute("encrypted", "notok");
+      if (gStatusBar) gStatusBar.setAttribute("encrypted", "notok");
     }
   },
 
@@ -113,14 +113,14 @@ function onSMIMEStartHeaders()
   gSMIMEContainer.collapsed = true;
   gSignedUINode.collapsed = true;
   gSignedUINode.removeAttribute("signed");
-  gStatusBar.removeAttribute("signed");
+  if (gStatusBar) gStatusBar.removeAttribute("signed");
 
-  gSignedStatusPanel.collapsed = true;
-  gEncryptedStatusPanel.collapsed = true; 
+  if (gSignedStatusPanel) gSignedStatusPanel.collapsed = true;
+  if (gEncryptedStatusPanel) gEncryptedStatusPanel.collapsed = true; 
 
   gEncryptedUINode.collapsed = true;
   gEncryptedUINode.removeAttribute("encrypted");
-  gStatusBar.removeAttribute("encrypted");
+  if (gStatusBar) gStatusBar.removeAttribute("encrypted");
 }
 
 function onSMIMEEndHeaders()
@@ -135,9 +135,9 @@ function msgHdrViewSMIMEOnLoad(event)
   gSignedUINode = document.getElementById('signedHdrIcon');
   gEncryptedUINode = document.getElementById('encryptedHdrIcon');
   gSMIMEContainer = document.getElementById('smimeBox');
-  gStatusBar = document.getElementById('status-bar');
-  gSignedStatusPanel = document.getElementById('signed-status');
-  gEncryptedStatusPanel = document.getElementById('encrypted-status');
+  if (gStatusBar) gStatusBar = document.getElementById('status-bar');
+  if (gSignedStatusPanel) gSignedStatusPanel = document.getElementById('signed-status');
+  if (gEncryptedStatusPanel) gEncryptedStatusPanel = document.getElementById('encrypted-status');
 
   // add ourself to the list of message display listeners so we get notified when we are about to display a
   // message.
