@@ -41,7 +41,7 @@
 # Double-Colon rules for utilizing the binary release model.          #
 #######################################################################
 
-all:: export libs 
+all:: export libs program install
 
 ifeq ($(AUTOCLEAN),1)
 autobuild:: clean export private_export libs program install
@@ -88,7 +88,7 @@ import::
 		"$(MDHEADER_JAR)=$(IMPORT_MD_DIR)|$(SOURCE_MD_DIR)/include|"        \
 		"$(MDBINARY_JAR)=$(IMPORT_MD_DIR)|$(SOURCE_MD_DIR)|"
 
-export:: 
+export::
 	+$(LOOP_OVER_DIRS)
 
 private_export::
@@ -239,8 +239,28 @@ endif
 
 endif
 
+ifneq ($(POLICY),)
+release_policy::
+ifdef LIBRARY
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(LIBRARY)
+endif
+ifdef SHARED_LIBRARY
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(SHARED_LIBRARY)
+endif
+ifdef IMPORT_LIBRARY
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(IMPORT_LIBRARY)
+endif
+ifdef PROGRAM
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(PROGRAM)
+endif
+ifdef PROGRAMS
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $(PROGRAMS)
+endif
+	+$(LOOP_OVER_DIRS)
+else
 release_policy::
 	+$(LOOP_OVER_DIRS)
+endif
 
 release_md::
 ifdef LIBRARY
@@ -276,13 +296,32 @@ endif
 $(PROGRAM): $(OBJS) $(EXTRA_LIBS)
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_ARCH),WINNT)
+ifeq ($(OS_TARGET),WIN16)
+	echo system windows >w16link
+	echo option map >>w16link
+	echo option oneautodata >>w16link
+	echo option heapsize=32K >>w16link
+	echo debug watcom all >>w16link
+	echo name $@ >>w16link
+	echo file >>w16link
+	echo $(W16OBJS) , >>w16link
+	echo $(W16LDFLAGS) >> w16link
+	echo library >>w16link
+	echo winsock.lib >>w16link
+	$(LINK) @w16link.
+	rm w16link
+else
 	$(MKPROG) $(subst /,\\,$(OBJS)) -Fe$@ -link $(LDFLAGS) $(subst /,\\,$(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS))
+endif
 else
 ifdef XP_OS2_VACPP
 	$(MKPROG) -Fe$@ $(CFLAGS) $(OBJS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
 else
 	$(MKPROG) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
 endif
+endif
+ifneq ($(POLICY),)
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $@
 endif
 
 get_objs:
@@ -298,6 +337,10 @@ else
 endif
 	$(RANLIB) $@
 
+ifeq ($(OS_TARGET), WIN16)
+$(IMPORT_LIBRARY): $(SHARED_LIBRARY)
+	wlib +$(SHARED_LIBRARY)
+endif
 
 ifeq ($(OS_ARCH),OS2)
 $(IMPORT_LIBRARY): $(SHARED_LIBRARY)
@@ -327,7 +370,22 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	-bM:SRE -bnoentry $(OS_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS)
 else
 ifeq ($(OS_ARCH), WINNT)
+ifeq ($(OS_TARGET), WIN16)
+	echo system windows dll initinstance >w16link
+	echo option map >>w16link
+	echo option oneautodata >>w16link
+	echo option heapsize=32K >>w16link
+	echo debug watcom all >>w16link
+	echo name $@ >>w16link
+	echo file >>w16link
+	echo $(W16OBJS) >>w16link
+	echo $(W16LIBS) >>w16link
+	echo libfile libentry >>w16link
+	$(LINK) @w16link.
+	rm w16link
+else
 	$(LINK_DLL) -MAP $(DLLBASE) $(subst /,\\,$(OBJS) $(SUB_SHLOBJS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS) $(LD_LIBS))
+endif
 else
 ifeq ($(OS_ARCH),OS2)
 	@cmd /C "echo LIBRARY $(notdir $(basename $(SHARED_LIBRARY))) INITINSTANCE TERMINSTANCE >$@.def"
@@ -356,6 +414,9 @@ ifeq ($(OS_ARCH),OpenVMS)
 	@echo "`translate $@`" > $(@:$(DLL_SUFFIX)=vms)
 endif
 endif
+endif
+ifneq ($(POLICY),)
+	-$(PLCYPATCH) $(PLCYPATCH_ARGS) $@
 endif
 
 ifeq ($(OS_ARCH), WINNT)
@@ -413,13 +474,6 @@ else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
 
-$(PROG_PREFIX)%$(OBJ_SUFFIX): %.c
-ifdef USE_NT_C_SYNTAX
-	$(CC) -Fo$@ -c $(CFLAGS) $(subst /,\\,$<)
-else
-	$(CC) -o $@ -c $(CFLAGS) $<
-endif
-
 ifneq ($(OS_ARCH), WINNT)
 $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX): %.s
 	@$(MAKE_OBJDIR)
@@ -464,13 +518,25 @@ endif
 endif #STRICT_CPLUSPLUS_SUFFIX
 
 %.i: %.cpp
+ifeq ($(OS_TARGET), WIN16)
+	echo $(WCCFLAGS3) >w16wccf
+	$(CCC) -pl -fo=$* @w16wccf $*.cpp
+	rm w16wccf
+else
 	$(CCC) -C -E $(CFLAGS) $< > $*.i
+endif
 
 %.i: %.c
+ifeq ($(OS_TARGET), WIN16)
+	echo $(WCCFLAGS3) >w16wccf
+	$(CC) -pl -fo=$* @w16wccf $*.c
+	rm w16wccf
+else
 ifeq ($(OS_ARCH),WINNT)
 	$(CC) -C /P $(CFLAGS) $< 
 else
 	$(CC) -C -E $(CFLAGS) $< > $*.i
+endif
 endif
 
 ifneq ($(OS_ARCH), WINNT)
@@ -567,14 +633,7 @@ ifdef NETLIBDEPTH
 	CORE_DEPTH := $(NETLIBDEPTH)
 endif
 
-# !!!!! THIS WILL CRASH SHMSDOS.EXE !!!!!
-# shmsdos does not support shell variables. It will crash when it tries
-# to parse the '=' character. A solution is to rewrite outofdate.pl so it
-# takes the Javac command as an argument and executes the command itself,
-# instead of returning a list of files.
 export:: $(JAVA_DESTPATH) $(JAVA_DESTPATH)/$(PACKAGE)
-	@echo "!!! THIS COMMAND IS BROKEN ON WINDOWS--SEE rules.mk FOR DETAILS !!!"
-	return -1
 	@for d in $(JDIRS); do							\
 		if test -d $$d; then						\
 			set $(EXIT_ON_ERROR);					\
@@ -708,8 +767,14 @@ export::
 		$(JAVAH) -jni -d $(JNI_GEN_DIR) $(JNI_GEN);				\
 	else										\
 		echo "Checking for out of date header files" ;                          \
-		perl $(CORE_DEPTH)/coreconf/jniregen.pl $(PERLARG)			\
-		 -d $(JAVA_DESTPATH) -j "$(JAVAH) -jni -d $(JNI_GEN_DIR)" $(JNI_GEN);\
+		cmd="perl $(CORE_DEPTH)/coreconf/jniregen.pl $(PERLARG)			\
+				-d $(JAVA_DESTPATH) $(JNI_GEN)";			\
+		echo $$cmd;								\
+		list=`$$cmd`;								\
+		if test "$${list}x" != "x"; then					\
+			echo $(JAVAH) -jni -d $(JNI_GEN_DIR) $$list;			\
+			$(JAVAH) -jni -d $(JNI_GEN_DIR) $$list;				\
+		fi									\
 	fi
 endif
 endif
@@ -760,6 +825,11 @@ endif
 # Copy each element of EXPORTS to $(SOURCE_XP_DIR)/public/$(MODULE)/
 #
 PUBLIC_EXPORT_DIR = $(SOURCE_XP_DIR)/public/$(MODULE)
+ifeq ($(OS_ARCH),WINNT)
+ifeq ($(OS_TARGET),WIN16)
+PUBLIC_EXPORT_DIR = $(SOURCE_XP_DIR)/public/win16
+endif
+endif
 
 ifneq ($(EXPORTS),)
 $(PUBLIC_EXPORT_DIR)::
@@ -768,17 +838,18 @@ $(PUBLIC_EXPORT_DIR)::
 		$(NSINSTALL) -D $@; \
 	fi
 
-export:: $(PUBLIC_EXPORT_DIR) 
-
-export:: $(EXPORTS) 
-	$(INSTALL) -m 444 $^ $(PUBLIC_EXPORT_DIR)
-
-export:: $(BUILT_SRCS)
+export:: $(EXPORTS) $(PUBLIC_EXPORT_DIR) $(BUILT_SRCS)
+	$(INSTALL) -m 444 $(EXPORTS) $(PUBLIC_EXPORT_DIR)
 endif
 
 # Duplicate export rule for private exports, with different directories
 
 PRIVATE_EXPORT_DIR = $(SOURCE_XP_DIR)/private/$(MODULE)
+ifeq ($(OS_ARCH),WINNT)
+ifeq ($(OS_TARGET),WIN16)
+PRIVATE_EXPORT_DIR = $(SOURCE_XP_DIR)/public/win16
+endif
+endif
 
 ifneq ($(PRIVATE_EXPORTS),)
 $(PRIVATE_EXPORT_DIR)::
@@ -787,10 +858,8 @@ $(PRIVATE_EXPORT_DIR)::
 		$(NSINSTALL) -D $@; \
 	fi
 
-private_export:: $(PRIVATE_EXPORT_DIR)
-
-private_export:: $(PRIVATE_EXPORTS) 
-	$(INSTALL) -m 444 $^ $(PRIVATE_EXPORT_DIR)
+private_export:: $(PRIVATE_EXPORTS) $(PRIVATE_EXPORT_DIR)
+	$(INSTALL) -m 444 $(PRIVATE_EXPORTS) $(PRIVATE_EXPORT_DIR)
 else
 private_export:: 
 	@echo There are no private exports.;

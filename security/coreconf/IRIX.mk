@@ -58,7 +58,7 @@ ifdef NS_USE_GCC
 else
 	CC	= cc
 	CCC		= CC
-	ODD_CFLAGS	= -fullwarn -xansi -woff 1209
+	ODD_CFLAGS	= -fullwarn -xansi
 	ifdef BUILD_OPT
 		ifeq ($(USE_N32),1)
 			OPTIMIZER	= -O -OPT:Olimit=4000
@@ -91,9 +91,10 @@ RANLIB		= /bin/true
 # NOTE: should always define _SGI_MP_SOURCE
 NOMD_OS_CFLAGS += $(ODD_CFLAGS) -D_SGI_MP_SOURCE
 
-OS_CFLAGS += $(NOMD_OS_CFLAGS)
-ifdef USE_MDUPDATE
-	OS_CFLAGS += -MDupdate $(DEPENDENCIES)
+ifndef NO_MDUPDATE
+	OS_CFLAGS += $(NOMD_OS_CFLAGS) -MDupdate $(DEPENDENCIES)
+else
+	OS_CFLAGS += $(NOMD_OS_CFLAGS)
 endif
 
 ifeq ($(USE_N32),1)

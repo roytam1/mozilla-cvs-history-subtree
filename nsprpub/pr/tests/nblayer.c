@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "prio.h"
@@ -367,48 +351,6 @@ static PRInt16 PR_CALLBACK MyPoll(
     return new_flags;
 }  /* MyPoll */
 
-static PRFileDesc * PR_CALLBACK MyAccept(
-    PRFileDesc *fd, PRNetAddr *addr, PRIntervalTime timeout)
-{
-    PRStatus rv;
-    PRFileDesc *newfd, *layer = fd;
-    PRFileDesc *newstack;
-    PRFilePrivate *newsecret;
-
-    PR_ASSERT(fd != NULL);
-    PR_ASSERT(fd->lower != NULL);
-
-    newstack = PR_NEW(PRFileDesc);
-    if (NULL == newstack)
-    {
-        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-        return NULL;
-    }
-    newsecret = PR_NEW(PRFilePrivate);
-    if (NULL == newsecret)
-    {
-        PR_DELETE(newstack);
-        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-        return NULL;
-    }
-    *newstack = *fd;  /* make a copy of the accepting layer */
-    *newsecret = *fd->secret;
-    newstack->secret = newsecret;
-
-    newfd = (fd->lower->methods->accept)(fd->lower, addr, timeout);
-    if (NULL == newfd)
-    {
-        PR_DELETE(newsecret);
-        PR_DELETE(newstack);
-        return NULL;
-    }
-
-    /* this PR_PushIOLayer call cannot fail */
-    rv = PR_PushIOLayer(newfd, PR_TOP_IO_LAYER, newstack);
-    PR_ASSERT(PR_SUCCESS == rv);
-    return newfd;  /* that's it */
-}
-
 static PRInt32 PR_CALLBACK MyRecv(
     PRFileDesc *fd, void *buf, PRInt32 amount,
     PRIntn flags, PRIntervalTime timeout)
@@ -584,7 +526,6 @@ PRIntn main(PRIntn argc, char **argv)
     ** send is really a send - receive - send sequence.
     */
     myMethods = *stubMethods;  /* first get the entire batch */
-    myMethods.accept = MyAccept;  /* then override the ones we care about */
     myMethods.recv = MyRecv;  /* then override the ones we care about */
     myMethods.send = MySend;  /* then override the ones we care about */
     myMethods.close = MyClose;  /* then override the ones we care about */

@@ -147,9 +147,18 @@ endif
 
 ifdef LIBRARY_NAME
 	ifeq ($(OS_ARCH), WINNT)
+		#
+		# Win16 requires library names conforming to the 8.3 rule.
+		# other platforms do not.
+		#
 		LIBRARY        = $(OBJDIR)/$(LIBRARY_NAME).lib
-		SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)32$(JDK_DEBUG_SUFFIX).dll
-		IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)32$(JDK_DEBUG_SUFFIX).lib
+		ifeq ($(OS_TARGET), WIN16)
+			SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)16$(JDK_DEBUG_SUFFIX).dll
+			IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)16$(JDK_DEBUG_SUFFIX).lib
+		else
+			SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)32$(JDK_DEBUG_SUFFIX).dll
+			IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)32$(JDK_DEBUG_SUFFIX).lib
+		endif
 	else
 		ifeq ($(OS_ARCH), OS2)
 			LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME).lib
@@ -204,8 +213,23 @@ ifndef BUILT_SRCS
 endif
 
 
+ifeq ($(OS_TARGET), WIN16)
+	comma   := ,
+	empty   :=
+	space   := $(empty) $(empty)
+	W16OBJS := $(subst $(space),$(comma)$(space),$(strip $(OBJS)))
+	W16TEMP  = $(OS_LIBS) $(EXTRA_LIBS)
+	ifeq ($(strip $(W16TEMP)),)
+		W16LIBS =
+	else
+		W16LIBS := library $(subst $(space),$(comma)$(space),$(strip $(W16TEMP)))
+	endif
+endif
+
 ifeq ($(OS_ARCH),WINNT)
-	OBJS += $(RES)
+	ifneq ($(OS_TARGET), WIN16)
+		OBJS += $(RES)
+	endif
 	MAKE_OBJDIR		= $(INSTALL) -D $(OBJDIR)
 else
 	define MAKE_OBJDIR
@@ -257,12 +281,16 @@ else
 endif
 
 ifdef REQUIRES
+ifeq ($(OS_TARGET),WIN16)
+	INCLUDES        += -I$(SOURCE_XP_DIR)/public/win16
+else
 	MODULE_INCLUDES := $(addprefix -I$(SOURCE_XP_DIR)/public/, $(REQUIRES))
 	INCLUDES        += $(MODULE_INCLUDES)
 	ifeq ($(MODULE), sectools)
 		PRIVATE_INCLUDES := $(addprefix -I$(SOURCE_XP_DIR)/private/, $(REQUIRES))
 		INCLUDES         += $(PRIVATE_INCLUDES)
 	endif
+endif
 endif
 
 ifdef SYSTEM_INCL_DIR
@@ -293,4 +321,28 @@ ifneq ($(OS_ARCH),WINNT)
 else
 	REGCOREDEPTH = $(subst \\,/,$(CORE_DEPTH))
 	REGDATE = $(subst \ ,, $(shell perl  $(CORE_DEPTH)/$(MODULE)/scripts/now))
+endif
+
+#
+# export control policy patcher program and arguments
+#
+
+PLCYPATCH     = $(SOURCE_BIN_DIR)/plcypatch$(PROG_SUFFIX)
+
+DOMESTIC_POLICY = -us
+EXPORT_POLICY   = -ex
+FRANCE_POLICY   = -fr
+
+ifeq ($(POLICY), domestic)
+	PLCYPATCH_ARGS = $(DOMESTIC_POLICY)
+else
+	ifeq ($(POLICY), export)
+		PLCYPATCH_ARGS = $(EXPORT_POLICY)
+	else
+		ifeq ($(POLICY), france)
+			PLCYPATCH_ARGS = $(FRANCE_POLICY)
+		else
+			PLCYPATCH_ARGS =
+		endif
+	endif
 endif

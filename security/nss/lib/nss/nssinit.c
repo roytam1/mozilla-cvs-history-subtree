@@ -180,8 +180,6 @@ nss_OpenSecModDB(const char * configdir,const char *dbname)
 
 static CERTCertDBHandle certhandle = { 0 };
 
-static PRBool isInitialized = PR_FALSE;
-
 static SECStatus
 nss_OpenVolatileCertDB() {
       SECStatus rv = SECSuccess;
@@ -240,10 +238,6 @@ nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
     SECStatus status;
     SECStatus rv      = SECFailure;
 
-    if( isInitialized ) {
-	return SECSuccess;
-    }
-
     status = RNG_RNGInit();     	/* initialize random number generator */
     if (status != SECSuccess)
 	goto loser;
@@ -286,7 +280,7 @@ nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
 	}
     }
     rv = SECSuccess;
-    isInitialized = PR_TRUE;
+
 
 loser:
     if (rv != SECSuccess) 
@@ -345,11 +339,7 @@ NSS_NoDB_Init(const char * configdir)
 {
           
       SECStatus rv = SECSuccess;
-
-      if( isInitialized ) {
-	   return SECSuccess;
-      }
-
+     
       rv = RNG_RNGInit();
       if (rv != SECSuccess) {
 	   return rv;
@@ -361,8 +351,6 @@ NSS_NoDB_Init(const char * configdir)
 	   return rv;
       }
       rv = nss_OpenVolatileSecModDB();
-
-      isInitialized = PR_TRUE;
 
       return rv;
 }
@@ -384,8 +372,6 @@ NSS_Shutdown(void)
     if (keyHandle)
     	SECKEY_CloseKeyDB(keyHandle);
     SECKEY_SetDefaultKeyDB(NULL); 
-
-    isInitialized = PR_FALSE;
 }
 
 

@@ -16,8 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
- *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ * Contributor(s):
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -100,15 +99,9 @@ extern SECKEYPublicKey *SECKEY_CopyPublicKey(SECKEYPublicKey *pubKey);
 extern SECKEYPublicKey *SECKEY_ConvertToPublicKey(SECKEYPrivateKey *privateKey);
 
 /*
- * create a new RSA key pair. The private Key is returned...
+ * create a new RSA key pair. The public Key is returned...
  */
 SECKEYPrivateKey *SECKEY_CreateRSAPrivateKey(int keySizeInBits,
-					   SECKEYPublicKey **pubk, void *cx);
-	
-/*
- * create a new DH key pair. The private Key is returned...
- */
-SECKEYPrivateKey *SECKEY_CreateDHPrivateKey(DHParams *param,
 					   SECKEYPublicKey **pubk, void *cx);
 /*
 ** Create a subject-public-key-info based on a public key.
@@ -135,13 +128,6 @@ SECKEY_ConvertAndDecodePublicKeyAndChallenge(char *pkacstr, char *challenge,
 								void *cx);
 
 /*
-** Encode a  CERTSubjectPublicKeyInfo structure. into a
-** DER encoded subject public key info. 
-*/
-SECItem *
-SECKEY_EncodeDERSubjectPublicKeyInfo(SECKEYPublicKey *pubk);
-
-/*
 ** Decode a DER encoded subject public key info into a
 ** CERTSubjectPublicKeyInfo structure.
 */
@@ -156,18 +142,10 @@ extern CERTSubjectPublicKeyInfo *
 SECKEY_ConvertAndDecodeSubjectPublicKeyInfo(char *spkistr);
 
 /*
- * extract the public key from a subject Public Key info structure.
- * (used by JSS).
- */
-extern SECKEYPublicKey *
-SECKEY_ExtractPublicKey(CERTSubjectPublicKeyInfo *);
-
-/*
 ** Destroy a private key object.
 **	"key" the object
 */
 extern void SECKEY_DestroyPrivateKey(SECKEYPrivateKey *key);
-
 
 /*
 ** Destroy a public key object.
@@ -227,29 +205,6 @@ SECKEY_CopyEncryptedPrivateKeyInfo(PRArenaPool *poolp,
 KeyType SECKEY_GetPrivateKeyType(SECKEYPrivateKey *privKey);
 KeyType SECKEY_GetPublicKeyType(SECKEYPublicKey *pubKey);
 
-/*
- * Creates a PublicKey from its DER encoding.
- * Currently only supports RSA and DSA keys.
- */
-SECKEYPublicKey*
-SECKEY_ImportDERPublicKey(SECItem *derKey, CK_KEY_TYPE type);
-
-SECKEYPrivateKeyList*
-SECKEY_NewPrivateKeyList(void);
-
-void
-SECKEY_DestroyPrivateKeyList(SECKEYPrivateKeyList *keys);
-
-void
-SECKEY_RemovePrivateKeyListNode(SECKEYPrivateKeyListNode *node);
-
-SECStatus
-SECKEY_AddPrivateKeyToListTail( SECKEYPrivateKeyList *list,
-                                SECKEYPrivateKey *key);
-
-#define PRIVKEY_LIST_HEAD(l) ((SECKEYPrivateKeyListNode*)PR_LIST_HEAD(&l->list))
-#define PRIVKEY_LIST_NEXT(n) ((SECKEYPrivateKeyListNode *)n->links.next)
-#define PRIVKEY_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
 
 SEC_END_PROTOS
 

@@ -239,7 +239,7 @@ usage (void)
   PR_fprintf(outputFD, 
 "  http://developer.netscape.com/library/documentation/signedobj/signtool/\n");
 
-  exit (ERRX);
+  exit (0);
 }
 
 /*
