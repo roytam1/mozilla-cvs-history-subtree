@@ -115,6 +115,7 @@ static const double two31 = 2147483648.0;
     extern JSType *Function_Type;
 
     extern JSType *Attribute_Type;      // used to define 'prototype' 'static' etc & Namespace values
+    extern JSType *NamedArgument_Type;
 
 /*
     bool hasAttribute(ExprNode *attributes, Token::Kind tokenKind, IdentifierExprNode **attrArg = NULL);
@@ -1200,6 +1201,16 @@ static const double two31 = 2147483648.0;
     protected:
         JSFunction() : JSObject(Function_Type), mActivation(NULL) { mPrototype = Function_Type->mPrototypeObject; }        // for JSBoundFunction (XXX ask Patrick about this structure)
     public:
+
+        class ArgumentData {
+        public:
+            ArgumentData() : mName(NULL), mType(NULL), mInitializer((uint32)(-1)) { }
+            const String *mName;
+            JSType *mType;
+            uint32 mInitializer;
+        };
+
+
         typedef JSValue (NativeCode)(Context *cx, const JSValue &thisValue, JSValue argv[], uint32 argc);
 
         // XXX these should be Function_Type->newInstance() calls, no?
@@ -1212,7 +1223,7 @@ static const double two31 = 2147483648.0;
                         mCode(NULL), 
                         mResultType(resultType), 
                         mExpectedArgs(argCount),
-                        mArgTypes(NULL),
+                        mArguments(NULL),
                         mScopeChain(NULL), 
                         mIsPrototype(false),
                         mClass(NULL)
@@ -1231,7 +1242,7 @@ static const double two31 = 2147483648.0;
                         mCode(code), 
                         mResultType(resultType), 
                         mExpectedArgs(0),
-                        mArgTypes(NULL),
+                        mArguments(NULL),
                         mScopeChain(NULL),
                         mIsPrototype(false),
                         mClass(NULL)
@@ -1248,8 +1259,12 @@ static const double two31 = 2147483648.0;
 
         void setByteCode(ByteCodeModule *b)     { ASSERT(!isNative()); mByteCode = b; }
         void setResultType(JSType *r)           { mResultType = r; }
-        void setExpectedArgs(uint32 e)          { mExpectedArgs = e; mArgTypes = new JSType *[mExpectedArgs]; }
-        void setArgType(uint32 a, JSType *t)    { ASSERT(mArgTypes && (a < mExpectedArgs)); mArgTypes[a] = t; }
+        void setExpectedArgs(uint32 e)          { mExpectedArgs = e; mArguments = new ArgumentData[mExpectedArgs]; }
+        void setArgument(uint32 index, const String *n, JSType *t)
+                                                { ASSERT(mArguments && (index < mExpectedArgs)); mArguments[index].mType = t; mArguments[index].mName = n; }
+        void setArgumentInitializer(uint32 index, uint32 offset)
+                                                { ASSERT(mArguments && (index < mExpectedArgs)); mArguments[index].mInitializer = offset; }
+
         void setIsPrototype(bool i)             { mIsPrototype = i; }
         void setFunctionName(const String &n)   { mFunctionName = n; }
         void setClass(JSType *c)                { mClass = c; }
@@ -1262,11 +1277,12 @@ static const double two31 = 2147483648.0;
 
         virtual JSType *getResultType()         { return mResultType; }
         virtual uint32 getExpectedArgs()        { return mExpectedArgs; }
-        virtual JSType *getArgType(uint32 a)    { ASSERT(mArgTypes && (a < mExpectedArgs)); return mArgTypes[a]; }
+        virtual JSType *getArgType(uint32 a)    { ASSERT(mArguments && (a < mExpectedArgs)); return mArguments[a].mType; }
         virtual ScopeChain *getScopeChain()     { return mScopeChain; }
         virtual JSValue getThisValue()          { return kNullValue; }         
         virtual JSType *getClass()              { return mClass; }
         virtual String &getFunctionName()       { return mFunctionName; }
+        virtual uint32 findParameterName(const String *name);
 
         ParameterBarrel *mParameterBarrel;
         Activation mActivation;                 // not used during execution  (XXX so maybe we should handle it differently, hmmm?)
@@ -1276,7 +1292,7 @@ static const double two31 = 2147483648.0;
         NativeCode *mCode;
         JSType *mResultType;
         uint32 mExpectedArgs;
-        JSType **mArgTypes;
+        ArgumentData *mArguments;
         ScopeChain *mScopeChain;
         bool mIsPrototype;                      // set for functions with prototype attribute
         JSType *mClass;                         // pointer to owning class if this function is a method
@@ -1306,6 +1322,8 @@ static const double two31 = 2147483648.0;
         JSValue getThisValue()          { return JSValue(mThis); }         
         JSType *getClass()              { return mFunction->getClass(); }
         String &getFunctionName()       { return mFunction->getFunctionName(); }
+        uint32 findParameterName(const String *name)
+                                        { return mFunction->findParameterName(name); } 
 
         void getProperty(Context *cx, const String &name, NamespaceList *names) 
                                         { mFunction->getProperty(cx, name, names); }
@@ -1503,17 +1521,7 @@ static const double two31 = 2147483648.0;
             return &mStack[n];
         }
 
-        void assureStackSpace(uint32 s)
-        {
-            if ((mStackMax - mStackTop) < s) {
-                JSValue *newStack = new JSValue[mStackMax + s];
-                memcpy(newStack, mStack, sizeof(JSValue *) * mStackTop);
-                delete[] mStack;
-                mStack = newStack;
-                mStackMax += s;
-            }
-        }
-
+        void assureStackSpace(uint32 s);
 
 
         // the activation stack
@@ -1607,13 +1615,28 @@ static const double two31 = 2147483648.0;
 
     };
 
+    
+    class NamedArgument : public JSObject {
+    public:
+        NamedArgument(JSValue &v, const String *n) : JSObject(NamedArgument_Type), mValue(v), mName(n) { }
+
+        JSValue mValue;
+        const String *mName;
+    };
+    
+    
+    
+    
+    
+    
+    
+    
+    
     inline AccessorReference::AccessorReference(JSFunction *f)
         : Reference(f->getResultType()), mFunction(f) 
     {
     }
   
-
-
     inline FunctionReference::FunctionReference(JSFunction *f) 
             : Reference(f->getResultType()), mFunction(f)
     {

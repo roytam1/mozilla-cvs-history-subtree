@@ -378,6 +378,7 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { 0,        "NewClosure" },
 { 0,        "Class" },
 { -1,       "Juxtapose" },
+{ -1,       "NamedArgument" },
 
 };
 
@@ -638,12 +639,30 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
         ASSERT(mStackTop == 1);
         addOpSetDepth(ReturnOp, 0);
     }
-    else
+    else {
         if (!hasReturn) {
             addOp(LoadConstantUndefinedOp);
             ASSERT(mStackTop == 1);
             addOpSetDepth(ReturnOp, 0);
         }
+    }
+
+    VariableBinding *v = f.parameters;
+    uint32 index = 0;
+    while (v) {
+        
+        if (v->initializer) {        
+            // this code gets executed if the function is called without
+            // an argument for this parameter. 
+            fnc->setArgumentInitializer(index, currentOffset());
+            genExpr(v->initializer);
+            addOp(RtsOp);        
+        }
+        index++;
+        v = v->next;
+    }
+
+
     fnc->setByteCode(new ByteCodeModule(this));        
 
     mScopeChain->popScope();
@@ -762,7 +781,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             FunctionStmtNode *f = checked_cast<FunctionStmtNode *>(p);
 //            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
             bool isConstructor = (f->attributeFlags & Property::Constructor) == Property::Constructor;
-            JSFunction *fnc = f->mFunction;    
+            JSFunction *fnc = f->mFunction;
 
             ASSERT(f->function.name);
             if (mScopeChain->topClass() && (mScopeChain->topClass()->mClassName.compare(*f->function.name) == 0))
@@ -2017,7 +2036,7 @@ BinaryOpEquals:
             Reference *ref = genReference(i->op, Read);
 
             // if the reference is the name of a type, then this
-            // is a cast of the argument to that type.
+            // is a cast of the argument to that type. [is this right??]
             //if (ref->isTypeName()) {
             //    addByte(LoadTypeOp);
             //    addPointer(ref->getType());
@@ -2028,10 +2047,17 @@ BinaryOpEquals:
             //}
             ref->emitInvokeSequence(this);
 
+            uint8 callFlags = 0;
+
             ExprPairList *p = i->pairs;
             int32 argCount = 0;
             while (p) {
                 genExpr(p->value);
+                if (p->field) {
+                    callFlags |= NamedArguments;
+                    genExpr(p->field);
+                    addOp(NamedArgOp);
+                }
                 argCount++;
                 p = p->next;
             }
@@ -2039,13 +2065,14 @@ BinaryOpEquals:
             if (ref->needsThis()) {
                 addOpAdjustDepth(InvokeOp, -(argCount + 1));
                 addLong(toUInt32(argCount));
-                addByte(Explicit);
+                callFlags |= Explicit;
             }
             else {
                 addOpAdjustDepth(InvokeOp, -argCount);
                 addLong(toUInt32(argCount));
-                addByte(NoThis);
+                callFlags |= NoThis;
             }
+            addByte(callFlags);
             JSType *type = ref->mType;
             delete ref;
             return type;
@@ -2271,6 +2298,7 @@ uint32 printInstruction(Formatter &f, uint32 i, const ByteCodeModule& bcm)
     case NewClosureOp:
     case ClassOp:
     case JuxtaposeOp:
+    case NamedArgOp:
         break;
 
     case DoUnaryOp:

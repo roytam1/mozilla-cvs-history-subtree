@@ -52,10 +52,16 @@ namespace JavaScript {
 namespace JS2Runtime {
 
     typedef enum {
-        NoThis,
-        Inherent,
-        Explicit
-    } ThisFlag;     // maybe have three different invoke ops instead?
+        // 1st 2 bits specify what kind of 'this' exists
+        NoThis = 0x00,
+        Inherent = 0x01,
+        Explicit = 0x02,
+        ThisFlags = 0x03,
+
+        // bit #3 indicates presence of named arguments
+        NamedArguments = 0x04
+
+    } CallFlag;
 
 typedef enum {
 
@@ -147,6 +153,7 @@ PopScopeOp,             // <pointer>        XXX !!! XXX
 NewClosureOp,           //                          <function> --> <function>
 ClassOp,                //                          <object> --> <type>
 JuxtaposeOp,            //                          <attribute> <attribute> --> <attribute>
+NamedArgOp,             //                          <object> <string> --> <named arg object>
 
 OpCodeCount
 
@@ -350,6 +357,11 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         void setLabel(uint32 label)
         {
             mLabelList[label].setLocation(this, mBuffer->size()); 
+        }
+
+        uint32 currentOffset()
+        {
+            return mBuffer->size();
         }
 
         std::vector<String> mStringPoolContents;

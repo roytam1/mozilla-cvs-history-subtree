@@ -429,17 +429,26 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         pc += sizeof(uint32);
                 }
                 break;
+            case NamedArgOp:
+                {
+                    JSValue name = popValue();
+                    if (!name.isString())
+                        reportError(Exception::typeError, "String needed for argument name");
+                    JSValue value = popValue();
+                    pushValue(JSValue(new NamedArgument(value, name.string)));
+                }
+                break;
             case InvokeOp:
                 {
                     uint32 argCount = *((uint32 *)pc); 
                     uint32 cleanUp = argCount;
                     pc += sizeof(uint32);
-                    ThisFlag thisFlag = (ThisFlag)(*pc++);
-                    
+                    CallFlag callFlag = (CallFlag)(*pc++);
+
                     JSValue *targetValue = getBase(stackSize() - (argCount + 1));
                     JSFunction *target;
                     JSValue oldThis = mThis;
-                    switch (thisFlag) {
+                    switch (callFlag & ThisFlags) {
                     case NoThis:
                         mThis = kNullValue; 
                         break;
@@ -478,12 +487,58 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             mThis = target->getThisValue();
                     }
                     
-                    uint32 argBase = 0;
-                    if (stackSize() > argCount)
-                        argBase = stackSize() - argCount;
+                    uint32 expectedArgCount = target->getExpectedArgs();
+                    JSValue *argBase = NULL;
+
+                    if ((callFlag & NamedArguments) == NamedArguments) {
+                        uint32 i;
+                        // simplest to allocate a chunk for the args, pull them off
+                        // the current stack and put them in the right place
+
+                        uint32 argBlockSize = argCount;
+                        if (expectedArgCount > argCount)
+                            argBlockSize = expectedArgCount;
+
+                        argBase = new JSValue[argBlockSize];
+                        bool *argAssigned = new bool[argBlockSize];
+                        for (i = 0; i < argBlockSize; i++)
+                            argAssigned[i] = false;
+
+                        uint32 argStart = stackSize() - argCount;
+                        for (i = 0; i < argCount; i++) {
+                            JSValue v = getValue(i + argStart);
+                            uint32 index = i;
+                            if (v.isObject() && (v.object->mType == NamedArgument_Type)) {
+                                NamedArgument *arg = (NamedArgument *)(v.object);
+                                index = target->findParameterName(arg->mName);
+                                if (index == (uint32)(-1))
+                                    reportError(Exception::referenceError, "Way iffy parameter name");
+                                v = arg->mValue;
+                            }
+                            if (argAssigned[index])
+                                reportError(Exception::referenceError, "Like, we've so seen that argument before");
+                            argBase[index] = v;
+                            argAssigned[index] = true;
+                        }
+                        delete[] argAssigned;
+                    }
+                    else {
+                        ASSERT(stackSize() > argCount);
+                        argBase = getBase(stackSize() - argCount);
+                    }
+
+                    // IF there are optional parameters for this target
+                    // AND those parameters are un-satisfied
+                    // THEN invoke the initializers from the target to get the appropriate
+                    // values.
+/*
+                    if (    target->hasOptionalArguments()
+                            && 
+                
+*/
+
 
                     if (!target->isNative()) {
-                        uint32 expectedArgCount = target->getExpectedArgs();
 
                         // we didn't know the target function at compile time
                         // and so we couldn't allocate space for these
@@ -505,14 +560,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         mCurModule = target->getByteCode();
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
-                        mArgumentBase = getBase(argBase);
+                        mArgumentBase = argBase;
                         mLocals = new JSValue[mCurModule->mLocalsCount];
                         mStack = new JSValue[mCurModule->mStackDepth];
                         mStackMax = mCurModule->mStackDepth;
                         mStackTop = 0;
                     }
                     else {
-                        JSValue result = (target->getNativeCode())(this, mThis, getBase(argBase), argCount);
+                        JSValue result = (target->getNativeCode())(this, mThis, argBase, argCount);
                         mThis = oldThis;
                         resizeStack(stackSize() - (cleanUp + 1));
                         pushValue(result);
