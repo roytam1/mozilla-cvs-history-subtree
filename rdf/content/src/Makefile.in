@@ -34,7 +34,7 @@ CPPSRCS =				\
 	nsRDFGenericElement.cpp         \
 	nsRDFHTMLBuilder.cpp		\
 	nsRDFResourceElement.cpp	\
-	nsRDFSimplContentSink.cpp	\
+	nsRDFSimpleContentSink.cpp	\
 	nsRDFTreeBuilder.cpp		\
 	$(NULL)
 
