@@ -1,0 +1,57 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="Generator" content="Microsoft Word 97">
+   <meta name="GENERATOR" content="Mozilla/4.7 [en] (WinNT; U) [Netscape]">
+</head>
+<body>
+
+<blockquote><b><u><font face="Arial"><font size=+0>Instruction for using
+the ‘MAPI_SUPP_BRANCH’ for the Mapi Support feature</font></font></u></b></blockquote>
+
+<ol>
+<li>
+<font face="Arial"><font size=+0>Get the latest 0.94 branch or the the
+trunk and build it</font></font></li>
+</ol>
+
+<ol>
+<li>
+<font face="Arial"><font size=+0>Now go to the dir where u have mozilla
+and get the branch from Mapi, do :</font></font></li>
+</ol>
+<font face="Arial"><font size=+0>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+"cvs co -rMAPI_SUPP_BRANCH mozilla/mailnews/mapi".</font></font>
+<p><font face="Arial"><font size=+0>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+This will get the latest branch for mapi support. The branch MAPI_SUPP_BRANCH
+for mapi support is NOT the full tree,</font></font>
+<br><i><font face="Arial"><font size=+0>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+it is just the mapi&nbsp; dir within mozilla/mailnews.</font></font></i>
+<ol>
+<li>
+<font face="Arial"><font size=+0>Go to mozilla/mailnews/mapi, build the
+mapi dir : 'nmake -f makefile.win'.&nbsp; This completes the building part.</font></font></li>
+</ol>
+
+<ol>
+<li>
+<font face="Arial"><font size=+0>Now run mozilla from your build. Go to
+menuitem Edit/Preferences, this will&nbsp; bring up the Preferences dialog.
+Go to category Mail &amp; NewsGroups. In the General setting section u
+will see the checkbox 'Use Mozilla Mail as the default mail application.'
+Check the checkbox to enable the MAPI support in Mozilla and close the
+Prefs dialog.</font></font></li>
+</ol>
+
+<ol>
+<li>
+<font face="Arial"><font size=+0>You are now ready to test the mozilla's
+MAPI support. Run Word, WordPad, Powerpoint, or Excel. Open a document
+in the app and do File/Send from the app. You should see the Mozilla mailnews
+compose window come up with your document attached to the opened mail.
+Type in the recipients (To, Cc, etc) and send the mail.</font></font></li>
+</ol>
+
+</body>
+</html>
