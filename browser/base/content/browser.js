@@ -4395,6 +4395,10 @@ function asyncOpenWebPanel(event)
  // should always return true for click to go through
  function contentAreaClick(event, fieldNormalClicks) 
  {
+   if (!event.isTrusted) {
+     return true;
+   }
+
    var target = event.target;
    var linkNode;
 
