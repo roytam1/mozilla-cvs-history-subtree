@@ -28,6 +28,8 @@
 
 #define NS_EXPORT _declspec(dllexport)
 #define NS_EXPORT_(type) _declspec(dllexport) type __stdcall
+#define NS_IMPORT _declspec(dllimport)
+#define NS_IMPORT_(type) _declspec(dllimport) type __stdcall
 
 #define NS_IMETHOD_(type) virtual type __stdcall
 #define NS_IMETHOD virtual nsresult __stdcall
@@ -44,6 +46,8 @@
 
 #define NS_EXPORT __declspec(export)
 #define NS_EXPORT_(type) __declspec(export) type
+#define NS_IMPORT
+#define NS_IMPORT_(type) type
 
 #define NS_IMETHOD_(type) virtual type
 #define NS_IMETHOD virtual nsresult
@@ -60,6 +64,8 @@
 
 #define NS_EXPORT
 #define NS_EXPORT_(type) type
+#define NS_IMPORT
+#define NS_IMPORT_(type) type
 
 #define NS_IMETHOD_(type) virtual type
 #define NS_IMETHOD virtual nsresult
