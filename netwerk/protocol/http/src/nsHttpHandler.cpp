@@ -273,28 +273,30 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
 }
 
 nsresult
-nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
-                                   nsHttpConnectionInfo *connectionInfo)
+nsHttpHandler::InitiateTransaction(nsHttpTransaction *trans,
+                                   nsHttpConnectionInfo *ci,
+                                   PRBool failIfBusy)
 {
     LOG(("nsHttpHandler::InitiateTransaction\n"));
 
-    NS_ENSURE_ARG_POINTER(transaction);
-    NS_ENSURE_ARG_POINTER(connectionInfo);
+    NS_ENSURE_ARG_POINTER(trans);
+    NS_ENSURE_ARG_POINTER(ci);
 
-    if (mNumActiveConnections == PRUint32(mMaxConnections))
-        // unable to perform this transaction at this time
-        return EnqueueTransaction(transaction, connectionInfo);
+    if (mNumActiveConnections == PRUint32(mMaxConnections)) {
+        LOG(("unable to perform the transaction at this time [trans=%x]\n", trans));
+        if (failIfBusy) return NS_ERROR_FAILURE;
+        return EnqueueTransaction(trans, ci);
+    }
 
     nsHttpConnection *conn = nsnull;
 
-#if 0
     // search the idle connection list
     PRCList *node = PR_LIST_HEAD(&mIdleConnections);
     while (node != &mIdleConnections) {
         conn = (nsHttpConnection *) node; 
         node = PR_NEXT_LINK(node);
 
-        if (conn->ConnectionInfo()->Equals(connectionInfo)) {
+        if (conn->ConnectionInfo()->Equals(ci)) {
             // found a matching connection; remove from list
             PR_REMOVE_AND_INIT_LINK(conn);
 
@@ -311,14 +313,14 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
             }
         }
     }
-#endif
 
     if (!conn) {
-#if 0
-        PRUint32 connectionsPerHost = CountActiveConnections(connectionInfo);
-        if (connectionsPerHost == PRUint32(mMaxConnectionsPerServer))
-            return EnqueueTransaction(transaction, connectionInfo);
-#endif
+        PRUint32 connectionsPerHost = CountActiveConnections(ci);
+        if (connectionsPerHost == PRUint32(mMaxConnectionsPerServer)) {
+            LOG(("unable to perform the transaction at this time [trans=%x]\n", trans));
+            if (failIfBusy) return NS_ERROR_FAILURE;
+            return EnqueueTransaction(trans, ci);
+        }
 
         LOG(("creating new connection...\n"));
         NS_NEWXPCOM(conn, nsHttpConnection);
@@ -327,13 +329,13 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
         NS_ADDREF(conn);
     }
 
-    nsresult rv = conn->Init(connectionInfo);
+    nsresult rv = conn->Init(ci);
     if (NS_FAILED(rv)) goto failed;
 
-    rv = conn->SetTransaction(transaction);
+    rv = conn->SetTransaction(trans);
     if (NS_FAILED(rv)) goto failed;
 
-//    PR_APPEND_LINK(conn, &mActiveConnections);
+    PR_APPEND_LINK(conn, &mActiveConnections);
     mNumActiveConnections++;
     return NS_OK;
 
@@ -350,7 +352,6 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
     LOG(("nsHttpHandler::ReclaimConnection [conn=%x keep-alive=%d]\n",
         conn, conn->CanReuse()));
 
-#if 0
     // remove connection from the active connection list
     PR_REMOVE_AND_INIT_LINK(conn);
 
@@ -373,12 +374,9 @@ nsHttpHandler::ReclaimConnection(nsHttpConnection *conn)
         }
     }
     else {
-#endif
         LOG(("closing connection: connection can't be reused\n"));
         NS_RELEASE(conn);
-#if 0
     }
-#endif
 
     // process the pending transaction queue...
     mNumActiveConnections--;
@@ -543,16 +541,16 @@ nsHttpHandler::ProcessTransactionQ()
         pt = (nsPendingTransaction *) node;
         node = PR_NEXT_LINK(node);
 
+        // try to initiate this transaction... if it fails
+        // then we'll just skip over this pending transaction
+        // and try the next.
         nsresult rv = InitiateTransaction(pt->Transaction(),
-                                          pt->ConnectionInfo());
-        if (NS_FAILED(rv)) {
-            LOG(("InitiateTransaction failed [rv=%x]\n", rv));
-            NS_NOTREACHED("InitiateTransaction failed!!");
-            break;
+                                          pt->ConnectionInfo(),
+                                          PR_TRUE);
+        if (NS_SUCCEEDED(rv)) {
+            PR_REMOVE_LINK(pt);
+            delete pt;
         }
-
-        PR_REMOVE_LINK(pt);
-        delete pt;
     }
 }
 
@@ -584,14 +582,16 @@ nsHttpHandler::CountActiveConnections(nsHttpConnectionInfo *ci)
         // only include a matching connection in the count if it
         // can still be reused.
         if (conn->ConnectionInfo()->Equals(ci)) {
+            count++;
+            /*
             if (conn->CanReuse())
                 count++;
             else {
                 LOG(("dropping stale connection: [conn=%x]\n", conn));
                 PR_REMOVE_LINK(conn);
                 NS_RELEASE(conn);
-                conn = nsnull;
             }
+            */
         }
     }
 
@@ -615,6 +615,8 @@ nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
         // only include a matching connection in the count if it
         // can still be reused.
         if (conn->ConnectionInfo()->Equals(ci)) {
+            count++;
+            /* WE NEED SOMETHING LIKE THIS
             if (conn->CanReuse())
                 count++;
             else {
@@ -623,6 +625,7 @@ nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
                 NS_RELEASE(conn);
                 conn = nsnull;
             }
+            */
         }
     }
 

@@ -87,9 +87,12 @@ public:
     //   steady-state max-connections pref.
     // 
 
-    // Called to kick-off a new transaction
+    // Called to kick-off a new transaction, by default the transaction
+    // will be put on the pending transaction queue if it cannot be 
+    // initiated at this time.
     nsresult InitiateTransaction(nsHttpTransaction *,
-                                 nsHttpConnectionInfo *);
+                                 nsHttpConnectionInfo *,
+                                 PRBool failIfBusy = PR_FALSE);
 
     // Called when a connection is done processing a transaction
     nsresult ReclaimConnection(nsHttpConnection *);

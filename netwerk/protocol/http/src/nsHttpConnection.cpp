@@ -172,6 +172,10 @@ nsHttpConnection::OnTransactionComplete(nsHttpTransaction *trans, nsresult statu
         mReadRequest = 0;
     }
 
+    // break the cycle between the socket transport and this
+    if (mSocketTransport)
+        mSocketTransport->SetNotificationCallbacks(nsnull, 0);
+
     if (!mKeepAlive) {
         // if we're not going to be keeping this connection alive...
         mSocketTransport->SetReuseConnection(PR_FALSE);
@@ -237,7 +241,9 @@ nsHttpConnection::ActivateConnection()
 
     mState = WAITING_FOR_WRITE;
 
-    rv = mSocketTransport->SetReuseConnection(PR_TRUE);
+    // allow the socket transport to call us directly on progress
+    rv = mSocketTransport->
+            SetNotificationCallbacks(this, nsITransport::DONT_PROXY_PROGRESS);
     if (NS_FAILED(rv)) return rv;
 
     rv = mSocketTransport->AsyncWrite(this, nsnull, 0, PRUint32(-1),
@@ -276,13 +282,12 @@ nsHttpConnection::CreateTransport()
                               getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
-    // allow the socket transport to call us directly on progress
-    rv = transport->SetNotificationCallbacks(this,
-                                             nsITransport::DONT_PROXY_PROGRESS);
-    if (NS_FAILED(rv)) return rv;
-
     // QI for the nsISocketTransport iface
     mSocketTransport = do_QueryInterface(transport, &rv);
+
+    rv = mSocketTransport->SetReuseConnection(PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+
     return rv;
 }
 
@@ -334,6 +339,10 @@ nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
         // Done reading, so signal transaction complete...
         mState = IDLE;
         mReadRequest = 0;
+
+        // break the cycle between the socket transport and this
+        if (mSocketTransport)
+            mSocketTransport->SetNotificationCallbacks(nsnull, 0);
 
         mTransaction->OnStopTransaction(status);
 

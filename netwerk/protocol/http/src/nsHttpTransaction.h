@@ -55,7 +55,7 @@ public:
     virtual ~nsHttpTransaction();
 
     // Called when assigned to a connection
-    void SetConnection(nsHttpConnection *);
+    nsresult SetConnection(nsHttpConnection *);
 
     // Called to initialize the transaction
     nsresult SetupRequest(nsHttpRequestHead *, nsIInputStream *);

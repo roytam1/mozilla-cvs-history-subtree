@@ -98,12 +98,16 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
     return rv;
 }
 
-void
+nsresult
 nsHttpTransaction::SetConnection(nsHttpConnection *conn)
 {
-    NS_IF_RELEASE(mConnection);
+    NS_ENSURE_ARG_POINTER(conn);
+    NS_ENSURE_TRUE(!mConnection, NS_ERROR_ALREADY_INITIALIZED);
+
     mConnection = conn;
-    NS_IF_ADDREF(mConnection);
+    NS_ADDREF(mConnection);
+
+    return NS_OK;
 }
 
 nsHttpResponseHead *
