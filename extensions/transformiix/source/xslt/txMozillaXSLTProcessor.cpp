@@ -249,7 +249,49 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                           nsIDOMDocument* aOutputDoc,
                                           nsISupports* aObserver)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG(aSourceDOM);
+    NS_ENSURE_ARG(aStyleDOM);
+    NS_ENSURE_ARG(aOutputDoc);
+    NS_ENSURE_FALSE(aObserver, NS_ERROR_NOT_IMPLEMENTED);
+
+    if (!URIUtils::CanCallerAccess(aSourceDOM) ||
+        !URIUtils::CanCallerAccess(aStyleDOM) ||
+        !URIUtils::CanCallerAccess(aOutputDoc)) {
+        return NS_ERROR_DOM_SECURITY_ERR;
+    }
+
+    PRUint16 type = 0;
+    aStyleDOM->GetNodeType(&type);
+    NS_ENSURE_TRUE(type == nsIDOMNode::ELEMENT_NODE ||
+                   type == nsIDOMNode::DOCUMENT_NODE,
+                   NS_ERROR_INVALID_ARG);
+
+    nsresult rv = TX_CompileStylesheet(aStyleDOM, getter_AddRefs(mStylesheet));
+    NS_ENSURE_SUCCESS(rv, rv);
+    // Create wrapper for the source document.
+    mSource = aSourceDOM;
+    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
+    mSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
+    if (!sourceDOMDocument) {
+        sourceDOMDocument = do_QueryInterface(mSource);
+    }
+    NS_ENSURE_TRUE(sourceDOMDocument, NS_ERROR_FAILURE);
+    Document sourceDocument(sourceDOMDocument);
+    Node* sourceNode = sourceDocument.createWrapper(mSource);
+    NS_ENSURE_TRUE(sourceNode, NS_ERROR_FAILURE);
+
+    txExecutionState es(mStylesheet);
+    txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, aOutputDoc,
+                                         nsnull);
+    es.mOutputHandlerFactory = &handlerFactory;
+
+    es.init(sourceNode, &mVariables);
+
+    // Process root of XML source document
+    txXSLTProcessor::execute(es);
+    es.end();
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP
