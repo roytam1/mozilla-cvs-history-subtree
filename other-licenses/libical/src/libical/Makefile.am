@@ -43,6 +43,7 @@ CPPFLAGS = -DPACKAGE_DATA_DIR=\""$(datadir)/$(PACKAGE)"\"
 all: ical.h
 
 INCLUDES =			\
+	-I/usr/include/objc	\
 	-I$(top_builddir)	\
 	-I$(top_srcdir)/src	\
 	-I$(top_builddir)/src	\
