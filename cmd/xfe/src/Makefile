@@ -171,9 +171,9 @@ CPPSRCS		+= \
 		  $(NULL)
 endif
 
-ifdef PRIVACY_FEATURES
+ifdef MOZ_PRIVACY 
 REQUIRES	+= \
-		  misc \
+		  privacy \
 		  $(NULL)
 endif
 
