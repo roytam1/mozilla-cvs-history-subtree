@@ -164,7 +164,7 @@ void charData(void* userData, const XML_Char* s, int len)
 {
     ParserState* ps = (ParserState*)userData;
     DOMString data;
-    data.append(s, len);
+    data.append((UNICODE_CHAR*)s, len);
     ps->currentNode->appendChild(ps->document->createTextNode(data));
 } //-- charData
 
