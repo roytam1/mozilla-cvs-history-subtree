@@ -968,7 +968,7 @@ ScopedXPCOMStartup::SetWindowCreator(nsINativeAppSupport* native)
   // Initialize the cmd line service
   nsCOMPtr<nsICmdLineService> cmdLineArgs
     (do_GetService("@mozilla.org/appshell/commandLineService;1"));
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(cmdLineArgs, NS_ERROR_FAILURE);
 
   rv = cmdLineArgs->Initialize(gArgc, gArgv);
 
