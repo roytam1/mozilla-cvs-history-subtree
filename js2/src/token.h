@@ -206,6 +206,13 @@ namespace JavaScript
         case Token::Set:           \
         case Token::identifier
 
+#define CASE_TOKEN_NONRESERVED_NONINCLUDE \
+             Token::Eval:          \
+        case Token::Exclude:       \
+        case Token::Get:           \
+        case Token::Set:           \
+        case Token::identifier
+
 // Keep synchronized with isNonExpressionAttribute below
 #define CASE_TOKEN_NONEXPRESSION_ATTRIBUTE \
              Token::Abstract:      \

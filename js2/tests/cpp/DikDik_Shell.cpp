@@ -133,7 +133,7 @@ static int readEvalPrint(Context *cx, FILE *in)
     while (promptLine(inReader, line, buffer.empty() ? "dd> " : "> ")) {
         appendChars(buffer, line.data(), line.size());
         try {
-            Parser p(world, a, buffer, ConsoleName);
+            Parser p(world, a, cx->mFlags, buffer, ConsoleName);
             cx->setReader(&p.lexer.reader);
             if (showTokens) {
                 Lexer &l = p.lexer;
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
     using namespace Shell;
 
     JSObject *globalObject;
-    Context cx(&globalObject, world, a);
+    Context cx(&globalObject, world, a, Pragma::js2);
 
     globalObject->defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(&cx, load, NULL)));
     globalObject->defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(&cx, print, NULL)));

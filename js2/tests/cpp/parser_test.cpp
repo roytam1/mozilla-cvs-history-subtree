@@ -77,7 +77,7 @@ static bool promptLine(LineReader &inReader, string &s, const char *prompt)
     return inReader.readLine(s) != 0;
 }
 
-static void readEvalPrint(FILE *in, World &world)
+static void readEvalPrint(FILE *in, World &world, Pragma::Flags flags)
 {
     String buffer;
     string line;
@@ -87,7 +87,7 @@ static void readEvalPrint(FILE *in, World &world)
         appendChars(buffer, line.data(), line.size());
         try {
             Arena a;
-            Parser p(world, a, buffer, consoleName);
+            Parser p(world, a, flags, buffer, consoleName);
                 
             if (showTokens) {
                 Lexer &l = p.lexer;
@@ -140,7 +140,7 @@ int main(int , char **)
 {
 #endif
 
-    readEvalPrint(stdin, world);
+    readEvalPrint(stdin, world, Pragma::js2);
     
     return 0;
     // return ProcessArgs(argv + 1, argc - 1);

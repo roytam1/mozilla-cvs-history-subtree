@@ -52,21 +52,19 @@ namespace JavaScript {
 
 
 //
-// Language Selectors
+// Pragmas
 //
 
-    class Language {
-        enum {
-            minorVersion = 0,           // Single BCD digit representing the minor JavaScript version
-            minorVersionBits = 4,
-            majorVersion = 4,           // Single BCD digit representing the major JavaScript version
-            majorVersionBits = 4,
-            strictSemantics = 8,        // True when strict semantics are in use
-            strictSyntax = 9,           // True when strict syntax is in use
-            unknown = 31                // True when language is unknown
+    namespace Pragma {
+        enum Flags {                    // Bitmap of pragma flags
+            none = 0,
+            js2 = 1<<0,                 // JS 2.0 when set; JS 1.5 when clear
+            strict = 1<<1               // Strict mode; can only be set when js2 is set
         };
-        uint32 flags;                   // Bitmap of flags at locations as above
-    };
+        
+        inline bool test(Flags flags, Flags bit) {return (flags & bit) != 0;}
+        inline bool lineBreaksSignificant(Flags flags) {return (flags & strict) == 0;}
+    }
 
 
 //
@@ -431,11 +429,10 @@ namespace JavaScript {
             With,           // UnaryStmtNode        with ( <expr> ) <stmt>
             For,            // ForStmtNode          for ( <initializer> ; <expr2> ; <expr3> ) <stmt>
             ForIn,          // ForStmtNode          for ( <initializer> in <expr2> ) <stmt>
-            Case,           // ExprStmtNode         case <expr> : or default :
-                            //   Only occurs directly inside a Switch
+            Case,           // ExprStmtNode         case <expr> : or default :   (Only occurs directly inside a Switch)
             Break,          // GoStmtNode           break ;   or   break <name> ;
-            Continue,       // GoStmtNode           continue ; or continue <name>;
-            Return,         // ExprStmtNode         return ; or return <expr> ;
+            Continue,       // GoStmtNode           continue ;   or   continue <name>;
+            Return,         // ExprStmtNode         return ;   or   return <expr> ;
             Throw,          // ExprStmtNode         throw <expr> ;
             Try,            // TryStmtNode          try <stmt> <catches> <finally>
             Import,         // ImportStmtNode       import <bindings> ;
@@ -448,8 +445,9 @@ namespace JavaScript {
             Class,          // ClassStmtNode        <attributes> class <name> extends <superclass> <body>
             Namespace,      // NamespaceStmtNode    <attributes> namespace <name>
             Language,       // LanguageStmtNode     language <language> ;
+            Include,        // IncludeStmtNode      include "name" ;
             Package,        // PackageStmtNode      package <packageName> <body>
-            Debugger        // ExprStmtNode         debugger ;
+            Debugger        // DebuggerStmtNode     debugger ;
         };
 
       private:
@@ -483,7 +481,7 @@ namespace JavaScript {
 
     struct ExprStmtNode: StmtNode {
         ExprNode *expr;     // The expression statement's expression. May be nil for default: or return-with-no-expression statements.
-        uint32 label;       // (only used for case statements)
+        uint32 label;       // Used for case statements' code generation
 
         ExprStmtNode(size_t pos, Kind kind, ExprNode *expr): StmtNode(pos, kind), expr(expr) {}
 
@@ -692,11 +690,18 @@ namespace JavaScript {
         void print(PrettyPrinter &f, bool noSemi) const;
     };
 
-    struct LanguageStmtNode: StmtNode {
-        JavaScript::Language language;  // The selected language
+    struct IncludeStmtNode: StmtNode {
+        String &name;                   // The file name
 
-        LanguageStmtNode(size_t pos, Kind kind, JavaScript::Language language):
-                StmtNode(pos, kind), language(language) {}
+        IncludeStmtNode(size_t pos, String &name): StmtNode(pos, Include), name(name) {}
+
+        void print(PrettyPrinter &f, bool noSemi) const;
+    };
+
+    struct LanguageStmtNode: StmtNode {
+        Pragma::Flags flags;            // The new set of flags to use until the next PragmaStmtNode or the end of this scope
+
+        LanguageStmtNode(size_t pos, Kind kind, Pragma::Flags flags): StmtNode(pos, kind), flags(flags) {}
     };
 
     struct PackageStmtNode: StmtNode {
@@ -712,9 +717,9 @@ namespace JavaScript {
       public:
         Lexer lexer;
         Arena &arena;
-        bool lineBreaksSignificant;     // If false, line breaks between tokens are treated as though they were spaces instead
+        Pragma::Flags &flags;           // The flags currently guiding the parser; saved and restored on entering nested scopes
 
-        Parser(World &world, Arena &arena, const String &source, const String &sourceLocation, uint32 initialLineNum = 1);
+        Parser(World &world, Arena &arena, Pragma::Flags &flags, const String &source, const String &sourceLocation, uint32 initialLineNum = 1);
 
       private:
         Reader &getReader() {return lexer.reader;}
@@ -726,8 +731,8 @@ namespace JavaScript {
         const Token &require(bool preferRegExp, Token::Kind kind);
       private:
         String &copyTokenChars(const Token &t);
-        bool lineBreakBefore(const Token &t) const {return lineBreaksSignificant && t.getLineBreak();}
-        bool lineBreakBefore() {return lineBreaksSignificant && lexer.peek(true).getLineBreak();}
+        bool lineBreakBefore(const Token &t) const {return Pragma::lineBreaksSignificant(flags) && t.getLineBreak();}
+        bool lineBreakBefore() {return Pragma::lineBreaksSignificant(flags) && lexer.peek(true).getLineBreak();}
 
         enum SuperState {
             ssNone,             // No super operator

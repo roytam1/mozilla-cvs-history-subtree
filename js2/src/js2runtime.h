@@ -1409,7 +1409,7 @@ static const double two31 = 2147483648.0;
             const JSValue *uninit;
         };
 
-        Context(JSObject **global, World &world, Arena &a);
+        Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags);
 
 #ifdef DEBUG
         void* operator new(size_t s)    { void *t = STD::malloc(s); trace_alloc("Context", s, t); return t; }
@@ -1447,6 +1447,7 @@ static const double two31 = 2147483648.0;
         World &mWorld;
         ScopeChain *mScopeChain;
         Arena &mArena;
+        Pragma::Flags mFlags;           // The flags to use for the next parse; updated by the parser
         bool mDebugFlag;
 
         // the currently executing 'function'

@@ -155,36 +155,29 @@ JSValue Context::readEvalFile(const String& fileName)
             buffer += static_cast<char>(ch);
         fclose(f);
     
-        
-        try {
-            Arena a;
-            Parser p(mWorld, a, buffer, fileName);
-            mReader = &p.lexer.reader;
-            StmtNode *parsedStatements = p.parseProgram();
-            ASSERT(p.lexer.peek(true).hasKind(Token::end));
-            if (mDebugFlag)
+        Arena a;
+        Parser p(mWorld, a, mFlags, buffer, fileName);
+        mReader = &p.lexer.reader;
+        StmtNode *parsedStatements = p.parseProgram();
+        ASSERT(p.lexer.peek(true).hasKind(Token::end));
+        if (mDebugFlag)
+        {
+            PrettyPrinter f(stdOut, 30);
             {
-                PrettyPrinter f(stdOut, 30);
-                {
-                    PrettyPrinter::Block b(f, 2);
-                    f << "Program =";
-                    f.linearBreak(1);
-                    StmtNode::printStatements(f, parsedStatements);
-                }
-                f.end();
-                stdOut << '\n';
+                PrettyPrinter::Block b(f, 2);
+                f << "Program =";
+                f.linearBreak(1);
+                StmtNode::printStatements(f, parsedStatements);
             }
+            f.end();
+            stdOut << '\n';
+        }
 
-            buildRuntime(parsedStatements);
-            JS2Runtime::ByteCodeModule* bcm = genCode(parsedStatements, fileName);
-            if (bcm) {
-                result = interpret(bcm, NULL, JSValue(getGlobalObject()), NULL, 0);
-                delete bcm;
-            }
-        
-        
-        } catch (Exception &e) {
-            throw e;
+        buildRuntime(parsedStatements);
+        JS2Runtime::ByteCodeModule* bcm = genCode(parsedStatements, fileName);
+        if (bcm) {
+            result = interpret(bcm, NULL, JSValue(getGlobalObject()), NULL, 0);
+            delete bcm;
         }
     }
     return result;

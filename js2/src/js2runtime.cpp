@@ -1536,7 +1536,7 @@ void Context::initBuiltins()
     initClass(Unit_Type,     Object_Type,  &builtInClasses[8], NULL);
 }
 
-Context::Context(JSObject **global, World &world, Arena &a) 
+Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags) 
     : VirtualKeyWord(world.identifiers["virtual"]),
       ConstructorKeyWord(world.identifiers["constructor"]),
       OperatorKeyWord(world.identifiers["operator"]),
@@ -1548,6 +1548,7 @@ Context::Context(JSObject **global, World &world, Arena &a)
       mWorld(world),
       mScopeChain(NULL),
       mArena(a),
+      mFlags(flags),
       mDebugFlag(false),
       mCurModule(NULL),
       mPC(NULL),
