@@ -30,7 +30,7 @@ CFLAGS +=  -mieee -Wall -Wno-format
 else
 CC  = cc
 CCC = cxx
-CFLAGS = -ieee -std
+CFLAGS += -ieee -std
 endif
 
 RANLIB = echo
