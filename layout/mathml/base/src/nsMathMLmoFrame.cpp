@@ -731,7 +731,7 @@ nsMathMLmoFrame::Stretch(nsIPresContext*      aPresContext,
 
         // get the leading to be left at the top and the bottom of the stretched char
         // this seems more reliable than using fm->GetLeading() on suspicious fonts               
-        float em = float(font.mFont.size);                                            
+        float em = float(font->mFont.size);
         leading = nscoord(0.2f * em); 
 
         aDesiredStretchSize.ascent = mBoundingMetrics.ascent + leading;
