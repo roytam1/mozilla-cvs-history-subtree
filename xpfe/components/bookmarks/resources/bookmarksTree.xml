@@ -875,7 +875,8 @@
               <treechildren>
                 <treeitem uri="rdf:*">
                   <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading rdf:http://home.netscape.com/WEB-rdf#status">
-                    <treecell label="rdf:http://home.netscape.com/NC-rdf#Name" />
+                    <treecell src="rdf:http://home.netscape.com/NC-rdf#Icon"
+                              label="rdf:http://home.netscape.com/NC-rdf#Name" />
                     <treecell label="rdf:http://home.netscape.com/NC-rdf#URL" />
                     <treecell label="rdf:http://home.netscape.com/NC-rdf#ShortcutURL" />
                     <treecell label="rdf:http://home.netscape.com/NC-rdf#Description" />
@@ -979,7 +980,8 @@
             <treechildren>
               <treeitem uri="rdf:*">
                 <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type rdf:http://home.netscape.com/NC-rdf#loading rdf:http://home.netscape.com/WEB-rdf#status">
-                  <treecell label="rdf:http://home.netscape.com/NC-rdf#Name" />
+                  <treecell src="rdf:http://home.netscape.com/NC-rdf#Icon"
+                            label="rdf:http://home.netscape.com/NC-rdf#Name" />
                 </treerow>
               </treeitem>
             </treechildren>
