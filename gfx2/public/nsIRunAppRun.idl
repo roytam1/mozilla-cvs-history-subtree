@@ -28,8 +28,8 @@
 interface nsIRunAppRun : nsISupports
 {
   /**
-  * Initialize the region to an empty state
-  *
-  **/
+   * Initialize the region to an empty state
+   *
+   */
   void go();
 };

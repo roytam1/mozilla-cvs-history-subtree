@@ -36,8 +36,8 @@
 [scriptable, uuid(f728830e-1dd1-11b2-9598-fb9f414f2465)]
 interface nsIScreen : nsISupports
 {
-  void getRect(out gfx_coord x, out gfx_coord y, out gfx_width width, out gfx_height height);
-  void getAvailRect(out gfx_coord x, out gfx_coord y, out gfx_width width, out gfx_height height);
+  void getRect(out gfx_coord x, out gfx_coord y, out gfx_dimension width, out gfx_dimension height);
+  void getAvailRect(out gfx_coord x, out gfx_coord y, out gfx_dimension width, out gfx_dimension height);
   
   readonly attribute gfx_depth pixelDepth;
   readonly attribute gfx_depth colorDepth;  

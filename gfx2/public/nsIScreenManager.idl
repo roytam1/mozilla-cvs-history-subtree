@@ -49,8 +49,8 @@ interface nsIScreenManager : nsISupports
    */
   nsIScreen screenForRect(in gfx_coord x,
                           in gfx_coord y,
-                          in gfx_width width,
-                          in gfx_height height);
+                          in gfx_dimension width,
+                          in gfx_dimension height);
 
   /**
    * Get the "main" screen.
