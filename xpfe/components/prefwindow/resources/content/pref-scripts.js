@@ -113,6 +113,12 @@ function Startup(){
     document.getElementById("allowDocumentCookieGet").checked = getPrefValueForCheckbox("dom.disable_cookie_get");
     document.getElementById("allowDocumentCookieSet").checked = getPrefValueForCheckbox("dom.disable_cookie_set");
     document.getElementById("allowHideStatusBar").checked = getPrefValueForCheckbox("dom.disable_window_open_feature.status");
+
+    //If we don't have a checkbox under groupbox pluginPreferences, we should hide it
+    var pluginGroup = document.getElementById("pluginPreferences")
+    var children = pluginGroup.childNodes;
+    if (!children || children.length <= 1)    // 1 for the caption
+      pluginGroup.setAttribute("hidden", "true");
   }
 
   javascriptEnabledChange();
