@@ -56,6 +56,7 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, resource);
 
 ////////////////////////////////////////////////////////////////////////
 
+static NS_DEFINE_IID(kIDOMNodeListIID,        NS_IDOMNODELIST_IID);
 static NS_DEFINE_IID(kIDocumentIID,           NS_IDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFContentIID,         NS_IRDFCONTENT_IID);
 static NS_DEFINE_IID(kIXMLContentIID,         NS_IXMLCONTENT_IID);
@@ -64,6 +65,112 @@ static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
 
 static NS_DEFINE_CID(kRDFResourceManagerCID,  NS_RDFRESOURCEMANAGER_CID);
+
+////////////////////////////////////////////////////////////////////////
+// Utility functions
+
+// XXX all of these should go to some generic RDF utility interface
+// that lives in rdf.dll
+
+static PRBool
+rdf_IsOrdinalProperty(const nsString& uri)
+{
+    if (uri.Find(kRDFNameSpaceURI) != 0)
+        return PR_FALSE;
+
+    nsAutoString tag(uri);
+    tag.Cut(0, sizeof(kRDFNameSpaceURI) - 1);
+
+    if (tag[0] != '_')
+        return PR_FALSE;
+
+    for (PRInt32 i = tag.Length() - 1; i >= 1; --i) {
+        if (tag[i] < '0' || tag[i] > '9')
+            return PR_FALSE;
+    }
+
+    return PR_TRUE;
+}
+
+
+static PRBool
+rdf_IsContainer(nsIRDFResourceManager* mgr,
+                nsIRDFDataSource* ds,
+                nsIRDFNode* resource)
+{
+    PRBool result = PR_FALSE;
+
+    nsIRDFNode* RDF_instanceOf = NULL;
+    nsIRDFNode* RDF_Bag        = NULL;
+
+    nsresult rv;
+    if (NS_FAILED(rv = mgr->GetNode(kURIRDF_instanceOf, RDF_instanceOf)))
+        goto done;
+    
+    if (NS_FAILED(rv = mgr->GetNode(kURIRDF_Bag, RDF_Bag)))
+        goto done;
+
+    rv = ds->HasAssertion(resource, RDF_instanceOf, RDF_Bag, PR_TRUE, result);
+
+done:
+    NS_IF_RELEASE(RDF_Bag);
+    NS_IF_RELEASE(RDF_instanceOf);
+    return result;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////
+// RDFDOMNodeListImpl
+//   Helper class to implement the nsIDOMNodeList interface
+
+class RDFDOMNodeListImpl : public nsIDOMNodeList {
+private:
+    nsRDFElement* mElement;
+
+public:
+    RDFDOMNodeListImpl(nsRDFElement* element) : mElement(element) {
+        NS_IF_ADDREF(mElement);
+    }
+
+    virtual ~RDFDOMNodeListImpl(void) {
+        NS_IF_RELEASE(mElement);
+    }
+
+    // nsISupports interface
+    NS_DECL_ISUPPORTS
+
+    NS_DECL_IDOMNODELIST
+};
+
+NS_IMPL_ISUPPORTS(RDFDOMNodeListImpl, kIDOMNodeListIID);
+
+NS_IMETHODIMP
+RDFDOMNodeListImpl::GetLength(PRUint32* aLength)
+{
+    PRInt32 count;
+    nsresult rv;
+    if (NS_FAILED(rv = mElement->ChildCount(count)))
+        return rv;
+    *aLength = count;
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+RDFDOMNodeListImpl::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
+{
+    // XXX naive. probably breaks when there are pseudo elements or something.
+    nsresult rv;
+    nsIContent* contentChild;
+    if (NS_FAILED(rv = mElement->ChildAt(aIndex, contentChild)))
+        return rv;
+
+    rv = contentChild->QueryInterface(kIDOMNodeIID, (void**) aReturn);
+    NS_RELEASE(contentChild);
+
+    return rv;
+}
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -143,118 +250,146 @@ nsRDFElement::QueryInterface(REFNSIID iid, void** result)
 NS_IMETHODIMP
 nsRDFElement::GetNodeName(nsString& aNodeName)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetNodeValue(nsString& aNodeValue)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::SetNodeValue(const nsString& aNodeValue)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetNodeType(PRUint16* aNodeType)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetParentNode(nsIDOMNode** aParentNode)
 {
-    return NS_OK;
+    if (!mParent)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    return mParent->QueryInterface(kIDOMNodeIID, (void**) aParentNode);
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetChildNodes(nsIDOMNodeList** aChildNodes)
 {
-    return NS_OK;
+    nsresult rv;
+    if (!mChildren) {
+        if (NS_FAILED(rv = GenerateChildren()))
+            return rv;
+    }
+
+    RDFDOMNodeListImpl* list = new RDFDOMNodeListImpl(this);
+    if (! list)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    return list->QueryInterface(kIDOMNodeListIID, (void**) aChildNodes);
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetFirstChild(nsIDOMNode** aFirstChild)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetLastChild(nsIDOMNode** aLastChild)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetPreviousSibling(nsIDOMNode** aPreviousSibling)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetNextSibling(nsIDOMNode** aNextSibling)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild, nsIDOMNode** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::AppendChild(nsIDOMNode* aNewChild, nsIDOMNode** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::HasChildNodes(PRBool* aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
@@ -275,63 +410,72 @@ nsRDFElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 NS_IMETHODIMP
 nsRDFElement::GetTagName(nsString& aTagName)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetDOMAttribute(const nsString& aName, nsString& aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::SetDOMAttribute(const nsString& aName, const nsString& aValue)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::RemoveAttribute(const nsString& aName)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetAttributeNode(const nsString& aName, nsIDOMAttr** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::SetAttributeNode(nsIDOMAttr* aNewAttr, nsIDOMAttr** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::RemoveAttributeNode(nsIDOMAttr* aOldAttr, nsIDOMAttr** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::GetElementsByTagName(const nsString& aName, nsIDOMNodeList** aReturn)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 NS_IMETHODIMP
 nsRDFElement::Normalize()
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
@@ -342,25 +486,29 @@ nsRDFElement::Normalize()
 NS_IMETHODIMP
 nsRDFElement::AddEventListener(nsIDOMEventListener *aListener, const nsIID& aIID)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::RemoveEventListener(nsIDOMEventListener *aListener, const nsIID& aIID)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::GetListenerManager(nsIEventListenerManager** aInstancePtrResult)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::GetNewListenerManager(nsIEventListenerManager **aInstancePtrResult)
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
@@ -497,9 +645,6 @@ nsRDFElement::SetParent(nsIContent* aParent)
 NS_IMETHODIMP
 nsRDFElement::CanContainChildren(PRBool& aResult) const
 {
-    // XXX is this always the case? we probably need to examine the
-    // resource and see if it's a container...
-    aResult = PR_TRUE;
     return NS_OK;
 }
 
@@ -608,13 +753,30 @@ nsRDFElement::GetAttribute(const nsString& aName, nsString& aResult) const
                                                     (nsISupports**) &mgr)))
         return rv;
     
-    nsIRDFNode* property;
-    if (NS_SUCCEEDED(rv = mgr->GetNode(aName, property))) {
-        
-        NS_RELEASE(property);
-    }
+    nsIRDFDataSource* ds = NULL;
+    nsIRDFNode* property = NULL;
+    nsIRDFNode* value    = NULL;
 
+    if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
+        goto done;
+
+    if (NS_FAILED(rv = mgr->GetNode(aName, property)))
+        goto done;
+
+    // XXX Only returns the first value. yer screwed for
+    // multi-attributes, I guess.
+
+    if (NS_FAILED(rv = ds->GetTarget(mResource, property, PR_TRUE, value)))
+        goto done;
+
+    rv = value->GetStringValue(aResult);
+
+done:
+    NS_IF_RELEASE(property);
+    NS_IF_RELEASE(value);
+    NS_IF_RELEASE(ds);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
+
     return rv;
 }
 
@@ -628,43 +790,177 @@ nsRDFElement::UnsetAttribute(nsIAtom* aAttribute, PRBool aNotify)
 NS_IMETHODIMP
 nsRDFElement::GetAllAttributeNames(nsISupportsArray* aArray, PRInt32& aResult) const
 {
-    return NS_OK;
+    if (! aArray)
+        return NS_ERROR_NULL_POINTER;
+
+    nsresult rv;
+    nsIRDFResourceManager* mgr = NULL;
+    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
+                                                    kIRDFResourceManagerIID,
+                                                    (nsISupports**) &mgr)))
+        return rv;
+    
+    nsIRDFDataSource* ds     = NULL;
+    nsIRDFCursor* properties = NULL;
+    PRBool moreProperties;
+
+    if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
+        goto done;
+
+    if (NS_FAILED(rv = ds->ArcLabelsOut(mResource, properties)))
+        goto done;
+
+    aArray->Clear(); // XXX or did you want me to append?
+    aResult = 0;
+
+    while (NS_SUCCEEDED(rv = properties->HasMoreElements(moreProperties)) && moreProperties) {
+        nsIRDFNode* property = NULL;
+        PRBool tv;
+
+        if (NS_FAILED(rv = properties->GetNext(property, tv /* ignored */)))
+            break;
+
+        nsAutoString uri;
+        if (NS_SUCCEEDED(rv = property->GetStringValue(uri))) {
+            nsIAtom* atom = NS_NewAtom(uri);
+            if (atom) {
+                aArray->AppendElement(atom);
+                ++aResult;
+            } else {
+                rv = NS_ERROR_OUT_OF_MEMORY;
+            }
+        }
+
+        NS_RELEASE(property);
+
+        if (NS_FAILED(rv))
+            break;
+    }
+
+done:
+    NS_IF_RELEASE(properties);
+    NS_IF_RELEASE(ds);
+    nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
+
+    return rv;
 }
 
 NS_IMETHODIMP
 nsRDFElement::GetAttributeCount(PRInt32& aResult) const
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+static void
+rdf_Indent(FILE* out, PRInt32 aIndent)
+{
+    for (PRInt32 i = aIndent; --i >= 0; ) fputs(" ", out);
 }
 
 NS_IMETHODIMP
 nsRDFElement::List(FILE* out, PRInt32 aIndent) const
 {
+    if (! mResource)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    nsresult rv;
+
+    {
+        nsAutoString s;
+        if (NS_FAILED(rv = mResource->GetStringValue(s)))
+            return rv;
+
+        rdf_Indent(out, aIndent);
+        fputs("[", out);
+        fputs(s, out);
+        fputs("\n", out);
+    }
+
+    {
+        nsISupportsArray* attrs;
+        PRInt32 nattrs;
+
+        if (NS_FAILED(rv = NS_NewISupportsArray(&attrs)))
+            return rv;
+
+        if (NS_SUCCEEDED(rv = GetAllAttributeNames(attrs, nattrs))) {
+            for (PRInt32 i = 0; i < nattrs; ++i) {
+                nsIAtom* attr = (nsIAtom*) attrs->ElementAt(i);
+
+                nsAutoString s;
+                attr->ToString(s);
+                NS_RELEASE(attr);
+
+                nsAutoString v;
+                GetAttribute(s, v);
+
+                rdf_Indent(out, aIndent);
+                fputs(" ", out);
+                fputs(s, out);
+                fputs("=", out);
+                fputs(v, out);
+                fputs("\n", out);
+            }
+        }
+
+        NS_RELEASE(attrs);
+
+        if (NS_FAILED(rv))
+            return rv;
+    }
+
+    rdf_Indent(out, aIndent);
+    fputs("]\n", out);
+
+    {
+        PRInt32 nchildren;
+        if (NS_FAILED(rv = ChildCount(nchildren)))
+            return rv;
+
+        for (PRInt32 i = 0; i < nchildren; ++i) {
+            nsIContent* child;
+            if (NS_FAILED(rv = ChildAt(i, child)))
+                return rv;
+
+            rv = child->List(out, aIndent + 1);
+            NS_RELEASE(child);
+
+            if (NS_FAILED(rv))
+                return rv;
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsRDFElement::BeginConvertToXIF(nsXIFConverter& aConverter) const
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::ConvertContentToXIF(nsXIFConverter& aConverter) const
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::FinishConvertToXIF(nsXIFConverter& aConverter) const
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsRDFElement::SizeOf(nsISizeOfHandler* aHandler) const
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
@@ -801,32 +1097,13 @@ done:
 NS_IMETHODIMP
 nsRDFElement::GetProperty(const nsString& aPropertyURI, nsString& rValue) const
 {
-    return NS_OK;
+    PR_ASSERT(0);
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation methods
-
-static PRBool
-rdf_IsOrdinalProperty(const nsString& uri)
-{
-    if (uri.Find(kRDFNameSpaceURI) != 0)
-        return PR_FALSE;
-
-    nsAutoString tag(uri);
-    tag.Cut(0, sizeof(kRDFNameSpaceURI) - 1);
-
-    if (tag[0] != '_')
-        return PR_FALSE;
-
-    for (PRInt32 i = tag.Length() - 1; i >= 1; --i) {
-        if (tag[i] < '0' || tag[i] > '9')
-            return PR_FALSE;
-    }
-
-    return PR_TRUE;
-}
 
 nsresult
 nsRDFElement::GenerateChildren(void) const
@@ -846,6 +1123,15 @@ nsRDFElement::GenerateChildren(void) const
         mChildren->Clear();
     }
 
+#ifdef DEBUG_waterson
+    {
+        char buf[1024];
+        nsAutoString s;
+        mResource->GetStringValue(s);
+        printf("generating content children for %s\n", s.ToCString(buf, sizeof buf));
+    }
+#endif
+
     nsIRDFResourceManager* mgr;
     if (NS_FAILED(rv = nsServiceManager::GetService(kRDFResourceManagerCID,
                                                     kIRDFResourceManagerIID,
@@ -853,24 +1139,13 @@ nsRDFElement::GenerateChildren(void) const
         return rv;
 
     nsIRDFDataSource* ds = NULL;
-    nsIRDFNode *RDF_instanceOf = NULL, *RDF_Bag = NULL;
     nsIRDFCursor* properties = NULL;
     PRBool moreProperties;
-    PRBool isBag;
 
     if (NS_FAILED(rv = mDocument->GetDataSource(ds)))
         goto done;
 
-    if (NS_FAILED(rv = mgr->GetNode(kURIRDF_instanceOf, RDF_instanceOf)))
-        goto done;
-    
-    if (NS_FAILED(rv = mgr->GetNode(kURIRDF_Bag, RDF_Bag)))
-        goto done;
-
-    if (NS_FAILED(rv = ds->HasAssertion(mResource, RDF_instanceOf, RDF_Bag, PR_TRUE, isBag)))
-        goto done;
-
-    if (! isBag)
+    if (! rdf_IsContainer(mgr, ds, mResource))
         goto done;
 
     if (NS_FAILED(rv = ds->ArcLabelsOut(mResource, properties)))
@@ -889,10 +1164,24 @@ nsRDFElement::GenerateChildren(void) const
             break;
         }
 
+#ifdef DEBUG_waterson
+        {
+            char buf[1024];
+            printf("property %s...", uri.ToCString(buf, sizeof buf));
+        }
+#endif
+
         if (! rdf_IsOrdinalProperty(uri)) {
+#ifdef DEBUG_waterson
+            printf("not a kid\n");
+#endif
             NS_RELEASE(property);
             continue;
         }
+
+#ifdef DEBUG_waterson
+        printf("adding children.\n");
+#endif
 
         nsIRDFCursor* values;
         if (NS_SUCCEEDED(rv = ds->GetTargets(mResource, property, PR_TRUE, values))) {
@@ -902,6 +1191,15 @@ nsRDFElement::GenerateChildren(void) const
 
                 if (NS_FAILED(rv = values->GetNext(value, tv /* ignored */)))
                     break;
+
+#ifdef DEBUG_waterson
+                {
+                    char buf[1024];
+                    nsAutoString s;
+                    value->GetStringValue(s);
+                    printf("...child %s\n", s.ToCString(buf, sizeof buf));
+                }
+#endif
 
                 nsRDFElement* child;
 
@@ -930,8 +1228,6 @@ nsRDFElement::GenerateChildren(void) const
 
 done:
     NS_IF_RELEASE(properties);
-    NS_IF_RELEASE(RDF_Bag);
-    NS_IF_RELEASE(RDF_instanceOf);
     NS_IF_RELEASE(ds);
     nsServiceManager::ReleaseService(kRDFResourceManagerCID, mgr);
 
