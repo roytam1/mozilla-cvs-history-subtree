@@ -168,13 +168,13 @@ jsj_WrapJavaObject(JSContext *cx,
         }
     }
 
+    java_obj_reflections_mutation_count++;
+
 #endif
 
     /* Add the JavaObject to the hash table */
     he = JSJ_HashTableRawAdd(java_obj_reflections, hep, hash_code,
                              java_obj, js_wrapper_obj, (void*)jEnv);
-    java_obj_reflections_mutation_count++;
-
 #ifdef JSJ_THREADSAFE
     PR_ExitMonitor(java_obj_reflections_monitor);
 #endif
