@@ -31,7 +31,7 @@ interface nsIMsgDBHdr;
 
 typedef long nsMsgViewSortOrderValue;
 typedef long nsMsgViewSortTypeValue;
-typedef long nsMsgDBViewTypeValue;
+typedef long nsMsgViewTypeValue;
 typedef long nsMsgViewNotificationCodeValue;
 typedef long nsMsgViewCommandCheckStateValue;
 typedef long nsMsgViewCommandTypeValue;
@@ -45,8 +45,6 @@ interface nsMsgViewSortOrder
 	const nsMsgViewSortOrderValue ascending = 1;
 	const nsMsgViewSortOrderValue descending = 2;
 };
-
-typedef long nsMsgViewTypeValue;
 
 [scriptable, uuid(dac950b0-1dd1-11b2-be06-d4c2003a6927)]
 interface nsMsgViewType {
@@ -226,7 +224,10 @@ interface nsIMsgDBView : nsISupports
     void getCommandStatus(in nsMsgViewCommandTypeValue command,
 						 out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p);
 
+    readonly attribute nsMsgViewTypeValue viewType;
     attribute nsMsgViewFlagsTypeValue viewFlags;
+    readonly attribute nsMsgViewSortTypeValue sortType;
+    readonly attribute nsMsgViewSortOrderValue sortOrder;
 
     /**
      * this method will automatically expand the destination thread, 

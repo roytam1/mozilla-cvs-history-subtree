@@ -38,6 +38,7 @@ public:
   NS_IMETHOD Close();
   NS_IMETHOD AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd);
   NS_IMETHOD Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
+  NS_IMETHOD GetViewType(nsMsgViewTypeValue *aViewType);
 
 protected:
   nsresult InitThreadedView(PRInt32 *pCount);

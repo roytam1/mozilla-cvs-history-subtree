@@ -343,7 +343,6 @@ function SwitchView(command)
     outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView; 
     dump('set outliner view\n');
   }
-
 }
 
 function SetSentFolderColumns(isSentFolder)
@@ -550,23 +549,27 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
     var count = new Object;
     gDBView.init(messenger, msgWindow);
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
-
-    if (viewFlags == nsMsgViewFlagsType.kThreadedDisplay) {
-      // threaded
-      SetHiddenAttributeOnThreadOnlyColumns("");
-    }
-    else {
-      // not threaded
-      SetHiddenAttributeOnThreadOnlyColumns("true");
-    }
-
+    
     var colID = ConvertSortTypeToColumnID(sortType);
     if (colID) {
       var column = document.getElementById(colID);
       gDBView.sortedColumn = column;
     }
 
-    dump("XXX count = " + count.value + "\n");
+    ShowAppropriateColumns();
+    PersistViewAttributesOnFolder();
+}
+
+function ShowAppropriateColumns()
+{
+    if (gDBView.sortType == nsMsgViewSortType.byThread) {
+      // don't hide them when sorted by thread
+      SetHiddenAttributeOnThreadOnlyColumns("");
+    }
+    else {
+      // hide them when not sorted by thread
+      SetHiddenAttributeOnThreadOnlyColumns("true");
+    }
 }
 
 function SetViewFlags(viewFlags)

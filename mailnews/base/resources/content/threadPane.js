@@ -53,6 +53,8 @@ function SetHiddenAttributeOnThreadOnlyColumns(value)
 
 function HandleColumnClick(columnID)
 {
+  dump("XXX HandleColumnClick()\n");
+
   // if they click on the "threadCol", we need to show the threaded-only columns
   if ((columnID[0] == 't') && (columnID[1] == 'h')) {  
     SetHiddenAttributeOnThreadOnlyColumns(""); // this will show them
@@ -61,17 +63,23 @@ function HandleColumnClick(columnID)
     SetHiddenAttributeOnThreadOnlyColumns("true");  // this will hide them
   }
   
-  dump("fix this, is this the right place for persisting?\n");
   dump("fix UpdateSortMenu()\n");
   //UpdateSortMenu(columnID);
+
+  ShowAppropriateColumns();
+  PersistViewAttributesOnFolder();
+}
+
+function PersistViewAttributesOnFolder()
+{
   var folder = GetSelectedFolder();
 
   if (folder) {
-    var sortType = ConvertColumnIDToSortType(columnID);
-    dump("XXX sortType to save = " + sortType + "\n");
-    folder.setAttribute("sortType", sortType);
-    dump("XXX fix me to save sortOrder\n");
-    //folder.setAttribute("sortOrder", XXX);
+    dump("XXX persist: " + gDBView.viewType + "," + gDBView.viewFlags  + "," + gDBView.sortType + "," + gDBView.sortOrder + "\n");
+    folder.setAttribute("viewType", gDBView.viewType);
+    folder.setAttribute("viewFlags", gDBView.viewFlags);
+    folder.setAttribute("sortType", gDBView.sortType);
+    folder.setAttribute("sortOrder", gDBView.sortOrder);
   }
 }
 
@@ -109,69 +117,77 @@ function ThreadPaneKeyPress(event)
 
 function MsgSortByDate()
 {
-    gDBView.sort(nsMsgViewSortType.byDate,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byDate);
 }
 
 function MsgSortBySender()
 {
-    gDBView.sort(nsMsgViewSortType.byAuthor,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byAuthor);
 }
 
 function MsgSortByRecipient()
 {
-    gDBView.sort(nsMsgViewSortType.byRecipient,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byRecipient);
 }
 
 function MsgSortByStatus()
 {
-    gDBView.sort(nsMsgViewSortType.byStatus,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byStatus);
 }
 
 function MsgSortBySubject()
 {
-    gDBView.sort(nsMsgViewSortType.bySubject,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.bySubject);
 }
 
 function MsgSortByFlagged() 
 {
-    gDBView.sort(nsMsgViewSortType.byFlagged,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byFlagged);
 }
 
 function MsgSortByPriority()
 {
-    gDBView.sort(nsMsgViewSortType.byPriority,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byPriority);
 }
 
 function MsgSortBySize() 
 {
-    gDBView.sort(nsMsgViewSortType.bySize,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.bySize);
 }
 
 function MsgSortByLines() 
 {
     dump("XXX fix this\n");
-    //gDBView.sort(nsMsgViewSortType.byLines,nsMsgViewSortOrder.ascending);
+    //MsgSortThreadPane(nsMsgViewSortType.byLines);
 }
 
 function MsgSortByUnread()
 {
-    gDBView.sort(nsMsgViewSortType.byUnread,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byUnread);
 }
 
 function MsgSortByOrderReceived()
 {
-    gDBView.sort(nsMsgViewSortType.byId,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byId);
 }
 
 function MsgSortByTotal()
 {
     dump("XXX fix this\n");
-    //gDBView.sort(nsMsgViewSortType.byTotal,nsMsgViewSortOrder.ascending);
+    //MsgSortThreadPane(nsMsgViewSortType.byTotal);
 }
 
 function MsgSortByThread()
 {
-    gDBView.sort(nsMsgViewSortType.byThread,nsMsgViewSortOrder.ascending);
+    MsgSortThreadPane(nsMsgViewSortType.byThread);
+}
+
+function MsgSortThreadPane(sortType)
+{
+    gDBView.sort(sortType, nsMsgViewSortOrder.ascending);
+
+    ShowAppropriateColumns();
+    PersistViewAttributesOnFolder();
 }
 
 function IsSpecialFolderSelected(folderName)

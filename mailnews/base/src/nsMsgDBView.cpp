@@ -2806,6 +2806,26 @@ void	nsMsgDBView::NoteEndChange(nsMsgViewIndex firstlineChanged, PRInt32 numChan
   NoteChange(firstlineChanged, numChanged, changeType);
 }
 
+NS_IMETHODIMP nsMsgDBView::GetSortOrder(nsMsgViewSortOrderValue *aSortOrder)
+{
+    NS_ENSURE_ARG_POINTER(aSortOrder);
+    *aSortOrder = m_sortOrder;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetSortType(nsMsgViewSortTypeValue *aSortType)
+{
+    NS_ENSURE_ARG_POINTER(aSortType);
+    *aSortType = m_sortType;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetViewType(nsMsgViewTypeValue *aViewType)
+{
+    NS_ASSERTION(0,"you should be overriding this\n");
+    return NS_ERROR_UNEXPECTED;
+}
+
 NS_IMETHODIMP nsMsgDBView::GetViewFlags(nsMsgViewFlagsTypeValue *aViewFlags)
 {
     NS_ENSURE_ARG_POINTER(aViewFlags);

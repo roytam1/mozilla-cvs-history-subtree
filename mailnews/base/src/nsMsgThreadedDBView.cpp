@@ -566,3 +566,9 @@ nsresult nsMsgThreadedDBView::RemoveByIndex(nsMsgViewIndex index)
 	return rv;
 }
 
+NS_IMETHODIMP nsMsgThreadedDBView::GetViewType(nsMsgViewTypeValue *aViewType)
+{
+    NS_ENSURE_ARG_POINTER(aViewType);
+    *aViewType = nsMsgViewType::eShowAllThreads; 
+    return NS_OK;
+}

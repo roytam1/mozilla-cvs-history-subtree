@@ -37,6 +37,13 @@ NS_IMETHODIMP nsMsgThreadsWithUnreadDBView::Open(nsIMsgFolder *folder, nsMsgView
   return nsMsgThreadedDBView::Open(folder, sortType, sortOrder, viewFlags, pCount);
 }
 
+NS_IMETHODIMP nsMsgThreadsWithUnreadDBView::GetViewType(nsMsgViewTypeValue *aViewType)
+{
+    NS_ENSURE_ARG_POINTER(aViewType);
+    *aViewType = nsMsgViewType::eShowThreadsWithUnread;
+    return NS_OK;
+}
+
 PRBool nsMsgThreadsWithUnreadDBView::WantsThisThread(nsIMsgThread *threadHdr)
 {
 	if (threadHdr)
@@ -67,6 +74,13 @@ nsresult nsMsgThreadsWithUnreadDBView::AddMsgToThreadNotInView(nsIMsgThread *thr
 		rv = AddHdr(parentHdr);
 	}
   return rv;
+}
+
+NS_IMETHODIMP nsMsgWatchedThreadsWithUnreadDBView::GetViewType(nsMsgViewTypeValue *aViewType)
+{
+    NS_ENSURE_ARG_POINTER(aViewType);
+    *aViewType = nsMsgViewType::eShowWatchedThreadsWithUnread;
+    return NS_OK;
 }
 
 PRBool nsMsgWatchedThreadsWithUnreadDBView::WantsThisThread(nsIMsgThread *threadHdr)
