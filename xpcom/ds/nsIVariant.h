@@ -52,7 +52,7 @@ public:
     nsVariantValue(PRInt32 value) { mUnion._PRInt32 = value; }
     nsVariantValue(PRUint32 value) { mUnion._PRUint32 = value; }
     nsVariantValue(PRInt64 value) { mUnion._PRInt64 = value; }
-    nsVariantValue(PRUint64 value) { mUnion._PRUint64 = value; }
+//    nsVariantValue(PRUint64 value) { mUnion._PRUint64 = value; }
     nsVariantValue(float value) { mUnion._float = value; }
     nsVariantValue(PRFloat64 value) { mUnion._PRFloat64 = value; }
 //    nsVariantValue(PRTime value) { mUnion._PRTime = value; }
@@ -66,7 +66,7 @@ public:
     operator PRInt32() { return mUnion._PRInt32; }
     operator PRUint32() { return mUnion._PRUint32; }
     operator PRInt64() { return mUnion._PRInt64; }
-    operator PRUint64() { return mUnion._PRUint64; }
+//    operator PRUint64() { return mUnion._PRUint64; }
     operator float() { return mUnion._float; }
     operator PRFloat64() { return mUnion._PRFloat64; }
 //    operator PRTime() { return mUnion._PRTime; }

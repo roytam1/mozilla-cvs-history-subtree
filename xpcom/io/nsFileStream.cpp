@@ -22,6 +22,7 @@
 
 #include "nsFileStream.h"
 
+#include "nsFileSpec.h"
 #include "nsIStringStream.h"
 
 #include <string.h>
