@@ -181,7 +181,7 @@ int PlugletFactory::Compare(const char *mimeType) {
     while ( p1 != NULL && p1 < terminator ) {
         size_t n = sizeof(char) * ( ( (p2 == NULL || p2 > terminator) ? terminator : p2) - p1 );
         if (PL_strncasecmp(p1,mimeType,n) == 0) {
-            return 1;
+            return strlen(mimeType) == n;
         }
         p1 = p2 ;
         if (p2 != NULL) {
