@@ -37,6 +37,21 @@ require "post-mozilla.pl" if -e "post-mozilla.pl";
 #
 require "gettime.pl";
 
+#
+# For performance tests, we need the following perl modules installed:
+# (MacOSX, Linux, Win2k):
+#
+# Time::HiRes      for higher timer resolution
+# Bundle::LWP      for http (to report data to graph)
+#
+# The "CPAN" way of installing this is to start here:
+#   % perl -MCPAN -e shell
+#   <take defaults..>
+#   cpan> install Time::HiRes
+#   [...]
+#   cpan> install Bundle::LWP
+#
+
 sub Setup {
     InitVars();
     my $args = ParseArgs();
