@@ -271,8 +271,9 @@ nsEntryList::SetEntry(const char *dir,
             entry = nsnull;
         }
     }
-    else if (dir)
+    else if (dir) {
         NS_NOTREACHED("directory without realm");
+    }
     else {
         // proxy case
         if (mList.Count() > 0) {
