@@ -32,13 +32,24 @@
  * by default since there can be problems with endian-ness and such.
  */
 
-#if defined(WIN32)
+#if defined(_WIN32)
+#define JS_USE_FDLIBM_MATH 1
+
 #elif defined(SUNOS4)
+#define JS_USE_FDLIBM_MATH 1
+
 #elif defined(IRIX)
+#define JS_USE_FDLIBM_MATH 1
+
 #elif defined(SOLARIS)
+#define JS_USE_FDLIBM_MATH 1
+
 #elif defined(HPUX)
+#define JS_USE_FDLIBM_MATH 1
+
 #elif defined(linux)
 #define JS_USE_FDLIBM_MATH 1
+
 #else
 #define JS_USE_FDLIBM_MATH 0
 #endif
