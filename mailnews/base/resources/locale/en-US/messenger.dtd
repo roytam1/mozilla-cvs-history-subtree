@@ -535,9 +535,9 @@ Rights Reserved.
 
 <!---SearchBar-->
 <!-- also used by addressbook -->
-<!ENTITY SearchSubjectOrSender.label "Subject or Sender contains:">
+<!ENTITY SearchSubjectOrSender.label "Search for Subject or Sender:">
 <!ENTITY SearchSubjectOrSender.accesskey "S">
-<!ENTITY SearchNameOrEmail.label "Name or Email contains:">
+<!ENTITY SearchNameOrEmail.label "Search for Name or Email:">
 <!ENTITY advancedButton.label "Advanced...">
 <!ENTITY advancedButton.accesskey "A">
 
