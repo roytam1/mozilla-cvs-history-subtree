@@ -125,6 +125,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
 
 - (void)windowWillClose:(NSNotification *)aNotification
 {
+  [self commitChanges:nil];
   mBookmarkItem = nil;
 }
 
@@ -134,19 +135,19 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     return;
 
   // Name
-  if (changedField == mNameField)
+  if ((!changedField && [mNameField superview]) || changedField == mNameField)
     [self commitField:mNameField toProperty:BookmarksService::gNameAtom];
   
   // Location
-  if (changedField == mLocationField)
+  if ((!changedField && [mLocationField superview]) || changedField == mLocationField)
     [self commitField:mLocationField toProperty:BookmarksService::gHrefAtom];
 
   // Keyword
-  if (changedField == mKeywordField)
+  if ((!changedField && [mKeywordField superview]) || changedField == mKeywordField)
     [self commitField:mKeywordField toProperty:BookmarksService::gKeywordAtom];
 
   // Description
-  if (changedField == mDescriptionField)
+  if ((!changedField && [mDescriptionField superview]) || changedField == mDescriptionField)
     [self commitField:mDescriptionField toProperty:BookmarksService::gDescriptionAtom];
 
   [[mFieldEditor undoManager] removeAllActions];
@@ -155,18 +156,9 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
 
 - (void)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom
 {
-  unsigned int len;
-  PRUnichar* buffer;
-  nsXPIDLString buf;
-
-  // we really need a category on NSString for this
-  len = [[textField stringValue] length];
-  buffer = new PRUnichar[len + 1];
-  if (!buffer) return;
-  [[textField stringValue] getCharacters:buffer];
-  buffer[len] = (PRUnichar)'\0';
-  buf.Adopt(buffer);
-  [mBookmarkItem contentNode]->SetAttr(kNameSpaceID_None, propertyAtom, buf, PR_TRUE);
+  nsAutoString attributeString;
+  [[textField stringValue] assignTo_nsAString:attributeString];
+  [mBookmarkItem contentNode]->SetAttr(kNameSpaceID_None, propertyAtom, attributeString, PR_TRUE);
 }
 
 - (IBAction)dockMenuCheckboxClicked:(id)sender
@@ -197,8 +189,9 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self showUIElementPair: mKeywordLabel     control: mKeywordField];
     [self showUIElementPair: mDescriptionLabel control: mDescriptionField];
 
-    [mNameField setNextKeyView:mKeywordField];
     [mDockMenuCheckbox removeFromSuperview];
+    [mNameField    setNextKeyView:mKeywordField];
+    [mKeywordLabel setNextKeyView:mDescriptionField];
   }
   else if (isFolder)
   {
@@ -207,8 +200,9 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self hideUIElementPair: mKeywordLabel     control: mKeywordField];
     [self showUIElementPair: mDescriptionLabel control: mDescriptionField];
 
-    [mNameField setNextKeyView:mDescriptionField];
     [mVariableFieldsContainer addSubview: mDockMenuCheckbox];
+    [mNameField        setNextKeyView:mDockMenuCheckbox];
+    [mDockMenuCheckbox setNextKeyView:mDescriptionField];
   }
   else
   {
@@ -217,8 +211,10 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self showUIElementPair: mKeywordLabel     control: mKeywordField];
     [self showUIElementPair: mDescriptionLabel control: mDescriptionField];
 
-    [mNameField setNextKeyView:mLocationField];
     [mDockMenuCheckbox removeFromSuperview];
+    [mNameField 			setNextKeyView:mLocationField];
+    [mLocationField 	setNextKeyView:mKeywordField];
+    [mKeywordField    setNextKeyView:mDescriptionField];
   }
   
   // Then, fill with appropriate values from Bookmarks
