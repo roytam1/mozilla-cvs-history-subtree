@@ -935,14 +935,13 @@ function st_marginclick (e, line)
     }
     else
     {
-        var manager = this.scriptInstance.scriptManager;
-        var parentBP = manager.getFutureBreakpoint(line);
+        var parentBP = getFutureBreakpoint(this.url, line);
         if (parentBP)
         {
             if (this.scriptInstance.hasBreakpoint(line))
                 this.scriptInstance.clearBreakpoint(line);
             else
-                manager.clearFutureBreakpoint(line);
+                clearFutureBreakpoint(this.url, line);
         }
         else
         {
@@ -952,7 +951,7 @@ function st_marginclick (e, line)
             }
             else
             {
-                parentBP = manager.setFutureBreakpoint(line);
+                parentBP = setFutureBreakpoint(this.url, line);
                 this.scriptInstance.setBreakpoint (line, parentBP);
             }
         }

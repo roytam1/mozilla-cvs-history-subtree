@@ -77,7 +77,8 @@ function (compMgr, fileSpec, location, type)
 {
     debug("*** Registering -venkman handler.\n");
     
-    compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
+    compMgr =
+        compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
 
     compMgr.registerFactoryLocation(CLINE_SERVICE_CID,
                                     "Venkman CommandLine Service",
@@ -90,7 +91,19 @@ function (compMgr, fileSpec, location, type)
 	catman.addCategoryEntry("command-line-argument-handlers",
                             "venkman command line handler",
                             CLINE_SERVICE_CTRID, true, true);
-    
+
+    try
+    {
+        const JSD_CTRID = "@mozilla.org/js/jsd/debugger-service;1";
+        const jsdIDebuggerService = Components.interfaces.jsdIDebuggerService;
+        var jsds = Components.classes[JSD_CTRID].getService(jsdIDebuggerService);
+        jsds.initAtStartup = true;
+    }
+    catch (ex)
+    {
+        debug ("*** ERROR initializing debugger service");
+        debug (ex);
+    }
 }
 
 Module.unregisterSelf =

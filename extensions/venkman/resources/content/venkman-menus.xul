@@ -44,9 +44,6 @@
     xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <overlaytarget id="menu-overlay-target">
-    <!-- parents for the command manager-managed objects -->
-    <keyset id="dynamic-keys"/>
-    <popupset id="dynamic-popups"/>
 
     <!-- Commands -->
     <commandset id="venkman-commands">

@@ -428,12 +428,24 @@ function smgr_linemap()
     return this.instances[this.instances.length - 1].lineMap;
 }
 
+ScriptManager.prototype.isLineExecutable =
+function smgr_isexe (line)
+{
+    for (var i in this.instances)
+    {
+        if (this.instances[i].isLineExecutable(line))
+            return true;
+    }
+
+    return false;
+}
+
 ScriptManager.prototype.hasBreakpoint =
 function smgr_hasbp (line)
 {
-    for (var i in instances)
+    for (var i in this.instances)
     {
-        if (instance[i].hasBreakpoint(line))
+        if (this.instances[i].hasBreakpoint(line))
             return true;
     }
     
@@ -441,17 +453,25 @@ function smgr_hasbp (line)
 }
 
 ScriptManager.prototype.setBreakpoint =
-function smgr_break (line)
+function smgr_break (line, parentBP)
 {
-    for (var i in instances)
-        instance[i].setBreakpoint(line);
+    var found = false;
+    
+    for (var i in this.instances)
+        found |= this.instances[i].setBreakpoint(line, parentBP);
+
+    return found;
 }
 
 ScriptManager.prototype.clearBreakpoint =
 function smgr_break (line)
 {
-    for (var i in instances)
-        instance[i].clearBreakpoint(line);
+    var found = false;
+
+    for (var i in this.instances)
+        found |= this.instances[i].clearBreakpoint(line);
+
+    return found;
 }
 
 ScriptManager.prototype.hasFutureBreakpoint =
@@ -464,61 +484,27 @@ function smgr_hasbp (line)
 ScriptManager.prototype.getFutureBreakpoint =
 function smgr_getfbp (line)
 {
-    var key = this.url + "#" + line;
-    if (key in console.fbreaks)
-        return console.fbreaks[key];
-    
-    return null;
+    return getFutureBreakpoint (this.url, line);
 }
 
-ScriptManager.prototype.setFutureBreakpoint =
-function smgr_fbreak (line)
+ScriptManager.prototype.noteFutureBreakpoint =
+function smgr_fbreak (line, state)
 {
-    var key = this.url + "#" + line;
-    if (key in console.fbreaks)
-    {
-        display (getMsg(MSN_BP_EXISTS, [this.url, this.line]), MT_ERROR);
-        return null;
-    }
-    
-    var fbreak = new FutureBreakpoint (this.url, line);
-    console.fbreaks[key] = fbreak;
-
     for (var i in this.instances)
     {
         if (this.instances[i]._lineMapInited)
-            arrayOrFlag (this.instances[i]._lineMap, line - 1, LINE_FBREAK);
+        {
+            if (state)
+            {
+                arrayOrFlag (this.instances[i]._lineMap, line - 1, LINE_FBREAK);
+            }
+            else
+            {
+                arrayAndFlag (this.instances[i]._lineMap, line - 1,
+                              ~LINE_FBREAK);
+            }
+        }
     }
-    
-    dispatch ("hook-fbreak-set", { fbreak: fbreak });
-
-    return fbreak;
-}
-
-ScriptManager.prototype.clearFutureBreakpoint =
-function smgr_clear (line)
-{
-    var key = this.url + "#" + line;
-    if (!(key in console.fbreaks))
-    {
-        display (getMsg(MSN_ERR_NO_DICE, [this.url, this.line]), MT_ERROR);
-        return;
-    }
-
-    var i;
-    var fbreak = console.fbreaks[key];
-    delete console.fbreaks[key];
-
-    for (i in fbreak.childrenBP)
-        fbreak.childrenBP[i].parentBP = null;
-    
-    for (i in this.instances)
-    {
-        if (this.instances[i]._lineMapInited)
-            arrayAndFlag (this.instances[i]._lineMap, line - 1, ~LINE_FBREAK);
-    }
-
-    dispatch ("hook-fbreak-clear", { fbreak: fbreak });
 }
 
 function ScriptInstance (manager)
@@ -551,6 +537,7 @@ function si_created (scriptWrapper)
         scriptWrapper.functionName = MSG_VAL_TLSCRIPT;
         this.isSealed = true;
         scriptWrapper.addToLineMap(this._lineMap);
+        //var dummy = scriptWrapper.sourceText;
         dispatch ("hook-script-instance-sealed", { scriptInstance: this });
     }
 
@@ -598,8 +585,37 @@ function si_linemap()
     return this._lineMap;            
 }
 
+ScriptInstance.prototype.isLineExecutable =
+function si_isexe (line)
+{
+    if (this.topLevel.jsdScript.isValid &&
+        this.topLevel.jsdScript.isLineExecutable (line, PCMAP_SOURCETEXT))
+    {
+        return true;
+    }
+    
+    for (var f in this.functions)
+    {
+        var jsdScript = this.functions[f].jsdScript;
+        if (line >= jsdScript.baseLineNumber &&
+            line <= jsdScript.baseLineNumber + jsdScript.lineExtent &&
+            jsdScript.isLineExecutable (line, PCMAP_SOURCETEXT))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 ScriptInstance.prototype.hasBreakpoint =
 function si_hasbp (line)
+{
+    return Boolean (this.getBreakpoint(line));
+}
+
+ScriptInstance.prototype.getBreakpoint =
+function si_getbp (line)
 {
     for (var b in console.breaks)
     {
@@ -612,7 +628,7 @@ function si_hasbp (line)
             if (jsdScript.pcToLine(console.breaks[b].pc, PCMAP_SOURCETEXT) ==
                 line)
             {
-                return true;
+                return console.breaks[b];
             }
         }
     }
@@ -631,7 +647,7 @@ function si_setbp (line, parentBP)
 
         if (line >= jsdScript.baseLineNumber &&
             line <= jsdScript.baseLineNumber + jsdScript.lineExtent &&
-            scriptWrapper.jsdScript.isLineExecutable (line, PCMAP_SOURCETEXT))
+            jsdScript.isLineExecutable (line, PCMAP_SOURCETEXT))
         {
             scriptWrapper.setBreakpoint(jsdScript.lineToPc(line,
                                                            PCMAP_SOURCETEXT),
@@ -641,17 +657,21 @@ function si_setbp (line, parentBP)
         return false;
     };
 
-    var foundOne = setBP (this.topLevel);
+    var found = setBP (this.topLevel);
     for (var f in this.functions)
-        foundOne |= setBP (this.functions[f]);
+        found |= setBP (this.functions[f]);
 
-    if (this._lineMapInited && foundOne)
-        arrayOrFlag(this._lineMap, line - 1, LINE_BREAK);    
+    if (this._lineMapInited && found)
+        arrayOrFlag(this._lineMap, line - 1, LINE_BREAK);
+
+    return found;
 }
 
 ScriptInstance.prototype.clearBreakpoint =
 function si_setbp (line)
 {
+    var found = false;
+    
     function clearBP (scriptWrapper)
     {
         var jsdScript = scriptWrapper.jsdScript;
@@ -663,7 +683,7 @@ function si_setbp (line)
             line <= jsdScript.baseLineNumber + jsdScript.lineExtent &&
             scriptWrapper.hasBreakpoint(pc))
         {
-            scriptWrapper.clearBreakpoint(pc);
+            found |= scriptWrapper.clearBreakpoint(pc);
         }
     };
 
@@ -673,6 +693,8 @@ function si_setbp (line)
     clearBP (this.topLevel);
     for (var f in this.functions)
         clearBP (this.functions[f]);
+
+    return found;
 }
     
 ScriptInstance.prototype.guessFunctionNames =
@@ -745,7 +767,12 @@ ScriptWrapper.prototype.__defineGetter__ ("sourceText", sw_getsource);
 function sw_getsource ()
 {
     if (!("_sourceText" in this))
+    {
+        if (!this.jsdScript.isValid)
+            return null;
         this._sourceText = new PPSourceText(this);
+    }
+    
     return this._sourceText;
 }
 
@@ -773,24 +800,17 @@ function sw_setbp (pc, parentBP)
     //dd ("setting breakpoint in " + this.functionName + " " + key);
     
     if (key in console.breaks)
-    {
-        display (getMsg(MSN_BP_EXISTS, [this.functionName, pc]), MT_ERROR);
-        return;
-    }
+        return false;
 
-    var brk = {
-        parentBP: parentBP,
-        scriptWrapper: this,
-        pc: pc
-    };
-
+    var brk = new BreakInstance (parentBP, this, pc);
     console.breaks[key] = brk;
     this.breaks[key] = brk;
     
     if (parentBP)
     {
         parentBP.childrenBP[key] = brk;
-        brk.__proto__ = parentBP;
+        brk.lineNumber = parentBP.lineNumber;
+        brk.url = parentBP.url;
     }
 
     if ("_sourceText" in this)
@@ -808,16 +828,22 @@ function sw_setbp (pc, parentBP)
         arrayOrFlag (this.scriptInstance._lineMap, line - 1, LINE_BREAK);
     }
 
-    dispatch ("hook-break-set", { breakInstance: brk });
+    dispatch ("hook-break-set", { breakWrapper: brk });
     
-    this.jsdScript.setBreakpoint (pc);    
+    this.jsdScript.setBreakpoint (pc);
+
+    return true;
 }
 
 ScriptWrapper.prototype.clearBreakpoints =
 function sw_clearbps ()
 {
+    var found = false;
+    
     for (b in this.breaks)
-        this.clearBreakpoint(this.breaks[b].pc);
+        found |= this.clearBreakpoint(this.breaks[b].pc);
+
+    return found;
 }
 
 ScriptWrapper.prototype.clearBreakpoint =
@@ -825,10 +851,7 @@ function sw_clearbp (pc)
 {
     var key = this.jsdScript.tag + ":" + pc;
     if (!(key in console.breaks))
-    {
-        display (getMsg(MSN_ERR_NO_DICE, [this.functionName, pc]), MT_ERROR);
-        return;
-    }
+        return false;
 
     var brk = console.breaks[key];
 
@@ -840,7 +863,7 @@ function sw_clearbp (pc)
 
     var line;
     
-    if ("_sourceText" in this)
+    if ("_sourceText" in this && this.jsdScript.isValid)
     {
         line = this.jsdScript.pcToLine(brk.pc, PCMAP_PRETTYPRINT);
         this._sourceText.lineMap[line - 1] &= ~LINE_BREAK;
@@ -851,14 +874,28 @@ function sw_clearbp (pc)
 
     if (this.scriptInstance._lineMapInited)
     {
-        line = this.jsdScript.pcToLine (pc, PCMAP_SOURCETEXT);
-        if (!this.scriptInstance.hasBreakpoint(line))
-            this.scriptInstance._lineMap[line - 1] &= ~LINE_BREAK;
+        if (this.jsdScript.isValid)
+        {
+            line = this.jsdScript.pcToLine (pc, PCMAP_SOURCETEXT);
+            if (!this.scriptInstance.hasBreakpoint(line))
+                this.scriptInstance._lineMap[line - 1] &= ~LINE_BREAK;
+        }
+        else
+        {
+            /* script is gone, no way to find out where the break actually
+             * was, so we have to redo the whole map. */
+            this.scriptInstance._lineMapInited = false;
+            this.scriptInstance._lineMap.length = 0;
+            var dummy = this.scriptInstance.lineMap;
+        }
     }
 
-    dispatch ("hook-break-clear", { breakInstance: brk });
-    
-    this.jsdScript.clearBreakpoint (pc);    
+    dispatch ("hook-break-clear", { breakWrapper: brk });
+
+    if (this.jsdScript.isValid)
+        this.jsdScript.clearBreakpoint (pc);
+
+    return true;
 }
 
 ScriptWrapper.prototype.addToLineMap =
@@ -889,6 +926,13 @@ function getScriptWrapper(jsdScript)
     return null;
 }
 
+function BreakInstance (parentBP, scriptWrapper, pc)
+{
+    this.parentBP = parentBP;
+    this.scriptWrapper = scriptWrapper;
+    this.pc = pc;
+}
+
 function FutureBreakpoint (url, lineNumber)
 {
     this.url = url;
@@ -896,6 +940,26 @@ function FutureBreakpoint (url, lineNumber)
     this.enabled = true;
     this.scriptText = null;
     this.childrenBP = new Object;
+}
+
+FutureBreakpoint.prototype.resetInstances =
+function fb_reset ()
+{
+    for (var url in console.scriptManagers)
+    {
+        if (url.search(this.url) != -1)
+            console.scriptManagers[url].setBreakpoint(this.lineNumber);
+    }
+}
+
+FutureBreakpoint.prototype.clearInstances =
+function fb_clear ()
+{
+    for (var url in console.scriptManagers)
+    {
+        if (url.search(this.url) != -1)
+            console.scriptManagers[url].clearBreakpoint(this.lineNumber);
+    }
 }
 
 function isURLFiltered (url)
@@ -1321,163 +1385,56 @@ function displayFrame (jsdFrame, idx, showHeader, sourceContext)
     }
 }
 
-function getBreakpoint (fileName, line)
+function getFutureBreakpoint (urlPattern, lineNumber)
 {
-    return console.breakpoints.locateChildByFileLine (fileName, line);
-}
-
-function disableBreakpoint (fileName, line)
-{
-    var bpr = console.breakpoints.locateChildByFileLine (fileName, line);
-    if (!bpr)
-    {
-        display (getMsg(MSN_ERR_BP_NODICE, [fileName, line]), MT_ERROR);
-        return 0;
-    }
+    var key = urlPattern + "#" + lineNumber;
+    if (key in console.fbreaks)
+        return console.fbreaks[key];
     
-    return disableBreakpointByNumber (bpr.childIndex);
-}
-
-function disableBreakpointByNumber (number)
-{
-    var bpr = console.breakpoints.childData[number];
-    if (!bpr)
-    {
-        display (getMsg(MSN_ERR_BP_NOINDEX, number, MT_ERROR));
-        return;
-    }
-
-    bpr.enabled = false;
-    display (getMsg(MSN_BP_DISABLED, [bpr.fileName, bpr.line,
-                                      bpr.scriptMatches]));
-}
-
-function clearBreakpoint (fileName, line)
-{
-    var bpr = console.breakpoints.locateChildByFileLine (fileName, line);
-    if (!bpr)
-    {
-        display (getMsg(MSN_ERR_BP_NODICE, [fileName, line]), MT_ERROR);
-        return 0;
-    }
-    
-    return clearBreakpointByNumber (bpr.childIndex);
-}
-
-function clearBreakpointByNumber (number)
-{
-    /* XXX breaks view */
     return null;
-    
-    var bpr = console.breakpoints.childData[number];
-    if (!bpr)
-    {
-        display (getMsg(MSN_ERR_BP_NOINDEX, number, MT_ERROR));
-        return null;
-    }
-
-    bpr.enabled = false;
-
-    var fileName = bpr.fileName;
-    var line = bpr.line;
-
-    var sourceText;
-    
-    if (fileName in console.scripts)
-        sourceText = console.scripts[fileName].sourceText;
-    else if (fileName in console.files)
-        sourceText = console.files[fileName];
-
-    if (sourceText && sourceText.isLoaded && sourceText.lines[line - 1])
-    {
-        delete sourceText.lines[line - 1].bpRecord;
-        if (console.sourceView.childData.fileName == fileName)
-            console.sourceView.tree.invalidateRow (line - 1);
-    }
-    
-    console.breakpoints.removeChildAtIndex(number);
-    return bpr;
-}
-    
-function setBreakpoint (fileName, line)
-{
-    /* XXX breaks view */
-    return null;
-
-    var scriptRec = console.scripts[fileName];
-    
-    if (!scriptRec)
-    {
-        display (getMsg(MSN_ERR_NOSCRIPT, fileName), MT_ERROR);
-        return null;
-    }
-
-    var bpr = console.breakpoints.locateChildByFileLine (fileName, line);
-    if (bpr)
-    {
-        display (getMsg(MSN_BP_EXISTS, [fileName, line]), MT_INFO);
-        return null;
-    }
-    
-    bpr = new BPRecord (fileName, line);
-    
-    var ary = scriptRec.childData;
-    var found = false;
-    
-    for (var i = 0; i < ary.length; ++i)
-    {
-        if (ary[i].containsLine(line) &&
-            ary[i].script.isLineExecutable(line, PCMAP_SOURCETEXT))
-        {
-            found = true;
-            bpr.addScriptRecord(ary[i]);
-        }
-    }
-
-    var matches = bpr.scriptMatches;
-    if (!matches)
-    {
-        display (getMsg(MSN_ERR_BP_NOLINE, [fileName, line]), MT_ERROR);
-        return null;
-    }
-    
-    if (scriptRec.sourceText.isLoaded &&
-        scriptRec.sourceText.lines[line - 1])
-    {
-        scriptRec.sourceText.lines[line - 1].bpRecord = bpr;
-        if (console.sourceView.childData.fileName == fileName)
-            console.sourceView.tree.invalidateRow (line - 1);
-    }
-    
-    console.breakpoints.appendChild (bpr);
-    return bpr;
 }
 
-function setFutureBreakpoint (filePattern, line)
+function setFutureBreakpoint (urlPattern, lineNumber)
 {
-    /* XXX breaks view */
-    return null;
+    var key = urlPattern + "#" + lineNumber;
 
-    var bpr = console.breakpoints.locateChildByFileLine (filePattern, line);
-    if (bpr)
+    if (key in console.fbreaks)
+        return false;
+    
+    for (var url in console.scriptManagers)
     {
-        display (getMsg(MSN_BP_EXISTS, [filePattern, line]), MT_INFO);
-        return null;
-    }
-    
-    bpr = new BPRecord (filePattern, line);
-    
-    if (filePattern in console.files)
+        if (url == urlPattern)
+            console.scriptManagers[url].noteFutureBreakpoint(lineNumber, true);
+    }    
+
+    var fbreak = new FutureBreakpoint (urlPattern, lineNumber);
+    console.fbreaks[key] = fbreak;
+
+    dispatch ("hook-fbreak-set", { fbreak: fbreak });
+
+    return fbreak;
+}
+
+function clearFutureBreakpoint (urlPattern, lineNumber)
+{
+    var key = urlPattern + "#" + lineNumber;
+    if (!(key in console.fbreaks))
+        return false;
+
+    var i;
+    var fbreak = console.fbreaks[key];
+    delete console.fbreaks[key];
+
+    for (i in fbreak.childrenBP)
+        fbreak.childrenBP[i].parentBP = null;
+
+    for (var url in console.scriptManagers)
     {
-        var sourceText = console.files[filePattern];
-        if (sourceText.isLoaded)
-        {
-            sourceText.lines[line - 1].bpRecord = bpr;
-            if (console.sourceView.childData.fileName == filePattern)
-                console.sourceView.tree.invalidateRow (line - 1);
-        }
-    }
-    
-    console.breakpoints.appendChild (bpr);
-    return bpr;
+        if (url.search(urlPattern) != -1)
+            console.scriptManagers[url].noteFutureBreakpoint(lineNumber, false);
+    }    
+
+    dispatch ("hook-fbreak-clear", { fbreak: fbreak });
+
+    return true;
 }

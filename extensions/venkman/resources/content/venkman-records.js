@@ -61,29 +61,29 @@ function initRecords()
  * One prototype for all breakpoint types, works only in the Breakpoints View.
  *******************************************************************************/
 
-function BPRecord (breakInstance)
+function BPRecord (breakWrapper)
 {
     this.setColumnPropertyName ("col-0", "name");
     this.setColumnPropertyName ("col-1", "line");
 
-    this.breakInstance = breakInstance;
+    this.breakWrapper = breakWrapper;
     
-    if ("pc" in breakInstance)
+    if ("pc" in breakWrapper)
     {
         this.type = "instance";
-        this.name = breakInstance.scriptWrapper.functionName;
-        this.line = getMsg(MSN_FMT_PC, String(breakInstance.pc));
+        this.name = breakWrapper.scriptWrapper.functionName;
+        this.line = getMsg(MSN_FMT_PC, String(breakWrapper.pc));
     }
-    else if (breakInstance instanceof FutureBreakpoint)
+    else if (breakWrapper instanceof FutureBreakpoint)
     {
         this.type = "future";
-        var ary = breakInstance.url.match(/\/([^\/?]+)(\?|$)/);
+        var ary = breakWrapper.url.match(/\/([^\/?]+)(\?|$)/);
         if (ary)
             this.name = ary[1];
         else
-            this.name = breakInstance.url;
+            this.name = breakWrapper.url;
 
-        this.line = breakInstance.lineNumber;
+        this.line = breakWrapper.lineNumber;
     }    
 }
 
@@ -340,7 +340,7 @@ function scr_preopen ()
     if (this.lastScriptCount != this.scriptInstance.scriptCount)
     {
         console.views.scripts.freeze();
-        this.reserveChildren();
+        this.childData = new Array();
         var scriptWrapper = this.scriptInstance.topLevel;
         var sr = new ScriptRecord(scriptWrapper);
         scriptWrapper.scriptRecord = sr;
@@ -349,9 +349,12 @@ function scr_preopen ()
         var functions = this.scriptInstance.functions;
         for (var f in functions)
         {
-            sr = new ScriptRecord(functions[f]);
-            functions[f].scriptRecord = sr;
-            this.appendChild(sr);
+            if (functions[f].jsdScript.isValid)
+            {
+                sr = new ScriptRecord(functions[f]);
+                functions[f].scriptRecord = sr;
+                this.appendChild(sr);
+            }
         }
         console.views.scripts.thaw();
         this.lastScriptCount = this.scriptInstance.scriptCount;

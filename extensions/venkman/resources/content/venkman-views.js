@@ -92,7 +92,7 @@ function syncTreeView (treeContent, treeView, cb)
     {
         if ("treeBoxObject" in treeContent)
         {
-            syncTreeView(treeContent, treeView);
+            syncTreeView(treeContent, treeView, cb);
         }
         else
         {
@@ -115,26 +115,85 @@ function syncTreeView (treeContent, treeView, cb)
         cb();
 }
 
+function getTreeContext (view, cx, recordContextGetter)
+{
+    dd ("getTreeContext {");
+
+    var i = 0;
+    var selection = view.tree.selection;
+    var row = selection.currentIndex;
+    var rec;
+    
+    if (view instanceof XULTreeView)
+    {
+        rec = view.childData.locateChildByVisualRow (row);
+        if (!rec)
+        {
+            dd ("} no record at currentIndex " + row);
+            return cx;
+        }
+    }
+    else
+    {
+        rec = row;
+    }
+    
+    cx.target = rec;
+
+    recordContextGetter(cx, rec, i++);
+    var rangeCount = selection.getRangeCount();
+
+    dd ("walking ranges {");
+    for (var range = 0; range < rangeCount; ++range)
+    {
+        var min = new Object();
+        var max = new Object();
+        selection.getRangeAt(range, min, max);
+        min = min.value;
+        max = max.value;
+
+        for (row = min; row <= max; ++row)
+        {
+            if (view instanceof XULTreeView)
+            {
+                rec = view.childData.locateChildByVisualRow(row);
+                if (!rec)
+                    dd ("no record at range index " + row);
+            }
+            else
+            {
+                rec = row;
+            }
+
+            recordContextGetter(cx, rec, i++);
+        }
+    }
+    dd ("}");
+    dd ("cleaning up {");
+    /* delete empty arrays as that may have been left behind. */
+    for (var p in cx)
+    {
+        if (cx[p] instanceof Array && !cx[p].length)
+            delete cx[p];
+    }
+    dd ("}");
+    dd ("}");
+    
+    return cx;
+}
+
 function initContextMenu (document, id)
 {
-    dd ("init context menu " + id + " {");
     if (!document.getElementById(id))
     {
         if (!ASSERT(id in console.menuSpecs, "unknown context menu " + id))
             return;
 
-        dd ("making a new context menu");
         var dp = document.getElementById("dynamic-popups");
         var popup = console.menuManager.appendPopupMenu (dp, null, id);
         var items = console.menuSpecs[id].items;
         console.menuManager.createMenuItems (popup, null, items);
     }
-    else
-    {
-        dd ("already there");
-    }
-
-    dd ("}");
 }
 
 console.views = new Object();
@@ -173,11 +232,11 @@ function bv_hookFBreakClear (e)
 console.views.breaks.hooks["hook-break-set"] =
 function bv_hookBreakSet (e)
 {
-    var breakRecord = new BPRecord (e.breakInstance);
-    e.breakInstance.breakRecord = breakRecord;
-    if (e.breakInstance.parentBP)
+    var breakRecord = new BPRecord (e.breakWrapper);
+    e.breakWrapper.breakRecord = breakRecord;
+    if (e.breakWrapper.parentBP)
     {
-        var parentRecord = e.breakInstance.parentBP.breakRecord;
+        var parentRecord = e.breakWrapper.parentBP.breakRecord;
         parentRecord.appendChild(breakRecord);
     }
     else
@@ -189,10 +248,10 @@ function bv_hookBreakSet (e)
 console.views.breaks.hooks["hook-break-clear"] =
 function bv_hookBreakClear (e)
 {
-    var breakRecord = e.breakInstance.breakRecord;
-    if (e.breakInstance.parentBP)
+    var breakRecord = e.breakWrapper.breakRecord;
+    if (e.breakWrapper.parentBP)
     {
-        var parentRecord = e.breakInstance.parentBP.breakRecord;
+        var parentRecord = e.breakWrapper.parentBP.breakRecord;
         parentRecord.removeChildAtIndex(breakRecord.childIndex);
     }
     else
@@ -211,8 +270,11 @@ function bv_init ()
         [
          ["find-url"],
          ["-"],
+         ["clear-break",  { enabledif: "has('hasBreak')" }],
+         ["clear-fbreak", { enabledif: "has('hasFBreak')" }],
+         ["-"],
          ["clear-all"],
-         ["clear"]
+         ["fclear-all"]
         ]
     };
 
@@ -247,63 +309,55 @@ function bv_sel (e)
     }
 
     if (row instanceof BPRecord)
-        dispatch ("find-bp", {breakpoint: row.breakInstance});
+        dispatch ("find-bp", {breakpoint: row.breakWrapper});
 }
 
 console.views.breaks.getContext =
 function bv_getcx(cx)
 {
-    if (!cx)
-        cx = new Object();
-
-    var breaksView = console.views.breaks;
+    cx.breakWrapperList = new Array();
+    cx.urlList = new Array();
+    cx.lineNumberList = new Array();
+    cx.pcList = new Array();
+    cx.scriptWrapperList = new Array();
     
-    var selection = breaksView.tree.selection;
-
-    var rec =
-        breaksView.childData.locateChildByVisualRow(selection.currentIndex);
-    
-    if (!rec)
+    function recordContextGetter (cx, rec, i)
     {
-        dd ("no current index.");
-        return cx;
-    }
-
-    cx.target = rec;
-    
-    if (rec instanceof BPRecord)
-    {
-        cx.breakpointRec = rec;
-        cx.url = rec.url;
-        cx.lineNumber = rec.lineNumber;
-    }
-    
-    var rangeCount = selection.getRangeCount();
-    if (rangeCount > 0)
-    {
-        cx.breakpointRecList = new Array();
-        cx.urlList = new Array();
-    }
-    
-    for (var range = 0; range < rangeCount; ++range)
-    {
-        var min = new Object();
-        var max = new Object();
-        selection.getRangeAt(range, min, max);
-        min = min.value;
-        max = max.value;
-        for (var i = min; i <= max; ++i)
+        if (i == 0)
         {
-            rec = breaksView.childData.locateChildByVisualRow(i);
-            if (rec instanceof BPRecord)
+            cx.breakWrapper = rec.breakWrapper;
+            if (rec.type == "instance")
             {
-                cx.breakpointRecList.push(rec);
-                cx.urlList.push (rec.url);
+                cx.hasBreak = true;
+                cx.scriptWrapper = rec.breakWrapper.scriptWrapper;
+                cx.pc = rec.breakWrapper.pc;
+            }
+            else if (rec.type == "future")
+            {
+                cx.hasFBreak = true;
+                cx.url = rec.breakWrapper.url;
+                cx.lineNumber = rec.breakWrapper.lineNumber;
             }
         }
-    }
+        else
+        {
+            cx.breakWrapperList.push(rec.breakWrapper);
+            if (rec.type == "instance")
+            {
+                cx.hasBreak = true;
+                cx.scriptWrapperList.push(rec.breakWrapper.scriptWrapper);
+                cx.pcList.push(rec.breakWrapper.pc);
+            }
+            else if (rec.type == "instance")
+            {
+                cx.hasFBreak = true;
+                cx.urlList.push(rec.breakWrapper.url);
+                cx.lineNumberList.push(rec.breakWrapper.lineNumber);
+            }
+        }
+    };
 
-    return cx;
+    return getTreeContext (console.views.breaks, cx, recordContextGetter);
 }
 
 console.views.breaks.getCellProperties =
@@ -344,10 +398,12 @@ function lv_init ()
         [
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}],
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "cx.target.value.objectValue.creatorURL"}],
          ["find-ctor",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}]
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "cx.target.value.objectValue.constructorURL"}]
         ]
     };
 
@@ -1519,10 +1575,13 @@ function sv_init()
          ["save-source"],
          ["-"],
          ["break", 
-                 {enabledif: "cx.lineIsExecutable && !has('breakpointRec')"}],
+                 {enabledif: "cx.lineIsExecutable && !has('hasBreak')"}],
+         ["clear",
+                 {enabledif: "has('hasBreak')"}],
          ["fbreak",
-                 {enabledif: "!cx.lineIsExecutable && !has('breakpointRec')"}],
-         ["clear"],
+                 {enabledif: "!has('hasFBreak')"}],
+         ["fclear",
+                 {enabledif: "has('hasFBreak')"}],
          ["-"],
          ["cont"],
          ["next"],
@@ -1585,7 +1644,7 @@ function sv_hookDisplay (e)
         targetLine = sourceView.rangeStart;
     else
         targetLine = e.targetLine - 1;
-    
+
     if (sourceView.tree)
     {
         if (e.targetLine && e.command.name == "hook-display-sourcetext-soft")
@@ -1613,6 +1672,9 @@ function sv_hookDisplay (e)
             sourceView.savedState[url] = new Object();
         sourceView.savedState[url].topLine = targetLine;
     }   
+
+    console.views.source.currentLine = targetLine + 1;
+    console.views.source.syncHeader();
 }
 
 /**
@@ -1643,6 +1705,9 @@ function sv_show ()
             delete sourceView.savedState[sourceText.url].lastRowCount;
         }
         sourceView.syncTreeView();
+        sourceView.urlLabel = getChildById(sourceView.currentContent,
+                                           "source-url");
+        sourceView.syncHeader();
     };
     
     syncTreeView (getChildById(this.currentContent, "source-tree"), this, cb);
@@ -1653,6 +1718,7 @@ console.views.source.onHide =
 function sv_hide ()
 {
     syncTreeView (getChildById(this.currentContent, "source-tree"), null);
+    delete this.urlLabel;
 }
 
 console.views.source.onClick =
@@ -1683,6 +1749,14 @@ function sv_click (e)
 
 }
 
+console.views.source.onSelect =
+function sv_select (e)
+{
+    var sourceView = console.views.source;
+    sourceView.currentLine = sourceView.tree.selection.currentIndex + 1;
+    console.views.source.syncHeader();
+}
+
 console.views.source.super_scrollTo = BasicOView.prototype.scrollTo;
 
 console.views.source.scrollTo =
@@ -1705,14 +1779,39 @@ function sv_scrollto (line, align)
         this.tree.invalidate();
 }
 
-console.views.source.syncTreeView =
-function sv_sync(skipScrollRestore)
+console.views.source.syncHeader =
+function sv_synch ()
 {
-    if (!ASSERT(this.childData, "No childData to sync!"))
-        return;
+    if ("urlLabel" in this)
+    {
+        var value;
+        if ("childData" in this)
+        {
+            value = getMsg(MSN_SOURCEHEADER_URL,
+                           [this.childData.url, this.currentLine]);
+        }
+        else
+        {
+            value = MSG_VAL_NONE;
+        }
+
+        this.urlLabel.setAttribute ("value", value);    
+    }
+}
     
+console.views.source.syncTreeView =
+function sv_synct (skipScrollRestore)
+{    
     if (this.tree)
     {
+        if (!("childData" in this) || !this.childData)
+        {
+            this.rowCount = 0;
+            this.tree.rowCountChanged (0, 0);
+            this.tree.invalidate();
+            return;
+        };
+
         var url = this.childData.url;
         var state;
         if (url in this.savedState)
@@ -1826,62 +1925,58 @@ function sv_getcx(cx)
     if (!cx)
         cx = new Object();
 
-    var sourceText = this.childData;
-    cx.fileName = sourceText.fileName;
+    var sourceText = console.views.source.childData;
+    cx.url = cx.urlPattern = sourceText.url;
+    cx.breakWrapperList = new Array();
+    cx.lineNumberList = new Array();
     cx.lineIsExecutable = null;
-    var selection = this.tree.selection;
-    var row = selection.currentIndex;
 
-    if (row != -1)
+    function rowContextGetter (cx, row, i)
     {
-        cx.lineNumber = selection.currentIndex + 1;
-        if ("lineMap" in sourceText && sourceText.lineMap[row])
-            cx.lineIsExecutable = true;
-        if (typeof sourceText.lines[row] == "object" &&
-            "bpRecord" in sourceText.lines[row])
+        if (!("lineMap" in sourceText))
+            return cx;
+        
+        if (i == 0)
         {
-            cx.breakpointRec = sourceText.lines[row].bpRecord;
-            cx.breakpointIndex = cx.breakpointRec.childIndex;
-        }
-    }
-    else
-        dd ("no currentIndex");
-    
-    var rangeCount = selection.getRangeCount();
-    if (rangeCount > 0 && !("lineNumberList" in cx))
-    {
-        cx.lineNumberList = new Array();
-    }
-    
-    for (var range = 0; range < rangeCount; ++range)
-    {
-        var min = new Object();
-        var max = new Object();
-        selection.getRangeAt(range, min, max);
-        min = min.value;
-        max = max.value;
-
-        for (row = min; row <= max; ++row)
-        {
-            cx.lineNumberList.push (row + 1);
-            if (range == 0 && row == min &&
-                "lineMap" in sourceText && sourceText.lineMap[row])
-            {
+            cx.lineNumber = row + 1;
+            
+            if (sourceText.lineMap[row] & LINE_BREAKABLE)
                 cx.lineIsExecutable = true;
-            }
-            if (typeof sourceText.lines[row] == "object" &&
-                "bpRecord" in sourceText.lines[row])
+            if (sourceText.lineMap[row] & LINE_BREAK)
             {
-                var sourceLine = sourceText.lines[row];
-                if (!("breakpointRecList" in cx))
-                    cx.breakpointRecList = new Array();
-                cx.breakpointRecList.push(sourceLine.bpRecord);
-                if (!("breakpointIndexList" in cx))
-                    cx.breakpointIndexList = new Array();
-                cx.breakpointIndexList.push(sourceLine.bpRecord.childIndex);
+                cx.hasBreak = true;
+                cx.breakWrapper =
+                    sourceText.scriptInstance.getBreakpoint(row + 1);
+                if (cx.breakWrapper.parentBP)
+                    cx.hasFBreak = true;
+            }
+            else if (sourceText.lineMap[row] & LINE_FBREAK)
+            {
+                cx.hasFBreak = true;
+                cx.breakWrapper = getFutureBreakpoint(row + 1);
             }
         }
-    }
+        else
+        {
+            if (sourceText.lineMap[row] & LINE_BREAK)
+            {
+                cx.hasBreak = true;
+                var wrapper = sourceText.scriptInstance.getBreakpoint(row + 1);
+                if (wrapper.parentBP)
+                    cx.hasFBreak = true;
+                cx.breakWrapperList.push(wrapper);
+            }
+            else if (sourceText.lineMap[row] & LINE_FBREAK)
+            {
+                cx.hasFBreak = true;
+                cx.breakWrapperList.push(getFutureBreakpoint(row + 1));
+            }
+        }
+        
+        return cx;
+    };
+    
+    getTreeContext (console.views.source, cx, rowContextGetter);
 
     return cx;
 }    
@@ -1998,10 +2093,12 @@ function wv_init()
         [
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}],
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "cx.target.value.objectValue.creatorURL"}],
          ["find-ctor",
                  {enabledif: "cx.target instanceof ValueRecord && " +
-                  "cx.target.jsType == jsdIValue.TYPE_OBJECT"}]
+                  "cx.target.jsType == jsdIValue.TYPE_OBJECT && " +
+                  "cx.target.value.objectValue.constructorURL"}]
         ]
     };
 }
@@ -2041,45 +2138,20 @@ function wv_cellprops (index, colID, properties)
 console.views.watches.getContext =
 function wv_getcx(cx)
 {
-    var view = console.views.watches;
-    var selection = view.tree.selection;
-    var row = selection.currentIndex;
-    var rec = view.childData.locateChildByVisualRow (row);
-    
-    if (!rec)
+    cx.jsdValueList = new Array();
+
+    function recordContextGetter (cx, rec, i)
     {
-        dd ("no record at currentIndex " + row);
-        return cx;
-    }
-    
-    cx.target = rec;
-    
-    if (rec instanceof ValueRecord)
-    {
-        cx.jsdValue = rec.value;
-        cx.jsdValueList = [rec.value];
-    }
-
-    var rangeCount = selection.getRangeCount();
-
-
-    for (var range = 0; range < rangeCount; ++range)
-    {
-        var min = new Object();
-        var max = new Object();
-        selection.getRangeAt(range, min, max);
-        min = min.value;
-        max = max.value;
-
-        for (row = min; row <= max; ++row)
+        if (rec instanceof ValueRecord)
         {
-            rec = view.childData.locateChildByVisualRow(row);
-            if (rec instanceof ValueRecord)
+            if (i == 0)
+                cx.jsdValue = rec.value;
+            else
                 cx.jsdValueList.push(rec.value);
         }
-    }
-
-    return cx;
+    };
+    
+    return getTreeContext (console.views.watches, cx, recordContextGetter);
 }
 
 console.views.watches.refresh =

@@ -33,17 +33,19 @@
  *
  */
 
-function MenuManager (commandManager, menuSpecs, contextFunction)
+function MenuManager (commandManager, menuSpecs, contextFunction, commandStr)
 {
     var menuManager = this;
 
-    this.contextFunction = contextFunction;
     this.commandManager = commandManager;
     this.menuSpecs = menuSpecs;
+    this.contextFunction = contextFunction;
+    this.commandStr = commandStr;
+
     this.onPopupShowing =
-        function (event) { menuManager.showPopup (event); };
+        function mmgr_onshow (event) { menuManager.showPopup (event); };
     this.onPopupHiding =
-        function (event) { menuManager.hidePopup (event); };
+        function mmgr_onhide (event) { menuManager.hidePopup (event); };
 }
 
 /**
@@ -71,6 +73,7 @@ function mmgr_hookpop (node)
 MenuManager.prototype.showPopup =
 function mmgr_showpop (event)
 {
+    dd ("showPopup {");
     /* returns true if the command context has the properties required to
      * execute the command associated with |menuitem|.
      */
@@ -128,22 +131,17 @@ function mmgr_showpop (event)
     };
     
     var cx;
+    var popup = event.originalTarget;
+    var menuitem = popup.firstChild;
+
     
     /* If the host provided a |contextFunction|, use it now.  Remember the
      * return result as this.cx for use if something from this menu is actually
      * dispatched.  this.cx is deleted in |hidePopup|. */
     if (typeof this.contextFunction == "function")
-    {
-        cx = this.cx = 
-            this.contextFunction (event.originalTarget.getAttribute("id"));
-    }
+        cx = this.cx = this.contextFunction (popup.getAttribute("id"));
     else
-    {
         cx = this.cx = { menuManager: this };
-    }
-
-    var popup = event.originalTarget;
-    var menuitem = popup.firstChild;
 
     do
     {
@@ -188,6 +186,8 @@ function mmgr_showpop (event)
         
     } while ((menuitem = menuitem.nextSibling));
 
+    dd ("}");
+    
     return true;
 }
 
@@ -237,7 +237,6 @@ function mmgr_addsmenu (parentNode, beforeNode, id, label, attribs)
         menupopup.setAttribute ("id", id + "-popup");
         menu.appendChild(menupopup);    
         menupopup = menu.firstChild;
-        dd ("menupopup: " + menupopup);
     }
     
     menu.setAttribute ("accesskey", getAccessKey(label));
@@ -296,6 +295,8 @@ function mmgr_addpmenu (parentNode, beforeNode, id, label, attribs)
 MenuManager.prototype.appendMenuItem =
 function mmgr_addmenu (parentNode, beforeNode, commandName, attribs)
 {
+    var menuManager = this;    
+    
     var document = parentNode.ownerDocument;
     if (commandName == "-")
         return this.appendMenuSeparator(parentNode, beforeNode, attribs);
@@ -316,8 +317,8 @@ function mmgr_addmenu (parentNode, beforeNode, commandName, attribs)
     menuitem.setAttribute ("key", "key:" + command.name);
     menuitem.setAttribute ("accesskey", getAccessKey(command.label));
     menuitem.setAttribute ("label", command.label.replace("&", ""));
-    menuitem.setAttribute ("oncommand",
-                           "dispatch('" + command.name + "');");
+    menuitem.setAttribute ("oncommand", this.commandStr);
+
     if (typeof attribs == "object")
     {
         for (var p in attribs)

@@ -241,17 +241,6 @@ function insertLink (matchText, containerTag)
     containerTag.appendChild (anchor);    
 }
 
-function matchFileName (pattern)
-{
-    var rv = new Array();
-    
-    for (var scriptName in console.scripts)
-        if (scriptName.search(pattern) != -1)
-            rv.push (scriptName);
-
-    return rv;
-}
-
 /* some of the drag and drop code has an annoying appetite for exceptions.  any
  * exception raised during a dnd operation causes the operation to fail silently.
  * passing the function through one of these adapters lets you use "return

@@ -40,11 +40,19 @@ function initMenus()
         return "'currentContent' in console.views." + view;
     };
 
+    function onMenuCommand (event)
+    {
+        var commandName = event.originalTarget.getAttribute("commandname");
+        dispatch (commandName, console.menuManager.cx);
+    };
+    
+    console.onMenuCommand = onMenuCommand;
     console.menuSpecs = new Object();
     var menuManager = 
         console.menuManager = new MenuManager(console.commandManager,
                                               console.menuSpecs,
-                                              getCommandContext);
+                                              getCommandContext,
+                                              "console.onMenuCommand(event);");
 
     console.menuSpecs["maintoolbar"] = {
         items:

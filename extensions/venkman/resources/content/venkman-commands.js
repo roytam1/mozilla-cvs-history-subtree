@@ -45,10 +45,11 @@ function initCommands()
     var cmdary =
         [/* "real" commands */
          ["break",          cmdBreak,              CMD_CONSOLE],
-         ["bp-props",       cmdBPProps,            0],
          ["chrome-filter",  cmdChromeFilter,       CMD_CONSOLE],
          ["clear",          cmdClear,              CMD_CONSOLE],
          ["clear-all",      cmdClearAll,           CMD_CONSOLE],
+         ["clear-break",    cmdClearBreak,         0],
+         ["clear-fbreak",   cmdClearFBreak,        0],
          ["clear-profile",  cmdClearProfile,       CMD_CONSOLE],
          ["clear-script",   cmdClearScript,        0],
          ["close",          cmdClose,              CMD_CONSOLE],
@@ -58,6 +59,8 @@ function initCommands()
          ["eval",           cmdEval,               CMD_CONSOLE | CMD_NEED_STACK],
          ["evald",          cmdEvald,              CMD_CONSOLE],
          ["fbreak",         cmdFBreak,             CMD_CONSOLE],
+         ["fclear",         cmdFClear,             CMD_CONSOLE],
+         ["fclear-all",     cmdFClearAll,          CMD_CONSOLE],
          ["find-bp",        cmdFindBp,             0],
          ["find-creator",   cmdFindCreatorOrCtor,  0],
          ["find-ctor",      cmdFindCreatorOrCtor,  0],
@@ -225,46 +228,63 @@ function formatCommandFlags (f)
  *******************************************************************************/
     
 function cmdBreak (e)
-{    
-    var i;
-    var bpr;
+{
+    if (!("isInteractive" in e))
+        e.isInteractive = false;
     
-    if (!e.fileName)
-    {  /* if no input data, just list the breakpoints */
-        var bplist = console.breakpoints.childData;
-
-        if (bplist.length == 0)
-        {
-            display (MSG_NO_BREAKPOINTS_SET);
-            return true;
-        }
+    if (!e.urlPattern)
+    {
+        /* if no input data, just list the breakpoints */
+        var i = 0;
         
-        display (getMsg(MSN_BP_HEADER, bplist.length));
-        for (i = 0; i < bplist.length; ++i)
+        for (var b in console.breaks)
         {
-            bpr = bplist[i];
-            feedback (e, getMsg(MSN_BP_LINE, [i, bpr.fileName, bpr.line,
-                                              bpr.scriptMatches]));
+            var brk = console.breaks[b];
+            display (getMsg(MSN_BP_LINE, [++i, brk.url, brk.lineNumber]));
         }
-        return true;
+
+        if (i == 0)
+            display (MSG_NO_BREAKS_SET);
+
+        return;
     }
 
-    var matchingFiles = matchFileName (e.fileName);
-    if (matchingFiles.length == 0)
-    {
-        feedback (e, getMsg(MSN_ERR_BP_NOSCRIPT, e.fileName), MT_ERROR);
-        return false;
-    }
+    var found;
     
-    for (i in matchingFiles)
+    for (var url in console.scriptManagers)
     {
-        bpr = setBreakpoint (matchingFiles[i], e.lineNumber);
-        if (bpr)
-            feedback (e, getMsg(MSN_BP_CREATED, [bpr.fileName, bpr.line,
-                                                 bpr.scriptMatches]));
+        var manager = console.scriptManagers[url];
+
+        if (url.search(e.urlPattern) != -1 &&
+            manager.isLineExecutable(e.lineNumber))
+        {
+            found = true;
+            if (manager.hasBreakpoint (e.lineNumber))
+            {
+                feedback (e, getMsg(MSN_BP_EXISTS, [url, e.lineNumber]));
+            }
+            else
+            {
+                var fbreak = getFutureBreakpoint(url, e.lineNumber);
+                if (!fbreak)
+                {
+                    dispatch ("fbreak", { isInteractive: e.isInteractive,
+                                          urlPattern: url,
+                                          lineNumber: e.lineNumber});
+                    fbreak = getFutureBreakpoint(url, e.lineNumber);
+                }
+
+                console.scriptManagers[url].setBreakpoint (e.lineNumber, fbreak);
+                feedback (e, getMsg(MSN_BP_CREATED, [url, e.lineNumber]));
+            }
+        }
     }
-    
-    return true;
+
+    if (!found)
+    {
+        feedback (e, getMsg(MSN_ERR_BP_NOLINE, [e.urlPattern, e.lineNumber]),
+                  MT_ERROR);
+    }
 }
 
 function cmdBPProps (e)
@@ -300,33 +320,110 @@ function cmdChromeFilter (e)
 
 function cmdClear (e)
 {
-    if ("breakpointIndexList" in e && e.breakpointIndexList.length > 0)
+    var found = false;
+    
+    for (var b in console.breaks)
     {
-        var ev = new Object();
-        if ("isInteractive" in e)
-            ev.isInteractive = true;
-        e.breakpointIndexList.sort();
-        for (var i = e.breakpointIndexList.length - 1; i >= 0 ; --i)
+        var brk = console.breaks[b];
+        if ((!e.lineNumber || 
+             "lineNumber" in brk && e.lineNumber == brk.lineNumber) &&
+            brk.scriptWrapper.jsdScript.fileName.search(e.urlPattern) != -1)
         {
-            ev.breakpointIndex = e.breakpointIndexList[i];
-            cmdClear(ev);
+            found = true;
+            brk.scriptWrapper.clearBreakpoint(brk.pc);
+            feedback (e, getMsg(MSN_BP_CLEARED,
+                                [brk.scriptWrapper.jsdScript.fileName,
+                                 e.lineNumber]));
         }
-        return;
     }
-            
-    var bpr = clearBreakpointByNumber (e.breakpointIndex);
-    if (bpr)
-        feedback (e, getMsg(MSN_BP_CLEARED, [bpr.fileName, bpr.line,
-                                             bpr.scriptMatches]));
+
+    if (!found)
+    {
+        feedback (e, getMsg(MSN_ERR_NODICE, [e.urlPattern, e.lineNumber]),
+                  MT_ERROR);
+    }
 }
 
-function cmdClearAll(e)
+function cmdClearAll (e)
 {
-    for (var i = console.breakpoints.childData.length - 1; i >= 0; --i)
-        clearBreakpointByNumber (i);
+    if (!("isInteractive" in e))
+        e.isInteractive = false;
+    
+    var breakWrapperList = new Array()
+    for (var i in console.breaks)
+        breakWrapperList.push (console.breaks[i]);
+
+    if (breakWrapperList.length)
+    {
+        dispatch ("clear-break", { isInteractive: e.isInteractive,
+                                   breakWrapperList: breakWrapperList });
+    }
 }
 
-function cmdClearProfile(e)
+function cmdClearBreak (e)
+{
+    if (!("isInteractive" in e))
+        e.isInteractive = false;
+    
+    function clear (wrapper)
+    {
+        if (wrapper instanceof BreakInstance)
+        {
+            wrapper.scriptWrapper.clearBreakpoint(wrapper.pc);
+        }
+        else if (wrapper instanceof FutureBreakpoint)
+        {
+            for (var b in wrapper.childrenBP)
+                clear (wrapper.childrenBP[b]);
+        }
+    };
+
+    if ("breakWrapperList" in e)
+    {
+        for (i = 0; i < e.breakWrapperList.length; ++i)
+            clear(e.breakWrapperList[i]);
+    }
+    else
+    {
+        clear (e.breakWrapper);
+    }
+}
+
+function cmdClearFBreak (e)
+{
+    if (!("isInteractive" in e))
+        e.isInteractive = false;
+    
+    function clear (wrapper)
+    {
+        if (wrapper instanceof FutureBreakpoint)
+        {
+            var params = {
+                isInteractive: e.isInteractive,
+                urlPattern: wrapper.url,
+                lineNumber: wrapper.lineNumber
+            };
+        
+            dispatch ("fclear", params);
+        }
+        else if (wrapper instanceof BreakInstance && wrapper.parentBP)
+        {
+            clear (wrapper.parentBP);
+        }
+    };
+            
+    if ("breakWrapperList" in e)
+    {
+        for (var i = 0; i < e.breakWrapperList.length; ++i)
+            clear(e.breakWrapperList[i]);
+    }
+    else
+    {
+        clear (e.breakWrapper);
+    }
+}
+    
+function cmdClearProfile (e)
 {
     if ("scriptRecList" in e)
     {
@@ -349,21 +446,14 @@ function cmdClearScript (e)
 {
     var i;
     
-    if ("scriptRecList" in e)
+    if ("scriptWrapperList" in e)
     {
-        for (i = 0; i < e.scriptRecList.length; ++i)
-            cmdClearScript ({scriptRec: e.scriptRecList[i]});
+        for (i = 0; i < e.scriptWrapperList.length; ++i)
+            cmdClearScript ({scriptWrapper: e.scriptWrapperList[i]});
         return true;
     }
 
-    /* walk backwards so as not to disturb the indicies */
-    for (i = console.breakpoints.childData.length - 1; i >= 0; --i)
-    {
-        var bpr = console.breakpoints.childData[i];
-        if (bpr.hasScriptRecord(e.scriptRec))
-            clearBreakpointByNumber (i);
-    }
-
+    
     return true;
 }
 
@@ -479,30 +569,35 @@ function cmdEvald (e)
 }
 
 function cmdFBreak(e)
-{
-    if (!e.fileName)
-    {  /* if no input data, just list the breakpoints */
-        var bplist = console.breakpoints.childData;
-
-        if (bplist.length == 0)
-        {
-            display (MSG_NO_FBREAKS_SET);
-            return true;
-        }
+{       
+    if (!e.urlPattern)
+    {
+        /* if no input data, just list the breakpoints */
+        var i = 0;
         
-        display (getMsg(MSN_FBP_HEADER, bplist.length));
-        for (var i = 0; i < bplist.length; ++i)
+        for (var f in console.fbreaks)
         {
-            var bpr = bplist[i];
-            if (bpr.scriptMatches == 0)
-                display (getMsg(MSN_FBP_LINE, [i, bpr.fileName, bpr.line]));
+            var brk = console.fbreaks[f];
+            display (getMsg(MSN_FBP_LINE, [++i, brk.url, brk.lineNumber]));
         }
-        return true;
-    }
 
-    if (setFutureBreakpoint (e.fileName, e.lineNumber))
-        feedback (e, getMsg(MSN_FBP_CREATED, [e.fileName, e.lineNumber]));
-    return true;
+        if (i == 0)
+            display (MSG_NO_FBREAKS_SET);
+
+        return;
+    }
+    else
+    {
+        if (setFutureBreakpoint (e.urlPattern, e.lineNumber))
+        {
+            feedback (e, getMsg(MSN_FBP_CREATED, [e.urlPattern, e.lineNumber]));
+        }
+        else
+        {
+            feedback (e, getMsg(MSN_FBP_EXISTS, [e.urlPattern, e.lineNumber]),
+                      MT_ERROR);
+        }
+    }
 }
 
 function cmdFinish (e)
@@ -558,7 +653,7 @@ function cmdFindCreatorOrCtor (e)
     }
 
     return dispatch ("find-url",
-                     {url: url, rangeStart: line - 1, rangeEnd: line - 1});
+                     {url: url, rangeStart: line, rangeEnd: line});
 }
 
 function cmdFindFile (e)
@@ -593,8 +688,8 @@ function cmdFindScript (e)
     var jsdScript = e.scriptWrapper.jsdScript;
     var targetLine = 1;
     var rv, params;
-    
-    if (jsdScript.isValid && console.prefs["prettyprint"])
+
+    if (console.prefs["prettyprint"] && e.scriptWrapper.sourceText)
     {
         if (e.targetPc != null && jsdScript.isValid)
             targetLine = jsdScript.pcToLine(e.targetPc, PCMAP_PRETTYPRINT);
@@ -660,7 +755,7 @@ function cmdFindSourceText (e)
     console.currentSourceText = e.sourceText;
     console.currentDetails = e.details;
     
-    if (e.sourceText.isLoaded)
+    if (!e.sourceText || e.sourceText.isLoaded)
         cb(Components.results.NS_OK);
     else
         e.sourceText.loadSource(cb);
@@ -715,6 +810,45 @@ function cmdFindURL (e)
         dispatch ("find-sourcetext", params);
     else
         dispatch ("find-sourcetext-soft", params);
+}
+
+function cmdFClear (e)
+{
+    var found = false;
+
+    for (var b in console.fbreaks)
+    {
+        var brk = console.fbreaks[b];
+        if (!e.lineNumber || e.lineNumber == brk.lineNumber &&
+            brk.url.search(e.urlPattern) != -1)
+        {
+            found = true;
+            clearFutureBreakpoint (brk.url, e.lineNumber);
+            feedback (e, getMsg(MSN_FBP_CLEARED, [brk.url, e.lineNumber]));
+        }
+    }
+
+    if (!found)
+    {
+        feedback (e, getMsg(MSN_ERR_NO_DICE, [e.urlPattern, e.lineNumber]),
+                  MT_ERROR);
+    }
+}
+
+function cmdFClearAll (e)
+{
+    if (!("isInteractive" in e))
+        e.isInteractive = false;
+
+    var breakWrapperList = new Array()
+    for (var i in console.breaks)
+        breakWrapperList.push (console.breaks[i]);
+
+    if (breakWrapperList.length)
+    {
+        dispatch ("clear-fbreak", { isInteractive: e.isInteractive,
+                                    breakWrapperList: breakWrapperList});
+    }
 }
 
 function cmdFloat (e)
@@ -1099,7 +1233,7 @@ function cmdSaveSource (e)
 {
     if (!e.targetFile || e.targetFile == "?")
     {
-        var fileName = console.currentSourceText.fileName;
+        var fileName = console.currentSourceText.url;
         if (fileName.search(/^\w+:/) < 0)
         {
             var shortName = getFileFromPath(fileName);

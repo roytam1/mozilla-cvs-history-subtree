@@ -71,6 +71,7 @@
 
 <!-- source view -->
 <!ENTITY Source.label       "Source Code">
+<!ENTITY SourceHeader.tip   "Source Toolbar">
 <!ENTITY SourceCol0.display "Margin">
 <!ENTITY SourceCol1.display "Line Number">
 

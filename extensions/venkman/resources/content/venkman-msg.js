@@ -35,10 +35,24 @@
 
 function initMsgs ()
 {
+    console.bundleList = new Array();
+    initStringBundle("chrome://venkman/locale/venkman.properties");
+}
+
+function initStringBundle (bundlePath)
+{
     const nsIPropertyElement = Components.interfaces.nsIPropertyElement;
-    console._bundle =
-        srGetStrBundle("chrome://venkman/locale/venkman.properties");
-    var enumer = console._bundle.getSimpleEnumeration();
+
+    var pfx;
+    if (console.bundleList.length == 0)
+        pfx = "";
+    else
+        pfx = console.bundleList.length + ":";
+
+    var bundle = srGetStrBundle(bundlePath);
+    console.bundleList.push(bundle);
+    var enumer = bundle.getSimpleEnumeration();
+
     while (enumer.hasMoreElements())
     {
         var prop = enumer.getNext().QueryInterface(nsIPropertyElement);
@@ -48,34 +62,39 @@ function initMsgs ()
             var constValue;
             var constName = prop.key.toUpperCase().replace (/\./g, "_");
             if (ary[1] == "msn")
-                constValue = prop.key;
+                constValue = pfx + prop.key;
             else
                 constValue = prop.value.replace (/^\"/, "").replace (/\"$/, "");
-            
-            window[constName] = String(constValue);
+
+            window[constName] = constValue;
         }
     }
+
+    return bundle;
 }
 
 function getMsg (msgName, params, deflt)
+{
+    var bundle;
+    var ary = msgName.match (/(\d+):(.+)/);
+    if (ary)
+        return (getMsgFrom(console.bundleList[ary[1]], ary[2], params, deflt));
+    else
+        return (getMsgFrom(console.bundleList[0], msgName, params, deflt));
+}
+
+function getMsgFrom (bundle, msgName, params, deflt)
 {
     try 
     {
         var rv;
         
         if (params && params instanceof Array)
-        {
-            rv = console._bundle.formatStringFromName (msgName, params,
-                                                       params.length);
-        }
+            rv = bundle.formatStringFromName (msgName, params, params.length);
         else if (params)
-        {
-            rv = console._bundle.formatStringFromName (msgName, [params], 1);
-        }
+            rv = bundle.formatStringFromName (msgName, [params], 1);
         else
-        {
-            rv = console._bundle.GetStringFromName (msgName);
-        }
+            rv = bundle.GetStringFromName (msgName);
         
         /* strip leading and trailing quote characters, see comment at the
          * top of venkman.properties.
@@ -95,6 +114,8 @@ function getMsg (msgName, params, deflt)
         }
         return deflt;
     }
+
+    return null;    
 }
 
 /* message types, don't localize */
