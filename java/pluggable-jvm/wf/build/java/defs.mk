@@ -8,19 +8,19 @@
 # IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
-# 
+#  
 # The Original Code is The Waterfall Java Plugin Module
-# 
+#  
 # The Initial Developer of the Original Code is Sun Microsystems Inc
 # Portions created by Sun Microsystems Inc are Copyright (C) 2001
 # All Rights Reserved.
-#
-# $Id$
-#
 # 
-# Contributor(s): 
-#
-#   Nikolay N. Igotti <inn@sparc.spb.su>
+# $Id$
+# 
+# Contributor(s):
+# 
+#     Nikolay N. Igotti <nikolay.igotti@Sun.Com>
+# 
 
 DEL=del/f/q 
 DELTREE=rmdir/s/q
