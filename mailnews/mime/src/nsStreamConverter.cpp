@@ -33,11 +33,86 @@
 #include "nsIURL.h"
 #include "nsString.h"
 #include "nsIServiceManager.h"
+#include "nsMimeStringResources.h"
+
+////////////////////////////////////////////////////////////////
+// Bridge routines for new stream converter XP-COM interface 
+////////////////////////////////////////////////////////////////
+
+// RICHIE - should live in the mimedrft.h header file!
+extern "C" void  *
+mime_bridge_create_draft_stream(nsIMimeEmitter      *newEmitter,
+                                nsStreamConverter   *newPluginObj2,
+                                nsIURI              *uri,
+                                nsMimeOutputType    format_out);
+
+extern "C" void  *
+bridge_create_stream(nsIMimeEmitter      *newEmitter,
+                     nsStreamConverter   *newPluginObj2,
+                     nsIURI              *uri,
+                     nsMimeOutputType    format_out)
+{
+  if (format_out == nsMimeOutput::nsMimeMessageDraft)
+    return mime_bridge_create_draft_stream(newEmitter, newPluginObj2, uri, format_out);
+  else
+    return mime_bridge_create_display_stream(newEmitter, newPluginObj2, uri, format_out);
+}
+
+void
+bridge_destroy_stream(void *newStream)
+{
+  nsMIMESession     *stream = (nsMIMESession *)newStream;
+  if (!stream)
+    return;
+  
+  PR_FREEIF(stream);
+}
+
+void          
+bridge_set_output_type(void *bridgeStream, nsMimeOutputType aType)
+{
+  nsMIMESession *session = (nsMIMESession *)bridgeStream;
+
+  if (session)
+  {
+    struct mime_stream_data *msd = (struct mime_stream_data *)session->data_object;
+    if (msd)
+      msd->format_out = aType;     // output format type
+  }
+}
+
+nsresult
+bridge_new_new_uri(void *bridgeStream, nsIURI *aURI)
+{
+  nsMIMESession *session = (nsMIMESession *)bridgeStream;
+
+  if (session)
+  {
+    struct mime_stream_data *msd = (struct mime_stream_data *)session->data_object;
+    if (msd)
+    {
+      char *urlString;
+      if (NS_SUCCEEDED(aURI->GetSpec(&urlString)))
+      {
+        if ((urlString) && (*urlString))
+        {
+          PR_FREEIF(msd->url_name);
+          msd->url_name = PL_strdup(urlString);
+          if (!(msd->url_name))
+            return MIME_OUT_OF_MEMORY;
+
+          PR_FREEIF(urlString);
+        }
+      }
+    }
+  }
+
+  return NS_OK;
+}
 
 //
 // Utility routines needed by this interface...
 //
-
 nsresult
 nsStreamConverter::DetermineOutputFormat(const char *url,  nsMimeOutputType *aNewType)
 {
@@ -145,7 +220,7 @@ nsStreamConverter::InternalCleanup(void)
   PR_FREEIF(mOutputFormat);
   if (mBridgeStream)
   {
-    mime_bridge_destroy_stream(mBridgeStream);
+    bridge_destroy_stream(mBridgeStream);
     mBridgeStream = nsnull;
   }
 
@@ -257,7 +332,12 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
       mOutputFormat = PL_strdup("raw");
       break;
 
-    default:   // case nsMimeUnknown (// Don't know the format, figure it out from the URL)
+  case nsMimeOutput::nsMimeMessageDraft:       // Loading drafts & templates
+      PR_FREEIF(mOutputFormat);
+      mOutputFormat = PL_strdup("message/draft");
+      break;
+
+  default:   // case nsMimeUnknown (// Don't know the format, figure it out from the URL)
     {
       char *url;
       if (NS_FAILED(aURI->GetSpec(&url)))
@@ -269,33 +349,40 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
 
   // 
   // We will first find an appropriate emitter in the repository that supports 
-  // the requested output format.
+  // the requested output format...note, the one special exception is for nsMimeMessageDraft
+  // where we don't need any emitters
   //
-  nsAutoString progID (eOneByte);
-  progID = "component://netscape/messenger/mimeemitter;type=";
-  if (mOverrideFormat)
-    progID += mOverrideFormat;
-  else
-    progID += mOutputFormat;
-
-  res = nsComponentManager::CreateInstance(progID.GetBuffer(), nsnull,
-										                       nsIMimeEmitter::GetIID(),
-										                       (void **) getter_AddRefs(mEmitter));
-  if ((NS_FAILED(res)) || (!mEmitter))
+  if (newType != nsMimeOutput::nsMimeMessageDraft)
   {
-#ifdef NS_DEBUG
-	  printf("Unable to create the correct converter!\n");
-#endif
-    return NS_ERROR_OUT_OF_MEMORY;
+    nsAutoString progID (eOneByte);
+    progID = "component://netscape/messenger/mimeemitter;type=";
+    if (mOverrideFormat)
+      progID += mOverrideFormat;
+    else
+      progID += mOutputFormat;
+
+    res = nsComponentManager::CreateInstance(progID.GetBuffer(), nsnull,
+										                         nsIMimeEmitter::GetIID(),
+										                         (void **) getter_AddRefs(mEmitter));
+    if ((NS_FAILED(res)) || (!mEmitter))
+    {
+  #ifdef NS_DEBUG
+	    printf("Unable to create the correct converter!\n");
+  #endif
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
   }
 
   // make sure to set these!
   mOutStream = aOutStream;
   SetStreamURI(aURI);
 
-  mEmitter->Initialize(aURI);
-  mEmitter->SetOutputStream(aOutStream);
-  mBridgeStream = mime_bridge_create_stream(mEmitter, this, aURI, newType);
+  if (mEmitter)
+  {
+    mEmitter->Initialize(aURI);
+    mEmitter->SetOutputStream(aOutStream);
+  }
+  mBridgeStream = bridge_create_stream(mEmitter, this, aURI, newType);
 
   // What type is libmime going to produce?
   *aOutFormat = newType;
@@ -310,6 +397,7 @@ nsStreamConverter::SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, ns
     return NS_OK;
 }
 
+
 // 
 // This is the type of output operation that is being requested by libmime. The types
 // of output are specified by nsIMimeOutputType enum
@@ -319,7 +407,7 @@ nsStreamConverter::SetOutputType(nsMimeOutputType aType)
 {
   mOutputType = aType;
   if (mBridgeStream)
-    mime_bridge_set_output_type(mBridgeStream, aType);
+    bridge_set_output_type(mBridgeStream, aType);
   return NS_OK;
 }
 
@@ -345,7 +433,7 @@ nsStreamConverter::SetStreamURI(nsIURI *aURI)
 {
   mURI = aURI;
   if (mBridgeStream)
-    return mime_bridge_new_new_uri((nsMIMESession *)mBridgeStream, aURI);
+    return bridge_new_new_uri((nsMIMESession *)mBridgeStream, aURI);
   else
     return NS_OK;
 }
@@ -404,7 +492,13 @@ char *output = "\
 
   mTotalRead += aLength;
   aIStream->Read(buf, aLength, &readLen);
-  rc = mime_display_stream_write((nsMIMESession *) mBridgeStream, buf, readLen);
+
+  if (mBridgeStream)
+  {
+    nsMIMESession   *tSession = (nsMIMESession *) mBridgeStream;
+    rc = tSession->put_block((nsMIMESession *)mBridgeStream, buf, readLen);
+  }
+
   PR_FREEIF(buf);
   if (NS_FAILED(rc))
     mDoneParsing = PR_TRUE;
@@ -451,8 +545,10 @@ nsStreamConverter::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt,
   // Now complete the stream!
   //
   if (mBridgeStream)
-    //mime_display_stream_complete((nsMIMESession *)mBridgeStream, mDoneParsing);
-    mime_display_stream_complete((nsMIMESession *)mBridgeStream);
+  {
+    nsMIMESession   *tSession = (nsMIMESession *) mBridgeStream;
+    tSession->complete((nsMIMESession *)mBridgeStream);
+  }
 
   // First close the output stream...
   mOutStream->Close();
