@@ -1131,7 +1131,7 @@ nsHTTPChannel::CheckCache()
         LOG(("Content-length=%d, CacheEntryDataSize=%u\n", contentLength, size));
 
         if (size != contentLength) {
-            NS_WARNING("Cached data size does not match the Content-Length header");
+            NS_NOTREACHED("Cached data size does not match the Content-Length header");
             return NS_OK; // must re-fetch
         }
     }
@@ -2396,6 +2396,14 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
 #endif
     }
 
+#ifdef MOZ_NEW_CACHE
+    // Mark the cache entry valid before calling our listener
+    if (mCacheEntry && (mCacheAccess & nsICache::ACCESS_WRITE))
+        mCacheEntry->MarkValid();
+    mCacheReadRequest = 0;
+    mCacheTransport = 0;
+#endif
+
     //
     // Call the consumer OnStopRequest(...) to end the request...
     //----------------------------------------------------------------
@@ -2408,19 +2416,14 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
                  "OnStopRequest to consumer failed! Status:%x\n", this, rv));
     }
 
-#ifdef MOZ_NEW_CACHE
-    if (mCacheEntry && (mCacheAccess & nsICache::ACCESS_WRITE))
-        mCacheEntry->MarkValid();
-    mCacheReadRequest = 0;
-    mCacheTransport = 0;
-    mCacheAccess = nsICache::ACCESS_NONE;
-#endif
-
     // Release the cache entry as soon as we are done. This helps as it can
     // flush any cache records and do maintenance. But do this only after
     // stopRequest has been fired as the stopListeners could want to use
     // the cache entry like the plugin listener.
     mCacheEntry = 0;
+#ifdef MOZ_NEW_CACHE
+    mCacheAccess = nsICache::ACCESS_NONE;
+#endif
 
     //
     // After the consumer has been notified, remove the channel from its 
