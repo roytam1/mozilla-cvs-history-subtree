@@ -109,6 +109,7 @@ SVG_BRANCH_FILES = \
 	dom/public/nsIDOMClassInfo.h \
 	dom/src/base/nsDOMClassInfo.cpp \
 	gfx/public/nsTransform2D.h \
+	gfx/src/mac/nsRenderingContextMac.cpp \
 	htmlparser/public/nsIParser.h \
 	htmlparser/src/nsExpatTokenizer.cpp \
 	htmlparser/src/nsViewSourceHTML.cpp \
