@@ -1392,7 +1392,7 @@ nsScriptSecurityManager::CheckFunctionAccess(JSContext *aCx, void *aFunObj,
 {
     //-- This check is called for event handlers
     nsCOMPtr<nsIPrincipal> subject;
-    nsresult rv = GetFunctionObjectPrincipal(aCx, (JSObject *)aFunObj,
+    nsresult rv = GetFunctionObjectPrincipal(aCx, (JSObject *)aFunObj, nsnull,
                                              getter_AddRefs(subject));
     //-- If subject is null, get a principal from the function object's scope.
     if (NS_SUCCEEDED(rv) && !subject)
@@ -1793,15 +1793,35 @@ nsScriptSecurityManager::GetScriptPrincipal(JSContext *cx,
 nsresult
 nsScriptSecurityManager::GetFunctionObjectPrincipal(JSContext *cx,
                                                     JSObject *obj,
+                                                    JSStackFrame *fp,
                                                     nsIPrincipal **result)
 {
     JSFunction *fun = (JSFunction *) JS_GetPrivate(cx, obj);
-    JSScript *script = JS_GetFunctionScript(cx, fun);
+    JSScript *funScript = JS_GetFunctionScript(cx, fun);
 
     nsCOMPtr<nsIPrincipal> scriptPrincipal;
-    if (script)
+    if (funScript)
     {
-        if (JS_GetFunctionObject(fun) != obj)
+        JSScript *frameScript = nsnull;
+
+        if (fp) {
+            frameScript = JS_GetFrameScript(cx, fp);
+        }
+
+        nsresult rv;
+        if (frameScript && frameScript != funScript) {
+            // There is a frame script, and it's different than the
+            // function script. In this case we're dealing with either
+            // an eval or a Script object, and in those cases the
+            // principal we want is in the frame's script, not in the
+            // function's script. The function's script is where the
+            // function came from, not where the eval came from, and
+            // we want the principal for the source of the eval
+            // function object or new Script object.
+            rv = GetScriptPrincipal(cx, frameScript,
+                                    getter_AddRefs(scriptPrincipal));
+        }
+        else if (JS_GetFunctionObject(fun) != obj)
         {
             // Function is a clone, its prototype was precompiled from
             // brutally shared chrome. For this case only, get the
@@ -1809,11 +1829,14 @@ nsScriptSecurityManager::GetFunctionObjectPrincipal(JSContext *cx,
             // reliable principals compiled into the function.
             return doGetObjectPrincipal(cx, obj, result);
         }
+        else
+        {
+            rv = GetScriptPrincipal(cx, funScript,
+                                    getter_AddRefs(scriptPrincipal));
+        }
 
-        if (NS_FAILED(GetScriptPrincipal(cx, script,
-                                         getter_AddRefs(scriptPrincipal))))
+        if (NS_FAILED(rv))
             return NS_ERROR_FAILURE;
-
     }
 
     NS_IF_ADDREF(*result = scriptPrincipal);
@@ -1834,7 +1857,7 @@ nsScriptSecurityManager::GetFramePrincipal(JSContext *cx,
         return GetScriptPrincipal(cx, script, result);
     }
 
-    nsresult rv = GetFunctionObjectPrincipal(cx, obj, result);
+    nsresult rv = GetFunctionObjectPrincipal(cx, obj, fp, result);
 
 #ifdef DEBUG
     if (NS_SUCCEEDED(rv) && !*result)
