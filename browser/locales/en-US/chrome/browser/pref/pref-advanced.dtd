@@ -6,6 +6,7 @@
 <!ENTITY browsing.label               "Browsing">
 <!ENTITY hideTabBar.label             "Hide the tab bar when only one web site is open">
 <!ENTITY loadInBackground.label       "Select new tabs opened from links">
+<!ENTITY loadBookmarksInBackground.label  "Select new tabs opened from bookmarks or history">
 <!ENTITY warnOnClose.label            "Warn when closing multiple tabs">
 <!ENTITY useAutoScrolling.label       "Use autoscrolling">
 <!ENTITY useSmoothScrolling.label     "Use smooth scrolling">

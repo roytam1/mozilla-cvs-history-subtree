@@ -35,8 +35,8 @@
 
 #define PROVISIONAL_SECURITY_UI
 
-var _elementIDs = ["moveSystemCaret", "hideTabBar",
-                    "loadInBackground", "warnOnClose", "useAutoScrolling",
+var _elementIDs = ["moveSystemCaret", "hideTabBar", "loadInBackground",
+                    "loadBookmarksInBackground", "warnOnClose", "useAutoScrolling",
                     "useSmoothScrolling", "enableAutoImageResizing",
                     "useSSL2", "useSSL3", "useTLS1", "useTypeAheadFind",
 #ifdef PROVISIONAL_SECURITY_UI
