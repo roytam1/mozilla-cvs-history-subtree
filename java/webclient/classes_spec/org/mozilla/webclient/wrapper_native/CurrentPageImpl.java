@@ -91,7 +91,7 @@ public CurrentPageImpl(WrapperFactory yourFactory,
 public void copyCurrentSelectionToSystemClipboard()
 {
     myFactory.throwExceptionIfNotInitialized();
-    Assert.assert(-1 != nativeWebShell);
+    Assert.assert_it(-1 != nativeWebShell);
 
     synchronized(myBrowserControl) {
         nativeCopyCurrentSelectionToSystemClipboard(nativeWebShell);

@@ -273,7 +273,7 @@ private UniversalDialog           uniDialog = null;
             System.out.println("Can't create BrowserControl: " + 
                                e.getMessage());
         }
-        Assert.assert(null != browserCanvas);
+        Assert.assert_it(null != browserCanvas);
 		browserCanvas.setSize(defaultWidth, defaultHeight);
 	
 		// Add the control panel and the browserCanvas

@@ -112,13 +112,13 @@ protected void finalize() throws Throwable
 
 public boolean hasMoreElements()
 {
-    Assert.assert(-1 != nativeRDFNode);
+    Assert.assert_it(-1 != nativeRDFNode);
     return nativeHasMoreElements(nativeWebShell, nativeRDFNode);
 }
 
 public Object nextElement()
 {
-    Assert.assert(null != parent);
+    Assert.assert_it(null != parent);
     Object result = null;
     int nextNativeRDFNode;
 

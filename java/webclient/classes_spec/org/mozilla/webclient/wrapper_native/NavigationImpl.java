@@ -80,7 +80,7 @@ public void loadURL(String absoluteURL)
 {
     ParameterCheck.nonNull(absoluteURL);
     myFactory.throwExceptionIfNotInitialized();
-    Assert.assert(-1 != nativeWebShell);
+    Assert.assert_it(-1 != nativeWebShell);
     
     synchronized(myBrowserControl) {
         nativeLoadURL(nativeWebShell, absoluteURL);
@@ -100,7 +100,7 @@ public void loadFromStream(InputStream stream, String uri,
     }
 
     myFactory.throwExceptionIfNotInitialized();
-    Assert.assert(-1 != nativeWebShell);
+    Assert.assert_it(-1 != nativeWebShell);
     
     synchronized(myBrowserControl) {
         nativeLoadFromStream(nativeWebShell, stream,
@@ -114,7 +114,7 @@ public void refresh(long loadFlags)
 {
     ParameterCheck.noLessThan(loadFlags, 0);
     myFactory.throwExceptionIfNotInitialized();
-    Assert.assert(-1 != nativeWebShell);
+    Assert.assert_it(-1 != nativeWebShell);
     
     synchronized(myBrowserControl) {
         nativeRefresh(nativeWebShell, loadFlags);
@@ -124,7 +124,7 @@ public void refresh(long loadFlags)
 public void stop()
 {
     myFactory.throwExceptionIfNotInitialized();
-    Assert.assert(-1 != nativeWebShell);
+    Assert.assert_it(-1 != nativeWebShell);
     
     synchronized(myBrowserControl) {
         nativeStop(nativeWebShell);
@@ -135,7 +135,7 @@ public void setPrompt(Prompt yourPrompt)
 {
     ParameterCheck.nonNull(yourPrompt);
     myFactory.throwExceptionIfNotInitialized();
-    Assert.assert(-1 != nativeWebShell);
+    Assert.assert_it(-1 != nativeWebShell);
     
     synchronized(myBrowserControl) {
         nativeSetPrompt(nativeWebShell, yourPrompt);
@@ -179,11 +179,11 @@ public static void main(String [] args)
         org.mozilla.webclient.BrowserControlFactory.setAppData(args[0]);
 	org.mozilla.webclient.BrowserControl control = 
 	    org.mozilla.webclient.BrowserControlFactory.newBrowserControl();
-        Assert.assert(control != null);
+        Assert.assert_it(control != null);
 	
 	Navigation wc = (Navigation)
 	    control.queryInterface(org.mozilla.webclient.BrowserControl.WINDOW_CONTROL_NAME);
-	Assert.assert(wc != null);
+	Assert.assert_it(wc != null);
     }
     catch (Exception e) {
 	System.out.println("got exception: " + e.getMessage());

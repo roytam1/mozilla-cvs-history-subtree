@@ -77,7 +77,7 @@ public class BrowserControlFactory extends Object
 
 public BrowserControlFactory()
 {
-    Assert.assert(false, "This class shouldn't be constructed.");
+    Assert.assert_it(false, "This class shouldn't be constructed.");
 }
 
 //
@@ -177,7 +177,7 @@ public static BrowserControl newBrowserControl() throws InstantiationException, 
     if (!appDataHasBeenSet) {
         throw new IllegalStateException("Can't create BrowserControl instance: setAppData() has not been called.");
     }
-    Assert.assert(null != browserControlCanvasClass);
+    Assert.assert_it(null != browserControlCanvasClass);
     
     BrowserControlCanvas newCanvas = null;
     BrowserControl result = null; 
@@ -232,9 +232,9 @@ public static void main(String [] args)
     try {
         BrowserControlFactory.setAppData(args[0]);
         control = BrowserControlFactory.newBrowserControl();
-        Assert.assert(control != null);
+        Assert.assert_it(control != null);
         canvas = (BrowserControlCanvas) control.queryInterface("webclient.BrowserControlCanvas");
-        Assert.assert(canvas != null);
+        Assert.assert_it(canvas != null);
     }
     catch (Exception e) {
         System.out.println(e.getMessage());

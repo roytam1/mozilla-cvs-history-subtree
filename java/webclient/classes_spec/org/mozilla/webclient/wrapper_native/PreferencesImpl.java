@@ -170,11 +170,11 @@ public static void main(String [] args)
         org.mozilla.webclient.BrowserControlFactory.setAppData(args[0]);
 	org.mozilla.webclient.BrowserControl control = 
 	    org.mozilla.webclient.BrowserControlFactory.newBrowserControl();
-        Assert.assert(control != null);
+        Assert.assert_it(control != null);
 	
 	Preferences wc = (Preferences)
 	    control.queryInterface(org.mozilla.webclient.BrowserControl.WINDOW_CONTROL_NAME);
-	Assert.assert(wc != null);
+	Assert.assert_it(wc != null);
     }
     catch (Exception e) {
 	System.out.println("got exception: " + e.getMessage());

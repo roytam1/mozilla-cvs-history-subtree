@@ -146,7 +146,7 @@ public void addNotify ()
 
 	try {
 		Rectangle r = new Rectangle(getBoundsRelativeToWindow());
-        Assert.assert(null != webShell);
+        Assert.assert_it(null != webShell);
 
         WindowControl wc = (WindowControl)
             webShell.queryInterface(BrowserControl.WINDOW_CONTROL_NAME);
