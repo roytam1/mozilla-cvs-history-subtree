@@ -25,6 +25,7 @@ DIRS	= \
 	cnvts		\
 	main		\
 	protocol	\
+	cstream		
 
 include $(DEPTH)/config/rules.mk
 
