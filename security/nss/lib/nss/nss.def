@@ -16,8 +16,7 @@
 ;+# Copyright (C) 2000 Netscape Communications Corporation.  All
 ;+# Rights Reserved.
 ;+#
-;+# Contributor(s): 
-;+#	Dr Stephen Henson <stephen.henson@gemplus.com>
+;+# Contributor(s):
 ;+#
 ;+# Alternatively, the contents of this file may be used under the
 ;+# terms of the GNU General Public License Version 2 or later (the
@@ -448,92 +447,12 @@ PK11_NeedUserInit;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.2.1 {       # NSS 3.2.1 release
+;+NSS_3.2.1 {       # NSS 3.2 release
 ;+    global:
 CERT_AddRDN;
 CERT_CreateRDN;
 CERT_CreateAVA;
 CERT_CreateName;
-;+    local:
-;+       *;
-;+};
-;+NSS_3.3 { 	# NSS 3.3. release
-;+    global:
-SECKEY_CreateDHPrivateKey;
-;+#
-;+# The following symbols are exported only to make JSS work.
-;+# These are still private!!!
-;+#
-CERT_DisableOCSPChecking;
-CERT_DisableOCSPDefaultResponder;
-CERT_EnableOCSPDefaultResponder;
-CERT_GetCertTimes;
-CERT_ImportCAChainTrusted;
-CERT_ImportCRL;
-CERT_IsCACert;
-CERT_IsCADERCert;
-CERT_SetOCSPDefaultResponder;
-PBE_CreateContext;
-PBE_DestroyContext;
-PBE_GenerateBits;
-PK11_CheckSSOPassword;
-PK11_CopySymKeyForSigning;
-PK11_DeleteTokenCertAndKey;
-PK11_DEREncodePublicKey;
-PK11_FindCertsFromNickname;
-PK11_FindKeyByKeyID;
-PK11_GetIVLength;
-PK11_GetKeyData;
-PK11_GetKeyType;
-PK11_GetLowLevelKeyIDForCert;
-PK11_GetLowLevelKeyIDForPrivateKey;
-PK11_ImportCertForKey;
-PK11_ImportDERCertForKey;
-PK11_ImportDERPrivateKeyInfo;
-PK11_IsLoggedIn;
-PK11_KeyForDERCertExists;
-PK11_KeyForCertExists;
-PK11_Logout;
-PK11_NeedPWInit;
-PK11_MakeIDFromPubKey;
-PK11_PQG_DestroyParams;
-PK11_PQG_DestroyVerify;
-PK11_PQG_GetBaseFromParams;
-PK11_PQG_GetCounterFromVerify;
-PK11_PQG_GetHFromVerify;
-PK11_PQG_GetPrimeFromParams;
-PK11_PQG_GetSeedFromVerify;
-PK11_PQG_GetSubPrimeFromParams;
-PK11_PQG_NewParams;
-PK11_PQG_NewVerify;
-PK11_PQG_ParamGen;
-PK11_PQG_ParamGenSeedLen;
-PK11_PQG_VerifyParams;
-PK11_SeedRandom;
-PK11_UnwrapPrivKey;
-PK11_VerifyRecover;
-PK11_WrapPrivKey;
-PK11_ReferenceSlot;
-PK11_GetSlotPWValues;
-PK11_ImportSymKey;
-PK11_ExtractKeyValue;
-PK11_TraversePrivateKeysInSlot;
-PK11_TraverseCertsInSlot;
-SEC_CertNicknameConflict;
-SECMOD_DeleteInternalModule;
-SECMOD_DestroyModule;
-SECMOD_GetDefaultModuleList;
-SECMOD_GetDefaultModuleListLock;
-SECMOD_GetInternalModule;
-SECMOD_GetReadLock;
-SECMOD_ReferenceModule;
-SECMOD_ReleaseReadLock;
-SECKEY_GetPrivateKeyType;
-SECKEY_EncodeDERSubjectPublicKeyInfo;
-SECKEY_ExtractPublicKey;
-SECKEY_HashPassword;
-SEC_PKCS5GetIV;
-VFY_EndWithSignature;
 ;+    local:
 ;+       *;
 ;+};

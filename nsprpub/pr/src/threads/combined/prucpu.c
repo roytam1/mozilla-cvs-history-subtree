@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -61,10 +45,6 @@ static void PR_CALLBACK _PR_CPU_Idle(void *);
 
 static _PRCPU *_PR_CreateCPU(PRThread *thread, PRBool needQueue);
 
-#if !defined(_PR_LOCAL_THREADS_ONLY)
-static void _PR_RunCPU(void *arg);
-#endif
-
 void  _PR_InitCPUs()
 {
     PRThread *me = _PR_MD_CURRENT_THREAD();
@@ -76,8 +56,6 @@ void  _PR_InitCPUs()
     _MD_NEW_LOCK(&_pr_md_idle_cpus_lock);
 #endif
 #endif
-
-#ifdef _PR_LOCAL_THREADS_ONLY
 
 #ifdef HAVE_CUSTOM_USER_THREADS
 	if (!_native_threads_only)
@@ -94,20 +72,6 @@ void  _PR_InitCPUs()
     _PR_MD_CURRENT_THREAD()->cpu = _pr_primordialCPU;
 
     _PR_MD_SET_LAST_THREAD(me);
-
-#else /* Combined MxN model */
-
-    _PR_CreateThread(PR_SYSTEM_THREAD,
-                     _PR_RunCPU,
-                     me,
-                     PR_PRIORITY_NORMAL,
-                     PR_GLOBAL_THREAD,
-                     PR_UNJOINABLE_THREAD,
-                     0,
-                     _PR_IDLE_THREAD);
-    _PR_MD_WAIT(me, PR_INTERVAL_NO_TIMEOUT);
-
-#endif /* _PR_LOCAL_THREADS_ONLY */
 
     _PR_MD_INIT_CPUS();
 }
@@ -207,11 +171,14 @@ static _PRCPU *_PR_CreateCPU(PRThread *thread, PRBool needQueue)
 /*
 ** This code is used during a cpu's initial creation.
 */
-static void _PR_RunCPU(void *arg)
+static void _PR_RunCPU(void *unused)
 {
+#if defined(XP_MAC)
+#pragma unused (unused)
+#endif
+
     _PRCPU *cpu;
     PRThread *me = _PR_MD_CURRENT_THREAD();
-    PRThread *waiter = (PRThread *) arg;
 
     PR_ASSERT(NULL != me);
 
@@ -245,13 +212,6 @@ static void _PR_RunCPU(void *arg)
     _PR_MD_SET_CURRENT_CPU(cpu);
     _PR_MD_SET_CURRENT_THREAD(cpu->thread);
     me->cpu = cpu;
-
-    if (waiter) {
-        _pr_primordialCPU = cpu;
-        _pr_numCPU = 1;
-        _PR_MD_WAKEUP_WAITER(waiter);
-    }
-
     while(1) {
         PRInt32 is;
         if (!_PR_IS_NATIVE_THREAD(me)) _PR_INTSOFF(is);

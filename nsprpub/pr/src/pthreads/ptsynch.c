@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -120,7 +104,7 @@ static void pt_PostNotifies(PRLock *lock, PRBool unlock)
                 while (notified->cv[index].times-- > 0)
                 {
                     rv = pthread_cond_signal(&cv->cv);
-                    PR_ASSERT(0 == rv);
+                    PR_ASSERT((0 == rv) || (EINVAL == rv));
                 }
             }
 #if defined(DEBUG)
@@ -164,7 +148,7 @@ PR_IMPLEMENT(void) PR_DestroyLock(PRLock *lock)
 {
     PRIntn rv;
     PR_ASSERT(NULL != lock);
-    PR_ASSERT(PR_FALSE == lock->locked);
+    PR_ASSERT(_PT_PTHREAD_THR_HANDLE_IS_ZERO(lock->owner));
     PR_ASSERT(0 == lock->notified.length);
     PR_ASSERT(NULL == lock->notified.link);
     rv = pthread_mutex_destroy(&lock->mutex);
@@ -184,9 +168,8 @@ PR_IMPLEMENT(void) PR_Lock(PRLock *lock)
     PR_ASSERT(0 == rv);
     PR_ASSERT(0 == lock->notified.length);
     PR_ASSERT(NULL == lock->notified.link);
-    PR_ASSERT(PR_FALSE == lock->locked);
-    lock->locked = PR_TRUE;
-    lock->owner = pthread_self();
+    PR_ASSERT(_PT_PTHREAD_THR_HANDLE_IS_ZERO(lock->owner));
+    _PT_PTHREAD_COPY_THR_HANDLE(pthread_self(), lock->owner);
 #if defined(DEBUG)
     pt_debug.locks_acquired += 1;
 #endif
@@ -198,13 +181,12 @@ PR_IMPLEMENT(PRStatus) PR_Unlock(PRLock *lock)
 
     PR_ASSERT(lock != NULL);
     PR_ASSERT(_PT_PTHREAD_MUTEX_IS_LOCKED(lock->mutex));
-    PR_ASSERT(PR_TRUE == lock->locked);
     PR_ASSERT(pthread_equal(lock->owner, pthread_self()));
 
-    if (!lock->locked || !pthread_equal(lock->owner, pthread_self()))
+    if (!pthread_equal(lock->owner, pthread_self()))
         return PR_FAILURE;
 
-    lock->locked = PR_FALSE;
+    _PT_PTHREAD_ZERO_THR_HANDLE(lock->owner);
     if (0 == lock->notified.length)  /* shortcut */
     {
         rv = pthread_mutex_unlock(&lock->mutex);
@@ -258,8 +240,7 @@ static PRIntn pt_TimedWait(
 
     /* NSPR doesn't report timeouts */
 #ifdef _PR_DCETHREADS
-    if (rv == -1) return (errno == EAGAIN) ? 0 : errno;
-    else return rv;
+    return (rv == -1 && errno == EAGAIN) ? 0 : rv;
 #else
     return (rv == ETIMEDOUT) ? 0 : rv;
 #endif
@@ -276,7 +257,6 @@ static void pt_PostNotifyToCvar(PRCondVar *cvar, PRBool broadcast)
     PRIntn index = 0;
     _PT_Notified *notified = &cvar->lock->notified;
 
-    PR_ASSERT(PR_TRUE == cvar->lock->locked);
     PR_ASSERT(pthread_equal(cvar->lock->owner, pthread_self()));
     PR_ASSERT(_PT_PTHREAD_MUTEX_IS_LOCKED(cvar->lock->mutex));
 
@@ -309,7 +289,6 @@ static void pt_PostNotifyToCvar(PRCondVar *cvar, PRBool broadcast)
     notified->length += 1;
 
 finished:
-    PR_ASSERT(PR_TRUE == cvar->lock->locked);
     PR_ASSERT(pthread_equal(cvar->lock->owner, pthread_self()));
 }  /* pt_PostNotifyToCvar */
 
@@ -351,7 +330,6 @@ PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
     PR_ASSERT(cvar != NULL);
     /* We'd better be locked */
     PR_ASSERT(_PT_PTHREAD_MUTEX_IS_LOCKED(cvar->lock->mutex));
-    PR_ASSERT(PR_TRUE == cvar->lock->locked);
     /* and it better be by us */
     PR_ASSERT(pthread_equal(cvar->lock->owner, pthread_self()));
 
@@ -374,9 +352,9 @@ PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
         pt_PostNotifies(cvar->lock, PR_FALSE);
 
     /*
-     * We're surrendering the lock, so clear out the locked field.
+     * We're surrendering the lock, so clear out the owner field.
      */
-    cvar->lock->locked = PR_FALSE;
+    _PT_PTHREAD_ZERO_THR_HANDLE(cvar->lock->owner);
 
     if (timeout == PR_INTERVAL_NO_TIMEOUT)
         rv = pthread_cond_wait(&cvar->cv, &cvar->lock->mutex);
@@ -384,19 +362,13 @@ PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
         rv = pt_TimedWait(&cvar->cv, &cvar->lock->mutex, timeout);
 
     /* We just got the lock back - this better be empty */
-    PR_ASSERT(PR_FALSE == cvar->lock->locked);
-    cvar->lock->locked = PR_TRUE;
-    cvar->lock->owner = pthread_self();
+    PR_ASSERT(_PT_PTHREAD_THR_HANDLE_IS_ZERO(cvar->lock->owner));
+    _PT_PTHREAD_COPY_THR_HANDLE(pthread_self(), cvar->lock->owner);
 
     PR_ASSERT(0 == cvar->lock->notified.length);
     thred->waiting = NULL;  /* and now we're not */
     if (_PT_THREAD_INTERRUPTED(thred)) goto aborted;
-    if (rv != 0)
-    {
-        _PR_MD_MAP_DEFAULT_ERROR(rv);
-        return PR_FAILURE;
-    }
-    return PR_SUCCESS;
+    return (rv == 0) ? PR_SUCCESS : PR_FAILURE;
 
 aborted:
     PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
@@ -484,42 +456,58 @@ PR_IMPLEMENT(void) PR_DestroyMonitor(PRMonitor *mon)
  */
 PR_IMPLEMENT(PRInt32) PR_GetMonitorEntryCount(PRMonitor *mon)
 {
-    PRThread *self = PR_GetCurrentThread();
-    if (mon->owner == self)
+    pthread_t self = pthread_self();
+    if (pthread_equal(mon->owner, self))
         return mon->entryCount;
     return 0;
 }
 
 PR_IMPLEMENT(void) PR_EnterMonitor(PRMonitor *mon)
 {
-    PRThread *self = PR_GetCurrentThread();
+    int rv;
+    pthread_t self = pthread_self();
 
     PR_ASSERT(mon != NULL);
-    /*
-     * This is safe only if mon->owner (a PRThread*) can be
-     * read in one instruction.
-     */
-    if (mon->owner != self)
+    rv = pthread_mutex_trylock(&mon->lock.mutex);
+#ifdef _PR_DCETHREADS
+    if (1 == rv)
+#else
+    if (0 == rv)
+#endif
     {
-        PR_Lock(&mon->lock);
-        /* and now I have the lock */
+        /* I now have the lock - I can play in the sandbox */
+        /* could/should/would not have gotten lock if entries != 0 */
         PR_ASSERT(0 == mon->entryCount);
-        PR_ASSERT(NULL == mon->owner);
-        mon->owner = self;
+        PR_ASSERT(_PT_PTHREAD_THR_HANDLE_IS_ZERO(mon->lock.owner));
+        _PT_PTHREAD_COPY_THR_HANDLE(pthread_self(), mon->lock.owner);
+        _PT_PTHREAD_COPY_THR_HANDLE(self, mon->owner);
+    }
+    else
+    {
+        PR_ASSERT(PT_TRYLOCK_BUSY == rv);  /* and if it isn't? */
+        /* somebody has it locked - is it me? */
+        if (!pthread_equal(mon->owner, self))
+        {
+            /* it's not me - this should block */
+            PR_Lock(&mon->lock);
+            /* and now I have the lock */
+            PR_ASSERT(0 == mon->entryCount);
+            _PT_PTHREAD_COPY_THR_HANDLE(self, mon->owner);
+        }
     }
     mon->entryCount += 1;
 }  /* PR_EnterMonitor */
 
 PR_IMPLEMENT(PRStatus) PR_ExitMonitor(PRMonitor *mon)
 {
-    PRThread *self = PR_GetCurrentThread();
+    pthread_t self = pthread_self();
 
     PR_ASSERT(mon != NULL);
     /* The lock better be that - locked */
     PR_ASSERT(_PT_PTHREAD_MUTEX_IS_LOCKED(mon->lock.mutex));
     /* we'd better be the owner */
-    PR_ASSERT(mon->owner == self);
-    if (mon->owner != self)
+    PR_ASSERT(pthread_equal(mon->owner, self));
+    if (!pthread_equal(mon->owner, self))
         return PR_FAILURE;
 
     /* if it's locked and we have it, then the entries should be > 0 */
@@ -528,7 +516,7 @@ PR_IMPLEMENT(PRStatus) PR_ExitMonitor(PRMonitor *mon)
     if (mon->entryCount == 0)
     {
         /* and if it transitioned to zero - unlock */
-        mon->owner = NULL;  /* make the owner unknown */
+        _PT_PTHREAD_ZERO_THR_HANDLE(mon->owner);  /* make the owner unknown */
         PR_Unlock(&mon->lock);
     }
     return PR_SUCCESS;
@@ -538,7 +526,7 @@ PR_IMPLEMENT(PRStatus) PR_Wait(PRMonitor *mon, PRIntervalTime timeout)
 {
     PRStatus rv;
     PRInt16 saved_entries;
-    PRThread *saved_owner;
+    pthread_t saved_owner;
 
     PR_ASSERT(mon != NULL);
     /* we'd better be locked */
@@ -546,19 +534,19 @@ PR_IMPLEMENT(PRStatus) PR_Wait(PRMonitor *mon, PRIntervalTime timeout)
     /* and the entries better be positive */
     PR_ASSERT(mon->entryCount > 0);
     /* and it better be by us */
-    PR_ASSERT(mon->owner == PR_GetCurrentThread());
+    PR_ASSERT(pthread_equal(mon->owner, pthread_self()));
 
     /* tuck these away 'till later */
     saved_entries = mon->entryCount; 
     mon->entryCount = 0;
-    saved_owner = mon->owner;
-    mon->owner = NULL;
+    _PT_PTHREAD_COPY_THR_HANDLE(mon->owner, saved_owner);
+    _PT_PTHREAD_ZERO_THR_HANDLE(mon->owner);
     
     rv = PR_WaitCondVar(mon->cvar, timeout);
 
     /* reinstate the intresting information */
     mon->entryCount = saved_entries;
-    mon->owner = saved_owner;
+    _PT_PTHREAD_COPY_THR_HANDLE(saved_owner, mon->owner);
 
     return rv;
 }  /* PR_Wait */
@@ -571,7 +559,7 @@ PR_IMPLEMENT(PRStatus) PR_Notify(PRMonitor *mon)
     /* and the entries better be positive */
     PR_ASSERT(mon->entryCount > 0);
     /* and it better be by us */
-    PR_ASSERT(mon->owner == PR_GetCurrentThread());
+    PR_ASSERT(pthread_equal(mon->owner, pthread_self()));
 
     pt_PostNotifyToCvar(mon->cvar, PR_FALSE);
 
@@ -586,7 +574,7 @@ PR_IMPLEMENT(PRStatus) PR_NotifyAll(PRMonitor *mon)
     /* and the entries better be positive */
     PR_ASSERT(mon->entryCount > 0);
     /* and it better be by us */
-    PR_ASSERT(mon->owner == PR_GetCurrentThread());
+    PR_ASSERT(pthread_equal(mon->owner, pthread_self()));
 
     pt_PostNotifyToCvar(mon->cvar, PR_TRUE);
 
@@ -1030,10 +1018,11 @@ PR_IMPLEMENT(PRStatus) PRP_TryLock(PRLock *lock)
     PRIntn rv = pthread_mutex_trylock(&lock->mutex);
     if (rv == PT_TRYLOCK_SUCCESS)
     {
-        PR_ASSERT(PR_FALSE == lock->locked);
-        lock->locked = PR_TRUE;
-        lock->owner = pthread_self();
+        PR_ASSERT(_PT_PTHREAD_THR_HANDLE_IS_ZERO(lock->owner));
+        _PT_PTHREAD_COPY_THR_HANDLE(pthread_self(), lock->owner); 
     }
+    else
+        PR_ASSERT(!_PT_PTHREAD_THR_HANDLE_IS_ZERO(lock->owner));
     /* XXX set error code? */
     return (PT_TRYLOCK_SUCCESS == rv) ? PR_SUCCESS : PR_FAILURE;
 }  /* PRP_TryLock */
@@ -1076,12 +1065,7 @@ PR_IMPLEMENT(PRStatus) PRP_NakedWait(
         rv = pthread_cond_wait(&cvar->cv, &ml->mutex);
     else
         rv = pt_TimedWait(&cvar->cv, &ml->mutex, timeout);
-    if (rv != 0)
-    {
-        _PR_MD_MAP_DEFAULT_ERROR(rv);
-        return PR_FAILURE;
-    }
-    return PR_SUCCESS;
+    return (rv == 0) ? PR_SUCCESS : PR_FAILURE;
 }  /* PRP_NakedWait */
 
 PR_IMPLEMENT(PRStatus) PRP_NakedNotify(PRCondVar *cvar)

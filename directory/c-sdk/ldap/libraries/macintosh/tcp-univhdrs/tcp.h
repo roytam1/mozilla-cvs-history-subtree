@@ -31,8 +31,8 @@
 
 //#include "MacTCPCommonTypes.h"
 #include "AddressXlation.h"
-#include "TCPPB.h"
-#include "GetMyIPAddr.h"
+//#include "TCPPB.h"
+//#include "GetMyIPAddr.h"
 #include <utime.h>	/* for the UNIX-y struct timeval */
 
 #include <MacTCP.h>
@@ -76,6 +76,7 @@ long		tcpread(  tcpstream *s, UInt8 timeout, unsigned char * rbuf,
 long		tcpwrite( tcpstream *s, unsigned char * wbuf, unsigned short wbuflen );
 short		tcpselect( tcpstream *s, struct timeval * timeout );
 short		tcpreadready( tcpstream *tsp );
+short		tcpwriteready( tcpstream *tsp );
 short		tcpgetpeername( tcpstream * tsp, ip_addr *addrp, tcp_port *portp );
 
 #ifdef SUPPORT_OPENTRANSPORT

@@ -39,7 +39,4 @@ SHLIB_LD_OPTS += -no_unresolved
 
 include $(CORE_DEPTH)/coreconf/IRIX6.mk
 
-OS_CFLAGS += -DIRIX6_5
-ifndef NS_USE_GCC
-OS_CFLAGS += -mips3
-endif
+OS_CFLAGS += -DIRIX6_5 -mips3
