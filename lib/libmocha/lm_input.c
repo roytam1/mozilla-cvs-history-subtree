@@ -1074,8 +1074,8 @@ input_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 		if (!JS_InstanceOf(cx, JSVAL_TO_OBJECT(*vp), &lm_option_class,
 				   NULL)) {
 		    JS_ReportError(cx, "cannot set %s.%s to incompatible %s",
-				   JS_GetClass(obj)->name, lm_options_str,
-				   JS_GetClass(JSVAL_TO_OBJECT(*vp))->name);
+				   JS_GetClass(cx, obj)->name, lm_options_str,
+				   JS_GetClass(cx, JSVAL_TO_OBJECT(*vp))->name);
 		    goto bad;
 		}
 		option = JS_GetPrivate(cx, JSVAL_TO_OBJECT(*vp));
@@ -1955,7 +1955,7 @@ LM_ReflectFormElement(MWContext *context, int32 layer_id, int32 form_id,
     if (name) {
 	old_obj = JSVAL_IS_OBJECT(val) ? JSVAL_TO_OBJECT(val) : NULL;
 	if (old_obj) {
-	    clasp = JS_GetClass(old_obj);
+	    clasp = JS_GetClass(cx, old_obj);
 	    if (clasp != &lm_input_class && clasp != &lm_input_array_class)
 	    	old_obj = NULL;
 	}

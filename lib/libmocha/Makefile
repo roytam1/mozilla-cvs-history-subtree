@@ -49,6 +49,7 @@ CSRCS		= et_mocha.c \
 		  lm_url.c \
 		  lm_win.c \
 		  lm_layer.c \
+		  lm_wngrp.c \
 		  $(NULL)
 
 
@@ -65,6 +66,10 @@ endif
 include $(DEPTH)/config/rules.mk
 
 DEFINES		+= -DDLL_SUFFIX=\"$(DLL_SUFFIX)\"
+
+ifdef JS_THREADSAFE
+DEFINES += -DJS_THREADSAFE
+endif
 
 EMBED_CFLAGS	= $(CFLAGS) -I$(DEPTH)/lib/plugin
 TAINT_CFLAGS	= $(CFLAGS) -I$(DEPTH)/lib/libjar -I$(DEPTH)/sun-java/netscape/security/_jri
