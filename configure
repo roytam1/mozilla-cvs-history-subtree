@@ -11115,28 +11115,19 @@ cross_compiling=$ac_cv_prog_cc_cross
 
 fi
 
+if test "$MOZ_MINOTAUR"; then
+   cat >> confdefs.h <<\EOF
+#define MOZ_MINOTAUR 1
+EOF
 
+fi
 
+if test "$MOZ_XRE_APP"; then
+   cat >> confdefs.h <<\EOF
+#define MOZ_XRE_APP 1
+EOF
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+fi
 
 
 if test "$MOZ_ENABLE_GTK" || test "$MOZ_ENABLE_QT" \

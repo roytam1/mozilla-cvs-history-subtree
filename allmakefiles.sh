@@ -868,14 +868,14 @@ toolkit/components/satchel/public/Makefile
 toolkit/components/satchel/src/Makefile
 toolkit/skin/unix/Makefile
 toolkit/skin/win/Makefile
-toolkit/xre/Makefile
+"
+MAKEFILES_xre="
+embedding/xre/Makefile
 "
 
 MAKEFILES_minotaur="
-mail/Makefile
-mail/base/Makefile
-mail/components/Makefile
-mail/components/compose/Makefile
+mailnews/app/Makefile
+mailnews/app/profile/Makefile
 "
 
 MAKEFILES_sql="
@@ -1291,6 +1291,10 @@ fi
 
 if test -n "$MOZ_PHOENIX"; then
     add_makefiles "$MAKEFILES_phoenix"
+fi
+
+if test -n "$MOZ_XRE_APP"; then
+    add_makefiles "$MAKEFILES_xre"
 fi
 
 if test -n "$MOZ_MINOTAUR"; then

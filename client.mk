@@ -361,6 +361,24 @@ CHECKOUT_PHOENIX := true
 FASTUPDATE_PHOENIX := true
 endif
 
+CVSCO_XRE_APP := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/embedding/xre
+ifdef MOZ_XRE_APP
+CHECKOUT_XRE_APP := cvs_co $(CVSCO_XRE_APP)
+FASTUPDATE_XRE_APP:= fast_update $(CVSCO_XRE_APP)
+else
+CHECKOUT_XRE_APP := true
+FASTUPDATE_XRE_APP:= true
+endif
+
+CVSCO_MINOTAUR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/mailnews/app
+ifdef MOZ_MINOTAUR
+CHECKOUT_MINOTAUR := cvs_co $(CVSCO_MINOTAUR)
+FASTUPDATE_MINOTAUR := fast_update $(CVSCO_MINOTAUR)
+else
+CHECKOUT_MINOTAUR := true
+FASTUPDATE_MINOTAUR := true
+endif
+
 ####################################
 # CVS defines for codesighs (pulled and built if MOZ_MAPINFO is set)
 #
@@ -442,6 +460,8 @@ real_checkout:
 	cvs_co $(CVSCO_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	$(CHECKOUT_PHOENIX) && \
+    $(CHECKOUT_XRE_APP) && \
+    $(CHECKOUT_MINOTAUR) && \
 	$(CHECKOUT_CODESIGHS) && \
 	cvs_co $(CVSCO_SEAMONKEY)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
@@ -502,6 +522,8 @@ real_fast-update:
 	fast_update $(CVSCO_CALENDAR) && \
 	$(FASTUPDATE_LIBART) && \
 	$(FASTUPDATE_PHOENIX) && \
+    $(FASTUPDATE_XRE_APP) && \
+    $(FASTUPDATE_MINOTAUR) && \
 	$(FASTUPDATE_CODESIGHS) && \
 	fast_update $(CVSCO_SEAMONKEY)
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
