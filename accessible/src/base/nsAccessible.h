@@ -93,11 +93,6 @@ protected:
   virtual nsIAccessible* CreateNewLastAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell);
   virtual nsIAccessible* CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell);
 
-  virtual nsresult GetAccParent(nsIPresContext*   aPresContext,
-                                nsIWeakReference* aPresShell,
-                                nsIFrame*         aFrame,
-                                nsIAccessible **  aAccParent);
-
   // Data Members
   nsCOMPtr<nsIDOMNode> mDOMNode;
   nsCOMPtr<nsIWeakReference> mPresShell;

@@ -84,7 +84,7 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
   nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
 
   //printf("################################## CreateRootAccessible\n");
-  *_retval = new nsRootAccessible(wr,f);
+  *_retval = new nsRootAccessible(wr);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;
@@ -418,7 +418,10 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
           if (ps) {
             nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(ps));
             //printf("################################## CreateHTMLIFrameAccessible\n");
-            *_retval = new nsIFrameRootAccessible(wr);
+
+            nsCOMPtr<nsIAccessible> root = new nsIFrameRootAccessible(wr,node);
+            *_retval = new nsHTMLIFrameAccessible(presShell, node, root);
+            NS_ADDREF(*_retval);
             return NS_OK;
           }
         }

@@ -59,6 +59,8 @@ class nsDOMAccessible : public nsGenericAccessible
   public:
     nsDOMAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
 
+    NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+
     NS_IMETHOD AccTakeSelection(void); 
     NS_IMETHOD AccTakeFocus(void); 
     NS_IMETHOD AccRemoveSelection(void);

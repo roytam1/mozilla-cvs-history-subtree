@@ -24,14 +24,30 @@
 #define _nsIFrameRootAccessible_H_
 
 #include "nsRootAccessible.h"
+#include "nsGenericAccessible.h"
 
 class nsIWebShell;
+
+class nsHTMLIFrameAccessible : public nsDOMAccessible
+{
+  public:
+    nsHTMLIFrameAccessible(nsIPresShell* aShell, nsIDOMNode* aNode, nsIAccessible* aRoot);
+
+    NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
+    NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
+    NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
+    NS_IMETHOD GetAccName(PRUnichar * *aAccName);
+    NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
+
+  protected:
+    nsCOMPtr<nsIAccessible> mRootAccessible;
+};
 
 class nsIFrameRootAccessible : public nsRootAccessible
 {
   
 	public:
-		nsIFrameRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame = nsnull);
+		nsIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode);
 		virtual ~nsIFrameRootAccessible();
 
     /* attribute wstring accName; */
@@ -43,9 +59,15 @@ class nsIFrameRootAccessible : public nsRootAccessible
     /* nsIAccessible getAccPreviousSibling (); */
     NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
 
+    NS_IMETHOD GetAccName(PRUnichar * *aAccName);
+
+    NS_IMETHOD GetAccRole(PRUnichar * *aAccRole);
+
   protected:
 
+  NS_IMETHOD GetHTMLIFrameAccessible(nsIAccessible** aAcc);
 
+  nsCOMPtr<nsIDOMNode> mRealDOMNode;
 };
 
 

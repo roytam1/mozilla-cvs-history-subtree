@@ -44,7 +44,7 @@ class nsRootAccessible : public nsAccessible,
   NS_DECL_ISUPPORTS_INHERITED
 
   public:
-    nsRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame = nsnull);
+    nsRootAccessible(nsIWeakReference* aShell);
     virtual ~nsRootAccessible();
 
     /* attribute wstring accName; */

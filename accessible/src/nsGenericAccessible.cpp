@@ -234,6 +234,22 @@ NS_IMETHODIMP nsGenericAccessible::GetAccExtState(PRUint32 *_retval)
 // nsDOMAccessible
 //-------------
 
+NS_IMETHODIMP 
+nsDOMAccessible::QueryInterface(REFNSIID aIID, void** aResult)
+{
+  if (!aResult)
+    return NS_ERROR_NULL_POINTER;
+  
+  if (aIID.Equals(NS_GET_IID(nsIDOMNode))) {                                         
+    nsIDOMNode* node = mNode;
+    *aResult = (void*) node;
+    NS_ADDREF(node);
+    return NS_OK;
+  }
+
+  return nsGenericAccessible::QueryInterface(aIID, aResult);
+}
+
 nsDOMAccessible::nsDOMAccessible(nsIPresShell* aShell, nsIDOMNode* aNode)
 {
   mPresShell = getter_AddRefs(NS_GetWeakReference(aShell));

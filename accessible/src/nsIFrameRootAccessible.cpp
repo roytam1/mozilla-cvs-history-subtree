@@ -30,13 +30,53 @@
 #include "nsIDocShell.h"
 #include "nsIWebShell.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsReadableUtils.h"
+
+
+nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIPresShell* aShell, nsIDOMNode* aNode, nsIAccessible* aRoot):
+  nsDOMAccessible(aShell, aNode)
+{
+  mRootAccessible = aRoot;
+}
+
+  /* attribute wstring accName; */
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccName(PRUnichar * *aAccName) 
+{ 
+  *aAccName = ToNewUnicode(NS_LITERAL_STRING("IFrame"));
+  return NS_OK;  
+}
+
+/* nsIAccessible getAccFirstChild (); */
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccFirstChild(nsIAccessible **_retval)
+{
+    return mRootAccessible->GetAccFirstChild(_retval);
+}
+
+/* nsIAccessible getAccLastChild (); */
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccLastChild(nsIAccessible **_retval)
+{
+    return mRootAccessible->GetAccLastChild(_retval);
+}
+
+/* long getAccChildCount (); */
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccChildCount(PRInt32 *_retval)
+{
+    return mRootAccessible->GetAccChildCount(_retval);
+}
+
+/* wstring getAccRole (); */
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUnichar **_retval)
+{
+    return mRootAccessible->GetAccRole(_retval);
+}
 
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsIFrameRootAccessible::nsIFrameRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame):
-  nsRootAccessible(aShell, aFrame)
+nsIFrameRootAccessible::nsIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode):
+  nsRootAccessible(aShell)
 {
+    mRealDOMNode = aNode;
 }
 
 //-----------------------------------------------------
@@ -45,11 +85,58 @@ nsIFrameRootAccessible::nsIFrameRootAccessible(nsIWeakReference* aShell, nsIFram
 nsIFrameRootAccessible::~nsIFrameRootAccessible()
 {
 }
+  /* attribute wstring accName; */
+NS_IMETHODIMP nsIFrameRootAccessible::GetAccName(PRUnichar * *aAccName) 
+{ 
+  *aAccName = ToNewUnicode(NS_LITERAL_STRING("IFrame(Root)"));
+  return NS_OK;  
+}
 
   /* readonly attribute nsIAccessible accParent; */
-NS_IMETHODIMP nsIFrameRootAccessible::GetAccParent(nsIAccessible * *aAccParent) 
+NS_IMETHODIMP nsIFrameRootAccessible::GetAccParent(nsIAccessible * *_retval) 
 { 
-  // Start by finding our PresShell and from that
+  nsCOMPtr<nsIAccessible> accessible;
+  if (NS_SUCCEEDED(GetHTMLIFrameAccessible(getter_AddRefs(accessible))))
+    return accessible->GetAccParent(_retval);
+
+  *_retval = nsnull;
+  return NS_OK;
+}
+
+  /* nsIAccessible getAccNextSibling (); */
+NS_IMETHODIMP nsIFrameRootAccessible::GetAccNextSibling(nsIAccessible **_retval) 
+{
+  nsCOMPtr<nsIAccessible> accessible;
+
+  if (NS_SUCCEEDED(GetHTMLIFrameAccessible(getter_AddRefs(accessible))))
+    return accessible->GetAccNextSibling(_retval);
+
+  *_retval = nsnull;
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+  /* nsIAccessible getAccPreviousSibling (); */
+NS_IMETHODIMP nsIFrameRootAccessible::GetAccPreviousSibling(nsIAccessible **_retval) 
+{
+  nsCOMPtr<nsIAccessible> accessible;
+
+  if (NS_SUCCEEDED(GetHTMLIFrameAccessible(getter_AddRefs(accessible))))
+    return accessible->GetAccPreviousSibling(_retval);
+
+  *_retval = nsnull;
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* wstring getAccRole (); */
+NS_IMETHODIMP nsIFrameRootAccessible::GetAccRole(PRUnichar **_retval)
+{
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("pane"));
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible** aAcc)
+{
+    // Start by finding our PresShell and from that
   // we get our nsIDocShell in order to walk the DocShell tree
   nsCOMPtr<nsIPresShell> presShell = do_QueryReferent(mPresShell);
   nsCOMPtr<nsIDocShell> docShell;
@@ -98,26 +185,21 @@ NS_IMETHODIMP nsIFrameRootAccessible::GetAccParent(nsIAccessible * *aAccParent)
               }
               printf("\n");
 #endif
-              // Now, go find the parent accessible for this frame.
-              return nsAccessible::GetAccParent(parentPresContext, wr, frame, aAccParent);
+
+
+              nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+              nsCOMPtr<nsIAccessible> acc = do_QueryInterface(frame);
+
+              *aAcc = CreateNewAccessible(acc, node, wr);
+              NS_IF_ADDREF(*aAcc);
+
+              return NS_OK;
             }
           }
         }
       }
     }
   }
-  *aAccParent = nsnull;
-  return NS_OK;
-}
 
-  /* nsIAccessible getAccNextSibling (); */
-NS_IMETHODIMP nsIFrameRootAccessible::GetAccNextSibling(nsIAccessible **_retval) 
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-  /* nsIAccessible getAccPreviousSibling (); */
-NS_IMETHODIMP nsIFrameRootAccessible::GetAccPreviousSibling(nsIAccessible **_retval) 
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_FAILURE;
 }

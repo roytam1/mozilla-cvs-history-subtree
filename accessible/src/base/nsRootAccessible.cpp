@@ -53,7 +53,7 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame):nsAccessible(nsnull,nsnull,aShell)
+nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,nsnull,aShell)
 {
   mListener = nsnull;
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
