@@ -10950,7 +10950,7 @@ EOF
 case "$MOZ_WIDGET_TOOLKIT" in
 gtk)
 	MOZ_ENABLE_GTK=1
-    MOZ_ENABLE_XREMOTE=1
+
     TK_CFLAGS='$(MOZ_GTK_CFLAGS)'
     TK_LIBS='$(MOZ_GTK_LDFLAGS)'
 	cat >> confdefs.h <<\EOF
