@@ -203,8 +203,6 @@ public:
 
 };
 
-// NS_IMPL_ISUPPORTS(DBArcsInOutCursor, kIRDFArcsOutCursorIID);
-//NS_IMPL_ISUPPORTS(DBArcsInOutCursor, kIRDFArcsInCursorIID);
         
 DBArcsInOutCursor::DBArcsInOutCursor (DataBase* db, nsIRDFNode* node, PRBool arcsOutp)
     : mDataBase(db), 
