@@ -823,10 +823,6 @@ NS_IMETHODIMP
 FTPDataSource::ArcLabelsOut(nsIRDFResource *source,
                              nsIRDFEnumerator **labels /* out */)
 {
-    nsresult rv;
-
-	*labels = nsnull;
-
 	if (isFTPURI(source) && isFTPDirectory(source))
 	{
         nsIRDFEnumerator* result = new nsSingletonEnumerator(kNC_Child);
@@ -841,7 +837,6 @@ FTPDataSource::ArcLabelsOut(nsIRDFResource *source,
 	{
 		return mInner->ArcLabelsOut(source, labels);
 	}
-
 }
 
 
