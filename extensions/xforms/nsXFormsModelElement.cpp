@@ -589,19 +589,19 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
   nsAutoString type;
   aEvent->GetType(type);
 
-  if (type.EqualsASCII("xforms-refresh")) {
+  if (type.EqualsLiteral("xforms-refresh")) {
     // refresh all of our form controls
     PRInt32 controlCount = mFormControls.Count();
     for (PRInt32 i = 0; i < controlCount; ++i) {
       NS_STATIC_CAST(nsXFormsControl*, mFormControls[i])->Refresh();
     }
-  } else if (type.EqualsASCII("xforms-revalidate")) {
+  } else if (type.EqualsLiteral("xforms-revalidate")) {
     // revalidate
-  } else if (type.EqualsASCII("xforms-recalculate")) {
+  } else if (type.EqualsLiteral("xforms-recalculate")) {
     // recalculate
-  } else if (type.EqualsASCII("xforms-rebuild")) {
+  } else if (type.EqualsLiteral("xforms-rebuild")) {
     // rebuild
-  } else if (type.EqualsASCII("xforms-reset")) {
+  } else if (type.EqualsLiteral("xforms-reset")) {
     // reset
   }
 

@@ -390,8 +390,8 @@ nsXFormsInputElement::Refresh()
         mInput->SetAttribute(NS_LITERAL_STRING("type"),
                              NS_LITERAL_STRING("checkbox"));
 
-        mInput->SetChecked(nodeValue.EqualsASCII("true") ||
-                           nodeValue.EqualsASCII("1"));
+        mInput->SetChecked(nodeValue.EqualsLiteral("true") ||
+                           nodeValue.EqualsLiteral("1"));
       } else {
         mInput->RemoveAttribute(NS_LITERAL_STRING("type"));
         mInput->SetValue(nodeValue);

@@ -47,13 +47,13 @@ NS_IMPL_ISUPPORTS1(nsXFormsElementFactory, nsIXTFElementFactory)
 
 NS_IMETHODIMP
 nsXFormsElementFactory::CreateElement(const nsAString& aTagName,
-				      nsIXTFElement **aElement)
+                                      nsIXTFElement **aElement)
 {
-  if (aTagName.Equals(NS_LITERAL_STRING("model")))
+  if (aTagName.EqualsLiteral("model"))
     return NS_NewXFormsModelElement(aElement);
-  else if (aTagName.Equals(NS_LITERAL_STRING("bind")))
+  else if (aTagName.EqualsLiteral("bind"))
     return NS_NewXFormsStubElement(aElement);
-  else if (aTagName.Equals(NS_LITERAL_STRING("input")))
+  else if (aTagName.EqualsLiteral("input"))
     return NS_NewXFormsInputElement(aElement);
 
   *aElement = nsnull;
