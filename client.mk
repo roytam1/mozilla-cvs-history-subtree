@@ -413,6 +413,7 @@ SVG_BRANCH_FILES := \
 	layout/html/style/src/nsCSSFrameConstructor.h \
 	layout/html/tests/makefile.win \
 	layout/macbuild/layoutsvg.mcp \
+	Makefile.in \
 	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
 	uriloader/exthandler/nsExternalHelperAppService.cpp \
 	xpfe/browser/src/nsBrowserInstance.cpp
