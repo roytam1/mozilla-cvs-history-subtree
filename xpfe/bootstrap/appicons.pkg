@@ -1,4 +1,9 @@
 [xpfe-browser]
+dist/bin/@PROGRAM@
+#if MOZILLA_SCRIPT
+dist/bin/@MOZILLA_SCRIPT@
+#endif
+
 dist/bin/chrome/icons/default/bmPropsWindow@ICON_SUFFIX@
 dist/bin/chrome/icons/default/bookmark-window@ICON_SUFFIX@
 dist/bin/chrome/icons/default/downloadManager@ICON_SUFFIX@

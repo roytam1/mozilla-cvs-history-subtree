@@ -233,7 +233,13 @@ PACKAGE_FILE = appicons.pkg
 PACKAGE_VARS += \
 	ICON_SUFFIX \
 	ICON_DIR \
+	PROGRAM \
+	MOZILLA_SCRIPT \
 	$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+PACKAGE_FILE += bootstrap-mac.pkg
+endif
 
 ifneq (,$(filter windows os2,$(MOZ_WIDGET_TOOLKIT)))
 ICON_SUFFIX=.ico
