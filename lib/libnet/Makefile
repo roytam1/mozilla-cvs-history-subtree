@@ -67,6 +67,7 @@ CSRCS			= cvactive.c \
 
 CPPSRCS			= mkmarimb.cpp
 
+
 REQUIRES		= netcast parse js dbm nspr security htmldlgs ldap softupdt \
 			  img util jtools layer pref java libfont lay style applet \
 			  zlib li msg progress net
@@ -93,14 +94,22 @@ include $(DEPTH)/config/config.mk
 ifdef MOZ_MAIL_NEWS
 CSRCS			+= \
 			  mkcertld.c \
+			  imap4url.c \
 			  mkmailbx.c \
 			  mknews.c \
 			  mknewsgr.c \
 			  mkpop3.c \
 			  mksmtp.c \
+			  prefetch.c \
 			  $(NULL)
 
 CPPSRCS			+= mkabook.cpp \
+			  imapbody.cpp \
+			  imaphier.cpp \
+			  imapearl.cpp \
+			  mkimap4.cpp \
+			  mkldap.cpp \
+			  imappars.cpp \
 			  $(NULL)
 endif
 
