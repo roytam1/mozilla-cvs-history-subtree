@@ -1037,7 +1037,7 @@ int login_QueryForCurrentProfile() {
 				return FALSE;
 
 			// Tell ASW to go to Upgrade screen
-			PREF_SetBoolPref("account_setup.upgraded", TRUE);
+			PREF_SetBoolPref("account_setup.upgraded", PR_TRUE);
 		}
 		else
 		{
@@ -1138,7 +1138,7 @@ int login_QueryForCurrentProfile() {
 	csTmp += "\\prefs.js";
 	PREF_Init((char *)(const char *)csTmp);
 
-	XP_Bool prefBool=FALSE;
+	PRBool prefBool=PR_FALSE;
 	PREF_GetBoolPref("li.enabled",&prefBool);
 
 	theApp.m_UserDirectory = pString;
@@ -1859,9 +1859,9 @@ int     login_UpdatePreferencesToJavaScript(const char * path)
 			if (!csPref.IsEmpty()) {
 				int iRet = csPref.CompareNoCase("yes");
 				if (iRet ==0)
-					PREF_SetBoolPref(prefUpdater[idx].xp_name,TRUE);
+					PREF_SetBoolPref(prefUpdater[idx].xp_name,PR_TRUE);
 				else
-					PREF_SetBoolPref(prefUpdater[idx].xp_name,FALSE);
+					PREF_SetBoolPref(prefUpdater[idx].xp_name,PR_FALSE);
 			}
 		}
 		idx++;
