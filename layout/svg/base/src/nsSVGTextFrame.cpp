@@ -154,6 +154,7 @@ public:
   NS_IMETHOD_(PRBool) GetRelativePositionAdjustmentY(float &dy, PRUint32 charNum);
 
 protected:
+  void EnsureFragmentTreeUpToDate();
   void UpdateFragmentTree();
   void UpdateGlyphPositioning();
   already_AddRefed<nsIDOMSVGLengthList> GetX();
@@ -200,6 +201,8 @@ NS_NewSVGTextFrame(nsIPresShell* aPresShell, nsIContent* aContent,
 }
 
 nsSVGTextFrame::nsSVGTextFrame()
+    : mFragmentTreeState(suspended), mMetricsState(suspended),
+      mFragmentTreeDirty(PR_FALSE), mPositioningDirty(PR_FALSE)
 {
 }
 
@@ -520,6 +523,20 @@ nsSVGTextFrame::InitialUpdate()
     }
     kid->GetNextSibling(&kid);
   }
+
+#ifdef DEBUG
+  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("null outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
+  
+  PRBool suspended;
+  outerSVGFrame->IsRedrawSuspended(&suspended);
+  if (!suspended) NS_ERROR("initialupdate while redraw not suspended! need to update fragment tree");
+  //XXX
+#endif
+
   return NS_OK;
 }
 
@@ -565,6 +582,8 @@ nsSVGTextFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGTextFrame::NotifyRedrawUnsuspended()
 {
+  NS_ASSERTION(mMetricsState == suspended, "metrics state not suspended during redraw");
+  NS_ASSERTION(mFragmentTreeState == suspended, "fragment tree not suspended during redraw");
 
   // 3 passes:
   mFragmentTreeState = updating;
@@ -616,6 +635,8 @@ nsSVGTextFrame::GetBBox(nsIDOMSVGRect **_retval)
   // iterate over all children and accumulate the bounding rect:
   // this relies on the fact that children of <text> elements can't
   // have individual transforms
+
+  EnsureFragmentTreeUpToDate();
   
   float x1=0.0f, y1=0.0f, x2=0.0f, y2=0.0f;
   PRBool bFirst=PR_TRUE;
@@ -764,6 +785,69 @@ nsSVGTextFrame::GetRelativePositionAdjustmentY(float &dy, PRUint32 charNum)
 
 //----------------------------------------------------------------------
 //
+
+// ensure that the tree and positioning of the nodes is up-to-date
+void
+nsSVGTextFrame::EnsureFragmentTreeUpToDate()
+{
+  PRBool resuspend_fragmenttree = PR_FALSE;
+  PRBool resuspend_metrics = PR_FALSE;
+  
+  // give children a chance to flush their change notifications:
+  
+  if (mFragmentTreeState == suspended) {
+    resuspend_fragmenttree = PR_TRUE;
+    mFragmentTreeState = updating;
+    nsIFrame* kid = mFrames.FirstChild();
+    while (kid) {
+      nsISVGGlyphFragmentNode* node=nsnull;
+      kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
+      if (node)
+        node->NotifyGlyphFragmentTreeUnsuspended();
+      kid->GetNextSibling(&kid);
+    }
+    
+    mFragmentTreeState = unsuspended;
+  }
+
+  if (mFragmentTreeDirty)
+    UpdateFragmentTree();
+
+  if (mMetricsState == suspended) {
+    resuspend_metrics = PR_TRUE;
+    mMetricsState = updating;
+    nsIFrame* kid = mFrames.FirstChild();
+    while (kid) {
+      nsISVGGlyphFragmentNode* node=nsnull;
+      kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
+      if (node)
+        node->NotifyMetricsUnsuspended();
+      kid->GetNextSibling(&kid);
+    }
+
+    mMetricsState = unsuspended;
+  }
+  
+  if (mPositioningDirty)
+    UpdateGlyphPositioning();
+
+  if (resuspend_fragmenttree || resuspend_metrics) {
+    mMetricsState = suspended;
+    mFragmentTreeState = suspended;
+  
+    nsIFrame* kid = mFrames.FirstChild();
+    while (kid) {
+      nsISVGGlyphFragmentNode* fragmentNode=nsnull;
+      kid->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&fragmentNode);
+      if (fragmentNode) {
+        fragmentNode->NotifyMetricsSuspended();
+        fragmentNode->NotifyGlyphFragmentTreeSuspended();
+      }
+      kid->GetNextSibling(&kid);
+    }
+  } 
+}
+
 
 void
 nsSVGTextFrame::UpdateFragmentTree()
