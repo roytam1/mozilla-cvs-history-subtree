@@ -30,16 +30,21 @@
 PR_BEGIN_EXTERN_C
 
 /**
- * Ensure that the context has a progress manager
+ * Create a progress manager in the specified context if one does
+ * not already exist.
  */
 extern void
 PM_EnsureProgressManager(MWContext* context);
 
 /**
- * Release the progress manager for a context.
+ * Release the progress manager from the specified context.
+ *
+ * <p> Note that this will not necessarily destroy the progress
+ * manager and unbind it from the context: it simply decrements the
+ * reference count onthe progress manager.
  */
 extern void
-PM_ReleaseProgressManager(MWContext* context);
+PM_DestroyProgressManager(MWContext* context);
 
 /**
  * Notify the progress manager for the specified context that the

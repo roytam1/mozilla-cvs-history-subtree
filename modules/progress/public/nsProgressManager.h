@@ -31,6 +31,10 @@
 class nsProgressManager : public nsITransferListener
 {
 protected:
+
+    /**
+     * The context to which the progress manager is bound.
+     */
     MWContext* fContext;
 
     nsProgressManager(MWContext* context);
@@ -38,17 +42,29 @@ protected:
 
 public:
 
+    /**
+     * Ensure that a progress manager exists in the specified context,
+     * creating a new one if necessary. If the context is a nested grid
+     * context, this may recursively create progress managers in
+     * parent contexts as well.
+     */
     static void Ensure(MWContext* context);
+
+    /**
+     * Release the progress manager from the current context. This may
+     * or may not destroy the progress manager, depending on the progress
+     * manager's reference count. Note that the context's
+     * <b>progressManager</b> field is maintained by the progress manager
+     * object, and will be set to <b>NULL</b> only when the progress
+     * manager's reference count goes to zero and the progress manager
+     * is destroyed.
+     */
     static void Release(MWContext* context);
 
     NS_DECL_ISUPPORTS
 
     // The nsITransferListener interface.
 
-    // XXX This is _really_ similar to the nsIStreamListener
-    // interface, which I want to supplant nsITransferListener at some
-    // point. For now, bringing in nsIURL, nsString, etc. is just to
-    // heavyweight.
     NS_IMETHOD
     OnStartBinding(const URL_Struct* url) = 0;
 

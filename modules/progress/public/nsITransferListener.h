@@ -22,12 +22,22 @@
 #include "nsISupports.h"
 #include "net.h" // for URL_Struct
 
+
 // {663f0fa1-edfe-11d9-8031-006008159b5a}
 #define NS_ITRANSFERLISTENER_IID \
 {0x663f0fa1, 0xedfe, 0x11d9,  \
     {0x80, 0x31, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
 
-
+/**
+ * This interface is <i>almost</i> identical to the <tt>nsIStreamListener</tt>
+ * interface. The reason that I don't just use that interface is that it's
+ * a little bit too heavy-weight right now: it brings in <tt>nsIURL</tt> and
+ * <tt>nsString</tt>, which in turn bring in a bunch of stuff that just isn't
+ * really running in Mozilla yet.
+ *
+ * <p>The interface defines an object to which a stream or "transfer"
+ * can report its status.
+ */
 class nsITransferListener : public nsISupports
 {
 public:
