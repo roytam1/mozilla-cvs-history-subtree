@@ -474,16 +474,10 @@ public:
 
     NS_DECL_AGGREGATED
 
-    nsIPluginInstance* GetUserInstance(void) {
-        userInst->AddRef();
-        return userInst;
-    }
-
-    void SetUserInstance(nsIPluginInstance* inst) {
-        userInst = inst;
-    }
+    void SetPluginInstance(nsIPluginInstance* inst);
+    nsIPluginInstance* GetPluginInstance(void);
     
-    NPP GetNPP(void) { return npp; }
+    NPP GetNPP(void);
     JSContext *GetJSContext(void);
     MWContext *GetMWContext(void);
 protected:
@@ -491,11 +485,10 @@ protected:
     // NPP is the old plugin structure. If we were implementing this
     // from scratch we wouldn't use it, but for now we're calling the old
     // npglue.c routines wherever possible.
-    NPP npp;
+    NPP fNPP;
 
-    nsIPluginInstance*  userInst;
-    nsPluginTagInfo*    tagInfo;
-
+    nsIPluginInstance*  fPluginInst;
+    nsPluginTagInfo*    fTagInfo;
 };
 
 #define NS_PLUGININSTANCEPEER_CID                    \
