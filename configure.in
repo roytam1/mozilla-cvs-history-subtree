@@ -433,6 +433,7 @@ ASM_SUFFIX=s
 TARGET_MD_ARCH=unix
 DIRENT_INO=d_ino
 CYGWIN_WRAPPER=
+VPS=:
 
 MOZ_JPEG_CFLAGS=
 MOZ_JPEG_LIBS='-L$(DIST)/lib -lmozjpeg'
@@ -980,6 +981,7 @@ case "$target" in
     BIN_SUFFIX='.exe'
     USE_SHORT_LIBNAME=1
     MOZ_ENABLE_POSTSCRIPT=
+    VPS=;
 
     dnl Hardcode to win95 for now - cls
     TARGET_NSPR_MDCPUCFG='\"md/_win95.cfg\"'
@@ -1151,6 +1153,7 @@ case "$target" in
     MOZ_ENABLE_POSTSCRIPT=
     RC=rc.exe
     RCFLAGS='-n -x2'
+    VPS=;
 
     if test "$MOZTOOLS"; then
         MOZ_TOOLS_DIR=`echo $MOZTOOLS | sed -e 's|\\\\|/|g'`
@@ -4547,6 +4550,7 @@ AC_SUBST(MOZ_LDAP_XPCOM_EXPERIMENTAL)
 AC_SUBST(LDAP_CFLAGS)
 AC_SUBST(LDAP_LIBS)
 AC_SUBST(LIBICONV)
+AC_SUBST(VPS)
 
 AC_SUBST(HAVE_XIE)
 AC_SUBST(MOZ_XIE_LIBS)
