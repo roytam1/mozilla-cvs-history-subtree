@@ -35,6 +35,7 @@
 #include "mcom_db.h"
 #include "laylayer.h"
 #include "prefapi.h"
+#include "cstream.h"
 
 static char lo_jsAllowFileSrcFromNonFile[]
     = "javascript.allow.file_src_from_non_file";
@@ -159,7 +160,7 @@ lo_BlockScriptTag(MWContext *context, lo_DocState *state, PA_Tag *tag)
         tag->lo_data = (void *)(doc_data->comment_bytes + 1);
     
     if (top_state->script_tag_count++ == 0)
-        ET_SetDecoderStream(context, doc_data->parser_stream,
+        ET_SetDecoderStream(context, NET_CStreamToVoidStream(doc_data->parser_stream),
                             doc_data->url_struct, JS_FALSE);
 }
 

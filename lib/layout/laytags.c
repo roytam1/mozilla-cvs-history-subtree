@@ -7121,7 +7121,7 @@ void lo_PreLayoutTag(MWContext * context, lo_DocState *state, PA_Tag *tag)
 	if (state->in_relayout == FALSE && 
         lo_IsTagInSourcedLayer(state, tag) == FALSE)
 	{
-		NET_StreamClass *stream = state->top_state->mocha_write_stream;
+		NET_VoidStreamClass *stream = state->top_state->mocha_write_stream;
 
 		/* @@@ small bug here
 		 * if someone uses <script type=text/css>
@@ -7137,7 +7137,7 @@ void lo_PreLayoutTag(MWContext * context, lo_DocState *state, PA_Tag *tag)
 				case P_TEXT:
 					if (tag->data != NULL)
 					{
-						stream->put_block(stream,
+						NET_StreamPutBlock(stream,
 										  (char *)tag->data,
 										  tag->data_len);
 					}
@@ -7156,7 +7156,7 @@ void lo_PreLayoutTag(MWContext * context, lo_DocState *state, PA_Tag *tag)
 						}
 						else
 						{
-							stream->put_block(stream, tag_str,
+							NET_StreamPutBlock(stream, tag_str,
 											  XP_STRLEN(tag_str));
 							XP_FREE(tag_str);
 						}
@@ -7195,7 +7195,7 @@ void lo_PreLayoutTag(MWContext * context, lo_DocState *state, PA_Tag *tag)
 						}
 						else
 						{
-							stream->put_block(stream, tag_str,
+							NET_StreamPutBlock(stream, tag_str,
 											  XP_STRLEN(tag_str));
 							XP_FREE(tag_str);
 						}
