@@ -186,6 +186,25 @@ nsOutlinerBoxObject::ScrollToRow(PRInt32 aRow)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsOutlinerBoxObject::ScrollByLines(PRInt32 aNumLines)
+{
+  nsIOutlinerBoxObject* body = GetOutlinerBody();
+  if (body)
+    return body->ScrollByLines(aNumLines);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsOutlinerBoxObject::ScrollByPages(PRInt32 aNumPages)
+{
+  nsIOutlinerBoxObject* body = GetOutlinerBody();
+  if (body)
+    return body->ScrollByPages(aNumPages);
+  return NS_OK;
+}
+
+
 NS_IMETHODIMP nsOutlinerBoxObject::Invalidate()
 {
   nsIOutlinerBoxObject* body = GetOutlinerBody();

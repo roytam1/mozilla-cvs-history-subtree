@@ -56,6 +56,17 @@ interface nsIOutlinerBoxObject : nsISupports
 
   // Scrolls such that the row at index is at the top of the visible view.
   void scrollToRow(in long index);
+
+  // Scroll the outliner up or down by numLines lines. Positive
+  // values move down in the outliner. Prevents scrolling off the
+  // end of the outliner. 
+  void scrollByLines(in long numLines);
+
+  // Scroll the outliner up or down by numPages pages. A page
+  // is considered to be the amount displayed by the outliner.
+  // Positive values move down in the outliner. Prevents scrolling
+  // off the end of the outliner.
+  void scrollByPages(in long numPages);
   
   // Invalidation methods for fine-grained painting control.
   void invalidate();

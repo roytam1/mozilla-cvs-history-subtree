@@ -1078,6 +1078,46 @@ NS_IMETHODIMP nsOutlinerBodyFrame::ScrollToRow(PRInt32 aRow)
   return ScrollInternal(aRow, PR_TRUE);
 }
 
+NS_IMETHODIMP nsOutlinerBodyFrame::ScrollByLines(PRInt32 aNumLines)
+{
+  if (!mView)
+    return NS_OK;
+
+  PRInt32 newIndex = mTopRowIndex + aNumLines;
+  if (newIndex < 0)
+    newIndex = 0;
+  else {
+    PRInt32 rowCount;
+    mView->GetRowCount(&rowCount);
+    PRInt32 lastPageTopRow = rowCount - mPageCount;
+    if (newIndex > lastPageTopRow)
+      newIndex = lastPageTopRow;
+  }
+  ScrollInternal(newIndex, PR_TRUE);
+  
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsOutlinerBodyFrame::ScrollByPages(PRInt32 aNumPages)
+{
+  if (!mView)
+    return NS_OK;
+
+  PRInt32 newIndex = mTopRowIndex + aNumPages * mPageCount;
+  if (newIndex < 0)
+    newIndex = 0;
+  else {
+    PRInt32 rowCount;
+    mView->GetRowCount(&rowCount);
+    PRInt32 lastPageTopRow = rowCount - mPageCount;
+    if (newIndex > lastPageTopRow)
+      newIndex = lastPageTopRow;
+  }
+  ScrollInternal(newIndex, PR_TRUE);
+  
+  return NS_OK;
+}
+
 nsresult
 nsOutlinerBodyFrame::ScrollInternal(PRInt32 aRow, PRBool aUpdateScrollbar)
 {
