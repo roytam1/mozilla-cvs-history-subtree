@@ -33,7 +33,6 @@
 #include "xp_core.h"
 #include "ntypes.h"
 #include "shistele.h"
-#include "xp_list.h"
 #include "msgtypes.h"
 
 #include "xp_error.h"
@@ -388,7 +387,7 @@ struct URL_Struct_ {
 	char **post_to;               /* Only meaningful if files_to_post is set.  If post_to is non-NULL, it is a NULL-terminated 
                                             array of the URLs to post the files in files_to_post to.  If NULL, files_to_post along with 
                                             address(a directory) will be used to decide where to post the files (like before). */
-  XP_Bool *add_crlf; /* Only meaningful if files_to_post is non-NULL.  If set, it specifies for each file in files_to_post,
+  PRBool *add_crlf; /* Only meaningful if files_to_post is non-NULL.  If set, it specifies for each file in files_to_post,
                         whether or not to make all line endings be crlf. */
     uint32    auto_scroll;				  /* set this if you want
 										   * the window to autoscroll
@@ -873,7 +872,7 @@ extern int NET_SetSocksHost(char * host);
 extern void NET_SetTCPConnectTimeout(uint32 seconds);
 
 /* Is there a registered converter for the passed mime_type  */
-extern XP_Bool NET_HaveConverterForMimeType(char *content_type);
+extern PRBool NET_HaveConverterForMimeType(char *content_type);
 
 /* builds an outgoing stream and returns a stream class structure
  * containing a stream function table
@@ -1012,7 +1011,7 @@ extern char * NET_GetUniqueIdString(void);
  * pass in FALSE to enable disk cacheing
  * of SSL documents
  */
-extern void NET_DontDiskCacheSSL(XP_Bool set);
+extern void NET_DontDiskCacheSSL(PRBool set);
 
 /* removes the specified number of objects from the
  * cache taking care to remove only the oldest objects.
@@ -1064,7 +1063,7 @@ extern Bool NET_IsURLInMemCache(URL_Struct *URL_s);
 /* returns TRUE if the URL->address passed in
  * is a local file URL
  */
-extern XP_Bool NET_IsLocalFileURL(char *address);
+extern PRBool NET_IsLocalFileURL(char *address);
 
 /* unload the disk cache FAT list to disk
  *
@@ -1167,7 +1166,7 @@ extern ExtCacheDBInfo * CACHE_GetCacheStruct(char * path, char * filename, char 
 extern char * CACHE_GetCachePath(char * filename);
 
 /* Returns the list of managed caches */
-extern XP_List * CACHE_GetManagedCacheList();
+extern struct PLList * CACHE_GetManagedCacheList();
 
 /* Saves the cache struct to the DB */
 extern void CACHE_SaveCacheInfoToDB(ExtCacheDBInfo *db_info);
@@ -1185,7 +1184,7 @@ extern int32 NET_RemoveLastDiskCacheObject(void);
  *
  * use the normal XP_List routines to iterate through
  */
-extern XP_List * cinfo_MasterListPointer(void);
+extern struct PLList * cinfo_MasterListPointer(void);
 
 /* get the presumed content-type of the filename given
  */
@@ -1221,10 +1220,10 @@ extern void NET_cdataCommit(char * mimeType, char * cdataString);
 extern char * NET_cinfo_find_ext(char *mime_type);
 
 /* check to see if this is an old mime type */
-extern XP_Bool NET_IsOldMimeTypes (XP_List *masterList);
+extern PRBool NET_IsOldMimeTypes (struct PLList *masterList);
 
 #ifdef XP_UNIX
-extern XP_List * mailcap_MasterListPointer(void);
+extern struct PLList * mailcap_MasterListPointer(void);
 extern NET_mdataStruct *NET_mdataCreate(void);
 extern void NET_mdataAdd(NET_mdataStruct *md);
 extern void NET_mdataRemove(NET_mdataStruct *md);
@@ -1373,7 +1372,7 @@ PUBLIC int NET_ProcessNet(PRFileDesc *ready_fd, int fd_type);
  *
  * Should be called in OnIdle loop to service netlib 
  */
-PUBLIC XP_Bool NET_PollSockets(void);
+PUBLIC PRBool NET_PollSockets(void);
 
 /* NET_InterruptWindow  interrupts all in progress transfers
  * that were initiated with the same window_id
@@ -1496,8 +1495,8 @@ extern NET_StreamClass * NET_NewStream(char *,
 /* this should really be a FE function
  */ 
 extern void NET_RegisterConverters(char * personal_file, char * global_file);
-extern XP_List *NET_GetRegConverterList(FO_Present_Types iFormatOut);
-extern void *NET_GETDataObject(XP_List *list, char *pMimeType, void** obj);
+extern struct PLList *NET_GetRegConverterList(FO_Present_Types iFormatOut);
+extern void *NET_GETDataObject(struct PLList *list, char *pMimeType, void** obj);
 extern void NET_CleanupMailCapList(char* filename);
 
 /*  Register a routine to convert between format_in and format_out
@@ -1508,7 +1507,7 @@ extern void NET_RegContentTypeConverter (char * format_in,
                                               FO_Present_Types format_out,
                                               void          * data_obj,
                                               NET_Converter * converter_func,
-                                              XP_Bool          bAutomated);
+                                              PRBool          bAutomated);
 
 /*  This function found in the windows front end.
  */
@@ -1722,7 +1721,7 @@ extern void NET_SetNumberOfNewsArticlesInListing(int32 number);
 
 /* Set whether to cache XOVER lines in an attempt to make news go faster
  */
-extern void NET_SetCacheXOVER(XP_Bool value);
+extern void NET_SetCacheXOVER(PRBool value);
 
 
 /* Tell netlib to clean up any strictly temporary cache files it has for XOVER
@@ -1766,7 +1765,7 @@ NET_ParseMimeHeader(FO_Present_Types outputFormat,
                     URL_Struct *URL_s,
                     char       *name,
                     char       *value,
-                    XP_Bool    is_http);
+                    PRBool    is_http);
 
 
 /* scans a line for references to URL's and turns them into active
@@ -1780,7 +1779,7 @@ NET_ParseMimeHeader(FO_Present_Types outputFormat,
  */
 
 extern int NET_ScanForURLs(MSG_Pane* pane, const char *input, int32 input_size,
-						   char *output, int output_size, XP_Bool urls_only_p);
+						   char *output, int output_size, PRBool urls_only_p);
 
 
 /* Takes an arbitrary chunk of HTML, and returns another chunk which has had
@@ -1946,7 +1945,7 @@ NET_PublishFilesTo(MWContext *context,
                  char **files_to_publish,
                  char **publish_to,  /* Absolute URLs of the location to 
                                       * publish the files to. */
-                 XP_Bool *add_crlf, /* For each file in files_to_publish, should every line 
+                 PRBool *add_crlf, /* For each file in files_to_publish, should every line 
                                        end in a CRLF. */
                  char *base_url,       /* Directory to publish to, or the destination 
                                                 * URL of the root HTML document. */
@@ -2046,7 +2045,7 @@ extern int NET_URL_Type(const char *URL);
 
 /* CM these functions added to \libnet\MKPARSE.C: */
 /* Returns TRUE if URL type is HTTP_TYPE_URL or SECURE_HTTP_TYPE_URL */
-extern Bool NET_IsHTTP_URL(const char *URL);
+extern PRBool NET_IsHTTP_URL(const char *URL);
 
 /* Return values for NET_MakeRelativeURL */
 enum {
@@ -2095,7 +2094,7 @@ char * NET_MakeTargetURL( char *base_url,
 extern void NET_WarnOnMailtoPost(PRBool warn);
 
 /* Is the user off-line - uses the network.online preference */
-extern XP_Bool NET_IsOffline();
+extern PRBool NET_IsOffline();
 
 XP_END_PROTOS
 
