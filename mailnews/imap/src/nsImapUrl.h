@@ -109,7 +109,7 @@ protected:
   char		*m_urlidSubString;
   char		m_onlineSubDirSeparator;
   char		*m_searchCriteriaString;	// should we use m_search, or is this special?
-  
+  nsCString     m_command;       // for custom commands
   PRPackedBool m_validUrl;
   PRPackedBool m_runningUrl;
   PRPackedBool m_idsAreUids;

@@ -383,7 +383,14 @@ NS_IMETHODIMP nsImapUrl::CreateListOfMessageIdsString(char ** aResult)
   *aResult = ToNewCString(newStr);
 	return NS_OK;
 }
-  
+
+NS_IMETHODIMP nsImapUrl::GetCommand(char **result)
+{
+  NS_ENSURE_ARG_POINTER(result);
+  *result = strdup(m_command.get());
+  return (*result) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
 NS_IMETHODIMP nsImapUrl::GetImapPartToFetch(char **result) 
 {
 	//  here's the old code....
@@ -716,6 +723,13 @@ void nsImapUrl::ParseImapPart(char *imapPartOfUrl)
     {
       m_imapAction = nsImapFolderStatus;
       ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
+    }
+    else if (m_imapAction == nsIImapUrl::nsImapUserDefinedMsgCommand)
+    {
+      m_command = m_urlidSubString; // save this
+      ParseUidChoice();
+      ParseFolderPath(&m_sourceCanonicalFolderPathSubString);
+      ParseListOfMessageIds();
     }
     else
     {

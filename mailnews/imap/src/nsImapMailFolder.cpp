@@ -3179,6 +3179,19 @@ NS_IMETHODIMP nsImapMailFolder::SetAdminUrl(const char *adminUrl)
   m_adminUrl = adminUrl;
   return NS_OK;
 }
+
+  // this is used to issue an arbitrary imap command on the passed in msgs.
+  // It assumes the command needs to be run in the selected state.
+NS_IMETHODIMP nsImapMailFolder::IssueCommandOnMsgs(const char *command, const char *uids, nsIMsgWindow *aWindow, nsIURI **url)
+{
+  nsresult rv;
+ nsCOMPtr<nsIImapService> imapService(do_GetService(kCImapService, &rv));
+  if (NS_FAILED(rv)) return rv;
+  // selecting the folder with m_downloadingFolderForOfflineUse true will cause
+  // us to fetch any message bodies we don't have.
+  return imapService->IssueCommandOnMsgs(m_eventQueue, this, aWindow, command, uids, url);
+}
+
 nsresult nsImapMailFolder::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr, 
                                                    nsIMsgDatabase *sourceDB, 
                                                    const char *destFolderUri,

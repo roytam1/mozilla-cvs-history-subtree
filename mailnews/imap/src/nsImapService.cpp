@@ -3914,6 +3914,59 @@ nsImapService::GetFolderAdminUrl(nsIEventQueue *aClientEventQueue,
 }
 
 NS_IMETHODIMP
+nsImapService::IssueCommandOnMsgs(nsIEventQueue *aClientEventQueue,
+                      nsIMsgFolder *anImapFolder,
+                      nsIMsgWindow   *aMsgWindow,
+                      const char *aCommand,
+                      const char *uids,
+                      nsIURI** aURL)
+{
+  NS_ENSURE_ARG_POINTER(aClientEventQueue);
+  NS_ENSURE_ARG_POINTER(anImapFolder);
+  NS_ENSURE_ARG_POINTER(aMsgWindow);
+  nsCOMPtr<nsIImapUrl> imapUrl;
+  nsCAutoString urlSpec;
+  nsresult rv;
+  PRUnichar hierarchySeparator = GetHierarchyDelimiter(anImapFolder);
+  rv = CreateStartOfImapUrl(nsnull, getter_AddRefs(imapUrl), anImapFolder, nsnull, urlSpec, hierarchySeparator);
+  
+  if (NS_SUCCEEDED(rv) && imapUrl)
+  {
+    // nsImapUrl::SetSpec() will set the imap action properly
+    rv = imapUrl->SetImapAction(nsIImapUrl::nsImapUserDefinedMsgCommand);
+    
+    nsCOMPtr <nsIMsgMailNewsUrl> mailNewsUrl = do_QueryInterface(imapUrl);
+    mailNewsUrl->SetMsgWindow(aMsgWindow);
+    mailNewsUrl->SetUpdatingFolder(PR_TRUE);
+    imapUrl->AddChannelToLoadGroup();
+    rv = SetImapUrlSink(anImapFolder, imapUrl);
+    
+    if (NS_SUCCEEDED(rv))
+    {
+      nsXPIDLCString folderName;
+      GetFolderName(anImapFolder, getter_Copies(folderName));
+      urlSpec.Append("/");
+      urlSpec.Append(aCommand);
+      urlSpec.Append(">");
+      urlSpec.Append(uidString);
+      urlSpec.Append(">");
+      urlSpec.Append(char(hierarchySeparator));
+      urlSpec.Append((const char *) folderName);
+      urlSpec.Append(">");
+      urlSpec.Append(uids);
+      rv = mailNewsUrl->SetSpec(urlSpec);
+      if (NS_SUCCEEDED(rv))
+        rv = GetImapConnectionAndLoadUrl(aClientEventQueue,
+        imapUrl,
+        nsnull,
+        aURL);
+    }
+  } // if we have a url to run....
+  
+  return rv;
+}
+
+NS_IMETHODIMP
 nsImapService::DownloadMessagesForOffline(const char *messageIds, nsIMsgFolder *aFolder, nsIUrlListener *aUrlListener, nsIMsgWindow *aMsgWindow)
 {
   NS_ENSURE_ARG_POINTER(aFolder);

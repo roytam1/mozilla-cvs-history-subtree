@@ -84,6 +84,7 @@ interface nsIImapUrl : nsISupports
   attribute nsImapAction imapAction; 
   readonly attribute nsImapState requiredImapState;
   readonly attribute string imapPartToFetch;
+  readonly attribute string command;
   void allocateCanonicalPath(in string aServerPath, in char aOnlineDelimiter, out string aAllocatedPath);
   void allocateServerPath(in string aCanonicalPath, in char aOnlineDelimiter, out string aAllocatedPath);
   string createServerSourceFolderPathString();
@@ -182,6 +183,7 @@ interface nsIImapUrl : nsISupports
   const long nsImapSaveMessageToDisk = 0x10000030;
   const long nsImapOpenMimePart = 0x10000031;
   const long nsImapMsgDownloadForOffline	= 0x10000032;
+  const long nsImapUserDefinedMsgCommand = 0x10000033;
 };
 
 %{C++

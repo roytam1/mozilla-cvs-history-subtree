@@ -243,6 +243,12 @@ interface nsIImapService : nsISupports
                       in nsIMsgWindow   aMsgWindow,
                       in nsIUrlListener aUrlListener);
 
+  nsIURI issueCommandOnMsgs(in nsIEventQueue aClientEventQueue,
+                      in nsIMsgFolder aMailFolder,
+                      in nsIMsgWindow aMsgWindow,
+                      in string aCommand,
+                      in string aMessageIdentifierList);
+
   void getListOfFoldersOnServer(in nsIImapIncomingServer aServer, in nsIMsgWindow aMsgWindow);
   void getListOfFoldersWithPath(in nsIImapIncomingServer aServer, in nsIMsgWindow aMsgWindow, in string folderPath);
 

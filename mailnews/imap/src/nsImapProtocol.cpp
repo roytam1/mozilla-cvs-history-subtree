@@ -1981,6 +1981,16 @@ void nsImapProtocol::ProcessSelectedStateURL()
                 // drop the results on the floor for now
         }
         break;
+      case nsIImapUrl::nsImapUserDefinedMsgCommand:
+        {
+          nsXPIDLCString messageIdString;
+          nsXPIDLCString command;
+    
+          m_runningUrl->GetCommand(getter_Copies(command));
+          m_runningUrl->CreateListOfMessageIdsString(getter_Copies(messageIdString));
+          IssueUserDefinedMsgCommand(command, messageIdString);
+        }
+        break;
       case nsIImapUrl::nsImapDeleteMsg:
         {
           nsXPIDLCString messageIdString;
@@ -4322,6 +4332,38 @@ nsImapProtocol::Store(const char * messageList, const char * messageData,
                   commandTag, // command tag
                   messageList,
                   messageData);
+      
+    nsresult rv = SendData(protocolString);
+    if (NS_SUCCEEDED(rv))
+      ParseIMAPandCheckForNewMail(protocolString);
+    PR_Free(protocolString);
+  }
+  else
+    HandleMemoryFailure();
+}
+
+void
+nsImapProtocol::IssueUserDefinedMsgCommand(const char *command, const char * messageList)
+{
+  IncrementCommandTagNumber();
+    
+  const char *formatString;
+  formatString = "%s uid %s %s\015\012";
+        
+  const char *commandTag = GetServerCommandTag();
+  int protocolStringSize = PL_strlen(formatString) +
+        PL_strlen(messageList) + PL_strlen(command) +
+        PL_strlen(commandTag) + 1;
+  char *protocolString = (char *) PR_CALLOC( protocolStringSize );
+
+  if (protocolString)
+  {
+    PR_snprintf(protocolString, // string to create
+                  protocolStringSize, // max size
+                  formatString, // format string
+                  commandTag, // command tag
+                  command, 
+                  messageList);
       
     nsresult rv = SendData(protocolString);
     if (NS_SUCCEEDED(rv))
