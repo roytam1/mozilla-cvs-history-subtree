@@ -132,6 +132,7 @@
 #include "nsStyleSet.h"
 #include "nsImageFrame.h"
 #include "nsTextControlFrame.h"
+#include "nsXBLWindowKeyHandler.h"
 
 // view stuff
 #include "nsViewsCID.h"
@@ -417,6 +418,7 @@ Shutdown()
   GlobalWindowImpl::ShutDown();
   nsDOMClassInfo::ShutDown();
   nsTextControlFrame::ShutDown();
+  nsXBLWindowKeyHandler::ShutDown();
 }
 
 #ifdef NS_DEBUG
