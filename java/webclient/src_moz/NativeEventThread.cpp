@@ -472,13 +472,13 @@ void DoMozInitialization(WebShellInitContext * initContext)
         nsresult rv = nsnull;
         JNIEnv *   env = initContext->env;
         const char * BinDir = gBinDir;
-
+        
         rv = NS_NewLocalFile(BinDir, PR_TRUE, &pathFile);
         if (NS_FAILED(rv)) {
             ::util_ThrowExceptionToJava(env, "call to NS_NewLocalFile failed.");
             return;
         }
-    
+        
         // It is vitally important to call NS_InitEmbedding before calling
         // anything else.
         NS_InitEmbedding(pathFile, nsnull);
@@ -493,7 +493,7 @@ void DoMozInitialization(WebShellInitContext * initContext)
             PR_SetLogFile(webclientLogFile);
             // If this fails, it just goes to stdout/stderr
         }
-
+        
         gComponentManager->RegisterComponentLib(kSHistoryCID, nsnull, 
                                                 nsnull, APPSHELL_DLL, 
                                                 PR_FALSE, PR_FALSE);
@@ -504,18 +504,40 @@ void DoMozInitialization(WebShellInitContext * initContext)
             ::util_ThrowExceptionToJava(env, "Can't get the profile manager.");
             return;
         }
+        PRInt32 numProfiles=0;
+        rv = profile->GetProfileCount(&numProfiles);
         char *argv[3];
+        int i, argc = 0;
         argv[0] = strdup(gBinDir);
-        // PENDING(edburns): fix for 70656.  Really we should have a way
-        // for the embedding app to specify which profile to use.  
-        argv[1] = strdup("-p");
-        argv[2] = strdup("default");
-        printf("debug: edburns: argv[1]: %s argv[2]: %s\n", argv[1],
-               argv[2]);
-        rv = cmdLine->Initialize(3, argv);
-        nsCRT::free(argv[0]);
-        nsCRT::free(argv[1]);
-        nsCRT::free(argv[2]);
+        if (numProfiles > 1) {
+            PRUnichar * Names;
+            rv = profile->GetProfileList(&Names);
+            // PENDING(edburns): fix for 70656.  Really we should have a way
+            // for the embedding app to specify which profile to use.  
+            // For now we just get the name of the first profile.
+            argv[1] = strdup("-p");
+            char * temp = new char[100]; // de-allocated in following for loop
+            for (i = 0; i<100; i++) {
+                if ((char) Names[i] != ',')
+                    temp[i] = (char) Names[i];
+                else {
+                    temp[i] = '\0';
+                    break;
+                }
+            }
+            nsCRT::free(Names);
+            argv[2] = temp;
+            argc = 3;
+            printf("debug: edburns: argv[1]: %s argv[2]: %s\n", argv[1],
+                   argv[2]);
+        }
+        else {
+            argc = 1;
+        }
+        rv = cmdLine->Initialize(argc, argv);
+        for (i = 0; i < argc; i++) {
+            nsCRT::free(argv[i]);
+        }
         if (NS_FAILED(rv)) {
             ::util_ThrowExceptionToJava(env, "Can't initialize nsICmdLineService.");
             return;
