@@ -94,6 +94,7 @@ nsBrowserBoxObject::~nsBrowserBoxObject()
 NS_IMETHODIMP nsBrowserBoxObject::GetDocShell(nsIDocShell** aResult)
 {
   *aResult = nsnull;
+
   if (!mPresShell)
     return NS_OK;
 
@@ -106,14 +107,14 @@ NS_IMETHODIMP nsBrowserBoxObject::GetDocShell(nsIDocShell** aResult)
     return NS_OK;
   }
 
-  nsCOMPtr<nsIScriptGlobalObject> sgo;
-  sub_doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+  nsCOMPtr<nsISupports> container;
+  sub_doc->GetContainer(getter_AddRefs(container));
 
-  if (sgo) {
-    sgo->GetDocShell(aResult);
+  if (!container) {
+    return NS_OK;
   }
 
-  return NS_OK;
+  return CallQueryInterface(container, aResult);
 }
 
 // Creation Routine ///////////////////////////////////////////////////////////////////////
