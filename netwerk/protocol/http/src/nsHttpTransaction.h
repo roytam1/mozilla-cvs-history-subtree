@@ -111,6 +111,7 @@ private:
     PRPackedBool                    mHaveStatusLine;
     PRPackedBool                    mHaveAllHeaders;
     PRPackedBool                    mFiredOnStart;
+    PRPackedBool                    mNoContent;       // true if we're expecting an empty entity body
 };
 
 #endif // nsHttpTransaction_h__

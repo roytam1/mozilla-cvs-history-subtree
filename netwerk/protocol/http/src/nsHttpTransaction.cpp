@@ -45,9 +45,10 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener,
     , mChunkedDecoder(nsnull)
     , mTransactionDone(0)
     , mStatus(NS_OK)
-    , mHaveStatusLine(0)
-    , mHaveAllHeaders(0)
-    , mFiredOnStart(0)
+    , mHaveStatusLine(PR_FALSE)
+    , mHaveAllHeaders(PR_FALSE)
+    , mFiredOnStart(PR_FALSE)
+    , mNoContent(PR_FALSE)
 {
     LOG(("Creating nsHttpTransaction @%x\n", this));
 
@@ -78,6 +79,9 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
     LOG(("nsHttpTransaction::SetupRequest [this=%x]\n", this));
 
     NS_ENSURE_ARG_POINTER(requestHead);
+
+    if (requestHead->Method() == nsHttp::Head)
+        mNoContent = PR_TRUE;
 
     mReqHeaderBuf.SetLength(0);
 
@@ -299,7 +303,6 @@ nsHttpTransaction::HandleContent(char *buf,
             if (mConnection)
                 mConnection->OnHeadersAvailable(this);
 
-
             // grab the content-length from the response headers
             mContentLength = mResponseHead->ContentLength();
 
@@ -319,18 +322,20 @@ nsHttpTransaction::HandleContent(char *buf,
                 val = mResponseHead->PeekHeader(nsHttp::Trailer);
                 NS_ASSERTION(!val, "FIXME: unhandled trailer header present!");
             }
-            // check if this is a no-content response
             else if (mContentLength == -1) {
-                // unless the server is going to explicitly close the connection
-                // when all of the data has arrived, we have no way of determining
-                // EOF, so just assume a no-content response.
-                val = mResponseHead->PeekHeader(nsHttp::Connection);
-                if (!val)
-                    val = mResponseHead->PeekHeader(nsHttp::Proxy_Connection);
-                if (val && !PL_strcasestr(val, "close")) {
-                    LOG(("assuming a no-content response\n"));
-                    mContentLength = 0;
+                // check if this is a no-content response
+                switch (mResponseHead->Status()) {
+                case 100:
+                case 204:
+                case 205:
+                case 304:
+                    mNoContent = PR_TRUE;
+                    LOG(("looks like this response should not contain a body.\n"));
+                    break;
                 }
+                if (mNoContent)
+                    mContentLength = 0;
+                // otherwise, we'll wait for the server to close the connection.
             }
         }
 

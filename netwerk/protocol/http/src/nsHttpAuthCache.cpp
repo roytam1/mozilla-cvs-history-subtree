@@ -39,10 +39,8 @@ nsHttpAuthCache::nsHttpAuthCache()
 
 nsHttpAuthCache::~nsHttpAuthCache()
 {
-    if (mDB) {
+    if (mDB)
         ClearAll();
-        PL_HashTableDestroy(mDB);
-    }
 }
 
 nsresult
@@ -107,13 +105,19 @@ nsHttpAuthCache::SetCredentials(const char *host,
                                 const char *realm,
                                 const char *creds)
 {
+    nsresult rv;
+
     NS_ENSURE_TRUE(mDB, NS_ERROR_NOT_INITIALIZED);
 
     LOG(("nsHttpAuthCache::SetCredentials\n"));
 
+    if (!mDB) {
+        rv = Init();
+        if (NS_FAILED(rv)) return rv;
+    }
+
     nsCAutoString key;
     nsEntryList *list = LookupEntryList(host, port, key);
-    nsresult rv;
 
     if (!list) {
         // only create a new list if we have a real entry
@@ -148,9 +152,10 @@ nsHttpAuthCache::ClearAll()
 {
     LOG(("nsHttpAuthCache::ClearAll\n"));
 
-    PL_HashTableDestroy(mDB);
-    mDB = 0;
-
+    if (mDB) {
+        PL_HashTableDestroy(mDB);
+        mDB = 0;
+    }
     return NS_OK;
 }
 
@@ -162,6 +167,9 @@ nsHttpAuthCache::nsEntryList *
 nsHttpAuthCache::LookupEntryList(const char *host, PRInt32 port, nsAFlatCString &key)
 {
     char buf[32];
+
+    if (!mDB)
+        return nsnull;
 
     PR_snprintf(buf, sizeof(buf), "%d", port);
 

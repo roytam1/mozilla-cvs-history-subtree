@@ -439,7 +439,7 @@ nsHttpChannel::ProcessNotModified()
     if (NS_FAILED(rv)) return rv;
 
     // drop our reference to the current transaction... ie. let it finish
-    // in the background.
+    // in the background, since we can most likely reuse the connection.
     mPrevTransaction = mTransaction;
     mTransaction = nsnull;
 
@@ -1858,7 +1858,7 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
     if ((request != mTransaction) && (request != mCacheReadRequest))
         return NS_OK;
 
-    LOG(("nsHttpChannel::OnStartRequest [this=%x]\n", this));
+    LOG(("nsHttpChannel::OnStartRequest [this=%x request=%x]\n", this, request));
 
     if (mTransaction) {
         // all of the response headers have been acquired, so we can take ownership
@@ -1877,6 +1877,10 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 NS_IMETHODIMP
 nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult status)
 {
+    LOG(("nsHttpChannel::OnStopRequest [this=%x request=%x status=%x]\n",
+        this, request, status));
+
+    // if the request is a previous transaction, then simply release it.
     if (request == mPrevTransaction) {
         NS_RELEASE(mPrevTransaction);
         mPrevTransaction = nsnull;
@@ -1886,9 +1890,6 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     // drop this event.
     if ((request != mTransaction) && (request != mCacheReadRequest))
         return NS_OK;
-
-    LOG(("nsHttpChannel::OnStopRequest [this=%x status=%x]\n",
-        this, status));
 
     mIsPending = PR_FALSE;
     mStatus = status;
