@@ -23,7 +23,6 @@
  */
 
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsString.h"
 #include "nsUnitConversion.h"

@@ -27,7 +27,6 @@
 class nsString;
 class nsIFrame;
 class nsIStyleRule;
-class nsIMutableStyleContext;
 class nsIPresContext;
 class nsIHTMLMappedAttributes;
 class nsIURI;
@@ -40,10 +39,6 @@ struct nsRuleData;
 
 typedef void (*nsMapRuleToAttributesFunc)(const nsIHTMLMappedAttributes* aAttributes, 
                                           nsRuleData* aData);
-
-typedef void (*nsMapAttributesFunc)(const nsIHTMLMappedAttributes* aAttributes, 
-                                    nsIMutableStyleContext* aContext, 
-                                    nsIPresContext* aPresContext);
 
 // Abstract interface for all html content
 class nsIHTMLContent : public nsIXMLContent
@@ -63,8 +58,7 @@ public:
 
   NS_IMETHOD GetHTMLAttribute(nsIAtom* aAttribute,
                               nsHTMLValue& aValue) const = 0;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
-                                          nsMapAttributesFunc& aMapFunc) const = 0;
+  NS_IMETHOD GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const = 0;
 
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,

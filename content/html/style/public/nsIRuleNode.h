@@ -28,7 +28,6 @@
 #include "nsHashtable.h"
 #include "nsIStyleRule.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsICSSDeclaration.h"
 
 class nsIHTMLMappedAttributes;
@@ -338,8 +337,7 @@ public:
   NS_IMETHOD GetPresContext(nsIPresContext** aResult)=0;
 
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID, 
-                                            nsIStyleContext* aContext,
-                                            nsIMutableStyleContext* aMutableContext)=0;
+                                            nsIStyleContext* aContext)=0;
 };
 
 #endif

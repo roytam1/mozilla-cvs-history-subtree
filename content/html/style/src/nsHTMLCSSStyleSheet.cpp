@@ -35,7 +35,6 @@
 #include "nsICSSStyleRule.h"
 #include "nsIStyleRuleProcessor.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsIDocument.h"
 #include "nsCOMPtr.h"
@@ -57,12 +56,8 @@ public:
   NS_IMETHOD HashValue(PRUint32& aValue) const;
   NS_IMETHOD GetStyleSheet(nsIStyleSheet*& aSheet) const;
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
-                          nsIPresContext* aPresContext);
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext,
-                              nsIPresContext* aPresContext);
-
-  // The new mapping functions.
+  
+  // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
@@ -115,13 +110,6 @@ CSSFirstLineRule::GetStrength(PRInt32& aStrength) const
 }
 
 NS_IMETHODIMP
-CSSFirstLineRule::MapFontStyleInto(nsIMutableStyleContext* aContext,
-                                   nsIPresContext* aPresContext)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 CSSFirstLineRule::MapRuleInfoInto(nsRuleData* aData)
 {
   if (!aData)
@@ -140,66 +128,6 @@ CSSFirstLineRule::MapRuleInfoInto(nsRuleData* aData)
       aData->mMarginData->mBorderStyle->mBottom = styleVal;
   }
 
-  return NS_OK;
-}
-
-// Fixup the style context so that all of the properties that don't
-// apply (CSS2 spec section 5.12.1) don't apply.
-//
-// The properties that apply: font-properties, color-properties,
-// backgorund-properties, word-spacing, letter-spacing,
-// text-decoration, vertical-align, text-transform, line-height,
-// text-shadow, and clear.
-//
-// Everything else doesn't apply.
-
-NS_IMETHODIMP
-CSSFirstLineRule::MapStyleInto(nsIMutableStyleContext* aContext,
-                               nsIPresContext* aPresContext)
-{
-  nsIStyleContext* parentContext;
-  parentContext = aContext->GetParent();
-
-  // Undo any change made to "direction"
-  nsStyleVisibility* vis = (nsStyleVisibility*)
-    aContext->GetMutableStyleData(eStyleStruct_Visibility);
-  if (parentContext) {
-    const nsStyleVisibility* parentVis = (const nsStyleVisibility*)
-      parentContext->GetStyleData(eStyleStruct_Visibility);
-    if (parentVis) {
-      vis->mDirection = parentVis->mDirection;
-    }
-  }
-
-  // Undo any change made to "cursor"
-  nsStyleUserInterface* color = (nsStyleUserInterface*)
-    aContext->GetMutableStyleData(eStyleStruct_UserInterface);
-  if (parentContext) {
-    const nsStyleUserInterface* parentColor = (const nsStyleUserInterface*)
-      parentContext->GetStyleData(eStyleStruct_UserInterface);
-    if (parentColor) {
-      color->mCursor = parentColor->mCursor;
-    }
-  }
-
-  // Undo any change to quotes
-  nsStyleQuotes* content = (nsStyleQuotes*)
-    aContext->GetMutableStyleData(eStyleStruct_Quotes);
-  if (parentContext) {
-    const nsStyleQuotes* parentContent = (const nsStyleQuotes*)
-      parentContext->GetStyleData(eStyleStruct_Quotes);
-    if (parentContent) {
-      nsAutoString open, close;
-      PRUint32 i, n = parentContent->QuotesCount();
-      content->AllocateQuotes(n);
-      for (i = 0; i < n; i++) {
-        parentContent->GetQuotesAt(i, open, close);
-        content->SetQuotesAt(i, open, close);
-      }
-    }
-  }
-
-  NS_RELEASE(parentContext);
   return NS_OK;
 }
 
@@ -252,74 +180,11 @@ void CSSFirstLineRule::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 class CSSFirstLetterRule : public CSSFirstLineRule {
 public:
   CSSFirstLetterRule(nsIHTMLCSSStyleSheet* aSheet);
-
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
-                          nsIPresContext* aPresContext);
 };
 
 CSSFirstLetterRule::CSSFirstLetterRule(nsIHTMLCSSStyleSheet* aSheet)
   : CSSFirstLineRule(aSheet)
 {
-}
-
-// Fixup the style context so that all of the properties that don't
-// apply (CSS2 spec section 5.12.2) don't apply.
-//
-// These properties apply: font-properties, color-properties,
-// backgorund-properties, text-decoration, vertical-align,
-// text-transform, line-height, margin-properties,
-// padding-properties, border-properties, float, text-shadow and
-// clear.
-//
-// Everything else doesn't apply.
-NS_IMETHODIMP
-CSSFirstLetterRule::MapStyleInto(nsIMutableStyleContext* aContext,
-                                 nsIPresContext* aPresContext)
-{
-  nsIStyleContext* parentContext;
-  parentContext = aContext->GetParent();
-
-  // Undo any change made to "direction"
-  nsStyleVisibility* vis = (nsStyleVisibility*)
-    aContext->GetMutableStyleData(eStyleStruct_Visibility);
-  if (parentContext) {
-    const nsStyleVisibility* parentVis = (const nsStyleVisibility*)
-      parentContext->GetStyleData(eStyleStruct_Visibility);
-    if (parentVis) {
-      vis->mDirection = parentVis->mDirection;
-    }
-  }
-
-  // Undo any change made to "cursor"
-  nsStyleUserInterface* color = (nsStyleUserInterface*)
-    aContext->GetMutableStyleData(eStyleStruct_UserInterface);
-  if (parentContext) {
-    const nsStyleUserInterface* parentColor = (const nsStyleUserInterface*)
-      parentContext->GetStyleData(eStyleStruct_UserInterface);
-    if (parentColor) {
-      color->mCursor = parentColor->mCursor;
-    }
-  }
-
-  // Undo any change to quotes
-  nsStyleQuotes* content = (nsStyleQuotes*)
-    aContext->GetMutableStyleData(eStyleStruct_Quotes);
-  if (parentContext) {
-    const nsStyleQuotes* parentContent = (const nsStyleQuotes*)
-      parentContext->GetStyleData(eStyleStruct_Quotes);
-    if (parentContent) {
-      nsAutoString open, close;
-      PRUint32 i, n = parentContent->QuotesCount();
-      content->AllocateQuotes(n);
-      for (i = 0; i < n; i++) {
-        parentContent->GetQuotesAt(i, open, close);
-        content->SetQuotesAt(i, open, close);
-      }
-    }
-  }
-
-  NS_RELEASE(parentContext);
-  return NS_OK;
 }
 
 // -----------------------------------------------------------

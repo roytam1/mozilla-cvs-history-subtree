@@ -50,7 +50,6 @@
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsCSSRendering.h"
 #include "nsHTMLIIDs.h"
 #include "nsDebug.h"

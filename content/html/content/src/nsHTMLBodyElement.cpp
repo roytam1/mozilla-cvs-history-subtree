@@ -27,7 +27,6 @@
 #include "nsHTMLAtoms.h"
 #include "nsHTMLIIDs.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
@@ -71,12 +70,7 @@ public:
   // Strength is an out-of-band weighting, always 0 here
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
 
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext,
-                              nsIPresContext* aPresContext);
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
-                          nsIPresContext* aPresContext);
-
-  // The new mapping functions.
+  // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
@@ -102,12 +96,7 @@ public:
   // Strength is an out-of-band weighting, always maxint here
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
 
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, 
-                              nsIPresContext* aPresContext);
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, 
-                          nsIPresContext* aPresContext);
-
-  // The new mapping functions.
+  // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
@@ -204,8 +193,7 @@ public:
   NS_IMETHOD StringToAttribute(nsIAtom* aAttribute,
                                const nsAReadableString& aValue,
                                nsHTMLValue& aResult);
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
-                                          nsMapAttributesFunc& aMapFunc) const;
+  NS_IMETHOD GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const;
   NS_IMETHOD WalkContentStyleRules(nsIRuleWalker* aRuleWalker);
   NS_IMETHOD WalkInlineStyleRules(nsIRuleWalker* aRuleWalker);
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
@@ -267,20 +255,6 @@ NS_IMETHODIMP
 BodyRule::GetStrength(PRInt32& aStrength) const
 {
   aStrength = 0;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-BodyRule::MapFontStyleInto(nsIMutableStyleContext* aContext,
-                           nsIPresContext* aPresContext)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-BodyRule::MapStyleInto(nsIMutableStyleContext* aContext,
-                       nsIPresContext* aPresContext)
-{
   return NS_OK;
 }
 
@@ -473,13 +447,6 @@ BodyFixupRule::GetStrength(PRInt32& aStrength) const
   return NS_OK;
 }
 
-NS_IMETHODIMP
-BodyFixupRule::MapFontStyleInto(nsIMutableStyleContext* aContext,
-                                nsIPresContext* aPresContext)
-{
-  return NS_OK;
-}
-
 static void 
 HandleFixedBackground(nsIPresContext* aPresContext, 
                       nsIPresShell *aPresShell, 
@@ -655,13 +622,6 @@ BodyFixupRule::MapRuleInfoInto(nsRuleData* aRuleData)
 {
   if (aRuleData && aRuleData->mSID == eStyleStruct_Background)
     aRuleData->mPostResolveCallback = &PostResolveCallback;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-BodyFixupRule::MapStyleInto(nsIMutableStyleContext* aContext,
-                            nsIPresContext* aPresContext)
-{
   return NS_OK;
 }
 
@@ -948,11 +908,9 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
 }
 
 NS_IMETHODIMP
-nsHTMLBodyElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
-                                                nsMapAttributesFunc& aMapFunc) const
+nsHTMLBodyElement::GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
-  aMapFunc = nsnull;
   return NS_OK;
 }
 

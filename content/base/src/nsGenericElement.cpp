@@ -1668,8 +1668,7 @@ nsGenericElement::GetHTMLAttribute(nsIAtom* aAttribute,
 }
 
 NS_IMETHODIMP
-nsGenericElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
-                                               nsMapAttributesFunc& aMapFunc) const
+nsGenericElement::GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -282,10 +282,10 @@ public:
   NS_DECL_ISUPPORTS
 
   NS_IMETHOD Init(nsIHTMLStyleSheet* aSheet,
-                  nsMapRuleToAttributesFunc aMapRuleFunc, nsMapAttributesFunc aMapFunc);
+                  nsMapRuleToAttributesFunc aMapRuleFunc);
   NS_IMETHOD Clone(nsHTMLMappedAttributes** aInstancePtrResult) const;
   NS_IMETHOD Reset(void);
-  NS_IMETHOD SetMappingFunctions(nsMapRuleToAttributesFunc aMapRuleFunc, nsMapAttributesFunc aMapFunc);
+  NS_IMETHOD SetMappingFunction(nsMapRuleToAttributesFunc aMapRuleFunc);
 
   NS_IMETHOD SetAttribute(nsIAtom* aAttrName, const nsAReadableString& aValue);
   NS_IMETHOD SetAttribute(nsIAtom* aAttrName, const nsHTMLValue& aValue);
@@ -314,10 +314,7 @@ public:
   NS_IMETHOD SetStyleSheet(nsIHTMLStyleSheet* aSheet);
   // Strength is an out-of-band weighting, always 0 here
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext,
-                              nsIPresContext* aPresContext);
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
-
+  
   // The new mapping functions.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
@@ -330,7 +327,6 @@ public:
   PRInt32             mAttrCount;
   HTMLAttribute       mFirst;
   nsMapRuleToAttributesFunc mRuleMapper;
-  nsMapAttributesFunc mMapper;
   PRBool              mUniqued;
 };
 
@@ -340,7 +336,6 @@ nsHTMLMappedAttributes::nsHTMLMappedAttributes(void)
     mAttrCount(0),
     mFirst(),
     mRuleMapper(nsnull),
-    mMapper(nsnull),
     mUniqued(PR_FALSE)
 {
   NS_INIT_ISUPPORTS();
@@ -352,7 +347,6 @@ nsHTMLMappedAttributes::nsHTMLMappedAttributes(const nsHTMLMappedAttributes& aCo
     mAttrCount(aCopy.mAttrCount),
     mFirst(aCopy.mFirst),
     mRuleMapper(aCopy.mRuleMapper),
-    mMapper(aCopy.mMapper),
     mUniqued(PR_FALSE)
 {
   NS_INIT_ISUPPORTS();
@@ -398,12 +392,10 @@ nsHTMLMappedAttributes::QueryInterface(const nsIID& aIID,
 
 NS_IMETHODIMP
 nsHTMLMappedAttributes::Init(nsIHTMLStyleSheet* aSheet,
-                             nsMapRuleToAttributesFunc aMapRuleFunc, 
-                             nsMapAttributesFunc aMapFunc)
+                             nsMapRuleToAttributesFunc aMapRuleFunc)
 {
   mSheet = aSheet;
   mRuleMapper = aMapRuleFunc;
-  mMapper = aMapFunc;
   return NS_OK;
 }
 
@@ -435,11 +427,9 @@ nsHTMLMappedAttributes::Reset(void)
 }
 
 NS_IMETHODIMP
-nsHTMLMappedAttributes::SetMappingFunctions(nsMapRuleToAttributesFunc aMapRuleFunc, 
-                                            nsMapAttributesFunc aMapFunc)
+nsHTMLMappedAttributes::SetMappingFunction(nsMapRuleToAttributesFunc aMapRuleFunc)
 {
   mRuleMapper = aMapRuleFunc;
-  mMapper = aMapFunc;
   return NS_OK;
 }
 
@@ -626,7 +616,7 @@ nsHTMLMappedAttributes::Equals(const nsIHTMLMappedAttributes* aOther, PRBool& aR
   }
   else {
     aResult = PR_FALSE;
-    if ((mRuleMapper == other->mRuleMapper) && (mMapper == other->mMapper) && 
+    if ((mRuleMapper == other->mRuleMapper) &&
         (mAttrCount == other->mAttrCount)) {
       const HTMLAttribute* attr = &mFirst;
       const HTMLAttribute* otherAttr = &(other->mFirst);
@@ -649,8 +639,7 @@ NS_IMETHODIMP
 nsHTMLMappedAttributes::HashValue(PRUint32& aValue) const
 {
   aValue = PRUint32(mRuleMapper);
-  aValue = aValue ^ PRUint32(mMapper);
-
+  
   const HTMLAttribute* attr = &mFirst;
   while (nsnull != attr) {
     if (nsnull != attr->mAttribute) {
@@ -744,25 +733,6 @@ nsHTMLMappedAttributes::MapRuleInfoInto(nsRuleData* aRuleData)
     }
   }
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTMLMappedAttributes::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
-  if (0 < mAttrCount) {
-    NS_ASSERTION(mMapper || mRuleMapper, "no mapping function");
-    if (mMapper) {
-      (*mMapper)(this, aContext, aPresContext);
-    }
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHTMLMappedAttributes::MapFontStyleInto(nsIMutableStyleContext* aContext,
-                                         nsIPresContext* aPresContext)
-{
-  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
@@ -1128,9 +1098,8 @@ HTMLAttributesImpl::EnsureSingleMappedFor(nsIHTMLContent* aContent,
       mMapped->AddUse();
       if (aContent) {
         nsMapRuleToAttributesFunc mapRuleFunc;
-        nsMapAttributesFunc mapFunc;
-        aContent->GetAttributeMappingFunctions(mapRuleFunc, mapFunc);
-        result = mMapped->Init(aSheet, mapRuleFunc, mapFunc);
+        aContent->GetAttributeMappingFunction(mapRuleFunc);
+        result = mMapped->Init(aSheet, mapRuleFunc);
       }
     }
     else {

@@ -47,7 +47,6 @@
 #include "nsPIDOMWindow.h"
 #include "nsISizeOfHandler.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsIStyleRule.h"
 #include "nsISupportsArray.h"
 #include "nsIURL.h"
@@ -2210,13 +2209,14 @@ nsGenericHTMLElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
   return NS_OK;
 }
 
+/*
 #ifdef IBMBIDI
 /**
  * Handle attributes on the BDO element
- */
+ 
 static void
 MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                     nsIMutableStyleContext* aStyleContext,
+                     nsIMuutableStyleContext* aStyleContext,
                      nsIPresContext* aPresContext)
 {
  // XXXdwh Don't forget about this function.
@@ -2232,20 +2232,19 @@ MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
   }
 }
 #endif // IBMBIDI
+*/
 
 NS_IMETHODIMP
-nsGenericHTMLElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
-                                                   nsMapAttributesFunc& aMapFunc) const
+nsGenericHTMLElement::GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const
 {
 #ifdef IBMBIDI
   if (mNodeInfo->Equals(nsHTMLAtoms::bdo)) {
     aMapRuleFunc = &MapCommonAttributesInto;
-    aMapFunc = &MapBdoAttributesInto;
+    // XXXdwh get the BIDI function back in here! aMapFunc = &MapBdoAttributesInto;
   }
   else
 #endif // IBMBIDI
   aMapRuleFunc = &MapCommonAttributesInto;
-  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -69,9 +69,7 @@ public:
 
   virtual PRBool HasTextDecorations()=0;
 
-  // Fill a style struct with data
-  NS_IMETHOD GetStyle(nsStyleStructID aSID, nsStyleStruct** aStruct) = 0;
-
+   
   NS_IMETHOD GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding)=0;
 
   // compute the effective difference between two contexts
@@ -86,10 +84,12 @@ public:
 
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize) = 0;
 
-  // -------------------------------------------------------------
-  // DEPRECATED METHODS - these are all going away, stop using them
-  // get a style data struct by ID, may return null 
-  // Replace calls to this with calls to GetStyle();
+  // Fill a style struct with data
+  NS_IMETHOD SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct) = 0;
+  
+  // Get the data for a style struct.
+  NS_IMETHOD GetStyle(nsStyleStructID aSID, nsStyleStruct** aStruct) = 0;
+
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID) = 0;
   virtual nsStyleStruct* GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID) = 0;
 

@@ -18,6 +18,7 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ *   David Hyatt <hyatt@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *   IBM Corporation 
  * 
@@ -35,7 +36,6 @@
  */
  
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsString.h"
 #include "nsUnitConversion.h"
@@ -63,13 +63,13 @@
 
 //----------------------------------------------------------------------
 
-class StyleContextImpl : public nsIStyleContext,
-                         protected nsIMutableStyleContext { // you can't QI to nsIMutableStyleContext
+class nsStyleContext : public nsIStyleContext 
+{
 public:
-  StyleContextImpl(nsIStyleContext* aParent, nsIAtom* aPseudoTag, 
+  nsStyleContext(nsIStyleContext* aParent, nsIAtom* aPseudoTag, 
                    nsIRuleNode* aRuleNode, 
                    nsIPresContext* aPresContext);
-  virtual ~StyleContextImpl();
+  virtual ~nsStyleContext();
 
   void* operator new(size_t sz, nsIPresContext* aPresContext);
   void Destroy();
@@ -111,14 +111,14 @@ public:
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize);
 
 protected:
-  void AppendChild(StyleContextImpl* aChild);
-  void RemoveChild(StyleContextImpl* aChild);
+  void AppendChild(nsStyleContext* aChild);
+  void RemoveChild(nsStyleContext* aChild);
 
-  StyleContextImpl* mParent;
-  StyleContextImpl* mChild;
-  StyleContextImpl* mEmptyChild;
-  StyleContextImpl* mPrevSibling;
-  StyleContextImpl* mNextSibling;
+  nsStyleContext* mParent;
+  nsStyleContext* mChild;
+  nsStyleContext* mEmptyChild;
+  nsStyleContext* mPrevSibling;
+  nsStyleContext* mNextSibling;
 
   nsIAtom*          mPseudoTag;
 
@@ -129,11 +129,11 @@ protected:
 
 static PRInt32 gLastDataCode;
 
-StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
+nsStyleContext::nsStyleContext(nsIStyleContext* aParent,
                                    nsIAtom* aPseudoTag,
                                    nsIRuleNode* aRuleNode,
                                    nsIPresContext* aPresContext)
-  : mParent((StyleContextImpl*)aParent),
+  : mParent((nsStyleContext*)aParent),
     mChild(nsnull),
     mEmptyChild(nsnull),
     mPseudoTag(aPseudoTag),
@@ -179,7 +179,7 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
   }
 }
 
-StyleContextImpl::~StyleContextImpl()
+nsStyleContext::~nsStyleContext()
 {
   NS_ASSERTION((nsnull == mChild) && (nsnull == mEmptyChild), "destructing context with children");
 
@@ -198,11 +198,11 @@ StyleContextImpl::~StyleContextImpl()
   }
 }
 
-NS_IMPL_ADDREF(StyleContextImpl)
-NS_IMPL_RELEASE_WITH_DESTROY(StyleContextImpl, Destroy())
+NS_IMPL_ADDREF(nsStyleContext)
+NS_IMPL_RELEASE_WITH_DESTROY(nsStyleContext, Destroy())
 
 NS_IMETHODIMP
-StyleContextImpl::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+nsStyleContext::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
   NS_PRECONDITION(nsnull != aInstancePtr, "null pointer");
   if (nsnull == aInstancePtr) {
@@ -222,21 +222,21 @@ StyleContextImpl::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return NS_NOINTERFACE;
 }
 
-nsIStyleContext* StyleContextImpl::GetParent(void) const
+nsIStyleContext* nsStyleContext::GetParent(void) const
 {
   NS_IF_ADDREF(mParent);
   return mParent;
 }
 
 NS_IMETHODIMP
-StyleContextImpl::GetFirstChild(nsIStyleContext** aContext)
+nsStyleContext::GetFirstChild(nsIStyleContext** aContext)
 {
   *aContext = mChild;
   NS_IF_ADDREF(*aContext);
   return NS_OK;
 }
 
-void StyleContextImpl::AppendChild(StyleContextImpl* aChild)
+void nsStyleContext::AppendChild(nsStyleContext* aChild)
 {
   PRBool isRoot = PR_FALSE;
   nsCOMPtr<nsIRuleNode> ruleNode;
@@ -268,7 +268,7 @@ void StyleContextImpl::AppendChild(StyleContextImpl* aChild)
   }
 }
 
-void StyleContextImpl::RemoveChild(StyleContextImpl* aChild)
+void nsStyleContext::RemoveChild(nsStyleContext* aChild)
 {
   NS_ASSERTION((nsnull != aChild) && (this == aChild->mParent), "bad argument");
 
@@ -312,7 +312,7 @@ void StyleContextImpl::RemoveChild(StyleContextImpl* aChild)
 }
 
 NS_IMETHODIMP
-StyleContextImpl::GetPseudoType(nsIAtom*& aPseudoTag) const
+nsStyleContext::GetPseudoType(nsIAtom*& aPseudoTag) const
 {
   aPseudoTag = mPseudoTag;
   NS_IF_ADDREF(aPseudoTag);
@@ -320,7 +320,7 @@ StyleContextImpl::GetPseudoType(nsIAtom*& aPseudoTag) const
 }
 
 NS_IMETHODIMP
-StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag, 
+nsStyleContext::FindChildWithRules(const nsIAtom* aPseudoTag, 
                                      nsIRuleNode* aRuleNode,
                                      nsIStyleContext*& aResult)
 {
@@ -330,7 +330,7 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
   aResult = nsnull;
 
   if ((nsnull != mChild) || (nsnull != mEmptyChild)) {
-    StyleContextImpl* child;
+    nsStyleContext* child;
     PRBool isRoot = PR_TRUE;
     aRuleNode->IsRoot(&isRoot);
     if (isRoot) {
@@ -371,10 +371,10 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
 }
 
 
-PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
+PRBool nsStyleContext::Equals(const nsIStyleContext* aOther) const
 {
   PRBool  result = PR_TRUE;
-  const StyleContextImpl* other = (StyleContextImpl*)aOther;
+  const nsStyleContext* other = (nsStyleContext*)aOther;
 
   if (other != this) {
     if (mParent != other->mParent) {
@@ -395,16 +395,16 @@ PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
 
 //=========================================================================================================
 
-const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
+const nsStyleStruct* nsStyleContext::GetStyleData(nsStyleStructID aSID)
 {
   const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
   if (cachedData)
     return cachedData; // We have computed data stored on this node in the context tree.
-  return mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
+  return mRuleNode->GetStyleData(aSID, this); // Our rule node will take care of it for us.
 }
 
 NS_IMETHODIMP
-StyleContextImpl::GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding)
+nsStyleContext::GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding)
 {
   nsMargin border, padding;
   const nsStyleBorder* borderData = (const nsStyleBorder*)GetStyleData(eStyleStruct_Border);
@@ -423,7 +423,7 @@ StyleContextImpl::GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding)
 // style data!  Do not use this function unless you absolutely have to!  You should avoid
 // this at all costs! -dwh
 nsStyleStruct* 
-StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID)
+nsStyleContext::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID)
 {
   nsStyleStruct* result = nsnull;
   switch (aSID) {
@@ -450,7 +450,7 @@ StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyle
   return result;
 }
 
-nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
+nsStyleStruct* nsStyleContext::GetMutableStyleData(nsStyleStructID aSID)
 {
   // XXXdwh ELIMINATE ME!!!
   NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
@@ -458,14 +458,14 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
 }
 
 NS_IMETHODIMP
-StyleContextImpl::GetStyle(nsStyleStructID aSID, nsStyleStruct** aStruct)
+nsStyleContext::GetStyle(nsStyleStructID aSID, nsStyleStruct** aStruct)
 {
   *aStruct = (nsStyleStruct*)(GetStyleData(aSID));
   return NS_OK;
 }
 
 NS_IMETHODIMP
-StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
+nsStyleContext::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
 {
   // This method should only be called from nsRuleNode!  It is not a public
   // method!
@@ -554,55 +554,25 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
   return result;
 }
 
-
-
-struct MapStyleData {
-  MapStyleData(nsIMutableStyleContext* aStyleContext, nsIPresContext* aPresContext)
-  {
-    mStyleContext = aStyleContext;
-    mPresContext = aPresContext;
-  }
-  nsIMutableStyleContext*  mStyleContext;
-  nsIPresContext*   mPresContext;
-};
-
-static void MapStyleRule(MapStyleData* aData, nsIRuleNode* aCurrNode)
-{
-  // For now in order to preserve compatibility with the current style system,
-  // we walk the rules from least sig. to most sig.  In reality, this is the
-  // wrong direction, and we should be dynamically obtaining properties by walking
-  // the rules from most sig. to least sig.  Changing this will prevent us from wasting time
-  // looking at rules whose values are overridden.
-  nsCOMPtr<nsIRuleNode> parent;
-  aCurrNode->GetParent(getter_AddRefs(parent));
-  if (parent)
-    MapStyleRule(aData, parent);
-
-  nsCOMPtr<nsIStyleRule> rule;;
-  aCurrNode->GetRule(getter_AddRefs(rule));
-  if (rule)
-    rule->MapStyleInto(aData->mStyleContext, aData->mPresContext);
-}
-
 NS_IMETHODIMP
-StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
+nsStyleContext::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 {
   // XXXdwh This function needs to handle invalidation of style subtrees and rule
   // subtrees.
   return NS_OK;
 }
 
-void StyleContextImpl::ForceUnique(void)
+void nsStyleContext::ForceUnique(void)
 {
   mBits |= NS_STYLE_UNIQUE_CONTEXT;
 }
 
 NS_IMETHODIMP
-StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference /*= PR_FALSE*/)
+nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference /*= PR_FALSE*/)
 {
   if (aOther) {
     PRInt32 hint;
-    const StyleContextImpl* other = (const StyleContextImpl*)aOther;
+    const nsStyleContext* other = (const nsStyleContext*)aOther;
 
     const nsStyleFont* font = (const nsStyleFont*)GetStyleData(eStyleStruct_Font);
     const nsStyleFont* otherFont = (const nsStyleFont*)aOther->GetStyleData(eStyleStruct_Font);
@@ -819,7 +789,7 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
   return NS_OK;
 }
 
-void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
+void nsStyleContext::List(FILE* out, PRInt32 aIndent)
 {
   // Indent
   PRInt32 ix;
@@ -833,14 +803,14 @@ void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
   }
   
   if (nsnull != mChild) {
-    StyleContextImpl* child = mChild;
+    nsStyleContext* child = mChild;
     do {
       child->List(out, aIndent + 1);
       child = child->mNextSibling;
     } while (mChild != child);
   }
   if (nsnull != mEmptyChild) {
-    StyleContextImpl* child = mEmptyChild;
+    nsStyleContext* child = mEmptyChild;
     do {
       child->List(out, aIndent + 1);
       child = child->mNextSibling;
@@ -852,11 +822,11 @@ void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
 /******************************************************************************
 * SizeOf method:
 *  
-*  Self (reported as StyleContextImpl's size): 
+*  Self (reported as nsStyleContext's size): 
 *    1) sizeof(*this) which gets all of the data members
 *    2) adds in the size of the PseudoTag, if there is one
 *  
-*  Contained / Aggregated data (not reported as StyleContextImpl's size):
+*  Contained / Aggregated data (not reported as nsStyleContext's size):
 *    1) the Style Rules in mRules are not counted as part of sizeof(*this)
 *       (though the size of the nsISupportsArray ptr. is) so we need to 
 *       count the rules seperately. For each rule in the mRules collection
@@ -871,7 +841,7 @@ void StyleContextImpl::List(FILE* out, PRInt32 aIndent)
 *    3) We recurse over our direct siblings (if any).
 *   
 ******************************************************************************/
-void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
+void nsStyleContext::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 {
   NS_ASSERTION(aSizeOfHandler != nsnull, "SizeOf handler cannot be null");
 
@@ -887,7 +857,7 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 
   // get or create a tag for this instance
   nsCOMPtr<nsIAtom> tag;
-  tag = getter_AddRefs(NS_NewAtom("StyleContextImpl"));
+  tag = getter_AddRefs(NS_NewAtom("nsStyleContext"));
   // get the size of an empty instance and add to the sizeof handler
   aSize = sizeof(*this);
   // add in the size of the member mPseudoTag
@@ -899,14 +869,14 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 
   // now follow up with the child (and empty child) recursion
   if (nsnull != mChild) {
-    StyleContextImpl* child = mChild;
+    nsStyleContext* child = mChild;
     do {
       child->SizeOf(aSizeOfHandler, localSize);
       child = child->mNextSibling;
     } while (mChild != child);
   }
   if (nsnull != mEmptyChild) {
-    StyleContextImpl* child = mEmptyChild;
+    nsStyleContext* child = mEmptyChild;
     do {
       child->SizeOf(aSizeOfHandler, localSize);
       child = child->mNextSibling;
@@ -921,7 +891,7 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
 // Overloaded new operator. Initializes the memory to 0 and relies on an arena
 // (which comes from the presShell) to perform the allocation.
 void* 
-StyleContextImpl::operator new(size_t sz, nsIPresContext* aPresContext)
+nsStyleContext::operator new(size_t sz, nsIPresContext* aPresContext)
 {
   // Check the recycle list first.
   void* result = nsnull;
@@ -932,18 +902,18 @@ StyleContextImpl::operator new(size_t sz, nsIPresContext* aPresContext)
 // Overridden to prevent the global delete from being called, since the memory
 // came out of an nsIArena instead of the global delete operator's heap.
 void 
-StyleContextImpl::Destroy()
+nsStyleContext::Destroy()
 {
   // Get the pres context from our rule node.
   nsCOMPtr<nsIPresContext> presContext;
   mRuleNode->GetPresContext(getter_AddRefs(presContext));
 
   // Call our destructor.
-  this->~StyleContextImpl();
+  this->~nsStyleContext();
 
   // Don't let the memory be freed, since it will be recycled
   // instead. Don't call the global operator delete.
-  presContext->FreeToShell(sizeof(StyleContextImpl), this);
+  presContext->FreeToShell(sizeof(nsStyleContext), this);
 }
 
 NS_LAYOUT nsresult
@@ -958,7 +928,7 @@ NS_NewStyleContext(nsIStyleContext** aInstancePtrResult,
     return NS_ERROR_NULL_POINTER;
   }
 
-  StyleContextImpl* context = new (aPresContext) StyleContextImpl(aParentContext, aPseudoTag, 
+  nsStyleContext* context = new (aPresContext) nsStyleContext(aParentContext, aPseudoTag, 
                                                                   aRuleNode, aPresContext);
   if (nsnull == context) {
     return NS_ERROR_OUT_OF_MEMORY;

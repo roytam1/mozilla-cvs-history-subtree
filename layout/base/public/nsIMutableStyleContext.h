@@ -21,32 +21,4 @@
  */
 #ifndef nsIMutableStyleContext_h___
 #define nsIMutableStyleContext_h___
-
-#include "nslayout.h"
-#include "nsISupports.h"
-#include "nsStyleStruct.h"
-
-
-#define NS_IMUTABLESTYLECONTEXT_IID   \
- { 0x53cbb100, 0x8340, 0x11d3, \
-   {0xba, 0x05, 0x00, 0x10, 0x83, 0x02, 0x3c, 0x2b} }
-
-
-class nsIMutableStyleContext : public nsISupports {
-public:
-  static const nsIID& GetIID() { static nsIID iid = NS_IMUTABLESTYLECONTEXT_IID; return iid; }
-
-  virtual nsIStyleContext*  GetParent(void) const = 0;
-
-  // Fill a style struct with data
-  NS_IMETHOD SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct) = 0;
-
-  //------------------------------------------------
-  // TEMP methods these are here only to ease the transition
-  // to the newer Get/SetStyle APIs above. Don't call these.
-  // get a style data struct by ID
-  virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID) = 0;
-  virtual nsStyleStruct* GetMutableStyleData(nsStyleStructID aSID) = 0;
-};
-
 #endif /* nsIMutableStyleContext_h___ */

@@ -90,96 +90,83 @@ protected:
  
   PRBool InheritsFromParentRule(const nsStyleStructID& aSID);
   
-  const nsStyleStruct* SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* SetDefaultOnRoot(const nsStyleStructID& aSID, nsIStyleContext* aContext);
 
   const nsStyleStruct* WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext, 
-                                    nsIMutableStyleContext* aMutableContext, nsRuleData* aRuleData,
+                                    nsRuleData* aRuleData,
                                     nsCSSStruct* aSpecificData);
 
   const nsStyleStruct* ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartStruct, 
                                         const nsCSSStruct& aStartData, 
-                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                        nsRuleNode* aHighestNode,
+                                        nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                         const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeDisplayData(nsStyleDisplay* aStartDisplay, const nsCSSDisplay& aDisplayData, 
-                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                          nsRuleNode* aHighestNode,
+                                          nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                           const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeVisibilityData(nsStyleVisibility* aStartVisibility, const nsCSSDisplay& aDisplayData, 
-                                             nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                             nsRuleNode* aHighestNode,
+                                             nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                              const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData, 
-                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                       nsRuleNode* aHighestNode,
+                                       nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                        const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeColorData(nsStyleColor* aStartColor, const nsCSSColor& aColorData, 
-                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                        nsRuleNode* aHighestNode,
+                                        nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                         const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeBackgroundData(nsStyleBackground* aStartBackground, const nsCSSColor& aColorData, 
-                                             nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                             nsRuleNode* aHighestNode,
+                                             nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                              const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeMarginData(nsStyleMargin* aStartMargin, const nsCSSMargin& aMarginData, 
-                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                         nsRuleNode* aHighestNode,
+                                         nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                          const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeBorderData(nsStyleBorder* aStartBorder, const nsCSSMargin& aMarginData, 
-                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                         nsRuleNode* aHighestNode,
+                                         nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                          const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputePaddingData(nsStylePadding* aStartPadding, const nsCSSMargin& aMarginData, 
-                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                          nsRuleNode* aHighestNode,
+                                          nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                           const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeOutlineData(nsStyleOutline* aStartOutline, const nsCSSMargin& aMarginData, 
-                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                          nsRuleNode* aHighestNode,
+                                          nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                           const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeListData(nsStyleList* aStartList, const nsCSSList& aListData, 
-                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                       nsRuleNode* aHighestNode,
+                                       nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                        const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputePositionData(nsStylePosition* aStartPosition, const nsCSSPosition& aPositionData, 
-                                           nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                           nsRuleNode* aHighestNode,
+                                           nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                            const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeTableData(nsStyleTable* aStartTable, const nsCSSTable& aTableData, 
-                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
-                                        nsRuleNode* aHighestNode,
+                                        nsIStyleContext* aContext, nsRuleNode* aHighestNode,
                                         const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeTableBorderData(nsStyleTableBorder* aStartTable, const nsCSSTable& aTableData, 
-                                              nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                              nsIStyleContext* aContext,  
                                               nsRuleNode* aHighestNode,
                                               const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeContentData(nsStyleContent* aStartContent, const nsCSSContent& aData, 
-                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsIStyleContext* aContext,  
                                           nsRuleNode* aHighestNode,
                                           const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeQuotesData(nsStyleQuotes* aStartQuotes, const nsCSSContent& aData, 
-                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                         nsIStyleContext* aContext,  
                                          nsRuleNode* aHighestNode,
                                          const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeTextData(nsStyleText* aStartData, const nsCSSText& aData, 
-                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                       nsIStyleContext* aContext,  
                                        nsRuleNode* aHighestNode,
                                        const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeTextResetData(nsStyleTextReset* aStartData, const nsCSSText& aData, 
-                                            nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                            nsIStyleContext* aContext,  
                                             nsRuleNode* aHighestNode,
                                             const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeUIData(nsStyleUserInterface* aStartData, const nsCSSUserInterface& aData, 
-                                     nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                     nsIStyleContext* aContext,  
                                      nsRuleNode* aHighestNode,
                                      const RuleDetail& aRuleDetail);
   const nsStyleStruct* ComputeUIResetData(nsStyleUIReset* aStartData, const nsCSSUserInterface& aData, 
-                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsIStyleContext* aContext,  
                                           nsRuleNode* aHighestNode,
                                           const RuleDetail& aRuleDetail);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData, 
-                                      nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                      nsIStyleContext* aContext,  
                                       nsRuleNode* aHighestNode,
                                       const RuleDetail& aRuleDetail);
 #endif
@@ -210,27 +197,27 @@ protected:
 #endif
 
   const nsStyleStruct* GetParentData(const nsStyleStructID& aSID);
-  const nsStyleStruct* GetDisplayData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetVisibilityData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetColorData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetBackgroundData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetMarginData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetPaddingData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetOutlineData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetListData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetPositionData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetTableData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetTableBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetContentData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetQuotesData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetTextData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetTextResetData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetUIData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
-  const nsStyleStruct* GetUIResetData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetDisplayData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetVisibilityData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetFontData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetColorData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetBackgroundData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetMarginData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetBorderData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetPaddingData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetOutlineData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetListData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetPositionData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetTableData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetTableBorderData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetContentData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetQuotesData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetTextData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetTextResetData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetUIData(nsIStyleContext* aContext);
+  const nsStyleStruct* GetUIResetData(nsIStyleContext* aContext);
 #ifdef INCLUDE_XUL
-  const nsStyleStruct* GetXULData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetXULData(nsIStyleContext* aContext);
 #endif
 
 public:
@@ -246,8 +233,7 @@ public:
   NS_IMETHOD GetRule(nsIStyleRule** aResult);
   NS_IMETHOD GetPresContext(nsIPresContext** aResult);
   const nsStyleStruct* GetStyleData(nsStyleStructID aSID, 
-                                    nsIStyleContext* aContext,
-                                    nsIMutableStyleContext* aMutableContext);
+                                    nsIStyleContext* aContext);
 };
 
 #endif

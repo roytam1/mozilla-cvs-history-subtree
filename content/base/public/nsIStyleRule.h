@@ -30,7 +30,6 @@
 class nsISizeOfHandler;
 
 class nsIStyleSheet;
-class nsIMutableStyleContext;
 class nsIPresContext;
 class nsIContent;
 struct nsRuleData;
@@ -48,12 +47,7 @@ public:
   // Strength is an out-of-band weighting, useful for mapping CSS ! important
   NS_IMETHOD GetStrength(PRInt32& aStrength) const = 0;
 
-  // Map only font data into style context
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext) = 0;
-  // Map all non-font info into style context
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext) = 0;
-
-  // The new mapping functions.
+  // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData)=0;
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const = 0;

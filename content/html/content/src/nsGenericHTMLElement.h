@@ -41,7 +41,6 @@ class nsIFrame;
 class nsIHTMLAttributes;
 class nsIHTMLMappedAttributes;
 class nsIHTMLContent;
-class nsIMutableStyleContext;
 class nsIStyleRule;
 class nsISupportsArray;
 class nsChildContentList;
@@ -162,8 +161,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
-                                          nsMapAttributesFunc& aMapFunc) const;
+  NS_IMETHOD GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const;
 
   void ListAttributes(FILE* out) const;
 

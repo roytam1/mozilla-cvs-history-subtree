@@ -44,7 +44,6 @@
 #include "nsIStyleRule.h"
 #include "nsIFrame.h"
 #include "nsIStyleContext.h"
-#include "nsIMutableStyleContext.h"
 #include "nsHTMLAtoms.h"
 #include "nsIPresContext.h"
 #include "nsIEventStateManager.h"
@@ -82,10 +81,7 @@ public:
   // Strength is an out-of-band weighting, always 0 here
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
 
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
-
-  // The new mapping functions.
+  // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
@@ -101,7 +97,6 @@ public:
   HTMLDocumentColorRule(nsIHTMLStyleSheet* aSheet);
   virtual ~HTMLDocumentColorRule();
 
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext);
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   virtual void SizeOf(nsISizeOfHandler *aSizeofHandler, PRUint32 &aSize);
@@ -150,18 +145,6 @@ NS_IMETHODIMP
 HTMLColorRule::GetStrength(PRInt32& aStrength) const
 {
   aStrength = 0;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-HTMLColorRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-HTMLColorRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
   return NS_OK;
 }
 
@@ -244,12 +227,6 @@ HTMLDocumentColorRule::MapRuleInfoInto(nsRuleData* aRuleData)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-HTMLDocumentColorRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
-  return NS_OK;
-}
-
 /******************************************************************************
 * SizeOf method:
 *
@@ -302,12 +279,7 @@ public:
   // Strength is an out-of-band weighting, always 0 here
   NS_IMETHOD GetStrength(PRInt32& aStrength) const;
 
-  NS_IMETHOD MapFontStyleInto(nsIMutableStyleContext* aContext,
-                              nsIPresContext* aPresContext);
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
-                          nsIPresContext* aPresContext);
-
-  // The new mapping functions.
+  // The new mapping function.
   NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 
   NS_IMETHOD List(FILE* out = stdout, PRInt32 aIndent = 0) const;
@@ -356,18 +328,6 @@ NS_IMETHODIMP
 GenericTableRule::GetStrength(PRInt32& aStrength) const
 {
   aStrength = 0;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-GenericTableRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-GenericTableRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
-{
   return NS_OK;
 }
 
@@ -430,8 +390,7 @@ public:
   TableTHRule(nsIHTMLStyleSheet* aSheet);
   virtual ~TableTHRule();
 
-  NS_IMETHOD MapStyleInto(nsIMutableStyleContext* aContext,
-                          nsIPresContext* aPresContext);
+  NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
 };
 
 TableTHRule::TableTHRule(nsIHTMLStyleSheet* aSheet)
@@ -443,24 +402,27 @@ TableTHRule::~TableTHRule()
 {
 }
 
-NS_IMETHODIMP
-TableTHRule::MapStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
+static void PostResolveCallback(nsStyleStruct* aStyleStruct, nsRuleData* aRuleData)
 {
-  nsIStyleContext* parentContext = aContext->GetParent();
+  nsStyleText* text = (nsStyleText*)aStyleStruct;
+  if (text->mTextAlign == NS_STYLE_TEXT_ALIGN_DEFAULT) {
+    nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aRuleData->mStyleContext->GetParent());
 
-  if (parentContext) {
-    nsStyleText* styleText = 
-      (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
-    if (NS_STYLE_TEXT_ALIGN_DEFAULT == styleText->mTextAlign) {
+    if (parentContext) {
       const nsStyleText* parentStyleText = 
-        (const nsStyleText*)parentContext->GetStyleData(eStyleStruct_Text);
+          (const nsStyleText*)parentContext->GetStyleData(eStyleStruct_Text);
       PRUint8 parentAlign = parentStyleText->mTextAlign;
-      styleText->mTextAlign = (NS_STYLE_TEXT_ALIGN_DEFAULT == parentAlign)
+      text->mTextAlign = (NS_STYLE_TEXT_ALIGN_DEFAULT == parentAlign)
                               ? NS_STYLE_TEXT_ALIGN_CENTER : parentAlign;
     }
-    NS_RELEASE(parentContext);
   }
+}
 
+NS_IMETHODIMP
+TableTHRule::MapRuleInfoInto(nsRuleData* aRuleData)
+{
+  if (aRuleData && aRuleData->mSID == eStyleStruct_Text)
+    aRuleData->mPostResolveCallback = &PostResolveCallback;
   return NS_OK;
 }
 
