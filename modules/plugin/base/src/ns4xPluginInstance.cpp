@@ -66,6 +66,7 @@ public:
 
   ns4xPluginStreamListener(nsIPluginInstance* inst, void* notifyData);
   virtual ~ns4xPluginStreamListener(void);
+  PRBool IsStarted(void);
 
 protected:
 
@@ -202,12 +203,18 @@ ns4xPluginStreamListener::OnDataAvailable(nsIPluginStreamInfo* pluginInfo,
         // We need to fix this.
 
         PRLibrary* lib = nsnull;
-        if(mInst)
+        PRBool started = PR_FALSE;
+        if(mInst) {
           lib = mInst->fLibrary;
+          started = mInst->IsStarted();
+        }
 
-        NS_TRY_SAFE_CALL_RETURN(numtowrite, CallNPP_WriteReadyProc(callbacks->writeready,
+        if (started)
+        {
+          NS_TRY_SAFE_CALL_RETURN(numtowrite, CallNPP_WriteReadyProc(callbacks->writeready,
                                                 npp,
                                                 &mNPStream), lib);
+        }
 #endif
 		    if (numtowrite <= 0)
                             return NS_ERROR_FAILURE;
@@ -271,13 +278,19 @@ ns4xPluginStreamListener::OnFileAvailable(nsIPluginStreamInfo* pluginInfo,
     // We need to fix this.
 
     PRLibrary* lib = nsnull;
-    if(mInst)
+    PRBool started = PR_FALSE;
+    if(mInst) {
       lib = mInst->fLibrary;
+      started = mInst->IsStarted();
+    }
 
-    NS_TRY_SAFE_CALL_VOID(CallNPP_StreamAsFileProc(callbacks->asfile,
+    if (started)
+    {
+      NS_TRY_SAFE_CALL_VOID(CallNPP_StreamAsFileProc(callbacks->asfile,
                              npp,
                              &mNPStream,
                              fileName), lib);
+    }
 #endif
  
     return NS_OK;
@@ -379,6 +392,11 @@ ns4xPluginInstance :: ~ns4xPluginInstance(void)
 #endif
 }
 
+PRBool
+ns4xPluginInstance :: IsStarted(void)
+{
+    return mStarted;
+}
 
 ////////////////////////////////////////////////////////////////////////
 
