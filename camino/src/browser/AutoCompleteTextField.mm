@@ -491,8 +491,8 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
     // if nothing is selected and you scroll up, go to last row
     row = [mTableView numberOfRows]-1;
   } else if (row == [mTableView numberOfRows]-1 && aRows == 1) {
-    // if the last row is selected and you scroll down, go to first row
-    row = 0;
+    // if the last row is selected and you scroll down, do nothing. pins
+    // the selection at the bottom.
   } else if (aRows+row < 0) {
     // if you scroll up beyond first row...
     if (row == 0)
