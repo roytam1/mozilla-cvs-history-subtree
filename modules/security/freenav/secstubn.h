@@ -45,6 +45,16 @@ typedef struct FINGERZIG_ {
 #define ZIG_MF 2
 #define ZIG_ERR_PNF 12
 
+/* certificate stuff */
+
+#define ZIG_C_COMPANY   1
+#define ZIG_C_CA        2
+#define ZIG_C_SERIAL    3
+#define ZIG_C_EXPIRES   4
+#define ZIG_C_NICKNAME  5
+#define ZIG_C_FP        6
+#define ZIG_C_JAVA      100
+
 SEC_BEGIN_PROTOS
 
 void
