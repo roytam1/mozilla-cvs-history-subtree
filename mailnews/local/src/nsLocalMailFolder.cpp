@@ -1256,7 +1256,7 @@ NS_IMETHODIMP
 nsMsgLocalMailFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgDatabase **db)
 {
   nsresult openErr=NS_ERROR_UNEXPECTED;
-  if(!db || !folderInfo)
+  if(!db || !folderInfo || !mPath)
     return NS_ERROR_NULL_POINTER;	//ducarroz: should we use NS_ERROR_INVALID_ARG?
 
   nsresult rv;
@@ -1264,7 +1264,7 @@ nsMsgLocalMailFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgD
 	nsCOMPtr<nsIMsgDatabase> mailDB;
   if (NS_SUCCEEDED(rv) && mailDBFactory)
   {
-        openErr = mailDBFactory->OpenFolderDB(this, PR_FALSE, PR_FALSE, getter_AddRefs(mailDB));
+    openErr = mailDBFactory->OpenFolderDB(this, PR_FALSE, PR_FALSE, getter_AddRefs(mailDB));
   }
 
   *db = mailDB;
