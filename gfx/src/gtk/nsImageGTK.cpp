@@ -403,7 +403,7 @@ nsImageGTK::DrawComposited32(PRBool isLSB, PRBool flipBytes,
   }
 
 //  PRINTF(("startX=%u startY=%u activeX=%u activeY=%u\n",
-//          startX, startY, activeX, activeY);
+//          startX, startY, activeX, activeY));
 //  fprintf(stderr, "width=%u height=%u\n", ximage->width, ximage->height);
 
   for (unsigned y=0; y<height; y++) {
@@ -426,7 +426,7 @@ nsImageGTK::DrawComposited32(PRBool isLSB, PRBool flipBytes,
          unsigned(imageRow[2]) * *alphaRow) >> 8;
     }
   }
-})
+}
 
 // 24-bit (888) truecolor convert/composite function
 void
@@ -719,7 +719,7 @@ nsImageGTK::DrawComposited(nsIRenderingContext &aContext,
 //  PRINTF(("aX=%d aY=%d, aWidth=%u aHeight=%u\n", aX, aY, aWidth, aHeight));
 //  PRINTF(("surfaceWidth=%u surfaceHeight=%u\n", surfaceWidth, surfaceHeight));
 //  PRINTF(("readX=%u readY=%u readWidth=%u readHeight=%u destX=%u destY=%u\n\n",
-//          readX, readY, readWidth, readHeight, destX, destY);
+//          readX, readY, readWidth, readHeight, destX, destY));
 
   XImage *ximage = XGetImage(dpy, drawable,
                              readX, readY, readWidth, readHeight, 
@@ -771,7 +771,7 @@ nsImageGTK::DrawComposited(nsIRenderingContext &aContext,
 
   XDestroyImage(ximage);
   delete [] readData;
-})
+}
 
 void nsImageGTK::CreateAlphaBitmap(PRInt32 aWidth, PRInt32 aHeight)
 {

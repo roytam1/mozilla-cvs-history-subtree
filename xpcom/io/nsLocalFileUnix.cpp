@@ -279,7 +279,7 @@ nsLocalFile::CreateAllAncestors(PRUint32 permissions)
          *slashp = buffer;
 
 #ifdef DEBUG_NSIFILE
-    PRINTF("nsIFile: before: %s\n", buffer);
+    PRINTF(("nsIFile: before: %s\n", buffer));
 #endif
 
     while ((slashp = strchr(slashp + 1, '/'))) {
@@ -301,7 +301,7 @@ nsLocalFile::CreateAllAncestors(PRUint32 permissions)
         /* Temporarily NUL-terminate here */
         *slashp = '\0';
 #ifdef DEBUG_NSIFILE
-        PRINTF("nsIFile: mkdir(\"%s\")\n", buffer);
+        PRINTF(("nsIFile: mkdir(\"%s\")\n", buffer));
 #endif
         int result = mkdir(buffer, permissions);
 
@@ -319,7 +319,7 @@ nsLocalFile::CreateAllAncestors(PRUint32 permissions)
     }
 
 #ifdef DEBUG_NSIFILE
-    PRINTF("nsIFile: after: %s\n", buffer);
+    PRINTF(("nsIFile: after: %s\n", buffer));
 #endif
 
     return NS_OK;
@@ -394,15 +394,15 @@ nsLocalFile::Create(PRUint32 type, PRUint32 permissions)
             dirperm |= S_IXOTH;
 
 #ifdef DEBUG_NSIFILE
-        PRINTF("nsIFile: perm = %o, dirperm = %o\n", permissions,
-                dirperm);
+        PRINTF(("nsIFile: perm = %o, dirperm = %o\n", permissions,
+                dirperm));
 #endif
 
         if (NS_FAILED(CreateAllAncestors(dirperm)))
             return NS_ERROR_FAILURE;
 
 #ifdef DEBUG_NSIFILE
-        PRINTF("nsIFile: Create(\"%s\") again\n", (const char *)mPath);
+        PRINTF(("nsIFile: Create(\"%s\") again\n", (const char *)mPath));
 #endif
         result = exclusiveCreateFunc((const char *)mPath, permissions);
     }
@@ -630,7 +630,7 @@ nsLocalFile::CopyTo(nsIFile *newParent, const char *newName)
             return rv;
 
 #ifdef DEBUG_blizzard
-        PRINTF("nsLocalFile::CopyTo() %s -> %s\n", (const char *)mPath, (const char *)newPathName);
+        PRINTF(("nsLocalFile::CopyTo() %s -> %s\n", (const char *)mPath, (const char *)newPathName));
 #endif
 
         // actually create the file.
@@ -706,8 +706,8 @@ nsLocalFile::CopyTo(nsIFile *newParent, const char *newName)
         }
 
 #ifdef DEBUG_blizzard
-        PRINTF("read %d bytes, wrote %d bytes\n",
-               totalRead, totalWritten);
+        PRINTF(("read %d bytes, wrote %d bytes\n",
+                totalRead, totalWritten));
 #endif
 
         // close the files
@@ -984,13 +984,13 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
     if (STATFS(mPath, &fs_buf) < 0) {
         // The call to STATFS failed.
 #ifdef DEBUG
-        PRINTF("ERROR: GetDiskSpaceAvailable: STATFS call FAILED. \n");
+        PRINTF(("ERROR: GetDiskSpaceAvailable: STATFS call FAILED. \n"));
 #endif
         return NS_ERROR_FAILURE;
     }
 #ifdef DEBUG_DISK_SPACE
-    PRINTF("DiskSpaceAvailable: %d bytes\n",
-           fs_buf.f_bsize * (fs_buf.f_bavail - 1));
+    PRINTF(("DiskSpaceAvailable: %d bytes\n",
+            fs_buf.f_bsize * (fs_buf.f_bavail - 1)));
 #endif
 
     // The number of Bytes free = The number of free blocks available to
@@ -1012,7 +1012,7 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
     ** properly for these platforms yet.
     */
 #ifdef DEBUG
-    PRINTF("ERROR: GetDiskSpaceAvailable: Not implemented for plaforms without statfs.\n");
+    PRINTF(("ERROR: GetDiskSpaceAvailable: Not implemented for plaforms without statfs.\n"));
 #endif
     return NS_ERROR_NOT_IMPLEMENTED;
 
