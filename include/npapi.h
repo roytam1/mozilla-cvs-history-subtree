@@ -29,7 +29,9 @@
 #pragma pack(1)
 #endif
 
+#if defined(JAVA)
 #include "jri.h"                /* Java Runtime Interface */
+#endif
 
 #if defined (__OS2__ ) || defined (OS2)
 #	ifndef XP_OS2
@@ -512,7 +514,9 @@ void	    NP_LOADDS	NPP_Print(NPP instance, NPPrint* platformPrint);
 int16       NP_LOADDS	NPP_HandleEvent(NPP instance, void* event);
 void	    NP_LOADDS	NPP_URLNotify(NPP instance, const char* url,
 									  NPReason reason, void* notifyData);
+#if defined(JAVA)
 jref	    NP_LOADDS			NPP_GetJavaClass(void);
+#endif
 NPError			NP_LOADDS	NPP_GetValue(void *instance, NPPVariable variable,
 									 void *value);
 NPError			NP_LOADDS	NPP_SetValue(void *instance, NPNVariable variable,
@@ -547,8 +551,10 @@ void*      NP_LOADDS	NPN_MemAlloc(uint32 size);
 void       NP_LOADDS	NPN_MemFree(void* ptr);
 uint32     NP_LOADDS	NPN_MemFlush(uint32 size);
 void	   NP_LOADDS	NPN_ReloadPlugins(NPBool reloadPages);
+#if defined(JAVA)
 JRIEnv*	   NP_LOADDS	NPN_GetJavaEnv(void);
 jref	   NP_LOADDS	NPN_GetJavaPeer(NPP instance);
+#endif
 NPError	   NP_LOADDS	NPN_GetValue(NPP instance, NPNVariable variable,
 							 void *value);
 NPError	   NP_LOADDS	NPN_SetValue(NPP instance, NPPVariable variable,

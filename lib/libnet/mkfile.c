@@ -34,7 +34,9 @@
 #include "glhist.h"
 
 #include "il_strm.h"            /* Image Lib stream converters. */
+#if !defined(B1M)
 #include "libimg.h"             /* Image Lib public API. */
+#endif /* B1M */
 
 #if defined(XP_WIN) || defined(XP_OS2)
 #include "errno.h"

@@ -30,7 +30,9 @@
 #include "mkpadpac.h"
 
 #if defined(XP_WIN)
+#if !defined(B1M)
 #define ASYNC_DNS
+#endif /* B1M */
 #endif
 
 #include "mktcp.h"

@@ -37,7 +37,9 @@
 #include "extcache.h"
 #include "mkmemcac.h"
 #include "cert.h" /* for CERT_DupCertificate() */
+#if !defined(B1M)
 #include "libimg.h"             /* Image Lib public API. */
+#endif /* ! B1M */
 #include "prclist.h"
 #include "shist.h"
 
