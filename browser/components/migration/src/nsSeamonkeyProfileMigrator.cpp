@@ -426,7 +426,7 @@ nsSeamonkeyProfileMigrator::CopyUserContentSheet()
   PRBool exists = PR_FALSE;
   sourceUserContent->Exists(&exists);
   if (!exists)
-    return NS_ERROR_FILE_NOT_FOUND;
+    return NS_OK;
 
   nsCOMPtr<nsIFile> targetUserContent;
   mTargetProfile->Clone(getter_AddRefs(targetUserContent));

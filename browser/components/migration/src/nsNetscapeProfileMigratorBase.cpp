@@ -236,7 +236,7 @@ nsNetscapeProfileMigratorBase::CopyFile(const nsAString& aSourceFileName, const 
   PRBool exists = PR_FALSE;
   sourceFile->Exists(&exists);
   if (!exists)
-    return NS_ERROR_FILE_NOT_FOUND;
+    return NS_OK;
 
   nsCOMPtr<nsIFile> targetFile;
   mTargetProfile->Clone(getter_AddRefs(targetFile));

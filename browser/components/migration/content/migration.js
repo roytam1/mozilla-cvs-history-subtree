@@ -212,7 +212,7 @@ var MigrationWizard = {
   
   onMigratingMigrate: function (aOuter)
   {
-    aOuter._migrator.migrate(aOuter._itemsFlags, this._automigrate, aOuter._selectedProfile);
+    aOuter._migrator.migrate(aOuter._itemsFlags, aOuter._automigrate, aOuter._selectedProfile);
   },
   
   _listItems: function (aID)
@@ -227,7 +227,6 @@ var MigrationWizard = {
       var index = this._selectedIndices[i];
       var label = document.createElement("label");
       var item = this._items[idToIndex[index.toString()]];
-      dump("*** goat = " + index + "\n");
       label.id = item._key;
       label.setAttribute("value", bundle.getString(item._key + "_" + this._source));
       items.appendChild(label);
