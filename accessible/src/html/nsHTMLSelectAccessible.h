@@ -34,7 +34,7 @@ class nsHTMLSelectAccessible : public nsAccessible,
 {
 public:
 
-  NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIACCESSIBLESELECTABLE
   
   nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
