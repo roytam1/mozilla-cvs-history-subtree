@@ -58,20 +58,20 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(chromeType, cf, localeName + "global/");
     registerChrome(chromeType, pf, localeName + "global-platform/");
 
-    registerChrome(chromeType, cf, localeName + "browser/");
-    registerChrome(chromeType, cf, localeName + "browser-region/");
+    registerChrome(chromeType, cf, "locale/browser/");
+    registerChrome(chromeType, cf, "locale/browser-region/");
     registerChrome(chromeType, cf, localeName + "passwordmgr/");
     registerChrome(chromeType, cf, localeName + "mozapps/");
 
     registerChrome(chromeType, cf, localeName + "necko/");
-    registerChrome(chromeType, cf, localeName + "autoconfig/");
+    registerChrome(chromeType, cf, "locale/autoconfig/");
     registerChrome(chromeType, cf, localeName + "cookie/");
     registerChrome(chromeType, cf, localeName + "wallet/");
     registerChrome(chromeType, cf, localeName + "pippki/");
     registerChrome(chromeType, cf, localeName + "pipnss/");
 
     // XXXben Soon to be obsolete.
-    registerChrome(chromeType, cf, localeName + "communicator/");
+    registerChrome(chromeType, cf, "locale/communicator/");
     registerChrome(chromeType, pf, localeName + "communicator-platform/");
     registerChrome(chromeType, cf, localeName + "navigator/");
     registerChrome(chromeType, pf, localeName + "navigator-platform/");
