@@ -1,3 +1,4 @@
+todo:
 - nsiprogresseventsink comment
 - license headers
 - nsresult for internal functions, clean up interfaces
@@ -5,9 +6,7 @@
 - alert() -> nsiprompt or dialog
 - remove printfs
 - XXXs
-- clean up progressdialog
 - firebird/thunderbird extension
-- listing progressmeter doesn't work
 
 don't care (for now):
 - conflict
@@ -18,6 +17,7 @@ don't care (for now):
     workaround: gTimeout
   - problem: cancel by user in progress dialog: xpconnect errors
     solution: prevent dialog closure (even if cancel pressed) until we're done.
+- listing progressmeter doesn't work
 
 Enhance
 - protocols

@@ -342,11 +342,11 @@ Transfer.prototype =
   },
 
   // called when an individual file transfer completed or failed
-  fileFinished : function(filei)
+  fileFinished : function(filenr)
   {
-    ddump("file " + filei + " finished");
+    ddump("file " + filenr + " finished");
 
-    var file = this.files[filei];
+    var file = this.files[filenr];
 
     // flush
     if (file.fos) // only for download
@@ -412,7 +412,7 @@ Transfer.prototype =
   /* Hack.
      We need to change the list of files (add or remove files) after
      the Transfer object was created. However, in that case, the internal
-     bookkeeping stuff (filei of TransferFile) won't match anymore, so this
+     bookkeeping stuff (filenr of TransferFile) won't match anymore, so this
      function fixes that.
      Note: If you add files, create them using new TransferFile(). If you
      remove files, do that best using splice or readd the remaining files to a
@@ -422,7 +422,7 @@ Transfer.prototype =
   {
     for (var i = 0, l = this.files.length; i < l; i++)
     {
-      this.files[i].filei = i;
+      this.files[i].filenr = i;
     }
   },
 
@@ -442,30 +442,26 @@ Transfer.prototype =
 
      SLOW! :-(
 
-     @param filei  int  index of the file whose progress changed
+     @param filenr  int  index of the file whose progress changed
      @param aProgress  float 0..1  progress of that file
   */
-  progressChanged : function(filei, aProgress)
+  progressChanged : function(filenr, aProgress)
   {
     if (!this.progressCalculate)
       return;
 
-    ddump("Transfer.progressChanged(" + filei + ", " + aProgress + ")");
+    ddump("Transfer.progressChanged(" + filenr + ", " + aProgress + ")");
 
-    var file = this.files[filei];
+    var file = this.files[filenr];
     file.progress = aProgress;
-    //this.files[filei].progress = aProgress;
 
     if (this.progressSizeAll == 0) // undetermined mode
       return;
-
-    //var file = this.files[filei]; // don't move up
 
     // avoid too many updates
     if (file.progress - file.progressPrevious < 0.01)
       return;
     else
-      //this.files[filei].progressPrevious = file.progress;
       file.progressPrevious = file.progress;
 
 
@@ -500,8 +496,8 @@ Transfer.prototype =
         ddump(" update serial mode");
         ddump(" progressSizeAll: " + this.progressSizeAll);
         ddump(" progressSizeCompletedFiles: "+this.progressSizeCompletedFiles);
-        ddump(" files[filei].size: " + file.size);
-        ddump(" files[filei].progress: " + file.progress);
+        ddump(" files[filenr].size: " + file.size);
+        ddump(" files[filenr].progress: " + file.progress);
 
         progressSize = this.progressSizeCompletedFiles
                        + file.size * file.progress;
@@ -529,7 +525,7 @@ Transfer.prototype =
        // I protected at the very beginning against this.progressSizeAll == 0
 
     for (var i = 0, l = this.progressCallbacks.length; i < l; i++)
-      this.progressCallbacks[i](filei);
+      this.progressCallbacks[i](filenr);
   },
 
   
@@ -634,11 +630,11 @@ Transfer.prototype =
 
 /* 
    @param transfer  Transfer  the owner
-   @param filei  int  index of this file in the transfer's files array
+   @param filenr  int  index of this file in the transfer's files array
 
    @param filename, mimetype, size  see Transfer
 */
-function TransferFile(transfer, filei, // hooks to owner
+function TransferFile(transfer, filenr, // hooks to owner
                       filename, mimetype, size)
 {
   // sanitize input
@@ -662,7 +658,7 @@ function TransferFile(transfer, filei, // hooks to owner
   this.localFile = null;
 
   this.transfer = transfer;
-  this.filei = filei;
+  this.filenr = filenr;
 }
 TransferFile.prototype =
 {
@@ -728,13 +724,13 @@ TransferFile.prototype =
         this.statusText = aMessage;
 
       for (var i = 0, l = this.transfer.progressCallbacks.length; i < l; i++)
-        this.transfer.progressCallbacks[i](this.filei);
+        this.transfer.progressCallbacks[i](this.filenr);
     }
     if (
         !(was_done || was_failed)
         && (aStatus == "done" || aStatus == "failed")
        )  // file just completed or failed
-     this.transfer.fileFinished(this.filei);
+     this.transfer.fileFinished(this.filenr);
   }
 }
 
@@ -742,14 +738,14 @@ TransferFile.prototype =
 
 
 /* Use one object per file to be downloaded.
-   @param filei  integer  index of file in transfer.files
+   @param filenr  integer  index of file in transfer.files
    @param transfer  Transfer  the context
 */
-function TransferProgressListener(transfer, filei)
+function TransferProgressListener(transfer, filenr)
 {
   this.transfer = transfer;  // this creates a cyclic reference :-(
-  this.filei = filei;
-  this.file = this.transfer.files[this.filei];
+  this.filenr = filenr;
+  this.file = this.transfer.files[this.filenr];
 
   /*
 
@@ -964,7 +960,7 @@ TransferProgressListener.prototype =
     if (aProgressMax > 0 && aProgress > 0)
           // WORKAROUND Necko sometimes sends crap like 397/0 or 0/4294967295
     {
-      this.transfer.progressChanged(this.filei, aProgress / aProgressMax);
+      this.transfer.progressChanged(this.filenr, aProgress / aProgressMax);
     }
   },
 

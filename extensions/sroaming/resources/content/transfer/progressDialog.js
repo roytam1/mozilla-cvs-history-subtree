@@ -34,22 +34,14 @@ var gTransfer; // main |Transfer| object, for the main files to be tranferred
                                  e.g. listing files. Needed for Cancel.
                                  XXX bad solution. too bad. don't care for,
                                  let the XPCOM excpetion fly! ;-P */
-var gDialog = {};
-var gInProgress = true;
-var gTotalFileCount = 0;
-var gSucceededCount = 0;
-var gFinished = false;
-var gTransferingFailed = false;
-var gFileNotFound = false;
-var gStatusMessage="";
+var gDialog = new Object(); // references to widgets
+var gFinished = false;  // all files finished (done or failed)
+var gTransferFailed = false; // any file failed
 var gResults = ""; /* stores the transfer result messages (in human language)
                       to be later displayed to the user on his request. */
-var gRanFinishedAll = false; // gee, what a hack. this is all a big shit here.
 var gTimerID;
 var gTimeout = 1000;
 var gAllowEnterKey = false;
-
-const XUL_NS ="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
 function Startup()
 {
@@ -75,7 +67,6 @@ function Startup()
     return;
   }
 
-  SetWindowLocation();
   window.title = GetString("TransferProgressCaption");
 
   var directionString = gTransfer.download
@@ -87,12 +78,11 @@ function Startup()
   // Show transfering destination URL
   document.getElementById("TransferUrl").value = gTransfer.remoteDir;
 
-  // Add the files to the "transfer to" list as quick as possible!
+  // Add the files to the UI as quickly as possible
   gDialog.FileList.setAttribute("rows", gTransfer.files.length);
   for (var i = 0; i < gTransfer.files.length; i++)
     SetProgressStatus(i);
   window.sizeToContent();
-  ddump("resized");
 }
 
 /*
@@ -208,31 +198,30 @@ function PassBackParams()
 /* Add filename to list of files to transfer
    or set status for file already in the list.
 
-   @param filei  integer  index of file in gTransfer
+   @param filenr integer  index of file in gTransfer
    @return boolean  if file was in the list
 */
-function SetProgressStatus(filei)
+function SetProgressStatus(filenr)
 {
-  ddumpCont("SetProgressStatus(" + filei + "): ");
-  var filename = gTransfer.files[filei].filename;
-  var status = gTransfer.files[filei].status;
-  var statusCode = gTransfer.files[filei].statusCode;
-  ddump(filename + ", " + status + ", " + NameForStatusCode(statusCode));
-
-  if (!filename)
+  ddumpCont("SetProgressStatus(" + filenr + "): ");
+  if (!gTransfer || !gTransfer.files[filenr])
+  {
+    dumpError("no such file");
     return false;
+  }
+  var file = gTransfer.files[filenr];
+  var filename = file.filename;
+  var status = file.status;
+  ddump(filename + ", " + status + ", " + NameForStatusCode(file.statusCode));
 
-  if (status == "busy" &&
-      gDialog.FinalStatusMessage.value == "")
-    gDialog.FinalStatusMessage.value = GetString("Transfering");
-  else if (status == "failed")
-    // Output error msg, if apppropriate
-    SetFileStatusMessage(filei, ErrorMessageForFile(gTransfer.files[filei]));
+  if (status == "busy")
+    SetStatusMessage(GetString("Transfering"));
 
-  // Just set attribute for status icon 
-  // if we already have this filename 
+  // update file listbox
+  // if we already have this file's item, just set attribute for status icon
+  found = false;
   var listitems = document.getElementsByTagName("listitem");
-  for (var i = 0; i < listitems.length; i++)
+  for (var i = 0, l = listitems.length; i < l; i++)
   {
     var li = listitems[i];
     if (li.getAttribute("filename") == filename)
@@ -242,142 +231,48 @@ function SetProgressStatus(filei)
         var oldstat = li.getAttribute("progress");
         ddump("  Setting "+filename+" from "+oldstat+" to "+status); 
         li.setAttribute("progress", status);
-        CheckDone(false);
       }
-      return true;
+      found = true;
     }
   }
-
-  // If we didn't return yet, we're adding a new file item to list
-  gTotalFileCount++;
-
-  var listitem = document.createElementNS(XUL_NS, "listitem");
-  if (listitem)
+  // otherwise, add the item
+  if (!found)
   {
+    var listitem = document.createElement("listitem");
     listitem.setAttribute("class", "listitem-iconic progressitem");
-    // This triggers CSS to show icon for each status state
+    // The progress attribute triggers CSS to show icon for each status state
     listitem.setAttribute("progress", status);
-    listitem.setAttribute("filename", filename);
+    listitem.setAttribute("filename", filename); // bookkeeping
     listitem.setAttribute("label", GetFileDescription(filename));
     gDialog.FileList.appendChild(listitem);
   }
-  return false;
-}
 
-function SetProgressFinished(filei)
-{
-  ddumpCont("SetProgressFinished(" + filei + "): ");
-  var filename = gTransfer.files[filei].filename;
-  var networkStatus = gTransfer.files[filei].statusCode;
-  var status = gTransfer.files[filei].status;
-  ddump(filename + ", " + status);
+  CheckDone(false);
 
-  SetProgressStatus(filei);
-
-  if (status == "done")
-    gSucceededCount++;
-  else // Error condition
-  {
-    // Mark all remaining files as "failed" XXX wrong
-    gTransferingFailed = true;
-    SetProgressStatusCancel();
-    gDialog.FinalStatusMessage.value = GetString("TransferFailed");
-
-    gStatusMessage = ErrorMessageForFile(gTransfer.files[filei]);
-  }
-
-  if (gStatusMessage)
-    SetFileStatusMessage(filei, gStatusMessage);
+  return found;
 }
 
 function SetProgressFinishedAll()
 {
-  if (gRanFinishedAll)
-    return;
-  gRanFinishedAll = true;
-
-    gDialog.Close.setAttribute("label", GetString("Close"));
-    if (!gStatusMessage)
-      gStatusMessage = GetString(gTransferingFailed
-                                 ? "UnknownTransferError" :
-                                 "AllFilesTransfered");
-
-    // Now allow "Enter/Return" key to close the dialog
-    AllowDefaultButton();
-
-    if (gTransferingFailed || gFileNotFound)
-    {
-      // Show "Troubleshooting" button to help solving problems
-      //  and key for successful / failed files
-      document.getElementById("failureBox").hidden = false;
-      window.sizeToContent();
-    }
+  SetStatusMessage(GetString(gTransferFailed
+                             ? "UnknownTransferError"
+                             : "TransferCompleted"));
 
   for (var i = 0, l = gTransfer.files.length; i < l; i++)
-  {
     addFileStatus(gTransfer.files[i]);
-  }
-}
 
-// set to on, if a listing.xml file is being transferred (and off afterwards)
-function SetListingTransfer(on)
-{
-  gDialog.ListingProgress.setAttribute("hidden", on ? "false" : "true");
-  //gDialog.ListingProgress.setAttribute("value", on ? "1" : "0");
-  gDialog.FinalStatusMessage.value = on ? GetString("TransferingListing") : "";
-}
-
-// this function is to be used when we cancel persist's saving,
-// because not all messages will be returned to us, if we cancel.
-// this function changes status for all non-done/non-failure to failure.
-function SetProgressStatusCancel()
-{
-  var listitems = document.getElementsByTagName("listitem");  if (!listitems)
-    return;
-
-  for (var i=0; i < listitems.length; i++)
+  if (gTransferFailed)
   {
-    var attr = listitems[i].getAttribute("progress");
-    if (attr != "done" && attr != "failed")
-      listitems[i].setAttribute("progress", "failed");
-  }
-}
-
-function SetGlobalStatusMessage(message)
-{
-  alert(message); // XXX
-  CloseDialog(); // XXX
-  //SetFileStatusMessage(-1, message)
-}
-
-function SetFileStatusMessage(filei, message)
-{
-  if (gTransfer.files[filei].status == "failed")
-  {
-    gTransferingFailed = true;
-    gDialog.FinalStatusMessage.value = GetString("TransferFailed");
+    /* Show "Troubleshooting" button to help solving problems
+       and legend for successful / failed icons */
+    document.getElementById("failureBox").hidden = false;
     window.sizeToContent();
   }
-  return;//XXX
-  // Status message is a child of <description> element
-  //  so text can wrap to multiple lines if necessary
-  var textNode = document.createTextNode(message);
-  if (textNode)
-    gDialog.StatusMessage.appendChild(textNode);
 
-  /*
-  if (gDialog.StatusMessage.firstChild)
-  {
-    gDialog.StatusMessage.firstChild.data = message;
-  }
-  else
-  {
-    var textNode = document.createTextNode(message);
-    if (textNode)
-      gDialog.StatusMessage.appendChild(textNode);
-  }
-  */
-  window.sizeToContent();
+  gDialog.Close.setAttribute("label", GetString("Close"));
+  // Now allow "Enter/Return" key to close the dialog
+  gDialog.Close.setAttribute("default","true");
+  gAllowEnterKey = true;
 }
 
 /*
@@ -393,32 +288,17 @@ function CheckDone(close)
     ddumpCont("  Checking " + i + ", " + file.filename + ", ");
     ddump(file.status);
     if (file.status == "failed")
-      gTransferingFailed = true;
+      gTransferFailed = true;
     else if (file.status != "done")
       return;
   }
   ddump("  Yes, we're done");
+  gFinished = true;
 
   // Finish progress messages, settings buttons etc.
   SetProgressFinishedAll();
 
-  // Set "completed" message if we succeeded
-  if (!gTransferingFailed)
-  {
-    gDialog.FinalStatusMessage.value = GetString("TransferCompleted");
-    if (gFileNotFound && gTotalFileCount - gSucceededCount)
-    {
-      // Show number of files that failed to upload
-      gStatusMessage = GetString("FailedFileMsg");
-      gStatusMessage = gStatusMessage.replace(/%x%/,
-                                          gTotalFileCount - gSucceededCount);
-      gStatusMessage = gStatusMessage.replace(/%total%/, gTotalFileCount);
-
-      SetGlobalStatusMessage(gStatusMessage);
-    }
-  }
-
-  if (!close || gTransferingFailed)
+  if (!close || gTransferFailed)
     return;
   ddump("  Closing");
 
@@ -429,28 +309,8 @@ function CheckDone(close)
     CloseDialog();
 }
 
-function CleanUpDialog()
-{
-  if (gTimerID)
-  {
-    clearTimeout(gTimerID);
-    gTimerID = null;
-  }
-  if (!gFinished)
-  {
-    gTransfer.cancel();
-  }
-  SaveWindowLocation();
-  PassBackParams();
-}
 
-function CloseDialog()
-{
-  CleanUpDialog();
-  try {
-    window.close();
-  } catch (e) {}
-}
+// Close stuff
 
 function onClose()
 {
@@ -464,26 +324,53 @@ function onCancel()
   CloseDialog();
 }
 
-function SetWindowLocation()
-{
-}
-
-function SaveWindowLocation()
-{
-}
-
-function AllowDefaultButton()
-{
-  gDialog.Close.setAttribute("default","true");
-  gAllowEnterKey = true;
-}
-
 function onEnterKey()
 {
   if (gAllowEnterKey)
     return CloseDialog();
 
   return false;
+}
+
+function CloseDialog()
+{
+  CleanUpDialog();
+  try {
+    window.close();
+  } catch (e) {}
+}
+
+function CleanUpDialog()
+{
+  if (gTimerID)
+  {
+    clearTimeout(gTimerID);
+    gTimerID = null;
+  }
+  if (!gFinished)
+  {
+    gTransfer.cancel();
+  }
+  PassBackParams();
+}
+
+
+// UI stuff
+
+// Sets the text in the prominent center of the dialog
+function SetStatusMessage(message)
+{
+  if (!message)
+    message = "";
+  if (!gTransferFailed)
+    gDialog.FinalStatusMessage.value = message;
+}
+
+// For fatal errors like unexpected exceptions. Bail and go home.
+function GlobalError(message)
+{
+  alert(message); // XXX
+  CloseDialog(); // XXX
 }
 
 /*
@@ -501,4 +388,12 @@ function addFileStatus(file)
 function showErrors()
 {
   alert(gResults);
+}
+
+// set to on, if a listing.xml file is being transferred (and off afterwards)
+function SetListingTransfer(on)
+{
+  gDialog.ListingProgress.setAttribute("hidden", on ? "false" : "true");
+  //gDialog.ListingProgress.setAttribute("value", on ? "1" : "0");
+  SetStatusMessage(on ? GetString("TransferingListing") : null);
 }
