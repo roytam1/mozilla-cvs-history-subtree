@@ -554,7 +554,7 @@ void CRDFToolbarButton::RemoveButtonFocus(void)
 	{
 		CRect clientRect;
 		GetClientRect(&clientRect);
-		if (foundOnRDFToolbar() && m_eState != eDISABLED)
+		if (foundOnRDFToolbar() && m_eState != eNORMAL)
 		{
 			CRDFToolbar* pToolbar = (CRDFToolbar*)GetParent();
 			if (pToolbar->GetBackgroundImage() != NULL &&
