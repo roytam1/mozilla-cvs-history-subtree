@@ -31,12 +31,10 @@ LINCS= -I..\base
 
 CPPSRCS =				\
 	nsJSEventListener.cpp		\
-	nsJSDOMEventListener.cpp	\
 	$(NULL)
 
 CPP_OBJS= \
 	.\$(OBJDIR)\nsJSEventListener.obj	\
-	.\$(OBJDIR)\nsJSDOMEventListener.obj	\
 	$(NULL)
 
 LCFLAGS = \

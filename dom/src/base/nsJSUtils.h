@@ -59,10 +59,6 @@ public:
   static PRBool ConvertJSValToUint32(PRUint32* aProp, JSContext* aContext,
                                      jsval aValue);
 
-  static PRBool ConvertJSValToFunc(nsIDOMEventListener** aListener,
-                                   JSContext* aContext, JSObject* aObj,
-                                   jsval aValue);
-
   static nsresult GetStaticScriptGlobal(JSContext* aContext, JSObject* aObj,
                                         nsIScriptGlobalObject** aGlobal);
 

@@ -234,41 +234,6 @@ nsJSUtils::ConvertJSValToUint32(PRUint32* aProp, JSContext* aContext,
   return JS_TRUE;
 }
 
-PRBool 
-nsJSUtils::ConvertJSValToFunc(nsIDOMEventListener** aListener,
-                              JSContext* aContext, JSObject* aObj,
-                              jsval aValue)
-{
-  if (JSVAL_IS_NULL(aValue)) {
-    *aListener = nsnull;
-  }
-  else if (JSVAL_IS_OBJECT(aValue)) {
-    if (::JS_TypeOfValue(aContext, aValue) == JSTYPE_FUNCTION){
-      nsIScriptContext* scriptContext =
-        (nsIScriptContext*)::JS_GetContextPrivate(aContext);
-      
-      if (NS_OK == NS_NewScriptEventListener(aListener, scriptContext,
-                                             (void*)aObj,
-                                             (void*)JSVAL_TO_OBJECT(aValue))) {
-        return JS_TRUE;
-      }
-
-      ::JS_ReportError(aContext, "Out of memory");
-      return JS_FALSE;
-    }
-    else {
-      ::JS_ReportError(aContext, "Parameter isn't a callable object");
-      return JS_FALSE;
-    }
-  }
-  else {
-    ::JS_ReportError(aContext, "Parameter must be an object");
-    return JS_FALSE;
-  }
-
-  return JS_TRUE;
-}
-
 nsresult 
 nsJSUtils::GetStaticScriptGlobal(JSContext* aContext, JSObject* aObj,
                                  nsIScriptGlobalObject** aNativeGlobal)
