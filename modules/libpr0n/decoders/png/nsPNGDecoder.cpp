@@ -74,7 +74,7 @@ nsPNGDecoder::~nsPNGDecoder()
 /* void init (in imgILoad aLoad); */
 NS_IMETHODIMP nsPNGDecoder::Init(imgILoad *aLoad)
 {
-#ifdef PNG_READ_UNKNOWN_CHUNKS_SUPPORTED
+#if defined(PNG_UNKNOWN_CHUNKS_SUPPORTED)
   static const png_byte unused_chunks[]=
        { 98,  75,  71,  68, '\0',   /* bKGD */
          99,  72,  82,  77, '\0',   /* cHRM */
@@ -89,7 +89,7 @@ NS_IMETHODIMP nsPNGDecoder::Init(imgILoad *aLoad)
         115,  80,  76,  84, '\0',   /* sPLT */
         116,  69,  88, 116, '\0',   /* tEXt */
         116,  73,  77,  69, '\0',   /* tIME */
-        122,  84,  88, 116, '\0'}   /* zTXt */
+        122,  84,  88, 116, '\0'};  /* zTXt */
 #endif
 
   mImageLoad = aLoad;
@@ -112,10 +112,10 @@ NS_IMETHODIMP nsPNGDecoder::Init(imgILoad *aLoad)
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-#ifdef PNG_READ_UNKNOWN_CHUNKS_SUPPORTED
+#if defined(PNG_UNKNOWN_CHUNKS_SUPPORTED)
   /* Ignore unused chunks */
-  png_set_keep_unknown_chunks(mPNG, mInfo, 0,
-      unused_chunks, sizeof(unused_chunks)/5);   
+  png_set_keep_unknown_chunks(mPNG, 0, unused_chunks,
+     (int)sizeof(unused_chunks)/5);   
 #endif
 
   /* use this as libpng "progressive pointer" (retrieve in callbacks) */
