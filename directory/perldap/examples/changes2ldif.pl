@@ -97,13 +97,16 @@ while ($entry)
       # Should we filter out modifiersname and modifytimestamp ? We do chop
       # off the trailing \0 though.
       chop($entry->{changes}[0]);
-      print $entry->{changes}[0], "\n";
+      print $entry->{changes}[0], "\n\n";
     }
   elsif ($type =~ /add/i)
     {
-      print $entry->{changes}[0], "\n";
+      print $entry->{changes}[0], "\n\n";
     }
-  print "\n";
+  else
+    {
+      print "\n\n";
+    }
 
   $entry = $conn->nextEntry;
 }
