@@ -27,10 +27,15 @@ MODULE			= netlib
 EXPORTS = nsIStreamListener.h           \
           nsIStreamObserver.h           \
           nsIURL.h                      \
+          nsIURI.h                      \
           nsIPostToServer.h             \
           nsIHttpURL.h                  \
           nsILoadAttribs.h              \
           nsITransport.h		\
+          nsICoolURL.h                  \
+          nsIProtocolHandler.h          \
+          nsIProtocolInstance.h         \
+          nsIHTTPHandler.h              \
           $(NULL)
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
