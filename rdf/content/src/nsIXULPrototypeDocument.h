@@ -48,6 +48,7 @@ public:
     /**
      * Retrieve the URI of the document
      */
+    NS_IMETHOD SetURI(nsIURI* aURI) = 0;
     NS_IMETHOD GetURI(nsIURI** aResult) = 0;
 
     /**

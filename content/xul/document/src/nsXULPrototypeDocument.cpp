@@ -42,6 +42,7 @@ public:
 
     // nsIXULPrototypeDocument interface
     NS_IMETHOD GetURI(nsIURI** aResult);
+    NS_IMETHOD SetURI(nsIURI* aURI);
 
     NS_IMETHOD GetRootElement(nsXULPrototypeElement** aResult);
     NS_IMETHOD SetRootElement(nsXULPrototypeElement* aElement);
@@ -135,6 +136,14 @@ nsXULPrototypeDocument::GetURI(nsIURI** aResult)
 {
     *aResult = mURI;
     NS_IF_ADDREF(*aResult);
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::SetURI(nsIURI* aURI)
+{
+    mURI = aURI;
     return NS_OK;
 }
 
