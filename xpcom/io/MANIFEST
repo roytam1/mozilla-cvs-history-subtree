@@ -8,3 +8,4 @@ nsIStringStream.h
 nsIUnicharInputStream.h
 nsSpecialSystemDirectory.h
 nsStorageStream.h
+nsILocalFileMac.h
