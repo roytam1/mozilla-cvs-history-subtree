@@ -549,3 +549,30 @@ Rights Reserved.
 
 <!ENTITY searchAddressesCmd.label "Search Addresses...">
 <!ENTITY searchAddressesCmd.accesskey "S">
+
+<!-- threadpane.dtd -->
+<!ENTITY threadColumn.label "Thread">
+<!ENTITY senderColumn.label "Sender">
+<!ENTITY subjectColumn.label "Subject">
+<!ENTITY dateColumn.label "Date">
+<!ENTITY priorityColumn.label "Priority">
+<!ENTITY labelColumn.label "Label">
+<!ENTITY statusColumn.label "Status">
+<!ENTITY sizeColumn.label "Size">
+<!ENTITY linesColumn.label "Lines">
+<!ENTITY unreadColumn.label "Unread">
+<!ENTITY totalColumn.label "Total">
+<!ENTITY orderReceivedColumn.label "Order Received">
+<!ENTITY readColumn.label "Read">
+<!ENTITY flagColumn.label "Flag">
+<!ENTITY locationColumn.label "Location">
+<!ENTITY threadColumnHeader.tooltip "Click to display message threads"> 
+<!ENTITY columnChooser.tooltip "Click to select columns to display"> 
+
+<!-- folderpane.dtd -->
+<!ENTITY nameColumn.label   "Name"> 
+<!ENTITY unreadColumn.label "Unread"> 
+<!ENTITY totalColumn.label "Total"> 
+<!ENTITY accounts.label "Accounts">
+<!-- LOCALIZATION NOTE (accounts.img) : DONT_TRANSLATE -->
+<!ENTITY accounts.img "chrome://messenger/skin/local-mailhost.gif">
