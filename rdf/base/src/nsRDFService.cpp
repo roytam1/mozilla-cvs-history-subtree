@@ -318,6 +318,7 @@ class ServiceImpl : public nsIRDFService
 protected:
     PrefixMap    mResourceFactories;
     PLHashTable* mNamedDataSources;
+    PLHashTable* mDataSourceConstructors;
     PLHashTable* mResources;
 
     ServiceImpl(void);
@@ -346,6 +347,8 @@ public:
 
     NS_IMETHOD RegisterNamedDataSource(const char* uri, nsIRDFDataSource* dataSource);
     NS_IMETHOD UnRegisterNamedDataSource(const char* uri);
+    NS_IMETHOD RegisterDataSourceConstructor(const char* uri, NSDataSourceConstructorCallback fn);
+    NS_IMETHOD UnRegisterDataSourceConstructor(const char* uri);
     NS_IMETHOD GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource);
     NS_IMETHOD CreateDatabase(const char** uris, nsIRDFDataBase** dataBase);
     NS_IMETHOD CreateBrowserDatabase(nsIRDFDataBase** dataBase);
@@ -370,18 +373,28 @@ ServiceImpl::ServiceImpl(void)
                                         PL_CompareStrings,
                                         PL_CompareValues,
                                         nsnull, nsnull);
+
+    mDataSourceConstructors = PL_NewHashTable(23,
+                                              PL_HashString,
+                                              PL_CompareStrings,
+                                              PL_CompareValues,
+                                              nsnull, nsnull);
 }
 
 
 ServiceImpl::~ServiceImpl(void)
 {
-    if (mResources) {
-        PL_HashTableDestroy(mResources);
-        mResources = nsnull;
+    if (mDataSourceConstructors) {
+        PL_HashTableDestroy(mDataSourceConstructors);
+        mDataSourceConstructors = nsnull;
     }
     if (mNamedDataSources) {
         PL_HashTableDestroy(mNamedDataSources);
         mNamedDataSources = nsnull;
+    }
+    if (mResources) {
+        PL_HashTableDestroy(mResources);
+        mResources = nsnull;
     }
     gRDFService = nsnull;
 }
@@ -546,15 +559,61 @@ ServiceImpl::UnRegisterNamedDataSource(const char* uri)
 }
 
 NS_IMETHODIMP
+ServiceImpl::RegisterDataSourceConstructor(const char* uri, NSDataSourceConstructorCallback fn)
+{
+    // XXX check for dups, etc.
+    PL_HashTableAdd(mDataSourceConstructors, uri, fn);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::UnRegisterDataSourceConstructor(const char* uri)
+{
+    PL_HashTableRemove(mDataSourceConstructors, uri);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 ServiceImpl::GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource)
 {
     nsIRDFDataSource* ds =
         NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
 
-    if (! ds)
+    if (ds) {
+        NS_ADDREF(ds);
+        *dataSource = ds;
+        return NS_OK;
+    }
+
+    // Otherwise, see if we have a lazy constructor
+    NSDataSourceConstructorCallback construct =
+        NS_STATIC_CAST(NSDataSourceConstructorCallback,
+                       PL_HashTableLookup(mDataSourceConstructors, uri));
+
+    if (! construct)
         return NS_ERROR_ILLEGAL_VALUE;
 
-    NS_ADDREF(ds);
+
+    // Yep, so try to construct it on the fly...
+    nsresult rv;
+
+    if (NS_FAILED(rv = construct(&ds))) {
+#ifdef DEBUG
+        printf("error constructing built-in datasource %s\n", uri);
+#endif
+        return rv;
+    }
+
+    // If it wants to register itself, it should do so in the Init() method.
+    if (NS_FAILED(rv = ds->Init(uri))) {
+#ifdef DEBUG
+        printf("error initializing named datasource %s\n", uri);
+#endif
+        NS_RELEASE(ds);
+        return rv;
+    }
+
+    // constructor did an implicit addref
     *dataSource = ds;
     return NS_OK;
 }
@@ -658,26 +717,12 @@ ServiceImpl::RegisterBuiltInNamedDataSources(void)
     for (DataSourceTable* entry = gTable; entry->mURI != nsnull; ++entry) {
         nsIRDFDataSource* ds;
 
-        if (NS_FAILED(rv = (entry->mDataSourceConstructor)(&ds))) {
+        if (NS_FAILED(rv = gRDFService->RegisterDataSourceConstructor(entry->mURI, entry->mDataSourceConstructor))) {
 #ifdef DEBUG
-            printf("error creating built-in datasource %s\n", entry->mURI);
+            printf("error registering built-in datasource constructor for %s\n", entry->mURI);
 #endif
             continue;
         }
-
-        if (NS_SUCCEEDED(rv = ds->Init(entry->mURI))) {
-            rv = gRDFService->RegisterNamedDataSource(entry->mURI, ds);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "registration failed");
-        }
-        else {
-#ifdef DEBUG
-            printf("error initializing built-in datasource %s\n", entry->mURI);
-#endif
-        }
-
-        // XXX we don't release the data source, because we want it to remain
-        // alive.
-        //NS_RELEASE(ds);
     }
 }
 
