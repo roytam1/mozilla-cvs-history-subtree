@@ -27,20 +27,24 @@ public:
         return NS_STATIC_CAST(nsIStreamListener *, GetReceiver());
     }
 
-    //
-    // The listener status is controlled by the event on the
-    // listener's thread. The monitor protects access to the
-    // listener's status.
-    //
-    nsresult   mListenerStatus;
-//    PRMonitor *mLMonitor;
+    void SetListenerStatus(nsresult status)
+    {
+        mListenerStatus = status;
+    }
 
-    nsCOMPtr<nsIChannel> mChannelToResume;
-    PRMonitor           *mCMonitor;
+    PRUint32 GetPendingCount();
 
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
+
+    nsCOMPtr<nsIChannel>      mChannelToResume;
+    PRMonitor                *mCMonitor;
+
+    nsresult                  mListenerStatus;
+
+    PRUint32                  mPendingCount;
+    PRMonitor                *mPMonitor;
 };
 
 #endif /* !nsStreamListenerProxy_h__ */

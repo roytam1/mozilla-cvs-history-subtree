@@ -10,6 +10,25 @@
 #define DEFAULT_BUFFER_SEGMENT_SIZE 2048
 #define DEFAULT_BUFFER_MAX_SIZE  (4*2048)
 
+//
+//----------------------------------------------------------------------------
+// Design Overview
+//
+// A stream listener proxy maintains a pipe.  When the channel makes data
+// available, the proxy copies as much of that data as possible into the pipe.
+// If data was written to the pipe, then the proxy posts an asynchronous event
+// corresponding to the amount of data written.  If no data could be written,
+// because the pipe was full, then WOULD_BLOCK is returned to the channel,
+// indicating that the channel should suspend itself.
+//
+// Once suspended in this manner, the channel is only resumed when the pipe is
+// emptied.
+//
+// XXX The current design does NOT allow the channel to be "externally"
+// suspended!!  For the moment this is not a problem, but it should be fixed.
+//----------------------------------------------------------------------------
+//
+
 #ifdef DEBUG
 //
 //----------------------------------------------------------------------------
@@ -91,21 +110,31 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamGuard,
 //
 
 nsStreamListenerProxy::nsStreamListenerProxy()
-    : mListenerStatus(NS_OK)
-    //, mLMonitor(nsnull)
-    , mCMonitor(nsnull)
+    : mCMonitor(nsnull)
+    , mListenerStatus(NS_OK)
+    , mPendingCount(0)
+    , mPMonitor(nsnull)
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
 {
-    //if (mLMonitor) {
-    //    nsAutoMonitor::DestroyMonitor(mLMonitor);
-    //    mLMonitor = nsnull;
-    //}
     if (mCMonitor) {
         nsAutoMonitor::DestroyMonitor(mCMonitor);
         mCMonitor = nsnull;
     }
+    if (mPMonitor) {
+        nsAutoMonitor::DestroyMonitor(mPMonitor);
+        mPMonitor = nsnull;
+    }
+}
+
+PRUint32
+nsStreamListenerProxy::GetPendingCount()
+{
+    nsAutoMonitor mon(mPMonitor);
+    PRUint32 c = mPendingCount;
+    mPendingCount = 0;
+    return c;
 }
 
 //
@@ -120,12 +149,10 @@ public:
                            nsIChannel *aChannel,
                            nsISupports *aContext,
                            nsIInputStream *aSource,
-                           PRUint32 aOffset,
-                           PRUint32 aCount)
+                           PRUint32 aOffset)
         : nsStreamObserverEvent(aProxy, aChannel, aContext)
         , mSource(aSource)
         , mOffset(aOffset)
-        , mCount(aCount)
     {
         MOZ_COUNT_CTOR(nsOnDataAvailableEvent);
     }
@@ -140,7 +167,6 @@ public:
 protected:
    nsCOMPtr<nsIInputStream> mSource;
    PRUint32                 mOffset;
-   PRUint32                 mCount;
 };
 
 NS_IMETHODIMP
@@ -168,23 +194,27 @@ nsOnDataAvailableEvent::HandleEvent()
     // have cancelled the channel after _this_ event was triggered.
     //
     if (NS_SUCCEEDED(status)) {
+        //
+        // Find out from the listener proxy how many bytes to report.
+        //
+        PRUint32 count = listenerProxy->GetPendingCount();
 #ifdef NS_ENABLE_LOGGING
         {
             PRUint32 avail;
             mSource->Available(&avail);
             PRINTF("HandleEvent -- calling the consumer's OnDataAvailable [offset=%u count=%u avail=%u]\n",
-                    mOffset, mCount, avail);FLUSH();
+                    mOffset, count, avail);FLUSH();
         }
 #endif
 
         // Give the listener a chance to read some data.
-        rv = listener->OnDataAvailable(mChannel, mContext, mSource, mOffset, mCount);
+        rv = listener->OnDataAvailable(mChannel, mContext, mSource, mOffset, count);
 
         PRINTF("HandleEvent -- done with the consumer's OnDataAvailable [rv=%x]\n", rv);FLUSH();
 
 #ifdef DEBUG
         PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
-        PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
+        PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, count);FLUSH();
 #endif
 
         //
@@ -202,8 +232,7 @@ nsOnDataAvailableEvent::HandleEvent()
         //
         // Update the listener status
         //
-        //nsAutoMonitor mon(listenerProxy->mLMonitor);
-        listenerProxy->mListenerStatus = rv;
+        listenerProxy->SetListenerStatus(rv);
     }
 #ifdef NS_ENABLE_LOGGING
     else {
@@ -323,6 +352,28 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     }
 
     //
+    // Enter the PendingCount monitor
+    //
+    {
+        nsAutoMonitor mon(mPMonitor);
+
+        //
+        // If the pending count is non-zero then there is a pending
+        // event, so just increment the pending count and let that 
+        // event do the work.  Otherwise, set the pending count and
+        // post an event.
+        //
+        if (mPendingCount > 0) {
+            mPendingCount += bytesWritten;
+            PRINTF("Piggy-backing pending OnDataAvailable event [mPendingCount=%u]\n",
+                    mPendingCount);
+            return NS_OK;
+        }
+        else
+            mPendingCount = bytesWritten;
+    }
+
+    //
     // Post an event for the number of bytes actually written.
     //
     nsCOMPtr<nsIInputStream> source;
@@ -333,8 +384,7 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     source = mPipeIn;
 #endif
     nsOnDataAvailableEvent *ev =
-        new nsOnDataAvailableEvent(this, aChannel, aContext, source,
-                                   aOffset, bytesWritten);
+        new nsOnDataAvailableEvent(this, aChannel, aContext, source, aOffset);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
     rv = ev->FireEvent(GetEventQueue());
@@ -359,10 +409,10 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
     NS_PRECONDITION(GetReceiver() == nsnull, "Listener already set");
     NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
-    //mLMonitor = nsAutoMonitor::NewMonitor("ListenerStatus");
-    //if (!mLMonitor) return NS_ERROR_OUT_OF_MEMORY;
     mCMonitor = nsAutoMonitor::NewMonitor("ChannelToResume");
     if (!mCMonitor) return NS_ERROR_OUT_OF_MEMORY;
+    mPMonitor = nsAutoMonitor::NewMonitor("PendingCount");
+    if (!mPMonitor) return NS_ERROR_OUT_OF_MEMORY;
 
     //
     // Create the pipe
@@ -404,7 +454,7 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
     // The pipe has been emptied by the listener.  If the channel
     // has been suspended (waiting for the pipe to be emptied), then
     // go ahead and resume it.  But take care not to resume while 
-    // holding the "C" monitor.
+    // holding the "ChannelToResume" monitor.
     //
     nsCOMPtr<nsIChannel> chan;
     {
