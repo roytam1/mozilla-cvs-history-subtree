@@ -22,7 +22,7 @@
 
 static void pl_ListRemoveEntry(PLList *list, PLListEntry *entry);
 
-// For debugging PLList code.
+/* For debugging PLList code. */
 #if 1
 #define PL_LIST_CHECK(list)
 #else
