@@ -91,7 +91,11 @@ sub DESTROY
   return unless defined($self->{"ld"});
 
   ldap_unbind_s($self->{"ld"});
-  ldap_msgfree($self->{"ldres"}) if defined($self->{"ldres"});
+  if (defined($self->{"ldres"}))
+    {
+      ldap_msgfree($self->{"ldres"});
+      undef $self->{"ldres"};
+    }
 
   undef $self->{"ld"};
 }
@@ -217,7 +221,11 @@ sub search
   $scope = Mozilla::LDAP::Utils::str2Scope($scope);
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
 
-  ldap_msgfree($self->{"ldres"}) if defined($self->{"ldres"});
+  if (defined($self->{"ldres"}))
+    {
+      ldap_msgfree($self->{"ldres"});
+      undef $self->{"ldres"};
+    }
   if (ldap_is_ldap_url($filter))
     {
       if (! ldap_url_search_s($self->{"ld"}, $filter, $attrsonly, $res))
@@ -252,7 +260,12 @@ sub searchURL
   my $entry;
   my $res = \$resv;
 
-  ldap_msgfree($self->{"ldres"}) if defined($self->{"ldres"});
+  if (defined($self->{"ldres"}))
+    {
+      ldap_msgfree($self->{"ldres"});
+      undef $self->{"ldres"};
+    }
+      
   if (! ldap_url_search_s($self->{"ld"}, $url, $attrsonly, $res))
     {
       $self->{"ldres"} = $res;
@@ -295,16 +308,19 @@ sub nextEntry
   return "" unless $ldentry;
 
   $dn = ldap_get_dn($self->{"ld"}, $self->{"ldentry"});
+  $obj->{"_oc_numattr_"} = 0;
+  $obj->{"_oc_keyidx_"} = 0;
   $obj->{"dn"} = $dn;
   $self->{"dn"} = $dn;
+
   $attr = lc ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
   return (bless \%entry, Mozilla::LDAP::Entry) unless $attr;
 
   @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
   $obj->{$attr} = [@vals];
   push(@ocorder, $attr);
-  $count = 1;
 
+  $count = 1;
   while ($attr = lc ldap_next_attribute($self->{"ld"},
 					$self->{"ldentry"}, $ber))
     {
@@ -315,9 +331,8 @@ sub nextEntry
     }
 
   $obj->{"_oc_order_"} = \@ocorder;
-  $obj->{"_oc_numattr_"} = $count;
-  $obj->{"_oc_keyidx_"} = 0;
   $obj->{"_self_obj_"} = $obj;
+  $obj->{"_oc_numattr_"} = $count;
 
   ldap_ber_free($ber, 0) if $ber;
 
