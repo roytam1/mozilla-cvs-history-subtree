@@ -1086,8 +1086,15 @@ nsExtensionInstaller.prototype = {
       type = this._writer.CHROME_TYPE_LOCALE;
     }
     var providerNames = this._getProviderNames(fileURL, type);
-    for (var i = 0; i < providerNames.length; ++i)
+    for (var i = 0; i < providerNames.length; ++i) {
       this._writer.registerChrome(providerNames[i], type, this._isProfile);
+      
+      // Make sure we enable overlays for this extension so that if it is disabled by
+      // mismatch checking, installing a newer version (as opposed to enabling as a 
+      // result of a version compatibility update) makes the extension's overlaid UI 
+      // appear immediately.
+      cr.setAllowOverlaysForPackage(providerNames[i], true);
+    }
   },
   
   _getProviderNames: function nsExtensionInstaller__getProviderNames (aBaseURL, aType)
