@@ -47,6 +47,61 @@
 	
 /* ::::: bookmark buttons ::::: */
 
+toolbarbutton.bookmark-item:hover
+{
+  background:url("chrome://browser/skin/bookmark-hover-left.png") no-repeat left center;
+}
+
+toolbarbutton.bookmark-item:hover:active, toolbarbutton.bookmark-item[open="true"] {
+  background:url("chrome://browser/skin/bookmark-open-left.png") no-repeat left center;
+}
+
+toolbarbutton.bookmark-item > label {
+  margin-left: 7px;
+}
+
+toolbarbutton.bookmark-item:not([container]) > .toolbarbutton-text {
+  padding-right: 7px;
+}
+
+toolbarbutton.bookmark-item:not([container]):hover > .toolbarbutton-text,
+toolbarbutton.bookmark-item[container]:not([open]):hover > .toolbarbutton-menu-dropmarker,
+#find-next:not([disabled]):hover > .toolbarbutton-text, 
+#find-previous:not([disabled]):hover > .toolbarbutton-text,
+#highlight:not([disabled]):hover > .toolbarbutton-text
+{
+  background: url("chrome://browser/skin/bookmark-hover-right.png") no-repeat right center;
+  color: #fff;
+}
+
+#find-next:not([disabled]):hover, 
+#find-previous:not([disabled]):hover,
+#highlight:not([disabled]):hover
+{
+  background:url("chrome://browser/skin/bookmark-hover-left.png") no-repeat left center;
+}
+
+toolbarbutton.bookmark-item[container]:hover > .toolbarbutton-text,
+#FindToolbar > toolbarbutton:not([disabled]):hover > .toolbarbutton-icon 
+{
+  background: url("chrome://browser/skin/bookmark-hover-mid.png") repeat-x;
+  color: #fff;
+}
+
+toolbarbutton.bookmark-item:not([container]):hover:active  > .toolbarbutton-text,
+toolbarbutton.bookmark-item[open] > .toolbarbutton-menu-dropmarker,
+toolbarbutton.bookmark-item[container]:hover:active > .toolbarbutton-menu-dropmarker 
+{
+  background: url("chrome://browser/skin/bookmark-open-right.png") no-repeat right center;
+}
+
+toolbarbutton.bookmark-item[container]:hover:active  > .toolbarbutton-text,
+toolbarbutton.bookmark-item[container][open="true"] > .toolbarbutton-text 
+{
+  background: url("chrome://browser/skin/bookmark-open-mid.png") repeat-x !important;
+  color: #fff;
+}
+
 toolbarbutton.bookmark-item[type=menu] {
   padding-left: 7px;
 }
@@ -55,13 +110,9 @@ toolbarbutton.bookmark-item[type=menu] > .toolbarbutton-menu-dropmarker {
   padding-right: 7px;
 }
 
-toolbarbutton.bookmark-item:not([type=menu]) {
-  -moz-binding: url("chrome://browser/skin/browser.xml#bm-toolbarbutton");
-}
-
 toolbarbutton.bookmark-item {
   margin: 1px;
-  padding: 1px 0px 1px 0px;
+  padding: 1px 0px 1px 7px;
   min-width: 0;
   max-width: 13em;
   font-weight: bold;
@@ -80,34 +131,6 @@ toolbarbutton.bookmark-item .toolbarbutton-text {
   margin: 0px !important;
 }
 
-
-.bookmark-image-left, .bookmark-image-right {
-  width: 7px !important;
-  height: 16px;
-}
-
-.bookmark-item:hover > .bookmark-image-left, .bookmark-item[open] > .bookmark-image-left {
-  background: url("chrome://browser/skin/bookmark-hover-left.png") no-repeat center left;
-}
-
-.bookmark-item:hover > .bookmark-image-right, .bookmark-item[open] > .bookmark-image-right {
-  background: url("chrome://browser/skin/bookmark-hover-right.png") no-repeat center right;
-}
-
-.bookmark-item:hover > .toolbarbutton-text, .bookmark-item[open] > .toolbarbutton-text  {
-  background: url("chrome://browser/skin/bookmark-hover-mid.png") repeat-x;
-  color: #000;
-}
-
-.bookmark-item:hover > .toolbarbutton-menu-dropmarker, .bookmark-item[open] > .toolbarbutton-menu-dropmarker {
-  background: url("chrome://browser/skin/bookmark-hover-dropmarker.png") no-repeat;
-  list-style-image: url("chrome://browser/skin/bookmarks/folderarrow-hover.png");
-}
-
-toolbarbutton.bookmark-item[type=menu]:hover, toolbarbutton.bookmark-item[type=menu][open] {
-  background: url("chrome://browser/skin/bookmark-hover-left.png") no-repeat center left;
-}
-
 /* Prevent [mode="icons"] from hiding the label */
 .bookmark-item > .toolbarbutton-text {
   display: -moz-box !important;
@@ -117,10 +140,12 @@ toolbarbutton.bookmark-item[type=menu]:hover, toolbarbutton.bookmark-item[type=m
 
 .bookmark-item > .toolbarbutton-menu-dropmarker {
 list-style-image: url("chrome://browser/skin/bookmarks/folderarrow.png");
- height: 16px !important;
-padding-top: 5px;
-padding-left: 3px;
-padding-bottom: 4px;
+height: 16px !important;
+padding: 5px 5px 4px 3px;
+}
+
+.bookmark-item:hover > .toolbarbutton-menu-dropmarker, .bookmark-item[open] > .toolbarbutton-menu-dropmarker  {
+list-style-image: url("chrome://browser/skin/bookmarks/folderarrow-hover.png");
 }
 
 .toolbarpaletteitem-box[type="bookmarks-toolbar"][place="palette"] {
@@ -840,7 +865,10 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 
 
 #PersonalToolbar {
-        background-image: none;
+	background-image: url("chrome://browser/skin/bookmark_toolbar_background.gif");
+	background-repeat: repeat-x;
+	background-position: bottom right;
+	background-color: rgb(246, 246, 246);
 }
 
 .bookmark-item {
@@ -860,3 +888,164 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 .tabs-closebutton:hover:active {
 	list-style-image: url("chrome://global/skin/icons/closetab-active.png") !important;
 }
+
+/* ::::: find toolbar ::::: */
+
+#FindToolbar {
+	background-image: url("chrome://browser/skin/bookmark_toolbar_background.gif");
+	background-repeat: repeat-x;
+	background-position: bottom right;
+	background-color: rgb(246, 246, 246);
+        border-top: 1px solid #b3b3b3;
+	border-bottom: none;
+	list-style-image: url("chrome://browser/skin/find.png");
+}
+
+#FindToolbar > toolbarbutton {
+  padding-left: 7px;
+}
+
+#FindToolbar > toolbarbutton > .toolbarbutton-icon 
+{
+  height: 16px !important;
+  padding: 0;
+}
+
+#FindToolbar > toolbarbutton > .toolbarbutton-text 
+{
+  height: 16px !important;
+  padding-top: 1px;
+  padding-right: 7px;
+  font-weight: bold;
+  color: #565656;
+}
+
+
+#find-field {
+  background: url("chrome://browser/skin/find-bar-background.png") no-repeat;
+  -moz-appearance: none;
+  height: 22px !important;
+  width: 182px !important;
+  border: none !important;
+  margin: 2px 4px;
+  padding: 3px 14px 3px 24px;
+}
+
+/* ::::: find ::::: */
+
+#find-previous 
+{
+  list-style-image: url("chrome://browser/skin/find.png");
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+
+#find-previous[disabled="true"]
+{
+  -moz-opacity: 0.5;
+}
+	
+#find-previous:hover
+{
+  -moz-image-region: rect(0px 32px 16px 16px);
+}
+
+#find-next 
+{
+  list-style-image: url("chrome://browser/skin/find.png");
+  -moz-image-region: rect(16px 16px 32px 0px);
+}
+
+#find-next[disabled="true"]
+{
+  -moz-opacity: 0.5;
+}
+
+#find-next:hover
+{
+  -moz-image-region: rect(16px 32px 32px 16px);
+}
+
+#highlight {
+  -moz-image-region: rect(0px 48px 16px 32px);
+}
+
+#highlight:hover {
+  -moz-image-region: rect(16px 48px 32px 32px);
+}
+
+#highlight[disabled="true"] {
+  -moz-opacity: 0.5;
+}
+
+#highlight:active, #highlight[checked="true"] {
+  -moz-image-region: rect(48px 48px 64px 32px);
+}
+
+#highlight[checked="true"]:hover {
+  -moz-image-region: rect(64px 48px 80px 32px);
+}
+
+#find-status-icon
+{
+  margin-left: 12px;
+  width: 16px;
+  height: 16px;
+}
+/* find-next button */
+
+#find-next {
+  -moz-image-region: rect(0px 16px 16px 0px);
+}
+
+#find-next:hover {
+  -moz-image-region: rect(16px 16px 32px 0px);
+}
+
+#find-next[disabled="true"] {
+  -moz-image-region: rect(32px 16px 48px 0px) !important;
+}
+
+/* find-previous button */
+
+#find-previous {
+  -moz-image-region: rect(0px 32px 16px 16px);
+}
+
+#find-previous:hover {
+  -moz-image-region: rect(16px 32px 32px 16px);
+}
+
+#find-previous[disabled="true"] {
+  -moz-image-region: rect(32px 32px 48px 16px) !important;
+}
+
+/* highlight button */
+
+#highlight {
+  -moz-image-region: rect(0px 48px 16px 32px);
+}
+
+#highlight:hover {
+  -moz-image-region: rect(16px 48px 32px 32px);
+}
+
+#highlight[disabled="true"] {
+  -moz-image-region: rect(32px 48px 48px 32px) !important;
+}
+
+#highlight:active, #highlight[checked="true"] {
+  -moz-image-region: rect(48px 48px 64px 32px);
+}
+
+#highlight[checked="true"]:hover {
+  -moz-image-region: rect(64px 48px 80px 32px);
+}
+
+#find-status-icon {
+  display: none;
+}
+
+#find-status {
+	color: #505050;
+}
+
