@@ -1335,8 +1335,9 @@ case "$target" in
         OBJDIR_SUFFIX=OBJD
     fi
 
+    OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS'
     if test -z "$MOZ_PDB"; then
-        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
+        OS_DLLFLAGS="$OS_DLLFLAGS -PDB:NONE"
     fi
 
     case "$OS_TARGET" in
