@@ -7,8 +7,8 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
+mozilla/nsprpub,        CONRAD_DYN_PROFILE_BRANCH
 mozilla/security/nss,   NSS_30_BRANCH
 mozilla/security/psm,   SECURITY_MAC_BRANCH
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-SeaMonkeyAll
+DirectorySDKSourceC,    CONRAD_DYN_PROFILE_BRANCH
+SeaMonkeyAll,           CONRAD_DYN_PROFILE_BRANCH
