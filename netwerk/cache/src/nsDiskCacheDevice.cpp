@@ -888,7 +888,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
     nsresult rv = scanDiskCacheEntries(getter_AddRefs(entries));
     if (NS_FAILED(rv)) return rv;
     
-    PRUint32 prefixLength = nsCRT::strlen(clientID);
+    PRUint32 prefixLength = (clientID ? nsCRT::strlen(clientID) : 0);
     PRUint32 newDataSize = mCacheMap->DataSize();
     
     PRUint32 count;
