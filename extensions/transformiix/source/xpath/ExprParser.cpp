@@ -642,7 +642,7 @@ NodeExpr* ExprParser::createNodeExpr(ExprLexer& lexer) {
             //-- ignore errMsg for now
             delete errMsg;
             break;
-        case Token::PI :
+        case Token::PROC_INST :
             nodeExpr = new BasicNodeExpr(NodeExpr::PI_EXPR);
             errMsg = parseParameters(&params, lexer);
             //-- ignore errMsg for now
@@ -800,7 +800,7 @@ MBool ExprParser::isNodeTypeToken(Token* token) {
         case Token::CNAME:
         case Token::COMMENT:
         case Token::NODE :
-        case Token::PI :
+        case Token::PROC_INST :
         case Token::TEXT :
             return MB_TRUE;
         default:

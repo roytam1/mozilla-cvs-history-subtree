@@ -100,10 +100,10 @@ Token::~Token() {
  * Complex Tokens
 */
 //-- Nodetype tokens
-const String ExprLexer::COMMENT = "comment";
-const String ExprLexer::NODE    = "node";
-const String ExprLexer::PI      = "processing-instruction";
-const String ExprLexer::TEXT    = "text";
+const String ExprLexer::COMMENT   = "comment";
+const String ExprLexer::NODE      = "node";
+const String ExprLexer::PROC_INST = "processing-instruction";
+const String ExprLexer::TEXT      = "text";
 
 //-- boolean
 const String ExprLexer::AND     = "and";
@@ -122,7 +122,7 @@ const Token ExprLexer::TOKENS[] = {
     //-- Nodetype tokens
     Token(ExprLexer::COMMENT,       Token::COMMENT),
     Token(ExprLexer::NODE,          Token::NODE),
-    Token(ExprLexer::PI,            Token::PI),
+    Token(ExprLexer::PROC_INST,     Token::PROC_INST),
     Token(ExprLexer::TEXT,          Token::TEXT),
     //-- boolean operators
     Token(ExprLexer::AND,           Token::AND_OP),
@@ -442,7 +442,7 @@ void ExprLexer::matchToken(String& buffer, UNICODE_CHAR ch) {
                 //-- NodeType tokens
                 case Token::COMMENT:
                 case Token::NODE :
-                case Token::PI :
+                case Token::PROC_INST :
                 case Token::TEXT :
                     // make sure next delimiter is '('
                     if ( ch != L_PAREN) {

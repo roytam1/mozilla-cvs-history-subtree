@@ -368,7 +368,7 @@ public:
         OTHERWISE,
         OUTPUT,
         PARAM,
-        PI,
+        PROC_INST,
         PRESERVE_SPACE,
         SORT,
         STRIP_SPACE,

@@ -100,7 +100,7 @@ public:
         //-- node type tokens
         COMMENT,
         NODE,
-        PI,
+        PROC_INST,
         TEXT
     };
 
@@ -173,7 +173,7 @@ public:
     //-- Nodetype tokens
     static const String COMMENT;
     static const String NODE;
-    static const String PI;
+    static const String PROC_INST;
     static const String TEXT;
 
     //-- boolean

@@ -64,7 +64,7 @@ extern const String NUMBER;
 extern const String OTHERWISE;
 extern const String OUTPUT;
 extern const String PARAM;
-extern const String PI;
+extern const String PROC_INST;
 extern const String PRESERVE_SPACE;
 extern const String STRIP_SPACE;
 extern const String SORT;
