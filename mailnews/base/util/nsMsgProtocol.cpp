@@ -414,7 +414,7 @@ NS_IMETHODIMP nsMsgProtocol::AsyncRead(nsIStreamListener *listener, nsISupports 
 	return LoadUrl(m_url, nsnull);
 }
 
-NS_IMETHODIMP nsMsgProtocol::AsyncWrite(nsIInputStream *a, nsIStreamObserver*b, nsISupports *ctxt, 
+NS_IMETHODIMP nsMsgProtocol::AsyncWrite(nsIStreamProvider*b, nsISupports *ctxt, 
                                         PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval)
 {
     NS_NOTREACHED("AsyncWrite");
