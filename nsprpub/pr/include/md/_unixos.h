@@ -62,8 +62,12 @@
 #define PR_DIRECTORY_SEPARATOR_STR	"/"
 #define PR_PATH_SEPARATOR		':'
 #define PR_PATH_SEPARATOR_STR		":"
-#define GCPTR
+#define GCPTR 
+
+#ifndef DEFFARPROC
+#define DEFFARPROC
 typedef int (*FARPROC)();
+#endif /* DEFFARPROC */
 
 /*
  * intervals at which GLOBAL threads wakeup to check for pending interrupt
