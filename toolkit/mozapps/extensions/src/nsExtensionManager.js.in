@@ -2238,7 +2238,7 @@ nsExtensionItemUpdater.prototype = {
   
   onError: function (aStatus, aMessage)
   {
-    this._os.notifyObservers(null, "Update:Extension:Item-Error", null);
+    this._os.notifyObservers(null, "Update:Extension:Item-Error", aStatus.toString());
     
     for (var i = 0; i < this._items.length; ++i) {
       if (!this._items[i].updateRDF)
@@ -2263,8 +2263,16 @@ nsExtensionItemUpdater.prototype = {
     var extensionRes = rdf.GetResource(getItemPrefix(aItem.type) + aItem.id);
     
     var version = aDatasource.GetTarget(extensionRes, versionArc, true);
+    if (!version) { // Report an error if the update manifest is incomplete
+      this.onDatasourceError(aItem, "malformed-rdf");
+      return;
+    }
     version = version.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
     var updateLink = aDatasource.GetTarget(extensionRes, updateLinkArc, true);
+    if (!updateLink) { // Report an error if the update manifest is incomplete
+      this.onDatasourceError(aItem, "malformed-rdf");
+      return;
+    }
     updateLink = updateLink.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
     
     // Check to see if this is a newer version.
@@ -2283,9 +2291,9 @@ nsExtensionItemUpdater.prototype = {
     this._checkForDone();
   },
   
-  onDatasourceError: function (aItem)
+  onDatasourceError: function (aItem, aError)
   {
-    this._os.notifyObservers(aItem, "Update:Extension:Item-Error", "");
+    this._os.notifyObservers(aItem, "Update:Extension:Item-Error", aError);
 
     this._checkForDone();
   },
@@ -2369,7 +2377,7 @@ nsExtensionUpdateXMLRDFDSObserver.prototype =
   {
     aSink.removeXMLSinkObserver(this);
     
-    this._updater.onDatasourceError(this._item);
+    this._updater.onDatasourceError(this._item, aStatus.toString());
   }
 };
 
