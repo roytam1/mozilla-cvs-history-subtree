@@ -227,6 +227,17 @@ function goHelpMenu( url )
   window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
 }
 
+function getTopWin()
+{
+    var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
+    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
+    var topWindowOfType = windowManagerInterface.getMostRecentWindow( "navigator:browser" );
+
+    if (topWindowOfType) {
+        return topWindowOfType;
+    }
+    return null;
+}
 
 function openTopWin( url )
 {
@@ -249,20 +260,14 @@ function openTopWin( url )
         url = "about:blank";
     }
 
-    var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
-    var windowManagerInterface = windowManager.QueryInterface( Components.interfaces.nsIWindowMediator);
-
-    var topWindowOfType = windowManagerInterface.getMostRecentWindow( "navigator:browser" );
+    var topWindowOfType = getTopWin();
     if ( topWindowOfType )
     {
         topWindowOfType.focus();
         topWindowOfType.loadURI(url);
         return topWindowOfType;
     }
-    else
-    {
-        return window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
-    }
+    return window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
 }
 
 function goAboutDialog()

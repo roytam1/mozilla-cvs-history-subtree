@@ -1831,7 +1831,7 @@
             return;
           }
           
-          var urlRes, urlValue;
+          var urlRes, urlValue, w;
           if (aEvent && aEvent.altKey)
             this.openPropertiesForItem();
           else if (aInNewWindow) {
@@ -1854,7 +1854,7 @@
                 else 
                   urlValue = "about:blank";
                 
-                var w = openDialog(this._browserURL, "_blank", "chrome,all,dialog=no", urlValue);
+                w = openDialog(this._browserURL, "_blank", "chrome,all,dialog=no", urlValue);
                 if (groupTarget)
                   w.OpenBookmarkGroupFromResource(this.treeBuilder.getResourceAtIndex(k),
                                                   this.db, this.rdf);
@@ -1872,9 +1872,14 @@
             else 
               urlValue = "about:blank";
               
-            var w = openTopWin(urlValue);
-            if (groupTarget)
+            if (groupTarget) {
+              w = getTopWin();
+              w.focus();
               w.OpenBookmarkGroupFromResource(this.currentRes, this.db, this.rdf);
+            }
+            else {
+              openTopWin(urlValue);
+            }
           }
           if (aEvent) 
             aEvent.preventBubble();
