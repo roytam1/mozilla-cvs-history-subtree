@@ -133,7 +133,7 @@ InitModuleFromLib(const char *modulesDir, const char *fileName)
             const ipcModuleEntry *entries = NULL;
             int count = func(&gDaemonMethods, &entries);
             for (int i=0; i<count; ++i) {
-                if (AddModule(entries[i].target, entries[i].methods, buf)) {
+                if (AddModule(entries[i].target, entries[i].methods, buf) == PR_SUCCESS) {
                     if (entries[i].methods->init)
                         entries[i].methods->init();
                 }

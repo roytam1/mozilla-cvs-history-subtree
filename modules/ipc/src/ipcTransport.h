@@ -79,12 +79,18 @@ public:
         , mSpawnedDaemon(PR_FALSE)
         , mConnectionAttemptCount(0)
 #ifdef XP_UNIX
-        , mReceiver(this)
         , mFD(nsnull)
 #endif
-        { NS_INIT_ISUPPORTS(); }
+        {}
 
-    virtual ~ipcTransport() {}
+    virtual ~ipcTransport()
+    {
+#ifdef XP_UNIX
+        // clear the receiver's back pointer to |this|.
+        if (mReceiver)
+            ((ipcReceiver *) mReceiver.get())->ClearTransport();
+#endif
+    }
 
     nsresult Init(ipcTransportObserver *observer);
     nsresult Shutdown();
@@ -104,7 +110,9 @@ private:
     //
     // helpers
     //
+    nsresult PlatformInit();
     nsresult Connect();
+    nsresult Disconnect();
     nsresult OnConnectFailure();
     nsresult SendMsg_Internal(ipcMessage *msg);
     nsresult SpawnDaemon();
@@ -113,7 +121,7 @@ private:
     // data
     //
     ipcMessageQ            mDelayedQ;
-    ipcTransportObserver  *mObserver;
+    ipcTransportObserver  *mObserver; // weak reference
     nsCOMPtr<nsITimer>     mTimer;
     PRPackedBool           mSentHello;
     PRPackedBool           mHaveConnection;
@@ -121,17 +129,16 @@ private:
     PRUint8                mConnectionAttemptCount;
 
 #ifdef XP_UNIX
-    ipcReceiver                  mReceiver;
-    nsCOMPtr<nsISocketTransport> mTransport;
-    nsCOMPtr<nsIInputStream>     mInputStream;
-    nsCOMPtr<nsIOutputStream>    mOutputStream;
-    nsCString                    mSocketPath;
-    PRFileDesc                  *mFD;
+    nsCOMPtr<nsIInputStreamNotify> mReceiver;
+    nsCOMPtr<nsISocketTransport>   mTransport;
+    nsCOMPtr<nsIInputStream>       mInputStream;
+    nsCOMPtr<nsIOutputStream>      mOutputStream;
+    nsCString                      mSocketPath;
+    PRFileDesc                    *mFD;
 
     //
     // unix specific helpers
     //
-    nsresult InitUnix();
     nsresult CreateTransport();
     nsresult GetSocketPath(nsACString &);
 

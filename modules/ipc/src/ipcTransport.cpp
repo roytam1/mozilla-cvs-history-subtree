@@ -65,19 +65,19 @@ ipcTransport::Init(ipcTransportObserver *obs)
 
     mObserver = obs;
 
-#ifdef XP_UNIX
-    nsresult rv = InitUnix();
+    nsresult rv = PlatformInit();
     if (NS_FAILED(rv)) return rv;
-#endif
-
-    // XXX service should be the observer
-    nsCOMPtr<nsIObserverService> observ(do_GetService("@mozilla.org/observer-service;1"));
-    if (observ) {
-        observ->AddObserver(this, "xpcom-shutdown", PR_FALSE);
-        observ->AddObserver(this, "profile-change-net-teardown", PR_FALSE);
-    }
 
     return Connect();
+}
+
+nsresult
+ipcTransport::Shutdown()
+{
+    LOG(("ipcTransport::Shutdown\n"));
+
+    mObserver = 0;
+    return Disconnect();
 }
 
 nsresult
@@ -99,7 +99,7 @@ ipcTransport::SendMsg(ipcMessage *msg)
 void
 ipcTransport::OnMessageAvailable(const ipcMessage *rawMsg)
 {
-    LOG(("ipcTransport::OnMsgAvailable [dataLen=%u]\n", rawMsg->DataLen()));
+    LOG(("ipcTransport::OnMessageAvailable [dataLen=%u]\n", rawMsg->DataLen()));
 
     if (!mHaveConnection) {
         if (rawMsg->Target().Equals(IPCM_TARGET)) {
@@ -215,13 +215,10 @@ ipcTransport::Observe(nsISupports *subject, const char *topic, const PRUnichar *
             // 
             // try reconnecting to the daemon
             //
-            Shutdown();
+            Disconnect();
             Connect();
         }
     }
-    else if (strcmp(topic, "xpcom-shutdown") == 0 ||
-             strcmp(topic, "profile-change-net-teardown") == 0)
-        Shutdown(); 
 
     return NS_OK;
 }

@@ -35,35 +35,54 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef ipcCID_h__
-#define ipcCID_h__
+#include "nsISupports.idl"
 
-#define IPC_SERVICE_CLASSNAME \
-    "ipcService"
-#define IPC_SERVICE_CONTRACTID \
-    "@mozilla.org/ipc/service;1"
-#define IPC_SERVICE_CID                              \
-{ /* 9f12676a-5168-4a08-beb8-edf8a593a1ca */         \
-    0x9f12676a,                                      \
-    0x5168,                                          \
-    0x4a08,                                          \
-    {0xbe, 0xb8, 0xed, 0xf8, 0xa5, 0x93, 0xa1, 0xca} \
-}
+interface ipcILockNotify;
 
-//-----------------------------------------------------------------------------
-// extensions
+/**
+ * This service provides named interprocess locking with asynchronous waiting.
+ */
+[scriptable, uuid(9f6dbe15-d851-4b00-912a-5ac0be88a409)]
+interface ipcILockService : nsISupports
+{
+    /**
+     * Call this method to acquire a named lock asynchronously.
+     *
+     * @param aLockName
+     *        specifies the name of the lock
+     * @param aNotify
+     *        notification callback
+     * @param aWaitIfBusy
+     *        wait for the lock to become available; otherwise, notification
+     *        handler will be notified immediately that the lock was busy.
+     */
+    void acquireLock(in string aLockName,
+                     in ipcILockNotify aNotify,
+                     in boolean aWaitIfBusy);
 
-// XXX replace CID with one from botbot
-#define IPC_LOCKSERVICE_CLASSNAME \
-    "ipcLockService"
-#define IPC_LOCKSERVICE_CONTRACTID \
-    "@mozilla.org/ipc/lock-service;1"
-#define IPC_LOCKSERVICE_CID                          \
-{ /* 7aaeaceb-b207-4b45-bbde-a13276401fc2 */         \
-    0x7aaeaceb,                                      \
-    0xb207,                                          \
-    0x4b45,                                          \
-    {0xbb, 0xde, 0xa1, 0x32, 0x76, 0x40, 0x1f, 0xc2} \
-}
+    /**
+     * Call this method to release a named lock.  This method can be called
+     * before OnAcquireLockComplete has been called, which will effectively
+     * cancel the request to acquire the named lock.  OnAcquireLockComplete
+     * will not be called after a call to ReleaseLock.
+     *
+     * @param aLockName
+     *        specifies the name of the lock
+     */
+    void releaseLock(in string aLockName);
+};
 
-#endif // !ipcCID_h__
+[scriptable, uuid(b4ac1160-98a4-4030-aecc-01137a05c94b)]
+interface ipcILockNotify : nsISupports
+{
+    /**
+     * Called to complete a call to AcquireLock.
+     *
+     * @status aLockName
+     *         specifies the name of the lock
+     * @status aStatus
+     *         NS_OK if lock has been acquired; reason for failure otherwise.
+     */
+    void onAcquireLockComplete(in string aLockName,
+                               in nsresult aStatus);
+};

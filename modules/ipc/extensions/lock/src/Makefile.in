@@ -35,42 +35,32 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../..
+DEPTH		= ../../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+DIRS = module
+
 MODULE		= ipc
-LIBRARY_NAME	= ipc
+LIBRARY_NAME	= ipclock_s
 EXPORT_LIBRARY = 1
-IS_COMPONENT	= 1
+FORCE_STATIC_LIB = 1
 MODULE_NAME	= ipc
-REQUIRES	= xpcom \
-		  string \
-		  necko \
+
+REQUIRES	= \
+          xpcom \
+          string \
 		  $(NULL)
 
-CPPSRCS		= ipcModule.cpp
-EXPORTS		= ipcCID.h
+CPPSRCS		= \
+			ipcLockProtocol.cpp \
+			ipcLockService.cpp \
+            $(NULL)
 
-SHARED_LIBRARY_LIBS = \
-		$(DIST)/lib/$(LIB_PREFIX)ipc_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)ipccom_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)ipclock_s.$(LIB_SUFFIX) \
-		$(NULL)
-
-LOCAL_INCLUDES	= \
-		-I$(srcdir)/../src \
-		-I$(srcdir)/../common \
-		-I$(srcdir)/../extensions/lock/src \
-		$(NULL)
-
-EXTRA_DSO_LDOPTS = \
-		$(LIBS_DIR) \
-		$(EXTRA_DSO_LIBS) \
-		$(MOZ_COMPONENT_LIBS) \
-		$(NULL)
+EXPORTS     = \
+            $(NULL)
 
 include $(topsrcdir)/config/rules.mk

@@ -40,10 +40,12 @@
 #include "plstr.h"
 
 #include "nsIServiceManager.h"
+#include "nsIEventQueueService.h"
+#include "nsIEventQueue.h"
 #include "nsIObserverService.h"
 #include "nsICategoryManager.h"
 #include "nsCategoryManagerUtils.h"
-#include "netCore.h"
+#include "nsNetError.h"
 
 #include "ipcConfig.h"
 #include "ipcLog.h"
@@ -144,6 +146,7 @@ ipcClientQuery::OnQueryComplete(nsresult status, const ipcmMessageClientInfo *ms
 ipcService::ipcService()
     : mTransport(nsnull)
     , mClientID(0)
+    , mWaiting(PR_FALSE)
 {
     NS_INIT_ISUPPORTS();
 
@@ -152,18 +155,20 @@ ipcService::ipcService()
 
 ipcService::~ipcService()
 {
-    if (mTransport) {
-        mTransport->Shutdown();
-        NS_RELEASE(mTransport);
-    }
-
-    mObserverDB.Reset(ipcReleaseMessageObserver, nsnull);
+    NS_ASSERTION(mTransport == nsnull, "no xpcom-shutdown event??");
 }
 
 nsresult
 ipcService::Init()
 {
     nsresult rv;
+
+    nsCOMPtr<nsIObserverService> observ(do_GetService("@mozilla.org/observer-service;1"));
+    if (observ) {
+        observ->AddObserver(this, "xpcom-shutdown", PR_FALSE);
+        observ->AddObserver(this, "profile-change-net-teardown", PR_FALSE);
+        observ->AddObserver(this, "profile-change-net-restore", PR_FALSE);
+    }
 
     mTransport = new ipcTransport();
     if (!mTransport)
@@ -239,7 +244,7 @@ ipcService::OnIPCMError(const ipcmMessageError *msg)
 // interface impl
 //-----------------------------------------------------------------------------
 
-NS_IMPL_ISUPPORTS1(ipcService, ipcIService)
+NS_IMPL_ISUPPORTS2(ipcService, ipcIService, nsIObserver)
 
 NS_IMETHODIMP
 ipcService::GetClientID(PRUint32 *clientID)
@@ -252,11 +257,11 @@ ipcService::GetClientID(PRUint32 *clientID)
 }
 
 NS_IMETHODIMP
-ipcService::AddClientName(const nsACString &name)
+ipcService::AddClientName(const char *name)
 {
     NS_ENSURE_TRUE(mTransport, NS_ERROR_NOT_INITIALIZED);
 
-    ipcMessage *msg = new ipcmMessageClientAddName(PromiseFlatCString(name).get());
+    ipcMessage *msg = new ipcmMessageClientAddName(name);
     if (!msg)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -264,11 +269,11 @@ ipcService::AddClientName(const nsACString &name)
 }
 
 NS_IMETHODIMP
-ipcService::RemoveClientName(const nsACString &name)
+ipcService::RemoveClientName(const char *name)
 {
     NS_ENSURE_TRUE(mTransport, NS_ERROR_NOT_INITIALIZED);
 
-    ipcMessage *msg = new ipcmMessageClientDelName(PromiseFlatCString(name).get());
+    ipcMessage *msg = new ipcmMessageClientDelName(name);
     if (!msg)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -276,7 +281,7 @@ ipcService::RemoveClientName(const nsACString &name)
 }
 
 NS_IMETHODIMP
-ipcService::QueryClientByName(const nsACString &name,
+ipcService::QueryClientByName(const char *name,
                               ipcIClientQueryHandler *handler,
                               PRUint32 *queryID)
 {
@@ -285,7 +290,7 @@ ipcService::QueryClientByName(const nsACString &name,
 
     ipcMessage *msg;
 
-    msg = new ipcmMessageQueryClientByName(PromiseFlatCString(name).get());
+    msg = new ipcmMessageQueryClientByName(name);
     if (!msg)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -406,6 +411,85 @@ ipcService::SendMessage(PRUint32 clientID,
     return mTransport->SendMsg(msg);
 }
 
+NS_IMETHODIMP
+ipcService::WaitMessage(const nsID &target,
+                        PRUint32 timeout)
+{
+    LOG(("ipcService::WaitMessage [timeout=%u]\n", timeout));
+
+    NS_ENSURE_TRUE(mWaiting == PR_FALSE, NS_ERROR_IN_PROGRESS);
+
+    // push event queue
+    //   create timer w/ specified timeout (XXX)
+    //   waitforevent
+    // pop event queue
+
+    nsresult rv;
+    nsCOMPtr<nsIEventQueueService> eqs = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIEventQueue> eventQ;
+
+    LOG(("  WaitMessage[0]: pushing event queue...\n"));
+    rv = eqs->PushThreadEventQueue(getter_AddRefs(eventQ));
+    if (NS_FAILED(rv)) return rv;
+
+    mWaiting = PR_TRUE;
+    mWaitingTarget = target;
+
+    PLEvent *ev;
+    while (mWaiting) {
+        eventQ->WaitForEvent(&ev);
+        eventQ->HandleEvent(ev);
+    }
+
+    // flush remaining events if any
+    for (;;) {
+        PRBool hasEvent;
+        eventQ->EventAvailable(hasEvent);
+        if (!hasEvent)
+            break;
+        eventQ->GetEvent(&ev);
+        eventQ->HandleEvent(ev);
+    }
+
+    LOG(("  WaitMessage[1]: popping event queue...\n"));
+    eqs->PopThreadEventQueue(eventQ);
+
+    LOG(("  WaitMessage[2]: dispatch delayed messages...\n"));
+    while (!mDelayedMsgQ.IsEmpty()) {
+        ipcMessage *msg = mDelayedMsgQ.First();
+        mDelayedMsgQ.RemoveFirst();
+        OnMessageAvailable(msg);
+        delete msg;
+    }
+
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+// nsIObserver impl
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+ipcService::Observe(nsISupports *subject, const char *topic, const PRUnichar *data)
+{
+    if (strcmp(topic, "xpcom-shutdown") == 0 ||
+        strcmp(topic, "profile-change-net-teardown") == 0) {
+        // disconnect any message observers
+        mObserverDB.Reset(ipcReleaseMessageObserver, nsnull);
+
+        // drop daemon connection
+        if (mTransport)
+            mTransport->Shutdown();
+    }
+    else if (strcmp(topic, "profile-change-net-restore") == 0) {
+        if (mTransport)
+            mTransport->Init(this);
+    }
+    return NS_OK;
+}
+
 //-----------------------------------------------------------------------------
 // ipcTransportObserver impl
 //-----------------------------------------------------------------------------
@@ -419,7 +503,7 @@ ipcService::OnConnectionEstablished(PRUint32 clientID)
     // enumerate ipc startup category...
     //
     NS_CreateServicesFromCategory(IPC_SERVICE_STARTUP_CATEGORY,
-                                  NS_STATIC_CAST(nsISupports *, this),
+                                  NS_STATIC_CAST(ipcIService *, this),
                                   IPC_SERVICE_STARTUP_TOPIC);
 }
 
@@ -443,13 +527,25 @@ ipcService::OnConnectionLost()
     nsCOMPtr<nsIObserverService> observ(
             do_GetService("@mozilla.org/observer-service;1"));
     if (observ)
-        observ->NotifyObservers(NS_STATIC_CAST(nsISupports *, this),
+        observ->NotifyObservers(NS_STATIC_CAST(ipcIService *, this),
                                 IPC_SERVICE_SHUTDOWN_TOPIC, nsnull);
 }
 
 void
 ipcService::OnMessageAvailable(const ipcMessage *msg)
 {
+    LOG(("ipcService::OnMessageAvailable\n"));
+
+    if (mWaiting) {
+        if (msg->Target().Equals(mWaitingTarget))
+            mWaiting = PR_FALSE;
+        else {
+            // queue this message up for later delivery
+            mDelayedMsgQ.Append(msg->Clone());
+            return;
+        }
+    }
+
     if (msg->Target().Equals(IPCM_TARGET)) {
         //
         // all IPCM messages stop here.

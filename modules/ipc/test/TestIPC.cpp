@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "ipcIService.h"
+#include "ipcILockService.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentRegistrar.h"
@@ -71,6 +72,7 @@ static nsIEventQueue* gEventQ = nsnull;
 static PRBool gKeepRunning = PR_TRUE;
 //static PRInt32 gMsgCount = 0;
 static ipcIService *gIpcServ = nsnull;
+static ipcILockService *gIpcLockServ = nsnull;
 
 static void
 SendMsg(ipcIService *ipc, PRUint32 cID, const nsID &target, const char *data, PRUint32 dataLen)
@@ -112,8 +114,6 @@ class myIpcClientQueryHandler : public ipcIClientQueryHandler
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_IPCICLIENTQUERYHANDLER
-
-    myIpcClientQueryHandler() { NS_INIT_ISUPPORTS(); }
 };
 
 NS_IMPL_ISUPPORTS1(myIpcClientQueryHandler, ipcIClientQueryHandler)
@@ -158,6 +158,25 @@ myIpcClientQueryHandler::OnQueryComplete(PRUint32 aQueryID,
 
 //-----------------------------------------------------------------------------
 
+class myIpcLockNotify : public ipcILockNotify
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_IPCILOCKNOTIFY
+};
+
+NS_IMPL_ISUPPORTS1(myIpcLockNotify, ipcILockNotify)
+
+NS_IMETHODIMP
+myIpcLockNotify::OnAcquireLockComplete(const char *lockName, nsresult status)
+{
+    printf("*** OnAcquireLockComplete [lock=%s status=%x]\n", lockName, status);
+    gIpcLockServ->ReleaseLock(lockName);
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+
 int main(int argc, char **argv)
 {
     nsresult rv;
@@ -187,7 +206,7 @@ int main(int argc, char **argv)
 
         if (argc > 1) {
             printf("*** using client name [%s]\n", argv[1]);
-            gIpcServ->AddClientName(nsDependentCString(argv[1]));
+            gIpcServ->AddClientName(argv[1]);
         }
 
         ipcServ->SetMessageObserver(kTestTargetID, new myIpcMessageObserver());
@@ -254,20 +273,33 @@ int main(int argc, char **argv)
                 "59 this is a really long message.\n"
                 "60 this is a really long message.\n";
         SendMsg(ipcServ, 0, kTestTargetID, data, strlen(data)+1);
+        ipcServ->WaitMessage(kTestTargetID, 0);
 
         PRUint32 queryID;
         nsCOMPtr<ipcIClientQueryHandler> handler(new myIpcClientQueryHandler());
-        ipcServ->QueryClientByName(NS_LITERAL_CSTRING("foopy"), handler, &queryID);
+        ipcServ->QueryClientByName("foopy", handler, &queryID);
 
-        while (gKeepRunning)
-            gEventQ->ProcessPendingEvents();
+        //
+        // test lock service
+        //
+        nsCOMPtr<ipcILockService> lockService = do_GetService("@mozilla.org/ipc/lock-service;1", &rv);
+        RETURN_IF_FAILED(rv, "do_GetService(ipcLockServ)");
+        NS_ADDREF(gIpcLockServ = lockService);
+
+        nsCOMPtr<ipcILockNotify> notify(new myIpcLockNotify());
+        gIpcLockServ->AcquireLock("blah", notify, PR_TRUE);
+
+        PLEvent *ev;
+        while (gKeepRunning) {
+            gEventQ->WaitForEvent(&ev);
+            gEventQ->HandleEvent(ev);
+        }
 
         NS_RELEASE(gIpcServ);
 
         printf("*** processing remaining events\n");
 
         // process any remaining events
-        PLEvent *ev;
         while (NS_SUCCEEDED(gEventQ->GetEvent(&ev)) && ev)
             gEventQ->HandleEvent(ev);
 

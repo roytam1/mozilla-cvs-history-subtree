@@ -286,10 +286,14 @@ ipcThreadShutdown()
 //-----------------------------------------------------------------------------
 
 nsresult
-ipcTransport::Shutdown()
+ipcTransport::PlatformInit()
 {
-    LOG(("ipcTransport::Shutdown\n"));
+    return NS_OK;
+}
 
+nsresult
+ipcTransport::Disconnect()
+{
     mHaveConnection = PR_FALSE;
 
     if (ipcThread)

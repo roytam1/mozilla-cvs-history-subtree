@@ -57,10 +57,12 @@ typedef ipcList<class ipcClientQuery> ipcClientQueryQ;
 
 class ipcService : public ipcIService
                  , public ipcTransportObserver
+                 , public nsIObserver
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_IPCISERVICE
+    NS_DECL_NSIOBSERVER
 
     ipcService();
     virtual ~ipcService();
@@ -83,6 +85,11 @@ private:
     PRUint32        mClientID;
 
     ipcClientQueryQ mQueryQ;
+
+    // WaitMessage support
+    ipcMessageQ     mDelayedMsgQ;
+    PRBool          mWaiting;
+    nsID            mWaitingTarget;
 };
 
 #endif // !ipcService_h__

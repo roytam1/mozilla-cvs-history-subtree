@@ -91,8 +91,8 @@ interface ipcIService : nsISupports
      *
      * XXX An IPC client name resembles a XPCOM contract ID.
      */
-    void addClientName(in ACString aName);
-    void removeClientName(in ACString aName);
+    void addClientName(in string aName);
+    void removeClientName(in string aName);
 
     /**
      * query info about a particular client given its client name. the
@@ -107,7 +107,7 @@ interface ipcIService : nsISupports
      *
      * @return integer value identifying this query.
      */
-    unsigned long queryClientByName(in ACString aName,
+    unsigned long queryClientByName(in string aName,
                                     in ipcIClientQueryHandler aHandler);
 
     /**
@@ -178,6 +178,26 @@ interface ipcIService : nsISupports
                     [array, const, size_is(aDataLen)]
                      in octet         aData,
                      in unsigned long aDataLen);
+
+    /**
+     * wait until a message for the specified target arrives.  when a message
+     * arrives, the associated message observer will be notified.  this method
+     * fails if there is not a registered message observer.
+     *
+     * @param aTarget
+     *        wait for the next message for the specified target.
+     * @param aTimeout
+     *        wait no more than this many seconds.  pass 0 to wait indefinitely.
+     *
+     * NOTE: this method can be used to synchronously wait for a response from
+     * the daemon.  however, there is no guarantee that the next event will be
+     * in response to the message previously sent.  depending on the protocol
+     * of this particular target, the next event might be unrelated to the
+     * message previously sent.  consumers should be aware of this fact, and
+     * design for it accordingly.
+     */
+    void waitMessage(in nsIDRef       aTarget,
+                     in unsigned long aTimeout);
 };
 
 /**

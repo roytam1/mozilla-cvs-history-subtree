@@ -54,7 +54,7 @@ class ipcTransport;
 class ipcReceiver : public nsIInputStreamNotify
 {
 public:
-    NS_DECL_ISUPPORTS_INHERITED
+    NS_DECL_ISUPPORTS
     NS_DECL_NSIINPUTSTREAMNOTIFY
 
     ipcReceiver(ipcTransport *transport)
@@ -62,12 +62,17 @@ public:
         { }
     virtual ~ipcReceiver() { }
 
+    // called by the transport when it is going away.
+    void ClearTransport() { mTransport = nsnull; }
+
 private:
     static NS_METHOD ReadSegment(nsIInputStream *, void *, const char *,
                                  PRUint32, PRUint32, PRUint32 *);
 
+    // the transport owns the receiver, so this back pointer does not need
+    // to be an owning reference.
     ipcTransport *mTransport;
-    ipcMessage    mMsg;  // message in progress
+    ipcMessage    mMsg;       // message in progress
 };
 
 #endif // !ipcTransportUnix_h__
