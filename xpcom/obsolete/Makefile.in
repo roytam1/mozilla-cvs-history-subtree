@@ -91,3 +91,7 @@ EXTRA_DSO_LDOPTS += imagehlp.lib
 endif
 endif # WINNT
 
+ifeq ($(OS_ARCH), Linux)
+DEFINES		+= -D_BSD_SOURCE
+endif
+
