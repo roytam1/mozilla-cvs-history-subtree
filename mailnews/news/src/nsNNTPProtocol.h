@@ -36,6 +36,7 @@
 
 #include "nsMsgLineBuffer.h"
 #include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
 
 // this is only needed as long as our libmime hack is in place
 #include "prio.h"
@@ -210,7 +211,7 @@ private:
     PRInt32     m_responseCode;    /* code returned from NNTP server */
 	PRInt32 	m_previousResponseCode; 
     char       *m_responseText;   /* text returned from NNTP server */
-	char	   *m_hostName;
+	nsXPIDLCString m_hostName;
 
     char		*m_dataBuf;
     PRUint32	 m_dataBufSize;
