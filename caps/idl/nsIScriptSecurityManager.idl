@@ -17,7 +17,9 @@
  * Copyright (C) 1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- * Contributor(s): 
+ * Contributor(s):
+ * Norris Boyd
+ * Mitch Stoltz
  */
 
 #include "nsISupports.idl"
@@ -30,11 +32,73 @@
 
 interface nsIURI;
 
+
 [scriptable, uuid(58df5780-8006-11d2-bd91-00805f8ae3f4)]
 interface nsIScriptSecurityManager : nsISupports
 {
-	///////////////// Principals /////////////////////// 
+	///////////////// Security Checks //////////////////
+    /**
+     * This function is obsolete and should no longer be used.
+     */
+	[noscript] void checkScriptAccess(in JSContextPtr cx, in voidPtr obj, 
+	                       in long prop, in boolean isWrite);
 
+	/**
+	 * Check that the script currently running in context "cx" can load "uri".
+	 *
+	 * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
+	 * should be denied.
+	 *
+	 * @param cx the JSContext of the script causing the load
+	 * @param uri the URI that is being loaded
+	 */
+    [noscript] void checkLoadURIFromScript(in JSContextPtr cx, in nsIURI uri);
+
+    /** 
+     * Default CheckLoadURI permissions
+     */
+	// Default permissions
+    const unsigned long STANDARD = 0;
+
+    // If the source is mail, disallow the load
+    const unsigned long DISALLOW_FROM_MAIL = 1 << 0;
+
+    // Allow the loading of chrome URLs by non-chrome URLs
+    const unsigned long ALLOW_CHROME = 1 << 1;
+
+	/**
+	 * Check that content from "from" can load "uri".
+	 *
+	 * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
+	 * should be denied.
+	 *
+	 * @param from the URI causing the load
+	 * @param uri the URI that is being loaded
+	 * @param flags the permission set, see above
+	 */
+    void checkLoadURI(in nsIURI from, in nsIURI uri, 
+	                  in unsigned long flags);
+
+    /**
+     * Check that the function 'funObj' is allowed to run on 'targetObj'
+     *
+     * Will return error code NS_ERROR_DOM_SECURITY_ERR if the function
+     * should not run
+     *
+     * @param cx The current active JavaScript context.
+     * @param funObj The function trying to run..
+     * @param targetObj The object the function will run on.
+     */
+    [noscript] void checkFunctionAccess(in JSContextPtr cx, in voidPtr funObj,
+                                        in voidPtr targetObj);
+
+	/**
+	 * Return true if content from the given principal is allowed to
+	 * execute scripts.
+	 */
+    [noscript] boolean canExecuteScripts(in JSContextPtr cx, in nsIPrincipal principal);
+
+	///////////////// Principals /////////////////////// 
 	/**
 	 * Return the principal of the innermost frame of the currently 
 	 * executing script. Will return null if there is no script 
@@ -48,92 +112,17 @@ interface nsIScriptSecurityManager : nsISupports
     nsIPrincipal getSystemPrincipal();
 
 	/**
+	 * Return a principal that can be QI'd to nsICertificatePrincipal.
+	 */
+    nsIPrincipal getCertificatePrincipal(in string CertID);
+
+	/**
 	 * Return a principal that can be QI'd to nsICodebasePrincipal and 
 	 * has the same origin as aURI.
 	 */
     nsIPrincipal getCodebasePrincipal(in nsIURI aURI);
 
-	/**
-	 * Return a principal that can be QI'd to nsICertificatePrincipal.
-	 */
-    nsIPrincipal getCertificatePrincipal(in string CertID);
-
-	///////////////// Security Checks //////////////////
-
-    /**
-     * Checks whether the currently executing script can access the given 
-     * property.
-     *
-     * @param cx The current active JavaScript context
-     * @param obj The object that is being accessed
-     * @param prop The ordinal of the property being accessed (see nsDOMPropEnums.h)
-     * @param isWrite True if write access is being attempted
-     */
-	[noscript] void checkScriptAccess(in JSContextPtr cx, in voidPtr obj, 
-	                       in long prop, in boolean isWrite);
-
-	/**
-	 * Check that the script with context "cx" can load "uri".
-	 *
-	 * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
-	 * should be denied.
-	 *
-	 * @param cx the JSContext of the script causing the load
-	 * @param uri the URI that is being loaded
-	 */
-    [noscript] void checkLoadURIFromScript(in JSContextPtr cx, in nsIURI uri);
-
-    /** 
-     * Default CheckLoadURI permissions
-     */
-    const unsigned long STANDARD = 0;
-
-    /** 
-     * If the source is mail, disallow the load
-     */
-    const unsigned long DISALLOW_FROM_MAIL = 1 << 0;
-
-    /** 
-     * Allow the loading of chrome URLs by non-chrome URLs
-     */
-    const unsigned long ALLOW_CHROME = 1 << 1;
-
-	/**
-	 * Check that content from "from" can load "uri".
-	 *
-	 * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
-	 * should be denied.
-	 *
-	 * @param from the URI causing the load
-	 * @param uri the URI that is being loaded
-	 * @param disallowFromMail if true, return NS_ERROR_DOM_BAD_URI if 'from'
-	 *                         is a URI associated with mail or news
-	 */
-    void checkLoadURI(in nsIURI from, in nsIURI uri, 
-	                  in unsigned long flags);
-
-  /**
-   * Check that the function 'funObj' is allowed to run on 'targetObj'
-   *
-   * Will return error code NS_ERROR_DOM_SECURITY_ERR if the function
-   * should not run
-   *
-   * @param cx The current active JavaScript context.
-   * @param funObj The function trying to run..
-   * @param targetObj The object the function will run on.
-   */
-    [noscript] void checkFunctionAccess(in JSContextPtr cx, in voidPtr funObj,
-                                        in voidPtr targetObj);
-
-	/**
-	 * Return true if content from the given principal is allowed to
-	 * execute scripts.
-	 */
-    [noscript] boolean canExecuteScripts(in JSContextPtr cx, in nsIPrincipal principal);
-
-
-	///////////////// Capabilities /////////////////////
-
+	///////////////// Capabilities API /////////////////////
     /**
      * Request that 'capability' can be enabled by scripts or applets running 
      * with 'principal'. Will prompt user if necessary. Returns 
@@ -166,7 +155,6 @@ interface nsIScriptSecurityManager : nsISupports
     void disableCapability(in string capability);
 
     //////////////// Master Certificate Functions ////////////////////
-
 	/**
 	 * Allow 'certificateID' to enable 'capability.' Can only be performed
      * by code signed by the system certificate.

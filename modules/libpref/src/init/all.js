@@ -126,47 +126,48 @@ pref("browser.related.provider", "http://www-rl.netscape.com/wtgn?");
 pref("browser.related.disabledForDomains", "");
 pref("browser.goBrowsing.enabled", true);
 
+pref("signed.applets.codebase_principal_support", true);
 // Default Capability Preferences: Security-Critical! 
 // Editing these may create a security risk - be sure you know what you're doing
-pref("capability.policy.default.barprop.visible.write", "UniversalBrowserWrite");
+pref("capability.policy.default.barprop.visible.set", "UniversalBrowserWrite");
 
-pref("capability.policy.default.domexception.code", "allAccess");
-pref("capability.policy.default.domexception.message", "allAccess");
-pref("capability.policy.default.domexception.name", "allAccess");
-pref("capability.policy.default.domexception.result", "allAccess");
-pref("capability.policy.default.domexception.tostring", "allAccess");
+pref("capability.policy.default.Domexception.code", "allAccess");
+pref("capability.policy.default.Domexception.message", "allAccess");
+pref("capability.policy.default.Domexception.name", "allAccess");
+pref("capability.policy.default.Domexception.result", "allAccess");
+pref("capability.policy.default.Domexception.tostring", "allAccess");
 
-pref("capability.policy.default.history.current.read", "UniversalBrowserRead");
-pref("capability.policy.default.history.next.read", "UniversalBrowserRead");
-pref("capability.policy.default.history.previous.read", "UniversalBrowserRead");
-pref("capability.policy.default.history.item.read", "UniversalBrowserRead");
+pref("capability.policy.default.History.current.get", "UniversalBrowserRead");
+pref("capability.policy.default.History.next.get", "UniversalBrowserRead");
+pref("capability.policy.default.History.previous.get", "UniversalBrowserRead");
+pref("capability.policy.default.History.item.get", "UniversalBrowserRead");
 
-pref("capability.policy.default.location.hash.write", "allAccess");
-pref("capability.policy.default.location.host.write", "allAccess");
-pref("capability.policy.default.location.hostname.write", "allAccess");
-pref("capability.policy.default.location.href.write", "allAccess");
-pref("capability.policy.default.location.pathname.write", "allAccess");
-pref("capability.policy.default.location.port.write", "allAccess");
-pref("capability.policy.default.location.protocol.write", "allAccess");
-pref("capability.policy.default.location.search.write", "allAccess");
+pref("capability.policy.default.Location.hash.set", "allAccess");
+pref("capability.policy.default.Location.host.set", "allAccess");
+pref("capability.policy.default.Location.hostname.set", "allAccess");
+pref("capability.policy.default.Location.href.set", "allAccess");
+pref("capability.policy.default.Location.pathname.set", "allAccess");
+pref("capability.policy.default.Location.port.set", "allAccess");
+pref("capability.policy.default.Location.protocol.set", "allAccess");
+pref("capability.policy.default.Location.search.set", "allAccess");
 
-pref("capability.policy.default.navigator.preference.read", "UniversalPreferencesRead");
-pref("capability.policy.default.navigator.preference.write", "UniversalPreferencesWrite");
+pref("capability.policy.default.Navigator.preference.get", "UniversalPreferencesRead");
+pref("capability.policy.default.Navigator.preference.set", "UniversalPreferencesWrite");
 
-pref("capability.policy.default.windowinternal.close", "allAccess");
-pref("capability.policy.default.windowinternal.location.write", "allAccess");
+pref("capability.policy.default.Window.close", "allAccess");
+pref("capability.policy.default.Window.location.set", "allAccess");
 
 pref("capability.policy.mailnews.sites", "mailbox: imap: news: pop: pop3:");
 
-pref("capability.policy.mailnews.domexception.tostring", "noAccess");
-pref("capability.policy.mailnews.htmldocument.domain", "noAccess");
-pref("capability.policy.mailnews.htmldocument.url", "noAccess");
-pref("capability.policy.mailnews.nsdocument.location", "noAccess");
-pref("capability.policy.mailnews.window.name.write", "noAccess");
-pref("capability.policy.mailnews.windowinternal.location", "noAccess");
+pref("capability.policy.mailnews.Domexception.tostring", "noAccess");
+pref("capability.policy.mailnews.Htmldocument.domain", "noAccess");
+pref("capability.policy.mailnews.Htmldocument.url", "noAccess");
+//pref("capability.policy.mailnews.nsdocument.location", "noAccess");
+pref("capability.policy.mailnews.Window.name.set", "noAccess");
+pref("capability.policy.mailnews.Window.location", "noAccess");
 
 // window.openDialog is insecure and must be made inaccessible from web scripts - see bug 56009
-pref("capability.policy.default.windowinternal.opendialog", "noAccess");
+pref("capability.policy.default.Window.opendialog", "noAccess");
 
 pref("javascript.enabled",                  true);
 pref("javascript.allow.mailnews",           false);

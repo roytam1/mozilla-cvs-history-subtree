@@ -98,58 +98,61 @@ public:
     JSContext * GetCurrentContextQuick();
 private:
 
-	nsresult
-	GetRootDocShell(JSContext *cx, nsIDocShell **result);
-
-    NS_IMETHOD
+    nsresult
     CheckScriptAccessInternal(JSContext *cx, 
                               void* obj, const char* aObjUrlStr, PRInt32 domPropInt, 
                               PRBool isWrite);
 
-    NS_IMETHOD
-    CreateCodebasePrincipal(nsIURI* aURI, nsIPrincipal** result);
+	nsresult
+	GetRootDocShell(JSContext *cx, nsIDocShell **result);
 
-    NS_IMETHOD
-    GetSubjectPrincipal(JSContext *aCx, nsIPrincipal **result);
-
-    NS_IMETHOD
-    GetObjectPrincipal(JSContext *aCx, JSObject *aObj, nsIPrincipal **result);
-
-    NS_IMETHOD
-    CheckPermissions(JSContext *aCx, nsIPrincipal* aObjectPrincipal, const char *aCapability);
+    nsresult
+    CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject, 
+                    nsIPrincipal* aObject, PRUint32 aAction);
     
     PRInt32 
-    GetSecurityLevel(nsIPrincipal *principal, nsDOMProp domProp, 
-                     PRBool isWrite, nsCString &capability);
+    GetSecurityLevel(nsIPrincipal *principal, nsCString &aProperty, 
+                     PRUint32 aAction, nsCString &capability);
 
-    NS_IMETHOD
-    GetPrefName(nsIPrincipal *principal, nsDOMProp domProp, 
+    nsresult
+    GetPrefName(nsIPrincipal *principal, nsCString &property, 
                 nsCString &result);
-
-    nsresult 
-    CheckXPCCapability(JSContext *aJSContext, const char *aCapability);
- 
-    NS_IMETHOD
+/*
+    nsresult
     CheckXPCPermissions(JSContext *cx, nsISupports* aObj);
+*/
 
-    NS_IMETHOD
+    nsresult
+    CreateCodebasePrincipal(nsIURI* aURI, nsIPrincipal** result);
+
+    nsresult
+    GetSubjectPrincipal(JSContext *aCx, nsIPrincipal **result);
+
+    nsresult
+    GetObjectPrincipal(JSContext *aCx, JSObject *aObj, nsIPrincipal **result);
+
+    nsresult
     GetFramePrincipal(JSContext *cx, JSStackFrame *fp, nsIPrincipal **result);
                                                      
-    NS_IMETHOD
+    nsresult
     GetScriptPrincipal(JSContext *cx, JSScript *script, nsIPrincipal **result);
 
-    NS_IMETHOD
+    nsresult
+    GetCallingPrincipal(JSContext *cx, nsIPrincipal **result);
+
+    nsresult
     GetFunctionObjectPrincipal(JSContext *cx, JSObject *obj, 
                                nsIPrincipal **result);
 
-    NS_IMETHOD
-    GetPrincipalAndFrame(JSContext *cx, nsIPrincipal **result, 
+    nsresult
+    GetPrincipalAndFrame(JSContext *cx, PRBool skipInnerFrame,
+                         nsIPrincipal **result,
                          JSStackFrame **frameResult);
 
-    NS_IMETHOD
+    nsresult
     SavePrincipal(nsIPrincipal* aToSave);
 
-    NS_IMETHOD
+    nsresult
     InitPrefs();
 
     static nsresult 
@@ -182,3 +185,4 @@ private:
 };
 
 #endif /*_NS_SCRIPT_SECURITY_MANAGER_H_*/
+
