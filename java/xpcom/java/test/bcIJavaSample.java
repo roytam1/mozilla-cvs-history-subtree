@@ -5,7 +5,7 @@
  */
 
 
-package org.mozilla.xpcom;
+import org.mozilla.xpcom.*;
 
 
 /**
