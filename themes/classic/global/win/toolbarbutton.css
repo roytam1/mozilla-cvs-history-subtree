@@ -30,7 +30,7 @@
 /* ::::: toolbarbutton ::::: */
 
 toolbarbutton {
-  -moz-appearance: toolbarbutton;
+  -moz-appearance: none;
   -moz-box-align: center;
   -moz-box-pack: center;
   margin: 0;
