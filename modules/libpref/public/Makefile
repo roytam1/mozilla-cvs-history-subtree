@@ -19,6 +19,6 @@ DEPTH	= ../../..
 
 MODULE	= pref
 
-EXPORTS= prefapi.h prefldap.h
+EXPORTS= prefapi.h prefldap.h nsIPrefsManager.h nsIBrowserPrefsManager.h
 
 include $(DEPTH)/config/rules.mk

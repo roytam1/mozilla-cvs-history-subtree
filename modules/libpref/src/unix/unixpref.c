@@ -20,13 +20,22 @@
  unixpref.c
  **********************************************************************/
 
+#include <stdio.h>
+#include <assert.h>
 #include "prefapi.h"
 #include "prlink.h"
+#include "prlog.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
-#include "xpassert.h"
-#include "fe_proto.h"
 
+#ifndef B1M
+#include <Xm/Xm.h>
+#endif
+
+extern PRLibrary* pref_LoadAutoAdminLib(void);
+extern PRLibrary* m_AutoAdminLib;
+
+#include "icondata.h"
 
 /*
  * pref_InitInitialObjects
@@ -40,7 +49,7 @@ pref_InitInitialObjects(void)
 {
     JSBool status;
 
-    XP_ASSERT(pref_init_buffer);
+    PR_ASSERT(pref_init_buffer);
 
     status = PREF_EvaluateJSBuffer(pref_init_buffer, strlen(pref_init_buffer));
 
@@ -65,27 +74,84 @@ pref_InitInitialObjects(void)
 
 
 /*
- * PREF_GetLabelAndMnemonic
+ * PREF_AlterSplashIcon
  */
-XP_Bool
-PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
+void
+PREF_AlterSplashIcon(struct fe_icon_data* icon)
 {
-    /* Code moved to where it should have been. */
-    return FE_GetLabelAndMnemonic(name, str, v_xm_str, v_mnemonic);
+    assert(icon);
+
+    if ( PREF_IsAutoAdminEnabled() && 
+         icon && 
+         (splash_screen = (struct fe_icon_type*)
+          PR_FindSymbol(m_AutoAdminLib, "_POLARIS_SplashPro")) != NULL ) {
+        memcpy(icon, splash_screen, sizeof(*icon));
+    }
 }
 
+#ifndef B1M
+/*
+ * PREF_GetLabelAndMnemonic
+ */
+PRBool
+PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
+{
+#ifdef MOZILLA_CLIENT   // non-raptor
+    /* Code moved to where it should have been. */
+    return FE_GetLabelAndMnemonic(name, str, v_xm_str, v_mnemonic);
+#else
+    XmString *xm_str = (XmString*)v_xm_str;
+    KeySym *mnemonic = (KeySym*)v_mnemonic;
+    char buf[256];
+    char* _str;
+    char* p1;
+    char* p2;
+
+    PR_ASSERT(name);
+    PR_ASSERT(str);
+    PR_ASSERT(xm_str);
+
+    if ( name == NULL || str == NULL || xm_str == NULL ) return PR_FALSE;
+
+    _str = NULL;
+	*str = NULL;
+    *xm_str = NULL;
+    *mnemonic = '\0';
+
+    strncpy(buf, name, 200);
+    strcat(buf, ".label");
+
+    PREF_CopyConfigString(buf, &_str);
+
+    if ( _str == NULL || *_str == '\0' ) return PR_FALSE;
+
+    /* Strip out ampersands */
+    if ( strchr(_str, '&') != NULL ) {
+        for ( p1 = _str, p2 = _str; *p2; p1++, p2++ ) {
+            if ( *p1 == '&' && *(++p1) != '&' ) *mnemonic = *p1;
+            *p2 = *p1;
+        }
+    }
+
+    *str = _str;
+    *xm_str = XmStringCreateLtoR(_str, XmFONTLIST_DEFAULT_TAG);
+
+    return ( *xm_str != NULL );
+#endif
+}
+#endif
 
 /*
  * PREF_GetUrl
  */
-XP_Bool
+PRBool
 PREF_GetUrl(char* name, char** url)
 {
     char buf[256];
 
-    XP_ASSERT(name);
+    PR_ASSERT(name);
 
-    if ( name == NULL || url == NULL ) return FALSE;
+    if ( name == NULL || url == NULL ) return PR_FALSE;
 
     strncpy(buf, name, 200);
     strcat(buf, ".url");

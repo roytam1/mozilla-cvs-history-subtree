@@ -44,6 +44,11 @@ endif
 
 CSRCS		+= prefapi.c
 
+CPPSRCS		+= nsPref.cpp
+
+include $(topsrcdir)/config/rules.mk
+
+INCLUDES	+= -I$(topsrcdir)/cmd/xfe/icons -I$(srcdir)/unix -I./unix
 
 GARBAGE		+= unix/jsbuffer.h
 

@@ -21,13 +21,9 @@
 #define NS_IMPL_IDS
 #include "nsIFactory.h"
 #include "nsRepository.h"
-#include "nsIPref.h"
-#ifdef XP_MAC
-#include "nsINetSupport.h"
-#include "nsIStreamListener.h"
-#endif
+#include "nsIBrowserPrefsManager.h"
 
-class nsPref: public nsIPref {
+class nsPref: public nsIBrowserPrefsManager {
   NS_DECL_ISUPPORTS
 
 private:
@@ -37,31 +33,17 @@ private:
   static nsPref *mInstance;
 
 public:
+  
   static nsPref *GetInstance();
 
-  // Initialize/shutdown
-  NS_IMETHOD Startup(char *filename);
-  NS_IMETHOD Shutdown();
-
-  // Config file input
-  NS_IMETHOD ReadUserJSFile(char *filename);
-  NS_IMETHOD ReadLIJSFile(char *filename);
-
-  // JS stuff
-  NS_IMETHOD GetConfigContext(JSContext **js_context);
-  NS_IMETHOD GetGlobalConfigObject(JSObject **js_object);
-  NS_IMETHOD GetPrefConfigObject(JSObject **js_object);
-
-  NS_IMETHOD EvaluateConfigScript(const char * js_buffer, size_t length,
-				  const char* filename, 
-				  PRBool bGlobalContext, 
-				  PRBool bCallbacks);
+  //////////////////////////////////////////////////////////////////////////////
+  // from nsIPrefs
 
   // Getters
   NS_IMETHOD GetCharPref(const char *pref, 
 			 char * return_buf, int * buf_length);
   NS_IMETHOD GetIntPref(const char *pref, int32 * return_int);	
-  NS_IMETHOD GetBoolPref(const char *pref, XP_Bool * return_val);	
+  NS_IMETHOD GetBoolPref(const char *pref, PRBool * return_val);	
   NS_IMETHOD GetBinaryPref(const char *pref, 
 			   void * return_val, int * buf_length);	
   NS_IMETHOD GetColorPref(const char *pref,
@@ -86,7 +68,7 @@ public:
   NS_IMETHOD GetDefaultCharPref(const char *pref, 
 				char * return_buf, int * buf_length);
   NS_IMETHOD GetDefaultIntPref(const char *pref, int32 * return_int);
-  NS_IMETHOD GetDefaultBoolPref(const char *pref, XP_Bool * return_val);
+  NS_IMETHOD GetDefaultBoolPref(const char *pref, PRBool * return_val);
   NS_IMETHOD GetDefaultBinaryPref(const char *pref, 
 				  void * return_val, int * buf_length);
   NS_IMETHOD GetDefaultColorPref(const char *pref, 
@@ -108,7 +90,39 @@ public:
   NS_IMETHOD SetDefaultRectPref(const char *pref, 
 				int16 left, int16 top, 
 				int16 right, int16 bottom);
-  
+
+  // Pref info
+  NS_IMETHOD PrefIsLocked(const char *pref, PRBool *res);
+
+  // Callbacks
+  NS_IMETHOD RegisterCallback( const char* domain,
+			       nsPrefChangedFunc callback, 
+			       void* instance_data );
+  NS_IMETHOD UnregisterCallback( const char* domain,
+				 nsPrefChangedFunc callback, 
+				 void* instance_data );
+
+  //////////////////////////////////////////////////////////////////////////////
+  // from nsIBrowserPrefsManager:
+
+  // Initialize/shutdown
+  NS_IMETHOD Startup(char *filename);
+  NS_IMETHOD Shutdown();
+
+  // Config file input
+  NS_IMETHOD ReadUserJSFile(char *filename);
+  NS_IMETHOD ReadLIJSFile(char *filename);
+
+  // JS stuff
+  NS_IMETHOD GetConfigContext(JSContext **js_context);
+  NS_IMETHOD GetGlobalConfigObject(JSObject **js_object);
+  NS_IMETHOD GetPrefConfigObject(JSObject **js_object);
+
+  NS_IMETHOD EvaluateConfigScript(const char * js_buffer, size_t length,
+				  const char* filename, 
+				  PRBool bGlobalContext, 
+				  PRBool bCallbacks);
+
   // Copy prefs
   NS_IMETHOD CopyCharPref(const char *pref, char ** return_buf);
   NS_IMETHOD CopyBinaryPref(const char *pref,
@@ -124,21 +138,10 @@ public:
   NS_IMETHOD SetPathPref(const char *pref, 
 			 const char *path, PRBool set_default);
 
-  // Pref info
-  NS_IMETHOD PrefIsLocked(const char *pref, XP_Bool *res);
-
   // Save pref files
   NS_IMETHOD SavePrefFile(void);
   NS_IMETHOD SavePrefFileAs(const char *filename);
   NS_IMETHOD SaveLIPrefFile(const char *filename);
-
-  // Callbacks
-  NS_IMETHOD RegisterCallback( const char* domain,
-			       PrefChangedFunc callback, 
-			       void* instance_data );
-  NS_IMETHOD UnregisterCallback( const char* domain,
-				 PrefChangedFunc callback, 
-				 void* instance_data );
 };
 
 nsPref* nsPref::mInstance = NULL;
@@ -195,10 +198,11 @@ nsPref *nsPref::GetInstance()
  * nsISupports Implementation
  */
 
-NS_IMPL_ISUPPORTS(nsPref, kIPrefIID);
+static NS_DEFINE_IID(kIPrefsIID, NS_IPREFSMANAGER_IID);
+NS_IMPL_ISUPPORTS(nsPref, kIPrefsIID);
 
 /*
- * nsIPref Implementation
+ * nsIBrowserPrefsManager Implementation
  */
 
 NS_IMETHODIMP nsPref::Startup(char *filename)
@@ -255,8 +259,7 @@ NS_IMETHODIMP nsPref::EvaluateConfigScript(const char * js_buffer,
 					       length,
 					       filename,
 					       bGlobalContext,
-					       bCallbacks,
-					       PR_TRUE));
+					       bCallbacks));
 }
 
 /*
@@ -274,7 +277,7 @@ NS_IMETHODIMP nsPref::GetIntPref(const char *pref, int32 * return_int)
   return _convertRes(PREF_GetIntPref(pref, return_int));
 }
 
-NS_IMETHODIMP nsPref::GetBoolPref(const char *pref, XP_Bool * return_val)
+NS_IMETHODIMP nsPref::GetBoolPref(const char *pref, PRBool * return_val)
 {
   return _convertRes(PREF_GetBoolPref(pref, return_val));
 }
@@ -365,7 +368,7 @@ NS_IMETHODIMP nsPref::GetDefaultIntPref(const char *pref,
 }
 
 NS_IMETHODIMP nsPref::GetDefaultBoolPref(const char *pref,
-					 XP_Bool * return_val)
+					 PRBool * return_val)
 {
   return _convertRes(PREF_GetDefaultBoolPref(pref, return_val));
 }
@@ -469,20 +472,24 @@ NS_IMETHODIMP nsPref::CopyDefaultBinaryPref(const char *pref,
 
 NS_IMETHODIMP nsPref::CopyPathPref(const char *pref, char ** return_buf)
 {
+#ifndef XP_MAC
   return _convertRes(PREF_CopyPathPref(pref, return_buf));
+#endif
 }
 
 NS_IMETHODIMP nsPref::SetPathPref(const char *pref, 
 				  const char *path, PRBool set_default)
 {
+#ifndef XP_MAC
   return _convertRes(PREF_SetPathPref(pref, path, set_default));
+#endif
 }
 
 /*
  * Pref info
  */
 
-NS_IMETHODIMP nsPref::PrefIsLocked(const char *pref, XP_Bool *res)
+NS_IMETHODIMP nsPref::PrefIsLocked(const char *pref, PRBool *res)
 {
   if (res == NULL) {
     return NS_ERROR_INVALID_POINTER;
@@ -516,7 +523,7 @@ NS_IMETHODIMP nsPref::SaveLIPrefFile(const char *filename)
  */
 
 NS_IMETHODIMP nsPref::RegisterCallback( const char* domain,
-					PrefChangedFunc callback, 
+					nsPrefChangedFunc callback, 
 					void* instance_data )
 {
   PREF_RegisterCallback(domain, callback, instance_data);
@@ -524,7 +531,7 @@ NS_IMETHODIMP nsPref::RegisterCallback( const char* domain,
 }
 
 NS_IMETHODIMP nsPref::UnregisterCallback( const char* domain,
-					  PrefChangedFunc callback, 
+					  nsPrefChangedFunc callback, 
 					  void* instance_data )
 {
   return _convertRes(PREF_UnregisterCallback(domain, callback, instance_data));
@@ -583,12 +590,35 @@ nsresult nsPrefFactory::CreateInstance(nsISupports *aDelegate,
   return res;
 }
 
-extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID, nsIFactory **aFactory)
+static NS_DEFINE_CID(kPrefsCID, NS_PREFSMANAGER_CID);
+
+#ifdef MOZILLA_CLIENT
+
+extern "C" PR_IMPLEMENT(nsresult)
+prefs_RegisterPrefs(void)
+{
+    nsPrefFactory* prefsFact = new nsPrefFactory();
+    if (prefsFact == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    prefsFact->AddRef();
+    return nsRepository::RegisterFactory(kPrefsCID, prefsFact, PR_TRUE);
+}
+
+#else // !MOZILLA_CLIENT
+
+#ifdef XP_MAC
+extern "C" NS_EXPORT nsresult NSGetFactory_PREF_DLL(const nsCID &aCID, nsIServiceManager* serviceMgr
+                                                    nsIFactory **aFactory)
+#else
+extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID, nsIServiceManager* serviceMgr,
+                                           nsIFactory **aFactory)
+#endif
 {
   if (aFactory == NULL) {
     return NS_ERROR_NULL_POINTER;
   }
-  if (aCID.Equals(kPrefCID)) {
+  if (aCID.Equals(kPrefsCID)) {
     nsPrefFactory *factory = new nsPrefFactory();
     nsresult res = factory->QueryInterface(kFactoryIID, (void **) aFactory);
     if (NS_FAILED(res)) {
@@ -600,19 +630,24 @@ extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID, nsIFactory **aFact
   return NS_NOINTERFACE;
 }
 
+#ifdef XP_MAC
+extern "C" NS_EXPORT PRBool NSCanUnload_PREF_DLL()
+#else
 extern "C" NS_EXPORT PRBool NSCanUnload()
+#endif
 {
   return PRBool(g_InstanceCount == 0 && g_LockCount == 0);
 }
 
 extern "C" NS_EXPORT nsresult NSRegisterSelf(const char *path)
 {
-  return nsRepository::RegisterFactory(kPrefCID, path, 
+  return nsRepository::RegisterFactory(kPrefsCID, path, 
                                        PR_TRUE, PR_TRUE);
 }
 
 extern "C" NS_EXPORT nsresult NSUnregisterSelf(const char *path)
 {
-  return nsRepository::UnregisterFactory(kPrefCID, path);
+  return nsRepository::UnregisterFactory(kPrefsCID, path);
 }
 
+#endif // !MOZILLA_CLIENT

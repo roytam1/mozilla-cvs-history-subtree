@@ -20,6 +20,6 @@ IGNORE_MANIFEST=1
 
 MODULE=pref 
 DEPTH=..\..\.. 
-EXPORTS=prefapi.h prefldap.h
+EXPORTS=prefapi.h prefldap.h nsIPrefsManager.h nsIBrowserPrefsManager.h
 
 include <$(DEPTH)\config\rules.mak>
