@@ -620,6 +620,7 @@ nsPipe::nsPipeOutputStream::WriteSegments(nsReadSegmentFun reader,
                                           PRUint32 *writeCount)
 {
     nsresult rv = NS_OK;
+    nsCOMPtr<nsIBufferOutputStream> kungFuDeathGrip(this);
     nsPipe* pipe = GET_OUTPUTSTREAM_PIPE(this);
     PRUint32 amt = count;
     {
