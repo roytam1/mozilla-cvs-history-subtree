@@ -2649,7 +2649,7 @@ NS_IMETHODIMP nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol*
             // contract-id?  Probably depends on disposition.
             //
             nsCOMPtr<nsIMsgFilterPlugin> filterPlugin = do_GetService(
-                "@mozilla.org/messenger/filter-plugin;1?name=spam-whacker",
+                "@mozilla.org/messenger/filter-plugin;1?name=junkmail",
                 &rv);
 
             // Generate a bogus XPCOM array and call the filter. The
