@@ -629,16 +629,7 @@ function SetKeywords(aKeywords)
 
 function ShowHideToolBarButtons()
 {
-  var prefBase = "mail.toolbars.showbutton.";
-  var prefBranch = prefServices.getBranch(prefBase);
-  var prefCount = {value:0};
-  var prefArray = prefBranch.getChildList("" , prefCount);
-
-  if (prefArray && (prefCount.value > 0)) {
-    for (var i=0;i < prefCount.value;i++) {
-      document.getElementById("button-" + prefArray[i]).hidden = !(prefBranch.getBoolPref(prefArray[i]));
-    }
-  }
+  return;
 }
   
 function AddToolBarPrefListener()

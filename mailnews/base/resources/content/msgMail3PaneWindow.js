@@ -662,6 +662,13 @@ function delayedOnLoadMessenger()
 
   //Set focus to the Thread Pane the first time the window is opened.
   SetFocusThreadPane();
+
+  // initialize the customizeDone method on the customizeable toolbar
+  var toolbox = document.getElementById("mail-toolbox");
+  toolbox.customizeDone = MailToolboxCustomizeDone;
+
+  var toolbarset = document.getElementById('customToolbars');
+  toolbox.toolbarset = toolbarset;
 }
 
 function OnUnloadMessenger()

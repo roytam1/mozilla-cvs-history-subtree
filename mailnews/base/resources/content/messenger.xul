@@ -140,8 +140,7 @@ Rights Reserved.
 
 <popup id="messagePaneContext"/>
 
-  <toolbox id="mailToolbarToolbox" class="toolbox-top">
-    <menubar id="mailMenubar"/>
+  <toolbox id="mail-toolbox" class="toolbox-top">
   </toolbox>
 
   <hbox style="height:100px" flex="1">

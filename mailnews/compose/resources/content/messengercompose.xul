@@ -196,8 +196,14 @@
   <menuitem label="&addAttachment.label;" accesskey="&addAttachment.accesskey;" command="cmd_attachFile"/>
 </popup>
 
-  <toolbox class="toolbox-top" id="headers-box">
-    <menubar id="compose-menubar" grippytooltiptext="&menuBar.tooltip;">
+  <toolbox id="headers-box" class="toolbox-top" mode="icons"> 
+  <!-- Menu -->
+  
+  <toolbar type="menubar" id="msgcompose-toolbar-menubar" class="chromeclass-menubar" customizable="false"
+     defaultset="menubar-items" mode="icons">
+
+     <toolbaritem id="menubar-items" align="center">
+      <menubar id="compose-menubar" style="border:0px;padding:0px;margin:0px;-moz-appearance:none">
       <menu id="menu_File">
         <menupopup id="menu_FilePopup">
           <menu id="menu_New">
@@ -372,8 +378,10 @@
       <menu id="tasksMenu"/>
       <menu id="windowMenu"/>
     </menubar>
+   </toolbaritem>
+  </toolbar>
 
-    <toolbar class="toolbar-primary chromeclass-toolbar" id="composeToolbar" persist="collapsed" grippytooltiptext="&mailToolbar.tooltip;">
+  <toolbar class="toolbar-primary chromeclass-toolbar" id="composeToolbar" persist="collapsed" customizable="false">
       <hbox id="toolbar_button_box">
        <toolbarbutton class="toolbarbutton-1"
                id="button-send" label="&sendButton.label;"
@@ -414,7 +422,7 @@
   
     <toolbar id="MsgHeadersToolbar" persist="collapsed" flex="1"
              tborient="vertical" tbalign="stretch"
-             grippytooltiptext="&addressBar.tooltip;">
+             customizable="true">
       <hbox id="msgheaderstoolbar-box" flex="1">
         <vbox flex="1" id="addresses-box">
           <hbox align="center">
@@ -447,7 +455,7 @@
     </toolbar>
   
     <!-- These toolbar items get filled out from the editorOverlay -->
-    <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" tbautostretch="never" grippytooltiptext="&formatToolbar.tooltip;">
+    <toolbar class="chromeclass-toolbar" id="FormatToolbar" persist="collapsed" tbautostretch="never" customizable="true">
       <menulist id="ParagraphSelect"/>
       <menulist id="FontFaceSelect"/>
       <stack id="ColorButtons"/>

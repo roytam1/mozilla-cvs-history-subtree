@@ -43,7 +43,7 @@
 
 /* ::::: primary toolbar masthead ::::: */
 
-#msgToolbar > .toolbar-holder > .toolbar-primary-icon {
+#mail-bar > .toolbar-holder > .toolbar-primary-icon {
   list-style-image: url("chrome://messenger/skin/icons/mast-mail.gif");
 }
 

@@ -136,6 +136,9 @@ Rights Reserved.
 <!ENTITY showMessengerToolbarCmd.label		"Mail Toolbar">
 <!ENTITY showMessengerToolbarCmd.accesskey	"o">
 
+<!ENTITY customizeToolbar.label		"Customize...">
+<!ENTITY customizeToolbar.accesskey	"C">
+
 <!-- showSearchToolbarCmd is also used by addressbook -->
 <!ENTITY showSearchToolbarCmd.label		"Search Bar">
 <!ENTITY showSearchToolbarCmd.accesskey	"e">
@@ -147,7 +150,7 @@ Rights Reserved.
 
 <!-- sortMenu is also used by addressbook -->
 <!ENTITY sortMenu.label "Sort by">
-<!ENTITY sortMenu.accesskey "t">
+<!ENTITY sortMenu.accesskey "S">
 
 <!ENTITY sortByDateCmd.label "Date">
 <!ENTITY sortByDateCmd.accesskey "e">

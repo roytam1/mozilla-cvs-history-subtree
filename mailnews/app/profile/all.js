@@ -51,7 +51,7 @@ pref("general.useragent.contentlocale", "chrome://navigator-region/locale/region
 pref("general.useragent.misc", "rv:1.3b");
 
 pref("general.startup.browser",             false);
-pref("general.startup.mail",                true);
+pref("general.startup.mail",                false);
 pref("general.startup.news",                false);
 pref("general.startup.editor",              false);
 pref("general.startup.compose",             false);

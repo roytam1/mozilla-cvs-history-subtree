@@ -6,7 +6,7 @@
           xmlns:xbl="http://www.mozilla.org/xbl">
 
   <binding id="toolbar-primary"
-           extends="chrome://global/content/bindings/toolbar.xml#toolbar-primary">
+           extends="chrome://global/content/bindings/toolbar.xml#toolbar">
     <content>
       <xul:hbox class="toolbar-holder toolbar-primary-holder" flex="1" xbl:inherits="orient=tborient,buttonstyle">
         <xul:image class="toolbar-primary-icon" xbl:inherits="buttonstyle"/>

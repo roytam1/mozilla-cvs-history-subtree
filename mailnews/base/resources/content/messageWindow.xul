@@ -121,8 +121,7 @@ Rights Reserved.
 
   <popup id="attachmentListContext"/>
 
-  <toolbox id="mailToolbarToolbox">
-    <menubar id="mailMenubar"/>
+  <toolbox id="mail-toolbox" class="toolbox-top">
   </toolbox>
   
  <!-- msg header view -->

@@ -131,8 +131,12 @@ Contributor(s):
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);"/>
 </keyset>
 
-<toolbox class="toolbox-top">
-    <menubar id="ab-menubar" grippytooltiptext="&menuBar.tooltip;">
+<toolbox class="toolbox-top" mode="icons">
+  <toolbar type="menubar" id="addrbook-toolbar-menubar" class="chromeclass-menubar" customizable="false"
+     defaultset="menubar-items" mode="icons">
+
+   <toolbaritem id="menubar-items" align="center">
+     <menubar id="ab-menubar" style="border:0px;padding:0px;margin:0px;-moz-appearance:none">
         <menu id="menu_File">
             <menupopup id="menu_FilePopup">
                 <menu id="menu_New">
@@ -308,10 +312,12 @@ Contributor(s):
         <menu id="windowMenu"/>
         <spacer flex="1"/>
     </menubar>
-    
-    <!-- toolbar -->
-        <toolbar class="chromeclass-toolbar toolbar-primary" id="abToolbar" persist="collapsed" grippytooltiptext="&addressbookToolbar.tooltip;">
-            <hbox id="toolbar_button_box">
+   </toolbaritem>
+  </toolbar>
+  
+  <!-- toolbar -->
+  <toolbar class="chromeclass-toolbar toolbar-primary" id="abToolbar" persist="collapsed" customizable="false">
+     <hbox id="toolbar_button_box">
         <toolbarbutton class="toolbarbutton-1" id="button-newcard" label="&newcardButton.label;" tooltiptext="&newcardButton.tooltip;" oncommand="AbNewCard('dirTree');"/>
         <toolbarbutton class="toolbarbutton-1" id="button-newlist" label="&newlistButton.label;" tooltiptext="&newlistButton.tooltip;" oncommand="AbNewList('dirTree');"/>
         <toolbarseparator class="toolbarseparator-primary"/>

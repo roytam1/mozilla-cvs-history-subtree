@@ -138,9 +138,8 @@ Rights Reserved.
 
 <popup id="messagePaneContext"/>
 
-  <toolbox id="mailToolbarToolbox" class="toolbox-top">
-    <menubar id="mailMenubar"/>
-  </toolbox>
+  <toolbox id="customMailToolbarToolbox" class="toolbox-top"/>
+  
   <!-- The main mail three pane frame -->
 
   <hbox style="height:100px" flex="1">
