@@ -35,6 +35,12 @@ toolbox {
  
 /* ::::: toolbar ::::: */
 
+.toolbar-primary {
+  -moz-binding: url("chrome://communicator/skin/toolbar/toolbarBindings.xml#toolbar-primary");
+  min-height: 43px;
+  background-color: #B1BDC9;
+}
+
 toolbar {
   min-width: 1px; /* DON'T DELETE!
     Removes disappearance of scrollbars in content pane when window

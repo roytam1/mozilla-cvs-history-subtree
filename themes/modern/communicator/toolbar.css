@@ -29,11 +29,6 @@
 
 /* ::::: toolbar-primary ::::: */
 
-.toolbar-primary {
-  -moz-binding: url("chrome://communicator/skin/toolbar/toolbarBindings.xml#toolbar-primary");
-  min-height: 43px;
-  background-color: #B1BDC9;
-}
 
 .toolbar-primary > .toolbar-holder {
   border: none;
