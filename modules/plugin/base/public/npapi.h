@@ -133,22 +133,33 @@ RCDATA NP_INFO_ProductName       { "NPAVI32 Dynamic Link Library\0" }
 #ifndef _UINT16
 typedef unsigned short uint16;
 #endif
+
 #ifndef _UINT32
-#if defined(__alpha)
+#  ifndef NSPR20
+#    if defined(__alpha)
 typedef unsigned int uint32;
-#else /* __alpha */
+#    else  /* __alpha */
 typedef unsigned long uint32;
-#endif /* __alpha */
+#    endif /* __alpha */
+#  else  /* NSPR20 */
+typedef PRUint32 uint32;
+#  endif /* NSPR20 */
 #endif
+
 #ifndef _INT16
 typedef short int16;
 #endif
+
 #ifndef _INT32
-#if defined(__alpha)
+#  ifndef NSPR20
+#    if defined(__alpha)
 typedef int int32;
-#else /* __alpha */
+#    else  /* __alpha */
 typedef long int32;
-#endif /* __alpha */
+#    endif /* __alpha */
+#  else  /* NSPR20 */
+typedef PRInt32 int32;
+#  endif /* NSPR20 */
 #endif
 
 #ifndef FALSE
