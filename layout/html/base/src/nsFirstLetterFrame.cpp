@@ -238,8 +238,12 @@ nsFirstLetterFrame::Reflow(nsIPresContext*          aPresContext,
     availSize.height -= tb;
   }
 
+  // This isn't needed if we're not incremental, but I'm paranoid
+  // about the way reflows get changed and what else might want to look
+  // at the reflow tree, so attempt to maintain it.
   reflowIterator.NextChild(&childFrame);
-  NS_ASSERTION((!childFrame && amTarget) ||
+  NS_ASSERTION((aReflowState.reason != eReflowReason_Incremental) ||
+               (!childFrame && amTarget) ||
                (childFrame && childFrame == kid),
                "incorrect or no reflow child in nsFirstLetterFrame");
   // set reflow state for child
