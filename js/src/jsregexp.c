@@ -356,7 +356,6 @@ NewRENode(CompilerState *state, REOp op, void *kid)
 
     cx = state->context;
     ren = JS_malloc(cx, sizeof *ren);
-//   JS_ARENA_ALLOCATE(ren, &cx->tempPool, sizeof *ren);
     if (!ren) {
 	JS_ReportOutOfMemory(cx);
 	return NULL;
@@ -1249,7 +1248,6 @@ static void calcBMSize(MatchState *state, RENode *ren)
 {
     const jschar *cp  = ren->kid;
     const jschar *cp2 = ren->u.kid2;
-    uintN len = PTRDIFF(cp2, cp, jschar);
     uintN maxc = 0;
     jschar c, c2;
     while (cp < cp2) {
@@ -1316,7 +1314,6 @@ static JSBool buildBitmap(MatchState *state, RENode *ren)
     for (i = 0; i < n; i++)
 	bitmap[i] = fill;
     nchars = n * JS_BITS_PER_BYTE;
-    bitmap[0] &= 0xFE;  /* 0 never matches */
 
 /* Split ops up into statements to keep MSVC1.52 from crashing. */
 #define MATCH_BIT(c)    { i = (c) >> 3; b = (c) & 7; b = 1 << b;              \
@@ -1487,6 +1484,7 @@ static JSBool buildBitmap(MatchState *state, RENode *ren)
 	}
 	lastc = c;
     }
+    return JS_TRUE;
 }
 
 static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
@@ -1577,7 +1575,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                         const jschar *restMatch = matchRENodes(state, ren->next,
                                                     stop, kidMatch);
                         if (restMatch == NULL) {
-                            // need to undo the result of running the kid
+                            /* need to undo the result of running the kid */
                             state->parenCount = num;
                             break;
                         }
@@ -1689,26 +1687,26 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
            case REOP_WBDRY:
                 if (((cp == state->cpbegin) || !JS_ISWORD(cp[-1]))
                       ^ ((cp >= cpend) || !JS_ISWORD(*cp)))
-                    ; // leave cp
+                    ; /* leave cp */
                 else
                     return NULL;
                 break;
           case REOP_WNONBDRY:
                 if (((cp == state->cpbegin) || !JS_ISWORD(cp[-1]))
                       ^ ((cp < cpend) && JS_ISWORD(*cp)))
-                    ; // leave cp
+                    ; /* leave cp */
                 else
                     return NULL;
                 break;
             case REOP_EOLONLY:
             case REOP_EOL: {
                     if (cp == cpend)
-                        ; // leave cp;
+                        ; /* leave cp */
                     else {
                         if (state->context->regExpStatics.multiline
                                 || ((state->flags & JSREG_MULTILINE) != 0))
                             if (*cp == '\n')
-                                ;// leave cp
+                                ;/* leave cp */
                             else
                                 return NULL;
                         else
@@ -1727,7 +1725,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                         }
                         return NULL;
                     }
-                    // leave cp
+                    /* leave cp */
                 }
                 break;
             case REOP_DIGIT:
@@ -1804,8 +1802,8 @@ static const jschar *
 MatchRegExp(MatchState *state, RENode *ren, const jschar *cp)
 {
     const jschar *cp2, *cp3;
-    // have to include the position beyond the last character
-    // in order to detect end-of-input/line condition
+    /* have to include the position beyond the last character
+     in order to detect end-of-input/line condition */
     for (cp2 = cp; cp2 <= state->cpend; cp2++) {
         state->skipped = cp2 - cp;
         state->parenCount = 0;
