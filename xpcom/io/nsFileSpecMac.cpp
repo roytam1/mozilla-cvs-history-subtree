@@ -222,9 +222,9 @@ char* MacFileHelpers::MacPathFromUnixPath(const char* unixPath)
 	{
 		char* dst = result;
 		const char* src = unixPath;
-		if (*src == '/')		 	// • full path
+		if (*src == '/')		 	// * full path
 			src++;
-		else if (strchr(src, '/'))	// • partial path, and not just a leaf name
+		else if (strchr(src, '/'))	// * partial path, and not just a leaf name
 			*dst++ = ':';
 		strcpy(dst, src);
 		nsUnescape(dst);	// Hex Decode
