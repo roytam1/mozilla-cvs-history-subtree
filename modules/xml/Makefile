@@ -20,7 +20,7 @@ DEPTH		= ../..
 MODULE		= xml
 LIBRARY_NAME	= $(LITE_PREFIX)xml
 
-REQUIRES	= nspr img layer util js cstream
+REQUIRES	= nspr img layer util js network cstream
 EXPORTS		= expat/xmlparse/xmlparse.h 
 
 CSRCS		= expat/xmltok/xmltok.c \
