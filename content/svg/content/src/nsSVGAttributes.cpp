@@ -547,7 +547,11 @@ nsSVGAttributes::UpdateContentStyleRule()
 
   nsCSSDeclaration* declaration = new nsCSSDeclaration();
   NS_ASSERTION(declaration, "could not create css declaration");
-
+  if (!declaration->InitializeEmpty()) {
+    NS_ERROR("could not initialize nsCSSDeclaration");
+    return;
+  }
+  
   nsCOMPtr<nsIURI> baseURL;
   {
     NS_ASSERTION(mContent, "null owner");
