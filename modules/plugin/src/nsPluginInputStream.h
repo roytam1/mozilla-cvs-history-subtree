@@ -22,6 +22,10 @@
 #include "net.h"
 #include "nppriv.h"
 
+#if defined(XP_MAC) && !defined(NEW_PLUGIN_STREAM_API)
+#define NEW_PLUGIN_STREAM_API
+#endif
+
 #ifdef NEW_PLUGIN_STREAM_API
 
 #include "nsIPluginInputStream2.h"

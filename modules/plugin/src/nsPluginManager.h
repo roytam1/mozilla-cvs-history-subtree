@@ -19,6 +19,10 @@
 #ifndef nsPluginManager_h__
 #define nsPluginManager_h__
 
+#if defined(XP_MAC) && !defined(NEW_PLUGIN_STREAM_API)
+#define NEW_PLUGIN_STREAM_API
+#endif
+
 #include "nsIPluginManager2.h"
 #include "nsAgg.h"
 #include "nsHashtable.h"
