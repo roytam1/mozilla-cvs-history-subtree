@@ -749,15 +749,16 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
 
   nsMsgViewSortTypeValue sortType = nsMsgViewSortType::bySubject;
   nsMsgViewSortOrderValue sortOrder = nsMsgViewSortOrder::descending;
-  PRBool performSort = PR_FALSE;
+  PRBool performSort = PR_TRUE;
 
   nsAutoString sortOrderValue;
   aElement->GetAttribute(NS_LITERAL_STRING("sortDirection"), sortOrderValue);
   if (!sortOrderValue.IsEmpty() && sortOrderValue.Equals(NS_LITERAL_STRING("ascending")))
      sortOrder = nsMsgViewSortOrder::ascending;
 
-  if (aColID[0] != 't')
+  if ((aColID[0] != 't') && (aColID[1] != 'h')) {
     m_viewFlags &= ~nsMsgViewFlagsType::kThreadedDisplay;
+  }
 
   switch (aColID[0])
   {
@@ -765,39 +766,52 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     if (aColID[1] == 'u') // sort the subject
     {
       sortType = nsMsgViewSortType::bySubject;
-      performSort = PR_TRUE;
     }
     else if (aColID[1] == 'e') // sort by sender
     {
       sortType = nsMsgViewSortType::byAuthor;
-      performSort = PR_TRUE;
     }
     else if (aColID[1] == 'i') // size
     {
       sortType = nsMsgViewSortType::bySize;
-      performSort = PR_TRUE;
     }
     else
     {
       sortType = nsMsgViewSortType::byStatus;
-      performSort = PR_TRUE;
     }
     break;
-
-  case 'd':  // date
+  case 'u': 
+    if (aColID[6] == 'B') // unreadButtonColHeader
+    {
+      sortType = nsMsgViewSortType::byUnread;
+    }
+    else  // unreadCol
+    {
+      printf("fix me\n");
+      performSort = PR_FALSE;
+    }
+  case 'd': // date
     sortType = nsMsgViewSortType::byDate;
-    performSort = PR_TRUE;
     break;
   case 'p': // priority
     sortType = nsMsgViewSortType::byPriority;
-    performSort = PR_TRUE;
     break;
   case 't': // thread column
-    sortType = nsMsgViewSortType::byThread;
-    m_viewFlags |= nsMsgViewFlagsType::kThreadedDisplay;
-    performSort = PR_TRUE;
+    if (aColID[1] == 'h') {
+      sortType = nsMsgViewSortType::byThread;
+      m_viewFlags |= nsMsgViewFlagsType::kThreadedDisplay;
+    }
+    else {
+      //sortType = nsMsgViewSortType::byTotal;
+      printf("fix me\n");
+      performSort = PR_FALSE;
+    }
+    break;
+  case 'f': // flagged
+    sortType = nsMsgViewSortType::byFlagged;
     break;
   default:
+    performSort = PR_FALSE;
     break;
   }
   
@@ -835,11 +849,13 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
 {
   switch (colID[0])
   {
-  case 'u': // unread column
-    ToggleReadByIndex(row);
+  case 'u': // unreadButtonColHeader
+    if (colID[6] == 'B') {
+      ToggleReadByIndex(row);
+    }
    break;
-  case 't': // threaded cell
-    if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) && (m_flags [row] & MSG_VIEW_FLAG_HASCHILDREN))
+  case 't': // threaded cell or total cell
+    if ((colID[1] == 'h') && ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) && (m_flags [row] & MSG_VIEW_FLAG_HASCHILDREN))) // 'th' for threaded, 'to' for total
     {
       PRUint32 numChanged = 0;
       PRInt32 multiplier = -1;
