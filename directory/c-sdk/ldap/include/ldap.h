@@ -32,7 +32,7 @@ extern "C" {
 #  endif
 #elif defined(macintosh)
 #include <utime.h>
-#include "macsock.h"
+#include "macsocket.h"
 #else
 #include <sys/time.h>
 #include <sys/types.h>
