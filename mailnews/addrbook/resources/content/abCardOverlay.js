@@ -519,3 +519,31 @@ function DisplayNameChanged()
     top.window.title = title;
 }
 
+function SwapFirstNameLastName()
+{
+  var firstNameField = document.getElementById('FirstName');
+  var lastNameField = document.getElementById('LastName');
+
+  if (lastNameField.value && firstNameField.value) {
+    var temp = lastNameField.value;
+    lastNameField.value = firstNameField.value;
+    firstNameField.value = temp;
+
+    // also swap phonetic fields if they exist
+    try {
+      firstNameField = document.getElementById('PhoneticFirstName');
+      lastNameField = document.getElementById('PhoneticLastName');
+      temp = lastNameField.value;
+      lastNameField.value = firstNameField.value;
+      firstNameField.value = temp;
+    }
+    catch (ex) {}
+
+    // turn generateDisplayName on to let display name re-generated 
+    // with the swapped order then turn it off by calling DisplayNameChanged()
+    editCard.generateDisplayName = true;
+    GenerateDisplayName();
+    DisplayNameChanged();
+  }
+}
+

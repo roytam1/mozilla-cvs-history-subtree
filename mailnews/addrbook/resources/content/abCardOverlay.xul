@@ -88,6 +88,8 @@ Rights Reserved.
                                                         <label control="DisplayName" value="&DisplayName.label;" class="CardEditLabel"/>
 							<hbox class="CardEditWidth">
 							<textbox id="DisplayName" flex="1" oninput="DisplayNameChanged()" disableforreadonly="true"/>
+							<!-- LOCALIZATION NOTE: the button may be disabled for non Japanese builds. -->
+							<button label="&SwapNameButton.label;" oncommand="SwapFirstNameLastName()"/>
 							</hbox>
 						</hbox>
 						<hbox>
