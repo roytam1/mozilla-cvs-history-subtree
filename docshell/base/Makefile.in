@@ -51,6 +51,7 @@ REQUIRES	= xpcom \
 		  chardet \
 		  uconv \
 		  appcomps \
+		  commandhandler \
 		  editor \
 		  composer \
 		  xuldoc \
