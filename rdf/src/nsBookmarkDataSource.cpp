@@ -121,7 +121,7 @@ const PRUnichar* BookmarkParser::kCloseDLString    = L"</DL>";
 const PRUnichar* BookmarkParser::kDDString         = L"<DD>";
 const PRUnichar* BookmarkParser::kOpenAnchorString = L"<A";
 const PRUnichar* BookmarkParser::kOpenDLString     = L"<DL>";
-const PRUnichar* BookmarkParser::kOpenH3String     = L"<H3>";
+const PRUnichar* BookmarkParser::kOpenH3String     = L"<H3";
 const PRUnichar* BookmarkParser::kOpenTitleString  = L"<TITLE>";
 const PRUnichar* BookmarkParser::kSeparatorString  = L"<HR>";
 
@@ -203,8 +203,7 @@ BookmarkParser::NextToken(void)
         return;
     }
 
-    /* ok, we have a piece of content.
-       can be the title, or a description or */
+    /* ok, we have a piece of content. can be the title, or a description */
     if ((mState == eBookmarkParserState_InTitle) ||
         (mState == eBookmarkParserState_InH3) || 
         (mState == eBookmarkParserState_InItemTitle)) {
@@ -223,6 +222,12 @@ BookmarkParser::NextToken(void)
             return;
 
         Assert(parent, kURINC_Folder, folder);
+
+        if (mFolderDate.Length()) {
+            AssertTime(folder, kURINC_BookmarkAddDate, mFolderDate);
+            mFolderDate.Truncate();
+        }
+
         mLastItem = folder;
 
         if (mState != eBookmarkParserState_InTitle)
@@ -248,7 +253,8 @@ BookmarkParser::DoStateTransition(void)
     else if (mLine.Find(kOpenH3String) == 0) {
         PRInt32 start = mLine.Find('"');
         PRInt32 end   = mLine.RFind('"');
-        mLine.Mid(mFolderDate, start, end - start);
+        if (start >= 0 && end >= 0)
+            mLine.Mid(mFolderDate, start + 1, end - start - 1);
         mState = eBookmarkParserState_InH3;
     }
     else if (mLine.Find(kOpenTitleString) == 0) {
@@ -310,12 +316,14 @@ BookmarkParser::CreateBookmark(void)
         if (start == -1)
             break;
 
-        PRInt32 end = mLine.Find('"', start + 1);
+        ++start; // past the first quote
+
+        PRInt32 end = mLine.Find('"', start);
         PR_ASSERT(end > 0); // unterminated
         if (end == -1)
             end = mLine.Length();
 
-        mLine.Mid(values[i], start, end - start + 1);
+        mLine.Mid(values[i], start, end - start);
         index = end + 1;
     }
 
@@ -467,7 +475,7 @@ nsBookmarkDataSource::ReadBookmarks(void)
 nsresult
 nsBookmarkDataSource::WriteBookmarks(void)
 {
-    PR_ASSERT(0);
+    //PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
