@@ -18,10 +18,7 @@
 
 #include "nsWinReg.h"
 #include "nsWinRegItem.h"
-
-#ifdef WIN32
 #include <windows.h> /* is this needed? */
-#endif
 
 /* Public Methods */
 

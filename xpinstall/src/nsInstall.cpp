@@ -2338,8 +2338,8 @@ nsInstall::GetLastError(PRInt32* aReturn)
 PRInt32    
 nsInstall::GetWinProfile(const nsString& aFolder, const nsString& aFile, PRInt32* aReturn)
 {
-#ifdef WIN32
-#endif /* WIN32 */
+#ifdef XP_WIN
+#endif /* XP_WIN */
 
     return NS_OK;
 }
@@ -2347,7 +2347,7 @@ nsInstall::GetWinProfile(const nsString& aFolder, const nsString& aFile, PRInt32
 PRInt32    
 nsInstall::GetWinRegistry(JSContext* jscontext, JSClass* WinRegClass, jsval* aReturn)
 {
-#ifdef WIN32
+#ifdef XP_WIN
     JSObject* winRegObject;
     nsWinReg* nativeWinRegObject = new nsWinReg(this);
     JSObject* winRegPrototype    = this->RetrieveWinRegPrototype();
@@ -2362,8 +2362,8 @@ nsInstall::GetWinRegistry(JSContext* jscontext, JSClass* WinRegClass, jsval* aRe
 
     *aReturn = OBJECT_TO_JSVAL(winRegObject);
 #else
-    aReturn = JSVAL_NULL;
-#endif /* WIN32 */
+    *aReturn = JSVAL_NULL;
+#endif /* XP_WIN */
 
     return NS_OK;
 }

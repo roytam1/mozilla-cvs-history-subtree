@@ -50,10 +50,6 @@ CPPSRCS = \
     nsSoftwareUpdateRun.cpp     \
     nsSoftwareUpdateStream.cpp  \
     ScheduledTasks.cpp          \
-    nsWinReg.cpp                \
-    nsJSWinReg.cpp              \
-    nsWinRegItem.cpp            \
-    nsWinRegValue.cpp           \
     $(NULL)
 
 INCLUDES += -I$(srcdir)/../public

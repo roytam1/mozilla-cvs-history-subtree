@@ -26,7 +26,7 @@
 
 #include "nsIDOMInstallVersion.h"
 
-#ifdef WIN32
+#ifdef XP_WIN
 #include "nsWinReg.h"
 #include "nsJSWinReg.h"
 
@@ -1059,7 +1059,7 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 
   *rval = JSVAL_NULL;
 
-#ifdef WIN32
+#ifdef XP_WIN
   // If there's no private data, this must be the prototype, so ignore
   if(nsnull == nativeThis)
   {
@@ -1566,7 +1566,7 @@ PRInt32 InitXPInstallObjects(nsIScriptContext *aContext, const char* jarfile, co
   JS_SetPrivate(jscontext, installObject, nativeInstallObject);
   nativeInstallObject->SetScriptObject(installObject);
  
-#ifdef WIN32
+#ifdef XP_WIN
   if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
   {
       return NS_ERROR_FAILURE;
@@ -1631,7 +1631,7 @@ PRInt32 InitXPInstallObjects(JSContext *jscontext, JSObject *global, const char*
   JS_SetPrivate(jscontext, installObject, nativeInstallObject);
   nativeInstallObject->SetScriptObject(installObject);
  
-#ifdef WIN32
+#ifdef XP_WIN
   if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
   {
       return NS_ERROR_FAILURE;
