@@ -128,6 +128,7 @@ JS_HFILES =		\
 	jsfun.h		\
 	jsgc.h		\
 	jsinterp.h	\
+	jslibmath.h	\
 	jslock.h	\
 	jsmath.h	\
 	jsnum.h		\

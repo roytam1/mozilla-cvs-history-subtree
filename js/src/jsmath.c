@@ -20,7 +20,7 @@
  * JS math package.
  */
 #include "jsstddef.h"
-#include "libmath.h"
+#include "jslibmath.h"
 #include <stdlib.h>
 #include "jstypes.h"
 #include "jslong.h"
