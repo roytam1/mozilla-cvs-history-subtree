@@ -282,7 +282,7 @@ sub attrModified
 
   return 1;
 }
-*markModified = \*attrModified;
+*markModified = \&attrModified;
 
 
 #############################################################################
@@ -375,7 +375,7 @@ sub remove
 
   return 1;
 }
-*delete = \*remove;
+*delete = \&remove;
 
 
 #############################################################################
@@ -400,7 +400,7 @@ sub move
 
   return 1;
 }
-*rename = \*move;
+*rename = \&move;
 
 
 #############################################################################
@@ -425,7 +425,7 @@ sub copy
 # Undo a remove(), or set of removeValues() fairly useless, to restore an
 # attribute to it's original state. This is fairly useless, but hey...
 #
-sub unRemove
+sub undo
 {
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
@@ -446,7 +446,8 @@ sub unRemove
 
   return 1;
 }
-*unDelete = \*unRemove;
+*unDelete = \&undo;
+*unRemove = \&undo;
 
 
 #############################################################################
@@ -493,7 +494,7 @@ sub removeValue
 
   return 0;
 }
-*deleteValue = \*removeValue;
+*deleteValue = \&removeValue;
 
 
 #############################################################################
@@ -505,7 +506,7 @@ sub removeDNValue
 
   return $self->removeValue($attr, $val, 1);
 }
-*deleteDNValue = \*removeDNValue;
+*deleteDNValue = \&removeDNValue;
 
 
 #############################################################################
@@ -632,10 +633,10 @@ sub values
 
   return 1;
 }
-*setValue = \*values;
-*setValues = \*values;
-*getValue = \*values;
-*getValues = \*values;
+*setValue = \&values;
+*setValues = \&values;
+*getValue = \&values;
+*getValues = \&values;
 
 
 #############################################################################
