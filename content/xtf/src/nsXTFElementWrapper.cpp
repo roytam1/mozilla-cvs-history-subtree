@@ -46,7 +46,7 @@
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIDocument.h"
 //XXX get rid of this:
-#include "nsSVGAtoms.h"
+#include "nsHTMLAtoms.h"
 
 nsXTFElementWrapper::nsXTFElementWrapper(nsINodeInfo* aNodeInfo)
     : nsXTFElementWrapperBase(aNodeInfo)
@@ -144,7 +144,7 @@ nsIAtom *
 nsXTFElementWrapper::GetIDAttributeName() const
 {
   // XXX:
-  return nsSVGAtoms::id;
+  return nsHTMLAtoms::id;
 }
 
 nsresult
