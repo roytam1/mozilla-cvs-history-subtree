@@ -285,7 +285,7 @@
 				FRAMEWORK_SEARCH_PATHS = "";
 				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ ../ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src /Volumes/Development/Trees/Chimera/mozilla/dist/Embed/components";
+				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src ../dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
 				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
@@ -652,6 +652,7 @@
 				F583E3BD03B820AC01A80166,
 				F5F415E403B97C6101A80166,
 				F5F0BDD603C0A76F01202892,
+				F5F7EF0F03C1F29C01BDD337,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -6175,6 +6176,7 @@
 				F507A84A03116E6E01026D5D,
 				F583E3BB03B820AC01A80166,
 				F507A84D03116E7401026D5D,
+				F5F7EF0D03C1F29C01BDD337,
 				F507A85003116E7901026D5D,
 			);
 			isa = PBXGroup;
@@ -7213,7 +7215,7 @@
 				FRAMEWORK_SEARCH_PATHS = /Users/sdagley/Library/Frameworks;
 				HEADER_SEARCH_PATHS = "../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../intl/unicharutil/src ../gfx/src ../js/src/liveconnect ../intl/unicharutil/util /Volumes/Development/Trees/ChimeraOpt/mozilla/js/src/xpconnect/loader";
+				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../intl/unicharutil/src ../gfx/src ../js/src/liveconnect ../intl/unicharutil/util ../js/src/xpconnect/loader";
 				OPTIMIZATION_CFLAGS = "-O2";
 				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -D_BUILD_STATIC_BIN -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lsmime3 -lssl3 -lnss3 -lsoftokn3 -lmozjs -lmozjpeg -ljsj -lmozpng -lmozmng -lpthread -lz -lm";
@@ -7590,6 +7592,7 @@
 				F583E3BE03B820AC01A80166,
 				F5F415E503B97C6101A80166,
 				F5F0BDD703C0A76F01202892,
+				F5F7EF1003C1F29C01BDD337,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9940,6 +9943,33 @@
 		};
 		F5F59322020F4D0201ACA690 = {
 			fileRef = F5F59320020F4CD201ACA690;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5F7EF0D03C1F29C01BDD337 = {
+			children = (
+				F5F7EF0E03C1F29C01BDD337,
+			);
+			isa = PBXVariantGroup;
+			name = Keychain.nib;
+			path = "";
+			refType = 4;
+		};
+		F5F7EF0E03C1F29C01BDD337 = {
+			isa = PBXFileReference;
+			name = English;
+			path = resources/localized/English.lproj/Keychain.nib;
+			refType = 4;
+		};
+		F5F7EF0F03C1F29C01BDD337 = {
+			fileRef = F5F7EF0D03C1F29C01BDD337;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5F7EF1003C1F29C01BDD337 = {
+			fileRef = F5F7EF0D03C1F29C01BDD337;
 			isa = PBXBuildFile;
 			settings = {
 			};
