@@ -86,11 +86,18 @@ struct nsXULPrototypeAttribute
 
  */
 
-struct nsXULPrototypeElement
+struct nsXULPrototypeNode
+{
+    enum Type { eType_Element, eType_Script, eType_Text };
+    Type                     mType;
+    PRInt32                  mLineNo;
+};
+
+struct nsXULPrototypeElement : public nsXULPrototypeNode
 {
     nsXULPrototypeDocument*  mDocument;           // [OWNER] because doc is refcounted
     PRInt32                  mNumChildren;
-    nsXULPrototypeElement*   mChildren;           // [OWNER]
+    nsXULPrototypeNode**     mChildren;           // [OWNER]
 
     nsINameSpace*            mNameSpace;          // [OWNER]
     nsIAtom*                 mNameSpacePrefix;    // [OWNER]
@@ -102,6 +109,19 @@ struct nsXULPrototypeElement
 
     nsIStyleRule*            mInlineStyleRule;    // [OWNER]
     nsClassList*             mClassList;
+};
+
+struct nsXULPrototypeScript : public nsXULPrototypeNode
+{
+    char*                    mSrcURI;
+    PRUnichar*               mInlineScript;
+    PRInt32                  mLength;
+};
+
+struct nsXULPrototypeText : public nsXULPrototypeNode
+{
+    PRUnichar*               mValue;
+    PRInt32                  mLength;
 };
 
 
@@ -185,6 +205,7 @@ protected:
     static nsIAtom*             kTreeItemAtom;
     static nsIAtom*             kTreeRowAtom;
     static nsIAtom*             kEditorAtom;
+    static nsIAtom*             kWindowAtom;
 
 public:
     static nsresult
@@ -260,6 +281,7 @@ public:
     NS_IMETHOD SetLazyState(PRInt32 aFlags);
     NS_IMETHOD ClearLazyState(PRInt32 aFlags);
     NS_IMETHOD GetLazyState(PRInt32 aFlag, PRBool& aValue);
+    NS_IMETHOD AddScriptEventListener(nsIAtom* aName, const nsString& aValue, REFNSIID aIID);
     NS_IMETHOD ForceElementToOwnResource(PRBool aForce);
 
     // nsIFocusableContent interface
@@ -316,8 +338,6 @@ protected:
 
     // Implementation methods
     nsresult EnsureContentsGenerated(void) const;
-
-    nsresult AddScriptEventListener(nsIAtom* aName, const nsString& aValue, REFNSIID aIID);
 
     nsresult ExecuteOnBroadcastHandler(nsIDOMElement* anElement, const nsString& attrName);
 
@@ -409,30 +429,6 @@ protected:
     nsXULAttributes*           Attributes() const         { return mSlots ? mSlots->mAttributes               : nsnull; }
     nsXULAggregateElement*     InnerXULElement() const    { return mSlots ? mSlots->mInnerXULElement          : nsnull; }
 
-protected:
-
-    // XXX Move to nsXULContentSink?
-    class ObserverForwardReference : public nsForwardReference
-    {
-    protected:
-        nsCOMPtr<nsIDOMElement> mListener;
-        nsString mTargetID;
-        nsString mAttributes;
-
-    public:
-        ObserverForwardReference(nsIDOMElement* aListener,
-                                 const nsString& aTargetID,
-                                 const nsString& aAttributes) :
-            mListener(aListener),
-            mTargetID(aTargetID),
-            mAttributes(aAttributes) {}
-
-        virtual ~ObserverForwardReference() {}
-
-        virtual Result Resolve();
-    };
-
-    friend class ObserverForwardReference;
 };
 
 
