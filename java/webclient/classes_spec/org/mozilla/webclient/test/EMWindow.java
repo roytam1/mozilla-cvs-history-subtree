@@ -474,13 +474,17 @@ public void dialogCancelled(Dialog d) {
 public void eventDispatched(WebclientEvent event)
 {
     if (event instanceof DocumentLoadEvent) {
+        String currentURL;
         switch ((int) event.getType()) {
         case ((int) DocumentLoadEvent.START_DOCUMENT_LOAD_EVENT_MASK):
-            String currentURL = (String) event.getEventData();
+            currentURL = (String) event.getEventData();
             System.out.println("debug: edburns: Currently Viewing: " + 
                                currentURL);
             statusLabel.setText("Starting to load " + currentURL);
             urlField.setText(currentURL);
+            break;
+        case ((int) DocumentLoadEvent.END_DOCUMENT_LOAD_EVENT_MASK):
+            statusLabel.setText("Done.");
             break;
         }
     }
@@ -515,6 +519,7 @@ public void mouseEntered(java.awt.event.MouseEvent e)
 
 public void mouseExited(java.awt.event.MouseEvent e)
 {
+    statusLabel.setText("");
     System.out.println("mouseExited");
 }
 
