@@ -556,19 +556,26 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
 
         /*
          * Only try to raise an exception if there isn't one already set -
-         * otherwise the exception will describe the last syntax error, which
-         * is likely spurious.
+         * otherwise the exception will describe only the last compile error,
+         * which is likely spurious.
          */
-        if (!JS_IsExceptionPending(cx))
-            (void)js_ErrorToException(cx, &report, message);
+        if (!(ts->flags & TSF_BADCOMPILE))
+            if (js_ErrorToException(cx, message, &report)) {
+                ts->flags |= TSF_BADCOMPILE;
+            }
 
         /*
-         * If compiletime errors are already reflected as exceptions, suppress
-         * any compiletime errors that don't occur at the top level.
+         * Suppress any compiletime errors that don't occur at the top level.
+         * This may still fail, as interplevel may be zero in contexts where we
+         * don't really want to call the error reporter, as when js is called
+         * by other code which could catch the error.
          */
         if (cx->interpLevel == 0)
-#endif
             (*onError)(cx, message, &report);
+#else
+        (*onError)(cx, message, &report);
+#endif;
+
 
 #if !defined XP_PC || !defined _MSC_VER || _MSC_VER > 800
     } else {

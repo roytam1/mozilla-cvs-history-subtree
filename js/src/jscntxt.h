@@ -25,6 +25,7 @@
 #include "jsclist.h"
 #include "jslong.h"
 #include "jsatom.h"
+#include "jsconfig.h"
 #include "jsgc.h"
 #include "jsinterp.h"
 #include "jsobj.h"
@@ -170,6 +171,11 @@ struct JSContext {
     /* Exception state (NB: throwing is packed with gcActive above). */
     JSPackedBool        throwing;           /* is there a pending exception? */
     jsval               exception;          /* most-recently-thrown exceptin */
+
+#ifdef JS_HAS_ERROR_EXCEPTIONS
+    /* Prototypes that define exception hierarchy, see jsexn.c. */
+    JSObject            **exceptionProtos;
+#endif
 };
 
 extern JSContext *

@@ -175,7 +175,7 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 	    if (script) {
                 JSErrorReporter older;
                 
-		if (JS_ExecuteScript(cx, obj, script, &result) &&
+		if ((ok = JS_ExecuteScript(cx, obj, script, &result)) &&
 		    (ts->flags & TSF_INTERACTIVE) &&
 		    result != JSVAL_VOID) {
                     /*
@@ -188,30 +188,25 @@ Process(JSContext *cx, JSObject *obj, char *filename)
 
 		    if (str)
 			printf("%s\n", JS_GetStringBytes(str));
+                    else
+                        ok = JS_FALSE;
 		}
 
-		if (JS_IsExceptionPending(cx) &&
-		    JS_GetPendingException(cx, &result))
-		{
-		    /*
-		     * Calling JS_ValueToString could cause another error (and
-		     * throw an associated exception) - so we disable the error
-		     * reporter so nothing gets reported, and we always clear
-		     * the pending exception.
-		     */
-                    JS_ClearPendingException(cx);
-		    older = JS_SetErrorReporter(cx, NULL);
-		    str = JS_ValueToString(cx, result);
-		    JS_SetErrorReporter(cx, older);
+#if JS_HAS_ERROR_EXCEPTIONS
+#if 0
+                /*
+                 * Require that any time we return failure, an exception has
+                 * been set.
+                 */
+                JS_ASSERT(ok || JS_IsExceptionPending(cx));
 
-		    /* XXX non-i18nized strings... */
-		    if (str) {
-			fprintf(stderr, "Uncaught JavaScript exception:\n%s\n",
-			       JS_GetStringBytes(str));
-		    } else {
-			fprintf(stderr, "Uncaught JavaScript exception\n");
-		    }
-		}
+                /*
+                 * Also that any time an exception has been set, we've
+                 * returned failure.
+                 */
+                JS_ASSERT(!JS_IsExceptionPending(cx) || !ok);
+#endif
+#endif /* JS_HAS_ERROR_EXCEPTIONS */
 		JS_DestroyScript(cx, script);
 	    }
 	}

@@ -2241,7 +2241,13 @@ JS_PUBLIC_API(JSBool)
 JS_ExecuteScript(JSContext *cx, JSObject *obj, JSScript *script, jsval *rval)
 {
     CHECK_REQUEST(cx);
-    return js_Execute(cx, obj, script, NULL, NULL, JS_FALSE, rval);
+    if (!js_Execute(cx, obj, script, NULL, NULL, JS_FALSE, rval)) {
+#if JS_HAS_ERROR_EXCEPTIONS
+        js_ReportUncaughtException(cx);
+#endif
+        return JS_FALSE;
+    }
+    return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -2309,6 +2315,10 @@ JS_EvaluateUCScriptForPrincipals(JSContext *cx, JSObject *obj,
     if (!script)
 	return JS_FALSE;
     ok = js_Execute(cx, obj, script, NULL, NULL, JS_FALSE, rval);
+    if (!ok)
+#if JS_HAS_ERROR_EXCEPTIONS
+        js_ReportUncaughtException(cx);
+#endif
     JS_DestroyScript(cx, script);
     return ok;
 }
@@ -2318,8 +2328,14 @@ JS_CallFunction(JSContext *cx, JSObject *obj, JSFunction *fun, uintN argc,
 		jsval *argv, jsval *rval)
 {
     CHECK_REQUEST(cx);
-    return js_CallFunctionValue(cx, obj, OBJECT_TO_JSVAL(fun->object),
-				argc, argv, rval);
+    if (!js_CallFunctionValue(cx, obj, OBJECT_TO_JSVAL(fun->object),
+                              argc, argv, rval)) {
+#if JS_HAS_ERROR_EXCEPTIONS
+        js_ReportUncaughtException(cx);
+#endif
+        return JS_FALSE;
+    }
+    return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -2331,7 +2347,13 @@ JS_CallFunctionName(JSContext *cx, JSObject *obj, const char *name, uintN argc,
     CHECK_REQUEST(cx);
     if (!JS_GetProperty(cx, obj, name, &fval))
 	return JS_FALSE;
-    return js_CallFunctionValue(cx, obj, fval, argc, argv, rval);
+    if (!js_CallFunctionValue(cx, obj, fval, argc, argv, rval)) {
+#if JS_HAS_ERROR_EXCEPTIONS
+        js_ReportUncaughtException(cx);
+#endif
+        return JS_FALSE;
+    }
+    return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -2339,7 +2361,13 @@ JS_CallFunctionValue(JSContext *cx, JSObject *obj, jsval fval, uintN argc,
 		     jsval *argv, jsval *rval)
 {
     CHECK_REQUEST(cx);
-    return js_CallFunctionValue(cx, obj, fval, argc, argv, rval);
+    if (!js_CallFunctionValue(cx, obj, fval, argc, argv, rval)) {
+#if JS_HAS_ERROR_EXCEPTIONS
+        js_ReportUncaughtException(cx);
+#endif
+        return JS_FALSE;
+    }
+    return JS_TRUE;
 }
 
 JS_PUBLIC_API(JSBranchCallback)

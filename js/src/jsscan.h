@@ -161,6 +161,7 @@ struct JSTokenStream {
 #define TSF_INTERACTIVE 0x10            /* interactive parsing mode */
 #define TSF_NLFLAG      0x20            /* last linebuf ended with \n */
 #define TSF_CRFLAG      0x40            /* linebuf would have ended with \r */
+#define TSF_BADCOMPILE  0x80            /* compile failed, stop throwing exns */ 
 
 /*
  * At most one non-EOF token can be pushed back onto a TokenStream between

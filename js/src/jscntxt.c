@@ -81,6 +81,10 @@ js_NewContext(JSRuntime *rt, size_t stacksize)
 #if JS_HAS_EXCEPTIONS
     cx->throwing = JS_FALSE;
 #endif
+#if JS_HAS_ERROR_EXCEPTIONS
+    cx->exceptionProtos = NULL;
+#endif
+
     return cx;
 }
 
@@ -137,6 +141,8 @@ js_DestroyContext(JSContext *cx)
     JS_FinishArenaPool(&cx->stackPool);
     JS_FinishArenaPool(&cx->codePool);
     JS_FinishArenaPool(&cx->tempPool);
+    if (cx->exceptionProtos)
+        free(cx->exceptionProtos);
     if (cx->lastMessage)
 	free(cx->lastMessage);
     free(cx);
@@ -221,7 +227,7 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
                  * their sizes.
 		 */
 		reportp->messageArgs
-                        = JS_malloc(cx, sizeof(jschar *) * argCount);
+                        = JS_malloc(cx, sizeof(jschar *) * (argCount + 1));
 		if (!reportp->messageArgs)
 		    return JS_FALSE;
                 for (i = 0; i < argCount; i++) {
@@ -235,6 +241,8 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
                     argLengths[i] = js_strlen(reportp->messageArgs[i]);
                     totalArgsLength += argLengths[i];
                 }
+                /* NULL-terminate for easy copying. */
+                reportp->messageArgs[i] = NULL; 
 	    }
 	    /*
 	     * Parse the error format, substituting the argument X
@@ -345,10 +353,16 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
      * if the error is defined to have an associated exception.  If an
      * exception is thrown, then the JSREPORT_EXCEPTION flag will be set
      * on the error report, and exception-aware hosts should ignore it.
-     */
-    js_ErrorToException(cx, &report, message);
-#endif
 
+     * We set the JSREPORT_EXCEPTION flag for the special case of
+     * user-thrown exeptions.
+     */
+    if (errorNumber == JSMSG_UNCAUGHT_EXCEPTION)
+        report.flags |= JSREPORT_EXCEPTION;
+    
+    /* Only call the error reporter if an exception wasn't raised. */
+    if (!js_ErrorToException(cx, message, &report))
+#endif
     js_ReportErrorAgain(cx, message, &report);
 
     if (message)

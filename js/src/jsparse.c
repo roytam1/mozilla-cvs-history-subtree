@@ -253,6 +253,7 @@ js_CompileTokenStream(JSContext *cx, JSObject *chain, JSTokenStream *ts,
     } while (ok);
 
 out:
+    ts->flags &= ~TSF_BADCOMPILE;
     cx->gcDisabled--;
     cx->fp = fp;
     if (!ok)
