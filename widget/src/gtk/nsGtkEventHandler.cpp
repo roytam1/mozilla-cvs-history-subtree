@@ -20,9 +20,6 @@
  * Contributor(s): 
  */
 
-#include "gtk/gtk.h"
-#include "nsGtkEventHandler.h"
-
 #include "nsWidget.h"
 #include "nsWindow.h"
 
@@ -42,6 +39,9 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CI
 
 #include "stdio.h"
 #include "ctype.h"
+
+#include "gtk/gtk.h"
+#include "nsGtkEventHandler.h"
 
 #include <gdk/gdkkeysyms.h>
 #include <X11/Xlib.h>

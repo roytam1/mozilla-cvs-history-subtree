@@ -20,6 +20,8 @@
  * Contributor(s): 
  */
 
+#include <stdio.h>
+
 #include <gtk/gtk.h>
 
 #include <gdk/gdkx.h>
@@ -44,8 +46,6 @@
 #include "nsIRollupListener.h"
 
 #include "nsGtkUtils.h" // for nsGtkUtils::gdk_window_flash()
-
-#include "stdio.h"
 
 // this is the nsWindow with the focus
 nsWindow  *nsWindow::focusWindow = NULL;
