@@ -245,9 +245,6 @@ ifeq ($(OS_ARCH),SunOS)
             ASFILES = os_$(OS_ARCH)_x86.s
         else
             ASFILES = os_$(OS_ARCH).s
-            ifneq ($(USE_64),1)
-            ASFILES += os_$(OS_ARCH)_32.s
-            endif
         endif
     endif
     endif

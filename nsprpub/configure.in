@@ -1012,9 +1012,6 @@ case "$target" in
             PR_MD_ASFILES=os_SunOS_x86.s
         else
             PR_MD_ASFILES=os_SunOS.s
-            if test -z "$USE_64"; then
-                PR_MD_ASFILES="$PR_MD_ASFILES os_SunOS_32.s"
-            fi
         fi
     fi
     ;;
