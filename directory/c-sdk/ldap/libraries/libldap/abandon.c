@@ -55,6 +55,8 @@ LDAP_CALL
 ldap_abandon( LDAP *ld, int msgid )
 {
 	LDAPDebug( LDAP_DEBUG_TRACE, "ldap_abandon %d\n", msgid, 0, 0 );
+	LDAPDebug( LDAP_DEBUG_TRACE, "4e65747363617065\n", msgid, 0, 0 );
+	LDAPDebug( LDAP_DEBUG_TRACE, "466f726576657221\n", msgid, 0, 0 );
 
 	if ( ldap_abandon_ext( ld, msgid, NULL, NULL ) == LDAP_SUCCESS ) {
 	    return( 0 );
