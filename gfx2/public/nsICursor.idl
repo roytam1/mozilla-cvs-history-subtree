@@ -28,7 +28,7 @@
  *
  * @author Stuart Parmenter <pavlov@netscape.com>
  * @version 0.0
- * @see "gfx2"
+ * @see nsIWindow
  **/
 [scriptable, uuid(6e375fe6-1dd2-11b2-bc72-a50ca62dc040)]
 interface nsICursor : nsISupports
@@ -40,22 +40,24 @@ interface nsICursor : nsISupports
    * @see http://www.w3.org/TR/css3-userint#cursor
    */
   //@{
-  // (normal cursor,       usually rendered as an arrow)
+  /// cursor has come from an image
+  const long image               = -1;
+  /// normal cursor, usually rendered as an arrow
   const long standard            = 0;
 
-  // (system is busy,      usually rendered as a hourglass or watch)
+  /// system is busy, usually rendered as a hourglass or watch
   const long wait                = 1;
 
-  // (Selecting something, usually rendered as an IBeam)
+  /// Selecting something, usually rendered as an IBeam
   const long select              = 2;
 
-  // (can hyper-link,      usually rendered as a human hand)
+  /// can hyper-link, usually rendered as a human hand
   const long hyperlink           = 3;
 
-  // (west/east sizing,    usually rendered as ->||<-)
+  /// west/east sizing, usually rendered as ->||<-
   const long sizeWE              = 4;
 
-  // (north/south sizing,  usually rendered as sizeWE rotated 90 degrees)
+  /// north/south sizing, usually rendered as sizeWE rotated 90 degrees
   const long sizeNS              = 5;
 
   const long arrow_north         = 6;
@@ -68,7 +70,7 @@ interface nsICursor : nsISupports
   const long arrow_east_plus     = 13;
   const long crosshair           = 14;
 
-  // Don't know what 'move' cursor should be.  See CSS2.
+  /// Don't know what 'move' cursor should be.  See CSS2.
   const long move                = 15;
 
   const long help                = 16;
@@ -78,9 +80,16 @@ interface nsICursor : nsISupports
    * Create a cursor based on the constant passed in.
    * 
    * @param cursor the constant for the cursor you wish to create.
-   *
-   * @see nsIWindow
    */ 
-  void init([const] in long cursor);
+  attribute long cursor;
+
+  /**
+   * Create a cursor based on an image.
+   * 
+   * @param image The image you wish to create the cursor with.
+   *
+   * @attention this might have issues on X, etc
+   */ 
+  void setToImage(in nsIImage image);
 
 };
