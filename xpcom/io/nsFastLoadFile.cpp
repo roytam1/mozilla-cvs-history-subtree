@@ -1534,7 +1534,20 @@ nsFastLoadFileWriter::AddDependency(nsIFile* aFile)
         if (!tmp)
             return NS_ERROR_OUT_OF_MEMORY;
         entry->mString = NS_REINTERPRET_CAST(const char*, tmp);
+
+        // If we can't get the last modified time from aFile, assume it does
+        // not exist, or is otherwise inaccessible to us (due to permissions),
+        // remove the dependency, and suppress the failure.
+        //
+        // Otherwise, we would end up aborting the fastload process due to a
+        // missing .js or .xul or other file on every startup.
+
         rv = aFile->GetLastModifiedTime(&entry->mLastModified);
+
+        if (NS_FAILED(rv)) {
+            PL_DHashTableOperate(&mDependencyMap, path.get(), PL_DHASH_REMOVE);
+            rv = NS_OK;
+        }
     }
     return rv;
 }
