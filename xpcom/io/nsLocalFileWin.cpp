@@ -703,7 +703,7 @@ nsLocalFile::SetLeafName(const char * aLeafName)
     PRInt32 offset = mWorkingPath.RFindChar('\\');
     if (offset)
     {
-        mWorkingPath.Truncate(offset);
+        mWorkingPath.Truncate(offset+1);
     }
     mWorkingPath.Append(aLeafName);
 
