@@ -39,7 +39,6 @@
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsCRT.h"
 #include "nsDogbertProfileMigrator.h"
-#include "nsIBookmarksService.h"
 #include "nsIFile.h"
 #include "nsIInputStream.h"
 #include "nsILineInputStream.h"
@@ -50,7 +49,6 @@
 #include "nsIPrefService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
-#include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
@@ -181,6 +179,7 @@ nsDogbertProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 // nsDogbertProfileMigrator
 #define F(a) nsDogbertProfileMigrator::a
 
+static 
 nsDogbertProfileMigrator::PREFTRANSFORM gTransforms[] = {
   // Simple Copy Prefs
   { "browser.anchor_color",           0, F(GetString),   F(SetString), PR_FALSE, -1 },
@@ -211,7 +210,7 @@ nsDogbertProfileMigrator::PREFTRANSFORM gTransforms[] = {
   { "browser.use_document_colors",          "browser.display.use_document_colors",F(GetBool),     F(SetBool),    PR_FALSE, -1 },
   { "browser.use_document.fonts",           "browser.display.use_document_fonts", F(GetInt),      F(SetInt),     PR_FALSE, -1 },
   { "browser.link_expiration",              "browser.history_expire_days",        F(GetInt),      F(SetInt),     PR_FALSE, -1 },
-  { "browser.startup.page",                 "browser.startup.homepage",           F(GetHomepage), F(SetWString), PR_FALSE, -1 },
+  { "browser.startup.page",                 "browser.startup.homepage",           F(GetHomepage), F(SetWStringFromASCII), PR_FALSE, -1 },
   { "general.always_load_images",           "network.image.imageBehavior",        F(GetImagePref),F(SetInt),     PR_FALSE, -1 },
 };
 
@@ -391,51 +390,8 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
   if (aReplace)
     return MigrateDogbertBookmarks();
 
-  nsCOMPtr<nsIFile> bookmarksFile;
-  mSourceProfile->Clone(getter_AddRefs(bookmarksFile));
-  bookmarksFile->Append(BOOKMARKS_FILE_NAME_IN_4x);
-
-  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
-  nsCOMPtr<nsISupportsArray> params;
-  NS_NewISupportsArray(getter_AddRefs(params));
-
-  nsCOMPtr<nsIRDFService> rdfs(do_GetService("@mozilla.org/rdf/rdf-service;1"));
-  nsCOMPtr<nsIRDFResource> prop;
-  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#URL"), 
-                    getter_AddRefs(prop));
-  nsCOMPtr<nsIRDFLiteral> url;
-  nsAutoString path;
-  bookmarksFile->GetPath(path);
-  rdfs->GetLiteral(path.get(), getter_AddRefs(url));
-
-  params->AppendElement(prop);
-  params->AppendElement(url);
-  
-  nsCOMPtr<nsIRDFResource> importCmd;
-  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#command?cmd=import"), 
-                    getter_AddRefs(importCmd));
-
-  nsCOMPtr<nsIRDFResource> root;
-  rdfs->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
-
-  nsXPIDLString importedDogbertBookmarksTitle;
-  mBundle->GetStringFromName(NS_LITERAL_STRING("importedDogbertBookmarksTitle").get(), getter_Copies(importedDogbertBookmarksTitle));
-
-  nsCOMPtr<nsIRDFResource> folder;
-  bms->CreateFolderInContainer(importedDogbertBookmarksTitle.get(), root, -1, getter_AddRefs(folder));
-  
-  nsCOMPtr<nsIRDFResource> folderProp;
-  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#Folder"), 
-                    getter_AddRefs(folderProp));
-  params->AppendElement(folderProp);
-  params->AppendElement(folder);
-
-  nsCOMPtr<nsISupportsArray> sources;
-  NS_NewISupportsArray(getter_AddRefs(sources));
-  sources->AppendElement(folder);
-
-  nsCOMPtr<nsIRDFDataSource> ds(do_QueryInterface(bms));
-  return ds->DoCommand(sources, importCmd, params);
+  return ImportNetscapeBookmarks(BOOKMARKS_FILE_NAME_IN_4x, 
+                                 NS_LITERAL_STRING("importedDogbertBookmarksTitle").get());
 }
 
 nsresult

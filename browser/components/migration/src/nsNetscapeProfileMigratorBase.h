@@ -69,7 +69,9 @@ public:
 
   static nsresult GetString(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetString(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult GetWString(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetWString(void* aTransform, nsIPrefBranch* aBranch);
+  static nsresult SetWStringFromASCII(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult GetBool(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult SetBool(void* aTransform, nsIPrefBranch* aBranch);
   static nsresult GetInt(void* aTransform, nsIPrefBranch* aBranch);
@@ -80,6 +82,9 @@ protected:
   void     GetUniqueProfileName(nsIFile* aProfilesDir, const PRUnichar* aSuggestedName, PRUnichar** aUniqueName);
 
   nsresult CopyFile(const nsAString& aSourceFileName, const nsAString& aTargetFileName);
+
+  nsresult ImportNetscapeBookmarks(const nsAString& aBookmarksFileName,
+                                   const PRUnichar* aImportFolderTitleKey);
 
 protected:
   nsCOMPtr<nsILocalFile> mSourceProfile;

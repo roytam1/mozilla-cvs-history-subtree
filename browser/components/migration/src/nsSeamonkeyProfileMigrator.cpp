@@ -38,6 +38,7 @@
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsSeamonkeyProfileMigrator.h"
 #include "nsIObserverService.h"
+#include "nsIPrefService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
 #include "nsIServiceManager.h"
@@ -46,6 +47,18 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsSeamonkeyProfileMigrator
+
+#define FILE_NAME_BOOKMARKS       NS_LITERAL_STRING("bookmarks.html")
+#define FILE_NAME_COOKIES         NS_LITERAL_STRING("cookies.txt")
+#define FILE_NAME_CERT8DB         NS_LITERAL_STRING("cert8.db")
+#define FILE_NAME_KEY3DB          NS_LITERAL_STRING("key3.db")
+#define FILE_NAME_SECMODDB        NS_LITERAL_STRING("secmod.db")
+#define FILE_NAME_HISTORY         NS_LITERAL_STRING("history.dat")
+#define FILE_NAME_MIMETYPES       NS_LITERAL_STRING("mimeTypes.rdf")
+#define FILE_NAME_PREFS           NS_LITERAL_STRING("prefs.js")
+#define FILE_NAME_SEARCH          NS_LITERAL_STRING("search.rdf")
+#define FILE_NAME_USERCONTENT     NS_LITERAL_STRING("userContent.css")
+#define DIR_NAME_CHROME           NS_LITERAL_STRING("chrome")
 
 NS_IMPL_ISUPPORTS1(nsSeamonkeyProfileMigrator, nsIBrowserProfileMigrator)
 
@@ -71,6 +84,16 @@ nsSeamonkeyProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUn
 
   NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
+  CreateTemplateProfile(aProfile);
+
+  if (aReplace) {
+    COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
+    COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
+    COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
+    COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
+  }
+  COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
+
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
 
   return rv;
@@ -92,4 +115,255 @@ nsSeamonkeyProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsSeamonkeyProfileMigrator
+
+#define F(a) nsSeamonkeyProfileMigrator::a
+
+#define MAKEPREFTRANSFORM(pref, newpref, getmethod, setmethod) \
+  { pref, newpref, F(Get##getmethod), F(Set##setmethod), PR_FALSE, -1 }
+
+#define MAKESAMETYPEPREFTRANSFORM(pref, method) \
+  { pref, 0, F(Get##method), F(Set##method), PR_FALSE, -1 }
+
+
+static 
+nsSeamonkeyProfileMigrator::PREFTRANSFORM gTransforms[] = {
+  { "browser.anchor_color",                   0, F(GetString),    F(SetString), PR_FALSE, -1 },
+
+  MAKESAMETYPEPREFTRANSFORM("signon.SignonFileName",                    String),
+  MAKESAMETYPEPREFTRANSFORM("browser.startup.homepage",                 WString),
+  MAKESAMETYPEPREFTRANSFORM("browser.history_expire_days",              Int),
+  MAKESAMETYPEPREFTRANSFORM("browser.tabs.autoHide",                    Bool),
+  MAKESAMETYPEPREFTRANSFORM("browser.tabs.loadInBackground",            Bool),
+  MAKESAMETYPEPREFTRANSFORM("browser.enable_automatic_image_resizing",  Bool),
+  MAKESAMETYPEPREFTRANSFORM("network.cookie.warnAboutCookies",          Bool),
+  MAKESAMETYPEPREFTRANSFORM("network.cookie.lifetime.enabled",          Bool),
+  MAKESAMETYPEPREFTRANSFORM("network.cookie.lifetime.behavior",         Int),
+  MAKESAMETYPEPREFTRANSFORM("dom.disable_open_during_load",             Bool),
+  MAKESAMETYPEPREFTRANSFORM("signon.rememberSignons",                   Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.enable_ssl2",                     Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.enable_ssl3",                     Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.enable_tls",                      Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.warn_entering_secure",            Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.warn_entering_weak",              Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.warn_leaving_secure",             Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.warn_submit_insecure",            Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.warn_viewing_mixed",              Bool),
+  MAKESAMETYPEPREFTRANSFORM("security.default_personal_cert",           String),
+  MAKESAMETYPEPREFTRANSFORM("security.OSCP.enabled",                    Int),
+  MAKESAMETYPEPREFTRANSFORM("security.OSCP.signingCA",                  String),
+  MAKESAMETYPEPREFTRANSFORM("security.OSCP.URL",                        String),
+  MAKESAMETYPEPREFTRANSFORM("security.enable_java",                     Bool),
+  MAKESAMETYPEPREFTRANSFORM("javascript.enabled",                       Bool),
+  MAKESAMETYPEPREFTRANSFORM("dom.disable_window_move_resize",           Bool),
+  MAKESAMETYPEPREFTRANSFORM("dom.disable_window_flip",                  Bool),
+  MAKESAMETYPEPREFTRANSFORM("dom.disable_window_open_feature.status",   Bool),
+  MAKESAMETYPEPREFTRANSFORM("dom.disable_window_status_change",         Bool),
+  MAKESAMETYPEPREFTRANSFORM("dom.disable_image_src_set",                Bool),
+  MAKESAMETYPEPREFTRANSFORM("accessibility.typeaheadfind.autostart",    Bool),
+  MAKESAMETYPEPREFTRANSFORM("accessibility.typeaheadfind.linksonly",    Bool),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.type",                       Int),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.http",                       String),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.http_port",                  Int),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.ftp",                        String),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.ftp_port",                   Int),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.ssl",                        String),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.ssl_port",                   Int),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.socks",                      String),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.socks_port",                 Int),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.gopher",                     String),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.gopher_port",                Int),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.no_proxies_on",              String),
+  MAKESAMETYPEPREFTRANSFORM("network.proxy.autoconfig_url",             String),
+  MAKESAMETYPEPREFTRANSFORM("browser.display.foreground_color",         String),
+  MAKESAMETYPEPREFTRANSFORM("browser.display.background_color",         String),
+  MAKESAMETYPEPREFTRANSFORM("browser.anchor_color",                     String),
+  MAKESAMETYPEPREFTRANSFORM("browser.visited_color",                    String),
+  MAKESAMETYPEPREFTRANSFORM("browser.underline_anchors",                Bool),
+  MAKESAMETYPEPREFTRANSFORM("browser.display.use_system_colors",        Bool),
+  MAKESAMETYPEPREFTRANSFORM("browser.display.use_document_colors",      Bool),
+  MAKESAMETYPEPREFTRANSFORM("browser.display.screen_resolution",        Int),
+  MAKESAMETYPEPREFTRANSFORM("browser.display.use_document_fonts",       Bool),
+
+  MAKEPREFTRANSFORM("network.image.imageBehavior",      0, Int, Image),
+  MAKEPREFTRANSFORM("network.cookie.cookieBehavior",    0, Int, Cookie),
+  MAKEPREFTRANSFORM("browser.downloadmanager.behavior", 0, Int, DownloadManager),
+
+  MAKEPREFTRANSFORM("wallet.captureForms", "formfill.enabled", Bool, Bool)
+};
+
+nsresult 
+nsSeamonkeyProfileMigrator::SetImage(void* aTransform, nsIPrefBranch* aBranch)
+{
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  nsresult rv = NS_OK;
+
+  if (xform->prefHasValue)
+    rv = aBranch->SetIntPref("network.image.imageBehavior", xform->intValue == 1 ? 0 : xform->intValue);
+
+  return rv;
+}
+
+nsresult 
+nsSeamonkeyProfileMigrator::SetCookie(void* aTransform, nsIPrefBranch* aBranch)
+{
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  nsresult rv = NS_OK;
+
+  if (xform->prefHasValue)
+    rv = aBranch->SetIntPref("network.cookie.cookieBehavior", xform->intValue == 3 ? 0 : xform->intValue);
+
+  return rv;
+}
+
+nsresult 
+nsSeamonkeyProfileMigrator::SetDownloadManager(void* aTransform, nsIPrefBranch* aBranch)
+{
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  nsresult rv = NS_OK;
+  
+  if (xform->prefHasValue) {
+    // Seamonkey's download manager uses a single pref to control behavior:
+    // 0 - show download manager window
+    // 1 - show individual progress dialogs
+    // 2 - show nothing
+    //
+    // Firebird has only a download manager window, but it can behave like a progress dialog, thus:
+    // 0 || 1  -> show downloads window when a download starts
+    // 2       -> don't show anything when a download starts
+    // 1       -> close the downloads window as if it were a progress window when downloads complete.
+    //
+    rv |= aBranch->SetBoolPref("browser.download.manager.showWhenStarting", xform->intValue != 2);
+    rv |= aBranch->SetBoolPref("browser.download.manager.closeWhenDone", xform->intValue == 1);
+  }
+  return NS_OK;
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::TransformPreferences(const nsAString& aSourcePrefFileName,
+                                                 const nsAString& aTargetPrefFileName)
+{
+  PREFTRANSFORM* transform;
+  PREFTRANSFORM* end = gTransforms + sizeof(gTransforms)/sizeof(PREFTRANSFORM);
+
+  // Load the source pref file
+  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  psvc->ResetPrefs();
+
+  nsCOMPtr<nsIFile> sourcePrefsFile;
+  mSourceProfile->Clone(getter_AddRefs(sourcePrefsFile));
+  sourcePrefsFile->Append(aSourcePrefFileName);
+  psvc->ReadUserPrefs(sourcePrefsFile);
+
+  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+  for (transform = gTransforms; transform < end; ++transform)
+    transform->prefGetterFunc(transform, branch);
+
+  ReadFontsBranch();
+
+  // Now that we have all the pref data in memory, load the target pref file,
+  // and write it back out
+  psvc->ResetPrefs();
+  for (transform = gTransforms; transform < end; ++transform)
+    transform->prefSetterFunc(transform, branch);
+
+  nsCOMPtr<nsIFile> targetPrefsFile;
+  mTargetProfile->Clone(getter_AddRefs(targetPrefsFile));
+  targetPrefsFile->Append(aTargetPrefFileName);
+  psvc->SavePrefFile(targetPrefsFile);
+
+  return NS_OK;
+}
+
+void
+nsSeamonkeyProfileMigrator::ReadFontsBranch()
+{
+  return;
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::CopyPreferences(PRBool aReplace)
+{
+  TransformPreferences(FILE_NAME_PREFS, FILE_NAME_PREFS);
+
+  // Security Stuff
+  CopyFile(FILE_NAME_CERT8DB, FILE_NAME_CERT8DB);
+  CopyFile(FILE_NAME_KEY3DB, FILE_NAME_KEY3DB);
+  CopyFile(FILE_NAME_SECMODDB, FILE_NAME_SECMODDB);
+
+  // User MIME Type overrides
+  CopyFile(FILE_NAME_MIMETYPES, FILE_NAME_MIMETYPES);
+
+  return CopyUserContentSheet();
+}
+
+nsresult 
+nsSeamonkeyProfileMigrator::CopyUserContentSheet()
+{
+  nsCOMPtr<nsIFile> sourceUserContent;
+  mSourceProfile->Clone(getter_AddRefs(sourceUserContent));
+  sourceUserContent->Append(DIR_NAME_CHROME);
+  sourceUserContent->Append(FILE_NAME_USERCONTENT);
+
+  PRBool exists = PR_FALSE;
+  sourceUserContent->Exists(&exists);
+  if (!exists)
+    return NS_ERROR_FILE_NOT_FOUND;
+
+  nsCOMPtr<nsIFile> targetUserContent;
+  mTargetProfile->Clone(getter_AddRefs(targetUserContent));
+  targetUserContent->Append(DIR_NAME_CHROME);
+  nsCOMPtr<nsIFile> targetChromeDir;
+  targetUserContent->Clone(getter_AddRefs(targetChromeDir));
+  targetUserContent->Append(FILE_NAME_USERCONTENT);
+
+  targetUserContent->Exists(&exists);
+  if (exists)
+    targetUserContent->Remove(PR_FALSE);
+
+  return sourceUserContent->CopyTo(targetChromeDir, FILE_NAME_USERCONTENT);
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::CopyCookies(PRBool aReplace)
+{
+  return CopyFile(FILE_NAME_COOKIES, FILE_NAME_COOKIES);
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::CopyHistory(PRBool aReplace)
+{
+  return CopyFile(FILE_NAME_HISTORY, FILE_NAME_HISTORY);
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::CopyPasswords(PRBool aReplace)
+{
+  nsresult rv;
+
+  // Find out what the signons file was called, this is stored in a pref
+  // in Seamonkey.
+  nsCOMPtr<nsIPrefService> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  psvc->ResetPrefs();
+
+  nsCOMPtr<nsIFile> seamonkeyPrefsFile;
+  mSourceProfile->Clone(getter_AddRefs(seamonkeyPrefsFile));
+  seamonkeyPrefsFile->Append(FILE_NAME_PREFS);
+  psvc->ReadUserPrefs(seamonkeyPrefsFile);
+
+  nsXPIDLCString signonsFileName;
+  nsCOMPtr<nsIPrefBranch> branch(do_QueryInterface(psvc));
+  rv = branch->GetCharPref("signon.SignonFileName", getter_Copies(signonsFileName));
+
+  nsAutoString fileName; fileName.AssignWithConversion(signonsFileName);
+  return CopyFile(fileName, fileName);
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::CopyBookmarks(PRBool aReplace)
+{
+  if (aReplace)
+    return CopyFile(FILE_NAME_BOOKMARKS, FILE_NAME_BOOKMARKS);
+  return ImportNetscapeBookmarks(FILE_NAME_BOOKMARKS, 
+                                 NS_LITERAL_STRING("importedSeamonkeyBookmarksTitle").get());
+}
 

@@ -35,46 +35,61 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef seamonkeyprofilemigrator___h___
-#define seamonkeyprofilemigrator___h___
-
-#include "nsIBrowserProfileMigrator.h"
-#include "nsILocalFile.h"
+#include "nsBrowserProfileMigratorUtils.h"
+#include "nsOmniWebProfileMigrator.h"
+#include "nsIObserverService.h"
+#include "nsIProfile.h"
+#include "nsIProfileInternal.h"
+#include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
-#include "nsNetscapeProfileMigratorBase.h"
-#include "nsString.h"
+#include "nsISupportsPrimitives.h"
 
-class nsIFile;
-class nsIPrefBranch;
+///////////////////////////////////////////////////////////////////////////////
+// nsOmniWebProfileMigrator
 
-class nsSeamonkeyProfileMigrator : public nsNetscapeProfileMigratorBase, 
-                                   public nsIBrowserProfileMigrator
+NS_IMPL_ISUPPORTS1(nsOmniWebProfileMigrator, nsIBrowserProfileMigrator)
+
+static nsIObserverService* sObserverService = nsnull;
+
+nsOmniWebProfileMigrator::nsOmniWebProfileMigrator()
 {
-public:
-  NS_DECL_NSIBROWSERPROFILEMIGRATOR
-  NS_DECL_ISUPPORTS
+  CallGetService("@mozilla.org/observer-service;1", &sObserverService);
+}
 
-  nsSeamonkeyProfileMigrator();
-  virtual ~nsSeamonkeyProfileMigrator();
+nsOmniWebProfileMigrator::~nsOmniWebProfileMigrator()
+{
+  NS_IF_RELEASE(sObserverService);
+}
 
-public:
-  static nsresult SetImage(void* aTransform, nsIPrefBranch* aBranch);
-  static nsresult SetCookie(void* aTransform, nsIPrefBranch* aBranch);
-  static nsresult SetDownloadManager(void* aTransform, nsIPrefBranch* aBranch);
+///////////////////////////////////////////////////////////////////////////////
+// nsIBrowserProfileMigrator
 
-protected:
-  nsresult CopyPreferences(PRBool aReplace);
-  nsresult TransformPreferences(const nsAString& aSourcePrefFileName,
-                                const nsAString& aTargetPrefFileName);
-  void     ReadFontsBranch();
-  nsresult CopyUserContentSheet();
+NS_IMETHODIMP
+nsOmniWebProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnichar* aProfile)
+{
+  nsresult rv = NS_OK;
 
-  nsresult CopyCookies(PRBool aReplace);
-  nsresult CopyHistory(PRBool aReplace);
-  nsresult CopyPasswords(PRBool aReplace);
-  nsresult CopyBookmarks(PRBool aReplace);
+  NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
-private:
-};
- 
-#endif
+  NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsOmniWebProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
+{
+  *aResult = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsOmniWebProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
+{
+  *aResult = nsnull;
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// nsOmniWebProfileMigrator
+

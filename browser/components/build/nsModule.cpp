@@ -42,19 +42,30 @@
 #include "nsBookmarksService.h"
 #include "nsProfileMigrator.h"
 #include "nsOperaProfileMigrator.h"
-#include "nsIEProfileMigrator.h"
-// #include "nsSeamonkeyProfileMigrator.h"
+#include "nsSeamonkeyProfileMigrator.h"
 #include "nsDogbertProfileMigrator.h"
+#ifdef XP_WIN
+#include "nsIEProfileMigrator.h"
+#elif defined(XP_MACOSX)
+#include "nsSafariProfileMigrator.h"
+#include "nsOmniWebProfileMigrator.h"
+#include "nsMacIEProfileMigrator.h"
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsProfileMigrator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOperaProfileMigrator)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsIEProfileMigrator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDogbertProfileMigrator)
-// NS_GENERIC_FACTORY_CONSTRUCTOR(nsSeamonkeyProfileMigrator)
-
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSeamonkeyProfileMigrator)
+#ifdef XP_WIN
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsIEProfileMigrator)
+#elif defined(XP_MACOSX)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSafariProfileMigrator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsOmniWebProfileMigrator)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacIEProfileMigrator)
+#endif
 /////////////////////////////////////////////////////////////////////////////
 
 static const nsModuleComponentInfo components[] =
@@ -74,21 +85,39 @@ static const nsModuleComponentInfo components[] =
     NS_PROFILEMIGRATOR_CONTRACTID,
     nsProfileMigratorConstructor },
 
-  { "Opera (Windows) Profile Migrator",
-    NS_OPERAPROFILEMIGRATOR_CID,
-    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera",
-    nsOperaProfileMigratorConstructor },
-
+#ifdef XP_WIN
   { "Internet Explorer (Windows) Profile Migrator",
     NS_WINIEPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "ie",
     nsIEProfileMigratorConstructor },
-/*
+
+#elif defined(XP_MACOSX)
+  { "Safari Profile Migrator",
+    NS_SAFARIPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "safari",
+    nsSafariProfileMigratorConstructor },
+
+  { "Internet Explorer (Macintosh) Profile Migrator",
+    NS_MACIEPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "macie",
+    nsMacIEProfileMigratorConstructor },
+
+  { "OmniWeb Profile Migrator",
+    NS_OMNIWEBPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "omniweb",
+    nsOmniWebProfileMigratorConstructor },
+#endif
+
+  { "Opera Profile Migrator",
+    NS_OPERAPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "opera",
+    nsOperaProfileMigratorConstructor },
+
   { "Seamonkey Profile Migrator",
     NS_OPERAPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey",
     nsSeamonkeyProfileMigratorConstructor },
-*/
+
   { "Netscape 4.x Profile Migrator",
     NS_DOGBERTPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert",

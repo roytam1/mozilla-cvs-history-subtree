@@ -37,12 +37,14 @@
 
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsCRT.h"
+#include "nsIBookmarksService.h"
 #include "nsIFile.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
+#include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
@@ -151,8 +153,27 @@ nsNetscapeProfileMigratorBase::SetString(void* aTransform, nsIPrefBranch* aBranc
   SETPREF(xform, SetCharPref, xform->stringValue);
 }
 
+nsresult
+nsNetscapeProfileMigratorBase::GetWString(void* aTransform, nsIPrefBranch* aBranch)
+{
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  nsCOMPtr<nsIPrefLocalizedString> prefValue;
+  nsresult rv = aBranch->GetComplexValue(xform->sourcePrefName, 
+                                         NS_GET_IID(nsIPrefLocalizedString),
+                                         getter_AddRefs(prefValue));
+
+  if (NS_SUCCEEDED(rv) && prefValue) {
+    nsXPIDLString data;
+    prefValue->ToString(getter_Copies(data));
+
+    xform->stringValue = ToNewCString(NS_ConvertUCS2toUTF8(data));
+    xform->prefHasValue = PR_TRUE;
+  }
+  return rv;
+}
+
 nsresult 
-nsNetscapeProfileMigratorBase::SetWString(void* aTransform, nsIPrefBranch* aBranch)
+nsNetscapeProfileMigratorBase::SetWStringFromASCII(void* aTransform, nsIPrefBranch* aBranch)
 {
   PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
   if (xform->prefHasValue) {
@@ -163,6 +184,20 @@ nsNetscapeProfileMigratorBase::SetWString(void* aTransform, nsIPrefBranch* aBran
   }
   return NS_OK;
 }
+
+nsresult
+nsNetscapeProfileMigratorBase::SetWString(void* aTransform, nsIPrefBranch* aBranch)
+{
+  PREFTRANSFORM* xform = (PREFTRANSFORM*)aTransform;
+  if (xform->prefHasValue) {
+    nsCOMPtr<nsIPrefLocalizedString> pls(do_CreateInstance("@mozilla.org/pref-localizedstring;1"));
+    nsAutoString data = NS_ConvertUTF8toUCS2(xform->stringValue);
+    pls->SetData(data.get());
+    return aBranch->SetComplexValue(xform->targetPrefName ? xform->targetPrefName : xform->sourcePrefName, NS_GET_IID(nsIPrefLocalizedString), pls);
+  }
+  return NS_OK;
+}
+
 
 nsresult 
 nsNetscapeProfileMigratorBase::GetBool(void* aTransform, nsIPrefBranch* aBranch)
@@ -213,5 +248,56 @@ nsNetscapeProfileMigratorBase::CopyFile(const nsAString& aSourceFileName, const 
     targetFile->Remove(PR_FALSE);
 
   return sourceFile->CopyTo(mTargetProfile, aTargetFileName);
+}
+
+nsresult
+nsNetscapeProfileMigratorBase::ImportNetscapeBookmarks(const nsAString& aBookmarksFileName,
+                                                       const PRUnichar* aImportFolderTitleKey)
+{
+  nsCOMPtr<nsIFile> bookmarksFile;
+  mSourceProfile->Clone(getter_AddRefs(bookmarksFile));
+  bookmarksFile->Append(aBookmarksFileName);
+
+  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  nsCOMPtr<nsISupportsArray> params;
+  NS_NewISupportsArray(getter_AddRefs(params));
+
+  nsCOMPtr<nsIRDFService> rdfs(do_GetService("@mozilla.org/rdf/rdf-service;1"));
+  nsCOMPtr<nsIRDFResource> prop;
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#URL"), 
+                    getter_AddRefs(prop));
+  nsCOMPtr<nsIRDFLiteral> url;
+  nsAutoString path;
+  bookmarksFile->GetPath(path);
+  rdfs->GetLiteral(path.get(), getter_AddRefs(url));
+
+  params->AppendElement(prop);
+  params->AppendElement(url);
+  
+  nsCOMPtr<nsIRDFResource> importCmd;
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#command?cmd=import"), 
+                    getter_AddRefs(importCmd));
+
+  nsCOMPtr<nsIRDFResource> root;
+  rdfs->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
+
+  nsXPIDLString importedDogbertBookmarksTitle;
+  mBundle->GetStringFromName(aImportFolderTitleKey, getter_Copies(importedDogbertBookmarksTitle));
+
+  nsCOMPtr<nsIRDFResource> folder;
+  bms->CreateFolderInContainer(importedDogbertBookmarksTitle.get(), root, -1, getter_AddRefs(folder));
+  
+  nsCOMPtr<nsIRDFResource> folderProp;
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#Folder"), 
+                    getter_AddRefs(folderProp));
+  params->AppendElement(folderProp);
+  params->AppendElement(folder);
+
+  nsCOMPtr<nsISupportsArray> sources;
+  NS_NewISupportsArray(getter_AddRefs(sources));
+  sources->AppendElement(folder);
+
+  nsCOMPtr<nsIRDFDataSource> ds(do_QueryInterface(bms));
+  return ds->DoCommand(sources, importCmd, params);
 }
 
