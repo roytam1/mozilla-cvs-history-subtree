@@ -52,7 +52,7 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+MOZ_CO_TAG = XPC_IDISP_20020417_BRANCH
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 PSM_CO_TAG = XPC_IDISP_20020417_BRANCH
 NSS_CO_TAG = XPC_IDISP_20020417_BRANCH
