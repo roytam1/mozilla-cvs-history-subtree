@@ -151,6 +151,7 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	hx  = __HI(x);	/* high word of x */
 	xsb = (hx>>31)&1;		/* sign bit of x */
 	hx &= 0x7fffffff;		/* high word of |x| */
+        k = 0; /* prevent warning */
 
     /* filter out non-finite argument */
 	if(hx >= 0x40862E42) {			/* if |x|>=709.78... */
@@ -178,7 +179,11 @@ P5   =  4.13813679705723846039e-08; /* 0x3E663769, 0x72BEA4D0 */
 	else if(hx < 0x3e300000)  {	/* when |x|<2**-28 */
 	    if(really_big+x>one) return one+x;/* trigger inexact */
 	}
-	else k = 0;
+	else {
+            k = 0;
+            hi = 0; /* Unused when k = 0, but prevent warning. */
+            lo = 0;
+        }
 
     /* x is now in primary range */
 	t  = x*x;
