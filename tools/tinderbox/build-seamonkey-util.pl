@@ -1190,6 +1190,12 @@ sub FileBasedTest {
     }
 } # FileBasedTest
 
+
+# Page loader (-f option):
+# If you are building optimized, you need to add
+#   --enable-logrefcnt --enable-perf-metrics
+# to turn the pageloader code on.  These are on by default for debug.
+#
 sub BloatTest {
     my ($binary, $build_dir, $timeout_secs) = @_;
     my $binary_basename = File::Basename::basename($binary);
