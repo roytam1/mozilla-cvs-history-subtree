@@ -48,6 +48,7 @@ import sun.awt.motif.*;
 import java.awt.*;
 
 import org.mozilla.webclient.*;
+import org.mozilla.webclient.wrapper_native.*;
 
 /**
  * MotifBrowserControlCanvas provides a concrete realization
@@ -132,8 +133,6 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
             
             this.gtkWinID = this.getGTKWinID(gtkWinPtr);
 
-            Thread nativeEventThread = new NativeEventThread(this);
-            nativeEventThread.start();
         }
 
 		return this.gtkWinPtr;
