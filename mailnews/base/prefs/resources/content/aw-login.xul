@@ -43,6 +43,7 @@ Rights Reserved.
     </box>
   </box>
   <spring class="spacer"/>
+<!--
   <box align="vertical">
     <text class="title" value="&passwordTitle.label;"/>
     <html>&savePasswordDesc.label;</html>
@@ -64,4 +65,5 @@ Rights Reserved.
       </box>
     </box>
   </box>
+-->
 </window>
