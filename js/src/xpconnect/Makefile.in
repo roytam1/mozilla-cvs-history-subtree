@@ -34,9 +34,9 @@
 DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
+VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-VPATH		= @srcdir@$(VPS)@srcdir@/idl 
 
 MODULE		= xpconnect
 LIBRARY_NAME	= xpconnect
@@ -71,22 +71,22 @@ EXPORTS		= \
 		$(NULL)
 
 SDK_XPIDLSRCS   = \
-		mozIJSSubScriptLoader.idl \
+		idl/mozIJSSubScriptLoader.idl \
 		$(NULL)
 
 XPIDLSRCS	= \
-		xpccomponents.idl \
-		xpcjsid.idl \
-		xpcexception.idl \
-		nsIJSContextStack.idl \
-		nsIJSRuntimeService.idl \
-		nsIXPConnect.idl \
-		nsIXPCSecurityManager.idl \
-		nsIXPCScriptable.idl \
-		nsIScriptError.idl \
-		nsIXPCScriptNotify.idl \
-		nsIScriptableInterfaces.idl \
-		XPCIDispatch.idl \
+		idl/xpccomponents.idl \
+		../xpconnect/idl/xpcjsid.idl \
+		idl/xpcexception.idl \
+		idl/nsIJSContextStack.idl \
+		idl/nsIJSRuntimeService.idl \
+		idl/nsIXPConnect.idl \
+		idl/nsIXPCSecurityManager.idl \
+		idl/nsIXPCScriptable.idl \
+		idl/nsIScriptError.idl \
+		idl/nsIXPCScriptNotify.idl \
+		idl/nsIScriptableInterfaces.idl \
+		idl/XPCIDispatch.idl \
 		$(NULL)
 
 

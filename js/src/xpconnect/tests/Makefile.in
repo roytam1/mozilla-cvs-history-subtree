@@ -34,9 +34,9 @@
 DEPTH		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
+VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-VPATH		= @srcdir@$(VPS)@srcdir@/idl
 
 MODULE		= xpconnect_tests
 LIBRARY_NAME	= xpctest
@@ -83,16 +83,16 @@ PROG_LIBS	= \
 		$(NULL)
 
 XPIDLSRCS	= \
-		xpctest.idl \
-		xpctest2.idl \
-		xpctest_attributes.idl \
-		xpctest_calljs.idl \
-		xpctest_const.idl \
-		xpctest_in.idl \
-		xpctest_inout.idl \
-		xpctest_multiple.idl \
-		xpctest_domstring.idl \
-		xpctest_out.idl \
+		idl/xpctest.idl \
+		idl/xpctest2.idl \
+		idl/xpctest_attributes.idl \
+		idl/xpctest_calljs.idl \
+		idl/xpctest_const.idl \
+		idl/xpctest_in.idl \
+		idl/xpctest_inout.idl \
+		idl/xpctest_multiple.idl \
+		idl/xpctest_domstring.idl \
+		idl/xpctest_out.idl \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk

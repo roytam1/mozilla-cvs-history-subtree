@@ -34,9 +34,9 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
+VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-VPATH		= @srcdir@$(VPS)@srcdir@/idl
 
 MODULE		= uconv
 LIBRARY_NAME	= uconv
@@ -310,10 +310,10 @@ notneeded = \
 		$(NULL)
 
 XPIDLSRCS	= \
-		nsITextToSubURI.idl \
-		nsICurrentCharsetListener.idl \
-		nsICharsetConverterManager2.idl \
-		nsIScriptableUConv.idl \
+		idl/nsITextToSubURI.idl \
+		idl/nsICurrentCharsetListener.idl \
+		idl/nsICharsetConverterManager2.idl \
+		idl/nsIScriptableUConv.idl \
 		$(NULL)
 
 EXPORT_RESOURCE	= \

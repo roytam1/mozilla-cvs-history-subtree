@@ -35,9 +35,9 @@
 DEPTH		= ../../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
+VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-VPATH		= @srcdir@$(VPS)@srcdir@/../idl
 
 MODULE		= xpctools
 LIBRARY_NAME	= xpctools
@@ -56,8 +56,8 @@ CPPSRCS		= \
 		$(NULL)
 
 XPIDLSRCS	= \
-		nsIXPCToolsCompiler.idl \
-		nsIXPCToolsProfiler.idl \
+		../idl/nsIXPCToolsCompiler.idl \
+		../idl/nsIXPCToolsProfiler.idl \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
