@@ -23,9 +23,6 @@
 # PUBLIC TREE
 ###################
 
-# TEMP to get libnet working
-ns:lib:libnet:MANIFEST								:libnet
-
 # LDAP
 mozilla:directory:c-sdk:ldap:include:MANIFEST		:ldap
 
