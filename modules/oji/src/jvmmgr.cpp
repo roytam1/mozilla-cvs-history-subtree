@@ -191,7 +191,13 @@ PR_BEGIN_EXTERN_C
 
 #ifdef MOCHA
 
-extern "C" JSContext *lm_crippled_context; /* XXX kill me */
+PR_EXTERN(JSContext*) map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp);
+PR_EXTERN(JSJavaThreadState*) map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp);
+PR_EXTERN(JSObject*) map_java_object_to_js_object_impl(JNIEnv *env, jobject applet, char **errp);
+PR_EXTERN(JavaVM*) get_java_vm_impl(char **errp);
+
+PR_EXTERN_DATA(JSContext*) lm_crippled_context; /* XXX kill me */
+
 PR_IMPLEMENT(JSContext *)
 map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
 {
@@ -200,6 +206,7 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
     PRBool    jvmMochaPrefsEnabled = PR_FALSE;
 
     *errp = NULL;
+    
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
         nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
@@ -258,33 +265,33 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
 PR_IMPLEMENT(JSJavaThreadState *)
 map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 {
-    int ret = ET_InitMoja(0);
-    *errp = NULL;
-    if (ret != LM_MOJA_OK)
-    {
-        *errp = strdup("ET_InitMoja(0) failed.");
-        return NULL;
-    }
-    
-    static ThreadLocalStorage<JSJavaThreadState*> localThreadState(&detach_jsjava_thread_state);
-    JSJavaThreadState* jsj_env = localThreadState.get();
+	*errp = NULL;
+
+	static ThreadLocalStorage<JSJavaThreadState*> localThreadState(&detach_jsjava_thread_state);
+	JSJavaThreadState* jsj_env = localThreadState.get();
 	if (jsj_env != NULL)
 		return jsj_env;
     
-    nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
-    if (pJVMMgr != NULL) {
-        if (pJVMMgr->GetJSJavaVM() == NULL)
-        {
-            *errp = strdup("Failed to attach to a java vm");
-	        return NULL;
-        }
-        pJVMMgr->Release();
-    }
+	if (ET_InitMoja(0) != LM_MOJA_OK) {
+		*errp = strdup("ET_InitMoja(0) failed.");
+		return NULL;
+	}
 
-    jsj_env = JSJ_AttachCurrentThreadToJava(pJVMMgr->GetJSJavaVM(), NULL, NULL);
-    localThreadState.set(jsj_env);
-    
-    return jsj_env;
+	JSJavaVM* js_jvm = NULL;
+	nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
+	if (pJVMMgr != NULL) {
+		js_jvm = pJVMMgr->GetJSJavaVM();
+		pJVMMgr->Release();
+		if (js_jvm == NULL) {
+			*errp = strdup("Failed to attach to a java vm");
+			return NULL;
+		}
+	}
+
+	jsj_env = JSJ_AttachCurrentThreadToJava(js_jvm, NULL, NULL);
+	localThreadState.set(jsj_env);
+
+	return jsj_env;
 }
 
 /*
