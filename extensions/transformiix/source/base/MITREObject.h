@@ -24,16 +24,21 @@
  * $Id$
  */
 
-#ifndef MITRE_MITREOBJECT_H
-#define MITRE_MITREOBJECT_H
+#include "TxObject.h"
+
+#ifndef TRANSFRMX_MITREOBJECT_H
+#define TRANSFRMX_MITREOBJECT_H
 
 /**
+ * Note this class is here for backward compatiblity, since a number
+ * of other classes rely on it. I primarily use TxObject now, which
+ * contains the #hashCode method.
  * A standard base class for many of the Class definitions in this
- * application
+ * application.
  * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
  * @version $Revision$ $Date$
 **/
-class MITREObject {
+class MITREObject : public TxObject{
 public:
     MITREObject() {};
     virtual ~MITREObject() {};
