@@ -31,12 +31,14 @@
 void
 Cache_Init(void)
 {
+    /* todo */
     PR_ASSERT(0);
 }
 
 void 
 Cache_Shutdown(void)
 {
+    /* todo */
     PR_ASSERT(0);
 }
 
@@ -296,7 +298,7 @@ DiskModule_RemoveAll(void)
 void
 DiskModule_SetSize(PRUint32 i_Size)
 {
-    DISKMOD->Size(i_Size);
+    DISKMOD->SetSize(i_Size);
 }
 
 /* MemModule functions */
@@ -353,7 +355,7 @@ MemModule_RemoveAll(void)
 void
 MemModule_SetSize(PRUint32 i_Size)
 {
-    MEMMOD->Size(i_Size);
+    MEMMOD->SetSize(i_Size);
 }
 
 #undef MEMMOD

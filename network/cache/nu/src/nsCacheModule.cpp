@@ -64,6 +64,12 @@ void nsCacheModule::GarbageCollect(void)
 {
 }
 
+PRBool nsCacheModule::ReduceSizeTo(const PRUint32 i_NewSize)
+{
+    //TODO
+    return PR_TRUE;
+}
+
 PRBool nsCacheModule::RemoveAll(void)
 {
     PRBool status = PR_TRUE;

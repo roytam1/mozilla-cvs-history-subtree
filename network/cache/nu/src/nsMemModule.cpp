@@ -37,7 +37,7 @@ nsMemModule::nsMemModule(const PRUint32 size):
     m_pFirstObject(0),
     nsCacheModule(size)
 {
-    Size(size);
+    SetSize(size);
 }
 
 nsMemModule::~nsMemModule()
@@ -146,6 +146,12 @@ nsMemCacheObject* nsMemModule::LastObject(void) const
 			pLast = pLast->Next();
 	}
 	return pLast;
+}
+
+PRBool nsMemModule::ReduceSizeTo(const PRUint32 i_NewSize)
+{
+    //TODO
+    return PR_TRUE;
 }
 
 PRBool nsMemModule::Remove(const char* i_url)

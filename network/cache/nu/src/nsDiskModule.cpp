@@ -240,12 +240,12 @@ PRBool nsDiskModule::Revalidate(void)
     return PR_FALSE;
 }
 
-void nsDiskModule::Size(const PRUint32 i_size)
+void nsDiskModule::SetSize(const PRUint32 i_Size)
 {
-    m_Size = size;
+    m_Size = i_Size;
     if (m_Size >0)
     {
-        ReduceSizeTo(i_Size);
+        ReduceSizeTo(m_Size);
     }
     else
     {

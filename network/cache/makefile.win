@@ -65,7 +65,7 @@ DEPTH=..\..
 
 EXTRA_LIBS=
 
-REQUIRES= network nspr2
+REQUIRES= network nspr2 cachelib
 EXPORTS= netcache.h
 
 C_OBJS = \
@@ -84,6 +84,7 @@ LINCS= \
     -I$(XPDIST)\public\java 	\
     -I$(XPDIST)\public\fileurl 	\
     -I$(XPDIST)\public\security \
+    -I$(XPDIST)\public\cache \
     -I$(XPDIST)\public\jtools
 #!endif
 

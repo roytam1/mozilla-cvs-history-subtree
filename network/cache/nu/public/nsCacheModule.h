@@ -81,7 +81,7 @@ public:
     void                Next(nsCacheModule*);
 
     virtual
-        PRBool          ReduceSizeTo(PRUint32 i_NewSize);
+        PRBool          ReduceSizeTo(const PRUint32 i_NewSize);
 
     virtual
         PRBool          Remove(const char* i_url) = 0;
@@ -96,8 +96,9 @@ public:
         PRBool          Revalidate(void) = 0;
 
     const PRUint32      Size(void) const;
+
     virtual
-    void                Size(const PRUint32 i_size);
+    void                SetSize(const PRUint32 i_size);
 
     PRUint32            SizeInUse(void) const;
 
@@ -167,7 +168,7 @@ inline const PRUint32 nsCacheModule::Size() const
     return m_Size;
 }
 
-inline void nsCacheModule::Size(const PRUint32 size)
+inline void nsCacheModule::SetSize(const PRUint32 size)
 {
     m_Size = size;
 }
