@@ -20,13 +20,23 @@
 #ifndef rdf_h___
 #define rdf_h___
 
-#include "nspr.h"
-#include "nsError.h"
 
-typedef nsresult RDF_Error;
+#include "prtypes.h"
 
-#define RDF_ERROR_ILLEGAL_ASSERT NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF,1)
-#define RDF_ERROR_ILLEGAL_KILL   NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_RDF,2)
+
+typedef int16 RDF_Error;
+typedef uint16 RDF_ValueType;
+
+
+#define RDF_ILLEGAL_ASSERT ((RDF_Error)0x0001)
+#define RDF_ILLEGAL_KILL   ((RDF_Error)0x0002)
+#define RDF_NO_MEMORY      ((RDF_Error)0x0003)
+
+
+#define RDF_RESOURCE_TYPE ((RDF_ValueType)0x0001)
+#define RDF_INT_TYPE      ((RDF_ValueType)0x0002)
+#define RDF_STRING_TYPE   ((RDF_ValueType)0x0003)
+#define RDF_NATIVE_TYPE   ((RDF_ValueType)0x0004)
 
 NSPR_BEGIN_EXTERN_C
 
@@ -34,61 +44,39 @@ typedef struct RDF_ResourceStruct* RDF_Resource;
 typedef struct RDF_CursorStruct* RDF_Cursor;
 typedef struct RDF_DBStruct* RDF;
 typedef struct RDF_TranslatorStruct *RDFT;
+typedef uint32 RDF_EventType;
 
-typedef enum { 
-  RDF_ANY_TYPE,
-  RDF_RESOURCE_TYPE,
-  RDF_INT_TYPE,
-  RDF_STRING_TYPE.
-#ifdef RDF_BLOB
-  RDF_BLOB_TYPE
-#endif
-} RDF_ValueType;
-
-
-#ifdef RDF_BLOB
-typedef struct RDF_BlobStruct {
-  PRUint32 size;
-  void* data;
-} *RDF_Blob;
-#endif
-
-typedef struct RDF_NodeStruct {
-  RDF_ValueType type;
-  union {
-    RDF_Resource r;
-    RDF_String s;
-#ifdef RDF_BLOB
-    RDF_Blob b;
-#endif
-  } value;
-} *RDF_Node;
-
-typedef PRUint32 RDF_EventType;
 #define RDF_ASSERT_NOTIFY	((RDF_EventType)0x00000001)
 #define RDF_DELETE_NOTIFY	((RDF_EventType)0x00000002)
+#define RDF_KILL_NOTIFY		((RDF_EventType)0x00000004)
+#define RDF_CREATE_NOTIFY	((RDF_EventType)0x00000008)
+#define RDF_RESOURCE_GC_NOTIFY	((RDF_EventType)0x00000010)
+#define RDF_INSERT_NOTIFY	((RDF_EventType)0x00000020)
 
-typedef PRUint32 RDF_EventMask;
-#define RDF_ANY_NOTIFY      ((RDF_EventMask)0xFFFFFFFF)
+struct RDF_NotificationStruct;
 
 typedef struct  RDF_AssertEventStruct {
   RDF_Resource u;
   RDF_Resource s;
-  struct RDF_NodeStruct v;
+  void*        v;
+  RDF_ValueType type;
   PRBool       tv;
   char*        dataSource;
 } *RDF_AssertEvent;
 
+
 typedef struct RDF_UnassertEventStruct {
   RDF_Resource u;
   RDF_Resource s;
-  struct RDF_NodeStruct v;
+  void*        v;
+  RDF_ValueType type;
   char*        dataSource;
 } *RDF_UnassertEvent;
 
 typedef struct RDF_KillEventStruct {
   RDF_Resource u;
 } *RDF_KillEvent;
+
 
 typedef struct RDF_EventStruct {
   RDF_EventType eventType;
@@ -99,7 +87,113 @@ typedef struct RDF_EventStruct {
   } event;
 } *RDF_Event;
 
+
+
+
+typedef struct _RDF_InitParamsStruct {
+	char	*profileURL;
+	char	*bookmarksURL;
+	char	*globalHistoryURL;
+} RDF_InitParamsStruct;
+
+typedef struct _RDF_InitParamsStruct* RDF_InitParams;
+
+typedef struct RDF_NotificationStruct* RDF_Notification; 
+
+typedef void (*RDF_NotificationProc)(RDF_Event theEvent, void* pdata);
+
+
+/* core rdf apis */
+
+PR_PUBLIC_API(RDF) RDF_GetDB(const char** dbs);
+PR_PUBLIC_API(RDF_Error) RDF_ReleaseDB(RDF rdf);
+PR_PUBLIC_API(RDFT) RDF_AddDataSource(RDF rdf, char* dataSource);
+PR_PUBLIC_API(RDF_Error) RDF_ReleaseDataSource(RDF rdf, RDFT dataSource);
+PR_PUBLIC_API(RDF_Resource) RDF_GetResource(RDF db, char* id, PRBool createp);
+PR_PUBLIC_API(RDF_Error) RDF_ReleaseResource(RDF db, RDF_Resource resource);
+PR_PUBLIC_API(RDF_Error) RDF_DeleteAllArcs(RDF rdfDB, RDF_Resource source);
+PR_PUBLIC_API(RDF_Error) RDF_Update(RDF rdfDB, RDF_Resource u);
+
+PR_PUBLIC_API(RDF_Notification) RDF_AddNotifiable (RDF rdfDB, RDF_NotificationProc callBack, RDF_Event ev, void* pdata);
+PR_PUBLIC_API(RDF_Error) RDF_DeleteNotifiable (RDF_Notification ns);
+
+
+PR_PUBLIC_API(PRBool) RDF_Assert(RDF rdfDB, RDF_Resource source, RDF_Resource arcLabel, 
+				 void* target, RDF_ValueType targetType);
+PR_PUBLIC_API(PRBool) RDF_AssertFalse(RDF rdfDB, RDF_Resource source, RDF_Resource arcLabel, 
+				      void* target, RDF_ValueType targetType);
+PR_PUBLIC_API(PRBool) RDF_Unassert(RDF rdfDB, RDF_Resource source, RDF_Resource arcLabel, 
+				   void* target, RDF_ValueType targetType);
+
+ 
+PR_PUBLIC_API(PRBool) RDF_CanAssert(RDF rdfDB, RDF_Resource u, RDF_Resource arcLabel, void* v, RDF_ValueType targetType);
+PR_PUBLIC_API(PRBool) RDF_CanAssertFalse(RDF rdfDB, RDF_Resource u, RDF_Resource arcLabel, void* v, RDF_ValueType targetType);
+PR_PUBLIC_API(PRBool) RDF_CanUnassert(RDF rdfDB, RDF_Resource u, RDF_Resource arcLabel, void* v, RDF_ValueType targetType);
+ 
+
+PR_PUBLIC_API(PRBool) RDF_HasAssertion (RDF rdfDB, RDF_Resource source, RDF_Resource arcLabel, 
+					void* target, RDF_ValueType targetType, PRBool tv);
+PR_PUBLIC_API(void*) RDF_GetSlotValue (RDF rdfDB, RDF_Resource u, RDF_Resource s, RDF_ValueType targetType, 
+				       PRBool inversep, PRBool tv);
+PR_PUBLIC_API(RDF_Cursor) RDF_GetTargets (RDF rdfDB, RDF_Resource source, RDF_Resource arcLabel, 
+					  RDF_ValueType targetType,  PRBool tv);	
+PR_PUBLIC_API(RDF_Cursor) RDF_GetSources (RDF rdfDB, RDF_Resource target, RDF_Resource arcLabel, 
+					  RDF_ValueType sourceType,  PRBool tv);	
+PR_PUBLIC_API(RDF_Cursor) RDF_ArcLabelsOut (RDF rdfDB, RDF_Resource u);
+PR_PUBLIC_API(RDF_Cursor) RDF_ArcLabelsIn (RDF rdfDB, RDF_Resource u);
+PR_PUBLIC_API(void*) RDF_NextValue(RDF_Cursor c);
+PR_PUBLIC_API(char*) RDF_ValueDataSource(RDF_Cursor c);
+PR_PUBLIC_API(RDF_ValueType) RDF_CursorValueType(RDF_Cursor c);
+PR_PUBLIC_API(RDF_Error) RDF_DisposeCursor (RDF_Cursor c);
+
+
+
+/*** Guha needs to get his act together and figure out how to do this.
+PR_PUBLIC_API(RDF_Error) RDF_Undo(RDF rdf);
+***/
+
+/* These two should be removed soon. They are here because Nav Center
+depends on them. */
+
+/* PR_PUBLIC_API(RDF_Error) RDF_Init(char *profileDirURL); */
+PR_PUBLIC_API(RDF_Error) RDF_Init(RDF_InitParams params);
+PR_PUBLIC_API(RDF_Error) RDF_Shutdown(void);
+
+
+/** utilities : move out of here!!! **/
+/* well known resources */
+
+
 #include "vocab.h"
+
+/* the stuff in vocab.h will supercede whats below. I am leaving this here
+   only for the very near future */
+
+
+PR_PUBLIC_API(char*) RDF_GetResourceName(RDF rdfDB, RDF_Resource node);
+
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetFirstInstance (RDF_Resource type, char* defaultURL);
+PR_PUBLIC_API(void) RDFUtil_SetFirstInstance (RDF_Resource type, RDF_Resource item);
+
+typedef void (*printProc)(void* data, char* str);
+PR_PUBLIC_API(void) outputMCFTree  (RDF db, printProc printer, void* data, RDF_Resource node);
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetBreadcrumb();
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetQuickFileFolder();
+PR_PUBLIC_API(void) RDFUtil_SetQuickFileFolder(RDF_Resource container);
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetPTFolder();
+PR_PUBLIC_API(void) RDFUtil_SetPTFolder(RDF_Resource container);
+PR_PUBLIC_API(RDF_Cursor)  RDF_Find (RDF_Resource s, RDF_Resource match, void* v, RDF_ValueType type);
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetNewBookmarkFolder();
+PR_PUBLIC_API(void) RDFUtil_SetNewBookmarkFolder(RDF_Resource container);
+PR_PUBLIC_API(RDF_Resource) RDFUtil_GetDefaultSelectedView();
+PR_PUBLIC_API(void) RDFUtil_SetDefaultSelectedView(RDF_Resource container);
+
+/** end utilities **/
+
+/* this stuff is stuck in here for netlib */
+
+
+
 
 NSPR_END_EXTERN_C
 
