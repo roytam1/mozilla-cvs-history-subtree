@@ -26,6 +26,7 @@
 #ifndef nsCSecurityContext_h___
 #define nsCSecurityContext_h___
 
+#include "jscntxt.h"
 #include "jsdbgapi.h"
 #include "nsISecurityContext.h"
 
@@ -64,6 +65,7 @@ public:
 
 protected:
     JSStackFrame *m_pJStoJavaFrame;
+    JSContext    *m_pJSCX;
 };
 
 #endif // nsCSecurityContext_h___

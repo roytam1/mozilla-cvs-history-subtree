@@ -76,10 +76,9 @@ nsCSecurityContext::Implies(const char* target, const char* action, PRBool *bAll
       *bAllowedAccess = PR_FALSE;
        return NS_OK;
     }
-    JSContext *pJSContext = LM_GetCrippledContext();
     JSStackFrame** startFrame = JVM_GetStartJSFrameFromParallelStack();
     *startFrame = m_pJStoJavaFrame;
-    *bAllowedAccess = LM_CanAccessTargetStr(pJSContext, target);
+    *bAllowedAccess = LM_CanAccessTargetStr(m_pJSCX, target);
     *startFrame = NULL;
     return NS_OK;
 }
@@ -89,16 +88,12 @@ nsCSecurityContext::Implies(const char* target, const char* action, PRBool *bAll
 // from nsCSecurityContext:
 extern PRUintn tlsIndex3_g;
 nsCSecurityContext::nsCSecurityContext(JSContext* cx)
-                   : m_pJStoJavaFrame(NULL)
+                   : m_pJStoJavaFrame(NULL), m_pJSCX(NULL)
 {
     NS_INIT_REFCNT();
-    JSContext *pJSCX = cx;
-    if (pJSCX == NULL)
-    {
-       pJSCX = LM_GetCrippledContext();
-    }
     JSStackFrame *fp = NULL;
-    m_pJStoJavaFrame = JS_FrameIterator(pJSCX, &fp);
+    m_pJStoJavaFrame = JS_FrameIterator(cx, &fp);
+    m_pJSCX          = cx;
 }
 
 nsCSecurityContext::~nsCSecurityContext()
