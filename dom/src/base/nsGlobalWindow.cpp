@@ -1702,39 +1702,11 @@ GlobalWindowImpl::Prompt(const nsAReadableString& aMessage,
   return rv;
 }
 
-static JSContext * GetCurrentContext()
-{
-  // Get JSContext from stack.
-
-
-
-  // Cache stack!!!
-
-  nsresult rv;
-  nsCOMPtr<nsIJSContextStack> stack =
-    do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
-
-  if (NS_FAILED(rv))
-    return nsnull;
-
-  JSContext *cx;
-  if (NS_FAILED(stack->Peek(&cx)))
-    return nsnull;
-
-  return cx;
-}
-
 NS_IMETHODIMP
 GlobalWindowImpl::Prompt(nsAWritableString& aReturn)
 {
   NS_ENSURE_STATE(mDocShell);
   NS_ENSURE_STATE(sXPConnect);
-
-  JSContext *cx = GetCurrentContext();
-
-  if (!cx) {
-    return NS_ERROR_UNEXPECTED;
-  }
 
   nsresult rv = NS_OK;
   nsCOMPtr<nsIXPCNativeCallContext> ncc;
@@ -1744,6 +1716,11 @@ GlobalWindowImpl::Prompt(nsAWritableString& aReturn)
 
   if (!ncc)
     return NS_ERROR_NOT_AVAILABLE;
+
+  JSContext *cx = nsnull;
+
+  rv = ncc->GetJSContext(&cx);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsAutoString message, initial, title;
 
@@ -2247,12 +2224,6 @@ GlobalWindowImpl::Open(nsIDOMWindow **_retval)
 {
   NS_ENSURE_STATE(sXPConnect);
 
-  JSContext *cx = GetCurrentContext();
-
-  if (!cx) {
-    return NS_ERROR_UNEXPECTED;
-  }
-
   nsresult rv = NS_OK;
   nsCOMPtr<nsIXPCNativeCallContext> ncc;
 
@@ -2261,6 +2232,11 @@ GlobalWindowImpl::Open(nsIDOMWindow **_retval)
 
   if (!ncc)
     return NS_ERROR_NOT_AVAILABLE;
+
+  JSContext *cx = nsnull;
+
+  rv = ncc->GetJSContext(&cx);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsAutoString url, name, options;
 
@@ -2304,12 +2280,6 @@ GlobalWindowImpl::OpenDialog(nsIDOMWindow** _retval)
 {
   NS_ENSURE_STATE(sXPConnect);
 
-  JSContext *cx = GetCurrentContext();
-
-  if (!cx) {
-    return NS_ERROR_UNEXPECTED;
-  }
-
   nsresult rv = NS_OK;
   nsCOMPtr<nsIXPCNativeCallContext> ncc;
 
@@ -2318,6 +2288,11 @@ GlobalWindowImpl::OpenDialog(nsIDOMWindow** _retval)
 
   if (!ncc)
     return NS_ERROR_NOT_AVAILABLE;
+
+  JSContext *cx = nsnull;
+
+  rv = ncc->GetJSContext(&cx);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsAutoString url, name, options;
 
@@ -2363,7 +2338,14 @@ GlobalWindowImpl::Close()
   // In the new world of application-level interfaces being written in JS, this
   // security check was causing problems.
 
-  JSContext *cx = GetCurrentContext();
+  nsCOMPtr<nsIJSContextStack> stack =
+    do_GetService("@mozilla.org/js/xpc/ContextStack;1");
+
+  JSContext *cx;
+
+  if (stack) {
+    stack->Peek(&cx);
+  }
 
   if (cx) {
     nsCOMPtr<nsIScriptContext> currentCX = 
@@ -3261,12 +3243,6 @@ GlobalWindowImpl::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
 {
   NS_ENSURE_STATE(sXPConnect);
 
-  JSContext *cx = GetCurrentContext();
-
-  if (!cx) {
-    return NS_ERROR_UNEXPECTED;
-  }
-
   nsresult rv = NS_OK;
   nsCOMPtr<nsIXPCNativeCallContext> ncc;
 
@@ -3275,6 +3251,11 @@ GlobalWindowImpl::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
 
   if (!ncc)
     return NS_ERROR_NOT_AVAILABLE;
+
+  JSContext *cx = nsnull;
+
+  rv = ncc->GetJSContext(&cx);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   PRUint32 argc;
   jsval *argv = nsnull;
