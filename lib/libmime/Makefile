@@ -64,6 +64,8 @@ ifndef NO_SECURITY
 INCLUDES	+= -I$(DEPTH)/lib/libmime
 endif
 
+INCLUDES 	+= ./
+
 #
 # Building the "mimefilt" executable, which reads a message from stdin and
 # writes HTML to stdout
