@@ -79,6 +79,9 @@ else
 OS_LIBS			= -lthread -lposix4 -lsocket -lnsl -ldl
 endif	# LOCAL_THREADS_ONLY
 endif	# USE_PTHREADS
+ifeq ($(OS_TEST),sun4u)
+DSO_LDOPTS		+= -f \$$ORIGIN/cpu/\$$ISALIST/lib$(ULTRASPARC_LIBRARY)$(MOD_VERSION)_flt.so
+endif	# sun4u
 endif	# 4.1.3_U1
 endif	# SunOS
 

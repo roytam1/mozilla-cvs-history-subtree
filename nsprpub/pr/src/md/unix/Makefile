@@ -309,21 +309,14 @@ DEFINES     += -D_NSPR_BUILD_
 
 include $(MOD_DEPTH)/config/rules.mk
 
-export:: $(TARGETS)
-#ifeq ($(OS_ARCH),AIX)
-#ifeq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
-#ifneq ($(USE_PTHREADS), 1)
-#	$(INSTALL) -m 444 $(OBJDIR)/aixwrap.$(OBJ_SUFFIX) $(DIST)/lib
-#endif
-#endif
-#endif
-
 ifeq ($(OS_ARCH),SunOS)
 ifneq ($(OS_RELEASE),4.1.3_U1)
 ifeq ($(OS_TEST),sun4u)
+SHARED_LIBRARY  = $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_flt.$(DLL_SUFFIX)
+
 $(SHARED_LIBRARY): $(ULTRASPARC_ASOBJS)
 	$(LD) -G -z text -z endfiltee -o $@ $(ULTRASPARC_ASOBJS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/lib/sparcv8plus
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/lib/cpu/sparcv8plus
 
 $(ULTRASPARC_ASOBJS): $(ULTRASPARC_ASFILES)
 ifeq ($(USE_64),1)
@@ -334,8 +327,17 @@ endif
 
 clean::
 	rm -rf $(ULTRASPARC_ASOBJS)
-endif
-endif
-endif
+endif	# sun4u
+endif	# ! 4.1.3_U1
+endif	# SunOS
+
+export:: $(TARGETS)
+#ifeq ($(OS_ARCH),AIX)
+#ifeq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
+#ifneq ($(USE_PTHREADS), 1)
+#	$(INSTALL) -m 444 $(OBJDIR)/aixwrap.$(OBJ_SUFFIX) $(DIST)/lib
+#endif
+#endif
+#endif
 
 install:: export

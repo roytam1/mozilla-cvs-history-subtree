@@ -8,7 +8,7 @@
 MOD_DEPTH = ../../..
 include ../Makefile.com
 
-DATAFILES +=
+DATAFILES += depend
 
 all:: $(FILES)
 publish:: all pkg

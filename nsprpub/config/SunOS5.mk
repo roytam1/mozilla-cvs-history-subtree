@@ -160,7 +160,7 @@ MKSHLIB			= $(LD) $(DSO_LDOPTS)
 # ld options:
 # -G: produce a shared object
 # -z defs: no unresolved symbols allowed
-DSO_LDOPTS		= -G -h $(notdir $@)
+DSO_LDOPTS		= -G -h $(notdir $@) -z combreloc
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)
@@ -177,13 +177,8 @@ NOSUCHFILE		= /no-such-file
 # available for UltraSparc systems.  On Solaris, these are used by setting up a
 # "filtee" which contains those routines.  The "filter" (libnspr.so, for
 # instance) loads the filtee if it can find it, based on what's passed in
-# through the -f option to ld.  $ORIGIN is the directory in which the calling
-# object lives (used for relocation purposes) and $ISALIST is a magic token
-# which expands to all the architectures the machine the object is running on
-# can support.  The filter will load functions from the "highest" available
-# filtee.
+# through the -f option to ld.  See the nspr Makefile for how this is used.
 #
 ifeq ($(OS_TEST),sun4u)
-ULTRASPARC_LIBRARY = atomic
-DSO_LDOPTS        += -f \$$ORIGIN/\$$ISALIST/lib$(ULTRASPARC_LIBRARY)$(MOD_VERSION).so
+ULTRASPARC_LIBRARY = nspr
 endif
