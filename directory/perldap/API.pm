@@ -40,7 +40,7 @@ require AutoLoader;
 # Do not simply export all your public functions/methods/constants.
 
 %EXPORT_TAGS = (
-	constant=> [qw(
+	constant => [qw(
 	LDAPS_PORT
 	LDAP_ADMINLIMIT_EXCEEDED
 	LDAP_AFFECTS_MULTIPLE_DSAS
@@ -241,16 +241,11 @@ require AutoLoader;
 	ldapssl_enable_clientauth
 	ldapssl_clientauth_init
 	ldapssl_init
-	ldapssl_install_routines)],
+	ldapssl_install_routines)]
 );
 
 # Add Everything in %EXPORT_TAGS to @EXPORT_OK
-@EXPORT_OK = ();
-
-foreach my $EXP (keys %EXPORT_TAGS)
-{
-   push @EXPORT_OK, @{$EXPORT_TAGS{$EXP}};
-}
+Exporter::export_ok_tags(keys %EXPORT_TAGS);
 
 $VERSION = '0.90';
 
