@@ -42,6 +42,7 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMScreen.h"
 #include "nsIDOMXULDocument.h"
+#include "nsIEmbeddingSiteWindow.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIIOService.h"
 #include "nsNetCID.h"
@@ -146,11 +147,13 @@ NS_IMETHODIMP nsXULWindow::GetInterface(const nsIID& aIID, void** aSink)
       NS_SUCCEEDED(EnsureContentTreeOwner()) &&
       NS_SUCCEEDED(mContentTreeOwner->QueryInterface(aIID, aSink)))
       return NS_OK;
-   else
-      return QueryInterface(aIID, aSink);
 
-   NS_IF_ADDREF(((nsISupports*)*aSink));
-   return NS_OK;   
+   if(aIID.Equals(NS_GET_IID(nsIEmbeddingSiteWindow)) &&
+      NS_SUCCEEDED(EnsureContentTreeOwner()) &&
+      NS_SUCCEEDED(mContentTreeOwner->QueryInterface(aIID, aSink)))
+      return NS_OK;
+ 
+   return QueryInterface(aIID, aSink);
 }
 
 //*****************************************************************************

@@ -32,6 +32,7 @@
 
 // Interfaces needed to include
 #include "nsIPrompt.h"
+#include "nsIEmbeddingSiteWindow.h"
 #include "nsIAuthPrompt.h"
 #include "nsIWebProgress.h"
 #include "nsIWindowMediator.h"
@@ -81,6 +82,8 @@ NS_IMETHODIMP nsChromeTreeOwner::GetInterface(const nsIID& aIID, void** aSink)
   if(aIID.Equals(NS_GET_IID(nsIAuthPrompt)))
     return mXULWindow->GetInterface(aIID, aSink);
   if(aIID.Equals(NS_GET_IID(nsIWebBrowserChrome)))
+    return mXULWindow->GetInterface(aIID, aSink);
+  if(aIID.Equals(NS_GET_IID(nsIEmbeddingSiteWindow)))
     return mXULWindow->GetInterface(aIID, aSink);
 
   return QueryInterface(aIID, aSink);
