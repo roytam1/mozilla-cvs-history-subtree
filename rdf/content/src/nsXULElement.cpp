@@ -1751,14 +1751,14 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAReadableString& aV
 
         nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(global);
             
-        rv = manager->AddScriptEventListener(context, owner, aName, aValue, aIID, PR_FALSE);
+        rv = manager->AddScriptEventListener(context, owner, aName, nsAutoString(aValue), aIID, PR_FALSE);
     }
     else {
         nsCOMPtr<nsIEventListenerManager> manager;
         rv = GetListenerManager(getter_AddRefs(manager));
         if (NS_FAILED(rv)) return rv;
 
-        rv = manager->AddScriptEventListener(context, this, aName, aValue, aIID, PR_TRUE);
+        rv = manager->AddScriptEventListener(context, this, aName, nsAutoString(aValue), aIID, PR_TRUE);
     }
 
     return rv;
@@ -4384,7 +4384,7 @@ nsXULPrototypeAttribute::~nsXULPrototypeAttribute()
 //
 
 nsresult
-nsXULPrototypeElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsAReadableString& aValue)
+nsXULPrototypeElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsAWritableString& aValue)
 {
     for (PRInt32 i = 0; i < mNumAttributes; ++i) {
         if (mAttributes[i].mNodeInfo->Equals(aName, aNameSpaceID)) {

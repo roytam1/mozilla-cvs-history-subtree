@@ -148,7 +148,7 @@ nsXULCommandDispatcher::SetFocusedElement(nsIDOMElement* aElement)
   // Need to update focus commands when focus switches from
   // an element to no element, so don't test mCurrentElement
   // before updating.
-  UpdateCommands(NS_ConvertASCIItoUCS2("focus"));
+  UpdateCommands(NS_LITERAL_STRING("focus"));
   return NS_OK;
 }
 
@@ -277,10 +277,13 @@ nsXULCommandDispatcher::UpdateCommands(const nsAReadableString& aEventName)
   }
 #endif
   
+    // XXX Fix Matches to take nsAReadableStrings...
+    nsAutoString eventName(aEventName);
+
     for (Updater* updater = mUpdaters; updater != nsnull; updater = updater->mNext) {
         // Skip any nodes that don't match our 'events' or 'targets'
         // filters.
-        if (! Matches(updater->mEvents, aEventName))
+        if (! Matches(updater->mEvents, eventName))
             continue;
 
         if (! Matches(updater->mTargets, id))
@@ -424,7 +427,7 @@ nsXULCommandDispatcher::Focus(nsIDOMEvent* aEvent)
         }
 
         if (!mCurrentElement)
-          UpdateCommands(NS_ConvertASCIItoUCS2("focus"));
+          UpdateCommands(NS_LITERAL_STRING("focus"));
       }
     }
   }
@@ -502,7 +505,7 @@ nsXULCommandDispatcher::SetScriptObject(void *aScriptObject)
 
 PRBool
 nsXULCommandDispatcher::Matches(const nsString& aList, 
-                                const nsAReadableString& aElement)
+                                const nsString& aElement)
 {
     if (aList.Equals(NS_LITERAL_STRING("*")))
         return PR_TRUE; // match _everything_!
@@ -629,7 +632,7 @@ nsXULCommandDispatcher::SetSuppressFocus(PRBool aSuppressFocus)
   // we are unsuppressing after activating, so update focus-related commands
   // we need this to update commands in the case where an element is focussed.
   if (!aSuppressFocus && mCurrentElement)
-    UpdateCommands(NS_ConvertASCIItoUCS2("focus"));
+    UpdateCommands(NS_LITERAL_STRING("focus"));
   
   return NS_OK;
 }

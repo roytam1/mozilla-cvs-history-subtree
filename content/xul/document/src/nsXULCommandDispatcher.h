@@ -112,7 +112,7 @@ protected:
     Updater* mUpdaters;
 
     PRBool Matches(const nsString& aList, 
-                   const nsAReadableString& aElement);
+                   const nsString& aElement);
 };
 
 #endif // nsXULCommandDispatcher_h__

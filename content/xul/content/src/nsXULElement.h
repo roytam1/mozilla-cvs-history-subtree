@@ -225,7 +225,7 @@ public:
     nsCOMPtr<nsIStyleRule>   mInlineStyleRule;    // [OWNER]
     nsClassList*             mClassList;
 
-    nsresult GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsAReadableString& aValue);
+    nsresult GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsAWritableString& aValue);
 };
 
 struct JSRuntime;
