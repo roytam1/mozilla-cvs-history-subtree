@@ -201,6 +201,9 @@ struct JNINativeInterface_ {
     void *reserved2;
 
     void *reserved3;
+
+    JNI_CFM_VECTORS
+
     jint (JNICALL *GetVersion)(JNIEnv *env);
 
     jclass (JNICALL *DefineClass)

@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -160,6 +160,24 @@
 	/*  This is the stuff inherited from JavaSoft .. */
 #	define JNIEXPORT
 
+/* Mac OS X (Mach-O) */
+#elif defined(XP_MACOSX)
+
+/*
+  On Mac, the JNINativeInterface_ table is padded to allow for
+  space for both CFM and MachO function pointers. CFM fp are at
+  the start of the table, and MachO pointers at the end. See
+  /System/Library/Frameworks/JavaVM.framework/Headers/jni.h
+*/
+#	define JNI_CFM_VECTORS				void* cfm_vectors[225];
+
+#	define JNI_PUBLIC_API(ResultType)		ResultType
+#	define JNI_PUBLIC_VAR(VarType) 			VarType
+#	define JNI_NATIVE_STUB(ResultType)		ResultType
+#	define JNICALL
+	/*  This is the stuff inherited from JavaSoft .. */
+#	define JNIEXPORT
+
 /* Unix or else */
 #else
 #	define JNI_PUBLIC_API(ResultType)		ResultType
@@ -168,6 +186,10 @@
 #	define JNICALL
 	/*  This is the stuff inherited from JavaSoft .. */
 #	define JNIEXPORT
+#endif
+
+#ifndef JNI_CFM_VECTORS		/* for non-MachO */
+#define JNI_CFM_VECTORS
 #endif
 
 #ifndef FAR		/* for non-Win16 */
