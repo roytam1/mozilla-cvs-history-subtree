@@ -152,5 +152,5 @@ nsSVGStyleValue::UpdateStyleRule(nsIDocument* baseDoc)
   NS_ASSERTION(css, "can't get a css parser");
   if (!css) return;    
 
-  css->ParseDeclarations(mValue, docURL, *getter_AddRefs(mRule)); 
+  css->ParseStyleAttribute(mValue, docURL, getter_AddRefs(mRule)); 
 }
