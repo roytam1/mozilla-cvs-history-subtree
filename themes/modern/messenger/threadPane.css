@@ -21,12 +21,16 @@
 
 /* temporary outliner styles */
 
-outlinercol.threadColumnHeader[currentView="threaded"] {
+outlinercol.threadColumnHeader {
+  list-style-image: url("chrome://messenger/skin/unthreadcol.gif");
+}
+
+outlinercol.threadColumnHeader[sortDirection="ascending"]  {
   list-style-image: url("chrome://messenger/skin/threadcol.gif");
 }
 
-outlinercol.threadColumnHeader[currentView="unthreaded"] {
-  list-style-image: url("chrome://messenger/skin/unthreadcol.gif");
+outlinercol.threadColumnHeader[sortDirection="descending"] {
+  list-style-image: url("chrome://messenger/skin/threadcol.gif");
 }
 
 outlinercol.readColumnHeader {
