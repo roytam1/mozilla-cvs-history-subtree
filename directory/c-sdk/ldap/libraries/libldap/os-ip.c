@@ -33,6 +33,16 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 #endif
 
+/* On Solaris we currently have a problem with > 1024 socket descriptors in */
+/* the non-blocking connect code due to the select() implementation  */
+/* We will temporarily get around this problem by upping the max number  */
+/* of socket descriptors for select as described on the select() man page */
+/* (mhein)
+
+#ifdef SOLARIS
+#define FD_SETSIZE	65536
+#endif
+
 #include "ldap-int.h"
 #ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #include <signal.h>
