@@ -60,6 +60,7 @@ CPPSRCS		= \
 		nsGfxFactoryOS2.cpp \
 		nsPrintOptionsOS2.cpp \
 		nsGfxDefs.cpp \
+		imgScaler2.cpp \
 		$(NULL)
 
 EXPORTS	= \
