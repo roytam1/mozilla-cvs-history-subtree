@@ -59,7 +59,7 @@
 extern "C" {
 unsigned char *_mbsstr( const unsigned char *str,
                         const unsigned char *substr );
-};
+}
 #endif
 
 //----------------------------------------------------------------------------
