@@ -115,9 +115,9 @@ typedef struct _RDF_NCVocabStruct {
 
   /* NavCenter appearance styles */
 
-  RDF_Resource treeFGColor;
-  RDF_Resource treeBGColor;
-  RDF_Resource treeBGURL;
+  RDF_Resource viewFGColor;
+  RDF_Resource viewBGColor;
+  RDF_Resource viewBGURL;
   RDF_Resource showTreeConnections;
   RDF_Resource treeConnectionFGColor;
   RDF_Resource treeOpenTriggerIconURL;
@@ -146,6 +146,9 @@ typedef struct _RDF_NCVocabStruct {
   RDF_Resource toolbarButtonsFixedSize; /* Whether or not the buttons must be the same size ("yes"/"no") */
   RDF_Resource buttonTooltipText;	/* The tooltip text for a button. */
   RDF_Resource buttonStatusbarText;	/* The status bar text for a button. */
+  RDF_Resource viewRolloverColor;   /* What to display when an item is rolled over in a view.*/
+  RDF_Resource viewPressedColor; /* What to display when an item is pressed in a view. */
+  RDF_Resource viewDisabledColor; /* Color to use when item is disabled in a view. */
   
 } RDF_NCVocabStruct;
 

@@ -177,9 +177,9 @@ createNavCenterVocab () {
 
   /* NavCenter appearance styles */
 
-  gNavCenter->treeFGColor = newResource("treeFGColor", RDF_FOREGROUND_COLOR_STR);
-  gNavCenter->treeBGColor = newResource("treeBGColor", RDF_BACKGROUND_COLOR_STR);
-  gNavCenter->treeBGURL = newResource("treeBGURL", RDF_BACKGROUND_IMAGE_STR);
+  gNavCenter->viewFGColor = newResource("viewFGColor", RDF_FOREGROUND_COLOR_STR);
+  gNavCenter->viewBGColor = newResource("viewBGColor", RDF_BACKGROUND_COLOR_STR);
+  gNavCenter->viewBGURL = newResource("viewBGURL", RDF_BACKGROUND_IMAGE_STR);
   gNavCenter->showTreeConnections = newResource("showTreeConnections", RDF_SHOW_TREE_CONNECTIONS_STR);
   gNavCenter->treeConnectionFGColor = newResource("treeConnectionFGColor", RDF_CONNECTION_FG_COLOR_STR);
   gNavCenter->treeOpenTriggerIconURL = newResource("treeOpenTriggerIconURL", RDF_OPEN_TRIGGER_IMAGE_STR);
@@ -214,6 +214,9 @@ createNavCenterVocab () {
   gNavCenter->RDF_largePressedIcon  = newResource("largePressedIcon", 0);
   gNavCenter->buttonTooltipText = newResource("buttonTooltipText", 0);
   gNavCenter->buttonStatusbarText = newResource("buttonStatusbarText", 0);
+  gNavCenter->viewRolloverColor = newResource("viewRolloverColor", 0);
+  gNavCenter->viewPressedColor = newResource("viewPressedColor", 0);
+  gNavCenter->viewDisabledColor = newResource("viewDisabledColor", 0);
 
 #endif /* MOZILLA_CLIENT */
 }
@@ -279,9 +282,9 @@ getResourceDefaultName(RDF_Resource node)
 	else if (node == gWebData->RDF_creationDate)			strID = RDF_CREATED_ON_STR;
 	else if (node == gWebData->RDF_lastModifiedDate)		strID = RDF_LAST_MOD_STR;
 	else if (node == gWebData->RDF_size)				strID =	RDF_SIZE_STR;
-	else if (node == gNavCenter->treeFGColor)			strID = RDF_FOREGROUND_COLOR_STR;
-	else if (node == gNavCenter->treeBGColor)			strID = RDF_BACKGROUND_COLOR_STR;
-	else if (node == gNavCenter->treeBGURL)				strID = RDF_BACKGROUND_IMAGE_STR;
+	else if (node == gNavCenter->viewFGColor)			strID = RDF_FOREGROUND_COLOR_STR;
+	else if (node == gNavCenter->viewBGColor)			strID = RDF_BACKGROUND_COLOR_STR;
+	else if (node == gNavCenter->viewBGURL)				strID = RDF_BACKGROUND_IMAGE_STR;
 	else if (node == gNavCenter->showTreeConnections)		strID = RDF_SHOW_TREE_CONNECTIONS_STR;
 	else if (node == gNavCenter->treeConnectionFGColor)		strID = RDF_CONNECTION_FG_COLOR_STR;
 	else if (node == gNavCenter->treeOpenTriggerIconURL)		strID = RDF_OPEN_TRIGGER_IMAGE_STR;
