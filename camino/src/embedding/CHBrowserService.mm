@@ -153,6 +153,8 @@ CHBrowserService::TermEmbedding()
 /* static */
 void CHBrowserService::ShutDown()
 {
+  NS_ASSERTION(sCanTerminate, "Should be able to terminate here!");
+  
   // phase 2 notifcation (we really are about to terminate)
   [[NSNotificationCenter defaultCenter] postNotificationName:XPCOMShutDownNotificationName object:nil];
 
