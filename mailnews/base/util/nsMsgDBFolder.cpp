@@ -1714,6 +1714,7 @@ nsMsgDBFolder::SetDBTransferInfo(nsIDBFolderInfo *aTransferInfo)
     db->GetDBFolderInfo(getter_AddRefs(dbFolderInfo));
     if(dbFolderInfo)
       dbFolderInfo->InitFromTransferInfo(aTransferInfo);
+    db->SetSummaryValid(PR_TRUE);
   }
   return NS_OK;
 }
@@ -2049,7 +2050,7 @@ nsresult nsMsgDBFolder::PromptForCachePassword(nsIMsgIncomingServer *server, nsI
   return (!passwordCorrect) ? NS_ERROR_FAILURE : rv;
 }
 
-
+// this gets called after the last junk mail classification has run.
 nsresult nsMsgDBFolder::PerformBiffNotifications(void)
 {
   nsCOMPtr<nsIMsgIncomingServer> server;
