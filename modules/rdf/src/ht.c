@@ -5416,7 +5416,7 @@ HT_Properties (HT_Resource node)
 #ifdef	HT_PASSWORD_RTNS
 			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_Password, HT_COLUMN_STRING);
 #endif
-			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_bookmarkAddDate, HT_COLUMN_DATE_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_bookmarkAddDate, HT_COLUMN_STRING);
 #ifdef	HT_LARGE_ICON_SUPPORT
 			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_largeIcon, HT_COLUMN_STRING);
 #endif
@@ -5436,9 +5436,9 @@ HT_Properties (HT_Resource node)
 				dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_URLShortcut, HT_COLUMN_STRING);
 			}
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_description, HT_COLUMN_STRING);
-			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_bookmarkAddDate, HT_COLUMN_DATE_STRING);
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastVisitDate, HT_COLUMN_DATE_STRING);
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_bookmarkAddDate, HT_COLUMN_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastVisitDate, HT_COLUMN_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_STRING);
 #ifdef	HT_LARGE_ICON_SUPPORT
 			dynStr = constructHTML(dynStr, node, (void *)gNavCenter->RDF_largeIcon, HT_COLUMN_STRING);
 #endif
@@ -5461,8 +5461,8 @@ HT_Properties (HT_Resource node)
 			if (node->node != gNavCenter->RDF_LocalFiles)
 			{
 				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_URL, HT_COLUMN_STRING);
-				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_DATE_STRING);
-				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_STRING);
+				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_STRING);
+				dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_STRING);
 			}
 			else
 			{
@@ -5477,8 +5477,8 @@ HT_Properties (HT_Resource node)
 			dynStr = constructHTML(dynStr, node, (void *)gCoreVocab->RDF_name, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_URL, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_size, HT_COLUMN_INT);
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_DATE_STRING);
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_DATE_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_creationDate, HT_COLUMN_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastModifiedDate, HT_COLUMN_STRING);
 		}
 		break;
 
@@ -5500,8 +5500,8 @@ HT_Properties (HT_Resource node)
 		{
 			dynStr = constructHTML(dynStr, node, (void *)gCoreVocab->RDF_name, HT_COLUMN_STRING);
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_URL, HT_COLUMN_STRING);
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_firstVisitDate, HT_COLUMN_DATE_INT);
-			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastVisitDate, HT_COLUMN_DATE_INT);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_firstVisitDate, HT_COLUMN_STRING);
+			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_lastVisitDate, HT_COLUMN_STRING);
 			/* XXX should also show calculated expiration date */
 			dynStr = constructHTML(dynStr, node, (void *)gWebData->RDF_numAccesses, HT_COLUMN_INT);
 		}

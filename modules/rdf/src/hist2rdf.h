@@ -69,6 +69,7 @@
 #define SECS_IN_HOUR            (60L * 60L)
 #define SECS_IN_DAY             (SECS_IN_HOUR * 24L)
 
+extern	int	RDF_HTML_WINDATE, RDF_HTML_MACDATE;
 
 
 /* hist2rdf.c function prototypes */

@@ -423,7 +423,7 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
     err=PR_GetFileInfo(&filePathname[FS_URL_OFFSET], &fn);
     if (err != -1) return (void *)fn.size;
     else return NULL;
-  } else if ((s == gWebData->RDF_lastModifiedDate) && (type == RDF_INT_TYPE) && (tv) && (fsUnitp(u))) {
+  } else if ((s == gWebData->RDF_lastModifiedDate) && (type == RDF_STRING_TYPE) && (tv) && (fsUnitp(u))) {
 
     PRFileInfo fn;
     PRStatus err;
@@ -431,18 +431,32 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
     err = PR_GetFileInfo(&filePathname[FS_URL_OFFSET], &fn);
     if (err != -1)
 	{
-		PRTime		oneMillion, dateVal;
-		int32		modifyTime;
+		char			buffer[128];
+		struct tm		*time;
+		PRTime			oneMillion, dateVal;
+		int32			modifyTime;
 
 	LL_I2L(oneMillion, PR_USEC_PER_SEC);
 	LL_DIV(dateVal, fn.modifyTime, oneMillion);
 	LL_L2I(modifyTime, dateVal);
-	return (void *)modifyTime;
+
+	if ((time = localtime((time_t *) &modifyTime)) != NULL)
+	{
+#ifdef	XP_MAC
+		time->tm_year += 4;
+		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+#else
+		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+#endif
+		return copyString(buffer);
+	}
+	else	return NULL;
+	
 	}
     else
 
 	return NULL;
-  } else if ((s == gWebData->RDF_creationDate) && (type == RDF_INT_TYPE) && (tv) && (fsUnitp(u))) {
+  } else if ((s == gWebData->RDF_creationDate) && (type == RDF_STRING_TYPE) && (tv) && (fsUnitp(u))) {
 
     PRFileInfo fn;
     PRStatus err;
@@ -450,13 +464,25 @@ fsGetSlotValue (RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type, PR
     err = PR_GetFileInfo(&filePathname[FS_URL_OFFSET], &fn);
     if (err != -1)
 	{
-		PRTime		oneMillion, dateVal;
-		uint32		creationTime;
+		char			buffer[128];
+		struct tm		*time;
+		PRTime			oneMillion, dateVal;
+		uint32			creationTime;
 
 	LL_I2L(oneMillion, PR_USEC_PER_SEC);
 	LL_DIV(dateVal, fn.creationTime, oneMillion);
 	LL_L2I(creationTime, dateVal);
-	return (void *)creationTime;
+	if ((time = localtime((time_t *) &creationTime)) != NULL)
+	{
+#ifdef	XP_MAC
+		time->tm_year += 4;
+		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+#else
+		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+#endif
+		return copyString(buffer);
+	}
+	else	return NULL;
 	}
     else
 

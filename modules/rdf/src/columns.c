@@ -76,14 +76,12 @@ ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type
 		(type == RDF_INT_TYPE) && (!inversep) && (tv))
 	{
 		if (u == gNavCenter->RDF_bookmarkAddDate ||
+		    u == gWebData->RDF_firstVisitDate ||
 		    u == gWebData->RDF_lastVisitDate ||
-		    u == gWebData->RDF_lastModifiedDate)
+		    u == gWebData->RDF_lastModifiedDate ||
+		    u == gWebData->RDF_creationDate)
 		{
-			val = (void *)HT_COLUMN_DATE_STRING;
-		}
-		else if (u == gWebData->RDF_firstVisitDate)
-		{
-			val = (void *)HT_COLUMN_DATE_INT;
+			val = (void *)HT_COLUMN_STRING;
 		}
 		else if (u == gWebData->RDF_size ||
 			 u == gWebData->RDF_numAccesses)
@@ -92,7 +90,7 @@ ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type
 		}
 		else
 		{
-			/* default to string... XXX wrong thing to do */
+			/* default to string... XXX wrong thing to do? */
 			val = (void *)HT_COLUMN_STRING;
 		}
 	}

@@ -106,6 +106,8 @@ void
 collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAccessDate,
 		time_t firstAccessDate, uint32 numAccesses, PRBool byDateFlag)
 {
+  char			buffer[128];
+  struct tm		*time;
   RDF_Resource		hostUnit, urlUnit;
   char* existingName = NULL;
   if (startsWith("404", title)) return;
@@ -124,10 +126,29 @@ collateOneHist (RDFT r, RDF_Resource u, char* url, char* title, time_t lastAcces
 
   
   if (hostUnit != urlUnit) remoteAddParent(urlUnit, hostUnit);
-  remoteStoreAdd(gRemoteStore, urlUnit, gWebData->RDF_lastVisitDate,
-		 (void *)lastAccessDate, RDF_INT_TYPE, 1);
-  remoteStoreAdd(gHistoryStore, urlUnit, gWebData->RDF_firstVisitDate,
-		 (void *)firstAccessDate, RDF_INT_TYPE, 1);
+  
+  if ((time = localtime((time_t *) &lastAccessDate)) != NULL)
+  {
+#ifdef	XP_MAC
+	time->tm_year += 4;
+	strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+#else
+	strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+#endif
+	remoteStoreAdd(gRemoteStore, urlUnit, gWebData->RDF_lastVisitDate,
+		 (void *)copyString(buffer), RDF_STRING_TYPE, 1);
+  }
+  if ((time = localtime((time_t *) &firstAccessDate)) != NULL)
+  {
+#ifdef	XP_MAC
+	time->tm_year += 4;
+	strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+#else
+	strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
+#endif
+	remoteStoreAdd(gRemoteStore, urlUnit, gWebData->RDF_firstVisitDate,
+		 (void *)copyString(buffer), RDF_STRING_TYPE, 1);
+  }
   if (numAccesses==0)	++numAccesses;
   remoteStoreAdd(gHistoryStore, urlUnit, gWebData->RDF_numAccesses,
 		 (void *)numAccesses, RDF_INT_TYPE, 1);
