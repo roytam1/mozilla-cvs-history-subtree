@@ -97,6 +97,8 @@
 #include "nsIStyleRule.h"//observe documents to send onchangenotifications
 #include "nsIDOMEventListener.h"//observe documents to send onchangenotifications
 #include "nsGUIEvent.h"
+#include "nsIDOMEventGroup.h"
+#include "nsIDOM3EventTarget.h"
 
 #include "nsIDOMFocusListener.h" //onchange events
 #include "nsIDOMCharacterData.h" //for selection setting helper func
@@ -3462,8 +3464,19 @@ nsGfxTextControlFrame2::SetInitialChildList(nsIPresContext* aPresContext,
   if (NS_SUCCEEDED(mContent->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), getter_AddRefs(erP))) && erP)
   {
     // register the event listeners with the DOM event reveiver
-    rv = erP->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMKeyListener *,mTextListener), NS_GET_IID(nsIDOMKeyListener));
+    nsCOMPtr<nsIDOMEventGroup> sysGroup;
+    rv = erP->GetSystemEventGroup(getter_AddRefs(sysGroup));
+    if (NS_SUCCEEDED(rv)) {
+      nsCOMPtr<nsIDOM3EventTarget> dom3Targ(do_QueryInterface(erP));
+      if (dom3Targ) {
+        rv = dom3Targ->AddGroupedEventListener(NS_LITERAL_STRING("keypress"), 
+                                               NS_STATIC_CAST(nsIDOMKeyListener *,mTextListener), 
+                                               PR_FALSE, sysGroup);
+      }
+    }
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register key listener");
+
+
     rv = erP->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMFocusListener *,mTextListener), NS_GET_IID(nsIDOMFocusListener));
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
     nsCOMPtr<nsIPresShell> shell;

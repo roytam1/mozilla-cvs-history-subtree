@@ -320,8 +320,6 @@ public:
 
 class nsXULElement : public nsIXULContent,
                      public nsIDOMXULElement,
-                     /*public nsIDOMEventReceiver,
-                     public nsIDOM3EventTarget,*/
                      public nsIScriptEventHandlerOwner,
                      public nsIChromeEventHandler
 {
@@ -436,21 +434,6 @@ public:
 
     // nsIDOMXULElement
     NS_DECL_NSIDOMXULELEMENT
-
-    /*
-    // nsIDOMEventTarget interface (from nsIDOMEventReceiver)
-    NS_DECL_NSIDOMEVENTTARGET
-
-    // nsIDOM3EventTarget interface
-    NS_DECL_NSIDOM3EVENTTARGET
-
-    // nsIDOMEventReceiver
-    NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
-    NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
-    NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
-    NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
-    NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
-    */
 
     // nsIScriptEventHandlerOwner
     NS_IMETHOD CompileEventHandler(nsIScriptContext* aContext,

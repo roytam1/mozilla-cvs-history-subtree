@@ -50,6 +50,7 @@ class nsIDOMLoadListener;
 class nsIDOMDragListener;
 class nsIEventListenerManager;
 class nsIDOMEvent;
+class nsIDOMEventGroup;
 
 /*
  * DOM event source class.  Object that allow event registration and

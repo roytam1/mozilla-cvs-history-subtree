@@ -568,9 +568,6 @@ nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener,
 nsresult nsEventListenerManager::AddEventListenerByIID(nsIDOMEventListener *aListener, 
                                                        const nsIID& aIID, PRInt32 aFlags)
 {
-  nsCOMPtr<nsIDOMEventGroup> sysGroup;
-  GetSystemEventGroupLM(getter_AddRefs(sysGroup));
-  //AddEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, sysGroup);
   AddEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, nsnull);
   return NS_OK;
 }
@@ -580,9 +577,6 @@ nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener,
                                                  const nsIID& aIID,
                                                  PRInt32 aFlags)
 {
-  nsCOMPtr<nsIDOMEventGroup> sysGroup;
-  GetSystemEventGroupLM(getter_AddRefs(sysGroup));
-  //RemoveEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, sysGroup);
   RemoveEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags, nsnull);
   return NS_OK;
 }
@@ -2741,7 +2735,9 @@ nsEventListenerManager::AddGroupedEventListener(const nsAReadableString& aType,
 {
   PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
-  return AddEventListenerByType(aListener, aType, flags, aEvtGrp);
+  nsCOMPtr<nsIDOMEventGroup> sysGroup;
+  GetSystemEventGroupLM(getter_AddRefs(sysGroup));
+  return AddEventListenerByType(aListener, aType, flags, sysGroup);
 }
 
 NS_IMETHODIMP 
@@ -2752,7 +2748,9 @@ nsEventListenerManager::RemoveGroupedEventListener(const nsAReadableString& aTyp
 {
   PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
   
-  return RemoveEventListenerByType(aListener, aType, flags, aEvtGrp);
+  nsCOMPtr<nsIDOMEventGroup> sysGroup;
+  GetSystemEventGroupLM(getter_AddRefs(sysGroup));
+  return RemoveEventListenerByType(aListener, aType, flags, sysGroup);
 }
 
 NS_IMETHODIMP
