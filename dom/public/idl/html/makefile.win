@@ -48,7 +48,6 @@ XPIDLSRCS =					\
 	.\nsIDOMHTMLHeadElement.idl		\
 	.\nsIDOMHTMLHeadingElement.idl		\
 	.\nsIDOMHTMLHtmlElement.idl		\
-	.\nsIDOMHTMLIEElement.idl		\
 	.\nsIDOMHTMLIFrameElement.idl		\
 	.\nsIDOMHTMLImageElement.idl		\
 	.\nsIDOMHTMLInputElement.idl		\
@@ -85,6 +84,7 @@ XPIDLSRCS =					\
 	.\nsIDOMNSHTMLAreaElement.idl		\
 	.\nsIDOMNSHTMLButtonElement.idl		\
 	.\nsIDOMNSHTMLDocument.idl		\
+	.\nsIDOMNSHTMLElement.idl		\
 	.\nsIDOMNSHTMLFormControlList.idl	\
 	.\nsIDOMNSHTMLFormElement.idl		\
 	.\nsIDOMNSHTMLImageElement.idl		\
