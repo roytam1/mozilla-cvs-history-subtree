@@ -835,3 +835,14 @@ endif
 #
 .PHONY: all all_platforms alltags boot clean clobber clobber_all export install libs realclean $(OBJDIR) $(DIRS)
 
+envirocheck::
+	@echo -----------------------------------
+	@echo "Enviro-Check (tm)"
+	@echo -----------------------------------
+	@echo "MOZILLA_CLIENT = $(MOZILLA_CLIENT)"
+	@echo "NO_MDUPDATE    = $(NO_MDUPDATE)"
+	@echo "BUILD_OPT      = $(BUILD_OPT)"
+	@echo "MOZ_LITE       = $(MOZ_LITE)"
+	@echo "MOZ_MEDIUM     = $(MOZ_MEDIUM)"
+	@echo -----------------------------------
+
