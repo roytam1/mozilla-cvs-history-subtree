@@ -2571,7 +2571,7 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
 #else
                 nsresult err2 = userPluginClass->CreateInstance(NULL, kPluginInstanceIID,
                                                                 (void**)&userInst);
-                if (err == NS_OK && userInst != NULL) {
+                if (err2 == NS_OK && userInst != NULL) {
                     nsPluginError err3 = userInst->Initialize(peerInst);
                     if (err3 == nsPluginError_NoError) {
                         npp->pdata = peerInst;
