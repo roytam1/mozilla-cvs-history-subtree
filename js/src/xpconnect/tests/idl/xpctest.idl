@@ -134,6 +134,8 @@ interface nsIEcho : nsISupports {
 
     readonly attribute short throwInGetter;
 
+    attribute string aString;
+
     const short one = 1;
     const short five = 5;
     const short six = 6;

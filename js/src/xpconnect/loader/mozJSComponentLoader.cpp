@@ -954,8 +954,7 @@ mozJSComponentLoader::GlobalForLocation(const char *aLocation,
     if (NS_FAILED(rv))
         return nsnull;
 
-    if (!JS_InitStandardClasses(cx, global) ||
-        !JS_DefineFunctions(cx, global, gGlobalFun)) {
+    if (!JS_DefineFunctions(cx, global, gGlobalFun)) {
         return nsnull;
     }
 

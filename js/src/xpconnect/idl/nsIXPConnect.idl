@@ -153,8 +153,8 @@ interface nsIXPConnectWrappedNative : nsIXPConnectJSObjectHolder
      */
 
     readonly attribute nsIXPConnect XPConnect;
-    XPCNativeInterface FindInterfaceWithMember(in JSID nameID);
-    XPCNativeInterface FindInterfaceWithName(in JSID nameID);
+    XPCNativeInterface FindInterfaceWithMember(in JSVal nameID);
+    XPCNativeInterface FindInterfaceWithName(in JSVal nameID);
 
     void debugDump(in short depth);
 };
@@ -189,6 +189,7 @@ interface nsIXPCNativeCallContext : nsISupports
     readonly attribute nsISupports                  Callee;
     readonly attribute PRUint16                     CalleeMethodIndex;
     readonly attribute nsIXPConnectWrappedNative    CalleeWrapper;
+    readonly attribute XPCNativeInterface           CalleeInterface;
     readonly attribute JSContextPtr                 JSContext;
     readonly attribute PRUint32                     Argc;
     readonly attribute JSValPtr                     ArgvPtr;

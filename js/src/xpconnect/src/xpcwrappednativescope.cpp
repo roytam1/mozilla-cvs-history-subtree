@@ -66,13 +66,15 @@ XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
 {
     NS_ASSERTION(!mComponents && aComponents, "bad");
     mComponents = aComponents;
-    NS_ADDREF(mComponents);
+    NS_IF_ADDREF(mComponents);
 }
 
 void 
 XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
 {
-//    NS_ASSERTION(!mGlobalJSObject && aGlobal, "bad");
+    // We allow for calling this more than once. This feature is used by
+    // nsXPConnect::InitClassesWithNewWrappedGlobal.
+    
     mGlobalJSObject = aGlobal;
 
     JSContext* cx = ccx.GetJSContext();
@@ -107,17 +109,13 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
 
     if(mWrappedNativeMap)
     {
-        // XXX assertion or warning???
-        // XXX walk them and unlink?
-//        NS_ASSERTION(0 == mWrappedNativeMap->Count(), "scope has non-empty map");
+        NS_ASSERTION(0 == mWrappedNativeMap->Count(), "scope has non-empty map");
         delete mWrappedNativeMap;    
     }
 
     if(mWrappedNativeProtoMap)
     {
-        // XXX assertion or warning???
-        // XXX walk them and unlink?
-//        NS_ASSERTION(0 == mWrappedNativeProtoMap->Count(), "scope has non-empty map");
+        NS_ASSERTION(0 == mWrappedNativeProtoMap->Count(), "scope has non-empty map");
         delete mWrappedNativeProtoMap;    
     }
 
@@ -129,13 +127,13 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
 
 // static 
 void 
-XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx)
+XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
 {
-    XPCJSRuntime* rt = nsXPConnect::GetRuntime();
-    if(!rt)
-        return;
+    XPCJSRuntime* rt = ccx.GetRuntime();
+    JSContext* cx = ccx.GetJSContext();
 
     // Hold the lock until return...
+    // XXX why does this matter - we are in gc!
     nsAutoLock lock(rt->GetMapLock());  
 
     // Since the JSGC_END call happens outside of a lock,
@@ -189,6 +187,53 @@ XPCWrappedNativeScope::FinshedGC(JSContext* cx)
     KillDyingScopes();
 }        
 
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeSetMarker(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNative*) he->value)->MarkSets();
+    return HT_ENUMERATE_NEXT;
+}
+
+// static 
+void
+XPCWrappedNativeScope::MarkAllInterfaceSets()
+{
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        cur->mWrappedNativeMap->Enumerate(WrappedNativeSetMarker, nsnull);
+}
+
+
+#ifdef DEBUG
+JS_STATIC_DLL_CALLBACK(intN)
+ASSERT_WrappedNativeSetNotMarked(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNative*) he->value)->ASSERT_SetsNotMarked();
+    return HT_ENUMERATE_NEXT;
+}
+
+// static 
+void
+XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked()
+{
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        cur->mWrappedNativeMap->Enumerate(ASSERT_WrappedNativeSetNotMarked, nsnull);
+}
+#endif
+
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeTearoffSweeper(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNative*) he->value)->SweepTearOffs();
+    return HT_ENUMERATE_NEXT;
+}
+
+// static 
+void
+XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs()
+{
+    for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        cur->mWrappedNativeMap->Enumerate(WrappedNativeTearoffSweeper, nsnull);
+}        
 
 // static 
 void 
@@ -205,23 +250,50 @@ XPCWrappedNativeScope::KillDyingScopes()
     gDyingScopes = nsnull;
 }        
 
+struct ShutdownData
+{
+    ShutdownData(XPCCallContext& accx)
+        : ccx(accx), wrapperCount(0), protoCount(0) {}
+    XPCCallContext& ccx;
+    int wrapperCount;
+    int protoCount;
+};
+
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-// fix this
+    ShutdownData* data = (ShutdownData*) arg;
+    XPCWrappedNative* wrapper = (XPCWrappedNative*) he->value;
+    
+    if(wrapper->IsValid())
+    {
+        if(!wrapper->HasSharedProto())
+            data->protoCount++;
+        wrapper->SystemIsBeingShutDown(data->ccx);
+        data->wrapperCount++;
+    }
+    return HT_ENUMERATE_REMOVE;
+}
 
-//    ((XPCWrappedNative*)he->value)->SystemIsBeingShutDown();
-    ++ *((int*)arg);
-    return HT_ENUMERATE_NEXT;
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeProtoShutdownEnumerator(JSHashEntry *he, intN i, void *arg)
+{
+    ShutdownData* data = (ShutdownData*) arg;
+    XPCWrappedNativeProto* proto = (XPCWrappedNativeProto*) he->value;
+    
+    proto->SystemIsBeingShutDown(data->ccx);
+    data->protoCount++;
+    return HT_ENUMERATE_REMOVE;
 }
 
 //static
 void 
-XPCWrappedNativeScope::SystemIsBeingShutDown()
+XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 {
     int liveScopeCount = 0;
-    int liveWrapperCount = 0;
-    int liveWrapperProtoCount = 0;
+    
+    ShutdownData data(ccx);
+
     XPCWrappedNativeScope* cur;
     
     // First move all the scopes to the dying list.
@@ -236,37 +308,27 @@ XPCWrappedNativeScope::SystemIsBeingShutDown()
         liveScopeCount++;
     }
     gScopes = nsnull;
-
     
-    // XXX fix this
     // Walk the unified dying list and call shutdown on all wrappers and protos
 
     for(cur = gDyingScopes; cur; cur = cur->mNext)
     {
-// fix this
-/*
+        // Walk the protos first. Wrapper shutdown can leave dangling
+        // proto pointers in the proto map.
+        cur->mWrappedNativeProtoMap->
+                Enumerate(WrappedNativeProtoShutdownEnumerator,  &data);
         cur->mWrappedNativeMap->
-                Enumerate(WrappedNativeShutdownEnumerator,  &liveWrapperCount);
-        ++count;
-
-        if(cur->mDefaultJSObjectPrototype && cur->mRuntime)
-        {
-            JSRuntime* rt = cur->mRuntime->GetJSRuntime();
-            if(rt)
-                JS_RemoveRootRT(rt, &cur->mDefaultJSObjectPrototype);
-            cur->mDefaultJSObjectPrototype = nsnull;
-        }
-*/
+                Enumerate(WrappedNativeShutdownEnumerator,  &data);
     }
 
     // Now it is safe to kill all the scopes.
     KillDyingScopes();
 
 #ifdef XPC_DUMP_AT_SHUTDOWN
-    if(liveWrapperCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", liveWrapperCount);
-    if(liveWrapperProtoCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos\n", liveWrapperProtoCount);
+    if(data.wrapperCount)
+        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", data.wrapperCount);
+    if(data.protoCount)
+        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos\n", data.protoCount);
     if(liveScopeCount)
         printf("deleting nsXPConnect  with %d live XPCWrappedNativeScopes\n", liveScopeCount);
 #endif
@@ -311,6 +373,8 @@ GetScopeOfObject(JSContext* cx, JSObject* obj)
 XPCWrappedNativeScope* 
 XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
 {
+    // XXX We can fix this to not have to lookup 'Components' now.
+
     JSContext* cx = ccx.GetJSContext();
     XPCWrappedNativeScope* scope;
 
@@ -364,8 +428,10 @@ XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
 
     XPC_LOG_ALWAYS(("chain of %d XPCWrappedNativeScope(s)", count));
     XPC_LOG_INDENT();
-        for(cur = gScopes; cur; cur = cur->mNext)
-            cur->DebugDump(depth);
+        XPC_LOG_ALWAYS(("gDyingScopes @ %x", gDyingScopes));
+        if(depth)
+            for(cur = gScopes; cur; cur = cur->mNext)
+                cur->DebugDump(depth);
     XPC_LOG_OUTDENT();
 #endif
 }        
@@ -374,24 +440,30 @@ XPCWrappedNativeScope::DebugDumpAllScopes(PRInt16 depth)
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-// fix this
-//    ((XPCWrappedNative*)he->value)->DebugDump(*(PRInt16*)arg);
+    ((XPCWrappedNative*)he->value)->DebugDump(*(PRInt16*)arg);
+    return HT_ENUMERATE_NEXT;
+}
+JS_STATIC_DLL_CALLBACK(intN)
+WrappedNativeProtoMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCWrappedNativeProto*)he->value)->DebugDump(*(PRInt16*)arg);
     return HT_ENUMERATE_NEXT;
 }
 #endif
 
-NS_IMETHODIMP 
+void
 XPCWrappedNativeScope::DebugDump(PRInt16 depth)
 {
 #ifdef DEBUG
     depth-- ;
-//    XPC_LOG_ALWAYS(("XPCWrappedNativeScope @ %x with mRefCnt = %d", this, mRefCnt));
+    XPC_LOG_ALWAYS(("XPCWrappedNativeScope @ %x", this));
     XPC_LOG_INDENT();
         XPC_LOG_ALWAYS(("mRuntime @ %x", mRuntime));
         XPC_LOG_ALWAYS(("mNext @ %x", mNext));
+        XPC_LOG_ALWAYS(("mComponents @ %x", mComponents));
+        XPC_LOG_ALWAYS(("mGlobalJSObject @ %x", mGlobalJSObject));
+        XPC_LOG_ALWAYS(("mPrototypeJSObject @ %x", mPrototypeJSObject));
 
-// fix this
-/*
         XPC_LOG_ALWAYS(("mWrappedNativeMap @ %x with %d wrappers(s)", \
                          mWrappedNativeMap, \
                          mWrappedNativeMap ? mWrappedNativeMap->Count() : 0));
@@ -402,10 +474,18 @@ XPCWrappedNativeScope::DebugDump(PRInt16 depth)
             mWrappedNativeMap->Enumerate(WrappedNativeMapDumpEnumerator, &depth);
             XPC_LOG_OUTDENT();
         }
-*/
 
+        XPC_LOG_ALWAYS(("mWrappedNativeProtoMap @ %x with %d protos(s)", \
+                         mWrappedNativeProtoMap, \
+                         mWrappedNativeProtoMap ? mWrappedNativeProtoMap->Count() : 0));
+        // iterate contexts...
+        if(depth && mWrappedNativeProtoMap && mWrappedNativeProtoMap->Count())
+        {
+            XPC_LOG_INDENT();
+            mWrappedNativeProtoMap->Enumerate(WrappedNativeProtoMapDumpEnumerator, &depth);
+            XPC_LOG_OUTDENT();
+        }
     XPC_LOG_OUTDENT();
 #endif
-    return NS_OK;
 }        
 

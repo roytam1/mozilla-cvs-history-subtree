@@ -50,7 +50,8 @@ nsXPConnect::nsXPConnect()
         mInterfaceInfoManager(nsnull),
         mContextStack(nsnull),
         mDefaultSecurityManager(nsnull),
-        mDefaultSecurityManagerFlags(0)
+        mDefaultSecurityManagerFlags(0),
+        mShutingDown(JS_FALSE)
 {
     NS_INIT_REFCNT();
 
@@ -94,11 +95,16 @@ nsXPConnect::nsXPConnect()
 
 nsXPConnect::~nsXPConnect()
 {
+    mShutingDown = JS_TRUE;
+    { // scoped callcontext
+        XPCCallContext ccx(NATIVE_CALLER);
+        if(ccx.IsValid())
+            XPCWrappedNativeScope::SystemIsBeingShutDown(ccx);
+    }
+
     NS_IF_RELEASE(mInterfaceInfoManager);
     NS_IF_RELEASE(mContextStack);
     NS_IF_RELEASE(mDefaultSecurityManager);
-
-    XPCWrappedNativeScope::SystemIsBeingShutDown();
 
     // Unfortunately calling CleanupAllThreads before the stuff above
     // (esp. SystemIsBeingShutDown) causes too many bad things to happen 
@@ -109,6 +115,10 @@ nsXPConnect::~nsXPConnect()
     // if people try to create components during shutdown. 
     // http://bugzilla.mozilla.org/show_bug.cgi?id=37058
     //
+    // Also, we just plain need the context stack for at least the current 
+    // thread to be in place. Unfortunately, this will leak stuff on the 
+    // stacks' safeJSContexts. But, this is a shutdown leak only.
+
     XPCPerThreadData::CleanupAllThreads();
 
     // shutdown the logging system
@@ -192,7 +202,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
 #ifdef XPC_DUMP_AT_SHUTDOWN
         // NOTE: to see really interesting stuff turn on the prlog stuff.
         // See the comment at the top of xpclog.h to see how to do that.
-        xpc->DebugDump(4);
+        xpc->DebugDump(7);
 #endif
         nsrefcnt cnt;
         NS_RELEASE2(xpc, cnt);
@@ -633,10 +643,10 @@ nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 NS_IMETHODIMP
 nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, PRUint16 flags)
 {
-    //    NS_IF_ADDREF(aManager);
-    //    NS_IF_RELEASE(mDefaultSecurityManager);
-    //    mDefaultSecurityManager = aManager;
-    //    mDefaultSecurityManagerFlags = flags;
+    NS_IF_ADDREF(aManager);
+    NS_IF_RELEASE(mDefaultSecurityManager);
+    mDefaultSecurityManager = aManager;
+    mDefaultSecurityManagerFlags = flags;
     return NS_OK;
 }        
 
@@ -748,10 +758,19 @@ nsXPConnect::DebugDump(PRInt16 depth)
     depth-- ;
     XPC_LOG_ALWAYS(("nsXPConnect @ %x with mRefCnt = %d", this, mRefCnt));
     XPC_LOG_INDENT();
+        XPC_LOG_ALWAYS(("gSelf @ %x", gSelf));
+        XPC_LOG_ALWAYS(("gOnceAliveNowDead is %d", (int)gOnceAliveNowDead));
+        XPC_LOG_ALWAYS(("mDefaultSecurityManager @ %x", mDefaultSecurityManager));
+        XPC_LOG_ALWAYS(("mDefaultSecurityManagerFlags of %x", mDefaultSecurityManagerFlags));
         XPC_LOG_ALWAYS(("mInterfaceInfoManager @ %x", mInterfaceInfoManager));
         XPC_LOG_ALWAYS(("mContextStack @ %x", mContextStack));
         if(mRuntime)
-            mRuntime->DebugDump(depth);
+        {
+            if(depth)
+                mRuntime->DebugDump(depth);
+            else
+                XPC_LOG_ALWAYS(("XPCJSRuntime @ %x", mRuntime));
+        }
         else
             XPC_LOG_ALWAYS(("mRuntime is null"));
         XPCWrappedNativeScope::DebugDumpAllScopes(depth);

@@ -159,14 +159,14 @@ XPCCallContext::SetName(jsval name)
             if(mMember && !mMember->IsConstant())
                 mMethodIndex = mMember->GetIndex();
     
-            PRUint16 ignored;
             XPCNativeMember* protoMember;
-            XPCNativeSet* mProtoSet = mWrapper->GetProto()->GetSet();
+            XPCNativeSet* protoSet = mWrapper->GetProto()->GetSet();
 
             mStaticMemberIsLocal =
                     !mMember ||
-                     (mProtoSet != mSet &&
-                      (!mProtoSet->FindMember(name, &protoMember, &ignored) ||
+                     (protoSet != mSet &&
+                      (!protoSet->FindMember(name, &protoMember, 
+                                             (PRUint16*)nsnull) ||
                        protoMember != mMember));
         }
         else
@@ -245,7 +245,7 @@ XPCCallContext::SystemIsBeingShutDown()
     // XXX This is pretty questionable since the per thread cleanup stuff
     // can be making this call on one thread for call contexts on another
     // thread.
-    NS_WARNING("XPConnect even through there is a live XPCCallContext");
+    NS_WARNING("Shutting Down XPConnect even through there is a live XPCCallContext");
     mThreadData = nsnull;
     mXPCContext = nsnull;
     mState = SYSTEM_SHUTDOWN;

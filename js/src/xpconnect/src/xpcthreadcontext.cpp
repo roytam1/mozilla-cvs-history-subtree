@@ -336,7 +336,7 @@ XPCPerThreadData::XPCPerThreadData()
         mJSContextStack(new XPCJSContextStack()),
         mNextThread(nsnull),
         mCallContext(nsnull),
-        mHackyResolveBugID(0)
+        mResolveName(0)
 {
     if(gLock)
     {
@@ -476,4 +476,12 @@ XPCPerThreadData::CleanupAllThreads()
     if(gTLSIndex != BAD_TLS_INDEX)
         PR_SetThreadPrivate(gTLSIndex, nsnull);
 }
+
+// static 
+XPCPerThreadData* 
+XPCPerThreadData::IterateThreads(XPCPerThreadData** iteratorp)
+{
+    *iteratorp = (*iteratorp == nsnull) ? gThreads : (*iteratorp)->mNextThread;
+    return *iteratorp;
+}        
 

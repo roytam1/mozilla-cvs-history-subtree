@@ -695,18 +695,18 @@ FullTrustSecMan::CanGetService(JSContext * aJSContext, const nsCID & aCID)
 }
 
 NS_IMETHODIMP
-FullTrustSecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsid aName)
+FullTrustSecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName)
 {
     return NS_OK;
 }
 
 NS_IMETHODIMP
-FullTrustSecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsid aName)
+FullTrustSecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName)
 {
     return NS_OK;
 }
 NS_IMETHODIMP
-FullTrustSecMan::CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsid aName)
+FullTrustSecMan::CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName)
 {
     return NS_OK;
 }
@@ -888,7 +888,7 @@ main(int argc, char **argv)
     js_ForceGC(jscontext);
     JS_DestroyContext(jscontext);
     xpc->SyncJSContexts();
-    xpc->DebugDump(4);
+    xpc->DebugDump(8);
     xpc = nsnull;   // force nsCOMPtr to Release the service
     secman = nsnull;
     rtsvc = nsnull;

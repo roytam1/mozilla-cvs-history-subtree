@@ -44,15 +44,6 @@
 
 #include "xpcprivate.h"
 
-// To kill #define index(a,b) strchr(a,b) macro in Toolkit types.h
-#ifdef XP_OS2_VACPP
-#if defined index
-#undef index
-//#define index index
-#endif
-#endif
-
-
 /***************************************************************************/
 XPCNativeMemberDescriptor::XPCNativeMemberDescriptor()
     : id(0), index(0), index2(0), argc(-1), flags(0) {}

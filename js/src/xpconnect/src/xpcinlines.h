@@ -157,6 +157,12 @@ XPCCallContext::GetWrapper() const
     return mWrapper;
 }
 
+inline JSBool                       
+XPCCallContext::CanGetTearOff() const
+{
+    return mState >= HAVE_OBJECT;
+}
+
 inline XPCWrappedNativeTearOff*
 XPCCallContext::GetTearOff() const
 {
@@ -392,6 +398,26 @@ inline JSBool XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
     return JS_FALSE;
 }
 
+inline void XPCNativeSet::Mark()
+{
+    if(IsMarked())
+        return;
+    int count = (int) mInterfaceCount;
+    for(int i = 0; i < count; i++)
+        mInterfaces[i]->Mark();
+    MarkSelfOnly();
+}
+
+#ifdef DEBUG
+inline void XPCNativeSet::ASSERT_NotMarked()
+{
+    NS_ASSERTION(!IsMarked(), "bad");
+    int count = (int) mInterfaceCount;
+    for(int i = 0; i < count; i++)
+        NS_ASSERTION(!mInterfaces[i]->IsMarked(), "bad");
+}
+#endif
+
 /***************************************************************************/
 
 inline JSBool 
@@ -478,6 +504,36 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
         return nsnull;
 
     return firstAvailable;    
+}
+
+inline void
+XPCWrappedNative::SweepTearOffs()
+{
+    XPCWrappedNativeTearOffChunk* chunk;
+    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
+    {
+        XPCWrappedNativeTearOff* to = chunk->mTearOffs;
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
+        {
+            JSBool marked = to->IsMarked();
+            to->Unmark();
+            if(marked)
+                continue;
+            
+            // If this tearoff does not have a live dedicated JSObject,
+            // then let's recycle it.
+            if(!to->GetJSObject())
+            {
+                nsISupports* obj = to->GetNative();
+                if(obj)
+                {
+                    obj->Release();    
+                    to->SetNative(nsnull);
+                }
+                to->SetInterface(nsnull);
+            }
+        }
+    }
 }
 
 /***************************************************************************/
