@@ -1941,13 +1941,12 @@ CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
 	goto out;
     }
     script = js_NewScriptFromCG(cx, &cg, NULL);
-    if (!script)
-	goto out;
+out:
     if (!js_CloseTokenStream(cx, ts)) {
-	js_DestroyScript(cx, script);
+        if (script)
+	    js_DestroyScript(cx, script);
 	script = NULL;
     }
-out:
     cg.tempMark = tempMark;
     js_FinishCodeGenerator(cx, &cg);
     return script;
