@@ -86,6 +86,11 @@ public:
   void IsSupportedImage(nsIContent* aContent, PRBool* aImage);
   void IsSupportedDocument(nsIContent* aContent, PRBool* aDoc);
 
+  // for a given aRoot, this walks the frame tree looking for the next outFrame
+  nsresult GetNextObjectFrame(nsIPresContext* aPresContext,
+                              nsIFrame* aRoot,
+                              nsIObjectFrame** outFrame);
+
   nsIPresContext *mPresContext;  // weak ref
 protected:
   // nsISupports
@@ -104,17 +109,17 @@ protected:
   nsresult SetFullURL(nsIURI* aURL);
 
   nsresult InstantiateWidget(nsIPresContext*          aPresContext,
-							nsHTMLReflowMetrics&     aMetrics,
-							const nsHTMLReflowState& aReflowState,
-							nsCID aWidgetCID);
+                             nsHTMLReflowMetrics&     aMetrics,
+                             const nsHTMLReflowState& aReflowState,
+                             nsCID aWidgetCID);
 
   nsresult InstantiatePlugin(nsIPresContext*          aPresContext,
-							nsHTMLReflowMetrics&     aMetrics,
-							const nsHTMLReflowState& aReflowState,
-							nsIPluginHost* aPluginHost, 
-							const char* aMimetype,
-							nsIURI* aURL);
-  //~~~
+                             nsHTMLReflowMetrics&     aMetrics,
+                             const nsHTMLReflowState& aReflowState,
+                             nsIPluginHost* aPluginHost, 
+                             const char* aMimetype,
+                             nsIURI* aURL);
+
   nsresult ReinstantiatePlugin(nsIPresContext* aPresContext, 
                                nsHTMLReflowMetrics& aMetrics, 
                                const nsHTMLReflowState& aReflowState);
@@ -135,7 +140,7 @@ private:
   nsPluginInstanceOwner *mInstanceOwner;
   nsIURI                *mFullURL;
   nsIFrame              *mFirstChild;
-  nsIWidget				      *mWidget;
+  nsIWidget             *mWidget;
 };
 
 
