@@ -291,7 +291,7 @@ nsAppShellService::DoProfileStartup(nsICmdLineService *aCmdLineService, PRBool c
 }
 #endif
 
-#ifndef MOZ_PHOENIX
+#ifndef MOZ_XUL_APP
 nsresult
 nsAppShellService::CheckAndRemigrateDefunctProfile()
 {
