@@ -218,7 +218,7 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 }
 
 nsresult
-nsHttpTransaction::ParseLine(const char *line)
+nsHttpTransaction::ParseLine(char *line)
 {
     nsresult rv;
 
@@ -227,14 +227,8 @@ nsHttpTransaction::ParseLine(const char *line)
 
     LOG(("nsHttpTransaction::ParseLine [%s]\n", line));
 
-    // wrap a funky string thang around our line buf and grab iterators
-    nsLocalCString s(line);
-    nsReadingIterator<char> begin, end;
-    s.BeginReading(begin);
-    s.EndReading(end);
-
     if (!mHaveStatusLine) {
-        rv = mResponseHead->ParseStatusLine(begin, end);
+        rv = mResponseHead->ParseStatusLine(line);
         if (NS_SUCCEEDED(rv))
             mHaveStatusLine = PR_TRUE;
         return rv;
@@ -245,11 +239,11 @@ nsHttpTransaction::ParseLine(const char *line)
         return NS_OK;
     }
 
-    return mResponseHead->ParseHeaderLine(begin, end);
+    return mResponseHead->ParseHeaderLine(line);
 }
 
 nsresult
-nsHttpTransaction::HandleSegment(const char *segment,
+nsHttpTransaction::HandleSegment(char *segment,
                                  PRUint32 count,
                                  PRUint32 *countRead)
 {
@@ -266,7 +260,7 @@ nsHttpTransaction::HandleSegment(const char *segment,
         // we may have a partial line to complete...
         if (!mLineBuf.IsEmpty()) {
             mLineBuf.Append(segment);
-            ParseLine(mLineBuf.get());
+            ParseLine((char *) mLineBuf.get());
             mLineBuf.SetLength(0);
         }
         else

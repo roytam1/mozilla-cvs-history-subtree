@@ -700,7 +700,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
         rv = mPrefs->GetLocalizedUnicharPref(INTL_ACCEPT_LANGUAGES, 
                 getter_Copies(acceptLanguages));
         if (NS_SUCCEEDED(rv))
-            SetAcceptLanguages(NS_ConvertUCS2toUTF8(acceptLanguages));
+            SetAcceptLanguages(NS_ConvertUCS2toUTF8(acceptLanguages).get());
     }
 
     if (bChangedAll || PL_strcmp(pref, INTL_ACCEPT_CHARSET) == 0) {
@@ -708,7 +708,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
         rv = mPrefs->GetLocalizedUnicharPref(INTL_ACCEPT_CHARSET, 
                 getter_Copies(acceptCharset));
         if (NS_SUCCEEDED(rv))
-            SetAcceptCharsets(NS_ConvertUCS2toUTF8(acceptCharset));
+            SetAcceptCharsets(NS_ConvertUCS2toUTF8(acceptCharset).get());
     }
 
     // general.useragent.override
@@ -749,7 +749,7 @@ nsHttpHandler::PrefsChanged(const char *pref)
         rv = mPrefs->CopyCharPref("network.http.accept-encoding",
                                   getter_Copies(acceptEncodings));
         if (NS_SUCCEEDED(rv))
-            SetAcceptEncodings(nsLocalCString(acceptEncodings));
+            SetAcceptEncodings(acceptEncodings);
     }
 }
 
@@ -840,10 +840,9 @@ nsHttpHandler::CreateServicesFromCategory(const char *category)
  *      returns: "en, ja; q=0.667, fr_CA; q=0.333"
  */
 static nsresult
-PrepareAcceptLanguages(const nsACString &i_AcceptLanguages,
-                             nsACString &o_AcceptLanguages)
+PrepareAcceptLanguages(const char *i_AcceptLanguages, nsACString &o_AcceptLanguages)
 {
-    if (i_AcceptLanguages.IsEmpty())
+    if (!i_AcceptLanguages)
         return NS_OK;
 
     PRUint32 n, size, wrote;
@@ -853,7 +852,7 @@ PrepareAcceptLanguages(const nsACString &i_AcceptLanguages,
     PRInt32 available;
 
 
-    o_Accept = nsCRT::strdup(PromiseFlatCString(i_AcceptLanguages).get());
+    o_Accept = nsCRT::strdup(i_AcceptLanguages);
     if (nsnull == o_Accept)
         return NS_ERROR_OUT_OF_MEMORY;
     for (p = o_Accept, n = size = 0; '\0' != *p; p++) {
@@ -901,7 +900,7 @@ PrepareAcceptLanguages(const nsACString &i_AcceptLanguages,
 }
 
 nsresult
-nsHttpHandler::SetAcceptLanguages(const nsACString &aAcceptLanguages) 
+nsHttpHandler::SetAcceptLanguages(const char *aAcceptLanguages) 
 {
     nsCString buf;
     nsresult rv = PrepareAcceptLanguages(aAcceptLanguages, buf);
@@ -925,8 +924,7 @@ nsHttpHandler::SetAcceptLanguages(const nsACString &aAcceptLanguages)
  *      returns: "UTF-8, *"
  */
 static nsresult
-PrepareAcceptCharsets(const nsACString &i_AcceptCharset,
-                            nsACString &o_AcceptCharset)
+PrepareAcceptCharsets(const char *i_AcceptCharset, nsACString &o_AcceptCharset)
 {
     PRUint32 n, size, wrote;
     PRInt32 available;
@@ -936,10 +934,10 @@ PrepareAcceptCharsets(const nsACString &i_AcceptCharset,
     PRBool add_utf = PR_FALSE;
     PRBool add_asterick = PR_FALSE;
 
-    if (i_AcceptCharset.IsEmpty())
+    if (!i_AcceptCharset)
         acceptable = "";
     else
-        acceptable = PromiseFlatCString(i_AcceptCharset).get();
+        acceptable = i_AcceptCharset;
     o_Accept = nsCRT::strdup(acceptable);
     if (nsnull == o_Accept)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -1021,7 +1019,7 @@ PrepareAcceptCharsets(const nsACString &i_AcceptCharset,
     nsCRT::free(o_Accept);
 
     // change alloc from C++ new/delete to nsCRT::strdup's way
-    o_AcceptCharset.Assign((const char *) q_Accept);
+    o_AcceptCharset.Assign(q_Accept);
 #if defined DEBUG_havill
     printf("Accept-Charset: %s\n", q_Accept);
 #endif
@@ -1030,7 +1028,7 @@ PrepareAcceptCharsets(const nsACString &i_AcceptCharset,
 }
 
 nsresult
-nsHttpHandler::SetAcceptCharsets(const nsACString &aAcceptCharsets) 
+nsHttpHandler::SetAcceptCharsets(const char *aAcceptCharsets) 
 {
     nsCString buf;
     nsresult rv = PrepareAcceptCharsets(aAcceptCharsets, buf);
@@ -1040,7 +1038,7 @@ nsHttpHandler::SetAcceptCharsets(const nsACString &aAcceptCharsets)
 }
 
 nsresult
-nsHttpHandler::SetAcceptEncodings(const nsACString &aAcceptEncodings) 
+nsHttpHandler::SetAcceptEncodings(const char *aAcceptEncodings) 
 {
     mAcceptEncodings = aAcceptEncodings;
     return NS_OK;

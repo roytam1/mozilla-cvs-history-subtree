@@ -103,9 +103,9 @@ private:
     void     InitUserAgentComponents();
     void     PrefsChanged(const char *pref = nsnull);
 
-    nsresult SetAcceptLanguages(const nsACString &);
-    nsresult SetAcceptEncodings(const nsACString &);
-    nsresult SetAcceptCharsets(const nsACString &);
+    nsresult SetAcceptLanguages(const char *);
+    nsresult SetAcceptEncodings(const char *);
+    nsresult SetAcceptCharsets(const char *);
 
     const nsCString &UserAgent();
 

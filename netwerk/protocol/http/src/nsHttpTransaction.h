@@ -52,8 +52,8 @@ public:
     nsresult OnStopTransaction(nsresult);
 
 private:
-    nsresult ParseLine(const char *line);
-    nsresult HandleSegment(const char *segment, PRUint32 count, PRUint32 *countRead);
+    nsresult ParseLine(char *line);
+    nsresult HandleSegment(char *segment, PRUint32 count, PRUint32 *countRead);
     nsresult HandleContent(nsIInputStream *, PRUint32 count, PRBool fromSocket);
     nsresult InstallChunkedDecoder();
 

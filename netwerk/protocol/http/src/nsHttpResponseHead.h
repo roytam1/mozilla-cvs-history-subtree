@@ -3,7 +3,7 @@
 
 #include "nsHttpHeaderArray.h"
 #include "nsHttp.h"
-#include "nsCommonString.h"
+#include "nsXPIDLString.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpResponseHead represents the status line and headers from an HTTP
@@ -19,10 +19,10 @@ public:
     nsHttpHeaderArray &Headers()        { return mHeaders; }
     nsHttpVersion      Version()        { return mVersion; }
     PRUint32           Status()         { return mStatus; }
-    nsCommonCString    StatusText()     { return mStatusText; }
+    const char        *StatusText()     { return mStatusText; }
     PRInt32            ContentLength()  { return mContentLength; }
-    nsCommonCString    ContentType()    { return mContentType; }
-    nsCommonCString    ContentCharset() { return mContentCharset; }
+    const char        *ContentType()    { return mContentType; }
+    const char        *ContentCharset() { return mContentCharset; }
 
     const char *PeekHeader(nsHttpAtom h)            { return mHeaders.PeekHeader(h); }
     nsresult SetHeader(nsHttpAtom h, const char *v) { return mHeaders.SetHeader(h, v); }
@@ -30,30 +30,28 @@ public:
 
     nsresult Flatten(nsACString &);
 
-    // called to parse from the result of Flatten
-    nsresult Parse(const nsReadingIterator<char> &begin,
-                   const nsReadingIterator<char> &end);
+    // parse flattened response head. block must be null terminated. parsing is
+    // destructive.
+    nsresult Parse(char *block);
 
-    // called to parse the status line
-    nsresult ParseStatusLine(const nsReadingIterator<char> &begin,
-                             const nsReadingIterator<char> &end);
+    // parse the status line. line must be null terminated.
+    nsresult ParseStatusLine(char *line);
 
-    // called to parse a header line
-    nsresult ParseHeaderLine(const nsReadingIterator<char> &begin,
-                             const nsReadingIterator<char> &end);
+    // parse a header line. line must be null terminated. parsing is destructive.
+    nsresult ParseHeaderLine(char *line);
 
 private:
-    nsresult ParseVersion(const char *str);
-    nsresult ParseContentType(const nsACString &);
+    nsresult ParseVersion(const char *);
+    nsresult ParseContentType(char *);
 
 private:
     nsHttpHeaderArray mHeaders;
     nsHttpVersion     mVersion;
     PRUint32          mStatus;
-    nsCommonCString   mStatusText;
+    nsXPIDLCString    mStatusText;
     PRInt32           mContentLength;
-    nsCommonCString   mContentType;
-    nsCommonCString   mContentCharset;
+    nsXPIDLCString    mContentType;
+    nsXPIDLCString    mContentCharset;
 };
 
 #endif // nsHttpResponseHead_h__

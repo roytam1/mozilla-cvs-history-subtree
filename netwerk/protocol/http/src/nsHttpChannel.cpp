@@ -137,7 +137,7 @@ nsHttpChannel::SetupTransaction()
 
     mRequestHead.SetMethod(nsHttp::GET);
     mRequestHead.SetVersion(HTTP_VERSION_1_1);
-    mRequestHead.SetRequestURI(nsLocalCString(path ? path.get() : mSpec.get()));
+    mRequestHead.SetRequestURI(path ? path : mSpec);
 
     return mTransaction->SetupRequest(&mRequestHead, nsnull);
 }
@@ -250,85 +250,84 @@ nsHttpChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
 //-----------------------------------------------------------------------------
 
 NS_IMETHODIMP
-nsHttpChannel::GetOriginalURI(nsIURI **aOriginalURI)
+nsHttpChannel::GetOriginalURI(nsIURI **originalURI)
 {
-    return GetURI(aOriginalURI);
+    return GetURI(originalURI);
 }
 NS_IMETHODIMP
-nsHttpChannel::SetOriginalURI(nsIURI *aOriginalURI)
+nsHttpChannel::SetOriginalURI(nsIURI *originalURI)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetURI(nsIURI **aURI)
+nsHttpChannel::GetURI(nsIURI **URI)
 {
-    NS_ENSURE_ARG_POINTER(aURI);
-    *aURI = mURI;
-    NS_IF_ADDREF(*aURI);
+    NS_ENSURE_ARG_POINTER(URI);
+    *URI = mURI;
+    NS_IF_ADDREF(*URI);
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetOwner(nsISupports **aOwner)
+nsHttpChannel::GetOwner(nsISupports **owner)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
-nsHttpChannel::SetOwner(nsISupports *aOwner)
+nsHttpChannel::SetOwner(nsISupports *owner)
 {
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetNotificationCallbacks(nsIInterfaceRequestor **aCallbacks)
+nsHttpChannel::GetNotificationCallbacks(nsIInterfaceRequestor **callbacks)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
-nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *aCallbacks)
+nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
 {
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetSecurityInfo(nsISupports **aSecurityInfo)
+nsHttpChannel::GetSecurityInfo(nsISupports **securityInfo)
 {
-    NS_ENSURE_ARG_POINTER(aSecurityInfo);
-    *aSecurityInfo = nsnull;
+    NS_ENSURE_ARG_POINTER(securityInfo);
+    *securityInfo = nsnull;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetContentType(char **aContentType)
+nsHttpChannel::GetContentType(char **value)
 {
-    NS_ENSURE_ARG_POINTER(aContentType);
+    NS_ENSURE_ARG_POINTER(value);
 
     if (!mResponseHead)
         return NS_ERROR_NOT_AVAILABLE;
 
-    *aContentType = PL_strdup(mResponseHead->ContentType().get());
-    return *aContentType ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+    return DupString(mResponseHead->ContentType(), value);
 }
 NS_IMETHODIMP
-nsHttpChannel::SetContentType(const char *aContentType)
+nsHttpChannel::SetContentType(const char *value)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsHttpChannel::GetContentLength(PRInt32 *aContentLength)
+nsHttpChannel::GetContentLength(PRInt32 *value)
 {
-    NS_ENSURE_ARG_POINTER(aContentLength);
+    NS_ENSURE_ARG_POINTER(value);
 
     if (!mResponseHead)
         return NS_ERROR_NOT_AVAILABLE;
 
-    *aContentLength = mResponseHead->ContentLength();
+    *value = mResponseHead->ContentLength();
     return NS_OK;
 }
 NS_IMETHODIMP
-nsHttpChannel::SetContentLength(PRInt32 aContentLength)
+nsHttpChannel::SetContentLength(PRInt32 value)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -3,8 +3,7 @@
 
 #include "nsHttpHeaderArray.h"
 #include "nsHttp.h"
-#include "nsAString.h"
-#include "nsCommonString.h"
+#include "nsXPIDLString.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpRequestHead represents the request line and headers from an HTTP
@@ -19,12 +18,12 @@ public:
 
     void SetMethod(nsHttpAtom method) { mMethod = method; }
     void SetVersion(nsHttpVersion version) { mVersion = version; }
-    void SetRequestURI(const nsACString &s) { mRequestURI = s; }
+    void SetRequestURI(const char *s) { mRequestURI = s; }
 
     nsHttpHeaderArray &Headers()    { return mHeaders; }
     nsHttpAtom         Method()     { return mMethod; }
     nsHttpVersion      Version()    { return mVersion; }
-    nsCommonCString    RequestURI() { return mRequestURI; }
+    const char        *RequestURI() { return mRequestURI; }
 
     const char *PeekHeader(nsHttpAtom h)            { return mHeaders.PeekHeader(h); }
     nsresult SetHeader(nsHttpAtom h, const char *v) { return mHeaders.SetHeader(h, v); }
@@ -36,7 +35,7 @@ private:
     nsHttpHeaderArray mHeaders;
     nsHttpAtom        mMethod;
     nsHttpVersion     mVersion;
-    nsCommonCString   mRequestURI;
+    nsXPIDLCString    mRequestURI;
 };
 
 #endif // nsHttpRequestHead_h__

@@ -1,7 +1,5 @@
 #include "nsHttpResponseHead.h"
 #include "nsPrintfCString.h"
-#include "nsReadableUtils.h"
-#include "nsPromiseSubstring.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpResponseHead
@@ -28,46 +26,43 @@ nsHttpResponseHead::Flatten(nsACString &buf)
 }
 
 nsresult
-nsHttpResponseHead::Parse(const nsReadingIterator<char> &begin,
-                          const nsReadingIterator<char> &end)
+nsHttpResponseHead::Parse(char *block)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult
-nsHttpResponseHead::ParseStatusLine(const nsReadingIterator<char> &begin,
-                                    const nsReadingIterator<char> &end)
+nsHttpResponseHead::ParseStatusLine(char *line)
 {
     //
     // Parse Status-Line:: HTTP-Version SP Status-Code SP Reason-Phrase CRLF
     //
     nsresult rv;
-    nsReadingIterator<char> p = begin;
  
     // HTTP-Version
-    rv = ParseVersion(p.get());
+    rv = ParseVersion(line);
     if (NS_FAILED(rv)) return rv;
     
-    if ((mVersion == HTTP_VERSION_0_9) || !FindCharInReadable(' ', p, end)) {
+    if ((mVersion == HTTP_VERSION_0_9) || !(line = PL_strchr(line, ' '))) {
         mStatus = 200;
-        mStatusText = NS_LITERAL_CSTRING("OK");
+        mStatusText = "OK";
         goto end;
     }
     
     // Status-Code
-    mStatus = atoi((++p).get());
+    mStatus = atoi(++line);
     if (mStatus == 0) {
         LOG(("mal-formed response status; assuming status = 200\n"));
         mStatus = 200;
     }
 
     // Reason-Phrase is whatever is remaining of the line
-    if (!FindCharInReadable(' ', p, end)) {
+    if (!(line = PL_strchr(line, ' '))) {
         LOG(("mal-formed response status line; assuming statusText = 'OK'\n"));
-        mStatusText = NS_LITERAL_CSTRING("OK");
+        mStatusText = "OK";
     }
     else
-        mStatusText = Substring(++p, end);
+        mStatusText = ++line;
 
 end:
     LOG(("Have status line [version=%d status=%d statusText=%s]\n",
@@ -76,30 +71,27 @@ end:
 }
 
 nsresult
-nsHttpResponseHead::ParseHeaderLine(const nsReadingIterator<char> &begin,
-                                    const nsReadingIterator<char> &end)
+nsHttpResponseHead::ParseHeaderLine(char *line)
 {
-    nsReadingIterator<char> p = begin;
+    char *p = PL_strchr(line, ':');
 
-    if (FindCharInReadable(':', p, end)) {
-        nsCommonCString header = Substring(begin, p);
-        nsHttpAtom atom = nsHttp::ResolveAtom(header.get());
+    if (p) {
+        *p = 0; // overwrite ':' char
+        nsHttpAtom atom = nsHttp::ResolveAtom(line);
         if (atom) {
             // skip over whitespace
             do {
                 ++p;
             } while (*p == ' ');
 
-            nsCommonCString val = Substring(p, end);
-
             // assign response header
-            mHeaders.SetHeader(atom, val.get());
+            mHeaders.SetHeader(atom, p);
 
             // handle some special case headers...
             if (atom == nsHttp::Content_Length)
-                mContentLength = atoi(val.get());
+                mContentLength = atoi(p);
             else if (atom == nsHttp::Content_Type)
-                ParseContentType(val);
+                ParseContentType(p);
         }
         else
             LOG(("unknown header; skipping\n"));
@@ -156,35 +148,29 @@ nsHttpResponseHead::ParseVersion(const char *str)
 }
 
 nsresult
-nsHttpResponseHead::ParseContentType(const nsACString &type)
+nsHttpResponseHead::ParseContentType(char *type)
 {
-    nsReadingIterator<char> a, b;
-    type.BeginReading(a);
-    type.EndReading(b);
+    char *p = PL_strchr(type, '(');
 
-    if (FindCharInReadable('(', a, b)) {
+    if (p) {
         // we don't care about comments
-        b = a;
-        type.BeginReading(a);
+        *p = 0;
         // trim any trailing whitespace
-        while (*b == ' ') --b;
+        do {
+            --p;
+        } while ((*p == ' ') && (p > type));
     }
 
-    if (a != b) {
-        nsReadingIterator<char> p = a;
-        if (FindCharInReadable(';', p, b)) {
-            // the content-type has additional fields
-            mContentType = Substring(a, p);
-
+    if (p != type) {
+        // check if the content-type has additional fields...
+        if ((p = PL_strchr(type, ';')) != nsnull) {
+            // null out the ';' char
+            *p = 0;
             // is there a charset field?
-            a = b;
-            if (FindInReadable(NS_LITERAL_CSTRING("charset="), p, a)) {
-                // set the charset
-                mContentCharset = Substring(a, b);
-            }
+            if ((p = PL_strstr(p, "charset=")) != nsnull)
+                mContentCharset = p + 8;
         }
-        else
-            mContentType = Substring(a, b);
+        mContentType = type;
     }
 
     return NS_OK;
