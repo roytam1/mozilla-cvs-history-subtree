@@ -197,8 +197,7 @@ void endElement(void *userData, const XML_Char* name)
 void charData(void* userData, const XML_Char* s, int len)
 {
     ParserState* ps = (ParserState*)userData;
-    String data;
-    data.append((UNICODE_CHAR*)s, len);
+    String data((UNICODE_CHAR*)s, len);
     Node* prevSib = ps->currentNode->getLastChild();
     if (prevSib && prevSib->getNodeType()==Node::TEXT_NODE){
       ((CharacterData*)prevSib)->appendData(data);

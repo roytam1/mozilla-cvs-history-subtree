@@ -68,7 +68,7 @@ nsXPathEvaluator::CreateExpression(const nsAString & aExpression,
                                    nsIDOMXPathNSResolver *aResolver,
                                    nsIDOMXPathExpression **aResult)
 {
-    String expressionString(PromiseFlatString(aExpression).get());
+    String expressionString(aExpression);
     // XXX (pvdb) TODO Set the right resolver on the ExprParser
     Expr* expression = mParser.createExpr(expressionString);
     if (!expression)

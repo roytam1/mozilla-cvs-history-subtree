@@ -172,8 +172,7 @@ MBool XMLUtils::isWhitespace(const String& text) {
 void XMLUtils::normalizePIValue(String& piValue) {
     PRInt32 size = piValue.length();
     //-- make copy of chars
-    UNICODE_CHAR* chars = new UNICODE_CHAR[size];
-    piValue.toUnicode(chars);
+    UNICODE_CHAR* chars = piValue.toUnicode();
     //-- clear attValue
     piValue.clear();
 

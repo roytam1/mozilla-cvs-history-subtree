@@ -1070,7 +1070,7 @@ void ProcessorState::initialize()
 
     // add predefined default decimal format
     defaultDecimalFormatSet = MB_FALSE;
-    decimalFormats.put("", new txDecimalFormat);
+    decimalFormats.put(String(), new txDecimalFormat);
     decimalFormats.setObjectDeletion(MB_TRUE);
 }
 
