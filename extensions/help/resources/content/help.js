@@ -134,7 +134,6 @@ function init()
   if (key[window.location.search]) {
       dump("loading help content: " + key[window.location.search] + "\n");
       loadURI(key[window.location.search]);
-      setContext();
    } else {
       goHome();
   }
