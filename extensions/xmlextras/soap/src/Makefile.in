@@ -34,7 +34,6 @@ CPPSRCS	= 				\
 		nsSOAPCall.cpp	        \
 		nsDefaultSOAPEncoder.cpp\
 		nsSOAPFault.cpp	        \
-		nsSOAPHeader.cpp        \
 		nsSOAPJSValue.cpp	\
 		nsSOAPMessage.cpp	\
 		nsSOAPParameter.cpp	\

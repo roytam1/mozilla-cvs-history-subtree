@@ -23,7 +23,6 @@ DEPTH=..\..\..\..
 
 XPIDLSRCS =     .\nsISOAPCall.idl \
 		.\nsISOAPFault.idl \
-		.\nsISOAPHeader.idl \
 		.\nsISOAPJSValue.idl \
 		.\nsISOAPMarshaller.idl \
 		.\nsISOAPMessage.idl \
