@@ -28,14 +28,27 @@ interface nsIWebShell;
  * The nsIDocShellFile    
  */
 
+[ptr] native FILE(FILE);
+
+interface nsIPrintListener;
+
 [scriptable, uuid(6317f32c-9bc7-11d3-bccc-0060b0fc76bd)]
 interface nsIContentViewerFile : nsISupports
 {
-	void Save();
-	readonly attribute boolean saveable;
+  void Save();
+  readonly attribute boolean saveable;
 
-	void Print();
-	readonly attribute boolean printable;
+  void Print();
+  readonly attribute boolean printable;
+
+  /**
+   * Print the current document
+   * @param aSilent -- if true, the print settings dialog will be suppressed
+   * @param aFileName -- a file pointer to output regression tests or print to a file
+   * @return error status
+   * @attention XXX is this used?  i'm moving it here since it was in nsIContentViewerFile.h (the generated one............ that was checked in to the tree)
+   */
+  [noscript] void PrintWith(in PRBool aSilent, in FILE aFile, in nsIPrintListener aPrintListener);
 
   [noscript] void PrintContent(in nsIWebShell parent);
 };
