@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre19";
+client.version = "0.8.5-pre20";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -363,7 +363,7 @@ function initHost(obj)
                         "chatzilla-teletype");
     obj.munger.addRule ("underline", /(?:\s|^)(\_[^_,.()]*\_)(?:[\s.,]|$)/,
                         "chatzilla-underline");
-    obj.munger.addRule (".mirc-colors", /(\x03(\d{1,2}|)(,\d{1,2}|))/,
+    obj.munger.addRule (".mirc-colors", /(\x03((\d{1,2})(,\d{1,2}|)|))/,
                          mircChangeColor);
     obj.munger.addRule (".mirc-bold", /(\x02)/, mircToggleBold);
     obj.munger.addRule (".mirc-underline", /(\x1f)/, mircToggleUnder);
@@ -545,6 +545,10 @@ function mircChangeColor (colorInfo, containerTag, data)
         fgColor &= 16;
     switch (fgColor.length)
     {
+        case 0:
+            delete data.currFgColor;
+            delete data.currBgColor;
+            return;
         case 1:
             data.currFgColor = "0" + fgColor;
             break;
@@ -610,7 +614,8 @@ function mircReverseColor (text, containerTag, data)
     if (!client.enableColors)
         return;
 
-    var tempColor = data.currFgColor;
+    var tempColor = ("currFgColor" in data ? data.currFgColor : "01");
+
     if (data.currBgColor)
         data.currFgColor = data.currBgColor;
     else
