@@ -453,38 +453,13 @@ static NSArray* sToolbarDefaults = nil;
 }
 
 
-#define RESIZE_WINDOW_FOR_DRAWER
-
 - (void)drawerWillOpen: (NSNotification*)aNotification
 {
   [mSidebarBookmarksDataSource ensureBookmarks];
   [mHistoryDataSource ensureDataSourceLoaded];
 
-#ifdef RESIZE_WINDOW_FOR_DRAWER
-  // Force the window to shrink and move if necessary in order to accommodate the sidebar.
-  NSRect screenFrame = [[[self window] screen] visibleFrame];
-  NSRect windowFrame = [[self window] frame];
-  NSSize drawerSize = [mSidebarDrawer contentSize];
-  int fudgeFactor = 12; // Not sure how to get the drawer's border info, so we fudge it for now.
-  drawerSize.width += fudgeFactor;
-
-  if (windowFrame.origin.x + windowFrame.size.width + drawerSize.width >
-      screenFrame.origin.x + screenFrame.size.width) {
-    // We need to adjust the window so that it can fit.
-    float shrinkDelta = (windowFrame.size.width + drawerSize.width) - screenFrame.size.width;
-    if (shrinkDelta < 0) shrinkDelta = 0;
-    float newWidth = (windowFrame.size.width - shrinkDelta);
-    float newPosition = screenFrame.size.width - newWidth - drawerSize.width + screenFrame.origin.x;
-    if (newPosition < screenFrame.origin.x) newPosition = screenFrame.origin.x;
-    mCachedFrameBeforeDrawerOpen = windowFrame;
-    windowFrame.origin.x = newPosition;
-    windowFrame.size.width = newWidth;
-    mCachedFrameAfterDrawerOpen = windowFrame;
-    [[self window] setFrame: windowFrame display: YES animate:NO];		// animation  would be nice, but is too slow
-    mDrawerCachedFrame = YES;
-  }
-#endif
-
+  // we used to resize the window here, but we can't if we want any chance of it
+  // being allowed to open on the left side. it's too late once we get here.
 }
 
 - (void)drawerDidOpen:(NSNotification *)aNotification
@@ -500,7 +475,7 @@ static NSArray* sToolbarDefaults = nil;
   if(mSidebarToolbarItem)
     [mSidebarToolbarItem setImage:[NSImage imageNamed:@"sidebarClosed"]];
 
-#ifdef RESIZE_WINDOW_FOR_DRAWER
+  // restore the frame we cached in |toggleSidebar:|
   if (mDrawerCachedFrame) {
     mDrawerCachedFrame = NO;
     NSRect frame = [[self window] frame];
@@ -508,16 +483,11 @@ static NSArray* sToolbarDefaults = nil;
         frame.origin.y == mCachedFrameAfterDrawerOpen.origin.y &&
         frame.size.width == mCachedFrameAfterDrawerOpen.size.width &&
         frame.size.height == mCachedFrameAfterDrawerOpen.size.height) {
-#if 0
-      printf("Got here too.\n");
-      printf("Xes are %f %f\n", frame.origin.x, mCachedFrameAfterDrawerOpen.origin.x);
-      printf("Widths are %f %f\n", frame.size.width, mCachedFrameAfterDrawerOpen.size.width);
-#endif
+
       // Restore the original frame.
       [[self window] setFrame: mCachedFrameBeforeDrawerOpen display: YES animate:NO];	// animation would be nice
     }
   }
-#endif
 }
 
 - (void)setupToolbar
@@ -1055,16 +1025,40 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)toggleSidebar:(id)aSender
 {
-#ifdef RESIZE_WINDOW_FOR_DRAWER
-  // force the sidebar to open on the right side. Having it open on the left throws off
-  // our window-resize calculations.
-  if ( ([mSidebarDrawer state] == NSDrawerClosedState) || ([mSidebarDrawer state] == NSDrawerClosingState) )
-    [mSidebarDrawer openOnEdge: NSMaxXEdge];
-  else
-    [mSidebarDrawer close];
-#else
+  // Force the window to shrink and move if necessary in order to accommodate the sidebar. We check
+  // if it will fit on either the left or on the right, and if it won't, shrink the window. We 
+  // used to do this in |drawerWillOpen:| but the problem is that as soon as wel tell cocoa to 
+  // toggle, it makes up its mind about what side it's going to open on. On multiple monitors, 
+  // if the window was on the secondary this could end up having the sidebar across the fold of
+  // the monitors. By placing the code here, we guarantee that if we are going to resize the
+  // window, we leave space for the drawer on the right BEFORE it starts, and cocoa will put it there.
+  
+  NSRect screenFrame = [[[self window] screen] visibleFrame];
+  NSRect windowFrame = [[self window] frame];
+  NSSize drawerSize = [mSidebarDrawer contentSize];
+  int fudgeFactor = 12; // Not sure how to get the drawer's border info, so we fudge it for now.
+  drawerSize.width += fudgeFactor;
+
+  // check that opening on the right won't flow off the edge of the screen on the right AND
+  // opening on the left won't flow off the edge of the screen on the left. If both are true,
+  // we have to resize the window.
+  if (windowFrame.origin.x + windowFrame.size.width + drawerSize.width > screenFrame.origin.x + screenFrame.size.width &&
+        windowFrame.origin.x - drawerSize.width < screenFrame.origin.x) {
+    // We need to adjust the window so that it can fit.
+    float shrinkDelta = (windowFrame.size.width + drawerSize.width) - screenFrame.size.width;
+    if (shrinkDelta < 0) shrinkDelta = 0;
+    float newWidth = (windowFrame.size.width - shrinkDelta);
+    float newPosition = screenFrame.size.width - newWidth - drawerSize.width + screenFrame.origin.x;
+    if (newPosition < screenFrame.origin.x) newPosition = screenFrame.origin.x;
+    mCachedFrameBeforeDrawerOpen = windowFrame;
+    windowFrame.origin.x = newPosition;
+    windowFrame.size.width = newWidth;
+    mCachedFrameAfterDrawerOpen = windowFrame;
+    [[self window] setFrame: windowFrame display: YES animate:NO];		// animation  would be nice, but is too slow
+    mDrawerCachedFrame = YES;
+  }
+
   [mSidebarDrawer toggle:aSender];
-#endif
 }
 
 // map command-left arrow to 'back'
