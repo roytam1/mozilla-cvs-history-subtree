@@ -256,8 +256,6 @@ nsPipe::GetReadSegment(PRUint32 segmentLogicalOffset,
             NS_ASSERTION(i == 0, "read cursor not in first segment");
         }
         if (segStart <= mWriteCursor && mWriteCursor < segEnd) {
-            if (mReadLimit == segEnd)
-                mReadLimit = mWriteCursor;
             segEnd = mWriteCursor;
             NS_ASSERTION(i == segCount - 1, "write cursor not in last segment");
         }
@@ -434,6 +432,15 @@ nsPipe::nsPipeInputStream::ReadSegments(nsWriteSegmentFun writer,
                 rv = mObserver->OnEmpty(this);
                 mon.Enter();
                 mon.Notify();   // wake up writer
+                if (NS_FAILED(rv))
+                    goto done;
+            }
+        }
+        else if (pipe->mReadCursor == pipe->mWriteCursor) {
+            if (mObserver) {
+                mon.Exit();     // XXXbe avoid deadlock better
+                rv = mObserver->OnEmpty(this);
+                mon.Enter();
                 if (NS_FAILED(rv))
                     goto done;
             }
