@@ -9666,9 +9666,12 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
           xulEl->GetBoxObject(getter_AddRefs(boxObject));
           nsCOMPtr<nsIListBoxObject> listBoxObject(do_QueryInterface(boxObject));
           nsIListBoxObject* bodyBoxObject = nsnull;
-          listBoxObject->GetListboxBody(&bodyBoxObject);
+          NS_ASSERTION(listBoxObject, "no listBoxObject");
+          if (listBoxObject) 
+            listBoxObject->GetListboxBody(&bodyBoxObject);
           listBoxBody = NS_STATIC_CAST(nsListBoxBodyFrame*, bodyBoxObject);
-          NS_RELEASE(bodyBoxObject);
+          NS_ASSERTION(bodyBoxObject, "no bodyBoxObject");
+          NS_IF_RELEASE(bodyBoxObject);
         }
       }
 
