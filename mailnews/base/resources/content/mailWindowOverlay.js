@@ -338,9 +338,8 @@ function MsgDeleteMessage(reallyDelete, fromToolbar)
 function MsgCopyMessage(destFolder)
 {
   try {
-    // get the msg folder we're copying into
+    // get the msg folder we're copying messages into
     destUri = destFolder.getAttribute('id');
-    dump("MsgCopyMessage to " + destUri + "\n");
     destResource = RDF.GetResource(destUri);
     destMsgFolder = destResource.QueryInterface(Components.interfaces.nsIMsgFolder);
     gDBView.doCommandWithFolder(nsMsgViewCommandType.copyMessages, destMsgFolder);
@@ -352,29 +351,24 @@ function MsgCopyMessage(destFolder)
 
 function MsgMoveMessage(destFolder)
 {
-    // get the msg folder we're copying into
+  try {
+    // get the msg folder we're moving messages into
     destUri = destFolder.getAttribute('id');
     destResource = RDF.GetResource(destUri);
     destMsgFolder = destResource.QueryInterface(Components.interfaces.nsIMsgFolder);
     
-    var srcFolder = GetLoadedMsgFolder();
-    if(srcFolder)
-    {
-        var compositeDataSource = GetCompositeDataSource("Move");
-        var messages = GetSelectedMessages();
-
-        var srcResource = srcFolder.QueryInterface(Components.interfaces.nsIRDFResource);
-        var srcUri = srcResource.Value;
-        if (isNewsURI(srcUri))
-        {
-            CopyMessages(compositeDataSource, srcFolder, destMsgFolder, messages, false);
-        }
-        else
-        {
-            SetNextMessageAfterDelete();
-            CopyMessages(compositeDataSource, srcFolder, destMsgFolder, messages, true);
-        }
-    }    
+    // we don't move news messages, we copy them
+    if (isNewsURI(gDBView.msgFolder.URI)) {
+      gDBView.doCommandWithFolder(nsMsgViewCommandType.copyMessages, destMsgFolder);
+    }
+    else {
+      SetNextMessageAfterDelete();
+      gDBView.doCommandWithFolder(nsMsgViewCommandType.moveMessages, destMsgFolder);
+    } 
+  }
+  catch (ex) {
+    dump("MsgMoveMessage failed: " + ex + "\n");
+  }   
 }
 
 function MsgNewMessage(event)

@@ -158,6 +158,9 @@ protected:
   // for commands
   nsresult ApplyCommandToIndices(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
 					PRInt32 numIndices);
+  nsresult ApplyCommandToIndicesWithFolder(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices, 
+                    PRInt32 numIndices, nsIMsgFolder *destFolder);
+  nsresult CopyMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool isMove, nsIMsgFolder *destFolder);
   nsresult DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool deleteStorage);
   nsresult ToggleReadByIndex(nsMsgViewIndex index);
   nsresult SetReadByIndex(nsMsgViewIndex index, PRBool read);

@@ -949,8 +949,37 @@ NS_IMETHODIMP nsMsgDBView::GetURIsForSelection(char ***uris, PRUint32 *length)
 
 NS_IMETHODIMP nsMsgDBView::DoCommandWithFolder(nsMsgViewCommandTypeValue command, nsIMsgFolder *destFolder)
 {
-    printf("DoCommandWithFolder(%d)\n", command);
-    return NS_OK;
+  nsUInt32Array selection;
+
+  NS_ENSURE_ARG_POINTER(destFolder);
+
+  GetSelectedIndices(&selection);
+
+  nsMsgViewIndex *indices = selection.GetData();
+  PRInt32 numIndices = selection.GetSize();
+
+  nsresult rv = NS_OK;
+  switch (command) {
+    case nsMsgViewCommandType::copyMessages:
+    case nsMsgViewCommandType::moveMessages:
+        // since the FE could have constructed the list of indices in
+        // any order (e.g. order of discontiguous selection), we have to
+        // sort the indices in order to find out which nsMsgViewIndex will
+        // be deleted first.
+        if (numIndices > 1) {
+            NS_QuickSort (indices, numIndices, sizeof(nsMsgViewIndex), CompareViewIndices, nsnull);
+        }
+        NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
+        rv = ApplyCommandToIndicesWithFolder(command, indices, numIndices, destFolder);
+        NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
+        break;
+    default:
+        NS_ASSERTION(PR_FALSE, "invalid command type");
+        rv = NS_ERROR_UNEXPECTED;
+        break;
+  }
+  return rv;
+
 }
 
 NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
@@ -989,7 +1018,7 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
 //		FEEnd();
 //		calledFEEnd = TRUE;
     NoteStartChange(nsMsgViewNotificationCode::none, 0, 0);
-		ApplyCommandToIndices(command, indices, numIndices);
+		rv = ApplyCommandToIndices(command, indices, numIndices);
     NoteEndChange(nsMsgViewNotificationCode::none, 0, 0);
 
     break;
@@ -1007,7 +1036,8 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
     break;
   default:
     NS_ASSERTION(PR_FALSE, "invalid command type");
-    rv = NS_ERROR_FAILURE;
+    rv = NS_ERROR_UNEXPECTED;
+    break;
   }
   return rv;
 }
@@ -1048,6 +1078,48 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
     rv = NS_ERROR_FAILURE;
   }
   return rv;
+}
+
+nsresult 
+nsMsgDBView::CopyMessages(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices, PRBool isMove, nsIMsgFolder *destFolder)
+{
+  nsresult rv = NS_OK;
+  NS_ENSURE_ARG_POINTER(destFolder);
+  nsCOMPtr<nsISupportsArray> messageArray;
+  NS_NewISupportsArray(getter_AddRefs(messageArray));
+  for (nsMsgViewIndex index = 0; index < (nsMsgViewIndex) numIndices; index++) {
+    nsMsgKey key = m_keys.GetAt(indices[index]);
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (msgHdr)
+      messageArray->AppendElement(msgHdr);
+  }
+  rv = destFolder->CopyMessages(m_folder /* source folder */, messageArray, isMove, window, nsnull /* listener */, PR_FALSE /* isFolder */);
+  return rv;
+}
+
+nsresult
+nsMsgDBView::ApplyCommandToIndicesWithFolder(nsMsgViewCommandTypeValue command, nsMsgViewIndex* indices,
+                    PRInt32 numIndices, nsIMsgFolder *destFolder)
+{
+  nsresult rv;
+
+  NS_ENSURE_ARG_POINTER(destFolder);
+
+  switch (command) {
+    case nsMsgViewCommandType::copyMessages:
+        rv = CopyMessages(mMsgWindow, indices, numIndices, PR_FALSE /* isMove */, destFolder);
+        break;
+    case nsMsgViewCommandType::moveMessages:
+        rv = CopyMessages(mMsgWindow, indices, numIndices, PR_TRUE  /* isMove */, destFolder);
+        break;
+    default:
+        NS_ASSERTION(PR_FALSE, "unhandled command");
+        rv = NS_ERROR_UNEXPECTED;
+        break;
+    }
+    return rv;
 }
 
 nsresult
