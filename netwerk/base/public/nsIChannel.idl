@@ -124,6 +124,11 @@ interface nsIChannel : nsIRequest
     attribute nsIInterfaceRequestor notificationCallbacks;
 
     /**
+     * Any security information about this channel.  This can be null.
+     */
+    readonly attribute nsISupports securityInfo;
+
+    /**
      * Returns the content MIME type of the channel if available. Note that the 
      * content type can often be wrongly specified (wrong file extension, wrong
      * MIME type, wrong document type stored on a server, etc.) and the caller
