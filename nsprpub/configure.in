@@ -668,6 +668,7 @@ case "$target" in
     AC_DEFINE(HPUX)
     AC_DEFINE(_HPUX_SOURCE)
     AC_DEFINE(hppa)
+    AC_DEFINE(hpux)
     DLL_SUFFIX=sl
     DSO_LDOPTS='-b +h $(notdir $@)'
     PR_MD_CSRCS=hpux.c
@@ -789,6 +790,7 @@ case "$target" in
     PR_MD_ASFILES=os_Irix.s
     MKSHLIB='$(LD) $(DSO_LDOPTS) -rdata_shared -shared -soname $(notdir $@) -o $@'
     #DSO_LDOPTS='-elf -shared -all'
+    STRIP="$STRIP -f"
     if test -n "$USE_64"; then
         MDCPUCFG_H=_irix64.cfg
     else
@@ -885,6 +887,7 @@ case "$target" in
     MKSHLIB='$(LD) $(DSO_LDOPTS) -soname $(notdir $@) -o $@'
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS=-shared
+    OS_LIBS="$OS_LIBS -lc"
     case "${target_cpu}" in
     alpha)
         AC_DEFINE(_ALPHA_)
@@ -1147,6 +1150,8 @@ mips-sony-newsos*)
     CXXFLAGS="$CXXFLAGS -ansi -Wall -pipe"
     DLL_SUFFIX=so.1.0
     DSO_CFLAGS=-fPIC
+    MDCPUCFG_H=_openbsd.cfg
+    PR_MD_CSRCS=openbsd.c
     case "$OS_TEST" in
     alpha|mips|pmax)
         DSO_LDOPTS=-shared ;;
@@ -1412,14 +1417,17 @@ mips-sony-newsos*)
         LD='$(CC)'
         IMPLIB='emximp -o'
         FILTER='emxexp'
+        OS_DLLFLAGS='$(DSO_LDOPTS) -o $@'
         _OPTIMIZE_FLAGS=-O3
         _DEBUG_FLAGS=-g
         if test -n "$MOZ_DEBUG"; then
           DLLFLAGS='-g'
           EXEFLAGS='-g $(OMF_FLAG) -Zmtd -L$(DIST)/lib -o $@'
+          DSO_LDOPTS='-g -Zomf -Zdll -Zmt -Zcrtdll -Zlinker /NOO'
         else
           DLLFLAGS=
           EXEFLAGS='-Zmtd -o $@'
+          DSO_LDOPTS='-Zomf -Zdll -Zmt -Zcrtdll -Zlinker /NOO'
         fi
         ;;
     *-os2_vacpp)
@@ -1828,6 +1836,7 @@ AC_SUBST(CC)
 AC_SUBST(CXX)
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
+AC_SUBST(CPPFLAGS)
 AC_SUBST(HOST_CC)
 AC_SUBST(HOST_CFLAGS)
 AC_SUBST(LDFLAGS)
