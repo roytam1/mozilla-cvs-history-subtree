@@ -63,6 +63,7 @@ REQUIRES	= xpcom \
 		  commandhandler \
 		  editor \
 		  history \
+		  windowwatcher \
 		  $(NULL)
 
 SDK_XPIDLSRCS = \

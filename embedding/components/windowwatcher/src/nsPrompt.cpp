@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,6 +41,11 @@
 #include "nsPrompt.h"
 #include "nsReadableUtils.h"
 #include "nsDependentString.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMDocumentEvent.h"
+#include "nsIDOMEventTarget.h"
+#include "nsIDOMEvent.h"
+#include "nsIPrivateDOMEvent.h"
 
 
 nsresult
@@ -116,6 +121,39 @@ nsPrompt::Init()
 // nsPrompt::nsIPrompt
 //*****************************************************************************   
 
+PRBool
+nsPrompt::DispatchCustomEvent(const char *aEventName)
+{
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  mParent->GetDocument(getter_AddRefs(domdoc));
+
+  nsCOMPtr<nsIDOMDocumentEvent> docevent(do_QueryInterface(domdoc));
+  nsCOMPtr<nsIDOMEvent> event;
+
+  // Doesn't this seem backwards? Seems like
+  // nsEventStateManager::DispatchNewEvent() screws up on the
+  // logic for its prevent default argument...
+  PRBool preventDefault = PR_TRUE;
+
+  if (docevent) {
+    docevent->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
+
+    nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+    if (privateEvent) {
+      event->InitEvent(NS_ConvertASCIItoUTF16(aEventName), PR_TRUE, PR_TRUE);
+
+      privateEvent->SetTrusted(PR_TRUE);
+
+      nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(mParent));
+
+      target->DispatchEvent(event, &preventDefault);
+    }
+  }
+
+  return preventDefault;
+}
+
+
 NS_IMETHODIMP
 nsPrompt::Alert(const PRUnichar* dialogTitle, 
                 const PRUnichar* text)
@@ -187,8 +225,21 @@ nsPrompt::PromptUsernameAndPassword(const PRUnichar *dialogTitle,
                                     PRBool *checkValue,
                                     PRBool *_retval)
 {
-  return mPromptService->PromptUsernameAndPassword(mParent, dialogTitle, text, username, password,
-                                                   checkMsg, checkValue, _retval);
+  // Dispatch DOMWillOpenModalDialog and DOMModalDialogClosed events
+  // so that the tab browsing code gets a chance to focus the right
+  // tab if it wants to.
+  if (!DispatchCustomEvent("DOMWillOpenModalDialog")) {
+    return NS_OK;
+  }
+
+  nsresult rv =
+    mPromptService->PromptUsernameAndPassword(mParent, dialogTitle, text,
+                                              username, password, checkMsg,
+                                              checkValue, _retval);
+
+  DispatchCustomEvent("DOMModalDialogClosed");
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -199,8 +250,20 @@ nsPrompt::PromptPassword(const PRUnichar *dialogTitle,
                          PRBool *checkValue,
                          PRBool *_retval)
 {
-  return mPromptService->PromptPassword(mParent, dialogTitle, text, password,
-                                        checkMsg, checkValue, _retval);
+  // Dispatch DOMWillOpenModalDialog and DOMModalDialogClosed events
+  // so that the tab browsing code gets a chance to focus the right
+  // tab if it wants to.
+  if (!DispatchCustomEvent("DOMWillOpenModalDialog")) {
+    return NS_OK;
+  }
+
+  nsresult rv =
+    mPromptService->PromptPassword(mParent, dialogTitle, text, password,
+                                   checkMsg, checkValue, _retval);
+
+  DispatchCustomEvent("DOMModalDialogClosed");
+
+  return rv;
 }
 
 NS_IMETHODIMP

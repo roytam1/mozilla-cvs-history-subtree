@@ -92,6 +92,7 @@
 #include "nsIHistoryEntry.h"
 #include "nsISHistoryListener.h"
 #include "nsIDirectoryListing.h"
+#include "nsIWindowWatcher.h"
 
 // Pull in various NS_ERROR_* definitions
 #include "nsIDNSService.h"
@@ -7414,6 +7415,19 @@ nsDocShell::GetAuthPrompt(PRUint32 aPromptReason, nsIAuthPrompt **aResult)
         return NS_ERROR_NOT_AVAILABLE;
 
     // we're either allowing auth, or it's a proxy request
+    nsCOMPtr<nsIWindowWatcher> wwatch =
+      do_GetService(NS_WINDOWWATCHER_CONTRACTID);
+
+    nsCOMPtr<nsIDOMWindow> window(do_QueryInterface(mScriptGlobal));
+
+    // If we've got a window and a window watcher service, use it to
+    // get parenting to work right when using tabs.
+    if (window && wwatch) {
+        return wwatch->GetNewAuthPrompter(window, aResult);
+    }
+
+    // If we don't have a window or we can't create a window watcher
+    // service, try the tree owner.
     nsCOMPtr<nsIAuthPrompt> authPrompter(do_GetInterface(mTreeOwner));
     if (!authPrompter)
         return NS_ERROR_NOT_AVAILABLE;
