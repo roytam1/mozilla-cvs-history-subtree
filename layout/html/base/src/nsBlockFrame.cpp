@@ -660,7 +660,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     // XXX fix? 
     // Is it possible for mAbsoluteContainer to be in the reflow tree?  If
     // not, we can remove this, but I think it's possible....
-    //aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
+    aReflowState.SetCurrentReflowNode(reflowIterator.SelectChild((nsIFrame*) &mAbsoluteContainer));
     mAbsoluteContainer.IncrementalReflow(this, aPresContext, aReflowState,
                                          containingBlockWidth, containingBlockHeight,
                                          handled, childBounds);
@@ -702,6 +702,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       // XXX fix? do we need to check children?
       return NS_OK;
     }
+    // else mAbsoluteContainer::IncrementalReflow() didn't handle this
   }
 
   if (IsFrameTreeTooDeep(aReflowState, aMetrics)) {
