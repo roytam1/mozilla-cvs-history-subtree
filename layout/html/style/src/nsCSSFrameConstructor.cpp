@@ -432,21 +432,42 @@ FindLastBlock(nsIPresContext* aPresContext, nsIFrame* aKid)
   return lastBlock;
 }
 
-static nsresult
-MoveChildrenTo(nsIPresContext* aPresContext,
+/**
+ * Moves frames to a new parent, updating the style context and
+ * propagating relevant frame state bits. |aNewParentSC| may be null,
+ * in which case the child frames' style contexts will remain
+ * untouched.
+ */
+static void
+MoveChildrenTo(nsIPresContext*  aPresContext,
                nsIStyleContext* aNewParentSC,
-               nsIFrame* aNewParent,
-               nsIFrame* aFrameList)
+               nsIFrame*        aNewParent,
+               nsIFrame*        aFrameList)
 {
-  // XXX We ignore the new parent SC: should we be reparenting?
+  PRBool setHasChildWithView = PR_FALSE;
+
   while (aFrameList) {
+    if (! setHasChildWithView) {
+      nsFrameState state;
+      aFrameList->GetFrameState(&state);
+      if (state & (NS_FRAME_HAS_VIEW | NS_FRAME_HAS_CHILD_WITH_VIEW))
+        setHasChildWithView = PR_TRUE;
+    }
+
     aFrameList->SetParent(aNewParent);
     aFrameList->GetNextSibling(&aFrameList);
+
+    if (aNewParentSC)
+      aPresContext->ReParentStyleContext(aFrameList, aNewParentSC);
   }
-  return NS_OK;
+
+  if (setHasChildWithView) {
+    nsFrameState state;
+    aNewParent->GetFrameState(&state);
+    state |= NS_FRAME_HAS_CHILD_WITH_VIEW;
+    aNewParent->SetFrameState(state);
+  }
 }
-
-
 
 // -----------------------------------------------------------
 
@@ -12723,8 +12744,8 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
     nsHTMLContainerFrame::ReparentFrameViewList(aPresContext, list2, oldParent, blockFrame);
   }
 
-  MoveChildrenTo(aPresContext, blockSC, blockFrame, list2);
   blockFrame->SetInitialChildList(aPresContext, nsnull, list2);
+  MoveChildrenTo(aPresContext, blockSC, blockFrame, list2);
 
   // list3's frames belong to another inline frame
   nsIFrame* inlineFrame = nsnull;
@@ -12753,10 +12774,8 @@ nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell,
 
     // Reparent (cheaply) the frames in list3 - we don't have to futz
     // with their style context because they already have the right one.
-    nsFrameList list;
-    list.AppendFrames(inlineFrame, list3);
-
     inlineFrame->SetInitialChildList(aPresContext, nsnull, list3);
+    MoveChildrenTo(aPresContext, nsnull, inlineFrame, list3);
   }
 
   // Mark the 3 frames as special. That way if any of the
@@ -13184,7 +13203,7 @@ nsCSSFrameConstructor::SplitToContainingBlock(nsIPresContext* aPresContext,
                       nsnull, styleContext, nsnull, inlineFrame);
 
   inlineFrame->SetInitialChildList(aPresContext, nsnull, aRightInlineChildFrame);
-  MoveChildrenTo(aPresContext, styleContext, inlineFrame, aRightInlineChildFrame);
+  MoveChildrenTo(aPresContext, nsnull, inlineFrame, aRightInlineChildFrame);
 
   // Make the "special" inline-block linkage between aFrame and the
   // newly created anonymous frames. We need to create the linkage
