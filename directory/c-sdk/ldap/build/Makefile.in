@@ -32,5 +32,5 @@ export:: $(TARGETS)
 install:: export
 
 clean::
-	rm -rf $(filter-out . ..,$(OBJDIR_NAME))
+	-rm -rf $(filter-out . ..,$(OBJDIR_NAME))
 
