@@ -398,14 +398,6 @@ NSPR_API(PRUint16) PR_htons(PRUint16);
 NSPR_API(PRUint32) PR_htonl(PRUint32);
 NSPR_API(PRUint64) PR_htonll(PRUint64);
 
-/***********************************************************************
-** FUNCTION: PR_FamilyInet
-**
-** DESCRIPTION: Routine to get value of address family for Internet Protocol
-**
-***********************************************************************/
-NSPR_API(PRUint16) PR_FamilyInet(void);
-
 PR_END_EXTERN_C
 
 #endif /* prnetdb_h___ */
