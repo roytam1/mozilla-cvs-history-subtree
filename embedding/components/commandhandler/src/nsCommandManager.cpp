@@ -244,7 +244,7 @@ nsCommandManager::DoCommand(const nsAString & aCommandName, /* const */ nsIComma
 #pragma mark -
 #endif
 
-NS_IMETHODIMP
+nsresult
 nsCommandManager::GetControllerForCommand(const nsAString& aCommand, nsIController** outController)
 {
   nsresult rv = NS_ERROR_FAILURE;
