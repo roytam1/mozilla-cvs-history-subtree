@@ -10,5 +10,5 @@ en-US.jar:
   locale/en-US/mozapps/profile/profileSelection.dtd         (locale/profileSelection.dtd)
 
 classic.jar:
-  skin/classic/mozapps/profile/profileicon-large.gif (skin/profileicon-large.gif)
+  skin/classic/mozapps/profile/profileicon.png       (skin/profileicon.png)
   skin/classic/mozapps/profile/profileSelection.css  (skin/profileSelection.css)

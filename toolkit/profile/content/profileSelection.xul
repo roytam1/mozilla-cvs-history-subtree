@@ -39,9 +39,10 @@
   id="profileWindow"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
   class="non-resizable"
-  title="&profilemanager.label;"
-  orient="vertical"
+  title="&windowtitle.label;"
+  orient="vertical" 
   buttons="accept,cancel"
+  style="width: 30em;"
   onload="startup();"
   ondialogaccept="return acceptDialog()"
   buttonlabelaccept="&start.label;"
@@ -54,11 +55,13 @@
 
   <script type="application/x-javascript" src="chrome://mozapps/content/profile/profileSelection.js"/>
 
-  <description>&pmDescription.label;</description>
-  <separator/>
+  <description class="label">&pmDescription.label;</description>
 
-  <hbox flex="1">
-    <vbox>
+  <separator class="thin"/>
+
+  <hbox class="profile-box indent" flex="1">
+
+    <vbox id="managebuttons">
       <button id="newbutton" label="&newButton.label;"
               accesskey="&newButton.accesskey;" oncommand="CreateProfileWizard();"/>
       <button id="renbutton" label="&renameButton.label;"
@@ -66,17 +69,20 @@
       <button id="delbutton" label="&deleteButton.label;"
               accesskey="&deleteButton.accesskey;" oncommand="ConfirmDelete();"/>
     </vbox>
-    <separator class="thin" />
+    
+    <separator flex="1"/>
+
     <vbox flex="1">
-      <listbox id="profiles" flex="1" seltype="single"
+      <listbox id="profiles" flex="1" rows="5" seltype="single"
                ondblclick="onProfilesDblClick(event)"
                onkeypress="onProfilesKey(event);">
-        <listhead>
-          <listheader label="&availprofiles.label;"/>
-        </listhead>
       </listbox>
+
+      <checkbox id="offlineState" disabled="true" label="&offlineState.label;" accesskey="&offlineState.accesskey;"/> 
+
       <checkbox id="autoSelectLastProfile" label="&autoSelect.label;"
-                accesskey="&autoSelect.accesskey;"/>
+                accesskey="&autoSelect.accesskey;"/> 
     </vbox>
+
   </hbox>
 </dialog>

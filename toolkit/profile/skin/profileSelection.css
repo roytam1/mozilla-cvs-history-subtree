@@ -40,5 +40,13 @@
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
 #profiles > listitem {
-  list-style-image: url("chrome://communicator/skin/profile/profileicon-large.gif");
+  list-style-image: url("chrome://mozapps/skin/profile/profileicon.png");
+}
+
+box#managebuttons > button {
+  min-width: 8em;
+}
+
+#managebuttons {
+  padding-top: 1em;
 }

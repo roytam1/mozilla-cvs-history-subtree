@@ -23,11 +23,11 @@
   
 -->
 
-<!ENTITY            profilemanager.label   "&brandShortName; Profile Manager">
+<!ENTITY            windowtitle.label      "&brandShortName; - Choose User Profile">
 
 <!ENTITY            profilename.label      "Profile Name:">
 
-<!ENTITY            start.label            "Start &vendorShortName;">
+<!ENTITY            start.label            "Start &brandShortName;">
 <!ENTITY            exit.label             "Exit">
 
 <!ENTITY            availprofiles.label    "Available Profiles">
@@ -41,6 +41,9 @@
 
 <!-- manager entities -->
 <!ENTITY            pmDescription.label    "&brandShortName; stores information about your settings, preferences, and other user items in your user profile.">
+
+<!ENTITY            offlineState.label    "Work offline">
+<!ENTITY            offlineState.accesskey "o">
 
 <!ENTITY            autoSelect.label       "Don't ask at startup">
 <!ENTITY            autoSelect.accesskey   "s">
