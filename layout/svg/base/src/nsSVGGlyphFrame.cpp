@@ -763,10 +763,7 @@ nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars, nscolor *fore
       frameSelection = do_QueryInterface(controller);
     }
     if (!frameSelection) {
-      nsCOMPtr<nsIPresShell> shell;
-      presContext->GetShell(getter_AddRefs(shell));
-      NS_ASSERTION(shell, "no presshell");
-      shell->GetFrameSelection(getter_AddRefs(frameSelection));
+      presContext->PresShell()->GetFrameSelection(getter_AddRefs(frameSelection));
     }
     if (!frameSelection) {
       NS_ERROR("no frameselection interface");
