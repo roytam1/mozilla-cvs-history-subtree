@@ -52,4 +52,9 @@ interface nsIXTFXMLVisual : nsIXTFElement
   void onCreated(in nsIXTFXMLVisualWrapper wrapper);
 
   readonly attribute nsIDOMElement visualContent;
+
+  const unsigned long DISPLAY_BLOCK = 0;
+  const unsigned long DISPLAY_INLINE = 1;
+
+  readonly attribute unsigned long displayType;
 };

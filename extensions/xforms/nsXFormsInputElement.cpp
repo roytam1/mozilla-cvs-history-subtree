@@ -104,6 +104,13 @@ nsXFormsInputElement::GetVisualContent(nsIDOMElement **aElement)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXFormsInputElement::GetDisplayType(PRUint32 *aDisplayType)
+{
+  *aDisplayType = nsIXTFXMLVisual::DISPLAY_INLINE;
+  return NS_OK;
+}
+
 // nsIXTFElement
 
 NS_IMETHODIMP

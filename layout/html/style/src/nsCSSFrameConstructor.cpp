@@ -146,6 +146,7 @@ static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 
 #ifdef MOZ_XTF
 #include "nsIXTFElement.h"
+#include "nsIXTFXMLVisual.h"
 nsresult
 NS_NewXTFSVGDisplayFrame(nsIPresShell*, nsIContent*, nsIFrame**);
 #endif
@@ -6899,9 +6900,28 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
 #endif
       break;
     case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
-      // XXX examine display style
-      rv = NS_NewBlockFrame(aPresShell, &newFrame);
-      break;
+      {
+        nsCOMPtr<nsIXTFXMLVisual> xmlVisual = do_QueryInterface(xtfElem);
+        PRUint32 displayType = nsIXTFXMLVisual::DISPLAY_BLOCK;
+        
+        if (xmlVisual)
+          xmlVisual->GetDisplayType(&displayType);
+        else {
+          NS_ERROR("xtf element has type XML_VISUAL but doesn't impl nsIXTFXMLVisual");
+        }
+
+        switch (displayType) {
+        case nsIXTFXMLVisual::DISPLAY_INLINE:
+          rv = NS_NewInlineFrame(aPresShell, &newFrame);
+          break;
+        default:
+          NS_WARNING("unknown display type, using block instead");
+        case nsIXTFXMLVisual::DISPLAY_BLOCK:
+          rv = NS_NewBlockFrame(aPresShell, &newFrame);
+        }
+
+        break;
+      }
     case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
       rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull);
       break;
