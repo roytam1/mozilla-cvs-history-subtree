@@ -523,6 +523,25 @@ nsJARChannel::AsyncReadJARElement()
 
     NS_ASSERTION(mJARBaseFile, "mJARBaseFile is null");
 
+    if (mLoadGroup) {
+        nsCOMPtr<nsILoadGroupListenerFactory> factory;
+        //
+        // Create a load group "proxy" listener...
+        //
+        rv = mLoadGroup->GetGroupListenerFactory(getter_AddRefs(factory));
+        if (factory) {
+            nsIStreamListener *newListener;
+            rv = factory->CreateLoadGroupListener(mUserListener, &newListener);
+            if (NS_SUCCEEDED(rv)) {
+                mUserListener = newListener;
+                NS_RELEASE(newListener);
+            }
+        }
+
+        rv = mLoadGroup->AddChannel(this, nsnull);
+        if (NS_FAILED(rv)) return rv;
+    }
+
     NS_WITH_SERVICE(nsIFileTransportService, fts, kFileTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -716,6 +735,15 @@ nsJARChannel::OnStopRequest(nsIChannel* jarExtractionTransport,
     }
 #endif
     rv = mUserListener->OnStopRequest(this, mUserContext, status, aMsg);
+
+    if (mLoadGroup) {
+        if (NS_SUCCEEDED(rv)) {
+            mLoadGroup->RemoveChannel(this, context, status, aMsg);
+        }
+    }
+
+    mUserListener = nsnull;
+    mUserContext = nsnull;
     mJarExtractionTransport = nsnull;
     return rv;
 }
