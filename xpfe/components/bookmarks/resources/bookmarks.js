@@ -1249,7 +1249,6 @@ var BookmarksUtils = {
   // Returns true if aSelection can be inserted in aFolder
   isValidTargetContainer: function (aFolder, aSelection)
   {
-
     if (!aFolder)
       return false;
     if (aFolder.Value == "NC:BookmarksRoot")

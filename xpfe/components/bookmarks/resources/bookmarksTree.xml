@@ -655,7 +655,11 @@
         },
         canDropBeforeAfter: function(index, before)
         {
-          return true;
+          if (index != 0)
+            return true;
+          if (this.mOuter.getRowResource(index).Value != "NC:BookmarksRoot")
+            return true;
+          return before? false:this.mOuter.treeBoxObject.view.isContainerOpen(0)
         },
         onDrop: function(row, orientation)
         {  
