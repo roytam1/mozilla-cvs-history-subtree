@@ -41,11 +41,11 @@ function Init()
     sidebar.datasource = RDF.GetDataSource(sidebar.db);
 
     // Add the necessary datasources to the select list
-    var selectList = document.getElementById('selected-panels');
-    selectList.database.AddDataSource(sidebar.datasource);
+    var select_list = document.getElementById('selected-panels');
+    select_list.database.AddDataSource(sidebar.datasource);
 
     // Root the customize dialog at the correct place.
-    selectList.setAttribute('ref', sidebar.resource);
+    select_list.setAttribute('ref', sidebar.resource);
 
     enableButtons();
 }
@@ -122,6 +122,7 @@ function moveUp() {
       tree.selectItem(selected);
     }
   }
+  enableButtons();
 }
    
 function moveDown() {
@@ -138,34 +139,33 @@ function moveDown() {
       tree.selectItem(selected);
     }
   }
+  enableButtons();
 }
 
 function enableButtons() {
   var up        = document.getElementById('up');
   var down      = document.getElementById('down');
-  var list      = document.getElementById('selected-panels');
+  var tree      = document.getElementById('selected-panels');
   var customize = document.getElementById('customize-button');
+  var remove    = document.getElementById('remove-button');
 
-  var selected = list.selectedItems;
-  var selectedNode = null
-  var noneSelected, isFirst, isLast
+  var numSelected = tree.selectedItems.length;
+  var noneSelected, isFirst, isLast, selectedNode
 
-  if (selected.length == 0) {
-    noneSelected = true
-  } else {
-    selectedNode = list.selectedItems[0]
+  if (numSelected > 0) {
+    selectedNode = tree.selectedItems[0]
     isFirst = selectedNode == selectedNode.parentNode.firstChild
     isLast  = selectedNode == selectedNode.parentNode.lastChild
   }
 
   // up /\ button
-  if (noneSelected || isFirst) {
+  if (numSelected != 1 || isFirst) {
     up.setAttribute('disabled', 'true');
   } else {
     up.setAttribute('disabled', '');
   }
   // down \/ button
-  if (noneSelected || isLast) {
+  if (numSelected != 1 || isLast) {
     down.setAttribute('disabled', 'true');
   } else {
     down.setAttribute('disabled', '');
@@ -175,26 +175,32 @@ function enableButtons() {
   if (selectedNode) {
     customizeURL = selectedNode.getAttribute('customize');
   }
-  if (customizeURL == null) {
+  if (customizeURL == null || customizeURL == '') {
     customize.setAttribute('disabled','true');
   } else {
     customize.setAttribute('disabled','');
+  }
+  // "Remove" button
+  if (numSelected == 0) {
+    remove.setAttribute('disabled','true');
+  } else {
+    remove.setAttribute('disabled','');
   }
 }
 
 function CustomizePanel() 
 {
-  var list  = document.getElementById('selected-panels');	
-  var index = list.selectedIndex;
+  var tree  = document.getElementById('selected-panels');	
+  var index = tree.selectedIndex;
 
   if (index != -1) {
-    var title         = list.childNodes.item(index).getAttribute('title');
-    var customize_URL = list.childNodes.item(index).getAttribute('customize');
+    var title         = tree.childNodes.item(index).getAttribute('title');
+    var customize_URL = tree.childNodes.item(index).getAttribute('customize');
 
     if (!title || !customize_URL) return;
 
     var customize = window.open("chrome://sidebar/content/customize-panel.xul",
-			      "PanelPreview", "chrome");
+			      "_blank", "chrome");
 
     customize.panel_name          = title;
     customize.panel_customize_URL = customize_URL;
@@ -305,7 +311,7 @@ function PreviewPanel()
 {
   var tree = document.getElementById('other-panels');
   var database = tree.database;
-  var select_list = document.getElementsByAttribute("selected", "true");
+  var select_list = tree.selectedItems
   for (var nodeIndex=0; nodeIndex<select_list.length; nodeIndex++) {
     var node = select_list[nodeIndex];
     if (!node)    break;
@@ -319,11 +325,10 @@ function PreviewPanel()
     if (!preview_URL || !preview_name) break;
 
     var preview = window.open("chrome://sidebar/content/preview.xul",
-			      "PanelPreview", "chrome");
+			      "_blank", "chrome");
     preview.panel_name = preview_name;
     preview.panel_URL = preview_URL;
   }
-  enableSave();
 }
 
 function enableSave() {

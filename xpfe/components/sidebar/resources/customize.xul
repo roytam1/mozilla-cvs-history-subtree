@@ -133,7 +133,7 @@
       <box align="horizontal" class="button-group" flex="100%">
         <titledbutton id="customize-button" onclick="CustomizePanel();" 
           value="&sidebar.customize.customize.label;" />
-        <titledbutton onclick="RemovePanel()"
+        <titledbutton id="remove-button" onclick="RemovePanel()"
           value="&sidebar.customize.remove.label;" />
       </box>
     </box> 
