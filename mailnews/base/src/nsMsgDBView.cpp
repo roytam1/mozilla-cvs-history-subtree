@@ -157,8 +157,13 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID
 
 NS_IMETHODIMP nsMsgDBView::IsContainer(PRInt32 index, PRBool *_retval)
 {
-  PRUint32 flags = m_flags[index];
-  *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) != 0;
+  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+  {
+    PRUint32 flags = m_flags[index];
+    *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) != 0;
+  }
+  else
+    *_retval = PR_FALSE;
   return NS_OK;
 }
 
@@ -171,7 +176,10 @@ NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
 
 NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
 {
-  *_retval = m_levels[index];
+  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+    *_retval = m_levels[index];
+  else
+    *_retval = 0;
   return NS_OK;
 }
 
