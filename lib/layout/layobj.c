@@ -945,11 +945,12 @@ lo_ProcessParamTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool 
 	    {
 	    	LO_JavaAppStruct* java_app = state->current_java;
 			lo_ObjectParam(context, state, tag,
-						   (uint32*) &(java_app->parameters.n),
 #ifdef OJI
+						   (uint32*) &(java_app->parameters.n),
 						   &(java_app->parameters.names),
 						   &(java_app->parameters.values));
 #else 
+						   (uint32*) &(java_app->param_cnt),
 						   &(java_app->param_names),
 						   &(java_app->param_values));
 #endif /* OJI */
