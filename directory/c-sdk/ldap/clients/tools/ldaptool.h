@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 #ifndef _LDAPTOOL_H
 #define _LDAPTOOL_H
@@ -68,18 +53,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 extern int getopt (int argc, char *const *argv, const char *optstring);
-#include <io.h>	/* for _mktemp() */
-#define LDAPTOOL_MKTEMP( p )	_mktemp( p )
 #else
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define LDAPTOOL_MKTEMP( p )	mktemp( p )
-#endif
-
-#ifdef LINUX
-#include <getopt.h>	/* not always included from unistd.h */
 #endif
 
 #include <ctype.h>
@@ -126,7 +103,6 @@ extern "C" {
 
 #define LDAPTOOL_DEFSEP		"="	/* used by ldapcmp and ldapsearch */
 #define LDAPTOOL_DEFHOST	"localhost"
-#define LDAPTOOL_DEFSSLSTRENGTH	LDAPSSL_AUTH_CERT
 #define LDAPTOOL_DEFCERTDBPATH	"."
 #define LDAPTOOL_DEFKEYDBPATH	"."
 #define LDAPTOOL_DEFREFHOPLIMIT		5
@@ -172,7 +148,7 @@ LDAPControl *ldaptool_create_proxyauth_control( LDAP *ld );
 void ldaptool_add_control_to_array( LDAPControl *ctrl, LDAPControl **array);
 void ldaptool_reset_control_array( LDAPControl **array );
 char *ldaptool_get_tmp_dir( void );
-char *ldaptool_local2UTF8( const char *s, const char *desc );
+char *ldaptool_local2UTF8( const char * );
 int ldaptool_berval_is_ascii( const struct berval *bvp );
 int ldaptool_sasl_bind_s( LDAP *ld, const char *dn, const char *mechanism,
         const struct berval *cred, LDAPControl **serverctrls,
@@ -194,7 +170,6 @@ int ldaptool_compare_ext_s( LDAP *ld, const char *dn, const char *attrtype,
 int ldaptool_boolean_str2value ( const char *s, int strict );
 int ldaptool_parse_ctrl_arg ( char *ctrl_arg, char sep, char **ctrl_oid, 
 	    int *ctrl_criticality, char **ctrl_value, int *vlen);
-FILE *ldaptool_open_file ( const char *filename, const char * mode);
 
 
 #ifdef __cplusplus
