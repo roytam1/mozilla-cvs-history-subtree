@@ -38,7 +38,7 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 # effectively with appropriate ACI/ACLs.
 #
 $APPNAM	= "lfinger";
-$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P cert user_info";
+$USAGE	= "$APPNAM -m -b base -h host -D bind -w pswd -P cert user_info";
 
 @ATTRIBUTES = ("uid", "cn", "homedirectory", "loginshell", "pager",
 	       "telephonenumber", "facsimiletelephonenumber", "mobile");
@@ -84,7 +84,7 @@ sub printIt
 #############################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('nvb:h:D:p:w:P:') || !defined($ARGV[$[]))
+if (!getopts('mb:h:D:p:w:P:') || !defined($ARGV[$[]))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;
@@ -96,15 +96,22 @@ $user=$ARGV[$[];
 #############################################################################
 # Instantiate an LDAP object, which also binds to the LDAP server.
 #
-$conn = new Mozilla::LDAP::Conn($ld{host}, $ld{port}, $ld{bind},
-				$ld{pswd}, $ld{cert});
+$conn = new Mozilla::LDAP::Conn(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 
 #############################################################################
 # Ok, lets generate the filter, and do the search!
 #
-$search = "(&(|(cn=*$user*)(uid=*$user*)(telephonenumber=*$user*))(!$HIDE))";
+if ($opt_m)
+{
+  $search = "(&(uid=$user)(!$HIDE))";
+}
+else
+{
+  $search = "(&(|(cn=*$user*)(uid=*$user*)(telephonenumber=*$user*))(!$HIDE))";
+}
+
 $entry = $conn->search($ld{root}, "subtree", $search, 0, @ATTRIBUTES);
 while($entry)
 {
