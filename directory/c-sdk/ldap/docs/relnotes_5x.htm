@@ -10,12 +10,16 @@
 
 <h1>
 Release Notes for LDAP C SDK 5.x</h1>
-<i>Michael Hein <a href="mailto:mhein@netscape.com">mhein@netscape.com</a></i>
+<i>Michael Hein <a href="mailto:mhein@netscape.com">mhein@sun.com</a></i>
 <br>&nbsp;
 <p><font size=+1><a href="#LDAP C SDK 5.0">LDAP C SDK 5.0 (3/28/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.1">LDAP C SDK 5.01 (06/13/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.2">LDAP C SDK 5.02 (07/03/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.3">LDAP C SDK 5.03 (08/02/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.04 (08/15/2001)">LDAP C SDK 5.04
+(08/15/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.05 (10/04/2001)">LDAP C SDK 5.05
+(10/04/2001)</a></font>
 <br>&nbsp;
 <p><a NAME="LDAP C SDK 5.0"></a><b><font size=+2>LDAP C SDK 5.0 (3/28/2001)
 (Available on www.iplanet.com)</font></b>
@@ -153,8 +157,7 @@ one want to use LoadLibrary to dynamically load DLL at runtime.&nbsp; This
 issue was found on NT only and cause PerLdap to fail.</li>
 </ul>
 
-<p><br><a NAME="LDAP C SDK 5.3"></a><b><font size=+2>LDAP C SDK 5.03 (08/02/2001)
-(Available on www.iplanet.com)</font></b>
+<p><br><a NAME="LDAP C SDK 5.3"></a><b><font size=+2>LDAP C SDK 5.03 (08/02/2001)</font></b>
 <h2>
 Bugs/enhancements fixed in this release:</h2>
 
@@ -182,6 +185,57 @@ Update components to NSS 3.3,&nbsp; NSPR 4.12, and SVRCORE 3.3</li>
 
 <li>
 package up additional header files for internal product builds</li>
+</ul>
+
+<br>&nbsp;
+<p><a NAME="LDAP C SDK 5.04 (08/15/2001)"></a><b><font size=+2>LDAP C SDK
+5.04 (08/15/2001)</font></b>
+<h2>
+Bugs/enhancements fixed in this release:</h2>
+
+<ul>
+<li>
+555890 - ldapsearch is broken on NT/Linux/OSF</li>
+
+<li>
+added the new packaging script for www.iplanet.com</li>
+</ul>
+
+<p><br><a NAME="LDAP C SDK 5.05 (10/04/2001)"></a>
+<br><b><font size=+2>LDAP C SDK 5.05 (10/04/2001) (This release is targeted
+for www.iplanet.com)</font></b>
+<h2>
+Bugs/enhancements fixed in this release:</h2>
+
+<ul>
+<li>
+new option to command line utilities to alllow for -w - to prompt for the
+simple bind password from the command line</li>
+
+<li>
+new option to command line utilities to allow for -j to read the simple
+bind password from a specified file name</li>
+
+<li>
+misc. ber changes to io.c</li>
+
+<li>
+take out -lC in tools/clients/Makefile.client since we are now picking
+up clean forte6 components</li>
+
+<li>
+558135 - smart referrals with three contiguous slashes don't work</li>
+
+<li>
+allow for the setting of controls via command line interface</li>
+
+<li>
+bump to forte6.2 component for Solaris 5.8 (This change only applies to
+the NSS&nbsp;component)</li>
+
+<li>
+559670 - use of select() cause problems with >&nbsp;1024 connections in
+iDS chaining code</li>
 </ul>
 
 </body>
