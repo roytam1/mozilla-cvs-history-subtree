@@ -798,6 +798,10 @@ nsDNSService::Shutdown()
     // deallocate Open Transport Service Provider
     OSStatus status = OTCloseProvider((ProviderRef)mServiceRef);
     CloseOpenTransport();           // should be moved to terminate routine
+    PRThread* dnsServiceThread;
+    rv = mThread->GetPRThread(&dnsServiceThread);
+    if (dnsServiceThread)
+        PR_Mac_PostAsyncNotify(dnsServiceThread);
 
 #elif defined(XP_PC)
 
