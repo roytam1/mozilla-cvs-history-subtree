@@ -153,7 +153,7 @@ public:
   
   void HandleXlibConfigureNotifyEvent(XEvent *event);
   // Return the GtkMozArea that is the nearest parent of this widget
-  virtual GtkWidget *GetOwningWidget();
+  GtkWidget *GetMozArea();
 
   // Return the Gdk window used for rendering
   virtual GdkWindow * GetRenderWindow(GtkObject * aGtkWidget);
@@ -163,7 +163,7 @@ public:
   virtual void DestroyNative(void);
 
   // grab in progress
-  PRBool static GrabInProgress(void);
+  PRBool GrabInProgress(void);
   //  XXX Chris - fix these
   //  virtual void OnButtonPressSignal(GdkEventButton * aGdkButtonEvent);
   void ShowCrossAtLocation(guint x, guint y);

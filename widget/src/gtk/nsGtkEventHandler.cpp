@@ -782,7 +782,7 @@ handle_gdk_event (GdkEvent *event, gpointer data)
         // MozArea widget and let it pass to the default gtk event
         // handler.
         gdk_window_unref (event->any.window);
-        event->any.window = GTK_WIDGET (window->GetOwningWidget())->window;
+        event->any.window = GTK_WIDGET (window->GetMozArea())->window;
         gdk_window_ref (event->any.window);
         // dispatch it.
         gtk_main_do_event(event);
@@ -812,7 +812,7 @@ handle_gdk_event (GdkEvent *event, gpointer data)
         GdkWindow *grabbingGdkWindow = 
           NS_STATIC_CAST(GdkWindow *,
                          grabbingWindow->GetNativeData(NS_NATIVE_WINDOW));
-        GtkWidget *grabbingMozArea = grabbingWindow->GetOwningWidget();
+        GtkWidget *grabbingMozArea = grabbingWindow->GetMozArea();
         if (gtk_widget_child_of_gdk_window(current_grab, grabbingGdkWindow))
         {
           gdk_window_unref (event->any.window);
@@ -894,17 +894,7 @@ handle_gdk_event (GdkEvent *event, gpointer data)
         }
       }
     }
-    else {
-      // Before handing this off to gtk, give the widget code a chance
-      // to take button press and button motion events.  This can happen
-      // if there's a passive grab in place that gtk doesn't know about.
-      // Otherwise, just process the event.
-      if (nsWidget::ProcessButtonEvent(event))
-        goto end;
-    }
-
     gtk_main_do_event (event);
-
     if (tempWidget)
       gtk_grab_remove(tempWidget);
   }
@@ -930,7 +920,7 @@ dispatch_superwin_event(GdkEvent *event, nsWindow *window)
     // in progress it gets the window events, not the gtk widget.
     if (!window->sFocusWindow && !window->GrabInProgress()) 
     {
-      GtkWidget *mozArea = window->GetOwningWidget();
+      GtkWidget *mozArea = window->GetMozArea();
       NS_ASSERTION(mozArea, "Failed to get GtkMozArea for superwin event!\n");
       // get the toplevel window for that widget
       GtkWidget *toplevel = gtk_widget_get_toplevel(mozArea);
@@ -958,7 +948,7 @@ dispatch_superwin_event(GdkEvent *event, nsWindow *window)
 PRBool
 superwin_child_of_gtk_widget(nsWindow *window, GtkWidget *widget)
 {
-  GtkWidget *this_widget = GTK_WIDGET(window->GetOwningWidget());
+  GtkWidget *this_widget = GTK_WIDGET(window->GetMozArea());
   while (this_widget)
   {
     if (this_widget == widget)
