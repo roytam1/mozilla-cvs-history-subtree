@@ -114,7 +114,6 @@ DIST_DIRS =			\
 # related libraries.
 
 RAPTOR_DIRS =			\
-  rdf                           \
 !if defined(NGEDITOR)
   editor \
 !endif
@@ -124,6 +123,7 @@ RAPTOR_DIRS =			\
   view				\
   widget			\
   layout			\
+  rdf                           \
   webshell			\
   xpfe			
 
