@@ -33,11 +33,6 @@ interface nsISOAPResponseListener;
  * transport based upon the protocol of the transportURI, and
  * automatically recieving the result in a new nsISOAPResponse object
  * which recieves an XML message.
- *
- * These conveniences may be bypassed by directly manipulating any 
- * protocol parameters, and supplying the message with an appropriate 
- * response message to receive the result, if any, directly to the
- * transport.
  */
 
 [scriptable, uuid(a8fefe40-52bc-11d4-9a57-000064657374)]

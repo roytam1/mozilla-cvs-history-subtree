@@ -22,21 +22,25 @@
 
 #include "nsISupports.idl"
 
-interface nsISOAPStruct;
-interface nsISOAPHeader;
-interface nsISupportsArray;
-interface nsIDOMNode;
+interface nsIDOMElement;
+interface nsIVariant;
+interface nsISOAPEncoding;
+interface nsISchemaType;
+interface nsISOAPAttachments;
 
 /**
  * This interface encapsulates an arbitrary parameter to be used
  * by the soap serialization or protocol.  It formalizes a type
- * string, a reference to the object, and optionally a name.
- * Conveniences are supplied for creating parameters from most
- * types of primatives and objects.
+ * string, a reference to the object, and a name.
  */
 
 [scriptable, uuid(99ec6690-535f-11d4-9a58-000064657374)]
 interface nsISOAPParameter : nsISupports {
+    
+  /**
+   * The namespace URI of the parameter.  Ignored if name is null.
+   */
+  attribute AString namespaceURI;
     
   /**
    * The name of the parameter. If the parameter is left unnamed, it
@@ -47,173 +51,36 @@ interface nsISOAPParameter : nsISupports {
   attribute AString name;
 
   /**
-   * An optional encodingStyle specifically for this parameter. The
-   * default is to inherit the encodingStyle from the element parent
-   * chain.
+   * The encoding that was / will be applied to the
+   * parameter.
    */
-  attribute AString encodingStyleURI;
+  attribute nsISOAPEncoding encoding;
 
   /**
-   * The type of the parameter.  Usually, the type is automatically
-   *    set when setting the value, but the type may be manually
-   *    overridden to utilize different types of serializers.
-   * <p>Possible values for the type of a Parameter object.  When
-   *      setting the value of a parameter object, the type is
-   *      automatically set.  The JS params method which creates the 
-   *      parameters array also sets types.  All predefined types 
-   *      start with "#", leaving names not prefixed with "#" for 
-   *      custom uses.
-   * <p>Notes:
-   * <ul>
-   *   <li><code>"#string"</code> - The value is of type
-   *       nsISupportsWString.</li>
-   *   <li><code>"#boolean"</code> - The value is of type
-   *       nsISupportsPRBool.</li>
-   *   <li><code>#double</code> - The value is of type
-   *       nsISupportsDouble.</li>
-   *   <li><code>#float</code> - The value is of type
-   *       nsISupportsFloat.</li>
-   *   <li><code>#long</code> - The value is of type
-   *       nsISupportsPRInt64.</li>
-   *   <li><code>#int</code> - The value is of type
-   *       nsISupportsPRInt32.</li>
-   *   <li><code>#short</code> - The value is of type
-   *       nsISupportsPRInt16.</li>
-   *   <li><code>#byte</code> - The value is of type
-   *       nsISupportsPRInt8.</li>
-   *   <li><code>#array</code> - The value is of type
-   *       nsISupportsArray (each element is itself an instance of 
-   *       nsISOAPParameter).</li>
-   *   <li><code>#struct#&lt;struct type&gt;</code> - The value is
-   *       a soap struct interface.</li>
-   *   <li><code>#literal</code> - The value is . DOMNode</li>
-   *   <li>Types not beginning with '#' are permitted for custom uses</li>
-   * </ul>
-   * </p>
+   * The schema type used to encode or decode the
+   *   parameter.
    */
-  attribute AString type;
+  attribute nsISchemaType schemaType;
 
   /**
-   * The schema type namespace associated with a parameter.  In addition
-   *   to a language data type, there may be a schema type associated
-   *   with a parameter.  If this is not specified, the recipient
-   *   must make its own choice as appropriate.
+   *  The element which is the encoded value of this parameter.
+   *  If this is set, value becomes a computed attribute
+   *  which may be produced by decoding this element.
    */
-  attribute AString schemaNamespaceURI;
+  attribute nsIDOMElement element;
 
   /**
-   * The schema type associated with a parameter.  In addition
-   *   to a language data type, there may be a schema type associated
-   *   with a parameter.  If this is not specified, the recipient
-   *   must make its own choice as appropriate.
+   *  The native value which is the decoded value of 
+   *  this parameter.  If this is set, element becomes
+   *  null.
    */
-  attribute AString schemaType;
+  attribute nsIVariant value;
 
   /**
-   * <p>The getter is for native and script callers (despite the
-   * [noscript] qualification). For native callers, the interface
-   * implemented by the returned value depends on the
-   * <code>type</code> attribute as detailed in the description of the
-   * type constants. For script callers, the value returned is either
-   * a string, boolean, double, integer, or object.</p> To set this
-   * value, callers should use a specialized language constructor or
-   * setAs methods.</p>
+   * The attachments which were attached to the message
+   *   that may be needed to decode the parameter.
    */
-  [noscript] attribute nsISupports value;
-
-  /**
-   * A flag indicating that this parameter belongs in the header.
-   */
-  attribute PRBool header;
-
-  /**
-   * A convenience method to set the value and type as a AString.
-   * This creates the wrapper and sets the type to "#string".
-   *
-   * @param aValue In AString parameter specifying the parameter value.
-   */
-  void setAsString(in AString aValue);
-
-  /**
-   * A convenience method to set the value and type as a boolean.
-   * This creates the wrapper and sets the type to "#boolean".
-   *
-   * @param aValue In boolean parameter specifying the parameter value.
-   */
-  void setAsBoolean(in PRBool aValue);
-
-  /**
-   * A convenience method to set the value and type as a double.
-   * This creates the wrapper and sets the type to "#double".
-   *
-   * @param aValue In double parameter specifying the parameter value.
-   */
-  void setAsDouble(in double aValue);
-
-  /**
-   * A convenience method to set the value and type as a float.
-   * This creates the wrapper and sets the type to "#float".
-   *
-   * @param aValue In float parameter specifying the parameter value.
-   */
-  void setAsFloat(in float aValue);
-
-  /**
-   * A convenience method to set the value and type as a long.
-   * This creates the wrapper and sets the type to "#long".
-   *
-   * @param aValue In long parameter specifying the parameter value.
-   */
-  void setAsLong(in PRInt64 aValue);
-
-  /**
-   * A convenience method to set the value and type as an int.
-   * This creates the wrapper and sets the type to "#int".
-   *
-   * @param aValue In int parameter specifying the parameter value.
-   */
-  void setAsInt(in PRInt32 aValue);
-
-  /**
-   * A convenience method to set the value and type as a short.
-   * This creates the wrapper and sets the type to "#short".
-   *
-   * @param aValue In short parameter specifying the parameter value.
-   */
-  void setAsShort(in PRInt16 aValue);
-
-  /**
-   * A convenience method to set the value and type as a byte.
-   * This creates the wrapper and sets the type to "#byte".
-   *
-   * @param aValue In byte parameter specifying the parameter value.
-   */
-  void setAsByte(in PRUint8 aValue);
-
-  /**
-   * A convenience method to set the value and type as an array.
-   * This sets the type to "#array".
-   *
-   * @param aValue In nsISupportsArray parameter specifying the parameter value.
-   */
-  void setAsArray(in nsISupportsArray aValue);
-
-  /**
-   * A convenience method to set the value and type as a struct
-   * This sets the type to "#struct#&lt;struct type&gt;".
-   *
-   * @param aStructType In AString, type of struct
-   * @param aValue In nsISOAPStruct parameter specifying value.
-   */
-  void setAsStruct(in AString aStructType, in nsISOAPStruct aValue);
-
-  /**
-   * A convenience method to set the value and type as literal content
-   * This sets the type to "#literal"
-   *
-   * @param aValue In nsIDOMNode parameter specifying value.
-   */
-  void setAsLiteral(in nsIDOMNode aValue);
+  attribute nsISOAPAttachments attachments;
 };
 
 %{ C++

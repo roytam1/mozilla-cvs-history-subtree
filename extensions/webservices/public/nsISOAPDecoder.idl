@@ -23,9 +23,9 @@
 #include "nsISupports.idl"
 
 interface nsISchemaType;
-interface nsISOAPEncodingRegistry;
+interface nsISOAPEncoding;
 interface nsIDOMElement;
-interface nsISOAPParameter;
+interface nsIVariant;
 interface nsISOAPAttachments;
 
 /**
@@ -50,12 +50,11 @@ interface nsISOAPDecoder : nsISupports {
  *
  * @param aAttachments Dispenses any attachments.
  *
- * @return The decoded parameter, soon to become a variant, which is null if 
+ * @return The decoded variant, which is null if 
  *   the operation failed or did not return a result.
  */
-nsISOAPParameter decode(
-    in nsISOAPEncodingRegistry aEncodings, 
-    in AString aEncodingStyleURI, 
+nsIVariant decode(
+    in nsISOAPEncoding aEncoding, 
     in nsIDOMElement aSource, 
     in nsISchemaType aSchemaType,
     in nsISOAPAttachments aAttachments);

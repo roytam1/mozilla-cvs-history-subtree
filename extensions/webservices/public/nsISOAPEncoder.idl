@@ -23,26 +23,26 @@
 #include "nsISupports.idl"
 
 interface nsISchemaType;
-interface nsISOAPEncodingRegistry;
-interface nsISOAPParameter;
+interface nsISOAPEncoding;
+interface nsIVariant;
 interface nsIDOMElement;
 interface nsISOAPAttachments;
 
 /**
- * This interface permits encoding of SOAP parameters.
+ * This interface permits encoding of variants.
  */
 
 [scriptable, uuid(fc33ffd6-1dd1-11b2-8750-fa62430a38b4)]
 interface nsISOAPEncoder : nsISupports {
 
 /**
- * Encode the source parameter
+ * Encode the source variant.
  *
  * @param aEncodings The encodings to be used.
  *
  * @param aEncodingStyleURI The encoding style
  *
- * @param aSource The parameter to be encoded, soon to become a variant
+ * @param aSource The variant to be encoded.
  *
  * @param aNamespaceURI The namespace of the thing being coded
  *
@@ -54,15 +54,16 @@ interface nsISOAPEncoder : nsISupports {
  *   will live.  If this is null, then the result must be 
  *   explicitly attached to the message.
  *
+ * @return element which was inserted.
+ *
  * @param aAttachments Accumulates any attachments.
  */
-void encode(
-    in nsISOAPEncodingRegistry aEncodings, 
-    in AString aEncodingStyleURI, 
-    in nsISOAPParameter aSource, 
+nsIDOMElement encode(
+    in nsISOAPEncoding aEncoding, 
+    in nsIVariant aSource, 
     in AString aNamespaceURI, 
     in AString aName, 
     in nsISchemaType aSchemaType,
-    in nsIDOMElement aDestination, 
-    in nsISOAPAttachments aAttachments);
+    in nsISOAPAttachments aAttachments,
+    in nsIDOMElement aDestination);
 };

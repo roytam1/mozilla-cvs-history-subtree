@@ -34,8 +34,9 @@ XPIDLSRCS	= \
 		nsISOAPCall.idl \
 		nsISOAPDecoder.idl \
 		nsISOAPEncoder.idl \
-		nsISOAPEncodingRegistry.idl \
+		nsISOAPEncoding.idl \
 		nsISOAPFault.idl \
+		nsISOAPHeaderBlock.idl \
 		nsISOAPJSValue.idl \
 		nsISOAPMessage.idl \
 		nsISOAPParameter.idl \
@@ -43,7 +44,6 @@ XPIDLSRCS	= \
 		nsISOAPResponseListener.idl \
 		nsISOAPService.idl \
 		nsISOAPServiceRegistry.idl \
-		nsISOAPStruct.idl		\
 		nsISOAPTransport.idl \
 		nsISOAPTransportListener.idl \
 		$(NULL)

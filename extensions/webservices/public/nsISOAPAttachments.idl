@@ -22,8 +22,6 @@
 
 #include "nsISupports.idl"
 
-interface nsISOAPParameter;
-
 /**
  * This interface permits attachment of SOAP attachments.
  */

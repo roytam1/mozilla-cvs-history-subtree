@@ -29,21 +29,21 @@ interface nsISchemaType;
 interface nsISOAPAttachments;
 
 /**
- * This interface encapsulates an arbitrary parameter to be used
+ * This interface encapsulates an arbitrary header block to be used
  * by the soap serialization or protocol.  It formalizes a type
  * string, a reference to the object, and a name.
  */
 
-[scriptable, uuid(99ec6690-535f-11d4-9a58-000064657374)]
-interface nsISOAPParameter : nsISupports {
+[scriptable, uuid(063d4a4e-1dd2-11b2-a365-cbaf1651f140)]
+interface nsISOAPHeaderBlock : nsISupports {
     
   /**
-   * The namespace URI of the parameter.  Ignored if name is null.
+   * The namespace URI of the header block.  Ignored if name is null.
    */
   attribute AString namespaceURI;
     
   /**
-   * The name of the parameter. If the parameter is left unnamed, it
+   * The name of the header block. If the header block is left unnamed, it
    * will be encoded using the element types defined in the SOAP-ENC
    * schema. For example, <code>&lt;SOAP-ENC:int&gt;45&lt;/SOAP-ENC:int&gt;
    * </code>
@@ -51,43 +51,46 @@ interface nsISOAPParameter : nsISupports {
   attribute AString name;
 
   /**
+   * The actor URI of the header block.
+   */
+  attribute AString actorURI;
+
+  /**
    * The encoding that was / will be applied to the
-   * parameter.
+   * header block.
    */
   attribute nsISOAPEncoding encoding;
 
   /**
    * The schema type used to encode or decode the
-   *   parameter.
+   *   header block.
    */
   attribute nsISchemaType schemaType;
 
   /**
-   *  The element which is the encoded value of this parameter.
+   *  The element which is the encoded value of this header block.
    *  If this is set, value becomes a computed attribute
-   *  which may be produced by decoding this element.
+   *  which is produced by decoding this element.
    */
   attribute nsIDOMElement element;
 
   /**
    *  The native value which is the decoded value of 
-   *  this parameter.  If this is set, element becomes
-   *  null.
+   *  this header block.  If this is set, element becomes null.
    */
   attribute nsIVariant value;
 
   /**
-   * The attachments which were attached to the message
-   *   that may be needed to decode the parameter.
+   * The attachments which were attached to the message.
    */
   attribute nsISOAPAttachments attachments;
 };
 
 %{ C++
-#define NS_SOAPPARAMETER_CID                        \
-{ /* 87d21ec2-539d-11d4-9a59-00104bdf5339 */        \
-  0x87d21ec2, 0x539d, 0x11d4,                       \
- {0x9a, 0x59, 0x00, 0x10, 0x4b, 0xdf, 0x53, 0x39} }
-#define NS_SOAPPARAMETER_CONTRACTID \
-"@mozilla.org/xmlextras/soap/parameter;1"
+#define NS_SOAPHEADERBLOCK_CID                        \
+{ /* 5ad0eace-1dd2-11b2-a260-ff42edcaedb3 */        \
+  0x5ad0eace, 0x1dd2, 0x11b2,                       \
+ {0xa2, 0x60, 0xff, 0x42, 0xed, 0xca, 0xed, 0xb3} }
+#define NS_SOAPHEADERBLOCK_CONTRACTID \
+"@mozilla.org/xmlextras/soap/headerblock;1"
 %}

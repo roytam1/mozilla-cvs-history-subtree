@@ -51,14 +51,6 @@ interface nsISOAPResponse : nsISOAPMessage {
    */
   readonly attribute nsISOAPFault fault;
 
-  /**
-   * The result from the first body entry in the response SOAP message.
-   * This is a convenience method which gets SOAPParameters and returns
-   * the first one, causing the response parameters and special attributes
-   * to be deserialized.
-   */
-  readonly attribute nsISOAPParameter returnValue;
-
 };
 
 %{ C++

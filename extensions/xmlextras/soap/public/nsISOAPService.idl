@@ -30,11 +30,7 @@ interface nsISOAPResponseListener;
  *   applied to incoming messages.  The service is
  *   responsible for determining whether the message
  *   is one that it should process and rejecting it
- *   if it is not.  Services may be chained.  For
- *   example, I can create a JS script which checks
- *   the original URI of the requester in the
- *   protocol parameters and rejects the message if
- *   it did not come from a specific place.
+ *   if it is not.  Services may be chained.
  */
 [scriptable, uuid(9927fa40-1dd1-11b2-a8d1-857ad21b872c)]
 interface nsISOAPService : nsISupports {

@@ -31,8 +31,7 @@ interface nsISOAPResponseListener;
 interface nsISOAPTransport : nsISupports {
 
 /**
- * Send the specified message to the specified destination using any applicable
- * transport metaparameters, synchronously waiting for completion and any response.
+ * Send the specified message to the specified destination.
  * This will fail if synchronous calls are not supported or if there is any
  * failure in the actual message exchange.  Failure of the call itself will be
  * contained in the response.
@@ -40,18 +39,18 @@ interface nsISOAPTransport : nsISupports {
  * @param aURI The URI of the message's destination within the transport.
  *  Usually the transport requires a specific protocol such as http: or mailto:
  *
- * @param aCall Actual message to be sent.
+ * @param aMessage Actual message to be sent.
  *
  * @param aResponse Message to be recieved.  Calling synchronously assumes that 
  *   exactly one response is expected.
  */
   void syncCall(in AString aURI,
-                 in nsISOAPMessage aCall,
+                 in nsISOAPMessage aMessage,
                  in nsISOAPResponse aResponse);
 
 /**
- * Send the specified message to the specified destination using any applicable
- * transport metaparameters, synchronously waiting for completion and any response.
+ * Send the specified message to the specified destination synchronously waiting 
+ * for completion and any response.
  * This will fail if there is any failure in the setup of the message exchange.
  * Later errors will only be known through the response listener.  Failures of the
  * call itself will be contained in the response passed to the response listener.
@@ -59,7 +58,7 @@ interface nsISOAPTransport : nsISupports {
  * @param aURI The URI of the message's destination within the transport.
  *  Usually the transport requires a specific protocol such as http: or mailto:
  *
- * @param aCall Actual message to be sent.
+ * @param aMessage Actual message to be sent.
  *
  * @param aListener Handler to be invoked (single threaded) as each response is 
  *  received and finally with null.  If specified as null, no responses are returned.
@@ -68,7 +67,7 @@ interface nsISOAPTransport : nsISupports {
  *   null if listener is null.
  */
   void asyncCall(in AString aURI,
-                 in nsISOAPMessage aCall,
+                 in nsISOAPMessage aMessage,
                  in nsISOAPResponseListener aListener,
                  in nsISOAPResponse aResponse);
 

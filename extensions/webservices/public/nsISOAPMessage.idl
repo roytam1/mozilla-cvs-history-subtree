@@ -22,11 +22,12 @@
 
 #include "nsISupports.idl"
 
-interface nsISupportsArray;
 interface nsIDOMDocument;
 interface nsIDOMElement;
+interface nsISOAPEncoding;
+interface nsISOAPHeaderBlock;
 interface nsISOAPParameter;
-interface nsISOAPEncodingRegistry;
+interface nsIVariant;
 
 /**
  * This interface controls all SOAP messages. It permits easy
@@ -44,7 +45,7 @@ interface nsISOAPMessage : nsISupports {
   /**
    * The document which captures the message, if any.  A simple 
    * sending application passes parameters to the method
-   * encodeSOAPParameters, which calls parameter encoders 
+   * encodeSOAPParameters, which calls SOAP encoders 
    * to construct this document along with all contained elements.  
    *
    * But an application may create and set the message directly
@@ -88,117 +89,108 @@ interface nsISOAPMessage : nsISupports {
   readonly attribute nsIDOMElement body;
 
   /**
-   * An optional URI that can be used to add a SOAPAction HTTP
-   * header field to the protocol parameters during parameter
-   * encoding. If this attribute is NULL (the default case),
-   * no SOAPAction header will be added.
-   */
-  attribute AString actionURI;
-
-  /**
-   * The encodingStyle to be used for the envelope. This URI is used
-   * by the encoder to set the initial encoding style of the
-   * envelope.  This should be set by applications desiring alternate
-   * encodings.  It will also be used as a key to select specific 
-   * encoders for the encoding.
-   *
-   * If this has not been set by a calling application, it will be the 
-   * default SOAP encoding style for RPC style calls.
-   */
-  attribute AString encodingStyleURI;
-
-  /**
-   * The name of the method being invoked. The methodName is used 
+   * The name of the method being invoked. The methodName is set
    * during encoding as the tagname of the single child of body
-   * of RPC-style messages.  This should be set by RPC-style
-   * applications.  Decoding also tests whether this attribute
-   * is null to determine whether to decode RPC-style or
-   * message style.  Before decoding, RPC-style applications
-   * should make certain that this has some non-null string
-   * value, which will be replaced if the decoding is
-   * successful.
-   *
-   * For example, if the <code>targetObjectURI</code> is 
-   * "urn:some-namespace" and the <code>methodName</code> is 
-   * GetLastTradePrice, the single body entry will be the
-   * following element:
-   * <code>
-   *   <m:GetLastTradePrice xmlns:m="urn:some-namespace">
-   *   ...
-   * </code>
-   *
-   * If this has not been set by a calling application (or by a
-   * recipient calling decodeParameters), it will be null.
-   * If this is null, encoding or decoding parameters 
-   * will produce
-   * a non-RPC-style message.
+   * of RPC-style messages.  When there is no encoded message
+   * this will be null.  The value of this attribute for
+   * document-style messages may be non-null but should be
+   * ignored.  It is up to the application to know whether the
+   * message is RPC-style or document style because the SOAP
+   * specification makes it difficult to tell which way a
+   * message was encoded.
    */
-  attribute AString methodName;   
+  readonly attribute AString methodName;   
 
   /**
    * The target object on which the method is being invoked. This URI
-   * is used during encoding as the namespace to qualify the tagname 
-   * of the single child of body of RPC-style messages.  This should
-   * be set by RPC-style applications.  When the methodName attribute 
-   * is not null decoding parameters causes this to be set to the 
-   * namespaceURI of the single child of body of the message.
-   *
-   * For example, if the <code>targetObjectURI</code> is 
-   * "urn:some-namespace" and the <code>methodName</code> is 
-   * GetLastTradePrice, the single child of body will be the
-   * following element:
-   * <code>
-   *   <m:GetLastTradePrice xmlns:m="urn:some-namespace">
-   *   ...
-   * </code>
-   *
-   * If this has not been set by a calling application
-   * or by decoding where the methodName is not null,
-   * will be null.  If this is null and method is not null, 
-   * encoding parameters fails.
+   * is set during encoding as the namespace to qualify the tagname 
+   * of the single child of body of RPC-style messages.  When there
+   * is no encoded message, this will be null.  The value of this
+   * attribute for document-style messages may be non-null but should
+   * be ignored.  It is up to the application to know whether the
+   * message is RPC-style or document style because the SOAP
+   * specification makes it difficult to tell which way a
+   * message was encoded.
    */
-  attribute AString targetObjectURI;
+  readonly attribute AString targetObjectURI;
 
   /**
    * Encodes the specified parameters into this message, if
    * this message type supports it.
    *
-   * @param SOAPParameters An array containing the parameters to
-   * be attached to the message by encoders.
-   */
-  [noscript] void encodeParameters(in nsISupportsArray SOAPParameters);
-
-  /**
-   * Decodes the parameters from this message, if
-   * this message type supports it.
+   * @param aMethodName The name of the method being invoked
+   * for rpc-style messages.  For document-style messages,
+   * this must be null.
    *
-   * @return An array containing the parameters that were
-   * returned in the message and decoded.
+   * @param aTargetObjectURI The name of the target object
+   * for rpc-style messages.  For document-style messages,
+   * this must be null.
+   *
+   * @param aHeaderBlockCount Number of header blocks in array to be
+   *   encoded.  Must be 0 if header block array is null.
+   *
+   * @param aHeaderBlocks Array of header blocks to be encoded, which
+   *   may be null if there are no header blocks.
+   *
+   * @param aParameterCount Number of parameters in array 
+   *   to be encoded.  Must be 0 if parameter array is null.
+   *
+   * @param aParameters An array of parameters to be 
+   *   encoded, which may null if there are no parameters.
    */
-  [noscript] nsISupportsArray decodeParameters();
+  void encode(
+    in AString aMethodName, in AString aTargetObjectURI,
+    in PRUint32 aHeaderBlockCount, 
+    [array, size_is(aHeaderBlockCount)] in nsISOAPHeaderBlock aHeaderBlocks,
+    in PRUint32 aParameterCount, 
+    [array, size_is(aParameterCount)] in nsISOAPParameter aParameters);
 
   /**
-   * The status returned by an operation such as encoding,
-   * decoding, or invocation.
+   * Gathers the header blocks of a message so that they can be
+   *   accessed by a recipient.
+   *
+   * @param aCount Integer to receive the length of the list
+   *   of header blocks.
+   *
+   * @return Array of header blocks found in the message.
    */
-  readonly attribute unsigned long status;
-  
-  /**
-   * A container of parameters passed to the protocol.  This may,
-   *  for example, contain the special SOAP header for HTTP or
-   *  additional mime attachments.  A given protocol ignores any
-   *  headers with names or types it does not understand.
-   *  Initially this attribute is null in any message.  This
-   *  will be replaced by an empty container as encoding begins
-   *  so that it is correctly produced by the encoding process.
-   *  When a transport places a message into the message object,
-   *  it provides this container of protocol parameters.
-   */
-  [noscript] attribute nsISupportsArray protocolParameters;
+  void getHeaderBlocks(out PRUint32 aCount,
+    [array, size_is(aCount), retval] out nsISOAPHeaderBlock aHeaderBlocks);
 
   /**
-   * A local registry of type information.  This is optional but
-   *   may be used to override the default type registry.
+   * Gathers the parameters of a message so that they can be
+   *   accessed by a recipient.
+   *
+   * @param aDocumentStyle If true, then the parameters
+   *   are looked for treating the message as a document 
+   *   style message, otherwise it treated as an RPC-style 
+   *   message.
+   *
+   * @param aCount Integer to receive the length of the list
+   *   of parameters.
+   *
+   * @return Array of parameters found in the message.
    */
-  attribute nsISOAPEncodingRegistry encodings;
+  void getParameters(in boolean aDocumentStyle,
+    out PRUint32 aCount, 
+    [array, size_is(aCount), retval] out nsISOAPParameter aParameters);
+
+  /**
+   * The primary encoding of the message, which is established
+   *   at the envelope and used unless overridden.  By default,
+   *   this is the SOAP encoding, which may be locally modified
+   *   or used to obtain alternative encodings, which may be
+   *   locally modified, but it may be set to an encoding that
+   *   is shared, or it may be set to null, in which case all
+   *   non-literal header blocks and parameters must specify an
+   *   encoding.
+   */
+  attribute nsISOAPEncoding encoding;
+
+  /**
+   * An optional URI that can be used to add a SOAPAction HTTP
+   * header field. If this attribute is NULL (the default case),
+   * no SOAPAction header will be added.
+   */
+  attribute AString actionURI;
 };
