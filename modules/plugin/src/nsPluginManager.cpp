@@ -70,6 +70,7 @@ static NS_DEFINE_IID(kIJNIEnvIID, NS_IJNIENV_IID);
 static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
 
 #include "prerror.h"
+#include "prmem.h"
 
 // mapping from NPError to nsresult
 nsresult fromNPError[] = {
