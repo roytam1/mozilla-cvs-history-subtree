@@ -1032,11 +1032,16 @@ PRBool BasicTableLayoutStrategy::BalanceColumnsTableFits(const nsReflowState& aR
           const nsStylePosition* cellPosition;
           cellFrame->GetStyleData(eStyleStruct_Position, (const nsStyleStruct*&)cellPosition);
           if (eStyleUnit_Percent==cellPosition->mWidth.GetUnit()) 
-          { //QQQ what if table is auto width?
-            float percent = cellPosition->mWidth.GetPercentValue();
-            specifiedCellWidth = (PRInt32)(aTableSpecifiedWidth*percent);
-            if (gsDebug) printf("specified percent width %f of %d = %d\n", 
-                                percent, aTableSpecifiedWidth, specifiedCellWidth);
+          {
+            if (PR_FALSE==aTableIsAutoWidth) 
+            {
+              float percent = cellPosition->mWidth.GetPercentValue();
+              specifiedCellWidth = (PRInt32)(aTableSpecifiedWidth*percent);
+              if (gsDebug) printf("specified percent width %f of %d = %d\n", 
+                                  percent, aTableSpecifiedWidth, specifiedCellWidth);
+            }
+            // otherwise we need to post-process, set to max for now
+            // do we want to set specifiedCellWidth off of aAvailWidth? aMaxWidth?    XXX
           }
           if (-1!=specifiedCellWidth)
           {
@@ -1145,10 +1150,12 @@ PRBool BasicTableLayoutStrategy::BalanceColumnsTableFits(const nsReflowState& aR
           printf ("  3 min: col %d set to min width = %d because style set proportionalWidth=0\n", 
                   colIndex, mTableFrame->GetColumnWidth(colIndex));
       }
-      else if (PR_TRUE==isAutoWidth)
+      else if ((PR_TRUE==isAutoWidth) || (PR_TRUE==aTableIsAutoWidth))
       {  // col width is determined by the cells' content,
          // so give each remaining column it's desired width (because we know we fit.)
          // if there is width left over, we'll factor that in after this loop is complete
+         // the OR clause is because we fix up percentage widths as a post-process 
+         // in auto-width tables
         mTableFrame->SetColumnWidth(colIndex, maxColWidth);
         if (gsDebug==PR_TRUE) 
           printf ("  3 auto: col %d with availWidth %d, set to width = %d\n", 
@@ -1220,7 +1227,13 @@ PRBool BasicTableLayoutStrategy::BalanceColumnsTableFits(const nsReflowState& aR
   }
 
   /* --- post-process if necessary --- */
-  // first, assign a width to proportional-width columns
+
+  // first, assign column widths in auto-width tables
+  if ((PR_TRUE==aTableIsAutoWidth) && (PR_TRUE))
+  {
+  }
+
+  // second, assign column widths to proportional-width columns
   if (nsnull!=proportionalColumnsList)
   {
     // first, figure out the amount of space per slice
