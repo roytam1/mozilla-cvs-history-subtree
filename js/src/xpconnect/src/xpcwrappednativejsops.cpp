@@ -619,6 +619,49 @@ XPC_WN_NoHelper_Finalize(JSContext *cx, JSObject *obj)
     p->FlatJSObjectFinalized(cx, obj);
 }
 
+static void 
+MarkScopeJSObjects(JSContext *cx, XPCWrappedNativeScope* scope, void *arg)
+{
+    NS_ASSERTION(scope, "bad scope");
+
+    JSObject* obj;
+
+    obj = scope->GetGlobalJSObject();
+    NS_ASSERTION(scope, "bad scope JSObject");
+    JS_MarkGCThing(cx, obj, "XPCWrappedNativeScope::mGlobalJSObject", arg);
+
+    obj = scope->GetPrototypeJSObject();
+    if(obj)
+    {
+        JS_MarkGCThing(cx, obj, "XPCWrappedNativeScope::mPrototypeJSObject", arg);
+    }
+        
+}        
+
+static void 
+MarkForValidWrapper(JSContext *cx, XPCWrappedNative* wrapper, void *arg)
+{
+    if(wrapper->HasProto())
+    {
+        JSObject* obj = wrapper->GetProto()->GetJSProtoObject();
+        NS_ASSERTION(obj, "bad proto");
+        JS_MarkGCThing(cx, obj, "XPCWrappedNativeProto::mJSProtoObject", arg);
+    }
+
+    MarkScopeJSObjects(cx, wrapper->GetScope(), arg);
+}        
+
+JS_STATIC_DLL_CALLBACK(uint32)
+XPC_WN_Shared_Mark(JSContext *cx, JSObject *obj, void *arg)
+{
+    XPCWrappedNative* wrapper =
+        XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
+
+    if(wrapper && wrapper->IsValid())
+        MarkForValidWrapper(cx, wrapper, arg);
+    return 1;
+}
+
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
 {
@@ -671,7 +714,7 @@ JSClass XPC_WN_NoHelper_JSClass = {
     nsnull,                         // construct;
     nsnull,                         // xdrObject;
     nsnull,                         // hasInstance;
-    nsnull,                         // mark;
+    XPC_WN_Shared_Mark,             // mark;
     nsnull                          // spare;
 };
 
@@ -807,7 +850,10 @@ XPC_WN_Helper_Mark(JSContext *cx, JSObject *obj, void *arg)
     XPCWrappedNative* wrapper =
         XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
     if(wrapper && wrapper->IsValid())
+    {
         wrapper->GetScriptable()->Mark(wrapper, cx, obj, arg, &ignored);
+        MarkForValidWrapper(cx, wrapper, arg);
+    }
     return (uint32) ignored;
 }
 
@@ -1139,8 +1185,11 @@ XPCNativeScriptableInfo::BuildJSClass()
 
     if(WantHasInstance())
         mJSClass.hasInstance = XPC_WN_Helper_HasInstance;
+
     if(WantMark())
         mJSClass.mark = XPC_WN_Helper_Mark;
+    else
+        mJSClass.mark = XPC_WN_Shared_Mark;
 
     return JS_TRUE;
 }
@@ -1265,6 +1314,16 @@ XPC_WN_Shared_Proto_Finalize(JSContext *cx, JSObject *obj)
         p->JSProtoObjectFinalized(cx, obj);
 }
 
+JS_STATIC_DLL_CALLBACK(uint32)
+XPC_WN_Shared_Proto_Mark(JSContext *cx, JSObject *obj, void *arg)
+{
+    // This can be null if xpc shutdown has already happened
+    XPCWrappedNativeProto* p = (XPCWrappedNativeProto*) JS_GetPrivate(cx, obj);
+    if(p)
+        MarkScopeJSObjects(cx, p->GetScope(), arg);
+    return 1;
+}
+
 /*****************************************************/
 
 JS_STATIC_DLL_CALLBACK(JSBool)
@@ -1320,7 +1379,7 @@ JSClass XPC_WN_ModsAllowed_Proto_JSClass = {
     nsnull,                         // construct;
     nsnull,                         // xdrObject;
     nsnull,                         // hasInstance;
-    nsnull,                         // mark;
+    XPC_WN_Shared_Proto_Mark,       // mark;
     nsnull                          // spare;
 };
 
@@ -1403,7 +1462,7 @@ JSClass XPC_WN_NoMods_Proto_JSClass = {
     nsnull,                         // construct;
     nsnull,                         // xdrObject;
     nsnull,                         // hasInstance;
-    nsnull,                         // mark;
+    XPC_WN_Shared_Proto_Mark,       // mark;
     nsnull                          // spare;
 };
 

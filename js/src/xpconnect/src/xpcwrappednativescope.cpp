@@ -160,8 +160,6 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
         if(cur->mGlobalJSObject &&
            JS_IsAboutToBeFinalized(cx, cur->mGlobalJSObject))
         {
-            // XXX some wrapper invalidation may be in order here...
-
             cur->mGlobalJSObject = nsnull;
 
             // Move this scope from the live list to the dying list.
@@ -176,7 +174,6 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
         else if(cur->mPrototypeJSObject &&
                 JS_IsAboutToBeFinalized(cx, cur->mPrototypeJSObject))
         {
-            // XXX do I want to be warned about this odd case?
             cur->mPrototypeJSObject = nsnull;
         }
         if(cur)
