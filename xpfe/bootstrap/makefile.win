@@ -71,7 +71,7 @@ CPP_OBJS=                               \
 
 MAKE_OBJ_TYPE = EXE
 PROGRAM = .\$(OBJDIR)\mozilla.exe
-RESFILE = splash.res
+RCINCLUDE = splash.rc
 
 LCFLAGS = \
         $(LCFLAGS) \

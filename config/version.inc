@@ -44,11 +44,10 @@ CONFIG_RESFILE_INC=1
 #// PBI      : Private build info.  Not used currently.
 #//            Guessing the best way would be to set an env var.
 #// BINARY   : Binary name.  Not used currently.
-#// RCINCLUDE: Another .rc file to merge with the built .rc file.
-#//            Not used currently.
 #//------------------------------------------------------------------------
 
-_RC_STRING = -OBJDIR $(OBJDIR) -DEPTH $(DEPTH) -TOPSRCDIR $(topsrcdir) -BITS $(MOZ_BITS) -QUIET 1 -SRCDIR .
+_topsrcdir = $(DEPTH:\=/)
+_RC_STRING = -OBJDIR $(OBJDIR) -DEPTH $(DEPTH) -TOPSRCDIR $(_topsrcdir) -BITS $(MOZ_BITS) -QUIET 1 -SRCDIR .
 !if defined(MOZ_DEBUG)
 _RC_STRING = $(_RC_STRING) -DEBUG 1
 !endif
@@ -57,6 +56,9 @@ _RC_STRING = $(_RC_STRING) -OFFICIAL 1
 !endif
 !if defined(MODULE)
 _RC_STRING = $(_RC_STRING) -MODNAME $(MODULE)
+!endif
+!if defined(RCINCLUDE)
+_RC_STRING = $(_RC_STRING) -RCINCLUDE $(RCINCLUDE)
 !endif
 
 RESFILE=$(OBJDIR)\module.res
@@ -69,10 +71,10 @@ all::
 
 $(RESFILE):: $(RCFILE)
 
-$(RCFILE):
+$(RCFILE):: $(RES_SRCS)
 	echo $(PERL) $(DEPTH)\config\version_win.pl $(_RC_STRING)
 	$(PERL) $(DEPTH)\config\version_win.pl $(_RC_STRING)
-	$(RC) $(OBJDIR)\module.rc
+	$(RC) $(RCFLAGS) $(OBJDIR)\module.rc
 
 !endif
 !endif # !CONFIG_RESFILE_INC
