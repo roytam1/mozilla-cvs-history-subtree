@@ -52,7 +52,7 @@ interface nsIBookmarksService : nsISupports
     const unsigned long BOOKMARK_FIND_TYPE      = 2;
 
     boolean readBookmarks();
-    boolean isBookmarked(in string aURI);
+    boolean isBookmarked(in string aURL);
 
     void addBookmarkImmediately(in string aURI, in wstring aTitle, in long bmType, in wstring docCharset);
         
