@@ -85,6 +85,7 @@ private:
   nsresult inputToDecoder(SEC_PKCS12DecoderContext *, nsILocalFile *);
   void unicodeToItem(PRUnichar *, SECItem *);
   PRBool handleError(int myerr = 0);
+  nsresult ImportFromFileHelper(nsILocalFile *file, PRBool &aWantRetry);
 
   // NSPR file I/O for temporary digest file
   PRFileDesc *mTmpFile;
