@@ -822,12 +822,12 @@ function FolderPaneSelectionChange()
                   {
                     viewType = nsMsgViewType.eShowQuickSearchResults;
                     var searchTermString = {};
-                    dbFolderInfo.GetCharPtrProperty("searchStr", searchTermString);
+                    dbFolderInfo.getCharPtrProperty("searchStr", searchTermString);
                     searchTermString = searchTermString.value;
                     // trick the view code into updating the real folder...
                     gCurrentVirtualFolderUri = uriToLoad;
                     var srchFolderUri = {};
-                    dbFolderInfo.GetCharPtrProperty("searchFolderUri", srchFolderUri);
+                    dbFolderInfo.getCharPtrProperty("searchFolderUri", srchFolderUri);
                     srchFolderUri = srchFolderUri.value;
                     var srchFolderUriArray = srchFolderUri.split('|');
                     // cross folder search
@@ -1039,8 +1039,8 @@ function  CreateVirtualFolder(newName, parentFolder, searchFolderURIs, searchTer
       var dbFolderInfo = vfdb.dBFolderInfo;
       // set the view string as a property of the db folder info
       // set the original folder name as well.
-      dbFolderInfo.SetCharPtrProperty("searchStr", searchTermString);
-      dbFolderInfo.SetCharPtrProperty("searchFolderUri", searchFolderURIs);
+      dbFolderInfo.setCharPtrProperty("searchStr", searchTermString);
+      dbFolderInfo.setCharPtrProperty("searchFolderUri", searchFolderURIs);
       vfdb.summaryValid = true;
       vfdb.Close(true);
       parentFolder.NotifyItemAdded(parentFolder, newFolder, "folderView");

@@ -74,8 +74,8 @@ interface  nsIDBFolderInfo : nsISupports {
 
   void ChangeExpungedBytes(in long delta);
 
-  void GetCharPtrProperty(in string propertyName, out string resultProperty);
-  void SetCharPtrProperty(in string aPropertyName, in string aPropertyValue);
+  void getCharPtrProperty(in string propertyName, out string resultProperty);
+  void setCharPtrProperty(in string aPropertyName, in string aPropertyValue);
   void SetUint32Property(in string propertyName, in unsigned long propertyValue);
   void GetUint32Property(in string propertyName, out unsigned long result, in unsigned long defaultValue);
   void getBooleanProperty(in string propertyName, out boolean result, in boolean defaultValue);

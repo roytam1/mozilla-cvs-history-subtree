@@ -114,7 +114,7 @@ var nsNewsBlogFeedDownloader =
     var msgdb = aFolder.QueryInterface(Components.interfaces.nsIMsgFolder).getMsgDatabase(null);
     var folderInfo = msgdb.dBFolderInfo;
     var feedurls = {};
-    folderInfo.GetCharPtrProperty("feedUrl", feedurls);
+    folderInfo.setCharPtrProperty("feedUrl", feedurls);
     feedurls = feedurls.value;
 
     var feedUrlArray = feedurls.split("|");
