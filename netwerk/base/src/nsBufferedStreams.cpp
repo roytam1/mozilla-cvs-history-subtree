@@ -37,6 +37,7 @@
 
 #include "nsBufferedStreams.h"
 #include "nsCRT.h"
+#include "prmem.h"
 
 #ifdef DEBUG_brendan
 # define METERING
@@ -535,8 +536,26 @@ nsBufferedOutputStream::Flush()
 NS_IMETHODIMP
 nsBufferedOutputStream::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRUint32 *_retval)
 {
-    NS_NOTREACHED("WriteFrom");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+    char* buf = (char*)PR_Malloc(count);
+
+    PRUint32 read;
+    rv = inStr->Read(buf, count, &read);
+    if (NS_FAILED(rv))
+    {
+        PR_Free(buf);
+        return rv;
+    }
+
+    rv = Write(buf, read, _retval);
+    if (NS_FAILED(rv))
+    {
+        PR_Free(buf);
+        return rv;
+    }
+
+    PR_Free(buf);
+    return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -94,6 +94,8 @@
 #include "nsIWindowMediator.h"
 #include "nsIWindowWatcher.h"
 
+#include "mozISRoaming.h"
+
 #if defined (XP_UNIX)
 #elif defined (XP_MAC)
 #define OLD_REGISTRY_FILE_NAME "Netscape Registry"
@@ -187,6 +189,7 @@ static NS_DEFINE_CID(kPrefMigrationCID, NS_PREFMIGRATION_CID);
 static NS_DEFINE_CID(kPrefConverterCID, NS_PREFCONVERTER_CID);
 static NS_DEFINE_IID(kCookieServiceCID, NS_COOKIESERVICE_CID);
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
+static NS_DEFINE_CID(kSRoamingCID, MOZ_SROAMING_CID);
 
 static NS_DEFINE_CID(kChromeRegistryCID,    NS_CHROMEREGISTRY_CID);
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
@@ -1265,6 +1268,12 @@ nsProfile::SetCurrentProfile(const PRUnichar * aCurrentProfile)
         NS_ASSERTION(NS_SUCCEEDED(rv), "Could not get prefs service");
     }
 
+    // Roaming download
+    // Tolerate errors. Maybe the roaming extension isn't installed.
+    nsCOMPtr <mozISRoaming> roam = do_CreateInstance(kSRoamingCID, &rv);
+    if (NS_SUCCEEDED(rv))
+      roam->BeginSession();
+
     // Phase 4: Notify observers that the profile has changed - Here they respond to new profile
     observerService->NotifyObservers(subject, "profile-do-change", context.get());
 
@@ -1325,6 +1334,13 @@ NS_IMETHODIMP nsProfile::ShutDownCurrentProfile(PRUint32 shutDownType)
     // Phase 3: Notify observers of a profile change
     observerService->NotifyObservers(subject, "profile-before-change", context.get());        
     }
+
+    // Roaming upload
+    // Tolerate errors. Maybe the roaming extension isn't installed.
+    nsCOMPtr <mozISRoaming> roam = do_CreateInstance(kSRoamingCID, &rv);
+    if (NS_SUCCEEDED(rv))
+      roam->EndSession();
+
 
     rv = UndefineFileLocations();
     NS_ASSERTION(NS_SUCCEEDED(rv), "Could not undefine file locations");
