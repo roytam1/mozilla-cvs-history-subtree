@@ -122,12 +122,12 @@ WSPCallContext::Abort(nsIException *error)
     mException = error;
     PRBool ret;
     rv = mCompletion->Abort(&ret);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-    if (ret) {
+    if (NS_SUCCEEDED(rv) && ret) {
       rv = CallCompletionListener();
     }
+    // Drop our ref to the completion object to break our cycle with
+    // it.
+    mCompletion = nsnull;
   }
   return rv;
 }
@@ -137,10 +137,7 @@ NS_IMETHODIMP
 WSPCallContext::GetSoapResponse(nsISOAPResponse * *aSoapResponse)
 {
   NS_ENSURE_ARG_POINTER(aSoapResponse);
-  if (mCompletion) {
-    return mCompletion->GetResponse(aSoapResponse);
-  }
-  *aSoapResponse = nsnull;
+  NS_IF_ADDREF(*aSoapResponse = mResponse);
   return NS_OK;
 }
 
@@ -155,6 +152,10 @@ WSPCallContext::HandleResponse(nsISOAPResponse *aResponse, nsISOAPCall *aCall,
   mStatus = status;
   *_retval = PR_TRUE;
   CallCompletionListener();
+  // Drop our ref to the completion object now that we dont need it
+  // any more. This breaks our reference cycle with it and prevents
+  // leaks.
+  mCompletion = nsnull;
   return NS_OK;
 }
 
@@ -170,13 +171,7 @@ WSPCallContext::CallAsync(PRUint32 aListenerMethodIndex,
 nsresult
 WSPCallContext::CallSync(PRUint32 aMethodIndex, nsXPTCMiniVariant* params)
 {
-  nsCOMPtr<nsISOAPResponse> response;
-  nsresult rv = mCall->Invoke(getter_AddRefs(response));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  return NS_OK;
+  return mCall->Invoke(getter_AddRefs(mResponse));
 }
 
 nsresult
@@ -193,16 +188,15 @@ WSPCallContext::CallCompletionListener()
   nsXPTCVariant paramBuffer[PARAM_BUFFER_COUNT];
   nsXPTCVariant* dispatchParams = nsnull;
 
-  nsCOMPtr<nsISOAPResponse> response;
   nsCOMPtr<nsISOAPFault> fault;
-  mCompletion->GetResponse(getter_AddRefs(response));
-  if (response) {
-    rv = response->GetFault(getter_AddRefs(fault));
+  mCompletion->GetResponse(getter_AddRefs(mResponse));
+  if (mResponse) {
+    rv = mResponse->GetFault(getter_AddRefs(fault));
     if (NS_FAILED(rv)) {
       return rv;
     }
   }
-  if (!response || fault) {
+  if (!mResponse || fault) {
     WSPException* exception = new WSPException(fault, mStatus);
     if (!exception) {
       return NS_ERROR_OUT_OF_MEMORY;
@@ -262,7 +256,7 @@ WSPCallContext::CallCompletionListener()
 
     rv = XPTC_InvokeByIndex(mAsyncListener, 3, 2, dispatchParams);
   }
-  else if (response) {
+  else if (mResponse) {
     nsCOMPtr<nsIWSDLBinding> binding;
     rv = mOperation->GetBinding(getter_AddRefs(binding));
     if (NS_FAILED(rv)) {
@@ -278,12 +272,12 @@ WSPCallContext::CallCompletionListener()
     PRUint16 style;
     operationBinding->GetStyle(&style);
 
-    rv = response->GetHeaderBlocks(&headerCount, &headerBlocks);
+    rv = mResponse->GetHeaderBlocks(&headerCount, &headerBlocks);
     if (NS_FAILED(rv)) {
       goto call_completion_end;
     }
-    rv = response->GetParameters(style == nsISOAPPortBinding::STYLE_DOCUMENT,
-                                 &bodyCount, &bodyBlocks);
+    rv = mResponse->GetParameters(style == nsISOAPPortBinding::STYLE_DOCUMENT,
+                                  &bodyCount, &bodyBlocks);
     if (NS_FAILED(rv)) {
       goto call_completion_end;
     }
