@@ -35,19 +35,59 @@ RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService)
 
 // the default sidebar:
 var defaultsidebar = new Object
-defaultsidebar.db = 'chrome://sidebar/content/sidebar.rdf'
-defaultsidebar.resource = 'NC:SidebarRoot'
+defaultsidebar.db = 'chrome://sidebar/content/default-panels.rdf'
+defaultsidebar.resource = 'urn:sidebar:current-panel-list'
 
 // the current sidebar:
 var sidebar = null
+
+function debug(msg)
+{
+  // uncomment for noise
+  dump(msg);
+}
+
+
+function loadRDFXML(url)
+{
+  // Load the RDF/XML at the specified URL synchronously.
+  debug('loading RDF/XML file ' + url + '\n')
+  var datasource
+  try {
+    // First try to construct a new one and load it
+    // synchronously. nsIRDFService::GetDataSource() loads RDF/XML
+    // asynchronously by default.
+    var xmlsrc = 'component://netscape/rdf/datasource?name=xml-datasource'
+    datasource = Components.classes[xmlsrc].createInstance()
+    datasource = datasource.QueryInterface(Components.interfaces.nsIRDFDataSource)
+
+    var remote = Components.interfaces.nsIRDFRemoteDataSource
+    remote = datasource.QueryInterface(remote)
+    // this will throw if it's already been opened and registered.
+    remote.Init(url)
+
+    // read it in synchronously.
+    remote.Refresh(true)
+
+    debug('RDF/XML file ' + url + ' succesfully loaded for the first time.\n')
+  }
+  catch (ex) {
+    debug('RDF/XML file ' + url + ': ' + ex + '\n')
+    // if we get here, then the RDF/XML has been opened and read
+    // once. We just need to grab the datasource.
+    datasource = RDF.GetDataSource(sidebar.db)
+    debug('RDF/XML file ' + url + ' succesfully re-loaded.\n')
+  }
+  return datasource
+}
 
 function sidebarOverlayInit(usersidebar)
 {
   // load up user-specified sidebar
   if (usersidebar) {
-    //dump("usersidebar = " + usersidebar + "\n")
-    //dump("usersidebar.resource = " + usersidebar.resource + "\n")
-    //dump("usersidebar.db = " + usersidebar.db + "\n")
+    debug("usersidebar = " + usersidebar + "\n")
+    debug("usersidebar.resource = " + usersidebar.resource + "\n")
+    debug("usersidebar.db = " + usersidebar.db + "\n")
     sidebar = usersidebar
   } 
   else {                  
@@ -58,19 +98,18 @@ function sidebarOverlayInit(usersidebar)
       var profileService  = Components.classes[profileURI].getService()
       profileService = profileService.QueryInterface(profileInterface)
       var sidebar_url = profileService.getCurrentProfileDirFromJS()
-      sidebar_url.URLString += "sidebar.rdf"
+      sidebar_url.URLString += "panels.rdf"
 
       if (!(sidebar_url.exists())) {
-        //dump("using " + defaultsidebar.db + " because " + 
-        //sidebar_url.URLString + " does not exist\n")
+        debug("using " + defaultsidebar.db + " because " + sidebar_url.URLString + " does not exist\n")
       } else {
-        //dump("sidebar url is " + sidebar_url.URLString + "\n")
+        debug("sidebar url is " + sidebar_url.URLString + "\n")
         defaultsidebar.db = sidebar_url.URLString
       }
     }
     catch (ex) 
     {
-      //dump("failed to get sidebar url, using default\n")
+      debug("failed to get sidebar url, using default\n")
     }
     sidebar = defaultsidebar
   }
@@ -81,50 +120,38 @@ function sidebarOverlayInit(usersidebar)
     return
   }
 
-  //dump("sidebar = " + sidebar + "\n")
-  //dump("sidebar.resource = " + sidebar.resource + "\n")
-  //dump("sidebar.db = " + sidebar.db + "\n")
-  //var panelsbox = document.getElementById('sidebar-panels')
-  //panelsbox.setAttribute('datasources',sidebar.db);
-  //panelsbox.setAttribute('datasource',sidebar.db);
-  //return;
+  debug("sidebar = " + sidebar + "\n")
+  debug("sidebar.resource = " + sidebar.resource + "\n")
+  debug("sidebar.db = " + sidebar.db + "\n")
 
-  var registry
-  try {
-    // First try to construct a new one and load it
-    // synchronously. nsIRDFService::GetDataSource() loads RDF/XML
-    // asynchronously by default.
-    var xmlsrc = 'component://netscape/rdf/datasource?name=xml-datasource'
-    registry = Components.classes[xmlsrc].createInstance()
-    registry = registry.QueryInterface(Components.interfaces.nsIRDFDataSource)
+  var db = Components.classes['component://netscape/rdf/datasource?name=composite-datasource']
+  db = db.createInstance()
+  db = db.QueryInterface(Components.interfaces.nsIRDFCompositeDataSource)
 
-    var remote = Components.interfaces.nsIRDFRemoteDataSource
-    remote = registry.QueryInterface(remote)
-    // this will throw if it's already been opened and registered.
-    remote.Init(sidebar.db)
+  // This is the master sidebar registry that is installed in a shared
+  // directory. We could add more lines that'd load registries from
+  // remote locations, as well.
+  var registry = loadRDFXML('chrome://sidebar/content/local-panels.rdf');
+  db.AddDataSource(registry);
 
-    // read it in synchronously.
-    remote.Refresh(true)
-  }
-  catch (ex) {
-    // if we get here, then the RDF/XML has been opened and read
-    // once. We just need to grab the datasource.
-    registry = RDF.GetDataSource(sidebar.db)
-  }
+  // This is the pseudo 'master registry' that is supposed to be
+  // loaded from some (*cough*) remote place.
+  var registry2 = loadRDFXML('chrome://sidebar/content/remote-panels.rdf')
+  db.AddDataSource(registry2);
+
+  // And these are the current user's panel choices
+  var currentpanels = loadRDFXML(sidebar.db)
+  db.AddDataSource(currentpanels)
 
   // Create a 'container' wrapper around the sidebar.resources
   // resource so we can use some utility routines that make access a
   // bit easier.
   var sb_datasource = Components.classes['component://netscape/rdf/container']
-  var container    = Components.interfaces.nsIRDFContainer
-  try {
-    sb_datasource     = sb_datasource.createInstance()
-    sb_datasource     = sb_datasource.QueryInterface(container)
-    sb_datasource.Init(registry, RDF.GetResource(sidebar.resource))
-  }
-  catch (ex) {
-    dump("failed to init sb_datasource\n")
-  }
+  var container     = Components.interfaces.nsIRDFContainer
+
+  sb_datasource     = sb_datasource.createInstance()
+  sb_datasource     = sb_datasource.QueryInterface(container)
+  sb_datasource.Init(db, RDF.GetResource(sidebar.resource))
   
   var mypanelsbox = document.getElementById('sidebar-panels')
   if (!mypanelsbox) {
@@ -135,10 +162,10 @@ function sidebarOverlayInit(usersidebar)
   // Now enumerate all of the datasources.
   var enumerator = null
   try {
-  enumerator = sb_datasource.GetElements()
+    enumerator = sb_datasource.GetElements()
   }
   catch (ex) {
-   dump("sb_datasource has no elements.\n")
+    debug("sb_datasource has no elements.\n")
   }
 
   if (!enumerator) return
@@ -148,14 +175,14 @@ function sidebarOverlayInit(usersidebar)
     service = service.QueryInterface(Components.interfaces.nsIRDFResource)
 
     var is_last = !enumerator.HasMoreElements()
-    var new_panel = sidebarAddPanel(mypanelsbox, registry, service, is_last)
+    var new_panel = sidebarAddPanel(mypanelsbox, db, service, is_last)
   }
 }
 
-function sidebarAddPanel(parent, registry, service, is_last) {
-  var panel_title     = sidebarGetAttr(registry, service, 'title')
-  var panel_content   = sidebarGetAttr(registry, service, 'content')
-  var panel_height    = sidebarGetAttr(registry, service, 'height')
+function sidebarAddPanel(parent, db, service, is_last) {
+  var panel_title     = sidebarGetAttr(db, service, 'title')
+  var panel_content   = sidebarGetAttr(db, service, 'content')
+  var panel_height    = sidebarGetAttr(db, service, 'height')
 
   var iframe   = document.createElement('html:iframe')
 
@@ -233,7 +260,7 @@ function sidebarReload() {
 }
 
 function sidebarCustomize() {
-  var newWin = window.openDialog('chrome://sidebar/content/customize.xul','New','chrome', sidebar.db, sidebar.resource)
+  var newWin = window.openDialog('chrome://sidebar/content/customize.xul', 'New','chrome', sidebar.db, sidebar.resource)
   return newWin
 }
 
@@ -243,12 +270,12 @@ function sidebarShowHide() {
   var is_hidden = sidebar.getAttribute('hidden')
 
   if (is_hidden && is_hidden == "true") {
-    //dump("Showing the sidebar\n")
+    debug("Showing the sidebar\n")
     sidebar.setAttribute('hidden','')
     sidebar_splitter.setAttribute('hidden','')
     sidebarOverlayInit()
   } else {
-    //dump("Hiding the sidebar\n")
+    debug("Hiding the sidebar\n")
     sidebar.setAttribute('hidden','true')
     sidebar_splitter.setAttribute('hidden','true')
   }
@@ -272,7 +299,7 @@ function dumpAttributes(node) {
   var attributes = node.attributes
 
   if (!attributes || attributes.length == 0) {
-    dump("no attributes")
+    debug("no attributes")
   }
   for (var ii=0; ii < attributes.length; ii++) {
     var attr = attributes.item(ii)

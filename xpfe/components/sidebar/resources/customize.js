@@ -1,58 +1,38 @@
 // -*- Mode: Java -*-
 
 // the rdf service
-var RDF;
+var RDF = Components.classes['component://netscape/rdf/rdf-service'].getService();
+RDF = RDF.QueryInterface(Components.interfaces.nsIRDFService);
+
 var NC = "http://home.netscape.com/NC-rdf#";
 
 var sidebar;
 
+function debug(msg)
+{
+  dump(msg);
+}
+
 function Init()
 {
-  RDF=Components.classes['component://netscape/rdf/rdf-service'].getService();
-  RDF=RDF.QueryInterface(Components.interfaces.nsIRDFService);
- 
-  sidebar          = new Object;
-  sidebar.db       = window.arguments[0];
-  sidebar.resource = window.arguments[1];
+    sidebar          = new Object;
+    sidebar.db       = window.arguments[0];
+    sidebar.resource = window.arguments[1];
 
-  var registry;
-  try {
-    // First try to construct a new one and load it
-    // synchronously. nsIRDFService::GetDataSource() loads RDF/XML
-    // asynchronously by default.
-    registry = Components.classes['component://netscape/rdf/datasource?name=xml-datasource'].createInstance();
-    registry = registry.QueryInterface(Components.interfaces.nsIRDFDataSource);
+    debug("sidebar.db = " + sidebar.db + "\n");
+    debug("sidebar.resource = " + sidebar.resource + "\n");
 
-    var remote = registry.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
-    remote.Init(sidebar.db); // this will throw if it's already been opened and registered.
+    var selectList = document.getElementById('selectList');
 
-    // read it in synchronously.
-    remote.Refresh(true);
-  }
-  catch (ex) {
-    // if we get here, then the RDF/XML has been opened and read
-    // once. We just need to grab the datasource.
-    registry = RDF.GetDataSource(sidebar.db);
-  }
+    // Add the necessary datasources to the select list
+    selectList.database.AddDataSource(RDF.GetDataSource("chrome://sidebar/content/local-panels.rdf"));
+    selectList.database.AddDataSource(RDF.GetDataSource("chrome://sidebar/content/remote-panels.rdf"));
+    selectList.database.AddDataSource(RDF.GetDataSource(sidebar.db));
 
-  // Create a 'container' wrapper around the sidebar.resources
-  // resource so we can use some utility routines that make access a
-  // bit easier.
-  var sb_datasource = Components.classes['component://netscape/rdf/container'].createInstance();
-  sb_datasource = sb_datasource.QueryInterface(Components.interfaces.nsIRDFContainer);
-  sb_datasource.Init(registry, RDF.GetResource(sidebar.resource));
-  
-  // Now enumerate all of the flash datasources.
-  var enumerator = sb_datasource.GetElements();
-  var count = 0;
-  while (enumerator.HasMoreElements()) {
-    count = ++count;
-    var service = enumerator.GetNext();
-    service = service.QueryInterface(Components.interfaces.nsIRDFResource);
+    // Root the customize dialog at the correct place.
+    selectList.setAttribute('ref', sidebar.resource);
 
-    addOption(registry, service, false);
-  }
-  enableButtons();
+    enableButtons();
 }
 
 function addOption(registry, service, selectIt) {
@@ -311,18 +291,27 @@ function Save()
   //window.close();
 }
 
-function selected()
+function otherPanelSelected()
 { 
-  var add_button = document.getElementById('add_button');
-  var preview_button = document.getElementById('preview_button');
-  var select_list = document.getElementsByAttribute("selected", "true");
-  if (select_list.length >= 1) {
-    add_button.setAttribute('disabled','');
-    preview_button.setAttribute('disabled','');
-  } else {
-    add_button.setAttribute('disabled','true');
-    preview_button.setAttribute('disabled','true');
-  }
+    var add_button = document.getElementById('add_button');
+    var preview_button = document.getElementById('preview_button');
+    var other_panels = document.getElementById('other-panels');
+
+    var select_list = new Array();
+    for (var i = 0; i < other_panels.options.length; ++i) {
+        if (other_panels.options[i].selected) {
+            select_list[select_list.length] = other_panels.options[i];
+        }
+    }
+
+    if (select_list.length > 0) {
+        add_button.setAttribute('disabled','');
+        preview_button.setAttribute('disabled','');
+    }
+    else {
+        add_button.setAttribute('disabled','true');
+        preview_button.setAttribute('disabled','true');
+    }
 }
 
 function AddPanel() 
