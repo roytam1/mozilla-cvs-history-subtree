@@ -599,6 +599,7 @@ ldap_x_hostlist_next( char **hostp, int *portp,
 	struct ldap_x_hostlist_status *status )
 {
 	char	*q;
+	int		squarebrackets = 0;
 
 	if ( NULL == hostp || NULL == portp || NULL == status ) {
 		return( LDAP_PARAM_ERROR );
@@ -607,6 +608,15 @@ ldap_x_hostlist_next( char **hostp, int *portp,
 	if ( NULL == status->lhs_nexthost ) {
 		*hostp = NULL;
 		return( LDAP_SUCCESS );
+	}
+
+	/*
+	 * skip past leading '[' if present (IPv6 addresses may be surrounded
+	 * with square brackets, e.g., [fe80::a00:20ff:fee5:c0b4]:389
+	 */
+	if ( status->lhs_nexthost[0] == '[' ) {
+		++status->lhs_nexthost;
+		squarebrackets = 1;
 	}
 
 	/* copy host into *hostp */
@@ -627,8 +637,17 @@ ldap_x_hostlist_next( char **hostp, int *portp,
 		status->lhs_nexthost = NULL;
 	}
 
+	/* 
+	 * Look for closing ']' and skip past it before looking for port.
+	 */
+	if ( squarebrackets && NULL != ( q = strchr( *hostp, ']' ))) {
+		*q++ = '\0';
+	} else {
+		q = *hostp;
+	}
+
 	/* determine and set port */
-	if ( NULL != ( q = strchr( *hostp, ':' ))) {
+	if ( NULL != ( q = strchr( q, ':' ))) {
 		*q++ = '\0';
 		*portp = atoi( q );
 	} else {

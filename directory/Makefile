@@ -30,8 +30,9 @@ NSPR_VERSION	= 4.1.1
 NSS_VERSION	= 3.2.1
 DEPTH		= ..
 CONFIGDIR	= c-sdk/config
+MOD_DEPTH	= c-sdk
 
-include		$(CONFIGDIR)/arch.mk
+include		$(CONFIGDIR)/config.mk
 include		c-sdk/build.mk
 
 all:	FORCE
@@ -47,6 +48,7 @@ all:	FORCE
 	@echo "   USE_PTHREADS=1	for using pthreads"
 	@echo "   USE_64=1		for building 64 bit versions"
 	@echo "   BUILD_CLU=1		build command line utilities"
+	@echo "   COMPS_FROM_OBJDIR=1	use components from ../dist/$(OBJDIR_NAME)"
 	@echo 
 	@echo iPlanet internal options
 	@echo

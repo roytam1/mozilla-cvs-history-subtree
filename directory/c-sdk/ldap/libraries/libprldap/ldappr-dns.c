@@ -65,14 +65,15 @@ static LDAPHostEnt *
 prldap_gethostbyname( const char *name, LDAPHostEnt *result,
 	char *buffer, int buflen, int *statusp, void *extradata )
 {
-	PRHostEnt	prhent;
+    PRHostEnt	prhent;
 
-	if( !statusp || ( *statusp = (int)PR_GetHostByName( name, buffer, 
-			buflen, &prhent )) == PR_FAILURE ) {
-		return( NULL );
-	}
+    if( !statusp || ( *statusp = (int)PR_GetIPNodeByName( name,
+		PRLDAP_DEFAULT_ADDRESS_FAMILY, PR_AI_DEFAULT,
+		buffer, buflen, &prhent )) == PR_FAILURE ) {
+	return( NULL );
+    }
 
-	return( prldap_convert_hostent( result, &prhent ));
+    return( prldap_convert_hostent( result, &prhent ));
 }
 
 
@@ -84,9 +85,10 @@ prldap_gethostbyaddr( const char *addr, int length, int type,
     PRHostEnt	prhent;
     PRNetAddr	iaddr;
 
-    if ( PR_InitializeNetAddr(PR_IpAddrNull, 0, &iaddr) == PR_FAILURE ||
-	    (iaddr.inet.ip = inet_addr(addr)) == -1 ) {
-        return( NULL );
+    if ( PR_SetNetAddr(PR_IpAddrNull, PRLDAP_DEFAULT_ADDRESS_FAMILY,
+		0, &iaddr) == PR_FAILURE
+		|| PR_StringToNetAddr( addr, &iaddr ) == PR_FAILURE ) {
+	return( NULL );
     }
 
     if( !statusp || (*statusp = PR_GetHostByAddr(&iaddr, buffer,

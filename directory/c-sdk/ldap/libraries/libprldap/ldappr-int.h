@@ -34,6 +34,19 @@
 #include <string.h>
 
 /*
+ * Macros:
+ */
+
+/* #define PRLDAP_DEBUG	1	*/ 	/* uncomment to enable debugging printfs */
+
+/*
+ * All of the sockets we use are IPv6 capable.
+ * Change the following #define to PR_AF_INET to support IPv4 only.
+ */
+#define PRLDAP_DEFAULT_ADDRESS_FAMILY	PR_AF_INET6
+
+
+/*
  * Data structures:
  */
 

@@ -35,12 +35,6 @@
 #define PRLDAP_POLL_ARRAY_GROWTH  5  /* grow arrays 5 elements at a time */
 
 /*
- * XXXmcs: change the following #define to PR_AF_INET6 once we upgrade
- * to NSPR 4 (or for IPv6 support with NSPR 3.5.x).
- */
-#define PRLDAP_DEFAULT_ADDRESS_FAMILY	PR_AF_INET
-
-/*
  * Local function prototypes:
  */
 static PRIntervalTime prldap_timeout2it( int ms_timeout );
@@ -283,6 +277,25 @@ prldap_try_one_address( struct lextiof_socket_private *prsockp,
 	}
     }
 
+#ifdef PRLDAP_DEBUG
+    {
+	char	buf[ 256 ], *p, *fmtstr;
+
+	if ( PR_SUCCESS != PR_NetAddrToString( addrp, buf, sizeof(buf ))) {
+		strcpy( buf, "conversion failed!" );
+	}
+	if ( strncmp( buf, "::ffff:", 7 ) == 0 ) {
+		/* IPv4 address mapped into IPv6 address space */
+		p = buf + 7;
+		fmtstr = "prldap_try_one_address(): Trying %s:%d...\n";
+	} else {
+		p = buf;
+		fmtstr = "prldap_try_one_address(): Trying [%s]:%d...\n";
+	}
+	fprintf( stderr, fmtstr, p, PR_ntohs( addrp->ipv6.port ));
+    }
+#endif /* PRLDAP_DEBUG */
+
     /*
      * Try to open the TCP connection itself:
      */
@@ -292,6 +305,10 @@ prldap_try_one_address( struct lextiof_socket_private *prsockp,
 	prsockp->prsock_prfd = NULL;
 	return( -1 );
     }
+
+#ifdef PRLDAP_DEBUG
+    fputs( "prldap_try_one_address(): Connected.\n", stderr );
+#endif /* PRLDAP_DEBUG */
 
     /*
      * Success.  Return a valid file descriptor (1 is always valid)
@@ -332,11 +349,20 @@ prldap_connect( const char *hostlist, int defport, int timeout,
 		parse_err = ldap_x_hostlist_next( &host, &port, status )) {
 
 	if ( PR_SUCCESS == PR_StringToNetAddr( host, &addr )) {
+		
+		if ( PRLDAP_DEFAULT_ADDRESS_FAMILY == PR_AF_INET6 &&
+				PR_AF_INET == PR_NetAddrFamily( &addr )) {
+			PRUint32	ipv4ip = addr.inet.ip;
+			memset( &addr, 0, sizeof(addr));
+			PR_ConvertIPv4AddrToIPv6( ipv4ip, &addr.ipv6.ip );
+			addr.ipv6.family = PR_AF_INET6;
+			
+		}
 	    rc = prldap_try_one_address( prsockp, &addr, port,
 			timeout, options );
 	} else {
 	    if ( PR_SUCCESS == PR_GetIPNodeByName( host,
-			PRLDAP_DEFAULT_ADDRESS_FAMILY, PR_AI_DEFAULT, hbuf, 
+			PRLDAP_DEFAULT_ADDRESS_FAMILY, PR_AI_DEFAULT | PR_AI_ALL, hbuf, 
 			sizeof( hbuf ), &hent )) {
 		PRIntn enumIndex = 0;
 

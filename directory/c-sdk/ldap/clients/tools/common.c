@@ -731,21 +731,14 @@ ldaptool_ldap_init( int second_host )
 
     if ( !second_host 	&& secure  
 	 &&(rc = ldapssl_pkcs_init( &local_pkcs_fns))  < 0) {
-	if ( secure ) {	/* secure connection requested -- fail if no SSL */
+	    /* secure connection requested -- fail if no SSL */
 	    rc = PORT_GetError();
 	    fprintf( stderr, "SSL initialization failed: error %d (%s)\n",
 		    rc, ldapssl_err2string( rc ));
 	    exit( LDAP_LOCAL_ERROR );
-	}
-	
-#ifdef NSPR20
-    /*
-     * PR_Init() is always called by ldapssl_clientauth_init()
-     * Since we don't plan to use NSPR I/O, we disable NSPR now.
-     */
-    PR_Cleanup();
-#endif
-    } else if (secure) {
+    }
+
+    if (secure) {
 #ifdef LDAP_TOOL_ARGPIN
 	if (PinArgRegistration( )) {
 	    exit( LDAP_LOCAL_ERROR);
@@ -763,11 +756,13 @@ ldaptool_ldap_init( int second_host )
 		    LDAPTOOL_CHECK4SSL_ALWAYS ));
 	    }
     } else {
-	ld = ldap_init( host, port );
+	/* In order to support IPv6, we use NSPR I/O */
+	ld = prldap_init( host, port, 0 /* not shared across threads */ );
     }
 
 #else
-    ld = ldap_init( host, port );
+    /* In order to support IPv6, we use NSPR I/O */
+    ld = prldap_init( host, port, 0 /* not shared across threads */ );
 #endif
 
     if ( ld == NULL ) {

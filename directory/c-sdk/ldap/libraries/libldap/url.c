@@ -30,11 +30,17 @@
  *    l d a p : / / hostport / dn [ ? attributes [ ? scope [ ? filter ] ] ]
  *
  *  where:
+ *   hostport is a host or a host:port list that can be space-separated.
  *   attributes is a comma separated list
  *   scope is one of these three strings:  base one sub (default=base)
  *   filter is an string-represented filter as in RFC 1558
  *
  *  e.g.,  ldap://ldap.itd.umich.edu/c=US?o,description?one?o=umich
+ *
+ *  To accomodate IPv6 addresses, the host portion of a host that appears
+ *  in hostport can be enclosed in square brackets, e.g
+ *
+ *  e.g.,  ldap://[fe80::a00:20ff:fee5:c0b4]:3389/dc=siroe,dc=com
  *
  *  We also tolerate URLs that look like: <ldapurl> and <URL:ldapurl>
  */
@@ -222,6 +228,10 @@ nsldapi_url_parse( const char *url, LDAPURLDesc **ludpp, int dn_required )
 			p = ludp->lud_host;
 		} else {
 			++p;
+		}
+		if ( *p == '[' && ( q = strchr( p, ']' )) != NULL ) {
+			 /* square brackets present -- skip past them */
+			p = q++;
 		}
 		if (( p = strchr( p, ':' )) != NULL ) {
 			*p++ = '\0';

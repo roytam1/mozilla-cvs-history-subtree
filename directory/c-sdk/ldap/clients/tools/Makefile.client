@@ -39,6 +39,10 @@ INCLUDES	+= -I../../../../..$(HEADERDIR)/include \
 		-I../../../../../dist/public/nss \
 		-I../../../ldap/include \
 
+ifeq ($(HAVE_CCONF), 1)
+COMPS_FROM_OBJDIR=1
+endif
+
 #
 # The "arg pin" feature depends on the server core library.
 #
@@ -143,6 +147,7 @@ ifeq ($(LDAP_TOOL_ARGPIN),0)
 EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SVRCORE_LIBNAME).lib
 endif
 EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SSLDAP_LIBNAME).lib
+EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PRLDAP_LIBNAME).lib
 EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(NSS_LIBNAME).lib
 EXTRA_LIBS += $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(SSL_LIBNAME).lib
 endif
@@ -229,7 +234,7 @@ else
 	$(NSINSTALL) $(LIBLOCATION)/lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
-ifeq ($(HAVE_CCONF), 1)
+ifeq ($(COMPS_FROM_OBJDIR), 1)
 ifeq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
