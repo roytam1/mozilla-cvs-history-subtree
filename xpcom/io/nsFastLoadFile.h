@@ -62,6 +62,21 @@ typedef PRUint32 NSFastLoadID;          // nsFastLoadFooter::mIDMap index
 typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mSharpObjectMap index
 
 /**
+ * A Mozilla FastLoad file is an untagged (in general) stream of objects and
+ * primitive-type data.  Small integers are fairly common, and could easily be
+ * confused for NSFastLoadIDs and NSFastLoadOIDs.  To help catch bugs where
+ * reader and writer code fail to match, we XOR unlikely 32-bit numbers with
+ * NSFastLoad*IDs when storing and fetching.  The following unlikely values are
+ * irrational numbers ((1-sqrt(5))/2, sqrt(2)-1) represented in fixed point.
+ *
+ * The reader XORs, converts the ID to an index, and bounds-checks all array
+ * accesses that use the index.  Array access code asserts that the index is in
+ * bounds, and returns a dummy array element if it isn't.
+ */
+#define MFL_ID_XOR_KEY  0x9E3779B9      // key XOR'd with ID when serialized
+#define MFL_OID_XOR_KEY 0x6A09E667      // key XOR'd with OID when serialized
+
+/**
  * An OID can be tagged to introduce the serialized definition of the object,
  * or to stand for a strong or weak reference to that object.  Thus the high
  * 29 bits actually identify the object, and the low three bits tell whether
@@ -106,6 +121,7 @@ typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mSharpObjectMap ind
 
 #define MFL_FILE_VERSION_0      0
 #define MFL_FILE_VERSION_1      1000
+#define MFL_FILE_VERSION        1       // experimental
 
 /**
  * Compute Fletcher's 16-bit checksum over aLength bytes starting at aBuffer,
@@ -271,6 +287,7 @@ class NS_COM nsFastLoadFileReader
     nsresult ReadFooter(nsFastLoadFooter *aFooter);
     nsresult ReadFooterPrefix(nsFastLoadFooterPrefix *aFooterPrefix);
     nsresult ReadSlowID(nsID *aID);
+    nsresult ReadFastID(NSFastLoadID *aID);
     nsresult ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo);
     nsresult DeserializeObject(nsISupports* *aObject);
 
@@ -340,6 +357,7 @@ class NS_COM nsFastLoadFileWriter
 
     nsresult WriteHeader(nsFastLoadHeader *aHeader);
     nsresult WriteSlowID(const nsID& aID);
+    nsresult WriteFastID(NSFastLoadID aID);
     nsresult WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo);
     nsresult WriteFooter();
 

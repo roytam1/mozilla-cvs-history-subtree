@@ -206,6 +206,15 @@ nsFastLoadFileReader::ReadSlowID(nsID *aID)
 }
 
 nsresult
+nsFastLoadFileReader::ReadFastID(NSFastLoadID *aID)
+{
+    nsresult rv = Read32(aID);
+    if (NS_SUCCEEDED(rv))
+        *aID ^= MFL_ID_XOR_KEY;
+    return rv;
+}
+
+nsresult
 nsFastLoadFileReader::ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo)
 {
     nsresult rv;
@@ -234,7 +243,7 @@ nsFastLoadFileReader::Open()
     rv = ReadHeader(&mHeader);
     if (NS_FAILED(rv)) return rv;
 
-    if (mHeader.mVersion != MFL_FILE_VERSION_0)
+    if (mHeader.mVersion != MFL_FILE_VERSION)
         return NS_ERROR_FAILURE;
 
     PRUint32 dataOffset;
@@ -286,7 +295,7 @@ nsFastLoadFileReader::DeserializeObject(nsISupports* *aObject)
     nsresult rv;
     NSFastLoadID fastCID;
 
-    rv = Read32(&fastCID);
+    rv = ReadFastID(&fastCID);
     if (NS_FAILED(rv)) return rv;
 
     const nsID& slowCID = mFooter.GetID(fastCID);
@@ -308,10 +317,11 @@ nsresult
 nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
 {
     nsresult rv;
-
     NSFastLoadOID oid;
+
     rv = Read32(&oid);
     if (NS_FAILED(rv)) return rv;
+    oid ^= MFL_OID_XOR_KEY;
 
     nsFastLoadSharpObjectEntry* entry = (oid != MFL_DULL_OBJECT_OID)
                                         ? &mFooter.GetSharpObjectEntry(oid)
@@ -380,7 +390,7 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
 
     if (oid & MFL_QUERY_INTERFACE_TAG) {
         NSFastLoadID iid;
-        rv = Read32(&iid);
+        rv = ReadFastID(&iid);
         if (NS_FAILED(rv)) return rv;
 
         rv = object->QueryInterface(mFooter.GetID(iid),
@@ -400,7 +410,7 @@ nsFastLoadFileReader::ReadID(nsID *aResult)
     nsresult rv;
     NSFastLoadID fastID;
 
-    rv = Read32(&fastID);
+    rv = ReadFastID(&fastID);
     if (NS_FAILED(rv)) return rv;
 
     *aResult = mFooter.GetID(fastID);
@@ -589,6 +599,12 @@ nsFastLoadFileWriter::WriteSlowID(const nsID& aID)
 }
 
 nsresult
+nsFastLoadFileWriter::WriteFastID(NSFastLoadID aID)
+{
+    return Write32(aID ^ MFL_ID_XOR_KEY);
+}
+
+nsresult
 nsFastLoadFileWriter::WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo)
 {
     nsresult rv;
@@ -743,7 +759,7 @@ nsFastLoadFileWriter::Close()
 
     memcpy(header.mMagic, magic, MFL_FILE_MAGIC_SIZE);
     header.mChecksum = 0;
-    header.mVersion = MFL_FILE_VERSION_0;
+    header.mVersion = MFL_FILE_VERSION;
     
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
 
@@ -841,7 +857,7 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
         oid |= MFL_WEAK_REF_TAG;
     oid |= (aTags & MFL_QUERY_INTERFACE_TAG);
 
-    rv = Write32(oid);
+    rv = Write32(oid ^ MFL_OID_XOR_KEY);
     if (NS_FAILED(rv)) return rv;
 
     if (oid & MFL_OBJECT_DEF_TAG) {
@@ -857,7 +873,7 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
         rv = MapID(slowCID, &fastCID);
         if (NS_FAILED(rv)) return rv;
 
-        rv = Write32(fastCID);
+        rv = WriteFastID(fastCID);
         if (NS_FAILED(rv)) return rv;
 
         rv = serializable->Write(this);
@@ -918,7 +934,7 @@ nsFastLoadFileWriter::WriteCompoundObject(nsISupports* aObject,
     rv = MapID(aIID, &iid);
     if (NS_FAILED(rv)) return rv;
 
-    return Write32(iid);
+    return WriteFastID(iid);
 }
 
 NS_IMETHODIMP
@@ -930,7 +946,7 @@ nsFastLoadFileWriter::WriteID(const nsID& aID)
     rv = MapID(aID, &fastID);
     if (NS_FAILED(rv)) return rv;
 
-    return Write32(fastID);
+    return WriteFastID(fastID);
 }
 
 NS_IMETHODIMP
