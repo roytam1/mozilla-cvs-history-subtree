@@ -63,6 +63,7 @@
 #include "nsIConsoleService.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIPrefBranchInternal.h"
+#include "nsIJSRuntimeService.h"
 
 static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -134,6 +135,41 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsScriptSecurityManager,
 ///////////////////////////////////////////////////
 
 ///////////////// Security Checks /////////////////
+static JSBool JS_DLL_CALLBACK
+CheckJSFunctionCallerAccess(JSContext *cx, JSObject *obj, jsval id,
+                              JSAccessMode mode, jsval *vp)
+{
+    // Currently, this function will be called only when function.caller
+    // is accessed. If that changes, we will need to change this function.
+    NS_ASSERTION(nsCRT::strcmp(JS_GetStringChars(JSVAL_TO_STRING(id)),
+                               NS_LITERAL_STRING("caller").get()) == 0,
+                 "CheckJSFunctionCallerAccess called for a property other than \'caller\'");
+
+    // Get the security manager
+    //XXX: Any way to avoid this service lookup?
+    nsresult rv;
+    nsCOMPtr<nsIScriptSecurityManager> ssm = 
+        do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+    if (NS_FAILED(rv))
+    {
+        NS_ERROR("Failed to get security manager service");
+        return JS_FALSE;
+    }
+
+    // Get the caller function object
+    NS_ASSERTION(JSVAL_IS_OBJECT(*vp), "*vp is not an object");
+    JSObject* target = JSVAL_TO_OBJECT(*vp);
+
+    // Do the same-origin check - this sets a JS exception if the check fails
+    rv = ssm->CheckPropertyAccess(cx, target, "Function", "caller",
+                                  nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
+
+    if (NS_FAILED(rv))
+        return JS_FALSE; // Security check failed
+
+    return JS_TRUE;
+}
+
 NS_IMETHODIMP
 nsScriptSecurityManager::CheckPropertyAccess(JSContext* aJSContext,
                                              JSObject* aJSObject,
@@ -2037,6 +2073,23 @@ nsScriptSecurityManager::nsScriptSecurityManager(void)
     NS_INIT_REFCNT();
     InitPrefs();
     mThreadJSContextStack = do_GetService("@mozilla.org/js/xpc/ContextStack;1");
+
+    //-- Register security check callback in the JS engine
+    //   Currently this is used to control access to function.caller
+    nsresult rv;
+    nsCOMPtr<nsIJSRuntimeService> runtimeService =
+        do_GetService("@mozilla.org/js/xpc/RuntimeService;1", &rv);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get runtime service");
+
+    JSRuntime *rt;
+    rv = runtimeService->GetRuntime(&rt);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get current JS runtime");
+
+    JSCheckAccessOp oldCallback = 
+        JS_SetCheckObjectAccessCallback(rt, CheckJSFunctionCallerAccess);
+
+    // For now, assert that no callback was set previously
+    NS_ASSERTION(!oldCallback, "Someone already set a JS CheckObjectAccess callback");
 }
 
 nsScriptSecurityManager::~nsScriptSecurityManager(void)
