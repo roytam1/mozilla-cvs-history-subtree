@@ -556,25 +556,7 @@ nsScriptSecurityManager::CheckSameOriginDOMProp(JSContext *aCx,
         return NS_ERROR_FAILURE;
 
     if (isSameOrigin)
-    {   // If either the subject or the object has changed its principal by
-        // explicitly setting document.domain then the other must also have
-        // done so in order to be considered the same origin. This prevents
-        // DNS spoofing based on document.domain (154930)
-        nsCOMPtr<nsIAggregatePrincipal> subjectAgg(do_QueryInterface(aSubject, &rv));
-        NS_ENSURE_SUCCESS(rv, rv);
-        PRBool subjectSetDomain = PR_FALSE;
-        subjectAgg->WasCodebaseChanged(&subjectSetDomain);
-
-        nsCOMPtr<nsIAggregatePrincipal> objectAgg(do_QueryInterface(aObject, &rv));
-        NS_ENSURE_SUCCESS(rv, rv);
-        PRBool objectSetDomain = PR_FALSE;
-        objectAgg->WasCodebaseChanged(&objectSetDomain);
-
-        // If both or neither explicitly set their domain, allow the access
-        if (!(subjectSetDomain || objectSetDomain) ||
-            (subjectSetDomain && objectSetDomain))
-            return NS_OK;
-    }
+        return NS_OK;
 
     // Allow access to about:blank
     nsCOMPtr<nsICodebasePrincipal> objectCodebase(do_QueryInterface(aObject));
