@@ -1,0 +1,40 @@
+<!ENTITY done.label                       "Done">
+<!ENTITY canceled.label                   "Canceled">
+<!ENTITY installing.label                 "Installing...">
+
+<!ENTITY starting.label                   "Starting...">
+<!ENTITY failed.label                     "Failed">
+
+<!ENTITY downloads.title                  "Downloads">
+
+<!ENTITY cmd.pause.label                  "Pause">
+<!ENTITY cmd.pause.accesskey              "P">
+<!ENTITY cmd.resume.label                 "Resume">
+<!ENTITY cmd.resume.accesskey             "R">
+<!ENTITY cmd.cancel.label                 "Cancel">
+<!ENTITY cmd.cancel.accesskey             "C">
+<!ENTITY cmd.show.label                   "Open Containing Folder">
+<!ENTITY cmd.show.accesskey               "F">
+<!ENTITY cmd.open.label                   "Open">
+<!ENTITY cmd.open.accesskey               "O">
+<!ENTITY cmd.openWith.label               "Open With...">
+<!ENTITY cmd.openWith.accesskey           "h">
+<!ENTITY cmd.retry.label                  "Retry">
+<!ENTITY cmd.retry.accesskey              "R">
+<!ENTITY cmd.remove.label                 "Remove">
+<!ENTITY cmd.remove.accesskey             "e">
+<!ENTITY cmd.properties.label             "Properties">
+<!ENTITY cmd.properties.accesskey         "i">
+<!ENTITY cmd.info.commandKey              "i">
+
+<!ENTITY cmd.close.commandKey             "w">
+<!ENTITY cmd.cleanUp.label                "Clean Up">
+<!ENTITY cmd.cleanUp.tooltip              "Removes completed, canceled or failed downloads from the list">
+<!ENTITY cmd.cleanUp.accesskey            "a">
+
+<!ENTITY cmd.options.label                "Options">
+<!ENTITY cmd.options.accesskey            "O">
+
+<!ENTITY closeWhenDone.label              "Close when downloads complete">
+<!ENTITY closeWhenDone.tooltip            "Closes the Downloads window when all files are done downloading">
+
