@@ -40,18 +40,20 @@
 #import "NSString+Utils.h"
 
 // Embedding includes
-#include "nsIWebBrowser.h"
 #include "nsIWebNavigation.h"
+#include "nsIWebProgress.h"
 #include "nsIURI.h"
 #include "nsIDOMWindow.h"
-//#include "nsIWidget.h"
+
 // XPCOM and String includes
+#include "nsIInterfaceRequestorUtils.h"
 #include "nsIRequest.h"
 #include "nsCRT.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMPopupBlockedEvent.h"
 #include "nsNetError.h"
+
 #import "CHBrowserView.h"
 #import "BookmarksClient.h"
 #import "Bookmark.h"
@@ -582,13 +584,19 @@ CHBrowserListener::OnProgressChange(nsIWebProgress *aWebProgress, nsIRequest *aR
 /* void onLocationChange (in nsIWebProgress aWebProgress, in nsIRequest aRequest, in nsIURI location); */
 NS_IMETHODIMP 
 CHBrowserListener::OnLocationChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, 
-                                          nsIURI *location)
+                                          nsIURI *aLocation)
 {
-  if (!location)
+  if (!aLocation || !aWebProgress)
     return NS_ERROR_FAILURE;
-    
+
+  nsCOMPtr<nsIDOMWindow> windowForProgress;
+  aWebProgress->GetDOMWindow(getter_AddRefs(windowForProgress));
+  nsCOMPtr<nsIDOMWindow> ourWindow = do_GetInterface(NS_STATIC_CAST(nsIInterfaceRequestor*, this));
+  if (windowForProgress != ourWindow)
+    return NS_OK;
+
   nsCAutoString spec;
-  location->GetSpec(spec);
+  aLocation->GetSpec(spec);
   NSString* str = [NSString stringWithUTF8String:spec.get()];
 
   NSEnumerator* enumerator = [mListeners objectEnumerator];
