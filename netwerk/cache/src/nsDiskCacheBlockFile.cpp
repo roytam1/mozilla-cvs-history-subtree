@@ -36,6 +36,8 @@ nsresult
 nsDiskCacheBlockFile::Open( nsILocalFile *  blockFile, PRUint32  blockSize)
 {
     PRStatus  err = PR_SUCCESS;
+    PRInt32   fileSize;
+
     mBlockSize = blockSize;
     
     // open the file
@@ -50,7 +52,7 @@ nsDiskCacheBlockFile::Open( nsILocalFile *  blockFile, PRUint32  blockSize)
     }
     
     // check if we just creating the file
-    PRInt32 fileSize = PR_Available(mFD);
+    fileSize = PR_Available(mFD);
     if (fileSize < 0) {
         // XXX an error occurred. We could call PR_GetError(), but how would that help?
         rv = NS_ERROR_UNEXPECTED;
