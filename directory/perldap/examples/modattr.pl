@@ -301,14 +301,12 @@ sufficient, e.g. I<CN>, I<UID> and I<MAIL>.
 
 =head1 AVAILABILITY
 
-The latest version of this script, and other related packages, are
-available from
+This package can be retrieved from a number of places, including:
 
-  http://www.mozilla.org/
+    http://www.mozilla.org/directory/
+    Your local CPAN server
 
-or your nearest CPAN archive.
-
-=head1 AUTHOR INFORMATION
+=head1 CREDITS
 
 This little tool was developed internally at Netscape, by Leif Hedstrom.
 
