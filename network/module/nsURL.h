@@ -47,22 +47,22 @@ public:
     /* 
         The Scheme is the protocol that this URL refers to. 
     */
-    NS_METHOD          GetScheme(const char* *o_Scheme) const;
-    NS_METHOD          SetScheme(const char* i_Scheme);
+    NS_METHOD           GetScheme(const char* *o_Scheme) const;
+    NS_METHOD           SetScheme(const char* i_Scheme);
 
     /* 
         The PreHost portion includes elements like the optional 
         username:password, or maybe other scheme specific items. 
     */
-    NS_METHOD          GetPreHost(const char* *o_PreHost) const;
-    NS_METHOD          SetPreHost(const char* i_PreHost);
+    NS_METHOD           GetPreHost(const char* *o_PreHost) const;
+    NS_METHOD           SetPreHost(const char* i_PreHost);
 
     /* 
         The Host is the internet domain name to which this URL refers. 
         Note that it could be an IP address as well. 
     */
-    NS_METHOD          GetHost(const char* *o_Host) const;
-    NS_METHOD          SetHost(const char* i_Host);
+    NS_METHOD           GetHost(const char* *o_Host) const;
+    NS_METHOD           SetHost(const char* i_Host);
 
     /* 
         A return value of -1 indicates that no port value is set and the 
@@ -73,17 +73,16 @@ public:
         However after setting a port (even if its default), the port number will
         appear in the ToString function.
     */
-    NS_METHOD_(PRInt32)
-                       GetPort(void) const;
-    NS_METHOD          SetPort(PRInt32 i_Port);
+    NS_METHOD_(PRInt32) GetPort(void) const;
+    NS_METHOD           SetPort(PRInt32 i_Port);
 
     /* 
         Note that the path includes the leading '/' Thus if no path is 
         available the GetPath will return a "/" 
         For SetPath if none is provided, one would be prefixed to the path. 
     */
-    NS_METHOD          GetPath(const char* *o_Path) const;
-    NS_METHOD          SetPath(const char* i_Path);
+    NS_METHOD           GetPath(const char* *o_Path) const;
+    NS_METHOD           SetPath(const char* i_Path);
 
     //Functions from nsICoolURL.h 
     /* 
@@ -92,7 +91,7 @@ public:
         calling OpenInputStream on the connection returned from 
         OpenConnection.
     */
-    NS_METHOD          OpenStream(nsIInputStream* *o_InputStream);
+    NS_METHOD           OpenStream(nsIInputStream* *o_InputStream);
 
     /*
         The GetDocument function BLOCKS till the data is made available
@@ -104,7 +103,7 @@ public:
 
         TODO - return status? 
     */
-    NS_METHOD          GetDocument(const char* *o_Data);
+    NS_METHOD           GetDocument(const char* *o_Data);
 
     /* 
         The OpenConnection method sets up the connection as decided by the 
@@ -124,12 +123,16 @@ public:
             http://foo.com:80 == http://foo.com
         but this function through nsIURL alone will not return equality.
     */
-    NS_METHOD_(PRBool) Equals(const nsIURI* i_URI) const;
+    NS_METHOD_(PRBool)  Equals(const nsIURI* i_URI) const;
 
     /* 
         Writes a string representation of the URL. 
     */
-    NS_METHOD          ToString(const char* *o_URLString) const;
+    NS_METHOD           ToString(const char* *o_URLString) const;
+
+#ifdef DEBUG
+    NS_METHOD           DebugString(const char* *o_URLString) const;
+#endif //DEBUG
 
 protected:
     
@@ -149,12 +152,12 @@ protected:
         Parses the portions of the URL into individual pieces 
         like spec, prehost, host, path etc.
     */
-    NS_METHOD          Parse();
+    NS_METHOD           Parse();
 
     /*
         Extract a portion from the given part id.
     */
-    NS_METHOD          Extract(const char* *o_OutputString, Part i_id) const;
+    NS_METHOD           Extract(const char* *o_OutputString, Part i_id) const;
 
     /* 
         This holds the offsets and the lengths of each part. 
@@ -164,6 +167,8 @@ protected:
 
     char*       m_URL;
     PRInt32     m_Port;
+private:
+    void                ExtractPortFrom(int start, int length);
 };
 
 inline

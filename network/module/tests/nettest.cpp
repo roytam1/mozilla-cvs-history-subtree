@@ -353,29 +353,24 @@ int main(int argc, char **argv)
 
 int testURL()
 {
-    char* fooURL1 = "http://username:password@hostname.com:80/pathname/./more/stuff/../path";
-    nsICoolURL* pURL1 = CreateURL(fooURL1);
+    const char* temp;
+    const int tests = 5;
+    const char* url[tests] = 
+    {
+        "http://username:password@hostname.com:80/pathname/./more/stuff/../path",
+        "username@host:8080/path",
+        "", //empty string
+        "http:user@hostname.edu:80/pathname", //this is http:user and not user:pass -TODO ??
+        "http:username:password@hostname:80/pathname"
+    };
 
-    const char* tempBuff = 0;
-
-    cout << "Starting with " << fooURL1 << endl;
-    pURL1->GetScheme(&tempBuff);
-    cout << "SCHEME= " << tempBuff << endl;
-    pURL1->GetPreHost(&tempBuff);
-    cout << "PREHOST= " << tempBuff << endl;
-    //if (tempBuff) delete[] tempBuff;
-    pURL1->GetHost(&tempBuff);
-    cout << "HOST= " << tempBuff << endl;
-    //if (tempBuff) delete[] tempBuff;
-    cout << "PORT= " << pURL1->GetPort() << endl;
-    pURL1->GetPath(&tempBuff);
-    cout << "PATH= " << tempBuff << endl;
-    //if (tempBuff) delete[] tempBuff;
-
-    char* fooURL2 = "username:password@hostname.edu:80/pathname";
-    nsICoolURL* pURL2 = CreateURL(fooURL2);
-    char* fooURL3 = "http:username:password@hostname:80/pathname";
-    nsICoolURL* pURL3 = CreateURL(fooURL3);
-    
+    for (int i = 0; i< tests; ++i)
+    {
+        nsICoolURL* pURL = CreateURL(url[i]);
+        pURL->DebugString(&temp);
+        cout << temp << endl;
+        pURL->Release();
+    }
+  
     return 0;
 }
