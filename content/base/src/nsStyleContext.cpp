@@ -164,181 +164,6 @@ PRInt32 StyleTextImpl::CalcDifference(const StyleTextImpl& aOther) const
 }
 
 //-----------------------
-// nsStyleContent
-//
-
-nsStyleContent::nsStyleContent(void)
-  : mMarkerOffset(),
-    mContentCount(0),
-    mContents(nsnull),
-    mIncrementCount(0),
-    mIncrements(nsnull),
-    mResetCount(0),
-    mResets(nsnull),
-    mQuotesCount(0),
-    mQuotes(nsnull)
-{
-}
-
-nsStyleContent::~nsStyleContent(void)
-{
-  DELETE_ARRAY_IF(mContents);
-  DELETE_ARRAY_IF(mIncrements);
-  DELETE_ARRAY_IF(mResets);
-  DELETE_ARRAY_IF(mQuotes);
-}
-
-
-struct StyleContentImpl: public nsStyleContent {
-  StyleContentImpl(void) : nsStyleContent() { };
-
-  void ResetFrom(const StyleContentImpl* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStyleContent& aSource);
-  void CopyTo(nsStyleContent& aDest) const;
-  PRInt32 CalcDifference(const StyleContentImpl& aOther) const;
-  
-private:  // These are not allowed
-  StyleContentImpl(const StyleContentImpl& aOther);
-  StyleContentImpl& operator=(const StyleContentImpl& aOther);
-};
-
-void
-StyleContentImpl::ResetFrom(const StyleContentImpl* aParent, nsIPresContext* aPresContext)
-{
-  // reset data
-  mMarkerOffset.Reset();
-  mContentCount = 0;
-  DELETE_ARRAY_IF(mContents);
-  mIncrementCount = 0;
-  DELETE_ARRAY_IF(mIncrements);
-  mResetCount = 0;
-  DELETE_ARRAY_IF(mResets);
-
-  // inherited data
-  if (aParent) {
-    if (NS_SUCCEEDED(AllocateQuotes(aParent->mQuotesCount))) {
-      PRUint32 ix = (mQuotesCount * 2);
-      while (0 < ix--) {
-        mQuotes[ix] = aParent->mQuotes[ix];
-      }
-    }
-  }
-  else {
-    mQuotesCount = 0;
-    DELETE_ARRAY_IF(mQuotes);
-  }
-}
-
-void StyleContentImpl::SetFrom(const nsStyleContent& aSource)
-{
-  mMarkerOffset = aSource.mMarkerOffset;
-
-  PRUint32 index;
-  if (NS_SUCCEEDED(AllocateContents(aSource.ContentCount()))) {
-    for (index = 0; index < mContentCount; index++) {
-      aSource.GetContentAt(index, mContents[index].mType, mContents[index].mContent);
-    }
-  }
-
-  if (NS_SUCCEEDED(AllocateCounterIncrements(aSource.CounterIncrementCount()))) {
-    for (index = 0; index < mIncrementCount; index++) {
-      aSource.GetCounterIncrementAt(index, mIncrements[index].mCounter,
-                                           mIncrements[index].mValue);
-    }
-  }
-
-  if (NS_SUCCEEDED(AllocateCounterResets(aSource.CounterResetCount()))) {
-    for (index = 0; index < mResetCount; index++) {
-      aSource.GetCounterResetAt(index, mResets[index].mCounter,
-                                       mResets[index].mValue);
-    }
-  }
-
-  if (NS_SUCCEEDED(AllocateQuotes(aSource.QuotesCount()))) {
-    PRUint32 count = (mQuotesCount * 2);
-    for (index = 0; index < count; index += 2) {
-      aSource.GetQuotesAt(index, mQuotes[index], mQuotes[index + 1]);
-    }
-  }
-}
-
-void StyleContentImpl::CopyTo(nsStyleContent& aDest) const
-{
-  aDest.mMarkerOffset = mMarkerOffset;
-
-  PRUint32 index;
-  if (NS_SUCCEEDED(aDest.AllocateContents(mContentCount))) {
-    for (index = 0; index < mContentCount; index++) {
-      aDest.SetContentAt(index, mContents[index].mType,
-                                mContents[index].mContent);
-    }
-  }
-
-  if (NS_SUCCEEDED(aDest.AllocateCounterIncrements(mIncrementCount))) {
-    for (index = 0; index < mIncrementCount; index++) {
-      aDest.SetCounterIncrementAt(index, mIncrements[index].mCounter,
-                                         mIncrements[index].mValue);
-    }
-  }
-
-  if (NS_SUCCEEDED(aDest.AllocateCounterResets(mResetCount))) {
-    for (index = 0; index < mResetCount; index++) {
-      aDest.SetCounterResetAt(index, mResets[index].mCounter,
-                                     mResets[index].mValue);
-    }
-  }
-
-  if (NS_SUCCEEDED(aDest.AllocateQuotes(mQuotesCount))) {
-    PRUint32 count = (mQuotesCount * 2);
-    for (index = 0; index < count; index += 2) {
-      aDest.SetQuotesAt(index, mQuotes[index], mQuotes[index + 1]);
-    }
-  }
-}
-
-PRInt32 
-StyleContentImpl::CalcDifference(const StyleContentImpl& aOther) const
-{
-  if (mContentCount == aOther.mContentCount) {
-    if ((mMarkerOffset == aOther.mMarkerOffset) &&
-        (mIncrementCount == aOther.mIncrementCount) && 
-        (mResetCount == aOther.mResetCount) &&
-        (mQuotesCount == aOther.mQuotesCount)) {
-      PRUint32 ix = mContentCount;
-      while (0 < ix--) {
-        if ((mContents[ix].mType != aOther.mContents[ix].mType) || 
-            (mContents[ix].mContent != aOther.mContents[ix].mContent)) {
-          return NS_STYLE_HINT_REFLOW;
-        }
-      }
-      ix = mIncrementCount;
-      while (0 < ix--) {
-        if ((mIncrements[ix].mValue != aOther.mIncrements[ix].mValue) || 
-            (mIncrements[ix].mCounter != aOther.mIncrements[ix].mCounter)) {
-          return NS_STYLE_HINT_REFLOW;
-        }
-      }
-      ix = mResetCount;
-      while (0 < ix--) {
-        if ((mResets[ix].mValue != aOther.mResets[ix].mValue) || 
-            (mResets[ix].mCounter != aOther.mResets[ix].mCounter)) {
-          return NS_STYLE_HINT_REFLOW;
-        }
-      }
-      ix = (mQuotesCount * 2);
-      while (0 < ix--) {
-        if (mQuotes[ix] != aOther.mQuotes[ix]) {
-          return NS_STYLE_HINT_REFLOW;
-        }
-      }
-      return NS_STYLE_HINT_NONE;
-    }
-    return NS_STYLE_HINT_REFLOW;
-  }
-  return NS_STYLE_HINT_FRAMECHANGE;
-}
-
-//-----------------------
 // nsStyleUserInterface
 //
 
@@ -502,14 +327,9 @@ protected:
   nsIRuleNode*            mRuleNode; // Weak. Rules can't go away without us going away.
   nsCachedStyleData       mCachedStyleData; // Our cached style data.
 
-  PRInt16           mDataCode;
-
   // the style data...
   StyleTextImpl           mText;
-  StyleContentImpl        mContent;
   StyleUserInterfaceImpl  mUserInterface;
-	
-  nsCOMPtr<nsIStyleSet>   mStyleSet;
 };
 
 static PRInt32 gLastDataCode;
@@ -524,9 +344,7 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mPseudoTag(aPseudoTag),
     mInheritBits(0),
     mRuleNode(aRuleNode),
-    mDataCode(-1),
     mText(),
-    mContent(),
     mUserInterface()
 {
   NS_INIT_REFCNT();
@@ -698,7 +516,7 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
       if (nsnull != mEmptyChild) {
         child = mEmptyChild;
         do {
-          if ((0 == child->mDataCode) &&  // only look at children with un-twiddled data
+          if ((!(child->mInheritBits & NS_STYLE_UNIQUE_CONTEXT)) &&  // only look at children with un-twiddled data
               (aPseudoTag == child->mPseudoTag)) {
             aResult = child;
             break;
@@ -714,7 +532,7 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
       child = mChild;
       
       do {
-        if ((0 == child->mDataCode) &&  // only look at children with un-twiddled data
+        if ((!(child->mInheritBits & NS_STYLE_UNIQUE_CONTEXT)) &&  // only look at children with un-twiddled data
             (child->mRuleNode == aRuleNode) &&
             (child->mPseudoTag == aPseudoTag)) {
           aResult = child;
@@ -741,7 +559,7 @@ PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
     if (mParent != other->mParent) {
       result = PR_FALSE;
     }
-    else if (mDataCode != other->mDataCode) {
+    else if (mInheritBits != other->mInheritBits) {
       result = PR_FALSE;
     }
     else if (mPseudoTag != other->mPseudoTag) {
@@ -771,28 +589,19 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     case eStyleStruct_Padding:
     case eStyleStruct_Outline:
     case eStyleStruct_List:
+    case eStyleStruct_Content:
+    case eStyleStruct_Quotes:
     case eStyleStruct_Position:
     case eStyleStruct_Table:
     case eStyleStruct_TableBorder:
     case eStyleStruct_XUL: {
-      StyleContextImpl* curr = this;
-      /*if (mParent) {
-        PRUint32 bit = nsCachedStyleData::GetBitForSID(aSID); // Check inheritance
-        while (curr && (curr->mInheritBits & bit))
-          curr = curr->mParent;
-      }
-*/
-      const nsStyleStruct* cachedData = curr->mCachedStyleData.GetStyleData(aSID); 
+      const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
       if (cachedData)
         return cachedData; // We have computed data stored on this node in the context tree.
-
-      return curr->mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
+      return mRuleNode->GetStyleData(aSID, this, this); // Our rule node will take care of it for us.
     }
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
-      break;
-    case eStyleStruct_Content:
-      result = & GETSCDATA(Content);
       break;
     case eStyleStruct_UserInterface:
       result = & GETSCDATA(UserInterface);
@@ -849,6 +658,7 @@ StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyle
 
 nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
 {
+  // XXXdwh ELIMINATE ME!!!
   nsStyleStruct*  result = nsnull;
 
     switch (aSID) {
@@ -860,6 +670,8 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
     case eStyleStruct_Padding:
     case eStyleStruct_Outline:
     case eStyleStruct_List:
+    case eStyleStruct_Content:
+    case eStyleStruct_Quotes:
     case eStyleStruct_XUL:
     case eStyleStruct_Position:
     case eStyleStruct_Table:
@@ -871,21 +683,12 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
     case eStyleStruct_Text:
       result = & GETSCDATA(Text);
       break;
-    case eStyleStruct_Content:
-      result = & GETSCDATA(Content);
-      break;
     case eStyleStruct_UserInterface:
       result = & GETSCDATA(UserInterface);
       break;
     default:
       NS_ERROR("Invalid style struct id");
       break;
-  }
-
-  if (nsnull != result) {
-    if (0 == mDataCode) {
-//      mDataCode = ++gLastDataCode;  // XXX temp disable, this is still used but not needed to force unique
-    }
   }
 
   return result;
@@ -949,7 +752,10 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       mCachedStyleData.mInheritedData->mTableData = (nsStyleTableBorder*)(const nsStyleTableBorder*)(&aStruct);
       break;
     case eStyleStruct_Content:
-      GETSCDATA(Content).SetFrom((const nsStyleContent&)aStruct);
+      mCachedStyleData.mResetData->mContentData = (nsStyleContent*)(const nsStyleContent*)(&aStruct);
+      break;
+    case eStyleStruct_Quotes:
+      mCachedStyleData.mInheritedData->mQuotesData = (nsStyleQuotes*)(const nsStyleQuotes*)(&aStruct);
       break;
     case eStyleStruct_UserInterface:
       GETSCDATA(UserInterface).SetFrom((const nsStyleUserInterface&)aStruct);
@@ -1012,16 +818,12 @@ static void MapStyleRule(MapStyleData* aData, nsIRuleNode* aCurrNode)
 NS_IMETHODIMP
 StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 {
-  mDataCode = -1;
-
   if (nsnull != mParent) {
     GETSCDATA(Text).ResetFrom(&(mParent->GETSCDATA(Text)), aPresContext);
-    GETSCDATA(Content).ResetFrom(&(mParent->GETSCDATA(Content)), aPresContext);
     GETSCDATA(UserInterface).ResetFrom(&(mParent->GETSCDATA(UserInterface)), aPresContext);
   }
   else {
     GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
-    GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
     GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
   }
 
@@ -1032,9 +834,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     MapStyleRule(&data, mRuleNode);
   }
 
-  if (-1 == mDataCode) {
-    mDataCode = 0;
-  }
 
   // Even in strict mode, we still have to support one "quirky" thing
   // for tables.  HTML's alignment attributes have always worked
@@ -1072,9 +871,7 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
 
 void StyleContextImpl::ForceUnique(void)
 {
-  if (mDataCode <= 0) {
-    mDataCode = ++gLastDataCode;
-  }
+  mInheritBits |= NS_STYLE_UNIQUE_CONTEXT;
 }
 
 NS_IMETHODIMP
@@ -1086,14 +883,17 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
 
     const nsStyleFont* font = (const nsStyleFont*)GetStyleData(eStyleStruct_Font);
     const nsStyleFont* otherFont = (const nsStyleFont*)aOther->GetStyleData(eStyleStruct_Font);
-    aHint = font->CalcDifference(*otherFont);
+    if (font != otherFont)
+      aHint = font->CalcDifference(*otherFont);
+    
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleColor* color = (const nsStyleColor*)GetStyleData(eStyleStruct_Color);
       const nsStyleColor* otherColor = (const nsStyleColor*)aOther->GetStyleData(eStyleStruct_Color);
-      hint = color->CalcDifference(*otherColor);
-      if (aHint < hint) {
-        aHint = hint;
+      if (color != otherColor) {
+        hint = color->CalcDifference(*otherColor);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
@@ -1101,9 +901,10 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleBackground* background = (const nsStyleBackground*)GetStyleData(eStyleStruct_Background);
       const nsStyleBackground* otherBackground = (const nsStyleBackground*)aOther->GetStyleData(eStyleStruct_Background);
-      hint = background->CalcDifference(*otherBackground);
-      if (aHint < hint) {
-        aHint = hint;
+      if (background != otherBackground) {
+        hint = background->CalcDifference(*otherBackground);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
@@ -1111,9 +912,10 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleMargin* margin = (const nsStyleMargin*)GetStyleData(eStyleStruct_Margin);
       const nsStyleMargin* otherMargin = (const nsStyleMargin*)aOther->GetStyleData(eStyleStruct_Margin);
-      hint = margin->CalcDifference(*otherMargin);
-      if (aHint < hint) {
-        aHint = hint;
+      if (margin != otherMargin) {
+        hint = margin->CalcDifference(*otherMargin);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
@@ -1121,45 +923,50 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStylePadding* padding = (const nsStylePadding*)GetStyleData(eStyleStruct_Padding);
       const nsStylePadding* otherPadding = (const nsStylePadding*)aOther->GetStyleData(eStyleStruct_Padding);
-      hint = padding->CalcDifference(*otherPadding);
-      if (aHint < hint) {
-        aHint = hint;
+      if (padding != otherPadding) {
+        hint = padding->CalcDifference(*otherPadding);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleBorder* border = (const nsStyleBorder*)GetStyleData(eStyleStruct_Border);
       const nsStyleBorder* otherBorder = (const nsStyleBorder*)aOther->GetStyleData(eStyleStruct_Border);
-      hint = border->CalcDifference(*otherBorder);
-      if (aHint < hint) {
-        aHint = hint;
+      if (border != otherBorder) {
+        hint = border->CalcDifference(*otherBorder);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleOutline* outline = (const nsStyleOutline*)GetStyleData(eStyleStruct_Outline);
       const nsStyleOutline* otherOutline = (const nsStyleOutline*)aOther->GetStyleData(eStyleStruct_Outline);
-      hint = outline->CalcDifference(*otherOutline);
-      if (aHint < hint) {
-        aHint = hint;
+      if (outline != otherOutline) {
+        hint = outline->CalcDifference(*otherOutline);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleList* list = (const nsStyleList*)GetStyleData(eStyleStruct_List);
       const nsStyleList* otherList = (const nsStyleList*)aOther->GetStyleData(eStyleStruct_List);
-      hint = list->CalcDifference(*otherList);
-      if (aHint < hint) {
-        aHint = hint;
+      if (list != otherList) {
+        hint = list->CalcDifference(*otherList);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      const nsStylePosition* list = (const nsStylePosition*)GetStyleData(eStyleStruct_Position);
+      const nsStylePosition* pos = (const nsStylePosition*)GetStyleData(eStyleStruct_Position);
       const nsStylePosition* otherPosition = (const nsStylePosition*)aOther->GetStyleData(eStyleStruct_Position);
-      hint = list->CalcDifference(*otherPosition);
-      if (aHint < hint) {
-        aHint = hint;
+      if (pos != otherPosition) {
+        hint = pos->CalcDifference(*otherPosition);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
@@ -1174,9 +981,10 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleVisibility* vis = (const nsStyleVisibility*)GetStyleData(eStyleStruct_Visibility);
       const nsStyleVisibility* otherVis = (const nsStyleVisibility*)aOther->GetStyleData(eStyleStruct_Visibility);
-      hint = vis->CalcDifference(*otherVis);
-      if (aHint < hint) {
-        aHint = hint;
+      if (vis != otherVis) {
+        hint = vis->CalcDifference(*otherVis);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
@@ -1184,9 +992,10 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleDisplay* display = (const nsStyleDisplay*)GetStyleData(eStyleStruct_Display);
       const nsStyleDisplay* otherDisplay = (const nsStyleDisplay*)aOther->GetStyleData(eStyleStruct_Display);
-      hint = display->CalcDifference(*otherDisplay);
-      if (aHint < hint) {
-        aHint = hint;
+      if (display != otherDisplay) {
+        hint = display->CalcDifference(*otherDisplay);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
@@ -1195,9 +1004,10 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleXUL* xul = (const nsStyleXUL*)GetStyleData(eStyleStruct_XUL);
       const nsStyleXUL* otherXUL = (const nsStyleXUL*)aOther->GetStyleData(eStyleStruct_XUL);
-      hint = xul->CalcDifference(*otherXUL);
-      if (aHint < hint) {
-        aHint = hint;
+      if (xul != otherXUL) {
+        hint = xul->CalcDifference(*otherXUL);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 #endif
@@ -1206,9 +1016,10 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleTable* table = (const nsStyleTable*)GetStyleData(eStyleStruct_Table);
       const nsStyleTable* otherTable = (const nsStyleTable*)aOther->GetStyleData(eStyleStruct_Table);
-      hint = table->CalcDifference(*otherTable);
-      if (aHint < hint) {
-        aHint = hint;
+      if (table != otherTable) {
+        hint = table->CalcDifference(*otherTable);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
@@ -1216,19 +1027,35 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
     if (aHint < NS_STYLE_HINT_MAX) {
       const nsStyleTableBorder* table = (const nsStyleTableBorder*)GetStyleData(eStyleStruct_TableBorder);
       const nsStyleTableBorder* otherTable = (const nsStyleTableBorder*)aOther->GetStyleData(eStyleStruct_TableBorder);
-      hint = table->CalcDifference(*otherTable);
-      if (aHint < hint) {
-        aHint = hint;
+      if (table != otherTable) {
+        hint = table->CalcDifference(*otherTable);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
 
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(Content).CalcDifference(other->GETSCDATA(Content));
-      if (aHint < hint) {
-        aHint = hint;
+      const nsStyleContent* content = (const nsStyleContent*)GetStyleData(eStyleStruct_Content);
+      const nsStyleContent* otherContent = (const nsStyleContent*)aOther->GetStyleData(eStyleStruct_Content);
+      if (content != otherContent) {
+        hint = content->CalcDifference(*otherContent);
+        if (aHint < hint)
+          aHint = hint;
       }
     }
+
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleQuotes* content = (const nsStyleQuotes*)GetStyleData(eStyleStruct_Quotes);
+      const nsStyleQuotes* otherContent = (const nsStyleQuotes*)aOther->GetStyleData(eStyleStruct_Quotes);
+      if (content != otherContent) {
+        hint = content->CalcDifference(*otherContent);
+        if (aHint < hint)
+          aHint = hint;
+      }
+    }
+
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       hint = GETSCDATA(UserInterface).CalcDifference(other->GETSCDATA(UserInterface));
@@ -1306,8 +1133,6 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     printf( "*************************************\n");
     printf( " - StyleTextImpl:          %ld\n", (long)sizeof(GETSCDATA(Text)) );
     totalSize += (long)sizeof(GETSCDATA(Text));
-    printf( " - StyleContentImpl:       %ld\n", (long)sizeof(GETSCDATA(Content)) );
-    totalSize += (long)sizeof(GETSCDATA(Content));
     printf( " - StyleUserInterfaceImpl: %ld\n", (long)sizeof(GETSCDATA(UserInterface)) );
     totalSize += (long)sizeof(GETSCDATA(UserInterface));
 	  printf( " - Total:                  %ld\n", (long)totalSize);

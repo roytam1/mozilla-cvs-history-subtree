@@ -863,6 +863,7 @@ static nsresult MapMarginForDeclaration(nsICSSDeclaration* aDecl, const nsStyleS
 static nsresult MapListForDeclaration(nsICSSDeclaration* aDecl, nsCSSList& aList);
 static nsresult MapPositionForDeclaration(nsICSSDeclaration* aDecl, nsCSSPosition& aPosition);
 static nsresult MapTableForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSTable& aTable);
+static nsresult MapContentForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSContent& aContent);
 
 #ifdef INCLUDE_XUL
 static nsresult MapXULForDeclaration(nsICSSDeclaration* aDecl, nsCSSXUL& aXUL);
@@ -983,6 +984,8 @@ CSSImportantRule::MapRuleInfoInto(nsRuleData* aRuleData)
     return MapPositionForDeclaration(mDeclaration, *aRuleData->mPositionData);
   else if (aRuleData->mTableData)
     return MapTableForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTableData);
+  else if (aRuleData->mContentData)
+    return MapContentForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mContentData);
 #ifdef INCLUDE_XUL
   else if (aRuleData->mXULData)
     return MapXULForDeclaration(mDeclaration, *aRuleData->mXULData);
@@ -1820,28 +1823,14 @@ CSSStyleRuleImpl::MapRuleInfoInto(nsRuleData* aRuleData)
     return MapPositionForDeclaration(mDeclaration, *aRuleData->mPositionData);
   else if (aRuleData->mTableData)
     return MapTableForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTableData);
+  else if (aRuleData->mContentData)
+    return MapContentForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mContentData);
 #ifdef INCLUDE_XUL
   else if (aRuleData->mXULData)
     return MapXULForDeclaration(mDeclaration, *aRuleData->mXULData);
 #endif
 
   return NS_OK;
-}
-
-
-nsString& Unquote(nsString& aString)
-{
-  PRUnichar start = aString.First();
-  PRUnichar end = aString.Last();
-
-  if ((start == end) && 
-      ((start == PRUnichar('\"')) || 
-       (start == PRUnichar('\'')))) {
-    PRInt32 length = aString.Length();
-    aString.Truncate(length - 1);
-    aString.Cut(0, 1);
-  }
-  return aString;
 }
 
 static nsresult 
@@ -2194,6 +2183,38 @@ MapTableForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsC
   return NS_OK;
 }
 
+static nsresult 
+MapContentForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSContent& aContent)
+{
+  if (!aDecl)
+    return NS_OK; // The rule must have a declaration.
+
+  nsCSSContent* ourContent;
+  aDecl->GetData(kCSSContentSID, (nsCSSStruct**)&ourContent);
+  if (!ourContent)
+    return NS_OK; // We don't have any rules for content.
+
+  if (aID == eStyleStruct_Content) {
+    if (!aContent.mContent && ourContent->mContent)
+      aContent.mContent = ourContent->mContent;
+
+    if (!aContent.mCounterIncrement && ourContent->mCounterIncrement)
+      aContent.mCounterIncrement = ourContent->mCounterIncrement;
+
+    if (!aContent.mCounterReset && ourContent->mCounterReset)
+      aContent.mCounterReset = ourContent->mCounterReset;
+    
+    if (aContent.mMarkerOffset.GetUnit() == eCSSUnit_Null && ourContent->mMarkerOffset.GetUnit() != eCSSUnit_Null)
+      aContent.mMarkerOffset = ourContent->mMarkerOffset;
+  }
+  else if (aID == eStyleStruct_Quotes) {
+    if (!aContent.mQuotes && ourContent->mQuotes)
+      aContent.mQuotes = ourContent->mQuotes;
+  }
+
+  return NS_OK;
+}
+
 static void 
 MapDeclarationTextInto(nsICSSDeclaration* aDeclaration, 
                        nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
@@ -2367,213 +2388,6 @@ MapDisplayForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, n
 }
 
 static void 
-MapDeclarationContentInto(nsICSSDeclaration* aDeclaration, 
-                          nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                          nsStyleFont* aFont, nsIPresContext* aPresContext)
-{
-  nsCSSContent* ourContent;
-  if (NS_OK == aDeclaration->GetData(kCSSContentSID, (nsCSSStruct**)&ourContent)) {
-    if (ourContent) {
-      nsStyleContent* content = (nsStyleContent*)aContext->GetMutableStyleData(eStyleStruct_Content);
-
-      const nsStyleContent* parentContent = content;
-      if (nsnull != aParentContext) {
-        parentContent = (const nsStyleContent*)aParentContext->GetStyleData(eStyleStruct_Content);
-      }
-
-      PRUint32 count;
-      nsAutoString  buffer;
-
-      // content: [string, url, counter, attr, enum]+, inherit
-      nsCSSValueList* contentValue = ourContent->mContent;
-      if (contentValue) {
-        if (eCSSUnit_Inherit == contentValue->mValue.GetUnit()) {
-          count = parentContent->ContentCount();
-          if (NS_SUCCEEDED(content->AllocateContents(count))) {
-            nsStyleContentType type;
-            while (0 < count--) {
-              parentContent->GetContentAt(count, type, buffer);
-              content->SetContentAt(count, type, buffer);
-            }
-          }
-        }
-        else {
-          count = 0;
-          while (contentValue) {
-            count++;
-            contentValue = contentValue->mNext;
-          }
-          if (NS_SUCCEEDED(content->AllocateContents(count))) {
-            const nsAutoString  nullStr;
-            count = 0;
-            contentValue = ourContent->mContent;
-            while (contentValue) {
-              const nsCSSValue& value = contentValue->mValue;
-              nsCSSUnit unit = value.GetUnit();
-              nsStyleContentType type;
-              switch (unit) {
-                case eCSSUnit_String:   type = eStyleContentType_String;    break;
-                case eCSSUnit_URL:      type = eStyleContentType_URL;       break;
-                case eCSSUnit_Attr:     type = eStyleContentType_Attr;      break;
-                case eCSSUnit_Counter:  type = eStyleContentType_Counter;   break;
-                case eCSSUnit_Counters: type = eStyleContentType_Counters;  break;
-                case eCSSUnit_Enumerated:
-                  switch (value.GetIntValue()) {
-                    case NS_STYLE_CONTENT_OPEN_QUOTE:     
-                      type = eStyleContentType_OpenQuote;     break;
-                    case NS_STYLE_CONTENT_CLOSE_QUOTE:
-                      type = eStyleContentType_CloseQuote;    break;
-                    case NS_STYLE_CONTENT_NO_OPEN_QUOTE:
-                      type = eStyleContentType_NoOpenQuote;   break;
-                    case NS_STYLE_CONTENT_NO_CLOSE_QUOTE:
-                      type = eStyleContentType_NoCloseQuote;  break;
-                    default:
-                      NS_ERROR("bad content value");
-                  }
-                  break;
-                default:
-                  NS_ERROR("bad content type");
-              }
-              if (type < eStyleContentType_OpenQuote) {
-                value.GetStringValue(buffer);
-                Unquote(buffer);
-                content->SetContentAt(count++, type, buffer);
-              }
-              else {
-                content->SetContentAt(count++, type, nullStr);
-              }
-              contentValue = contentValue->mNext;
-            }
-          } 
-        }
-      }
-
-      // counter-increment: [string [int]]+, none, inherit
-      nsCSSCounterData* ourIncrement = ourContent->mCounterIncrement;
-      if (ourIncrement) {
-        PRInt32 increment;
-        if (eCSSUnit_Inherit == ourIncrement->mCounter.GetUnit()) {
-          count = parentContent->CounterIncrementCount();
-          if (NS_SUCCEEDED(content->AllocateCounterIncrements(count))) {
-            while (0 < count--) {
-              parentContent->GetCounterIncrementAt(count, buffer, increment);
-              content->SetCounterIncrementAt(count, buffer, increment);
-            }
-          }
-        }
-        else if (eCSSUnit_None == ourIncrement->mCounter.GetUnit()) {
-          content->AllocateCounterIncrements(0);
-        }
-        else if (eCSSUnit_String == ourIncrement->mCounter.GetUnit()) {
-          count = 0;
-          while (ourIncrement) {
-            count++;
-            ourIncrement = ourIncrement->mNext;
-          }
-          if (NS_SUCCEEDED(content->AllocateCounterIncrements(count))) {
-            count = 0;
-            ourIncrement = ourContent->mCounterIncrement;
-            while (ourIncrement) {
-              if (eCSSUnit_Integer == ourIncrement->mValue.GetUnit()) {
-                increment = ourIncrement->mValue.GetIntValue();
-              }
-              else {
-                increment = 1;
-              }
-              ourIncrement->mCounter.GetStringValue(buffer);
-              content->SetCounterIncrementAt(count++, buffer, increment);
-              ourIncrement = ourIncrement->mNext;
-            }
-          }
-        }
-      }
-
-      // counter-reset: [string [int]]+, none, inherit
-      nsCSSCounterData* ourReset = ourContent->mCounterReset;
-      if (ourReset) {
-        PRInt32 reset;
-        if (eCSSUnit_Inherit == ourReset->mCounter.GetUnit()) {
-          count = parentContent->CounterResetCount();
-          if (NS_SUCCEEDED(content->AllocateCounterResets(count))) {
-            while (0 < count--) {
-              parentContent->GetCounterResetAt(count, buffer, reset);
-              content->SetCounterResetAt(count, buffer, reset);
-            }
-          }
-        }
-        else if (eCSSUnit_None == ourReset->mCounter.GetUnit()) {
-          content->AllocateCounterResets(0);
-        }
-        else if (eCSSUnit_String == ourReset->mCounter.GetUnit()) {
-          count = 0;
-          while (ourReset) {
-            count++;
-            ourReset = ourReset->mNext;
-          }
-          if (NS_SUCCEEDED(content->AllocateCounterResets(count))) {
-            count = 0;
-            ourReset = ourContent->mCounterReset;
-            while (ourReset) {
-              if (eCSSUnit_Integer == ourReset->mValue.GetUnit()) {
-                reset = ourReset->mValue.GetIntValue();
-              }
-              else {
-                reset = 0;
-              }
-              ourReset->mCounter.GetStringValue(buffer);
-              content->SetCounterResetAt(count++, buffer, reset);
-              ourReset = ourReset->mNext;
-            }
-          }
-        }
-      }
-
-      // marker-offset: length, auto, inherit
-      if (! SetCoord(ourContent->mMarkerOffset, content->mMarkerOffset, parentContent->mMarkerOffset,
-                     SETCOORD_LH | SETCOORD_AUTO, aFont->mFont, aPresContext)) {
-      }
-
-      // quotes: [string string]+, none, inherit
-      nsCSSQuotes* ourQuotes = ourContent->mQuotes;
-      if (ourQuotes) {
-        nsAutoString  closeBuffer;
-        if (eCSSUnit_Inherit == ourQuotes->mOpen.GetUnit()) {
-          count = parentContent->QuotesCount();
-          if (NS_SUCCEEDED(content->AllocateQuotes(count))) {
-            while (0 < count--) {
-              parentContent->GetQuotesAt(count, buffer, closeBuffer);
-              content->SetQuotesAt(count, buffer, closeBuffer);
-            }
-          }
-        }
-        else if (eCSSUnit_None == ourQuotes->mOpen.GetUnit()) {
-          content->AllocateQuotes(0);
-        }
-        else if (eCSSUnit_String == ourQuotes->mOpen.GetUnit()) {
-          count = 0;
-          while (ourQuotes) {
-            count++;
-            ourQuotes = ourQuotes->mNext;
-          }
-          if (NS_SUCCEEDED(content->AllocateQuotes(count))) {
-            count = 0;
-            ourQuotes = ourContent->mQuotes;
-            while (ourQuotes) {
-              ourQuotes->mOpen.GetStringValue(buffer);
-              ourQuotes->mClose.GetStringValue(closeBuffer);
-              Unquote(buffer);
-              Unquote(closeBuffer);
-              content->SetQuotesAt(count++, buffer, closeBuffer);
-              ourQuotes = ourQuotes->mNext;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-static void 
 MapDeclarationUIInto(nsICSSDeclaration* aDeclaration, 
                      nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
                      nsStyleFont* /*aFont*/, nsIPresContext* aPresContext)
@@ -2694,7 +2508,6 @@ void MapDeclarationInto(nsICSSDeclaration* aDeclaration,
     nsStyleFont* font = (nsStyleFont*)aContext->GetStyleData(eStyleStruct_Font);
 
     MapDeclarationTextInto(aDeclaration, aContext, parentContext, font, aPresContext);
-    MapDeclarationContentInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationUIInto(aDeclaration, aContext, parentContext, font, aPresContext);
     
     NS_IF_RELEASE(parentContext);

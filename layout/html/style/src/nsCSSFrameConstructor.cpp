@@ -1398,7 +1398,8 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
     case eStyleContentType_OpenQuote:
     case eStyleContentType_CloseQuote:
       {
-        PRUint32  quotesCount = aStyleContent->QuotesCount();
+        const nsStyleQuotes* quotes = (const nsStyleQuotes*)aStyleContext->GetStyleData(eStyleStruct_Quotes);
+        PRUint32  quotesCount = quotes->QuotesCount();
         if (quotesCount > 0) {
           nsAutoString  openQuote, closeQuote;
   
@@ -1408,7 +1409,7 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
           if (quoteDepth > quotesCount) {
             quoteDepth = quotesCount - 1;
           }
-          aStyleContent->GetQuotesAt(quoteDepth, openQuote, closeQuote);
+          quotes->GetQuotesAt(quoteDepth, openQuote, closeQuote);
           if (eStyleContentType_OpenQuote == type) {
             contentString = openQuote;
           } else {

@@ -42,6 +42,7 @@ struct nsInheritedStyleData
   nsStyleList* mListData;
   nsStyleTableBorder* mTableData;
   nsStyleColor* mColorData;
+  nsStyleQuotes* mQuotesData;
 
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
@@ -59,19 +60,23 @@ struct nsInheritedStyleData
       mTableData->Destroy(aContext);
     if (mColorData && !(aBits & NS_STYLE_INHERIT_COLOR))
       mColorData->Destroy(aContext);
+    if (mQuotesData && !(aBits & NS_STYLE_INHERIT_QUOTES))
+      mQuotesData->Destroy(aContext);
     aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
   };
 
   nsInheritedStyleData() 
     :mVisibilityData(nsnull), mFontData(nsnull), mListData(nsnull), 
-     mTableData(nsnull), mColorData(nsnull) {};
+     mTableData(nsnull), mColorData(nsnull), mQuotesData(nsnull) {};
 };
 
 struct nsResetStyleData
 {
   nsResetStyleData()
     :mDisplayData(nsnull), mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
-     mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull), mBackgroundData(nsnull) {
+     mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull), mBackgroundData(nsnull),
+     mContentData(nsnull)
+  {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
 #endif
@@ -99,6 +104,8 @@ struct nsResetStyleData
       mTableData->Destroy(aContext);
     if (mBackgroundData && !(aBits & NS_STYLE_INHERIT_BACKGROUND))
       mBackgroundData->Destroy(aContext);
+    if (mContentData && !(aBits & NS_STYLE_INHERIT_CONTENT))
+      mContentData->Destroy(aContext);
 #ifdef INCLUDE_XUL
     if (mXULData && !(aBits & NS_STYLE_INHERIT_XUL))
       mXULData->Destroy(aContext);
@@ -114,6 +121,7 @@ struct nsResetStyleData
   nsStylePosition* mPositionData;
   nsStyleTable* mTableData;
   nsStyleBackground* mBackgroundData;
+  nsStyleContent* mContentData;
 
 #ifdef INCLUDE_XUL
   nsStyleXUL* mXULData;
@@ -133,6 +141,7 @@ struct nsCachedStyleData
       case eStyleStruct_List:
       case eStyleStruct_TableBorder:
       case eStyleStruct_Color:
+      case eStyleStruct_Quotes:
         return PR_FALSE; 
       case eStyleStruct_Display: // [Reset]
       case eStyleStruct_Margin: 
@@ -142,6 +151,7 @@ struct nsCachedStyleData
       case eStyleStruct_Position:
       case eStyleStruct_Table:
       case eStyleStruct_Background:
+      case eStyleStruct_Content:
       case eStyleStruct_XUL:
     	  return PR_TRUE;
     }
@@ -184,6 +194,8 @@ struct nsCachedStyleData
     	  return NS_STYLE_INHERIT_BORDER;
       case eStyleStruct_Outline:
     	  return NS_STYLE_INHERIT_OUTLINE;
+      case eStyleStruct_Quotes:
+        return NS_STYLE_INHERIT_QUOTES;
 #ifdef INCLUDE_XUL
       case eStyleStruct_XUL:
     	  return NS_STYLE_INHERIT_XUL;
@@ -220,6 +232,10 @@ struct nsCachedStyleData
         return mResetData ? mResetData->mTableData : nsnull;
       case eStyleStruct_TableBorder:
         return mInheritedData ? mInheritedData->mTableData : nsnull;
+      case eStyleStruct_Content:
+        return mResetData ? mResetData->mContentData : nsnull;
+      case eStyleStruct_Quotes:
+        return mInheritedData ? mInheritedData->mQuotesData : nsnull;
 #ifdef INCLUDE_XUL
       case eStyleStruct_XUL:
         return mResetData ? mResetData->mXULData : nsnull;
@@ -255,6 +271,7 @@ struct nsRuleData
   nsCSSPosition* mPositionData;
   nsCSSTable* mTableData;
   nsCSSColor* mColorData;
+  nsCSSContent* mContentData;
 
 #ifdef INCLUDE_XUL
   nsCSSXUL* mXULData;
@@ -263,7 +280,7 @@ struct nsRuleData
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
     :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext), mPostResolveCallback(nsnull),
      mAttributes(nsnull), mDisplayData(nsnull), mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), 
-     mPositionData(nsnull), mTableData(nsnull), mColorData(nsnull)
+     mPositionData(nsnull), mTableData(nsnull), mColorData(nsnull), mContentData(nsnull)
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;

@@ -932,3 +932,134 @@ PRInt32 nsStyleVisibility::CalcDifference(const nsStyleVisibility& aOther) const
   return NS_STYLE_HINT_REFLOW;
 }
 
+//-----------------------
+// nsStyleContent
+//
+
+nsStyleContent::nsStyleContent(void)
+  : mMarkerOffset(),
+    mContentCount(0),
+    mContents(nsnull),
+    mIncrementCount(0),
+    mIncrements(nsnull),
+    mResetCount(0),
+    mResets(nsnull)
+{
+}
+
+nsStyleContent::~nsStyleContent(void)
+{
+  DELETE_ARRAY_IF(mContents);
+  DELETE_ARRAY_IF(mIncrements);
+  DELETE_ARRAY_IF(mResets);
+}
+
+nsStyleContent::nsStyleContent(const nsStyleContent& aSource)
+   :mMarkerOffset(),
+    mContentCount(0),
+    mContents(nsnull),
+    mIncrementCount(0),
+    mIncrements(nsnull),
+    mResetCount(0),
+    mResets(nsnull)
+
+{
+  mMarkerOffset = aSource.mMarkerOffset;
+
+  PRUint32 index;
+  if (NS_SUCCEEDED(AllocateContents(aSource.ContentCount()))) {
+    for (index = 0; index < mContentCount; index++) {
+      aSource.GetContentAt(index, mContents[index].mType, mContents[index].mContent);
+    }
+  }
+
+  if (NS_SUCCEEDED(AllocateCounterIncrements(aSource.CounterIncrementCount()))) {
+    for (index = 0; index < mIncrementCount; index++) {
+      aSource.GetCounterIncrementAt(index, mIncrements[index].mCounter,
+                                           mIncrements[index].mValue);
+    }
+  }
+
+  if (NS_SUCCEEDED(AllocateCounterResets(aSource.CounterResetCount()))) {
+    for (index = 0; index < mResetCount; index++) {
+      aSource.GetCounterResetAt(index, mResets[index].mCounter,
+                                       mResets[index].mValue);
+    }
+  }
+}
+
+PRInt32 
+nsStyleContent::CalcDifference(const nsStyleContent& aOther) const
+{
+  if (mContentCount == aOther.mContentCount) {
+    if ((mMarkerOffset == aOther.mMarkerOffset) &&
+        (mIncrementCount == aOther.mIncrementCount) && 
+        (mResetCount == aOther.mResetCount)) {
+      PRUint32 ix = mContentCount;
+      while (0 < ix--) {
+        if ((mContents[ix].mType != aOther.mContents[ix].mType) || 
+            (mContents[ix].mContent != aOther.mContents[ix].mContent)) {
+          return NS_STYLE_HINT_REFLOW;
+        }
+      }
+      ix = mIncrementCount;
+      while (0 < ix--) {
+        if ((mIncrements[ix].mValue != aOther.mIncrements[ix].mValue) || 
+            (mIncrements[ix].mCounter != aOther.mIncrements[ix].mCounter)) {
+          return NS_STYLE_HINT_REFLOW;
+        }
+      }
+      ix = mResetCount;
+      while (0 < ix--) {
+        if ((mResets[ix].mValue != aOther.mResets[ix].mValue) || 
+            (mResets[ix].mCounter != aOther.mResets[ix].mCounter)) {
+          return NS_STYLE_HINT_REFLOW;
+        }
+      }
+      return NS_STYLE_HINT_NONE;
+    }
+    return NS_STYLE_HINT_REFLOW;
+  }
+  return NS_STYLE_HINT_FRAMECHANGE;
+}
+
+// ---------------------
+// nsStyleQuotes
+//
+
+nsStyleQuotes::nsStyleQuotes(void)
+  : mQuotesCount(0),
+    mQuotes(nsnull)
+{
+}
+
+nsStyleQuotes::~nsStyleQuotes(void)
+{
+  DELETE_ARRAY_IF(mQuotes);
+}
+
+nsStyleQuotes::nsStyleQuotes(const nsStyleQuotes& aSource)
+{
+  if (NS_SUCCEEDED(AllocateQuotes(aSource.QuotesCount()))) {
+    PRUint32 count = (mQuotesCount * 2);
+    for (PRUint32 index = 0; index < count; index += 2) {
+      aSource.GetQuotesAt(index, mQuotes[index], mQuotes[index + 1]);
+    }
+  }
+}
+
+PRInt32 
+nsStyleQuotes::CalcDifference(const nsStyleQuotes& aOther) const
+{
+  if (mQuotesCount == aOther.mQuotesCount) {
+    PRUint32 ix = (mQuotesCount * 2);
+    while (0 < ix--) {
+      if (mQuotes[ix] != aOther.mQuotes[ix]) {
+        return NS_STYLE_HINT_REFLOW;
+      }
+    }
+
+    return NS_STYLE_HINT_NONE;
+  }
+  return NS_STYLE_HINT_REFLOW;
+}

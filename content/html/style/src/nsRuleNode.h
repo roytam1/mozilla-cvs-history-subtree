@@ -153,6 +153,14 @@ protected:
                                               nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                               nsRuleNode* aHighestNode,
                                               const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeContentData(nsStyleContent* aStartContent, const nsCSSContent& aData, 
+                                          nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                          nsRuleNode* aHighestNode,
+                                          const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeQuotesData(nsStyleQuotes* aStartQuotes, const nsCSSContent& aData, 
+                                         nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                         nsRuleNode* aHighestNode,
+                                         const RuleDetail& aRuleDetail);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData, 
                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
@@ -174,6 +182,8 @@ protected:
   RuleDetail CheckPositionProperties(const nsCSSPosition& aPosition);
   RuleDetail CheckTableProperties(const nsCSSTable& aTable);
   RuleDetail CheckTableBorderProperties(const nsCSSTable& aTable);
+  RuleDetail CheckContentProperties(const nsCSSContent& aContent);
+  RuleDetail CheckQuotesProperties(const nsCSSContent& aContent);
 #ifdef INCLUDE_XUL
   RuleDetail CheckXULProperties(const nsCSSXUL& aXUL);
 #endif
@@ -192,6 +202,8 @@ protected:
   const nsStyleStruct* GetPositionData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetTableData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetTableBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetContentData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetQuotesData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* GetXULData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
 #endif

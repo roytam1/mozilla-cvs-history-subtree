@@ -183,11 +183,11 @@ CSSFirstLineRule::MapStyleInto(nsIMutableStyleContext* aContext,
   }
 
   // Undo any change to quotes
-  nsStyleContent* content = (nsStyleContent*)
-    aContext->GetMutableStyleData(eStyleStruct_Content);
+  nsStyleQuotes* content = (nsStyleQuotes*)
+    aContext->GetMutableStyleData(eStyleStruct_Quotes);
   if (parentContext) {
-    const nsStyleContent* parentContent = (const nsStyleContent*)
-      parentContext->GetStyleData(eStyleStruct_Content);
+    const nsStyleQuotes* parentContent = (const nsStyleQuotes*)
+      parentContext->GetStyleData(eStyleStruct_Quotes);
     if (parentContent) {
       nsAutoString open, close;
       PRUint32 i, n = parentContent->QuotesCount();
@@ -302,11 +302,11 @@ CSSFirstLetterRule::MapStyleInto(nsIMutableStyleContext* aContext,
   }
 
   // Undo any change to quotes
-  nsStyleContent* content = (nsStyleContent*)
-    aContext->GetMutableStyleData(eStyleStruct_Content);
+  nsStyleQuotes* content = (nsStyleQuotes*)
+    aContext->GetMutableStyleData(eStyleStruct_Quotes);
   if (parentContext) {
-    const nsStyleContent* parentContent = (const nsStyleContent*)
-      parentContext->GetStyleData(eStyleStruct_Content);
+    const nsStyleQuotes* parentContent = (const nsStyleQuotes*)
+      parentContext->GetStyleData(eStyleStruct_Quotes);
     if (parentContent) {
       nsAutoString open, close;
       PRUint32 i, n = parentContent->QuotesCount();

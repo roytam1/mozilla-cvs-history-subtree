@@ -116,6 +116,21 @@ static void EnsureBlockDisplay(PRUint8& display)
   }
 }
 
+nsString& Unquote(nsString& aString)
+{
+  PRUnichar start = aString.First();
+  PRUnichar end = aString.Last();
+
+  if ((start == end) && 
+      ((start == PRUnichar('\"')) || 
+       (start == PRUnichar('\'')))) {
+    PRInt32 length = aString.Length();
+    aString.Truncate(length - 1);
+    aString.Cut(0, 1);
+  }
+  return aString;
+}
+
 nscoord CalcLength(const nsCSSValue& aValue,
                    nsFont* aFont, 
                    nsIStyleContext* aStyleContext,
@@ -466,6 +481,10 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStr
     return CheckTableProperties((const nsCSSTable&)aCSSStruct);
   case eStyleStruct_TableBorder:
     return CheckTableBorderProperties((const nsCSSTable&)aCSSStruct);
+  case eStyleStruct_Content:
+    return CheckContentProperties((const nsCSSContent&)aCSSStruct);
+  case eStyleStruct_Quotes:
+    return CheckQuotesProperties((const nsCSSContent&)aCSSStruct);
 #ifdef INCLUDE_XUL
   case eStyleStruct_XUL:
     return CheckXULProperties((const nsCSSXUL&)aCSSStruct);
@@ -644,6 +663,31 @@ nsRuleNode::GetTableBorderData(nsIStyleContext* aContext, nsIMutableStyleContext
   ruleData.mTableData = &tableData;
 
   return WalkRuleTree(eStyleStruct_TableBorder, aContext, aMutableContext, &ruleData, &tableData);
+}
+
+const nsStyleStruct*
+nsRuleNode::GetContentData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSContent contentData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Content, mPresContext, aContext);
+  ruleData.mContentData = &contentData;
+
+  const nsStyleStruct* res = WalkRuleTree(eStyleStruct_Content, aContext, aMutableContext, &ruleData, &contentData);
+  contentData.mCounterIncrement = contentData.mCounterReset = nsnull;
+  contentData.mContent = nsnull; // We are sharing with some style rule.  It really owns the data.
+  return res;
+}
+
+const nsStyleStruct*
+nsRuleNode::GetQuotesData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSContent contentData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Quotes, mPresContext, aContext);
+  ruleData.mContentData = &contentData;
+
+  const nsStyleStruct* res = WalkRuleTree(eStyleStruct_Quotes, aContext, aMutableContext, &ruleData, &contentData);
+  contentData.mQuotes = nsnull; // We are sharing with some style rule.  It really owns the data.
+  return res;
 }
 
 #ifdef INCLUDE_XUL
@@ -849,6 +893,19 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext
       aMutableContext->SetStyle(eStyleStruct_TableBorder, *table);
       return table;
     }
+    case eStyleStruct_Content:
+    {
+      nsStyleContent* content = new (mPresContext) nsStyleContent();
+      aMutableContext->SetStyle(eStyleStruct_Content, *content);
+      return content;
+    }
+    case eStyleStruct_Quotes:
+    {
+      nsStyleQuotes* quotes = new (mPresContext) nsStyleQuotes();
+      aMutableContext->SetStyle(eStyleStruct_Quotes, *quotes);
+      return quotes;
+    }
+
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
     {
@@ -908,6 +965,12 @@ nsRuleNode::ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartS
   case eStyleStruct_TableBorder:
     return ComputeTableBorderData((nsStyleTableBorder*)aStartStruct, (const nsCSSTable&)aStartData, 
                                   aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Content:
+    return ComputeContentData((nsStyleContent*)aStartStruct, (const nsCSSContent&)aStartData, 
+                              aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Quotes:
+    return ComputeQuotesData((nsStyleQuotes*)aStartStruct, (const nsCSSContent&)aStartData, 
+                              aContext, aMutableContext, aHighestNode, aRuleDetail);
 #ifdef INCLUDE_XUL
   case eStyleStruct_XUL:
     return ComputeXULData((nsStyleXUL*)aStartStruct, (const nsCSSXUL&)aStartData, 
@@ -2559,6 +2622,290 @@ nsRuleNode::ComputeTableBorderData(nsStyleTableBorder* aStartTable, const nsCSST
   return table;
 }
 
+const nsStyleStruct* 
+nsRuleNode::ComputeContentData(nsStyleContent* aStartContent, const nsCSSContent& aContentData, 
+                               nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                               nsRuleNode* aHighestNode,
+                               const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW CONTENT CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleContent* content;
+  if (aStartContent)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    content = new (mPresContext) nsStyleContent(*aStartContent);
+  else
+    content = new (mPresContext) nsStyleContent();
+  
+  nsStyleContent* parentContent = content;
+  if (parentContext)
+    parentContent = (nsStyleContent*)parentContext->GetStyleData(eStyleStruct_Content);
+  PRBool inherited = PR_FALSE;
+
+  // content: [string, url, counter, attr, enum]+, inherit
+  PRUint32 count;
+  nsAutoString  buffer;
+  nsCSSValueList* contentValue = aContentData.mContent;
+  if (contentValue) {
+    if (eCSSUnit_Inherit == contentValue->mValue.GetUnit()) {
+      inherited = PR_TRUE;
+      count = parentContent->ContentCount();
+      if (NS_SUCCEEDED(content->AllocateContents(count))) {
+        nsStyleContentType type;
+        while (0 < count--) {
+          parentContent->GetContentAt(count, type, buffer);
+          content->SetContentAt(count, type, buffer);
+        }
+      }
+    }
+    else {
+      count = 0;
+      while (contentValue) {
+        count++;
+        contentValue = contentValue->mNext;
+      }
+      if (NS_SUCCEEDED(content->AllocateContents(count))) {
+        const nsAutoString  nullStr;
+        count = 0;
+        contentValue = aContentData.mContent;
+        while (contentValue) {
+          const nsCSSValue& value = contentValue->mValue;
+          nsCSSUnit unit = value.GetUnit();
+          nsStyleContentType type;
+          switch (unit) {
+            case eCSSUnit_String:   type = eStyleContentType_String;    break;
+            case eCSSUnit_URL:      type = eStyleContentType_URL;       break;
+            case eCSSUnit_Attr:     type = eStyleContentType_Attr;      break;
+            case eCSSUnit_Counter:  type = eStyleContentType_Counter;   break;
+            case eCSSUnit_Counters: type = eStyleContentType_Counters;  break;
+            case eCSSUnit_Enumerated:
+              switch (value.GetIntValue()) {
+                case NS_STYLE_CONTENT_OPEN_QUOTE:     
+                  type = eStyleContentType_OpenQuote;     break;
+                case NS_STYLE_CONTENT_CLOSE_QUOTE:
+                  type = eStyleContentType_CloseQuote;    break;
+                case NS_STYLE_CONTENT_NO_OPEN_QUOTE:
+                  type = eStyleContentType_NoOpenQuote;   break;
+                case NS_STYLE_CONTENT_NO_CLOSE_QUOTE:
+                  type = eStyleContentType_NoCloseQuote;  break;
+                default:
+                  NS_ERROR("bad content value");
+              }
+              break;
+            default:
+              NS_ERROR("bad content type");
+          }
+          if (type < eStyleContentType_OpenQuote) {
+            value.GetStringValue(buffer);
+            Unquote(buffer);
+            content->SetContentAt(count++, type, buffer);
+          }
+          else {
+            content->SetContentAt(count++, type, nullStr);
+          }
+          contentValue = contentValue->mNext;
+        }
+      } 
+    }
+  }
+
+  // counter-increment: [string [int]]+, none, inherit
+  nsCSSCounterData* ourIncrement = aContentData.mCounterIncrement;
+  if (ourIncrement) {
+    PRInt32 increment;
+    if (eCSSUnit_Inherit == ourIncrement->mCounter.GetUnit()) {
+      inherited = PR_TRUE;
+      count = parentContent->CounterIncrementCount();
+      if (NS_SUCCEEDED(content->AllocateCounterIncrements(count))) {
+        while (0 < count--) {
+          parentContent->GetCounterIncrementAt(count, buffer, increment);
+          content->SetCounterIncrementAt(count, buffer, increment);
+        }
+      }
+    }
+    else if (eCSSUnit_None == ourIncrement->mCounter.GetUnit()) {
+      content->AllocateCounterIncrements(0);
+    }
+    else if (eCSSUnit_String == ourIncrement->mCounter.GetUnit()) {
+      count = 0;
+      while (ourIncrement) {
+        count++;
+        ourIncrement = ourIncrement->mNext;
+      }
+      if (NS_SUCCEEDED(content->AllocateCounterIncrements(count))) {
+        count = 0;
+        ourIncrement = aContentData.mCounterIncrement;
+        while (ourIncrement) {
+          if (eCSSUnit_Integer == ourIncrement->mValue.GetUnit()) {
+            increment = ourIncrement->mValue.GetIntValue();
+          }
+          else {
+            increment = 1;
+          }
+          ourIncrement->mCounter.GetStringValue(buffer);
+          content->SetCounterIncrementAt(count++, buffer, increment);
+          ourIncrement = ourIncrement->mNext;
+        }
+      }
+    }
+  }
+
+  // counter-reset: [string [int]]+, none, inherit
+  nsCSSCounterData* ourReset = aContentData.mCounterReset;
+  if (ourReset) {
+    PRInt32 reset;
+    if (eCSSUnit_Inherit == ourReset->mCounter.GetUnit()) {
+      inherited = PR_TRUE;
+      count = parentContent->CounterResetCount();
+      if (NS_SUCCEEDED(content->AllocateCounterResets(count))) {
+        while (0 < count--) {
+          parentContent->GetCounterResetAt(count, buffer, reset);
+          content->SetCounterResetAt(count, buffer, reset);
+        }
+      }
+    }
+    else if (eCSSUnit_None == ourReset->mCounter.GetUnit()) {
+      content->AllocateCounterResets(0);
+    }
+    else if (eCSSUnit_String == ourReset->mCounter.GetUnit()) {
+      count = 0;
+      while (ourReset) {
+        count++;
+        ourReset = ourReset->mNext;
+      }
+      if (NS_SUCCEEDED(content->AllocateCounterResets(count))) {
+        count = 0;
+        ourReset = aContentData.mCounterReset;
+        while (ourReset) {
+          if (eCSSUnit_Integer == ourReset->mValue.GetUnit()) {
+            reset = ourReset->mValue.GetIntValue();
+          }
+          else {
+            reset = 0;
+          }
+          ourReset->mCounter.GetStringValue(buffer);
+          content->SetCounterResetAt(count++, buffer, reset);
+          ourReset = ourReset->mNext;
+        }
+      }
+    }
+  }
+
+  // marker-offset: length, auto, inherit
+  SetCoord(aContentData.mMarkerOffset, content->mMarkerOffset, parentContent->mMarkerOffset,
+           SETCOORD_LH | SETCOORD_AUTO, aContext, mPresContext, inherited);
+    
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Content, *content);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mContentData = content;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_CONTENT, aHighestNode);
+  }
+
+  return content;
+}
+
+const nsStyleStruct* 
+nsRuleNode::ComputeQuotesData(nsStyleQuotes* aStartQuotes, const nsCSSContent& aContentData, 
+                                   nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                   nsRuleNode* aHighestNode,
+                                   const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW QUOTES CREATED!\n");
+#endif
+
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleQuotes* quotes = nsnull;
+  nsStyleQuotes* parentQuotes = quotes;
+  PRBool inherited = PR_FALSE;
+
+  if (aStartQuotes)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    quotes = new (mPresContext) nsStyleQuotes(*aStartQuotes);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentQuotes = (nsStyleQuotes*)parentContext->GetStyleData(eStyleStruct_Quotes);
+      if (parentQuotes)
+        quotes = new (mPresContext) nsStyleQuotes(*parentQuotes);
+    }
+  }
+
+  if (!quotes)
+    quotes = parentQuotes = new (mPresContext) nsStyleQuotes();
+
+  // quotes: [string string]+, none, inherit
+  PRUint32 count;
+  nsAutoString  buffer;
+  nsCSSQuotes* ourQuotes = aContentData.mQuotes;
+  if (ourQuotes) {
+    nsAutoString  closeBuffer;
+    if (eCSSUnit_Inherit == ourQuotes->mOpen.GetUnit()) {
+      inherited = PR_TRUE;
+      count = parentQuotes->QuotesCount();
+      if (NS_SUCCEEDED(quotes->AllocateQuotes(count))) {
+        while (0 < count--) {
+          parentQuotes->GetQuotesAt(count, buffer, closeBuffer);
+          quotes->SetQuotesAt(count, buffer, closeBuffer);
+        }
+      }
+    }
+    else if (eCSSUnit_None == ourQuotes->mOpen.GetUnit()) {
+      quotes->AllocateQuotes(0);
+    }
+    else if (eCSSUnit_String == ourQuotes->mOpen.GetUnit()) {
+      count = 0;
+      while (ourQuotes) {
+        count++;
+        ourQuotes = ourQuotes->mNext;
+      }
+      if (NS_SUCCEEDED(quotes->AllocateQuotes(count))) {
+        count = 0;
+        ourQuotes = aContentData.mQuotes;
+        while (ourQuotes) {
+          ourQuotes->mOpen.GetStringValue(buffer);
+          ourQuotes->mClose.GetStringValue(closeBuffer);
+          Unquote(buffer);
+          Unquote(closeBuffer);
+          quotes->SetQuotesAt(count++, buffer, closeBuffer);
+          ourQuotes = ourQuotes->mNext;
+        }
+      }
+    }
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Quotes, *quotes);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mQuotesData = quotes;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_QUOTES, aHighestNode);
+  }
+
+  return quotes;
+}
+
 #ifdef INCLUDE_XUL
 const nsStyleStruct* 
 nsRuleNode::ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData, 
@@ -3176,6 +3523,76 @@ nsRuleNode::CheckTableBorderProperties(const nsCSSTable& aTableData)
   return eRulePartialMixed;
 }
 
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckContentProperties(const nsCSSContent& aData)
+{
+  const PRUint32 numProps = 4;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (aData.mContent) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mContent->mValue.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aData.mMarkerOffset.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mMarkerOffset.GetUnit())
+      inheritCount++;
+  }
+
+  if (aData.mCounterIncrement) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mCounterIncrement->mCounter.GetUnit())
+      inheritCount++;
+  }
+
+  if (aData.mCounterReset) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mCounterReset->mCounter.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckQuotesProperties(const nsCSSContent& aData)
+{
+  const PRUint32 numProps = 1;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (aData.mQuotes) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aData.mQuotes->mOpen.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numProps)
+    return eRuleFullInherited;
+  else if (totalCount == numProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
 #ifdef INCLUDE_XUL
 inline nsRuleNode::RuleDetail 
 nsRuleNode::CheckXULProperties(const nsCSSXUL& aXULData)
@@ -3262,6 +3679,10 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
       return GetTableData(aContext, aMutableContext);
     case eStyleStruct_TableBorder:
       return GetTableBorderData(aContext, aMutableContext);
+    case eStyleStruct_Content:
+      return GetContentData(aContext, aMutableContext);
+    case eStyleStruct_Quotes:
+      return GetQuotesData(aContext, aMutableContext);
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
       return GetXULData(aContext, aMutableContext);

@@ -50,12 +50,17 @@ class nsIFrame;
 #define NS_STYLE_INHERIT_TABLE            0x00100
 #define NS_STYLE_INHERIT_TABLE_BORDER     0x00200
 #define NS_STYLE_INHERIT_CONTENT          0x00400
-#define NS_STYLE_INHERIT_UI               0x00800
-#define NS_STYLE_INHERIT_MARGIN           0x01000
-#define NS_STYLE_INHERIT_PADDING          0x02000
-#define NS_STYLE_INHERIT_BORDER           0x04000
-#define NS_STYLE_INHERIT_OUTLINE          0x08000
-#define NS_STYLE_INHERIT_XUL              0x10000
+#define NS_STYLE_INHERIT_QUOTES           0x00800
+#define NS_STYLE_INHERIT_UI               0x01000
+#define NS_STYLE_INHERIT_MARGIN           0x02000
+#define NS_STYLE_INHERIT_PADDING          0x04000
+#define NS_STYLE_INHERIT_BORDER           0x08000
+#define NS_STYLE_INHERIT_OUTLINE          0x01000
+#define NS_STYLE_INHERIT_XUL              0x20000
+
+// A bit to test whether or not a style context can be shared
+// by siblings.
+#define NS_STYLE_UNIQUE_CONTEXT           0x80000
 
 enum nsStyleStructID {
   eStyleStruct_Font           = 1,
@@ -67,16 +72,17 @@ enum nsStyleStructID {
   eStyleStruct_Display        = 7,
   eStyleStruct_Visibility     = 8,
   eStyleStruct_Content        = 9,
-  eStyleStruct_UserInterface  = 10,
-  eStyleStruct_Table          = 11,
-  eStyleStruct_TableBorder    = 12,
-  eStyleStruct_Margin         = 13,
-  eStyleStruct_Padding        = 14,
-  eStyleStruct_Border         = 15,
-  eStyleStruct_Outline        = 16,
-  eStyleStruct_XUL            = 17,
+  eStyleStruct_Quotes         = 10,
+  eStyleStruct_UserInterface  = 11,
+  eStyleStruct_Table          = 12,
+  eStyleStruct_TableBorder    = 13,
+  eStyleStruct_Margin         = 14,
+  eStyleStruct_Padding        = 15,
+  eStyleStruct_Border         = 16,
+  eStyleStruct_Outline        = 17,
+  eStyleStruct_XUL            = 18,
   eStyleStruct_Max            = eStyleStruct_XUL,
-  eStyleStruct_BorderPaddingShortcut = 18       // only for use in GetStyle()
+  eStyleStruct_BorderPaddingShortcut = 19       // only for use in GetStyle()
 };
 
 // The actual structs start here
@@ -651,9 +657,79 @@ struct nsStyleCounterData {
 
 #define DELETE_ARRAY_IF(array)  if (array) { delete[] array; array = nsnull; }
 
+struct nsStyleQuotes : public nsStyleStruct {
+  nsStyleQuotes();
+  nsStyleQuotes(const nsStyleQuotes& aQuotes);
+  ~nsStyleQuotes();
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleQuotes), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleQuotes& aOther) const;
+
+  
+  PRUint32  QuotesCount(void) const { return mQuotesCount; } // [inherited]
+  nsresult  GetQuotesAt(PRUint32 aIndex, nsString& aOpen, nsString& aClose) const {
+    if (aIndex < mQuotesCount) {
+      aIndex *= 2;
+      aOpen = mQuotes[aIndex];
+      aClose = mQuotes[++aIndex];
+      return NS_OK;
+    }
+    return NS_ERROR_ILLEGAL_VALUE;
+  }
+
+  nsresult  AllocateQuotes(PRUint32 aCount) {
+    if (aCount != mQuotesCount) {
+      DELETE_ARRAY_IF(mQuotes);
+      if (aCount) {
+        mQuotes = new nsString[aCount * 2];
+        if (! mQuotes) {
+          mQuotesCount = 0;
+          return NS_ERROR_OUT_OF_MEMORY;
+        }
+      }
+      mQuotesCount = aCount;
+    }
+    return NS_OK;
+  }
+
+  nsresult  SetQuotesAt(PRUint32 aIndex, const nsString& aOpen, const nsString& aClose) {
+    if (aIndex < mQuotesCount) {
+      aIndex *= 2;
+      mQuotes[aIndex] = aOpen;
+      mQuotes[++aIndex] = aClose;
+      return NS_OK;
+    }
+    return NS_ERROR_ILLEGAL_VALUE;
+  }
+
+protected:
+  PRUint32            mQuotesCount;
+  nsString*           mQuotes;
+};
+
 struct nsStyleContent: public nsStyleStruct {
   nsStyleContent(void);
+  nsStyleContent(const nsStyleContent& aContent);
   ~nsStyleContent(void);
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleContent), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleContent& aOther) const;
 
   PRUint32  ContentCount(void) const  { return mContentCount; } // [reset]
   nsresult  GetContentAt(PRUint32 aIndex, nsStyleContentType& aType, nsString& aContent) const {
@@ -764,42 +840,6 @@ struct nsStyleContent: public nsStyleStruct {
 
   nsStyleCoord  mMarkerOffset;  // [reset]
 
-  PRUint32  QuotesCount(void) const { return mQuotesCount; } // [inherited]
-  nsresult  GetQuotesAt(PRUint32 aIndex, nsString& aOpen, nsString& aClose) const {
-    if (aIndex < mQuotesCount) {
-      aIndex *= 2;
-      aOpen = mQuotes[aIndex];
-      aClose = mQuotes[++aIndex];
-      return NS_OK;
-    }
-    return NS_ERROR_ILLEGAL_VALUE;
-  }
-
-  nsresult  AllocateQuotes(PRUint32 aCount) {
-    if (aCount != mQuotesCount) {
-      DELETE_ARRAY_IF(mQuotes);
-      if (aCount) {
-        mQuotes = new nsString[aCount * 2];
-        if (! mQuotes) {
-          mQuotesCount = 0;
-          return NS_ERROR_OUT_OF_MEMORY;
-        }
-      }
-      mQuotesCount = aCount;
-    }
-    return NS_OK;
-  }
-
-  nsresult  SetQuotesAt(PRUint32 aIndex, const nsString& aOpen, const nsString& aClose) {
-    if (aIndex < mQuotesCount) {
-      aIndex *= 2;
-      mQuotes[aIndex] = aOpen;
-      mQuotes[++aIndex] = aClose;
-      return NS_OK;
-    }
-    return NS_ERROR_ILLEGAL_VALUE;
-  }
-
 protected:
   PRUint32            mContentCount;
   nsStyleContentData* mContents;
@@ -809,9 +849,6 @@ protected:
 
   PRUint32            mResetCount;
   nsStyleCounterData* mResets;
-
-  PRUint32            mQuotesCount;
-  nsString*           mQuotes;
 };
 
 struct nsStyleUserInterface: public nsStyleStruct {
