@@ -40,7 +40,10 @@ Rights Reserved.
   <hbox align="center" valign="center">
     <label control="abPopup" value="&addToAddressBook.label;" accesskey="&addToAddressBook.accesskey;"/>
     <menulist id="abPopup">
-      <menupopup id="abPopup-menupopup" ref="moz-abdirectory://" datasources="rdf:addressdirectory">
+      <menupopup id="abPopup-menupopup" ref="moz-abdirectory://" 
+        datasources="rdf:addressdirectory"
+        sortResource="http://home.netscape.com/NC-rdf#DirName"
+        sortDirection="ascending">
         <template> 
         <rule nc:IsMailList="false">
           <menuitem uri="..."

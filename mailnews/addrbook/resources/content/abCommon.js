@@ -379,14 +379,25 @@ function GetSelectedAbCards()
   return cards;
 }
 
+
 function SelectFirstAddressBook()
 {
-  var body = document.getElementById("dirTreeBody");
-  if (dirTree && body) {
-    var treeitems = body.getElementsByTagName("treeitem");
-    if (treeitems && treeitems.length > 0) {
-      dirTree.selectItem(treeitems[0]);
-      ChangeDirectoryByDOMNode(treeitems[0]);
+  var children = dirTree.childNodes;
+
+  var treechildren;
+  for (var i=0;i<children.length; i++) {
+    if (children[i].localName == "treechildren") {
+      treechildren = children[i];
+      break;
+    }
+  }
+
+  children = treechildren.childNodes;
+  for (i=0; i<children.length; i++) {
+    if (children[i].localName == "treeitem") {
+      dirTree.selectItem(children[i]);
+      ChangeDirectoryByDOMNode(children[i]);
+      return;
     }
   }
 }

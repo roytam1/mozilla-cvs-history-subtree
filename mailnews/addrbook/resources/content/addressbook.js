@@ -101,8 +101,7 @@ function OnLoadAddressBook()
 
 	//workaround - add setTimeout to make sure dynamic overlays get loaded first
 	setTimeout('SelectFirstAddressBook()',0);
-	}
-
+}
 
 function GetCurrentPrefs()
 {
