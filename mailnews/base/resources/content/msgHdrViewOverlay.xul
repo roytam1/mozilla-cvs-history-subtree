@@ -50,9 +50,9 @@ Rights Reserved.
 <tooltip id="attachmentListTooltip"
          onpopupshowing="return FillInAttachmentTooltip(document.tooltipNode);"/> 
 
-<hbox id="msgHeaderView" persist="state">
+<hbox id="msgHeaderView" persist="state" originalclass="none">
 
-<grid id="collapsedHeaderView" class="header-part1" flex="1" collapsed="true">
+<grid id="collapsedHeaderView" originalclass="header-part1" class="header-part1" flex="1" collapsed="true">
   <rows>
     <row flex="1"/>
   </rows>
@@ -92,7 +92,7 @@ Rights Reserved.
   </columns>
 </grid>
 
-<hbox id="expandedHeaderView" class="header-part1" flex="1" collapsed="true">
+<hbox id="expandedHeaderView" originalclass="header-part1" class="header-part1" flex="1" collapsed="true">
    <vbox id="expandedHeaders" flex="1">
     <mail-toggle-headerfield id="expandedsubjectBox" class="subjectvalue" label="&subjectField.label;" ontwistyclick="ToggleHeaderView();" collapsed="true"/>
     
@@ -113,15 +113,15 @@ Rights Reserved.
 
    <vbox id="expandedKeywordBox">
      <spacer flex="1"/>
-     <image id="expandedKeywordImage" class="keyword-part"/>  
+     <image id="expandedKeywordImage" originalclass="none"/>  
      <spacer flex="1"/>
    </vbox>
 
-   <vbox id="editMessageBox" class="header-part1" collapsed="true">
+   <vbox id="editMessageBox" class="header-part1" originalclass="header-part1" collapsed="true">
      <button id="editMessageButton" label="&editMessage.label;" oncommand="MsgComposeDraftMessage()"/>
    </vbox> 
 
-   <vbox id="expandedAttachmentBox" class="header-part1" collapsed="true">
+   <vbox id="expandedAttachmentBox" class="header-part1" originalclass="header-part1" collapsed="true">
      <label id="attachmentText" value="&attachmentsTree.label;" crop="right"/>
      <listbox id="attachmentList" flex="2"
               onclick="attachmentListClick(event);" context="attachmentListContext"/>
