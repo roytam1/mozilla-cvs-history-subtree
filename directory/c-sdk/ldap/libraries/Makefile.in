@@ -2,7 +2,7 @@ DEPTH	 = ../../../..
 srcdir = @srcdir
 ldaptopsrcdir = @top_srcdir@
 
-UNIXDIRLIST	= liblber libldap
+UNIXDIRLIST	= liblber libldap libprldap
 
 include ../build/autoconf.mk
 include $(NSPR_TREE)/config/rules.mk

@@ -1,7 +1,7 @@
 DEPTH	 = ../../../..
 MOD_DEPTH       = ../../../../nsprpub
 NSPR_TREE = ../../../../nsprpub
-UNIXDIRLIST	= liblber libldap
+UNIXDIRLIST	= liblber libldap libprldap
 
 include $(NSPR_TREE)/config/rules.mk
 
