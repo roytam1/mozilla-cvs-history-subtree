@@ -3411,8 +3411,8 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     }
 
     if (resolveStyle) {
-      styleContext = ResolveStyleContext(aPresContext, aParentFrame,
-                                         aDocElement);
+      styleContext = aPresShell->StyleSet()->ResolveStyleFor(aDocElement,
+                                                             nsnull);
     }
   }
 
@@ -3658,8 +3658,9 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
   // Bind the viewport frame to the root view
   nsIViewManager* viewManager = aPresContext->GetViewManager();
-  nsIView*        rootView = viewManager->RootView();
+  nsIView*        rootView;
 
+  viewManager->GetRootView(rootView);
   viewportFrame->SetView(rootView);
 
   nsContainerFrame::SyncFrameViewProperties(aPresContext, viewportFrame,

@@ -1041,6 +1041,7 @@ embedding/components/profilesharingsetup/src/Makefile
         modules/libpr0n/decoders/bmp/Makefile
         modules/libpr0n/decoders/icon/Makefile
         modules/libpr0n/decoders/icon/win/Makefile
+        modules/libpr0n/decoders/icon/gtk/Makefile
         modules/libpr0n/decoders/xbm/Makefile
 "
 
