@@ -21,6 +21,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,7 +41,7 @@
 
 interface nsICmdLineService;
 
-[scriptable, uuid(7877c9eb-ec6c-4214-9b59-48ee78f09eb9)]
+[scriptable, uuid(e9b0f89b-0529-4d96-98a8-eb5b2b9a8383)]
 interface nsIAppStartup : nsISupports
 {
     /**
@@ -73,23 +74,4 @@ interface nsIAppStartup : nsISupports
      * Exit the event loop, shut down the app
      */
     void quit(in PRUint32 aFerocity);
-
-    /**
-     * Creates the initial state of the application by launching tasks
-     * specfied by "general.startup.*" prefs.
-     * @param aWindowWidth     the width to make the initial window(s) opened
-     * @param aWindowHeight    the height to make the initial window(s) opened
-     * @note SIZE_TO_CONTENT may be used for width or height.
-     * @return TRUE if a window was opened
-     */
-    boolean createStartupState(in long aWindowWidth, in long aWindowHeight);
-
-    /**
-     * Ensures that at least one window exists after creating the startup state.
-     * If one has not been made, this will create a browser window.
-     *
-     * @param aCmdLineService the command line from which startup args
-     *        can be read.
-     */
-    void ensure1Window(in nsICmdLineService aCmdLineService);
 };
