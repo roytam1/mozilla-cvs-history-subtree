@@ -158,7 +158,7 @@ public:
 #if defined(XP_MAC) || defined(XP_MACOSX)
   void GUItoMacEvent(const nsGUIEvent& anEvent, EventRecord& aMacEvent);
   nsPluginPort* GetPluginPort();
-  void FixUpPluginWindow();
+  nsPluginPort* FixUpPluginWindow();
 #endif
                    
 private:
@@ -167,6 +167,7 @@ private:
   nsIWidget         *mWindow;       //we do not addref this...
   PluginViewerImpl  *mViewer;       //we do not addref this...
   nsCOMPtr<nsITimer> mPluginTimer;
+  PRPackedBool	     mWidgetVisible;
 };
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
@@ -1051,6 +1052,7 @@ pluginInstanceOwner :: pluginInstanceOwner()
   mInstance = nsnull;
   mWindow = nsnull;
   mViewer = nsnull;
+  mWidgetVisible = PR_TRUE;
 }
 
 pluginInstanceOwner :: ~pluginInstanceOwner()
@@ -1257,9 +1259,9 @@ NS_IMETHODIMP pluginInstanceOwner :: Init(PluginViewerImpl *aViewer, nsIWidget *
 static void InitializeEventRecord(EventRecord* event)
 {
     memset(event, 0, sizeof(EventRecord));
-    GetGlobalMouse(&event->where);
-    event->when = TickCount();
-    event->modifiers = GetCurrentKeyModifiers();
+    ::GetGlobalMouse(&event->where);
+    event->when = ::TickCount();
+    event->modifiers = ::GetCurrentKeyModifiers();
 }
 #else
 inline void InitializeEventRecord(EventRecord* event) { ::OSEventAvail(0, event); }
@@ -1311,19 +1313,19 @@ nsEventStatus pluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
             GUItoMacEvent(anEvent, macEvent);
             event = &macEvent;
             if (event->what == updateEvt) {
-                nsPluginPort* pluginPort = GetPluginPort();
                 // Add in child windows absolute position to get make the dirty rect
                 // relative to the top-level window.
-                FixUpPluginWindow();
-                
-                EventRecord updateEvent;
-                InitializeEventRecord(&updateEvent);
-                updateEvent.what = updateEvt;
-                updateEvent.message = UInt32(pluginPort->port);
-
-                nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(pluginPort->port) };
-                PRBool eventHandled = PR_FALSE;
-                mInstance->HandleEvent(&pluginEvent, &eventHandled);
+                nsPluginPort* pluginPort = FixUpPluginWindow();
+                if (pluginPort) {
+                    EventRecord updateEvent;
+                    InitializeEventRecord(&updateEvent);
+                    updateEvent.what = updateEvt;
+                    updateEvent.message = UInt32(pluginPort->port);
+    
+                    nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(pluginPort->port) };
+                    PRBool eventHandled = PR_FALSE;
+                    mInstance->HandleEvent(&pluginEvent, &eventHandled);
+                }
             }
             return nsEventStatus_eConsumeNoDefault;
             
@@ -1360,17 +1362,22 @@ NS_IMETHODIMP_(void) pluginInstanceOwner::Notify(nsITimer* /* timer */)
     // validate the plugin clipping information by syncing the plugin window info to
     // reflect the current widget location. This makes sure that everything is updated
     // correctly in the event of scrolling in the window.
-    FixUpPluginWindow();
     if (mInstance != NULL) {
-        EventRecord idleEvent;
-        InitializeEventRecord(&idleEvent);
-        idleEvent.what = nullEvent;
-        
-        nsPluginPort* pluginPort = GetPluginPort();
-        nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(pluginPort->port) };
-        
-        PRBool eventHandled = PR_FALSE;
-        mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        nsPluginPort* pluginPort = FixUpPluginWindow();
+        if (pluginPort) {
+            EventRecord idleEvent;
+            InitializeEventRecord(&idleEvent);
+            idleEvent.what = nullEvent;
+    
+            // we must give flash a bogus mouse location if we are not visible.
+            if (!mWidgetVisible)
+                idleEvent.where.h = idleEvent.where.v = 20000;
+    
+            nsPluginEvent pluginEvent = { &idleEvent, nsPluginPlatformWindowRef(pluginPort->port) };
+            
+            PRBool eventHandled = PR_FALSE;
+            mInstance->HandleEvent(&pluginEvent, &eventHandled);
+        }
     }
 
 #ifndef REPEATING_TIMERS
@@ -1452,9 +1459,21 @@ static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbs
 } 
 
 
-void pluginInstanceOwner::FixUpPluginWindow()
+nsPluginPort* pluginInstanceOwner::FixUpPluginWindow()
 {
   if (mWindow) {
+#if defined(MOZ_WIDGET_COCOA)
+    nsPluginPort* pluginPort = GetPluginPort();
+
+    mPluginWindow.x = -pluginPort->portx;
+    mPluginWindow.y = -pluginPort->porty;    
+    RgnHandle clipRgn = ::NewRgn();
+    if (clipRgn) {
+      ::GetPortClipRegion(pluginPort->port, clipRgn);
+      ::GetRegionBounds(clipRgn, (Rect*)&mPluginWindow.clipRect);
+      ::DisposeRgn(clipRgn);
+    }
+#else
     nscoord absWidgetX = 0;
     nscoord absWidgetY = 0;
     nsRect widgetClip(0,0,0,0);
@@ -1468,8 +1487,34 @@ void pluginInstanceOwner::FixUpPluginWindow()
     mPluginWindow.clipRect.top = widgetClip.y;
     mPluginWindow.clipRect.left = widgetClip.x;
     mPluginWindow.clipRect.bottom =  mPluginWindow.clipRect.top + widgetClip.height;
-    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width; 
+    mPluginWindow.clipRect.right =  mPluginWindow.clipRect.left + widgetClip.width;
+#endif
+
+    PRBool isVisible;
+    mWindow->IsVisible(isVisible);
+    if (mWidgetVisible != isVisible) {
+      mWidgetVisible = isVisible;
+      // must do this to disable async Java Applet drawing
+      if (isVisible) {
+        mInstance->SetWindow(&mPluginWindow);
+      } else {
+        mInstance->SetWindow(nsnull);
+        // switching states, do not draw
+        pluginPort = nsnull;
+      }
+    }
+
+#if defined(MOZ_WIDGET_COCOA)
+    // XXX somebody needs to synchronize clipping of the plugin's window port.
+    if (!mWidgetVisible) {
+      mPluginWindow.clipRect.right = mPluginWindow.clipRect.left;
+      mPluginWindow.clipRect.bottom = mPluginWindow.clipRect.top;
+    }
+    ::ClipRect((Rect*)&mPluginWindow.clipRect);
+#endif
+    return pluginPort;
   }
+  return nsnull;
 }
 
 #endif
