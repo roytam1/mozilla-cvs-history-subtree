@@ -319,14 +319,60 @@ nsShouldIgnoreFile(nsString& name)
     return PR_TRUE;
 }
 
+// this is only called for virtual folders, currently.
 NS_IMETHODIMP nsImapMailFolder::AddSubfolder(const nsAString &aName,
                                    nsIMsgFolder** aChild)
 {
-  nsresult rv = nsMsgDBFolder::AddSubfolder(aName, aChild);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_ARG_POINTER(aChild);
+  
+  PRInt32 flags = 0;
+  nsresult rv;
+  nsCOMPtr<nsIRDFService> rdf = do_GetService("@mozilla.org/rdf/rdf-service;1", &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+  
+  nsCAutoString uri(mURI);
+  uri.Append('/');
+  
+  // convert name to imap modified utf7, like an imap server would
+  nsCAutoString utfFolderName;
+  utfFolderName.Assign(CreateUtf7ConvertedStringFromUnicode(PromiseFlatString(aName).get()));
+  
+  uri += utfFolderName.get();
+  
+  nsCOMPtr <nsIMsgFolder> msgFolder;
+  rv = GetChildWithURI(uri.get(), PR_FALSE/*deep*/, PR_TRUE /*case Insensitive*/, getter_AddRefs(msgFolder));  
+  if (NS_SUCCEEDED(rv) && msgFolder)
+    return NS_MSG_FOLDER_EXISTS;
+  
+  nsCOMPtr<nsIRDFResource> res;
+  rv = rdf->GetResource(uri, getter_AddRefs(res));
+  if (NS_FAILED(rv))
+    return rv;
+  
+  nsCOMPtr<nsIMsgFolder> folder(do_QueryInterface(res, &rv));
+  if (NS_FAILED(rv))
+    return rv;
+  
+  folder->GetFlags((PRUint32 *)&flags);
+  
+  flags |= MSG_FOLDER_FLAG_MAIL;
+  
+  folder->SetParent(this);
+  
+  folder->SetFlags(flags);
+  
+  nsCOMPtr<nsISupports> supports = do_QueryInterface(folder);
+  if(folder)
+    mSubFolders->AppendElement(supports);
+  NS_ADDREF(*aChild = folder);
+  
   nsCOMPtr <nsIMsgImapMailFolder> imapChild = do_QueryInterface(*aChild);
   if (imapChild)
+  {
+    NS_LossyConvertUTF16toASCII folderCName(aName);
+    imapChild->SetOnlineName(folderCName.get());
     imapChild->SetHierarchyDelimiter(m_hierarchyDelimiter);
+  }
   return rv;
 }
 
@@ -3973,6 +4019,12 @@ nsImapMailFolder::ParseAdoptedMsgLine(const char *adoptedMessageLine, nsMsgKey u
   }
   if (m_tempMessageStream)
   {
+      nsCOMPtr <nsISeekableStream> seekable;
+
+      seekable = do_QueryInterface(m_tempMessageStream);
+
+      if (seekable)
+        seekable->Seek(PR_SEEK_END, 0);
      rv = m_tempMessageStream->Write(adoptedMessageLine, 
                   PL_strlen(adoptedMessageLine), &count);
      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to write to stream");
@@ -5941,11 +5993,16 @@ nsImapMailFolder::SetUrlState(nsIImapProtocol* aProtocol,
   {
     ProgressStatus(aProtocol, IMAP_DONE, nsnull);
     m_urlRunning = PR_FALSE;
-    EndOfflineDownload();
-    if (m_downloadingFolderForOfflineUse)
+    // if no protocol, then we're reading from the mem or disk cache
+    // and we don't want to end the offline download just yet.
+    if (aProtocol)
     {
-      ReleaseSemaphore(NS_STATIC_CAST(nsIMsgImapMailFolder*, this));
-      m_downloadingFolderForOfflineUse = PR_FALSE;
+      EndOfflineDownload();
+      if (m_downloadingFolderForOfflineUse)
+      {
+        ReleaseSemaphore(NS_STATIC_CAST(nsIMsgImapMailFolder*, this));
+        m_downloadingFolderForOfflineUse = PR_FALSE;
+      }
     }
   }
 
