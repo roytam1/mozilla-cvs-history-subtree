@@ -117,7 +117,9 @@ function TextEditorOnLoad()
 
 function PageIsEmptyAndUntouched()
 {
-  return (editorShell != null) && (editorShell.documentIsEmpty == true) && (docWasModified == false);
+  return (editorShell != null) && editorShell.documentIsEmpty &&
+          !docWasModified && !gHTMLSourceChanged;
+
 }
 
 function IsEditorContentHTML()
