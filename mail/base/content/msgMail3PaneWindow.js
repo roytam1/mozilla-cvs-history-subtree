@@ -803,11 +803,11 @@ function delayedOnLoadMessenger()
   var toolbarset = document.getElementById('customToolbars');
   toolbox.toolbarset = toolbarset;
 
-  var updatePanel = document.getElementById("statusbar-updates");
-  try {
-    updatePanel.init();
-  }
-  catch (ex) {}
+//  var updatePanel = document.getElementById("statusbar-updates");
+//  try {
+//    updatePanel.init();
+//  }
+//  catch (ex) {}
 }
 
 function OnUnloadMessenger()
