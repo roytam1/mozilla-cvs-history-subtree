@@ -357,9 +357,6 @@ Contributor(s):
         <button id="clear" label="&clearButton.label;" disabled="true"
                 oncommand="onAbClearSearch();"
                 tooltiptext="&clearButton.tooltip;"/>
-        <button id="advancedButton" label="&advancedButton.label;" 
-                tooltiptext="&advancedButton.tooltip;" 
-                oncommand="onAdvancedAbSearch();"/>
       </hbox>
 
       <!-- results pane -->
