@@ -15,13 +15,11 @@
                 confirmCheckPanel = id; 
                 confirmCheckPanelButton1 = id; 
                 confirmCheckPanelButton2 = id; 
-                confirmCheckPanelButton3 = id; 
                 confirmCheckPanelCheck = id; 
                 confirmCheckPanelText = id; 
                 confirmPanel = id; 
                 confirmPanelButton1 = id; 
                 confirmPanelButton2 = id; 
-                confirmPanelButton3 = id; 
                 confirmPanelText = id; 
                 confirmStorePasswordPanel = id; 
                 expiredCertPanel = id; 

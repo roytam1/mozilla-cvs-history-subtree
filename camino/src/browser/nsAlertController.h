@@ -49,12 +49,10 @@
     IBOutlet id confirmCheckPanelText;
     IBOutlet id confirmCheckPanelButton1;
     IBOutlet id confirmCheckPanelButton2;
-    IBOutlet id confirmCheckPanelButton3;
     IBOutlet id confirmPanel;
     IBOutlet id confirmPanelText;
     IBOutlet id confirmPanelButton1;
     IBOutlet id confirmPanelButton2;
-    IBOutlet id confirmPanelButton3;
     IBOutlet id confirmStorePasswordPanel;
     IBOutlet id promptPanel;
     IBOutlet id promptPanelCheck;

@@ -125,7 +125,6 @@ enum { kOKButton = 0, kCancelButton = 1, kOtherButton = 2 };
 
   [confirmPanelButton1 setTitle:btn1];
   [confirmPanelButton2 setTitle:btn2];
-  [confirmPanelButton3 setTitle:btn3];  
 
   int result = [NSApp runModalForWindow:confirmPanel relativeToWindow:parent];
   
@@ -146,7 +145,6 @@ enum { kOKButton = 0, kCancelButton = 1, kOtherButton = 2 };
 
   [confirmCheckPanelButton1 setTitle:btn1];
   [confirmCheckPanelButton2 setTitle:btn2];
-  [confirmCheckPanelButton3 setTitle:btn3];  
   
   int result = [NSApp runModalForWindow:confirmCheckPanel relativeToWindow:parent];
 
