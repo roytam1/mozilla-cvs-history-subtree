@@ -68,7 +68,7 @@ private:
     Expr*          createFilterExpr   (ExprLexer& lexer);
     FunctionCall*  createFunctionCall (ExprLexer& lexer);
     LocationStep*  createLocationStep (ExprLexer& lexer);
-    NodeExpr*      createNodeExpr     (ExprLexer& lexer);
+    txNodeTest*    createNodeTest     (ExprLexer& lexer);
     Expr*          createPathExpr     (ExprLexer& lexer);
     Expr*          createUnionExpr    (ExprLexer& lexer);
 

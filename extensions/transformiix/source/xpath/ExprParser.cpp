@@ -471,8 +471,8 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer) {
 LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
 
     //-- child axis is default
-    short axisIdentifier = LocationStep::CHILD_AXIS;
-    NodeExpr* nodeExpr = 0;
+    LocationStep::LocationStepType axisIdentifier = LocationStep::CHILD_AXIS;
+    txNodeTest* nodeTest = 0;
 
     //-- get Axis Identifier or AbbreviatedStep, if present
     Token* tok = lexer.peek();
@@ -536,41 +536,61 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
             //-- eat token
             lexer.nextToken();
             axisIdentifier = LocationStep::PARENT_AXIS;
-            nodeExpr = new BasicNodeExpr(NodeExpr::NODE_EXPR);
+            nodeTest = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+            if (!nodeTest) {
+                //XXX out of memory
+                return 0;
+            }
             break;
         case Token::SELF_NODE :
             //-- eat token
             lexer.nextToken();
             axisIdentifier = LocationStep::SELF_AXIS;
-            nodeExpr = new BasicNodeExpr(NodeExpr::NODE_EXPR);
+            nodeTest = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+            if (!nodeTest) {
+                //XXX out of memory
+                return 0;
+            }
             break;
         default:
             break;
     }
 
-    //-- get NodeTest unless AbbreviatedStep was found
-    if (!nodeExpr) {
+    //-- get NodeTest unless an AbbreviatedStep was found
+    if (!nodeTest) {
         tok = lexer.nextToken();
 
         switch (tok->type) {
             case Token::CNAME :
-                // NameTest
-                // XXX Namespace: handle namespaces here
-                if (axisIdentifier ==  LocationStep::ATTRIBUTE_AXIS)
-                    nodeExpr = new AttributeExpr(tok->value);
-                else
-                    nodeExpr = new ElementExpr(tok->value);
+                switch (axisIdentifier) {
+                    case LocationStep::ATTRIBUTE_AXIS:
+                        nodeTest = new txNameTest(tok->value, Node::ATTRIBUTE_NODE);
+                        break;
+                    // XXX Namespace: handle namespaces here
+                    default:
+                        nodeTest = new txNameTest(tok->value, Node::ELEMENT_NODE);
+                        break;
+                }
+                if (!nodeTest) {
+                    //XXX ErrorReport: out of memory
+                    return 0;
+                }
                 break;
             default:
                 lexer.pushBack();
-                nodeExpr = createNodeExpr(lexer);
-                if (!nodeExpr) {
+                nodeTest = createNodeTest(lexer);
+                if (!nodeTest) {
                     return 0;
                 }
         }
     }
     
-    LocationStep* lstep = new LocationStep(nodeExpr, axisIdentifier);
+    LocationStep* lstep = new LocationStep(nodeTest, axisIdentifier);
+    if (!lstep) {
+        //XXX out of memory
+        delete nodeTest;
+        return 0;
+    }
 
     //-- handle predicates
     if (!parsePredicates(lstep, lexer)) {
@@ -585,51 +605,54 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
  * This method only handles comment(), text(), processing-instructing() and node()
  *
 **/
-NodeExpr* ExprParser::createNodeExpr(ExprLexer& lexer) {
+txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
 
-    NodeExpr* nodeExpr = 0;
+    txNodeTest* nodeTest = 0;
 
     Token* nodeTok = lexer.nextToken();
 
     switch (nodeTok->type) {
         case Token::COMMENT:
-            nodeExpr = new BasicNodeExpr(NodeExpr::COMMENT_EXPR);
+            nodeTest = new txNodeTypeTest(txNodeTypeTest::COMMENT_TYPE);
             break;
         case Token::NODE :
-            nodeExpr = new BasicNodeExpr(NodeExpr::NODE_EXPR);
+            nodeTest = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
             break;
         case Token::PROC_INST :
-            nodeExpr = new BasicNodeExpr(NodeExpr::PI_EXPR);
+            nodeTest = new txNodeTypeTest(txNodeTypeTest::PI_TYPE);
             break;
         case Token::TEXT :
-            nodeExpr = new TextExpr();
+            nodeTest = new txNodeTypeTest(txNodeTypeTest::TEXT_TYPE);
             break;
         default:
             lexer.pushBack();
             // XXX ErrorReport: unexpected token
             return 0;
-            break;
+    }
+    if (!nodeTest) {
+        //XXX out of memory
+        return 0;
     }
 
     if (lexer.nextToken()->type != Token::L_PAREN) {
         lexer.pushBack();
         //XXX ErrorReport: left parenthesis expected
-        delete nodeExpr;
+        delete nodeTest;
         return 0;
     }
     if (nodeTok->type == Token::PROC_INST &&
         lexer.peek()->type == Token::LITERAL) {
         Token* tok = lexer.nextToken();
-        ((BasicNodeExpr*)nodeExpr)->setNodeName(tok->value);
+        ((txNodeTypeTest*)nodeTest)->setNodeName(tok->value);
     }
     if (lexer.nextToken()->type != Token::R_PAREN) {
         lexer.pushBack();
         //XXX ErrorReport: right parenthesis expected (or literal for pi)
-        delete nodeExpr;
+        delete nodeTest;
         return 0;
     }
 
-    return nodeExpr;
+    return nodeTest;
 } //-- createNodeExpr
 
 /**

@@ -34,9 +34,11 @@
  * @param nodeExpr the NodeExpr to use when matching Nodes
  * @param axisIdentifier the Axis Identifier in which to search for nodes
 **/
-LocationStep::LocationStep(NodeExpr* nodeExpr, short axisIdentifier) : PredicateList() {
-    this->nodeExpr = nodeExpr;
-    this->axisIdentifier = axisIdentifier;
+LocationStep::LocationStep(txNodeTest* aNodeTest,
+                           LocationStepType aAxisIdentifier)
+{
+    mNodeTest = aNodeTest;
+    mAxisIdentifier = aAxisIdentifier;
 } //-- LocationStep
 
 /**
@@ -45,7 +47,7 @@ LocationStep::LocationStep(NodeExpr* nodeExpr, short axisIdentifier) : Predicate
  * The NodeExpr will be deleted
 **/
 LocationStep::~LocationStep() {
-    delete nodeExpr;
+    delete mNodeTest;
 } //-- ~LocationStep
 
   //-----------------------------/
@@ -62,17 +64,18 @@ LocationStep::~LocationStep() {
 **/
 ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
 
-   NodeSet* nodes = new NodeSet();
-   if (( !context ) || (! nodeExpr )) return nodes;
+    NodeSet* nodes = new NodeSet();
+    if (!context || !mNodeTest || !nodes)
+        return nodes;
 
     Node* node = context;
-    switch (axisIdentifier) {
+    switch (mAxisIdentifier) {
         case ANCESTOR_AXIS :
             node = context->getXPathParent();
             //-- do not break here
         case ANCESTOR_OR_SELF_AXIS :
             while (node) {
-                if (nodeExpr->matches(node, context, cs)) {
+                if (mNodeTest->matches(node, cs)) {
                     nodes->add(node);
                 }
                 node = node->getXPathParent();
@@ -84,13 +87,14 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
             if ( atts ) {
                 for ( PRUint32 i = 0; i < atts->getLength(); i++ ) {
                     Node* attr = atts->item(i);
-                    if ( nodeExpr->matches(attr, context, cs) ) nodes->add(attr);
+                    if (mNodeTest->matches(attr, cs))
+                        nodes->add(attr);
                 }
             }
             break;
         }
         case DESCENDANT_OR_SELF_AXIS :
-            if ( nodeExpr->matches(context, context, cs))
+            if (mNodeTest->matches(context, cs))
                 nodes->add(context);
             //-- do not break here
         case DESCENDANT_AXIS :
@@ -108,7 +112,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
             while (node) {
                 node = node->getNextSibling();
 
-                if (nodeExpr->matches(node, context, cs))
+                if (mNodeTest->matches(node, cs))
                     nodes->add(node);
 
                 if (node->hasChildNodes())
@@ -123,7 +127,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
         case FOLLOWING_SIBLING_AXIS :
             node = context->getNextSibling();
             while (node) {
-                if (nodeExpr->matches(node, context, cs))
+                if (mNodeTest->matches(node, cs))
                     nodes->add(node);
                 node = node->getNextSibling();
             }
@@ -137,7 +141,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
         case PARENT_AXIS :
         {
             Node* parent = context->getXPathParent();
-            if ( nodeExpr->matches(parent, context, cs) )
+            if (mNodeTest->matches(parent, cs))
                     nodes->add(parent);
             break;
         }
@@ -151,7 +155,7 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
                 if (node->hasChildNodes())
                     fromDescendantsRev(node, cs, nodes);
 
-                if (nodeExpr->matches(node, context, cs))
+                if (mNodeTest->matches(node, cs))
                     nodes->add(node);
 
                 while (node && !node->getPreviousSibling()) {
@@ -162,20 +166,20 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
         case PRECEDING_SIBLING_AXIS:
             node = context->getPreviousSibling();
             while (node) {
-                if (nodeExpr->matches(node, context, cs))
+                if (mNodeTest->matches(node, cs))
                     nodes->add(node);
                 node = node->getPreviousSibling();
             }
             break;
         case SELF_AXIS :
-            if ( nodeExpr->matches(context, context, cs) )
+            if (mNodeTest->matches(context, cs))
                     nodes->add(context);
             break;
         default: //-- Children Axis
         {
             Node* tmpNode = context->getFirstChild();
             while (tmpNode) {
-                if ( nodeExpr->matches(tmpNode, context, cs) )
+                if (mNodeTest->matches(tmpNode, cs))
                     nodes->add(tmpNode);
                 tmpNode = tmpNode->getNextSibling();
             }
@@ -195,18 +199,19 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
 **/
 double LocationStep::getDefaultPriority(Node* node, Node* context, ContextState* cs) {
     if (isEmpty())
-        return nodeExpr->getDefaultPriority(node, context, cs);
+        return mNodeTest->getDefaultPriority();
     return 0.5;
 } //-- getDefaultPriority
 
 
 void LocationStep::fromDescendants(Node* context, ContextState* cs, NodeSet* nodes) {
 
-    if ( !context || !nodeExpr ) return;
+    if (!context)
+        return;
 
     Node* child = context->getFirstChild();
     while (child) {
-        if (nodeExpr->matches(child, context, cs))
+        if (mNodeTest->matches(child, cs))
             nodes->add(child);
         //-- check childs descendants
         if (child->hasChildNodes())
@@ -219,7 +224,8 @@ void LocationStep::fromDescendants(Node* context, ContextState* cs, NodeSet* nod
 
 void LocationStep::fromDescendantsRev(Node* context, ContextState* cs, NodeSet* nodes) {
 
-    if ( !context || !nodeExpr ) return;
+    if (!context)
+        return;
 
     Node* child = context->getLastChild();
     while (child) {
@@ -227,7 +233,7 @@ void LocationStep::fromDescendantsRev(Node* context, ContextState* cs, NodeSet* 
         if (child->hasChildNodes())
             fromDescendantsRev(child, cs, nodes);
 
-        if (nodeExpr->matches(child, context, cs))
+        if (mNodeTest->matches(child, cs))
             nodes->add(child);
 
         child = child->getPreviousSibling();
@@ -241,10 +247,10 @@ void LocationStep::fromDescendantsRev(Node* context, ContextState* cs, NodeSet* 
 **/
 MBool LocationStep::matches(Node* node, Node* context, ContextState* cs) {
 
-    if (!nodeExpr || !node)
+    if (!mNodeTest || !node)
         return MB_FALSE;
 
-    if (!nodeExpr->matches(node, context, cs))
+    if (!mNodeTest->matches(node, cs))
         return MB_FALSE;
 
     MBool result = MB_TRUE;
@@ -253,7 +259,7 @@ MBool LocationStep::matches(Node* node, Node* context, ContextState* cs) {
         result = nodes->contains(node);
         delete nodes;
     }
-    else if (axisIdentifier == CHILD_AXIS ) {
+    else if (mAxisIdentifier == CHILD_AXIS ) {
         if (!node->getParentNode())
             result = MB_FALSE;
     }
@@ -268,7 +274,7 @@ MBool LocationStep::matches(Node* node, Node* context, ContextState* cs) {
  * @see Expr
 **/
 void LocationStep::toString(String& str) {
-    switch (axisIdentifier) {
+    switch (mAxisIdentifier) {
         case ANCESTOR_AXIS :
             str.append("ancestor::");
             break;
@@ -308,8 +314,9 @@ void LocationStep::toString(String& str) {
         default:
             break;
     }
-    if ( nodeExpr ) nodeExpr->toString(str);
-    else str.append("null");
+    if (mNodeTest)
+        mNodeTest->toString(str);
+
     PredicateList::toString(str);
 } //-- toString
 

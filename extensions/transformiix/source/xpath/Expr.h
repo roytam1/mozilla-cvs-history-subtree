@@ -232,161 +232,100 @@ private:
 };
 
 
-/**
- * This class represents a NodeTestExpr as defined by the XSL
- * Working Draft
-**/
-class NodeExpr : public Expr {
+/*
+ * This class represents a NodeTest as defined by the XPath spec
+ */
+class txNodeTest {
 
 public:
 
-    //-- NodeExpr Types
-    //-- LF - changed from const short to enum
-    enum NodeExprType {
-        ATTRIBUTE_EXPR =  1,
-        ELEMENT_EXPR,
-        TEXT_EXPR,
-        COMMENT_EXPR,
-        PI_EXPR,
-        NODE_EXPR
+    virtual ~txNodeTest() {}
+
+    /*
+     * Determines whether this txNodeTest matches the given node
+     */
+    virtual MBool matches(Node* aNode, ContextState* aCs) = 0;
+
+    /*
+     * Returns the default priority of this txNodeTest
+     */
+    virtual double getDefaultPriority() = 0;
+
+    /*
+     * Returns the String representation of this txNodeTest.
+     * @param aDest the String to use when creating the string representation.
+     *              The string representation will be appended to the string.
+     */
+    virtual void toString(String& aDest) = 0;
+
+};
+
+/*
+ * This class represents a NameTest as defined by the XPath spec
+ */
+class txNameTest : public txNodeTest {
+
+public:
+
+    /*
+     * Creates a new txNameTest with the given type and the given
+     * principal node type
+     */
+    txNameTest(String& aName, Node::NodeType aNodeType);
+
+    ~txNameTest();
+
+    /*
+     * Virtual methods from txNodeTest 
+     */
+    MBool matches(Node* aNode, ContextState* aCs);
+    double getDefaultPriority();
+    void toString(String& aDest);
+
+private:
+
+    String mPrefix;
+    txAtom* mLocalName;
+    Node::NodeType mNodeType;
+};
+
+/*
+ * This class represents a NodeType as defined by the XPath spec
+ */
+class txNodeTypeTest : public txNodeTest {
+
+public:
+
+    enum NodeType {
+        COMMENT_TYPE,
+        TEXT_TYPE,
+        PI_TYPE,
+        NODE_TYPE
     };
 
-    virtual ~NodeExpr() {};
+    /*
+     * Creates a new txNodeTypeTest of the given type
+     */
+    txNodeTypeTest(NodeType aNodeType);
 
-      //------------------/
-     //- Public Methods -/
-    //------------------/
+    ~txNodeTypeTest();
 
-    /**
-     * Virtual methods from Expr 
-    **/
-    virtual MBool matches(Node* node, Node* context, ContextState* cs) = 0;
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs) = 0;
-    virtual void toString(String& dest) = 0;
-
-}; //-- NodeExpr
-
-/**
- * This class represents a AttributeExpr as defined by the XSL
- * Working Draft
-**/
-class AttributeExpr : public NodeExpr {
-
-public:
-
-      //------------------/
-     //- Public Methods -/
-    //------------------/
-
-    AttributeExpr(String& name);
-
-    /**
-     * Virtual methods from NodeExpr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
-
-private:
-
-    static const String WILD_CARD;
-
-    String prefix;
-    String name;
-    MBool  isNameWild;
-    MBool  isNamespaceWild;
-
-}; //-- AttributeExpr
-
-/**
- *
-**/
-class BasicNodeExpr : public NodeExpr {
-
-public:
-
-      //------------------/
-     //- Public Methods -/
-    //------------------/
-
-    /**
-     * Creates a new BasicNodeExpr of the given type
-    **/
-    BasicNodeExpr(NodeExprType nodeExprType);
-
-    /**
+    /*
      * Sets the name of the node to match. Only availible for pi nodes
-    **/
-    void setNodeName(const String& name);
+     */
+    void setNodeName(const String& aName);
 
-    /**
-     * Virtual methods from NodeExpr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
-
-private:
-    NodeExprType type;
-    String nodeName;
-    MBool nodeNameSet;
-}; //-- BasicNodeExpr
-
-/**
- * This class represents a ElementExpr as defined by the XSL
- * Working Draft
-**/
-class ElementExpr : public NodeExpr {
-
-public:
-
-      //------------------/
-     //- Public Methods -/
-    //------------------/
-
-    ElementExpr(String& name);
-
-    /**
-     * Virtual methods from NodeExpr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
+    /*
+     * Virtual methods from txNodeTest 
+     */
+    MBool matches(Node* aNode, ContextState* aCs);
+    double getDefaultPriority();
+    void toString(String& aDest);
 
 private:
-
-    static const String WILD_CARD;
-
-    String name;
-    MBool isNamespaceWild;
-    MBool isNameWild;
-    String prefix;
-
-}; //-- ElementExpr
-
-/**
- * This class represents a TextExpr, which only matches any text node
-**/
-class TextExpr : public NodeExpr {
-
-public:
-
-      //------------------/
-     //- Public Methods -/
-    //------------------/
-
-    /**
-     * Virtual methods from NodeExpr 
-    **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-    virtual MBool matches(Node* node, Node* context, ContextState* cs);
-    virtual double getDefaultPriority(Node* node, Node* context, ContextState* cs);
-    virtual void toString(String& dest);
-
-}; //-- TextExpr
+    NodeType mNodeType;
+    txAtom* mNodeName;
+};
 
 /**
  * Represents an ordered list of Predicates,
@@ -441,7 +380,7 @@ public:
 
     // Axis Identifier Types
     //-- LF changed from static const short to enum
-    enum _LocationStepType {
+    enum LocationStepType {
         ANCESTOR_AXIS = 0,
         ANCESTOR_OR_SELF_AXIS,
         ATTRIBUTE_AXIS,
@@ -462,7 +401,7 @@ public:
      * @param nodeExpr the NodeExpr to use when matching Nodes
      * @param axisIdentifier the Axis Identifier in which to search for nodes
     **/
-    LocationStep(NodeExpr* nodeExpr, short axisIdentifier);
+    LocationStep(txNodeTest* aNodeTest, LocationStepType aAxisIdentifier);
 
     /**
      * Destructor, will delete all predicates and the given NodeExpr
@@ -479,8 +418,8 @@ public:
 
 private:
 
-    NodeExpr* nodeExpr;
-    short     axisIdentifier;
+    txNodeTest* mNodeTest;
+    LocationStepType mAxisIdentifier;
 
     void fromDescendants(Node* context, ContextState* cs, NodeSet* nodes);
     void fromDescendantsRev(Node* context, ContextState* cs, NodeSet* nodes);
