@@ -26,19 +26,24 @@
 
 #include "nsCOMPtr.h"
 
-NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerWin)
+NS_IMPL_ISUPPORTS3(nsImageContainer, nsIImageContainer, nsPIImageContainerWin, nsITimerCallback)
 
 nsImageContainer::nsImageContainer()
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
   mCurrentFrame = 0;
+  mCurrentFrameIsFinishedDecoding = PR_FALSE;
+  mDoneDecoding = PR_FALSE;
 }
 
 nsImageContainer::~nsImageContainer()
 {
   /* destructor code */
   mFrames.Clear();
+
+  if (mTimer)
+    mTimer->Cancel();
 }
 
 
@@ -52,6 +57,8 @@ NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight, nsIImageCo
   }
 
   mSize.SizeTo(aWidth, aHeight);
+
+  mObserver = aObserver;
 
   return NS_OK;
 }
@@ -104,7 +111,28 @@ NS_IMETHODIMP nsImageContainer::GetFrameAt(PRUint32 index, nsIImageFrame **_retv
 /* void appendFrame (in nsIImageFrame item); */
 NS_IMETHODIMP nsImageContainer::AppendFrame(nsIImageFrame *item)
 {
-    return mFrames.AppendElement(NS_REINTERPRET_CAST(nsISupports*, item));
+  PRUint32 numFrames;
+  this->GetNumFrames(&numFrames);
+  if (!mTimer){
+    if (numFrames) {
+      // Since we have more than one frame we need a timer
+      mTimer = do_CreateInstance("@mozilla.org/timer;1");
+      
+      PRInt32 timeout;
+      nsCOMPtr<nsIImageFrame> currentFrame;
+      this->GetFrameAt(mCurrentFrame, getter_AddRefs(currentFrame));
+      currentFrame->GetTimeout(&timeout);
+      if(timeout != -1 &&
+         timeout >= 0) { // -1 means display this frame forever
+        
+        mTimer->Init(NS_STATIC_CAST(nsITimerCallback*, this), timeout, 
+                     NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_PRECISE);
+      }
+    }
+  }
+
+  mCurrentFrameIsFinishedDecoding = PR_FALSE;
+  return mFrames.AppendElement(NS_REINTERPRET_CAST(nsISupports*, item));
 }
 
 /* void removeFrame (in nsIImageFrame item); */
@@ -118,6 +146,22 @@ NS_IMETHODIMP nsImageContainer::Enumerate(nsIEnumerator **_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+/* void endFrameDecode (in nsIImageFrame item, in unsigned long timeout); */
+NS_IMETHODIMP nsImageContainer::EndFrameDecode(PRUint32 aFrameNum, PRUint32 aTimeout)
+{
+  // It is now okay to start the timer for the next frame in the animation
+  mCurrentFrameIsFinishedDecoding = PR_TRUE;
+  return NS_OK;
+}
+
+/* void decodingComplete (); */
+NS_IMETHODIMP nsImageContainer::DecodingComplete(void)
+{
+  mDoneDecoding = PR_TRUE;
+  return NS_OK;
+}
+
 
 /* void clear (); */
 NS_IMETHODIMP nsImageContainer::Clear()
@@ -163,4 +207,44 @@ NS_IMETHODIMP nsImageContainer::DrawScaledImage(HDC aDestDC, const nsRect * aSrc
     return rv;
 
   return NS_REINTERPRET_CAST(nsImageFrame*, img.get())->DrawScaledImage(aDestDC, aSrcRect, aDestRect);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+NS_IMETHODIMP_(void) nsImageContainer::Notify(nsITimer *aTimer)
+{
+  ++mCurrentFrame;
+
+  PRUint32 numFrames;
+  GetNumFrames(&numFrames);
+  if (mCurrentFrame > numFrames)
+    mCurrentFrame = 0;
+
+  nsCOMPtr<nsIImageFrame> nextFrame;
+  GetFrameAt(mCurrentFrame, getter_AddRefs(nextFrame));
+
+  if (!nextFrame)
+    return; // XXX thiss would suck.
+
+  // Go to next frame in sequence
+  PRInt32 timeout;
+  nextFrame->GetTimeout(&timeout);
+
+  // XXX do notification to FE to draw this frame
+  nsRect* dirtyRect;
+  nextFrame->GetRect(&dirtyRect);
+  mObserver->FrameChanged(this, nsnull, nextFrame, dirtyRect);
+/*
+  mTimer->Init(NS_STATIC_CAST(nsITimerCallback*, this), timeout, 
+               NS_PRIORITY_NORMAL, NS_TYPE_ONE_SHOT);
+               */
 }

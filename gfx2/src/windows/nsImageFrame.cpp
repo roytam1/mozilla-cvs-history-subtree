@@ -27,11 +27,6 @@
 
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
-
-
-
-
-
 struct MONOBITMAPINFO {
   BITMAPINFOHEADER  bmiHeader;
   RGBQUAD           bmiColors[2];
@@ -121,6 +116,7 @@ struct ALPHA32BITMAPINFO {
 
 
 nsImageFrame::nsImageFrame() :
+  mTimeout(0),
   mInitalized(PR_FALSE),
   mAlphaData(nsnull)
 {
@@ -191,13 +187,8 @@ NS_IMETHODIMP nsImageFrame::Init(nscoord aX, nscoord aY, nscoord aWidth, nscoord
     mImageData.bytesPerRow++;
   mImageData.bytesPerRow <<= 2;
 
-
   mImageData.length = mImageData.bytesPerRow * mRect.height;
   mImageData.data = new PRUint8[mImageData.length];
-/*
-  mImageData.bitmap = ::CreateDIBitmap(NULL, mImageData.header, CBM_INIT, NULL, (LPBITMAPINFO)mImageData.header,
-				                               DIB_RGB_COLORS);
-*/
 
   if (mAlphaData) {
     mAlphaData->length = mAlphaData->bytesPerRow * mRect.height;
@@ -208,6 +199,26 @@ NS_IMETHODIMP nsImageFrame::Init(nscoord aX, nscoord aY, nscoord aWidth, nscoord
 */
   }
 
+  mImageData.header = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
+
+  LPBITMAPINFOHEADER header = mImageData.header;
+
+  header->biSize = sizeof(BITMAPINFOHEADER);
+	header->biWidth = mRect.width;
+	header->biHeight = -mRect.height;
+	header->biPlanes = 1;
+	header->biBitCount = mImageData.depth;
+	header->biCompression = BI_RGB;
+	header->biSizeImage = mImageData.length;
+	header->biXPelsPerMeter = 0;
+	header->biYPelsPerMeter = 0;
+	header->biClrUsed = 0;
+	header->biClrImportant = 0;
+
+  /*
+  mImageData.bitmap = ::CreateDIBitmap(NULL, mImageData.header, CBM_INIT, NULL, (LPBITMAPINFO)mImageData.header,
+				                               DIB_RGB_COLORS);
+  */
   return NS_OK;
 }
 
@@ -255,12 +266,10 @@ NS_IMETHODIMP nsImageFrame::GetHeight(nscoord *aHeight)
 /* readonly attribute nsRect rect; */
 NS_IMETHODIMP nsImageFrame::GetRect(nsRect **aRect)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
-
   if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
-//  *aRect = mRect;
+  *aRect = &mRect;
   return NS_OK;
 }
 
@@ -277,11 +286,14 @@ NS_IMETHODIMP nsImageFrame::GetFormat(gfx_format *aFormat)
 /* attribute long timeout; */
 NS_IMETHODIMP nsImageFrame::GetTimeout(PRInt32 *aTimeout)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  *aTimeout = mTimeout;
+  return NS_OK;
 }
+
 NS_IMETHODIMP nsImageFrame::SetTimeout(PRInt32 aTimeout)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  mTimeout = aTimeout;
+  return NS_OK;
 }
 
 /* readonly attribute unsigned long imageBytesPerRow; */
@@ -384,57 +396,36 @@ NS_IMETHODIMP nsImageFrame::SetAlphaData(const PRUint8 *data, PRUint32 length, P
 
 nsresult nsImageFrame::DrawImage(HDC aDestDC, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
-  LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
+  printf("%i, %i, %i, %i    %i, %i\n", aSrcRect->x, aSrcRect->y, aSrcRect->width, aSrcRect->height,
+    aDestPoint->x, aDestPoint->y);
 
-  PRInt32 height = aSrcRect->height;
+  // Translate to bottom-up coordinates for the source bitmap
+  nscoord srcY = mRect.height - (aSrcRect->y + aSrcRect->height);
 
-  PRInt32 width = mRect.width;
-
-  mBHead->biSize = sizeof(BITMAPINFOHEADER);
-	mBHead->biWidth = width;
-	mBHead->biHeight = -height;
-	mBHead->biPlanes = 1;
-	mBHead->biBitCount = 24; // XXX
-	mBHead->biCompression = BI_RGB;
-	mBHead->biSizeImage = mImageData.length;            // not compressed, so we dont need this to be set
-	mBHead->biXPelsPerMeter = 0;
-	mBHead->biYPelsPerMeter = 0;
-	mBHead->biClrUsed = 0;
-	mBHead->biClrImportant = 0;
-
-//  void* oldThing = ::SelectObject(aDestDC, memBM);
-
-//	mBHead->biHeight = -mBHead->biHeight;
   int rop = SRCCOPY;
   if (mAlphaData && mAlphaData->depth == 1) {
-    MONOBITMAPINFO bmi(width, -height);
+    MONOBITMAPINFO bmi(mRect.width, -mRect.height);
     bmi.bmiHeader.biSizeImage = mAlphaData->length;
-    ::StretchDIBits(aDestDC, (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y), width, height,
-                    aSrcRect->x, 0, width, height,
-                    mAlphaData->data + (aSrcRect->y * mAlphaData->bytesPerRow), 
+    ::StretchDIBits(aDestDC, (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y),
+                    aSrcRect->width, aSrcRect->height,
+                    aSrcRect->x, srcY, aSrcRect->width, aSrcRect->height,
+                    mAlphaData->data,
                     (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
     rop = SRCPAINT;
   }
 
-  ::StretchDIBits(aDestDC, (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y), width, height,
-                  aSrcRect->x, 0, width, height,
-                  mImageData.data + (aSrcRect->y * mImageData.bytesPerRow), 
-                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
-
-
-//  ::SelectObject(mDC, oldThing)
-
-  delete[] mBHead;
+  ::StretchDIBits(aDestDC, (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y),
+                  aSrcRect->width, aSrcRect->height,
+                  aSrcRect->x, srcY, aSrcRect->width, aSrcRect->height,
+                  mImageData.data, 
+                  (LPBITMAPINFO)mImageData.header, DIB_RGB_COLORS, rop);
 
   return NS_OK;
-
 }
 
 
 nsresult nsImageFrame::DrawScaledImage(HDC aDestDC, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
-  LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
-
   nsTransform2D trans;
   trans.SetToScale((float(mRect.width) / float(aDestRect->width)), (float(mRect.height) / float(aDestRect->height)));
 
@@ -442,37 +433,22 @@ nsresult nsImageFrame::DrawScaledImage(HDC aDestDC, const nsRect * aSrcRect, con
   nsRect dest(*aDestRect);
 
   trans.TransformCoord(&source.x, &source.y, &source.width, &source.height);
-//  trans.TransformCoord(&dest.x, &dest.y, &dest.width, &dest.height);
-
-  mBHead->biSize = sizeof(BITMAPINFOHEADER);
-	mBHead->biWidth = mRect.width;
-	mBHead->biHeight = -source.height;
-	mBHead->biPlanes = 1;
-	mBHead->biBitCount = 24;
-	mBHead->biCompression = BI_RGB;
-	mBHead->biSizeImage = mImageData.length;
-	mBHead->biXPelsPerMeter = 0;
-	mBHead->biYPelsPerMeter = 0;
-	mBHead->biClrUsed = 0;
-	mBHead->biClrImportant = 0;
 
   int rop = SRCCOPY;
   if (mAlphaData && mAlphaData->depth == 1) {
-    MONOBITMAPINFO bmi(mRect.width, -source.height);
+    MONOBITMAPINFO bmi(mRect.width, -mRect.width);
     bmi.bmiHeader.biSizeImage = mAlphaData->length;
     ::StretchDIBits(aDestDC, (aDestRect->x + aSrcRect->x), (aDestRect->y + aSrcRect->y), dest.width, dest.height,
-                    source.x, 0, mRect.width, source.height,
-                    mAlphaData->data + (source.y * mAlphaData->bytesPerRow), 
+                    source.x, source.y, source.width, source.height,
+                    mAlphaData->data, 
                     (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
     rop = SRCPAINT;
   }
 
   ::StretchDIBits(aDestDC, (aDestRect->x + aSrcRect->x), (aDestRect->y + aSrcRect->y), dest.width, dest.height,
-                  source.x, 0, mRect.width, source.height,
-                  mImageData.data + (source.y * mImageData.bytesPerRow), 
-                  (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
-
-  delete[] mBHead;
+                  source.x, source.y, source.width, source.height,
+                  mImageData.data, 
+                  (LPBITMAPINFO)mImageData.header, DIB_RGB_COLORS, rop);
 
   return NS_OK;
 

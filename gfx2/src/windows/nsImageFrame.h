@@ -67,6 +67,8 @@ public:
 private:
   /* additional members */
   nsRect mRect;
+  PRInt32 mTimeout;
+
 
   PRPackedBool mInitalized;   // 8 bits
 

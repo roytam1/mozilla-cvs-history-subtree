@@ -23,10 +23,18 @@
 
 #include "nsIImageContainer.h"
 #include "nsPIImageContainerWin.h"
+#include "nsITimerCallback.h"
 
 #include "nsSize.h"
 
 #include "nsSupportsArray.h"
+
+#include "nsIImageContainerObserver.h"
+#include "nsITimer.h"
+
+
+#include "nsCOMPtr.h"
+
 
 #define NS_IMAGECONTAINER_CID \
 { /* aa699204-1dd1-11b2-84a9-a280c268e4fb */         \
@@ -37,12 +45,15 @@
 }
 
 class nsImageContainer : public nsIImageContainer,
-                         public nsPIImageContainerWin
+                         public nsPIImageContainerWin,
+                         public nsITimerCallback
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGECONTAINER
   NS_DECL_NSPIIMAGECONTAINERWIN
+
+  NS_IMETHOD_(void) Notify(nsITimer *timer);
 
   nsImageContainer();
   virtual ~nsImageContainer();
@@ -52,5 +63,13 @@ private:
   nsSupportsArray mFrames;
   nsSize mSize;
   PRUint32 mCurrentFrame;
+
+  PRPackedBool mCurrentFrameIsFinishedDecoding;
+  PRPackedBool mDoneDecoding;
+
+  nsCOMPtr<nsITimer> mTimer;
+  nsCOMPtr<nsIImageContainerObserver> mObserver;
+
+
 };
 
