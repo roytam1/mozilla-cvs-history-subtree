@@ -19,11 +19,6 @@
 #include <npapi.h>
 #include "plugin.h"
 
-// Netscape Registry header file
-#include "NSReg.h"
- 
-#include "xp_mem.h"
-
 // resource include
 #ifdef WIN32 // **************************** WIN32 *****************************
 #include "resource.h"
@@ -40,8 +35,6 @@
 #define INI_CURRUSER_KEY				"CurrentUser"
 #endif       // !WIN32
 
-#define MAX_PATH_LENGTH			256
-
 // java includes
 #include "netscape_npasw_SetupPlugin.h"
 #include "java_lang_String.h"
@@ -50,8 +43,6 @@ extern const char *GetStringPlatformChars(JRIEnv *env, struct java_lang_String *
 
 
 void GetProfileDirectory(char *profilePath);
-REGERR CopyNetscapeRegKey(HREG hReg, RKEY key, const char *path, RKEY newKey, char *newPath);
-REGERR DeleteKeyTree(HREG hReg, RKEY key, const char *path);
 
 
 //********************************************************************************
@@ -65,76 +56,50 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fGetCurrentProfileDirectory(JRIEnv*
 														  struct netscape_npasw_SetupPlugin* self)
 {
 	struct java_lang_String *profilePath = NULL;
-	char buf[MAX_PATH_LENGTH];
+	char buf[_MAX_PATH];
+	DWORD bufsize = sizeof(buf);
 	buf[0] = '\0';
 
 #ifdef WIN32 // ***************************** WIN32 ********************************
-	HREG   reg;
-	RKEY   rKey1, rKey2;
-
+	HKEY hKey;
 	char *keyPath = (char *)malloc(sizeof(char) * 512);
 
 	assert(keyPath);
 	if (!keyPath)
 		return NULL;
+	strcpy(keyPath, "SOFTWARE\\Netscape\\Netscape Navigator\\Users");
 
-	strcpy(keyPath, "Netscape/ProfileManager");
-
-	// Open Netscape Registry
-	if (REGERR_OK == NR_RegOpen(NULL, &reg))
+	// finds the user profile path in registry
+	if(ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, keyPath, NULL, KEY_ALL_ACCESS, &hKey))
 	{
-		// Get the handle to the common information
-		if (REGERR_OK == NR_RegGetKey(reg, ROOTKEY_COMMON, keyPath, &rKey1))
-		{
-			//Get the current user profile
-			if (REGERR_OK == NR_RegGetEntryString(reg, rKey1, "LastNetscapeUser", buf, MAX_PATH_LENGTH))
-			{
-				//Get the handle to the current profile
-				if( REGERR_OK == NR_RegGetKey(reg, ROOTKEY_USERS, buf, &rKey2))
-				{
-					// Get the current profile location
-					if (REGERR_OK == NR_RegGetEntryString(reg, rKey2, "ProfileLocation", (char *)buf, MAX_PATH_LENGTH))
-					{
-						// make sure we append the last '\' in the profile dir path
-						strcat(buf, "\\");	
 
-						profilePath = JRI_NewStringPlatform(env, buf, strlen(buf), NULL, 0);
+		if (ERROR_SUCCESS == RegQueryValueEx(hKey, "CurrentUser", NULL, NULL, (LPBYTE)buf, (LPDWORD)&bufsize)) {
 
-						if (REGERR_OK == NR_RegSetEntryString(reg, rKey2, "Temporary", "Temporary"))
-						{
-							trace("profile.cpp : GetCurrentProfileDirectiory : Temp flag set for Current User profile directory");
-						}	
-						else
-						{
-							trace("profile.cpp : GetCurrentProfileDirectiory : Error in setting Temp flag to Current User profile location");
-						}
+			RegCloseKey(hKey);
 
-						NR_RegClose(reg);
-					} 
-					else
-					{
-						trace("profile.cpp : GetCurrentProfileDirectiory : Error in obtaining Current User profile location");
-					}
-				}
-				else
-				{
-					trace("profile.cpp : GetCurrentProfileDirectory : Could not obtain handle to ROOTKEY_USERS");
+			strcat(keyPath, "\\");
+			strcat(keyPath, buf);
+
+			buf[0]='\0';
+			bufsize = sizeof(buf);	// bufsize got reset from the last RegQueryValueEx
+
+			if(ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, keyPath, NULL, KEY_ALL_ACCESS, &hKey)) {
+
+				if (ERROR_SUCCESS == RegQueryValueEx(hKey, "DirRoot", NULL, NULL, (LPBYTE)buf, (LPDWORD)&bufsize)) {
+
+					// make sure we append the last '\' in the profile dir path
+					strcat(buf, "\\");	
+
+					int len = strlen(buf);
+					profilePath = JRI_NewStringPlatform(env, buf, len, NULL, 0);
+
+					RegCloseKey(hKey);
+
 				}
 			}
-			else
-			{
-				trace("profile.cpp : GetCurrentProfileDirectory : Error in obtaining Current User profile");
-			}
-		}
-		else
-		{
-			trace("profile.cpp : GetCurrentProfileDirectory : Could not obtain handle to ROOTKEY_COMMON");
 		}
 	}
-	else
-	{
-		trace("profile.cpp : GetCurrentProfileDirectory : Could not open Netscape Registry");
-	}
+
 	free(keyPath);
 
 #else  // ***************************** WIN16 ********************************
@@ -159,43 +124,28 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fGetCurrentProfileName(JRIEnv* env,
 													 struct netscape_npasw_SetupPlugin* self)
 {
 	struct java_lang_String *profileName = NULL;
-	char buf[MAX_PATH_LENGTH];
+	char buf[_MAX_PATH];
+	DWORD bufsize = sizeof(buf);
 	buf[0] = '\0';
-
-
 
 #ifdef WIN32  // ***************************** WIN32 ********************************
 
-	HREG   reg;
-	RKEY   rKey;
+	HKEY hKey;
 
-	// Open Netscape Registry
-	if (REGERR_OK == NR_RegOpen(NULL, &reg))
+	// finds the user profile path in registry
+	if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, 
+                                     "SOFTWARE\\Netscape\\Netscape Navigator\\Users", 
+                                     NULL, 
+                                     KEY_ALL_ACCESS, 
+                                     &hKey))
 	{
-		// finds the user profile path in registry
-		if (REGERR_OK == NR_RegGetKey(reg, ROOTKEY_COMMON, "Netscape/ProfileManager", &rKey))
-		{
-			//Get the current user profile
-			if (REGERR_OK == NR_RegGetEntryString(reg, rKey, "LastNetscapeUser", buf, MAX_PATH_LENGTH))
-			{
-				profileName = JRI_NewStringPlatform(env, buf, strlen(buf), NULL, 0);
 
-				NR_RegClose(reg);
-			}
-			else
-			{
-				trace("profile.cpp : GetCurrentProfileName : Error in obtaining Current User profile location");
-			}
-		}
-		else
-		{
-			trace("profile.cpp : GetCurrentProfileName : Could not obtain handle to ROOTKEY_COMMON");
-		}
+		RegQueryValueEx(hKey, "CurrentUser", NULL, NULL, (LPBYTE)buf, (LPDWORD)&bufsize);
+		profileName = JRI_NewStringPlatform(env, buf, strlen(buf), NULL, 0);
+		RegCloseKey(hKey);
+
 	}
-	else
-	{
-		trace("profile.cpp : GetCurrentProfileName : Could not open Netscape Registry");
-	}
+
 #else         // ***************************** WIN16 ********************************
 
    // get current profile name
@@ -366,117 +316,103 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fSetCurrentProfileName(JRIEnv* env,
 	
 #ifdef WIN32  // ***************************** WIN32 ********************************
 
-	char *newProfName;
-	char *oldProfName;
-	char buf[MAX_PATH_LENGTH];
-	char *keyPath = (char *)malloc(sizeof(char) * 512);
+	char *newPath;
+	char *oldPath;
+	char *Path	= "SOFTWARE\\Netscape\\Netscape Navigator\\Users";
+	char buf[_MAX_PATH];
+	DWORD bufsize = sizeof(buf);
 
-	assert(keyPath);
-	if (!keyPath)
-		return;
+	HKEY hKeyUsers;
+	HKEY hKeyNewName;
+	HKEY hKeyOldName;
 
-	strcpy(keyPath, "Netscape/ProfileManager");
-
-
-	HREG   reg;
-	RKEY   rKey1, rKey2, rKey3;
-
+	DWORD dwDisposition;
 	BOOL Err = FALSE;
 
 	if (JSprofileName != NULL)
 		newProfileName = GetStringPlatformChars(env, JSprofileName);
 
-	oldProfName = (char *)malloc(sizeof(char) * 260);
-	newProfName = (char *)malloc(sizeof(char) * 260);
+	oldPath = (char *)malloc(sizeof(char) * 260);
+	newPath = (char *)malloc(sizeof(char) * 260);
 
-	if ((!oldProfName) && (!newProfName))
+	if ((!oldPath) && (!newPath))
 		return;
 
-	// Open Netscape Registry
-	if (REGERR_OK == NR_RegOpen(NULL, &reg))
-	{
-		// Get the handle to the common information
-		if (REGERR_OK == NR_RegGetKey(reg, ROOTKEY_COMMON, keyPath, &rKey1))
-		{
-			//Get the current user profile
-			if (REGERR_OK == NR_RegGetEntryString(reg, rKey1, "LastNetscapeUser", buf, MAX_PATH_LENGTH))
-			{
-				// old user profile key path
-				strcpy (oldProfName, buf);
+	// finds the user profile path in registry
+	if(ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, Path, NULL, KEY_ALL_ACCESS, &hKeyUsers))  {
 
-				// new user profile key path
-				strcpy (newProfName, newProfileName);
+		// finds out the value of CurrentUser (the default user)
+		if (ERROR_SUCCESS == RegQueryValueEx(hKeyUsers, "CurrentUser", NULL, NULL, (LPBYTE)buf, (LPDWORD)&bufsize)) {
 
-				// check if the new ProfileName is same as old ProfileName, if it is, we don't
-				// need to do anything.
-				if (strcmp(oldProfName, newProfName) == 0) {
-					NR_RegClose(reg);
-					free(newProfName);
-					free(oldProfName);
-					return;
-				}
+			// old user profile key path
+			strcpy (oldPath, Path);
+			strcat (oldPath, "\\");
+			strcat (oldPath, buf);
 
-				// Get the handle to the user profile to be modified
-				if (REGERR_OK == NR_RegGetKey(reg, ROOTKEY_USERS, oldProfName, &rKey2))
-				{
-					if (REGERR_OK == CopyNetscapeRegKey (reg, ROOTKEY_USERS, (char *)oldProfName, ROOTKEY_USERS, (char *) newProfName))	
-					{
-						if (REGERR_OK == NR_RegGetKey(reg, ROOTKEY_USERS, newProfName, &rKey3))
-						{
-							if (REGERR_OK == NR_RegDeleteEntry(reg, rKey3, "Temporary"))
-							{
-								trace("profile.cpp : SetCurrentProfile : Profile marked permanent");
+			// new user profile key path
+			strcpy (newPath, Path);
+			strcat (newPath, "\\");
+			strcat (newPath, newProfileName);
+
+			// check if the new ProfileName is same as old ProfileName, if it is, we don't
+			// need to do anything.
+			if (strcmp(oldPath, newPath) == 0) {
+				RegCloseKey(hKeyUsers);
+				free(newPath);
+				free(oldPath);
+				return;
+			}
+
+			// create a new key for our new profile name
+			if (ERROR_SUCCESS == RegCreateKeyEx(HKEY_LOCAL_MACHINE, newPath, NULL, NULL, NULL, KEY_ALL_ACCESS, NULL, &hKeyNewName, &dwDisposition)) {
+
+				// now... we enumerate old profile key contents and copy everything into new profile key
+				// first, gets the hkey for the old profile path
+				if (ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, oldPath, NULL, KEY_ALL_ACCESS, &hKeyOldName)) {
+		
+					DWORD subKeys;
+					DWORD maxSubKeyLen;
+					DWORD maxClassLen;
+					DWORD values;
+					DWORD maxValueNameLen;
+					DWORD maxValueLen;
+					DWORD securityDescriptor;
+					FILETIME lastWriteTime;
+
+					// get some information about this old profile key 
+					if (ERROR_SUCCESS == RegQueryInfoKey(hKeyOldName, NULL, NULL, NULL, &subKeys, &maxSubKeyLen, &maxClassLen, &values, &maxValueNameLen, &maxValueLen, &securityDescriptor, &lastWriteTime)) {
+
+						// copy the values
+						BOOL NoErr = CopyRegKeys(hKeyOldName, hKeyNewName, subKeys, maxSubKeyLen, maxClassLen, values, maxValueNameLen, maxValueLen, oldPath, newPath);
+
+						// delete the old Key, if everything went well
+						if (NoErr) {
+
+							if (ERROR_SUCCESS != RegDeleteKey(hKeyUsers, buf)) {
+								// unknown err happened, can't delete key
+								Err = TRUE;
 							}
-							else
-							{
-								trace("profile.cpp : SetCurrentProfile : Error in deleting Temp entry fron new profile");
+
+							// also, resets the CurrentUser key to point to the newly renamed key
+							if (hKeyUsers) {
+
+								char *CurrentUserkey = "CurrentUser";
+								long ret = RegSetValueEx(hKeyUsers, CurrentUserkey, 0, REG_SZ, (unsigned char *)newProfileName, strlen(newProfileName) + 1);
 							}
-						}	
-						else
-						{
-							trace("profile.cpp : SetCurrentProfile : Error in obtaining new profile handle");
 						}
-
-						DeleteKeyTree(reg, ROOTKEY_USERS, (char *)oldProfName);
-					}
-					else
-					{
-						trace("profile.cpp : SetCurrentProfile : Error in copying keys");
 					}
 				}
-				else
-				{
-					trace("profile.cpp : SetCurrentProfile : Error in obtaining a handle to ROOTKEY_USERS");
-				}
+
+				RegCloseKey(hKeyUsers);
+				RegCloseKey(hKeyNewName);
+				RegCloseKey(hKeyOldName);
+
+				free(oldPath);
 			}
-			else
-			{
-				trace("profile.cpp : SetCurrentProfile : Error in obtaining current profile value");
-			}
-		}
-		else
-		{
-			trace("profile.cpp : SetCurrentProfile : Error in obtaining a handle to ROOTKEY_COMMON");
+
+			free(newPath);
 		}
 	}
-	else
-	{
-		trace("profile.cpp : SetCurrentProfile : Error opening Netscape registry");
-	}
-
-
-	if (REGERR_OK == NR_RegSetUsername(newProfName))
-	{
-		trace("profile.cpp : SetCurrentProfile : New profile name is the current user name");
-	}
-	else
-	{
-		trace("profile.cpp : SetCurrentProfile : Error in setting the new profile name to be the current profile name");
-	}
-
-	NR_RegClose(reg);
-	free(oldProfName);
-	free(newProfName);
 
 #else         // ***************************** WIN16 ********************************
 
@@ -527,70 +463,48 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fSetCurrentProfileName(JRIEnv* env,
 //********************************************************************************
 void GetProfileDirectory(char *profilePath)
 {
-	char buf[MAX_PATH_LENGTH];
+	char buf[_MAX_PATH];
+	DWORD bufsize = sizeof(buf);
 	buf[0] = '\0';
 
 #ifdef WIN32
-
-	HREG   reg;
-	RKEY   rKey1, rKey2;
-
+ 	HKEY hKey;
 	char *keyPath = (char *)malloc(sizeof(char) * 512);
 
 	assert(keyPath);
 	if (!keyPath)
 		return;
+	strcpy(keyPath, "SOFTWARE\\Netscape\\Netscape Navigator\\Users");
 
-	strcpy(keyPath, "Netscape/ProfileManager");
-
-	// Open Netscape Registry
-	if (REGERR_OK == NR_RegOpen(NULL, &reg))
+	// finds the user profile path in registry
+	if(ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, keyPath, NULL, KEY_ALL_ACCESS, &hKey))
 	{
-		// Get the handle to the common information
-		if (REGERR_OK == NR_RegGetKey(reg, ROOTKEY_COMMON, keyPath, &rKey1))
-		{
-			//Get the current user profile
-			if (REGERR_OK == NR_RegGetEntryString(reg, rKey1, "LastNetscapeUser", buf, MAX_PATH_LENGTH))
-			{
-				//Get the handle to the current profile
-				if( REGERR_OK == NR_RegGetKey(reg, ROOTKEY_USERS, buf, &rKey2))
-				{
-					// Get the current profile location
-					if (REGERR_OK == NR_RegGetEntryString(reg, rKey2, "ProfileLocation", (char *)buf, MAX_PATH_LENGTH))
-					{
-						// make sure we append the last '\' in the profile dir path
-						strcat(buf, "\\");	
 
-						NR_RegClose(reg);
-					} 
-					else
-					{
-						trace("profile.cpp : GetCurrentProfileDirectiory : Error in obtaining Current User profile location");
-					}
-				}
-				else
-				{
-					trace("profile.cpp : GetCurrentProfileDirectory : Could not obtain handle to ROOTKEY_USERS");
+		if (ERROR_SUCCESS == RegQueryValueEx(hKey, "CurrentUser", NULL, NULL, (LPBYTE)buf, (LPDWORD)&bufsize)) {
+
+			RegCloseKey(hKey);
+
+			strcat(keyPath, "\\");
+			strcat(keyPath, buf);
+
+			buf[0]='\0';
+			bufsize = sizeof(buf);	// bufsize got reset from the last RegQueryValueEx
+
+			if(ERROR_SUCCESS == RegOpenKeyEx(HKEY_LOCAL_MACHINE, keyPath, NULL, KEY_ALL_ACCESS, &hKey)) {
+
+				if (ERROR_SUCCESS == RegQueryValueEx(hKey, "DirRoot", NULL, NULL, (LPBYTE)buf, (LPDWORD)&bufsize)) {
+
+					// make sure we append the last '\' in the profile dir path
+					strcat(buf, "\\");	
+					RegCloseKey(hKey);
+
 				}
 			}
-			else
-			{
-				trace("profile.cpp : GetCurrentProfileDirectory : Error in obtaining Current User profile");
-			}
-		}
-		else
-		{
-			trace("profile.cpp : GetCurrentProfileDirectory : Could not obtain handle to ROOTKEY_COMMON");
 		}
 	}
-	else
-	{
-		trace("profile.cpp : GetCurrentProfileDirectory : Could not open Netscape Registry");
-	}
+
 	free(keyPath);
-
-#else  // ***************************** WIN16 ********************************
-    
+#else // WIN16
 	char keyPath[_MAX_PATH];
    
 	// get current user profile
@@ -614,107 +528,3 @@ void GetProfileDirectory(char *profilePath)
 }
 
 
-    REGERR
-CopyNetscapeRegKey(
-         HREG       hReg,        /* handle of open registry */
-         RKEY       key,         /* root key */
-         const char *path,       /* relative path of subkey to find */
-         RKEY       newKey,      /* new root key */
-         char       *newPath     /* new path */
-        )
-{
-    char            keyName[MAX_PATH_LENGTH];
-    REGERR          err;
-    REGENUM         keyState = NULL, entryState = NULL;
-    REGINFO         regInfo;
-    RKEY            sourceKey, destKey;
-    
-    err = NR_RegGetKey(hReg, key, (char *) path, &sourceKey);
-
-    if (err == REGERR_OK) {
-        err = NR_RegAddKey(hReg, newKey, newPath, &destKey);
-    }
-
-    if (err == REGERR_OK) {
-        char            entryName[MAX_PATH_LENGTH];
-        uint32          dataSize;
-        unsigned char   smallBuffer[256];
-        void            *pData;
-
-        regInfo.size = sizeof(REGINFO);
-        entryState = NULL;
-
-        while (err == REGERR_OK) {
-            err = NR_RegEnumEntries(hReg, sourceKey, &entryState, entryName, MAX_PATH_LENGTH, &regInfo);
-
-            if (err == REGERR_OK) {
-                if (regInfo.entryLength < 256) {
-                    pData = (void *) smallBuffer;
-                    dataSize = 256;
-                } else {
-                    pData = (void *) XP_ALLOC(regInfo.entryLength);
-                    dataSize = regInfo.entryLength;
-                }
-
-
-                err = NR_RegGetEntry(hReg, sourceKey, entryName, pData, &dataSize);
-
-                if (err == REGERR_OK) {
-                    err = NR_RegSetEntry(hReg, destKey, entryName, regInfo.entryType, pData, dataSize);
-                }
-
-                if (pData != smallBuffer) {
-                    XP_FREEIF(pData);
-                }
-            }
-        }
-
-        if (err == REGERR_NOMORE) {
-            err = REGERR_OK;
-        }
-
-        while (err == REGERR_OK) {
-            err = NR_RegEnumSubkeys(hReg, sourceKey, &keyState, keyName, MAX_PATH_LENGTH, 0);
-
-            if (err == REGERR_OK) {
-                err = CopyNetscapeRegKey(hReg, sourceKey, keyName, destKey, keyName);
-                
-            }
-        }
-
-        if (err == REGERR_NOMORE) {
-            err = REGERR_OK;
-        }
-    
-    } /* if (destKey) */
-
-
-    return err;
-}
-
-REGERR
-DeleteKeyTree(
-         HREG       hReg,        /* handle of open registry */
-         RKEY       key,         /* root key */
-         const char *path        /* relative path of subkey to find */
-        )
-{
-    char            keyName[MAX_PATH_LENGTH];
-    REGERR          err;
-    REGENUM         keyState = NULL;
-    RKEY            keyToDelete;
-
-    err = NR_RegGetKey(hReg, key, (char *) path, &keyToDelete);
-
-    while (err == REGERR_OK) {
-        err = NR_RegEnumSubkeys(hReg, keyToDelete, &keyState, keyName, MAX_PATH_LENGTH, REGENUM_DEPTH_FIRST);
-
-        if (err == REGERR_OK) {
-            NR_RegDeleteKey(hReg, keyToDelete, keyName);
-        }
-    }
-
-    err = NR_RegDeleteKey(hReg, key, (char *) path);
-
-    return err;
-}
