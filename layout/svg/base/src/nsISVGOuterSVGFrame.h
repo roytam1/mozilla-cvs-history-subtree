@@ -61,6 +61,7 @@ public:
   NS_IMETHOD GetRenderer(nsISVGRenderer**renderer)=0;
   NS_IMETHOD GetPresContext(nsIPresContext**presContext)=0;
   NS_IMETHOD CreateSVGRect(nsIDOMSVGRect **_retval)=0;
+  NS_IMETHOD NotifyViewportChange()=0; // called by our correspoding content element
 };
 
 #endif // __NS_ISVGOUTERSVGFRAME_H__

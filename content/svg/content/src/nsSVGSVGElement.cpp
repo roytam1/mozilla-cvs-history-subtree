@@ -62,6 +62,7 @@
 #include "nsISVGOuterSVGFrame.h" //XXX
 #include "nsSVGNumber.h"
 #include "nsSVGRect.h"
+#include "nsISVGValueUtils.h"
 
 class nsSVGSVGElement : public nsSVGElement,
                         public nsISVGSVGElement, // : nsIDOMSVGSVGElement
@@ -93,7 +94,11 @@ public:
 
   // nsISVGContent interface
   NS_IMETHOD IsPresentationAttribute(const nsIAtom* attribute, PRBool* retval);
-    
+
+  // nsISVGValueObserver
+  NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);
+  NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable);
+  
 protected:
   
   // implementation helpers:
@@ -104,6 +109,7 @@ protected:
   nsCOMPtr<nsISVGViewportRect>      mParentViewport;
   nsCOMPtr<nsISVGViewportRect>      mViewport;
   nsCOMPtr<nsIDOMSVGAnimatedRect>   mViewBox;
+  nsCOMPtr<nsIDOMSVGMatrix>         mViewBoxToViewportTransform;
   nsCOMPtr<nsIDOMSVGAnimatedLength> mX;
   nsCOMPtr<nsIDOMSVGAnimatedLength> mY;
   
@@ -162,6 +168,12 @@ nsSVGSVGElement::nsSVGSVGElement()
 
 nsSVGSVGElement::~nsSVGSVGElement()
 {
+  if (mViewBox) {
+    NS_REMOVE_SVGVALUE_OBSERVER(mViewBox);
+  }
+  if (mViewport) {
+    NS_REMOVE_SVGVALUE_OBSERVER(mViewport);
+  }
 }
 
   
@@ -311,6 +323,11 @@ nsSVGSVGElement::Init()
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
+
+  // add observers -------------------------- :
+  NS_ADD_SVGVALUE_OBSERVER(mViewport);
+  NS_ADD_SVGVALUE_OBSERVER(mViewBox);
+  
   return NS_OK;
 }
 
@@ -800,8 +817,50 @@ nsSVGSVGElement::GetElementById(const nsAString & elementId, nsIDOMElement **_re
 NS_IMETHODIMP
 nsSVGSVGElement::GetViewboxToViewportTransform(nsIDOMSVGMatrix **_retval)
 {
-  // XXX
-  return CreateSVGMatrix(_retval);
+  if (!mViewBoxToViewportTransform) {
+    float viewportWidth, viewportHeight;
+    mViewport->GetWidth(&viewportWidth);
+    mViewport->GetHeight(&viewportHeight);
+    
+    float viewboxWidth, viewboxHeight, viewboxX, viewboxY;
+    {
+      nsCOMPtr<nsIDOMSVGRect> vb;
+      mViewBox->GetAnimVal(getter_AddRefs(vb));
+      NS_ASSERTION(vb, "could not get viewbox");
+      vb->GetWidth(&viewboxWidth);
+      vb->GetHeight(&viewboxHeight);
+      vb->GetX(&viewboxX);
+      vb->GetY(&viewboxY);
+    }
+    if (viewboxWidth==0.0f || viewboxHeight==0.0f) {
+      NS_ERROR("XXX. We shouldn't get here. Viewbox width/height is set to 0. Need to disable display of element as per specs.");
+      viewboxWidth = 1.0f;
+      viewboxHeight = 1.0f;
+    }
+    
+    // case with preserveAspectRatio=none:
+    float a, e, d, f;
+    
+    a = viewportWidth/viewboxWidth;
+    e = -a*viewboxX;
+    
+    d = viewportHeight/viewboxHeight;
+    f = -d*viewboxY;
+    
+#ifdef DEBUG
+    printf("SVG Viewport=(0?,0?,%f,%f)\n", viewportWidth, viewportHeight);
+    printf("SVG Viewbox=(%f,%f,%f,%f)\n", viewboxX, viewboxY, viewboxWidth, viewboxHeight);
+    printf("SVG Viewbox->Viewport xform [a c e] = [%f,   0, %f]\n", a, e);
+    printf("                            [b d f] = [   0,  %f, %f]\n", d, f);
+#endif
+    
+    nsSVGMatrix::Create(getter_AddRefs(mViewBoxToViewportTransform),
+                                       a, 0, 0, d, e, f);
+  }
+
+  *_retval = mViewBoxToViewportTransform;
+  NS_IF_ADDREF(*_retval);
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -811,8 +870,9 @@ nsSVGSVGElement::GetViewboxToViewportTransform(nsIDOMSVGMatrix **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::GetViewBox(nsIDOMSVGAnimatedRect * *aViewBox)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *aViewBox = mViewBox;
+  NS_ADDREF(*aViewBox);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedPreserveAspectRatio preserveAspectRatio; */
@@ -1087,6 +1147,51 @@ nsSVGSVGElement::IsPresentationAttribute(const nsIAtom* name, PRBool *retval)
   }
   else
     return nsSVGElement::IsPresentationAttribute(name, retval);
+}
+
+//----------------------------------------------------------------------
+// nsISVGValueObserver methods:
+
+NS_IMETHODIMP
+nsSVGSVGElement::WillModifySVGObservable(nsISVGValue* observable)
+{
+#ifdef DEBUG
+  printf("viewport/viewbox will be changed\n");
+#endif
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsSVGSVGElement::DidModifySVGObservable (nsISVGValue* observable)
+{
+  // either viewport or viewbox have changed
+  // invalidate viewbox -> viewport xform & inform frames
+  
+  mViewBoxToViewportTransform = nsnull;
+  
+  if (!mDocument) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIPresShell> presShell;
+  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+  NS_ASSERTION(presShell, "no presShell");
+  if (!presShell) return NS_ERROR_FAILURE;
+
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
+  if (frame) {
+    nsISVGOuterSVGFrame* svgframe;
+    CallQueryInterface(frame, &svgframe);
+    NS_ASSERTION(svgframe, "wrong frame type");
+    if (svgframe) {
+      svgframe->NotifyViewportChange();
+    }
+  }
+  
+  
+#ifdef DEBUG
+  printf("viewport/viewbox have been changed\n");
+#endif
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------

@@ -112,6 +112,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	content/svg/content/src/nsSVGPathSeg.h                \
 	content/svg/content/src/nsSVGPathSegList.cpp          \
 	content/svg/content/src/nsSVGPointList.cpp            \
+	content/svg/content/src/nsSVGRect.cpp                 \
 	content/svg/content/src/nsSVGRectElement.cpp          \
 	content/svg/content/src/nsSVGSVGElement.cpp           \
 	content/svg/content/src/nsSVGTransformList.cpp        \

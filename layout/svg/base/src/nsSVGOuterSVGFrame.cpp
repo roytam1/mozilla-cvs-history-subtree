@@ -234,6 +234,8 @@ public:
   NS_IMETHOD GetRenderer(nsISVGRenderer**renderer);
   NS_IMETHOD GetPresContext(nsIPresContext**presContext);
   NS_IMETHOD CreateSVGRect(nsIDOMSVGRect **_retval);
+  NS_IMETHOD NotifyViewportChange();
+
   // nsISVGContainerFrame interface:
   NS_IMETHOD_(nsISVGOuterSVGFrame*) GetOuterSVGFrame();
   
@@ -1072,6 +1074,27 @@ nsSVGOuterSVGFrame::CreateSVGRect(nsIDOMSVGRect **_retval)
   if(svgElement)
     return svgElement->CreateSVGRect(_retval);
   return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::NotifyViewportChange()
+{
+  // no point in doing anything when were not init'ed yet:
+  if (!mViewportInitialized) return NS_OK;
+
+  // inform children
+  // XXX we should have an nsISVGChildFrame:NotifyViewportChange() function
+  SuspendRedraw();
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame)
+      SVGFrame->NotifyCTMChanged(); 
+    kid->GetNextSibling(&kid);
+  }
+  UnsuspendRedraw();
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
