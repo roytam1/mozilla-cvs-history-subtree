@@ -975,7 +975,7 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     GlobalVariableValue* globVar;
     globVar = (GlobalVariableValue*)mGlobalVariableValues.get(varName);
     if (globVar) {
-        if (globVar->mFlags & GlobalVariableValue::evaluating) {
+        if (globVar->mFlags == GlobalVariableValue::evaluating) {
             String err("Cyclic variable-value detected");
             receiveError(err, NS_ERROR_FAILURE);
             return NS_ERROR_FAILURE;
@@ -1204,6 +1204,8 @@ void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)
 
 ProcessorState::GlobalVariableValue::~GlobalVariableValue()
 {
-    if (mFlags & owned)
+    if (mFlags) {
+        NS_ASSERTION(mFlags != evaluating, "deleted while evaluating");
         delete mValue;
+    }
 }

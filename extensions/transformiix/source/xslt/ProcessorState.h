@@ -385,7 +385,7 @@ private:
         char mFlags;
         enum _flags 
         {
-            none = 0,
+            nonOwned = 0,
             evaluating,
             owned
         };
