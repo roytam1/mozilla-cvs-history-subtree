@@ -30,20 +30,14 @@
 #include <URegistrar.h>
 #include <LPushButton.h>
 #include <LStaticText.h>
-
+#include <LIconControl.h>
 #include <LWindow.h>
-#include <LCaption.h>
 #include <LTextTableView.h>
-#include <LTableMonoGeometry.h>
-#include <LTableArrayStorage.h>
-#include <LTableSingleSelector.h>
-#include <LCellSizeToFit.h>
-
 #include <UControlRegistry.h>
 #include <UGraphicUtils.h>
 #include <UEnvironment.h>
-
 #include <Appearance.h>
+#include <UConditionalDialogs.h>
 
 #include "ApplIDs.h"
 #include "CBrowserWindow.h"
@@ -68,6 +62,7 @@
 #include "nsXPIDLString.h"
 #include "macstdlibextras.h"
 #include "SIOUX.h"
+#include "nsIURL.h"
 
 #include <TextServices.h>
 
@@ -132,8 +127,11 @@ CBrowserApp::CBrowserApp()
 		::RegisterAppearanceClient();
 	}
 
-	RegisterClass_(PP_PowerPlant::LWindow);	// You must register each kind of
+	RegisterClass_(PP_PowerPlant::LWindow);	    // You must register each kind of
 	RegisterClass_(PP_PowerPlant::LCaption);	// PowerPlant classes that you use in your PPob resource.
+	RegisterClass_(PP_PowerPlant::LTabGroupView);
+    RegisterClass_(PP_PowerPlant::LIconControl);
+    RegisterClass_(PP_PowerPlant::LView);
 	
 	// Register the Appearance Manager/GA classes
 	PP_PowerPlant::UControlRegistry::RegisterClasses();
@@ -191,7 +189,10 @@ CBrowserApp::CBrowserApp()
 
 CBrowserApp::~CBrowserApp()
 {
-   UMacUnicode::ReleaseUnit();
+   nsresult rv;
+   NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
+   if (NS_SUCCEEDED(rv) && prefs)
+      prefs->SavePrefFile();
 	   
    NS_TermEmbedding();
 }
@@ -335,6 +336,37 @@ CBrowserApp::ObeyCommand(
             theWindow->GetBrowserShell()->LoadURL("http://www.mozilla.org");
 			}
 			break;
+
+		case PP_PowerPlant::cmd_Open:
+		case cmd_OpenDirectory:
+            {
+                FSSpec fileSpec;
+                if (SelectFileObject(inCommand, fileSpec))
+                {
+                    nsresult rv;
+                    nsCOMPtr<nsILocalFileMac> macFile;
+                    
+                    rv = NS_NewLocalFileWithFSSpec(&fileSpec, PR_TRUE, getter_AddRefs(macFile));
+                    ThrowIfError_(NS_ERROR_GET_CODE(rv));
+                    nsCOMPtr<nsILocalFile> localFile(do_QueryInterface(macFile, &rv));
+                    ThrowIfError_(NS_ERROR_GET_CODE(rv));
+                    nsCOMPtr<nsIFileURL> aURL(do_CreateInstance("@mozilla.org/network/standard-url;1", &rv));
+                    ThrowIfError_(NS_ERROR_GET_CODE(rv));
+                    
+                    rv = aURL->SetFile(localFile);
+                    ThrowIfError_(NS_ERROR_GET_CODE(rv));
+                    
+                    nsXPIDLCString urlSpec;
+                    rv = aURL->GetSpec(getter_Copies(urlSpec));
+                    ThrowIfError_(NS_ERROR_GET_CODE(rv));
+                        
+           			CBrowserWindow	*theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_BrowserWindow, this));
+           			ThrowIfNil_(theWindow);
+                    theWindow->GetBrowserShell()->LoadURL(urlSpec.get());
+           			theWindow->Show();
+           		}
+            }
+            break;
 			
 		// Any that you don't handle, such as cmd_About and cmd_Quit,
 		// will be passed up to LApplication
@@ -365,6 +397,11 @@ CBrowserApp::FindCommandStatus(
 	
 		// Return menu item status according to command messages.
 		case PP_PowerPlant::cmd_New:
+			outEnabled = true;
+			break;
+
+		case PP_PowerPlant::cmd_Open:
+		case cmd_OpenDirectory:
 			outEnabled = true;
 			break;
 
@@ -416,6 +453,7 @@ nsresult CBrowserApp::InitializePrefs()
 		{
             prefs->SetIntPref("font.size.variable.x-western", 12);
             prefs->SetIntPref("font.size.fixed.x-western", 12);
+            prefs->SetBoolPref("wallet.captureForms", PR_TRUE);
             rv = prefs->SetBoolPref("ppbrowser.prefs_inited", PR_TRUE);
             if (NS_SUCCEEDED(rv))
                 rv = prefs->SavePrefFile();
@@ -467,6 +505,38 @@ nsresult CBrowserApp::InitCachePrefs()
 
   return prefs->SetFileXPref(CACHE_DIR_PREF, cacheDir);
 }
+
+Boolean CBrowserApp::SelectFileObject(PP_PowerPlant::CommandT	inCommand,
+                                      FSSpec& outSpec)
+{
+		// LFileChooser presents the standard dialog for asking
+		// the user to open a file. It supports both StandardFile
+		// and Navigation Services. The latter allows opening
+		// multiple files.
+
+	UConditionalDialogs::LFileChooser	chooser;
+	
+	NavDialogOptions *theDialogOptions = chooser.GetDialogOptions();
+	if (theDialogOptions) {
+		theDialogOptions->dialogOptionFlags |= kNavSelectAllReadableItem;
+	}
+
+    Boolean     result;
+	SInt32      dirID;
+	
+	if (inCommand == cmd_OpenDirectory)
+	{
+	    result = chooser.AskChooseFolder(outSpec, dirID);
+	}
+	else
+	{
+	    result = chooser.AskOpenFile(LFileTypeList(fileTypes_All));
+	    if (result)
+	        chooser.GetFileSpec(1, outSpec);
+	}
+    return result;
+}
+
 
 #if USE_PROFILES
 

@@ -588,7 +588,7 @@ Boolean CBrowserShell::GetFindParams(nsString& searchText,
 
    		// Set initial text for string in dialog box
 
-   	UMacUnicode::StringToStr255(searchText, aStr);
+    CPlatformUCSConversion::GetInstance()->UCSToPlatform(searchText, aStr);
    			
    	LEditText	*editField = dynamic_cast<LEditText*>(theDialog->FindPaneByID(kSearchTextEdit));
    	editField->SetDescriptor(aStr);
@@ -623,8 +623,8 @@ Boolean CBrowserShell::GetFindParams(nsString& searchText,
    		}
    		else if (hitMessage == msg_OK)
    		{
-   			editField->GetDescriptor(aStr);
-            UMacUnicode::Str255ToString(aStr, searchText);
+   			    editField->GetDescriptor(aStr);
+            CPlatformUCSConversion::GetInstance()->PlatformToUCS(aStr, searchText);
        	
           	caseSensitive = caseSensCheck->GetValue() ? TRUE : FALSE;
           	entireWord = entireWordCheck->GetValue() ? TRUE : FALSE;

@@ -70,6 +70,9 @@ protected:
 
 	virtual nsresult        InitializePrefs();
     static nsresult         InitCachePrefs();
+
+    virtual Boolean         SelectFileObject(PP_PowerPlant::CommandT	inCommand,
+                                             FSSpec& outSpec);
     
 #if USE_PROFILES
     Boolean                 ConfirmProfileSwitch();

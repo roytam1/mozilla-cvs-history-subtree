@@ -24,9 +24,13 @@
 #include "nsWidgetsCID.h"
 #include "nsIComponentManager.h"
 #include "nsComponentManagerUtils.h"
+#include "nsIServiceManager.h"
 #include "nsIChannel.h"
 #include "nsIURI.h"
 #include "nsXPIDLString.h"
+#include "nsIWalletService.h"
+#include "nsIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 
 #include "CBrowserWindow.h"
 #include "CBrowserShell.h"
@@ -231,6 +235,11 @@ Boolean CBrowserWindow::ObeyCommand(CommandT			inCommand,
 
 	Boolean	cmdHandled = true;
 	
+	nsresult rv;
+	nsCOMPtr<nsIWebBrowser> webBrowser;
+	nsCOMPtr<nsIDOMWindow> domWindow;
+	nsCOMPtr<nsIDOMWindowInternal> domWindowInternal;
+	
 	switch (inCommand)
 	{
 		case paneID_BackButton:
@@ -262,10 +271,41 @@ Boolean CBrowserWindow::ObeyCommand(CommandT			inCommand,
 		case CBrowserShell::cmd_FindNext:
 			mBrowserShell->FindNext();
 			break;
+			
+		case cmd_SaveFormData:
+		  {
+  		  NS_WITH_SERVICE(nsIWalletService, walletService, NS_WALLETSERVICE_CONTRACTID, &rv);
+  		  ThrowIfError_(rv);
+  		  rv = mBrowserShell->GetWebBrowser(getter_AddRefs(webBrowser));
+  		  ThrowIfError_(rv);
+  		  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+  		  ThrowIfError_(rv);
+  		  domWindowInternal = do_QueryInterface(domWindow, &rv);
+  		  ThrowIfError_(rv);
+  		  PRUint32 retval;
+  		  rv = walletService->WALLET_RequestToCapture(domWindowInternal, &retval);
+		  }
+		  break;
+		  
+		case cmd_PrefillForm:
+		  {
+  		  NS_WITH_SERVICE(nsIWalletService, walletService, NS_WALLETSERVICE_CONTRACTID, &rv);
+  		  ThrowIfError_(rv);
+  		  rv = mBrowserShell->GetWebBrowser(getter_AddRefs(webBrowser));
+  		  ThrowIfError_(rv);
+  		  rv = webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+  		  ThrowIfError_(rv);
+  		  domWindowInternal = do_QueryInterface(domWindow, &rv);
+  		  ThrowIfError_(rv);
+  		  PRBool retval;
+  		  // Don't check the result - A result of NS_ERROR_FAILURE means not to show preview dialog
+  		  rv = walletService->WALLET_Prefill(true, domWindowInternal, &retval);
+		  }
+		  break;
 
-	    default:
-	       cmdHandled = false;
-	       break;
+	  default:
+	    cmdHandled = false;
+	    break;
 	}
 
 	if (!cmdHandled)
@@ -301,6 +341,16 @@ CBrowserWindow::FindCommandStatus(
 			outEnabled = mBrowserShell->CanFindNext();
 			break;
 
+    // See: http://lxr.mozilla.org/seamonkey/source/xpfe/browser/resources/content/nsContextMenu.js#444
+			
+		case cmd_SaveFormData:
+		  outEnabled = true;
+		  break;
+
+		case cmd_PrefillForm:
+		  outEnabled = true;
+		  break;
+
 		default:
 			PP_PowerPlant::LCommander::FindCommandStatus(inCommand, outEnabled,
 												outUsesMark, outMark, outName);
@@ -334,11 +384,10 @@ NS_METHOD CBrowserWindow::SetStatus(const PRUnichar* aStatus)
 {
    if (mStatusBar)
    {
-		nsAutoString statusStr(aStatus);
-		Str255 aStr;
+		nsCAutoString cStr;
 		
-		UMacUnicode::StringToStr255(statusStr, aStr);
-		mStatusBar->SetDescriptor(aStr);
+        CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(aStatus), cStr);
+		mStatusBar->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
    }
    return NS_OK;
 }
@@ -347,10 +396,10 @@ NS_METHOD CBrowserWindow::SetLocation(const nsString& aLocation)
 {
 	if (mURLField)
 	{
-		Str255 aStr;
+		nsCAutoString cStr;
 		
-		UMacUnicode::StringToStr255(aLocation, aStr);
-		mURLField->SetDescriptor(aStr);
+        CPlatformUCSConversion::GetInstance()->UCSToPlatform(aLocation, cStr);
+		mURLField->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
 	}
    return NS_OK;
 }

@@ -68,6 +68,11 @@ const MessageT    msg_OnEndLoadDocument 	= 1001;
 //***    Command IDs
 //*****************************************************************************
 
-const MessageT    cmd_ManageProfiles        = 'MPrf';
+const CommandT    cmd_OpenDirectory         = 'ODir';
+
+const CommandT    cmd_ManageProfiles        = 'MPrf';
+
+const CommandT    cmd_SaveFormData          = 'SFrm';
+const CommandT    cmd_PrefillForm           = 'PFFm';
 
 #endif // __ApplIDs__

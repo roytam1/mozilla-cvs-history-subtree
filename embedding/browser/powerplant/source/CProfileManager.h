@@ -39,7 +39,7 @@ class CProfileManager : public LAttachment
     
     virtual void        StartUp();
     virtual void        DoManageProfilesDialog();
-    virtual Boolean     DoNewProfileDialog(Str255& profileName);
+    virtual Boolean     DoNewProfileDialog(char *outName, UInt32 bufSize);
     
   protected:
   

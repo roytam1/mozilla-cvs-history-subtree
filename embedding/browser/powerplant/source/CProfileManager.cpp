@@ -103,10 +103,11 @@ void CProfileManager::StartUp()
     if (profileCount == 0)
     {
         // Make a new default profile
-        nsString newProfileName; newProfileName.AssignWithConversion("default");
-        rv = profileService->CreateNewProfile(newProfileName.GetUnicode(), nsnull, nsnull, PR_FALSE);
+        NS_NAMED_LITERAL_STRING(newProfileName, "default");
+
+        rv = profileService->CreateNewProfile(newProfileName, nsnull, nsnull, PR_FALSE);
         ThrowIfError_(rv);
-        rv = profileService->SetCurrentProfile(newProfileName.GetUnicode());
+        rv = profileService->SetCurrentProfile(newProfileName);
         ThrowIfError_(rv);
     }
     else
@@ -134,7 +135,7 @@ void CProfileManager::StartUp()
     }
 }
 
-Boolean CProfileManager::DoNewProfileDialog(Str255& profileName)
+Boolean CProfileManager::DoNewProfileDialog(char *outName, UInt32 bufSize)
 {
     Boolean confirmed;
     StDialogHandler	theHandler(dlog_NewProfile, LCommander::GetTopCommander());
@@ -154,7 +155,13 @@ Boolean CProfileManager::DoNewProfileDialog(Str255& profileName)
   		
   		if (hitMessage == msg_OK)
   		{
- 		    responseText->GetDescriptor(profileName);
+  		    Str255 pStr;
+  		    UInt32 outLen;
+  		    
+ 		    responseText->GetDescriptor(pStr);
+ 		    outLen = pStr[0] >= bufSize ? bufSize - 1 : pStr[0];
+ 		    memcpy(outName, &pStr[1], outLen);
+ 		    outName[outLen] = '\0'; 
             confirmed = PR_TRUE;
      		break;
    		}
@@ -183,8 +190,10 @@ void CProfileManager::DoManageProfilesDialog()
     LPushButton *deleteButton = (LPushButton *) theDialog->FindPaneByID('Dele');
     ThrowIfNil_(deleteButton);
     
-    Str255 pascalStr;
+    //Str255 pascalStr;
     nsAutoString unicodeStr;
+    nsCAutoString cStr;
+    char dataBuf[256];
     UInt32 dataSize;
     
     // PowerPlant stuff to set up the list view
@@ -210,8 +219,8 @@ void CProfileManager::DoManageProfilesDialog()
     
     for (PRUint32 index = 0; index < listLen; index++)
     {
-          UMacUnicode::StringToStr255(nsString(profileList[index]), pascalStr);
-          table->InsertRows(1, LONG_MAX, &pascalStr[1], pascalStr[0], true);
+          CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(profileList[index]), cStr);
+          table->InsertRows(1, LONG_MAX, cStr.GetBuffer(), cStr.Length(), true);
           
           if (nsCRT::strcmp(profileList[index], currProfileName.get()) == 0)
             selectedCell.row = index + 1;
@@ -232,14 +241,14 @@ void CProfileManager::DoManageProfilesDialog()
   		
   		if (hitMessage == msg_OK)
   		{
+  		    theDialog->Hide();
    		    selectedCell = table->GetFirstSelectedCell();
    		    if (selectedCell.row > 0)
    		    {
-   		        dataSize = 255;
-   		        table->GetCellData(selectedCell, &pascalStr[1], dataSize);
-   		        pascalStr[0] = dataSize;
-   		        UMacUnicode::Str255ToString(pascalStr, unicodeStr);
-   		        
+   		        dataSize = sizeof(dataBuf) - 1;
+   		        table->GetCellData(selectedCell, dataBuf, dataSize);
+   		        dataBuf[dataSize] = '\0';
+                CPlatformUCSConversion::GetInstance()->PlatformToUCS(nsLiteralCString(dataBuf), unicodeStr);
    		        rv = profileService->SetCurrentProfile(unicodeStr.GetUnicode());
             }
   		    break;
@@ -250,14 +259,14 @@ void CProfileManager::DoManageProfilesDialog()
         }
         else if (hitMessage == msg_OnNewProfile)
    		{
-   		    if (DoNewProfileDialog(pascalStr))
+   		    if (DoNewProfileDialog(dataBuf, sizeof(dataBuf)))
    		    {
-   		        UMacUnicode::Str255ToString(pascalStr, unicodeStr);
+   		        CPlatformUCSConversion::GetInstance()->PlatformToUCS(nsLiteralCString(dataBuf), unicodeStr);
    		        rv = profileService->CreateNewProfile(unicodeStr.GetUnicode(), nsnull, nsnull, PR_FALSE);
    		        if (NS_FAILED(rv))
    		            break;
    		        
-                table->InsertRows(1, LONG_MAX, &pascalStr[1], pascalStr[0], true);
+                table->InsertRows(1, LONG_MAX, dataBuf, strlen(dataBuf), true);
                 table->GetTableSize(rows, cols);
                 table->SelectCell(STableCell(rows, cols));
                 
@@ -270,10 +279,10 @@ void CProfileManager::DoManageProfilesDialog()
    		    selectedCell = table->GetFirstSelectedCell();
    		    if (selectedCell.row > 0)
    		    {
-   		        dataSize = 255;
-   		        table->GetCellData(selectedCell, &pascalStr[1], dataSize);
-   		        pascalStr[0] = dataSize;
-   		        UMacUnicode::Str255ToString(pascalStr, unicodeStr);
+   		        dataSize = sizeof(dataBuf) - 1;
+   		        table->GetCellData(selectedCell, dataBuf, dataSize);
+   		        dataBuf[dataSize] = '\0';
+   		        CPlatformUCSConversion::GetInstance()->PlatformToUCS(nsLiteralCString(dataBuf), unicodeStr);
    		        
    		        rv = profileService->DeleteProfile(unicodeStr.GetUnicode(), PR_TRUE);
    		        if (NS_FAILED(rv))
@@ -291,18 +300,19 @@ void CProfileManager::DoManageProfilesDialog()
    		}
    		else if (hitMessage == msg_OnRenameProfile)
    		{
-	        dataSize = 255;
-   		    selectedCell = table->GetFirstSelectedCell();
-	        table->GetCellData(selectedCell, &pascalStr[1], dataSize);
-	        pascalStr[0] = dataSize;
 	        nsAutoString oldName;
-	        UMacUnicode::Str255ToString(pascalStr, oldName);
 
-   		    if (DoNewProfileDialog(pascalStr))
+   		    selectedCell = table->GetFirstSelectedCell();
+	        dataSize = sizeof(dataBuf) - 1;
+	        table->GetCellData(selectedCell, dataBuf, dataSize);
+	        dataBuf[dataSize] = '\0';
+	        CPlatformUCSConversion::GetInstance()->PlatformToUCS(nsLiteralCString(dataBuf), oldName);
+
+   		    if (DoNewProfileDialog(dataBuf, sizeof(dataBuf)))
    		    {
-   		        UMacUnicode::Str255ToString(pascalStr, unicodeStr);
+   		        CPlatformUCSConversion::GetInstance()->PlatformToUCS(nsLiteralCString(dataBuf), unicodeStr);
                 profileService->RenameProfile(oldName.GetUnicode(), unicodeStr.GetUnicode());
-                table->SetCellData(selectedCell, &pascalStr[1], pascalStr[0]); 		        
+                table->SetCellData(selectedCell, dataBuf, strlen(dataBuf)); 		        
    		    }
    		}
   	}  
