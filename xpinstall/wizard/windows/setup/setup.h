@@ -159,8 +159,10 @@ typedef struct dlgLicense
 typedef struct stStruct
 {
   BOOL  bVisible;
-  DWORD dwItems;
-  DWORD dwItemsSelected[MAX_BUF];
+  DWORD dwCItems;
+  DWORD dwCItemsSelected[MAX_BUF];
+  DWORD dwAItems;
+  DWORD dwAItemsSelected[MAX_BUF];
   LPSTR szDescriptionShort;
   LPSTR szDescriptionLong;
 } st;
