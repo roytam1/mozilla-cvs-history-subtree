@@ -973,29 +973,36 @@ void nsBayesianFilter::classifyMessage(Tokenizer& tokenizer, const char* message
 
     for (i = 0; i < count; ++i) 
     {
-        Token& token = tokens[i];
-        const char* word = token.mWord;
-        Token* t = mGoodTokens.get(word);
+      Token& token = tokens[i];
+      const char* word = token.mWord;
+      Token* t = mGoodTokens.get(word);
       double hamcount = ((t != NULL) ? t->mCount : 0);
-        t = mBadTokens.get(word);
-       double spamcount = ((t != NULL) ? t->mCount : 0);
-       prob = (spamcount / nbad) / ( hamcount / ngood + spamcount / nbad);
-       double n = hamcount + spamcount;
-       prob =  (0.225 + n * prob) / (.45 + n);
-       double distance = moz_abs(prob - 0.5);
-       if (distance >= .1) 
-       {
-         goodclues++;
-         token.mDistance = distance;
-         token.mProbability = prob;
-            PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("token.mProbability (%s) is %f", word, token.mProbability));
-        }
+      t = mBadTokens.get(word);
+      double spamcount = ((t != NULL) ? t->mCount : 0);
+
+      // if hamcount and spam count are both 0, we could end up with a divide by 0 error, 
+      // tread carefully here. (Bug #240819)
+      double probDenom = (hamcount *nbad + spamcount*ngood);
+      if (probDenom == 0.0) // nGood and nbad are known to be non zero or we wouldn't be here
+        probDenom = nbad + ngood; // error case use a value of 1 for hamcount and spamcount if they are both zero.
+
+      prob = (spamcount * ngood)/probDenom;
+      double n = hamcount + spamcount;
+      prob =  (0.225 + n * prob) / (.45 + n);
+      double distance = moz_abs(prob - 0.5);
+      if (distance >= .1) 
+      {
+        goodclues++;
+        token.mDistance = distance;
+        token.mProbability = prob;
+        PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("token.mProbability (%s) is %f", word, token.mProbability));
+      }
       else 
         token.mDistance = -1; //ignore clue
     }
     
     // sort the array by the token distances
-        NS_QuickSort(tokens, count, sizeof(Token), compareTokens, NULL);
+    NS_QuickSort(tokens, count, sizeof(Token), compareTokens, NULL);
     PRUint32 first, last = count;
     if (goodclues > 150)
        first = count - 150;
