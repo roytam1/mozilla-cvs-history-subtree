@@ -1064,6 +1064,15 @@ nsHttpChannel::ProcessRedirection(PRUint32 redirectType)
         rv = ioService->NewURI(location, mURI, getter_AddRefs(newURI));
         if (NS_FAILED(rv)) return rv;
 
+        // verify that this is a legal redirect
+        nsCOMPtr<nsIScriptSecurityManager> securityManager = 
+                 do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+        if (securityManager) {
+            rv = securityManager->CheckLoadURI(mURI, newURI,
+                                               nsIScriptSecurityManager::DISALLOW_FROM_MAIL);
+            if (NS_FAILED(rv)) return rv;
+        }
+
         // move the reference of the old location to the new one if the new
         // one has none.
         nsCOMPtr<nsIURL> newURL = do_QueryInterface(newURI, &rv);
@@ -1520,15 +1529,6 @@ nsHttpChannel::AddAuthorizationHeaders()
         nsXPIDLCString path;
         rv = GetCurrentPath(getter_Copies(path));
         if (NS_FAILED(rv)) return rv;
-
-        // verify that this is a legal redirect
-        nsCOMPtr<nsIScriptSecurityManager> securityManager = 
-                 do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
-        if (securityManager) {
-            rv = securityManager->CheckLoadURI(mURI, newURI,
-                                               nsIScriptSecurityManager::DISALLOW_FROM_MAIL);
-            if (NS_FAILED(rv)) return rv;
-        }
 
         rv = authCache->GetCredentialsForPath(mConnectionInfo->Host(),
                                               mConnectionInfo->Port(),
