@@ -1331,7 +1331,8 @@ nsFrame::PeekBackwardAndForward(nsSelectionAmount aAmountBack,
                    aStartPos,
                    PR_FALSE,
                    PR_TRUE,
-                   aJumpLines);
+                   aJumpLines,
+                   PR_TRUE);//limit on scrolled views
   rv = PeekOffset(aPresContext, &startpos);
   if (NS_FAILED(rv))
     return rv;
@@ -1343,7 +1344,8 @@ nsFrame::PeekBackwardAndForward(nsSelectionAmount aAmountBack,
                  aStartPos,
                  PR_FALSE,
                  PR_FALSE,
-                 aJumpLines);
+                 aJumpLines,
+                 PR_TRUE);//limit on scrolled views
   rv = PeekOffset(aPresContext, &endpos);
   if (NS_FAILED(rv))
     return rv;
@@ -3019,7 +3021,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
 
       nsCOMPtr<nsIBidirectionalEnumerator> frameTraversal;
       result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal), LEAF,
-                                    aPresContext, resultFrame);
+                                    aPresContext, resultFrame, aPos->mScrollViewStop);
       if (NS_FAILED(result))
         return result;
       nsISupports *isupports = nsnull;
@@ -3119,7 +3121,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
       if (!found){
         resultFrame = storeOldResultFrame;
         result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal), LEAF,
-                                      aPresContext, resultFrame);
+                                      aPresContext, resultFrame, aPos->mScrollViewStop);
       }
       while ( !found ){
         nsCOMPtr<nsIPresContext> context;
@@ -3838,11 +3840,12 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
                                 aPresContext, 
                                 (lineJump && lineIsRTL)
                                 ? (aPos->mDirection == eDirNext) ? lastFrame : firstFrame
-                                : traversedFrame);
+                                : traversedFrame,
+                                aPos->mScrollViewStop);
 #else
   //if we are a container frame we MUST init with last leaf for eDirNext
   //
-  result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal),LEAF, aPresContext, traversedFrame);
+  result = NS_NewFrameTraversal(getter_AddRefs(frameTraversal),LEAF, aPresContext, traversedFrame, aPos->mScrollViewStop);
 #endif
   if (NS_FAILED(result))
     return result;
