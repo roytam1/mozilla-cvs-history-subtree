@@ -264,6 +264,38 @@ txMessage::execute(txExecutionState& aEs)
     return mTerminate ? NS_ERROR_XSLT_ABORTED : NS_OK;
 }
 
+txProcessingInstruction::txProcessingInstruction(Expr* aName)
+    : mName(aName)
+{
+}
+
+nsresult
+txProcessingInstruction::execute(txExecutionState& aEs)
+{
+    nsresult rv = NS_OK;
+    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    XMLUtils::normalizePIValue(handler->mValue);
+
+    ExprResult* exprRes = mName->evaluate(aEs.getEvalContext());
+    NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+
+    nsAutoString name;
+    exprRes->stringValue(name);
+    delete exprRes;
+
+    // Check name validity (must be valid NCName and a PITarget)
+    // XXX Need to check for NCName and PITarget
+    if (!XMLUtils::isValidQName(name)) {
+        // XXX ErrorReport: bad PI-target
+        delete handler;
+        return NS_ERROR_FAILURE;
+    }
+
+    aEs.mResultHandler->processingInstruction(name, handler->mValue);
+
+    return NS_OK;
+}
+
 txPushNewContext::txPushNewContext(Expr* aSelect)
     : mSelect(aSelect)
 {

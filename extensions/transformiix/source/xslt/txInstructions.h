@@ -169,6 +169,16 @@ public:
     PRBool mTerminate;
 };
 
+class txProcessingInstruction : public txInstruction
+{
+public:
+    txProcessingInstruction(Expr* aName);
+
+    TX_DECL_TXINSTRUCTION
+
+    Expr* mName;
+};
+
 class txPushNewContext : public txInstruction
 {
 public:

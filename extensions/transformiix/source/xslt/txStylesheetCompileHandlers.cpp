@@ -894,6 +894,45 @@ txFnEndMessage(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:processing-instruction
+nsresult
+txFnStartPI(PRInt32 aNamespaceID,
+            nsIAtom* aLocalName,
+            nsIAtom* aPrefix,
+            txStylesheetAttr* aAttributes,
+            PRInt32 aAttrCount,
+            txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txPushStringHandler(PR_TRUE);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* name;
+    rv = getAVTAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                    aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    instr = new txProcessingInstruction(name);
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = aState.pushObject(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndPI(txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = (txInstruction*)aState.popObject();
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
 // xsl:text
 nsresult
 txFnStartText(PRInt32 aNamespaceID,
@@ -1041,6 +1080,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "for-each", txFnStartForEach, txFnEndForEach },
     { kNameSpaceID_XSLT, "if", txFnStartIf, txFnEndIf },
     { kNameSpaceID_XSLT, "message", txFnStartMessage, txFnEndMessage },
+    { kNameSpaceID_XSLT, "processing-instruction", txFnStartPI, txFnEndPI },
     { kNameSpaceID_XSLT, "text", txFnStartText, txFnEndText },
     { kNameSpaceID_XSLT, "value-of", txFnStartValueOf, txFnEndValueOf },
     { 0, 0, 0, 0 } },
