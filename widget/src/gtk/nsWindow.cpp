@@ -2113,6 +2113,8 @@ PRBool ChildWindow::IsChild() const
   return PR_TRUE;
 }
 
+#ifndef USE_SUPERWIN
+
 NS_METHOD ChildWindow::Destroy()
 {
 #ifdef NOISY_DESTROY
@@ -2124,3 +2126,5 @@ NS_METHOD ChildWindow::Destroy()
   // instead make sure widget destroy method gets invoked.
   return nsWidget::Destroy();
 }
+
+#endif

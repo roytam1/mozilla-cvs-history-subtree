@@ -188,7 +188,9 @@ public:
   ChildWindow();
   ~ChildWindow();
   virtual PRBool IsChild() const;
+#ifndef USE_SUPERWIN
   NS_IMETHOD Destroy(void);
+#endif
 };
 
 #endif // Window_h__
