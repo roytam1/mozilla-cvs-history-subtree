@@ -1534,7 +1534,7 @@ static JSValue ExtendAttribute_Invoke(Context * /*cx*/, const JSValue& /*thisVal
 JSValue JSFunction::runArgInitializer(Context *cx, uint32 a, const JSValue& thisValue, JSValue *argv, uint32 argc)
 {
     ASSERT(mArguments && (a < mExpectedArgs));
-    return cx->interpret(getByteCode(), mArguments[a].mInitializer, getScopeChain(), thisValue, argv, argc);    
+    return cx->interpret(getByteCode(), (int32)mArguments[a].mInitializer, getScopeChain(), thisValue, argv, argc);    
 }
 
 
@@ -1821,7 +1821,7 @@ void Context::reportError(Exception::Kind kind, char *message, size_t pos, const
 
         String x = widenCString(message);
         if (arg) {
-            int a = x.find(widenCString("{0}"));
+            uint32 a = x.find(widenCString("{0}"));
             x.replace(a, (a + 2), widenCString(arg));
         }
         throw Exception(kind, x, 
