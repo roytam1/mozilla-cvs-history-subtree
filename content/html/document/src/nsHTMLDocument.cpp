@@ -2135,6 +2135,10 @@ nsHTMLDocument::OpenCommon(nsIURI* aSourceURI)
     mRootContent = root;
   }
 
+  // zap the old title otherwise it can hang around until document.close()
+  // (which might never come) if the new document doesn't explicitly set one
+  SetTitle(EmptyString());
+
   // Store the security info of the caller now that we're done
   // resetting the document.
   mSecurityInfo = securityInfo;
