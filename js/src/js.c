@@ -68,6 +68,10 @@
 #include <sys/wait.h>
 #endif
 
+#ifdef XP_PC
+#include <io.h>     /* for isatty() */
+#endif
+
 #ifdef XP_MAC
 #define isatty(f) 1
 
