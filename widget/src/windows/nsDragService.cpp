@@ -161,8 +161,14 @@ NS_IMETHODIMP nsDragService::StartInvokingDragSession(IDataObject * aDataObj, PR
   mDragAction = aActionType;      //XXX not sure why we bother to cache this, it can change during the drag
   mDoingDrag  = PR_TRUE;
 
+  // Start dragging
+  StartDragSession();
+
   // Call the native D&D method
   HRESULT res = ::DoDragDrop(aDataObj, mNativeDragSrc, effects, &dropRes);
+
+  // We're done dragging
+  EndDragSession();
 
   // For some drag/drop interactions, IDataObject::SetData doesn't get called with
   // a CFSTR_PERFORMEDDROPEFFECT format and the intermediate file (if it was created)
