@@ -53,7 +53,7 @@ if (verifyDiskSpace(fProgram, srDest))
         var cf = getFolder(fProgram, "chrome/"+chromeName);
         var pf = getFolder(fProgram, "chrome/"+platformName);
 
-        registerChrome(chromeType, cf, localeName + "global/");
+        registerChrome(chromeType, cf, "locale/global/");
         registerChrome(chromeType, pf, localeName + "global-platform/");
 
         registerChrome(chromeType, cf, "locale/browser/");
@@ -69,7 +69,6 @@ if (verifyDiskSpace(fProgram, srDest))
         registerChrome(chromeType, cf, localeName + "pippki/");
 
         // XXXben Soon to be obsolete.
-        registerChrome(chromeType, cf, localeName + "communicator/");
         registerChrome(chromeType, pf, localeName + "communicator-platform/");
         registerChrome(chromeType, cf, localeName + "navigator/");
         registerChrome(chromeType, pf, localeName + "navigator-platform/");

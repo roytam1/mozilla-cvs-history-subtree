@@ -155,7 +155,6 @@ en-US.jar:
     locale/en-US/communicator/sidebar/sidebarOverlay.dtd        (sidebar/resources/locale/en-US/sidebarOverlay.dtd)
     locale/en-US/communicator/sidebar/sidebar.properties        (sidebar/resources/locale/en-US/sidebar.properties)
     locale/en-US/communicator/update-notifications.properties   (updates/resources/locale/en-US/update-notifications.properties)
-    locale/en-US/global/downloadProgress.properties             (xfer/resources/locale/en-US/downloadProgress.properties)
     locale/en-US/global/filepicker.dtd                          (filepicker/res/locale/en-US/filepicker.dtd)
     locale/en-US/global/filepicker.properties                   (filepicker/res/locale/en-US/filepicker.properties)
     locale/en-US/global/console.dtd                             (console/resources/locale/en-US/console.dtd)
@@ -163,6 +162,9 @@ en-US.jar:
     locale/en-US/global/finddialog.dtd                          (find/resources/locale/en-US/finddialog.dtd)
     locale/en-US/global/finddialog.properties                          (find/resources/locale/en-US/finddialog.properties)
     locale/en-US/global/ldapAutoCompErrs.properties             (autocomplete/resources/locale/en-US/ldapAutoCompErrs.properties)
+#ifndef MOZ_XUL_APP
+    locale/en-US/global/downloadProgress.properties             (/toolkit/locales/en-US/chrome/global/downloadProgress.properties)
+#endif
 
 toolkit.jar:
     content/global/console.js                                   (console/resources/content/console.js)

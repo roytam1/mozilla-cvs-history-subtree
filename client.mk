@@ -734,6 +734,11 @@ depend:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 ####################################
 # Build it
 
+configure:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
+
+####################################
+# Build it
+
 build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE)
 

@@ -1517,6 +1517,7 @@ libs realchrome:: $(CHROME_DEPS)
 ifndef NO_DIST_INSTALL
 	@$(EXIT_ON_ERROR) \
 	if test -f $(JAR_MANIFEST); then \
+	  if test ! -e $(DIST)/bin/chrome; then mkdir $(DIST)/bin/chrome; fi; \
 	  $(PERL) $(MOZILLA_DIR)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) \
 	    $(JAR_MANIFEST) | \
 	  $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-jars.pl \
@@ -1534,6 +1535,7 @@ install:: $(CHROME_DEPS)
 ifndef NO_INSTALL
 	@$(EXIT_ON_ERROR) \
 	if test -f $(JAR_MANIFEST); then \
+	  if test ! -e $(DESTDIR)$(mozappdir)/chrome; then mkdir $(DESTDIR)$(mozappdir)/chrome; fi; \
 	  $(PERL) $(MOZILLA_DIR)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) \
 	    $(JAR_MANIFEST) | \
 	  $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/make-jars.pl \

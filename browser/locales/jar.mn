@@ -1,6 +1,8 @@
 #filter substitution
 
 @AB_CD@.jar:
+*   locale/global/brand.dtd        (@AB_CD@/chrome/global/brand.dtd)
+    locale/global/brand.properties (@AB_CD@/chrome/global/brand.properties)
     locale/browser/contents.rdf                    (@AB_CD@/chrome/browser/contents.rdf)
     locale/browser/aboutDialog.dtd                 (@AB_CD@/chrome/browser/aboutDialog.dtd)
 *   locale/browser/credits.html                    (@AB_CD@/chrome/browser/credits.html)

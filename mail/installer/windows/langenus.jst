@@ -55,7 +55,7 @@ if(verifyDiskSpace(fProgram, srDest))
     var cf = getFolder(fProgram, "chrome/"+chromeName);
     var pf = getFolder(fProgram, "chrome/"+platformName);
 
-    registerChrome(chromeType, cf, localeName + "global/");
+    registerChrome(chromeType, cf, "locale/global/");
     registerChrome(chromeType, pf, localeName + "global-platform/");
 
     registerChrome(chromeType, cf, "locale/mozapps/");

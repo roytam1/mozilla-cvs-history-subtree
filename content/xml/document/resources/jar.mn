@@ -4,5 +4,7 @@ toolkit.jar:
     content/global/xml/XMLPrettyPrint.xml                 (XMLPrettyPrint.xml)
     content/global/xml/XMLPrettyPrint.xsl                 (XMLPrettyPrint.xsl)
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
-    locale/en-US/global/xml/prettyprint.dtd               (locale/en-US/prettyprint.dtd)
+    locale/en-US/global/xml/prettyprint.dtd  (/toolkit/locales/en-US/chrome/global/xml/prettyprint.dtd)
+#endif

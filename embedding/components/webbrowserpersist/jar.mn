@@ -1,2 +1,4 @@
+#ifndef MOZ_XUL_APP
 en-US.jar:
-    locale/en-US/global/nsWebBrowserPersist.properties (locale/en-US/nsWebBrowserPersist.properties)
+  locale/en-US/global/nsWebBrowserPersist.properties (/toolkit/locales/en-US/chrome/global/nsWebBrowserPersist.properties)
+#endif
