@@ -62,16 +62,6 @@ static NS_DEFINE_CID(kCMorkFactory, NS_MORK_CID);
 #define DEBUG_MSGKEYSET 1
 #endif
 
-
-#if defined(XP_UNIX) || defined(XP_PC)
-#define ENABLE_TESTING_HACK 1
-#endif
-
-#ifdef ENABLE_TESTING_HACK
-/* for getenv() */
-#include <stdlib.h>
-#endif /* ENABLE_TESTING_HACK */
-
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kCMimeConverterCID, NS_MIME_CONVERTER_CID);
 static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
@@ -2083,10 +2073,6 @@ protected:
 	PRBool						mNextPrefetched;
     nsMsgDBEnumeratorFilter     mFilter;
     void*                       mClosure;
-#ifdef ENABLE_TESTING_HACK
-    PRInt32                     mRandomAccessEnumeratorHackCurrent;
-    PRInt32                     mRandomAccessEnumeratorHackLimit;
-#endif /* ENABLE_TESTING_HACK */
 };
 
 nsMsgDBEnumerator::nsMsgDBEnumerator(nsMsgDatabase* db,
@@ -2097,17 +2083,6 @@ nsMsgDBEnumerator::nsMsgDBEnumerator(nsMsgDatabase* db,
     NS_INIT_REFCNT();
     NS_ADDREF(mDB);
 	mNextPrefetched = PR_FALSE;
-#ifdef ENABLE_TESTING_HACK
-    mRandomAccessEnumeratorHackCurrent = 0;
-    const char *str = getenv("RANDOM_ACCESS_ENUMERATOR_HACK_LIMIT");
-    if (str) {
-        mRandomAccessEnumeratorHackLimit = atoi(str);
-    }
-    else {
-        mRandomAccessEnumeratorHackLimit = -1;
-    }
-    printf("mRandomAccessEnumeratorHackLimit=%d\n",mRandomAccessEnumeratorHackLimit);
-#endif /* ENABLE_TESTING_HACK */
 }
 
 nsMsgDBEnumerator::~nsMsgDBEnumerator()
@@ -2157,15 +2132,6 @@ nsresult nsMsgDBEnumerator::PrefetchNext()
 	nsIMdbRow* hdrRow;
 	mdb_pos rowPos;
 	PRUint32 flags;
-
-#ifdef ENABLE_TESTING_HACK
-    if (mRandomAccessEnumeratorHackCurrent == mRandomAccessEnumeratorHackLimit) {
-        printf("bailing out early\n");
-        mDone = PR_TRUE;
-        return NS_ERROR_FAILURE;
-    }
-    mRandomAccessEnumeratorHackCurrent++;
-#endif /* ENABLE_TESTING_HACK */
 
 	if (!mRowCursor)
 	{
