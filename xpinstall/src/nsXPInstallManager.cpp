@@ -190,6 +190,11 @@ nsXPInstallManager::InitManagerInternal()
     const PRUnichar** packageList =
         (const PRUnichar**)malloc( sizeof(PRUnichar*) * numStrings );
 
+#if defined(XP_MACOSX)
+// Disabling xpinstall under MAC OSX until it is working properly.
+// See bug 195788.
+    rv = NS_ERROR_FAILURE;
+#endif
     if ( packageList && NS_SUCCEEDED(rv) )
     {
         // populate the list. The list doesn't own the strings
