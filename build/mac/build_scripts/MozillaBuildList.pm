@@ -15,6 +15,7 @@ use Cwd;
 use FileHandle;
 use File::Path;
 use File::Copy;
+use File::Basename;
 
 # homegrown
 use Moz::Moz;
@@ -475,8 +476,6 @@ sub BuildRuntimeDist()
     #INCLUDE
     InstallFromManifest(":mozilla:config:MANIFEST_xpfe",                           "$distdirectory:xpfe:");
     InstallFromManifest(":mozilla:config:mac:MANIFEST",                            "$distdirectory:config:");
-    InstallFromManifest(":mozilla:config:mac:MANIFEST_config",                     "$distdirectory:config:");
-    MakeAlias($main::DEFINESOPTIONS_FILE,                                          "$distdirectory:config:DefinesOptions.h");
     
     #NSPR 
     InstallFromManifest(":mozilla:nsprpub:pr:include:MANIFEST",                    "$distdirectory:nspr:");
@@ -790,7 +789,6 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:rdf:util:public:MANIFEST",                       "$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:datasource:public:MANIFEST",                 "$distdirectory:rdf:");
     InstallFromManifest(":mozilla:rdf:build:MANIFEST",                             "$distdirectory:rdf:");
-    InstallFromManifest(":mozilla:rdf:tests:domds:MANIFEST",                       "$distdirectory:idl:");
     
     #CHROME
     InstallFromManifest(":mozilla:rdf:chrome:public:MANIFEST",                     "$distdirectory:idl:");
@@ -971,6 +969,24 @@ sub BuildDist()
     EndBuildModule("dist");
 }
 
+#//--------------------------------------------------------------------------------------------------
+#// Do some stuff between exporting dist and compilation
+#//--------------------------------------------------------------------------------------------------
+
+sub PrepareBuild()
+{
+    unless( $main::build{config} ) { return; }
+    assertRightDirectory();
+
+    StartBuildModule("config");
+
+    UpdateConfigHeader($main::DEFINESOPTIONS_FILE);
+    
+    my($file_name) = basename($main::DEFINESOPTIONS_FILE);
+    MakeAlias($main::DEFINESOPTIONS_FILE, ":mozilla:dist:config:$file_name");
+
+    EndBuildModule("config");
+}
 
 #//--------------------------------------------------------------------------------------------------
 #// Build stub projects
@@ -978,7 +994,6 @@ sub BuildDist()
 
 sub BuildStubs()
 {
-
     unless( $main::build{stubs} ) { return; }
     assertRightDirectory();
 
@@ -1258,7 +1273,7 @@ sub BuildRuntimeProjects()
     
     BuildOneProjectWithOutput(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp", "NSRuntime$C$P$D.shlb", "NSRuntime$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
 
-    BuildProject(":mozilla:lib:mac:MoreFiles:build:MoreFilesPPC.mcp",          "MoreFiles.o");
+    BuildProject(":mozilla:lib:mac:MoreFiles:build:MoreFilesPPC.mcp",          "MoreFiles$D.o");
 
     if ($main::GC_LEAK_DETECTOR && !$main::options{carbon}) {
         BuildProject(":mozilla:gc:boehm:macbuild:gc.mcp",                    "gc.ppc.lib");
@@ -1297,8 +1312,15 @@ sub BuildCommonProjects()
 
     StartBuildModule("common");
 
+    #//
+    #// Static libraries
+    #//
+
     BuildProject(":mozilla:string:macbuild:string.mcp",                      "string$D.o");
     MakeAlias(":mozilla:string:macbuild:string$D.o", ":mozilla:dist:string:");
+
+    BuildProject(":mozilla:intl:unicharutil:macbuild:UnicharUtilsStaticLib.mcp", "UnicharUtilsStatic$D.o");
+    MakeAlias(":mozilla:intl:unicharutil:macbuild:UnicharUtilsStatic$D.o", ":mozilla:dist:client_stubs:");
 
     #//
     #// Shared libraries
@@ -2108,6 +2130,8 @@ sub BuildProjects()
 {
     # activate CodeWarrior
     ActivateApplication('CWIE');
+
+    PrepareBuild();
 
     if ($main::RUNTIME)
     {

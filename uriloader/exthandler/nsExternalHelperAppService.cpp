@@ -1285,7 +1285,6 @@ nsExternalAppHandler::OnStartURIOpen(nsIURI* aURI, PRBool* aAbortOpen)
 
 NS_IMETHODIMP
 nsExternalAppHandler::IsPreferred(const char * aContentType,
-                                  nsURILoadCommand aCommand,
                                   char ** aDesiredContentType,
                                   PRBool * aCanHandleContent)
 
@@ -1296,7 +1295,7 @@ nsExternalAppHandler::IsPreferred(const char * aContentType,
 
 NS_IMETHODIMP
 nsExternalAppHandler::CanHandleContent(const char * aContentType,
-                                       nsURILoadCommand aCommand,
+                                       PRBool aIsContentPreferred,
                                        char ** aDesiredContentType,
                                        PRBool * aCanHandleContent)
 
@@ -1307,7 +1306,7 @@ nsExternalAppHandler::CanHandleContent(const char * aContentType,
 
 NS_IMETHODIMP
 nsExternalAppHandler::DoContent(const char * aContentType,
-                                nsURILoadCommand aCommand,
+                                PRBool aIsContentPreferred,
                                 nsIRequest * aRequest,
                                 nsIStreamListener ** aContentHandler,
                                 PRBool * aAbortProcess)
