@@ -64,8 +64,8 @@ var nsSearchResultsController =
     isCommandEnabled: function(command)
     {
         var enabled = true;
-//        if (GetNumSelectedMessages() <= 0)
-//            enabled = false;
+        if (GetNumSelectedMessages() <= 0)
+          enabled = false;
 
         return enabled;
     },
@@ -103,11 +103,11 @@ var gSearchNotificationListener =
         gButton.setAttribute("value", Bundle.GetStringFromName("labelForSearchButton"));
         // if there are no hits, it means no matches were found in the search.
         if (!gIsSearchHit) {
-            gStatusFeedback.ShowStatusString(Bundle.GetStringFromName("searchFailureMessage"));
+            gStatusFeedback.showStatusString(Bundle.GetStringFromName("searchFailureMessage"));
         }
         else
         {
-            gStatusFeedback.ShowStatusString(Bundle.GetStringFromName("searchSuccessMessage"));
+            gStatusFeedback.showStatusString(Bundle.GetStringFromName("searchSuccessMessage"));
             gIsSearchHit = false;
         }
     },
@@ -117,26 +117,27 @@ var gSearchNotificationListener =
         gButton.setAttribute("value", Bundle.GetStringFromName("labelForStopButton"));
 //        if (gThreadTree)
 //            gThreadTree.clearItemSelection();
-        ThreadTreeUpdate_Search();
-//        gStatusFeedback.ShowStatusString(Bundle.GetStringFromName("searchingMessage"));
+
+        document.commandDispatcher.updateCommands('mail-search');
+      gStatusFeedback.showStatusString(Bundle.GetStringFromName("searchingMessage"));
     }
 }
 
 function searchOnLoad()
 {
-    initializeSearchWidgets();
-    initializeSearchWindowWidgets();
+  initializeSearchWidgets();
+  initializeSearchWindowWidgets();
 
-    Bundle = srGetStrBundle("chrome://messenger/locale/search.properties");
-    setupDatasource();
-    setupSearchListener();
+  Bundle = srGetStrBundle("chrome://messenger/locale/search.properties");
+  setupDatasource();
+  setupSearchListener();
 
-    if (window.arguments && window.arguments[0])
-        selectFolder(window.arguments[0].folder);
-    
-    onMore(null);
+  if (window.arguments && window.arguments[0])
+      selectFolder(window.arguments[0].folder);
+  
+  onMore(null);
+  document.commandDispatcher.updateCommands('mail-search');
 	moveToAlertPosition();
-
 }
 
 
@@ -164,7 +165,6 @@ function initializeSearchWindowWidgets()
     // depending of whether items are selected in the search results thread pane.
 //    gThreadTree.controllers.appendController(nsSearchResultsController);
     top.controllers.insertControllerAt(0, nsSearchResultsController);
-    ThreadTreeUpdate_Search();
 }
 
 
@@ -299,6 +299,40 @@ var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
 var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
 var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
 var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
+
+function goUpdateSearchItems(commandset)
+{   
+  for (var i = 0; i < commandset.childNodes.length; i++)
+  {
+    var commandID = commandset.childNodes[i].getAttribute("id");
+    if (commandID)
+    {
+      goUpdateCommand(commandID);
+    }
+  }
+}
+
+function nsMsgSearchCommandUpdater()
+{}
+
+nsMsgSearchCommandUpdater.prototype = 
+{
+  updateCommandStatus : function()
+    {
+      // the back end is smart and is only telling us to update command status
+      // when the # of items in the selection has actually changed.
+		  document.commandDispatcher.updateCommands('mail-search');
+    },
+
+  QueryInterface : function(iid)
+   {
+     if(iid.equals(Components.interfaces.nsIMsgDBViewCommandUpdater))
+	    return this;
+	  
+     throw Components.results.NS_NOINTERFACE;
+     return null;
+   }
+}
     
 function setupDatasource() {
 
@@ -306,7 +340,8 @@ function setupDatasource() {
     gSearchView = Components.classes["@mozilla.org/messenger/msgdbview;1?type=search"].createInstance(Components.interfaces.nsIMsgDBView);
     
     var count = new Object;
-    gSearchView.init(messenger, msgWindow);
+    var cmdupdator = new nsMsgSearchCommandUpdater();
+    gSearchView.init(messenger, msgWindow, cmdupdator);
     gSearchView.open(null, nsMsgViewSortType.byId, nsMsgViewSortOrder.ascending, nsMsgViewFlagsType.kFlatDisplay, count);
 
     var outlinerView = gSearchView.QueryInterface(Components.interfaces.nsIOutlinerView);
@@ -314,7 +349,6 @@ function setupDatasource() {
     {     
       var outliner = GetThreadOutliner();
       outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView; 
-      dump('set outliner view\n');
     }
     // the thread pane needs to use the search datasource (to get the
     // actual list of messages) and the message datasource (to get any
@@ -393,11 +427,6 @@ function onSearchButton(event)
         onSearch(event);
     else
         onSearchStop(event);
-}
-
-function ThreadTreeUpdate_Search()
-{
-    goUpdateCommand("cmd_open");
 }
 
 // threadPane.js will be needing this, too
