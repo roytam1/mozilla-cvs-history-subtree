@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,8 +15,8 @@
  * The Original Code is the Mozilla SVG project.
  *
  * The Initial Developer of the Original Code is 
- * Crocodile Clips Ltd.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Crocodile Clips Ltd..
+ * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,18 +36,38 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsISupports.idl"
+#include "nsSVGRenderItem.h"
 
-[scriptable, uuid(c3cd294e-39ae-4718-b2bc-87c0fad97a12)]
-interface nsISVGRendererPathBuilder : nsISupports
-{ 
-  void moveto(in float x, in float y);
-  void lineto(in float x, in float y);
-  /* cubic bezier */
-  void curveto(in float x, in float y, in float x1, in float y1, in float x2, in float y2);
-  void arcto(in float x, in float y, in float r1, in float r2, in float angle,
-             in boolean largeArcFlag, in boolean sweepFlag);
-  void closePath(out float newX, out float newY);
-  void endPath();
-};
+nsSVGRenderItem::nsSVGRenderItem()
+    : mSvp(nsnull)
+{
+  
+}
+
+nsSVGRenderItem::~nsSVGRenderItem()
+{
+  Clear();
+}
+
+void nsSVGRenderItem::Clear()
+{
+  if (mSvp)
+    art_svp_free(mSvp);
+  mSvp = nsnull;
+}  
+
+ArtUta*
+nsSVGRenderItem::GetUta()
+{
+  if (!mSvp) return nsnull;
+  return art_uta_from_svp(mSvp);
+}
+
+PRBool
+nsSVGRenderItem::Contains(float x, float y)
+{
+  if (!mSvp) return PR_FALSE;
+  return (art_svp_point_wind(GetSvp(), x, y) != 0);
+}
+
 

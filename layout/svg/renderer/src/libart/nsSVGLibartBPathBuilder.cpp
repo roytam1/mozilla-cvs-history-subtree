@@ -36,96 +36,22 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include <windows.h>
-
-// unknwn.h is needed to build with WIN32_LEAN_AND_MEAN
-#include <unknwn.h>
-
-#include <Gdiplus.h>
-using namespace Gdiplus;
-
 #include "nsCOMPtr.h"
-#include "nsISVGPathGeometrySource.h"
 #include "nsISVGRendererPathBuilder.h"
+#include "nsSVGLibartBPathBuilder.h"
 #include <math.h>
 
-////////////////////////////////////////////////////////////////////////
-// PointStack helper class
-
-class PointStack
-{
-public:
-  PointStack();
-  ~PointStack();
-
-  struct PointData {
-    float x;
-    float y;
-  };
-  
-  void PushPoint(float x, float y);
-  const PointData *PopPoint();
-private:  
-  void Grow();
-  
-  PointData mOrigin;
-  PointData *mPoints;
-  int mCapacity;
-  int mSize;
-};
-
-PointStack::PointStack()
-    : mPoints(0), mCapacity(0), mSize(0)
-{
-  mOrigin.x = 0.0f;
-  mOrigin.y = 0.0f;
-}
-
-PointStack::~PointStack()
-{
-  if (mPoints) delete[] mPoints;
-}
-
-void PointStack::PushPoint(float x, float y)
-{
-  if (mCapacity-mSize<1)
-    Grow();
-  NS_ASSERTION(mCapacity-mSize>0, "no space in array");
-  mPoints[mSize].x = x;
-  mPoints[mSize].y = y;
-  ++mSize;
-}
-
-const PointStack::PointData *PointStack::PopPoint()
-{
-  if (mSize == 0) return &mOrigin;
-
-  return &mPoints[--mSize];
-}
-
-void PointStack::Grow()
-{
-  // nested subpaths are not very common, so we'll just grow linearly
-  PointData *oldPoints = mPoints;
-  mPoints = new PointData[++mCapacity];
-  if (oldPoints) {
-    memcpy(mPoints, oldPoints, sizeof(PointData) * mSize);
-    delete[] oldPoints;
-  }
-}
 
 ////////////////////////////////////////////////////////////////////////
-// nsSVGGDIPlusPathBuilder class
+// nsSVGLibartBPathBuilder class
 
-class nsSVGGDIPlusPathBuilder : public nsISVGRendererPathBuilder
+class nsSVGLibartBPathBuilder : public nsISVGRendererPathBuilder
 {
 protected:
-  friend nsresult NS_NewSVGGDIPlusPathBuilder(nsISVGRendererPathBuilder **result,
-                                              nsISVGPathGeometrySource *src,
-                                              GraphicsPath* dest);
+  friend nsresult NS_NewSVGLibartBPathBuilder(nsISVGRendererPathBuilder **result,
+                                              ArtBpath** dest);
 
-  nsSVGGDIPlusPathBuilder(nsISVGPathGeometrySource *src,
-                          GraphicsPath* dest);
+  nsSVGLibartBPathBuilder(ArtBpath** dest);
 
 public:
   // nsISupports interface:
@@ -135,32 +61,32 @@ public:
   NS_DECL_NSISVGRENDERERPATHBUILDER
 
 private:
-  nsCOMPtr<nsISVGPathGeometrySource> mSource;
-  GraphicsPath *mPath;
-  PointStack mSubPathStack;
-  PointF mCurrentPoint;
+  // helpers
+  void EnsureBPathSpace(PRUint32 space=1);
+  void EnsureBPathTerminated();
+  PRInt32 GetLastOpenBPath();
+
+  ArtBpath** mBPath;
+  PRUint32  mBPathSize;
+  PRUint32  mBPathEnd; // one-past-the-end
 };
 
 //----------------------------------------------------------------------
 // implementation:
 
-nsSVGGDIPlusPathBuilder::nsSVGGDIPlusPathBuilder(nsISVGPathGeometrySource *src,
-                                                 GraphicsPath* dest)
-    : mSource(src), mPath(dest)
+nsSVGLibartBPathBuilder::nsSVGLibartBPathBuilder(ArtBpath** dest)
+    : mBPath(dest),
+      mBPathSize(0),
+      mBPathEnd(0)
 {
   NS_INIT_ISUPPORTS();
-  PRUint16 fillrule;
-  mSource->GetFillRule(&fillrule);
-  mPath->SetFillMode(fillrule==nsISVGGeometrySource::FILL_RULE_NONZERO ?
-                     FillModeWinding : FillModeAlternate);
 }
 
 nsresult
-NS_NewSVGGDIPlusPathBuilder(nsISVGRendererPathBuilder **result,
-                            nsISVGPathGeometrySource *src,
-                            GraphicsPath* dest)
+NS_NewSVGLibartBPathBuilder(nsISVGRendererPathBuilder **result,
+                            ArtBpath** dest)
 {
-  *result = new nsSVGGDIPlusPathBuilder(src, dest);
+  *result = new nsSVGLibartBPathBuilder(dest);
   if (!result) return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(*result);
@@ -171,10 +97,10 @@ NS_NewSVGGDIPlusPathBuilder(nsISVGRendererPathBuilder **result,
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ADDREF(nsSVGGDIPlusPathBuilder)
-NS_IMPL_RELEASE(nsSVGGDIPlusPathBuilder)
+NS_IMPL_ADDREF(nsSVGLibartBPathBuilder)
+NS_IMPL_RELEASE(nsSVGLibartBPathBuilder)
 
-NS_INTERFACE_MAP_BEGIN(nsSVGGDIPlusPathBuilder)
+NS_INTERFACE_MAP_BEGIN(nsSVGLibartBPathBuilder)
   NS_INTERFACE_MAP_ENTRY(nsISVGRendererPathBuilder)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
 NS_INTERFACE_MAP_END
@@ -184,35 +110,50 @@ NS_INTERFACE_MAP_END
 
 /* void moveto (in float x, in float y); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathBuilder::Moveto(float x, float y)
+nsSVGLibartBPathBuilder::Moveto(float x, float y)
 {
-//  mPath->CloseFigure();
-  mPath->StartFigure();
-  mCurrentPoint.X = x;
-  mCurrentPoint.Y = y;
-  mSubPathStack.PushPoint(x, y);
+  EnsureBPathSpace();
+
+  (*mBPath)[mBPathEnd].code = ART_MOVETO_OPEN;
+  (*mBPath)[mBPathEnd].x3 = x;
+  (*mBPath)[mBPathEnd].y3 = y;
+
+  ++mBPathEnd;
+  
   return NS_OK;
 }
 
 /* void lineto (in float x, in float y); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathBuilder::Lineto(float x, float y)
+nsSVGLibartBPathBuilder::Lineto(float x, float y)
 {
-  mPath->AddLine(mCurrentPoint.X, mCurrentPoint.Y, x, y);
-  mCurrentPoint.X = x;
-  mCurrentPoint.Y = y;
+  EnsureBPathSpace();
+
+  (*mBPath)[mBPathEnd].code = ART_LINETO;
+  (*mBPath)[mBPathEnd].x3 = x;
+  (*mBPath)[mBPathEnd].y3 = y;
+
+  ++mBPathEnd;
+
   return NS_OK;
 }
 
 /* void curveto (in float x, in float y, in float x1, in float y1, in float x2, in float y2); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathBuilder::Curveto(float x, float y, float x1, float y1, float x2, float y2)
+nsSVGLibartBPathBuilder::Curveto(float x, float y, float x1, float y1, float x2, float y2)
 {
-  mPath->AddBezier(mCurrentPoint.X, mCurrentPoint.Y, // startpoint
-                   x1, y1, x2, y2, // controlpoints
-                   x, y); // endpoint
-  mCurrentPoint.X = x;
-  mCurrentPoint.Y = y;
+  EnsureBPathSpace();
+
+  (*mBPath)[mBPathEnd].code = ART_CURVETO;
+  (*mBPath)[mBPathEnd].x1 = x1;
+  (*mBPath)[mBPathEnd].y1 = y1;
+  (*mBPath)[mBPathEnd].x2 = x2;
+  (*mBPath)[mBPathEnd].y2 = y2;
+  (*mBPath)[mBPathEnd].x3 = x;
+  (*mBPath)[mBPathEnd].y3 = y;
+
+  ++mBPathEnd;
+
   return NS_OK;
 }
 
@@ -229,12 +170,17 @@ static inline double CalcVectorAngle(double ux, double uy, double vx, double vy)
 
 /* void arcto (in float x, in float y, in float r1, in float r2, in float angle, in boolean largeArcFlag, in boolean sweepFlag); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathBuilder::Arcto(float x2, float y2, float rx, float ry, float angle, PRBool largeArcFlag, PRBool sweepFlag)
+nsSVGLibartBPathBuilder::Arcto(float x2, float y2, float rx, float ry, float angle, PRBool largeArcFlag, PRBool sweepFlag)
 {
   const double pi = 3.14159265359;
   const double radPerDeg = pi/180.0;
 
-  float x1=mCurrentPoint.X, y1=mCurrentPoint.Y;
+  float x1=0.0f, y1=0.0f;
+  NS_ASSERTION(mBPathEnd > 0, "Arcto needs a start position");
+  if (mBPathEnd > 0) {
+    x1 = (float)((*mBPath)[mBPathEnd-1].x3);
+    y1 = (float)((*mBPath)[mBPathEnd-1].y3);
+  }
 
   // 1. Treat out-of-range parameters as described in
   // http://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
@@ -246,7 +192,8 @@ nsSVGGDIPlusPathBuilder::Arcto(float x2, float y2, float rx, float ry, float ang
   // If rX = 0 or rY = 0 then this arc is treated as a straight line
   // segment (a "lineto") joining the endpoints.
   if (rx == 0.0f || ry == 0.0f) {
-    return Lineto(x2, y2);
+    Lineto(x2, y2);
+    return NS_OK;
   }
 
   // If rX or rY have negative signs, these are dropped; the absolute
@@ -330,27 +277,86 @@ nsSVGGDIPlusPathBuilder::Arcto(float x2, float y2, float rx, float ry, float ang
     x1 = (float)xe;
     y1 = (float)ye;
   }
+
   return NS_OK;
 }
 
 /* void closePath (out float newX, out float newY); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathBuilder::ClosePath(float *newX, float *newY)
+nsSVGLibartBPathBuilder::ClosePath(float *newX, float *newY)
 {
-  mPath->CloseFigure();
-  const PointStack::PointData *point = mSubPathStack.PopPoint();
+  PRInt32 subpath = GetLastOpenBPath();
+  NS_ASSERTION(subpath>=0, "no open subpath");
+  if (subpath<0) return NS_OK;
 
-  *newX = point->x;
-  *newY = point->y;
-  mCurrentPoint.X = point->x;
-  mCurrentPoint.Y = point->y;
+  // insert closing line if needed:
+  if ((*mBPath)[subpath].x3 != (*mBPath)[mBPathEnd-1].x3 ||
+      (*mBPath)[subpath].y3 != (*mBPath)[mBPathEnd-1].y3) {
+    Lineto((float)(*mBPath)[subpath].x3, (float)(*mBPath)[subpath].y3);
+  }
+
+  (*mBPath)[subpath].code = ART_MOVETO;
+
+  *newX = (float)((*mBPath)[subpath].x3);
+  *newY = (float)((*mBPath)[subpath].y3);
   
   return NS_OK;
 }
 
 /* void endPath (); */
 NS_IMETHODIMP
-nsSVGGDIPlusPathBuilder::EndPath()
+nsSVGLibartBPathBuilder::EndPath()
 {
+  EnsureBPathTerminated();
   return NS_OK;
 }
+
+//----------------------------------------------------------------------
+// helpers
+
+void
+nsSVGLibartBPathBuilder::EnsureBPathSpace(PRUint32 space)
+{
+  const PRInt32 minGrowSize = 10;
+
+  if (mBPathSize - mBPathEnd >= space)
+    return;
+
+  if (space < minGrowSize)
+    space = minGrowSize;
+  
+  mBPathSize += space;
+  
+  if (!*mBPath) {
+    *mBPath = art_new(ArtBpath, mBPathSize);
+  }
+  else {
+    *mBPath = art_renew(*mBPath, ArtBpath, mBPathSize);
+  }
+}
+
+void
+nsSVGLibartBPathBuilder::EnsureBPathTerminated()
+{
+  NS_ASSERTION (*mBPath, "no bpath");  
+  NS_ASSERTION (mBPathEnd>0, "trying to terminate empty bpath");
+  
+  if (mBPathEnd>0 && (*mBPath)[mBPathEnd-1].code == ART_END) return;
+
+  EnsureBPathSpace(1);
+  (*mBPath)[mBPathEnd++].code = ART_END;
+}
+
+PRInt32
+nsSVGLibartBPathBuilder::GetLastOpenBPath()
+{
+  if (!*mBPath) return -1;
+  
+  PRInt32 i = mBPathEnd;
+  while (--i >= 0) {
+    if ((*mBPath)[i].code == ART_MOVETO_OPEN)
+      return i;
+  }
+  return -1;
+}
+

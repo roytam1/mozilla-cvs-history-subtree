@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -14,13 +14,13 @@
  *
  * The Original Code is the Mozilla SVG project.
  *
- * The Initial Developer of the Original Code is 
- * Crocodile Clips Ltd.
+ * The Initial Developer of the Original Code is Alex Fritze.
+ * 
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
+ *    Alex Fritze <alex@croczilla.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -36,18 +36,18 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsISupports.idl"
+#ifndef __NS_SVGLIBART_CANVAS_H__
+#define __NS_SVGLIBART_CANVAS_H__
 
-[scriptable, uuid(c3cd294e-39ae-4718-b2bc-87c0fad97a12)]
-interface nsISVGRendererPathBuilder : nsISupports
-{ 
-  void moveto(in float x, in float y);
-  void lineto(in float x, in float y);
-  /* cubic bezier */
-  void curveto(in float x, in float y, in float x1, in float y1, in float x2, in float y2);
-  void arcto(in float x, in float y, in float r1, in float r2, in float angle,
-             in boolean largeArcFlag, in boolean sweepFlag);
-  void closePath(out float newX, out float newY);
-  void endPath();
-};
+class nsIRenderingContext;
+class nsISVGRendererCanvas;
+class nsIPresContext;
+struct nsRect;
 
+nsresult
+NS_NewSVGLibartCanvas(nsISVGRendererCanvas **result,
+                      nsIRenderingContext *ctx,
+                      nsIPresContext *presContext,
+                      const nsRect & dirtyRect);
+
+#endif // __NS_SVGLIBART_CANVAS_H__

@@ -306,7 +306,15 @@ nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
 
 nsresult nsSVGOuterSVGFrame::Init()
 {
+#if defined(MOZ_SVG_RENDERER_GDIPLUS) && defined(MOZ_SVG_RENDERER_LIBART)
+#error "Multiple SVG renderers. Please choose one manually."
+#elif defined(MOZ_SVG_RENDERER_GDIPLUS)  
   mRenderer = do_CreateInstance(NS_SVG_RENDERER_GDIPLUS_CONTRACTID);
+#elif defined(MOZ_SVG_RENDERER_LIBART)
+  mRenderer = do_CreateInstance(NS_SVG_RENDERER_LIBART_CONTRACTID);
+#else
+#error "No SVG renderer."
+#endif
   NS_ASSERTION(mRenderer, "could not get renderer");
   AddAsWidthHeightObserver();
   SuspendRedraw();
@@ -827,7 +835,8 @@ nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
   PRTime start = PR_Now();
 #endif
 
-  float pxPerTwips = GetPxPerTwips();  
+  float pxPerTwips = GetPxPerTwips();
+  // XXX why do we need to inflate the rect here? 
   nsRect dirtyRectPx(aDirtyRect.x*pxPerTwips-1, aDirtyRect.y*pxPerTwips-1,
                      aDirtyRect.width*pxPerTwips+2, aDirtyRect.height*pxPerTwips+2);
   

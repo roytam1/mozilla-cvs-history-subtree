@@ -92,6 +92,11 @@ OS_LIBS += \
 	Gdiplus.lib \
 	$(NULL)
 endif
+ifdef MOZ_SVG_RENDERER_LIBART
+SHARED_LIBRARY_LIBS += \
+                $(DIST)/lib/$(LIB_PREFIX)gksvgrendererlibart_s.$(LIB_SUFFIX) \
+                $(NSNULL)
+endif
 endif
 
 EXTRA_DSO_LDOPTS = \

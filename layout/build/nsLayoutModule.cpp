@@ -193,9 +193,12 @@ extern nsresult NS_NewAutoCopyService(nsIAutoCopyService** aResult);
 extern nsresult NS_NewSelectionImageService(nsISelectionImageService** aResult);
 
 #ifdef MOZ_SVG
-//ifdef XXX
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
 extern nsresult NS_NewSVGRendererGDIPlus(nsISVGRenderer** aResult);
-// endif XXX
+#endif // MOZ_SVG_RENDERER_GDIPLUS
+#ifdef MOZ_SVG_RENDERER_LIBART
+extern nsresult NS_NewSVGRendererLibart(nsISVGRenderer** aResult);
+#endif // MOZ_SVG_RENDERER_LIBART
 #endif // MOZ_SVG
 
 #define MAKE_CTOR(ctor_, iface_, func_)                   \
@@ -240,20 +243,29 @@ MAKE_CTOR(CreateNewAutoCopyService,     nsIAutoCopyService,     NS_NewAutoCopySe
 MAKE_CTOR(CreateSelectionImageService,  nsISelectionImageService,NS_NewSelectionImageService)
 
 #ifdef MOZ_SVG
-//ifdef XXX
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
 MAKE_CTOR(CreateNewSVGRendererGDIPlus,  nsISVGRenderer,         NS_NewSVGRendererGDIPlus)
-// endif XXX
+#endif // MOZ_SVG_RENDERER_GDIPLUS
+#ifdef MOZ_SVG_RENDERER_LIBART
+MAKE_CTOR(CreateNewSVGRendererLibart,  nsISVGRenderer,         NS_NewSVGRendererLibart)
+#endif // MOZ_SVG_RENDERER_LIBART
 #endif // MOZ_SVG
   
 // The list of components we register
 static const nsModuleComponentInfo gComponents[] = {
 #ifdef MOZ_SVG
-//ifdef XXX
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
   { "SVG GdiPlus Renderer",
     NS_SVG_RENDERER_GDIPLUS_CID,
     NS_SVG_RENDERER_GDIPLUS_CONTRACTID,
     CreateNewSVGRendererGDIPlus },
-// endif XXX
+#endif // MOZ_SVG_RENDERER_GDIPLUS
+#ifdef MOZ_SVG_RENDERER_LIBART
+  { "SVG Libart Renderer",
+    NS_SVG_RENDERER_LIBART_CID,
+    NS_SVG_RENDERER_LIBART_CONTRACTID,
+    CreateNewSVGRendererLibart },
+#endif // MOZ_SVG_RENDERER_LIBART
 #endif // MOZ_SVG
 
 #ifdef DEBUG

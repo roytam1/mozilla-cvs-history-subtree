@@ -1042,6 +1042,7 @@ if [ "$MOZ_SVG" ]; then
     layout/svg/renderer/public/Makefile
     layout/svg/renderer/src/Makefile
     layout/svg/renderer/src/gdiplus/Makefile
+    layout/svg/renderer/src/libart/Makefile
 "
 fi
 

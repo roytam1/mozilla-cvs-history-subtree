@@ -649,6 +649,7 @@ nsSVGForeignObjectFrame::DoReflow()
 
   // remember the area we have to invalidate after this reflow:
   nsCOMPtr<nsISVGRendererRegion> area_before = GetCoveredRegion();
+  NS_ASSERTION(area_before, "could not get covered region");
   
   // initiate a synchronous reflow here and now:  
   nsSize availableSpace(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);

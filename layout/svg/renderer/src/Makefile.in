@@ -47,4 +47,8 @@ ifdef MOZ_SVG_RENDERER_GDIPLUS
 DIRS		+= gdiplus
 endif
 
+ifdef MOZ_SVG_RENDERER_LIBART
+DIRS		+= libart
+endif
+
 include $(topsrcdir)/config/rules.mk

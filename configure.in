@@ -3439,11 +3439,19 @@ MOZ_ARG_ENABLE_BOOL(svg,
 [  --enable-svg            Enable SVG ],
     MOZ_SVG=1
     AC_DEFINE(MOZ_SVG))
+AC_SUBST(MOZ_SVG)
 
 MOZ_ARG_ENABLE_BOOL(svg-renderer-gdiplus,
 [  --enable-svg-renderer-gdiplus Enable SVG gdi+ renderer ],
     MOZ_SVG_RENDERER_GDIPLUS=1
     AC_DEFINE(MOZ_SVG_RENDERER_GDIPLUS))
+AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
+
+MOZ_ARG_ENABLE_BOOL(svg-renderer-libart,
+[  --enable-svg-renderer-libart Enable SVG libart renderer ],
+    MOZ_SVG_RENDERER_LIBART=1
+    AC_DEFINE(MOZ_SVG_RENDERER_LIBART))
+AC_SUBST(MOZ_SVG_RENDERER_LIBART)
 
 dnl To build transformiix standalone, set TX_EXE while configuring
 if test "$TX_EXE"; then
@@ -4565,8 +4573,6 @@ AC_SUBST(MOZ_GFX_TOOLKIT)
 AC_SUBST(MOZ_GFX_TOOLKIT_LDFLAGS)
 AC_SUBST(MOZ_UPDATE_XTERM)
 AC_SUBST(MOZ_MATHML)
-AC_SUBST(MOZ_SVG)
-AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
 AC_SUBST(TX_EXE)
 AC_SUBST(MOZ_JS_LIBS)
 AC_SUBST(MOZ_PSM)

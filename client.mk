@@ -300,6 +300,24 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.cpp \
 	layout/svg/renderer/src/gdiplus/nsSVGGDIPlusRegion.h  \
 	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp \
+	layout/svg/renderer/src/libart/libart-incs.h \
+	layout/svg/renderer/src/libart/nsISVGLibartCanvas.h \
+	layout/svg/renderer/src/libart/nsISVGLibartRegion.h \
+	layout/svg/renderer/src/libart/nsSVGFill.cpp \
+	layout/svg/renderer/src/libart/nsSVGFill.h \
+	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.h \
+	layout/svg/renderer/src/libart/nsSVGLibartCanvas.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartCanvas.h \
+	layout/svg/renderer/src/libart/nsSVGLibartPathGeometry.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartPathGeometry.h \
+	layout/svg/renderer/src/libart/nsSVGLibartRegion.cpp \
+	layout/svg/renderer/src/libart/nsSVGLibartRegion.h \
+	layout/svg/renderer/src/libart/nsSVGRenderItem.cpp \
+	layout/svg/renderer/src/libart/nsSVGRenderItem.h \
+	layout/svg/renderer/src/libart/nsSVGRendererLibart.cpp \
+	layout/svg/renderer/src/libart/nsSVGStroke.cpp \
+	layout/svg/renderer/src/libart/nsSVGStroke.h \
 	other-licenses/libart_lgpl/Makefile.am \
 	other-licenses/libart_lgpl/acconfig.h \
 	other-licenses/libart_lgpl/art_render_mask.c \
