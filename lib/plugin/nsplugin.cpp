@@ -241,7 +241,6 @@ nsPluginInstancePeer::GetMode(void)
     return (NPPluginType)instance->type;
 }
 
-#ifdef OJI
 NS_METHOD_(NPPluginError)
 nsPluginInstancePeer::GetAttributes(PRUint16& n, 
                                     const char*const*& names, 
@@ -370,23 +369,23 @@ nsPluginInstancePeer::GetParameter(const char* name)
     return 0;
 }
 
-NS_METHOD_(tag_id) 
+NS_METHOD_(NPTagType) 
 nsPluginInstancePeer::GetTagType(void)
 {
 #ifdef XXX
     switch (fLayoutElement->lo_element.type) {
       case LO_JAVA:
-        return TAG_APPLET;
+        return NPTagType_Applet;
       case LO_EMBED:
-        return TAG_EMBED;
+        return NPTagType_Embed;
       case LO_OBJECT:
-        return TAG_OBJECT;
+        return NPTagType_Object;
 
       default:
-        return TAG_UNKNOWN;
+        return NPTagType_Unknown;
     }
 #endif
-    return TAG_UNKNOWN;
+    return NPTagType_Unknown;
 }
 
 NS_METHOD_(const char *) 
@@ -395,53 +394,6 @@ nsPluginInstancePeer::GetTagText(void)
     // XXX
     return NULL;
 }
-
-#else /* OJI */
-NS_METHOD_(PRUint16)
-nsPluginInstancePeer::GetArgCount(void)
-{
-    np_instance* instance = (np_instance*)npp->ndata;
-    if (instance->type == NP_EMBED) {
-        np_data* ndata = (np_data*)instance->app->np_data;
-        return (PRUint16)ndata->lo_struct->attribute_cnt;
-    }
-    else {
-        return 1;
-    }
-}
-  
-NS_METHOD_(const char**)
-nsPluginInstancePeer::GetArgNames(void)
-{
-      np_instance* instance = (np_instance*)npp->ndata;
-      if (instance->type == NP_EMBED) {
-          np_data* ndata = (np_data*)instance->app->np_data;
-         return (const char**)ndata->lo_struct->attribute_list;
-     }
-     else {
-         static char name[] = "PALETTE";
-         static char* names[1];
-         names[0] = name;
-         return (const char**)names;
-      }
-}
-  
-NS_METHOD_(const char**)
-nsPluginInstancePeer::GetArgValues(void)
-{
-     np_instance* instance = (np_instance*)npp->ndata;
-     if (instance->type == NP_EMBED) {
-         np_data* ndata = (np_data*)instance->app->np_data;
-         return (const char**)ndata->lo_struct->value_list;
-     }
-     else {
-         static char value[] = "foreground";
-         static char* values[1];
-         values[0] = value;
-         return (const char**)values;
-      }
-}
-#endif /* OJI */
 
 NS_METHOD_(NPIPluginManager*)
 nsPluginInstancePeer::GetPluginManager(void)

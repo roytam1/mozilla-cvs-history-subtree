@@ -353,6 +353,13 @@ enum NPPluginReason {
     NPPluginReason_NoReason
 };
 
+enum NPTagType { 
+	NPTagType_Unknown = 0, 
+	NPTagType_Embed,
+	NPTagType_Object, 
+	NPTagType_Applet 
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Classes
 ////////////////////////////////////////////////////////////////////////////////
@@ -658,10 +665,6 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Peer Interface
 
-#ifdef OJI
-typedef enum { TAG_UNKNOWN, TAG_EMBED, TAG_OBJECT, TAG_APPLET } tag_id;
-#endif
-
 class NPIPluginInstancePeer : public nsISupports {
 public:
 
@@ -676,7 +679,6 @@ public:
     NS_IMETHOD_(NPPluginType)
     GetMode(void) = 0;
 
-#ifdef OJI
     // Get a ptr to the paired list of attribute names and values,
     // returns the length of the array.
     //
@@ -709,24 +711,10 @@ public:
     // Get the type of the HTML tag that was used ot instantiate this
     // plugin.  Currently supported tags are EMBED, OBJECT and APPLET.
     // 
-    // returns a tag_id, defined above as follows:
-    //    typedef enum { TAG_EMBED, TAG_OBJECT, TAG_APPLET } tag_id;
-    //
-    NS_IMETHOD_(tag_id) 
+    // returns a NPTagType.
+    NS_IMETHOD_(NPTagType) 
     GetTagType(void) = 0;
-#else
-     // (Corresponds to NPP_New's argc argument.)
-     NS_IMETHOD_(PRUint16)
-     GetArgCount(void) = 0;
- 
-     // (Corresponds to NPP_New's argn argument.)
-     NS_IMETHOD_(const char**)
-     GetArgNames(void) = 0;
- 
-     // (Corresponds to NPP_New's argv argument.)
-     NS_IMETHOD_(const char**)
-     GetArgValues(void) = 0;
-#endif /* OJI */
+
     NS_IMETHOD_(NPIPluginManager*)
     GetPluginManager(void) = 0;
 
@@ -809,9 +797,10 @@ public:
     UnregisterWindow(void* window) = 0;
 
 	// Menu ID allocation calls for Mac:
-
+#ifdef XP_MAC
     NS_IMETHOD_(PRInt16)
 	AllocateMenuID(PRBool isSubmenu) = 0;
+#endif
 
 };
 
