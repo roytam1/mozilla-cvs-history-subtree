@@ -373,6 +373,9 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
 
       *vp = OBJECT_TO_JSVAL(arrayobj);
 
+//  We really should wrap an IID with a JS Native wrapper here, if I knew how
+//  } else if (nsAutoString(aType).RFind(nsSOAPUtils::kIIDObjectTypePrefix, false, 0) >= 0) {
+
   } else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0) {
       
       nsCOMPtr<nsISOAPJSValue> jsvalue = do_QueryInterface(aValue);
@@ -453,11 +456,11 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
   else if (JSVAL_IS_OBJECT(val)) {
     JSObject* jsobj = JSVAL_TO_OBJECT(val);
     nsresult rc;
+    NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc);
+    if (NS_FAILED(rc)) return NS_ERROR_FAILURE;
+
     if (JS_IsArrayObject(aContext, jsobj)) {
       aType = nsSOAPUtils::kArrayType;
-
-      NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rc);
-      if (NS_FAILED(rc)) return NS_ERROR_FAILURE;
 
       PRUint32 count, index;
       count = JS_GetArrayLength(aContext, jsobj, &count);
@@ -514,39 +517,49 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
       NS_ADDREF(*aValue);
     }
     else {
-      nsCOMPtr<nsSOAPJSValue> value = new nsSOAPJSValue();
-      if (NS_FAILED(rc)) return rc;
+      nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
+      xpc->GetWrappedNativeOfJSObject(aContext, jsobj, getter_AddRefs(wrapper));
+
+//  We could handle wrapped native objects differently, but what type should we use?
+//      if (wrapper) {
+//      }
+//      else 
+      {
+        nsCOMPtr<nsSOAPJSValue> value = new nsSOAPJSValue();
+        if (NS_FAILED(rc)) return rc;
 
 // Look for a constructor name on the current object or a prototype
 
-      for (;;) {
-        JSObject* constructor = JS_GetConstructor(aContext, jsobj);
-        jsobj = JS_GetPrototype(aContext, jsobj);
-        jsval cname;
-        if (constructor
-          && JS_GetProperty(aContext, constructor, "name", &cname)
-          && JSVAL_IS_STRING(cname))
-        {
-          JSString* jsstr = JSVAL_TO_STRING(cname);
-          if (jsstr) {
-            PRUnichar* data = NS_REINTERPRET_CAST(PRUnichar*, 
-                                            JS_GetStringChars(jsstr));
-            if (data) {
-              aType = nsSOAPUtils::kStructTypePrefix;
-              aType.Append(data);
-              jsobj = nsnull;
-              break;
+
+        for (;;) {
+          JSObject* constructor = JS_GetConstructor(aContext, jsobj);
+          jsobj = JS_GetPrototype(aContext, jsobj);
+          jsval cname;
+          if (constructor
+            && JS_GetProperty(aContext, constructor, "name", &cname)
+            && JSVAL_IS_STRING(cname))
+          {
+            JSString* jsstr = JSVAL_TO_STRING(cname);
+            if (jsstr) {
+              PRUnichar* data = NS_REINTERPRET_CAST(PRUnichar*, 
+                                              JS_GetStringChars(jsstr));
+              if (data) {
+                aType = nsSOAPUtils::kStructTypePrefix;
+                aType.Append(data);
+                jsobj = nsnull;
+                break;
+              }
             }
           }
-        }
-        if (!jsobj) {
-          aType = nsSOAPUtils::kStructTypePrefix;
-          break;
-        }
-      }
+          if (!jsobj) {
+            aType = nsSOAPUtils::kStructTypePrefix;
+            break;
+          }
+	}
 
-      *aValue = value;
-      NS_ADDREF(*aValue);
+        *aValue = value;
+        NS_ADDREF(*aValue);
+      }
     }
   }
   else {
