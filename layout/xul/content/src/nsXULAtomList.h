@@ -88,6 +88,7 @@ XUL_ATOM(mozoutlinercolumn, ":-moz-outliner-column")
 XUL_ATOM(mozoutlinercelltext, ":-moz-outliner-cell-text")
 XUL_ATOM(mozoutlinertwisty, ":-moz-outliner-twisty")
 XUL_ATOM(mozoutlinerindentation, ":-moz-outliner-indentation")
+XUL_ATOM(mozoutlinerline, ":-moz-outliner-line")
 
 XUL_ATOM(menubar, "menubar") // An XP menu bar.
 XUL_ATOM(menu, "menu") // Represents an XP menu
