@@ -185,23 +185,24 @@ NS_IMETHODIMP nsAbMDBDirProperty::ClearDatabase()
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsAbMDBDirProperty::GetAnonymousValueForCard(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval)
+NS_IMETHODIMP nsAbMDBDirProperty::GetValueForCard(nsIAbCard *card, const PRUnichar *name, PRUnichar **value)
 {
   nsresult rv;
   nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nsCAutoString attrName;
-  attrName.AssignWithConversion(colID);
+  rv = mdbcard->GetStringAttribute(name, value);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return NS_OK;
+}
 
-  nsXPIDLCString attrValue;
-  rv = mdbcard->GetAnonymousStringAttribute(attrName.get(), getter_Copies(attrValue));
+NS_IMETHODIMP nsAbMDBDirProperty::SetValueForCard(nsIAbCard *card, const PRUnichar *name, const PRUnichar *value)
+{
+  nsresult rv;
+  nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nsAutoString resultStr;
-  resultStr.AssignWithConversion(attrValue.get());
-  *_retval = nsCRT::strdup(resultStr.get());
-  if (!*_retval)
-    return NS_ERROR_OUT_OF_MEMORY;
+  rv = mdbcard->SetStringAttribute(name, value);
+  NS_ENSURE_SUCCESS(rv,rv);
   return NS_OK;
 }

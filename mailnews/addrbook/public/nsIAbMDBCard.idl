@@ -57,7 +57,6 @@ interface nsIAbMDBCard : nsISupports {
 	readonly attribute unsigned long key;
 	void setRecordKey(in unsigned long key);
 
-
 	// DB specific methods
 	
     attribute unsigned long dbTableID;
@@ -70,31 +69,7 @@ interface nsIAbMDBCard : nsISupports {
 	// a directory listener of an inserted event
 	void copyCard(in nsIAbMDBCard srcCardDB);
 
-    void setAnonymousStringAttribute(in string attrname, in string value);
-	string getAnonymousStringAttribute(in string attrname);
-
-	// Anonymous card properties
-	// Not really sure what these are for
-	// They do not seem to be used.
-	// May have to move back to nsAbCard interface
-	[noscript] readonly attribute nsVoidArray anonymousStrAttrubutesList;
-	[noscript] readonly attribute nsVoidArray anonymousStrValuesList;
-	[noscript] readonly attribute nsVoidArray anonymousIntAttrubutesList;
-	[noscript] readonly attribute nsVoidArray anonymousIntValuesList;
-	[noscript] readonly attribute nsVoidArray anonymousBoolAttrubutesList;
-	[noscript] readonly attribute nsVoidArray anonymousBoolValuesList;
-	void setAnonymousIntAttribute(in string attrname, in unsigned long value);
-	void setAnonymousBoolAttribute(in string attrname, in boolean value);
-	/*
-		In the current implementation these methods
-		operate on the personal address book.
-		i.e. they are hardcoded to abdirectory://abook.mab
-		Potentialy disasterous if called since they
-		can overwrite the database member variable to point to
-		the personal database.
-	*/
-	void addAnonymousAttributesToDB();
-	void editAnonymousAttributesInDB();
-
+	wstring getStringAttribute(in wstring name);
+	void setStringAttribute(in wstring name, in wstring value);
 };
 

@@ -226,6 +226,17 @@ NS_IMETHODIMP nsAbView::Init(const char *aURI, nsIAbViewListener *abViewListener
   rv = EnumerateCards();
   NS_ENSURE_SUCCESS(rv, rv);
 
+#if 1
+  for (PRInt32 ii=0;ii<mCards.Count();ii++) {
+    nsIAbCard *card = ((AbCard *)(mCards.ElementAt(ii)))->card;
+    nsAutoString value;
+    value = NS_LITERAL_STRING("_foobar_value").get();
+    value.AppendInt(ii);
+    rv = mDirectory->SetValueForCard(card, NS_LITERAL_STRING("_FooBar").get(),value.get());
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+#endif
+
   // see if the persisted sortColumn is valid.
   // it may not be, if you migrated from older versions, or switched between
   // a mozilla build and a commercial build, which have different columns.
@@ -403,7 +414,7 @@ NS_IMETHODIMP nsAbView::GetParentIndex(PRInt32 rowIndex, PRInt32 *_retval)
 
 NS_IMETHODIMP nsAbView::HasNextSibling(PRInt32 rowIndex, PRInt32 afterIndex, PRBool *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsAbView::GetLevel(PRInt32 index, PRInt32 *_retval)
@@ -412,9 +423,9 @@ NS_IMETHODIMP nsAbView::GetLevel(PRInt32 index, PRInt32 *_retval)
   return NS_OK;
 }
 
-nsresult nsAbView::GetAnonymousValue(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval)
+nsresult nsAbView::GetCardValue(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval)
 {
-  return mDirectory->GetAnonymousValueForCard(card, colID, _retval);
+  return mDirectory->GetValueForCard(card, colID, _retval);
 }
 
 NS_IMETHODIMP nsAbView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnichar **_retval)
@@ -427,7 +438,7 @@ NS_IMETHODIMP nsAbView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnich
   if (colID[0] == 'G')
     rv = card->GetGeneratedName(mGeneratedNameFormat, _retval);
   else if (colID[0] == '_') 
-    rv = GetAnonymousValue(card, colID, _retval);
+    rv = GetCardValue(card, colID, _retval);
   else 
     rv = card->GetCardUnicharValue(colID, _retval);
 
@@ -667,11 +678,12 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
 {
   nsresult rv;
   nsXPIDLString value;
+
   // XXX fix me, do this with const to avoid the strcpy
   if (colID[0] == 'G') // "G" == "GeneratedName"
     rv = abcard->card->GetGeneratedName(mGeneratedNameFormat, getter_Copies(value));
   else if (colID[0] == '_') 
-    rv = GetAnonymousValue(abcard->card, colID, getter_Copies(value));
+    rv = GetCardValue(abcard->card, colID, getter_Copies(value));
   else
     rv = abcard->card->GetCardUnicharValue(colID, getter_Copies(value));
   NS_ENSURE_SUCCESS(rv,rv);

@@ -87,8 +87,6 @@ public:
 	NS_IMETHOD Close(PRBool forceCommit);
 	NS_IMETHOD OpenMDB(nsFileSpec *dbName, PRBool create);
 	NS_IMETHOD CloseMDB(PRBool commit);
-	NS_IMETHOD OpenAnonymousDB(nsIAddrDatabase **pCardDB);
-	NS_IMETHOD CloseAnonymousDB(PRBool forceCommit);
 	NS_IMETHOD Commit(PRUint32 commitType);
 	NS_IMETHOD ForceClosed();
 
@@ -108,20 +106,6 @@ public:
 	NS_IMETHOD DeleteCardFromMailList(nsIAbDirectory *mailList, nsIAbCard *card, PRBool beNotify);
 
 	NS_IMETHOD GetCardForEmailAddress(nsIAbDirectory *directory, const char *emailAddress, nsIAbCard **card);
-
-	NS_IMETHOD SetAnonymousStringAttribute(const char *attrname, const char *value);
-	NS_IMETHOD GetAnonymousStringAttribute(const char *attrname, char** value);
-	NS_IMETHOD SetAnonymousIntAttribute(const char *attrname, PRUint32 value);
-	NS_IMETHOD GetAnonymousIntAttribute(const char *attrname, PRUint32* value);
-	NS_IMETHOD SetAnonymousBoolAttribute(const char *attrname, PRBool value);
-	NS_IMETHOD GetAnonymousBoolAttribute(const char *attrname, PRBool* value);
-	NS_IMETHOD AddAnonymousAttributesToDB();
-	NS_IMETHOD RemoveAnonymousAttributesFromDB();
-	NS_IMETHOD EditAnonymousAttributesInDB();
-
-	NS_IMETHOD AddAnonymousAttributesFromCard(nsIAbCard *card);
-	NS_IMETHOD RemoveAnonymousAttributesFromCard(nsIAbCard *card);
-	NS_IMETHOD EditAnonymousAttributesFromCard(nsIAbCard *card);
 
 	NS_IMETHOD GetNewRow(nsIMdbRow * *newRow); 
 	NS_IMETHOD GetNewListRow(nsIMdbRow * *newRow); 
@@ -255,7 +239,9 @@ public:
 	NS_IMETHOD GetCardCount(PRUint32 *count);
 	NS_IMETHOD RemoveExtraCardsInCab(PRUint32 cardTotal, PRUint32 nCabMax);
 
-	//////////////////////////////////////////////////////////////////////////////
+  NS_IMETHOD SetCardValue(nsIAbCard *card, const PRUnichar *name, const PRUnichar *value, PRBool notify);
+  NS_IMETHOD GetCardValue(nsIAbCard *card, const PRUnichar *name, PRUnichar **value);
+
 	// nsAddrDatabase methods:
 
 	nsAddrDatabase();
@@ -267,7 +253,6 @@ public:
 	PRUint32		GetCurVersion();
 	nsIMdbTableRowCursor *GetTableRowCursor();
 	nsIMdbTable		*GetPabTable() {return m_mdbPabTable;}
-	nsIMdbTable		*GetAnonymousTable() {return m_mdbAnonymousTable;}
 
 	static nsAddrDatabase*	FindInCache(nsFileSpec *dbName);
 
@@ -314,19 +299,10 @@ protected:
 	nsresult GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow);
 	nsresult GetListCardFromDB(nsIAbCard *listCard, nsIMdbRow* listRow);
 	nsresult GetListFromDB(nsIAbDirectory *newCard, nsIMdbRow* listRow);
-	nsresult GetAnonymousAttributesFromDB();
 	nsresult AddRecordKeyColumnToRow(nsIMdbRow *pRow);
 	nsresult AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *cardRow);
 	nsresult AddListCardColumnsToRow(nsIAbCard *pCard, nsIMdbRow *pListRow, PRUint32 pos, nsIAbCard** pNewCard);
 	nsresult AddListAttributeColumnsToRow(nsIAbDirectory *list, nsIMdbRow *listRow);
-	nsresult RemoveAnonymousList(nsVoidArray* pArray);
-	nsresult SetAnonymousAttribute(nsVoidArray** pAttrAray, 
-							nsVoidArray** pValueArray, void *attrname, void *value);
-	nsresult DoAnonymousAttributesTransaction(AB_NOTIFY_CODE code);
-	nsresult DoStringAnonymousTransaction(nsVoidArray* pAttributes, nsVoidArray* pValues, AB_NOTIFY_CODE code);
-	nsresult DoIntAnonymousTransaction(nsVoidArray* pAttributes, nsVoidArray* pValues, AB_NOTIFY_CODE code);
-	nsresult DoBoolAnonymousTransaction(nsVoidArray* pAttributes, nsVoidArray* pValues, AB_NOTIFY_CODE code);
-	void GetAnonymousAttributesFromCard(nsIAbCard* card);
 	nsresult FindAttributeRow(nsIMdbTable* pTable, mdb_token columnToken, nsIMdbRow** row);
 	nsresult GetRowForEmailAddress(const char *emailAddress, nsIMdbRow	**cardRow);
 	nsresult CreateCard(nsIMdbRow* cardRow, mdb_id listRowID, nsIAbCard **result);
@@ -345,11 +321,10 @@ protected:
 	nsresult			InitNewDB();
 	nsresult			InitMDBInfo();
 	nsresult			InitPabTable();
-	nsresult			InitAnonymousTable();
 
 	nsresult			InitLastRecorKey();
 	nsresult			GetDataRow(nsIMdbRow **pDataRow);
-	nsresult			GetLastRecorKey();
+	nsresult			GetLastRecordKey();
 	nsresult			UpdateLastRecordKey();
 	nsresult			CheckAndUpdateRecordKey();
 	nsresult			UpdateLowercaseEmailListName();
@@ -368,16 +343,7 @@ protected:
 	nsIMdbTable		    *m_mdbPabTable;
 	nsFileSpec		    m_dbName;
 	PRBool				m_mdbTokensInitialized;
-    nsVoidArray /*<nsIAddrDBListener>*/ *m_ChangeListeners;
-
-	nsIMdbTable		    *m_mdbAnonymousTable;
-	mdb_kind			m_AnonymousTableKind;
-	nsVoidArray*		m_pAnonymousStrAttributes;
-	nsVoidArray*		m_pAnonymousStrValues;
-	nsVoidArray*		m_pAnonymousIntAttributes;
-	nsVoidArray*		m_pAnonymousIntValues;
-	nsVoidArray*		m_pAnonymousBoolAttributes;
-	nsVoidArray*		m_pAnonymousBoolValues;
+  nsVoidArray /*<nsIAddrDBListener>*/ *m_ChangeListeners;
 
 	mdb_kind			m_PabTableKind;
 	mdb_kind			m_MailListTableKind;

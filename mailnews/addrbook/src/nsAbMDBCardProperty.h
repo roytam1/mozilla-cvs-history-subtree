@@ -64,18 +64,6 @@ protected:
 	PRUint32 m_dbRowID;
 
 	nsCOMPtr<nsIAddrDatabase> mCardDatabase;  
-
-	nsresult RemoveAnonymousList(nsVoidArray* pArray);
-	nsresult SetAnonymousAttribute(nsVoidArray** pAttrAray, 
-					nsVoidArray** pValueArray, void *attrname, void *value);
-
-	nsVoidArray* m_pAnonymousStrAttributes;
-	nsVoidArray* m_pAnonymousStrValues;
-	nsVoidArray* m_pAnonymousIntAttributes;
-	nsVoidArray* m_pAnonymousIntValues;
-	nsVoidArray* m_pAnonymousBoolAttributes;
-	nsVoidArray* m_pAnonymousBoolValues;
-
 };
 
 #endif // nsAbMDBCardProperty_h__

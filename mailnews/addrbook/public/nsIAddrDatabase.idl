@@ -104,8 +104,6 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	void close(in boolean forceCommit);
 	[noscript] void openMDB(in nsFileSpec dbName, in boolean create);
 	void closeMDB(in boolean commit);
-	void openAnonymousDB(out nsIAddrDatabase pCardDB);
-	void closeAnonymousDB(in boolean forceCommit);
 
 	void commit(in unsigned long commitType);
 	void forceClosed();
@@ -131,20 +129,7 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	PRBool findMailListbyUnicodeName(in wstring listName);
 
 	void getCardCount(out PRUint32 count);
-	void RemoveExtraCardsInCab(in PRUint32 cardTotal, in PRUint32 cabMax);
-
-	void setAnonymousStringAttribute(in string attrname, in string value);
-	string getAnonymousStringAttribute(in string attrname);
-	void setAnonymousIntAttribute(in string attrname, in unsigned long value);
-	unsigned long getAnonymousIntAttribute(in string attrname);
-	void setAnonymousBoolAttribute(in string attrname, in boolean value);
-	boolean getAnonymousBoolAttribute(in string attrname);
-	void addAnonymousAttributesToDB();
-	void removeAnonymousAttributesFromDB();
-	void editAnonymousAttributesInDB();
-	void addAnonymousAttributesFromCard(in nsIAbCard card);
-	void removeAnonymousAttributesFromCard(in nsIAbCard card);
-	void editAnonymousAttributesFromCard(in nsIAbCard card);
+	void removeExtraCardsInCab(in PRUint32 cardTotal, in PRUint32 cabMax);
 
 	[noscript] readonly attribute nsIMdbRow newRow;
 	[noscript] readonly attribute nsIMdbRow newListRow;
@@ -191,5 +176,11 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addListName(in nsIMdbRow row, in string value);
 	[noscript] void addListNickName(in nsIMdbRow row, in string value);
 	[noscript] void addListDescription(in nsIMdbRow row, in string value);
-	[noscript] void AddListDirNode(in nsIMdbRow listRow);
+	[noscript] void addListDirNode(in nsIMdbRow listRow);
+
+    /**
+	 * use for getting and setting generic attributes
+	 */
+    void setCardValue(in nsIAbCard card, in wstring name, in wstring value, in boolean notify);
+    wstring getCardValue(in nsIAbCard card, in wstring name);
 };

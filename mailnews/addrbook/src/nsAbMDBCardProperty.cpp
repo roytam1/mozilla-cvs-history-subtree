@@ -58,40 +58,15 @@ nsAbMDBCardProperty::nsAbMDBCardProperty(void)
 	m_Key = 0;
 	m_dbTableID = 0;
 	m_dbRowID = 0;
-
-	m_pAnonymousStrAttributes = nsnull;
-	m_pAnonymousStrValues = nsnull;
-	m_pAnonymousIntAttributes = nsnull;
-	m_pAnonymousIntValues = nsnull;
-	m_pAnonymousBoolAttributes = nsnull;
-	m_pAnonymousBoolValues = nsnull;
-
 }
 
 nsAbMDBCardProperty::~nsAbMDBCardProperty(void)
 {
-	
 	if (mCardDatabase)
 		mCardDatabase = nsnull;
-
-	if (m_pAnonymousStrAttributes)
-		RemoveAnonymousList(m_pAnonymousStrAttributes);
-	if (m_pAnonymousIntAttributes)
-		RemoveAnonymousList(m_pAnonymousIntAttributes);
-	if (m_pAnonymousBoolAttributes)
-		RemoveAnonymousList(m_pAnonymousBoolAttributes);
-
-	if (m_pAnonymousStrValues)
-		RemoveAnonymousList(m_pAnonymousStrValues);
-	if (m_pAnonymousIntValues)
-		RemoveAnonymousList(m_pAnonymousIntValues);
-	if (m_pAnonymousBoolValues)
-		RemoveAnonymousList(m_pAnonymousBoolValues);
-
 }
 
 NS_IMPL_ISUPPORTS_INHERITED1(nsAbMDBCardProperty, nsAbCardProperty, nsIAbMDBCard)
-
 
 // nsIAbMDBCard attributes
 
@@ -125,78 +100,6 @@ NS_IMETHODIMP nsAbMDBCardProperty::GetKey(PRUint32 *aKey)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousStrAttrubutesList(nsVoidArray **attrlist)
-{
-	if (attrlist && m_pAnonymousStrAttributes)
-	{
-		*attrlist = m_pAnonymousStrAttributes;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousStrValuesList(nsVoidArray **valuelist)
-{
-	if (valuelist && m_pAnonymousStrValues)
-	{
-		*valuelist = m_pAnonymousStrValues;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousIntAttrubutesList(nsVoidArray **attrlist)
-{
-	if (attrlist && m_pAnonymousIntAttributes)
-	{
-		*attrlist = m_pAnonymousIntAttributes;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousIntValuesList(nsVoidArray **valuelist)
-{
-	if (valuelist && m_pAnonymousIntValues)
-	{
-		*valuelist = m_pAnonymousIntValues;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousBoolAttrubutesList(nsVoidArray **attrlist)
-{
-	if (attrlist && m_pAnonymousBoolAttributes)
-	{
-		*attrlist = m_pAnonymousBoolAttributes;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousBoolValuesList(nsVoidArray **valuelist)
-{
-	if (valuelist && m_pAnonymousBoolValues)
-	{
-		*valuelist = m_pAnonymousBoolValues;
-		return NS_OK;
-	}
-	else
-		return NS_ERROR_NULL_POINTER;
-}
-
-
-
-
-
-
-
 // nsIAbMDBCard methods
 
 NS_IMETHODIMP nsAbMDBCardProperty::SetRecordKey(PRUint32 key)
@@ -211,75 +114,22 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetAbDatabase(nsIAddrDatabase* database)
 	return NS_OK;
 }
 
-
-NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousStringAttribute(const char *attrname, const char *value)
+NS_IMETHODIMP nsAbMDBCardProperty::SetStringAttribute(const PRUnichar *name, const PRUnichar *value)
 {
-	nsresult rv = NS_OK;
+  NS_ASSERTION(mCardDatabase, "no db");
+  if (!mCardDatabase)
+    return NS_ERROR_UNEXPECTED;
 
-	char* pAttribute = nsCRT::strdup(attrname);
-	char* pValue = nsCRT::strdup(value);
-	if (pAttribute && pValue)
-	{
-		rv = SetAnonymousAttribute(&m_pAnonymousStrAttributes, 
-			&m_pAnonymousStrValues, pAttribute, pValue);
-	}
-	else
-	{
-		nsCRT::free(pAttribute);
-		nsCRT::free(pValue);
-		rv = NS_ERROR_NULL_POINTER;
-	}
-	return rv;
-}	
-
-NS_IMETHODIMP nsAbMDBCardProperty::GetAnonymousStringAttribute(const char *attrname, char **value)
-{
-  *value = PR_smprintf("%s-%d-%d-%d", attrname, m_Key, m_dbTableID, m_dbRowID);
-  return NS_OK;
+  return mCardDatabase->SetCardValue(this, name, value, PR_TRUE /* notify */);
 }
 
-NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousIntAttribute
-(const char *attrname, PRUint32 value)
+NS_IMETHODIMP nsAbMDBCardProperty::GetStringAttribute(const PRUnichar *name, PRUnichar **value)
 {
-	nsresult rv = NS_OK;
+  NS_ASSERTION(mCardDatabase, "no db");
+  if (!mCardDatabase)
+    return NS_ERROR_UNEXPECTED;
 
-	char* pAttribute = nsCRT::strdup(attrname);
-	PRUint32* pValue = (PRUint32 *)PR_Calloc(1, sizeof(PRUint32));
-	*pValue = value;
-	if (pAttribute && pValue)
-	{
-		rv = SetAnonymousAttribute(&m_pAnonymousIntAttributes, 
-			&m_pAnonymousIntValues, pAttribute, pValue);
-	}
-	else
-	{
-		nsCRT::free(pAttribute);
-		PR_FREEIF(pValue);
-		rv = NS_ERROR_NULL_POINTER;
-	}
-	return rv;
-}	
-
-NS_IMETHODIMP nsAbMDBCardProperty::SetAnonymousBoolAttribute
-(const char *attrname, PRBool value)
-{
-	nsresult rv = NS_OK;
-
-	char* pAttribute = nsCRT::strdup(attrname);
-	PRBool* pValue = (PRBool *)PR_Calloc(1, sizeof(PRBool));
-	*pValue = value;
-	if (pAttribute && pValue)
-	{
-		rv = SetAnonymousAttribute(&m_pAnonymousBoolAttributes, 
-			&m_pAnonymousBoolValues, pAttribute, pValue);
-	}
-	else
-	{	
-		nsCRT::free(pAttribute);
-		PR_FREEIF(pValue);
-		rv = NS_ERROR_NULL_POINTER;
-	}
-	return rv;
+  return mCardDatabase->GetCardValue(this, name, value);
 }
 
 NS_IMETHODIMP nsAbMDBCardProperty::CopyCard(nsIAbMDBCard* srcCardDB)
@@ -377,28 +227,6 @@ NS_IMETHODIMP nsAbMDBCardProperty::CopyCard(nsIAbMDBCard* srcCardDB)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBCardProperty::AddAnonymousAttributesToDB()
-{
-	nsresult rv = NS_OK;
-	if (mCardDatabase)
-		mCardDatabase = nsnull;
-	rv = GetCardDatabase(kPersonalAddressbookUri);
-	if (NS_SUCCEEDED(rv) && mCardDatabase)
-		rv = mCardDatabase->AddAnonymousAttributesFromCard(this);
-	return rv;
-}
-
-NS_IMETHODIMP nsAbMDBCardProperty::EditAnonymousAttributesInDB()
-{
-	nsresult rv = NS_OK;
-	if (mCardDatabase)
-		mCardDatabase = nsnull;
-	rv = GetCardDatabase(kPersonalAddressbookUri);
-	if (NS_SUCCEEDED(rv) && mCardDatabase)
-		rv = mCardDatabase->EditAnonymousAttributesFromCard(this);
-	return rv;
-}
-
 NS_IMETHODIMP nsAbMDBCardProperty::EditCardToDatabase(const char *uri)
 {
 	if (!mCardDatabase && uri)
@@ -447,48 +275,3 @@ nsresult nsAbMDBCardProperty::GetCardDatabase(const char *uri)
 }
 
 
-nsresult nsAbMDBCardProperty::RemoveAnonymousList(nsVoidArray* pArray)
-{
-	if (pArray)
-	{
-		PRUint32 count = pArray->Count();
-		for (int i = count - 1; i >= 0; i--)
-		{
-			void* pPtr = pArray->ElementAt(i);
-			PR_FREEIF(pPtr);
-			pArray->RemoveElementAt(i);
-		}
-		delete pArray;
-	}
-	return NS_OK;
-}
-
-nsresult nsAbMDBCardProperty::SetAnonymousAttribute
-(nsVoidArray** pAttrAray, nsVoidArray** pValueArray, void *attrname, void *value)
-{
-	nsresult rv = NS_OK;
-	nsVoidArray* pAttributes = *pAttrAray;
-	nsVoidArray* pValues = *pValueArray; 
-
-	if (!pAttributes && !pValues)
-	{
-		pAttributes = new nsVoidArray();
-		pValues = new nsVoidArray();
-		*pAttrAray = pAttributes;
-		*pValueArray = pValues;
-	}
-	if (pAttributes && pValues)
-	{
-		if (attrname && value)
-		{
-			pAttributes->AppendElement(attrname);
-			pValues->AppendElement(value);
-		}
-	}
-	else
-	{ 
-		rv = NS_ERROR_FAILURE;
-	}
-
-	return rv;
-}	

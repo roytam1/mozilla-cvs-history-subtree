@@ -293,6 +293,7 @@ nsAddbookProtocolHandler::FindPossibleAbName(nsIAbCard  *aCard,
   nsCOMPtr<nsIAbMDBCard> dbaCard(do_QueryInterface(aCard, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
 
+#if 0
   if (NS_SUCCEEDED(dbaCard->GetAnonymousStrAttrubutesList(&attrlist)) && attrlist)
   {
     if (NS_SUCCEEDED(dbaCard->GetAnonymousStrValuesList(&valuelist)) && valuelist)
@@ -315,7 +316,9 @@ nsAddbookProtocolHandler::FindPossibleAbName(nsIAbCard  *aCard,
       }
     }
   }
-
+#else
+  NS_ASSERTION(0, "fix me, FindPossibleAbName");
+#endif
   return rv;
 }
 
