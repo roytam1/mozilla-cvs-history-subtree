@@ -438,10 +438,6 @@ GtkMozillaContainer::StartStream(const char *base_url,
   nsString url_str(base_url);
   nsIInputStream *istream = NULL;
 
-  NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-  if (NS_FAILED(rv)) 
-    goto error;
-
   mStream = new GtkMozillaInputStream();
   if (mStream == nsnull)
     goto error;
@@ -455,19 +451,16 @@ GtkMozillaContainer::StartStream(const char *base_url,
   if (NS_FAILED(rv)) 
     goto error;
   
-  rv = NS_NewLoadGroup(nsnull, nsnull, &mLoadGroup);
-  if (NS_FAILED(rv)) 
-    goto error;
-  rv = mLoadGroup->Init(nsnull, nsnull);
+  rv = NS_NewLoadGroup(nsnull, &mLoadGroup);
   if (NS_FAILED(rv)) 
     goto error;
   
-  rv = serv->NewInputStreamChannel(url, content_type, 
-                                   1024/*len*/, istream,
-                                   mLoadGroup, 
-                                   nsnull,      // notificationCallbacks
-                                   nsIChannel::LOAD_NORMAL,
-                                   nsnull, &mChannel);
+  rv = NS_NewInputStreamChannel(url, content_type, 
+                                1024/*len*/, istream,
+                                mLoadGroup, 
+                                nsnull,      // notificationCallbacks
+                                nsIChannel::LOAD_NORMAL,
+                                nsnull, &mChannel);
   if (NS_FAILED(rv)) 
     goto error;
   
