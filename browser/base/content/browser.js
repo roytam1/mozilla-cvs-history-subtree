@@ -51,7 +51,8 @@ const NS_NET_STATUS_WROTE_TO  = NS_ERROR_MODULE_NETWORK + 9;
 const kXULNS = 
     "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
-const nsIWebNavigation = Components.interfaces.nsIWebNavigation;
+const nsCI               = Components.interfaces;
+const nsIWebNavigation   = nsCI.nsIWebNavigation;
 
 const MAX_HISTORY_MENU_ITEMS = 15;
 const FIND_NORMAL = 0;
@@ -1142,7 +1143,17 @@ function prepareForStartup()
   }
 
   // initialize observers and listeners
+  // and give C++ access to gBrowser
   window.XULBrowserWindow = new nsBrowserStatusHandler();
+  gBrowser.docShell
+          .QueryInterface(nsCI.nsIDocShellTreeItem)
+          .rootTreeItem
+          .QueryInterface(nsCI.nsIInterfaceRequestor)
+          .getInterface(nsCI.nsIDOMWindow)
+          .QueryInterface(nsCI.nsIInterfaceRequestor)
+          .getInterface(nsCI.nsIDOMWindowUtils)
+          .browserDOMWindow = new nsBrowserAccess();
+
   window.browserContentListener =
     new nsBrowserContentListener(window, gBrowser);
 
@@ -1434,6 +1445,14 @@ function Shutdown()
 
   window.XULBrowserWindow.destroy();
   window.XULBrowserWindow = null;
+  gBrowser.docShell
+          .QueryInterface(nsCI.nsIDocShellTreeItem)
+          .rootTreeItem
+          .QueryInterface(nsCI.nsIInterfaceRequestor)
+          .getInterface(nsCI.nsIDOMWindow)
+          .QueryInterface(nsCI.nsIInterfaceRequestor)
+          .getInterface(nsCI.nsIDOMWindowUtils)
+          .browserDOMWindow = null;
 
   window.browserContentListener.close();
   // Close the app core.
@@ -3560,6 +3579,53 @@ nsBrowserStatusHandler.prototype =
     } catch (e) {
     }
     setTimeout(function() { if (document.getElementById("highlight").checked) toggleHighlight(true); }, 0);
+  }
+}
+
+function nsBrowserAccess()
+{
+}
+
+nsBrowserAccess.prototype =
+{
+  QueryInterface : function(aIID)
+  {
+    if (aIID.equals(nsCI.nsIBrowserDOMWindow) ||
+        aIID.equals(nsCI.nsISupports))
+      return this;
+    throw Components.results.NS_NOINTERFACE;
+  },
+
+  openURI : function(aURI, aWhere, aContext)
+  {
+    var newWindow = null;
+    if (aWhere == nsCI.nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW) {
+      switch (aContext) {
+        case nsCI.nsIBrowserDOMWindow.OPEN_EXTERNAL :
+          aWhere = gPrefService.getIntPref("browser.link.open_external");
+          break;
+        default : // OPEN_NEW or an illegal value
+          aWhere = gPrefService.getIntPref("browser.link.open_newwindow");
+      }
+    }
+    var url = aURI ? aURI.spec : "about:blank";
+    switch(aWhere) {
+      case nsCI.nsIBrowserDOMWindow.OPEN_NEWWINDOW :
+        newWindow = openDialog(getBrowserURL(), "_blank", "all,dialog=no", url);
+        break;
+      case nsCI.nsIBrowserDOMWindow.OPEN_NEWTAB :
+        var newTab = gBrowser.addTab(url);
+        if (!gPrefService.getBoolPref("browser.tabs.loadInBackground"))
+          gBrowser.selectedTab = newTab;
+        newWindow = gBrowser.getBrowserForTab(newTab).docShell
+                            .QueryInterface(nsCI.nsIInterfaceRequestor)
+                            .getInterface(nsCI.nsIDOMWindow);
+        break;
+      default : // OPEN_CURRENTWINDOW or an illegal value
+        loadURI(url);
+        newWindow = window;
+    }
+    return newWindow;
   }
 }
 
