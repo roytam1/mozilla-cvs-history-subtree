@@ -1,1 +1,1 @@
-content,install,url,resource://app/chrome/content/sample/
+content,profile,url,resource://app/chrome/content/sample/

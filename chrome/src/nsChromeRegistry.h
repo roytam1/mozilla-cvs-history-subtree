@@ -48,6 +48,8 @@ class nsIRDFContainer;
 class nsIRDFContainerUtils;
 class nsIDOMWindowInternal;
 class nsIDocument;
+class nsILocalFile;
+class nsIProperties;
 
 #include "nsIChromeRegistry.h"
 #include "nsIXULOverlayProvider.h"
@@ -218,7 +220,9 @@ private:
                              PRBool aUseProfile, PRBool aAllowScripts, PRBool aRemove);
   nsresult UninstallProvider(const nsACString& aProviderType, const nsACString& aProviderName, PRBool aUseProfile);
 
-  nsresult ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength);
+  NS_HIDDEN_(nsresult) CheckForNewChrome(nsIProperties *aDirSvc, const char *aListDir, const char *aCacheDir);
+  NS_HIDDEN_(nsresult) ProcessNewChromeFile(nsILocalFile *aListFile);
+  NS_HIDDEN_(nsresult) ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength);
 
   PRBool GetProviderCount(const nsACString& aProviderType, nsIRDFDataSource* aDataSource);
 
