@@ -1914,7 +1914,7 @@ EmitRegExp(CompilerState *state, RENode *ren, JSRegExp *re)
 		pc[j] = (jsbytecode)c;
 #if IS_LITTLE_ENDIAN
 		if (op == REOP_UCFLAT)
-		    pc[j++] = (jsbytecode)(c >> 8);
+		    pc[++j] = (jsbytecode)(c >> 8);
 #endif
 	    }
 	    break;
@@ -2485,7 +2485,7 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 
 	  case REOP_UCFLATi:
 	    matchlen = (ptrdiff_t)pc[1];
-	    oplen += matchlen;
+	    oplen += 2 * matchlen;
 	    matched = (cp + matchlen <= cpend);
 	    if (matched) {
 		pc2 = pc + 2;
