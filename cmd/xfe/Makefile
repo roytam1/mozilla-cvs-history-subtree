@@ -289,6 +289,7 @@ BASIC_LIBS	+= \
 		  $(DIST)/lib/libnscnv30.a \
 		  $(DIST)/lib/libnsuni30.a \
 		  $(DIST)/lib/libnsfmt30.a \
+		  $(DIST)/lib/libaddr.a \
 		  $(DIST)/lib/libneo.a \
 		  $(DIST)/lib/libaddr.a \
 		  $(NULL)
