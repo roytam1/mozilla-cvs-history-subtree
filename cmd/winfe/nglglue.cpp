@@ -325,7 +325,7 @@ void
 ET_SendLoadEvent(MWContext * pContext, int32 type, ETVoidPtrFunc fnClosure,
                  NET_StreamClass *stream, int32 layer_id, Bool resize_reload)
 {
-    MOZ_FUNCTION_STUB;
+//    MOZ_FUNCTION_STUB;
 }
 
 
