@@ -2375,7 +2375,6 @@ nsDocShell::Stop(PRUint32 aStopFlags)
     if (nsIWebNavigation::STOP_CONTENT & aStopFlags) {
         if (mContentViewer)
             mContentViewer->Stop();
-
     }
 
     if (nsIWebNavigation::STOP_NETWORK & aStopFlags) {
@@ -3557,6 +3556,7 @@ nsDocShell::CreateAboutBlankContentViewer()
     // generate (about:blank) document to load
     docFactory->CreateBlankDocument(loadGroup, getter_AddRefs(blankDoc));
     if (blankDoc) {
+      blankDoc->SetContainer(NS_STATIC_CAST(nsIDocShell *, this));
 
       // create a content viewer for us and the new document
       docFactory->CreateInstanceForDocument(NS_ISUPPORTS_CAST(nsIDocShell *, this),
