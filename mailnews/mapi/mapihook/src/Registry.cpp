@@ -34,6 +34,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#undef _UNICODE
+#undef UNICODE
+
 #include <objbase.h>
 #include <assert.h>
 #include "nsString.h"

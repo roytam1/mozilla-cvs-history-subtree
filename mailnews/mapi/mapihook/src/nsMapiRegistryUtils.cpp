@@ -418,11 +418,11 @@ nsresult RestoreBackedUpMapiDll()
 
     nsCOMPtr <nsILocalFile> pCurrentMapiFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv) || !pCurrentMapiFile) return NS_ERROR_FAILURE;        
-    pCurrentMapiFile->InitWithPath(filePath);
+    pCurrentMapiFile->InitWithPath(filePath.get());
     
     nsCOMPtr<nsILocalFile> pPreviousMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv) || !pPreviousMapiFile) return NS_ERROR_FAILURE;       
-    pPreviousMapiFile->InitWithPath(previousFileName);
+    pPreviousMapiFile->InitWithPath(previousFileName.get());
 
     PRBool bExist;
     rv = pCurrentMapiFile->Exists(&bExist);

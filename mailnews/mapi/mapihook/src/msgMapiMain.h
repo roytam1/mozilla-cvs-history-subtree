@@ -40,6 +40,7 @@
 #define        MAX_NAME_LEN    256
 #define        MAX_PW_LEN      256
 #define        MAX_SESSIONS    50
+#define        MAPI_SENDCOMPLETE_EVENT   "SendCompletionEvent"
 
 #include "nsXPIDLString.h"
 #include "nspr.h"

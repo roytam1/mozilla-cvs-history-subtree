@@ -17,10 +17,11 @@
 # Copyright (C) 1998 Netscape Communications Corporation. All
 # Rights Reserved.
 #
-# Contributor(s): 
+# Contributor(s): Srilatha Moturi  <srilatha@netscape.com>
+#                 Krishna Mohan Khandrika <kkhandrika@netscape.com>
 
 DEPTH=..\..
 
-DIRS=build mapiDll mapihook resources registry
+DIRS=mapihook resources mapiDll
 
 include <$(DEPTH)\config\rules.mak>

@@ -37,7 +37,6 @@
  
 #include "nsIServiceManager.h"
 #include "nsMapiRegistry.h"
-#include "nsIGenericFactory.h"
 #include "nsXPIDLString.h"
 #include "nsIPromptService.h"
 #include "nsIStringBundle.h"
@@ -233,20 +232,4 @@ nsresult ShowMapiErrorDialog() {
     }
     return rv;
 }
-
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMapiRegistry);
-
-// The list of components we register
-static nsModuleComponentInfo components[] = 
-{
-  {
-    NS_IMAPIREGISTRY_CLASSNAME, 
-    NS_IMAPIREGISTRY_CID,
-    NS_IMAPIWINHOOK_CONTRACTID, 
-    nsMapiRegistryConstructor
-  }
-};
-
-NS_IMPL_NSGETMODULE(nsMapiRegistryModule, components);
 

@@ -81,7 +81,7 @@ BOOL InitMozillaReference(nsIMapi **aRetValue)
     if ((*aRetValue) && (*aRetValue)->IsValid() == S_OK)
          return TRUE;
 
-    HRESULT hRes = CoInitialize(NULL);
+    HRESULT hRes = ::CoInitialize(nsnull) ;
 
     hRes = ::CoCreateInstance(CLSID_nsMapiImp, NULL, CLSCTX_LOCAL_SERVER,
                                          IID_nsIMapi, (LPVOID *)aRetValue);
@@ -234,19 +234,25 @@ ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessa
     else
         lpFiles = lpMessage->lpFiles ;
 
+    HANDLE hEvent = CreateEvent (NULL, FALSE, FALSE, (LPCTSTR) MAPI_SENDCOMPLETE_EVENT) ;
+
     hr = pNsMapi->SendMail (lhSession, lpMessage, 
                             (short) lpMessage->nRecipCount, lpRecips,
                             (short) lpMessage->nFileCount, lpFiles,
                             flFlags, ulReserved);
 
-    if (bTempSession)
-        MAPILogoff (lhSession, ulUIParam, 0,0) ;
-
     // we are seeing a problem when using Word, although we return success from the MAPI support
     // MS COM interface in mozilla, we are getting this error here. This is a temporary hack !!
     if (hr == 0x800703e6)
-        return SUCCESS_SUCCESS;
+        hr = SUCCESS_SUCCESS;
     
+    if (hr == SUCCESS_SUCCESS)
+        WaitForSingleObject (hEvent, INFINITE) ;
+    CloseHandle (hEvent) ;
+    
+    if (bTempSession)
+        MAPILogoff (lhSession, ulUIParam, 0,0) ;
+
     return hr ; 
 }
 
@@ -266,8 +272,14 @@ ULONG FAR PASCAL MAPISendDocuments(ULONG ulUIParam, LPTSTR lpszDelimChar, LPTSTR
 
     HRESULT hr;
 
+    HANDLE hEvent = CreateEvent (NULL, FALSE, FALSE, (LPCTSTR) MAPI_SENDCOMPLETE_EVENT) ;
+
     hr = pNsMapi->SendDocuments(lhSession, (LPTSTR) lpszDelimChar, (LPTSTR) lpszFilePaths, 
                                     (LPTSTR) lpszFileNames, ulReserved) ;
+
+    if (hr == SUCCESS_SUCCESS)
+        WaitForSingleObject (hEvent, INFINITE) ;
+    CloseHandle (hEvent) ;
 
     MAPILogoff (lhSession, ulUIParam, 0,0) ;
 

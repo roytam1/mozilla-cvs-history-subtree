@@ -42,6 +42,7 @@
 
 #include <mapidefs.h>
 #include <mapi.h>
+#include <tchar.h>
 
 #include "nsCOMPtr.h"
 #include "nsIComponentManager.h"
@@ -63,6 +64,7 @@
 #include "nsIPref.h"
 #include "nsString.h"
 
+#include "nsIMsgAttachment.h"
 #include "nsIMsgCompFields.h"
 #include "nsIMsgComposeParams.h"
 #include "nsIMsgCompose.h"
@@ -78,6 +80,7 @@
 #include "msgMapiHook.h"
 #include "msgMapiSupport.h"
 #include "msgMapiMain.h"
+#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
 
@@ -110,6 +113,9 @@ public:
         printf("Sending Done - OnStopSending \n");
 #endif
         m_done = PR_TRUE;
+        HANDLE hEvent = CreateEvent (NULL, FALSE, FALSE, (LPCTSTR) MAPI_SENDCOMPLETE_EVENT) ;
+        SetEvent (hEvent) ;
+        CloseHandle (hEvent) ;
         return NS_OK ;
     }
 
@@ -386,7 +392,7 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
     pMsgComposeParams->SetIdentity(pMsgId);
     pMsgComposeParams->SetComposeFields(aCompFields); 
     pMsgComposeParams->SetSendListener(sendListener) ;
-    pMsgComposeParams->SetSmtpPassword(smtpPassword);
+    pMsgComposeParams->SetSmtpPassword(smtpPassword.get());
 
     // create the nsIMsgCompose object to send the object
     nsCOMPtr<nsIMsgCompose> pMsgCompose (do_CreateInstance(NS_MSGCOMPOSE_CONTRACTID, &rv));
@@ -507,14 +513,12 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
 
     nsCOMPtr <nsILocalFile> pFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv) ;
     if (NS_FAILED(rv) || (!pFile) ) return rv ;        
-    nsCOMPtr <nsILocalFile> pTempDir = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv) ;
-    if (NS_FAILED(rv) || (!pTempDir) ) return rv ;        
 
     for (int i=0 ; i < aFileCount ; i++)
     {
-        PRBool bTempFile = PR_FALSE ;
         if (aFiles[i].lpszPathName)
         {
+            // check if attachment exists
             if (aIsUnicode)
                 pFile->InitWithUnicodePath (aFiles[i].lpszPathName) ; 
             else
@@ -523,101 +527,37 @@ nsresult nsMapiHook::HandleAttachments (nsIMsgCompFields * aCompFields, PRInt32 
             rv = pFile->Exists(&bExist) ;
             if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
 
-            // we do this since MS Office apps create a temp file when sending  
-            // the currently open document in that app
+            // create Msg attachment object
+            nsCOMPtr<nsIMsgAttachment> attachment = do_CreateInstance(NS_MSGATTACHMENT_CONTRACTID, &rv);
+            if (NS_FAILED(rv) || (!attachment) ) return rv ;
+
+            // set url 
+            nsXPIDLCString pURL ;
+#if 1
+            pFile->GetURL (getter_Copies(pURL)) ;
+#else
+            NS_GetURLFromFile(pFile, getter_Copies(pURL));
+#endif
+            attachment->SetUrl(pURL) ;
+
             if (aFiles[i].lpszFileName)
             {
-                // Win temp Path
-                nsAutoString tempPath ;
-                nsSpecialSystemDirectory tmpDir(nsSpecialSystemDirectory::OS_TemporaryDirectory);
-                ((nsFileSpec*)&tmpDir)->GetNativePathString(tempPath);
-                tempPath.ToLowerCase() ;
-
-                // filename of the file attachment
-                nsXPIDLString pLeafName ;
-                pFile->GetUnicodeLeafName (getter_Copies(pLeafName)) ;
-
-                // dir path of the file attachment
-                nsXPIDLString pPath ;
-                pFile->GetUnicodePath (getter_Copies(pPath)) ;
-                nsAutoString Path ;
-                Path.Assign(pPath.get()) ;
-
-                nsAutoString LeafName ;
-                LeafName.Assign (pLeafName.get());
-                PRInt32 offset = Path.RFind (LeafName) ;
-                Path.SetLength(offset) ;
-                Path.ToLowerCase() ;
-
-                if (tempPath == Path)
+                if (! aIsUnicode)
                 {
-                    // create another temp dir for mapi within Win temp dir
-                    nsAutoString strTempDir ;
-                    strTempDir += tempPath.get() ; 
-                    strTempDir.AppendWithConversion("moz_mapi") ; 
-                    pTempDir->InitWithUnicodePath (strTempDir.get()) ;
-                    pTempDir->Exists (&bExist) ;
-                    if (!bExist)
-                    {
-                        rv = pTempDir->Create(nsIFile::DIRECTORY_TYPE, 777) ;
-                        if (NS_FAILED(rv)) return rv ;
-                    }
-                    // filename passed for the file attachment
-                    if (aIsUnicode)
-                    {
-                        nsAutoString RealFileName ;
-                        RealFileName.Assign (aFiles[i].lpszFileName) ;
-                        // copy to our mapi temp dir with real name
-                        rv = pFile->CopyToUnicode(pTempDir, RealFileName.get()) ;
-                        if (NS_FAILED(rv)) return rv ;
-                        pFile->InitWithUnicodePath(strTempDir.get()) ;
-                        pFile->AppendUnicode (RealFileName.get()) ;
-                    }
-                    else
-                    {
-                        nsCAutoString asciiRealFileName ;
-                        asciiRealFileName.Assign((char *) aFiles[i].lpszFileName) ;
-                        nsCAutoString asciiLeafName ;
-                        asciiLeafName.AssignWithConversion (pLeafName.get());
-                        // copy to our mapi temp dir with real name
-                        rv = pFile->CopyTo(pTempDir, asciiRealFileName.get()) ;
-                        if (NS_FAILED(rv)) return rv ;
-                        pFile->InitWithUnicodePath(strTempDir.get()) ;
-                        pFile->Append (asciiRealFileName.get()) ;
-                    }
-                    // this one is a temp file
-                    bTempFile = PR_TRUE ;
-                }
+                    nsAutoString realFileName ;
+                    realFileName.AssignWithConversion ((char *) aFiles[i].lpszFileName) ;
+                    attachment->SetName(realFileName.get()) ;
+                    // attachment->SetName( (nsDependentString(aFiles[i].lpszFileName)).get() );
             }
-            // get url 
-            nsXPIDLCString pURL ;
-            pFile->GetURL (getter_Copies(pURL)) ;
-            if (pURL)
-            {
-                if (Attachments.Length() > 0)
-                    Attachments.Append(",") ;
-                Attachments.Append(pURL) ;
-                if (bTempFile)
-                {
-                    if (TempFiles.Length() > 0)
-                        TempFiles.Append(",") ;
-                    TempFiles.Append(pURL) ;
-                }
-            }
+                else
+                    attachment->SetName(aFiles[i].lpszFileName) ;
+        }
+
+            attachment->SetTemporary(PR_FALSE) ;
+
+            rv = aCompFields->AddAttachment (attachment);
         }
     }
-    // set attachment
-    if (Attachments.Length() > 0)
-        rv = aCompFields->SetAttachments (Attachments.get());
-    // set temp file
-    if (TempFiles.Length() > 0)
-        rv = aCompFields->SetTemporaryFiles(TempFiles.get());
-
-#ifdef RAJIV_DEBUG
-    printf ("Attachments : %s \n", Attachments.get()) ;
-    printf ("TempFiles : %s \n", TempFiles.get()) ;
-#endif
-
     return rv ;
 }
 
@@ -677,14 +617,14 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     aCompFields->SetCc (Cc.get()) ;
     aCompFields->SetBcc (Bcc.get()) ;
 
-    nsAutoString platformCharSet;
+    nsCAutoString platformCharSet;
     // set subject
     if (aMessage->lpszSubject)
     {
         nsAutoString Subject ;
         if (platformCharSet.IsEmpty())
             platformCharSet.Assign(nsMsgI18NFileSystemCharset());
-        rv = ConvertToUnicode(platformCharSet, (char *) aMessage->lpszSubject, Subject);
+        rv = ConvertToUnicode(platformCharSet.get(), (char *) aMessage->lpszSubject, Subject);
         if (NS_FAILED(rv)) return rv ;         
         aCompFields->SetSubject(Subject.get()) ;
     }
@@ -699,7 +639,7 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
         nsAutoString Body ;
         if (platformCharSet.IsEmpty())
             platformCharSet.Assign(nsMsgI18NFileSystemCharset());
-        rv = ConvertToUnicode(platformCharSet, (char *) aMessage->lpszNoteText, Body);
+        rv = ConvertToUnicode(platformCharSet.get(), (char *) aMessage->lpszNoteText, Body);
         if (NS_FAILED(rv)) return rv ;
         rv = aCompFields->SetBody(Body.get()) ;
     }
@@ -758,7 +698,11 @@ nsresult nsMapiHook::PopulateCompFieldsForSendDocs(nsIMsgCompFields * aCompField
         if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
 
         nsXPIDLCString pURL ;
+#if 1
         pFile->GetURL (getter_Copies(pURL)) ;
+#else
+        NS_GetURLFromFile(pFile, getter_Copies(pURL));
+#endif
         if (pURL)
             Attachments.Assign(pURL) ;
 
@@ -797,7 +741,11 @@ nsresult nsMapiHook::PopulateCompFieldsForSendDocs(nsIMsgCompFields * aCompField
             if (NS_FAILED(rv) || (!bExist) ) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST ;
 
             nsXPIDLCString pURL ;
+#if 1
             pFile->GetURL (getter_Copies(pURL)) ;
+#else
+            NS_GetURLFromFile(pFile, getter_Copies(pURL));
+#endif
             if (pURL)
             {
 				if (Attachments.Length() > 0)

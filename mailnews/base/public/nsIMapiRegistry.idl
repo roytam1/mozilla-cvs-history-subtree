@@ -73,6 +73,6 @@ interface nsIMapiRegistry: nsISupports {
 };
 
 %{C++
-#define NS_IMAPIWINHOOK_CONTRACTID    "@mozilla.org/mapiregistry;1"
-#define NS_IMAPIWINHOOK_CLASSNAME "Mozilla MAPI Registry"
+#define NS_IMAPIREGISTRY_CONTRACTID    "@mozilla.org/mapiregistry;1"
+#define NS_IMAPIREGISTRY_CLASSNAME "Mozilla MAPI Registry"
 %}

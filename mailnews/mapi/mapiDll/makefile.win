@@ -41,14 +41,22 @@ EXPORT_LIBRARY  = $(MODULE)
 LIBRARY_NAME    = $(MODULE)
 DEFFILE         = Mapi32.def
 
+REQUIRES	= MapiProxy \
+                  msgMapi \
+		  xpcom \
+		  string \
+		  $(NULL)
+
 include <$(DEPTH)\config\config.mak>
 ###############################################################
 
 LCFLAGS=-DUNICODE -D_UNICODE
 
-OBJS= .\$(OBJDIR)\MapiDll.obj
+OBJS= .\$(OBJDIR)\MapiDll.obj \
+	  $(NULL)
 
-WIN_LIBS= ole32.lib
+WIN_LIBS= ole32.lib \
+          $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
 

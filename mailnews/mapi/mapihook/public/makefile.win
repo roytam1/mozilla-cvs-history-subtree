@@ -37,11 +37,12 @@
 
 DEPTH=..\..\..\..
 
-MODULE=nsMapiRegistry
-XPIDL_MODULE=mapiregistry
+MODULE=msgMapi
+XPIDL_MODULE=mapihook
 
 XPIDLSRCS =	\
            .\nsIMapiRegistry.idl \
+           .\nsIMapiSupport.idl  \
             $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -37,36 +37,71 @@
 
 DEPTH=..\..\..\..
 
-MODULE=nsMapiRegistry
+MODULE          = msgMapi
 MAKE_OBJ_TYPE = DLL
 LIBRARY_NAME=$(MODULE)
-MODULE_NAME=nsMapiRegistry
+MODULE_NAME	= $(MODULE)
 
-
-CPPSRCS= \
-	nsMapiRegistry.cpp	\
-	Registry.cpp        \
-	nsMapiRegistryUtils.cpp  \
+REQUIRES        = xpcom \
+                  string \
+		  MapiProxy \
+		  appshell \
+		  windowwatcher \
+		  dom \
+		  profile \
+		  msgbase \
+		  pref \
+		  msgbaseutil \
+		  msgcompo \
+		  mailnews \
+		  necko \
+		  intl \
+		  editor \
+		  msgdb \
+		  uriloader \
+ 	          appstartup \
 	$(NULL)
 
-CPP_OBJS=	\
+include <$(DEPTH)\config\config.mak>
+############################################################################
+
+LCFLAGS=-DUNICODE -D_UNICODE
+
+
+
+OBJS=   \
+    ..\build\$(OBJDIR)\msgMapi_i.obj    \
+    .\$(OBJDIR)\msgMapiFactory.obj  \
+    .\$(OBJDIR)\msgMapiHook.obj \
+    .\$(OBJDIR)\msgMapiImp.obj  \
+    .\$(OBJDIR)\msgMapiMain.obj \
+    .\$(OBJDIR)\msgMapiSupport.obj  \
 	.\$(OBJDIR)\nsMapiRegistry.obj	\
-	.\$(OBJDIR)\Registry.obj        \
 	.\$(OBJDIR)\nsMapiRegistryUtils.obj \
+    .\$(OBJDIR)\Registry.obj  \
 	$(NULL)
+
+
 
 LLIBS=                               \
  $(DIST)\lib\xpcom.lib               \
+ $(DIST)\lib\msgbsutl.lib            \
  $(LIBNSPR)                          \
  $(NULL)
 
 WIN_LIBS=       \
 	ole32.lib   \
     $(NULL)
+
 EXPORTS=	\
+    msgMapiFactory.h    \
+    msgMapiHook.h       \
+    msgMapiImp.h        \
+    msgMapiMain.h       \
+    msgMapiSupport.h    \
 	nsMapiRegistry.h		\
-	Registry.h              \
 	nsMapiRegistryUtils.h   \
+    Registry.h \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

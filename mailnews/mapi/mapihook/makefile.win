@@ -36,42 +36,6 @@
 
 DEPTH=..\..\..
 
-MODULE          = msgMapi
-EXPORT_LIBRARY  = $(MODULE)
-LIBRARY_NAME    = $(MODULE)
-
-include <$(DEPTH)\config\config.mak>
-############################################################################
-
-REQUIRES        = xpcom \
-                  string \
-                  $(NULL)
-
-LCFLAGS=-DUNICODE -D_UNICODE
-
-OBJS=   \
-    ..\build\$(OBJDIR)\msgMapi_i.obj    \
-    .\$(OBJDIR)\msgMapiFactory.obj  \
-    .\$(OBJDIR)\msgMapiHook.obj \
-    .\$(OBJDIR)\msgMapiImp.obj  \
-    .\$(OBJDIR)\msgMapiMain.obj \
-    .\$(OBJDIR)\msgMapiSupport.obj  \
-    $(NULL)
-
-LLIBS=                               \
- $(DIST)\lib\xpcom.lib               \
- $(DIST)\lib\msgbsutl.lib            \
- $(LIBNSPR)                          \
- $(NULL)
-
-WIN_LIBS= ole32.lib
-
-EXPORTS=    \
-    msgMapiFactory.h    \
-    msgMapiHook.h   \
-    msgMapiImp.h    \
-    msgMapiMain.h   \
-    msgMapiSupport.h    \
-    $(NULL)
+DIRS= build public src
 
 include <$(DEPTH)\config\rules.mak>

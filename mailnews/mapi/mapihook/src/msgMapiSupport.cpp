@@ -33,68 +33,83 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+#include <nsComPtr.h>
+#include <objbase.h>
+#include <nsISupports.h>
+#include <nsMapiRegistry.h>
+#include <nsIGenericFactory.h>
+#include <nsIObserverService.h>
+#include <nsIAppStartupNotifier.h>
+#include <nsIServiceManager.h>
+#include <nsIComponentManager.h>
+#include <nsICategoryManager.h>
 #include "msgMapiSupport.h"
-#include "nsISupports.h"
+
 
 const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, \
                               {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
 
-PRBool WINAPI DllMain(HINSTANCE aInstance, DWORD aReason, LPVOID aReserved)
-{
-    switch (aReason)
-    {
-        case DLL_PROCESS_ATTACH :
+/** Implementation of the nsIMapiSupport interface.
+ *  Use standard implementation of nsISupports stuff.
+ */
+
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsMapiSupport, nsIMapiSupport, nsIObserver);
+
+static NS_METHOD nsMapiRegistrationProc(nsIComponentManager *aCompMgr,
+                   nsIFile *aPath, const char *registryLocation, const char *componentType,
+                   const nsModuleComponentInfo *info)
         {
-            // Initialize MAPI Support
+    
+  nsresult rv;
 
-            nsMapiSupport *pTemp = nsMapiSupport::GetNsMapiSupport();
-            break;
-        }
-        case DLL_PROCESS_DETACH :
-        {
-            nsMapiSupport *pTemp = nsMapiSupport::GetNsMapiSupport();
-            pTemp->UnInitMSCom();
-            delete pTemp;
-            pTemp = nsnull;
-        }
-    }
+  nsCOMPtr<nsICategoryManager> categoryManager(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
+  if (NS_SUCCEEDED(rv)) 
+      rv = categoryManager->AddCategoryEntry(APPSTARTUP_CATEGORY, "Mapi Support", 
+                  "service," NS_IMAPISUPPORT_CONTRACTID, PR_TRUE, PR_TRUE, nsnull);
+ 
+  return rv ;
 
-    return PR_TRUE;
 }
 
-extern "C"
+NS_IMETHODIMP
+nsMapiSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
 {
-    void __declspec(dllexport) Init()
-    {
-        nsMapiSupport *pTemp = nsMapiSupport::GetNsMapiSupport();
-        if (pTemp != nsnull)
-            pTemp->InitMSCom();
-    }
+    if (!nsCRT::strcmp(aTopic, "profile-after-change"))
+        return InitializeMAPISupport();
+
+    if (!nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
+        return ShutdownMAPISupport();
+
+    nsresult rv;
+
+    nsCOMPtr<nsIObserverService> observerService(do_GetService("@mozilla.org/observer-service;1", &rv));
+    if (NS_FAILED(rv)) return rv;
+ 
+    rv = observerService->AddObserver(this,"profile-after-change", PR_FALSE);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
+           
+    return rv;
 }
 
-nsMapiSupport* nsMapiSupport::m_pSelfRef = nsnull;
-
-nsMapiSupport *nsMapiSupport::GetNsMapiSupport()
-{
-    if (m_pSelfRef == nsnull)
-        m_pSelfRef = new nsMapiSupport();
-
-    return m_pSelfRef;
-}
 
 nsMapiSupport::nsMapiSupport()
 : m_dwRegister(0),
   m_nsMapiFactory(nsnull)
 {
+   NS_INIT_ISUPPORTS();
 }
 
 nsMapiSupport::~nsMapiSupport()
 {
 }
 
-PRBool nsMapiSupport::RegsiterComponents()
+NS_IMETHODIMP
+nsMapiSupport::InitializeMAPISupport()
 {
+    ::CoInitialize(nsnull) ;
+
     if (m_nsMapiFactory == nsnull)    // No Registering if already done.  Sanity Check!!
     {
         m_nsMapiFactory = new nsMapiFactory();
@@ -111,15 +126,16 @@ PRBool nsMapiSupport::RegsiterComponents()
             {
                 m_nsMapiFactory->Release() ;
                 m_nsMapiFactory = nsnull;
-                return PR_FALSE;
+                return NS_ERROR_FAILURE;
             }
         }
     }
 
-    return PR_TRUE;
+    return NS_OK;
 }
 
-PRBool nsMapiSupport::UnRegisterComponents()
+NS_IMETHODIMP
+nsMapiSupport::ShutdownMAPISupport()
 {
     if (m_dwRegister != 0)
         ::CoRevokeClassObject(m_dwRegister);
@@ -130,17 +146,33 @@ PRBool nsMapiSupport::UnRegisterComponents()
         m_nsMapiFactory = nsnull;
     }
 
-    return PR_TRUE;
-}
-
-void nsMapiSupport::InitMSCom()
-{
-    ::CoInitialize(nsnull);
-    RegsiterComponents();
-}
-
-void nsMapiSupport::UnInitMSCom()
-{
-    UnRegisterComponents();
     ::CoUninitialize();
+
+    return NS_OK ;
 }
+
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMapiRegistry);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMapiSupport);
+
+// The list of components we register
+static nsModuleComponentInfo components[] = 
+{
+  {
+    NS_IMAPIREGISTRY_CLASSNAME, 
+    NS_IMAPIREGISTRY_CID,
+    NS_IMAPIREGISTRY_CONTRACTID, 
+    nsMapiRegistryConstructor
+  },
+
+{
+    NS_IMAPISUPPORT_CLASSNAME,
+    NS_IMAPISUPPORT_CID,
+    NS_IMAPISUPPORT_CONTRACTID,
+    nsMapiSupportConstructor,
+    nsMapiRegistrationProc,
+    nsnull
+}
+};
+
+NS_IMPL_NSGETMODULE(msgMapiModule, components);
+

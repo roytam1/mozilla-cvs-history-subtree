@@ -34,7 +34,7 @@
 #
 # ***** END LICENSE BLOCK ***** 
 
-DEPTH=..\..\..
+DEPTH=..\..\..\..
 
 MODULE           = MapiProxy
 EXPORT_LIBRARY   = $(MODULE)
