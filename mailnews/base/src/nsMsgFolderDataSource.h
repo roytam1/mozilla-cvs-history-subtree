@@ -192,7 +192,7 @@ protected:
 
 	nsresult GetBiffStateString(PRUint32 biffState, nsCAutoString & biffStateStr);
 
-	nsresult CreateUnreadMessagesNameString(PRInt32 unreadMessages, nsAutoString &nameString);
+	nsresult CreateMessagesNameString(PRInt32 aNumMessages, nsAutoString &nameString);
 	nsresult CreateArcsOutEnumerator();
 
 	nsresult OnItemAddedOrRemoved(nsISupports *parentItem, nsISupports *item,
@@ -200,7 +200,7 @@ protected:
 
 	nsresult OnUnreadMessagePropertyChanged(nsIMsgFolder *folder, PRInt32 oldValue, PRInt32 newValue);
 	nsresult OnTotalMessagePropertyChanged(nsIMsgFolder *folder, PRInt32 oldValue, PRInt32 newValue);
-  nsresult NotifyFolderTreeNameChanged(nsIMsgFolder *folder, PRInt32 aUnreadMessages);
+  nsresult NotifyFolderTreeNameChanged(nsIMsgFolder *folder, PRInt32 aNumMessages);
   nsresult NotifyFolderTreeSimpleNameChanged(nsIMsgFolder *folder);
   nsresult NotifyFolderNameChanged(nsIMsgFolder *folder);
   nsresult NotifyAncestors(nsIMsgFolder *aFolder, nsIRDFResource *aPropertyResource, nsIRDFNode *aNode);

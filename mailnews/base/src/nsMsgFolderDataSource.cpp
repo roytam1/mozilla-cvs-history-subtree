@@ -902,9 +902,16 @@ nsMsgFolderDataSource::OnItemUnicharPropertyChanged(nsISupports *item,
     if (NS_SUCCEEDED(rv)) {
       nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item, &rv);
       if (NS_SUCCEEDED(rv)) {
+#ifdef SHOW_UNREAD_IN_FOLDER_NAME
         PRInt32 numUnread;
         folder->GetNumUnread(PR_FALSE, &numUnread);
         NotifyFolderTreeNameChanged(folder, numUnread);
+#else
+        PRInt32 numTotal;
+        folder->GetTotalMessages(PR_FALSE, &numTotal);
+        NotifyFolderTreeNameChanged(folder, numTotal);
+#endif /* SHOW_UNREAD_IN_FOLDER_PANE */
+
         NotifyFolderTreeSimpleNameChanged(folder);
         NotifyFolderNameChanged(folder);
       }
@@ -1097,11 +1104,18 @@ nsMsgFolderDataSource::createFolderTreeNameNode(nsIMsgFolder *folder,
   nsresult rv = folder->GetAbbreviatedName(getter_Copies(name));
   if (NS_FAILED(rv)) return rv;
   nsAutoString nameString(name);
-  PRInt32 unreadMessages;
 
+#ifdef SHOW_UNREAD_IN_FOLDER_NAME
+  PRInt32 unreadMessages;
   rv = folder->GetNumUnread(PR_FALSE, &unreadMessages);
   if(NS_SUCCEEDED(rv)) 
-    CreateUnreadMessagesNameString(unreadMessages, nameString);	
+    CreateMessagesNameString(unreadMessages, nameString);	
+#else
+  PRInt32 totalMessages;
+  rv = folder->GetTotalMessages(PR_FALSE, &totalMessages);
+  if(NS_SUCCEEDED(rv)) 
+    CreateMessagesNameString(totalMessages, nameString);	
+#endif /* SHOW_UNREAD_IN_FOLDER_PANE */
 
   createNode(nameString.get(), target, getRDFService());
   return NS_OK;
@@ -1117,13 +1131,13 @@ nsresult nsMsgFolderDataSource::createFolderTreeSimpleNameNode(nsIMsgFolder * fo
   return NS_OK;
 }
 
-nsresult nsMsgFolderDataSource::CreateUnreadMessagesNameString(PRInt32 unreadMessages, nsAutoString &nameString)
+nsresult nsMsgFolderDataSource::CreateMessagesNameString(PRInt32 aNumMessages, nsAutoString &nameString)
 {
-  //Only do this if unread messages are positive
-  if(unreadMessages > 0)
+  //Only do this if num messages is positive
+  if(aNumMessages > 0)
   {
     nameString.Append(NS_LITERAL_STRING(" (").get());
-    nameString.AppendInt(unreadMessages);
+    nameString.AppendInt(aNumMessages);
     nameString.Append(NS_LITERAL_STRING(")").get());
   }
   return NS_OK;
@@ -1709,14 +1723,14 @@ nsMsgFolderDataSource::NotifyFolderTreeSimpleNameChanged(nsIMsgFolder* aFolder)
 
 nsresult
 nsMsgFolderDataSource::NotifyFolderTreeNameChanged(nsIMsgFolder* aFolder,
-                                                   PRInt32 aUnreadMessages)
+                                                   PRInt32 aNumMessages)
 {
   nsXPIDLString name;
   nsresult rv = aFolder->GetAbbreviatedName(getter_Copies(name));
   if (NS_SUCCEEDED(rv)) {
     nsAutoString newNameString(name);
 			
-    CreateUnreadMessagesNameString(aUnreadMessages, newNameString);	
+    CreateMessagesNameString(aNumMessages, newNameString);	
 			
     nsCOMPtr<nsIRDFNode> newNameNode;
     createNode(newNameString.get(), getter_AddRefs(newNameNode), getRDFService());
@@ -1837,6 +1851,8 @@ nsMsgFolderDataSource::OnTotalMessagePropertyChanged(nsIMsgFolder *folder, PRInt
 		GetNumMessagesNode(newValue, getter_AddRefs(newNode));
 		NotifyPropertyChanged(folderResource, kNC_TotalMessages, newNode);
 	}
+
+        NotifyFolderTreeNameChanged(folder, newValue);
 	return NS_OK;
 }
 
