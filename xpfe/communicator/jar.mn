@@ -31,6 +31,7 @@ comm.jar:
     content/communicator/popupManager.xul                (resources/content/popupManager.xul)
     content/communicator/aboutPopups.xul                 (resources/content/aboutPopups.xul)
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
 *   locale/en-US/communicator/contents.rdf                      (resources/locale/en-US/contents.rdf)
     locale/en-US/communicator/utilityOverlay.dtd                (resources/locale/en-US/utilityOverlay.dtd) 
@@ -51,6 +52,7 @@ en-US.jar:
 US.jar:
 *   locale/US/communicator-region/contents.rdf   	      (resources/locale/en-US/contents-region.rdf)
     locale/US/communicator-region/region.properties     (resources/locale/en-US/region.properties)
+#endif
 
 en-win.jar:
 *   locale/en-US/communicator-platform/contents.rdf		(resources/locale/en-US/win/contents-platform.rdf)

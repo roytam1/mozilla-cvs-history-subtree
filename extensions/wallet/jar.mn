@@ -18,6 +18,7 @@ comm.jar:
     content/communicator/wallet/WalletViewer.xul        (editor/resources/content/WalletViewer.xul)
     content/communicator/wallet/WalletViewer.js         (editor/resources/content/WalletViewer.js)
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
 *   locale/en-US/wallet/contents.rdf                          (resources/locale/en-US/contents.rdf)
     locale/en-US/wallet/walletNavigatorOverlay.dtd            (resources/locale/en-US/walletNavigatorOverlay.dtd)
@@ -48,3 +49,4 @@ US.jar:
     locale/US/communicator-region/wallet/WalletPrimary.xul                     (editor/resources/content/WalletPrimary.xul)
     locale/US/communicator-region/wallet/WalletShipping.xul                    (editor/resources/content/WalletShipping.xul)
     locale/US/communicator-region/wallet/WalletUrlspecific.xul                 (editor/resources/content/WalletUrlspecific.xul)
+#endif

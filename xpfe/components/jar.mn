@@ -95,6 +95,7 @@ comm.jar:
     content/communicator/alerts/alert.xul                       (alerts/resources/content/alert.xul)  
     content/communicator/alerts/alert.js                        (alerts/resources/content/alert.js)  
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
     locale/en-US/communicator/directory/directory.dtd           (directory/locale/en-US/directory.dtd)
     locale/en-US/communicator/history/history.dtd               (history/resources/locale/en-US/history.dtd)
@@ -155,7 +156,6 @@ en-US.jar:
     locale/en-US/communicator/sidebar/sidebarOverlay.dtd        (sidebar/resources/locale/en-US/sidebarOverlay.dtd)
     locale/en-US/communicator/sidebar/sidebar.properties        (sidebar/resources/locale/en-US/sidebar.properties)
     locale/en-US/communicator/update-notifications.properties   (updates/resources/locale/en-US/update-notifications.properties)
-#ifndef MOZ_XUL_APP
     locale/en-US/global/filepicker.dtd                          (filepicker/res/locale/en-US/filepicker.dtd)
     locale/en-US/global/filepicker.properties                   (filepicker/res/locale/en-US/filepicker.properties)
     locale/en-US/global/console.dtd                             (console/resources/locale/en-US/console.dtd)
