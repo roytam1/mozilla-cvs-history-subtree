@@ -76,8 +76,6 @@
 #include "prefapi.h"
 #include "UProcessUtils.h"
 #include "CAppleEventHandler.h"
-#include "addrbook.h"
-#include "addbook.h"
 
 #include "secnav.h"
 #include "CTableKeyAttachment.h"
@@ -185,7 +183,8 @@ public:
 			ABID type;
 			ABook* pABook = CAddressBookManager::GetAddressBook();
 			GetEntryIDAndType( inRow, &id, &type );
-			pABook->GetFullAddress( sCurrentBook, id, inName );
+			//pABook->GetFullAddress( sCurrentBook, id, inName );
+			AB_GetExpandedName(sCurrentBook, pABook, id, inName);
 		}
 	
 	
