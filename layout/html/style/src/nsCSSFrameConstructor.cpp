@@ -9411,7 +9411,11 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     const nsStyleDisplay* display;
     childFrame->GetStyleData(eStyleStruct_Display,
                              (const nsStyleStruct*&)display);
-    if (display->mDisplay == NS_STYLE_DISPLAY_POPUP) {
+    nsIFrame* placeholderFrame = nsnull;
+    if (display->mDisplay == NS_STYLE_DISPLAY_POPUP)
+      // Get the placeholder frame
+      frameManager->GetPlaceholderFrameFor(childFrame, &placeholderFrame);
+    if (placeholderFrame) {
       // Get the placeholder frame
       nsIFrame* placeholderFrame;
       frameManager->GetPlaceholderFrameFor(childFrame, &placeholderFrame);
