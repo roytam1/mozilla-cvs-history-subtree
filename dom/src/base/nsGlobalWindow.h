@@ -201,6 +201,7 @@ public:
   GlobalWindowImpl();
 
   static void ShutDown();
+  static PRBool IsCallerChrome();
 
 protected:
   // Object Management
@@ -243,7 +244,6 @@ protected:
   nsresult CheckSecurityWidthAndHeight(PRInt32* width, PRInt32* height);
   nsresult CheckSecurityLeftAndTop(PRInt32* left, PRInt32* top);
   static nsresult CheckSecurityIsChromeCaller(PRBool *isChrome);
-  static PRBool IsCallerChrome();
 
   void MakeScriptDialogTitle(const nsAString &aInTitle, nsAString &aOutTitle);
 
