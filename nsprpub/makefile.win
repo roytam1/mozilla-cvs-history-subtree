@@ -104,5 +104,5 @@ export::
 	$(MAKE_INSTALL) $(XPDIST)\$(PR_OBJDIR)\lib\*.dll $(DIST)\bin
 !endif
 
-depend::
+depend:: clean
 	@echo NSPR20 has no dependencies.  Skipped.
