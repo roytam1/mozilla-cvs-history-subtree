@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -51,14 +52,9 @@ public:
     DocumentFunctionCall(ProcessorState* aPs, Node* aDefResolveNode);
 
     /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param cs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
+     * Virtual methods from FunctionCall
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
     ProcessorState* mProcessorState;
@@ -80,12 +76,10 @@ public:
     /*
      * Evaluates a key() xslt-functioncall. First argument is name of key
      * to use, second argument is value to look up.
-     * @param aContext the context node for evaluation of this Expr
-     * @param aCs      the ContextState containing the stack information needed
-     *                 for evaluation
-     * @return the result of the evaluation
+     *
+     * Virtual function from FunctionCall
      */
-    virtual ExprResult* evaluate(Node* aContext, ContextState* aCs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
     ProcessorState* mProcessorState;
@@ -98,7 +92,7 @@ private:
 class txXSLKey : public TxObject {
     
 public:
-    txXSLKey(ProcessorState* aPs);
+    txXSLKey();
     ~txXSLKey();
     
     /*
@@ -111,7 +105,8 @@ public:
      * @return a NodeSet* containing all nodes in doc matching with value
      *         keyValue
      */
-    const NodeSet* getNodes(String& aKeyValue, Document* aDoc);
+    const NodeSet* getNodes(String& aKeyValue, Document* aDoc,
+                            txIMatchContext* aContext);
     
     /*
      * Adds a match/use pair. Returns MB_FALSE if matchString or useString
@@ -120,7 +115,7 @@ public:
      * @param aUse    use-expression
      * @return MB_FALSE if an error occured, MB_TRUE otherwise
      */
-    MBool addKey(Pattern* aMatch, Expr* aUse);
+    MBool addKey(txPattern* aMatch, Expr* aUse);
     
 private:
     /*
@@ -128,7 +123,7 @@ private:
      * @param aDoc Document to index and add
      * @returns a NamedMap* containing the index
      */
-    NamedMap* addDocument(Document* aDoc);
+    NamedMap* addDocument(Document* aDoc, txIMatchContext* aContext);
 
     /*
      * Recursively searches a node, its attributes and its subtree for
@@ -136,7 +131,7 @@ private:
      * @param aNode node to search
      * @param aMap index to add search result in
      */
-    void indexTree(Node* aNode, NamedMap* aMap);
+    void indexTree(Node* aNode, NamedMap* aMap, txIMatchContext* aContext);
 
     /*
      * Tests one node if it matches any of the keys match-patterns. If
@@ -144,13 +139,13 @@ private:
      * @param aNode node to test
      * @param aMap index to add values to
      */
-    void testNode(Node* aNode, NamedMap* aMap);
+    void testNode(Node* aNode, NamedMap* aMap, txIMatchContext* aContext);
 
     /*
      * represents one match/use pair
      */
     struct Key {
-        Pattern* matchPattern;
+        txPattern* matchPattern;
         Expr* useExpr;
     };
 
@@ -165,12 +160,6 @@ private:
      * a certain value
      */
     Map mMaps;
-    
-    /*
-     * ProcessorState used to parse the match-patterns and
-     * use-expressions
-     */
-    ProcessorState* mProcessorState;
     
     /*
      * Used to return empty nodeset
@@ -191,14 +180,9 @@ public:
     txFormatNumberFunctionCall(ProcessorState* aPs);
 
     /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param aContext the context node for evaluation of this Expr
-     * @param aCs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
+     * Virtual function from FunctionCall
     **/
-    virtual ExprResult* evaluate(Node* aContext, ContextState* aCs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
     static const UNICODE_CHAR FORMAT_QUOTE;
@@ -252,20 +236,12 @@ public:
     /**
      * Creates a new current() function call
     **/
-    CurrentFunctionCall(ProcessorState* ps);
+    CurrentFunctionCall();
 
     /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param cs the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     * @see FunctionCall.h
+     * Virtual function from FunctionCall
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
-
-private:
-   ProcessorState* processorState;
+    ExprResult* evaluate(txIEvalContext* aContext);
 };
 
 /**
@@ -288,7 +264,7 @@ public:
      * @return the result of the evaluation
      * @see FunctionCall.h
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
 };
@@ -313,7 +289,7 @@ public:
      * @return the result of the evaluation
      * @see FunctionCall.h
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
     static const char printfFmt[];
@@ -328,8 +304,10 @@ public:
 
     /**
      * Creates a new system-property() function call
+     * aNode is the Element in the stylesheet containing the 
+     * Expr and is used for namespaceID resolution
     **/
-    SystemPropertyFunctionCall();
+    SystemPropertyFunctionCall(Element* aNode);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -339,9 +317,13 @@ public:
      * @return the result of the evaluation
      * @see FunctionCall.h
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
+    /*
+     * resolve namespaceIDs with this node
+     */
+    Element* mStylesheetNode;
 };
 
 /**
@@ -353,8 +335,10 @@ public:
 
     /**
      * Creates a new element-available() function call
+     * aNode is the Element in the stylesheet containing the 
+     * Expr and is used for namespaceID resolution
     **/
-    ElementAvailableFunctionCall();
+    ElementAvailableFunctionCall(Element* aNode);
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -364,9 +348,13 @@ public:
      * @return the result of the evaluation
      * @see FunctionCall.h
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
+    /*
+     * resolve namespaceIDs with this node
+     */
+    Element* mStylesheetNode;
 };
 
 /**
@@ -389,7 +377,7 @@ public:
      * @return the result of the evaluation
      * @see FunctionCall.h
     **/
-    virtual ExprResult* evaluate(Node* context, ContextState* cs);
+    ExprResult* evaluate(txIEvalContext* aContext);
 
 private:
 };
