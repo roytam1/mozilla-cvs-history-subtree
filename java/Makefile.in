@@ -29,8 +29,10 @@ include $(DEPTH)/config/autoconf.mk
 # webclient and javadom
 
 DIRS=   util		\
+	external	\
 	dom		\
 	plugins		\
+	xpcom		\
 	webclient	\
 	$(NULL)
 

@@ -51,6 +51,7 @@ CPPSRCS = \
 	HistoryActionEvents.cpp \
 	ISupportsPeer.cpp \
 	NativeEventThread.cpp \
+	NativeEventThreadActionEvents.cpp \
 	NavigationImpl.cpp \
 	NavigationActionEvents.cpp \
 	InputStreamShim.cpp \
@@ -109,7 +110,6 @@ PACKAGE_LIB=$(PACKAGE_DIR)/lib
 PACKAGE_EXAMPLE=$(PACKAGE_DIR)/example
 endif # PACKAGE_BUILD
 
-clobber_all::
 
 buildRunems:
 ifeq ($(BAL_INTERFACE),)
@@ -129,6 +129,12 @@ else
 	cp $(topsrcdir)/dist/bin/libplugletjni.so $(PACKAGE_LIB)/libplugletjni.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/components/libpluglet.so $(PACKAGE_LIB)/libpluglet.so.$(VERSION_NUMBER)
 	cp $(topsrcdir)/dist/bin/components/libjavadom.so $(PACKAGE_LIB)/libjavadom.so.$(VERSION_NUMBER)
+	cp $(topsrcdir)/dist/bin/components/libbcorb.so $(PACKAGE_LIB)/libbcorb.so.$(VERSION_NUMBER)
+	cp $(topsrcdir)/dist/bin/components/libbcjavastubs.so $(PACKAGE_LIB)/libbcjavastubs.so.$(VERSION_NUMBER)
+	cp $(topsrcdir)/dist/bin/components/libjavaloader.so $(PACKAGE_LIB)/libjavaloader.so.$(VERSION_NUMBER)
+	cp $(topsrcdir)/dist/bin/components/libjavaSample.so $(PACKAGE_LIB)/libjavaSample.so.$(VERSION_NUMBER)
+	cp $(topsrcdir)/dist/bin/components/libbcTest.so $(PACKAGE_LIB)/libbcTest.so.$(VERSION_NUMBER)
+	cp $(topsrcdir)/dist/bin/components/libbcxpcomstubs.so $(PACKAGE_LIB)/libbcxpcomstubs.so.$(VERSION_NUMBER)
 	rm -f $(topsrcdir)/dist/bin/libwebclientstub.so
 	rm -f $(topsrcdir)/dist/lib/libwebclientstub.so
 	rm -f $(topsrcdir)/dist/bin/libwebclient.so
@@ -142,6 +148,12 @@ else
 	rm -f $(topsrcdir)/dist/lib/components/libpluglet.so
 	rm -f $(topsrcdir)/dist/bin/components/libjavadom.so
 	rm -f $(topsrcdir)/dist/lib/components/libjavadom.so
+	rm -f $(topsrcdir)/dist/bin/components/libbcorb.so
+	rm -f $(topsrcdir)/dist/bin/components/libbcjavastubs.so
+	rm -f $(topsrcdir)/dist/bin/components/libjavaloader.so
+	rm -f $(topsrcdir)/dist/bin/components/libjavaSample.so
+	rm -f $(topsrcdir)/dist/bin/components/libbcTest.so
+	rm -f $(topsrcdir)/dist/bin/components/libbcxpcomstubs.so	
 	chmod 555 $(PACKAGE_LIB)/libwebclientstub.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libwebclient.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libwc_share.a.$(VERSION_NUMBER)
@@ -149,6 +161,18 @@ else
 	chmod 555 $(PACKAGE_LIB)/libplugletjni.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libpluglet.so.$(VERSION_NUMBER)
 	chmod 555 $(PACKAGE_LIB)/libjavadom.so.$(VERSION_NUMBER)
+	chmod 555 $(PACKAGE_LIB)/libbcorb.so.$(VERSION_NUMBER)
+	chmod 555 $(PACKAGE_LIB)/libbcjavastubs.so.$(VERSION_NUMBER)
+	chmod 555 $(PACKAGE_LIB)/libjavaloader.so.$(VERSION_NUMBER)
+	chmod 555 $(PACKAGE_LIB)/libjavaSample.so.$(VERSION_NUMBER)
+	chmod 555 $(PACKAGE_LIB)/libbcTest.so.$(VERSION_NUMBER)
+	chmod 555 $(PACKAGE_LIB)/libbcxpcomstubs.so.$(VERSION_NUMBER)
+	if test ! -d $(PACKAGE_LIB)/libbcorb.so ; then ln -s libbcorb.so.$(VERSION_NUMBER)  $(PACKAGE_LIB)/libbcorb.so ; else true ; fi ;
+	if test ! -d $(PACKAGE_LIB)/libbcjavastubs.so ; then ln -s libbcjavastubs.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libbcjavastubs.so ; else true ; fi ;
+	if test ! -d $(PACKAGE_LIB)/libjavaloader.so ; then ln -s libjavaloader.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libjavaloader.so ; else true ; fi ;
+	if test ! -d $(PACKAGE_LIB)/libjavaSample.so ; then ln -s libjavaSample.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libjavaSample.so ; else true ; fi ;
+	if test ! -d $(PACKAGE_LIB)/libbcTest.so ; then ln -s libbcTest.so.$(VERSION_NUMBER)  $(PACKAGE_LIB)/libbcTest.so ; else true ; fi ;
+	if test ! -d $(PACKAGE_LIB)/libbcxpcomstubs.so ; then ln -s libbcxpcomstubs.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libbcxpcomstubs.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libwc_share.a ; then ln -s libwc_share.a.$(VERSION_NUMBER) $(PACKAGE_LIB)/libwc_share.a ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libwebclientstub.so ; then ln -s libwebclientstub.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libwebclientstub.so ; else true ; fi ;
 	if test ! -d $(PACKAGE_LIB)/libwebclient.so ; then ln -s libwebclient.so.$(VERSION_NUMBER) $(PACKAGE_LIB)/libwebclient.so ; else true ; fi ;
@@ -163,4 +187,5 @@ endif # PACKAGE_BUILD
 endif # BAL_INTERFACE
 
 install:: buildRunems
+
 
