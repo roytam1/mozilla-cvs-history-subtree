@@ -3627,6 +3627,7 @@ GlobalWindowImpl::ClearTimeoutOrInterval(PRInt32 aTimerID)
         /* Delete the timeout from the pending timeout list */
         *top = timeout->next;
         if (timeout->timer) {
+          NS_ASSERTION(timeout->ref_count > 1, "Low ref_count on dropping timeout");
           timeout->timer->Cancel();
           DropTimeout(timeout);
         }
@@ -3689,7 +3690,13 @@ void nsGlobalWindow_RunTimeout(nsITimer *aTimer, void *aClosure)
 
   if (timeout->window->RunTimeout(timeout)) {
     // Drop the ref_count since the timer won't be holding on to the
-    // timeout struct anymore
+    // timeout struct anymore. If the timeout isn't an interval then
+    // we also want to null out its ref to the timer so that it won't
+    // assume the time is holding a ref to it later if this DropTimeout 
+    // call doesn't bring its refcnt to 0 and end up deleting it.
+    if (!timeout->interval) {
+      timeout->timer = nsnull;
+    }
     timeout->window->DropTimeout(timeout);
   }
 }
