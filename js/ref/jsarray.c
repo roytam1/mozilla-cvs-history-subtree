@@ -64,7 +64,7 @@ IdIsIndex(jsid id, jsuint *indexp)
     jschar *cp;
 
     if (JSVAL_IS_INT(id)) {
-	jsint i;
+	jsuint i;
         i = JSVAL_TO_INT(id);
         if (i < 0)
             return JS_FALSE;
