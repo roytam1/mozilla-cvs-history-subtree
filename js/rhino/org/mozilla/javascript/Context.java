@@ -615,7 +615,8 @@ public final class Context {
                         ScriptableObject.defineClass(scope, c, sealed);
                     } else {
                         String s = "org.mozilla.javascript." + classes[i];
-                        new LazilyLoadedCtor(scope, classes[i+1], s, 0);
+                        new LazilyLoadedCtor(scope, classes[i+1], s, 
+                                             ScriptableObject.DONTENUM);
                     }
                 } catch (ClassNotFoundException e) {
                     continue;
@@ -1421,7 +1422,7 @@ public final class Context {
         if (isCachingEnabled && !cachingEnabled) {
             // Caching is being turned off. Empty caches.
             FunctionObject.methodsCache = null;
-            JavaMembers.classTable = null;
+            JavaMembers.classTable = new Hashtable();
         }
         isCachingEnabled = cachingEnabled;
     }
