@@ -2,7 +2,7 @@
 # $Id$
 #
 # The contents of this file are subject to the Mozilla Public License
-# Version 1.0 (the "License"); you may not use this file except in
+# Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
 #
@@ -16,7 +16,9 @@
 # by Leif are Copyright (C) Leif Hedstrom, portions created by Netscape
 # are Copyright (C) Netscape Communications Corp. All Rights Reserved.
 #
-# Contributor(s):	Michelle Wyner <mwyner@perldap.org>
+# Contributor(s):	Leif Hedstrom <leif@perldap.org>
+#			Michelle Wyner <mwyner@perldap.org>
+#			Kevin McCarthy <kevin@perldap.org>
 #
 # DESCRIPTION
 #    This is the main object class for connecting to an LDAP server,
@@ -92,20 +94,30 @@ sub new
       # This is for backward compatibility, use the above instead.
       my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth) = @_;
 
-      $self->{"host"} = $host;
-      $self->{"port"} = $port;
-      $self->{"binddn"} = $binddn;
-      $self->{"bindpasswd"} = $bindpasswd;
-      $self->{"certdb"} = $certdb;
+      $self->{"host"} = $host if defined($host);
+      $self->{"port"} = $port if defined($port);
+      $self->{"binddn"} = $binddn if defined($binddn);
+      $self->{"bindpasswd"} = $bindpasswd if defined($bindpasswd);
+      $self->{"certdb"} = $certdb if defined($certdb);
     }
 
+  # Anonymous bind is the default...
   $self->{"binddn"} = "" unless defined($self->{"binddn"});
   $self->{"bindpasswd"} = "" unless defined($self->{"bindpasswd"});
 
+  # Find an appropriate default port number if not specified.
   if (!defined($self->{"port"}) || ($self->{"port"} eq ""))
     {
-      $self->{"port"} = (($self->{"certdb"} ne "") ? LDAPS_PORT : LDAP_PORT);
+      if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
+	{
+	  $self->{"port"} = LDAPS_PORT;
+	}
+      else
+	{
+	  $self->{"port"} = LDAP_PORT;
+	}
     }
+
   if (defined($args{"verbose"}) && $args{"verbose"})
     {
       print STDERR "Created an LDAP connection, with these paramaters:\n\n";
@@ -119,6 +131,7 @@ sub new
     }
 
   bless $self, $class;
+
   return unless $self->_initialize();
   return $self;
 }
@@ -268,8 +281,7 @@ sub search
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
-  $self->{"ldres"} = 0;
-  
+
   if (ldap_is_ldap_url($args{"filter"}))
     {
       if (! ldap_url_search_s($self->{"ld"}, $args{"filter"},
@@ -303,6 +315,7 @@ sub search
 	}
     }
 
+  undef $self->{"ldres"};
   return undef;
 }
 
@@ -329,6 +342,7 @@ sub searchURL
       return $self->nextEntry();
     }
 
+  undef $self->{"ldres"};
   return undef;
 }
 
@@ -476,11 +490,13 @@ sub close
   my ($ret) = 1;
 
   ldap_unbind_s($self->{"ld"}) if defined($self->{"ld"});
+
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+
   undef $self->{"ld"};
 
   return (($ret == LDAP_SUCCESS) ? 1 : 0);
@@ -612,6 +628,7 @@ sub update
       if (defined($entry->{"_${key}_deleted_"}))
         {
           $mod{$key} = { "db", [] };
+	  undef @{$entry->{$key}};
         }
       elsif (defined($entry->{"_${key}_modified_"}))
         {
