@@ -19,7 +19,7 @@
  *
  * Contributor(s): 
  */
-#define FTP_DONT_CACHE_CONTROL_CONNECTION
+//#define FTP_DONT_CACHE_CONTROL_CONNECTION
 
 #include "nsFtpConnectionThread.h"
 #include "nsFtpControlConnection.h"

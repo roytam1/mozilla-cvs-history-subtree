@@ -55,8 +55,7 @@ public:
     
 protected:
     static nsSupportsHashtable* mRootConnectionList;
-    static PRBool DisconnectConnection(nsHashKey *aKey, void *aData, void* closure);
-    
+
     nsCOMPtr<nsIIOService> mIOSvc;
     nsCOMPtr<nsIProtocolProxyService>   mProxySvc;
 };

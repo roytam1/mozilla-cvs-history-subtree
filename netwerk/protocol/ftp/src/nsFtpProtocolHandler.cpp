@@ -80,21 +80,10 @@ nsFtpProtocolHandler::nsFtpProtocolHandler() {
 nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("~nsFtpProtocolHandler() called"));
      if (mRootConnectionList) {
-        mRootConnectionList->Enumerate(DisconnectConnection, nsnull);
-    //    NS_DELETEXPCOM(mRootConnectionList);
+        NS_DELETEXPCOM(mRootConnectionList);
         mRootConnectionList = nsnull;
     }
     mIOSvc = 0;
-}
-
-PRBool PR_CALLBACK
-nsFtpProtocolHandler::DisconnectConnection(nsHashKey *aKey, void *aData, void* closure)
-{
-    nsFtpControlConnection* con = NS_STATIC_CAST(nsFtpControlConnection*, aData);
-    if (con) {
-        con->Disconnect();
-    }
-    return PR_TRUE;
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsFtpProtocolHandler, nsIProtocolHandler);

@@ -20,7 +20,6 @@
  * Contributor(s): 
  */
 
-// ftp implementation
 
 #include "nsFTPChannel.h"
 #include "nsIStreamListener.h"
