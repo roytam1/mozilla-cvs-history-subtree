@@ -124,6 +124,11 @@ static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_auto
   // ensure a row is selected (cocoa doesn't do this for us, but will keep
   // us from unselecting a row once one is set; go figure).
   [mSiteTable selectRow:0 byExtendingSelection:NO];
+  
+  // we shouldn't need to do this, but the scrollbar won't enable unless we
+  // force the table to reload its data. Oddly it gets the number of rows correct,
+  // it just forgets to tell the scrollbar. *shrug*
+  [mSiteTable reloadData];
 }
 
 -(IBAction) editCookieSitesDone:(id)aSender
