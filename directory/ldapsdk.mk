@@ -46,5 +46,13 @@ ifdef LDAP_MODULE
 endif
 
 build:
-	cd ../config; $(MAKE)
+	cd config; $(MAKE)
 	cd directory; $(MAKE) $(TARGETS)
+
+
+
+
+
+
+
+
