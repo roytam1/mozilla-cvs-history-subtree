@@ -572,6 +572,8 @@ nsBlockFrame::GetMinWidth()
     } else {
       // XXX WRITE ME
     }
+    if (line_result > result)
+      result = line_result;
   }
 
   return (mMinWidth = result);
@@ -595,6 +597,8 @@ nsBlockFrame::GetPrefWidth()
     } else {
       // XXX WRITE ME
     }
+    if (line_result > result)
+      result = line_result;
   }
 
   return (mPrefWidth = result);
