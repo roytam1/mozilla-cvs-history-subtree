@@ -430,6 +430,28 @@ tcpreadready( tcpstream *tsp )
 }
 
 
+short
+tcpwriteready( tcpstream *tsp )
+{
+#ifdef SUPPORT_OPENTRANSPORT
+	if (gHaveOT) {
+		if ( tsp->tcps_ep == NULL ) {
+			return( -1 );
+		}
+	} else {
+#endif /* SUPPORT_OPENTRANSPORT */
+		if ( tsp->tcps_sptr == (StreamPtr)NULL ) {
+			 return( -1 );
+		}
+
+		/* tsp->tcps_data is set in async. notify proc, so nothing for us to do here */
+#ifdef SUPPORT_OPENTRANSPORT
+	}
+#endif /* SUPPORT_OPENTRANSPORT */
+	return ( tsp->tcps_terminated ? -1 : 1 );
+}
+
+
 /*
  * read up to "rbuflen" bytes into "rbuf" from a connected TCP stream
  * wait up to "timeout" seconds for data (if timeout == 0, wait "forever")

@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -49,7 +33,6 @@
 #endif /* XP_UNIX */
 
 extern PRLock *_pr_flock_lock;
-extern PRCondVar *_pr_flock_cv;
 
 static PRInt32 PR_CALLBACK FileRead(PRFileDesc *fd, void *buf, PRInt32 amount)
 {
@@ -85,24 +68,16 @@ static PRInt32 PR_CALLBACK FileWrite(PRFileDesc *fd, const void *buf, PRInt32 am
     if (_PR_PENDING_INTERRUPT(me)) {
         me->flags &= ~_PR_INTERRUPT;
         PR_SetError(PR_PENDING_INTERRUPT_ERROR, 0);
-	    rv = -1;
+	rv = -1;
     }
     if (_PR_IO_PENDING(me)) {
         PR_SetError(PR_IO_PENDING_ERROR, 0);
-	    rv = -1;
+	rv = -1;
     }
     if (rv != 0)
     	return rv;
 
     count = 0;
-#if !defined(XP_UNIX)  /* BugZilla: 4090 */
-    if ( PR_TRUE == fd->secret->appendMode ) {
-        rv = PR_Seek(fd, 0, PR_SEEK_END );
-        if ( -1 == rv )  {
-            return rv;
-        }
-    } /* if (fd->secret->appendMode...) */
-#endif /* XP_UNIX */
     while (amount > 0) {
 		temp = _PR_MD_WRITE(fd, buf, amount);
 		if (temp < 0) {
@@ -298,7 +273,7 @@ static PRIOMethods _pr_fileMethods = {
     (PRGetsocketoptionFN)_PR_InvalidStatus,	
     (PRSetsocketoptionFN)_PR_InvalidStatus,
     (PRSendfileFN)_PR_InvalidInt, 
-    (PRConnectcontinueFN)_PR_InvalidStatus, 
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -342,7 +317,7 @@ static PRIOMethods _pr_pipeMethods = {
     (PRGetsocketoptionFN)_PR_InvalidStatus,	
     (PRSetsocketoptionFN)_PR_InvalidStatus,
     (PRSendfileFN)_PR_InvalidInt, 
-    (PRConnectcontinueFN)_PR_InvalidStatus, 
+    (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
     (PRReservedFN)_PR_InvalidInt, 
@@ -358,9 +333,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
 {
     PRInt32 osfd;
     PRFileDesc *fd = 0;
-#if !defined(XP_UNIX) /* BugZilla: 4090 */
-    PRBool  appendMode = ( PR_APPEND & flags )? PR_TRUE : PR_FALSE;
-#endif
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
@@ -371,11 +343,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
         fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
         if (!fd) {
             (void) _PR_MD_CLOSE_FILE(osfd);
-        } else {
-#if !defined(XP_UNIX) /* BugZilla: 4090 */
-            fd->secret->appendMode = appendMode;
-#endif
-            _PR_MD_INIT_FD_INHERITABLE(fd, PR_FALSE);
         }
     }
     return fd;
@@ -386,9 +353,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
 {
     PRInt32 osfd;
     PRFileDesc *fd = 0;
-#if !defined(XP_UNIX) /* BugZilla: 4090 */
-    PRBool  appendMode = ( PR_APPEND & flags )? PR_TRUE : PR_FALSE;
-#endif
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
@@ -399,11 +363,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
         fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
         if (!fd) {
             (void) _PR_MD_CLOSE_FILE(osfd);
-        } else {
-#if !defined(XP_UNIX) /* BugZilla: 4090 */
-            fd->secret->appendMode = appendMode;
-#endif
-            _PR_MD_INIT_FD_INHERITABLE(fd, PR_FALSE);
         }
     }
     return fd;
@@ -550,30 +509,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PRInt32 osfd)
     fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
     if( !fd ) {
         (void) _PR_MD_CLOSE_FILE(osfd);
-    } else {
-        _PR_MD_INIT_FD_INHERITABLE(fd, PR_TRUE);
-    }
-
-    return fd;
-}
-
-/*
-** Import an existing OS pipe to NSPR 
-*/
-PR_IMPLEMENT(PRFileDesc*) PR_ImportPipe(PRInt32 osfd)
-{
-    PRFileDesc *fd = NULL;
-
-    if (!_pr_initialized) _PR_ImplicitInitialization();
-
-    fd = PR_AllocFileDesc(osfd, &_pr_pipeMethods);
-    if( !fd ) {
-        (void) _PR_MD_CLOSE_FILE(osfd);
-    } else {
-        _PR_MD_INIT_FD_INHERITABLE(fd, PR_TRUE);
-#ifdef WINNT
-        fd->secret->md.sync_file_io = PR_TRUE;
-#endif
     }
 
     return fd;
@@ -634,17 +569,10 @@ PR_IMPLEMENT(PRStatus) PR_LockFile(PRFileDesc *fd)
 
     PR_Lock(_pr_flock_lock);
     if (fd->secret->lockCount == 0) {
-        fd->secret->lockCount == -1;
-        PR_Unlock(_pr_flock_lock);
         status = _PR_MD_LOCKFILE(fd->secret->md.osfd);
-        PR_Lock(_pr_flock_lock);
-        if (status == PR_SUCCESS) {
+        if (status == PR_SUCCESS)
             fd->secret->lockCount = 1;
-            PR_NotifyAllCondVar(_pr_flock_cv);
-        }
     } else {
-        while (fd->secret->lockCount == -1)
-            PR_WaitCondVar(_pr_flock_cv, PR_INTERVAL_NO_TIMEOUT);
         fd->secret->lockCount++;
     }
     PR_Unlock(_pr_flock_lock);
@@ -734,8 +662,8 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
     (*readPipe)->secret->md.sync_file_io = PR_TRUE;
     (*writePipe)->secret->md.sync_file_io = PR_TRUE;
 #endif
-    (*readPipe)->secret->inheritable = _PR_TRI_TRUE;
-    (*writePipe)->secret->inheritable = _PR_TRI_TRUE;
+    (*readPipe)->secret->inheritable = PR_TRUE;
+    (*writePipe)->secret->inheritable = PR_TRUE;
     return PR_SUCCESS;
 #elif defined(XP_UNIX) || defined(XP_OS2)
 #ifdef XP_OS2
@@ -768,9 +696,7 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
         return PR_FAILURE;
     }
     _MD_MakeNonblock(*readPipe);
-    _PR_MD_INIT_FD_INHERITABLE(*readPipe, PR_FALSE);
     _MD_MakeNonblock(*writePipe);
-    _PR_MD_INIT_FD_INHERITABLE(*writePipe, PR_FALSE);
     return PR_SUCCESS;
 #else
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
