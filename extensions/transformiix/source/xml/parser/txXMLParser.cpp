@@ -62,7 +62,7 @@ class txXMLParser
   protected:
     void createErrorString();
     nsString  mErrorString;
-    txXPathNode* mDocument;
+    Document* mDocument;
     Node*  mCurrentNode;
     XML_Parser mExpatParser;
 };
@@ -133,7 +133,7 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
 #ifdef TX_EXE
 nsresult
 txParseFromStream(istream& aInputStream, const nsAString& aUri,
-                  nsAString& aErrorString, Document** aResult)
+                  nsAString& aErrorString, txXPathNode** aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
     txXMLParser parser;
@@ -211,7 +211,7 @@ externalEntityRefHandler(XML_Parser aParser,
  */
 nsresult
 txXMLParser::parse(istream& aInputStream, const nsAString& aUri,
-                   Document** aResultDoc)
+                   txXPathNode** aResultDoc)
 {
     mErrorString.Truncate();
     *aResultDoc = nsnull;
@@ -263,7 +263,7 @@ txXMLParser::parse(istream& aInputStream, const nsAString& aUri,
     // clean up
     XML_ParserFree(mExpatParser);
     // ownership to the caller
-    *aResultDoc = mDocument;
+    *aResultDoc = txXPathNativeNode::createXPathNode(mDocument);
     mDocument = nsnull;
     return NS_OK;
 }

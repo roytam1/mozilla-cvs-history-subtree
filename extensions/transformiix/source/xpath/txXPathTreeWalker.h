@@ -118,7 +118,9 @@ public:
 
 private:
 #ifdef TX_EXE
+    PRBool moveToPreceding(NodeDefinition* aNode);
     txXPathNode mPosition;
+    PRUint32 mLevel;
 #else
     PRBool moveToSibling(PRBool aForward);
 

@@ -350,8 +350,12 @@ MBool txIdPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
     // Get a ID attribute, if there is
     nsAutoString value;
 #ifdef TX_EXE
-    if (!((Element*)aNode)->getIDValue(value))
-        return MB_FALSE;
+    Element* elem;
+    nsresult rv = txXPathNativeNode::getElement(aNode, &elem);
+    NS_ENSURE_SUCCESS(rv, PR_FALSE);
+    if (!elem->getIDValue(value)) {
+        return PR_FALSE;
+    }
 #else
     nsCOMPtr<nsIContent> content;
     txXPathNativeNode::getContent(aNode, getter_AddRefs(content));
