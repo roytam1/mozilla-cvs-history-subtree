@@ -747,7 +747,8 @@ convert_JS_method_args_to_java_argv(JSContext *cx, JNIEnv *jEnv, jsval *argv,
         ok = jsj_ConvertJSValueToJavaValue(cx, jEnv, argv[i], arg_signatures[i],
                                            &dummy_cost, &jargv[i], &localv[i]);
         if (!ok) {
-            JS_ReportError(cx, "Internal error: can't convert JS value to Java value");
+            JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                                            JSJMSG_CONVERT_JS_VALUE);
             JS_free(cx, jargv);
             JS_free(cx, localv);
             *localvp = NULL;
@@ -798,8 +799,8 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
 
 #ifdef DEBUG
     if (old_cx && (old_cx != cx)) {
-        JS_ReportError(cx, "Java thread in simultaneous use by more than "
-                           "one JSContext ?");
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                                        JSJMSG_MULTIPLE_JTHREADS);
     }
 #endif
 
@@ -1007,7 +1008,7 @@ jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
         return invoke_overloaded_java_method(cx, jsj_env, member_descriptor, JS_TRUE, 
                                              java_class, class_descriptor, argc, argv, vp);
     }
-    jsj_init_js_obj_reflections_table();    
+    
     return invoke_overloaded_java_method(cx, jsj_env, member_descriptor,
                                          JS_FALSE, java_obj, 
                                          class_descriptor, argc, argv, vp);
@@ -1050,8 +1051,8 @@ invoke_java_constructor(JSContext *cx,
 
 #ifdef DEBUG
     if (old_cx && (old_cx != cx)) {
-        JS_ReportError(cx, "Java thread in simultaneous use by more than "
-                           "one JSContext ?");
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
+                                        JSJMSG_MULTIPLE_JTHREADS);
     }
 #endif
 
@@ -1137,25 +1138,25 @@ jsj_JavaConstructorWrapper(JSContext *cx, JSObject *obj,
     /* Get class/interface flags and check them */
     modifiers = class_descriptor->modifiers;
     if (modifiers & ACC_ABSTRACT) {
-        JS_ReportError(cx, "Java class %s is abstract and therefore may not "
-                           "be instantiated", class_descriptor->name);
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                            JSJMSG_ABSTRACT_JCLASS, class_descriptor->name);
         return JS_FALSE;
     }
     if (modifiers & ACC_INTERFACE) {
-        JS_ReportError(cx, "%s is a Java interface and therefore may not "
-                           "be instantiated", class_descriptor->name);
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                            JSJMSG_IS_INTERFACE, class_descriptor->name);
         return JS_FALSE;
     }
     if ( !(modifiers & ACC_PUBLIC) ) {
-        JS_ReportError(cx, "Java class %s is not public and therefore may not "
-                           "be instantiated", class_descriptor->name);
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                            JSJMSG_NOT_PUBLIC, class_descriptor->name);
         return JS_FALSE;
     }
     
     member_descriptor = jsj_LookupJavaClassConstructors(cx, jEnv, class_descriptor);
     if (!member_descriptor) {
-        JS_ReportError(cx, "No public constructors defined for Java class %s",
-                       class_descriptor->name);
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                            JSJMSG_NO_CONSTRUCTORS, class_descriptor->name);
         return JS_FALSE;
     }
 

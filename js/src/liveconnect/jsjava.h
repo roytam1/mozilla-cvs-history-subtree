@@ -51,7 +51,11 @@ typedef struct JSJavaThreadState JSJavaThreadState;
  * it is a reference to a JVM plugin. A set of callbacks in the JSJCallbacks
  * struct allow it to be manipulated.
  */
+#ifdef OJI
 typedef struct SystemJavaVM SystemJavaVM;
+#else
+typedef JavaVM SystemJavaVM;
+#endif
 
 /*
  * This callback table provides hooks to external functions that implement

@@ -307,6 +307,41 @@ jsj_LogError(const char *error_msg)
         fputs(error_msg, stderr);
 }
 
+/*
+	Error number handling. 
+
+	jsj_ErrorFormatString is an array of format strings mapped
+	by error number. It is initialized by the contents of jsj.msg
+
+	jsj_GetErrorMessage is invoked by the engine whenever it wants 
+	to convert an error number into an error format string.
+*/
+/*
+        this define needs to go somewhere sensible
+*/
+#define JSJ_HAS_DFLT_MSG_STRINGS 1
+
+JSErrorFormatString jsj_ErrorFormatString[JSJ_Err_Limit] = {
+#if JSJ_HAS_DFLT_MSG_STRINGS
+#define MSG_DEF(name, number, count, format) \
+    { format, count } ,
+#else
+#define MSG_DEF(name, number, count, format) \
+    { NULL, count } ,
+#endif
+#include "jsj.msg"
+#undef MSG_DEF
+};
+
+const JSErrorFormatString *
+jsj_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber)
+{
+    if ((errorNumber > 0) && (errorNumber < JSJ_Err_Limit))
+	    return &jsj_ErrorFormatString[errorNumber];
+	else
+	    return NULL;
+}
+
 jsize
 jsj_GetJavaArrayLength(JSContext *cx, JNIEnv *jEnv, jarray java_array)
 {

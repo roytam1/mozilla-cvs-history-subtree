@@ -180,14 +180,6 @@ struct JSJavaThreadState {
     JSJavaThreadState * next;           /* next thread state among all created threads */
 };
 
-struct JavaToJSSavedState {
-	JSErrorReporter error_reporter;
-	JSJavaThreadState* java_jsj_env;
-};
-typedef struct JavaToJSSavedState JavaToJSSavedState;
-
-
-
 /******************************** Globals ***********************************/
 
 extern JSJCallbacks *JSJ_callbacks;
@@ -315,9 +307,9 @@ jsj_ConvertJavaObjectToJSBoolean(JSContext *cx, JNIEnv *jEnv,
                                  jobject java_obj, jsval *vp);
 extern JSJavaThreadState *
 jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
-         JSContext **cxp, JSObject **js_objp, JavaToJSSavedState* saved_state);
+             JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp);
 extern JSBool
-jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JavaToJSSavedState* original_state);
+jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter old_error_reporterp);
 
 extern JavaClassDescriptor *
 jsj_get_jlObject_descriptor(JSContext *cx, JNIEnv *jEnv);
@@ -502,6 +494,9 @@ jsj_GetJavaErrorMessage(JNIEnv *env);
 extern void
 jsj_LogError(const char *error_msg);
 
+extern const JSErrorFormatString * 
+jsj_GetErrorMessage(void *userRef, const char *locale, const uintN errorNumber);
+
 JS_DLL_CALLBACK JSJHashNumber
 jsj_HashJavaObject(const void *key, void* env);
 
@@ -529,9 +524,6 @@ jsj_DupJavaStringUTF(JSContext *cx, JNIEnv *jEnv, jstring jstr);
 JSJavaThreadState *
 jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp);
 
-JSJavaThreadState *
-jsj_SetJavaJSJEnv(JSJavaThreadState* java_jsj_env);
-
 #ifdef DEBUG
 #define DEBUG_LOG(args) printf args
 #endif
@@ -541,5 +533,15 @@ jsj_SetJavaJSJEnv(JSJavaThreadState* java_jsj_env);
         if (x)                                                              \
             JS_free(cx, x);                                                 \
     JS_END_MACRO
+
+
+enum JSJErrNum {
+#define MSG_DEF(name, number, format, count) \
+    name = number,
+#include "jsj.msg"
+#undef MSG_DEF
+    JSJ_Err_Limit
+#undef MSGDEF
+};
 
 #endif   /* _JSJAVA_PVT_H */

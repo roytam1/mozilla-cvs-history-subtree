@@ -55,9 +55,8 @@ convert_js_obj_to_JSObject_wrapper(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj
 {
     if (!njJSObject) {
         if (java_value)
-            JS_ReportError(cx, "Couldn't convert JavaScript object to an "
-                               "instance of netscape.javascript.JSObject "
-                               "because that class could not be loaded.");
+            JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                                                JSJMSG_CANT_LOAD_JSOBJECT);
         return JS_FALSE;
     }
 
@@ -177,6 +176,8 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
                reference is passed to the original JS object by wrapping it
                inside an instance of netscape.javascript.JSObject */
             if (convert_js_obj_to_JSObject_wrapper(cx, jEnv, js_obj, signature, cost, java_value))             {
+                if (*java_value)
+                    *is_local_refp = JS_TRUE;
                 return JS_TRUE;
             }
             
@@ -516,9 +517,8 @@ conversion_error:
         if (!jsval_string)
             jsval_string = "";
         
-        JS_ReportError(cx, "Unable to convert JavaScript value %s to "
-                           "Java value of type %s",
-                       jsval_string, signature->name);
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                    JSJMSG_CANT_CONVERT_JS, jsval_string, signature->name);
         return JS_FALSE;
     }
     return success;

@@ -43,14 +43,12 @@ report_java_initialization_error(JNIEnv *jEnv, const char *js_error_msg)
     const char *error_msg, *java_error_msg;
 
     java_error_msg = NULL;
-#if 0   /* This can never work here, because jsj_GetJavaErrorMessage relies on 
-           jlThrowable_toString which is set up by the initialization that calls 
-           this function. */
+
     if (jEnv) {
         java_error_msg = jsj_GetJavaErrorMessage(jEnv);
         (*jEnv)->ExceptionClear(jEnv);
     }
-#endif
+
     if (java_error_msg) { 
         error_msg = JS_smprintf("initialization error: %s (%s)\n",
                                 js_error_msg, java_error_msg);
@@ -287,7 +285,7 @@ static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
         "toString", "()Ljava/lang/String;", (void*)&Java_netscape_javascript_JSObject_toString,
         "getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow,
         "finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize,
-        /* "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals */
+        "equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals
     };
     (*jEnv)->RegisterNatives(jEnv, njJSObject, nativeMethods, sizeof(nativeMethods) / sizeof(JNINativeMethod));
     if ((*jEnv)->ExceptionOccurred(jEnv)) {
@@ -738,7 +736,7 @@ default_map_jsj_thread_to_js_context(JSJavaThreadState *jsj_env, JNIEnv *jEnv, c
 
 /* Trivial implementation of callback function */
 static JSObject *
-default_map_java_object_to_js_object(JNIEnv *jEnv, jobject hint, char **errp)
+default_map_java_object_to_js_object(JNIEnv *jEnv, void *hint, char **errp)
 {
     return the_global_js_obj;
 }
@@ -786,7 +784,7 @@ default_attach_current_thread(SystemJavaVM* jvm)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
     JNIEnv* env = NULL;
-    jint err = (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
+    (*java_vm)->AttachCurrentThread(java_vm, &env, NULL);
     return env;
 }
 
@@ -803,7 +801,7 @@ static SystemJavaVM* JS_DLL_CALLBACK
 default_get_java_vm(JNIEnv* env)
 {
     JavaVM* java_vm = NULL;
-    jint err = (*env)->GetJavaVM(env, &java_vm);
+    (*env)->GetJavaVM(env, &java_vm);
     return (SystemJavaVM*)java_vm;
 }
 
@@ -812,6 +810,7 @@ JSJCallbacks jsj_default_callbacks = {
     default_map_jsj_thread_to_js_context,
     default_map_js_context_to_jsj_thread,
     default_map_java_object_to_js_object,
+    NULL,
     NULL,
     NULL,
     NULL,
@@ -835,12 +834,12 @@ JSJ_SimpleInit(JSContext *cx, JSObject *global_obj, SystemJavaVM *java_vm, const
 {
     JNIEnv *jEnv;
 
+    JSJ_Init(&jsj_default_callbacks);
+
     JS_ASSERT(!the_jsj_vm);
     the_jsj_vm = JSJ_ConnectToJavaVM(java_vm, (void*)classpath);
     if (!the_jsj_vm)
         return JS_FALSE;
-
-    JSJ_Init(&jsj_default_callbacks);
 
     if (!JSJ_InitJSContext(cx, global_obj, NULL))
         goto error;

@@ -54,7 +54,7 @@
 static void *
 DefaultAllocTable(void *pool, size_t size)
 {
-#ifdef XP_MAC
+#if defined(XP_MAC)
 #pragma unused (pool)
 #endif
 
@@ -64,7 +64,7 @@ DefaultAllocTable(void *pool, size_t size)
 static void
 DefaultFreeTable(void *pool, void *item)
 {
-#ifdef XP_MAC
+#if defined(XP_MAC)
 #pragma unused (pool)
 #endif
 
@@ -74,7 +74,7 @@ DefaultFreeTable(void *pool, void *item)
 static JSJHashEntry *
 DefaultAllocEntry(void *pool, const void *key)
 {
-#ifdef XP_MAC
+#if defined(XP_MAC)
 #pragma unused (pool,key)
 #endif
 
@@ -84,7 +84,7 @@ DefaultAllocEntry(void *pool, const void *key)
 static void
 DefaultFreeEntry(void *pool, JSJHashEntry *he, JSUintn flag)
 {
-#ifdef XP_MAC
+#if defined(XP_MAC)
 #pragma unused (pool)
 #endif
 
