@@ -38,6 +38,7 @@
 #include "jsdate.h"
 #include "jsemit.h"
 #include "jsexn.h"
+#include "jsfile.h"
 #include "jsfun.h"
 #include "jsgc.h"
 #include "jsinterp.h"
@@ -694,6 +695,9 @@ JS_InitStandardClasses(JSContext *cx, JSObject *obj)
 #endif
 #if JS_HAS_ERROR_EXCEPTIONS
 	   js_InitExceptionClasses(cx, obj) &&
+#endif
+#if JS_HAS_FILE_OBJECT
+           js_InitFileClass(cx, obj) &&
 #endif
 	   js_InitDateClass(cx, obj);
 }
