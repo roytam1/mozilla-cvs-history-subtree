@@ -72,38 +72,41 @@ var BookmarksMenu = {
     aTarget.appendChild(element);
   },
 
+  realHideOpenInTabsMenuItem: function (aParent)
+  {
+    if (!aParent.hasChildNodes())
+      return;
+    child = aParent.lastChild;
+    var removed = 0;
+    while (child) {
+      var cclass = child.getAttribute("class");
+      if (cclass == "openintabs-menuitem" || cclass == "openintabs-menuseparator") {
+        var prevchild = child.previousSibling;
+        aParent.removeChild(child);
+        child = prevchild;
+        removed++;
+        if (removed == 2)
+          break;
+      } else {
+        child = child.previousSibling;
+      }
+    }
+  },
+
 #ifdef XP_MACOSX
   // FIXME: Work around a Mac menu bug with onpopuphidden.  onpopuphiding/hidden on mac fire
   // before oncommand executes on a menuitem.  For now we're applying a XUL workaround
   // since it's too late to fix this in the Mac widget code for 1.5.
-  gOpenInTabsParent : null,
-  delayedHideOpenInTabsMenuItem: function ()
-  {
-    if (!gOpenInTabsParent.hasChildNodes())
-      return;
-    if (gOpenInTabsParent.lastChild.getAttribute("class") == "openintabs-menuitem") {
-      gOpenInTabsParent.removeChild(gOpenInTabsParent.lastChild);
-      gOpenInTabsParent.removeChild(gOpenInTabsParent.lastChild);
-    }
-  },
-
   hideOpenInTabsMenuItem: function (aTarget)
   {
-    gOpenInTabsParent = aTarget;
-    setTimeout(function() { BookmarksMenu.delayedHideOpenInTabsMenuItem(); }, 0);
+    setTimeout(function() { BookmarksMenu.realHideOpenInTabsMenuItem(aTarget); }, 0);
   },
-
 #else
-
   /////////////////////////////////////////////////////////////////////////////
   // hides the 'Open in Tabs' on popuphidden so that we won't duplicate it -->
   hideOpenInTabsMenuItem: function (aTarget)
   {
-    if (aTarget.hasChildNodes() &&
-        aTarget.lastChild.getAttribute("class") == "openintabs-menuitem") {
-      aTarget.removeChild(aTarget.lastChild);
-      aTarget.removeChild(aTarget.lastChild);
-    }
+    BookmarksMenu.realHideOpenInTabsMenuItem(aTarget);
   },
 #endif
 
