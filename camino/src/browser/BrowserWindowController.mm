@@ -274,6 +274,14 @@ static NSArray* sToolbarDefaults = nil;
 
   [self autosaveWindowFrame];
   
+  { // scope...
+    nsCOMPtr<nsIRDFRemoteDataSource> dataSource ( do_QueryInterface(mGlobalHistory) );
+    if (dataSource)
+      dataSource->Flush();
+    NS_IF_RELEASE(mGlobalHistory);
+    NS_IF_RELEASE(mURIFixer);
+  } // matters
+  
   // Loop over all tabs, and tell them that the window is closed. This
   // stops gecko from going any further on any of its open connections
   // and breaks all the necessary cycles between Gecko and the BrowserWrapper.
@@ -282,12 +290,6 @@ static NSArray* sToolbarDefaults = nil;
     NSTabViewItem* item = [mTabBrowser tabViewItemAtIndex: i];
     [[item view] windowClosed];
   }
-
-  nsCOMPtr<nsIRDFRemoteDataSource> dataSource ( do_QueryInterface(mGlobalHistory) );
-  if (dataSource)
-    dataSource->Flush();
-  NS_IF_RELEASE(mGlobalHistory);
-  NS_IF_RELEASE(mURIFixer);
 
   // autorelease just in case we're here because of a window closing
   // initiated from gecko, in which case this BWC would still be on the 
