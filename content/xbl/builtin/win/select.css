@@ -52,7 +52,7 @@ select[size]
   
 option
   {
-    font                  : list;  
+    font                  : -moz-list;  
     border                : 1px solid transparent;
     color                 : windowtext;
   }  
@@ -80,7 +80,7 @@ select, select[size="1"]
     border-bottom         : 1px solid threedhighlight;
     background-color      : -moz-field;
     color                 : menutext;
-    font                  : list;
+    font                  : -moz-list;
     margin                : 1px 5px 2px 5px;
   }
 

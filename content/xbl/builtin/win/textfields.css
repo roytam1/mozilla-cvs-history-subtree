@@ -45,7 +45,7 @@ input
     border-right          : 1px solid threedhighlight;
     border-bottom         : 1px solid threedhighlight;
     color                 : windowtext;
-    font                  : window;
+    font                  : -moz-window;
   }
   
 .text-input-internal-box
