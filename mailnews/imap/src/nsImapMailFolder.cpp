@@ -723,6 +723,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
       getter_AddRefs(eventQ));
     nsCOMPtr <nsIURI> url;
     rv = imapService->SelectFolder(eventQ, this, m_urlListener, msgWindow, getter_AddRefs(url));
+    if (NS_SUCCEEDED(rv))
     m_urlRunning = PR_TRUE;
     if (url)
     {
