@@ -1566,7 +1566,7 @@ PRInt32 InitXPInstallObjects(nsIScriptContext *aContext, const char* jarfile, co
   JS_SetPrivate(jscontext, installObject, nativeInstallObject);
   nativeInstallObject->SetScriptObject(installObject);
  
-#if WIN32
+#ifdef WIN32
   if(NS_OK != InitWinRegPrototype(jscontext, global, &winRegPrototype))
   {
       return NS_ERROR_FAILURE;
