@@ -1197,6 +1197,39 @@ nsBlockFrame::~nsBlockFrame()
 {
 }
 
+#ifdef IBMBIDI
+nscoord nsBlockFrame::GetLinesXMax(void)
+{
+  nscoord Mwidth = 0, tempWidth;
+  nsLineBox* line;
+  nsFrame* tmpFrame;
+  nsRect tempRect;
+  line = mLines;
+  while(line!=NULL)
+  {
+    tmpFrame = (nsFrame*) line->mFirstChild;
+    tmpFrame->GetRect(tempRect);
+    tempWidth = tempRect.width;
+    Mwidth = (Mwidth < tempWidth) ? tempWidth : Mwidth ;
+    line = line->mNext;
+  }
+  return Mwidth;
+}
+
+void nsBlockFrame::AlignLinesRight(void)
+{
+  nscoord Mwidth = this->GetLinesXMax(), tempWidth;
+  nsLineBox* line;
+  nsFrame* tmpFrame;
+  nsRect tempRect;
+  line = mLines;
+  while(line!=NULL)
+  {
+    line = line->mNext;
+  }
+}
+#endif // IBMBIDI
+
 NS_IMETHODIMP
 nsBlockFrame::Destroy(nsIPresContext* aPresContext)
 {
@@ -1603,6 +1636,22 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
   if (eReflowReason_Resize != aReflowState.reason) {
     RenumberLists(aPresContext);
+#ifdef IBMBIDI
+    PRBool bidiEnabled;
+    aPresContext->BidiEnabled(bidiEnabled);
+    if ( (bidiEnabled) && (mLines) ) {
+      nsBidiPresUtils* bidiUtils;
+      aPresContext->GetBidiUtils(&bidiUtils);
+      if (bidiUtils) {
+        PRInt32 childCountGrow;
+        nsresult rv = bidiUtils->Resolve(aPresContext, this,
+                                         mLines->mFirstChild, childCountGrow);
+        if (NS_SUCCEEDED(rv) && childCountGrow > 0) {
+          mLines->SetChildCount(mLines->GetChildCount() + childCountGrow);
+        }
+      }
+    }
+#endif // IBMBIDI
   }
 
   nsresult rv = NS_OK;
@@ -4690,6 +4739,29 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
     aLine->MarkDirty();
     aState.SetFlag(BRS_NEEDRESIZEREFLOW, PR_TRUE);
   }
+#ifdef IBMBIDI
+  else {
+    PRBool bidiEnabled;
+    aState.mPresContext->BidiEnabled(bidiEnabled);
+
+    if (bidiEnabled) {
+      PRBool isVisual;
+      aState.mPresContext->IsVisualMode(isVisual);
+      if (!isVisual) {
+        nsBidiPresUtils* bidiUtils;
+        aState.mPresContext->GetBidiUtils(&bidiUtils);
+
+        if (bidiUtils && bidiUtils->IsSuccessful() ) {
+          nsIFrame* nextInFlow = (aLine->mNext)
+            ? aLine->mNext->mFirstChild : nsnull;
+
+          bidiUtils->ReorderFrames(aState.mPresContext, aLine->mFirstChild,
+                                   nextInFlow, aLine->GetChildCount() );
+        } // bidiUtils
+      } // not visual mode
+    } // bidi enabled
+  } // successful
+#endif // IBMBIDI
 
   nsRect combinedArea;
   aLineLayout.RelativePositionFrames(combinedArea);
@@ -5572,12 +5644,32 @@ nsBlockFrame::DeleteChildsNextInFlow(nsIPresContext* aPresContext,
   nsIFrame* nextInFlow;
   aChild->GetNextInFlow(&nextInFlow);
   NS_PRECONDITION(nsnull != nextInFlow, "null next-in-flow");
+#ifdef IBMBIDI
+  PRBool bidiEnabled;
+  aPresContext->BidiEnabled(bidiEnabled);
+  if (bidiEnabled) {
+    PRUint8 level, nextLevel;
+    aChild->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
+                            (void**) &level);
+    nextInFlow->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel,
+                                (void**) &nextLevel);
+    bidiEnabled = (level ^ nextLevel);
+  }
+  if (bidiEnabled) {
+    aChild->SetNextInFlow(nsnull);
+    nextInFlow->SetPrevInFlow(nsnull);
+  }
+  else {
+#endif // IBMBIDI
   nsBlockFrame* parent;
   nextInFlow->GetParent((nsIFrame**)&parent);
   NS_PRECONDITION(nsnull != parent, "next-in-flow with no parent");
   NS_PRECONDITION(nsnull != parent->mLines, "next-in-flow with weird parent");
 //  NS_PRECONDITION(nsnull == parent->mOverflowLines, "parent with overflow");
   parent->DoRemoveFrame(aPresContext, nextInFlow);
+#ifdef IBMBIDI
+  }
+#endif // IBMBIDI
 }
 
 ////////////////////////////////////////////////////////////////////////

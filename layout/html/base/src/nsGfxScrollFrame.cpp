@@ -53,6 +53,13 @@
 #include "nsINodeInfo.h"
 #include "nsIScrollbarFrame.h"
 #include "nsIScrollbarMediator.h"
+#ifdef IBMBIDI
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+#include "nsIDocument.h"
+#include "nsIUBidiUtils.h"
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+#endif // IBMBIDI
 #include "nsIGfxTextControlFrame.h"
 #include "nsIDOMHTMLTextAreaElement.h"
 
@@ -1089,6 +1096,27 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
 
   // if true places the horizontal scrollbar on the bottom false puts it on the top.
   PRBool scrollBarBottom = PR_TRUE;
+
+#ifdef IBMBIDI
+  const nsStyleDisplay* display;
+    mOuter->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+  //
+  // Direction Style from this->GetStyleData()
+  // now in (display->mDirection)
+  // ------------------
+  // NS_STYLE_DIRECTION_LTR : LTR or Default
+  // NS_STYLE_DIRECTION_RTL
+  // NS_STYLE_DIRECTION_INHERIT
+  //
+
+  if (display->mDirection == NS_STYLE_DIRECTION_RTL){
+    // if true places the vertical scrollbar on the right false puts it on the left.
+    scrollBarRight = PR_FALSE;
+
+    // if true places the horizontal scrollbar on the bottom false puts it on the top.
+    scrollBarBottom = PR_TRUE;
+  }
+#endif // IBMBIDI
 
   nsIFrame* frame = nsnull;
   mOuter->GetFrame(&frame);

@@ -44,6 +44,13 @@
 #include "nsIViewManager.h"
 #include "nsHTMLAtoms.h"
 #include "nsTextFragment.h"
+#ifdef IBMBIDI
+#include "nsBlockFrame.h"
+
+nsresult
+NS_SetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32 aStart, PRInt32 aEnd);
+
+#endif // IBMBIDI
 
 #ifdef DEBUG
 #undef  NOISY_HORIZONTAL_ALIGN
@@ -345,6 +352,17 @@ nsLineLayout::UpdateBand(nscoord aX, nscoord aY,
     psd->mRightEdge = NS_UNCONSTRAINEDSIZE;
   }
   else {
+#ifdef IBMBIDI
+    if (mBlockReflowState->mStyleDisplay->mDirection == NS_STYLE_DIRECTION_RTL)
+    {  
+      psd->mRightEdge = (((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() > (aX + aWidth)) ? 
+        ((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() : 
+        (aX + aWidth);
+      //((nsBlockFrame*)mBlockReflowState->frame)->AlignLinesRight();
+      //psd->mRightEdge = aX + aWidth; // Line Wraping is not ok :(
+    }
+    else
+#endif // IBMBIDI
     psd->mRightEdge = aX + aWidth;
   }
   mTopEdge = aY;
@@ -469,6 +487,18 @@ nsLineLayout::BeginSpan(nsIFrame* aFrame,
     psd->mReflowState = aSpanReflowState;
     psd->mLeftEdge = aLeftEdge;
     psd->mX = aLeftEdge;
+#ifdef IBMBIDI
+    if (mBlockReflowState->mStyleDisplay->mDirection == NS_STYLE_DIRECTION_RTL)
+    {  
+      psd->mRightEdge = (((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() > (aRightEdge)) ? 
+        ((nsBlockFrame*)mBlockReflowState->frame)->GetLinesXMax() : 
+        (aRightEdge);
+      
+      //((nsBlockFrame*)mBlockReflowState->frame)->AlignLinesRight();
+      //psd->mRightEdge = aRightEdge;
+    }
+    else
+#endif // IBMBIDI
     psd->mRightEdge = aRightEdge;
 
     const nsStyleText* styleText;
@@ -932,6 +962,22 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   pfd->SetFlag(PFD_ISSTICKY, PR_FALSE);
   pfd->SetFlag(PFD_ISBULLET, PR_FALSE);
 
+#ifdef IBMBIDI
+  PRInt32 start, end;
+  PRBool isBidiFrame = PR_FALSE;
+  nsIAtom* frameType;
+
+  aFrame->GetFrameType(&frameType);
+
+  PRBool bidiEnabled;
+  mPresContext->BidiEnabled(bidiEnabled);
+  if ( (bidiEnabled) && (frameType == nsLayoutAtoms::textFrame) ) {
+    aFrame->GetOffsets(start, end);
+    if (start < end) {
+      isBidiFrame = PR_TRUE;
+    }
+  }
+#endif // IBMBIDI
   aFrame->Reflow(mPresContext, metrics, reflowState, aReflowStatus);
 
   pfd->mJustificationNumSpaces = mTextJustificationNumSpaces;
@@ -939,8 +985,10 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   // XXX See if the frame is a placeholderFrame and if it is process
   // the floater.
+#ifndef IBMBIDI
   nsIAtom* frameType;
   aFrame->GetFrameType(&frameType);
+#endif // !defined IBMBIDI
   if (frameType) {
     if (frameType == nsLayoutAtoms::placeholderFrame) {
       nsIFrame* outOfFlowFrame = ((nsPlaceholderFrame*)aFrame)->GetOutOfFlowFrame();
@@ -1138,6 +1186,29 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   nsFrame::ListTag(stdout, aFrame);
   printf(" status=%x\n", aReflowStatus);
 #endif
+
+#ifdef IBMBIDI
+  if (isBidiFrame) {
+    // Since aReflowStatus may change, check it at the end
+    if (NS_INLINE_IS_BREAK_BEFORE(aReflowStatus) ) {
+      NS_SetContentLengthAndOffsetForBidi(aFrame, start, end);
+    }
+    else if (!NS_FRAME_IS_COMPLETE(aReflowStatus) ) {
+      PRInt32 newStart, newEnd;
+      aFrame->GetOffsets(newStart, newEnd);
+      PRInt32 delta = newEnd - end;
+      if (delta) {
+        nsIFrame* nextInFlow;
+        aFrame->GetNextInFlow(&nextInFlow);
+        if (nextInFlow) {
+          nextInFlow->GetOffsets(start, end);
+          NS_SetContentLengthAndOffsetForBidi(nextInFlow, newEnd, end + delta);
+        } // nextInFlow
+      } // delta
+    } // !NS_FRAME_IS_COMPLETE(aReflowStatus)
+  } // isBidiFrame
+#endif // IBMBIDI
+
   return rv;
 }
 
@@ -2317,6 +2388,11 @@ PRBool
 nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
                                        nscoord* aDeltaWidth)
 {
+#ifdef IBMBIDI
+  PRBool isVisual;
+  mPresContext->IsVisualMode(isVisual);
+  if (isVisual)
+#endif // IBMBIDI
 // XXX what about NS_STYLE_DIRECTION_RTL?
   if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
     *aDeltaWidth = 0;
@@ -2604,7 +2680,23 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         dx = remainingWidth / 2;
         break;
     }
+#ifdef IBMBIDI
+    PRBool visualRTL = PR_FALSE;
+    
+    if ( (NS_STYLE_DIRECTION_RTL == psd->mDirection)
+        && (!psd->mChangedFrameDirection) ) {
+      psd->mChangedFrameDirection = PR_TRUE;
+  
+      /* Assume that all frames have been right aligned.*/
+      if (aShrinkWrapWidth) {
+        return PR_FALSE;
+      }
+      mPresContext->IsVisualMode(visualRTL);
+    }
+    if ( (0 != dx) || (visualRTL) ) {
+#else
     if (0 != dx) {
+#endif // IBMBIDI
       // If we need to move the frames but we're shrink wrapping, then
       // we need to wait until the final width is known
       if (aShrinkWrapWidth) {
@@ -2612,14 +2704,24 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
       }
 
       PerFrameData* pfd = psd->mFirstFrame;
+#ifdef IBMBIDI
+      PRUint32 maxX = psd->mLastFrame->mBounds.x
+          + psd->mLastFrame->mBounds.width + dx;
+#endif // IBMBIDI
       while (nsnull != pfd) {
         pfd->mBounds.x += dx;
+#ifdef IBMBIDI
+        if (visualRTL) {
+          maxX = pfd->mBounds.x = maxX - pfd->mBounds.width;
+        }
+#endif // IBMBIDI
         pfd->mFrame->SetRect(mPresContext, pfd->mBounds);
         pfd = pfd->mNext;
       }
       aLineBounds.width += dx;
     }
 
+#ifndef IBMBIDI
     if ((NS_STYLE_DIRECTION_RTL == psd->mDirection) &&
         !psd->mChangedFrameDirection) {
       psd->mChangedFrameDirection = PR_TRUE;
@@ -2637,6 +2739,7 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         pfd = pfd->mNext;
       }
     }
+#endif // ndef IBMBIDI
   }
 
   return PR_TRUE;

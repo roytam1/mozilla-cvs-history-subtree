@@ -2479,6 +2479,18 @@ nsFrame::SetSelected(nsIPresContext* aPresContext, nsIDOMRange *aRange, PRBool a
     }
   }
 #endif
+#ifdef IBMBIDI
+  PRInt32 start, end;
+  nsIFrame* frame;
+  GetNextSibling(&frame);
+  if (frame){
+    GetFirstLeaf(aPresContext, &frame);
+    GetOffsets(start, end);
+    if (start && end) {
+      frame->SetSelected(aPresContext, aRange, aSelected, aSpread);
+    }
+  }
+#endif // IBMBIDI
   return NS_OK;
 }
 
@@ -3554,6 +3566,51 @@ nsFrame::IsMouseCaptured(nsIPresContext* aPresContext)
 
   return PR_FALSE;
 }
+
+#ifdef IBMBIDI
+/**
+ *  retrieve Bidi property of this frame
+ *  @lina 5/1/2000
+ */
+
+nsresult nsFrame::GetBidiProperty(nsIPresContext* aPresContext,
+                                  nsIAtom*        aPropertyName,
+                                  void**          aPropertyValue) const
+{
+  *aPropertyValue = nsnull;
+
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell) );
+
+  if (presShell) {
+    nsCOMPtr<nsIFrameManager> frameManager;
+    presShell->GetFrameManager(getter_AddRefs(frameManager) );
+  
+    if (frameManager) {
+      frameManager->GetFrameProperty( (nsIFrame*)this, aPropertyName, 0, aPropertyValue);
+    }
+  }
+  return NS_OK;
+}
+
+nsresult nsFrame::SetBidiProperty(nsIPresContext* aPresContext,
+                                  nsIAtom*        aPropertyName,
+                                  void*           aPropertyValue) const
+{
+  nsresult rv = NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell) );
+  if (shell) {
+    nsCOMPtr<nsIFrameManager> frameManager;
+    shell->GetFrameManager(getter_AddRefs(frameManager) );
+    if (frameManager) {
+      rv = frameManager->SetFrameProperty( (nsIFrame*) this, aPropertyName, aPropertyValue, nsnull);
+    }
+  }
+  return rv;
+}
+#endif // IBMBIDI
 
 #ifdef NS_DEBUG
 static void

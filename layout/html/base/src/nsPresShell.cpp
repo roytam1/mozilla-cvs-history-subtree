@@ -132,6 +132,11 @@
 // SubShell map
 #include "nsDST.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
+#endif // IBMBIDI
+
 // local management of the style watch:
 //  aCtlValue should be set to all actions desired (bitwise OR'd together)
 //  aStyleSet cannot be null
@@ -2900,6 +2905,22 @@ PresShell::DoCopy()
     return rv?rv:NS_ERROR_FAILURE;
 
   doc->CreateXIF(buffer,sel);
+
+#ifdef IBMBIDI_NOT
+  rv = NS_OK;
+  NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBidiUtilCID, &rv);
+	//ahmed
+  nsBidiOptions mBidioptions;
+  mPresContext->GetBidi(&mBidioptions);
+  if (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_LOGICAL) {
+    nsString NewBuffer;
+    PRUint32 txtSizeChange = 0;
+
+    BidiEngine->Conv_FE_06 (buffer, NewBuffer);
+    buffer = NewBuffer;
+  }
+#endif // IBMBIDI
+
 
   // Get the Clipboard
   NS_WITH_SERVICE(nsIClipboard, clipboard, kCClipboardCID, &rv);

@@ -30,6 +30,9 @@ class nsBlockReflowState;
 class nsBulletFrame;
 class nsLineBox;
 class nsFirstLineFrame;
+#ifdef IBMBIDI
+class nsTextFragment;
+#endif // IBMBIDI
 
 /**
  * Child list name indices
@@ -64,6 +67,11 @@ extern const nsIID kBlockFrameCID;
 class nsBlockFrame : public nsBlockFrameSuper
 {
 public:
+#ifdef IBMBIDI
+  nscoord GetLinesXMax(void);
+  void AlignLinesRight(void);
+#endif // IBMBIDI
+
   friend nsresult NS_NewBlockFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRUint32 aFlags);
 
   // nsISupports
