@@ -19,6 +19,12 @@
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIURL.h"
+#ifdef NECKO
+#include "nsIIOService.h"
+#include "nsIURI.h"
+#include "nsIServiceManager.h"
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+#endif // NECKO
 #include "nsIWidget.h"
 #include "nsIPref.h"
 #include "plevent.h"
@@ -113,6 +119,27 @@ PrintUsage(void)
    fprintf(stderr, "\t<url>:  a fully defined url string like http:// etc..\n");
 }
 
+//----------------------------------------------------------------------------------------
+static PRBool CheckAndRunPrefs(nsICmdLineService* cmdLineArgs)
+//----------------------------------------------------------------------------------------
+{
+  char* cmdResult;
+  nsresult rv = cmdLineArgs->GetCmdLineValue("-pref", &cmdResult);
+  if (NS_SUCCEEDED(rv) && cmdResult && (strcmp("1",cmdResult) == 0))
+  {
+    nsIPrefWindow* prefWindow;
+    rv = nsComponentManager::CreateInstance(
+	  NS_PREFWINDOW_PROGID,
+      nsnull,
+      nsIPrefWindow::GetIID(),
+      (void **)&prefWindow);
+	if (NS_SUCCEEDED(rv))
+	  prefWindow->showWindow(nsString("Apprunner::main()").GetUnicode(), nsnull, nsnull);
+	NS_IF_RELEASE(prefWindow);
+	return PR_TRUE;
+  }
+  return PR_FALSE;
+} // CheckandRunPrefs
 
 int main(int argc, char* argv[])
 {
@@ -138,6 +165,10 @@ int main(int argc, char* argv[])
   nsIDOMAppCoresManager *appCoresManager = nsnull;
   nsIURL* url = nsnull;
   nsIPref *prefs = nsnull;
+#ifdef NECKO
+  nsIIOService* service = nsnull;
+  nsIURI *uri = nsnull;
+#endif // NECKO
 
   // initialization for Full Circle
 #ifdef MOZ_FULLCIRCLE
@@ -472,7 +503,21 @@ int main(int argc, char* argv[])
   ///write me...
   nsIWebShellWindow* newWindow;
   
+#ifndef NECKO
   rv = NS_NewURL(&url, urlstr);
+#else
+  rv = nsServiceManager::GetService(kIOServiceCID, 
+                                    nsIIOService::GetIID(), 
+                                    (nsISupports **)&service);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = service->NewURI(urlstr, nsnull, &uri);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = uri->QueryInterface(nsIURL::GetIID(), (void**)&url);
+  NS_RELEASE(uri);
+#endif // NECKO
+
   if (NS_FAILED(rv)) {
     goto done;
   }
@@ -526,24 +571,6 @@ int main(int argc, char* argv[])
   }
   /* End of mailhack */
   /* ********************************************************************* */
-
-  // Support the "-pref" command-line option, which just puts up the pref window, so that
-  // apprunner becomes a "control panel". The "OK" and "Cancel" buttons will quit
-  // the application.
-  rv = cmdLineArgs->GetCmdLineValue("-pref", &cmdResult);
-  if (NS_SUCCEEDED(rv) && cmdResult && (strcmp("1",cmdResult) == 0))
-  {
-    nsIPrefWindow* prefWindow;
-    rv = nsComponentManager::CreateInstance(
-	  NS_PREFWINDOW_PROGID,
-      nsnull,
-      nsIPrefWindow::GetIID(),
-      (void **)&prefWindow);
-	if (NS_SUCCEEDED(rv))
-	  prefWindow->showWindow(nsString("Apprunner::main()").GetUnicode(), nsnull, nsnull);
-	NS_IF_RELEASE(prefWindow);
-	goto done;
-  }
 
   // Kick off appcores
   rv = nsServiceManager::GetService(kAppCoresManagerCID,
@@ -622,6 +649,12 @@ int main(int argc, char* argv[])
   // Now we have the right profile, read the user-specific prefs.
   prefs->ReadUserPrefs();
  
+  // Support the "-pref" command-line option, which just puts up the pref window, so that
+  // apprunner becomes a "control panel". The "OK" and "Cancel" buttons will quit
+  // the application.
+  if (CheckAndRunPrefs(cmdLineArgs))
+    goto done;
+
   if ( !useArgs ) {
       rv = appShell->CreateTopLevelWindow(nsnull, url, PR_TRUE, newWindow,
                        nsnull, nsnull, widthVal, heightVal);
@@ -701,5 +734,10 @@ done:
   /* 
    * Translate the nsresult into an appropriate platform-specific return code.
    */
+
+#ifdef NECKO
+    nsServiceManager::ReleaseService(kIOServiceCID, service);
+#endif // NECKO
+
   return TranslateReturnValue(rv);
 }
