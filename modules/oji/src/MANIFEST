@@ -4,3 +4,4 @@
 
 jvmmgr.h
 nsIJVM.h
+nsscd.h
