@@ -31,6 +31,7 @@ typedef long nsMsgDBViewTypeValue;
 typedef long nsMsgViewNotificationCodeValue;
 typedef long nsMsgViewCommandCheckStateValue;
 typedef long nsMsgViewCommandTypeValue;
+typedef long nsMsgViewFlagsTypeValue;
 
 [scriptable, uuid(682a18be-fd18-11d4-a5be-0060b0fc04b7)]
 interface nsMsgViewSortOrder
@@ -38,6 +39,19 @@ interface nsMsgViewSortOrder
 	const nsMsgViewSortOrderValue none = 0;
 	const nsMsgViewSortOrderValue ascending = 1;
 	const nsMsgViewSortOrderValue descending = 2;
+};
+
+[scriptable, uuid(64852276-1dd2-11b2-8103-afe12002c053)]
+interface nsMsgViewFlagsType
+{
+    /**
+     * flags for GetViewFlags
+     */
+    const nsMsgViewFlagsTypeValue kNone = 0x0;
+    const nsMsgViewFlagsTypeValue kOutlineDisplay = 0x1;
+    const nsMsgViewFlagsTypeValue kFlatDisplay = 0x2;
+    const nsMsgViewFlagsTypeValue kShowIgnored = 0x8;
+    const nsMsgViewFlagsTypeValue kUnreadOnly = 0x10;
 };
 
 [scriptable, uuid(b2f31bca-fd18-11d4-a5be-0060b0fc04b7)]
@@ -173,6 +187,9 @@ interface nsIMsgDBView : nsISupports
     void getCommandStatus(in nsMsgViewCommandTypeValue command,
 						 out nsMsgViewIndex indices, in long numindices,
 						 out boolean selectable_p, out nsMsgViewCommandCheckStateValue selected_p);
+
+    attribute nsMsgViewFlagsTypeValue viewFlags;
+
     /**
      * temporary, so we can inspect from js
      */

@@ -44,7 +44,7 @@ nsMsgDBView::nsMsgDBView()
   /* member initializers and constructor code */
   m_sortValid = PR_TRUE;
   m_sortOrder = nsMsgViewSortOrder::none;
-  m_viewFlags = (nsMsgDBViewFlags) 0;
+  m_viewFlags = nsMsgViewFlagsType::kNone;
 }
 
 nsMsgDBView::~nsMsgDBView()
@@ -65,10 +65,10 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue vie
 		viewType = ViewAllThreads;
 	m_viewType = viewType;
 	if (messageDB && messageDB->GetNeoFolderInfo()->GetFlags() & MSG_FOLDER_PREF_SHOWIGNORED)
-		m_viewFlags = (ViewFlags) ((int32) kShowIgnored | (int32) m_viewFlags);
+		m_viewFlags = nsMsgViewFlagsType::kShowIgnored | m_viewFlags;
 	if (messageDB && messageDB->GetNeoFolderInfo() 
 		&& (viewType == ViewOnlyNewHeaders))
-		m_viewFlags = (ViewFlags) ((int32) kUnreadOnly | (int32) m_viewFlags);
+		m_viewFlags = nsMsgViewFlagsType::kUnreadOnly | m_viewFlags;
 
 	CacheAdd ();
 #endif
@@ -673,7 +673,7 @@ nsMsgViewIndex nsMsgDBView::GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *th
 	// We could speed up the unreadOnly view by starting our search with the first
 	// unread message in the thread. Sometimes, that will be wrong, however, so
 	// let's skip it until we're sure it's neccessary.
-//	(m_viewFlags & kUnreadOnly) 
+//	(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) 
 //		? threadHdr->GetFirstUnreadKey(m_messageDB) : threadHdr->GetChildAt(0);
   PRUint32 numThreadChildren;
   threadHdr->GetNumChildren(&numThreadChildren);
@@ -838,7 +838,7 @@ nsresult nsMsgDBView::ExpansionDelta(nsMsgViewIndex index, PRInt32 *expansionDel
 	// The client can pass in the key of any message
 	// in a thread and get the expansion delta for the thread.
 
-	if (!(m_viewFlags & kUnreadOnly))
+	if (!(m_viewFlags & nsMsgViewFlagsType::kUnreadOnly))
 	{
 		rv = GetThreadCount(m_keys[index], &numChildren);
 		NS_ENSURE_SUCCESS(rv, rv);
@@ -916,7 +916,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
   rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
 	m_flags[index] = flags;
   NoteChange(index, 1, nsMsgViewNotificationCode::changed);
-	if (m_viewFlags & kUnreadOnly)
+	if (m_viewFlags & nsMsgViewFlagsType::kUnreadOnly)
 	{
 //		if (flags & MSG_FLAG_READ)
 //			unreadLevelArray.Add(0);	// keep top level hdr in thread, even though read.
@@ -1099,3 +1099,17 @@ void	nsMsgDBView::NoteEndChange(nsMsgViewIndex firstlineChanged, PRInt32 numChan
 							 nsMsgViewNotificationCodeValue changeType)
 {
 }
+
+NS_IMETHODIMP nsMsgDBView::GetViewFlags(nsMsgViewFlagsTypeValue *aViewFlags)
+{
+    NS_ENSURE_ARG_POINTER(aViewFlags);
+    *aViewFlags = m_viewFlags;
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
+{
+    m_viewFlags = aViewFlags;
+    return NS_OK;
+}
+

@@ -108,7 +108,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, con
 		PRInt32 flag = threadFlag;
 
 		// skip ignored threads.
-		if ((threadFlag & MSG_FLAG_IGNORED) && !(m_viewFlags & kShowIgnored))
+		if ((threadFlag & MSG_FLAG_IGNORED) && !(m_viewFlags & nsMsgViewFlagsType::kShowIgnored))
 			continue;
 		// by default, make threads collapsed, unless we're in only viewing new msgs
 
@@ -120,7 +120,7 @@ NS_IMETHODIMP nsMsgThreadedDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, con
 		m_flags.Add(flag);
 		m_levels.Add(pLevels[i]);
 		numAdded++;
-		if ((/*m_viewFlags & kUnreadOnly || */(sortType != nsMsgViewSortType::byThread)) && flag & MSG_FLAG_ELIDED)
+		if ((/*m_viewFlags & nsMsgViewFlagsType::kUnreadOnly || */(sortType != nsMsgViewSortType::byThread)) && flag & MSG_FLAG_ELIDED)
 		{
 			ExpandByIndex(m_keys.GetSize() - 1, NULL);
 		}
@@ -281,7 +281,7 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
 //		m_db->SetSortInfo(m_sortType, sortOrder);
 	}
   // by default, the unread only view should have all threads expanded.
-	if ((m_viewFlags & kUnreadOnly) && m_sortType == nsMsgViewSortType::byThread)
+	if ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) && m_sortType == nsMsgViewSortType::byThread)
 		ExpandAll();
 	m_sortValid = PR_TRUE;
   if (sortType != nsMsgViewSortType::byThread)

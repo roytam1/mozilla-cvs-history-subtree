@@ -43,13 +43,6 @@ enum eFieldType {
 #define MSG_VIEW_FLAG_HASCHILDREN 0x40000000
 #define MSG_VIEW_FLAG_ISTHREAD 0x8000000
 
-typedef PRInt32 nsMsgDBViewFlags;
-	// flags for GetViewFlags
-const int kOutlineDisplay = 0x1;
-const int kFlatDisplay = 0x2;
-const int kShowIgnored = 0x8;
-const int kUnreadOnly = 0x10;
-
 // I think this will be an abstract implementation class.
 // The classes that implement the outliner support will probably
 // inherit from this class.
@@ -119,7 +112,7 @@ protected:
   nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgDBViewTypeValue m_viewType;
-	nsMsgDBViewFlags	m_viewFlags;
+  nsMsgViewFlagsTypeValue m_viewFlags;
 };
 
 
