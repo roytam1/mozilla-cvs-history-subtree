@@ -118,13 +118,6 @@ protected:
 	virtual ~nsMsgMailNewsUrl();
 
 	nsCOMPtr<nsIURL> m_baseURL;
-
-	char		*m_spec;
-    char		*m_protocol;
-    char		*m_host;
-    char		*m_file;
-    char		*m_ref;
-    char		*m_search;
 	char		*m_errorMessage;
 
 	PRBool		m_runningUrl;
