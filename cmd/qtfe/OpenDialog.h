@@ -34,9 +34,7 @@ public:
 
 private slots:
     void chooseFile();
-#ifdef EDITOR
     void openInComposer();
-#endif
     void openInNavigator();
     void clear();
 

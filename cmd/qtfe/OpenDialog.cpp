@@ -119,15 +119,15 @@ void OpenDialog::chooseFile()
 	edit->setText( file );
 }
 
-#ifdef EDITOR
 void OpenDialog::openInComposer()
 {
+#ifdef EDITOR
     if( !strlen( edit->text() ) )
 	return;
 
     context->editorEdit( 0, edit->text() );
-}
 #endif
+}
 
 void OpenDialog::openInNavigator()
 {
