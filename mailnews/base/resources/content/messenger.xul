@@ -144,7 +144,7 @@ Rights Reserved.
 
 		  <box id="messagesBox" orient="vertical" flex="1">
      
-      <outliner id="threadOutliner" flex="1"/>
+      <outliner id="threadOutliner" flex="2" persist="height" style="height:0px"/>
 
 			<!-- if you change this id, please change GetThreadAndMessagePaneSplitter() and MsgToggleMessagePane() -->
 			<splitter collapse="after" persist="state" onclick="OnClickThreadAndMessagePaneSplitter()"
