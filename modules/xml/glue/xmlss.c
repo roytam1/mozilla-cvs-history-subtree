@@ -306,7 +306,8 @@ outputStyleSpan (XMLFile f, XMLElement el, PRBool endp)
   for (ss = f->ss; (ss != NULL) ; ss = ss->next) {    
     for (se = ss->el; (se != NULL) ; se = se->next) {
 	 
-      if (stringEquals((se->tagStack)[0],  el->tag)) {
+      if (se->style && stringEquals((se->tagStack)[0],  el->tag)) {
+        /* check for se->style from Steve Wingard <swingard@spyglass.com> */
         PRBool divp = startsWith("Display:Block;", se->style);
         PRBool listp = startsWith("Display:List-item;", se->style);
         if (!endp) {
