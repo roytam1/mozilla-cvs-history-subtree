@@ -33,7 +33,8 @@ XPIDLSRCS	= \
         nsICommandManager.idl \
         nsICommandParams.idl \
         nsIControllerCommand.idl \
-        nsIControllerCommandManager.idl \
+        nsIControllerContext.idl \
+        nsIControllerCommandTable.idl \
         nsPICommandUpdater.idl \
         $(NULL)
 

@@ -53,6 +53,7 @@ nsControllerCommandTable::nsControllerCommandTable()
 : mCommandsTable(NUM_COMMANDS_BOUNDS, PR_FALSE)
 , mMutable(PR_TRUE)
 {
+  NS_INIT_ISUPPORTS();
 }
 
 

@@ -58,6 +58,7 @@ NS_INTERFACE_MAP_END
 nsBaseCommandController::nsBaseCommandController()
 : mCommandContext(nsnull)
 {
+  NS_INIT_ISUPPORTS();
 }
 
 nsBaseCommandController::~nsBaseCommandController()
