@@ -1044,14 +1044,15 @@ JS_ClearContextThread(JSContext *cx);
 
 /************************************************************************/
 
-#ifdef NETSCAPE_INTERNAL
 /*
  * Returns true if a script is executing and its current bytecode is a set
  * (assignment) operation.
+ *
+ * NOTE: Previously conditional on NETSCAPE_INTERNAL. This function may 
+ * be removed in the future.
  */
-extern JS_PUBLIC_API(JSBool)
+extern JS_FRIEND_API(JSBool)
 JS_IsAssigning(JSContext *cx);
-#endif
 
 JS_END_EXTERN_C
 

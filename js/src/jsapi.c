@@ -2687,8 +2687,7 @@ JS_ClearContextThread(JSContext *cx)
 
 /************************************************************************/
 
-#ifdef NETSCAPE_INTERNAL
-JS_PUBLIC_API(JSBool)
+JS_FRIEND_API(JSBool)
 JS_IsAssigning(JSContext *cx)
 {
     JSStackFrame *fp;
@@ -2698,7 +2697,6 @@ JS_IsAssigning(JSContext *cx)
 	return JS_FALSE;
     return (js_CodeSpec[*pc].format & JOF_SET) != 0;
 }
-#endif
 
 /************************************************************************/
 

@@ -22,7 +22,6 @@
  * JS public API typedefs.
  */
 #include "jstypes.h"
-#define NETSCAPE_INTERNAL 1
 #include "jscompat.h"
 
 JS_BEGIN_EXTERN_C

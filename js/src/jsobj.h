@@ -26,9 +26,7 @@
  * values, called slots.  The map/slot pointer pair is GC'ed, while the map
  * is reference counted and the slot vector is malloc'ed.
  */
-#ifdef NETSCAPE_INTERNAL
 #include "jshash.h" /* Added by JSIFY */
-#endif
 #include "jsprvtd.h"
 #include "jspubtd.h"
 
