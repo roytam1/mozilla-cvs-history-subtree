@@ -280,7 +280,8 @@ NS_IMETHODIMP
 nsPKCS11ModuleDB::GetInternal(nsIPKCS11Module **_retval)
 {
   nsCOMPtr<nsIPKCS11Module> module = 
-     new nsPKCS11Module(SECMOD_GetInternalModule());
+     new nsPKCS11Module(SECMOD_CreateModule(NULL,SECMOD_INT_NAME,
+						NULL,SECMOD_INT_FLAGS));
   if (!module)
     return NS_ERROR_OUT_OF_MEMORY;
   *_retval = module;
@@ -293,7 +294,8 @@ NS_IMETHODIMP
 nsPKCS11ModuleDB::GetInternalFIPS(nsIPKCS11Module **_retval)
 {
   nsCOMPtr<nsIPKCS11Module> module = 
-     new nsPKCS11Module(SECMOD_GetFIPSInternal());
+     new nsPKCS11Module(SECMOD_CreateModule(NULL, SECMOD_FIPS_NAME, NULL,
+							SECMOD_FIPS_FLAGS));
   if (!module)
     return NS_ERROR_OUT_OF_MEMORY;
   *_retval = module;
