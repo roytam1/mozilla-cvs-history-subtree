@@ -86,7 +86,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
 #ifdef MOZ_XSL
             String name, nameSpaceURI;
             name = element->getNodeName();
-            resolver->getNameSpaceURI(name, nameSpaceURI);
+            resolver->getResultNameSpaceURI(name, nameSpaceURI);
             Element* newElement = owner->createElementNS(nameSpaceURI, name);
 #else
             Element* newElement = owner->createElement(element->getNodeName());
@@ -98,7 +98,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
                 for ( i = 0; i < attList->getLength(); i++ ) {
                     Attr* attr = (Attr*) attList->item(i);
 #ifdef MOZ_XSL
-                    resolver->getNameSpaceURI(attr->getName(), nameSpaceURI);
+                    resolver->getResultNameSpaceURI(attr->getName(), nameSpaceURI);
                     newElement->setAttributeNS(nameSpaceURI, attr->getName(), attr->getValue());
 #else
                     newElement->setAttribute(attr->getName(), attr->getValue());

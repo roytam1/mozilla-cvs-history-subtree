@@ -1639,10 +1639,7 @@ void XSLTProcessor::xslCopy(Node* node, Element* action, ProcessorState* ps) {
             }
 
             String nameSpaceURI;
-            String prefix;
-            int idx = nodeName.indexOf(':');
-            if (idx >= 0) nodeName.subString(0, idx, prefix);
-            XMLDOMUtils::getNameSpace(prefix, element, nameSpaceURI);
+            ps->getResultNameSpaceURI(nodeName, nameSpaceURI);
             // XXX HACK (pvdb) Workaround for BUG 51656 Html rendered as xhtml
             if (ps->getOutputFormat()->isHTMLOutput()) {
                 nodeName.toLowerCase();

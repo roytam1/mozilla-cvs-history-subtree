@@ -35,7 +35,7 @@ public:
     /**
      * Returns the namespace URI for the given name
     **/ 
-    virtual void getNameSpaceURI(const String& name, String& nameSpaceURI) = 0;
+    virtual void getResultNameSpaceURI(const String& name, String& nameSpaceURI) = 0;
 
     /**
      * Returns the namespace URI for the given namespace prefix
