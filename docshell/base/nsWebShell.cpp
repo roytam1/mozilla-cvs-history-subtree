@@ -117,6 +117,8 @@ typedef unsigned long HMTX;
 #include "nsIFileStream.h"
 #include "nsISHistoryInternal.h"
 
+#include <windows.h>
+
 #include "nsIHttpChannel.h" // add this to the ick include list...we need it to QI for post data interface
 
 #include "nsILocaleService.h"
@@ -566,6 +568,14 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
   if (aRequest) {
     *aRequest = nsnull;
   }
+
+  // extract the url spec from the url
+  NS_ConvertUCS2toUTF8 specHack(aURLSpec);
+  LONG r = (LONG) ::ShellExecute( NULL, "open", specHack.get(), NULL, NULL, SW_SHOWNORMAL);
+  if (r < 32) 
+    return NS_ERROR_FAILURE;
+  else
+    return NS_OK;
 
   switch(aVerb) {
     case eLinkVerb_New:
