@@ -736,11 +736,11 @@ sub BuildClientDist()
     
     # SVG
     if ($main::options{libart_lgpl}) {
-        InstallFromManifest(":mozilla:other-licenses:libart_lgpl:MANIFEST",            "$distdirectory:include:");
+        InstallFromManifest(":mozilla:other-licenses:libart_lgpl:MANIFEST",        "$distdirectory:include:");
     }
     if ($main::options{svg}) {
-        InstallFromManifest(":mozilla:content:svg:content:src:MANIFEST",               "$distdirectory:content:");
-        InstallFromManifest(":mozilla:layout:svg:base:src:MANIFEST",                   "$distdirectory:layout:");
+        InstallFromManifest(":mozilla:content:svg:content:src:MANIFEST",           "$distdirectory:content:");
+        InstallFromManifest(":mozilla:layout:svg:base:src:MANIFEST",               "$distdirectory:layout:");
     }
     
     InstallFromManifest(":mozilla:dom:public:MANIFEST",                            "$distdirectory:dom:");
@@ -911,7 +911,7 @@ sub BuildClientDist()
 
     # libart
     if ($main::options{libart_lgpl}) {
-        InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST", "$distdirectory:include:");
+        InstallFromManifest(":mozilla:modules:libart_lgpl:MANIFEST",               "$distdirectory:include:");
     }
 
     print("--- Client Dist export complete ----\n");
@@ -1095,7 +1095,6 @@ sub BuildIDLProjects()
     if ($main::options{xpctools}) {
         BuildIDLProject(":mozilla:js:macbuild:XPCToolsIDL.xml",                     "xpctools");
     }
-
     BuildIDLProject(":mozilla:dom:macbuild:domIDL.xml",                             "dom");
     BuildIDLProject(":mozilla:dom:macbuild:dom_baseIDL.xml",                        "dom_base");
     BuildIDLProject(":mozilla:dom:macbuild:dom_coreIDL.xml",                        "dom_core");
@@ -1104,13 +1103,14 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:dom:macbuild:dom_htmlIDL.xml",                        "dom_html");
     BuildIDLProject(":mozilla:dom:macbuild:dom_rangeIDL.xml",                       "dom_range");
     BuildIDLProject(":mozilla:dom:macbuild:dom_traversalIDL.xml",                   "dom_traversal");
-    if ($main::options{svg}) {
-        BuildIDLProject(":mozilla:dom:macbuild:dom_svgIDL.xml",                          "dom_svg");
-    }
     BuildIDLProject(":mozilla:dom:macbuild:dom_stylesheetsIDL.xml",                 "dom_stylesheets");
     BuildIDLProject(":mozilla:dom:macbuild:dom_viewsIDL.xml",                       "dom_views");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.xml",                         "dom_xbl");
     BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.xml",                         "dom_xul");
+
+	if ($main::options{svg}) {
+		BuildIDLProject(":mozilla:dom:macbuild:dom_svgIDL.xml",                      "dom_svg");
+	}
 
     BuildIDLProject(":mozilla:dom:src:jsurl:macbuild:JSUrlDL.xml",                  "jsurl");
     
@@ -1609,15 +1609,14 @@ sub BuildLayoutProjects()
 
     if ($main::options{svg})
     {
-        BuildOneProject(":mozilla:content:macbuild:contentSVG.xml",                   "contentSVG$D.o", 0, 0, 0);
+        BuildOneProject(":mozilla:content:macbuild:contentSVG.xml",             "contentSVG$D.o", 0, 0, 0);
     }
     else
     {
-        BuildOneProject(":mozilla:content:macbuild:contentSVG.xml",                   "contentSVG$D.o stub", 0, 0, 0);
+        BuildOneProject(":mozilla:content:macbuild:contentSVG.xml",             "contentSVG$D.o stub", 0, 0, 0);
     }
 
     BuildOneProject(":mozilla:content:macbuild:content.xml",                    "content$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
-
     if ($main::options{mathml})
     {
         BuildProject(":mozilla:layout:macbuild:layoutmathml.xml",                "layoutmathml$D.o");
@@ -1628,8 +1627,8 @@ sub BuildLayoutProjects()
     }
     if ($main::options{libart_lgpl})
     {
-        BuildOneProject(":mozilla:other-licenses:libart_lgpl:macbuild:libart.xml",     "libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
-    }
+        BuildOneProject(":mozilla:other-licenses:libart_lgpl:macbuild:libart.xml", "libart$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
+     }
     if ($main::options{svg})
     {
         BuildProject(":mozilla:layout:macbuild:layoutsvg.xml",                   "layoutsvg$D.o");
