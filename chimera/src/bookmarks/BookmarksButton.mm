@@ -45,7 +45,7 @@
 {
   if ( (self = [super initWithFrame:frame]) )
   {
-    DraggableImageAndTextCell* newCell = [[DraggableImageAndTextCell alloc] init];
+    DraggableImageAndTextCell* newCell = [[[DraggableImageAndTextCell alloc] init] autorelease];
     [newCell setDraggable:YES];
     [self setCell:newCell];
 

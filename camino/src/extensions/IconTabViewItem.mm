@@ -79,6 +79,7 @@ static const int kMinTabsForSpacing = 4;		// with 1-4 tabs, each tab is 1/4 the 
 {
   [mTabIcon release];
   [mLabelAttributes release];
+  [mLabelString release];
   [mTruncLabelString release];
   [super dealloc];
 }
