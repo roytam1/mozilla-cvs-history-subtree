@@ -49,6 +49,7 @@
 #include "nsWeakReference.h"
 #include "nsISizeOfHandler.h"
 #include "nsTextFormater.h"
+#include "nsStorageStream.h"
 
 class dummyComparitor: public nsAVLNodeComparitor {
 public:
@@ -111,4 +112,5 @@ void XXXNeverCalled()
     TestSegmentedBuffer();
 #endif
     NS_NewSizeOfHandler(0);
+    nsStorageStream();
 }
