@@ -37,25 +37,20 @@ Contributors:
   <tree id="dirTree" 
       class="abDirectory" 
       ref="moz-abdirectory://"
-      sortResource="http://home.netscape.com/NC-rdf#DirName"
-      sortDirection="ascending"
       datasources="rdf:addressdirectory"
       containment="http://home.netscape.com/NC-rdf#child"
       onselect="DirPaneSelectionChange(); document.commandDispatcher.updateCommands('tree-select');"
       ondblclick="DirPaneDoubleClick();"
       onblur="goOnEvent(this,'blur')"
-      allownegativeassertions="false"
-          coalesceduplicatearcs="false"
-          multiple="true"
-          ondragover="nsDragAndDrop.dragOver(event, abDirTreeObserver);"
-          ondragdrop="nsDragAndDrop.drop(event, abDirTreeObserver);">
+      ondragover="nsDragAndDrop.dragOver(event, abDirTreeObserver);"
+      ondragdrop="nsDragAndDrop.drop(event, abDirTreeObserver);">
     <treecolgroup>
       <treecol flex="1"/>
     </treecolgroup>
     <template>
       <rule>
        <treechildren flex="1">
-        <treeitem uri="..." persist="sortColumn sortKey sortDirection">
+        <treeitem uri="..." persist="sortColumn sortKey sortDirection" open="true">
           <treerow>
             <treecell indent="true" class="treecell-indent ab-directory-icon" label="rdf:http://home.netscape.com/NC-rdf#DirName"
                      IsMailList="rdf:http://home.netscape.com/NC-rdf#IsMailList"/>
