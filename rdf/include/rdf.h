@@ -58,17 +58,6 @@ typedef struct RDF_BlobStruct {
 } *RDF_Blob;
 #endif
 
-typedef struct RDF_NodeStruct {
-  RDF_ValueType type;
-  union {
-    RDF_Resource r;
-    RDF_String s;
-#ifdef RDF_BLOB
-    RDF_Blob b;
-#endif
-  } value;
-} *RDF_Node;
-
 typedef PRUint32 RDF_EventType;
 #define RDF_ASSERT_NOTIFY	((RDF_EventType)0x00000001)
 #define RDF_DELETE_NOTIFY	((RDF_EventType)0x00000002)

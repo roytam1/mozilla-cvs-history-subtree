@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -41,10 +41,7 @@ class nsIRDFDataSource;
 class nsIRDFObserver : public nsISupports
 {
 public:
-
-  NS_IMETHOD HandleEvent(nsIRDFDataSource *source,
-                         RDF_Event event) = 0;
-
+  
 };
 
 

@@ -16,20 +16,21 @@
  * Reserved.
  */
 
-#ifndef nsRDFCID_h__
-#define nsRDFCID_h__
+#ifndef nsIRDFResourceManager_h__
+#define nsIRDFResourceManager_h__
 
-// {0F78DA56-8321-11d2-8EAC-00805F29F370}
-#define NS_RDFNODE_CID \
-{ 0xf78da56, 0x8321, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
+class nsString;
+class nsIRDFNode;
 
-// {BFD05264-834C-11d2-8EAC-00805F29F370}
-#define NS_RDFRESOURCEMANAGER_CID \
-{ 0xbfd05264, 0x834c, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
-
-// {BFD0526D-834C-11d2-8EAC-00805F29F370}
-#define NS_RDFMEMORYDATASOURCE_CID \
-{ 0xbfd0526d, 0x834c, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
+// {BFD05261-834C-11d2-8EAC-00805F29F370}
+#define NS_IRDFRESOURCEMANAGER_IID \
+{ 0xbfd05261, 0x834c, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
 
 
-#endif // nsRDFCID_h__
+class nsIRDFResourceManager : public nsISupports {
+public:
+    NS_IMETHOD GetNode(const nsString& uri, nsIRDFNode*& resource) = 0;
+};
+
+
+#endif // nsIRDFResourceManager_h__
