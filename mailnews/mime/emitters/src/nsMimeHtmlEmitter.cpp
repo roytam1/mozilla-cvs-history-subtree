@@ -102,10 +102,11 @@ nsMimeHtmlEmitter::SetPipe(nsIInputStream * aInputStream, nsIOutputStream *outSt
 // anything to the stream since these may be image data
 // output streams, etc...
 nsresult       
-nsMimeHtmlEmitter::Initialize(nsIURI *url)
+nsMimeHtmlEmitter::Initialize(nsIURI *url, nsIChannel * aChannel)
 {
   // set the url
   mURL = url;
+  mChannel = aChannel;
 
   // Create rebuffering object
   mBufferMgr = new MimeRebuffer();
@@ -471,7 +472,7 @@ nsMimeHtmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten
                             mBufferMgr->GetSize(), &written);
     mTotalWritten += written;
     mBufferMgr->ReduceBuffer(written);
-    mOutListener->OnDataAvailable(nsnull, mURL, mInputStream, 0, written);
+    mOutListener->OnDataAvailable(mChannel, mURL, mInputStream, 0, written);
     *amountWritten = written;
 
     // if we couldn't write all the old data, buffer the new data
@@ -494,7 +495,7 @@ nsMimeHtmlEmitter::Write(const char *buf, PRUint32 size, PRUint32 *amountWritten
     mBufferMgr->IncreaseBuffer(buf+written, (size-written));
 
   if (mOutListener)
-    mOutListener->OnDataAvailable(nsnull, mURL, mInputStream, 0, written);
+    mOutListener->OnDataAvailable(mChannel, mURL, mInputStream, 0, written);
 
   return rc;
 }
