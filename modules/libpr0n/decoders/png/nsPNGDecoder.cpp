@@ -148,6 +148,7 @@ static NS_METHOD ReadDataOut(nsIInputStream* in,
 {
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, closure);
 
+  // we need to do the setjmp here otherwise bad things will happen
   if (setjmp(decoder->mPNG->jmpbuf)) {
     png_destroy_read_struct(&decoder->mPNG, &decoder->mInfo, NULL);
     // is this NS_ERROR_FAILURE enough?
