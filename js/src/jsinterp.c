@@ -708,7 +708,7 @@ out2:
                               cx->stackPool.current->base) <
                   JS_UPTRDIFF(cx->stackPool.current->avail,
                               cx->stackPool.current->base));
-        vp[-fp->script->depth] = (jsval)fp->pc;
+        vp[-(int)fp->script->depth] = (jsval)fp->pc;
     }
     return ok;
 
