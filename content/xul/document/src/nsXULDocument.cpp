@@ -4497,7 +4497,7 @@ nsXULDocument::EvaluateScript(nsIURI* aURL, const nsString& aScript, PRInt32 aLi
 nsresult
 nsXULDocument::CreateElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult)
 {
-    // Create a content model element.
+    // Create a content model element from a prototype element.
     nsresult rv;
 
     nsCOMPtr<nsIContent> result;
@@ -4540,10 +4540,7 @@ nsXULDocument::CreateElement(nsXULPrototypeElement* aPrototype, nsIContent** aRe
     else {
         // If it's a XUL element, it'll be lightweight until somebody
         // monkeys with it.
-        rv = nsXULElement::Create(aPrototype, getter_AddRefs(result));
-        if (NS_FAILED(rv)) return rv;
-
-        rv = result->SetDocument(this, PR_FALSE);
+        rv = nsXULElement::Create(aPrototype, this, getter_AddRefs(result));
         if (NS_FAILED(rv)) return rv;
 
         // We also need to pay special attention to the keyset tag to set up a listener

@@ -282,7 +282,7 @@ protected:
 
 public:
     static nsresult
-    Create(nsXULPrototypeElement* aPrototype, nsIContent** aResult);
+    Create(nsXULPrototypeElement* aPrototype, nsIDocument* aDocument, nsIContent** aResult);
 
     static nsresult
     Create(PRInt32 aNameSpaceID, nsIAtom* aTag, nsIContent** aResult);
@@ -425,6 +425,7 @@ protected:
                                   float& aFloatValue,
                                   nsHTMLUnit& aValueUnit);
 
+    // Static helpers
     static nsresult
     GetElementsByTagName(nsIDOMNode* aNode,
                          const nsString& aTagName,
@@ -442,6 +443,8 @@ protected:
     NS_IMETHOD GetParentTree(nsIDOMXULTreeElement** aTreeElement);
 
     PRBool IsFocusableContent();
+
+    nsresult AddPopupListener(nsIAtom* aName);
 
 protected:
     // Required fields

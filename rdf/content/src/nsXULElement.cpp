@@ -368,9 +368,19 @@ nsXULElement::~nsXULElement()
 
 
 nsresult
-nsXULElement::Create(nsXULPrototypeElement* aPrototype, nsIContent** aResult)
+nsXULElement::Create(nsXULPrototypeElement* aPrototype,
+                     nsIDocument* aDocument,
+                     nsIContent** aResult)
 {
     // Create an nsXULElement from a prototype
+    NS_PRECONDITION(aPrototype != nsnull, "null ptr");
+    if (! aPrototype)
+        return NS_ERROR_NULL_POINTER;
+
+    NS_PRECONDITION(aDocument != nsnull, "null ptr");
+    if (! aDocument)
+        return NS_ERROR_NULL_POINTER;
+
     NS_PRECONDITION(aResult != nsnull, "null ptr");
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
@@ -388,9 +398,35 @@ nsXULElement::Create(nsXULPrototypeElement* aPrototype, nsIContent** aResult)
     if (NS_FAILED(rv)) return rv;
 
     element->mPrototype = aPrototype;
+    element->mDocument = aDocument;
 
-    //XXXwaterson if necessary, immediately convert the element to a
-    //"heavyweight", e.g., because it has script event listeners, etc.
+    // Check each attribute on the prototype to see if we need to do
+    // any additional processing and hookup that would otherwise be
+    // done 'automagically' by SetAttribute().
+    for (PRInt32 i = 0; i < aPrototype->mNumAttributes; ++i) {
+        nsXULPrototypeAttribute* attr = &(aPrototype->mAttributes[i]);
+
+        if (attr->mNameSpaceID == kNameSpaceID_None) {
+            // Check for an event handler
+            nsIID iid;
+            PRBool found;
+            rv = gXULUtils->GetEventHandlerIID(attr->mName, &iid, &found);
+            if (NS_FAILED(rv)) return rv;
+
+            if (found) {
+                rv = element->AddScriptEventListener(attr->mName, attr->mValue, iid);
+                if (NS_FAILED(rv)) return rv;
+            }
+
+            // Check for popup attributes
+            if ((attr->mName == kPopupAtom) ||
+                (attr->mName == kTooltipAtom) ||
+                (attr->mName == kContextAtom)) {
+                rv = element->AddPopupListener(attr->mName);
+                if (NS_FAILED(rv)) return rv;
+            }
+        }
+    }
 
     *aResult = NS_REINTERPRET_CAST(nsIStyledContent*, element);
     NS_ADDREF(*aResult);
@@ -2046,37 +2082,7 @@ nsXULElement::SetAttribute(PRInt32 aNameSpaceID,
     if (mDocument && (aNameSpaceID == kNameSpaceID_None) && 
         (aName == kPopupAtom || aName == kTooltipAtom || aName == kContextAtom))
     {
-        // Do a create instance of our popup listener.
-        nsIXULPopupListener* popupListener;
-        rv = nsComponentManager::CreateInstance(kXULPopupListenerCID,
-                                                nsnull,
-                                                kIXULPopupListenerIID,
-                                                (void**) &popupListener);
-        if (NS_FAILED(rv))
-        {
-          NS_ERROR("Unable to create an instance of the popup listener object.");
-          return rv;
-        }
-
-        XULPopupType popupType = eXULPopupType_popup;
-        if (aName == kTooltipAtom)
-          popupType = eXULPopupType_tooltip;
-        else if (aName == kContextAtom)
-          popupType = eXULPopupType_context;
-
-        // Add a weak reference to the node.
-        popupListener->Init(this, popupType);
-
-        // Add the popup as a listener on this element.
-        nsCOMPtr<nsIDOMEventListener> eventListener = do_QueryInterface(popupListener);
-
-        if (popupType == eXULPopupType_tooltip) {
-          AddEventListener("mouseout", eventListener, PR_FALSE);
-          AddEventListener("mousemove", eventListener, PR_FALSE);
-        }
-        else AddEventListener("mousedown", eventListener, PR_FALSE);  
-        
-        NS_IF_RELEASE(popupListener);
+        AddPopupListener(aName);
     }
 
     // XXX need to check if they're changing an event handler: if so, then we need
@@ -3395,6 +3401,50 @@ nsXULElement::ParseNumericValue(const nsString& aString,
   return PR_FALSE;
 }
 
+
+nsresult
+nsXULElement::AddPopupListener(nsIAtom* aName)
+{
+    // Add a popup listener to the element
+    nsresult rv;
+
+    nsCOMPtr<nsIXULPopupListener> popupListener;
+    rv = nsComponentManager::CreateInstance(kXULPopupListenerCID,
+                                            nsnull,
+                                            kIXULPopupListenerIID,
+                                            getter_AddRefs(popupListener));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to create an instance of the popup listener object.");
+    if (NS_FAILED(rv)) return rv;
+
+    XULPopupType popupType;
+    if (aName == kTooltipAtom) {
+        popupType = eXULPopupType_tooltip;
+    }
+    else if (aName == kContextAtom) {
+        popupType = eXULPopupType_context;
+    }
+    else {
+        popupType = eXULPopupType_popup;
+    }
+
+    // Add a weak reference to the node.
+    popupListener->Init(this, popupType);
+
+    // Add the popup as a listener on this element.
+    nsCOMPtr<nsIDOMEventListener> eventListener = do_QueryInterface(popupListener);
+
+    if (popupType == eXULPopupType_tooltip) {
+        AddEventListener("mouseout", eventListener, PR_FALSE);
+        AddEventListener("mousemove", eventListener, PR_FALSE);
+    }
+    else {
+        AddEventListener("mousedown", eventListener, PR_FALSE); 
+    }
+
+    return NS_OK;
+}
+
+
 //----------------------------------------------------------------------
 
 nsresult
@@ -3451,6 +3501,9 @@ nsXULElement::EnsureSlots()
 }
 
 //----------------------------------------------------------------------
+//
+// nsXULElement::Slots
+//
 
 nsXULElement::Slots::Slots(nsXULElement* aElement)
     : mElement(aElement),
@@ -3488,6 +3541,9 @@ nsXULElement::Slots::~Slots()
 
 
 //----------------------------------------------------------------------
+//
+// nsXULPrototypeElement
+//
 
 nsresult
 nsXULPrototypeElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsString& aValue)
