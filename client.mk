@@ -52,9 +52,9 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG = SeaMonkey_M15_BRANCH
-NSPR_CO_TAG = SeaMonkey_M15_BRANCH
-PSM_CO_TAG = SeaMonkey_M15_BRANCH
+MOZ_CO_TAG = SeaMonkey_M15_RELEASE
+NSPR_CO_TAG = SeaMonkey_M15_RELEASE
+PSM_CO_TAG = SeaMonkey_M15_RELEASE
 
 #######################################################################
 # Defines
