@@ -83,6 +83,15 @@ const int kOpenNewWindowOnAE = 0;
 const int kOpenNewTabOnAE = 1;
 const int kReuseWindowOnAE = 2;
 
+// Because of bug #2751274, on Mac OS X 10.1.x the sender for this action method when called from
+// a dock menu item is always the NSApplication object, not the actual menu item.  This ordinarily 
+// makes it impossible to take action based on which menu item was selected, because we don't know
+// which menu item called our action method. We have a workaround
+// in this sample for the bug (using NSInvocations), but we set up a #define here for the AppKit
+// version that is fixed (in a future release of Mac OS X) so that the code can automatically switch
+// over to doing things the right way when the time comes.
+#define kFixedDockMenuAppKitVersion 632
+
 @interface MainController(MainControllerPrivate)
 
 - (void)setupStartpage;
@@ -189,14 +198,24 @@ const int kReuseWindowOnAE = 2;
                                          watchedFolder: eBookmarksFolderRoot];
   [bmManager addBookmarksClient:mMenuBookmarks];
 
-  // dock bookmarks
-  [mDockMenu setAutoenablesItems:NO];
-  mDockBookmarks = [[BookmarksMenu alloc] initWithMenu: mDockMenu
-                                             firstItem: 0
-                                           rootContent: [bmManager getDockMenuRoot]
-                                         watchedFolder: eBookmarksFolderDockMenu];
-  [bmManager addBookmarksClient:mDockBookmarks];
-    
+  // dock bookmarks. Note that we disable them on 10.1 because of a bug noted here:
+  // http://developer.apple.com/samplecode/Sample_Code/Cocoa/DeskPictAppDockMenu.htm
+  if (NSAppKitVersionNumber >= kFixedDockMenuAppKitVersion)
+  {
+    [mDockMenu setAutoenablesItems:NO];
+    mDockBookmarks = [[BookmarksMenu alloc] initWithMenu: mDockMenu
+                                              firstItem: 0
+                                            rootContent: [bmManager getDockMenuRoot]
+                                          watchedFolder: eBookmarksFolderDockMenu];
+    [bmManager addBookmarksClient:mDockBookmarks];
+  }
+  else
+  {
+    // just empty the menu
+    while ([mDockMenu numberOfItems] > 0)
+      [mDockMenu removeItemAtIndex:0];
+  }
+  
   // Initialize offline mode.
   mOffline = NO;
   nsCOMPtr<nsIIOService> ioService(do_GetService(ioServiceContractID));
@@ -221,7 +240,7 @@ const int kReuseWindowOnAE = 2;
     // are we on 10.2.3 or higher? The DNS resolution stuff is broken before 10.2.3
     long systemVersion;
     OSErr err = ::Gestalt(gestaltSystemVersion, &systemVersion);
-    if ((err == noErr) && (systemVersion >= 0x00001022))
+    if ((err == noErr) && (systemVersion >= 0x00001023))
     {
       mNetworkServices = [[NetworkServices alloc] init];
       [mNetworkServices registerClient:self];
@@ -724,9 +743,12 @@ const int kReuseWindowOnAE = 2;
 }
 
 -(IBAction) openMenuBookmark:(id)aSender
-{
+{	
+  if ([aSender isMemberOfClass:[NSApplication class]])
+    return;		// 10.1. Don't do anything.
+
   BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
-  BookmarkItem* item = [bmManager getWrapperForID:[aSender tag]];
+  BookmarkItem*     item = [bmManager getWrapperForID:[aSender tag]];
 
   if ([item isGroup])
   {
