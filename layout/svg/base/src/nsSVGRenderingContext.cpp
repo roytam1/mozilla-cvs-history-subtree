@@ -188,11 +188,13 @@ void nsSVGRenderingContext::Render()
   DumpImage();
   mBuffer->Unlock(); // OK, its not ours any more
 
+  /* This is usefull to debug clip region problems
   PRInt32 bytesPerWidth;
   mBuffer->Lock(0, 0, mDirtyRect.width, mDirtyRect.height,(void **)&mBitBuf,
                 &mStride, &bytesPerWidth,0);
   DumpImage();
   mBuffer->Unlock();
+  */
 
   PRBool clip;
   mRenderingContext->PopState(clip);
