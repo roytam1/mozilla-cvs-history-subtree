@@ -15,24 +15,27 @@
  * Copyright (C) 1999 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
+#include "nsCodebasePrincipal.h"
 #include "nsJSPrincipals.h"
 #include "xp.h"
 #include "plstr.h"
 
 PR_STATIC_CALLBACK(void *) 
-getPrincipalArray(JSContext *, struct JSPrincipals *) {
+nsGetPrincipalArray(JSContext * cx, struct JSPrincipals * prin) {
     return nsnull;
 }
 
-PR_STATIC_CALLBACK(JSBool) 
-globalPrivilegesEnabled(JSContext *, struct JSPrincipals *) {
+//PR_STATIC_CALLBACK(JSBool) 
+static JSBool
+nsGlobalPrivilegesEnabled(JSContext * cx , struct JSPrincipals *jsprin) {
     return JS_TRUE;
 }
 
 PR_STATIC_CALLBACK(void)
-destroy(JSContext *, struct JSPrincipals * jsPrincipals) {
-    PL_strfree(jsPrincipals->codebase);
-    NS_IF_RELEASE(((nsJSPrincipals *) jsPrincipals)->nsIPrincipalPtr);
+nsDestroyJSPrincipals(JSContext * cx, struct JSPrincipals * jsprin) {
+    nsJSPrincipals * nsjsprin = (nsJSPrincipals *)jsprin;
+    PL_strfree(nsjsprin->jsPrincipals.codebase);
+    NS_IF_RELEASE(nsjsprin->nsIPrincipalPtr);
 }
 
 nsJSPrincipals::nsJSPrincipals(nsIPrincipal * prin) {
@@ -40,10 +43,11 @@ nsJSPrincipals::nsJSPrincipals(nsIPrincipal * prin) {
   nsICodebasePrincipal * cbprin;
   prin->QueryInterface(nsICodebasePrincipal::GetIID(),(void * *)& cbprin);
   cbprin->GetURLString(& cb);
+  this->nsIPrincipalPtr = prin;
   jsPrincipals.codebase = PL_strdup(cb);
-  jsPrincipals.getPrincipalArray = getPrincipalArray;
-  jsPrincipals.globalPrivilegesEnabled = globalPrivilegesEnabled;
+  jsPrincipals.getPrincipalArray = nsGetPrincipalArray;
+  jsPrincipals.globalPrivilegesEnabled = nsGlobalPrivilegesEnabled;
   jsPrincipals.refcount = 0;
-  jsPrincipals.destroy = destroy;
+  jsPrincipals.destroy = nsDestroyJSPrincipals;
 }
 
