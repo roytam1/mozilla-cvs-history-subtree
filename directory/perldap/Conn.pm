@@ -145,7 +145,6 @@ sub newEntry
 
   tie %entry, 'Mozilla::LDAP::Entry';
   $obj = bless \%entry, 'Mozilla::LDAP::Entry';
-  $obj->{"_self_obj_"} = $obj;
 
   return $obj;
 }
@@ -366,7 +365,6 @@ sub nextEntry
     }
 
   $obj->{"_oc_order_"} = \@ocorder;
-  $obj->{"_self_obj_"} = $obj;
   $obj->{"_oc_numattr_"} = $count;
 
   ldap_ber_free($ber, 0) if $ber;

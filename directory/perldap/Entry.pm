@@ -62,7 +62,6 @@ sub new
 
   tie %entry, $class;
   $obj = bless \%entry, $class;
-  $obj->{"_self_obj_"} = $obj;
 
   return $obj;
 }
@@ -119,7 +118,7 @@ sub STORE
 
   $self->{$attr} = $val;
   $self->{"_${attr}_modified_"} = 1;
-  delete $self->{"_self_obj_"}->{"_${attr}_deleted_"}
+  delete $self->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});
 
   # Potentially add the attribute to the OC order list.
@@ -162,7 +161,7 @@ sub DELETE
     }
   else
     {
-      $self->{"_self_obj_"}->{"_${attr}_deleted_"} = 1;
+      $self->{"_${attr}_deleted_"} = 1;
     }
 }
 
@@ -242,10 +241,10 @@ sub attrModified
   return 0 unless defined($self->{$attr});
   return 0 if defined($self->{"_${attr}_deleted_"});
 
-  @{$self->{"_self_obj_"}->{"_${attr}_save_"}} = @{$self->{$attr}}
+  @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
     unless defined($self->{"_${attr}_save_"});
-  $self->{"_self_obj_"}->{"_${attr}_modified_"} = 1;
-  delete $self->{"_self_obj_"}->{"_${attr}_deleted_"}
+  $self->{"_${attr}_modified_"} = 1;
+  delete $self->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});
 
 
@@ -265,16 +264,16 @@ sub attrClean
 
   return 0 unless (defined($attr) && ($attr ne ""));
 
-  delete $self->{"_self_obj_"}->{"_${attr}_modified_"}
+  delete $self->{"_${attr}_modified_"}
     if defined($self->{"_${attr}_modified_"});
 
-  delete $self->{"_self_obj_"}->{"_${attr}_deleted_"}
+  delete $self->{"_${attr}_deleted_"}
     if defined($self->{"_${attr}_deleted_"});
 
   if (defined($self->{"_${attr}_save_"}))
     {
-      undef @{$self->{"_self_obj_"}->{"_${attr}_save_"}};
-      delete $self->{"_self_obj_"}->{"_${attr}_save_"}; 
+      undef @{$self->{"_${attr}_save_"}};
+      delete $self->{"_${attr}_save_"}; 
     }
 }
 
@@ -339,7 +338,7 @@ sub remove
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 unless defined($self->{$attr});
 
-  $self->{"_self_obj_"}->{"_${attr}_deleted_"} = 1;
+  $self->{"_${attr}_deleted_"} = 1;
 
   return 1;
 }
@@ -358,14 +357,14 @@ sub unRemove
   return 0 unless defined($self->{$attr});
 
   # ToDo: We need to verify that this sucker works...
-  delete $self->{"_self_obj_"}->{"_${attr}_deleted_"};
+  delete $self->{"_${attr}_deleted_"};
   if (defined($self->{"_${attr}_save_"}))
     {
-      undef @{$self->{"_self_obj_"}->{$attr}};
-      delete $self->{"_self_obj_"}->{$attr};
-      @{$self->{"_self_obj_"}->{$attr}} = @{$self->{"_${attr}_save_"}};
-      undef @{$self->{"_self_obj_"}->{"_${attr}_save_"}};
-      delete $self->{"_self_obj_"}->{"_${attr}_save_"};
+      undef @{$self->{$attr}};
+      delete $self->{$attr};
+      @{$self->{$attr}} = @{$self->{"_${attr}_save_"}};
+      undef @{$self->{"_${attr}_save_"}};
+      delete $self->{"_${attr}_save_"};
     }
 
   return 1;
@@ -390,7 +389,7 @@ sub removeValue
   return 0 unless defined($self->{$attr});
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
-  @{$self->{"_self_obj_"}->{"_${attr}_save_"}} = @{$self->{$attr}} unless
+  @{$self->{"_${attr}_save_"}} = @{$self->{$attr}} unless
     defined($self->{"_${attr}_save_"});
 
   foreach (@{$self->{$attr}})
@@ -401,11 +400,11 @@ sub removeValue
 	  splice(@{$self->{$attr}}, $i, 1);
 	  if ($self->size($attr) > 0)
 	    {
-	      $self->{"_self_obj_"}->{"_${attr}_modified_"} = 1;
+	      $self->{"_${attr}_modified_"} = 1;
 	    }
 	  else
 	    {
-	      $self->{"_self_obj_"}->{"_${attr}_deleted_"} = 1;
+	      $self->{"_${attr}_deleted_"} = 1;
 	    }
 
 	  return 1;
@@ -459,19 +458,19 @@ sub addValue
 
   if (defined($self->{$attr}))
     {
-      @{$self->{"_self_obj_"}->{"_${attr}_save_"}} = @{$self->{$attr}}
+      @{$self->{"_${attr}_save_"}} = @{$self->{$attr}}
         unless defined($self->{"_${attr}_save_"});
     }
   else
     {
-      @{$self->{"_self_obj_"}->{"_${attr}_save_"}} = ()
+      @{$self->{"_${attr}_save_"}} = ()
         unless defined($self->{"_${attr}_save_"});
     }
 
-  $self->{"_self_obj_"}->{"_${attr}_modified_"} = 1;
+  $self->{"_${attr}_modified_"} = 1;
   if (defined($self->{"_${attr}_deleted_"}))
     {
-      delete $self->{"_self_obj_"}->{"_${attr}_deleted_"};
+      delete $self->{"_${attr}_deleted_"};
       $self->{$attr} = [$val];
     }
   else
@@ -520,8 +519,8 @@ sub setValue
   return 0 unless (defined(@vals) && ($#vals >= $[));
   return 0 unless (defined($attr) && ($attr ne ""));
 
-  $self->{"_self_obj_"}->{$attr} = [ @vals ];
-  $self->{"_self_obj_"}->{"_${attr}_modified_"} = 1;
+  $self->{$attr} = [ @vals ];
+  $self->{"_${attr}_modified_"} = 1;
 
   return 1;
 }
@@ -627,7 +626,7 @@ sub setDN
   return 0 unless (defined($val) && ($val ne ""));
 
   $val = normalizeDN($val) if (defined($norm) && $norm);
-  $self->{"_self_obj_"}->{"dn"} = $val;
+  $self->{"dn"} = $val;
 
   return 1;
 }
