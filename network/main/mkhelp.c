@@ -801,7 +801,7 @@ net_ParseHTMLHelpLoadHelpDoc(HTMLHelpParseObj *obj, MWContext *context)
 
 	if(!content_address)
 	  {
-		FE_Alert(context, XP_GetString(MK_CANT_LOAD_HELP_TOPIC));
+		NET_Alert(context, XP_GetString(MK_CANT_LOAD_HELP_TOPIC));
 		return;
 	  }
 

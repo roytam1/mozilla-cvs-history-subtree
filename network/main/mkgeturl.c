@@ -810,7 +810,7 @@ NET_ChangeMaxNumberOfConnectionsPerContext(int max_number_of_connections)
 
 /* check the date and set off the timebomb if necessary
  *
- * Calls FE_Alert with a message and then disables
+ * Calls NET_Alert with a message and then disables
  * all network calls to hosts not in our domains,
  * except for FTP connects.
  */
@@ -860,7 +860,7 @@ NET_CheckForTimeBomb(MWContext *context)
 	  {
 		char * alert = NET_ExplainErrorDetails(MK_TIMEBOMB_MESSAGE);
 
-		FE_Alert(context, alert);
+		NET_Alert(context, alert);
 		FREE(alert);
 
 		NET_TimeBombActive = TRUE;
@@ -899,7 +899,7 @@ NET_CheckForTimeBomb(MWContext *context)
 		{
 			char *alert = NET_ExplainErrorDetails(MK_RELATIVE_TIMEBOMB_MESSAGE);
 
-			FE_Alert(context, alert);
+			NET_Alert(context, alert);
 			FREE(alert);
 
 			NET_TimeBombActive = TRUE;
@@ -918,7 +918,7 @@ NET_CheckForTimeBomb(MWContext *context)
 	  {
 		char * alert = NET_ExplainErrorDetails( MK_TIMEBOMB_WARNING_MESSAGE,
 										INTL_ctime(context, &timebomb_time));
-		FE_Alert(context, alert);
+		NET_Alert(context, alert);
 		FREE(alert);
 
 		NET_TimeBombActive = FALSE;
@@ -947,7 +947,7 @@ NET_CheckForTimeBomb(MWContext *context)
 			char * alert = NET_ExplainErrorDetails(
 						MK_RELATIVE_TIMEBOMB_WARNING_MESSAGE,
 						INTL_ctime(context, &relative_timebomb_time));
-			FE_Alert(context, alert);
+			NET_Alert(context, alert);
 			FREE(alert);
 
 			NET_TimeBombActive = FALSE;
@@ -1296,13 +1296,13 @@ net_CheckForWaitingURL(MWContext * window_id, int protocol, Bool was_background)
 
     if(NET_TotalNumberOfProcessingURLs < 0)
       {
-	FE_Alert(window_id, XP_GetString(XP_ALERT_URLS_LESSZERO));
+	NET_Alert(window_id, XP_GetString(XP_ALERT_URLS_LESSZERO));
 	NET_TotalNumberOfProcessingURLs = 0;
       }
 
 	if(NET_TotalNumberOfOpenConnections < 0)
 	  {
-		FE_Alert(window_id, XP_GetString(XP_ALERT_CONNECTION_LESSZERO));
+		NET_Alert(window_id, XP_GetString(XP_ALERT_CONNECTION_LESSZERO));
 	    NET_TotalNumberOfOpenConnections = 0;
 	  }
 
@@ -1605,7 +1605,7 @@ NET_SanityCheckDNS (MWContext *context)
   if (socks) PR_Free (socks);
 
   if (*message)
-    FE_Alert (context, message);
+    NET_Alert (context, message);
   PR_Free (message);
 #endif /* XP_UNIX full function wrap */
 }
@@ -2117,7 +2117,7 @@ NET_GetURL (URL_Struct *URL_s,
 		  {
 			char * alert = NET_ExplainErrorDetails(MK_TIMEBOMB_URL_PROHIBIT);
 
-			FE_Alert(window_id, alert);
+			NET_Alert(window_id, alert);
 			FREE(alert);
 
 		/* we need at least an address
@@ -2393,7 +2393,7 @@ NET_GetURL (URL_Struct *URL_s,
 			char *buf = 0;
 			StrAllocCopy(buf, XP_GetString(XP_URL_NOT_FOUND_IN_CACHE));
 			StrAllocCat(buf, URL_s->address);
-			FE_Alert(window_id, buf);
+			NET_Alert(window_id, buf);
 			FREE(buf);
 		  }
 
@@ -2446,7 +2446,7 @@ NET_GetURL (URL_Struct *URL_s,
 				char *buf = 0;
 				StrAllocCopy(buf, XP_GetString(XP_PARTIAL_CACHE_ENTRY));
 				StrAllocCat(buf, URL_s->address);
-				FE_Alert(window_id, buf);
+				NET_Alert(window_id, buf);
 				FREE(buf);
 			  }
 
@@ -2463,7 +2463,7 @@ NET_GetURL (URL_Struct *URL_s,
 		char *buf = 0;
 		StrAllocCopy(buf, XP_GetString(XP_CHECKING_SERVER__FORCE_RELOAD));
 		StrAllocCat(buf, URL_s->address);
-		FE_Alert(window_id, buf);
+		NET_Alert(window_id, buf);
 		FREE(buf);
 	      }
 
@@ -2496,7 +2496,7 @@ NET_GetURL (URL_Struct *URL_s,
 		    char *buf = 0;
 		    StrAllocCopy(buf, XP_GetString(XP_OBJECT_HAS_EXPIRED));
 		    StrAllocCat(buf, URL_s->address);
-		    FE_Alert(window_id, buf);
+		    NET_Alert(window_id, buf);
 		    FREE(buf);
 		  }
 	      }
@@ -2523,7 +2523,7 @@ NET_GetURL (URL_Struct *URL_s,
 				char *buf = 0;
 				StrAllocCopy(buf, XP_GetString(XP_CHECKING_SERVER_CACHE_ENTRY));
 				StrAllocCat(buf, URL_s->address);
-				FE_Alert(window_id, buf);
+				NET_Alert(window_id, buf);
 				FREE(buf);
 			  }
 
@@ -2558,7 +2558,7 @@ NET_GetURL (URL_Struct *URL_s,
 				char *buf = 0;
 				StrAllocCopy(buf, XP_GetString(XP_CHECKING_SERVER__LASTMOD_MISS));
 				StrAllocCat(buf, URL_s->address);
-				FE_Alert(window_id, buf);
+				NET_Alert(window_id, buf);
 				FREE(buf);
 			  }
 
@@ -2772,7 +2772,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 	else if ( pacf_status == FALSE && NET_GetNoProxyFailover() == TRUE ) 
 	  {
 		status = MK_UNABLE_TO_LOCATE_PROXY;
-		FE_Alert(window_id, XP_GetString(XP_BAD_AUTOCONFIG_NO_FAILOVER));
+		NET_Alert(window_id, XP_GetString(XP_BAD_AUTOCONFIG_NO_FAILOVER));
       } 
 	else
 	  {
@@ -2896,7 +2896,7 @@ redo_load_switch:   /* come here on file/ftp retry */
 				   inline images, plugins, or java classes */
 				   
 				char * alert = PL_strdup(XP_GetString(XP_ALERT_OFFLINE_MODE_SELECTED));
-				FE_Alert(window_id, alert);
+				NET_Alert(window_id, alert);
 				FREE(alert);
 			}
 		}
@@ -3149,7 +3149,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 			 * box which causes the main event loop to get called
 			 * from within the stream
 			 *
-			 * FE_Alert(tmpEntry->window_id, "reentrant call to Process Net");
+			 * NET_Alert(tmpEntry->window_id, "reentrant call to Process Net");
 			 */
 		}
 			/* this will activate local and memory files as well since the ready_fd
@@ -3260,7 +3260,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
 						StrAllocCat(tmpEntry->URL_s->error_msg,
 						XP_GetString( XP_USING_PREVIOUSLY_CACHED_COPY_INSTEAD ) );
 
-						FE_Alert(tmpEntry->window_id,
+						NET_Alert(tmpEntry->window_id,
 								 tmpEntry->URL_s->error_msg);
 					  }
 
@@ -3640,7 +3640,7 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
 				  {
 				TRACEMSG(("AAAACK, reentrant protection kicking in.!!!"));
 #ifdef DEBUG
-				FE_Alert(tmpEntry->window_id, XP_GetString(XP_ALERT_INTERRUPT_WINDOW));
+				NET_Alert(tmpEntry->window_id, XP_GetString(XP_ALERT_INTERRUPT_WINDOW));
 #endif /* DEBUG */
 				  }
 		      }

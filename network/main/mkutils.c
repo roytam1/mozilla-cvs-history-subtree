@@ -101,7 +101,7 @@ NET_AssembleAllFilesInDirectory(MWContext *context, char * local_dir_name)
 
 	if(NULL == (dir_ptr = XP_OpenDir(local_dir_name, xpFileToPost)))
 	  {
-	  	FE_Alert(context, "Unable to open local directory");
+	  	NET_Alert(context, "Unable to open local directory");
 	  	return NULL;
 	  }
 
@@ -197,7 +197,7 @@ NET_PublishFiles(MWContext *context,
 	URL_s = NET_CreateURLStruct(remote_directory, NET_SUPER_RELOAD);
 	if(!URL_s)
       {    
-        FE_Alert(context, "Error: not enough memory for file upload");
+        NET_Alert(context, "Error: not enough memory for file upload");
 	  	return;  /* does not exist */
       }
 
@@ -245,7 +245,7 @@ NET_PublishFilesTo(MWContext *context,
   URL_s = NET_CreateURLStruct(base_url, NET_SUPER_RELOAD);
 	if(!URL_s)
   {    
-    FE_Alert(context, "Error: not enough memory for file upload");
+    NET_Alert(context, "Error: not enough memory for file upload");
     return;  /* does not exist */
   }
 
@@ -3287,7 +3287,7 @@ net_URNProtoLoad(ActiveEntry *ce)
 	PL_strcpy(buffer, XP_GetString(XP_ALERT_URN_USEHTTP));
 	PL_strncat(buffer, ce->URL_s->address, 150);
 	buffer[255] = '\0'; /* in case strncat doesn't add one */
-	FE_Alert(ce->window_id, buffer);
+	NET_Alert(ce->window_id, buffer);
 
 	return -1;
 }
@@ -3329,7 +3329,7 @@ net_NFSProtoLoad(ActiveEntry *ce)
         PL_strcpy(buffer, XP_GetString(XP_ALERT_NFS_USEHTTP));
         PL_strncat(buffer, ce->URL_s->address, 150);
         buffer[255] = '\0'; /* in case strncat doesn't add one */
-        FE_Alert(ce->window_id, buffer);
+        NET_Alert(ce->window_id, buffer);
 
         return -1;
 }
@@ -3368,7 +3368,7 @@ net_WAISProtoLoad(ActiveEntry *ce)
 {
 	char * alert = NET_ExplainErrorDetails(MK_NO_WAIS_PROXY);
 
-	FE_Alert(ce->window_id, alert);
+	NET_Alert(ce->window_id, alert);
 	FREE(alert);
 
 	return -1;

@@ -723,7 +723,7 @@ net_GopherLoad (ActiveEntry * cur_entry)
 														MK_MALFORMED_URL_ERROR, 
 														CE_URL_S->address);
 					if(error_msg)
-						FE_Alert(CE_WINDOW_ID, error_msg);
+						NET_Alert(CE_WINDOW_ID, error_msg);
 					PR_Free(gopher_host);
 					return(MK_MALFORMED_URL_ERROR);
 			  	  }
@@ -961,7 +961,7 @@ net_GopherLoad (ActiveEntry * cur_entry)
    		char *error_msg = NET_ExplainErrorDetails(MK_MALFORMED_URL_ERROR, 
 												  CE_URL_S->address);
 		if(error_msg)
-			FE_Alert(CE_WINDOW_ID, error_msg);
+			NET_Alert(CE_WINDOW_ID, error_msg);
         return(MK_MALFORMED_URL_ERROR);
       }
     

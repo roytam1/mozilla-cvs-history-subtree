@@ -448,7 +448,7 @@ net_smtp_send_helo_response(ActiveEntry *cur_entry)
 								s);
 				}
 				else {
-					FE_Alert (CE_WINDOW_ID, XP_GetString(XP_RETURN_RECEIPT_NOT_SUPPORT));
+					NET_Alert (CE_WINDOW_ID, XP_GetString(XP_RETURN_RECEIPT_NOT_SUPPORT));
 					PR_snprintf(buffer, sizeof(buffer), "MAIL FROM:<%.256s>" CRLF, s);
 				}
 			}

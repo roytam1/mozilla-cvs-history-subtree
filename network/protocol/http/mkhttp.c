@@ -2425,7 +2425,7 @@ net_parse_first_http_line (ActiveEntry *ce)
                   sprintf(message_buffer,
 							 XP_GetString(XP_ALERT_UNKNOWN_STATUS),
                              CE_URL_S->server_status);
-                  FE_Alert(CE_WINDOW_ID, message_buffer);
+                  NET_Alert(CE_WINDOW_ID, message_buffer);
 
                   /* don't cache unless we have a succesful reply
                    */

@@ -22,6 +22,7 @@
  * Additions/Changes by Judson Valeski 1998
  */
 #include "mkutils.h"
+#include "mkfe.h"
 #include "cstream.h"
 #include "plstr.h"
 #include "prmem.h"
@@ -245,7 +246,7 @@ NET_StreamBuilder  (FO_Present_Types format_out,
       }
 
     TRACEMSG(("Alert! did not find a converter or decoder\n"));
-    FE_Alert(context, XP_GetString(XP_ALERT_CANTFIND_CONVERTER));
+    NET_Alert(context, XP_GetString(XP_ALERT_CANTFIND_CONVERTER));
 
     return(0);  /* Uh-oh. didn't find a converter.  VERY VERY BAD! */
 }

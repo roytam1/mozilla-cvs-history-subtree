@@ -19,6 +19,7 @@
 /* Please leave outside of ifdef for window precompiled headers */
 #include "xp.h"
 #include "netutils.h"
+#include "mkfe.h"
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
@@ -300,7 +301,7 @@ EDT_ErrorOut (int format_out,
 			  MWContext  *window_id)
 {
 
- 	FE_Alert(window_id, XP_GetString(XP_EDITOR_NON_HTML));
+ 	NET_Alert(window_id, XP_GetString(XP_EDITOR_NON_HTML));
 
 	return(NULL);
 }

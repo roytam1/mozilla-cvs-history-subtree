@@ -27,6 +27,7 @@
 #include "rosetta.h"
 #include "mkutils.h"
 #include "netutils.h"
+#include "mkfe.h"
 #include "prerror.h"
 #include "prsystem.h"
 #include "prefapi.h"
@@ -647,7 +648,7 @@ net_FindAddress (const char *host_ptr,
                 	if(port_num == net_bad_ports_table[i]) {
                     	char *error_msg = PL_strdup(XP_GetString(MK_PORT_ACCESS_NOT_ALLOWED));
                     	if(error_msg) {
-                        	FE_Alert(window_id, error_msg);
+                        	NET_Alert(window_id, error_msg);
 							PR_Free(error_msg);
 					  	  }
 

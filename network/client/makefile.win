@@ -44,12 +44,7 @@ LLIBS=  \
 MISCDEP=$(LLIBS)
 OBJS=   \
 	.\$(OBJDIR)\cnetinit.obj		\
-	$(NULL)
-
-
-CSRCS =	\
-	cnetinit.c	\
-	mkfe.c		\
+	.\$(OBJDIR)\mkfe.obj			\
 	$(NULL)
 
 

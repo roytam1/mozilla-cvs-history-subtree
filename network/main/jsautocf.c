@@ -28,7 +28,7 @@
 
 #include "mkgeturl.h"
 #include "mkstream.h"
-#include "mkgeturl.h"
+#include "mkfe.h"
 #include "mkformat.h"
 /* acharya: This file is obsolete and not used in this file.
 #include "il.h" 
@@ -198,7 +198,7 @@ PRIVATE void jsacf_abort(NET_StreamClass *stream, int status)
 {
 	JSACF_Object *obj=stream->data_object;	
     jsacf_loading = FALSE;
-//    FE_Alert(obj->context, CONFIG_LOAD_ABORTED);
+//    NET_Alert(obj->context, CONFIG_LOAD_ABORTED);
     PR_Free(obj);
 }
 

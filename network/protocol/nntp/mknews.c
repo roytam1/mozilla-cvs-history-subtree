@@ -4310,7 +4310,7 @@ net_NewsLoad (ActiveEntry *ce)
   if (defhost == NULL)
     {
 	  char* alert = NET_ExplainErrorDetails(MK_NNTP_SERVER_NOT_CONFIGURED);
-	  FE_Alert(ce->window_id, alert);
+	  NET_Alert(ce->window_id, alert);
 #ifdef XP_MAC
 	  /* AFTER the alert, not before! */
 	  FE_EditPreference(PREF_NewsHost);

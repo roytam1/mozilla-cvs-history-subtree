@@ -445,7 +445,7 @@ jscookie_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report
     if (!msg)
         return;
 
-    FE_Alert(context, msg);
+    NET_Alert(context, msg);
     PR_Free(msg);
 
     return;

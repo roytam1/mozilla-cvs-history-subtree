@@ -821,11 +821,11 @@ retry:
     if (!pacf_src_buf) {
 	if ( pacf_do_failover == FALSE && !NET_UsingPadPac() ) {
 	  /* Don't failover to using no proxies */
-	     FE_Alert(obj->context, XP_GetString(XP_NO_CONFIG_RECEIVED_NO_FAILOVER));
+	     NET_Alert(obj->context, XP_GetString(XP_NO_CONFIG_RECEIVED_NO_FAILOVER));
 	}
 	else if (obj->flag != 2 && (XP_Stat("", &st, xpProxyConfig) == -1) && !NET_UsingPadPac())
 	  {
-			FE_Alert(obj->context, XP_GetString(XP_NO_CONFIG_RECIEVED));
+			NET_Alert(obj->context, XP_GetString(XP_NO_CONFIG_RECIEVED));
 	  }
 	else
 	{
@@ -856,7 +856,7 @@ retry:
 			goto out;
 		}
 		if (obj->flag) {
-				FE_Alert(obj->context, XP_GetString(XP_EVEN_SAVED_IS_BAD));
+				NET_Alert(obj->context, XP_GetString(XP_EVEN_SAVED_IS_BAD));
 		} else if (XP_Stat("", &st, xpProxyConfig) == -1) {
 				alert2(obj->context, XP_GetString(XP_BAD_CONFIG_IGNORED), pacf_url);
 		} else if (confirm2(obj->context, XP_GetString(XP_BAD_CONFIG_USE_PREV), pacf_url)) {
@@ -884,7 +884,7 @@ out:
 PRIVATE void pacf_abort(NET_StreamClass *stream, int status) {
 	PACF_Object *obj=stream->data_object;	
     pacf_loading = FALSE;
-		FE_Alert(obj->context, XP_GetString(XP_GLOBAL_CONFIG_LOAD_ABORTED));
+		NET_Alert(obj->context, XP_GetString(XP_GLOBAL_CONFIG_LOAD_ABORTED));
     PR_Free(obj);
 }
 
@@ -959,12 +959,12 @@ static void pacf_restart_queued(URL_Struct *URL_s, int status,
 	
 	if ( pacf_do_failover == FALSE ) {
 	  /* Don't failover to using no proxies */
-	     FE_Alert(window_id, XP_GetString(XP_CONF_LOAD_FAILED_NO_FAILOVER));
+	     NET_Alert(window_id, XP_GetString(XP_CONF_LOAD_FAILED_NO_FAILOVER));
 	}
 	else if (XP_Stat("", &st, xpProxyConfig) == -1)
 	  {
 	      if (status < 0)
-		  FE_Alert(window_id, XP_GetString(XP_CONF_LOAD_FAILED_IGNORED));
+		  NET_Alert(window_id, XP_GetString(XP_CONF_LOAD_FAILED_IGNORED));
 	      else {
 				alert2(window_id, XP_GetString(XP_BAD_TYPE_CONFIG_IGNORED), pacf_url);
 		  }
@@ -1039,7 +1039,7 @@ MODULE_PRIVATE int NET_LoadProxyConfig(char *autoconf_url,
 	return -1;
 
 	if (!PL_strcmp(autoconf_url,"BAD-NOAUTOADMNLIB")) {
-	    FE_Alert(window_id, XP_GetString( XP_AUTOADMIN_MISSING ));
+	    NET_Alert(window_id, XP_GetString( XP_AUTOADMIN_MISSING ));
 		return -1;
 	}
 

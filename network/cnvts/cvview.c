@@ -20,6 +20,7 @@
 #include "xp.h"
 #include "plstr.h"
 #include "netutils.h"
+#include "mkfe.h"
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
@@ -461,7 +462,7 @@ NET_ExtViewerConverter   (int         format_out,
 
 		if(!obj->fp)
 		  {
-			FE_Alert(window_id, XP_GetString(XP_ALERT_UNABLE_INVOKEVIEWER));
+			NET_Alert(window_id, XP_GetString(XP_ALERT_UNABLE_INVOKEVIEWER));
 		    return(NULL);
 		  }
 
@@ -550,7 +551,7 @@ NET_ExtViewerConverter   (int         format_out,
 											   obj->filename);
 			if (s)
 			  {
-				FE_Alert (window_id, s);
+				NET_Alert (window_id, s);
 				PR_Free (s);
 			  }
 	        return(NULL);

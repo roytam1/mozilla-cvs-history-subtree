@@ -708,7 +708,7 @@ net_send_password_response(ActiveEntry * ce)
 	    SI_RemoveUser(cd->cc->hostname, cd->cc->hostname, TRUE);
 	}
 #endif
-        FE_Alert(ce->window_id, cd->return_msg ? cd->return_msg :
+        NET_Alert(ce->window_id, cd->return_msg ? cd->return_msg :
 								 XP_GetString( XP_COULD_NOT_LOGIN_TO_FTP_SERVER ) );
 		/* no error status message in this case 
 		 */
@@ -751,7 +751,7 @@ net_send_acct_response(ActiveEntry * ce)
     else
       {
         cd->next_state = FTP_ERROR_DONE;
-        FE_Alert(ce->window_id, cd->return_msg ? cd->return_msg : 
+        NET_Alert(ce->window_id, cd->return_msg ? cd->return_msg : 
 								 XP_GetString( XP_COULD_NOT_LOGIN_TO_FTP_SERVER ) );
 		/* no error status message in this case 
 		 */

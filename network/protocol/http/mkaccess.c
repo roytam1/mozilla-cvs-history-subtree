@@ -3142,7 +3142,7 @@ NET_AskForProxyAuth(MWContext * context,
 		new_entry = TRUE;
 		if (!(prev = net_parse_authenticate_line(pauth_params, NULL)))
 		  {
-			  FE_Alert(context, INVALID_AUTH_HEADER);
+			  NET_Alert(context, INVALID_AUTH_HEADER);
 			  return FALSE;
 		  }
 		StrAllocCopy(prev->proxy_addr, proxy_addr);

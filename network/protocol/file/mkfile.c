@@ -1092,7 +1092,7 @@ net_FileLoad (ActiveEntry * cur_entry)
     cur_entry->con_data = PR_NEW(FILEConData);
     if(!cur_entry->con_data)
       {
-        FE_Alert(CE_WINDOW_ID, XP_GetString(XP_ALERT_OUTMEMORY));
+        NET_Alert(CE_WINDOW_ID, XP_GetString(XP_ALERT_OUTMEMORY));
 		CE_URL_S->error_msg = NET_ExplainErrorDetails(MK_OUT_OF_MEMORY);
         CE_STATUS = MK_OUT_OF_MEMORY;
         return(CE_STATUS);

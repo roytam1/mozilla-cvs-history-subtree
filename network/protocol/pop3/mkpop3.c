@@ -1640,7 +1640,7 @@ net_pop3_get_uidl_list(ActiveEntry *ce)
 	  if (!host) host = "(null)";
 	  buf = PR_smprintf (fmt, host);
 	  if (!buf) return MK_OUT_OF_MEMORY;
-	  FE_Alert (ce->window_id, buf);
+	  NET_Alert (ce->window_id, buf);
 	  PR_Free (buf);
 
 	  /* Free up the msg_info structure, as we use its presence later to
@@ -2177,7 +2177,7 @@ net_pop3_top_response(ActiveEntry *ce)
 		  return MK_OUT_OF_MEMORY;
 	  }
 	  PR_snprintf (buf, size, fmt, host ? host : "(null)");
-	  FE_Alert (ce->window_id, buf);
+	  NET_Alert (ce->window_id, buf);
 	  PR_Free (buf);
 	  FREEIF(host);
 
@@ -2353,7 +2353,7 @@ net_Pop3Load (ActiveEntry * ce)
 												MK_POP3_USERNAME_UNDEFINED);
 		ce->status = MK_POP3_USERNAME_UNDEFINED;
 #ifdef XP_MAC
-		FE_Alert(ce->window_id, ce->URL_s->error_msg); /* BEFORE going to the prefs window */
+		NET_Alert(ce->window_id, ce->URL_s->error_msg); /* BEFORE going to the prefs window */
 		FE_EditPreference(PREF_Pop3ID);
 #endif
 		return(MK_POP3_USERNAME_UNDEFINED);
