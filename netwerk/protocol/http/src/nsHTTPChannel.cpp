@@ -1917,7 +1917,6 @@ nsresult nsHTTPChannel::ResponseCompleted(nsIStreamListener *aListener,
     //
     // Call the consumer OnStopRequest(...) to end the request...
     //----------------------------------------------------------------
-    mStatus = aStatus; // set the channel's status based on the respone status
 
     if (aListener)
     {
