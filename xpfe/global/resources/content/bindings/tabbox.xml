@@ -15,6 +15,19 @@
     <content orient="vertical"/>
 
     <implementation>
+      <property name="handleCtrlTab">
+        <setter>
+        <![CDATA[
+          this.setAttribute("handleCtrlTab", val);
+        ]]>
+        </setter>
+        <getter>
+        <![CDATA[
+          return this.getAttribute("handleCtrlTab");
+        ]]>
+        </getter>
+      </property>
+
       <property name="selectedTab">
         <setter>
         <![CDATA[
@@ -49,8 +62,10 @@
                                                   "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
                                                   "tabs");
          tabs = tabs.length ? tabs[0] : null;
-         if (tabs)
+         if (tabs && (this.handleCtrlTab != "false")) {
            tabs.advanceSelectedTab(1);
+           event.preventDefault();
+         }
          ]]>
       </handler>
       
@@ -60,8 +75,10 @@
                                                   "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
                                                   "tabs");
          tabs = tabs.length ? tabs[0] : null;
-         if (tabs)
+         if (tabs && (this.handleCtrlTab != "false")) {
            tabs.advanceSelectedTab(-1);
+           event.preventDefault();
+         }
          ]]>
       </handler>
     </handlers>
@@ -133,10 +150,20 @@
         <parameter name="aDir"/>
         <body>
         <![CDATA[
-          var next = this.selectedTab[aDir == -1 ? "previousSibling" : "nextSibling"];
-          if (next && !next.getAttribute("hidden")) {
+          var startTab = this.selectedItem;
+          var next = startTab[aDir == -1 ? "previousSibling" : "nextSibling"];
+
+          while (next != startTab && (!next || next.getAttribute("hidden"))) {
+            if (next && next.getAttribute("hidden"))
+              next = next[aDir == -1 ? "previousSibling" : "nextSibling"];
+            if (!next)
+              next = aDir == 1 ? this.childNodes[0] : this.childNodes[this.childNodes.length - 1];
+          }
+
+          if (next && next != startTab) {
             this.selectedTab = next;
             next.focus();
+            document.commandDispatcher.advanceFocusIntoSubtree(next);
           }
         ]]>
         </body>

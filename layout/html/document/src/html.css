@@ -385,6 +385,7 @@ frameset {
 
 frame {
   background-color: transparent ! important; /* (b=49779) */
+  -moz-user-focus: normal;
 }
 
 iframe {

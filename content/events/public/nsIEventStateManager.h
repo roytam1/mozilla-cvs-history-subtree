@@ -33,7 +33,6 @@ class nsIDOMEvent;
 class nsIFrame;
 class nsIView;
 class nsIWidget;
-class nsIDocument;
 
 /*
  * Event listener manager interface.
@@ -75,19 +74,10 @@ public:
   NS_IMETHOD GetFocusedContent(nsIContent **aContent) = 0;
   NS_IMETHOD SetFocusedContent(nsIContent* aContent) = 0;
 
-  virtual PRBool ChangeFocus(nsIContent* aFocus, nsIFrame* aFocusFrame, PRBool aSetFocus) = 0;
   NS_IMETHOD GetNextTabbableContent(nsIContent* aRootContent, nsIFrame* aFrame,
                                     PRBool forward, nsIContent** aResult) = 0;
 
-  NS_IMETHOD GetNextTabbableIndexContent(nsIContent* aRootContent, 
-                                         PRBool forward, 
-                                         PRBool aStartOver,
-                                         nsIContent** aResult) = 0;
-
-  NS_IMETHOD HasPositiveTabIndex(nsIContent* aContent, 
-                                 PRBool* aResult) = 0;
-
-  // This is an experiement and may be temporary
+  // This is an experiment and may be temporary
   NS_IMETHOD ConsumeFocusEvents(PRBool aDoConsume) = 0;
 
   // Access Key Registration
@@ -100,11 +90,7 @@ public:
   NS_IMETHOD DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent) = 0;
 
   // Method for moving the focus forward/back.
-  NS_IMETHOD MoveFocus(PRBool aDirection, nsIContent* aRoot)=0;
-
-  //-- Special Enums needed for DocShell Identification
-  enum eDocType {eChrome = 0, eGenericContent, eFrameSet, eFrame, eIFrame};
-  NS_IMETHOD FigureOutKindOfDoc(nsIDocument* aDoc, eDocType* aDocType) = 0;
+  NS_IMETHOD ShiftFocus(PRBool aDirection, nsIContent* aStart)=0;
 
 };
 
