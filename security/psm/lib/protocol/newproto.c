@@ -42,6 +42,12 @@
 #ifdef XP_BEOS
 #include "ByteOrder.h"
 #endif
+#ifdef XP_OS2_EMX
+#include <sys/param.h>
+#endif
+#ifdef XP_OS2_VACPP
+#include <utils.h>
+#endif
 
 #include "newproto.h"
 

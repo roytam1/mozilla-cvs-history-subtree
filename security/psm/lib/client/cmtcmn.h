@@ -55,7 +55,9 @@
 #else
 #ifndef macintosh
 #include <stdlib.h>
+#ifndef XP_OS2_VACPP
 #include <unistd.h>
+#endif /* XP_OS2_VACPP */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -65,8 +67,13 @@
 
 typedef void (*void_fun) (void);
 
+#ifdef XP_OS2_VACPP /* OS/2 VisualAge */
+typedef void (*_Optlink CMTP7ContentCallback)(void *arg, const char *buf,
+				      unsigned long len);
+#else
 typedef void (* CMTP7ContentCallback)(void *arg, const char *buf,
 				      unsigned long len);
+#endif
 
 typedef struct _CMTPrivate CMTPrivate;
 typedef void (*CMTReclaimFunc)(CMTPrivate *priv);
