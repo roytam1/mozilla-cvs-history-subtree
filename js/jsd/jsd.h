@@ -36,6 +36,7 @@
 * in other embeddings.
 */
 #ifdef MOZILLA_CLIENT
+#define JS_THREADSAFE 1
 #define JSD_THREADSAFE 1
 #define JSD_HAS_DANGEROUS_THREAD 1
 #define JSD_USE_NSPR_LOCKS 1
@@ -64,6 +65,9 @@ JS_BEGIN_EXTERN_C
 #include "jsobj.h"
 #include "jsfun.h"
 #include "jsdbgapi.h"
+#ifdef JS_THREADSAFE
+#include "jslock.h"
+#endif 
 #include "jsd_lock.h"
 #include <stdio.h>
 #include <stdlib.h>

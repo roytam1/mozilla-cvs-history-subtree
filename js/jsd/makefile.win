@@ -23,7 +23,8 @@ DEPTH=..\..
 include <$(DEPTH)\config\config.mak>
 
 !ifdef MOZ_OJI
-DIRS = java classes
+DIRS = java
+# DIRS = java classes
 !endif
 
 #//------------------------------------------------------------------------
@@ -48,13 +49,10 @@ LINCS = -I$(DEPTH)\include \
 DEFFILE		= $(DLLNAME).def
 !endif
 
-# LCFLAGS= $(LCFLAGS) -DEXPORT_JSD_API -DJSD_THREADSAFE
+LCFLAGS= $(LCFLAGS)  -DMOZILLA_CLIENT
 
 LLIBS=	$(LIBNSPR) 										\
 		$(DIST)\lib\js$(MOZ_BITS)$(VERSION_NUMBER).lib	\
-!ifdef MOZ_OJI
-		$(DIST)\lib\oji$(MOZ_BITS).lib	
-!endif
 
 !if "$(MOZ_BITS)"=="32" && defined(MOZ_DEBUG) && defined(GLOWCODE)
 LLIBS=$(LLIBS) $(GLOWDIR)\glowcode.lib
@@ -84,7 +82,7 @@ OBJS =					\
 #// install headers
 #//
 #//------------------------------------------------------------------------
-INSTALL_DIR=$(PUBLIC)\jsd
+INSTALL_DIR=$(PUBLIC)\jsdebug
 INSTALL_FILE_LIST=	\
 	jsdebug.h		\
 	$(NULL)
@@ -96,7 +94,7 @@ INSTALL_FILE_LIST=	\
 #//------------------------------------------------------------------------
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
+libs:: $(DLL)
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
 	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 

@@ -546,8 +546,8 @@ jsd_GetValueClassName(JSDContext* jsdc, JSDValue* jsdval)
         JSObject* obj;
         if(!(obj = JSVAL_TO_OBJECT(val)))
             return NULL;
-        if(OBJ_GET_CLASS(cx, obj))
-            jsdval->className = OBJ_GET_CLASS(cx, obj)->name;
+        if(OBJ_GET_CLASS(jsdc->dumbContext, obj))
+            jsdval->className = OBJ_GET_CLASS(jsdc->dumbContext, obj)->name;
     }
     return jsdval->className;
 }
