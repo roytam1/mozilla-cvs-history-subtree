@@ -212,3 +212,44 @@ NS_IMETHODIMP nsMsgMailNewsUrl::MakeAbsolute(const char *relativePart, char **_r
 	return m_baseURL->MakeAbsolute(relativePart, _retval);
 }
 
+NS_IMETHODIMP nsMsgMailNewsUrl::GetDirectory(char * *aDirectory)
+{
+	return m_baseURL->GetDirectory(aDirectory);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::SetDirectory(char *aDirectory)
+{
+	return m_baseURL->SetDirectory(aDirectory);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::GetFileName(char * *aFileName)
+{
+	return m_baseURL->GetFileName(aFileName);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::SetFileName(char * aFileName)
+{
+	return m_baseURL->SetFileName(aFileName);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::GetQuery(char * *aQuery)
+{
+	return m_baseURL->GetQuery(aQuery);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::SetQuery(char *aQuery)
+{
+	return m_baseURL->SetQuery(aQuery);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::GetRef(char * *aRef)
+{
+	return m_baseURL->GetRef(aRef);
+}
+
+NS_IMETHODIMP nsMsgMailNewsUrl::SetRef(char *aRef)
+{
+	return m_baseURL->SetRef(aRef);
+}
+
+
