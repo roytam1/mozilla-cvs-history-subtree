@@ -69,7 +69,7 @@
   
   <menupopup id="taskPopup">
     <menuitem position="2" accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail"/>
-    <menuitem position="4" label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook"/>
+    <menuitem insertafter="editorTask" label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook"/>
   </menupopup>
   
 </overlay>         
