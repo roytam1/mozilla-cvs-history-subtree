@@ -170,12 +170,13 @@ nsStreamIOChannel::Init(nsIURI* uri, nsIStreamIO* io)
     return NS_OK;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS5(nsStreamIOChannel, 
+NS_IMPL_THREADSAFE_ISUPPORTS6(nsStreamIOChannel, 
                               nsIStreamIOChannel,
                               nsIChannel,
                               nsIRequest,
-                              nsIStreamObserver,
-                              nsIStreamListener);
+                              nsIStreamListener,
+                              nsIStreamProvider,
+                              nsIStreamObserver);
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIRequest methods:
@@ -352,11 +353,10 @@ NS_IMETHODIMP
 nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
 {
     NS_WARNING("nsStreamIOChannel::AsyncWrite -- NOT IMPLEMENTED!!");
-#if 0
     nsresult rv;
 
-    NS_ASSERTION(observer, "no observer");
-    mUserObserver = observer;
+    NS_ASSERTION(provider, "no provider");
+    SetProvider(provider);
 
     if (mLoadGroup) {
         nsCOMPtr<nsILoadGroupListenerFactory> factory;
@@ -365,12 +365,15 @@ nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
         //
         rv = mLoadGroup->GetGroupListenerFactory(getter_AddRefs(factory));
         if (factory) {
+            NS_WARNING("load group proxy listener not implemented for AsyncWrite");
+#if 0
             nsIStreamListener *newListener;
             rv = factory->CreateLoadGroupListener(GetListener(), &newListener);
             if (NS_SUCCEEDED(rv)) {
                 mUserObserver = newListener;
                 NS_RELEASE(newListener);
             }
+#endif
         }
 
         rv = mLoadGroup->AddChannel(this, nsnull);
@@ -399,7 +402,7 @@ nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
         if (NS_FAILED(rv)) goto done;
     }
 #endif
-    rv = mFileTransport->AsyncWrite(fromStream, this, ctxt);
+    rv = mFileTransport->AsyncWrite(this, ctxt);
 
   done:
     if (NS_FAILED(rv)) {
@@ -410,8 +413,6 @@ nsStreamIOChannel::AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt)
         mFileTransport = nsnull;
     }
     return rv;
-#endif
-    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -603,7 +604,7 @@ nsStreamIOChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// nsIStreamListener methods:
+// nsIStreamObserver implementation:
 ////////////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP
@@ -638,6 +639,10 @@ nsStreamIOChannel::OnStopRequest(nsIChannel* transportChannel, nsISupports* cont
     return mStreamIO->Close(aStatus);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// nsIStreamListener implementation:
+////////////////////////////////////////////////////////////////////////////////
+
 NS_IMETHODIMP
 nsStreamIOChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* context,
                                    nsIInputStream *aIStream, PRUint32 aSourceOffset,
@@ -645,6 +650,19 @@ nsStreamIOChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* co
 {
     return GetListener()->OnDataAvailable(this, context, aIStream,
                                           aSourceOffset, aLength);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// nsIStreamProvider implementation:
+////////////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP
+nsStreamIOChannel::OnProvideData(nsIChannel* transportChannel, nsISupports* context,
+                                 nsIOutputStream *aOStream, PRUint32 aOffset,
+                                 PRUint32 aLength)
+{
+    return GetProvider()->OnProvideData(this, context, aOStream,
+                                        aOffset, aLength);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
