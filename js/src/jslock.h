@@ -60,10 +60,10 @@ typedef struct JSFatLockTable {
 #define JS_LOCK0(P,M) js_Lock(P,M)
 #define JS_UNLOCK0(P,M) js_Unlock(P,M)
 
-#define JS_NEW_CONDVAR(l)           JS_NewCondVar(l)
+#define JS_NEW_CONDVAR(l)           PR_NewCondVar(l)
 #define JS_DESTROY_CONDVAR(cv)      PR_DestroyCondVar(cv)
 #define JS_WAIT_CONDVAR(cv,to)      PR_WaitCondVar(cv,to)
-#define JS_NO_TIMEOUT               JS_INTERVAL_NO_TIMEOUT
+#define JS_NO_TIMEOUT               PR_INTERVAL_NO_TIMEOUT
 #define JS_NOTIFY_CONDVAR(cv)       PR_NotifyCondVar(cv)
 #define JS_NOTIFY_ALL_CONDVAR(cv)   PR_NotifyAllCondVar(cv)
 

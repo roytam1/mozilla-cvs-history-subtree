@@ -105,8 +105,8 @@ js_CompareAndSwap(jsword *w, jsword ov, jsword nv)
     asm volatile ("
 stbar
 swap [%1],%4
-1:  tst %4
-bneg,a 1b
+1:  cmp %4,-1
+be,a 1b
 swap [%1],%4
 cmp %2,%4
 be,a 2f
@@ -307,7 +307,7 @@ mallocFatlock()
     fl->next = NULL;
     fl->prev = NULL;
     fl->slock = PR_NewLock();
-    fl->svar = JS_NewCondVar(fl->slock);
+    fl->svar = PR_NewCondVar(fl->slock);
     return fl;
 }
 
@@ -326,7 +326,7 @@ js_SuspendThread(JSThinLock *p)
     JSStatus stat;
 
     while ((fl = (JSFatLock*)js_AtomicSet((jsword*)&p->fat,1)) == (JSFatLock*)1) /* busy wait */
-	PR_Sleep(JS_INTERVAL_NO_WAIT);
+	PR_Sleep(PR_INTERVAL_NO_WAIT);
     if (fl == NULL)
 	return 1;
     PR_Lock(fl->slock);
@@ -336,7 +336,7 @@ js_SuspendThread(JSThinLock *p)
 	PR_Unlock(fl->slock);
 	return 1;
     }
-    stat = PR_WaitCondVar(fl->svar,JS_INTERVAL_NO_TIMEOUT);
+    stat = PR_WaitCondVar(fl->svar,PR_INTERVAL_NO_TIMEOUT);
     if (stat == JS_FAILURE) {
 	fl->susp--;
 	return 0;
@@ -352,7 +352,7 @@ js_ResumeThread(JSThinLock *p)
     JSStatus stat;
 
     while ((fl = (JSFatLock*)js_AtomicSet((jsword*)&p->fat,1)) == (JSFatLock*)1)
-	PR_Sleep(JS_INTERVAL_NO_WAIT);
+	PR_Sleep(PR_INTERVAL_NO_WAIT);
     if (fl == NULL)
 	return;
     PR_Lock(fl->slock);
@@ -519,7 +519,7 @@ emptyFatlock(JSThinLock *p)
     PRLock* lck;
 
     while ((fl = (JSFatLock*)js_AtomicSet((jsword*)&p->fat,1)) == (JSFatLock*)1)
-       PR_Sleep(JS_INTERVAL_NO_WAIT);
+       PR_Sleep(PR_INTERVAL_NO_WAIT);
     if (fl == NULL) {
 	js_AtomicSet((jsword*)&p->fat,(jsword)fl);
 	return 1;
@@ -584,7 +584,7 @@ js_Enqueue(JSThinLock *p, jsword me)
 	if (o != 0 && js_CompareAndSwap(&p->owner,o,n)) {
 	    JSFatLock* fl;
 	    while ((fl = (JSFatLock*)js_AtomicSet((jsword*)&p->fat,1)) == (JSFatLock*)1)
-		PR_Sleep(JS_INTERVAL_NO_WAIT);
+		PR_Sleep(PR_INTERVAL_NO_WAIT);
 	    if (fl == NULL)
 		fl = allocateFatlock();
 	    js_AtomicSet((jsword*)&p->fat,(jsword)fl);
