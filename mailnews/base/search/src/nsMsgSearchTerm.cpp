@@ -58,6 +58,7 @@
 #include "nsTime.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
+#include "nsISupportsObsolete.h"
 
 
 //---------------------------------------------------------------------------
@@ -311,7 +312,7 @@ PRInt32 NS_MsgGetStatusValueFromName(char *name)
 // Needed for DeStream method.
 nsMsgSearchTerm::nsMsgSearchTerm()
 {
-    NS_INIT_REFCNT();
+    NS_INIT_ISUPPORTS();
 
     // initialize this to zero
     m_value.string=nsnull;
