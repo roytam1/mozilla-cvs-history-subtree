@@ -480,8 +480,7 @@ PRBool gif_write_ready(const gif_struct* gs)
   if (!gs)
     return PR_FALSE;
 
-  PRInt32 max = PR_MAX(MAX_READ_AHEAD, gs->requested_buffer_fullness);
-  return (gs->gathered < max);
+  return (gs->gathered < MAX_READ_AHEAD);
 }
 
 /******************************************************************************/
@@ -786,19 +785,16 @@ PRStatus gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
       }
       /* Wait for specified # of bytes to enter buffer */
       else if (netscape_extension == 2) {
-        gs->requested_buffer_fullness = GETINT32(q + 1);
-        GETN(gs->requested_buffer_fullness, gif_wait_for_buffer_full);
+        // Don't do this, this extension doesn't exist (isn't used at all) 
+        // and doesn't do anything, as our streaming/buffering takes care of it all...
+        // See: http://semmix.pl/color/exgraf/eeg24.htm
+        GETN(1, gif_netscape_extension_block);
       } else
         gs->state = gif_error; // 0,3-7 are yet to be defined netscape
                                // extension codes
 
       break;
     }
-
-    case gif_wait_for_buffer_full:
-      gs->gathered = gs->requested_buffer_fullness;
-      GETN(1, gif_netscape_extension_block);
-      break;
 
     case gif_image_header:
     {
@@ -901,7 +897,6 @@ PRStatus gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
       }
 
       /* Clear state from last image */
-      gs->requested_buffer_fullness = 0;
       gs->irow = 0;
       gs->rows_remaining = gs->height;
       gs->rowend = gs->rowbuf + gs->width;
