@@ -36,8 +36,7 @@
  */
 
 
-/*  $Revision$
-**
+/*
 **  Main editing routines for editline library.
 */
 #include "editline.h"
@@ -1344,3 +1343,4 @@ STATIC KEYMAP	MetaMap[16]= {
     {	'w',		copy_region	},
     {	0,		NULL		}
 };
+                         
