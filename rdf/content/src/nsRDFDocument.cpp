@@ -53,7 +53,6 @@
 #include "nsIRDFDataSource.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
-#include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
 #include "nsIRDFXMLDataSource.h"
 #include "nsIScriptContextOwner.h"
@@ -117,22 +116,176 @@ static NS_DEFINE_CID(kRDFXULBuilderCID,         NS_RDFXULBUILDER_CID);
 
 ////////////////////////////////////////////////////////////////////////
 
-static PLHashNumber
-rdf_HashPointer(const void* key)
-{
-    return (PLHashNumber) key;
-}
-
 enum nsContentType {
 	TEXT_RDF, 
 	TEXT_XUL,
 };
 
 ////////////////////////////////////////////////////////////////////////
+// nsElementMap
+
+class nsElementMap
+{
+private:
+    PLHashTable* mResources;
+
+    class ContentListItem {
+    public:
+        ContentListItem(nsIContent* aContent)
+            : mNext(nsnull), mContent(aContent) {}
+
+        ContentListItem* mNext;
+        nsIContent*      mContent;
+    };
+
+    static PLHashNumber
+    HashPointer(const void* key)
+    {
+        return (PLHashNumber) key;
+    }
+
+    static PRIntn
+    ReleaseContentList(PLHashEntry* he, PRIntn index, void* closure)
+    {
+        ContentListItem* head =
+            (ContentListItem*) he->value;
+
+        while (head) {
+            ContentListItem* doomed = head;
+            head = head->mNext;
+            delete doomed;
+        }
+
+        return HT_ENUMERATE_NEXT;
+    }
+
+public:
+    nsElementMap(void)
+    {
+        // Create a table for mapping RDF resources to elements in the
+        // content tree.
+        static PRInt32 kInitialResourceTableSize = 1023;
+        if ((mResources = PL_NewHashTable(kInitialResourceTableSize,
+                                          HashPointer,
+                                          PL_CompareValues,
+                                          PL_CompareValues,
+                                          nsnull,
+                                          nsnull)) == nsnull) {
+            NS_ERROR("could not create hash table for resources");
+        }
+    }
+
+    virtual ~nsElementMap()
+    {
+        if (mResources) {
+            PL_HashTableEnumerateEntries(mResources, ReleaseContentList, nsnull);
+            PL_HashTableDestroy(mResources);
+        }
+    }
+
+    nsresult
+    Add(nsIRDFResource* aResource, nsIContent* aContent)
+    {
+        NS_PRECONDITION(mResources != nsnull, "not initialized");
+        if (! mResources)
+            return NS_ERROR_NOT_INITIALIZED;
+
+        ContentListItem* head =
+            (ContentListItem*) PL_HashTableLookup(mResources, aResource);
+
+        if (! head) {
+            head = new ContentListItem(aContent);
+            if (! head)
+                return NS_ERROR_OUT_OF_MEMORY;
+
+            PL_HashTableAdd(mResources, aResource, head);
+        }
+        else {
+            while (1) {
+                if (head->mContent == aContent) {
+                    NS_ERROR("attempt to add same element twice");
+                    return NS_ERROR_ILLEGAL_VALUE;
+                }
+                if (! head->mNext)
+                    break;
+
+                head = head->mNext;
+            }
+
+            head->mNext = new ContentListItem(aContent);
+            if (! head->mNext)
+                return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        return NS_OK;
+    }
+
+    nsresult
+    Remove(nsIRDFResource* aResource, nsIContent* aContent)
+    {
+        NS_PRECONDITION(mResources != nsnull, "not initialized");
+        if (! mResources)
+            return NS_ERROR_NOT_INITIALIZED;
+
+        ContentListItem* head =
+            (ContentListItem*) PL_HashTableLookup(mResources, aResource);
+
+        if (head) {
+            if (head->mContent == aContent) {
+                ContentListItem* newHead = head->mNext;
+                if (newHead) {
+                    PL_HashTableAdd(mResources, aResource, newHead);
+                }
+                else {
+                    PL_HashTableRemove(mResources, aResource);
+                }
+                delete head;
+                return NS_OK;
+            }
+            else {
+                ContentListItem* doomed = head->mNext;
+                while (doomed) {
+                    if (doomed->mContent == aContent) {
+                        head->mNext = doomed->mNext;
+                        delete doomed;
+                        return NS_OK;
+                    }
+                    head = doomed;
+                    doomed = doomed->mNext;
+                }
+            }
+        }
+
+        NS_ERROR("attempt to remove an element that was never added");
+        return NS_ERROR_ILLEGAL_VALUE;
+    }
+
+    nsresult
+    Find(nsIRDFResource* aResource, nsISupportsArray* aResults)
+    {
+        NS_PRECONDITION(mResources != nsnull, "not initialized");
+        if (! mResources)
+            return NS_ERROR_NOT_INITIALIZED;
+
+        aResults->Clear();
+        ContentListItem* head =
+            (ContentListItem*) PL_HashTableLookup(mResources, aResource);
+
+        while (head) {
+            aResults->AppendElement(head->mContent);
+            head = head->mNext;
+        }
+        return NS_OK;
+    }
+};
+
+
+
+////////////////////////////////////////////////////////////////////////
+// RDFDocumentImpl
 
 class RDFDocumentImpl : public nsIDocument,
                         public nsIRDFDocument,
-                        public nsIRDFObserver,
                         public nsIRDFXMLDataSourceObserver,
                         public nsIHTMLContentContainer
 {
@@ -300,25 +453,13 @@ public:
 
     // nsIRDFDocument interface
 	NS_IMETHOD SetContentType(const char* aContentType);
-    NS_IMETHOD SetContentModelBuilder(nsIRDFContentModelBuilder* aBuilder);
-    NS_IMETHOD GetContentModelBuilder(nsIRDFContentModelBuilder** aBuilder);
     NS_IMETHOD SetRootResource(nsIRDFResource* resource);
-    NS_IMETHOD GetDataBase(nsIRDFCompositeDataSource*& result);
-    NS_IMETHOD AddTreeProperty(nsIRDFResource* resource);
-    NS_IMETHOD RemoveTreeProperty(nsIRDFResource* resource);
-    NS_IMETHOD IsTreeProperty(nsIRDFResource* aProperty, PRBool* aResult) const;
-    NS_IMETHOD MapResource(nsIRDFResource* aResource, nsIRDFContent* aContent);
-    NS_IMETHOD UnMapResource(nsIRDFResource* aResource, nsIRDFContent* aContent);
     NS_IMETHOD SplitProperty(nsIRDFResource* aResource, PRInt32* aNameSpaceID, nsIAtom** aTag);
-
-    // nsIRDFObserver interface
-    NS_IMETHOD OnAssert(nsIRDFResource* subject,
-                        nsIRDFResource* predicate,
-                        nsIRDFNode* object);
-
-    NS_IMETHOD OnUnassert(nsIRDFResource* subject,
-                          nsIRDFResource* predicate,
-                          nsIRDFNode* object);
+    NS_IMETHOD AddElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement);
+    NS_IMETHOD RemoveElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement);
+    NS_IMETHOD GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements);
+    NS_IMETHOD CreateContents(nsIRDFContent* aElement);
+    NS_IMETHOD AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder);
 
     // nsIRDFXMLDataSourceObserver interface
     NS_IMETHOD OnBeginLoad(nsIRDFXMLDataSource* aDataSource);
@@ -329,12 +470,10 @@ public:
     NS_IMETHOD OnRootResourceFound(nsIRDFXMLDataSource* aDataSource, nsIRDFResource* aResource);
     NS_IMETHOD OnCSSStyleSheetAdded(nsIRDFXMLDataSource* aDataSource, nsIURL* aStyleSheetURI);
     NS_IMETHOD OnNamedDataSourceAdded(nsIRDFXMLDataSource* aDataSource, const char* aNamedDataSourceURI);
-    NS_IMETHOD OnContentModelBuilderSpecified(nsIRDFXMLDataSource* aDataSource, nsID* aCID);
 
     // Implementation methods
     nsresult Init(void);
     nsresult StartLayout(void);
-    nsresult SetContentModelBuilderFromCID(nsID& aCID);
 
 protected:
     nsIContent*
@@ -365,11 +504,10 @@ protected:
     nsINameSpaceManager*   mNameSpaceManager;
     nsIHTMLStyleSheet*     mAttrStyleSheet;
     nsIHTMLCSSStyleSheet*  mInlineStyleSheet;
-    nsIRDFCompositeDataSource* mDB;
     nsIRDFService*             mRDFService;
-    nsISupportsArray*          mTreeProperties;
-    nsIRDFContentModelBuilder* mBuilder;
-    PLHashTable*               mResources;
+    nsElementMap               mResources;
+    nsISupportsArray*          mBuilders;
+    nsIRDFContentModelBuilder* mXULBuilder;
     nsIRDFDataSource*          mLocalDataSource;
     nsIRDFXMLDataSource*       mDocumentDataSource;
 
@@ -470,6 +608,7 @@ DummyListener::QueryInterface(REFNSIID aIID, void** aResult)
     }
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // ctors & dtors
 
@@ -484,11 +623,9 @@ RDFDocumentImpl::RDFDocumentImpl(void)
       mDisplaySelection(PR_FALSE),
       mNameSpaceManager(nsnull),
       mAttrStyleSheet(nsnull),
-      mDB(nsnull),
       mRDFService(nsnull),
-      mTreeProperties(nsnull),
-      mBuilder(nsnull),
-      mResources(nsnull),
+      mBuilders(nsnull),
+      mXULBuilder(nsnull),
       mLocalDataSource(nsnull),
       mDocumentDataSource(nsnull),
 	  mContentType(TEXT_RDF)
@@ -515,25 +652,18 @@ RDFDocumentImpl::~RDFDocumentImpl()
     }
     NS_IF_RELEASE(mLocalDataSource);
 
-    if (mResources)
-        PL_HashTableDestroy(mResources);
-
     if (mRDFService) {
         nsServiceManager::ReleaseService(kRDFServiceCID, mRDFService);
         mRDFService = nsnull;
     }
 
     // mParentDocument is never refcounted
-    NS_IF_RELEASE(mBuilder);
+    NS_IF_RELEASE(mBuilders);
+    NS_IF_RELEASE(mXULBuilder);
     NS_IF_RELEASE(mSelection);
     NS_IF_RELEASE(mScriptContextOwner);
     NS_IF_RELEASE(mAttrStyleSheet);
-    NS_IF_RELEASE(mTreeProperties);
     NS_IF_RELEASE(mRootContent);
-    if (mDB) {
-        mDB->RemoveObserver(this);
-        NS_RELEASE(mDB);
-    }
     NS_IF_RELEASE(mDocumentURLGroup);
     NS_IF_RELEASE(mDocumentURL);
     NS_IF_RELEASE(mArena);
@@ -595,6 +725,15 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
 
     nsresult rv;
 
+    mDocumentTitle.Truncate();
+
+    NS_IF_RELEASE(mDocumentURL);
+    mDocumentURL = aURL;
+    NS_ADDREF(aURL);
+
+    NS_IF_RELEASE(mDocumentURLGroup);
+    (void)aURL->GetURLGroup(&mDocumentURLGroup);
+
     // Delete references to style sheets - this should be done in superclass...
     PRInt32 index = mStyleSheets.Count();
     while (--index >= 0) {
@@ -603,15 +742,6 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
         NS_RELEASE(sheet);
     }
     mStyleSheets.Clear();
-
-    NS_IF_RELEASE(mDocumentURL);
-    NS_IF_RELEASE(mDocumentURLGroup);
-    mDocumentTitle.Truncate();
-
-    mDocumentURL = aURL;
-    NS_ADDREF(aURL);
-
-    (void)aURL->GetURLGroup(&mDocumentURLGroup);
 
     // Create an HTML style sheet for the HTML content.
     nsIHTMLStyleSheet* sheet;
@@ -631,6 +761,38 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
     if (NS_FAILED(rv))
         return rv;
       
+    // Create a composite data source that'll tie together local and
+    // remote stores.
+    nsIRDFCompositeDataSource* db;
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFCompositeDataSourceCID,
+                                                    nsnull,
+                                                    kIRDFCompositeDataSourceIID,
+                                                    (void**) &db))) {
+        NS_ERROR("couldn't create composite datasource");
+        return rv;
+    }
+
+    // Create a XUL content model builder
+    NS_IF_RELEASE(mXULBuilder);
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFXULBuilderCID,
+                                                    nsnull,                     
+                                                    kIRDFContentModelBuilderIID,
+                                                    (void**) &mXULBuilder))) {
+        NS_ERROR("couldn't create XUL builder");
+        return rv;
+    }
+
+    if (NS_FAILED(rv = mXULBuilder->SetDataBase(db))) {
+        NS_ERROR("couldn't set builder's db");
+        return rv;
+    }
+
+    NS_IF_RELEASE(mBuilders);
+    if (NS_FAILED(rv = AddContentModelBuilder(mXULBuilder))) {
+        NS_ERROR("could't add XUL builder");
+        return rv;
+    }
+
     // Create a "scratch" in-memory data store to associate with the
     // document to be a catch-all for any doc-specific info that we
     // need to store (e.g., current sort order, etc.)
@@ -641,34 +803,42 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
     if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
                                                     nsnull,
                                                     kIRDFDataSourceIID,
-                                                    (void**) &mLocalDataSource)))
+                                                    (void**) &mLocalDataSource))) {
+        NS_ERROR("couldn't create local data source");
         return rv;
+    }
 
-    if (NS_FAILED(rv = mDB->AddDataSource(mLocalDataSource)))
+    if (NS_FAILED(rv = db->AddDataSource(mLocalDataSource))) {
+        NS_ERROR("couldn't add local data source to db");
         return rv;
-
-    const char* uri;
-    if (NS_FAILED(rv = aURL->GetSpec(&uri)))
-        return rv;
+    }
 
     // Now load the actual RDF/XML document data source. First, we'll
     // see if the data source has been loaded and is registered with
     // the RDF service. If so, do some monkey business to "pretend" to
     // load it: really, we'll just walk its graph to generate the
     // content model.
+    const char* uri;
+    if (NS_FAILED(rv = aURL->GetSpec(&uri)))
+        return rv;
+
     nsIRDFDataSource* ds;
     if (NS_SUCCEEDED(rv = mRDFService->GetDataSource(uri, &ds))) {
         // Add the RDF/XML data source to our composite data source
+        NS_IF_RELEASE(mDocumentDataSource);
         if (NS_FAILED(rv = ds->QueryInterface(kIRDFXMLDataSourceIID,
                                               (void**) &mDocumentDataSource))) {
+            NS_ERROR("unable to get RDF/XML interface to remote datasource");
             NS_RELEASE(ds);
             return rv;
         }
 
         NS_RELEASE(ds);
 
-        if (NS_FAILED(rv = mDB->AddDataSource(mDocumentDataSource)))
+        if (NS_FAILED(rv = db->AddDataSource(mDocumentDataSource))) {
+            NS_ERROR("unable to add remote data source to db");
             return rv;
+        }
 
         // we found the data source already loaded locally. Load it's
         // style sheets and attempt to include any named data sources
@@ -691,17 +861,6 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
                     printf("error adding named data source %s\n", namedDataSourceURIs[i]);
 #endif
                 }
-            }
-        }
-
-        nsID cid;
-        if (NS_SUCCEEDED(rv = mDocumentDataSource->GetContentModelBuilderCID(&cid))) {
-            SetContentModelBuilderFromCID(cid);
-
-            nsIRDFResource* root;
-            if (NS_SUCCEEDED(rv = mDocumentDataSource->GetRootResource(&root))) {
-                SetRootResource(root);
-                StartLayout();
             }
         }
 
@@ -739,55 +898,25 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
         }
     }
     else {
-		// We need to create either a serialized RDF/XML data source,
-		// or we need to make a XUL data source.  Both of these data
-		// sources implement the nsIRDFXMLDataSource interface, which
-		// has to do with handling aspects of XML.
-		
-		if (mContentType == TEXT_RDF) {
-			rv = nsRepository::CreateInstance(kRDFXMLDataSourceCID,
-                                              nsnull,
-                                              kIRDFXMLDataSourceIID,
-                                              (void**) &mDocumentDataSource);
-        }
-		else if (mContentType == TEXT_XUL) {
-			rv = nsRepository::CreateInstance(kXULDataSourceCID,
-                                              nsnull,
-                                              kIRDFXMLDataSourceIID,
-                                              (void**) &mDocumentDataSource);
-
-            NS_VERIFY(NS_SUCCEEDED(rv), "unable to create XUL datasource");
-
-			nsIRDFContentModelBuilder* builder;
-			rv = nsRepository::CreateInstance(kRDFXULBuilderCID,
-                                              nsnull,                     
-                                              kIRDFContentModelBuilderIID,
-                                              (void**) &builder);
-
-            NS_VERIFY(NS_SUCCEEDED(rv), "unable to create XUL content model builder");
-
-			rv = SetContentModelBuilder(builder);
-            NS_VERIFY(NS_SUCCEEDED(rv), "unable to set document content model builder");
-		}
-        else {
-            NS_ERROR("unknown content type");
-        }
-
-		if (rv != NS_OK) {
-			// an error occurred, and we have nothing.
-            NS_ERROR("problem constructing data source");
-			return rv;
-		}
-
-        if (NS_FAILED(rv = mDB->AddDataSource(mDocumentDataSource)))
-            return rv;
-
         // We need to construct a new stream and load it. The stream
         // will automagically register itself as a named data source,
         // so if subsequent docs ask for it, they'll get the real
         // deal. In the meantime, add us as an
         // nsIRDFXMLDataSourceObserver so that we'll be notified when we
         // need to load style sheets, etc.
+		NS_IF_RELEASE(mDocumentDataSource);
+        if (NS_FAILED(rv = nsRepository::CreateInstance(kXULDataSourceCID,
+                                                        nsnull,
+                                                        kIRDFXMLDataSourceIID,
+                                                        (void**) &mDocumentDataSource))) {
+            NS_ERROR("unable to create XUL datasource");
+            return rv;
+        }
+
+        if (NS_FAILED(rv = db->AddDataSource(mDocumentDataSource))) {
+            NS_ERROR("unable to add XUL datasource to db");
+            return rv;
+        }
 
         nsIRDFXMLDataSource* doc;
         if (NS_SUCCEEDED(rv = mDocumentDataSource->QueryInterface(kIRDFXMLDataSourceIID,
@@ -795,10 +924,16 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
             doc->AddXMLStreamObserver(this);
             NS_RELEASE(doc);
         }
+        else {
+            NS_ERROR("unable to add self as stream observer on XUL datasource");
+        }
 
-        if (NS_FAILED(rv = mDocumentDataSource->Init(uri)))
+        if (NS_FAILED(rv = mDocumentDataSource->Init(uri))) {
+            NS_ERROR("unable to initialize XUL data source");
             return rv;
+        }
 
+        // XXX huh?
         if (aDocListener) {
             *aDocListener = nsnull;
         }
@@ -1612,151 +1747,20 @@ RDFDocumentImpl::SetContentType(const char* aContentType)
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::SetContentModelBuilder(nsIRDFContentModelBuilder* aBuilder)
-{
-    NS_PRECONDITION(aBuilder != nsnull, "null ptr");
-    if (! aBuilder)
-        return NS_ERROR_NULL_POINTER;
-
-    NS_ADDREF(aBuilder);
-    mBuilder = aBuilder;
-
-    nsresult rv;
-
-    // The builder may try to ask us for our DB, so do this last...
-    if (NS_FAILED(rv = mBuilder->SetDocument(this)))
-        return rv;
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-RDFDocumentImpl::GetContentModelBuilder(nsIRDFContentModelBuilder** aBuilder)
-{
-    NS_PRECONDITION(aBuilder != nsnull, "null ptr");
-    if (! aBuilder)
-        return NS_ERROR_NULL_POINTER;
-
-    *aBuilder = mBuilder;
-    NS_IF_ADDREF(mBuilder);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 RDFDocumentImpl::SetRootResource(nsIRDFResource* aResource)
 {
-    NS_ASSERTION(mBuilder != nsnull, "not initialized");
-    if (! mBuilder)
+    NS_PRECONDITION(mXULBuilder != nsnull, "not initialized");
+    if (! mXULBuilder)
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsresult rv = mBuilder->CreateRoot(aResource);
+    NS_PRECONDITION(mRootContent == nsnull, "already initialize");
+    if (mRootContent)
+        return NS_ERROR_ALREADY_INITIALIZED;
+
+    nsresult rv = mXULBuilder->CreateRootContent(aResource);
+
+    NS_POSTCONDITION(mRootContent != nsnull, "root content wasn't set");
     return rv;
-}
-
-NS_IMETHODIMP
-RDFDocumentImpl::GetDataBase(nsIRDFCompositeDataSource*& result)
-{
-    NS_PRECONDITION(mDB != nsnull, "not initialized");
-    if (! mDB)
-        return NS_ERROR_NOT_INITIALIZED;
-
-    result = mDB;
-    NS_ADDREF(result);
-
-    return NS_OK;
-}
-
-
-NS_IMETHODIMP
-RDFDocumentImpl::AddTreeProperty(nsIRDFResource* resource)
-{
-    nsresult rv;
-    if (! mTreeProperties) {
-        if (NS_FAILED(rv = NS_NewISupportsArray(&mTreeProperties)))
-            return rv;
-    }
-
-    // ensure uniqueness
-    if (mTreeProperties->IndexOf(resource) != -1) {
-        PR_ASSERT(0);
-        return NS_OK;
-    }
-
-    mTreeProperties->AppendElement(resource);
-    return NS_OK;
-}
-
-
-NS_IMETHODIMP
-RDFDocumentImpl::RemoveTreeProperty(nsIRDFResource* resource)
-{
-    if (! mTreeProperties) {
-        // XXX no properties have ever been inserted!
-        PR_ASSERT(0);
-        return NS_OK;
-    }
-
-    if (! mTreeProperties->RemoveElement(resource)) {
-        // XXX that specific property has never been inserted!
-        PR_ASSERT(0);
-        return NS_OK;
-    }
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-RDFDocumentImpl::IsTreeProperty(nsIRDFResource* aProperty, PRBool* aResult) const
-{
-#define TREE_PROPERTY_HACK
-#if defined(TREE_PROPERTY_HACK)
-    const char* p;
-    aProperty->GetValue(&p);
-    nsAutoString s(p);
-    if (s.Equals(NC_NAMESPACE_URI "child") ||
-        s.Equals(NC_NAMESPACE_URI "Folder") ||
-		s.Equals(NC_NAMESPACE_URI "Columns") ||
-		s.Equals(RDF_NAMESPACE_URI "child")) {
-        *aResult = PR_TRUE;
-        return NS_OK;
-    }
-#endif // defined(TREE_PROPERTY_HACK)
-    if (rdf_IsOrdinalProperty(aProperty)) {
-        *aResult = PR_TRUE;
-        return NS_OK;
-    }
-    if (! mTreeProperties) {
-        *aResult = PR_FALSE;
-        return NS_OK;
-    }
-    if (mTreeProperties->IndexOf(aProperty) == -1) {
-        *aResult = PR_FALSE;
-        return NS_OK;
-    }
-    // XXX return "true" by default???
-    *aResult = PR_TRUE;
-    return NS_OK;
-}
-
-
-NS_IMETHODIMP
-RDFDocumentImpl::MapResource(nsIRDFResource* aResource, nsIRDFContent* aContent)
-{
-    // XXX busted: a resource might be located in multiple content
-    // elements in the tree. This needs to map to a set, not a single
-    // instance.
-    PL_HashTableAdd(mResources, aResource, aContent);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-RDFDocumentImpl::UnMapResource(nsIRDFResource* aResource, nsIRDFContent* aContent)
-{
-    // XXX busted: a resource might be located in multiple content
-    // elements in the tree. This needs to map to a set, not a single
-    // instance.
-    PL_HashTableRemove(mResources, aResource);
-    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1843,52 +1847,100 @@ RDFDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
 }
 
 
-////////////////////////////////////////////////////////////////////////
-// nsIRDFObserver methods
+NS_IMETHODIMP
+RDFDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
+{
+    NS_PRECONDITION(aResource != nsnull, "null ptr");
+    if (! aResource)
+        return NS_ERROR_NULL_POINTER;
+
+    NS_PRECONDITION(aElement != nsnull, "null ptr");
+    if (! aElement)
+        return NS_ERROR_NULL_POINTER;
+
+    mResources.Add(aResource, aElement);
+    return NS_OK;
+}
+
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnAssert(nsIRDFResource* subject,
-                          nsIRDFResource* predicate,
-                          nsIRDFNode* object)
+RDFDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
 {
-    NS_PRECONDITION(mResources != nsnull, "not initialized");
-    if (! mResources)
+    NS_PRECONDITION(aResource != nsnull, "null ptr");
+    if (! aResource)
+        return NS_ERROR_NULL_POINTER;
+
+    NS_PRECONDITION(aElement != nsnull, "null ptr");
+    if (! aElement)
+        return NS_ERROR_NULL_POINTER;
+
+    mResources.Remove(aResource, aElement);
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+RDFDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements)
+{
+    NS_PRECONDITION(aElements != nsnull, "null ptr");
+    if (! aElements)
+        return NS_ERROR_NULL_POINTER;
+
+    mResources.Find(aResource, aElements);
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+RDFDocumentImpl::CreateContents(nsIRDFContent* aElement)
+{
+    NS_PRECONDITION(aElement != nsnull, "null ptr");
+    if (! aElement)
+        return NS_ERROR_NULL_POINTER;
+
+    if (! mBuilders)
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsIRDFContent* element = (nsIRDFContent*) PL_HashTableLookup(mResources, subject);
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        // XXX we should QueryInterface() here
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
 
-    if (! element)
-        // it's not in the tree: we're done!
-        return NS_OK;
+        NS_ASSERTION(builder != nsnull, "null ptr");
+        if (! builder)
+            continue;
 
-    nsresult rv;
-    rv = mBuilder->OnAssert(element, predicate, object);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "error notifying content model builder");
+        nsresult rv = builder->CreateContents(aElement);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "error creating content");
+        // XXX ignore error code?
+
+        NS_RELEASE(builder);
+    }
 
     return NS_OK;
 }
 
-NS_IMETHODIMP
-RDFDocumentImpl::OnUnassert(nsIRDFResource* subject,
-                            nsIRDFResource* predicate,
-                            nsIRDFNode* object)
-{
-    NS_PRECONDITION(mResources != nsnull, "not initialized");
-    if (! mResources)
-        return NS_ERROR_NOT_INITIALIZED;
 
-    nsIRDFContent* element = (nsIRDFContent*) PL_HashTableLookup(mResources, subject);
-    if (! element)
-        // it's not in the tree: we're done!
-        return NS_OK;
+NS_IMETHODIMP
+RDFDocumentImpl::AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder)
+{
+    NS_PRECONDITION(aBuilder != nsnull, "null ptr");
+    if (! aBuilder)
+        return NS_ERROR_NULL_POINTER;
 
     nsresult rv;
-    rv = mBuilder->OnUnassert(element, predicate, object);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "error notifying content model builder");
+    if (! mBuilders) {
+        if (NS_FAILED(rv = NS_NewISupportsArray(&mBuilders)))
+            return rv;
+    }
 
-    return NS_OK;
+    if (NS_FAILED(rv = aBuilder->SetDocument(this))) {
+        NS_ERROR("unable to set builder's document");
+        return rv;
+    }
+
+    return mBuilders->AppendElement(aBuilder) ? NS_OK : NS_ERROR_FAILURE;
 }
-
 
 ////////////////////////////////////////////////////////////////////////
 // nsIRDFXMLDataSourceObserver interface
@@ -1949,13 +2001,6 @@ RDFDocumentImpl::OnNamedDataSourceAdded(nsIRDFXMLDataSource* aDataSource, const 
     return AddNamedDataSource(aNamedDataSourceURI);
 }
 
-
-NS_IMETHODIMP
-RDFDocumentImpl::OnContentModelBuilderSpecified(nsIRDFXMLDataSource* aDataSource,
-                                                nsID* aCID)
-{
-    return SetContentModelBuilderFromCID(*aCID);
-}
 
 ////////////////////////////////////////////////////////////////////////
 // Implementation methods
@@ -2038,18 +2083,30 @@ RDFDocumentImpl::LoadCSSStyleSheet(nsIURL* url)
 nsresult
 RDFDocumentImpl::AddNamedDataSource(const char* uri)
 {
+    NS_PRECONDITION(mXULBuilder != nsnull, "not initialized");
+    if (! mXULBuilder)
+        return NS_ERROR_NOT_INITIALIZED;
+
     nsresult rv;
-    nsIRDFDataSource* ds = nsnull;
+    nsCOMPtr<nsIRDFDataSource> ds;
 
-    if (NS_FAILED(rv = mRDFService->GetDataSource(uri, &ds)))
-        goto done;
+    if (NS_FAILED(rv = mRDFService->GetDataSource(uri, getter_AddRefs(ds)))) {
+        NS_ERROR("unable to get named datasource");
+        return rv;
+    }
 
-    if (NS_FAILED(rv = mDB->AddDataSource(ds)))
-        goto done;
+    nsCOMPtr<nsIRDFCompositeDataSource> db;
+    if (NS_FAILED(rv = mXULBuilder->GetDataBase(getter_AddRefs(db)))) {
+        NS_ERROR("unable to get XUL db");
+        return rv;
+    }
 
-done:
-    NS_IF_RELEASE(ds);
-    return rv;
+    if (NS_FAILED(rv = db->AddDataSource(ds))) {
+        NS_ERROR("unable to add named data source to XUL db");
+        return rv;
+    }
+
+    return NS_OK;
 }
 
 
@@ -2068,52 +2125,11 @@ RDFDocumentImpl::Init(void)
                                                     (void**) &mNameSpaceManager)))
         return rv;
 
-    // Create a table for mapping RDF resources to elements in the
-    // content tree.
-static PRInt32 kInitialResourceTableSize = 1023;
-    if ((mResources = PL_NewHashTable(kInitialResourceTableSize,
-                                      rdf_HashPointer,
-                                      PL_CompareValues,
-                                      PL_CompareValues,
-                                      nsnull,
-                                      nsnull)) == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    // Create a composite data source that'll tie together local and
-    // remote stores.
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFCompositeDataSourceCID,
-                                                    nsnull,
-                                                    kIRDFCompositeDataSourceIID,
-                                                    (void**) &mDB)))
-        return rv;
-
-    // Make ourselves an observer
-    if (NS_FAILED(rv = mDB->AddObserver(this)))
-        return rv;
-
     // Keep the RDF service cached in a member variable to make using
     // it a bit less painful
     if (NS_FAILED(rv = nsServiceManager::GetService(kRDFServiceCID,
                                                     kIRDFServiceIID,
                                                     (nsISupports**) &mRDFService)))
-        return rv;
-
-    return NS_OK;
-}
-
-
-nsresult
-RDFDocumentImpl::SetContentModelBuilderFromCID(nsID& aCID)
-{
-    nsresult rv;
-
-    nsCOMPtr<nsIRDFContentModelBuilder> builder;
-    if (NS_FAILED(rv = nsRepository::CreateInstance(aCID, nsnull,
-                                                    kIRDFContentModelBuilderIID,
-                                                    (void**) getter_AddRefs(builder))))
-        return rv;
-
-    if (NS_FAILED(rv = SetContentModelBuilder(builder)))
         return rv;
 
     return NS_OK;
