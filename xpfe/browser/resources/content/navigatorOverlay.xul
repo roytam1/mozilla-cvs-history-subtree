@@ -64,15 +64,16 @@
 	<key id="key_reload"  key="&reloadCmd.commandkey;" observes="canReload" modifiers="accel"/>
 	<key id="key_viewsource"    key="&pageSourceCmd.commandkey;" observes="View:PageSource" modifiers="accel"/>
 
-	<key id="key_textZoomReduce"   key="&textZoomReduceCmd.commandkey;"  observes="cmd_viewTextZoomReduce"  modifiers="accel"/>
-	<key id="key_textZoomEnlarge"  key="&textZoomEnlargeCmd.commandkey;" observes="cmd_viewTextZoomEnlarge" modifiers="accel"/>
+	<key id="key_textZoomReduce"  key="&textZoomReduceCmd.commandkey;"   observes="cmd_viewTextZoomReduce"  modifiers="accel"/>
+	<key id="key_textZoomEnlarge" key="&textZoomEnlargeCmd.commandkey;"  observes="cmd_viewTextZoomEnlarge" modifiers="accel"/>
+	<key                          key="&textZoomEnlargeCmd.commandkey;"  observes="cmd_viewTextZoomEnlarge" modifiers="accel,shift"/>
+	<key                          key="&textZoomEnlargeCmd.commandkey2;" observes="cmd_viewTextZoomEnlarge" modifiers="accel"/>
 
 	<!-- Search Menu -->	
 	<key id="key_find"              key="&findOnCmd.commandkey;" observes="Browser:Find" modifiers="accel"/>
 	<key id="key_findAgain"         key="&findAgainCmd.commandkey;" observes="Browser:FindAgain" modifiers="accel"/>
 
 	<!-- Go Menu -->		
-	<key id="goHomeKb"             keycode="VK_HOME" observes="Browser:Home"  modifiers="alt"/>
 
     <!-- Tools Menu -->
 	<key id="key_gotoHistory"       key="&history.commandKey;" oncommand="toHistory();" modifiers="accel"/>
@@ -203,8 +204,7 @@
 		  	</menupopup>
 	</menu>   
       <menuseparator />
-<!--
-for some reason, this makes mac freak out. pulling out until i understand why (pinkerton)
+
       <menu id="menu_TextZoom" accesskey="&textZoomMenu.accesskey;">
         <menupopup id="textZoomPopup" oncreate="initTextZoomMenu()">
           <menuitem key="key_textZoomReduce" accesskey="&textZoomReduceCmd.accesskey;" observes="cmd_viewTextZoomReduce"/>
@@ -214,7 +214,7 @@ for some reason, this makes mac freak out. pulling out until i understand why (p
           <menuitem id="textZoomOther" type="radio" name="textZoom" accesskey="&textZoomOtherCmd.accesskey;" oncommand="setTextZoomOther()"/>
         </menupopup>
       </menu>
--->
+
      <menu value="&useStyleSheetMenu.label;" accesskey="&useStyleSheetMenu.accesskey;" disabled="false">
         <menupopup oncreate="stylesheetFillPopup(window._content.document, this, document.getElementById('authssnoopt'))">
           <menuitem value="&useStyleSheetNone.label;" id="authssnoopt" type="radio" name="authorstyle" oncommand="stylesheetSwitch(window._content.document, '')"/>
@@ -293,7 +293,7 @@ oncommand="goPreferences('pref-themes.xul','chrome://communicator/content/pref/p
 	  <menupopup oncreate="updateGoMenu(event);">
 		  <menuitem id="menuitem-back" value="&goBackCmd.label;" accesskey="&goBackCmd.accesskey;"  key="goBackKb" observes="canGoBack"/>
 		  <menuitem id="menuitem-forward" value="&goForwardCmd.label;" accesskey="&goForwardCmd.accesskey;"  key="goForwardKb" observes="canGoForward" />
-		  <menuitem id="menuitem-home" accesskey="&goHomeCmd.accesskey;" key="goHomeKb" observes="Browser:Home"/>
+		  <menuitem id="menuitem-home" observes="Browser:Home"/>
 		  <menuseparator />
 	  </menupopup>
   </menu>       

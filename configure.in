@@ -78,9 +78,10 @@ NSPR_VERSION=4
 
 dnl Set the minimum version of toolkit libs used by mozilla
 dnl ========================================================
+GLIB_VERSION=1.2.0
 GTK_VERSION=1.2.0
 LIBIDL_VERSION=0.6.3
-PERL_VERSION=5.000
+PERL_VERSION=5.004
 
 dnl Set various checks
 dnl ========================================================
@@ -289,7 +290,7 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_AWK
 AC_PATH_PROGS(EMACS, xemacs lemacs emacs, :)
-AC_PATH_PROGS(PERL, perl5 perl )
+AC_PATH_PROGS(PERL, $PERL perl5 perl )
 if test -z "$PERL" || test "$PERL" = ":"; then
     AC_MSG_ERROR([perl not found in \$PATH])
 fi
@@ -1680,6 +1681,10 @@ if test -n "$CROSS_COMPILE"; then
     fi
 fi
 
+if test -z "${GLIB_CFLAGS}" || test -z "${GLIB_LIBS}" ; then
+    AM_PATH_GLIB(${GLIB_VERSION})
+fi
+
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
 
@@ -2856,6 +2861,7 @@ dnl The following are the only platforms I tested  -ramiro
 dnl OpenVMS added by Colin Blake
 dnl Tru64   added by Jim Nance
 dnl hpux added by John Gaunt workaround for bug 39747
+dnl irix added for bug 53471
 dnl nto added by Jerry Kirk 
 case "$target" in
     *-*-linux*)   MOZ_MONOLITHIC_TOOLKIT= ;;
@@ -2866,6 +2872,7 @@ case "$target" in
     *-*-aix*)     MOZ_MONOLITHIC_TOOLKIT= ;;
     *-*-osf*)     MOZ_MONOLITHIC_TOOLKIT= ;;
     *-hpux*)      MOZ_MONOLITHIC_TOOLKIT= ;;
+    *-irix*)      MOZ_MONOLITHIC_TOOLKIT= ;;
     *-nto*)       MOZ_MONOLITHIC_TOOLKIT= ;;
 esac
 

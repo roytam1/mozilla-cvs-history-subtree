@@ -308,7 +308,6 @@ nsresult nsMailboxService::PrepareMessageUrl(const char * aSrcMsgMailboxURI, nsI
 		nsFileSpec folderPath;
 		nsMsgKey msgKey;
         const char *part = PL_strstr(aSrcMsgMailboxURI, "part=");
-		
 		rv = nsParseLocalMessageURI(aSrcMsgMailboxURI, folderURI, &msgKey);
 		rv = nsLocalURI2Path(kMailboxMessageRootURI, folderURI, folderPath);
 

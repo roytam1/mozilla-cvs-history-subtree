@@ -5278,14 +5278,7 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*        aPresShell,
     if (!xblService)
       return rv;
 
-    // Load the bindings.
-    nsCOMPtr<nsIXBLBinding> binding;
-    PRBool dummy;
-    rv = xblService->LoadBindings(aParent, ui->mBehavior, PR_FALSE, getter_AddRefs(binding), &dummy);
-    if (NS_FAILED(rv))
-      return NS_OK;
-
-    // Retrieve the anonymous content that we should build.
+     // Retrieve the anonymous content that we should build.
     nsCOMPtr<nsISupportsArray> anonymousItems;
     nsCOMPtr<nsIContent> childElement;
     PRBool multiple;
@@ -5523,13 +5516,6 @@ nsCSSFrameConstructor::CreateAnonymousTableCellFrames(nsIPresShell*        aPres
     NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
     if (!xblService)
       return rv;
-
-    // Load the bindings.
-    nsCOMPtr<nsIXBLBinding> binding;
-    PRBool dummy;
-    rv = xblService->LoadBindings(aParent, ui->mBehavior, PR_FALSE, getter_AddRefs(binding), &dummy);
-    if (NS_FAILED(rv))
-      return NS_OK;
 
     // Retrieve the anonymous content that we should build.
     nsCOMPtr<nsIContent> childElement;
@@ -7965,9 +7951,15 @@ FindPreviousAnonymousSibling(nsIPresShell* aPresShell,
   
   nsCOMPtr<nsIDocument> doc;
   aContainer->GetDocument(*getter_AddRefs(doc));
-  nsCOMPtr<nsIDOMDocumentXBL> xblDoc(do_QueryInterface(doc));
-  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aContainer));
-  xblDoc->GetAnonymousNodes(elt, getter_AddRefs(nodeList));
+  NS_ASSERTION(doc, "null document from content element in FindPreviousAnonymousSibling");
+  if (doc) {
+    nsCOMPtr<nsIDOMDocumentXBL> xblDoc(do_QueryInterface(doc));
+    NS_ASSERTION(xblDoc, "null xblDoc for content element in FindPreviousAnonymousSibling");
+    if (xblDoc) {
+      nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aContainer));
+      xblDoc->GetAnonymousNodes(elt, getter_AddRefs(nodeList));
+    }
+  }
   if (nodeList) {
     PRUint32 ctr,listLength;
     nsCOMPtr<nsIDOMNode> node;
@@ -8031,9 +8023,15 @@ FindNextAnonymousSibling(nsIPresShell* aPresShell,
   
   nsCOMPtr<nsIDocument> doc;
   aContainer->GetDocument(*getter_AddRefs(doc));
-  nsCOMPtr<nsIDOMDocumentXBL> xblDoc(do_QueryInterface(doc));
-  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aContainer));
-  xblDoc->GetAnonymousNodes(elt, getter_AddRefs(nodeList));
+  NS_ASSERTION(doc, "null document from content element in FindNextAnonymousSibling");
+  if (doc) {
+    nsCOMPtr<nsIDOMDocumentXBL> xblDoc(do_QueryInterface(doc));
+    NS_ASSERTION(xblDoc, "null xblDoc for content element in FindNextAnonymousSibling");
+    if (xblDoc) {
+      nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aContainer));
+      xblDoc->GetAnonymousNodes(elt, getter_AddRefs(nodeList));
+    }
+  }
   if (nodeList) {
     PRUint32 ctr,listLength;
     nsCOMPtr<nsIDOMNode> node;

@@ -459,6 +459,9 @@ js_SetupLocks(int l, int g)
     return 1;
 }
 
+/* pull in the cleanup function from jsdtoa.c */
+extern void js_FinishDtoa(void);
+
 void
 js_CleanupLocks()
 {
@@ -472,6 +475,8 @@ js_CleanupLocks()
             deleteListOfFatlocks(_fl_tables[i].taken);
             _fl_tables[i].taken = NULL;
         }
+        free(_fl_tables);
+        _fl_tables = NULL;
         free(_global_locks);
         _global_locks = NULL;
 #ifdef UsingCounterLock
@@ -482,6 +487,7 @@ js_CleanupLocks()
         PR_DestroyLock(_compare_and_swap_lock);
         _compare_and_swap_lock = NULL;
 #endif
+        js_FinishDtoa();
     }
 }
 

@@ -10,7 +10,7 @@
 # implied. See the MPL for the specific language governing
 # rights and limitations under the MPL.
 # 
-# The Original Code is lineterm.
+# The Original Code is XMLterm.
 # 
 # The Initial Developer of the Original Code is Ramalingam Saravanan.
 # Portions created by Ramalingam Saravanan <svn@xmlterm.org> are
@@ -48,6 +48,7 @@ CHROME_CONTENT	= \
 		xmlterm.html \
 		xmlterm.xul \
 		xmlterm2.xul \
+		xmltermDummy.xul \
 		xmltermOverlay.xul \
 		xmltermOverlay.js \
 		XMLTermChrome.js \
