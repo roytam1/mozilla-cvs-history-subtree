@@ -1233,7 +1233,7 @@ nsStyleContext::Destroy()
   presContext->FreeToShell(sizeof(nsStyleContext), this);
 }
 
-NS_LAYOUT nsresult
+NS_EXPORT nsresult
 NS_NewStyleContext(nsIStyleContext** aInstancePtrResult,
                    nsIStyleContext* aParentContext,
                    nsIAtom* aPseudoTag,

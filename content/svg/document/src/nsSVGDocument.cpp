@@ -119,7 +119,7 @@ nsSVGDocument::GetRootElement(nsIDOMSVGSVGElement** aRootElement) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_LAYOUT nsresult
+NS_EXPORT nsresult
 NS_NewSVGDocument(nsIDocument** aInstancePtrResult)
 {
   nsSVGDocument* doc = new nsSVGDocument();
