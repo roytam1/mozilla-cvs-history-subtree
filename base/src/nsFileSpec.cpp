@@ -702,12 +702,14 @@ void nsPersistentFileDescriptor::SetData(const void* inData, PRInt32 inSize)
 	mDescriptorString[inSize] = '\0';
 }
 
+#define MAX_PERSISTENT_DATA_SIZE 1000
+
 //----------------------------------------------------------------------------------------
 nsBasicInStream& operator >> (nsBasicInStream& s, nsPersistentFileDescriptor& d)
 // reads the data from a file
 //----------------------------------------------------------------------------------------
 {
-	char bigBuffer[1000];
+	char bigBuffer[MAX_PERSISTENT_DATA_SIZE + 1];
 	// The first 8 bytes of the data should be a hex version of the data size to follow.
 	PRInt32 bytesRead = 8;
 	bytesRead = s.read(bigBuffer, bytesRead);
@@ -715,7 +717,7 @@ nsBasicInStream& operator >> (nsBasicInStream& s, nsPersistentFileDescriptor& d)
 		return s;
 	bigBuffer[8] = '\0';
 	sscanf(bigBuffer, "%lx", &bytesRead);
-	if (bytesRead > 0x4000)
+	if (bytesRead > MAX_PERSISTENT_DATA_SIZE)
 		return s; // preposterous.
 	// Now we know how many bytes to read, do it.
 	s.read(bigBuffer, bytesRead);
