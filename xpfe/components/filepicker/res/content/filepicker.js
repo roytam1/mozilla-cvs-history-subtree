@@ -42,6 +42,7 @@ var homeDir;
 
 var directoryTree;
 var textInput;
+var okButton;
 
 var bundle = srGetStrBundle("chrome://global/locale/filepicker.properties");   
 
@@ -50,14 +51,16 @@ function onLoad() {
 
   directoryTree = document.getElementById("directoryTree");
   textInput = document.getElementById("textInput");
+  okButton = document.getElementById("ok");
 
   if (window.arguments) {
     var o = window.arguments[0];
     retvals = o.retvals; /* set this to a global var so we can set return values */
     const title = o.title;
     filePickerMode = o.mode;
-    if (o.displayDirectory)
-      const directory = o.displayDirectory.path;
+    if (o.displayDirectory) {
+      const directory = o.displayDirectory.unicodePath;
+    }
     const initialText = o.defaultString;
     const filterTitles = o.filters.titles;
     const filterTypes = o.filters.types;
@@ -110,7 +113,6 @@ function onLoad() {
     }
 
     if (buttonLabel) {
-      var okButton = document.getElementById("ok");
       okButton.setAttribute("value", buttonLabel);
     }
   } catch (exception) {
@@ -125,16 +127,18 @@ function onLoad() {
   var persistent = new Object();
   homeDir = dirServiceProvider.getFile("Home", persistent);
 
-  if (directory)
-    sfile.initWithPath(directory);
+  if (directory) {
+    sfile.initWithUnicodePath(directory);
+  }
   if (!directory || !(sfile.exists() && sfile.isDirectory())) {
     // Start in the user's home directory
-    sfile.initWithPath(homeDir.path);
+    sfile.initWithUnicodePath(homeDir.path);
   }
 
   retvals.buttonStatus = nsIFilePicker.returnCancel;
 
   gotoDirectory(sfile);
+  doEnabling();
   textInput.focus();
 }
 
@@ -150,6 +154,7 @@ function applyFilter()
   /* This is where we manipulate the DOM to create new <rule>s */
   var splitFilters = currentFilter.split("; ");
   var matchAllFiles = false;
+  var ruleNode;
 
   /* get just the extensions for each of the filters */
   var extensions = new Array(splitFilters.length);
@@ -163,8 +168,8 @@ function applyFilter()
   }
 
   /* delete all rules except the first one */
-  for (var j = 1;; j++) {
-    var ruleNode = document.getElementById("matchRule."+j);
+  for (j = 1;; j++) {
+    ruleNode = document.getElementById("matchRule."+j);
     if (ruleNode) {
       ruleNode.parentNode.removeChild(ruleNode);
     } else {
@@ -185,7 +190,7 @@ function applyFilter()
   rule0.setAttributeNS(NC_NAMESPACE_URI, "extension" , extensions[0]);
 
   /* iterate through the remaining extensions, creating new rules */
-  var ruleNode = document.getElementById("fileFilter");
+  ruleNode = document.getElementById("fileFilter");
 
   for (var k=1; k < extensions.length; k++) {
     var newRule = rule0.cloneNode(true);
@@ -206,7 +211,7 @@ function onOK()
 
   var input = textInput.value;
   if (input[0] == '~') // XXX XP?
-    input  = homeDir.path + input.substring(1);
+    input  = homeDir.unicodePath + input.substring(1);
 
   var file = sfile.clone().QueryInterface(nsILocalFile);
   if (!file)
@@ -214,10 +219,10 @@ function onOK()
 
   /* XXX we need an XP way to test for an absolute path! */
   if (input[0] == '/')   /* an absolute path was entered */
-    file.initWithPath(input);
+    file.initWithUnicodePath(input);
   else {
     try {
-      file.appendRelativePath(input);
+      file.appendRelativeUnicodePath(input);
     } catch (e) {
       dump("Can't append relative path '"+input+"':\n");
       return false;
@@ -236,35 +241,51 @@ function onOK()
   switch(filePickerMode) {
   case nsIFilePicker.modeOpen:
     if (isFile) {
-      retvals.directory = file.parent.path;
+      retvals.directory = file.parent.unicodePath;
       ret = nsIFilePicker.returnOK;
     } else if (isDir) {
       if (!sfile.equals(file)) {
         gotoDirectory(file);
       }
       textInput.value = "";
+      doEnabling();
       ret = nsIFilePicker.returnCancel;
     }
     break;
   case nsIFilePicker.modeSave:
-    if (isFile) {
+    if (isFile) { // can only be true if file.exists()
       // we need to pop up a dialog asking if you want to save
-      rv = window.confirm(file.path + " " + bundle.GetStringFromName("confirmFileReplacing"));
-      if (rv)
+      rv = window.confirm(file.unicodePath + " " + bundle.GetStringFromName("confirmFileReplacing"));
+      if (rv) {
         ret = nsIFilePicker.returnReplace;
-      else
+        retvals.directory = file.parent.unicodePath;
+      } else {
         ret = nsIFilePicker.returnCancel;
-      retvals.directory = file.parent.path;
-    } else if (!file.exists()) {
-      ret = nsIFilePicker.returnOK;
-      retvals.directory = file.parent.path;
+      }
+    } else if (isDir) {
+      if (!sfile.equals(file)) {
+        gotoDirectory(file);
+      }
+      textInput.value = "";
+      doEnabling();
+      ret = nsIFilePicker.returnCancel;
+    } else {
+      var parent = file.parent;
+      if (parent.exists() && parent.isDirectory()) {
+        ret = nsIFilePicker.returnOK;
+        retvals.directory = parent.unicodePath;
+      } else {
+        // See bug 55026, do nothing for now, leaves typed text as clue.
+        // window.alert("Directory "+parent.path+" doesn't seem to exist, can't save "+file.unicodePath);
+        ret = nsIFilePicker.returnCancel;
+      }
     }
     break;
   case nsIFilePicker.modeGetFolder:
     if (isDir) {
-      retvals.directory = file.parent.path;
+      retvals.directory = file.parent.unicodePath;
     } else { // if nothing selected, the current directory will be fine
-      retvals.directory = sfile.path;
+      retvals.directory = sfile.unicodePath;
     }
     ret = nsIFilePicker.returnOK;
     break;
@@ -289,14 +310,18 @@ function onCancel()
 
 function onClick(e) {
   if ( e.detail == 2 ) {
-    var file = URLpathToFile(e.target.parentNode.getAttribute("path"));
+    var path = e.target.parentNode.getAttribute("path");
 
-    if (file.isDirectory()) {
-      gotoDirectory(file);
-    }
-    else if (file.isFile()) {
-      /* what about symlinks? what if they symlink to a directory? */
-      return doOKButton();
+    if (path) {
+      var file = URLpathToFile(path);
+      if (file) {
+        if (file.isDirectory()) {
+          gotoDirectory(file);
+        }
+        else if (file.isFile()) {
+          doOKButton();
+        }
+      }
     }
   }
 }
@@ -306,15 +331,38 @@ function onKeypress(e) {
     goUp();
 }
 
+function doEnabling() {
+  // Maybe add check if textInput.value would resolve to an existing
+  // file or directory in .modeOpen. Too costly I think.
+  var enable = (textInput.value != "");
+
+  if (enable) {
+    if (okButton.getAttribute("disabled")) {
+      okButton.removeAttribute("disabled");
+    }
+  } else {
+    if (!okButton.getAttribute("disabled")) {
+      okButton.setAttribute("disabled","true");
+    }
+  }
+}
+
 function onSelect(e) {
   if (e.target.selectedItems.length != 1)
     return;
-  var file = URLpathToFile(e.target.selectedItems[0].firstChild.getAttribute("path"));
+  var path = e.target.selectedItems[0].firstChild.getAttribute("path");
 
-  if (file.isFile() || (filePickerMode == nsIFilePicker.modeGetFolder)) {
-    /* Note, if we're in GetFolder mode, everything in the display list
-       will be a directory, so we don't need an extra check */
-    textInput.value = file.leafName;
+  if (path) {
+    var file = URLpathToFile(path);
+    if (file) {
+      /* Put the leafName of the selected item in the input field if:
+         - GetFolder mode   : a directory was selected (only option)
+         - Open or Save mode: a file was selected                    */
+      if ((filePickerMode == nsIFilePicker.modeGetFolder) || file.isFile()) {
+        textInput.value = file.unicodeLeafName;
+        doEnabling();
+      }
+    }
   }
 }
 
@@ -323,9 +371,11 @@ function onDirectoryChanged(target)
   var path = target.getAttribute("value");
 
   var file = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
-  file.initWithPath(path);
+  file.initWithUnicodePath(path);
 
-  gotoDirectory(file);
+  if (!sfile.equals(file)) {
+    gotoDirectory(file);
+  }
 }
 
 function addToHistory(directoryName) {
@@ -350,10 +400,10 @@ function addToHistory(directoryName) {
   var menu = document.getElementById("lookInMenu");
 
   var children = menu.childNodes;
-  for (var i=0; i < children.length; i++)
+  for (i=0; i < children.length; i++)
     menu.removeChild(children[i]);
 
-  for (var i=0; i < dirHistory.length; i++) {
+  for (i=0; i < dirHistory.length; i++) {
     var menuItem = document.createElement("menuitem");
     menuItem.setAttribute("value", dirHistory[i]);
     menu.appendChild(menuItem);
@@ -374,8 +424,7 @@ function goUp() {
 }
 
 function gotoDirectory(directory) {
-  var newURL = fileToURL(directory);
-  addToHistory(directory.path);
+  addToHistory(directory.unicodePath);
   directoryTree.setAttribute("ref", fileToURL(directory).spec);
   sfile = directory;
 }
