@@ -783,7 +783,7 @@ ImageNetContextImpl::GetURL (ilIURL * aURL,
             if (NS_SUCCEEDED(reqchannel->GetURI(getter_AddRefs(referrer))))
             {
                 // Set the referrer-
-                httpChannel->SetReferrer(referrer);
+                httpChannel->SetReferrer(referrer, nsIHttpChannel::REFERRER_INLINES);
             }
         }
     }
