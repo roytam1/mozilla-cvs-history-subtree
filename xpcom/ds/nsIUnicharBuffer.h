@@ -46,13 +46,12 @@ NS_NewUnicharBuffer(nsIUnicharBuffer** aInstancePtrResult,
                     nsISupports* aOuter,
                     PRUint32 aBufferSize = 0);
 
-// XXX regenerate:
 #define NS_UNICHARBUFFER_CID                         \
-{ /* c86b1be0-0a94-11d3-9331-000000000000 */         \
-    0xc86b1be0,                                      \
-    0x0a94,                                          \
+{ /* c81fd8f0-0d6b-11d3-9331-00104ba0fd40 */         \
+    0xc81fd8f0,                                      \
+    0x0d6b,                                          \
     0x11d3,                                          \
-    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+    {0x93, 0x31, 0x00, 0x10, 0x4b, 0xa0, 0xfd, 0x40} \
 }
 
 #endif /* nsIUnicharBuffer_h___ */

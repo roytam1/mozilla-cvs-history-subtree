@@ -25,20 +25,12 @@ OBJS =  \
 
 LLIBS =                        \
     $(DIST)\lib\xpcom.lib    \
-    $(DIST)\lib\xptinfo32.lib  \
-    $(DIST)\lib\xptcall32.lib  \
-    $(DIST)\lib\libproxy.lib   \
     $(LIBNSPR)		       \
     $(DIST)\lib\plc3.lib       \
     $(NULL)
 
 LINCS =                        \
     -I$(PUBLIC)\xpcom	       \
-    -I$(PUBLIC)\xptcall        \
-    -I$(PUBLIC)\xptinfo        \
-    -I$(PUBLIC)\libxpt         \
-    -I$(PUBLIC)\libproxy       \
-    -I$(PUBLIC)\raptor         \
     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -21,8 +21,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= proxy
-LIBRARY_NAME	= proxy
+MODULE		= xpcom
+LIBRARY_NAME	= xpcomproxy
 REQUIRES        = xpcom
 
 CPPSRCS		     =            \

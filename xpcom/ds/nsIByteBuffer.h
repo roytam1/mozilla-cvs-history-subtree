@@ -51,13 +51,12 @@ public:
                             PRUint32 aKeep) = 0;
 };
 
-// XXX regenerate:
 #define NS_BYTEBUFFER_CID                            \
-{ /* 78323f10-0a8c-11d3-9331-000000000000 */         \
-    0x78323f10,                                      \
-    0x0a8c,                                          \
+{ /* a49d5280-0d6b-11d3-9331-00104ba0fd40 */         \
+    0xa49d5280,                                      \
+    0x0d6b,                                          \
     0x11d3,                                          \
-    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+    {0x93, 0x31, 0x00, 0x10, 0x4b, 0xa0, 0xfd, 0x40} \
 }
 
 /** Create a new byte buffer using the given buffer size. */

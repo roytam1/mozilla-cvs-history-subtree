@@ -36,6 +36,10 @@
 #include "nsEnumeratorUtils.h"
 #include "nsQuickSort.h"
 #include "nsString2.h"
+#include "nsProxyEventPrivate.h"
+#include "xpt_xdr.h"
+#include "nsInterfaceInfo.h"
+#include "xptcall.h"
 
 void XXXNeverCalled()
 {
@@ -60,4 +64,13 @@ void XXXNeverCalled()
     NS_NewIntersectionEnumerator(NULL, NULL, NULL);
     NS_QuickSort(NULL, 0, 0, NULL, NULL);
     nsString2();
+    nsProxyObject();
+    XPT_DoString(NULL, NULL);
+    XPT_DoHeader(NULL, NULL);
+    nsInterfaceInfo* info = NULL;
+    info->GetName(NULL);
+#ifdef DEBUG
+    info->print(NULL);
+#endif
+    XPTC_InvokeByIndex(NULL, 0, 0, NULL);
 }

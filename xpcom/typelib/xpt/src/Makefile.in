@@ -22,8 +22,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= libxpt
-LIBRARY_NAME	= xpt
+MODULE		= xpcom
+LIBRARY_NAME	= xpcomxpt
 
 LIB_IS_C_ONLY	= 1
 

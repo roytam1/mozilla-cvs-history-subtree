@@ -27,7 +27,7 @@ PROG2 = .\$(OBJDIR)\RegFactory.exe
 PROG3 = .\$(OBJDIR)\TestArray.exe
 PROG4 = .\$(OBJDIR)\TestID.exe
 PROG5 = .\$(OBJDIR)\TestServMgr.exe
-PROG6 = .\$(OBJDIR)\TimerTest.exe
+#PROG6 = .\$(OBJDIR)\TimerTest.exe
 PROG7 = .\$(OBJDIR)\TestAtoms.exe
 PROG8 = .\$(OBJDIR)\CvtURL.exe
 PROG9 = .\$(OBJDIR)\TestCRT.exe
@@ -109,7 +109,7 @@ $(PROG3): $(OBJDIR) TestArray.cpp
 $(PROG4): $(OBJDIR) TestID.cpp
 $(PROG5): $(OBJDIR) TestServMgr.cpp
 
-$(PROG6): $(OBJDIR) TimerTest.cpp $(RESFILE)
+#$(PROG6): $(OBJDIR) TimerTest.cpp $(RESFILE)
 
 $(PROG7): $(OBJDIR) TestAtoms.cpp
 

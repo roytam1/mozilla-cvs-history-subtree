@@ -21,7 +21,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= libxpt
+MODULE		= xpcom
 
 SIMPLE_PROGRAMS	= xpt_dump xpt_link
 
@@ -29,7 +29,7 @@ CSRCS		= xpt_dump.c xpt_link.c
 
 # Compile directly against the static lib, so we can use the tools
 # during the build without the shared library path being set.
-LIBS		= $(DIST)/lib/libxpt.a
+LIBS		= $(DIST)/lib/xpcom.a
 
 # Tell the $(SIMPLE_PROGRAMS) target that we need to be recompiled
 # when libxpt changes.

@@ -30,6 +30,14 @@
     {0x93, 0x1c, 0x00, 0x10, 0x4b, 0xa0, 0xfd, 0x40} \
 }
 
+#define NS_BYTEBUFFERINPUTSTREAM_CID                 \
+{ /* d713ada0-0d6b-11d3-9331-00104ba0fd40 */         \
+    0xd713ada0,                                      \
+    0x0d6b,                                          \
+    0x11d3,                                          \
+    {0x93, 0x31, 0x00, 0x10, 0x4b, 0xa0, 0xfd, 0x40} \
+}
+
 class nsIByteBufferInputStream : public nsIInputStream {
 public:
     NS_DEFINE_STATIC_IID_ACCESSOR(NS_IBYTEBUFFERINPUTSTREAM_IID);

@@ -52,13 +52,12 @@ public:
 extern NS_BASE nsresult NS_NewHeapArena(nsIArena** aInstancePtrResult,
                                         PRUint32 aArenaBlockSize = 0);
 
-// XXX regenerate:
 #define NS_ARENA_CID                                 \
-{ /* e139e1d0-0a89-11d3-9331-000000000000 */         \
-    0xe139e1d0,                                      \
-    0x0a89,                                          \
+{ /* 9832ec80-0d6b-11d3-9331-00104ba0fd40 */         \
+    0x9832ec80,                                      \
+    0x0d6b,                                          \
     0x11d3,                                          \
-    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+    {0x93, 0x31, 0x00, 0x10, 0x4b, 0xa0, 0xfd, 0x40} \
 }
 
 #endif /* nsIArena_h___ */

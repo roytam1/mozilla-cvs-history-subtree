@@ -29,13 +29,12 @@
     {0x93, 0x11, 0x00, 0xe0, 0x98, 0x05, 0x57, 0x0f} \
 }
 
-// XXX regenerate:
 #define NS_PROPERTIES_CID                            \
-{ /* 9017a8a0-0a90-11d3-9331-000000000000 */         \
-    0x9017a8a0,                                      \
-    0x0a90,                                          \
+{ /* b3efe4d0-0d6b-11d3-9331-00104ba0fd40 */         \
+    0xb3efe4d0,                                      \
+    0x0d6b,                                          \
     0x11d3,                                          \
-    {0x93, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} \
+    {0x93, 0x31, 0x00, 0x10, 0x4b, 0xa0, 0xfd, 0x40} \
 }
 
 class nsIProperties : public nsISupports {

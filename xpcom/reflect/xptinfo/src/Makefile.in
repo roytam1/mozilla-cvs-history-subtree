@@ -21,8 +21,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= xptinfo
-LIBRARY_NAME	= xptinfo
+MODULE		= xpcom
+LIBRARY_NAME	= xpcomxptinfo_s
 
 CSRCS		= $(NULL)
 
