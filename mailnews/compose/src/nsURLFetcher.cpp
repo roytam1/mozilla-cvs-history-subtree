@@ -451,15 +451,3 @@ nsURLFetcher::OnRedirect(nsIHttpChannel *aOldChannel, nsIChannel *aNewChannel)
   mRedirection = PR_TRUE;
   return NS_OK;
 }
-
-NS_IMETHODIMP
-nsURLFetcher::OnAuthenticate(nsIHttpChannel *httpChannel, const char *host, PRInt32 port, PRBool isProxy, const char *realm, char **username, char **password)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsURLFetcher::OnAuthenticationFailed(nsIHttpChannel *httpChannel, const char *host, PRInt32 port, PRBool isProxy, const char *realm, const char *username, const char *password)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
