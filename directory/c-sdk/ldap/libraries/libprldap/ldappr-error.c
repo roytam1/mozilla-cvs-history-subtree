@@ -181,7 +181,7 @@ struct prldap_errormap_entry {
 #define EOVERFLOW       -1
 #endif
 
-#if defined(HPUX11) || defined(AIX4_3) || defined(OSF1) || defined(DARWIN) || \
+#if defined(__hpux) || defined(AIX4_3) || defined(OSF1) || defined(DARWIN) || \
   defined(BEOS) || defined(FREEBSD) || defined(BSDI) || defined(VMS)
 #define EDEADLOCK       -1
 #endif

@@ -190,7 +190,11 @@ endif
 
 ifeq ($(OS_ARCH), HP-UX)
 EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
+ifdef USE_PTHREADS
 EXTRA_LIBS += -ldld -lm -lpthread
+else
+EXTRA_LIBS += -ldld -lm
+endif
 endif
 
 ifeq ($(OS_ARCH), Darwin)
