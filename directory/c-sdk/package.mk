@@ -36,7 +36,6 @@ NSPRINCDIR  = ../../dist/$(OBJDIR_NAME)/include
 BINDIR  = ../../dist/$(OBJDIR_NAME)/bin
 ETCDIR  = ../../dist/$(OBJDIR_NAME)/etc
 EXPDIR  = ldap/examples
-DOCDIR  = ldap/docs
 
 # defaults
 PKG_PRIVATE_HDRS=1
@@ -61,6 +60,9 @@ endif
 	$(NSINSTALL) $(LIBDIR)/$(UTIL_LIBNAME).lib $(INSTDIR)/lib
 ifeq ($(PKG_DEP_LIBS),1)
 	$(NSINSTALL) $(LIBDIR)/$(NSS_LIBNAME).* $(INSTDIR)/lib
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(LIBDIR)/$(SOFTOKN_LIBNAME).* $(INSTDIR)/lib
+endif
 	$(NSINSTALL) $(LIBDIR)/$(SSL_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLC_BASENAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLDS_BASENAME).* $(INSTDIR)/lib
@@ -79,6 +81,9 @@ ifeq ($(PKG_PRIVATE_LIBS),1)
 endif
 ifeq ($(PKG_DEP_LIBS),1)
 	$(NSINSTALL) $(LIBDIR)/lib$(NSS_LIBNAME).* $(INSTDIR)/lib
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+	$(NSINSTALL) $(LIBDIR)/lib$(SOFTOKN_LIBNAME).* $(INSTDIR)/lib
+endif
 	$(NSINSTALL) $(LIBDIR)/lib$(SSL_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLC_BASENAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLDS_BASENAME).* $(INSTDIR)/lib
@@ -151,6 +156,17 @@ endif
 	$(NSINSTALL) $(EXPDIR)/README $(INSTDIR)/examples
 	$(NSINSTALL) $(EXPDIR)/Makefile $(INSTDIR)/examples
 	$(NSINSTALL) $(EXPDIR)/xmplflt.conf $(INSTDIR)/examples
+
+ifdef DOCDIR
+	@echo "Installing doc files"
+	$(NSINSTALL) -D $(INSTDIR)/docs
+	$(NSINSTALL) $(DOCDIR)/README $(INSTDIR)
+	$(NSINSTALL) $(DOCDIR)/redist.txt $(INSTDIR)
+	$(NSINSTALL) $(DOCDIR)/*.htm $(INSTDIR)
+	$(NSINSTALL) $(DOCDIR)/*.gif $(INSTDIR)
+	$(NSINSTALL) $(DOCDIR)/README $(INSTDIR)/docs
+	$(NSINSTALL) $(DOCDIR)/redist.txt $(INSTDIR)/docs
+endif
 
 ifdef BUILD_SHIP
 	@echo "Copying files to $(BUILD_SHIP) directory"

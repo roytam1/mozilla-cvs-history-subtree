@@ -99,6 +99,9 @@ endif
 
 # nss library
 NSS_LIBNAME	= nss$(NSSVERS)
+ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
+SOFTOKN_LIBNAME	= softokn$(NSSVERS)
+endif
 SSL_LIBNAME	= ssl$(NSSVERS)
 HYBRID_LIBNAME	= freebl_hybrid_$(NSSVERS)
 PURE32_LIBNAME	= freebl_pure32_$(NSSVERS)
@@ -272,6 +275,9 @@ endif
 RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
 
 ifeq ($(OS_ARCH), SunOS)
+# include $ORIGIN in run time library path (work on Solaris 8 10/01 and later
+RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
+
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,-R,
