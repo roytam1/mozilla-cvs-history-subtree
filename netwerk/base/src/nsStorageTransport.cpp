@@ -589,6 +589,9 @@ nsStorageTransport::nsReadRequest::OnDataAvailable(nsIRequest *aRequest,
 {
     nsresult rv = NS_OK;
 
+    printf(">>> nsStorageTransport::nsReadRequest::OnDataAvailable [this=%x count=%u]\n", this, aCount);
+    NS_BREAK();
+
     rv = mListener->OnDataAvailable(aRequest, aContext, aInput, aOffset, aCount);
 
     NS_ASSERTION(rv != NS_BASE_STREAM_WOULD_BLOCK, "not implemented");
