@@ -190,7 +190,7 @@ nsresult nsWidgetFactory::CreateInstance( nsISupports* aOuter,
       inst = (nsISupports*)new nsTransferable();
     }
     else if (mClassID.Equals(kCXIFFormatConverter)) {
-        inst = (nsISupports*)new nsXIFFormatConverter();
+        inst = (nsISupports*)new nsHTMLFormatConverter();
     }
     else if (mClassID.Equals(kCClipboard)) {
         inst = (nsISupports*)(nsBaseClipboard *)new nsClipboard();
