@@ -184,12 +184,31 @@ nsSVGLibartCanvas::Clear(nscolor color)
   PRUint8 green = NS_GET_G(color);
   PRUint8 blue  = NS_GET_B(color);
 
-  PRInt32 stride = mBitmap->GetLineStride();
-  PRInt32 width  = mBitmap->GetWidth();
-  PRUint8* buf = mBitmap->GetBits();
-  PRUint8* end = buf + stride*mBitmap->GetHeight();
-  for ( ; buf<end; buf += stride) {
-    art_rgb_fill_run(buf, red, green, blue, width);
+  switch (mBitmap->GetPixelFormat()) {
+    case nsISVGLibartBitmap::PIXEL_FORMAT_24_RGB:
+    {
+      PRInt32 stride = mBitmap->GetLineStride();
+      PRInt32 width  = mBitmap->GetWidth();
+      PRUint8* buf = mBitmap->GetBits();
+      PRUint8* end = buf + stride*mBitmap->GetHeight();
+      for ( ; buf<end; buf += stride) {
+        art_rgb_fill_run(buf, red, green, blue, width);
+      }
+      break;
+    }
+    case nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR:
+    {
+      NS_ASSERTION(mBitmap->GetLineStride() == 4*mBitmap->GetWidth(), "strange pixel format");
+      PRUint32 pixel = (blue<<16)+(green<<8)+red;
+      PRUint32 *dest = (PRUint32*)mBitmap->GetBits();
+      PRUint32 *end  = dest+mBitmap->GetWidth()*mBitmap->GetHeight();
+      while (dest!=end)
+        *dest++ = pixel;
+      break;
+    }
+    default:
+      NS_ERROR("Unknown pixel format");
+      break;
   }
   
   return NS_OK;
