@@ -5173,3 +5173,44 @@ nsMsgDBView::SetSearchSession(nsIMsgSearchSession *aSession)
   m_searchSession = getter_AddRefs(NS_GetWeakReference(aSession));
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsMsgDBView::CloneDBView(nsIMessenger *aMessengerInstance, nsIMsgWindow *aMsgWindow, nsIMsgDBViewCommandUpdater *aCmdUpdater, nsIMsgDBView **_retval)
+{
+  nsMsgDBView* newMsgDBView;
+
+  NS_NEWXPCOM(newMsgDBView, nsMsgDBView);
+  if (!newMsgDBView)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  nsresult rv = CopyDBView(newMsgDBView, aMessengerInstance, aMsgWindow, aCmdUpdater);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  NS_IF_ADDREF(*_retval = newMsgDBView);
+  return NS_OK;
+}
+
+nsresult nsMsgDBView::CopyDBView(nsMsgDBView *aNewMsgDBView, nsIMessenger *aMessengerInstance, nsIMsgWindow *aMsgWindow, nsIMsgDBViewCommandUpdater *aCmdUpdater)
+{
+  NS_ENSURE_ARG_POINTER(aNewMsgDBView);
+
+  aNewMsgDBView->mMsgWindow = aMsgWindow;
+  aNewMsgDBView->mMessengerInstance = aMessengerInstance;
+  aNewMsgDBView->mCommandUpdater = aCmdUpdater;
+  aNewMsgDBView->m_folder = m_folder;
+  aNewMsgDBView->m_viewFlags = m_viewFlags;
+  aNewMsgDBView->m_sortOrder = m_sortOrder;
+  aNewMsgDBView->m_sortType = m_sortType;
+  aNewMsgDBView->m_db = m_db;
+  aNewMsgDBView->mDateFormater = mDateFormater;
+  aNewMsgDBView->m_db->AddListener(aNewMsgDBView);
+  aNewMsgDBView->mIsNews = mIsNews;
+  aNewMsgDBView->mHeaderParser = mHeaderParser;
+  aNewMsgDBView->mDeleteModel = mDeleteModel;
+  aNewMsgDBView->mIsSpecialFolder = mIsSpecialFolder;
+  aNewMsgDBView->m_flags.CopyArray(m_flags);
+  aNewMsgDBView->m_levels.CopyArray(m_levels);
+  aNewMsgDBView->m_keys.CopyArray(m_keys);
+
+  return NS_OK;
+}
