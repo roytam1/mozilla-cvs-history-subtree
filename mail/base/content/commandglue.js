@@ -821,10 +821,14 @@ function FolderPaneSelectionChange()
                   if (folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
                   {
                     viewType = nsMsgViewType.eShowQuickSearchResults;
-                    var searchTermString = dbFolderInfo.GetCharPtrProperty("searchStr");
+                    var searchTermString = {};
+                    dbFolderInfo.GetCharPtrProperty("searchStr", searchTermString);
+                    searchTermString = searchTermString.value;
                     // trick the view code into updating the real folder...
                     gCurrentVirtualFolderUri = uriToLoad;
-                    var srchFolderUri = dbFolderInfo.GetCharPtrProperty("searchFolderUri");
+                    var srchFolderUri = {};
+                    dbFolderInfo.GetCharPtrProperty("searchFolderUri", srchFolderUri);
+                    srchFolderUri = srchFolderUri.value;
                     var srchFolderUriArray = srchFolderUri.split('|');
                     // cross folder search
                     var filterService = Components.classes["@mozilla.org/messenger/services/filters;1"].getService(Components.interfaces.nsIMsgFilterService);
@@ -1039,7 +1043,7 @@ function  CreateVirtualFolder(newName, parentFolder, searchFolderURIs, searchTer
       dbFolderInfo.SetCharPtrProperty("searchFolderUri", searchFolderURIs);
       vfdb.summaryValid = true;
       vfdb.Close(true);
-      parentFolder.NotifyItemAdded(newFolder);
+      parentFolder.NotifyItemAdded(parentFolder, newFolder, "folderView");
       var accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
       accountManager.saveVirtualFolders();
     }
