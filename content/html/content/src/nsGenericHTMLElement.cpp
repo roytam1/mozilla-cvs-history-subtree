@@ -2005,7 +2005,6 @@ nsGenericHTMLElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute, PRBoo
     }
   }
 
-  nsCOMPtr<nsIHTMLStyleSheet> sheet;
   PRInt32 impact = NS_STYLE_HINT_UNKNOWN;
   if (mDocument) {
     if (aNotify) {
@@ -2053,8 +2052,9 @@ nsGenericHTMLElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute, PRBoo
     }
   }
 
-  sheet = dont_AddRef(GetAttrStyleSheet(mDocument));
-  if (sheet && mAttributes) {
+  if (mAttributes) {
+    nsCOMPtr<nsIHTMLStyleSheet> sheet
+         = dont_AddRef(GetAttrStyleSheet(mDocument));
     PRInt32 count;
     result = mAttributes->UnsetAttributeFor(aAttribute, aNameSpaceID, this,
                                             sheet, count);
