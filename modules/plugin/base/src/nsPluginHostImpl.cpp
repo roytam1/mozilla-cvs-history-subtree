@@ -3454,6 +3454,9 @@ static PRBool isUnwantedPlugin(nsPluginTag * tag)
 
     if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i], "application/x-shockwave-flash"))
       return PR_FALSE;
+
+    if(nsnull == PL_strcasecmp(tag->mMimeTypeArray[i],"application/x-director"))
+      return PR_FALSE;
   }
 
   return PR_TRUE;
