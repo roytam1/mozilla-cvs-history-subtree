@@ -72,26 +72,25 @@ void LocalPort::Exit()
 		::SetPort(fOldPort);
 }
 
+static RgnHandle NewEmptyRgn()
+{
+    RgnHandle region = ::NewRgn();
+    if (region != NULL) ::SetEmptyRgn(region);
+    return region;
+}
+
 MRJContext::MRJContext(MRJSession* session, MRJPluginInstance* instance)
 	:	mPluginInstance(instance), mSession(session), mSessionRef(session->getSessionRef()), mPeer(NULL),
 		mLocator(NULL), mContext(NULL), mViewer(NULL), mViewerFrame(NULL), mIsActive(false),
-		mPluginWindow(NULL), mPluginClipping(NULL),	mPluginPort(NULL), mCodeBase(NULL), mDocumentBase(NULL), mPage(NULL)
+		mPluginWindow(NULL), mPluginClipping(NULL), mPluginPort(NULL),
+		mCodeBase(NULL), mDocumentBase(NULL), mPage(NULL)
 {
 	instance->GetPeer(&mPeer);
 	
 	// we cache attributes of the window, and periodically notice when they change.
-    mCache.window = NULL; 	/* Platform specific window handle */
-    mCache.x = -1;			/* Position of top left corner relative */
-    mCache.y = -1;			/*	to a netscape page.					*/
-    mCache.width = 0;		/* Maximum window size */
-    mCache.height = 0;
-    ::SetRect((Rect*)&mCache.clipRect, 0, 0, 0, 0);
-    						/* Clipping rectangle in port coordinates */
-							/* Used by MAC only.			  */
-    mCache.type = nsPluginWindowType_Drawable;
-    						/* Is this a window or a drawable? */
-
-	mPluginClipping = ::NewRgn();
+	mCachedOrigin.x = mCachedOrigin.y = -1;
+    ::SetRect((Rect*)&mCachedClipRect, 0, 0, 0, 0);
+	mPluginClipping =::NewEmptyRgn();
 	mPluginPort = getEmptyPort();
 }
 
@@ -744,14 +743,7 @@ OSStatus MRJContext::createFrame(JMFrameRef frameRef, JMFrameKind kind, const Re
 		frame = new AppletViewerFrame(frameRef, this);
 
 		// make sure the frame's clipping is up-to-date.
-		setVisibility();
-
-#if 0		
-		// ensure the frame is active.
-		WindowRef appletWindow = getPort();
-		Boolean isHilited = IsWindowHilited(appletWindow);
-		frame->activate(isHilited);
-#endif
+		synchronizeClipping();
 	} else if (thePluginManager2 != NULL) {
 		// Can only do this safely if we are using the new API.
 		frame = new TopLevelFrame(mPluginInstance, frameRef, kind, initialBounds, resizeable);
@@ -1005,7 +997,7 @@ void MRJContext::click(const EventRecord* event, MRJFrame* appletFrame)
 	// inspectWindow();
 //    printf("mrjcontext::click\n");
 
-	nsPluginPort* npPort = (nsPluginPort*) mCache.window;
+	nsPluginPort* npPort = mPluginWindow->window;
 	
 	// make the plugin's port current, and move its origin to (0, 0).
 	LocalPort port(GrafPtr(npPort->port));
@@ -1014,7 +1006,7 @@ void MRJContext::click(const EventRecord* event, MRJFrame* appletFrame)
 	// will we always be called in the right coordinate system?
 	Point localWhere = event->where;
 	::GlobalToLocal(&localWhere);
-	nsPluginRect& clipRect = mCache.clipRect;
+	nsPluginRect& clipRect = mCachedClipRect;
 	Rect bounds = { clipRect.top, clipRect.left, clipRect.bottom, clipRect.right };
 	if (PtInRect(localWhere, &bounds)) {
 		localToFrame(&localWhere);
@@ -1047,7 +1039,7 @@ void MRJContext::idle(short modifiers)
 //    printf("mrjcontext::idle\n");
 
 	// Put the port in to proper window coordinates.
-	nsPluginPort* npPort = (nsPluginPort*) mCache.window;
+	nsPluginPort* npPort = mPluginWindow->window;
 	LocalPort port(GrafPtr(npPort->port));
 	port.Enter();
 	
@@ -1068,33 +1060,26 @@ void MRJContext::idle(short modifiers)
 void MRJContext::setWindow(nsPluginWindow* pluginWindow)
 {
 	// don't do anything if the AWTContext hasn't been created yet.
-	if (mContext != NULL && pluginWindow != NULL) {
-		if (pluginWindow->height != 0 && pluginWindow->width != 0) {
-			mPluginWindow = pluginWindow;
-			mCache.window = NULL;
+	if (mContext != NULL) {
+    	if (pluginWindow != NULL) {
+    		if (pluginWindow->height != 0 && pluginWindow->width != 0) {
+    			mPluginWindow = pluginWindow;
 
-			// establish the GrafPort the plugin will draw in.
-			mPluginPort = pluginWindow->window->port;
+    			// establish the GrafPort the plugin will draw in.
+    			mPluginPort = pluginWindow->window->port;
 
-			// set up the clipping region based on width & height.
-			::SetRectRgn(mPluginClipping, 0, 0, pluginWindow->width, pluginWindow->height);
-
-			if (! appletLoaded())
-				loadApplet();
-
-			setVisibility();
-		}
-	} else {
-		// tell MRJ the window has gone away.
-		mPluginWindow = NULL;
-		
-		// use a single, 0x0, empty port for all future drawing.
-		mPluginPort = getEmptyPort();
-		
-		// perhaps we should set the port to something quite innocuous, no? say a 0x0, empty port?
-		::SetEmptyRgn(mPluginClipping);
-		setVisibility();
-	}
+    			if (! appletLoaded())
+    				loadApplet();
+    		}
+    	} else {
+    		// tell MRJ the window has gone away.
+    		mPluginWindow = NULL;
+    		
+    		// use a single, 0x0, empty port for all future drawing.
+    		mPluginPort = getEmptyPort();
+    	}
+    	synchronizeClipping();
+    }
 }
 
 static Boolean equalRect(const nsPluginRect* r1, const nsPluginRect* r2)
@@ -1110,47 +1095,51 @@ Boolean MRJContext::inspectWindow()
 	if (mViewerFrame == NULL)
 		return false;
 
-	Boolean recomputeVisibility = false;
+	Boolean recomputeClipping = false;
 	
 	if (mPluginWindow != NULL) {
-		// Use new plugin data structures.
-		if (mCache.window == NULL || mCache.x != mPluginWindow->x || mCache.y != mPluginWindow->y || !equalRect(&mCache.clipRect, &mPluginWindow->clipRect)) {
+		// Check for origin or clipping changes.
+		nsPluginPort* npPort = mPluginWindow->window;
+		if (mCachedOrigin.x != npPort->portx || mCachedOrigin.y != npPort->porty || !equalRect(&mCachedClipRect, &mPluginWindow->clipRect)) {
 			// transfer over values to the window cache.
-			recomputeVisibility = true;
+			recomputeClipping = true;
 		}
 	}
 	
-	if (recomputeVisibility)
-		setVisibility();
+	if (recomputeClipping)
+		synchronizeClipping();
 	
-	return recomputeVisibility;
+	return recomputeClipping;
 }
 
-Boolean MRJContext::inspectClipping()
+/**
+ * This routine ensures that the browser and MRJ agree on what the current clipping
+ * should be. If the browser has assigned us a window to draw in (see setWindow()
+ * above), then we use that window's clipRect to set up clipping, which is cached
+ * in mPluginClipping, as a region. Otherwise, mPluginClipping is set to an empty
+ * region.
+ */
+void MRJContext::synchronizeClipping()
 {
 	// this is called on update events to make sure the clipping region is in sync with the browser's.
-	GrafPtr pluginPort = getPort();
-	if (pluginPort != NULL) {
-		if (true || !::EqualRgn(pluginPort->clipRgn, mPluginClipping)) {
-			::CopyRgn(pluginPort->clipRgn, mPluginClipping);
-			setVisibility();
-			return true;
-		}
+	if (mPluginWindow != NULL) {
+	    // plugin clipping is intersection of clipRgn and the clipRect.
+        nsPluginRect clipRect = mPluginWindow->clipRect;
+        nsPluginPort* pluginPort = mPluginWindow->window;
+        clipRect.left += pluginPort->portx, clipRect.right += pluginPort->portx;
+        clipRect.top += pluginPort->porty, clipRect.bottom += pluginPort->porty;
+	    ::SetRectRgn(mPluginClipping, clipRect.left, clipRect.top, clipRect.right, clipRect.bottom);
+	} else {
+	    ::SetEmptyRgn(mPluginClipping);
 	}
-	return false;
-}
-
-void MRJContext::setClipping(RgnHandle clipRgn)
-{
-	::CopyRgn(clipRgn, mPluginClipping);
-	setVisibility();
+    synchronizeVisibility();
 }
 
 MRJFrame* MRJContext::findFrame(WindowRef window)
 {
 	MRJFrame* frame = NULL;
 
-	setVisibility();
+	// synchronizeVisibility();
 	
 	// locates the frame corresponding to this window.
 	if (window == NULL || (CGrafPtr(window) == mPluginPort) && mViewerFrame != NULL) {
@@ -1178,7 +1167,7 @@ GrafPtr MRJContext::getPort()
 {
 #if 0
 	if (mPluginWindow != NULL) {
-		nsPluginPort* npPort = (nsPluginPort*) mPluginWindow->window;
+		nsPluginPort* npPort = mPluginWindow->window;
 		return GrafPtr(npPort->port);
 	}
 	return NULL;
@@ -1191,7 +1180,7 @@ void MRJContext::localToFrame(Point* pt)
 {
 	if (mPluginWindow != NULL) {
 		// transform mouse to frame coordinates.
-		nsPluginPort* npPort = (nsPluginPort*) mPluginWindow->window;
+		nsPluginPort* npPort = mPluginWindow->window;
 		pt->v += npPort->porty;
 		pt->h += npPort->portx;
 	}
@@ -1200,7 +1189,7 @@ void MRJContext::localToFrame(Point* pt)
 void MRJContext::ensureValidPort()
 {
 	if (mPluginWindow != NULL) {
-		nsPluginPort* npPort = (nsPluginPort*) mPluginWindow->window;
+		nsPluginPort* npPort = mPluginWindow->window;
 		if (npPort == NULL)
 			mPluginPort = getEmptyPort();
 		::SetPort(GrafPtr(mPluginPort));
@@ -1215,35 +1204,40 @@ static void blinkRgn(RgnHandle rgn)
 	::InvertRgn(rgn);
 }
 
-void MRJContext::setVisibility()
+void MRJContext::synchronizeVisibility()
 {
 	// always update the cached information.
-	if (mPluginWindow != NULL)
-		mCache = *mPluginWindow;
-		
-	// would be nice if printf or fprintf(stderr or fprintf(stdout actually
-	// dumped to sioux.. i so hate this development
-//    fprintf(stderr, "mrjcontext::setvisibility\n");
-	
 	if (mViewerFrame != NULL) {
-		nsPluginWindow* npWindow = &mCache;
-		
-		// compute the frame's origin and clipping.
-		
-		// JManager wants the origin expressed in window coordinates.
-		// npWindow refers to the entire mozilla view port whereas the nport
-		// refers to the actual rendered html window.
-#if 0		
-		Point frameOrigin = { npWindow->y, npWindow->x };
-#else
-		nsPluginPort* npPort = mPluginWindow->window;
-		Point frameOrigin = { -npPort->porty, -npPort->portx };
-#endif
-	
-		// The clipping region is now maintained by a new browser event.
-		OSStatus status = ::JMSetFrameVisibility(mViewerFrame, GrafPtr(mPluginPort),
-												frameOrigin, mPluginClipping);
-	}
+    	if (mPluginWindow != NULL) {
+            nsPluginRect oldClipRect = mCachedClipRect;
+            nsPluginPort* pluginPort = mPluginWindow->window;
+    	    mCachedOrigin.x = pluginPort->portx;
+    	    mCachedOrigin.y = pluginPort->porty;
+    	    mCachedClipRect = mPluginWindow->clipRect;
+    		
+    		// compute the frame's origin and clipping.
+    		
+    		// JManager wants the origin expressed in window coordinates.
+    		// npWindow refers to the entire mozilla view port whereas the nport
+    		// refers to the actual rendered html window.
+    		Point frameOrigin = { -pluginPort->porty, -pluginPort->portx };
+    		GrafPtr framePort = (GrafPtr)mPluginPort;
+    		OSStatus status = ::JMSetFrameVisibility(mViewerFrame, framePort,
+    												 frameOrigin, mPluginClipping);
+
+            // Invalidate the old clip rectangle, so that any bogus drawing that may
+            // occurred at the old location, will be corrected.
+        	LocalPort port(framePort);
+            port.Enter();
+        	::InvalRect((Rect*)&oldClipRect);
+        	::InvalRect((Rect*)&mCachedClipRect);
+        	port.Exit();
+        } else {
+            Point frameOrigin = { 0, 0 };
+    		OSStatus status = ::JMSetFrameVisibility(mViewerFrame, GrafPtr(mPluginPort),
+    												 frameOrigin, mPluginClipping);
+        }
+    }
 }
 
 void MRJContext::showFrames()
@@ -1306,8 +1300,10 @@ void MRJContext::releaseFrames()
 
 void MRJContext::setCodeBase(const char* codeBase)
 {
-	if (mCodeBase != NULL)
+	if (mCodeBase != NULL) {
 		delete[] mCodeBase;
+        mCodeBase = NULL;
+    }
 	if (codeBase != NULL)
 		mCodeBase = ::strdup(codeBase);
 }
@@ -1319,8 +1315,10 @@ const char* MRJContext::getCodeBase()
 
 void MRJContext::setDocumentBase(const char* documentBase)
 {
-	if (mDocumentBase != NULL)
+	if (mDocumentBase != NULL) {
+	    delete[] mDocumentBase;
 		mDocumentBase = NULL;
+    }
 	if (documentBase != NULL)
 		mDocumentBase = ::strdup(documentBase); 
 }

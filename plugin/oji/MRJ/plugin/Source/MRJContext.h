@@ -49,6 +49,11 @@ class MRJFrame;
 class MRJPage;
 struct MRJPageAttributes;
 
+struct nsPluginPoint {
+	PRInt32             x;
+    PRInt32             y;
+};
+
 class MRJContext {
 public:
 	MRJContext(MRJSession* session, MRJPluginInstance* instance);
@@ -80,9 +85,7 @@ public:
 	void keyRelease(long message, short modifiers);
 	
 	void setWindow(nsPluginWindow* pluginWindow);
-	Boolean inspectClipping();
 	Boolean inspectWindow();
-	void setClipping(RgnHandle clipRgn);
 	
 	MRJFrame* findFrame(WindowRef window);
 	GrafPtr getPort();
@@ -100,7 +103,8 @@ public:
 private:
 	void localToFrame(Point* pt);
 	void ensureValidPort();
-	void setVisibility();
+	void synchronizeClipping();
+	void synchronizeVisibility();
 
 	static OSStatus requestFrame(JMAWTContextRef context, JMFrameRef newFrame, JMFrameKind kind,
 								const Rect *initialBounds, Boolean resizeable, JMFrameCallbacks *callbacks);
@@ -132,9 +136,10 @@ private:
 	JMAppletViewerRef		mViewer;
 	JMFrameRef				mViewerFrame;
 	Boolean					mIsActive;
-	nsPluginWindow			mCache;
-	nsPluginWindow*			mPluginWindow;
+	nsPluginPoint           mCachedOrigin;
+	nsPluginRect            mCachedClipRect;
 	RgnHandle				mPluginClipping;
+	nsPluginWindow*			mPluginWindow;
 	CGrafPtr				mPluginPort;
 	char*					mDocumentBase;
 	char*					mCodeBase;
