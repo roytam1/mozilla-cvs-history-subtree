@@ -17,7 +17,6 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 #include "nsIWebShell.h"
-#include "nsIURLListener.h"
 #include "nsIDocumentLoader.h"
 #include "nsIContentViewer.h"
 #include "nsIDocumentViewer.h"
@@ -31,7 +30,7 @@
 #include "nsIDocumentLoaderObserver.h"
 #include "nsDOMEvent.h"
 #include "nsIPresContext.h"
-#include "nsIComponentManager.h"
+#include "nsRepository.h"
 #include "nsIServiceManager.h"
 #include "nsIEventQueueService.h"
 #include "nsXPComCIID.h"
@@ -160,9 +159,7 @@ public:
   NS_IMETHOD Repaint(PRBool aForce);
   NS_IMETHOD SetContentViewer(nsIContentViewer* aViewer);
   NS_IMETHOD SetContainer(nsIWebShellContainer* aContainer);
-  NS_IMETHOD SetURLListener(nsIURLListener * aURLListener);
   NS_IMETHOD GetContainer(nsIWebShellContainer*& aResult);
-  NS_IMETHOD GetURLListener(nsIURLListener*& aResult);
   NS_IMETHOD SetObserver(nsIStreamObserver* anObserver);
   NS_IMETHOD GetObserver(nsIStreamObserver*& aResult);
   NS_IMETHOD SetPrefs(nsIPref* aPrefs);
@@ -307,13 +304,11 @@ public:
 
 protected:
   void InitFrameData();
-  nsresult CheckForTrailingSlash(nsIURL* aURL);
 
   PLEventQueue* mThreadEventQueue;
   nsIScriptGlobalObject *mScriptGlobal;
   nsIScriptContext* mScriptContext;
 
-  nsIURLListener * mURLListener;
   nsIWebShellContainer* mContainer;
   nsIContentViewer* mContentViewer;
   nsIDeviceContext* mDeviceContext;
@@ -406,9 +401,9 @@ nsresult nsWebShell::CreatePluginHost(PRBool aAllowPlugins)
   {
     if (nsnull == mPluginManager)
     {
-      // use the service manager to obtain the plugin manager.
-      rv = nsServiceManager::GetService(kCPluginManagerCID, kIPluginManagerIID,
-      									(nsISupports**)&mPluginManager);
+      rv = nsRepository::CreateInstance(kCPluginManagerCID, nsnull,
+                                        kIPluginManagerIID,
+                                        (void**)&mPluginManager);
       if (NS_OK == rv)
       {
         if (NS_OK == mPluginManager->QueryInterface(kIPluginHostIID,
@@ -433,17 +428,11 @@ nsresult nsWebShell::DestroyPluginHost(void)
 
   if (0 == mPluginInitCnt)
   {
-    if (nsnull != mPluginHost) {
+    if (nsnull != mPluginHost)
       mPluginHost->Destroy();
-      mPluginHost->Release();
-      mPluginHost = NULL;
-    }
-    
-    // use the service manager to release the plugin manager.
-    if (nsnull != mPluginManager) {
-      nsServiceManager::ReleaseService(kCPluginManagerCID, mPluginManager);
-      mPluginManager = NULL;
-    }
+
+    NS_IF_RELEASE(mPluginManager);
+    NS_IF_RELEASE(mPluginHost);
   }
 
   return NS_OK;
@@ -459,7 +448,6 @@ nsWebShell::nsWebShell()
   mScrollPref = nsScrollPreference_kAuto;
   mScriptGlobal = nsnull;
   mScriptContext = nsnull;
-  mURLListener = nsnull;
   InitFrameData();
   mIsFrame = PR_FALSE;
 }
@@ -481,7 +469,6 @@ nsWebShell::~nsWebShell()
   NS_IF_RELEASE(mContentViewer);
   NS_IF_RELEASE(mDeviceContext);
   NS_IF_RELEASE(mPrefs);
-  NS_IF_RELEASE(mURLListener);
   NS_IF_RELEASE(mContainer);
   NS_IF_RELEASE(mObserver);
   NS_IF_RELEASE(mNetSupport);
@@ -778,7 +765,7 @@ nsWebShell::Init(nsNativeWidget aNativeParent,
   mDocLoader->AddObserver((nsIDocumentLoaderObserver*)this);
 
   // Create device context
-  rv = nsComponentManager::CreateInstance(kDeviceContextCID, nsnull,
+  rv = nsRepository::CreateInstance(kDeviceContextCID, nsnull,
                                     kIDeviceContextIID,
                                     (void **)&mDeviceContext);
   if (NS_FAILED(rv)) {
@@ -795,7 +782,7 @@ nsWebShell::Init(nsNativeWidget aNativeParent,
   mDeviceContext->SetGamma(1.0f);
 
   // Create a Native window for the shell container...
-  rv = nsComponentManager::CreateInstance(kChildCID, nsnull, kIWidgetIID, (void**)&mWindow);
+  rv = nsRepository::CreateInstance(kChildCID, nsnull, kIWidgetIID, (void**)&mWindow);
   if (NS_FAILED(rv)) {
     goto done;
   }
@@ -817,7 +804,6 @@ nsWebShell::Destroy()
   // Stop any URLs that are currently being loaded...
   Stop();
 
-  SetURLListener(nsnull);
   SetContainer(nsnull);
   SetObserver(nsnull);
 
@@ -968,28 +954,11 @@ nsWebShell::SetContentViewer(nsIContentViewer* aViewer)
 }
 
 NS_IMETHODIMP
-nsWebShell::SetURLListener(nsIURLListener* aURLListener)
-{
-  NS_IF_RELEASE(mURLListener);
-  mURLListener = aURLListener;
-  NS_IF_ADDREF(aURLListener);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsWebShell::SetContainer(nsIWebShellContainer* aContainer)
 {
   NS_IF_RELEASE(mContainer);
   mContainer = aContainer;
   NS_IF_ADDREF(aContainer);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsWebShell::GetURLListener(nsIURLListener *& aResult)
-{
-  aResult = mURLListener;
-  NS_IF_ADDREF(mURLListener);
   return NS_OK;
 }
 
@@ -1240,7 +1209,7 @@ static void convertFileToURL(const nsString &aIn, nsString &aOut)
   if (PL_strchr(szFile, '\\')) {
     PRInt32 len = strlen(szFile);
     PRInt32 sum = len + sizeof(FILE_PROTOCOL);
-    char* lpszFileURL = (char *)PR_Malloc(sum + 1);
+    char* lpszFileURL = new char[sum];
     
     // Translate '\' to '/'
     for (PRInt32 i = 0; i < len; i++) {
@@ -1255,7 +1224,6 @@ static void convertFileToURL(const nsString &aIn, nsString &aOut)
     // Build the file URL
     PR_snprintf(lpszFileURL, sum, "%s%s", FILE_PROTOCOL, szFile);
     aOut = lpszFileURL;
-    PR_Free((void *)lpszFileURL);
   }
   else
 #endif
@@ -1334,13 +1302,6 @@ nsWebShell::DoLoadURL(const nsString& aUrlSpec,
       return rv;
     }
   }
-  // Tell URL listener we are loading a new url.
-  if (nsnull != mURLListener) {
-      nsresult rv = mURLListener->BeginLoadURL(this, aUrlSpec);
-      if (NS_FAILED(rv)) {
-          return rv;
-      }
-  }
 
   return mDocLoader->LoadDocument(aUrlSpec,       // URL string
                                   aCommand,       // Command
@@ -1404,13 +1365,6 @@ nsWebShell::LoadURL(const PRUnichar *aURLSpec,
     if (NS_FAILED(rv)) {
       return rv;
     }
-  }
-  // Give URL listener right of refusal.
-  if (nsnull != mURLListener) {
-      rv = mURLListener->WillLoadURL(this, urlSpec, nsLoadURL);
-      if (NS_FAILED(rv)) {
-          return rv;
-      }
   }
 
   nsString* url = new nsString(urlSpec);
@@ -1519,13 +1473,6 @@ nsWebShell::GoTo(PRInt32 aHistoryIndex)
         return rv;
       }
     }
-    // Give URL listener right of refusal
-    if (nsnull != mURLListener) {
-        rv = mURLListener->WillLoadURL(this, urlSpec, nsLoadHistory);
-        if (NS_FAILED(rv)) {
-            return rv;
-        }
-    }
 
     printf("Goto %d\n", aHistoryIndex);
     mHistoryIndex = aHistoryIndex;
@@ -1630,14 +1577,10 @@ nsWebShell::GetTitle(const PRUnichar** aResult)
 NS_IMETHODIMP
 nsWebShell::WillLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, nsLoadType aReason)
 {
-  nsresult rv = NS_OK;
   if (nsnull != mContainer) {
-    rv = mContainer->WillLoadURL(aShell, aURL, aReason);
+    return mContainer->WillLoadURL(aShell, aURL, aReason);
   }
-  if (NS_SUCCEEDED(rv) && nsnull != mURLListener) {
-    rv = mURLListener->WillLoadURL(aShell, aURL, aReason);
-  }
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1656,29 +1599,20 @@ nsWebShell::ProgressLoadURL(nsIWebShell* aShell,
                             PRInt32 aProgress, 
                             PRInt32 aProgressMax)
 {
-  nsresult rv = NS_OK;
   if (nsnull != mContainer) {
-    rv = mContainer->ProgressLoadURL(aShell, aURL, aProgress, aProgressMax);
+    return mContainer->ProgressLoadURL(aShell, aURL, aProgress, aProgressMax);
   }
-  if (NS_SUCCEEDED(rv) && nsnull != mURLListener) {
-    rv = mURLListener->ProgressLoadURL(aShell, aURL, aProgress, aProgressMax);
-  }
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsWebShell::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStatus)
 {
-  nsresult rv = NS_OK;
   if (nsnull != mContainer) {
     // XXX: do not propagate this notification up from any frames...
     return mContainer->EndLoadURL(aShell, aURL, aStatus);
   }
-  if (NS_SUCCEEDED(rv) && nsnull != mURLListener) {
-    // XXX: do not propagate this notification up from any frames...
-    rv = mURLListener->EndLoadURL(aShell, aURL, aStatus);
-  }
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -2092,7 +2026,7 @@ nsWebShell::OnConnectionsComplete()
   /*
    *Fire the EndLoadURL(...) notification...
    */
-  if (((nsnull != mURLListener) || (nsnull != mContainer)) && (nsnull != mContentViewer)) {
+  if ((nsnull != mContainer) && (nsnull != mContentViewer)) {
     nsIDocument* document;
 
     rv = mContentViewer->QueryInterface(kIDocumentViewerIID, (void**)&docViewer);
@@ -2110,12 +2044,7 @@ nsWebShell::OnConnectionsComplete()
           /* XXX: The load status needs to be passed in... */
           if (NS_SUCCEEDED(rv)) {
             urlString = spec;
-            if (nsnull != mContainer) {
-                rv = mContainer->EndLoadURL(this, urlString, /* XXX */ 0 );
-            }
-            if (NS_SUCCEEDED(rv) && nsnull != mURLListener) {
-                rv = mURLListener->EndLoadURL(this, urlString, /* XXX */ 0 );
-            }
+            rv = mContainer->EndLoadURL(this, urlString, /* XXX */ 0 );
           }
           NS_RELEASE(url);
         }
@@ -2247,49 +2176,12 @@ nsWebShell::CancelRefreshURLTimers(void) {
   return NS_OK;
 }
 
-
 //----------------------------------------------------------------------
-
-/*
- * There are cases where netlib does things like add a trailing slash
- * to the url being retrieved.  We need to watch out for such
- * changes and update the currently loading url's entry in the history
- * list. UpdateHistoryEntry() does this.
- *
- * Assumptions: 
- *
- *   1) aURL is the URL that was inserted into the history list in LoadURL()
- *   2) The load of aURL is in progress and this function is being called
- *      from one of the functions in nsIStreamListener implemented by nsWebShell.
- */
-nsresult nsWebShell::CheckForTrailingSlash(nsIURL* aURL)
-{
-  nsString* historyURL = (nsString*) mHistory.ElementAt(mHistoryIndex);
-  const char* spec;
-  aURL->GetSpec(&spec);
-  nsString* newURL = (nsString*) new nsString(spec);
-
-  if (newURL->Last() == '/' && !historyURL->Equals(*newURL)) {
-    // Replace the top most history entry with the new url
-    if (nsnull != historyURL) {
-      delete historyURL;
-    }
-    mHistory.ReplaceElementAt(newURL, mHistoryIndex);
-  }
-
-  return NS_OK;
-}
 
 NS_IMETHODIMP
 nsWebShell::OnStartBinding(nsIURL* aURL, const char *aContentType)
 {
   nsresult rv = NS_OK;
-
-  // XXX This is a temporary hack for meeting the M3 Dogfood milestone
-  // for seamonkey.  I think Netlib should send a message to all stream listeners
-  // when it changes the URL like this.  That would mean adding a new method
-  // to nsIStreamListener.  Need to talk to Rick, Kipp, Gagan about this.
-  CheckForTrailingSlash(aURL);
 
   if (nsnull != mObserver) {
     rv = mObserver->OnStartBinding(aURL, aContentType);
@@ -2307,12 +2199,12 @@ nsWebShell::OnProgress(nsIURL* aURL, PRUint32 aProgress, PRUint32 aProgressMax)
     rv = mObserver->OnProgress(aURL, aProgress, aProgressMax);
   }
 
-  if (nsnull != mURLListener) {
+  if (nsnull != mContainer) {
     const char* spec;
     (void)aURL->GetSpec(&spec);
     nsAutoString urlString(spec);
 
-    rv = mURLListener->ProgressLoadURL(this, urlString, aProgress, aProgressMax);
+    rv = mContainer->ProgressLoadURL(this, urlString, aProgress, aProgressMax);
   }
 
   // Pass status messages out to the nsIBrowserWindow...
