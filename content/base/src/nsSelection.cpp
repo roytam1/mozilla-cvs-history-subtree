@@ -1379,6 +1379,17 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
 //        SetDesiredX(desiredX);
   }
 
+#ifdef IBMBIDI
+  nsCOMPtr<nsICaret> caret;
+  nsCOMPtr<nsIPresShell> shell;
+  result = context->GetShell(getter_AddRefs(shell));
+  if (NS_FAILED(result) || !shell)
+    return 0;
+  result = shell->GetCaret(getter_AddRefs(caret));
+  if (NS_FAILED(result) || !caret)
+    return 0;
+#endif
+
   offsetused = mDomSelections[index]->FetchFocusOffset();
   weakNodeUsed = mDomSelections[index]->FetchFocusNode();
 
@@ -1430,6 +1441,9 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
         pos.mAmount = eSelectBeginLine;
         InvalidateDesiredX();
         mHint = HINTRIGHT;//stick to opposite of movement
+#ifdef IBMBIDI
+				caret->VKHomePress(1);  // Mamdouh To identify home key press for layer change;
+#endif
       break;
     case nsIDOMKeyEvent::DOM_VK_END :
         InvalidateDesiredX();
@@ -1439,6 +1453,10 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
      break;
   default :return NS_ERROR_FAILURE;
   }
+#ifdef IBMBIDI
+  // Mamdouh : Flage for VK key
+  caret->AccessVirtualKey(1);
+#endif 
   pos.mPreferLeft = mHint;
   if (NS_SUCCEEDED(result) && NS_SUCCEEDED(result = frame->PeekOffset(context, &pos)) && pos.mResultContent)
   {

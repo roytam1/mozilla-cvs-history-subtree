@@ -82,6 +82,17 @@ EXPORTS		= \
 		nsXIFConverter.h \
 		$(NULL)
 
+ifdef IBMBIDI
+CPPSRCS		+= \
+		nsBidiPresUtils.cpp \
+		$(NULL)
+
+EXPORTS		+= \
+		nsBidiPresUtils.h \
+		$(NULL)
+
+endif                
+
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 
 # we don't want the shared lib, but we want to force the creation of a static lib.

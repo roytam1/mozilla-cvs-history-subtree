@@ -45,6 +45,9 @@
 #include "nsINodeInfo.h"
 #include "nsIDOMDocumentEvent.h"
 #include "nsISupportsArray.h"
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif // IBMBIDI
 
 class nsIEventListenerManager;
 class nsDOMStyleSheetList;
@@ -205,6 +208,39 @@ public:
    * Remove a charset observer.
    */
   NS_IMETHOD RemoveCharSetObserver(nsIObserver* aObserver);
+
+#ifdef IBMBIDI
+  NS_IMETHOD   SetBidi(nsBidiOptions Source);
+  NS_IMETHOD   GetBidi(nsBidiOptions * Dist);
+/**
+ *  Check if bidi enabled (set depending on the presence of RTL
+ *  characters). If enabled, we should apply the Unicode Bidi Algorithm
+ *
+ *  @lina 07/12/2000
+ */
+  NS_IMETHOD   BidiEnabled(PRBool& aBidiEnabled) const
+  {
+    aBidiEnabled = mBidiEnabled;
+    return NS_OK;
+  }
+
+/**
+ *  Indicate the document contains RTL characters.
+ *
+ *  @lina 07/12/2000
+ */
+  NS_IMETHOD EnableBidi(void)
+  {
+#if 0 // XXX: todo
+    if (IBMBIDI_SUPPORTMODE_MOZILLA == mBidi.msupport) {
+#endif
+      mBidiEnabled = PR_TRUE;
+#if 0 // XXX: todo
+    }
+#endif
+    return NS_OK;
+  }
+#endif // IBMBIDI
 
   /**
    * Return the Line Breaker for the document
@@ -518,6 +554,12 @@ protected:
   // A content ID counter used to give a monotonically increasing ID to the content
   // objects in the document's content model
   PRInt32 mNextContentID;
+
+#ifdef IBMBIDI
+  nsBidiOptions mBidi;
+
+  PRBool        mBidiEnabled;
+#endif // IBMBIDI
 
   // disk file members
   nsFileSpec*     mFileSpec;

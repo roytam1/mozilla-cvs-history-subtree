@@ -58,6 +58,12 @@
 #include "nsIBox.h"
 #include "nsIDOMElement.h"
 #include "nsContentPolicyUtils.h"
+#ifdef IBMBIDI
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+#include "nsIUBidiUtils.h"
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+#endif // IBMBIDI
 
 #ifdef _WIN32
 #include <windows.h>
@@ -111,6 +117,10 @@ nsPresContext::nsPresContext()
   mDefaultBackgroundImageRepeat = NS_STYLE_BG_REPEAT_XY;
   mDefaultBackgroundImageOffsetX = mDefaultBackgroundImageOffsetY = 0;
   mDefaultDirection = NS_STYLE_DIRECTION_LTR;
+#ifdef IBMBIDI
+  mIsVisual = PR_FALSE;
+  mBidiUtils = nsnull;
+#endif // IBMBIDI
 }
 
 nsPresContext::~nsPresContext()
@@ -141,6 +151,11 @@ nsPresContext::~nsPresContext()
     mPrefs->UnregisterCallback("font.", PrefChangedCallback, (void*)this);
     mPrefs->UnregisterCallback("browser.display.", PrefChangedCallback, (void*)this);
   }
+#ifdef IBMBIDI
+  if (mBidiUtils) {
+    delete mBidiUtils;
+  }
+#endif // IBMBIDI
 }
 
 NS_IMPL_ISUPPORTS2(nsPresContext, nsIPresContext, nsIObserver)
@@ -354,6 +369,26 @@ nsPresContext::SetShell(nsIPresShell* aShell)
           mLangService->LookupCharSet(charset.GetUnicode(),
                                       getter_AddRefs(mLanguage));
           GetFontPreferences();
+#ifdef IBMBIDI
+          PRBool isVisual = PR_FALSE;
+          PRUint8 textType;
+          GetDocumentBidi(IBMBIDI_TEXTTYPE, &textType);
+
+          if (IBMBIDI_TEXTTYPE_VISUAL == textType) {
+            isVisual = PR_TRUE;
+          }
+          else if (textType != IBMBIDI_TEXTTYPE_LOGICAL) {
+            // XXX shouldn't be hard-coded.
+            if ( (charset.EqualsIgnoreCase("visual") )
+                || (charset.EqualsIgnoreCase("ibm-864") )           // Arabic
+                || (charset.EqualsIgnoreCase("ibm-862") )           // Hebrew
+                || (charset.EqualsIgnoreCase("iso-8859-8") ) ) {    // Hebrew
+              isVisual = PR_TRUE;
+            }
+          }
+          SetVisualMode(isVisual);
+					
+#endif // IBMBIDI
         }
       }
     }
@@ -1122,6 +1157,102 @@ nsPresContext::SetDefaultDirection(PRUint8 aDirection)
   mDefaultDirection = aDirection;
   return NS_OK;
 }
+
+#ifdef IBMBIDI
+/**
+ *  Check if bidi enabled (set depending on the presence of RTL
+ *  characters). If enabled, we should apply the Unicode Bidi Algorithm
+ *
+ *  @lina 07/12/2000
+ */
+NS_IMETHODIMP
+nsPresContext::BidiEnabled(PRBool& aBidiEnabled) const
+{
+  aBidiEnabled = PR_FALSE;
+  if (mShell) {
+    nsCOMPtr<nsIDocument> doc;
+    mShell->GetDocument(getter_AddRefs(doc) );
+    if (doc) {
+      doc->BidiEnabled(aBidiEnabled);
+    }
+  }
+  return NS_OK;
+}
+
+/**
+ *  Set visual or implicit mode into the pres context.
+ *
+ *  Visual directionality is a presentation method that displays text
+ *  as if it were a uni-directional, according to the primary display
+ *  direction only. 
+ *
+ *  Implicit directionality is a presentation method in which the
+ *  direction is determined by the Bidi algorithm according to the
+ *  category of the characters and the category of the adjacent
+ *  characters, and according to their primary direction.
+ *
+ *  @lina 05/02/2000
+ */
+NS_IMETHODIMP
+nsPresContext::SetVisualMode(PRBool aIsVisual)
+{
+  mIsVisual = aIsVisual;
+//ahmed
+   mDeviceContext->mIsVisual= aIsVisual;
+
+  return NS_OK;
+}
+
+/**
+ *  Check whether the content should be treated as visual.
+ *
+ *  @lina 05/02/2000
+ */
+NS_IMETHODIMP
+nsPresContext::IsVisualMode(PRBool& aIsVisual) const
+{
+  aIsVisual = mIsVisual;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsPresContext::GetBidiUtils(nsBidiPresUtils** aBidiUtils)
+{
+  nsresult rv = NS_OK;
+
+  if (!mBidiUtils) {
+    mBidiUtils = new nsBidiPresUtils;
+    if (!mBidiUtils) {
+      rv = NS_ERROR_OUT_OF_MEMORY;
+    }
+  }
+  *aBidiUtils = mBidiUtils;
+  return rv;
+}
+
+NS_IMETHODIMP   nsPresContext::SetBidi(nsBidiOptions Source)
+{
+  this->mBidi.mdirection        = Source.mdirection;
+  this->mBidi.mtexttype          = Source.mtexttype;
+  this->mBidi.mcontrolstextmode = Source.mcontrolstextmode;
+  this->mBidi.mclipboardtextmode = Source.mclipboardtextmode;
+  this->mBidi.mnumeral          = Source.mnumeral;
+  this->mBidi.msupport          = Source.msupport;
+  this->mBidi.mcharacterset      = Source.mcharacterset;
+   return NS_OK;
+}
+NS_IMETHODIMP   nsPresContext::GetBidi(nsBidiOptions * Dist)
+{
+  Dist->mdirection        = this->mBidi.mdirection;
+  Dist->mtexttype          = this->mBidi.mtexttype;
+  Dist->mcontrolstextmode = this->mBidi.mcontrolstextmode;
+  Dist->mclipboardtextmode = this->mBidi.mclipboardtextmode;
+  Dist->mnumeral          = this->mBidi.mnumeral;
+  Dist->msupport          = this->mBidi.msupport;
+  Dist->mcharacterset      = this->mBidi.mcharacterset;
+  return NS_OK;
+}
+#endif //IBMBIDI
 
 NS_IMETHODIMP
 nsPresContext::GetLanguage(nsILanguageAtom** aLanguage)

@@ -72,10 +72,15 @@ CPPSRCS =				\
 	nsTextContentChangeData.cpp	\
 	nsTextNode.cpp			\
 	nsLayoutHistoryState.cpp	\
+!ifdef IBMBIDI
+	nsBidiPresUtils.cpp		\
+!endif        
 	$(NULL)
 
-MODULE=raptor 
-# EXPORTS=
+MODULE=raptor
+!ifdef IBMBIDI
+EXPORTS=nsBidiPresUtils.h
+!endif
 
 CPP_OBJS=					\
 	.\$(OBJDIR)\nsAutoCopy.obj		\
@@ -122,6 +127,9 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsTextContentChangeData.obj	\
 	.\$(OBJDIR)\nsTextNode.obj		\
 	.\$(OBJDIR)\nsLayoutHistoryState.obj	\
+!ifdef IBMBIDI        
+	.\$(OBJDIR)\nsBidiPresUtils.obj		\
+!endif        
 	$(NULL)
 
 LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor \

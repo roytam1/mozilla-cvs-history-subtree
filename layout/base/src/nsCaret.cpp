@@ -47,7 +47,29 @@
 #include "nsISelectionController.h"
 
 #include "nsCaret.h"
+#ifdef IBMBIDI
+//-------------------------------IBM BIDI--------------------------------------
+// Mamdouh : Modifiaction of the caret to work with Bidi in the LTR and RTL
+#ifdef XP_WIN
+#include "windows.h"
+#endif // XP_WIN
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+#include "nsViewsCID.h"
+#include "nsUnitConversion.h"
+#include "nsIStyleContext.h"
+#include "nsStyleConsts.h"
+#include "nsIStyleSheet.h"
+#include "nsIStyleRuleProcessor.h"
+#include "nsIStyleRule.h"
+#include "nsIStyleFrameConstruction.h"
+#include "nsLayoutAtoms.h"
+//#include "nsBidiOptions.h"
+#include "nsIUBidiUtils.h"
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);//Hacked from Text Frame
 
+//------------------------------END OF IBM BIDI--------------------------------
+#endif //IBMBIDI
 
 static NS_DEFINE_IID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
 
@@ -504,6 +526,45 @@ PRBool nsCaret::SetupDrawingFrameAndOffset()
 					
 					mLastCaretFrame = theFrame;
 					mLastContentOffset = theFrameOffset;
+#ifdef IBMBIDI
+// Mamdouh : modification of the caret to work at rtl and ltr with Bidi
+					const nsStyleDisplay* display;
+						theFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+					//
+					// Direction Style from this->GetStyleData()
+					// now in (display->mDirection)
+					// ------------------
+					// NS_STYLE_DIRECTION_LTR : LTR or Default
+					// NS_STYLE_DIRECTION_RTL
+					// NS_STYLE_DIRECTION_INHERIT
+
+					if(VKaccess)
+					{
+						lpx=mLastContentOffset;
+						VKaccess=0;
+						if (display->mDirection == NS_STYLE_DIRECTION_RTL) // we work in the rtl
+						{
+							if(HomeVKaccess) // this special key(home) in the ltr cause the lang to be eng.
+							{
+#ifdef XP_WIN
+								LoadKeyboardLayout("00000401",KLF_ACTIVATE);
+#endif // XP_WIN
+								HomeVKaccess=0;
+							}
+
+						}// if dir is rtl 
+						else // if (display->mDirection == NS_STYLE_DIRECTION_LTR) // we work in the ltr
+						{
+							if(HomeVKaccess) // this special key(home) in the ltr cause the lang to be eng.
+							{
+#ifdef XP_WIN
+								LoadKeyboardLayout("00000409",KLF_ACTIVATE);
+#endif // XP_WIN
+								HomeVKaccess=0;
+							}
+						} // if dir is ltr
+					}// if virtual key access occur
+#endif // IBMBIDI
 					return PR_TRUE;
 				}
 			}
@@ -654,6 +715,142 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
 		nsRect		caretRect = frameRect;
 		
 		mLastCaretFrame->GetPointFromOffset(presContext, localRC, mLastContentOffset, &framePos);
+#ifdef IBMBIDI
+// Mamdouh : modification of the caret to work with Bidi lang in the LTR and RTL
+/*
+		nsIFrame*	theFrame = nsnull;
+		PRInt32         theFrameOffset = 0;
+
+		//get frame selection and find out what frame to use...
+		nsCOMPtr<nsIFrameSelection> frameSelection;
+		nsCOMPtr<nsIDOMSelection> domSelection;
+		nsresult err = mPresShell->GetSelection(SELECTION_NORMAL, getter_AddRefs(domSelection));
+		if (!NS_SUCCEEDED(err) || !domSelection)
+			return;
+		err = mPresShell->GetFrameSelection(getter_AddRefs(frameSelection));
+		if (NS_FAILED(err) || !frameSelection)
+			return;
+		nsCOMPtr<nsIDOMNode>	focusNode;
+		PRInt32	contentOffset;
+		const nsStyleDisplay* display;
+		
+		if (NS_SUCCEEDED(domSelection->GetFocusNode(getter_AddRefs(focusNode))) && focusNode &&
+				NS_SUCCEEDED(domSelection->GetFocusOffset(&contentOffset)))
+		{
+			nsCOMPtr<nsIContent>contentNode = do_QueryInterface(focusNode);
+
+			err = frameSelection->GetFrameForNodeOffset(contentNode, contentOffset, &theFrame, &theFrameOffset);
+			if (NS_FAILED(err))
+				return;
+		theFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+		}
+		//
+		// Direction Style from this->GetStyleData()
+		// now in (display->mDirection)
+		// ------------------
+		// NS_STYLE_DIRECTION_LTR : LTR or Default
+		// NS_STYLE_DIRECTION_RTL
+		// NS_STYLE_DIRECTION_INHERIT
+
+		if (display->mDirection == NS_STYLE_DIRECTION_RTL)
+			{
+				caretRect.x -=29;
+				caretRect.x +=caretRect.width;
+				if(!IsLangBIDI())  // the lang not arabic or heberow
+					{
+						mLastCaretFrame->GetPointFromOffset(presContext, localRC,lpx, &framePos);
+						caretRect -=framePos;
+					}
+				else
+					{
+						startlangflage=1;
+						caretRect -=framePos;
+					}
+				caretRect.width = mCaretWidth;  // Modifiy if the width
+
+				// Avoid view redraw problems by making sure the
+				// caret doesn't hang outside the right edge of
+				// the frame. This ensures that the caret gets
+				// erased properly if the frame's right edge gets
+				// invalidated.
+
+				//nscoord cX = caretRect.x - caretRect.width;
+				//nscoord fX = frameRect.x - frameRect.width;
+				/*
+				if (caretRect.x <= fX && cX < fX)
+				{
+					caretRect.x += fX - cX;
+					if (caretRect.x < fX)
+						caretRect.x = fX;
+				}// caution of the scroll
+				*/
+
+				if(IsLangBIDI())
+					lpx=mLastContentOffset;  // to save the last caret position in the case of change the layer to arabic
+
+/*			
+			} 
+			else // if(display->mDirection == NS_STYLE_DIRECTION_LTR) // we work in the ltr
+			{
+				
+				if(!IsLangBIDI())  // the lang not arabic or heberow
+					{
+						startlangflage=1;
+						caretRect +=framePos;
+					}
+				else
+					{
+						mLastCaretFrame->GetPointFromOffset(presContext, localRC,lpx, &framePos);
+						caretRect +=framePos;
+					}
+	
+				caretRect.width = mCaretWidth;  // Modifiy if the width
+
+				// Avoid view redraw problems by making sure the
+				// caret doesn't hang outside the right edge of
+				// the frame. This ensures that the caret gets
+				// erased properly if the frame's right edge gets
+				// invalidated.
+				nscoord cX = caretRect.x + caretRect.width;
+				nscoord fX = frameRect.x + frameRect.width;
+				if (caretRect.x <= fX && cX > fX)
+				{
+					caretRect.x -= cX - fX;
+					if (caretRect.x < frameRect.x)
+						caretRect.x = frameRect.x;
+				}// caution of the scroll
+
+
+				if(!IsLangBIDI())
+					lpx=mLastContentOffset;  // to save the last caret position in the case of change the layer to arabic
+
+			} 
+*/
+		caretRect += framePos;
+		
+		//printf("Content offset %ld, frame offset %ld\n", focusOffset, framePos.x);
+		
+		caretRect.width = mCaretPixelsWidth;
+
+		// Avoid view redraw problems by making sure the
+		// caret doesn't hang outside the right edge of
+		// the frame. This ensures that the caret gets
+		// erased properly if the frame's right edge gets
+		// invalidated.
+
+		nscoord cX = caretRect.x + caretRect.width;
+		nscoord fX = frameRect.x + frameRect.width;
+
+		if (caretRect.x <= fX && cX > fX)
+		{
+			caretRect.x -= cX - fX;
+
+			if (caretRect.x < frameRect.x)
+				caretRect.x = frameRect.x;
+		}
+
+#else // IBMBIDI
+
 		caretRect += framePos;
 
 		
@@ -680,6 +877,7 @@ void nsCaret::DrawCaretWithContext(nsIRenderingContext* inRendContext)
 			if (caretRect.x < frameRect.x)
 				caretRect.x = frameRect.x;
 		}
+#endif // IBMBIDI
 
 		mCaretRect = caretRect;
 	}
@@ -767,6 +965,7 @@ nsresult NS_NewCaret(nsICaret** aInstancePtrResult)
   return caret->QueryInterface(NS_GET_IID(nsICaret), (void**) aInstancePtrResult);
 }
 
+
 NS_IMETHODIMP nsCaret::SetCaretWidth(nscoord aPixels)
 {
   if(!aPixels)
@@ -778,3 +977,42 @@ NS_IMETHODIMP nsCaret::SetCaretWidth(nscoord aPixels)
   }
   return NS_OK;
 }
+
+#ifdef IBMBIDI
+//----------------------------------------------------------------------------------
+//
+//								Defination of IBMBIDI Function
+// Function : Select lang from list of bidi lang.
+//----------------------------------------------------------------------------------
+PRBool nsCaret::IsLangBIDI(void)
+{
+	char CurrentLang[9]="00000000";    // to get keyboar layout name in this array
+	char LangID[17][9]=
+	{
+	"00000401", //Arabic (Saudi Arabia)
+	"00000801", //Arabic (Iraq)
+	"00000c01", //Arabic (Egypt)
+	"00001001", //Arabic (Libya)
+	"00001401", //Arabic (Algeria)
+	"00001801", //Arabic (Morocco)
+	"00001c01", //Arabic (Tunisia)
+	"00002001", //Arabic (Oman)
+	"00002401", //Arabic (Yemen)
+	"00002801", //Arabic (Syria)
+	"00002c01", //Arabic (Jordan)
+	"00003001", //Arabic (Lebanon)
+	"00003401", //Arabic (Kuwait)
+	"00003801", //Arabic (U.A.E.)
+	"00003c01", //Arabic (Bahrain)
+	"00004001", //Arabic (Qatar)
+	"0000040d"  //Hebrew
+	};
+#ifdef XP_WIN
+	GetKeyboardLayoutName(CurrentLang);
+#endif // XP_WIN
+	for(int count=0;count<17;count++)
+		if(strcmp(CurrentLang,LangID[count])==0)
+			return PR_TRUE;
+	return PR_FALSE;
+}
+#endif //IBMBIDI

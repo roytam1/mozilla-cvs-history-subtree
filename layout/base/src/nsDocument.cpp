@@ -113,6 +113,17 @@
 #include "nsIDOMElement.h"
 #include "nsIAnonymousContentCreator.h"
 
+#ifdef IBMBIDI
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+#include "nsIDocumentViewer.h"
+#include "nsIUBidiUtils.h"
+#include "nsIWebShell.h"
+
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_IID(kIWebShellIID, NS_IWEB_SHELL_IID);
+#endif // IBMBIDI
+
 static NS_DEFINE_CID(kXIFConverterCID, NS_XIFCONVERTER_CID);
 static NS_DEFINE_CID(kCRangeCID, NS_RANGE_CID);
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -629,6 +640,9 @@ nsDocument::nsDocument()
   mFileSpec = nsnull;
   mPrincipal = nsnull;
   mNextContentID = NS_CONTENT_ID_COUNTER_BASE;
+#ifdef IBMBIDI
+  mBidiEnabled = PR_FALSE;
+#endif // IBMBIDI
   Init();/* XXX */
 }
 
@@ -971,6 +985,19 @@ nsDocument::StartDocumentLoad(const char* aCommand,
   nsresult rv = NS_OK;
   if (aReset)
     rv = Reset(aChannel, aLoadGroup);
+#ifdef IBMBIDI
+  nsBidiOptions tempBidi;
+  nsCOMPtr<nsIWebShell> iwebShell;
+  if(aContainer != nsnull)
+  {
+    aContainer->QueryInterface(kIWebShellIID, getter_AddRefs(iwebShell));
+
+    //nsCOMPtr<nsWebShell> webShell = (nsWebShell) iwebShell;
+
+    iwebShell->GetBidi(&tempBidi);
+    this->SetBidi(tempBidi);
+  }
+#endif // IBMBIDI
   return rv;
 }
 
@@ -1092,6 +1119,33 @@ NS_IMETHODIMP nsDocument::RemoveCharSetObserver(nsIObserver* aObserver)
   NS_ENSURE_TRUE(mCharSetObservers.RemoveElement(aObserver), NS_ERROR_FAILURE);
   return NS_OK;
 }
+
+#ifdef IBMBIDI
+
+NS_IMETHODIMP   nsDocument::SetBidi(nsBidiOptions Source)
+{
+  this->mBidi.mdirection        = Source.mdirection;
+  this->mBidi.mtexttype          = Source.mtexttype;
+  this->mBidi.mcontrolstextmode = Source.mcontrolstextmode;
+  this->mBidi.mclipboardtextmode = Source.mclipboardtextmode;
+  this->mBidi.mnumeral          = Source.mnumeral;
+  this->mBidi.msupport          = Source.msupport;
+  this->mBidi.mcharacterset      = Source.mcharacterset;
+   return NS_OK;
+}
+
+NS_IMETHODIMP   nsDocument::GetBidi(nsBidiOptions * Dist)
+{
+  Dist->mdirection        = this->mBidi.mdirection;
+  Dist->mtexttype          = this->mBidi.mtexttype;
+  Dist->mcontrolstextmode = this->mBidi.mcontrolstextmode;
+  Dist->mclipboardtextmode = this->mBidi.mclipboardtextmode;
+  Dist->mnumeral          = this->mBidi.mnumeral;
+  Dist->msupport          = this->mBidi.msupport;
+  Dist->mcharacterset      = this->mBidi.mcharacterset;
+  return NS_OK;
+}
+#endif //IBMBIDI
 
 NS_IMETHODIMP nsDocument::GetLineBreaker(nsILineBreaker** aResult) 
 {

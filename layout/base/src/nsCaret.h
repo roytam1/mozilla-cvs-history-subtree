@@ -66,6 +66,10 @@ class nsCaret : public nsICaret,
 	  NS_IMETHOD    NotifySelectionChanged(nsIDOMDocument *aDoc, nsIDOMSelection *aSel, short aReason);
 	  		               				
 		static void		CaretBlinkCallback(nsITimer *aTimer, void *aClosure);
+#ifdef IBMBIDI
+		// test of the BIDI lang
+		PRBool IsLangBIDI(void);
+#endif //IBMBIDI
 	
 	protected:
 
@@ -108,5 +112,11 @@ class nsCaret : public nsICaret,
 		nsIFrame*							mLastCaretFrame;		// store the frame the caret was last drawn in.
 		PRInt32								mLastContentOffset;
     nsWeakPtr mDomSelectionWeak;
+#ifdef IBMBIDI
+//---------------------------------------IBMBIDI----------------------------------------------
+        PRInt32 lpx;
+        PRBool startlangflage;
+//-------------------------------------END OF IBM BIDI----------------------------------------
+#endif
 };
 

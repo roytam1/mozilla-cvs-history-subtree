@@ -29,7 +29,7 @@
  * identified per MPL Section 3.3
  *
  * Date         Modified by     Description of modification
- * 03/20/2000   IBM Corp.       BiDi - ability to change the default direction of the browser
+ * 03/20/2000   IBM Corp.       Bidi - ability to change the default direction of the browser
  * 04/20/2000   IBM Corp.       OS/2 VisualAge build.
  *
  */
@@ -148,6 +148,15 @@ public:
   // nsIObserver method
   NS_IMETHOD Observe(nsISupports* aSubject, const PRUnichar* aTopic,
                      const PRUnichar* aData);
+#ifdef IBMBIDI
+  NS_IMETHOD BidiEnabled(PRBool& aBidiEnabled) const;
+  NS_IMETHOD IsVisualMode(PRBool& aIsVisual) const;
+  NS_IMETHOD SetVisualMode(PRBool aIsVisual);
+  NS_IMETHOD GetBidiUtils(nsBidiPresUtils** aBidiUtils);
+
+  NS_IMETHOD SetBidi(nsBidiOptions Source);
+  NS_IMETHOD GetBidi(nsBidiOptions * Dist);
+#endif // IBMBIDI
 
 protected:
   nsPresContext();
@@ -188,7 +197,15 @@ protected:
   nsImageAnimation      mImageAnimationMode;
   PRPackedBool          mImageAnimationStopped;   // image animation stopped
   PRPackedBool          mStopped;                 // loading stopped
+#ifdef IBMBIDI
+  PRPackedBool          mIsVisual;
+#endif // IBMBIDI
   PRUint8               mDefaultDirection;
+
+#ifdef IBMBIDI
+  nsBidiPresUtils*      mBidiUtils;
+  nsBidiOptions         mBidi;
+#endif // IBMBIDI
 
 #ifdef DEBUG
   PRBool                mInitialized;

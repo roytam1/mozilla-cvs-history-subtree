@@ -30,7 +30,7 @@
  * identified per MPL Section 3.3
  *
  * Date         Modified by     Description of modification
- * 03/20/2000   IBM Corp.       BiDi - ability to change the default direction of the browser
+ * 03/20/2000   IBM Corp.       Bidi - ability to change the default direction of the browser
  *
  */
 #include "nsIStyleContext.h"
@@ -49,6 +49,15 @@
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
 #include "nsIPresShell.h"
+
+#ifdef IBMBIDI
+#include "nsIPref.h"
+#include "nsIServiceManager.h"
+#include "nsIDocument.h"
+#include "nsIPresShell.h"
+#include "nsIUBidiUtils.h"
+static NS_DEFINE_CID(kPrefCID,     NS_PREF_CID);
+#endif // IBMBIDI
 
 static NS_DEFINE_IID(kIStyleContextIID, NS_ISTYLECONTEXT_IID);
 
@@ -1189,7 +1198,16 @@ void StyleDisplayImpl::ResetFrom(const nsStyleDisplay* aParent, nsIPresContext* 
     mVisible = aParent->mVisible;
   }
   else {
+#ifdef IBMBIDI
+  nsBidiOptions mBidioptions;
+  aPresContext->GetBidi(&mBidioptions);
+  if (mBidioptions.mdirection == IBMBIDI_TEXTDIRECTION_RTL)
+    mDirection = NS_STYLE_DIRECTION_RTL;
+  else
+    mDirection = NS_STYLE_DIRECTION_LTR;
+#else // ifndef IBMBIDI
     aPresContext->GetDefaultDirection(&mDirection);
+#endif // IBMBIDI
     aPresContext->GetLanguage(getter_AddRefs(mLanguage));
     mVisible = NS_STYLE_VISIBILITY_VISIBLE;
   }
@@ -2773,6 +2791,11 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     }
     mRules->EnumerateForwards(MapStyleRule, &data);
   }
+#ifdef IBMBIDI
+  else if (!(GETSCDATA(Display).IsBlockLevel() ) ) {
+    GETSCDATA(Display).mDirection = NS_STYLE_DIRECTION_INHERIT;
+  }
+#endif // IBMBIDI
   if (-1 == mDataCode) {
     mDataCode = 0;
   }

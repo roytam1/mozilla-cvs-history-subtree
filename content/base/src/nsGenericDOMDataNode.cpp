@@ -1023,6 +1023,15 @@ nsGenericDOMDataNode::SetText(nsIContent *aOuterContent,
   if (aNotify && (nsnull != mDocument)) {
     mDocument->BeginUpdate();
   }
+#ifdef IBMBIDI
+  if (mDocument != nsnull) {
+    PRBool bidiEnabled = mText.SetTo(aBuffer, aLength);
+    if (bidiEnabled) {
+      mDocument->EnableBidi();
+    }
+  }
+  else
+#endif // IBMBIDI
   mText.SetTo(aBuffer, aLength);
 
   // Trigger a reflow
