@@ -57,6 +57,7 @@
 #include "nsIEnumerator.h"
 #include "nsIZipReader.h"
 #include "nsIChromeRegistry.h"
+#include "nsIExtensionManager.h"
 #include "nsIPrincipal.h"
 
 #define XPINSTALL_BUNDLE_URL "chrome://communicator/locale/xpinstall/xpinstall.properties"
@@ -81,7 +82,8 @@ class nsInstallInfo
                    nsIPrincipal*    mPrincipal,
                    PRUint32         aFlags,
                    nsIXPIListener*  aListener,
-                   nsIXULChromeRegistry*   aChromeReg);
+                   nsIXULChromeRegistry*   aChromeReg,
+                   nsIExtensionManager*    aExtensionManager);
 
     virtual ~nsInstallInfo();
 
@@ -92,6 +94,7 @@ class nsInstallInfo
     PRUint32            GetType()               { return mType; }
     nsIXPIListener*     GetListener()           { return mListener.get(); }
     nsIXULChromeRegistry*  GetChromeRegistry()  { return mChromeRegistry.get(); }
+    nsIExtensionManager*   GetExtensionManager(){ return mExtensionManager.get(); }
 
     nsCOMPtr<nsIPrincipal>      mPrincipal;
 
@@ -107,6 +110,7 @@ class nsInstallInfo
     nsCOMPtr<nsIFile>           mFile;
     nsCOMPtr<nsIXPIListener>    mListener;
     nsCOMPtr<nsIXULChromeRegistry> mChromeRegistry;
+    nsCOMPtr<nsIExtensionManager> mExtensionManager;
 };
 
 #if defined(XP_WIN) || defined(XP_OS2)

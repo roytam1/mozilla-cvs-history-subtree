@@ -147,7 +147,8 @@ nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
                              nsIPrincipal*      aPrincipal,
                              PRUint32           flags,
                              nsIXPIListener*    aListener,
-                             nsIXULChromeRegistry* aChromeRegistry)
+                             nsIXULChromeRegistry* aChromeRegistry,
+                             nsIExtensionManager* aExtensionManager)
 : mPrincipal(aPrincipal),
   mError(0),
   mType(aInstallType),
@@ -156,7 +157,8 @@ nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
   mArgs(aArgs),
   mFile(aFile),
   mListener(aListener),
-  mChromeRegistry(aChromeRegistry)
+  mChromeRegistry(aChromeRegistry),
+  mExtensionManager(aExtensionManager)
 {
     MOZ_COUNT_CTOR(nsInstallInfo);
 }

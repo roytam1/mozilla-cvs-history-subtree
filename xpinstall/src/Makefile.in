@@ -60,6 +60,7 @@ REQUIRES	= xpcom \
 		  plugin \
 		  unicharutil \
 		  appshell \
+		  extensions \
 		  $(ZLIB_REQUIRES) \
 		  $(NULL)
 

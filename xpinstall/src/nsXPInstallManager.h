@@ -35,6 +35,7 @@
 #include "nsIInputStream.h"
 #include "nsIStreamListener.h"
 #include "nsIXPINotifier.h"
+#include "nsIXPInstallManager.h"
 #include "nsIXPIDialogService.h"
 #include "nsXPITriggerInfo.h"
 #include "nsIXPIProgressDialog.h"
@@ -57,10 +58,12 @@
 #include "nsWeakReference.h"
 
 #define NS_XPIDIALOGSERVICE_CONTRACTID "@mozilla.org/embedui/xpinstall-dialog-service;1"
+#define NS_XPINSTALLMANAGERCOMPONENT_CONTRACTID "@mozilla.org/xpinstall/install-manager;1"
 #define XPI_PROGRESS_TOPIC "xpinstall-progress"
 
 class nsXPInstallManager : public nsIXPIListener,
                            public nsIXPIDialogService,
+                           public nsIXPInstallManager,
                            public nsIObserver,
                            public nsIStreamListener,
                            public nsIProgressEventSink,
@@ -75,6 +78,7 @@ class nsXPInstallManager : public nsIXPIListener,
         NS_DECL_ISUPPORTS
         NS_DECL_NSIXPILISTENER
         NS_DECL_NSIXPIDIALOGSERVICE
+        NS_DECL_NSIXPINSTALLMANAGER
         NS_DECL_NSIOBSERVER
         NS_DECL_NSISTREAMLISTENER
         NS_DECL_NSIPROGRESSEVENTSINK
