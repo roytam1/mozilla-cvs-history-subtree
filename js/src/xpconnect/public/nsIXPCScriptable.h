@@ -79,93 +79,101 @@
 
 /***************************************************************************/
 
-// forward declaration
+// forward declarations
 class nsIXPCScriptable;
+class nsIXPCNativeInterface;
+class nsIXPCWrappedNativeTearOff;
 
 // bit flags used in result of GetFlags call
-#define XPCSCRIPTABLE_DONT_ENUM_STATIC_PROPS    (1 << 0)
+#define XPCSCRIPTABLE_DONT_ENUM_STATIC_PROPS           (1 << 0)
+#define XPCSCRIPTABLE_DONT_ASK_INSTANCE_FOR_SCRIPTABLE (1 << 1)
+#define XPCSCRIPTABLE_CALL_SCRIPTABLE_FIRST            (1 << 2)
+#define XPCSCRIPTABLE_HIDE_CALL_AND_CONSTRUCT          (1 << 3)
+#define XPCSCRIPTABLE_HIDE_QUERY_INTERFACE             (1 << 4)
+#define XPCSCRIPTABLE_NO_TEAROFFS                      (1 << 5)
+#define XPCSCRIPTABLE_DONT_CALL_SCRIPTABLE_ON_TEAROFFS (1 << 6)
 
 
 #define XPC_DECLARE_IXPCSCRIPTABLE \
 public: \
     NS_IMETHOD Create(JSContext *cx, JSObject *obj,                         \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       nsIXPCScriptable* arbitrary) COND_PURE ;              \
     NS_IMETHOD GetFlags(JSContext *cx, JSObject *obj,                       \
-                      nsIXPConnectWrappedNative* wrapper,                   \
-                      JSUint32* flagsp,                                     \
-                      nsIXPCScriptable* arbitrary) COND_PURE ;              \
+                        nsIXPCWrappedNativeTearOff* tearOff,                \
+                        JSUint32* flagsp,                                   \
+                        nsIXPCScriptable* arbitrary) COND_PURE ;            \
     NS_IMETHOD LookupProperty(JSContext *cx, JSObject *obj, jsid id,        \
                               JSObject **objp, JSProperty **propp,          \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval) COND_PURE ;                   \
     NS_IMETHOD DefineProperty(JSContext *cx, JSObject *obj,                 \
                               jsid id, jsval value,                         \
                               JSPropertyOp getter, JSPropertyOp setter,     \
                               uintN attrs, JSProperty **propp,              \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval) COND_PURE ;                   \
     NS_IMETHOD GetProperty(JSContext *cx, JSObject *obj,                    \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval) COND_PURE ;                      \
     NS_IMETHOD SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp,\
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval) COND_PURE ;                      \
     NS_IMETHOD GetAttributes(JSContext *cx, JSObject *obj, jsid id,         \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval) COND_PURE ;                    \
     NS_IMETHOD SetAttributes(JSContext *cx, JSObject *obj, jsid id,         \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval) COND_PURE ;                    \
     NS_IMETHOD DeleteProperty(JSContext *cx, JSObject *obj,                 \
                               jsid id, jsval *vp,                           \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval) COND_PURE ;                   \
     NS_IMETHOD DefaultValue(JSContext *cx, JSObject *obj,                   \
                             JSType type, jsval *vp,                         \
-                            nsIXPConnectWrappedNative* wrapper,             \
+                            nsIXPCWrappedNativeTearOff* tearOff,            \
                             nsIXPCScriptable* arbitrary,                    \
                             JSBool* retval) COND_PURE ;                     \
     NS_IMETHOD Enumerate(JSContext *cx, JSObject *obj,                      \
                          JSIterateOp enum_op,                               \
                          jsval *statep, jsid *idp,                          \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval) COND_PURE ;                        \
     NS_IMETHOD CheckAccess(JSContext *cx, JSObject *obj, jsid id,           \
                            JSAccessMode mode, jsval *vp, uintN *attrsp,     \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval) COND_PURE ;                      \
     NS_IMETHOD Call(JSContext *cx, JSObject *obj,                           \
                     uintN argc, jsval *argv,                                \
                     jsval *rval,                                            \
-                    nsIXPConnectWrappedNative* wrapper,                     \
+                    nsIXPCWrappedNativeTearOff* tearOff,                    \
                     nsIXPCScriptable* arbitrary,                            \
                     JSBool* retval) COND_PURE ;                             \
     NS_IMETHOD Construct(JSContext *cx, JSObject *obj,                      \
                          uintN argc, jsval *argv,                           \
                          jsval *rval,                                       \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval) COND_PURE ;                        \
     NS_IMETHOD HasInstance(JSContext *cx, JSObject *obj,                    \
                            jsval v, JSBool *bp,                             \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval) COND_PURE ;                      \
     NS_IMETHOD Finalize(JSContext *cx, JSObject *obj,                       \
-                        nsIXPConnectWrappedNative* wrapper,                 \
+                        nsIXPCWrappedNativeTearOff* tearOff,                \
                         nsIXPCScriptable* arbitrary) COND_PURE ;
 
 
@@ -188,27 +196,86 @@ public:
 
 /***************************************************************************/
 
+/*
+ * These two classes are *not* xpcom interfaces. They have no virtual methods
+ * and are not reference counted. They exist only as a way to expose a little
+ * of the XPConnect interals to implementors of nsIXPCScriptable and users of
+ * nsIXPCNativeCallContext interfaces. In the places where a pointer to a
+ * nsIXPCWrappedNativeTearOff object is available it should be used only for
+ * the lifetime of the call in question. Same story for nsIXPCNativeInterface.
+ */
+
+// no virtuals
+class nsIXPCWrappedNativeTearOff
+    {
+public:
+    inline nsIXPConnectWrappedNative* GetWrapper()   const {return mWrapper;}
+    inline JSObject*                  GetJSObject()  const {return mJSObject;}
+    inline nsISupports*               GetNative()    const {return mNative;}
+    inline nsIXPCNativeInterface*     GetInterface() const {return mInterface;}
+
+    inline JSBool IsFlattenedObject() const {return nsnull == mInterface;}
+
+protected:
+    nsIXPCWrappedNativeTearOff()
+        : mWrapper(nsnull), mJSObject(nsnull), 
+          mNative(nsnull), mInterface(nsnull) {}
+    ~nsIXPCWrappedNativeTearOff() {}
+
+    nsIXPCWrappedNativeTearOff(const nsIXPCWrappedNativeTearOff& r); // not implemented
+    nsIXPCWrappedNativeTearOff& operator= (const nsIXPCWrappedNativeTearOff& r); // not implemented
+
+protected:
+    nsIXPConnectWrappedNative*  mWrapper;
+    JSObject*                   mJSObject;
+    nsISupports*                mNative;
+    nsIXPCNativeInterface*      mInterface;
+};
+
+// no virtuals
+
+class nsIXPCNativeInterface
+{
+public:
+    inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
+    inline jsid              GetNameID()        const {return mNameID;}
+
+protected:
+    nsIXPCNativeInterface(nsIInterfaceInfo* aInfo, jsid aNameID)
+        : mInfo(aInfo), mNameID(aNameID) {}
+    ~nsIXPCNativeInterface() {}
+
+    nsIXPCNativeInterface(const nsIXPCNativeInterface& r); // not implemented
+    nsIXPCNativeInterface& operator= (const nsIXPCNativeInterface& r); // not implemented
+
+protected:
+    nsCOMPtr<nsIInterfaceInfo> mInfo;
+    jsid                       mNameID;
+};
+
+/***************************************************************************/
+
 #define XPC_IMPLEMENT_FORWARD_CREATE(_class) \
     NS_IMETHODIMP _class::Create(JSContext *cx, JSObject *obj,              \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       nsIXPCScriptable* arbitrary)                          \
-    {return arbitrary->Create(cx, obj, wrapper, NULL);}
+    {return arbitrary->Create(cx, obj, tearOff, NULL);}
 
 #define XPC_IMPLEMENT_FORWARD_GETFLAGS(_class) \
     NS_IMETHODIMP _class::GetFlags(JSContext *cx, JSObject *obj,            \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       JSUint32* flagsp,                                     \
                       nsIXPCScriptable* arbitrary)                          \
-    {return arbitrary->GetFlags(cx, obj, wrapper, flagsp, NULL);}
+    {return arbitrary->GetFlags(cx, obj, tearOff, flagsp, NULL);}
 
 #define XPC_IMPLEMENT_FORWARD_LOOKUPPROPERTY(_class) \
     NS_IMETHODIMP _class::LookupProperty(JSContext *cx, JSObject *obj,      \
                               jsid id,                                      \
                               JSObject **objp, JSProperty **propp,          \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
-    {return arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,    \
+    {return arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,    \
                                       NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_DEFINEPROPERTY(_class) \
@@ -216,134 +283,134 @@ public:
                               jsid id, jsval value,                         \
                               JSPropertyOp getter, JSPropertyOp setter,     \
                               uintN attrs, JSProperty **propp,              \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {return arbitrary->DefineProperty(cx, obj, id, value, getter, setter,   \
-                                 attrs, propp, wrapper, NULL, retval);}
+                                 attrs, propp, tearOff, NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_GETPROPERTY(_class) \
     NS_IMETHODIMP _class::GetProperty(JSContext *cx, JSObject *obj,         \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
-    {return arbitrary->GetProperty(cx, obj, id, vp, wrapper, NULL, retval);}
+    {return arbitrary->GetProperty(cx, obj, id, vp, tearOff, NULL, retval);}
 
 
 #define XPC_IMPLEMENT_FORWARD_SETPROPERTY(_class) \
     NS_IMETHODIMP _class::SetProperty(JSContext *cx, JSObject *obj,         \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
-    {return arbitrary->SetProperty(cx, obj, id, vp, wrapper, NULL, retval);}
+    {return arbitrary->SetProperty(cx, obj, id, vp, tearOff, NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_GETATTRIBUTES(_class) \
     NS_IMETHODIMP _class::GetAttributes(JSContext *cx, JSObject *obj,       \
                              jsid id,                                       \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval)                                \
-    {return arbitrary->GetAttributes(cx, obj, id, prop, attrsp, wrapper,    \
+    {return arbitrary->GetAttributes(cx, obj, id, prop, attrsp, tearOff,    \
                                      NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_SETATTRIBUTES(_class) \
     NS_IMETHODIMP _class::SetAttributes(JSContext *cx, JSObject *obj,       \
                              jsid id,                                       \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval)                                \
-    {return arbitrary->SetAttributes(cx, obj, id, prop, attrsp, wrapper,    \
+    {return arbitrary->SetAttributes(cx, obj, id, prop, attrsp, tearOff,    \
                                      NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_DELETEPROPERTY(_class) \
     NS_IMETHODIMP _class::DeleteProperty(JSContext *cx, JSObject *obj,      \
                               jsid id, jsval *vp,                           \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
-    {return arbitrary->DeleteProperty(cx, obj, id, vp, wrapper,             \
+    {return arbitrary->DeleteProperty(cx, obj, id, vp, tearOff,             \
                                       NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(_class) \
     NS_IMETHODIMP _class::DefaultValue(JSContext *cx, JSObject *obj,        \
                             JSType type, jsval *vp,                         \
-                            nsIXPConnectWrappedNative* wrapper,             \
+                            nsIXPCWrappedNativeTearOff* tearOff,            \
                             nsIXPCScriptable* arbitrary,                    \
                             JSBool* retval)                                 \
-    {return arbitrary->DefaultValue(cx, obj, type, vp, wrapper,             \
+    {return arbitrary->DefaultValue(cx, obj, type, vp, tearOff,             \
                                     NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_ENUMERATE(_class) \
     NS_IMETHODIMP _class::Enumerate(JSContext *cx, JSObject *obj,           \
                          JSIterateOp enum_op,                               \
                          jsval *statep, jsid *idp,                          \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval)                                    \
-    {return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, wrapper,    \
+    {return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, tearOff,    \
                                  NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_CHECKACCESS(_class) \
     NS_IMETHODIMP _class::CheckAccess(JSContext *cx, JSObject *obj,         \
                            jsid id,                                         \
                            JSAccessMode mode, jsval *vp, uintN *attrsp,     \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {return arbitrary->CheckAccess(cx, obj, id, mode, vp, attrsp,           \
-                              wrapper, NULL, retval);}
+                              tearOff, NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_CALL(_class) \
     NS_IMETHODIMP _class::Call(JSContext *cx, JSObject *obj,                \
                     uintN argc, jsval *argv,                                \
                     jsval *rval,                                            \
-                    nsIXPConnectWrappedNative* wrapper,                     \
+                    nsIXPCWrappedNativeTearOff* tearOff,                    \
                     nsIXPCScriptable* arbitrary,                            \
                     JSBool* retval)                                         \
-    {return arbitrary->Call(cx, obj, argc, argv, rval, wrapper,             \
+    {return arbitrary->Call(cx, obj, argc, argv, rval, tearOff,             \
                             NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_CONSTRUCT(_class) \
     NS_IMETHODIMP _class::Construct(JSContext *cx, JSObject *obj,           \
                          uintN argc, jsval *argv,                           \
                          jsval *rval,                                       \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval)                                    \
-    {return arbitrary->Construct(cx, obj, argc, argv, rval, wrapper,        \
+    {return arbitrary->Construct(cx, obj, argc, argv, rval, tearOff,        \
                                  NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_HASINSTANCE(_class) \
     NS_IMETHODIMP _class::HasInstance(JSContext *cx, JSObject *obj,         \
                            jsval v, JSBool *bp,                             \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
-    {return arbitrary->HasInstance(cx, obj, v, bp, wrapper,                 \
+    {return arbitrary->HasInstance(cx, obj, v, bp, tearOff,                 \
                                  NULL, retval);}
 
 #define XPC_IMPLEMENT_FORWARD_FINALIZE(_class) \
     NS_IMETHODIMP _class::Finalize(JSContext *cx, JSObject *obj,            \
-                        nsIXPConnectWrappedNative* wrapper,                 \
+                        nsIXPCWrappedNativeTearOff* tearOff,                \
                         nsIXPCScriptable* arbitrary)                        \
-    /* XPConnect does the finalization on the wrapper itself anyway */      \
-    {return arbitrary->Finalize(cx, obj, wrapper, NULL);}
+    /* XPConnect does the finalization on the tearOff itself anyway */      \
+    {return arbitrary->Finalize(cx, obj, tearOff, NULL);}
 
 /***************************************************************************/
 
 #define XPC_IMPLEMENT_IGNORE_CREATE(_class) \
     NS_IMETHODIMP _class::Create(JSContext *cx, JSObject *obj,              \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       nsIXPCScriptable* arbitrary)                          \
     {return NS_OK;}
 
 #define XPC_IMPLEMENT_IGNORE_GETFLAGS(_class) \
     NS_IMETHODIMP _class::GetFlags(JSContext *cx, JSObject *obj,            \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       JSUint32* flagsp,                                     \
                       nsIXPCScriptable* arbitrary)                          \
     {*flagsp = 0; return NS_OK;}
@@ -352,7 +419,7 @@ public:
     NS_IMETHODIMP _class::LookupProperty(JSContext *cx, JSObject *obj,      \
                               jsid id,                                      \
                               JSObject **objp, JSProperty **propp,          \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {*objp = NULL; *propp = NULL; *retval = JS_TRUE; return NS_OK;}
@@ -362,7 +429,7 @@ public:
                               jsid id, jsval value,                         \
                               JSPropertyOp getter, JSPropertyOp setter,     \
                               uintN attrs, JSProperty **propp,              \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {if(propp)*propp = NULL; *retval = JS_TRUE; return NS_OK;}
@@ -370,7 +437,7 @@ public:
 #define XPC_IMPLEMENT_IGNORE_GETPROPERTY(_class) \
     NS_IMETHODIMP _class::GetProperty(JSContext *cx, JSObject *obj,         \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {*vp = JSVAL_VOID; *retval = JS_TRUE; return NS_OK;}
@@ -378,7 +445,7 @@ public:
 #define XPC_IMPLEMENT_IGNORE_SETPROPERTY(_class) \
     NS_IMETHODIMP _class::SetProperty(JSContext *cx, JSObject *obj,         \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {*retval = JS_TRUE; return NS_OK;}
@@ -387,7 +454,7 @@ public:
     NS_IMETHODIMP _class::GetAttributes(JSContext *cx, JSObject *obj,       \
                              jsid id,                                       \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval)                                \
     {*attrsp = 0; *retval = JS_TRUE; return NS_OK;}
@@ -396,7 +463,7 @@ public:
     NS_IMETHODIMP _class::SetAttributes(JSContext *cx, JSObject *obj,       \
                              jsid id,                                       \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval)                                \
     {*retval = JS_FALSE; return NS_OK;}
@@ -404,7 +471,7 @@ public:
 #define XPC_IMPLEMENT_IGNORE_DELETEPROPERTY(_class) \
     NS_IMETHODIMP _class::DeleteProperty(JSContext *cx, JSObject *obj,      \
                               jsid id, jsval *vp,                           \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {*retval = JS_TRUE; return NS_OK;}
@@ -412,7 +479,7 @@ public:
 #define XPC_IMPLEMENT_IGNORE_DEFAULTVALUE(_class) \
     NS_IMETHODIMP _class::DefaultValue(JSContext *cx, JSObject *obj,        \
                             JSType type, jsval *vp,                         \
-                            nsIXPConnectWrappedNative* wrapper,             \
+                            nsIXPCWrappedNativeTearOff* tearOff,            \
                             nsIXPCScriptable* arbitrary,                    \
                             JSBool* retval)                                 \
     {*retval = JS_TRUE; return NS_OK;}
@@ -421,7 +488,7 @@ public:
     NS_IMETHODIMP _class::Enumerate(JSContext *cx, JSObject *obj,           \
                          JSIterateOp enum_op,                               \
                          jsval *statep, jsid *idp,                          \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval)                                    \
     {*retval = JS_FALSE; return NS_OK;}
@@ -430,7 +497,7 @@ public:
     NS_IMETHODIMP _class::CheckAccess(JSContext *cx, JSObject *obj,         \
                            jsid id,                                         \
                            JSAccessMode mode, jsval *vp, uintN *attrsp,     \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {*retval = JS_FALSE; return NS_OK;}
@@ -439,7 +506,7 @@ public:
     NS_IMETHODIMP _class::Call(JSContext *cx, JSObject *obj,                \
                     uintN argc, jsval *argv,                                \
                     jsval *rval,                                            \
-                    nsIXPConnectWrappedNative* wrapper,                     \
+                    nsIXPCWrappedNativeTearOff* tearOff,                    \
                     nsIXPCScriptable* arbitrary,                            \
                     JSBool* retval)                                         \
     {*rval = JSVAL_NULL; *retval = JS_TRUE; return NS_OK;}
@@ -448,7 +515,7 @@ public:
     NS_IMETHODIMP _class::Construct(JSContext *cx, JSObject *obj,           \
                          uintN argc, jsval *argv,                           \
                          jsval *rval,                                       \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval)                                    \
     {*rval = JSVAL_NULL; *retval = JS_TRUE; return NS_OK;}
@@ -456,29 +523,29 @@ public:
 #define XPC_IMPLEMENT_IGNORE_HASINSTANCE(_class) \
     NS_IMETHODIMP _class::HasInstance(JSContext *cx, JSObject *obj,         \
                            jsval v, JSBool *bp,                             \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {*bp = JS_FALSE; *retval = JS_TRUE; return NS_OK;}
 
 #define XPC_IMPLEMENT_IGNORE_FINALIZE(_class) \
     NS_IMETHODIMP _class::Finalize(JSContext *cx, JSObject *obj,            \
-                        nsIXPConnectWrappedNative* wrapper,                 \
+                        nsIXPCWrappedNativeTearOff* tearOff,                \
                         nsIXPCScriptable* arbitrary)                        \
-    /* XPConnect does the finalization on the wrapper itself anyway */      \
+    /* XPConnect does the finalization on the tearOff itself anyway */      \
     {return NS_OK;}
 
 /***************************************************************************/
 
 #define XPC_IMPLEMENT_FAIL_CREATE(_class, _code) \
     NS_IMETHODIMP _class::Create(JSContext *cx, JSObject *obj,              \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       nsIXPCScriptable* arbitrary)                          \
     {return _code;}
 
 #define XPC_IMPLEMENT_FAIL_GETFLAGS(_class, _code) \
     NS_IMETHODIMP _class::GetFlags(JSContext *cx, JSObject *obj,            \
-                      nsIXPConnectWrappedNative* wrapper,                   \
+                      nsIXPCWrappedNativeTearOff* tearOff,                  \
                       JSUint32* flagsp,                                     \
                       nsIXPCScriptable* arbitrary)                          \
     {return _code;}
@@ -487,7 +554,7 @@ public:
     NS_IMETHODIMP _class::LookupProperty(JSContext *cx, JSObject *obj,      \
                               jsid id,                                      \
                               JSObject **objp, JSProperty **propp,          \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {return _code;}
@@ -497,7 +564,7 @@ public:
                               jsid id, jsval value,                         \
                               JSPropertyOp getter, JSPropertyOp setter,     \
                               uintN attrs, JSProperty **propp,              \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {return _code;}
@@ -505,7 +572,7 @@ public:
 #define XPC_IMPLEMENT_FAIL_GETPROPERTY(_class, _code) \
     NS_IMETHODIMP _class::GetProperty(JSContext *cx, JSObject *obj,         \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {return _code;}
@@ -513,7 +580,7 @@ public:
 #define XPC_IMPLEMENT_FAIL_SETPROPERTY(_class, _code) \
     NS_IMETHODIMP _class::SetProperty(JSContext *cx, JSObject *obj,         \
                            jsid id, jsval *vp,                              \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {return _code;}
@@ -522,7 +589,7 @@ public:
     NS_IMETHODIMP _class::GetAttributes(JSContext *cx, JSObject *obj,       \
                              jsid id,                                       \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval)                                \
     {return _code;}
@@ -531,7 +598,7 @@ public:
     NS_IMETHODIMP _class::SetAttributes(JSContext *cx, JSObject *obj,       \
                              jsid id,                                       \
                              JSProperty *prop, uintN *attrsp,               \
-                             nsIXPConnectWrappedNative* wrapper,            \
+                             nsIXPCWrappedNativeTearOff* tearOff,           \
                              nsIXPCScriptable* arbitrary,                   \
                              JSBool* retval)                                \
     {return _code;}
@@ -539,7 +606,7 @@ public:
 #define XPC_IMPLEMENT_FAIL_DELETEPROPERTY(_class, _code) \
     NS_IMETHODIMP _class::DeleteProperty(JSContext *cx, JSObject *obj,      \
                               jsid id, jsval *vp,                           \
-                              nsIXPConnectWrappedNative* wrapper,           \
+                              nsIXPCWrappedNativeTearOff* tearOff,          \
                               nsIXPCScriptable* arbitrary,                  \
                               JSBool* retval)                               \
     {return _code;}
@@ -547,7 +614,7 @@ public:
 #define XPC_IMPLEMENT_FAIL_DEFAULTVALUE(_class, _code) \
     NS_IMETHODIMP _class::DefaultValue(JSContext *cx, JSObject *obj,        \
                             JSType type, jsval *vp,                         \
-                            nsIXPConnectWrappedNative* wrapper,             \
+                            nsIXPCWrappedNativeTearOff* tearOff,            \
                             nsIXPCScriptable* arbitrary,                    \
                             JSBool* retval)                                 \
     {return _code;}
@@ -556,7 +623,7 @@ public:
     NS_IMETHODIMP _class::Enumerate(JSContext *cx, JSObject *obj,           \
                          JSIterateOp enum_op,                               \
                          jsval *statep, jsid *idp,                          \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval)                                    \
     {return _code;}
@@ -565,7 +632,7 @@ public:
     NS_IMETHODIMP _class::CheckAccess(JSContext *cx, JSObject *obj,         \
                            jsid id,                                         \
                            JSAccessMode mode, jsval *vp, uintN *attrsp,     \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {return _code;}
@@ -574,7 +641,7 @@ public:
     NS_IMETHODIMP _class::Call(JSContext *cx, JSObject *obj,                \
                     uintN argc, jsval *argv,                                \
                     jsval *rval,                                            \
-                    nsIXPConnectWrappedNative* wrapper,                     \
+                    nsIXPCWrappedNativeTearOff* tearOff,                    \
                     nsIXPCScriptable* arbitrary,                            \
                     JSBool* retval)                                         \
     {return _code;}
@@ -583,7 +650,7 @@ public:
     NS_IMETHODIMP _class::Construct(JSContext *cx, JSObject *obj,           \
                          uintN argc, jsval *argv,                           \
                          jsval *rval,                                       \
-                         nsIXPConnectWrappedNative* wrapper,                \
+                         nsIXPCWrappedNativeTearOff* tearOff,               \
                          nsIXPCScriptable* arbitrary,                       \
                          JSBool* retval)                                    \
     {return _code;}
@@ -591,16 +658,16 @@ public:
 #define XPC_IMPLEMENT_FAIL_HASINSTANCE(_class, _code) \
     NS_IMETHODIMP _class::HasInstance(JSContext *cx, JSObject *obj,         \
                            jsval v, JSBool *bp,                             \
-                           nsIXPConnectWrappedNative* wrapper,              \
+                           nsIXPCWrappedNativeTearOff* tearOff,             \
                            nsIXPCScriptable* arbitrary,                     \
                            JSBool* retval)                                  \
     {return _code;}
 
 #define XPC_IMPLEMENT_FAIL_FINALIZE(_class, _code) \
     NS_IMETHODIMP _class::Finalize(JSContext *cx, JSObject *obj,            \
-                        nsIXPConnectWrappedNative* wrapper,                 \
+                        nsIXPCWrappedNativeTearOff* tearOff,                \
                         nsIXPCScriptable* arbitrary)                        \
-    /* XPConnect does the finalization on the wrapper itself anyway */      \
+    /* XPConnect does the finalization on the tearOff itself anyway */      \
     {return _code;}
 
 /***************************************************************************/

@@ -122,11 +122,9 @@ nsXPCWrappedJS::AddRef(void)
     
     if(2 == cnt && IsValid())
     {
-        AutoPushCompatibleJSContext 
-                autoContext(mClass->GetRuntime()->GetJSRuntime());
-        JSContext* cx = autoContext.GetJSContext();
-        if(cx)
-            JS_AddNamedRoot(cx, &mJSObj, "nsXPCWrappedJS::mJSObj");
+        XPCCallContext ccx(NATIVE_CALLER);
+        if(ccx.IsValid())
+            JS_AddNamedRoot(ccx.GetJSContext(), &mJSObj, "nsXPCWrappedJS::mJSObj");
     }
 
     return cnt;
@@ -181,23 +179,17 @@ nsXPCWrappedJS::GetJSObject(JSObject** aJSObj)
 
 // static
 nsXPCWrappedJS*
-nsXPCWrappedJS::GetNewOrUsedWrapper(XPCContext* xpcc,
-                                    JSObject* aJSObj,
-                                    REFNSIID aIID,
-                                    nsISupports* aOuter)
+nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
+                             JSObject* aJSObj,
+                             REFNSIID aIID,
+                             nsISupports* aOuter)
 {
     JSObject2WrappedJSMap* map;
     JSObject* rootJSObj;
     nsXPCWrappedJS* root;
     nsXPCWrappedJS* wrapper = nsnull;
     nsXPCWrappedJSClass* clazz = nsnull;
-    XPCJSRuntime* rt;
-    
-    if(!xpcc || !(rt = xpcc->GetRuntime()) || !aJSObj)
-    {
-        NS_ASSERTION(0,"bad param");    
-        return nsnull;
-    }
+    XPCJSRuntime* rt = ccx.GetRuntime();
 
     map = rt->GetWrappedJSMap();
     if(!map)
@@ -206,13 +198,13 @@ nsXPCWrappedJS::GetNewOrUsedWrapper(XPCContext* xpcc,
         return nsnull;
     }
 
-    clazz = nsXPCWrappedJSClass::GetNewOrUsedClass(rt, aIID);
+    clazz = nsXPCWrappedJSClass::GetNewOrUsed(ccx, aIID);
     if(!clazz)
         return nsnull;
     // from here on we need to return through 'return_wrapper'
 
     // always find the root JSObject
-    rootJSObj = clazz->GetRootJSObject(aJSObj);
+    rootJSObj = clazz->GetRootJSObject(ccx, aJSObj);
     if(!rootJSObj)
         goto return_wrapper;
 
@@ -236,7 +228,7 @@ nsXPCWrappedJS::GetNewOrUsedWrapper(XPCContext* xpcc,
         if(rootJSObj == aJSObj)
         {
             // the root will do double duty as the interface wrapper
-            wrapper = root = new nsXPCWrappedJS(xpcc, aJSObj, clazz, nsnull, 
+            wrapper = root = new nsXPCWrappedJS(ccx, aJSObj, clazz, nsnull, 
                                                 aOuter);
             if(root)
             {   // scoped lock
@@ -249,12 +241,12 @@ nsXPCWrappedJS::GetNewOrUsedWrapper(XPCContext* xpcc,
         {
             // just a root wrapper
             nsXPCWrappedJSClass* rootClazz;
-            rootClazz = nsXPCWrappedJSClass::GetNewOrUsedClass(
-                                                rt, NS_GET_IID(nsISupports));
+            rootClazz = nsXPCWrappedJSClass::GetNewOrUsed(
+                                                ccx, NS_GET_IID(nsISupports));
             if(!rootClazz)
                 goto return_wrapper;
 
-            root = new nsXPCWrappedJS(xpcc, rootJSObj, rootClazz, nsnull, aOuter);
+            root = new nsXPCWrappedJS(ccx, rootJSObj, rootClazz, nsnull, aOuter);
             NS_RELEASE(rootClazz);
 
             if(!root)
@@ -272,7 +264,7 @@ nsXPCWrappedJS::GetNewOrUsedWrapper(XPCContext* xpcc,
 
     if(!wrapper)
     {
-        wrapper = new nsXPCWrappedJS(xpcc, aJSObj, clazz, root, aOuter);
+        wrapper = new nsXPCWrappedJS(ccx, aJSObj, clazz, root, aOuter);
         if(!wrapper)
             goto return_wrapper;
     }
@@ -290,7 +282,7 @@ return_wrapper:
 #pragma warning(disable : 4355) // OK to pass "this" in member initializer
 #endif
 
-nsXPCWrappedJS::nsXPCWrappedJS(XPCContext* xpcc,
+nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
                                JSObject* aJSObj,
                                nsXPCWrappedJSClass* aClass,
                                nsXPCWrappedJS* root,

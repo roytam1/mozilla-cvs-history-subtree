@@ -2744,13 +2744,7 @@ js_Interpret(JSContext *cx, jsval *result)
             }
 
             /* Take the slow path if prop was not found in a native object. */
-
-            /* The prop == 1 check *really* shlouldn't be here! It's
-             * here to prevent a crash when the global object is a
-             * XPConnect wrapped native object. DO NOT CHECK THIS IN!
-             */
-
-            if (prop == (JSProperty *)1 || !OBJ_IS_NATIVE(obj) || !OBJ_IS_NATIVE(obj2)) {
+            if (!OBJ_IS_NATIVE(obj) || !OBJ_IS_NATIVE(obj2)) {
                 OBJ_DROP_PROPERTY(cx, obj2, prop);
                 ok = OBJ_GET_PROPERTY(cx, obj, id, &rval);
                 if (!ok)

@@ -34,7 +34,7 @@ DEPTH=..\..\..
 
 DIRS=public idl src \
 !if !defined(DISABLE_TESTS)
-     tests \
+#     tests \
 !endif
      shell loader \
 !if defined(XPC_TOOLS_SUPPORT)

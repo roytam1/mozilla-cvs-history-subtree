@@ -50,7 +50,9 @@ const char* XPCJSRuntime::mStrings[] = {
     "Components",           // IDX_COMPONENTS
     "wrappedJSObject",      // IDX_WRAPPED_JSOBJECT
     "Object",               // IDX_OBJECT
-    "prototype"             // IDX_PROTOTYPE
+    "prototype",            // IDX_PROTOTYPE
+    "__callableinfo",       // IDX_CALLABLE_INFO_PROP_NAME
+    "createInstance"        // IDX_CREATE_INSTANCE
 };
 
 /***************************************************************************/
@@ -79,14 +81,20 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
         {
             if(JS_IsAboutToBeFinalized(data->cx, wrapper->GetJSObject()))
                 data->array->AppendElement(wrapper);
-        }    
+        }
         wrapper = wrapper->GetNextWrapper();
     }
     return HT_ENUMERATE_NEXT;
 }
 
+JS_STATIC_DLL_CALLBACK(intN)
+NativeInterfaceGC(JSHashEntry *he, intN i, void *arg)
+{
+    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings((JSContext*) arg);
+    return HT_ENUMERATE_NEXT;
+}
 
-// static 
+// static
 JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 {
     if(status == JSGC_MARK_END || status == JSGC_END)
@@ -98,6 +106,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
             if(status == JSGC_MARK_END)
             {
+                {
                 nsAutoLock lock(self->mMapLock); // lock the wrapper map
                 JSDyingJSObjectData data = {cx, array};
 
@@ -105,25 +114,29 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 // this array. Note that this is a nsVoidArray because
                 // we do not want to be changing the refcount of these wrappers.
                 // We add them to the array now and Release the array members
-                // later to avoid the posibility of doing any JS GCThing 
+                // later to avoid the posibility of doing any JS GCThing
                 // allocations during the gc cycle.
-                self->mWrappedJSMap->Enumerate(WrappedJSDyingJSObjectFinder, 
+                self->mWrappedJSMap->Enumerate(WrappedJSDyingJSObjectFinder,
                                                &data);
-            }    
+                }
+
+                // Do cleanup in NativeInterfaces
+                self->mIID2NativeInterfaceMap->Enumerate(NativeInterfaceGC, cx);
+            }
             else // status == JSGC_END
             {
                 // Release all the members whose JSObjects are now known
                 // to be dead.
                 for(PRInt32 i = array->Count() - 1; i >= 0; i--)
                 {
-                    nsXPCWrappedJS* wrapper = 
-                        NS_REINTERPRET_CAST(nsXPCWrappedJS*, 
+                    nsXPCWrappedJS* wrapper =
+                        NS_REINTERPRET_CAST(nsXPCWrappedJS*,
                                             array->ElementAt(i));
-                    
+
                     NS_RELEASE(wrapper);
                 }
-                array->Clear();                        
-            }        
+                array->Clear();
+            }
         }
     }
 
@@ -143,7 +156,8 @@ hash_root(const void *key)
 JS_STATIC_DLL_CALLBACK(intN)
 DEBUG_WrapperChecker(JSHashEntry *he, intN i, void *arg)
 {
-    NS_ASSERTION(!((nsXPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
+// XXX fix this
+//    NS_ASSERTION(!((nsXPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
     ++ *((int*)arg);
     return HT_ENUMERATE_NEXT;
 }
@@ -170,10 +184,10 @@ XPCJSRuntime::~XPCJSRuntime()
     while(JS_ContextIterator(mJSRuntime, &iter))
         count ++;
     if(count)
-        printf("deleting XPCJSRuntime with %d live JSContexts\n", count);        
+        printf("deleting XPCJSRuntime with %d live JSContexts\n", count);
     }
 #endif
-    
+
     // clean up and destroy maps...
 
     if(mContextMap)
@@ -187,9 +201,9 @@ XPCJSRuntime::~XPCJSRuntime()
 #ifdef XPC_DUMP_AT_SHUTDOWN
         uint32 count = mWrappedJSMap->Count();
         if(count)
-            printf("deleting XPCJSRuntime with %d live wrapped JSObject\n", (int)count);        
+            printf("deleting XPCJSRuntime with %d live wrapped JSObject\n", (int)count);
 #endif
-        mWrappedJSMap->Enumerate(WrappedJSShutdownMarker, mJSRuntime); 
+        mWrappedJSMap->Enumerate(WrappedJSShutdownMarker, mJSRuntime);
         delete mWrappedJSMap;
     }
 
@@ -198,19 +212,42 @@ XPCJSRuntime::~XPCJSRuntime()
 #ifdef XPC_DUMP_AT_SHUTDOWN
         uint32 count = mWrappedJSClassMap->Count();
         if(count)
-            printf("deleting XPCJSRuntime with %d live nsXPCWrappedJSClass\n", (int)count);        
+            printf("deleting XPCJSRuntime with %d live nsXPCWrappedJSClass\n", (int)count);
 #endif
         delete mWrappedJSClassMap;
     }
 
-    if(mWrappedNativeClassMap)
+
+    // XXX clear these maps???
+
+    if(mIID2NativeInterfaceMap)
     {
 #ifdef XPC_DUMP_AT_SHUTDOWN
-        uint32 count = mWrappedNativeClassMap->Count();
+        uint32 count = mIID2NativeInterfaceMap->Count();
         if(count)
-            printf("deleting XPCJSRuntime with %d live nsXPCWrappedNativeClass\n", (int)count);        
+            printf("deleting XPCJSRuntime with %d live XPCNativeInterfaces\n", (int)count);
 #endif
-        delete mWrappedNativeClassMap;
+        delete mIID2NativeInterfaceMap;
+    }
+
+    if(mClassInfo2NativeSetMap)
+    {
+#ifdef XPC_DUMP_AT_SHUTDOWN
+        uint32 count = mClassInfo2NativeSetMap->Count();
+        if(count)
+            printf("deleting XPCJSRuntime with %d live XPCNativeSets\n", (int)count);
+#endif
+        delete mClassInfo2NativeSetMap;
+    }
+
+    if(mNativeSetMap)
+    {
+#ifdef XPC_DUMP_AT_SHUTDOWN
+        uint32 count = mNativeSetMap->Count();
+        if(count)
+            printf("deleting XPCJSRuntime with %d live XPCNativeSets\n", (int)count);
+#endif
+        delete mNativeSetMap;
     }
 
     if(mMapLock)
@@ -219,10 +256,10 @@ XPCJSRuntime::~XPCJSRuntime()
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
     int LiveWrapperCount = 0;
-    JS_HashTableEnumerateEntries(DEBUG_WrappedNativeHashtable, 
+    JS_HashTableEnumerateEntries(DEBUG_WrappedNativeHashtable,
                                  DEBUG_WrapperChecker, &LiveWrapperCount);
     if(LiveWrapperCount)
-        printf("deleting XPCJSRuntime with %d live nsXPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);        
+        printf("deleting XPCJSRuntime with %d live nsXPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);
     JS_HashTableDestroy(DEBUG_WrappedNativeHashtable);
 #endif
 }
@@ -235,14 +272,16 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
    mContextMap(JSContext2XPCContextMap::newMap(XPC_CONTEXT_MAP_SIZE)),
    mWrappedJSMap(JSObject2WrappedJSMap::newMap(XPC_JS_MAP_SIZE)),
    mWrappedJSClassMap(IID2WrappedJSClassMap::newMap(XPC_JS_CLASS_MAP_SIZE)),
-   mWrappedNativeClassMap(IID2WrappedNativeClassMap::newMap(XPC_NATIVE_CLASS_MAP_SIZE)),
+   mIID2NativeInterfaceMap(IID2NativeInterfaceMap::newMap(XPC_NATIVE_INTERFACE_MAP_SIZE)),
+   mClassInfo2NativeSetMap(ClassInfo2NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
+   mNativeSetMap(NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mMapLock(PR_NewLock()),
    mWrappedJSToReleaseArray()
 {
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
    DEBUG_WrappedNativeHashtable = JS_NewHashTable(128, hash_root,
-                                                  JS_CompareValues, 
+                                                  JS_CompareValues,
                                                   JS_CompareValues,
                                                   nsnull, nsnull);
 #endif
@@ -265,7 +304,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
     if(mJSRuntime)
         xpc_InstallJSDebuggerKeywordHandler(mJSRuntime);
 #endif
-} 
+}
 
 // static
 XPCJSRuntime*
@@ -277,15 +316,17 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
 
     XPCJSRuntime* self;
 
-    self = new XPCJSRuntime(aXPConnect, 
+    self = new XPCJSRuntime(aXPConnect,
                             aJSRuntimeService);
 
-    if(self                             &&
-       self->GetJSRuntime()             &&
-       self->GetContextMap()            &&
-       self->GetWrappedJSMap()          &&
-       self->GetWrappedJSClassMap()     &&
-       self->GetWrappedNativeClassMap() &&
+    if(self                              &&
+       self->GetJSRuntime()              &&
+       self->GetContextMap()             &&
+       self->GetWrappedJSMap()           &&
+       self->GetWrappedJSClassMap()      &&
+       self->GetIID2NativeInterfaceMap() &&
+       self->GetClassInfo2NativeSetMap() &&
+       self->GetNativeSetMap()           &&
        self->GetMapLock())
     {
         return self;
@@ -341,7 +382,7 @@ XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
 
     // get rid of any XPCContexts that represent dead JSContexts
     mContextMap->Enumerate(KillDeadContextsCB, mJSRuntime);
-    
+
     XPCContext* found = nsnull;
 
     // add XPCContexts that represent any JSContexts we have not seen before
@@ -374,7 +415,7 @@ PurgeContextsCB(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_REMOVE;
 }
 
-void 
+void
 XPCJSRuntime::PurgeXPCContextList()
 {
     // hold the map lock through this whole thing
@@ -384,7 +425,7 @@ XPCJSRuntime::PurgeXPCContextList()
     mContextMap->Enumerate(PurgeContextsCB, nsnull);
 }
 
-JSBool 
+JSBool
 XPCJSRuntime::GenerateStringIDs(JSContext* cx)
 {
     NS_PRECONDITION(!mStrIDs[0],"string ids generated twice!");
@@ -424,7 +465,8 @@ WrappedJSMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 JS_STATIC_DLL_CALLBACK(intN)
 WrappedNativeClassMapDumpEnumerator(JSHashEntry *he, intN i, void *arg)
 {
-    ((nsXPCWrappedNativeClass*)he->value)->DebugDump(*(PRInt16*)arg);
+// XXX fix this
+//    ((nsXPCWrappedNativeClass*)he->value)->DebugDump(*(PRInt16*)arg);
     return HT_ENUMERATE_NEXT;
 }
 #endif
@@ -471,6 +513,8 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
             XPC_LOG_OUTDENT();
         }
 
+// XXX fix this
+#if 0
         XPC_LOG_ALWAYS(("mWrappedNativeClassMap @ %x with %d wrapperclasses(s)", \
                          mWrappedNativeClassMap, mWrappedNativeClassMap ? \
                                             mWrappedNativeClassMap->Count() : 0));
@@ -481,6 +525,8 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
             mWrappedNativeClassMap->Enumerate(WrappedNativeClassMapDumpEnumerator, &depth);
             XPC_LOG_OUTDENT();
         }
+#endif
+
         XPC_LOG_OUTDENT();
 #endif
 }

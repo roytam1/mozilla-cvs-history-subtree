@@ -132,4 +132,12 @@ interface nsIXPCComponents : nsISupports
 
     /* 'lastResult' is accessable via JavaScript only */
     /* 'returnCode' is accessable via JavaScript only */
+
+    // XXX TEMPORARY TEMPORARY TEMPORARY TEMPORARY TEMPORARY
+    const short one = 1;
+    const short five = 5;
+    const short six = 6;
+    const PRUint32 medium = 12345;
+    const PRUint32 big = 0xFFFFFFFF;
+
 };

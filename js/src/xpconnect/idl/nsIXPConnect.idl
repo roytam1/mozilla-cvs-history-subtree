@@ -52,6 +52,14 @@
 [ptr] native JSContextPtr(JSContext);
 [ptr] native JSObjectPtr(JSObject);
 [ptr] native JSValPtr(jsval);
+      native JSVal(jsval);
+      native JSID(jsid);
+[ptr] native XPCNativeInterface(nsIXPCNativeInterface);
+
+%{ C++
+// This class is fully declared in nsIXPCScriptable.h
+class nsIXPCNativeInterface;
+%}
 
 /***************************************************************************/
 
@@ -110,6 +118,8 @@
 #define NS_ERROR_XPC_JSOBJECT_HAS_NO_FUNCTION_NAMED    GENERATE_XPC_FAILURE(48)
 #define NS_ERROR_XPC_BAD_ID_STRING                     GENERATE_XPC_FAILURE(49)
 #define NS_ERROR_XPC_BAD_INITIALIZER_NAME              GENERATE_XPC_FAILURE(50)
+#define NS_ERROR_XPC_HAS_BEEN_SHUTDOWN                 GENERATE_XPC_FAILURE(51)
+#define NS_ERROR_XPC_CANT_MODIFY_PROP_ON_WN            GENERATE_XPC_FAILURE(52)
 
 // any new errors here should have an associated entry added in xpc.msg
 /***************************************************************************/
@@ -119,21 +129,12 @@
 
 // forward declarations...
 interface nsIXPCScriptable;
+interface nsIXPConnect;
 interface nsIXPConnectWrappedNative;
-interface nsIXPConnectFinalizeListener;
 interface nsIInterfaceInfo;
 interface nsIXPCSecurityManager;
 
 /***************************************************************************/
-
-[uuid(1B2DDB00-EEE8-11d2-BAA4-00805F8A5DD7)]
-interface nsIXPConnectFinalizeListener : nsISupports
-{
-    void aboutToRelease(in nsISupports aObj);
-};
-
-/***************************************************************************/
-
 [uuid(8916a320-d118-11d3-8f3a-0010a4e73d9a)]
 interface nsIXPConnectJSObjectHolder : nsISupports
 {
@@ -144,14 +145,17 @@ interface nsIXPConnectJSObjectHolder : nsISupports
 interface nsIXPConnectWrappedNative : nsIXPConnectJSObjectHolder
 {
     /* attribute 'JSObject' inherited from nsIXPConnectJSObjectHolder */
-    readonly attribute nsIXPCScriptable DynamicScriptable;
-    readonly attribute nsIXPCScriptable ArbitraryScriptable;
     readonly attribute nsISupports      Native;
-    readonly attribute nsIInterfaceInfo InterfaceInfo;
-    readonly attribute nsIIDPtr         IID;
     readonly attribute JSObjectPtr      JSObjectPrototype;
 
-    void setFinalizeListener(in nsIXPConnectFinalizeListener aListener);
+    /**
+     * These are here as an aid to nsIXPCScriptable implementors
+     */
+
+    readonly attribute nsIXPConnect XPConnect;
+    XPCNativeInterface FindInterfaceWithMember(in JSID nameID);
+    XPCNativeInterface FindInterfaceWithName(in JSID nameID);
+
     void debugDump(in short depth);
 };
 
@@ -311,7 +315,8 @@ interface nsIXPConnect : nsISupports
     initClassesWithNewWrappedGlobal(
                   in JSContextPtr aJSContext,
                   in nsISupports  aCOMObj,
-                  in nsIIDRef     aIID);
+                  in nsIIDRef     aIID,
+                  in PRBool       aCallJS_InitStandardClasses);
 
     /**
     * wrapNative will create a new JSObject or return an existing one. 
@@ -381,12 +386,22 @@ interface nsIXPConnect : nsISupports
            [iid_is(aIID),retval] out nsQIResult result);
 
     /**
-    * This only succeeds if the JSObject is a nsIXPConnectWrappedNative. A
-    * new wrapper is *never* constructed.
+    * This only succeeds if the JSObject is a nsIXPConnectWrappedNative. 
+    * A new wrapper is *never* constructed.
     */
     nsIXPConnectWrappedNative
     getWrappedNativeOfJSObject(in JSContextPtr aJSContext,
                                in JSObjectPtr  aJSObj);
+
+    /**
+    * This only succeeds if the native object is already wrapped by xpconnect. 
+    * A new wrapper is *never* constructed.
+    */
+    nsIXPConnectWrappedNative
+    getWrappedNativeOfNativeObject(in JSContextPtr aJSContext,
+                                   in JSObjectPtr  aScope,
+                                   in nsISupports  aCOMObj,
+                                   in nsIIDRef     aIID);
 
     void setSecurityManagerForJSContext(in JSContextPtr aJSContext,
                                         in nsIXPCSecurityManager aManager,
@@ -434,11 +449,6 @@ interface nsIXPConnect : nsISupports
                           in PRBool showThisProps);
     void debugDumpEvalInJSStackFrame(in PRUint32 aFrameNumber,
                                      in string aSourceText);
-    /**
-    * Set fallback JSContext to use when xpconnect can't find an appropriate
-    * context to use to execute JavaScript.
-    */
-    void setSafeJSContextForCurrentThread(in JSContextPtr cx);
 
     /**
     * wrapJSAggregatedToNative is just like wrapJS except it is used in cases 

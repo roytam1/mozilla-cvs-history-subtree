@@ -166,29 +166,187 @@ IID2WrappedJSClassMap::~IID2WrappedJSClassMap()
         JS_HashTableDestroy(mHashtable);
 }
 
+
 /***************************************************************************/
-// implement IID2WrappedJSClassMap...
+// implement IID2NativeInterfaceMap...
 
 // static
-IID2WrappedNativeClassMap*
-IID2WrappedNativeClassMap::newMap(int size)
+IID2NativeInterfaceMap*
+IID2NativeInterfaceMap::newMap(int size)
 {
-    IID2WrappedNativeClassMap* map = new IID2WrappedNativeClassMap(size);
+    IID2NativeInterfaceMap* map = new IID2NativeInterfaceMap(size);
     if(map && map->mHashtable)
         return map;
     delete map;
     return nsnull;
 }
 
-IID2WrappedNativeClassMap::IID2WrappedNativeClassMap(int size)
+IID2NativeInterfaceMap::IID2NativeInterfaceMap(int size)
 {
     mHashtable = JS_NewHashTable(size, hash_IID,
                                  compare_IIDs, JS_CompareValues,
                                  nsnull, nsnull);
 }
 
-IID2WrappedNativeClassMap::~IID2WrappedNativeClassMap()
+IID2NativeInterfaceMap::~IID2NativeInterfaceMap()
 {
     if(mHashtable)
         JS_HashTableDestroy(mHashtable);
 }
+
+/***************************************************************************/
+// implement ClassInfo2NativeSetMap...
+
+// static
+ClassInfo2NativeSetMap*
+ClassInfo2NativeSetMap::newMap(int size)
+{
+    ClassInfo2NativeSetMap* map = new ClassInfo2NativeSetMap(size);
+    if(map && map->mHashtable)
+        return map;
+    delete map;
+    return nsnull;
+}
+
+ClassInfo2NativeSetMap::ClassInfo2NativeSetMap(int size)
+{
+    mHashtable = JS_NewHashTable(size, hash_root,
+                                 JS_CompareValues, JS_CompareValues,
+                                 nsnull, nsnull);
+}
+
+ClassInfo2NativeSetMap::~ClassInfo2NativeSetMap()
+{
+    if(mHashtable)
+        JS_HashTableDestroy(mHashtable);
+}
+
+/***************************************************************************/
+// implement ClassInfo2WrappedNativeProtoMap...
+
+// static
+ClassInfo2WrappedNativeProtoMap*
+ClassInfo2WrappedNativeProtoMap::newMap(int size)
+{
+    ClassInfo2WrappedNativeProtoMap* map = new ClassInfo2WrappedNativeProtoMap(size);
+    if(map && map->mHashtable)
+        return map;
+    delete map;
+    return nsnull;
+}
+
+ClassInfo2WrappedNativeProtoMap::ClassInfo2WrappedNativeProtoMap(int size)
+{
+    mHashtable = JS_NewHashTable(size, hash_root,
+                                 JS_CompareValues, JS_CompareValues,
+                                 nsnull, nsnull);
+}
+
+ClassInfo2WrappedNativeProtoMap::~ClassInfo2WrappedNativeProtoMap()
+{
+    if(mHashtable)
+        JS_HashTableDestroy(mHashtable);
+}
+
+/***************************************************************************/
+// implement NativeSetMap...
+
+JS_STATIC_DLL_CALLBACK(JSHashNumber)
+hash_NativeKey(const void *key)
+{
+    XPCNativeSetKey* Key = (XPCNativeSetKey*) key;
+
+    JSHashNumber h;
+    
+    XPCNativeSet*       Set      = Key->GetBaseSet();
+    XPCNativeInterface* Addition = Key->GetAddition();
+    PRUint16            Position = Key->GetPosition();
+    
+    if(!Set)
+    {
+        NS_ASSERTION(Addition, "bad key");
+        h = (JSHashNumber) Addition;
+    }
+    else
+    {
+        XPCNativeInterface** Current = Set->GetInterfaceArray();
+        PRUint16 count = Set->Count() + (Addition ? 1 : 0);
+        for(PRUint16 i = 0; i < count; i++)
+        {
+            if(Addition && i == Position)
+                h ^= (JSHashNumber) Addition;    
+            else
+                h ^= (JSHashNumber) *(Current++);
+        }   
+    }
+    
+    return h;
+}
+
+JS_STATIC_DLL_CALLBACK(intN)
+compare_NativeKeyToSet(const void *v1, const void *v2)
+{
+    XPCNativeSetKey* Key = (XPCNativeSetKey*) v1;
+    XPCNativeSet*    SetInTable = (XPCNativeSet*) v2;
+
+    XPCNativeSet*       Set      = Key->GetBaseSet();
+    XPCNativeInterface* Addition = Key->GetAddition();
+    
+    if(!Set)
+    {
+        return SetInTable->Count() == 1 &&
+               *SetInTable->GetInterfaceArray() == Addition;
+    }
+
+    if(!Addition && Set == SetInTable)
+        return 1;
+        
+    PRUint16 count = Set->Count() + (Addition ? 1 : 0);
+    if(count != Set->Count())
+        return 0;
+
+    PRUint16 Position = Key->GetPosition();
+    XPCNativeInterface** CurrentInTable = SetInTable->GetInterfaceArray();
+    XPCNativeInterface** Current = Set->GetInterfaceArray();
+    for(PRUint16 i = 0; i < count; i++)
+    {
+        if(Addition && i == Position)
+        {
+            if(Addition != *(CurrentInTable++))
+                return 0;
+        }
+        else
+        {
+            if(*(Current++) != *(CurrentInTable++))
+                return 0;
+        }
+    }   
+    
+    return 1;
+}
+
+
+// static
+NativeSetMap*
+NativeSetMap::newMap(int size)
+{
+    NativeSetMap* map = new NativeSetMap(size);
+    if(map && map->mHashtable)
+        return map;
+    delete map;
+    return nsnull;
+}
+
+NativeSetMap::NativeSetMap(int size)
+{
+    mHashtable = JS_NewHashTable(size, hash_NativeKey,
+                                 compare_NativeKeyToSet, JS_CompareValues,
+                                 nsnull, nsnull);
+}
+
+NativeSetMap::~NativeSetMap()
+{
+    if(mHashtable)
+        JS_HashTableDestroy(mHashtable);
+}
+

@@ -1999,29 +1999,7 @@ js_FindProperty(JSContext *cx, jsid id, JSObject **objp, JSObject **pobjp,
     do {
         /* Try the property cache and return immediately on cache hit. */
         JS_LOCK_OBJ(cx, obj);
-
-        //	PROPERTY_CACHE_TEST(&rt->propertyCache, obj, id, prop);
-        {
-            uintN _hashIndex = (uintN)PROPERTY_CACHE_HASH(obj, id);
-            JSPropertyCache *_cache = (&rt->propertyCache);
-            JSPropertyCacheEntry *_pce = &_cache->table[_hashIndex];
-            JSPropertyCacheEntry _entry;
-            JSProperty *_pce_prop;
-            PCE_LOAD(_cache, _pce, _entry);
-            _pce_prop = PCE_PROPERTY(_entry);
-            _cache->tests++;
-            if (_pce_prop && _pce_prop != (JSProperty *)1 &&
-                sym_id(((JSScopeProperty *)_pce_prop)->symbols) == id &&
-                PCE_OBJECT(_entry) == obj) {
-                prop = _pce_prop;
-            } else {
-                _cache->misses++;
-                prop = NULL;
-            }
-        }
-
-
-
+        PROPERTY_CACHE_TEST(&rt->propertyCache, obj, id, prop);
         if (prop) {
 #ifdef JS_THREADSAFE
             JS_ASSERT(OBJ_IS_NATIVE(obj));

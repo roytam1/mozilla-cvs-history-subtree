@@ -43,10 +43,10 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsXPCArbitraryScriptable, nsIXPCScriptable)
 
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::Create(JSContext *cx, JSObject *obj,
-                  nsIXPConnectWrappedNative* wrapper,
+                  nsIXPCWrappedNativeTearOff* tearOff,
                   nsIXPCScriptable* arbitrary)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
     return NS_OK;
@@ -54,11 +54,11 @@ nsXPCArbitraryScriptable::Create(JSContext *cx, JSObject *obj,
 
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::GetFlags(JSContext *cx, JSObject *obj,
-                  nsIXPConnectWrappedNative* wrapper,
+                  nsIXPCWrappedNativeTearOff* tearOff,
                   JSUint32* flagsp,
                   nsIXPCScriptable* arbitrary)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
     NS_PRECONDITION(flagsp, "bad param");
@@ -69,11 +69,11 @@ nsXPCArbitraryScriptable::GetFlags(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::LookupProperty(JSContext *cx, JSObject *obj, jsid id,
                           JSObject **objp, JSProperty **propp,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           nsIXPCScriptable* arbitrary,
                           JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -90,11 +90,11 @@ nsXPCArbitraryScriptable::DefineProperty(JSContext *cx, JSObject *obj,
                           jsid id, jsval value,
                           JSPropertyOp getter, JSPropertyOp setter,
                           uintN attrs, JSProperty **propp,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           nsIXPCScriptable* arbitrary,
                           JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -106,11 +106,11 @@ nsXPCArbitraryScriptable::DefineProperty(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::GetProperty(JSContext *cx, JSObject *obj,
                        jsid id, jsval *vp,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary,
                        JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -126,11 +126,11 @@ nsXPCArbitraryScriptable::GetProperty(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::SetProperty(JSContext *cx, JSObject *obj,
                        jsid id, jsval *vp,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary,
                        JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -141,11 +141,11 @@ nsXPCArbitraryScriptable::SetProperty(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::GetAttributes(JSContext *cx, JSObject *obj, jsid id,
                          JSProperty *prop, uintN *attrsp,
-                         nsIXPConnectWrappedNative* wrapper,
+                         nsIXPCWrappedNativeTearOff* tearOff,
                          nsIXPCScriptable* arbitrary,
                          JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -156,11 +156,11 @@ nsXPCArbitraryScriptable::GetAttributes(JSContext *cx, JSObject *obj, jsid id,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::SetAttributes(JSContext *cx, JSObject *obj, jsid id,
                          JSProperty *prop, uintN *attrsp,
-                         nsIXPConnectWrappedNative* wrapper,
+                         nsIXPCWrappedNativeTearOff* tearOff,
                          nsIXPCScriptable* arbitrary,
                          JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -171,11 +171,11 @@ nsXPCArbitraryScriptable::SetAttributes(JSContext *cx, JSObject *obj, jsid id,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::DeleteProperty(JSContext *cx, JSObject *obj,
                           jsid id, jsval *vp,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           nsIXPCScriptable* arbitrary,
                           JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -186,11 +186,11 @@ nsXPCArbitraryScriptable::DeleteProperty(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::DefaultValue(JSContext *cx, JSObject *obj,
                         JSType type, jsval *vp,
-                        nsIXPConnectWrappedNative* wrapper,
+                        nsIXPCWrappedNativeTearOff* tearOff,
                         nsIXPCScriptable* arbitrary,
                         JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -202,11 +202,11 @@ NS_IMETHODIMP
 nsXPCArbitraryScriptable::Enumerate(JSContext *cx, JSObject *obj,
                      JSIterateOp enum_op,
                      jsval *statep, jsid *idp,
-                     nsIXPConnectWrappedNative* wrapper,
+                     nsIXPCWrappedNativeTearOff* tearOff,
                      nsIXPCScriptable* arbitrary,
                      JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -217,11 +217,11 @@ nsXPCArbitraryScriptable::Enumerate(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::CheckAccess(JSContext *cx, JSObject *obj, jsid id,
                        JSAccessMode mode, jsval *vp, uintN *attrsp,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary,
                        JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -233,11 +233,11 @@ NS_IMETHODIMP
 nsXPCArbitraryScriptable::Call(JSContext *cx, JSObject *obj,
                 uintN argc, jsval *argv,
                 jsval *rval,
-                nsIXPConnectWrappedNative* wrapper,
+                nsIXPCWrappedNativeTearOff* tearOff,
                 nsIXPCScriptable* arbitrary,
                 JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -249,11 +249,11 @@ NS_IMETHODIMP
 nsXPCArbitraryScriptable::Construct(JSContext *cx, JSObject *obj,
                      uintN argc, jsval *argv,
                      jsval *rval,
-                     nsIXPConnectWrappedNative* wrapper,
+                     nsIXPCWrappedNativeTearOff* tearOff,
                      nsIXPCScriptable* arbitrary,
                      JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
@@ -264,11 +264,11 @@ nsXPCArbitraryScriptable::Construct(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::HasInstance(JSContext *cx, JSObject *obj,
                            jsval v, JSBool *bp,
-                           nsIXPConnectWrappedNative* wrapper,
+                           nsIXPCWrappedNativeTearOff* tearOff,
                            nsIXPCScriptable* arbitrary,
                            JSBool* retval)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(bp, "bad param");
     NS_PRECONDITION(retval, "bad param");
     NS_PRECONDITION(cx, "bad param");
@@ -279,10 +279,10 @@ nsXPCArbitraryScriptable::HasInstance(JSContext *cx, JSObject *obj,
 
 NS_IMETHODIMP
 nsXPCArbitraryScriptable::Finalize(JSContext *cx, JSObject *obj,
-                    nsIXPConnectWrappedNative* wrapper,
+                    nsIXPCWrappedNativeTearOff* tearOff,
                     nsIXPCScriptable* arbitrary)
 {
-    NS_PRECONDITION(wrapper, "bad param");
+    NS_PRECONDITION(tearOff, "bad param");
     NS_PRECONDITION(cx, "bad param");
     NS_PRECONDITION(obj, "bad param");
     /* XPConnect does the finalization on the wrapper itself anyway */
