@@ -153,6 +153,7 @@ public:
   void LoadThrobberImages();
   void DestroyThrobberImages();
   virtual nsEventStatus DispatchMenuItem(PRInt32 aID) = 0;
+  virtual nsresult GetWindow(nsIWidget** aWindow);
 
   void DoFileOpen();
   void DoCopy();

@@ -186,7 +186,12 @@ nsPrintingPromptService::ShowPageSetup(nsIDOMWindow *parent, nsIPrintSettings *p
       return rv;
 
     block->SetInt(0, 0);
-    return DoDialog(parent, block, nsnull, printSettings, kPageSetupDialogURL);
+    rv = DoDialog(parent, block, nsnull, printSettings, kPageSetupDialogURL);
+    if (NS_SUCCEEDED(rv)) {
+      PRInt32 didOK;
+      block->GetInt(0, &didOK);
+      return didOK?NS_OK:NS_ERROR_ABORT;
+    }
 }
 
 /* void showPrinterProperties (in nsIDOMWindow parent, in wstring printerName, in nsIPrintSettings printSettings); */

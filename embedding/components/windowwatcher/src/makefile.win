@@ -25,12 +25,14 @@ REQUIRES	= xpcom \
 		  string \
 		  dom \
 		  widget \
+		  gfx \
 		  js \
 		  xpconnect \
 		  caps \
 		  content \
 		  pref \
 		  necko \
+		  uriloader \
 		  docshell \
 		  webBrowser_core \
 		  embed_base \
@@ -45,6 +47,7 @@ CPP_OBJS= \
 	.\$(OBJDIR)\nsPromptService.obj \
 	.\$(OBJDIR)\nsWWJSUtils.obj \
 	.\$(OBJDIR)\nsWindowWatcher.obj \
+	.\$(OBJDIR)\nsPrintingPrompt.obj \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

@@ -192,6 +192,7 @@ nsPrintingPromptService::ShowProgress(nsIDOMWindow*            parent,
                                       nsIWebBrowserPrint*      webBrowserPrint,    // ok to be null
                                       nsIPrintSettings*        printSettings,      // ok to be null
                                       nsIObserver*             openDialogObserver, // ok to be null
+                                      PRBool                   isForPrinting,
                                       nsIWebProgressListener** webProgressListener,
                                       nsIPrintProgressParams** printProgressParams,
                                       PRBool*                  notifyOnOpen)
@@ -309,6 +310,14 @@ nsPrintingPromptService::DoDialog(nsIDOMWindow *aParent,
                               "centerscreen,chrome,modal,titlebar", arguments,
                               getter_AddRefs(dialog));
 
+    // if aWebBrowserPrint is not null then we are printing
+    // so we want to pass back NS_ERROR_ABORT on cancel
+    if (NS_SUCCEEDED(rv)) 
+    {
+      PRInt32 status;
+      aParamBlock->GetInt(0, &status);
+      //return status == 0?NS_ERROR_ABORT:NS_OK;
+    }
     return rv;
 }
 

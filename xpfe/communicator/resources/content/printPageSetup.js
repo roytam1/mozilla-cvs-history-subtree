@@ -418,3 +418,17 @@ function onAccept()
 
   return true;
 }
+
+//---------------------------------------------------
+function onCancel()
+{
+  // set return value to "cancel"
+  if (paramBlock) {
+    paramBlock.SetInt(0, 0);
+  } else {
+    dump("*** FATAL ERROR: No paramBlock\n");
+  }
+
+  return true;
+}
+

@@ -2413,7 +2413,9 @@ GlobalWindowImpl::Print()
   nsCOMPtr<nsIWebBrowserPrint> webBrowserPrint;
   if (NS_SUCCEEDED(GetInterface(NS_GET_IID(nsIWebBrowserPrint),
                                 getter_AddRefs(webBrowserPrint)))) {
-    webBrowserPrint->Print(nsnull, nsnull);
+    nsCOMPtr<nsIPrintSettings> printSettings;
+    webBrowserPrint->GetGlobalPrintSettings(getter_AddRefs(printSettings));
+    webBrowserPrint->Print(printSettings, nsnull);
   }
   return NS_OK;
 }

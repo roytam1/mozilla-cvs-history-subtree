@@ -22,6 +22,7 @@
  * Contributor(s):
  *  Patrick C. Beard <beard@netscape.com>
  *  Simon Fraser     <sfraser@netscape.com>
+ *  Conrad Carlen    <ccarlen@netscape.com>
  *
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -46,6 +47,7 @@
 
 #include "nsIServiceManager.h"
 #include "nsIPrintOptions.h"
+#include "nsIPrintSettingsX.h"
 
 /** -------------------------------------------------------
  *  Construct the nsDeviceContextSpecX
@@ -76,65 +78,28 @@ NS_IMPL_ISUPPORTS2(nsDeviceContextSpecX, nsIDeviceContextSpec, nsIPrintingContex
  *  Initialize the nsDeviceContextSpecMac
  *  @update   dc 12/02/98
  */
-NS_IMETHODIMP nsDeviceContextSpecX::Init(nsIPrintSettings* aPS, PRBool	aQuiet)
+NS_IMETHODIMP nsDeviceContextSpecX::Init(nsIPrintSettings* aPS, PRBool	aIsPrintPreview)
 {
   nsresult rv;
   OSStatus status;
-   
-  nsCOMPtr<nsIPrintOptions> printOptionsService = do_GetService("@mozilla.org/gfx/printoptions;1", &rv);
-  if (NS_FAILED(rv)) return rv;
-
-	// are we doing a printpreview.. then don't start setting up for the printing
-	PRBool	doingPrintPreview;
-	
-	aPS->GetIsPrintPreview(&doingPrintPreview);
-
-  // Because page setup can get called at any time, we can't use the session APIs here.
-	if(!doingPrintPreview) {
-		status = ::PMBegin();
-		if (status != noErr) return NS_ERROR_FAILURE;
-	}
-
-  mBeganPrinting = PR_TRUE;
   
-  PMPageFormat    optionsPageFormat = kPMNoPageFormat;
-  rv = printOptionsService->GetNativeData(nsIPrintOptions::kNativeDataPrintRecord, (void **)&optionsPageFormat);
-  if (NS_FAILED(rv)) return rv;
-  
-  status = ::PMNewPageFormat(&mPageFormat);
-  if (status != noErr) return NS_ERROR_FAILURE;
-  
-  if (optionsPageFormat != kPMNoPageFormat)
-  {
-    status = ::PMCopyPageFormat(optionsPageFormat, mPageFormat);
-    ::PMDisposePageFormat(optionsPageFormat);
-  }
-  else
-    status = ::PMDefaultPageFormat(mPageFormat);
-
-  if (status != noErr) return NS_ERROR_FAILURE;
-  
-  Boolean validated;
-  ::PMValidatePageFormat(mPageFormat, &validated);
-  
-  status = ::PMNewPrintSettings(&mPrintSettings);
-  if (status != noErr) return NS_ERROR_FAILURE;
-  
-  status = ::PMDefaultPrintSettings(mPrintSettings);
-  if (status != noErr) return NS_ERROR_FAILURE;
-
-  if (! aQuiet)
-  {
-		::InitCursor();
-
-    Boolean accepted = false;
-    status = ::PMPrintDialog(mPrintSettings, mPageFormat, &accepted);
-    if (! accepted)
-        return NS_ERROR_ABORT;
-
+  if (!aIsPrintPreview) { 
+    status = ::PMBegin();
     if (status != noErr)
       return NS_ERROR_FAILURE;
+    mBeganPrinting = PR_TRUE;
   }
+  
+  nsCOMPtr<nsIPrintSettingsX> printSettingsX(do_QueryInterface(aPS));
+  if (!printSettingsX)
+    return NS_ERROR_NO_INTERFACE;
+  
+  rv = printSettingsX->GetPMPageFormat(&mPageFormat);
+  if (NS_FAILED(rv))
+    return rv;
+  rv = printSettingsX->GetPMPrintSettings(&mPrintSettings);
+  if (NS_FAILED(rv))
+    return rv;
 
   return NS_OK;
 }
@@ -163,9 +128,17 @@ NS_IMETHODIMP nsDeviceContextSpecX::ClosePrintManager()
 	return NS_OK;
 }  
 
-NS_IMETHODIMP nsDeviceContextSpecX::BeginDocument()
+NS_IMETHODIMP nsDeviceContextSpecX::BeginDocument(PRInt32     aStartPage, 
+                                                  PRInt32     aEndPage)
 {
-    OSStatus status = ::PMBeginDocument(mPrintSettings, mPageFormat, &mPrintingContext);
+    OSStatus status;
+    
+    status = ::PMSetFirstPage(mPrintSettings, aStartPage, false);
+    NS_ASSERTION(status == noErr, "PMSetFirstPage failed");
+    status = ::PMSetLastPage(mPrintSettings, aEndPage, false);
+    NS_ASSERTION(status == noErr, "PMSetLastPage failed");
+
+    status = ::PMBeginDocument(mPrintSettings, mPageFormat, &mPrintingContext);
     if (status != noErr) return NS_ERROR_ABORT;
     
     return NS_OK;

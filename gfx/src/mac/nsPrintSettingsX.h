@@ -43,6 +43,11 @@ public:
   nsresult Init();
 
 protected:
+  nsPrintSettingsX(const nsPrintSettings* aPS);
+
+  virtual nsresult CloneObj(nsIPrintSettings **_retval);
+
+protected:
   PMPageFormat mPageFormat;
   PMPrintSettings mPrintSettings;
 };

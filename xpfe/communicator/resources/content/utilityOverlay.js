@@ -135,11 +135,12 @@ function goPageSetup(domwin, printSettings)
     // This code calls the printoptions service to bring up the printoptions
     // dialog.  This will be an xp dialog if the platform did not override
     // the ShowPrintSetupDialog method.
-    var printOptionsService = Components.classes["@mozilla.org/gfx/printoptions;1"]
-                                             .getService(Components.interfaces.nsIPrintOptions);
-    printOptionsService.ShowPrintSetupDialog(printSettings);
+    var printingPromptService = Components.classes["@mozilla.org/embedcomp/printingprompt-service;1"]
+                                             .getService(Components.interfaces.nsIPrintingPromptService);
+    printingPromptService.showPageSetup(domwin, printSettings);
+    return true;
   } catch(e) {
-    return false;
+    return false; 
   }
   return true;
 }

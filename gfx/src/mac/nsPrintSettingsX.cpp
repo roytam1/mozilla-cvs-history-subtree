@@ -67,12 +67,54 @@ nsPrintSettingsX::nsPrintSettingsX() :
 
 /** ---------------------------------------------------
  */
+nsPrintSettingsX::nsPrintSettingsX(const nsPrintSettings* aPS) :
+    nsPrintSettings(aPS),
+  mPageFormat(kPMNoPageFormat),
+  mPrintSettings(kPMNoPrintSettings)
+{
+  NS_INIT_REFCNT();
+  
+  nsPrintSettingsX* aPSX = (nsPrintSettingsX*)aPS;
+
+  OSStatus status = noErr;
+  
+  if (aPSX->mPageFormat) {
+    status = ::PMNewPageFormat(&mPageFormat);
+    if (status != noErr)
+      status = ::PMCopyPageFormat(aPSX->mPageFormat, mPageFormat);
+    NS_ASSERTION(status == noErr, "Failed to copy page format");
+  }
+  
+  if (aPSX->mPrintSettings) {
+    status = ::PMNewPrintSettings(&mPrintSettings);
+    if (status != noErr)
+      status = ::PMCopyPrintSettings(aPSX->mPrintSettings, mPrintSettings);
+    NS_ASSERTION(status == noErr, "Failed to copy page format");
+  } 
+}
+
+/** ---------------------------------------------------
+ */
 nsPrintSettingsX::~nsPrintSettingsX()
 {
   if (mPageFormat != kPMNoPageFormat) {
     ::PMDisposePageFormat(mPageFormat);
     mPageFormat = kPMNoPageFormat;
   }
+  if (mPrintSettings != kPMNoPrintSettings) {
+    ::PMDisposePrintSettings(mPrintSettings);
+    mPrintSettings = kPMNoPrintSettings;
+  }
+}
+
+/** ---------------------------------------------------
+ */
+nsresult nsPrintSettingsX::CloneObj(nsIPrintSettings **_retval)
+{
+  nsPrintSettingsX *clone = new nsPrintSettingsX(this);
+  if (!clone)
+    return NS_ERROR_OUT_OF_MEMORY;
+  return clone->QueryInterface(NS_GET_IID(nsIPrintSettings), (void**)_retval); // ref counts  
 }
 
 /** ---------------------------------------------------
