@@ -17,6 +17,7 @@
  * Netscape Communications Corporation.  All Rights Reserved.
  */
 
+#include "nsIFrameReflow.h"
 #include "nsTreeFrame.h"
 #include "nsTreeRowGroupFrame.h"
 #include "nsIStyleContext.h"
@@ -56,12 +57,51 @@ nsTreeRowGroupFrame::~nsTreeRowGroupFrame()
 {
 }
 
-NS_METHOD nsTreeRowGroupFrame::ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
-                                                     nsHTMLReflowMetrics& aDesiredSize,
-                                                     RowGroupReflowState& aReflowState,
-                                                     nsReflowStatus&      aStatus)
+NS_IMETHODIMP 
+nsTreeRowGroupFrame::ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
+                                           nsHTMLReflowMetrics& aDesiredSize,
+                                           RowGroupReflowState& aReflowState,
+                                           nsReflowStatus&      aStatus,
+                                           nsReflowReason       aReason)
 {
-  return NS_OK;
+  nsresult rv = NS_OK;
+  // Reflow a scrollbar if we have one.
+  if (mScrollbar && (aReflowState.availSize.height != NS_UNCONSTRAINEDSIZE)) {
+    // We must be constrained, or a scrollbar makes no sense.
+    nsSize    kidMaxElementSize;
+    nsSize*   pKidMaxElementSize = (nsnull != aDesiredSize.maxElementSize) ? &kidMaxElementSize : nsnull;
+  
+    nsSize kidAvailSize(aReflowState.availSize);
+    nsHTMLReflowMetrics desiredSize(pKidMaxElementSize);
+    desiredSize.width=desiredSize.height=desiredSize.ascent=desiredSize.descent=0;
+
+    // Reflow the child into the available space, giving it as much width as it
+    // wants, but constraining its height.
+    kidAvailSize.width = NS_UNCONSTRAINEDSIZE;
+    nsHTMLReflowState kidReflowState(aPresContext, aReflowState.reflowState, mScrollbar,
+                                     kidAvailSize, aReason);
+    
+    kidReflowState.computedHeight = kidAvailSize.height;
+    rv = ReflowChild(mScrollbar, aPresContext, desiredSize, kidReflowState, aStatus);
+    if (NS_FAILED(rv))
+      return rv;
+
+    nscoord xpos = 0;
+
+    // Lose the width of the scrollbar as far as the rows are concerned.
+    if (aReflowState.availSize.width != NS_UNCONSTRAINEDSIZE) {
+      xpos = aReflowState.availSize.width - desiredSize.width;
+      /*aReflowState.availSize.width -= desiredSize.width;
+      if (aReflowState.availSize.width < 0)
+        aReflowState.availSize.width = 0;*/ 
+    }
+
+    // Place the child
+    nsRect kidRect (xpos, 0, desiredSize.width, aReflowState.availSize.height);
+    mScrollbar->SetRect(kidRect);
+  }
+
+  return rv;
 }
 
 

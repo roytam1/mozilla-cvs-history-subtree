@@ -47,52 +47,6 @@ static const PRBool gsDebugIR = PR_FALSE;
 NS_DEF_PTR(nsIStyleContext);
 NS_DEF_PTR(nsIContent);
 
-/* ----------- RowGroupReflowState ---------- */
-
-struct RowGroupReflowState {
-  nsIPresContext& mPresContext;  // Our pres context
-  const nsHTMLReflowState& reflowState;  // Our reflow state
-
-  // The available size (computed from the parent)
-  nsSize availSize;
-
-  // Flags for whether the max size is unconstrained
-  PRBool  unconstrainedWidth;
-  PRBool  unconstrainedHeight;
-
-  // Running y-offset
-  nscoord y;
-
-  // Flag used to set maxElementSize to my first row
-  PRBool  firstRow;
-
-  // Remember the height of the first row, because it's our maxElementHeight (plus header/footers)
-  nscoord firstRowHeight;
-
-  nsTableFrame *tableFrame;
-
-  RowGroupReflowState(nsIPresContext&          aPresContext,
-                      const nsHTMLReflowState& aReflowState,
-                      nsTableFrame *           aTableFrame)
-    : mPresContext(aPresContext),
-      reflowState(aReflowState)
-  {
-    availSize.width = reflowState.availableWidth;
-    availSize.height = reflowState.availableHeight;
-    y=0;  // border/padding???
-    unconstrainedWidth = PRBool(reflowState.availableWidth == NS_UNCONSTRAINEDSIZE);
-    unconstrainedHeight = PRBool(reflowState.availableHeight == NS_UNCONSTRAINEDSIZE);
-    firstRow = PR_TRUE;
-    firstRowHeight=0;
-    tableFrame = aTableFrame;
-  }
-
-  ~RowGroupReflowState() {
-  }
-};
-
-
-
 /* ----------- nsTableRowGroupFrame ---------- */
 
 nsresult
@@ -443,7 +397,7 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
   nsIFrame*  kidFrame;
   if (nsnull==aStartFrame) {
     kidFrame = mFrames.FirstChild();
-    ReflowBeforeRowLayout(aPresContext, aDesiredSize, aReflowState, aStatus);
+    ReflowBeforeRowLayout(aPresContext, aDesiredSize, aReflowState, aStatus, aReason);
   }
   else
     kidFrame = aStartFrame;

@@ -24,7 +24,50 @@
 
 class nsTableFrame;
 class nsTableRowFrame;
-struct RowGroupReflowState;
+
+/* ----------- RowGroupReflowState ---------- */
+
+struct RowGroupReflowState {
+  nsIPresContext& mPresContext;  // Our pres context
+  const nsHTMLReflowState& reflowState;  // Our reflow state
+
+  // The available size (computed from the parent)
+  nsSize availSize;
+
+  // Flags for whether the max size is unconstrained
+  PRBool  unconstrainedWidth;
+  PRBool  unconstrainedHeight;
+
+  // Running y-offset
+  nscoord y;
+
+  // Flag used to set maxElementSize to my first row
+  PRBool  firstRow;
+
+  // Remember the height of the first row, because it's our maxElementHeight (plus header/footers)
+  nscoord firstRowHeight;
+
+  nsTableFrame *tableFrame;
+
+  RowGroupReflowState(nsIPresContext&          aPresContext,
+                      const nsHTMLReflowState& aReflowState,
+                      nsTableFrame *           aTableFrame)
+    : mPresContext(aPresContext),
+      reflowState(aReflowState)
+  {
+    availSize.width = reflowState.availableWidth;
+    availSize.height = reflowState.availableHeight;
+    y=0;  // border/padding???
+    unconstrainedWidth = PRBool(reflowState.availableWidth == NS_UNCONSTRAINEDSIZE);
+    unconstrainedHeight = PRBool(reflowState.availableHeight == NS_UNCONSTRAINEDSIZE);
+    firstRow = PR_TRUE;
+    firstRowHeight=0;
+    tableFrame = aTableFrame;
+  }
+
+  ~RowGroupReflowState() {
+  }
+};
 
 #define NS_ITABLEROWGROUPFRAME_IID    \
 { 0xe940e7bc, 0xb534, 0x11d2,  \
@@ -244,10 +287,11 @@ protected:
                          nsTableFrame*            aTableFrame,
                          nsReflowStatus&          aStatus);
 
-  NS_METHOD     ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
+  NS_IMETHOD     ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
                                       nsHTMLReflowMetrics& aDesiredSize,
                                       RowGroupReflowState& aReflowState,
-                                      nsReflowStatus&      aStatus) { return NS_OK; };
+                                      nsReflowStatus&      aStatus,
+                                      nsReflowReason       aReason) { return NS_OK; };
 
   virtual PRBool ExcludeFrameFromReflow(nsIFrame* aFrame) { return PR_FALSE; }
 
