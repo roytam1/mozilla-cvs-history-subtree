@@ -4050,7 +4050,12 @@ nsGenericHTMLElement::InternalGetExistingAttrNameFromQName(const nsAString& aStr
     NS_ConvertUTF16toUTF8(aStr));
 }
 
-NS_IMPL_ISUPPORTS1(nsGenericWWGFormControl, nsIDOMWWGHTMLFormControl)
+// --------------------------------------------------------------------------
+
+NS_IMPL_ISUPPORTS_INHERITED2(nsGenericWWGFormControl, nsGenericHTMLElement, nsIDOMWWGHTMLFormControl, nsIFormControl)
+//NS_IMPL_ADDREF_INHERITED(nsGenericWWGFormControl, nsGenericHTMLElement)
+//NS_IMPL_RELEASE_INHERITED(nsGenericWWGFormControl, nsGenericHTMLElement)
+//NS_IMPL_QUERY_INTERFACE_INHERITED1(nsGenericWWGFormControl, nsGenericHTMLFormControl, nsIDOMWWGHTMLFormControl)
 
 nsGenericWWGFormControl::~nsGenericWWGFormControl()
 {

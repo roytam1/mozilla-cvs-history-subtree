@@ -41,7 +41,7 @@
 interface nsIDOMWWGHTMLFormControl : nsISupports
 {
 
-  readonly attribute nsIDOMNodeList  forms;
+  //readonly attribute nsIDOMNodeList  forms;
   readonly attribute boolean         willConsiderForSubmission;
   readonly attribute nsIDOMWWGHTMLValidityState   validity;
   readonly attribute DOMString       validationMessage;

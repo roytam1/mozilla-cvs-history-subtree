@@ -104,7 +104,7 @@ SDK_XPIDLSRCS =					\
 	nsIDOMHTMLTextAreaElement.idl		\
 	nsIDOMHTMLTitleElement.idl		\
 	nsIDOMHTMLUListElement.idl		\
-	nsIDOMWWGHTMLRepetitionElement.idl	\
+	nsIDOMWWGRepetitionElement.idl		\
         nsIDOMWWGHTMLValidityState.idl		\
 	nsIDOMWWGHTMLFormControl.idl		\
 	nsIDOMWWGHTMLButtonElement.idl		\

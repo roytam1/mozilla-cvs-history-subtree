@@ -38,7 +38,7 @@
 #include "domstubs.idl"
 
 [scriptable, uuid(c4d5a565-943b-42e2-9c1f-f7d7321a7597)]
-interface nsIDOMWWGHTMLRepetitionElementElement : nsISupports
+interface nsIDOMWWGRepetitionElement : nsISupports
 {
 
   const              unsigned short     REPETITION_NONE = 0;
