@@ -256,7 +256,7 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 		return jsj_env;
     
 	if (ET_InitMoja(0) != LM_MOJA_OK) {
-		*errp = strdup("ET_InitMoja(0) failed.");
+		*errp = strdup("LiveConnect initialization failed.");
 		return NULL;
 	}
 
@@ -266,7 +266,7 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
 		js_jvm = pJVMMgr->GetJSJavaVM();
 		pJVMMgr->Release();
 		if (js_jvm == NULL) {
-			*errp = strdup("Failed to attach to a java vm");
+			*errp = strdup("Failed to attach to a Java VM.");
 			return NULL;
 		}
 	}
