@@ -19,6 +19,10 @@
 #include "primpl.h"
 #include <process.h>  /* for _beginthread() */
 
+#ifdef XP_OS2_VACPP
+#include <time.h>     /* for _tzset() */
+#endif
+
 /* --- Declare these to avoid "implicit" warnings --- */
 PR_EXTERN(void) _PR_MD_NEW_SEM(_MDSemaphore *md, PRUintn value);
 PR_EXTERN(void) _PR_MD_DESTROY_SEM(_MDSemaphore *md);
@@ -50,6 +54,10 @@ _PR_MD_EARLY_INIT()
    if (DosLoadModule(NULL, 0, "DOSCALL1.DLL", &hmod) == 0)
        DosQueryProcAddr(hmod, 877, "DOSQUERYTHREADCONTEXT",
                         (PFN *)&QueryThreadContext);
+
+#ifdef XP_OS2_VACPP
+   _tzset();
+#endif
 }
 
 PR_IMPLEMENT(void)
@@ -161,7 +169,9 @@ _PR_MD_EXIT_THREAD(PRThread *thread)
            DosKillThread( thread->md.handle );
            DosResumeThread( thread->md.handle );
        } else {
+#ifndef XP_OS2_EMX
            _endthread();
+#endif
        }
        thread->md.handle = 0;
     }
