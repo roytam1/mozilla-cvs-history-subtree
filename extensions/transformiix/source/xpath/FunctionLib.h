@@ -187,7 +187,7 @@ class BooleanFunctionCall : public FunctionCall {
 
 public:
 
-    enum _BooleanFunctions { BOOLEAN = 1, FALSE, NOT, TRUE };
+    enum BooleanFunctions { TX_BOOLEAN = 1, TX_FALSE, TX_NOT, TX_TRUE };
 
     /**
      * Creates a default BooleanFunctionCall, which always evaluates to False
