@@ -50,20 +50,25 @@ nsresult nsMsgMailNewsUrl::QueryInterface(const nsIID &aIID, void** aInstancePtr
     }
     if (aIID.Equals(nsCOMTypeInfo<nsIURI>::GetIID())) {
         *aInstancePtr = (void*) ((nsIURI*)this);
-        AddRef();
+        NS_ADDREF_THIS();
+        return NS_OK;
+    }
+	if (aIID.Equals(nsCOMTypeInfo<nsIURL>::GetIID())) {
+        *aInstancePtr = (void*) ((nsIURL*)this);
+        NS_ADDREF_THIS();
         return NS_OK;
     }
 	if (aIID.Equals(nsCOMTypeInfo<nsIMsgMailNewsUrl>::GetIID()))
 	{
 		*aInstancePtr = (void *) ((nsIMsgMailNewsUrl*) this);
-		AddRef();
+		NS_ADDREF_THIS();
 		return NS_OK;
 	}
  
 	if (aIID.Equals(nsCOMTypeInfo<nsISupports>::GetIID()))    
 	{
 		*aInstancePtr = (void *) ((nsIMsgMailNewsUrl*) this);
-		AddRef();
+		NS_ADDREF_THIS();
 		return NS_OK;
 	}
 #if defined(NS_DEBUG)
