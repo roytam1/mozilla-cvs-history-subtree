@@ -23,7 +23,7 @@
 #include "nsIStreamListener.idl"
 
 [scriptable, uuid(39E329E2-357F-11d3-8EFD-00A024A7D144)] 
-interface HeaderDisplayTypes 
+interface nsMimeHeaderDisplayTypes 
 { 
     const long MicroHeaders = 0; 
     const long NormalHeaders = 1; 
