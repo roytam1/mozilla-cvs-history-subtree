@@ -4782,6 +4782,11 @@ GlobalWindowImpl::OpenInternal(const nsAString& aUrl,
         bwin->OpenURI(tabURI,
               containerPref, nsIBrowserDOMWindow::OPEN_NEW,
               getter_AddRefs(domReturn));
+        if (domReturn) {
+          nsCOMPtr<nsIScriptGlobalObject> domObj(do_GetInterface(domReturn));
+          if (domObj)
+            domObj->SetOpenerWindow(this);
+        }
       }
     } else {
 #ifdef DEBUG
