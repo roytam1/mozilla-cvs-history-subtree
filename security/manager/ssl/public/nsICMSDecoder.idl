@@ -73,7 +73,7 @@ interface nsICMSMessage : nsISupports
 interface nsICMSDecoder : nsISupports
 {
   void start(in NSSCMSContentCallback cb, in voidPtr arg);
-  void update(in string bug, in long len);
+  void update(in string aBuf, in long aLen);
   void finish(out nsICMSMessage msg);
 };
 
@@ -85,7 +85,7 @@ interface nsICMSDecoder : nsISupports
 interface nsICMSEncoder : nsISupports
 {
   void start();
-  void update();
+  void update(in string aBuf, in long aLen);
   void finish();
   void encode(in nsICMSMessage aMsg);
 };

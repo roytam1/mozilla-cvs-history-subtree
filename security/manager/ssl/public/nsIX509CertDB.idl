@@ -123,6 +123,13 @@ interface nsIX509CertDB : nsISupports {
                                               in nsCertCompareFunc aCertCmpFn,
                                               out nsISupportsArray certs);
 
+  nsIX509Cert getDefaultEmailEncryptionCert();
+
+  nsIX509Cert getDefaultEmailSigningCert();
+
+  nsIX509Cert getCertByEmailAddress(in nsIPK11Token aToken,
+                             in wstring aEmailAddress);
+
   /*
    * importCertificates
    * Use this to import a stream sent down as a mime type into
