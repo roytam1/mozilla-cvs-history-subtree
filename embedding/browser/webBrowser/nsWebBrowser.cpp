@@ -1485,8 +1485,14 @@ NS_IMETHODIMP nsWebBrowser::Deactivate(void)
     GetContentDOMWindow(getter_AddRefs(domWindow));
     if (domWindow) {
         nsCOMPtr<nsPIDOMWindow> privateDOMWindow = do_QueryInterface(domWindow);
-        if(privateDOMWindow)
+        if(privateDOMWindow) {
+          nsCOMPtr<nsIFocusController> focusController;
+          privateDOMWindow->GetRootFocusController(getter_AddRefs(focusController));
+          if(focusController)
+            focusController->SetActive(PR_FALSE);
+
           privateDOMWindow->Deactivate();
+        }
     }
 
     return NS_OK;
