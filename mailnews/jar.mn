@@ -145,6 +145,8 @@ messenger.jar:
     content/messenger/mailWidgets.xml                                          (base/resources/content/mailWidgets.xml)
     content/messenger/platformMailnewsOverlay.xul                              (base/resources/content/win/platformMailnewsOverlay.xul)
     content/messenger/platformMailOverlay.xul                                  (base/resources/content/win/platformMailOverlay.xul)
+    content/messenger/viewSource.xul                                           (base/resources/content/viewSource.xul)
+    content/messenger/viewSource.js                                            (base/resources/content/viewSource.js)
     content/messenger/SearchDialog.xul                                         (base/search/resources/content/SearchDialog.xul)
     content/messenger/ABSearchDialog.xul                                       (base/search/resources/content/ABSearchDialog.xul)
     content/messenger/SearchDialog.js                                          (base/search/resources/content/SearchDialog.js)
@@ -217,6 +219,7 @@ en-US.jar:
     locale/en-US/messenger/mailOverlay.dtd                              (base/resources/locale/en-US/mailOverlay.dtd)
     locale/en-US/messenger/msgSynchronize.dtd                           (base/resources/locale/en-US/msgSynchronize.dtd)
     locale/en-US/messenger/offline.properties                           (base/resources/locale/en-US/offline.properties)
+    locale/en-US/messenger/viewSource.dtd                               (base/resources/locale/en-US/viewSource.dtd)
     locale/en-US/messenger/SearchDialog.dtd                             (base/search/resources/locale/en-US/SearchDialog.dtd)
     locale/en-US/messenger/FilterListDialog.dtd                         (base/search/resources/locale/en-US/FilterListDialog.dtd)
     locale/en-US/messenger/CustomHeaders.dtd                            (base/search/resources/locale/en-US/CustomHeaders.dtd)
@@ -290,3 +293,4 @@ en-US.jar:
 US.jar:
     locale/US/messenger-region/contents.rdf                             (base/resources/locale/en-US/contents-region.rdf)
     locale/US/messenger-region/region.properties                        (base/resources/locale/en-US/region.properties)
+

@@ -395,19 +395,29 @@ function ViewPageSource(messages)
 		// Now, we need to get a URL from a URI
 		url = mailSession.ConvertMsgURIToMsgURL(uri, msgWindow);
 		if (url) {
-            // XXX what if there already is a "?", like "?part=0"
-            // XXX shouldn't this be "&header=src" in that case?
+      // XXX what if there already is a "?", like "?part=0"
+      // XXX shouldn't this be "&header=src" in that case?
 			url += "?header=src";
-        }
+    }
     
-		// Use a browser window to view source
-		window.openDialog( getBrowserURL(),
+    //for stand alone mail, we don't have a browser, so we use our own view source chrome
+    if (false) {
+		  // Use a browser window to view source
+		  window.openDialog( getBrowserURL(),
 						   "_blank",
 						   "scrollbars,resizable,chrome,dialog=no",
-							url,
-							"view-source" );
+							 url,
+							 "view-source" );
+    }
+    else {
+		  window.openDialog("chrome://messenger/content/viewSource.xul",
+						   "_blank",
+						   "scrollbars,resizable,chrome,dialog=no",
+							 url,
+							 "view-source" );
+    }
 	}
-        return true;
+  return true;
 }
 
 
