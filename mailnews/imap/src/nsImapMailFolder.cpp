@@ -6625,29 +6625,25 @@ NS_IMETHODIMP nsImapMailFolder::SetFolderVerifiedOnline(PRBool bVal)
 
 NS_IMETHODIMP nsImapMailFolder::ShouldStoreMsgOffline(nsMsgKey msgKey, PRBool *result)
 {
-  // check if we're storing mail we read in the inbox in a personal filing cabinet.
-  // if not, just use base class implementation.
-  if (mFlags & MSG_FOLDER_FLAG_INBOX)
-  {
-    PRBool hasMsgOffline = PR_FALSE;
+  // aol PFC works for all online folders, not just inbox. And INBOX flag isn't set...
+  PRBool hasMsgOffline = PR_FALSE;
 
-    HasMsgOffline(msgKey, &hasMsgOffline);
-    if (hasMsgOffline)
+  HasMsgOffline(msgKey, &hasMsgOffline);
+  if (hasMsgOffline)
+  {
+    *result = PR_FALSE;
+    return NS_OK;
+  }
+  nsCOMPtr<nsIImapIncomingServer> imapServer;
+  nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
+  if (NS_SUCCEEDED(rv) && imapServer)
+  {
+    PRBool storeReadMailInPFC;
+    imapServer->GetStoreReadMailInPFC(&storeReadMailInPFC);
+    if (storeReadMailInPFC)
     {
-      *result = PR_FALSE;
+      *result = PR_TRUE;
       return NS_OK;
-    }
-    nsCOMPtr<nsIImapIncomingServer> imapServer;
-    nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
-    if (NS_SUCCEEDED(rv) && imapServer)
-    {
-      PRBool storeReadMailInPFC;
-      imapServer->GetStoreReadMailInPFC(&storeReadMailInPFC);
-      if (storeReadMailInPFC)
-      {
-        *result = PR_TRUE;
-        return NS_OK;
-      }
     }
   }
   return nsMsgDBFolder::ShouldStoreMsgOffline(msgKey, result);
@@ -6655,38 +6651,35 @@ NS_IMETHODIMP nsImapMailFolder::ShouldStoreMsgOffline(nsMsgKey msgKey, PRBool *r
 
 nsresult nsImapMailFolder::GetOfflineStoreOutputStream(nsIOutputStream **outputStream)
 {
-  // check if we're storing mail we read in the inbox in a personal filing cabinet.
+  // check if we're storing mail we're reading in online aol mail in a personal filing cabinet.
   // if not, just use base class implementation.
-  if (mFlags & MSG_FOLDER_FLAG_INBOX)
+  nsCOMPtr<nsIImapIncomingServer> imapServer;
+  nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
+  if (NS_SUCCEEDED(rv) && imapServer)
   {
-    nsCOMPtr<nsIImapIncomingServer> imapServer;
-    nsresult rv = GetImapIncomingServer(getter_AddRefs(imapServer));
-    if (NS_SUCCEEDED(rv) && imapServer)
+    PRBool storeReadMailInPFC;
+    imapServer->GetStoreReadMailInPFC(&storeReadMailInPFC);
+    if (storeReadMailInPFC)
     {
-      PRBool storeReadMailInPFC;
-      imapServer->GetStoreReadMailInPFC(&storeReadMailInPFC);
-      if (storeReadMailInPFC)
+      nsresult rv = NS_ERROR_NULL_POINTER;
+      nsCOMPtr <nsIMsgFolder> outputPFC;
+
+      imapServer->GetReadMailPFC(PR_TRUE, getter_AddRefs(outputPFC));
+      if (outputPFC)
       {
-        nsresult rv = NS_ERROR_NULL_POINTER;
-        nsCOMPtr <nsIMsgFolder> outputPFC;
+        nsCOMPtr <nsIFileSpec> outputPFCPath;
+        outputPFC->GetPath(getter_AddRefs(outputPFCPath));
+        nsCOMPtr<nsISupports>  supports;
+        nsFileSpec fileSpec;
+        outputPFCPath->GetFileSpec(&fileSpec);
+        rv = NS_NewIOFileStream(getter_AddRefs(supports), fileSpec, PR_WRONLY | PR_CREATE_FILE, 00700);
+        supports->QueryInterface(NS_GET_IID(nsIOutputStream), (void **) outputStream);
 
-        imapServer->GetReadMailPFC(PR_TRUE, getter_AddRefs(outputPFC));
-        if (outputPFC)
-        {
-          nsCOMPtr <nsIFileSpec> outputPFCPath;
-          outputPFC->GetPath(getter_AddRefs(outputPFCPath));
-          nsCOMPtr<nsISupports>  supports;
-          nsFileSpec fileSpec;
-          outputPFCPath->GetFileSpec(&fileSpec);
-          rv = NS_NewIOFileStream(getter_AddRefs(supports), fileSpec, PR_WRONLY | PR_CREATE_FILE, 00700);
-          supports->QueryInterface(NS_GET_IID(nsIOutputStream), (void **) outputStream);
-
-          nsCOMPtr <nsISeekableStream> seekable = do_QueryInterface(supports);
-          if (seekable)
-            seekable->Seek(nsISeekableStream::NS_SEEK_END, 0);
-        }
-        return rv;
+        nsCOMPtr <nsISeekableStream> seekable = do_QueryInterface(supports);
+        if (seekable)
+          seekable->Seek(nsISeekableStream::NS_SEEK_END, 0);
       }
+      return rv;
     }
   }
   return nsMsgDBFolder::GetOfflineStoreOutputStream(outputStream);
