@@ -21,7 +21,7 @@
  **********************************************************************/
 
 #include "prefapi.h"
-#include "prassert.h"
+#include "prlog.h"
 #include "prlink.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
@@ -74,6 +74,7 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
     }
 }
 
+#if 0
 
 /*
  * PREF_GetLabelAndMnemonic
@@ -120,6 +121,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     return ( *xm_str != NULL );
 }
 
+#endif 
 
 /*
  * PREF_GetUrl

@@ -165,7 +165,7 @@ void pref_Alert(char* msg);
 int pref_HashPref(const char *key, PrefValue value, PrefType type, PrefAction action);
 
 /* -- Platform specific function extern */
-#if !defined(XP_WIN) && !defined(XP_OS2)
+#ifndef XP_PC
 extern JSBool pref_InitInitialObjects(void);
 #endif
 
@@ -1293,7 +1293,12 @@ PREF_GetDefaultRectPref(const char *pref_name, int16 *left, int16 *top, int16 *r
 	int result = PREF_GetDefaultCharPref(pref_name, (char *)&rectstr, &iLen);
 	
 	if (result == PREF_NOERROR) {
-		sscanf(rectstr, "%d,%d,%d,%d", left, top, right, bottom);
+        int l,t,r,b;
+		sscanf(rectstr, "%i,%i,%i,%i", &l, &t, &r, &b);
+        *left = l;
+        *top = t;
+        *right = r;
+        *bottom = b;
 	}
 	return result;
 }
@@ -1454,6 +1459,7 @@ static XP_Bool pref_ValueChanged(PrefValue oldValue, PrefValue newValue, PrefTyp
 		case PREF_BOOL:
 			changed = oldValue.boolVal != newValue.boolVal;
 			break;
+        default:
 	}
 	return changed;
 }
@@ -1554,6 +1560,7 @@ int pref_HashPref(const char *key, PrefValue value, PrefType type, PrefAction ac
 		    pref->flags |= PREF_LOCKED;
 		    m_IsAnyPrefLocked = TRUE;
 		    break;
+        default:
 	}
 
     if (result == PREF_VALUECHANGED && m_CallbacksEnabled) {
@@ -1655,9 +1662,7 @@ JSBool PR_CALLBACK pref_NativeSetConfig
 JSBool PR_CALLBACK pref_NativeGetPref
 	(JSContext *cx, JSObject *obj, unsigned int argc, jsval *argv, jsval *rval)
 {
-	void* value = NULL;
 	PrefNode* pref;
-	XP_Bool prefExists = TRUE;
 	
     if (argc >= 1 && JSVAL_IS_STRING(argv[0]))
     {
@@ -1817,7 +1822,7 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 	if ( PREF_CreateChildList(curSrcBranch, &children) == PREF_NOERROR )
 	{	
 		int 	index = 0;
-		int		srcPrefixLen = XP_STRLEN(srcPrefix);
+		int		srcPrefixLen = PL_strlen(srcPrefix);
 		char* 	child = NULL;
 		
 		while ( (child = PREF_NextChild(children, &index)) != NULL)
@@ -1826,7 +1831,7 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 			char	*destPrefName = NULL;
 			char	*childStart = (srcPrefixLen > 0) ? (child + srcPrefixLen + 1) : child;
 			
-			XP_ASSERT( XP_STRNCMP(child, curSrcBranch, srcPrefixLen) == 0 );
+			PR_ASSERT( PL_strncmp(child, curSrcBranch, srcPrefixLen) == 0 );
 							
 			if (*destPrefix > 0)
 				destPrefName = PR_smprintf("%s.%s", destPrefix, childStart);
@@ -1856,7 +1861,7 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 							if (result == PREF_NOERROR)
 								result = PREF_SetCharPref(destPrefName, prefVal);
 								
-							XP_FREEIF(prefVal);
+							PR_FREEIF(prefVal);
 						}
 						break;
 					
@@ -1888,20 +1893,20 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 						
 					default:
 						/* we should never get here */
-						XP_ASSERT(FALSE);
+						PR_ASSERT(FALSE);
 						break;
 				}
 				
 			}	/* is not locked */
 			
-			XP_FREEIF(destPrefName);
+			PR_FREEIF(destPrefName);
 			
 			/* Recurse */
 			if (result == PREF_NOERROR || result == PREF_VALUECHANGED)
 				result = pref_copyTree(srcPrefix, destPrefix, child);
 		}
 		
-		XP_FREE(children);
+		PR_Free(children);
 	}
 	
 	return result;
@@ -1911,12 +1916,11 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 PR_IMPLEMENT(int)
 PREF_CopyPrefsTree(const char *srcRoot, const char *destRoot)
 {
-	XP_ASSERT(srcRoot != NULL);
-	XP_ASSERT(destRoot != NULL);
+	PR_ASSERT(srcRoot != NULL);
+	PR_ASSERT(destRoot != NULL);
 	
 	return pref_copyTree(srcRoot, destRoot, srcRoot);
 }
-
 
 /* Adds a node to the beginning of the callback list. */
 PR_IMPLEMENT(void)
