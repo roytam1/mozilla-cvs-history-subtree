@@ -12161,13 +12161,11 @@ nsCSSFrameConstructor::RecreateFramesForContent(nsIPresContext* aPresContext,
       // data), we need to blow away our style information if this reframe happened as
       // a result of an inline style attribute changing.
       if (aInlineStyle) {
-        if (aStyleContext)
-          aStyleContext->ClearCachedDataForRule(aInlineStyleRule);
-        else {
-          nsCOMPtr<nsIStyleSet> set;
-          shell->GetStyleSet(getter_AddRefs(set));
-          set->ClearCachedDataInRuleTree(aInlineStyleRule);
-        }
+        nsCOMPtr<nsIStyleSet> set;
+        shell->GetStyleSet(getter_AddRefs(set));
+        // XXXldb If |aStyleContext| is null, wouldn't it be faster to pass
+        // in something to tell it that this change is for inline style?
+        set->ClearStyleData(aPresContext, aInlineStyleRule, aStyleContext);
       }
     
       if (NS_SUCCEEDED(rv)) {
