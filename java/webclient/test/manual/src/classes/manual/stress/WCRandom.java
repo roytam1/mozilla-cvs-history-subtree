@@ -28,6 +28,9 @@ import org.mozilla.webclient.test.EMWindow;
 import org.mozilla.webclient.test.EmbeddedMozilla;
 import org.mozilla.util.Assert;
 
+import java.util.Calendar;
+import java.util.Date;
+
 /**
  *
 
@@ -115,15 +118,21 @@ public static void main(String [] arg)
 
 public void run()
 {
-  for (;;) {
-    try {
-      Thread.sleep(10000);
+    Calendar calendar;
+    Date date;
+    for (;;) {
+        try {
+            Thread.sleep(10000);
+        }
+        catch (Exception e) {
+        }
+        calendar = Calendar.getInstance();
+        date = calendar.getTime();
+        System.out.println("Loading " + url + " at " + date.toString());
+        navigation.stop();
+        navigation.loadURL(url);
+        
     }
-    catch (Exception e) {
-    }
-    navigation.stop();
-    navigation.loadURL(url);
-  }
 }
 
 
