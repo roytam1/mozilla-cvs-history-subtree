@@ -34,6 +34,7 @@
 #include "nsCOMPtr.h"
 #include "nsIImapIncomingServer.h"
 #include "nsMsgBaseCID.h"
+#include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kMsgMailSessionCID, NS_MSGMAILSESSION_CID);
 static NS_DEFINE_CID(kCImapHostSessionListCID, NS_IIMAPHOSTSESSIONLIST_CID);
@@ -232,8 +233,8 @@ nsresult nsImapUrl::ParseUrl()
 		nsCRT::free(imapPartOfUrl);
 	}
 
-	char * host = nsnull;
-	rv = GetHost(&host);
+	nsXPIDLCString host;
+	rv = GetHost(getter_Copies(host));
     if (NS_SUCCEEDED(rv) && host)
     {
         NS_WITH_SERVICE(nsIMsgMailSession, session, kMsgMailSessionCID, &rv); 
@@ -252,7 +253,6 @@ nsresult nsImapUrl::ParseUrl()
         // can't do an addref because it's private to nsIURI, so use
         // do_QueryInterface instead
 		m_server = do_QueryInterface(server);
-		nsCRT::free(host);
     }
 
     NS_UNLOCK_INSTANCE();
@@ -719,7 +719,7 @@ NS_IMETHODIMP nsImapUrl::AllocateCanonicalPath(const char *serverPath, char onli
     nsresult rv = NS_ERROR_NULL_POINTER;
     char *canonicalPath = nsnull;
 	char delimiterToUse = onlineDelimiter;
-    char* hostName = nsnull;
+    nsXPIDLCString hostName;
     char* userName = nsnull;
     nsString aString;
 	char *currentPath = (char *) serverPath;
@@ -741,7 +741,7 @@ NS_IMETHODIMP nsImapUrl::AllocateCanonicalPath(const char *serverPath, char onli
 	if (!serverPath || NS_FAILED(rv))
 		goto done;
 
-    GetHost(&hostName);
+    GetHost(getter_Copies(hostName));
     m_server->GetUsername(&userName);
 
     hostSessionList->GetOnlineDirForHost(hostName, userName, aString); 
@@ -798,7 +798,6 @@ NS_IMETHODIMP nsImapUrl::AllocateCanonicalPath(const char *serverPath, char onli
 done:
     PR_FREEIF(userName);
     PR_FREEIF(onlineDir);
-	nsCRT::free(hostName);
 
     NS_UNLOCK_INSTANCE();
     return rv;
