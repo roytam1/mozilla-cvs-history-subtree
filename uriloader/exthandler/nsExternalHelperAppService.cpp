@@ -1558,6 +1558,7 @@ nsresult nsExternalHelperAppService::GetMIMEInfoForMimeTypeFromExtras(const char
           mimeInfo->SetMacCreator(extraMimeEntries[index].mMacCreator);
 
           *aMIMEInfo = mimeInfo;
+          NS_ADDREF(*aMIMEInfo);
       }
   }
 
