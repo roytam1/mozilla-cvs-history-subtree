@@ -1597,7 +1597,8 @@ nsFrame::PeekBackwardAndForward(nsSelectionAmount aAmountBack,
                    PR_FALSE,
                    PR_TRUE,
                    aJumpLines,
-                   PR_TRUE);//limit on scrolled views
+                   PR_TRUE,   //limit on scrolled views
+                   PR_FALSE); //stop at inline frame.
   rv = PeekOffset(aPresContext, &startpos);
   if (NS_FAILED(rv))
     return rv;
@@ -1610,7 +1611,8 @@ nsFrame::PeekBackwardAndForward(nsSelectionAmount aAmountBack,
                  PR_FALSE,
                  PR_FALSE,
                  aJumpLines,
-                 PR_TRUE);//limit on scrolled views
+                 PR_TRUE,   //limit on scrolled views
+                 PR_FALSE); //stop at inline frame.
   rv = PeekOffset(aPresContext, &endpos);
   if (NS_FAILED(rv))
     return rv;
@@ -3375,11 +3377,86 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
           if (!rect.width || !rect.height)
             result = NS_ERROR_FAILURE;
           else
+          {
+            //we may need to check for inline frame here.
+            //if so, stop outside the inline frame.
+            if (aPos->mInlineFrameStop)
+            {
+              const nsStyleDisplay* display;
+              aPos->mInlineFrameStop = PR_FALSE; //default to fail
+              resultFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+              //check that we are on the last frame
+              nsIFrame *inFlow;
+
+              nsRect tempRect;
+              PRBool pointAfter(PR_FALSE); // is the point after the  selected frame or in front of it?
+              resultFrame->GetRect(tempRect);                    
+              if (tempRect.width && tempRect.height && ((tempRect.x + tempRect.width) < point.x))
+              {
+                pointAfter = PR_TRUE;
+                resultFrame->GetNextInFlow(&inFlow);
+              }
+              else //the point is before the inline frame we need to check for previous frames...
+              {
+                resultFrame->GetPrevInFlow(&inFlow);
+              }
+              if (display->mDisplay == NS_STYLE_DISPLAY_INLINE && !inFlow) 
+              {
+                //we need to look for the nearest parent that does NOT have the inline style...
+                nsIFrame *resultFrameParent;
+                nsIFrame *currentFrame = resultFrame;
+                currentFrame->GetParent(&resultFrameParent);
+
+                resultFrameParent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+                while (display->mDisplay == NS_STYLE_DISPLAY_INLINE) 
+                {
+                  currentFrame = resultFrameParent;
+                  currentFrame->GetParent(&resultFrameParent);
+                  if (!resultFrameParent)
+                    break;
+                  resultFrameParent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+                }
+                //get next in flow...
+                if (currentFrame)
+                {
+                  nsCOMPtr<nsIContent> content;
+                  nsCOMPtr<nsIContent> parentContent;
+                  currentFrame->GetContent(getter_AddRefs(content));
+                  if (content)
+                  {
+                    content->GetParent(*getter_AddRefs(parentContent));
+                    if (parentContent)
+                    {
+                      PRInt32 contentOffset;
+                      result = parentContent->IndexOf(content, contentOffset);
+                      if (NS_SUCCEEDED(result))
+                      {
+                        resultFrame = currentFrame;
+                        aPos->mResultFrame = resultFrame;
+                        aPos->mResultContent = parentContent;
+                        aPos->mContentOffset = contentOffset;
+                        aPos->mInlineFrameStop = PR_TRUE;//success
+                        if (tempRect.Contains(point))
+                          aPos->mContentOffsetEnd = ++aPos->mContentOffset;
+                        else 
+                        {
+                          if (pointAfter)
+                            aPos->mContentOffset++;
+                          aPos->mContentOffsetEnd = aPos->mContentOffset;
+                          return NS_OK;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
             result = resultFrame->GetContentAndOffsetsFromPoint(context,point,
                                           getter_AddRefs(aPos->mResultContent),
                                           aPos->mContentOffset,
                                           aPos->mContentOffsetEnd,
                                           aPos->mPreferLeft);
+          }
         }
         if (NS_SUCCEEDED(result))
         {
