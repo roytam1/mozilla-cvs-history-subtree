@@ -59,9 +59,7 @@ Stack::~Stack() {
  * You will need to delete this Iterator when you are done
 **/
 StackIterator* Stack::iterator() {
-    StackIterator* iter = (StackIterator*)List::iterator();
-    iter->reverse();
-    return iter;
+    return (StackIterator*)List::iterator();
 } //-- iterator
 
 /**
@@ -71,7 +69,7 @@ StackIterator* Stack::iterator() {
 **/
 void* Stack::peek() {
     void* obj = 0;
-    List::ListItem* item = getLastItem();
+    List::ListItem* item = getFirstItem();
     if ( item ) obj = item->objPtr;
     return obj;
 } //-- peek
@@ -82,7 +80,7 @@ void* Stack::peek() {
  * top of this Stack
 **/
 void Stack::push(void* obj) {
-    add(obj);
+    insert(0,obj);
 } //-- push
 
 /**
@@ -91,7 +89,7 @@ void Stack::push(void* obj) {
 **/
 void* Stack::pop() {
     void* obj = 0;
-    ListItem* item = getLastItem();
+    ListItem* item = getFirstItem();
     if ( item ) obj = item->objPtr;
     item = remove(item);
     item->objPtr = 0;
