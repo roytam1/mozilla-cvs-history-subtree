@@ -236,6 +236,54 @@ PRBool nsMapiRegistryUtils::IsDefaultMailClient()
 
 }
 
+nsresult nsMapiRegistryUtils::saveDefaultProtocol(const char * aClientKey, const char * aProtocol)
+{
+	nsresult rv = NS_OK;
+	nsCAutoString keyName (aClientKey);
+	keyName += "\\protocols\\";
+	keyName += aProtocol;
+	keyName += "\\shell\\open\\command";
+
+	nsCAutoString appPath ;
+    GetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", appPath);
+    if (!appPath.IsEmpty()) {
+      nsCAutoString stringName("HKEY_LOCAL_MACHINE\\");
+      stringName += keyName.get();
+      rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                          "Software\\Mozilla\\Desktop", 
+                          stringName.get(), (char *)appPath.get());
+	}
+
+	return rv;
+}
+
+nsresult nsMapiRegistryUtils::saveDefaultNewsClient()
+{
+    nsresult rv;
+    nsCAutoString name ;
+    GetRegistryKey(HKEY_LOCAL_MACHINE,"Software\\Clients\\News", "", name);
+    if (!name.IsEmpty()) {
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "HKEY_LOCAL_MACHINE\\Software\\Clients\\News", 
+                            (char *)name.get());
+        if (NS_SUCCEEDED(rv)) {
+            nsCAutoString keyName("Software\\Clients\\News\\");
+            keyName += name.get(); 
+
+			saveDefaultProtocol(keyName.get(), "news");
+			saveDefaultProtocol(keyName.get(), "nntp");
+			saveDefaultProtocol(keyName.get(), "snews");
+        }
+    }
+    else
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "HKEY_LOCAL_MACHINE\\Software\\Clients\\News", 
+                            "");
+    return rv;
+}
+
 nsresult nsMapiRegistryUtils::saveDefaultMailClient()
 {
     nsresult rv;
@@ -249,16 +297,7 @@ nsresult nsMapiRegistryUtils::saveDefaultMailClient()
         if (NS_SUCCEEDED(rv)) {
             nsCAutoString keyName("Software\\Clients\\Mail\\");
             keyName += name.get(); 
-            keyName += "\\protocols\\mailto\\shell\\open\\command";
-            nsCAutoString appPath ;
-            GetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", appPath);
-            if (!appPath.IsEmpty()) {
-                nsCAutoString stringName("HKEY_LOCAL_MACHINE\\");
-                stringName += keyName.get();
-                rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                  "Software\\Mozilla\\Desktop", 
-                                  stringName.get(), (char *)appPath.get());
-            }
+			saveDefaultProtocol(keyName.get(), "mailto");
         }
     }
     else
@@ -268,6 +307,26 @@ nsresult nsMapiRegistryUtils::saveDefaultMailClient()
                             "");
     return rv;
 } 
+
+nsresult nsMapiRegistryUtils::saveUserDefaultNewsClient()
+{
+    nsresult rv;
+    nsCAutoString name ;
+    GetRegistryKey(HKEY_CURRENT_USER,"Software\\Clients\\News", "", name);
+    if (!name.IsEmpty()) {
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "HKEY_CURRENT_USER\\Software\\Clients\\News", 
+                            (char *)name.get());
+    }
+    else {
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "HKEY_CURRENT_USER\\Software\\Clients\\News", 
+                            "");
+   }
+   return rv;
+}
 
 nsresult nsMapiRegistryUtils::saveUserDefaultMailClient()
 {
@@ -454,7 +513,7 @@ nsresult nsMapiRegistryUtils::setMailtoProtocolHandler()
     nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
 
     nsCAutoString mailAppPath(thisApplication());
-    mailAppPath += " -compose %1";
+    mailAppPath += " -compose \"%1\"";
 
     nsresult rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\mailto\\shell\\open\\command", "", (char *)mailAppPath.get());
     NS_ENSURE_SUCCESS(rv, rv);
@@ -477,13 +536,154 @@ nsresult nsMapiRegistryUtils::setNewsProtocolHandler()
     NS_ENSURE_SUCCESS(rv, rv);
     rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\snews\\shell\\open\\command", "", (char *)mailAppPath.get());
     NS_ENSURE_SUCCESS(rv, rv);
+    rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\nntp\\shell\\open\\command", "", (char *)mailAppPath.get());
+    NS_ENSURE_SUCCESS(rv, rv);
 
     nsCAutoString iconPath(thisApplication());
     iconPath += ",0";
     rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\news\\DefaultIcon", "", (char *)iconPath.get());
     NS_ENSURE_SUCCESS(rv, rv);
 
+    rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\nntp\\DefaultIcon", "", (char *)iconPath.get());
+    NS_ENSURE_SUCCESS(rv, rv);
+
     return SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\snews\\DefaultIcon", "", (char *)iconPath.get());
+}
+
+nsresult nsMapiRegistryUtils::setupDefaultProtocolKey(const char * aDefaultAppRegKey, const char * aProtocol, const char * aProtocolEntryValue, const char * aCmdLineText)
+{
+    nsCAutoString keyName;
+    keyName = aDefaultAppRegKey;
+    keyName.Append("\\protocols\\");
+    keyName.Append(aProtocol);
+
+    nsCAutoString temp; 
+    temp = aProtocolEntryValue;  // XXX this is bogus. SetRegistryKey should not require a char *..it should take a const char *
+   
+    nsresult rv = SetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", (char *) temp.get());
+    if (NS_SUCCEEDED(rv)) {
+        nsCAutoString appPath (thisApplication());
+        appPath += " ";
+        if (aCmdLineText) {
+            appPath += aCmdLineText;
+            appPath += " ";
+        }
+        appPath += "%1";
+        keyName.Append("\\shell\\open\\command");
+
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", (char *)appPath.get());
+
+        nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
+        
+        if (NS_SUCCEEDED(rv)) {
+            rv = SetRegistryKey(HKEY_LOCAL_MACHINE, aDefaultAppRegKey, "", (char *)appName.get());
+        }
+
+    }
+
+    return rv;
+}
+
+/** Sets Mozilla as the default News Client 
+    Note: this method assumes setDefaultMailClient has already been called. 
+ */
+nsresult nsMapiRegistryUtils::setDefaultNewsClient()
+{
+    nsresult rv;
+    nsresult mailKeySet=NS_ERROR_FAILURE;
+    rv = saveDefaultNewsClient();
+    if (NS_FAILED(saveUserDefaultNewsClient()) || NS_FAILED(rv)) 
+		return NS_ERROR_FAILURE;
+
+    nsCAutoString keyName("Software\\Clients\\News\\");
+    nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
+
+    // (1) Add our app to the list of keys undder Software\\Clients\\News so we show up as a possible News application  
+    if (!appName.IsEmpty()) {
+        keyName.Append(appName.get());
+
+        nsCOMPtr<nsIStringBundle> bundle;
+        rv = MakeMapiStringBundle (getter_AddRefs (bundle)) ;
+        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+        nsXPIDLString defaultMailTitle;
+        // Use vendorName instead of brandname since brandName is product name
+        // and has more than just the name of the application
+        const PRUnichar *keyValuePrefixStr[] = { vendorName() };
+        NS_NAMED_LITERAL_STRING(defaultMailTitleTag, "defaultMailDisplayTitle");
+        rv = bundle->FormatStringFromName(defaultMailTitleTag.get(),
+                                      keyValuePrefixStr, 1,
+                                      getter_Copies(defaultMailTitle));
+        if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+             keyName.get(), 
+             "", NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(defaultMailTitle).get()) ) ; 
+    }
+    else
+        rv = NS_ERROR_FAILURE;
+
+    if (NS_SUCCEEDED(rv)) {
+        nsCAutoString thisApp (thisApplication()) ;
+        if (NS_FAILED(rv)) return rv ;
+
+        nsCAutoString dllPath (thisApp) ;
+        PRInt32 index = dllPath.RFind("\\");
+        if (index != kNotFound)
+            dllPath.Truncate(index + 1);
+        dllPath += "mozMapi32.dll";
+
+        // (2) add a dllPath subkey to Software\\Clients\\News\\<app name>
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            keyName.get(), "DLLPath", 
+                            (char *)dllPath.get());
+        if (NS_SUCCEEDED(rv)) {
+            // (3) now that we have added Software\\Clients\\News\\<app name>
+            //     add subkeys for each protocol news supports
+            setupDefaultProtocolKey(keyName.get(), "news", "URL:News Protocol", "-mail");
+            setupDefaultProtocolKey(keyName.get(), "nntp", "URL:NNTP Protocol", "-mail");
+            setupDefaultProtocolKey(keyName.get(), "snews", "URL:Snews Protocol", "-mail");
+
+            // (4) add a shell open command entry to Software\\Clients\\News\\<app name>
+            nsCAutoString appPath (thisApp);
+            appPath += " -mail %1";
+            keyName.Append("\\shell\\open\\command");
+            rv = SetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", (char *)appPath.get());
+            if (NS_SUCCEEDED(rv)) {
+                rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Clients\\News", "", (char *)appName.get());
+            }
+            
+            if (NS_SUCCEEDED(rv)) {
+                nsCAutoString mailAppPath(thisApp);
+                mailAppPath += " -mail";
+                nsCAutoString appKeyName ("Software\\Clients\\News\\");
+                appKeyName.Append(appName.get());
+                appKeyName.Append("\\shell\\open\\command");
+                rv = SetRegistryKey(HKEY_LOCAL_MACHINE, appKeyName.get(), "", (char *)mailAppPath.get());
+             }
+            
+            // (5) add a default icon entry to Software\\Clients\\News\\<app name>
+            if (NS_SUCCEEDED(rv)) {
+                 nsCAutoString iconPath(thisApp);
+                 iconPath += ",0";
+                 nsCAutoString iconKeyName ("Software\\Clients\\News\\");
+                 iconKeyName.Append(appName.get());
+                 iconKeyName.Append("\\DefaultIcon");
+                 mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, iconKeyName.get(),"", (char *)iconPath.get());
+            }                       
+        }
+    }
+
+    if (NS_SUCCEEDED(mailKeySet)) {     
+        // and set our selves as the default news protocol handler
+        setNewsProtocolHandler();  
+
+        nsresult desktopKeySet = SetRegistryKey(HKEY_CURRENT_USER, 
+                                                "Software\\Clients\\News",
+                                                "", (char *)appName.get());
+    }
+    
+    return mailKeySet;
 }
 
 /** Sets Mozilla as default Mail Client
@@ -499,6 +699,7 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
     rv = saveDefaultMailClient();
     if (NS_FAILED(saveUserDefaultMailClient()) ||
         NS_FAILED(rv)) return NS_ERROR_FAILURE;
+    
     nsCAutoString keyName("Software\\Clients\\Mail\\");
 
     nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
@@ -538,13 +739,12 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
                             keyName.get(), "DLLPath", 
                             (char *)dllPath.get());
         if (NS_SUCCEEDED(rv)) {
-            keyName.Append("\\protocols\\mailto");
-            rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
-                                keyName.get(), 
-                                "", "URL:MailTo Protocol");
+
+            rv = setupDefaultProtocolKey(keyName.get(), "mailto", "URL:MailTo Protocol", "-compose");
+
             if (NS_SUCCEEDED(rv)) {
                 nsCAutoString appPath (thisApp);
-                appPath += " \"%1\"";
+                appPath += " -compose \"%1\"";
                 keyName.Append("\\shell\\open\\command");
                 rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                        keyName.get(), 
@@ -588,8 +788,8 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
         // make sure we also set ourselves as the mailto protocol handler for the user...
         rv = setMailtoProtocolHandler(); 
         
-        // and set our selves as the default news protocol handler
-        // rv = setNewsProtocolHandler(); // XXX news is not ready to be turned on yet. 
+        // set ourselves as the default news client as well...
+        rv = setDefaultNewsClient();  
 #endif
 
         // ignore the error returned by setNewsProtocolHandler and setMailtoProtocolHandler
@@ -616,6 +816,70 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
     return mailKeySet;
 }
 
+nsresult nsMapiRegistryUtils::unsetDefaultNewsClient() {
+    nsresult rv = NS_OK;
+    nsresult mailKeySet = NS_ERROR_FAILURE;
+    nsCAutoString name ;
+
+    // get the name of the default news client
+    GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
+                                      "HKEY_LOCAL_MACHINE\\Software\\Clients\\News", name);
+    
+    // Use vendorName instead of brandname since brandName is product name
+    // and has more than just the name of the application
+    nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
+    
+    // if we are the current default client....
+    if (!name.IsEmpty() && !appName.IsEmpty() && name.Equals(appName)) {
+        nsCAutoString keyName("HKEY_LOCAL_MACHINE\\Software\\Clients\\News\\");
+        keyName.Append(appName.get());
+
+        keyName.Append("\\protocols\\mailto\\shell\\open\\command");
+        nsCAutoString appPath ;
+        
+        GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", keyName.get(), appPath);
+        if (!appPath.IsEmpty()) {
+            keyName.Assign("Software\\Clients\\News\\");
+            keyName.Append(appName.get());
+            keyName.Append("\\protocols\\news\\shell\\open\\command");
+            rv = SetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", (char *)appPath.get());
+            if (NS_SUCCEEDED(rv)) {
+                PRInt32 index = appPath.RFind("\\");
+                if (index != kNotFound)
+                    appPath.Truncate(index + 1);
+                appPath += "mozMapi32.dll";
+                keyName.Assign("Software\\Clients\\News\\");
+                keyName.Append(appName.get());
+                rv = SetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "DLLPath", (char *) appPath.get());
+            }
+        }
+    }
+    if (!name.IsEmpty()) {
+        if (NS_SUCCEEDED(rv))
+            mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Clients\\News", "", (char *)name.get());
+    }
+    else
+        mailKeySet = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Clients\\News","", "");
+
+    if (NS_SUCCEEDED(mailKeySet)) {
+
+        // get the name of the previous news client
+        nsCAutoString userAppName;
+        GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", "HKEY_CURRENT_USER\\Software\\Clients\\News", userAppName);
+        nsresult desktopKeySet = NS_OK;
+
+        // restore the previous default news client
+        if (!userAppName.IsEmpty()) {
+            desktopKeySet = SetRegistryKey(HKEY_CURRENT_USER, "Software\\Clients\\News", "", (char *)userAppName.get());
+        }
+        else {
+            DeleteRegistryValue(HKEY_CURRENT_USER, "Software\\Clients\\News", "");
+        }
+    }
+
+    return mailKeySet;
+}
+
 /** Removes Mozilla as the default Mail client and restores the previous setting
  */
 nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
@@ -625,6 +889,11 @@ nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
     if (!isSmartDll()) {
         if (NS_FAILED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
     }
+
+#ifdef MOZ_THUNDERBIRD
+   unsetDefaultNewsClient(); // ignore any returned error and continue to unset the default mail client
+#endif
+
     nsCAutoString name ;
     GetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Mozilla\\Desktop", 
                                       "HKEY_LOCAL_MACHINE\\Software\\Clients\\Mail", name);
@@ -700,6 +969,7 @@ nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
         UnregisterServer(CLSID_CMapiImp, "MozillaMapi", "MozillaMapi.1");
         return desktopKeySet;
     }
+
     return mailKeySet;
 }
 

@@ -13,7 +13,7 @@
         chrome:author="mozilla.org"
         chrome:name="mozapps"
         chrome:skinVersion="1.5"
-        chrome:localeVersion="1.5a">
+        chrome:localeVersion="1.6a">
   </RDF:Description>
 
 </RDF:RDF>
