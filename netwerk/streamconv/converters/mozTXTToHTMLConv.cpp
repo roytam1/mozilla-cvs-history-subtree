@@ -238,6 +238,9 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
   case abbreviated:
   {
     PRInt32 i = pos - 1;
+    // This disallows non-ascii-characters for email.
+    // Currently correct, but revisit later after standards changed.
+    PRBool isEmail = aInString[pos] == (PRUnichar)'@';
     for (; i >= 0
              && aInString[PRUint32(i)] != '>' && aInString[PRUint32(i)] != '<'
              && aInString[PRUint32(i)] != '"' && aInString[PRUint32(i)] != '\''
@@ -246,6 +249,7 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
              && aInString[PRUint32(i)] != '(' && aInString[PRUint32(i)] != '|'
              && aInString[PRUint32(i)] != '\\'
              && !IsSpace(aInString[PRUint32(i)])
+             && (!isEmail || nsCRT::IsAscii(aInString[PRUint32(i)]))
          ; i--)
       ;
     if
@@ -294,6 +298,9 @@ mozTXTToHTMLConv::FindURLEnd(const PRUnichar * aInString, PRInt32 aInStringLengt
   case abbreviated:
   {
     PRUint32 i = pos + 1;
+    // This disallows non-ascii-characters for email.
+    // Currently correct, but revisit later after standards changed.
+    PRBool isEmail = aInString[pos] == (PRUnichar)'@';
     for (; PRInt32(i) < aInStringLength
              && aInString[i] != '>' && aInString[i] != '<'
              && aInString[i] != '"' && aInString[i] != '\''
@@ -301,6 +308,7 @@ mozTXTToHTMLConv::FindURLEnd(const PRUnichar * aInString, PRInt32 aInStringLengt
              && aInString[i] != '}' && aInString[i] != ']'
              && aInString[i] != ')' && aInString[i] != '|'
              && !IsSpace(aInString[i])
+             && (!isEmail || nsCRT::IsAscii(aInString[i]))
          ; i++)
       ;
     while (--i > pos && (
