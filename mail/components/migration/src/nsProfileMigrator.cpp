@@ -169,7 +169,7 @@ nsProfileMigrator::GetDefaultMailMigratorKey(nsACString& aKey,
   // XXXben - until we figure out what to do here with default browsers on MacOS and
   // GNOME, simply copy data from a previous Seamonkey install. 
   PRBool exists = PR_FALSE;
-  aMailMigrator = do_CreateInstance(NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
+  aMailMigrator = do_CreateInstance(NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey");
   if (aMailMigrator)
     aMailMigrator->GetSourceExists(&exists);
   if (exists) {
