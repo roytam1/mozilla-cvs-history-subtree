@@ -1,5 +1,11 @@
 1999-05-30  Kevin McCarthy  <kevin@perldap.org>
 
+	* typemap, API.xs: Updated Perl internal variables.  na=>PL_na,
+	sv_undef=>PL_sv_undef.
+	NOTE: This means we can only compile with Perl 5.004_05 and later now.
+
+1999-05-30  Kevin McCarthy  <kevin@perldap.org>
+
 	* typemap: Translate undef to NULL, so we can pass NULL to API calls.
 
 1999-09-08  Leif Hedstrom  <leif@perldap.org>

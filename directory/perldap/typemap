@@ -30,7 +30,7 @@
 # char *:
 #    INPUT:
 #       Changed the standard T_PV INPUT mapping to translate "undef"
-#       (sv_undev) to NULL.  I don't know if this will screw anything
+#       (PL_sv_undef) to NULL.  I don't know if this will screw anything
 #       up - this needs to be tested CAREFULLY.
 #    OUTPUT:
 #       Most the of functions returning a char * malloc() the char *
@@ -148,16 +148,16 @@ struct timeval		T_timeval
 #########
 INPUT
 T_PV
-	if ( $arg  == &sv_undef )
+	if ( $arg  == &PL_sv_undef )
            $var = NULL;
 	else
-	   $var = ($type)SvPV($arg,na)
+	   $var = ($type)SvPV($arg,PL_na)
 T_timeval
-	$var.tv_sec = atof((char *)SvPV($arg,na));
+	$var.tv_sec = atof((char *)SvPV($arg,PL_na));
 	$var.tv_usec = 0
 T_berval
-	$var.bv_val = (char *)SvPV($arg,na);
-	$var.bv_len = na
+	$var.bv_val = (char *)SvPV($arg,PL_na);
+	$var.bv_len = PL_na
 T_charptrptr
         $var = (char **)avref2charptrptr($arg)
 T_ldapcontrolptrptr
