@@ -18,6 +18,7 @@
 # the appropriate lib/ and include/ dirs on it.
 # If you're not using the `Blackdown' JDK, try changing the following line:
 JDK=/share/builds/components/jdk/1.1.7/Linux
+export THREADS_FLAG=native
 
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/md \
 	      -I$(JDK)/include/genunix
