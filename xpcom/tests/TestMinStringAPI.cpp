@@ -35,6 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include <stdio.h>
 #include "nsStringAPI.h"
 #include "nsCRT.h"
 
