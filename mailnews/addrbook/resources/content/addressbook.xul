@@ -221,7 +221,11 @@ Rights Reserved.
 	<!-- The main address book three pane -->
 	<box align="horizontal" flex="100%">
 		<!-- sidebar with dir tree -->
-		<box id="sidebar-box" class="extra_panel">
+		<box id="sidebar-box">
+			<splitter class="sidebar-main-header" collapse="after"
+			          onclick="sidebarOpenClosePanel(this)"> 
+				<html:div class="panel-bar">&addressbook-sidebar-header.label;</html:div>
+			</splitter>
 			<html:div style="width:100px; height:100px" flex="1">
 				<tree id="dirTree"/>
 			</html:div>

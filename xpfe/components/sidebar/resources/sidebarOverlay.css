@@ -52,11 +52,6 @@ box#sidebar-box
   border-bottom: 8px solid #003366;
 }
 
-box#sidebar-box[class="extra_panel"]
-{
-  border-top: 8px solid #003366;
-}
-
 box#sidebar-box[hidden="true"]
 {
   display: none;
@@ -82,7 +77,7 @@ iframe.panel-frame
 /*
  *  Sidebar and Panel title buttons
  */
-splitter#title-box {
+splitter.sidebar-main-header {
   color: #CCFFFF;
   background-color: #003366;
   padding: 0px;
@@ -90,15 +85,16 @@ splitter#title-box {
   padding-right: 5px;
 }
 
-splitter#title-box div {
+splitter.sidebar-main-header div {
+  font-weight: bold;
   margin: 2px;
 }
 
-splitter#title-box titledbutton {
+splitter.sidebar-main-header titledbutton {
   padding: 0px;
 }
 
-splitter#title-box titledbutton:hover {
+splitter.sidebar-main-header titledbutton:hover {
   color: white;
 }
 
@@ -142,6 +138,7 @@ splitter#alerts-splitter
 
 splitter#alerts-splitter > div
 {
+  font-weight: bold;
   padding-left:   5px;
   padding-top:    2px;
   padding-bottom: 3px;

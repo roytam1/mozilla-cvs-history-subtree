@@ -14,7 +14,7 @@
 
   <!-- Overlay the sidebar panels -->
   <box id="sidebar-box" align="vertical" persist="hidden width">
-    <splitter id="title-box" collapse="after"
+    <splitter id="title-box" class="sidebar-main-header" collapse="after"
       onclick="sidebarOpenClosePanel(this)">
       <html:div class="panel-bar">
         &sidebar.panels.label;
@@ -49,7 +49,7 @@
       -->
     </box>
 
-    <splitter id="alerts-splitter" class="panel-bar"
+    <splitter id="alerts-splitter" class="sidebar-main-header"
       collapse="after" chromeclass="extrachrome"
       onclick="sidebarOpenClosePanel(this)"> 
       <html:div class="panel-bar">
@@ -80,7 +80,7 @@
     </box>
   </box>
 
-  <!-- Splitter -->
+  <!-- Splitter on the right of sidebar -->
   <splitter id="sidebar-splitter" collapse="before" persist="state hidden" 
             chromeclass="extrachrome" onclick="sidebarSaveState(this)">
     <box id="topright-cap" align="vertical">

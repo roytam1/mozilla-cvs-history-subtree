@@ -259,6 +259,9 @@ Rights Reserved.
 <!ENTITY ignoreThreadCmd.label ".Ignore Thread">  
 <!ENTITY watchThreadCmd.label ".Watch Thread">  
 
+<!-- Sidebar -->
+<!ENTITY mail-sidebar-header.label "Mail Folders">
+
 <!-- Toolbar items -->  
 <!ENTITY getMsgButton.label "Get Msg">  
 <!ENTITY newMsgButton.label "New Msg">  

@@ -72,3 +72,6 @@ Rights Reserved.
 <!ENTITY stopButton.label ".Stop">  
 <!ENTITY searchButton.label ".Search">  
 <!ENTITY showNames.label "Show names containing:">  
+
+<!-- Sidebar -->  
+<!ENTITY addressbook-sidebar-header.label "Address Books">  

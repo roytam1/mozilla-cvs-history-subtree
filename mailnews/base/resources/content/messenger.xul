@@ -497,7 +497,11 @@ Rights Reserved.
 
         <box align="horizontal" style="height:100px" flex="1">
           
-          <box id="sidebar-box" class="extra_panel">
+          <box id="sidebar-box">
+		    <splitter class="sidebar-main-header" collapse="after"
+		              onclick="sidebarOpenClosePanel(this)"> 
+		 		<html:div class="panel-bar">&mail-sidebar-header.label;</html:div>
+		    </splitter>
             <html:div id="folder-panel"/>
           </box>
           
