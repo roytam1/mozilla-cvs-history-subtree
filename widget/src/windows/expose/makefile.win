@@ -18,55 +18,8 @@
 # Rights Reserved.
 #
 # Contributor(s): 
-#   leaf@mozilla.org
-
 DEPTH=..\..\..\..
 
-MAKE_OBJ_TYPE = DLL
-MODULE = IMozNodeMarshal
-DLL = .\$(OBJDIR)\$(MODULE).dll
-
-PROXYSTUBIDL = IMozNode.idl
-LCFLAGS =-DWIN$(MOZ_BITS) -DREGISTER_PROXY_DLL -D_WIN$(MOZ_BITS)_WINNT=0x400
-
-DEFFILE = IMozNode.def
-
-OBJS =                \
-       dlldata.obj    \
-       IMozNode_p.obj \
-       IMozNode_i.obj \
-       $(NULL)
-
-WIN_LIBS =                       \
-           kernel$(MOZ_BITS).lib \
-           rpcndr.lib            \
-           rpcns4.lib            \
-           rpcrt4.lib            \
-           uuid.lib              \
-           oleaut$(MOZ_BITS).lib \
-           $(NULL)
-
-MIDL_GENERATED_FILES =                       \
-                       ..\IMozNode.h         \
-                       ..\IMozNode_iid.h     \
-                       IMozNode_p.c          \
-                       IMozNode_i.c          \
-                       dlldata.c             \
-                       $(NULL)
+DIRS=ISimpleDOMNode ISimpleDOMDocument
 
 include <$(DEPTH)\config\rules.mak>
-
-install:: $(DLL)
-    $(MAKE_INSTALL) $(DLL) $(DIST)\bin
-    regsvr32 /s $(DIST)\bin\$(MODULE).dll
-
-$(MIDL_GENERATED_FILES): IMozNode.idl
-    midl IMozNode.idl
-    copy IMozNode.h ..
-    copy IMozNode_i.c ..\IMozNode_iid.h
-
-export:: $(MIDL_GENERATED_FILES)
-
-clobber::
-  rm -rf $(MIDL_GENERATED_FILES)
-  rm -rf $(DLL)
