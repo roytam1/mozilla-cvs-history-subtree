@@ -1631,3 +1631,69 @@ function OnMsgLoaded(folder, msgURI)
      }
 }
 
+
+function toEditor()
+    {
+      NewEditorWindow();
+    }
+    function NewEditorWindow()
+    {
+      var launcher = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"].getService(Components.interfaces.nsIExternalProtocolService);
+      launcher.launchApp("editor");
+    }
+    function toMessengerWindow()
+      {
+        var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                             .getService(Components.interfaces.nsIPrefBranch);
+        var windowDoc = "chrome://messenger/content/messenger.xul";
+        try
+          {
+            var layoutType = pref.getIntPref("mail.pane_config");
+            windowDoc = !layoutType ? "chrome://messenger/content/messenger.xul" : 
+                                          "chrome://messenger/content/mail3PaneWindowVertLayout.xul";
+          }
+        catch(ex)
+          {
+          }
+        toOpenWindowByType("mail:3pane", windowDoc);
+      }
+    
+    function toAddressBook() 
+      {
+        toOpenWindowByType("mail:addressbook", "chrome://messenger/content/addressbook/addressbook.xul");
+      }
+
+    function toImport()
+      {
+        window.openDialog("chrome://messenger/content/importDialog.xul","importDialog","chrome, modal, titlebar", {importType: "addressbook"});
+      }
+      
+    function MsgSearchMessages()
+    {
+        var preselectedFolder = null;
+        if ("GetFirstSelectedMsgFolder" in window)
+          preselectedFolder = GetFirstSelectedMsgFolder();
+        var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+        var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
+        var searchWindow = windowManagerInterface.getMostRecentWindow("mailnews:search");
+    
+        if (searchWindow)
+            searchWindow.focus();
+        else
+            window.openDialog("chrome://messenger/content/SearchDialog.xul", "", 
+                              "chrome,resizable,status,centerscreen,dialog=no", { folder: preselectedFolder });
+    }
+
+    function MsgSearchAddresses()
+    {
+        var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
+        var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
+        var abSearchWindow = windowManagerInterface.getMostRecentWindow("mailnews:absearch");
+    
+        if (abSearchWindow)
+            abSearchWindow.focus();
+        else
+            window.openDialog("chrome://messenger/content/ABSearchDialog.xul", "", 
+                              "chrome,resizable,status,centerscreen,dialog=no", {directory: null});
+    }      
+

@@ -55,75 +55,7 @@ Rights Reserved.
 <!-- no zoom
 <script type="application/x-javascript" src="chrome://communicator/content/viewZoomOverlay.js"/>
 -->
-<script type="application/x-javascript" src="chrome://messenger-smime/content/msgReadSMIMEOverlay.js"/>
-
-  <script type="application/x-javascript">
-  <![CDATA[
-    // uses "toOpenWindowByType" function provided by utilityOverlay.js
-    // which is included by most clients. 
-    function toMessengerWindow()
-      {
-        var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                             .getService(Components.interfaces.nsIPrefBranch);
-        var windowDoc = "chrome://messenger/content/messenger.xul";
-        try
-          {
-            var layoutType = pref.getIntPref("mail.pane_config");
-            windowDoc = !layoutType ? "chrome://messenger/content/messenger.xul" : 
-                                          "chrome://messenger/content/mail3PaneWindowVertLayout.xul";
-          }
-        catch(ex)
-          {
-          }
-        toOpenWindowByType("mail:3pane", windowDoc);
-      }
-    
-    function toAddressBook() 
-      {
-        toOpenWindowByType("mail:addressbook", "chrome://messenger/content/addressbook/addressbook.xul");
-      }
-    
-    function toNewsgroups() 
-      {
-        dump ("Sorry, command not implemented.\n");
-      }
-
-    function toImport()
-      {
-        window.openDialog("chrome://messenger/content/importDialog.xul","importDialog","chrome, modal, titlebar", {importType: "addressbook"});
-      }
-      
-    function MsgSearchMessages()
-    {
-        var preselectedFolder = null;
-        if ("GetFirstSelectedMsgFolder" in window)
-          preselectedFolder = GetFirstSelectedMsgFolder();
-        var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
-        var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
-        var searchWindow = windowManagerInterface.getMostRecentWindow("mailnews:search");
-    
-        if (searchWindow)
-            searchWindow.focus();
-        else
-            window.openDialog("chrome://messenger/content/SearchDialog.xul", "", 
-                              "chrome,resizable,status,centerscreen,dialog=no", { folder: preselectedFolder });
-    }
-
-    function MsgSearchAddresses()
-    {
-        var windowManager = Components.classes['@mozilla.org/rdf/datasource;1?name=window-mediator'].getService();
-        var windowManagerInterface = windowManager.QueryInterface(Components.interfaces.nsIWindowMediator);
-        var abSearchWindow = windowManagerInterface.getMostRecentWindow("mailnews:absearch");
-    
-        if (abSearchWindow)
-            abSearchWindow.focus();
-        else
-            window.openDialog("chrome://messenger/content/ABSearchDialog.xul", "", 
-                              "chrome,resizable,status,centerscreen,dialog=no", {directory: null});
-    }      
-
-  ]]>
-  </script>     
+<script type="application/x-javascript" src="chrome://messenger-smime/content/msgReadSMIMEOverlay.js"/> 
 
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
@@ -153,6 +85,7 @@ Rights Reserved.
 
 
 <commandset id="tasksCommands">
+    <command id="Tasks:Editor" oncommand="toEditor();"/>
     <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
     <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
     <command id="cmd_searchMsgs" oncommand="MsgSearchMessages();"/>
@@ -374,6 +307,7 @@ Rights Reserved.
 -->
 
   <keyset id="tasksKeys">
+    <key id="key_editor" key="&editorCmd.commandkey;" command="Tasks:Editor" modifiers="accel"/>
     <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
     <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
     <key id="key_searchMail" key="&searchMailCmd.key;" command="cmd_searchMsgs" modifiers="accel, shift"/>
@@ -1514,7 +1448,6 @@ Rights Reserved.
               accesskey="&filtersCmd.accesskey;"
               oncommand="MsgFilters(null);"/>
     <menuitem label="&importCmd.label;" accesskey="&importCmd.accesskey;" oncommand="toImport();"/>
-    <menuseparator/>
   </menupopup>
 </menu>
 
@@ -1531,9 +1464,9 @@ Rights Reserved.
         </template>
         <menupopup id="windowPopup">
           <menuitem label="&navigatorCmd.label;" accesskey="&navigatorCmd.accesskey;" key="key_navigator" command="Tasks:Navigator" id="tasksMenuNavigator" class="menuitem-iconic icon-navigator16"/>
-          <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" insertafter="tasksMenuNavigator" class="menuitem-iconic icon-mail16 menu-iconic"/>
-          <menuitem id="tasksMenuEditor" insertafter="tasksMenuMail"/>
-          <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" insertafter="tasksMenuEditor" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+          <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail"  class="menuitem-iconic icon-mail16 menu-iconic"/>
+          <menuitem label="&editorCmd.label;" accesskey="&editorCmd.accesskey;" key="key_editor" command="Tasks:Editor" id="tasksMenuEditor" class="menuitem-iconic icon-composer16 menu-iconic"/>
+          <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
           <menuseparator id="sep-window-list"/>
         </menupopup>
       </menu>
@@ -1689,10 +1622,11 @@ Rights Reserved.
     <toolbarbutton class="taskbutton" id="mini-nav" oncommand="toNavigator();" 
                    tooltiptext="&taskNavigator.tooltip;"/>
     <toolbarbutton class="taskbutton" id="mini-mail" oncommand="toMessengerWindow()" 
-            position="2" tooltiptext="&taskMessenger.tooltip;"/>
-    <toolbarbutton id="mini-comp" insertafter="mini-mail"/>
+             tooltiptext="&taskMessenger.tooltip;"/>
+    <toolbarbutton class="taskbutton" id="mini-comp" command="Tasks:Editor" 
+                   tooltiptext="&taskComposer.tooltip;"/>
     <toolbarbutton class="taskbutton" id="mini-addr" oncommand="toAddressBook();"
-            insertafter="mini-comp" tooltiptext="&taskAddressBook.tooltip;"/>
+            tooltiptext="&taskAddressBook.tooltip;"/>
   </statusbarpanel> 
 
     <statusbarpanel id="statusText" label="&statusText.label;" flex="1"/>
@@ -1710,14 +1644,5 @@ Rights Reserved.
     <statusbarpanel checkfunc="MailCheckBeforeOfflineChange()" id="offline-status" class="statusbarpanel-iconic"/> 
   </hbox>
 </statusbar> 
-
-<!--
-  
-  <menupopup id="searchMenu">
-    <menuitem label="&searchMailCmd.label;" key="key_searchMail" accesskey="&searchMailCmd.accesskey;" command="cmd_searchMsgs" position="2"/>
-    <menuitem label="&searchAddressesCmd.label;" accesskey="&searchAddressesCmd.accesskey;" oncommand="MsgSearchAddresses(null)" position="3"/>
-  </menupopup>
-
--->
 
 </overlay>
