@@ -491,81 +491,93 @@ var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
 var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
 var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
 var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
+var nsMsgViewType = Components.interfaces.nsMsgViewType;
 
 var gDBView = null;
 var gCurViewFlags;
 
+// CreateDBView is called when we have a thread pane. CreateBareDBView is called when there is no
+// outliner associated with the view. CreateDBView will call into CreateBareDBView...
+
+function CreateBareDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
+{
+  dump("XXX CreateDBView(" + msgFolder + "," + viewType + "," + viewFlags + "," + sortType + "," + sortOrder + ")\n");
+
+  var dbviewContractId = "@mozilla.org/messenger/msgdbview;1?type=";
+
+  switch (viewType) {
+      case nsMsgViewType.eShowThreadsWithUnread:
+          dbviewContractId += "threadswithunread";
+          break;
+      case nsMsgViewType.eShowWatchedThreadsWithUnread:
+          dbviewContractId += "watchedthreadswithunread";
+          break;
+      case nsMsgViewType.eShowAllThreads:
+      default:
+          dbviewContractId += "threaded";
+          break;
+  }
+
+  dump("XXX creating " + dbviewContractId + " with: " + viewType + "," + sortType + "," + sortOrder + "\n");
+  gDBView = Components.classes[dbviewContractId].createInstance(Components.interfaces.nsIMsgDBView);
+
+  var isNews = isNewsURI(msgFolder.URI);
+  if (!viewFlags) {
+    if (isNews) {
+      // news defaults to threaded mode
+      viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
+    }
+    else {
+      viewFlags &= nsMsgViewFlagsType.kThreadedDisplay;
+    }
+  }
+
+  if (!sortType) {
+    if (isNews) { 
+      // news defaults to threaded mode
+      sortType = nsMsgViewSortType.byThread;
+    }
+    else {
+      sortType = nsMsgViewSortType.byDate;
+    }
+  }
+
+  if (!sortOrder) {
+    sortOrder = nsMsgViewSortOrder.ascending;
+  }
+
+  gCurViewFlags = viewFlags;
+  var count = new Object;
+  if (!gThreadPaneCommandUpdater)
+    gThreadPaneCommandUpdater = new nsMsgDBViewCommandUpdater();
+
+  gDBView.init(messenger, msgWindow, gThreadPaneCommandUpdater);
+  gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
+}
+
 function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
 {
-    dump("XXX CreateDBView(" + msgFolder + "," + viewType + "," + viewFlags + "," + sortType + "," + sortOrder + ")\n");
+  // call the inner create method
+  CreateBareDBView(msgFolder, viewType, viewFlags, sortType, sortOrder);
 
-    var dbviewContractId = "@mozilla.org/messenger/msgdbview;1?type=";
+  // now do outliner specific work
 
-    switch (viewType) {
-        case nsMsgViewType.eShowThreadsWithUnread:
-            dbviewContractId += "threadswithunread";
-            break;
-        case nsMsgViewType.eShowWatchedThreadsWithUnread:
-            dbviewContractId += "watchedthreadswithunread";
-            break;
-        case nsMsgViewType.eShowAllThreads:
-        default:
-            dbviewContractId += "threaded";
-            break;
-    }
-
-    dump("XXX creating " + dbviewContractId + " with: " + viewType + "," + sortType + "," + sortOrder + "\n");
-    gDBView = Components.classes[dbviewContractId].createInstance(Components.interfaces.nsIMsgDBView);
-
-    var isNews = isNewsURI(msgFolder.URI);
-    if (!viewFlags) {
-      if (isNews) {
-        // news defaults to threaded mode
-        viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
-      }
-      else {
-        viewFlags &= nsMsgViewFlagsType.kThreadedDisplay;
-      }
-    }
-
-    if (!sortType) {
-      if (isNews) { 
-        // news defaults to threaded mode
-        sortType = nsMsgViewSortType.byThread;
-      }
-      else {
-        sortType = nsMsgViewSortType.byDate;
-      }
-    }
-
-    if (!sortOrder) {
-      sortOrder = nsMsgViewSortOrder.ascending;
-    }
-
-    gCurViewFlags = viewFlags;
-    var count = new Object;
-    if (!gThreadPaneCommandUpdater)
-      gThreadPaneCommandUpdater = new nsMsgDBViewCommandUpdater();
-
-    gDBView.init(messenger, msgWindow, gThreadPaneCommandUpdater);
-    gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
-
-    // based on the collapsed state of the thread pane/message pane splitter,
-    // supress message display if appropriate.
-    var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
-    if (collapsed)
-      gDBView.supressMsgDisplay = true;
-    else
-      gDBView.supressMsgDisplay = false;
+  // based on the collapsed state of the thread pane/message pane splitter,
+  // supress message display if appropriate.
+  var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
+  if (collapsed)
+    gDBView.supressMsgDisplay = true;
+  else
+    gDBView.supressMsgDisplay = false;
     
-    var colID = ConvertSortTypeToColumnID(sortType);
-    if (colID) {
-      var column = document.getElementById(colID);
-      gDBView.sortedColumn = column;
-    }
+  var colID = ConvertSortTypeToColumnID(sortType);
+  if (colID) {
+    var column = document.getElementById(colID);
+    gDBView.sortedColumn = column;
+  }
 
-    ShowAppropriateColumns();
-    PersistViewAttributesOnFolder();
+  ShowAppropriateColumns();
+  PersistViewAttributesOnFolder();
 }
 
 function ShowAppropriateColumns()
