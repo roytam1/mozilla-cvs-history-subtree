@@ -51,8 +51,8 @@ interface nsIBookmarksService : nsISupports
     const unsigned long BOOKMARK_SEARCH_TYPE    = 1;
     const unsigned long BOOKMARK_FIND_TYPE      = 2;
 
-    boolean ReadBookmarks();
-    boolean IsBookmarked(in string aURI);
+    boolean readBookmarks();
+    boolean isBookmarked(in string aURI);
 
     void addBookmarkImmediately(in string aURI, in wstring aTitle, in long bmType, in wstring docCharset);
         

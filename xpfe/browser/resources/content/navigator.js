@@ -614,7 +614,7 @@ function LoadBookmarksCallback()
   // loads the services
   initServices();
   initBMService();
-  var hasRead = BMSVC.ReadBookmarks();  
+  var hasRead = BMSVC.readBookmarks();  
   var bt = document.getElementById("bookmarks-ptf");
   if (bt && hasRead) 
     bt.builder.rebuild();
