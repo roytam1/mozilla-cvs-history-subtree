@@ -1520,13 +1520,17 @@ npn_getvalue(NPP npp, NPNVariable variable, void *r_value)
 	/* Some of these variabled may be handled by backend. The rest is FE.
 	 * So Handle all the backend variables and pass the rest over to FE.
 	 */
+  PRBool prRValue;
+
 
 	switch(variable) {
 		case NPNVjavascriptEnabledBool : 
-			ret = PREF_GetBoolPref("javascript.enabled", (XP_Bool*)r_value);	
+			ret = PREF_GetBoolPref("javascript.enabled", &prRValue);	
+      *((XP_Bool *)r_value) = (XP_Bool)prRValue;
 			break;
 		case NPNVasdEnabledBool :
-			ret = PREF_GetBoolPref("autoupdate.enabled", (XP_Bool*)r_value);
+			ret = PREF_GetBoolPref("autoupdate.enabled", &prRValue);
+      *((XP_Bool *)r_value) = (XP_Bool)prRValue;
 			break;
 #ifdef MOZ_OFFLINE        
 		case NPNVisOfflineBool :{
