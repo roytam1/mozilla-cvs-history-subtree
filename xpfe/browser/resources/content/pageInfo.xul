@@ -76,11 +76,11 @@
           <rows>
             <row>
               <text class="label" value="&pageInfo.pageTitle;"/>
-              <text class="label" id="titletext" value=""/>
+              <text class="label" id="titletext" value="" crop="right"/>
             </row>
             <row>
               <text class="label" value="&pageInfo.URL;"/>
-              <text class="label" id="urltext" value=""/>
+              <text class="label" id="urltext" value="" crop="right"/>
             </row>
             <row>
               <text class="label" value="&pageInfo.lastModified;"/>
