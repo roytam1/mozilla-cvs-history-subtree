@@ -389,9 +389,9 @@ void CXIcon::ImageComplete(NI_Pixmap* image)
 	// Will get a call for both the mask and for the image.  
 	if (m_image && m_mask)
 	{
+		m_icon->pairCount++;
 		if (m_icon->pairCount == 2)
 			m_icon->CompleteCallback();
-		else m_icon->pairCount++;
 	}
 	else
 	{

@@ -744,10 +744,10 @@ void CSelector::RearrangeIcons()
 	if (dockStyle == DOCKSTYLE_HORZTOP || dockStyle == DOCKSTYLE_HORZBOTTOM) 
 	{
 		m_xpos = ICONXPOS;
-		m_ypos = 2;
+		m_ypos = 1;
 	}
 	else {
-		m_xpos = 2;
+		m_xpos = 1;
 		m_ypos = ICONYPOS;
 	}
 	CRect parentRect;
