@@ -136,7 +136,7 @@ protected:
     // Checks with the corresponding Palm record for any discrepencies
     // if any modification needed, this will return the modified card
     // returns whether card exists (in which case it can be discarded)
-    PRBool CardExistsInPalmList(nsAbIPCCard  * aIPCCard);
+    PRBool CardExistsInPalmList(nsAbIPCCard  * aIPCCard, PRInt32 diffFieldCountAllowed);
 
     // utility function
     nsresult AddToListForPalm(nsAbIPCCard & ipcCard);

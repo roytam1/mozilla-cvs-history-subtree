@@ -598,10 +598,11 @@ nsresult nsAbPalmHotSync::LoadNewModifiedCardsSinceLastSync()
             // pass it around as an interface pointer
             ipcCard.SetStatus((lastModifiedDate) ? ATTR_MODIFIED : ATTR_NEW);
 
+            PRInt32 diffFieldCountAllowed = (!lastModifiedDate || !mPalmSyncTimeStamp)
+                ? 3 : 0;
             // Check with the palm list (merging is done if required)
-            if (CardExistsInPalmList(&ipcCard)) 
-                continue;
-
+            if (CardExistsInPalmList(&ipcCard, diffFieldCountAllowed))
+              continue;
             rv = AddToListForPalm(ipcCard);
             if(NS_FAILED(rv))
                 break;
@@ -620,7 +621,7 @@ nsresult nsAbPalmHotSync::LoadNewModifiedCardsSinceLastSync()
 
 
 // this take care of the all cases when the state is either modified or new
-PRBool nsAbPalmHotSync::CardExistsInPalmList(nsAbIPCCard  * aIPCCard)
+PRBool nsAbPalmHotSync::CardExistsInPalmList(nsAbIPCCard  * aIPCCard, PRInt32 diffFieldCountAllowed)
 {
     NS_ENSURE_ARG_POINTER(aIPCCard);
 
@@ -673,6 +674,10 @@ PRBool nsAbPalmHotSync::CardExistsInPalmList(nsAbIPCCard  * aIPCCard)
             else
                 fieldsMatch = aIPCCard->EqualsAfterUnicodeConversion(palmRec, diffAttrs);
 
+            // if this is a first time sync, and it's not an exact match, but only a couple fields different,
+            // don't dup the cards. Some conduits don't sync every field, and we'd rather not have dups
+            if (diffAttrs.Count() < diffFieldCountAllowed)
+              fieldsMatch = PR_TRUE;
             // if fields match, no need to keep it for sync
             if(fieldsMatch) 
             {
