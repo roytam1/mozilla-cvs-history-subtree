@@ -83,6 +83,12 @@ CPPSRCS		= \
 		xpcwrappednativejsops.cpp \
 		xpcwrappednativeproto.cpp \
 		xpcwrappednativescope.cpp \
+		xpccomobject.cpp	\
+		XPCCOMIDispatchInfo.cpp	\
+		XPCCOMIDispatchInterface.cpp	\
+		XPCCOMConvert.cpp \
+		XPCCOMTypeInfo.cpp	\
+		XPCIDArray.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -98,6 +104,9 @@ DEFINES		+= -DJSFILE -DJS_THREADSAFE -DEXPORT_XPC_API
 
 ifdef MOZ_XPCTOOLS
 DEFINES         +=  -DXPC_TOOLS_SUPPORT
+!ifdef XPC_IDISPATCH_SUPPORT
+DEFINES			+=	-DXPC_IDISPATCH_SUPPORT
+!endif
 REQUIRES	+= xpctools
 endif
 

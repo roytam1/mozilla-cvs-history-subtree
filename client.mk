@@ -54,12 +54,12 @@
 # and commit this file on that tag.
 #MOZ_CO_TAG = <tag>
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
-NSS_CO_TAG = NSS_CLIENT_TAG
+PSM_CO_TAG = XPC_IDISP_20020417_BRANCH
+NSS_CO_TAG = XPC_IDISP_20020417_BRANCH
 LDAPCSDK_CO_TAG = ldapcsdk_50_client_branch
-ACCESSIBLE_CO_TAG = 
-GFX2_CO_TAG = 
-IMGLIB2_CO_TAG = 
+ACCESSIBLE_CO_TAG = XPC_IDISP_20020417_BRANCH
+GFX2_CO_TAG = XPC_IDISP_20020417_BRANCH
+IMGLIB2_CO_TAG = XPC_IDISP_20020417_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
