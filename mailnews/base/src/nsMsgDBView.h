@@ -69,7 +69,7 @@ protected:
   virtual PRBool WantsThisThread(nsIMsgThread * thread);
   virtual nsresult	AddHdr(nsIMsgDBHdr *msgHdr);
   PRBool GetShowingIgnored() {return (m_viewFlags & nsMsgViewFlagsType::kShowIgnored) != 0;}
-  virtual nsresult OnNewHeader(nsMsgKey newKey, PRBool ensureListed);
+  virtual nsresult OnNewHeader(nsMsgKey newKey, nsMsgKey parentKey, PRBool ensureListed);
   virtual nsMsgViewIndex GetInsertIndex(nsIMsgDBHdr *msgHdr);
   nsMsgViewIndex GetIndexForThread(nsIMsgDBHdr *hdr);
   virtual nsresult InsertHdrAt(nsIMsgDBHdr *msgHdr, nsMsgViewIndex insertIndex);

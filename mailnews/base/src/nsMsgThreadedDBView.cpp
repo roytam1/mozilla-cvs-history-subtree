@@ -142,7 +142,7 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 {
 	nsresult rv = NS_OK;
 	// N.B..don't ret before assigning numListed to *pNumListed
-	PRInt32				numListed = 0;
+	PRInt32				numListed;
 
 	if (*startMsg > 0)
 	{
@@ -172,7 +172,7 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
     threadHdr = do_QueryInterface(supports);
 
 		PRInt32	threadsRemoved = 0;
-		for (PRInt32 i = 0; i < numToList && threadHdr != nsnull; i++)
+		for (numListed = 0; numListed < numToList && threadHdr != nsnull;)
 		{
     	nsCOMPtr <nsIMsgDBHdr> msgHdr;
       PRUint32 numChildren;
@@ -327,7 +327,7 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
 	return NS_OK;
 }
 
-nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, PRBool ensureListed)
+nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, PRBool ensureListed)
 {
 	nsresult	rv = NS_OK;
 	// views can override this behaviour, which is to append to view.

@@ -41,7 +41,7 @@ public:
   NS_IMETHOD Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder);
 
 protected:
-  virtual nsresult OnNewHeader(nsMsgKey newKey, PRBool ensureListed);
+  virtual nsresult OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, PRBool ensureListed);
   virtual nsresult AddMsgToThreadNotInView(nsIMsgThread *threadHdr, nsIMsgDBHdr *msgHdr, PRBool ensureListed);
   nsresult ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnly, nsMsgKey *pOutput, PRInt32 *pFlags, char *pLevels, 
 									 PRInt32 numToList, PRInt32 *pNumListed, PRInt32 *pTotalHeaders);

@@ -727,6 +727,12 @@ typedef struct tagIdStr{
     PRUnichar   str[1];
 } IdStr;
 
+typedef struct tagIdStrPtr{
+	EntryInfo	info;
+	const PRUnichar		*strPtr;
+} IdStrPtr;
+
+
 int PR_CALLBACK
 FnSortIdStr(const void *pItem1, const void *pItem2, void *privateData)
 {
@@ -739,6 +745,19 @@ FnSortIdStr(const void *pItem1, const void *pItem2, void *privateData)
         return(1);
     else
         return(-1);
+}
+
+static int /* __cdecl */ FnSortIdStrPtr(const void* pItem1, const void* pItem2, void *privateData)
+{
+	IdStrPtr** p1 = (IdStrPtr**)pItem1;
+	IdStrPtr** p2 = (IdStrPtr**)pItem2;
+  int retVal = nsCRT::strcmp((*p1)->strPtr, (*p2)->strPtr); 
+	if (retVal != 0)
+		return(retVal);
+	if ((*p1)->info.id >= (*p2)->info.id)
+		return(1);
+	else
+		return(-1);
 }
 
 typedef struct tagIdDWord{
@@ -1482,7 +1501,7 @@ nsresult nsMsgDBView::CollapseByIndex(nsMsgViewIndex index, PRUint32 *pNumCollap
 	return rv;
 }
 
-nsresult nsMsgDBView::OnNewHeader(nsMsgKey newKey, PRBool /*ensureListed*/)
+nsresult nsMsgDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, PRBool /*ensureListed*/)
 {
 	nsresult rv = NS_MSG_MESSAGE_NOT_FOUND;;
 	// views can override this behaviour, which is to append to view.
@@ -1568,7 +1587,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	nsMsgViewIndex lowIndex = 0;
 	nsMsgViewIndex highIndex = GetSize() - 1;
 	IdDWord			dWordEntryInfo1, dWordEntryInfo2;
-	IdStr		strPtrInfo1, strPtrInfo2;
+	IdStrPtr		strPtrInfo1, strPtrInfo2;
 
 	if (GetSize() == 0)
 		return 0;
@@ -1592,10 +1611,9 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	switch (fieldType)
 	{
 		case kString:
-			comparisonFun = FnSortIdStr;
-            GetStringField(msgHdr, m_sortType, getter_Copies(field1Str));
-            //note to dmb, still won't compile
-            //strPtrInfo1.str = (const PRUnichar *) field1Str;
+			comparisonFun = FnSortIdStrPtr;
+      GetStringField(msgHdr, m_sortType, getter_Copies(field1Str));
+      strPtrInfo1.strPtr = (const PRUnichar *) field1Str;
 			msgHdr->GetMessageKey(&strPtrInfo1.info.id);
 			pValue1 = &strPtrInfo1;
 			break;
@@ -1621,8 +1639,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 		if (fieldType == kString)
 		{
 			GetStringField(tryHdr, m_sortType, getter_Copies(field2Str));
-            //note to dmb, still won't compile
-            //strPtrInfo2.str = (const PRUnichar *) field2Str;
+      strPtrInfo2.strPtr = (const PRUnichar *) field2Str;
 			strPtrInfo2.info.id = messageKey;
 			pValue2 = &strPtrInfo2;
 		}
@@ -1851,8 +1868,9 @@ NS_IMETHODIMP nsMsgDBView::OnKeyDeleted(nsMsgKey aKeyChanged, nsMsgKey aParentKe
 NS_IMETHODIMP nsMsgDBView::OnKeyAdded(nsMsgKey aKeyChanged, nsMsgKey aParentKey, PRInt32 aFlags, 
                           nsIDBChangeListener *aInstigator)
 {
-//  OnNewHeader(
-  return NS_OK;
+  return OnNewHeader(aKeyChanged, aParentKey, PR_FALSE); 
+  // probably also want to pass that parent key in, since we went to the trouble
+  // of figuring out what it is.
 }
                           
 NS_IMETHODIMP nsMsgDBView::OnParentChanged (nsMsgKey aKeyChanged, nsMsgKey oldParent, nsMsgKey newParent, nsIDBChangeListener *aInstigator)
