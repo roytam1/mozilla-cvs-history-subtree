@@ -3,4 +3,4 @@
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
-!xpt dist/bin/components/prefmgr.xpt
+!xpt dist/bin/components/prefmigr.xpt
