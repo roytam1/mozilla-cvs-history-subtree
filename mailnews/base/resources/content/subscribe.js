@@ -5,6 +5,7 @@ var gChangeTable = {};
 var gServerURI = null;
 var gSubscribableServer = null;
 var gStatusBar = null;
+var gProgressPanel = null;
 var gNameField = null;
 var gNameFieldLabel = null;
 var gFolderDelimiter = ".";
@@ -95,6 +96,7 @@ var MySubscribeListener = {
 		gStatusFeedback.showProgress(0);
 		gStatusFeedback.showStatusString("");
 		gStatusBar.setAttribute("mode","normal");
+		gProgressPanel.setAttribute("hidden", "true");
 
         // only re-root the tree, if it is null.
         // otherwise, we are in here because we are populating
@@ -114,6 +116,7 @@ function SetUpTree(forceToServer)
 	//dump("SetUpTree()\n");
 	
 	gStatusBar = document.getElementById('statusbar-icon');
+	gProgressPanel = document.getElementById('progress-panel');
 	if (!gServerURI) return;
 
 	var folder = GetMsgFolderFromUri(gServerURI, true);
@@ -139,6 +142,7 @@ function SetUpTree(forceToServer)
           gStatusFeedback.showProgress(0);
           gStatusFeedback.showStatusString(gSubscribeBundle.getString("pleaseWaitString"));
           gStatusBar.setAttribute("mode","undetermined");
+          gProgressPanel.removeAttribute("hidden");
 
           gSubscribableServer.startPopulating(msgWindow, forceToServer);
 	}
@@ -423,6 +427,7 @@ function SubscribeOnClick(event)
           gStatusFeedback.showProgress(0);
           gStatusFeedback.showStatusString(gSubscribeBundle.getString("pleaseWaitString"));
           gStatusBar.setAttribute("mode", "undetermined");
+          gProgressPanel.removeAttribute("hidden");
 
           gSubscribableServer.startPopulatingWithUri(msgWindow, true /* force to server */, uri);
         }
