@@ -49,7 +49,9 @@
 #include "nsGNOMEShellService.h"
 #endif
 #include "nsProfileMigrator.h"
+#if !defined(XP_BEOS)
 #include "nsDogbertProfileMigrator.h"
+#endif
 #if !defined(XP_OS2)
 #include "nsOperaProfileMigrator.h"
 #endif
@@ -77,8 +79,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacShellService)
 #elif defined(MOZ_WIDGET_GTK2)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsGNOMEShellService, Init)
 #endif
-
+#if !defined(XP_BEOS)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDogbertProfileMigrator)
+#endif
 #if !defined(XP_OS2)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOperaProfileMigrator)
 #endif
@@ -173,6 +176,13 @@ static const nsModuleComponentInfo components[] =
     nsOperaProfileMigratorConstructor },
 #endif
 
+#if !defined(XP_BEOS)
+  { "Netscape 4.x Profile Migrator",
+    NS_DOGBERTPROFILEMIGRATOR_CID,
+    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert",
+    nsDogbertProfileMigratorConstructor },
+#endif
+
   { "Phoenix Profile Migrator",
     NS_PHOENIXPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "phoenix",
@@ -181,12 +191,8 @@ static const nsModuleComponentInfo components[] =
   { "Seamonkey Profile Migrator",
     NS_SEAMONKEYPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey",
-    nsSeamonkeyProfileMigratorConstructor },
+    nsSeamonkeyProfileMigratorConstructor }
 
-  { "Netscape 4.x Profile Migrator",
-    NS_DOGBERTPROFILEMIGRATOR_CID,
-    NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "dogbert",
-    nsDogbertProfileMigratorConstructor }
 
 };
 
