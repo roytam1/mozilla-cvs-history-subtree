@@ -273,6 +273,13 @@ function openFindBar()
     gWrappedToTopStr = bundle.getString("WrappedToTop");
     gWrappedToBottomStr = bundle.getString("WrappedToBottom");
   }
+
+  var statusIcon = document.getElementById("find-status-icon");
+  var statusText = document.getElementById("find-status");
+  var findField = document.getElementById("find-field");
+  findField.removeAttribute("status");
+  statusIcon.removeAttribute("status");
+  statusText.value = "";
   
   var findToolbar = document.getElementById("FindToolbar");
   if (findToolbar.hidden) {
@@ -311,11 +318,7 @@ function closeFindBar()
   if (gQuickFindTimeout) {
     clearTimeout(gQuickFindTimeout);
     gQuickFindTimeout = null;    
-  }
-  
-  var statusIcon = document.getElementById("find-status-icon");
-  findField.removeAttribute("status");
-  statusIcon.removeAttribute("status");
+  } 
 }
 
 function shouldFastFind(evt)
