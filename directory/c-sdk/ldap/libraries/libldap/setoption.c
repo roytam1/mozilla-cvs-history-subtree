@@ -16,7 +16,7 @@
  * Reserved.
  */
 /*
- * `setoption.c - ldap_set_option implementation 
+ * setoption.c - ldap_set_option implementation 
  */
 
 #include "ldap-int.h"
@@ -65,12 +65,26 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 
 		return( 0 );
 	}
+	/* 
+     * LDAP_OPT_DEBUG_LEVEL is global 
+     */
+    if (LDAP_OPT_DEBUG_LEVEL == option) 
+    {
+#ifdef LDAP_DEBUG	  
+        ldap_debug = *((int *) optdata);
+#endif
+        return 0;
+    }
 
 	/*
 	 * if ld is NULL, arrange to modify our default settings
 	 */
 	if ( ld == NULL ) {
 		ld = &nsldapi_ld_defaults;
+#ifdef LDAP_DEBUG
+		ldap_debug = 0;
+#endif
+
 	}
 
 	/*
@@ -78,6 +92,14 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	 */
 	if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
 		return( -1 );	/* punt */
+	}
+    /* 
+     * Don't accept optdata == NULL in ldap_set_option
+     */
+    if (NULL == optdata)
+    {
+		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
+		return( LDAP_PARAM_ERROR );
 	}
 
 	rc = 0;
@@ -108,9 +130,12 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 	case LDAP_OPT_RECONNECT:
 		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_RECONNECT, optdata );
 		break;
+
+#ifdef LDAP_ASYNC_IO
 	case LDAP_OPT_ASYNC_CONNECT:
  		LDAP_SETCLR_BITOPT(ld, LDAP_BITOPT_ASYNC, optdata );
 	 	break;
+#endif /* LDAP_ASYNC_IO */
 
 	/* fields in the LDAP structure */
 	case LDAP_OPT_DEREF:
@@ -171,7 +196,7 @@ ldap_set_option( LDAP *ld, int option, void *optdata )
 			for( i=0; i<LDAP_MAX_LOCK; i++ )
 				ld->ld_mutex[i] = (ld->ld_mutex_alloc_fn)();
 		}
-		break;
+		return (rc);
 
 	/* extra thread function pointers */
 	case LDAP_OPT_EXTRA_THREAD_FN_PTRS:

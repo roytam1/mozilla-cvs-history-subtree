@@ -43,12 +43,12 @@
 # include <sys/socket.h>
 # include <netinet/in.h>
 # include <netdb.h>
-#if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX1_2) && !defined(LINUX2_0)
+#if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX)
 # include <sys/select.h>
 #endif /* !defined(hpux) and others */
 #endif /* _WINDOWS */
 
-#if defined(BSDI) || defined(LINUX1_2) || defined(SNI) || defined(IRIX)
+#if defined(BSDI) || defined(LINUX) || defined(SNI) || defined(IRIX)
 #include <arpa/inet.h>
 #endif /* BSDI */
 
@@ -71,7 +71,9 @@
 #ifdef NEED_FILIO
 #include <sys/filio.h>		/* to get FIONBIO for ioctl() call */
 #else /* NEED_FILIO */
+#ifndef _WINDOWS
 #include <sys/ioctl.h>		/* to get FIONBIO for ioctl() call */
+#endif /* _WINDOWS */
 #endif /* NEED_FILIO */
 #endif /* LDAP_ASYNC_IO */
 
@@ -79,7 +81,7 @@
 #  include <unistd.h>
 #endif /* USE_SYSCONF */
 
-#if !defined(_WINDOWS) && !defined(macintosh) && !defined(LINUX2_0)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(LINUX) && !defined(BSDI)
 #define NSLDAPI_HAVE_POLL	1
 #endif
 
@@ -89,6 +91,7 @@
 #else
 #  define SSL_VERSION 0
 #endif
+
 
 #define LDAP_URL_URLCOLON	"URL:"
 #define LDAP_URL_URLCOLON_LEN	4
@@ -226,6 +229,7 @@ struct ldap {
 	int		ld_cldaptimeout;/* time between retries */
 	int		ld_refhoplimit;	/* limit on referral nesting */
 	unsigned long	ld_options;	/* boolean options */
+
 #define LDAP_BITOPT_REFERRALS	0x80000000
 #define LDAP_BITOPT_SSL		0x40000000
 #define LDAP_BITOPT_DNS		0x20000000

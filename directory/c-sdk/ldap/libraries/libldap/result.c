@@ -107,6 +107,9 @@ nsldapi_result_nolock( LDAP *ld, int msgid, int all, int unlock_permitted,
     struct timeval *timeout, LDAPMessage **result )
 {
 	LDAPMessage	*lm, *lastlm, *nextlm;
+
+	LDAPRequest	*lr;
+
 	int		rc;
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_result_nolock\n", 0, 0, 0 );
@@ -168,7 +171,21 @@ nsldapi_result_nolock( LDAP *ld, int msgid, int all, int unlock_permitted,
 		}
 		lastlm = lm;
 	}
-	if ( lm == NULL ) {
+
+	/*
+	 * if we did not find a message OR if the one we found is a result for
+	 * a request that is still pending, call into wait4msg() to await a
+	 * result.
+	 */
+
+	if ( lm == NULL 
+             || (  ld->ld_options & LDAP_BITOPT_ASYNC 
+                   && lm->lm_msgtype != LDAP_RES_SEARCH_REFERENCE &&
+                   lm->lm_msgtype != LDAP_RES_SEARCH_ENTRY &&
+                   ( lr = nsldapi_find_request_by_msgid( ld, lm->lm_msgid ))  != NULL
+                   && lr->lr_outrefcnt > 0 )) 
+
+    {
 		LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
 		rc = wait4msg( ld, msgid, all, unlock_permitted, timeout,
 		    result );
@@ -219,7 +236,8 @@ add_to_cache_and_return:
 		    (all || NSLDAPI_IS_SEARCH_RESULT( rc )), *result );
 	}
 
-	LDAP_MUTEX_UNLOCK( ld, LDAP_RESULT_LOCK );
+	if( ld->ld_mutex_trylock_fn != NULL )
+		LDAP_MUTEX_UNLOCK( ld, LDAP_RESULT_LOCK );
 	POST( ld, LDAP_RES_ANY, NULL );
 	return( rc );
 }
@@ -357,6 +375,27 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 					    lc->lconn_sb )) {
 						rc = read1msg( ld, msgid, all,
 						    lc->lconn_sb, lc, result );
+					}
+					else if (ld->ld_options & LDAP_BITOPT_ASYNC) {
+                        if(   lr
+                              && lc->lconn_status == LDAP_CONNST_CONNECTING
+                              && nsldapi_is_write_ready( ld, lc->lconn_sb ) ) {
+                            rc = nsldapi_ber_flush( ld, lc->lconn_sb, lr->lr_ber, 0, 1 );
+                            if ( rc == 0 ) {
+                                rc = LDAP_RES_BIND;
+                                lc->lconn_status = LDAP_CONNST_CONNECTED;
+                                
+                                lr->lr_ber->ber_end = lr->lr_ber->ber_ptr;
+                                lr->lr_ber->ber_ptr = lr->lr_ber->ber_buf;
+                                nsldapi_mark_select_read( ld, lc->lconn_sb );
+                            }
+                            else if ( rc == -1 ) {
+                                LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
+                                nsldapi_free_request( ld, lr, 0 );
+                                nsldapi_free_connection( ld, lc, 0, 0 );
+                            }
+                        }
+                        
 					}
 				}
 				LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
@@ -597,17 +636,20 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 		}
 
 		if ( msgid == LDAP_RES_ANY || id == msgid ) {
-			if ( all == 0
-			    || (new->lm_msgtype != LDAP_RES_SEARCH_RESULT
-			    && new->lm_msgtype != LDAP_RES_SEARCH_REFERENCE
+			if ( new->lm_msgtype == LDAP_RES_SEARCH_RESULT ) {
+				/*
+				 * return the first response we have for this
+				 * search request later (possibly an entire
+				 * chain of messages).
+				 */
+				foundit = 1;
+			} else if ( all == 0
+			    || (new->lm_msgtype != LDAP_RES_SEARCH_REFERENCE
 			    && new->lm_msgtype != LDAP_RES_SEARCH_ENTRY) ) {
 				*result = new;
 				LDAP_SET_LDERRNO( ld, LDAP_SUCCESS, NULL,
 				    NULL );
 				return( tag );
-			} else if ( new->lm_msgtype ==
-			    LDAP_RES_SEARCH_RESULT ) {
-				foundit = 1;	/* return the chain later */
 			}
 		}
 	}
@@ -654,12 +696,32 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 		;	/* NULL */
 	tmp->lm_chain = new;
 
-	/* return the whole chain if that's what we were looking for */
+	/*
+	 * return the first response or the whole chain if that's what
+	 * we were looking for....
+	 */
 	if ( foundit ) {
-		if ( prev == NULL )
-			ld->ld_responses = l->lm_next;
-		else
-			prev->lm_next = l->lm_next;
+		if ( all == 0 && l->lm_chain != NULL ) {
+			/*
+			 * only return the first response in the chain
+			 */
+			if ( prev == NULL ) {
+				ld->ld_responses = l->lm_chain;
+			} else {
+				prev->lm_next = l->lm_chain;
+			}
+			l->lm_chain = NULL;
+			tag = l->lm_msgtype;
+		} else {
+			/*
+			 * return all of the responses (may be a chain)
+			 */
+			if ( prev == NULL ) {
+				ld->ld_responses = l->lm_next;
+			} else {
+				prev->lm_next = l->lm_next;
+			}
+		}
 		*result = l;
 		LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
 		LDAP_SET_LDERRNO( ld, LDAP_SUCCESS, NULL, NULL );
@@ -707,16 +769,28 @@ check_for_refs( LDAP *ld, LDAPRequest *lr, BerElement *ber,
 
 	if ( origerr == LDAP_REFERRAL ) {	/* ldapv3 */
 		if ( v3refs != NULL ) {
+			LDAP_MUTEX_UNLOCK(ld, LDAP_CONN_LOCK);
+			LDAP_MUTEX_UNLOCK(ld, LDAP_REQ_LOCK);
+			LDAP_MUTEX_UNLOCK(ld, LDAP_RESULT_LOCK);
 			err = nsldapi_chase_v3_refs( ld, lr, v3refs,
 			    ( lr->lr_res_msgtype == LDAP_RES_SEARCH_REFERENCE ),
 			    totalcountp, chasingcountp );
+			LDAP_MUTEX_LOCK(ld, LDAP_RESULT_LOCK);
+			LDAP_MUTEX_LOCK(ld, LDAP_REQ_LOCK);
+			LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK);
 			ldap_value_free( v3refs );
 		}
 	} else if ( ldapversion == LDAP_VERSION2
 	    && origerr != LDAP_SUCCESS ) {
 		/* referrals may be present in the error string */
+		LDAP_MUTEX_UNLOCK(ld, LDAP_CONN_LOCK);
+		LDAP_MUTEX_UNLOCK(ld, LDAP_REQ_LOCK);
+		LDAP_MUTEX_UNLOCK(ld, LDAP_RESULT_LOCK);
 		err = nsldapi_chase_v2_referrals( ld, lr, &errstr,
 		    totalcountp, chasingcountp );
+		LDAP_MUTEX_LOCK(ld, LDAP_RESULT_LOCK);
+		LDAP_MUTEX_LOCK(ld, LDAP_REQ_LOCK);
+		LDAP_MUTEX_LOCK(ld, LDAP_CONN_LOCK);
 	}
 
 	/* set LDAP errno, message, and matched string appropriately */
