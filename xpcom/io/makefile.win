@@ -65,6 +65,7 @@ CPP_OBJS =                                       \
         .\$(OBJDIR)\nsEscape.obj                 \
         .\$(OBJDIR)\nsFileSpec.obj               \
         .\$(OBJDIR)\nsFileSpecStreaming.obj      \
+        .\$(OBJDIR)\nsFileSpecImpl.obj           \
         .\$(OBJDIR)\nsFileStream.obj             \
         .\$(OBJDIR)\nsIFileStream.obj            \
         .\$(OBJDIR)\nsIStringStream.obj          \

@@ -37,6 +37,7 @@ CPPSRCS =				\
 	nsFileSpec.cpp               \
 	nsFileSpecStreaming.cpp      \
 	nsFileStream.cpp             \
+	nsFileSpecImpl.cpp           \
 	nsIFileStream.cpp            \
 	nsIStringStream.cpp          \
 	nsSpecialSystemDirectory.cpp \
