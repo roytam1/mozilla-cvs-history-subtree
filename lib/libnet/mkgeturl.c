@@ -809,6 +809,7 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 	NET_InitLDAPProtocol();
 	NET_InitCertLdapProtocol();
 	NET_InitAddressBookProtocol();
+	NET_InitIMAP4Protocol();
 #endif /* MOZ_MAIL_NEWS */
 
     return(status);
