@@ -22,6 +22,7 @@
  * JavaScript API.
  */
 #include <stddef.h>
+#include <stdio.h>
 #include "jspubtd.h"
 
 JS_BEGIN_EXTERN_C
@@ -783,17 +784,12 @@ extern JS_PUBLIC_API(JSBool)
 JS_BufferIsCompilableUnit(JSContext *cx, JSObject *obj,
                           const char *bytes, size_t length);
 
-#ifdef JSFILE
 extern JS_PUBLIC_API(JSScript *)
 JS_CompileFile(JSContext *cx, JSObject *obj, const char *filename);
-
-/* for FILE */
-#include <stdio.h>
 
 extern JS_PUBLIC_API(JSScript *)
 JS_CompileFileHandle(JSContext *cx, JSObject *obj, const char *filename,
                      FILE *fh);
-#endif
 
 extern JS_PUBLIC_API(JSObject *)
 JS_NewScriptObject(JSContext *cx, JSScript *script);
@@ -1105,3 +1101,4 @@ JS_IsAssigning(JSContext *cx);
 JS_END_EXTERN_C
 
 #endif /* jsapi_h___ */
+

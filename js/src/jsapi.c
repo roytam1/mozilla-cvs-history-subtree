@@ -2085,7 +2085,6 @@ out:
     return result;
 }
 
-#ifdef JSFILE
 JS_PUBLIC_API(JSScript *)
 JS_CompileFile(JSContext *cx, JSObject *obj, const char *filename)
 {
@@ -2115,7 +2114,6 @@ JS_CompileFileHandle(JSContext *cx, JSObject *obj, const char *filename,
     ts->filename = filename;
     return CompileTokenStream(cx, obj, ts, mark, NULL);
 }
-#endif
 
 JS_PUBLIC_API(JSObject *)
 JS_NewScriptObject(JSContext *cx, JSScript *script)
