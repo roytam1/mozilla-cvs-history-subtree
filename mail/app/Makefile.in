@@ -82,12 +82,15 @@ LIBS = \
 	$(MOZ_JS_LIBS) \
 	$(MOZ_COMPONENT_LIBS) \
 	$(TK_LIBS) \
+	$(EXTRA_DSO_LIBS) \
 	$(NULL)
 
 # Add explicit X11 dependency when building against X11 toolkits
 ifneq (,$(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)))
 LIBS += $(XLDFLAGS) $(XLIBS)
 endif
+
+NSDISTMODE = copy
 
 include $(topsrcdir)/config/config.mk
 
@@ -103,6 +106,10 @@ endif
 
 ifeq ($(OS_ARCH),OS2)
 RESFILE=splashos2.res
+endif
+
+ifdef NS_TRACE_MALLOC
+EXTRA_DSO_LIBS += tracemalloc
 endif
 
 include $(topsrcdir)/config/rules.mk
