@@ -182,6 +182,8 @@ protected:
 
   nsSize mComputedSize;
   nsSize mIntrinsicSize;
+
+  PRBool mGotInitialReflow;
 #endif
   nsImageMap*         mImageMap;
   PRPackedBool        mSizeFrozen;

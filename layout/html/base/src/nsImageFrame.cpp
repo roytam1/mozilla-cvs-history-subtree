@@ -98,7 +98,8 @@ NS_NewImageFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 nsImageFrame::nsImageFrame() :
   mLowSrcImageLoader(nsnull)
 #ifdef USE_IMG2
-  , mIntrinsicSize(0, 0)
+  , mIntrinsicSize(0, 0),
+  mGotInitialReflow(PR_FALSE)
 #endif
 {
 }
@@ -208,15 +209,20 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
 
 
 #ifdef USE_IMG2
+  mInitialLoadCompleted = PR_FALSE;
+  mCanSendLoadEvent = PR_TRUE;
+
   nsCOMPtr<nsIURI> srcURI;
   NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
   il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
+  // if the image was found in the cache, it is possible that LoadImage will result in a call to OnStartContainer()
 #else
   mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
-#endif
 
   mInitialLoadCompleted = PR_FALSE;
   mCanSendLoadEvent = PR_TRUE;
+#endif
+
   return rv;
 }
 
@@ -245,6 +251,7 @@ NS_IMETHODIMP nsImageFrame::OnStartContainer(nsIImageRequest *request, nsIPresCo
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
 
+  mInitialLoadCompleted = PR_TRUE;
 
   nscoord w, h;
   image->GetWidth(&w);
@@ -253,15 +260,20 @@ NS_IMETHODIMP nsImageFrame::OnStartContainer(nsIImageRequest *request, nsIPresCo
   float p2t;
   aPresContext->GetPixelsToTwips(&p2t);
 
-  mIntrinsicSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+  nsSize newsize(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
+  if (mIntrinsicSize != newsize) {
+    mIntrinsicSize = newsize;
 
-  if (mParent) {
-    mState |= NS_FRAME_IS_DIRTY;
-	  mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
-  }
-  else {
-    NS_ASSERTION(0, "No parent to pass the reflow request up to.");
+    if (mParent) {
+      if (mGotInitialReflow) { // don't reflow if we havn't gotten the inital reflow yet
+        mState |= NS_FRAME_IS_DIRTY;
+	      mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
+      }
+    }
+    else {
+      NS_ASSERTION(0, "No parent to pass the reflow request up to.");
+    }
   }
 
   if (mCanSendLoadEvent && presShell) {
@@ -597,6 +609,11 @@ nsImageFrame::Reflow(nsIPresContext*          aPresContext,
                   aReflowState.availableWidth, aReflowState.availableHeight));
 
   NS_PRECONDITION(mState & NS_FRAME_IN_REFLOW, "frame is not in reflow");
+
+#ifdef USE_IMG2
+  if (aReflowState.reason == eReflowReason_Initial)
+    mGotInitialReflow = PR_TRUE;
+#endif
 
   GetDesiredSize(aPresContext, aReflowState, aMetrics);
   AddBordersAndPadding(aPresContext, aReflowState, aMetrics, mBorderPadding);
