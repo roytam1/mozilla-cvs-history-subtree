@@ -31,6 +31,8 @@ protected:
   nsTreeRowGroupFrame();
   virtual ~nsTreeRowGroupFrame();
 
+  PRBool IsFlexible();
+
 protected: // Data Members
 
 }; // class nsTreeRowGroupFrame

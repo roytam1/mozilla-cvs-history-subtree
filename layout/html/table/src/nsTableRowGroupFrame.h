@@ -129,6 +129,8 @@ public:
    */
   NS_METHOD GetHeightOfRows(nscoord& aResult);
   
+  virtual PRBool IsFlexible() { return PR_FALSE; }
+
 protected:
 
   /** implement abstract method on nsHTMLContainerFrame */

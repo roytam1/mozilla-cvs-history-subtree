@@ -55,3 +55,11 @@ nsTreeRowGroupFrame::nsTreeRowGroupFrame()
 nsTreeRowGroupFrame::~nsTreeRowGroupFrame()
 {
 }
+
+PRBool nsTreeRowGroupFrame::IsFlexible()
+{
+  // Only row groups are flexible.
+  const nsStyleDisplay *display=nsnull;
+  GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
+  return (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP);
+}

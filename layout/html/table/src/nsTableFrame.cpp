@@ -3794,6 +3794,15 @@ NS_METHOD nsTableFrame::ReflowMappedChildren(nsIPresContext& aPresContext,
       nscoord x = borderPadding.left;
       nscoord y = borderPadding.top + aReflowState.y;
       if (PR_TRUE==gsDebugIR) printf("\nTIF IR: Reflow Pass 2 of frame %p with reason=%d\n", kidFrame, reason);
+      
+      if (RowGroupsShouldBeConstrained()) {
+        // Only applies to the tree widget.
+        nscoord tableSpecifiedHeight;
+        GetTableSpecifiedHeight(tableSpecifiedHeight, kidReflowState);
+        if (tableSpecifiedHeight != -1)
+          kidReflowState.availableHeight = tableSpecifiedHeight - y;
+      }
+
       rv = ReflowChild(kidFrame, aPresContext, desiredSize, kidReflowState, aStatus);
       // Did the child fit?
       if (desiredSize.height > kidAvailSize.height) {
@@ -4325,7 +4334,8 @@ nscoord nsTableFrame::ComputeDesiredHeight(nsIPresContext& aPresContext,
       {
         const nsStyleDisplay *rowGroupDisplay;
         rowGroupFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)rowGroupDisplay));
-        if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay))
+        if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay) &&
+            ((nsTableRowGroupFrame*)rowGroupFrame)->IsFlexible())
         { 
           ((nsTableRowGroupFrame*)rowGroupFrame)->GetHeightOfRows(sumOfRowHeights);
         }
@@ -4338,7 +4348,8 @@ nscoord nsTableFrame::ComputeDesiredHeight(nsIPresContext& aPresContext,
       {
         const nsStyleDisplay *rowGroupDisplay;
         rowGroupFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)rowGroupDisplay));
-        if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay))
+        if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay) &&
+            ((nsTableRowGroupFrame*)rowGroupFrame)->IsFlexible())
         { 
           nscoord excessForGroup = 0;
           DistributeSpaceToRows(aPresContext, aReflowState, rowGroupFrame, sumOfRowHeights, 

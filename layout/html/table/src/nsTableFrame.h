@@ -454,7 +454,7 @@ public:
                                PRBool                   aDoSiblings);
 
   NS_IMETHOD GetTableSpecifiedHeight(nscoord& aHeight, const nsHTMLReflowState& aReflowState);
-
+  virtual PRBool RowGroupsShouldBeConstrained() { return PR_FALSE; }
   
 protected:
   /** second pass of ResizeReflow.

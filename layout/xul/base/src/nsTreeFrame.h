@@ -41,7 +41,9 @@ public:
     
   void FireChangeHandler(nsIPresContext& aPresContext);
 
+  // Overridden methods
   NS_IMETHOD DeleteFrame(nsIPresContext& aPresContext);
+  PRBool RowGroupsShouldBeConstrained() { return PR_TRUE; }
 
 protected:
   nsTreeFrame();

@@ -419,7 +419,7 @@ protected:
                            nsIAtom*                 aTag,
                            nsFrameConstructorState& aState,
                            nsIContent*              aContent,
-                           nsIFrame*                aNewFrame,
+                           nsIFrame*                aParentFrame,
                            nsFrameItems&            aChildItems);
 
 #endif

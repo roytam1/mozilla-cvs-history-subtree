@@ -1023,9 +1023,6 @@ nsTableRowGroupFrame::Reflow(nsIPresContext&          aPresContext,
   else if (tableFrame == nsnull)
     return NS_ERROR_NULL_POINTER;
 
-  nscoord tableSpecifiedHeight;
-  tableFrame->GetTableSpecifiedHeight(tableSpecifiedHeight, aReflowState);
-
   RowGroupReflowState state(aPresContext, aReflowState, tableFrame);
 
   if (eReflowReason_Incremental == aReflowState.reason) {

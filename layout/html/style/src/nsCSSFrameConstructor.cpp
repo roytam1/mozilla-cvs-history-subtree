@@ -1250,6 +1250,7 @@ nsCSSFrameConstructor::ConstructTableGroupFrameOnly(nsIPresContext*          aPr
     // Create an area container for the frame
     rv = (aIsRowGroup) ? aTableCreator.CreateTableRowGroupFrame(&aNewGroupFrame)
                        : aTableCreator.CreateTableColGroupFrame(&aNewGroupFrame);
+    
     if (NS_FAILED(rv)) return rv;
     // Initialize the frame and force it to have a view
     aNewGroupFrame->Init(*aPresContext, aContent, aNewTopFrame, scrolledPseudoStyle,
@@ -1269,6 +1270,15 @@ nsCSSFrameConstructor::ConstructTableGroupFrameOnly(nsIPresContext*          aPr
   if (aProcessChildren) {
     nsFrameItems childItems;
     if (aIsRowGroup) {
+      
+      // Create some anonymous extras within the tree body.
+      if (aTableCreator.IsTreeCreator()) {
+        nsCOMPtr<nsIAtom> tag;
+        aContent->GetTag(*getter_AddRefs(tag));
+        CreateAnonymousXULContent(aPresContext, tag, aState, aContent, aNewGroupFrame,
+                                  childItems);
+      }
+
       TableProcessChildren(aPresContext, aState, aContent, aNewGroupFrame,
                            childItems, aTableCreator);
     } else {
@@ -2962,9 +2972,31 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
                                        nsIAtom*                 aTag,
                                        nsFrameConstructorState& aState,
                                        nsIContent*              aContent,
-                                       nsIFrame*                aNewFrame,
+                                       nsIFrame*                aParentFrame,
                                        nsFrameItems&            aChildItems)
 {
+  if (aTag == nsXULAtoms::treechildren) {
+    // See if our parent is a tree.
+    nsCOMPtr<nsIContent> grandPappy;
+    aContent->GetParent(*getter_AddRefs(grandPappy));
+    nsCOMPtr<nsIAtom> tag;
+    grandPappy->GetTag(*getter_AddRefs(tag));
+    if (tag == nsXULAtoms::tree) {
+      // Create an anonymous scrollbar node.
+      nsCOMPtr<nsIDocument> idocument;
+      aContent->GetDocument(*getter_AddRefs(idocument));
+
+      nsCOMPtr<nsIDOMDocument> document(do_QueryInterface(idocument));
+
+      nsCOMPtr<nsIDOMElement> node;
+      document->CreateElement("scrollbar",getter_AddRefs(node));
+
+      nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+      aContent->AppendChildTo(content, PR_TRUE);
+      ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
+    }
+  }
+
     // if we are creating a scrollbar
     if (aTag == nsXULAtoms::scrollbar) {
 
@@ -2990,7 +3022,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
         content->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::kClass, "decrement", PR_TRUE);
         content->SetParent(aContent);
 
-        ConstructFrame(aPresContext, aState, content, aNewFrame, PR_FALSE, aChildItems);
+        ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
 
         // a slider
         document->CreateElement("slider",getter_AddRefs(node));
@@ -2998,7 +3030,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
         content->SetAttribute(kNameSpaceID_None, nsXULAtoms::flex, "100%", PR_TRUE);
         content->SetParent(aContent);
 
-        ConstructFrame(aPresContext, aState, content, aNewFrame, PR_FALSE, aChildItems);
+        ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
 
         // make sure the slider's thumb is flexible.
         nsIFrame* thumb;
@@ -3020,7 +3052,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
         content->SetAttribute(kNameSpaceID_None, nsHTMLAtoms::kClass, "increment", PR_TRUE);
         content->SetParent(aContent);
 
-        ConstructFrame(aPresContext, aState, content, aNewFrame, PR_FALSE, aChildItems);
+        ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
       }
     } else if (aTag == nsXULAtoms::slider) {
 
@@ -3042,7 +3074,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
         nsCOMPtr<nsIContent> content;
         content = do_QueryInterface(node);
         
-        ConstructFrame(aPresContext, aState, content, aNewFrame, PR_FALSE, aChildItems);
+        ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
       }
     }
 
