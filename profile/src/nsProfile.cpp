@@ -970,7 +970,8 @@ NS_IMETHODIMP nsProfile::RenameProfile(const char* oldName, const char* newName)
 	// Copy reg keys
 	rv = CopyRegKey(oldName, newName);
 	if (NS_FAILED(rv)) return rv;
-	 
+ 
+#if 0
 	rv = RenameProfileDir(newName);
 	if (NS_FAILED(rv)) {
 		rv = DeleteProfile(newName, PR_FALSE /* don't delete files */);
@@ -978,6 +979,7 @@ NS_IMETHODIMP nsProfile::RenameProfile(const char* oldName, const char* newName)
 		NS_ASSERTION(NS_SUCCEEDED(rv), "failed to delete the aborted profile in rename");
 		return NS_ERROR_FAILURE;
 	}
+#endif
 
 	// Delete old profile entry
 	rv = DeleteProfile(oldName, PR_FALSE /* don't delete files */);
@@ -1009,10 +1011,6 @@ nsresult nsProfile::CopyRegKey(const char *oldProfile, const char *newProfile)
 		return NS_ERROR_FAILURE;
 
 	aProfile->profileName		= nsCRT::strdup(newProfile);
-	aProfile->NCProfileName		= nsnull;
-	aProfile->NCDeniedService	= nsnull;
-	aProfile->NCEmailAddress	= nsnull;
-	aProfile->NCHavePregInfo	= nsnull;
 
 	rv = gProfileDataAccess->SetValue(aProfile);
 
@@ -1415,6 +1413,18 @@ NS_IMETHODIMP nsProfile::ProcessPREGInfo(const char* data)
 
 	if (userProfileName.mLength > 0)
 	{
+            // BETA1 FIX for 31409.  
+	    // rv = RenameProfile((const char*)curProfile, (const char*)userProfileName.ToNewCString());
+            // if (NS_FAILED(rv)) return rv;
+
+            // Saving netcenter profile name for AIM and Mail settings
+            // This is required for the work around described below
+            nsCAutoString netcenterProfileName(userProfileName);
+
+            // XXX Setting the name to curProfile. Not renaming for BETA1.
+	    userProfileName = curProfile;
+
+#if 0
 		rv = CloneProfile(userProfileName.ToNewCString());
         if (NS_FAILED(rv)) return rv;
 
@@ -1428,17 +1438,18 @@ NS_IMETHODIMP nsProfile::ProcessPREGInfo(const char* data)
 		// After cloning we have a new filespec. Remove the old one.
 		sRedundantDirectory = dirSpec;
 		sHaveRedundantDirectory = PR_TRUE;
-		
+#endif		
+
 		ProfileStruct*	aProfile;
 
 		gProfileDataAccess->GetValue(userProfileName.ToNewCString(), &aProfile);
 
-		aProfile->NCProfileName = nsCRT::strdup(userProfileName.ToNewCString());
+		aProfile->NCProfileName = nsCRT::strdup(netcenterProfileName.GetBuffer());
 
         NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
         
-		prefs->SetCharPref(ACTIVATION_AIM_PREF, aProfile->NCProfileName);
+		prefs->SetCharPref(ACTIVATION_AIM_PREF, netcenterProfileName.GetBuffer());
 		
 		if (userEmailAddress.mLength > 0)
 		{
@@ -1537,10 +1548,10 @@ NS_IMETHODIMP nsProfile::ProcessPREGInfo(const char* data)
 	}
     
 	gProfileDataAccess->SetPREGInfo(REGISTRY_YES_STRING);
-
+	
 	gProfileDataAccess->mProfileDataChanged = PR_TRUE;
 	gProfileDataAccess->UpdateRegistry();
-
+	
 	PR_FREEIF(curProfile);
 	return rv;
 }

@@ -185,17 +185,18 @@ nsProfileAccess::GetValue(const char* profileName, ProfileStruct** aProfile)
 		(*aProfile)->NCHavePregInfo     = nsnull;
 
 		(*aProfile)->profileName		= nsCRT::strdup(profileItem->profileName);
+
 		(*aProfile)->profileLocation	= nsCRT::strdup(profileItem->profileLocation);
 		(*aProfile)->isMigrated			= nsCRT::strdup(profileItem->isMigrated);
 
 		if (profileItem->NCProfileName)
 			(*aProfile)->NCProfileName	= nsCRT::strdup(profileItem->NCProfileName);
 		if (profileItem->NCDeniedService)
-			(*aProfile)->NCProfileName	= nsCRT::strdup(profileItem->NCDeniedService);
+			(*aProfile)->NCDeniedService	= nsCRT::strdup(profileItem->NCDeniedService);
         if (profileItem->NCEmailAddress)
-            (*aProfile)->NCProfileName	= nsCRT::strdup(profileItem->NCEmailAddress);
+            (*aProfile)->NCEmailAddress	= nsCRT::strdup(profileItem->NCEmailAddress);
         if (profileItem->NCHavePregInfo)
-            (*aProfile)->NCProfileName	= nsCRT::strdup(profileItem->NCHavePregInfo);
+            	(*aProfile)->NCHavePregInfo	= nsCRT::strdup(profileItem->NCHavePregInfo);
 	}
 	else
 		*aProfile = nsnull;
@@ -275,7 +276,7 @@ nsProfileAccess::SetValue(ProfileStruct* aProfile)
 		if (aProfile->NCProfileName)
 			profileItem->NCProfileName	= nsCRT::strdup(aProfile->NCProfileName);
 		if (aProfile->NCDeniedService)
-			profileItem->NCProfileName	= nsCRT::strdup(aProfile->NCDeniedService);
+			profileItem->NCDeniedService	= nsCRT::strdup(aProfile->NCDeniedService);
         if (aProfile->NCEmailAddress)
             profileItem->NCEmailAddress	= nsCRT::strdup(aProfile->NCEmailAddress);
         if (aProfile->NCHavePregInfo)
