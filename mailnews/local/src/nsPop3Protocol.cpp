@@ -612,7 +612,7 @@ PRInt32 nsPop3Protocol::SendData(nsIURI * aURL, const char * dataBuffer)
 {
 	PRInt32 result = nsMsgProtocol::SendData(aURL, dataBuffer);
 
-	if (result) // yeah this sucks...i need an error code....
+	if (result >= 0) // yeah this sucks...i need an error code....
 	{
 	    m_pop3ConData->pause_for_read = PR_TRUE;
         m_pop3ConData->next_state = POP3_WAIT_FOR_RESPONSE;
