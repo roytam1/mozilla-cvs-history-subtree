@@ -57,12 +57,12 @@ XP_LIBS		= \
 
 ifdef NO_STATIC_LIB
 XP_LIBS		+= \
-		$(XPCOM_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(NULL)
 endif
 
 XP_LIBS		+= \
+		$(XPCOM_LIBS) \
 		$(OJI_LIBS) \
 		$(NSPR_LIBS) \
 		$(NULL)
