@@ -218,9 +218,9 @@ function findParentNode(node, parentNode)
 // - A linked document using Save Link As...
 // - A linked document using shift-click Save Link As...
 //
-function saveURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache)
+function saveURL(aURL, aFileName, aFilePickerTitleKey, aShouldBypassCache, aReferrer)
 {
-  saveInternal(aURL, null, aFileName, aFilePickerTitleKey, aShouldBypassCache);
+  saveInternal(aURL, null, aFileName, aFilePickerTitleKey, aShouldBypassCache, aReferrer);
 }
 
 function saveFrameDocument()
@@ -242,7 +242,7 @@ function saveDocument(aDocument)
 
 function saveInternal(aURL, aDocument, 
                       aFileName, aFilePickerTitleKey,
-                      aShouldBypassCache)
+                      aShouldBypassCache, aReferrer)
 {
   var data = {
     url: aURL,
@@ -250,7 +250,8 @@ function saveInternal(aURL, aDocument,
     filePickerTitle: aFilePickerTitleKey,
     document: aDocument,
     bypassCache: aShouldBypassCache,
-    window: window
+    window: window,
+    referrer: aReferrer
   };
   var sniffer = new nsHeaderSniffer(aURL, foundHeaderInfo, data);
 }
@@ -403,7 +404,7 @@ function foundHeaderInfo(aSniffer, aData)
                          persistArgs.contentType, encodingFlags, kWrapColumn);
   } else {
     dl.init(source, persistArgs.target, null, null, null, persist);
-    var referer = getReferrer(document);
+    var referer = aData.referrer || getReferrer(document);
     persist.saveURI(source, null, referer, persistArgs.postData, null, persistArgs.target);
   }
 }
@@ -429,7 +430,7 @@ function nsHeaderSniffer(aURL, aCallback, aData)
 
   // Set referrer, ignore errors
   try {
-    var referrer = getReferrer(document);
+    var referrer = aData.referrer || getReferrer(document);
     this.linkChecker.baseChannel.QueryInterface(Components.interfaces.nsIHttpChannel).referrer = referrer;
   }
   catch (ex) { }
