@@ -168,27 +168,23 @@ struct nsPluginPrintCallbackStruct {
 
 // List of variables which should be implmented by the plugin
 enum nsPluginVariable {
-    nsPluginVariable_NameString = 1,
-    nsPluginVariable_DescriptionString
+    nsPluginVariable_NameString                         = 1,
+    nsPluginVariable_DescriptionString                  = 2
 };
 
 // List of variables which are implemented by the browser
 enum nsPluginManagerVariable {
-    nsPluginManagerVariable_XDisplay = 1,
-    nsPluginManagerVariable_XtAppContext,
-    nsPluginManagerVariable_NetscapeWindow,
-
-    nsPluginManagerVariable_COUNT       // must be last
+    nsPluginManagerVariable_XDisplay                    = 1,
+    nsPluginManagerVariable_XtAppContext                = 2,
+    nsPluginManagerVariable_NetscapeWindow              = 3
 };
 
 enum nsPluginInstancePeerVariable {
-    nsPluginInstancePeerVariable_WindowBool = nsPluginManagerVariable_COUNT,
-    nsPluginInstancePeerVariable_TransparentBool,
-    nsPluginInstancePeerVariable_JavaClass,
-    nsPluginInstancePeerVariable_WindowSize,
-    nsPluginInstancePeerVariable_TimerInterval,
-
-    nsPluginInstancePeerVariable_COUNT  // must be last
+    nsPluginInstancePeerVariable_WindowBool             = 3,
+    nsPluginInstancePeerVariable_TransparentBool        = 4,
+    nsPluginInstancePeerVariable_JavaClass              = 5,
+    nsPluginInstancePeerVariable_WindowSize             = 6,
+    nsPluginInstancePeerVariable_TimerInterval          = 7
 };
 
 ////////////////////////////////////////////////////////////////////////////////
