@@ -582,8 +582,6 @@ ParseItem(CompilerState *state)
       case '^':
 	state->cp = cp + 1;
 	ren = NewRENode(state, REOP_BOL, NULL);
-	if (ren)
-	    ren->flags |= RENODE_ANCHORED;
 	return ren;
 
       case '$':
@@ -1266,9 +1264,6 @@ AnchorRegExp(CompilerState *state, RENode *ren)
 	cp = &ren2->u.chr;
 	op = REOP_FLAT1;
 	goto do_first_char;
-
-      case REOP_EOLONLY:
-        break;
 
       case REOP_DOTSTAR:
 	/*
@@ -2126,54 +2121,20 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
 
 	  case REOP_BOL:
 	    matched = (cp == cpbegin);
-	    if (state->context->regExpStatics.multiline) {
-		/* Anchor-search only if RegExp.multiline is true. */
-		if (state->anchoring) {
-		    if (!matched)
-			matched = (cp[-1] == '\n');
-		} else {
-		    state->anchoring = JS_TRUE;
-		    for (cp2 = cp; cp2 <= cpend; cp2++) {
-			if (cp2 == cpbegin || cp2[-1] == '\n') {
-			    cp3 = MatchRegExp(state, pc, cp2);
-			    if (cp3) {
-				state->skipped = cp2 - cp;
-				state->anchoring = JS_FALSE;
-				return cp3;
-			    }
-			}
-		    }
-		    state->anchoring = JS_FALSE;
-		}
-	    }
+	    if (!matched && state->context->regExpStatics.multiline)
+		matched = (cp[-1] == '\n');
 	    matchlen = 0;
 	    break;
 
 	  case REOP_EOL:
 	  case REOP_EOLONLY:
 	    matched = (cp == cpend);
-	    if (op == REOP_EOL || state->anchoring) {
-		if (!matched && state->context->regExpStatics.multiline)
-		    matched = (*cp == '\n');
-	    } else {
-		/* Always anchor-search EOLONLY, which has no BOL analogue. */
-		state->anchoring = JS_TRUE;
-		for (cp2 = cp; cp2 <= cpend; cp2++) {
-		    if (cp2 == cpend || *cp2 == '\n') {
-			cp3 = MatchRegExp(state, pc, cp2);
-			if (cp3) {
-			    state->anchoring = JS_FALSE;
-			    state->skipped = cp2 - cp;
-			    return cp3;
-			}
-		    }
-		}
-		state->anchoring = JS_FALSE;
-	    }
+	    if (!matched && state->context->regExpStatics.multiline)
+		matched = (*cp == '\n');
 	    matchlen = 0;
 	    break;
 
-	  case REOP_WBDRY:
+          case REOP_WBDRY:
 	    matched = (cp == cpbegin || !JS_ISWORD(cp[-1])) ^ !JS_ISWORD(*cp);
 	    matchlen = 0;
 	    break;
