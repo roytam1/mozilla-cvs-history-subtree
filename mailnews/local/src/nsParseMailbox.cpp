@@ -34,6 +34,7 @@
 #include "nsMsgFolderFlags.h"
 #include "nsIMsgFolder.h"
 #include "nsXPIDLString.h"
+#include "nsIURL.h"
 
 #ifdef DOING_FILTERS
 #include "nsIMsgFilterService.h"
@@ -72,14 +73,14 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartRequest(nsIChannel * /* aChannel */, ns
 	// we have an error.
 	nsresult rv = NS_OK;
 	nsCOMPtr<nsIMailboxUrl> runningUrl = do_QueryInterface(ctxt, &rv);
-	nsCOMPtr<nsIURI> url = do_QueryInterface(ctxt);
+	nsCOMPtr<nsIURL> url = do_QueryInterface(ctxt);
 
 	if (NS_SUCCEEDED(rv) && runningUrl)
 	{
 		// okay, now fill in our event sinks...Note that each getter ref counts before
 		// it returns the interface to us...we'll release when we are done
 		nsXPIDLCString fileName;
-		url->GetPath(getter_Copies(fileName));
+		url->DirFile(getter_Copies(fileName));
 		if (fileName)
 		{
 			nsFilePath dbPath(fileName);
