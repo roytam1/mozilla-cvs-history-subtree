@@ -1154,8 +1154,13 @@ nsVariant::ConvertToISupports(const nsDiscriminatedUnion& data, nsISupports **_r
     {
     case nsIDataType::VTYPE_INTERFACE:
     case nsIDataType::VTYPE_INTERFACE_IS:
-        return data.u.iface.mInterfaceValue->
-                    QueryInterface(NS_GET_IID(nsISupports), (void**)_retval);
+        if (data.u.iface.mInterfaceValue) {
+            return data.u.iface.mInterfaceValue->
+                QueryInterface(NS_GET_IID(nsISupports), (void**)_retval);
+        }
+
+        *_retval = nsnull;
+        return NS_OK;
     default:
         return NS_ERROR_CANNOT_CONVERT_DATA;
     }
@@ -1181,7 +1186,13 @@ nsVariant::ConvertToInterface(const nsDiscriminatedUnion& data, nsIID * *iid, vo
     *iid = (nsIID*) nsMemory::Clone(piid, sizeof(nsIID));
     if(!*iid)
         return NS_ERROR_OUT_OF_MEMORY;
-    return data.u.iface.mInterfaceValue->QueryInterface(*piid, iface);
+
+    if (data.u.iface.mInterfaceValue) {
+        return data.u.iface.mInterfaceValue->QueryInterface(*piid, iface);
+    }
+
+    *iface = nsnull;
+    return NS_OK;
 }
 
 /* static */ nsresult
@@ -1478,9 +1489,7 @@ nsVariant::SetFromISupports(nsDiscriminatedUnion* data, nsISupports *aValue)
 nsVariant::SetFromInterface(nsDiscriminatedUnion* data, const nsIID& iid, nsISupports *aValue)
 {
     DATA_SETTER_PROLOGUE(data);
-    if(!aValue)
-        return NS_ERROR_NULL_POINTER;
-    NS_ADDREF(aValue);
+    NS_IF_ADDREF(aValue);
     data->u.iface.mInterfaceValue = aValue;
     data->u.iface.mInterfaceID = iid;
     DATA_SETTER_EPILOGUE(data, VTYPE_INTERFACE_IS);
