@@ -121,8 +121,6 @@ function InitMessageMenu()
         watchThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
     }
 
-    dump("aMessage == " + aMessage + "\n");
-
     //disable the move and copy menus only if there are no messages selected.
     var moveMenu = document.getElementById("moveMenu");
     if(moveMenu)
