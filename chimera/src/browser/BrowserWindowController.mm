@@ -1156,6 +1156,12 @@ static NSArray* sToolbarDefaults = nil;
   [self forward:sender];
 }
 
+// map delete key to Back
+- (void)deleteBackward:(id)sender
+{
+  [self back:sender];
+}
+
 -(void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer activate:(BOOL)activate
 {
     if (mInitialized) {

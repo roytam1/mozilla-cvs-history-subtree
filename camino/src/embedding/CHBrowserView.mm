@@ -781,6 +781,26 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   return [self isCommandEnabled: "cmd_redo"];
 }
 
+- (void)moveToBeginningOfDocument:(id)sender
+{
+  [self doCommand: "cmd_moveTop"];
+}
+
+- (void)moveToEndOfDocument:(id)sender
+{
+  [self doCommand: "cmd_moveBottom"];
+}
+
+- (void)moveToBeginningOfDocumentAndModifySelection:(id)sender
+{
+  [self doCommand: "cmd_selectMoveTop"];
+}
+
+- (void)moveToEndOfDocumentAndModifySelection:(id)sender
+{
+  [self doCommand: "cmd_selectMoveBottom"];
+}
+
 // how does this differ from getCurrentURI?
 -(NSString*)getCurrentURLSpec
 {

@@ -5712,6 +5712,9 @@ const char * const sCopyImageLocationString = "cmd_copyImageLocation";
 const char * const sCopyImageContentsString = "cmd_copyImageContents";
 const char * const sGetContentsString = "cmd_getContents";
 
+const char * const sMoveTopString = "cmd_moveTop";
+const char * const sMoveBottomString = "cmd_moveBottom";
+
 const char * const sScrollTopString = "cmd_scrollTop";
 const char * const sScrollBottomString = "cmd_scrollBottom";
 const char * const sScrollPageUpString = "cmd_scrollPageUp";
@@ -5937,6 +5940,8 @@ nsDOMWindowController::SupportsCommand(const nsAString& aCommand,
       commandName.Equals(sPasteString) ||
       commandName.Equals(sScrollTopString) ||
       commandName.Equals(sScrollBottomString) ||
+      commandName.Equals(sMoveTopString) ||
+      commandName.Equals(sMoveBottomString) ||
       commandName.Equals(sCopyLinkString) ||
       commandName.Equals(sCopyImageLocationString) ||
       commandName.Equals(sCopyImageContentsString) ||
@@ -6015,6 +6020,11 @@ nsDOMWindowController::DoCommand(nsICommandParams *aCommandParams)
       
     rv = aCommandParams->SetStringValue(NS_LITERAL_STRING("result"), contents);
   }
+  else
+  {
+    // pass it onto the old-style controller method
+    rv = DoCommand(commandName);
+  }
 
   return rv;
 }
@@ -6039,6 +6049,8 @@ nsDOMWindowController::DoCommand(const nsAString & aCommand)
   }
   else if (commandName.Equals(sScrollTopString) ||
            commandName.Equals(sScrollBottomString) ||
+           commandName.Equals(sMoveTopString) ||
+           commandName.Equals(sMoveBottomString) ||
            commandName.Equals(sScrollPageUpString) ||
            commandName.Equals(sScrollPageDownString) ||
            commandName.Equals(sScrollLineUpString) ||
@@ -6137,6 +6149,10 @@ nsDOMWindowController::DoCommandWithSelectionController(const nsCString& aComman
     rv = (mBrowseWithCaret? selCont->CharacterMove(PR_TRUE, PR_FALSE): selCont->ScrollHorizontal(PR_FALSE));
   // These commands are so the browser can use editor navigation key bindings -
   // Helps with accessibility - aaronl@chorus.net
+  else if (aCommandName.Equals(sMoveTopString))
+    rv = selCont->CompleteMove(PR_FALSE, PR_FALSE);
+  else if (aCommandName.Equals(sMoveBottomString))
+    rv = selCont->CompleteMove(PR_TRUE, PR_FALSE);
   else if (aCommandName.Equals(sSelectCharPreviousString))
     rv = selCont->CharacterMove(PR_FALSE, PR_TRUE);
   else if (aCommandName.Equals(sSelectCharNextString))
