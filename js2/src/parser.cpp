@@ -374,10 +374,11 @@ JS::ExprNode *JS::Parser::parsePrimaryExpression(SuperState superState)
       case Token::Function:
         {
             FunctionExprNode *f = new(arena) FunctionExprNode(t.getPos());
-            const Token &t2 = lexer.get(true);
-            f->function.prefix = FunctionName::normal;
-            if (!(f->function.name = makeIdentifierExpression(t2)))
-                lexer.unget();
+            const Token &t2 = lexer.peek(true);
+            if (t2.hasIdentifierKind()) {
+                f->function.name = &t.getIdentifier();
+                lexer.skip();
+            }
             parseFunctionSignature(f->function);
             f->function.body = parseBody(0);
             e = f;
@@ -1078,24 +1079,26 @@ JS::VariableBinding *JS::Parser::parseParameter()
 // After parseFunctionName finishes, the next token might have been peeked with preferRegExp set to true.
 void JS::Parser::parseFunctionName(FunctionName &fn)
 {
-    fn.prefix = FunctionName::normal;
     const Token *t = &lexer.get(true);
-    ExprNode *name;
+    FunctionName::Prefix prefix = FunctionName::normal;
+    const StringAtom *name;
 
-    if (t->hasKind(Token::string))
-        name = new(arena) StringExprNode(t->getPos(), ExprNode::string, copyTokenChars(*t));
-    else {
+    if (t->hasKind(Token::string)) {
+        prefix = FunctionName::op;
+        name = &getWorld().identifiers[t->getChars()];
+    } else {
         if (t->hasKind(Token::Get) || t->hasKind(Token::Set)) {
             const Token *t2 = &lexer.peek(true);
             if (!lineBreakBefore(*t2) && t2->getFlag(Token::isNonreserved)) {
-                fn.prefix = t->hasKind(Token::Get) ? FunctionName::Get : FunctionName::Set;
+                prefix = t->hasKind(Token::Get) ? FunctionName::Get : FunctionName::Set;
                 t = &lexer.get(true);
             }
         }
-        name = makeIdentifierExpression(*t);
-        if (!name)
+        if (!t->hasIdentifierKind())
             syntaxError("Identifier expected");
+        name = &t->getIdentifier();
     }
+    fn.prefix = prefix;
     fn.name = name;
 }
 
@@ -1600,14 +1603,18 @@ const int32 subexpressionIndent = 4;    // Size of one level of expression inden
 const int32 functionHeaderIndent = 9;   // Indentation of function signature
 const int32 namespaceHeaderIndent = 4;  // Indentation of class, interface, or namespace header
 
-static const char functionPrefixNames[3][5] = {"", "get ", "set "};
+static const char functionPrefixNames[4][5] = {"", "get ", "set ", "op "};
 
 
 // Print this onto f.  name must be non-nil.
 void JS::FunctionName::print(PrettyPrinter &f) const
 {
-    f << functionPrefixNames[prefix];
-    f << name;
+    if (prefix == FunctionName::op)
+        quoteString(f, *name, '"');
+    else {
+        f << functionPrefixNames[prefix];
+        f << *name;
+    }
 }
 
 

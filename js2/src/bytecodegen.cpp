@@ -558,7 +558,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
 */
 
 #ifdef DEBUG
-    if (f.name && (f.name->getKind() == ExprNode::identifier)) {
+    if (f.name) {
 //      const StringAtom& name = (static_cast<IdentifierExprNode *>(f.name))->name;
 //      stdOut << "gencode for " << name << "\n";
     }
@@ -753,12 +753,9 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
             JSFunction *fnc = f->mFunction;    
 
-            if (f->function.name->getKind() == ExprNode::identifier) {
-                const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                if (mScopeChain->topClass() 
-                            && (mScopeChain->topClass()->mClassName.compare(name) == 0))
-                    isConstructor = true;
-            }
+            ASSERT(f->function.name);
+            if (mScopeChain->topClass() && (mScopeChain->topClass()->mClassName.compare(*f->function.name) == 0))
+                isConstructor = true;
             ByteCodeGen bcg(m_cx, mScopeChain);
             bcg.genCodeForFunction(f->function, fnc, isConstructor, mScopeChain->topClass());
         }

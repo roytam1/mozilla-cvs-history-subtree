@@ -255,14 +255,15 @@ namespace JavaScript {
 
 
     struct FunctionName {
-        enum Prefix {
+        enum Prefix {                   // Keep synchronized with functionPrefixNames
             normal,                     // No prefix
             Get,                        // get
-            Set                         // set
+            Set,                        // set
+            op                          // The function name is a string (used for operator overrides)
         };
 
         Prefix prefix;                  // The name's prefix, if any
-        ExprNode *name;                 // The name; nil if omitted
+        const StringAtom *name;         // The interned name; nil if omitted
 
         FunctionName(): prefix(normal), name(0) {}
 

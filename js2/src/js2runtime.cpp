@@ -802,81 +802,77 @@ void ScopeChain::collectNames(StmtNode *p)
                 // no need to do anything yet, all operators are 'pre-declared'
             }
             else {
-                if (f->function.name->getKind() == ExprNode::identifier) {
-                    const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                    fnc->setFunctionName(name);
-                    if (topClass())
-                        fnc->setClass(topClass());
-                    IdentifierExprNode *extendArg;
-                    if (hasAttribute(f->attributes, m_cx->ExtendKeyWord, &extendArg)) {
-                        JSType *extendedClass = extractType(extendArg);
-                    
-                          // sort of want to fall into the code below, but use 'extendedClass' instead
-                          // of whatever the topClass will turn out to be.
-                        if (extendedClass->mClassName.compare(name) == 0)
-                            isConstructor = true;       // can you add constructors?
-                        if (isConstructor)
-                            extendedClass->defineConstructor(name, f->attributes, fnc);
-                        else {
-                            switch (f->function.prefix) {
-                            case FunctionName::Get:
-                                if (isStatic)
-                                    extendedClass->defineStaticGetterMethod(name, f->attributes, fnc);
-                                else
-                                    extendedClass->defineGetterMethod(name, f->attributes, fnc);
-                                break;
-                            case FunctionName::Set:
-                                if (isStatic)
-                                    extendedClass->defineStaticSetterMethod(name, f->attributes, fnc);
-                                else
-                                    extendedClass->defineSetterMethod(name, f->attributes, fnc);
-                                break;
-                            case FunctionName::normal:
-                                if (isStatic)
-                                    extendedClass->defineStaticMethod(name, f->attributes, fnc);
-                                else
-                                    extendedClass->defineMethod(name, f->attributes, fnc);
-                                break;
-                            default:
-                                NOT_REACHED("unexpected prefix");
-                                break;
-                            }
-                        }                    
-                    }
+                const StringAtom& name = *f->function.name;
+                fnc->setFunctionName(name);
+                if (topClass())
+                    fnc->setClass(topClass());
+                IdentifierExprNode *extendArg;
+                if (hasAttribute(f->attributes, m_cx->ExtendKeyWord, &extendArg)) {
+                    JSType *extendedClass = extractType(extendArg);
+                
+                    // sort of want to fall into the code below, but use 'extendedClass' instead
+                    // of whatever the topClass will turn out to be.
+                    if (extendedClass->mClassName.compare(name) == 0)
+                        isConstructor = true;       // can you add constructors?
+                    if (isConstructor)
+                        extendedClass->defineConstructor(name, f->attributes, fnc);
                     else {
-                        if (topClass() && (topClass()->mClassName.compare(name) == 0))
-                            isConstructor = true;
-                        if (isConstructor)
-                            defineConstructor(name, f->attributes, fnc);
-                        else {
-                            switch (f->function.prefix) {
-                            case FunctionName::Get:
-                                if (isStatic)
-                                    defineStaticGetterMethod(name, f->attributes, fnc);
-                                else
-                                    defineGetterMethod(name, f->attributes, fnc);
-                                break;
-                            case FunctionName::Set:
-                                if (isStatic)
-                                    defineStaticSetterMethod(name, f->attributes, fnc);
-                                else
-                                    defineSetterMethod(name, f->attributes, fnc);
-                                break;
-                            case FunctionName::normal:
-                                if (isStatic)
-                                    defineStaticMethod(name, f->attributes, fnc);
-                                else
-                                    defineMethod(name, f->attributes, fnc);
-                                break;
-                            default:
-                                NOT_REACHED("unexpected prefix");
-                                break;
-                            }
+                        switch (f->function.prefix) {
+                        case FunctionName::Get:
+                            if (isStatic)
+                                extendedClass->defineStaticGetterMethod(name, f->attributes, fnc);
+                            else
+                                extendedClass->defineGetterMethod(name, f->attributes, fnc);
+                            break;
+                        case FunctionName::Set:
+                            if (isStatic)
+                                extendedClass->defineStaticSetterMethod(name, f->attributes, fnc);
+                            else
+                                extendedClass->defineSetterMethod(name, f->attributes, fnc);
+                            break;
+                        case FunctionName::normal:
+                            if (isStatic)
+                                extendedClass->defineStaticMethod(name, f->attributes, fnc);
+                            else
+                                extendedClass->defineMethod(name, f->attributes, fnc);
+                            break;
+                        default:
+                            NOT_REACHED("***** implement me -- throw an error because the user passed a quoted function name");
+                            break;
+                        }
+                    }                    
+                }
+                else {
+                    if (topClass() && (topClass()->mClassName.compare(name) == 0))
+                        isConstructor = true;
+                    if (isConstructor)
+                        defineConstructor(name, f->attributes, fnc);
+                    else {
+                        switch (f->function.prefix) {
+                        case FunctionName::Get:
+                            if (isStatic)
+                                defineStaticGetterMethod(name, f->attributes, fnc);
+                            else
+                                defineGetterMethod(name, f->attributes, fnc);
+                            break;
+                        case FunctionName::Set:
+                            if (isStatic)
+                                defineStaticSetterMethod(name, f->attributes, fnc);
+                            else
+                                defineSetterMethod(name, f->attributes, fnc);
+                            break;
+                        case FunctionName::normal:
+                            if (isStatic)
+                                defineStaticMethod(name, f->attributes, fnc);
+                            else
+                                defineMethod(name, f->attributes, fnc);
+                            break;
+                        default:
+                            NOT_REACHED("***** implement me -- throw an error because the user passed a quoted function name");
+                            break;
                         }
                     }
                 }
-                else
-                    NOT_REACHED("implement me - qualified function name");
             }
         }
         break;
@@ -1237,8 +1233,11 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             fnc->setResultType(resultType);
  
             if (isOperator) {
-                ASSERT(f->function.name->getKind() == ExprNode::string);
-                const String& name = static_cast<StringExprNode *>(f->function.name)->str;
+                if (f->function.prefix != FunctionName::op) {
+                    NOT_REACHED("***** Implement me -- signal an error here because the user entered an unquoted operator name");
+                }
+                ASSERT(f->function.name);
+                const StringAtom& name = *f->function.name;
                 Operator op = getOperator(getParameterCount(f->function), name);
                 // if it's a unary operator, it just gets added 
                 // as a method with a special name. Binary operators
@@ -1551,7 +1550,7 @@ Context::Context(JSObject **global, World &world, Arena &a)
     initOperators();
 }
 
-void Context::reportError(Exception::Kind kind, char *message, size_t pos)
+void Context::reportError(Exception::Kind, char *message, size_t pos)
 {
     if (mReader) {
         uint32 lineNum = mReader->posToLineNum(pos);
