@@ -28,8 +28,7 @@ endif
 ASFLAGS         =
 DEFINES         =
 
-DIST = ../../dist/$(OBJDIR)
-INSTALL	= $(DEPTH)/$(DIST)/bin/nsinstall
+INSTALL	= $(DEPTH)/../../dist/$(OBJDIR)/bin/nsinstall
 
 include $(DEPTH)/config/$(OS_CONFIG).mk
 

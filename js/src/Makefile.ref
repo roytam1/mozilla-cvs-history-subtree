@@ -19,9 +19,9 @@
 #
 
 DEPTH = .
+DIST = ../../dist/$(OBJDIR)
 
 include config.mk
-include config/$(OS_CONFIG).mk
 
 #NS_USE_NATIVE = 1
 
@@ -50,7 +50,7 @@ LDFLAGS		= -lm $(XLDFLAGS)
 # Ask perl what flags it was built with, so we can build js with similar flags
 # and link properly.  Viva gmake.
 #
-ifdef PERLCONNECT
+ifdef JS_PERLCONNECT
 DEFINES += -DPERLCONNECT
 
 PERLCFLAGS := $(shell perl -MExtUtils::Embed -e ccopts)
@@ -144,11 +144,11 @@ JS_CFILES =		\
 	prmjtime.c	\
 	$(NULL)
 
-ifndef NO_LIVECONNECT
+ifdef JS_LIVECONNECT
 DIRS	= liveconnect
 endif
 
-ifdef PERLCONNECT
+ifdef JS_PERLCONNECT
 JS_CFILES += jsperl.c
 endif
 
