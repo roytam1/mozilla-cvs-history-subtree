@@ -102,9 +102,14 @@
 #include "nsInternetCiter.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
+<<<<<<< nsHTMLDataTransfer.cpp
+#include "nsLinebreakConverter.h"
+#include "nsIHTMLFragmentContentSink.h"
+=======
 #include "nsLinebreakConverter.h"
 #include "nsIHTMLFragmentContentSink.h"
 
+>>>>>>> 1.62.6.1
 // netwerk
 #include "nsIURI.h"
 #include "nsNetUtil.h"
@@ -795,9 +800,121 @@ NS_IMETHODIMP nsHTMLEditor::PrepareHTMLTransferable(nsITransferable **aTransfera
       (*aTransferable)->AddDataFlavor(kFileMime);
       //(*transferable)->AddDataFlavor(kJPEGImageMime);
     }
+<<<<<<< nsHTMLDataTransfer.cpp
     (*aTransferable)->AddDataFlavor(kUnicodeMime);
   }
   
+  return NS_OK;
+}
+
+PRInt32
+FindPositiveIntegerAfterString( const char * aLeadingString, nsCString & aCStr )
+{
+  char crlf[] = {nsCRT::CR, nsCRT::LF, 0};
+  // first obtain offsets from cfhtml str
+  PRInt32 numFront = aCStr.Find(aLeadingString);
+  if (numFront == -1)
+    return -1;
+  numFront += nsCRT::strlen(aLeadingString); 
+  
+  PRInt32 numBack = aCStr.FindCharInSet(crlf, numFront);
+  if (numBack == -1)
+    return -1;
+   
+  nsCAutoString numStr(Substring(aCStr, numFront, numBack-numFront));
+  PRInt32 errorCode;
+  return numStr.ToInteger(&errorCode);
+}
+
+nsresult
+RemoveFragComments(nsCString & aStr)
+{
+  // remove the StartFragment/EndFragment comments from the str, if present
+  PRInt32 startCommentIndx = aStr.Find("<!--StartFragment");
+  if (startCommentIndx >= 0)
+  {
+    PRInt32 startCommentEnd = aStr.Find("-->", PR_FALSE, startCommentIndx);
+    if (startCommentEnd > startCommentIndx)
+      aStr.Cut(startCommentIndx, (startCommentEnd+3)-startCommentIndx);
+  }  
+  PRInt32 endCommentIndx = aStr.Find("<!--EndFragment");
+  if (endCommentIndx >= 0)
+  {
+    PRInt32 endCommentEnd = aStr.Find("-->", PR_FALSE, endCommentIndx);
+    if (endCommentEnd > endCommentIndx)
+      aStr.Cut(endCommentIndx, (endCommentEnd+3)-endCommentIndx);
+  }  
+  return NS_OK;
+}
+
+nsresult
+nsHTMLEditor::ParseCFHTML(nsCString & aCfhtml, nsAString & aStuffToPaste, nsAString & aCfcontext)
+{
+  // first obtain offsets from cfhtml str
+  PRInt32 startHTML     = FindPositiveIntegerAfterString("StartHTML:", aCfhtml);
+  PRInt32 endHTML       = FindPositiveIntegerAfterString("EndHTML:", aCfhtml);
+  PRInt32 startFragment = FindPositiveIntegerAfterString("StartFragment:", aCfhtml);
+  PRInt32 endFragment   = FindPositiveIntegerAfterString("EndFragment:", aCfhtml);
+
+  if ((startHTML<0) || (endHTML<0) || (startFragment<0) || (endFragment<0))
+    return NS_ERROR_FAILURE;
+ 
+  // create context string
+  nsCAutoString contextUTF8(Substring(aCfhtml, startHTML, endHTML-startHTML));
+  
+  // cut fragment string out of context
+  contextUTF8.Cut(startFragment-startHTML, endFragment-startFragment);
+
+  // create fragment string
+  nsCAutoString fragmentUTF8(Substring(aCfhtml, startFragment, endFragment-startFragment));
+  
+  // remove the StartFragment/EndFragment comments from the fragment, if present
+  RemoveFragComments(fragmentUTF8);
+
+  // remove the StartFragment/EndFragment comments from the context, if present
+  RemoveFragComments(contextUTF8);
+
+  // convert both strings to usc2
+  aStuffToPaste.Assign(NS_ConvertUTF8toUCS2(fragmentUTF8));
+  aCfcontext.Assign(NS_ConvertUTF8toUCS2(contextUTF8));
+  
+  // translate platform linebreaks for fragment
+  PRUnichar* newStr=0;
+  PRInt32 oldLengthInChars=aStuffToPaste.Length();
+  PRInt32 newLengthInChars=0;
+  newStr = nsLinebreakConverter::ConvertUnicharLineBreaks( PromiseFlatString(aStuffToPaste).get(),
+                                                           nsLinebreakConverter::eLinebreakAny, 
+                                                           nsLinebreakConverter::eLinebreakContent, 
+                                                           oldLengthInChars, &newLengthInChars );
+  if (newStr)
+  {
+    aStuffToPaste.Assign(newStr, newLengthInChars);
+    nsMemory::Free (newStr);
+  }
+  else
+  {
+    return NS_ERROR_FAILURE;
+  }
+  
+  // translate platform linebreaks for context
+  newStr=0;
+  oldLengthInChars=aCfcontext.Length();
+  newLengthInChars=0;
+  newStr = nsLinebreakConverter::ConvertUnicharLineBreaks( PromiseFlatString(aCfcontext).get(),
+                                                           nsLinebreakConverter::eLinebreakAny, 
+                                                           nsLinebreakConverter::eLinebreakContent, 
+                                                           oldLengthInChars, &newLengthInChars );
+  if (newStr)
+  {
+    aCfcontext.Assign(newStr, newLengthInChars);
+    nsMemory::Free (newStr);
+=======
+    (*aTransferable)->AddDataFlavor(kUnicodeMime);
+>>>>>>> 1.62.6.1
+  }
+  // else --- it's ok for context to be empty.  frag might be whole doc and contain all it's context.
+  
+  // we're done!  
   return NS_OK;
 }
 
@@ -925,6 +1042,9 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
 #ifdef DEBUG_clipboard
     printf("Got flavor [%s]\n", bestFlavor);
 #endif
+<<<<<<< nsHTMLDataTransfer.cpp
+    if (flavor.Equals(NS_LITERAL_STRING(kNativeHTMLMime)))
+=======
     if (flavor.Equals(NS_LITERAL_STRING(kNativeHTMLMime)))
     {
       // note cf_html uses utf8, hence use length = len, not len/2 as in flavors below
@@ -945,7 +1065,27 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
       }
     }
     else if (flavor.Equals(NS_LITERAL_STRING(kHTMLMime)))
+>>>>>>> 1.62.6.1
     {
+      // note cf_html uses utf8, hence use length = len, not len/2 as in flavors below
+      nsCOMPtr<nsISupportsCString> textDataObj ( do_QueryInterface(genericDataObj) );
+      if (textDataObj && len > 0)
+      {
+        nsCAutoString cfhtml;        
+        textDataObj->GetData(cfhtml);        
+
+        NS_ASSERTION(cfhtml.Length() <= (len), "Invalid length!");
+        nsAutoString cfcontext, cfselection; // cfselection left emtpy for now
+        rv = ParseCFHTML(cfhtml, stuffToPaste, cfcontext);
+        if ( NS_SUCCEEDED(rv) && !stuffToPaste.IsEmpty() )
+        {
+          nsAutoEditBatch beginBatching(this);
+          rv = InsertHTMLWithContext(stuffToPaste, cfcontext, cfselection);
+        }
+      }
+    }
+    else if (flavor.Equals(NS_LITERAL_STRING(kHTMLMime)))
+    {         
       nsCOMPtr<nsISupportsString> textDataObj ( do_QueryInterface(genericDataObj) );
       if (textDataObj && len > 0)
       {
@@ -1057,12 +1197,21 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   dragService->GetCurrentSession(getter_AddRefs(dragSession)); 
   if (!dragSession) return NS_OK;
 
+<<<<<<< nsHTMLDataTransfer.cpp
+  // find out if we have our internal html flavor on the clipboard.  We don't want to mess
+  // around with cfhtml if we do.
+  PRBool bHavePrivateHTMLFlavor = PR_FALSE;
+  rv = dragSession->IsDataFlavorSupported(kHTMLContext, &bHavePrivateHTMLFlavor);
+  if (NS_FAILED(rv)) return rv;
+
+=======
   // find out if we have our internal html flavor on the clipboard.  We don't want to mess
   // around with cfhtml if we do.
   PRBool bHavePrivateHTMLFlavor = PR_FALSE;
   rv = dragSession->IsDataFlavorSupported(kHTMLContext, &bHavePrivateHTMLFlavor);
   if (NS_FAILED(rv)) return rv;
   
+>>>>>>> 1.62.6.1
   // Get the nsITransferable interface for getting the data from the drop
   nsCOMPtr<nsITransferable> trans;
   rv = PrepareHTMLTransferable(getter_AddRefs(trans), bHavePrivateHTMLFlavor);
@@ -1517,6 +1666,10 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
   nsCOMPtr<nsIClipboard> clipboard( do_GetService( kCClipboardCID, &rv ) );
   if ( NS_FAILED(rv) )
     return rv;
+
+  // find out if we have our internal html flavor on the clipboard.  We don't want to mess
+  // around with cfhtml if we do.
+  PRBool bHavePrivateHTMLFlavor = HavePrivateHTMLFlavor( clipboard );
     
   // find out if we have our internal html flavor on the clipboard.  We don't want to mess
   // around with cfhtml if we do.
@@ -1529,15 +1682,58 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
   {
     // Get the Data from the clipboard  
     if (NS_SUCCEEDED(clipboard->GetData(trans, aSelectionType)) && IsModifiable())
+<<<<<<< nsHTMLDataTransfer.cpp
+    {      
+      nsAutoString contextStr, infoStr;
+=======
     {
       nsAutoString contextStr, infoStr;
+>>>>>>> 1.62.6.1
       // also get additional html copy hints, if present
+<<<<<<< nsHTMLDataTransfer.cpp
+      if (bHavePrivateHTMLFlavor) {
+        nsCOMPtr<nsISupports> contextDataObj, infoDataObj;
+        PRUint32 contextLen, infoLen;
+        nsCOMPtr<nsISupportsString> textDataObj;
+=======
       if (bHavePrivateHTMLFlavor) {
           nsAutoString contextStr, infoStr;
           nsCOMPtr<nsISupports> contextDataObj, infoDataObj;
           PRUint32 contextLen, infoLen;
           nsCOMPtr<nsISupportsString> textDataObj;
+>>>>>>> 1.62.6.1
       
+<<<<<<< nsHTMLDataTransfer.cpp
+        nsCOMPtr<nsITransferable> contextTrans = do_CreateInstance(kCTransferableCID);
+        NS_ENSURE_TRUE(contextTrans, NS_ERROR_NULL_POINTER);
+        contextTrans->AddDataFlavor(kHTMLContext);
+        clipboard->GetData(contextTrans, aSelectionType);
+        contextTrans->GetTransferData(kHTMLContext, getter_AddRefs(contextDataObj), &contextLen);
+  
+        nsCOMPtr<nsITransferable> infoTrans = do_CreateInstance(kCTransferableCID);
+        NS_ENSURE_TRUE(infoTrans, NS_ERROR_NULL_POINTER);
+        infoTrans->AddDataFlavor(kHTMLInfo);
+        clipboard->GetData(infoTrans, aSelectionType);
+        infoTrans->GetTransferData(kHTMLInfo, getter_AddRefs(infoDataObj), &infoLen);
+        
+        if (contextDataObj)
+        {
+          nsAutoString text;
+          textDataObj = do_QueryInterface(contextDataObj);
+          textDataObj->GetData ( text );
+          NS_ASSERTION(text.Length() <= (contextLen/2), "Invalid length!");
+          contextStr.Assign ( text.get(), contextLen / 2 );
+        }
+        
+        if (infoDataObj)
+        {
+          nsAutoString text;
+          textDataObj = do_QueryInterface(infoDataObj);
+          textDataObj->GetData ( text );
+          NS_ASSERTION(text.Length() <= (infoLen/2), "Invalid length!");
+          infoStr.Assign ( text.get(), infoLen / 2 );
+        }
+=======
         nsCOMPtr<nsITransferable> contextTrans = do_CreateInstance(kCTransferableCID);
         NS_ENSURE_TRUE(contextTrans, NS_ERROR_NULL_POINTER);
         contextTrans->AddDataFlavor(kHTMLContext);
@@ -1566,6 +1762,7 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
         textDataObj->GetData ( text );
         NS_ASSERTION(text.Length() <= (infoLen/2), "Invalid length!");
         infoStr.Assign ( text.get(), infoLen / 2 );
+>>>>>>> 1.62.6.1
       }
       rv = InsertFromTransferable(trans, contextStr, infoStr);
     }
@@ -2116,19 +2313,36 @@ nsresult nsHTMLEditor::CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
   nsresult res = NS_OK;
   
   // if we have context info, create a fragment for that
+<<<<<<< nsHTMLDataTransfer.cpp
+  nsCOMPtr<nsIDOMDocumentFragment> contextfrag;
   nsCOMPtr<nsIDOMNode> contextLeaf, junk;
+=======
+  nsCOMPtr<nsIDOMNode> contextLeaf, junk;
+>>>>>>> 1.62.6.1
   PRInt32 contextDepth = 0;
   if (aContextStr.Length())
   {
     res = ParseFragment(aContextStr, address_of(contextAsNode));
     NS_ENSURE_SUCCESS(res, res);
+<<<<<<< nsHTMLDataTransfer.cpp
+    NS_ENSURE_TRUE(contextAsNode, NS_ERROR_FAILURE);
+
+    res = StripFormattingNodes(contextAsNode);
+=======
     NS_ENSURE_TRUE(contextAsNode, NS_ERROR_FAILURE);
 
    res = StripFormattingNodes(contextAsNode);
+>>>>>>> 1.62.6.1
     NS_ENSURE_SUCCESS(res, res);
+<<<<<<< nsHTMLDataTransfer.cpp
+
+    RemoveBodyAndHead(contextAsNode);
+
+=======
     
     RemoveBodyAndHead(contextAsNode);
     
+>>>>>>> 1.62.6.1
     // cache the deepest leaf in the context
     tmp = contextAsNode;
     while (tmp)
@@ -2143,11 +2357,19 @@ nsresult nsHTMLEditor::CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
   // create fragment for pasted html
   res = ParseFragment(aInputString, outFragNode);
   NS_ENSURE_SUCCESS(res, res);
+<<<<<<< nsHTMLDataTransfer.cpp
+  NS_ENSURE_TRUE(*outFragNode, NS_ERROR_FAILURE);
+
+  RemoveBodyAndHead(*outFragNode);
+  
+  if (contextAsNode)
+=======
   NS_ENSURE_TRUE(*outFragNode, NS_ERROR_FAILURE);
       
   RemoveBodyAndHead(*outFragNode);
 
   if (contextAsNode)
+>>>>>>> 1.62.6.1
   {
     // unite the two trees
     contextLeaf->AppendChild(*outFragNode, getter_AddRefs(junk));
