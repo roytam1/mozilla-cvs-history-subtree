@@ -402,6 +402,7 @@ LINK_LIBS= \
     $(DIST)\lib\remoturl.lib \
     $(DIST)\lib\netcache.lib \
     $(DIST)\lib\netcnvts.lib \
+	$(DIST)\lib\mimetype.lib \
     $(DIST)\lib\network.lib \
     $(DIST)\lib\cnetinit.lib \
 !ifdef MOZ_LDAP
@@ -2415,6 +2416,7 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\remoturl.lib +
     $(DIST)\lib\netcache.lib +
     $(DIST)\lib\netcnvts.lib +
+	$(DIST)\lib\mimetype.lib +
     $(DIST)\lib\network.lib +
     $(DIST)\lib\cnetinit.lib +
 !ifdef MOZ_MAIL_NEWS
