@@ -2970,8 +2970,17 @@ PRIntervalTime timeout)
      * Map in (part of) file. Take care of zero-length files.
      */
     if (len) {
+#ifdef OSF1
+		/*
+		 * Use MAP_SHARED to work around a bug in OSF1 that results in
+		 * corrupted data in the memory-mapped region
+		 */
+        addr = mmap((caddr_t) 0, len, PROT_READ, MAP_SHARED,
+            fd->secret->md.osfd, 0);
+#else
         addr = mmap((caddr_t) 0, len, PROT_READ, MAP_PRIVATE,
             fd->secret->md.osfd, 0);
+#endif
 
         if (addr == (void*)-1) {
             _PR_MD_MAP_MMAP_ERROR(_MD_ERRNO());
@@ -3011,8 +3020,17 @@ PRIntervalTime timeout)
          * Map in (part of) file
          */
         PR_ASSERT((count - hlen) % TRANSMITFILE_MMAP_CHUNK == 0);
+#ifdef OSF1
+		/*
+		 * Use MAP_SHARED to work around a bug in OSF1 that results in
+		 * corrupted data in the memory-mapped region
+		 */
+        addr = mmap((caddr_t) 0, len, PROT_READ, MAP_SHARED,
+                fd->secret->md.osfd, count - hlen);
+#else
         addr = mmap((caddr_t) 0, len, PROT_READ, MAP_PRIVATE,
                 fd->secret->md.osfd, count - hlen);
+#endif
 
         if (addr == (void*)-1) {
             _PR_MD_MAP_MMAP_ERROR(_MD_ERRNO());
