@@ -149,8 +149,6 @@ private:
     PRBool mDirty;
     PRBool mStartWithLast;
 
-    static NS_HIDDEN_(nsresult) GetAppDataDir(nsILocalFile* *aResult);
-
     static nsToolkitProfileService *gService;
 
     class ProfileEnumerator : public nsISimpleEnumerator
@@ -333,9 +331,10 @@ NS_IMPL_ISUPPORTS2(nsToolkitProfileService,
 nsresult
 nsToolkitProfileService::Init()
 {
+    NS_ASSERTION(gDirServiceProvider, "No dirserviceprovider!");
     nsresult rv;
 
-    rv = GetAppDataDir(getter_AddRefs(mAppData));
+    rv = gDirServiceProvider->GetUserAppDataDirectory(getter_AddRefs(mAppData));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIFile> listFile;
@@ -414,141 +413,6 @@ nsToolkitProfileService::Init()
     }
 
     return NS_OK;
-}
-
-nsresult
-nsToolkitProfileService::GetAppDataDir(nsILocalFile* *aResult)
-{
-    NS_ASSERTION(gAppData, "Whoops, no gAppData");
-
-#ifdef XP_MACOSX
-    FSRef fsRef;
-    OSErr err = ::FSFindFolder(kUserDomain, kDomainLibraryFolderType, kCreateFolder, &fsRef);
-    if (err) return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsILocalFile> dirFile;
-    nsresult rv = NS_NewNativeLocalFile(EmptyCString(), PR_TRUE,
-                                        getter_AddRefs(dirFile));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsILocalFileMac> dirFileMac = do_QueryInterface(dirFile);
-    NS_ENSURE_TRUE(dirFileMac, NS_ERROR_UNEXPECTED);
-
-    rv = dirFileMac->InitWithFSRef(&fsRef);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = dirFileMac->AppendNative(nsDependentCString(gAppData->appName));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    NS_ADDREF(*aResult = dirFile);
-    return NS_OK;
-#elif defined(XP_WIN)
-    LPMALLOC pMalloc;
-    LPITEMIDLIST pItemIDList = NULL;
-
-    if (!SUCCEEDED(SHGetMalloc(&pMalloc)))
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    char appDataPath[MAXPATHLEN];
-
-    if (SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_APPDATA, &pItemIDList)) &&
-        SUCCEEDED(SHGetPathFromIDList(pItemIDList, appDataPath))) {
-    } else {
-        if (!GetWindowsDirectory(appDataPath, MAXPATHLEN)) {
-            NS_WARNING("Aaah, no windows directory!");
-            return NS_ERROR_FAILURE;
-        }
-    }
-
-    if (pItemIDList) pMalloc->Free(pItemIDList);
-    pMalloc->Release();
-
-    nsCOMPtr<nsILocalFile> lf;
-    nsresult rv = NS_NewNativeLocalFile(nsDependentCString(appDataPath),
-                                        PR_TRUE, getter_AddRefs(lf));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = lf->AppendNative(nsDependentCString(gAppData->appName));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    NS_ADDREF(*aResult = lf);
-    return NS_OK;
-
-#elif defined(XP_OS2)
-    // we want an environment variable of the form
-    // FIREFOX_HOME, etc
-    char envVar[100];
-    char *writing = envVar;
-    const char *reading = gAppData->appName;
-
-    while (*reading) {
-        *writing = toupper(*reading);
-        ++writing; ++reading;
-    }
-    static const char kSuffix[] = "_HOME";
-    memcpy(writing, kSuffix, sizeof(kSuffix));
-    
-    char *pHome = getenv(envVar);
-    if (pHome && *pHome) {
-        return NS_NewNativeLocalFile(nsDependentCString(pHome), PR_TRUE,
-                                     aResult);
-    }
-
-    PPID ppid;
-    PTIB ptib;
-    char appDir[CCHMAXPATH];
-
-    DosGetInfoBlocks(&ptib, &ppib);
-    DosQueryModuleName(ppib->pib_hmte, CCHMAXPATH, appDir);
-    *strrchr(appDir, '\\') = '\0';
-    return NS_NewNativeLocalFile(nsDependentCString(appDir), PR_TRUE, aResult);
-
-#elif defined(XP_BEOS)
-    char appDir[MAXPATHLEN];
-    if (find_directory(B_USER_DIRECTORY, NULL, true, appDir, MAXPATHLEN))
-        return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsILocalFile> lf;
-    nsresult rv = NS_NewNativeLocalFile(nsDependentCString(appDir), PR_TRUE,
-                                        getter_AddRefs(lf));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = lf->AppendNative(nsDependentCString(gAppData->appName));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    NS_ADDREF(*aResult = lf);
-    return NS_OK;
-
-#elif defined(XP_UNIX)
-    const char* homeDir = getenv("HOME");
-    if (!homeDir || !*homeDir)
-        return NS_ERROR_FAILURE;
-
-    nsCOMPtr<nsILocalFile> lf;
-    nsresult rv = NS_NewNativeLocalFile(nsDependentCString(homeDir), PR_TRUE,
-                                        getter_AddRefs(lf));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    char appname[MAXPATHLEN] = ".";
-
-    const char *reading = gAppData->appName;
-    char *writing = appname + 1;
-
-    while (*reading) {
-        *writing = tolower(*reading);
-        ++writing; ++reading;
-    }
-    *writing = '\0';
-
-    rv = lf->AppendNative(nsDependentCString(appname));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    NS_ADDREF(*aResult = lf);
-    return NS_OK;
-
-#else
-#error Need platform-specific code here.
-#endif
 }
 
 NS_IMETHODIMP
@@ -664,11 +528,17 @@ nsToolkitProfileService::CreateProfile(nsILocalFile* aRootDir,
                                        nsIToolkitProfile* *aResult)
 {
     nsresult rv;
-    nsCOMPtr<nsILocalFile> rootDir = aRootDir;
+    nsCOMPtr<nsILocalFile> rootDir (aRootDir);
 
     if (!rootDir) {
-        rv = GetAppDataDir(getter_AddRefs(rootDir));
+        nsCOMPtr<nsIFile> file;
+        PRBool dummy;
+        rv = gDirServiceProvider->GetFile(NS_APP_USER_PROFILES_ROOT_DIR, &dummy,
+                                          getter_AddRefs(file));
         NS_ENSURE_SUCCESS(rv, rv);
+
+        rootDir = do_QueryInterface(file);
+        NS_ENSURE_TRUE(rootDir, NS_ERROR_UNEXPECTED);
 
         rootDir->AppendNative(aName);
     }

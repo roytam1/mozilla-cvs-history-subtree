@@ -218,7 +218,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
     return GetProfileDefaultsDir(aFile);
   }
   else if (!strcmp(aProperty, NS_APP_USER_PROFILES_ROOT_DIR)) {
-    rv = GetUserAppDataDirectory(getter_AddRefs(file));
+    rv = GetUserAppDataDirectory((nsILocalFile**)(nsIFile**) getter_AddRefs(file));
 
 #if !defined(XP_UNIX) || defined(XP_MACOSX)
     rv |= file->AppendNative(nsEmbedCString("Profiles"));
@@ -394,7 +394,7 @@ nsXREDirProvider::DoShutdown()
 }
 
 nsresult
-nsXREDirProvider::GetUserAppDataDirectory(nsIFile** aFile)
+nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
 {
   NS_ASSERTION(gAppData, "gAppData not initialized!");
 

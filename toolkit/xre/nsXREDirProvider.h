@@ -68,7 +68,7 @@ public:
   void DoShutdown();
 
   nsresult GetProfileDefaultsDir(nsIFile* *aResult);
-  static nsresult GetUserAppDataDirectory(nsIFile* *aFile);
+  static nsresult GetUserAppDataDirectory(nsILocalFile* *aFile);
 
   /* make sure you clone it, if you need to do stuff to it */
   nsIFile* GetAppDir() { return mAppDir; }
