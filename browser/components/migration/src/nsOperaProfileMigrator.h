@@ -116,7 +116,6 @@ class nsOperaCookieMigrator
 {
 public:
   nsOperaCookieMigrator(nsIInputStream* aSourceStream);
-  nsOperaCookieMigrator() { };
   virtual ~nsOperaCookieMigrator() { };
 
   nsresult Migrate();
@@ -154,26 +153,29 @@ public:
   } TAG;
 
 protected:
+  nsOperaCookieMigrator() { };
+
   nsresult ReadHeader();
 
-  void     SynthesizePath(nsVoidArray* aStack, const char* aDelimiter, char** aResult);
+  void     SynthesizePath(char** aResult);
+  void     SynthesizeDomain(char** aResult);
   nsresult AddCookie(nsICookieManager2* aManager,
                      const nsACString& aID, 
                      const nsACString& aData, 
                      PRBool aSecure, 
-                     PRTime aExpiryTime);
+                     PRInt32 aExpiryTime);
 
 private:
   nsCOMPtr<nsIBinaryInputStream> mStream;
 
   nsVoidArray mDomainStack;
   nsVoidArray mPathStack;
-  nsVoidArray mTagStack;
 
   PRUint32 mAppVersion;
   PRUint32 mFileVersion;
   PRUint16 mTagTypeLength;
   PRUint16 mPayloadTypeLength;
+  PRBool   mCookieOpen;
 };
 
 #endif

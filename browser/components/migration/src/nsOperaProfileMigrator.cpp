@@ -400,7 +400,8 @@ nsOperaProfileMigrator::CopyCookies(PRBool aReplace)
   return rv;
 }
 
-nsOperaCookieMigrator::nsOperaCookieMigrator(nsIInputStream* aSourceStream)
+nsOperaCookieMigrator::nsOperaCookieMigrator(nsIInputStream* aSourceStream) :
+  mAppVersion(0), mFileVersion(0), mTagTypeLength(0), mPayloadTypeLength(0), mCookieOpen(PR_FALSE)
 {
   mStream = do_CreateInstance("@mozilla.org/binaryinputstream;1");
   if (mStream)
@@ -423,74 +424,74 @@ nsOperaCookieMigrator::Migrate()
 
   PRUint8 tag;
   PRUint16 length, segmentLength;
-  PRTime expiryTime;
+  PRInt32 expiryTime;
   PRUint8 handlingInfo = 0;
   PRBool hasHandlingInfo = PR_FALSE;
   PRBool isSecure = PR_FALSE;
-  PRBool cookieOpen = PR_FALSE;
 
   nsCAutoString id, data;
   char* buf;
   do {
-    mStream->Read8(&tag);
-    mTagStack.AppendElement((void*)tag);
+    if (NS_FAILED(mStream->Read8(&tag))) 
+      return NS_OK; // EOF.
 
     switch (tag) {
     case BEGIN_DOMAIN_SEGMENT:
-      printf("*** open domain\n");
       mStream->Read16(&length);
       break;
-    case DOMAIN_COMPONENT:
-      printf("*** domain name\n");
-      mStream->Read16(&length);
-      
-      mStream->ReadBytes(length, &buf);
-      buf[length] = '\0';
-      printf("*** domain = %s\n", buf);
-      mDomainStack.AppendElement((void*)buf);
+    case DOMAIN_COMPONENT: 
+      {
+        mStream->Read16(&length);
+        
+        mStream->ReadBytes(length, &buf);
+        buf[length] = '\0';
+        mDomainStack.AppendElement((void*)buf);
+      }
       break;
     case END_DOMAIN_SEGMENT:
-      printf("*** end domain segment\n");
-      // Pop the domain stack
+      {
+        // Pop the domain stack
+        PRUint32 count = mDomainStack.Count();
+        if (count > 0)
+          mDomainStack.RemoveElementAt(count - 1);
+      }
       break;
 
     case BEGIN_PATH_SEGMENT:
-      printf("*** open path\n");
       mStream->Read16(&length);
       break;
     case PATH_COMPONENT:
-      printf("*** path name\n");
-      mStream->Read16(&length);
-      
-      mStream->ReadBytes(length, &buf);
-      buf[length] = '\0';
-      printf("*** path = %s\n", buf);
-      mPathStack.AppendElement((void*)buf);
+      {
+        mStream->Read16(&length);
+        
+        mStream->ReadBytes(length, &buf);
+        buf[length] = '\0';
+        mPathStack.AppendElement((void*)buf);
+      }
       break;
     case END_PATH_SEGMENT:
       {
-        printf("*** end path segment\n");
-
         // Add the last remaining cookie for this path.
-        if (cookieOpen) 
+        if (mCookieOpen) 
           AddCookie(manager, id, data, isSecure, expiryTime);
 
         // We receive one "End Path Segment" even if the path stack is empty
         // i.e. telling us that we are done processing cookies for "/"
 
         // Pop the path stack
+        PRUint32 count = mPathStack.Count();
+        if (count > 0)
+          mPathStack.RemoveElementAt(count - 1);
       }
       break;
 
     case FILTERING_INFO:
-      printf("*** open handling info\n");
       mStream->Read16(&length);
       mStream->Read8(&handlingInfo);
       break;
     case PATH_HANDLING_INFO:
     case THIRD_PARTY_HANDLING_INFO: 
       {
-        printf("*** non-supported handling info\n");
         mStream->Read16(&length);
         PRUint8 temp;
         mStream->Read8(&temp);
@@ -498,35 +499,37 @@ nsOperaCookieMigrator::Migrate()
       break;
 
     case BEGIN_COOKIE_SEGMENT:
-      printf("*** open segment info\n");
-      
-      // Be sure to save the last cookie before overwriting the buffers
-      // with data from subsequent cookies. 
-      if (cookieOpen)
-        AddCookie(manager, id, data, isSecure, expiryTime);
+      {
+        // Be sure to save the last cookie before overwriting the buffers
+        // with data from subsequent cookies. 
+        if (mCookieOpen)
+          AddCookie(manager, id, data, isSecure, expiryTime);
 
-      mStream->Read16(&segmentLength);
-      cookieOpen = PR_TRUE;
+        mStream->Read16(&segmentLength);
+        mCookieOpen = PR_TRUE;
+      }
       break;
     case COOKIE_ID:
-      printf("*** open cookie id\n");
-      mStream->Read16(&length);
-      mStream->ReadBytes(length, &buf);
-      buf[length] = '\0';
+      {
+        mStream->Read16(&length);
+        mStream->ReadBytes(length, &buf);
+        buf[length] = '\0';
+        id.Assign(buf);
+      }
       break;
     case COOKIE_DATA:
-      printf("*** open cookie data\n");
-      mStream->Read16(&length);
-      mStream->ReadBytes(length, &buf);
-      buf[length] = '\0';
+      {
+        mStream->Read16(&length);
+        mStream->ReadBytes(length, &buf);
+        buf[length] = '\0';
+        data.Assign(buf);
+      }
       break;
     case COOKIE_EXPIRY:
-      printf("*** open expiry time\n");
       mStream->Read16(&length);
-      mStream->Read64(NS_REINTERPRET_CAST(PRUint64*, &expiryTime));
+      mStream->Read32(NS_REINTERPRET_CAST(PRUint32*, &expiryTime));
       break;
     case COOKIE_SECURE:
-      printf("*** SECURE!\n");
       break;
 
     // We don't support any of these fields but we must read them in
@@ -534,8 +537,8 @@ nsOperaCookieMigrator::Migrate()
     case COOKIE_LASTUSED: 
       {
         mStream->Read16(&length);
-        PRUint64 temp;
-        mStream->Read64(&temp);
+        PRTime temp;
+        mStream->Read32(NS_REINTERPRET_CAST(PRUint32*, &temp));
       }
       break;
     case COOKIE_COMMENT:
@@ -543,10 +546,11 @@ nsOperaCookieMigrator::Migrate()
     case COOKIE_V1_DOMAIN:
     case COOKIE_V1_PATH:
     case COOKIE_V1_PORT_LIMITATIONS:
-      mStream->Read16(&length);
-      mStream->ReadBytes(length, &buf);
-      buf[length] = '\0';
-      printf("*** generic string = %s\n");
+      {
+        mStream->Read16(&length);
+        mStream->ReadBytes(length, &buf);
+        buf[length] = '\0';
+      }
       break;
     case COOKIE_VERSION: 
       {
@@ -576,37 +580,52 @@ nsOperaCookieMigrator::AddCookie(nsICookieManager2* aManager,
                                  const nsACString& aID, 
                                  const nsACString& aData, 
                                  PRBool aSecure, 
-                                 PRTime aExpiryTime)
+                                 PRInt32 aExpiryTime)
 {
   // This is where we use the information gathered in all the other 
   // states to add a cookie to the Firebird Cookie Manager.
   nsXPIDLCString domain;
-  SynthesizePath(&mDomainStack, ".", getter_Copies(domain));
+  SynthesizeDomain(getter_Copies(domain));
 
   nsXPIDLCString path;
-  SynthesizePath(&mPathStack, "/", getter_Copies(path));
+  SynthesizePath(getter_Copies(path));
 
-  return aManager->Add(domain, path, aID, aData, aSecure, PR_FALSE, aExpiryTime);
+  mCookieOpen = PR_FALSE;
+  
+  return aManager->Add(domain, path, aID, aData, aSecure, PR_FALSE, PRInt64(aExpiryTime));
 }
 
 void
-nsOperaCookieMigrator::SynthesizePath(nsVoidArray* aStack, 
-                                      const char* aDelimiter, 
-                                      char** aResult)
+nsOperaCookieMigrator::SynthesizePath(char** aResult)
 {
-  PRUint32 stringLength = 0;
-  PRUint32 count = aStack->Count();
-  for (PRUint32 i = 0; i < count; ++i)
-    stringLength += nsCRT::strlen((char*)aStack->ElementAt(i)) + 1;
-
-  nsCAutoString synthesizedPath;
-  for (i = 0; i < count; ++i) {
-    synthesizedPath.Append((char*)aStack->ElementAt(i));
-    if (i != count)
-      synthesizedPath.Append(aDelimiter);
+  PRUint32 count = mPathStack.Count();
+  nsCAutoString synthesizedPath("/");
+  for (PRUint32 i = 0; i < count; ++i) {
+    synthesizedPath.Append((char*)mPathStack.ElementAt(i));
+    if (i != count-1)
+      synthesizedPath.Append("/");
   }
+  if (synthesizedPath.IsEmpty())
+    synthesizedPath.Assign("/");
 
   *aResult = ToNewCString(synthesizedPath);
+}
+
+void
+nsOperaCookieMigrator::SynthesizeDomain(char** aResult)
+{
+  PRUint32 count = mDomainStack.Count();
+  if (count == 0)
+    return;
+
+  nsCAutoString synthesizedDomain;
+  for (PRInt32 i = (PRInt32)count - 1; i >= 0; --i) {
+    synthesizedDomain.Append((char*)mDomainStack.ElementAt((PRUint32)i));
+    if (i != 0)
+      synthesizedDomain.Append(".");
+  }
+
+  *aResult = ToNewCString(synthesizedDomain);
 }
 
 nsresult
