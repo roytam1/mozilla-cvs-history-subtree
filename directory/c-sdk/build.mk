@@ -22,9 +22,19 @@
 
 ifdef HAVE_CCONF
 # component tags for iPlanet build only
-NSPR_RELEASE_TAG=v4.1.1
-NSS_RELEASE_TAG	=NSS_3_2_1_RTM
-SVRCORE_RELEASE_TAG=SVRCORE_3_2
+NSPR_RELEASE_TAG=v4.1.2
+NSS_RELEASE_TAG	=NSS_3_3_RTM
+SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM
+ifeq ($(OS_ARCH), SunOS)
+ifneq ($(USE_64), 1)
+OS_VERS         := $(shell uname -r)
+ifeq ($(OS_VERS),5.8)
+NSPR_RELEASE_TAG=v4.1.2/forte6
+NSS_RELEASE_TAG	=NSS_3_3_RTM/forte6
+SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM/forte6
+endif
+endif
+endif
 endif
 
 # Ldap library
