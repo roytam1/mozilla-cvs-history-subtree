@@ -96,7 +96,7 @@ nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
       cp = str;
       char *elem;
       int count = 0;
-      while (elem = nsCRT::strtok(cp, "',", &cp)) {
+      while ((elem = nsCRT::strtok(cp, "',", &cp))) {
         char *end;
         dash.dash[count++] = PR_strtod(elem, &end);
 #ifdef DEBUG

@@ -77,14 +77,10 @@ CPP_OBJS= \
   .\$(OBJDIR)\nsTextFragment.obj \
   .\$(OBJDIR)\nsXULAtoms.obj \
   .\$(OBJDIR)\nsStyleCoord.obj \
-<<<<<<< makefile.win
 !ifdef MOZ_SVG
   .\$(OBJDIR)\nsSVGAtoms.obj \
 !endif
-	$(NULL)
-=======
   $(NULL)
->>>>>>> 3.13
 
 LCFLAGS = \
         $(LCFLAGS) \
