@@ -20,6 +20,8 @@ Release Notes for LDAP C SDK 5.x</h1>
 (08/15/2001)</a></font>
 <br><font size=+1><a href="#LDAP C SDK 5.05 (10/04/2001)">LDAP C SDK 5.05
 (10/04/2001)</a></font>
+<br><font size=+1><a href="#LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www.">LDAP&nbsp;C&nbsp;SDK
+5.06 (11/07/2001)</a></font>
 <br>&nbsp;
 <p><a NAME="LDAP C SDK 5.0"></a><b><font size=+2>LDAP C SDK 5.0 (3/28/2001)
 (Available on www.iplanet.com)</font></b>
@@ -239,6 +241,35 @@ chaining code</li>
 
 <li>
 support sun4m architecture</li>
+</ul>
+
+<p><a NAME="LDAP C SDK 5.06 (10/04/2001) (This release is targeted for www."></a>
+<br><b><font size=+2>LDAP C SDK 5.06 (11/07/2001) (This release is targeted
+for www.iplanet.com)</font></b>
+<h2>
+Bugs/enhancements fixed in this release:</h2>
+
+<ul>
+<li>
+560859 - use of select() appears to limit connections to 1024.&nbsp; This
+is manifested in using select in the non-blocking connect code (os-ip.c).&nbsp;
+Have increased platform specific FD_SETSIZE constant to get around this
+limitation.&nbsp; This was done to reduce the risk of creating poll bugs.</li>
+
+<li>
+561412 - no timeout in ssl_write in liblber.&nbsp; Changed the usage of
+PR_Write to PR_Send as PR_Send will allow for the specifying a timeout.&nbsp;
+This value should probably be settable from outside libprldap.&nbsp; This
+is the real fix that needs to be put in place.</li>
+
+<li>
+561268 - Option '-w -' for command line utilities does not work on Win
+NT &amp; Win 2000</li>
+
+<li>
+a bunch of misc changes were committed to make the build system "company"
+agnostic which allows the builder of the LDAP C SDK to specify company
+version, company name etc.</li>
 </ul>
 
 </body>
