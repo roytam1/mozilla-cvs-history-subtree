@@ -99,7 +99,6 @@ pref("update.severity", 0);
 pref("update.extensions.count", 0);
 pref("xpinstall.whitelist.add", "update.mozilla.org");
 
-
 /////////////////////////////////////////////////////////////////
 // Overrides of the seamonkey suite mailnews.js prefs
 ///////////////////////////////////////////////////////////////// 
@@ -300,7 +299,7 @@ pref("wallet.Server",                       "chrome://navigator/locale/navigator
 pref("wallet.Samples",                      "chrome://navigator/locale/navigator.properties");
 pref("wallet.version",                      "1");
 pref("wallet.enabled",                      true);
-pref("wallet.crypto",                       false);
+pref("wallet.crypto",                       true); // needs to be enabled for the master password to work
 pref("wallet.crypto.autocompleteoverride",  false); // Ignore 'autocomplete=off' - available only when wallet.crypto is enabled. 
 pref("wallet.namePanel.hide",               false);
 pref("wallet.addressPanel.hide",            false);
