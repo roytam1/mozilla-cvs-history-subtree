@@ -471,6 +471,11 @@ nsTopProgressManager::UpdateProgressBar(AggregateTransferInfo& info)
 // The bulk of the following code was pulled over from lib/xp/xp_thermo.c
 //
 
+#ifdef XP_MAC
+#include "allxpstr.h"
+#else
+
+PR_BEGIN_EXTERN_C
 extern int XP_THERMO_BYTE_FORMAT;
 extern int XP_THERMO_KBYTE_FORMAT;
 extern int XP_THERMO_HOURS_FORMAT;
@@ -489,6 +494,9 @@ extern int XP_THERMO_M_RATE_FORMAT;
 extern int XP_THERMO_STALLED_FORMAT;
 extern int XP_THERMO_RATE_REMAINING_FORM;
 extern int XP_THERMO_RATE_FORM;
+PR_END_EXTERN_C
+
+#endif // XP_MAC
 
 #define KILOBYTE		(1024L)
 #define MINUTE			(60L)
