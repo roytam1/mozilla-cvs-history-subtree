@@ -30,9 +30,9 @@
 #else
 	#define LDAP_PORT 389
 	#define LDAPS_PORT 636
-#endif /* MOZ_LDAP */
+#endif
 
-#if !defined(MOZADDRSTANDALONE)
+#ifndef MOZADDRSTANDALONE
 
 extern int MK_OUT_OF_MEMORY;
 extern int MK_ADDR_PAB;
@@ -51,14 +51,25 @@ extern int MK_LDAP_CUSTOM2;
 extern int MK_LDAP_CUSTOM3; 
 extern int MK_LDAP_CUSTOM4;
 extern int MK_LDAP_CUSTOM5;
+extern int MK_LDAP_DESCRIPTION;   
+extern int MK_LDAP_EMPLOYEE_TYPE; 
+extern int MK_LDAP_FAX_NUMBER;    
+extern int MK_LDAP_MANAGER;       
+extern int MK_LDAP_OBJECT_CLASS;       
+extern int MK_LDAP_POSTAL_ADDRESS;
+extern int MK_LDAP_POSTAL_CODE;   
+extern int MK_LDAP_SECRETARY;
+extern int MK_LDAP_TITLE; 
+extern int MK_LDAP_CAR_LICENSE;
+extern int MK_LDAP_BUSINESS_CAT;
+extern int MK_LDAP_DEPT_NUMBER;
 extern int MK_LDAP_REPL_CANT_SYNC_REPLICA;
 
 #else
 
 #define MK_OUT_OF_MEMORY -1;
 
-#endif /* #if !defined(MOZADDRSTANDALONE) */
-
+#endif /* !MOZADDRSTANDALONE */
 
 /*****************************************************************************
  * Private structs and stuff
@@ -80,19 +91,6 @@ typedef struct DIR_Attribute
 	char *prettyName;
 	char **attrNames;
 } DIR_Attribute;
-
-struct _DIR_ReplicationInfo
-{
-	XP_Bool enabled;					/* duh */
-	char *description;					/* human readable description of replica */
-	char *filter;						/* LDAP filter string which constrains the repl search */
-	int32 lastChangeNumber;				/* Last change we saw -- start replicating here */
-	int32 generation;	/* LDAP server's scoping of the lastChangeNumber */
-										/* this changes when the server's DB gets reloaded from LDIF */
-	char **excludedAttributes;			/* list of attributes we shouldn't replicate */
-	int excludedAttributesCount;		/* duh */
-
-};
 
 /* Our internal view of a default attribute is a resourceId for the pretty
  * name and the real attribute name. These are catenated to create a string
@@ -128,22 +126,83 @@ typedef struct DIR_Filter
 #define kDefaultIsOffline TRUE
 #define kDefaultEnableAuth FALSE
 #define kDefaultSavePassword FALSE
-#define kDefaultAutoCompleteEnabled FALSE
-
-#define kDefaultReplicaExcludedAttributes ""
-#define kDefaultReplicaEnabled FALSE
-#define kDefaultReplicaFilter "(objectclass=*)"
-#define kDefaultReplicaChangeNumber 0
-#define kDefaultReplicaChangeNumberGeneration 0
-#define kDefaultReplicaDescription ""
 #define kDefaultUtf8Disabled FALSE
+#define kDefaultLdapPublicDirectory FALSE
+
+#define kDefaultAutoCompleteEnabled FALSE
+#define kDefaultAutoCompleteStyle acsGivenAndSurname
+
+#define kDefaultReplicaEnabled FALSE
+#define kDefaultReplicaFileName NULL
+#define kDefaultReplicaDataVersion NULL
+#define kDefaultReplicaDescription NULL
+#define kDefaultReplicaChangeNumber -1
+#define kDefaultReplicaFilter "(objectclass=*)"
+#define kDefaultReplicaExcludedAttributes NULL
 
 #define kLdapServersPrefName "network.hosts.ldap_servers"
 
-const char *DIR_GetAttributeName (DIR_Server *server, DIR_AttributeId id);
-void DIR_SetServerFileName(DIR_Server* pServer, const char* leafName);
-static DIR_DefaultAttribute *DIR_GetDefaultAttribute (DIR_AttributeId id);
+#define kDefaultPABColumnHeaders "cn, mail,o,title,telephonenumber, l"  /* default column headers for the address book window */
+#define kDefaultLDAPColumnHeaders "mail,cn,o,givenname,telephonenumber, l"
 
+const char *DIR_GetAttributeName (DIR_Server *server, DIR_AttributeId id);
+static DIR_DefaultAttribute *DIR_GetDefaultAttribute (DIR_AttributeId id);
+void DIR_SetFileName(char** filename, const char* leafName);
+
+
+/*****************************************************************************
+ * Functions for creating the new back end managed DIR_Server list.
+ */
+
+static XP_List * dir_ServerList = NULL;
+
+XP_List * DIR_GetDirServers()
+{
+	const char * msg = "abook.nab";
+	if (!dir_ServerList)
+	{
+		/* we need to build the DIR_Server list */
+		dir_ServerList = XP_ListNew();
+
+		PREF_SetDefaultCharPref("browser.addressbook_location",msg);
+
+		DIR_GetServerPreferences (&dir_ServerList, msg);
+/*		char * ldapPref = PR_smprintf("ldap_%d.end_of_directories", kCurrentListVersion);
+		if (ldapPref)
+			PREF_RegisterCallback(ldapPref, DirServerListChanged, NULL);
+		XP_FREEIF (ldapPref); */
+	}
+	return dir_ServerList;
+}
+
+int DIR_ShutDown()  /* FEs should call this when the app is shutting down. It frees all DIR_Servers regardless of ref count values! */
+{
+	int i = 1;
+	if (dir_ServerList)
+	{
+		for (i = 1; i <= XP_ListCount(dir_ServerList); i++)
+			DIR_DeleteServer(XP_ListGetObjectNum (dir_ServerList, i));
+		XP_ListDestroy (dir_ServerList);
+	}
+
+	return 0;
+}
+
+int DIR_DecrementServerRefCount (DIR_Server *server)
+{
+	XP_ASSERT(server);
+	if (server && --server->refCount <= 0)
+		return DIR_DeleteServer(server);
+	return 0;
+}
+
+int DIR_IncrementServerRefCount (DIR_Server *server)
+{
+	XP_ASSERT(server);
+	if (server)
+		server->refCount++;
+	return 0;
+}
 
 /*****************************************************************************
  * Functions for creating DIR_Servers
@@ -160,6 +219,8 @@ int DIR_InitServer (DIR_Server *server)
 		server->port = LDAP_PORT;
 		server->maxHits = kDefaultMaxHits;
 		server->isOffline = kDefaultIsOffline;
+		server->refCount = 1;
+		server->columnAttributes = XP_STRDUP(kDefaultLDAPColumnHeaders);
 	}
 	return 0;
 }
@@ -226,14 +287,16 @@ static int dir_CopyTokenList (char **inList, int inCount, char ***outList, int *
 
 static DIR_ReplicationInfo *dir_CopyReplicationInfo (DIR_ReplicationInfo *inInfo)
 {
-	DIR_ReplicationInfo *outInfo = (DIR_ReplicationInfo*) XP_CALLOC (sizeof(DIR_ReplicationInfo), 1);
+	DIR_ReplicationInfo *outInfo = (DIR_ReplicationInfo*) XP_CALLOC (1, sizeof(DIR_ReplicationInfo));
 	if (outInfo)
 	{
 		outInfo->lastChangeNumber = inInfo->lastChangeNumber;
-		outInfo->generation = inInfo->generation;
-		outInfo->enabled = inInfo->enabled;
 		if (inInfo->description)
 			outInfo->description = XP_STRDUP (inInfo->description);
+		if (inInfo->fileName)
+			outInfo->fileName = XP_STRDUP (inInfo->fileName);
+		if (inInfo->dataVersion)
+			outInfo->dataVersion = XP_STRDUP (inInfo->dataVersion);
 		if (inInfo->filter)
 			outInfo->filter = XP_STRDUP (inInfo->filter);
 		dir_CopyTokenList (inInfo->excludedAttributes, inInfo->excludedAttributesCount,
@@ -242,11 +305,9 @@ static DIR_ReplicationInfo *dir_CopyReplicationInfo (DIR_ReplicationInfo *inInfo
 	return outInfo;
 }
 
-
 int DIR_CopyServer (DIR_Server *in, DIR_Server **out)
 {
 	int err = 0;
-
 	if (in) {
 		*out = XP_ALLOC(sizeof(DIR_Server));
 		if (*out)
@@ -285,6 +346,13 @@ int DIR_CopyServer (DIR_Server *in, DIR_Server **out)
 			{
 				(*out)->prefId = XP_STRDUP(in->prefId);
 				if (!(*out)->prefId)
+					err = MK_OUT_OF_MEMORY;
+			}
+
+			if (in->columnAttributes)
+			{
+				(*out)->columnAttributes = XP_STRDUP(in->columnAttributes);
+				if (!(*out)->columnAttributes)
 					err = MK_OUT_OF_MEMORY;
 			}
 
@@ -377,6 +445,12 @@ int DIR_CopyServer (DIR_Server *in, DIR_Server **out)
 
 			if (in->customDisplayUrl)
 				(*out)->customDisplayUrl = XP_STRDUP (in->customDisplayUrl);
+			if (in->searchPairList)
+				(*out)->searchPairList = XP_STRDUP (in->searchPairList);
+
+			(*out)->autoCompleteStyle = in->autoCompleteStyle;
+
+			(*out)->refCount = 1;
 		}
 		else {
 			err = MK_OUT_OF_MEMORY;
@@ -392,21 +466,32 @@ int DIR_CopyServer (DIR_Server *in, DIR_Server **out)
 	return err;
 }
 
-
 /*****************************************************************************
  * Function for comparing DIR_Servers 
  */
 
 XP_Bool	DIR_AreServersSame (DIR_Server *first, DIR_Server *second)
 {
+	/* This function used to be written to assume that we only had one PAB so it
+	   only checked the server type for PABs. If both were PABDirectories, then 
+	   it returned TRUE. Now that we support multiple address books, we need to
+	   check type & file name for address books to test if they are the same */
+
 	XP_Bool result = FALSE;
 
 	if (first && second) 
 	{
 		/* assume for right now one personal address book type where offline is false */
 		if ((first->dirType == PABDirectory) && (second->dirType == PABDirectory)) {
-			if ((first->isOffline == FALSE) && (second->isOffline == FALSE))
-				return TRUE;
+			if ((first->isOffline == FALSE) && (second->isOffline == FALSE))  /* are they both really address books? */
+			{
+				XP_ASSERT(first->fileName && second->fileName);
+				if (first->fileName && second->fileName)
+					if (XP_STRCASECMP(first->fileName, second->fileName) == 0)
+						return TRUE;
+
+				return FALSE;
+			}
 			else {
 				XP_ASSERT (first->serverName && second->serverName);
 				if (first->serverName && second->serverName)
@@ -514,17 +599,30 @@ static void dir_DeleteReplicationInfo (DIR_Server *server)
 		dir_DeleteTokenList (info->excludedAttributes, info->excludedAttributesCount);
 		
 		XP_FREEIF(info->description);
+		XP_FREEIF(info->fileName);
+		XP_FREEIF(info->dataVersion);
 		XP_FREEIF(info->filter);
 		XP_FREE(info);
 	}
 }
 
-
+/* When the back end manages the server list, deleting a server just decrements
+ * its ref count, in the old world, we actually delete the server
+ */
 int DIR_DeleteServer (DIR_Server *server)
 {
 	if (server)
 	{
 		int i;
+
+		/* when destroying the server check its clear flag to see if things need cleared */
+		if (DIR_TestFlag(server, DIR_CLEAR_SERVER))
+		{
+			if (server->fileName)
+				XP_FileRemove (server->fileName, xpAddrBookNew);
+			if (server->replInfo && server->replInfo->fileName)
+				XP_FileRemove (server->replInfo->fileName, xpAddrBookNew);
+		}
 
 		XP_FREEIF (server->description);
 		XP_FREEIF (server->serverName);
@@ -535,6 +633,7 @@ int DIR_DeleteServer (DIR_Server *server)
 		XP_FREEIF (server->authDn);
 		XP_FREEIF (server->password);
 		XP_FREEIF (server->prefId);
+		XP_FREEIF (server->columnAttributes);
 
 		if (server->customFilters)
 		{
@@ -561,6 +660,7 @@ int DIR_DeleteServer (DIR_Server *server)
 			dir_DeleteReplicationInfo (server);
 
 		XP_FREEIF (server->customDisplayUrl);
+		XP_FREEIF (server->searchPairList);
 
 		XP_FREE (server);
 	}
@@ -582,22 +682,11 @@ int DIR_DeleteServerList(XP_List *wholeList)
 
 int DIR_CleanUpServerPreferences(XP_List *deletedList)
 {
-	int i;
-	if (deletedList)
-	{
-		for (i = 1; i <= XP_ListCount(deletedList); i++)
-		{
-			DIR_Server *server = (DIR_Server *) (XP_ListGetObjectNum (deletedList, i));
-			if (server)
-			{
-#if !defined(MOZADDRSTANDALONE)
-				if (server->fileName)
-					XP_FileRemove (server->fileName, xpAddrBookNew);
-#endif
-			}
-		}
-		DIR_DeleteServerList(deletedList);
-	}
+	/* In the new world order of DIR_Servers it has been decreed that to clean
+	 * up a server you should set its DIR_CLEAR_SERVER flag.  Then, release
+	 * your ref count on the list or servers (if you have one)
+	 */
+	XP_ASSERT(FALSE);
 	return 0;
 }
 
@@ -606,7 +695,7 @@ int DIR_CleanUpServerPreferences(XP_List *deletedList)
  * Functions for retrieving subsets of the DIR_Server list 
  */
 
-int DIR_GetHtmlServers (XP_List *wholeList, XP_List *subList)
+static int DIR_GetHtmlServers(XP_List *wholeList, XP_List *subList)
 {
 	int i;
 	if (wholeList && subList)
@@ -622,7 +711,23 @@ int DIR_GetHtmlServers (XP_List *wholeList, XP_List *subList)
 	return -1;
 }
 
-int DIR_GetLdapServers (XP_List *wholeList, XP_List *subList)
+int DIR_GetPersonalAddressBooks (XP_List *wholeList, XP_List * subList)
+{
+	int i;
+	if (wholeList && subList)
+	{
+		for (i = 1; i <= XP_ListCount(wholeList); i++)
+		{
+			DIR_Server *s = (DIR_Server*) XP_ListGetObjectNum (wholeList, i);
+			if (PABDirectory == s->dirType)
+				XP_ListAddObjectToEnd (subList, s);
+		}
+		return 0;
+	}
+	return -1;
+}
+
+int DIR_GetLdapServers(XP_List *wholeList, XP_List *subList)
 {
 	int i;
 	if (wholeList && subList)
@@ -638,7 +743,7 @@ int DIR_GetLdapServers (XP_List *wholeList, XP_List *subList)
 	return -1;
 }
 
-int	DIR_ReorderLdapServers (XP_List *wholeList)
+int	DIR_ReorderLdapServers(XP_List *wholeList)
 {
 	int status = 0;
 	int length = 0;
@@ -671,7 +776,7 @@ int	DIR_ReorderLdapServers (XP_List *wholeList)
 	return status;
 }
 
-int DIR_GetPersonalAddressBook (XP_List *wholeList, DIR_Server **pab)
+int DIR_GetPersonalAddressBook(XP_List *wholeList, DIR_Server **pab)
 {
 	int i;
 	if (wholeList && pab)
@@ -698,7 +803,7 @@ int DIR_GetPersonalAddressBook (XP_List *wholeList, DIR_Server **pab)
 	return -1;
 }
 
-int DIR_GetComposeNameCompletionAddressBook (XP_List *wholeList, DIR_Server **cab)
+int DIR_GetComposeNameCompletionAddressBook(XP_List *wholeList, DIR_Server **cab)
 {
 	int i;
 	if (wholeList && cab)
@@ -724,7 +829,7 @@ int DIR_GetComposeNameCompletionAddressBook (XP_List *wholeList, DIR_Server **ca
 
 #if !defined(MOZADDRSTANDALONE)
 
-static char *DIR_GetStringPref (const char *prefRoot, const char *prefLeaf, char *scratch, const char *defaultValue)
+static char *DIR_GetStringPref(const char *prefRoot, const char *prefLeaf, char *scratch, const char *defaultValue)
 {
 	int valueLength = 0;
 	char *value = NULL;
@@ -735,15 +840,15 @@ static char *DIR_GetStringPref (const char *prefRoot, const char *prefLeaf, char
 	{
 		/* unfortunately, there may be some prefs out there which look like this */
 		if (!XP_STRCMP(value, "(null)")) 
-			value = XP_STRDUP(defaultValue);
+			value = defaultValue ? XP_STRDUP(defaultValue) : NULL;
 	}
 	else
-		value = XP_STRDUP(defaultValue);
+		value = defaultValue ? XP_STRDUP(defaultValue) : NULL;
 	return value;
 }
 
 
-static int32 DIR_GetIntPref (const char *prefRoot, const char *prefLeaf, char *scratch, int32 defaultValue)
+static int32 DIR_GetIntPref(const char *prefRoot, const char *prefLeaf, char *scratch, int32 defaultValue)
 {
 	int32 value;
 	XP_STRCPY(scratch, prefRoot);
@@ -753,7 +858,7 @@ static int32 DIR_GetIntPref (const char *prefRoot, const char *prefLeaf, char *s
 }
 
 
-static XP_Bool DIR_GetBoolPref (const char *prefRoot, const char *prefLeaf, char *scratch, XP_Bool defaultValue)
+static XP_Bool DIR_GetBoolPref(const char *prefRoot, const char *prefLeaf, char *scratch, XP_Bool defaultValue)
 {
 	XP_Bool value;
 	XP_STRCPY(scratch, prefRoot);
@@ -763,7 +868,7 @@ static XP_Bool DIR_GetBoolPref (const char *prefRoot, const char *prefLeaf, char
 }
 
 
-int DIR_AttributeNameToId (const char *attrName, DIR_AttributeId *id)
+int DIR_AttributeNameToId(const char *attrName, DIR_AttributeId *id)
 {
 	int status = 0;
 
@@ -775,9 +880,17 @@ int DIR_AttributeNameToId (const char *attrName, DIR_AttributeId *id)
 		else
 			status = -1;
 		break;
+	case 'b':
+		if (!XP_STRCASECMP(attrName, "businesscategory"))
+			*id = businesscategory;
+		else
+			status = -1;
+		break;
 	case 'c' :
 		if (!XP_STRCASECMP(attrName, "cn"))
 			*id = cn;
+		else if (!XP_STRCASECMP(attrName, "carlicense"))
+			*id = carlicense;
 		else if (!XP_STRNCASECMP(attrName, "custom", 6))
 		{
 			switch (attrName[6])
@@ -793,31 +906,30 @@ int DIR_AttributeNameToId (const char *attrName, DIR_AttributeId *id)
 		else
 			status = -1;
 		break;
+	case 'd':
+		if (!XP_STRCASECMP(attrName, "departmentnumber"))
+			*id = departmentnumber;
+		else
+			if (!XP_STRCASECMP(attrName, "description"))
+				*id = description;
+		else
+			status = -1;
+		break;
+	case 'e':
+		if (!XP_STRCASECMP(attrName, "employeetype"))
+			*id = employeetype;
+		else
+			status = -1;
+		break;
+	case 'f':
+		if (!XP_STRCASECMP(attrName, "facsimiletelephonenumber"))
+			*id = facsimiletelephonenumber;
+		else
+			status = -1;
+		break;
 	case 'g':
 		if (!XP_STRCASECMP(attrName, "givenname"))
 			*id = givenname; 
-		else
-			status = -1;
-		break;
-	case 's': 
-		if (!XP_STRCASECMP(attrName, "street"))
-			*id = street;
-		else if (!XP_STRCASECMP(attrName, "sn"))
-			*id = sn;
-		else
-			status = -1;
-		break;
-	case 'm':
-		if (!XP_STRCASECMP(attrName, "mail"))
-			*id = mail;
-		else
-			status = -1;
-		break;
-	case 'o':
-		if (!XP_STRCASECMP(attrName, "o"))
-			*id = o;
-		else if (!XP_STRCASECMP(attrName, "ou"))
-			*id = ou;
 		else
 			status = -1;
 		break;
@@ -827,9 +939,47 @@ int DIR_AttributeNameToId (const char *attrName, DIR_AttributeId *id)
 		else
 			status = -1;
 		break;
+	case 'm':
+		if (!XP_STRCASECMP(attrName, "mail"))
+			*id = mail;
+		else if (!XP_STRCASECMP(attrName, "manager"))
+			*id = manager;
+		else
+			status = -1;
+		break;
+	case 'o':
+		if (!XP_STRCASECMP(attrName, "o"))
+			*id = o;
+		else if (!XP_STRCASECMP(attrName, "ou"))
+			*id = ou;
+		else if (!XP_STRCASECMP(attrName, "objectclass"))
+			*id = objectclass;
+		else
+			status = -1;
+		break;
+	case 'p':
+		if (!XP_STRCASECMP(attrName, "postalcode"))
+			*id = postalcode;
+		else if (!XP_STRCASECMP(attrName, "postaladdress"))
+			*id = postaladdress;
+		else
+			status = -1;
+		break;
+	case 's': 
+		if (!XP_STRCASECMP(attrName, "street"))
+			*id = street;
+		else if (!XP_STRCASECMP(attrName, "sn"))
+			*id = sn;
+		else if (!XP_STRCASECMP(attrName, "secretary"))
+			*id = secretary;
+		else
+			status = -1;
+		break;
 	case 't':
-		if (!XP_STRCASECMP(attrName, "telephoneNumber"))
+		if (!XP_STRCASECMP(attrName, "telephonenumber"))
 			*id = telephonenumber;
+		else if (!XP_STRCASECMP(attrName, "title"))
+			*id = title;
 		else
 			status = -1;
 		break;
@@ -841,7 +991,7 @@ int DIR_AttributeNameToId (const char *attrName, DIR_AttributeId *id)
 }
 
 
-static int DIR_AddCustomAttribute (DIR_Server *server, const char *attrName, char *jsAttr)
+static int DIR_AddCustomAttribute(DIR_Server *server, const char *attrName, char *jsAttr)
 {
 	int status = 0;
 	char *jsCompleteAttr = NULL;
@@ -918,13 +1068,85 @@ static int DIR_AddCustomAttribute (DIR_Server *server, const char *attrName, cha
 	return status;
 }
 
+int DIR_GetNumAttributeIDsForColumns(DIR_Server * server)
+{
+	int count = 0;
+	char * buffer = NULL;
+	char * marker = NULL;
+	if (server && server->columnAttributes)
+	{
+		buffer = XP_STRDUP(server->columnAttributes);
+		if (buffer)
+		{
+			marker = buffer;
+			while (XP_STRTOK_R(nil, ", ", &buffer))
+				count++;
+			XP_FREEIF(marker);
+		}
+	}
 
-static int dir_CreateTokenListFromWholePref (const char *pref, char ***outList, int *outCount)
+	return count;
+}
+
+int DIR_GetAttributeIDsForColumns(DIR_Server *server, DIR_AttributeId ** ids /* caller must free */, int * numIds)
+{
+	DIR_AttributeId * idArray = NULL;
+	int status = 0; 
+	int numAdded = 0;  /* number of ids we actually added to the array...*/
+	int index = 0;
+	int numItems = 0; 
+	char * idName = NULL;
+	char * marker = NULL;
+	char * columnIDs = NULL;
+
+	if (server && numIds && ids)
+	{
+		if (server->columnAttributes) 
+		{
+			columnIDs = XP_STRDUP(server->columnAttributes);
+			numItems = DIR_GetNumAttributeIDsForColumns(server);
+		}
+
+		if (columnIDs && numItems)
+		{
+			marker = columnIDs;
+			idArray = (DIR_AttributeId *) XP_ALLOC(sizeof(DIR_AttributeId) * numItems);
+			if (idArray)
+			{
+				for (index; index < numItems; index++)
+				{
+					idName = XP_STRTOK_R(nil,", ",&marker);
+					if (idName)
+					{
+						if (DIR_AttributeNameToId(idName, &idArray[numAdded]) >= 0)
+							numAdded++;
+					}
+					else
+						break;
+				}
+
+			}
+			else
+				status = MK_OUT_OF_MEMORY;
+		}
+
+		XP_FREEIF(columnIDs); 
+	}
+
+	if (ids)
+		*ids = idArray;
+	if (numIds)
+		*numIds = numAdded;
+
+	return status;
+}
+
+static int dir_CreateTokenListFromWholePref(const char *pref, char ***outList, int *outCount)
 {
 	int result = 0;
 	char *commaSeparatedList = NULL;
 
-	if (PREF_NOERROR == PREF_CopyCharPref (pref, &commaSeparatedList) && commaSeparatedList)
+	if (PREF_NOERROR == PREF_CopyCharPref(pref, &commaSeparatedList) && commaSeparatedList)
 	{
 		char *tmpList = commaSeparatedList;
 		*outCount = 1;
@@ -932,14 +1154,14 @@ static int dir_CreateTokenListFromWholePref (const char *pref, char ***outList, 
 			if (*tmpList++ == ',')
 				(*outCount)++;
 
-		*outList = (char**) XP_ALLOC (*outCount * sizeof(char*));
+		*outList = (char**) XP_ALLOC(*outCount * sizeof(char*));
 		if (*outList)
 		{
 			int i;
-			char *token = XP_STRTOK (commaSeparatedList, ", ");
+			char *token = XP_STRTOK(commaSeparatedList, ", ");
 			for (i = 0; i < *outCount; i++)
 			{
-				(*outList)[i] = XP_STRDUP (token);
+				(*outList)[i] = XP_STRDUP(token);
 				token = XP_STRTOK(NULL, ", ");
 			}
 		}
@@ -954,18 +1176,18 @@ static int dir_CreateTokenListFromWholePref (const char *pref, char ***outList, 
 }
 
 
-static int dir_CreateTokenListFromPref (const char *prefBase, const char *prefLeaf, char *scratch, char ***outList, int *outCount)
+static int dir_CreateTokenListFromPref(const char *prefBase, const char *prefLeaf, char *scratch, char ***outList, int *outCount)
 {
 	XP_STRCPY (scratch, prefBase);
 	XP_STRCAT (scratch, prefLeaf);
 
-	return dir_CreateTokenListFromWholePref (scratch, outList, outCount);
+	return dir_CreateTokenListFromWholePref(scratch, outList, outCount);
 }
 
 
-static int dir_ConvertTokenListToIdList (char **tokenList, int tokenCount, DIR_AttributeId **outList)
+static int dir_ConvertTokenListToIdList(char **tokenList, int tokenCount, DIR_AttributeId **outList)
 {
-	*outList = (DIR_AttributeId*) XP_ALLOC (sizeof(DIR_AttributeId) * tokenCount);
+	*outList = (DIR_AttributeId*) XP_ALLOC(sizeof(DIR_AttributeId) * tokenCount);
 	if (*outList)
 	{
 		int i;
@@ -978,71 +1200,51 @@ static int dir_ConvertTokenListToIdList (char **tokenList, int tokenCount, DIR_A
 }
 
 
-static void dir_GetReplicationInfo (const char *prefName, DIR_Server *server, char *scratch)
+static void dir_GetReplicationInfo(const char *prefName, DIR_Server *server, char *scratch)
 {
-	char *childList = NULL;
-	XP_STRCPY (scratch, prefName);
-	if (PREF_NOERROR == PREF_CreateChildList (XP_STRCAT(scratch, "replication"), &childList))
-	{
-		XP_ASSERT (server->replInfo == NULL);
-		if (childList && childList[0])
-		{
-			server->replInfo = (DIR_ReplicationInfo *) XP_CALLOC (sizeof (DIR_ReplicationInfo), 1);
-			if (server->replInfo)
-			{
-				char *child = NULL;
-				int index = 0;
-				while ((child = PREF_NextChild (childList, &index)) != NULL)
-				{
-					char *leaf = XP_STRRCHR (child, '.');
-					if (leaf)
-					{
-						leaf++; /* skip over the '.' */
+	char *replPrefName;
+	XP_Bool arePrefsValid = FALSE;
 
-						/* Note: JS prefs are case-sensitive, and so is this code */
-						switch (leaf[0])
-						{
-							case 'd':
-								if (!XP_STRCMP (leaf, "description"))
-									PREF_CopyCharPref (child, &server->replInfo->description);
-								else
-									XP_ASSERT(FALSE);
-								break;
-							case 'e':
-								if (!XP_STRCMP (leaf, "enabled"))
-									PREF_GetBoolPref (child, &server->replInfo->enabled);
-								else if (!XP_STRCMP (leaf, "excludedAttributes"))
-									dir_CreateTokenListFromWholePref (child, &server->replInfo->excludedAttributes, 
-																	&server->replInfo->excludedAttributesCount);
-								else
-									XP_ASSERT(FALSE);
-								break;
-							case 'f' :
-								if (!XP_STRCMP (leaf, "filter"))
-									PREF_CopyCharPref (child, &server->replInfo->filter);
-								else
-									XP_ASSERT(FALSE);
-								break;
-							case 'g':
-								if (!XP_STRCMP (leaf, "generation"))
-									PREF_GetIntPref (child, &server->replInfo->generation);
-								else
-									XP_ASSERT(FALSE);
-								break;
-							case 'l':
-								if (!XP_STRCMP (leaf, "lastChangeNumber"))
-									PREF_GetIntPref (child, &server->replInfo->lastChangeNumber);
-								else
-									XP_ASSERT(FALSE);
-								break;
-							default:
-								XP_ASSERT(FALSE); 
-						}
-					}
-				}
-			}
+	XP_ASSERT (server->replInfo == NULL);
+
+	replPrefName = (char *) XP_ALLOC(128);
+	server->replInfo = (DIR_ReplicationInfo *) XP_CALLOC (1, sizeof (DIR_ReplicationInfo));
+	if (server->replInfo && replPrefName)
+	{
+		XP_STRCPY(replPrefName, prefName);
+		XP_STRCAT(replPrefName, "replication.");
+
+		if (DIR_GetBoolPref (replPrefName, "enabled", scratch, kDefaultReplicaEnabled))
+			DIR_SetFlag (server, DIR_REPLICATION_ENABLED);
+
+		server->replInfo->fileName = DIR_GetStringPref (replPrefName, "fileName", scratch, kDefaultReplicaFileName);
+		server->replInfo->dataVersion = DIR_GetStringPref (replPrefName, "dataVersion", scratch, kDefaultReplicaDataVersion);
+
+		/* The file name and data version must be set or we ignore all of the
+		 * replication prefs.
+		 */
+		if (server->replInfo->fileName && server->replInfo->dataVersion)
+		{
+			dir_CreateTokenListFromPref (replPrefName, "excludedAttributes", scratch, &server->replInfo->excludedAttributes, 
+			                             &server->replInfo->excludedAttributesCount);
+
+			server->replInfo->description = DIR_GetStringPref (replPrefName, "description", scratch, kDefaultReplicaDescription);
+			server->replInfo->filter = DIR_GetStringPref (replPrefName, "filter", scratch, kDefaultReplicaFilter);
+			server->replInfo->lastChangeNumber = DIR_GetIntPref (replPrefName, "lastChangeNumber", scratch, kDefaultReplicaChangeNumber);
+
+			arePrefsValid = TRUE;
 		}
-		XP_FREE(childList);
+	}
+
+	if (!arePrefsValid)
+	{
+		if (server->replInfo)
+		{
+			XP_FREEIF(server->replInfo->fileName);
+			XP_FREEIF(server->replInfo->dataVersion);
+		}
+		XP_FREEIF(server->replInfo);
+		XP_FREEIF(replPrefName);
 	}
 }
 
@@ -1050,7 +1252,7 @@ static void dir_GetReplicationInfo (const char *prefName, DIR_Server *server, ch
 /* Called at startup-time to read whatever overrides the LDAP site administrator has
  * done to the attribute names
  */
-static int DIR_GetCustomAttributePrefs (const char *prefName, DIR_Server *server, char *scratch)
+static int DIR_GetCustomAttributePrefs(const char *prefName, DIR_Server *server, char *scratch)
 {
 	char **tokenList = NULL;
 	char *childList = NULL;
@@ -1110,7 +1312,7 @@ static int DIR_GetCustomAttributePrefs (const char *prefName, DIR_Server *server
 /* Called at startup-time to read whatever overrides the LDAP site administrator has
  * done to the filtering logic
  */
-static int DIR_GetCustomFilterPrefs (const char *prefName, DIR_Server *server, char *scratch)
+static int DIR_GetCustomFilterPrefs(const char *prefName, DIR_Server *server, char *scratch)
 {
 	int status = 0;
 	XP_Bool keepGoing = TRUE;
@@ -1138,13 +1340,6 @@ static int DIR_GetCustomFilterPrefs (const char *prefName, DIR_Server *server, c
 					if (1 == filterNum)
 					{
 						server->tokenSeps = DIR_GetStringPref (prefName, "wordSeparators", localScratch, kDefaultTokenSeps);
-#if 0
-						/* This is left over from when I thought I'd have time to let the
-						** admin specify a list of filters, and we'd run them until we got 
-						** a hit. Still a good idea, but probably too late for Dogbert.
-						*/
-						server->stopFiltersOnHit = DIR_GetBoolPref (prefName, "stopFiltersOnHit", localScratch, kDefaultStopOnHit);
-#endif
 						XP_STRCAT(scratch, ".");
 					}
 
@@ -1184,12 +1379,12 @@ static int DIR_GetCustomFilterPrefs (const char *prefName, DIR_Server *server, c
 
 /* This will convert from the old preference that was a path and filename */
 /* to a just a filename */
-void DIR_ConvertServerFileName(DIR_Server* pServer)
+static void DIR_ConvertServerFileName(DIR_Server* pServer)
 {
 	char* leafName = pServer->fileName;
 	char* newLeafName = NULL;
 #if defined(XP_WIN) || defined(XP_OS2)
-	/* jefft -- bug 73349 This is to allow users share same address book.
+	/* This is to allow users to share the same address book.
 	 * It only works if the user specify a full path filename.
 	 */
 	if (! XP_FileIsFullPath(leafName))
@@ -1202,20 +1397,25 @@ void DIR_ConvertServerFileName(DIR_Server* pServer)
 }
 
 /* This will generate a correct filename and then remove the path */
-void DIR_SetServerFileName(DIR_Server* pServer, const char* leafName)
+void DIR_SetFileName(char** fileName, const char* leafName)
 {
 	char* tempName = WH_TempName(xpAddrBook, leafName);
 	char* nativeName = WH_FileName(tempName, xpAddrBook);
 	char* urlName = XP_PlatformFileToURL(nativeName);
 #if defined(XP_WIN) || defined(XP_UNIX) || defined(XP_MAC) || defined(XP_OS2)
 	char* newLeafName = XP_STRRCHR (urlName + XP_STRLEN("file://"), '/');
-	pServer->fileName = newLeafName ? XP_STRDUP(newLeafName + 1) : XP_STRDUP(urlName + XP_STRLEN("file://"));
+	(*fileName) = newLeafName ? XP_STRDUP(newLeafName + 1) : XP_STRDUP(urlName + XP_STRLEN("file://"));
 #else
-	pServer->fileName = XP_STRDUP(urlName + XP_STRLEN("file://"));
+	(*fileName) = XP_STRDUP(urlName + XP_STRLEN("file://"));
 #endif
 	if (urlName) XP_FREE(urlName);
 	if (nativeName) XP_FREE(nativeName);
 	if (tempName) XP_FREE(tempName);
+}
+
+void DIR_SetServerFileName(DIR_Server *server, const char* leafName)
+{
+	DIR_SetFileName(&(server->fileName), leafName);
 }
 
 /* This will reconstruct a correct filename including the path */
@@ -1226,7 +1426,7 @@ void DIR_GetServerFileName(char** filename, const char* leafName)
 	char* nativeName;
 	char* urlName;
 	if (XP_STRCHR(leafName, ':') != NULL)
-		realLeafName = XP_STRRCHR(leafName, ':') + 1;	// makes sure that leafName is not a fullpath
+		realLeafName = XP_STRRCHR(leafName, ':') + 1;	/* makes sure that leafName is not a fullpath */
 	else
 		realLeafName = leafName;
 
@@ -1257,7 +1457,7 @@ void DIR_GetServerFileName(char** filename, const char* leafName)
 	if (nativeName) XP_FREE(nativeName);
 }
 
-static int DIR_GetPrefsFromBranch (XP_List **list, const char *pabFile, const char *branch)
+static int DIR_GetPrefsFromBranch(XP_List **list, const char *pabFile, const char *branch)
 {
 	int32 numDirectories = 0;
 	int i = 0;
@@ -1281,14 +1481,16 @@ static int DIR_GetPrefsFromBranch (XP_List **list, const char *pabFile, const ch
 		char *numberOfDirs = PR_smprintf ("%s.number_of_directories", branch);
 		if (numberOfDirs)
 			PREF_GetIntPref(numberOfDirs, &numDirectories);	
+
 		for (i = 1; i <= numDirectories; i++)
 		{
 			pNewServer = (DIR_Server *) XP_ALLOC(sizeof(DIR_Server));
 			if (pNewServer)
 			{
 				XP_Bool prefBool;
+				int prefInt;
 
-				XP_BZERO(pNewServer, sizeof(DIR_Server));
+				DIR_InitServer(pNewServer);
 				XP_SPRINTF(prefstring, "%s.directory%i.", branch, i);
 
 				pNewServer->isSecure = DIR_GetBoolPref (prefstring, "isSecure", tempString, FALSE);
@@ -1321,6 +1523,12 @@ static int DIR_GetPrefsFromBranch (XP_List **list, const char *pabFile, const ch
 					pNewServer->saveResults = TRUE; /* never let someone delete their PAB this way */
 				}
 
+				/* load in the column attributes */
+				if (pNewServer->dirType == PABDirectory)
+					pNewServer->columnAttributes = DIR_GetStringPref(prefstring, "columns", tempString, kDefaultPABColumnHeaders);
+				else
+					pNewServer->columnAttributes = DIR_GetStringPref(prefstring, "columns", tempString, kDefaultLDAPColumnHeaders);
+
 				pNewServer->fileName = DIR_GetStringPref (prefstring, "filename", tempString, "");
 				if (!pNewServer->fileName || !*(pNewServer->fileName)) 
 				{
@@ -1344,18 +1552,22 @@ static int DIR_GetPrefsFromBranch (XP_List **list, const char *pabFile, const ch
 
 				/* Get authentication prefs */
 				pNewServer->enableAuth = DIR_GetBoolPref (prefstring, "enableAuth", tempString, kDefaultEnableAuth);
+				pNewServer->authDn = DIR_GetStringPref (prefstring, "authDn", tempString, NULL);
 				pNewServer->savePassword = DIR_GetBoolPref (prefstring, "savePassword", tempString, kDefaultSavePassword);
 				if (pNewServer->savePassword)
-				{
-					pNewServer->authDn = DIR_GetStringPref (prefstring, "authDn", tempString, "");
 					pNewServer->password = DIR_GetStringPref (prefstring, "password", tempString, "");
-				}
 
-				prefBool = DIR_GetBoolPref (prefstring, "autoCompleteEnabled", tempString, kDefaultAutoCompleteEnabled);
+				prefBool = DIR_GetBoolPref (prefstring, "autoComplete.enabled", tempString, kDefaultAutoCompleteEnabled);
 				DIR_ForceFlag (pNewServer, DIR_AUTO_COMPLETE_ENABLED, prefBool);
+				prefInt = DIR_GetIntPref (prefstring, "autoComplete.style", tempString, kDefaultAutoCompleteStyle);
+				pNewServer->autoCompleteStyle = (DIR_AutoCompleteStyle) prefInt;
 
 				prefBool = DIR_GetBoolPref (prefstring, "utf8Disabled", tempString, kDefaultUtf8Disabled);
 				DIR_ForceFlag (pNewServer, DIR_UTF8_DISABLED, prefBool);
+
+				prefBool = DIR_GetBoolPref (prefstring, "ldapPublicDirectory", tempString, kDefaultLdapPublicDirectory);
+				DIR_ForceFlag (pNewServer, DIR_LDAP_PUBLIC_DIRECTORY, prefBool);
+				DIR_ForceFlag (pNewServer, DIR_LDAP_ROOTDSE_PARSED, prefBool);
 
 				pNewServer->customDisplayUrl = DIR_GetStringPref (prefstring, "customDisplayUrl", tempString, "");
 
@@ -1367,7 +1579,7 @@ static int DIR_GetPrefsFromBranch (XP_List **list, const char *pabFile, const ch
 
 		/* all.js should have filled this stuff in */
 		XP_ASSERT(hasPAB);
-		XP_ASSERT(numDirectories != 0); 
+		XP_ASSERT(numDirectories != 0);
 	}
 	else
 		result = -1;
@@ -1379,7 +1591,7 @@ static int DIR_GetPrefsFromBranch (XP_List **list, const char *pabFile, const ch
 }
 
 
-int DIR_GetServerPreferences (XP_List **list, const char* pabFile)
+int DIR_GetServerPreferences(XP_List **list, const char* pabFile)
 {
 	int err = 0;
 	XP_List *oldList = NULL;
@@ -1399,9 +1611,12 @@ int DIR_GetServerPreferences (XP_List **list, const char* pabFile)
 	{
 		if (oldChildren)
 		{
-			if (userHasOldPrefs)
-				err = DIR_GetPrefsFromBranch (&oldList, pabFile, "directories");
-			PREF_DeleteBranch ("directories");
+			if (XP_STRLEN(oldChildren))
+			{
+				if (userHasOldPrefs)
+					err = DIR_GetPrefsFromBranch (&oldList, pabFile, "directories");
+				PREF_DeleteBranch ("directories");
+			}
 			XP_FREEIF(oldChildren);
 		}
 	}
@@ -1410,15 +1625,18 @@ int DIR_GetServerPreferences (XP_List **list, const char* pabFile)
 	{
 		if (oldChildren)
 		{
-			if (userHasOldPrefs)
-				err = DIR_GetPrefsFromBranch (&oldList, pabFile, "ldap");
-			PREF_DeleteBranch ("ldap");
+			if (XP_STRLEN(oldChildren))
+			{
+				if (userHasOldPrefs)
+					err = DIR_GetPrefsFromBranch (&oldList, pabFile, "ldap");
+				PREF_DeleteBranch ("ldap");
+			}
 			XP_FREEIF(oldChildren);
 		}
 	}
 
 	/* Find the new-style "ldap_1" tree in prefs */
-	DIR_GetPrefsFromBranch (&newList, pabFile, "ldap_1");
+	DIR_GetPrefsFromBranch(&newList, pabFile, "ldap_1");
 
 	if (oldList && newList)
 	{
@@ -1434,19 +1652,19 @@ int DIR_GetServerPreferences (XP_List **list, const char* pabFile)
 
 			while (NULL != (newServer = XP_ListNextObject(walkNewList)) && addOldServer)
 			{
-				if (DIR_AreServersSame (oldServer, newServer))
+				if (DIR_AreServersSame(oldServer, newServer))
 					addOldServer = FALSE; /* don't add servers which are in the new list */
 				else if (PABDirectory == oldServer->dirType)
 					addOldServer = FALSE; /* don't need the old PAB; there's already one in ALL.JS */
-				else if (!XP_STRCMP (oldServer->serverName, "ldap-trace.fedex.com"))
+				else if (!XP_STRCMP(oldServer->serverName, "ldap-trace.fedex.com"))
 					addOldServer = FALSE;
 			}
 
 			if (addOldServer)
 			{
 				DIR_Server *copyOfOldServer;
-				DIR_CopyServer (oldServer, &copyOfOldServer);
-				XP_ListAddObjectToEnd (newList, copyOfOldServer);
+				DIR_CopyServer(oldServer, &copyOfOldServer);
+				XP_ListAddObjectToEnd(newList, copyOfOldServer);
 			}
 		}
 
@@ -1464,10 +1682,7 @@ int DIR_GetServerPreferences (XP_List **list, const char* pabFile)
 }
 
 
-#define DIR_GOOD_WAY 1
-
-
-static void DIR_ClearPrefBranch (const char *branch)
+static void DIR_ClearPrefBranch(const char *branch)
 {
 	/* This little function provides a way to delete a prefs object but still
 	 * allow reassignment of that object later. 
@@ -1475,7 +1690,7 @@ static void DIR_ClearPrefBranch (const char *branch)
 	char *recreateBranch = NULL;
 
 	PREF_DeleteBranch (branch);
-	recreateBranch = PR_smprintf ("pref_inittree(\"%s\")", branch);
+	recreateBranch = PR_smprintf("pref_inittree(\"%s\")", branch);
 	if (recreateBranch)
 	{
 		PREF_QuietEvaluateJSBuffer (recreateBranch, XP_STRLEN(recreateBranch));
@@ -1528,7 +1743,11 @@ static void DIR_SetStringPref (const char *prefRoot, const char *prefLeaf, char 
 		/* If there's a default pref, just set ours in and let libpref worry 
 		 * about potential defaults in all.js
 		 */
-		prefErr = PREF_SetCharPref (scratch, value);
+		 if (value) /* added this check to make sure we have a value before we try to set it..*/
+		 	prefErr = PREF_SetCharPref (scratch, value);
+		 else
+			 DIR_ClearStringPref(scratch);
+
 		XP_FREE(defaultPref);
 	}
 	else
@@ -1539,18 +1758,14 @@ static void DIR_SetStringPref (const char *prefRoot, const char *prefLeaf, char 
 		char *userPref = NULL;
 		if (PREF_NOERROR == PREF_CopyCharPref (scratch, &userPref))
 		{
-#if DIR_GOOD_WAY
-			if (value && XP_STRCASECMP(value, defaultValue))
+			if (value && (defaultValue ? XP_STRCASECMP(value, defaultValue) : value != defaultValue))
 				prefErr = PREF_SetCharPref (scratch, value);
 			else
 				DIR_ClearStringPref (scratch); 
-#else
-				prefErr = PREF_SetCharPref (scratch, value);
-#endif
 		}
 		else
 		{
-			if (value && XP_STRCASECMP(value, defaultValue))
+			if (value && (defaultValue ? XP_STRCASECMP(value, defaultValue) : value != defaultValue))
 				prefErr = PREF_SetCharPref (scratch, value); 
 		}
 	}
@@ -1577,14 +1792,10 @@ static void DIR_SetIntPref (const char *prefRoot, const char *prefLeaf, char *sc
 		int32 userPref;
 		if (PREF_NOERROR == PREF_GetIntPref (scratch, &userPref))
 		{
-#if DIR_GOOD_WAY
 			if (value != defaultValue)
 				prefErr = PREF_SetIntPref(scratch, value);
 			else
 				DIR_ClearIntPref (scratch);
-#else
-				prefErr = PREF_SetIntPref(scratch, value);
-#endif
 		}
 		else
 		{
@@ -1615,14 +1826,10 @@ static void DIR_SetBoolPref (const char *prefRoot, const char *prefLeaf, char *s
 		XP_Bool userPref;
 		if (PREF_NOERROR == PREF_GetBoolPref (scratch, &userPref))
 		{
-#if DIR_GOOD_WAY
 			if (value != defaultValue)
 				prefErr = PREF_SetBoolPref(scratch, value);
 			else
 				DIR_ClearBoolPref (scratch);
-#else
-				prefErr = PREF_SetBoolPref(scratch, value);
-#endif
 		}
 		else
 		{
@@ -1767,6 +1974,7 @@ static int DIR_SaveCustomFilters (const char *prefRoot, char *scratch, DIR_Serve
 				DIR_SetStringPref (scratch, "string", localScratch, filter->string, kDefaultFilter);
 			}
 			XP_FREE(localScratch);
+			localScratch = NULL;
 		}
 		else
 			err = MK_OUT_OF_MEMORY;
@@ -1781,6 +1989,9 @@ static int DIR_SaveCustomFilters (const char *prefRoot, char *scratch, DIR_Serve
 		DIR_SetStringPref (scratch, "string", localScratch, kDefaultFilter, kDefaultFilter);
 	}
 
+	if (localScratch)  /* memory leak! I'm adding this to patch up the leak. */
+		XP_FREE(localScratch);
+
 	return err;
 }
 
@@ -1794,6 +2005,8 @@ static int dir_SaveReplicationInfo (const char *prefRoot, char *scratch, DIR_Ser
 
 	XP_STRCPY (scratch, prefRoot);
 	XP_STRCAT (scratch, "replication.");
+
+	DIR_SetBoolPref (scratch, "enabled", localScratch, DIR_TestFlag (server, DIR_REPLICATION_ENABLED), kDefaultReplicaEnabled);
 
 	if (server->replInfo)
 	{
@@ -1818,15 +2031,16 @@ static int dir_SaveReplicationInfo (const char *prefRoot, char *scratch, DIR_Ser
 				err = MK_OUT_OF_MEMORY;
 		}
 
-		DIR_SetStringPref (scratch, "excludedAttributes", scratch, excludedList, kDefaultReplicaExcludedAttributes);
+		DIR_SetStringPref (scratch, "excludedAttributes", localScratch, excludedList, kDefaultReplicaExcludedAttributes);
 
-		DIR_SetBoolPref (scratch, "enabled", localScratch, server->replInfo->enabled, kDefaultReplicaEnabled);
 		DIR_SetStringPref (scratch, "description", localScratch, server->replInfo->description, kDefaultReplicaDescription);
+		DIR_SetStringPref (scratch, "fileName", localScratch, server->replInfo->fileName, kDefaultReplicaFileName);
 		DIR_SetStringPref (scratch, "filter", localScratch, server->replInfo->filter, kDefaultReplicaFilter);
 		DIR_SetIntPref (scratch, "lastChangeNumber", localScratch, server->replInfo->lastChangeNumber, kDefaultReplicaChangeNumber);
-		DIR_SetIntPref (scratch, "generation", localScratch, server->replInfo->generation, kDefaultReplicaChangeNumberGeneration);
+		DIR_SetStringPref (scratch, "dataVersion", localScratch, server->replInfo->dataVersion, kDefaultReplicaDataVersion);
 	}
 
+	XP_FREE(localScratch);
 	return err;
 }
 
@@ -1868,16 +2082,23 @@ int DIR_SaveServerPreferences (XP_List *wholeList)
 					DIR_SetIntPref (prefstring, "dirType", tempString, s->dirType, (int) LDAPDirectory);
 					DIR_SetBoolPref (prefstring, "isOffline", tempString, s->isOffline, kDefaultIsOffline);
 
-					DIR_SetBoolPref (prefstring, "autoCompleteEnabled", tempString, DIR_TestFlag(s, DIR_AUTO_COMPLETE_ENABLED), kDefaultAutoCompleteEnabled);
+					/* save the column attributes */
+					if (s->dirType == PABDirectory)
+						DIR_SetStringPref(prefstring, "columns", tempString, s->columnAttributes, kDefaultPABColumnHeaders);
+					else
+						DIR_SetStringPref(prefstring, "columns", tempString, s->columnAttributes, kDefaultLDAPColumnHeaders);
+
+					DIR_SetBoolPref (prefstring, "autoComplete.enabled", tempString, DIR_TestFlag(s, DIR_AUTO_COMPLETE_ENABLED), kDefaultAutoCompleteEnabled);
+					DIR_SetIntPref (prefstring, "autoComplete.style", tempString, (int32) s->autoCompleteStyle, kDefaultAutoCompleteStyle);
+
 					DIR_SetBoolPref (prefstring, "utf8Disabled", tempString, DIR_TestFlag(s, DIR_UTF8_DISABLED), kDefaultUtf8Disabled);
 
 					DIR_SetBoolPref (prefstring, "enableAuth", tempString, s->enableAuth, kDefaultEnableAuth);
+					DIR_SetStringPref (prefstring, "authDn", tempString, s->authDn, NULL);
 					DIR_SetBoolPref (prefstring, "savePassword", tempString, s->savePassword, kDefaultSavePassword);
-					if (s->savePassword)
-					{
-						DIR_SetStringPref (prefstring, "authDn", tempString, s->authDn, "");
-						DIR_SetStringPref (prefstring, "password", tempString, s->password, "");
-					}
+					DIR_SetStringPref (prefstring, "password", tempString, s->savePassword ? s->password : "", "");
+
+					DIR_SetBoolPref (prefstring, "publicDirectory", tempString, DIR_TestFlag(s, DIR_LDAP_PUBLIC_DIRECTORY), kDefaultLdapPublicDirectory);
 
 					DIR_SaveCustomAttributes (prefstring, tempString, s);
 					DIR_SaveCustomFilters (prefstring, tempString, s);
@@ -1906,70 +2127,123 @@ static DIR_DefaultAttribute *DIR_GetDefaultAttribute (DIR_AttributeId id)
 {
 	int i = 0;
 
-	static DIR_DefaultAttribute defaults[15];
-	defaults[0].id = cn;
-	defaults[0].resourceId = MK_LDAP_COMMON_NAME;
-	defaults[0].name = "cn";
-	
-	defaults[1].id = givenname;
-	defaults[1].resourceId = MK_LDAP_GIVEN_NAME;
-	defaults[1].name = "givenName";
-	
-	defaults[2].id = sn;
-	defaults[2].resourceId = MK_LDAP_SURNAME;
-	defaults[2].name = "sn";
-	
-	defaults[3].id = mail;
-	defaults[3].resourceId = MK_LDAP_EMAIL_ADDRESS;
-	defaults[3].name = "mail";
-	
-	defaults[4].id = telephonenumber;
-	defaults[4].resourceId = MK_LDAP_PHONE_NUMBER;
-	defaults[4].name = "telephoneNumber";
-	
-	defaults[5].id = o;
-	defaults[5].resourceId = MK_LDAP_ORGANIZATION;
-	defaults[5].name = "o";
-	
-	defaults[6].id = ou;
-	defaults[6].resourceId = MK_LDAP_ORG_UNIT;
-	defaults[6].name = "ou";
-	
-	defaults[7].id = l;
-	defaults[7].resourceId = MK_LDAP_LOCALITY;
-	defaults[7].name = "l";
-	
-	defaults[8].id = street;
-	defaults[8].resourceId = MK_LDAP_STREET;
-	defaults[8].name = "street";
-	
-	defaults[9].id = custom1;
-	defaults[9].resourceId = MK_LDAP_CUSTOM1;
-	defaults[9].name = "custom1";
-	
-	defaults[10].id = custom2;
-	defaults[10].resourceId = MK_LDAP_CUSTOM2;
-	defaults[10].name = "custom2";
-	
-	defaults[11].id = custom3;
-	defaults[11].resourceId = MK_LDAP_CUSTOM3;
-	defaults[11].name = "custom3";
-	
-	defaults[12].id = custom4;
-	defaults[12].resourceId = MK_LDAP_CUSTOM4;
-	defaults[12].name = "custom4";
-	
-	defaults[13].id = custom5;
-	defaults[13].resourceId = MK_LDAP_CUSTOM5;
-	defaults[13].name = "custom5";
+	static DIR_DefaultAttribute defaults[28];
 
-	defaults[14].id = auth;
-	defaults[14].resourceId = MK_LDAP_EMAIL_ADDRESS;
-	defaults[14].name = "mail";
+	if (defaults[0].name == NULL)
+	{
+		defaults[0].id = cn;
+		defaults[0].resourceId = MK_LDAP_COMMON_NAME;
+		defaults[0].name = "cn";
+	
+		defaults[1].id = givenname;
+		defaults[1].resourceId = MK_LDAP_GIVEN_NAME;
+		defaults[1].name = "givenName";
+	
+		defaults[2].id = sn;
+		defaults[2].resourceId = MK_LDAP_SURNAME;
+		defaults[2].name = "sn";
+	
+		defaults[3].id = mail;
+		defaults[3].resourceId = MK_LDAP_EMAIL_ADDRESS;
+		defaults[3].name = "mail";
+	
+		defaults[4].id = telephonenumber;
+		defaults[4].resourceId = MK_LDAP_PHONE_NUMBER;
+		defaults[4].name = "telephoneNumber";
+	
+		defaults[5].id = o;
+		defaults[5].resourceId = MK_LDAP_ORGANIZATION;
+		defaults[5].name = "o";
+	
+		defaults[6].id = ou;
+		defaults[6].resourceId = MK_LDAP_ORG_UNIT;
+		defaults[6].name = "ou";
+	
+		defaults[7].id = l;
+		defaults[7].resourceId = MK_LDAP_LOCALITY;
+		defaults[7].name = "l";
+	
+		defaults[8].id = street;
+		defaults[8].resourceId = MK_LDAP_STREET;
+		defaults[8].name = "street";
+	
+		defaults[9].id = custom1;
+		defaults[9].resourceId = MK_LDAP_CUSTOM1;
+		defaults[9].name = "custom1";
+	
+		defaults[10].id = custom2;
+		defaults[10].resourceId = MK_LDAP_CUSTOM2;
+		defaults[10].name = "custom2";
+	
+		defaults[11].id = custom3;
+		defaults[11].resourceId = MK_LDAP_CUSTOM3;
+		defaults[11].name = "custom3";
+	
+		defaults[12].id = custom4;
+		defaults[12].resourceId = MK_LDAP_CUSTOM4;
+		defaults[12].name = "custom4";
+	
+		defaults[13].id = custom5;
+		defaults[13].resourceId = MK_LDAP_CUSTOM5;
+		defaults[13].name = "custom5";
 
-	defaults[15].id = cn;
-	defaults[15].resourceId = 0;
-	defaults[15].name = NULL;
+		defaults[14].id = auth;
+		defaults[14].resourceId = MK_LDAP_EMAIL_ADDRESS;
+		defaults[14].name = "mail";
+
+		/* these extra attribute ids were added by mscott */
+		defaults[15].id = carlicense;
+		defaults[15].resourceId = MK_LDAP_CAR_LICENSE;
+		defaults[15].name = "carlicense";
+
+		defaults[16].id = businesscategory;
+		defaults[16].resourceId = MK_LDAP_BUSINESS_CAT;
+		defaults[16].name = "businesscategory";
+
+		defaults[17].id = departmentnumber;
+		defaults[17].resourceId = MK_LDAP_DEPT_NUMBER;
+		defaults[17].name = "businesscategory";
+
+		defaults[18].id = description;
+		defaults[18].resourceId = MK_LDAP_DESCRIPTION;
+		defaults[18].name = "description";
+
+		defaults[19].id = employeetype;
+		defaults[19].resourceId = MK_LDAP_EMPLOYEE_TYPE;
+		defaults[19].name = "employeetype";
+
+		defaults[20].id = facsimiletelephonenumber;
+		defaults[20].resourceId = MK_LDAP_FAX_NUMBER;
+		defaults[20].name = "facsimiletelephonenumber";
+
+		defaults[21].id = manager;
+		defaults[21].resourceId = MK_LDAP_MANAGER;
+		defaults[21].name = "manager";
+
+		defaults[22].id = objectclass;
+		defaults[22].resourceId = MK_LDAP_OBJECT_CLASS;
+		defaults[22].name = "objectclass";
+
+		defaults[23].id = postaladdress;
+		defaults[23].resourceId = MK_LDAP_POSTAL_ADDRESS;
+		defaults[23].name = "postaladdress";
+
+		defaults[24].id = postalcode;
+		defaults[24].resourceId = MK_LDAP_POSTAL_CODE;
+		defaults[24].name = "postalcode";
+
+		defaults[25].id = secretary;
+		defaults[25].resourceId = MK_LDAP_SECRETARY;
+		defaults[25].name = "secretary";
+
+		defaults[26].id = title;
+		defaults[26].resourceId = MK_LDAP_TITLE;
+		defaults[26].name = "title";
+
+		defaults[27].id = cn;
+		defaults[27].resourceId = 0;
+		defaults[27].name = NULL;
+	}
 
 	while (defaults[i].name)
 	{
@@ -2011,14 +2285,17 @@ const char **DIR_GetAttributeStrings (DIR_Server *server, DIR_AttributeId id)
 {
 	const char **result = NULL;
 
-	/* First look in the custom attributes in case the attribute is overridden */
-	XP_List *list = server->customAttributes;
-	DIR_Attribute *walkList = NULL;
-
-	while ((walkList = XP_ListNextObject(list)) != NULL)
+	if (server && server->customAttributes)
 	{
-		if (walkList->id == id)
-			result = (const char**)walkList->attrNames;
+		/* First look in the custom attributes in case the attribute is overridden */
+		XP_List *list = server->customAttributes;
+		DIR_Attribute *walkList = NULL;
+
+		while ((walkList = XP_ListNextObject(list)) != NULL)
+		{
+			if (walkList->id == id)
+				result = (const char**)walkList->attrNames;
+		}
 	}
 
 	/* If we didn't find it, look in our own static list of attributes */
@@ -2039,6 +2316,13 @@ const char *DIR_GetFirstAttributeString (DIR_Server *server, DIR_AttributeId id)
 	return array[0];
 }
 
+const char *DIR_GetReplicationFilter (DIR_Server *server)
+{
+	if (server && server->replInfo)
+		return server->replInfo->filter;
+	else
+		return NULL;
+}
 
 const char *DIR_GetFilterString (DIR_Server *server)
 {
@@ -2209,15 +2493,6 @@ static void dir_PushStringToPrefs (DIR_Server *s, char **curVal, const char *new
 
 }
 
-/* XXX FreeMail - jsw removed for src331 ... need to find a home and proper code */
-#ifndef NO_SECURITY
-#ifdef MOZ_LDAP
-int DIR_SetupSecureConnection (LDAP *ld)
-{
-  return -1;
-}
-#endif
-#endif
 
 void DIR_SetAuthDN (DIR_Server *s, const char *dn)
 {
@@ -2336,56 +2611,100 @@ char *DIR_Unescape (const char *src, XP_Bool makeHtml)
 }
 
 
-/*****************************************************************************
- * Functions for building a secure connection to LDAP servers
- *
- * Use of PR_CALLBACK is required for Win16 because the socket API functions
- * ultimately call into MOZOCK, which has DS-resident global variables. Ick.
- */
-
-#ifdef MOZ_LDAP
-
-int DIR_ValidateRootDSE (DIR_Server *server, int32 gen, int32 first, int32 last)
+int DIR_ValidateRootDSE (DIR_Server *server, char *version, int32 first, int32 last)
 {
 	/* Here we validate the replication info that the server has against the
 	 * state of the local replica as stored in JS prefs. 
 	 */
 
-	XP_ASSERT(server && server->replInfo);
-	if (!server || !server->replInfo)
+	if (!server || !version)
 		return -1;
 
-	/* The generation of the server's DB is different than when we last
-	 * saw it, which means that the first and last change number we know
-	 * are totally meaningless.
+	/* If the replication info file name in the server is NULL, that means the
+	 * server has not been replicated.  Reinitialize the change number and the
+	 * data version and generate a file name for the replica database.
 	 */
-	if (gen != server->replInfo->generation)
-		return MK_LDAP_REPL_CANT_SYNC_REPLICA;
+	if (!server->replInfo)
+		server->replInfo = (DIR_ReplicationInfo *) XP_CALLOC (1, sizeof (DIR_ReplicationInfo));
+	if (!server->replInfo)
+		return MK_OUT_OF_MEMORY;
 
-	/* Some changes have come and gone on the server since we last 
-	 * replicated. Since we have no way to know what those changes were,
-	 * we have no way to get sync'd up with the current server state
-	 */
-	if (first > server->replInfo->lastChangeNumber)
-		return MK_LDAP_REPL_CANT_SYNC_REPLICA;
+	if (!server->replInfo->fileName)
+	{
+		server->replInfo->lastChangeNumber = kDefaultReplicaChangeNumber;
+		XP_FREEIF(server->replInfo->filter);
+		server->replInfo->filter = XP_STRDUP(kDefaultReplicaFilter);
+		XP_FREEIF(server->replInfo->dataVersion);
+		server->replInfo->dataVersion = XP_STRDUP(version);
+		DIR_SetFileName (&(server->replInfo->fileName), server->serverName);
+		return 0;
+	}
 
-	/* We appear to have already replicated changes that the server
-	 * hasn't made yet. Not likely
+	/* There are three cases in which we should reinitialize the replica:
+	 *  1) The data version of the server's DB is different than when we last
+	 *     saw it, which means that the first and last change number we know
+	 *     are totally meaningless.
+	 *  2) Some changes have come and gone on the server since we last 
+	 *     replicated. Since we have no way to know what those changes were,
+	 *     we have no way to get sync'd up with the current server state
+	 *  3) We have already replicated changes that the server hasn't made yet.
+	 *     Not likely.
 	 */
-	if (last < server->replInfo->lastChangeNumber)
-		return MK_LDAP_REPL_CANT_SYNC_REPLICA;
+	if (   !server->replInfo->dataVersion || XP_STRCASECMP(version, server->replInfo->dataVersion)
+	    || first > server->replInfo->lastChangeNumber + 1
+	    || last < server->replInfo->lastChangeNumber)
+	{
+		server->replInfo->lastChangeNumber = kDefaultReplicaChangeNumber;
+		XP_FREEIF(server->replInfo->dataVersion);
+		server->replInfo->dataVersion = XP_STRDUP(version);
+	}
 
 	return 0;
 }
 
+int DIR_ParseRootDSE (DIR_Server *server, LDAP *ld, LDAPMessage *message)
+{
+#ifdef MOZ_LDAP
+	char **values = NULL;
 
-#define DIR_AUTO_COMPLETE_ENABLED 0x00000001
-#define DIR_ENABLE_AUTH           0x00000002
-#define DIR_SAVE_PASSWORD         0x00000004
-#define DIR_UTF8_DISABLED         0x00000008
-#define DIR_IS_SECURE             0x00000010
-#define DIR_SAVE_RESULTS          0x00000020
-#define DIR_EFFICIENT_WILDCARDS   0x00000040
+	server->flags |= DIR_LDAP_ROOTDSE_PARSED;
+	server->flags &= ~(DIR_LDAP_VERSION3 | DIR_LDAP_VIRTUALLISTVIEW);
+
+	values = ldap_get_values (ld, message, "supportedLDAPVersion");
+	if (values && values[0])
+	{
+		int i;
+
+		for (i = 0; values[i]; i++)
+		{
+			if (XP_ATOI (values[i]) == LDAP_VERSION3)
+			{
+				server->flags |= DIR_LDAP_VERSION3;
+				break;
+			}
+		}
+		ldap_value_free (values);
+	}
+
+	values = ldap_get_values (ld, message, "supportedControl");
+	if (values)
+	{
+		int i;
+
+		for (i = 0; values[i]; i++)
+		{
+			if (XP_STRCMP (values[i], LDAP_CONTROL_VLVREQUEST) == 0)
+			{
+				server->flags |= DIR_LDAP_VIRTUALLISTVIEW;
+				break;
+			}
+		}
+		ldap_value_free (values);
+	}
+#endif
+	return 0;
+}
+
 
 void DIR_SetAutoCompleteEnabled (XP_List *list, DIR_Server *server, XP_Bool enabled)
 {
@@ -2397,11 +2716,11 @@ void DIR_SetAutoCompleteEnabled (XP_List *list, DIR_Server *server, XP_Bool enab
 		if (enabled)
 		{
 			while (NULL != (tmp = XP_ListNextObject(list)))
-				tmp->flags &= ~DIR_AUTO_COMPLETE_ENABLED;
-			server->flags |= DIR_AUTO_COMPLETE_ENABLED;
+				DIR_ClearFlag (tmp, DIR_AUTO_COMPLETE_ENABLED);
+			DIR_SetFlag (server, DIR_AUTO_COMPLETE_ENABLED);
 		}
 		else
-			server->flags &= ~DIR_AUTO_COMPLETE_ENABLED;
+			DIR_ClearFlag (server, DIR_AUTO_COMPLETE_ENABLED);
 	}
 }
 
@@ -2503,9 +2822,4 @@ char *DIR_BuildUrl (DIR_Server *server, const char *dn, XP_Bool forAddToAB)
 	}
 	return url;
 }
-
-
-#endif /* MOZ_LDAP */
-
-
-#endif /* #if !defined(MOZADDRSTANDALONE) */
+#endif /* !MOZADDRSTANDALONE */
