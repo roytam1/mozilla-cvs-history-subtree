@@ -49,6 +49,12 @@
   background-color: #C7D0D9;
 }
 
+.alertImage {
+  min-width: 77px;
+  min-height: 50px;
+  -moz-box-pack: end;
+}
+
 .alertTitle {
   font-weight: bold;
 }
