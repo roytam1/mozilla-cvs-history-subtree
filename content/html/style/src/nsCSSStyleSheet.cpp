@@ -2592,6 +2592,11 @@ CSSStyleSheetImpl::InsertRule(const nsAString& aRule,
   if (!complete) {
     return NS_ERROR_DOM_INVALID_ACCESS_ERR;
   }
+
+  if (aRule.IsEmpty()) {
+    // Nothing to do here
+    return NS_OK;
+  }
   
   nsresult result;
   result = WillDirty();
@@ -2639,7 +2644,8 @@ CSSStyleSheetImpl::InsertRule(const nsAString& aRule,
   
   PRUint32 rulecount = 0;
   rules->Count(&rulecount);  
-  if (rulecount == 0 && !aRule.IsEmpty()) {
+  if (rulecount == 0) {
+    // Since we know aRule was not an empty string, just throw
     return NS_ERROR_DOM_SYNTAX_ERR;
   }
   
@@ -2701,8 +2707,8 @@ CSSStyleSheetImpl::InsertRule(const nsAString& aRule,
     }
   }
   
-  result = mInner->mOrderedRules->InsertElementsAt(rules, aIndex);
-  NS_ENSURE_SUCCESS(result, result);
+  PRBool insertResult = mInner->mOrderedRules->InsertElementsAt(rules, aIndex);
+  NS_ENSURE_TRUE(insertResult, NS_ERROR_OUT_OF_MEMORY);
   DidDirty();
 
   nsCOMPtr<nsICSSRule> cssRule;
@@ -2838,7 +2844,10 @@ CSSStyleSheetImpl::DeleteRuleFromGroup(nsICSSGroupRule* aGroup, PRUint32 aIndex)
 }
 
 NS_IMETHODIMP
-CSSStyleSheetImpl::InsertRuleIntoGroup(const nsAString & aRule, nsICSSGroupRule* aGroup, PRUint32 aIndex, PRUint32* _retval)
+CSSStyleSheetImpl::InsertRuleIntoGroup(const nsAString & aRule,
+                                       nsICSSGroupRule* aGroup,
+                                       PRUint32 aIndex,
+                                       PRUint32* _retval)
 {
   nsresult result;
   NS_ASSERTION(mInner && mInner->mComplete,
@@ -2850,6 +2859,11 @@ CSSStyleSheetImpl::InsertRuleIntoGroup(const nsAString & aRule, nsICSSGroupRule*
     return NS_ERROR_INVALID_ARG;
   }
 
+  if (aRule.IsEmpty()) {
+    // Nothing to do here
+    return NS_OK;
+  }
+  
   // Hold strong ref to the CSSLoader in case the document update
   // kills the document
   nsCOMPtr<nsICSSLoader> loader;
@@ -2882,7 +2896,8 @@ CSSStyleSheetImpl::InsertRuleIntoGroup(const nsAString & aRule, nsICSSGroupRule*
 
   PRUint32 rulecount = 0;
   rules->Count(&rulecount);
-    if (rulecount == 0 && !aRule.IsEmpty()) {
+  if (rulecount == 0) {
+    // Since we know aRule was not an empty string, just throw
     return NS_ERROR_DOM_SYNTAX_ERR;
   }
 
