@@ -108,12 +108,13 @@ main( int argc, char **argv )
     scope = LDAP_SCOPE_SUBTREE;
 	server_sort = 0;
 
-
+#ifdef notdef
 #ifdef HPUX11
 #ifndef __LP64__
 	_main( argc, argv);
 #endif /* __LP64_ */
 #endif /* HPUX11 */
+#endif
 
 
     optind = ldaptool_process_args( argc, argv, "ABLTU1eotuxa:b:F:G:l:S:s:z:",

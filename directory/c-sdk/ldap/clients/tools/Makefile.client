@@ -10,7 +10,8 @@ include		../../../build.mk
 
 INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
-INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include \
+INCLUDES	+= -I../../../../..$(INSTALLDIR)/include \
+		-I../../../../../dist/include/obsolete \
 		-I../../../../../dist/include \
 		-I../../../../../dist/public/security \
 		-I../../../ldap/include
@@ -60,6 +61,15 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
+ifeq ($(OS_ARCH), HP-UX)
+EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
+	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
+             -L$(NSCP_DISTDIR)/lib -l$(SVRCORE_LIBNAME) \
+	     -l$(SSL_LIBNAME) -l$(NSS_LIBNAME) -l$(LBER_LIBNAME)\
+	     -ldbm -ldld -lm -lpthread -lrt
+#EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+endif
+
 ifeq ($(OS_ARCH), AIX)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
@@ -69,10 +79,6 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -ldl -brtl -lpthreads -lc_r -lm
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
-
-ifeq ($(OS_ARCH), AIX)
-LDTOOLS_LIBS += $(EXTRA_LIBS)
-endif 
 
 LDTOOLS_LIBS += $(EXTRA_LIBS)
 LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib

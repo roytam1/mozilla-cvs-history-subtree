@@ -39,7 +39,7 @@ ifneq ($(USE_64), 1)
 ifeq ($(OS_ARCH), SunOS)
 COPYFREEBL      = 1
 endif
-ifeq ($(OS_ARCH), HPUX)
+ifeq ($(OS_ARCH), HP-UX)
 COPYFREEBL      = 1
 endif
 endif
@@ -144,25 +144,31 @@ LDAP_REFERRALS  = -DLDAP_REFERRALS
 ifeq ($(OS_ARCH), WINNT)
 
 DLLEXPORTS_PREFIX=/DEF:
+USE_DLL_EXPORTS_FILE	= 1
 
 else
 ifeq ($(OS_ARCH), SunOS)
 
 DLLEXPORTS_PREFIX=-Blocal -M
+USE_DLL_EXPORTS_FILE	= 1
 
 else
 ifeq ($(OS_ARCH), IRIX)
 
 DLLEXPORTS_PREFIX=-exports_file
+USE_DLL_EXPORTS_FILE	= 1
 
 else
-ifeq ($(OS_ARCH),HPUX)
+ifeq ($(OS_ARCH), HP-UX)
+
+DEFS		+= -Dhpux -D_REENTRANT
 
 else
 ifeq ($(OS_ARCH),AIX)
 
 DLLEXPORTS_PREFIX=-bE:
 DL=-ldl
+USE_DLL_EXPORTS_FILE	= 1
 
 else
 ifeq ($(OS_ARCH),OSF1)
@@ -193,7 +199,7 @@ endif # ReliantUNIX
 endif # Linux
 endif # OSF1
 endif # AIX
-endif # HPUX
+endif # HP-UX
 endif # IRIX
 endif # SOLARIS
 endif # WINNT
@@ -238,7 +244,7 @@ DLL_EXTRA_LIBS= -bI:/usr/lib/lowsys.exp -lC_r -lC -lpthreads -lc_r -lm \
 EXE_EXTRA_LIBS= -bI:/usr/lib/syscalls.exp -lsvld -lpthreads
 endif # AIX
 
-ifeq ($(OS_ARCH), HPUX)
+ifeq ($(OS_ARCH), HP-UX)
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,+s,+b,
@@ -246,11 +252,12 @@ RPATHFLAG_PREFIX=-Wl,+s,+b,
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=+s +b
+
 # we need to link in the rt library to get sem_*()
 PLATFORMLIBS += -lV3 -lrt
+PLATFORMCFLAGS= 
 
-PLATFORMCFLAGS= -Dhpux -D$(PLATFORM) -D_HPUX_SOURCE -D_REENTRANT -Aa
-endif # HPUX
+endif # HP-UX
 
 ifeq ($(OS_ARCH), Linux)
 # flag to pass to cc when linking to set runtime shared library search path
@@ -301,27 +308,23 @@ ifeq ($(OS_ARCH), OSF1)
 SO_FILES_TO_REMOVE=so_locations
 endif
 
-ifeq ($(OS_ARCH), HPUX)
+ifeq ($(OS_ARCH), HP-UX)
 # On HPUX, we need a couple of changes:
-# 1) Use the C++ compiler for linking, which will pass the +eh flag on down to t
-he
-#    linker so the correct exception-handling-aware libC gets used (libnshttpd.s
-l
+# 1) Use the C++ compiler for linking, which will pass the +eh flag on down to the
+#    linker so the correct exception-handling-aware libC gets used (libnshttpd.sl
 #    needs this).
 # 2) Add a "-Wl,-E" option so the linker gets a "-E" flag.  This makes symbols
 #    in an executable visible to shared libraries loaded at runtime.
-LINK_EXE        = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPAT
-HFLAG) \
+LINK_EXE        = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
         -o $@ $(OBJS) $(EXTRA_LIBS)
 LINK_EXE_NOLIBSOBJS     = $(CXX) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
         $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@
 LINK_EXE_NOLIBSOBJS_NOCXX       = $(CC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) \
         $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@
-LINK_EXE_NOCXX = $(CC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHF
-LAG) \
+LINK_EXE_NOCXX = $(CC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
         -o $@ $(OBJS) $(EXTRA_LIBS)
 
-else # HPUX
+else # HP-UX
 # everything except HPUX
 ifeq ($(OS_ARCH), ReliantUNIX)
 # Use the C++ compiler for linking if at least ONE object is C++
@@ -347,7 +350,7 @@ LINK_EXE_NOLIBSOBJS     = $(CC) $(ALDFLAGS) $(LDFLAGS) \
                         $(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) -o $@
 endif # USE_LD_RUN_PATH
 endif # ReliantUNIX
-endif # HPUX
+endif # HP-UX
 endif # WINNT
 
 

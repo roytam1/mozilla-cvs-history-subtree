@@ -63,7 +63,7 @@ nsldapi_compat_gethostbyname_r( const char *name, struct hostent *result,
 char *
 nsldapi_compat_ctime_r( const time_t *clock, char *buf, int buflen )
 {
-    (void) ctime_r( clock, buf, buflen );
+    NSLDAPI_CTIME1( clock, buf, buflen );
     return buf;
 }
 #endif /* HPUX10 && _REENTRANT */

@@ -104,12 +104,13 @@ main( int argc, char **argv )
     LDAPControl	*ldctrl;
 
 
-    
+#ifdef notdef
 #ifdef HPUX11
 #ifndef __LP64__
 	_main( argc, argv);
 #endif /* __LP64_ */
 #endif /* HPUX11 */
+#endif
 
     valsfromfiles = display_binary_values = 0;
 

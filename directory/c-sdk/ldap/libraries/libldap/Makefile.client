@@ -99,12 +99,12 @@ RUNTIMEETCDIR	= $(ETCDIR)
 #
 # shared library symbol export definitions
 #
+ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 ifeq ($(OS_ARCH), WINNT)
 GENEXPORTS=cmd /c  $(PERL) $(LDAP_SRC)/build/genexports.pl
 else
 GENEXPORTS=$(PERL) $(LDAP_SRC)/build/genexports.pl
 endif
-
 
 # variable definitions for exported symbols
 ifeq ($(OS_ARCH), WINNT)
@@ -116,6 +116,7 @@ endif
 LDAP_EXPORT_FLAGS=$(addprefix $(DLLEXPORTS_PREFIX), $(LDAP_EXPORT_DEFS))
 
 GENEXPARGS=$(BUILD_DEBUG) $(LDAPVERS_SUFFIX) $(LDAPVERS)
+endif # USE_DLL_EXPORTS_FILE
 
 ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LBER_LIBNAME)
@@ -144,9 +145,11 @@ OBJDEST = $(OBJDIR_NAME)
 
 ###########################################################################
 
+ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # recursive gmake rule to create exported symbols file
 $(LDAPOBJDEST)/libldap.exp:: ../libldap.ex
 	$(GENEXPORTS) $(OS_ARCH) Standard $< $(GENEXPARGS) > $@
+endif # USE_DLL_EXPORTS_FILE
 
 versiont.c:	Makefile.client Version.c
 	@$(RM) $@

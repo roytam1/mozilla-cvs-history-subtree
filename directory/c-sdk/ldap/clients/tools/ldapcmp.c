@@ -74,11 +74,13 @@ main( int argc, char **argv )
     int			rc, optind;
     LDAP		*ld1, *ld2;
 
+#ifdef notdef
 #ifdef HPUX11
 #ifndef __LP64__
 	_main( argc, argv);
 #endif /* __LP64_ */
 #endif /* HPUX11 */
+#endif
 
     deref = allow_binary = vals2tmp = attrsonly = 0;
     ldif = 1;
