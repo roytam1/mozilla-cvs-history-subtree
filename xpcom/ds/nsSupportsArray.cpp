@@ -65,17 +65,31 @@ nsSupportsArray::Read(nsIObjectInputStream *aStream)
 {
   nsresult rv;
 
-  rv = aStream->Read32(&mArraySize);
-  if (mArraySize > kAutoArraySize) {
-    nsISupports** array = new nsISupports*[mArraySize];
-    if (!array)
-      return NS_ERROR_OUT_OF_MEMORY;
-    mArray = array;
+  PRUint32 newArraySize;
+  rv = aStream->Read32(&newArraySize);
+
+  if (newArraySize <= kAutoArraySize) {
+    if (mArray != mAutoArray) {
+      delete mArray;
+      mArray = mAutoArray;
+      newArraySize = kAutoArraySize;
+    }
   }
   else {
-    NS_ASSERTION(mArraySize == kAutoArraySize, "bad default mArraySize!");
-    NS_ASSERTION(mArray == mAutoArray, "bad default mArray!");
+    if (newArraySize <= mArraySize) {
+      // Keep non-default-size mArray, it's more than big enough.
+      newArraySize = mArraySize;
+    }
+    else {
+      nsISupports** array = new nsISupports*[mArraySize];
+      if (!array)
+        return NS_ERROR_OUT_OF_MEMORY;
+      if (mArray != mAutoArray)
+        delete mArray;
+      mArray = array;
+    }
   }
+  mArraySize = newArraySize;
 
   rv = aStream->Read32(&mCount);
   if (NS_FAILED(rv)) return rv;
