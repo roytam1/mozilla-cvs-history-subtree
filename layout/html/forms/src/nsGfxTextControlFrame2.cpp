@@ -573,8 +573,8 @@ public:
   //NSISELECTIONCONTROLLER INTERFACES
   NS_IMETHOD SetDisplaySelection(PRInt16 toggle);
   NS_IMETHOD GetDisplaySelection(PRInt16 *_retval);
-  NS_IMETHOD SetDisplayNonTextSelection(PRBool toggle);
-  NS_IMETHOD GetDisplayNonTextSelection(PRBool *_retval);
+  NS_IMETHOD SetSelectionFlags(PRInt16 aTextSel);
+  NS_IMETHOD GetSelectionFlags(PRInt16 *_retval);
   NS_IMETHOD GetSelection(PRInt16 type, nsISelection **_retval);
   NS_IMETHOD ScrollSelectionIntoView(PRInt16 type, PRInt16 region);
   NS_IMETHOD RepaintSelection(PRInt16 type);
@@ -685,21 +685,22 @@ nsTextInputSelectionImpl::SetDisplaySelection(PRInt16 aToggle)
 NS_IMETHODIMP
 nsTextInputSelectionImpl::GetDisplaySelection(PRInt16 *aToggle)
 {
-  if (mFrameSelection)
+  if (mFrameSelection) 
     return mFrameSelection->GetDisplaySelection(aToggle);
   return NS_ERROR_NULL_POINTER;
 }
 
 NS_IMETHODIMP
-nsTextInputSelectionImpl::SetDisplayNonTextSelection(PRBool aToggle)
+nsTextInputSelectionImpl::SetSelectionFlags(PRInt16 aTextSel)
 {
   return NS_OK;//stub this out. not used in input
 }
 
 NS_IMETHODIMP
-nsTextInputSelectionImpl::GetDisplayNonTextSelection(PRBool *aToggle)
+nsTextInputSelectionImpl::GetSelectionFlags(PRInt16 *aTextSel)
 {
-  return NS_OK;//stub this out. not used in input
+  *aTextSel = nsISelectionController::DISPLAY_TEXT;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -50,6 +50,8 @@
 #ifdef INCLUDE_XUL
 #include "nsXULAtoms.h"
 #endif
+#include "nsISelectionController.h"
+
 
 class nsXBLSpecialDocInfo
 {
@@ -242,9 +244,9 @@ nsXBLWindowHandler :: IsEditor()
     docShell->GetPresShell(getter_AddRefs(presShell));
 
   if (presShell) {
-    PRBool isEditor;
-    presShell->GetDisplayNonTextSelection(&isEditor);
-    return isEditor;
+    PRInt16 isEditor;
+    presShell->GetSelectionFlags(&isEditor);
+    return isEditor & nsISelectionController::DISPLAY_ALL;
   }
 
   return PR_FALSE;

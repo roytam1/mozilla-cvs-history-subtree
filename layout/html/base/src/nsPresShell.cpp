@@ -969,8 +969,8 @@ public:
   NS_IMETHOD SetCaretReadOnly(PRBool aReadOnly);
   NS_IMETHOD GetCaretEnabled(PRBool *aOutEnabled);
 
-  NS_IMETHOD SetDisplayNonTextSelection(PRBool aInEnable);
-  NS_IMETHOD GetDisplayNonTextSelection(PRBool *aOutEnable);
+  NS_IMETHOD SetSelectionFlags(PRInt16 aInEnable);
+  NS_IMETHOD GetSelectionFlags(PRInt16 *aOutEnable);
 
   // nsISelectionController
 
@@ -1164,7 +1164,7 @@ protected:
   
   nsCOMPtr<nsIFrameSelection>   mSelection;
   nsCOMPtr<nsICaret>            mCaret;
-  PRBool                        mDisplayNonTextSelection;
+  PRInt16                       mDisplayNonTextSelection;
   PRBool                        mScrollingEnabled; //used to disable programmable scrolling from outside
   nsIFrameManager*              mFrameManager;  // we hold a reference
   PresShellViewEventListener    *mViewEventListener;
@@ -1414,7 +1414,7 @@ PresShell::PresShell():mAnonymousContentTable(nsnull),
   mIsDestroying = PR_FALSE;
   mDidInitialReflow = PR_FALSE;
   mCaretEnabled = PR_FALSE;
-  mDisplayNonTextSelection = PR_FALSE;
+  mDisplayNonTextSelection = nsISelectionController::DISPLAY_TEXT;
   mCurrentEventContent = nsnull;
   mCurrentEventFrame = nsnull;
   EnableScrolling();
@@ -3040,17 +3040,17 @@ NS_IMETHODIMP PresShell::GetCaretEnabled(PRBool *aOutEnabled)
   return NS_OK;
 }
 
-NS_IMETHODIMP PresShell::SetDisplayNonTextSelection(PRBool aInEnable)
+NS_IMETHODIMP PresShell::SetSelectionFlags(PRInt16 aTextSel)
 {
-  mDisplayNonTextSelection = PR_TRUE;
+  mDisplayNonTextSelection = aTextSel;
   return NS_OK;
 }
 
-NS_IMETHODIMP PresShell::GetDisplayNonTextSelection(PRBool *aOutEnable)
+NS_IMETHODIMP PresShell::GetSelectionFlags(PRInt16 *aTextSel)
 {
-  if (!aOutEnable)
+  if (!aTextSel)
     return NS_ERROR_INVALID_ARG;
-  *aOutEnable = mDisplayNonTextSelection;
+  *aTextSel = mDisplayNonTextSelection;
   return NS_OK;
 }
 

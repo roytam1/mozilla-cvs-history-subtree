@@ -320,7 +320,7 @@ nsEditor::Init(nsIDOMDocument *aDoc, nsIPresShell* aPresShell, nsIContent *aRoot
   aSelCon->SetCaretReadOnly(PR_FALSE);
   aSelCon->SetDisplaySelection(nsISelectionController::SELECTION_ON);
   
-  aSelCon->SetDisplayNonTextSelection(PR_TRUE);//we want to see all the selection reflected to user
+  aSelCon->SetSelectionFlags(nsISelectionController::DISPLAY_ALL);//we want to see all the selection reflected to user
 
   // Set the selection to the beginning:
 

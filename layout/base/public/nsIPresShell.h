@@ -423,16 +423,16 @@ public:
    *                  if PR_FALSE visual selection effects are disabled
    * @return  always NS_OK
    */
-  NS_IMETHOD SetDisplayNonTextSelection(PRBool aInEnable) = 0;
+  NS_IMETHOD SetSelectionFlags(PRInt16 aInEnable) = 0;
 
   /** 
     * Gets the current state of non text selection effects
     * @param aEnabled  [OUT] set to the current state of non text selection,
-    *                  as set by SetDisplayNonTextSelection
+    *                  as set by SetSelectionFlags
     * @return   if aOutEnabled==null, returns NS_ERROR_INVALID_ARG
     *           else NS_OK
     */
-  NS_IMETHOD GetDisplayNonTextSelection(PRBool *aOutEnabled) = 0;
+  NS_IMETHOD GetSelectionFlags(PRInt16 *aOutEnabled) = 0;
 
   /**
     * Interface to dispatch events via the presshell

@@ -57,6 +57,10 @@ interface nsISelectionController : nsISupports
    const short SELECTION_ON = 2;
    const short SELECTION_DISABLED = 3;
 
+   const short DISPLAY_TEXT = 1;   //display text selected.
+   const short DISPLAY_IMAGES = 2; //show images selected
+   const short DISPLAY_FRAMES = 4; //display hrules ect.
+   const short DISPLAY_ALL = 7; //display all. used for isEditor as well
    /**
    * SetDisplaySelection will set the display mode for the selection. OFF,ON,DISABLED
    */
@@ -68,16 +72,16 @@ interface nsISelectionController : nsISupports
     short   getDisplaySelection();
 
    /**
-   * SetDisplayNonTextSelection used to set whether you want to see HRULES/IMAGES with border.
+   * SetSelectionFlags used to set whether you want to see HRULES/IMAGES with border.
    * also used to tell if the presshell is an editor right now. this should change
    */
-    void setDisplayNonTextSelection(in boolean toggle);
+    void setSelectionFlags(in short toggle);
 
    /**
-   * GetDisplayNonTextSelection used to get whether you want to see HRULES/IMAGES with border.
+   * GetSelectionFlags used to get whether you want to see HRULES/IMAGES with border.
    * also used to tell if the presshell is an editor right now. this should change
    */
-    boolean getDisplayNonTextSelection();
+    short getSelectionFlags();
 
    /**
    * GetSelection will return the selection that the presentation
