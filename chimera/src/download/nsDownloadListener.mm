@@ -269,7 +269,12 @@ NS_IMETHODIMP_(void) nsDownloadListener::Notify(nsITimer *timer)
   // changed it
   nsAutoString pathStr;
   mDestination->GetPath(pathStr);
-  [mDownloadDisplay setDestinationPath: [NSString stringWith_nsAString:pathStr]];
+  NSString* destPath = [NSString stringWith_nsAString:pathStr];
+  [mDownloadDisplay setDestinationPath:destPath];
+
+  // update the Finder immediately.
+  if ( NS_SUCCEEDED(mDownloadStatus) )
+    [[NSWorkspace sharedWorkspace] noteFileSystemChanged:destPath];
 
   // cancelling should give us a failure status
   [mDownloadDisplay onEndDownload:(NS_SUCCEEDED(mDownloadStatus) && !mUserCanceled)];
