@@ -292,8 +292,10 @@ sub DistMozilla()
 		#OJI
 		InstallFromManifest(":mozilla:modules:oji:public:MANIFEST",						":mozilla:dist:oji:");
 		InstallFromManifest(":mozilla:modules:oji:src:MANIFEST",						":mozilla:dist:oji:");
+
+		#CAPS
+		InstallFromManifest(":mozilla:caps:include:MANIFEST",							":mozilla:dist:caps:");
 	}
 
 1;
-
 
