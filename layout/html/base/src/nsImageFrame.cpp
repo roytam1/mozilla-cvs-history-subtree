@@ -429,7 +429,8 @@ NS_IMETHODIMP nsImageFrame::OnStopDecode(imgIRequest *aRequest, nsIPresContext *
     // One of the two images didn't load, which one?
     if (mLowImageRequest == aRequest || !mLowImageRequest) {
       lowFailed = PR_TRUE;
-    } else if (mImageRequest == aRequest || !mImageRequest) {
+    }
+    if (mImageRequest == aRequest || !mImageRequest) {
       imageFailed = PR_TRUE;
     }
 
