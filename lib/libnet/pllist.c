@@ -22,6 +22,42 @@
 
 static void pl_ListRemoveEntry(PLList *list, PLListEntry *entry);
 
+// For debugging PLList code.
+#if 1
+#define PL_LIST_CHECK(list)
+#else
+#define PL_LIST_CHECK(list) pl_ListCheck(list)
+
+static void pl_ListCheck(PLList *list) 
+{
+  PLListEntry *lastEntry;
+  PLListEntry *entry;
+
+  if (!list) {
+    return;
+  }
+
+  if (list->first) {
+    PR_ASSERT(list->first->prev == NULL);
+  }
+
+  lastEntry = NULL;
+  entry = list->first;
+  while (entry) {
+    if (entry->next) {
+      PR_ASSERT(entry->next->prev == entry);
+    }
+    else {
+      lastEntry = entry;
+    }
+    entry = entry->next;
+  }
+
+  PR_ASSERT(list->last == lastEntry);
+}
+#endif
+
+
 PR_IMPLEMENT(PLList *)
 PL_ListNew(void)
 {
@@ -31,6 +67,7 @@ PL_ListNew(void)
 PR_IMPLEMENT(void)
 PL_ListDestroy(PLList *list)
 {
+  PL_LIST_CHECK(list);
   if (list) {
     while (PL_ListRemoveFirst(list));
     PR_Free(list);
@@ -42,14 +79,19 @@ PL_ListAdd(PLList *list, void *value)
 {
   PLListEntry *entry;
   PR_ASSERT(list);
+  PL_LIST_CHECK(list);
   
   entry = PR_NEWZAP(PLListEntry);
   entry->value = value;
   entry->next = list->first;
+  if (entry->next) {
+    entry->next->prev = entry;
+  }
   list->first = entry;
   if (list->last == NULL) {
     list->last = entry;
   }
+  PL_LIST_CHECK(list);
 }
 
 PR_IMPLEMENT(void)
@@ -57,14 +99,19 @@ PL_ListAddLast(PLList *list, void *value)
 {
   PLListEntry *entry;
   PR_ASSERT(list);
+  PL_LIST_CHECK(list);
   
   entry = PR_NEWZAP(PLListEntry);
   entry->value = value;
   entry->prev = list->last;
+  if (entry->prev) {
+    entry->prev->next = entry;
+  }
   list->last = entry;
   if (list->first == NULL) {
     list->first = entry;
   }
+  PL_LIST_CHECK(list);
 }
 
 PR_IMPLEMENT(void)
@@ -72,6 +119,7 @@ PL_ListInsertBefore(PLList *list, void *before, void *value)
 {
   PLListEntry *entry, *beforeEntry;
   PR_ASSERT(list && before);
+  PL_LIST_CHECK(list);
   beforeEntry = PL_ListFindEntry(list, before);
 
   if (beforeEntry) {
@@ -84,6 +132,7 @@ PL_ListInsertBefore(PLList *list, void *before, void *value)
       list->first = entry;
     }
   }
+  PL_LIST_CHECK(list);
 }
 
 PR_IMPLEMENT(void)
@@ -91,6 +140,7 @@ PL_ListInsertAfter(PLList *list, void *after, void *value)
 {
   PLListEntry *entry, *afterEntry;
   PR_ASSERT(list && after);
+  PL_LIST_CHECK(list);
   afterEntry = PL_ListFindEntry(list, after);
   
   if (afterEntry) {
@@ -103,10 +153,12 @@ PL_ListInsertAfter(PLList *list, void *after, void *value)
       list->last = entry;
     }
   }
+  PL_LIST_CHECK(list);
 }
 
 static void pl_ListRemoveEntry(PLList *list, PLListEntry *entry)
 {
+  PL_LIST_CHECK(list);
   if (entry->prev) {
     entry->prev->next = entry->next;
   }
@@ -120,12 +172,14 @@ static void pl_ListRemoveEntry(PLList *list, PLListEntry *entry)
     list->last = entry->prev;
   }
   PR_Free(entry);
+  PL_LIST_CHECK(list);
 }
 
 PR_IMPLEMENT(PRBool)
 PL_ListRemove(PLList *list, void *value)
 {
   PLListEntry *entry = PL_ListFindEntry(list, value);
+  PL_LIST_CHECK(list);
   if (entry) {
     pl_ListRemoveEntry(list, entry);
     return PR_TRUE;
@@ -138,6 +192,7 @@ PR_IMPLEMENT(PLListEntry *)
 PL_ListFindEntry(PLList *list, void *value)
 {
   PLListEntry *entry;
+  PL_LIST_CHECK(list);
   if (!list)
     return NULL;
 
@@ -156,6 +211,7 @@ PL_ListRemoveFirst(PLList *list)
 {
   void *res = NULL;
   PR_ASSERT(list);
+  PL_LIST_CHECK(list);
   if (list->first) {
     res = list->first->value;
     pl_ListRemoveEntry(list, list->first);
@@ -166,6 +222,7 @@ PL_ListRemoveFirst(PLList *list)
 PR_IMPLEMENT(void *)
 PL_ListFirst(PLList *list)
 {
+  PL_LIST_CHECK(list);
   if (!list)
     return NULL;
   return list->first ? list->first->value : NULL;
@@ -174,6 +231,7 @@ PL_ListFirst(PLList *list)
 PR_IMPLEMENT(PLListEntry *)
 PL_ListFirstEntry(PLList *list)
 {
+  PL_LIST_CHECK(list);
   if (!list)
     return NULL;
 
@@ -185,6 +243,7 @@ PL_ListRemoveLast(PLList *list)
 {
   void *res = NULL;
   PR_ASSERT(list);
+  PL_LIST_CHECK(list);
   if (list->last) {
     res = list->last->value;
     pl_ListRemoveEntry(list, list->last);
@@ -195,6 +254,7 @@ PL_ListRemoveLast(PLList *list)
 PR_IMPLEMENT(void *)
 PL_ListLast(PLList *list)
 {
+  PL_LIST_CHECK(list);
   if (!list)
     return NULL;
 
@@ -204,6 +264,7 @@ PL_ListLast(PLList *list)
 PR_IMPLEMENT(PLListEntry *)
 PL_ListLastEntry(PLList *list)
 {
+  PL_LIST_CHECK(list);
   if (!list)
     return NULL;
 
@@ -213,6 +274,7 @@ PL_ListLastEntry(PLList *list)
 PR_IMPLEMENT(PRBool)
 PL_ListIsEmpty(PLList *list)
 {
+  PL_LIST_CHECK(list);
   if (!list)
     return PR_TRUE;
 
@@ -224,6 +286,7 @@ PL_ListCount(PLList *list)
 {
   int res = 0;
   PLListEntry *entry;
+  PL_LIST_CHECK(list);
 
   if (!list)
     return 0;
@@ -240,6 +303,7 @@ PR_IMPLEMENT(void *)
 PL_ListAt(PLList *list, PRUint32 index)
 {
   PLListEntry *entry = PL_ListEntryAt(list, index);
+  PL_LIST_CHECK(list);
   if (entry) {
     return entry->value;
   }
@@ -252,6 +316,7 @@ PL_ListEntryAt(PLList *list, PRUint32 index)
   PRUint32 idx = 0;
   PLListEntry *entry;
   PR_ASSERT(list);
+  PL_LIST_CHECK(list);
   entry = list->first;
   while (entry) {
     if (idx == index)
@@ -290,6 +355,7 @@ PR_IMPLEMENT(void)
 PL_ListMoveFirstToLast(PLList *list)
 {
   PR_ASSERT(list);
+  PL_LIST_CHECK(list);
   if (list->first && (list->first != list->last)) {
     PLListEntry *entry = list->first;
     list->first = entry->next;
@@ -299,12 +365,19 @@ PL_ListMoveFirstToLast(PLList *list)
     list->last->next = entry;
     list->last = entry;
   }
+  PL_LIST_CHECK(list);
 }
 
+/* Fixed so that calling PL_ListEnumReset() and PL_ListEnumNext() on
+ * a NULL list is legal.
+ */
 PR_IMPLEMENT(void)
 PL_ListEnumReset(PLList *list)
 {
-  PR_ASSERT(list);
+  if (!list) {
+    return;
+  }
+  PL_LIST_CHECK(list);
   list->enumerate = list->first;
 }
 
@@ -312,11 +385,13 @@ PR_IMPLEMENT(void *)
 PL_ListEnumNext(PLList *list)
 {
   void *res = NULL;
-  PR_ASSERT(list);
+  if (!list) {
+    return NULL;
+  }
+  PL_LIST_CHECK(list);
   if (list->enumerate) {
     res = list->enumerate->value;
     list->enumerate = list->enumerate->next;
   }
   return res;
 }
-
