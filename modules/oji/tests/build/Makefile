@@ -37,6 +37,7 @@ $(DIRS)::
 
 check_env:
 	@if test ! -d $(MOZILLA_HOME)/dist/include; then echo "WARNING: MOZILLA_HOME variable is incorrect !"; exit 1; fi
+	@mkdir -p bin classes
 
 
 clean:
