@@ -77,7 +77,7 @@ endif
 export:	
 	$(INSTALL) -m 444 $(HFILES) $(DIST)/include
 	$(INSTALL) -m 555 $(LIBRARY) $(DIST)/lib
-	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/bin
+	$(INSTALL) -m 555 $(SHARED_LIBRARY) $(DIST)/lib
 	+$(LOOP_OVER_DIRS)
 
 clean:

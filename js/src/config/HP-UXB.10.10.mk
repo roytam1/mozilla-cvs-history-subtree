@@ -19,8 +19,9 @@
 # Config stuff for HPUX
 #
 
-CC = gcc -Wall -Wno-format
-CCC = g++ -Wall -Wno-format
+CC = gcc
+CCC = g++
+CFLAGS +=  -Wall -Wno-format
 
 RANLIB = echo
 

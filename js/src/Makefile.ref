@@ -26,7 +26,7 @@ include config.mk
 
 ifdef JS_THREADSAFE
 DEFINES += -DJS_THREADSAFE
-NSPR_LIBRARY = ../../dist/$(OBJDIR)/lib/libnspr21.so
+NSPR_LIBRARY = -L../../dist/$(OBJDIR)/lib -lnspr21
 INCLUDES += -I../../dist/$(OBJDIR)/include
 else
 NSPR_LIBRARY =
@@ -168,7 +168,7 @@ endif
 include rules.mk
 
 $(PROGRAM): $(PROG_OBJS) $(LIBRARY)
-	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(NSPR_LIBRARY) $(LDFLAGS)
+	$(CC) -o $@ $(CFLAGS) $(PROG_OBJS) $(LIBRARY) $(LDFLAGS) $(NSPR_LIBRARY)
 
 $(PROGRAM).pure: $(PROG_OBJS) $(LIBRARY)
 	purify $(PUREFLAGS) \

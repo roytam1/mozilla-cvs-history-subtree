@@ -19,8 +19,9 @@
 # Config stuff for SunOS5.3
 #
 
-CC = gcc -Wall -Wno-format
-CCC = g++ -Wall -Wno-format
+CC = gcc
+CCC = g++
+CFLAGS +=  -Wall -Wno-format
 
 #CC = /opt/SUNWspro/SC3.0.1/bin/cc
 RANLIB = echo

@@ -22,4 +22,14 @@ JDK_DIR=/usr/lib/jdk-1.1.5
 INCLUDES   += -I$(JDK_DIR)/include -I$(JDK_DIR)/include/md \
 	      -I$(JDK_DIR)/include/genunix
 
-OTHER_LIBS += -L../$(OBJDIR) -ljs $(JDK_DIR)/lib/i386/green_threads/libjava.so
+OTHER_LIBS += -L$(JDK_DIR)/lib/i386/green_threads -ljava
+
+ifdef JS_STATIC
+ifeq ($(CC),gcc)
+OTHER_LIBS += -Wl,-Bstatic -L../$(OBJDIR) -ljs
+else
+OTHER_LIBS += -Bstatic -L../$(OBJDIR) -ljs
+endif
+else
+OTHER_LIBS += -L../$(OBJDIR) -ljs
+endif

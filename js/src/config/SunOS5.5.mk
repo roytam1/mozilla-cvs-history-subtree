@@ -20,8 +20,9 @@
 #
 
 AS = as
-CC = gcc -Wall -Wno-format
-CCC = g++ -Wall -Wno-format
+CC = gcc
+CCC = g++
+CFLAGS +=  -Wall -Wno-format
 
 #CC = /opt/SUNWspro/SC3.0.1/bin/cc
 RANLIB = echo
@@ -49,13 +50,13 @@ endif
 
 ifeq ($(OS_CPUARCH),sun4u)
 ASFLAGS         += $(ULTRA_OPTIONS)
-ifeq ($(findstring gcc,$(CC)),gcc)
+ifeq ($(CC),gcc)
 DEFINES         += -Wa,$(ULTRA_OPTIONS)
 endif
 else
 ifeq ($(OS_CPUARCH),sun4m)
 ASFLAGS         += -xarch=v8
-ifeq ($(findstring gcc,$(CC)),gcc)
+ifeq ($(CC),gcc)
 DEFINES         += -Wa,-xarch=v8
 endif
 endif

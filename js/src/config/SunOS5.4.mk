@@ -23,8 +23,9 @@ ifdef NS_USE_NATIVE
 CC = cc
 CCC = CC
 else
-CC = gcc -Wall -Wno-format
-CCC = g++ -Wall -Wno-format
+CC = gcc
+CCC = g++
+CFLAGS += -Wall -Wno-format
 endif
 
 RANLIB = echo

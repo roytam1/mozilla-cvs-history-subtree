@@ -21,8 +21,9 @@
 
 AS = as
 ifndef NS_USE_NATIVE
-CC = gcc -Wall -Wno-format
-CCC = g++ -Wall
+CC = gcc
+CCC = g++
+CFLAGS +=  -Wall -Wno-format
 else
 CC = cc
 CCC = CC
@@ -55,7 +56,7 @@ endif
 
 ifeq ($(OS_CPUARCH),sun4u)
 DEFINES 	+= $(ULTRA_OPTIONSD)
-ifeq ($(findstring gcc,$(CC)),gcc)
+ifeq ($(CC),gcc)
 DEFINES         += -Wa,$(ULTRA_OPTIONS),$(ULTRA_OPTIONSD)
 else
 ASFLAGS         += $(ULTRA_OPTIONS) $(ULTRA_OPTIONSD)
@@ -63,7 +64,7 @@ endif
 endif
 
 ifeq ($(OS_CPUARCH),sun4m)
-ifeq ($(findstring gcc,$(CC)),gcc)
+ifeq ($(CC),gcc)
 DEFINES         += -Wa,-xarch=v8
 else
 ASFLAGS         += -xarch=v8

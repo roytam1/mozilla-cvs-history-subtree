@@ -21,7 +21,7 @@
 DEPTH = ..
 
 ifdef JS_THREADSAFE
-OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/libnspr21.so
+OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
 endif
 
 INCLUDES   += -I. -I..
