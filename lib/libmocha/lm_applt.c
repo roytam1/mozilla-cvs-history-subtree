@@ -243,11 +243,7 @@ lm_ReallyReflectApplet(MWContext *context, LO_JavaAppStruct *lo_applet,
 
 #ifdef OJI
     {
-      PRBool  jvmMochaPrefsEnabled = PR_FALSE;
-      if (NPL_IsJVMAndMochaPrefsEnabled() == PR_TRUE) {
-          jvmMochaPrefsEnabled = PR_TRUE;
-      }
-      if (jvmMochaPrefsEnabled == PR_FALSE) {
+      if (! NPL_IsJVMAndMochaPrefsEnabled()) {
           return lo_embed->mocha_object = lm_DummyObject;
       }
 
@@ -327,6 +323,22 @@ lm_ReallyReflectApplet(MWContext *context, LO_JavaAppStruct *lo_applet,
 /* XXX what happens if this is called before java starts up?
  * or if java is disabled? */
 
+#if defined(OJI)
+
+static char* getValue(struct lo_NVList* nvlist, const char* name)
+{
+	int i;
+	char** names = nvlist->names;
+	char** values = nvlist->values;
+	
+	for (i = nvlist->n - 1; i >= 0; --i)
+		if (XP_STRCASECMP(names[i], name) == 0)
+			return values[i];
+	
+	return NULL;
+}
+
+#endif
 
 JSObject *
 LM_ReflectApplet(MWContext *context, LO_JavaAppStruct *applet_data,
@@ -336,6 +348,9 @@ LM_ReflectApplet(MWContext *context, LO_JavaAppStruct *applet_data,
     MochaDecoder *decoder;
     JSContext *cx;
     char *name;
+#ifdef OJI
+	LO_EmbedStruct *embed = (LO_EmbedStruct *)applet_data;
+#endif
 
     obj = applet_data->objTag.mocha_object;
     if (obj)
@@ -346,12 +361,19 @@ LM_ReflectApplet(MWContext *context, LO_JavaAppStruct *applet_data,
         return NULL;
     cx = decoder->js_context;
 
+#ifdef OJI
+	/* this is really skanky, but we don't really have a LO_JavaAppStruct, but instead a LO_EmbedStruct. */
+	name = getValue(&embed->attributes, "NAME");
+	if (name != NULL)
+		name = JS_strdup(cx, name);
+#else
     /* get the name */
     if (applet_data->attr_name) {
         name = JS_strdup(cx, (char *) applet_data->attr_name);
     } else {
         name = 0;
     }
+#endif
 
     /* Get the document object that will hold this applet */
     document = lm_GetDocumentFromLayerId(decoder, layer_id);
