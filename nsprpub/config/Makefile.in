@@ -31,6 +31,8 @@ INTERNAL_TOOLS	= 1
 # because it is included by every makefile.
 DIST_GARBAGE	= nsprincl.mk nsprincl.sh nspr-config
 
+RELEASE_BINS	= nspr-config
+
 include $(topsrcdir)/config/config.mk
 
 CSRCS	= now.c
