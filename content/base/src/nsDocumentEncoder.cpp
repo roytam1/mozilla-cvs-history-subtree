@@ -113,6 +113,9 @@ protected:
 
   nsresult FlushText(nsAWritableString& aString, PRBool aForce);
 
+  static PRBool IsTag(nsIDOMNode* aNode, nsIAtom* aAtom);
+  static nsresult AdjustCommonParent(nsCOMPtr<nsIDOMNode> *aCommPar);
+  
   virtual PRBool IncludeInContext(nsIDOMNode *aNode);
 
   nsCOMPtr<nsIDocument>          mDocument;
@@ -317,6 +320,55 @@ nsDocumentEncoder::SerializeToStringRecursive(nsIDOMNode* aNode,
   NS_ENSURE_SUCCESS(rv, rv);
 
   return FlushText(aStr, PR_FALSE);
+}
+
+PRBool 
+nsDocumentEncoder::IsTag(nsIDOMNode* aNode, nsIAtom* aAtom)
+{
+  if (aNode)
+  {
+    nsCOMPtr<nsIAtom> atom;
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+    if (content)
+      content->GetTag(*getter_AddRefs(atom));
+    if (atom)
+    {
+      if (atom.get() == aAtom)
+      {
+        return PR_TRUE;
+      }
+    }
+  }
+  return PR_FALSE;
+}
+
+nsresult
+nsDocumentEncoder::AdjustCommonParent(nsCOMPtr<nsIDOMNode> *aCommPar)
+{
+  // if common parent is a table section other than
+  // td or th, look for the parent of the enclosing 
+  // table and use that instead.
+  if (IsTag(*aCommPar, nsHTMLAtoms::tr)    || 
+      IsTag(*aCommPar, nsHTMLAtoms::tbody) ||
+      IsTag(*aCommPar, nsHTMLAtoms::tfoot) ||
+      IsTag(*aCommPar, nsHTMLAtoms::thead) ||
+      IsTag(*aCommPar, nsHTMLAtoms::table))
+  {
+    nsCOMPtr<nsIDOMNode> parent, tmp=*aCommPar;
+    while (tmp)
+    {
+      if (IsTag(parent, nsHTMLAtoms::table))
+      {
+        // return parent of table
+        parent->GetParentNode(getter_AddRefs(tmp));
+        *aCommPar = tmp;
+        break;
+      }
+      tmp->GetParentNode(getter_AddRefs(parent));
+      tmp = parent;
+    }
+  }
+  return NS_OK;
 }
 
 static nsresult
@@ -648,6 +700,8 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
 
   if (!commonParent)
     return NS_OK;
+    
+  AdjustCommonParent(&commonParent);
 
   aRange->GetStartContainer(getter_AddRefs(startParent));
   NS_ENSURE_TRUE(startParent, NS_ERROR_FAILURE);
@@ -832,7 +886,6 @@ protected:
   nsresult GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 aOffset, 
                                   nsCOMPtr<nsIDOMNode> *outNode, PRInt32 *outOffset);
   nsCOMPtr<nsIDOMNode> GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset);
-  PRBool IsBody(nsIDOMNode* aNode);
   PRBool IsMozBR(nsIDOMNode* aNode);
   nsresult GetNodeLocation(nsIDOMNode *inChild, nsCOMPtr<nsIDOMNode> *outParent, PRInt32 *outOffset);
   PRBool IsFirstNode(nsIDOMNode *aNode);
@@ -1073,12 +1126,12 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
 
     // finding the real start for this point.  look up the tree for as long as we are the 
     // first node in the container, and as long as we haven't hit the body node.
-    if (!IsBody(node))
+    if (!IsTag(node, nsHTMLAtoms::body))
     {
       rv = GetNodeLocation(node, &parent, &offset);
       NS_ENSURE_SUCCESS(rv, rv);
       if (offset == -1) return NS_OK; // we hit generated content; STOP
-      while ((IsFirstNode(node)) && (!IsBody(parent)))
+      while ((IsFirstNode(node)) && (!IsTag(parent, nsHTMLAtoms::body)))
       {
         if (bResetPromotion)
         {
@@ -1158,12 +1211,12 @@ nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 
     
     // finding the real end for this point.  look up the tree for as long as we are the 
     // last node in the container, and as long as we haven't hit the body node.
-    if (!IsBody(node))
+    if (!IsTag(node, nsHTMLAtoms::body))
     {
       rv = GetNodeLocation(node, &parent, &offset);
       NS_ENSURE_SUCCESS(rv, rv);
       if (offset == -1) return NS_OK; // we hit generated content; STOP
-      while ((IsLastNode(node)) && (!IsBody(parent)))
+      while ((IsLastNode(node)) && (!IsTag(parent, nsHTMLAtoms::body)))
       {
         if (bResetPromotion)
         {
@@ -1234,57 +1287,21 @@ nsHTMLCopyEncoder::GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset)
 }
 
 PRBool 
-nsHTMLCopyEncoder::IsBody(nsIDOMNode* aNode)
-{
-  if (aNode)
-  {
-    nsAutoString tag;
-    nsCOMPtr<nsIAtom> atom;
-    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
-    if (content)
-      content->GetTag(*getter_AddRefs(atom));
-    if (atom)
-    {
-      atom->ToString(tag);
-      tag.ToLowerCase();
-      if (tag.EqualsWithConversion("body"))
-      {
-        return PR_TRUE;
-      }
-    }
-  }
-  return PR_FALSE;
-}
-
-PRBool 
 nsHTMLCopyEncoder::IsMozBR(nsIDOMNode* aNode)
 {
-  if (aNode)
+  if (IsTag(aNode, nsHTMLAtoms::br))
   {
-    nsAutoString tag;
-    nsCOMPtr<nsIAtom> atom;
-    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
-    if (content)
-      content->GetTag(*getter_AddRefs(atom));
-    if (atom)
+    nsCOMPtr<nsIDOMElement> elem = do_QueryInterface(aNode);
+    if (elem)
     {
-      atom->ToString(tag);
-      tag.ToLowerCase();
-      if (tag.EqualsWithConversion("br"))
-      {
-        nsCOMPtr<nsIDOMElement> elem = do_QueryInterface(aNode);
-        if (elem)
-        {
-          nsAutoString typeAttrName; typeAttrName.AssignWithConversion("type");
-          nsAutoString typeAttrVal;
-          nsresult rv = elem->GetAttribute(typeAttrName, typeAttrVal);
-          typeAttrVal.ToLowerCase();
-          if (NS_SUCCEEDED(rv) && (typeAttrVal.EqualsWithConversion("_moz")))
-            return PR_TRUE;
-        }
-        return PR_FALSE;
-      }
+      nsAutoString typeAttrName; typeAttrName.AssignWithConversion("type");
+      nsAutoString typeAttrVal;
+      nsresult rv = elem->GetAttribute(typeAttrName, typeAttrVal);
+      typeAttrVal.ToLowerCase();
+      if (NS_SUCCEEDED(rv) && (typeAttrVal.EqualsWithConversion("_moz")))
+        return PR_TRUE;
     }
+    return PR_FALSE;
   }
   return PR_FALSE;
 }
