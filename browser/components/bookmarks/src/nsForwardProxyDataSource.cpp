@@ -666,7 +666,9 @@ nsForwardProxyDataSource::OnMove(nsIRDFDataSource* aDataSource,
 {
     NS_PRECONDITION(mDS != nsnull, "Null datasource");
 
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    PRInt32 i;
+
+    for (i = mObservers.Count() - 1; i >= 0; --i) {
         mObservers[i]->OnChange(this, aOldSource, aNewSource, aProperty, aTarget);
     }
 
@@ -681,7 +683,7 @@ nsForwardProxyDataSource::OnMove(nsIRDFDataSource* aDataSource,
         return NS_OK;
     }
 
-    for (PRInt32 i = mObservers.Count() - 1; i >= 0; --i) {
+    for (i = mObservers.Count() - 1; i >= 0; --i) {
         mObservers[i]->OnChange(this,
                                 realOldResource ? realOldResource.get() : aOldSource,
                                 realNewResource ? realNewResource.get() : aNewSource,
