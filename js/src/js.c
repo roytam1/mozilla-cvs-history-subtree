@@ -66,6 +66,28 @@
 
 #ifdef XP_MAC
 #define isatty(f) 1
+
+#include <SIOUX.h>
+#include <Types.h>
+
+static char* mac_argv[] = { "js", NULL };
+
+static void initConsole(StringPtr consoleName, const char* startupMessage, int *argc, char** *argv)
+{
+	SIOUXSettings.autocloseonquit = true;
+	SIOUXSettings.asktosaveonclose = false;
+	// SIOUXSettings.initializeTB = false;
+	// SIOUXSettings.showstatusline = true;
+	puts(startupMessage);
+	SIOUXSetTitle(consoleName);
+
+	// set up a buffer for stderr (otherwise it's a pig).
+	setvbuf(stderr, malloc(BUFSIZ), _IOLBF, BUFSIZ);
+
+	*argc = 1;
+	*argv = mac_argv;
+}
+
 #endif
 
 #ifndef JSFILE
@@ -109,7 +131,7 @@ Process(JSContext *cx, JSObject *obj, char *filename)
             while((ch = fgetc(ts->file)) != EOF) {
                 if(ch == '\n' || ch == '\r')
                     break;
-            } 
+            }
         }
         ungetc(ch, ts->file);
     }
@@ -151,6 +173,82 @@ out:
     PR_FreeArenaPool(&cx->tempPool);
 }
 
+static int
+usage(void)
+{
+    fprintf(stderr, "%s\n", JS_GetImplementationVersion());
+    fprintf(stderr, "usage: js [-v version] [-f scriptfile] [scriptfile] [scriptarg...]\n");
+    return 2;
+}
+
+static int
+ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
+{
+    int i;
+    char *filename = NULL;
+    jsint length;
+    jsval *vector;
+    jsval *p;
+    JSObject *argsObj;
+
+    for (i=0; i < argc; i++) {
+        if (argv[i][0] == '-') {
+            switch (argv[i][1]) {
+            case 'v':
+                if (i+1 == argc) {
+                    return usage();
+                }
+                JS_SetVersion(cx, atoi(argv[i+1]));
+                i++;
+                break;
+
+            case 'f':
+                if (i+1 == argc) {
+                    return usage();
+                }
+                filename = argv[i+1];
+                /* "-f -" means read from stdin */
+                if (filename[0] == '-' && filename[1] == '\0')
+                    filename = NULL;
+                Process(cx, obj, filename);
+                i++;
+                break;
+            default:
+                return usage();
+            }
+        } else {
+            filename = argv[i++];
+            break;
+        }
+    }
+
+    length = argc - i;
+    vector = JS_malloc(cx, length * sizeof(jsval));
+    p = vector;
+
+    if (vector == NULL)
+        return 1;
+
+    while (i < argc) {
+        JSString *str = JS_NewStringCopyZ(cx, argv[i]);
+        if (str == NULL)
+            return 1;
+        *p++ = STRING_TO_JSVAL(str);
+        i++;
+    }
+    argsObj = JS_NewArrayObject(cx, length, vector);
+    if (argsObj == NULL)
+        return 1;
+
+    if (!JS_DefineProperty(cx, obj, "arguments",
+                           OBJECT_TO_JSVAL(argsObj), NULL, NULL, 0))
+        return 1;
+
+    Process(cx, obj, filename);
+    return 0;
+}
+
+
 static JSBool
 Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
@@ -161,9 +259,14 @@ Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
+static void
+my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
+
 static JSBool
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
+    JSContext *cx2;
+    JSVersion version;
     uintN i;
     JSString *str;
     const char *filename;
@@ -171,27 +274,39 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSBool ok;
     jsval result;
 
+    /*
+     * Create new context to execute in so that gc will still find
+     * roots for the script that called load().
+     */
+    cx2 = JS_NewContext(cx->runtime, 8192);
+    if (!cx2)
+	return JS_FALSE;
+    JS_SetErrorReporter(cx2, my_ErrorReporter);
+    JS_SetGlobalObject(cx2, JS_GetGlobalObject(cx));
+    version = JS_GetVersion(cx);
+    if (version != JSVERSION_DEFAULT)
+	JS_SetVersion(cx2, version);
+
+    ok = JS_TRUE;
     for (i = 0; i < argc; i++) {
 	str = JS_ValueToString(cx, argv[i]);
-	if (!str)
-	    return JS_FALSE;
+        if (!str) {
+            ok = JS_FALSE;
+            break;
+        }
 	argv[i] = STRING_TO_JSVAL(str);
 	filename = JS_GetStringBytes(str);
 	errno = 0;
 	script = JS_CompileFile(cx, obj, filename);
-	if (!script) {
-	    fprintf(stderr, "js: cannot load %s", filename);
-	    if (errno)
-		fprintf(stderr, ": %s", strerror(errno));
-	    putc('\n', stderr);
+	if (!script)
 	    continue;
-	}
-	ok = JS_ExecuteScript(cx, obj, script, &result);
+	ok = JS_ExecuteScript(cx2, obj, script, &result);
 	JS_DestroyScript(cx, script);
 	if (!ok)
-	    return JS_FALSE;
+	    break;
     }
-    return JS_TRUE;
+    JS_DestroyContext(cx2);
+    return ok;
 }
 
 static JSBool
@@ -391,7 +506,7 @@ PCToLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 #ifdef DEBUG
 
 static void
-SingleNote(JSContext *cx, JSFunction *fun )
+SrcNotes(JSContext *cx, JSFunction *fun )
 {
     uintN offset, delta;
     jssrcnote *notes, *sn;
@@ -450,23 +565,23 @@ Notes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	if (!fun)
 	    return JS_FALSE;
 
-	SingleNote(cx, fun);
+	SrcNotes(cx, fun);
     }
     return JS_TRUE;
 }
 
 static JSBool
-ExceptionTable(JSContext *cx, JSFunction *fun)
+TryNotes(JSContext *cx, JSFunction *fun)
 {
-    JSTryNote *iter = fun->script->trynotes;
+    JSTryNote *tn = fun->script->trynotes;
 
-    if (!iter)
+    if (!tn)
 	return JS_TRUE;
     printf("\nException table:\nstart\tend\tcatch\tfinally\n");
-    while (iter->start && iter->end) {
+    while (tn->catchStart || tn->finallyStart) {
 	printf("  %d\t%d\t%d\t%d\n",
-	       iter->start, iter->end, iter->catch, iter->finally);
-	iter++;
+	       tn->start, tn->length, tn->catchStart, tn->finallyStart);
+	tn++;
     }
     return JS_TRUE;
 }
@@ -492,8 +607,8 @@ Disassemble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	    return JS_FALSE;
 
 	js_Disassemble(cx, fun->script, lines, stdout);
-	SingleNote(cx, fun);
-	ExceptionTable(cx, fun);
+	SrcNotes(cx, fun);
+	TryNotes(cx, fun);
     }
     return JS_TRUE;
 }
@@ -857,6 +972,7 @@ Help(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JSString *str;
     const char *bytes;
 
+    printf("%s\n", JS_GetImplementationVersion());
     if (argc == 0) {
 	ShowHelpHeader();
 	for (i = 0; shell_functions[i].name; i++)
@@ -1046,7 +1162,7 @@ my_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
     fputs("^\n", stderr);
 }
 
-#if defined DEBUG && defined XP_UNIX
+#if defined(SHELL_HACK) && defined(DEBUG) && defined(XP_UNIX)
 static JSBool
 Exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
@@ -1099,7 +1215,7 @@ Exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 static JSBool
 global_resolve(JSContext *cx, JSObject *obj, jsval id)
 {
-#if defined DEBUG && defined XP_UNIX
+#if defined(SHELL_HACK) && defined(DEBUG) && defined(XP_UNIX)
     /*
      * Do this expensive hack only for unoptimized Unix builds, which are not
      * used for benchmarking.
@@ -1155,11 +1271,11 @@ static JSClass global_class = {
 int
 main(int argc, char **argv)
 {
-    int c, i;
     JSVersion version;
     JSRuntime *rt;
     JSContext *cx;
     JSObject *glob, *it;
+    int result;
 
 #ifdef XP_OS2
    /* these streams are normally line buffered on OS/2 and need a \n, *
@@ -1168,25 +1284,13 @@ main(int argc, char **argv)
     setbuf(stderr,0);
 #endif
 
+#ifdef XP_MAC
+	initConsole("\pJavaScript Shell", "Welcome to js shell.", &argc, &argv);
+#endif
+
     version = JSVERSION_DEFAULT;
-#ifdef XP_UNIX
-    while ((c = getopt(argc, argv, "v:")) != -1) {
-	switch (c) {
-	  case 'v':
-	    version = atoi(optarg);
-	    break;
-	  default:
-	    fprintf(stderr, "usage: js [-v version]\n");
-	    return 2;
-	}
-    }
-    argc -= optind;
-    argv += optind;
-#else
-    c = -1;
     argc--;
     argv++;
-#endif
 
     rt = JS_NewRuntime(8L * 1024L * 1024L);
     if (!rt)
@@ -1242,12 +1346,7 @@ main(int argc, char **argv)
 #endif /* JSDEBUGGER_JAVA_UI */
 #endif /* JSDEBUGGER */
 
-    if (argc > 0) {
-	for (i = 0; i < argc; i++)
-	    Process(cx, glob, argv[i]);
-    } else {
-	Process(cx, glob, NULL);
-    }
+    result = ProcessArgs(cx, glob, argv, argc);
 
 #ifdef JSDEBUGGER
     if (_jsdc)
@@ -1257,5 +1356,5 @@ main(int argc, char **argv)
     JS_DestroyContext(cx);
     JS_DestroyRuntime(rt);
     JS_ShutDown();
-    return 0;
+    return result;
 }
