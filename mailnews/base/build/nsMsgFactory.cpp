@@ -53,6 +53,7 @@
 #include "nsMsgNotificationManager.h"
 
 #include "nsCopyMessageStreamListener.h"
+#include "nsMsgCopyService.h"
 
 #ifdef DEBUG_bienvenu
 #include "nsMsgFilterService.h"
@@ -94,7 +95,9 @@ static NS_DEFINE_CID(kMsgBiffManagerCID, NS_MSGBIFFMANAGER_CID);
 static NS_DEFINE_CID(kMsgNotificationManagerCID, NS_MSGNOTIFICATIONMANAGER_CID);
 
 // Copy
-static NS_DEFINE_CID(kCopyMessageStreamListenerCID, NS_COPYMESSAGESTREAMLISTENER_CID);
+static NS_DEFINE_CID(kCopyMessageStreamListenerCID,
+                     NS_COPYMESSAGESTREAMLISTENER_CID);
+static NS_DEFINE_CID(kMsgCopyServiceCID, NS_MSGCOPYSERVICE_CID);
 
 ////////////////////////////////////////////////////////////
 //
@@ -303,6 +306,9 @@ nsMsgFactory::CreateInstance(nsISupports * /* aOuter */,
   else if (mClassID.Equals(kCopyMessageStreamListenerCID)){
     rv = NS_NewCopyMessageStreamListener(aIID, aResult);
   }
+  else if (mClassID.Equals(kMsgCopyServiceCID)) {
+      rv = NS_NewMsgCopyService(aIID, aResult);
+  }
 
   return rv;
 }  
@@ -478,6 +484,12 @@ NSRegisterSelf(nsISupports* aServMgr, const char* path)
                                   path, PR_TRUE, PR_TRUE);
   if (NS_FAILED(rv)) finalResult = rv;
 
+	rv = compMgr->RegisterComponent(kMsgCopyServiceCID,
+                                  "Mail/News Message Copy Service",
+                                  "component://netscape/messenger/messagecopyservice",
+                                  path, PR_TRUE, PR_TRUE);
+  if (NS_FAILED(rv)) finalResult = rv;
+
 #ifdef NS_DEBUG
   printf("mailnews registering from %s\n",path);
 #endif
@@ -533,6 +545,9 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
   if (NS_FAILED(rv)) finalResult = rv;
 
   rv = compMgr->UnregisterComponent(kCopyMessageStreamListenerCID, path);
+  if (NS_FAILED(rv)) finalResult = rv;
+
+  rv = compMgr->UnregisterComponent(kMsgCopyServiceCID, path);
   if (NS_FAILED(rv)) finalResult = rv;
   return finalResult;
 }
