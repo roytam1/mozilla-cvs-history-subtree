@@ -2496,6 +2496,7 @@ js_XDRObject(JSXDRState *xdr, JSObject **objp)
     } else {
 	classDef = 0;
 	className = NULL;
+        clasp = NULL;           /* quell GCC overwarning */
     }
 
     /* XDR a flag word followed (if true) by the class name. */
