@@ -20,7 +20,7 @@ OBJS		= $(REALOBJS)
 
 HDIR		= $(LDAPSRC)/include
 
-LIBRARY_NAME	= lber40
+LIBRARY_NAME	= lber41
 
 #
 # DEFS are included in CFLAGS

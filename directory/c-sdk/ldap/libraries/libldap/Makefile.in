@@ -69,7 +69,7 @@ HDIR2		= ../../include
 
 CFLAGS		= $(INCLUDES) $(DEFINES)
 
-LIBRARY_NAME	= ldap40
+LIBRARY_NAME	= ldap41
 
 #
 # DEFS are included in CFLAGS
