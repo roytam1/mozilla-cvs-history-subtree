@@ -40,6 +40,10 @@
 #include "prlog.h"
 
 
+//XXX used for nsIStreamObserver implementation.  This sould be replaced by DocLoader
+//    notifications...
+#include "nsIURL.h"
+
 //XXX for nsIPostData; this is wrong; we shouldn't see the nsIDocument type
 #include "nsIDocument.h"
 
@@ -72,7 +76,8 @@ static PRLogModuleInfo* gLogModule = PR_NewLogModule("webwidget");
 class nsWebShell : public nsIWebShell,
                    public nsIWebShellContainer,
                    public nsILinkHandler,
-                   public nsIScriptContextOwner
+                   public nsIScriptContextOwner,
+                   public nsIStreamObserver
 {
 public:
   nsWebShell();
@@ -164,6 +169,12 @@ public:
   NS_IMETHOD GetScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
   NS_IMETHOD ReleaseScriptContext(nsIScriptContext *aContext);
 
+  // nsIStreamObserver
+  NS_IMETHOD OnStartBinding(nsIURL* aURL, const char *aContentType);
+  NS_IMETHOD OnProgress(nsIURL* aURL, PRInt32 aProgress, PRInt32 aProgressMax);
+  NS_IMETHOD OnStatus(nsIURL* aURL, const nsString &aMsg);
+  NS_IMETHOD OnStopBinding(nsIURL* aURL, PRInt32 aStatus, const nsString &aMsg);
+
   // nsWebShell
   void HandleLinkClickEvent(const PRUnichar* aURLSpec,
                             const PRUnichar* aTargetSpec,
@@ -235,6 +246,7 @@ static NS_DEFINE_IID(kCPluginHostCID, NS_PLUGIN_HOST_CID);
 
 // XXX not sure
 static NS_DEFINE_IID(kILinkHandlerIID, NS_ILINKHANDLER_IID);
+static NS_DEFINE_IID(kIWebShellContainerIID, NS_IWEB_SHELL_CONTAINER_IID);
 
 nsIPluginHost *nsWebShell::mPluginHost = nsnull;
 nsIPluginManager *nsWebShell::mPluginManager = nsnull;
@@ -319,7 +331,6 @@ nsWebShell::ReleaseChildren()
 NS_IMPL_ADDREF(nsWebShell)
 NS_IMPL_RELEASE(nsWebShell)
 
-//XXX missing nsIWebShellContainer!!!
 nsresult
 nsWebShell::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
@@ -338,6 +349,11 @@ nsWebShell::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   if (aIID.Equals(kIScriptContextOwnerIID)) {
     *aInstancePtr = (void*)(nsIScriptContextOwner*)this;
+    AddRef();
+    return NS_OK;
+  }
+  if (aIID.Equals(kIWebShellContainerIID)) {
+    *aInstancePtr = (void*)(nsIWebShellContainer*)this;
     AddRef();
     return NS_OK;
   }
@@ -888,7 +904,7 @@ nsWebShell::LoadURL(const PRUnichar* aURLSpec,
                            this,           // Container
                            aPostData,      // Post Data
                            nsnull,         // Extra Info...
-                           mObserver);     // Observer
+                           this);          // Observer
   return rv;
 }
 
@@ -976,7 +992,7 @@ nsWebShell::GoTo(PRInt32 aHistoryIndex)
                              this,           // Container
                              nsnull,         // Post Data
                              nsnull,         // Extra Info...
-                             mObserver);     // Observer
+                             this);          // Observer
   }
   return rv;
 }
@@ -1097,10 +1113,13 @@ nsWebShell::EndLoadURL(nsIWebShell* aShell, const PRUnichar* aURL, PRInt32 aStat
 NS_IMETHODIMP
 nsWebShell::OverLink(nsIWebShell* aShell, const PRUnichar* aURLSpec, const PRUnichar* aTargetSpec)
 {
+  nsresult rv = NS_OK;
+
   if (nsnull != mContainer) {
-    return mContainer->OverLink(aShell, aURLSpec, aTargetSpec);
-  }
-  return NS_OK;
+    rv = mContainer->OverLink(aShell, aURLSpec, aTargetSpec);
+  } 
+
+  return rv;
 }
 
 
@@ -1237,6 +1256,7 @@ nsWebShell::HandleLinkClickEvent(const PRUnichar* aURLSpec,
   nsIWebShell* shell = GetTarget(aTargetSpec);
   if (nsnull != shell) {
     shell->LoadURL(aURLSpec, aPostData);
+    NS_RELEASE(shell);
   }
 }
 
@@ -1254,6 +1274,11 @@ fputs("Was '", stdout); fputs(mOverURL, stdout); fputs("' '", stdout); fputs(mOv
     fputs("'\n", stdout);
     mOverURL = aURLSpec;
     mOverTarget = aTargetSpec;
+
+    // XXX: Should the IWebShell being passed out be the target WebShell?
+    if (nsnull != mContainer) {
+      mContainer->OverLink(this, aURLSpec, aTargetSpec);
+    } 
   }
   return NS_OK;
 }
@@ -1331,6 +1356,67 @@ nsWebShell::ReleaseScriptContext(nsIScriptContext *aContext)
   // XXX Is this right? Why are we passing in a context?
   NS_IF_RELEASE(aContext);
   return NS_OK;
+}
+
+//----------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsWebShell::OnStartBinding(nsIURL* aURL, const char *aContentType)
+{
+  nsresult rv = NS_OK;
+
+  if (nsnull != mObserver) {
+    rv = mObserver->OnStartBinding(aURL, aContentType);
+  }
+  return rv;
+}
+
+
+NS_IMETHODIMP
+nsWebShell::OnProgress(nsIURL* aURL, PRInt32 aProgress, PRInt32 aProgressMax)
+{
+  nsresult rv = NS_OK;
+
+  if (nsnull != mObserver) {
+    rv = mObserver->OnProgress(aURL, aProgress, aProgressMax);
+  }
+
+  if (nsnull != mContainer) {
+    nsAutoString urlString(aURL->GetSpec());
+
+    rv = mContainer->ProgressLoadURL(this, urlString, aProgress, aProgressMax);
+  }
+  return rv;
+}
+
+
+NS_IMETHODIMP
+nsWebShell::OnStatus(nsIURL* aURL, const nsString &aMsg)
+{
+  nsresult rv = NS_OK;
+
+  if (nsnull != mObserver) {
+    rv = mObserver->OnStatus(aURL, aMsg);
+  }
+  return rv;
+}
+
+
+NS_IMETHODIMP
+nsWebShell::OnStopBinding(nsIURL* aURL, PRInt32 aStatus, const nsString &aMsg)
+{
+  nsresult rv = NS_OK;
+
+  if (nsnull != mObserver) {
+    rv = mObserver->OnStopBinding(aURL, aStatus, aMsg);
+  }
+
+  if (nsnull != mContainer) {
+    nsAutoString urlString(aURL->GetSpec());
+
+    rv = mContainer->EndLoadURL(this, urlString, aStatus);
+  }
+  return rv;
 }
 
 //----------------------------------------------------------------------
