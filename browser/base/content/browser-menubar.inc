@@ -113,6 +113,15 @@
                 <menuseparator/>
                 <menuitem label="&findOnCmd.label;" accesskey="&findOnCmd.accesskey;" key="key_find" command="cmd_find"/>
                 <menuitem label="&findAgainCmd.label;" accesskey="&findAgainCmd.accesskey;" key="key_findAgain" command="cmd_findAgain"/>
+#ifdef XP_UNIX
+#ifndef XP_MACOSX
+                <menuseparator/>
+                <menuitem id="menu_preferences"
+                          label="&preferencesCmdUnix.label;"
+                          accesskey="&preferencesCmdUnix.accesskey;"
+                          oncommand="openPreferences();"/>
+#endif
+#endif
               </menupopup>
             </menu>
   
@@ -316,10 +325,16 @@
 #ifndef XP_MACOSX
               <menuseparator id="prefSep"/>
 #endif
+#ifndef XP_UNIX
               <menuitem id="menu_preferences"
                         label="&preferencesCmd.label;"
                         accesskey="&preferencesCmd.accesskey;"
                         oncommand="openPreferences();"/>
+#else
+#ifdef XP_MACOSX
+              <menuitem id="menu_preferences" oncommand="openPreferences();"/>
+#endif
+#endif
             </menupopup>
           </menu>
     
