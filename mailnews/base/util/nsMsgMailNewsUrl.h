@@ -119,7 +119,6 @@ public:
 
 protected:
 	virtual ~nsMsgMailNewsUrl();
-	virtual void ReconstructSpec(void) = 0;
 
 	nsCOMPtr<nsIURL> m_baseURL;
 	
