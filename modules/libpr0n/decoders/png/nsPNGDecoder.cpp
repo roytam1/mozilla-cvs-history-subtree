@@ -329,16 +329,25 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
     return NS_ERROR_FAILURE;
 #endif
 
+  gfx_format format;
+
   // then initalize the frame (which was appended above in nsPNGDecoder::Init())
   if (channels == 3) {
-    decoder->mFrame->Init(0, 0, width, height, nsIGFXFormat::RGB);
+    format = nsIGFXFormat::RGB;
   } else if (channels > 3) {
     if (alpha_bits == 8) {
-      decoder->mFrame->Init(0, 0, width, height, nsIGFXFormat::RGBA);
+      format = nsIGFXFormat::RGBA;
     } else if (alpha_bits == 1) {
-      decoder->mFrame->Init(0, 0, width, height, nsIGFXFormat::RGB_A1);
+      format = nsIGFXFormat::RGB_A1;
     }
   }
+
+#ifdef XP_PC
+  // XXX this works...
+  format += 1; // RGB to BGR
+#endif
+
+  decoder->mFrame->Init(0, 0, width, height, format);
 
   decoder->mImage->AppendFrame(decoder->mFrame);
 
@@ -386,11 +395,11 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, png_get_progressive_ptr(png_ptr));
 
   PRUint32 bpr;
-  decoder->mFrame->GetBytesPerRow(&bpr);
+  decoder->mFrame->GetImageBytesPerRow(&bpr);
 
   PRUint32 length;
   PRUint8 *bits;
-  decoder->mFrame->GetBits(&bits, &length);
+  decoder->mFrame->GetImageData(&bits, &length);
 
   png_bytep line;
   if (bits) {
@@ -401,7 +410,7 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
     line = new_row;
 
   if (new_row) {
-    decoder->mFrame->SetBits((PRUint8*)line, bpr, row_num*bpr);
+    decoder->mFrame->SetImageData((PRUint8*)line, bpr, row_num*bpr);
     gfx_dimension width;
     decoder->mFrame->GetWidth(&width);
     nsRect2 r(0, row_num, width, 1);

@@ -228,7 +228,7 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
 
   PRUint32 bpr;
   gfx_dimension width;
-  mFrame->GetBytesPerRow(&bpr);
+  mFrame->GetImageBytesPerRow(&bpr);
   mFrame->GetWidth(&width);
 
   // XXX ceil?
@@ -243,7 +243,7 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
 
     do {
       PRUint8 *line = (PRUint8*)data + i*real_bpr;
-      mFrame->SetBits(line, real_bpr, (rownum++)*bpr);
+      mFrame->SetImageData(line, real_bpr, (rownum++)*bpr);
 
       nsRect2 r(0, rownum, width, 1);
       mObserver->OnDataAvailable(nsnull, nsnull, mFrame, &r);
