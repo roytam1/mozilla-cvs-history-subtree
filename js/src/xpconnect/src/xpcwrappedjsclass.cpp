@@ -458,6 +458,21 @@ nsXPCWrappedJSClass::DelegatedQueryInterface(nsXPCWrappedJS* self,
         return NS_OK;
     }
 
+#ifdef XPC_IDISPATCH_SUPPORT
+    else if (nsXPConnect::GetXPConnect()->IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
+    {
+        nsXPCWrappedJS* root = self->GetRootWrapper();
+
+        if(!root->IsValid())
+        {
+            *aInstancePtr = nsnull;
+            return NS_NOINTERFACE;
+        }
+        NS_ADDREF(root);
+        *aInstancePtr = (void*) NS_STATIC_CAST(IDispatch*, root);
+        return NS_OK;
+    }
+#endif
     if(aIID.Equals(NS_GET_IID(nsIPropertyBag)))
     {
         // We only want to expose one implementation from our aggregate.

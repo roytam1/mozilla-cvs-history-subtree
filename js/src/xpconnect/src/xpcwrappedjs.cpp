@@ -82,14 +82,6 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
         *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
         return NS_OK;
     }
-#ifdef XPC_IDISPATCH_SUPPORT
-    else if (nsXPConnect::GetXPConnect()->IsIDispatchSupported() && aIID.Equals(NSID_IDISPATCH))
-    {
-        NS_ADDREF(this);
-        *aInstancePtr = (void*) NS_STATIC_CAST(IDispatch*, this);
-        return NS_OK;
-    }
-#endif
     nsISupports* outer = GetAggregatedNativeObject();
     if(outer)
         return outer->QueryInterface(aIID, aInstancePtr);

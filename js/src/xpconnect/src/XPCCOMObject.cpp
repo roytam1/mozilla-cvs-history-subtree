@@ -484,19 +484,7 @@ void XPCWrappedNativeTearOff::SetIDispatchJSObject(JSObject* jsobj)
  */
 STDMETHODIMP nsXPCWrappedJS::QueryInterface(const struct _GUID & IID,void ** pPtr)
 {
-    if(IID == IID_IDispatch)
-        *pPtr = NS_STATIC_CAST(IDispatch*, this);
-    else if(IID == IID_IUnknown)
-        *pPtr = NS_STATIC_CAST(IUnknown*, this);
-    else
-    {
-        // We don't know this interface
-        *pPtr = 0;
-        return E_NOINTERFACE;
-    }
-    // We have a good casted pointer, need to addref
-    NS_REINTERPRET_CAST(IUnknown*,*pPtr)->AddRef();
-    return S_OK;
+    return QueryInterface(NS_REINTERPRET_CAST(REFNSIID, IID), pPtr);
 }
 
 STDMETHODIMP nsXPCWrappedJS::GetTypeInfoCount(unsigned int FAR * pctinfo)
