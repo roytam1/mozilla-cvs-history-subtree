@@ -56,7 +56,7 @@
 #define __LITTLE_ENDIAN
 #endif
 
-#if defined(linux) && defined(__i386__)
+#if defined(linux) && (defined(__i386__) || defined(__x86_64__))
 #define __LITTLE_ENDIAN
 #endif
 
