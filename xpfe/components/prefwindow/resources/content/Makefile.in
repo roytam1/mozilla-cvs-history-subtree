@@ -25,7 +25,7 @@ include $(DEPTH)/config/autoconf.mk
 EXPORT_RESOURCE_CONTENT = \
 		$(srcdir)/PrefsWindow.html \
 		$(srcdir)/PrefsWindow.js \
-		$(srcdir)/PrefsWindow.xul \
+		$(srcdir)/pref.xul \
 		$(srcdir)/pref-advanced.xul \
 		$(srcdir)/pref-appearance.xul \
 		$(srcdir)/pref-applications.xul \

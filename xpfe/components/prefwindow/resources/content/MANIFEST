@@ -18,5 +18,5 @@ pref-smart_browsing.xul
 pref-smartupdate.xul
 PrefsWindow.html
 PrefsWindow.js
-PrefsWindow.xul
+pref.xul
 preftree.xul
