@@ -38,6 +38,7 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsIDOMNSDocument.h"
 #include "nsLayoutAtoms.h"
 
 // Window scriptable helper includes
@@ -142,6 +143,7 @@
 #define DOCUMENT_SCRIPTABLE_FLAGS                                             \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
+  WANT_NEWRESOLVE |                                                           \
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
 
@@ -1672,6 +1674,74 @@ nsFormControlListSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 // Document helper for document.location and document.on*
 
 NS_IMETHODIMP
+nsDocumentSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, PRUint32 flags,
+                         JSObject **objp, PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    JSString *str = JSVAL_TO_STRING(id);
+
+    if (str == sLocation_id) {
+      *_retval = ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
+                                       ::JS_GetStringLength(str),
+                                       JSVAL_VOID, nsnull, nsnull, 
+                                       JSPROP_ENUMERATE);
+      *objp = obj;
+
+      return NS_OK;
+    }
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    JSString *jsstr = JSVAL_TO_STRING(id);
+
+    if (jsstr == sLocation_id) {
+      NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+      nsCOMPtr<nsISupports> native;
+
+      wrapper->GetNative(getter_AddRefs(native));
+      NS_ABORT_IF_FALSE(native, "No native!");
+
+      nsCOMPtr<nsIDOMNSDocument> doc(do_QueryInterface(native));
+      NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIDOMLocation> l;
+
+      doc->GetLocation(getter_AddRefs(l));
+
+      if (l) {
+        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+        nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
+                                             l, NS_GET_IID(nsIDOMLocation),
+                                             getter_AddRefs(holder));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        JSObject* location_obj = nsnull;
+        rv = holder->GetJSObject(&location_obj);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        *vp = OBJECT_TO_JSVAL(location_obj);
+      } else {
+        *vp = JSVAL_NULL;
+      }
+
+      return NS_OK;
+    }
+  }
+
+  return nsNodeSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+NS_IMETHODIMP
 nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                           JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
@@ -1701,9 +1771,11 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         win->GetLocation(getter_AddRefs(location));
 
         if (location) {
+          JSString *l = JSVAL_TO_STRING(*vp);
+
           nsLiteralString href(NS_REINTERPRET_CAST(const PRUnichar *,
-                                                   ::JS_GetStringChars(jsstr)),
-                               ::JS_GetStringLength(jsstr));
+                                                   ::JS_GetStringChars(l)),
+                               ::JS_GetStringLength(l));
 
           location->SetHref(href);
         }
