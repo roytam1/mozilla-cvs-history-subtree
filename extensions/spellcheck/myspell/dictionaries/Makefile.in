@@ -51,3 +51,6 @@ DICTIONARY_FILES=\
 
 libs::
 	$(INSTALL) $(DICTIONARY_FILES) $(DIST)/bin/components/myspell
+
+install::
+	$(SYSINSTALL) $(IFLAGS1) $(DICTIONARY_FILES) $(DESTDIR)$(mozappdir)/components/myspell

@@ -38,6 +38,7 @@
 #ifndef mozSpellI18NManager_h__
 #define mozSpellI18NManager_h__
 
+#include "nsCOMPtr.h"
 #include "mozISpellI18NManager.h"
 
 #define MOZ_SPELLI18NMANAGER_CONTRACTID "@mozilla.org/spellchecker/i18nmanager;1"

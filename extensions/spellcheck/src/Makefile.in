@@ -70,6 +70,7 @@ CPPSRCS		= \
 		mozEnglishWordUtils.cpp		\
 		mozGenericWordUtils.cpp		\
 		mozSpellI18NManager.cpp		\
+		nsAVLTree.cpp \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \

@@ -38,6 +38,7 @@
 #ifndef mozPersonalDictionary_h__
 #define mozPersonalDictionary_h__
 
+#include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsVoidArray.h"
 #include "mozIPersonalDictionary.h"

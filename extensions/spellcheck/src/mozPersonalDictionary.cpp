@@ -365,7 +365,17 @@ NS_IMETHODIMP mozPersonalDictionary::Load()
   if(NS_FAILED(res)) return res;
   res = theFile->Exists(&dictExists);
   if(NS_FAILED(res)) return res;
-  if(!dictExists) return NS_OK;  // it has every right not to exist.
+
+  if(!dictExists) {
+    //create new user dictionary
+    nsCOMPtr<nsIOutputStream> outStream;
+    NS_NewLocalFileOutputStream(getter_AddRefs(outStream), theFile, PR_CREATE_FILE | PR_WRONLY | PR_TRUNCATE ,0664);
+
+    CopyToStreamFunctor writer(outStream);
+    if(NS_FAILED(res)) return res;
+    if(!outStream)return NS_ERROR_FAILURE;
+  }
+  
   nsCOMPtr<nsIInputStream> inStream;
   NS_NewLocalFileInputStream(getter_AddRefs(inStream), theFile);
   nsCOMPtr<nsIUnicharInputStream> convStream;
@@ -419,7 +429,7 @@ NS_IMETHODIMP mozPersonalDictionary::Save()
   CopyToStreamFunctor writer(outStream);
   if(NS_FAILED(res)) return res;
   if(!outStream)return NS_ERROR_FAILURE;
-  mUnicodeTree->ForEach(writer);
+  if (mUnicodeTree) mUnicodeTree->ForEach(writer);
   mDirty = PR_FALSE;
   return NS_OK;
 }
@@ -452,7 +462,7 @@ NS_IMETHODIMP mozPersonalDictionary::GetWordList(PRUnichar ***words, PRUint32 *c
 /* boolean CheckUnicode (in wstring word); */
 NS_IMETHODIMP mozPersonalDictionary::CheckUnicode(const PRUnichar *word, PRBool *_retval)
 {
-  if(!word || !_retval || mUnicodeTree)
+  if(!word || !_retval || !mUnicodeTree)
     return NS_ERROR_NULL_POINTER;
   if(mUnicodeTree->FindItem((void *)word)){
     *_retval = PR_TRUE;
