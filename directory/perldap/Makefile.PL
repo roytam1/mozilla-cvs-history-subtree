@@ -33,6 +33,9 @@ $osname   = $Config{'osname'};
 $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
 $ldapsdk_ssl = $ENV{"LDAPSDKSSL"}; # Y to include SSL
 
+$libexts = "so|sl|a|lib";
+
+
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
 print     "================================\n";
 
@@ -79,10 +82,10 @@ opendir(DIR,$lib_ldap);
 @files = grep{/ldap|lber/} readdir(DIR);
 closedir(DIR);
 
-if (!((@ldaplib = grep{/ldapssl/} @files) && $ssl_def))
+if (!((@ldaplib = grep{/ldapssl.*\.($libexts)$/} @files) && $ssl_def))
 {
-   @ldaplib = grep{/ldap/} @files;
-   @lberlib = grep{/lber/} @files;
+   @ldaplib = grep{/ldap.*\.($libexts)$/} @files;
+   @lberlib = grep{/lber.*\.($libexts)$/} @files;
 }
 
 if ($#ldaplib < 0)
@@ -101,14 +104,14 @@ if ($#ldaplib > 0)
 
 $lline_ldap = $ldaplib[0];
 $lline_ldap =~ s/^lib//;
-$lline_ldap =~ s/\.(so||sl|a|lib|dll)$//;
+$lline_ldap =~ s/\.($libexts)$//;
 $lline = "-L$lib_ldap -l$lline_ldap";
 
 if ($#lberlib >= 0 && $lline =~ /ldap$/)
 {
    $lline_lber = $lberlib[0];
    $lline_lber =~ s/^lib//;
-   $lline_lber =~ s/\.(so|sl|a|lib|dll)$//;
+   $lline_lber =~ s/\.($libexts)$//;
    $lline .= " -l$lline_lber";
 }
 
