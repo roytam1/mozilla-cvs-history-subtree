@@ -1759,7 +1759,10 @@ nsObjectFrame::Paint(nsIPresContext*      aPresContext,
         if(doupdatewindow)
           inst->SetWindow(window);
 
-        mInstanceOwner->Paint(aDirtyRect, hdc);
+        // check for mInstanceOwner, bad things may happen during
+        // previous SetWindow call, like frame destruction
+        if(mInstanceOwner)
+          mInstanceOwner->Paint(aDirtyRect, hdc);
       }
       NS_RELEASE(inst);
     }
@@ -2988,25 +2991,17 @@ nsresult nsPluginInstanceOwner::KeyUp(nsIDOMEvent* aKeyEvent)
 
 nsresult nsPluginInstanceOwner::KeyPress(nsIDOMEvent* aKeyEvent)
 {
-  if (mInstance) {
-    // If this event is going to the plugin, we want to kill it.
-    // Not actually sending keypress to the plugin, since we didn't before.
-    aKeyEvent->PreventDefault();
-
-    nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aKeyEvent));
-
-    if (nsevent) {
-      nsevent->PreventBubble();
-    }
-
-    return NS_ERROR_FAILURE; // means consume event
-  }
-  return NS_OK;
+  return DispatchKeyToPlugin(aKeyEvent);
 }
     
 nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
 {
-#ifdef XP_MAC   // on Mac, we don't have child windows so hook in through DOM events
+#ifndef XP_MAC
+  if (nsPluginWindowType_Window == mPluginWindow.type)
+    return NS_ERROR_FAILURE; // means consume event
+  // continue only for cases without child window
+#endif
+
   if (mInstance) {
     nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aKeyEvent));
     if (privateEvent) {
@@ -3030,10 +3025,8 @@ nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
     }
     else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchKeyToPlugin failed, privateEvent null");   
   }
+
   return NS_OK;
-#else
-  return NS_ERROR_FAILURE; // means consume event
-#endif
 }    
 
 /*=============== nsIMouseMotionListener ======================*/
@@ -3164,6 +3157,7 @@ nsPluginInstanceOwner::HandleEvent(nsIDOMEvent* aEvent)
 
 nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 {
+  // printf("nsGUIEvent.message: %d\n", anEvent.message);
   nsEventStatus rv = nsEventStatus_eIgnore;
   if (!mInstance)   // if mInstance is null, we shouldn't be here
     return rv;
