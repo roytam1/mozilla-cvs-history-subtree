@@ -44,7 +44,7 @@ Contributor(s):
     </vbox>
     <separator orient="vertical" class="thin"/>
     <vbox flex="1">
-      <text value="&textInformation.label;"/>
+      <description class="wrap" flex="1" style="width: 1em">&textInformation.label;</description>
     </vbox>
   </hbox>
 
