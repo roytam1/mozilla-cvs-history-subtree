@@ -288,9 +288,9 @@ nsContentAreaDragDrop::ExtractURLFromData(const nsACString & inFlavor, nsISuppor
     return;
   outURL.Truncate();
   
-  if ( inFlavor.Equals(kUnicodeMime) ) {
-    // the data is regular unicode, just go with what we get. It may be a url, it
-    // may not be. *shrug*
+  if ( inFlavor.Equals(kUnicodeMime)  || inFlavor.Equals(kURLDataMime) ) {
+    // the data is regular unicode, just go with what we get.
+    // if kUnicodeMime, it may be a url, it may not be.
     nsCOMPtr<nsISupportsWString> stringData(do_QueryInterface(inDataWrapper));
     if ( stringData ) {
       nsXPIDLString data;
@@ -363,6 +363,7 @@ nsContentAreaDragDrop::DragDrop(nsIDOMEvent* inMouseEvent)
     return NS_ERROR_FAILURE;
     
   // add the relevant flavors. order is important (higest fidelity to lowest)
+  trans->AddDataFlavor(kURLDataMime);
   trans->AddDataFlavor(kURLMime);
   trans->AddDataFlavor(kFileMime);
   trans->AddDataFlavor(kUnicodeMime);
@@ -957,10 +958,24 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
     dragData += NS_LITERAL_STRING("\n");
     dragData += inTitleString;
     nsCOMPtr<nsISupportsWString> urlPrimitive(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
-    if ( !urlPrimitive )
+    if (!urlPrimitive)
       return NS_ERROR_FAILURE;
     urlPrimitive->SetData(dragData.get());
     trans->SetTransferData(kURLMime, urlPrimitive, dragData.Length() * 2);
+
+    nsCOMPtr<nsISupportsWString> urlDataPrimitive(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
+    if (!urlDataPrimitive)
+      return NS_ERROR_FAILURE;
+    const nsPromiseFlatString& urlData = PromiseFlatString(inURLString);
+    urlDataPrimitive->SetData(urlData.get());
+    trans->SetTransferData(kURLDataMime, urlDataPrimitive, urlData.Length() * 2);
+
+    nsCOMPtr<nsISupportsWString> urlDescPrimitive(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
+    if (!urlDescPrimitive)
+      return NS_ERROR_FAILURE;
+    const nsPromiseFlatString& urlDesc = PromiseFlatString(inTitleString);
+    urlDescPrimitive->SetData(urlDesc.get());
+    trans->SetTransferData(kURLDescriptionMime, urlDescPrimitive, urlDesc.Length() * 2);
   }
   
   // add the full html
@@ -999,6 +1014,17 @@ nsContentAreaDragDrop::CreateTransferable(const nsAString & inURLString, const n
     nsAutoString imageURL(inImageSourceString);
     imageUrlPrimitive->SetData(imageURL.get());
     trans->SetTransferData(kFilePromiseURLMime, imageUrlPrimitive, imageURL.Length() * sizeof(PRUnichar));
+
+    // if not an anchor, add the image url
+    if (!inIsAnchor)
+    {
+      nsCOMPtr<nsISupportsWString> urlDataPrimitive(do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID));
+      if (!urlDataPrimitive)
+        return NS_ERROR_FAILURE;
+      const nsPromiseFlatString& urlData = PromiseFlatString(inURLString);
+      urlDataPrimitive->SetData(urlData.get());
+      trans->SetTransferData(kURLDataMime, urlDataPrimitive, urlData.Length() * 2);
+    }
   }
   
   *outTrans = trans;
