@@ -49,7 +49,7 @@ interface nsIFileSpec;
 [scriptable, uuid(D60B84F1-2A8C-11d3-9E07-00A0C92B5F0D)]
 interface nsIAddressBook : nsISupports 
 {
-  void newAddressBook(in nsIRDFCompositeDataSource db, in nsIDOMXULElement srcDir, in unsigned long prefCount,[array, size_is(prefCount)] in string prefName, [array, size_is(prefCount)] in wstring prefValue);
+  void newAddressBook(in nsIRDFCompositeDataSource db, in unsigned long prefCount,[array, size_is(prefCount)] in string prefName, [array, size_is(prefCount)] in wstring prefValue);
   void deleteAddressBooks(in nsIRDFCompositeDataSource db, in nsISupportsArray parentDir, in nsIDOMNodeList node);
   void printCard();
   void printAddressbook();

@@ -212,7 +212,7 @@ function AbCreateNewAddressBook(name)
 	var prefsValue = new Array;
 	prefsAttr[0]  = "description";
 	prefsValue[0]  = name;  
-	top.addressbook.newAddressBook(dirTree.database, resultsTree, 1, prefsAttr, prefsValue);
+	top.addressbook.newAddressBook(dirTree.database, 1, prefsAttr, prefsValue);
 }
 
 function AbPrintCard()

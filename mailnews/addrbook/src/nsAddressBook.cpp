@@ -134,9 +134,9 @@ NS_IMPL_QUERY_INTERFACE2(nsAddressBook, nsIAddressBook, nsICmdLineHandler);
 //
 
 NS_IMETHODIMP nsAddressBook::NewAddressBook
-(nsIRDFCompositeDataSource* db, nsIDOMXULElement *srcDirectory, PRUint32 prefCount, const char **prefName, const PRUnichar **prefValue)
+(nsIRDFCompositeDataSource* db, PRUint32 prefCount, const char **prefName, const PRUnichar **prefValue)
 {
-	if(!db || !srcDirectory || !*prefName || !*prefValue)
+	if(!db || !*prefName || !*prefValue)
 		return NS_ERROR_NULL_POINTER;
 
 	nsresult rv = NS_OK;
@@ -151,7 +151,6 @@ NS_IMETHODIMP nsAddressBook::NewAddressBook
 	NS_ENSURE_SUCCESS(rv, rv);
 		
 	rv = parentDir->CreateNewDirectory (prefCount, prefName, prefValue);
-
 	return rv;
 }
 
