@@ -62,7 +62,7 @@ extern "C" {
 MenuSpec XFE_ComposeFrame::message_attach_menu_spec[] = {
   { xfeCmdAttachFile,			PUSHBUTTON },
   { xfeCmdAttachWebPage,		PUSHBUTTON },
-  { xfeCmdDeleteAttachment,		PUSHBUTTON },
+  //  { xfeCmdDeleteAttachment,		PUSHBUTTON },
   MENU_SEPARATOR,
   { xfeCmdAttachAddressBookCard,	TOGGLEBUTTON },
   { NULL }
@@ -71,17 +71,16 @@ MenuSpec XFE_ComposeFrame::message_attach_menu_spec[] = {
 MenuSpec XFE_ComposeFrame::file_menu_spec[] = {
   { "newSubmenu",		CASCADEBUTTON,
 	(MenuSpec*)&XFE_Frame::new_menu_spec },
-  MENU_SEPARATOR,
-  { xfeCmdSaveDraft,		PUSHBUTTON },
-  { xfeCmdSaveAs,		PUSHBUTTON },
+  { xfeCmdSaveAsMenu,   CASCADEBUTTON,
+    (MenuSpec*)&XFE_ComposeFrame::saveas_spec},
+  { xfeCmdAttach,		CASCADEBUTTON,
+    (MenuSpec*)&XFE_ComposeFrame::message_attach_menu_spec},
   MENU_SEPARATOR,
   { xfeCmdSendMessageNow,		PUSHBUTTON },
   { xfeCmdSendMessageLater,		PUSHBUTTON },
   { xfeCmdQuoteOriginalText,	PUSHBUTTON},
   { xfeCmdAddresseePicker,	PUSHBUTTON},
-  { xfeCmdAttach,		CASCADEBUTTON,
-    (MenuSpec*)&XFE_ComposeFrame::message_attach_menu_spec},
-  MENU_SEPARATOR,
+  //  MENU_SEPARATOR,
   //{ xfeCmdPrintSetup,		PUSHBUTTON },
   //{ xfeCmdPrintPreview,		PUSHBUTTON },
   //{ xfeCmdPrint,		PUSHBUTTON },
@@ -91,16 +90,23 @@ MenuSpec XFE_ComposeFrame::file_menu_spec[] = {
   { NULL }
 };
 
+MenuSpec XFE_ComposeFrame::saveas_spec[] = {
+  { xfeCmdSaveAs,		PUSHBUTTON },
+  MENU_SEPARATOR,
+  { xfeCmdSaveDraft,		PUSHBUTTON },
+  { xfeCmdSaveTemplate,     PUSHBUTTON },
+  { NULL }
+};
+
 MenuSpec XFE_ComposeFrame::edit_menu_spec[] = {
   { xfeCmdUndo,			PUSHBUTTON },
-  { xfeCmdRedo,			PUSHBUTTON },
+  //  { xfeCmdRedo,			PUSHBUTTON },
   MENU_SEPARATOR,
   { xfeCmdCut,			PUSHBUTTON },
   { xfeCmdCopy,			PUSHBUTTON },
   { xfeCmdPaste,		PUSHBUTTON },
   { xfeCmdPasteAsQuoted,	PUSHBUTTON },
-  { xfeCmdDeleteItem,		PUSHBUTTON },
-  MENU_SEPARATOR,
+  //  { xfeCmdDeleteItem,		PUSHBUTTON },
   { xfeCmdSelectAll,		PUSHBUTTON },
   MENU_SEPARATOR,
   { xfeCmdFindInObject,		PUSHBUTTON },
@@ -113,18 +119,30 @@ MenuSpec XFE_ComposeFrame::edit_menu_spec[] = {
 
 static char view_radio_group_name[] = "viewRadiogroup";
 
-#define RADIOBUTTON TOGGLEBUTTON, NULL, view_radio_group_name
+#define RADIOBUTTON TOGGLEBUTTON, NULL
 
 MenuSpec XFE_ComposeFrame::view_menu_spec[] = {
-  { xfeCmdToggleNavigationToolbar, PUSHBUTTON },
-  { xfeCmdToggleAddressArea, PUSHBUTTON },
-  MENU_SEPARATOR,
-  { xfeCmdViewAddresses,	RADIOBUTTON },
-  { xfeCmdViewAttachments,	RADIOBUTTON },
-  { xfeCmdViewOptions,	    RADIOBUTTON },
+  { xfeCmdShowChrome,		CASCADEBUTTON,
+    (MenuSpec*)&XFE_ComposeFrame::show_chrome_spec},
   MENU_SEPARATOR,
   { xfeCmdWrapLongLines,    TOGGLEBUTTON},
   { NULL }
+};
+
+MenuSpec XFE_ComposeFrame::show_chrome_spec[] = {
+
+    { xfeCmdToggleNavigationToolbar, PUSHBUTTON },
+    { xfeCmdToggleAddressArea, PUSHBUTTON },
+    MENU_SEPARATOR,
+    { xfeCmdFloatingTaskBarClose, PUSHBUTTON },
+    MENU_SEPARATOR,
+    { xfeCmdViewAddresses,	RADIOBUTTON, view_radio_group_name },
+    { xfeCmdViewAttachments,	RADIOBUTTON, view_radio_group_name },
+    { xfeCmdViewOptions,	    RADIOBUTTON, view_radio_group_name },
+    MENU_SEPARATOR,
+    { xfeCmdToggleParagraphMarks, PUSHBUTTON }, /* with toggling label */
+    { NULL }
+
 };
 
 static MenuSpec text_tools_menu_spec[] = {
@@ -168,45 +186,57 @@ ToolbarSpec XFE_ComposeFrame::toolbar_spec[] = {
 
 MenuSpec XFE_ComposeFrame::html_edit_menu_spec[] = {
   { xfeCmdUndo,			PUSHBUTTON },
-  { xfeCmdRedo,			PUSHBUTTON },
+  //  { xfeCmdRedo,			PUSHBUTTON },
   MENU_SEPARATOR,
   { xfeCmdCut,			PUSHBUTTON },
   { xfeCmdCopy,			PUSHBUTTON },
   { xfeCmdPaste,		PUSHBUTTON },
   { xfeCmdPasteAsQuoted,	PUSHBUTTON },
-  { xfeCmdDeleteItem,		PUSHBUTTON },
+  //  { xfeCmdDeleteItem,		PUSHBUTTON },
+  { xfeCmdSelectAll,	PUSHBUTTON },
   MENU_SEPARATOR,
   { "deleteTableMenu",	CASCADEBUTTON,
 	(MenuSpec*)&XFE_EditorFrame::delete_table_menu_spec },
   { xfeCmdRemoveLink,	PUSHBUTTON },
   MENU_SEPARATOR,
-  { xfeCmdSelectAll,	PUSHBUTTON },
   { xfeCmdSelectTable,	PUSHBUTTON },
   MENU_SEPARATOR,
   { xfeCmdFindInObject,	PUSHBUTTON },
   { xfeCmdFindAgain,	PUSHBUTTON },
+#if 0
+  /* temporary take out
+   */
   { xfeCmdSearchAddress,	PUSHBUTTON },
+#endif
   MENU_SEPARATOR,
   { xfeCmdEditPreferences,PUSHBUTTON },
   { NULL }
 };
 
 MenuSpec XFE_ComposeFrame::html_view_menu_spec[] = {
-  { xfeCmdToggleNavigationToolbar, PUSHBUTTON },
-  { xfeCmdToggleAddressArea, PUSHBUTTON },
-  { xfeCmdToggleFormatToolbar, PUSHBUTTON },
-  MENU_SEPARATOR,
-  { xfeCmdViewAddresses,	RADIOBUTTON },
-  { xfeCmdViewAttachments,	RADIOBUTTON },
-  { xfeCmdViewOptions,	    RADIOBUTTON },
-  MENU_SEPARATOR,
-  { xfeCmdToggleParagraphMarks, PUSHBUTTON }, /* with toggling label */
+  { xfeCmdShowChrome, CASCADEBUTTON,
+    (MenuSpec*)&XFE_ComposeFrame::html_show_chrome_spec },
   MENU_SEPARATOR,
   { xfeCmdViewPageSource,	PUSHBUTTON },
   { xfeCmdViewPageInfo,		PUSHBUTTON },
   MENU_SEPARATOR,
   { "encodingSubmenu",		CASCADEBUTTON,
 	(MenuSpec*)&XFE_Frame::encoding_menu_spec },
+  { NULL }
+};
+
+MenuSpec XFE_ComposeFrame::html_show_chrome_spec[] = {
+    { xfeCmdToggleNavigationToolbar, PUSHBUTTON },
+    { xfeCmdToggleAddressArea, PUSHBUTTON },
+    { xfeCmdToggleFormatToolbar, PUSHBUTTON },
+    MENU_SEPARATOR,
+    { xfeCmdFloatingTaskBarClose, PUSHBUTTON },
+    MENU_SEPARATOR,
+    { xfeCmdViewAddresses,	RADIOBUTTON, view_radio_group_name },
+    { xfeCmdViewAttachments,	RADIOBUTTON, view_radio_group_name },
+    { xfeCmdViewOptions,	    RADIOBUTTON, view_radio_group_name },
+    MENU_SEPARATOR,
+    { xfeCmdToggleParagraphMarks, PUSHBUTTON }, /* with toggling label */
   { NULL }
 };
 
@@ -306,7 +336,7 @@ XDEBUG(	printf ("in XFE_ComposeFrame::~XFE_ComposeFrame()\n");)
 }
 
 void
-XFE_ComposeFrame::allConnectionsComplete()
+XFE_ComposeFrame::allConnectionsComplete(MWContext  */* context */)
 {
   MSG_Pane *pane = getPane();
 

@@ -758,6 +758,7 @@ XFE_ComposeView::isCommandEnabled(CommandType command, void *calldata,
 	}
 	else if ( (command == xfeCmdNewMessage )
 		 || (command == xfeCmdSaveDraft)
+         || (command == xfeCmdSaveTemplate)
 		 || (command == xfeCmdQuoteOriginalText)
 		 || (command == xfeCmdQuote)
 		 || (command == xfeCmdAttach)
@@ -1053,6 +1054,7 @@ XDEBUG(	printf ("in XFE_ComposeView::handlesCommand(%s)\n", Command::getString(c
 	  return False;
   if ( (command == xfeCmdNewMessage )
 	|| (command == xfeCmdSaveDraft)
+    || (command == xfeCmdSaveTemplate)
 	|| (command == xfeCmdAddresseePicker)
 	|| (command == xfeCmdQuoteOriginalText)
 	|| (command == xfeCmdQuote)
@@ -1244,7 +1246,8 @@ XDEBUG(	printf ("Do Command: %s \n", Command::getString(command));)
       /* ###tw  Should still probably do the commandstatus stuff. */
       MSG_Command(getPane(), MSG_SendMessageLater, NULL, 0);
     }
-  else if (command == xfeCmdSaveDraft)
+  else if (command == xfeCmdSaveDraft ||
+           command == xfeCmdSaveTemplate)
   {
       XDEBUG(   printf ("XFE_ComposeView::saveAsDraft()\n");)
  
@@ -1257,8 +1260,10 @@ XDEBUG(	printf ("Do Command: %s \n", Command::getString(command));)
       XP_FREE(pBody);
  
       /* ###tw  Should still probably do the commandstatus stuff. */
-    
-      MSG_Command(getPane(), MSG_SaveDraft, NULL, 0);
+      if (command == xfeCmdSaveDraft)
+          MSG_Command(getPane(), MSG_SaveDraft, NULL, 0);
+      else if (command == xfeCmdSaveTemplate)
+          MSG_Command(getPane(), MSG_SaveTemplate, NULL, 0);
 
      // Reset these two flags so that if user close the window, they
      // will not be prompt to save again
@@ -1668,7 +1673,7 @@ fe_compose_getData(MWContext *context)
 {
   XFE_Frame *f = ViewGlue_getFrame(context);
 
-  XP_ASSERT(f->getType() == FRAME_MAILNEWS_COMPOSE);
+  XP_ASSERT(f && f->getType() == FRAME_MAILNEWS_COMPOSE);
  
   return ((XFE_ComposeView *)f->getView())->getComposerData();
 }
@@ -1678,7 +1683,7 @@ fe_compose_setData(MWContext *context, void* data)
 {
   XFE_Frame *f = ViewGlue_getFrame(context);
   
-  XP_ASSERT(f->getType() == FRAME_MAILNEWS_COMPOSE);
+  XP_ASSERT(f && f->getType() == FRAME_MAILNEWS_COMPOSE);
   
   ((XFE_ComposeView *)f->getView())->setComposerData(data);
 }
@@ -1688,7 +1693,7 @@ fe_compose_getAttachment(MWContext *context)
 {
   XFE_Frame *f = ViewGlue_getFrame(context);
   
-  XP_ASSERT(f->getType() == FRAME_MAILNEWS_COMPOSE);
+  XP_ASSERT(f && f->getType() == FRAME_MAILNEWS_COMPOSE);
   
   return ((XFE_ComposeView *)f->getView())->getAttachmentData();
 }
@@ -1698,7 +1703,7 @@ fe_compose_setAttachment(MWContext *context, void* data)
 {
   XFE_Frame *f = ViewGlue_getFrame(context);
   
-  XP_ASSERT(f->getType() == FRAME_MAILNEWS_COMPOSE);
+  XP_ASSERT(f && f->getType() == FRAME_MAILNEWS_COMPOSE);
   
   ((XFE_ComposeView *)f->getView())->setAttachmentData(data);
 }
@@ -2280,7 +2285,7 @@ fe_set_compose_wrap_state(MWContext *context, XP_Bool wrap_p)
 {
   XFE_Frame *frame = ViewGlue_getFrame(XP_GetNonGridContext(context));
 
-  XP_ASSERT(frame->getType() == FRAME_MAILNEWS_COMPOSE);
+  XP_ASSERT(frame && frame->getType() == FRAME_MAILNEWS_COMPOSE);
 
   ((XFE_ComposeView*)frame->getView())->setComposeWrapState(wrap_p);
 }
