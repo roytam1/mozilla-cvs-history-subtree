@@ -34,8 +34,10 @@ class JSException extends RuntimeException {
     /**
      * Constructs a JSException without a detail message.
      * A detail message is a String that describes this particular exception.
+     *
+     * @deprecated Not for public use in future versions.
      */
-    private JSException() {
+    public JSException() {
 	super();
         filename = "unknown";
         lineno = 0;
@@ -47,8 +49,10 @@ class JSException extends RuntimeException {
      * Constructs a JSException with a detail message.
      * A detail message is a String that describes this particular exception.
      * @param s the detail message
+     *
+     * @deprecated Not for public use in future versions.
      */
-    private JSException(String s) {
+    public JSException(String s) {
 	super(s);
         filename = "unknown";
         lineno = 0;
@@ -60,6 +64,8 @@ class JSException extends RuntimeException {
      * Constructs a JSException with a wrapped JavaScript exception object.
      * This constructor needs to be public so that Java users can throw 
      * exceptions to JS cleanly.
+     *
+     * @deprecated Not for public use in future versions.
      */
     public JSException(Object wrappedException) {
 	super();
@@ -70,8 +76,10 @@ class JSException extends RuntimeException {
      * Constructs a JSException with a detail message and all the
      * other info that usually comes with a JavaScript error.
      * @param s the detail message
+     *
+     * @deprecated Not for public use in future versions.
      */
-    private JSException(String s, String filename, int lineno,
+    public JSException(String s, String filename, int lineno,
                        String source, int tokenIndex) {
 	super(s);
         this.filename = filename;
