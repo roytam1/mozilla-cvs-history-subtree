@@ -4,6 +4,7 @@ To do:
     - column headings
     - width
   - listing progressmeter doesn't work
+  - filenames -> descr
 - error handling
   - (local profile) files missing, also adjust listing.xml
   - copy protocol

@@ -56,6 +56,10 @@
           filename="cookperm.txt"
           label="&cookperm.label;" />
         <listitem type="checkbox"
+          id="history"
+          filename="history.dat"
+          label="&history.label;" />
+        <listitem type="checkbox"
           id="passwords"
           filename=""
           label="&passwords.label;" />

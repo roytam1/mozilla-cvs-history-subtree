@@ -497,6 +497,8 @@ function compareFiles(filesList, files1, files2)
     var matches = (f1 && f2
                    && f1.size == f2.size
                    && f1.lastModified == f2.lastModified);
+    if (!f1 && !f2)
+      matches = true;
 
     ddump(filename + (matches ? " matches" : " doesn't match"));
     if (matches)
@@ -827,13 +829,13 @@ function localFilesStats(checkFiles)
       }
       else
       {
-        f.size = -1;
+        continue;
         // use error field?
       }
     }
     catch(e)
     {
-      f.size = -2;
+      continue;
       // XXX use error field? (see also above)
     }
     result.push(f);
