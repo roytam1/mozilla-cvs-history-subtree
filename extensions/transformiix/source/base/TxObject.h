@@ -45,10 +45,18 @@ class TxObject {
     /**
      * Returns the Hashcode for this TxObject
 	**/
-    Int32 hashCode() {
+    virtual Int32 hashCode() {
 	    return (Int32)this;
     } //-- hashCode
 
+    /**
+     * Returns true if the given Object is equal to this object.
+     * By default the comparision operator == is used, but this may
+     * be overridden
+    **/
+    virtual MBool equals(TxObject* obj) {
+        return (MBool)(obj == this);
+    } //-- equals
 };
 
 #endif
