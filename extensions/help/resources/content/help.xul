@@ -37,6 +37,7 @@
   <script type="application/x-javascript" src="chrome://communicator/content/contentAreaClick.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/findUtils.js"/>
+  <script type="application/x-javascript" src="chrome://global/content/nsJSSupportsUtils.js"/>
 
   <popupset id="aTooltipSet">
     <popup id="backMenu" oncreate="createBackMenu(event);" oncommand="gotoHistoryIndex(event);"/>
