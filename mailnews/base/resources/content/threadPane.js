@@ -19,6 +19,7 @@
  */
 
 var gLastMessageUriToLoad = null;
+var gThreadPaneCommandUpdater = null;
 
 function ThreadPaneOnClick(event)
 {
@@ -30,6 +31,7 @@ function ThreadPaneOnClick(event)
     // we get in here for clicks on the "outlinercol" (headers)
     // and the "scrollbarbutton" (scrollbar buttons)
     // we don't want those events to cause a "double click"
+
     var t = event.originalTarget;
 
     if (t.localName == "outlinercol") {
@@ -49,6 +51,29 @@ function SetHiddenAttributeOnThreadOnlyColumns(value)
 
   totalCol.setAttribute("hidden",value);
   unreadCol.setAttribute("hidden",value);
+}
+
+
+function nsMsgDBViewCommandUpdater()
+{}
+
+nsMsgDBViewCommandUpdater.prototype = 
+{
+  updateCommandStatus : function()
+    {
+      // the back end is smart and is only telling us to update command status
+      // when the # of items in the selection has actually changed.
+		  document.commandDispatcher.updateCommands('mail-toolbar');
+    },
+
+  QueryInterface : function(iid)
+   {
+     if(iid.equals(Components.interfaces.nsIMsgDBViewCommandUpdater))
+	    return this;
+	  
+     throw Components.results.NS_NOINTERFACE;
+     return null;
+    }
 }
 
 function HandleColumnClick(columnID)
