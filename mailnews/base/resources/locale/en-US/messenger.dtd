@@ -158,6 +158,10 @@ Rights Reserved.
 <!ENTITY collapseAllThreadsCmd.accesskey "c">  
 <!ENTITY unreadMsgsCmd.label "Unread">  
 <!ENTITY unreadMsgsCmd.accesskey "u">  
+<!ENTITY threadsWithUnreadCmd.label "Threads With Unread">  
+<!ENTITY threadsWithUnreadCmd.accesskey "t">  
+<!ENTITY watchedThreadsWithUnreadCmd.label "Watched Threads With Unread">  
+<!ENTITY watchedThreadsWithUnreadCmd.accesskey "w">  
 <!ENTITY headersMenu.label "Headers"> 
 <!ENTITY headersMenu.accesskey "h"> 
 <!ENTITY headersAllCmd.label "All">  

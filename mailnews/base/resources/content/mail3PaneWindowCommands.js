@@ -199,8 +199,10 @@ var DefaultController =
 			case "cmd_previousFlaggedMsg":
 			case "cmd_viewAllMsgs":
 			case "cmd_viewUnreadMsgs":
-            case "cmd_undo":
-            case "cmd_redo":
+      case "cmd_viewThreadsWithUnread":
+      case "cmd_viewWatchedThreadsWithUnread":
+      case "cmd_undo":
+      case "cmd_redo":
 			case "cmd_expandAllThreads":
 			case "cmd_collapseAllThreads":
 			case "cmd_renameFolder":
@@ -327,12 +329,13 @@ var DefaultController =
 				return IsViewNavigationItemEnabled();
 			case "cmd_viewAllMsgs":
 			case "cmd_sortByThread":
-  			case "cmd_viewUnreadMsgs":
-                return true;
-  				break;
-            case "cmd_undo":
-            case "cmd_redo":
-                return SetupUndoRedoCommand(command);
+  		case "cmd_viewUnreadMsgs":
+      case "cmd_viewThreadsWithUnread":
+      case "cmd_viewWatchedThreadsWithUnread":
+        return true;
+      case "cmd_undo":
+      case "cmd_redo":
+          return SetupUndoRedoCommand(command);
 			case "cmd_renameFolder":
 				return IsRenameFolderEnabled();
 			case "cmd_getNewMessages":
@@ -438,10 +441,10 @@ var DefaultController =
 				MsgSortByThread();
 				break;
 			case "cmd_viewAllMsgs":
-				MsgViewAllMsgs();
-				break;
+      case "cmd_viewThreadsWithUnread":
+      case "cmd_viewWatchedThreadsWithUnread":
 			case "cmd_viewUnreadMsgs":
-				SwitchView("cmd_viewUnreadMsgs");
+				SwitchView(command);
 				break;
 			case "cmd_undo":
 				messenger.Undo(msgWindow);
@@ -569,6 +572,8 @@ function CommandUpdate_Mail()
 	goUpdateCommand('cmd_sortByThread');
 	goUpdateCommand('cmd_viewAllMsgs');
 	goUpdateCommand('cmd_viewUnreadMsgs');
+  goUpdateCommand('cmd_viewThreadsWithUnread');
+  goUpdateCommand('cmd_viewWatchedThreadsWithUnread');
 	goUpdateCommand('cmd_expandAllThreads');
 	goUpdateCommand('cmd_collapseAllThreads');
 	goUpdateCommand('cmd_renameFolder');
@@ -911,23 +916,6 @@ function MsgViewAllMsgs()
         }
 	}
 	RefreshThreadTreeView();
-}
-
-function MsgViewUnreadMsg()
-{
-	//dump("MsgViewUnreadMsgs\n");
-
-	SwitchView("cmd_viewUnreadMsgs");
-	if(gDBView)
-	{
-		gDBView.viewType = nsMsgViewType.eShowThreadsWithUnread;
-
-        var folder = GetSelectedFolder();
-        if(folder) {
-            folder.setAttribute("viewType", nsMsgViewType.eShowThreadsWithUnread);
-        }
-	}
-
 }
 
 

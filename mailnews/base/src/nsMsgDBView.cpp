@@ -638,8 +638,10 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   if (!msgHdr)
     return NS_MSG_INVALID_DBVIEW_INDEX;
 
+  *aValue = 0;
   // just a hack
   nsXPIDLCString dbString;
+  nsCOMPtr <nsIMsgThread> thread;
 
   switch (aColID[0])
   {
@@ -659,15 +661,34 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   case 'p': // priority
     rv = FetchPriority(msgHdr, aValue);
     break;
-  case 't':   // threaded mode (this is temporary...it's how we are faking 
-    if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+  case 't':   // threaded mode (this is temporary...it's how we are faking twisties
+    if (aColID[1] == 'h')
     {
-      // if it's an open container, print a '-' sign. If it's a closed container,
-      // print a "+" sign. o.t. do nothing.
-      if (m_flags[aRow] & MSG_FLAG_ELIDED)
-        *aValue = nsCRT::strdup(NS_LITERAL_STRING("+"));
-      else if (m_flags[aRow] & MSG_VIEW_FLAG_HASCHILDREN)
-        *aValue = nsCRT::strdup(NS_LITERAL_STRING("-"));      
+      if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+      {
+        // if it's an open container, print a '-' sign. If it's a closed container,
+        // print a "+" sign. o.t. do nothing.
+        if (m_flags[aRow] & MSG_FLAG_ELIDED)
+          *aValue = nsCRT::strdup(NS_LITERAL_STRING("+"));
+        else if (m_flags[aRow] & MSG_VIEW_FLAG_HASCHILDREN)
+          *aValue = nsCRT::strdup(NS_LITERAL_STRING("-"));      
+      }
+    }
+    // total msgs in thread column
+    else  if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+    {
+      if (m_flags[aRow] & MSG_VIEW_FLAG_ISTHREAD)
+      {
+        rv = GetThreadContainingIndex(aRow, getter_AddRefs(thread));
+        if (NS_SUCCEEDED(rv) && thread)
+        {
+          nsAutoString formattedCountString;
+          PRUint32 numChildren;
+          thread->GetNumChildren(&numChildren);
+          formattedCountString.AppendInt(numChildren);
+          *aValue = formattedCountString.ToNewUnicode();
+        }
+      }
     }
     break;
   case 'f':
@@ -677,10 +698,29 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
       *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
     break;      
   case 'u': // unread button column
-    if (m_flags[aRow] & MSG_FLAG_READ)
-      *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
-    else
-      *aValue = nsCRT::strdup(NS_LITERAL_STRING("*"));
+    if (aColID[6] == 'B')
+    {
+      if (m_flags[aRow] & MSG_FLAG_READ)
+        *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
+      else
+        *aValue = nsCRT::strdup(NS_LITERAL_STRING("*"));
+    }
+    // unread msgs in thread col
+    else if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+    {
+      if (m_flags[aRow] & MSG_VIEW_FLAG_ISTHREAD)
+      {
+        rv = GetThreadContainingIndex(aRow, getter_AddRefs(thread));
+        if (NS_SUCCEEDED(rv) && thread)
+        {
+          nsAutoString formattedCountString;
+          PRUint32 numUnreadChildren;
+          thread->GetNumUnreadChildren(&numUnreadChildren);
+          formattedCountString.AppendInt(numUnreadChildren);
+          *aValue = formattedCountString.ToNewUnicode();
+        }
+      }
+    }
     break;
   default:
     break;

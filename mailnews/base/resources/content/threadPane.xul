@@ -50,6 +50,10 @@ Rights Reserved.
   <outlinercol id="flaggedCol" fixed="true" class="outlinercol-header outlinercol-image outlinercol-inset-header flagColumnHeader" display="&flagColumn.label;" cycler="true"/>
   <splitter class="tree-splitter"/>
   <outlinercol id="priorityCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden witdth" flex="1" value="&priorityColumn.label;"/>
+  <splitter class="tree-splitter"/>
+  <outlinercol id="unreadCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden witdth" flex="1" value="&unreadColumn.label;"/>
+  <splitter class="tree-splitter"/>
+  <outlinercol id="totalCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden witdth" flex="1" value="&totalColumn.label;"/>
   <outlinerbody flex="1" onselect="this.parentNode.outlinerBoxObject.view.selectionChanged();"/>
 </outliner>
 
