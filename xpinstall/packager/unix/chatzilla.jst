@@ -1,12 +1,12 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Chatzilla v0.5", "Chatzilla", "$Version$"); 
+var err = initInstall("Chatzilla v0.5", "Chatzilla", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 if (verifyDiskSpace(getFolder("Program"), srDest))
 {
     addFile("Chatzilla service",
-            "$Version$",
+            "@XPI_VERSION@",
             "bin/components/chatzilla-service.js",
             getFolder("Components"),
             "chatzilla-service.js",

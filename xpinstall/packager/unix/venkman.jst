@@ -1,12 +1,12 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("JavaScript Debugger", "Venkman", "$Version$"); 
+var err = initInstall("JavaScript Debugger", "Venkman", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 if (verifyDiskSpace(getFolder("Program"), srDest))
 {
     addFile("Venkman Service",
-            "$Version$",
+            "@XPI_VERSION@",
             "bin/components/venkman-service.js",
             getFolder("Components"),
             "venkman-service.js",

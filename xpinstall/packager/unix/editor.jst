@@ -1,6 +1,6 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Mozilla Editor", "Editor", "$Version$"); 
+var err = initInstall("Mozilla Editor", "Editor", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 var communicatorFolder = getFolder("Program");
@@ -9,7 +9,7 @@ logComment("communicatorFolder: " + communicatorFolder);
 if (verifyDiskSpace(communicatorFolder, srDest))
 {
     err = addDirectory("Program",
-                       "$Version$",
+                       "@XPI_VERSION@",
                        "bin",              // jar source folder
                        communicatorFolder, // target folder 
                        "",                 // target subdir 

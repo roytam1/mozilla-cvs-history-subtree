@@ -1,6 +1,6 @@
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Mozilla Myspell Spellchecker", "Spellchecker", "$Version$"); 
+var err = initInstall("Mozilla Myspell Spellchecker", "Spellchecker", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 fProgram  = getFolder("Program");
@@ -11,7 +11,7 @@ if (verifyDiskSpace(fProgram, srDest))
     setPackageFolder(fProgram);
 
     addDirectory("Spellchecker",
-            "$Version$",
+            "@XPI_VERSION@",
             "bin",
             fProgram,
             "");

@@ -4,10 +4,10 @@ function upgradeCleanup()
   deleteThisFolder("Communicator", "psm");
 }
 
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 var err;
 
-err = initInstall("Personal Security Manager", "Personal Security Manager", "$Version$");
+err = initInstall("Personal Security Manager", "Personal Security Manager", "@XPI_VERSION@");
 logComment("initInstall: " + err);
 
 var communicatorFolder = getFolder("Communicator");
@@ -20,7 +20,7 @@ if(verifyDiskSpace(communicatorFolder, srDest))
   // it will just get reinstalled.  This is for safety measure.
   upgradeCleanup();
   err = addDirectory("Program",          // reg entry
-                     "$Version$",        // version
+                     "@XPI_VERSION@",        // version
                      "bin",              // jar source
                      communicatorFolder, // target folder
                      "",              // relative subdir

@@ -47,9 +47,9 @@ function upgradeCleanup()
   deleteThisFile("Program",    "libprotocol.so");
 }
 
-var srDest = $SpaceRequired$;
+var srDest = @XPI_SPACEREQUIRED@;
 
-var err = initInstall("Mozilla Navigator", "Browser", "$Version$"); 
+var err = initInstall("Mozilla Navigator", "Browser", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 var communicatorFolder = getFolder("Program");
@@ -62,7 +62,7 @@ if (verifyDiskSpace(communicatorFolder, srDest))
     // it will just get reinstalled.  This is for safety measure.
     upgradeCleanup();
     err = addDirectory("Program",
-                       "$Version$",
+                       "@XPI_VERSION@",
                        "bin",              // jar source folder
                        communicatorFolder, // target folder
                        "",                 // target subdir 
@@ -116,7 +116,7 @@ if (verifyDiskSpace(communicatorFolder, srDest))
         if (! ('buildID' in Install))
         {
           logComment("Running Pre-Mozilla 0.9.1");
-          initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "$Version$");
+          initInstall("Post-install Cleanup Utility", "Browser/xpicleanup", "@XPI_VERSION@");
           cleanupUtility = getFolder(communicatorFolder, "xpicleanup");
           err = File.execute(cleanupUtility);
           logComment("execute() returned: " + err);
