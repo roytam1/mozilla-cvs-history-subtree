@@ -194,6 +194,10 @@ nsTableRowFrame::AppendFrames(nsIPresContext* aPresContext,
       tableFrame->AppendCell(*aPresContext, (nsTableCellFrame&)*childFrame, GetRowIndex());
       // XXX this could be optimized with some effort
       tableFrame->SetNeedStrategyInit(PR_TRUE);
+      if (!(mState & NS_FRAME_OUTSIDE_CHILDREN) && (((nsTableCellFrame*)childFrame)->GetRowSpan() > 1)) {
+        mState |= NS_FRAME_OUTSIDE_CHILDREN;
+      }
+
     }
   }
 
@@ -226,6 +230,9 @@ nsTableRowFrame::InsertFrames(nsIPresContext* aPresContext,
       cellChildren.AppendElement(childFrame);
       // XXX this could be optimized with some effort
       tableFrame->SetNeedStrategyInit(PR_TRUE);
+      if (!(mState & NS_FRAME_OUTSIDE_CHILDREN) && (((nsTableCellFrame*)childFrame)->GetRowSpan() > 1)) {
+        mState |= NS_FRAME_OUTSIDE_CHILDREN;
+      }
     }
   }
   // insert the cells into the cell map
