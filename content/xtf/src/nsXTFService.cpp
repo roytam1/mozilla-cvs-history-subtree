@@ -121,7 +121,7 @@ nsXTFElementFactoryWrapper::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
   nsAutoString tagName;
   aNodeInfo->GetName(tagName);
 #ifdef DEBUG
-  printf("nsXTFElementFactoryWrapper::CreateInstanceByTag(%s)\n",NS_ConvertUTF16toUTF8(tagName).get());
+//  printf("nsXTFElementFactoryWrapper::CreateInstanceByTag(%s)\n",NS_ConvertUTF16toUTF8(tagName).get());
 #endif
   mXTFFactory->CreateElement(tagName, getter_AddRefs(elem));
   if (elem) {
@@ -159,7 +159,7 @@ nsXTFElementFactoryWrapper::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
     }
   }
 #ifdef DEBUG
-  printf("nsXTFElementFactoryWrapper::CreateInstanceByTag: element could not be created\n");
+//  printf("nsXTFElementFactoryWrapper::CreateInstanceByTag: element could not be created\n");
 #endif
   // if we don't know what to create, just create a standard xml element:
   return NS_NewXMLElement(aResult, aNodeInfo);
@@ -221,7 +221,7 @@ nsXTFService::WrapXTFElementFactory(nsIXTFElementFactory* xtfFactory,
                                     nsIElementFactory** wrapper)
 {
 #ifdef DEBUG
-  printf("nsXTFService::WrapXTFElementFactory\n");
+//  printf("nsXTFService::WrapXTFElementFactory\n");
 #endif
   return NS_NewXTFElementFactoryWrapper(xtfFactory, wrapper);
 }

@@ -36,25 +36,13 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXMLContentBuilder.idl"
-#include "nsISupportsArray.idl"
+#include "nsISupports.idl"
 
-[scriptable, uuid(99905e1c-843b-40b5-9bdb-f4e20c005691)]
-interface nsIXMLContentFragment : nsIXMLContentBuilder
+interface nsIDOMSVGElement;
+
+[scriptable, uuid(02183d16-34ca-43c4-9124-c2613205f300)]
+interface nsIXTFWidget : nsISupports
 {
-  void clear();
-  readonly attribute nsISupportsArray content;
+  readonly attribute nsIDOMSVGElement visual;
 };
 
-
-%{C++
-    
-// {9654A3C8-9DAE-437F-8B3A-EB6A3F854EB7}
-#define NS_XMLCONTENTFRAGMENT_CID                             \
-    { 0x9654a3c8, 0x9dae, 0x437f, { 0x8b, 0x3a, 0xeb, 0x6a, 0x3f, 0x85, 0x4e, 0xb7 } }
-
-#define NS_XMLCONTENTFRAGMENT_CONTRACTID "@mozilla.org/xtf/xml-contentfragment;1"
-
-nsresult NS_NewXMLContentFragment(nsIXMLContentFragment** aResult);
-
-%}

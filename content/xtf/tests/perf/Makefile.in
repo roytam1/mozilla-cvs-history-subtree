@@ -35,7 +35,7 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../..
+DEPTH		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
@@ -43,21 +43,23 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= content
-XPIDL_MODULE    = content_xtf
-
-XPIDLSRCS = \
-	nsIXTFElementFactory.idl \
-	nsIXTFElement.idl \
-	nsIXTFSVGVisual.idl \
-	nsIXTFXMLVisual.idl \
-	nsIXTFXULVisual.idl \
-	nsIXTFGenericElement.idl \
-	nsIXTFSVGVisualWrapper.idl \
-	nsIXTFXMLVisualWrapper.idl \
-	nsIXTFXULVisualWrapper.idl \
-	nsIXTFGenericElementWrapper.idl \
-	nsIXMLContentBuilder.idl \
-	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
+
+XTF_TEST_RESOURCES = \
+	perf.js \
+	smiley25.svg \
+	smiley50.svg \
+	smiley100.svg \
+	smiley25-control.svg \
+	smiley50-control.svg \
+	smiley100-control.svg \
+	$(NULL)
+
+libs::  $(XTF_TEST_RESOURCES)
+	$(INSTALL) $^ $(DIST)/bin/xtf_test_resources
+
+install::  $(XTF_TEST_RESOURCES)
+	$(INSTALL) $^ $(DESTDIR)$(mozappdir)/bin/xtf_test_resources
+
 

@@ -49,10 +49,18 @@ interface nsIXTFElement : nsISupports
   const unsigned long ELEMENT_TYPE_XUL_VISUAL          = 3;
   
   readonly attribute unsigned long elementType;
+
+  // getScriptingInterfaces: This array servers 2 purposes: a) All
+  // interfaces in this array will automatically be accessible when
+  // our wrapper element is used from JS (other interfaces need to be
+  // explicitly QI'ed for), and b) All these interfaces are callable
+  // from unpriviliged script.
   
   void getScriptingInterfaces(out unsigned long count,
                               [array, size_is(count), retval] out nsIIDPtr array);
 
+  // context events:
+  
   void willChangeDocument(in nsISupports newDoc);
   void documentChanged(in nsISupports newDoc);
   
@@ -68,10 +76,12 @@ interface nsIXTFElement : nsISupports
   void willRemoveChild(in unsigned long index);
   void childRemoved(in unsigned long index);
 
-  void willSetAttribute(in AString name, in AString newValue);
-  void attributeSet(in AString name, in AString newValue);
-
-  void willUnsetAttribute(in AString name);
-  void attributeUnset(in AString name);
+  // attribute management: xxx these must handle namespaces
+  void setAttribute(in AString name, in AString newValue);
+  void unsetAttribute(in AString name);
+  AString getAttribute(in AString name);
+  boolean hasAttribute(in AString name);
+  unsigned long getAttributeCount();
+  AString getAttributeNameAt(in unsigned long index);
 };
 

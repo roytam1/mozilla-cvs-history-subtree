@@ -67,7 +67,7 @@ CPPSRCS		= \
 		nsXTFSVGVisualWrapper.cpp \
 		nsXTFXMLVisualWrapper.cpp \
 		nsXTFXULVisualWrapper.cpp \
-		nsXMLContentFragment.cpp \
+		nsXMLContentBuilder.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk

@@ -87,7 +87,7 @@ nsXTFInterfaceAggregator::nsXTFInterfaceAggregator(const nsIID& iid,
     : mOuter(outer), mIID(iid)
 {
 #ifdef DEBUG
-  printf("nsXTFInterfaceAggregator CTOR\n");
+//  printf("nsXTFInterfaceAggregator CTOR\n");
 #endif
   inner->QueryInterface(iid, (void**)&mInner);
   mOuter->AddRef();
@@ -96,7 +96,7 @@ nsXTFInterfaceAggregator::nsXTFInterfaceAggregator(const nsIID& iid,
 nsXTFInterfaceAggregator::~nsXTFInterfaceAggregator()
 {
 #ifdef DEBUG
-  printf("nsXTFInterfaceAggregator DTOR\n");
+//  printf("nsXTFInterfaceAggregator DTOR\n");
 #endif
   mInner->Release();
   mOuter->Release();

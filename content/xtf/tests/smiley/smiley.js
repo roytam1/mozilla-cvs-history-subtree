@@ -16,6 +16,8 @@ importModule("resource:/jscodelib/xtf.js");
 var smileyElement = makeTemplate("smileyElement");
 smileyElement.mergeTemplate(XTFSVGVisual);
 
+//smileyElement.addProtoObj("_dump", function() {});
+
 smileyElement.appendInitializer("smileyElement_eventsListeners",
   function() {
     var instance = this;
@@ -25,22 +27,22 @@ smileyElement.appendInitializer("smileyElement_eventsListeners",
 smileyElement.addProtoObj("_buildVisualContent",
   function(builder) {
     builder.setElementNamespace(SVG_NS);
-    this._g = builder.beginElement("g");
-      builder.attrib("style", "fill:yellow;");
-      builder.attrib("stroke", "blue");
-      builder.attrib("stroke-width", "10px");
+    builder.beginElement("g");
+    this._g = builder.current;
+      builder.attribs({fill:"yellow"});
       builder.beginElement("circle");
         builder.attribs({cx:"100", cy:"100", r:"120"});
       builder.endElement();
       builder.beginElement("circle");
-        builder.attribs({cx:"50", cy:"50", r:"10", style: "fill:black;"});
+        builder.attribs({cx:"50", cy:"50", r:"10", fill: "black"});
       builder.endElement();
       builder.beginElement("circle");
-        builder.attribs({cx:"150", cy:"50", r:"10", style: "fill:black;"});
+        builder.attribs({cx:"150", cy:"50", r:"10", fill: "black"});
       builder.endElement();
-      this._mouth = builder.beginElement("path");
+      builder.beginElement("path");
+      this._mouth = builder.current;
         builder.attrib("d", "M50,150 Q100,200 150,150");
-        builder.attrib("style", "fill:none;stroke:black;stroke-width:10;");
+        builder.attribs({fill:"none", stroke:"black", "stroke-width":"10"});
       builder.endElement();
     builder.endElement();
 
@@ -56,10 +58,32 @@ smileyElement.addProtoObj("_makeSad",
     quad.y1 -= 10;
   });
 
-smileyElement.addProtoObj("attributeSet",
-  function(name, value) {
-    // let our 'g' element inherit all attribs:
-    this._g.setAttribute(name, value);
+// let our 'g' element handle all of our attribs:
+smileyElement.mergeTemplate(XTFMappedAttributes);
+
+smileyElement.mapAttribute("*",
+  {
+    get: function(name) {
+      return this._g.getAttribute(name);
+    },
+    set: function(name, value) {
+      this._g.setAttribute(name, value);
+      this._attributeCountChanged();
+    },
+    unset: function(name) {
+      this._dump("unsetting "+name);
+      this._g.removeAttribute(name);
+      this._attributeCountChanged();
+    },
+    has: function(name) {
+      return this._g.hasAttribute(name);
+    },
+    count: function() {
+      return this._g.attributes.length;
+    },
+    nameAt: function(i) {
+      return this._g.attributes.item(i).name;
+    }
   });
 
 smileyElement.addProtoObj("XTFSVGVisual$onDestroyed",
@@ -79,10 +103,19 @@ smileyElement.addProtoObj("onDestroyed",
 var smileyFactory = makeTemplate("smileyFactory");
 smileyFactory.mergeTemplate(XTFElementFactory);
 
+smileyFactory.addProtoObj("_dump", function() {});
+
+
 smileyFactory.addElement("smiley", smileyElement);
 
 var theSmileyFactory = smileyFactory.instantiate();
 
+// hand a proxied factory to XPCOM to support dynamic reloading of
+// this file:
+var theSmileyFactoryProxied = createDynamicProxy(function(){return theSmileyFactory;});
+// XXX until bug#244696 is fixed we need to explicitly add a createElement method:
+theSmileyFactory._createElement = theSmileyFactory.createElement;
+theSmileyFactoryProxied.createElement = function(tn) {return this._createElement(tn);};
 
 //----------------------------------------------------------------------
 // Module definition
@@ -91,6 +124,6 @@ NSGetModule = ComponentUtils.generateNSGetModule(
   [{ className  : "XTFSmiley XTF element factory",
      cid        : Components.ID("{7d2bff65-6d03-4d0e-ae9f-b3102c5e606e}"),
      contractID : "@mozilla.org/xtf/element-factory;1?namespace=urn:mozilla:xtf:tests:smiley",
-     factory    : ComponentUtils.generateFactory(function() { return createDynamicProxy(function(){return theSmileyFactory;}); })
+     factory    : ComponentUtils.generateFactory(function() { return theSmileyFactoryProxied; })
   }]);
                                                   

@@ -83,14 +83,14 @@ nsXTFWeakTearoff::nsXTFWeakTearoff(const nsIID& iid,
     : mObj(obj), mIID(iid)
 {
 #ifdef DEBUG
-  printf("nsXTFWeakTearoff CTOR\n");
+//  printf("nsXTFWeakTearoff CTOR\n");
 #endif
 }
 
 nsXTFWeakTearoff::~nsXTFWeakTearoff()
 {
 #ifdef DEBUG
-  printf("nsXTFWeakTearoff DTOR\n");
+//  printf("nsXTFWeakTearoff DTOR\n");
 #endif
 }
 

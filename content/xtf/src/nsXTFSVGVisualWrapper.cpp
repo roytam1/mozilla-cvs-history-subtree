@@ -85,9 +85,15 @@ public:
   nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                    nsIAtom* aPrefix, const nsAString& aValue,
                    PRBool aNotify);
+  nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                   nsAString& aResult)const;
+  PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const;
   nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
                      PRBool aNotify);
-
+  nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
+                         nsIAtom** aName, nsIAtom** aPrefix) const;
+  PRUint32 GetAttrCount() const;
+  
   // nsIClassInfo interface
   NS_DECL_NSICLASSINFO
 
@@ -121,7 +127,7 @@ nsXTFSVGVisualWrapper::nsXTFSVGVisualWrapper(nsINodeInfo* aNodeInfo,
     : nsXTFSVGVisualWrapperBase(aNodeInfo), mXTFElement(xtfElement)
 {
 #ifdef DEBUG
-  printf("nsXTFSVGVisualWrapper CTOR\n");
+//  printf("nsXTFSVGVisualWrapper CTOR\n");
 #endif
   NS_ASSERTION(mXTFElement, "xtfElement is null");
 }
@@ -152,7 +158,7 @@ nsXTFSVGVisualWrapper::~nsXTFSVGVisualWrapper()
   mXTFElement = nsnull;
   
 #ifdef DEBUG
-  printf("nsXTFSVGVisualWrapper DTOR\n");
+//  printf("nsXTFSVGVisualWrapper DTOR\n");
 #endif
 }
 
@@ -217,7 +223,7 @@ nsXTFSVGVisualWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   else if (AggregatesInterface(aIID)) {
 #ifdef DEBUG
-    printf("nsXTFSVGVisualWrapper::QueryInterface(): creating aggregation tearoff\n");
+//    printf("nsXTFSVGVisualWrapper::QueryInterface(): creating aggregation tearoff\n");
 #endif
     return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
                                         (nsISupports**)aInstancePtr);
@@ -293,12 +299,38 @@ nsXTFSVGVisualWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsAutoString name;
   aName->ToString(name);
   
-  nsresult rv;
-  mXTFElement->WillSetAttribute(name, aValue);
-  rv = nsXTFSVGVisualWrapperBase::SetAttr(aNameSpaceID, aName, aPrefix, aValue, aNotify);
-  mXTFElement->AttributeSet(name, aValue);
+  nsresult rv = mXTFElement->SetAttribute(name, aValue);
+
+  // XXX mutation events?
+  
   return rv;
 }
+
+nsresult
+nsXTFSVGVisualWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                               nsAString& aResult)const
+{
+  nsAutoString name;
+  aName->ToString(name);
+  nsresult rv = mXTFElement->GetAttribute(name, aResult);
+  if (NS_FAILED(rv)) return rv;
+  if (aResult.IsVoid()) return NS_CONTENT_ATTR_NOT_THERE;
+  // XXX when should we return NS_CONTENT_ATTR_NO_VALUE ???
+  
+  return NS_CONTENT_ATTR_HAS_VALUE;
+}
+
+PRBool
+nsXTFSVGVisualWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
+{
+  nsAutoString name;
+  aName->ToString(name);
+  PRBool rval = PR_FALSE;
+  mXTFElement->HasAttribute(name, &rval);
+  
+  return rval;
+}
+
 
 nsresult
 nsXTFSVGVisualWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
@@ -307,11 +339,36 @@ nsXTFSVGVisualWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr,
   nsAutoString name;
   aAttr->ToString(name);
   
-  nsresult rv;
-  mXTFElement->WillUnsetAttribute(name);
-  rv = nsXTFSVGVisualWrapperBase::UnsetAttr(aNameSpaceID, aAttr, aNotify);
-  mXTFElement->AttributeUnset(name);
+  nsresult rv = mXTFElement->UnsetAttribute(name);
+
+  // XXX mutation events?
+  
   return rv;
+}
+
+nsresult
+nsXTFSVGVisualWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
+                                     nsIAtom** aName, nsIAtom** aPrefix) const
+{
+  *aNameSpaceID = kNameSpaceID_None;
+  *aPrefix = nsnull;
+  
+  nsAutoString name;
+  nsresult rv = mXTFElement->GetAttributeNameAt(aIndex, name);
+  if (NS_SUCCEEDED(rv))
+    *aName = NS_NewAtom(name);
+  else
+    *aName = nsnull;
+  
+  return rv;
+}
+
+PRUint32
+nsXTFSVGVisualWrapper::GetAttrCount() const
+{
+  PRUint32 rval = 0;
+  mXTFElement->GetAttributeCount(&rval);
+  return rval;
 }
 
 //----------------------------------------------------------------------
@@ -401,8 +458,9 @@ nsXTFSVGVisualWrapper::CreateAnonymousContent(nsIPresContext* aPresContext,
 {
   nsCOMPtr<nsIDOMElement> element;
   mXTFElement->GetVisualContent(getter_AddRefs(element));
-  
-  aAnonymousItems.AppendElement(element);
+
+  if (element)
+    aAnonymousItems.AppendElement(element);
   
 //   NS_ASSERTION(mDocument, "no document; cannot create anonymous content");
 

@@ -85,8 +85,14 @@ public:
   nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                    nsIAtom* aPrefix, const nsAString& aValue,
                    PRBool aNotify);
+  nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                   nsAString& aResult)const;
+  PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const;
   nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
                      PRBool aNotify);
+  nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
+                         nsIAtom** aName, nsIAtom** aPrefix) const;
+  PRUint32 GetAttrCount() const;
   
   // nsIClassInfo interface
   NS_DECL_NSICLASSINFO
@@ -121,7 +127,7 @@ nsXTFXMLVisualWrapper::nsXTFXMLVisualWrapper(nsINodeInfo* aNodeInfo,
     : nsXTFXMLVisualWrapperBase(aNodeInfo), mXTFElement(xtfElement)
 {
 #ifdef DEBUG
-  printf("nsXTFXMLVisualWrapper CTOR\n");
+//  printf("nsXTFXMLVisualWrapper CTOR\n");
 #endif
   NS_ASSERTION(mXTFElement, "xtfElement is null");
 }
@@ -152,7 +158,7 @@ nsXTFXMLVisualWrapper::~nsXTFXMLVisualWrapper()
   mXTFElement = nsnull;
   
 #ifdef DEBUG
-  printf("nsXTFXMLVisualWrapper DTOR\n");
+//  printf("nsXTFXMLVisualWrapper DTOR\n");
 #endif
 }
 
@@ -217,7 +223,7 @@ nsXTFXMLVisualWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
   else if (AggregatesInterface(aIID)) {
 #ifdef DEBUG
-    printf("nsXTFXMLVisualWrapper::QueryInterface(): creating aggregation tearoff\n");
+//    printf("nsXTFXMLVisualWrapper::QueryInterface(): creating aggregation tearoff\n");
 #endif
     return NS_NewXTFInterfaceAggregator(aIID, mXTFElement, (nsIContent*)this,
                                         (nsISupports**)aInstancePtr);
@@ -293,12 +299,38 @@ nsXTFXMLVisualWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsAutoString name;
   aName->ToString(name);
   
-  nsresult rv;
-  mXTFElement->WillSetAttribute(name, aValue);
-  rv = nsXTFXMLVisualWrapperBase::SetAttr(aNameSpaceID, aName, aPrefix, aValue, aNotify);
-  mXTFElement->AttributeSet(name, aValue);
+  nsresult rv = mXTFElement->SetAttribute(name, aValue);
+
+  // XXX mutation events?
+  
   return rv;
 }
+
+nsresult
+nsXTFXMLVisualWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                               nsAString& aResult)const
+{
+  nsAutoString name;
+  aName->ToString(name);
+  nsresult rv = mXTFElement->GetAttribute(name, aResult);
+  if (NS_FAILED(rv)) return rv;
+  if (aResult.IsVoid()) return NS_CONTENT_ATTR_NOT_THERE;
+  // XXX when should we return NS_CONTENT_ATTR_NO_VALUE ???
+  
+  return NS_CONTENT_ATTR_HAS_VALUE;
+}
+
+PRBool
+nsXTFXMLVisualWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
+{
+  nsAutoString name;
+  aName->ToString(name);
+  PRBool rval = PR_FALSE;
+  mXTFElement->HasAttribute(name, &rval);
+  
+  return rval;
+}
+
 
 nsresult
 nsXTFXMLVisualWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
@@ -307,11 +339,36 @@ nsXTFXMLVisualWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr,
   nsAutoString name;
   aAttr->ToString(name);
   
-  nsresult rv;
-  mXTFElement->WillUnsetAttribute(name);
-  rv = nsXTFXMLVisualWrapperBase::UnsetAttr(aNameSpaceID, aAttr, aNotify);
-  mXTFElement->AttributeUnset(name);
+  nsresult rv = mXTFElement->UnsetAttribute(name);
+
+  // XXX mutation events?
+  
   return rv;
+}
+
+nsresult
+nsXTFXMLVisualWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
+                                     nsIAtom** aName, nsIAtom** aPrefix) const
+{
+  *aNameSpaceID = kNameSpaceID_None;
+  *aPrefix = nsnull;
+  
+  nsAutoString name;
+  nsresult rv = mXTFElement->GetAttributeNameAt(aIndex, name);
+  if (NS_SUCCEEDED(rv))
+    *aName = NS_NewAtom(name);
+  else
+    *aName = nsnull;
+  
+  return rv;
+}
+
+PRUint32
+nsXTFXMLVisualWrapper::GetAttrCount() const
+{
+  PRUint32 rval = 0;
+  mXTFElement->GetAttributeCount(&rval);
+  return rval;
 }
 
 //----------------------------------------------------------------------

@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 
 <svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:svg="http://www.w3.org/2000/svg"
      xmlns:sm="urn:mozilla:xtf:tests:smiley">
   <sm:smiley transform="translate(120,150) skewX(30)"/>
 
@@ -12,7 +13,70 @@
 
   <sm:smiley style="fill:green;"
              transform="translate(200,50) rotate(-30) scale(0.5)"/>
-  
+
+  <svg:g transform="translate(400,50) scale(0.1)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
+  <svg:g transform="translate(400,50) scale(0.1) translate(0,200)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
+  <svg:g transform="translate(400,50) scale(0.1) translate(0,400)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
+  <svg:g transform="translate(400,50) scale(0.1) translate(0,600)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
+  <svg:g transform="translate(400,50) scale(0.1) translate(0,800)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
+  <svg:g transform="translate(400,50) scale(0.1) translate(0,1000)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
+  <svg:g transform="translate(400,50) scale(0.1) translate(0,1200)">
+    <sm:smiley transform="translate(0)"/>
+    <sm:smiley transform="translate(200)"/>
+    <sm:smiley transform="translate(400)"/>
+    <sm:smiley transform="translate(600)"/>
+    <sm:smiley transform="translate(800)"/>
+    <sm:smiley transform="translate(1000)"/>
+    <sm:smiley transform="translate(1200)"/>
+  </svg:g>  
   <text x="100" y="380" font-size="20px;">These smileys are implemented in <tspan font-weight="bold">XTF</tspan>.</text>
   <text x="100" y="400" font-size="20px;">They are interactive; try clicking on them.</text>
 </svg>

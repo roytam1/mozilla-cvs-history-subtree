@@ -35,7 +35,7 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH		= ../../..
+DEPTH		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
@@ -43,21 +43,14 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= content
-XPIDL_MODULE    = content_xtf
+XPIDL_MODULE    = content_xtf_tests_canvas
 
 XPIDLSRCS = \
-	nsIXTFElementFactory.idl \
-	nsIXTFElement.idl \
-	nsIXTFSVGVisual.idl \
-	nsIXTFXMLVisual.idl \
-	nsIXTFXULVisual.idl \
-	nsIXTFGenericElement.idl \
-	nsIXTFSVGVisualWrapper.idl \
-	nsIXTFXMLVisualWrapper.idl \
-	nsIXTFXULVisualWrapper.idl \
-	nsIXTFGenericElementWrapper.idl \
-	nsIXMLContentBuilder.idl \
+	nsIXTFCanvas.idl \
+	nsIXTFWidget.idl \
 	$(NULL)
+
+JS_COMPONENTS   = $(srcdir)/canvas.js
 
 include $(topsrcdir)/config/rules.mk
 

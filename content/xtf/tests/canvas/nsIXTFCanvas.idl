@@ -38,29 +38,8 @@
 
 #include "nsISupports.idl"
 
-interface nsIDOMElement;
-
-[scriptable, uuid(e9c4cd4f-cd41-43d0-bf3b-48abb9cde90f)]
-interface nsIXMLContentBuilder : nsISupports
-{
-  void clear();
-  void setElementNamespace(in AString ns);
-  void beginElement(in AString tagname);
-  void endElement();
-  void attrib(in AString name, in AString value);
-  readonly attribute nsIDOMElement root;
-  readonly attribute nsIDOMElement current;
+[scriptable, uuid(9bc9010c-2b61-4504-9fa9-a43185e4eb38)]
+interface nsIXTFCanvas : nsISupports
+{  
 };
-
-%{C++
-
-// {E09AF32D-2A54-4D76-9EF0-3070E83F8BE7}
-#define NS_XMLCONTENTBUILDER_CID \
-{ 0xe09af32d, 0x2a54, 0x4d76, { 0x9e, 0xf0, 0x30, 0x70, 0xe8, 0x3f, 0x8b, 0xe7 } }
-    
-#define NS_XMLCONTENTBUILDER_CONTRACTID "@mozilla.org/xtf/xml-contentbuilder;1"
-
-nsresult NS_NewXMLContentBuilder(nsIXMLContentBuilder** aResult);
-
-%}
 
