@@ -245,8 +245,12 @@ Contributor(s): ______________________________________. -->
              grippytooltiptext="&personalToolbar.tooltip;"
              tbalign="stretch">
 
+      <tooltip id="home-button-tooltip" noautohide="true">
+        <vbox id="home-button-tooltip-inner" flex="1"/>
+      </tooltip>
       <toolbarbutton id="home-button" class="bookmark-item"
                      label="&homeButton.label;" persist="hidden"
+                     tooltip="home-button-tooltip"
                      ondraggesture="nsDragAndDrop.startDrag(event, homeButtonObserver);"
                      ondragover="nsDragAndDrop.dragOver(event, homeButtonObserver);"
                      ondragdrop="nsDragAndDrop.drop(event, homeButtonObserver);"
