@@ -83,7 +83,7 @@ nsInternetConfigService::nsInternetConfigService()
   long  version;
   OSErr err;
   mRunningOSX = ((err = ::Gestalt(gestaltSystemVersion, &version)) == noErr && version >= 0x00001000);
-  mRunningJaguar = (err == noErr && version >= 0x00001200);
+  mRunningJaguar = (err == noErr && version >= 0x00001020);
 }
 
 nsInternetConfigService::~nsInternetConfigService()
@@ -103,7 +103,7 @@ NS_IMETHODIMP nsInternetConfigService::LaunchURL(const char *url)
 {
   nsresult rv = NS_ERROR_FAILURE;
   
-#if defined(TARGET_CARBON) || defined(XP_MACOSX)
+#if TARGET_CARBON
   if (mRunningOSX && ((UInt32)LSOpenCFURLRef != (UInt32)kUnresolvedCFragSymbolAddress))
   {
     CFURLRef myURLRef = ::CFURLCreateWithBytes(
@@ -154,7 +154,7 @@ NS_IMETHODIMP nsInternetConfigService::HasProtocolHandler(const char *protocol, 
   *_retval = PR_FALSE;            // Presume failure
   nsresult rv = NS_ERROR_FAILURE; // Ditto
   
-#if defined(TARGET_CARBON) || defined(XP_MACOSX)
+#if TARGET_CARBON
   // Use LaunchServices directly when we're running under OS X to avoid the problem of some protocols
   // apparently not being reflected into the IC mappings (webcal for one).  Even better, it seems
   // LaunchServices under 10.1.x will often fail to find an app when using LSGetApplicationForURL
