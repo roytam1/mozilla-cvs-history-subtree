@@ -224,7 +224,7 @@ struct il_container_struct {
     int forced;
     uint32 content_length;
 
-    int dest_width, dest_height; /* Target dimensions of the image */
+    uint32 dest_width, dest_height; /* Target dimensions of the image */
     PRPackedBool natural_size;  /* True if the image is decoded to its natural
                                    size. */
     PRPackedBool aspect_distorted; /* True if the image undergoes aspect ratio
