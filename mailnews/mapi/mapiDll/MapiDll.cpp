@@ -278,25 +278,25 @@ ULONG FAR PASCAL MAPIFindNext(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszMes
                               LPTSTR lpszSeedMessageID, FLAGS flFlags, ULONG ulReserved,
                               LPTSTR lpszMessageID)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPIReadMail(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszMessageID,
                               FLAGS flFlags, ULONG ulReserved, lpMapiMessage FAR *lppMessage)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPISaveMail(LHANDLE lhSession, ULONG ulUIParam, lpMapiMessage lpMessage,
                               FLAGS flFlags, ULONG ulReserved, LPTSTR lpszMessageID)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPIDeleteMail(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszMessageID,
                                 FLAGS flFlags, ULONG ulReserved)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPIAddress(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszCaption,
@@ -305,24 +305,24 @@ ULONG FAR PASCAL MAPIAddress(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszCapt
                              ULONG ulReserved, LPULONG lpnNewRecips,
                              lpMapiRecipDesc FAR *lppNewRecips)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPIDetails(LHANDLE lhSession, ULONG ulUIParam, lpMapiRecipDesc lpRecip,
                              FLAGS flFlags, ULONG ulReserved)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPIResolveName(LHANDLE lhSession, ULONG ulUIParam, LPTSTR lpszName,
                                  FLAGS flFlags, ULONG ulReserved, lpMapiRecipDesc FAR *lppRecip)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL MAPIFreeBuffer(LPVOID pv)
 {
-    return SUCCESS_SUCCESS;
+    return MAPI_E_FAILURE;
 }
 
 ULONG FAR PASCAL GetMapiDllVersion()
