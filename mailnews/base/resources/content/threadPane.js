@@ -22,54 +22,9 @@ var gLastMessageUriToLoad = null;
 
 function ThreadPaneOnClick(event)
 {
-/*
-    var t = event.originalTarget;
-
-    if (t.localName != "treecell" &&
-        t.localName != "treeitem" &&
-        t.localName != "image")
-        return;
-
-    // fix for #48424.  bail out of here when the user is 
-    // clicking on the column headers
-    if (t.localName == "treecell") {
-        if (t.parentNode && (t.parentNode.getAttribute("id") == "headRow")) {
-            return;
-        }
-    }
-   
-    var targetclass = "";
-
-    if (t.localName == "image" && (t.getAttribute('twisty') != 'true'))
-      targetclass = t.parentNode.getAttribute('class');
-
-    //dump('targetclass = ' + targetclass + '\n');
-
-	if(targetclass.indexOf('unreadcol') != -1)
-	{
-		ToggleMessageRead(t.parentNode.parentNode.parentNode);
-	}
-	if(targetclass.indexOf('flagcol') != -1)
-	{
-		ToggleMessageFlagged(t.parentNode.parentNode.parentNode);
-	}
-    else if (t.getAttribute('twisty') == 'true') {
-        // The twisty is nested three below the treeitem:
-        // <treeitem>
-        //   <treerow>
-        //     <treecell>
-        //         <button class="tree-cell-twisty"> <!-- anonymous -->
-        var treeitem = t.parentNode.parentNode.parentNode;
-		var open = treeitem.getAttribute('open');
-		if(open == "true")
-		{
-			//open all of the children of the treeitem
-			msgNavigationService.OpenTreeitemAndDescendants(treeitem);
-		}
-    }
-*/
-    // XXX, TODO, do we need to handle clicks on special columns, or is mscott
-    // already handling that?
+    // we are already handling marking as read and flagging
+    // in nsMsgDBView.cpp
+    // so all we need to worry about here is double clicks
 	if (event.detail == 2) {
 		ThreadPaneDoubleClick();
 	}
