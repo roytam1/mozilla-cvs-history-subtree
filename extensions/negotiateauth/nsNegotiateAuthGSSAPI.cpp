@@ -217,13 +217,11 @@ nsNegotiateAuth::GetNextToken(const void *inToken,
         in_token_ptr = &input_token;
     }
     else if (mCtx != GSS_C_NO_CONTEXT) {
-        // If there is no input token, then we are starting a new
-        // authentication sequence.  If we have already initialized our
-        // security context, then we're in trouble because it means that the
-        // first sequence failed.  We need to bail or else we might end up in
-        // an infinite loop.
-        LOG(("Cannot restart authentication sequence!"));
-        return NS_ERROR_UNEXPECTED; 
+        //
+        // Possibly starting over, clear out any existing context.
+        //
+        //Reset();
+        return NS_ERROR_UNEXPECTED;
     }
 
 #if defined(XP_MACOSX)

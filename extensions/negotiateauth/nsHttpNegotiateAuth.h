@@ -45,6 +45,14 @@
 #include "nsIURI.h"
 #include "nsSubstring.h"
 
+#define NS_HTTPNEGOTIATEAUTH_CID \
+{ /* 75c80fd0-accb-432c-af59-ec60668c3990 */         \
+    0x75c80fd0,                                      \
+    0xaccb,                                          \
+    0x432c,                                          \
+    {0xaf, 0x59, 0xec, 0x60, 0x66, 0x8c, 0x39, 0x90} \
+}
+
 // The nsGssapiAuth class provides responses for the GSS-API Negotiate method
 // as specified by Microsoft in draft-brezak-spnego-http-04.txt
 

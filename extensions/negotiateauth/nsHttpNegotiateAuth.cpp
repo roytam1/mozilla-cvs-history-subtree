@@ -127,11 +127,13 @@ nsHttpNegotiateAuth::ChallengeReceived(nsIHttpChannel *httpChannel,
     if (NS_FAILED(rv))
         return rv;
 
+    /*
     PRBool allowed = TestPref(uri, kNegotiateAuthTrustedURIs);
     if (!allowed) {
         LOG(("nsHttpNegotiateAuth::ChallengeReceived URI blocked\n"));
         return NS_ERROR_ABORT;
     }
+    */
 
     PRUint32 req_flags = nsIAuthModule::REQ_DEFAULT;
 
