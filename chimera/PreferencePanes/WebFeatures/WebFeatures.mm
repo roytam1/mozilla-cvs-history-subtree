@@ -28,6 +28,10 @@
   mPrefService->GetBoolPref("security.enable_java", &javaEnabled);
   [mEnableJava setState:(javaEnabled ? NSOnState : NSOffState)];
 
+  PRBool pluginsEnabled = PR_TRUE;
+  mPrefService->GetBoolPref("chimera.enable_plugins", &pluginsEnabled);
+  [mEnablePlugins setState:(pluginsEnabled ? NSOnState : NSOffState)];
+
   // set initial value on popup blocking checkbox
   BOOL gotPref = NO;
   BOOL enablePopupBlocking = [self getBooleanPref:"dom.disable_open_during_load" withSuccess:&gotPref] && gotPref;  
@@ -62,7 +66,7 @@
 //
 -(IBAction) clickEnablePlugins:(id)sender
 {
-
+  [self setPref:"chimera.enable_plugins" toBoolean:[sender state] == NSOnState];
 }
 
 //
