@@ -277,34 +277,6 @@ DeleteModule(char *moduleName)
 
 /************************************************************************
  *
- * R a w L i s t M o d u l e s
- *
- * Lists all the modules in the database, along with their slots and tokens.
- */
-Error
-RawListModule(char *modulespec)
-{
-	SECMODModule *module;
-	char **moduleSpecList;
-	SECStatus rv;
-
-	module = SECMOD_LoadModule(modulespec,NULL,PR_FALSE);
-	if (module == NULL) {
-	    /* handle error */
-	    return NO_SUCH_MODULE_ERR;
-	}
-
-	moduleSpecList = SECMOD_GetModuleSpecList(module);
-
-	for ( ;*moduleSpecList; moduleSpecList++) {
-		printf("%s\n",*moduleSpecList);
-	}
-
-	return SUCCESS;
-}
-
-/************************************************************************
- *
  * L i s t M o d u l e s
  *
  * Lists all the modules in the database, along with their slots and tokens.
@@ -566,7 +538,7 @@ ChangePW(char *tokenName, char *pwFile, char *newpwFile)
 	/* Get old password */
 	if(! PK11_NeedUserInit(slot)) {
 		if(pwFile) {
-			oldpw = SECU_FilePasswd(NULL, PR_FALSE, pwFile);
+			oldpw = SECU_GetPasswordString(pwFile, "");
 			if(PK11_CheckUserPassword(slot, oldpw) != SECSuccess) {
 				PR_fprintf(PR_STDERR, errStrings[BAD_PW_ERR]);
 				ret=BAD_PW_ERR;
@@ -586,7 +558,7 @@ ChangePW(char *tokenName, char *pwFile, char *newpwFile)
 
 	/* Get new password */
 	if(newpwFile) {
-		newpw = SECU_FilePasswd(NULL, PR_FALSE, newpwFile);
+		newpw = SECU_GetPasswordString(newpwFile, "");
 	} else {
 		for(matching=PR_FALSE; !matching; ) {
 			newpw = SECU_GetPasswordString(NULL, "Enter new password: ");
@@ -691,7 +663,12 @@ EnableModule(char *moduleName, char *slotName, PRBool enable)
 	}
 
 	/* Delete and re-add module to save changes */
-	if( SECMOD_UpdateModule(module) != SECSuccess ) {
+	if( SECMOD_DeletePermDB(module) != SECSuccess ) {
+		PR_fprintf(PR_STDERR, errStrings[UPDATE_MOD_FAILED_ERR], moduleName);
+		return UPDATE_MOD_FAILED_ERR;
+	}
+	if( SECMOD_AddPermDB(module) != SECSuccess ) {
+		/* We're in big trouble here */
 		PR_fprintf(PR_STDERR, errStrings[UPDATE_MOD_FAILED_ERR], moduleName);
 		return UPDATE_MOD_FAILED_ERR;
 	}
@@ -753,7 +730,14 @@ SetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 	}
 
 	/* Delete and re-add module to save changes */
-	if( SECMOD_UpdateModule(module) != SECSuccess ) {
+	if( SECMOD_DeletePermDB(module) != SECSuccess ) {
+		PR_fprintf(PR_STDERR, errStrings[DEFAULT_FAILED_ERR],
+		  moduleName);
+		errcode = DEFAULT_FAILED_ERR;
+		goto loser;
+	}
+	if( SECMOD_AddPermDB(module) != SECSuccess ) {
+		/* We're in big trouble here */
 		PR_fprintf(PR_STDERR, errStrings[DEFAULT_FAILED_ERR],
 		  moduleName);
 		errcode = DEFAULT_FAILED_ERR;
@@ -810,7 +794,13 @@ UnsetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 	}
 
 	/* Delete and re-add module to save changes */
-	if( SECMOD_UpdateModule(module) != SECSuccess ) {
+	if( SECMOD_DeletePermDB(module) != SECSuccess ) {
+		PR_fprintf(PR_STDERR, errStrings[UNDEFAULT_FAILED_ERR],
+		  moduleName);
+		return UNDEFAULT_FAILED_ERR;
+	}
+	if( SECMOD_AddPermDB(module) != SECSuccess ) {
+		/* We're in big trouble here */
 		PR_fprintf(PR_STDERR, errStrings[UNDEFAULT_FAILED_ERR],
 		  moduleName);
 		return UNDEFAULT_FAILED_ERR;

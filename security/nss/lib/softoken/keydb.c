@@ -37,7 +37,6 @@
 
 #include "keylow.h"
 #include "keydbt.h"
-#include "keytboth.h"
 #include "seccomon.h"
 #include "sechash.h"
 #include "secder.h"
@@ -84,16 +83,16 @@ const SEC_ASN1Template SECKEY_SetOfAttributeTemplate[] = {
 
 const SEC_ASN1Template SECKEY_PrivateKeyInfoTemplate[] = {
     { SEC_ASN1_SEQUENCE,
-	0, NULL, sizeof(PrivateKeyInfo) },
+	0, NULL, sizeof(SECKEYPrivateKeyInfo) },
     { SEC_ASN1_INTEGER,
-	offsetof(PrivateKeyInfo,version) },
+	offsetof(SECKEYPrivateKeyInfo,version) },
     { SEC_ASN1_INLINE,
-	offsetof(PrivateKeyInfo,algorithm),
+	offsetof(SECKEYPrivateKeyInfo,algorithm),
 	SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_OCTET_STRING,
-	offsetof(PrivateKeyInfo,privateKey) },
+	offsetof(SECKEYPrivateKeyInfo,privateKey) },
     { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 0,
-	offsetof(PrivateKeyInfo,attributes),
+	offsetof(SECKEYPrivateKeyInfo,attributes),
 	SECKEY_SetOfAttributeTemplate },
     { 0 }
 };
@@ -104,19 +103,18 @@ const SEC_ASN1Template SECKEY_PointerToPrivateKeyInfoTemplate[] = {
 
 const SEC_ASN1Template SECKEY_EncryptedPrivateKeyInfoTemplate[] = {
     { SEC_ASN1_SEQUENCE,
-	0, NULL, sizeof(EncryptedPrivateKeyInfo) },
+	0, NULL, sizeof(SECKEYEncryptedPrivateKeyInfo) },
     { SEC_ASN1_INLINE,
-	offsetof(EncryptedPrivateKeyInfo,algorithm),
+	offsetof(SECKEYEncryptedPrivateKeyInfo,algorithm),
 	SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_OCTET_STRING,
-	offsetof(EncryptedPrivateKeyInfo,encryptedData) },
+	offsetof(SECKEYEncryptedPrivateKeyInfo,encryptedData) },
     { 0 }
 };
 
 const SEC_ASN1Template SECKEY_PointerToEncryptedPrivateKeyInfoTemplate[] = {
 	{ SEC_ASN1_POINTER, 0, SECKEY_EncryptedPrivateKeyInfoTemplate }
 };
-
 
 /* ====== Default key databse encryption algorithm ====== */
 
@@ -801,7 +799,7 @@ SECKEY_StoreKeyByPublicKey(SECKEYKeyDBHandle *handle,
 			   SECKEYLowPrivateKey *privkey,
 			   SECItem *pubKeyData,
 			   char *nickname,
-			   SECKEYLowGetPasswordKey f, void *arg)
+			   SECKEYGetPasswordKey f, void *arg)
 {
     return SECKEY_StoreKeyByPublicKeyAlg(handle, privkey, pubKeyData, nickname,
 					 f, arg, SECKEY_GetDefaultKeyDBAlg());
@@ -859,10 +857,10 @@ SECKEY_KeyForCertExists(SECKEYKeyDBHandle *handle, CERTCertificate *cert)
  */
 SECKEYLowPrivateKey *
 SECKEY_FindKeyByCert(SECKEYKeyDBHandle *handle, CERTCertificate *cert,
-		     SECKEYLowGetPasswordKey f, void *arg)
+		     SECKEYGetPasswordKey f, void *arg)
 {
     SECKEYPublicKey *pubkey = NULL;
-    SECItem *keyItem = NULL;
+    SECItem *keyItem;
     SECKEYLowPrivateKey *privKey = NULL;
     
     /* get cert's public key */
@@ -883,12 +881,10 @@ SECKEY_FindKeyByCert(SECKEYKeyDBHandle *handle, CERTCertificate *cert,
 	keyItem = &pubkey->u.dh.publicValue;
 	break;
 	/* fortezza an NULL keys are not stored in the data base */
-      case keaKey:
       case fortezzaKey:
       case nullKey:
 	goto loser;
     }
-    PORT_Assert( keyItem != NULL );
 
     privKey = SECKEY_FindKeyByPublicKey(handle, keyItem, f, arg);
 
@@ -1023,7 +1019,7 @@ seckey_get_private_key_algorithm(SECKEYKeyDBHandle *keydb, DBT *index)
 {
     SECKEYDBKey *dbkey = NULL;
     SECOidTag algorithm = SEC_OID_UNKNOWN;
-    EncryptedPrivateKeyInfo *epki = NULL;
+    SECKEYEncryptedPrivateKeyInfo *epki = NULL;
     PLArenaPool *poolp = NULL;
     SECStatus rv;
 
@@ -1035,8 +1031,8 @@ seckey_get_private_key_algorithm(SECKEYKeyDBHandle *keydb, DBT *index)
     if(dbkey == NULL)
 	return (SECOidTag)SECFailure;
 
-    epki = (EncryptedPrivateKeyInfo *)PORT_ArenaZAlloc(poolp, 
-	sizeof(EncryptedPrivateKeyInfo));
+    epki = (SECKEYEncryptedPrivateKeyInfo *)PORT_ArenaZAlloc(poolp, 
+	sizeof(SECKEYEncryptedPrivateKeyInfo));
     if(epki == NULL)
 	goto loser;
     rv = SEC_ASN1DecodeItem(poolp, epki, 
@@ -1171,13 +1167,13 @@ seckey_rc4_cipher(SECItem *key, SECItem *src, PRBool encrypt)
 
 /* TNH - keydb is unused */
 /* TNH - the pwitem should be the derived key for RC4 */
-EncryptedPrivateKeyInfo *
+SECKEYEncryptedPrivateKeyInfo *
 seckey_encrypt_private_key(
 	SECKEYLowPrivateKey *pk, SECItem *pwitem, SECKEYKeyDBHandle *keydb,
 	SECOidTag algorithm)
 {
-    EncryptedPrivateKeyInfo *epki = NULL;
-    PrivateKeyInfo *pki = NULL;
+    SECKEYEncryptedPrivateKeyInfo *epki = NULL;
+    SECKEYPrivateKeyInfo *pki = NULL;
     SECStatus rv = SECFailure;
     SECAlgorithmID *algid = NULL;
     PLArenaPool *temparena = NULL, *permarena = NULL;
@@ -1193,10 +1189,10 @@ seckey_encrypt_private_key(
 	goto loser;
 
     /* allocate structures */
-    epki = (EncryptedPrivateKeyInfo *)PORT_ArenaZAlloc(permarena,
-	sizeof(EncryptedPrivateKeyInfo));
-    pki = (PrivateKeyInfo *)PORT_ArenaZAlloc(temparena, 
-	sizeof(PrivateKeyInfo));
+    epki = (SECKEYEncryptedPrivateKeyInfo *)PORT_ArenaZAlloc(permarena,
+	sizeof(SECKEYEncryptedPrivateKeyInfo));
+    pki = (SECKEYPrivateKeyInfo *)PORT_ArenaZAlloc(temparena, 
+	sizeof(SECKEYPrivateKeyInfo));
     der_item = (SECItem *)PORT_ArenaZAlloc(temparena, sizeof(SECItem));
     if((epki == NULL) || (pki == NULL) || (der_item == NULL))
 	goto loser;
@@ -1211,9 +1207,9 @@ seckey_encrypt_private_key(
 
     /* Encode the key, and set the algorithm (with params) */
     switch (pk->keyType) {
-      case lowRSAKey:
+      case rsaKey:
 	dummy = SEC_ASN1EncodeItem(temparena, &(pki->privateKey), pk, 
-				   SECKEY_LowRSAPrivateKeyTemplate);
+				   SECKEY_RSAPrivateKeyTemplate);
 	if (dummy == NULL) {
 	    rv = SECFailure;
 	    goto loser;
@@ -1226,16 +1222,16 @@ seckey_encrypt_private_key(
 	}
 	
 	break;
-      case lowDSAKey:
+      case dsaKey:
 	dummy = SEC_ASN1EncodeItem(temparena, &(pki->privateKey), pk,
-				   SECKEY_LowDSAPrivateKeyTemplate);
+				   SECKEY_DSAPrivateKeyTemplate);
 	if (dummy == NULL) {
 	    rv = SECFailure;
 	    goto loser;
 	}
 	
 	dummy = SEC_ASN1EncodeItem(temparena, NULL, &pk->u.dsa.params,
-				   SECKEY_LowPQGParamsTemplate);
+				   SECKEY_PQGParamsTemplate);
 	if (dummy == NULL) {
 	    rv = SECFailure;
 	    goto loser;
@@ -1248,9 +1244,9 @@ seckey_encrypt_private_key(
 	}
 	
 	break;
-      case lowDHKey:
+      case dhKey:
 	dummy = SEC_ASN1EncodeItem(temparena, &(pki->privateKey), pk,
-				   SECKEY_LowDHPrivateKeyTemplate);
+				   SECKEY_DHPrivateKeyTemplate);
 	if (dummy == NULL) {
 	    rv = SECFailure;
 	    goto loser;
@@ -1348,7 +1344,7 @@ seckey_put_private_key(SECKEYKeyDBHandle *keydb, DBT *index, SECItem *pwitem,
 		       SECOidTag algorithm)
 {
     SECKEYDBKey *dbkey = NULL;
-    EncryptedPrivateKeyInfo *epki = NULL;
+    SECKEYEncryptedPrivateKeyInfo *epki = NULL;
     PLArenaPool *temparena = NULL, *permarena = NULL;
     SECItem *dummy = NULL;
     SECItem *salt = NULL;
@@ -1422,7 +1418,7 @@ SECKEY_StoreKeyByPublicKeyAlg(SECKEYKeyDBHandle *handle,
 			      SECKEYLowPrivateKey *privkey,
 			      SECItem *pubKeyData,
 			      char *nickname,
-			      SECKEYLowGetPasswordKey f, void *arg,
+			      SECKEYGetPasswordKey f, void *arg,
 			      SECOidTag algorithm)
 {
     DBT namekey;
@@ -1452,11 +1448,11 @@ SECKEY_StoreKeyByPublicKeyAlg(SECKEYKeyDBHandle *handle,
 }
 
 SECKEYLowPrivateKey *
-seckey_decrypt_private_key(EncryptedPrivateKeyInfo *epki,
+seckey_decrypt_private_key(SECKEYEncryptedPrivateKeyInfo *epki,
 			   SECItem *pwitem)
 {
     SECKEYLowPrivateKey *pk = NULL;
-    PrivateKeyInfo *pki = NULL;
+    SECKEYPrivateKeyInfo *pki = NULL;
     SECStatus rv = SECFailure;
     SECOidTag algorithm;
     PLArenaPool *temparena = NULL, *permarena = NULL;
@@ -1471,8 +1467,8 @@ seckey_decrypt_private_key(EncryptedPrivateKeyInfo *epki,
 	goto loser;
 
     /* allocate temporary items */
-    pki = (PrivateKeyInfo *)PORT_ArenaZAlloc(temparena, 
-	sizeof(PrivateKeyInfo));
+    pki = (SECKEYPrivateKeyInfo *)PORT_ArenaZAlloc(temparena, 
+	sizeof(SECKEYPrivateKeyInfo));
 
     /* allocate permanent arena items */
     pk = (SECKEYLowPrivateKey *)PORT_ArenaZAlloc(permarena,
@@ -1520,26 +1516,26 @@ seckey_decrypt_private_key(EncryptedPrivateKeyInfo *epki,
 	    switch(SECOID_GetAlgorithmTag(&pki->algorithm)) {
 	      case SEC_OID_X500_RSA_ENCRYPTION:
 	      case SEC_OID_PKCS1_RSA_ENCRYPTION:
-		pk->keyType = lowRSAKey;
+		pk->keyType = rsaKey;
 		rv = SEC_ASN1DecodeItem(permarena, pk,
-					SECKEY_LowRSAPrivateKeyTemplate,
+					SECKEY_RSAPrivateKeyTemplate,
 					&pki->privateKey);
 		break;
 	      case SEC_OID_ANSIX9_DSA_SIGNATURE:
-		pk->keyType = lowDSAKey;
+		pk->keyType = dsaKey;
 		rv = SEC_ASN1DecodeItem(permarena, pk,
-					SECKEY_LowDSAPrivateKeyTemplate,
+					SECKEY_DSAPrivateKeyTemplate,
 					&pki->privateKey);
 		if (rv != SECSuccess)
 		    goto loser;
 		rv = SEC_ASN1DecodeItem(permarena, &pk->u.dsa.params,
-					SECKEY_LowPQGParamsTemplate,
+					SECKEY_PQGParamsTemplate,
 					&pki->algorithm.parameters);
 		break;
 	      case SEC_OID_X942_DIFFIE_HELMAN_KEY:
-		pk->keyType = lowDHKey;
+		pk->keyType = dhKey;
 		rv = SEC_ASN1DecodeItem(permarena, pk,
-					SECKEY_LowDHPrivateKeyTemplate,
+					SECKEY_DHPrivateKeyTemplate,
 					&pki->privateKey);
 		break;
 	      default:
@@ -1575,7 +1571,7 @@ static SECKEYLowPrivateKey *
 seckey_decode_encrypted_private_key(SECKEYDBKey *dbkey, SECItem *pwitem)
 {
     SECKEYLowPrivateKey *pk = NULL;
-    EncryptedPrivateKeyInfo *epki;
+    SECKEYEncryptedPrivateKeyInfo *epki;
     PLArenaPool *temparena = NULL;
     SECStatus rv;
     SECOidTag algorithm;
@@ -1589,8 +1585,8 @@ seckey_decode_encrypted_private_key(SECKEYDBKey *dbkey, SECItem *pwitem)
 	return NULL;
     }
 
-    epki = (EncryptedPrivateKeyInfo *)
-	PORT_ArenaZAlloc(temparena, sizeof(EncryptedPrivateKeyInfo));
+    epki = (SECKEYEncryptedPrivateKeyInfo *)
+	PORT_ArenaZAlloc(temparena, sizeof(SECKEYEncryptedPrivateKeyInfo));
 
     if(epki == NULL) {
 	goto loser;
@@ -1680,7 +1676,7 @@ SECKEY_DecryptKey(DBT *key, SECItem *pwitem,
  */
 SECKEYLowPrivateKey *
 SECKEY_FindKeyByPublicKey(SECKEYKeyDBHandle *handle, SECItem *modulus,
-			  SECKEYLowGetPasswordKey f, void *arg)
+			  SECKEYGetPasswordKey f, void *arg)
 {
     DBT namekey;
     SECKEYLowPrivateKey *pk = NULL;
@@ -1848,6 +1844,8 @@ loser:
 static PRBool
 seckey_HasAServerKey(DB *db)
 {
+    DBT checkKey;
+    DBT checkData;
     DBT key;
     DBT data;
     int ret;
@@ -2133,15 +2131,15 @@ ChangeKeyDBPasswordAlg(SECKEYKeyDBHandle *handle,
 	/* get the public key, which we use as the database index */
 
 	switch (privkey->keyType) {
-	  case lowRSAKey:
+	  case rsaKey:
 	    newkey.data = privkey->u.rsa.modulus.data;
 	    newkey.size = privkey->u.rsa.modulus.len;
 	    break;
-	  case lowDSAKey:
+	  case dsaKey:
 	    newkey.data = privkey->u.dsa.publicValue.data;
 	    newkey.size = privkey->u.dsa.publicValue.len;
 	    break;
-	  case lowDHKey:
+	  case dhKey:
 	    newkey.data = privkey->u.dh.publicValue.data;
 	    newkey.size = privkey->u.dh.publicValue.len;
 	    break;
@@ -2430,6 +2428,8 @@ SECStatus
 SECKEY_ResetKeyDB(SECKEYKeyDBHandle *handle)
 {
     SECStatus rv;
+    DBT key;
+    DBT data;
     int ret;
     int errors = 0;
 
@@ -2486,4 +2486,6 @@ SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_PrivateKeyInfoTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_PointerToPrivateKeyInfoTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_EncryptedPrivateKeyInfoTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_PointerToEncryptedPrivateKeyInfoTemplate)
+SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_DSAPublicKeyTemplate)
+SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_RSAPublicKeyTemplate)
 

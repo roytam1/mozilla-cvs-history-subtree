@@ -306,14 +306,14 @@ SECKEYPrivateKey *
 CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
 			    int publicExponent, char *noise, 
 			    SECKEYPublicKey **pubkeyp, char *pqgFile,
-                            secuPWData *pwdata)
+                            char *passFile)
 {
     CK_MECHANISM_TYPE mechanism;
     SECOidTag algtag;
     PK11RSAGenParams rsaparams;
     PQGParams *dsaparams = NULL;
     void *params;
-    PRArenaPool *dsaparena;
+    secuPWData pwdata = { PW_NONE, 0 };
 
     /*
      * Do some random-number initialization.
@@ -344,20 +344,9 @@ CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
 	if (pqgFile) {
 	    dsaparams = getpqgfromfile(size, pqgFile);
 	} else {
-	    dsaparena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-	    if (dsaparena == NULL) return NULL;
-	    dsaparams = PORT_ArenaZAlloc(dsaparena, sizeof(PQGParams));
-	    if (dsaparams == NULL) return NULL;
-	    dsaparams->arena = dsaparena;
-	    SECITEM_AllocItem(dsaparena, &dsaparams->prime, sizeof P);
-	    SECITEM_AllocItem(dsaparena, &dsaparams->subPrime, sizeof Q);
-	    SECITEM_AllocItem(dsaparena, &dsaparams->base, sizeof G);
-	    PORT_Memcpy(dsaparams->prime.data, P, dsaparams->prime.len);
-	    PORT_Memcpy(dsaparams->subPrime.data, Q, dsaparams->subPrime.len);
-	    PORT_Memcpy(dsaparams->base.data, G, dsaparams->base.len);
+	    dsaparams = &default_pqg_params;
 	}
 	params = dsaparams;
-	break;
       default:
 	return NULL;
     }
@@ -365,7 +354,12 @@ CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
     if (slot == NULL)
 	return NULL;
 
-    if (PK11_Authenticate(slot, PR_TRUE, pwdata) != SECSuccess)
+    if (passFile) {
+	pwdata.source = PW_FROMFILE;
+	pwdata.data = passFile;
+    }
+
+    if (PK11_Authenticate(slot, PR_TRUE, &pwdata) != SECSuccess)
 	return NULL;
 
     fprintf(stderr, "\n\n");
@@ -373,5 +367,144 @@ CERTUTIL_GeneratePrivateKey(KeyType keytype, PK11SlotInfo *slot, int size,
 
     return PK11_GenerateKeyPair(slot, mechanism, params, pubkeyp,
 				PR_TRUE /*isPerm*/, PR_TRUE /*isSensitive*/, 
-				pwdata /*wincx*/);
+				NULL /*wincx*/);
 }
+
+/*
+ * The following is all functionality moved over from keyutil, which may
+ * or may not become completely obsolete.  So, some of this stuff may
+ * end up being turned on from within certutil.  Some is probably not
+ * even feasible anymore (Add/Delete?).
+ */
+#ifdef LATER
+
+static SECStatus
+ListKeys(FILE *out)
+{
+    int rt;
+
+    rt = SECU_PrintKeyNames(handle, out);
+    if (rt) {
+	SECU_PrintError(progName, "unable to list nicknames");
+	return SECFailure;
+    }
+    return SECSuccess;
+}
+
+static SECStatus
+DumpPublicKey(char *nickname, FILE *out)
+{
+    SECKEYLowPrivateKey *privKey;
+    SECKEYLowPublicKey *publicKey;
+
+    /* check if key actually exists */
+    if (SECU_CheckKeyNameExists(handle, nickname) == PR_FALSE) {
+	SECU_PrintError(progName, "the key \"%s\" does not exist", nickname);
+	return SECFailure;
+    }
+
+    /* Read in key */
+    privKey = SECU_GetPrivateKey(handle, nickname);
+    if (!privKey) {
+	return SECFailure;
+    }
+
+    publicKey = SECKEY_LowConvertToPublicKey(privKey);
+
+    /* Output public key (in the clear) */
+    switch(publicKey->keyType) {
+      case rsaKey:
+	fprintf(out, "RSA Public-Key:\n");
+	SECU_PrintInteger(out, &publicKey->u.rsa.modulus, "modulus", 1);
+	SECU_PrintInteger(out, &publicKey->u.rsa.publicExponent,
+			  "publicExponent", 1);
+	break;
+      case dsaKey:
+	fprintf(out, "DSA Public-Key:\n");
+	SECU_PrintInteger(out, &publicKey->u.dsa.params.prime, "prime", 1);
+	SECU_PrintInteger(out, &publicKey->u.dsa.params.subPrime,
+			  "subPrime", 1);
+	SECU_PrintInteger(out, &publicKey->u.dsa.params.base, "base", 1);
+	SECU_PrintInteger(out, &publicKey->u.dsa.publicValue, "publicValue", 1);
+	break;
+      default:
+	fprintf(out, "unknown key type\n");
+	break;
+    }
+    return SECSuccess;
+}
+
+static SECStatus
+DumpPrivateKey(char *nickname, FILE *out)
+{
+    SECKEYLowPrivateKey *key;
+
+    /* check if key actually exists */
+    if (SECU_CheckKeyNameExists(handle, nickname) == PR_FALSE) {
+	SECU_PrintError(progName, "the key \"%s\" does not exist", nickname);
+	return SECFailure;
+    }
+
+    /* Read in key */
+    key = SECU_GetPrivateKey(handle, nickname);
+    if (!key) {
+	SECU_PrintError(progName, "error retrieving key");
+	return SECFailure;
+    }
+
+    switch(key->keyType) {
+      case rsaKey:
+	fprintf(out, "RSA Private-Key:\n");
+	SECU_PrintInteger(out, &key->u.rsa.modulus, "modulus", 1);
+	SECU_PrintInteger(out, &key->u.rsa.publicExponent, "publicExponent", 1);
+	SECU_PrintInteger(out, &key->u.rsa.privateExponent,
+			  "privateExponent", 1);
+	SECU_PrintInteger(out, &key->u.rsa.prime[0], "prime[0]", 1);
+	SECU_PrintInteger(out, &key->u.rsa.prime[1], "prime[1]", 1);
+	SECU_PrintInteger(out, &key->u.rsa.primeExponent[0],
+			  "primeExponent[0]", 1);
+	SECU_PrintInteger(out, &key->u.rsa.primeExponent[1],
+			  "primeExponent[1]", 1);
+	SECU_PrintInteger(out, &key->u.rsa.coefficient, "coefficient", 1);
+	break;
+      case dsaKey:
+	fprintf(out, "DSA Private-Key:\n");
+	SECU_PrintInteger(out, &key->u.dsa.params.prime, "prime", 1);
+	SECU_PrintInteger(out, &key->u.dsa.params.subPrime, "subPrime", 1);
+	SECU_PrintInteger(out, &key->u.dsa.params.base, "base", 1);
+	SECU_PrintInteger(out, &key->u.dsa.publicValue, "publicValue", 1);
+	SECU_PrintInteger(out, &key->u.dsa.privateValue, "privateValue", 1);
+	break;
+      default:
+	fprintf(out, "unknown key type\n");
+	break;
+    }
+    return SECSuccess;
+}
+
+static SECStatus
+ChangePassword(void)
+{
+    SECStatus rv;
+
+    /* Write out database with a new password */
+    rv = SECU_ChangeKeyDBPassword(handle);
+    if (rv) {
+	SECU_PrintError(progName, "unable to change key password");
+    }
+    return rv;
+}
+
+static SECStatus DeletePrivateKey (char *nickName)
+{
+    int rv;
+
+    rv = SECU_DeleteKeyByName (keyHandle, nickName);
+    if (rv != SECSuccess)
+	fprintf(stderr, "%s: problem deleting private key (%s)\n",
+		progName, SECU_Strerror(PR_GetError()));
+    return (rv);
+
+}
+
+#endif /* LATER */

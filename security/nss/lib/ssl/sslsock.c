@@ -80,12 +80,6 @@ static cipherPolicy ssl_ciphers[] = {	   /*   Export           France   */
  {  SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_DHE_DSS_WITH_RC4_128_SHA,           SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  SSL_RSA_WITH_NULL_MD5,		    SSL_ALLOWED,     SSL_ALLOWED },
- {  TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
- {  TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
- {  TLS_RSA_WITH_AES_128_CBC_SHA,     	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
- {  TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
- {  TLS_DHE_RSA_WITH_AES_256_CBC_SHA,       SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
- {  TLS_RSA_WITH_AES_256_CBC_SHA,     	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,    SSL_ALLOWED,     SSL_NOT_ALLOWED },
  {  TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,     SSL_ALLOWED,     SSL_NOT_ALLOWED },
  {  0,					    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED }
@@ -252,24 +246,18 @@ ssl_DupSocket(sslSocket *os)
 	     * during the for loop.
 	     */
 	    int i;
-	    sslServerCerts * oc = os->serverCerts;
-	    sslServerCerts * sc = ss->serverCerts;
 
-	    for (i=kt_null; i < kt_kea_size; i++, oc++, sc++) {
-		if (oc->serverCert && oc->serverCertChain) {
-		    sc->serverCert      = CERT_DupCertificate(oc->serverCert);
-		    sc->serverCertChain = CERT_DupCertList(oc->serverCertChain);
-		    if (!sc->serverCertChain) 
-		    	goto loser;
+	    for (i=kt_null; i < kt_kea_size; i++) {
+		if (os->serverCert[i] && os->serverCertChain[i]) {
+		    ss->serverCert[i] = CERT_DupCertificate(os->serverCert[i]);
+		    ss->serverCertChain[i] = CERT_DupCertList(
+		                                       os->serverCertChain[i]);
 		} else {
-		    sc->serverCert      = NULL;
-		    sc->serverCertChain = NULL;
+		    ss->serverCert[i]      = NULL;
+		    ss->serverCertChain[i] = NULL;
 		}
-		sc->serverKey = oc->serverKey ?
-				SECKEY_CopyPrivateKey(oc->serverKey) : NULL;
-		if (oc->serverKey && !sc->serverKey)
-		    goto loser;
-	        sc->serverKeyBits = oc->serverKeyBits;
+		ss->serverKey[i] = os->serverKey[i] ?
+				SECKEY_CopyPrivateKey(os->serverKey[i]) : NULL;
 	    }
 	    ss->stepDownKeyPair = !os->stepDownKeyPair ? NULL :
 		                  ssl3_GetKeyPairRef(os->stepDownKeyPair);
@@ -290,14 +278,13 @@ ssl_DupSocket(sslSocket *os)
 	    /* Create security data */
 	    rv = ssl_CopySecurityInfo(ss, os);
 	    if (rv != SECSuccess) {
-		goto loser;
+		goto losage;
 	    }
 	}
     }
     return ss;
 
-loser:
-    ssl_FreeSocket(ss);
+  losage:
     return NULL;
 }
 
@@ -349,13 +336,12 @@ ssl_FreeSocket(sslSocket *ss)
 
     /* Clean up server configuration */
     for (i=kt_null; i < kt_kea_size; i++) {
-	sslServerCerts * sc = fs->serverCerts + i;
-	if (sc->serverCert != NULL)
-	    CERT_DestroyCertificate(sc->serverCert);
-	if (sc->serverCertChain != NULL)
-	    CERT_DestroyCertificateList(sc->serverCertChain);
-	if (sc->serverKey != NULL)
-	    SECKEY_DestroyPrivateKey(sc->serverKey);
+	if (fs->serverCert[i] != NULL)
+	    CERT_DestroyCertificate(fs->serverCert[i]);
+	if (fs->serverCertChain[i] != NULL)
+	    CERT_DestroyCertificateList(fs->serverCertChain[i]);
+	if (fs->serverKey[i] != NULL)
+	    SECKEY_DestroyPrivateKey(fs->serverKey[i]);
     }
     if (fs->stepDownKeyPair) {
 	ssl3_FreeKeyPair(fs->stepDownKeyPair);
@@ -1849,11 +1835,9 @@ ssl_NewSocket(void)
         ss->url                = NULL;
 
 	for (i=kt_null; i < kt_kea_size; i++) {
-	    sslServerCerts * sc = ss->serverCerts + i;
-	    sc->serverCert      = NULL;
-	    sc->serverCertChain = NULL;
-	    sc->serverKey       = NULL;
-	    sc->serverKeyBits   = 0;
+	    ss->serverCert[i]      = NULL;
+	    ss->serverCertChain[i] = NULL;
+	    ss->serverKey[i]       = NULL;
 	}
 	ss->stepDownKeyPair    = NULL;
 	ss->dbHandle           = CERT_GetDefaultCertDB();

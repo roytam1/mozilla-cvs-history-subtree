@@ -40,8 +40,8 @@
 #ifndef __sslproto_h_
 #define __sslproto_h_
 
-/* All versions less than 3_0 are treated as SSL version 2 */
 #define SSL_LIBRARY_VERSION_2			0x0002
+#define SSL_LIBRARY_VERSION_2_1			0x0201
 #define SSL_LIBRARY_VERSION_3_0			0x0300
 #define SSL_LIBRARY_VERSION_3_1_TLS		0x0301
 
@@ -139,21 +139,7 @@
 #define SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA	0x001d
 #define SSL_FORTEZZA_DMS_WITH_RC4_128_SHA	0x001e
 
-/* New TLS cipher suites */
-#define TLS_RSA_WITH_AES_128_CBC_SHA      	0x002F
-#define TLS_DH_DSS_WITH_AES_128_CBC_SHA   	0x0030
-#define TLS_DH_RSA_WITH_AES_128_CBC_SHA   	0x0031
-#define TLS_DHE_DSS_WITH_AES_128_CBC_SHA  	0x0032
-#define TLS_DHE_RSA_WITH_AES_128_CBC_SHA  	0x0033
-#define TLS_DH_ANON_WITH_AES_128_CBC_SHA  	0x0034
-
-#define TLS_RSA_WITH_AES_256_CBC_SHA      	0x0035
-#define TLS_DH_DSS_WITH_AES_256_CBC_SHA   	0x0036
-#define TLS_DH_RSA_WITH_AES_256_CBC_SHA   	0x0037
-#define TLS_DHE_DSS_WITH_AES_256_CBC_SHA  	0x0038
-#define TLS_DHE_RSA_WITH_AES_256_CBC_SHA  	0x0039
-#define TLS_DH_ANON_WITH_AES_256_CBC_SHA  	0x003A
-
+/* New TLS cipher suites backported to SSL3. */
 #define TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA     0x0062
 #define TLS_RSA_EXPORT1024_WITH_RC4_56_SHA      0x0064
 

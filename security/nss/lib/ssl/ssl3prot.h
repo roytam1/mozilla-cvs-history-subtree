@@ -184,7 +184,9 @@ typedef struct {
     SECItem list;
 } SSL3Certificate;
 
-/* SSL3SignType moved to ssl.h */
+typedef enum {
+    sign_null, sign_rsa, sign_dsa
+} SSL3SignType;
 
 /* The SSL key exchange method used */     
 typedef enum {

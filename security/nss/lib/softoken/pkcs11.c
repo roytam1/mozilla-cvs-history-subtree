@@ -430,8 +430,8 @@ pk11_setStringName(char *inString, char *buffer, int buffer_length) {
 /*
  * Configuration utils
  */
-static CK_RV
-pk11_configure(char *man, char *libdes, char *tokdes, char *ptokdes,
+void
+PK11_ConfigurePKCS11(char *man, char *libdes, char *tokdes, char *ptokdes,
 	char *slotdes, char *pslotdes, char *fslotdes, char *fpslotdes,
 	int minPwd, int pwRequired) 
 {
@@ -472,7 +472,7 @@ pk11_configure(char *man, char *libdes, char *tokdes, char *ptokdes,
 
     PK11_ConfigureFIPS(fslotdes,fpslotdes);
 
-    return CKR_OK;
+    return;
 }
 
 /*
@@ -654,7 +654,12 @@ pk11_handleCertObject(PK11Session *session,PK11Object *object)
 	/* Temporary for PKCS 12 */
 	if(cert->nickname == NULL) {
 	    /* use the arena so we at least don't leak memory  */
-	    cert->nickname = PORT_ArenaStrdup(cert->arena, label);
+	    cert->nickname = (char *)PORT_ArenaAlloc(cert->arena,
+							PORT_Strlen(label)+1);
+	    if(cert->nickname == NULL) {
+		return CKR_HOST_MEMORY;
+	    }
+	    PORT_Memcpy(cert->nickname, label, PORT_Strlen(label));
 	}
 
 	/* only add certs that have a private key */
@@ -666,7 +671,7 @@ pk11_handleCertObject(PK11Session *session,PK11Object *object)
 	    if (CERT_AddTempCertToPerm(cert, label, &trust) != SECSuccess) {
 		return CKR_HOST_MEMORY;
 	    }
-        } else {
+	} else {
 	    CERT_ChangeCertTrust(cert->dbhandle,cert,&trust);
 	}
 	if(certUsage) {
@@ -771,25 +776,6 @@ pk11_GetPubItem(SECKEYPublicKey *pubKey) {
 	    break;
     }
     return pubItem;
-}
-
-/* convert a high key type to a low key type. This will go away when
- * the last SECKEYPublicKey structs go away.
- */
-LowKeyType
-seckeyLow_KeyType(KeyType keyType)
-{
-    switch (keyType) {
-    case rsaKey:
-	return lowRSAKey;
-    case dsaKey:
-	return lowDSAKey;
-    case dhKey:
-	return lowDHKey;
-    default:
-	break;
-    }
-    return lowNullKey;
 }
 
 typedef struct {
@@ -1009,7 +995,7 @@ pk11_handlePrivateKeyObject(PK11Object *object,CK_KEY_TYPE key_type)
 	if (crv == CKR_OK) {
 	    rv = SECKEY_StoreKeyByPublicKey(SECKEY_GetDefaultKeyDB(),
 			privKey, &pubKey, label,
-			(SECKEYLowGetPasswordKey) pk11_givePass, object->slot);
+			(SECKEYGetPasswordKey) pk11_givePass, object->slot);
 
 	    /* check for the existance of an existing certificate and activate
 	     * it if necessary */
@@ -1131,6 +1117,9 @@ pk11_handleSecretKeyObject(PK11Object *object,CK_KEY_TYPE key_type,
 								PRBool isFIPS)
 {
     CK_RV crv;
+    CK_BBOOL cktrue = CK_TRUE;
+    CK_BBOOL ckfalse = CK_FALSE;
+    PK11Attribute *attribute = NULL;
     SECKEYLowPrivateKey *privKey = NULL;
     SECItem pubKey;
 
@@ -1155,10 +1144,7 @@ pk11_handleSecretKeyObject(PK11Object *object,CK_KEY_TYPE key_type,
 
 	rv = SECKEY_StoreKeyByPublicKey(SECKEY_GetDefaultKeyDB(),
 			privKey, &pubKey, label,
-			(SECKEYLowGetPasswordKey) pk11_givePass, object->slot);
-	if (rv != SECSuccess) {
-	    crv = CKR_DEVICE_ERROR;
-	}
+			(SECKEYGetPasswordKey) pk11_givePass, object->slot);
 
 	object->inDB = PR_TRUE;
         object->handle |= (PK11_TOKEN_MAGIC | PK11_TOKEN_TYPE_PRIV);
@@ -1433,7 +1419,7 @@ pk11_importPrivateKey(PK11Slot *slot,SECKEYLowPrivateKey *lowPriv,
      * will look them up again from the database when it needs them.
      */
     switch (lowPriv->keyType) {
-    case lowRSAKey:
+    case rsaKey:
 	/* format the keys */
 	key_type = CKK_RSA;
 	sign = CK_TRUE;
@@ -1459,7 +1445,7 @@ pk11_importPrivateKey(PK11Slot *slot,SECKEYLowPrivateKey *lowPriv,
 	if (crv != CKR_OK)  break;
         crv = pk11_AddAttributeType(privateKey,CKA_COEFFICIENT,NULL,0);
 	break;
-    case lowDSAKey:
+    case dsaKey:
 	key_type = CKK_DSA;
 	sign = CK_TRUE;
 	recover = CK_FALSE;
@@ -1477,7 +1463,7 @@ pk11_importPrivateKey(PK11Slot *slot,SECKEYLowPrivateKey *lowPriv,
 	crv = pk11_AddAttributeType(privateKey,CKA_VALUE,NULL,0);
 	if (crv != CKR_OK) break;
 	break;
-    case lowDHKey:
+    case dhKey:
 	key_type = CKK_DH;
 	sign = CK_FALSE;
 	decrypt = CK_FALSE;
@@ -1552,7 +1538,7 @@ pk11_importPublicKey(PK11Slot *slot,
     CK_RV crv = CKR_OK;
     CK_OBJECT_CLASS pubClass = CKO_PUBLIC_KEY;
     unsigned char cka_id[SHA1_LENGTH];
-    LowKeyType keyType = nullKey;
+    KeyType keyType = nullKey;
     SECKEYPublicKey *pubKey = NULL;
     CK_ATTRIBUTE theTemplate[2];
     PK11ObjectListElement *objectList = NULL;
@@ -1652,14 +1638,14 @@ pk11_importPublicKey(PK11Slot *slot,
     /* Now Set up the parameters to generate the key (based on mechanism) */
     if (lowPriv == NULL) {
 
-	keyType = seckeyLow_KeyType(pubKey->keyType); 
+	keyType = pubKey->keyType;
     } else {
 	keyType = lowPriv->keyType;
     } 
 
 
     switch (keyType) {
-    case lowRSAKey:
+    case rsaKey:
 	/* format the keys */
 	key_type = CKK_RSA;
 	verify = CK_TRUE;
@@ -1683,7 +1669,7 @@ pk11_importPublicKey(PK11Slot *slot,
 	    if (crv != CKR_OK) break;
 	}
 	break;
-    case lowDSAKey:
+    case dsaKey:
 	key_type = CKK_DSA;
 	verify = CK_TRUE;
 	recover = CK_FALSE;
@@ -1717,7 +1703,7 @@ pk11_importPublicKey(PK11Slot *slot,
 	    if (crv != CKR_OK) break;
 	}
 	break;
-    case lowDHKey:
+    case dhKey:
 	key_type = CKK_DH;
 	verify = CK_FALSE;
 	encrypt = CK_FALSE;
@@ -1961,7 +1947,7 @@ SECKEYLowPublicKey *pk11_GetPubKey(PK11Object *object,CK_KEY_TYPE key_type)
     pubKey->arena = arena;
     switch (key_type) {
     case CKK_RSA:
-	pubKey->keyType = lowRSAKey;
+	pubKey->keyType = rsaKey;
 	crv = pk11_Attribute2SSecItem(arena,&pubKey->u.rsa.modulus,
 							object,CKA_MODULUS);
     	if (crv != CKR_OK) break;
@@ -1969,7 +1955,7 @@ SECKEYLowPublicKey *pk11_GetPubKey(PK11Object *object,CK_KEY_TYPE key_type)
 						object,CKA_PUBLIC_EXPONENT);
 	break;
     case CKK_DSA:
-	pubKey->keyType = lowDSAKey;
+	pubKey->keyType = dsaKey;
 	crv = pk11_Attribute2SSecItem(arena,&pubKey->u.dsa.params.prime,
 							object,CKA_PRIME);
     	if (crv != CKR_OK) break;
@@ -1983,7 +1969,7 @@ SECKEYLowPublicKey *pk11_GetPubKey(PK11Object *object,CK_KEY_TYPE key_type)
 							object,CKA_VALUE);
 	break;
     case CKK_DH:
-	pubKey->keyType = lowDHKey;
+	pubKey->keyType = dhKey;
 	crv = pk11_Attribute2SSecItem(arena,&pubKey->u.dh.prime,
 							object,CKA_PRIME);
     	if (crv != CKR_OK) break;
@@ -2030,7 +2016,7 @@ pk11_mkPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
     privKey->arena = arena;
     switch (key_type) {
     case CKK_RSA:
-	privKey->keyType = lowRSAKey;
+	privKey->keyType = rsaKey;
 	crv=pk11_Attribute2SSecItem(arena,&privKey->u.rsa.modulus,
 							object,CKA_MODULUS);
 	if (crv != CKR_OK) break;
@@ -2061,7 +2047,7 @@ pk11_mkPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
 	break;
 
     case CKK_DSA:
-	privKey->keyType = lowDSAKey;
+	privKey->keyType = dsaKey;
 	crv = pk11_Attribute2SSecItem(arena,&privKey->u.dsa.params.prime,
 							object,CKA_PRIME);
     	if (crv != CKR_OK) break;
@@ -2080,7 +2066,7 @@ pk11_mkPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
 	break;
 
     case CKK_DH:
-	privKey->keyType = lowDHKey;
+	privKey->keyType = dhKey;
 	crv = pk11_Attribute2SSecItem(arena,&privKey->u.dh.prime,
 							object,CKA_PRIME);
     	if (crv != CKR_OK) break;
@@ -2117,6 +2103,7 @@ pk11_GetPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
 
     if (pk11_isTrue(object,CKA_TOKEN)) {
 	/* grab it from the data base */
+	char *label = pk11_getString(object,CKA_LABEL);
 	SECItem pubKey;
 	CK_RV crv;
 
@@ -2126,7 +2113,7 @@ pk11_GetPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
 	if (crv != CKR_OK) return NULL;
 	
 	priv=SECKEY_FindKeyByPublicKey(SECKEY_GetDefaultKeyDB(),&pubKey,
-				       (SECKEYLowGetPasswordKey) pk11_givePass,
+				       (SECKEYGetPasswordKey) pk11_givePass,
 				       object->slot);
 	if (!priv && pubKey.data[0] == 0) {
 	    /* Because of legacy code issues, sometimes the public key has
@@ -2137,7 +2124,7 @@ pk11_GetPrivKey(PK11Object *object,CK_KEY_TYPE key_type)
 	    tmpPubKey.data = pubKey.data + 1;
 	    tmpPubKey.len = pubKey.len - 1;
 	    priv=SECKEY_FindKeyByPublicKey(SECKEY_GetDefaultKeyDB(),&tmpPubKey,
-				           (SECKEYLowGetPasswordKey) pk11_givePass,
+				           (SECKEYGetPasswordKey) pk11_givePass,
 				           object->slot);
 	}
 	if (pubKey.data) PORT_Free(pubKey.data);
@@ -2240,7 +2227,7 @@ pk11_mkSecretKeyRep(PK11Object *object)
      *      is used for the key.
      *   all others - set to integer 0
      */
-    privKey->keyType = lowRSAKey;
+    privKey->keyType = rsaKey;
 
     /* The modulus is set to the key id of the symmetric key */
     crv=pk11_Attribute2SecItem(arena,&privKey->u.rsa.modulus,object,CKA_ID);
@@ -2287,7 +2274,7 @@ loser:
 static PRBool
 isSecretKey(SECKEYLowPrivateKey *privKey)
 {
-  if (privKey->keyType == lowRSAKey && privKey->u.rsa.publicExponent.len == 1 &&
+  if (privKey->keyType == rsaKey && privKey->u.rsa.publicExponent.len == 1 &&
       privKey->u.rsa.publicExponent.data[0] == 0)
     return PR_TRUE;
 
@@ -2429,82 +2416,23 @@ PK11_SlotInit(CK_SLOT_ID slotID, PRBool needLogin)
     return CKR_OK;
 }
 
-
 /*
  * common initialization routines between PKCS #11 and FIPS
  */
 CK_RV PK11_LowInitialize(CK_VOID_PTR pReserved)
 {
-    CK_RV crv = CKR_OK;
-    CK_C_INITIALIZE_ARGS *init_args = (CK_C_INITIALIZE_ARGS *) pReserved;
+    SECStatus rv = SECSuccess;
 
-    /* NOTE:
-     * we should be getting out mutexes from this list, not statically binding
-     * them from NSPR. This should happen before we allow the internal to split
-     * off from the rest on NSS.
-     */
+    /* initialize the Random number generater */
+    rv =  RNG_RNGInit();
 
-    /* initialize the key and cert db's */
-    SECKEY_SetDefaultKeyDBAlg(SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC);
-
-    if ((init_args && init_args->LibraryParameters)) {
-	pk11_parameters paramStrings;
-       
-	crv = secmod_parseParameters
-		((char *)init_args->LibraryParameters,&paramStrings);
-	if (crv != CKR_OK) {
-	    return crv;
-	}
-	    
-	crv = pk11_DBInit(paramStrings.configdir,paramStrings.certPrefix,
-	    paramStrings.keyPrefix,paramStrings.secmodName,				    paramStrings.readOnly,paramStrings.noCertDB,
-	    paramStrings.noModDB, paramStrings.forceOpen);
-	if (crv != CKR_OK) {
-	    secmod_freeParams(&paramStrings);
-	    return crv;
-	}
-	crv = pk11_configure(paramStrings.man, paramStrings.libdes, 
-		paramStrings.tokdes,paramStrings.ptokdes,paramStrings.slotdes,
-		paramStrings.pslotdes,paramStrings.fslotdes,
-		paramStrings.fpslotdes, paramStrings.minPW, 
-					paramStrings.pwRequired);
-	secmod_freeParams(&paramStrings);
-	if (crv != CKR_OK) {
-	    return crv;
-	}
-    } else {
-	return CKR_ARGUMENTS_BAD;
+    if (rv != SECSuccess) {
+	return CKR_DEVICE_ERROR;
     }
 
-
+    SECKEY_SetDefaultKeyDBAlg(SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC);
     return CKR_OK;
 }
-
-/*
- * handle the SECMOD.db
- */
-char **
-NSC_ModuleDBFunc(unsigned long function,char *parameters, char *args)
-{
-    char *secmod;
-    PRBool rw;
-    static char *success="Success";
-
-    secmod = secmod_getSecmodName(parameters,&rw);
-
-    switch (function) {
-    case SECMOD_MODULE_DB_FUNCTION_FIND:
-	return secmod_ReadPermDB(secmod,parameters,rw);
-    case SECMOD_MODULE_DB_FUNCTION_ADD:
-	return (secmod_AddPermDB(secmod,args,rw) == SECSuccess) 
-							? &success: NULL;
-    case SECMOD_MODULE_DB_FUNCTION_DEL:
-	return (secmod_DeletePermDB(secmod,args,rw) == SECSuccess) 
-							? &success: NULL;
-    }
-    return NULL;
-}
-
 
 /* NSC_Initialize initializes the Cryptoki library. */
 CK_RV NSC_Initialize(CK_VOID_PTR pReserved)
@@ -3553,10 +3481,10 @@ add_key_to_list(DBT *key, DBT *data, void *arg)
     
     node->privKey = privKey;
     switch (privKey->keyType) {
-      case lowRSAKey:
+      case rsaKey:
 	node->pubItem = &privKey->u.rsa.modulus;
 	break;
-      case lowDSAKey:
+      case dsaKey:
 	node->pubItem = &privKey->u.dsa.publicValue;
 	break;
       default:
@@ -3609,7 +3537,7 @@ add_cert_to_list(CERTCertificate *cert, SECItem *k, void *pdata)
 	node = keylist->head;
 	while ( node ) {
 	    /* if key type is different, then there is no match */
-	    if (node->privKey->keyType == seckeyLow_KeyType(pubKey->keyType)) { 
+	    if ( node->privKey->keyType == pubKey->keyType ) {
 
 		/* compare public value from cert with public value from
 		 * the key

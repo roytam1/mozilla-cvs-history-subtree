@@ -619,7 +619,6 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     SECStatus rv;
     sslSocket *ss;
     sslSecurityInfo *sec;
-    sslServerCerts  *sc;
 
     ss = ssl_FindSocket(fd);
     if (!ss) {
@@ -655,49 +654,39 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
 	return SECFailure;
     }
 
-    sc = ss->serverCerts + kea;
     /* load the server certificate */
-    if (sc->serverCert != NULL) {
-	CERT_DestroyCertificate(sc->serverCert);
-    	sc->serverCert = NULL;
-    }
+    if (ss->serverCert[kea] != NULL)
+	CERT_DestroyCertificate(ss->serverCert[kea]);
     if (cert) {
-	SECKEYPublicKey * pubKey;
-	sc->serverCert = CERT_DupCertificate(cert);
-	if (!sc->serverCert)
+	ss->serverCert[kea] = CERT_DupCertificate(cert);
+	if (ss->serverCert[kea] == NULL)
 	    goto loser;
-    	/* get the size of the cert's public key, and remember it */
-	pubKey = CERT_ExtractPublicKey(cert);
-	if (!pubKey) 
-	    goto loser;
-	sc->serverKeyBits = SECKEY_PublicKeyStrength(pubKey) * BPB;
-	SECKEY_DestroyPublicKey(pubKey); 
-	pubKey = NULL;
-    }
+    } else ss->serverCert[kea] = NULL;
 
 
     /* load the server cert chain */
-    if (sc->serverCertChain != NULL) {
-	CERT_DestroyCertificateList(sc->serverCertChain);
-    	sc->serverCertChain = NULL;
-    }
+    if (ss->serverCertChain[kea] != NULL)
+	CERT_DestroyCertificateList(ss->serverCertChain[kea]);
     if (cert) {
-	sc->serverCertChain = CERT_CertChainFromCert(
-			    sc->serverCert, certUsageSSLServer, PR_TRUE);
-	if (sc->serverCertChain == NULL)
+	ss->serverCertChain[kea] = CERT_CertChainFromCert(
+			    ss->serverCert[kea], certUsageSSLServer, PR_TRUE);
+	if (ss->serverCertChain[kea] == NULL)
 	     goto loser;
-    }
+    } else ss->serverCertChain[kea] = NULL;
+
+
+    /* Only do this once because it's global. */
+    if (ssl3_server_ca_list == NULL)
+	ssl3_server_ca_list = CERT_GetSSLCACerts(ss->dbHandle);
 
     /* load the private key */
-    if (sc->serverKey != NULL) {
-	SECKEY_DestroyPrivateKey(sc->serverKey);
-    	sc->serverKey = NULL;
-    }
+    if (ss->serverKey[kea] != NULL)
+	SECKEY_DestroyPrivateKey(ss->serverKey[kea]);
     if (key) {
-	sc->serverKey = SECKEY_CopyPrivateKey(key);
-	if (sc->serverKey == NULL)
+	ss->serverKey[kea] = SECKEY_CopyPrivateKey(key);
+	if (ss->serverKey[kea] == NULL)
 	    goto loser;
-    }
+    } else ss->serverKey[kea] = NULL;
 
     if (kea == kt_rsa) {
         rv = ssl3_CreateRSAStepDownKeys(ss);
@@ -706,24 +695,20 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
 	}
     }
 
-    /* Only do this once because it's global. */
-    if (ssl3_server_ca_list == NULL)
-	ssl3_server_ca_list = CERT_GetSSLCACerts(ss->dbHandle);
-
     return SECSuccess;
 
 loser:
-    if (sc->serverCert != NULL) {
-	CERT_DestroyCertificate(sc->serverCert);
-	sc->serverCert = NULL;
+    if (ss->serverCert[kea] != NULL) {
+	CERT_DestroyCertificate(ss->serverCert[kea]);
+	ss->serverCert[kea] = NULL;
     }
-    if (sc->serverCertChain != NULL) {
-	CERT_DestroyCertificateList(sc->serverCertChain);
-	sc->serverCertChain = NULL;
+    if (ss->serverCertChain != NULL) {
+	CERT_DestroyCertificateList(ss->serverCertChain[kea]);
+	ss->serverCertChain[kea] = NULL;
     }
-    if (sc->serverKey != NULL) {
-	SECKEY_DestroyPrivateKey(sc->serverKey);
-	sc->serverKey = NULL;
+    if (ss->serverKey[kea] != NULL) {
+	SECKEY_DestroyPrivateKey(ss->serverKey[kea]);
+	ss->serverKey[kea] = NULL;
     }
     return SECFailure;
 }
@@ -949,12 +934,6 @@ ssl_SecureClose(sslSocket *ss)
 	!(ss->shutdownHow & ssl_SHUTDOWN_SEND)	&&
 	!ss->recvdCloseNotify                   &&
 	(ss->ssl3 != NULL)) {
-
-	/* We don't want the final alert to be Nagle delayed. */
-	if (!ss->delayDisabled) {
-	    ssl_EnableNagleDelay(ss, PR_FALSE);
-	    ss->delayDisabled = 1;
-	}
 
 	(void) SSL3_SendAlert(ss, alert_warning, close_notify);
     }
@@ -1254,7 +1233,7 @@ SSL_GetSessionID(PRFileDesc *fd)
 	    sid = ss->sec->ci.sid;
 	    item = (SECItem *)PORT_Alloc(sizeof(SECItem));
 	    if (sid->version < SSL_LIBRARY_VERSION_3_0) {
-		item->len = SSL2_SESSIONID_BYTES;
+		item->len = SSL_SESSIONID_BYTES;
 		item->data = (unsigned char*)PORT_Alloc(item->len);
 		PORT_Memcpy(item->data, sid->u.ssl2.sessionID, item->len);
 	    } else {

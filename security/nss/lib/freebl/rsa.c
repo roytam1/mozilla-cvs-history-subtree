@@ -626,7 +626,7 @@ RSA_PrivateKeyOp(RSAPrivateKey *key,
 {
     unsigned int modLen;
     unsigned int offset;
-    SECStatus rv = SECSuccess;
+    SECStatus rv;
     mp_err err;
     mp_int n, c, m;
     mp_int f, g;

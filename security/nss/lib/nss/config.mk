@@ -68,9 +68,6 @@ SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/softoken.lib \
 	$(CRYPTOLIB) \
 	$(DIST)/lib/secutil.lib \
-	$(DIST)/lib/nsspki.lib \
-	$(DIST)/lib/nssdev.lib \
-	$(DIST)/lib/nssb.lib \
 	$(NULL)
 
 SHARED_LIBRARY_DIRS = \
@@ -81,9 +78,6 @@ SHARED_LIBRARY_DIRS = \
 	../softoken \
 	$(CRYPTODIR) \
 	../util \
-	../pki \
-	../dev \
-	../base \
 	$(NULL)
 
 EXTRA_LIBS += \
@@ -122,9 +116,6 @@ SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/libcertdb.$(LIB_SUFFIX) \
 	$(CRYPTOLIB) \
 	$(DIST)/lib/libsecutil.$(LIB_SUFFIX) \
-	$(DIST)/lib/libnsspki.$(LIB_SUFFIX) \
-	$(DIST)/lib/libnssdev.$(LIB_SUFFIX) \
-	$(DIST)/lib/libnssb.$(LIB_SUFFIX) \
 	$(NULL)
 EXTRA_LIBS += \
 	$(DIST)/lib/libdbm.$(LIB_SUFFIX) \
@@ -140,9 +131,6 @@ SHARED_LIBRARY_DIRS = \
 	../certdb \
 	$(CRYPTODIR) \
 	../util \
-	../pki \
-	../dev \
-	../base \
 	$(NULL)
 
 # $(PROGRAM) has NO explicit dependencies on $(EXTRA_SHARED_LIBS)

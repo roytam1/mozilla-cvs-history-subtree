@@ -29,16 +29,8 @@
 #       as would have been produced with -cron
 #   -m <mailinglist> - send filename to mailinglist (csl) only useful
 #       with -f
-#   -ml <mailinglist> - send link to filename to mailinglist (csl) 
-#       only useful with -f
 #   -cron equivalient to -y -s -d -f $RESULTDIR/$HOST.<scriptname>
 #   -t  run on a tinderbox build that means: local, from the startlocation
-#   -l <mozroot directory>  run on a local build mozroot
-#   -ln <mozroot> copy a networkbuild to a local directory mozroot, 
-#        used for networkindipendend QA
-#   -lt try to copy a networkbuild to a local directory, if not possible
-#        run on the network
-#        used for networkindipendend QA
 #
 # special strings
 # ---------------
@@ -70,9 +62,7 @@ fi
 export QASCRIPT_DIR
 
 O_HWACC=OFF
-if [ -z "$O_ALWAYS_YES" ] ; then
-    O_ALWAYS_YES=OFF    # turned on by -y answer all questions with y 
-fi
+O_ALWAYS_YES=OFF    # turned on by -y answer all questions with y 
 
 if [ -z "$O_INIT" ] # header is global, some including scripts may not
 then                # want the init to run, the others don't need to bother
@@ -82,21 +72,17 @@ if [ -z "$O_PARAM" ] # header is global, some including scripts may not
 then                 # require parameters, the others don't need to bother
     O_PARAM=ON
 fi
-if [ -z "$O_OPTIONS" ] # header is global, some including scripts may not
+if [ -z "$O_OPTIONS" ]    # header is global, some including scripts may not
 then                # permit options, they don't need to bother
     O_OPTIONS=OFF
 fi
 O_SILENT=OFF        # turned on by -s silent (only usefull with -y)
-if  [ -z "$O_DEBUG" ] ; then
-    O_DEBUG=OFF     # turned on by -d - calls to Debug produce output when ON
-fi
+O_DEBUG=OFF         # turned on by -d - calls to Debug produce output when ON
 O_FILE=OFF          # turned on by -f echo all output to a file $FILENAME
 O_CRON=OFF          # turned on by -cron cron use only
 O_CRONFILE=OFF      # turned on by -cron cron and -fcron
-O_LOCAL=OFF         # turned on by -l* run on a local build in $LOCAL_MOZROOT
-O_LN=OFF            # turned on by -ln and -lt, test a networkbuild locally
+O_LOCAL=OFF         # turned on by -l run on a local build in $MOZROOT
 O_MAIL=OFF          # turned on by -m - sends email
-O_MAIL_LINK=OFF     # turned on by -ml - sends email
 O_TBX=OFF           # turned on by -t run on a tinderbox build
                     # that means: local, from the startlocation
 
@@ -146,10 +132,7 @@ KILL_SELFSERV=OFF   # if sourcing script sets this to on cleanup will also
                     # Set the masterbuilds 
 if [ -z "$UX_MASTERBUILD" ]
 then                     
-    UX_MASTERBUILD=booboo_Solaris8
-    #if [ ! -d $UX_MASTERBUILD ] ; then
-        #UX_MASTERBUILD=booboo_Solaris8_forte6
-    #fi
+    UX_MASTERBUILD=y2sun2_Solaris8
 fi
 if [ -z "$NT_MASTERBUILD" ]
 then                     
@@ -183,9 +166,11 @@ fi
 if [ -z "$BC_MASTER" ]    # master directory for backwardscompatibility testing
 then                      # a linux compiler bug prevents us from doing the 
                           # testing against a rtm - so we rebuild the branch
-    BC_UX_MASTER=nss322/builds/20010820.1/y2sun2_Solaris8
-    BC_NT_MASTER=nss322/builds/20010820.1/blowfish_NT4.0_Win95
-    BC_MASTER=$BC_UX_MASTER
+    if [ "`uname -sp`" != "SunOS i386" ] ; then
+        BC_MASTER="nss32/builds/20010510.1-nss-3.2-ref"
+    else
+        BC_MASTER="nss32/builds/20010530.1.nss321_rtm_solaris"
+    fi
 fi
 BC_RELEASE=3.2
 export BC_RELEASE
@@ -193,7 +178,7 @@ export BC_RELEASE
 EARLY_EXIT=TRUE     #before the report file has been created, causes Exit to 
                     #create it
 
-UX_D0=/share/builds/mccrel/nss
+UX_D0=/h/blds-sca15a/export/builds/mccrel/nss
 
 ################################### glob_init ##########################
 # global shell function, main initialisation function
@@ -205,14 +190,11 @@ glob_init()
     fi
                         # if running from cron HOST needs to be known early, 
     init_host            # so the output file name can be constructed. 
-    Debug "Setting up environment...( $QASCRIPT_DIR/set_environment) "
     . $QASCRIPT_DIR/set_environment #finds out if we are running on Windows
     Debug "OPerating system: $os_name $os_full"
     if [ $O_WIN = "ON" ] ; then
-        win_set_tmp
         write_to_tmpfile
         MASTERBUILD=$NT_MASTERBUILD
-        BC_MASTER=$BC_NT_MASTER
     fi
     umask 0    
     init_dirs
@@ -260,235 +242,49 @@ init_vars()
    export O_HWACC
 }
 
-########################################################################
-# functions below deal with setting up the directories and PATHs for
-# all different flavors of OS (Unix, Linux, NT MKS, NT Cygnus) and QA
-# (Standard, local tinderbox)
-########################################################################
-
 ########################## find_nt_masterbuild #########################
 # global shell function, sets the nt masterbuild directories, part of init 
 ########################################################################
 find_nt_masterbuild()
 {
-    NT_MASTERDIR=${DAILY_BUILD}/${NT_MASTERBUILD}
+    NT_MASTERDIR=${D2}/${NT_MASTERBUILD}
     if [ "${NT_MB_WAS_SET}" = "FALSE" -a ! -d $NT_MASTERDIR ] ; then
-        if [ -d ${DAILY_BUILD}/*NT4* ] ; then
-            NT_MASTERBUILD=` cd ${DAILY_BUILD}; ls -d *NT4* `
+        if [ -d ${D2}/*NT4* ] ; then
+            NT_MASTERBUILD=` cd ${D2}; ls -d *NT4* `
             Debug "NT_MASTERBUILD $NT_MASTERBUILD"
-            NT_MASTERDIR=${DAILY_BUILD}/${NT_MASTERBUILD}
+            NT_MASTERDIR=${D2}/${NT_MASTERBUILD}
         fi
     fi
     Debug "NT_MASTERDIR $NT_MASTERDIR"
 }
 
-################################### set_daily_build_dirs ###########################
-# global shell function, sets directories 
-########################################################################
-set_daily_build_dirs()
+set_d2()
 {
-    if [ "$O_LOCAL" = "ON" -a "$O_LN" = "OFF" ] ; then
-        DAILY_BUILD=${LOCAL_MOZROOT}        # on local builds NSS_VER_DIR and DAILY_BUILD are 
-                             # set to the LOCAL_MOZROOT, since it is not sure
-                             # if ../.. (DAILY_BUILD) even exists
-        LOCALDIST=${LOCAL_MOZROOT}/dist
-    elif [ "$O_TBX" = "ON" ] ; then
-        DAILY_BUILD="$TBX_DAILY_BUILD"
+    if [ "$O_TBX" = "ON" ] ; then
+        D2="$TBX_D2"
         LOCALDIST=${UXDIST}
     else
-        DAILY_BUILD=${NSS_VER_DIR}/builds/${QAYEAR}${BUILDDATE}.${BUILDNUMBER}
-        LOCALDIST=${DAILY_BUILD}/${MASTERBUILD}/mozilla/dist
+        D2=${D1}/builds/${QAYEAR}${BUILDDATE}.${BUILDNUMBER}
+        LOCALDIST=${D2}/${MASTERBUILD}/mozilla/dist
     fi
 }
 
-map_os64()
-{
-  IS_64=""
-  case `uname -s` in
-      #OSF1) has been done already - always 64 bit
-      SunOS)
-          MAPPED_OS=Solaris*8
-          IS_64=`(isainfo -v | grep 64)>/dev/null 2>/dev/null && echo 64 bit`
-          if [ "$O_TBX" = "OFF" ] ; then
-              set_osdir
-              if [ -n "$IS_64" ]
-              then #Wait for the 64 bit build to finish...
-                  Debug Testing build for $MAPPED_OS in $OSDIR
-                  Wait ${OSDIR}/SVbuild.InProgress.1 0
-              fi
-          fi
-          ;;
-      AIX)
-          IS_64=`lslpp -l | grep "bos.64bit"> /dev/null && echo 64 bit`
-          ;;
-      HP-UX)
-          IS_64=`getconf KERNEL_BITS | grep 64 >/dev/null && echo 64 bit`
-          ;;
-  esac
-  Debug "Mapped OS to $MAPPED_OS"
-}
-
-
-
-################################### copy_to_local ########################
-# global shell function, copies the necessary directories from the 
-# daily build aerea to the local disk
-########################################################################
-copy_to_local()
-{
-    Debug "Copy network directories to local directories"
-    C2L_ERROR=0
-    if [ ! -d ${LOCAL_MOZROOT}/dist ] ; then
-        mkdir -p ${LOCAL_MOZROOT}/dist || C2L_ERROR=1
-    fi
-    if [ ! -d ${LOCAL_MOZROOT}/security/nss ] ; then
-        mkdir -p ${LOCAL_MOZROOT}/security/nss || C2L_ERROR=2
-    fi
-    if [ $C2L_ERROR != 0 ] ; then
-        Exit "copy_to_local: Can t make necesssary directories ($C2L_ERROR ) "
-    fi
-    if [ ! -d ${LOCAL_MOZROOT}/security/nss/tests ] ; then
-        cp -r ${TESTSCRIPTDIR} ${LOCAL_MOZROOT}/security/nss || C2L_ERROR=1
-    fi
-    if [ ! -d ${LOCAL_MOZROOT}/security/coreconf ] ; then
-        cp -r ${MOZILLA_ROOT}/security/coreconf ${LOCAL_MOZROOT}/security || C2L_ERROR=2
-    fi
-    
-    NO_DIRS=0;
-    if [ "$O_WIN" = "ON" ] ; then
-        OS_TARGET=WINNT;export OS_TARGET
-    fi
-    unset BUILD_OPT;export BUILD_OPT;
-    unset USE_64;export USE_64;
-#FIXME only tested on 64 bit Solaris and only got 32 bit builds
-    while [ $NO_DIRS -lt 4 ] ; do
-                                                  # first time thru: Debug 32 bit NT
-        set_objdir
-        Debug "Copying ${OBJDIR}..."
-        if [ ! -d ${LOCAL_MOZROOT}/dist/${OBJDIR} ] ; then
-            cp -r ${LOCALDIST}/${OBJDIR} ${LOCAL_MOZROOT}/dist || C2L_ERROR=3
-        fi
-        NO_DIRS=`expr $NO_DIRS + 1`
-        if [ $NO_DIRS = 1 ] ; then                # 2nd time: OPT 32 bit NT
-            BUILD_OPT=1; export BUILD_OPT;
-        elif [ $NO_DIRS = 2 ] ; then              # 3rd time: OPT, either 64 bit or Win95 or force exit
-            if [ "$O_WIN" = "ON" ] ; then
-                OS_TARGET=WIN95;export OS_TARGET
-            else
-                map_os64
-                if [ -z "$IS_64" ] ; then #32 bit platform
-                    NO_DIRS=4
-                else
-                    USE_64=1; export USE_64
-                fi
-            fi
-        elif [ $NO_DIRS = 3 ] ; then              # 4th time:  Debug either 64 bit or Win95
-            unset BUILD_OPT;export BUILD_OPT;
-        fi
-     
-            
-    done
-    if [ $C2L_ERROR != 0 ] ; then
-        Exit "copy_to_local: Can t copy necesssary directories ($C2L_ERROR ) "
-    fi
-    unset TESTSCRIPTDIR
-    unset TESTDIR
-    unset RESULTDIR
-    O_LN=OFF       #from here on pretend it is regular -l local QA FIXME, might cause 
-                   #problems with the backwardcompatibility tests
-    Debug "Successfully copied network directories to local directories"
-}
-
-################################### local_dirs ###########################
-# global shell function, sets the directories for local QA
-########################################################################
-local_dirs()
-{
-    Debug "Set directories for local QA"
-    #if [ "$O_WIN" = "ON" ] ; then
-        #win_set_tmp
-    #fi
-    NSS_VER_DIR=${LOCAL_MOZROOT}        # on local builds NSS_VER_DIR and DAILY_BUILD are 
-                         # set to the LOCAL_MOZROOT, since it is not sure
-                         # if ../../../.. (NSS_VER_DIR) even exists
-    if [ -z "${RESULTDIR}" ] ; then # needs to be local as well
-        Debug "Setting RESULTDIR for local QA"
-        RESULTDIR="${LOCAL_MOZROOT}/tests_results/security/${HOST}-`date +%Y%m%d-%H.%M`"
-    fi
-    set_daily_build_dirs
-    UX_MASTERDIR=`dirname ${LOCAL_MOZROOT}`
-    NT_MASTERDIR=$UX_MASTERDIR
-    MOZILLA_ROOT=${LOCAL_MOZROOT}
-
-    UXDIST=${MOZILLA_ROOT}/dist
-    NTDIST=${UXDIST}
-
-    if [ -z "${TESTDIR}" ] ; then 
-        Debug "Setting TESTDIR for local QA"
-        TESTDIR=${RESULTDIR}
-    fi
-    if [ -n "$TESTDIR" ] ; then
-        if [ ! -d $TESTDIR ] ; then
-            Debug "Making TESTDIR for local QA"
-            mkdir -p $TESTDIR
-        fi
-    fi
-    export TESTDIR
-    Debug "RESULTDIR $RESULTDIR TESTDIR $TESTDIR"
-
-    TESTSCRIPTDIR=${LOCAL_MOZROOT}/security/nss/tests
-    COMMON=${TESTSCRIPTDIR}/common
-
-    set_objdir
-    debug_dirs
-    export_dirs
-}
-
-
-################################### tbx_dirs ###########################
-# global shell function, sets the directories for tinderbox QA
-########################################################################
 tbx_dirs()
 {
     Debug "Set directories for tinderbox"
     if [ "$O_WIN" = "ON" ] ; then
-        win_set_d1 # we need the NSS_VER_DIR later
+        win_set_d1 #also gets the TMP straight and we need the D1 later
     else
-        NSS_VER_DIR="$UX_D0"/nss$NSSVER
+        D1="$UX_D0"/nss$NSSVER
     fi
     if [ -z "${RESULTDIR}" ] ; then # needs to be different for tinderbox
         Debug "Setting RESULTDIR for tinderbox"
-        RESULTDIR="${NSS_VER_DIR}/tinderbox/tests_results/security/${HOST}-`date +%Y%m%d-%H.%M`"
+        RESULTDIR="${D1}/tinderbox/tests_results/security/${HOST}-`date +%Y%m%d-%H.%M`"
         #RESULTDIR=${UX_MASTERDIR}/mozilla/tests_results/security
     fi
-    TBX_DAILY_BUILD=`cd ../../../../..;pwd`
-    NSS_VER_DIR="${TBX_DAILY_BUILD}/../.." 
-    if [ "$O_WIN" = "ON" ] ; then
-        TBX_LOGFILE_DIR="${NSS_VER_DIR}/logs/tbx/stalker_NT"
-    else
-        if [ -n "${TBX_LOGDIR}" ] ; then
-            TBX_LOGFILE_DIR="${TBX_LOGDIR}"
-        elif [ -d "${NSS_VER_DIR}/logs/tinderbox/Solaris8_64" ] ; then
-            TBX_LOGFILE_DIR="${NSS_VER_DIR}/logs/tinderbox/Solaris8_64"
-        elif [ -d "${NSS_VER_DIR}/logs/tinderbox/Solaris2.6" ] ; then
-            TBX_LOGFILE_DIR="${NSS_VER_DIR}/logs/tinderbox/Solaris2.6"
-        else
-            TBX_LOGFILE_DIR=`ls ${NSS_VER_DIR}/logs/tinderbox |
-                     sed -e 's/ .*//g'`
-            if [ -z "$TBX_LOGFILE_DIR" ] ; then
-                TBX_LOGFILE_DIR=`ls ${NSS_VER_DIR}/logs/tbx |
-                     sed -e 's/ .*//g'`
-                TBX_LOGFILE_DIR="${NSS_VER_DIR}/logs/tbx/${TBX_LOGFILE_DIR}"
-            else
-                TBX_LOGFILE_DIR="${NSS_VER_DIR}/logs/tinderbox/${TBX_LOGFILE_DIR}"
-            fi
-            #TBX_LOGFILE_DIR="${NSS_VER_DIR}/logs"
-        fi
-    fi
-    echo "QA results in $RESULTDIR" >${TBX_LOGFILE_DIR}/qa.log
-    O_FILE=ON
-    FILENAME=${TBX_LOGFILE_DIR}/qa.log
-    set_daily_build_dirs
+    TBX_D2=`cd ../../../../..;pwd`
+    D1="${TBX_D2}/../.." 
+    set_d2
     UX_MASTERDIR=`cd ../../../..;pwd`
     NT_MASTERDIR=$UX_MASTERDIR
     MOZILLA_ROOT=$UX_MASTERDIR/mozilla
@@ -518,36 +314,30 @@ tbx_dirs()
 }
 
 ################################### init_dirs ###########################
-# global shell function, sets the directories for standard QA
-# calls special functions for tinderbox, windows or local QA, part of init 
+# global shell function, sets the directories, part of init 
 ########################################################################
 init_dirs()
 {
-    if [ "$O_LOCAL" = "ON" -a $O_LN = "OFF" ] ; then  # if it is a LN we need to know
-                       # all the directories off the network first to copy them
-        local_dirs     # O_LOCAL alone assumes that all the directories are already there 
-        return
-    elif [ "$O_TBX" = "ON" ] ; then
+    if [ "$O_TBX" = "ON" ] ; then
         tbx_dirs
         return
     elif [ "$O_WIN" = "ON" ] ; then
         win_set_d1
     else
-        NSS_VER_DIR="$UX_D0"/nss$NSSVER
+        D1="$UX_D0"/nss$NSSVER
     fi
-    #set -x
 
-    set_daily_build_dirs
+    set_d2
 
     if [ -z "${BCDIST}" ] ; then
-        #BCDIST=/share/builds/mccrel/nss/${BC_MASTER}/mozilla/dist
-        BCDIST=${NSS_VER_DIR}/../${BC_MASTER}/mozilla/dist
+        #BCDIST=/h/blds-sca15a/export/builds/mccrel/nss/${BC_MASTER}/${MASTERBUILD}/mozilla/dist
+        BCDIST=${D1}/../${BC_MASTER}/${MASTERBUILD}/mozilla/dist
         if [ ! -d $BCDIST ] ; then
-            ask "Backward compatibility directory $BCDIST does not exist, continue" "y" "n" || Exit
+            ask "Backward compatibility dierectory $BCDIST does not exist, continue" "y" "n" || Exit
         fi
     fi
 
-    UX_MASTERDIR=${DAILY_BUILD}/${UX_MASTERBUILD}
+    UX_MASTERDIR=${D2}/${UX_MASTERBUILD}
     find_nt_masterbuild
 
     if [ "$O_WIN" = "ON" ]
@@ -564,17 +354,10 @@ init_dirs()
         RESULTDIR=${UX_MASTERDIR}/mozilla/tests_results/security
     fi
 
-    if [ -n "$PRODUCT_TO_TEST" -a "$PRODUCT_TO_TEST" = "JSS" ] ; then
+    TESTSCRIPTDIR=${MOZILLA_ROOT}/security/nss/tests
 
-        if [ "$O_WIN" = "ON" ] ; then
-            JSS_NSS_SRC_DIR=$JSS_NSS_NT_SRC_DIR
-        fi
-        TESTSCRIPTDIR=${NSS_VER_DIR}/../${JSS_NSS_SRC_DIR}/mozilla/security/nss/tests
-    else
-        TESTSCRIPTDIR=${MOZILLA_ROOT}/security/nss/tests
-    fi
-
-    if [ ! -d $TESTSCRIPTDIR ] ; then
+    if [ ! -d $TESTSCRIPTDIR ]
+    then
         if [ "$O_WIN" = "ON" -a "$WIN_WAIT_FOREVER" = "ON" ]
         then
             WaitForever $TESTSCRIPTDIR/all.sh 1
@@ -584,13 +367,6 @@ init_dirs()
     fi
 
     COMMON=${TESTSCRIPTDIR}/common
-    if [ "$O_LOCAL" = "ON" -a $O_LN = "ON" ] ; then  # if it is a LN we need to know
-                       # all the directories off the network first to copy them
-        copy_to_local
-        local_dirs     
-    fi
-    #set +x
-
 
     set_objdir
     debug_dirs
@@ -612,13 +388,8 @@ debug_dirs()
 
 export_dirs()
 {
-    export NSS_VER_DIR DAILY_BUILD NTDIST UXDIST RESULTDIR TESTSCRIPTDIR BCDIST
+    export D1 D2 NTDIST UXDIST RESULTDIR TESTSCRIPTDIR BCDIST
     export UX_MASTERDIR NT_MASTERDIR COMMON MOZILLA_ROOT
-}
-
-set_osdir()
-{
-    OSDIR=${DAILY_BUILD}/*${MAPPED_OS}*
 }
 
 ################################### init_files ###########################
@@ -647,7 +418,7 @@ init_files()
     fi
 }
 
-################################### write_to_tmpfile ##########################
+################################### eval_opts ##########################
 # global shell function, for NT and cron operation, first a tmpfile 
 # needs to be created
 ########################################################################
@@ -675,62 +446,6 @@ turn_on_cronoptions()
     write_to_tmpfile
 }
 
-########################## test_mozroot ##########################
-# global shell function, determines if the variable LOCAL_MOZROOT is set, 
-# and is usable as mozilla root diretory for a local QA
-###################################################################
-test_mozroot()
-{
-  PWD=`pwd`
-  Debug "LOCAL_MOZROOT = $LOCAL_MOZROOT"
-  case "$LOCAL_MOZROOT" in
-      [0-9-]*|tip)
-          glob_usage "Error: -"$1" requires a directoryname to follow (start with a letter) "
-          ;;
-      \.\.)
-          LOCAL_MOZROOT=`dirname $PWD`
-          ;;
-      \.)
-          LOCAL_MOZROOT=$PWD
-          ;;
-      \.\/*)
-          LOCAL_MOZROOT=`echo $LOCAL_MOZROOT | sed -e "s/^\.//"`
-          LOCAL_MOZROOT="${PWD}${LOCAL_MOZROOT}"
-          ;;
-      \.\.\/*)
-          LOCAL_MOZROOT="${PWD}/${LOCAL_MOZROOT}"
-          ;;
-      \/*|[a-zA-Z]:\/*)
-          ;;
-      ?*)
-          LOCAL_MOZROOT="${PWD}/${LOCAL_MOZROOT}"
-          ;;
-      *)
-          glob_usage "Error: -"$1" requires a directoryname to follow"
-          ;;
-  esac
-  Debug "Reformated MOZROOT to $LOCAL_MOZROOT"
-  if [ "$1" = "ln" ] ; then
-      LOCAL_MOZROOT_PARENT=`dirname $LOCAL_MOZROOT`
-      if [ ! -d $LOCAL_MOZROOT_PARENT -o ! -w $LOCAL_MOZROOT_PARENT -o \
-           ! -x $LOCAL_MOZROOT_PARENT ] ; then
-              Exit "Error: Can't create $LOCAL_MOZROOT (permissions)"
-      fi
-      if [ ! -d "$LOCAL_MOZROOT" ] ; then
-          mkdir $LOCAL_MOZROOT ||
-              Exit "Error: Can't create mozroot $LOCAL_MOZROOT (mkdir failed)"
-      else
-          ask "mozroot $LOCAL_MOZROOT exists - continue (y will remove dir) ?" \
-               "y" "n" || Exit
-          rm -rf $LOCAL_MOZROOT/dist $LOCAL_MOZROOT/security $LOCAL_MOZROOT/tests_results ||
-              Exit "Error: Can't clean mozroot $LOCAL_MOZROOT"
-      fi
-  fi
-  if [ ! -d "$LOCAL_MOZROOT" ] ; then
-      glob_usage "Error: mozilla root $LOCAL_MOZROOT not a valid directory"
-  fi
-}
-
 ################################### eval_opts ##########################
 # global shell function, evapuates options and parameters, sets flags
 # variables and defaults
@@ -752,24 +467,13 @@ eval_opts()
             O_SILENT=ON
             ;;
         -Y*|-y)
-            Debug "Option -y dedectet"
             O_ALWAYS_YES=ON
             ;;
         -d*|-D)
             O_DEBUG=ON
             #set -x
             ;;
-        -ml|-ML)
-            O_MAIL_LINK=ON
-            shift
-            MAILINGLIST=$1
-            if [ -z "$MAILINGLIST" ]
-            then
-                glob_usage "Error: -m requires a mailinglist to follow, for example sonmi,wtc,nelsonb "
-            fi
-            Debug "Sending link to result to $MAILINGLIST"
-            ;;
-        -m|-M)
+        -m*|-M*)
             O_MAIL=ON
             shift
             MAILINGLIST=$1
@@ -797,32 +501,6 @@ eval_opts()
             ;;
         -h|-help|"-?")
             glob_usage
-            ;;
-        -ln)
-            if [ `basename $0` != nssqa ] ; then
-                glob_usage "Error: Can't handle option $1"
-            fi
-            O_LOCAL=ON
-            O_LN=ON
-            shift
-            LOCAL_MOZROOT=$1
-            test_mozroot ln
-            ;;
-        -lt)
-            if [ `basename $0` != nssqa ] ; then
-                glob_usage "Error: Can't handle option $1"
-            fi
-            O_LN=ON
-            O_LOCAL=ON
-            ;;
-        -l)
-            if [ `basename $0` != nssqa ] ; then
-                glob_usage "Error: Can't handle option $1"
-            fi
-            O_LOCAL=ON
-            shift
-            LOCAL_MOZROOT=$1
-            test_mozroot l
             ;;
         -*)
             glob_usage "Error: Can't handle option $1"
@@ -864,12 +542,6 @@ eval_opts()
   export O_CRON O_SILENT O_DEBUG O_ALWAYS_YES O_TBX
 }
 
-win_set_tmp()
-{
-    TMP=`echo "$TMP" | sed -e 's/	/\/t/g' -e 's//\/b/' -e 's/\\\/\//g'`
-    Debug "TMP reformated to $TMP"
-}
-
 ######################### win_set_d1 ################################
 # global shell function, interactively finds the directories in case
 # windows can't get to the default
@@ -877,42 +549,43 @@ win_set_tmp()
 win_set_d1()
 {
     Debug "set Windows Directories..."
-    #win_set_tmp
+    TMP=`echo "$TMP" | sed -e 's/\\\/\//g'`
+    Debug "TMP reformated to $TMP"
     if [ "$O_CYGNUS" = ON ]
     then
-        NSS_VER_DIR=/cygdrive/w/nss/nss$NSSVER
+        D1=/cygdrive/w/nss/nss$NSSVER
     else
-        NSS_VER_DIR=w:/nss/nss$NSSVER
+        D1=w:/nss/nss$NSSVER
     fi
-    if [ ! -w $NSS_VER_DIR ]
+    if [ ! -w $D1 ]
     then
-        Echo "Windows special... can't write in $NSS_VER_DIR"
+        Echo "Windows special... can't write in $D1"
         if [ "$O_CYGNUS" = ON ]
         then
-            NSS_VER_DIR=/cygdrive/u/nss/nss$NSSVER
+            D1=/cygdrive/u/nss/nss$NSSVER
         else
-            NSS_VER_DIR="u:/nss/nss$NSSVER"
+            D1="u:/nss/nss$NSSVER"
         fi
     else
-        Debug "NSS_VER_DIR set to $NSS_VER_DIR"
+        Debug "D1 set to $D1"
         return
     fi
 
-    while [ ! -w $NSS_VER_DIR ]
+    while [ ! -w $D1 ]
     do
         if [ "$O_CRONFILE" = "ON" ] 
         then
-            Exit "cant write in $NSS_VER_DIR" 
+            Exit "cant write in $D1" 
         fi
-        Warning "cant write in $NSS_VER_DIR" 
+        Warning "cant write in $D1" 
         Echo "input start directory (u:/nss, d:/src/nss, f:/shared/nss) "
         read D
         if [ -n "$D" ]
         then
-            NSS_VER_DIR=$D/nss$NSSVER
+            D1=$D/nss$NSSVER
         fi
     done
-    Debug "NSS_VER_DIR set to $NSS_VER_DIR"
+    Debug "D1 set to $D1"
 }
 
 ########################### init_host ##################################
@@ -925,10 +598,6 @@ set_host()
 }
 init_host()
 {
-    if [ `basename $0` != nssqa ] ; then
-        return
-    fi
-
     init_host_done=0
 
     if [ $DS_WAS_SET = FALSE ] #give chance to overwrite, espec. for NT
@@ -1020,7 +689,7 @@ qa_stat_get_sysinfo()
                     -e "s/ release//"`
     else
         case $QA_SYS in
-            *SunOS*5.[89]*)
+            *SunOS*5.8*)
                 ISAINFO=`$GET_SYSINFO isainfo -v`
                 IS_64=`echo $ISAINFO | grep 64 >/dev/null && \
                     echo 64 bit`
@@ -1053,13 +722,12 @@ qa_stat_get_sysinfo()
 ########################################################################
 set_objdir()
 {
-    Debug "set object dir"
     OBJDIR=`cd ${TESTSCRIPTDIR}/common; gmake objdir_name`
     OS_ARCH=`cd ${TESTSCRIPTDIR}/common; gmake os_arch`
     
     #at this point $MASTERBUILD needs to be either NT or unix
 
-    set_daily_build_dirs
+    set_d2
     LOCALDIST_BIN=${LOCALDIST}/${OBJDIR}/bin
     DIST=$LOCALDIST
 
@@ -1079,12 +747,6 @@ set_objdir()
 ########################################################################
 bc()
 {
-  if [ -n "$PRODUCT_TO_TEST" -a "$PRODUCT_TO_TEST" = "JSS" ] ; then
-      TESTDIR=${RESULTDIR}
-      BC_ACTION=""
-      DON_T_SET_PATHS="FALSE" #let init.sh override - FIXME - check if necessary
-      return
-  fi
   DON_T_SET_PATHS="TRUE"
   case $1 in
     0)
@@ -1098,13 +760,23 @@ bc()
       BC_ACTION=""
       DON_T_SET_PATHS="FALSE" #let init.sh override - FIXME - check if necessary
       ;;
-    *)
-      if [ "$O_LOCAL" = "ON" ] ; then
-          Exit "FIXME Can't run backwardcompatibility tests locally yet"
+    1)
+      TESTDIR=${RESULTDIR}/bc_libs
+      BC_ACTION="backward compatibility shlibs in $BC_MASTER to new binaries"
+      LD_LIBRARY_PATH=${BCDIST}/${OBJDIR}/lib
+      if [ "$O_WIN" = "ON" ] ; then
+          if [ "$O_CYGNUS" = ON ] ; then
+              PATH=$TESTSCRIPTDIR:$LOCALDIST_BIN:$BASEPATH:$LD_LIBRARY_PATH
+          else
+              PATH="$TESTSCRIPTDIR;$LOCALDIST_BIN;$BASEPATH;$LD_LIBRARY_PATH"
+          fi
+      else
+          PATH=$TESTSCRIPTDIR:$LOCALDIST_BIN:$BASEPATH
       fi
-      TESTSCRIPTDIR=${BCDIST}/../security/nss/tests
-      COMMON=${TESTSCRIPTDIR}/common
-      TESTDIR=${RESULTDIR}/bct
+      Debug "1st stage of backward compatibility test"
+      ;;
+    *)
+      TESTDIR=${RESULTDIR}/bc_bins
       BC_ACTION="backward compatibility of binaries in $BC_MASTER to new libs"
       BCDIST_BIN=${BCDIST}/${OBJDIR}/bin
       LD_LIBRARY_PATH=${LOCALDIST}/${OBJDIR}/lib
@@ -1117,7 +789,7 @@ bc()
       else
           PATH=$TESTSCRIPTDIR:$BCDIST_BIN:$BASEPATH
       fi
-      Debug "1st stage of backward compatibility test"
+      Debug "2nd stage of backward compatibility test"
       ;;
   esac
   if [ -n "$TESTDIR" ] ; then
@@ -1132,7 +804,6 @@ bc()
   Debug "LD_LIBRARY_PATH $LD_LIBRARY_PATH"
   export PATH LD_LIBRARY_PATH SHLIB_PATH LIBPATH
   export DON_T_SET_PATHS BC_ACTION
-  export TESTSCRIPTDIR COMMON
 }
 
 ########################### Ps #########################################
@@ -1242,23 +913,7 @@ Exit()
     then
         kill_by_name selfserv
     fi
-    if [ $O_MAIL_LINK = "ON" -a $O_FILE = "ON" ]
-    then
-        if [ $EARLY_EXIT = TRUE ]    #before the report file has been created
-        then
-            early_exit "$1"
-        else
-            head -3  $FILENAME >$ML_FILE
-            echo "Content-Type: text/plain; charset=us-ascii; format=flowed
-    Content-Transfer-Encoding: 7bit
-
-" >>$ML_FILE
-            echo $HREF_TMP_HTML_FILE >>$ML_FILE
-            cat $ML_FILE | $RMAIL $MAILINGLIST
-        fi
-
-#FIXME - early exit etc
-    elif [ $O_MAIL = "ON" -a $O_FILE = "ON" ]
+    if [ $O_MAIL = "ON" -a $O_FILE = "ON" ]
     then
         if [ $EARLY_EXIT = TRUE ]    #before the report file has been created
         then
@@ -1486,35 +1141,24 @@ Echo
 ########################################################################
 opt_usage()
 {
-  if [ $O_OPTIONS = "ON" ]
-  then
-    Echo
-    line
-    Echo
-    Echo "    -y answer all questions with y - use at your own risk..."
-    Echo "    -s silent (only usefull with -y)"
-    Echo "    -h, -? - you guessed right - displays this text"
-    Echo "    -d debug"
-    Echo "    -f <filename> - write the (error)output to filename"
-    Echo "    -fcronfile produces the resultfiles in the same locations"
-    Echo "        as would have been produced with -cron"
-    Echo "    -m <mailinglist> - send filename to mailinglist (csl "
-    Echo "         example sonmi,nelsonb,wtc) only useful with -f"
-    Echo "    -ml <mailinglist> - send link to filename to mailinglist "
-    Echo "         (csl example sonmi,nelsonb,wtc) only useful with -f"
-    Echo "    -cron equivalient to -y -s -d -f \$RESULTDIR/\$HOST.nssqa"
-    Echo "    -t run on a tinderbox build (included -cron)"
-    if [ `basename $0` = nssqa ] ; then
+    if [ $O_OPTIONS = "ON" ]
+    then
+        Echo
+        line
+        Echo
+        Echo "    -y answer all questions with y - use at your own risk..."
+        Echo "    -s silent (only usefull with -y)"
+        Echo "    -h, -? - you guessed right - displays this text"
+        Echo "    -d debug"
+        Echo "    -f <filename> - write the (error)output to filename"
+        Echo "    -fcronfile produces the resultfiles in the same locations"
+        Echo "        as would have been produced with -cron"
+        Echo "    -m <mailinglist> - send filename to mailinglist (csl "
+        Echo "         example sonmi,nelsonb,wtc) only useful with -f"
+        Echo "    -cron equivalient to -y -s -d -f \$RESULTDIR/\$HOST.nssqa"
         Echo "    -l <mozroot> run on a local build"
-        Echo "    -ln <mozroot> copy a networkbuild to a local directory "
-        Echo "        mozroot,  used for networkindipendend QA "
-        Echo "    -lt try to copy a networkbuild to a local directory, if"
-        Echo "        not possible run on the network
-        Echo "        used for networkindipendend QA
+        Echo "    -t run on a tinderbox build (included -cron)"
     fi
-#
-# special strings
-  fi
     
 }
 
