@@ -23,7 +23,7 @@
  *     Blake Ross <blakeross@telocity.com>
  *     Gervase Markham <gerv@gerv.net>
  */
-
+var gBrowserElt = -1;
 /*------------------------------ nsContextMenu ---------------------------------
 |   This JavaScript "class" is used to implement the browser's content-area    |
 |   context menu.                                                              |
@@ -130,7 +130,20 @@ nsContextMenu.prototype = {
     initViewItems : function () {
         // View source is always OK, unless in directory listing.
         this.showItem( "context-viewsource", !( this.inDirList || this.onImage ) );
+        var isPostData = false;
+        if (gBrowserElt == -1)
+          gBrowserElt = document.getElementById("content");
+        if (gBrowserElt)
+          isPostData = gBrowserElt.webNavigation.postData;
 
+        this.showItem( "context-viewsource", !( this.inDirList || this.onImage) );
+        if (!this.inDirList && !this.onImage) {
+          var viewSourceElt = document.getElementById("context-viewsource");
+          if (isPostData)
+            viewSourceElt.setAttribute("disabled", "true");
+          else
+            viewSourceElt.removeAttribute("disabled");
+        }
         // View frame source depends on whether we're in a frame.
         this.showItem( "context-viewframesource", this.inFrame );
 

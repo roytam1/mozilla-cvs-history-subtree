@@ -95,7 +95,7 @@ function nsTreeController_copy(tree)
         // the #URL property for anonymous resources (see bookmarks.js)
         //var ID = getAbsoluteID("bookmarksTree", node);
         var ID = node.id;
-        
+        var RDFC = Components.classes[rdfc_contractid].getService(nsIRDFContainer);
         var IDRes = RDF.GetResource(ID);
 
         var nameNode = datasource.GetTarget(IDRes, nameResource, true);
