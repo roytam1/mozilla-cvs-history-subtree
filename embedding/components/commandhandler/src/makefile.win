@@ -25,6 +25,7 @@ LIBRARY_NAME=commandhandler_s
 REQUIRES	= string \
 		  xpcom \
 		  dom \
+		  widget \
 		  docshell \
 		  layout \
 		  content \
