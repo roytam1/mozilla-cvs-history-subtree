@@ -59,7 +59,7 @@
   <checkbox id="enabled"
             aoncommand="EnableTree(this.checked, E('roamingSettings'));
                         parent.roaming.enabled = this.checked;"
-            oncommand="SwitchChanged();"
+            oncommand="ActivationWarning(); SwitchChanged();"
             class="indent"
             label="&enabled.label;"
             accesskey="&enabled.accesskey;"

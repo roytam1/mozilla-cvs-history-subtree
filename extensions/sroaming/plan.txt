@@ -1,5 +1,5 @@
 todo:
-- experimental warning
+- downloading all the time
 - XXXs
 - firebird/thunderbird extension
 
@@ -17,7 +17,7 @@ don't care (for now):
   there is no conflict, we still show one. That's due to that commented-out
   check in compareFiles(). Mind the warning there and fix it.
 - no preselection in conflict dialog
-- not using statusText for FTP errors (file not readable in this case)
+- not using statusText for FTP errors (reason 'file not readable' in this case)
 
 Enhance
 - better error dialog

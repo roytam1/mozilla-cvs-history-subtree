@@ -88,3 +88,35 @@ function SwitchChanged()
   UIToData();
   DataToUI();
 }
+
+// Displays a general warning about roaming
+function ActivationWarning()
+{
+  try
+  {
+    /* The pref here is intended not to exist (code logic falling back to
+       false) when the user first activates roaming,
+       then to be set, so that the user doesn't see the dialog twice.
+       It being a pref also leaves admins the choice of supressing it,
+       e.g. when they set up appropriate backups on behalf of the user on
+       the server or client in a large installation. */
+    var prefService = Components.classes["@mozilla.org/preferences;1"]
+                     .getService(Components.interfaces.nsIPrefService);
+    var prefBranch = prefService.getBranch("roaming.");
+    try
+    {
+      showWarning = prefBranch.getBoolPref("showInitialWarning");
+      if (!showWarning)
+        return;
+    } catch(e) { ddump("fooo");}
+
+    var bundle = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                 .getService()
+                 .QueryInterface(Components.interfaces.nsIStringBundleService)
+                 .createBundle("chrome://sroaming/locale/prefs.properties");
+    GetPromptService().alert(window, GetString("Alert"),
+                             bundle.GetStringFromName("ActivationWarning"));
+
+    prefBranch.setBoolPref("showInitialWarning", false);
+  } catch(e) {}
+}

@@ -157,7 +157,7 @@ Transfer.prototype =
   */
   done : function(success)
   {
-    //ddump("Done(" + (success ? "without" : "with") + " errors)");
+    ddump("Done(" + (success ? "without" : "with") + " errors)");
 
     for (var i = 0, l = this.finishedCallbacks.length; i < l; i++)
       this.finishedCallbacks[i](success);
@@ -174,7 +174,7 @@ Transfer.prototype =
    */
   transfer : function()
   {
-    //ddump("starting transfer");
+    ddump("starting transfer");
     this.dump();
 
     if (this.files.length == 0)
@@ -239,7 +239,7 @@ Transfer.prototype =
   transferFile : function(id)
   {
     var file = this.files[id];
-    //ddump("TransferFile(" + id + ")");
+    ddump("TransferFile(" + id + ")");
 
     try
     {
@@ -253,8 +253,8 @@ Transfer.prototype =
       var progress = new TransferProgressListener(this, id);
       file.progressListener = progress;
       channel.notificationCallbacks = progress;
-      //ddumpCont("Trying to "+ (this.download ? "download from" : "upload to"));
-      //ddumpCont(" remote URL <" + channel.URI.spec + "> ");
+      ddumpCont("Trying to "+ (this.download ? "download from" : "upload to"));
+      ddumpCont(" remote URL <" + channel.URI.spec + "> ");
 
       if (this.download)
       {
@@ -277,7 +277,7 @@ Transfer.prototype =
                        .QueryInterface(Components.interfaces.nsIFileURL)
                        .file.clone();
         file.localFile = lf;
-        //ddump("to local file " + lf.path);
+        ddump("to local file " + lf.path);
         try
         {
           fos.init(lf, -1, -1, 0);//odd params from NS_NewLocalFileOutputStream
@@ -289,10 +289,10 @@ Transfer.prototype =
                // we get this error, if the directory does no exist yet locally
               && dir && !dir.exists())
           {
-            //ddumpCont("Creating dir " + dir.path + " ... ");
+            ddumpCont("Creating dir " + dir.path + " ... ");
             dir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0755);
                           // also creates all higher-level dirs, if necessary
-            //ddump("done (hopefully).");
+            ddump("done (hopefully).");
             fos.init(lf, -1, -1, 0); // try again
           }
           else
@@ -309,7 +309,7 @@ Transfer.prototype =
         var uploadChannel = channel.QueryInterface(
                                       Components.interfaces.nsIUploadChannel);
         var lfURL = ioserv.newURI(file.filename, null, localURL);
-        //ddump("from local file <" + lfURL.spec + ">");
+        ddump("from local file <" + lfURL.spec + ">");
 
         var fileChannel = ioserv.newChannelFromURI(lfURL);
         var is = fileChannel.open(); // maybe async? WFM.
@@ -330,12 +330,12 @@ Transfer.prototype =
       if (e.result) // XPCOM error, we can report that to the user and we
              // partially even expect it (file not found in new profiles etc.)
       {
-        //ddump("Transfer problem, will later report it to user:\n" + e);
+        ddump("Transfer problem, will later report it to user:\n" + e);
         file.setStatus("failed", e.result, e.message);
       }
       else
       {
-        //ddump("Unexpected (non-XPCOM) transfer problem:\n" + e);
+        ddump("Unexpected (non-XPCOM) transfer problem:\n" + e);
         file.setStatus("failed", kErrorUnexpected, e);
       }
     }
@@ -344,7 +344,7 @@ Transfer.prototype =
   // called when an individual file transfer completed or failed
   fileFinished : function(filenr)
   {
-    //ddump("file " + filenr + " finished");
+    ddump("file " + filenr + " finished");
 
     var file = this.files[filenr];
 
@@ -384,7 +384,7 @@ Transfer.prototype =
   // user wishes transfer to stop
   cancel : function()
   {
-    //ddump("Canceling transfer");
+    ddump("Canceling transfer");
     this.cancelled = true;  /* needed so that file.setStatus doesn't start
                                a next transfer in serial mode */
 
@@ -450,7 +450,7 @@ Transfer.prototype =
     if (!this.progressCalculate)
       return;
 
-    //ddump("Transfer.progressChanged(" + filenr + ", " + aProgress + ")");
+    ddump("Transfer.progressChanged(" + filenr + ", " + aProgress + ")");
 
     var file = this.files[filenr];
     file.progress = aProgress;
@@ -469,10 +469,10 @@ Transfer.prototype =
     var progressSize = 0;
     if (file.status == "done")
     {
-      //ddump(" file completed mode");
-      //ddump(" progressSizeAll: " + this.progressSizeAll);
-      //ddumpCont(" progressSizeCompletedFiles before: ");
-      //ddump(this.progressSizeCompletedFiles);
+      ddump(" file completed mode");
+      ddump(" progressSizeAll: " + this.progressSizeAll);
+      ddumpCont(" progressSizeCompletedFiles before: ");
+      ddump(this.progressSizeCompletedFiles);
 
       this.progressSizeCompletedFiles = 0;
       for (var i = 0, l = this.files.length; i < l; i++)
@@ -483,9 +483,9 @@ Transfer.prototype =
       }
       progressSize = this.progressSizeCompletedFiles;
 
-      //ddumpCont(" progressSizeCompletedFiles now: ");
-      //ddump(this.progressSizeCompletedFiles);
-      //ddump(" progressSize: " + progressSize);
+      ddumpCont(" progressSizeCompletedFiles now: ");
+      ddump(this.progressSizeCompletedFiles);
+      ddump(" progressSize: " + progressSize);
     }
     else
     {
@@ -493,21 +493,21 @@ Transfer.prototype =
          that happens often, so performance matters. */
       if (this.serial)
       {
-        //ddump(" update serial mode");
-        //ddump(" progressSizeAll: " + this.progressSizeAll);
-        //ddump(" progressSizeCompletedFiles: "+this.progressSizeCompletedFiles);
-        //ddump(" files[filenr].size: " + file.size);
-        //ddump(" files[filenr].progress: " + file.progress);
+        ddump(" update serial mode");
+        ddump(" progressSizeAll: " + this.progressSizeAll);
+        ddump(" progressSizeCompletedFiles: "+this.progressSizeCompletedFiles);
+        ddump(" files[filenr].size: " + file.size);
+        ddump(" files[filenr].progress: " + file.progress);
 
         progressSize = this.progressSizeCompletedFiles
                        + file.size * file.progress;
 
-        //ddump(" progressSize: " + progressSize);
+        ddump(" progressSize: " + progressSize);
       }
       else
       {
-        //ddump(" update parallel mode");
-        //ddump(" progressSizeCompletedFiles: "+this.progressSizeCompletedFiles);
+        ddump(" update parallel mode");
+        ddump(" progressSizeCompletedFiles: "+this.progressSizeCompletedFiles);
 
         progressSize = this.progressSizeCompletedFiles;
         for (var i = 0, l = this.files.length; i < l; i++)
@@ -517,7 +517,7 @@ Transfer.prototype =
             progressSize += cur.size * cur.progress;
         }
 
-        //ddump(" progressSize: " + progressSize);
+        ddump(" progressSize: " + progressSize);
       }
     }
 
@@ -648,7 +648,7 @@ function TransferFile(transfer, filenr, // hooks to owner
   this.filename = filename;
   this.mimetype = mimetype;
   this.size = size;
-  //ddump("got file " + filename + " with mimetype " + mimetype);
+  ddump("got file " + filename + " with mimetype " + mimetype);
   this.status = "pending";
   this.statusCode = 0;
   this.progress = 0.0;
@@ -665,25 +665,25 @@ TransferFile.prototype =
 {
   dump : function()
   {
-    //ddump("   filename: " + this.filename);
+    ddump("   filename: " + this.filename);
       // String: relative pathname from profile root
-    //ddump("   mimetype: " + this.mimetype);
+    ddump("   mimetype: " + this.mimetype);
       // String. might be undefined.
-    //ddump("   size: " + this.size);
+    ddump("   size: " + this.size);
       // int, in bytes. might be 0 for undefined.
-    //ddump("   status: " + this.status);
+    ddump("   status: " + this.status);
       // String: "pending" (not started), "busy", "done", "failed"
-    //ddumpCont("   statusCode: " + this.statusCode + " (");
-    //ddump(NameForStatusCode(this.statusCode) + ")");
+    ddumpCont("   statusCode: " + this.statusCode + " (");
+    ddump(NameForStatusCode(this.statusCode) + ")");
       // int: nsresult error code that we got from Necko
-    //ddump("   httpResponse: " + this.httpResponse);
+    ddump("   httpResponse: " + this.httpResponse);
       // int: HTTP response code that we got from the server
-    //ddump("   statusText: " + this.statusText);
+    ddump("   statusText: " + this.statusText);
       // String: Text corresponding to error (usually with httpResponse
       // or fatal errors). Might be in English or the server's language.
       // Text (usually translated) corresponding to statusCode can be
       // gotten from ...utility.js; it may include this text.
-    //ddump("   progress: " + this.progress);
+    ddump("   progress: " + this.progress);
       // float: 0 (nothing) .. 1 (complete)
   },
 
@@ -696,14 +696,14 @@ TransferFile.prototype =
   */
   setStatus : function(aStatus, aStatusCode, aMessage)
   {
-    //ddumpCont("request to change "+this.filename+" from "+this.status+" (");
-    //ddumpCont(NameForStatusCode(this.statusCode)+") to "+aStatus+" (");
+    ddumpCont("request to change "+this.filename+" from "+this.status+" (");
+    ddumpCont(NameForStatusCode(this.statusCode)+") to "+aStatus+" (");
     var undef = aStatusCode == undefined;
-    //ddump((undef ? "no new status code" : NameForStatusCode(aStatusCode))+")");
+    ddump((undef ? "no new status code" : NameForStatusCode(aStatusCode))+")");
 
     if (this.statusCode == aStatusCode && this.status == aStatus)
     {
-      //ddump("  (no changes)");
+      ddump("  (no changes)");
       return;
     }
 
@@ -785,15 +785,15 @@ TransferProgressListener.prototype =
 
   onStartRequest : function(aRequest, aContext)
   {
-    //ddump("onStartRequest: " + aRequest.name);
+    ddump("onStartRequest: " + aRequest.name);
     this.file.setStatus("busy");
   },
 
   onStopRequest : function(aRequest, aContext, aStatusCode)
   {
-    //ddump("onStopRequest:");
-    //ddump("  Request: " + aRequest.name);
-    //ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
+    ddump("onStopRequest:");
+    ddump("  Request: " + aRequest.name);
+    ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
 
     if (aStatusCode == kNS_OK)
     {
@@ -844,10 +844,10 @@ TransferProgressListener.prototype =
     else if (aStatusCode == kStatusWroteTo_Status)
               aStatusCode = kStatusWroteTo;
 
-    //ddump("onStatus:");
-    //ddump("  Request: " + aRequest.name);
-    //ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
-    //ddump("  StatusArg: " + aStatusArg);
+    ddump("onStatus:");
+    ddump("  Request: " + aRequest.name);
+    ddump("  StatusCode: " + NameForStatusCode(aStatusCode));
+    ddump("  StatusArg: " + aStatusArg);
 
     /* WORKAROUND
        We sometimes get onStopRequest *before* e.g. onStatus(SENDING_TO), so
@@ -915,7 +915,7 @@ TransferProgressListener.prototype =
   */
   privateHTTPResponse : function()
   {
-    //ddumpCont("privateHTTPResponse ");
+    ddumpCont("privateHTTPResponse ");
 
     // Get HTTP response code
     var responseCode;
@@ -927,11 +927,11 @@ TransferProgressListener.prototype =
       responseCode = httpchannel.responseStatus;
       this.file.httpResponse = responseCode;
       respText = httpchannel.responseStatusText;
-      //ddump(responseCode);
+      ddump(responseCode);
     }
     catch(e)
     {
-      //ddump("  Error while trying to get HTTP response: " + e);
+      ddump("  Error while trying to get HTTP response: " + e);
       this.file.setStatus("failed", kErrorNoInterface);
       return;
     }
@@ -955,8 +955,8 @@ TransferProgressListener.prototype =
   onProgress : function(aRequest, aContext, aProgress, aProgressMax)
   {
     // ddumpCont("onProgress: " + aRequest.name + ", ");
-    // //ddump(aProgress + "/" + aProgressMax);
-    //ddump("onProgress: " + aProgress + "/" + aProgressMax);
+    // ddump(aProgress + "/" + aProgressMax);
+    ddump("onProgress: " + aProgress + "/" + aProgressMax);
 
     if (aProgressMax > 0 && aProgress > 0)
           // WORKAROUND Necko sometimes sends crap like 397/0 or 0/4294967295
@@ -1017,7 +1017,7 @@ TransferProgressListener.prototype =
   // nsIPrompt
   alert : function(dlgTitle, text)
   {
-    //ddump("alert " + text);
+    ddump("alert " + text);
 
     /* WORKAROUND
        FTP sends us these in the case of an error *sigh*. Don't display dialog,
@@ -1032,17 +1032,17 @@ TransferProgressListener.prototype =
   },
   alertCheck : function(dlgTitle, text, checkBoxLabel, checkObj)
   {
-    //ddump("alertCheck");
+    ddump("alertCheck");
     this.alert(dlgTitle, text);
   },
   confirm : function(dlgTitle, text)
   {
-    //ddump("confirm");
+    ddump("confirm");
     return this.confirmCheck(dlgTitle, text, null, null);
   },
   confirmCheck : function(dlgTitle, text, checkBoxLabel, checkObj)
   {
-    //ddump("confirmCheck");
+    ddump("confirmCheck");
     var promptServ = GetPromptService();
     if (!promptServ)
       return;
@@ -1055,7 +1055,7 @@ TransferProgressListener.prototype =
                        btn0Title, btn1Title, btn2Title,
                        checkBoxLabel, checkVal)
   {
-    //ddump("confirmEx");
+    ddump("confirmEx");
     var promptServ = GetPromptService();
     if (!promptServ)
       return 0;
@@ -1066,7 +1066,7 @@ TransferProgressListener.prototype =
   },
   select : function(dlgTitle, text, count, selectList, outSelection)
   {
-    //ddump("select");
+    ddump("select");
     var promptServ = GetPromptService();
     if (!promptServ)
       return false;
@@ -1077,7 +1077,7 @@ TransferProgressListener.prototype =
   prompt : function(dlgTitle, label, /*inout*/ inputvalueObj,
                     checkBoxLabel, /*inout*/ checkObj)
   {
-    //ddump("nsIPrompt::prompt");
+    ddump("nsIPrompt::prompt");
     return this.privatePrompt(dlgTitle, label, null, inputvalueObj,
                               checkBoxLabel, checkObj);
   },
@@ -1091,10 +1091,10 @@ TransferProgressListener.prototype =
   promptPassword : function(dlgTitle, label, /*inout*/ pwObj,
                             checkBoxLabel, /*inout*/ savePWObj)
   {
-    //ddump("nsIPrompt::promptPassword:");
-    //ddump("  pwObj: " + pwObj.value);
-    //ddump("  checkBoxLabel: " + checkBoxLabel);
-    //ddump("  savePWObj: " + savePWObj.value + " (ignored)");
+    ddump("nsIPrompt::promptPassword:");
+    ddump("  pwObj: " + pwObj.value);
+    ddump("  checkBoxLabel: " + checkBoxLabel);
+    ddump("  savePWObj: " + savePWObj.value + " (ignored)");
 
     var ret = this.privatePromptPassword(dlgTitle, label, null,
                                          pwObj, checkBoxLabel);
@@ -1106,11 +1106,11 @@ TransferProgressListener.prototype =
                                        /*inout*/ userObj, /*inout*/ pwObj,
                                        savePWLabel, /*inout*/ savePWObj)
   {
-    //ddump("nsIPrompt::promptUsernameAndPassword:");
-    //ddump("  userObj: " + userObj.value);
-    //ddump("  pwObj: " + pwObj.value);
-    //ddump("  savePWLabel: " + savePWLabel);
-    //ddump("  savePWObj: " + savePWObj.value + " (ignored)");
+    ddump("nsIPrompt::promptUsernameAndPassword:");
+    ddump("  userObj: " + userObj.value);
+    ddump("  pwObj: " + pwObj.value);
+    ddump("  savePWLabel: " + savePWLabel);
+    ddump("  savePWObj: " + savePWObj.value + " (ignored)");
 
     var ret = this.privatePromptUsernameAndPassword(dlgTitle, label, null,
                                                     userObj, pwObj,
@@ -1125,7 +1125,7 @@ TransferProgressListener.prototype =
   prompt : function(dlgTitle, label, pwrealm, /*in*/ savePW, defaultText,
                     /*out*/ resultObj)
   {
-    //ddump("nsIAuthPrompt::prompt");
+    ddump("nsIAuthPrompt::prompt");
     var savePWObj = {value:this.transfer.savePassword};
                     // I know it better than the caller.
     var inputvalueObj = {value:defaultText};
@@ -1137,10 +1137,10 @@ TransferProgressListener.prototype =
   promptPassword : function(dlgTitle, label, pwrealm, /*in*/ savePW,
                             /*out*/ pwObj)
   {
-    //ddump("nsIAuthPrompt::promptPassword");
-    //ddump("  pwrealm: " + pwrealm);
-    //ddump("  savePW: " + savePW + " (ignored)");
-    //ddump("  pwObj: " + pwObj.value);
+    ddump("nsIAuthPrompt::promptPassword");
+    ddump("  pwrealm: " + pwrealm);
+    ddump("  savePW: " + savePW + " (ignored)");
+    ddump("  pwObj: " + pwObj.value);
 
     return this.privatePromptPassword(dlgTitle, label, pwrealm,
                                       pwObj, null);
@@ -1148,11 +1148,11 @@ TransferProgressListener.prototype =
   promptUsernameAndPassword : function(dlgTitle, label, pwrealm, /*in*/savePW,
                                        /*out*/ userObj, /*out*/ pwObj)
   {
-    //ddump("nsIAuthPrompt::promptUsernameAndPassword:");
-    //ddump("  pwrealm: " + pwrealm);
-    //ddump("  savePW: " + savePW + " (ignored)");
-    //ddump("  userObj: " + userObj.value);
-    //ddump("  pwObj: " + pwObj.value);
+    ddump("nsIAuthPrompt::promptUsernameAndPassword:");
+    ddump("  pwrealm: " + pwrealm);
+    ddump("  savePW: " + savePW + " (ignored)");
+    ddump("  userObj: " + userObj.value);
+    ddump("  pwObj: " + pwObj.value);
 
     return this.privatePromptUsernameAndPassword(dlgTitle, label, pwrealm,
                                                  userObj, pwObj, null);
@@ -1185,13 +1185,13 @@ TransferProgressListener.prototype =
   privatePromptPassword : function(dlgTitle, label, pwrealm,
                                    /*inout*/ pwObj, savePWLabel)
   {
-    //ddump("privatePromptPassword()");
-    //ddump("  pwObj.value: " + pwObj.value);
-    //ddump("  savePWLabel: " + savePWLabel);
-    //ddump("  label: " + label);
-    //ddump("  pwrealm: " + pwrealm);
-    //ddump("  this.transfer.savePassword: " + this.transfer.savePassword);
-    //ddump("  this.transfer.username: " + this.transfer.username);
+    ddump("privatePromptPassword()");
+    ddump("  pwObj.value: " + pwObj.value);
+    ddump("  savePWLabel: " + savePWLabel);
+    ddump("  label: " + label);
+    ddump("  pwrealm: " + pwrealm);
+    ddump("  this.transfer.savePassword: " + this.transfer.savePassword);
+    ddump("  this.transfer.username: " + this.transfer.username);
 
     if (!dlgTitle)
       dlgTitle = GetString("PasswordTitle");
@@ -1203,10 +1203,10 @@ TransferProgressListener.prototype =
       savePWLabel = GetString("SavePassword");
     var savePWObj = {value: this.transfer.savePassword};
 
-    //ddump("  pwObj.value: " + pwObj.value);
-    //ddump("  savePWLabel: " + savePWLabel);
-    //ddump("  label: " + label);
-    //ddump("  pwrealm: " + pwrealm);
+    ddump("  pwObj.value: " + pwObj.value);
+    ddump("  savePWLabel: " + savePWLabel);
+    ddump("  label: " + label);
+    ddump("  pwrealm: " + pwrealm);
 
     var promptServ = GetPromptService();
     if (!promptServ)
@@ -1234,14 +1234,14 @@ TransferProgressListener.prototype =
   {
     // HTTP prompts us twice even if user Cancels from 1st attempt!
 
-    //ddump("privatePromptUsernameAndPassword()");
-    //ddump("  pwObj.value: " + pwObj.value);
-    //ddump("  userObj.value: " + userObj.value);
-    //ddump("  savePWLabel: " + savePWLabel);
-    //ddump("  label: " + label);
-    //ddump("  pwrealm: " + pwrealm);
-    //ddump("  this.transfer.savePassword: " + this.transfer.savePassword);
-    //ddump("  this.transfer.username: " + this.transfer.username);
+    ddump("privatePromptUsernameAndPassword()");
+    ddump("  pwObj.value: " + pwObj.value);
+    ddump("  userObj.value: " + userObj.value);
+    ddump("  savePWLabel: " + savePWLabel);
+    ddump("  label: " + label);
+    ddump("  pwrealm: " + pwrealm);
+    ddump("  this.transfer.savePassword: " + this.transfer.savePassword);
+    ddump("  this.transfer.username: " + this.transfer.username);
 
     if (!dlgTitle)
       dlgTitle = GetString("PasswordTitle");
@@ -1257,11 +1257,11 @@ TransferProgressListener.prototype =
       userObj.value = this.transfer.username;
     var savePWObj = {value: this.transfer.savePassword};
 
-    //ddump("  savePWObj.value: " + savePWObj.value);
-    //ddump("  userObj.value: " + userObj.value);
-    //ddump("  savePWLabel: " + savePWLabel);
-    //ddump("  label: " + label);
-    //ddump("  pwrealm: " + pwrealm);
+    ddump("  savePWObj.value: " + savePWObj.value);
+    ddump("  userObj.value: " + userObj.value);
+    ddump("  savePWLabel: " + savePWLabel);
+    ddump("  label: " + label);
+    ddump("  pwrealm: " + pwrealm);
 
     /* I had the idea to put up the password-only dialog, if we have a
        username. But if the user didn't enter a username in the prefs,
@@ -1282,7 +1282,7 @@ TransferProgressListener.prototype =
     }
 
     // We should get here only, if we got an empty username pref from the reg.
-    //ddump("  asking for username as well");
+    ddump("  asking for username as well");
 
     var ret = false;
     try {
@@ -1302,10 +1302,10 @@ TransferProgressListener.prototype =
     } catch (e) {
       dumpError(e);
     }
-    //ddump("  done. result:");
-    //ddump("  userObj.value: " + userObj.value);
-    //ddump("  pwObj.value: " + pwObj.value);
-    //ddump("  savePWObj.value: " + savePWObj.value);
+    ddump("  done. result:");
+    ddump("  userObj.value: " + userObj.value);
+    ddump("  pwObj.value: " + pwObj.value);
+    ddump("  savePWObj.value: " + savePWObj.value);
     return ret;
   },
   // Update any data that the user supplied in a prompt dialog
@@ -1317,10 +1317,10 @@ TransferProgressListener.prototype =
                                password != this.transfer.password)
                               && savePassword;
 
-    //ddump("  username: " + username);
-    //ddump("  password: " + password);
-    //ddump("  savePW: " + savePassword);
-    //ddump("  saveLogin: " + this.transfer.saveLogin);
+    ddump("  username: " + username);
+    ddump("  password: " + password);
+    ddump("  savePW: " + savePassword);
+    ddump("  saveLogin: " + this.transfer.saveLogin);
 
     this.transfer.username = username;
     this.transfer.password = password;
