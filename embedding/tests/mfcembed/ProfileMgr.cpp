@@ -40,6 +40,10 @@
 #include "nsIRegistry.h"
 #include "nsIProfile.h"
 
+#ifdef MOZ_PROFILESHARING
+#include "nsIProfileSharing.h"
+#endif
+
 // Constants
 #define kRegistryGlobalPrefsSubtreeString (NS_LITERAL_STRING("global-prefs"))
 #define kRegistryShowProfilesAtStartup "start-show-dialog"
@@ -68,6 +72,20 @@ nsresult CProfileMgr::StartUp()
     nsCOMPtr<nsIProfile> profileService = 
              do_GetService(NS_PROFILE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
+
+#ifdef MOZ_PROFILESHARING
+    nsCOMPtr<nsIProfileSharing> profileSharing =
+        do_QueryInterface(profileService);
+    if (profileSharing)
+    {
+        USES_CONVERSION;
+        CString strRes;
+        strRes.LoadString(IDS_PROFILES_NONSHARED_NAME);
+        nsDependentString nonSharedName(T2W(strRes));
+        profileSharing->InitSharing(nonSharedName);
+    }
+#endif
+
         
     PRInt32 profileCount;
     rv = profileService->GetProfileCount(&profileCount);

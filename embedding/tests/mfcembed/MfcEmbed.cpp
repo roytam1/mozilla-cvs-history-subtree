@@ -50,7 +50,6 @@
 #include "BrowserFrm.h"
 #include "EditorFrm.h"
 #include "winEmbedFileLocProvider.h"
-#include "ProfileMgr.h"
 #include "BrowserImpl.h"
 #include "nsIWindowWatcher.h"
 #include "plstr.h"
@@ -58,6 +57,12 @@
 #include "nsCRT.h"
 #include <io.h>
 #include <fcntl.h>
+
+#ifdef USE_PROFILES
+#include "ProfileMgr.h"
+#else
+#include "nsProfileDirServiceProvider.h"
+#endif
 
 
 #ifdef _BUILD_STATIC_BIN
@@ -190,7 +195,9 @@ BEGIN_MESSAGE_MAP(CMfcEmbedApp, CWinApp)
     //{{AFX_MSG_MAP(CMfcEmbedApp)
     ON_COMMAND(ID_NEW_BROWSER, OnNewBrowser)
     ON_COMMAND(ID_NEW_EDITORWINDOW, OnNewEditor)
+#ifdef USE_PROFILES
     ON_COMMAND(ID_MANAGE_PROFILES, OnManageProfiles)
+#endif
     ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
     ON_COMMAND(ID_EDIT_PREFERENCES, OnEditPreferences)
     // NOTE - the ClassWizard will add and remove mapping macros here.
@@ -198,10 +205,13 @@ BEGIN_MESSAGE_MAP(CMfcEmbedApp, CWinApp)
     //}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-CMfcEmbedApp::CMfcEmbedApp() :
-    m_ProfileMgr(NULL)
+CMfcEmbedApp::CMfcEmbedApp()
 {
     mRefCnt = 1; // Start at one - nothing is going to addref this object
+
+#ifdef USE_PROFILES
+    m_ProfileMgr = NULL;
+#endif
 
     m_strHomePage = "";
 
@@ -384,7 +394,9 @@ BOOL CMfcEmbedApp::InitInstance()
     // http://www.mozilla.org/projects/xpcom/file_locations.html
     // for more info on File Locations
 
-    winEmbedFileLocProvider *provider = new winEmbedFileLocProvider("MfcEmbed");
+    CString strRes;
+    strRes.LoadString(IDS_PROFILES_FOLDER_NAME);
+    winEmbedFileLocProvider *provider = new winEmbedFileLocProvider(nsDependentCString(strRes));
     if(!provider)
     {
         ASSERT(FALSE);
@@ -550,7 +562,9 @@ int CMfcEmbedApp::ExitInstance()
     if (m_pMainWnd)
         m_pMainWnd->DestroyWindow();
 
+#ifdef USE_PROFILES
     delete m_ProfileMgr;
+#endif
 
     NS_TermEmbedding();
 
@@ -566,7 +580,9 @@ BOOL CMfcEmbedApp::OnIdle(LONG lCount)
 
 void CMfcEmbedApp::OnManageProfiles()
 {
+#ifdef USE_PROFILES
     m_ProfileMgr->DoManageProfilesDialog(PR_FALSE);
+#endif
 }
 
 void CMfcEmbedApp::OnEditPreferences()
@@ -599,6 +615,7 @@ void CMfcEmbedApp::OnEditPreferences()
 
 BOOL CMfcEmbedApp::InitializeProfiles()
 {
+#ifdef USE_PROFILES
     m_ProfileMgr = new CProfileMgr;
     if (!m_ProfileMgr)
         return FALSE;
@@ -611,6 +628,36 @@ BOOL CMfcEmbedApp::InitializeProfiles()
     observerService->AddObserver(this, "profile-after-change", PR_TRUE);
 
     m_ProfileMgr->StartUp();
+#else
+    nsresult rv;
+    nsCOMPtr<nsIFile> appDataDir;
+    NS_GetSpecialDirectory(NS_APP_APPLICATION_REGISTRY_DIR,
+                                getter_AddRefs(appDataDir));
+    if (!appDataDir)
+        return FALSE;
+    nsCOMPtr<nsProfileDirServiceProvider> profProvider;
+    NS_NewProfileDirServiceProvider(PR_TRUE, getter_AddRefs(profProvider));
+    if (!profProvider)
+        return FALSE;
+    // Directory service holds a strong reference to any
+    // provider that is registered with it.
+    profProvider->Register();
+
+#ifdef MOZ_PROFILESHARING
+    {
+        USES_CONVERSION;
+        CString strRes;
+        strRes.LoadString(IDS_PROFILES_NONSHARED_NAME);
+        nsDependentString nonSharedName(T2W(strRes));
+        profProvider->InitSharing(nonSharedName);
+    }
+#endif
+    
+    nsCOMPtr<nsILocalFile> localAppDataDir(do_QueryInterface(appDataDir));
+    rv = profProvider->SetProfileDir(localAppDataDir);
+    if (NS_FAILED(rv))
+        return FALSE;
+#endif
 
     return TRUE;
 }

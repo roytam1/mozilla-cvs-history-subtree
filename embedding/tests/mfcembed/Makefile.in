@@ -52,6 +52,7 @@ REQUIRES = \
 	shistory \
 	pref \
 	profile \
+	profdirserviceprovider \
 	find \
 	gfx \
 	windowwatcher \
@@ -90,7 +91,7 @@ CPPSRCS		= \
 		StdAfx.cpp       \
 		$(NULL)
 
-EXTRA_DSO_LIBS	= embed_base_s gkgfx mfcEmbedComponents
+EXTRA_DSO_LIBS	= embed_base_s profdirserviceprovider_s gkgfx mfcEmbedComponents
 
 ifdef NS_TRACE_MALLOC
 EXTRA_DSO_LIBS	+= tracemalloc

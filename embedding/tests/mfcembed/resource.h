@@ -34,6 +34,8 @@
 #define IDD_HEADERFOOTER_TAB            156
 #define IDD_FORMAT_OPTIONS_TAB          157
 #define IDD_CUSTOM_PROMPT_DIALOG        159
+#define IDS_PROFILES_FOLDER_NAME        180
+#define IDS_PROFILES_NONSHARED_NAME     181
 #define ID_URL_BAR                      1001
 #define ID_PROG_BAR                     1002
 #define IDC_PROMPT_ANSWER               1003
