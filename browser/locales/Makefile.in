@@ -41,14 +41,20 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# This makefile uses target-specific variable assignments to override
+# the AB_CD variable when making non-default language JARs and XPIs
+# below. If you don't understand what this means, talk to bsmedberg
+# before altering this makefile.
+
 AB_CD = $(MOZ_UI_LOCALE)
 
-# We need a way to make a localized build and a langpack-extension from the
-# same jar.mn
-
-APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
+APP_VERSION := $(shell cat $(srcdir)/../config/version.txt)
 
 DEFINES += -DAB_CD=$(AB_CD) -DAPP_VERSION=$(APP_VERSION)
+
+ifeq (,$(filter-out pref,$(MOZ_EXTENSIONS)))
+DEFINES += -DEXTENSION_PREF
+endif
 
 PROFILE_FILES = \
 	bookmarks.html \
@@ -93,13 +99,24 @@ install::
 # NOTE: we explicitly want the JAR, even if we're building flat chrome, but
 # we specify "both" so that we don't break flat-chrome trees
 
+jar-%: AB_CD = $*
+xpi-%: AB_CD = $*
+
 jar-%: %
-	$(PERL) $(topsrcdir)/config/preprocessor.pl -DAB_CD=$* $(ACDEFINES) $(srcdir)/jar.mn | \
+	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) $(srcdir)/jar.mn | \
 	  $(PERL) -I$(topsrcdir)/config $(topsrcdir)/config/make-jars.pl \
 	    $(if $(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)),-x) \
 	    $(if $(CROSS_COMPILE),-o $(OS_ARCH)) $(_NO_FLOCK) \
 	    -f both -d $(DIST)/bin/chrome -s $(srcdir) -t $(topsrcdir) -z $(ZIP) \
 	    -p $(topsrcdir)/config/preprocessor.pl -- \
-		  "-DAB_CD=$* -DAPP_VERSION=$(APP_VERSION) $(ACDEFINES)"
+		  "$(DEFINES) $(ACDEFINES)"
+
+xpi-%: %
+	@$(MAKE) -C ../../toolkit/locales jar-$*
+	@$(MAKE) jar-$*
+	@$(RM) -rf $(DIST)/xpi-$*
+	@$(INSTALL) $(DIST)/bin/chrome/$*.jar $(DIST)/xpi-$*/chrome
+	@$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) -I$(topsrcdir)/toolkit/locales/$*/defines.inc -I$(srcdir)/$*/defines.inc $(srcdir)/generic/install.rdf > $(DIST)/xpi-$*/install.rdf
+	@cd $(DIST)/xpi-$*; $(ZIP) -r9D ../lang$*.xpi install.rdf chrome
 
 include $(topsrcdir)/config/rules.mk
