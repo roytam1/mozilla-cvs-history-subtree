@@ -338,7 +338,11 @@ NOTIFYICONDATAW nsMessengerWinIntegration::mWideBiffIconData = { sizeof(NOTIFYIC
                                                     0 };
 
 #ifdef MOZ_THUNDERBIRD
+#ifdef MOZ_STATIC_BUILD
+#define MAIL_DLL_NAME "thunderbird.exe"
+#else
 #define MAIL_DLL_NAME "mail.dll"
+#endif
 #else
 #define MAIL_DLL_NAME "msgbase.dll"
 #endif
