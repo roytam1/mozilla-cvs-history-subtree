@@ -117,6 +117,7 @@
 				FRAMEWORK_VERSION = A;
 				HEADER_SEARCH_PATHS = "../../../../dist/include/mimetype ../../../../dist/include/find ../../../../dist/include/webbrowserpersist ../../../../dist/include/commandhandler ../../../../dist/include/exthandler ../../../../dist/include/helperAppDlg ../../../../dist/include/profile ../../../../dist/include/xpcom ../../../../dist/include/string ../../../../dist/include/docshell ../../../../dist/include/webshell ../../../../dist/include/necko ../../../../dist/include/widget ../../../../dist/include/dom ../../../../dist/include/gfx ../../../../dist/include/layout ../../../../dist/include/content ../../../../dist/include/uriloader ../../../../dist/include/webbrwsr ../../../../dist/include/shistory ../../../../dist/include/embed_base ../../../../dist/include/pref ../../../../dist/include/windowwatcher ../../../../dist/include/mpfilelocprovider ../../../../dist/include ../../../../dist/include/nspr";
 				LIBRARY_SEARCH_PATHS = "../../../../dist/bin ../../../../dist/lib";
+				OPTIMIZATION_CFLAGS = "-O2";
 				OTHER_CFLAGS = "-fno-rtti -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\"";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				PRODUCT_NAME = CHBrowserView;
@@ -172,6 +173,7 @@
 				F57D38B90330E3E601026D5D,
 				F57D38BA0330E3E601026D5D,
 				F57D38BB0330E3E701026D5D,
+				F52978A70371981B01026DCE,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -198,6 +200,7 @@
 				F57D38B60330E3E101026D5D,
 				F57D38B70330E3E201026D5D,
 				F57D38B80330E3E301026D5D,
+				F52978A60371981A01026DCE,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -261,6 +264,7 @@
 				F57D38950330DAB701026D5D,
 				F57D38970330DAB701026D5D,
 				F57D38990330DAB701026D5D,
+				F52978A50371981701026DCE,
 				F6BA6D4401B2115301A962F7,
 			);
 			isa = PBXGroup;
@@ -310,6 +314,28 @@
 //F52
 //F53
 //F54
+		F52978A40371981701026DCE = {
+			isa = PBXFileReference;
+			path = CHClickListener.h;
+			refType = 2;
+		};
+		F52978A50371981701026DCE = {
+			isa = PBXFileReference;
+			path = CHClickListener.mm;
+			refType = 2;
+		};
+		F52978A60371981A01026DCE = {
+			fileRef = F52978A50371981701026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F52978A70371981B01026DCE = {
+			fileRef = F52978A40371981701026DCE;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F57D38940330DAB701026D5D = {
 			isa = PBXFileReference;
 			path = CHBrowserListener.h;
@@ -627,6 +653,7 @@
 		};
 		F6BA6D4C01B2EFCE01A962F7 = {
 			children = (
+				F52978A40371981701026DCE,
 				F57D38940330DAB701026D5D,
 				F57D38960330DAB701026D5D,
 				F57D38980330DAB701026D5D,
