@@ -1435,6 +1435,7 @@ void CNetscapeApp::OnAppSuperExit()
 
 void CNetscapeApp::OnAppExit()
 {
+	int iExit = IDOK;
 
 #ifdef MOZ_OFFLINE
 	// Check prompt synchronization preference.  If set bring up
@@ -1443,7 +1444,6 @@ void CNetscapeApp::OnAppExit()
 	XP_Bool promptSynch = TRUE;
 	PREF_GetBoolPref("offline.prompt_synch_on_exit", &promptSynch);
 	
-	int iExit = IDOK;
 
 	if(promptSynch)
 	{
