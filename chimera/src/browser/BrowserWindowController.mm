@@ -1301,11 +1301,14 @@ static NSArray* sToolbarDefaults = nil;
 
 - (void)updateLocationFields:(NSString *)locationString
 {
-    if ( [locationString isEqual:@"about:blank"] ) 			// don't show about:blank to users
-      locationString = @"";
-    [mURLBar setStringValue:locationString];
-    [mLocationSheetURLField setStringValue:locationString];
-
+    // if we're loading about:blank, don't do anything to the urlbar because
+    // someone (if they're really fast) may have typed something before the page
+    // finishes loading. (bug 181174)
+    if ( ![locationString isEqual:@"about:blank"] ) {
+      [mURLBar setStringValue:locationString];
+      [mLocationSheetURLField setStringValue:locationString];
+    }
+    
     // don't call [window display] here, no matter how much you might want
     // to, because it forces a redraw of every view in the window and with a lot
     // of tabs, it's dog slow.
