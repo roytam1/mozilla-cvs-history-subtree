@@ -541,7 +541,7 @@
             newBrowser.setAttribute("type", "content-primary");
             this.mCurrentBrowser = newBrowser;
             this.mCurrentTab = this.selectedTab;
-
+            
             if (updatePageReport)
               this.mCurrentBrowser.updatePageReport();
 
@@ -570,6 +570,8 @@
               }
             }
             this.mCurrentBrowser.userTypedClear = userTypedClear;
+            
+            this._fastFind.setDocShell(this.mCurrentBrowser.docShell);
 
             // Update the window title.
             this.updateTitlebar();
@@ -917,6 +919,8 @@
             b.webProgress.addProgressListener(filter, Components.interfaces.nsIWebProgress.NOTIFY_ALL);
             this.mTabListeners[position] = tabListener;
             this.mTabFilters[position] = filter;
+            
+            b._fastFind = this._fastFind;
 
             if (!blank) {
               // pretend the user typed this so it'll be available till
@@ -1436,11 +1440,22 @@
       <property name="currentURI"
                 onget="return this.mCurrentBrowser.currentURI;"
                 readonly="true"/>
-                
+
+      <field name="_fastFind">null</field>
       <property name="fastFind"
-                onget="return this.mCurrentBrowser.fastFind;"
-                readonly="true"/>    
-                
+                readonly="true">
+        <getter>
+        <![CDATA[
+          if (!this._fastFind) {
+            this._fastFind = Components.classes["@mozilla.org/typeaheadfind;1"]
+                                       .createInstance(Components.interfaces.nsITypeAheadFind);                                
+            this._fastFind.init(this.docShell);
+          }
+          return this._fastFind;
+        ]]>
+        </getter>
+      </property>
+                      
       <property name="findString"
                 onget="return this.mCurrentBrowser.findString;"
                 readonly="true"/>

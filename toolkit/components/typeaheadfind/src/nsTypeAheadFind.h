@@ -127,7 +127,6 @@ protected:
   // mAllTheSame Char starts out PR_TRUE, becomes false when 
   // at least 2 different chars typed
   PRPackedBool mAllTheSameChar;
-  PRPackedBool mIsFirstVisiblePreferred;
   PRInt32 mRepeatingMode;
 
   // Sound is played asynchronously on some platforms.

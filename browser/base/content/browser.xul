@@ -28,6 +28,7 @@
 
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?> 
 <?xml-stylesheet href="chrome://browser/content/browser.css" type="text/css"?>
+<?xml-stylesheet href="chrome://global/skin/findBar.css" type="text/css"?>
 
 #ifdef XP_MACOSX
 <?xul-overlay href="chrome://browser/content/macBrowserOverlay.xul"?>
@@ -396,32 +397,16 @@
       <tabbrowser id="content" disablehistory="true"
                   flex="1" contenttooltip="aHTMLTooltip"
                   contentcontextmenu="contentAreaContextMenu"
-                  onnewtab="BrowserOpenTab();" onkeypress="onBrowserKeyPress(event);"
+                  onnewtab="BrowserOpenTab();"
                   onkeyup="onBrowserKeyUp(event);"
                   autocompletepopup="PopupAutoComplete"
                   ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);"
-                  onclick="return contentAreaClick(event, false);"
-                  onmousedown="if (gFindMode != FIND_NORMAL) closeFindBar();"/>
+                  onclick="return contentAreaClick(event, false);"/>
     </vbox>
   </hbox>
-  <toolbar id="FindToolbar" hidden="true" align="center" fullscreentoolbar="true">
-    <label value="&find.label;"/>
-    <hbox id="find-field-container">
-      <textbox id="find-field" oninput="find(this.value);" onfocus="onFindBarFocus();"
-              onkeypress="onFindBarKeyPress(event);" onblur="onFindBarBlur();"/>
-    </hbox>
-    <toolbarbutton id="find-next" label="&findNext.label;" tooltiptext="&findNext.tooltip;"
-                   command="cmd_findAgain" disabled="true"/>
-    <toolbarbutton id="find-previous" label="&findPrevious.label;" tooltiptext="&findPrevious.tooltip;"
-                   command="cmd_findPrevious" disabled="true"/>
-    <toolbarbutton id="highlight" label="&highlight.label;" tooltiptext="&highlight.tooltip;"
-                   oncommand="toggleHighlight(!this.checked); if (gFindMode != FIND_NORMAL) setFindCloseTimeout();"
-                   type="checkbox" disabled="true"/>
-    <image id="find-status-icon"/>
-    <label id="find-status"/>
-    <spacer flex="1"/>
-    <toolbarbutton class="tabs-closebutton" tooltiptext="&findCloseButton.tooltip;" oncommand="closeFindBar();"/>
-  </toolbar>
+  
+#include ../../../toolkit/components/typeaheadfind/content/findBar.inc
+  
   <statusbar class="chromeclass-status" id="status-bar"
              ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);">
     <statusbarpanel id="statusbar-display" flex="1"/>

@@ -52,6 +52,13 @@ function onLoadViewSource()
 {
   viewSource(window.arguments[0]);
   document.commandDispatcher.focusedWindow = content;
+  
+  initFindBar();
+}
+
+function onUnloadViewSource()
+{
+  uninitFindBar();
 }
 
 function getBrowser()

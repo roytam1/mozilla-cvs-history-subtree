@@ -44,7 +44,7 @@
 
 interface nsIDocShell;
 
-[scriptable, uuid(c6cf96a4-d02f-4be7-a47e-193095de83a1)]
+[scriptable, uuid(1a834a64-3b06-4b75-b05b-96ca4e35a2a1)]
 interface nsITypeAheadFind : nsISupports
 {
   void init(in nsIDocShell aDocShell);
@@ -57,7 +57,10 @@ interface nsITypeAheadFind : nsISupports
   unsigned short findNext();
   unsigned short findPrevious();
 
+  void setDocShell(in nsIDocShell aDocShell);
+
   readonly attribute AString searchString;
   attribute boolean focusLinks;
+  attribute boolean caseSensitive;
 };
 

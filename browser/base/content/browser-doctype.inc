@@ -7,5 +7,7 @@
 %globalRegionDTD;
 <!ENTITY % charsetDTD SYSTEM "chrome://global/locale/charsetOverlay.dtd" >
 %charsetDTD;
+<!ENTITY % findBarDTD SYSTEM "chrome://global/locale/findBar.dtd" >
+%findBarDTD;
 ]>
 

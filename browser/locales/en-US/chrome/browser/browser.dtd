@@ -56,14 +56,6 @@
 
 <!ENTITY closeWindow.label "Close Window">
 
-<!ENTITY findOnCmd.label     "Find in This Page...">
-<!ENTITY findOnCmd.accesskey "F">
-<!ENTITY findOnCmd.commandkey "f">
-<!ENTITY findAgainCmd.label  "Find Again">
-<!ENTITY findAgainCmd.accesskey "g">
-<!ENTITY findAgainCmd.commandkey "g">
-<!ENTITY findAgainCmd.commandkey2 "VK_F3">
-
 <!ENTITY bookmarksMenu.label "Bookmarks">
 <!ENTITY bookmarksMenu.accesskey "B">
 <!ENTITY addCurPageAsCmd.label "Bookmark This Page...">
@@ -358,15 +350,6 @@
 
 <!ENTITY pageStyleIcon.tooltip             "Switch to an alternate page style">
 <!ENTITY pageReportIcon.tooltip            "Change popup blocking settings for this web site">
-
-<!ENTITY find.label "Find:">
-<!ENTITY findNext.label "Find Next">
-<!ENTITY findNext.tooltip "Find the next occurrence of the phrase">
-<!ENTITY findPrevious.label "Find Previous">
-<!ENTITY findPrevious.tooltip "Find the previous occurrence of the phrase">
-<!ENTITY findCloseButton.tooltip "Close Find bar">
-<!ENTITY highlight.label "Highlight">
-<!ENTITY highlight.tooltip "Highlight all occurrences of the phrase">
 
 <!ENTITY allowPopups.accesskey "p">
 <!ENTITY editPopupSettings.label "Edit Popup Blocker Options...">

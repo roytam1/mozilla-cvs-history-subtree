@@ -123,6 +123,8 @@ function init() {
     helpIndexPanel = document.getElementById("help-index-panel");
     helpGlossaryPanel = document.getElementById("help-glossary-panel");
     helpBrowser = document.getElementById("help-content");
+    
+    initFindBar();
 
     // Get the content pack, base URL, and help topic
     var helpTopic = defaultTopic;
@@ -304,6 +306,10 @@ function getLink(ID) {
 # requested help file.
 function getHelpFileURI() {
     return helpFileURI;
+}
+
+function getBrowser() {
+  return helpBrowser;
 }
 
 function getWebNavigation() {
