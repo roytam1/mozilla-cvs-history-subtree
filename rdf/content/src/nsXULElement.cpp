@@ -3899,16 +3899,6 @@ nsXULElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
         // "style" attribute anyway.
         aHint = NS_STYLE_HINT_FRAMECHANGE;
     }
-    else if (NodeInfo()->Equals(nsXULAtoms::treeitem)) {
-        // Force a framechange if the 'open' atom changes on a <treeitem>
-        if (nsXULAtoms::open == aAttribute)
-            aHint = NS_STYLE_HINT_FRAMECHANGE;
-    }
-    else if (NodeInfo()->Equals(nsXULAtoms::treecol)) {
-        // Ignore 'width' and 'hidden' on a <treecol>
-        if (nsXULAtoms::width == aAttribute || nsXULAtoms::hidden == aAttribute)
-            aHint = NS_STYLE_HINT_REFLOW;
-    }
     else if (NodeInfo()->Equals(nsXULAtoms::window)) {
         // Ignore 'width' and 'height' on a <window>
         if (nsXULAtoms::width == aAttribute || nsXULAtoms::height == aAttribute)
