@@ -158,6 +158,9 @@ IL_RemoveGroupObserver(IL_GroupContext *img_cx, XP_ObserverProc observer,
    (animation, status, progress, etc.) can be suppressed.*/
 IL_EXTERN(IL_ImageReq *)
 IL_GetImage(const char* url,
+/* ebb - begin */
+			const char* icc_profile_url,
+/* ebb - end */
             IL_GroupContext *image_context,
             XP_ObserverList observer_list,
             IL_IRGB *background_color,
