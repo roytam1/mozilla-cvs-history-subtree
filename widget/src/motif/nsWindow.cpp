@@ -500,6 +500,11 @@ void* nsWindow::GetNativeData(PRUint32 aDataType)
 {
     switch(aDataType) {
 
+        case NS_NATIVE_DISPLAY:
+	  {
+            return (void*)XtDisplay(mWidget);
+	  }
+	break;
         case NS_NATIVE_WINDOW:
 	  {
             return (void*)XtWindow(mWidget);
