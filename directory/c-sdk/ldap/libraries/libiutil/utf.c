@@ -21,6 +21,9 @@
  * $RCSfile$ $Revision$ $Date$ $State$
  *
  * $Log$
+ * Revision 1.1.2.1  2001/03/23 23:51:23  mhein%netscape.com
+ * add files needed for internal builds (internal iPlanet use only)
+ *
  * Revision 1.7  1999/03/22 23:58:22  Administrator
  * update Copyright statements in ILC-SDK
  *
@@ -46,6 +49,7 @@
  */
 
 #include "ldap-int.h"
+#include "iutil.h"
 
 unsigned char *ldap_charset_unicode_to_utf8 (
 	unsigned short *src,

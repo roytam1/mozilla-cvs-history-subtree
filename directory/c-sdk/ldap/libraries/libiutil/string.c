@@ -21,6 +21,9 @@
  * $RCSfile$ $Revision$ $Date$ $State$
  *
  * $Log$
+ * Revision 1.1.2.1  2001/03/23 23:51:21  mhein%netscape.com
+ * add files needed for internal builds (internal iPlanet use only)
+ *
  * Revision 1.15  1999/07/06 17:52:08  ac
  * fix ldap_utf8_strcasecmp
  *
@@ -71,6 +74,7 @@
  */
 
 #include "ldap-int.h"
+#include "iutil.h"
 
 char *ldap_strdup( const char *s )
 {

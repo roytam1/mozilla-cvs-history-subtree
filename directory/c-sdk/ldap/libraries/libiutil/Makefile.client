@@ -34,7 +34,8 @@ ifeq ($(HAVE_CCONF), 1)
 SRCS		= iutil-lock.c \
 		  utf.c \
 		  string.c \
-		  getdn.c
+		  getdn.c \
+		  log.c
 else
 SRCS		= iutil-lock.c
 endif

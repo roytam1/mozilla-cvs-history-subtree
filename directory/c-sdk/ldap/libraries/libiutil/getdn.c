@@ -24,6 +24,9 @@
  * $RCSfile$ $Revision$ $Date$ $State$
  *
  * $Log$
+ * Revision 1.1.2.1  2001/03/23 23:51:19  mhein%netscape.com
+ * add files needed for internal builds (internal iPlanet use only)
+ *
  * Revision 1.23  1999/09/08 15:24:40  ac
  * A99090320A - move dn normalize functions into libldap
  *
@@ -106,6 +109,11 @@ static char copyright[] = "@(#) Copyright 1998-1999 Innosoft International, Inc.
 #endif
 
 #include "ldap-int.h"
+#include "iutil.h"
+
+#ifdef WIN32
+#define strcasecmp stricmp
+#endif
 
 /**
 *** This function counts the number of trailing space characters in a 
@@ -675,7 +683,7 @@ static char **normalize_ava_cis(void *data, char **ava)
     lastspace=0; seenfirstchar=0;
 
     for (p=newval; s && *s; s=(char*)ldap_utf8_nextchar((unsigned char*)s)) {
-        if (ldap_utf8_isspace((unsigned char*)s)) {
+        if (ldap_utf8isspace((unsigned char*)s)) {
             lastspace=1;
             continue;
         } 
@@ -713,12 +721,12 @@ char *ldap_dn_normalize_format(const char *dn)
 {
     return ldap_dn_normalize_count(dn, NULL, NULL, 
                                    normalize_ava_stub, NULL,
-                                   ldap_memfree);
+                                   (void *)ldap_memfree);
 }
 
 char *ldap_dn_normalize(const char *dn)
 {
     return ldap_dn_normalize_count(dn, NULL, NULL, 
                                    normalize_ava_cis, NULL,
-                                   ldap_memfree);
+                                   (void *)ldap_memfree);
 }
