@@ -663,12 +663,12 @@ public void eventDispatched(WebclientEvent event)
             forwardMenuItem.setEnabled(history.canForward());
             populateHistoryMenu();
             statusLabel.setText("Done.");
-            //            currentDocument = currentPage.getDOM();
+            currentDocument = currentPage.getDOM();
             // add the new document to the domViewer
-            //            if (null != currentDocument && null != domViewer) {
-            //                domViewer.setDocument(currentDocument);
-            //            }
-
+            if (null != currentDocument && null != domViewer) {
+                domViewer.setDocument(currentDocument);
+            }
+            
             break;
         case ((int) DocumentLoadEvent.PROGRESS_URL_LOAD_EVENT_MASK):
             status = "Status: " + (String) event.getEventData();
