@@ -583,8 +583,12 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
     if ((m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay) && (m_flags [row] & MSG_VIEW_FLAG_HASCHILDREN))
     {
       PRUint32 numChanged = 0;
+      PRInt32 multiplier = -1;
+      if (m_flags [row] & MSG_FLAG_ELIDED)
+        multiplier = 1;
       ToggleExpansion(row, &numChanged);
-      mOutliner->RowCountChanged(row, numChanged);
+
+      mOutliner->RowCountChanged(row, numChanged * multiplier);
     }
     break;
   default:
