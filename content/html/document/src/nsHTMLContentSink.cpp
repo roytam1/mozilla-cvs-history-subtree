@@ -4520,8 +4520,9 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
               // cookies to be set! But we'll worry about that in the next
               // iteration
               nsCOMPtr<nsIChannel>  channel;
-              if (NS_SUCCEEDED(mParser->GetChannel(getter_AddRefs(channel))) &&
-                      channel) {
+              if (mParser &&
+                  NS_SUCCEEDED(mParser->GetChannel(getter_AddRefs(channel))))
+              {
                   nsCOMPtr<nsIHttpChannel>
                       httpchannel(do_QueryInterface(channel));
                   if (httpchannel)
