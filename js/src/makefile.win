@@ -193,4 +193,4 @@ export:: $(DLL)	INSTALL_FILES
 #//	    $(link) /debug /out:$(PROGRAM) $(OBJDIR)\js.obj $(DIST)\lib\pr3240.lib $(LIBRARY) $(LDFLAGS)
 #//
 #//$(OBJDIR)\js.obj: js.c
-#//		$(CC) /Fo$(OBJDIR)\js.obj js.c $(CFLAGS) -DJSFILE
+#//		$(CC) /Fo$(OBJDIR)\js.obj js.c $(CFLAGS)
