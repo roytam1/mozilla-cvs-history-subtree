@@ -207,7 +207,8 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
   nsCOMPtr<nsIURI> srcURI;
   NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
   il->LoadImage(srcURI, nsnull, getter_AddRefs(mImageRequest));
-//#else
+  mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
+#else
   mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
 #endif
 
@@ -1106,7 +1107,7 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
 #else
       if (mImageLoader.IsImageSizeKnown()) {
         mImageLoader.UpdateURLSpec(aPresContext, newSRC);
-        PRUint32 loadStatus = mImageLoader.GetLoadStatus();
+        loadStatus = mImageLoader.GetLoadStatus();
         if (loadStatus & NS_IMAGE_LOAD_STATUS_IMAGE_READY) {
 #endif
           // Trigger a paint now because image-loader won't if the
