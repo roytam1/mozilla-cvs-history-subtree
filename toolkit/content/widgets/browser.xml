@@ -144,6 +144,7 @@
         <parameter name="aFlags"/>
         <parameter name="aReferrerURI"/>
         <parameter name="aCharset"/>
+        <parameter name="aPostData"/>
         <body>
           <![CDATA[
             if (!aURI)
@@ -157,7 +158,7 @@
               }
             }
             this.mFavIconURL = null;
-            this.webNavigation.loadURI(aURI, aFlags, aReferrerURI, null, null);
+            this.webNavigation.loadURI(aURI, aFlags, aReferrerURI, aPostData, null);
           ]]>
         </body>
       </method>

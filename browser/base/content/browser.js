@@ -2005,7 +2005,7 @@ function BrowserLoadURL(aTriggeringEvent, aPostData)
         aTriggeringEvent && 'altKey' in aTriggeringEvent &&
         aTriggeringEvent.altKey) {
       _content.focus();
-      var t = gBrowser.addTab(url, aPostData); // open link in new tab
+      var t = gBrowser.addTab(url, null, null, aPostData); // open link in new tab
       gBrowser.selectedTab = t;
       gURLBar.value = url;
       event.preventDefault();
@@ -2038,7 +2038,7 @@ function getShortcutOrURI(aURL, aPostDataRef)
             //          enctypes.
             aPostDataRef.value = unescape(aPostDataRef.value);
             if (aPostDataRef.value.match(/%s/))
-              aPostDataRef.value = getPostDataStream(aPostDataRef.value, text), 
+              aPostDataRef.value = getPostDataStream(aPostDataRef.value, text, 
                                                      "application/x-www-form-urlencoded");
             else {
               shortcutURL = null;
