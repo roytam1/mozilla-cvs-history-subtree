@@ -1651,8 +1651,8 @@ net_AddCookiePermission
 	    net_SaveCookiePermissions(NULL);
 	}
 
-    //	RDF_AddCookiePermissionResource (
-    //	    cookie_permission->host, cookie_permission->permission);
+   /* 	RDF_AddCookiePermissionResource (
+   	    cookie_permission->host, cookie_permission->permission); */
     }
 }
 #endif
@@ -2206,7 +2206,7 @@ net_IntSetCookieString(MWContext * context,
 				    ctime(&(prev_cookie->expires)),
 				    prev_cookie->cookie,
 				    prev_cookie->is_domain,
-				    FALSE); //@@@prev_cookie->secure);
+				    FALSE); /* @@@prev_cookie->secure); */
 				XP_ListInsertObject(net_cookie_list, tmp_cookie_ptr, prev_cookie);
 				cookies_changed = TRUE;
 				NET_SaveCookies(NULL);
@@ -2222,7 +2222,7 @@ net_IntSetCookieString(MWContext * context,
 		     ctime(&(prev_cookie->expires)),
 		     prev_cookie->cookie,
 		     prev_cookie->is_domain,
-		     FALSE); //@@@prev_cookie->secure);
+		     FALSE); /* @@@prev_cookie->secure); */
 		XP_ListAddObjectToEnd(net_cookie_list, prev_cookie);
 	  }
 
@@ -2653,7 +2653,7 @@ NET_InitRDFCookieResources (void) {
       ctime(&(item->expires)),
       item->cookie,
       item->is_domain,
-      FALSE); //@@@item->secure);
+      FALSE); /* @@@item->secure); */
   }
   net_unlock_cookie_list();
 }
@@ -3635,13 +3635,13 @@ NET_DisplayCookieInfoAsHTML(MWContext *context)
 "    if (selname.options[i-1].selected) {\n"
 "      selname.options[i-1].selected = 0;\n"
 "      goneC.value = goneC.value + \",\" + selname.options[i-1].value;\n"
-//"    temp = selname.options[i-1];\n"
+/* "    temp = selname.options[i-1];\n" */
 "      for (j=i ; j<selname.options.length ; j++) {\n"
 "        selname.options[j-1] = selname.options[j];\n"
 "      }\n"
 "      selname.options[selname.options.length-1] = null;\n"
-//"    selname.options[selname.options.length-1] = temp;\n"
-//"    selname.options.length = selname.options.length-1;\n"
+/* "    selname.options[selname.options.length-1] = temp;\n" */
+/* "    selname.options.length = selname.options.length-1;\n" */
 "    }\n"
 "  }\n"
 "}\n"
