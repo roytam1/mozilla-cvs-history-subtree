@@ -98,6 +98,7 @@ typedef int PRInt32;
 #define FO_ERROR_DESTINATION_CONFLICT   2
 #define FO_ERROR_CHANGE_DIR             3
 
+/* Mode of Setup to run in */
 #define NORMAL                          0
 #define SILENT                          1
 #define AUTO                            2

@@ -39,14 +39,17 @@ void AskCancelDlg(HWND hDlg)
   char szDlgQuitTitle[MAX_BUF];
   char szDlgQuitMsg[MAX_BUF];
 
-  if(NS_LoadString(hSetupRscInst, IDS_DLGQUITTITLE, szDlgQuitTitle, MAX_BUF) != WIZ_OK)
-    PostQuitMessage(1);
-  else if(NS_LoadString(hSetupRscInst, IDS_DLGQUITMSG, szDlgQuitMsg, MAX_BUF) != WIZ_OK)
-    PostQuitMessage(1);
-  else if(MessageBox(hDlg, szDlgQuitMsg, szDlgQuitTitle, MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2 | MB_APPLMODAL | MB_SETFOREGROUND) == IDYES)
+  if((sgProduct.dwMode != SILENT) && (sgProduct.dwMode != AUTO))
   {
-    DestroyWindow(hDlg);
-    PostQuitMessage(0);
+    if(NS_LoadString(hSetupRscInst, IDS_DLGQUITTITLE, szDlgQuitTitle, MAX_BUF) != WIZ_OK)
+      PostQuitMessage(1);
+    else if(NS_LoadString(hSetupRscInst, IDS_DLGQUITMSG, szDlgQuitMsg, MAX_BUF) != WIZ_OK)
+      PostQuitMessage(1);
+    else if(MessageBox(hDlg, szDlgQuitMsg, szDlgQuitTitle, MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2 | MB_APPLMODAL | MB_SETFOREGROUND) == IDYES)
+    {
+      DestroyWindow(hDlg);
+      PostQuitMessage(0);
+    }
   }
 } 
 
@@ -313,7 +316,60 @@ LRESULT CALLBACK BrowseHookProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
           break;
 
         case IDOK:
-          GetDlgItemText(hDlg, IDC_EDIT_DESTINATION, szTempSetupPath, MAX_BUF);
+          GetDlgItemText(hDlg, IDC_EDIT_DESTINATION, szBuf, MAX_BUF);
+          if(*szBuf == '\0')
+          {
+            char szEDestinationPath[MAX_BUF];
+
+            NS_LoadString(hSetupRscInst, IDS_ERROR_DESTINATION_PATH, szEDestinationPath, MAX_BUF);
+            MessageBox(hDlg, szEDestinationPath, NULL, MB_OK | MB_ICONEXCLAMATION);
+            break;
+          }
+
+          AppendBackSlash(szBuf, sizeof(szBuf));
+          if(FileExists(szBuf) == FALSE)
+          {
+            char szMsgCreateDirectory[MAX_BUF];
+            char szStrCreateDirectory[MAX_BUF];
+            char szBufTemp[MAX_BUF];
+            char szBufTemp2[MAX_BUF];
+
+            NS_LoadString(hSetupRscInst, IDS_STR_CREATE_DIRECTORY, szStrCreateDirectory, MAX_BUF);
+            if(NS_LoadString(hSetupRscInst, IDS_MSG_CREATE_DIRECTORY, szMsgCreateDirectory, MAX_BUF) == WIZ_OK)
+            {
+              lstrcpy(szBufTemp, "\n\n    ");
+              lstrcat(szBufTemp, szBuf);
+              RemoveBackSlash(szBufTemp);
+              lstrcat(szBufTemp, "\n\n");
+              wsprintf(szBufTemp2, szMsgCreateDirectory, szBufTemp);
+            }
+
+            if(MessageBox(hDlg, szBufTemp2, szStrCreateDirectory, MB_YESNO | MB_ICONQUESTION) == IDYES)
+            {
+              if(CreateDirectoriesAll(szBuf) == FALSE)
+              {
+                char szECreateDirectory[MAX_BUF];
+
+                lstrcpy(szBufTemp, "\n\n    ");
+                lstrcat(szBufTemp, sgProduct.szPath);
+                RemoveBackSlash(szBufTemp);
+                lstrcat(szBufTemp, "\n\n");
+
+                if(NS_LoadString(hSetupRscInst, IDS_ERROR_CREATE_DIRECTORY, szECreateDirectory, MAX_BUF) == WIZ_OK)
+                  wsprintf(szBuf, szECreateDirectory, szBufTemp);
+
+                MessageBox(hDlg, szBuf, "", MB_OK | MB_ICONERROR);
+                break;
+              }
+              bCreateDestinationDir = TRUE;
+            }
+            else
+            {
+              break;
+            }
+          }
+
+          lstrcpy(szTempSetupPath, szBuf);
           DestroyWindow(hDlg);
           break;
       }
@@ -325,9 +381,11 @@ LRESULT CALLBACK BrowseHookProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 BOOL BrowseForDirectory(HWND hDlg, char *szCurrDir)
 { 
   OPENFILENAME   of;
-  char           ftitle [MAX_PATH];
-  char           fname  [MAX_PATH];
-  char           szCDir [MAX_BUF];
+  char           ftitle[MAX_PATH];
+  char           fname[MAX_PATH];
+  char           szCDir[MAX_BUF];
+  char           szBuf[MAX_BUF];
+  char           szSearchPathBuf[MAX_BUF];
   char           szDlgBrowseTitle[MAX_BUF];
   BOOL           bRet;
 
@@ -336,6 +394,15 @@ BOOL BrowseForDirectory(HWND hDlg, char *szCurrDir)
 
   ZeroMemory(szDlgBrowseTitle, sizeof(szDlgBrowseTitle));
   NS_LoadString(hSetupRscInst, IDS_DLGBROWSETITLE, szDlgBrowseTitle, MAX_BUF);
+
+  lstrcpy(szSearchPathBuf, szCurrDir);
+  RemoveBackSlash(szSearchPathBuf);
+  while(FileExists(szSearchPathBuf) == FALSE)
+  {
+    RemoveBackSlash(szSearchPathBuf);
+    ParsePath(szSearchPathBuf, szBuf, sizeof(szBuf), PP_PATH_ONLY);
+    lstrcpy(szSearchPathBuf, szBuf);
+  }
 
   ZeroMemory(ftitle, sizeof(ftitle));
   strcpy(fname, "*.*");
@@ -350,7 +417,7 @@ BOOL BrowseForDirectory(HWND hDlg, char *szCurrDir)
   of.nMaxFile           = MAX_PATH;
   of.lpstrFileTitle     = ftitle;
   of.nMaxFileTitle      = MAX_PATH;
-  of.lpstrInitialDir    = szCurrDir;
+  of.lpstrInitialDir    = szSearchPathBuf;
   of.lpstrTitle         = szDlgBrowseTitle;
   of.Flags              = OFN_NONETWORKBUTTON |
                           OFN_ENABLEHOOK      |
@@ -1726,15 +1793,18 @@ void ProcessWindowsMessages()
 }
 void ShowMessage(LPSTR szMessage, BOOL bShow)
 {
-  if((bShow) && (hDlgMessage == NULL))
+  if(sgProduct.dwMode != SILENT)
   {
-    InstantiateDialog(DLG_MESSAGE, "Message", DlgProcMessage);
-    SendMessage(hDlgMessage, WM_COMMAND, IDC_MESSAGE, (LPARAM)szMessage);
-  }
-  else if(!bShow && hDlgMessage)
-  {
-    DestroyWindow(hDlgMessage);
-    hDlgMessage = NULL;
+    if((bShow) && (hDlgMessage == NULL))
+    {
+      InstantiateDialog(DLG_MESSAGE, "Message", DlgProcMessage);
+      SendMessage(hDlgMessage, WM_COMMAND, IDC_MESSAGE, (LPARAM)szMessage);
+    }
+    else if(!bShow && hDlgMessage)
+    {
+      DestroyWindow(hDlgMessage);
+      hDlgMessage = NULL;
+    }
   }
 }
 
@@ -1798,7 +1868,7 @@ void DlgSequenceNext()
         InstantiateDialog(dwWizardState, diSetupType.szTitle, DlgProcSetupType);
       else
       {
-        CheckWizardStateCustom(DLG_SELECT_COMPONENTS);
+        CheckWizardStateCustom(DLG_SELECT_ADDITIONAL_COMPONENTS);
         PostMessage(hWndMain, WM_COMMAND, IDWIZNEXT, 0);
       }
       break;
@@ -1858,7 +1928,10 @@ void DlgSequenceNext()
       if(diProgramFolder.bShowDialog)
         InstantiateDialog(dwWizardState, diProgramFolder.szTitle, DlgProcProgramFolder);
       else
+      {
+        dwWizardState = DLG_SITE_SELECTOR;
         PostMessage(hWndMain, WM_COMMAND, IDWIZNEXT, 0);
+      }
       break;
 
     case DLG_PROGRAM_FOLDER:

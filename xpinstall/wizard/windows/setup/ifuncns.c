@@ -784,7 +784,8 @@ HRESULT ProcessProgramFolderShowCmd()
       iShowFolder = SW_SHOWNORMAL;
 
     if(iShowFolder != SW_HIDE)
-      WinSpawn(szProgramFolder, NULL, NULL, iShowFolder, TRUE);
+      if(sgProduct.dwMode != SILENT)
+        WinSpawn(szProgramFolder, NULL, NULL, iShowFolder, TRUE);
 
     ++dwIndex0;
     itoa(dwIndex0, szIndex0, 10);

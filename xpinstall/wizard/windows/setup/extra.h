@@ -167,6 +167,13 @@ ssi*              SsiGetNode(LPSTR szDescription);
 void              UpdateSiteSelector(void);
 DWORD             GetAdditionalComponentsCount(void);
 DWORD             GetTotalArchivesToDownload();
+void              RemoveQuotes(LPSTR lpszSrc, LPSTR lpszDest, int iDestSize);
+LPSTR             GetFirstNonSpace(LPSTR lpszString);
+int               GetArgC(LPSTR lpszCommandLine);
+LPSTR             GetArgV(LPSTR lpszCommandLine, int iIndex, LPSTR lpszDest, int iDestSize);
+void              ParseCommandLine(LPSTR lpszCmdLine);
+void              SetSetupRunMode(LPSTR szMode);
+void              Delay(DWORD dwSeconds);
 
 BOOL              bSDInit;
 

@@ -121,7 +121,16 @@ void PrintError(LPSTR szMsg, DWORD dwErrorCodeSH)
   else
     wsprintf(szErrorString, "%s", szMsg);
 
-  MessageBox(hWndMain, szErrorString, NULL, MB_ICONEXCLAMATION);
+  if((sgProduct.dwMode != SILENT) && (sgProduct.dwMode != AUTO))
+  {
+    MessageBox(hWndMain, szErrorString, NULL, MB_ICONEXCLAMATION);
+  }
+  else if(sgProduct.dwMode == AUTO)
+  {
+    ShowMessage(szErrorString, TRUE);
+    Delay(5);
+    ShowMessage(szErrorString, FALSE);
+  }
 }
 
 void *NS_GlobalAlloc(DWORD dwMaxBuf)
@@ -182,6 +191,11 @@ HRESULT NS_LoadString(HANDLE hInstance, DWORD dwID, LPSTR szStringBuf, DWORD dwS
     return(1);
   }
   return(WIZ_OK);
+}
+
+void Delay(DWORD dwSeconds)
+{
+  SleepEx(dwSeconds * 1000, FALSE);
 }
 
 HRESULT Initialize(HINSTANCE hInstance)
@@ -468,6 +482,175 @@ HRESULT SdArchives(LPSTR szFileIdi, LPSTR szDownloadDir)
 #endif
 
   return(hResult);
+}
+
+/* Function to remove quotes from a string */
+void RemoveQuotes(LPSTR lpszSrc, LPSTR lpszDest, int iDestSize)
+{
+  char *lpszBegin;
+
+  if(lstrlen(lpszSrc) > iDestSize)
+    return;
+
+  if(*lpszSrc == '\"')
+    lpszBegin = &lpszSrc[1];
+  else
+    lpszBegin = lpszSrc;
+
+  lstrcpy(lpszDest, lpszBegin);
+
+  if(lpszDest[lstrlen(lpszDest) - 1] == '\"')
+    lpszDest[lstrlen(lpszDest) - 1] = '\0';
+}
+
+/* Function to locate the first non space character in a string,
+ * and return a pointer to it. */
+LPSTR GetFirstNonSpace(LPSTR lpszString)
+{
+  int   i;
+  int   iStrLength;
+
+  iStrLength = lstrlen(lpszString);
+
+  for(i = 0; i < iStrLength; i++)
+  {
+    if(!isspace(lpszString[i]))
+      return(&lpszString[i]);
+  }
+
+  return(NULL);
+}
+
+/* Function to return the argument count given a command line input
+ * format string */
+int GetArgC(LPSTR lpszCommandLine)
+{
+  int   i;
+  int   iArgCount;
+  int   iStrLength;
+  LPSTR lpszBeginStr;
+  BOOL  bFoundQuote;
+  BOOL  bFoundSpace;
+
+  iArgCount    = 0;
+  lpszBeginStr = GetFirstNonSpace(lpszCommandLine);
+
+  if(lpszBeginStr == NULL)
+    return(iArgCount);
+
+  iStrLength   = lstrlen(lpszBeginStr);
+  bFoundQuote  = FALSE;
+  bFoundSpace  = TRUE;
+
+  for(i = 0; i < iStrLength; i++)
+  {
+    if(lpszCommandLine[i] == '\"')
+    {
+      if(bFoundQuote == FALSE)
+      {
+        ++iArgCount;
+        bFoundQuote = TRUE;
+      }
+      else
+      {
+        bFoundQuote = FALSE;
+      }
+    }
+    else if(bFoundQuote == FALSE)
+    {
+      if(!isspace(lpszCommandLine[i]) && (bFoundSpace == TRUE))
+      {
+        ++iArgCount;
+        bFoundSpace = FALSE;
+      }
+      else if(isspace(lpszCommandLine[i]))
+      {
+        bFoundSpace = TRUE;
+      }
+    }
+  }
+
+  return(iArgCount);
+}
+
+/* Function to return a specific argument parameter from a given command line input
+ * format string. */
+LPSTR GetArgV(LPSTR lpszCommandLine, int iIndex, LPSTR lpszDest, int iDestSize)
+{
+  int   i;
+  int   j;
+  int   iArgCount;
+  int   iStrLength;
+  LPSTR lpszBeginStr;
+  LPSTR lpszDestTemp;
+  BOOL  bFoundQuote;
+  BOOL  bFoundSpace;
+
+  iArgCount    = 0;
+  lpszBeginStr = GetFirstNonSpace(lpszCommandLine);
+
+  if(lpszBeginStr == NULL)
+    return(NULL);
+
+  lpszDestTemp = (char *)calloc(iDestSize, sizeof(char));
+  if(lpszDestTemp == NULL)
+  {
+    PrintError("Out of memory", ERROR_CODE_HIDE);
+    exit(1);
+  }
+
+  ZeroMemory(lpszDest, iDestSize);
+  iStrLength    = lstrlen(lpszBeginStr);
+  bFoundQuote   = FALSE;
+  bFoundSpace   = TRUE;
+  j             = 0;
+
+  for(i = 0; i < iStrLength; i++)
+  {
+    if(lpszCommandLine[i] == '\"')
+    {
+      if(bFoundQuote == FALSE)
+      {
+        ++iArgCount;
+        bFoundQuote = TRUE;
+      }
+      else
+      {
+        bFoundQuote = FALSE;
+      }
+    }
+    else if(bFoundQuote == FALSE)
+    {
+      if(!isspace(lpszCommandLine[i]) && (bFoundSpace == TRUE))
+      {
+        ++iArgCount;
+        bFoundSpace = FALSE;
+      }
+      else if(isspace(lpszCommandLine[i]))
+      {
+        bFoundSpace = TRUE;
+      }
+    }
+
+    if((iIndex == (iArgCount - 1)) &&
+      ((bFoundQuote == TRUE) || (bFoundSpace == FALSE) ||
+      ((bFoundQuote == FALSE) && (lpszCommandLine[i] == '\"'))))
+    {
+      if(j < iDestSize)
+      {
+        lpszDestTemp[j] = lpszCommandLine[i];
+        ++j;
+      }
+      else
+      {
+        lpszDestTemp[j] = '\0';
+      }
+    }
+  }
+
+  RemoveQuotes(lpszDestTemp, lpszDest, iDestSize);
+  free(lpszDestTemp);
+  return(lpszDest);
 }
 
 HRESULT ParseSetupIni()
@@ -778,6 +961,16 @@ HRESULT AddArchiveToIdiFile(siC *siCObject, char *szSComponent, char *szSFile, c
     GetPrivateProfileString(szSComponent, szKServerPath, "", szBufServerPath, MAX_BUF, szFileIniConfig);
   }
   return(0);
+}
+
+void SetSetupRunMode(LPSTR szMode)
+{
+  if(lstrcmpi(szMode, "NORMAL") == 0)
+    sgProduct.dwMode = NORMAL;
+  if(lstrcmpi(szMode, "AUTO") == 0)
+    sgProduct.dwMode = AUTO;
+  if(lstrcmpi(szMode, "SILENT") == 0)
+    sgProduct.dwMode = SILENT;
 }
 
 long RetrieveRedirectFile()
@@ -2419,7 +2612,19 @@ HRESULT ErrorMsgDiskSpace(ULONGLONG ullDSAvailable, ULONGLONG ullDSRequired, LPS
   lstrcpy(szBuf3, szDSAvailable);
   lstrcat(szBuf3, " K\n\n");
   wsprintf(szBufMsg, szDlgDiskSpaceCheckMsg, szBufRootPath, szBuf1, szBuf2, szBuf3);
-  return(MessageBox(hWndMain, szBufMsg, szDlgDiskSpaceCheckTitle, dwDlgType | MB_ICONEXCLAMATION | MB_DEFBUTTON2 | MB_APPLMODAL | MB_SETFOREGROUND));
+
+  if((sgProduct.dwMode != SILENT) && (sgProduct.dwMode != AUTO))
+  {
+    return(MessageBox(hWndMain, szBufMsg, szDlgDiskSpaceCheckTitle, dwDlgType | MB_ICONEXCLAMATION | MB_DEFBUTTON2 | MB_APPLMODAL | MB_SETFOREGROUND));
+  }
+  else if(sgProduct.dwMode == AUTO)
+  {
+    ShowMessage(szBufMsg, TRUE);
+    Delay(5);
+    ShowMessage(szBufMsg, FALSE);
+  }
+
+  return(IDCANCEL);
 }
 
 void UpdatePathDiskSpaceRequired(LPSTR szPath, ULONGLONG ullSize, dsN **dsnComponentDSRequirement)
@@ -3273,6 +3478,60 @@ void ResolveDependees(LPSTR szToggledDescriptionShort)
     ResolveDependees(szToggledDescriptionShort);
 }
 
+void ParseCommandLine(LPSTR lpszCmdLine)
+{
+  char  szArgVBuf[MAX_BUF];
+  int   i;
+  int   iArgC;
+
+#ifdef XXX_DEBUG
+  char  szBuf[MAX_BUF];
+  char  szOutputStr[MAX_BUF];
+#endif
+
+  iArgC = GetArgC(lpszCmdLine);
+
+#ifdef XXX_DEBUG
+  wsprintf(szOutputStr, "ArgC: %d\n", iArgC);
+#endif
+
+  i = 0;
+  while(i < iArgC)
+  {
+    GetArgV(lpszCmdLine, i, szArgVBuf, sizeof(szArgVBuf));
+
+    if((lstrcmpi(szArgVBuf, "-a") == 0) || (lstrcmpi(szArgVBuf, "/a") == 0))
+    {
+      ++i;
+      GetArgV(lpszCmdLine, i, szArgVBuf, sizeof(szArgVBuf));
+      lstrcpy(sgProduct.szAlternateArchiveSearchPath, szArgVBuf);
+    }
+    else if((lstrcmpi(szArgVBuf, "-ma") == 0) || (lstrcmpi(szArgVBuf, "/ma") == 0))
+    {
+      SetSetupRunMode("AUTO");
+    }
+    else if((lstrcmpi(szArgVBuf, "-ms") == 0) || (lstrcmpi(szArgVBuf, "/ms") == 0))
+    {
+      SetSetupRunMode("SILENT");
+    }
+
+#ifdef XXX_DEBUG
+    itoa(i, szBuf, 10);
+    lstrcat(szOutputStr, "    ");
+    lstrcat(szOutputStr, szBuf);
+    lstrcat(szOutputStr, ": ");
+    lstrcat(szOutputStr, szArgVBuf);
+    lstrcat(szOutputStr, "\n");
+#endif
+
+    ++i;
+  }
+
+#ifdef XXX_DEBUG
+  MessageBox(NULL, szOutputStr, "Output", MB_OK);
+#endif
+}
+
 void GetAlternateArchiveSearchPath(LPSTR lpszCmdLine)
 {
   char  szBuf[MAX_PATH];
@@ -3395,7 +3654,18 @@ HRESULT CheckInstances()
         if(CheckForProcess(szProcessName, sizeof(szProcessName)) == TRUE)
         {
           if(*szMessage != '\0')
-            MessageBox(hWndMain, szMessage, NULL, MB_ICONEXCLAMATION);
+          {
+            if((sgProduct.dwMode != SILENT) && (sgProduct.dwMode != AUTO))
+            {
+              MessageBox(hWndMain, szMessage, NULL, MB_ICONEXCLAMATION);
+            }
+            else if(sgProduct.dwMode == AUTO)
+            {
+              ShowMessage(szMessage, TRUE);
+              Delay(5);
+              ShowMessage(szMessage, FALSE);
+            }
+          }
 
           return(TRUE);
         }
@@ -3428,10 +3698,19 @@ HRESULT CheckInstances()
       if((hwndFW = FindWindow(szClassName, szWN)) != NULL)
       {
         if(*szMessage != '\0')
-          MessageBox(hWndMain, szMessage, NULL, MB_ICONEXCLAMATION);
+        {
+          if((sgProduct.dwMode != SILENT) && (sgProduct.dwMode != AUTO))
+          {
+            MessageBox(hWndMain, szMessage, NULL, MB_ICONEXCLAMATION);
+          }
+          else if(sgProduct.dwMode == AUTO)
+          {
+            ShowMessage(szMessage, TRUE);
+            Delay(5);
+            ShowMessage(szMessage, FALSE);
+          }
+         }
 
-//        ShowWindow(hwndFW, SW_RESTORE);
-//        SetForegroundWindow(hwndFW);
         return(TRUE);
       }
     }
@@ -3629,9 +3908,6 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   if(CheckInstances())
     return(1);
 
-  ShowWindow(hWndMain, SW_MAXIMIZE);
-  UpdateWindow(hWndMain);
-
   if(InitSetupGeneral())
     return(1);
   if(InitDlgWelcome(&diWelcome))
@@ -3657,17 +3933,17 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   if(InitSCoreFile())
     return(1);
  
-  /* get Alternate Archive Search Path, if there is one */
-  GetAlternateArchiveSearchPath(lpszCmdLine);
-
   /* get install Mode information */
-  GetPrivateProfileString("General", "Mode", "", szBuf, MAX_BUF, szFileIniConfig);
-  if(lstrcmpi(szBuf, "NORMAL") == 0)
-    sgProduct.dwMode = NORMAL;
-  if(lstrcmpi(szBuf, "AUTO") == 0)
-    sgProduct.dwMode = AUTO;
-  if(lstrcmpi(szBuf, "SILENT") == 0)
-    sgProduct.dwMode = SILENT;
+  GetPrivateProfileString("General", "Run Mode", "", szBuf, MAX_BUF, szFileIniConfig);
+  SetSetupRunMode(szBuf);
+  ParseCommandLine(lpszCmdLine);
+
+  if((sgProduct.dwMode == NORMAL) || (sgProduct.dwMode == AUTO))
+  {
+    /* show blue background here */
+    ShowWindow(hWndMain, SW_MAXIMIZE);
+    UpdateWindow(hWndMain);
+  }
 
   /* get product name description */
   GetPrivateProfileString("General", "Product Name", "", sgProduct.szProductName, MAX_BUF, szFileIniConfig);
@@ -3878,14 +4154,15 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   {
     case AUTO:
     case SILENT:
-      diWelcome.bShowDialog             = FALSE;
-      diLicense.bShowDialog             = FALSE;
-      diSetupType.bShowDialog           = FALSE;
-      diSelectComponents.bShowDialog    = FALSE;
-      diWindowsIntegration.bShowDialog  = FALSE;
-      diProgramFolder.bShowDialog       = FALSE;
-      diSiteSelector.bShowDialog        = FALSE;
-      diStartInstall.bShowDialog        = FALSE;
+      diWelcome.bShowDialog                     = FALSE;
+      diLicense.bShowDialog                     = FALSE;
+      diSetupType.bShowDialog                   = FALSE;
+      diSelectComponents.bShowDialog            = FALSE;
+      diSelectAdditionalComponents.bShowDialog  = FALSE;
+      diWindowsIntegration.bShowDialog          = FALSE;
+      diProgramFolder.bShowDialog               = FALSE;
+      diSiteSelector.bShowDialog                = FALSE;
+      diStartInstall.bShowDialog                = FALSE;
       break;
   }
 

@@ -387,6 +387,7 @@ BEGIN
                             "The following directory does not exist:%sWould you like to create it?"
     IDS_STR_CREATE_DIRECTORY "Create Directory?"
     IDS_ERROR_PROGRAM_FOLDER_NAME "Invalid program folder name entered."
+    IDS_ERROR_DESTINATION_PATH "Invalid path entered."
     IDS_CB_DEFAULT          "Default"
 END
 

@@ -119,6 +119,7 @@
 #define IDS_STR_CREATE_DIRECTORY        11016
 #define IDS_ERROR_PROGRAM_FOLDER_NAME   11017
 #define IDS_CB_DEFAULT                  11018
+#define IDS_ERROR_DESTINATION_PATH      11019
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
