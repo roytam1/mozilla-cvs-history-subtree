@@ -25,15 +25,42 @@ function ThreadPaneOnClick(event)
     // we are already handling marking as read and flagging
     // in nsMsgDBView.cpp
     // so all we need to worry about here is double clicks
+    // and column header.
     //
     // we get in here for clicks on the "outlinercol" (headers)
     // and the "scrollbarbutton" (scrollbar buttons)
     // we don't want those events to cause a "double click"
-	if (event.originalTarget.localName == "outlinerbody" && event.detail == 2) {
-		ThreadPaneDoubleClick();
-	}
+    var t = event.originalTarget;
+
+    if (t.localName == "outlinercol") {
+       HandleColumnClick(t.id);
+    }
+    else if (event.detail == 2 && t.localName == "outlinerbody") {
+       ThreadPaneDoubleClick();
+    }
 }
 
+function SetHiddenAttributeOnThreadOnlyColumns(value)
+{
+  // todo, cache these?
+
+  var totalCol = document.getElementById("totalCol");
+  var unreadCol = document.getElementById("unreadCol");
+
+  totalCol.setAttribute("hidden",value);
+  unreadCol.setAttribute("hidden",value);
+}
+
+function HandleColumnClick(columnID)
+{
+  // if they click on the "threadCol", we need to show the threaded-only columns
+  if ((columnID[0] == 't') && (columnID[1] == 'h')) {  
+    SetHiddenAttributeOnThreadOnlyColumns(""); // this will show them
+  }
+  else {
+    SetHiddenAttributeOnThreadOnlyColumns("true");  // this will hide them
+  }
+}
 
 function MsgComposeDraftMessage()
 {
