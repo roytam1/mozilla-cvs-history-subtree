@@ -158,15 +158,15 @@ start_selfserv()
       echo "$SCRIPTNAME: $testname ----"
   fi
   sparam=`echo $sparam | sed -e 's;_; ;g'`
-  echo "selfserv -D -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \\"
+  echo "selfserv -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \\"
   echo "         -w nss ${sparam} -i ${R_SERVERPID} $verbose &"
   echo "selfserv started at `date`"
   if [ ${fileout} -eq 1 ]; then
-      selfserv -D -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
+      selfserv -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
                -w nss ${sparam} -i ${R_SERVERPID} $verbose \
                > ${SERVEROUTFILE} 2>&1 &
   else
-      selfserv -D -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
+      selfserv -p ${PORT} -d ${R_SERVERDIR} -n ${HOSTADDR} \
                -w nss ${sparam} -i ${R_SERVERPID} $verbose &
   fi
   wait_for_selfserv
@@ -199,21 +199,9 @@ ssl_cov()
           is_selfserv_alive
           echo "tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} \\"
           echo "        -f -d . < ${REQUEST_FILE}"
-          if [ `uname -n` = "dump" ] ; then
-              echo "workaround for dump to avoid client and server writes at "
-              echo "       the same time"
-              rm ${TMP}/dump.tmp.$$ 2>/dev/null
-              tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} -f \
-                  -d . < ${REQUEST_FILE} >${TMP}/dump.tmp.$$  2>&1
-              ret=$?
-              cat ${TMP}/dump.tmp.$$ 
-              rm ${TMP}/dump.tmp.$$ 2>/dev/null
-          else
-              tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} -f \
+          tstclnt -p ${PORT} -h ${HOST} -c ${param} ${TLS_FLAG} -f \
                   -d . < ${REQUEST_FILE}
-              ret=$?
-          fi
-          html_msg $ret 0 "${testname}"
+          html_msg $? 0 "${testname}"
       fi
   done
 
@@ -236,19 +224,8 @@ ssl_auth()
 
           echo "tstclnt -p ${PORT} -h ${HOST} -f -d . ${cparam} \\"
           echo "        < ${REQUEST_FILE}"
-          if [ `uname -n` = "dump" ] ; then
-              echo "workaround for dump to avoid client and server writes at "
-              echo "       the same time"
-              rm ${TMP}/dump.tmp.$$ 2>/dev/null
-              tstclnt -p ${PORT} -h ${HOST} -f ${cparam} \
-                  -d . < ${REQUEST_FILE} >${TMP}/dump.tmp.$$  2>&1
-              ret=$?
-              cat ${TMP}/dump.tmp.$$ 
-              rm ${TMP}/dump.tmp.$$ 2>/dev/null
-          else
-            tstclnt -p ${PORT} -h ${HOST} -f -d . ${cparam} < ${REQUEST_FILE}
-            ret=$?
-          fi
+          tstclnt -p ${PORT} -h ${HOST} -f -d . ${cparam} < ${REQUEST_FILE}
+          ret=$?
 
           # the NT client does not return the same error code as Unix
           # FIXME - this is a serious bug in the NT testclient
@@ -281,24 +258,13 @@ ssl_stress()
           cparam=`echo $cparam | sed -e 's;_; ;g'`
           start_selfserv
 
-          #FIXME - this is done because NSS 3.2 stressclient did not have the 
-          # -q option - needs to be removed when testing later releases
-          if [ -n "$BC_RELEASE" -a "$BC_RELEASE" = "3.2" -a \
-               -n "$TEST_LEVEL" -a "$TEST_LEVEL" = "2" ] ; then
-              echo "strsclnt -p ${PORT} -d . -w nss $cparam $verbose \\"
-              echo "         ${HOSTADDR}"
-              echo "strsclnt started at `date`"
-              strsclnt -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
-              ret=$?
-          else
-              echo "strsclnt -q -p ${PORT} -d . -w nss $cparam $verbose \\"
-              echo "         ${HOSTADDR}"
-              echo "strsclnt started at `date`"
-              strsclnt -q -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
-              ret=$?
-          fi
+          echo "strsclnt -p ${PORT} -d . -w nss $cparam $verbose \\"
+          echo "         ${HOSTADDR}"
+          echo "strsclnt started at `date`"
+          strsclnt -p ${PORT} -d . -w nss $cparam $verbose ${HOSTADDR}
           echo "strsclnt completed at `date`"
-          html_msg $ret $value "${testname}"
+
+          html_msg $? $value "${testname}"
           kill_selfserv
       fi
   done

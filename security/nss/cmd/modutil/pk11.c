@@ -116,14 +116,12 @@ static MaskString mechanismStrings[] = {
 	{"RANDOM", PUBLIC_MECH_RANDOM_FLAG},
 	{"FRIENDLY", PUBLIC_MECH_FRIENDLY_FLAG}
 };
-static int numMechanismStrings =
-	sizeof(mechanismStrings) / sizeof(mechanismStrings[0]);
+static int numMechanismStrings = 13;
 
 static MaskString cipherStrings[] = {
 	{"FORTEZZA", PUBLIC_CIPHER_FORTEZZA_FLAG}
 };
-static int numCipherStrings =
-	sizeof(cipherStrings) / sizeof(cipherStrings[0]);
+static int numCipherStrings= 1;
 
 /* Maximum length of a colon-separated list of all the strings in an 
  * array. */
@@ -357,6 +355,7 @@ loser:
 }
 
 /* Strings describing PK11DisableReasons */
+static int numDisableReasonStr = 5;
 static char *disableReasonStr[] = {
 	"no reason",
 	"user disabled",
@@ -364,8 +363,6 @@ static char *disableReasonStr[] = {
 	"could not verify token",
 	"token not present"
 };
-static int numDisableReasonStr =
-	sizeof(disableReasonStr) / sizeof(disableReasonStr[0]);
 
 /***********************************************************************
  *

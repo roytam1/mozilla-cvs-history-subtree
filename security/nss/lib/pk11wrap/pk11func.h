@@ -343,14 +343,10 @@ CERTCertList * PK11_FindCertsFromNickname(char *nickname, void *wincx);
 SECKEYPrivateKey * PK11_FindPrivateKeyFromNickname(char *nickname, void *wincx);
 PK11SlotInfo *PK11_ImportCertForKey(CERTCertificate *cert, char *nickname,
 								void *wincx);
-PK11SlotInfo *PK11_ImportDERCertForKey(SECItem *derCert, char *nickname,
-								void *wincx);
 CK_OBJECT_HANDLE * PK11_FindObjectsFromNickname(char *nickname,
 	PK11SlotInfo **slotptr, CK_OBJECT_CLASS objclass, int *returnCount, 
 								void *wincx);
 PK11SlotInfo *PK11_KeyForCertExists(CERTCertificate *cert,
-					CK_OBJECT_HANDLE *keyPtr, void *wincx);
-PK11SlotInfo *PK11_KeyForDERCertExists(SECItem *derCert,
 					CK_OBJECT_HANDLE *keyPtr, void *wincx);
 CK_OBJECT_HANDLE PK11_MatchItem(PK11SlotInfo *slot,CK_OBJECT_HANDLE peer,
 						CK_OBJECT_CLASS o_class); 
@@ -450,15 +446,6 @@ PK11_PBEKeyGen(PK11SlotInfo *slot, SECAlgorithmID *algid,  SECItem *pwitem,
 	       PRBool faulty3DES, void *wincx);
 SECItem *
 PK11_GetPBEIV(SECAlgorithmID *algid, SECItem *pwitem);
-
-/**********************************************************************
- * New fucntions which are already depricated....
- **********************************************************************/
-SECItem *
-PK11GetLowLevelKeyIDForCert(PK11SlotInfo *slot,
-					CERTCertificate *cert, void *pwarg);
-SECItem *
-PK11GetLowLevelKeyIDForPrivateKey(SECKEYPrivateKey *key);
 
 SEC_END_PROTOS
 

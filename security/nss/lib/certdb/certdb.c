@@ -1545,24 +1545,9 @@ CERT_MakeCANickname(CERTCertificate *cert)
 	}
 
 	org = CERT_GetOrgName(&cert->issuer);
-	if (org == NULL) {
-	    org = CERT_GetDomainComponentName(&cert->issuer);
-	    if (org == NULL) {
-		if (firstname) {
-		    org = firstname;
-		    firstname = NULL;
-		} else {
-		    org = PORT_Strdup("Unknown CA");
-		}
-	    }
-	}
-
-	/* can only fail if PORT_Strdup fails, in which case
-	 * we're having memory problems. */
-	if (org == NULL) {
+	if ( org == NULL ) {
 	    goto loser;
 	}
-
     
 	count = 1;
 	while ( 1 ) {
@@ -1691,22 +1676,6 @@ CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype)
     
     return(ret);
 }
-
-
-PRBool
-CERT_IsCADERCert(SECItem *derCert, unsigned int *type) {
-    CERTCertificate *cert;
-    PRBool isCA;
-
-    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
-	                                   PR_FALSE, PR_TRUE);
-    if (cert == NULL) return NULL;
-
-    isCA = CERT_IsCACert(cert,type);
-    CERT_DestroyCertificate (cert);
-    return isCA;
-}
-
 
 /*
  * is certa newer than certb?  If one is expired, pick the other one.

@@ -88,7 +88,6 @@ static int handle_connection( PRFileDesc *, PRFileDesc *, int );
 static const char envVarName[] = { SSL_ENV_VAR_NAME };
 static const char inheritableSockName[] = { "SELFSERV_LISTEN_SOCKET" };
 
-
 const int ssl2CipherSuites[] = {
     SSL_EN_RC4_128_WITH_MD5,			/* A */
     SSL_EN_RC4_128_EXPORT40_WITH_MD5,		/* B */

@@ -54,7 +54,11 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
 
-
+ifeq ($(OS_TARGET),WINNT)
+NSPR_IMPORT_VERSION = v4.0.1
+else
+NSPR_IMPORT_VERSION = v4.0
+endif
 
 #######################################################################
 # (5) Execute "global" rules. (OPTIONAL)                              #
@@ -72,7 +76,11 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
 
-nss_build_all: build_coreconf build_nspr build_dbm all
+nss_build_all: 
+	$(MAKE) build_coreconf
+	$(MAKE) build_nspr
+	$(MAKE) build_dbm
+	$(MAKE)
 
 build_coreconf:
 	cd $(CORE_DEPTH)/coreconf ;  $(MAKE)
@@ -87,8 +95,6 @@ build_dbm:
 
 moz_import::
 ifeq ($(OS_ARCH),WINNT)
-	$(NSINSTALL) -D $(DIST)/include/nspr
-	cp $(DIST)/../include/nspr/*.h $(DIST)/include/nspr
 	cp $(DIST)/../include/* $(DIST)/include
 ifdef BUILD_OPT
 	cp $(DIST)/../WIN32_O.OBJ/lib/* $(DIST)/lib
@@ -108,4 +114,9 @@ else
 endif
 endif
 
-nss_RelEng_bld: build_coreconf import all
+coreconf_hack:
+	cd ../coreconf; $(MAKE)
+	$(MAKE) import
+
+nss_RelEng_bld: coreconf_hack
+	$(MAKE)
