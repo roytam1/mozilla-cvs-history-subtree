@@ -3350,7 +3350,6 @@ PRInt32 nsNNTPProtocol::BeginReadXover()
 		   &m_firstPossibleArticle, 
 		   &m_lastPossibleArticle);
 
-    CleanupNewsgroupList();
     m_newsgroupList = do_CreateInstance(NS_NNTPNEWSGROUPLIST_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return -1;
 
