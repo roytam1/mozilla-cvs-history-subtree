@@ -489,10 +489,9 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
     if (!mNodeTest->matches(aNode, aContext))
         return MB_FALSE;
 
-    MBool result = MB_TRUE;
+    if (!mIsAttr && !aNode->getParentNode())
+        return MB_FALSE;
     if (isEmpty()) {
-        if (!mIsAttr && !aNode->getParentNode())
-            return MB_FALSE;
         return MB_TRUE;
     }
 
