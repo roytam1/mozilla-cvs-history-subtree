@@ -2005,7 +2005,7 @@ nsresult nsMsgDatabase::RowCellColumnTonsString(nsIMdbRow *hdrRow, mdb_token col
 	return err;
 }
 
-nsresult nsMsgDatabase::RowCellColumnToMime2EncodedString(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr)
+nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr)
 {
 	nsresult err;
 	nsString nakedString;
@@ -2034,7 +2034,7 @@ nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token co
 	nsString nakedString;
 	nsresult err;
 
-	err = RowCellColumnTonsString(row, columnToken, nakedString);
+	err = RowCellColumnToMime2DecodedString(row, columnToken, nakedString);
 	if (NS_SUCCEEDED(err))
 	{
 		nsILocaleFactory* localeFactory; 
