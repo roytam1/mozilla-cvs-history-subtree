@@ -107,9 +107,9 @@ ICodeModule* Context::compileFunction(const String &source)
 JSValue Context::readEvalFile(FILE* in, const String& fileName)
 {
     String buffer;
-	int ch;
-	while ((ch = getc(in)) != EOF)
-		buffer += static_cast<char>(ch);
+    int ch;
+    while ((ch = getc(in)) != EOF)
+        buffer += static_cast<char>(ch);
     
     JSValues emptyArgs;
     JSValue result;
@@ -119,18 +119,18 @@ JSValue Context::readEvalFile(FILE* in, const String& fileName)
         Parser p(getWorld(), a, buffer, fileName);
         StmtNode *parsedStatements = p.parseProgram();
 /*******/
-		ASSERT(p.lexer.peek(true).hasKind(Token::end));
+        ASSERT(p.lexer.peek(true).hasKind(Token::end));
         {
             PrettyPrinter f(stdOut, 30);
             {
-            	PrettyPrinter::Block b(f, 2);
+                PrettyPrinter::Block b(f, 2);
                 f << "Program =";
                 f.linearBreak(1);
                 StmtNode::printStatements(f, parsedStatements);
             }
             f.end();
         }
-    	stdOut << '\n';
+        stdOut << '\n';
 /*******/
 
         // Generate code for parsedStatements, which is a linked 
@@ -971,7 +971,7 @@ JSValue Context::interpret(ICodeModule* iCode, const JSValues& args)
                         if (getter->isNative()) {
                             JSValues argv(2);
                             argv[0] = kNullValue;
-							argv[1] = getter;
+                            argv[1] = getter;
                             JSValue result = static_cast<JSNativeFunction*>(getter)->mCode(this, argv);
                             if (dst(ln).first != NotARegister)
                                 (*registers)[dst(ln).first] = result;
