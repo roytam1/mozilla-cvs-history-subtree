@@ -223,7 +223,6 @@ defaults:Profile:mimeTypes.rdf
 defaults:Profile:US:mimeTypes.rdf
 
 ; uriloader
-Components:uriLoader.shlb
 Components:uriLoader.xpt
 
 ; widget

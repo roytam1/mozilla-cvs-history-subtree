@@ -106,7 +106,6 @@ components\appshell.dll
 components\appshell.xpt                 
 components\docshell.dll                 
 components\docshell_base.xpt            
-components\urildr.dll
 components\uriloader.xpt
 components\chrome.dll                   
 components\chrome.xpt                   

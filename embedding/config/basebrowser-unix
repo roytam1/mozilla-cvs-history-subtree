@@ -92,7 +92,6 @@ components/libcookie.so
 ; appshell, docshell, uriloader, chrome, components
 components/libdocshell.so                 
 components/docshell.xpt
-components/liburiloader.so
 components/uriloader.xpt
 components/libchrome.so                   
 components/chrome.xpt                   
