@@ -87,26 +87,32 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
+struct CX_AND_XPCRT_Data
+{
+    JSContext* cx; 
+    XPCJSRuntime* rt;      
+};
+
 JS_STATIC_DLL_CALLBACK(intN)
 NativeInterfaceGC(JSHashEntry *he, intN i, void *arg)
 {
-    XPCCallContext* ccx = (XPCCallContext*) arg;
-    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings(*ccx);
+    CX_AND_XPCRT_Data* data = (CX_AND_XPCRT_Data*) arg;
+    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings(data->cx, data->rt);
     return HT_ENUMERATE_NEXT;
 }
 
 JS_STATIC_DLL_CALLBACK(intN)
 NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
 {
+    CX_AND_XPCRT_Data* data = (CX_AND_XPCRT_Data*) arg;
     XPCNativeInterface* iface = (XPCNativeInterface*) he->value;
-    XPCCallContext* ccx = (XPCCallContext*) arg;
     if(iface->IsMarked())
     {
         iface->Unmark();
         return HT_ENUMERATE_NEXT;
     }
 
-    XPCNativeInterface::DestroyInstance(*ccx, iface);
+    XPCNativeInterface::DestroyInstance(data->cx, data->rt, iface);
     return HT_ENUMERATE_REMOVE;
 }
 
@@ -144,7 +150,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
     XPCJSRuntime* self = nsXPConnect::GetRuntime();
     if(self)
     {
-        nsVoidArray* array = &self->mWrappedJSToReleaseArray;
+        nsVoidArray* dyingWrappedJSArray = &self->mWrappedJSToReleaseArray;
 
         switch(status)
         {
@@ -155,28 +161,28 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             }
             case JSGC_MARK_END:
             {
-                XPCCallContext ccx(JS_CALLER, cx);
-                if(!ccx.IsValid())
-                    break;
-
                 {
-                nsAutoLock lock(self->mMapLock); // lock the wrapper map
-                JSDyingJSObjectData data = {cx, array};
+                    nsAutoLock lock(self->mMapLock); // lock the wrapper map
+                    JSDyingJSObjectData data = {cx, dyingWrappedJSArray};
 
-                // Add any wrappers whose JSObjects are to be finalized to
-                // this array. Note that this is a nsVoidArray because
-                // we do not want to be changing the refcount of these wrappers.
-                // We add them to the array now and Release the array members
-                // later to avoid the posibility of doing any JS GCThing
-                // allocations during the gc cycle.
-                self->mWrappedJSMap->Enumerate(WrappedJSDyingJSObjectFinder,
-                                               &data);
+                    // Add any wrappers whose JSObjects are to be finalized to
+                    // this array. Note that this is a nsVoidArray because
+                    // we do not want to be changing the refcount of these wrappers.
+                    // We add them to the array now and Release the array members
+                    // later to avoid the posibility of doing any JS GCThing
+                    // allocations during the gc cycle.
+                    self->mWrappedJSMap->
+                        Enumerate(WrappedJSDyingJSObjectFinder, &data);
                 }
 
                 // Do cleanup in NativeInterfaces
-                self->mIID2NativeInterfaceMap->Enumerate(NativeInterfaceGC, &ccx);
+                CX_AND_XPCRT_Data data = {cx, self};
 
-                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(ccx);
+                self->mIID2NativeInterfaceMap->
+                    Enumerate(NativeInterfaceGC, &data);
+
+                // Find dying scopes...
+                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(cx, self);
                 
                 break;
             }        
@@ -185,26 +191,27 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 // We use this occasion to mark and sweep NativeInterfaces
                 // and NativeSets...
 
-                XPCCallContext ccx(JS_CALLER, cx);
-                if(!ccx.IsValid())
-                    break;
+                CX_AND_XPCRT_Data data = {cx, self};
 
                 // Do the marking...
                 XPCWrappedNativeScope::MarkAllInterfaceSets();
                 
                 // Do the sweeping...
-                self->mClassInfo2NativeSetMap->Enumerate(
-                    NativeUnMarkedSetRemover, nsnull);
+                self->mClassInfo2NativeSetMap->
+                    Enumerate(NativeUnMarkedSetRemover, nsnull);
 
-                self->mNativeSetMap->Enumerate(
-                    NativeSetSweeper, nsnull);
+                self->mNativeSetMap->
+                    Enumerate(NativeSetSweeper, nsnull);
 
-                self->mIID2NativeInterfaceMap->Enumerate(
-                    NativeInterfaceSweeper, &ccx);
+                self->mIID2NativeInterfaceMap->
+                    Enumerate(NativeInterfaceSweeper, &data);
 
 #ifdef DEBUG
                 XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked();
 #endif
+
+                // Sweep scopes needing cleanup
+                XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(cx);
 
                 // Now we are going to recycle any unused WrappedNativeTearoffs.
                 // We do this by iterating all the live callcontexts (on all 
@@ -221,7 +228,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 // Skip this part if XPConnect is shutting down. We get into
                 // bad locking problems with the thread iteration otherwise.
-                if(ccx.GetXPConnect()->IsShuttingDown())
+                if(self->GetXPConnect()->IsShuttingDown())
                     break;
 
                 // Do the marking...
@@ -260,19 +267,25 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             }
             case JSGC_END:
             {
+                // NOTE that this event happens outside of the gc lock in
+                // the js engine. So this could be sumultaneous with the
+                // events above.
+
                 // Release all the members whose JSObjects are now known
                 // to be dead.
-                for(PRInt32 i = array->Count() - 1; i >= 0; i--)
+
+                // XXX We *really* need to enter and exit a lock and pick these
+                // elements off one at a time!
+
+                for(PRInt32 i = dyingWrappedJSArray->Count() - 1; i >= 0; i--)
                 {
                     nsXPCWrappedJS* wrapper =
                         NS_REINTERPRET_CAST(nsXPCWrappedJS*,
-                                            array->ElementAt(i));
+                                            dyingWrappedJSArray->ElementAt(i));
 
                     NS_RELEASE(wrapper);
                 }
-                array->Clear();
-
-                XPCWrappedNativeScope::FinshedGC(cx);
+                dyingWrappedJSArray->Clear();
                 
                 break;
             }

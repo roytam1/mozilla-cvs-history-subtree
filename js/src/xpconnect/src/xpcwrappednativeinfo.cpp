@@ -44,7 +44,6 @@
 XPCCallableInfo*
 XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
 {
-    JSContext* cx;
     JSFunction* fun;
     JSObject* realFunObj;
     jsid id;
@@ -52,28 +51,26 @@ XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
 
     // We expect funobj to be a clone, we need the real funobj.
 
-    cx = ccx.GetJSContext();
-    fun = (JSFunction*) JS_GetPrivate(cx, funobj);
+    fun = (JSFunction*) JS_GetPrivate(ccx, funobj);
     realFunObj = JS_GetFunctionObject(fun);
     id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
-    if(OBJ_GET_PROPERTY(cx, realFunObj, id, &val) && JSVAL_IS_INT(val))
+    if(OBJ_GET_PROPERTY(ccx, realFunObj, id, &val) && JSVAL_IS_INT(val))
         return (XPCCallableInfo*) JSVAL_TO_PRIVATE(val);
 
     return nsnull;
 }
 
 void
-XPCNativeMember::CleanupCallableInfo(XPCCallContext& ccx, JSObject* funobj)
+XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt, 
+                                     JSObject* funobj)
 {
-    JSContext* cx;
     jsid id;
     jsval val;
 
     // We know this must be the *real* function object - not a clone.
 
-    cx = ccx.GetJSContext();
-    id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
+    id = rt->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
     if(OBJ_GET_PROPERTY(cx, funobj, id, &val) && JSVAL_IS_INT(val))
         delete ((XPCCallableInfo*) JSVAL_TO_PRIVATE(val));
@@ -83,9 +80,6 @@ JSBool
 XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 {
     // XXX locking!
-
-    // XXX Is this necessary?  can we ever get here w/o being in a request?
-    AutoJSRequest req(ccx); // scoped JS Request
 
     if(IsConstant())
     {
@@ -189,10 +183,10 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 
 
 void
-XPCNativeMember::Cleanup(XPCCallContext& ccx)
+XPCNativeMember::Cleanup(JSContext* cx, XPCJSRuntime* rt)
 {
     if(IsResolved() && !JSVAL_IS_PRIMITIVE(mVal))
-        CleanupCallableInfo(ccx, JSVAL_TO_OBJECT(mVal));
+        CleanupCallableInfo(cx, rt, JSVAL_TO_OBJECT(mVal));
 }
 
 /***************************************************************************/
@@ -202,13 +196,18 @@ XPCNativeMember::Cleanup(XPCCallContext& ccx)
 XPCNativeInterface*
 XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
 {
-    IID2NativeInterfaceMap* map = ccx.GetRuntime()->GetIID2NativeInterfaceMap();
+    XPCJSRuntime* rt = ccx.GetRuntime();
+    XPCNativeInterface* iface;
+
+    IID2NativeInterfaceMap* map = rt->GetIID2NativeInterfaceMap();
     if(!map)
         return nsnull;
 
-    // XXX add locking...
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        iface = map->Find(*iid);
+    }
 
-    XPCNativeInterface* iface = map->Find(*iid);
     if(iface)
         return iface;
 
@@ -225,7 +224,21 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
     if(!iface)
         return nsnull;
 
-    map->Add(iface);
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        XPCNativeInterface* iface2 = map->Add(iface);
+        if(!iface2)
+        {
+            NS_ERROR("failed to add our interface!");
+            DestroyInstance(ccx, rt, iface);
+            iface = nsnull;
+        }
+        else if(iface2 != iface)
+        {
+            DestroyInstance(ccx, rt, iface);
+            iface = iface2;        
+        }
+    }
 
     return iface;
 }
@@ -234,17 +247,23 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
 XPCNativeInterface*
 XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
 {
-    IID2NativeInterfaceMap* map = ccx.GetRuntime()->GetIID2NativeInterfaceMap();
-    if(!map)
-        return nsnull;
+    XPCNativeInterface* iface;
 
     const nsIID* iid;
     if(NS_FAILED(info->GetIIDShared(&iid)) || !iid)
         return nsnull;
 
-    // XXX add locking...
+    XPCJSRuntime* rt = ccx.GetRuntime();
 
-    XPCNativeInterface* iface = map->Find(*iid);
+    IID2NativeInterfaceMap* map = rt->GetIID2NativeInterfaceMap();
+    if(!map)
+        return nsnull;
+
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        iface = map->Find(*iid);
+    }
+
     if(iface)
         return iface;
 
@@ -252,7 +271,21 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
     if(!iface)
         return nsnull;
 
-    map->Add(iface);
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        XPCNativeInterface* iface2 = map->Add(iface);
+        if(!iface2)
+        {
+            NS_ERROR("failed to add our interface!");
+            DestroyInstance(ccx, rt, iface);
+            iface = nsnull;
+        }
+        else if(iface2 != iface)
+        {
+            DestroyInstance(ccx, rt, iface);
+            iface = iface2;        
+        }
+    }
 
     return iface;
 }
@@ -307,9 +340,11 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     // Find out how often we create these objects w/o really looking at
     // (or using) the members.
 
-    JSContext* cx = ccx.GetJSContext();
+    PRBool canScript;
+    if(NS_FAILED(aInfo->IsScriptable(&canScript)) || !canScript)
+        return nsnull;
 
-    if(!cx)
+    if(!nsXPConnect::IsISupportsDescendant(aInfo))
         return nsnull;
 
     if(NS_FAILED(aInfo->GetMethodCount(&methodCount)) ||
@@ -348,7 +383,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
         if(!XPCConvert::IsMethodReflectable(*info))
             continue;
 
-        str = JS_InternString(cx, info->GetName());
+        str = JS_InternString(ccx, info->GetName());
         if(!str)
         {
             NS_ASSERTION(0,"bad method name");
@@ -391,7 +426,7 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
                 break;
             }
 
-            str = JS_InternString(cx, constant->GetName());
+            str = JS_InternString(ccx, constant->GetName());
             if(!str)
             {
                 NS_ASSERTION(0,"bad constant name");
@@ -413,14 +448,12 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     {
         const char* bytes;
         if(NS_FAILED(aInfo->GetNameShared(&bytes)) || !bytes ||
-           nsnull == (str = JS_InternString(cx, bytes)))
+           nsnull == (str = JS_InternString(ccx, bytes)))
         {
             failed = JS_TRUE;
         }
         interfaceName = STRING_TO_JSVAL(str);
     }
-
-
 
     if(!failed)
     {
@@ -451,12 +484,13 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
 
 // static
 void
-XPCNativeInterface::DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst)
+XPCNativeInterface::DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
+                                    XPCNativeInterface* inst)
 {
     int count = (int) inst->mMemberCount;
     XPCNativeMember* cur = inst->mMembers;
     for(int i = 0; i < count; i++, cur++)
-        cur->Cleanup(ccx);
+        cur->Cleanup(cx, rt);
 
     inst->~XPCNativeInterface();
     delete [] (char*) inst;
@@ -491,24 +525,47 @@ XPCNativeInterface::DebugDump(PRInt16 depth)
 XPCNativeSet*
 XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
 {
+    XPCNativeSet* set;
+
     XPCNativeInterface* iface = XPCNativeInterface::GetNewOrUsed(ccx, iid);
     if(!iface)
         return nsnull;
 
-    NativeSetMap* map = ccx.GetRuntime()->GetNativeSetMap();
+    XPCNativeSetKey key(nsnull, iface, 0);
+
+    XPCJSRuntime* rt = ccx.GetRuntime();
+    NativeSetMap* map = rt->GetNativeSetMap();
     if(!map)
         return nsnull;
 
-    // XXX add locking...
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        set = map->Find(&key);
+    }
 
-    XPCNativeSetKey key(nsnull, iface, 0);
-
-    XPCNativeSet* set = map->Find(&key);
     if(set)
         return set;
 
     set = NewInstance(&iface, 1);
-    map->Add(&key, set);
+    if(!set)
+        return nsnull;
+
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        XPCNativeSet* set2 = map->Add(&key, set);
+        if(!set2)
+        {
+            NS_ERROR("failed to add our set!");
+            DestroyInstance(set);
+            set = nsnull;
+        }
+        else if(set2 != set)
+        {
+            DestroyInstance(set);
+            set = set2;        
+        }
+    }
+
     return set;
 }
 
@@ -516,13 +573,18 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
 XPCNativeSet*
 XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
 {
-    ClassInfo2NativeSetMap* map = ccx.GetRuntime()->GetClassInfo2NativeSetMap();
+    XPCNativeSet* set;
+    XPCJSRuntime* rt = ccx.GetRuntime();
+
+    ClassInfo2NativeSetMap* map = rt->GetClassInfo2NativeSetMap();
     if(!map)
         return nsnull;
 
-    // XXX add locking...
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        set = map->Find(classInfo);
+    }
 
-    XPCNativeSet* set = map->Find(classInfo);
     if(set)
         return set;
 
@@ -569,23 +631,27 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
             set = NewInstance(interfaceArray, interfaceCount);
             if(set)
             {
-                NativeSetMap* map2 = ccx.GetRuntime()->GetNativeSetMap();
+                NativeSetMap* map2 = rt->GetNativeSetMap();
                 if(!map2)
                     goto out;
 
-                // XXX add locking...
-
                 XPCNativeSetKey key(set, nsnull, 0);
-
-                XPCNativeSet* oldSet = map2->Find(&key);
-                if(oldSet)
-                {
-                    DestroyInstance(set);
-                    set = oldSet;
-                }
-                else
-                {
-                    map2->Add(&key, set);
+                
+                {   // scoped lock
+                    nsAutoLock lock(rt->GetMapLock());  
+                    XPCNativeSet* set2 = map2->Add(&key, set);
+                    if(!set2)
+                    {
+                        NS_ERROR("failed to add our set!");
+                        DestroyInstance(set);
+                        set = nsnull;
+                        goto out;
+                    }
+                    if(set2 != set)
+                    {
+                        DestroyInstance(set);
+                        set = set2;
+                    }
                 }
             }
         }
@@ -596,7 +662,12 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
         set = GetNewOrUsed(ccx, &NS_GET_IID(nsISupports));
 
     if(set)
-        map->Add(classInfo, set);
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        XPCNativeSet* set2 = map->Add(classInfo, set);
+        NS_ASSERTION(set2, "failed to add our set!");
+        NS_ASSERTION(set2 == set, "hashtables inconsistent!");
+    }
 
 out:
     if(iidArray)
@@ -614,15 +685,19 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
                            XPCNativeInterface* newInterface,
                            PRUint16 position)
 {
-    NativeSetMap* map = ccx.GetRuntime()->GetNativeSetMap();
+    XPCNativeSet* set;
+    XPCJSRuntime* rt = ccx.GetRuntime();
+    NativeSetMap* map = rt->GetNativeSetMap();
     if(!map)
         return nsnull;
 
-    // XXX add locking...
-
     XPCNativeSetKey key(otherSet, newInterface, position);
 
-    XPCNativeSet* set = map->Find(&key);
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        set = map->Find(&key);
+    }
+
     if(set)
         return set;
 
@@ -631,7 +706,25 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
     else
         set = NewInstance(&newInterface, 1);
 
-    map->Add(&key, set);
+    if(!set)
+        return nsnull;
+
+    {   // scoped lock
+        nsAutoLock lock(rt->GetMapLock());  
+        XPCNativeSet* set2 = map->Add(&key, set);
+        if(!set2)
+        {
+            NS_ERROR("failed to add our set!");
+            DestroyInstance(set);
+            set = nsnull;
+        }
+        else if(set2 != set)
+        {
+            DestroyInstance(set);
+            set = set2;        
+        }
+    }
+
     return set;
 }
 

@@ -2714,6 +2714,20 @@ JS_DefineFunction(JSContext *cx, JSObject *obj, const char *name, JSNative call,
     return js_DefineFunction(cx, obj, atom, call, nargs, attrs);
 }
 
+JS_PUBLIC_API(JSFunction *)
+JS_DefineUCFunction(JSContext *cx, JSObject *obj, const jschar *name,
+                    size_t length, JSNative call, uintN nargs, uintN attrs)
+{
+    JSAtom *atom;
+
+    CHECK_REQUEST(cx);
+    atom = js_AtomizeChars(cx, name, length, 0);
+
+    if (!atom)
+	return NULL;
+    return js_DefineFunction(cx, obj, atom, call, nargs, attrs);
+}
+
 static JSScript *
 CompileTokenStream(JSContext *cx, JSObject *obj, JSTokenStream *ts,
 		   void *tempMark, JSBool *eofp)

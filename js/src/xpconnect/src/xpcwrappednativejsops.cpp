@@ -88,7 +88,6 @@ ToStringGuts(XPCCallContext& ccx)
 #endif
 
     XPCWrappedNative* wrapper = ccx.GetWrapper();
-    JSContext* cx = ccx.GetJSContext();
 
     char* sz = nsnull;
 
@@ -130,7 +129,7 @@ ToStringGuts(XPCCallContext& ccx)
 
         if(!name)
         {
-            JS_ReportOutOfMemory(cx);
+            JS_ReportOutOfMemory(ccx);
             return JS_FALSE;
         }
 
@@ -146,11 +145,11 @@ ToStringGuts(XPCCallContext& ccx)
 
     if(!sz)
     {
-        JS_ReportOutOfMemory(cx);
+        JS_ReportOutOfMemory(ccx);
         return JS_FALSE;
     }
 
-    JSString* str = JS_NewString(cx, sz, strlen(sz));
+    JSString* str = JS_NewString(ccx, sz, strlen(sz));
     if(!str)
     {
         JS_smprintf_free(sz);
@@ -187,6 +186,92 @@ XPC_WN_Shared_ToSource(JSContext *cx, JSObject *obj,
 
 /***************************************************************************/
 
+static JSObject*
+GetDoubleWrappedJSObject(XPCCallContext& ccx, XPCWrappedNative* wrapper)
+{
+    JSObject* obj = nsnull;
+    nsCOMPtr<nsIXPConnectWrappedJS>
+        underware = do_QueryInterface(wrapper->GetIdentityObject());
+    if(underware)
+    {
+        JSObject* mainObj = nsnull;
+        if(NS_SUCCEEDED(underware->GetJSObject(&mainObj)) && mainObj)
+        {
+            jsid id = ccx.GetRuntime()->
+                    GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+            jsval val;
+            if(OBJ_GET_PROPERTY(ccx, mainObj, id,
+                                &val) && !JSVAL_IS_PRIMITIVE(val))
+            {
+                obj = JSVAL_TO_OBJECT(val);
+            }
+        }
+    }
+    return obj;
+}
+
+// This is the getter native function we use to handle 'wrappedJSObject' for
+// double wrapped JSObjects.
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
+                           uintN argc, jsval *argv, jsval *vp)
+{
+    XPCCallContext ccx(JS_CALLER, cx, obj);
+    XPCWrappedNative* wrapper = ccx.GetWrapper();
+    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+
+    NS_ASSERTION(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION, "bad function");
+
+    JSObject* realObject = GetDoubleWrappedJSObject(ccx, wrapper);
+    if(!realObject)
+    {
+        // This is pretty unexpected at this point. The object originally 
+        // responded to this get property call and now gives no object.
+        // XXX Should this throw something at the caller?
+        *vp = JSVAL_NULL;
+        return JS_TRUE;    
+    }
+
+    // It is a double wrapped object. Figure out if the caller
+    // is allowed to see it.
+    
+    nsIXPCSecurityManager* sm;
+    XPCContext* xpcc = ccx.GetXPCContext();
+
+    sm = xpcc->GetAppropriateSecurityManager(
+                    nsIXPCSecurityManager::HOOK_GET_PROPERTY);
+    if(sm)
+    {
+        jsval idval = ccx.GetRuntime()->
+                        GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+        nsCOMPtr<nsIInterfaceInfoManager> iimgr =
+                dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
+        if(iimgr)
+        {
+            const nsIID& iid = NS_GET_IID(nsIXPCWrappedJSObjectGetter);
+            nsCOMPtr<nsIInterfaceInfo> info;
+            if(NS_SUCCEEDED(iimgr->GetInfoForIID(&iid, getter_AddRefs(info))))
+            {
+                if(NS_FAILED(sm->
+                    CanGetProperty(cx, iid, wrapper->GetIdentityObject(),
+                                   info, 3, idval,
+                                   wrapper->GetSecurityInfoAddr())))
+                {
+                    // The SecurityManager should have set an exception.
+                    return JS_FALSE;
+                }
+            }
+        }
+    }
+    *vp = OBJECT_TO_JSVAL(realObject);
+    return JS_TRUE;
+}
+
+/***************************************************************************/
+
 /*
  * We *never* set the tearoff names (e.g. nsIFoo) as JS_ENUMERATE.
  * We *never* set toString or toSource as JS_ENUMERATE.
@@ -200,11 +285,14 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                       XPCWrappedNativeScope* scope,
                       JSBool reflectToStringAndToSource,
                       XPCWrappedNative* wrapperToReflectInterfaceNames,
+                      XPCWrappedNative* wrapperToReflectDoubleWrap,
+                      XPCNativeScriptableInfo* scriptableInfo,
                       uintN propFlags) 
 {
-    JSContext* cx = ccx.GetJSContext();
+    XPCJSRuntime* rt = ccx.GetRuntime();
     XPCNativeMember* member;
     JSBool found;
+    const char* name;
     jsid id;
 
     if(set)
@@ -214,13 +302,11 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
     if(!found)
     {
-        HANDLE_POSSIBLE_NAME_CASE_ERROR(cx, set, iface, idval);
+        HANDLE_POSSIBLE_NAME_CASE_ERROR(ccx, set, iface, idval);
             
         if(reflectToStringAndToSource)
         {
             JSNative call;
-            const char* name;
-            XPCJSRuntime* rt = ccx.GetRuntime();
 
             if(idval == rt->GetStringJSVal(XPCJSRuntime::IDX_TO_STRING))
             {
@@ -240,15 +326,15 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
             if(call)
             {
-                JSFunction* fun = JS_NewFunction(cx, call, 0, 0, obj, name);
+                JSFunction* fun = JS_NewFunction(ccx, call, 0, 0, obj, name);
                 if(!fun)
                 {
-                    JS_ReportOutOfMemory(cx);
+                    JS_ReportOutOfMemory(ccx);
                     return JS_FALSE;
                 }
                 
                 AutoResolveName arn(ccx, idval);
-                return OBJ_DEFINE_PROPERTY(cx, obj, id, 
+                return OBJ_DEFINE_PROPERTY(ccx, obj, id, 
                                            OBJECT_TO_JSVAL(JS_GetFunctionObject(fun)),
                                            nsnull, nsnull,
                                            propFlags & ~JSPROP_ENUMERATE, 
@@ -275,12 +361,44 @@ DefinePropertyIfFound(XPCCallContext& ccx,
 
                 {
                     AutoResolveName arn(ccx, idval);
-                    return JS_ValueToId(cx, idval, &id) &&
-                           OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
+                    return JS_ValueToId(ccx, idval, &id) &&
+                           OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
                                                nsnull, nsnull, 
                                                propFlags & ~JSPROP_ENUMERATE, 
                                                nsnull);
                 }
+            }
+            
+            // This *might* be a double wrapped JSObject
+            if(wrapperToReflectDoubleWrap && 
+               idval == rt->GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT) &&
+               GetDoubleWrappedJSObject(ccx, wrapperToReflectDoubleWrap))
+            {
+                // We build and add a getter function. 
+                // A security is done on a per-get basis.
+
+                JSFunction* fun;
+
+                id = rt->GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+                name = rt->GetStringName(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
+
+                fun = JS_NewFunction(ccx, XPC_WN_DoubleWrappedGetter, 
+                                     0, JSFUN_GETTER, obj, name); 
+
+                if(!fun)
+                    return JS_FALSE;
+
+                JSObject* funobj = JS_GetFunctionObject(fun);
+                if(!funobj)
+                    return JS_FALSE;
+
+                propFlags |= JSPROP_GETTER;
+                propFlags &= ~JSPROP_ENUMERATE;
+
+                AutoResolveName arn(ccx, idval);
+                return OBJ_DEFINE_PROPERTY(ccx, obj, id, JSVAL_VOID,
+                                           (JSPropertyOp) funobj, nsnull,
+                                           propFlags, nsnull);
             }
         }
         return JS_TRUE;    
@@ -300,8 +418,8 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                 return JS_FALSE;
 
             AutoResolveName arn(ccx, idval);
-            return JS_ValueToId(cx, idval, &id) &&
-                   OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(jso),
+            return JS_ValueToId(ccx, idval, &id) &&
+                   OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(jso),
                                        nsnull, nsnull, 
                                        propFlags & ~JSPROP_ENUMERATE, 
                                        nsnull);
@@ -314,17 +432,21 @@ DefinePropertyIfFound(XPCCallContext& ccx,
         jsval val;
         AutoResolveName arn(ccx, idval);
         return member->GetValue(ccx, iface, &val) &&
-               JS_ValueToId(cx, idval, &id) &&
-               OBJ_DEFINE_PROPERTY(cx, obj, id, val, nsnull, nsnull,
+               JS_ValueToId(ccx, idval, &id) &&
+               OBJ_DEFINE_PROPERTY(ccx, obj, id, val, nsnull, nsnull,
                                    propFlags, nsnull);
     }
+
+    if(scriptableInfo && scriptableInfo->HideQueryInterface() &&
+       idval == rt->GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE))
+        propFlags &= ~JSPROP_ENUMERATE;
 
     jsval funval;
     if(!member->GetValue(ccx, iface, &funval))
         return JS_FALSE;
 
     JSObject* funobj =
-        JS_CloneFunctionObject(cx, JSVAL_TO_OBJECT(funval),
+        JS_CloneFunctionObject(ccx, JSVAL_TO_OBJECT(funval),
                                scope->GetGlobalJSObject());
     if(!funobj)
         return JS_FALSE;
@@ -332,29 +454,25 @@ DefinePropertyIfFound(XPCCallContext& ccx,
     if(member->IsMethod())
     {
         AutoResolveName arn(ccx, idval);
-        return JS_ValueToId(cx, idval, &id) &&
-               OBJ_DEFINE_PROPERTY(cx, obj, id, OBJECT_TO_JSVAL(funobj),
+        return JS_ValueToId(ccx, idval, &id) &&
+               OBJ_DEFINE_PROPERTY(ccx, obj, id, OBJECT_TO_JSVAL(funobj),
                                    nsnull, nsnull, propFlags, nsnull);
     }
 
     // else...
 
     NS_ASSERTION(member->IsAttribute(), "way broken!");
-
-    // Avoid infinite recursion on getter/setter re-lookup.
-    if(ccx.GetResolveName() == idval)
-        return JS_TRUE;
     
-    propFlags |= JSPROP_GETTER | JSPROP_SHARED;
+    propFlags |= JSPROP_GETTER;
     if(member->IsWritableAttribute())
     {
-        propFlags |= JSPROP_SETTER;
+        propFlags |= JSPROP_SETTER | JSPROP_SHARED;
         propFlags &= ~JSPROP_READONLY;
     }
 
     AutoResolveName arn(ccx, idval);
-    return JS_ValueToId(cx, idval, &id) &&
-           OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID,
+    return JS_ValueToId(ccx, idval, &id) &&
+           OBJ_DEFINE_PROPERTY(ccx, obj, id, JSVAL_VOID,
                                (JSPropertyOp) funobj,
                                (JSPropertyOp) funobj,
                                propFlags, nsnull);
@@ -372,6 +490,7 @@ XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval 
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
     
+    // Avoid infinite recursion on getter/setter re-lookup.
     if(ccx.GetResolveName() == idval)
         return JS_TRUE;
 
@@ -468,6 +587,7 @@ XPC_WN_Shared_Enumerate(JSContext *cx, JSObject *obj)
 
     // Since we might be using this in the helper case, we check to
     // see if this is all avoidable.
+    
     if(wrapper->GetScriptableInfo() &&
        wrapper->GetScriptableInfo()->DontEnumStaticProps())
         return JS_TRUE;
@@ -534,9 +654,13 @@ XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(ccx.GetInterface() && !ccx.GetStaticMemberIsLocal())
         return JS_TRUE;
 
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  set, nsnull, wrapper->GetScope(),
-                                 JS_TRUE, wrapper,
+                                 JS_TRUE, wrapper, wrapper, nsnull,
                                  JSPROP_ENUMERATE |
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT);
@@ -715,10 +839,7 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
     XPCWrappedNative* wrapper = ccx.GetWrapper();
     THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
 
-    // XXX This nonsense is here because the JS engine will call my resolve
-    // if I try to define a property with a getter or setter. This is a
-    // problem since I'm already servicing resolve and we risk infinite
-    // recursion.
+    // Avoid infinite recursion on getter/setter re-lookup.
     if(ccx.GetResolveName() == idval)
         return JS_TRUE;
 
@@ -892,102 +1013,94 @@ XPCNativeScriptableInfo::~XPCNativeScriptableInfo()
         nsMemory::Free((void*)mJSClass.name);
 }
 
-// static 
-XPCNativeScriptableInfo* 
-XPCNativeScriptableInfo::NewInfo(nsIXPCScriptable* scriptable, 
-                                 JSUint32 flags)
+JSBool            
+XPCNativeScriptableInfo::BuildJSClass()
 {
-    XPCNativeScriptableInfo* self = 
-        new XPCNativeScriptableInfo(scriptable, flags);
-
-    if(!self)
-        return nsnull;
-
-    JSClass* clazz = self->GetJSClass();
+    NS_ASSERTION(mScriptable, "bad call!");
     
-    if(NS_FAILED(scriptable->GetClassName((char**)&clazz->name)) || !clazz->name)
+    if(NS_FAILED(mScriptable->GetClassName((char**)&mJSClass.name)) || 
+       !mJSClass.name)
     {
-        delete self;
-        return nsnull;    
+        return JS_FALSE;
     }
     
-    clazz->flags = JSCLASS_HAS_PRIVATE | 
-                   JSCLASS_PRIVATE_IS_NSISUPPORTS |
-                   JSCLASS_NEW_RESOLVE;
+    mJSClass.flags = JSCLASS_HAS_PRIVATE | 
+                     JSCLASS_PRIVATE_IS_NSISUPPORTS |
+                     JSCLASS_NEW_RESOLVE;
 
-    if(self->WantAddProperty())
-        clazz->addProperty = XPC_WN_Helper_AddProperty;
-    else if(self->UseJSStubForAddProperty())
-        clazz->addProperty = JS_PropertyStub;
-    else if(self->AllowPropModsDuringResolve())
-        clazz->addProperty = XPC_WN_MaybeResolvingPropertyStub;
+    if(WantAddProperty())
+        mJSClass.addProperty = XPC_WN_Helper_AddProperty;
+    else if(UseJSStubForAddProperty())
+        mJSClass.addProperty = JS_PropertyStub;
+    else if(AllowPropModsDuringResolve())
+        mJSClass.addProperty = XPC_WN_MaybeResolvingPropertyStub;
     else
-        clazz->addProperty = XPC_WN_CannotModifyPropertyStub;
+        mJSClass.addProperty = XPC_WN_CannotModifyPropertyStub;
 
-    if(self->WantDelProperty())
-        clazz->delProperty = XPC_WN_Helper_DelProperty;
-    else if(self->UseJSStubForDelProperty())
-        clazz->delProperty = JS_PropertyStub;
-    else if(self->AllowPropModsDuringResolve())
-        clazz->delProperty = XPC_WN_MaybeResolvingPropertyStub;
+    if(WantDelProperty())
+        mJSClass.delProperty = XPC_WN_Helper_DelProperty;
+    else if(UseJSStubForDelProperty())
+        mJSClass.delProperty = JS_PropertyStub;
+    else if(AllowPropModsDuringResolve())
+        mJSClass.delProperty = XPC_WN_MaybeResolvingPropertyStub;
     else
-        clazz->delProperty = XPC_WN_CannotModifyPropertyStub;
+        mJSClass.delProperty = XPC_WN_CannotModifyPropertyStub;
 
-    if(self->WantGetProperty())
-        clazz->getProperty = XPC_WN_Helper_GetProperty;
+    if(WantGetProperty())
+        mJSClass.getProperty = XPC_WN_Helper_GetProperty;
     else
-        clazz->getProperty = JS_PropertyStub;
+        mJSClass.getProperty = JS_PropertyStub;
 
-    if(self->WantSetProperty())
-        clazz->setProperty = XPC_WN_Helper_SetProperty;
-    else if(self->UseJSStubForSetProperty())
-        clazz->setProperty = JS_PropertyStub;
-    else if(self->AllowPropModsDuringResolve())
-        clazz->setProperty = XPC_WN_MaybeResolvingPropertyStub;
+    if(WantSetProperty())
+        mJSClass.setProperty = XPC_WN_Helper_SetProperty;
+    else if(UseJSStubForSetProperty())
+        mJSClass.setProperty = JS_PropertyStub;
+    else if(AllowPropModsDuringResolve())
+        mJSClass.setProperty = XPC_WN_MaybeResolvingPropertyStub;
     else
-        clazz->setProperty = XPC_WN_CannotModifyPropertyStub;
+        mJSClass.setProperty = XPC_WN_CannotModifyPropertyStub;
 
     // We figure out most of the enumerate strategy at call time.
-    // Note that we *must* set clazz->getObjectOps = XPC_WN_GetObjectOpsStub
+    // Note that we *must* set mJSClass.getObjectOps = XPC_WN_GetObjectOpsStub
     // (even for the cases were it does not do much) because with these 
     // dynamically generated JSClasses, the code in 
     // XPCWrappedNative::GetWrappedNativeOfJSObject() needs to look for
     // that XPC_WN_GetObjectOpsStub pointer in order to identify that a given
     // JSObject represents a wrapper.
 
-    clazz->getObjectOps = XPC_WN_GetObjectOpsStub;
-    if(self->WantNewEnumerate() || self->WantEnumerate() || 
-       self->DontEnumStaticProps())
-        clazz->enumerate = JS_EnumerateStub;
+    mJSClass.getObjectOps = XPC_WN_GetObjectOpsStub;
+    if(WantNewEnumerate() || WantEnumerate() || 
+       DontEnumStaticProps())
+        mJSClass.enumerate = JS_EnumerateStub;
     else
-        clazz->enumerate = XPC_WN_Shared_Enumerate;
+        mJSClass.enumerate = XPC_WN_Shared_Enumerate;
 
     // We have to figure out resolve strategy at call time
-    clazz->resolve = (JSResolveOp) XPC_WN_Helper_NewResolve;
+    mJSClass.resolve = (JSResolveOp) XPC_WN_Helper_NewResolve;
 
-    if(self->WantConvert())
-        clazz->convert = XPC_WN_Helper_Convert;
+    if(WantConvert())
+        mJSClass.convert = XPC_WN_Helper_Convert;
     else
-        clazz->convert = XPC_WN_Shared_Convert;
+        mJSClass.convert = XPC_WN_Shared_Convert;
 
-    if(self->WantFinalize())
-        clazz->finalize = XPC_WN_Helper_Finalize;
+    if(WantFinalize())
+        mJSClass.finalize = XPC_WN_Helper_Finalize;
     else
-        clazz->finalize = XPC_WN_NoHelper_Finalize;
+        mJSClass.finalize = XPC_WN_NoHelper_Finalize;
 
     // We let the rest default to nsnull unless the helper wants them...
-    if(self->WantCheckAccess())
-        clazz->checkAccess = XPC_WN_Helper_CheckAccess;
-    if(self->WantCall())
-        clazz->call = XPC_WN_Helper_Call;
-    if(self->WantConstruct())
-        clazz->construct = XPC_WN_Helper_Construct;
-    if(self->WantHasInstance())
-        clazz->hasInstance = XPC_WN_Helper_HasInstance;
-    if(self->WantMark())
-        clazz->mark = XPC_WN_Helper_Mark;
+    if(WantCheckAccess())
+        mJSClass.checkAccess = XPC_WN_Helper_CheckAccess;
+    if(WantCall())
+        mJSClass.call = XPC_WN_Helper_Call;
+    if(WantConstruct())
+        mJSClass.construct = XPC_WN_Helper_Construct;
+    if(WantHasInstance())
+        mJSClass.hasInstance = XPC_WN_Helper_HasInstance;
+    if(WantMark())
+        mJSClass.mark = XPC_WN_Helper_Mark;
                                                             
-    return self;
+    return JS_TRUE;
 }
 
 /***************************************************************************/
@@ -1124,14 +1237,16 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!ccx.IsValid())
         return JS_FALSE;
 
-    uintN enumFlag = self->GetScriptableInfo() &&
-                     self->GetScriptableInfo()->DontEnumStaticProps() ?
-                        0 : JSPROP_ENUMERATE;
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
 
+    XPCNativeScriptableInfo* si = self->GetScriptableInfo();
+    uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
-                                 JS_TRUE, nsnull,
+                                 JS_TRUE, nsnull, nsnull, si,
                                  enumFlag);
 }
 
@@ -1204,13 +1319,16 @@ XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(!ccx.IsValid())
         return JS_FALSE;
 
-    uintN enumFlag = self->GetScriptableInfo() &&
-                     self->GetScriptableInfo()->DontEnumStaticProps() ?
-                        0 : JSPROP_ENUMERATE;
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
+
+    XPCNativeScriptableInfo* si = self->GetScriptableInfo();
+    uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
                                  self->GetSet(), nsnull, self->GetScope(),
-                                 JS_TRUE, nsnull,
+                                 JS_TRUE, nsnull, nsnull, si,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
                                  enumFlag);
@@ -1290,11 +1408,15 @@ XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     XPCNativeInterface* iface;
     
     if(!to || nsnull == (iface = to->GetInterface()))    
-        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);                   \
+        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+
+    // Avoid infinite recursion on getter/setter re-lookup.
+    if(ccx.GetResolveName() == idval)
+        return JS_TRUE;
 
     return DefinePropertyIfFound(ccx, obj, idval, nsnull, iface, 
                                  wrapper->GetScope(),
-                                 JS_TRUE, nsnull,
+                                 JS_TRUE, nsnull, nsnull, nsnull,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
                                  JSPROP_ENUMERATE);
@@ -1335,80 +1457,3 @@ JSClass XPC_WN_Tearoff_JSClass = {
     nsnull                          // spare;
 };
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-#if 0
-
-// XXX snipets of code that I may use to restore removed functionality
-
-static JSObject*
-GetDoubleWrappedJSObject(XPCWrappedNativeCallContext& ccx)
-{
-    JSObject* obj = nsnull;
-    nsCOMPtr<nsIXPConnectWrappedJS>
-        underware = do_QueryInterface(ccx.GetIdentityObject());
-    if(underware)
-    {
-        JSObject* mainObj = nsnull;
-        if(NS_SUCCEEDED(underware->GetJSObject(&mainObj)) && mainObj)
-        {
-            jsval val;
-            if(OBJ_GET_PROPERTY(ccx.GetJSContext(), mainObj, ccx.GetJSID(),
-                                &val) && !JSVAL_IS_PRIMITIVE(val))
-            {
-                obj = JSVAL_TO_OBJECT(val);
-            }
-        }
-    }
-    return obj;
-}
-
-    else if(wrapper->GetNative() &&
-            id == clazz->GetRuntime()->
-                            GetStringID(XPCJSRuntime::IDX_WRAPPED_JSOBJECT))
-    {
-        JSObject* realObject = GetDoubleWrappedJSObject(cx, wrapper, id);
-        if(realObject)
-        {
-            // It is a double wrapped object. Figure out if the caller
-            // is allowed to see it.
-
-            XPCContext* xpcc = nsXPConnect::GetContext(cx);
-            if(xpcc)
-            {
-                nsIXPCSecurityManager* sm;
-
-                sm = xpcc->GetAppropriateSecurityManager(
-                                nsIXPCSecurityManager::HOOK_GET_PROPERTY);
-                if(sm)
-                {
-                    nsCOMPtr<nsIInterfaceInfoManager> iimgr =
-                            dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
-                    if(iimgr)
-                    {
-                        const nsIID& iid =
-                            NS_GET_IID(nsIXPCWrappedJSObjectGetter);
-                        nsCOMPtr<nsIInterfaceInfo> info;
-                        if(NS_SUCCEEDED(iimgr->GetInfoForIID(&iid,
-                                                    getter_AddRefs(info))))
-                        {
-                            if(NS_OK != sm->CanGetProperty(cx, iid,
-                                                    wrapper->GetNative(),
-                                                    info, 3, id))
-                            {
-                                // The SecurityManager should have set an exception.
-                                return JS_FALSE;
-                            }
-                        }
-                    }
-                }
-                *vp = OBJECT_TO_JSVAL(realObject);
-                return JS_TRUE;
-            }
-        }
-    }
-
-/***************************************************************************/
-#endif

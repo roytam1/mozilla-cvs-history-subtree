@@ -188,7 +188,6 @@ public:
 
     JSBool IsShuttingDown() const {return mShutingDown;}
 
-
 protected:
     nsXPConnect();
 
@@ -511,6 +510,8 @@ public:
 
     void SystemIsBeingShutDown();
 
+    operator JSContext*() const {return GetJSContext();}
+
 private:
 
     // no copy ctor or assignment allowed
@@ -605,7 +606,10 @@ public:
     SystemIsBeingShutDown(XPCCallContext& ccx);
 
     static void
-    FinishedMarkPhaseOfGC(XPCCallContext& ccx);
+    FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt);
+
+    static void
+    FinishedFinalizationPhaseOfGC(JSContext* cx);
 
     static void
     MarkAllInterfaceSets();
@@ -617,9 +621,6 @@ public:
 
     static void
     SweepAllWrappedNativeTearOffs();
-
-    static void
-    FinshedGC(JSContext* cx);
 
     static void
     DebugDumpAllScopes(PRInt16 depth);
@@ -847,7 +848,7 @@ private:
 
 /***************************************************************************/
 
-class nsXPCJSObjectHolder : public nsIXPConnectJSObjectHolder
+class XPCJSObjectHolder : public nsIXPConnectJSObjectHolder
 {
 public:
     // all the interface method declarations...
@@ -857,13 +858,13 @@ public:
     // non-interface implementation
 
 public:
-    static nsXPCJSObjectHolder* newHolder(JSContext* cx, JSObject* obj);
+    static XPCJSObjectHolder* newHolder(JSContext* cx, JSObject* obj);
 
-    virtual ~nsXPCJSObjectHolder();
+    virtual ~XPCJSObjectHolder();
 
 private:
-    nsXPCJSObjectHolder(JSContext* cx, JSObject* obj);
-    nsXPCJSObjectHolder(); // not implemented
+    XPCJSObjectHolder(JSContext* cx, JSObject* obj);
+    XPCJSObjectHolder(); // not implemented
 
     JSRuntime* mRuntime;
     JSObject* mJSObj;
@@ -1481,7 +1482,8 @@ private:
 class XPCNativeMember
 {
 public:
-    static XPCCallableInfo* GetCallableInfo(XPCCallContext& ccx, JSObject* funobj);
+    static XPCCallableInfo* GetCallableInfo(XPCCallContext& ccx, 
+                                            JSObject* funobj);
 
     jsval   GetName() const {return mName;}
 
@@ -1525,18 +1527,19 @@ public:
     XPCNativeMember() {}
     ~XPCNativeMember() {}
 
-    void Cleanup(XPCCallContext& ccx);
+    void Cleanup(JSContext* cx, XPCJSRuntime* rt);
 
-    void DealWithDyingGCThings(XPCCallContext& ccx)
+    void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
         {if(IsResolved() && JSVAL_IS_GCTHING(mVal) &&
-           JS_IsAboutToBeFinalized(ccx.GetJSContext(), JSVAL_TO_GCTHING(mVal)))
-           {Cleanup(ccx); mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
+           JS_IsAboutToBeFinalized(cx, JSVAL_TO_GCTHING(mVal)))
+           {Cleanup(cx, rt); mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
 
 private:
     JSBool IsResolved() const {return mFlags & RESOLVED;}
     JSBool Resolve(XPCCallContext& ccx, XPCNativeInterface* iface);
 
-    void   CleanupCallableInfo(XPCCallContext& ccx, JSObject* funobj);
+    void   CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt, 
+                               JSObject* funobj);
 
     enum {
         RESOLVED    = 0x01,
@@ -1583,9 +1586,9 @@ public:
     XPCNativeMember* GetMemberAt(PRUint16 i)
         {NS_ASSERTION(i < mMemberCount, "bad index"); return &mMembers[i];}
 
-    void DealWithDyingGCThings(XPCCallContext& ccx)
+    void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
         {for(PRUint16 i = 0; i < mMemberCount; i++) 
-            mMembers[i].DealWithDyingGCThings(ccx);}
+            mMembers[i].DealWithDyingGCThings(cx, rt);}
 
     void DebugDump(PRInt16 depth);
 
@@ -1593,7 +1596,8 @@ public:
     void Unmark()     {mMemberCount &= ~0x8000;}
     JSBool IsMarked() const {return (JSBool)(mMemberCount & 0x8000);}
 
-    static void DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst);
+    static void DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
+                                XPCNativeInterface* inst);
 
 private:
     static XPCNativeInterface* NewInstance(XPCCallContext& ccx,
@@ -1621,19 +1625,45 @@ public:
     XPCNativeSetKey(XPCNativeSet*       BaseSet  = nsnull,
                     XPCNativeInterface* Addition = nsnull,
                     PRUint16            Position = 0)
-        : mBaseSet(BaseSet), mAddition(Addition), mPosition(Position) {}
+        : mIsAKey(IS_A_KEY), mBaseSet(BaseSet), mAddition(Addition), 
+          mPosition(Position) {}
     ~XPCNativeSetKey() {}
 
     XPCNativeSet*           GetBaseSet()  const {return mBaseSet;}
     XPCNativeInterface*     GetAddition() const {return mAddition;}
     PRUint16                GetPosition() const {return mPosition;}
 
+    // This is a fun little hack... 
+    // We build these keys only on the stack. We use them for lookup in 
+    // NativeSetMap. Becasue we don't want to pay the cost of cloning a key and
+    // sticking it into the hashtable, when the XPCNativeSet actually
+    // gets added to the table the 'key' in the table is a pointer to the 
+    // set itself and not this key. Our key compare function expects to get
+    // a key and a set. When we do external lookups in the map we pass in one
+    // of these keys and our compare function gets passed a key and a set.
+    // (see compare_NativeKeyToSet in xpcmaps.cpp). This is all well and good.
+    // Except, when the table decides to resize itself. Then it tries to use
+    // our compare function with the 'keys' that are in the hashtable (which are
+    // really XPCNativeSet objects and not XPCNativeSetKey objects!
+    //
+    // So, the hack is to have the compare function assume it is getting a 
+    // XPCNativeSetKey pointer and call this IsAKey method. If that fails then
+    // it realises that it really has a XPCNativeSet pointer and deals with that
+    // fact. This is safe because we know that both of these classes have no
+    // virtual methods and their first data member is a PRUint16. We are
+    // confident that XPCNativeSet->mMemberCount will never be 0xffff.
+
+    JSBool                  IsAKey() const {return mIsAKey == IS_A_KEY;}
+
+    enum {IS_A_KEY = 0xffff};
+
     // Allow shallow copy
 
 private:
+    PRUint16                mIsAKey;
+    PRUint16                mPosition;
     XPCNativeSet*           mBaseSet;
     XPCNativeInterface*     mAddition;
-    PRUint16                mPosition;
 };
 
 class XPCNativeSet
@@ -1654,6 +1684,8 @@ public:
                              XPCNativeInterface** pInterface) const;
 
     inline JSBool HasInterface(XPCNativeInterface* aInterface) const;
+
+    inline XPCNativeInterface* FindInterfaceWithIID(const nsIID& iid) const;
 
     inline XPCNativeInterface* FindNamedInterface(jsval name) const;
 
@@ -1701,50 +1733,66 @@ private:
 class XPCNativeScriptableInfo
 {
 public:
-    static XPCNativeScriptableInfo* NewInfo(nsIXPCScriptable* scriptable, 
-                                            JSUint32 flags);
-
     nsIXPCScriptable* GetScriptable() const  {return mScriptable;}
     JSUint32          GetFlags() const       {return mFlags;}
     JSClass*          GetJSClass()           {return &mJSClass;}
 
+    JSBool            BuildJSClass();
+    
+    void              SetScriptable(nsIXPCScriptable* s)
+                                {NS_ASSERTION(!ClassBuilt(), "too late!");
+                                 mScriptable = s;}
 
-    JSBool WantPreCreate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_PRECREATE);}
-    JSBool WantCreate()                   const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CREATE);}
-    JSBool WantAddProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ADDPROPERTY);}
-    JSBool WantDelProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_DELPROPERTY);}
-    JSBool WantGetProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_GETPROPERTY);}
-    JSBool WantSetProperty()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_SETPROPERTY);}
-    JSBool WantEnumerate()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_ENUMERATE);}
-    JSBool WantNewEnumerate()             const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWENUMERATE);}
-    JSBool WantNewResolve()               const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_NEWRESOLVE);}
-    JSBool WantConvert()                  const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONVERT);}
-    JSBool WantFinalize()                 const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_FINALIZE);}
-    JSBool WantCheckAccess()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CHECKACCESS);}
-    JSBool WantCall()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CALL);}
-    JSBool WantConstruct()                const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_CONSTRUCT);}
-    JSBool WantHasInstance()              const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_HASINSTANCE);}
-    JSBool WantMark()                     const {return (JSBool)(mFlags & nsIXPCScriptable::WANT_MARK);}
-    JSBool UseJSStubForAddProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY);}
-    JSBool UseJSStubForDelProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY);}
-    JSBool UseJSStubForSetProperty()      const {return (JSBool)(mFlags & nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY);}
-    JSBool DontEnumStaticProps()          const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ENUM_STATIC_PROPS);}
-    JSBool DontAskInstanceForScriptable() const {return (JSBool)(mFlags & nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE);}
-    JSBool HideQueryInterface()           const {return (JSBool)(mFlags & nsIXPCScriptable::HIDE_QUERY_INTERFACE);}
-    JSBool ClassInfoInterfacesOnly()      const {return (JSBool)(mFlags & nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY);}
-    JSBool AllowPropModsDuringResolve()   const {return (JSBool)(mFlags & nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE);}
-    JSBool AllowPropModsToPrototype()     const {return (JSBool)(mFlags & nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE);}
+    void              SetFlags(JSUint32 f)
+                                {NS_ASSERTION(!ClassBuilt(), "too late!"); 
+                                 mFlags = f;}
+
+#ifdef GET_IT
+#undef GET_IT
+#endif
+#define GET_IT(f_) const {return (JSBool)(mFlags & nsIXPCScriptable:: f_ );}
+
+    JSBool WantPreCreate()                GET_IT(WANT_PRECREATE)
+    JSBool WantCreate()                   GET_IT(WANT_CREATE)
+    JSBool WantAddProperty()              GET_IT(WANT_ADDPROPERTY)
+    JSBool WantDelProperty()              GET_IT(WANT_DELPROPERTY)
+    JSBool WantGetProperty()              GET_IT(WANT_GETPROPERTY)
+    JSBool WantSetProperty()              GET_IT(WANT_SETPROPERTY)
+    JSBool WantEnumerate()                GET_IT(WANT_ENUMERATE)
+    JSBool WantNewEnumerate()             GET_IT(WANT_NEWENUMERATE)
+    JSBool WantNewResolve()               GET_IT(WANT_NEWRESOLVE)
+    JSBool WantConvert()                  GET_IT(WANT_CONVERT)
+    JSBool WantFinalize()                 GET_IT(WANT_FINALIZE)
+    JSBool WantCheckAccess()              GET_IT(WANT_CHECKACCESS)
+    JSBool WantCall()                     GET_IT(WANT_CALL)
+    JSBool WantConstruct()                GET_IT(WANT_CONSTRUCT)
+    JSBool WantHasInstance()              GET_IT(WANT_HASINSTANCE)
+    JSBool WantMark()                     GET_IT(WANT_MARK)
+    JSBool UseJSStubForAddProperty()      GET_IT(USE_JSSTUB_FOR_ADDPROPERTY)
+    JSBool UseJSStubForDelProperty()      GET_IT(USE_JSSTUB_FOR_DELPROPERTY)
+    JSBool UseJSStubForSetProperty()      GET_IT(USE_JSSTUB_FOR_SETPROPERTY)
+    JSBool DontEnumStaticProps()          GET_IT(DONT_ENUM_STATIC_PROPS)
+    JSBool DontAskInstanceForScriptable() GET_IT(DONT_ASK_INSTANCE_FOR_SCRIPTABLE)
+    JSBool HideQueryInterface()           GET_IT(HIDE_QUERY_INTERFACE)
+    JSBool ClassInfoInterfacesOnly()      GET_IT(CLASSINFO_INTERFACES_ONLY)
+    JSBool AllowPropModsDuringResolve()   GET_IT(ALLOW_PROP_MODS_DURING_RESOLVE)
+    JSBool AllowPropModsToPrototype()     GET_IT(ALLOW_PROP_MODS_TO_PROTOTYPE)
+
+#undef GET_IT
 
     ~XPCNativeScriptableInfo();
+    XPCNativeScriptableInfo(nsIXPCScriptable* scriptable = nsnull, 
+                            JSUint32 flags = 0);
+
+    XPCNativeScriptableInfo* Clone() const 
+        {return new XPCNativeScriptableInfo(mScriptable, mFlags);}
 
 private:
-    XPCNativeScriptableInfo(nsIXPCScriptable* scriptable, JSUint32 flags);
+    JSBool ClassBuilt() const {return mJSClass.name != 0;} 
 
-private:
     // disable copy ctor and assignment
     XPCNativeScriptableInfo(const XPCNativeScriptableInfo& r); // not implemented
     XPCNativeScriptableInfo& operator= (const XPCNativeScriptableInfo& r); // not implemented
-    XPCNativeScriptableInfo();  // not implemented
 
 private:
     nsCOMPtr<nsIXPCScriptable> mScriptable;
@@ -1757,13 +1805,16 @@ private:
 class XPCWrappedNativeProto
 {
 public:
-    static XPCWrappedNativeProto* GetNewOrUsed(XPCCallContext& ccx,
-                                               XPCWrappedNativeScope* Scope,
-                                               nsIClassInfo* ClassInfo);
+    static XPCWrappedNativeProto* 
+    GetNewOrUsed(XPCCallContext& ccx,
+                 XPCWrappedNativeScope* Scope,
+                 nsIClassInfo* ClassInfo,
+                 const XPCNativeScriptableInfo* scriptableInfo);
 
-    static XPCWrappedNativeProto* BuildOneOff(XPCCallContext& ccx,
-                                              XPCWrappedNativeScope* Scope,
-                                              XPCNativeSet* Set);
+    static XPCWrappedNativeProto* 
+    BuildOneOff(XPCCallContext& ccx,
+                XPCWrappedNativeScope* Scope,
+                XPCNativeSet* Set);
 
     XPCWrappedNativeScope*   GetScope()   const {return mScope;}
     XPCJSRuntime*            GetRuntime() const {return mScope->GetRuntime();}
@@ -1800,7 +1851,8 @@ private:
 
     ~XPCWrappedNativeProto();
 
-    JSBool Init(XPCCallContext& ccx);
+    JSBool Init(XPCCallContext& ccx,
+                const XPCNativeScriptableInfo* scriptableInfo);
 
 private:
 #ifdef DEBUG
@@ -1898,6 +1950,8 @@ public:
     nsISupports*           GetIdentityObject() const {return mIdentity;}
     JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}
 
+    void** GetSecurityInfoAddr() const {return mProto->GetSecurityInfoAddr();}
+
     // XXX the rules may change here...
     JSBool IsValid() const {return nsnull != mFlatJSObject;}
     JSBool HasSharedProto() const {return GetProto()->IsShared();}
@@ -1969,7 +2023,8 @@ private:
                      XPCWrappedNativeProto* aProto);
     virtual ~XPCWrappedNative();
 
-    JSBool Init(XPCCallContext& ccx);
+    JSBool Init(XPCCallContext& ccx, JSObject* parent,
+                const XPCNativeScriptableInfo& scriptableInfo);
 
     JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
     
@@ -1980,6 +2035,11 @@ private:
      
     JSBool InitTearOffJSObject(XPCCallContext& ccx, 
                                XPCWrappedNativeTearOff* to);
+
+    static nsresult GatherScriptableInfo(nsISupports* obj,
+                                         nsIClassInfo* classInfo,
+                                         XPCNativeScriptableInfo* siProto,
+                                         XPCNativeScriptableInfo* siWrapper);
 
     XPCJSRuntime* GetRuntime() const {return mProto->GetScope()->GetRuntime();}
 

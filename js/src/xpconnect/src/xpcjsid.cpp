@@ -39,29 +39,6 @@
 #include "xpcprivate.h"
 
 /***************************************************************************/
-// stuff used by all
-
-static void ThrowException(uintN errNum, JSContext* cx)
-{
-    XPCThrower::Throw(errNum, cx);
-}
-
-static nsresult ThrowAndFail(nsresult errNum, JSContext* cx, JSBool* retval)
-{
-    XPCThrower::Throw(errNum, cx);
-    *retval = JS_FALSE;
-    return NS_OK;
-}
-
-static nsresult ThrowBadResultAndFail(nsresult errNum, nsresult result,
-                                      XPCCallContext& ccx, JSBool* retval)
-{
-    XPCThrower::ThrowBadResult(errNum, result, ccx);
-    *retval = JS_FALSE;
-    return NS_OK;
-}
-
-/***************************************************************************/
 // nsJSID
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsJSID, nsIJSID)
@@ -465,6 +442,16 @@ nsJSIID::HasInstance(nsIXPConnectWrappedNative *wrapper,
         if(!other_wrapper)
             return NS_OK;
 
+        // We'll trust the interface set of the wrapper if this is known
+        // to be an interface that the objects *expects* to be able to
+        // handle.
+        if(other_wrapper->HasInterfaceNoQI(*mDetails.GetID()))
+        {
+            *bp = JS_TRUE;
+            return NS_OK;
+        }
+
+        // Otherwise, we'll end up Querying the native object to be sure.
         XPCCallContext ccx(JS_CALLER, cx);
 
         XPCNativeInterface* iface =
@@ -484,6 +471,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsJSCID, nsIJSID, nsIJSCID, nsIXPCScriptable)
 #define XPC_MAP_CLASSNAME           nsJSCID
 #define XPC_MAP_QUOTED_CLASSNAME   "nsJSCID"
 #define                             XPC_MAP_WANT_CONSTRUCT
+#define                             XPC_MAP_WANT_HASINSTANCE
 #define XPC_MAP_FLAGS               0
 #include "xpc_map_end.h" /* This will #undef the above */
 
@@ -743,6 +731,45 @@ nsJSCID::Construct(nsIXPConnectWrappedNative *wrapper,
 
     *_retval = XPCWrappedNative::CallMethod(ccx);
     return NS_OK;
+}
+
+/* PRBool hasInstance (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal val, out PRBool bp); */
+NS_IMETHODIMP
+nsJSCID::HasInstance(nsIXPConnectWrappedNative *wrapper,
+                     JSContext * cx, JSObject * obj,
+                     jsval val, PRBool *bp, PRBool *_retval)
+{
+    *bp = JS_FALSE;
+    nsresult rv = NS_OK;
+
+    if(!JSVAL_IS_PRIMITIVE(val))
+    {
+        // we have a JSObject
+        JSObject* obj = JSVAL_TO_OBJECT(val);
+
+        NS_ASSERTION(obj, "when is an object not an object?");
+
+        // is this really a native xpcom object with a wrapper?
+        XPCWrappedNative* other_wrapper =
+           XPCWrappedNative::GetWrappedNativeOfJSObject(cx, obj);
+
+        if(!other_wrapper)
+            return NS_OK;
+
+        // We consider CID equality to be the thing that matters here.
+        // This is perhaps debatable.
+        nsIClassInfo* ci = other_wrapper->GetProto()->GetClassInfo();
+        if(ci)
+        {
+            nsID* cid;
+            if(NS_SUCCEEDED(ci->GetClassID(&cid)) && cid)
+            {
+                *bp = cid->Equals(*mDetails.GetID());
+                nsMemory::Free((char*)cid);
+            }
+        }
+    }
+    return rv;
 }
 
 /***************************************************************************/

@@ -95,6 +95,11 @@ nsXPConnect::nsXPConnect()
 
 nsXPConnect::~nsXPConnect()
 {
+    // XXX It would be nice if we could get away with doing a GC here and also
+    // calling Release on the natives no longer reachable via XPConnect. As 
+    // noted all over the place, this makes bad things happen since shutdown is
+    // an unstable time for so many modules who have not planned well for it.
+
     mShutingDown = JS_TRUE;
     { // scoped callcontext
         XPCCallContext ccx(NATIVE_CALLER);
@@ -296,18 +301,13 @@ nsXPConnect::IsISupportsDescendant(nsIInterfaceInfo* info)
     nsCOMPtr<nsIInterfaceInfo> parent;
 
     while(NS_SUCCEEDED(oldest->GetParent(getter_AddRefs(parent))) && parent)
-    {
         oldest = parent;
-    }
 
-    JSBool retval = JS_FALSE;
-    nsID* iid;
-    if(NS_SUCCEEDED(oldest->GetIID(&iid)))
-    {
-        retval = iid->Equals(NS_GET_IID(nsISupports));
-        nsMemory::Free(iid);
-    }
-    return retval;
+    JSBool match;
+    
+    if(NS_FAILED(oldest->IsIID(&NS_GET_IID(nsISupports), &match)))
+        return JS_FALSE;
+    return match;
 }
 
 JSBool 
@@ -643,10 +643,12 @@ nsXPConnect::GetSecurityManagerForJSContext(JSContext * aJSContext, nsIXPCSecuri
 NS_IMETHODIMP
 nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager, PRUint16 flags)
 {
-    //    NS_IF_ADDREF(aManager);
-    //    NS_IF_RELEASE(mDefaultSecurityManager);
-    //    mDefaultSecurityManager = aManager;
-    //    mDefaultSecurityManagerFlags = flags;
+#if 0
+    NS_IF_ADDREF(aManager);
+    NS_IF_RELEASE(mDefaultSecurityManager);
+    mDefaultSecurityManager = aManager;
+    mDefaultSecurityManagerFlags = flags;
+#endif
     return NS_OK;
 }        
 

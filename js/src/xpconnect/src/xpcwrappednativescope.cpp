@@ -77,19 +77,17 @@ XPCWrappedNativeScope::SetGlobal(XPCCallContext& ccx, JSObject* aGlobal)
     
     mGlobalJSObject = aGlobal;
 
-    JSContext* cx = ccx.GetJSContext();
-
     // Lookup 'globalObject.Object.prototype' for our wrapper's proto
     {
-        AutoJSErrorAndExceptionEater eater(cx); // scoped error eater
+        AutoJSErrorAndExceptionEater eater(ccx); // scoped error eater
 
         jsval val;
         jsid idObj = mRuntime->GetStringID(XPCJSRuntime::IDX_OBJECT);
         jsid idProto = mRuntime->GetStringID(XPCJSRuntime::IDX_PROTOTYPE);
 
-        if(OBJ_GET_PROPERTY(cx, aGlobal, idObj, &val) &&
+        if(OBJ_GET_PROPERTY(ccx, aGlobal, idObj, &val) &&
            !JSVAL_IS_PRIMITIVE(val) &&
-           OBJ_GET_PROPERTY(cx, JSVAL_TO_OBJECT(val), idProto, &val) &&
+           OBJ_GET_PROPERTY(ccx, JSVAL_TO_OBJECT(val), idProto, &val) &&
            !JSVAL_IS_PRIMITIVE(val))
         {
             mPrototypeJSObject = JSVAL_TO_OBJECT(val);
@@ -127,13 +125,9 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
 
 // static 
 void 
-XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
+XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
 {
-    XPCJSRuntime* rt = ccx.GetRuntime();
-    JSContext* cx = ccx.GetJSContext();
-
     // Hold the lock until return...
-    // XXX why does this matter - we are in gc!
     nsAutoLock lock(rt->GetMapLock());  
 
     // Since the JSGC_END call happens outside of a lock,
@@ -176,7 +170,7 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
 
 // static 
 void 
-XPCWrappedNativeScope::FinshedGC(JSContext* cx)
+XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(JSContext* cx)
 {
     XPCJSRuntime* rt = nsXPConnect::GetRuntime();
     if(!rt)
@@ -373,9 +367,6 @@ GetScopeOfObject(JSContext* cx, JSObject* obj)
 XPCWrappedNativeScope* 
 XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
 {
-    // XXX We can fix this to not have to lookup 'Components' now.
-
-    JSContext* cx = ccx.GetJSContext();
     XPCWrappedNativeScope* scope;
 
     if(!obj)
@@ -384,32 +375,47 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
     // If this object is itself a wrapped native then we can get the 
     // scope directly. 
     
-    scope = GetScopeOfObject(cx, obj);
+    scope = GetScopeOfObject(ccx, obj);
     if(scope)
         return scope;
     
     // Else, we will have to lookup the 'Components' object and ask it for
     // the scope. 
 
-    jsval prop;
-    JSObject* compobj;
     JSObject* parent;
     const char* name = ccx.GetRuntime()->GetStringName(XPCJSRuntime::IDX_COMPONENTS);
 
-    while(nsnull != (parent = JS_GetParent(cx, obj)))
+    while(nsnull != (parent = JS_GetParent(ccx, obj)))
         obj = parent;
 
-    if(!JS_LookupProperty(cx, obj, name, &prop) ||
+
+#if 1 /* Use new scope lookup */
+
+    // XXX We are assuming that the scope count is low enough that traversing
+    // the linked list is more reasonable then doing a hashtable lookup.
+    {   // scoped lock
+        nsAutoLock lock(ccx.GetRuntime()->GetMapLock());  
+        for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+        {
+            if(obj == cur->GetGlobalJSObject())
+                return cur;
+        }
+    }
+    NS_ERROR("No scope has this global object!");
+    return nsnull;
+#else
+    jsval prop;
+    JSObject* compobj;
+    if(!JS_LookupProperty(ccx, obj, name, &prop) ||
        JSVAL_IS_PRIMITIVE(prop) ||
        !(compobj = JSVAL_TO_OBJECT(prop)))
     {
-        // XXX we can change this now that we can walk the scope looking 
-        // for a global JSObject.
         NS_ASSERTION(0,"No 'Components' in scope!");
         return nsnull;
     }
 
-    return GetScopeOfObject(cx, compobj);
+    return GetScopeOfObject(ccx, compobj);
+#endif
 }        
 
 

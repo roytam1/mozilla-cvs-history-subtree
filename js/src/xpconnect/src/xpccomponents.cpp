@@ -1685,7 +1685,7 @@ nsXPCComponents::AttachNewComponentsObject(XPCCallContext& ccx,
     jsid id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_COMPONENTS);
     JSObject* obj = wrapper->GetFlatJSObject();
 
-    return obj && OBJ_DEFINE_PROPERTY(ccx.GetJSContext(),
+    return obj && OBJ_DEFINE_PROPERTY(ccx,
                                       aGlobal, id, OBJECT_TO_JSVAL(obj),
                                       nsnull, nsnull,
                                       JSPROP_PERMANENT | JSPROP_READONLY,

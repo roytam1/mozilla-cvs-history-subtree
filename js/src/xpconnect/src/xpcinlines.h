@@ -376,7 +376,8 @@ XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
     return JS_TRUE;
 }
 
-inline XPCNativeInterface* XPCNativeSet::FindNamedInterface(jsval name) const
+inline XPCNativeInterface* 
+XPCNativeSet::FindNamedInterface(jsval name) const
 {
     int count = (int) mInterfaceCount;
     int i;
@@ -389,7 +390,22 @@ inline XPCNativeInterface* XPCNativeSet::FindNamedInterface(jsval name) const
     return nsnull;
 }
 
-inline JSBool XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
+inline XPCNativeInterface* 
+XPCNativeSet::FindInterfaceWithIID(const nsIID& iid) const
+{
+    int count = (int) mInterfaceCount;
+    int i;
+
+    for(i = 0; i < count; i++)
+    {
+        if(mInterfaces[i]->GetIID()->Equals(iid))
+            return mInterfaces[i];
+    }
+    return nsnull;
+}
+
+inline JSBool 
+XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
 {
     int count = (int) mInterfaceCount;
     for(int i = 0; i < count; i++)
@@ -423,42 +439,13 @@ inline void XPCNativeSet::ASSERT_NotMarked()
 inline JSBool 
 XPCWrappedNative::HasInterfaceNoQI(XPCNativeInterface* aInterface)
 {
-    // XXX locking !
- 
-    XPCWrappedNativeTearOffChunk* chunk;
-    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
-    {
-        XPCWrappedNativeTearOff* to = chunk->mTearOffs;
-        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
-        {
-            if(to->GetInterface() == aInterface)
-                return JS_TRUE;
-        }
-    }
-    return JS_FALSE;
+    return mSet->HasInterface(aInterface);
 }
 
 inline JSBool 
 XPCWrappedNative::HasInterfaceNoQI(const nsIID& iid)
 {
-    // XXX locking !
- 
-    XPCWrappedNativeTearOffChunk* chunk;
-    for(chunk = &mFirstChunk; chunk; chunk = chunk->mNextChunk)
-    {
-        const XPCWrappedNativeTearOff* to = chunk->mTearOffs;
-        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK-1; i >= 0; i--, to++)
-        {
-            XPCNativeInterface* iface = to->GetInterface();
-            if(iface)
-            {
-                const nsIID* curIID = iface->GetIID();
-                if(curIID && curIID->Equals(iid))
-                    return JS_TRUE;
-            }
-        }
-    }
-    return JS_FALSE;
+    return nsnull != mSet->FindInterfaceWithIID(iid);
 }
 
 inline XPCWrappedNativeTearOff*
