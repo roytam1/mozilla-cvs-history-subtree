@@ -69,7 +69,7 @@ public:
      * Creates a String representation of this ExprResult
      * @param str the destination string to append the String representation to.
     **/
-    virtual void stringValue(String& str) = 0;
+    virtual void stringValue(DOMString& str) = 0;
 
     /**
      * Converts this ExprResult to a Boolean (MBool) value
