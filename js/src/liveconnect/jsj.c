@@ -30,7 +30,10 @@
 #include "prtypes.h"
 #include "prlog.h"
 #include "prprf.h"
-/* #include "prosdep.h" */
+
+#ifdef XP_MAC
+#include "prosdep.h"
+#endif
 
 #include "jsj_private.h"        /* LiveConnect internals */
 #include "jsjava.h"             /* LiveConnect external API */
@@ -310,7 +313,6 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
 {
     JavaVM *java_vm;
     JSJavaVM *jsjava_vm;
-    const char *full_classpath;
     char  *err_msg;
 
 
@@ -348,7 +350,7 @@ JSJ_ConnectToJavaVM(JavaVM *java_vm_arg, const char *user_classpath)
         
         /* Prepend the classpath argument to the default JVM classpath */
         if (user_classpath) {
-            full_classpath = PR_smprintf("%s;%s", user_classpath, vm_args.classpath);
+            const char *full_classpath = PR_smprintf("%s;%s", user_classpath, vm_args.classpath);
             if (!full_classpath) {
                 free(jsjava_vm);
                 return NULL;
@@ -508,7 +510,7 @@ find_jsjava_thread(JNIEnv *jEnv)
 
     /* Search for the thread state among the list of all created
        LiveConnect threads */
-    for (p=&thread_list; e = *p; p = &(e->next)) {
+    for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e->jEnv == jEnv) {
             jsj_env = e;
             *p = jsj_env->next;
@@ -636,7 +638,7 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
     jsj_ClearPendingJSErrors(jsj_env);
 
     /* FIXME - need to protect against races */
-    for (p=&thread_list; e = *p; p = &(e->next)) {
+    for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e == jsj_env) {
             *p = jsj_env->next;
             break;
