@@ -101,8 +101,6 @@ public:
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID);
   virtual nsStyleStruct* GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID);
 
-  virtual nsStyleStruct* GetMutableStyleData(nsStyleStructID aSID);
-
   virtual void ForceUnique(void);
   NS_IMETHOD  CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference = PR_FALSE);
 
@@ -427,6 +425,14 @@ nsStyleContext::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleSt
 {
   nsStyleStruct* result = nsnull;
   switch (aSID) {
+  case eStyleStruct_Display: {
+    const nsStyleDisplay* dis = (const nsStyleDisplay*)GetStyleData(aSID);
+    nsStyleDisplay* newDis = new (aPresContext) nsStyleDisplay(*dis);
+    SetStyle(aSID, *newDis);
+    result = newDis;
+    mBits &= ~NS_STYLE_INHERIT_DISPLAY;
+    break;
+  }
   case eStyleStruct_Background: {
     const nsStyleBackground* bg = (const nsStyleBackground*)GetStyleData(aSID);
     nsStyleBackground* newBG = new (aPresContext) nsStyleBackground(*bg);
@@ -448,13 +454,6 @@ nsStyleContext::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleSt
   }
 
   return result;
-}
-
-nsStyleStruct* nsStyleContext::GetMutableStyleData(nsStyleStructID aSID)
-{
-  // XXXdwh ELIMINATE ME!!!
-  NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
-  return nsnull;
 }
 
 NS_IMETHODIMP

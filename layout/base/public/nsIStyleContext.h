@@ -93,9 +93,6 @@ public:
   virtual const nsStyleStruct* GetStyleData(nsStyleStructID aSID) = 0;
   virtual nsStyleStruct* GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyleStructID& aSID) = 0;
 
-  // get a style data struct by ID, may return null 
-  virtual nsStyleStruct* GetMutableStyleData(nsStyleStructID aSID) = 0;
-
   // call this to prevent context from getting shared
   virtual void  ForceUnique(void) = 0;
 

@@ -1494,36 +1494,6 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
       PRUint32  contentCount = styleContent->ContentCount();
 
       if (contentCount > 0) {
-        PRUint8 displayValue = display->mDisplay;
-  
-        // Make sure the 'display' property value is allowable
-        const nsStyleDisplay* subjectDisplay = (const nsStyleDisplay*)
-          aStyleContext->GetStyleData(eStyleStruct_Display);
-  
-        if (subjectDisplay->IsBlockLevel()) {
-          // For block-level elements the only allowed 'display' values are:
-          // 'none', 'inline', 'block', and 'marker'
-          if ((NS_STYLE_DISPLAY_INLINE != displayValue) &&
-              (NS_STYLE_DISPLAY_BLOCK != displayValue) &&
-              (NS_STYLE_DISPLAY_MARKER != displayValue)) {
-            // Pseudo-element behaves as if the value were 'block'
-            displayValue = NS_STYLE_DISPLAY_BLOCK;
-          }
-  
-        } else {
-          // For inline-level elements the only allowed 'display' values are
-          // 'none' and 'inline'
-          displayValue = NS_STYLE_DISPLAY_INLINE;
-        }
-  
-        if (display->mDisplay != displayValue) {
-          // Reset the value
-          nsStyleDisplay* mutableDisplay = (nsStyleDisplay*)
-            pseudoStyleContext->GetMutableStyleData(eStyleStruct_Display);
-  
-          mutableDisplay->mDisplay = displayValue;
-        }
-
         // Create a block box or an inline box depending on the value of
         // the 'display' property
         nsIFrame*     containerFrame;
@@ -1532,7 +1502,7 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
         nsCOMPtr<nsIDocument>  document;
         aContent->GetDocument(*getter_AddRefs(document));
 
-        if (NS_STYLE_DISPLAY_BLOCK == displayValue) {
+        if (NS_STYLE_DISPLAY_BLOCK == display->mDisplay) {
           NS_NewBlockFrame(aPresShell, &containerFrame);
         } else {
           NS_NewInlineFrame(aPresShell, &containerFrame);
@@ -4908,7 +4878,7 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
         }
         if (allowSubframes) {
           // make <noframes> be display:none if frames are enabled
-          nsStyleDisplay* mutdisplay = (nsStyleDisplay*)aStyleContext->GetMutableStyleData(eStyleStruct_Display);
+          nsStyleDisplay* mutdisplay = (nsStyleDisplay*)aStyleContext->GetUniqueStyleData(aPresContext, eStyleStruct_Display);
           mutdisplay->mDisplay = NS_STYLE_DISPLAY_NONE;
           aState.mFrameManager->SetUndisplayedContent(aContent, aStyleContext);
         } 

@@ -2006,6 +2006,32 @@ nsRuleNode::ComputeDisplayData(nsStyleDisplay* aStartDisplay, const nsCSSDisplay
     display->mFloats = NS_STYLE_FLOAT_NONE;
   }
 
+  nsCOMPtr<nsIAtom> tag;
+  aContext->GetPseudoType(*getter_AddRefs(tag));
+  if (tag && tag.get() == nsCSSAtoms::beforePseudo || tag.get() == nsCSSAtoms::afterPseudo) {
+    PRUint8 displayValue = display->mDisplay;
+    if (parentDisplay->IsBlockLevel()) {
+      // For block-level elements the only allowed 'display' values are:
+      // 'none', 'inline', 'block', and 'marker'
+      if ((NS_STYLE_DISPLAY_INLINE != displayValue) &&
+          (NS_STYLE_DISPLAY_BLOCK != displayValue) &&
+          (NS_STYLE_DISPLAY_MARKER != displayValue)) {
+        // Pseudo-element behaves as if the value were 'block'
+        displayValue = NS_STYLE_DISPLAY_BLOCK;
+      }
+
+    } else {
+      // For inline-level elements the only allowed 'display' values are
+      // 'none' and 'inline'
+      displayValue = NS_STYLE_DISPLAY_INLINE;
+    }
+  
+    if (display->mDisplay != displayValue) {
+      // Reset the value
+      display->mDisplay = displayValue;
+    }
+  }
+
   return display;
 }
 
