@@ -1,25 +1,32 @@
- #
- # -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- #
- # The contents of this file are subject to the Netscape Public
- # License Version 1.1 (the "License"); you may not use this file
- # except in compliance with the License. You may obtain a copy of
- # the License at http://www.mozilla.org/NPL/
- #
- # Software distributed under the License is distributed on an "AS
- # IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- # implied. See the License for the specific language governing
- # rights and limitations under the License.
- #
- # The Original Code is mozilla.org code.
- #
- # The Initial Developer of the Original Code is Netscape
- # Communications Corporation.  Portions created by Netscape are
- # Copyright (C) 1999 Netscape Communications Corporation. All
- # Rights Reserved.
- #
- # Contributor(s): 
- #
+#
+# -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+#
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#
+# The Original Code is mozilla.org code.
+#
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1999 Netscape Communications Corporation. All
+# Rights Reserved.
+#
+# Contributor(s):
+#  Patrick C. Beard <beard@netscape.com>
+#
+
+# 
+# ** Assumed vtable layout (obtained by disassembling with gdb):
+# ** 4 bytes per vtable entry, skip 0th entry, so the mapping
+# ** from index to entry is (4 * index) + 8.
+#
 
 .data
 	.align 2
@@ -92,8 +99,8 @@ __XPTC_InvokeByIndex:
 	lwz	r3,160(r31)
 	lwz	r4,0(r3)
 	lwz	r5,164(r31)
-	slwi	r5,r5,3
-	addi	r5,r5,8
+	slwi	r5,r5,2		; entry_offset = (index * 4) + 4
+	addi	r5,r5,4
 	add	r12,r5,r4
 	lwz	r12,4(r12)
 
