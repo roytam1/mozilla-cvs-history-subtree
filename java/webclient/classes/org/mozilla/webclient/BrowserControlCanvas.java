@@ -111,13 +111,10 @@ protected BrowserControlCanvas ()
 	
 } // BrowserControlCanvas() ctor
 
-protected static void initialize(String verifiedBinDirAbsolutePath)
+protected void initialize(BrowserControl controlImpl)
 {
-	try {
-		BrowserControlMozillaShim.initialize(verifiedBinDirAbsolutePath);
-	} catch (Exception e) {
-		System.out.println(e.toString());
-	}
+    ParameterCheck.nonNull(controlImpl);
+    webShell = controlImpl;
 }
 
 /**
@@ -151,7 +148,8 @@ public void addNotify ()
 
 	try {
 		Rectangle r = new Rectangle(getBoundsRelativeToWindow());
-		webShell = new BrowserControlImpl(nativeWindow, r);
+        Assert.assert(null != webShell);
+        webShell.createWindow(nativeWindow, r);
 	} catch (Exception e) {
 		dsi.unlock();
 		System.out.println(e.toString());

@@ -33,6 +33,7 @@ import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
 import java.awt.Rectangle;
+import java.awt.Canvas;
 
 /**
  *
@@ -71,14 +72,16 @@ public class BrowserControlImpl extends Object implements BrowserControl, EventR
 	 */
 
 	private int nativeWebShell;
+    private Canvas myCanvas;
 
 //
 // Constructors and Initializers    
 //
 
-public BrowserControlImpl(int windowPtr, Rectangle bounds) throws Exception 
+protected BrowserControlImpl(Canvas yourCanvas)
 {
-	nativeWebShell = BrowserControlMozillaShim.webShellCreate(windowPtr, bounds);
+    ParameterCheck.nonNull(yourCanvas);
+    myCanvas = yourCanvas;
 }
 
 //
@@ -92,6 +95,16 @@ public BrowserControlImpl(int windowPtr, Rectangle bounds) throws Exception
 // 
 // Methods from BrowserControl
 // 
+
+public void createWindow(int windowPtr, Rectangle bounds) throws Exception 
+{
+	nativeWebShell = BrowserControlMozillaShim.webShellCreate(windowPtr, bounds);
+}
+
+public Canvas getCanvas()
+{
+    return myCanvas;
+}
 
 public void loadURL(String urlString) throws Exception 
 {
