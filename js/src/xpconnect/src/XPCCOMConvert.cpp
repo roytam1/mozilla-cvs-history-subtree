@@ -308,6 +308,11 @@ JSBool XPCCOMConvert::COMToJS(XPCCallContext& ccx, const VARIANT & src,
             dest = BOOLEAN_TO_JSVAL(src.boolVal);
         }
         break;
+        case VT_DISPATCH:
+        {
+            XPCCOMObject::COMCreateFromIDispatch(src.pdispVal, ccx, JS_GetGlobalObject(ccx), &dest);
+        }
+        break;
         /**
          * Currently unsupported conversion types
          */
@@ -315,7 +320,6 @@ JSBool XPCCOMConvert::COMToJS(XPCCallContext& ccx, const VARIANT & src,
         case VT_CY:
         case VT_DATE:
         case VT_UNKNOWN:
-        case VT_DISPATCH:
         case VT_ARRAY:
         case VT_I1:
         case VT_UI2:

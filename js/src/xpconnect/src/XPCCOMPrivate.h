@@ -300,6 +300,12 @@ public:
     static
     IDispatch * COMCreateInstance(const char * className);
     /**
+     * Create a COM object from an existing IDispatch interface (e.g. returned by another object)
+     */
+    static
+    PRBool COMCreateFromIDispatch(IDispatch *pDispatch, JSContext *cx, JSObject *obj, jsval *rval);
+
+    /**
      * Throws an error, converting the errNum to an exception
      */
     static

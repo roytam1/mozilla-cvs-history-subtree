@@ -80,6 +80,34 @@ COMObjectConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     return JS_TRUE;
 }
 
+PRBool
+XPCCOMObject::COMCreateFromIDispatch(IDispatch *pDispatch, JSContext *cx, JSObject *obj, jsval *rval)
+{
+    if (!pDispatch)
+    {
+        // TODO: error reporting
+        return PR_FALSE;
+    }
+
+    // TODO: Do we return an existing COM object if we recognize we've already wrapped this IDispatch?
+
+    // Instantiate the desired COM object
+    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+    nsresult rv = nsXPConnect::GetXPConnect()->WrapNative(cx, obj, 
+                                  NS_REINTERPRET_CAST(nsISupports*, pDispatch),
+                                  NSID_IDISPATCH, getter_AddRefs(holder));
+    if(FAILED(rv) || !holder)
+    {
+        // TODO: error reporting
+        return PR_FALSE;
+    }
+    JSObject * jsobj;
+    if(NS_FAILED(holder->GetJSObject(&jsobj)))
+        return PR_FALSE;
+    *rval = OBJECT_TO_JSVAL(jsobj);
+    return PR_TRUE;
+}
+
 IDispatch * XPCCOMObject::COMCreateInstance(const char * className)
 {
     // allows us to convert to BSTR for CLSID functions below
