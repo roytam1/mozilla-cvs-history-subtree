@@ -1,0 +1,29 @@
+<!ENTITY newBookmark.title          "Könyvjelző hozzáadása">
+<!ENTITY newbookmark.label          "A &brandShortName; egy könyvjelzőt fog elhelyezni ehhez az oldalhoz.">
+<!ENTITY name.label                 "Név:">
+<!ENTITY name.accesskey             "N">
+<!ENTITY keyword.label              "Kulcsszó:">
+<!ENTITY keyword.accesskey          "K">
+<!ENTITY url.label                  "Hely:">
+<!ENTITY url.accesskey              "H">
+<!ENTITY button.createin.label      "Mappa &gt;&gt;">
+<!ENTITY button.createin.accesskey  "M">
+<!ENTITY button.createin2.label     "Mappa &lt;&lt;">
+<!ENTITY createin.label             "Mappa:">
+<!ENTITY createin.accesskey         "M">
+<!ENTITY button.newfolder.label     "Új mappa...">
+<!ENTITY button.newfolder.accesskey "j">
+<!ENTITY alwayscreateinfolder.label "Ne mutassa újra ezt az ablakot">
+<!ENTITY alwayscreateinfolder.accesskey "e">
+<!ENTITY dontshowmessage.tooltip    "Ha ezt a négyzetet bejelöli, az új könyvjelzők az oldal által ajánlott névvel lesznek elmentve.">
+<!ENTITY button.defaultfolder.label "Alapértelmezés használata">
+<!ENTITY button.defaultfolder.accesskey "A">
+<!ENTITY selectFolder.label         "Válasszon mappát">
+
+<!ENTITY expanderDown.tooltip    "Minden könyvjelzőmappa megjelenítése">
+<!ENTITY expanderUp.tooltip      "Elrejtés">
+<!ENTITY addGroup.label          "Könyvjelző a lapok csoportjából">
+<!ENTITY addGroup.accesskey      "K">
+<!ENTITY newFolder.label         "Új mappa...">
+<!ENTITY newFolder.accesskey     "m">
+<!ENTITY acceptButton.label      "Hozzáadás">

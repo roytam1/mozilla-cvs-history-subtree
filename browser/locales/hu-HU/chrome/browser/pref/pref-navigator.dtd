@@ -1,0 +1,39 @@
+<!ENTITY  lHeader                   "Böngésző">
+
+<!ENTITY  header2.label             "Kezdőlap">
+<!ENTITY  location.label            "Hely:">
+<!ENTITY  location.accesskey        "H">
+<!ENTITY  useCurrent.label          "Aktuális oldal használata">
+<!ENTITY  useCurrent.accesskey      "A">
+<!ENTITY  useCurrentMultiple.label  "Aktuális oldalak használata">
+<!ENTITY  useBookmark.label         "Könyvjelző használata...">
+<!ENTITY  useBookmark.accesskey     "K">
+<!ENTITY  useBlank.label            "Üres oldal használata">
+<!ENTITY  useBlank.accesskey        "r">
+
+<!ENTITY defaultBrowserGroup.label  "Alapértelmezett böngésző">
+<!ENTITY defaultBrowserButton.label "Beállítás alapértelmezett böngészőként">
+<!ENTITY makeDefaultText            "A &brandShortName; beállítása alapértelmezett böngészőként.">
+
+<!-- XXXben oh please, can we do better than this text-wise? -->
+<!ENTITY showConnections.label      "Kapcsolat beállításai...">
+<!ENTITY showConnections.accesskey  "o">
+<!ENTITY proxiesInfo.label          "Proxyk beállítása az interneteléréshez">
+<!ENTITY connectionsInfo.caption    "Kapcsolat">
+
+<!ENTITY fonts.caption                      "Betűk és színek">
+<!ENTITY fontsInfo.label                    "Weboldalak betűtípusainak és színeinek kiválasztása. ">
+<!ENTITY showFontsAndColors.label           "Betűk és színek...">
+<!ENTITY showFontsAndColors.accesskey       "B">
+
+<!ENTITY languages.caption                  "Nyelvek">
+<!ENTITY languagesInfo.label                "Weboldalak alapértelmezett nyelvének és karakterkódolásának kiválasztása. ">
+<!ENTITY showLanguages.label                "Nyelvek...">
+<!ENTITY showLanguages.accesskey            "N">
+
+<!ENTITY checkForDefault.label              "A &brandShortName; ellenőrizze, hogy alapértelmezett böngésző-e. ">
+<!ENTITY checkForDefault.accesskey          "e">
+<!ENTITY checkNow.label                     "Ellenőrzés">
+<!ENTITY checkNow.accesskey                 "E">
+
+

@@ -1,0 +1,96 @@
+<!-- extracted from content/pref-fonts.xul -->
+
+<!ENTITY  prefFontsDialog.title                   "Betűk és színek">
+
+<!ENTITY  language.label                          "Kódolás:">
+<!ENTITY  language.accesskey                      "K">
+
+<!ENTITY  typefaces.label                         "Betűkészlet">
+<!ENTITY  sizes.label                             "Méret (képpont)">
+
+<!ENTITY  proportional.label                      "Proporcionális:">
+<!ENTITY  proportional.accesskey                  "p">
+
+<!ENTITY  serif.label                             "Talpas:">
+<!ENTITY  serif.accesskey                         "T">
+<!ENTITY  sans-serif.label                        "Talpatlan:">
+<!ENTITY  sans-serif.accesskey                    "a">
+<!ENTITY  monospace.label                         "Fix szélességű:">
+<!ENTITY  monospace.accesskey                     "F">
+<!-- LOCALIZATION NOTE (fantasy.label): 'Fantasy' means 'Ornate' -->
+<!ENTITY  fantasy.label                           "Díszes:">
+<!ENTITY  fantasy.accesskey                       "D">
+<!ENTITY  cursive.label                           "Kurzív:">
+<!ENTITY  cursive.accesskey                       "K">
+
+<!ENTITY  fontsize.units                          "képpont">
+
+<!ENTITY  font.langGroup.latin1                   "Nyugati">
+<!ENTITY  font.langGroup.latin2                   "Közép-európai">
+<!ENTITY  font.langGroup.japanese                 "Japán">
+<!ENTITY  font.langGroup.trad-chinese             "Hagyományos kínai">
+<!ENTITY  font.langGroup.simpl-chinese            "Egyszerűsített kínai">
+<!ENTITY  font.langGroup.trad-chinese-hk          "Hagyományos kínai (Hong Kong)">
+<!ENTITY  font.langGroup.korean                   "Koreai">
+<!ENTITY  font.langGroup.cyrillic                 "Cirill">
+<!ENTITY  font.langGroup.baltic                   "Balti">
+<!ENTITY  font.langGroup.el                       "Görög">
+<!ENTITY  font.langGroup.turkish                  "Török">
+<!ENTITY  font.langGroup.unicode                  "Unicode">
+<!ENTITY  font.langGroup.user-def                 "Felhasználó által megadott">
+<!ENTITY  font.langGroup.thai                     "Thai">
+<!ENTITY  font.langGroup.hebrew                   "Héber">
+<!ENTITY  font.langGroup.arabic                   "Arab">
+<!ENTITY  font.langGroup.devanagari               "Devanagari">
+<!ENTITY  font.langGroup.tamil                    "Tamil">
+<!-- Minimum font size -->
+<!ENTITY minSize.label                            "Legkisebb betűméret:">
+<!ENTITY minSize.accesskey                        "L">
+<!ENTITY minSize.none                             "Nincs ilyen">
+
+<!-- default font type -->
+<!ENTITY  useDefaultFontSerif.label               "Talpas">
+<!ENTITY  useDefaultFontSansSerif.label           "Talpatlan">
+
+<!ENTITY  newLanguages.label                      "Új nyelveket a 'Nyelvek' menüpontban állíthat be.">
+
+<!-- leaving this stuff in for now -->
+
+<!ENTITY  header2                                 "Amikor a dokumentum saját maga választ betűkészletet,">
+<!-- font scaling -->
+<!ENTITY  resolution.label                        "Képernyő felbontása:">
+<!ENTITY  resolution.accesskey                    "f">
+<!-- LOCALIZATION NOTE (resolution.dpi): dpi stands for "dots per inch" -->
+<!ENTITY  resolution.dpi                          "dpi">
+<!-- LOCALIZATION NOTE (resolution.dpi): $val will be replaced by a numeric dpi value. -->
+<!ENTITY  resolution.dpival                       "$val &resolution.dpi;">
+<!ENTITY  resolution.system.label                 "Rendszerbeállítás">
+<!ENTITY  resolution.other                        "Egyéb...">
+
+<!-- screen calibration dialog -->
+<!ENTITY  calibrateDialog.title                   "Felbontás beállítása">
+<!ENTITY  calibrate.instructions                  "A fenti vonal hossza:">
+<!ENTITY  units.inches                            "hüvelyk">
+<!ENTITY  units.centimetres                       "centiméter">
+
+<!ENTITY  color                           "Szöveg és háttér">
+<!ENTITY  textColor.label                 "Szöveg:">
+<!ENTITY  textColor.accesskey             "S">
+<!ENTITY  backgroundColor.label           "Háttér:">
+<!ENTITY  backgroundColor.accesskey       "H">
+<!ENTITY  useSystemColors.label           "Rendszerszínek használata">
+<!ENTITY  useSystemColors.accesskey       "R">
+
+<!ENTITY  underlineLinks.label            "Hivatkozások aláhúzása">
+<!ENTITY  underlineLinks.accesskey        "a">
+<!ENTITY  links                           "Hivatkozás színei">
+<!ENTITY  linkColor.label                 "Nem látogatott hivatkozások:">
+<!ENTITY  linkColor.accesskey             "N">
+<!ENTITY  visitedLinkColor.label          "Látogatott hivatkozások:">
+<!ENTITY  visitedLinkColor.accesskey      "L">
+<!ENTITY  someProvColors                  "Amikor a weboldal meghatározza a hátteret és a színeket">
+<!ENTITY  useMyColors.label   "színek használata minden alkalommal">
+<!ENTITY  useMyColors.accesskey "z">
+<!ENTITY  useMyFonts.label                  "betűkészletek, illetve">
+<!ENTITY  useMyFonts.accesskey              "b">
+<!ENTITY  alwaysUseMy.label                 "A megadott ">

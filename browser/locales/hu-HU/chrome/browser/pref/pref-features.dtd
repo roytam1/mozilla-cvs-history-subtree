@@ -1,0 +1,19 @@
+<!ENTITY  lHeader                           "Webes szolgáltatások">
+
+<!ENTITY  enbJavaCheck.label                "Java engedélyezése">
+<!ENTITY  enbJavaCheck.accesskey            "j">
+<!ENTITY  enableJavaScript.label            "JavaScript engedélyezése">
+<!ENTITY  enableJavaScript.accesskey        "s">
+<!ENTITY  advancedJavaScript.label          "Haladó...">
+<!ENTITY  advancedJavaScript.accesskey      "H">
+
+<!ENTITY  enableImages.label                "Képek betöltése">
+<!ENTITY  enableImages.accesskey            "k">
+<!ENTITY  forOriginatingSiteOnly.label      "csak a képet tartalmazó weboldal kiszolgálójáról">
+<!ENTITY  forOriginatingSiteOnly.accesskey  "c">
+<!ENTITY  popupReject.label                 "Felugró ablakok tiltása">
+<!ENTITY  popupReject.accesskey             "f">
+<!ENTITY  enableSoftwareUpdate.label        "Allow web sites to install software">
+<!ENTITY  enableSoftwareUpdate.accesskey    "i">
+
+<!ENTITY  exceptions.label                  "Exceptions">

@@ -1,0 +1,97 @@
+<!--LOCALIZATION NOTE : FILE 'Advanced' prefs settings -->
+<!ENTITY lHeader                      "Haladó">
+
+<!ENTITY accessibility.label          "Kisegítő lehetőségek">
+<!ENTITY moveSystemCaret.label        "Kurzor áthelyezése a fókusz vagy kijelölés változtatásakor">
+<!ENTITY browsing.label               "Böngészés">
+<!ENTITY hideTabBar.label             "A fülek sávjának elrejtése, ha csak egy weboldal van nyitva">
+<!ENTITY loadInBackground.label       "Új lap aktiválása a hivatkozások megnyitásakor">
+<!ENTITY useAutoScrolling.label       "Automatikus görgetés">
+<!ENTITY useSmoothScrolling.label     "Finom görgetés">
+<!ENTITY multimedia.label             "Multimédia">
+<!ENTITY enableAutoImageResizing.label "Nagy méretű képek átméretezése, hogy beférjenek a böngészőablakba">
+<!ENTITY security.label               "Biztonság">
+<!ENTITY useSSL2.label                "SSL 2.0 használata">
+<!ENTITY useSSL3.label                "SSL 3.0 használata">
+<!ENTITY useTLS1.label                "TLS 1.0 használata">
+<!ENTITY useTypeAheadFind.label       "Gépelőkeresés">
+<!ENTITY linksOnlyTypeAheadFind.label "csak a hivatkozásokra">
+
+<!-- Certs -->
+<!ENTITY certs.label                  "Tanúsítványok">
+<!ENTITY SSLClientAuthMethod          "Ügyféltanúsítvány kiválasztása">
+<!ENTITY certselect.description       "Ha egy webhely tanúsítványt igényel, a &brandShortName; hogyan válassza ki a megfelelőt:">
+<!ENTITY certselect.auto              "Automatikusan">
+<!ENTITY certselect.ask               "Kérdezzen rá minden alkalommal">
+<!ENTITY  managecerts.label           "Tanúsítványkezelő">
+<!ENTITY  managecerts.text            "A tanúsítványkezelő segítségével mind a saját személyes, mind más emberek és hitelesítésszolgáltatók tanúsítványait kezelheti.">
+<!ENTITY  managecerts.button          "Tanúsítványok kezelése...">
+<!ENTITY  managecerts.accesskey       "T">
+<!ENTITY  managedevices.label         "Adatvédelmi eszközök kezelése">
+<!ENTITY  managedevices.text          "Ezzel a gombbal kezelheti az adatvédelmi eszközeit, pl. az intelligens chipkártyákat.">
+<!ENTITY  managedevices.button        "Adatvédelmi eszközök kezelése...">
+<!ENTITY  managedevices.accesskey     "A">
+
+<!ENTITY  validation.label            "Érvényesítés">
+
+<!-- Validation -->
+<!ENTITY  validation.title          "Érvényesítés">
+
+<!ENTITY  validation.crl.label      "CRL">
+<!ENTITY  validation.crl.description "A CRL-kezelő segítségével kezelheti a tanúsítvány-adatbázisában tárolt visszavont tanúsítványok listáját (CRL).">
+<!ENTITY  validation.managecrls.button      "CRL-ek kezelése...">
+<!ENTITY  validation.managecrls.accesskey   "C">
+<!ENTITY  validation.crlmanager.label       "CRL-ek kezelése">
+<!ENTITY  validation.crlname.label          "Név">
+<!ENTITY  validation.crllastupdate.label    "Utolsó frissítés">
+<!ENTITY  validation.crlnextupdate.label    "Következő frissítés">
+<!ENTITY  validation.crlautoupdateenabled.label   "Automatikus frissítés">
+<!ENTITY  validation.crlautoupdatestatus.label    "Automatikus frissítés állapota">
+<!ENTITY  validation.deletecrl.label        "Törlés">
+<!ENTITY  validation.updatecrl.label        "Frissítés">
+<!ENTITY  validation.advanced.label         "Beállítások">
+
+<!ENTITY  validation.crl.autoupdate.title            "Automatikus CRL-frissítés beállításai">
+<!ENTITY  validation.crl.autoupdate.enable.label     "A CRL automatikus frissítésének engedélyezése">
+<!ENTITY  validation.crl.autoupdate.time.label1      "Frissítés">
+<!ENTITY  validation.crl.autoupdate.time.label2      "nappal a következő frissítés dátuma előtt">
+<!ENTITY  validation.crl.autoupdate.freq.label1      "Frissítés">
+<!ENTITY  validation.crl.autoupdate.freq.label2      "naponként">
+<!ENTITY  validation.crl.autoupdate.url.label        "A CRL-t a következő helyről importálja:">
+<!ENTITY  crl.import.status.title         "CRL-importálás állapota">
+<!ENTITY  crl.import.success.message      "A visszavont tanúsítványok listája (CRL) sikeresen importálva. ">
+<!ENTITY  crl.issuer.label                "CRL kibocsátója:">
+<!ENTITY  crl.issuer.org.label            "Szervezet:">
+<!ENTITY  crl.issuer.orgunit.label        "Egység:">
+<!ENTITY  crl.import.nextupdate.label     "Következő frissítés: ">
+<!ENTITY  crl.autoupdate.fail.cnt.label      "Eddigi frissítési hibák: ">
+<!ENTITY  crl.autoupdate.fail.reason.label   "Utolsó hiba részletei: ">
+<!ENTITY  ok.button        "OK">
+<!ENTITY  cancel.button    "Mégse">
+<!ENTITY  help.button      "Súgó">
+<!ENTITY  edit.button      "Beállítások">
+
+<!ENTITY validation.ocsp.label      "OCSP">
+<!ENTITY validation.ocsp.description "A &brandShortName; az Online Certificate Status Protocol (OCSP) segítségével ellenőrizheti a tanúsítványokat. A &brandShortName;:">
+<!ENTITY disableOCSP.label "Nincs OCSP használat a tanúsítványok ellenőrzésekor">
+<!ENTITY certOCSP.label "Csak az OCSP szolgáltatás címét tartalmazó tanúsítványok ellenőrzése">
+<!ENTITY proxyOCSP.label "Minden tanúsítvány ellenőrzése a következő URL és aláíró felhasználásával:">
+<!ENTITY serviceURL.label "Szolgáltatási URL:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY signingCA.label "Válasz aláírója:">
+<!ENTITY signingCA.accesskey "v">
+
+<!-- Software Update -->
+<!ENTITY softwareupdate.label             "Szoftverfrissítés">
+<!ENTITY softwareupdateinfo.label         "Frissítések rendszeres keresése: ">
+<!ENTITY enableSmartUpdate.label          "&brandShortName;">
+<!ENTITY enableSmartUpdate.accesskey      "F">
+<!ENTITY enableExtensionUpdate.label      "Kiterjesztések">
+<!ENTITY enableExtensionUpdate.accesskey  "K">
+<!ENTITY enableAutoInstall.label          "Kiterjesztések frissítéseinek automatikus letöltése és telepítése">
+<!ENTITY enableAutoInstall.accesskey      "a">
+<!ENTITY checkNow.label                   "Ellenőrzés">
+<!ENTITY checkNow.accesskey               "E">
+
+<!ENTITY xpinstall.allowedSites.label     "Allowed Sites">
+<!ENTITY xpinstall.allowedSites.accesskey "S">

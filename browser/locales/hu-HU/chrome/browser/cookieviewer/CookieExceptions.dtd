@@ -1,0 +1,9 @@
+<!ENTITY window.title                 "Kivételek">
+<!ENTITY treehead.sitename.label      "Webhely">
+<!ENTITY treehead.status.label        "Állapot">
+<!ENTITY addpermission.label          "Új webhely">
+<!ENTITY removepermission.label       "Webhely eltávolítása">
+<!ENTITY removeallpermissions.label   "Minden webhely eltávolítása">
+<!ENTITY address.label                "Webhely címe:">
+<!ENTITY block.label                  "Engedélyezés">
+<!ENTITY allow.label                  "Tiltás">

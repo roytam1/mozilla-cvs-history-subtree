@@ -1,0 +1,98 @@
+# The contents of this file are subject to the Mozilla Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+# 
+# The Original Code is Mozilla Communicator.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corp. Portions created by Netscape Communications
+# Corp. are Copyright (C) 1999 Netscape Communications Corp. All
+# Rights Reserved.
+# 
+# Contributor(s):
+#   Stephen Lamm <slamm@netscape.com>
+#   Blake Ross <blaker@netscape.com>
+
+<!ENTITY fileMenu.label                 "Fájl">
+<!ENTITY fileMenu.accesskey             "F">
+<!ENTITY viewMenu.label                 "Nézet">
+<!ENTITY viewMenu.accesskey             "N">
+
+<!ENTITY closeCmd.label "Bezárás">
+<!ENTITY closeCmd.accesskey "B">
+<!ENTITY closeCmd.commandkey "W">
+                                                                                             
+<!ENTITY menuitem.newBookmark.label    "Könyvjelző">
+<!ENTITY menuitem.newBookmark.accesskey "K">
+<!ENTITY menuitem.newLivemark.label    "New Live Bookmark...">
+<!ENTITY menuitem.newLivemark.accesskey "L">
+<!ENTITY menuitem.newFolder.label        "Mappa">
+<!ENTITY menuitem.newFolder.accesskey    "M">
+<!ENTITY menuitem.newSeparator.label     "Elválasztó">
+<!ENTITY menuitem.newSeparator.accesskey "E">
+<!ENTITY menuitem.import.label         "Könyvjelzők importálása...">
+<!ENTITY menuitem.import.accesskey     "i">
+<!ENTITY menuitem.export.label         "Könyvjelzők exportálása...">
+<!ENTITY menuitem.export.accesskey     "x">
+<!ENTITY menuitem.find.label           "Könyvjelzők keresése...">
+<!ENTITY command.findBookmarks.label   "Keres...">
+<!ENTITY menuitem.find.accesskey       "K">
+<!ENTITY edit.find.keybinding          "f">
+<!ENTITY command.properties.label      "Tulajdonságok">
+<!ENTITY command.properties.accesskey  "T">
+<!ENTITY edit.properties.keybinding    "i">
+<!ENTITY command.rename.label          "Átnevezés...">
+<!ENTITY command.rename.accesskey      "t">
+<!ENTITY command.delete.label          "Törlés">
+<!ENTITY command.delete.accesskey      "T">
+<!ENTITY command.moveBookmark.label    "Könyvjelzők áthelyezése...">
+<!ENTITY command.moveBookmarkShort.label "Áthelyezés...">
+<!ENTITY command.moveBookmark.accesskey "Á">
+<!ENTITY command.addBookmark.label     "Hozzáad...">
+<!ENTITY command.manageBookmarks.label "Kezel">
+<!ENTITY command.refreshLivemark.label "Refresh Live Bookmark">
+
+<!ENTITY menuitem.view.command.toolbar.label        "Eszköztár">
+<!ENTITY menuitem.view.command.toolbar.accesskey    "E">
+<!ENTITY menuitem.view.show_columns.label           "Oszlopok megjelenítése">
+<!ENTITY menuitem.view.show_columns.accesskey       "O">
+<!ENTITY menuitem.view.unsorted.label               "Rendezetlen">
+<!ENTITY menuitem.view.unsorted.accesskey           "r">
+<!ENTITY menuitem.view.ascending.label              "A > Z">
+<!ENTITY menuitem.view.ascending.accesskey          "a">
+<!ENTITY menuitem.view.descending.label             "Z > A">
+<!ENTITY menuitem.view.descending.accesskey         "z">
+<!ENTITY menuitem.personaltoolbarfolder.label       "Beállítás a személyes eszköztár mappájaként">
+<!ENTITY menuitem.personaltoolbarfolder.accesskey   "s">
+
+<!ENTITY treecol.name.label             "Név">
+<!ENTITY treecol.name.accesskey         "n">
+<!ENTITY treecol.url.label              "Hely (URL)">
+<!ENTITY treecol.url.accesskey          "H">
+<!ENTITY treecol.shortcut.label         "Kulcsszó">
+<!ENTITY treecol.shortcut.accesskey     "k">
+<!ENTITY treecol.addedon.label          "Hozzáadva">
+<!ENTITY treecol.addedon.accesskey      "H">
+<!ENTITY treecol.lastmod.label          "Utoljára módosítva">
+<!ENTITY treecol.lastmod.accesskey      "U">
+<!ENTITY treecol.lastvisit.label        "Utoljára látogatva">
+<!ENTITY treecol.lastvisit.accesskey    "t">
+<!ENTITY treecol.description.label      "Leírás">
+<!ENTITY treecol.description.accesskey  "L">
+
+<!ENTITY bookmarksRoot.label            "Bookmarks">
+
+<!ENTITY bookmarksWindowTitle.label     "Könyvjelzőkezelő">
+
+<!ENTITY search.label                   "Keresés">
+<!ENTITY search.accesskey               "K">
+
+<!-- selectBookmark.xul -->
+<!ENTITY selectBookmark.title      "Beállítás kezdőlapként">
+<!ENTITY selectBookmark.label      "Válassza ki a könyvjelzőt, amelyet kezdőlapként kíván használni. Ha mappát választ, akkor a mappában található könyvjelzők több böngészőlapon fognak megnyílni.">

@@ -1,0 +1,8 @@
+<!ENTITY aboutDialog.title      "A &brandFullName; névjegye">
+<!ENTITY copyright              "Közreműködők">
+<!ENTITY aboutLink              "&lt; A &brandFullName; névjegye">
+<!ENTITY aboutVersion           "verziószám: &version;">
+<!ENTITY copyrightText          "&#169;1998-2004 A közreműködők. Minden jog fenntartva. A Firefox
+                                 és a Firefox logó a Mozilla Foundation védjegye.  Minden jog
+                                 fenntartva. Bizonyos védjegyeket a Charlton Company
+                                 engedélyével használunk. ">
