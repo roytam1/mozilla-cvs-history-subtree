@@ -38,7 +38,6 @@
 #import "NSString+Utils.h"
 
 #import "CHBrowserService.h"
-#import "CHDownloadFactories.h"
 #import "CHBrowserView.h"
 
 #include "nsIWindowWatcher.h"
