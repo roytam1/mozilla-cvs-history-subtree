@@ -17,6 +17,10 @@
 #ifndef _SECSTUBT_H_
 #define _SECSTUBT_H_
 
+typedef struct _item {
+    unsigned char *data;
+    unsigned long len;
+} SECItem;
 
 struct CERTCertificateStr {
     SECItem derCert;
@@ -30,7 +34,11 @@ typedef struct _sha1context SHA1Context;
 #define MD5_LENGTH	16
 #define SHA1_LENGTH	20
 
-
+typedef enum _SECStatus {
+    SECWouldBlock = -2,
+    SECFailure = -1,
+    SECSuccess = 0
+} SECStatus;
 
 #define SSL_SECURITY_STATUS_NOOPT -1
 #define SSL_SECURITY_STATUS_OFF           0
