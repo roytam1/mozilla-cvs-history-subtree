@@ -742,7 +742,7 @@ pk11_FindSecretKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 
 
 	/*
- 	 * Because of various endian and word lengths The database may have
+ 	 * Because of various endian and word lengths, the database may have
 	 * stored the keyType value in one of the following formats:
 	 *   (kt) <= 0x1f 
 	 *                                   length data
@@ -756,9 +756,9 @@ pk11_FindSecretKeyAttribute(PK11TokenObject *object, CK_ATTRIBUTE_TYPE type)
 	 * where (a) is 0 or >= 0x80. currently (a) can only be 0.
 	 */
 	/*
- 	 * this key was written on a 64 bit platform with a using NSS 3.9
-	 * or earlier. Reduce the 64 bit possibilities above. We were are
-	 * through, we will only have:
+ 	 * This key was written on a 64 bit platform with a using NSS 3.9
+	 * or earlier. Reduce the 64 bit possibilities above. When  through,
+	 * we will only have:
 	 * 
 	 * Big Endian,     pre-3.9, all lengths: 1  (kt)
 	 * Little Endian,  pre-3.9, all lengths: 4  (kt) 0  0  0

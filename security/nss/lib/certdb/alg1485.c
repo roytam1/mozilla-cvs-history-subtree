@@ -697,9 +697,8 @@ AppendAVA(stringBuf *bufp, CERTAVA *ava)
     /* Check value length */
     if (avaValue->len > maxLen + 3) {  /* must be room for "..." */
 	/* avaValue is a UTF8 string, freshly allocated and returned to us 
-	** by CERT_DecodeAVAValue or get_hex_string just above, so we can
-	** modify it here.  See if we're in the middle of a multi-byte
-	** UTF8 character.
+	** by CERT_DecodeAVAValue just above, so we can modify it here.
+	** See if we're in the middle of a multi-byte UTF8 character.
 	*/
 	while (((avaValue->data[maxLen] & 0xc0) == 0x80) && maxLen > 0) {
 	   maxLen--;
@@ -926,7 +925,7 @@ CERT_GetCertificateEmailAddress(CERTCertificate *cert)
 		if (rawEmailAddr) {
 		    break;
 		}
-		current = CERT_GetNextGeneralName(current);
+		current = cert_get_next_general_name(current);
 	    } while (current != nameList);
 	}
     }
@@ -1040,7 +1039,7 @@ cert_GetCertificateEmailAddresses(CERTCertificate *cert)
 		} else if (current->type == certRFC822Name) {
 		    pBuf = appendItemToBuf(pBuf, &current->name.other, &maxLen);
 		}
-		current = CERT_GetNextGeneralName(current);
+		current = cert_get_next_general_name(current);
 	    } while (current != nameList);
 	}
 	SECITEM_FreeItem(&subAltName, PR_FALSE);

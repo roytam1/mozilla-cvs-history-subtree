@@ -659,9 +659,7 @@ cert_GetCertType(CERTCertificate *cert)
 	PORT_Free(encodedExtKeyUsage.data);
 	CERT_DestroyOidSequence(extKeyUsage);
     }
-    /* Assert that it is safe to cast &cert->nsCertType to "PRInt32 *" */
-    PORT_Assert(sizeof(cert->nsCertType) == sizeof(PRInt32));
-    PR_AtomicSet((PRInt32 *)&cert->nsCertType, nsCertType);
+    PR_AtomicSet(&cert->nsCertType, nsCertType);
     return(SECSuccess);
 }
 
@@ -1138,7 +1136,6 @@ CERT_KeyUsageAndTypeForCertUsage(SECCertUsage usage,
 	    requiredCertType = NS_CERT_TYPE_OBJECT_SIGNING_CA;
 	    break;
 	  case certUsageAnyCA:
-	  case certUsageVerifyCA:
 	  case certUsageStatusResponder:
 	    requiredKeyUsage = KU_KEY_CERT_SIGN;
 	    requiredCertType = NS_CERT_TYPE_OBJECT_SIGNING_CA |
@@ -1339,7 +1336,20 @@ CERT_AddOKDomainName(CERTCertificate *cert, const char *hn)
 static SECStatus
 cert_TestHostName(char * cn, const char * hn)
 {
-    int regvalid = PORT_RegExpValid(cn);
+    char * hndomain;
+    int    regvalid;
+
+    if ((hndomain = PORT_Strchr(hn, '.')) == NULL) {
+	/* No domain in URI host name */
+	char * cndomain;
+	if ((cndomain = PORT_Strchr(cn, '.')) != NULL &&
+	    (cndomain - cn) > 0) {
+	    /* there is a domain in the cn string, so chop it off */
+	    *cndomain = '\0';
+	}
+    }
+
+    regvalid = PORT_RegExpValid(cn);
     if (regvalid != NON_SXP) {
 	SECStatus rv;
 	/* cn is a regular expression, try to match the shexp */
@@ -1360,6 +1370,13 @@ cert_TestHostName(char * cn, const char * hn)
 	return SECSuccess;
     }
 	    
+    if ( hndomain ) {
+	/* compare just domain name with cert name */
+	if ( PORT_Strcasecmp(hndomain+1, cn) == 0 ) {
+	    return SECSuccess;
+	}
+    }
+
     PORT_SetError(SSL_ERROR_BAD_CERT_DOMAIN);
     return SECFailure;
 }
@@ -1463,7 +1480,7 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 	default:
 	    break;
 	}
-	current = CERT_GetNextGeneralName(current);
+	current = cert_get_next_general_name(current);
     } while (current != nameList);
 
     if ((!isIPaddr && !DNSextCount) || (isIPaddr && !IPextCount)) {
@@ -1995,17 +2012,9 @@ CERT_DecodeTrustString(CERTCertTrust *trust, char *trusts)
     unsigned int i;
     unsigned int *pflags;
     
-    if (!trust) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
-    }
     trust->sslFlags = 0;
     trust->emailFlags = 0;
     trust->objectSigningFlags = 0;
-    if (!trusts) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return SECFailure;
-    }
 
     pflags = &trust->sslFlags;
     

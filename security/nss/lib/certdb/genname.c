@@ -279,7 +279,7 @@ loser:
 }
 
 CERTGeneralName *
-CERT_GetNextGeneralName(CERTGeneralName *current)
+cert_get_next_general_name(CERTGeneralName *current)
 {
     PRCList *next;
     
@@ -288,7 +288,7 @@ CERT_GetNextGeneralName(CERTGeneralName *current)
 }
 
 CERTGeneralName *
-CERT_GetPrevGeneralName(CERTGeneralName *current)
+cert_get_prev_general_name(CERTGeneralName *current)
 {
     PRCList *prev;
     prev = current->l.prev;
@@ -296,7 +296,7 @@ CERT_GetPrevGeneralName(CERTGeneralName *current)
 }
 
 CERTNameConstraint *
-CERT_GetNextNameConstraint(CERTNameConstraint *current)
+cert_get_next_name_constraint(CERTNameConstraint *current)
 {
     PRCList *next;
     
@@ -305,7 +305,7 @@ CERT_GetNextNameConstraint(CERTNameConstraint *current)
 }
 
 CERTNameConstraint *
-CERT_GetPrevNameConstraint(CERTNameConstraint *current)
+cert_get_prev_name_constraint(CERTNameConstraint *current)
 {
     PRCList *prev;
     prev = current->l.prev;
@@ -386,10 +386,10 @@ cert_EncodeGeneralNames(PRArenaPool *arena, CERTGeneralName *names)
     }
     head = &(names->l);
     while (current_name->l.next != head) {
-	current_name = CERT_GetNextGeneralName(current_name);
+	current_name = cert_get_next_general_name(current_name);
 	++count;
     }
-    current_name = CERT_GetNextGeneralName(current_name);
+    current_name = cert_get_next_general_name(current_name);
     items = PORT_ArenaNewArray(arena, SECItem *, count + 1);
     if (items == NULL) {
 	goto loser;
@@ -399,7 +399,7 @@ cert_EncodeGeneralNames(PRArenaPool *arena, CERTGeneralName *names)
 	if (items[i] == NULL) {
 	    goto loser;
 	}
-	current_name = CERT_GetNextGeneralName(current_name);
+	current_name = cert_get_next_general_name(current_name);
     }
     items[i] = NULL;
     /* TODO: unmark arena */
@@ -489,7 +489,7 @@ cert_DecodeGeneralNames (PRArenaPool  *arena,
     }
     if (currentName) {
 	/* TODO: unmark arena */
-	return CERT_GetNextGeneralName(currentName);
+	return cert_get_next_general_name(currentName);
     }
     /* TODO: release arena to mark */
     return NULL;
@@ -510,7 +510,7 @@ cert_DestroyGeneralNames(CERTGeneralName *name)
 
     first = name;
     do {
-	next = CERT_GetNextGeneralName(name);
+	next = cert_get_next_general_name(name);
 	PORT_Free(name);
 	name = next;
     } while (name != first);
@@ -555,10 +555,10 @@ cert_EncodeNameConstraintSubTree(CERTNameConstraint  *constraints,
     }
     head = &constraints->l;
     while (current_constraint->l.next != head) {
-	current_constraint = CERT_GetNextNameConstraint(current_constraint);
+	current_constraint = cert_get_next_name_constraint(current_constraint);
 	++count;
     }
-    current_constraint = CERT_GetNextNameConstraint(current_constraint);
+    current_constraint = cert_get_next_name_constraint(current_constraint);
     items = PORT_ArenaZNewArray(arena, SECItem *, count + 1);
     if (items == NULL) {
 	goto loser;
@@ -569,7 +569,7 @@ cert_EncodeNameConstraintSubTree(CERTNameConstraint  *constraints,
 	if (items[i] == NULL) {
 	    goto loser;
 	}
-	current_constraint = CERT_GetNextNameConstraint(current_constraint);
+	current_constraint = cert_get_next_name_constraint(current_constraint);
     }
     *dest = items;
     if (*dest == NULL) {
@@ -765,7 +765,7 @@ CERT_CopyGeneralName(PRArenaPool      *arena,
 	rv = cert_CopyOneGeneralName(arena, dest, src);
 	if (rv != SECSuccess)
 	    goto loser;
-	src = CERT_GetNextGeneralName(src);
+	src = cert_get_next_general_name(src);
 	/* if there is only one general name, we shouldn't do this */
 	if (src != srcHead) {
 	    if (dest->l.next == &destHead->l) {
@@ -779,7 +779,7 @@ CERT_CopyGeneralName(PRArenaPool      *arena,
 		dest->l.next = &temp->l;
 		dest = temp;
 	    } else {
-		dest = CERT_GetNextGeneralName(dest);
+		dest = cert_get_next_general_name(dest);
 	    }
 	}
     } while (src != srcHead && rv == SECSuccess);
@@ -927,7 +927,7 @@ CERT_GetNameConstraintByType (CERTNameConstraint *constraints,
 		goto loser;
 	    *returnList = CERT_AddNameConstraint(*returnList, temp);
 	}
-	current = CERT_GetNextNameConstraint(current);
+	current = cert_get_next_name_constraint(current);
     } while (current != constraints);
     /* TODO: unmark arena */
     return SECSuccess;
@@ -969,7 +969,7 @@ CERT_GetGeneralNameByType (CERTGeneralName *genNames,
 	    PORT_Assert(0); 
 	    return NULL;
 	}
-	current = CERT_GetNextGeneralName(current);
+	current = cert_get_next_general_name(current);
     } while (current != genNames);
     return NULL;
 }
@@ -984,7 +984,7 @@ CERT_GetNamesLength(CERTGeneralName *names)
     if (names != NULL) {
 	do {
 	    length++;
-	    names = CERT_GetNextGeneralName(names);
+	    names = cert_get_next_general_name(names);
 	} while (names != first);
     }
     return length;
@@ -1424,7 +1424,7 @@ cert_CompareNameWithConstraints(CERTGeneralName     *name,
 	}
 	if (matched == SECSuccess || rv != SECSuccess)
 	    break;
-	current = CERT_GetNextNameConstraint(current);
+	current = cert_get_next_name_constraint(current);
     } while (current != constraints);
     if (rv == SECSuccess) {
         if (matched == SECSuccess) 
@@ -1502,7 +1502,7 @@ CERT_CompareNameSpace(CERTCertificate  *cert,
 	    if (rv != SECSuccess) 
 		break;
  	}
- 	currentName = CERT_GetNextGeneralName(currentName);
+ 	currentName = cert_get_next_general_name(currentName);
  	count ++;
     } while (currentName != namesList);
 done:
@@ -1565,7 +1565,7 @@ CERT_GetNickName(CERTCertificate   *cert,
 	    found = 1;
 	    break;
 	}
-	current = CERT_GetNextGeneralName(current);
+	current = cert_get_next_general_name(current);
     } while (current != names);
     if (!found)
     	goto loser;
@@ -1635,8 +1635,8 @@ CERT_CompareGeneralName(CERTGeneralName *a, CERTGeneralName *b)
 	    if (currentB == NULL) {
 		return SECFailure;
 	    }
-	    currentB = CERT_GetNextGeneralName(currentB);
-	    currentA = CERT_GetNextGeneralName(currentA);
+	    currentB = cert_get_next_general_name(currentB);
+	    currentA = cert_get_next_general_name(currentA);
 	} while (currentA != a);
     }
     if (currentB != b) {
@@ -1681,12 +1681,12 @@ CERT_CompareGeneralName(CERTGeneralName *a, CERTGeneralName *b)
 		}
 		    
 	    }
-	    currentB = CERT_GetNextGeneralName(currentB);
+	    currentB = cert_get_next_general_name(currentB);
 	} while (currentB != b && found != PR_TRUE);
 	if (found != PR_TRUE) {
 	    return SECFailure;
 	}
-	currentA = CERT_GetNextGeneralName(currentA);
+	currentA = cert_get_next_general_name(currentA);
     } while (currentA != a);
     return SECSuccess;
 }

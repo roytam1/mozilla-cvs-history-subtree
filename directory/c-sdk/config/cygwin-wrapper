@@ -2,7 +2,6 @@
 #
 # Stupid wrapper to avoid win32 dospath/cygdrive issues
 #
-
 prog=$1
 shift
 if test -z "$prog"; then

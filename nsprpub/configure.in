@@ -2209,6 +2209,7 @@ if test -n "$USE_PTHREADS"; then
 	    fi
 	    ;;
     *-openbsd*)
+        AC_DEFINE(_THREAD_SAFE)
         if test "$ac_cv_have_dash_pthread" = "yes"; then
             _PTHREAD_LDFLAGS=-pthread
         fi

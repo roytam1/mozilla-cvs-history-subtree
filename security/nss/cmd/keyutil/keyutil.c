@@ -319,7 +319,6 @@ int main(int argc, char **argv)
 	return -1;
     }
 
-    SECU_RegisterDynamicOids();
     if (dumpPublicKey) {
 	rv = DumpPublicKey(keyHandle, nickname, stdout);
     } else

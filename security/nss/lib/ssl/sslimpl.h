@@ -103,8 +103,7 @@ extern int Debug;
 #else
 #undef Debug
 #endif
-
-#if defined(DEBUG) && !defined(TRACE) && !defined(NISCC_TEST)
+#if defined(DEBUG)
 #define TRACE
 #endif
 

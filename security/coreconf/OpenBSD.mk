@@ -48,7 +48,7 @@ endif
 
 ifndef CLASSIC_NSPR
 USE_PTHREADS		= 1
-DEFINES			+= -pthread
+DEFINES			+= -D_THREAD_SAFE -pthread
 OS_LIBS			+= -pthread
 DSO_LDOPTS		+= -pthread
 endif
