@@ -270,10 +270,17 @@ nsSVGLibartPathGeometry::Render(nsISVGRendererCanvas *canvas)
 
     ArtPixMaxDepth col[3];
 
+    // XXX we should have a method on nsIImage to extract the color order
+#ifdef XP_WIN
+    col[0] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+    col[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+    col[2] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
+#else
     col[0] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
     col[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
     col[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
-
+#endif
+    
     ArtRender* render = libartCanvas->NewRender();
     NS_ASSERTION(render, "could not create render");
 
@@ -293,10 +300,17 @@ nsSVGLibartPathGeometry::Render(nsISVGRendererCanvas *canvas)
 
     ArtPixMaxDepth col[3];
 
+    // XXX we should have a method on nsIImage to extract the color order
+#ifdef XP_WIN
+    col[0] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+    col[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+    col[2] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
+#else
     col[0] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
     col[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
     col[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
-
+#endif
+    
     ArtRender* render = libartCanvas->NewRender();
     NS_ASSERTION(render, "could not create render");
 
