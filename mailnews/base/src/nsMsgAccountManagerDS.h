@@ -124,10 +124,6 @@ protected:
   nsresult appendGenericSettingsResources(nsIMsgIncomingServer *server, nsISupportsArray *aNodeArray);
   nsresult appendGenericSetting(const char *name, nsISupportsArray *aNodeArray);
 
-  PRBool IsFakeAccountRequired();
-  nsresult GetFakeAccountHostName(char **aHostName);
-  nsresult IsIncomingServerForFakeAccount(nsIMsgIncomingServer* aServer, PRBool *aResult);
-
   static nsIRDFResource* kNC_Name;
   static nsIRDFResource* kNC_FolderTreeName;
   static nsIRDFResource* kNC_FolderTreeSimpleName;
