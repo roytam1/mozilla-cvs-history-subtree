@@ -34,7 +34,7 @@ static char copyright[] = "@(#) Copyright (c) 1994 The Regents of the University
 
 #include "ldap-int.h"
 
-#if defined( HPUX10 ) && defined( _REENTRANT )
+#if defined( HPUX10 ) && defined( _REENTRANT ) && !defined ( HPUX11 )
 extern int h_errno;
 
 struct hostent *
@@ -64,4 +64,4 @@ nsldapi_compat_ctime_r( const time_t *clock, char *buf, int buflen )
     (void) ctime_r( clock, buf, buflen );
     return buf;
 }
-#endif /* HPUX10 && _REENTRANT */
+#endif /* HPUX10 && _REENTRANT && !HPUX11 */
