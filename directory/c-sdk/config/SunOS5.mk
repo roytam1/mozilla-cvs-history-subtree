@@ -63,7 +63,11 @@ else
     DEFINES += -D_PR_LOCAL_THREADS_ONLY
   else
     USE_PTHREADS = 1
+ifdef HAVE_CCONF 
+    IMPL_STRATEGY =
+else
     IMPL_STRATEGY = _PTH
+endif
   endif
 endif
 
@@ -104,7 +108,11 @@ endif
 endif
 COMPILER_TAG		= _64
 else
+ifdef HAVE_CCONF
+COMPILER_TAG		=
+else
 COMPILER_TAG		= _32
+endif
 endif
 
 RANLIB			= echo
@@ -124,9 +132,18 @@ OPTIMIZER		= -Wa,-s -gstabs
 endif
 endif
 else
+ifdef HAVE_CCONF
+CPU_ARCH		=
+else
 CPU_ARCH		= sparc
 endif
+endif
+
+ifdef HAVE_CCONF
+CPU_ARCH_TAG		=
+else
 CPU_ARCH_TAG		= _$(CPU_ARCH)
+endif
 
 ifeq (5.5,$(findstring 5.5,$(OS_RELEASE)))
 OS_DEFINES		+= -DSOLARIS2_5

@@ -23,7 +23,6 @@
 DEPTH		= ../../../..
 MOD_DEPTH	= ../..
 NSPR_TREE	= ../..
-
 CSRCS	= dirver.c
 
 include $(NSPR_TREE)/config/rules.mk
@@ -41,7 +40,7 @@ $(TARGETS): $(OBJS)
 endif
 
 export:: $(TARGETS)
-	$(INSTALL) -m 555 $(TARGETS) $(DIST)/bin
+	$(INSTALL) -m 555 $(TARGETS) ../$(DIST)/bin
 
 install:: export
 

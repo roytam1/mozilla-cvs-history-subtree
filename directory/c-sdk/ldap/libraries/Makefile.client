@@ -21,11 +21,10 @@
 #
 
 DEPTH	    = ../../../..
-MOD_DEPTH   = ../..
-NSPR_TREE   = ../..
-UNIXDIRLIST = liblber libldif libiutil libldap libprldap libssldap
+NSPR_TREE = ../..
+MOD_DEPTH = ../..
 
-include $(NSPR_TREE)/config/rules.mk
+UNIXDIRLIST = liblber libldif libiutil libldap libprldap libssldap
 
 all export::	FORCE
 	@for i in $(UNIXDIRLIST); do \

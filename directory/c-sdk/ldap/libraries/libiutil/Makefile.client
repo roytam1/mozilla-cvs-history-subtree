@@ -22,13 +22,13 @@
 
 DEPTH		= ../../../../..
 NS_DEPTH	= ../../../..
-MOD_DEPTH       = ../../..
-NSPR_TREE	= ../../..
 LDAP_SRC	= ../..
 NSCP_DISTDIR	= ../../../../../dist
+NSPR_TREE       = ../../..
+MOD_DEPTH       = ../../..
 
-include		$(NSPR_TREE)/config/rules.mk
-include		../../../build.mk
+include $(NSPR_TREE)/config/rules.mk
+include         ../../../build.mk
 
 SRCS		= iutil-lock.c
 

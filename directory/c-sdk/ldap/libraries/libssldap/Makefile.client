@@ -22,10 +22,10 @@
 
 DEPTH		= ../../../../..
 NS_DEPTH	= ../../../..
-MOD_DEPTH       = ../../..
-NSPR_TREE	= ../../..
 LDAP_SRC	= ../..
 NSCP_DISTDIR	= ../../../../../dist
+NSPR_TREE	= ../../..
+MOD_DEPTH	= ../../..
 
 include		$(NSPR_TREE)/config/rules.mk
 include		../../../build.mk
@@ -48,7 +48,8 @@ INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include \
 		   -I../../../../../dist/include \
-		   -I../../../../../dist/public/security
+		   -I../../../../../dist/public/security \
+		   -I../../../../../dist/public/nss
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS

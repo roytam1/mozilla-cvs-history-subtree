@@ -72,13 +72,14 @@ ifneq ($(HAVE_CCONF), 1)
 	else \
 		echo "No NSS $(NSS_VERSION) directory found"; \
 	fi
-endif
+else
 	@if [ -d $(CONFIGDIR)/ ]; then \
 		cd $(CONFIGDIR); \
 		gmake; \
 	else \
 		echo "No NSS $(CONFIGDIR) directory found"; \
 	fi
+endif
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
 		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) export; \

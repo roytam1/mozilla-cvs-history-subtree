@@ -21,21 +21,24 @@
 #
 		    
 NS_DEPTH        = ../../../..
-MOD_DEPTH       = ../../..
-NSPR_TREE       = ../../..
 LDAP_SRC	= ../..
 NSCP_DISTDIR	= ../../../../../dist
+NSPR_TREE = ../../..
+MOD_DEPTH = ../../..
 
-include		$(NSPR_TREE)/config/rules.mk
+include $(NSPR_TREE)/config/rules.mk
 include		../../../build.mk
 
-INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
+INSTALLDIR     = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/bin
+HEADERDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
-INCLUDES	+= -I../../../../..$(INSTALLDIR)/include \
+INCLUDES	+= -I../../../../..$(HEADERDIR)/include \
 		-I../../../../../dist/include/obsolete \
 		-I../../../../../dist/include \
 		-I../../../../../dist/public/security \
-		-I../../../ldap/include
+		-I../../../../../dist/public/nss \
+		-I../../../ldap/include \
+		-I../../../../../dist/public/svrcore
 ifdef HAVE_LIBNLS
 INCLUDES	+= -I$(LIBNLS_INCLUDES)
 endif
@@ -149,6 +152,17 @@ else
 	$(NSINSTALL) $(LIBLOCATION)/lib$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/lib$(SSLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(HAVE_CCONF), 1)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+ifeq ($(COPYFREEBL), 1)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
+else
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -157,6 +171,7 @@ else
 ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(NSCP_DISTDIR)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+endif
 endif
 endif
 
@@ -184,6 +199,11 @@ clean::
 	$(RM) $(BINS)
 
 install:: $(OBJDEST) libdir $(BINS)
+	$(NSINSTALL) $(LDAPDELETE) $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPSEARCH) $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPMODIFY) $(INSTALLDIR)
+	$(NSINSTALL) $(LDAPCMP)	   $(INSTALLDIR)
+
 
 #
 # Simple, local dependencies

@@ -33,24 +33,24 @@ HEADERS		= \
 		  disptmpl.h \
 		  lber.h \
 		  ldap.h \
+		  ldap_ssl.h \
+		  iutil.h \
 		  srchpref.h \
 		  $(NULL)
 
 include $(NSPR_TREE)/config/rules.mk
+include ../../build.mk
 
 GARBAGE		+= sdkver.h dirver.h
 
 ETCDIR		= $(DIST)/etc
 INCLUDEDIR	= $(XPDIST)/public/ldap
 
-DIR_VERSION	:= 2.0
-DIRSDK_VERSION	:= 1.0
-
 ifeq ($(OS_ARCH), WINNT)
 # Is this correct?
 DIRVER_PATH	= $(DEPTH)/netsite/ldap/build
 else
-DIRVER_PATH	= $(DIST)/bin
+DIRVER_PATH	= ../$(DIST)/bin
 endif
 
 DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
@@ -59,7 +59,6 @@ DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 
 all export::	sdkver.h dirver.h FORCE
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
-	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(DIST)/include
 
 sdkver.h:	$(DIRVER_PROG)
 	@$< $(DIRSDK_VERSION) UseSystemDate $@
