@@ -425,8 +425,27 @@ nsSVGTSpanFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
 nsSVGTSpanFrame::GetCoveredRegion()
 {
-  // XXX
-  return nsnull;
+  nsISVGRendererRegion *accu_region=nsnull;
+  
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsISVGRendererRegion> dirty_region = SVGFrame->GetCoveredRegion();
+      if (accu_region) {
+        nsCOMPtr<nsISVGRendererRegion> temp = dont_AddRef(accu_region);
+        dirty_region->Combine(temp, &accu_region);
+      }
+      else {
+        accu_region = dirty_region;
+        NS_IF_ADDREF(accu_region);
+      }
+    }
+    kid->GetNextSibling(&kid);
+  }
+  
+  return accu_region;
 }
 
 NS_IMETHODIMP
