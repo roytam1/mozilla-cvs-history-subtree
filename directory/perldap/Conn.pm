@@ -961,6 +961,71 @@ module is likely to change.
 
 =over 13
 
+=item B<add>
+
+Add a new entry to the LDAP server. Make sure you use the B<new> method
+for the Mozilla::LDAP::Entry object, to create a proper entry.
+
+=item B<browse>
+
+Searches for an LDAP entry, but sets some default values to begin with,
+such as scope=BASE, filter=(objectclass=*) and so on.  Much like B<search>
+except for these defaults.  Requires a DN value
+as an argument. An optional second argument is an array of which
+attributes to return from the entry.  Note that this does not support the
+"attributesOnly" flag.
+
+    $secondEntry = $conn->browse($entry->getDN());
+
+=item B<close>
+
+Close the LDAP connection, and clean up the object. If you don't call this
+directly, the destructor for the object instance will do the job for you.
+
+=item B<compare>
+
+Compares an attribute and value to a given DN without first doing a
+search.  Requires three arguments: a DN, the attribute name, and the value
+of the attribute. Returns TRUE if the attribute/value compared ok.
+
+    print "not" unless $conn->compare($entry->getDN(), "cn", "Big Swede");
+    print "ok";
+
+=item B<delete>
+
+This will delete the current entry, or possibly an entry as specified with
+the optional argument. You can use this function to delete any entry you
+like, by passing it an explicit DN. If you don't pass it this argument,
+B<delete> defaults to delete the current entry, from the last call to
+B<search> or B<entry>. I'd recommend doing a delete with the explicit DN,
+like
+
+    $conn->delete($entry->getDN());
+
+=item B<modifyRDN>
+
+This will rename the specified LDAP entry, by modifying it's RDN. For
+example, assuming you have a DN of
+
+    uid=leif, ou=people, dc=netscape, dc=com
+
+and you wish to rename to
+
+    uid=fiel, ou=people, dc=netscape, dc=com
+
+you'd do something like
+
+    $rdn = "uid=fiel";
+    $conn->modifyRDN($rdn, $entry->getDN());
+
+Note that this can only be done on the RDN, you could not change say
+C<ou=people> to be C<ou=hackers> in the example above. To do that, you have
+to add a new entry (a copy of the old one), and then remove the old
+entry.
+
+The last argument is a boolean (0 or 1), which indicates if the old RDN
+value should be removed from the entry. The default is TRUE ("1").
+
 =item B<new>
 
 This creates and initialized a new LDAP connection and object. The
@@ -976,6 +1041,26 @@ A typical usage could be something like
     $conn = new Mozilla::LDAP::Conn(\%ld);
 
 Also, remember that if you use SSL, the port is (usually) 636.
+
+=item B<newEntry>
+
+This will create an empty Mozilla::LDAP::Entry object, which is properly
+tied into the appropriate objectclass. Use this method instead of manually
+creating new Entry objects, or at least make sure that you use the "tie"
+function when creating the entry. This function takes no arguments, and
+returns a pointer to an ::Entry object. For instance
+
+    $entry = $conn->newEntry();
+
+or
+
+    $entry = Mozilla::LDAP::Conn->newEntry();
+
+=item B<nextEntry>
+
+This method will return the next entry from the search result, and can
+therefore only be called after a succesful search has been initiated. If
+there are no more entries to retrieve, it returns nothing (empty string).
 
 =item B<search>
 
@@ -1006,56 +1091,6 @@ attribute names to be returned (and no values). This function isn't very
 useful, since the B<search> method will actually honor properly formed
 LDAP URL's, and use it if appropriate.
 
-=item B<nextEntry>
-
-This method will return the next entry from the search result, and can
-therefore only be called after a succesful search has been initiated. If
-there are no more entries to retrieve, it returns nothing (empty string).
-
-=item B<newEntry>
-
-This will create an empty Mozilla::LDAP::Entry object, which is properly
-tied into the appropriate objectclass. Use this method instead of manually
-creating new Entry objects, or at least make sure that you use the "tie"
-function when creating the entry. This function takes no arguments, and
-returns a pointer to an ::Entry object. For instance
-
-    $entry = $conn->newEntry();
-
-or
-
-    $entry = Mozilla::LDAP::Conn->newEntry();
-
-=item B<update>
-
-After modifying an Ldap::Entry entry (see below), use the B<update>
-method to commit changes to the LDAP server. Only attributes that has been
-changed will be updated, assuming you have used the appropriate methods in
-the Entry object. For instance, do not use B<push> or B<splice> to
-modify an entry, the B<update> will not recognize such changes.
-
-To change the CN value for an entry, you could do
-
-    $entry->{cn} = ["Leif Hedstrom"];
-    $conn->update($entry);
-
-=item B<delete>
-
-This will delete the current entry, or possibly an entry as specified with
-the optional argument. You can use this function to delete any entry you
-like, by passing it an explicit DN. If you don't pass it this argument,
-B<delete> defaults to delete the current entry, from the last call to
-B<search> or B<entry>. I'd recommend doing a delete with the explicit DN,
-like
-
-    $conn->delete($entry->getDN());
-
-
-=item B<add>
-
-Add a new entry to the LDAP server. Make sure you use the B<new> method
-for the Mozilla::LDAP::Entry object, to create a proper entry.
-
 =item B<simpleAuth>
 
 This method will rebind the LDAP connection using new credentials (i.e. a
@@ -1076,64 +1111,24 @@ example:
 
     $ret = $conn->simpleAuth();		# Bind as anon again.
 
+=item B<update>
 
-=item B<close>
+After modifying an Ldap::Entry entry (see below), use the B<update>
+method to commit changes to the LDAP server. Only attributes that has been
+changed will be updated, assuming you have used the appropriate methods in
+the Entry object. For instance, do not use B<push> or B<splice> to
+modify an entry, the B<update> will not recognize such changes.
 
-Close the LDAP connection, and clean up the object. If you don't call this
-directly, the destructor for the object instance will do the job for you.
+To change the CN value for an entry, you could do
 
-=item B<modifyRDN>
-
-This will rename the specified LDAP entry, by modifying it's RDN. For
-example, assuming you have a DN of
-
-    uid=leif, ou=people, dc=netscape, dc=com
-
-and you wish to rename to
-
-    uid=fiel, ou=people, dc=netscape, dc=com
-
-you'd do something like
-
-    $rdn = "uid=fiel";
-    $conn->modifyRDN($rdn, $entry->getDN());
-
-
-Note that this can only be done on the RDN, you could not change say
-C<ou=people> to be C<ou=hackers> in the example above. To do that, you have
-to add a new entry (a copy of the old one), and then remove the old
-entry.
-
-The last argument is a boolean (0 or 1), which indicates if the old RDN
-value should be removed from the entry. The default is TRUE ("1").
+    $entry->{cn} = ["Leif Hedstrom"];
+    $conn->update($entry);
 
 =back
 
 =head2 Other methods
 
 =over 13
-
-=item B<isURL>
-
-Returns TRUE or FALSE if the given argument is a properly formed URL.
-
-=item B<getLD>
-
-Return the (internal) LDAP* connection handle, which you can use
-(carefully) to call the native LDAP API functions. You shouldn't have to
-use this in most cases, unless of course our OO layer is seriously flawed.
-
-=item B<getRes>
-
-Just like B<getLD>, except it returns the internal LDAP return message
-structure. Again, use this very carefully, and be aware that this might
-break in future releases of PerLDAP. These two methods can be used to call
-some useful API functions, like 
-
-    $cld = $conn->getLD();
-    $res = $conn->getRes();
-    $count = Mozilla::LDAP::API::ldap_count_entries($cld, $res);
-
 
 =item B<getErrorCode>
 
@@ -1159,9 +1154,30 @@ returned by the LDAP server.
 
 =item B<getErrorString>
 
-Very much like B<getError>, but return a string with a human readable
+Very much like B<getErrorCode>, but return a string with a human readable
 error message. This can then be used to print a good error message on the
 console.
+
+=item B<getLD>
+
+Return the (internal) LDAP* connection handle, which you can use
+(carefully) to call the native LDAP API functions. You shouldn't have to
+use this in most cases, unless of course our OO layer is seriously flawed.
+
+=item B<getRes>
+
+Just like B<getLD>, except it returns the internal LDAP return message
+structure. Again, use this very carefully, and be aware that this might
+break in future releases of PerLDAP. These two methods can be used to call
+some useful API functions, like 
+
+    $cld = $conn->getLD();
+    $res = $conn->getRes();
+    $count = Mozilla::LDAP::API::ldap_count_entries($cld, $res);
+
+=item B<isURL>
+
+Returns TRUE or FALSE if the given argument is a properly formed URL.
 
 =item B<printError>
 
