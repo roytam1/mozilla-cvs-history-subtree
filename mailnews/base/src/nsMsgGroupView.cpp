@@ -311,7 +311,7 @@ nsMsgGroupThread *nsMsgGroupView::AddHdrToThread(nsIMsgDBHdr *msgHdr, PRBool *pN
   }
   delete hashKey;
   if (foundThread)
-    foundThread->AddChild(msgHdr, nsnull, PR_FALSE, nsnull /* announcer */);
+    foundThread->AddChildFromGroupView(msgHdr, this);
   // check if new hdr became thread root
   if (!newThread && foundThread->m_keys[0] == msgKey)
   {
@@ -418,6 +418,7 @@ nsresult nsMsgGroupView::OnNewHeader(nsIMsgDBHdr *newHdr, nsMsgKey aParentKey, P
       if (! (m_flags[threadIndex] & MSG_FLAG_ELIDED))
       {
         PRUint32 msgIndexInThread = thread->m_keys.IndexOf(msgKey);
+        PRBool insertedAtThreadRoot = !msgIndexInThread;
         if (!msgIndexInThread && GroupViewUsesDummyRow())
           msgIndexInThread++;
 
@@ -454,7 +455,7 @@ nsresult nsMsgGroupView::OnNewHeader(nsIMsgDBHdr *newHdr, nsMsgKey aParentKey, P
         }
         // the call to NoteChange() has to happen after we add the key
         // as NoteChange() will call RowCountChanged() which will call our GetRowCount()
-        NoteChange((newThread && GroupViewUsesDummyRow()) ? threadIndex + msgIndexInThread - 1 : threadIndex + msgIndexInThread,
+        NoteChange((insertedAtThreadRoot && GroupViewUsesDummyRow()) ? threadIndex + msgIndexInThread - 1 : threadIndex + msgIndexInThread,
                       numRowsInserted, nsMsgViewNotificationCode::insertOrDelete);
 
         numRowsToInvalidate = msgIndexInThread;
