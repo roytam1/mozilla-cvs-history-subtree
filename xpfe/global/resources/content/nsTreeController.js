@@ -321,6 +321,7 @@ function nsTreeController_delete(tree)
             parentID = node.parentNode.parentNode.id;
         if (!parentID) continue;
 
+        var RDF = Components.classes[rdf_contractid].getService(Components.interfaces.nsIRDFService);
         var IDRes = RDF.GetResource(ID);
         if (!IDRes) continue;
         var parentIDRes = RDF.GetResource(parentID);
