@@ -28,7 +28,6 @@
 #include "nsIImage.h"
 #include "nsPoint.h"
 #include "nsGCCache.h"
-#include "nsRegion.h"
 #include "xlibrgb.h"
 
 // class nsDrawingSurfaceXlib;
@@ -85,7 +84,6 @@ public:
                       PRInt32 aSXOffset, PRInt32 aSYOffset,
                       const nsRect &aTileRect);
 
-  void UpdateCachedImage();
   virtual void ImageUpdated(nsIDeviceContext *aContext,
                             PRUint8 aFlags, nsRect *aUpdateRect);
   virtual nsresult    Init(PRInt32 aWidth, PRInt32 aHeight,
@@ -197,8 +195,6 @@ private:
   PRInt32       mDecodedX2;
   PRInt32       mDecodedY2;
 
-  nsRegion      mUpdateRegion;
-
   static XlibRgbHandle *mXlibRgbHandle;
   Display      *mDisplay;
 
@@ -209,7 +205,6 @@ private:
   PRInt16       mAlphaHeight;       // alpha layer height
   PRPackedBool  mAlphaValid;
   PRPackedBool  mIsSpacer;
-  PRPackedBool  mPendingUpdate;
 
   PRUint8       mFlags;             // flags set by ImageUpdated
 };

@@ -59,9 +59,9 @@ class RgnRectMemoryAllocator
   }
 
   void FreeChunk (void* aChunk) {  delete [] (PRUint8 *) aChunk;  }
-  void* NextChunk (void* aThisChunk) const { return *NS_STATIC_CAST (void**, aThisChunk); }
+  void* NextChunk (const void* aThisChunk) const { return *NS_STATIC_CAST (void**, aThisChunk); }
 
-  nsRegion::RgnRect* ChunkHead (void* aThisChunk) const
+  nsRegion::RgnRect* ChunkHead (const void* aThisChunk) const
   {   return NS_REINTERPRET_CAST (nsRegion::RgnRect*, NS_STATIC_CAST (PRUint8*, aThisChunk) + sizeof (void*));  }
 
 public:
