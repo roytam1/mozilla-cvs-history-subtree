@@ -412,7 +412,9 @@ txExecutionState::pushTemplateRule(txStylesheet::ImportFrame* aFrame,
 void
 txExecutionState::popTemplateRule()
 {
-    NS_IF_RELEASE(mTemplateRules[--mTemplateRuleCount].mModeLocalName);
+    // decrement outside of RELEASE, that would decrement twice
+    --mTemplateRuleCount;
+    NS_IF_RELEASE(mTemplateRules[mTemplateRuleCount].mModeLocalName);
 }
 
 txIEvalContext*
