@@ -164,8 +164,8 @@ access_java_array_element(JSContext *cx,
 
     /* Just let Java throw an exception instead of checking array bounds here */
     if (index < 0 || index >= array_length) {
-	char numBuf[12];
-	sprintf(numBuf, "%d", index);
+        char numBuf[12];
+        sprintf(numBuf, "%d", index);
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL,
                                             JSJMSG_BAD_JARRAY_INDEX, numBuf);
         return JS_FALSE;

@@ -107,19 +107,19 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
         if (!JSVAL_IS_STRING(idval)) {
             JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
                                             JSJMSG_BAD_JCLASS_EXPR);
-	    return JS_FALSE;
+            return JS_FALSE;
         }
 
         member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
-	
-	/*
+        
+        /*
          * See if the property looks like the explicit resolution of an
          * overloaded method, e.g. "max(double,double)".
          */
-	member_descriptor =
-	    jsj_ResolveExplicitMethod(cx, jEnv, class_descriptor, id, JS_TRUE);
-	if (member_descriptor)
-	    goto done;
+        member_descriptor =
+            jsj_ResolveExplicitMethod(cx, jEnv, class_descriptor, id, JS_TRUE);
+        if (member_descriptor)
+            goto done;
 
         /* Why do we have to do this ? */
         if (!strcmp(member_name, "prototype")) {
@@ -373,15 +373,15 @@ JavaClass_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         member_descriptor = JSVAL_TO_PRIVATE(*statep);
         if (member_descriptor) {
 
-	    /* Don't enumerate explicit-signature methods, i.e. enumerate toValue,
-	       but not toValue(int), toValue(double), etc. */
-	    while (member_descriptor->methods && member_descriptor->methods->is_alias) {
-		member_descriptor = member_descriptor->next;
-		if (!member_descriptor) {
-		    *statep = JSVAL_NULL;
-		    return JS_TRUE;
-		}
-	    }
+            /* Don't enumerate explicit-signature methods, i.e. enumerate toValue,
+               but not toValue(int), toValue(double), etc. */
+            while (member_descriptor->methods && member_descriptor->methods->is_alias) {
+                member_descriptor = member_descriptor->next;
+                if (!member_descriptor) {
+                    *statep = JSVAL_NULL;
+                    return JS_TRUE;
+                }
+            }
 
             *idp = member_descriptor->id;
             *statep = PRIVATE_TO_JSVAL(member_descriptor->next);
@@ -579,7 +579,7 @@ getClass(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
          !JS_InstanceOf(cx, obj_arg, &JavaArray_class, 0))) {
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
                                                 JSJMSG_NEED_JOBJECT_ARG);
-	return JS_FALSE;
+        return JS_FALSE;
     }
 
     java_wrapper = JS_GetPrivate(cx, obj_arg);

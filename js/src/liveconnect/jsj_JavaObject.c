@@ -303,7 +303,7 @@ JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
  */
 static JSBool
 inherit_props_from_JS_natives(JSContext *cx, const char *js_constructor_name,
-		              const char *member_name, jsval *vp)
+                              const char *member_name, jsval *vp)
 {
     JSObject *global_obj, *constructor_obj, *prototype_obj;
     jsval constructor_val, prototype_val;
@@ -311,7 +311,7 @@ inherit_props_from_JS_natives(JSContext *cx, const char *js_constructor_name,
     global_obj = JS_GetGlobalObject(cx);
     JS_ASSERT(global_obj);
     if (!global_obj)
-	return JS_FALSE;
+        return JS_FALSE;
 
     JS_GetProperty(cx, global_obj, js_constructor_name, &constructor_val);
     JS_ASSERT(JSVAL_IS_OBJECT(constructor_val));
@@ -329,7 +329,7 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
                     JavaObjectWrapper **java_wrapperp,
                     jsid id,
                     JavaMemberDescriptor **member_descriptorp,
-		    jsval *vp)
+                    jsval *vp)
 {
     jsval idval;
     JavaObjectWrapper *java_wrapper;
@@ -346,7 +346,7 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
         if (JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
             (member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) != NULL) {
             if (!strcmp(member_name, "constructor"))
-		goto done;
+                goto done;
         }
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, JSJMSG_BAD_OP_JOBJECT);
         return JS_FALSE;
@@ -357,18 +357,18 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     
     member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
     if (member_descriptor)
-	goto done;
+        goto done;
     
     /* Instances can reference static methods and fields */
     member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
     if (member_descriptor)
-	goto done;
+        goto done;
 
     /* Ensure that the property we're searching for is string-valued. */
     JS_IdToValue(cx, id, &idval);
     if (!JSVAL_IS_STRING(idval)) {
-	JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, JSJMSG_BAD_JOBJECT_EXPR);
-	return JS_FALSE;
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, JSJMSG_BAD_JOBJECT_EXPR);
+        return JS_FALSE;
     }
     member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
 
@@ -384,20 +384,20 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
      *     on JavaArray objects, however, since the 'length' property is read-only.)
      */
     if (vp) {
-	if ((class_descriptor->type == JAVA_SIGNATURE_JAVA_LANG_STRING) &&
-	    inherit_props_from_JS_natives(cx, "String", member_name, vp))
-	    goto done;
-	if ((class_descriptor->type == JAVA_SIGNATURE_ARRAY) &&
-	    inherit_props_from_JS_natives(cx, "Array", member_name, vp))
-	    goto done;
+        if ((class_descriptor->type == JAVA_SIGNATURE_JAVA_LANG_STRING) &&
+            inherit_props_from_JS_natives(cx, "String", member_name, vp))
+            goto done;
+        if ((class_descriptor->type == JAVA_SIGNATURE_ARRAY) &&
+            inherit_props_from_JS_natives(cx, "Array", member_name, vp))
+            goto done;
     }
 
     /* Check for access to magic prototype chain property */
     if (!strcmp(member_name, "__proto__")) {
-	proto_chain = JS_GetPrototype(cx, obj);
-	if (vp)
-	    *vp = OBJECT_TO_JSVAL(proto_chain);
-	goto done;
+        proto_chain = JS_GetPrototype(cx, obj);
+        if (vp)
+            *vp = OBJECT_TO_JSVAL(proto_chain);
+        goto done;
     }
     
     /*
@@ -408,26 +408,26 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
      */
     member_descriptor = jsj_ResolveExplicitMethod(cx, jEnv, class_descriptor, id, JS_FALSE);
     if (member_descriptor)
-	goto done;
+        goto done;
     member_descriptor = jsj_ResolveExplicitMethod(cx, jEnv, class_descriptor, id, JS_TRUE);
     if (member_descriptor)
-	goto done;
+        goto done;
     
     /* Is this lookup on behalf of a GetProperty or a LookupProperty ? */
     if (vp) {
-	/* If so, follow __proto__ link to search prototype chain */
-	proto_chain = JS_GetPrototype(cx, obj);
+        /* If so, follow __proto__ link to search prototype chain */
+        proto_chain = JS_GetPrototype(cx, obj);
 
-	/* TODO: No way to tell if the property doesn't exist in proto_chain
-	   or if it exists, but has an undefined value.  We assume the former. */
-	if (proto_chain && JS_LookupProperty(cx, proto_chain, member_name, vp) &&
-	    (*vp != JSVAL_VOID))
-	    goto done;
+        /* TODO: No way to tell if the property doesn't exist in proto_chain
+           or if it exists, but has an undefined value.  We assume the former. */
+        if (proto_chain && JS_LookupProperty(cx, proto_chain, member_name, vp) &&
+            (*vp != JSVAL_VOID))
+            goto done;
     }
 
     /* Report lack of Java member with the given property name */
     JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, JSJMSG_NO_INSTANCE_NAME,
-	                 class_descriptor->name, member_name);
+                         class_descriptor->name, member_name);
     return JS_FALSE;
 
 done:
@@ -542,19 +542,19 @@ JavaObject_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 
     /* Could be assignment to magic JS __proto__ property rather than a Java field */
     if (!member_descriptor) {
-	JS_IdToValue(cx, id, &idval);
-	if (!JSVAL_IS_STRING(idval))
-	    goto no_such_field;
-	member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
-	if (strcmp(member_name, "__proto__"))
-	    goto no_such_field;
-	if (!JSVAL_IS_OBJECT(*vp)) {
-	    JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-				 JSJMSG_BAD_PROTO_ASSIGNMENT);
-	    return JS_FALSE;
-	}
-	JS_SetPrototype(cx, obj, JSVAL_TO_OBJECT(*vp));
-	return JS_TRUE;
+        JS_IdToValue(cx, id, &idval);
+        if (!JSVAL_IS_STRING(idval))
+            goto no_such_field;
+        member_name = JS_GetStringBytes(JSVAL_TO_STRING(idval));
+        if (strcmp(member_name, "__proto__"))
+            goto no_such_field;
+        if (!JSVAL_IS_OBJECT(*vp)) {
+            JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                                 JSJMSG_BAD_PROTO_ASSIGNMENT);
+            return JS_FALSE;
+        }
+        JS_SetPrototype(cx, obj, JSVAL_TO_OBJECT(*vp));
+        return JS_TRUE;
     }
 
     /* Check for the case where there is a method with the given name, but no field
@@ -600,10 +600,10 @@ JavaObject_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
 
     old_reporter = JS_SetErrorReporter(cx, NULL);
     if (lookup_member_by_id(cx, jEnv, obj, NULL, id, NULL, &dummy_val)) {
-	/* TODO - objp may not be set correctly if a property is found, not in
-	   obj, but somewhere in obj's proto chain.  However, there is
-	   no exported JS API to discover which object a property is defined
-	   in. */
+        /* TODO - objp may not be set correctly if a property is found, not in
+           obj, but somewhere in obj's proto chain.  However, there is
+           no exported JS API to discover which object a property is defined
+           in. */
         *objp = obj;
         *propp = (JSProperty*)1;
     } else {
@@ -711,17 +711,17 @@ JavaObject_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         member_descriptor = JSVAL_TO_PRIVATE(*statep);
         if (member_descriptor) {
 
-	    /* Don't enumerate explicit-signature methods, i.e. enumerate toValue,
-	       but not toValue(int), toValue(double), etc. */
-	    while (member_descriptor->methods && member_descriptor->methods->is_alias) {
-		member_descriptor = member_descriptor->next;
-		if (!member_descriptor) {
-		    *statep = JSVAL_NULL;
-		    return JS_TRUE;
-		}
-	    }
+            /* Don't enumerate explicit-signature methods, i.e. enumerate toValue,
+               but not toValue(int), toValue(double), etc. */
+            while (member_descriptor->methods && member_descriptor->methods->is_alias) {
+                member_descriptor = member_descriptor->next;
+                if (!member_descriptor) {
+                    *statep = JSVAL_NULL;
+                    return JS_TRUE;
+                }
+            }
             
-	    *idp = member_descriptor->id;
+            *idp = member_descriptor->id;
             *statep = PRIVATE_TO_JSVAL(member_descriptor->next);
             return JS_TRUE;
         }
