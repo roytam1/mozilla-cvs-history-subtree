@@ -3310,7 +3310,7 @@ nsXULElement::HandleDOMEvent(nsIPresContext* aPresContext,
     }
 
     //Local handling stage
-    if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH)) {
+    if (mListenerManager) {
         aEvent->flags |= aFlags;
         nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(NS_STATIC_CAST(nsIContent *, this)));
         mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, target, aFlags, aEventStatus);

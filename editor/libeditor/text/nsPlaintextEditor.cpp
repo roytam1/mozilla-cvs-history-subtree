@@ -159,6 +159,12 @@ nsPlaintextEditor::~nsPlaintextEditor()
   nsresult result = GetDOMEventReceiver(getter_AddRefs(erP));
   if (NS_SUCCEEDED(result) && erP) 
   {
+    nsCOMPtr<nsIDOM3EventTarget> dom3Targ(do_QueryInterface(erP));
+    nsCOMPtr<nsIDOMEventGroup> sysGroup;
+    if (NS_SUCCEEDED(erP->GetSystemEventGroup(getter_AddRefs(sysGroup)))) {
+      result = dom3Targ->RemoveGroupedEventListener(NS_LITERAL_STRING("keypress"), mKeyListenerP, PR_FALSE, sysGroup);
+    }
+
     if (mKeyListenerP) {
       erP->RemoveEventListenerByIID(mKeyListenerP, NS_GET_IID(nsIDOMKeyListener));
     }

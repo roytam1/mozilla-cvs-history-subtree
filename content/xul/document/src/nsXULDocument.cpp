@@ -2450,7 +2450,7 @@ nsXULDocument::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   //Local handling stage
-  if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH)) {
+  if (mListenerManager) {
     aEvent->flags |= aFlags;
     mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, this, aFlags, aEventStatus);
     aEvent->flags &= ~aFlags;

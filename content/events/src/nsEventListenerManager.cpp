@@ -1259,6 +1259,10 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
   NS_ENSURE_ARG_POINTER(aEventStatus);
   nsresult ret = NS_OK;
 
+  if (aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH) {
+    return ret;
+  }
+
   if (aFlags & NS_EVENT_FLAG_INIT) {
     aFlags |= (NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE);
   }
@@ -2735,9 +2739,7 @@ nsEventListenerManager::AddGroupedEventListener(const nsAReadableString& aType,
 {
   PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
 
-  nsCOMPtr<nsIDOMEventGroup> sysGroup;
-  GetSystemEventGroupLM(getter_AddRefs(sysGroup));
-  return AddEventListenerByType(aListener, aType, flags, sysGroup);
+  return AddEventListenerByType(aListener, aType, flags, aEvtGrp);
 }
 
 NS_IMETHODIMP 
@@ -2748,9 +2750,7 @@ nsEventListenerManager::RemoveGroupedEventListener(const nsAReadableString& aTyp
 {
   PRInt32 flags = aUseCapture ? NS_EVENT_FLAG_CAPTURE : NS_EVENT_FLAG_BUBBLE;
   
-  nsCOMPtr<nsIDOMEventGroup> sysGroup;
-  GetSystemEventGroupLM(getter_AddRefs(sysGroup));
-  return RemoveEventListenerByType(aListener, aType, flags, sysGroup);
+  return RemoveEventListenerByType(aListener, aType, flags, aEvtGrp);
 }
 
 NS_IMETHODIMP

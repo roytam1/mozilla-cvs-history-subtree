@@ -841,21 +841,22 @@ nsGenericDOMDataNode::HandleDOMEvent(nsIPresContext* aPresContext,
       externalDOMEvent = PR_TRUE;
     }
 
-    aEvent->flags = aFlags;
+    aEvent->flags |= aFlags;
     aFlags &= ~(NS_EVENT_FLAG_CANT_BUBBLE | NS_EVENT_FLAG_CANT_CANCEL);
+    aFlags |= NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE;
   }
 
   nsIContent *parent_weak = GetParentWeak();
 
   //Capturing stage evaluation
-  if (NS_EVENT_FLAG_BUBBLE != aFlags) {
+  if (NS_EVENT_FLAG_CAPTURE & aFlags) {
     //Initiate capturing phase.  Special case first call to document
     if (parent_weak) {
       parent_weak->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                  NS_EVENT_FLAG_CAPTURE, aEventStatus);
+                                  aFlags & NS_EVENT_CAPTURE_MASK, aEventStatus);
     } else if (mDocument) {
       ret = mDocument->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                      NS_EVENT_FLAG_CAPTURE, aEventStatus);
+                                      aFlags & NS_EVENT_CAPTURE_MASK, aEventStatus);
     }
   }
 
@@ -863,10 +864,9 @@ nsGenericDOMDataNode::HandleDOMEvent(nsIPresContext* aPresContext,
   LookupListenerManager(getter_AddRefs(listener_manager));
 
   //Local handling stage
-  if (listener_manager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH) &&
-      !(NS_EVENT_FLAG_BUBBLE & aFlags &&
-        NS_EVENT_FLAG_CANT_BUBBLE & aEvent->flags)
-      && !(aEvent->flags & NS_EVENT_FLAG_NO_CONTENT_DISPATCH)) {
+  if (listener_manager &&
+      !(NS_EVENT_FLAG_BUBBLE & aFlags && NS_EVENT_FLAG_CANT_BUBBLE & aEvent->flags) &&
+      !(aEvent->flags & NS_EVENT_FLAG_NO_CONTENT_DISPATCH)) {
     aEvent->flags |= aFlags;
     listener_manager->HandleEvent(aPresContext, aEvent, aDOMEvent, nsnull,
                                   aFlags, aEventStatus);
@@ -874,9 +874,9 @@ nsGenericDOMDataNode::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   //Bubbling stage
-  if (NS_EVENT_FLAG_CAPTURE != aFlags && parent_weak) {
+  if (NS_EVENT_FLAG_BUBBLE & aFlags && parent_weak) {
     ret = parent_weak->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                      NS_EVENT_FLAG_BUBBLE, aEventStatus);
+                                      aFlags & NS_EVENT_BUBBLE_MASK, aEventStatus);
   }
 
   if (NS_EVENT_FLAG_INIT & aFlags) {

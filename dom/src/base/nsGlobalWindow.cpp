@@ -641,9 +641,8 @@ GlobalWindowImpl::HandleDOMEvent(nsIPresContext* aPresContext,
   }
 
   // Local handling stage
-  if (mListenerManager && !(aEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH) &&
-      !((NS_EVENT_FLAG_BUBBLE & aFlags) &&
-        (NS_EVENT_FLAG_CANT_BUBBLE & aEvent->flags))) {
+  if (mListenerManager &&
+      !((NS_EVENT_FLAG_BUBBLE & aFlags) && (NS_EVENT_FLAG_CANT_BUBBLE & aEvent->flags))) {
     aEvent->flags |= aFlags;
     mListenerManager->HandleEvent(aPresContext, aEvent, aDOMEvent, this,
                                   aFlags, aEventStatus);
