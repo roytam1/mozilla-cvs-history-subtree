@@ -18,6 +18,7 @@
 
 
 #include "xp.h"
+#include "plstr.h"
 #include "prmon.h"
 
 #ifdef NSPR20
@@ -875,7 +876,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		  if (dot) {
 
 			  len = dot - name + 1;
-			  XP_STRNCPY_SAFE(buf, name, len);
+			  PL_strncpyz(buf, name, len);
 		  }/* if */
 
 		  XP_STRCAT (buf, ".nab");
@@ -917,7 +918,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		  dot = XP_STRRCHR(name, '.');
 		  if (dot) {
 			  len = dot - name + 1;
-			  XP_STRNCPY_SAFE(buf, name, len);
+			  PL_strncpyz(buf, name, len);
 		  }/* if */
 
 		  XP_STRCAT (buf, ".vcf");
@@ -953,7 +954,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		  dot = XP_STRRCHR(name, '.');
 		  if (dot) {
 			  len = dot - name + 1;
-			  XP_STRNCPY_SAFE(buf, name, len);
+			  PL_strncpyz(buf, name, len);
 		  }/* if */
 
 		  XP_STRCAT (buf, ".ldif");
@@ -1046,7 +1047,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
                               prefbuf, &len) == PREF_NOERROR)
             && *prefbuf == '/')
 	            /* guard against assert: line 806, file xp_file.c */
-            XP_STRNCPY_SAFE(buf, prefbuf, len);
+            PL_strncpyz(buf, prefbuf, len);
             /* Copy back to the buffer that was passed in.
              * We couldn't have PREF_GetCharPref() just put it there
              * initially because the size of buf wasn't passed in
@@ -1085,6 +1086,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 		name = buf;
 		break;
 
+#ifndef NO_SECURITY
      case xpCryptoPolicy:
      {
          extern void fe_GetProgramDirectory(char *path, int len);
@@ -1107,7 +1109,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
          sprintf(buf, "%.900s/%s", conf_dir, policyFN);
          break;
      }
-
+#endif
 	case xpPKCS12File:
 	  /* Convert /a/b/c/foo to /a/b/c/foo.p12 (note leading dot) */
 	  {
@@ -1122,7 +1124,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 
 				/* include NULL in length */
 				len = XP_STRLEN(name) + 1;
-				XP_STRNCPY_SAFE(buf, name, len);
+				PL_strncpyz(buf, name, len);
 
 				/* we want to concatenate ".p12" if it is not the
 				 * last 4 characters of the name already.  
@@ -1134,7 +1136,7 @@ xp_FileName (const char *name, XP_FileType type, char* buf, char* configBuf)
 				 * only side effect -- this allows for the filename
 				 * ".p12" which is fine.
 				 */
-				if((len >= 5) && XP_STRCASECMP(&(name[len-4-1]), ".p12")) {
+				if((len >= 5) && PL_strcasecmp(&(name[len-4-1]), ".p12")) {
 					XP_STRCAT(buf, ".p12");
 				} else if(len < 5) {
 					/* can't be ".p12", so we append ".p12" */
