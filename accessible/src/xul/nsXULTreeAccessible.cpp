@@ -522,8 +522,6 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetState(PRUint32 *_retval)
   mTree->GetLastVisibleRow(&lastVisibleRow);
   if (mRow < firstVisibleRow || mRow > lastVisibleRow)
     *_retval |= STATE_INVISIBLE;
-  else
-    *_retval |= STATE_SHOWING;
 
   return NS_OK;
 }
@@ -913,11 +911,7 @@ NS_IMETHODIMP nsXULTreeColumnitemAccessible::GetActionName(PRUint8 index, nsAStr
 NS_IMETHODIMP nsXULTreeColumnitemAccessible::DoAction(PRUint8 index)
 {
   if (index == eAction_Click) {
-    nsCOMPtr<nsIDOMXULElement> colElement(do_QueryInterface(mDOMNode));
-    if (colElement)
-      colElement->Click();
-
-    return NS_OK;
+    return DoCommand();
   }
 
   return NS_ERROR_INVALID_ARG;

@@ -101,6 +101,7 @@
 #include "nsEditor.h"
 #include "nsEditorUtils.h"
 #include "nsISelectionDisplay.h"
+#include "nsIInlineSpellChecker.h"
 #include "nsINameSpaceManager.h"
 #include "nsIHTMLDocument.h"
 
@@ -215,6 +216,9 @@ nsEditor::~nsEditor()
   delete mEditorObservers;   // no need to release observers; we didn't addref them
   mEditorObservers = 0;
   
+  if (mInlineSpellChecker)
+    mInlineSpellChecker->Cleanup();
+
   if (mActionListeners)
   {
     PRInt32 i;
@@ -1141,6 +1145,22 @@ nsEditor::MarkNodeDirty(nsIDOMNode* aNode)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsEditor::GetInlineSpellChecker(nsIInlineSpellChecker ** aInlineSpellChecker)
+{
+  NS_ENSURE_ARG_POINTER(aInlineSpellChecker);
+  nsresult rv;
+
+  if (!mInlineSpellChecker) {
+    mInlineSpellChecker = do_CreateInstance(MOZ_INLINESPELLCHECKER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = mInlineSpellChecker->Init(this);
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  NS_IF_ADDREF(*aInlineSpellChecker = mInlineSpellChecker);  
+  return NS_OK;
+}
 
 #ifdef XP_MAC
 #pragma mark -
@@ -2165,6 +2185,34 @@ NS_IMETHODIMP
 nsEditor::GetReconversionString(nsReconversionEventReply* aReply)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsEditor::GetQueryCaretRect(nsQueryCaretRectEventReply* aReply)
+{
+  nsCOMPtr<nsISelection> selection;
+  nsresult rv = GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(rv))
+    return rv;
+
+  if (!mPresShellWeak)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+  if (!ps)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  nsCOMPtr<nsICaret> caretP;
+  rv = ps->GetCaret(getter_AddRefs(caretP));
+
+  if (NS_FAILED(rv) || !caretP)
+    return rv;
+
+  PRBool cursorIsCollapsed;
+  rv = caretP->GetCaretCoordinates(nsICaret::eIMECoordinates, selection,
+                                   &aReply->mCaretRect, &cursorIsCollapsed, nsnull);
+
+  return rv;
 }
 
 #ifdef XP_MAC
@@ -5204,6 +5252,26 @@ nsEditor::RemoveAttributeOrEquivalent(nsIDOMElement * aElement,
                                       PRBool aSuppressTransaction)
 {
   return RemoveAttribute(aElement, aAttribute);
+}
+
+nsresult
+nsEditor::HandleInlineSpellCheck(PRInt32 action,
+                                   nsISelection *aSelection,
+                                   nsIDOMNode *previousSelectedNode,
+                                   PRInt32 previousSelectedOffset,
+                                   nsIDOMNode *aStartNode,
+                                   PRInt32 aStartOffset,
+                                   nsIDOMNode *aEndNode,
+                                   PRInt32 aEndOffset)
+{
+  return mInlineSpellChecker ? mInlineSpellChecker->SpellCheckAfterEditorChange(action,
+                                                       aSelection,
+                                                       previousSelectedNode,
+                                                       previousSelectedOffset,
+                                                       aStartNode,
+                                                       aStartOffset,
+                                                       aEndNode,
+                                                       aEndOffset) : NS_OK;
 }
 
 NS_IMETHODIMP

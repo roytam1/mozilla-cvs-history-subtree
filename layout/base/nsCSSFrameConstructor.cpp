@@ -4806,10 +4806,24 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
       // Create display and button frames from the combobox's anonymous content.
       // The anonymous content is appended to existing anonymous content for this
       // element (the scrollbars).
+
+      // save the incoming pseudo frame state, so that we don't end up
+      // with those pseudoframes in childItems
+      nsPseudoFrames priorPseudoFrames; 
+      aState.mPseudoFrames.Reset(&priorPseudoFrames);
+
       nsFrameItems childItems;
       CreateAnonymousFrames(aPresShell, aPresContext, nsHTMLAtoms::combobox,
                             aState, aContent, comboboxFrame, PR_TRUE, childItems);
   
+      // process the current pseudo frame state
+      if (!aState.mPseudoFrames.IsEmpty()) {
+        ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, childItems);
+      }
+
+      // restore the incoming pseudo frame state 
+      aState.mPseudoFrames = priorPseudoFrames;
+      
       comboboxFrame->SetInitialChildList(aPresContext, nsnull,
                                          childItems.childList);
 
@@ -9343,9 +9357,6 @@ nsCSSFrameConstructor::ContentInserted(nsPresContext*        aPresContext,
       // Get the correct parentFrame and prevSibling - if a
       // letter-frame is present, use its parent.
       if (parentFrame->GetType() == nsLayoutAtoms::letterFrame) {
-        if (prevSibling)
-          prevSibling = parentFrame;
-
         parentFrame = parentFrame->GetParent();
       }
 
@@ -9378,6 +9389,14 @@ nsCSSFrameConstructor::ContentInserted(nsPresContext*        aPresContext,
 
         return NS_OK;
       }
+
+      // Removing the letterframes messes around with the frame tree, removing
+      // and creating frames.  We need to reget our prevsibling.
+      // See XXX comment the first time we do this in this method....
+      prevSibling = (aIndexInContainer >= 0)
+        ? FindPreviousSibling(shell, container, parentFrame,
+                              aIndexInContainer, aChild)
+        : FindPreviousAnonymousSibling(shell, mDocument, aContainer, aChild);
     }
   }
 
