@@ -3144,12 +3144,19 @@ NS_IMETHODIMP nsMsgDBView::ViewNavigate(nsMsgNavigationTypeValue motion, nsMsgKe
     NS_ENSURE_ARG_POINTER(pThreadIndex);
     NS_ENSURE_ARG_POINTER(resultFolderInfo);
 
-    PRInt32 currentIndex;
+    PRInt32 currentIndex; 
     nsMsgViewIndex startIndex;
-    nsresult rv = mOutlinerSelection->GetCurrentIndex(&currentIndex);
-    NS_ENSURE_SUCCESS(rv, rv);
-    startIndex = currentIndex;
 
+    if (!mOutlinerSelection) // we must be in stand alone message mode
+    {
+      currentIndex = FindViewIndex(m_currentlyDisplayedMsgKey);
+    }
+    else
+    {         
+      nsresult rv = mOutlinerSelection->GetCurrentIndex(&currentIndex);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    startIndex = currentIndex;
     return nsMsgDBView::NavigateFromPos(motion, startIndex, pResultKey, pResultIndex, pThreadIndex, wrap, resultFolderInfo);
 }
 
@@ -3838,6 +3845,13 @@ nsresult
 nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
 {
   NS_ENSURE_ARG_POINTER(key);
+  // if we don't have an outliner selection we must be in stand alone mode....
+  if (!mOutlinerSelection) 
+  {
+    *key = m_currentlyDisplayedMsgKey;
+    return NS_OK;
+  }
+
   PRInt32 currentIndex;
   nsresult rv = mOutlinerSelection->GetCurrentIndex(&currentIndex);
   NS_ENSURE_SUCCESS(rv, rv);
