@@ -1129,8 +1129,24 @@ static PRStatus pt_Close(PRFileDesc *fd)
     {
         if (-1 == close(fd->secret->md.osfd))
         {
+#ifdef OSF1
+            /*
+             * Bug 86764: On Tru64 UNIX V5.1, the close() system call,
+             * when called to close a TCP socket, may return -1 with
+             * errno set to EINVAL but the system call does close the
+             * socket successfully.  An application may safely ignore
+             * the EINVAL error.
+             */
+            if (PR_DESC_SOCKET_TCP != fd->methods->file_type
+            || EINVAL != errno)
+            {
+                pt_MapError(_PR_MD_MAP_CLOSE_ERROR, errno);
+                return PR_FAILURE;
+            }
+#else
             pt_MapError(_PR_MD_MAP_CLOSE_ERROR, errno);
             return PR_FAILURE;
+#endif
         }
         fd->secret->state = _PR_FILEDESC_CLOSED;
     }
