@@ -43,14 +43,15 @@ public:
   nsresult Init();
 
 protected:
-  virtual nsresult CloneObj(nsIPrintSettings **_retval);
-
-protected:
   nsPrintSettingsX(const nsPrintSettingsX& src);
   nsPrintSettingsX& operator=(const nsPrintSettingsX& rhs);
 
   nsresult _Clone(nsIPrintSettings **_retval);
   nsresult _Assign(nsIPrintSettings *aPS);
+  
+  // The out param has a ref count of 1 on return so caller needs to PMRelase() when done.
+  OSStatus CreateDefaultPageFormat(PMPrintSession aSession, PMPageFormat& outFormat);
+  OSStatus CreateDefaultPrintSettings(PMPrintSession aSession, PMPrintSettings& outSettings);
 
   PMPageFormat mPageFormat;
   PMPrintSettings mPrintSettings;

@@ -26,6 +26,7 @@
 #include "nsIPrintSettings.h"  
 #include "nsMargin.h"  
 #include "nsString.h"  
+#include "nsWeakReference.h"  
 
 #define NUM_HEAD_FOOT 3
 
@@ -59,6 +60,8 @@ protected:
   nsresult SetMarginStrs(const PRUnichar * aTitle, nsHeaderFooterEnum aType, PRInt16 aJust);
 
   // Members 
+  nsWeakPtr     mSession; // Should never be touched by Clone or Assign
+ 
   nsMargin      mMargin;
   PRInt32       mPrintOptions;
 

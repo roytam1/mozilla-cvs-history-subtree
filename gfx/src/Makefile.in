@@ -98,6 +98,7 @@ CPPSRCS = \
         nsGraphicsImpl.cpp \
         nsPrintOptionsImpl.cpp \
         nsPrintSettingsImpl.cpp \
+        nsPrintSession.cpp \
         $(NULL)
 
 ifeq ($(OS_ARCH),OS2)
