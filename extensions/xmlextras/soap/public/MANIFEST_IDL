@@ -3,10 +3,17 @@
 #
 
 nsISOAPCall.idl
+nsISOAPFault.idl
+nsISOAPJSValue.idl
+nsISOAPMarshaller.idl
+nsISOAPMessage.idl
 nsISOAPParameter.idl
 nsISOAPResponse.idl
 nsISOAPResponseListener.idl
-nsISOAPEncoder.idl
-nsISOAPFault.idl
+nsISOAPService.idl
+nsISOAPServiceRegistry.idl
 nsISOAPTransport.idl
 nsISOAPTransportListener.idl
+nsISOAPType.idl
+nsISOAPTypeRegistry.idl
+nsISOAPUnmarshaller.idl

@@ -14,7 +14,7 @@
  *
  * The Initial Developer of the Original Code is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Copyright (C) 2001 Netscape Communications Corporation. All
  * Rights Reserved.
  *
  * Contributor(s): 
@@ -25,6 +25,12 @@
 interface nsISOAPCall;
 interface nsISOAPResponse;
 
+/**
+ * This interface represents a response handler to be invoked whenever
+ * a response of a particular call is recieved and when no more
+ * responses are expected.
+ */
+
 [scriptable, uuid(99ec6692-535f-11d4-9a58-000064657374)]
 interface nsISOAPResponseListener : nsISupports {
   /**
@@ -32,11 +38,32 @@ interface nsISOAPResponseListener : nsISupports {
    * a SOAP message. The listener is registered as part of the original
    * asynchronous call invocation. 
    *
-   * @param response The decoded version of the response
-   * @param call The SOAPCall object that triggered the response
-   * @param status The protcol status from the call
+   * @param response The decoded version of the response.  If an
+   *   error occurred transmitting the response, the status field
+   *   of the response will contain an error code.  The last call
+   *   to the listener may contain a null response, which should
+   *   only be interpreted as an error if your call expected more 
+   *   results than it got.  If the service or the transport
+   *   do not know whether to expect more results, then setting
+   *   the last parameter true may only be possible after the
+   *   last response has already been delivered.
+   *
+   * @param last True if this is the last call to the listener.
+   *
+   * @return True to make this the last call to the listener, even
+   *   if last was not true.  Calls which expect a single response
+   *   should return true upon receiving that response to avoid
+   *   possibly recieving another callback with a null response
+   *   indicating that the last response was already sent.
    */ 
-  void handleResponse(in nsISOAPResponse response, 
-                      in nsISOAPCall call,
-                      in unsigned long status);
+  boolean handleResponse(in nsISOAPResponse response, in boolean last);
 };
+
+%{ C++
+#define NS_SOAPJSRESPONSELISTENER_CID                            \
+{ /* a4df573c-1dd1-11b2-a36d-89962dde39f6 */        \
+  0xa4df573c, 0x1dd1, 0x11b2,                       \
+ {0xa3, 0x6d, 0x89, 0x96, 0x2d, 0xde, 0x39, 0xf6} }
+#define NS_SOAPJSRESPONSELISTENER_CONTRACTID \
+"@mozilla.org/xmlextras/soap/jsresponselistener;1"
+%}
