@@ -84,7 +84,7 @@ NewThisOp,              //                          <type> -->
 NewInstanceOp,          //  <argc>                  <type> <args> --> <object>
 TypeOfOp,               //                          <object> --> <string>
 InstanceOfOp,           //                          <object> <object> --> <boolean>
-AtOp,                   //                          <object> <type> --> <object>
+AsOp,                   //                          <object> <type> --> <object>
 ToBooleanOp,            //                          <object> --> <boolean>
 JumpFalseOp,            // <target>                 <object> -->
 JumpTrueOp,             // <target>                 <object> -->
@@ -139,6 +139,7 @@ SetNameOp,              // <poolindex>              <object> --> <object>
 LoadGlobalObjectOp,     //                          --> <object>
 PushScopeOp,            // <pointer>        XXX !!! XXX
 PopScopeOp,             // <pointer>        XXX !!! XXX
+NewClosureOp,           //                          <function> --> <function>
 
 OpCodeCount
 
@@ -222,7 +223,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
 
         ByteCodeModule *genCodeForScript(StmtNode *p);
         void genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
-        void genCodeForFunction(FunctionStmtNode *f, 
+        void genCodeForFunction(FunctionDefinition &f, 
                                     JSFunction *fnc, 
                                     bool isConstructor, 
                                     JSType *topClass);

@@ -713,7 +713,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         pushValue(JSValue(new String(widenCString("object"))));
                 }
                 break;
-            case AtOp:
+            case AsOp:
                 {
                     JSValue t = popValue();
                     JSValue v = popValue();
@@ -1078,6 +1078,28 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mLocals[index] = topValue();
                 }
                 break;
+            case GetClosureVarOp:
+                {
+                    uint32 depth = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+//                    pushValue(mScopeChain->getClosureVar(depth, index));                    
+                }
+                break;
+            case SetClosureVarOp:
+                {
+                    uint32 depth = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+                    uint32 index = *((uint32 *)pc);
+                    pc += sizeof(uint32);
+//                    mScopeChain->setClosureVar(depth, index, topValue()));
+                }
+                break;
+            case NewClosureOp:
+                {
+                }
+                break;
             case LoadThisOp:
                 {
                     pushValue(mThis);
@@ -1286,6 +1308,9 @@ void ScopeChain::collectNames(StmtNode *p)
             if (hasAttribute(classStmt->attributes, m_cx->DynamicKeyWord))
                 thisClass->mIsDynamic = true;
 
+            PropertyIterator it;
+            if (hasProperty(name, classStmt->attributes, Read, &it))
+                throw Exception(Exception::referenceError, "Duplicate class definition");
             defineVariable(name, classStmt->attributes, Type_Type, JSValue(thisClass));
             classStmt->mType = thisClass;
         }
@@ -1527,6 +1552,26 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
 
 }
 
+void Context::buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc)
+{
+    fnc->mParameterBarrel = new ParameterBarrel(this);
+    mScopeChain->addScope(fnc->mParameterBarrel);
+    VariableBinding *v = f.parameters;
+    while (v) {
+        if (v->name && (v->name->getKind() == ExprNode::identifier)) {
+            JSType *pType = mScopeChain->extractType(v->type);
+            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
+            mScopeChain->defineVariable(i->name, NULL, pType);       // XXX attributes?
+        }
+        v = v->next;
+    }
+    mScopeChain->addScope(&fnc->mActivation);
+    mScopeChain->collectNames(f.body);
+    buildRuntimeForStmt(f.body);
+    mScopeChain->popScope();
+    mScopeChain->popScope();
+}
+
 
 // Second pass, collect type information
 void Context::buildRuntimeForStmt(StmtNode *p)
@@ -1631,23 +1676,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             }
 */            
 
-            fnc->mParameterBarrel = new ParameterBarrel(this);
-            mScopeChain->addScope(fnc->mParameterBarrel);
-            VariableBinding *v = f->function.parameters;
-            while (v) {
-                if (v->name && (v->name->getKind() == ExprNode::identifier)) {
-                    JSType *pType = mScopeChain->extractType(v->type);
-                    IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                    mScopeChain->defineVariable(i->name, NULL, pType);       // XXX attributes?
-                }
-                v = v->next;
-            }
-            mScopeChain->addScope(&fnc->mActivation);
-            mScopeChain->collectNames(f->function.body);
-            buildRuntimeForStmt(f->function.body);
-            mScopeChain->popScope();
-            mScopeChain->popScope();
-
+            buildRuntimeForFunction(f->function, fnc);
 /*
             if (isExtender) {   // blow off the extended class's scope
                 mScopeChain->popScope();

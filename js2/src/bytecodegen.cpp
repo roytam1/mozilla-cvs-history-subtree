@@ -346,12 +346,13 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { 0,        "GetProperty", },
 { 1,        "GetInvokeProperty", },
 { -1,       "SetProperty", },
-{ 0,        "GetName", },
+{ 1,        "GetName", },
 { 1,        "GetTypeOfName", },
 { 0,        "SetName", },
 { 1,        "LoadGlobalObject", },
 { 0,        "PushScope", },
 { 0,        "PopScope", },
+{ 0,        "NewClosure" },
 
 };
 
@@ -377,7 +378,7 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
     mStackDepth = bcg->mStackMax;
 }
 
-void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool isConstructor, JSType *topClass)
+void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, bool isConstructor, JSType *topClass)
 {
     mScopeChain->addScope(fnc->mParameterBarrel);
     mScopeChain->addScope(&fnc->mActivation);
@@ -394,8 +395,8 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
 */
 
 #ifdef DEBUG
-    if (f->function.name->getKind() == ExprNode::identifier) {
-        const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
+    if (f.name && (f.name->getKind() == ExprNode::identifier)) {
+        const StringAtom& name = (static_cast<IdentifierExprNode *>(f.name))->name;
 //      stdOut << "gencode for " << name << "\n";
     }
 #endif
@@ -413,7 +414,7 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
         // statement to do so.
         //  
         bool foundSuperCall = false;
-        BlockStmtNode *b = f->function.body;
+        BlockStmtNode *b = f.body;
         if (b && b->statements) {
             if (b->statements->getKind() == StmtNode::expression) {
                 ExprStmtNode *e = static_cast<ExprStmtNode *>(b->statements);
@@ -471,7 +472,7 @@ void ByteCodeGen::genCodeForFunction(FunctionStmtNode *f, JSFunction *fnc, bool 
         }
     }
 
-    genCodeForStatement(f->function.body, NULL);
+    genCodeForStatement(f.body, NULL);
     
 /*
     // OPT - see above
@@ -589,7 +590,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                     isConstructor = true;
             }
             ByteCodeGen bcg(m_cx, mScopeChain);
-            bcg.genCodeForFunction(f, fnc, isConstructor, mScopeChain->topClass());
+            bcg.genCodeForFunction(f->function, fnc, isConstructor, mScopeChain->topClass());
         }
         break;
     case StmtNode::While:
@@ -1177,9 +1178,11 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             }
 
         }
+/*
     default:
         NOT_REACHED("Invalid l-value");      // XXX should be a semantic error
         return NULL;
+*/
     }
     return NULL;
 }
@@ -1851,19 +1854,14 @@ BinaryOpEquals:
             addOp(InstanceOfOp);
         }
         break;
-/*
-
-  XXX did x @ y go away?
-
-    case ExprNode::at:
+    case ExprNode::As:
         {
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             genExpr(b->op1);
             genExpr(b->op2);
-            addOp(AtOp);
+            addOp(AsOp);
         }
         break;
-*/
     case ExprNode::numUnit:
         {
             // turn the unit string into a function call into the
@@ -1885,6 +1883,18 @@ BinaryOpEquals:
             addOp(NoThis);
         }
         break;
+    case ExprNode::functionLiteral:
+        {
+            FunctionExprNode *f = static_cast<FunctionExprNode *>(p);
+            JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function), mScopeChain);
+            m_cx->buildRuntimeForFunction(f->function, fnc);
+            ByteCodeGen bcg(m_cx, mScopeChain);
+            bcg.genCodeForFunction(f->function, fnc, false, NULL);
+            addOp(LoadFunctionOp);
+            addPointer(fnc);
+            addOp(NewClosureOp);
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1894,276 +1904,131 @@ BinaryOpEquals:
 int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
 {
     int32 offset;
-    switch (bcm.mCodeBase[i]) {
-    case SwapOp:
-        f << "Swap\n";
-        i++;
-        break;
-    case PopOp:
-        f << "Pop\n";
-        i++;
-        break;
-    case DupOp:
-        f << "Dup\n";
-        i++;
-        break;
-    case DupInsertOp:
-        f << "DupInsert\n";
-        i++;
-        break;
-    case DupNOp:
-        f << "DupN" << bcm.mCodeBase[i + 1] << "\n";
-        i += 2;
-        break;
-    case DupInsertNOp:
-        f << "DupInsertN" << bcm.mCodeBase[i + 1] << "\n";
-        i++;
-        break;
-    case LogicalXorOp:
-        f << "LogicalXor\n";
-        i++;
-        break;
-    case LogicalNotOp:
-        f << "LogicalNot\n";
-        i++;
-        break;
-    case ToBooleanOp:
-        f << "ToBoolean\n";
-        i++;
-        break;
-    case JumpFalseOp:
-        offset = bcm.getOffset(i + 1);
-        f << "JumpFalse " << offset << " --> " << (i + 1) + offset << "\n";
-        i += 5;
-        break;
-    case JumpTrueOp:
-        offset = bcm.getOffset(i + 1);
-        f << "JumpTrue " << offset << " --> " << (i + 1) + offset << "\n";
-        i += 5;
-        break;
-    case JumpOp:
-        offset = bcm.getOffset(i + 1);
-        f << "Jump " << offset << " --> " << (i + 1) + offset << "\n";
-        i += 5;
-        break;
-    case ReturnOp:
-        f << "Return\n";
-        i++;
-        break;
-    case ReturnVoidOp:
-        f << "ReturnVoid\n";
-        i++;
-        break;
-    case InvokeOp:
-        f << "Invoke " << bcm.getLong(i + 1) << " " << bcm.mCodeBase[i + 5] << "\n";
-        i += 6;
-        break;
-    case GetTypeOp:
-        f << "GetType\n";
-        i++;
-        break;
-    case CastOp:
-        f << "Cast\n";
-        i++;
-        break;
-    case DoUnaryOp:
-        f << "DoUnary " << bcm.mCodeBase[i + 1] << "\n";
-        i += 2;
-        break;
-    case DoOperatorOp:
-        f << "DoOperator " << bcm.mCodeBase[i + 1] << "\n";
-        i += 2;
-        break;
-    case GetLocalVarOp:
-        f << "GetLocalVar " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case SetLocalVarOp:
-        f << "SetLocalVar " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case GetArgOp:
-        f << "GetArg " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case SetArgOp:
-        f << "SetArg " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case GetMethodOp:
-        f << "GetMethod " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;            
-    case GetMethodRefOp:
-        f << "GetMethodRef " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;            
-    case GetStaticMethodOp:
-        f << "GetStaticMethod " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;            
-    case GetElementOp:
-        f << "GetElement\n";
-        i++;
-        break;
-    case SetElementOp:
-        f << "SetElement\n";
-        i++;
-        break;
-    case GetFieldOp:
-        f << "GetField " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case SetFieldOp:
-        f << "SetField " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case GetStaticFieldOp:
-        f << "GetStaticField " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case SetStaticFieldOp:
-        f << "SetStaticField " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
-    case GetNameOp:
-        f << "GetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case GetTypeOfNameOp:
-        f << "GetTypeOfName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case SetNameOp:
-        f << "SetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case GetPropertyOp:
-        f << "GetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case GetInvokePropertyOp:
-        f << "GetInvokeProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case SetPropertyOp:
-        f << "SetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
+    uint8 op = bcm.mCodeBase[i];
+    f << gByteCodeData[op].opName << " ";
+    i++;
+    switch (op) {
+
     case LoadConstantUndefinedOp:
-        f << "LoadConstantUndefined\n";
-        i++;
-        break;
     case LoadConstantTrueOp:
-        f << "LoadConstantTrue\n";
-        i++;
-        break;
     case LoadConstantFalseOp:
-        f << "LoadConstantFalse\n";
-        i++;
-        break;
     case LoadConstantNullOp:
-        f << "LoadConstantNull\n";
-        i++;
-        break;
-    case LoadConstantNumberOp:
-        f << "LoadConstantNumber " << bcm.getNumber(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case LoadConstantStringOp:
-        f << "LoadConstantString " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-        i += 5;
-        break;
-    case LoadTypeOp:
-        printFormat(f, "LoadType 0x%X\n", bcm.getLong(i + 1));
-        i += 5;
-        break;
-    case LoadFunctionOp:
-        printFormat(f, "LoadFunction 0x%X\n", bcm.getLong(i + 1));
-        i += 5;
-        break;
-    case PushScopeOp:
-        printFormat(f, "PushScope 0x%X\n", bcm.getLong(i + 1));
-        i += 5;
-        break;
-    case PopScopeOp:
-        f << "PopScope\n";
-        i++;
-        break;
-    case WithinOp:
-        f << "Within\n";
-        i += 5;
-        break;
-    case WithoutOp:
-        f << "Without\n";
-        i++;
-        break;
+    case GetTypeOp:
+    case CastOp:
+    case ReturnOp:
+    case ReturnVoidOp:
     case GetConstructorOp:
-        f << "GetConstructor\n";
-        i++;
-        break;
     case NewObjectOp:
-        f << "NewObject\n";
-        i++;
-        break;
-    case NewInstanceOp:
-        f << "NewInstance " << bcm.getLong(i + 1) << "\n";
-        i += 5;
-        break;
     case NewThisOp:
-        f << "NewThis\n";
-        i++;
-        break;
     case TypeOfOp:
-        f << "TypeOf\n";
-        i++;
-        break;
     case InstanceOfOp:
-        f << "InstanceOf\n";
-        i++;
-        break;
-    case AtOp:
-        f << "At\n";
-        i++;
-        break;
-    case LoadThisOp:
-        f << "LoadThis\n";
-        i++;
-        break;
-    case LoadGlobalObjectOp:
-        f << "LoadGlobalObject\n";
-        i++;
-        break;
-    case JsrOp:
-        offset = bcm.getOffset(i + 1);
-        f << "Jsr " << offset << " --> " << (i + 1) + offset << "\n";
-        i += 5;
-        break;
+    case AsOp:
+    case ToBooleanOp:
     case RtsOp:
-        f << "Rts\n";
+    case WithinOp:
+    case WithoutOp:
+    case ThrowOp:
+    case HandlerOp:
+    case LogicalXorOp:
+    case LogicalNotOp:
+    case SwapOp:
+    case DupOp:
+    case DupInsertOp:
+    case PopOp:
+    case GetElementOp:
+    case SetElementOp:
+    case LoadGlobalObjectOp:
+    case NewClosureOp:
+        break;
+
+    case DoUnaryOp:
+    case DupNOp:
+    case DupInsertNOp:
+    case DoOperatorOp:
+        f << bcm.mCodeBase[i];
         i++;
         break;
-    case TryOp:
-        offset = bcm.getOffset(i + 1);
-        f << "Try " << offset << " --> " << (i + 1) + offset;
-        i += 5;
+    
+    case JumpOp:
+    case JumpTrueOp:
+    case JumpFalseOp:
         offset = bcm.getOffset(i);
-        f << " " << offset << " --> " << i + offset << "\n";
+        f << offset << " --> " << (i) + offset;
         i += 4;
         break;
-    case HandlerOp:
-        f << "Handler\n";
-        i++;
+
+    case InvokeOp:
+        f << bcm.getLong(i) << " " << bcm.mCodeBase[i + 4];
+        i += 5;
         break;
-    case ThrowOp:
-        f << "Throw\n";
-        i++;
+
+    case GetLocalVarOp:
+    case SetLocalVarOp:
+    case GetArgOp:
+    case SetArgOp:
+    case GetMethodOp:
+    case GetMethodRefOp:
+    case GetStaticMethodOp:
+    case GetFieldOp:
+    case SetFieldOp:
+    case GetStaticFieldOp:
+    case SetStaticFieldOp:
+    case NewInstanceOp:
+        f << bcm.getLong(i);
+        i += 4;
+        break;
+
+    case GetClosureVarOp:
+    case SetClosureVarOp:
+        f << bcm.getLong(i);
+        i += 4;
+        f << " " << bcm.getLong(i);
+        i += 4;
+        break;
+
+    case GetNameOp:
+    case GetTypeOfNameOp:
+    case SetNameOp:
+    case GetPropertyOp:
+    case GetInvokePropertyOp:
+    case SetPropertyOp:
+    case LoadConstantStringOp:
+        f << *bcm.getString(bcm.getLong(i));
+        i += 4;
+        break;
+
+    case LoadConstantNumberOp:
+        f << bcm.getNumber(bcm.getLong(i));
+        i += 4;
+        break;
+
+    case LoadTypeOp:
+    case LoadFunctionOp:
+    case PushScopeOp:
+        printFormat(f, "0x%X", bcm.getLong(i));
+        i += 4;
+        break;
+
+    case JsrOp:
+        offset = bcm.getOffset(i);
+        f << offset << " --> " << i + offset;
+        i += 4;
+        break;
+
+    case TryOp:
+        offset = bcm.getOffset(i);
+        f << offset << " --> " << i + offset;
+        i += 4;
+        offset = bcm.getOffset(i);
+        f << " " << offset << " --> " << i + offset;
+        i += 4;
         break;
     default:
-        printFormat(f, "Unknown Opcode 0x%X\n", bcm.mCodeBase[i]);
+        printFormat(f, "Unknown Opcode 0x%X", bcm.mCodeBase[i]);
         i++;
         break;
     }
+    f << "\n";
     return i;
 }
 

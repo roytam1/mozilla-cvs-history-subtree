@@ -1646,7 +1646,7 @@ static const double two31 = 2147483648.0;
         std::stack<HandlerData *> mTryStack;
         std::stack<uint8 *> mSubStack;
 
-        // the locals for the current function (an array, constructed on function entry)
+        // the locals for the current function (an array, constructed on fudnction entry)
         JSValue *mLocals;
 
         // the base of the incoming arguments for this function
@@ -1661,6 +1661,7 @@ static const double two31 = 2147483648.0;
         JSValue readEvalFile(const String& fileName);
 
         void buildRuntime(StmtNode *p);
+        void buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc);
         void buildRuntimeForStmt(StmtNode *p);
         ByteCodeModule *genCode(StmtNode *p, String sourceName);
 
