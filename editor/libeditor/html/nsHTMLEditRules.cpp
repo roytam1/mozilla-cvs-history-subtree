@@ -359,10 +359,11 @@ nsHTMLEditRules::AfterEditInner(PRInt32 action, nsIEditor::EDirection aDirection
     res = RemoveEmptyNodes();
     if (NS_FAILED(res)) return res;
     
-    // adjust selection for insert text and delete actions
+    // adjust selection for insert text, html paste, and delete actions
     if ((action == nsEditor::kOpInsertText) || 
         (action == nsEditor::kOpInsertIMEText) ||
-        (action == nsEditor::kOpDeleteSelection))
+        (action == nsEditor::kOpDeleteSelection) ||
+        (action == nsEditor::kOpHTMLPaste))
     {
       res = AdjustSelection(selection, aDirection);
       if (NS_FAILED(res)) return res;

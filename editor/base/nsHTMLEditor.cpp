@@ -2460,7 +2460,7 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
   // force IME commit; set up rules sniffing and batching
   ForceCompositionEnd();
   nsAutoEditBatch beginBatching(this);
-  nsAutoRules beginRulesSniffing(this, kOpInsertElement, nsIEditor::eNext);
+  nsAutoRules beginRulesSniffing(this, kOpHTMLPaste, nsIEditor::eNext);
   
   // Get selection
   nsresult res;
@@ -2675,7 +2675,11 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
         if (NS_SUCCEEDED(res)) 
         {
           bDidInsert = PR_TRUE;
-          lastInsertNode = curNode;
+          // a little tricky here.  We might be inserting below an inserted parent,
+          // in which case the parent is still last for purposes of setting selection
+          // after we are done.
+          if (!lastInsertNode || !nsHTMLEditUtils::IsDescendantOf(curNode, lastInsertNode))
+            lastInsertNode = curNode;
         }
           
         // assume failure means no legal parent in the document heirarchy.
@@ -2693,7 +2697,11 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
             if (NS_SUCCEEDED(res)) 
             {
               bDidInsert = PR_TRUE;
-              lastInsertNode = tmp;
+              // a little tricky here.  We might be inserting below an inserted parent,
+              // in which case the parent is still last for purposes of setting selection
+              // after we are done.
+              if (!lastInsertNode || !nsHTMLEditUtils::IsDescendantOf(tmp, lastInsertNode))
+                lastInsertNode = tmp;
               res = InsertNodeAtPoint(curNode, tmp, 0, PR_TRUE);
               // if this failed then we have a paste heirarchy that is
               // not compatible with our dtd.  This is where we should add
@@ -2719,12 +2727,9 @@ nsresult nsHTMLEditor::InsertHTMLWithCharsetAndContext(const nsString& aInputStr
     // Now collapse the selection to the end of what we just inserted:
     if (lastInsertNode) 
     {
-      nsCOMPtr<nsIDOMNode> leafNode;
-      PRUint32 len;
-      res = GetLastEditableLeaf(lastInsertNode, &leafNode);
+      res = GetNodeLocation(lastInsertNode, &parentNode, &offsetOfNewNode);
       NS_ENSURE_SUCCESS(res, res);
-      res = GetLengthOfDOMNode(leafNode, len);
-      selection->Collapse(leafNode, (PRInt32)len);
+      selection->Collapse(parentNode, offsetOfNewNode+1);
     }
   }
   
@@ -3177,8 +3182,6 @@ nsHTMLEditor::InsertNodeAtPoint(nsIDOMNode *aNode,
   nsCOMPtr<nsIDOMNode> parent = aParent;
   nsCOMPtr<nsIDOMNode> topChild = aParent;
   nsCOMPtr<nsIDOMNode> tmp;
-  nsAutoString parentTagName;
-  PRBool isRoot;
   PRInt32 offsetOfInsert = aOffset;
    
   // Search up the parent chain to find a suitable container      
