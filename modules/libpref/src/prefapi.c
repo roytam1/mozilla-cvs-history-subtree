@@ -1826,7 +1826,7 @@ PREF_NextChild(char *child_list, int *index)
 		*index += strlen(child) + 1;
 	return child;
 }
-
+#if 0 /* LANDING HACK */
 /*----------------------------------------------------------------------------------------
 *	pref_copyTree
 *
@@ -1941,7 +1941,6 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 	return result;
 }
 
-
 PR_IMPLEMENT(int)
 PREF_CopyPrefsTree(const char *srcRoot, const char *destRoot)
 {
@@ -1950,6 +1949,7 @@ PREF_CopyPrefsTree(const char *srcRoot, const char *destRoot)
 	
 	return pref_copyTree(srcRoot, destRoot, srcRoot);
 }
+#endif /* LANDING HACK */
 
 
 /* Adds a node to the beginning of the callback list. */
