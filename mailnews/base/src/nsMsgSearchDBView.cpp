@@ -230,7 +230,7 @@ NS_IMETHODIMP
 nsMsgSearchDBView::DoCommandWithFolder(nsMsgViewCommandTypeValue command, nsIMsgFolder *destFolder)
 {
     mCommand = command;
-    mDestFolder = getter_AddRefs(destFolder);
+    mDestFolder = destFolder;
 
     return nsMsgDBView::DoCommandWithFolder(command, destFolder);
 }
