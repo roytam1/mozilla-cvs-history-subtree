@@ -1,6 +1,6 @@
 <!-- extracted from migrationMode.xul -->
 
 <!ENTITY windowTitle.label "Migration Mode For Mail">
-<!ENTITY textInformation.label "Do you want to keep a seperate work space for mail or just use the existing one?">
-<!ENTITY buttonKeepSeperate.label "Keep Seperate">
-<!ENTITY buttonUsingExist.label "Use Existing">
+<!ENTITY textInformation.label "We provide you with an option to keep your mail folders in the location where you have kept them before.  This is desirable if you do not plan to switch back to the 4.x mail client.">
+<!ENTITY buttonKeepSeperate.label "Separated from 4.x">
+<!ENTITY buttonUsingExist.label "Shared with 4.x">
