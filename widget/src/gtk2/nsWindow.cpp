@@ -119,9 +119,19 @@ static gboolean window_state_event_cb     (GtkWidget *widget,
                                            GdkEventWindowState *event);
 static gboolean property_notify_event_cb  (GtkWidget *widget,
                                            GdkEventProperty *event);
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 static GdkFilterReturn plugin_window_filter_func (GdkXEvent *gdk_xevent, 
                                                   GdkEvent *event, 
                                                   gpointer data);
+static GdkFilterReturn plugin_client_message_filter (GdkXEvent *xevent,
+                                                     GdkEvent *event,
+                                                     gpointer data);
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 static gboolean drag_motion_event_cb      (GtkWidget *aWidget,
                                            GdkDragContext *aDragContext,
                                            gint aX,
@@ -153,12 +163,17 @@ static nsresult    initialize_prefs        (void);
 // this is the last window that had a drag event happen on it.
 nsWindow *nsWindow::mLastDragMotionWindow = NULL;
 
+// This is the time of the last button press event.  The drag service
+// uses it as the time to start drags.
+guint32   nsWindow::mLastButtonPressTime = 0;
+
 static NS_DEFINE_IID(kCDragServiceCID,  NS_DRAGSERVICE_CID);
 
 // the current focus window
 static nsWindow         *gFocusWindow          = NULL;
 static PRBool            gGlobalsInitialized   = PR_FALSE;
 static PRBool            gRaiseWindows         = PR_TRUE;
+static nsWindow         *gPluginFocusWindow    = NULL;
 
 nsCOMPtr  <nsIRollupListener> gRollupListener;
 nsWeakPtr                     gRollupWindow;
@@ -406,6 +421,11 @@ nsWindow::Destroy(void)
         gFocusWindow = nsnull;
     }
 
+    // make sure that we remove ourself as the plugin focus window
+    if (gPluginFocusWindow == this) {
+        gPluginFocusWindow->LoseNonXEmbedPluginFocus();
+    }
+
     // Remove our reference to the window group.  If there was a window
     // group destroying the widget will have automatically unreferenced
     // the group, destroying it if necessary.  And, if we're a child
@@ -527,7 +547,7 @@ nsWindow::Move(PRInt32 aX, PRInt32 aY)
             gtk_window_move(GTK_WINDOW(mShell), aX, aY);
         }
     }
-    else {
+    else if (mDrawingarea) {
         moz_drawingarea_move(mDrawingarea, aX, aY);
     }
 
@@ -591,6 +611,9 @@ nsWindow::SetFocus(PRBool aRaise)
     // grab it.  Note that we don't set our focus flag in this case.
 
     LOGFOCUS(("  SetFocus [%p]\n", (void *)this));
+
+    if (!mDrawingarea)
+        return NS_ERROR_FAILURE;
 
     GtkWidget *owningWidget =
         get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
@@ -708,7 +731,7 @@ nsWindow::SetCursor(nsCursor aCursor)
 {
     // if we're not the toplevel window pass up the cursor request to
     // the toplevel window to handle it.
-    if (!mContainer) {
+    if (!mContainer && mDrawingarea) {
         GtkWidget *widget =
             get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
         nsWindow *window = get_window_for_gtk_widget(widget);
@@ -737,6 +760,9 @@ nsWindow::Validate()
 {
     // Get the update for this window and, well, just drop it on the
     // floor.
+    if (!mDrawingarea)
+        return NS_OK;
+
     GdkRegion *region = gdk_window_get_update_area(mDrawingarea->inner_window);
 
     if (region)
@@ -757,6 +783,9 @@ nsWindow::Invalidate(PRBool aIsSynchronous)
 
     LOGDRAW(("Invalidate (all) [%p]: %d %d %d %d\n", (void *)this,
              rect.x, rect.y, rect.width, rect.height));
+
+    if (!mDrawingarea)
+        return NS_OK;
 
     gdk_window_invalidate_rect(mDrawingarea->inner_window,
                                &rect, TRUE);
@@ -780,6 +809,9 @@ nsWindow::Invalidate(const nsRect &aRect,
     LOGDRAW(("Invalidate (rect) [%p]: %d %d %d %d (sync: %d)\n", (void *)this,
              rect.x, rect.y, rect.width, rect.height, aIsSynchronous));
 
+    if (!mDrawingarea)
+        return NS_OK;
+
     gdk_window_invalidate_rect(mDrawingarea->inner_window,
                                &rect, TRUE);
     if (aIsSynchronous)
@@ -795,7 +827,7 @@ nsWindow::InvalidateRegion(const nsIRegion* aRegion,
     GdkRegion *region = nsnull;
     aRegion->GetNativeRegion((void *&)region);
 
-    if (region) {
+    if (region && mDrawingarea) {
         GdkRectangle rect;
         gdk_region_get_clipbox(region, &rect);
 
@@ -817,6 +849,9 @@ nsWindow::InvalidateRegion(const nsIRegion* aRegion,
 NS_IMETHODIMP
 nsWindow::Update()
 {
+    if (!mDrawingarea)
+        return NS_OK;
+
     gdk_window_process_updates(mDrawingarea->inner_window, TRUE);
     return NS_OK;
 }
@@ -832,6 +867,9 @@ nsWindow::Scroll(PRInt32  aDx,
                  PRInt32  aDy,
                  nsRect  *aClipRect)
 {
+    if (!mDrawingarea)
+        return NS_OK;
+
     moz_drawingarea_scroll(mDrawingarea, aDx, aDy);
 
     // Update bounds on our child windows
@@ -865,6 +903,9 @@ NS_IMETHODIMP
 nsWindow::ScrollWidgets(PRInt32 aDx,
                         PRInt32 aDy)
 {
+    if (!mDrawingarea)
+        return NS_OK;
+
     moz_drawingarea_scroll(mDrawingarea, aDx, aDy);
     return NS_OK;
 }
@@ -882,9 +923,13 @@ nsWindow::GetNativeData(PRUint32 aDataType)
 {
     switch (aDataType) {
     case NS_NATIVE_WINDOW:
-    case NS_NATIVE_WIDGET:
+    case NS_NATIVE_WIDGET: {
+        if (!mDrawingarea)
+            return nsnull;
+
         return mDrawingarea->inner_window;
         break;
+    }
 
     case NS_NATIVE_PLUGIN_PORT:
         return SetupPluginPort();
@@ -894,10 +939,11 @@ nsWindow::GetNativeData(PRUint32 aDataType)
         return GDK_DISPLAY();
         break;
 
-    case NS_NATIVE_GRAPHIC:
+    case NS_NATIVE_GRAPHIC: {
         NS_ASSERTION(nsnull != mToolkit, "NULL toolkit, unable to get a GC");
         return (void *)NS_STATIC_CAST(nsToolkit *, mToolkit)->GetSharedGC();
         break;
+    }
 
     default:
         NS_WARNING("nsWindow::GetNativeData called with bad value");
@@ -952,7 +998,7 @@ nsWindow::SetIcon(const nsAString& aIconSpec)
     PRInt32 n = iconSpec.Find(key) + key.Length();
 
     // Append that to icon resource path.
-    iconPath.Append(iconSpec.get() + n - 1 );
+    iconPath.Append(iconSpec.get() + n - 1);
 
     nsCOMPtr<nsILocalFile> pathConverter;
     rv = NS_NewLocalFile(iconPath, PR_TRUE,
@@ -988,7 +1034,7 @@ nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
                                    &x, &y);
         LOG(("WidgetToScreen (container) %d %d\n", x, y));
     }
-    else {
+    else if (mDrawingarea) {
         gdk_window_get_origin(mDrawingarea->inner_window, &x, &y);
         LOG(("WidgetToScreen (drawing) %d %d\n", x, y));
     }
@@ -1047,6 +1093,9 @@ nsWindow::CaptureMouse(PRBool aCapture)
 {
     LOG(("CaptureMouse %p\n", (void *)this));
 
+    if (!mDrawingarea)
+        return NS_OK;
+
     GtkWidget *widget = 
         get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
 
@@ -1067,6 +1116,9 @@ nsWindow::CaptureRollupEvents(nsIRollupListener *aListener,
                               PRBool             aDoCapture,
                               PRBool             aConsumeRollupEvent)
 {
+    if (!mDrawingarea)
+        return NS_OK;
+
     GtkWidget *widget = 
         get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
 
@@ -1138,6 +1190,9 @@ nsWindow::OnExposeEvent(GtkWidget *aWidget, GdkEventExpose *aEvent)
              (void *)this, (void *)aEvent->window));
         return NS_OK;
     }
+
+    if (!mDrawingarea)
+        return FALSE;
 
     // handle exposes for the inner window only
     if (aEvent->window != mDrawingarea->inner_window)
@@ -1213,6 +1268,9 @@ nsWindow::OnSizeAllocate(GtkWidget *aWidget, GtkAllocation *aAllocation)
     mBounds.width = rect.width;
     mBounds.height = rect.height;
 
+    if (!mDrawingarea)
+        return;
+
     moz_drawingarea_resize (mDrawingarea, rect.width, rect.height);
 
     nsEventStatus status;
@@ -1244,24 +1302,6 @@ nsWindow::OnEnterNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 
     LOG(("OnEnterNotify: %p\n", (void *)this));
 
-    // if we have a non-xembed plugin (java, basically) dispatch focus
-    // to it because it's too dumb not to know how to do it itself.
-    if( mHasNonXembedPlugin ) {
-        Window curFocusWindow;
-        int    focusState;
-        XGetInputFocus(GDK_WINDOW_XDISPLAY (aEvent->window), 
-                       &curFocusWindow, 
-                       &focusState);
-        if(curFocusWindow != GDK_WINDOW_XWINDOW(aEvent->window)) {
-            mOldFocusWindow = curFocusWindow;
-            XSetInputFocus(GDK_WINDOW_XDISPLAY (aEvent->window),
-                           GDK_WINDOW_XWINDOW(aEvent->window),
-                           RevertToParent,
-                           gtk_get_current_event_time ());
-        }
-        gdk_flush();
-    }
-
     nsEventStatus status;
     DispatchEvent(&event, status);
 }
@@ -1277,16 +1317,6 @@ nsWindow::OnLeaveNotifyEvent(GtkWidget *aWidget, GdkEventCrossing *aEvent)
 
     LOG(("OnLeaveNotify: %p\n", (void *)this));
 
-    // if we have a non-xembed plugin (java, basically) take focus
-    // back since it's not going to give it up by itself.
-    if( mHasNonXembedPlugin ) {
-        XSetInputFocus(GDK_WINDOW_XDISPLAY (aEvent->window),
-                       mOldFocusWindow,
-                       RevertToParent,
-                       gtk_get_current_event_time ());
-        gdk_flush();
-    }
-
     nsEventStatus status;
     DispatchEvent(&event, status);
 }
@@ -1301,6 +1331,11 @@ nsWindow::OnMotionNotifyEvent(GtkWidget *aWidget, GdkEventMotion *aEvent)
                              GDK_WINDOW_XWINDOW(aEvent->window),
                              ButtonMotionMask, &xevent)) {
         synthEvent = PR_TRUE;
+    }
+
+    // if plugins still keeps the focus, get it back
+    if (gPluginFocusWindow && gPluginFocusWindow != this) {
+        gPluginFocusWindow->LoseNonXEmbedPluginFocus();
     }
 
     nsMouseEvent event;
@@ -1339,6 +1374,9 @@ nsWindow::OnButtonPressEvent(GtkWidget *aWidget, GdkEventButton *aEvent)
     nsMouseEvent  event;
     PRUint32      eventType;
     nsEventStatus status;
+
+    // Always save the time of this event
+    mLastButtonPressTime = aEvent->time;
 
     // check to see if we should rollup
     nsWindow *containerWindow;
@@ -1439,6 +1477,12 @@ void
 nsWindow::OnContainerFocusOutEvent(GtkWidget *aWidget, GdkEventFocus *aEvent)
 {
     LOGFOCUS(("OnContainerFocusOutEvent [%p]\n", (void *)this));
+
+    // plugin lose focus
+    if (gPluginFocusWindow) {
+        gPluginFocusWindow->LoseNonXEmbedPluginFocus();
+    }
+
     // Figure out if the focus widget is the child of this window.  If
     // it is, send a focus out and deactivate event for it.
     if (!gFocusWindow)
@@ -1450,7 +1494,7 @@ nsWindow::OnContainerFocusOutEvent(GtkWidget *aWidget, GdkEventFocus *aEvent)
 
     while (tmpWindow && tmpnsWindow) {
         // found it!
-        if(tmpnsWindow == gFocusWindow)
+        if (tmpnsWindow == gFocusWindow)
             goto foundit;
 
         tmpWindow = gdk_window_get_parent(tmpWindow);
@@ -1537,7 +1581,7 @@ nsWindow::OnKeyPressEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
         // if none of the other modifier keys are pressed then we need to
         // clear isShift so the character can be inserted in the editor
 
-        if ( event.isControl || event.isAlt || event.isMeta ) {
+        if (event.isControl || event.isAlt || event.isMeta) {
            // make Ctrl+uppercase functional as same as Ctrl+lowercase
            // when Ctrl+uppercase(eg.Ctrl+C) is pressed,convert the charCode
            // from uppercase to lowercase(eg.Ctrl+c),so do Alt and Meta Key
@@ -1545,9 +1589,9 @@ nsWindow::OnKeyPressEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
            // Windows platform in widget/src/windows/nsWindow.cpp: See bug 16486
            // Note: if Shift is pressed at the same time, do not to_lower()
            // Because Ctrl+Shift has different function with Ctrl
-           if ( !event.isShift &&
-                event.charCode >= GDK_A &&
-                event.charCode <= GDK_Z )
+           if (!event.isShift &&
+               event.charCode >= GDK_A &&
+               event.charCode <= GDK_Z)
             event.charCode = gdk_keyval_to_lower(event.charCode);
         }
     }
@@ -2073,11 +2117,12 @@ nsWindow::NativeCreate(nsIWidget        *aParent,
         }
         else if (mWindowType == eWindowType_popup) {
             mShell = gtk_window_new(GTK_WINDOW_POPUP);
-            if(topLevelParent) {
+            if (topLevelParent) {
                 gtk_window_set_transient_for(GTK_WINDOW(mShell), 
                                             topLevelParent);
                 mTransientParent = topLevelParent;
-                if(topLevelParent->group) {
+
+                if (topLevelParent->group) {
                     gtk_window_group_add_window(topLevelParent->group,
                                             GTK_WINDOW(mShell));
                     mWindowGroup = topLevelParent->group;
@@ -2111,7 +2156,7 @@ nsWindow::NativeCreate(nsIWidget        *aParent,
         if (parentMozContainer) {
             mDrawingarea = moz_drawingarea_new(parentArea, parentMozContainer);
         }
-        else {
+        else if (parentGtkContainer) {
             mContainer = MOZ_CONTAINER(moz_container_new());
             gtk_container_add(parentGtkContainer, GTK_WIDGET(mContainer));
             gtk_widget_realize(GTK_WIDGET(mContainer));
@@ -2129,7 +2174,7 @@ nsWindow::NativeCreate(nsIWidget        *aParent,
     }
     // Disable the double buffer because it will make the caret crazy
     // For bug#153805 (Gtk2 double buffer makes carets misbehave) 
-    if( mContainer )
+    if (mContainer)
         gtk_widget_set_double_buffered (GTK_WIDGET(mContainer),FALSE);
 
     // label the drawing area with this object so we can find our way
@@ -2302,7 +2347,7 @@ nsWindow::NativeResize(PRInt32 aX, PRInt32 aY,
         gtk_widget_size_allocate(GTK_WIDGET(mContainer), &allocation);
         moz_drawingarea_move_resize(mDrawingarea, aX, aY, aWidth, aHeight);
     }
-    else {
+    else if (mDrawingarea) {
         moz_drawingarea_move_resize(mDrawingarea, aX, aY, aWidth, aHeight);
     }
 }
@@ -2323,7 +2368,7 @@ nsWindow::NativeShow (PRBool  aAction)
             moz_drawingarea_set_visibility(mDrawingarea, TRUE);
             gtk_widget_show(GTK_WIDGET(mContainer));
         }
-        else {
+        else if (mDrawingarea) {
             moz_drawingarea_set_visibility(mDrawingarea, TRUE);
         }
     }
@@ -2336,7 +2381,9 @@ nsWindow::NativeShow (PRBool  aAction)
             gtk_widget_hide(GTK_WIDGET(mContainer));
             moz_drawingarea_set_visibility(mDrawingarea, FALSE);
         }
-        moz_drawingarea_set_visibility(mDrawingarea, FALSE);
+        if (mDrawingarea) {
+            moz_drawingarea_set_visibility(mDrawingarea, FALSE);
+        }
     }
 }
 
@@ -2366,6 +2413,9 @@ nsWindow::GrabPointer(void)
         mRetryPointerGrab = PR_TRUE;
         return;
     }
+
+    if (!mDrawingarea)
+        return;
 
     gint retval;
     retval = gdk_pointer_grab(mDrawingarea->inner_window, TRUE,
@@ -2407,8 +2457,10 @@ nsWindow::GrabKeyboard(void)
 
     if (mTransientParent)
         grabWindow = GTK_WIDGET(mTransientParent)->window;
-    else
+    else if (mDrawingarea)
         grabWindow = mDrawingarea->inner_window;
+    else
+        return;
 
     gint retval;
     retval = gdk_keyboard_grab(grabWindow, TRUE, GDK_CURRENT_TIME);
@@ -2442,6 +2494,9 @@ nsWindow::GetToplevelWidget(GtkWidget **aWidget)
         return;
     }
 
+    if (!mDrawingarea) 
+        return;
+
     GtkWidget *widget =
         get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
     if (!widget)
@@ -2453,6 +2508,9 @@ nsWindow::GetToplevelWidget(GtkWidget **aWidget)
 void
 nsWindow::GetContainerWindow(nsWindow **aWindow)
 {
+    if (!mDrawingarea) 
+        return;
+
     GtkWidget *owningWidget =
         get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
 
@@ -2478,7 +2536,7 @@ nsWindow::SetupPluginPort(void)
     XSelectInput (GDK_DISPLAY (),
                   GDK_WINDOW_XWINDOW(mDrawingarea->inner_window),
                   xattrs.your_event_mask |
-                  SubstructureNotifyMask );
+                  SubstructureNotifyMask);
 
     gdk_window_add_filter(mDrawingarea->inner_window, 
                           plugin_window_filter_func,
@@ -2540,6 +2598,101 @@ nsWindow::SetPluginType(PRBool aIsXembed)
 {
     mHasNonXembedPlugin = !aIsXembed;
 }
+
+void
+nsWindow::SetNonXEmbedPluginFocus()
+{
+    if (gPluginFocusWindow == this) {
+        return;
+    }
+
+    if (gPluginFocusWindow) {
+        gPluginFocusWindow->LoseNonXEmbedPluginFocus();
+    }
+
+    LOGFOCUS(("nsWindow::SetNonXEmbedPluginFocus\n"));
+
+    Window curFocusWindow;
+    int focusState;
+
+    XGetInputFocus(GDK_WINDOW_XDISPLAY(mDrawingarea->inner_window),
+                   &curFocusWindow,
+                   &focusState);
+
+    LOGFOCUS(("\t curFocusWindow=%p\n", curFocusWindow));
+
+    GdkWindow* toplevel = gdk_window_get_toplevel
+                                (mDrawingarea->inner_window);
+    GdkWindow *gdkfocuswin = gdk_window_lookup(curFocusWindow);
+
+    // lookup with the focus proxy window is supposed to get the
+    // same GdkWindow as toplevel. If the current focused window
+    // is not the focus proxy, we return without any change.
+    if (gdkfocuswin != toplevel) {
+        return;
+    }
+
+    // switch the focus from the focus proxy to the plugin window
+    mOldFocusWindow = curFocusWindow;
+    XRaiseWindow(GDK_WINDOW_XDISPLAY(mDrawingarea->inner_window),
+                 GDK_WINDOW_XWINDOW(mDrawingarea->inner_window));
+    gdk_error_trap_push();
+    XSetInputFocus(GDK_WINDOW_XDISPLAY(mDrawingarea->inner_window),
+                   GDK_WINDOW_XWINDOW(mDrawingarea->inner_window),
+                   RevertToNone,
+                   CurrentTime);
+    gdk_flush();
+    gdk_error_trap_pop();
+    gPluginFocusWindow = this;
+    gdk_window_add_filter(NULL, plugin_client_message_filter, this);
+    
+    LOGFOCUS(("nsWindow::SetNonXEmbedPluginFocus oldfocus=%p new=%p\n",
+                mOldFocusWindow, 
+                GDK_WINDOW_XWINDOW(mDrawingarea->inner_window)));
+}
+
+void
+nsWindow::LoseNonXEmbedPluginFocus()
+{
+    LOGFOCUS(("nsWindow::LoseNonXEmbedPluginFocus\n"));
+
+    // This method is only for the nsWindow which contains a
+    // Non-XEmbed plugin, for example, JAVA plugin.
+    if (gPluginFocusWindow != this) {
+        return;
+    }
+
+    Window curFocusWindow;
+    int focusState;
+
+    XGetInputFocus(GDK_WINDOW_XDISPLAY(mDrawingarea->inner_window),
+                   &curFocusWindow,
+                   &focusState);
+
+    // we only switch focus between plugin window and focus proxy. If the 
+    // current focused window is not the plugin window, just removing the 
+    // event filter that blocks the WM_TAKE_FOCUS is enough. WM and gtk2
+    // will take care of the focus later.
+    if (!curFocusWindow || 
+        curFocusWindow == GDK_WINDOW_XWINDOW(mDrawingarea->inner_window)) {
+
+        gdk_error_trap_push();
+        XRaiseWindow(GDK_WINDOW_XDISPLAY(mDrawingarea->inner_window),
+                     mOldFocusWindow);
+        XSetInputFocus(GDK_WINDOW_XDISPLAY(mDrawingarea->inner_window),
+                       mOldFocusWindow,
+                       RevertToParent,
+                       CurrentTime);
+        gdk_flush();
+        gdk_error_trap_pop();
+    }
+    gPluginFocusWindow = NULL;
+    mOldFocusWindow = 0;
+    gdk_window_remove_filter(NULL, plugin_client_message_filter, this);
+
+    LOGFOCUS(("nsWindow::LoseNonXEmbedPluginFocus end\n"));
+}
+
 
 PRBool
 check_for_rollup(GdkWindow *aWindow, gdouble aMouseX, gdouble aMouseY,
@@ -2637,8 +2790,8 @@ is_mouse_in_window (GdkWindow* aWindow, gdouble aMouseX, gdouble aMouseY)
 
     gdk_window_get_size(aWindow, &w, &h);
 
-    if ( aMouseX > x && aMouseX < x + w &&
-         aMouseY > y && aMouseY < y + h )
+    if (aMouseX > x && aMouseX < x + w &&
+        aMouseY > y && aMouseY < y + h)
         return PR_TRUE;
 
     return PR_FALSE;
@@ -3004,28 +3157,80 @@ plugin_window_filter_func (GdkXEvent *gdk_xevent, GdkEvent *event, gpointer data
     {
         case CreateNotify:
         case ReparentNotify:
-            if(xevent->type==CreateNotify) {
+            if (xevent->type==CreateNotify) {
                 plugin_window = gdk_window_lookup(xevent->xcreatewindow.window);
             }
             else {
-                if(xevent->xreparent.event != xevent->xreparent.parent)
+                if (xevent->xreparent.event != xevent->xreparent.parent)
                     break;
                 plugin_window = gdk_window_lookup (xevent->xreparent.window);
             }
-            if(plugin_window) {
+            if (plugin_window) {
                 user_data = nsnull;
                 gdk_window_get_user_data(plugin_window, &user_data);
                 widget = GTK_WIDGET(user_data);
-                if(GTK_IS_SOCKET(widget)){
+
+                if (GTK_IS_SOCKET(widget)) {
                     break;
                 }
             }
             nswindow->SetPluginType(PR_FALSE);
             return_val = GDK_FILTER_REMOVE;
             break;
+        case EnterNotify:
+            // Currently we consider all plugins are non-xembed and calls
+            // SetNonXEmbedPluginFocus without any checking.
+            nswindow->SetNonXEmbedPluginFocus();
+            break;
+        case DestroyNotify:
+            gdk_window_remove_filter
+                ((GdkWindow*)(nswindow->GetNativeData(NS_NATIVE_WINDOW)),
+                 plugin_window_filter_func,
+                 nswindow);
+            // Currently we consider all plugins are non-xembed and calls
+            // LoseNonXEmbedPluginFocus without any checking.
+            nswindow->LoseNonXEmbedPluginFocus();
+            break;
         default:
             break;
     }
+    return return_val;
+}
+
+/* static */
+GdkFilterReturn   
+plugin_client_message_filter (GdkXEvent *gdk_xevent,
+                              GdkEvent *event,
+                              gpointer data)
+{
+    XEvent    *xevent;
+    xevent = (XEvent *)gdk_xevent;
+
+    GdkFilterReturn return_val;
+    return_val = GDK_FILTER_CONTINUE;
+
+    if (!gPluginFocusWindow || xevent->type!=ClientMessage) {
+        return return_val;
+    }
+
+    // When WM sends out WM_TAKE_FOCUS, gtk2 will use XSetInputFocus
+    // to set the focus to the focus proxy. To prevent this happen
+    // while the focus is on the plugin, we filter the WM_TAKE_FOCUS
+    // out.
+    Display *dpy ;
+    dpy = GDK_WINDOW_XDISPLAY((GdkWindow*)(gPluginFocusWindow->
+                GetNativeData(NS_NATIVE_WINDOW)));
+    if (gdk_x11_get_xatom_by_name("WM_PROTOCOLS") 
+            != xevent->xclient.message_type) {
+        return return_val;
+    }
+    
+    if ((Atom) xevent->xclient.data.l[0] == 
+            gdk_x11_get_xatom_by_name("WM_TAKE_FOCUS")) {
+        // block it from gtk2.0 focus proxy
+        return_val = GDK_FILTER_REMOVE;
+    }
+
     return return_val;
 }
 
@@ -3359,8 +3564,8 @@ get_inner_gdk_window (GdkWindow *aWindow,
         if (child) {
             GdkWindow * childWindow = (GdkWindow *) child->data;
             gdk_window_get_geometry (childWindow, &cx, &cy, &cw, &ch, &cd);
-            if (( cx < x ) && (x < (cx + cw)) &&
-                ( cy < y ) && (y < (cy + ch)) &&
+            if ((cx < x) && (x < (cx + cw)) &&
+                (cy < y) && (y < (cy + ch)) &&
                 gdk_window_is_visible (childWindow)) {
                 return get_inner_gdk_window (childWindow,
                                              x - cx, y - cy,
