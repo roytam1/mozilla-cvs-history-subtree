@@ -56,7 +56,9 @@ typedef float               gfx_coord;
 typedef float               gfx_angle;
 
 /**
- * typedef that should be used for colors
+ * A color is a 32 bit unsigned integer with
+ * four components: R, G, B and A.
+ *
  * @var typedef unsigned long gfx_color
  */
 typedef unsigned long       gfx_color;
