@@ -4040,6 +4040,9 @@ nsGlobalHistory::AutoCompleteSearch(const nsAString& aSearchString,
                                             kToken_TypedColumn,
                                             mAutocompleteOnlyTyped,
                                             aSearchString, aExclude);
+
+    nsCOMPtr<nsISupports> kungFuDeathGrip(enumerator);
+
     rv = enumerator->Init(mEnv, mTable);
     if (NS_FAILED(rv)) return rv;
   
