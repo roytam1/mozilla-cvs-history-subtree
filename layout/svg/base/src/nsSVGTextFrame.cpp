@@ -991,11 +991,9 @@ nsSVGTextFrame::UpdateGlyphPositioning()
   PRUint8 baseline;
   switch(((const nsStyleSVGReset*)mStyleContext->GetStyleData(eStyleStruct_SVGReset))->mDominantBaseline) {
     case NS_STYLE_DOMINANT_BASELINE_TEXT_BEFORE_EDGE:
-    case NS_STYLE_DOMINANT_BASELINE_TEXT_TOP:
       baseline = nsISVGRendererGlyphMetrics::BASELINE_TEXT_BEFORE_EDGE;
       break;
     case NS_STYLE_DOMINANT_BASELINE_TEXT_AFTER_EDGE:
-    case NS_STYLE_DOMINANT_BASELINE_TEXT_BOTTOM:
       baseline = nsISVGRendererGlyphMetrics::BASELINE_TEXT_AFTER_EDGE;
       break;
     case NS_STYLE_DOMINANT_BASELINE_MIDDLE:

@@ -878,8 +878,6 @@ const PRInt32 nsCSSProps::kDominantBaselineKTable[] = {
   eCSSKeyword_middle, NS_STYLE_DOMINANT_BASELINE_MIDDLE,
   eCSSKeyword_text_after_edge, NS_STYLE_DOMINANT_BASELINE_TEXT_AFTER_EDGE,
   eCSSKeyword_text_before_edge, NS_STYLE_DOMINANT_BASELINE_TEXT_BEFORE_EDGE,
-  eCSSKeyword_text_top, NS_STYLE_DOMINANT_BASELINE_TEXT_TOP,
-  eCSSKeyword_text_bottom, NS_STYLE_DOMINANT_BASELINE_TEXT_BOTTOM,
   -1, -1
 };
 
