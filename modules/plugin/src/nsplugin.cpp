@@ -221,15 +221,14 @@ nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, 
                         const char* altHost, const char* referrer,
                         PRBool forceJSEnabled)
 {
-    nsPluginError rslt;
-    nsPluginInstancePeer* instPeer;
-    NPP npp = NULL;
-    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK)
-        npp = instPeer->GetNPP();
-    rslt = (nsPluginError)np_geturlinternal(npp, url, target, altHost, referrer,
-                                            forceJSEnabled, notifyData != NULL, notifyData);
-    if (npp)
+    nsPluginError rslt = nsPluginError_InvalidParam;
+    nsPluginInstancePeer* instPeer = NULL;
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
+        NPP npp = instPeer->GetNPP();
+	     rslt = (nsPluginError)np_geturlinternal(npp, url, target, altHost, referrer,
+                                               forceJSEnabled, notifyData != NULL, notifyData);
         instPeer->Release();
+    }
     return rslt;
 }
 
@@ -240,15 +239,14 @@ nsPluginManager::PostURL(nsISupports* peer, const char* url, const char* target,
                          PRBool forceJSEnabled,
                          PRUint32 postHeadersLength, const char* postHeaders)
 {
-    nsPluginError rslt;
+    nsPluginError rslt = nsPluginError_InvalidParam;
     nsPluginInstancePeer* instPeer;
-    NPP npp = NULL;
-    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK)
-        npp = instPeer->GetNPP();
-    rslt = (nsPluginError)np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
-                                             bufLen, buf, file, notifyData != NULL, notifyData);
-    if (npp)
+    if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
+        NPP npp = instPeer->GetNPP();
+        rslt = (nsPluginError)np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
+                                                bufLen, buf, file, notifyData != NULL, notifyData);
         instPeer->Release();
+    }
     return rslt;
 }
 
@@ -378,17 +376,19 @@ nsFileUtilities::NewTempFileName(const char* prefix, char* resultBuf, PRUint32 b
 // Plugin Instance Peer Interface
 
 nsPluginInstancePeer::nsPluginInstancePeer(NPP npp)
-    : npp(npp), userInst(NULL)
+    : fNPP(npp), fPluginInst(NULL), fTagInfo(NULL)
 {
     NS_INIT_AGGREGATED(NULL);
-    tagInfo = new nsPluginTagInfo(npp);
-    tagInfo->AddRef();
+    fTagInfo = new nsPluginTagInfo(npp);
+    fTagInfo->AddRef();
 }
 
 nsPluginInstancePeer::~nsPluginInstancePeer(void)
 {
-    tagInfo->Release();
-    tagInfo = NULL;
+    if (fTagInfo != NULL) {
+        fTagInfo->Release();
+        fTagInfo = NULL;
+    }
 }
 
 NS_IMPL_AGGREGATED(nsPluginInstancePeer);
@@ -408,20 +408,20 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
         AddRef(); 
         return NS_OK; 
     }
-    return tagInfo->QueryInterface(aIID, aInstancePtr);
+    return fTagInfo->QueryInterface(aIID, aInstancePtr);
 }
 
 NS_METHOD_(nsMIMEType)
 nsPluginInstancePeer::GetMIMEType(void)
 {
-    np_instance* instance = (np_instance*)npp->ndata;
+    np_instance* instance = (np_instance*)fNPP->ndata;
     return instance->typeString;
 }
 
 NS_METHOD_(nsPluginType)
 nsPluginInstancePeer::GetMode(void)
 {
-    np_instance* instance = (np_instance*)npp->ndata;
+    np_instance* instance = (np_instance*)fNPP->ndata;
     return (nsPluginType)instance->type;
 }
 
@@ -430,54 +430,54 @@ nsPluginInstancePeer::NewStream(nsMIMEType type, const char* target, nsIOutputSt
 {
     NPStream* pstream;
     nsPluginError err = (nsPluginError)
-        npn_newstream(npp, (char*)type, (char*)target, &pstream);
+        npn_newstream(fNPP, (char*)type, (char*)target, &pstream);
     if (err != nsPluginError_NoError)
         return err;
-    *result = new nsPluginManagerStream(npp, pstream);
+    *result = new nsPluginManagerStream(fNPP, pstream);
     return nsPluginError_NoError;
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::ShowStatus(const char* message)
 {
-    npn_status(npp, message);
+    npn_status(fNPP, message);
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::InvalidateRect(nsRect *invalidRect)
 {
-    npn_invalidaterect(npp, (NPRect*)invalidRect);
+    npn_invalidaterect(fNPP, (NPRect*)invalidRect);
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::InvalidateRegion(nsRegion invalidRegion)
 {
-    npn_invalidateregion(npp, invalidRegion);
+    npn_invalidateregion(fNPP, invalidRegion);
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::ForceRedraw(void)
 {
-    npn_forceredraw(npp);
+    npn_forceredraw(fNPP);
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::RegisterWindow(void* window)
 {
-    npn_registerwindow(npp, window);
+    npn_registerwindow(fNPP, window);
 }
 
 NS_METHOD_(void)
 nsPluginInstancePeer::UnregisterWindow(void* window)
 {
-    npn_unregisterwindow(npp, window);
+    npn_unregisterwindow(fNPP, window);
 }
 
 NS_METHOD_(PRInt16)
 nsPluginInstancePeer::AllocateMenuID(PRBool isSubmenu)
 {
 #ifdef XP_MAC
-    return npn_allocateMenuID(npp, isSubmenu);
+    return npn_allocateMenuID(fNPP, isSubmenu);
 #else
     return -1;
 #endif
@@ -495,7 +495,33 @@ nsPluginInstancePeer::Tickle(void)
 NS_METHOD_(jref)
 nsPluginInstancePeer::GetJavaPeer(void)
 {
-    return npn_getJavaPeer(npp);
+    return npn_getJavaPeer(fNPP);
+}
+
+void nsPluginInstancePeer::SetPluginInstance(nsIPluginInstance* inst)
+{
+    if (fPluginInst != NULL) {
+        fPluginInst->Release();
+    }
+    fPluginInst = inst;
+    if (fPluginInst != NULL) {
+	    fPluginInst->AddRef();
+	 }
+}
+
+nsIPluginInstance* nsPluginInstancePeer::GetPluginInstance()
+{
+	if (fPluginInst != NULL) {
+		fPluginInst->AddRef();
+		return fPluginInst;
+	}
+	return NULL;
+}
+
+NPP
+nsPluginInstancePeer::GetNPP()
+{
+    return fNPP;
 }
 
 extern "C" JSContext *lm_crippled_context; /* XXX kill me */
@@ -523,7 +549,7 @@ nsPluginInstancePeer::GetJSContext(void)
 MWContext *
 nsPluginInstancePeer::GetMWContext(void)
 {
-    np_instance* instance = (np_instance*) npp->ndata;
+    np_instance* instance = (np_instance*) fNPP->ndata;
     MWContext *pMWCX = instance->cx;
 
     return pMWCX;
