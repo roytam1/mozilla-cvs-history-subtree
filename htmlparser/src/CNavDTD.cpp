@@ -847,7 +847,8 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
         case eHTMLTag_comment:
         case eHTMLTag_newline:
         case eHTMLTag_whitespace:
-          if(mMisplacedContent.GetSize()<1) {
+        case eHTMLTag_userdefined:
+          if (mMisplacedContent.GetSize() == 0) {
             // simply pass these through to token handler without further ado...
             // fix for bugs 17017,18308,23765,24275,69331
             break;  
@@ -1461,7 +1462,7 @@ nsresult CNavDTD::WillHandleStartTag(CToken* aToken,eHTMLTags aTag,nsIParserNode
       //with any tags that don't belong in the head.
     if(NS_OK==result) {
       if(mOpenHeadCount>0){
-        static eHTMLTags skip2[]={eHTMLTag_newline,eHTMLTag_whitespace};
+        static eHTMLTags skip2[]={eHTMLTag_newline,eHTMLTag_whitespace,eHTMLTag_userdefined};
         if(!FindTagInSet(aTag,skip2,sizeof(skip2)/sizeof(eHTMLTag_unknown))){
           PRBool theExclusive=PR_FALSE;
           if(!gHTMLElements[eHTMLTag_head].IsChildOfHead(aTag,theExclusive)){      
@@ -1751,7 +1752,9 @@ nsresult CNavDTD::HandleStartToken(CToken* aToken) {
         //the old way...
       if(!isTokenHandled) {
         if(theHeadIsParent || 
-          (mOpenHeadCount>0  && (eHTMLTag_newline==theChildTag || eHTMLTag_whitespace==theChildTag))) {
+          (mOpenHeadCount>0  && (eHTMLTag_newline==theChildTag || 
+                                 eHTMLTag_whitespace==theChildTag ||
+                                 eHTMLTag_userdefined==theChildTag))) {
             result=AddHeadLeaf(theNode);
         }
         else result=HandleDefaultStartToken(aToken,theChildTag,theNode); 
