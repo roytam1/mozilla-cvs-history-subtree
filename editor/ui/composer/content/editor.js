@@ -233,8 +233,11 @@ function EditorStartup(editorType, editorElement)
     gFormatToolbar = document.getElementById("FormatToolbar");
   }
 
+  // HACK
+  return;
+  
   // store the editor shell in the window, so that child windows can get to it.
-  editorShell = editorElement.editorShell;        // this pattern exposes a JS/XBL bug that causes leaks
+  editorShell = editorElement.editorShell;
   editorShell.editorType = editorType;
 
   editorShell.webShellWindow = window;

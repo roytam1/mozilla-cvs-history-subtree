@@ -114,6 +114,8 @@ protected:
 
   nsComposerCommandsUpdater    *mStateMaintainer;      // we hold the owning ref to this.
   
+  // temporary!
+  nsCOMPtr<nsIEditorShell>      mEditorShell;
 };
 
 

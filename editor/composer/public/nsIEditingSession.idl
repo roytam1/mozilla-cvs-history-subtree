@@ -40,13 +40,14 @@
 #include "nsISupports.idl"
 #include "domstubs.idl"
 
-interface nsIEditor;
-interface nsIEditingShell;
+#include "nsIEditorShell.idl"
+#include "nsIEditor.idl"
 
 [scriptable, uuid(D3B0AA04-F221-11D4-A73C-EAA4BAA8B4FC)]
 interface nsIEditingSession : nsISupports
 {
-
+  readonly attribute nsIEditorShell   editorShell;    /* temporary access to the editorShell */
+  
   /*  Init the editing session, passing the window that will be the root of
       the session (usually the content root frame.
   */
