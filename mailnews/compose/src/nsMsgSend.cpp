@@ -24,7 +24,6 @@
 #include "nsMsgBaseCID.h"
 #include "nsMsgNewsCID.h"
 #include "nsIMsgHeaderParser.h"
-#include "nsINetService.h"
 #include "nsISmtpService.h"  // for actually sending the message...
 #include "nsINntpService.h"  // for actually posting the message...
 #include "nsMsgCompPrefs.h"
@@ -63,7 +62,6 @@
 static NS_DEFINE_IID(kIMsgSend, NS_IMSGSEND_IID);
 static NS_DEFINE_CID(kSmtpServiceCID, NS_SMTPSERVICE_CID);
 static NS_DEFINE_CID(kNntpServiceCID, NS_NNTPSERVICE_CID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID); 
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kMimeURLUtilsCID, NS_IMIME_URLUTILS_CID);
@@ -328,7 +326,7 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 		m_plaintext->m_mime_delivery_state = this;
 
     char *tempURL = nsMsgPlatformFileToURL (mHTMLFileSpec->GetCString());
-    if (!tempURL || NS_FAILED(nsMsgNewURL(&(m_plaintext->mURL), nsString(tempURL))))
+    if (!tempURL || NS_FAILED(nsMsgNewURL(&(m_plaintext->mURL), tempURL)))
     {
       delete m_plaintext;
       m_plaintext = nsnull;
@@ -702,9 +700,9 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 			if (status < 0)
 				goto FAIL;
 
-      const char *turl;
+      char *turl;
       ma->mURL->GetSpec(&turl);
-			hdrs = mime_generate_attachment_headers (ma->m_type, ma->m_encoding,
+	  hdrs = mime_generate_attachment_headers (ma->m_type, ma->m_encoding,
 												   ma->m_description,
 												   ma->m_x_mac_type,
 												   ma->m_x_mac_creator,
@@ -713,6 +711,7 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 												   m_digest_p,
 												   ma,
 												   mCompFields->GetCharacterSet());
+	  nsCRT::free(turl);
 			if (!hdrs)
 				goto FAILMEM;
 
@@ -999,7 +998,7 @@ int nsMsgComposeAndSend::HackAttachments(
 
 			/* Count up attachments which are going to come from mail folders
 			and from NNTP servers. */
-      const char *turl;
+      char *turl;
       m_attachments[i].mURL->GetSpec(&turl);
 			if (PL_strncasecmp(turl, "mailbox:",8) ||
 					PL_strncasecmp(turl, "IMAP:",5))
@@ -1010,6 +1009,7 @@ int nsMsgComposeAndSend::HackAttachments(
 					news_count++;
 
 			msg_pick_real_name(&m_attachments[i], mCompFields->GetCharacterSet());
+			nsCRT::free(turl);
 		}
 
 		/* If there is more than one mailbox URL, or more than one NNTP url,
@@ -2095,7 +2095,7 @@ BuildURLAttachmentData(nsIURI *url)
   int                 attachCount = 2;  // one entry and one empty entry
   nsMsgAttachmentData *attachments = nsnull;
   char                *theName = nsnull;
-  const char          *spec = nsnull;
+  char          *spec = nsnull;
 
   if (!url)
     return nsnull;    
@@ -2120,7 +2120,8 @@ BuildURLAttachmentData(nsIURI *url)
   attachments[0].url = url; // The URL to attach. This should be 0 to signify "end of list".
   attachments[0].real_name = (char *)PL_strdup(theName);	// The original name of this document, which will eventually show up in the 
 
-  NS_ADDREF(url);
+  NS_IF_ADDREF(url);
+  nsCRT::free(spec);
   return attachments;
 }
 
@@ -2152,7 +2153,7 @@ nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity                    *aUserIndenti
   rv = fields->GetBody(&msgBody);
   if (NS_FAILED(rv) || (!msgBody))
   {
-    const char *body = nsnull;
+    char *body = nsnull;
     url->GetSpec(&body);
     msgBody = (char *)body;
   }
@@ -2171,6 +2172,7 @@ nsMsgComposeAndSend::SendWebPage(nsIMsgIdentity                    *aUserIndenti
 						  nsnull,  // const struct nsMsgAttachedFile    *preloaded_attachments,
 						  nsnull, // void                              *relatedPart,
               aListenerArray);  
+  nsCRT::free(msgBody);
   return rv;
 }
 
