@@ -161,7 +161,7 @@ Rights Reserved.
        
         <hbox id="mail3PaneVertLayoutBox" persist="collapsed width" flex="2">
           <vbox id="searchAndthreadpaneBox" persist="width" flex ="1">
-           <vbox id="messagesBox">
+           <vbox id="messagesBox" flex="1">
             <hbox id="searchBox"/>
             <vbox id="threadpaneBox" flex="1" persist="width">
               <tree id="threadTree" flex="1" persist="width" style="width:0px" context="threadPaneContext"/>
