@@ -26,7 +26,12 @@
 #ifndef nsXPIDLString_h__
 #define nsXPIDLString_h__
 
-#include "nscore.h" // for PRUnichar
+#include "prtypes.h"
+
+#ifndef __PRUNICHAR__
+#define __PRUNICHAR__
+typedef PRUint16 PRUnichar;
+#endif __PRUNICHAR__
 
 ////////////////////////////////////////////////////////////////////////
 // nsXPIDLString
