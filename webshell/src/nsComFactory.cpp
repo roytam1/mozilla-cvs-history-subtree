@@ -34,6 +34,7 @@
 #include "nsIWebShell.h"
 #include "nsString.h"
 #include "plevent.h"
+#include "private/pprthred.h"
 
 static HMODULE g_DllInst = NULL;
 
@@ -100,6 +101,7 @@ STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv)
     // for now here is as good a place as any...
     //
     if (TRUE == isFirstTime) {
+        PR_AttachThread(PR_USER_THREAD, PR_PRIORITY_NORMAL, NULL);
         PL_InitializeEventsLib("");
         NS_SetupRegistry();
 
