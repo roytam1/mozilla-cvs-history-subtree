@@ -190,6 +190,7 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
         }
         iter.reset();
         SortableNode* compNode = (SortableNode*)iter.next();
+        mEContext->setSecond(compNode->mNode);
         while (compNode && (compareNodes(currNode, compNode) > 0)) {
             compNode = (SortableNode*)iter.next();
         }

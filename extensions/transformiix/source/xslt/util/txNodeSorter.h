@@ -117,6 +117,11 @@ private:
             return next;
         }
 
+        void setSecond(Node* aSecond)
+        {
+            mSecondNode = aSecond;
+        }
+
         void setNode(which aWhich)
         {
             mWhich = aWhich;
