@@ -1322,6 +1322,26 @@ static NSArray* sToolbarDefaults = nil;
 	[mProxyIcon setImage:siteIconImage];
 }
 
+//
+// closeBrowserWindow:
+//
+// Some gecko view in this window wants to close the window. If we have
+// a bunch of tabs, only close the relevant tab, otherwise close the
+// window as a whole.
+//
+- (void)closeBrowserWindow:(BrowserWrapper*)inBrowser
+{
+  if ( [mTabBrowser numberOfTabViewItems] > 1 ) {
+    // close the appropriate browser (it may not be frontmost) and
+    // remove it from the tab UI
+    [inBrowser windowClosed];
+    [mTabBrowser removeTabViewItem:[inBrowser tab]];
+  }
+  else
+    [[self window] close];
+
+}
+
 - (void)createNewTab:(ENewTabContents)contents;
 {
     BrowserTabViewItem* newTab  = [self createNewTabItem];

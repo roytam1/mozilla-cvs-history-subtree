@@ -267,6 +267,8 @@ typedef enum
 
 -(BrowserTabViewItem*)createNewTabItem;
 
+- (void)closeBrowserWindow:(BrowserWrapper*)inBrowser;
+
 -(void)autosaveWindowFrame;
 -(void)disableAutosave;
 -(void)disableLoadPage;

@@ -101,6 +101,12 @@ typedef enum {
 // another item that represents the same entity (e.g. tab or proxy icon)
 - (BOOL)shouldAcceptDragFromSource:(id)dragSource;
 
+// Gecko wants to close the "window" associated with this instance. Some
+// embedding apps might want to multiplex multiple gecko views in one
+// window (tabbed browsing). This gives them the chance to change the
+// behavior.
+- (void)closeBrowserWindow;
+
 @end
 
 enum {

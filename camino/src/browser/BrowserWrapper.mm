@@ -181,6 +181,11 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   mTabItem = tab;
 }
 
+-(NSTabViewItem*)tab
+{
+  return mTabItem;
+}
+
 -(void)makePrimaryBrowserView: (id)aUrlbar status: (id)aStatus
          windowController: (BrowserWindowController*)aWindowController
 {
@@ -554,6 +559,18 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     return NO;
   
   return YES;
+}
+
+//
+// closeBrowserWindow
+//
+// Gecko wants us to close the browser associated with this gecko instance. However,
+// we're just one tab in the window so we don't really have the power to do this.
+// Let the window controller have final say.
+// 
+- (void)closeBrowserWindow
+{
+  [mWindowController closeBrowserWindow:self];
 }
 
 - (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString

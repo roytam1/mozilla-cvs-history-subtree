@@ -92,6 +92,7 @@
           windowController: (BrowserWindowController*)aWindowController;
 - (void)disconnectView;
 - (void)setTab: (NSTabViewItem*)tab;
+- (NSTabViewItem*) tab;
 
 - (NSWindow*)getNativeWindow;
 - (NSMenu*)getContextMenu;
