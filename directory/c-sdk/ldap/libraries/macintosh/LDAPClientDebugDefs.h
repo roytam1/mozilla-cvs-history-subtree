@@ -29,11 +29,12 @@
 
 #ifdef __powerc
 #define SUPPORT_OPENTRANSPORT	1
-#define OTUNIXERRORS 1
 #endif
 
 /* Read standard Mac prefix header */
 #include "MacPrefix_debug.h"
+
+#define OTCARBONAPPLICATION TARGET_CARBON
 
 #if 0 /* These are picked up from the MacPrefix file */
 #ifndef macintosh

@@ -515,6 +515,16 @@ struct ldap {
 #define LDAP_IS_CLDAP( ld )	( ld->ld_sbp->sb_naddr > 0 )
 
 /*
+ * Some Unix error defs. Under CW 7, we can't define OTUNIXERRORS because
+ * it generates many conflicts with errno.h. Define what we need here.
+ */
+ 
+#if defined(macintosh)
+#define EWOULDBLOCK     35
+#define EHOSTUNREACH    65
+#endif
+
+/*
  * handy macro to check errno "e" for an "in progress" sort of error
  */
 #if defined(macintosh) || defined(_WINDOWS)

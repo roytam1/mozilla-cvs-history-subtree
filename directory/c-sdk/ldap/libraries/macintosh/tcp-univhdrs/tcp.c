@@ -52,7 +52,7 @@ pascal void DNREventHandler();
 #endif /* NEEDPROTOS */
 
 static Boolean gHaveOT = false;
-static OTNotifyUPP		EventHandlerUPP;
+static OTNotifyUPP		sEventHandlerUPP;
 static EventRecord		dummyEvent;
 
 
@@ -87,8 +87,8 @@ tcp_init( void )
 		gHaveOT = ( InitOpenTransport() == noErr );
 #endif /* TARGET_CARBON */
 
-		EventHandlerUPP = NewOTNotifyUPP(EventHandler);
-		/* Somewhere we should probably do a DisposeOTNotifyUPP(EventHandlerUPP) but since we only
+		sEventHandlerUPP = NewOTNotifyUPP(EventHandler);
+		/* Somewhere we should probably do a DisposeOTNotifyUPP(sEventHandlerUPP) but since we only
 		   create one once I'm not going to worry about a leak */
 
 	}
@@ -148,7 +148,7 @@ tcpopen( unsigned char * buf, long buflen ) {
 		//	need to pass tsp to make it work		%%%
 		//
 		if ( !err ) {
-			err = OTInstallNotifier( tsp->tcps_ep, EventHandlerUPP, tsp );
+			err = OTInstallNotifier( tsp->tcps_ep, sEventHandlerUPP, tsp );
 		}
 	
 		if ( err != kOTNoError ) {
