@@ -1956,8 +1956,8 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                 nsDocElement = nsnull;
             }
 
-            anObserverService->AddObserver(aObserver, topic.GetUnicode());
-            anObserverService->Notify(nsDocElement, topic.GetUnicode(), nsnull);
+            anObserverService->AddObserver(aObserver, topic.get());
+            anObserverService->Notify(nsDocElement, topic.get(), nsnull);
         }
     }
 
