@@ -139,7 +139,7 @@ class XFE_DragDesktop : public XFE_DragBase
 {
 public:
     XFE_DragDesktop(Widget);
-    ~XFE_DragDesktop();
+    virtual ~XFE_DragDesktop();
 protected:
     Atom _fileTarget;
 
@@ -159,7 +159,7 @@ class XFE_DragNetscape : public XFE_DragDesktop
 {
 public:
     XFE_DragNetscape(Widget);
-    ~XFE_DragNetscape();
+    virtual ~XFE_DragNetscape();
 protected:
     XFE_DesktopType *_desktopFileData;
 
@@ -245,7 +245,7 @@ class XFE_DropDesktop : public XFE_DropBase
 {
 public:
     XFE_DropDesktop(Widget);
-    ~XFE_DropDesktop();
+    virtual ~XFE_DropDesktop();
 protected:
     // base class methods changed
     int isFileTarget(Atom);
@@ -271,7 +271,7 @@ class XFE_DropNetscape : public XFE_DropDesktop
 {
 public:
     XFE_DropNetscape(Widget);
-    ~XFE_DropNetscape();
+    virtual ~XFE_DropNetscape();
 protected:
     int processFileTarget(const char**,int);
     int processDesktopURLTarget(const char*,const char*);
