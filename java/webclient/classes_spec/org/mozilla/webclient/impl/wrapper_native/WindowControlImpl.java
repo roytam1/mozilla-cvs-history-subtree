@@ -102,17 +102,20 @@ public void createWindow(int nativeWindow, Rectangle rect)
     final int nativeWin = nativeWindow;
     final int nativeBc = getNativeBrowserControl();
     final BrowserControl bc = getBrowserControl();
-    final Rectangle bounds = rect;
+    final int finalX = rect.x;
+    final int finalY = rect.y;
+    final int finalWidth = rect.width;
+    final int finalHeight = rect.height;
+
     NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable() {
 	    public Object run() {
-		nativeRealize(nativeWin, nativeBc, bounds.x, 
-			      bounds.y, bounds.width, 
-			      bounds.height, bc);
+
+		nativeRealize(nativeWin, nativeBc, finalX, 
+			      finalY, finalWidth, 
+			      finalHeight, bc);
 		return null;
 	    }
 	});
-    
-    
 }
 
 public int getNativeWebShell()

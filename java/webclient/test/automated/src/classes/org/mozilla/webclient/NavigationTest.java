@@ -69,6 +69,7 @@ public class NavigationTest extends WebclientTestCase {
 	frame.setBounds(0, 0, 640, 480);
 	frame.add(canvas, BorderLayout.CENTER);
 	frame.setVisible(true);
+	canvas.setVisible(true);
 	
 	Navigation nav = (Navigation) 
 	    firstBrowserControl.queryInterface(BrowserControl.NAVIGATION_NAME);
@@ -78,6 +79,10 @@ public class NavigationTest extends WebclientTestCase {
 
 	System.out.println("Loading url: " + testPage.toURL().toString());
 	nav.loadURL(testPage.toURL().toString());
+	frame.setVisible(false);
+	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
+	BrowserControlFactory.appTerminate();
+
     }
 
 }
