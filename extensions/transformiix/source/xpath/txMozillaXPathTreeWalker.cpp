@@ -305,9 +305,9 @@ txXPathTreeWalker::moveToSibling(PRInt32 aDir)
                                : document->IndexOf(mPosition.mContent);
     }
 
-    PRInt32 newIndex = mCurrentIndex + aDir;
-    nsIContent* newChild = parent ? parent->GetChildAt(newIndex)
-                                  : document->GetChildAt(newIndex);
+    PRUint32 newIndex = mCurrentIndex + aDir;
+    nsIContent* newChild = parent ? parent->GetChildAt(newIndex) :
+                                    document->GetChildAt(newIndex);
     if (!newChild) {
         return PR_FALSE;
     }
@@ -499,6 +499,8 @@ txXPathNodeUtils::getNodeName(const txXPathNode& aNode, nsAString& aName)
             // PIs don't have a nodeinfo but do have a name
             nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aNode.mContent);
             node->GetNodeName(aName);
+
+            return;
         }
 
         aName.Truncate();
@@ -585,7 +587,7 @@ txXPathNodeUtils::getNodeType(const txXPathNode& aNode)
 static void getTextContent(nsIContent* aElement, nsAString& aResult)
 {
     nsIContent* content = aElement->GetChildAt(0);
-    PRInt32 i = 0;
+    PRUint32 i = 0;
     while (content) {
         if (content->IsContentOfType(nsIContent::eELEMENT)) {
             getTextContent(content, aResult);
@@ -621,17 +623,20 @@ txXPathNodeUtils::getNodeValue(const txXPathNode& aNode, nsAString& aResult)
         if (content) {
             getTextContent(content, aResult);
         }
+
         return;
     }
 
     if (aNode.mContent->IsContentOfType(nsIContent::eELEMENT)) {
         getTextContent(aNode.mContent, aResult);
+
         return;
     }
 
     if (aNode.mContent->IsContentOfType(nsIContent::eTEXT)) {
         nsCOMPtr<nsITextContent> textContent = do_QueryInterface(aNode.mContent);
         textContent->AppendTextTo(aResult);
+
         return;
     }
 
@@ -671,26 +676,6 @@ txXPathNodeUtils::getOwnerDocument(const txXPathNode& aNode)
     }
 
     return new txXPathNode(aNode.mContent->GetDocument());
-}
-
-/* static */
-txXPathNode*
-txXPathNodeUtils::getElementById(const txXPathNode& aDocument,
-                                 const nsAString& aID)
-{
-    if (!aDocument.isDocument()) {
-        return nsnull;
-    }
-
-    nsCOMPtr<nsIDOMDocument> document = do_QueryInterface(aDocument.mDocument);
-    nsCOMPtr<nsIDOMElement> element;
-    document->GetElementById(aID, getter_AddRefs(element));
-    nsCOMPtr<nsIContent> content = do_QueryInterface(element);
-    if (!content) {
-        return nsnull;
-    }
-
-    return new txXPathNode(content);
 }
 
 #ifndef HAVE_64BIT_OS

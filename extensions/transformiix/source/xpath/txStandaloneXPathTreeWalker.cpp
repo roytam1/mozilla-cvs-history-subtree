@@ -363,7 +363,6 @@ txXPathNodeUtils::isWhitespace(const txXPathNode& aNode)
 {
     NS_ASSERTION(aNode.mInner->nodeType == Node::TEXT_NODE, "Wrong type!");
 
-    
     return XMLUtils::isWhitespace(aNode.mInner->nodeValue);
 }
 
@@ -376,24 +375,6 @@ txXPathNodeUtils::getOwnerDocument(const txXPathNode& aNode)
     }
 
     return new txXPathNode(aNode.mInner->ownerDocument);
-}
-
-/* static */
-txXPathNode*
-txXPathNodeUtils::getElementById(const txXPathNode& aDocument,
-                                 const nsAString& aID)
-{
-    if (aDocument.mInner->nodeType != Node::DOCUMENT_NODE) {
-        return nsnull;
-    }
-
-    Document* doc = NS_STATIC_CAST(Document*, aDocument.mInner);
-    Element* element = doc->getElementById(aID);
-    if (!element) {
-        return nsnull;
-    }
-
-    return txXPathNativeNode::createXPathNode(element);
 }
 
 #ifndef HAVE_64BIT_OS

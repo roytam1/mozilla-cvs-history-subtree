@@ -456,37 +456,16 @@ txExecutionState::getEvalContext()
 }
 
 const txXPathNode*
-txExecutionState::retrieveDocument(const nsAString& uri,
-                                   const nsAString& baseUri)
+txExecutionState::retrieveDocument(const nsAString& aUri)
 {
-    nsAutoString absUrl;
-    URIUtils::resolveHref(uri, baseUri, absUrl);
-
-    PRInt32 hash = absUrl.RFindChar(PRUnichar('#'));
-    PRUint32 urlEnd, fragStart, fragEnd;
-    if (hash == kNotFound) {
-        urlEnd = absUrl.Length();
-        fragStart = 0;
-        fragEnd = 0;
-    }
-    else {
-        urlEnd = hash;
-        fragStart = hash + 1;
-        fragEnd = absUrl.Length();
-    }
-
-    nsDependentSubstring docUrl(absUrl, 0, urlEnd);
-    nsDependentSubstring frag(absUrl, fragStart, fragEnd);
+    NS_ASSERTION(aUri.FindChar(PRUnichar('#')) != kNotFound,
+                 "Remove the fragment.");
 
     PR_LOG(txLog::xslt, PR_LOG_DEBUG,
-           ("Retrieve Document %s, uri %s, baseUri %s, fragment %s\n", 
-            NS_LossyConvertUCS2toASCII(docUrl).get(),
-            NS_LossyConvertUCS2toASCII(uri).get(),
-            NS_LossyConvertUCS2toASCII(baseUri).get(),
-            NS_LossyConvertUCS2toASCII(frag).get()));
+           ("Retrieve Document %s", NS_LossyConvertUCS2toASCII(aUri).get()));
 
     // try to get already loaded document
-    txLoadedDocumentEntry *entry = mLoadedDocuments.PutEntry(docUrl);
+    txLoadedDocumentEntry *entry = mLoadedDocuments.PutEntry(aUri);
     if (!entry) {
         return nsnull;
     }
@@ -498,21 +477,17 @@ txExecutionState::retrieveDocument(const nsAString& uri,
         // triggering the load, but this will do for the time being
         txXPathNodeUtils::getBaseURI(*mLoadedDocuments.mSourceDocument, refUri);
         nsresult rv;
-        rv = txParseDocumentFromURI(docUrl, refUri,
+        rv = txParseDocumentFromURI(aUri, refUri,
                                     *mLoadedDocuments.mSourceDocument, errMsg,
                                     getter_Transfers(entry->mDocument));
 
         if (NS_FAILED(rv) || !entry->mDocument) {
             mLoadedDocuments.RawRemoveEntry(entry);
             receiveError(NS_LITERAL_STRING("Couldn't load document '") +
-                         docUrl + NS_LITERAL_STRING("': ") + errMsg, rv);
+                         aUri + NS_LITERAL_STRING("': ") + errMsg, rv);
+
             return nsnull;
         }
-    }
-
-    // return element with supplied id if supplied
-    if (!frag.IsEmpty()) {
-        return txXPathNodeUtils::getElementById(*entry->mDocument, frag);
     }
 
     return entry->mDocument;

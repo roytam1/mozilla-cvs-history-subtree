@@ -40,6 +40,7 @@
 #include "txIXPathContext.h"
 #include "XSLTFunctions.h"
 #include "txExecutionState.h"
+#include "txURIUtils.h"
 
 /*
  * Creates a new DocumentFunctionCall.
@@ -47,6 +48,43 @@
 DocumentFunctionCall::DocumentFunctionCall(const nsAString& aBaseURI)
     : mBaseURI(aBaseURI)
 {
+}
+
+static void
+retrieveNode(txExecutionState* aExecutionState, const nsAString& aUri,
+             const nsAString& aBaseUri, txNodeSet* aNodeSet)
+{
+    nsAutoString absUrl;
+    URIUtils::resolveHref(aUri, aBaseUri, absUrl);
+
+    PRInt32 hash = absUrl.RFindChar(PRUnichar('#'));
+    PRUint32 urlEnd, fragStart, fragEnd;
+    if (hash == kNotFound) {
+        urlEnd = absUrl.Length();
+        fragStart = 0;
+        fragEnd = 0;
+    }
+    else {
+        urlEnd = hash;
+        fragStart = hash + 1;
+        fragEnd = absUrl.Length();
+    }
+
+    nsDependentSubstring docUrl(absUrl, 0, urlEnd);
+    nsDependentSubstring frag(absUrl, fragStart, fragEnd);
+
+    const txXPathNode* loadNode = aExecutionState->retrieveDocument(docUrl);
+    if (loadNode) {
+        if (frag.IsEmpty()) {
+            aNodeSet->add(*loadNode);
+        }
+        else {
+            txXPathTreeWalker walker(*loadNode);
+            if (walker.moveToElementById(frag)) {
+                aNodeSet->add(walker.getCurrentPosition());
+            }
+        }
+    }
 }
 
 /*
@@ -115,10 +153,7 @@ DocumentFunctionCall::evaluate(txIEvalContext* aContext,
                 // the baseUri of node itself
                 txXPathNodeUtils::getBaseURI(node, baseURI);
             }
-            const txXPathNode* loadNode = es->retrieveDocument(uriStr, baseURI);
-            if (loadNode) {
-                nodeSet->add(*loadNode);
-            }
+            retrieveNode(es, uriStr, baseURI, nodeSet);
         }
         
         NS_ADDREF(*aResult = nodeSet);
@@ -130,10 +165,7 @@ DocumentFunctionCall::evaluate(txIEvalContext* aContext,
     nsAutoString uriStr;
     exprResult1->stringValue(uriStr);
     const nsAString* base = baseURISet ? &baseURI : &mBaseURI;
-    const txXPathNode* loadNode = es->retrieveDocument(uriStr, *base);
-    if (loadNode) {
-        nodeSet->add(*loadNode);
-    }
+    retrieveNode(es, uriStr, *base, nodeSet);
 
     NS_ADDREF(*aResult = nodeSet);
 

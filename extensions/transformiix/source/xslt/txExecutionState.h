@@ -127,8 +127,7 @@ public:
     // state-getting functions
     txIEvalContext* getEvalContext();
     txExpandedNameMap* getParamMap();
-    const txXPathNode* retrieveDocument(const nsAString& uri,
-                                        const nsAString& baseUri);
+    const txXPathNode* retrieveDocument(const nsAString& aUri);
     nsresult getKeyNodes(const txExpandedName& aKeyName,
                          const txXPathNode& aDocument,
                          const nsAString& aKeyValue, PRBool aIndexIfNotFound,

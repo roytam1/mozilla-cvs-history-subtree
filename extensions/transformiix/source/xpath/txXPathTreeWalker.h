@@ -138,8 +138,6 @@ public:
                              const txXPathNode& aOtherNode);
     static txXPathNode* getOwnerDocument(const txXPathNode& aNode);
     static PRInt32 getHashKey(const txXPathNode& aNode);
-    static txXPathNode* getElementById(const txXPathNode& aDocument,
-                                         const nsAString& aID);
     static nsresult getXSLTId(const txXPathNode& aNode, nsAString& aResult);
     static void release(txXPathNode* aNode);
     static void getBaseURI(const txXPathNode& aNode, nsAString& aURI);
