@@ -633,6 +633,7 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
     JavaMethodSignature *ms;
     JSString *simple_name_jsstr;
     JSFunction *fun;
+    JSBool is_constructor;
     int left_paren;
     const char *sig_cstr, *method_name;
     char *arg_start;
@@ -649,6 +650,9 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
     /* If no left-paren, then this is not a case of explicit method resolution */
     if (!arg_start)
 	return NULL;
+    /* Left-paren must be first character for constructors */
+    is_constructor = (is_static && (arg_start == method_name));
+        
     left_paren = arg_start - method_name;
     simple_name_jsstr = JS_NewStringCopyN(cx, method_name, left_paren);
     if (!simple_name_jsstr)
@@ -656,7 +660,9 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
 
     /* Find all the methods in the same class with the same simple name */
     JS_ValueToId(cx, STRING_TO_JSVAL(simple_name_jsstr), &id);
-    if (is_static)
+    if (is_constructor)
+        member_descriptor = jsj_LookupJavaClassConstructors(cx, jEnv, class_descriptor);
+    else if (is_static)
 	member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
     else
 	member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
@@ -704,7 +710,8 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
     memset(member_descriptor, 0, sizeof(JavaMemberDescriptor));
 
     member_descriptor->id = method_name_id;
-    member_descriptor->name = JS_strdup(cx, JS_GetStringBytes(simple_name_jsstr));
+    member_descriptor->name =
+        JS_strdup(cx, is_constructor ? "<init>" : JS_GetStringBytes(simple_name_jsstr));
     if (!member_descriptor->name) {
         JS_free(cx, member_descriptor);
         return NULL;
@@ -1504,92 +1511,6 @@ invoke_overloaded_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
                               method, is_static_method, argv, vp);
 }
 
-JS_DLL_CALLBACK JSBool
-jsj_JavaStaticMethodWrapper(JSContext *cx, JSObject *obj,
-                            uintN argc, jsval *argv, jsval *vp)
-{
-    JSFunction *function;
-    JavaMemberDescriptor *member_descriptor;
-    JavaClassDescriptor *class_descriptor;
-    jsid id;
-    jsval idval;
-    JNIEnv *jEnv;
-    JSJavaThreadState *jsj_env;
-    jobject java_class;
-
-    /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
-    if (!jEnv)
-        return JS_FALSE;
-    
-    class_descriptor = JS_GetPrivate(cx, obj);
-    if (!class_descriptor)
-        return JS_FALSE;
-    java_class = class_descriptor->java_class;
-    
-    JS_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
-    function = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[-2]));
-    idval = STRING_TO_JSVAL(JS_InternString(cx, JS_GetFunctionName(function)));
-    JS_ValueToId(cx, idval, &id);
-    
-    member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
-    if (!member_descriptor) {
-        JS_ASSERT(0);
-        return JS_FALSE;
-    }
-
-    return invoke_overloaded_java_method(cx, jsj_env, member_descriptor, JS_TRUE, 
-                                         java_class, class_descriptor, argc, argv, vp);
-}
-
-JS_DLL_CALLBACK JSBool
-jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
-                              uintN argc, jsval *argv, jsval *vp)
-{
-    JSFunction *function;
-    JavaMemberDescriptor *member_descriptor;
-    JavaObjectWrapper *java_wrapper;
-    JavaClassDescriptor *class_descriptor;
-    jsid id;
-    jsval idval;
-    JSJavaThreadState *jsj_env;
-    JNIEnv *jEnv;
-    jobject java_obj, java_class;
-
-    /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
-    if (!jEnv)
-        return JS_FALSE;
-    
-    java_wrapper = JS_GetPrivate(cx, obj);
-    if (!java_wrapper)
-        return JS_FALSE;
-    java_obj = java_wrapper->java_obj;
-    
-    JS_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
-    function = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[-2]));
-    idval = STRING_TO_JSVAL(JS_InternString(cx, JS_GetFunctionName(function)));
-    JS_ValueToId(cx, idval, &id);
-    class_descriptor = java_wrapper->class_descriptor;
-    member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
-
-    /* If no instance method was found, try for a static method */
-    if (!member_descriptor) {
-        member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
-        if (!member_descriptor) {
-            JS_ASSERT(0);
-            return JS_FALSE;
-        }
-        java_class = class_descriptor->java_class;
-        return invoke_overloaded_java_method(cx, jsj_env, member_descriptor, JS_TRUE, 
-                                             java_class, class_descriptor, argc, argv, vp);
-    }
-    
-    return invoke_overloaded_java_method(cx, jsj_env, member_descriptor,
-                                         JS_FALSE, java_obj, 
-                                         class_descriptor, argc, argv, vp);
-}
-
 static JSBool
 invoke_java_constructor(JSContext *cx,
                         JSJavaThreadState *jsj_env,
@@ -1668,21 +1589,15 @@ static JSBool
 invoke_overloaded_java_constructor(JSContext *cx,
                                    JSJavaThreadState *jsj_env,
                                    JavaMemberDescriptor *member,
-                                   JSObject *obj, uintN argc, jsval *argv,
+                                   JavaClassDescriptor *class_descriptor,
+                                   uintN argc, jsval *argv,
                                    jsval *vp)
 {
     jclass java_class;
     JavaMethodSpec *method;
-    JavaClassDescriptor *class_descriptor;
     JNIEnv *jEnv;
 
     jEnv = jsj_env->jEnv;
-
-    class_descriptor = JS_GetPrivate(cx, obj);
-    JS_ASSERT(class_descriptor);
-    if (!class_descriptor)
-        return JS_FALSE;
-
 
     method = resolve_overloaded_method(cx, jEnv, member, class_descriptor, JS_TRUE, 
                                        argc, argv);
@@ -1693,27 +1608,17 @@ invoke_overloaded_java_constructor(JSContext *cx,
     return invoke_java_constructor(cx, jsj_env, java_class, method, argv, vp);
 }
 
-
-JS_DLL_CALLBACK JSBool
-jsj_JavaConstructorWrapper(JSContext *cx, JSObject *obj,
-                           uintN argc, jsval *argv, jsval *vp)
+static JSBool
+java_constructor_wrapper(JSContext *cx, JSJavaThreadState *jsj_env,
+                         JavaMemberDescriptor *member_descriptor,
+                         JavaClassDescriptor *class_descriptor,
+                         uintN argc, jsval *argv, jsval *vp)
 {
     jint modifiers;
-    JavaMemberDescriptor *member_descriptor;
-    JavaClassDescriptor *class_descriptor;
-    JSJavaThreadState *jsj_env;
     JNIEnv *jEnv;
 
-    /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
-    if (!jEnv)
-        return JS_FALSE;
+    jEnv = jsj_env->jEnv;
     
-    obj = JSVAL_TO_OBJECT(argv[-2]);
-    class_descriptor = JS_GetPrivate(cx, obj);
-    if (!class_descriptor)
-        return JS_FALSE;
-
     /* Get class/interface flags and check them */
     modifiers = class_descriptor->modifiers;
     if (modifiers & ACC_ABSTRACT) {
@@ -1732,13 +1637,134 @@ jsj_JavaConstructorWrapper(JSContext *cx, JSObject *obj,
         return JS_FALSE;
     }
     
-    member_descriptor = jsj_LookupJavaClassConstructors(cx, jEnv, class_descriptor);
     if (!member_descriptor) {
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
                             JSJMSG_NO_CONSTRUCTORS, class_descriptor->name);
         return JS_FALSE;
     }
 
-    return invoke_overloaded_java_constructor(cx, jsj_env, member_descriptor, obj, argc, argv, vp);
+    return invoke_overloaded_java_constructor(cx, jsj_env, member_descriptor,
+                                              class_descriptor, argc, argv, vp);
+}
+
+JS_DLL_CALLBACK JSBool
+jsj_JavaConstructorWrapper(JSContext *cx, JSObject *obj,
+                           uintN argc, jsval *argv, jsval *vp)
+{
+    JavaClassDescriptor *class_descriptor;
+    JavaMemberDescriptor *member_descriptor;
+    JSJavaThreadState *jsj_env;
+    JNIEnv *jEnv;
+
+    /* Get the Java per-thread environment pointer for this JSContext */
+    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
+    if (!jEnv)
+        return JS_FALSE;
+    obj = JSVAL_TO_OBJECT(argv[-2]);
+    class_descriptor = JS_GetPrivate(cx, obj);
+    JS_ASSERT(class_descriptor);
+    if (!class_descriptor)
+        return JS_FALSE;
+    member_descriptor = jsj_LookupJavaClassConstructors(cx, jEnv, class_descriptor);
+    return java_constructor_wrapper(cx, jsj_env, member_descriptor, 
+                                    class_descriptor, argc, argv, vp);
+}
+
+
+static JSBool
+static_method_wrapper(JSContext *cx, JSJavaThreadState *jsj_env,
+                      JavaClassDescriptor *class_descriptor,
+                      jsid id,
+                      uintN argc, jsval *argv, jsval *vp)
+{
+    JNIEnv *jEnv;
+    JavaMemberDescriptor *member_descriptor;
+
+    jEnv = jsj_env->jEnv;
+    member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
+    
+    /* Is it a static method that is not a constructor ? */
+    if (member_descriptor && strcmp(member_descriptor->name, "<init>")) {
+        return invoke_overloaded_java_method(cx, jsj_env, member_descriptor, JS_TRUE, 
+                                             class_descriptor->java_class,
+                                             class_descriptor, argc, argv, vp);
+    }
+
+    JS_ASSERT(member_descriptor);
+    if (!member_descriptor)
+        return JS_FALSE;
+    
+    /* Must be an explicitly resolved overloaded constructor */
+    return java_constructor_wrapper(cx, jsj_env, member_descriptor,
+                                    class_descriptor, argc, argv, vp);
+}
+
+JS_DLL_CALLBACK JSBool
+jsj_JavaStaticMethodWrapper(JSContext *cx, JSObject *obj,
+                            uintN argc, jsval *argv, jsval *vp)
+{
+    JSFunction *function;
+    JavaClassDescriptor *class_descriptor;
+    jsid id;
+    jsval idval;
+    JNIEnv *jEnv;
+    JSJavaThreadState *jsj_env;
+
+    /* Get the Java per-thread environment pointer for this JSContext */
+    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
+    if (!jEnv)
+        return JS_FALSE;
+    
+    class_descriptor = JS_GetPrivate(cx, obj);
+    if (!class_descriptor)
+        return JS_FALSE;
+    
+    JS_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
+    function = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[-2]));
+    idval = STRING_TO_JSVAL(JS_InternString(cx, JS_GetFunctionName(function)));
+    JS_ValueToId(cx, idval, &id);
+
+    return static_method_wrapper(cx, jsj_env, class_descriptor, id, argc, argv, vp);
+}
+
+JS_DLL_CALLBACK JSBool
+jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
+                              uintN argc, jsval *argv, jsval *vp)
+{
+    JSFunction *function;
+    JavaMemberDescriptor *member_descriptor;
+    JavaObjectWrapper *java_wrapper;
+    JavaClassDescriptor *class_descriptor;
+    jsid id;
+    jsval idval;
+    JSJavaThreadState *jsj_env;
+    JNIEnv *jEnv;
+    jobject java_obj;
+
+    /* Get the Java per-thread environment pointer for this JSContext */
+    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
+    if (!jEnv)
+        return JS_FALSE;
+    
+    java_wrapper = JS_GetPrivate(cx, obj);
+    if (!java_wrapper)
+        return JS_FALSE;
+    java_obj = java_wrapper->java_obj;
+    
+    JS_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
+    function = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[-2]));
+    idval = STRING_TO_JSVAL(JS_InternString(cx, JS_GetFunctionName(function)));
+    JS_ValueToId(cx, idval, &id);
+    class_descriptor = java_wrapper->class_descriptor;
+    
+    /* Try to find an instance method with the given name first */
+    member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
+    if (member_descriptor)
+        return invoke_overloaded_java_method(cx, jsj_env, member_descriptor,
+                                             JS_FALSE, java_obj, 
+                                             class_descriptor, argc, argv, vp);
+
+    /* If no instance method was found, try for a static method or constructor */
+    return static_method_wrapper(cx, jsj_env, class_descriptor, id, argc, argv, vp);
 }
 
