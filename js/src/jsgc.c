@@ -92,14 +92,6 @@
 #define GC_ARENA_SIZE   (GC_THINGS_SIZE + GC_FLAGS_SIZE)
 
 /*
- * The private JSGCThing struct, which describes a gcFreeList element.
- */
-struct JSGCThing {
-    JSGCThing   *next;
-    uint8       *flagp;
-};
-
-/*
  * A GC arena contains one flag byte for each thing in its heap, and supports
  * O(1) lookup of a flag given its thing's address.
  *
@@ -179,11 +171,23 @@ typedef struct JSGCPageInfo {
 
 #define FIRST_THING_PAGE(a)     (((a)->base + GC_FLAGS_SIZE) & ~GC_PAGE_MASK)
 
+/*
+ * Given a jsuword page pointer p and a byte-count n, return the address of
+ * the first thing in p.  We "know" that any n not a power of two packs from
+ * the end of the page leaving enough room for one JSGCPageInfo at the front
+ * (assertions below check this).  This works because all allocations are a
+ * multiple of sizeof(JSGCThing) == sizeof(JSGCPageInfo) in size.
+ */
+#define FIRST_THING(p,n)        (((n) & ((n) - 1))                            \
+                                 ? (p) + (uint32)(GC_PAGE_SIZE % (n))         \
+                                 : (p) + (n))
+
 static JSGCThing *
-gc_new_arena(JSArenaPool *pool)
+gc_new_arena(JSArenaPool *pool, size_t nbytes)
 {
     uint8 *flagp, *split, *pagep, *limit;
     JSArena *a;
+    jsuword p;
     JSGCThing *thing;
     JSGCPageInfo *pi;
 
@@ -194,11 +198,13 @@ gc_new_arena(JSArenaPool *pool)
     a = pool->current;
 
     /* Reset a->avail to start at the flags split, aka the first thing page. */
-    a->avail = FIRST_THING_PAGE(a);
-    split = pagep = (uint8 *) a->avail;
-    a->avail += sizeof(JSGCPageInfo);
+    p = a->avail = FIRST_THING_PAGE(a);
+    split = pagep = (uint8 *) p;
+    a->avail = FIRST_THING(p, nbytes);
+    JS_ASSERT(a->avail >= p + sizeof(JSGCPageInfo));
     thing = (JSGCThing *) a->avail;
-    a->avail += sizeof(JSGCThing);
+    JS_ArenaCountAllocation(pool, a->avail - p);
+    a->avail += nbytes;
 
     /* Initialize the JSGCPageInfo records at the start of every thing page. */
     limit = pagep + GC_THINGS_SIZE;
@@ -235,7 +241,56 @@ js_IsAboutToBeFinalized(JSContext *cx, void *thing)
 
 typedef void (*GCFinalizeOp)(JSContext *cx, JSGCThing *thing);
 
-static GCFinalizeOp gc_finalizers[GCX_NTYPES];
+static GCFinalizeOp gc_finalizers[GCX_NTYPES] = {
+    (GCFinalizeOp) js_FinalizeObject,
+    (GCFinalizeOp) js_FinalizeString,
+#ifdef DEBUG
+    (GCFinalizeOp) js_FinalizeDouble,
+#else
+    NULL,
+#endif
+    (GCFinalizeOp) js_FinalizeString,
+#if JS_HAS_XML_SUPPORT
+    (GCFinalizeOp) js_FinalizeXMLNamespace,
+    (GCFinalizeOp) js_FinalizeXMLQName,
+    (GCFinalizeOp) js_FinalizeXML,
+#else
+    NULL,
+    NULL,
+    NULL,
+#endif
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
+
+#ifdef GC_MARK_DEBUG
+static const char newborn_external_string[] = "newborn external string";
+
+static const char *gc_typenames[GCX_NTYPES] = {
+    "newborn object",
+    "newborn string",
+    "newborn double",
+    "newborn mutable string",
+    "newborn Namespace",
+    "newborn QName",
+    "newborn XML",
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string,
+    newborn_external_string
+};
+#endif
 
 intN
 js_ChangeExternalStringFinalizer(JSStringFinalizeOp oldop,
@@ -265,6 +320,8 @@ js_ChangeExternalStringFinalizer(JSStringFinalizeOp oldop,
 JSBool
 js_InitGC(JSRuntime *rt, uint32 maxbytes)
 {
+    uintN i;
+
     JS_ASSERT(sizeof(JSGCThing) == sizeof(JSGCPageInfo));
     JS_ASSERT(sizeof(JSGCThing) >= sizeof(JSObject));
     JS_ASSERT(sizeof(JSGCThing) >= sizeof(JSString));
@@ -272,17 +329,10 @@ js_InitGC(JSRuntime *rt, uint32 maxbytes)
     JS_ASSERT(GC_FLAGS_SIZE >= GC_PAGE_SIZE);
     JS_ASSERT(sizeof(JSStackHeader) >= 2 * sizeof(jsval));
 
-    if (!gc_finalizers[GCX_OBJECT]) {
-        gc_finalizers[GCX_OBJECT] = (GCFinalizeOp)js_FinalizeObject;
-        gc_finalizers[GCX_STRING] = (GCFinalizeOp)js_FinalizeString;
-#ifdef DEBUG
-        gc_finalizers[GCX_DOUBLE] = (GCFinalizeOp)js_FinalizeDouble;
-#endif
-        gc_finalizers[GCX_MUTABLE_STRING] = (GCFinalizeOp)js_FinalizeString;
+    for (i = 0; i < GC_NUM_FREELISTS; i++) {
+        JS_InitArenaPool(&rt->gcArenaPool[i], "gc-arena", GC_ARENA_SIZE,
+                         GC_FREELIST_NBYTES(i));
     }
-
-    JS_InitArenaPool(&rt->gcArenaPool, "gc-arena", GC_ARENA_SIZE,
-                     sizeof(JSGCThing));
     if (!JS_DHashTableInit(&rt->gcRootsHash, JS_DHashGetStubOps(), NULL,
                            sizeof(JSGCRootHashEntry), GC_ROOTS_SIZE)) {
         rt->gcRootsHash.ops = NULL;
@@ -297,36 +347,42 @@ js_InitGC(JSRuntime *rt, uint32 maxbytes)
 void
 js_DumpGCStats(JSRuntime *rt, FILE *fp)
 {
+    uintN i;
+
     fprintf(fp, "\nGC allocation statistics:\n");
 
-#define U(x)    ((unsigned long)(x))
-    fprintf(fp, "  bytes currently allocated: %lu\n", U(rt->gcBytes));
-    fprintf(fp, "             alloc attempts: %lu\n", U(rt->gcStats.alloc));
-    fprintf(fp, "         GC freelist length: %lu\n", U(rt->gcStats.freelen));
-    fprintf(fp, "   recycles via GC freelist: %lu\n", U(rt->gcStats.recycle));
-    fprintf(fp, "allocation retries after GC: %lu\n", U(rt->gcStats.retry));
-    fprintf(fp, "        allocation failures: %lu\n", U(rt->gcStats.fail));
-    fprintf(fp, "         things born locked: %lu\n", U(rt->gcStats.lockborn));
-    fprintf(fp, "           valid lock calls: %lu\n", U(rt->gcStats.lock));
-    fprintf(fp, "         valid unlock calls: %lu\n", U(rt->gcStats.unlock));
-    fprintf(fp, "locks that hit stuck counts: %lu\n", U(rt->gcStats.stuck));
-    fprintf(fp, "    unlocks on stuck counts: %lu\n", U(rt->gcStats.unstuck));
-    fprintf(fp, "       mark recursion depth: %lu\n", U(rt->gcStats.depth));
-    fprintf(fp, "     maximum mark recursion: %lu\n", U(rt->gcStats.maxdepth));
-    fprintf(fp, "     mark C recursion depth: %lu\n", U(rt->gcStats.cdepth));
-    fprintf(fp, "   maximum mark C recursion: %lu\n", U(rt->gcStats.maxcdepth));
-    fprintf(fp, "     mark C stack overflows: %lu\n", U(rt->gcStats.dswmark));
-    fprintf(fp, "   mark DSW recursion depth: %lu\n", U(rt->gcStats.dswdepth));
-    fprintf(fp, " maximum mark DSW recursion: %lu\n", U(rt->gcStats.maxdswdepth));
-    fprintf(fp, "  mark DSW up-tree movement: %lu\n", U(rt->gcStats.dswup));
-    fprintf(fp, "DSW up-tree obj->slot steps: %lu\n", U(rt->gcStats.dswupstep));
-    fprintf(fp, "   maximum GC nesting level: %lu\n", U(rt->gcStats.maxlevel));
-    fprintf(fp, "potentially useful GC calls: %lu\n", U(rt->gcStats.poke));
-    fprintf(fp, "           useless GC calls: %lu\n", U(rt->gcStats.nopoke));
-    fprintf(fp, "  thing arenas freed so far: %lu\n", U(rt->gcStats.afree));
-    fprintf(fp, "     stack segments scanned: %lu\n", U(rt->gcStats.stackseg));
-    fprintf(fp, "stack segment slots scanned: %lu\n", U(rt->gcStats.segslots));
-#undef U
+#define UL(x)       ((unsigned long)(x))
+#define ULSTAT(x)   UL(rt->gcStats.x)
+    fprintf(fp, "  bytes currently allocated: %lu\n", UL(rt->gcBytes));
+    fprintf(fp, "             alloc attempts: %lu\n", ULSTAT(alloc));
+    for (i = 0; i < GC_NUM_FREELISTS; i++) {
+        fprintf(fp, "       GC freelist %u length: %lu\n", i, ULSTAT(freelen));
+        fprintf(fp, " recycles via GC freelist %u: %lu\n", i, ULSTAT(recycle));
+    }
+    fprintf(fp, "allocation retries after GC: %lu\n", ULSTAT(retry));
+    fprintf(fp, "        allocation failures: %lu\n", ULSTAT(fail));
+    fprintf(fp, "         things born locked: %lu\n", ULSTAT(lockborn));
+    fprintf(fp, "           valid lock calls: %lu\n", ULSTAT(lock));
+    fprintf(fp, "         valid unlock calls: %lu\n", ULSTAT(unlock));
+    fprintf(fp, "locks that hit stuck counts: %lu\n", ULSTAT(stuck));
+    fprintf(fp, "    unlocks on stuck counts: %lu\n", ULSTAT(unstuck));
+    fprintf(fp, "       mark recursion depth: %lu\n", ULSTAT(depth));
+    fprintf(fp, "     maximum mark recursion: %lu\n", ULSTAT(maxdepth));
+    fprintf(fp, "     mark C recursion depth: %lu\n", ULSTAT(cdepth));
+    fprintf(fp, "   maximum mark C recursion: %lu\n", ULSTAT(maxcdepth));
+    fprintf(fp, "     mark C stack overflows: %lu\n", ULSTAT(dswmark));
+    fprintf(fp, "   mark DSW recursion depth: %lu\n", ULSTAT(dswdepth));
+    fprintf(fp, " maximum mark DSW recursion: %lu\n", ULSTAT(maxdswdepth));
+    fprintf(fp, "  mark DSW up-tree movement: %lu\n", ULSTAT(dswup));
+    fprintf(fp, "DSW up-tree obj->slot steps: %lu\n", ULSTAT(dswupstep));
+    fprintf(fp, "   maximum GC nesting level: %lu\n", ULSTAT(maxlevel));
+    fprintf(fp, "potentially useful GC calls: %lu\n", ULSTAT(poke));
+    fprintf(fp, "           useless GC calls: %lu\n", ULSTAT(nopoke));
+    fprintf(fp, "  thing arenas freed so far: %lu\n", ULSTAT(afree));
+    fprintf(fp, "     stack segments scanned: %lu\n", ULSTAT(stackseg));
+    fprintf(fp, "stack segment slots scanned: %lu\n", ULSTAT(segslots));
+#undef UL
+#undef US
 
 #ifdef JS_ARENAMETER
     JS_DumpArenaStats(fp);
@@ -353,13 +409,18 @@ js_root_printer(JSDHashTable *table, JSDHashEntryHdr *hdr, uint32 i, void *arg)
 void
 js_FinishGC(JSRuntime *rt)
 {
+    uintN i;
+
 #ifdef JS_ARENAMETER
     JS_DumpArenaStats(stdout);
 #endif
 #ifdef JS_GCMETER
     js_DumpGCStats(rt, stdout);
 #endif
-    JS_FinishArenaPool(&rt->gcArenaPool);
+    for (i = 0; i < GC_NUM_FREELISTS; i++) {
+        JS_FinishArenaPool(&rt->gcArenaPool[i]);
+        rt->gcFreeList[i] = NULL;
+    }
     JS_ArenaFinish();
 
     if (rt->gcRootsHash.ops) {
@@ -392,7 +453,6 @@ js_FinishGC(JSRuntime *rt)
         JS_DHashTableDestroy(rt->gcLocksHash);
         rt->gcLocksHash = NULL;
     }
-    rt->gcFreeList = NULL;
 }
 
 JSBool
@@ -479,11 +539,13 @@ unsigned gchpos;
 #endif
 
 void *
-js_AllocGCThing(JSContext *cx, uintN flags)
+js_NewGCThing(JSContext *cx, uintN flags, size_t nbytes)
 {
     JSBool tried_gc;
     JSRuntime *rt;
-    JSGCThing *thing;
+    size_t nflags;
+    uintN i;
+    JSGCThing *thing, **flp;
     uint8 *flagp;
     JSLocalRootStack *lrs;
 
@@ -503,13 +565,18 @@ js_AllocGCThing(JSContext *cx, uintN flags)
         return NULL;
     }
     METER(rt->gcStats.alloc++);
+    nbytes = JS_ROUNDUP(nbytes, sizeof(JSGCThing));
+    nflags = nbytes / sizeof(JSGCThing);
+    i = GC_FREELIST_INDEX(nbytes);
+    flp = &rt->gcFreeList[i];
+
 retry:
-    thing = rt->gcFreeList;
+    thing = *flp;
     if (thing) {
-        rt->gcFreeList = thing->next;
+        *flp = thing->next;
         flagp = thing->flagp;
-        METER(rt->gcStats.freelen--);
-        METER(rt->gcStats.recycle++);
+        METER(rt->gcStats.freelen[i]--);
+        METER(rt->gcStats.recycle[i]++);
     } else {
         if (rt->gcBytes < rt->gcMaxBytes &&
             (tried_gc || rt->gcMallocBytes < rt->gcMaxBytes))
@@ -520,25 +587,24 @@ retry:
              * GC_PAGE_SIZE-byte-aligned thing (which is actually not a thing,
              * it's a JSGCPageInfo record).
              */
-            JSArenaPool *pool = &rt->gcArenaPool;
+            JSArenaPool *pool = &rt->gcArenaPool[i];
             JSArena *a = pool->current;
-            size_t nb = sizeof(JSGCThing);
             jsuword p = a->avail;
-            jsuword q = p + nb;
+            jsuword q = p + nbytes;
 
             if (q > (a->limit & ~GC_PAGE_MASK)) {
-                thing = gc_new_arena(pool);
+                thing = gc_new_arena(pool, nbytes);
             } else {
                 if ((p & GC_PAGE_MASK) == 0) {
                     /* Beware, p points to a JSGCPageInfo record! */
-                    p = q;
-                    q += nb;
-                    JS_ArenaCountAllocation(pool, nb);
+                    p = FIRST_THING(p, nbytes);
+                    q = p + nbytes;
+                    JS_ArenaCountAllocation(pool, p & GC_PAGE_MASK);
                 }
                 a->avail = q;
                 thing = (JSGCThing *)p;
             }
-            JS_ArenaCountAllocation(pool, nb);
+            JS_ArenaCountAllocation(pool, nbytes);
         }
 
         /*
@@ -594,7 +660,7 @@ retry:
 
     /* We can't fail now, so update flags and rt->gcBytes. */
     *flagp = (uint8)flags;
-    rt->gcBytes += sizeof(JSGCThing) + sizeof(uint8);
+    rt->gcBytes += nbytes + nflags;
 
     /*
      * Clear thing before unlocking in case a GC run is about to scan it,
@@ -604,7 +670,7 @@ retry:
     thing->flagp = NULL;
 #ifdef DEBUG_brendan
     gchist[gchpos].lastDitch = tried_gc;
-    gchist[gchpos].freeList = rt->gcFreeList;
+    gchist[gchpos].freeList = *flp;
     if (++gchpos == NGCHIST)
         gchpos = 0;
 #endif
@@ -888,6 +954,8 @@ js_MarkAtom(JSContext *cx, JSAtom *atom, void *arg)
     NextUnmarkedGCThing(vp, end, thingp, flagpp, arg)
 # define MARK_GC_THING(cx, thing, flagp, arg)                                 \
     MarkGCThing(cx, thing, flagp, arg)
+# define MARK_XML_THING(marker, cx, thing, arg)                               \
+    marker(cx, thing, arg)
 #else
 # define UNMARKED_GC_THING_FLAGS(thing, arg)                                  \
     UnmarkedGCThingFlags(thing)
@@ -895,6 +963,8 @@ js_MarkAtom(JSContext *cx, JSAtom *atom, void *arg)
     NextUnmarkedGCThing(vp, end, thingp, flagpp)
 # define MARK_GC_THING(cx, thing, flagp, arg)                                 \
     MarkGCThing(cx, thing, flagp)
+# define MARK_XML_THING(marker, cx, thing, arg)                               \
+    marker(cx, thing, NULL)
 #endif
 
 static uint8 *
@@ -1133,6 +1203,20 @@ MARK_GC_THING(JSContext *cx, void *thing, uint8 *flagp, void *arg)
             }
         }
         break;
+
+#if JS_HAS_XML_SUPPORT
+      case GCX_NAMESPACE:
+        MARK_XML_THING(js_MarkXMLNamespace, cx, (JSXMLNamespace *)thing, arg);
+        break;
+
+      case GCX_QNAME:
+        MARK_XML_THING(js_MarkXMLQName, cx, (JSXMLQName *)thing, arg);
+        break;
+
+      case GCX_XML:
+        MARK_XML_THING(js_MarkXML, cx, (JSXML *)thing, arg);
+        break;
+#endif
     }
 
 out:
@@ -1313,16 +1397,19 @@ gc_root_marker(JSDHashTable *table, JSDHashEntryHdr *hdr, uint32 num, void *arg)
     if (!JSVAL_IS_NULL(v) && JSVAL_IS_GCTHING(v)) {
         JSContext *cx = (JSContext *)arg;
 #ifdef DEBUG
+        uintN i;
         JSArena *a;
         jsuword firstpage;
         JSBool root_points_to_gcArenaPool = JS_FALSE;
         void *thing = JSVAL_TO_GCTHING(v);
 
-        for (a = cx->runtime->gcArenaPool.first.next; a; a = a->next) {
-            firstpage = FIRST_THING_PAGE(a);
-            if (JS_UPTRDIFF(thing, firstpage) < a->avail - firstpage) {
-                root_points_to_gcArenaPool = JS_TRUE;
-                break;
+        for (i = 0; i < GC_NUM_FREELISTS; i++) {
+            for (a = cx->runtime->gcArenaPool[i].first.next; a; a = a->next) {
+                firstpage = FIRST_THING_PAGE(a);
+                if (JS_UPTRDIFF(thing, firstpage) < a->avail - firstpage) {
+                    root_points_to_gcArenaPool = JS_TRUE;
+                    break;
+                }
             }
         }
         if (!root_points_to_gcArenaPool && rhe->name) {
@@ -1383,6 +1470,7 @@ js_GC(JSContext *cx, uintN gcflags)
     JSStackFrame *fp, *chain;
     uintN i, depth, nslots, type;
     JSStackHeader *sh;
+    size_t nbytes, nflags;
     JSArena *a, **ap;
     uint8 flags, *flagp, *split;
     JSGCThing *thing, *limit, **flp, **oflp;
@@ -1618,13 +1706,8 @@ restart:
 
         /* Mark other roots-by-definition in acx. */
         GC_MARK(cx, acx->globalObject, "global object", NULL);
-        GC_MARK(cx, acx->newborn[GCX_OBJECT], "newborn object", NULL);
-        GC_MARK(cx, acx->newborn[GCX_STRING], "newborn string", NULL);
-        GC_MARK(cx, acx->newborn[GCX_DOUBLE], "newborn double", NULL);
-        GC_MARK(cx, acx->newborn[GCX_MUTABLE_STRING], "newborn mutable string",
-                NULL);
-        for (i = GCX_EXTERNAL_STRING; i < GCX_NTYPES; i++)
-            GC_MARK(cx, acx->newborn[i], "newborn external string", NULL);
+        for (i = 0; i < GCX_NTYPES; i++)
+            GC_MARK(cx, acx->newborn[i], gc_typenames[i], NULL);
         if (acx->lastAtom)
             GC_MARK_ATOM(cx, acx->lastAtom, NULL);
 #if JS_HAS_EXCEPTIONS
@@ -1661,90 +1744,99 @@ restart:
     js_SweepAtomState(&rt->atomState);
     js_SweepScopeProperties(rt);
     js_SweepScriptFilenames(rt);
-    for (a = rt->gcArenaPool.first.next; a; a = a->next) {
-        flagp = (uint8 *) a->base;
-        split = (uint8 *) FIRST_THING_PAGE(a);
-        limit = (JSGCThing *) a->avail;
-        for (thing = (JSGCThing *) split; thing < limit; thing++) {
-            if (((jsuword)thing & GC_PAGE_MASK) == 0) {
-                flagp++;
-                thing++;
-            }
-            flags = *flagp;
-            if (flags & GCF_MARK) {
-                *flagp &= ~GCF_MARK;
-            } else if (!(flags & (GCF_LOCKMASK | GCF_FINAL))) {
-                /* Call the finalizer with GCF_FINAL ORed into flags. */
-                type = flags & GCF_TYPEMASK;
-                finalizer = gc_finalizers[type];
-                if (finalizer) {
-                    *flagp = (uint8)(flags | GCF_FINAL);
-                    if (type >= GCX_EXTERNAL_STRING)
-                        js_PurgeDeflatedStringCache((JSString *)thing);
-                    finalizer(cx, thing);
+    for (i = 0; i < GC_NUM_FREELISTS; i++) {
+        nbytes = GC_FREELIST_NBYTES(i);
+        nflags = nbytes / sizeof(JSGCThing);
+
+        for (a = rt->gcArenaPool[i].first.next; a; a = a->next) {
+            flagp = (uint8 *) a->base;
+            split = (uint8 *) FIRST_THING_PAGE(a);
+            limit = (JSGCThing *) a->avail;
+            for (thing = (JSGCThing *) split; thing < limit; thing += nflags) {
+                if (((jsuword)thing & GC_PAGE_MASK) == 0) {
+                    thing = (JSGCThing *) FIRST_THING((jsuword)thing, nbytes);
+                    flagp = js_GetGCThingFlags(thing);
                 }
+                flags = *flagp;
+                if (flags & GCF_MARK) {
+                    *flagp &= ~GCF_MARK;
+                } else if (!(flags & (GCF_LOCKMASK | GCF_FINAL))) {
+                    /* Call the finalizer with GCF_FINAL ORed into flags. */
+                    type = flags & GCF_TYPEMASK;
+                    finalizer = gc_finalizers[type];
+                    if (finalizer) {
+                        *flagp = (uint8)(flags | GCF_FINAL);
+                        if (type >= GCX_EXTERNAL_STRING)
+                            js_PurgeDeflatedStringCache((JSString *)thing);
+                        finalizer(cx, thing);
+                    }
 
-                /* Set flags to GCF_FINAL, signifying that thing is free. */
-                *flagp = GCF_FINAL;
+                    /* Set flags to GCF_FINAL, signifying that thing is free. */
+                    *flagp = GCF_FINAL;
 
-                JS_ASSERT(rt->gcBytes >= sizeof(JSGCThing) + sizeof(uint8));
-                rt->gcBytes -= sizeof(JSGCThing) + sizeof(uint8);
+                    JS_ASSERT(rt->gcBytes >= sizeof(JSGCThing) + sizeof(uint8));
+                    rt->gcBytes -= sizeof(JSGCThing) + sizeof(uint8);
+                }
+                flagp += nflags;
+                if (JS_UPTRDIFF(flagp, split) < nflags)
+                    flagp += GC_THINGS_SIZE;
             }
-            if (++flagp == split)
-                flagp += GC_THINGS_SIZE;
         }
     }
-#if JS_HAS_XML_SUPPORT
-    js_FinalizeDoomedXML(cx);
-#endif
 
     /*
      * Free phase.
      * Free any unused arenas and rebuild the JSGCThing freelist.
      */
-    ap = &rt->gcArenaPool.first.next;
-    a = *ap;
-    if (!a)
-        goto out;
-    all_clear = JS_TRUE;
-    flp = oflp = &rt->gcFreeList;
-    *flp = NULL;
-    METER(rt->gcStats.freelen = 0);
+    for (i = 0; i < GC_NUM_FREELISTS; i++) {
+        ap = &rt->gcArenaPool[i].first.next;
+        a = *ap;
+        if (!a)
+            continue;
 
-    do {
-        flagp = (uint8 *) a->base;
-        split = (uint8 *) FIRST_THING_PAGE(a);
-        limit = (JSGCThing *) a->avail;
-        for (thing = (JSGCThing *) split; thing < limit; thing++) {
-            if (((jsuword)thing & GC_PAGE_MASK) == 0) {
-                flagp++;
-                thing++;
+        all_clear = JS_TRUE;
+        flp = oflp = &rt->gcFreeList[i];
+        *flp = NULL;
+        METER(rt->gcStats.freelen[i] = 0);
+
+        nbytes = GC_FREELIST_NBYTES(i);
+        nflags = nbytes / sizeof(JSGCThing);
+        do {
+            flagp = (uint8 *) a->base;
+            split = (uint8 *) FIRST_THING_PAGE(a);
+            limit = (JSGCThing *) a->avail;
+            for (thing = (JSGCThing *) split; thing < limit; thing += nflags) {
+                if (((jsuword)thing & GC_PAGE_MASK) == 0) {
+                    thing = (JSGCThing *) FIRST_THING((jsuword)thing, nbytes);
+                    flagp = js_GetGCThingFlags(thing);
+                }
+                if (*flagp != GCF_FINAL) {
+                    all_clear = JS_FALSE;
+                } else {
+                    thing->flagp = flagp;
+                    *flp = thing;
+                    flp = &thing->next;
+                    METER(rt->gcStats.freelen[i]++);
+                }
+                flagp += nflags;
+                if (JS_UPTRDIFF(flagp, split) < nflags)
+                    flagp += GC_THINGS_SIZE;
             }
-            if (*flagp != GCF_FINAL) {
-                all_clear = JS_FALSE;
+
+            if (all_clear) {
+                JS_ARENA_DESTROY(&rt->gcArenaPool[i], a, ap);
+                flp = oflp;
+                METER(rt->gcStats.afree++);
             } else {
-                thing->flagp = flagp;
-                *flp = thing;
-                flp = &thing->next;
-                METER(rt->gcStats.freelen++);
+                ap = &a->next;
+                all_clear = JS_TRUE;
+                oflp = flp;
             }
-            if (++flagp == split)
-                flagp += GC_THINGS_SIZE;
-        }
+        } while ((a = *ap) != NULL);
 
-        if (all_clear) {
-            JS_ARENA_DESTROY(&rt->gcArenaPool, a, ap);
-            flp = oflp;
-            METER(rt->gcStats.afree++);
-        } else {
-            ap = &a->next;
-            all_clear = JS_TRUE;
-            oflp = flp;
-        }
-    } while ((a = *ap) != NULL);
-
-    /* Terminate the new freelist. */
-    *flp = NULL;
+        /* Terminate the new freelist. */
+        *flp = NULL;
+    }
 
     if (rt->gcCallback)
         (void) rt->gcCallback(cx, JSGC_FINALIZE_END);
@@ -1755,7 +1847,6 @@ restart:
   }
 #endif
 
-out:
     JS_LOCK_GC(rt);
     if (rt->gcLevel > 1) {
         rt->gcLevel = 1;

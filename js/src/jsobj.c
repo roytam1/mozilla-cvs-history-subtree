@@ -1787,7 +1787,7 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
     jsval *newslots;
 
     /* Allocate an object from the GC heap and zero it. */
-    obj = (JSObject *) js_AllocGCThing(cx, GCX_OBJECT);
+    obj = (JSObject *) js_NewGCThing(cx, GCX_OBJECT, sizeof(JSObject));
     if (!obj)
         return NULL;
 
