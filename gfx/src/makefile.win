@@ -98,10 +98,22 @@ LLFLAGS = \
 		 
 include <$(DEPTH)\config\rules.mak>
 
+!ifndef MOZ_STATIC_COMPONENT_LIBS
+# XXX It's evil for us to be installing the library, because this is
+# supposed to be a component. Unfortunately, people need to get to all
+# the |nsRect| stuff, which should probably be in its own little
+# static library...
+
+install:: $(LIBRARY)
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
+!endif
+
 install::
 	$(MAKE_INSTALL) icon_0.gif $(DIST)\bin\res\gfx
 	$(MAKE_INSTALL) icon_1.gif $(DIST)\bin\res\gfx
 
 clobber::
+        rm -f $(DIST)\lib\library
 	rm -f $(DIST)\bin\res\gfx\icon_0.gif
 	rm -f $(DIST)\bin\res\gfx\icon_1.gif
