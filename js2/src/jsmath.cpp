@@ -123,7 +123,9 @@ JSValue Math_cos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 }
 JSValue Math_exp(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::exp(argv[0].toNumber(cx).f64));
 }
 JSValue Math_floor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -134,7 +136,9 @@ JSValue Math_floor(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 }
 JSValue Math_log(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::log(argv[0].toNumber(cx).f64));
 }
 JSValue Math_max(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -162,27 +166,38 @@ JSValue Math_min(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 }
 JSValue Math_pow(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc < 1)
+        return kNaNValue;
+    return JSValue(fd::pow(argv[0].toNumber(cx).f64, argv[1].toNumber(cx).f64));
 }
 JSValue Math_random(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    return JSValue(42.0);
 }
 JSValue Math_round(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    float64 x = argv[0].toNumber(cx).f64;
+    return JSValue( fd::copysign( fd::floor(x + 0.5), x ) );
 }
 JSValue Math_sin(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::sin(argv[0].toNumber(cx).f64));
 }
 JSValue Math_sqrt(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::sqrt(argv[0].toNumber(cx).f64));
 }
 JSValue Math_tan(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)   
 {
-    return kNaNValue;
+    if (argc == 0)
+        return kNaNValue;
+    return JSValue(fd::tan(argv[0].toNumber(cx).f64));
 }
 
 

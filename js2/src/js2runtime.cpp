@@ -73,26 +73,34 @@ JSType *Void_Type;
 JSType *Unit_Type;
 JSArrayType *Array_Type;
 
-bool hasAttribute(AttributeList* identifiers, Token::Kind tokenKind)
+bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind)
 {
-    while (identifiers) {
-        if (identifiers->expr->getKind() == ExprNode::identifier) {
-            const StringAtom& name = (static_cast<IdentifierExprNode *>(identifiers->expr))->name;
+    while (attrs) {
+        if (attrs->expr->getKind() == ExprNode::identifier) {
+            const StringAtom& name = (static_cast<IdentifierExprNode *>(attrs->expr))->name;
             if (name.tokenKind == tokenKind)
                 return true;
         }
         else
-            ASSERT(false);  // XXX NYI
-        identifiers = identifiers->next;
+            if (attrs->expr->getKind() == ExprNode::call) {
+                InvokeExprNode *i = static_cast<InvokeExprNode *>(attrs->expr);        
+                ASSERT(i->op->getKind() == ExprNode::identifier);
+                const StringAtom& name = (static_cast<IdentifierExprNode *>(i->op))->name;
+                if (name.tokenKind == tokenKind)
+                    return true;
+            }
+            else
+                ASSERT(false);
+        attrs = attrs->next;
     }
     return false;
 }
 
-bool hasAttribute(AttributeList* identifiers, const StringAtom &name)
+bool hasAttribute(AttributeList* attrs, const StringAtom &name)
 {
-    while (identifiers) {
-        if (identifiers->expr->getKind() == ExprNode::identifier) {
-            const StringAtom& idname = (static_cast<IdentifierExprNode *>(identifiers->expr))->name;
+    while (attrs) {
+        if (attrs->expr->getKind() == ExprNode::identifier) {
+            const StringAtom& idname = (static_cast<IdentifierExprNode *>(attrs->expr))->name;
             if (idname == name)
                 return true;
             //  else
@@ -101,8 +109,16 @@ bool hasAttribute(AttributeList* identifiers, const StringAtom &name)
                 // 
         }
         else
-            ASSERT(false);  // XXX NYI
-        identifiers = identifiers->next;
+            if (attrs->expr->getKind() == ExprNode::call) {
+                InvokeExprNode *i = static_cast<InvokeExprNode *>(attrs->expr);        
+                ASSERT(i->op->getKind() == ExprNode::identifier);
+                const StringAtom& idname = (static_cast<IdentifierExprNode *>(i->op))->name;
+                if (idname == name)
+                    return true;
+            }
+            else
+                ASSERT(false);
+        attrs = attrs->next;
     }
     return false;
 }
