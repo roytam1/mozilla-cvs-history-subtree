@@ -1622,10 +1622,11 @@ nsPlaintextEditor::SharedOutputString(PRUint32 aFlags,
     return NS_ERROR_NOT_INITIALIZED;
 
   rv = selection->GetIsCollapsed(aIsCollapsed);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (NS_FAILED(rv) || !*aIsCollapsed)
-        // Collapsed selection, so use the whole document
+  if (!*aIsCollapsed)
     aFlags |= nsIDocumentEncoder::OutputSelectionOnly;
+  // If the selection isn't collapsed, we'll use the whole document.
 
   return OutputToString(NS_LITERAL_STRING("text/plain"), aFlags, aResult);
 }
