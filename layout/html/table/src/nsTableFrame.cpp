@@ -4348,12 +4348,19 @@ nscoord nsTableFrame::ComputeDesiredHeight(nsIPresContext& aPresContext,
       {
         const nsStyleDisplay *rowGroupDisplay;
         rowGroupFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)rowGroupDisplay));
-        if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay) &&
-            ((nsTableRowGroupFrame*)rowGroupFrame)->IsFlexible())
-        { 
-          nscoord excessForGroup = 0;
-          DistributeSpaceToRows(aPresContext, aReflowState, rowGroupFrame, sumOfRowHeights, 
-                                excess, tableStyle, excessForGroup, rowGroupYPos);
+        if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay)) {
+          if (((nsTableRowGroupFrame*)rowGroupFrame)->IsFlexible())
+          {
+            nscoord excessForGroup = 0;
+            DistributeSpaceToRows(aPresContext, aReflowState, rowGroupFrame, sumOfRowHeights, 
+                                  excess, tableStyle, excessForGroup, rowGroupYPos);
+          }
+          else
+          {
+            nsRect rowGroupRect;
+            rowGroupFrame->GetRect(rowGroupRect);
+            rowGroupYPos += rowGroupRect.height;
+          }
         }
         rowGroupFrame->GetNextSibling(&rowGroupFrame);
       }
