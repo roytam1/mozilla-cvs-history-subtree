@@ -808,16 +808,46 @@ nsWebShell::Embed(nsIContentViewer* aContentViewer,
       ("nsWebShell::Embed: this=%p aDocViewer=%p aCommand=%s aExtraInfo=%p",
        this, aContentViewer, aCommand ? aCommand : "", aExtraInfo));
 
-  if (mContentViewer) // && (eCharsetReloadInit!=mCharsetReloadState))
-  { // get any interesting state from the old content viewer
-    // XXX: it would be far better to just reuse the document viewer ,
-    //      since we know we're just displaying the same document as before
+  //
+  // Copy content viewer state from previous or parent content viewer.
+  //
+  // The following logic is mirrored in nsHTMLDocument::StartDocumentLoad!
+  //
+  // Do NOT to maintain a reference to the old content viewer outside
+  // of this "copying" block, or it will not be destroyed until the end of
+  // this routine and all <SCRIPT>s and event handlers fail! (bug 20315)
+  //
+  // In this block of code, if we get an error result, we return it
+  // but if we get a null pointer, that's perfectly legal for parent
+  // and parentContentViewer.
+  //
+  nsCOMPtr<nsIWebShell> parent;
+  rv = GetParent(*getter_AddRefs(parent));
+  if (NS_FAILED(rv)) { return rv; }
+  
+  if (mContentViewer || parent) 
+  {
+    nsCOMPtr<nsIMarkupDocumentViewer> oldMUDV;
+    if (mContentViewer) { // Get any interesting state from old content viewer
+      // XXX: it would be far better to just reuse the document viewer ,
+      //      since we know we're just displaying the same document as before
+      oldMUDV = do_QueryInterface(mContentViewer);
+    }
+    else
+    { // No old content viewer, so get state from parent's content viewer
+      nsCOMPtr<nsIContentViewer> parentContentViewer;
+      rv = parent->GetContentViewer(getter_AddRefs(parentContentViewer));
+      if (NS_FAILED(rv)) { return rv; }
+      if (parentContentViewer) {
+        oldMUDV = do_QueryInterface(parentContentViewer);
+      }
+    }
+
     PRUnichar *defaultCharset=nsnull;
     PRUnichar *forceCharset=nsnull;
     PRUnichar *hintCharset=nsnull;
     PRInt32 hintCharsetSource;
 
-    nsCOMPtr<nsIMarkupDocumentViewer> oldMUDV = do_QueryInterface(mContentViewer);
     nsCOMPtr<nsIMarkupDocumentViewer> newMUDV = do_QueryInterface(aContentViewer);
     if (oldMUDV && newMUDV)
     {
@@ -843,6 +873,8 @@ nsWebShell::Embed(nsIContentViewer* aContentViewer,
       }
     }
   }
+  // End copying block (Don't hold content/document viewer ref beyond here!!)
+
   mContentViewer = nsnull;
   if (nsnull != mScriptContext) {
     mScriptContext->GC();
@@ -898,7 +930,20 @@ nsWebShell::HandleUnknownContentType(nsIDocumentLoader* loader,
                                      nsIChannel* channel,
                                      const char *aContentType,
                                      const char *aCommand ) {
-    // If we have a doc loader observer, let it respond to this.
+    // If we have a doc loader observer, let it respond to this. 
+    // if we don't have a doc loader observer...we still need to reach the unknown content handler
+    // somehow...we must be a frame so try asking our parent for a doc loader observer...
+    if (!mDocLoaderObserver && mParent) {
+      nsCOMPtr<nsIWebShell> root;
+      nsCOMPtr<nsIDocumentLoaderObserver> observer;
+      nsresult res = GetRootWebShell(*getter_AddRefs(root));
+
+      if (NS_SUCCEEDED(res) && root)
+        root->GetDocLoaderObserver(getter_AddRefs(observer));
+      if (observer)
+        return observer->HandleUnknownContentType(mDocLoader, channel, aContentType, aCommand);
+    }
+    
     return mDocLoaderObserver ? mDocLoaderObserver->HandleUnknownContentType( mDocLoader, channel, aContentType, aCommand )
                               : NS_ERROR_FAILURE;
 }
@@ -1429,14 +1474,24 @@ nsWebShell::GetDocumentLoader(nsIDocumentLoader*& aResult)
   return (nsnull != mDocLoader) ? NS_OK : NS_ERROR_FAILURE;
 }
 
-#define FILE_PROTOCOL "file:///"
+#define FILE_PROTOCOL "file://"
 
 static void convertFileToURL(const nsString &aIn, nsString &aOut)
 {
-#ifdef XP_PC
   char szFile[1000];
   aIn.ToCString(szFile, sizeof(szFile));
+#ifdef XP_PC
+  // Check for \ in the url-string (PC)
   if (PL_strchr(szFile, '\\')) {
+#else
+#if XP_UNIX
+  // Check if it starts with / or \ (UNIX)
+  if (*(szFile) == '/' || *(szFile) == '\\') {
+#else
+  if (0) {  
+  // Do nothing (All others for now) 
+#endif
+#endif
     PRInt32 len = strlen(szFile);
     PRInt32 sum = len + sizeof(FILE_PROTOCOL);
     char* lpszFileURL = (char *)PR_Malloc(sum + 1);
@@ -1457,7 +1512,6 @@ static void convertFileToURL(const nsString &aIn, nsString &aOut)
     PR_Free((void *)lpszFileURL);
   }
   else
-#endif
   {
     aOut = aIn;
   }
@@ -1582,9 +1636,11 @@ nsWebShell::DoLoadURL(nsIURI * aUri,
             */
            nsIInterfaceRequestor * interfaceRequestor = NS_STATIC_CAST(nsIInterfaceRequestor *, this);
            nsCOMPtr<nsIChannel> dummyChannel;
-           rv = NS_OpenURI(getter_AddRefs(dummyChannel), aUri, nsnull, interfaceRequestor);
-           if (NS_FAILED(rv)) return rv;
+           // creating a channel is expensive...don't create it unless we know we have to
+           // so move the creation down into each of the if clauses...
            if (nsnull != (const char *) ref) {
+              rv = NS_OpenURI(getter_AddRefs(dummyChannel), aUri, nsnull, interfaceRequestor);
+              if (NS_FAILED(rv)) return rv;
               rv = OnStartDocumentLoad(mDocLoader, aUri, "load");
               // Go to the anchor in the current document
               rv = presShell->GoToAnchor(nsAutoString(ref));            
@@ -1600,6 +1656,8 @@ nsWebShell::DoLoadURL(nsIURI * aUri,
            }
            else if (aType == nsISessionHistory::LOAD_HISTORY)
            {
+              rv = NS_OpenURI(getter_AddRefs(dummyChannel), aUri, nsnull, interfaceRequestor);
+              if (NS_FAILED(rv)) return rv;
               rv = OnStartDocumentLoad(mDocLoader, aUri, "load");
               // Go to the top of the current document
               nsCOMPtr<nsIViewManager> viewMgr;
