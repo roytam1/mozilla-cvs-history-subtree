@@ -288,6 +288,12 @@ static NSArray* sToolbarDefaults = nil;
       // someone rearranging the nib with this detail.
       [mProgress retain];
       mProgressSuperview = [mProgress superview];
+      
+      // due to a cocoa issue with it updating the bounding box of two rects
+      // that both needing updating instead of just the two individual rects
+      // (radar 2194819), we need to make the text area opaque.
+      [mStatus setBackgroundColor:[NSColor windowBackgroundColor]];
+      [mStatus setDrawsBackground:YES];
     }
 
     // Get our saved dimensions.
