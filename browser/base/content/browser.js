@@ -3542,6 +3542,10 @@ nsBrowserStatusHandler.prototype =
       gBackProtectBuffer = 0;
     }
     
+    //fix bug 253793 - turn off highlight when page changes
+    if (document.getElementById("highlight").checked)
+      document.getElementById("highlight").removeAttribute("checked");
+           
     // clear missing plugins
     gMissingPluginInstaller.clearMissingPlugins(getBrowser().selectedTab);
        
