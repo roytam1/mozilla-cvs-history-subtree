@@ -148,7 +148,7 @@ static struct prldap_errormap_entry prldap_errormap[] = {
     {  PR_UNLOAD_LIBRARY_ERROR, -1 },
     {  PR_FIND_SYMBOL_ERROR, -1 },
     {  PR_INSUFFICIENT_RESOURCES_ERROR, -1 },
-    {  PR_DIRECTORY_LOOKUP_ERROR, -1 },
+    {  PR_DIRECTORY_LOOKUP_ERROR, EHOSTUNREACH },/* an approximation */
     {  PR_TPD_RANGE_ERROR, -1 },
     {  PR_PROC_DESC_TABLE_FULL_ERROR, -1 },
     {  PR_SYS_DESC_TABLE_FULL_ERROR, -1 },
