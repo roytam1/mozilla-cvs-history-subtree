@@ -1230,6 +1230,7 @@ if [ "$MOZ_XTF" ]; then
 	content/xtf/tests/smiley/Makefile
 	content/xtf/tests/canvas/Makefile
 	content/xtf/tests/perf/Makefile
+        content/xtf/tests/shapes/Makefile
 "
     MAKEFILES_layout="$MAKEFILES_layout
 	layout/xtf/Makefile

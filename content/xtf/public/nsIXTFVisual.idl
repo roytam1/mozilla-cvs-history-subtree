@@ -61,7 +61,8 @@ interface nsIXTFVisual : nsIXTFElement
   readonly attribute nsIDOMElement insertionPoint;
 
   // If 'true', document style sheets will apply to the visual
-  // content. If 'false', only UA style sheets will be applied.
+  // content. If 'false', only UA and user style sheets will be
+  // applied.
   readonly attribute boolean applyDocumentStyleSheets;
   
   // Notification mask constants:

@@ -117,24 +117,35 @@ nsXTFElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
   // actually changed.
   bool docReallyChanged = false;
   if (aDocument!=GetCurrentDoc()) docReallyChanged = true;
-
+  
+  nsCOMPtr<nsIDOMDocument> domDocument;
+  if (docReallyChanged &&
+      mNotificationMask & (nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT |
+                           nsIXTFElement::NOTIFY_DOCUMENT_CHANGED))
+    domDocument = do_QueryInterface(aDocument);
+  
   if (docReallyChanged &&
       (mNotificationMask & nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT))
-    GetXTFElement()->WillChangeDocument(aDocument);
+    GetXTFElement()->WillChangeDocument(domDocument);
   nsXTFElementWrapperBase::SetDocument(aDocument, aDeep, aCompileEventHandlers);
   if (docReallyChanged &&
       (mNotificationMask & nsIXTFElement::NOTIFY_DOCUMENT_CHANGED))
-    GetXTFElement()->DocumentChanged(aDocument);
+    GetXTFElement()->DocumentChanged(domDocument);
 }
 
 void
 nsXTFElementWrapper::SetParent(nsIContent* aParent)
 {
+  nsCOMPtr<nsIDOMElement> domParent;
+  if (mNotificationMask & (nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT |
+                           nsIXTFElement::NOTIFY_PARENT_CHANGED))
+    domParent = do_QueryInterface(aParent);
+  
   if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT)
-    GetXTFElement()->WillChangeParent(aParent);
+    GetXTFElement()->WillChangeParent(domParent);
   nsXTFElementWrapperBase::SetParent(aParent);
   if (mNotificationMask & nsIXTFElement::NOTIFY_PARENT_CHANGED)
-    GetXTFElement()->ParentChanged(aParent);
+    GetXTFElement()->ParentChanged(domParent);
 }
 
 nsresult
@@ -142,12 +153,18 @@ nsXTFElementWrapper::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                                    PRBool aNotify, PRBool aDeepSetDocument)
 {
   nsresult rv;
+
+  nsCOMPtr<nsIDOMNode> domKid;
+  if (mNotificationMask & (nsIXTFElement::NOTIFY_WILL_INSERT_CHILD |
+                           nsIXTFElement::NOTIFY_CHILD_INSERTED))
+    domKid = do_QueryInterface(aKid);
   
   if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_INSERT_CHILD)
-    GetXTFElement()->WillInsertChild(aKid, aIndex);
+    GetXTFElement()->WillInsertChild(domKid, aIndex);
   rv = nsXTFElementWrapperBase::InsertChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
   if (mNotificationMask & nsIXTFElement::NOTIFY_CHILD_INSERTED)
-    GetXTFElement()->ChildInserted(aKid, aIndex);
+    GetXTFElement()->ChildInserted(domKid, aIndex);
+  
   return rv;
 }
 
@@ -156,12 +173,17 @@ nsXTFElementWrapper::AppendChildTo(nsIContent* aKid, PRBool aNotify,
                                    PRBool aDeepSetDocument)
 {
   nsresult rv;
+
+  nsCOMPtr<nsIDOMNode> domKid;
+  if (mNotificationMask & (nsIXTFElement::NOTIFY_WILL_APPEND_CHILD |
+                           nsIXTFElement::NOTIFY_CHILD_APPENDED))
+    domKid = do_QueryInterface(aKid);
   
   if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_APPEND_CHILD)
-    GetXTFElement()->WillAppendChild(aKid);
+    GetXTFElement()->WillAppendChild(domKid);
   rv = nsXTFElementWrapperBase::AppendChildTo(aKid, aNotify, aDeepSetDocument);
   if (mNotificationMask & nsIXTFElement::NOTIFY_CHILD_APPENDED)
-    GetXTFElement()->ChildAppended(aKid);
+    GetXTFElement()->ChildAppended(domKid);
   return rv;
 }
 
@@ -497,17 +519,6 @@ nsXTFElementWrapper::GetDocumentFrameElement(nsIDOMElement * *aDocumentFrameElem
   }
   *aDocumentFrameElement = pidomwin->GetFrameElementInternal();
   NS_IF_ADDREF(*aDocumentFrameElement);
-  return NS_OK;
-}
-
-/* readonly attribute nsIDOMDocument ownerDocument; */
-NS_IMETHODIMP
-nsXTFElementWrapper::GetOwnerDocument(nsIDOMDocument * *aOwnerDocument)
-{
-  *aOwnerDocument = nsnull;
-  nsIDocument *doc = GetOwnerDoc();
-  if (doc)
-    doc->QueryInterface(NS_GET_IID(nsIDOMDocument), (void**)aOwnerDocument);
   return NS_OK;
 }
 

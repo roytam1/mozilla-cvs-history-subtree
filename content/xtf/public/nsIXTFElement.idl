@@ -38,6 +38,9 @@
 
 #include "nsISupports.idl"
 interface nsIAtom;
+interface nsIDOMDocument;
+interface nsIDOMElement;
+interface nsIDOMNode;
 
 [scriptable, uuid(f0617ed1-db6a-4704-ac4b-67bf15a77788)]
 interface nsIXTFElement : nsISupports
@@ -113,17 +116,17 @@ interface nsIXTFElement : nsISupports
   
   // Event notifications:
 
-  void willChangeDocument(in nsISupports newDoc);
-  void documentChanged(in nsISupports newDoc);
+  void willChangeDocument(in nsIDOMDocument newDoc);
+  void documentChanged(in nsIDOMDocument newDoc);
   
-  void willChangeParent(in nsISupports newParent);
-  void parentChanged(in nsISupports newParent);
+  void willChangeParent(in nsIDOMElement newParent);
+  void parentChanged(in nsIDOMElement newParent);
 
-  void willInsertChild(in nsISupports child, in unsigned long index);
-  void childInserted(in nsISupports child, in unsigned long index);
+  void willInsertChild(in nsIDOMNode child, in unsigned long index);
+  void childInserted(in nsIDOMNode child, in unsigned long index);
 
-  void willAppendChild(in nsISupports child);
-  void childAppended(in nsISupports child);
+  void willAppendChild(in nsIDOMNode child);
+  void childAppended(in nsIDOMNode child);
 
   void willRemoveChild(in unsigned long index);
   void childRemoved(in unsigned long index);

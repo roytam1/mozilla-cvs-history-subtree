@@ -46,7 +46,6 @@ interface nsIXTFElementWrapper : nsISupports
 {  
   readonly attribute nsIDOMElement elementNode;
   readonly attribute nsIDOMElement documentFrameElement;
-  readonly attribute nsIDOMDocument ownerDocument;
   
   // Events can be unmasked by setting the corresponding bit as given
   // by the NOTIFY_* constants in nsIXTFElement and nsIXTFVisual:
