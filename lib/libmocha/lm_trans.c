@@ -27,7 +27,7 @@
 #include "lo_ele.h"
 #include "layout.h"
 #include "prtypes.h"
-#include "xmlglue.h"
+
 
 enum transclusion_array_slot {
   TRANSCLUSION_ARRAY_LENGTH = -1
@@ -237,9 +237,9 @@ LM_ReflectTransclusion(MWContext *context, void *ele, int32 layer_id, uint index
   lo_TopState *top_state;
   PRHashTable *map;
   JSString *str;
-  XMLElement xmlEle = (XMLElement) ele;
 
-  obj = xmlEle->mocha_object;
+
+  obj = XML_GetMochaObject(ele);
   if (obj)
     return obj;
 
@@ -248,7 +248,7 @@ LM_ReflectTransclusion(MWContext *context, void *ele, int32 layer_id, uint index
     return NULL;
   cx = decoder->js_context;
 
-  top_state = lo_GetMochaTopState(context);
+ /* top_state = lo_GetMochaTopState(context);
   if (top_state->resize_reload) {
     map = lm_GetIdToObjectMap(decoder);
 
@@ -257,11 +257,11 @@ LM_ReflectTransclusion(MWContext *context, void *ele, int32 layer_id, uint index
                                            LM_GET_MAPPING_KEY(LM_TRANSCLUSIONS,
                                                               layer_id, index));
     if (obj) {
-      xmlEle->mocha_object = obj;
+      XML_SetMochaObject(ele, obj);
       LM_PutMochaDecoder(decoder);
       return obj;
     }
-  }
+  } */
 
   /* Get the document object that will hold this transclusion */
   document = lm_GetDocumentFromLayerId(decoder, layer_id);
@@ -318,7 +318,7 @@ LM_ReflectTransclusion(MWContext *context, void *ele, int32 layer_id, uint index
   trans->decoder = HOLD_BACK_COUNT(decoder);
   trans->layer_id = layer_id;
   trans->index = index;
-  trans->xmlFile = context->XMLFile;
+  trans->xmlFile = context->xmlfile;
   /*
   str = JS_NewStringCopyZ(cx, (char *) name_rec->name);
   if (!str || !JS_LockGCThing(cx, str)) {
@@ -327,8 +327,7 @@ LM_ReflectTransclusion(MWContext *context, void *ele, int32 layer_id, uint index
   }
   trans->name = str;
   */
-
-  xmlEle->mocha_object = obj;
+  XML_SetMochaObject(ele, obj);
 
   LM_PutMochaDecoder(decoder);
   return obj;
@@ -356,7 +355,6 @@ transclusion_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
   switch (slot) 
 	{
 	case TRANS_HREF:
-      LO_UnlockLayout();
       url = JS_GetStringBytes(JSVAL_TO_STRING(*vp));
       ET_TweakTransclusion(trans->decoder->window_context, trans->xmlFile, url, trans->index, TR_SetHref, trans->decoder->doc_id);
       break;    
