@@ -34,10 +34,6 @@
 #include <libart_lgpl/art_config.h>
 #endif
 
-#define art_alloc malloc
-#define art_free free
-#define art_realloc realloc
-
 /* These aren't, strictly speaking, configuration macros, but they're
    damn handy to have around, and may be worth playing with for
    debugging. */
@@ -77,6 +73,18 @@ typedef int art_boolean;
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/* Define art_alloc etc. as function and *not* as macros to ensure
+   that the same allocator gets used when using these from outside of
+   libart:
+*/
+/* #define art_alloc malloc */
+/* #define art_free free */
+/* #define art_realloc realloc */
+void * art_alloc(size_t size);
+void art_free(void *ptr);
+void *art_realloc(void*ptr, size_t size);
 
 void ART_GNUC_NORETURN
 art_die (const char *fmt, ...) ART_GNUC_PRINTF (1, 2);
