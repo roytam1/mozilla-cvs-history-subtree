@@ -1270,8 +1270,11 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         return(NS_ERROR_FAILURE);
       }
 
+      if (!mLDAPURL)
+        return(NS_ERROR_NULL_POINTER);
+
       nsXPIDLCString dn;
-      rv = mLDAPURL->GetDn(getter_Copies (dn));
+      rv = mLDAPURL->GetDn(getter_Copies(dn));
       NS_ENSURE_SUCCESS(rv, rv);
 
       switch(mOpcode)
