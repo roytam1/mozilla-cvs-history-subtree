@@ -1488,94 +1488,127 @@ void nsImapServerResponseParser::internal_date()
 
 void nsImapServerResponseParser::flags()
 {
-	imapMessageFlagsType messageFlags = kNoImapMsgFlag;
-	
-	// eat the opening '('
-	fNextToken++;
-						     
-	while (ContinueParse() && (*fNextToken != ')'))
-	{
-		if (*fNextToken == '\\')
-		{
-			switch (toupper(fNextToken[1])) {
-			case 'S':
-				if (!PL_strncasecmp(fNextToken, "\\Seen",5))
-					messageFlags |= kImapMsgSeenFlag;
-				break;
-			case 'A':
-				if (!PL_strncasecmp(fNextToken, "\\Answered",9))
-					messageFlags |= kImapMsgAnsweredFlag;
-				break;
-			case 'F':
-				if (!PL_strncasecmp(fNextToken, "\\Flagged",8))
-					messageFlags |= kImapMsgFlaggedFlag;
-				break;
-			case 'D':
-				if (!PL_strncasecmp(fNextToken, "\\Deleted",8))
-					messageFlags |= kImapMsgDeletedFlag;
-				else if (!PL_strncasecmp(fNextToken, "\\Draft",6))
-					messageFlags |= kImapMsgDraftFlag;
-				break;
-			case 'R':
-				if (!PL_strncasecmp(fNextToken, "\\Recent",7))
-					messageFlags |= kImapMsgRecentFlag;
-				break;
-			default:
-				break;
-			}
-		}
-		else if (*fNextToken == '$')
-		{
-			switch (toupper(fNextToken[1])) {
-			case 'M':
-				if ((fSupportsUserDefinedFlags & (kImapMsgSupportUserFlag |
-												  kImapMsgSupportMDNSentFlag))
-					&& !PL_strncasecmp(fNextToken, "$MDNSent",8))
-					messageFlags |= kImapMsgMDNSentFlag;
-				break;
-			case 'F':
-				if ((fSupportsUserDefinedFlags & (kImapMsgSupportUserFlag |
-												  kImapMsgSupportForwardedFlag))
-					 && !PL_strncasecmp(fNextToken, "$Forwarded",10))
-				messageFlags |= kImapMsgForwardedFlag;
-				break;
-                        case 'L':
-                                if (fSupportsUserDefinedFlags & kImapMsgSupportUserFlag
-					 && !PL_strncasecmp(fNextToken, "$Label", 6))
-                                {
-                                  PRInt32 labelValue = fNextToken[6];
-                                  if (labelValue > '0')
-                                  {
-                                    // turn off any previous label flags
-                                    messageFlags &= ~kImapMsgLabelFlags;
-                                    // turn on this label flag
-                                    messageFlags |= (labelValue - '0') << 9;
-                                  }
-                                }
-				break;
-			default:
-				break;
-			}
-		}
-			
-		if (PL_strcasestr(fNextToken, ")"))
-		{
-			// eat token chars until we get the ')'
-			while (*fNextToken != ')')
-				fNextToken++;
-		}
-		else
-			fNextToken = GetNextToken();
-	}
-	
-	if (ContinueParse())
-		while(*fNextToken != ')')
-			fNextToken++;
-	
-	fCurrentLineContainedFlagInfo = PR_TRUE;	// handled in PostProcessEndOfLine
-	fSavedFlagInfo = messageFlags;
+  imapMessageFlagsType messageFlags = kNoImapMsgFlag;
+  
+  // eat the opening '('
+  fNextToken++;
+  while (ContinueParse() && (*fNextToken != ')'))
+  {
+    PRBool knownFlag = PR_FALSE;					     
+    if (*fNextToken == '\\')
+    {
+      switch (toupper(fNextToken[1])) {
+      case 'S':
+        if (!PL_strncasecmp(fNextToken, "\\Seen",5))
+        {
+          messageFlags |= kImapMsgSeenFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      case 'A':
+        if (!PL_strncasecmp(fNextToken, "\\Answered",9))
+        {
+          messageFlags |= kImapMsgAnsweredFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      case 'F':
+        if (!PL_strncasecmp(fNextToken, "\\Flagged",8))
+        {
+          messageFlags |= kImapMsgFlaggedFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      case 'D':
+        if (!PL_strncasecmp(fNextToken, "\\Deleted",8))
+        {
+          messageFlags |= kImapMsgDeletedFlag;
+          knownFlag = PR_TRUE;
+        }
+        else if (!PL_strncasecmp(fNextToken, "\\Draft",6))
+        {
+          messageFlags |= kImapMsgDraftFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      case 'R':
+        if (!PL_strncasecmp(fNextToken, "\\Recent",7))
+        {
+          messageFlags |= kImapMsgRecentFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      default:
+        break;
+      }
+    }
+    else if (*fNextToken == '$')
+    {
+      switch (toupper(fNextToken[1])) {
+      case 'M':
+        if ((fSupportsUserDefinedFlags & (kImapMsgSupportUserFlag |
+          kImapMsgSupportMDNSentFlag))
+          && !PL_strncasecmp(fNextToken, "$MDNSent",8))
+        {
+          messageFlags |= kImapMsgMDNSentFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      case 'F':
+        if ((fSupportsUserDefinedFlags & (kImapMsgSupportUserFlag |
+          kImapMsgSupportForwardedFlag))
+          && !PL_strncasecmp(fNextToken, "$Forwarded",10))
+        {
+          messageFlags |= kImapMsgForwardedFlag;
+          knownFlag = PR_TRUE;
+        }
+        break;
+      case 'L':
+        if (fSupportsUserDefinedFlags & kImapMsgSupportUserFlag
+          && !PL_strncasecmp(fNextToken, "$Label", 6))
+        {
+          PRInt32 labelValue = fNextToken[6];
+          if (labelValue > '0')
+          {
+            // turn off any previous label flags
+            messageFlags &= ~kImapMsgLabelFlags;
+            // turn on this label flag
+            messageFlags |= (labelValue - '0') << 9;
+          }
+          knownFlag = PR_TRUE;
+        }
+        break;
+      default:
+        break;
+      }
+    }
+    if (!knownFlag && fFlagState)
+    {
+      nsCAutoString flag(fNextToken);
+      PRInt32 parenIndex = flag.FindChar(')');
+      if (parenIndex > 0)
+        flag.Truncate(parenIndex);
+      messageFlags |= kImapMsgCustomKeywordFlag;
+      fFlagState->AddUidCustomFlagPair(CurrentResponseUID(), flag.get());
+    }
+    if (PL_strcasestr(fNextToken, ")"))
+    {
+      // eat token chars until we get the ')'
+      while (*fNextToken != ')')
+        fNextToken++;
+    }
+    else
+      fNextToken = GetNextToken();
+  }
+  
+  if (ContinueParse())
+    while(*fNextToken != ')')
+      fNextToken++;
+    
+    fCurrentLineContainedFlagInfo = PR_TRUE;	// handled in PostProcessEndOfLine
+    fSavedFlagInfo = messageFlags;
 }
-	
+
 /* 
  resp_cond_state ::= ("OK" / "NO" / "BAD") SPACE resp_text
 */

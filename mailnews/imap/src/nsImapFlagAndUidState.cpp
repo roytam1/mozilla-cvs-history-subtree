@@ -42,6 +42,7 @@
 #include "nsImapFlagAndUidState.h"
 #include "prcmon.h"
 #include "nspr.h"
+#include "nsAutoLock.h"
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsImapFlagAndUidState, nsIImapFlagAndUidState)
 
@@ -116,6 +117,7 @@ nsImapFlagAndUidState::nsImapFlagAndUidState(PRInt32 numberOfMessages, PRUint16 
   memset(fFlags, 0, sizeof(imapMessageFlagsType) * fNumberOfMessageSlotsAllocated);
   fSupportedUserFlags = flags;
   fNumberDeleted = 0;
+  m_customFlagsHash = nsnull;
   NS_INIT_REFCNT();
 }
 
@@ -131,12 +133,25 @@ nsImapFlagAndUidState::nsImapFlagAndUidState(const nsImapFlagAndUidState& state,
   memcpy(fFlags, state.fFlags, sizeof(imapMessageFlagsType) * fNumberOfMessageSlotsAllocated);
   fSupportedUserFlags = flags;
   fNumberDeleted = 0;
+  m_customFlagsHash = nsnull;
   NS_INIT_REFCNT();
+}
+
+/* static */PRBool nsImapFlagAndUidState::FreeCustomFlags(nsHashKey *aKey, void *aData,
+                                        void *closure)
+{
+  PR_Free(aData);
+  return PR_TRUE;
 }
 
 nsImapFlagAndUidState::~nsImapFlagAndUidState()
 {
   PR_FREEIF(fFlags);
+  if (m_customFlagsHash)
+  {
+    m_customFlagsHash->Reset(FreeCustomFlags, nsnull);
+    delete m_customFlagsHash;
+  }
 }
 	
 NS_IMETHODIMP
@@ -335,5 +350,56 @@ imapMessageFlagsType nsImapFlagAndUidState::GetMessageFlagsFromUID(PRUint32 uid,
   *ndx = msgIndex;
   PR_CExitMonitor(this);
   return 0;
+}
+
+NS_IMETHODIMP nsImapFlagAndUidState::AddUidCustomFlagPair(PRUint32 uid, const char *customFlag)
+{
+  nsAutoCMonitor(this);
+  if (!m_customFlagsHash)
+    m_customFlagsHash = new nsHashtable(10);
+  if (!m_customFlagsHash)
+    return NS_ERROR_OUT_OF_MEMORY;
+  nsPRUint32Key hashKey(uid);
+  char *ourCustomFlags;
+  char *oldValue = (char *) m_customFlagsHash->Get(&hashKey);
+  if (oldValue)
+  {
+    ourCustomFlags = (char *) PR_Malloc(strlen(oldValue) + strlen(customFlag) + 3);
+    strcpy(ourCustomFlags, oldValue);
+    strcpy(ourCustomFlags + strlen(oldValue) + 1, customFlag);
+    PR_Free(oldValue);
+    m_customFlagsHash->Remove(&hashKey);
+  }
+  else
+  {
+    ourCustomFlags = (char *) PR_Calloc(strlen(customFlag) + 2, 1);
+    if (!ourCustomFlags)
+      return NS_ERROR_OUT_OF_MEMORY;
+    strcpy(ourCustomFlags, customFlag);;
+  }
+  return (m_customFlagsHash->Put(&hashKey, ourCustomFlags) == 0) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+NS_IMETHODIMP nsImapFlagAndUidState::GetCustomFlags(PRUint32 uid, char **customFlags)
+{
+  nsAutoCMonitor(this);
+  if (!m_customFlagsHash)
+  {
+    *customFlags = nsnull;
+    return NS_OK;
+  }
+  nsPRUint32Key hashKey(uid);
+  char *value = (char *) m_customFlagsHash->Get(&hashKey);
+  PRUint32 valueLen = 0, curStringLen = 0;
+  do 
+  {
+    curStringLen = strlen(value + valueLen) + 1;
+    valueLen += curStringLen;
+  }
+  while (curStringLen > 1);
+
+  *customFlags = (char *) PR_Malloc(valueLen);
+  memcpy(*customFlags, value, valueLen);
+  return NS_OK;
 }
 

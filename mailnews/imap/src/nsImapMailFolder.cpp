@@ -3862,9 +3862,29 @@ nsresult nsImapMailFolder::SyncFlags(nsIImapFlagAndUidState *flagState)
     flagState->GetUidOfMessage(flagIndex, &uidOfMessage);
     imapMessageFlagsType flags;
     flagState->GetMessageFlags(flagIndex, &flags);
-    // ### dmb need to do something about imap deleted flag;
-    NotifyMessageFlags(flags, uidOfMessage);
+    if (flags & kImapMsgCustomKeywordFlag)
+    {
+      char *keywords;
+      nsresult rv = flagState->GetCustomFlags(uidOfMessage, &keywords);
+      if (NS_SUCCEEDED(rv) && keywords)
+      {
+        nsCOMPtr<nsIMsgDBHdr> dbHdr;
+        PRBool containsKey;
+        rv = mDatabase->ContainsKey(uidOfMessage , &containsKey);
+        // if we don't have the header, don't diddle the flags.
+        // GetMsgHdrForKey will create the header if it doesn't exist.
+        if (NS_FAILED(rv) || !containsKey)
+          return rv;
+    
+        rv = mDatabase->GetMsgHdrForKey(uidOfMessage, getter_AddRefs(dbHdr));
+        if (dbHdr && NS_SUCCEEDED(rv))
+        {
+          dbHdr->SetStringProperty("keywords", keywords);
+        }
+      }
     }
+    NotifyMessageFlags(flags, uidOfMessage);
+  }
   return NS_OK;
 }
 
