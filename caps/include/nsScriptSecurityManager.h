@@ -33,9 +33,10 @@
 #include "nsIXPCSecurityManager.h"
 #include "nsHashtable.h"
 #include "nsCOMPtr.h"
-#include "nsIPref.h"
+#include "nsIPrefService.h"
 #include "nsISecurityPref.h"
 #include "nsIJSContextStack.h"
+#include "nsIObserver.h"
 
 class nsIDocShell;
 class nsString;
@@ -80,7 +81,7 @@ protected:
 { 0x7ee2a4c0, 0x4b93, 0x17d3, \
 { 0xba, 0x18, 0x00, 0x60, 0xb0, 0xf1, 0x99, 0xa2 }}
 
-class nsScriptSecurityManager : public nsIScriptSecurityManager
+class nsScriptSecurityManager : public nsIScriptSecurityManager, public nsIObserver
 {
 public:
     nsScriptSecurityManager();
@@ -91,6 +92,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISCRIPTSECURITYMANAGER
     NS_DECL_NSIXPCSECURITYMANAGER
+    NS_DECL_NSIOBSERVER
 
     static nsScriptSecurityManager*
     GetScriptSecurityManager();
@@ -173,21 +175,23 @@ private:
     static nsresult 
     PrincipalPrefNames(const char* pref, char** grantedPref, char** deniedPref);
 
-    static void
-    EnumeratePolicyCallback(const char* prefName, void* data);
+    nsresult
+    InitPolicies(PRUint32 prefCount, const char** prefNames);
 
-    static void
-    EnumeratePrincipalsCallback(const char* prefName, void* data);
+    nsresult
+    InitPrincipals(PRUint32 prefCount, const char** prefNames);
 
-    static int PR_CALLBACK
-    JSEnabledPrefChanged(const char* pref, void* data);
+    inline void
+    JSEnabledPrefChanged();
 
-    static int PR_CALLBACK
-    PrincipalPrefChanged(const char* pref, void* data);
+    static const char* sJSEnabledPrefName;
+    static const char* sJSMailEnabledPrefName;
+    static const char* sPrincipalPrefix;
 
     nsObjectHashtable* mOriginToPolicyMap;
     nsHashtable* mClassPolicies;
-    nsCOMPtr<nsIPref> mPrefs;
+    nsCOMPtr<nsIPrefService> mPrefService;
+    nsCOMPtr<nsIPrefBranch> mPrefs;
     nsCOMPtr<nsISecurityPref> mSecurityPrefs;
     nsIPrincipal* mSystemPrincipal;
     nsCOMPtr<nsIPrincipal> mSystemCertificate;

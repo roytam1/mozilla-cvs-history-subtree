@@ -64,12 +64,13 @@
 #include "nsIWindowWatcher.h"
 #include "nsIConsoleService.h"
 #include "nsISecurityCheckedComponent.h"
+#include "nsIPref.h"
 
 static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
 static NS_DEFINE_IID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
-static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
+static NS_DEFINE_CID(kPrefServiceCID, NS_PREFSERVICE_CID);
 static NS_DEFINE_CID(kCScriptNameSetRegistryCID, 
                      NS_SCRIPT_NAMESET_REGISTRY_CID);
 static NS_DEFINE_CID(kZipReaderCID, NS_ZIPREADER_CID);
@@ -125,9 +126,10 @@ nsScriptSecurityManager::GetCurrentContextQuick()
 // Methods implementing ISupports //
 ////////////////////////////////////
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsScriptSecurityManager,
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsScriptSecurityManager,
                    nsIScriptSecurityManager,
-                   nsIXPCSecurityManager)
+                   nsIXPCSecurityManager,
+                   nsIObserver)
 
 ///////////////////////////////////////////////////
 // Methods implementing nsIScriptSecurityManager //
@@ -317,7 +319,7 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
         }
     }
     rv = CheckXPCPermissions(aJSContext, aObj, objectSecurityLevel, aSkipFrame,
-                               "Permission to access property denied");
+                               "Permission denied to access property");
 #ifdef DEBUG_mstoltz
     if(NS_SUCCEEDED(rv))
         printf("CheckXPCPerms GRANTED.\n");
@@ -1253,7 +1255,7 @@ nsScriptSecurityManager::SavePrincipal(nsIPrincipal* aToSave)
         mSecurityPrefs->SecurityClearUserPref(idPrefName);
 
     mIsWritingPrefs = PR_FALSE;
-    return mPrefs->SavePrefFile(nsnull);
+    return mPrefService->SavePrefFile(nsnull);
 }
 
 ///////////////// Capabilities API /////////////////////
@@ -1655,7 +1657,7 @@ nsScriptSecurityManager::CanCreateWrapper(JSContext *aJSContext,
         checkedComponent->CanCreateWrapper((nsIID *)&aIID, getter_Copies(objectSecurityLevel));
 
     return CheckXPCPermissions(aJSContext, aObj, objectSecurityLevel, PR_FALSE,
-                               "Permission to create wrapper denied");
+                               "Permission denied to create wrapper for object");
 }
 
 NS_IMETHODIMP
@@ -1669,7 +1671,8 @@ nsScriptSecurityManager::CanCreateInstance(JSContext *aJSContext,
     PR_FREEIF(cidStr);
 #endif
 
-    return CheckXPCPermissions(aJSContext, nsnull, nsnull, PR_FALSE, "Permission to create instance of class denied");
+    return CheckXPCPermissions(aJSContext, nsnull, nsnull, PR_FALSE, 
+        "Permission denied to create instance of class");
 }
 
 NS_IMETHODIMP
@@ -1682,7 +1685,8 @@ nsScriptSecurityManager::CanGetService(JSContext *aJSContext,
     PR_FREEIF(cidStr);
 #endif
 
-    return CheckXPCPermissions(aJSContext, nsnull, nsnull, PR_FALSE, "Permission to get service denied");
+    return CheckXPCPermissions(aJSContext, nsnull, nsnull, PR_FALSE, 
+                              "Permission denied to get service");
 }
 
 /* void CanAccess (in PRUint32 aAction, in nsIXPCNativeCallContext aCallContext, in JSContextPtr aJSContext, in JSObjectPtr aJSObject, in nsISupports aObj, in nsIClassInfo aClassInfo, in JSVal aName, inout voidPtr aPolicy); */
@@ -1753,6 +1757,40 @@ nsScriptSecurityManager::CheckXPCPermissions(JSContext *aJSContext,
     return NS_ERROR_DOM_XPCONNECT_ACCESS_DENIED;
 }
 
+/////////////////////////////////////
+// Method implementing nsIObserver //
+/////////////////////////////////////
+NS_IMETHODIMP
+nsScriptSecurityManager::Observe(nsISupports* aObject, const PRUnichar* aAction,
+                                 const PRUnichar* aPrefName)
+{
+    nsresult rv = NS_OK;
+    nsCAutoString prefNameStr;
+    prefNameStr.AssignWithConversion(aPrefName);
+    char* prefName = prefNameStr.ToNewCString();
+    if (!prefName)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    static const char jsPrefix[] = "javascript.";
+    if(PL_strncmp(prefName, jsPrefix, sizeof(jsPrefix)-1) == 0)
+        JSEnabledPrefChanged();
+    else if((PL_strncmp(prefName, sPrincipalPrefix, sizeof(sPrincipalPrefix)-1) == 0) &&
+            !mIsWritingPrefs)
+    {
+        static const char id[] = "id";
+        char* lastDot = PL_strrchr(prefName, '.');
+        //-- This check makes sure the string copy below doesn't overwrite its bounds
+        if(PL_strlen(lastDot) >= sizeof(id))
+        {
+            PL_strcpy(lastDot + 1, id);
+            const char** idPrefArray = (const char**)&prefName;
+            rv = InitPrincipals(1, idPrefArray);
+        }
+    }
+    PR_Free(prefName);
+    return rv;
+}
+
 /////////////////////////////////////////////
 // Constructor, Destructor, Initialization //
 /////////////////////////////////////////////
@@ -1809,6 +1847,10 @@ nsScriptSecurityManager::GetScriptSecurityManager()
     return ssecMan;
 }
 
+const char* nsScriptSecurityManager::sJSEnabledPrefName = "javascript.enabled";
+const char* nsScriptSecurityManager::sJSMailEnabledPrefName = "javascript.allow.mailnews";
+const char* nsScriptSecurityManager::sPrincipalPrefix = "capability.principal";
+
 PR_STATIC_CALLBACK(PRBool)
 DeleteEntry(nsHashKey *aKey, void *aData, void* closure)
 {
@@ -1822,127 +1864,125 @@ DeleteEntry(nsHashKey *aKey, void *aData, void* closure)
     return PR_TRUE;
 }
 
-void 
-nsScriptSecurityManager::EnumeratePolicyCallback(const char *prefName, 
-                                                 void *data)
+nsresult
+nsScriptSecurityManager::InitPolicies(PRUint32 aPrefCount, const char** aPrefNames)
 {
-    if (!prefName || !*prefName)
-        return;
-
-    nsScriptSecurityManager *mgr = (nsScriptSecurityManager *) data;
-    unsigned count = 0;
-    const char *dots[5];
-    const char *p;
-    for (p=prefName; *p; p++)
+    for (PRUint32 c = 0; c < aPrefCount; c++)
     {
-        if (*p == '.')
+        unsigned count = 0;
+        const char *dots[5];
+        const char *p;
+        for (p=aPrefNames[c]; *p; p++)
         {
-            dots[count++] = p;
-            if (count == sizeof(dots)/sizeof(dots[0]))
-                break;
-        }
-    }
-    if (count < sizeof(dots)/sizeof(dots[0]))
-        dots[count] = p;
-    if (count < 3)
-        return;
-    const char *policyName = dots[1] + 1;
-    int policyLength = dots[2] - policyName;
-    PRBool isDefault = PL_strncmp("default", policyName, policyLength) == 0;
-    if (!isDefault && count == 3)
-    {
-        // capability.policy.<policyname>.sites
-        const char *sitesName = dots[2] + 1;
-        int sitesLength = dots[3] - sitesName;
-        if (PL_strncmp("sites", sitesName, sitesLength) == 0)
-        {
-            if (!mgr->mOriginToPolicyMap)
+            if (*p == '.')
             {
-                mgr->mOriginToPolicyMap = 
-                    new nsObjectHashtable(nsnull, nsnull, DeleteEntry, nsnull);
-                if (!mgr->mOriginToPolicyMap)
-                    return;
+                dots[count++] = p;
+                if (count == sizeof(dots)/sizeof(dots[0]))
+                    break;
             }
-            char *s;
-            if (NS_FAILED(mgr->mSecurityPrefs->SecurityGetCharPref(prefName, &s)))
-                return;
-            char *q=s;
-            char *r=s;
-            char *lastDot = nsnull;
-            char *nextToLastDot = nsnull;
-            PRBool working = PR_TRUE;
-            while (working)
+        }
+        if (count < sizeof(dots)/sizeof(dots[0]))
+            dots[count] = p;
+        if (count < 3)
+            continue;
+        const char *policyName = dots[1] + 1;
+        int policyLength = dots[2] - policyName;
+        PRBool isDefault = PL_strncmp("default", policyName, policyLength) == 0;
+        if (!isDefault && count == 3)
+        {
+            // capability.policy.<policyname>.sites
+            const char *sitesName = dots[2] + 1;
+            int sitesLength = dots[3] - sitesName;
+            if (PL_strncmp("sites", sitesName, sitesLength) == 0)
             {
-                if (*r == ' ' || *r == '\0')
+                if (!mOriginToPolicyMap)
                 {
-                    working = (*r != '\0');
-                    *r = '\0';
-                    nsCStringKey key(nextToLastDot ? nextToLastDot+1 : q);
-                    nsDomainEntry *value = new nsDomainEntry(q, policyName, 
-                                                             policyLength);
-                    if (!value)
-                        break;
-                    nsDomainEntry *de = (nsDomainEntry *) 
-                        mgr->mOriginToPolicyMap->Get(&key);
-                    if (!de)
-                        mgr->mOriginToPolicyMap->Put(&key, value);
-                    else
+                    mOriginToPolicyMap = 
+                        new nsObjectHashtable(nsnull, nsnull, DeleteEntry, nsnull);
+                    if (!mOriginToPolicyMap)
+                        return NS_ERROR_OUT_OF_MEMORY;
+                }
+                char *s;
+                if (NS_FAILED(mSecurityPrefs->SecurityGetCharPref(aPrefNames[c], &s)))
+                    return NS_ERROR_FAILURE;
+                char *q=s;
+                char *r=s;
+                char *lastDot = nsnull;
+                char *nextToLastDot = nsnull;
+                PRBool working = PR_TRUE;
+                while (working)
+                {
+                    if (*r == ' ' || *r == '\0')
                     {
-                        if (de->Matches(q))
-                        {
-                            value->mNext = de;
-                            mgr->mOriginToPolicyMap->Put(&key, value);
-                        }
+                        working = (*r != '\0');
+                        *r = '\0';
+                        nsCStringKey key(nextToLastDot ? nextToLastDot+1 : q);
+                        nsDomainEntry *value = new nsDomainEntry(q, policyName, 
+                                                                 policyLength);
+                        if (!value)
+                            break;
+                        nsDomainEntry *de = (nsDomainEntry *) 
+                            mOriginToPolicyMap->Get(&key);
+                        if (!de)
+                            mOriginToPolicyMap->Put(&key, value);
                         else
                         {
-                            while (de->mNext)
+                            if (de->Matches(q))
                             {
-                                if (de->mNext->Matches(q))
-                                {
-                                    value->mNext = de->mNext;
-                                    de->mNext = value;
-                                    break;
-                                }
-                                de = de->mNext;
+                                value->mNext = de;
+                                mOriginToPolicyMap->Put(&key, value);
                             }
-                            if (!de->mNext)
-                                de->mNext = value;
+                            else
+                            {
+                                while (de->mNext)
+                                {
+                                    if (de->mNext->Matches(q))
+                                    {
+                                        value->mNext = de->mNext;
+                                        de->mNext = value;
+                                        break;
+                                    }
+                                    de = de->mNext;
+                                }
+                                if (!de->mNext)
+                                    de->mNext = value;
+                            }
                         }
+                        q = r + 1;
+                        lastDot = nextToLastDot = nsnull;
                     }
-                    q = r + 1;
-                    lastDot = nextToLastDot = nsnull;
+                    else if (*r == '.')
+                    {
+                        nextToLastDot = lastDot;
+                        lastDot = r;
+                    }
+                    r++;
                 }
-                else if (*r == '.')
-                {
-                    nextToLastDot = lastDot;
-                    lastDot = r;
-                }
-                r++;
+                PR_Free(s);
             }
-            PR_Free(s);
-            return;
+        }
+        else if (count > 3)
+        { // capability.policy.<policyname>.<class>.<property>[.(get|set)]
+          // Store the class name so we know this class has a policy set on it
+            const char* className = dots[2] + 1;
+            PRInt32 classNameLen = dots[3] - className;
+            char* classNameNullTerm = PL_strndup(className, classNameLen);
+            if (!classNameNullTerm)
+                return NS_ERROR_OUT_OF_MEMORY;
+            nsCStringKey classNameKey(classNameNullTerm);
+            if (!(mClassPolicies))
+                mClassPolicies = new nsHashtable(31);
+            // We don't actually have to store the class name as data in the hashtable, 
+            // since all we check for is whether the key exists.
+            void* classPolicy = mClassPolicies->Get(&classNameKey);
+            if (isDefault && !classPolicy)
+                mClassPolicies->Put(&classNameKey, (void*)CLASS_POLICY_DEFAULT);
+            else if (!isDefault && classPolicy != (void*)CLASS_POLICY_SITE)
+                mClassPolicies->Put(&classNameKey, (void*)CLASS_POLICY_SITE);
+            PR_Free(classNameNullTerm);
         }
     }
-    else if (count > 3)
-    { // capability.policy.<policyname>.<class>.<property>[.(get|set)]
-      // Store the class name so we know this class has a policy set on it
-        const char* className = dots[2] + 1;
-        PRInt32 classNameLen = dots[3] - className;
-        char* classNameNullTerm = PL_strndup(className, classNameLen);
-        if (!classNameNullTerm)
-            return;
-        nsCStringKey classNameKey(classNameNullTerm);
-        if (!(mgr->mClassPolicies))
-            mgr->mClassPolicies = new nsHashtable(31);
-        // We don't actually have to store the class name as data in the hashtable, 
-        // since all we check for is whether the key exists.
-        void* classPolicy = mgr->mClassPolicies->Get(&classNameKey);
-        if (isDefault && !classPolicy)
-            mgr->mClassPolicies->Put(&classNameKey, (void*)CLASS_POLICY_DEFAULT);
-        else if (!isDefault && classPolicy != (void*)CLASS_POLICY_SITE)
-            mgr->mClassPolicies->Put(&classNameKey, (void*)CLASS_POLICY_SITE);
-        PR_Free(classNameNullTerm);
-    }
+    return NS_OK;
 }
 
 nsresult
@@ -1975,16 +2015,8 @@ nsScriptSecurityManager::PrincipalPrefNames(const char* pref,
     return NS_OK;
 }
 
-struct EnumeratePrincipalsInfo {
-    // this struct doesn't own these objects; consider them parameters on
-    // the stack
-    nsSupportsHashtable *ht;
-    nsISecurityPref *prefs;
-};
-
-void
-nsScriptSecurityManager::EnumeratePrincipalsCallback(const char *prefName, 
-                                                     void *voidParam)
+nsresult
+nsScriptSecurityManager::InitPrincipals(PRUint32 aPrefCount, const char** aPrefNames)
 {
     /* This is the principal preference syntax:
      * capability.principal.[codebase|certificate].<name>.[id|granted|denied]
@@ -1994,163 +2026,142 @@ nsScriptSecurityManager::EnumeratePrincipalsCallback(const char *prefName,
      * user_pref("capability.principal.certificate.p1.denied","Capability3");
      */
 
-    EnumeratePrincipalsInfo *info = (EnumeratePrincipalsInfo *) voidParam;
-    static const char idName[] = ".id";
-    PRInt32 prefNameLen = PL_strlen(prefName) - (sizeof(idName)-1);
-    if (PL_strcasecmp(prefName + prefNameLen, idName) != 0)
-        return;
-
-    char* id;
-    if (NS_FAILED(info->prefs->SecurityGetCharPref(prefName, &id))) 
-        return;
-
-    nsXPIDLCString grantedPrefName;
-    nsXPIDLCString deniedPrefName;
-    if (NS_FAILED(PrincipalPrefNames( prefName, 
-                                      getter_Copies(grantedPrefName), 
-                                      getter_Copies(deniedPrefName)  )))
-        return;
-
-    char* grantedList = nsnull;
-    info->prefs->SecurityGetCharPref(grantedPrefName, &grantedList);
-    char* deniedList = nsnull;
-    info->prefs->SecurityGetCharPref(deniedPrefName, &deniedList);
-
-    //-- Delete prefs if their value is the empty string
-    if ((!id || id[0] == '\0') || 
-        ((!grantedList || grantedList[0] == '\0') && (!deniedList || deniedList[0] == '\0')))
+    static const char idSuffix[] = ".id";
+    for (PRUint32 c = 0; c < aPrefCount; c++)
     {
-        info->prefs->SecurityClearUserPref(prefName);
-        info->prefs->SecurityClearUserPref(grantedPrefName);
-        info->prefs->SecurityClearUserPref(deniedPrefName);
-        return;
-    }
+        PRInt32 prefNameLen = PL_strlen(aPrefNames[c]) - (sizeof(idSuffix)-1);
+        if (PL_strcasecmp(aPrefNames[c] + prefNameLen, idSuffix) != 0)
+            continue;
 
-    //-- Create a principal based on the prefs
-    static const char certificateName[] = "capability.principal.certificate";
-    static const char codebaseName[] = "capability.principal.codebase";
-    nsCOMPtr<nsIPrincipal> principal;
-    if (PL_strncmp(prefName, certificateName, 
-                   sizeof(certificateName)-1) == 0) 
-    {
-        nsCertificatePrincipal *certificate = new nsCertificatePrincipal();
-        if (certificate) {
-            NS_ADDREF(certificate);
-            if (NS_SUCCEEDED(certificate->InitFromPersistent(prefName, id, 
-                                                             grantedList, deniedList))) 
-                principal = do_QueryInterface((nsBasePrincipal*)certificate);
-            NS_RELEASE(certificate);
+        char* id;
+        if (NS_FAILED(mSecurityPrefs->SecurityGetCharPref(aPrefNames[c], &id))) 
+            return NS_ERROR_FAILURE;
+
+        nsXPIDLCString grantedPrefName;
+        nsXPIDLCString deniedPrefName;
+        nsresult rv = PrincipalPrefNames(aPrefNames[c], 
+                                         getter_Copies(grantedPrefName), 
+                                         getter_Copies(deniedPrefName));
+        if (rv == NS_ERROR_OUT_OF_MEMORY)
+            return rv;
+        else if (NS_FAILED(rv))
+            continue;
+
+        char* grantedList = nsnull;
+        mSecurityPrefs->SecurityGetCharPref(grantedPrefName, &grantedList);
+        char* deniedList = nsnull;
+        mSecurityPrefs->SecurityGetCharPref(deniedPrefName, &deniedList);
+
+        //-- Delete prefs if their value is the empty string
+        if ((!id || id[0] == '\0') || 
+            ((!grantedList || grantedList[0] == '\0') && (!deniedList || deniedList[0] == '\0')))
+        {
+            mSecurityPrefs->SecurityClearUserPref(aPrefNames[c]);
+            mSecurityPrefs->SecurityClearUserPref(grantedPrefName);
+            mSecurityPrefs->SecurityClearUserPref(deniedPrefName);
+            PR_FREEIF(grantedList);
+            PR_FREEIF(deniedList);
+            continue;
         }
-    } else if(PL_strncmp(prefName, codebaseName, 
-                   sizeof(codebaseName)-1) == 0) 
-    {
-        nsCodebasePrincipal *codebase = new nsCodebasePrincipal();
-        if (codebase) {
-            NS_ADDREF(codebase);
-            if (NS_SUCCEEDED(codebase->InitFromPersistent(prefName, id, 
-                                                          grantedList, deniedList))) 
-                principal = do_QueryInterface((nsBasePrincipal*)codebase);
-            NS_RELEASE(codebase);
+
+        //-- Create a principal based on the prefs
+        static const char certificateName[] = "capability.principal.certificate";
+        static const char codebaseName[] = "capability.principal.codebase";
+        nsCOMPtr<nsIPrincipal> principal;
+        if (PL_strncmp(aPrefNames[c], certificateName, 
+                       sizeof(certificateName)-1) == 0) 
+        {
+            nsCertificatePrincipal *certificate = new nsCertificatePrincipal();
+            if (certificate) {
+                NS_ADDREF(certificate);
+                if (NS_SUCCEEDED(certificate->InitFromPersistent(aPrefNames[c], id, 
+                                                                 grantedList, deniedList))) 
+                    principal = do_QueryInterface((nsBasePrincipal*)certificate);
+                NS_RELEASE(certificate);
+            }
+        } else if(PL_strncmp(aPrefNames[c], codebaseName, 
+                       sizeof(codebaseName)-1) == 0) 
+        {
+            nsCodebasePrincipal *codebase = new nsCodebasePrincipal();
+            if (codebase) {
+                NS_ADDREF(codebase);
+                if (NS_SUCCEEDED(codebase->InitFromPersistent(aPrefNames[c], id, 
+                                                              grantedList, deniedList))) 
+                    principal = do_QueryInterface((nsBasePrincipal*)codebase);
+                NS_RELEASE(codebase);
+            }
         }
-    }
-    PR_FREEIF(grantedList);
-    PR_FREEIF(deniedList);
+        PR_FREEIF(grantedList);
+        PR_FREEIF(deniedList);
    
-    if (principal) {
-        nsIPrincipalKey key(principal);
-        info->ht->Put(&key, principal);
+        if (principal)
+        {
+            if (!mPrincipals)
+            {
+                mPrincipals = new nsSupportsHashtable(31);
+                if (!mPrincipals)
+                    return NS_ERROR_OUT_OF_MEMORY;
+            }
+            nsIPrincipalKey key(principal);
+            mPrincipals->Put(&key, principal);
+        }
     }
+    return NS_OK;
 }
 
-static const char jsEnabledPrefName[] = "javascript.enabled";
-static const char jsMailEnabledPrefName[] = "javascript.allow.mailnews";
 
-int PR_CALLBACK
-nsScriptSecurityManager::JSEnabledPrefChanged(const char *pref, void *data)
+inline void
+nsScriptSecurityManager::JSEnabledPrefChanged()
 {
-    nsScriptSecurityManager *secMgr = (nsScriptSecurityManager *) data;
-
-    if (NS_FAILED(secMgr->mPrefs->GetBoolPref(jsEnabledPrefName, 
-                                                      &secMgr->mIsJavaScriptEnabled)))
-    {
+    if (NS_FAILED(mPrefs->GetBoolPref(sJSEnabledPrefName, 
+                                      &mIsJavaScriptEnabled)))
         // Default to enabled.
-        secMgr->mIsJavaScriptEnabled = PR_TRUE;
-    }
+        mIsJavaScriptEnabled = PR_TRUE;
 
-    if (NS_FAILED(secMgr->mPrefs->GetBoolPref(jsMailEnabledPrefName, 
-                                                      &secMgr->mIsMailJavaScriptEnabled))) 
-    {
+    if (NS_FAILED(mPrefs->GetBoolPref(sJSMailEnabledPrefName, 
+                                      &mIsMailJavaScriptEnabled))) 
         // Default to enabled.
-        secMgr->mIsMailJavaScriptEnabled = PR_TRUE;
-    }
-
-    return 0;
-}
-
-int PR_CALLBACK
-nsScriptSecurityManager::PrincipalPrefChanged(const char *pref, void *data)
-{
-    nsScriptSecurityManager *secMgr = (nsScriptSecurityManager *) data;
-    if (secMgr->mIsWritingPrefs)
-        return 0;
-
-    char* lastDot = PL_strrchr(pref, '.');
-    if (!lastDot) return NS_ERROR_FAILURE;
-    PRInt32 prefLen = lastDot - pref + 1;
-
-    static const char id[] = "id";
-    char* idPref = (char*)PR_MALLOC(prefLen + sizeof(id));
-    if (!idPref) return NS_ERROR_OUT_OF_MEMORY;
-    PL_strncpy(idPref, pref, prefLen);
-    PL_strcpy(idPref + prefLen, id);
-
-    EnumeratePrincipalsInfo info;
-    info.ht = secMgr->mPrincipals;
-    info.prefs = secMgr->mSecurityPrefs;
-    EnumeratePrincipalsCallback(idPref, &info);
-    PR_FREEIF(idPref);
-    return 0;
+        mIsMailJavaScriptEnabled = PR_TRUE;
 }
 
 nsresult
 nsScriptSecurityManager::InitPrefs()
 {
     nsresult rv;
-    NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &rv);
-    if (NS_FAILED(rv))
-        return NS_ERROR_FAILURE;
-    mPrefs = prefs;
+    mPrefService = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = mPrefService->GetBranch(nsnull, getter_AddRefs(mPrefs));
+    NS_ENSURE_SUCCESS(rv, rv);
+    mSecurityPrefs = do_QueryInterface(mPrefs, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIPref> oldPrefService = do_GetService(NS_PREF_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    mSecurityPrefs = do_QueryInterface(prefs, &rv);
-    if (NS_FAILED(rv))
-        return NS_ERROR_FAILURE;
+    // Set the initial value of the "javascript.enabled" prefs
+    JSEnabledPrefChanged();
+    // set observer callbacks in case the value of the pref changes
+    oldPrefService->AddObserver(sJSEnabledPrefName, this);
+    oldPrefService->AddObserver(sJSMailEnabledPrefName, this);
 
-    // Set the initial value of the "javascript.enabled" pref
-    JSEnabledPrefChanged(jsEnabledPrefName, this);
+    PRUint32 prefCount;
+    char** prefNames;
 
-    // set callbacks in case the value of the pref changes
-    prefs->RegisterCallback(jsEnabledPrefName, JSEnabledPrefChanged, this);
-    prefs->RegisterCallback(jsMailEnabledPrefName, JSEnabledPrefChanged, this);
+    //-- Initialize the policy database from prefs
+    rv = mPrefs->GetChildList("capability.policy", &prefCount, &prefNames);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = InitPolicies(prefCount, (const char**)prefNames);
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(prefCount, prefNames);
 
-    mPrefs->EnumerateChildren("capability.policy",
-                              nsScriptSecurityManager::EnumeratePolicyCallback,
-                              (void *) this);
-    
-    if (!mPrincipals)
-    {
-        mPrincipals = new nsSupportsHashtable(31);
-        if (!mPrincipals)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
-    EnumeratePrincipalsInfo info;
-    info.ht = mPrincipals;
-    info.prefs = mSecurityPrefs;
-    
-    mPrefs->EnumerateChildren("capability.principal", 
-                              nsScriptSecurityManager::EnumeratePrincipalsCallback,
-                              (void *) &info);
-    
-    mPrefs->RegisterCallback("capability.principal", PrincipalPrefChanged, this);
+    //-- Initialize the principals database from prefs
+    rv = mPrefs->GetChildList(sPrincipalPrefix, &prefCount, &prefNames);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = InitPrincipals(prefCount, (const char**)prefNames);
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(prefCount, prefNames);
+
+    //-- Set a callback for principal changes
+    oldPrefService->AddObserver(sPrincipalPrefix, this);
 
     return NS_OK;
 }
