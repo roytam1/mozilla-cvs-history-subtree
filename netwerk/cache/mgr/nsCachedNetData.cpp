@@ -531,6 +531,9 @@ nsCachedNetData::Deserialize(PRBool aDeserializeFlags)
     rv = binaryStream->Read32(&mLastUpdateTime);
     if (NS_FAILED(rv)) return rv;
 
+    rv = binaryStream->Read32(&mLastModifiedTime);
+    if (NS_FAILED(rv)) return rv;
+
     rv = binaryStream->Read32(&mExpirationTime);
     if (NS_FAILED(rv)) return rv;
 
@@ -732,6 +735,15 @@ nsCachedNetData::GetLastAccessTime(PRTime *aLastAccessTime)
 }
 
 NS_IMETHODIMP
+nsCachedNetData::GetLastUpdateTime(PRTime *aLastUpdateTime)
+{
+    CHECK_AVAILABILITY();
+    NS_ENSURE_ARG_POINTER(aLastUpdateTime);
+    *aLastUpdateTime = convertSecondsToPRTime(mLastUpdateTime);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsCachedNetData::GetNumberAccesses(PRUint16 *aNumberAccesses)
 {
     CHECK_AVAILABILITY();
@@ -814,6 +826,9 @@ nsCachedNetData::Commit(void)
     }
 
     rv = binaryStream->Write32(mLastUpdateTime);
+    if (NS_FAILED(rv)) goto error;
+
+    rv = binaryStream->Write32(mLastModifiedTime);
     if (NS_FAILED(rv)) goto error;
 
     rv = binaryStream->Write32(mExpirationTime);
