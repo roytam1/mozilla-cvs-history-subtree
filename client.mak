@@ -40,10 +40,10 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-MOZ_BRANCH=MOZILLA_0_8_2001020916_BASE
-NSPR_CO_TAG=MOZILLA_0_8_2001020916_BASE
-PSM_CO_TAG=MOZILLA_0_8_2001020916_BASE
-LDAPCSDK_CO_TAG=MOZILLA_0_8_2001020916_BASE
+MOZ_BRANCH=MOZILLA_0_8_BRANCH
+NSPR_CO_TAG=MOZILLA_0_8_BRANCH
+PSM_CO_TAG=MOZILLA_0_8_BRANCH
+LDAPCSDK_CO_TAG=MOZILLA_0_8_BRANCH
 
 !if "$(MOZ_BRANCH)" != ""
 CVS_BRANCH=-r $(MOZ_BRANCH)
