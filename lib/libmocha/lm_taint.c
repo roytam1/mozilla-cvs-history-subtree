@@ -1600,6 +1600,7 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
 #ifdef OJI
     JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    PRBool  bCalledFromJava = (pFrameToEndLooking != NULL);
     if( pFrameToStartLooking == NULL)
     {
        pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
@@ -1661,7 +1662,7 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
           * Call from Java into JS. Just call the Java routine for checking
           * privileges.
           */
-          if (pFrameToEndLooking != NULL)
+          if (bCalledFromJava == PR_TRUE)
           {
             if (principalArray) {
                 /*
