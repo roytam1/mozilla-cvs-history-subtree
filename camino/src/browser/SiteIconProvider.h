@@ -48,7 +48,7 @@ class NeckoCacheHelper;
 
 @interface SiteIconProvider : NSObject<RemoteLoadListener>
 {
-  NeckoCacheHelper*	mMissedIconsCacheHelper;
+  NeckoCacheHelper* mMissedIconsCacheHelper;
 }
 
 + (SiteIconProvider*)sharedFavoriteIconProvider;

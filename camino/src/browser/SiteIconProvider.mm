@@ -248,7 +248,6 @@ static nsresult MakeFaviconURIFromURI(const nsAString& inURIString, nsAString& o
   return inCache;
 }
 
-
 - (BOOL)loadFavoriteIcon:(id)sender forURI:(NSString *)inURI withUserData:(id)userData allowNetwork:(BOOL)inAllowNetwork
 {
   // look for a favicon

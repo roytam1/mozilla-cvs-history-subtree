@@ -45,6 +45,7 @@
 #import "CHBrowserService.h"
 #import "AboutBox.h"
 #import "UserDefaults.h"
+#import "RemoteDataProvider.h"
 
 #include "nsCOMPtr.h"
 #include "nsEmbedAPI.h"
@@ -156,24 +157,27 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 -(void)applicationWillTerminate: (NSNotification*)aNotification
 {
 #if DEBUG
-    NSLog(@"Termination notification");
+  NSLog(@"Termination notification");
 #endif
-
-    // Autosave one of the windows.
-    [[[mApplication mainWindow] windowController] autosaveWindowFrame];
-    
-    mMenuBookmarks->RemoveObserver();
-    delete mMenuBookmarks;
-    mMenuBookmarks = nsnull;
-    
-    // Release before calling TermEmbedding since we need to access XPCOM
-    // to save preferences
-    [mPreferencesController release];
-    [mPreferenceManager release];
-
-    CHBrowserService::TermEmbedding();
-    
-    [self autorelease];
+  
+  // Autosave one of the windows.
+  [[[mApplication mainWindow] windowController] autosaveWindowFrame];
+  
+  // Cancel outstanding site icon loads
+  [[RemoteDataProvider sharedRemoteDataProvider] cancelOutstandingRequests];
+  
+  mMenuBookmarks->RemoveObserver();
+  delete mMenuBookmarks;
+  mMenuBookmarks = nsnull;
+  
+  // Release before calling TermEmbedding since we need to access XPCOM
+  // to save preferences
+  [mPreferencesController release];
+  [mPreferenceManager release];
+  
+  CHBrowserService::TermEmbedding();
+  
+  [self autorelease];
 }
 
 -(IBAction)newWindow:(id)aSender
