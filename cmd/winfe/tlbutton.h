@@ -27,8 +27,6 @@
 
 #include "tooltip.h"
 
-#include "rdfacc.h"
-
 #define SHOW_ALL_CHARACTERS -1
 
 #define TB_DYNAMIC_TOOLTIP		0x1		//Client fills in tooltip
