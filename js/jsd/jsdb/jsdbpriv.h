@@ -69,4 +69,7 @@ jsdb_ExecHookHandler(JSDContext*     jsdc,
                      void*           callerdata,
                      jsval*          rval);
 
+extern JSBool 
+jsdb_EvalReturnExpression(JSDB_Data* data, jsval* rval);
+
 #endif /* jsdbpriv_h___ */

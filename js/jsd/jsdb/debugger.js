@@ -304,6 +304,9 @@ addHelp("untrap    untrap([url],lineno)   Clear a breakpoint");
 addHelp("safeEval  safeEval('expr'[,url,lineno]) Eval w/o terminate on failure");
 addHelp("gets      gets()                 Get string from console");
 addHelp("prompt    prompt(str)            Show string and return user input");
+addHelp("returnVal returnVal(val)         resume and force script to return this val");
+addHelp("throwVal  throwVal(val)          resume and force script to throw this val");
+
 /* More can be added anywhere */
 
 /***************************************************************************/
@@ -724,16 +727,36 @@ function prompt(str)
     return gets();
 }    
 
+function abort()
+{
+    return resume(jsd.JSD_HOOK_RETURN_ABORT);
+}    
+
 function quit()
 {
     return resume(jsd.JSD_HOOK_RETURN_HOOK_ERROR);
 }    
 
+function returnVal(val)
+{
+    jsd.ReturnExpression = val;
+    resume(jsd.JSD_HOOK_RETURN_RET_WITH_VAL);
+    return "";
+}    
+
+function throwVal(val)
+{
+    jsd.ReturnExpression = val;
+    resume(jsd.JSD_HOOK_RETURN_THROW_WITH_VAL);
+    return "";
+}    
+
+
 function resume(code)
 {
     if(arguments.length && 
        code >= jsd.JSD_HOOK_RETURN_HOOK_ERROR &&
-       code <= jsd.JSD_HOOK_RETURN_RET_WITH_VAL) {
+       code <= jsd.JSD_HOOK_RETURN_THROW_WITH_VAL) {
         resumeCode = code;
     }
     else {

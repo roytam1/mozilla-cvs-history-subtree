@@ -110,8 +110,16 @@ jsdb_ExecHookHandler(JSDContext*     jsdc,
             goto label_bail;
         answer = JSVAL_TO_INT(result);
 
+
+        if((answer == JSD_HOOK_RETURN_RET_WITH_VAL ||
+            answer == JSD_HOOK_RETURN_THROW_WITH_VAL) &&
+           !jsdb_EvalReturnExpression(data, rval))          
+        {
+            goto label_bail;
+        }
+
         if(answer >= JSD_HOOK_RETURN_HOOK_ERROR &&
-           answer <= JSD_HOOK_RETURN_RET_WITH_VAL)
+           answer <= JSD_HOOK_RETURN_THROW_WITH_VAL)
             ourRetVal = answer;
         else
             ourRetVal = JSD_HOOK_RETURN_CONTINUE;

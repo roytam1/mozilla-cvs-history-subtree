@@ -29,6 +29,12 @@ static const char _str_ThreadStateHandle[]  = "ThreadStateHandle";
 static const char _str_InterruptSet[]       = "InterruptSet";
 static const char _str_Evaluating[]         = "Evaluating";
 static const char _str_DebuggerDepth[]      = "DebuggerDepth";
+static const char _str_ReturnExpression[]   = "ReturnExpression";
+
+static jsval _valFalse = JSVAL_FALSE;
+static jsval _valTrue  = JSVAL_TRUE;
+static jsval _valNull  = JSVAL_NULL;
+
 
 enum jsd_prop_ids
 {
@@ -36,6 +42,7 @@ enum jsd_prop_ids
     JSD_PROP_ID_INTERRUPT_SET       = -2,
     JSD_PROP_ID_EVALUATING          = -3,
     JSD_PROP_ID_DEBUGGER_DEPTH      = -4,
+    JSD_PROP_ID_RETURN_EXPRESSION   = -5,
     COMPLETLY_IGNORED_ID            = 0 /* just to avoid tracking the comma */
 };
 
@@ -44,6 +51,7 @@ static JSPropertySpec jsd_properties[] = {
     {_str_InterruptSet,      JSD_PROP_ID_INTERRUPT_SET,      JSPROP_ENUMERATE|JSPROP_PERMANENT},
     {_str_Evaluating,        JSD_PROP_ID_EVALUATING,         JSPROP_ENUMERATE|JSPROP_PERMANENT},
     {_str_DebuggerDepth,     JSD_PROP_ID_DEBUGGER_DEPTH,     JSPROP_ENUMERATE|JSPROP_PERMANENT},
+    {_str_ReturnExpression,  JSD_PROP_ID_RETURN_EXPRESSION,  JSPROP_ENUMERATE|JSPROP_PERMANENT},
     {0}                                                                        
 };
 
@@ -52,8 +60,6 @@ _defineNonConstProperties(JSDB_Data* data)
 {
     JSContext* cx = data->cxDebugger;
     JSObject*  ob = data->jsdOb;
-    jsval valFalse = JSVAL_FALSE;
-    jsval valNull  = JSVAL_NULL;
     jsval val;
     JSBool ignored;
 
@@ -62,13 +68,13 @@ _defineNonConstProperties(JSDB_Data* data)
 
     /* set initial state of some of the properties */
 
-    if(!JS_SetProperty(cx, ob, _str_ThreadStateHandle, &valNull))
+    if(!JS_SetProperty(cx, ob, _str_ThreadStateHandle, &_valNull))
         return JS_FALSE;
 
-    if(!JS_SetProperty(cx, ob, _str_InterruptSet, &valFalse))
+    if(!JS_SetProperty(cx, ob, _str_InterruptSet, &_valFalse))
         return JS_FALSE;
 
-    if(!JS_SetProperty(cx, ob, _str_Evaluating, &valFalse))
+    if(!JS_SetProperty(cx, ob, _str_Evaluating, &_valFalse))
         return JS_FALSE;
 
     val = INT_TO_JSVAL(data->debuggerDepth);
@@ -79,6 +85,9 @@ _defineNonConstProperties(JSDB_Data* data)
                                  JSPROP_ENUMERATE | 
                                  JSPROP_PERMANENT,
                                  &ignored))
+        return JS_FALSE;
+
+    if(!JS_SetProperty(cx, ob, _str_ReturnExpression, &_valNull))
         return JS_FALSE;
 
     return JS_TRUE;
@@ -137,6 +146,40 @@ static JSFunctionSpec handle_methods[] = {
     {"toString",   handle_toString,        0},
     {0}
 };
+
+JSBool 
+jsdb_EvalReturnExpression(JSDB_Data* data, jsval* rval)
+{
+    JSDStackFrameInfo* frame;
+    jsval expressionVal;
+    JSString* expressionString;
+    JSContext* cx = data->cxDebugger;
+    JSBool result = JS_FALSE;
+
+    frame = JSD_GetStackFrame(data->jsdcTarget, data->jsdthreadstate);
+    if(!frame)
+        return JS_FALSE;
+
+    if(!JS_GetProperty(cx, data->jsdOb, _str_ReturnExpression, &expressionVal))
+        return JS_FALSE;
+
+    if(NULL == (expressionString = JS_ValueToString(cx, expressionVal)))
+        return JS_FALSE;
+
+    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valTrue);
+    if(JSD_EvaluateScriptInStackFrame(data->jsdcTarget,
+                                      data->jsdthreadstate,
+                                      frame,
+                                      JS_GetStringBytes(expressionString),
+                                      JS_GetStringLength(expressionString),
+                                      "ReturnExpressionEval", 1, rval))
+    {
+        result = JS_TRUE;
+    }
+    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valFalse);
+    JS_SetProperty(cx, data->jsdOb, _str_ReturnExpression, &_valNull);
+    return result;
+}
 
 void*
 jsdb_HandleValToPointer(JSContext *cx, jsval val)
@@ -611,8 +654,6 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     JSString* textJSString;
     char* filename;
     int32 lineno;
-    jsval valFalse = JSVAL_FALSE;
-    jsval valTrue = JSVAL_TRUE;
     JSBool retVal = JS_FALSE;
     JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
     JS_ASSERT(data);
@@ -656,7 +697,7 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
     }
 
 
-    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &valTrue);
+    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valTrue);
 
     if(JSD_EvaluateScriptInStackFrame(data->jsdcTarget,
                                       data->jsdthreadstate,
@@ -679,7 +720,7 @@ EvaluateScriptInStackFrame(JSContext *cx, JSObject *obj, uintN argc, jsval *argv
 
     }
 
-    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &valFalse);
+    JS_SetProperty(cx, data->jsdOb, _str_Evaluating, &_valFalse);
 
     return retVal;
 }
@@ -1021,26 +1062,27 @@ typedef struct ConstProp
 /* these are used for constants defined in jsdebug.h - they must match! */
 
 static ConstProp const_props[] = {
-    {"JSD_HOOK_INTERRUPTED",            0},
-    {"JSD_HOOK_BREAKPOINT",             1},
-    {"JSD_HOOK_DEBUG_REQUESTED",        2},
-    {"JSD_HOOK_DEBUGGER_KEYWORD",       3},
+    {"JSD_HOOK_INTERRUPTED",            JSD_HOOK_INTERRUPTED     },
+    {"JSD_HOOK_BREAKPOINT",             JSD_HOOK_BREAKPOINT      },
+    {"JSD_HOOK_DEBUG_REQUESTED",        JSD_HOOK_DEBUG_REQUESTED },
+    {"JSD_HOOK_DEBUGGER_KEYWORD",       JSD_HOOK_DEBUGGER_KEYWORD},
 
-    {"JSD_HOOK_RETURN_HOOK_ERROR",      0},
-    {"JSD_HOOK_RETURN_CONTINUE",        1},
-    {"JSD_HOOK_RETURN_ABORT",           2},
-    {"JSD_HOOK_RETURN_RET_WITH_VAL",    3},
+    {"JSD_HOOK_RETURN_HOOK_ERROR",      JSD_HOOK_RETURN_HOOK_ERROR    },
+    {"JSD_HOOK_RETURN_CONTINUE",        JSD_HOOK_RETURN_CONTINUE      },
+    {"JSD_HOOK_RETURN_ABORT",           JSD_HOOK_RETURN_ABORT         },
+    {"JSD_HOOK_RETURN_RET_WITH_VAL",    JSD_HOOK_RETURN_RET_WITH_VAL  },
+    {"JSD_HOOK_RETURN_THROW_WITH_VAL",  JSD_HOOK_RETURN_THROW_WITH_VAL},
 
-    {"JSD_SOURCE_INITED",               0},
-    {"JSD_SOURCE_PARTIAL",              1},
-    {"JSD_SOURCE_COMPLETED",            2},
-    {"JSD_SOURCE_ABORTED",              3},
-    {"JSD_SOURCE_FAILED",               4},
-    {"JSD_SOURCE_CLEARED",              5},
+    {"JSD_SOURCE_INITED",               JSD_SOURCE_INITED   },
+    {"JSD_SOURCE_PARTIAL",              JSD_SOURCE_PARTIAL  },
+    {"JSD_SOURCE_COMPLETED",            JSD_SOURCE_COMPLETED},
+    {"JSD_SOURCE_ABORTED",              JSD_SOURCE_ABORTED  },
+    {"JSD_SOURCE_FAILED",               JSD_SOURCE_FAILED   },
+    {"JSD_SOURCE_CLEARED",              JSD_SOURCE_CLEARED  },
 
-    {"JSD_ERROR_REPORTER_PASS_ALONG",   0},
-    {"JSD_ERROR_REPORTER_RETURN",       1},
-    {"JSD_ERROR_REPORTER_DEBUG",        2},
+    {"JSD_ERROR_REPORTER_PASS_ALONG",   JSD_ERROR_REPORTER_PASS_ALONG},
+    {"JSD_ERROR_REPORTER_RETURN",       JSD_ERROR_REPORTER_RETURN    },
+    {"JSD_ERROR_REPORTER_DEBUG",        JSD_ERROR_REPORTER_DEBUG     },
 
     {0}
 };
