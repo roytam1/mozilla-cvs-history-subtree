@@ -56,7 +56,6 @@ NS_NAMED_LITERAL_STRING(kCharType,"#byte");
 NS_NAMED_LITERAL_STRING(kArrayType,"#array");
 NS_NAMED_LITERAL_STRING(kStructTypePrefix,"#struct#");
 NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
-NS_NAMED_LITERAL_STRING(kIIDObjectTypePrefix,"#iid#");
 NS_NAMED_LITERAL_STRING(kNullType,"#null");
 NS_NAMED_LITERAL_STRING(kVoidType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownType,"#unknown");

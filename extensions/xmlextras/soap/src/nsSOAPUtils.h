@@ -87,7 +87,6 @@ public:
   static const nsString kArrayType;
   static const nsString kTypeSeparator;
   static const nsString kStructTypePrefix;
-  static const nsString kIIDObjectTypePrefix;
   static const nsString kNullType;
   static const nsString kVoidType;
   static const nsString kUnknownType;

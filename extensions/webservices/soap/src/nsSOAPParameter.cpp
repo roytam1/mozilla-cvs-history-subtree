@@ -44,7 +44,7 @@ NS_IMPL_ISUPPORTS4(nsSOAPParameter,
                    nsIXPCScriptable,
                    nsIJSNativeInitializer)
 
-/* attribute DOMString name; */
+/* attribute AString name; */
 NS_IMETHODIMP nsSOAPParameter::GetName(nsAWritableString & aName)
 {
   NS_ENSURE_ARG_POINTER(&aName);
@@ -57,7 +57,7 @@ NS_IMETHODIMP nsSOAPParameter::SetName(const nsAReadableString & aName)
   return NS_OK;
 }
 
-/* attribute DOMString encodingStyleURI; */
+/* attribute AString encodingStyleURI; */
 NS_IMETHODIMP nsSOAPParameter::GetEncodingStyleURI(nsAWritableString & aEncodingStyleURI)
 {
   NS_ENSURE_ARG_POINTER(&aEncodingStyleURI);
@@ -70,7 +70,7 @@ NS_IMETHODIMP nsSOAPParameter::SetEncodingStyleURI(const nsAReadableString & aEn
   return NS_OK;
 }
 
-/* attribute DOMString type; */
+/* attribute AString type; */
 NS_IMETHODIMP nsSOAPParameter::GetType(nsAWritableString & aType)
 {
   NS_ENSURE_ARG_POINTER(&aType);
@@ -83,7 +83,7 @@ NS_IMETHODIMP nsSOAPParameter::SetType(const nsAReadableString & aType)
   return NS_OK;
 }
 
-/* attribute DOMString schemaType; */
+/* attribute AString schemaType; */
 NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsAWritableString & aSchemaType)
 {
   NS_ENSURE_ARG_POINTER(&aSchemaType);
@@ -111,7 +111,7 @@ NS_IMETHODIMP nsSOAPParameter::SetValue(nsISupports *aValue)
     return NS_OK;
 }
 
-/* void setAsWString (in DOMString aValue); */
+/* void setAsWString (in AString aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetAsWString(const nsAReadableString & aValue)
 {
     mType.Assign(nsSOAPUtils::kWStringType);
@@ -195,6 +195,15 @@ NS_IMETHODIMP nsSOAPParameter::SetAsByte(PRUint8 aValue)
 NS_IMETHODIMP nsSOAPParameter::SetAsArray(nsISupportsArray *aValue)
 {
     mType.Assign(nsSOAPUtils::kArrayType);
+    mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
+    return NS_OK;
+}
+
+/* void setAsArray (in AString structType, in nsISOAPStruct aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsStruct(const nsAReadableString & aStructType, nsISOAPStruct *aValue)
+{
+    mType.Assign(nsSOAPUtils::kStructTypePrefix);
+    mType.Append(aStructType);
     mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
     return NS_OK;
 }
