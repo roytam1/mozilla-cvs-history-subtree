@@ -1303,10 +1303,13 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
           rv = mLDAPURL->GetFilter(getter_Copies (filter));
           NS_ENSURE_SUCCESS(rv, rv);
 
-          static const PRUint32 numLDAPAttrs = 6;
+          static const PRUint32 numLDAPAttrs = 12;
           static const char *attrs[numLDAPAttrs] = {
             MOZ_SCHEMA_URL, MOZ_SCHEMA_NAME, MOZ_SCHEMA_KEYWORD,
-            MOZ_SCHEMA_DESCRIPTION, MOZ_SCHEMA_GROUPFLAG, MOZ_SCHEMA_OBJ_CLASS
+            MOZ_SCHEMA_DESCRIPTION, MOZ_SCHEMA_GROUPFLAG,
+            MOZ_SCHEMA_SEPARATORFLAG, MOZ_SCHEMA_LASTCHARSET,
+            MOZ_SCHEMA_ICONURL, MOZ_SCHEMA_DATEADDED, MOZ_SCHEMA_LASTMOD,
+            MOZ_SCHEMA_LASTVISIT, MOZ_SCHEMA_OBJ_CLASS
           };
 
           // when we called SetSpec(), our spec contained UTF8 data
