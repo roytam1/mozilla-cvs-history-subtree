@@ -1814,10 +1814,10 @@ LM_ReflectFormElement(MWContext *context, int32 layer_id, int32 form_id,
     JSInputBase *base;
     JSInputArray *array;
     jsval val;
-    static uint recurring;	/* XXX thread-unsafe */
     lo_FormData * form_data;
     lo_TopState *top_state;
     int32 element_index;
+    LMWindowGroup *grp;
 
     /* reflect the form */
     if (!LM_ReflectForm(context, NULL, NULL, layer_id, form_id)) 
@@ -1883,6 +1883,12 @@ LM_ReflectFormElement(MWContext *context, int32 layer_id, int32 form_id,
     type = data->type;
     if ((char *)data->ele_minimal.name)
 	name = XP_STRDUP((char *)data->ele_minimal.name);
+
+    grp = lm_MWContextToGroup(context);
+    if(!grp)  {
+	grp = LM_GetDefaultWindowGroup(context);
+    }
+
     switch (type) {
       case FORM_TYPE_TEXT:
       case FORM_TYPE_TEXTAREA:
@@ -1890,12 +1896,12 @@ LM_ReflectFormElement(MWContext *context, int32 layer_id, int32 form_id,
         break;
 
       case FORM_TYPE_RADIO:
-        if (!recurring) {
-	    recurring++;
+        if (!grp->inputRecurring) {
+	    grp->inputRecurring++;
 	    ok = lm_ReflectRadioButtonArray(context, layer_id,
                                             form_element->form_id,
                                             name, tag);
-	    recurring--;
+	    grp->inputRecurring--;
 	    obj = form_element->mocha_object;
 	    if (obj) {
 		LM_PutMochaDecoder(decoder);

@@ -408,293 +408,344 @@ lm_GetEventNames(uint32 event_bit);
  */
 extern JSBool
 lm_CompileEventHandler(MochaDecoder * decoder, PA_Block id, PA_Block data, 
-		       int newline_count, JSObject *object, const char *name, 
-		       PA_Block block);
-
-extern uint32
-lm_FindEventInMWContext(MWContext *context);
-
-/*
- * Remember the current form object that we are processing
- */
-extern void
-lm_SetActiveForm(MWContext * context, int32 id);
-
-/*
- * Called when we want to get rid of the old contents of a layer
- * and create a new document.
- */
-extern void
-lm_NewLayerDocument(MochaDecoder *decoder, int32 layer_id);
-
-/*
- * Called to set the source URL as a result of a document.open() on the
- * layer's document.
- */
-JSBool
-lm_SetLayerSourceURL(MochaDecoder *decoder, int32 layer_id, char *url);
-
-/*
- * Get a layer obj from a parent id and a layer name. Used for lazy reflection.
- */
-extern JSObject *
-lm_GetNamedLayer(MochaDecoder *decoder, int32 parent_layer_id, 
-                 const char *name);
-
-extern const char *
-lm_GetLayerOriginURL(JSContext *cx, JSObject *obj);
-
-
-/* Clears out object references from the doc private data */
-extern void
-lm_CleanUpDocumentRoots(MochaDecoder *decoder, JSObject *obj);
-
-/* Calls CleanUpDocumentRoots for a layer's document */
-extern void
-lm_DestroyLayer(MWContext *context, JSObject *obj);
-
-/* 
- * Called when the content associated with a document is destroyed,
- * but the document itself may not be. Cleans out object references
- * from doc private data (so that the objects can be collected). Also
- * deals with correctly relinquishing event capture.
- */
-extern void
-lm_CleanUpDocument(MochaDecoder *decoder, JSObject *document);
-
-extern NET_StreamClass *
-lm_ClearDecoderStream(MochaDecoder *decoder, JSBool fromDiscard);
-
-extern void
-lm_ProcessImageEvent(MWContext *context, JSObject *obj,
-                     LM_ImageEvent event);
-
-extern JSObject *
-lm_NewImage(JSContext *cx, LO_ImageStruct *image_data);
-
-extern JSObject *
-lm_NewSoftupObject(JSContext *cx, MochaDecoder *decoder, const char *jarargs);
-
-extern void
-lm_RegisterComponent(const char *targetName, ETBoolPtrFunc active_callback, 
-		     ETVoidPtrFunc startup_callback);
-
-extern void
-lm_RegisterComponentProp(const char *comp, const char *targetName, 
-			 uint8 retType, ETCompPropSetterFunc setter, 
-			 ETCompPropGetterFunc getter);
-
-extern void
-lm_RegisterComponentMethod(const char *comp, const char *targetName, 
-			   uint8 retType, ETCompMethodFunc method, int32 nargs);
-
-/*
- * Class initializers (the wave of the future).
- */
-extern JSBool
-lm_InitDocumentClass(MochaDecoder *decoder);
-
-extern JSBool
-lm_InitImageClass(MochaDecoder *decoder);
-
-extern JSBool
-lm_InitAnchorClass(MochaDecoder *decoder);
-
-extern JSBool
-lm_InitLayerClass(MochaDecoder *decoder);
-
-extern JSBool
-lm_InitInputClasses(MochaDecoder *decoder);
-
-extern JSBool
-lm_InitEventClasses(MochaDecoder *decoder);
-
-extern JSBool
-lm_InitRectClass(MochaDecoder *decoder);
-
-/* Create an image context for anonymous images. */
-extern JSBool
-lm_NewImageContext(MWContext *context, MochaDecoder *decoder);
-
-/* 
- * Called to save and restore timeouts across a resize_reload.
- */
-void
-lm_SaveWindowTimeouts(MochaDecoder *decoder);
-
-void
-lm_RestoreWindowTimeouts(MochaDecoder *decoder);
-
-/*
- * Call this function from LO_ResetForm() to let the form's onReset attribute
- * event handler run and do specialized form element data reinitialization.
- * Returns JS_TRUE if the form reset should continue, JS_FALSE if it
- * should be aborted.
- */
-extern JSBool
-lm_SendOnReset(MWContext *context, JSEvent *event, LO_Element *element);
-
-/*
- * See if our outer object is the current form or the document
- */
-extern JSObject *
-lm_GetOuterObject(MochaDecoder * decoder);
-
-/*
- * Entry point for the netlib to notify JS of load and unload events.
- */
-extern void
-lm_SendLoadEvent(MWContext *context, int32 event, JSBool resize_reload);
-
-/*
- * Load or unload event for a layer
- */
-extern void
-lm_SendLayerLoadEvent(MWContext *context, int32 event, int32 layer_id, JSBool resize_reload);
-
-/*
- * This one should be called when a form is submitted.  If there is an
- * INPUT tag of type "submit", the JS author could write an "onClick"
- * handler property of the submit button, but for forms that auto-submit
- * we want an "onSubmit" form property handler.
- *
- * Returns JS_TRUE if the submit should continue, JS_FALSE if it
- * should be aborted.
- */
-extern JSBool
-lm_SendOnSubmit(MWContext *context, JSEvent *event, LO_Element *element);
-
-extern JSBool
-lm_InputEvent(MWContext *context, LO_Element *element, JSEvent *pEvent,
-            jsval *rval);
-
-extern JSBool
-lm_KeyInputEvent(MWContext *context, LO_Element *element, JSEvent *pEvent,
-            jsval *rval);
-
-extern JSBool
-lm_MouseInputEvent(MWContext *context, LO_Element *element, JSEvent *pEvent,
-            jsval *rval);
-
-extern NET_StreamClass *
-lm_DocCacheConverter(MWContext * context, URL_Struct * url,
-		     const char * wysiwyg_url);
-
-extern char *
-lm_MakeWysiwygUrl(JSContext *cx, MochaDecoder *decoder, int32 layer_id,
-                  JSPrincipals *principals);
-
-typedef struct JSObjectArray {
-    MochaDecoder        *decoder;
-    jsint		length;
-    int32               layer_id;
-} JSObjectArray;
-
-extern JSBool
-lm_AddObjectToArray(JSContext * cx, JSObject * array_obj,
-		     const char * name, jsint index, JSObject * obj);
-
-/* Version Information; sits on top of JS_SetVersion and JS_GetVersion */
-extern void
-lm_SetVersion(MochaDecoder *decoder, JSVersion version);
-
-#define lm_GetVersion(decoder) JS_GetVersion((decoder)->js_context)
-
-/* 
- * Security -----------------------------------
- */
-
-typedef enum JSTarget {
-    JSTARGET_UNIVERSAL_BROWSER_READ,
-    JSTARGET_UNIVERSAL_BROWSER_WRITE,
-    JSTARGET_UNIVERSAL_SEND_MAIL,
-    JSTARGET_UNIVERSAL_FILE_READ,
-    JSTARGET_UNIVERSAL_FILE_WRITE,
-    JSTARGET_UNIVERSAL_PREFERENCES_READ,
-    JSTARGET_UNIVERSAL_PREFERENCES_WRITE,
-    JSTARGET_MAX
-} JSTarget;
-
-extern const char *
-lm_GetSubjectOriginURL(JSContext *cx);
-
-extern const char *
-lm_GetObjectOriginURL(JSContext *cx, JSObject *object);
-
-extern const char *
-lm_SetObjectOriginURL(JSContext *cx, JSObject *object, const char *origin);
-
-extern JSPrincipals *
-lm_GetPrincipalsFromStackFrame(JSContext *cx);
-
-extern JSPrincipals *
-lm_GetCompilationPrincipals(MochaDecoder *decoder, 
-                            JSPrincipals *layoutPrincipals);
-
-extern JSBool
-lm_CanAccessTarget(JSContext *cx, JSTarget target);
-
-extern JSBool
-lm_CheckPermissions(JSContext *cx, JSObject *obj, JSTarget target);
-
-extern JSBool
-lm_GetCrossOriginEnabled(void);
-
-extern JSBool
-lm_CheckContainerAccess(JSContext *cx, JSObject *obj, MochaDecoder *decoder,
-                        JSTarget target);
-
-/* 
- * Get the innermost (in the sense of the parent scope chain of "obj") 
- * nonnull principals. Will create principals at the window level if 
- * none exist. Will always return nonnull principals except in the case 
- * of memory failure. 
- * Argument "container" specifies the start of the search, the 
- * container where the principals were found will be stored into 
- * "foundIn" if "foundIn" is nonnull. 
- */
-extern JSPrincipals *
-lm_GetInnermostPrincipals(JSContext *cx, JSObject *container, 
-                          JSObject **foundIn);
-
-extern JSPrincipals *
-lm_GetContainerPrincipals(JSContext *cx, JSObject *container);
-
-extern void
-lm_SetContainerPrincipals(JSContext *cx, JSObject *container, 
-                          JSPrincipals *principals);
-
-extern JSBool 
-lm_CanCaptureEvent(JSContext *cx, JSFunction *fun, JSEvent *event);
-
-extern void
-lm_SetExternalCapture(JSContext *cx, JSPrincipals *principals, 
-                      JSBool b);
-
-extern JSBool
-lm_CheckSetParentSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
-
-extern JSBool
-lm_SetDocumentDomain(JSContext *cx, JSPrincipals *principals, 
-                     const char *newDomain);
-
-extern void
-lm_InvalidateCertPrincipals(MochaDecoder *decoder, JSPrincipals *principals);
-
-extern void
-lm_DestroyPrincipalsList(JSContext *cx, JSPrincipalsList *list);
-
-/* 
- * --------------------------------------------
- */
-
-/* For when mozilla needs to call LM_PutMochaDecoder in the mocha thread. */
-extern void
-et_PutMochaDecoder(MWContext *context, MochaDecoder *decoder);
-
-/* This function is private to libmocha, so don't stuff it in libevent.h, chouck ! */
-extern int32
-ET_PostCreateLayer(MWContext *context, int32 wrap_width, int32 parent_layer_id);
+		       int newline_(cx, sizeof *option);
+		if (!option)
+		    goto bad;
+
+		option_obj =
+		    JS_NewObject(cx, &lm_option_class,
+				 input->input_decoder->option_prototype, obj);
+
+		if (!option_obj || !JS_SetPrivate(cx, option_obj, option)) {
+		    JS_free(cx, option);
+		    goto bad;
+		}
+		option->decoder = HOLD_BACK_COUNT(input->input_decoder);
+		option->object = option_obj;
+		option->index = (uint32)slot;
+		option->indexInForm = form_element->element_index;
+		option->data = NULL;
+		*vp = OBJECT_TO_JSVAL(option_obj);
+		goto good;
+	    }
+	}
+	break;
+
+      case FORM_TYPE_RADIO:
+      case FORM_TYPE_CHECKBOX:
+	{
+	    lo_FormElementToggleData *toggle;
+
+	    toggle = &form_element->element_data->ele_toggle;
+	    switch (input_slot) {
+	      case INPUT_NAME:
+		str = lm_LocalEncodingToStr(context, 
+					    (char *)toggle->name);
+		break;
+	      case INPUT_VALUE:
+		str = lm_LocalEncodingToStr(context, 
+					    (char *)toggle->value);
+		break;
+	      case INPUT_STATUS:
+		*vp = BOOLEAN_TO_JSVAL(toggle->toggled);
+		goto good;
+	      case INPUT_DEFAULT_STATUS:
+		*vp = BOOLEAN_TO_JSVAL(toggle->default_toggle);
+		goto good;
+
+#if DISABLED_READONLY_SUPPORT
+	      case INPUT_DISABLED:
+	        *vp = BOOLEAN_TO_JSVAL(toggle->disabled);
+		goto good;
+	      case INPUT_READONLY:
+		*vp = BOOLEAN_TO_JSVAL(FALSE);
+		goto good;
+#endif
+	      default:
+		/* Don't mess with a user-defined property. */
+		goto good;
+	    }
+	}
+	break;
+
+      default:
+	{
+	    lo_FormElementMinimalData *minimal;
+
+	    minimal = &form_element->element_data->ele_minimal;
+	    switch (input_slot) {
+	      case INPUT_NAME:
+		str = lm_LocalEncodingToStr(context, 
+					    (char *)minimal->name);
+		break;
+	      case INPUT_VALUE:
+		str = lm_LocalEncodingToStr(context, 
+					    (char *)minimal->value);
+		break;
+#if DISABLED_READONLY_SUPPORT
+	      case INPUT_DISABLED:
+	        *vp = BOOLEAN_TO_JSVAL(minimal->disabled);
+		goto good;
+	      case INPUT_READONLY:
+		*vp = BOOLEAN_TO_JSVAL(FALSE); /* minimal elements don't have the readonly attribute. */
+		goto good;
+#endif
+	      default:
+		/* Don't mess with a user-defined property. */
+		goto good;
+	    }
+	}
+	break;
+    }
+
+    if (!str)
+	goto bad;
+    *vp = STRING_TO_JSVAL(str);
+
+good:
+    LO_UnlockLayout();
+    return JS_TRUE;
+
+bad:
+    LO_UnlockLayout();
+    return JS_FALSE;
+
+}
+
+char *
+lm_FixNewlines(JSContext *cx, const char *value, JSBool formElement)
+{
+    size_t size;
+    const char *cp;
+    char *tp, *new_value;
+
+#if defined XP_PC
+    size = 1;
+    for (cp = value; *cp != '\0'; cp++) {
+	switch (*cp) {
+	  case '\r':
+	    if (cp[1] != '\n')
+		size++;
+	    break;
+	  case '\n':
+	    if (cp > value && cp[-1] != '\r')
+		size++;
+	    break;
+	}
+    }
+    size += cp - value;
+#else
+    size = XP_STRLEN(value) + 1;
+#endif
+    new_value = JS_malloc(cx, size);
+    if (!new_value)
+	return NULL;
+    for (cp = value, tp = new_value; *cp != '\0'; cp++) {
+#if defined XP_MAC
+	if (*cp == '\n') {
+	    if (cp > value && cp[-1] != '\r')
+		*tp++ = '\r';
+	} else {
+	    *tp++ = *cp;
+	}
+#elif defined XP_PC
+	switch (*cp) {
+	  case '\r':
+	    *tp++ = '\r';
+	    if (cp[1] != '\n' && formElement)
+		*tp++ = '\n';
+	    break;
+	  case '\n':
+	    if (cp > value && cp[-1] != '\r' && formElement)
+		*tp++ = '\r';
+	    *tp++ = '\n';
+	    break;
+	  default:
+	    *tp++ = *cp;
+	    break;
+	}
+#else /* XP_UNIX */
+	if (*cp == '\r') {
+	    if (cp[1] != '\n')
+		*tp++ = '\n';
+	} else {
+	    *tp++ = *cp;
+	}
+#endif
+    }
+    *tp = '\0';
+    return new_value;
+}
+
+PR_STATIC_CALLBACK(JSBool)
+input_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+{
+    JSInput *input;
+    enum input_slot input_slot;
+    const char *prop_name;
+    char *value = NULL;
+    LO_FormElementStruct *form_element;
+    MochaDecoder *decoder;
+    MWContext *context;
+    int32 intval;
+    jsint slot;
+
+    input = JS_GetInstancePrivate(cx, obj, &lm_input_class, NULL);
+    if (!input)
+	return JS_TRUE;
+
+    /* If the property is seting a key handler we find out now so
+     * that we can tell the front end to send the event. */
+    if (JSVAL_IS_STRING(id)) {
+	prop_name = JS_GetStringBytes(JSVAL_TO_STRING(id));
+	/* XXX use lm_onKeyDown_str etc. initialized by PARAM_ONKEYDOWN */
+	if (XP_STRCASECMP(prop_name, "onkeydown") == 0 ||
+	    XP_STRCASECMP(prop_name, "onkeyup") == 0 ||
+	    XP_STRCASECMP(prop_name, "onkeypress") == 0) {
+	    form_element = lm_GetFormElementByIndex(cx, JS_GetParent(cx, obj),
+						    input->index);
+	    form_element->event_handler_present = TRUE;
+	}
+	return JS_TRUE;
+    }
+
+    XP_ASSERT(JSVAL_IS_INT(id));
+    slot = JSVAL_TO_INT(id);
+
+    decoder = input->input_decoder;
+    context = decoder->window_context;
+    input_slot = slot;
+    switch (input_slot) {
+      case INPUT_TYPE:
+      case INPUT_FORM:
+      case INPUT_OPTIONS:
+	/* These are immutable. */
+	break;
+      case INPUT_NAME:
+      case INPUT_VALUE:
+      case INPUT_DEFAULT_VALUE:
+	/* These are string-valued. */
+	if (!JSVAL_IS_STRING(*vp) &&
+	    !JS_ConvertValue(cx, *vp, JSTYPE_STRING, vp)) {
+	    return JS_FALSE;
+	}
+	value = lm_StrToLocalEncoding(context, JSVAL_TO_STRING(*vp));
+	break;
+      case INPUT_STATUS:
+      case INPUT_DEFAULT_STATUS:
+#if DISABLED_READONLY_SUPPORT
+      case INPUT_READONLY:
+      case INPUT_DISABLED:
+#endif
+	/* These must be Booleans. */
+	if (!JSVAL_IS_BOOLEAN(*vp) &&
+	    !JS_ConvertValue(cx, *vp, JSTYPE_BOOLEAN, vp)) {
+	    return JS_FALSE;
+	}
+	break;
+      case INPUT_LENGTH:
+      case INPUT_SELECTED_INDEX:
+	/* These should be integers. */
+	if (JSVAL_IS_INT(*vp))
+	    intval = JSVAL_TO_INT(*vp);
+	else if (!JS_ValueToInt32(cx, *vp, &intval)) {
+	    return JS_FALSE;
+	}
+	break;
+    }
+
+    LO_LockLayout();
+
+    form_element = lm_GetFormElementByIndex(cx, JS_GetParent(cx, obj),
+					    input->index);
+    if (!form_element)
+	goto good;
+
+    switch (form_element->element_data->type) {
+      case FORM_TYPE_FILE:
+	/* if we try to set a file upload widget we better be a signed script */
+	if (!lm_CanAccessTarget(cx, JSTARGET_UNIVERSAL_FILE_READ))
+	    break;
+	/* else fall through... */
+
+      case FORM_TYPE_TEXT:
+      case FORM_TYPE_TEXTAREA:	/* XXX we ASSUME common struct prefixes */
+      case FORM_TYPE_PASSWORD:
+	{
+	    lo_FormElementTextData *text;
+	    JSBool ok;
+	    char * fixed_string;
+
+	    text = &form_element->element_data->ele_text;
+	    switch (input_slot) {
+	      case INPUT_NAME:
+		if (!lm_SaveParamString(cx, &text->name, value))
+		    goto bad;
+		break;
+	      case INPUT_VALUE:
+	      case INPUT_DEFAULT_VALUE:
+		fixed_string = lm_FixNewlines(cx, value, JS_TRUE);
+		if (!fixed_string)
+		    goto bad;
+		ok = (input_slot == INPUT_VALUE)
+		     ? lm_SaveParamString(cx, &text->current_text, fixed_string)
+		     : lm_SaveParamString(cx, &text->default_text, fixed_string);
+
+		JS_free(cx, (char *)fixed_string);
+		if (!ok)
+		    goto bad;
+		if (input_slot == INPUT_VALUE && context) {
+		    ET_PostManipulateForm(context, (LO_Element *)form_element,
+                                  EVENT_CHANGE);
+		}
+		break;
+#if DISABLED_READONLY_SUPPORT
+	      case INPUT_DISABLED:
+		text->disabled = JSVAL_TO_BOOLEAN(*vp);
+		if (context) {
+		  ET_PostManipulateForm(context, (LO_Element *)form_element,
+					EVENT_CHANGE);
+		}
+		break;
+	      case INPUT_READONLY:
+		if (form_element->element_data->type == FORM_TYPE_FILE)
+		  break;
+		text->readonly = JSVAL_TO_BOOLEAN(*vp);
+		if (context) {
+		  ET_PostManipulateForm(context, (LO_Element *)form_element,
+					EVENT_CHANGE);
+		}
+		break;
+#endif
+	      default:
+		/* Don't mess with option or user-defined property. */
+		goto good;
+	    }
+	}
+	break;
+
+      case FORM_TYPE_SELECT_ONE:
+      case FORM_TYPE_SELECT_MULT:
+	{
+	    lo_FormElementSelectData *selectData;
+	    lo_FormElementOptionData *optionData;
+	    JSSelectOption *option;
+	    int32 i, new_option_cnt, old_option_cnt;
+
+	    selectData = &form_element->element_data->ele_select;
+	    switch (slot) {
+	      case INPUT_NAME:
+		if (!lm_SaveParamString(cx, &selectData->name, value))
+		    goto bad;
+		break;
+
+	      case INPUT_LENGTH:
+		new_option_cnt = intval;
+		old_option_cnt = selectData->option_cnt;
+		optionData = (lo_FormElementOptionData *) selectData->options;
+
+		/* Remove truncated slots, or clear extended element data. */
+		if (new_ayer(MWContext *context, int32 wrap_width, int32 parent_layer_id);
 
 extern void
 lm_RestoreLayerState(MWContext *context, int32 layer_id, 
@@ -785,6 +836,8 @@ struct WindowGroup {
 
     JSTimeout         **js_timeout_insertion_point;
     JSTimeout         *js_timeout_running;
+
+    uint              inputRecurring;
 
     PREventQueue      *interpret_queue;
     QueueStackElement *queue_stack;

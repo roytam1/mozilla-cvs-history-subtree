@@ -162,6 +162,7 @@ LMWindowGroup *_lm_NewWindowGroup(int priority)
 	newgrp->lock_context = NULL;
 	newgrp->js_timeout_insertion_point = NULL;
 	newgrp->js_timeout_running = NULL;
+	newgrp->inputRecurring = 0;
     }
     return newgrp;
 }
