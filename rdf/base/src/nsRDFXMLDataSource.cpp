@@ -594,8 +594,6 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
 {
     nsresult rv;
 
-//xx dougt - what request do we really have here?  I probably broke blocking RDF parsing.
-
     // XXX I really hate the way that we're spoon-feeding this stuff
     // to the parser: it seems like this is something that netlib
     // should be able to do by itself.
@@ -609,6 +607,8 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     PRUint32 sourceOffset = 0;
     rv = channel->OpenInputStream(0, -1, &in);
 
+    nsCOMPtr<nsIRequest> request = do_QueryInterface(channel);
+
     // If we couldn't open the channel, then just return.
     if (NS_FAILED(rv)) return NS_OK;
 
@@ -620,7 +620,7 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     if (! proxy)
         goto done;
 
-    aConsumer->OnStartRequest(nsnull, nsnull);
+    aConsumer->OnStartRequest(request, nsnull);
     while (PR_TRUE) {
         char buf[1024];
         PRUint32 readCount;
@@ -633,13 +633,13 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
 
         proxy->SetBuffer(buf, readCount);
 
-        rv = aConsumer->OnDataAvailable(nsnull, nsnull, proxy, sourceOffset, readCount);
+        rv = aConsumer->OnDataAvailable(request, nsnull, proxy, sourceOffset, readCount);
         sourceOffset += readCount;
         if (NS_FAILED(rv))
             break;
     }
 
-    aConsumer->OnStopRequest(nsnull, nsnull, rv, nsnull);
+    aConsumer->OnStopRequest(request, nsnull, rv, nsnull);
 
 	// don't leak proxy!
 	proxy->Close();
