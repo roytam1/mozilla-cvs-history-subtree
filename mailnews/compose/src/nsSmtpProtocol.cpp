@@ -16,17 +16,18 @@
  * Reserved.
  */
 #include "msgCore.h"
+#include "MailNewsTypes.h"
 #include "MsgCompGlue.h" // need this to get MK_ defines...
 
 #include "nsSmtpProtocol.h"
 #include "nscore.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
+#include "nsIBufferInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsFileStream.h"
 #include "nsIMsgMailNewsUrl.h"
-#include "nsINetService.h"
 
 #include "nsMsgBaseCID.h"
 
@@ -36,8 +37,6 @@
 #include "prprf.h"
 #include "nsEscape.h"
 
-
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
 
 extern "C" 
@@ -66,8 +65,6 @@ char *XP_AppCodeName = "Mozilla";
 const char *XP_AppCodeName = "Mozilla";
 #endif
 #define NET_IS_SPACE(x) ((((unsigned int) (x)) > 0x7f) ? 0 : isspace(x))
-typedef PRUint32 nsMsgKey;
-const nsMsgKey nsMsgKey_None = 0xffffffff;
 
 /*
  * This function takes an error code and associated error data
@@ -234,20 +231,8 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
 	if (aURL)
 		m_runningURL = do_QueryInterface(aURL);
 
-	const char * hostName = NULL;
-	if (aURL)
-	{
-		aURL->GetHost(&hostName);
-		aURL->GetHostPort(&m_port);
-	}
-
-	if (hostName)
-		m_hostName = PL_strdup(hostName);
-	else
-		m_hostName = NULL;
-	
 	// call base class to set up the url 
-	rv = OpenNetworkSocket(aURL, m_port, m_hostName);
+	rv = OpenNetworkSocket(aURL);
 	
 	m_dataBuf = (char *) PR_Malloc(sizeof(char) * OUTPUT_BUFFER_SIZE);
 	m_dataBufSize = OUTPUT_BUFFER_SIZE;
@@ -293,9 +278,9 @@ const char * nsSmtpProtocol::GetUserDomainName()
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsSmtpProtocol::OnStopBinding(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsSmtpProtocol::OnStopBinding(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
-	nsMsgProtocol::OnStopBinding(aURL, aStatus, aMsg);
+	nsMsgProtocol::OnStopBinding(ctxt, aStatus, aMsg);
 
 	// okay, we've been told that the send is done and the connection is going away. So 
 	// we need to release all of our state
@@ -306,10 +291,10 @@ NS_IMETHODIMP nsSmtpProtocol::OnStopBinding(nsIURI* aURL, nsresult aStatus, cons
 // End of nsIStreamListenerSupport
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-PRInt32 nsSmtpProtocol::ReadLine(nsIInputStream * inputStream, PRUint32 length, char ** line)
+PRInt32 nsSmtpProtocol::ReadLine(nsIBufferInputStream * inputStream, PRUint32 length, char ** line)
 {
 	// I haven't looked into writing this yet. We have a couple of possibilities:
-	// (1) insert ReadLine *yuck* into here or better yet into the nsIInputStream
+	// (1) insert ReadLine *yuck* into here or better yet into the nsIBufferInputStream
 	// then we can just turn around and call it here. 
 	// OR
 	// (2) we write "protocol" specific code for news which looks for a CRLF in the incoming
@@ -365,7 +350,7 @@ PRInt32 nsSmtpProtocol::ReadLine(nsIInputStream * inputStream, PRUint32 length, 
  *
  * returns the TCP return code from the read
  */
-PRInt32 nsSmtpProtocol::SmtpResponse(nsIInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::SmtpResponse(nsIBufferInputStream * inputStream, PRUint32 length)
 {
 	char * line = nsnull;
 	char cont_char;
@@ -429,7 +414,7 @@ PRInt32 nsSmtpProtocol::SmtpResponse(nsIInputStream * inputStream, PRUint32 leng
     return(0);  /* everything ok */
 }
 
-PRInt32 nsSmtpProtocol::LoginResponse(nsIInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::LoginResponse(nsIBufferInputStream * inputStream, PRUint32 length)
 {
     PRInt32 status = 0;
 	nsAutoString buffer ((const char *) "HELO ", eOneByte);
@@ -455,7 +440,7 @@ PRInt32 nsSmtpProtocol::LoginResponse(nsIInputStream * inputStream, PRUint32 len
 }
     
 
-PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIInputStream * inputStream, PRUint32 length) 
+PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIBufferInputStream * inputStream, PRUint32 length) 
 {
     PRInt32 status = 0;
 	nsAutoString buffer((const char *) "EHLO ", eOneByte);
@@ -481,7 +466,7 @@ PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIInputStream * inputStream, PRU
 }
     
 
-PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::SendHeloResponse(nsIBufferInputStream * inputStream, PRUint32 length)
 {
     PRInt32 status = 0;
 	nsAutoString buffer (eOneByte);
@@ -577,7 +562,7 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 
 }
 
 
-PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::SendEhloResponse(nsIBufferInputStream * inputStream, PRUint32 length)
 {
   PRInt32 status = 0;
   nsAutoString buffer(eOneByte);
@@ -651,7 +636,7 @@ PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 
 
 HG76227
 
-PRInt32 nsSmtpProtocol::AuthLoginResponse(nsIInputStream * stream, PRUint32 length)
+PRInt32 nsSmtpProtocol::AuthLoginResponse(nsIBufferInputStream * stream, PRUint32 length)
 {
   PRInt32 status = 0;
 
@@ -1292,7 +1277,8 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
  *
  * returns zero or more if the transfer needs to be continued.
  */
-nsresult nsSmtpProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, PRUint32 length)
+nsresult nsSmtpProtocol::ProcessProtocolState(nsIURI * url, nsIBufferInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length)
 {
     PRInt32 status = 0;
     ClearFlag(SMTP_PAUSE_FOR_READ); /* already paused; reset */
