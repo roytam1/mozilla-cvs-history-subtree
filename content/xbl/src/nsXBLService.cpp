@@ -473,7 +473,7 @@ PRUint32 nsXBLService::gClassLRUListQuota = 64;
 
 // Enabled by default. Must be over-ridden to disable
 PRBool nsXBLService::gDisableChromeCache = PR_FALSE;
-static const char kDisableChromeCachePref[] = "nglayout.debug.disable_xul_cache";
+static const char kDisableChromeCachePref[] = "nglayout.debug.disable_xul_cache_ex";
 
 // Implement our nsISupports methods
 NS_IMPL_ISUPPORTS3(nsXBLService, nsIXBLService, nsIObserver, nsISupportsWeakReference)

@@ -895,13 +895,6 @@ function getInterfaceForType(type) {
     }
 }
 
-// flush the XUL cache - just for debugging purposes - not called
-function onFlush() {
-        gPrefs.setBoolPref("nglayout.debug.disable_xul_cache", true);
-        gPrefs.setBoolPref("nglayout.debug.disable_xul_cache", false);
-
-}
-
 /** If there are no default accounts..
   * this is will be the new default, so enable
   * check for mail at startup

@@ -15,6 +15,5 @@
 
 <!-- Cache -->
 <!ENTITY debugCache.label             "Cache">
-<!ENTITY debugDisableXULCache.label   "Disable XUL Cache">
 <!ENTITY debugEnableMemCache.label    "Enable Mem Cache">
 <!ENTITY debugEnableDiskCache.label   "Enable Disk Cache">

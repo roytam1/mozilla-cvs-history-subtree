@@ -30,8 +30,8 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["dirFormat", "nglayoutDebugDisableXULCache", 
-                       "browserEnableCache", "browserEnableDiskCache", ];
+    var _elementIDs = ["dirFormat", "browserEnableCache",
+                       "browserEnableDiskCache"];
   ]]>
   </script>
 
@@ -61,8 +61,6 @@
   <groupbox>
     <caption label="&debugCache.label;"/>
     <vbox align="start">
-    <checkbox id="nglayoutDebugDisableXULCache" label="&debugDisableXULCache.label;"
-              prefstring="nglayout.debug.disable_xul_cache"/>
     <checkbox id="browserEnableDiskCache" label="&debugEnableDiskCache.label;"
               prefstring="browser.cache.disk.enable"/>
     <checkbox id="browserEnableCache" label="&debugEnableMemCache.label;"

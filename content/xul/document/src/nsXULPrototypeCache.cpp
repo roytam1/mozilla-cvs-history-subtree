@@ -161,7 +161,7 @@ protected:
 };
 
 static PRBool gDisableXULCache = PR_FALSE; // enabled by default
-static const char kDisableXULCachePref[] = "nglayout.debug.disable_xul_cache";
+static const char kDisableXULCachePref[] = "nglayout.debug.disable_xul_cache_ex";
 
 //----------------------------------------------------------------------
 
