@@ -84,7 +84,7 @@ void _PR_NT_InitSids(void)
             sizeof(infoBuffer), &dwLength);
     PR_ASSERT(rv != 0);
     dwLength = GetLengthSid(pTokenOwner->Owner);
-    _pr_nt_sids.owner = (PSID) HeapAlloc(GetProcessHeap(), 0, dwLength);
+    _pr_nt_sids.owner = (PSID) PR_Malloc(dwLength);
     PR_ASSERT(_pr_nt_sids.owner != NULL);
     rv = CopySid(dwLength, _pr_nt_sids.owner, pTokenOwner->Owner);
     PR_ASSERT(rv != 0);
@@ -93,7 +93,7 @@ void _PR_NT_InitSids(void)
             sizeof(infoBuffer), &dwLength);
     PR_ASSERT(rv != 0);
     dwLength = GetLengthSid(pTokenPrimaryGroup->PrimaryGroup);
-    _pr_nt_sids.group = (PSID) HeapAlloc(GetProcessHeap(), 0, dwLength);
+    _pr_nt_sids.group = (PSID) PR_Malloc(dwLength);
     PR_ASSERT(_pr_nt_sids.group != NULL);
     rv = CopySid(dwLength, _pr_nt_sids.group,
             pTokenPrimaryGroup->PrimaryGroup);
@@ -113,10 +113,10 @@ void
 _PR_NT_FreeSids(void)
 {
     if (_pr_nt_sids.owner) {
-        HeapFree(GetProcessHeap(), 0, (LPVOID) _pr_nt_sids.owner);
+        PR_Free(_pr_nt_sids.owner);
     }
     if (_pr_nt_sids.group) {
-        HeapFree(GetProcessHeap(), 0, (LPVOID) _pr_nt_sids.group);
+        PR_Free(_pr_nt_sids.group);
     }
     if (_pr_nt_sids.everyone) {
         FreeSid(_pr_nt_sids.everyone);
@@ -146,8 +146,7 @@ _PR_NT_MakeSecurityDescriptorACL(
         return PR_FAILURE;
     }
 
-    pSD = (PSECURITY_DESCRIPTOR) LocalAlloc(LPTR,
-            SECURITY_DESCRIPTOR_MIN_LENGTH);
+    pSD = (PSECURITY_DESCRIPTOR) PR_Malloc(SECURITY_DESCRIPTOR_MIN_LENGTH);
     if (pSD == NULL) {
         _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
         goto failed;
@@ -173,7 +172,7 @@ _PR_NT_MakeSecurityDescriptorACL(
      * GENERIC_WRITE, and GENERIC_EXECUTE access rights.
      */
 
-    pACL = (PACL) LocalAlloc(LPTR, cbACL);
+    pACL = (PACL) PR_Malloc(cbACL);
     if (pACL == NULL) {
         _PR_MD_MAP_DEFAULT_ERROR(GetLastError());
         goto failed;
@@ -221,10 +220,10 @@ _PR_NT_MakeSecurityDescriptorACL(
 
 failed:
     if (pSD) {
-        LocalFree((HLOCAL) pSD);
+        PR_Free(pSD);
     }
     if (pACL) {
-        LocalFree((HLOCAL) pACL);
+        PR_Free(pACL);
     }
     return PR_FAILURE;
 }
@@ -237,9 +236,9 @@ void
 _PR_NT_FreeSecurityDescriptorACL(PSECURITY_DESCRIPTOR pSD, PACL pACL)
 {
     if (pSD) {
-        LocalFree((HLOCAL) pSD);
+        PR_Free(pSD);
     }
     if (pACL) {
-        LocalFree((HLOCAL) pACL);
+        PR_Free(pACL);
     }
 }
