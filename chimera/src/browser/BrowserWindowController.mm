@@ -94,6 +94,40 @@ static NSArray* sToolbarDefaults = nil;
 
 #define kMaxBrowserWindowTabs 16
 
+//////////////////////////////////////
+@interface AutoCompleteTextFieldEditor : NSTextView
+{
+}
+@end
+
+@implementation AutoCompleteTextFieldEditor
+
+-(void)paste:(id)sender
+{
+  NSPasteboard *pboard = [NSPasteboard generalPasteboard];
+  NSEnumerator *dataTypes = [[pboard types] objectEnumerator];
+  NSString *aType;
+  while ((aType = [dataTypes nextObject])) {
+    if ([aType isEqualToString:NSStringPboardType]) {
+      NSString *oldText = [pboard stringForType:NSStringPboardType];
+      NSString *newText = [oldText stringByRemovingCharactersInSet:[NSCharacterSet controlCharacterSet]];
+      NSRange aRange = [self selectedRange];
+      if ([self shouldChangeTextInRange:aRange replacementString:newText]) {
+        [[self textStorage] replaceCharactersInRange:aRange withString:newText];
+        [self didChangeText];
+      }
+      // after a paste, the insertion point should be after the pasted text
+      unsigned int newInsertionPoint = aRange.location + [newText length];
+      [self setSelectedRange:NSMakeRange(newInsertionPoint,0)];
+      return;
+    }
+  }
+}
+
+@end
+//////////////////////////////////////
+
+
 @interface BrowserWindowController(Private)
 - (void)setupToolbar;
 - (void)setupSidebarTabs;
@@ -1544,7 +1578,7 @@ static NSArray* sToolbarDefaults = nil;
 {
   if ([anObject isEqual:mURLBar]) {
     if (!mURLFieldEditor) {
-      mURLFieldEditor = [[NSTextView alloc] init];
+      mURLFieldEditor = [[AutoCompleteTextFieldEditor alloc] init];
       [mURLFieldEditor setFieldEditor:YES];
       [mURLFieldEditor setAllowsUndo:YES];
     }
