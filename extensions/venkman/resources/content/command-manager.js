@@ -33,7 +33,7 @@ function getAccessKey (str)
     return str[i + 1];
 }
 
-function CommandRecord (name, func, usage, help, label, flags)
+function CommandRecord (name, func, usage, help, label, flags, keystr)
 {
     this.name = name;
     this.func = func;
@@ -43,8 +43,8 @@ function CommandRecord (name, func, usage, help, label, flags)
     this.label = label ? label : name;
     this.flags = flags;
     this._enabled = true;
-    this.key = null;
-    this.keystr = MSG_VAL_NA;
+    this.keyNodes = new Array();
+    this.keystr = keystr ? keystr : MSG_VAL_NA;
     this.uiElements = new Array();
 
 }
@@ -158,6 +158,125 @@ function CommandManager ()
     this.commands = new Object();
 }
 
+CommandManager.prototype.defineCommands =
+function cmgr_defcmds (cmdary)
+{
+    var len = cmdary.length;
+    var bundle = cmdary.stringBundle;
+    var commands = new Object();
+    
+    for (var i = 0; i < len; ++i)
+    {
+        var name  = cmdary[i][0];
+        var func  = cmdary[i][1];
+        var flags = cmdary[i][2];
+        var usage = getMsgFrom(bundle, "cmd." + name + ".params", null, "");
+
+        var helpDefault;
+        var labelDefault = name;
+        var aliasFor;
+        if (flags & CMD_NO_HELP)
+            helpDefault = MSG_NO_HELP;
+
+        if (typeof func == "string")
+        {
+            var ary = func.match(/(\S+)/);
+            if (ary)
+                aliasFor = ary[1];
+            helpDefault = getMsg (MSN_DEFAULT_ALIAS_HELP, func); 
+            labelDefault = getMsgFrom (bundle,
+                                       "cmd." + aliasFor + ".label", null, name);
+        }
+
+        var label = getMsgFrom(bundle,
+                               "cmd." + name + ".label", null, labelDefault);
+        var help  = getMsgFrom(bundle,
+                               "cmd." + name + ".help", null, helpDefault);
+        var keystr = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
+        var command = new CommandRecord (name, func, usage, help, label, flags,
+                                         keystr);
+        this.addCommand(command);
+        commands[name] = command;
+    }
+
+    return commands;
+}
+
+CommandManager.prototype.installKeys =
+function cmgr_instkeys (document, commands)
+{
+    var parentElem = document.getElementById("dynamic-keys");
+    if (!parentElem)
+        parentElem = document.createElement("dynamic-keys");
+
+    if (!commands)
+        commands = this.commands;
+    
+    for (var c in commands)
+        this.installKey (parentElem, commands[c]);
+}
+
+/**
+ * Create a <key> node relative to a DOM node.  Usually called once per command,
+ * per document, so that accelerator keys work in all application windows.
+ *
+ * @param parentElem  A reference to the DOM node which should contain the new
+ *                    <key> node.
+ * @param command     reference to the CommandRecord to install.
+ */
+CommandManager.prototype.installKey =
+function cmgr_instkey (parentElem, command)
+{
+    if (!command.keystr)
+        return;
+    
+    var ary = command.keystr.match (/(.*\s)?([\S]+)$/);
+    if (!ASSERT(ary, "couldn't parse key string ``" + command.keystr +
+                "'' for command ``" + command.name + "''"))
+    {
+        return;
+    }
+    
+    var key = document.createElement ("key");
+    key.setAttribute ("id", "key:" + command.name);
+    key.setAttribute ("oncommand", "dispatch('" + command.name + "');");
+    key.setAttribute ("modifiers", ary[1]);
+    if (ary[2].indexOf("VK_") == 0)
+        key.setAttribute ("keycode", ary[2]);
+    else
+        key.setAttribute ("key", ary[2]);
+    
+    parentElem.appendChild(key);
+    command.keyNodes.push(key);
+}
+
+CommandManager.prototype.uninstallKeys =
+function cmgr_uninstkeys (commands)
+{
+    if (!commands)
+        commands = this.commands;
+    
+    for (var c in commands)
+        this.uninstallKey (commands[c]);
+}
+
+CommandManager.prototype.uninstallKey =
+function cmgr_uninstkey (command)
+{
+    for (var i in command.keyNodes)
+    {
+        try
+        {
+            /* document may no longer exist in a useful state. */
+            command.keyNode.parentNode.removeChild(command.keyNode);
+        }
+        catch (ex)
+        {
+            dd ("*** caught exception uninstalling key node: " + ex);
+        }
+    }
+}
+
 /**
  * Register a new command with the manager.
  */
@@ -165,6 +284,19 @@ CommandManager.prototype.addCommand =
 function cmgr_add (command)
 {
     this.commands[command.name] = command;
+}
+
+CommandManager.prototype.removeCommands = 
+function cmgr_removes (commands)
+{
+    for (var c in commands)
+        this.removeCommand(commands[c]);
+}
+
+CommandManager.prototype.removeCommand = 
+function cmgr_remove (command)
+{
+    delete this.commands[command.name];
 }
 
 /**
@@ -225,6 +357,19 @@ function cmgr_hooks (hooks, prefix)
     }
 }
 
+CommandManager.prototype.removeHooks =
+function cmgr_remhooks (hooks, prefix)
+{
+    if (!prefix)
+        prefix = "";
+    
+    for (var h in hooks)
+    {
+        this.removeHook(h, prefix + ":" + h, 
+                        ("before" in hooks[h]) ? hooks[h].before : false);
+    }
+}
+
 CommandManager.prototype.removeHook =
 function cmgr_unhook (commandName, id, before)
 {
@@ -255,40 +400,6 @@ function cmgr_unhook (commandName, id, before)
         }
     }
 
-}
-
-/**
- * Set the accelerator key used to trigger a command.  Multiple keys can be
- * assigned to a command, but only the last one will appear in the documentation
- * entry for the command.
- * @param parent   ID of the keyset to add the <key> to.
- * @param command  reference to the CommandRecord which should be dispatced.
- * @param keystr   String representation of the key, in the format
- *                 <modifiers> (<key>|<keycode>), where the parameter names
- *                 represent attributes on the <key> object.
- */
-CommandManager.prototype.setKey =
-function cmgr_add (parent, command, keystr)
-{
-    var parentElem = document.getElementById(parent);
-    if (!ASSERT(parentElem, "setKey: couldn't get parent '" + parent +
-                "' for " + command.name))
-        return;
-
-    var ary = keystr.match (/(.*\s)?([\S]+)$/);
-    var key = document.createElement ("key");
-    key.setAttribute ("id", "key:" + command.name);
-    key.setAttribute ("oncommand",
-                      "dispatch('" + command.name + "');");
-    key.setAttribute ("modifiers", ary[1]);
-    if (ary[2].indexOf("VK_") == 0)
-        key.setAttribute ("keycode", ary[2]);
-    else
-        key.setAttribute ("key", ary[2]);
-    
-    parentElem.appendChild(key);
-    command.key = key;
-    command.keystr = keystr;
 }
 
 /**

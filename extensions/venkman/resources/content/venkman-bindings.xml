@@ -43,11 +43,16 @@
 
   <binding id="floatingview">
     <content>
-      <xul:vbox id="view-frame-p" flex="1">
+      <xul:vbox id="view-frame-p" flex="1"
+        ondragover="console.dnd.dragOver(event, console.viewProxy);"
+        ondragexit="console.dnd.dragExit(event, console.viewProxy);"
+        ondragdrop="console.dnd.drop(event, console.viewProxy);">
         <xul:vbox id="view-outer">
           <xul:hbox id="view-title">
-            <xul:toolbarbutton class="view-title-pop" xbl:inherits="parentid=id"
-                               oncommand="console.dispatch('float', { viewId: this.getAttribute('parentid')});"/>
+            <xul:toolbarbutton class="view-title-pop"
+              xbl:inherits="parentid=id containertype"
+              oncommand="console.dispatch('toggle-float', { viewId: this.getAttribute('parentid')});"
+              ondraggesture="console.dnd.startDrag(event, console.viewProxyIcon);"/>
             <xul:hbox class="view-title-grippy" flex="1">
               <xul:hbox flex="1" class="view-title-margin-left"/>
               <xul:label id="view-title-text" xbl:inherits="value=title"/>
@@ -57,6 +62,19 @@
         </xul:vbox>
         <children/>
       </xul:vbox>
+    </content>
+
+    <implementation>
+      <property name="ownerWindow" onget="return window;"/>
+      <property name="proxyIcon" onget="return document.getAnonymousNodes(this)[0].firstChild.firstChild.firstChild;"/>
+    </implementation>
+  </binding>
+
+  <binding id="viewcontainer">
+    <content>
+      <xul:box xbl:inherits="type" class="view-container" flex="1">
+        <children/>
+      </xul:box>
     </content>
 
     <implementation>

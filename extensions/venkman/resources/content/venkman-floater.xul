@@ -49,7 +49,7 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   onload="onLoad();" onclose="return onClose();"
   onunload="return onUnload();"
-  width="640" height="480"
+  width="320" height="200"
   persist="width height screenX screenY" title="&MainWindow.title;"
   windowtype="mozapp:venkman:floater">
 
@@ -59,8 +59,9 @@
   <script src="chrome://venkman/content/venkman-utils.js"/>
   <script>
     <![CDATA[
-    var console = opener.console;
-    var dd = opener.dd;
+    var dd       = opener.dd;
+    var console  = opener.console;
+    var dispatch = console.dispatch;
     var windowId;
 
     function onLoad()
@@ -73,29 +74,23 @@
         }
 
         windowId = ary[1];
-        console.floatWindows[windowId] = window;
 
         if ("arguments" in window && 0 in window.arguments &&
-            window.arguments[0])
+            typeof window.arguments[0] == "function")
         {
-            var viewContainer = document.getElementById("view-container");
-            var viewContent   = document.getElementById(window.arguments[0]);
-            console.dispatch ("move-view",
-                              {viewContent: viewContent,
-                               viewContainer: viewContainer});
+            window.arguments[0](window);
         }
     }
 
     function onClose()
     {
+        window.isClosing = true;
         return true;
     }
 
     function onUnload()
     {
-        console.destroyViews(document);
-        var idx = arrayIndexOf(console.floatingWindows, window);
-        arrayRemoveAt (console.floatingWindows, idx);
+        console.viewManager.destroyWindow (windowId);
     }
     ]]>
   </script>
@@ -104,6 +99,6 @@
 
   <overlaytarget id="views-overlay-target"/>
 
-  <vbox id="view-container" flex="1" view-container="true"/>
+  <viewcontainer id="initial-container" flex="1" type="vertical"/>
 </window>
 

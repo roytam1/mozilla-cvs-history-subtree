@@ -63,6 +63,9 @@
   <overlaytarget id="menu-overlay-target"/>
   <overlaytarget id="views-overlay-target"/>
 
+  <viewcontainer flex="1" id="initial-container" type="horizontal"/>
+
+<!--
   <vbox flex="1">
     <hbox flex="1" id="top-hbox" persist="height">
       <vbox id="view-container-1" flex="1" view-container="true"
@@ -83,6 +86,7 @@
       </vbox>
     </hbox>
   </vbox>
+-->
 
   <overlaytarget id="statusbar-overlay-target"/>
 

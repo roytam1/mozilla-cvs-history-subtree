@@ -33,8 +33,9 @@
  *
  */
 
-const __vnk_version = "0.9.5";
-var   __vnk_versionSuffix = "";
+const __vnk_version        = "0.9.5";
+const __vnk_requiredLocale = "0.9.x";
+var   __vnk_versionSuffix  = "";
 
 const __vnk_counter_url = 
 "http://www.hacksrus.com/~ginda/venkman/launch-counter/next-sequence.cgi"
@@ -419,7 +420,8 @@ function init()
         Components.classes[WW_CTRID].getService(nsIWindowWatcher);
 
     console.debuggerWindow = getBaseWindowFromWindow(window);
-
+    console.dnd = nsDragAndDrop;
+    
     console.files = new Object();
     console.pluginState = new Object();
 
@@ -445,7 +447,7 @@ function init()
 
     initMenus();
 
-    var ary = console.prefs["initialScripts"].split();
+    var ary = console.prefs["initialScripts"].split(/\s*;\s*/);
     for (var i = 0; i < ary.length; ++i)
     {
         var url = stringTrim(ary[i]);
@@ -455,11 +457,13 @@ function init()
 
     dispatch ("hook-venkman-init");
 
-    initViews();
+    initViews(window);
     initRecords();
     initHandlers(); // handlers may notice windows, which need views and records
+
     createMainMenu(document);
     createMainToolbar(document);
+
     console.ui = {
         "status-text": document.getElementById ("status-text"),
         "profile-button": document.getElementById ("maintoolbar:profile-tb"),
@@ -477,10 +481,14 @@ function init()
 
     console.pushStatus(MSG_STATUS_DEFAULT);
 
+    ary = console.prefs["defaultVURLs"].split(/\s*;\s*/);
+    console.viewManager.reconstituteVURLs (ary); 
+
     dispatch ("version");
     dispatch ("commands");
     dispatch ("help");
 
+    /*
     dispatch ("toggle-view windows");
     dispatch ("toggle-view breaks");
     dispatch ("toggle-view locals");
@@ -491,15 +499,24 @@ function init()
 
     dispatch ("toggle-view session");
     dispatch ("toggle-view stack");
+    */
 
     dispatch ("pprint", { toggle: console.prefs["prettyprint"] });
 
+    if (MSG_LOCALE_VERSION != __vnk_requiredLocale)
+    {
+        display (getMsg(MSN_BAD_LOCALE,
+                        [__vnk_requiredLocale, MSG_LOCALE_VERSION]),
+                 MT_WARN);
+    }
+
     dispatch ("hook-venkman-started");
+
 }
 
 function destroy ()
 {
-    destroyViews(document);
+    destroyViews();
     destroyHandlers();
     detachDebugger();
 }

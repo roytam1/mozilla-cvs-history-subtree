@@ -35,6 +35,10 @@
 
 @import url(chrome://communicator/skin/);
 
+viewcontainer {
+    -moz-binding: url(chrome://venkman/content/venkman-bindings.xml#viewcontainer);
+}
+
 floatingview {
     -moz-binding: url(chrome://venkman/content/venkman-bindings.xml#floatingview);
 }
@@ -202,6 +206,20 @@ tree {
     list-style-image: url("chrome://venkman/skin/images/prettyprint-act.png");
 }
 
+.view-container {
+    -moz-box-orient: horizontal;
+    border-top: 2px black solid;
+    border-bottom: 2px black solid;
+}
+
+.view-container[type="vertical"] {
+    -moz-box-orient: vertical;
+    border-top: none;
+    border-bottom: none;
+    border-left: 2px black solid;
+    border-right: 2px black solid;
+}
+
 .view-title-margin-left,
 .view-title-margin-right {
     margin: 3px;
@@ -214,6 +232,22 @@ tree {
     -moz-box-align: center;
     font-size: 8pt;
     font-variant: small-caps;
+}
+
+.view-title-pop[dragover="left"] {
+    list-style-image: url("chrome://venkman/skin/images/arrow-left.png") !important;
+}
+
+.view-title-pop[dragover="up"] {
+    list-style-image: url("chrome://venkman/skin/images/arrow-up.png") !important;
+}
+
+.view-title-pop[dragover="right"] {
+    list-style-image: url("chrome://venkman/skin/images/arrow-right.png") !important;
+}
+
+.view-title-pop[dragover="down"] {
+    list-style-image: url("chrome://venkman/skin/images/arrow-down.png") !important;
 }
 
 .view-title-pop[parentid="breaks"] {

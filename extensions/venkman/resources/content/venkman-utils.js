@@ -286,6 +286,8 @@ function Prophylactic (parentObj, fun)
         
         if (!rv)
             throw "goodger";
+
+        return rv;
     };
     
     return adapter;

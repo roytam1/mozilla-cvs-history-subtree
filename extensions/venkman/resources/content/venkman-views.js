@@ -33,52 +33,40 @@
  *
  */
 
-function initViews()
+function initViews(mainWindow)
 {
+    const DEFAULT_VURLS =
+        (
+         ("x-vloc:/mainwindow?target=container&type=vertical&id=vleft; " +
+          ("x-vloc:/mainwindow/vleft?target=view&id=windows; " +
+           "x-vloc:/mainwindow/vleft?target=view&id=breaks; " +
+           "x-vloc:/mainwindow/vleft?target=view&id=locals; " +
+           "x-vloc:/mainwindow/vleft?target=view&id=watches; ")) +
+         ("x-vloc:/mainwindow?target=container&type=vertical&id=vright; " +
+          ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=topright; " +
+           ("x-vloc:/mainwindow/topright?target=view&id=source; " +
+            "x-vloc:/mainwindow/topright?target=view&id=scripts; ")) +
+          ("x-vloc:/mainwindow/vright?target=container&type=horizontal&id=bottomright; " +
+           ("x-vloc:/mainwindow/bottomright?target=view&id=session; " +
+            "x-vloc:/mainwindow/bottomright?target=view&id=stack; "))
+          )
+         );
+
+    console.addPref ("defaultVURLs", DEFAULT_VURLS);
+
     const ATOM_CTRID = "@mozilla.org/atom-service;1";
     const nsIAtomService = Components.interfaces.nsIAtomService;
     console.atomService =
         Components.classes[ATOM_CTRID].getService(nsIAtomService);
 
-    console.floatWindows = new Object(); 
-
-    console.floaterSequence = 0;
-
-    for (var v in console.views)
-    {
-        if (ASSERT("init" in console.views[v],
-                   "View " + v + " does not have an init() property"))
-        {
-            console.realizeView(console.views[v], v);
-        }
-    }
+    console.viewManager = new ViewManager (console.commandManager, mainWindow);
+    console.viewManager.realizeViews (console.views);
+    console.views = console.viewManager.views;
 }
 
-console.destroyViews = destroyViews;
-
-function destroyViews(doc)
+function destroyViews()
 {
-    for (var v in console.views)
-    {
-        var view = console.views[v];
-        
-        if ("currentContent" in view &&
-            view.currentContent.ownerDocument == doc)
-        {
-            console.dispatch ("hide-view", {viewId: v});
-        }
-    }
-}
-
-console.realizeView =
-function con_realizeview (view, key)
-{
-    console.views[key] = view;
-    console.views[key].init();
-    if ("commands" in console.views[key])
-        defineVenkmanCommands(console.views[key].commands);
-    if ("hooks" in console.views[key])
-        console.commandManager.addHooks (console.views[key].hooks, key);
+    console.viewManager.destroyWindows ();
 }
 
 /**
@@ -102,17 +90,22 @@ function syncTreeView (treeContent, treeView, cb)
             setTimeout (tryAgain, 500);
         }
     };
-    
-    if (!("treeBoxObject" in treeContent))
+
+    try
+    {
+        if (!("treeBoxObject" in treeContent))
+            throw "tantrum";
+        
+        treeContent.treeBoxObject.view = treeView;
+        if (treeContent.treeBoxObject.selection)
+            treeContent.treeBoxObject.selection.tree = treeContent.treeBoxObject;
+    }
+    catch (ex)
     {
         setTimeout (tryAgain, 500);
         return;
     }
     
-    treeContent.treeBoxObject.view = treeView;
-    if (treeContent.treeBoxObject.selection)
-        treeContent.treeBoxObject.selection.tree = treeContent.treeBoxObject;
-
     if (typeof cb == "function")
         cb();
 }
@@ -198,6 +191,238 @@ function initContextMenu (document, id)
     }
 }
 
+console.viewProxyIcon = new Object();
+
+console.viewProxyIcon.onDragStart =
+Prophylactic(console.viewProxyIcon, vpxy_dragstart);
+function vpxy_dragstart (event, transferData, action)
+{
+    var viewId = event.originalTarget.getAttribute("parentid");
+    if (!ASSERT(viewId in console.views, "unknown view " + viewId))
+        return false;
+    
+    var view = console.views[viewId];
+    
+    if (!ASSERT("currentContent" in view, "view is not visible " + viewId))
+        return false;
+    
+    var locationURL = console.viewManager.computeLocation (view.currentContent);
+    transferData.data = new TransferData();
+    transferData.data.addDataForFlavour("text/x-vloc", locationURL);
+    return true;
+}
+
+console.viewProxy = new Object();
+
+console.viewProxy.containerSequence = 0;
+
+console.viewProxy.findFloatingView =
+function vpxy_findview (element)
+{
+    while (element && element.localName != "floatingview")
+        element = element.parentNode;
+    
+    return element;
+}
+
+console.viewProxy.getDropDirection =
+function vpxy_getdrop (event, floatingView)
+{
+    var eventX = event.screenX - floatingView.boxObject.screenX;
+    var eventY = event.screenY - floatingView.boxObject.screenY;
+    var viewW = floatingView.boxObject.width;
+    var viewH = floatingView.boxObject.height;
+
+    var rv;
+    var dir;
+
+    var m = viewH / viewW;
+    if (eventY < m * eventX)
+        dir = -1;
+    else
+        dir = 1;
+    
+    m = -m;
+    
+    if (eventY < m * eventX + viewH)
+    {
+        if (dir < 0)
+            rv = "up";
+        else
+            rv = "left";
+    }
+    else
+    {
+        if (dir < 0)
+            rv = "right";
+        else
+            rv = "down";
+    }
+
+    return rv;
+}
+
+console.viewProxy.onDrop =
+function vpxy_drop (event, transferData, session)
+{
+    /* get next container, based on dir.  if no container is found,
+     * make one of the requested type. */
+    function getNextContainer (child, type)
+    {
+        var next = child.nextSibling;
+        
+        while (next && next.localName != "viewcontainer")
+            next = next.nextSibling;
+
+        if (next)
+            return next;
+        
+        var id = "vpxy-container-" + ++console.viewProxy.containerSequence;
+        var last = child.parentNode.lastChild;
+        var url = console.viewManager.computeLocation (last);
+        var parsedLocation = console.viewManager.parseLocation (url);
+
+        dd ("getNextContainer: making new container: " + type);
+        return console.viewManager.createContainer (parsedLocation, id, type);
+    };
+
+    function getPreviousContainer (child, type)
+    {
+        var prev = child.previousSibling;
+        
+        while (prev && prev.localName != "viewcontainer")
+            prev = prev.previousSibling;
+
+        if (prev)
+            return prev;
+        
+        var id = "vpxy-container-" + ++console.viewProxy.containerSequence;
+        var first = child.parentNode.firstChild;
+        var url = console.viewManager.computeLocation (first);
+        var parsedLocation = console.viewManager.parseLocation (url);
+        parsedLocation.before = parsedLocation.id;
+
+        dd ("getPreviousContainer: making new container: " + type);
+        return console.viewManager.createContainer (parsedLocation, id, type);
+    };
+            
+    var floatingView = this.findFloatingView (event.originalTarget);
+    var viewId = floatingView.getAttribute ("id");
+    var view = console.views[viewId];
+    if (!ASSERT("currentContent" in view, "view is not visible " + viewId))
+        return false;
+    
+    var parsedSource = console.viewManager.parseLocation(transferData.data);
+    if (!ASSERT(parsedSource, "unable to parse " + transferData.data))
+        return false;
+    
+    var currentContent = view.currentContent;
+    var currentContainer = currentContent.parentNode;
+    var targetURL = console.viewManager.computeLocation (currentContent);
+    var parsedTarget = console.viewManager.parseLocation(targetURL);
+    if (!ASSERT(parsedTarget, "unable to parse " + targetURL))
+        return false;
+
+    var direction = this.getDropDirection (event, floatingView);
+
+    var destContainer;
+    var destBefore;
+    
+    dd ("parent container is ``" + 
+        currentContent.parentNode.getAttribute("type") + "''");
+    
+    if (currentContent.parentNode.getAttribute("type") == "vertical")
+    {
+        switch (direction)
+        {
+            case "up":
+                destContainer = currentContainer;
+                destBefore = currentContent;
+                break;
+                
+            case "down":
+                dd ("down {");
+                destContainer = currentContainer;
+                destBefore = currentContent.nextSibling;
+                if (destBefore && destBefore.hasAttribute("grout"))
+                    destBefore = destBefore.nextSibling;
+                dd ("}");
+                break;
+                
+            case "left":
+                destContainer = getPreviousContainer (currentContainer);
+                break;
+                
+            case "right":
+                destContainer = getNextContainer (currentContainer);
+                break;
+        }
+    }
+    else
+    {
+        switch (direction)
+        {
+            case "up":
+                destContainer = getPreviousContainer (currentContainer);
+                break;
+                
+            case "down":
+                destContainer = getNextContainer (currentContainer);
+                break;
+                
+            case "left":
+                destContainer = currentContainer;
+                destBefore = currentContent;
+                break;
+                
+            case "right":
+                destContainer = currentContainer;
+                destBefore = currentContent.nextSibling;
+                if (destBefore && destBefore.hasAttribute("grout"))
+                    destBefore = destBefore.nextSibling;
+                break;
+        }
+    }
+
+    var dest = new Object();
+    dest.windowId = parsedTarget.windowId;
+    dest.containerId = destContainer.getAttribute ("id");
+    dest.before = destBefore ? destBefore.getAttribute("id") : null;
+    console.viewManager.moveView (dest, parsedSource.id);
+    return true;
+}
+
+console.viewProxy.onDragOver =
+function vpxy_dragover (event, flavor, session)
+{
+    if (flavor.contentType != "text/x-vloc")
+        return false;
+
+    var target = this.findFloatingView(event.originalTarget);
+    if (!target)
+        return false;
+
+    var proxyIcon = target.proxyIcon;
+    proxyIcon.setAttribute ("dragover", this.getDropDirection(event, target));
+
+    return true;
+}
+
+console.viewProxy.onDragExit =
+function vpxy_dragexit (event, session)
+{
+    var target = this.findFloatingView(event.originalTarget);
+    target.proxyIcon.removeAttribute ("dragover");
+}
+        
+console.viewProxy.getSupportedFlavours =
+function vpxy_getflavors ()
+{
+    var flavours = new FlavourSet();
+    flavours.appendFlavour("text/x-vloc");
+    return flavours;
+}
+
 console.views = new Object();
 
 /*******************************************************************************
@@ -206,7 +431,8 @@ console.views = new Object();
 
 console.views.breaks = new XULTreeView();
 
-console.views.breaks.vewId = "breaks";
+const VIEW_BREAKS = "breaks"
+console.views.breaks.viewId = VIEW_BREAKS;
 
 console.views.breaks.hooks = new Object();
 
@@ -379,11 +605,10 @@ function bv_cellprops (index, colID, properties)
  * Locals View
  *******************************************************************************/
 
-var localsShare = new Object();
-
 console.views.locals = new XULTreeView();
 
-console.views.locals.viewId = "locals";
+const VIEW_LOCALS = "locals";
+console.views.locals.viewId = VIEW_LOCALS;
 
 console.views.locals.init =
 function lv_init ()
@@ -694,7 +919,8 @@ function lv_refresh()
 
 console.views.scripts = new XULTreeView ();
 
-console.views.scripts.viewId = "scripts";
+const VIEW_SCRIPTS = "script";
+console.views.scripts.viewId = VIEW_SCRIPTS;
 
 console.views.scripts.init =
 function scv_init ()
@@ -1060,7 +1286,8 @@ function scv_getcx(cx)
 
 console.views.session = new Object();
 
-console.views.session.viewId = "session";
+const VIEW_SESSION = "session";
+console.views.session.viewId = VIEW_SESSION;
 
 console.views.session.init =
 function ss_init ()
@@ -1188,22 +1415,25 @@ function ss_show ()
     
     try
     {
-        this.outputDocument = 
-            doc.getElementById("session-output-iframe").contentDocument;
-
-        var win = this.currentContent.ownerWindow;
-        for (var f = 0; f < win.frames.length; ++f)
+        if ("contentDocument" in doc.getElementById("session-output-iframe"))
         {
-            if (win.frames[f].document == this.outputDocument)
-            {
-                this.outputWindow = win.frames[f];
-                break;
-            }
-        }
+            this.outputDocument = 
+                doc.getElementById("session-output-iframe").contentDocument;
 
-        this.outputTable =
-            this.outputDocument.getElementById("session-output-table");
-        this.inputElement = doc.getElementById("session-sl-input");
+            var win = this.currentContent.ownerWindow;
+            for (var f = 0; f < win.frames.length; ++f)
+            {
+                if (win.frames[f].document == this.outputDocument)
+                {
+                    this.outputWindow = win.frames[f];
+                    break;
+                }
+            }
+
+            this.outputTable =
+                this.outputDocument.getElementById("session-output-table");
+            this.inputElement = doc.getElementById("session-sl-input");
+        }
     }
     catch (ex)
     {
@@ -1418,7 +1648,8 @@ function ss_tabcomplete (e)
 
 console.views.stack = new XULTreeView();
 
-console.views.stack.viewId = "stack";
+const VIEW_STACK = "stack";
+console.views.stack.viewId = VIEW_STACK;
 
 console.views.stack.init =
 function skv_init()
@@ -1556,7 +1787,8 @@ function sv_cellprops (index, colID, properties)
  *******************************************************************************/
 console.views.source = new BasicOView();
 
-console.views.source.viewId = "source";
+const VIEW_SOURCE = "source";
+console.views.source.viewId = VIEW_SOURCE;
 
 console.views.source.details = null;
 console.views.source.prettyPrint = false;
@@ -2080,19 +2312,20 @@ function sv_getcelltext (row, colID)
 
 console.views.watches = new XULTreeView();
 
-console.views.watches.viewId = "watches";
+const VIEW_WATCHES = "watches";
+console.views.watches.viewId = VIEW_WATCHES;
 
 console.views.watches.init =
 function wv_init()
 {
-    this.commands =
+    this.cmdary =
         [
          ["watch-expr",     cmdWatchExpr,          CMD_CONSOLE | CMD_NEED_STACK],
          ["watch-exprd",    cmdWatchExpr,          CMD_CONSOLE],
          ["watch-property", cmdWatchProperty,      0]
         ];
 
-    this.commands.stringBundle = console.defaultBundle;
+    this.cmdary.stringBundle = console.defaultBundle;
     
     console.menuSpecs["context:watches"] = {
         getContext: this.getContext,
@@ -2264,7 +2497,8 @@ function cmdWatchProperty (e)
 
 console.views.windows = new XULTreeView();
 
-console.views.windows.viewId = "windows";
+const VIEW_WINDOWS = "windows";
+console.views.windows.viewId = VIEW_WINDOWS;
 
 console.views.windows.init = 
 function winv_init ()

@@ -72,14 +72,13 @@ function initCommands()
          ["find-url",       cmdFindURL,            CMD_CONSOLE],
          ["find-url-soft",  cmdFindURL,            0],
          ["finish",         cmdFinish,             CMD_CONSOLE | CMD_NEED_STACK],
-         ["float",          cmdFloat,              CMD_CONSOLE],
          ["focus-input",    cmdHook,               0],
          ["frame",          cmdFrame,              CMD_CONSOLE | CMD_NEED_STACK],
          ["grout-container",cmdGroutContainer,     0],
          ["help",           cmdHelp,               CMD_CONSOLE],
          ["hide-view",      cmdHideView,           CMD_CONSOLE],
          ["loadd",          cmdLoadd,              CMD_CONSOLE],
-         ["move-view",      cmdMoveView,           0],
+         ["move-view",      cmdMoveView,           CMD_CONSOLE],
          ["next",           cmdNext,               CMD_CONSOLE | CMD_NEED_STACK],
          ["open-dialog",    cmdOpenDialog,         CMD_CONSOLE],
          ["open-url",       cmdOpenURL,            0],
@@ -93,6 +92,7 @@ function initCommands()
          ["save-source",    cmdSaveSource,         CMD_CONSOLE],
          ["save-profile",   cmdSaveProfile,        CMD_CONSOLE],
          ["scope",          cmdScope,              CMD_CONSOLE | CMD_NEED_STACK],
+         ["toggle-float",   cmdToggleFloat,        CMD_CONSOLE],
          ["toggle-view",    cmdToggleView,         CMD_CONSOLE],
          ["startup-init",   cmdStartupInit,        CMD_CONSOLE],
          ["step",           cmdStep,               CMD_CONSOLE | CMD_NEED_STACK],
@@ -154,7 +154,8 @@ function initCommands()
          ["hook-venkman-started",          cmdHook, 0]
         ];
 
-    defineVenkmanCommands (cmdary);
+    cmdary.stringBundle = console.defaultBundle;
+    console.commandManager.defineCommands (cmdary);
 
     console.commandManager.argTypes.__aliasTypes__ (["index", "breakpointIndex",
                                                      "lineNumber"], "int");
@@ -861,20 +862,6 @@ function cmdFClearAll (e)
     }
 }
 
-function cmdFloat (e)
-{
-    if (!e.windowId)
-        e.windowId = "floatwindow:" + ++console.floaterSequence;
-
-    if (!(e.viewId in console.views))
-        throw new InvalidParam ("viewId", e.viewId);
-    
-    var win = openDialog ("chrome://venkman/content/venkman-floater.xul?id=" +
-                          escape(e.windowId), "", e.windowId, e.viewId);
-    console.floatingWindows.push(win);
-    return win;
-}
-
 function cmdFrame (e)
 {
     if (e.frameIndex != null)
@@ -888,49 +875,6 @@ function cmdFrame (e)
 
 function cmdGroutContainer (e)
 {
-    var container = e.viewContainer;
-
-    if (!container)
-        throw new InvalidParam ("container", container);
-
-    if (!ASSERT(container.hasAttribute ("view-container"),
-                "Attempt to grout something that is not a view container"))
-    {
-        return;
-    }
-    
-    var doc = container.ownerDocument;
-    var content = e.viewContainer.firstChild;
-    
-    while (content)
-    {
-        var previousContent = content.previousSibling;
-        var nextContent = content.nextSibling;
-
-        if (content.hasAttribute("grout"))
-        {
-            if (!previousContent || !nextContent ||
-                previousContent.hasAttribute("grout") ||
-                nextContent.hasAttribute("grout"))
-            {
-                container.removeChild(content);
-            }
-        }
-        else
-        {
-            if (nextContent && !nextContent.hasAttribute("grout") &&
-                content.hasAttribute("splitter-collapse"))
-            {
-                var split = doc.createElement("splitter");
-                split.setAttribute("grout", "true");
-                split.setAttribute("collapse",
-                                   content.getAttribute("splitter-collapse"));
-                split.appendChild(doc.createElement("grippy"));
-                container.insertBefore(split, nextContent);
-            }
-        }
-        content = nextContent;
-    }
 }
 
 function cmdHelp (e)
@@ -1017,75 +961,14 @@ function cmdLoadd (e)
 
 function cmdMoveView (e)
 {
-    var viewId = e.viewContent.getAttribute ("id");
+    if (!e.viewId || !(e.viewId in console.views))
+        throw new InvalidParam ("viewId", e.viewId);
 
-    if (!viewId || !(viewId in console.views))
-        throw new InvalidParam ("viewContent", "{" + e.viewContent + "; id='" +
-                                viewId + "'}");
+    var parsedLocation = console.viewManager.parseLocation (e.locationUrl);
+    if (!parsedLocation)
+        throw new InvalidParam ("locationURL", e.locationUrl);
     
-    ASSERT (!e.viewContainer ||
-            e.viewContent.ownerDocument == e.viewContainer.ownerDocument,
-            "Attempt to put view content in a foreign document, Bad Idea.");
-    
-    var view = console.views[viewId];
-
-    if (!("originalParent" in e.viewContent) && e.viewContent.parentNode)
-    {
-        /* Record the original parent for this content, if we haven't already. */
-        //dd ("recording original parent");
-        e.viewContent.originalParent = e.viewContent.parentNode;
-    }
-    
-    if ("currentContent" in view)
-    {
-        /* View is already inserted somewhere, take it out of there first. */
-        if ("onHide" in view)
-            view.onHide();
-        var originalParent = view.currentContent.originalParent;
-        var currentParent = view.currentContent.parentNode;
-
-        currentParent.removeChild (view.currentContent);
-
-        if (view.currentContent.ownerDocument != e.viewContent.ownerDocument)
-        {
-            /* We're moving to a different window, put the previous content
-             * back in its DOM. */
-            //dd ("going to new document, append to original parent");
-            originalParent.appendChild(view.currentContent);
-        }
-
-        dispatch ("grout-container",
-                  {viewContainer: currentParent});
-    }
-    else if (e.viewContent.parentNode)
-    {
-        //dd ("removing from original parent");
-        e.viewContent.parentNode.removeChild(e.viewContent);
-    }
-    
-    if (e.viewContainer)
-    {
-        /* Relocate the view to the new container. */
-        view.currentContent = e.viewContent;
-        view.currentContent.jsView = view;
-        if (e.beforeContent)
-            e.viewContainer.insertBefore (e.viewContent, e.beforeContent);
-        else
-            e.viewContainer.appendChild(e.viewContent);
-
-        if ("onShow" in view)
-            view.onShow();
-
-        /* regrout our container */
-        dispatch ("grout-container", {viewContainer: e.viewContainer});
-    }
-    else if ("originalParent" in e.viewContent)
-    {
-        /* Put the view back where it started. */
-        
-        delete view.currentContent;
-        e.viewContent.originalParent.appendChild (e.viewContent);
-    }
+    console.viewManager.moveView (parsedLocation, e.viewId);
 }
 
 function cmdNext ()
@@ -1093,7 +976,7 @@ function cmdNext ()
     console._stepOverLevel = 0;
     dispatch ("step");
     console.jsds.functionHook = console.callHook;
-    return true;
+    return;
 }
 
 function cmdOpenDialog (e)
@@ -1478,7 +1361,23 @@ function cmdToggleFloat (e)
         return;
     }
 
+    var view = console.views[e.viewId];
+    var url;
+    
+    if (!view.currentContent ||
+        view.currentContent.ownerWindow == console.viewManager.mainWindow)
+    {
+        url = VMGR_VURL_NEW;
+    }
+    else
+    {
+        if ("previousLocation" in view)
+            url = view.previousLocation;
+        else
+            url = VMGR_VURL_MAINWINDOW;
+    }
 
+    dispatch ("move-view", { viewId: e.viewId, locationUrl: url });
 }
 
 function cmdToggleView (e)
@@ -1489,37 +1388,23 @@ function cmdToggleView (e)
         return;
     }
     
-    if (!e.containerId && "currentContent" in console.views[e.viewId])
+    var view = console.views[e.viewId];
+    var url;
+    
+    if ("currentContent" in view)
     {
-        /* view is already displayed, and user didn't ask to put it somewhere
-         * in particular, so we'll hide it. */
-        dispatch ("move-view",
-                  {viewContent: console.views[e.viewId].currentContent, 
-                   viewContainer: null});
-        return;
+        url = VMGR_VURL_HIDDEN;
+    }
+    else
+    {
+        if ("previousLocation" in view)
+            url = view.previousLocation;
+        else
+            url = VMGR_VURL_MAINWINDOW;
     }
     
-    var viewContent = document.getElementById(e.viewId);
-    if (!ASSERT(viewContent, "No content for view '" + e.viewId + "'"))
-        throw new Failure();
-        
-    if (!e.containerId)
-    {
-        e.containerId = viewContent.getAttribute("default-container");
-    
-        if (!e.containerId)
-            e.containerId = "view-container-1";
-    }
-    
-    var viewContainer = document.getElementById(e.containerId);
-    if (!viewContainer)
-    {
-        display (getMsg(MSN_ERR_NO_SUCH_CONTAINER, e.containerId), MT_ERROR);
-        return;
-    }
+    console.viewManager.moveViewURL (url, e.viewId);
 
-    dispatch ("move-view",
-              {viewContent: viewContent, viewContainer: viewContainer});
 }    
 
 function cmdVersion ()

@@ -50,7 +50,7 @@ function initPrefs()
     console.prefs.prefNames = new Array();
     console.prefs.prefNameMap = new Object();
     
-    //    console.addPref ("input.commandchar", "/");    
+    //    console.addPref ("input.commandchar", "/");
     console.addPref ("startupCount", 0);
     console.addPref ("enableChromeFilter", false);
     console.addPref ("tabWidth", 4);
