@@ -19,7 +19,14 @@
 #ifndef	_RDF_XMLGLUE_H_
 #define	_RDF_XMLGLUE_H_
 
+/* Make sure @#$%^&* LAYERS is defined for the Mac */
+#ifndef LAYERS
+#define	LAYERS
+#endif
+
 #include "xmlparse.h"
+
+#include "jscompat.h"
 #include "lo_ele.h"
 #include "libevent.h"
 #include "libmocha.h"
