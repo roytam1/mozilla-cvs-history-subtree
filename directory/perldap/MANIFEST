@@ -21,6 +21,11 @@ test_api/api.pl
 t/conn.pl
 t/entry.pl
 t/ChangeLog
+t/api.t
+t/conn.t
+t/entry.t
+t/ldif.t
+t/utils.t
 examples/ChangeLog
 examples/lfinger.pl
 examples/qsearch.pl
