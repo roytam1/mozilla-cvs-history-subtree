@@ -954,23 +954,15 @@ nsXULTreeOuterGroupFrame::FindPreviousRowContent(PRInt32& aDelta, nsIContent* aU
   nsCOMPtr<nsIContent> parentContent;
   if (aUpwardHint) {
     aUpwardHint->GetParent(*getter_AddRefs(parentContent));
-    if (!parentContent) {
-      NS_ERROR("Parent content should not be NULL!");
+    NS_ASSERTION(parentContent, "Parent content null in the upward hint of FPRC\n");
+    if (!parentContent)
       return;
-    }
     parentContent->IndexOf(aUpwardHint, index);
   }
   else if (aDownwardHint) {
     parentContent = dont_QueryInterface(aDownwardHint);
     parentContent->ChildCount(index);
   }
-
-  /* Let me see inside the damn nsCOMptrs
-  nsIAtom* aAtom;
-  parentContent->GetTag(aAtom);
-  nsAutoString result;
-  aAtom->ToString(result);
-  */
 
   for (PRInt32 i = index-1; i >= 0; i--) {
     nsCOMPtr<nsIContent> childContent;
@@ -1018,6 +1010,10 @@ nsXULTreeOuterGroupFrame::FindPreviousRowContent(PRInt32& aDelta, nsIContent* aU
         return;
     }
   }
+
+  NS_ASSERTION(parentContent, "Parent content null at the end of FPRC\n");
+  if (!parentContent)
+    return;
 
   nsCOMPtr<nsIAtom> tag;
   parentContent->GetTag(*getter_AddRefs(tag));
