@@ -127,7 +127,7 @@ public:
     NS_IMETHOD SetMenuBar(nsIMenuBar *aMenuBar) { return NS_ERROR_FAILURE; }
     NS_IMETHOD ShowMenuBar(PRBool aShow) { return NS_ERROR_FAILURE; }
     NS_IMETHOD CaptureMouse(PRBool aCapture) { return NS_ERROR_FAILURE; }
-    virtual PRBool OnPaint(nsPaintEvent &event) { return PR_FALSE; };
+    virtual PRBool OnPaint(nsPaintEvent &aEvent) { return PR_FALSE; };
     virtual PRBool OnKey(nsKeyEvent &aEvent) { return PR_FALSE; };
     virtual PRBool OnText(nsTextEvent &aEvent) { return PR_FALSE; };
     virtual PRBool OnComposition(nsCompositionEvent &aEvent) { return PR_FALSE; };

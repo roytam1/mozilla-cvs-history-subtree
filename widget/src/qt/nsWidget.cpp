@@ -276,7 +276,7 @@ NS_METHOD nsWidget::Resize(PRInt32 aWidth,PRInt32 aHeight,PRBool aRepaint)
      
     mWidget->Resize(aWidth,aHeight);
 
-    if (mListenForResizes) {
+    if (mIsToplevel || mListenForResizes) {
       nsSizeEvent sevent;
       nsRect rect(0,0,aWidth,aHeight);
 
@@ -373,8 +373,8 @@ NS_METHOD nsWidget::Enable(PRBool aState)
 NS_METHOD nsWidget::IsEnabled(PRBool *aState)
 {
   NS_ENSURE_ARG_POINTER(aState);
-  *aState = PR_TRUE;
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *aState = mWidget && mWidget->IsEnabled();
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -627,18 +627,13 @@ nsresult nsWidget::CreateWidget(nsIWidget *aParent,
   } 
   else if (aParent) {
     parentWidget = (QWidget*)aParent->GetNativeData(NS_NATIVE_WIDGET);
+    mListenForResizes = aInitData ? aInitData->mListenForResizes : PR_FALSE;
   } 
   mBounds = aRect;
 
   CreateNative(parentWidget);
   Resize(aRect.width,aRect.height,PR_FALSE);
   mWidget->Polish();
-  if (mIsToplevel) {
-    /* We have to Spin the Qt Event loop to make top level windows */
-    /* come up with the correct size, but it creates problems for  */
-    /* menus, etc. */
-    qApp->processEvents(1);
-  }
   DispatchStandardEvent(NS_CREATE);
   return NS_OK;
 }

@@ -343,6 +343,7 @@ void nsQBaseWidget::Destroy()
 void nsQBaseWidget::Enable(PRBool aState)
 {
   mEnabled = aState;
+  mQWidget->setEnabled(aState);
 }
 
 PRBool nsQBaseWidget::HandlePopup(void *aEvent)
@@ -846,12 +847,17 @@ PRBool nsQBaseWidget::ResizeEvent(QResizeEvent *aEvent)
 
     mWidget->OnResize(rect);
   }
-  return PR_FALSE;
+  return PR_TRUE;
 }
 
 PRBool nsQBaseWidget::MoveEvent(QMoveEvent *aEvent)
 {
   if (aEvent && mWidget) {
+    if (aEvent->oldPos().x()==aEvent->pos().x() &&
+        aEvent->oldPos().y()==aEvent->pos().y())
+    {
+      return PR_TRUE;
+    }
     // Generate XPFE move event
     mWidget->OnMove(aEvent->pos().x(),aEvent->pos().y());
   }

@@ -59,7 +59,6 @@ static PRInt32 gChildID = 0;
 
 PRBool   nsWindow::mIsGrabbing        = PR_FALSE;
 nsWindow *nsWindow::mGrabWindow       = NULL;
-nsQBaseWidget *nsWindow::mFocusWidget = NULL;
 PRBool nsWindow::mGlobalsInitialized  = PR_FALSE;
 PRBool nsWindow::mRaiseWindows        = PR_TRUE;
 PRBool nsWindow::mGotActivate         = PR_FALSE;
@@ -158,23 +157,13 @@ NS_METHOD nsWindow::SetFocus(PRBool aRaise)
 
   mGotActivate = PR_FALSE;
   if (mWidget) {
-    if (!mWidget->IsTopLevelActive()) {
       if (aRaise && mRaiseWindows) {
         mWidget->RaiseTopLevel(); 
       }
       mBlockFocusEvents = PR_TRUE;
-      mWidget->SetTopLevelFocus();
+      mWidget->SetFocus();
       mBlockFocusEvents = PR_FALSE;
       mGotActivate = PR_TRUE;
-    }
-    else {
-      if (mWidget == mFocusWidget) {
-        return NS_OK;
-      }
-      else {
-        mFocusWidget = mWidget;
-      }
-    }
   }
   DispatchFocusInEvent();
   if (sendActivate) {
@@ -237,14 +226,10 @@ NS_METHOD nsWindow::CreateNative(QWidget *parentWidget)
     mWidget = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  if (!parentWidget && !mIsDialog) {
+  if (!parentWidget || mIsPopup) {
     // This is a top-level window. I'm not sure what special actions
     // need to be taken here.
     mIsToplevel = PR_TRUE;
-    mListenForResizes = PR_TRUE;
-  }
-  else {
-    mIsToplevel = PR_FALSE;
   }
   return nsWidget::CreateNative(parentWidget);
 }
@@ -258,19 +243,12 @@ void nsWindow::InitCallbacks(char *aName)
 }
 
 //-------------------------------------------------------------------------
-// Set the colormap of the window
-//-------------------------------------------------------------------------
-NS_METHOD nsWindow::SetColorMap(nsColorMap *aColorMap)
-{
-  return NS_OK;
-}
-
-//-------------------------------------------------------------------------
 // Scroll the bits of a window
 //-------------------------------------------------------------------------
 NS_METHOD nsWindow::Scroll(PRInt32 aDx,PRInt32 aDy,nsRect *aClipRect)
 {
   if (mWidget) {
+    mUpdateArea->Offset(aDx,aDy);
     mWidget->Scroll(aDx,aDy);
   }
   return NS_OK;
@@ -377,9 +355,6 @@ PRBool nsWindow::DispatchFocusOutEvent()
 {
   nsGUIEvent nsEvent;
 
-  if (mFocusWidget == mWidget)
-    mFocusWidget = nsnull;
-
   nsEvent.message         = NS_LOSTFOCUS;
   nsEvent.eventStructType = NS_GUI_EVENT;
   nsEvent.widget          = this;
@@ -419,25 +394,10 @@ PRBool nsWindow::DispatchFocus(nsGUIEvent &aEvent)
   return PR_FALSE;
 }
 
-NS_METHOD nsWindow::GetClientBounds(nsRect &aRect)
-{
-  return GetBounds(aRect);
-}
- 
-NS_METHOD nsWindow::GetBounds(nsRect &aRect)
-{
-  nsRect Rct(mWidget->BoundsX(),mWidget->BoundsX(),
-             mWidget->Width(),mWidget->Height());
-  
-  aRect = Rct;
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsWindow::GetScreenBounds(nsRect &aRect)
 {
   nsRect nBounds(0,0,mBounds.width,mBounds.height);
-
-  aRect = nBounds;
+  WidgetToScreen(nBounds,aRect);
   return NS_OK;
 }
  

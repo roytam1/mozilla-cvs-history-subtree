@@ -55,7 +55,6 @@ public:
 
     NS_IMETHOD PreCreateWidget(nsWidgetInitData *aWidgetInitData);
 
-    NS_IMETHOD SetColorMap(nsColorMap *aColorMap);
     NS_IMETHOD Scroll(PRInt32 aDx,PRInt32 aDy,nsRect *aClipRect);
 
     NS_IMETHOD ConstrainPosition(PRBool aAllowSlop, PRInt32 *aX,PRInt32 *aY);
@@ -72,9 +71,7 @@ public:
     NS_IMETHOD EndResizingChildren(void);
     NS_IMETHOD SetFocus(PRBool aRaise);
 
-    NS_IMETHOD GetBounds(nsRect &aRect);
     NS_IMETHOD GetBoundsAppUnits(nsRect &aRect,float aAppUnits);
-    NS_IMETHOD GetClientBounds(nsRect &aRect);
     NS_IMETHOD GetScreenBounds(nsRect &aRect);
 
     virtual PRBool IsChild() const;
@@ -82,7 +79,7 @@ public:
     virtual PRBool IsDialog() const { return mIsDialog; };
 
     // Utility methods
-    virtual PRBool OnPaint(nsPaintEvent &event);
+    virtual PRBool OnPaint(nsPaintEvent &aEvent);
     virtual PRBool OnKey(nsKeyEvent &aEvent);
     virtual PRBool OnText(nsTextEvent &aEvent);
     virtual PRBool OnComposition(nsCompositionEvent &aEvent);
@@ -103,7 +100,6 @@ protected:
     // are we doing a grab?
     static PRBool    mIsGrabbing;
     static nsWindow  *mGrabWindow;
-    static nsQBaseWidget *mFocusWidget;
     static PRBool    mGlobalsInitialized;
     static PRBool    mRaiseWindows;
     static PRBool    mGotActivate;

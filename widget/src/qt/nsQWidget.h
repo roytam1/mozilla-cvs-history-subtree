@@ -118,9 +118,10 @@ public:
   virtual void Move(PRInt32 aX,PRInt32 aY) {mQWidget->move(aX,aY);};
   virtual void Resize(PRInt32 aW,PRInt32 aH) {mQWidget->resize(aW,aH);};
   virtual void Scroll(PRInt32 aDx,PRInt32 aDy) {mQWidget->scroll(aDx,aDy);};
-  virtual void Show() { printf("ESBEN: Show called\n"); mQWidget->show();};
+  virtual void Show() {mQWidget->show();};
   virtual void Hide() {mQWidget->hide();};
   virtual PRBool IsVisible() {return mQWidget->isVisible();};
+  virtual PRBool IsEnabled() {return mQWidget->isEnabled();};
   virtual void SetFocus() {mQWidget->setFocus();};
   virtual void SetTopLevelFocus() {mQWidget->topLevelWidget()->setFocus();};
   virtual void RaiseTopLevel() {mQWidget->topLevelWidget()->raise();};
