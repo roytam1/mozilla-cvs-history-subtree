@@ -1,9 +1,0 @@
-<!ENTITY newserver.reason2 "- O certificado do site está incompleto devido a uma má configuração do servidor.">
-<!ENTITY newserver.reason1 "- Seu browser não reconhece a Autoridade Certificadora que emitiu o certificado do site.">
-<!ENTITY newserver.notify "Por favor notifique o webmaster do site sobre este problema.">
-<!ENTITY newserver.session "Aceitar este certificado temporariamente para esta sessão">
-<!ENTITY newserver.examine "Examinar certificado...">
-<!ENTITY newserver.title "Servidor certificado por uma CA desconhecida">
-<!ENTITY newserver.remember "Aceitar este certificado permanentemente">
-<!ENTITY newserver.refuse "Não aceitar este certificado e não conectar-se a este site">
-<!ENTITY newserver.reasons "Possíveis razões para este erro:">

@@ -1,9 +1,0 @@
-<!-- extracted from institems.xul -->
-
-<!ENTITY dialog.title "Szoftvertelepítés">
-<!ENTITY warningText2.label "Bizonyos programok tartalmazhatnak rosszindulatú kódokat is, melyek károkat okozhatnak, vagy egyéb módon veszélyeztethetik a számítógépét.">
-<!ENTITY warningText3.label "Csak megbízható forrásból származó programokat telepítsen.">
-
-<!ENTITY from.label "innen:">
-
-

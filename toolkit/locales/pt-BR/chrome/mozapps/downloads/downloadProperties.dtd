@@ -1,7 +1,0 @@
-<!ENTITY cmd.close.commandKey "w">
-<!ENTITY path.label "Salvo em:">
-<!ENTITY window.title "Propriedades">
-<!ENTITY dateStarted.label "Início:">
-<!ENTITY acceptButton.label "Fechar">
-<!ENTITY downloadedFrom.label "Endereço:">
-<!ENTITY dateEnded.label "Conclusão:">

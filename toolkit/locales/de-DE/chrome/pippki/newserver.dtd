@@ -1,9 +1,0 @@
-<!ENTITY newserver.reason2 "- Das Zertifikat dieser Website ist auf Grund einer Server-Fehlkonfiguration nicht vollständig.">
-<!ENTITY newserver.reason1 "- Ihr Browser erkennt die Zertifizierungsstelle nicht, die dieses Zertifikat herausgegeben hat.">
-<!ENTITY newserver.notify "Bitte melden Sie dieses Problem dem Webmaster dieser Website.">
-<!ENTITY newserver.session "Dieses Zertifikat temporär (für diese Sitzung) akzeptieren">
-<!ENTITY newserver.examine "Zertifikat untersuchen...">
-<!ENTITY newserver.title "Website zertifiziert von unbekannter Zertifizierungsstelle">
-<!ENTITY newserver.remember "Dieses Zertifikat immer akzeptieren">
-<!ENTITY newserver.refuse "Dieses Zertifikat nicht akzeptieren und nicht mit dieser Website verbinden">
-<!ENTITY newserver.reasons "Mögliche Gründe für diesen Fehler:">

@@ -1,8 +1,0 @@
-<!-- extracted from institems.xul -->
-
-<!ENTITY dialog.title "Instalace softwaru">
-<!ENTITY warningText2.label "Zákeřený software může poškodit obsah vašeho počítače nebo kompromitovat vaše soukromí.">
-<!ENTITY warningText3.label "Měli byste proto instalovat software pouze ze zdrojů, kterým věříte.">
-
-<!ENTITY from.label "z:">
-

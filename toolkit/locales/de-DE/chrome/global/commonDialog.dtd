@@ -1,6 +1,0 @@
-<!ENTITY header.label "Kurztitel">
-<!ENTITY editfield1.label "Passwort:">
-<!ENTITY editfield0.label "Benutzername:">
-<!ENTITY checkbox.label "prüfen">
-<!ENTITY message.label "Beispieltext erscheint hier.">
-<!ENTITY editfield2.label "Passwort bestätigen:">
