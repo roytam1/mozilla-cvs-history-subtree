@@ -21,19 +21,20 @@
 #//------------------------------------------------------------------------
 DEPTH=..\..
 
+DIRS=fdlibm
 #//------------------------------------------------------------------------
 #//
 #// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
 #//
 #//------------------------------------------------------------------------
 
-DLLNAME		= js$(MOZ_BITS)$(VERSION_NUMBER)
-DLL1NAME	= js1$(MOZ_BITS)$(VERSION_NUMBER)
-PDBFILE		= $(DLLNAME).pdb
-MAPFILE		= $(DLLNAME).map
-RESFILE		= $(DLLNAME).res
-DLL		=.\$(OBJDIR)\$(DLLNAME).dll
-MAKE_OBJ_TYPE	= DLL
+DLLNAME     = js$(MOZ_BITS)$(VERSION_NUMBER)
+DLL1NAME    = js1$(MOZ_BITS)$(VERSION_NUMBER)
+PDBFILE     = $(DLLNAME).pdb
+MAPFILE     = $(DLLNAME).map
+RESFILE     = $(DLLNAME).res
+DLL     =.\$(OBJDIR)\$(DLLNAME).dll
+MAKE_OBJ_TYPE   = DLL
 
 !if "$(MOZ_BITS)" != "16"
 LINCS = -I$(PUBLIC)\layout \
@@ -43,13 +44,13 @@ LINCS = -I$(PUBLIC)\layout \
 
 !if "$(MOZ_BITS)" == "16"
 !ifdef NSPR20
-DEFFILE		= $(DLL1NAME).def
-!else
-DEFFILE		= $(DLLNAME).def
+DEFFILE     = $(DLL1NAME).def
+else
+DEFFILE     = $(DLLNAME).def
 !endif
 !endif
 
-LLIBS=$(LIBNSPR)
+LLIBS=$(LIBNSPR) .\$(OBJDIR)\fdlibm.lib
 LCFLAGS= $(LCFLAGS) -DEXPORT_JS_API
 
 #//------------------------------------------------------------------------
@@ -57,32 +58,32 @@ LCFLAGS= $(LCFLAGS) -DEXPORT_JS_API
 #// Define the files necessary to build the target (ie. OBJS)
 #//
 #//------------------------------------------------------------------------
-OBJS =					\
-	.\$(OBJDIR)\jsapi.obj		\
-	.\$(OBJDIR)\prmjtime.obj	\
-	.\$(OBJDIR)\jsarray.obj		\
-	.\$(OBJDIR)\jsatom.obj		\
-	.\$(OBJDIR)\jsbool.obj		\
-	.\$(OBJDIR)\jscntxt.obj		\
-	.\$(OBJDIR)\jsdate.obj		\
-	.\$(OBJDIR)\jsdbgapi.obj	\
-	.\$(OBJDIR)\jsemit.obj		\
-	.\$(OBJDIR)\jsfun.obj		\
-	.\$(OBJDIR)\jsgc.obj		\
-	.\$(OBJDIR)\jsinterp.obj	\
-	.\$(OBJDIR)\jslock.obj		\
-	.\$(OBJDIR)\jsmath.obj		\
-	.\$(OBJDIR)\jsnum.obj		\
-	.\$(OBJDIR)\jsobj.obj		\
-	.\$(OBJDIR)\jsopcode.obj	\
-	.\$(OBJDIR)\jsparse.obj		\
-	.\$(OBJDIR)\jsregexp.obj	\
-	.\$(OBJDIR)\jsscan.obj		\
-	.\$(OBJDIR)\jsscope.obj		\
-	.\$(OBJDIR)\jsscript.obj	\
-	.\$(OBJDIR)\jsstr.obj		\
-	.\$(OBJDIR)\jsxdrapi.obj	\
-	$(NULL)
+OBJS =                  \
+    .\$(OBJDIR)\jsapi.obj       \
+    .\$(OBJDIR)\prmjtime.obj    \
+    .\$(OBJDIR)\jsarray.obj     \
+    .\$(OBJDIR)\jsatom.obj      \
+    .\$(OBJDIR)\jsbool.obj      \
+    .\$(OBJDIR)\jscntxt.obj     \
+    .\$(OBJDIR)\jsdate.obj      \
+    .\$(OBJDIR)\jsdbgapi.obj    \
+    .\$(OBJDIR)\jsemit.obj      \
+    .\$(OBJDIR)\jsfun.obj       \
+    .\$(OBJDIR)\jsgc.obj        \
+    .\$(OBJDIR)\jsinterp.obj    \
+    .\$(OBJDIR)\jslock.obj      \
+    .\$(OBJDIR)\jsmath.obj      \
+    .\$(OBJDIR)\jsnum.obj       \
+    .\$(OBJDIR)\jsobj.obj       \
+    .\$(OBJDIR)\jsopcode.obj    \
+    .\$(OBJDIR)\jsparse.obj     \
+    .\$(OBJDIR)\jsregexp.obj    \
+    .\$(OBJDIR)\jsscan.obj      \
+    .\$(OBJDIR)\jsscope.obj     \
+    .\$(OBJDIR)\jsscript.obj    \
+    .\$(OBJDIR)\jsstr.obj       \
+    .\$(OBJDIR)\jsxdrapi.obj    \
+    $(NULL)
 
 #//------------------------------------------------------------------------
 #//
@@ -90,35 +91,35 @@ OBJS =					\
 #//
 #//------------------------------------------------------------------------
 INSTALL_DIR=$(PUBLIC)\js
-INSTALL_FILE_LIST=	\
-	jsapi.h		\
-	jsarray.h	\
-	jsatom.h	\
-	jsbool.h	\
-	jscntxt.h	\
-	jscompat.h	\
-	jsconfig.h	\
-	jsdate.h	\
-	jsdbgapi.h	\
-	jsemit.h	\
-	jsfun.h		\
-	jsgc.h		\
-	jsinterp.h	\
-	jslock.h	\
-	jsmath.h	\
-	jsnum.h		\
-	jsobj.h		\
-	jsopcode.def	\
-	jsopcode.h	\
-	jsparse.h	\
-	jsprvtd.h	\
-	jspubtd.h	\
-	jsregexp.h	\
-	jsscan.h	\
-	jsscope.h	\
-	jsscript.h	\
-	jsstr.h		\
-	$(NULL)
+INSTALL_FILE_LIST=  \
+    jsapi.h     \
+    jsarray.h   \
+    jsatom.h    \
+    jsbool.h    \
+    jscntxt.h   \
+    jscompat.h  \
+    jsconfig.h  \
+    jsdate.h    \
+    jsdbgapi.h  \
+    jsemit.h    \
+    jsfun.h     \
+    jsgc.h      \
+    jsinterp.h  \
+    jslock.h    \
+    jsmath.h    \
+    jsnum.h     \
+    jsobj.h     \
+    jsopcode.def    \
+    jsopcode.h  \
+    jsparse.h   \
+    jsprvtd.h   \
+    jspubtd.h   \
+    jsregexp.h  \
+    jsscan.h    \
+    jsscope.h   \
+    jsscript.h  \
+    jsstr.h     \
+    $(NULL)
 
 #//------------------------------------------------------------------------
 #//
@@ -127,9 +128,9 @@ INSTALL_FILE_LIST=	\
 #//------------------------------------------------------------------------
 include <$(DEPTH)\config\rules.mak>
 
-export:: $(DLL)	INSTALL_FILES
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
+export:: $(DLL) INSTALL_FILES
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).dll $(DIST)\bin
+    $(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
 
 #//------------------------------------------------------------------------
 #//
@@ -138,11 +139,11 @@ export:: $(DLL)	INSTALL_FILES
 #//------------------------------------------------------------------------
 
 #//PROGRAM = $(OBJDIR)\js.exe
-#//js:	$(PROGRAM)
+#//js:  $(PROGRAM)
 #//
 #//$(PROGRAM): $(OBJDIR)\js.obj $(LIBRARY)
-#//	    @$(MAKE_OBJDIR)
-#//	    $(link) /debug /out:$(PROGRAM) $(OBJDIR)\js.obj $(DIST)\lib\pr3240.lib $(LIBRARY) $(LDFLAGS)
+#//     @$(MAKE_OBJDIR)
+#//     $(link) /debug /out:$(PROGRAM) $(OBJDIR)\js.obj $(DIST)\lib\pr3240.lib $(LIBRARY) $(LDFLAGS)
 #//
 #//$(OBJDIR)\js.obj: js.c
-#//		$(CC) /Fo$(OBJDIR)\js.obj js.c $(CFLAGS) -DJSFILE
+#//     $(CC) /Fo$(OBJDIR)\js.obj js.c $(CFLAGS) -DJSFILE

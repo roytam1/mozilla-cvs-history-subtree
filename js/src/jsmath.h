@@ -25,7 +25,7 @@
 PR_BEGIN_EXTERN_C
 
 extern JSObject *
-js_InitMathClass(JSContext *cx, JSObject *obj);
+js_InitMathObject(JSContext *cx, JSObject *obj);
 
 PR_END_EXTERN_C
 
