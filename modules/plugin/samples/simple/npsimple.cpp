@@ -117,6 +117,8 @@ typedef struct _PlatformInstance
 // Simple Plugin Classes
 ////////////////////////////////////////////////////////////////////////////////
 
+class SimplePluginShutdownListener;
+
 ////////////////////////////////////////////////////////////////////////////////
 // SimplePlugin represents the class of all simple plugins. One 
 // instance of this class is kept around for as long as there are
@@ -189,7 +191,8 @@ public:
 protected:
     nsIServiceManager* mServMgr;
     nsIPluginManager* mPluginMgr;
-
+    SimplePluginShutdownListener* mPluginMgrShutdownListener;
+    SimplePluginShutdownListener* mEnvShutdownListener;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -475,7 +478,8 @@ JRIEnv* SimplePlugin::gEnv = NULL;
 ////////////////////////////////////////////////////////////////////////////////
 
 SimplePlugin::SimplePlugin(nsIServiceManager* servMgr)
-    : mServMgr(servMgr)
+    : mServMgr(servMgr), mPluginMgr(NULL),
+      mPluginMgrShutdownListener(NULL), mEnvShutdownListener(NULL)
 {
     NS_INIT_REFCNT();
     gPluginObjectCount++;
@@ -484,7 +488,6 @@ SimplePlugin::SimplePlugin(nsIServiceManager* servMgr)
 SimplePlugin::~SimplePlugin(void)
 {
     gPluginObjectCount--;
-    (void)Cleanup();
 }
 
 // These macros produce simple version of QueryInterface and AddRef.
@@ -559,6 +562,7 @@ NSCanUnload(void)
         && !SimplePlugin::gPluginLocked;
     if (canUnload && SimplePlugin::gPluginObjectCount == 1) {
         // shutdown code
+        gPlugin->Cleanup();	// release any references to services obtained
         gPlugin->Release();
         gPlugin = NULL;
     }
@@ -590,11 +594,11 @@ SimplePlugin::Cleanup(void)
 {
     if (gEnv) {
         Simple::_unuse(gEnv);
-        mServMgr->ReleaseService(kJRIEnvCID, (nsISupports*)gEnv);
+        mServMgr->ReleaseService(kJRIEnvCID, (nsISupports*)gEnv, mEnvShutdownListener);
         gEnv = NULL;
     }
     if (mPluginMgr) {
-        mServMgr->ReleaseService(kPluginManagerCID, mPluginMgr);
+        mServMgr->ReleaseService(kPluginManagerCID, mPluginMgr, mPluginMgrShutdownListener);
         mPluginMgr = NULL;
     }
     return NS_OK;
@@ -604,9 +608,11 @@ nsIPluginManager*
 SimplePlugin::GetPluginManager(void)
 {
     if (mPluginMgr == NULL) {
+        mPluginMgrShutdownListener = new SimplePluginShutdownListener(this);
+        // mPluginMgrShutdownListener->AddRef() done by GetService
         nsresult err = mServMgr->GetService(kPluginManagerCID, kIPluginManagerIID, 
                                             (nsISupports**)&mPluginMgr,
-                                            new SimplePluginShutdownListener(this));
+                                            mPluginMgrShutdownListener);
         if (err != NS_OK) return NULL;
     }
     return mPluginMgr;
@@ -660,10 +666,11 @@ SimplePlugin::GetJavaClass(jref *result)
 {
     struct java_lang_Class* myClass;
     if (gEnv == NULL) {
-        nsIPluginManager* mgr = NULL;
+        mEnvShutdownListener = new SimplePluginShutdownListener(this);
+        // mEnvShutdownListener->AddRef() done by GetService
         nsresult err = mServMgr->GetService(kJRIEnvCID, kIJRIEnvIID, 
                                             (nsISupports**)&gEnv,
-                                            new SimplePluginShutdownListener(this));
+                                            mEnvShutdownListener);
         if (err != NS_OK) return err;
     }
     PR_ASSERT(gEnv);
@@ -690,10 +697,13 @@ NS_IMPL_ISUPPORTS(SimplePluginShutdownListener, kIShutdownListenerIID);
 SimplePluginShutdownListener::SimplePluginShutdownListener(SimplePlugin* plugin)
     : mPlugin(plugin)
 {
+    NS_INIT_REFCNT();
+    mPlugin->AddRef();
 }
 
 SimplePluginShutdownListener::~SimplePluginShutdownListener(void)
 {
+    mPlugin->Release();
 }
 
 NS_METHOD
