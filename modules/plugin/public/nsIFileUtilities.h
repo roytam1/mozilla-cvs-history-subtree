@@ -35,6 +35,7 @@
 #define nsIFileUtilities_h___
 
 #include "nsplugindefs.h"
+#include "nsISupports.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // File Utilities Interface
