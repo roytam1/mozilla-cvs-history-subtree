@@ -2829,10 +2829,17 @@ NS_IMETHODIMP nsMsgFolder::GetSortOrder(PRInt32 *order)
     *order = 3;
   else if (flags & MSG_FOLDER_FLAG_SENTMAIL)
     *order = 4;
+#ifdef TRASH_NOT_LAST
   else if (flags & MSG_FOLDER_FLAG_TRASH)
     *order = 5;
   else
     *order = 6;
+#else
+  else if (flags & MSG_FOLDER_FLAG_TRASH)
+    *order = 6;
+  else
+    *order = 5;
+#endif
 
   return NS_OK;
 }
