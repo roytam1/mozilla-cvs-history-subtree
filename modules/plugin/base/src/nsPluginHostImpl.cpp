@@ -206,7 +206,9 @@
 // 0.02 added caching of CanUnload to fix bug 105935
 // 0.03 changed name, description and mime desc from string to bytes, bug 108246
 // 0.04 added new mime entry point on Mac, bug 113464
-static const char *kPluginInfoVersion = "0.04";
+// 0.05 added new entry point check for the default plugin, bug 132430
+static const char *kPluginInfoVersion = "0.05";
+
 ////////////////////////////////////////////////////////////////////////
 // CID's && IID's
 static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
@@ -5599,6 +5601,19 @@ nsPluginHostImpl::LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFi
     rv = LoadXPCOMPlugin(registry, filename.get(), key, &tag);
     if (NS_FAILED(rv))
       continue;
+
+    // Find the same plugin in our cache and mark it as 'unwanted' so this plugin will
+    // just be added to the list without being detected as new.
+    // Note: Our XPCOM plugin probably shouldn't be in this list. If it is, it has been
+    // cached twice in the registry:
+    //  a) ApplicationComponentRegistry: probably by the installer or regxpcom
+    //  b) ApplicationRegistry: by us in |nsPluginHostImpl::CachePluginsInfo|
+    nsPluginTag *cachedTag = RemoveCachedPluginsInfo(filename.get());
+    if (cachedTag) {
+      cachedTag->Mark(NS_PLUGIN_FLAG_UNWANTED);
+      cachedTag->mNext = mCachedPlugins;
+      mCachedPlugins = cachedTag;
+    }
 
     PRBool bAddIt = PR_TRUE;
 
