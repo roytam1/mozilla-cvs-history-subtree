@@ -851,6 +851,7 @@ nsresult nsHTTPServerListener::FireSingleOnData(nsIStreamListener *aListener,
     return rv;
 }
 
+#if 0  // DWF: THIS IMPLEMENTATION IS HORRIBLY WRONG!!!
 static NS_METHOD
 nsWriteLineToString(nsIInputStream* in,
                     void* closure,
@@ -881,7 +882,47 @@ nsWriteLineToString(nsIInputStream* in,
   //
   return (c != LF) ? NS_OK : NS_BASE_STREAM_WOULD_BLOCK;
 }
+#endif
 
+struct nsWriteLineInfo
+{
+    nsCString &buf;
+    PRBool haveLF;
+
+    nsWriteLineInfo(nsCString &b) : buf(b), haveLF(0) {}
+};
+
+static NS_METHOD
+nsWriteLineToString(nsIInputStream *in,
+                    void *closure,
+                    const char *fromRawSegment,
+                    PRUint32 offset,
+                    PRUint32 count,
+                    PRUint32 *writeCount)
+{
+    nsWriteLineInfo *info = (nsWriteLineInfo *) closure;
+    *writeCount = 0;
+
+    if (info->haveLF)
+        // Stop reading
+        return NS_BASE_STREAM_WOULD_BLOCK;
+    else
+    {
+        char c = 0;
+        const char *p = fromRawSegment;
+        for (; count>0; --count) {
+            c = *p++;
+            (*writeCount)++;
+            if (c == LF) {
+                info->haveLF = PR_TRUE;
+                break;
+            }
+        }
+        info->buf.Append(fromRawSegment, *writeCount);
+        // Successfully read something
+        return NS_OK;
+    }
+}
 
 nsresult nsHTTPServerListener::ParseStatusLine(nsIInputStream* in, 
                                                PRUint32 aLength,
@@ -901,8 +942,9 @@ nsresult nsHTTPServerListener::ParseStatusLine(nsIInputStream* in,
     return NS_ERROR_FAILURE;
   }
 
+  nsWriteLineInfo info(mHeaderBuffer);
   rv = in->ReadSegments(nsWriteLineToString, 
-                        (void*) &mHeaderBuffer, 
+                        (void*) &info,
                         aLength, 
                         &actualBytesRead) ;
   if (NS_FAILED(rv)) return rv;
@@ -987,8 +1029,9 @@ nsresult nsHTTPServerListener::ParseHTTPHeader(nsIInputStream* in,
   PRInt32 newlineOffset = 0;
   do {
     // Append the buffer into the header string...
+    nsWriteLineInfo info(mHeaderBuffer);
     rv = in->ReadSegments(nsWriteLineToString, 
-                          (void*) &mHeaderBuffer, 
+                          (void*) &info,
                           totalBytesToRead, 
                           &actualBytesRead);
     if (NS_FAILED(rv)) return rv;

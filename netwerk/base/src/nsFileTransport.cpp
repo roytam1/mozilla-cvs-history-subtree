@@ -281,12 +281,10 @@ nsFileTransport::~nsFileTransport()
 
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS5(nsFileTransport, 
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsFileTransport, 
                               nsIChannel, 
                               nsIRequest, 
-                              nsIRunnable, 
-                              nsIInputStreamObserver,
-                              nsIOutputStreamObserver);
+                              nsIRunnable)
 
 NS_METHOD
 nsFileTransport::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
@@ -425,21 +423,6 @@ nsFileTransport::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
                                    mBufferMaxSize);
     if (NS_FAILED(rv)) return rv;
 
-    /*
-    rv = NS_NewPipe(getter_AddRefs(mPipeIn),
-                    getter_AddRefs(mPipeOut),
-                    mBufferSegmentSize, mBufferMaxSize,
-                    PR_TRUE, PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-
-    //
-    // As a pipe input observer this transport will be notified when the 
-    // pipe is emptied.
-    // 
-    rv = mPipeIn->SetObserver(this);
-    if (NS_FAILED(rv)) return rv;
-    */
-
     NS_ASSERTION(mContext == nsnull, "context not released");
     mContext = ctxt;
     mXferState = OPEN_FOR_READ;
@@ -467,19 +450,6 @@ nsFileTransport::AsyncWrite(nsIStreamProvider *provider,
     NS_ASSERTION(provider, "need to supply an nsIStreamProvider");
     rv = NS_NewStreamProviderProxy(getter_AddRefs(mProvider), provider);
     if (NS_FAILED(rv)) return rv;
-
-    /*
-    rv = NS_NewPipe(getter_AddRefs(mPipeIn),
-                    getter_AddRefs(mPipeOut),
-                    mBufferSegmentSize, mBufferMaxSize,
-                    PR_TRUE, PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    */
-
-    //rv = mPipeIn->SetObserver(this);
-    //if (NS_FAILED(rv)) return rv;
-    //rv = mPipeOut->SetObserver(this);
-    //if (NS_FAILED(rv)) return rv;
 
     NS_ASSERTION(mContext == nsnull, "context not released");
     mContext = ctxt;
@@ -920,37 +890,6 @@ nsFileTransport::DoClose(void)
     mXferState = CLOSED;
 
     PR_AtomicDecrement(&mService->mConnectedTransports);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// nsIInputStreamObserver/nsIOutputStreamObserver methods:
-////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP
-nsFileTransport::OnFull(nsIOutputStream* out)
-{
-    PRINTF("OnFull -- suspending transport\n");
-    mRunState = SUSPENDED;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::OnWrite(nsIOutputStream* out, PRUint32 aCount)
-{
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileTransport::OnEmpty(nsIInputStream* in)
-{
-    PRINTF("OnEmpty\n");
-    return Resume();
-}
-
-NS_IMETHODIMP
-nsFileTransport::OnClose(nsIInputStream* in)
-{
-    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

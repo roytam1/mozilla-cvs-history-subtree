@@ -45,16 +45,12 @@
 class nsIInterfaceRequestor;
 
 class nsFileTransport : public nsIChannel, 
-                        public nsIRunnable,
-                        public nsIInputStreamObserver,
-                        public nsIOutputStreamObserver
+                        public nsIRunnable
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUEST
     NS_DECL_NSICHANNEL
-    NS_DECL_NSIINPUTSTREAMOBSERVER
-    NS_DECL_NSIOUTPUTSTREAMOBSERVER
     NS_DECL_NSIRUNNABLE
 
     nsFileTransport();

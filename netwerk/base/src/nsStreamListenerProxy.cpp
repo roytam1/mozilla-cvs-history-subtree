@@ -97,7 +97,9 @@ nsStreamListenerProxy::nsStreamListenerProxy()
     : mListenerStatus(NS_OK)
     , mLMonitor(nsnull)
     , mCMonitor(nsnull)
+#ifdef HAVE_BROKEN_PIPE_IMPL
     , mPendingEvents(0)
+#endif
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
@@ -157,7 +159,9 @@ nsOnDataAvailableEvent::HandleEvent()
     nsIStreamListener *listener = listenerProxy->GetListener();
     if (!listener) {
         PRINTF("Already called OnStopRequest (listener is NULL)\n");
+#ifdef HAVE_BROKEN_PIPE_IMPL
         PR_AtomicDecrement(&listenerProxy->mPendingEvents);
+#endif
         return NS_ERROR_FAILURE;
     }
 
@@ -172,55 +176,65 @@ nsOnDataAvailableEvent::HandleEvent()
     // have cancelled the channel after _this_ event was triggered.
     //
     if (NS_SUCCEEDED(status)) {
-        PRUint32 avail;
-        mSource->Available(&avail);
-
-        PRINTF("HandleEvent -- calling the consumer's OnDataAvailable [offset=%u count=%u avail=%u]\n",
-                mOffset, mCount, avail);FLUSH();
+#ifdef NS_ENABLE_LOGGING
+        {
+            PRUint32 avail;
+            mSource->Available(&avail);
+            PRINTF("HandleEvent -- calling the consumer's OnDataAvailable [offset=%u count=%u avail=%u]\n",
+                    mOffset, mCount, avail);FLUSH();
+        }
+#endif
 
         //
         // If we are the only event at the moment and the pipe has extra data...
         // feed that to the client...
         //
-        if (listenerProxy->mChannelToResume && (avail > mCount)) {
-            NS_WARNING("pipe contains unread data");
-            mCount = avail; // this is potentially very bad
-        }
+        //if (listenerProxy->mChannelToResume && (avail > mCount)) {
+        //    NS_WARNING("pipe contains unread data");
+        //    mCount = avail; // this is potentially very bad
+        //}
 
         // Give the listener a chance to read some data.
         rv = listener->OnDataAvailable(mChannel, mContext, mSource, mOffset, mCount);
 
         PRINTF("HandleEvent -- done with the consumer's OnDataAvailable [rv=%x]\n", rv);FLUSH();
 
-        mSource->Available(&avail);
-        PRINTF("HandleEvent -- %u bytes still available in pipe\n", avail);FLUSH();
-
+#ifdef HAVE_BROKEN_PIPE_IMPL
         //
         // Stoke the pipe observer if it doesn't appear to have run.
         //
-        {
-            nsAutoMonitor mon(listenerProxy->mCMonitor);
-            if (listenerProxy->mChannelToResume && (listenerProxy->mPendingEvents == 1)) {
+        PR_EnterMonitor(listenerProxy->mCMonitor);
+        listenerProxy->mPendingEvents--;
+        if (listenerProxy->mChannelToResume && (listenerProxy->mPendingEvents == 0)) {
 #ifdef DEBUG
-                PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
-                PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
+            PRUint32 bytesRead = TO_INPUT_STREAM_GUARD(mSource)->GetBytesRead();
+            PRINTF("HandleEvent -- %u bytes read out of %u total\n", bytesRead, mCount);FLUSH();
 #endif
-                if (avail && (NS_SUCCEEDED(rv) || rv == NS_BASE_STREAM_WOULD_BLOCK)) {
-                    PRINTF("HandleEvent -- listener did not consume all data [avail=%u, rv=%x]\n",
-                        avail, rv);
-                    NS_WARNING("listener did not consume all data");
-                }
-
-                PRINTF("HandleEvent -- stoking pipe observer...\n");FLUSH();
-                mon.Exit();
-                listenerProxy->OnEmpty(mSource);
+            PRUint32 avail;
+            mSource->Available(&avail);
+            if (avail && (NS_SUCCEEDED(rv) || rv == NS_BASE_STREAM_WOULD_BLOCK)) {
+                PRINTF("HandleEvent -- listener did not consume all data [avail=%u, rv=%x]\n",
+                    avail, rv);
+                NS_WARNING("listener did not consume all data");
             }
-        }
 
-#ifdef DEBUG
-        // For this event, we are done with the pipe
-        mSource->Close();
+            PRINTF("HandleEvent -- stoking pipe observer...\n");FLUSH();
+            NS_WARNING("stoking pipe observer");
+
+            //
+            // Must exit the monitor before calling OnEmpty.
+            //
+            PR_ExitMonitor(listenerProxy->mCMonitor);
+            listenerProxy->OnEmpty(mSource);
+        }
+        else
+            PR_ExitMonitor(listenerProxy->mCMonitor);
 #endif
+
+//#ifdef DEBUG
+//        // For this event, we are done with the pipe
+//        mSource->Close();
+//#endif
 
         //
         // We must honor the listener's desire to suspend the channel.
@@ -237,10 +251,10 @@ nsOnDataAvailableEvent::HandleEvent()
         listenerProxy->mListenerStatus = rv;
     }
 #ifdef NS_ENABLE_LOGGING
-    else
+    else {
         PRINTF("not calling OnDataAvailable");FLUSH();
+    }
 #endif
-    PR_AtomicDecrement(&listenerProxy->mPendingEvents);
     return NS_OK;
 }
 
@@ -275,7 +289,7 @@ nsStreamListenerProxy::OnStopRequest(nsIChannel *aChannel,
                                      const PRUnichar *aStatusText)
 {
     //
-    // Release/close the pipe
+    // We are done with the pipe.
     //
     mPipeIn = 0;
     mPipeOut = 0;
@@ -318,45 +332,42 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     }
     
     //
-    // Copy data into the pipe
+    // Enter the ChannelToResume monitor
     //
-    PRUint32 bytesWritten=0;
-    {
-        nsAutoMonitor mon(mCMonitor);
+    nsAutoMonitor mon(mCMonitor);
 
-        // 
-        // If there is data already in the pipe, then suspend the calling
-        // channel.  It will be resumed when the pipe is emptied.  Being
-        // inside the "C" monitor ensures that the resume will follow the
-        // suspend.
-        //
-        PRUint32 count;
-        rv = mPipeIn->Available(&count);
-        if (NS_FAILED(rv)) return rv;
+    // 
+    // If there is data already in the pipe, then suspend the calling
+    // channel.  It will be resumed when the pipe is emptied.  Being
+    // inside the "C" monitor ensures that the resume will follow the
+    // suspend.
+    //
+    PRUint32 count, bytesWritten=0;
+    rv = mPipeIn->Available(&count);
+    if (NS_FAILED(rv)) return rv;
 
-        PRINTF("already %u bytes in the pipe\n", count);
+    if (count == 0) {
+        PRINTF("Writing to the pipe...\n");FLUSH();
+        rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
 
-        if (count == 0) {
-            PRINTF("writing to the pipe...\n");FLUSH();
-            rv = mPipeOut->WriteFrom(aSource, aCount, &bytesWritten);
+        PRINTF("mPipeOut->WriteFrom(aSource) [rv=%x aCount=%u bytesWritten=%u]\n",
+                rv, aCount, bytesWritten);FLUSH();
+    }
+    else {
+        PRINTF("Already %u bytes in the pipe\n", count);
+        rv = NS_BASE_STREAM_WOULD_BLOCK;
+    }
 
-            PRINTF("mPipeOut->WriteFrom(aSource) [rv=%x aCount=%u bytesWritten=%u]\n",
-                    rv, aCount, bytesWritten);FLUSH();
+    if (NS_FAILED(rv)) {
+        if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
+            PRINTF("Setting channel to resume\n");FLUSH();
+            mChannelToResume = aChannel;
         }
-        else
-            rv = NS_BASE_STREAM_WOULD_BLOCK;
-
-        if (NS_FAILED(rv)) {
-            if (rv == NS_BASE_STREAM_WOULD_BLOCK) {
-                PRINTF("Setting channel to resume\n");FLUSH();
-                mChannelToResume = aChannel;
-            }
-            return rv;
-        }
-        else if (bytesWritten == 0) {
-            PRINTF("Copied zero bytes; not posting an event\n");
-            return NS_BASE_STREAM_CLOSED; // there was no more data to read!
-        }
+        return rv;
+    }
+    else if (bytesWritten == 0) {
+        PRINTF("Copied zero bytes; not posting an event\n");
+        return NS_BASE_STREAM_CLOSED; // there was no more data to read!
     }
 
     //
@@ -374,11 +385,19 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
                                    aOffset, bytesWritten);
     if (!ev) return NS_ERROR_OUT_OF_MEMORY;
 
-    PR_AtomicIncrement(&mPendingEvents);
+#ifdef HAVE_BROKEN_PIPE_IMPL
+    //
+    // Increment the pending events counter
+    //
+    mPendingEvents++;
+#endif
 
     rv = ev->FireEvent(mEventQueue);
     if (NS_FAILED(rv)) {
         delete ev;
+#ifdef HAVE_BROKEN_PIPE_IMPL
+        mPendingEvents--;
+#endif
         return rv;
     }
     return NS_OK;

@@ -8,6 +8,13 @@
 #include "nsIOutputStream.h"
 #include "nsCOMPtr.h"
 
+//
+// Our nsIPipe implementation does not always call OnEmpty when 
+// the pipe is emptied.  This is most definitely a bug, and it
+// needs to be fixed.
+//
+//#define HAVE_BROKEN_PIPE_IMPL
+
 class nsStreamListenerProxy : public nsStreamObserverProxy
                             , public nsIStreamListenerProxy
                             , public nsIInputStreamObserver
@@ -38,7 +45,9 @@ public:
     nsCOMPtr<nsIChannel> mChannelToResume;
     PRMonitor           *mCMonitor;
 
-    PRInt32              mPendingEvents;
+#ifdef HAVE_BROKEN_PIPE_IMPL
+    PRInt32 mPendingEvents;
+#endif
 
 protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
