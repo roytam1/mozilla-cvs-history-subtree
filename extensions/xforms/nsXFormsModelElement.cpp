@@ -60,6 +60,8 @@
 #include "nsIDOM3EventTarget.h"
 #include "nsIDOMEventGroup.h"
 #include "nsIDOMNSUIEvent.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIContent.h"
 
 #include "nsISchemaLoader.h"
 #include "nsAutoPtr.h"
@@ -130,7 +132,8 @@ struct nsXFormsModelElement::ModelItemProperties
 };
 
 nsXFormsModelElement::nsXFormsModelElement()
-  : mSchemaCount(0),
+  : mContent(nsnull),
+    mSchemaCount(0),
     mInstanceDataLoaded(PR_FALSE)
 {
 }
@@ -163,8 +166,40 @@ nsXFormsModelElement::OnDestroyed()
     targ->RemoveGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[i].name),
                                      this, PR_FALSE, systemGroup);
   }
-    
+
+  RemoveModelFromDocument();
+
+  mContent = nsnull;
   return NS_OK;
+}
+
+void
+nsXFormsModelElement::RemoveModelFromDocument()
+{
+  // Find out if we are handling the model-construct-done for this document.
+  nsIDocument *doc = mContent->GetDocument();
+  nsIScriptGlobalObject *window = nsnull;
+  if (doc)
+    window = doc->GetScriptGlobalObject();
+  nsCOMPtr<nsIDOMEventTarget> targ2 = do_QueryInterface(window);
+  if (targ2) {
+    nsVoidArray *models = NS_STATIC_CAST(nsVoidArray*,
+                          doc->GetProperty(nsXFormsAtoms::modelListProperty));
+
+    if (models) {
+      if (models->SafeElementAt(0) == this) {
+        nsXFormsModelElement *next =
+          NS_STATIC_CAST(nsXFormsModelElement*, models->SafeElementAt(1));
+        if (next) {
+          targ2->AddEventListener(NS_LITERAL_STRING("load"), next, PR_TRUE);
+        }
+
+        targ2->RemoveEventListener(NS_LITERAL_STRING("load"), this, PR_TRUE);
+      }
+
+      models->RemoveElement(this);
+    }
+  }
 }
 
 NS_IMETHODIMP
@@ -212,19 +247,55 @@ nsXFormsModelElement::GetScriptingInterfaces(PRUint32 *aCount, nsIID ***aArray)
 NS_IMETHODIMP
 nsXFormsModelElement::GetNotificationMask(PRUint32 *aMask)
 {
-  *aMask = 0;
+  *aMask = (nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT |
+            nsIXTFElement::NOTIFY_DOCUMENT_CHANGED);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::WillChangeDocument(nsISupports* aNewDocument)
 {
+  RemoveModelFromDocument();
   return NS_OK;
+}
+
+static void
+DeleteVoidArray(void    *aObject,
+                nsIAtom *aPropertyName,
+                void    *aPropertyValue,
+                void    *aData)
+{
+  delete NS_STATIC_CAST(nsVoidArray*, aPropertyValue);
 }
 
 NS_IMETHODIMP
 nsXFormsModelElement::DocumentChanged(nsISupports* aNewDocument)
 {
+  // Add this model to the document's model list.  If this is the first
+  // model to be created, register an onload handler so that we can
+  // do model-construct-done notifications.
+
+  if (!aNewDocument)
+    return NS_OK;
+
+  nsIDocument *doc = mContent->GetDocument();
+
+  nsVoidArray *models = NS_STATIC_CAST(nsVoidArray*,
+                  doc->GetProperty(nsXFormsAtoms::modelListProperty));
+
+  if (!models) {
+    models = new nsVoidArray(16);
+    doc->SetProperty(nsXFormsAtoms::modelListProperty,
+                     models, DeleteVoidArray);
+
+    nsIScriptGlobalObject *window = doc->GetScriptGlobalObject();
+
+    nsCOMPtr<nsIDOMEventTarget> targ = do_QueryInterface(window);
+    targ->AddEventListener(NS_LITERAL_STRING("load"), this, PR_TRUE);
+  }
+
+  models->AppendElement(this);
+                                 
   return NS_OK;
 }
 
@@ -349,6 +420,8 @@ nsXFormsModelElement::DoneAddingChildren()
   // XXX the spec says there can be any number of <instance> nodes, but
   // I can't see how it makes sense to have more than one per model.
 
+  // XXX schema and external instance data loads should delay document onload
+
   PRUint32 childCount = mContent->GetChildCount();
   for (PRUint32 i = 0; i < childCount; ++i) {
     nsIContent *child = mContent->GetChildAt(i);
@@ -436,7 +509,13 @@ nsXFormsModelElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 {
   nsCOMPtr<nsIDOMElement> node;
   aWrapper->GetElementNode(getter_AddRefs(node));
-  mContent = do_QueryInterface(node);
+
+  // It's ok to keep a weak pointer to mContent.  mContent will have an
+  // owning reference to this object, so as long as we null out mContent in
+  // OnDestroyed, it will always be valid.
+
+  nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+  mContent = content;
 
   NS_ASSERTION(mContent, "Wrapper is not an nsIContent, we'll crash soon");
 
@@ -535,9 +614,29 @@ nsXFormsModelElement::HandleEvent(nsIDOMEvent* aEvent)
 NS_IMETHODIMP
 nsXFormsModelElement::Load(nsIDOMEvent* aEvent)
 {
-  mInstanceDataLoaded = PR_TRUE;
-  if (IsComplete()) {
-    return FinishConstruction();
+  // This could be a load event for us or for the document.
+  nsCOMPtr<nsIDOMEventTarget> target;
+  aEvent->GetTarget(getter_AddRefs(target));
+
+  nsCOMPtr<nsIDocument> document = do_QueryInterface(target);
+  if (document) {
+    // The document has finished loading; that means that all of the models
+    // in it are initialized.  Fire the model-construct-done event to each
+    // model.
+
+    nsVoidArray *models = NS_STATIC_CAST(nsVoidArray*,
+                      document->GetProperty(nsXFormsAtoms::modelListProperty));
+
+    NS_ASSERTION(models, "models list is empty!");
+    for (PRInt32 i = 0; i < models->Count(); ++i) {
+      NS_STATIC_CAST(nsXFormsModelElement*, models->ElementAt(i))
+        ->DispatchEvent(eEvent_ModelConstructDone);
+    }
+  } else {
+    mInstanceDataLoaded = PR_TRUE;
+    if (IsComplete()) {
+      return FinishConstruction();
+    }
   }
 
   return NS_OK;
@@ -619,7 +718,7 @@ nsXFormsModelElement::FinishConstruction()
   DispatchEvent(eEvent_Recalculate);
   DispatchEvent(eEvent_Revalidate);
 
-  // mark this model as initialized
+  // We're done initializing this model.
 
   return NS_OK;
 }
@@ -631,7 +730,7 @@ ReleaseExpr(void    *aElement,
             void    *aData)
 {
   nsIDOMXPathExpression *expr = NS_STATIC_CAST(nsIDOMXPathExpression*,
-                                               aElement);
+                                               aPropertyValue);
 
   NS_RELEASE(expr);
 }

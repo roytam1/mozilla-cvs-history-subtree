@@ -38,7 +38,6 @@
 
 #include "nsIXTFGenericElement.h"
 #include "nsIXFormsModelElement.h"
-#include "nsIContent.h"
 #include "nsISchema.h"
 #include "nsCOMArray.h"
 #include "nsCOMPtr.h"
@@ -48,6 +47,7 @@
 #include "nsISchemaLoader.h"
 
 class nsIDOMXPathEvaluator;
+class nsIContent;
 
 class nsXFormsModelElement : public nsIXTFGenericElement,
                              public nsIXFormsModelElement,
@@ -83,11 +83,13 @@ private:
   NS_HIDDEN_(PRBool)   ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
                                    nsIContent *aBindElement);
 
+  NS_HIDDEN_(void)     RemoveModelFromDocument();
+
   PRBool IsComplete() const { return (mSchemas.Count() == mSchemaCount)
                                 && mInstanceDataLoaded; }
 
-  nsCOMPtr<nsIContent> mContent;
-  nsCOMArray<nsISchema> mSchemas;
+  nsIContent              *mContent;
+  nsCOMArray<nsISchema>    mSchemas;
   nsCOMPtr<nsIDOMDocument> mInstanceDocument;
 
   PRInt32 mSchemaCount;

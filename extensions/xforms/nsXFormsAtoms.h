@@ -53,6 +53,8 @@ class nsXFormsAtoms
   static nsIAtom *calculate;
   static nsIAtom *constraint;
   static nsIAtom *p3ptype;
+  static nsIAtom *model;
+  static nsIAtom *modelListProperty;
 
   static NS_HIDDEN_(void) InitAtoms();
 

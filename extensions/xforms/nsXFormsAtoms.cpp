@@ -51,20 +51,24 @@ nsIAtom* nsXFormsAtoms::relevant;
 nsIAtom* nsXFormsAtoms::calculate;
 nsIAtom* nsXFormsAtoms::constraint;
 nsIAtom* nsXFormsAtoms::p3ptype;
+nsIAtom* nsXFormsAtoms::model;
+nsIAtom* nsXFormsAtoms::modelListProperty;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
-  { "schema",     &nsXFormsAtoms::schema },
-  { "instance",   &nsXFormsAtoms::instance },
-  { "src",        &nsXFormsAtoms::src },
-  { "bind",       &nsXFormsAtoms::bind },
-  { "nodeset",    &nsXFormsAtoms::nodeset },
-  { "type",       &nsXFormsAtoms::type },
-  { "readonly",   &nsXFormsAtoms::readonly },
-  { "required",   &nsXFormsAtoms::required },
-  { "relevant",   &nsXFormsAtoms::relevant },
-  { "calculate",  &nsXFormsAtoms::calculate },
-  { "constraint", &nsXFormsAtoms::constraint },
-  { "p3ptype",    &nsXFormsAtoms::p3ptype }
+  { "schema",            &nsXFormsAtoms::schema },
+  { "instance",          &nsXFormsAtoms::instance },
+  { "src",               &nsXFormsAtoms::src },
+  { "bind",              &nsXFormsAtoms::bind },
+  { "nodeset",           &nsXFormsAtoms::nodeset },
+  { "type",              &nsXFormsAtoms::type },
+  { "readonly",          &nsXFormsAtoms::readonly },
+  { "required",          &nsXFormsAtoms::required },
+  { "relevant",          &nsXFormsAtoms::relevant },
+  { "calculate",         &nsXFormsAtoms::calculate },
+  { "constraint",        &nsXFormsAtoms::constraint },
+  { "p3ptype",           &nsXFormsAtoms::p3ptype },
+  { "model",             &nsXFormsAtoms::model },
+  { "ModelListProperty", &nsXFormsAtoms::modelListProperty }
 };
 
 void
