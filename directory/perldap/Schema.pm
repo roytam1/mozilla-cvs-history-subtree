@@ -187,29 +187,28 @@ sub _initialize
       #for parentheses in the $i+1 phase.
 
       #check for spaces in the objectclass!!
-      if ($i eq "") {
+      if ($temparr[$i] eq "") {
 	$i+=1;
       }
-      if ($i+1 ne "(") {
-	print $temparr[$i],"\n";
+      if ($temparr[$i+1] ne "(") {
+#	print $temparr[$i],"\n";
 	$self->{lc $temparr[$i]} = lc $temparr[$i+1];
 	$i+=2;
       }
       else {
-	$j = $i+1;
+	$j = $i+2;
 	my $k = 0;
 	while ($temparr[$j] ne ")")
 	  {
 	    if ($temparr[$j] eq "\$") {
 	      $j+=1;
 	    }
-	    print $k,"\n";
 	    $objarr[$k] = lc $temparr[$j];
-	    $k++;
+	    $k+=1;
 	    $j+=1;
 	  }
 	$self->{lc $temparr[$i]} = @objarr;
-	$i += 2;
+	$i=$j+1;
       }
     }
 }
@@ -242,11 +241,39 @@ sub name
   $self->{'name'}; 
 }
 
+sub desc
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'desc'} = lc shift;
+  }
+  $self->{'desc'}; 
+}
+
+sub sup
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'sup'} = lc shift;
+  }
+  $self->{'sup'}; 
+}
+
+sub must
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'must'} = lc shift;
+  }
+  $self->{'must'}; 
+}
+
 sub may
 {
   my $self = shift;
-  print $self->{'may'};
+  $self->{'may'};
 }
+
 #############################################################################
 # Mandatory TRUE return value.
 #
