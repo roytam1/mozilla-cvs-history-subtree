@@ -1025,12 +1025,17 @@ function cmdPPrint (e)
     if (e.toggle != null)
     {
         if (e.toggle == "toggle")
-            state = console.prefs["prettyprint"] = !console.prefs["prettyprint"];
+        {
+            e.toggle = console.prefs["prettyprint"] = 
+                !console.prefs["prettyprint"];
+        }
         else
-            state = console.prefs["prettyprint"] = e.toggle;
+        {
+            console.prefs["prettyprint"] = e.toggle;
+        }
         
         var tb = document.getElementById("maintoolbar-toggle-pprint");
-        if (state)
+        if (e.toggle)
         {
             tb.setAttribute("state", "true");
         }

@@ -281,13 +281,13 @@ treechildren:-moz-tree-cell(source\:col-2, selected) {
     background: inherit !important;
 }
 
-treechildren:-moz-tree-row {
-    border: 0px;
-}
-
 treechildren:-moz-tree-cell(source\:col-1, current-line),
 treechildren:-moz-tree-cell(source\:col-2, current-line) {
     background: #ecef34;
+}
+
+#source-tree-body:-moz-tree-row {
+    border: 0px;
 }
 
 treechildren:-moz-tree-image(source\:col-0, code) {

@@ -67,7 +67,7 @@ const LINE_FBREAK    = 0x04;
 
 var console = new Object();
 
-console.version = "0.9.0";
+console.version = "0.9.1";
 
 /* |this|less functions */
 
@@ -904,8 +904,16 @@ function SourceText (scriptInstance)
 {
     this.lines = new Array();
     this.tabWidth = console.prefs["tabWidth"];
-    this.scriptInstance = scriptInstance;
-    this.url = scriptInstance.url;
+    if (scriptInstance instanceof ScriptInstance)
+    {
+        this.scriptInstance = scriptInstance;
+        this.url = scriptInstance.url;
+    }
+    else
+    {
+        this.scriptInstance = null;
+        this.url = scriptInstance;
+    }
 }
 
 SourceText.prototype.onMarginClick =

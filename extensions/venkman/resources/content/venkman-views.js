@@ -660,7 +660,7 @@ function sch_hookGuessComplete(e)
 console.views.scripts.hooks["hook-script-instance-sealed"] =
 function scv_hookScriptInstanceSealed (e)
 {
-    dd ("instance sealed: " + e.scriptInstance.url);
+    //dd ("instance sealed: " + e.scriptInstance.url);
     
     var scr = new ScriptInstanceRecord (e.scriptInstance);
     e.scriptInstance.scriptInstanceRecord = scr;
@@ -677,15 +677,12 @@ function scv_hookScriptInstanceSealed (e)
 console.views.scripts.hooks["hook-script-instance-destroyed"] =
 function scv_hookScriptInstanceDestroyed (e)
 {
-    if (!ASSERT("scriptInstanceRecord" in e.scriptInstance,
-                "Script instance destroyed, but never sealed " +
-                e.scriptInstance.url))
-    {
+    if (!("scriptInstanceRecord" in e.scriptInstance))
         return;
-    }
     
     var rec = e.scriptInstance.scriptInstanceRecord;
-    console.views.scripts.childData.removeChildAtIndex(rec.childIndex);
+    if ("parentRecord" in rec)
+        console.views.scripts.childData.removeChildAtIndex(rec.childIndex);
 }
 
 console.views.scripts.hooks["hook-window-opened"] =

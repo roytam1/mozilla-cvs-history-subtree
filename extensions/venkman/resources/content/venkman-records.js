@@ -249,7 +249,8 @@ function ScriptInstanceRecord(scriptInstance)
     this.shortName = this.url;
     this.group = 4;
     this.scriptInstance = scriptInstance;
-
+    this.lastScriptCount = 0;
+    
     this.shortName = getFileFromPath(this.url);
     var ary = this.shortName.match (/\.(js|html|xul|xml)$/i);
     if (ary)
@@ -336,9 +337,10 @@ function scr_preopen ()
     if (!this.scriptInstance.sourceText.isLoaded)
         this.scriptInstance.sourceText.loadSource();
     
-    if (this.childData.length == 0)
+    if (this.lastScriptCount != this.scriptInstance.scriptCount)
     {
         console.views.scripts.freeze();
+        this.reserveChildren();
         var scriptWrapper = this.scriptInstance.topLevel;
         var sr = new ScriptRecord(scriptWrapper);
         scriptWrapper.scriptRecord = sr;
@@ -352,6 +354,7 @@ function scr_preopen ()
             this.appendChild(sr);
         }
         console.views.scripts.thaw();
+        this.lastScriptCount = this.scriptInstance.scriptCount;
     }
 }
 

@@ -168,7 +168,7 @@ function sh_created (jsdScript)
     }
     catch (ex)
     {
-        dd ("caught " + ex + " while creating script.");
+        dd ("caught " + dumpObjectTree(ex) + " while creating script.");
     }
 }
 
@@ -181,7 +181,7 @@ function sh_destroyed (jsdScript)
     }
     catch (ex)
     {
-        dd ("caught " + ex + " while destroying script.");
+        dd ("caught " + dumpObjectTree(ex) + " while destroying script.");
     }
 }
     
@@ -355,17 +355,16 @@ function smgr_created (jsdScript)
     if (!jsdScript.isValid)
         dd ("************************* invalid script created!");
     
-    if (this.instances.length == 0 || jsdScript.functionName)
+    if (this.instances.length != 0)
+        instance = this.instances[this.instances.length - 1];
+
+    if (!instance || (instance.isSealed && jsdScript.functionName))
     {
         //dd ("instance created for " + jsdScript.fileName);
         instance = new ScriptInstance(this);
         this.instances.push(instance);
         dispatchCommand (console.coInstanceCreated,
                          { scriptInstance: instance });
-    }
-    else
-    {
-        instance = this.instances[this.instances.length - 1];
     }
 
     var scriptWrapper = new ScriptWrapper(jsdScript);
@@ -375,10 +374,12 @@ function smgr_created (jsdScript)
 
     if (!instance.isSealed)
     {
+        //dd ("function created " + formatScript(jsdScript));
         instance.onScriptCreated (scriptWrapper);
     }
     else
     {
+        //dd ("transient created " + formatScript(jsdScript));
         ++this.transientCount;
         this.transients[jsdScript.tag] = scriptWrapper;
         scriptWrapper.functionName = MSG_VAL_EVSCRIPT;
@@ -394,13 +395,14 @@ function smgr_invalidated (scriptWrapper)
     delete console.scriptWrappers[scriptWrapper.tag];
     if (scriptWrapper.tag in this.transients)
     {
+        //dd ("transient destroyed " + formatScript(scriptWrapper.jsdScript));
         --this.transientCount;
         delete this.transients[scriptWrapper.tag];
         //dispatch ("hook-script-invalidated", { scriptWrapper: scriptWrapper });
     }
     else
     {
-        //dd ("invalidating instance");
+        //dd ("function destroyed " + formatScript(scriptWrapper.jsdScript));
         scriptWrapper.scriptInstance.onScriptInvalidated(scriptWrapper);
         //dispatch ("hook-script-invalidated", { scriptWrapper: scriptWrapper });
 
