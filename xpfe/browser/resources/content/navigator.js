@@ -1025,7 +1025,17 @@ function BrowserEditBookmarks()
 
   function initViewMenu()
   {
-    updateTextSizeMenuLabel();
+    var viewPopup = document.getElementById("menu_View_Popup");
+    if (navigator.platform.indexOf("Mac") != -1) {
+      // only need to test once
+      viewPopup.removeAttribute("oncreate");
+    } else {
+      var textZoomMenu = document.getElementById("menu_TextZoom");
+      textZoomMenu.removeAttribute("hidden");
+      // next time, oncreate skips this check
+      viewPopup.setAttribute("oncreate", "updateTextSizeMenuLabel();");
+      updateTextSizeMenuLabel();
+    }
   }
 
   {
