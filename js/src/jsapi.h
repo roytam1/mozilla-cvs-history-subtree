@@ -977,7 +977,7 @@ struct JSErrorReport {
 /*
  * If JSREPORT_EXCEPTION is set, then a JavaScript-catchable exception
  * has been thrown for this runtime error, and the host should ignore it.
- * Exception-aware hosts should also check for JS_IsPendingException if
+ * Exception-aware hosts should also check for JS_IsExceptionPending if
  * JS_ExecuteScript returns failure, and signal or propagate the exception, as
  * appropriate.
  */
