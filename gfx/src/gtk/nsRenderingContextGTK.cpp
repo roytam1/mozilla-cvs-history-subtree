@@ -2020,12 +2020,12 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const 
 
   PRUint32 len;
   PRUint8 *bits;
-  rv = img->GetBits(&bits, &len);
+  rv = img->GetImageData(&bits, &len);
   if (NS_FAILED(rv))
     return rv;
 
   PRUint32 bpr;
-  img->GetBytesPerRow(&bpr);
+  img->GetImageBytesPerRow(&bpr);
 
   gfx_dimension frHeight;
   img->GetHeight(&frHeight);
