@@ -171,6 +171,7 @@ public:
     void                ProcessRequests();
 
 private:
+
 	friend class nsDNSService;
     nsDNSLookup();
 
@@ -180,13 +181,20 @@ private:
     // Result of the DNS Lookup
     nsHostEnt           mHostEntry;
     nsresult            mStatus;
+
     PRUint32            mState;
     enum {
+
         LOOKUP_NEW      = 0,
+
         LOOKUP_PENDING  = 1,
+
         LOOKUP_COMPLETE = 2
+
     };
+
     
+
 	PRBool              mCacheable;
     nsTime              mExpires;    
 
@@ -655,6 +663,7 @@ nsDNSLookup::InitiateLookup()
 {
     NS_ASSERTION(PR_CLIST_IS_EMPTY(this), "lookup being initiated while on queue");
     if (HostnameIsIPAddress())  return NS_OK;
+
    
 #if defined(XP_BEOS) || defined(XP_OS2)
 
@@ -725,11 +734,14 @@ nsDNSLookup::EnqueueRequest(nsDNSRequest * request)
     if (NS_FAILED(rv)) return rv;
 
     PR_APPEND_LINK(request, &mRequestQ);
+    NS_ADDREF(request);                 // keep request until processed
 
     if (mState == LOOKUP_NEW) {
         // we need to kick off the lookup
+
         mState = LOOKUP_PENDING;
         rv = InitiateLookup();
+
         if (NS_FAILED(rv))  MarkComplete(rv);
     }
     return NS_OK;
@@ -745,7 +757,6 @@ nsDNSLookup::ProcessRequests()
     nsDNSRequest * request = (nsDNSRequest *)PR_LIST_HEAD(&mRequestQ);
     while (request != &mRequestQ) {
         PR_REMOVE_AND_INIT_LINK(request);
-        NS_ADDREF(request);                 // hold onto request while calling FireStop
         nsDNSService::UnlockDNSService();   // can't hold lock during callback
         nsresult  rv = request->FireStop(mStatus);
         NS_ASSERTION(NS_SUCCEEDED(rv), "request->FireStop() failed.");
@@ -1219,14 +1230,20 @@ nsDNSService::Lookup(const char*     hostName,
         request = new nsDNSRequest(lookup, userListener, userContext);
         if (!request)  return NS_ERROR_OUT_OF_MEMORY;
         NS_ADDREF(request); // for caller
+
  //       NS_ADDREF(request); // XXX debug leak
 
         NS_ADDREF(lookup);  // keep it around for life of this method.
         rv = lookup->EnqueueRequest(request);    // releases dns lock
+
         if (NS_FAILED(rv)) {
+
             NS_RELEASE(lookup);
+
             return rv;
+
         }
+
 
         if (lookup->IsComplete()) {
             lookup->ProcessRequests();      // releases dns lock
@@ -1258,6 +1275,7 @@ nsDNSService::FindOrCreateLookup(const char* hostName)
         if (lookup->IsComplete() && lookup->IsExpired()) {
             lookup->Reset();
         }
+
         return lookup;
     }
 
@@ -1553,6 +1571,7 @@ nsDNSService::Shutdown()
     PR_DestroyCondVar(mDNSCondVar);
     mDNSCondVar = nsnull;
 #endif
+
 
     PR_Unlock(mDNSServiceLock);
     PR_DestroyLock(mDNSServiceLock);
