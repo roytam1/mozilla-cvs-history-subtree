@@ -33,6 +33,7 @@
 #include "nsIImageDecoderObserver.h"
 #include "nsIImageRequest2.h"
 #include "nsIInputStream.h"
+#include "nsIPipe.h"
 
 #include "jpeglib.h"
 
@@ -90,9 +91,10 @@ public:
   decoder_error_mgr mErr;
   jstate mState;
 
-  char *mBuf;
-  PRUint32 mBufLen;
-  PRUint32 mCurDataLen;
+  nsCOMPtr<nsIInputStream> mInStream;
+  nsCOMPtr<nsIOutputStream> mOutStream;
+
+  PRUint32 mDataLen;
 
   JSAMPARRAY mSamples;
   JSAMPARRAY mSamples3;
