@@ -38,7 +38,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= idl public util src ucvja ucvcn ucvlatin ucvtw ucvtw2 ucvko ucvibm ucvasia ucvwestern
+DIRS		= idl public util ucvja ucvcn ucvlatin ucvtw ucvtw2 ucvko ucvibm src
 
 ifdef MOZ_MATHML
 DIRS           += ucvmath
