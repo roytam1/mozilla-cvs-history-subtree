@@ -133,8 +133,7 @@ var folderListener = {
                         if (gNextMessageAfterLoad) {
                             gNextMessageAfterLoad = false;
 
-                            GoNextMessage(navigateUnread, true); 
-
+                            GoNextMessage(nsMsgNavigationType.nextUnreadMessage, true);
 				            msgNavigationService.EnsureDocumentIsLoaded(document);
                             PositionThreadPane();
                         }

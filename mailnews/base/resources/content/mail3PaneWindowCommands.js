@@ -851,42 +851,43 @@ function MsgDeleteFolder()
 
 }
 
- //3pane related commands.  Need to go in own file.  Putting here for the moment.
+// 3pane related commands.  Need to go in own file.  Putting here for the moment.
+var nsMsgNavigationType = Components.interfaces.nsMsgNavigationType;
 
 function MsgNextMessage()
 {
-	GoNextMessage(navigateAny, false );
+	GoNextMessage(nsMsgNavigationType.nextMessage, false );
 }
 
 function MsgNextUnreadMessage()
 {
-	GoNextMessage(navigateUnread, true);
+	GoNextMessage(nsMsgNavigationType.nextUnreadMessage, true);
 }
 function MsgNextFlaggedMessage()
 {
-	GoNextMessage(navigateFlagged, true);
+	GoNextMessage(nsMsgNavigationType.nextFlagged, true);
 }
 
 function MsgNextUnreadThread()
 {
 	//First mark the current thread as read.  Then go to the next one.
 	MsgMarkThreadAsRead();
-	GoNextThread(navigateUnread, true, true);
+	GoNextMessage(nsMsgNavigationType.nextUnreadThread, true);
 }
 
 function MsgPreviousMessage()
 {
-	GoPreviousMessage(navigateAny, false);
+    GoNextMessage(nsMsgNavigationType.previousMessage, false);
 }
 
 function MsgPreviousUnreadMessage()
 {
-	GoPreviousMessage(navigateUnread, true);
+	GoNextMessage(nsMsgNavigationType.previousUnreadMessage, true);
 }
 
 function MsgPreviousFlaggedMessage()
 {
-	GoPreviousMessage(navigateFlagged, true);
+	GoNextMessage(nsMsgNavigationType.previousFlagged, true);
 }
 
 var nsMsgViewType = Components.interfaces.nsMsgViewType;
