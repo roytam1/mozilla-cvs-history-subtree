@@ -7,9 +7,11 @@
 #include "nsIStreamConverterService.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIServiceManager.h"
+#include "nsIFileStreams.h"
 #include "nsHTTPChunkConv.h"
 #include "nsNetCID.h"
 #include "prmem.h"
+#include "pratom.h"
 
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kSupportsVoidCID, NS_SUPPORTS_VOID_CID);
@@ -20,12 +22,13 @@ static NS_DEFINE_CID(kSupportsVoidCID, NS_SUPPORTS_VOID_CID);
 
 nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
     : mListener(listener)
-    , mConnection(nsnull)
+    , mTransactionSink(nsnull)
     , mResponseHead(nsnull)
     , mReadBuf(0)
     , mContentLength(-1)
     , mContentRead(0)
     , mChunkConvCtx(0)
+    , mTransactionDone(0)
     , mHaveStatusLine(0)
     , mHaveAllHeaders(0)
     , mFiredOnStart(0)
@@ -37,12 +40,12 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener)
 
 nsHttpTransaction::~nsHttpTransaction()
 {
-    NS_IF_RELEASE(mConnection);
+    NS_IF_RELEASE(mTransactionSink);
 }
 
 nsresult
-nsHttpTransaction::SetRequestInfo(nsHttpRequestHead *requestHead,
-                                  nsIInputStream *requestStream)
+nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
+                                nsIInputStream *requestStream)
 {
     nsresult rv;
 
@@ -68,11 +71,11 @@ nsHttpTransaction::SetRequestInfo(nsHttpRequestHead *requestHead,
 }
 
 void
-nsHttpTransaction::SetConnection(nsHttpConnection *conn)
+nsHttpTransaction::SetTransactionSink(nsAHttpTransactionSink *sink)
 {
-    NS_IF_RELEASE(mConnection);
-    mConnection = conn;
-    NS_IF_ADDREF(mConnection);
+    NS_IF_RELEASE(mTransactionSink);
+    mTransactionSink = sink;
+    NS_IF_ADDREF(mTransactionSink);
 }
 
 // called on the socket transport thread
@@ -286,14 +289,25 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
     LOG(("nsHttpTransaction::HandleContent [this=%x count=%u]\n",
         this, count));
 
-    NS_PRECONDITION(mConnection, "no connection");
+    if (mTransactionDone)
+        return NS_OK;
+
+    NS_PRECONDITION(mTransactionSink, "no transaction sink");
 
     if (!mFiredOnStart) {
-        mFiredOnStart = PR_TRUE;
+        // notify the transaction sink first
+        if (mTransactionSink)
+            mTransactionSink->OnHeadersAvailable(this);
 
         LOG(("nsHttpTransaction [this=%x] sending OnStartRequest\n", this));
+
+        mFiredOnStart = PR_TRUE;
+
         rv = mListener->OnStartRequest(this, nsnull);
-        if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv)) {
+            LOG(("OnStartRequest failed with [rv=%x]\n", rv));
+            return rv;
+        }
 
         // grab the content-length from the response headers
         mContentLength = mResponseHead->ContentLength();
@@ -307,43 +321,46 @@ nsHttpTransaction::HandleContent(nsIInputStream *stream,
         if (val) {
             // we only support the "chunked" transfer encoding right now.
             rv = InstallChunkedDecoder();
-            if (NS_FAILED(rv)) return rv;
+            if (NS_FAILED(rv)) {
+                LOG(("InstallChunkedDecoder failed with [rv=%x]\n", rv));
+                return rv;
+            }
         }
     }
 
     // we cannot trust that all of "count" data will be read, so we have to
-    // interogate the connection for the current number of bytes read.
+    // interogate the stream for the number of bytes read.
     PRUint32 before = 0, after = 0;
-    if (fromSocket) {
-        rv = mConnection->GetBytesRead(&before);
-        if (NS_FAILED(rv)) return rv;
-    }
+    nsCOMPtr<nsISeekableStream> seekable = do_QueryInterface(stream);
+    if (seekable)
+        seekable->Tell(&before);
 
     rv = mListener->OnDataAvailable(this, nsnull, stream, mContentRead, count);
     if (NS_FAILED(rv)) return rv;
 
-    if (fromSocket) {
-        rv = mConnection->GetBytesRead(&after);
-        if (NS_FAILED(rv)) return rv;
-    }
+    // get the stream position now to see how much was read.
+    if (seekable)
+        seekable->Tell(&after);
     else
         after = count;
 
-    NS_ASSERTION(after >= before, "unexpected stream offset!");
-
     // update count of content bytes read..
+    NS_ASSERTION(after >= before, "invalid stream offset!");
     mContentRead += (after - before);
 
-    LOG(("nsHttpTransaction [this=%x mContentRead=%u mContentLength=%d]\n",
-        this, mContentRead, mContentLength));
+    LOG(("nsHttpTransaction [this=%x count=%u read=%u mContentRead=%u mContentLength=%d]\n",
+        this, count, after - before, mContentRead, mContentLength));
 
     // check for end-of-file
-    if ((PRInt32(mContentRead) >= mContentLength) ||
-            (mChunkConvCtx && mChunkConvCtx->GetEOF())) {
-        // let the connection know that we are done with it; this should
-        // result in OnStopTransaction being fired.
-        rv = mConnection->OnTransactionComplete(NS_OK);
-        if (NS_FAILED(rv)) return rv;
+    if ((mContentRead == PRUint32(mContentLength)) ||
+        (mChunkConvCtx && mChunkConvCtx->GetEOF())) {
+
+        PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
+        if (priorVal == 0) {
+            // let the connection know that we are done with it; this should
+            // result in OnStopTransaction being fired.
+            return mTransactionSink->OnTransactionComplete(this, NS_OK);
+        }
     }
 
     return NS_OK;
@@ -439,13 +456,16 @@ nsHttpTransaction::GetStatus(nsresult *aStatus)
     return NS_OK;
 }
 
+// called from any thread
 NS_IMETHODIMP
 nsHttpTransaction::Cancel(nsresult status)
 {
-    if (mConnection)
-        mConnection->OnTransactionComplete(status);
-    //else
-    //    nsHttpHandler::get()->CancelTransaction(this, status);
+    if (!mTransactionSink) return NS_ERROR_NOT_INITIALIZED;
+
+    PRInt32 priorVal = PR_AtomicSet(&mTransactionDone, 1);
+    if (priorVal == 0)
+        mTransactionSink->OnTransactionComplete(this, status);
+
     return NS_OK;
 }
 

@@ -8,11 +8,9 @@
 #include "nsXPIDLString.h"
 #include "nsCOMPtr.h"
 
-class nsHttpConnection;
-class nsHttpConnectionInfo;
 class nsHttpRequestHead;
 class nsHttpResponseHead;
-class nsAHttpTransactionHandler;
+class nsAHttpTransactionSink;
 class nsHTTPChunkConvContext;
 
 //-----------------------------------------------------------------------------
@@ -31,15 +29,14 @@ public:
     virtual ~nsHttpTransaction();
 
     // Called when added to a connection
-    void SetConnection(nsHttpConnection *);
+    void SetTransactionSink(nsAHttpTransactionSink *);
 
     // Called to initialize the transaction
-    nsresult SetRequestInfo(nsHttpRequestHead *, nsIInputStream *);
+    nsresult SetupRequest(nsHttpRequestHead *, nsIInputStream *);
 
-    nsIStreamListener    *Listener()           { return mListener; }
-    nsHttpConnection     *Connection()         { return mConnection; }
-
-    nsHttpResponseHead   *ResponseHead()       { return mResponseHead; }
+    nsIStreamListener      *Listener()        { return mListener; }
+    nsAHttpTransactionSink *TransactionSink() { return mTransactionSink; }
+    nsHttpResponseHead     *ResponseHead()    { return mResponseHead; }
 
     // Called to take ownership of the response headers; the transaction
     // will drop any reference to the response headers after this call.
@@ -63,7 +60,7 @@ private:
 private:
     nsCOMPtr<nsIStreamListener> mListener;
 
-    nsHttpConnection           *mConnection;  // hard ref
+    nsAHttpTransactionSink     *mTransactionSink; // hard ref
 
     nsCString                   mReqHeaderBuf;    // flattened request headers
     nsCOMPtr<nsIInputStream>    mReqHeaderStream; // header data stream
@@ -71,18 +68,32 @@ private:
 
     nsHttpResponseHead         *mResponseHead;
 
-    char                       *mReadBuf; // read ahead buffer
-    nsCString                   mLineBuf; // may contain a partial line
+    char                       *mReadBuf;         // read ahead buffer
+    nsCString                   mLineBuf;         // may contain a partial line
 
-    PRInt32                     mContentLength; // equals -1 if unknown
-    PRUint32                    mContentRead;   // count of consumed content bytes
+    PRInt32                     mContentLength;   // equals -1 if unknown
+    PRUint32                    mContentRead;     // count of consumed content bytes
 
     // we hold onto this context to know when eof has been reached
     nsHTTPChunkConvContext     *mChunkConvCtx;
 
+    PRInt32                     mTransactionDone; // atomically {in,de}cremented
+
     PRPackedBool                mHaveStatusLine;
     PRPackedBool                mHaveAllHeaders;
     PRPackedBool                mFiredOnStart;
+};
+
+//-----------------------------------------------------------------------------
+// nsAHttpTransactionSink recieves notifications from the transaction.  This
+// is, for example, implemented by nsHttpConnection.
+//-----------------------------------------------------------------------------
+
+class nsAHttpTransactionSink : public nsISupports
+{
+public:
+    virtual nsresult OnHeadersAvailable(nsHttpTransaction *) = 0;
+    virtual nsresult OnTransactionComplete(nsHttpTransaction *, nsresult) = 0;
 };
 
 #endif

@@ -1,6 +1,7 @@
 #ifndef nsHttpConnection_h__
 #define nsHttpConnection_h__
 
+#include "nsHttpTransaction.h"
 #include "nsIStreamListener.h"
 #include "nsIStreamProvider.h"
 #include "nsISocketTransport.h"
@@ -11,7 +12,6 @@
 
 class nsHttpHandler;
 class nsHttpConnectionInfo;
-class nsHttpTransaction;
 
 //-----------------------------------------------------------------------------
 // nsHttpConnection - represents a connection to a HTTP server (or proxy)
@@ -20,6 +20,7 @@ class nsHttpTransaction;
 class nsHttpConnection : public nsIStreamListener
                        , public nsIStreamProvider
                        , public PRCList
+                       , public nsAHttpTransactionSink
 {
 public:
     NS_DECL_ISUPPORTS
@@ -38,13 +39,10 @@ public:
 
     // called by the transaction to inform the connection that all of the
     // headers are available.
-    nsresult OnHeadersAvailable();
+    nsresult OnHeadersAvailable(nsHttpTransaction *);
 
     // called by the transaction to inform the connection that it is done.
-    nsresult OnTransactionComplete(nsresult status);
-
-    nsresult GetBytesWritten(PRUint32 *);
-    nsresult GetBytesRead(PRUint32 *);
+    nsresult OnTransactionComplete(nsHttpTransaction *, nsresult status);
 
     PRBool   CanReuse(); // can this connection be reused?
     PRBool   IsAlive();
@@ -78,6 +76,7 @@ private:
     PRUint32                     mReuseCount;
     PRUint32                     mMaxReuseCount; // value of keep-alive: max=
     PRUint32                     mIdleTimeout;   // value of keep-alive: timeout=
+    PRPackedBool                 mKeepAlive;
 };
 
 //-----------------------------------------------------------------------------

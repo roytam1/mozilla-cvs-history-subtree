@@ -2,7 +2,6 @@
 #include "nsPrintfCString.h"
 #include "nsReadableUtils.h"
 #include "nsPromiseSubstring.h"
-#include "nsPromiseFlatString.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpResponseHead
@@ -83,8 +82,7 @@ nsHttpResponseHead::ParseHeaderLine(const nsReadingIterator<char> &begin,
     nsReadingIterator<char> p = begin;
 
     if (FindCharInReadable(':', p, end)) {
-        nsHttpAtom atom = nsHttp::ResolveAtom(
-                PromiseFlatCString(Substring(begin, p)).get());
+        nsHttpAtom atom = nsHttp::ResolveAtom(Substring(begin, p));
         if (atom) {
             // skip over whitespace
             do {

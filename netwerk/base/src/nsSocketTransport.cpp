@@ -2176,7 +2176,9 @@ nsSocketBOS::SetObserver(nsIOutputStreamObserver *aObserver)
 //----------------------------------------------------------------------------
 //
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsSocketIS, nsIInputStream)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsSocketIS,
+                              nsIInputStream,
+                              nsISeekableStream)
 
 nsSocketIS::nsSocketIS()
     : mOffset(0)
@@ -2264,13 +2266,29 @@ nsSocketIS::SetObserver(nsIInputStreamObserver *aObserver)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsSocketIS::Seek(PRInt32 whence, PRInt32 offset)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsSocketIS::Tell(PRUint32 *offset)
+{
+    NS_ENSURE_ARG_POINTER(offset);
+    *offset = mOffset;
+    return NS_OK;
+}
+
 //
 //----------------------------------------------------------------------------
 // nsSocketOS
 //----------------------------------------------------------------------------
 //
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsSocketOS, nsIOutputStream)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsSocketOS,
+                              nsIOutputStream,
+                              nsISeekableStream)
 
 nsSocketOS::nsSocketOS()
     : mOffset(0)
@@ -2375,16 +2393,29 @@ nsSocketOS::SetObserver(nsIOutputStreamObserver *aObserver)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsSocketOS::Seek(PRInt32 whence, PRInt32 offset)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsSocketOS::Tell(PRUint32 *offset)
+{
+    NS_ENSURE_ARG_POINTER(offset);
+    *offset = mOffset;
+    return NS_OK;
+}
+
 //
 //----------------------------------------------------------------------------
 // nsSocketRequest
 //----------------------------------------------------------------------------
 //
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsSocketRequest,
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsSocketRequest,
                               nsIRequest,
-                              nsITransportRequest,
-                              nsISocketTransportRequest)
+                              nsITransportRequest)
 
 nsSocketRequest::nsSocketRequest()
     : mTransport(nsnull)
@@ -2657,17 +2688,6 @@ nsSocketReadRequest::OnRead()
     return rv;
 }
 
-NS_IMETHODIMP
-nsSocketReadRequest::GetTransferCount(PRUint32 *count)
-{
-    NS_ENSURE_ARG_POINTER(count);
-    if (mInputStream)
-        *count = mInputStream->GetOffset();
-    else
-        *count = 0;
-    return NS_OK;
-}
-
 //
 //----------------------------------------------------------------------------
 // nsSocketWriteRequest
@@ -2764,15 +2784,4 @@ nsSocketWriteRequest::OnWrite()
         }
     }
     return rv;
-}
-
-NS_IMETHODIMP
-nsSocketWriteRequest::GetTransferCount(PRUint32 *count)
-{
-    NS_ENSURE_ARG_POINTER(count);
-    if (mOutputStream)
-        *count = mOutputStream->GetOffset();
-    else
-        *count = 0;
-    return NS_OK;
 }

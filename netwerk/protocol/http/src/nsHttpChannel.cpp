@@ -138,7 +138,7 @@ nsHttpChannel::SetupTransaction()
     mRequestHead.SetVersion(HTTP_VERSION_1_1);
     mRequestHead.SetRequestURI(nsLocalCString(path ? path.get() : mSpec.get()));
 
-    return mTransaction->SetRequestInfo(&mRequestHead, nsnull);
+    return mTransaction->SetupRequest(&mRequestHead, nsnull);
 }
 
 nsresult
@@ -531,10 +531,12 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     // the connection.  otherwise, the connection can just be recycled.
     //
     // XXX need to support authentication
-    if (mTransaction->Connection()) {
+    /*
+    if (mTransaction->TransactionSink()) {
         nsHttpHandler::get()->RecycleConnection(mTransaction->Connection());
-        mTransaction->SetConnection(nsnull);
+        mTransaction->SetTransactionSink(nsnull);
     }
+    */
 
     return NS_OK;
 }

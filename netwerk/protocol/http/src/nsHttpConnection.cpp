@@ -20,6 +20,7 @@ nsHttpConnection::nsHttpConnection()
     , mReuseCount(0)
     , mMaxReuseCount(0)
     , mIdleTimeout(0)
+    , mKeepAlive(0)
 {
     NS_INIT_ISUPPORTS();
     PR_INIT_CLIST(this);
@@ -63,44 +64,54 @@ nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
     NS_ADDREF(mTransaction); // XXX may want to make this weak
 
     // assign ourselves to the transaction
-    mTransaction->SetConnection(this);
+    mTransaction->SetTransactionSink(this);
 
     return ActivateConnection();
 }
 
+// called from the socket thread
+nsresult
+nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
+{
+    LOG(("nsHttpConnection::OnHeadersAvailable [this=%x trans=%x]\n",
+        this, trans));
+
+    NS_ENSURE_ARG_POINTER(trans);
+
+    // be pesimistic
+    mKeepAlive = PR_FALSE;
+
+    // inspect the connection headers for keep-alive info provided the
+    // transaction completed successfully.
+    const char *val = trans->ResponseHead()->PeekHeader(nsHttp::Connection);
+    if (val) {
+        if (PL_strcmp(val, "keep-alive") == 0) {
+            mKeepAlive = PR_TRUE;
+
+            val = trans->ResponseHead()->PeekHeader(nsHttp::Keep_Alive);
+
+            const char *cp = PL_strstr(val, "max=");
+            if (cp)
+                mMaxReuseCount = (PRUint32) atoi(cp + 4);
+
+            cp = PL_strstr(val, "timeout=");
+            if (cp)
+                mIdleTimeout = (PRUint32) atoi(cp + 8);
+        }
+    }
+
+    return NS_OK;
+}
+
 // called from any thread
 nsresult
-nsHttpConnection::OnTransactionComplete(nsresult status)
+nsHttpConnection::OnTransactionComplete(nsHttpTransaction *trans, nsresult status)
 {
     LOG(("nsHttpConnection::OnTransactionComplete [this=%x status=%x]\n",
         this, status));
 
-    NS_PRECONDITION(mSocketTransport, "what? no socket transport!");
-    NS_PRECONDITION(mTransaction, "what? no http transaction!");
-
-    PRBool closeConnection = PR_TRUE;
-
-    // inspect the connection headers for keep-alive info provided the
-    // transaction completed successfully.
-    if (NS_SUCCEEDED(status)) {
-        const char *val =
-                mTransaction->ResponseHead()->PeekHeader(nsHttp::Connection);
-        if (val) {
-            if (PL_strcmp(val, "keep-alive") == 0) {
-                closeConnection = PR_FALSE;
-
-                val = mTransaction->ResponseHead()->PeekHeader(nsHttp::Keep_Alive);
-
-                const char *cp = PL_strstr(val, "max=");
-                if (cp)
-                    mMaxReuseCount = (PRUint32) atoi(cp + 4);
-
-                cp = PL_strstr(val, "timeout=");
-                if (cp)
-                    mIdleTimeout = (PRUint32) atoi(cp + 8);
-            }
-        }
-    }
+    NS_ENSURE_TRUE(mSocketTransport, NS_ERROR_UNEXPECTED);
+    NS_ENSURE_TRUE(trans == mTransaction, NS_ERROR_UNEXPECTED);
 
     // cancel the requests... this will cause OnStopRequest to be fired
     if (mWriteRequest) {
@@ -112,41 +123,13 @@ nsHttpConnection::OnTransactionComplete(nsresult status)
         mReadRequest = 0;
     }
 
-    if (closeConnection) {
+    if (!mKeepAlive) {
         // if we're not going to be keeping this connection alive...
         mSocketTransport->SetReuseConnection(PR_FALSE);
         mSocketTransport = 0;
     }
 
     return NS_OK;
-}
-
-nsresult
-nsHttpConnection::GetBytesRead(PRUint32 *bytesRead)
-{
-    if (!mReadRequest)
-        return NS_ERROR_NOT_AVAILABLE;
-
-    nsresult rv;
-    nsCOMPtr<nsISocketTransportRequest> req =
-            do_QueryInterface(mReadRequest, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    return req->GetTransferCount(bytesRead);
-}
-
-nsresult
-nsHttpConnection::GetBytesWritten(PRUint32 *bytesWritten)
-{
-    if (!mWriteRequest)
-        return NS_ERROR_NOT_AVAILABLE;
-
-    nsresult rv;
-    nsCOMPtr<nsISocketTransportRequest> req =
-            do_QueryInterface(mWriteRequest, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    return req->GetTransferCount(bytesWritten);
 }
 
 PRBool

@@ -39,6 +39,7 @@
 #include "nsIPipe.h"
 #include "nsIProgressEventSink.h"
 #include "nsIInterfaceRequestor.h"
+#include "nsIFileStreams.h"
 
 #define NS_SOCKET_TRANSPORT_SEGMENT_SIZE        (2*1024)
 #define NS_SOCKET_TRANSPORT_BUFFER_SIZE         (8*1024)
@@ -325,10 +326,12 @@ public:
  * input stream, passed to nsIStreamListener::OnDataAvailable()
  */
 class nsSocketIS : public nsIInputStream
+                 , public nsISeekableStream
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIINPUTSTREAM
+    NS_DECL_NSISEEKABLESTREAM
 
     nsSocketIS();
     virtual ~nsSocketIS() { }
@@ -350,10 +353,12 @@ private:
  * output stream, passed to nsIStreamProvider::OnDataWritable()
  */
 class nsSocketOS : public nsIOutputStream
+                 , public nsISeekableStream
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIOUTPUTSTREAM
+    NS_DECL_NSISEEKABLESTREAM
 
     nsSocketOS();
     virtual ~nsSocketOS() { }
@@ -377,7 +382,7 @@ private:
 /**
  * base request
  */
-class nsSocketRequest : public nsISocketTransportRequest
+class nsSocketRequest : public nsITransportRequest
 {
 public:
     NS_DECL_ISUPPORTS
@@ -418,8 +423,6 @@ protected:
 class nsSocketReadRequest : public nsSocketRequest
 {
 public:
-    NS_DECL_NSISOCKETTRANSPORTREQUEST
-
     nsSocketReadRequest();
     virtual ~nsSocketReadRequest();
 
@@ -440,8 +443,6 @@ private:
 class nsSocketWriteRequest : public nsSocketRequest
 {
 public:
-    NS_DECL_NSISOCKETTRANSPORTREQUEST
-
     nsSocketWriteRequest();
     virtual ~nsSocketWriteRequest();
 
