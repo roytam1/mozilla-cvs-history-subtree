@@ -20,6 +20,9 @@
 
 static void gdk_superwin_class_init(GdkSuperWinClass *klass);
 static void gdk_superwin_init(GdkSuperWin *superwin);
+static Bool gdk_superwin_expose_predicate(Display *display, 
+                                          XEvent  *xevent, 
+                                          XPointer arg);
 
 typedef struct _GdkSuperWinTranslate GdkSuperWinTranslate;
 
@@ -34,21 +37,21 @@ GtkType
 gdk_superwin_get_type(void)
 {
   static GtkType superwin_type = 0;
-
+  
   if (!superwin_type)
     {
       static const GtkTypeInfo superwin_info =
       {
-	"GtkSuperWin",
-	sizeof(GdkSuperWin),
-	sizeof(GdkSuperWinClass),
-	(GtkClassInitFunc) gdk_superwin_class_init,
-	(GtkObjectInitFunc) gdk_superwin_init,
-	/* reserved_1 */ NULL,
-        /* reserved_2 */ NULL,
-        (GtkClassInitFunc) NULL
+        "GtkSuperWin",
+          sizeof(GdkSuperWin),
+          sizeof(GdkSuperWinClass),
+          (GtkClassInitFunc) gdk_superwin_class_init,
+          (GtkObjectInitFunc) gdk_superwin_init,
+          /* reserved_1 */ NULL,
+          /* reserved_2 */ NULL,
+          (GtkClassInitFunc) NULL
       };
-
+      
       superwin_type = gtk_type_unique (gtk_object_get_type(), &superwin_info);
     }
   return superwin_type;
@@ -72,24 +75,24 @@ gdk_superwin_init(GdkSuperWin *superwin)
 }
 
 static GdkFilterReturn  gdk_superwin_bin_filter   (GdkXEvent *gdk_xevent,
-						   GdkEvent  *event,
-						   gpointer   data);
+                                                   GdkEvent  *event,
+                                                   gpointer   data);
 static GdkFilterReturn  gdk_superwin_shell_filter (GdkXEvent *gdk_xevent,
-						   GdkEvent  *event,
-						   gpointer   data);
+                                                   GdkEvent  *event,
+                                                   gpointer   data);
 static void             gdk_superwin_expose_area  (GdkSuperWin *superwin,
-						   gint         x,
-						   gint         y,
-						   gint         width,
-						   gint         height);
+                                                   gint         x,
+                                                   gint         y,
+                                                   gint         width,
+                                                   gint         height);
 static gboolean gravity_works;
 
 GdkSuperWin *
 gdk_superwin_new (GdkWindow *parent_window,
-		  guint      x,
-		  guint      y,
-		  guint      width,
-		  guint      height)
+                  guint      x,
+                  guint      y,
+                  guint      width,
+                  guint      height)
 {
   GdkWindowAttr attributes;
   gint attributes_mask;
@@ -159,21 +162,39 @@ gdk_superwin_scroll (GdkSuperWin *superwin,
 
   gdk_window_get_size (superwin->shell_window, &width, &height);
 
+  g_print("scrolling x %d y %d\n", dx, dy);
+
+  XFlush(GDK_DISPLAY());
+
   if (dx > 0 || dy > 0) 
     {
       translate = g_new (GdkSuperWinTranslate, 1);
       translate->dx = MAX (0, dx);
       translate->dy = MAX (0, dy);
       translate->serial = NextRequest (GDK_DISPLAY());
+      g_print("adding serial %lx with vals %d %d to translate queue\n",
+              translate->serial, translate->dx, translate->dy);
       superwin->translate_queue = g_list_append (superwin->translate_queue, translate);
     }
+
+  g_print("move_resizing window to %d, %d %d, %d\n",
+          MIN (0, -dx), MIN (0, -dy),
+          width + ABS(dx), height + ABS(dy));
+
 
   gdk_window_move_resize (superwin->bin_window,
 			  MIN (0, -dx), MIN (0, -dy),
 			  width + ABS(dx), height + ABS(dy));
 
+  XFlush(GDK_DISPLAY());
+
+  g_print("move window to %d, %d\n",
+          MIN (0, -dx) + dx, MIN (0, -dy) + dy);
+
   gdk_window_move (superwin->bin_window,
 		   MIN (0, -dx) + dx, MIN (0, -dy) + dy);  
+
+  XFlush(GDK_DISPLAY());
 
   if (dx < 0 || dy < 0) 
     {
@@ -181,11 +202,18 @@ gdk_superwin_scroll (GdkSuperWin *superwin,
       translate->dx = MIN (0, dx);
       translate->dy = MIN (0, dy);
       translate->serial = NextRequest (GDK_DISPLAY());
+      g_print("adding serial %lx with vals %d %d to translate queue\n",
+              translate->serial, translate->dx, translate->dy);
       superwin->translate_queue = g_list_append (superwin->translate_queue, translate);
     }
 
+  g_print("move_resizing window to %d,%d %d,%d\n",
+          0, 0, width, height);
+
   gdk_window_move_resize (superwin->bin_window,
 			  0, 0, width, height);
+
+  XFlush(GDK_DISPLAY());
 
   if (dx < 0)
     gdk_superwin_expose_area (superwin,
@@ -235,11 +263,12 @@ void gdk_superwin_resize (GdkSuperWin *superwin,
 
 static void
 gdk_superwin_expose_area  (GdkSuperWin *superwin,
-			   gint         x,
-			   gint         y,
-			   gint         width,
-			   gint         height)
+                           gint         x,
+                           gint         y,
+                           gint         width,
+                           gint         height)
 {
+  
 }
 
 static GdkFilterReturn 
@@ -251,31 +280,58 @@ gdk_superwin_bin_filter (GdkXEvent *gdk_xevent,
   GdkSuperWin *superwin = data;
   GdkSuperWinTranslate *translate;
   GList *tmp_list;
+  
+  g_print("filter for serial %lx\n",
+          xevent->xany.serial);
+
+  /* XXX implement this hell
+
+     Ok, this is ugly.  Because of some race conditions in the layout
+     engine in mozilla, we need to go out and make sure that we get
+     the last ConfigureNotify event for this window.  If you don't
+     then the layout engine and the front end will get into a
+     deathgrip from which you can never return.  However, the fact
+     that gaffaw scrolling is in effect with translated expose events
+     makes life interesting.
+
+     If we go out and get the extra ConfigureNotify events we have to
+     get the Expose events that are also part of that logical request.
+     We do this by taking the old serial number from the
+     ConfigureNotify event and the new ConfigureNotify event and use
+     those as the basis for a predicate.  The predicate will never
+     return true but it will find all of the Expose events that fall
+     into that range of serials, create an entry in a the expose
+     translation list for them ( by serial since we already know the
+     expose serial number in the predicate ) and then process as
+     normal.  The expose handler will be processed as part of the
+     event loop as normal.  Every time it is called it will walk the
+     list and make any adjustments to its x/y that are required.
+
+  */
 
   switch (xevent->xany.type) {
   case Expose:
     tmp_list = superwin->translate_queue;
+    g_print("got an expose event at %d,%d %d,%d\n",
+          xevent->xexpose.x, xevent->xexpose.y,
+          xevent->xexpose.width, xevent->xexpose.height);
     while (tmp_list) {
       translate = tmp_list->data;
       
       xevent->xexpose.x += translate->dx;
       xevent->xexpose.y += translate->dy;
-      
+      g_print("translated event to %d,%d %d,%d\n",
+              xevent->xexpose.x, xevent->xexpose.y,
+              xevent->xexpose.width, xevent->xexpose.height);
       tmp_list = tmp_list->next;
     }
     break;
-    
+
   case ConfigureNotify:
-    if (superwin->translate_queue) {
-      translate = superwin->translate_queue->data;
-      if (xevent->xany.serial == translate->serial) {
-	      tmp_list = superwin->translate_queue;
-	      superwin->translate_queue = g_list_remove_link (tmp_list, tmp_list);
-	      g_free (tmp_list->data);
-	      g_list_free_1 (tmp_list);
-	    }
-      break;
-    }
+    g_print("got a configurenotify with serial %lx\n",
+            xevent->xany.serial);
+    gdk_superwin_clear_translate_queue(superwin, xevent->xany.serial);
+    break;
   }
 
   if (superwin->event_func) {
@@ -316,4 +372,36 @@ gdk_superwin_shell_filter (GdkXEvent *gdk_xevent,
     }
   
   return GDK_FILTER_CONTINUE;
+}
+
+void
+gdk_superwin_clear_translate_queue(GdkSuperWin *superwin, unsigned long serial)
+{
+  GdkSuperWinTranslate *translate;
+  GList *tmp_list;
+  GList *link_to_remove = NULL;
+
+  if (superwin->translate_queue) {
+    tmp_list = superwin->translate_queue;
+    while (tmp_list) {
+      translate = tmp_list->data;
+      if (serial == translate->serial) {
+        g_print("removing serial %lx\n",
+                serial);
+        g_free (tmp_list->data);
+        superwin->translate_queue = g_list_remove_link (superwin->translate_queue, tmp_list);
+        link_to_remove = tmp_list;
+      }
+      tmp_list = tmp_list->next;
+      if (link_to_remove) {
+        g_list_free_1(link_to_remove);
+        link_to_remove = NULL;
+      }
+    }
+  }
+}
+
+Bool gdk_superwin_expose_predicate(Display *display, XEvent  *xevent, XPointer arg)
+{
+  
 }

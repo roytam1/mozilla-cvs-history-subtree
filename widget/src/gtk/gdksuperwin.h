@@ -39,7 +39,6 @@ typedef struct _GdkSuperWinClass GdkSuperWinClass;
 typedef void (*GdkSuperWinFunc) (GdkSuperWin *super_win,
                                  XEvent      *event,
                                  gpointer     data);
-
 struct _GdkSuperWin
 {
   GtkObject object;
@@ -80,6 +79,8 @@ void gdk_superwin_resize (GdkSuperWin *superwin,
                           gint         width,
                           gint         height);
 void gdk_superwin_destroy(GdkSuperWin *superwin);
+void gdk_superwin_clear_translate_queue(GdkSuperWin *superwin,
+                                        unsigned long serial);
 
 #ifdef __cplusplus
 }
