@@ -80,7 +80,7 @@ namespace JS2Runtime {
     ((JSDOUBLE_HI32(x) & JSDOUBLE_HI32_EXPMASK) != JSDOUBLE_HI32_EXPMASK)
 
 #define JSDOUBLE_IS_NEGZERO(d)  (JSDOUBLE_HI32(d) == JSDOUBLE_HI32_SIGNBIT && \
-				 JSDOUBLE_LO32(d) == 0)
+                                 JSDOUBLE_LO32(d) == 0)
 
 
 static const double two32minus1 = 4294967295.0;
@@ -135,7 +135,7 @@ static const double two31 = 2147483648.0;
             type_tag,
             boolean_tag,
             string_tag,
-            null_tag,
+            null_tag
         } Tag;
         Tag tag;
         
