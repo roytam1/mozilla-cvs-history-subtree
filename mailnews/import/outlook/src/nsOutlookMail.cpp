@@ -1051,6 +1051,8 @@ nsresult nsOutlookMail::CreateList( const PRUnichar * pName,
     hr = pUserList->GetProps(properties, 0, &aValueCount, &aValue) ;
 
     SBinaryArray *sa=(SBinaryArray *)&aValue->Value.bin;
+  if (!sa || !sa->lpbin)
+    return NS_ERROR_NULL_POINTER;
 
     LPENTRYID    lpEid;
     ULONG        cbEid;
@@ -1075,8 +1077,6 @@ nsresult nsOutlookMail::CreateList( const PRUnichar * pName,
             IMPORT_LOG1( "*** Error opening messages in mailbox: %S\n", pName);
             return( NS_ERROR_FAILURE);
         }
-        {
-            {
                 // This is a contact, add it to the address book!
                 subject.Truncate( 0);
                 pVal = m_mapi.GetMapiProperty( lpMsg, PR_SUBJECT);
@@ -1118,8 +1118,6 @@ nsresult nsOutlookMail::CreateList( const PRUnichar * pName,
 
 
             }
-        }
-    }
   
   rv = pDb->AddCardRowToDB(newListRow);
   NS_ENSURE_SUCCESS(rv, rv);
