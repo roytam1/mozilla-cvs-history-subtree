@@ -166,9 +166,6 @@ components/wallet.xpt
 ;components/nsDownloadProgressListener.js
 ;components/downloadmanager.xpt
 
-; proxy auto-config
-components/nsProxyAutoConfig.js
-
 ; psm2
 ; Optional - only if you need PSM2 support
 components/libpipboot.dylib
