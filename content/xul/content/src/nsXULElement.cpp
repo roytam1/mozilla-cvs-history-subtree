@@ -4830,7 +4830,8 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
     // XXX is this right? or should we use the protodoc's?
     nsCOMPtr<nsIPrincipal> principal;
     rv = aDocument->GetPrincipal(getter_AddRefs(principal));
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv))
+        return rv;
 
     nsXPIDLCString urlspec;
     aURI->GetSpec(getter_Copies(urlspec));
@@ -4843,21 +4844,21 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
                                 urlspec,
                                 PRUint32(aLineNo),
                                 mLangVersion,
-                                (void**) &mJSObject);
+                                (void**)&mJSObject);
 
     if (NS_FAILED(rv)) return rv;
 
-#if 0
-    if (mScriptObject) {
+    if (mJSObject) {
         // Root the compiled prototype script object.
-        JSContext* cx = NS_REINTERPRET_CAST(JSContext*, context->GetNativeContext());
+        JSContext* cx = NS_REINTERPRET_CAST(JSContext*,
+                                            context->GetNativeContext());
         if (!cx)
             return NS_ERROR_UNEXPECTED;
 
-        rv = AddJSGCRoot(cx, &mScriptObject, "nsXULPrototypeScript::mScriptObject");
-        if (NS_FAILED(rv)) return rv;
+        rv = AddJSGCRoot(cx, &mJSObject, "nsXULPrototypeScript::mJSObject");
+        if (NS_FAILED(rv))
+            return rv;
     }
-#endif
 
     return NS_OK;
 
