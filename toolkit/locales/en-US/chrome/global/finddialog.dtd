@@ -11,7 +11,6 @@
 <!ENTITY backwardsCheckbox.label "Search backwards">
 <!ENTITY backwardsCheckbox.accesskey "b">
 <!ENTITY findField.tooltip "Type one or more words to search for">
-<!ENTITY cancelButton.label "Cancel">
 <!ENTITY findButton.label "Find Next">
 <!ENTITY findButton.accesskey "F">
 <!ENTITY cancelButton.label "Cancel">
