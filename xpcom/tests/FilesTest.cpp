@@ -421,7 +421,7 @@ int FilesTest::Copy(const char* file, const char* dir)
 {
     nsFileSpec dirPath(dir, true);
 		
-	dirPath.CreateDirectory(true);
+	dirPath.CreateDirectory();
     if (! dirPath.Exists())
 	{
 		Failed();
@@ -445,7 +445,7 @@ int FilesTest::Copy(const char* file, const char* dir)
     nsresult error = filePath.Copy(dirPath);
 
     dirPath += filePath.GetLeafName();
-    if (! dirPath.Exists() && filePath.Exists() || NS_FAILED(error))
+    if (! dirPath.Exists() || ! filePath.Exists() || NS_FAILED(error))
 	{
 		Failed();
 		return -1;
@@ -462,7 +462,7 @@ int FilesTest::Move(const char* file, const char* dir)
 {
     nsFileSpec dirPath(dir, true);
 		
-	dirPath.CreateDirectory(true);
+	dirPath.CreateDirectory();
     if (! dirPath.Exists())
 	{
 		Failed();
@@ -584,8 +584,10 @@ int FilesTest::RunAllTests()
 	// Change path to suit.
     if NS_FAILED(Execute("/Projects/Nav45_BRANCH/ns/cmd/macfe/"\
         "projects/client45/Client45PPC", ""))
-#else
+#elseif XP_WIN
     if NS_FAILED(Execute("c:\\windows\\notepad.exe", ""))
+#else
+    if NS_FAILED(Execute("/bin/ls", "/"))
 #endif
         return -1;
 
