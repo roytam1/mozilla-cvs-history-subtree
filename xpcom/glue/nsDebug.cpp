@@ -182,9 +182,7 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
    ASSERT_PRINTF("%s", buf);
    ASSERT_FLUSH();
 
-#if defined(XP_MAC)
-   dprintf("ASSERT: %s", buf);
-#elif defined(_WIN32)
+#if defined(_WIN32)
    if(!InDebugger())
    {
      char msg[1200];
@@ -234,19 +232,21 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
       }
 #endif
 
+#if defined(XP_MAC)
+   dprintf("ASSERT: %s", buf);
+#else
    Break(aFile, aLine);
+#endif
 }
 
 NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 {
-#ifdef XP_MAC
-    dprintf("BREAK: at file %s, line %d", aFile, aLine);
-#else
-
     BREAK_PRINTF("at file %s, line %d", aFile, aLine);
     BREAK_FLUSH();
 
-#if defined(_WIN32)
+#ifdef XP_MAC
+    dprintf("BREAK: at file %s, line %d", aFile, aLine);
+#elif defined(_WIN32)
 #ifdef _M_IX86
     ::DebugBreak();
 #else /* _M_ALPHA */
@@ -309,7 +309,6 @@ NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 #else
   Abort(aFile, aLine);
 #endif
-#endif // XP_MAC
 }
 
 NS_COM void nsDebug::Warning(const char* aMessage,
