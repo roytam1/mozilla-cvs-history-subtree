@@ -40,9 +40,10 @@
 #define OPAQUE_CONTEXT MWContext /* The old MWContext. */
 #endif /* IL_INTERNAL */
 
-XP_BEGIN_PROTOS
 
 #ifndef STANDALONE_IMAGE_LIB
+XP_BEGIN_PROTOS
+
 /********************** Image Library stream converters. *********************/
 extern int IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out,
                                         URL_Struct *urls,
