@@ -316,7 +316,7 @@ endif
 # CVS defines for SeaMonkey
 #
 ifeq ($(MOZ_CO_MODULE),)
-  MOZ_CO_MODULE := SeaMonkeyAll
+  MOZ_CO_MODULE := SeaMonkeyAll mozilla/tools/trace-malloc
 endif
 CVSCO_SEAMONKEY := $(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZ_CO_MODULE)
 
