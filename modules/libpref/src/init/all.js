@@ -1140,7 +1140,7 @@ pref("font.name.fantasy.zh-TW", "XXX.fantasy");
 pref("font.name.serif.zh-HK", "Ming(for ISO10646)");
 pref("font.name.sans-serif.zh-HK", "Apple LiGothic Medium");  
 pref("font.name.monospace.zh-HK", "Apple LiGothic Medium");  
-pref("font.name.cursive.zh-HK", "XXX.cursive");s
+pref("font.name.cursive.zh-HK", "XXX.cursive");
 pref("font.name.fantasy.zh-HK", "XXX.fantasy");
 
 pref("font.default", "serif");
