@@ -122,6 +122,7 @@
 #include "nsIPluginHost.h"
 #include "nsPIPluginHost.h"
 
+#ifdef OJI
 // HTMLAppletElement helper includes
 #include "nsIJVMManager.h"
 
@@ -130,8 +131,9 @@
 
 #include "nsILiveConnectManager.h"
 #include "nsIJVMPluginInstance.h"
+#endif
 
-// HTMLOptionCollection includes
+// HTMLOptionsCollection includes
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMNSHTMLOptionElement.h"
 #include "nsIDOMHTMLOptionsCollection.h"
@@ -318,6 +320,8 @@
 #endif
 
 #include "nsIImageDocument.h"
+
+#include "nsIXPointer.h"
 
 static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 static NS_DEFINE_CID(kDOMSOF_CID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -827,6 +831,10 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(ImageDocument, nsHTMLDocumentSH,
                            DOCUMENT_SCRIPTABLE_FLAGS |
                            nsIXPCScriptable::WANT_ENUMERATE)
+
+                            
+  NS_DEFINE_CLASSINFO_DATA(XPointerResult, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
@@ -1697,8 +1705,8 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(HTMLOptionElement, nsIDOMHTMLOptionElement)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLOptionElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLOptionElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLOptionElement)
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
@@ -2222,6 +2230,10 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_BEGIN(ContentList, nsIDOMHTMLCollection)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNodeList)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLCollection)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN_NO_CLASS_IF(XPointerResult, nsIXPointerResult)
+    DOM_CLASSINFO_MAP_ENTRY(nsIXPointerResult)
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(ImageDocument, nsIImageDocument)
@@ -5761,13 +5773,16 @@ nsHTMLAppletElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
                                          JSObject **plugin_obj,
                                          JSObject **plugin_proto)
 {
+#ifdef OJI
   *plugin_obj = nsnull;
   *plugin_proto = nsnull;
 
   nsCOMPtr<nsIJVMManager> jvm(do_GetService(nsIJVMManager::GetCID()));
 
   if (!jvm) {
+#endif
     return NS_OK;
+#ifdef OJI
   }
 
   nsCOMPtr<nsIJVMPluginInstance> javaPluginInstance;
@@ -5793,6 +5808,7 @@ nsHTMLAppletElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
   }
 
   return manager->WrapJavaObject(cx, appletObject, plugin_obj);
+#endif /* OJI */
 }
 
 

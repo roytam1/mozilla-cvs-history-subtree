@@ -128,6 +128,7 @@
 #include "nsIAutoCopy.h"
 #include "nsIPrintPreviewContext.h"
 #include "nsCSSLoader.h"
+#include "nsIModifyableXPointer.h"
 #include "nsXULAtoms.h"
 #include "nsLayoutCID.h"
 
@@ -147,6 +148,10 @@ class nsIDocumentLoaderFactory;
 
 #define NS_HTMLOPTIONELEMENT_CONTRACTID \
   "@mozilla.org/content/element/html;1?name=option"
+
+/* 0ddf4df8-4dbb-4133-8b79-9afb966514f5 */
+#define NS_PLUGINDOCLOADERFACTORY_CID \
+{ 0x0ddf4df8, 0x4dbb, 0x4133, { 0x8b, 0x79, 0x9a, 0xfb, 0x96, 0x65, 0x14, 0xf5 } }
 
 
 #ifdef MOZ_XUL
@@ -246,6 +251,9 @@ Initialize(nsIModule* aSelf)
   nsSVGAtoms::AddRefAtoms();
 #endif
 
+#ifdef DEBUG
+  nsFrame::DisplayReflowStartup();
+#endif
   nsCSSFrameConstructor::InitGlobals();
   nsTextTransformer::Initialize();
 
@@ -282,6 +290,9 @@ Shutdown(nsIModule* aSelf)
   nsContentList::Shutdown();
   nsComputedDOMStyle::Shutdown();
   CSSLoaderImpl::Shutdown();
+#ifdef DEBUG
+  nsFrame::DisplayReflowShutdown();
+#endif
 
   // Release all of our atoms
   nsColorNames::ReleaseTable();
@@ -371,6 +382,7 @@ nsresult NS_NewContentPolicy(nsIContentPolicy** aResult);
 nsresult NS_NewFrameLoader(nsIFrameLoader** aResult);
 nsresult NS_NewSyncLoadDOMService(nsISyncLoadDOMService** aResult);
 nsresult NS_NewDOMEventGroup(nsIDOMEventGroup** aResult);
+nsresult NS_NewXPointerResult(nsIXPointerResult **aResult);
 
 nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult);
 nsresult NS_CreateCSSFrameConstructor(nsICSSFrameConstructor** aResult);
@@ -472,6 +484,8 @@ MAKE_CTOR(CreateNewSVGRendererLibart,   nsISVGRenderer,         NS_NewSVGRendere
 #endif // MOZ_SVG_RENDERER_LIBART
 #endif
 MAKE_CTOR(CreateCaret,                  nsICaret,               NS_NewCaret)
+
+MAKE_CTOR(CreateXPointerResult,           nsIXPointerResult,           NS_NewXPointerResult)
 MAKE_CTOR(CreateNameSpaceManager,         nsINameSpaceManager,         NS_GetNameSpaceManager)
 MAKE_CTOR(CreateEventListenerManager,     nsIEventListenerManager,     NS_NewEventListenerManager)
 MAKE_CTOR(CreateEventStateManager,        nsIEventStateManager,        NS_NewEventStateManager)
@@ -546,6 +560,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsInspectorCSSUtils)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWyciwygProtocolHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsContentAreaDragDrop)
 MAKE_CTOR(CreateSyncLoadDOMService,       nsISyncLoadDOMService,       NS_NewSyncLoadDOMService)
+MAKE_CTOR(CreatePluginDocument,           nsIDocument,                 NS_NewPluginDocument)
 
 // views are not refcounted, so this is the same as
 // NS_GENERIC_FACTORY_CONSTRUCTOR without the NS_ADDREF/NS_RELEASE
@@ -830,6 +845,11 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_DOMEVENTGROUP_CID,
     nsnull,
     CreateDOMEventGroup },
+
+  { "XPointer Result",
+    NS_XPOINTERRESULT_CID,
+    nsnull,
+    CreateXPointerResult },
 
   { "Document Viewer",
     NS_DOCUMENT_VIEWER_CID,
@@ -1234,7 +1254,17 @@ static const nsModuleComponentInfo gComponents[] = {
   { "Scrolling View", NS_SCROLLING_VIEW_CID, "@mozilla.org/scrolling-view;1",
     nsScrollingViewConstructor },
   { "Scroll Port View", NS_SCROLL_PORT_VIEW_CID,
-    "@mozilla.org/scroll-port-view;1", nsScrollPortViewConstructor }
+    "@mozilla.org/scroll-port-view;1", nsScrollPortViewConstructor },
+
+  { "Plugin Document Loader Factory",
+    NS_PLUGINDOCLOADERFACTORY_CID,
+    "@mozilla.org/content/plugin/document-loader-factory;1",
+    CreateContentDLF },
+
+  { "Plugin Document",
+    NS_PLUGINDOCUMENT_CID,
+    nsnull,
+    CreatePluginDocument }
 };
 
 NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsLayoutModule, gComponents, Initialize, Shutdown)
