@@ -53,6 +53,7 @@
 #include "ContentClickListener.h"
 #include "nsIDOMWindow.h"
 #include "nsIWebBrowser.h"
+#include "nsIWebBrowserSetup.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIChromeEventHandler.h"
@@ -112,6 +113,11 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     mListenersAttached = NO;
     mSecureState = nsIWebProgressListener::STATE_IS_INSECURE;
 
+    BOOL gotPref;
+    BOOL pluginsEnabled = [[PreferenceManager sharedInstance] getBooleanPref:"chimera.enable_plugins" withSuccess:&gotPref];
+    if (gotPref && !pluginsEnabled)
+      [mBrowserView setProperty:nsIWebBrowserSetup::SETUP_ALLOW_PLUGINS toValue:PR_FALSE];
+    
     mToolTip = [[ToolTip alloc] init];
 
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];

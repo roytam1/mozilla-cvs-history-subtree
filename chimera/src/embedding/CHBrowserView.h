@@ -150,6 +150,9 @@ enum {
 - (void)stop:(unsigned int)flags;
 - (NSString*)getCurrentURI;
 
+// nsIWebBrowserSetup methods
+- (void)setProperty:(unsigned int)property toValue:(unsigned int)value;
+
 - (void)saveDocument: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList;
 - (void)saveURL: (NSView*)aFilterView filterList: (NSPopUpButton*)aFilterList
             url: (NSString*)aURLSpec suggestedFilename: (NSString*)aFilename;

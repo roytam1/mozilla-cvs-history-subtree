@@ -40,6 +40,7 @@
 #include "nsCWebBrowser.h"
 #include "nsIBaseWindow.h"
 #include "nsIWebNavigation.h"
+#include "nsIWebBrowserSetup.h"
 #include "nsComponentManagerUtils.h"
 
 #include "nsIURI.h"
@@ -94,6 +95,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   mWindow = aWindow;
   return [self initWithFrame:frame];
 }
+
 
 - (id)initWithFrame:(NSRect)frame
 {
@@ -317,6 +319,13 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   if (NS_FAILED(rv)) {
     // XXX need to throw
   }    
+}
+
+- (void)setProperty:(unsigned int)property toValue:(unsigned int)value
+{
+	nsCOMPtr<nsIWebBrowserSetup> browserSetup = do_QueryInterface(_webBrowser);
+	if (browserSetup)
+    browserSetup->SetProperty(property, value);
 }
 
 - (NSString*)getCurrentURI
