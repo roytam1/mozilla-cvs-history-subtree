@@ -262,10 +262,12 @@
       <rdf:Seq>
         <rdf:li> <rdf:Description ID="menu-file-new-window" nc:name="New Window" nc:link="menu_reference.xhtml#new_window"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-new-tab" nc:name="New Tab" nc:link="menu_reference.xhtml#new_tab"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-file-open-location" nc:name="Open Location..." nc:link="menu_reference.xhtml#open_location"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-open-file" nc:name="Open File..." nc:link="menu_reference.xhtml#open_file"/> </rdf:li>
-        <rdf:li> <rdf:Description ID="menu-file-close" nc:name="Close" nc:link="menu_reference.xhtml#close"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-file-close-tab" nc:name="Close Tab" nc:link="menu_reference.xhtml#close_tab"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-file-close" nc:name="Close Window" nc:link="menu_reference.xhtml#close"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-save-page-as" nc:name="Save Page As..." nc:link="menu_reference.xhtml#save_page_as"/> </rdf:li>
-        <rdf:li> <rdf:Description ID="menu-file-send-page" nc:name="Send Page..." nc:link="menu_reference.xhtml#send_page"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-file-send-page" nc:name="Send Link..." nc:link="menu_reference.xhtml#send_page"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-page-setup" nc:name="Page Setup..." nc:link="menu_reference.xhtml#page_setup"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-print-preview" nc:name="Print Preview" nc:link="menu_reference.xhtml#print_preview"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-file-print" nc:name="Print..." nc:link="menu_reference.xhtml#print"/> </rdf:li>
@@ -350,6 +352,8 @@
     <nc:subheadings>
       <rdf:Seq>
         <rdf:li> <rdf:Description ID="menu-tools-web-search" nc:name="Web Search" nc:link="menu_reference.xhtml#web_search"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-tools-read-mail" nc:name="Read Mail" nc:link="menu_reference.xhtml#read_mail"/> </rdf:li>
+        <rdf:li> <rdf:Description ID="menu-tools-new-message" nc:name="New Message..." nc:link="menu_reference.xhtml#new_message"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-tools-downloads" nc:name="Downloads" nc:link="menu_reference.xhtml#downloads"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-tools-extensions" nc:name="Extensions" nc:link="menu_reference.xhtml#extensions"/> </rdf:li>
         <rdf:li> <rdf:Description ID="menu-tools-themes" nc:name="Themes" nc:link="menu_reference.xhtml#themes"/> </rdf:li>
