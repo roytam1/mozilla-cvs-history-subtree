@@ -161,9 +161,14 @@ NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
-LIBNLS_INCLUDES_LOC = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+ifdef RELEASE_TREE
+LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+else
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
 
+endif
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
 ifeq ($(COMPONENT_PULL_METHOD), FTP)
 LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
@@ -270,7 +275,7 @@ endif
 RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
 
 ifeq ($(OS_ARCH), SunOS)
-# include $ORIGIN in run time library path (works on Solaris 8 10/01 and later)
+# include $ORIGIN in run time library path (work on Solaris 8 10/01 and later
 RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
 
 # flag to pass to cc when linking to set runtime shared library search path
@@ -355,12 +360,12 @@ ifeq ($(BUILD_OPT), 1)
 endif
 
 SUBSYSTEM=CONSOLE
-LINK_EXE        = link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
+LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
     /NODEFAULTLIB:MSVCRTD /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
     $(EXTRA_LIBS) $(PLATFORMLIBS) $(OBJS)
-LINK_LIB        = lib -OUT:"$@"  $(OBJS)
-LINK_DLL        = link $(DEBUG_LINK_OPT) /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
+LINK_LIB        = $(CYGWIN_WRAPPER) lib -OUT:"$@"  $(OBJS)
+LINK_DLL        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
         $(ML_DEBUG) /SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) /out:"$@" $(OBJS)
 else # WINNT
@@ -455,10 +460,7 @@ endif
 endif
 
 
-ifndef PERL
-PERL = perl
-endif
-
+PERL ?= perl
 #
 # shared library symbol export definitions
 #

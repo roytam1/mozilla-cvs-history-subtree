@@ -443,7 +443,6 @@ pk11_InitGeneric(PK11Session *session,PK11SessionContext **contextPtr,
     context->doPad = PR_FALSE;
     context->padDataLength = 0;
     context->key = key;
-    context->blockSize = 0;
 
     *contextPtr = context;
     return CKR_OK;
@@ -796,21 +795,12 @@ CK_RV NSC_EncryptFinal(CK_SESSION_HANDLE hSession,
     unsigned int maxout = *pulLastEncryptedPartLen;
     CK_RV crv;
     SECStatus rv = SECSuccess;
-    PRBool contextFinished = PR_TRUE;
 
     /* make sure we're legal */
     crv = pk11_GetContext(hSession,&context,PK11_ENCRYPT,PR_TRUE,&session);
     if (crv != CKR_OK) return crv;
 
     *pulLastEncryptedPartLen = 0;
-    if (!pLastEncryptedPart) {
-	/* caller is checking the amount of remaining data */
-	if (context->blockSize > 0) {
-	    *pulLastEncryptedPartLen = context->blockSize;
-	    contextFinished = PR_FALSE; /* still have padding to go */
-	}
-	goto finish;
-    }
 
     /* do padding */
     if (context->doPad) {
@@ -825,11 +815,9 @@ CK_RV NSC_EncryptFinal(CK_SESSION_HANDLE hSession,
 	if (rv == SECSuccess) *pulLastEncryptedPartLen = (CK_ULONG) outlen;
     }
 
-finish:
-    if (contextFinished) {
-	pk11_SetContextByType(session, PK11_ENCRYPT, NULL);
-	pk11_FreeContext(context);
-    }
+    /* do it */
+    pk11_SetContextByType(session, PK11_ENCRYPT, NULL);
+    pk11_FreeContext(context);
     pk11_FreeSession(session);
     return (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
 }
@@ -850,11 +838,6 @@ CK_RV NSC_Encrypt (CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
     /* make sure we're legal */
     crv = pk11_GetContext(hSession,&context,PK11_ENCRYPT,PR_FALSE,&session);
     if (crv != CKR_OK) return crv;
-
-    if (!pEncryptedData) {
-	*pulEncryptedDataLen = ulDataLen + 2 * context->blockSize;
-	goto finish;
-    }
 
     if (context->doPad) {
 	CK_ULONG finalLen;
@@ -877,9 +860,8 @@ CK_RV NSC_Encrypt (CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
     rv = (*context->update)(context->cipherInfo, pEncryptedData, 
 					&outlen, maxoutlen, pData, ulDataLen);
     *pulEncryptedDataLen = (CK_ULONG) outlen;
-    pk11_SetContextByType(session, PK11_ENCRYPT, NULL);
     pk11_FreeContext(context);
-finish:
+    pk11_SetContextByType(session, PK11_ENCRYPT, NULL);
     pk11_FreeSession(session);
 
     return (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
@@ -948,22 +930,12 @@ CK_RV NSC_DecryptFinal(CK_SESSION_HANDLE hSession,
     unsigned int maxout = *pulLastPartLen;
     CK_RV crv;
     SECStatus rv = SECSuccess;
-    PRBool contextFinished = PR_TRUE;
 
     /* make sure we're legal */
     crv = pk11_GetContext(hSession,&context,PK11_DECRYPT,PR_TRUE,&session);
     if (crv != CKR_OK) return crv;
 
     *pulLastPartLen = 0;
-    if (!pLastPart) {
-	/* caller is checking the amount of remaining data */
-	if (context->padDataLength > 0) {
-	    *pulLastPartLen = 2 * context->blockSize;
-	    contextFinished = PR_FALSE; /* still have padding to go */
-	}
-	goto finish;
-    }
-
     if (context->doPad) {
 	/* decrypt our saved buffer */
 	if (context->padDataLength != 0) {
@@ -983,11 +955,9 @@ CK_RV NSC_DecryptFinal(CK_SESSION_HANDLE hSession,
 	}
     }
 
-finish:
-    if (contextFinished) {
-	pk11_SetContextByType(session, PK11_DECRYPT, NULL);
-	pk11_FreeContext(context);
-    }
+    /* do it */
+    pk11_SetContextByType(session, PK11_DECRYPT, NULL);
+    pk11_FreeContext(context);
     pk11_FreeSession(session);
     return (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
 }
@@ -1009,11 +979,6 @@ CK_RV NSC_Decrypt(CK_SESSION_HANDLE hSession,
     crv = pk11_GetContext(hSession,&context,PK11_DECRYPT,PR_FALSE,&session);
     if (crv != CKR_OK) return crv;
 
-    if (!pData) {
-	*pulDataLen = ulEncryptedDataLen + context->blockSize;
-	goto finish;
-    }
-
     if (context->doPad) {
 	CK_ULONG finalLen;
 	/* padding is fairly complicated, have the update and final 
@@ -1033,9 +998,8 @@ CK_RV NSC_Decrypt(CK_SESSION_HANDLE hSession,
     rv = (*context->update)(context->cipherInfo, pData, &outlen, maxoutlen, 
 					pEncryptedData, ulEncryptedDataLen);
     *pulDataLen = (CK_ULONG) outlen;
-    pk11_SetContextByType(session, PK11_DECRYPT, NULL);
     pk11_FreeContext(context);
-finish:
+    pk11_SetContextByType(session, PK11_DECRYPT, NULL);
     pk11_FreeSession(session);
     return (rv == SECSuccess)  ? CKR_OK : CKR_DEVICE_ERROR;
 }
@@ -1078,7 +1042,6 @@ CK_RV NSC_DigestInit(CK_SESSION_HANDLE hSession,
 	context->hashUpdate = (PK11Hash) MD2_Update;
 	context->end = (PK11End) MD2_End;
 	context->destroy = (PK11Destroy) MD2_DestroyContext;
-	context->maxLen = MD2_LENGTH;
 	MD2_Begin(md2_context);
 	break;
     case CKM_MD5:
@@ -1093,7 +1056,6 @@ CK_RV NSC_DigestInit(CK_SESSION_HANDLE hSession,
 	context->hashUpdate = (PK11Hash) MD5_Update;
 	context->end = (PK11End) MD5_End;
 	context->destroy = (PK11Destroy) MD5_DestroyContext;
-	context->maxLen = MD5_LENGTH;
 	MD5_Begin(md5_context);
 	break;
     case CKM_SHA_1:
@@ -1109,7 +1071,6 @@ CK_RV NSC_DigestInit(CK_SESSION_HANDLE hSession,
 	context->end = (PK11End) SHA1_End;
 	context->destroy = (PK11Destroy) SHA1_DestroyContext;
 	SHA1_Begin(sha1_context);
-	context->maxLen = SHA1_LENGTH;
 	break;
     default:
 	crv = CKR_MECHANISM_INVALID;
@@ -1142,11 +1103,6 @@ CK_RV NSC_Digest(CK_SESSION_HANDLE hSession,
     crv = pk11_GetContext(hSession,&context,PK11_HASH,PR_FALSE,&session);
     if (crv != CKR_OK) return crv;
 
-    if (pDigest == NULL) {
-	*pulDigestLen = context->maxLen;
-	goto finish;
-    }
-
     /* do it: */
     (*context->hashUpdate)(context->cipherInfo, pData, ulDataLen);
     /*  NOTE: this assumes buf size is bigenough for the algorithm */
@@ -1155,7 +1111,6 @@ CK_RV NSC_Digest(CK_SESSION_HANDLE hSession,
 
     pk11_SetContextByType(session, PK11_HASH, NULL);
     pk11_FreeContext(context);
-finish:
     pk11_FreeSession(session);
     return CKR_OK;
 }
@@ -1194,12 +1149,12 @@ CK_RV NSC_DigestFinal(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pDigest,
     if (pDigest != NULL) {
         (*context->end)(context->cipherInfo, pDigest, &digestLen, maxout);
         *pulDigestLen = digestLen;
-	pk11_SetContextByType(session, PK11_HASH, NULL);
-	pk11_FreeContext(context);
     } else {
-	*pulDigestLen = context->maxLen;
+	*pulDigestLen = 0;
     }
 
+    pk11_SetContextByType(session, PK11_HASH, NULL);
+    pk11_FreeContext(context);
     pk11_FreeSession(session);
     return CKR_OK;
 }
@@ -1309,7 +1264,6 @@ pk11_doHMACInit(PK11SessionContext *context,HASH_HashType hash,
     context->destroy = (PK11Destroy) pk11_Space;
     context->update = (PK11Cipher) pk11_HMACCopy;
     context->verify = (PK11Verify) pk11_HMACCmp;
-    context->maxLen = hashObj->length;
     HMAC_Begin(HMACcontext);
     return CKR_OK;
 }
@@ -1430,7 +1384,6 @@ pk11_doSSLMACInit(PK11SessionContext *context,SECOidTag oid,
     context->destroy = (PK11Destroy) pk11_Space;
     context->update = (PK11Cipher) pk11_SSLMACSign;
     context->verify = (PK11Verify) pk11_SSLMACVerify;
-    context->maxLen = mac_size;
     return CKR_OK;
 }
 
@@ -1902,7 +1855,6 @@ finish_rsa:
 	    context->cipherInfo = privKey;
 	    context->destroy = (PK11Destroy)pk11_Null;
 	}
-	context->maxLen = nsslowkey_PrivateModulusLen(privKey);
 	break;
 
     case CKM_DSA_SHA1:
@@ -1924,7 +1876,6 @@ finish_rsa:
 	context->update     = (PK11Cipher) nsc_DSA_Sign_Stub;
 	context->destroy    = (privKey == key->objectInfo) ?
 		(PK11Destroy) pk11_Null:(PK11Destroy)pk11_FreePrivKey;
-	context->maxLen     = DSA_SIGNATURE_LEN;
 
 	break;
     case CKM_MD2_HMAC_GENERAL:
@@ -2072,10 +2023,7 @@ CK_RV NSC_SignFinal(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pSignature,
     crv = pk11_GetContext(hSession,&context,PK11_SIGN,PR_TRUE,&session);
     if (crv != CKR_OK) return crv;
 
-    if (!pSignature) {
-	*pulSignatureLen = context->maxLen;
-	goto finish;
-    } else if (context->hashInfo) {
+    if (context->hashInfo) {
         (*context->end)(context->hashInfo, tmpbuf, &digestLen, sizeof(tmpbuf));
 	rv = (*context->update)(context->cipherInfo, pSignature,
 					&outlen, maxoutlen, tmpbuf, digestLen);
@@ -2099,8 +2047,6 @@ CK_RV NSC_SignFinal(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pSignature,
 
     pk11_FreeContext(context);
     pk11_SetContextByType(session, PK11_SIGN, NULL);
-
-finish:
     pk11_FreeSession(session);
 
     return (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
@@ -2124,11 +2070,6 @@ CK_RV NSC_Sign(CK_SESSION_HANDLE hSession,
     crv = pk11_GetContext(hSession,&context,PK11_SIGN,PR_FALSE,&session);
     if (crv != CKR_OK) return crv;
 
-    if (!pSignature) {
-	*pulSignatureLen = context->maxLen;
-	goto finish;
-    }
-
     /* multi part Signing are completely implemented by SignUpdate and
      * sign Final */
     if (context->multi) {
@@ -2144,8 +2085,6 @@ CK_RV NSC_Sign(CK_SESSION_HANDLE hSession,
     *pulSignatureLen = (CK_ULONG) outlen;
     pk11_FreeContext(context);
     pk11_SetContextByType(session, PK11_SIGN, NULL);
-
-finish:
     pk11_FreeSession(session);
 
     return (rv == SECSuccess) ? CKR_OK : CKR_DEVICE_ERROR;
@@ -2374,7 +2313,6 @@ finish_rsa:
 	break;
     case CKM_TLS_PRF_GENERAL:
 	crv = pk11_TLSPRFInit(context, key, key_type);
-	break;
 
     default:
 	crv = CKR_MECHANISM_INVALID;
@@ -3067,8 +3005,8 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
 CK_RV NSC_GenerateKeyPair (CK_SESSION_HANDLE hSession,
     CK_MECHANISM_PTR pMechanism, CK_ATTRIBUTE_PTR pPublicKeyTemplate,
     CK_ULONG ulPublicKeyAttributeCount, CK_ATTRIBUTE_PTR pPrivateKeyTemplate,
-    CK_ULONG ulPrivateKeyAttributeCount, CK_OBJECT_HANDLE_PTR phPublicKey,
-    					CK_OBJECT_HANDLE_PTR phPrivateKey)
+    CK_ULONG ulPrivateKeyAttributeCount, CK_OBJECT_HANDLE_PTR phPrivateKey,
+    					CK_OBJECT_HANDLE_PTR phPublicKey)
 {
     PK11Object *	publicKey,*privateKey;
     PK11Session *	session;
@@ -5157,7 +5095,6 @@ CK_RV NSC_GetOperationState(CK_SESSION_HANDLE hSession,
     PK11SessionContext *context;
     PK11Session *session;
     CK_RV crv;
-    CK_ULONG pOSLen = *pulOperationStateLen;
 
     /* make sure we're legal */
     crv = pk11_GetContext(hSession, &context, PK11_HASH, PR_TRUE, &session);
@@ -5168,10 +5105,6 @@ CK_RV NSC_GetOperationState(CK_SESSION_HANDLE hSession,
     if (pOperationState == NULL) {
         pk11_FreeSession(session);
 	return CKR_OK;
-    } else {
-	if (pOSLen < *pulOperationStateLen) {
-	    return CKR_BUFFER_TOO_SMALL;
-	}
     }
     PORT_Memcpy(pOperationState,&context->type,sizeof(PK11ContextType));
     pOperationState += sizeof(PK11ContextType);

@@ -782,8 +782,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     }
 
     /* generate and save the database key for the cert */
-    rv = CERT_KeyFromIssuerAndSN(arena, &cert->derIssuer, &cert->serialNumber,
-			&cert->certKey);
+    rv = CERT_KeyFromDERCert(arena, &cert->derCert, &cert->certKey);
     if ( rv ) {
 	goto loser;
     }
@@ -925,7 +924,7 @@ CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
     
     LL_I2L(llPendingSlop, pendingSlop);
     /* convert to micro seconds */
-    LL_UI2L(tmp1, PR_USEC_PER_SEC);
+    LL_I2L(tmp1, PR_USEC_PER_SEC);
     LL_MUL(llPendingSlop, llPendingSlop, tmp1);
     LL_SUB(notBefore, notBefore, llPendingSlop);
     if ( LL_CMP( t, <, notBefore ) ) {
@@ -1898,7 +1897,7 @@ CERT_FixupEmailAddr(char *emailAddr)
 SECStatus
 CERT_DecodeTrustString(CERTCertTrust *trust, char *trusts)
 {
-    unsigned int i;
+    int i;
     unsigned int *pflags;
     
     trust->sslFlags = 0;
@@ -2139,10 +2138,10 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 		 CERTCertificate ***retCerts, PRBool keepCerts,
 		 PRBool caOnly, char *nickname)
 {
-    unsigned int i;
+    int i;
     CERTCertificate **certs = NULL;
     SECStatus rv;
-    unsigned int fcerts = 0;
+    int fcerts = 0;
 
     if ( ncerts ) {
 	certs = (CERTCertificate**)PORT_ZAlloc(sizeof(CERTCertificate *) * ncerts );

@@ -309,11 +309,9 @@ CERT_KeyFromDERCrl(PRArenaPool *arena, SECItem *derCrl, SECItem *key)
 
 /*
  * take a DER CRL or KRL  and decode it into a CRL structure
- * allow reusing the input DER without making a copy
  */
 CERTSignedCrl *
-CERT_DecodeDERCrlEx(PRArenaPool *narena, SECItem *derSignedCrl, int type,
-                          PRInt32 options)
+CERT_DecodeDERCrl(PRArenaPool *narena, SECItem *derSignedCrl, int type)
 {
     PRArenaPool *arena;
     CERTSignedCrl *crl;
@@ -337,19 +335,13 @@ CERT_DecodeDERCrlEx(PRArenaPool *narena, SECItem *derSignedCrl, int type,
     
     crl->arena = arena;
 
-    if (options & CRL_DECODE_DONT_COPY_DER) {
-        crl->derCrl = derSignedCrl; /* DER is not copied . The application
-                                       must keep derSignedCrl until it
-                                       destroys the CRL */
-    } else {
-        crl->derCrl = (SECItem *)PORT_ArenaZAlloc(arena,sizeof(SECItem));
-        if (crl->derCrl == NULL) {
-            goto loser;
-        }
-        rv = SECITEM_CopyItem(arena, crl->derCrl, derSignedCrl);
-        if (rv != SECSuccess) {
-            goto loser;
-        }
+    crl->derCrl = (SECItem *)PORT_ArenaZAlloc(arena,sizeof(SECItem));
+    if (crl->derCrl == NULL) {
+	goto loser;
+    }
+    rv = SECITEM_CopyItem(arena, crl->derCrl, derSignedCrl);
+    if (rv != SECSuccess) {
+	goto loser;
     }
 
     /* Save the arena in the inner crl for CRL extensions support */
@@ -357,7 +349,7 @@ CERT_DecodeDERCrlEx(PRArenaPool *narena, SECItem *derSignedCrl, int type,
 
     /* decode the CRL info */
     switch (type) {
-    case SEC_CRL_TYPE:
+    case SEC_CRL_TYPE: 
 	rv = SEC_ASN1DecodeItem
 	     (arena, crl, cert_SignedCrlTemplate, derSignedCrl);
 	if (rv != SECSuccess)
@@ -393,15 +385,6 @@ loser:
 }
 
 /*
- * take a DER CRL or KRL  and decode it into a CRL structure
- */
-CERTSignedCrl *
-CERT_DecodeDERCrl(PRArenaPool *narena, SECItem *derSignedCrl, int type)
-{
-    return CERT_DecodeDERCrlEx(narena, derSignedCrl, type, CRL_DECODE_DEFAULT_OPTIONS);
-}
-
-/*
  * Lookup a CRL in the databases. We mirror the same fast caching data base
  *  caching stuff used by certificates....?
  */
@@ -428,11 +411,9 @@ SEC_FindCrlByKeyOnSlot(PK11SlotInfo *slot, SECItem *crlKey, int type)
 	crl->slot = slot;
 	slot = NULL; /* adopt it */
 	crl->pkcs11ID = crlHandle;
-	if (url) {
-	    crl->url = PORT_ArenaStrdup(crl->arena,url);
-	}
     }
     if (url) {
+	crl->url = PORT_ArenaStrdup(crl->arena,url);
 	PORT_Free(url);
     }
 
@@ -456,6 +437,8 @@ crl_storeCRL (PK11SlotInfo *slot,char *url,
     CK_OBJECT_HANDLE crlHandle;
 
     oldCrl = SEC_FindCrlByKeyOnSlot(slot, &newCrl->crl.derName, type);
+
+
 
     /* if there is an old crl, make sure the one we are installing
      * is newer. If not, exit out, otherwise delete the old crl.
@@ -532,15 +515,36 @@ SEC_FindCrlByName(CERTCertDBHandle *handle, SECItem *crlKey, int type)
 CERTSignedCrl *
 SEC_NewCrl(CERTCertDBHandle *handle, char *url, SECItem *derCrl, int type)
 {
-    CERTSignedCrl* retCrl = NULL;
-    PK11SlotInfo* slot = PK11_GetInternalKeySlot();
-    retCrl = PK11_ImportCRL(slot, derCrl, url, type, NULL,
-        CRL_IMPORT_BYPASS_CHECKS, NULL, CRL_DECODE_DEFAULT_OPTIONS);
+    CERTSignedCrl *newCrl = NULL, *crl = NULL;
+    PK11SlotInfo *slot;
+
+    /* make this decode dates! */
+    newCrl = CERT_DecodeDERCrl(NULL, derCrl, type);
+    if (newCrl == NULL) {
+        if (type == SEC_CRL_TYPE) {
+            PORT_SetError(SEC_ERROR_CRL_INVALID);
+        } else {
+            PORT_SetError(SEC_ERROR_KRL_INVALID);
+        }
+        goto done;
+    }
+
+    slot = PK11_GetInternalKeySlot();
+    crl = crl_storeCRL(slot, url, newCrl, derCrl, type);
     PK11_FreeSlot(slot);
 
-    return retCrl;
+
+done:
+    if (crl == NULL) {
+	if (newCrl) {
+	    PORT_FreeArena(newCrl->arena, PR_FALSE);
+	}
+    }
+
+    return crl;
 }
-    
+
+
 CERTSignedCrl *
 SEC_FindCrlByDERCert(CERTCertDBHandle *handle, SECItem *derCrl, int type)
 {

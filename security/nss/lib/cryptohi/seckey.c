@@ -880,7 +880,6 @@ CERT_GetCertKeyType (CERTSubjectPublicKeyInfo *spki) {
 	break;
       case SEC_OID_X942_DIFFIE_HELMAN_KEY:
 	keyType = dhKey;
-	break;
       default:
 	keyType = nullKey;
     }

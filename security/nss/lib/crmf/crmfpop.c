@@ -594,7 +594,6 @@ CRMF_CertReqMsgSetKeyAgreementPOP (CRMFCertReqMsg        *inCertReqMsg,
     case crmfSubsequentMessage:
         rv = crmf_add_privkey_subseqmessage(inCertReqMsg, subseqMess, 
 					    crmfKeyAgreement);
-	break;
     case crmfDHMAC:
         /* This case should be added in the future. */
     default:

@@ -66,6 +66,7 @@ NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
 NOSUCHFILE=/no-such-file
 LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_MAJOR_VERSION)'
 LIBPLC='-L$(dist_libdir) -lplc$(MOD_MAJOR_VERSION)'
+CYGWIN_WRAPPER=
 
 dnl Link in libraries necessary to resolve all symbols for shared libs
 RESOLVE_LINK_SYMBOLS=
@@ -1168,20 +1169,22 @@ case "$target" in
     AC_DEFINE(WIN32)
     PR_MD_ARCH_DIR=windows
     RESOLVE_LINK_SYMBOLS=1
+    NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
 
     if test -n "$GNU_CC"; then
         AC_DEFINE(NONAMELESSUNION)
         MKSHLIB='$(DLLTOOL) --as=$(AS) -k --dllname $*.dll --output-lib $@'
     else
-        CC=cl
-        CXX=cl
+        topsrcdir=$srcdir
+        CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
+        CC='$(CYGWIN_WRAPPER) cl'
+        CXX='$(CYGWIN_WRAPPER) cl'
         LD=link
         AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        NSINSTALL=nsinstall
-        RC=rc.exe
+        RC='$(CYGWIN_WRAPPER) rc.exe'
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
@@ -2317,6 +2320,7 @@ AC_SUBST(RC)
 AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
+AC_SUBST(CYGWIN_WRAPPER)
 
 dnl ========================================================
 dnl Generate output files.

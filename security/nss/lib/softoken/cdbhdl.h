@@ -68,6 +68,4 @@ DB * rdbopen(const char *appName, const char *prefix,
 				const char *type, int flags);
 
 SECStatus db_Copy(DB *dest,DB *src);
-int db_BeginTransaction(DB *db);
-int db_FinishTransaction(DB *db, PRBool abort);
 #endif
