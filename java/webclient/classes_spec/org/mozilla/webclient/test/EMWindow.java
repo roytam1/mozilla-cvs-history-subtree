@@ -160,6 +160,15 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
           historyMenu.add(forwardMenuItem);
           menuBar.add(historyMenu);
 
+        Menu streamMenu = new Menu("Stream");
+          MenuItem streamFromFile = new MenuItem("Load Stream From File...");
+          streamFromFile.addActionListener(this);
+          streamMenu.add(streamFromFile);
+          MenuItem randomStream = new MenuItem("Load Random HTML InputStream");
+          randomStream.addActionListener(this);
+          streamMenu.add(randomStream);
+          menuBar.add(streamMenu);
+
 		viewMenu.add(sourceItem);
 		sourceItem.addActionListener(this);
        		viewMenu.add(pageInfoItem);
@@ -188,11 +197,8 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
         stopButton.setEnabled(false);
 		refreshButton = makeItem(buttonsPanel, "Refresh", 3, 0, 1, 1, 0.0, 0.0);
         refreshButton.setEnabled(false);
-        makeItem(buttonsPanel, "Bookmarks",    0, 1, 1, 1, 0.0, 0.0);
-        makeItem(buttonsPanel, "Stream With Len", 1, 1, 1, 1, 0.0, 0.0);
-        makeItem(buttonsPanel, "Stream No Len",   2, 1, 1, 1, 0.0, 0.0);
-        makeItem(buttonsPanel, " ",    3, 1, 1, 1, 0.0, 0.0);
-        //makeItem(buttonsPanel, "DOMViewer",    3, 1, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Bookmarks",    4, 0, 1, 1, 0.0, 0.0);
+        //makeItem(buttonsPanel, "DOMViewer",    5, 1, 1, 1, 0.0, 0.0);
 
 		// Create the control panel
 		controlPanel = new Panel();
@@ -202,9 +208,6 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
         Panel centerPanel = new Panel();
         centerPanel.setLayout(new BorderLayout());
         centerPanel.add(urlField, BorderLayout.NORTH);
-        Label spacer = new Label();
-        spacer.setBackground(Color.lightGray);
-        centerPanel.add(spacer, BorderLayout.SOUTH);
 
         //		controlPanel.add(urlField,     BorderLayout.CENTER);
 		controlPanel.add(centerPanel,     BorderLayout.CENTER);
@@ -437,7 +440,7 @@ public void actionPerformed (ActionEvent evt)
             }
             bookmarksFrame.setVisible(true);
         }
-        else if (command.equals("Stream With Len")) {
+        else if (command.equals("Load Stream From File...")) {
             FileDialog fileDialog = new FileDialog(this, "Pick an HTML file",
                                                    FileDialog.LOAD);
             fileDialog.show();
@@ -458,7 +461,7 @@ public void actionPerformed (ActionEvent evt)
                                           null);
             }
         }        
-        else if (command.equals("Stream No Len")) {
+        else if (command.equals("Load Random HTML InputStream")) {
             RandomHTMLInputStream rhis = new RandomHTMLInputStream(3);
             System.out.println("debug: edburns: created RandomHTMLInputStream");
             navigation.loadFromStream(rhis, "http://randomstream.com/",
