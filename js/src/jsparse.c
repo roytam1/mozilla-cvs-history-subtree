@@ -419,7 +419,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 	return NULL;
 
 #if JS_HAS_LEXICAL_CLOSURE
-    if (!funAtom || cx->fp->scopeChain != parent || InWithStatement(tc)) {
+    if (!funAtom || InWithStatement(tc)) {
 	/* Don't name the function if enclosed by a with statement or equiv. */
 	fun = js_NewFunction(cx, NULL, NULL, 0, 0, cx->fp->scopeChain,
 			     funAtom);
