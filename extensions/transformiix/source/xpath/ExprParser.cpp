@@ -537,7 +537,7 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer,
 {
     //-- child axis is default
     LocationStep::LocationStepType axisIdentifier = LocationStep::CHILD_AXIS;
-    txNodeTest* nodeTest = 0;
+    nsAutoPtr<txNodeTest> nodeTest;
 
     //-- get Axis Identifier or AbbreviatedStep, if present
     Token* tok = lexer.peek();
@@ -677,7 +677,6 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer,
     LocationStep* lstep = new LocationStep(nodeTest, axisIdentifier);
     if (!lstep) {
         //XXX out of memory
-        delete nodeTest;
         return 0;
     }
 
