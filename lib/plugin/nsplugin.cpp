@@ -37,6 +37,7 @@
 
 #ifdef XP_MAC
 #include "MacMemAllocator.h"
+#include "asyncCursors.h"
 #endif
 
 #include "intl_csi.h"
