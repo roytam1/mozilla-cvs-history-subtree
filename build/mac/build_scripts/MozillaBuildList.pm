@@ -394,10 +394,9 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:content:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:unix:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:components:prefwindow:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:xpfe:communicator:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:resources:content:mac:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:unix:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:win:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpfe:global:resources:locale:en-US:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:xpinstall:res:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:components:ui:jar.mn", $chrome_dir, \%jars);
@@ -886,7 +885,9 @@ sub BuildClientDist()
     }
     if ($main::options{soap})
     {
+        InstallFromManifest(":mozilla:extensions:xmlextras:schema:public:MANIFEST_IDL", "$distdirectory:idl:");
         InstallFromManifest(":mozilla:extensions:xmlextras:soap:public:MANIFEST_IDL", "$distdirectory:idl:");
+        InstallFromManifest(":mozilla:extensions:xmlextras:wsdl:public:MANIFEST_IDL", "$distdirectory:idl:");
     }
 
     #DOCUMENT INSPECTOR
@@ -1210,7 +1211,9 @@ sub BuildIDLProjects()
     }
     if ($main::options{soap})
     {
+        BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlschemaIDL.mcp", "xmlschema");
         BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlsoapIDL.mcp", "xmlsoap");
+        BuildIDLProject(":mozilla:extensions:xmlextras:macbuild:xmlwsdlIDL.mcp", "xmlwsdl");
     }
 
     if ($main::options{inspector})
