@@ -51,4 +51,14 @@
   background-color: transparent;
 }
 
+.quick-search-clearbutton {
+  background: url("chrome://messenger/skin/icons/SearchBarRight.png") right center no-repeat;
+  width: 8px !important;
+  list-style-image: none !important;
+  margin: 0px 4px 0px 0px;
+  display: -moz-box;
+}
 
+.quick-search-clearbutton > .toolbarbutton-icon{
+  display: none;
+}
