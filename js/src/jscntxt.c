@@ -78,6 +78,9 @@ js_NewContext(JSRuntime *rt, size_t stacksize)
 	return NULL;
     }
 #endif
+#if JS_HAS_EXCEPTIONS
+    cx->throwing = JS_FALSE;
+#endif
     return cx;
 }
 
