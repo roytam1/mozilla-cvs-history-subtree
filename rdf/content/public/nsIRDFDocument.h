@@ -81,6 +81,6 @@ public:
 };
 
 // factory functions
-nsresult NS_NewRDFDocument(nsIRDFDocument** result);
+nsresult NS_NewXULDocument(nsIRDFDocument** result);
 
 #endif // nsIRDFDocument_h___
