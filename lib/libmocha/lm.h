@@ -150,7 +150,6 @@ et_SubEventLoop(QueueStackElement * qse);
 #define LM_STACK_SIZE   8192
 
 extern JSRuntime        *lm_runtime;
-extern MochaDecoder     *lm_crippled_decoder;
 extern JSClass		lm_window_class;
 extern JSClass		lm_layer_class;
 extern JSClass		lm_document_class;
@@ -749,5 +748,80 @@ extern JSString *
 lm_LocalEncodingToStr(MWContext * context, char * bytes);
 
 /* end INTL support */
+
+/* MLM */
+typedef struct lm_lock_waiter {
+    JSLockReleaseFunc       fn;
+    void                  * data;
+    struct lm_lock_waiter * next;
+} lm_lock_waiter;
+
+typedef struct ContextListStr ContextList;
+
+typedef struct WindowGroup LMWindowGroup;
+
+struct WindowGroup {
+    LMWindowGroup     *next;
+    LMWindowGroup     *prev;
+
+    /* XXXMLM - this entry is currently unused; it should eventually hold
+     *           a shared JSContext for the thread group. 
+     */
+    JSContext         *js_context;
+
+    PRBool            interruptCurrentOp;
+
+    PRMonitor         *owner_monitor;
+    PRThread          *thread;
+    PRThread          *owner;
+    lm_lock_waiter    *waiting_list;
+    int32             current_count;
+
+    PRBool            mozWantsLock;
+    PRBool            mozGotLock;
+    
+    PRBool            hasLock;
+    JSContext         *lock_context;
+
+    JSTimeout         **js_timeout_insertion_point;
+    JSTimeout         *js_timeout_running;
+
+    PREventQueue      *interpret_queue;
+    QueueStackElement *queue_stack;
+    uint              queue_depth;
+    uint              queue_count;
+    PRMonitor         *queue_monitor;
+    ContextList       *mw_contexts;
+    MWContext         *current_context;
+    PRBool            done;
+};
+
+extern void lm_InitWindowGroups(void);
+extern LMWindowGroup *lm_NewWindowGroup(void);
+extern void lm_StartWindowGroup(LMWindowGroup *grp);
+extern void lm_DestroyWindowGroup(LMWindowGroup *grp);
+extern LMWindowGroup *LM_GetDefaultWindowGroup(MWContext *mwc);
+extern LMWindowGroup *lm_MWContextToGroup(MWContext *mwc);
+extern LMWindowGroup *lm_QueueStackToGroup(QueueStackElement *qse);
+extern PREventQueue *LM_MWContextToQueue(MWContext *mwc);
+extern PREventQueue *LM_WindowGroupToQueue(LMWindowGroup *lmg);
+extern ContextList *lm_GetEntryForContext(LMWindowGroup *grp, MWContext *cx);
+extern void LM_AddContextToGroup(LMWindowGroup *grp, MWContext *cx);
+extern void LM_RemoveContextFromGroup(MWContext *cx);
+extern PRBool LM_IsLocked(LMWindowGroup *grp);
+extern void LM_BeginRequest(LMWindowGroup *grp, JSContext *jsc);
+extern void LM_EndRequest(LMWindowGroup *grp, JSContext *jsc);
+
+extern void LM_LockJSByGroup(LMWindowGroup *grp);
+extern void LM_UnlockJSByGroup(LMWindowGroup *grp);
+
+extern JSBool lm_inited(void);
+
+extern JSContext *LM_GetCrippledContext(void);
+extern MochaDecoder *LM_GetCrippledDecoder(void);
+extern void LM_SetCrippledDecoder(MochaDecoder *md);
+extern JSBool LM_ShouldRunGC(JSContext *cx, JSGCStatus status);
+
+/* MLM */
 
 #endif /* lm_h___ */
