@@ -772,7 +772,7 @@ sub RunBloatTest {
   alarm 0;
 
   print LOG "Client quit Bloat Test with status $status\n";
-  if ($status >= 0) {
+  if ($status <= 0) {
     print LOG "$Binary has crashed or quit on the BloatTest.  Turn the tree orange now.\n";
     print LOG "----------- failure Output from mozilla-bin for BloatTest --------------- \n";
     open READRUNLOG, "$BinaryLog";
