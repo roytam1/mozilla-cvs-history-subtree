@@ -73,6 +73,8 @@
 #include "nsIWindowWatcher.h"
 #include "nsIAbMDBDirectory.h" 
 
+extern PRLogModuleInfo *ABSYNC;
+
 /* Implementation file */
 
 //
@@ -107,7 +109,7 @@ nsresult nsAbSync::LoadListHistoryTable()
     return NS_ERROR_FAILURE;
 
   if (NS_FAILED(mListHistoryFile->OpenStreamForReading()))
-    return(NS_ERROR_OUT_OF_MEMORY);
+    return(NS_ERROR_FAILURE);
 
   mListOldTableSize = 0;
   char *listBuf = (char *)PR_Malloc(fileSize+1);
@@ -160,6 +162,17 @@ nsresult nsAbSync::LoadListHistoryTable()
           break;
         }
         listNum++;
+      }
+
+      // Log list history table to file (can be removed later).
+      for (PRUint32 i = 0; i < listNum; i++)
+      {
+        if (mListOldSyncMapingTable[i].serverID != 0)
+        {
+          nsXPIDLCString str;
+          ConvertListMappingEntryToString(mListOldSyncMapingTable[i], getter_Copies(str));
+          PR_LOG(ABSYNC, PR_LOG_DEBUG, ("%s[%d]: %s", "  Loading history table", i, str.get()));
+        }
       }
     }
   }
@@ -309,10 +322,10 @@ nsresult nsAbSync::PatchListHistoryTableWithNewMemberID(PRInt32 listServerID, PR
 nsresult nsAbSync::SaveListSyncMappingTable()
 {
   if (!mListHistoryFile)
-    return NS_ERROR_OUT_OF_MEMORY;
+    return NS_ERROR_FAILURE;
 
   if (NS_FAILED(mListHistoryFile->OpenStreamForWriting()))
-  	return NS_ERROR_OUT_OF_MEMORY;
+  	return NS_ERROR_FAILURE;
 
   // Ok, these are the lists that exist when we started the sync op.
   PRInt32 writeSize;
@@ -324,9 +337,10 @@ nsresult nsAbSync::SaveListSyncMappingTable()
     {
       nsXPIDLCString str;
       ConvertListMappingEntryToString(mListNewSyncMapingTable[writeCount], getter_Copies(str));
+      PR_LOG(ABSYNC, PR_LOG_DEBUG, ("%s[%d]: %s", "  Saving existing list", writeCount, str.get()));
       if (NS_FAILED(mListHistoryFile->Write(str.get(),  str.Length(), &writeSize))
                                        || (writeSize != (PRInt32)str.Length()))
-        return NS_ERROR_OUT_OF_MEMORY;
+        return NS_ERROR_FAILURE;
     }
     writeCount++;
   }
@@ -343,9 +357,10 @@ nsresult nsAbSync::SaveListSyncMappingTable()
 
       nsXPIDLCString str;
       ConvertListMappingEntryToString(*tRec, getter_Copies(str));
+      PR_LOG(ABSYNC, PR_LOG_DEBUG, ("%s[%d]: %s", "  Saving new list", writeCount, str.get()));
       if (NS_FAILED(mListHistoryFile->Write(str.get(),  str.Length(), &writeSize))
                                        || (writeSize != (PRInt32)str.Length()))
-        return NS_ERROR_OUT_OF_MEMORY;
+        return NS_ERROR_FAILURE;
 
       writeCount++;
     }

@@ -72,7 +72,7 @@
 #include "nsIPrompt.h"
 #include "nsIWindowWatcher.h"
 
-static PRLogModuleInfo *ABSYNC;  // Logging module
+PRLogModuleInfo *ABSYNC;  // Logging module
 
 /* Implementation file */
 NS_IMPL_ISUPPORTS1(nsAbSync, nsIAbSync)
