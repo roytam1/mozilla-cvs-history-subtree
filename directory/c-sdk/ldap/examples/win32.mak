@@ -5,45 +5,66 @@
 #
 # Win32 GNU Makefile for Directory SDK examples
 #
-# build all the examples by typing:  gmake -f win32.mak
-#
-
-###############################################################################
-# Note that the LDAP API library has different names for the SSL-enabled
-# and non-SSL versions of the Directory SDK for C:  
-# 
-# o In the SSL-enabled version, the import library for Microsoft
-#   compilers is named nsldapssl32v41.lib, and the DLL is named 
-#   nsldapssl32v41.dll.
-# 
-# o In the non-SSL version, the import library for Microsoft
-#   compilers is named nsldap32v41.lib, and the DLL is named
-#   nsldap32v41.dll.
-#
-# Remove the comment character in front of the definition of
-# LDAPLIB that matches the name of the LDAP API library for the
-# version you've downloaded.
+# build the examples by typing:  gmake -f win32.mak
+# SSL examples are not built by default.  Use 'gmake -f win32.mak ssl'
+# NSPR examples are not built by default.  Use 'gmake -f win32.mak nspr'
 #
 
 
 # For Win32 (NT)
-LDAPLIB=nsldap32v41
-#LDAPLIB=nsldapssl32v41
-NSPRLIB=libnspr3
-EXTRACFLAGS=-nologo -W3 -GT -GX -D_X86_ -Dx386 -DWIN32 -D_WINDOWS -c
-EXTRALDFLAGS=/NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /SUBSYSTEM:console
+LDAPLIB=nsldap32v50
+SSLDAPLIB=nsldapssl32v50
+PRLDAPLIB=nsldappr32v50
+NSPRLIB=libnspr4
+EXTRACFLAGS=-nologo -W3 -GT -GX -D_X86_ -Dx386 -DWIN32 -D_WINDOWS -c -Od
+EXTRALDFLAGS=/NOLOGO /PDB:NONE /DEBUG /DEBUGTYPE:BOTH /SUBSYSTEM:console /FIXED:NO
 
 
 ###############################################################################
 # You should not need to change anything below here....
 
+INTERNAL_LIBLDAP_HEADERS=$(wildcard ../libraries/libldap/*.h)
+ifeq (,$(findstring h, $(INTERNAL_LIBLDAP_HEADERS)))
+IN_SRC_TREE=0
+else
+IN_SRC_TREE=1
+endif
+
+ifneq ($(IN_SRC_TREE),1)
+# we are not in the C SDK source tree... so must be in a binary distribution
 INCDIR=../include
 LIBDIR=../lib
 NSPRINCDIR=../include
 NSPRLIBDIR=../lib
 
+else
+# we are in the C SDK source tree... paths to headers and libs are different
+NS_DEPTH	= ../../..
+LDAP_SRC	= ..
+NSCP_DISTDIR	= ../../../../dist
+NSPR_TREE	= ../..
+MOD_DEPTH	= ../..
+
+ifeq ($(HAVE_CCONF), 1)
+COMPS_FROM_OBJDIR=1
+endif
+
+include $(NSPR_TREE)/config/config.mk
+
+ifeq ($(COMPS_FROM_OBJDIR),1)
+NSPR_DISTDIR=$(NSCP_DISTDIR)/$(OBJDIR_NAME)
+else
+NSPR_DISTDIR=$(NSCP_DISTDIR)
+endif
+
+INCDIR=$(NSCP_DISTDIR)/public/ldap
+LIBDIR=$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
+NSPRINCDIR=$(NSPR_DISTDIR)/include
+NSPRLIBDIR=$(NSPR_DISTDIR)/lib
+endif
+
 SYSLIBS=wsock32.lib kernel32.lib user32.lib shell32.lib
-LIBS=$(LIBDIR)/$(LDAPLIB).lib $(NSPRLIBDIR)/$(NSPRLIB).lib
+LIBS=$(LIBDIR)/$(LDAPLIB).lib $(LIBDIR)/$(SSLDAPLIB).lib $(LIBDIR)/$(PRLDAPLIB).lib $(NSPRLIBDIR)/$(NSPRLIB).lib 
 
 CC=cl
 OPTFLAGS=-MD
@@ -61,7 +82,7 @@ SSLEXES=$(addsuffix .exe,$(SSLPROGS))
 NSPRPROGS=nsprio
 NSPREXES=$(addsuffix .exe,$(NSPRPROGS))
 
-ALLEXES= $(EXES) $(SSLEXES) $(NSEXES)
+ALLEXES= $(EXES) $(SSLEXES) $(NSPREXES)
 
 standard:	$(EXES)
 
