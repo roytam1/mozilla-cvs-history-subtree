@@ -106,13 +106,13 @@ ifndef LIBRARY
 ifdef LIBRARY_NAME
 LIBRARY			:= lib$(LIBRARY_NAME).$(LIB_SUFFIX)
 endif # LIBRARY_NAME
-endif # LIBRARY
+endif # ! LIBRARY
 
 ifdef LIBRARY
 ifeq ($(OS_ARCH),OS2)
 ifndef DEF_FILE
 DEF_FILE		:= $(LIBRARY:.lib=.def)
-endif # DEF_FILE
+endif # ! DEF_FILE
 endif # OS2
 
 LIBRARY			:= $(addprefix $(OBJDIR)/, $(LIBRARY))
@@ -127,22 +127,21 @@ MAPS			:= $(LIBRARY:$(LIB_SUFFIX)=.map)
 endif # OS2
 
 ifdef LIB_IS_C_ONLY
-ifneq (, $(filter-out $(TARGET_ARCH), WIN32 OS2))
-# Unix only
 MKSHLIB			= $(MKCSHLIB)
-endif
 endif # LIB_IS_C_ONLY
 
 endif # MKSHLIB
 endif # !NO_SHARED_LIB
+
 endif # LIBRARY
 
 ifdef NO_STATIC_LIB
-LIBRARY			= $(NULL)
+LIBRARY			:= $(NULL)
 endif
 
 ifdef NO_SHARED_LIB
-DLL_SUFFIX		= $(LIB_SUFFIX)
+#DLL_SUFFIX		= $(LIB_SUFFIX)
+SHARED_LIBRARY		:= $(NULL)
 endif
 
 ifndef TARGETS
@@ -184,10 +183,6 @@ else
 ALL_TRASH		= $(TARGETS) $(OBJS) LOGS TAGS $(GARBAGE) a.out \
 			  $(NOSUCHFILE) $(JMC_STUBS) so_locations \
 			  _gen _stubs $(MDDEPDIR) $(wildcard gts_tmp_*)
-endif
-
-ifndef USE_AUTOCONF
-ALL_TRASH		+= $(OBJDIR)
 endif
 
 ifdef JAVA_OR_NSJVM
@@ -292,13 +287,6 @@ $(MDDEPDIR):
 ifdef OBJS
 MAKE_DIRS += $(MDDEPDIR)
 endif
-endif
-
-ifneq "$(OBJDIR)" "."
-$(OBJDIR):
-	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
-
-MAKE_DIRS += $(OBJDIR)
 endif
 
 ifdef ALL_PLATFORMS
