@@ -821,14 +821,10 @@ function FolderPaneSelectionChange()
                   if (folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
                   {
                     viewType = nsMsgViewType.eShowQuickSearchResults;
-                    var searchTermString = {};
-                    dbFolderInfo.getCharPtrProperty("searchStr", searchTermString);
-                    searchTermString = searchTermString.value;
+                    var searchTermString = dbFolderInfo.getCharPtrProperty("searchStr");
                     // trick the view code into updating the real folder...
                     gCurrentVirtualFolderUri = uriToLoad;
-                    var srchFolderUri = {};
-                    dbFolderInfo.getCharPtrProperty("searchFolderUri", srchFolderUri);
-                    srchFolderUri = srchFolderUri.value;
+                    var srchFolderUri = dbFolderInfo.getCharPtrProperty("searchFolderUri");
                     var srchFolderUriArray = srchFolderUri.split('|');
                     // cross folder search
                     var filterService = Components.classes["@mozilla.org/messenger/services/filters;1"].getService(Components.interfaces.nsIMsgFilterService);

@@ -92,9 +92,7 @@ function updateFolderFeedUrl(aFolder, aFeedUrl, aRemoveUrl)
 {
   var msgdb = aFolder.QueryInterface(Components.interfaces.nsIMsgFolder).getMsgDatabase(null);
   var folderInfo = msgdb.dBFolderInfo;
-  var oldFeedUrl = {};
-  folderInfo.getCharPtrProperty("feedUrl", oldFeedUrl);
-  oldFeedUrl = oldFeedUrl.value;
+  var oldFeedUrl = folderInfo.getCharPtrProperty("feedUrl");
 
   if (aRemoveUrl)
   { 

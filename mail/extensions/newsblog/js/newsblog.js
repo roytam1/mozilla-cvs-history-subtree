@@ -113,10 +113,7 @@ var nsNewsBlogFeedDownloader =
     // an rss folder was just renamed...we need to update our feed data source
     var msgdb = aFolder.QueryInterface(Components.interfaces.nsIMsgFolder).getMsgDatabase(null);
     var folderInfo = msgdb.dBFolderInfo;
-    var feedurls = {};
-    folderInfo.setCharPtrProperty("feedUrl", feedurls);
-    feedurls = feedurls.value;
-
+    var feedurls = folderInfo.getCharPtrProperty("feedUrl");
     var feedUrlArray = feedurls.split("|");
 
     var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
