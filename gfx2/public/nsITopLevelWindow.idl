@@ -120,6 +120,30 @@ interface nsITopLevelWindow : nsISupports
             in gfx_dimension aHeight,
             in long aBorder);
 
+  /**
+   * Minimize, maximize, restore
+   *
+   * getting:
+   * normal   == !(minimize || maximize)
+   * minimize == !(normal || maximize)
+   * maximize == !(normal || minimize)
+   *
+   * setting:
+   * normal will restore a minimized or maximized window to its "normal" state.
+   */
+  attribute long sizeState;
+
+  /**
+   * Perform platform-dependent sanity check on a potential window position.
+   * This is guaranteed to work only for top-level windows.
+   *
+   * @param aX in: an x position expressed in screen coordinates.
+   *           out: the x position constrained to fit on the screen(s).
+   * @param aY in an y position expressed in screen coordinates.
+   *           out: the y position constrained to fit on the screen(s).
+   *
+   */
+  void constrainPosition(inout gfx_coord aX, inout gfx_coord aY);
 
   /**
    * Bring the window to the top (infront of all other windows)

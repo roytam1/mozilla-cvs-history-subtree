@@ -9,6 +9,8 @@
 
 #include "nsIDragService.h"
 
+#include "nsRegion.h"
+
 #include "nsGUIEvent.h"
 
 #include "nsRect.h"
@@ -83,11 +85,23 @@ static char *event_names[] = {
 
 NS_IMPL_ISUPPORTS1(nsRunAppRun, nsIRunAppRun)
 
+
+static int
+my_x_error (Display     *display,
+             XErrorEvent *error)
+{
+  return 1;
+}
+
 nsRunAppRun::nsRunAppRun()
 {
   NS_INIT_ISUPPORTS();
 
   sDisplay = ::XOpenDisplay(NULL);
+
+
+  //  XSetErrorHandler(my_x_error);
+
   /* member initializers and constructor code */
 }
 
@@ -344,37 +358,44 @@ nsRunAppRun::HandleExposeEvent(const XEvent *event, nsWindow *aWindow)
   PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("Expose event for window 0x%lx %d %d %d %d\n", event->xany.window,
                                        event->xexpose.x, event->xexpose.y, event->xexpose.width, event->xexpose.height));
 
-  nsRect *dirtyRect = new nsRect(event->xexpose.x, event->xexpose.y, 
-                                 event->xexpose.width, event->xexpose.height);
+
+  nsCOMPtr<nsIRegion> region(do_CreateInstance("@mozilla.org/gfx/region;2"));
+  
+  region->SetToRect(event->xexpose.x, event->xexpose.y, event->xexpose.width, event->xexpose.height);
 
   /* compress expose events...
    */
-  if (event->xexpose.count!=0) {
-     XEvent txe;
-     do {
-        XWindowEvent(event->xany.display, event->xany.window, ExposureMask, (XEvent *)&txe);
-        dirtyRect->UnionRect(*dirtyRect, nsRect(txe.xexpose.x, txe.xexpose.y, 
-                                                txe.xexpose.width, txe.xexpose.height));
-     } while (txe.xexpose.count>0);
+  if (event->xexpose.count != 0) {
+    XEvent txe;
+    do {
+      XWindowEvent(event->xany.display, event->xany.window, ExposureMask, (XEvent *)&txe);
+      region->UnionRect(txe.xexpose.x, txe.xexpose.y, 
+			txe.xexpose.width, txe.xexpose.height);
+    } while (txe.xexpose.count > 0);
   }
-
-
 
   nsPaintEvent pevent;
   pevent.message = NS_PAINT;
   pevent.window = aWindow;
   pevent.eventStructType = NS_PAINT_EVENT;
-  pevent.rect = dirtyRect;
+
 
   // XXX fix this
   pevent.time = 0;
   //pevent.time = PR_Now();
-    //pevent.region = nsnull;
+  //pevent.region = nsnull;
+  //  pevent.rect = dirtyRect;
+
+
+  //  aWindow->SetBackgroundColor(255);
+
+  nsRect r;
+  region->GetBoundingBox(&r.x, &r.y, &r.width, &r.height);
+  aWindow->FillRectangle(r.x, r.y, r.width, r.height);
 
   aWindow->DispatchEvent(&pevent);
 
-  delete pevent.rect;
-
+  //  delete pevent.rect;
 }
 
 void

@@ -46,6 +46,7 @@ public:
   NS_DECL_NSIREGION
 
   friend class nsDrawable;
+  friend class nsWindow;
 
 protected:
   Region mRegion;
@@ -53,8 +54,9 @@ protected:
 
 private:
   void XCopyRegion(Region src, Region dr_return);
-  void XRegionFromRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight, Region dr_return);
-
+  void XUnionRegionWithRect(Region srca,
+                            gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight,
+                            Region dr_return);
 
   Region CreateRectRegion(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight);
   inline Region GetCopyRegion();

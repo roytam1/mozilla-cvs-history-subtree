@@ -108,7 +108,7 @@ NS_IMETHODIMP nsCursor::SetCursor(PRInt32 aCursor)
   return NS_OK;
 }
 
-NS_IMETHODIMP SetToImage(nsIImage *aImage)
+NS_IMETHODIMP nsCursor::SetToImage(nsIImage *aImage)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -122,3 +122,16 @@ NS_IMETHODIMP nsPopupWindow::Init(nsIWindow *aParent,
 
   return NS_OK;
 }
+
+
+/* void bringToTop (); */
+NS_IMETHODIMP nsPopupWindow::BringToTop()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void setTransparency (in nsIPixmap mask); */
+NS_IMETHODIMP nsPopupWindow::SetTransparency(nsIPixmap *mask)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

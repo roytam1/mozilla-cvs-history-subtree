@@ -58,6 +58,23 @@ NS_IMPL_RELEASE_INHERITED(nsTopLevelWindow, nsWindow)
                      ColormapChangeMask | OwnerGrabButtonMask )
 
 
+long GetEventMask()
+{
+  return (ButtonMotionMask |
+          ButtonPressMask | 
+          ButtonReleaseMask | 
+          EnterWindowMask |
+          ExposureMask | 
+          KeyPressMask | 
+          KeyReleaseMask | 
+          LeaveWindowMask |
+          PointerMotionMask |
+          StructureNotifyMask | 
+          VisibilityChangeMask |
+          FocusChangeMask |
+          OwnerGrabButtonMask);
+}
+
 
 nsTopLevelWindow::nsTopLevelWindow()
 {
@@ -108,7 +125,7 @@ NS_IMETHODIMP nsTopLevelWindow::Init(nsIWindow *aParent,
 
   attr.bit_gravity = NorthWestGravity;
   attr.colormap = DefaultColormapOfScreen(screen);
-  attr.event_mask = ALL_EVENTS;
+  attr.event_mask = GetEventMask();
   attr_mask = CWBitGravity | CWColormap | CWEventMask;
 
   mWindow = ::XCreateWindow(mDisplay, parent, aX, aY,
@@ -174,3 +191,21 @@ NS_IMETHODIMP nsTopLevelWindow::SetTransparency(nsIPixmap *mask)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
+
+
+/* attribute long sizeState; */
+NS_IMETHODIMP nsTopLevelWindow::GetSizeState(PRInt32 *aSizeState)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsTopLevelWindow::SetSizeState(PRInt32 aSizeState)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+ /* void constrainPosition (inout gfx_coord aX, inout gfx_coord aY); */
+NS_IMETHODIMP nsTopLevelWindow::ConstrainPosition(gfx_coord *aX, gfx_coord *aY)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+

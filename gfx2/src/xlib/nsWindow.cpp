@@ -212,6 +212,40 @@ NS_IMETHODIMP nsWindow::SetCursor(nsICursor * aCursor)
   return NS_OK;
 }
 
+NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect & aOldRect, nsRect & aNewRect)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener *aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* [noscript] void invalidateRect ([const] in nsRect aRect, in boolean aIsSynchronous); */
+NS_IMETHODIMP nsWindow::InvalidateRect(const nsRect * aRect, PRBool aIsSynchronous)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void invalidateRegion (in nsIRegion aRegion, in boolean aIsSynchronous); */
+NS_IMETHODIMP nsWindow::InvalidateRegion(nsIRegion *aRegion, PRBool aIsSynchronous)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void update (); */
+NS_IMETHODIMP nsWindow::Update()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void scroll (in gfx_coord aSrcX, in gfx_coord aSrcY, in gfx_coord aDestX, in gfx_coord aDestY, in gfx_dimension aWidth, in gfx_dimension aHeight); */
+NS_IMETHODIMP nsWindow::Scroll(gfx_coord aSrcX, gfx_coord aSrcY, gfx_coord aDestX, gfx_coord aDestY, gfx_dimension aWidth, gfx_dimension aHeight)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 
 
 /* nsPIWindowXlib methods */

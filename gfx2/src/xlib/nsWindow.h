@@ -28,6 +28,8 @@
 #include "nsPIWindowXlib.h"
 #include "nsDrawable.h"
 
+#include "nsIRegion.h"
+
 #include "nsWeakReference.h"
 
 #include "nsIGUIEventListener.h"
@@ -45,9 +47,14 @@ public:
   nsWindow();
   virtual ~nsWindow();
 
+private:
+
 protected:
   Window mWindow;
   nsWeakPtr mParent;
+
+/* for exposes, invalidates, etc */
+  nsCOMPtr<nsIRegion> mUpdateRegion;
 
 /* state*/
   PRBool mMapped;

@@ -123,3 +123,23 @@ NS_IMETHODIMP nsChildWindow::Init(nsIWindow *aParent,
 
   return NS_OK;
 }
+
+
+/* void takeFocus (); */
+NS_IMETHODIMP nsChildWindow::TakeFocus()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void moveZOrderAboveSibling (in nsIChildWindow aSibling); */
+NS_IMETHODIMP nsChildWindow::MoveZOrderAboveSibling(nsIChildWindow *aSibling)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void moveZOrderBelowSibling (in nsIChildWindow aSibling); */
+NS_IMETHODIMP nsChildWindow::MoveZOrderBelowSibling(nsIChildWindow *aSibling)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+

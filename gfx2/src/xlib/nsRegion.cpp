@@ -56,7 +56,9 @@ nsRegion::XCopyRegion(Region srca, Region dr_return)
 }
 
 void
-nsRegion::XRegionFromRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight, Region dr_return)
+nsRegion::XUnionRegionWithRect(Region srca,
+                               gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight,
+                               Region dr_return)
 {
   XRectangle rect;
 
@@ -65,7 +67,7 @@ nsRegion::XRegionFromRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_
   rect.width = GFXCoordToIntRound(aWidth);
   rect.height = GFXCoordToIntRound(aHeight);
 
-  ::XUnionRectWithRegion(&rect, GetCopyRegion(), dr_return);
+  ::XUnionRectWithRegion(&rect, srca, dr_return);
 }
 
 NS_IMETHODIMP nsRegion::Init(void)
@@ -99,14 +101,14 @@ NS_IMETHODIMP nsRegion::SetToRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWid
 {
   if (!mRegion)
     mRegion = ::XCreateRegion();
-  this->XRegionFromRect(aX, aY, aWidth, aHeight, mRegion);
+  this->XUnionRegionWithRect(GetCopyRegion(), aX, aY, aWidth, aHeight, mRegion);
 
   return NS_OK;
 }
 
 NS_IMETHODIMP nsRegion::IntersectRegion(nsIRegion *aRegion)
 {
-  nsRegion * pRegion = (nsRegion *)aRegion;
+  nsRegion *pRegion = NS_STATIC_CAST(nsRegion*, aRegion);
 
   ::XIntersectRegion(mRegion, pRegion->mRegion, mRegion);
 
@@ -116,7 +118,7 @@ NS_IMETHODIMP nsRegion::IntersectRegion(nsIRegion *aRegion)
 NS_IMETHODIMP nsRegion::IntersectRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight)
 {
   Region tRegion = ::XCreateRegion();
-  this->XRegionFromRect(aX, aY, aWidth, aHeight, tRegion);
+  this->XUnionRegionWithRect(GetCopyRegion(), aX, aY, aWidth, aHeight, tRegion);
 
   ::XIntersectRegion(mRegion, tRegion, mRegion);
 
@@ -127,7 +129,7 @@ NS_IMETHODIMP nsRegion::IntersectRect(gfx_coord aX, gfx_coord aY, gfx_dimension 
 
 NS_IMETHODIMP nsRegion::UnionRegion(nsIRegion *aRegion)
 {
-  nsRegion *pRegion = (nsRegion *)aRegion;
+  nsRegion *pRegion = NS_STATIC_CAST(nsRegion*, aRegion);
 
   if (pRegion->mRegion) {
     if (mRegion) {
@@ -146,14 +148,14 @@ NS_IMETHODIMP nsRegion::UnionRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWid
   if (!mRegion)
     mRegion = ::XCreateRegion();
 
-  this->XRegionFromRect(aX, aY, aWidth, aHeight, mRegion);
+  this->XUnionRegionWithRect(mRegion, aX, aY, aWidth, aHeight, mRegion);
 
   return NS_OK;
 }
 
 NS_IMETHODIMP nsRegion::SubtractRegion(nsIRegion *aRegion)
 {
-  nsRegion *pRegion = (nsRegion *)aRegion;
+  nsRegion *pRegion = NS_STATIC_CAST(nsRegion*, aRegion);
   if (pRegion->mRegion) {
     if (!mRegion) {
       mRegion = ::XCreateRegion();
@@ -167,7 +169,7 @@ NS_IMETHODIMP nsRegion::SubtractRegion(nsIRegion *aRegion)
 NS_IMETHODIMP nsRegion::SubtractRect(gfx_coord aX, gfx_coord aY, gfx_dimension aWidth, gfx_dimension aHeight)
 {
   Region tRegion = ::XCreateRegion();
-  this->XRegionFromRect(aX, aY, aWidth, aHeight, tRegion);
+  this->XUnionRegionWithRect(GetCopyRegion(), aX, aY, aWidth, aHeight, tRegion);
 
   if (!mRegion) {
     mRegion = ::XCreateRegion();
@@ -193,7 +195,7 @@ NS_IMETHODIMP nsRegion::IsEmpty(PRBool *aResult)
 NS_IMETHODIMP nsRegion::IsEqual(nsIRegion *aRegion, PRBool *aResult)
 {
   *aResult = PR_FALSE;
-  nsRegion *pRegion = (nsRegion *)aRegion;
+  nsRegion *pRegion = NS_STATIC_CAST(nsRegion*, aRegion);
 
   if (mRegion && pRegion->mRegion) {
     *aResult = ::XEqualRegion(mRegion, pRegion->mRegion);

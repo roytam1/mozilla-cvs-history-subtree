@@ -177,6 +177,7 @@ xGC *nsGCCache::GetGC(Display *display, Drawable drawable, unsigned long flags, 
   if (!entry->gc) {
     // No old GC, greate new
     entry->gc = new xGC(display, drawable, flags, gcv);
+    entry->gc->AddRef(); // addref the newly created xGC
     entry->flags = flags;
     entry->gcv = *gcv;
     entry->clipRegion = NULL;
@@ -186,6 +187,7 @@ xGC *nsGCCache::GetGC(Display *display, Drawable drawable, unsigned long flags, 
     // Old GC still in use, create new
     entry->gc->Release();
     entry->gc = new xGC(display, drawable, flags, gcv);
+    entry->gc->AddRef(); // addref the newly created xGC
     entry->flags = flags;
     entry->gcv = *gcv;
     entry->clipRegion = NULL;
@@ -225,6 +227,5 @@ void nsGCCache::ReuseGC(GCCacheEntry *entry, unsigned long flags, XGCValues *gcv
     ::XChangeGC(entry->gc->mDisplay, entry->gc->mGC,
                 flags, gcv);
   }
-  entry->flags = flags;
-  entry->gcv = *gcv;
+  entry->flags = flags;  entry->gcv = *gcv;
 }

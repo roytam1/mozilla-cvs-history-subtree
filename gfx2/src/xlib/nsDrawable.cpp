@@ -454,7 +454,7 @@ void nsDrawable::UpdateGC()
 
   memset(&values, 0, sizeof(XGCValues));
 
-  //  values.foreground.pixel = gdk_rgb_xpixel_from_rgb(NS_TO_GDK_RGB(mCurrentColor));
+  // values.foreground.pixel = gdk_rgb_xpixel_from_rgb(NS_TO_GDK_RGB(mCurrentColor));
   values.foreground = mForegroundColor;
   valuesMask = GCForeground;
 
@@ -482,11 +482,10 @@ void nsDrawable::UpdateGC()
   valuesMask |= GCLineWidth;
   values.line_width = GFXCoordToIntRound(mLineWidth);
 
-
   Region rgn = 0;
 #if 0
   if (mClipRegion) {
-    mClipRegion->GetNativeRegion((void*&)rgn);
+    rgn = mClipRegion->mRegion;
   }
 #endif
 
