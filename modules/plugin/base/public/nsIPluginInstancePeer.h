@@ -42,13 +42,6 @@ class nsIOutputStream;
 ////////////////////////////////////////////////////////////////////////////////
 // Plugin Instance Peer Interface
 
-enum nsPluginTagType {
-    nsPluginTagType_Unknown,
-    nsPluginTagType_Embed,
-    nsPluginTagType_Object,
-    nsPluginTagType_Applet
-};
-
 /**
  * The nsIPluginInstancePeer interface is the set of operations implemented
  * by the browser to support a plugin instance. When a plugin instance is 
