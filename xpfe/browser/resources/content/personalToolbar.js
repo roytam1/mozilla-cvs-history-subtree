@@ -409,7 +409,8 @@ BookmarksToolbar.prototype = {
         return true;
       case "cmd_properties":
       case "cmd_rename":
-        return document.popupNode != null;
+        seln = gBookmarksShell.tree.selectedItems;
+        return document.popupNode != null && seln[0].getAttribute("type") != NC_NS + "BookmarkSeparator";
       case "cmd_setnewbookmarkfolder":
         seln = gBookmarksShell.getSelection();
         if (!seln.length) return false;
