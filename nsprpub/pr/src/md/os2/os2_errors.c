@@ -749,7 +749,9 @@ void _MD_os2_map_connect_error(PRInt32 err)
        case EWOULDBLOCK:
 			PR_SetError(PR_WOULD_BLOCK_ERROR, err);
 			break;
-      case EINPROGRESS:
+        case EINPROGRESS:
+			PR_SetError(PR_IN_PROGRESS_ERROR, err);
+			break;
 		case EALREADY:
 		case EINVAL:
 			PR_SetError(PR_ALREADY_INITIATED_ERROR, err);
