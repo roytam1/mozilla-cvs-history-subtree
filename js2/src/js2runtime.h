@@ -1484,11 +1484,23 @@ static const double two31 = 2147483648.0;
 
         JSValue mThis;
 
-        // this is the execution stack (for the current function at least)
+        // this is the execution stack (for the current function)
         std::vector<JSValue> mStack;
 
         // the activation stack
         std::stack<Activation *> mActivationStack;
+
+        struct HandlerData {
+            HandlerData(uint8 *pc, uint32 stackSize, Activation *curAct) 
+                : mPC(pc), mStackSize(stackSize), mActivation(curAct) { }
+
+            uint8 *mPC;
+            uint32 mStackSize;
+            Activation *mActivation;
+        };
+
+        std::stack<HandlerData *> mTryStack;
+        std::stack<uint8 *> mSubStack;
 
         // the locals for the current function (an array, constructed on function entry)
         JSValue *mLocals;

@@ -101,6 +101,12 @@ namespace ByteCode {
         JumpTrueOp,             // <target>            <object> -->
         JumpOp,                 // <target>            
 
+        TryOp,
+        JsrOp,
+        RtsOp,
+        ThrowOp,
+        HandlerOp,
+
         LogicalXorOp,           //                     <object> <object> <boolean> <boolean> --> <object> 
         LogicalNotOp,           //                     <object> --> <object>
 

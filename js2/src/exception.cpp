@@ -50,7 +50,8 @@ namespace JavaScript
         "Runtime error",                        // runtimeError
         "Reference error",                      // referenceError
         "Range error",                          // burnt the beans
-        "Type error",                           // Sype error
+        "Type error",                           // Yype error
+        "Uncaught exception error",             // uncaught exception error
     };
     
 // Return a null-terminated string describing the exception's kind.

@@ -1009,6 +1009,69 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mStack.push_back(JSValue(mGlobal));
                 }
                 break;
+            case JsrOp:
+                {
+                    uint32 offset = *((uint32 *)pc);
+                    mSubStack.push(pc + sizeof(uint32));
+                    pc += offset;
+                }
+                break;
+            case RtsOp:
+                {
+                    pc = mSubStack.top();
+                    mSubStack.pop();
+                }
+                break;
+
+            case TryOp:
+                {
+                    Activation *curAct = (mActivationStack.size() > 0) ? mActivationStack.top() : NULL;
+                    uint32 handler = *((uint32 *)pc);
+                    if (handler != -1)
+                        mTryStack.push(new HandlerData(pc + handler, mStack.size(), curAct));
+                    pc += sizeof(uint32);
+                    handler = *((uint32 *)pc);
+                    if (handler != -1)
+                        mTryStack.push(new HandlerData(pc + handler, mStack.size(), curAct));
+                    pc += sizeof(uint32);
+                }
+                break;
+            case HandlerOp:
+                {
+                    HandlerData *hndlr = (HandlerData *)mTryStack.top();
+                    mTryStack.pop();
+                    delete hndlr;
+                }
+                break;
+            case ThrowOp:
+                {   
+                    JSValue x = mStack.back();
+                    if (mTryStack.size() > 0) {
+                        HandlerData *hndlr = (HandlerData *)mTryStack.top();
+                        Activation *curAct = (mActivationStack.size() > 0) ? mActivationStack.top() : NULL;
+                        if (curAct != hndlr->mActivation) {
+                            Activation *prev = mActivationStack.top();
+                            do {
+                                mActivationStack.pop();
+                                curAct = mActivationStack.top();                            
+                            } while (hndlr->mActivation != curAct);
+                            mCurModule = prev->mModule;
+                            endPC = mCurModule->mCodeBase + mCurModule->mLength;
+                            mLocals = new JSValue[mCurModule->mLocalsCount];
+                            memcpy(mLocals, prev->mLocals, sizeof(JSValue) * mCurModule->mLocalsCount);
+                            mArgumentBase = prev->mArgumentBase;
+                            mThis = prev->mThis;
+                        }
+
+                        mStack.resize(hndlr->mStackSize);
+                        pc = hndlr->mPC;
+                        mStack.push_back(x);
+                    }
+                    else
+                        throw Exception(Exception::uncaughtError, "No handler for throw");
+                }
+                break;
+
             default:
                 throw Exception(Exception::internalError, "Bad Opcode");
             }

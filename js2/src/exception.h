@@ -53,7 +53,8 @@ namespace JavaScript
             runtimeError,
             referenceError,
             rangeError,
-            typeError
+            typeError,
+            uncaughtError
         };
         
         Kind kind;         // The exception's kind

@@ -789,6 +789,104 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             addByte(PopOp);
         }
         break;
+    case StmtNode::empty:
+        /* nada */
+        break;
+    case StmtNode::Throw:
+        {
+            ExprStmtNode *e = static_cast<ExprStmtNode *>(p);
+            genExpr(e->expr);
+            addByte(ThrowOp);
+        }
+        break;
+    case StmtNode::Try:
+        {
+/*
+
+            try {   //  [catch,finally] handler labels are pushed on try stack
+                    <tryblock>
+                }   //  catch handler label is popped off try stack
+                jsr finally
+                jump-->finished                 
+
+            finally:        // finally handler label popped off
+                {           // a throw from in here goes to the 'next' handler
+                }
+                rts
+
+            finallyInvoker:              <---
+                push exception              |
+                jsr finally                 |--- the handler labels 
+                throw exception             | 
+                                            |
+            catchLabel:                  <---
+                catch (exception) { // catch handler label popped off
+                        // any throw from in here must jump to the finallyInvoker
+                        // (i.e. not the catch handler!)
+                    the incoming exception
+                    is on the top of the stack. it
+                    get stored into the variable
+                    we've associated with the catch clause
+
+                }
+                // 'normal' fall thru from catch
+                jsr finally
+
+            finished:
+*/
+            TryStmtNode *t = static_cast<TryStmtNode *>(p);
+
+            uint32 catchClauseLabel = (t->catches) ? getLabel() : -1;
+            uint32 finallyInvokerLabel = (t->finally) ? getLabel() : -1;
+            uint32 finishedLabel = getLabel();
+
+            addByte(TryOp);
+            addFixup(finallyInvokerLabel);            
+            addFixup(catchClauseLabel);
+
+            genCodeForStatement(t->stmt, static_cg);
+
+            uint32 finallyLabel;
+            if (t->finally) {
+                finallyLabel = getLabel(); 
+                addByte(JsrOp);
+                addFixup(finallyLabel);
+                addByte(JumpOp);
+                addFixup(finishedLabel);
+                setLabel(finallyLabel);
+                addByte(HandlerOp);
+                genCodeForStatement(t->finally, static_cg);
+                addByte(RtsOp);
+
+                setLabel(finallyInvokerLabel);
+                // the exception object is on the top of the stack already
+                addByte(JsrOp);
+                addFixup(finallyLabel);
+                addByte(ThrowOp);
+
+            }
+            else {
+                addByte(JumpOp);
+                addFixup(finishedLabel);
+            }
+
+            if (t->catches) {
+                setLabel(catchClauseLabel);
+                addByte(HandlerOp);
+                CatchClause *c = t->catches;
+                while (c) {
+                    genCodeForStatement(c->stmt, static_cg);
+                    c = c->next;
+                }
+                if (t->finally) {
+                    addByte(JsrOp);
+                    addFixup(finallyLabel);
+                }
+            }
+            setLabel(finishedLabel);
+        }
+        break;
+
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1743,6 +1841,26 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
         break;
     case LoadGlobalObjectOp:
         f << "LoadGlobalObject\n";
+        i++;
+        break;
+    case JsrOp:
+        f << "Jsr " << bcm.getOffset(i + 1) << "\n";
+        i += 5;
+        break;
+    case RtsOp:
+        f << "Rts\n";
+        i++;
+        break;
+    case TryOp:
+        f << "Try " << bcm.getOffset(i + 1) << " " << bcm.getOffset(i + 5) << "\n";
+        i += 9;
+        break;
+    case HandlerOp:
+        f << "Handler\n";
+        i++;
+        break;
+    case ThrowOp:
+        f << "Throw\n";
         i++;
         break;
     default:
