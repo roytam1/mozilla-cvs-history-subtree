@@ -84,6 +84,7 @@ CSRCS =             \
 	lock.c          \
 	lockfile.c      \
 	logger.c		\
+	makedir.c		\
 	mbcs.c          \
 	multiacc.c		\
 	multiwait.c		\
@@ -99,6 +100,7 @@ CSRCS =             \
 	op_filok.c		\
 	op_noacc.c		\
 	op_nofil.c		\
+	openfile.c		\
 	parent.c    	\
 	perf.c    		\
 	pipeping.c		\
