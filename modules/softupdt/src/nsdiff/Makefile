@@ -19,7 +19,7 @@ DEPTH		= ../../../..
 
 REQUIRES	= softupdt zlib
 
-CSRCS		= nsdiff.c
+CSRCS		= nsdiff.c crc32.c
 
 PROGRAM		= nsdiff$(BIN_SUFFIX)
 
@@ -31,3 +31,7 @@ symbols:
 	@echo "PROGRAM	= $(PROGRAM)"
 	@echo "LIBRARY	= $(LIBRARY)"
 	@echo "TARGETS	= $(TARGETS)"
+
+crc32.c:  $(DEPTH)/modules/zlib/src/crc32.c
+        @$(RM) $@
+        @$(COPY) $< $@

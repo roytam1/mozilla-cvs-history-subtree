@@ -34,8 +34,8 @@ PDBFILE	= nsdiff.pdb
 MAPFILE = nsdiff.map
 
 REQUIRES=softupdt zlib 
-CSRCS=nsdiff.c
-C_OBJS=.\$(OBJDIR)\nsdiff.obj 
+CSRCS=nsdiff.c crc32.c
+C_OBJS=.\$(OBJDIR)\nsdiff.obj .\$(OBJDIR)\crc32.obj
 !if "$(MOZ_BITS)" != "16"
 LINCS= \
    -I$(XPDIST)\public\softupdt \
@@ -66,3 +66,6 @@ symbols:
 	@echo "DBM_LIB	= $(DBM_LIB)"
 	@echo "INSTALL	= $(INSTALL)"
 
+crc32.c:  $(DEPTH)/modules/zlib/src/crc32.c
+        @$(RM) $@
+        copy $(DEPTH)\modules\zlib\src\crc32.c $@
