@@ -30,14 +30,14 @@ MODULE		= dom
 LIBRARY_NAME	= jsdomevents_s
 REQUIRES	= xpcom string js caps xpconnect widget layout
 
-CPPSRCS		= \
-		nsJSEventListener.cpp \
-		nsJSDOMEventListener.cpp \
-		nsJSEvent.cpp \
-		nsJSUIEvent.cpp \
-		nsJSKeyEvent.cpp \
-    nsJSMutationEvent.cpp \
-		$(NULL)
+CPPSRCS =				\
+	nsJSEventListener.cpp		\
+	nsJSDOMEventListener.cpp	\
+#	nsJSEvent.cpp			\
+#	nsJSUIEvent.cpp			\
+#	nsJSKeyEvent.cpp		\
+#  nsJSMutationEvent.cpp \
+	$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
 override NO_SHARED_LIB=1
