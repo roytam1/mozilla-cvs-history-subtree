@@ -34,6 +34,7 @@ REQUIRES	= string \
 		  layout \
 		  content \
 		  content_xul \
+		  commandhandler \
 		  $(NULL)
 
 CPPSRCS		= \
