@@ -821,6 +821,15 @@ sub BuildClientDist()
     # XML-RPC
     InstallFromManifest(":mozilla:extensions:xml-rpc:idl:MANIFEST_IDL",                "$distdirectory:idl:");
 
+    #LDAP
+    if ($main::options{ldap})
+    {
+        InstallFromManifest(":mozilla:directory:c-sdk:ldap:include:MANIFEST",      		"$distdirectory:directory:");
+        InstallFromManifest(":mozilla:directory:xpcom:base:public:MANIFEST",       		"$distdirectory:directory:");
+        InstallFromManifest(":mozilla:directory:xpcom:base:public:MANIFEST_IDL",   		"$distdirectory:idl:");
+        InstallFromManifest(":mozilla:xpfe:components:autocomplete:public:MANIFEST_IDL",	"$distdirectory:idl:");
+    }
+
     # MAILNEWS
     InstallFromManifest(":mozilla:mailnews:public:MANIFEST",                       "$distdirectory:mailnews:");
     InstallFromManifest(":mozilla:mailnews:public:MANIFEST_IDL",                   "$distdirectory:idl:");
@@ -858,15 +867,6 @@ sub BuildClientDist()
     if ($main::options{transformiix})
     {
         InstallFromManifest(":mozilla:extensions:transformiix:public:MANIFEST_IDL", "$distdirectory:idl:");
-    }
-
-    #LDAP
-    if ($main::options{ldap})
-    {
-        InstallFromManifest(":mozilla:directory:c-sdk:ldap:include:MANIFEST",      		"$distdirectory:directory:");
-        InstallFromManifest(":mozilla:directory:xpcom:base:public:MANIFEST",       		"$distdirectory:directory:");
-        InstallFromManifest(":mozilla:directory:xpcom:base:public:MANIFEST_IDL",   		"$distdirectory:idl:");
-        InstallFromManifest(":mozilla:xpfe:components:autocomplete:public:MANIFEST_IDL",	"$distdirectory:idl:");
     }
 
     #XMLEXTRAS
@@ -1139,6 +1139,12 @@ sub BuildIDLProjects()
     
     BuildIDLProject(":mozilla:xpinstall:macbuild:xpinstallIDL.mcp",                 "xpinstall");
 
+    if ($main::options{ldap})
+    {
+        BuildIDLProject(":mozilla:directory:xpcom:macbuild:mozldapIDL.mcp", "mozldap");
+        BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:ldapAutoCompleteIDL.mcp", "ldapAutoComplete");
+    }
+
     BuildIDLProject(":mozilla:mailnews:base:macbuild:msgCoreIDL.mcp",               "mailnews");
     BuildIDLProject(":mozilla:mailnews:compose:macbuild:msgComposeIDL.mcp",         "MsgCompose");
     BuildIDLProject(":mozilla:mailnews:local:macbuild:msglocalIDL.mcp",             "MsgLocal");
@@ -1161,12 +1167,6 @@ sub BuildIDLProjects()
     if ($main::options{transformiix})
     {
         BuildIDLProject(":mozilla:extensions:transformiix:macbuild:transformiixIDL.mcp", "transformiix");
-    }
-
-    if ($main::options{ldap})
-    {
-        BuildIDLProject(":mozilla:directory:xpcom:macbuild:mozldapIDL.mcp", "mozldap");
-        BuildIDLProject(":mozilla:xpfe:components:autocomplete:macbuild:ldapAutoCompleteIDL.mcp", "ldapAutoComplete");
     }
 
     if ($main::options{xmlextras})
@@ -1677,6 +1677,9 @@ sub BuildEmbeddingProjects()
     
     # $D becomes a suffix to target names for selecting either the debug or non-debug target of a project
     my($D) = $main::DEBUG ? "Debug" : "";
+    # $C becomes a component of target names for selecting either the Carbon or non-Carbon target of a project
+    my($C) = $main::options{carbon} ? "Carbon" : "";
+
     my($dist_dir) = GetBinDirectory();
 
     StartBuildModule("embedding");
@@ -1687,15 +1690,21 @@ sub BuildEmbeddingProjects()
     BuildOneProject(":mozilla:embedding:base:macbuild:EmbedAPI.mcp", "EmbedAPI$D.o", 0, 0, 0);
     MakeAlias(":mozilla:embedding:base:macbuild:EmbedAPI$D.o", ":mozilla:dist:embedding:");
 
-    if ($main::options{embedding_test} && !$main::options{carbon})
+    if ((!$main::options{carbon} && $main::options{embedding_test}) || ($main::options{carbon} && $main::options{embedding_test_carbon}))
     {
-        if (-e GetCodeWarriorRelativePath("MacOS Support:PowerPlant"))
+    	my($PowerPlantPath) = $main::options{carbon} ? "Carbon Support:PowerPlant" : "MacOS Support:PowerPlant";
+        if (-e GetCodeWarriorRelativePath($PowerPlantPath))
         {
-            BuildOneProject(":mozilla:embedding:browser:powerplant:PPBrowser.mcp",            "PPEmbed$D",  0, 0, 0);
+        	# Build PowerPlant and export the lib and the precompiled header
+            BuildOneProject(":mozilla:lib:mac:PowerPlant:PowerPlant.mcp", "PowerPlant$C$D.o",  0, 0, 0);
+            MakeAlias(":mozilla:lib:mac:PowerPlant:PowerPlant$C$D.o", ":mozilla:dist:mac:powerplant:");
+            MakeAlias(":mozilla:lib:mac:PowerPlant:pch:PPHeaders$D" . "_pch", ":mozilla:dist:mac:powerplant:");
+            
+            BuildOneProject(":mozilla:embedding:browser:powerplant:PPBrowser.mcp", "PPEmbed$C$D",  0, 0, 0);
         }
         else
         {
-            print("MacOS Support:PowerPlant does not exist - embedding sample will not be built\n");
+            print("$PowerPlantPath does not exist - embedding sample will not be built\n");
         }
     }
     
