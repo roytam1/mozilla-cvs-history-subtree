@@ -42,7 +42,7 @@
 #include "ipcd.h"
 #include "ipcm.h"
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 #include "prio.h"
 #endif
 
@@ -78,7 +78,7 @@ ipcClient::Finalize()
     mNames.DeleteAll();
     mTargets.DeleteAll();
 
-#ifdef XP_UNIX 
+#if defined(XP_UNIX) || defined(XP_OS2)
     mInMsg.Reset();
     mOutMsgQ.DeleteAll();
 #endif
@@ -126,7 +126,7 @@ ipcClient::DelTarget(const nsID &target)
         mTargets.FindAndDelete(target);
 }
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 
 //
 // called to process a client socket

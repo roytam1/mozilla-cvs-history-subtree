@@ -47,7 +47,7 @@
 #include "ipcMessage.h"
 #include "ipcMessageQ.h"
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 #include "ipcTransportUnix.h"
 typedef nsISocketEventHandler ipcTransportSuper;
 #else
@@ -91,7 +91,7 @@ public:
     virtual ~ipcTransport()
     {
         PR_DestroyMonitor(mMonitor);
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
         if (mReceiver)
             ((ipcReceiver *) mReceiver.get())->ClearTransport();
 #endif
@@ -144,7 +144,7 @@ private:
     PRUint32               mConnectionAttemptCount;
     PRUint32               mClientID;
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     nsCOMPtr<nsIInputStreamNotify> mReceiver;
     nsCOMPtr<nsISocketTransport>   mTransport;
     nsCOMPtr<nsIInputStream>       mInputStream;

@@ -83,7 +83,7 @@ ipcServiceUnregisterProc(nsIComponentManager *aCompMgr,
 }
 #endif
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 #include "ipcSocketProviderUnix.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(ipcSocketProviderUnix)
 
@@ -121,7 +121,7 @@ static const nsModuleComponentInfo components[] = {
     ipcServiceRegisterProc,
     ipcServiceUnregisterProc },
     */
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
   { IPC_SOCKETPROVIDER_CLASSNAME,
     IPC_SOCKETPROVIDER_CID,
     NS_NETWORK_SOCKET_CONTRACTID_PREFIX IPC_SOCKET_TYPE,

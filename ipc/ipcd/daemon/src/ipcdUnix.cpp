@@ -59,7 +59,7 @@
 #include "ipcdPrivate.h"
 #include "ipcd.h"
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 void
 IPC_Sleep(int seconds)
 {
@@ -88,7 +88,11 @@ static PRBool AcquireDaemonLock(const char *baseDir)
 
     char *lockFile = (char *) malloc(len);
     memcpy(lockFile, baseDir, dirLen);
+#ifdef XP_OS2
+    lockFile[dirLen] = '\\';
+#else
     lockFile[dirLen] = '/';
+#endif
     memcpy(lockFile + dirLen + 1, lockName, sizeof(lockName));
 
     // 
@@ -101,6 +105,7 @@ static PRBool AcquireDaemonLock(const char *baseDir)
     if (ipcLockFD == -1)
         return PR_FALSE;
 
+#ifndef XP_OS2
     //
     // we use fcntl for locking.  assumption: filesystem should be local.
     // this API is nice because the lock will be automatically released
@@ -127,6 +132,7 @@ static PRBool AcquireDaemonLock(const char *baseDir)
     char buf[32];
     int nb = PR_snprintf(buf, sizeof(buf), "%u\n", (unsigned long) getpid());
     write(ipcLockFD, buf, nb);
+#endif
 
     return PR_TRUE;
 }
@@ -187,7 +193,7 @@ static void ShutdownDaemonDir()
 ipcClient *ipcClients = NULL;
 int        ipcClientCount = 0;
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 //
 // the first element of this array is always zero; this is done so that the
 // k'th element of ipcClientArray corresponds to the k'th element of
@@ -350,7 +356,7 @@ static void PollLoop(PRFileDesc *listenFD)
 PRStatus
 IPC_PlatformSendMsg(ipcClient  *client, ipcMessage *msg)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     LOG(("IPC_PlatformSendMsg\n"));
 
     //
@@ -377,7 +383,7 @@ IPC_PlatformSendMsg(ipcClient  *client, ipcMessage *msg)
 
 int main(int argc, char **argv)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     PRFileDesc *listenFD = NULL;
     PRNetAddr addr;
 

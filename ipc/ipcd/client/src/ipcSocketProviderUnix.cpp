@@ -49,7 +49,7 @@
 #include "ipcSocketProviderUnix.h"
 #include "ipcLog.h"
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 static PRDescIdentity ipcIOLayerIdentity;
 static PRIOMethods    ipcIOLayerMethods;
 static char          *ipcIOSocketPath;
@@ -137,7 +137,7 @@ ipcSocketProviderUnix::NewSocket(const char *host,
                                  PRFileDesc **fd,
                                  nsISupports **securityInfo)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     static PRBool firstTime = PR_TRUE;
     if (firstTime) {
         InitIPCMethods();
@@ -187,7 +187,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(ipcSocketProviderUnix, nsISocketProvider)
 void
 ipcSocketProviderUnix::SetSocketPath(const char *socketPath)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     if (ipcIOSocketPath)
         free(ipcIOSocketPath);
     ipcIOSocketPath = socketPath ? strdup(socketPath) : nsnull;

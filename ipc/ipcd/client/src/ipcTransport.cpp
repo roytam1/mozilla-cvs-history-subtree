@@ -338,7 +338,7 @@ ipcTransport::OnConnectFailure()
     return NS_OK;
 }
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 NS_IMPL_THREADSAFE_ISUPPORTS1(ipcTransport, nsISocketEventHandler)
 #else
 NS_IMPL_THREADSAFE_ISUPPORTS0(ipcTransport)

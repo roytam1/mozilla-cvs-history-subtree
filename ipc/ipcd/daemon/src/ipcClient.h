@@ -89,7 +89,7 @@ public:
     void SetHwnd(HWND hwnd) { mHwnd = hwnd; }
 #endif
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     //
     // called to process a client file descriptor.  the value of pollFlags
     // indicates the state of the socket.
@@ -129,7 +129,7 @@ private:
     HWND          mHwnd;
 #endif
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     ipcMessage    mInMsg;    // buffer for incoming message
     ipcMessageQ   mOutMsgQ;  // outgoing message queue
 

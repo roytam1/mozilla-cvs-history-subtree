@@ -74,7 +74,7 @@ enum {
 nsresult
 ipcTransport::PlatformInit()
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     PRNetAddr addr; // this way we know our buffer is large enough ;-)
     IPC_GetDefaultSocketPath(addr.local.path, sizeof(addr.local.path));
 
@@ -85,7 +85,7 @@ ipcTransport::PlatformInit()
 #endif
 }
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 static NS_METHOD ipcWriteMessage(nsIOutputStream *stream,
                                  void            *closure,
                                  char            *segment,
@@ -111,7 +111,7 @@ static NS_METHOD ipcWriteMessage(nsIOutputStream *stream,
 nsresult
 ipcTransport::SendMsg_Internal(ipcMessage *msg)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     LOG(("ipcTransport::SendMsg_Internal [msg=%p dataLen=%u]\n", msg, msg->DataLen()));
     
     if (nsIThread::IsMainThread()) {
@@ -144,7 +144,7 @@ ipcTransport::SendMsg_Internal(ipcMessage *msg)
 nsresult
 ipcTransport::Connect()
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     LOG(("ipcTransport::Connect\n"));
 
     if (++mConnectionAttemptCount > 20) {
@@ -192,7 +192,7 @@ ipcTransport::Connect()
 nsresult
 ipcTransport::Disconnect()
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     if (nsIThread::IsMainThread()) {
         LOG(("  proxy to socket thread\n"));
         nsresult rv;
@@ -215,7 +215,7 @@ ipcTransport::Disconnect()
 #endif
 }
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
 // runs on socket transport thread
 void
 ipcTransport::OnConnectionLost(nsresult reason)
@@ -323,7 +323,7 @@ ipcReceiver::ReadSegment(nsIInputStream *stream,
                          PRUint32        count,
                          PRUint32       *countRead)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     ipcReceiver *self = (ipcReceiver *) closure;
 
     *countRead = 0;
@@ -358,7 +358,7 @@ ipcReceiver::ReadSegment(nsIInputStream *stream,
 NS_IMETHODIMP
 ipcReceiver::OnInputStreamReady(nsIAsyncInputStream *stream)
 {
-#ifdef XP_UNIX
+#if defined(XP_UNIX) || defined(XP_OS2)
     LOG(("ipcReceiver::OnInputStreamReady\n"));
 
     nsresult rv;
