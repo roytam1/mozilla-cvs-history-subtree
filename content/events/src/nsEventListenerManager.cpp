@@ -962,43 +962,44 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
         if (NS_OK == ret) {
           for (int i=0; mMouseListeners && i<mMouseListeners->Count(); i++) {
             nsListenerStruct *ls;
-            nsIDOMMouseListener *mMouseListener;
 
             ls = (nsListenerStruct*)mMouseListeners->ElementAt(i);
             
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMMouseListenerIID, (void**)&mMouseListener)) {
+              nsCOMPtr<nsIDOMMouseListener> mouseListener =
+                do_QueryInterface(ls->mListener);
+
+              if (mouseListener) {
                 switch(aEvent->message) {
                   case NS_MOUSE_LEFT_BUTTON_DOWN:
                   case NS_MOUSE_MIDDLE_BUTTON_DOWN:
                   case NS_MOUSE_RIGHT_BUTTON_DOWN:
-                    ret = mMouseListener->MouseDown(*aDOMEvent);
+                    ret = mouseListener->MouseDown(*aDOMEvent);
                     break;
                   case NS_MOUSE_LEFT_BUTTON_UP:
                   case NS_MOUSE_MIDDLE_BUTTON_UP:
                   case NS_MOUSE_RIGHT_BUTTON_UP:
-                    ret = mMouseListener->MouseUp(*aDOMEvent);
+                    ret = mouseListener->MouseUp(*aDOMEvent);
                     break;
                   case NS_MOUSE_LEFT_CLICK:
                   case NS_MOUSE_MIDDLE_CLICK:
                   case NS_MOUSE_RIGHT_CLICK:
-                    ret = mMouseListener->MouseClick(*aDOMEvent);
+                    ret = mouseListener->MouseClick(*aDOMEvent);
                     break;
                   case NS_MOUSE_LEFT_DOUBLECLICK:
                   case NS_MOUSE_MIDDLE_DOUBLECLICK:
                   case NS_MOUSE_RIGHT_DOUBLECLICK:
-                    ret = mMouseListener->MouseDblClick(*aDOMEvent);
+                    ret = mouseListener->MouseDblClick(*aDOMEvent);
                     break;
                   case NS_MOUSE_ENTER_SYNTH:
-                    ret = mMouseListener->MouseOver(*aDOMEvent);
+                    ret = mouseListener->MouseOver(*aDOMEvent);
                     break;
                   case NS_MOUSE_EXIT_SYNTH:
-                    ret = mMouseListener->MouseOut(*aDOMEvent);
+                    ret = mouseListener->MouseOut(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mMouseListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
