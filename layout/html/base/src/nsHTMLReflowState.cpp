@@ -2028,7 +2028,6 @@ nsHTMLReflowState::ComputeBlockBoxData(nsIPresContext* aPresContext,
             mComputedBorderPadding.right;
         }
 
-        // XXXwaterson why not just AdjustComputedWidth here?
         // Take into account any min and max values
         if (mComputedWidth > mComputedMaxWidth) {
           // Use 'max-width' as the value for 'width'
@@ -2038,7 +2037,6 @@ nsHTMLReflowState::ComputeBlockBoxData(nsIPresContext* aPresContext,
           mComputedWidth = mComputedMinWidth;
         }
 
-        CalculateBlockSideMargins(cbrs->mComputedWidth, mComputedWidth);
       }
     }
   } else {
