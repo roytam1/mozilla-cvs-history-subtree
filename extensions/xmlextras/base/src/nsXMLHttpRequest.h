@@ -43,6 +43,8 @@
 #include "nsISupportsArray.h"
 #include "jsapi.h"
 #include "nsIScriptContext.h"
+#include "nsIHttpEventSink.h"
+#include "nsIInterfaceRequestor.h"
 
 
 enum nsXMLHttpRequestState {
@@ -60,6 +62,8 @@ class nsXMLHttpRequest : public nsIXMLHttpRequest,
                          public nsIDOMLoadListener,
                          public nsIDOMEventTarget,
                          public nsIStreamListener,
+                         public nsIHttpEventSink,
+                         public nsIInterfaceRequestor,
                          public nsSupportsWeakReference
 {
 public:
@@ -91,6 +95,12 @@ public:
 
   // nsIRequestObserver
   NS_DECL_NSIREQUESTOBSERVER
+
+  // nsIHttpEventSink
+  NS_DECL_NSIHTTPEVENTSINK
+
+  // nsIInterfaceRequestor
+  NS_DECL_NSIINTERFACEREQUESTOR
 
 protected:
   nsresult GetStreamForWString(const PRUnichar* aStr,
@@ -145,6 +155,7 @@ protected:
 
   PRInt32 mStatus;
   PRBool mAsync;
+  PRBool mCrossSiteAccessEnabled;
 };
 
 #endif

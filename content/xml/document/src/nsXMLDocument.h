@@ -28,6 +28,7 @@
 #include "nsIHTMLContentContainer.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIHttpEventSink.h"
+#include "nsIScriptContext.h"
 
 class nsIParser;
 class nsIDOMNode;
@@ -114,6 +115,9 @@ protected:
   nsString mBaseTarget;
 
   nsIParser *mParser;
+
+  nsCOMPtr<nsIScriptContext> mScriptContext;
+  PRBool mCrossSiteAccessEnabled;
 };
 
 
