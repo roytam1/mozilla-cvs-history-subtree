@@ -279,5 +279,5 @@ nsSVGLibartBitmapDefault::Flush()
   }
   
   mContainer->DecodingComplete();
-  mRenderingContext->DrawTile(mContainer, 0, 0, &mRectTwips);
+  mRenderingContext->DrawTile(mContainer, mRectTwips.x, mRectTwips.y, &mRectTwips);
 }
