@@ -1059,7 +1059,7 @@ HT_NewToolbarPane(HT_Notification notify)
 
 
 HT_Pane
-paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag)
+paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag)
 {
 	HT_Pane			pane;
 	HT_View			view;
@@ -1093,7 +1093,7 @@ paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlush
 			err = true;
 			break;
 		}
-		pane->db =  newNavCenterDB();
+		pane->db =  db;
 		pane->autoFlushFlag = autoFlushFlag;
 
 		if ((view = HT_NewView(resource, pane, PR_FALSE, NULL, autoOpenFlag)) == NULL)
@@ -1121,10 +1121,26 @@ paneFromResource(RDF_Resource resource, HT_Notification notify, PRBool autoFlush
 
 
 
+
+
 PR_PUBLIC_API(HT_Pane)
 HT_PaneFromResource(RDF_Resource r, HT_Notification n, PRBool autoFlush)
 {
-	return paneFromResource(r, n, autoFlush, false);
+  return paneFromResource(newNavCenterDB(), r, n, autoFlush, false);
+}
+
+
+PR_PUBLIC_API(HT_Pane)
+HT_PaneFromURL(char* url, HT_Notification n, PRBool autoFlush)
+{
+  char** dbstr = getMem(sizeof(char*) * 2);  
+  RDF db ;
+  RDF_Resource r;
+  dbstr[0] = url;
+  db = RDF_GetDB(dbstr);
+  r = RDF_GetResource(db, url, 1);
+  freeMem(dbstr);
+  return paneFromResource(db, r, n, autoFlush, false);
 }
 
 
@@ -1137,7 +1153,7 @@ HT_NewQuickFilePane(HT_Notification notify)
 
 	if ((qf = RDFUtil_GetQuickFileFolder()) != NULL)
 	{
-		if ((pane = paneFromResource( qf, notify, true, true)) != NULL)
+		if ((pane = paneFromResource(newNavCenterDB(), qf, notify, true, true)) != NULL)
 		{
 			pane->bookmarkmenu = true;
 			RDFUtil_SetQuickFileFolder(pane->selectedView->top->node);
@@ -1157,7 +1173,7 @@ HT_NewPersonalToolbarPane(HT_Notification notify)
 
 	if ((pt  = RDFUtil_GetPTFolder()) != NULL)
 	{
-		if ((pane = paneFromResource(pt, notify, true, true)) != NULL)
+		if ((pane = paneFromResource(newNavCenterDB(), pt, notify, true, true)) != NULL)
 		{
 			pane->personaltoolbar = true;
 			RDFUtil_SetPTFolder(pane->selectedView->top->node);
@@ -7297,6 +7313,8 @@ htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash)
 {
 	RDF_Resource		r;
 	RDF_BT			type;
+	RDF_Resource    childNode = child->node;
+	RDF_Resource    parentNode = parent->node;
 
 	/* disallow various nodes from being removed */
 
@@ -7366,11 +7384,11 @@ htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTrash)
 
 	if (moveToTrash == true)
 	{
-		RDF_Assert(parent->view->pane->db, child->node, gCoreVocab->RDF_parent,
+		RDF_Assert(parent->view->pane->db, childNode, gCoreVocab->RDF_parent,
 			gNavCenter->RDF_Trash, RDF_RESOURCE_TYPE);
 	}
-	RDF_Unassert(parent->view->pane->db, child->node, gCoreVocab->RDF_parent,
-		parent->node, RDF_RESOURCE_TYPE);
+	RDF_Unassert(parent->view->pane->db, childNode, gCoreVocab->RDF_parent,
+		parentNode, RDF_RESOURCE_TYPE);
 	return(false);
 }
 

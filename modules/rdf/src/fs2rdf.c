@@ -29,9 +29,9 @@
 	/* external string references in allxpstr */
 extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 
-#define IMPORT_LIST_SIZE 10
+#define IMPORT_LIST_SIZE 8
 
-char* importList[IMPORT_LIST_SIZE] = {"Favorites", "NC:Bookmarks", "History", "NC:History", 
+char* importList[IMPORT_LIST_SIZE] = {"Favorites", "NC:Bookmarks",  
                        "Recent", "NC:Bookmarks",   "Start Menu", "NC:Bookmarks", "Desktop", "NC:LocalFiles"};
 
 void importForProfile (char* dir, const char* uname) {

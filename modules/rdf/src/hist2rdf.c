@@ -519,7 +519,7 @@ historyUnassert (RDFT hst,  RDF_Resource u, RDF_Resource s, void* v,
     RDF_Resource parents[5];
     int8 n = 0;
     Assertion as = u->rarg1;
-	memset(parents, '\0', 5 * sizeof(RDF_Resource));
+    memset(parents, '\0', 5 * sizeof(RDF_Resource));
     while (as) {
       if ((as->type == RDF_RESOURCE_TYPE) && (as->s == gCoreVocab->RDF_parent) && 
 	  (resourceType((RDF_Resource)as->value) == HISTORY_RT) && (n < 5)) {
@@ -527,14 +527,25 @@ historyUnassert (RDFT hst,  RDF_Resource u, RDF_Resource s, void* v,
       }
       as = as->next;
     }
-    GH_DeleteHistoryItem ( resourceID(u));
+    if (containerp(u)) {
+      Assertion as = u->rarg2;
+      while (as) {
+        if ((as->db == gHistoryStore) && (as->s == gCoreVocab->RDF_parent)) {
+          GH_DeleteHistoryItem (resourceID(as->u));          
+        } 
+        as = as->invNext;
+      }
+    } else {
+      GH_DeleteHistoryItem (resourceID(u));
+    }
+      
     while (n > 0) {
-		n = n - 1;
-		if (parents[n]) {
-		    Assertion nas = remoteStoreRemove (gHistoryStore, u, gCoreVocab->RDF_parent, 
-			     parents[n], RDF_RESOURCE_TYPE);
-			freeMem(nas);
-		} 
+      n = n - 1;
+      if (parents[n]) {
+        Assertion nas = remoteStoreRemove (gHistoryStore, u, gCoreVocab->RDF_parent, 
+                                           parents[n], RDF_RESOURCE_TYPE);
+        freeMem(nas);
+      } 
     }
     return 1;
   }

@@ -413,7 +413,7 @@ iscontainerp (RDF_Resource u)
   } 
 #ifdef MOZILLA_CLIENT  
   else if (startsWith("file:", id)) {
-    return fileDirectoryp(u);
+    return (endsWith("/", id) || fileDirectoryp(u));
   } else if (startsWith("ftp:", id) && (endsWith("/", id))) {
     return 1;
   } else if (startsWith("cache:container", id)) {
@@ -447,35 +447,48 @@ resourceTypeFromID (char* id)
   } else return 0;
 }
 
+RDF_Resource specialUrlResource (char* id) {
+	if (strcmp(id, "NC:PersonalToolbar") == 0)
+		return RDFUtil_GetPTFolder();
+	return NULL;
+}
 
+RDF_Resource NewRDFResource (char* id) {
+  RDF_Resource existing = (RDF_Resource)getMem(sizeof(struct RDF_ResourceStruct)); 
+  existing->url = copyString(id);
+  PL_HashTableAdd(resourceHash, existing->url, existing);
+  return existing;
+}
+
+RDF_Resource QuickGetResource (char* id) {
+	RDF_Resource existing = NULL;
+	existing = (RDF_Resource)PL_HashTableLookup(resourceHash, id);
+	if (existing) return existing;
+	return NewRDFResource(id); 
+}
 
 PR_PUBLIC_API(RDF_Resource)
 RDF_GetResource (RDF db, char* id, PRBool createp)
 {
-  char* nid;
-  RDF_Resource existing;
-  if (id != NULL) {
-	
-	if (strcmp(id, "NC:PersonalToolbar") == 0)
-		return RDFUtil_GetPTFolder();
-
-    existing = (RDF_Resource)PL_HashTableLookup(resourceHash, id);
-    if (existing != null) return addDep(db, existing);
-    if (!createp) {
-      return null;
-    } else {
-      nid = copyString(id);
-    }
-  } else if (createp != false) {
-    nid = makeNewID();
+  char* nid = NULL;
+  RDF_Resource existing = NULL;
+  if (id == NULL) {
+	if (!createp) {
+		return NULL;
+	} else {
+		id = nid = makeNewID();
+	}
   }
-  existing = (RDF_Resource)getMem(sizeof(struct RDF_ResourceStruct)); 
-  existing->url = nid;
-  PL_HashTableAdd(resourceHash, nid, existing);
-  setResourceType(existing, resourceTypeFromID(nid));
+  existing = specialUrlResource(id);
+  if (existing) return existing;
+  existing = (RDF_Resource)PL_HashTableLookup(resourceHash, id);
+  if (existing) return addDep(db, existing);
+  if (!createp) return NULL;
+  existing =  NewRDFResource(id);  
+  setResourceType(existing, resourceTypeFromID(id));
   setContainerp(existing, iscontainerp(existing));
-  return addDep(db, existing);
-  
+  if (nid) freeMem(nid);
+  return addDep(db, existing); 
 }
 
 

@@ -57,7 +57,7 @@ XP_BEGIN_PROTOS
 #endif
 #define null NULL
 #define nullp(x) (((void*)x) == ((void*)0))
- 
+#define LookupResource(x) ((RDF_Resource)PL_HashTableLookup(resourceHash, x));
 
 #define noRDFErr 0
 #define noMoreValuesErr 1
@@ -187,6 +187,7 @@ struct RDF_TranslatorStruct {
 
 extern     PLHashTable*  resourceHash;  
 extern     PLHashTable*  dataSourceHash;  
+extern     char*  gNavCntrUrl;
 struct RDF_DBStruct {
   int16 numTranslators;
   int16 translatorArraySize;
