@@ -129,6 +129,7 @@ typedef	struct HT_ColumnStruct {
 	uint32				width;
 	uint32				tokenType;
 	void				*token;
+	PRBool				isHiddenFlag;
 } HT_ColumnStruct, *HT_Column;
 
 typedef struct _HT_ViewStruct {
@@ -285,6 +286,7 @@ void				removeHTFromHash (HT_Pane pane, HT_Resource item);
 void				deleteHTSubtree (HT_Resource subtree);
 void				deleteContainerItem (HT_Resource container, RDF_Resource item);
 uint32				fillContainer (HT_Resource node);
+void				sendColumnNotification (HT_View view, void *token, uint32 tokenType, HT_Event whatHappened);
 PRBool				htIsMenuCmdEnabled(HT_Pane pane, HT_MenuCmd menuCmd, PRBool isWorkspaceFlag, PRBool isBackgroundFlag);
 void				freeMenuCommandList();
 void				exportCallbackWrite(PRFileDesc *fp, char *str);

@@ -2608,6 +2608,28 @@ fillContainer (HT_Resource node)
 
 
 
+void
+sendColumnNotification (HT_View view, void *token, uint32 tokenType, HT_Event whatHappened)
+{
+	HT_Pane			pane;
+	HT_Notification		ns;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(view->pane != NULL);
+
+	if (view == NULL)			return;
+	if ((pane = view->pane) == NULL)	return;
+	if ((ns = pane->ns) == NULL)		return;
+	if (ns->notifyProc == NULL)		return;
+  
+	if (pane->mask & whatHappened) 
+	{
+		(*ns->notifyProc)(ns, (void *)token, whatHappened);
+	}
+}
+
+
+
 PR_PUBLIC_API(HT_Cursor)
 HT_NewCursor (HT_Resource node)
 {
@@ -2741,8 +2763,136 @@ HT_SetColumnOrder(HT_View view, void *srcColToken, void *destColToken, PRBool af
 				(*srcCol)->next = *destCol;
 				*destCol = *srcCol;
 			}
+			sendColumnNotification(view, (*srcCol)->token,
+				(*srcCol)->tokenType, HT_EVENT_COLUMN_REORDER);
 		}
 	}
+}
+
+
+
+PR_PUBLIC_API(uint32)
+HT_GetColumnWidth(HT_View view, void *token, uint32 tokenType)
+{
+	HT_Column	*columnList;
+	uint32		width = 0;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
+
+	if ((columnList = &(view->columns)) != NULL)
+	{
+		while ((*columnList) != NULL)
+		{
+			if ((*columnList)->token == token)
+			{
+				if (!((*columnList)->isHiddenFlag))
+				{
+					width = (*columnList)->width;
+				}
+				break;
+			}
+			columnList = &((*columnList)->next);
+		}
+	}
+	return(width);
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_SetColumnWidth(HT_View view, void *token, uint32 tokenType, uint32 width)
+{
+	HT_Column	*columnList;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
+
+	if ((columnList = &(view->columns)) != NULL)
+	{
+		while ((*columnList) != NULL)
+		{
+			if ((*columnList)->token == token)
+			{
+				(*columnList)->width = width;
+				sendColumnNotification(view, token, tokenType, HT_EVENT_COLUMN_SIZETO);
+				break;
+			}
+			columnList = &((*columnList)->next);
+		}
+	}
+}
+
+
+
+PR_PUBLIC_API(PRBool)
+HT_GetColumnVisibility(HT_View view, void *token, uint32 tokenType)
+{
+	HT_Column	*columnList;
+	PRBool		isHiddenFlag = PR_TRUE;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
+
+	if ((columnList = &(view->columns)) != NULL)
+	{
+		while ((*columnList) != NULL)
+		{
+			if ((*columnList)->token == token)
+			{
+				isHiddenFlag = (*columnList)->isHiddenFlag;
+				break;
+			}
+			columnList = &((*columnList)->next);
+		}
+	}
+	return ((isHiddenFlag == PR_TRUE) ? PR_FALSE : PR_TRUE);
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_SetColumnVisibility(HT_View view, void *token, uint32 tokenType, PRBool isHiddenFlag)
+{
+	HT_Column	*columnList;
+	HT_Event	theEvent;
+
+	XP_ASSERT(view != NULL);
+	XP_ASSERT(token != NULL);
+
+	if ((columnList = &(view->columns)) != NULL)
+	{
+		while ((*columnList) != NULL)
+		{
+			if ((*columnList)->token == token)
+			{
+				if ((*columnList)->isHiddenFlag != isHiddenFlag)
+				{
+					(*columnList)->isHiddenFlag = isHiddenFlag;
+					theEvent = (isHiddenFlag) ? HT_EVENT_COLUMN_HIDE : HT_EVENT_COLUMN_SHOW;
+					sendColumnNotification(view, token, tokenType, theEvent);
+				}
+				break;
+			}
+			columnList = &((*columnList)->next);
+		}
+	}
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_ShowColumn(HT_View view, void *token, uint32 tokenType)
+{
+	HT_SetColumnVisibility(view, token, tokenType, PR_FALSE);
+}
+
+
+
+PR_PUBLIC_API(void)
+HT_HideColumn(HT_View view, void *token, uint32 tokenType)
+{
+	HT_SetColumnVisibility(view, token, tokenType, PR_TRUE);
 }
 
 
@@ -2755,7 +2905,7 @@ HT_SetSortColumn(HT_View view, void *token, uint32 tokenType, PRBool descendingF
 	view->sortToken = token;
 	view->sortTokenType = tokenType;
 	view->descendingFlag = descendingFlag;
-	refreshItemList(view->top, HT_EVENT_VIEW_SORTING_CHANGED);
+	sendColumnNotification(view, token, tokenType, HT_EVENT_VIEW_SORTING_CHANGED);
 }
 
 

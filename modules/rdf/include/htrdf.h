@@ -133,6 +133,9 @@ typedef HT_NotificationStruct* HT_Notification;
 #define	HT_EVENT_COLUMN_ADD			0x00100000UL
 #define	HT_EVENT_COLUMN_DELETE			0x00200000UL
 #define	HT_EVENT_COLUMN_SIZETO			0x00400000UL
+#define	HT_EVENT_COLUMN_REORDER			0x00800000UL
+#define	HT_EVENT_COLUMN_SHOW			0x01000000UL
+#define	HT_EVENT_COLUMN_HIDE			0x02000000UL
 
 #define HT_EVENT_NO_NOTIFICATION_MASK           0x00000000UL
 #define HT_EVENT_DEFAULT_NOTIFICATION_MASK      0xFFFFFFFFUL
@@ -311,6 +314,13 @@ PR_PUBLIC_API(void)		HT_SetColumnOrder(HT_View view, void *srcColToken,
 						PRBool afterDestFlag);
 PR_PUBLIC_API(void)		HT_SetSortColumn(HT_View view, void *token,
 						uint32 tokenType, PRBool descendingFlag);
+PR_PUBLIC_API(void)		HT_SetColumnWidth(HT_View view, void *token,
+						uint32 tokenType, uint32 width);
+PR_PUBLIC_API(uint32)		HT_GetColumnWidth(HT_View view, void *token, uint32 tokenType);
+PR_PUBLIC_API(void)		HT_SetColumnVisibility(HT_View view, void *token, uint32 tokenType, PRBool isHiddenFlag);
+PR_PUBLIC_API(PRBool)		HT_GetColumnVisibility(HT_View view, void *token, uint32 tokenType);
+PR_PUBLIC_API(void)		HT_ShowColumn(HT_View view, void *token, uint32 tokenType);
+PR_PUBLIC_API(void)		HT_HideColumn(HT_View view, void *token, uint32 tokenType);
 PR_PUBLIC_API(PRBool)		HT_ContainerSupportsNaturalOrderSort(HT_Resource container);
 
 
