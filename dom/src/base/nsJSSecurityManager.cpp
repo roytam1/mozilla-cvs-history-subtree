@@ -304,7 +304,6 @@ nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj,
     case SCRIPT_SECURITY_ALL_ACCESS:
       *aResult = PR_TRUE;
       return NS_OK;
-
     case SCRIPT_SECURITY_SAME_DOMAIN_ACCESS:
       return this->CheckPermissions(cx, (JSObject*)aObj, eJSTarget_Max, aResult);
 
@@ -385,9 +384,7 @@ nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container,
 
   // Need to check that the origin hasn't changed underneath us
   char* originUrl = FindOriginURL(aCx, container);
-  if (!originUrl) {
-    return NS_ERROR_FAILURE;
-  }
+  if (!originUrl) return NS_ERROR_FAILURE;
 
   nsISupports *tmp;
   nsIScriptGlobalObjectData *globalData;
@@ -404,7 +401,7 @@ nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container,
   globalData->GetPrincipals((void**)aPrincipals);
 
   if (nsnull != *aPrincipals) {
-    if (SameOrigins(aCx, originUrl, (*aPrincipals)->codebase)) {
+    if (this->SameOrigins(aCx, originUrl, (*aPrincipals)->codebase)) {
       delete originUrl;
       return NS_OK;
     }
@@ -412,7 +409,7 @@ nsJSSecurityManager::GetContainerPrincipals(JSContext *aCx, JSObject *container,
     nsJSPrincipalsData* data;
     data = (nsJSPrincipalsData*)*aPrincipals;
     if (data->codebaseBeforeSettingDomain &&
-        SameOrigins(aCx, originUrl, data->codebaseBeforeSettingDomain)) {
+        this->SameOrigins(aCx, originUrl, data->codebaseBeforeSettingDomain)) {
       /* document.domain was set, so principals are okay */
       delete originUrl;
       return NS_OK;
@@ -491,10 +488,8 @@ char *
 nsJSSecurityManager::AddSecPolicyPrefix(JSContext *cx, char *pref_str)
 {
   const char *subjectOrigin = "";//GetSubjectOriginURL(cx);
-  char *policy_str;
-  char *retval = 0;
-
-  if ((policy_str = GetSitePolicy(subjectOrigin)) == 0) {
+  char *policy_str, *retval = 0;
+  if ((policy_str = this->GetSitePolicy(subjectOrigin)) == 0) {
     /* No site-specific policy.  Get global policy name. */
 
     if (NS_OK != mPrefs->CopyCharPref("javascript.security_policy", &policy_str))
@@ -616,7 +611,7 @@ nsJSSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, PRInt16 aT
       goto out;
   }
   /* Now see whether the origin methods and servers match. */
-  if (SameOrigins(aCx, subjectOrigin, objectOrigin)) {
+  if (this->SameOrigins(aCx, subjectOrigin, objectOrigin)) {
       *aReturn = PR_TRUE;
       goto out;
   }
@@ -654,7 +649,7 @@ nsJSSecurityManager::SameOrigins(JSContext *aCx, const char* aOrigin1, const cha
     return PR_FALSE;
   }
   delete tmp;
-  if (*aOrigin1 == *aOrigin2) return PR_TRUE;
+  if (PL_strcmp(aOrigin1, aOrigin2) == 0) return PR_TRUE;
   nsString * cmp1 = new nsString(GetCanonicalizedOrigin(aCx, aOrigin1));
   nsString * cmp2 = new nsString(GetCanonicalizedOrigin(aCx, aOrigin2));
   
@@ -1808,7 +1803,7 @@ nsJSSecurityManager::CanCaptureEvent(JSContext *aCx, JSFunction *aFun, JSObject 
     return NS_OK;
   }
 
-  *aReturn = (PRBool)(SameOrigins(aCx, originChar, principals->codebase) ||
+  *aReturn = (PRBool)(this->SameOrigins(aCx, originChar, principals->codebase) ||
               IsExternalCaptureEnabled(aCx, principals));
 
   delete origin;
@@ -1868,7 +1863,7 @@ nsJSSecurityManager::CheckSetParentSlot(JSContext *aCx, JSObject *aObj, jsval *a
       delete oldOrigin;
       return NS_ERROR_FAILURE;
     }
-    if (!SameOriginsStr(aCx, oldOrigin, newOrigin)) {
+    if (!this->SameOrigins(aCx, oldOrigin, newOrigin)) {
       delete oldOrigin;
       delete newOrigin;
       return NS_OK;
@@ -2337,7 +2332,7 @@ nsJSSecurityManager::RegisterPrincipals(nsIScriptContext *aContext, nsIScriptGlo
         InvalidateCertPrincipals(cx, containerPrincipals);
 
         /* compare codebase principals */
-        if (!SameOrigins(cx, containerPrincipals->codebase,
+        if (!this->SameOrigins(cx, containerPrincipals->codebase,
                          aPrincipals->codebase)) {
           /* Codebases don't match; evaluate under different
              principals than container */
@@ -2358,7 +2353,7 @@ nsJSSecurityManager::RegisterPrincipals(nsIScriptContext *aContext, nsIScriptGlo
   if (!PrincipalsEqual(cx, aPrincipals, containerPrincipals)) {
     /* We have two unequal sets of principals. */
     if (containerData->signedness == HAS_NO_SCRIPTS &&
-      SameOrigins(cx, aPrincipals->codebase,
+      this->SameOrigins(cx, aPrincipals->codebase,
                   containerPrincipals->codebase)) {
       /*
        * Principals are unequal because we have container principals
@@ -2604,7 +2599,7 @@ nsJSSecurityManager::IntersectPrincipals(JSContext *aCx, JSPrincipals *aPrincipa
   NS_ASSERTION(data->signedness != HAS_NO_SCRIPTS, "Signed page with no scripts");
   NS_ASSERTION(newData->signedness != HAS_NO_SCRIPTS, "Signed page with no scripts");
 
-  if (!SameOrigins(aCx, aPrincipals->codebase, aNewPrincipals->codebase)) {
+  if (!this->SameOrigins(aCx, aPrincipals->codebase, aNewPrincipals->codebase)) {
     delete aPrincipals->codebase;
     aPrincipals->codebase = gUnknownOriginStr.ToNewCString();
     if (aPrincipals->codebase == nsnull) {
