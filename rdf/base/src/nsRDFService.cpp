@@ -587,8 +587,8 @@ ServiceImpl::GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource)
 
     // Otherwise, see if we have a lazy constructor
     NSDataSourceConstructorCallback construct =
-        NS_STATIC_CAST(NSDataSourceConstructorCallback,
-                       PL_HashTableLookup(mDataSourceConstructors, uri));
+        (NSDataSourceConstructorCallback)
+        PL_HashTableLookup(mDataSourceConstructors, uri);
 
     if (! construct)
         return NS_ERROR_ILLEGAL_VALUE;
