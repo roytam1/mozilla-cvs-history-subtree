@@ -41,7 +41,7 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
 MOZ_BRANCH=WINCE_20020218_BRANCH
-NSPR_CO_TAG=WINCE_20020218_BRANCH
+NSPR_CO_TAG=WINCE_NSPRPUB_RELEASE_4_2_BETA1
 PSM_CO_TAG=WINCE_20020218_BRANCH
 NSS_CO_TAG=WINCE_20020218_BRANCH
 LDAPCSDK_CO_TAG=WINCE_20020218_BRANCH
