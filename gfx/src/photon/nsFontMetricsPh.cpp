@@ -564,3 +564,11 @@ nsFontEnumeratorPh::HaveFontFor(const char* aLangGroup, PRBool* aResult)
   // Finish me - ftang
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsFontEnumeratorPh::UpdateFontList(PRBool *updateFontList)
+{
+  *updateFontList = PR_FALSE; // always return false for now
+  return NS_OK;
+}
+
