@@ -31,6 +31,12 @@
 #include <Strings.h>
 #include <Aliases.h>
 
+#if TARGET_CARBON
+#include <CFURL.h>
+#include <CFBundle.h>
+#include <CFString.h>
+#endif
+
 #include "macdll.h"
 #include "mdmac.h"
 #endif
@@ -91,6 +97,10 @@ struct PRLibrary {
 
 #ifdef XP_MAC
     CFragConnectionID           dlh;
+
+#if TARGET_CARBON
+    CFBundleRef                 bundle;
+#endif
 #endif
 
 #ifdef XP_UNIX
@@ -472,6 +482,37 @@ PR_LoadLibrary(const char *name)
     return PR_LoadLibraryWithFlags(libSpec, 0);
 }
 
+#if TARGET_CARBON
+
+/*
+** Returns a CFBundleRef if the FSSpec refers to a Mac OS X bundle directory.
+** The caller is responsible for calling CFRelease() to deallocate.
+*/
+static CFBundleRef getLibraryBundle(const FSSpec* spec)
+{
+    CFBundleRef bundle = NULL;
+    FSRef ref;
+    OSErr err = FSpMakeFSRef(spec, &ref);
+    char path[512];
+    if (err == noErr && ((UInt32)(FSRefMakePath) != kUnresolvedCFragSymbolAddress)) {
+        err = FSRefMakePath(&ref, (UInt8*)path, sizeof(path) - 1);
+        if (err == noErr) {
+            CFStringRef pathRef = CFStringCreateWithCString(NULL, path, kCFStringEncodingUTF8);
+            if (pathRef) {
+            	CFURLRef bundleURL = CFURLCreateWithFileSystemPath(NULL, pathRef, kCFURLPOSIXPathStyle, true);
+            	if (bundleURL != NULL) {
+                    bundle = CFBundleCreate(NULL, bundleURL);
+                    CFRelease(bundleURL);
+            	}
+            	CFRelease(pathRef);
+            }
+        }
+    }
+    return bundle;
+}
+
+#endif
+
 /*
 ** Dynamically load a library. Only load libraries once, so scan the load
 ** map first.
@@ -547,13 +588,13 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 
 #if defined(XP_MAC) && TARGET_RT_MAC_CFM
     {
-    OSErr                err;
-    Ptr                    main;
-    CFragConnectionID    connectionID;
+    OSErr                 err;
+    Ptr                   main;
+    CFragConnectionID     connectionID;
     Str255                errName;
     Str255                pName;
-    char                cName[64];
-    const char*                libName;
+    char                  cName[64];
+    const char*           libName;
         
     /*
      * Algorithm: The "name" passed in could be either a shared
@@ -624,75 +665,19 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
          * of the file, and then (finally) make an FSSpec and call
          * GetDiskFragment.
          */
-        char* cMacPath = NULL;
-        char* cFileName = NULL;
-        char* position = NULL;
-        CInfoPBRec pb;
         FSSpec fileSpec;
-        PRUint32 index;
         Boolean tempUnusedBool;
 
-        /* Copy the name: we'll change it */
-        cMacPath = strdup(name);    
-        if (cMacPath == NULL)
-        {
+        PStrFromCStr(name, pName);
+        err = FSMakeFSSpec(0, 0, pName, &fileSpec);
+        if (err != noErr) {
             oserr = _MD_ERRNO();
             PR_DELETE(lm);
             goto unlock;
         }
-            
-        /* First, get the vRefNum */
-        position = strchr(cMacPath, PR_PATH_SEPARATOR);
-        if ((position == cMacPath) || (position == NULL))
-            fileSpec.vRefNum = 0;        /* Use application relative searching */
-        else
-        {
-            char cVolName[32];
-            memset(cVolName, 0, sizeof(cVolName));
-            strncpy(cVolName, cMacPath, position-cMacPath);
-            fileSpec.vRefNum = GetVolumeRefNumFromName(cVolName);
-        }
-
-        /* Next, break the path and file name apart */
-        index = 0;
-        while (cMacPath[index] != 0)
-            index++;
-        while (cMacPath[index] != PR_PATH_SEPARATOR && index > 0)
-            index--;
-        if (index == 0 || index == strlen(cMacPath))
-        {
-            oserr = _MD_ERRNO();
-            PR_DELETE(cMacPath);
-            PR_DELETE(lm);
-            goto unlock;
-        }
-        cMacPath[index] = 0;
-        cFileName = &(cMacPath[index + 1]);
-        
-        /* Convert the path and name into Pascal strings */
-        PStrFromCStr(cMacPath, pName);
-        PStrFromCStr(cFileName, fileSpec.name);
-        strcpy(cName, cFileName);
-        PR_DELETE(cMacPath);
-        cMacPath = NULL;
-        
-        /* Now we can look up the path on the volume */
-        pb.dirInfo.ioNamePtr = pName;
-        pb.dirInfo.ioVRefNum = fileSpec.vRefNum;
-        pb.dirInfo.ioDrDirID = 0;
-        pb.dirInfo.ioFDirIndex = 0;
-        err = PBGetCatInfoSync(&pb);
-        if (err != noErr)
-        {
-            oserr = err;
-            PR_DELETE(lm);
-            goto unlock;
-        }
-        fileSpec.parID = pb.dirInfo.ioDrDirID;
 
         /* Resolve an alias if this was one */
-        err = ResolveAliasFile(&fileSpec, true, &tempUnusedBool,
-                &tempUnusedBool);
+        err = ResolveAliasFile(&fileSpec, true, &tempUnusedBool, &tempUnusedBool);
         if (err != noErr)
         {
             oserr = err;
@@ -702,14 +687,31 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 
         /* Finally, try to load the library */
         err = GetDiskFragment(&fileSpec, 0, kCFragGoesToEOF, fileSpec.name, 
-                        kLoadCFrag, &connectionID, &main, errName);
+                              kLoadCFrag, &connectionID, &main, errName);
 
+        memcpy(cName, fileSpec.name + 1, fileSpec.name[0]);
+        cName[fileSpec.name[0]] = '\0';
         libName = cName;
+        
         if (err != noErr)
         {
+#if TARGET_CARBON
+            /* If not a CFM library, perhaps it's a CFBundle. */
+            lm->bundle = getLibraryBundle(&fileSpec);
+#ifdef DEBUG
+            fprintf(stderr, "*** loading bundle for library '%s' [%s]. ***\n",
+                    libName, lm->bundle ? "SUCCEEDED" : "FAILED");
+#endif
+            if (lm->bundle == NULL) {
+                oserr = err;
+                PR_DELETE(lm);
+                goto unlock;
+            }
+#else
             oserr = err;
             PR_DELETE(lm);
             goto unlock;
+#endif
         }
     }
     
@@ -1073,23 +1075,28 @@ PR_UnloadLibrary(PRLibrary *lib)
 
 #if defined(XP_MAC) && TARGET_RT_MAC_CFM
     /* Close the connection */
+#if TARGET_CARBON
+    if (lib->bundle)
+        CFRelease(lib->bundle);
+    else
+#endif
     CloseConnection(&(lib->dlh));
 #endif
 
     /* unlink from library search list */
     if (pr_loadmap == lib)
-    pr_loadmap = pr_loadmap->next;
+        pr_loadmap = pr_loadmap->next;
     else if (pr_loadmap != NULL) {
-    PRLibrary* prev = pr_loadmap;
-    PRLibrary* next = pr_loadmap->next;
-    while (next != NULL) {
-        if (next == lib) {
-        prev->next = next->next;
-        goto freeLib;
+        PRLibrary* prev = pr_loadmap;
+        PRLibrary* next = pr_loadmap->next;
+        while (next != NULL) {
+            if (next == lib) {
+                prev->next = next->next;
+                goto freeLib;
+            }
+            prev = next;
+            next = next->next;
         }
-        prev = next;
-        next = next->next;
-    }
         /*
          * fail (the library is not on the _pr_loadmap list),
          * but don't wipe out an error from dlclose/shl_unload.
@@ -1151,10 +1158,21 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
 #endif  /* WIN32 || WIN16 */
 
 #ifdef XP_MAC
+#if TARGET_CARBON
+    if (lm->bundle)
     {
-    Ptr            symAddr;
-    CFragSymbolClass    symClass;
-    Str255        pName;
+        CFStringRef nameRef = CFStringCreateWithCString(NULL, name, kCFStringEncodingASCII);
+        if (nameRef) {
+            f = CFBundleGetFunctionPointerForName(lm->bundle, nameRef);
+            CFRelease(nameRef);
+        }
+    }
+    else
+#endif
+    {
+        Ptr                 symAddr;
+        CFragSymbolClass    symClass;
+        Str255              pName;
             
         PStrFromCStr(name, pName);    
         
