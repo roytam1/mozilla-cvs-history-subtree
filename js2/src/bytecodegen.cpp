@@ -399,11 +399,11 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
-            bool isStatic = hasAttribute(f->attributes, Token::Static);
             bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
-            bool isOperator = hasAttribute(f->attributes, mScopeChain->OperatorKeyWord);
             JSFunction *fnc = f->mFunction;    
 /*            
+            bool isStatic = hasAttribute(f->attributes, Token::Static);
+            bool isOperator = hasAttribute(f->attributes, mScopeChain->OperatorKeyWord);
             if (isOperator) {   // XXX
                 ASSERT(f->function.name->getKind() == ExprNode::string);
                 const String& name = static_cast<StringExprNode *>(f->function.name)->str;
@@ -451,19 +451,52 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         {
             UnaryStmtNode *w = static_cast<UnaryStmtNode *>(p);
             addByte(JumpOp);
-            uint32 labelAtTestCondition = getLabel(); 
+            uint32 labelAtTestCondition = getLabel(Label::ContinueLabel); 
             addFixup(labelAtTestCondition);
-
             uint32 labelAtTopOfBlock = getLabel();
             setLabel(labelAtTopOfBlock);
+            uint32 breakLabel = getLabel(Label::BreakLabel);
 
+            mLabelStack.push_back(breakLabel);
+            mLabelStack.push_back(labelAtTestCondition);
             genCodeForStatement(w->stmt, static_cg);
-
+            mLabelStack.pop_back();
+            mLabelStack.pop_back();
+            
             setLabel(labelAtTestCondition);
             genExpr(w->expr);
             addByte(JumpTrueOp);
             addFixup(labelAtTopOfBlock);
-
+            setLabel(breakLabel);
+        }
+        break;
+    case StmtNode::label:
+        {
+            LabelStmtNode *l = static_cast<LabelStmtNode *>(p);
+            uint32 label = getLabel(l);
+            mLabelStack.push_back(label);
+            genCodeForStatement(l->stmt, static_cg);
+            mLabelStack.pop_back();
+        }
+        break;
+    case StmtNode::Break:
+        {
+            GoStmtNode *g = static_cast<GoStmtNode *>(p);
+            addByte(JumpOp);
+            if (g->name)
+                addFixup(getTopLabel(g->name));
+            else
+                addFixup(getTopLabel(Label::BreakLabel));
+        }
+        break;
+    case StmtNode::Continue:
+        {
+            GoStmtNode *g = static_cast<GoStmtNode *>(p);
+            addByte(JumpOp);
+            if (g->name)
+                addFixup(getTopLabel(g->name));
+            else
+                addFixup(getTopLabel(Label::ContinueLabel));
         }
         break;
     case StmtNode::If:
@@ -485,13 +518,11 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             uint32 elseStatementLabel = getLabel(); 
             addFixup(elseStatementLabel);
             genCodeForStatement(i->stmt, static_cg);
-
             addByte(JumpOp);
             uint32 branchAroundElselabel = getLabel(); 
             addFixup(branchAroundElselabel);
             setLabel(elseStatementLabel);
             genCodeForStatement(i->stmt2, static_cg);
-
             setLabel(branchAroundElselabel);
         }
         break;
@@ -517,6 +548,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
         {
             ExprStmtNode *e = static_cast<ExprStmtNode *>(p);
             genExpr(e->expr);
+            addByte(PopOp);
         }
         break;
     default:
@@ -533,6 +565,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             Reference *ref = mScopeChain->getName(name, acc);            
             if (ref == NULL)
                 ref = new NameReference(name, acc);
+            ref->emitImplicitLoad(this);
             return ref;
         }
     case ExprNode::dot:
@@ -560,7 +593,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                     ASSERT(v.isType());
                     if (v.type->mStatics) {
                         lType = v.type->mStatics;
-//                        genExpr(b->op1);
+                        genExpr(b->op1);
                     }
                 }
                 if (ref) delete ref;
@@ -598,6 +631,7 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
             writeRef = mScopeChain->getName(name, Write);            
             if (writeRef == NULL)
                 writeRef = new NameReference(name, Write);
+            readRef->emitImplicitLoad(this);
         }
         break;
     case ExprNode::dot:
@@ -614,7 +648,7 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
                     ASSERT(v.isType());
                     if (v.type->mStatics) {
                         lType = v.type->mStatics;
-//                        genExpr(b->op1);
+                        genExpr(b->op1);
                     }
                 }
                 if (ref) delete ref;
@@ -793,99 +827,46 @@ BinaryOperator:
         }
 
     case ExprNode::preIncrement:
-        {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
-
-            Reference *readRef;
-            Reference *writeRef;
-            
-            genReferencePair(u->op, readRef, writeRef);
-            
-            writeRef->emitImplicitLoad(this);
-
-            readRef->emitImplicitLoad(this);
-            readRef->emitCodeSequence(this);
-
-            addByte(DoUnaryOp);
-            addByte(Increment);
-            writeRef->emitCodeSequence(this);
-
-            return Object_Type;
-        }
-
+        op = Increment;
+        goto PreXcrement;
     case ExprNode::preDecrement:
-        {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
-            genExpr(u->op);
-            addByte(DoUnaryOp);
-            addByte(Decrement);
-            return Object_Type;
-        }
-/*
-Not general enough - need to invoke increment operator
-on the object.
-    case ExprNode::postIncrement:
-        {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+        op = Decrement;
+        goto PreXcrement;
 
+PreXcrement:
+        {
+            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
             Reference *readRef;
-            Reference *writeRef;
-            
+            Reference *writeRef;            
             genReferencePair(u->op, readRef, writeRef);
-            
-            readRef->emitImplicitLoad(this);
-            readRef->emitCodeSequence(this);
-
-            addByte(DupOp);
-            addByte(LoadConstantNumberOp);
-            addNumberRef(1.0);
-            addByte(DoOperatorOp);
-            addByte(Plus);
-            writeRef->emitImplicitLoad(this);
-            writeRef->emitCodeSequence(this);
-
-            genExpr(u->op);
-            addByte(DoUnaryOp);
-            addByte(PostIncrement);
-            return Object_Type;
-        }
-*/
-    case ExprNode::postIncrement:
-        {
-            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
-
-            Reference *readRef;
-            Reference *writeRef;
-            
-            genReferencePair(u->op, readRef, writeRef);
-            readRef->emitImplicitLoad(this);
             if (readRef->hasBaseExpression()) {
                 addByte(DupOp);         // duplicate the base expression
                 readRef->emitCodeSequence(this);
-                addByte(DupInsertOp);   // duplicate the value and bury it
+                addByte(DoUnaryOp);
+                addByte(op);
             }
             else {
                 readRef->emitCodeSequence(this);
-                addByte(DupOp);
+                addByte(DoUnaryOp);
+                addByte(op);
             }
-
-            addByte(DoUnaryOp);
-            addByte(Increment);
-
             writeRef->emitCodeSequence(this);
-
             return Object_Type;
         }
 
+    case ExprNode::postIncrement:
+        op = Increment;
+        goto PostXcrement;
     case ExprNode::postDecrement:
+        op = Decrement;
+        goto PostXcrement;
+
+PostXcrement:
         {
             UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
-
             Reference *readRef;
             Reference *writeRef;
-            
             genReferencePair(u->op, readRef, writeRef);
-            readRef->emitImplicitLoad(this);
             if (readRef->hasBaseExpression()) {
                 addByte(DupOp);         // duplicate the base expression
                 readRef->emitCodeSequence(this);
@@ -895,12 +876,10 @@ on the object.
                 readRef->emitCodeSequence(this);
                 addByte(DupOp);
             }
-
             addByte(DoUnaryOp);
-            addByte(Decrement);
-
+            addByte(op);
             writeRef->emitCodeSequence(this);
-
+            addByte(PopOp);     // because the SetXXX will propogate the new value
             return Object_Type;
         }
 
@@ -916,7 +895,6 @@ on the object.
         {
             BinaryExprNode *b = static_cast<BinaryExprNode *>(p);
             Reference *ref = genReference(b->op1, Write);
-            ref->emitImplicitLoad(this);
             genExpr(b->op2);
             ref->emitCodeSequence(this);
             delete ref;
@@ -925,7 +903,6 @@ on the object.
     case ExprNode::identifier:
         {
             Reference *ref = genReference(p, Read);
-            ref->emitImplicitLoad(this);
             ref->emitCodeSequence(this);
             JSType *type = ref->mType;
             delete ref;
@@ -934,7 +911,6 @@ on the object.
     case ExprNode::dot:
         {
             Reference *ref = genReference(p, Read);
-            ref->emitImplicitLoad(this);
             ref->emitCodeSequence(this);
             JSType *type = ref->mType;
             delete ref;
@@ -963,7 +939,6 @@ on the object.
         {
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
             Reference *ref = genReference(i->op, Read);
-            ref->emitImplicitLoad(this);
             ref->emitCodeSequence(this);
 
             // we want to be able to detect calls to a class constructor
@@ -1001,157 +976,167 @@ on the object.
     return NULL;
 }
 
+int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
+{
+    switch (bcm.mCodeBase[i]) {
+    case SwapOp:
+        f << "Swap\n";
+        i++;
+        break;
+    case DupOp:
+        f << "Dup\n";
+        i++;
+        break;
+    case PopOp:
+        f << "PopOp\n";
+        i++;
+        break;
+    case DupInsertOp:
+        f << "DupInsert\n";
+        i++;
+        break;
+    case LogicalNotOp:
+        f << "LogicalNot\n";
+        i++;
+        break;
+    case JumpFalseOp:
+        f << "JumpFalse " << bcm.getOffset(i + 1) << "\n";
+        i += 5;
+        break;
+    case JumpTrueOp:
+        f << "JumpTrue " << bcm.getOffset(i + 1) << "\n";
+        i += 5;
+        break;
+    case JumpOp:
+        f << "Jump " << bcm.getOffset(i + 1) << "\n";
+        i += 5;
+        break;
+    case ReturnOp:
+        f << "Return\n";
+        i++;
+        break;
+    case ReturnVoidOp:
+        f << "ReturnVoid\n";
+        i++;
+        break;
+    case InvokeOp:
+        f << "Invoke " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case DoUnaryOp:
+        f << "DoUnary " << bcm.mCodeBase[i + 1] << "\n";
+        i += 2;
+        break;
+    case DoOperatorOp:
+        f << "DoOperator " << bcm.mCodeBase[i + 1] << "\n";
+        i += 2;
+        break;
+    case GetLocalVarOp:
+        f << "GetLocalVar " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case SetLocalVarOp:
+        f << "SetLocalVar " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case GetArgOp:
+        f << "GetArg " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case SetArgOp:
+        f << "SetArg " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case GetMethodOp:
+        f << "GetMethod " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;            
+    case GetStaticMethodOp:
+        f << "GetStaticMethod " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;            
+    case GetFieldOp:
+        f << "GetField " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case SetFieldOp:
+        f << "SetField " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case GetStaticFieldOp:
+        f << "GetStaticField " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case SetStaticFieldOp:
+        f << "SetStaticField " << bcm.getLong(i + 1) << "\n";
+        i += 5;
+        break;
+    case GetNameOp:
+        f << "GetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+        i += 5;
+        break;
+    case SetNameOp:
+        f << "SetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+        i += 5;
+        break;
+    case GetPropertyOp:
+        f << "GetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+        i += 5;
+        break;
+    case SetPropertyOp:
+        f << "SetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+        i += 5;
+        break;
+    case LoadConstantNumberOp:
+        f << "LoadConstantNumber " << bcm.getNumber(bcm.getLong(i + 1)) << "\n";
+        i += 5;
+        break;
+    case LoadConstantStringOp:
+        f << "LoadConstantString " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
+        i += 5;
+        break;
+    case LoadTypeOp:
+        printFormat(f, "LoadType 0x%X\n", bcm.getLong(i + 1));
+        i += 5;
+        break;
+    case LoadFunctionOp:
+        printFormat(f, "LoadFunction 0x%X\n", bcm.getLong(i + 1));
+        i += 5;
+        break;
+    case PushScopeOp:
+        printFormat(f, "PushScope 0x%X\n", bcm.getLong(i + 1));
+        i += 5;
+        break;
+    case PopScopeOp:
+        f << "PopScope\n";
+        i++;
+        break;
+    case GetConstructorOp:
+        f << "GetConstructor\n";
+        i++;
+        break;
+    case NewObjectOp:
+        f << "NewObject\n";
+        i++;
+        break;
+    case LoadThisOp:
+        f << "LoadThis\n";
+        i++;
+        break;
+    default:
+        printFormat(f, "Unknown Opcode 0x%X\n", bcm.mCodeBase[i]);
+        i++;
+        break;
+    }
+    return i;
+}
+
 Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm)
 {
     uint32 i = 0;
     while (i < bcm.mLength) {
         printFormat(f, "%.4d ", i);
-        switch (bcm.mCodeBase[i]) {
-        case SwapOp:
-            f << "Swap\n";
-            i++;
-            break;
-        case DupOp:
-            f << "Dup\n";
-            i++;
-            break;
-        case DupInsertOp:
-            f << "DupInsert\n";
-            i++;
-            break;
-        case LogicalNotOp:
-            f << "LogicalNot\n";
-            i++;
-            break;
-        case JumpFalseOp:
-            f << "JumpFalse " << bcm.getOffset(i + 1) << "\n";
-            i += 5;
-            break;
-        case JumpTrueOp:
-            f << "JumpTrue " << bcm.getOffset(i + 1) << "\n";
-            i += 5;
-            break;
-        case JumpOp:
-            f << "Jump " << bcm.getOffset(i + 1) << "\n";
-            i += 5;
-            break;
-        case ReturnOp:
-            f << "Return\n";
-            i++;
-            break;
-        case ReturnVoidOp:
-            f << "ReturnVoid\n";
-            i++;
-            break;
-        case InvokeOp:
-            f << "Invoke " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case DoUnaryOp:
-            f << "DoUnary " << bcm.mCodeBase[i + 1] << "\n";
-            i += 2;
-            break;
-        case DoOperatorOp:
-            f << "DoOperator " << bcm.mCodeBase[i + 1] << "\n";
-            i += 2;
-            break;
-        case GetLocalVarOp:
-            f << "GetLocalVar " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case SetLocalVarOp:
-            f << "SetLocalVar " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case GetArgOp:
-            f << "GetArg " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case SetArgOp:
-            f << "SetArg " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case GetMethodOp:
-            f << "GetMethod " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;            
-        case GetStaticMethodOp:
-            f << "GetStaticMethod " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;            
-        case GetFieldOp:
-            f << "GetField " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case SetFieldOp:
-            f << "SetField " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case GetStaticFieldOp:
-            f << "GetStaticField " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case SetStaticFieldOp:
-            f << "SetStaticField " << bcm.getLong(i + 1) << "\n";
-            i += 5;
-            break;
-        case GetNameOp:
-            f << "GetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-            i += 5;
-            break;
-        case SetNameOp:
-            f << "SetName " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-            i += 5;
-            break;
-        case GetPropertyOp:
-            f << "GetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-            i += 5;
-            break;
-        case SetPropertyOp:
-            f << "SetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-            i += 5;
-            break;
-        case LoadConstantNumberOp:
-            f << "LoadConstantNumber " << bcm.getNumber(bcm.getLong(i + 1)) << "\n";
-            i += 5;
-            break;
-        case LoadConstantStringOp:
-            f << "LoadConstantString " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
-            i += 5;
-            break;
-        case LoadTypeOp:
-            printFormat(f, "LoadType 0x%X\n", bcm.getLong(i + 1));
-            i += 5;
-            break;
-        case LoadFunctionOp:
-            printFormat(f, "LoadFunction 0x%X\n", bcm.getLong(i + 1));
-            i += 5;
-            break;
-        case PushScopeOp:
-            printFormat(f, "PushScope 0x%X\n", bcm.getLong(i + 1));
-            i += 5;
-            break;
-        case PopScopeOp:
-            f << "PopScope\n";
-            i++;
-            break;
-        case GetConstructorOp:
-            f << "GetConstructor\n";
-            i++;
-            break;
-        case NewObjectOp:
-            f << "NewObject\n";
-            i++;
-            break;
-        case LoadThisOp:
-            f << "LoadThis\n";
-            i++;
-            break;
-        default:
-            printFormat(f, "Unknown Opcode 0x%X\n", bcm.mCodeBase[i]);
-            i++;
-            break;
-        }
+        i = printInstruction(f, i, bcm);
     }
     return f;
 }

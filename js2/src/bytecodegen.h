@@ -94,6 +94,7 @@ namespace ByteCode {
         SwapOp,                 //                     <object1> <object2> --> <object2> <object1>
         DupOp,                  //                     <object> --> <object> <object>
         DupInsertOp,            //                     <object1> <object2> --> <object2> <object1> <object2>
+        PopOp,                  //                     <object> -->
     
         // for instance members
         GetFieldOp,             // <slot>              <base> --> <object>
@@ -161,14 +162,33 @@ namespace ByteCode {
 
     class Label {
     public:
-        Label() : mHasLocation(false) { }
+        
+        typedef enum { InternalLabel, NamedLabel, BreakLabel, ContinueLabel } LabelKind;
+
+        Label() : mKind(InternalLabel), mHasLocation(false) { }
+        Label(LabelStmtNode *lbl) : mKind(NamedLabel), mHasLocation(false), mLabelStmt(lbl) { }
+        Label(LabelKind kind) : mKind(kind), mHasLocation(false) { }
+
+
+        bool matches(const StringAtom *name)
+        {
+            return ((mKind == NamedLabel) && (mLabelStmt->name.compare(*name) == 0));
+        }
+
+        bool matches(LabelKind kind)
+        {
+            return (mKind == kind);
+        }
 
         void addFixup(ByteCodeGen *bcg, uint32 branchLocation);        
         void setLocation(ByteCodeGen *bcg, uint32 location);
 
         std::vector<uint32> mFixupList;
 
+        LabelKind mKind;
         bool mHasLocation;
+        LabelStmtNode *mLabelStmt;
+
         uint32 mLocation;
     };
 
@@ -197,6 +217,8 @@ namespace ByteCode {
         Context *m_cx;
         
         std::vector<Label> mLabelList;
+        std::vector<uint32> mLabelStack;
+
         
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
@@ -218,6 +240,46 @@ namespace ByteCode {
             uint32 result = mLabelList.size();
             mLabelList.push_back(Label());
             return result;
+        }
+
+        uint32 getLabel(Label::LabelKind kind)
+        {
+            uint32 result = mLabelList.size();
+            mLabelList.push_back(Label(kind));
+            return result;
+        }
+
+        uint32 getLabel(LabelStmtNode *lbl)
+        {
+            uint32 result = mLabelList.size();
+            mLabelList.push_back(Label(lbl));
+            return result;
+        }
+
+        uint32 getTopLabel(const StringAtom *name)
+        {
+            for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
+                                end = mLabelStack.rend();
+                                (i != end); i++)
+            {
+                if (mLabelList[*i].matches(name))
+                    return *i;
+            }
+            NOT_REACHED("label not found");
+            return false;
+        }
+
+        uint32 getTopLabel(Label::LabelKind kind)
+        {
+            for (std::vector<uint32>::reverse_iterator i = mLabelStack.rbegin(),
+                                end = mLabelStack.rend();
+                                (i != end); i++)
+            {
+                if (mLabelList[*i].matches(kind))
+                    return *i;
+            }
+            NOT_REACHED("label not found");
+            return false;
         }
 
         void setLabel(uint32 label)
@@ -283,6 +345,9 @@ namespace ByteCode {
             bcg->addLong(0);
         }
     }
+
+
+    int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm);
 }
 }
 

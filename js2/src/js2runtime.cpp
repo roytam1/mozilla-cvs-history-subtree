@@ -85,13 +85,20 @@ bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
 JSType *ScopeChain::findType(const StringAtom& typeName) 
 {
     Reference *ref = getName(typeName, Read);
+    JSType *result = Object_Type;
     if (ref) {
-        const JSValue type = ref->getValue();
+        if (ref->hasCompileTimeValue()) {
+            if (ref->isConstructor())
+                result = ref->mType;
+            else {
+                const JSValue type = ref->getValue();
+                if (type.isType())
+                    result = type.type;
+            }
+        }
         delete ref;
-        if (type.isType())
-            return type.type;
     }
-    return Object_Type;
+    return result;
 }
 
 JSType *ScopeChain::extractType(ExprNode *t)
@@ -103,87 +110,6 @@ JSType *ScopeChain::extractType(ExprNode *t)
     }
     return type;
 }
-
-
-JS2Runtime::Operator simpleLookup[Token::kindsEnd] = {
-   JS2Runtime::None,                    // none,
-   JS2Runtime::None,                    // identifier,
-   JS2Runtime::None,                    // number,
-   JS2Runtime::None,                    // string,
-   JS2Runtime::None,                    // regExp
-   JS2Runtime::None,                    // Null,
-   JS2Runtime::None,                    // True,
-   JS2Runtime::None,                    // False,
-   JS2Runtime::None,                    // This,
-   JS2Runtime::None,                    // Super,
-   JS2Runtime::None,                    // parentheses,
-   JS2Runtime::None,                    // numUnit,
-   JS2Runtime::None,                    // exprUnit,
-   JS2Runtime::None,                    // qualify,
-   JS2Runtime::None,                    // objectLiteral,
-   JS2Runtime::None,                    // arrayLiteral,
-   JS2Runtime::None,                    // functionLiteral,
-   JS2Runtime::None,                    // call,
-   JS2Runtime::None,                    // New,
-   JS2Runtime::None,                    // index,
-   JS2Runtime::None,                    // dot,
-   JS2Runtime::None,                    // dotClass,
-   JS2Runtime::None,                    // dotParen,
-   JS2Runtime::None,                    // at,
-   JS2Runtime::None,                    // Delete,
-   JS2Runtime::None,                    // Typeof,
-   JS2Runtime::None,                    // Eval,
-   JS2Runtime::None,                    // preIncrement,
-   JS2Runtime::None,                    // preDecrement,
-   JS2Runtime::None,                    // postIncrement,
-   JS2Runtime::None,                    // postDecrement,
-   JS2Runtime::None,                    // plus,
-   JS2Runtime::None,                    // minus,
-   JS2Runtime::Complement,              // complement,
-   JS2Runtime::None,                    // logicalNot,
-   JS2Runtime::None,                    // add,
-   JS2Runtime::None,                    // subtract,
-   JS2Runtime::Multiply,                // multiply,
-   JS2Runtime::Divide,                  // divide,
-   JS2Runtime::Remainder,               // modulo,
-   JS2Runtime::ShiftLeft,               // leftShift,
-   JS2Runtime::ShiftRight,              // rightShift,
-   JS2Runtime::UShiftRight,             // logicalRightShift,
-   JS2Runtime::BitAnd,                  // bitwiseAnd,
-   JS2Runtime::BitXor,                  // bitwiseXor,
-   JS2Runtime::BitOr,                   // bitwiseOr,
-   JS2Runtime::None,                    // logicalAnd,
-   JS2Runtime::None,                    // logicalXor,
-   JS2Runtime::None,                    // logicalOr,
-   JS2Runtime::Equal,                   // equal,
-   JS2Runtime::None,                    // notEqual,
-   JS2Runtime::Less,                    // lessThan,
-   JS2Runtime::LessEqual,               // lessThanOrEqual,
-   JS2Runtime::None,                    // greaterThan,
-   JS2Runtime::None,                    // greaterThanOrEqual,
-   JS2Runtime::SpittingImage,           // identical,
-   JS2Runtime::None,                    // notIdentical,
-   JS2Runtime::In,                      // In,
-   JS2Runtime::None,                    // Instanceof,
-   JS2Runtime::None,                    // assignment,
-   JS2Runtime::None,                    // addEquals,
-   JS2Runtime::None,                    // subtractEquals,
-   JS2Runtime::None,                    // multiplyEquals,
-   JS2Runtime::None,                    // divideEquals,
-   JS2Runtime::None,                    // moduloEquals,
-   JS2Runtime::None,                    // leftShiftEquals,
-   JS2Runtime::None,                    // rightShiftEquals,
-   JS2Runtime::None,                    // logicalRightShiftEquals,
-   JS2Runtime::None,                    // bitwiseAndEquals,
-   JS2Runtime::None,                    // bitwiseXorEquals,
-   JS2Runtime::None,                    // bitwiseOrEquals,
-   JS2Runtime::None,                    // logicalAndEquals,
-   JS2Runtime::None,                    // logicalXorEquals,
-   JS2Runtime::None,                    // logicalOrEquals,
-   JS2Runtime::None,                    // conditional,
-   JS2Runtime::None,                    // comma,
-};
-
 
 JS2Runtime::Operator Context::getOperator(uint32 parameterCount, const String &name)
 {
@@ -394,12 +320,21 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     if (applicableOperators.size() == 0)
         throw Exception(Exception::runtimeError, "No applicable operators found");
 
-    JSFunction *candidate = applicableOperators[0]->mImp;
-    // XXX more code needed here, obviously
+    OperatorList::iterator candidate = applicableOperators.begin();
+    for (oi = applicableOperators.begin() + 1,
+                end = applicableOperators.end();
+                (oi != end); oi++) 
+    {
+        if ((*oi)->mType1->derivesFrom((*candidate)->mType1)
+                || ((*oi)->mType2->derivesFrom((*candidate)->mType2)))
+            candidate = oi;
+    }
 
-    if (candidate->isNative()) {
+    JSFunction *target = (*candidate)->mImp;
+
+    if (target->isNative()) {
         // if the candidate can't 
-        JSValue result = candidate->mCode(this, mStack.end() - 2, 2);
+        JSValue result = target->mCode(this, mStack.end() - 2, 2);
         mStack.pop_back();      // XXX
         mStack.pop_back();
         mStack.push_back(result);
@@ -409,7 +344,7 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
         // have to lie about the argCount since the Return sequence expects to 
         // consume the arguments AND the target pointer from the stack.
         mActivationStack.push(new Activation(mLocals, mArgumentBase, mPC, mCurModule, 1));
-        mCurModule = candidate->mByteCode;
+        mCurModule = target->mByteCode;
         mArgumentBase = mStack.size() - 2;
         return true;
     }
@@ -435,9 +370,20 @@ JSValue Context::interpret(ByteCodeModule *bcm, JSValueList args)
 
 JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 {
+    JSValue result = kUndefinedValue;
     while (pc != endPC) {
         try {
+            if (mDebugFlag) {
+                stdOut << "                                           ";
+                printInstruction(stdOut, (pc - mCurModule->mCodeBase), *mCurModule);
+            }
             switch ((ByteCodeOp)(*pc++)) {
+            case PopOp:
+                {
+                    result = mStack.back(); // XXX debug only?
+                    mStack.pop_back();
+                }
+                break;
             case DupOp:
                 {
                     JSValue v = mStack.back();
@@ -782,7 +728,6 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     mLocals[index] = mStack.back();
-                    mStack.pop_back();
                 }
                 break;
             case LoadThisOp:
@@ -802,7 +747,6 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     mStack[mArgumentBase + index] = mStack.back();
-                    mStack.pop_back();
                 }
                 break;
             case GetMethodOp:
@@ -848,6 +792,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     ((JSInstance *)(base.object))->mInstanceValues[index] = v;
+                    mStack.push_back(v);
                 }
                 break;
             case GetStaticFieldOp:
@@ -874,6 +819,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     classP->mStatics->mInstanceValues[index] = v;
+                    mStack.push_back(v);
                 }
                 break;
             case PushScopeOp:
@@ -895,7 +841,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
             break;
         }
     }
-    return kUndefinedValue;
+    return result;
 }
 
 //  The first pass over the tree - it just installs the names of each declaration
@@ -946,6 +892,8 @@ void ScopeChain::collectNames(StmtNode *p)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
+            JSFunction *fnc = new JSFunction(NULL);
+            f->mFunction = fnc;
             bool isStatic = hasAttribute(f->attributes, Token::Static);
             bool isConstructor = hasAttribute(f->attributes, ConstructorKeyWord);
             bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
@@ -1081,8 +1029,10 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             bool isConstructor = hasAttribute(f->attributes, mScopeChain.ConstructorKeyWord);
             bool isOperator = hasAttribute(f->attributes, mScopeChain.OperatorKeyWord);
             JSType *resultType = mScopeChain.extractType(f->function.resultType);
-            JSFunction *fnc = new JSFunction(resultType);
-            f->mFunction = fnc;
+//            JSFunction *fnc = new JSFunction(resultType);
+//            f->mFunction = fnc;
+            JSFunction *fnc = f->mFunction;
+            fnc->mResultType = resultType;
  
             if (isOperator) {
                 ASSERT(f->function.name->getKind() == ExprNode::string);
@@ -1350,37 +1300,38 @@ JSValue objectLessEqual(Context *cx, JSValue *argv, uint32 argc)
         return kTrueValue;
 }
 
-struct OpTableEntry {
-    Operator which;
-    JSType *op1;
-    JSType *op2;
-    JSFunction::NativeCode *imp;
-    JSType *resType;
-} OpTable[] = {
-    { Plus,  Object_Type, Object_Type, objectPlus,  Object_Type },
-    { Plus,  Number_Type, Number_Type, numberPlus,  Number_Type },
-
-    { Minus, Object_Type, Object_Type, objectMinus, Number_Type },
-    { Minus, Number_Type, Number_Type, numberMinus, Number_Type },
-
-    { ShiftLeft, Object_Type, Object_Type, objectShiftLeft, Number_Type },
-    { ShiftRight, Object_Type, Object_Type, objectShiftRight, Number_Type },
-    { UShiftRight, Object_Type, Object_Type, objectUShiftRight, Number_Type },
-    { BitAnd, Object_Type, Object_Type, objectBitAnd, Number_Type },
-    { BitXor, Object_Type, Object_Type, objectBitXor, Number_Type },
-    { BitOr, Object_Type, Object_Type, objectBitOr, Number_Type },
-
-    { Multiply, Object_Type, Object_Type, objectMultiply, Number_Type },
-    { Divide, Object_Type, Object_Type, objectDivide, Number_Type },
-    { Remainder, Object_Type, Object_Type, objectRemainder, Number_Type },
-
-    { Less, Object_Type, Object_Type, objectMultiply, Boolean_Type },
-    { LessEqual, Object_Type, Object_Type, objectMultiply, Boolean_Type },
-
-};
 
 void Context::initOperators()
 {
+    struct OpTableEntry {
+        Operator which;
+        JSType *op1;
+        JSType *op2;
+        JSFunction::NativeCode *imp;
+        JSType *resType;
+    } OpTable[] = {
+        { Plus,  Object_Type, Object_Type, objectPlus,  Object_Type },
+        { Plus,  Number_Type, Number_Type, numberPlus,  Number_Type },
+
+        { Minus, Object_Type, Object_Type, objectMinus, Number_Type },
+        { Minus, Number_Type, Number_Type, numberMinus, Number_Type },
+
+        { ShiftLeft, Object_Type, Object_Type, objectShiftLeft, Number_Type },
+        { ShiftRight, Object_Type, Object_Type, objectShiftRight, Number_Type },
+        { UShiftRight, Object_Type, Object_Type, objectUShiftRight, Number_Type },
+        { BitAnd, Object_Type, Object_Type, objectBitAnd, Number_Type },
+        { BitXor, Object_Type, Object_Type, objectBitXor, Number_Type },
+        { BitOr, Object_Type, Object_Type, objectBitOr, Number_Type },
+
+        { Multiply, Object_Type, Object_Type, objectMultiply, Number_Type },
+        { Divide, Object_Type, Object_Type, objectDivide, Number_Type },
+        { Remainder, Object_Type, Object_Type, objectRemainder, Number_Type },
+
+        { Less, Object_Type, Object_Type, objectLess, Boolean_Type },
+        { LessEqual, Object_Type, Object_Type, objectLessEqual, Boolean_Type },
+
+    };
+
     for (int i = 0; i < sizeof(OpTable) / sizeof(OpTableEntry); i++) {
         JSFunction *f = new JSFunction(OpTable[i].imp, OpTable[i].resType);
         OperatorDefinition *op = new OperatorDefinition(OpTable[i].op1, OpTable[i].op2, f);

@@ -265,6 +265,9 @@ namespace JS2Runtime {
         virtual bool hasBaseExpression()
                 { return false; }
 
+        virtual bool hasCompileTimeValue()
+                { return false; }
+
     };
 
     // a getter/setter function from an activation
@@ -377,6 +380,7 @@ namespace JS2Runtime {
         bool isConstructor()    { return true; }
         virtual bool needsThis() { return true; }
         bool hasBaseExpression() { return true; }
+        bool hasCompileTimeValue() { return true; }
     };
     // a getter function
     class GetterFunctionReference : public Reference {
@@ -407,6 +411,7 @@ namespace JS2Runtime {
         bool getValue(Context *cx);
         bool setValue(Context *cx);
         JSValue getValue();
+        bool hasCompileTimeValue() { return true; }
     };
     // the "we don't know any field by that name", either it'll be a dynamic property
     // or we just didn't have enough type info at compile time.
@@ -669,6 +674,7 @@ namespace JS2Runtime {
         case f64_tag: return Number_Type;
         case string_tag: return String_Type;
         case object_tag: return object->getType();
+        case undefined_tag: return Object_Type;
         default: NOT_REACHED("bad type"); return NULL;
         }
     }
@@ -1364,7 +1370,7 @@ namespace JS2Runtime {
     public:
         
         OperatorDefinition(JSType *type1, JSType *type2, JSFunction *imp)
-            : mType1(type1), mType2(type2), mImp(imp) { }
+            : mType1(type1), mType2(type2), mImp(imp) { ASSERT(mType1); ASSERT(mType2); }
 
 
         JSType *mType1;
@@ -1392,9 +1398,9 @@ namespace JS2Runtime {
         Context(JSObject *global, World &world) 
             : mGlobal(global), 
               mWorld(world),
-              mScopeChain(mWorld)
+              mScopeChain(mWorld),
+              mDebugFlag(false)
         {
-            initOperators();
             if (Object_Type == NULL) {
                 Object_Type = new JSType(NULL);
 
@@ -1410,6 +1416,7 @@ namespace JS2Runtime {
                 Boolean_Type = new JSType(Object_Type);
                 Type_Type = new JSType(Object_Type);        
             }
+            initOperators();
         }
 
         void initOperators();
@@ -1442,6 +1449,7 @@ namespace JS2Runtime {
         JSObject *mGlobal;
         World &mWorld;
         ScopeChain mScopeChain;
+        bool mDebugFlag;
 
         // the currently executing 'function'
         ByteCodeModule *mCurModule;
