@@ -622,8 +622,11 @@ nsNSSCertificate::GetChain(nsISupportsArray **_rvChain)
   nsresult rv;
   CERTCertListNode *node;
   /* Get the cert chain from NSS */
-  CERTCertList *nssChain;
+  CERTCertList *nssChain = NULL;
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Getting chain for \"%s\"\n", mCert->nickname));
+  // XXX This function is buggy - if it can't find the issuer, it crashes
+  //     on a null pointer.  Will have to wait until it is fixed in NSS.
+#ifdef NSS_CHAIN_BUG_FIXED
   nssChain = CERT_GetCertChainFromCert(mCert, PR_Now(), certUsageSSLClient);
   if (!nssChain)
     return NS_ERROR_FAILURE;
@@ -640,6 +643,24 @@ nsNSSCertificate::GetChain(nsISupportsArray **_rvChain)
     nsCOMPtr<nsIX509Cert> cert = new nsNSSCertificate(node->cert);
     array->AppendElement(cert);
   }
+#else // workaround here
+  CERTCertificate *cert = mCert;
+  /* enumerate the chain for scripting purposes */
+  nsCOMPtr<nsISupportsArray> array;
+  rv = NS_NewISupportsArray(getter_AddRefs(array));
+  if (NS_FAILED(rv)) { 
+    goto done; 
+  }
+  PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Getting chain for \"%s\"\n", mCert->nickname));
+  while (cert &&
+         SECITEM_CompareItem(&cert->derIssuer, &cert->derSubject) 
+           != SECEqual) {
+    nsCOMPtr<nsIX509Cert> pipCert = new nsNSSCertificate(cert);
+    PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("adding %s to chain\n", cert->nickname));
+    array->AppendElement(pipCert);
+    cert = CERT_FindCertIssuer(cert, PR_Now(), certUsageSSLClient);
+  }
+#endif // NSS_CHAIN_BUG_FIXED
   *_rvChain = array;
   NS_IF_ADDREF(*_rvChain);
   rv = NS_OK;
