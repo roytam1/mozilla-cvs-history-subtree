@@ -118,7 +118,11 @@ void nsBasicFileStream::open(
 #else
     const OSType kCreator = 'MOSS';
 #endif
-    const FSSpec& spec = inFile.operator const FSSpec&();
+	// Resolve the alias to the original file.
+	nsFileSpec original = inFile;
+	PRBool ignoredResult;
+    original.ResolveAlias(ignoredResult);
+    const FSSpec& spec = original.operator const FSSpec&();
     if (nsprMode & PR_CREATE_FILE)
     	err = FSpCreate(&spec, kCreator, 'TEXT', 0);
     if (err == dupFNErr)
