@@ -61,6 +61,7 @@ LIBRARY_NAME=absync_s
 
 CPP_OBJS=   .\$(OBJDIR)\nsAbSyncPostEngine.obj             \
             .\$(OBJDIR)\nsAbSync.obj           	           \
+            .\$(OBJDIR)\nsAbSyncList.obj           	       \
             .\$(OBJDIR)\nsAbSyncCRCModel.obj               \
             .\$(OBJDIR)\nsSyncDecoderRing.obj              \
             .\$(OBJDIR)\nsABSyncDriver.obj                 \

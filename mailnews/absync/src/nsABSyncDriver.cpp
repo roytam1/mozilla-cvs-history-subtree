@@ -174,6 +174,9 @@ NS_IMETHODIMP nsAbSyncDriver::OnStopOperation(PRInt32 aTransactionID, nsresult a
   {
     PRUnichar   *outValue = nsnull;
 
+    // mCancelled is already set at this point if the operation was cancelled by users.
+    PRBool cancelledByUser = (mCancelled) ? PR_TRUE : PR_FALSE;
+
     // Tweak the button...
     mStatus->StopMeteors();
     mStatus->CloseWindow();
@@ -182,7 +185,7 @@ NS_IMETHODIMP nsAbSyncDriver::OnStopOperation(PRInt32 aTransactionID, nsresult a
       outValue = GetString(NS_LITERAL_STRING("syncDoneSuccess").get());
     else
     {
-      if (mCancelled)
+      if (cancelledByUser)
         outValue = GetString(NS_LITERAL_STRING("syncDoneCancelled").get());
       else
         outValue = GetString(NS_LITERAL_STRING("syncDoneFailed").get());
