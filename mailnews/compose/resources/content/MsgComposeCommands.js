@@ -2185,9 +2185,6 @@ function LoadIdentity(startup)
           }
       }
     }
-
-    // Initialize our security options
-    // initSecuritySettings();
 }
 
 function setupAutocomplete()
