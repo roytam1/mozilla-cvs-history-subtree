@@ -11170,11 +11170,7 @@ fi
 
 MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet"
 
-if test -n "$SUNCTL"; then
-  MOZ_EXTENSIONS_DEFAULT="$MOZ_EXTENSIONS_DEFAULT ctl"
-fi
-
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin ctl p3p interfaceinfo" 
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm access-builtin p3p interfaceinfo" 
 
 # Check whether --enable-extensions or --disable-extensions was given.
 if test "${enable_extensions+set}" = set; then
@@ -13578,37 +13574,6 @@ fi
 if test -z "${GLIB_GMODULE_LIBS}" ; then
     GLIB_GMODULE_LIBS=`$GLIB_CONFIG gmodule --libs`
 fi
-
-
-
-
-
-
-
-
-
-
-_SAVE_CFLAGS=$CFLAGS
-CFLAGS="$CFLAGS $GLIB_CFLAGS"
-cat > conftest.$ac_ext <<EOF
-#line 13595 "configure"
-#include "confdefs.h"
-#include <gmodule.h>
-int main() {
- int x = 1; x++; 
-; return 0; }
-EOF
-if { (eval echo configure:13602: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
-  :
-else
-  echo "configure: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  rm -rf conftest*
-  echo "configure: warning: Cannot build ctl without gmodule support in glib. Removing ctl from MOZ_EXTENSIONS." 1>&2
-    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|ctl||'` 
-fi
-rm -f conftest*
-CFLAGS=$_SAVE_CFLAGS
 
 MOZ_LIBART_CFLAGS=
 MOZ_LIBART_LIBS=
