@@ -1,4 +1,4 @@
-# The contents of this file are subject to the Netscape Public
+ig# The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
 # the License at http://www.mozilla.org/NPL/
@@ -361,6 +361,10 @@ SVG_BRANCH_FILES := \
 	content/shared/src/nsCSSProps.cpp \
 	content/shared/src/nsSVGAtoms.cpp \
 	content/shared/src/nsStyleStruct.cpp \
+	dom/public/idl/Makefile.in \
+	dom/public/idl/makefile.win \
+	dom/public/nsIDOMClassInfo.h \
+	dom/src/base/nsDOMClassInfo.cpp \
 	gfx/public/nsTransform2D.h \
 	htmlparser/src/nsIParser.h \
 	htmlparser/src/nsViewSourceHTML.cpp \
