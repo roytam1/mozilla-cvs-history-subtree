@@ -1,4 +1,4 @@
-LIBRARY         NSSLDAP32V
+LIBRARY         NSSLDAP32V50
 DESCRIPTION     'Lightweight Directory Access Protocol Client API with SSL for 32-bit Windows'
 VERSION		5.0	
 HEAPSIZE        4096
