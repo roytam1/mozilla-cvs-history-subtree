@@ -593,9 +593,7 @@ protected:
   // there is one scenario where we need to own the url....and that
   // is when we are loading the url from the cache....so in that case,
   // we'll turn around and make our m_url ptr an owning reference... *sigh*
-  nsIURI * m_url;
-  PRBool mOwningRefToUrl;
-
+  nsCOMPtr <nsIURI> m_url;
   nsCOMPtr<nsIURI> m_originalUrl;
   nsCOMPtr<nsILoadGroup> m_loadGroup;
   nsCOMPtr<nsIStreamListener> m_channelListener;
