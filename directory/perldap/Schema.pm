@@ -92,20 +92,66 @@ sub _initialize
   my ($self, $attrString) = @_;
   my @temparr = quotewords(" ", 0, $attrString);
   my $i = 2;
-  
-  # The OID is always going to be the first thing, and it will not have
-  # a label on it.
-  # We start from 1 because 0 will be a parentheses.
-  
-  $self->{"oid"} = $temparr[1];
-  
-  while ($i<(scalar(@temparr)-1)) # the last character is a ")" 
-    {
-      $self->{lc $temparr[$i]} = lc $temparr[$i+1];
-      $i += 2;
-    }
+  if (ref($attrString) eq "HASH") {
+    my @somearray = ("NAME","OID","DESC","SYNTAX");
+    my($name,$oid,$desc,$syntax) = $self->rearrange(\@somearray, $attrString);
+    $self->{"name"} = $name;
+  }
+  else {
+    # The OID is always going to be the first thing, and it will not have
+    # a label on it.
+    # We start from 1 because 0 will be a parentheses.
+    
+    $self->{"oid"} = $temparr[1];
+    
+    while ($i<(scalar(@temparr)-1)) # the last character is a ")" 
+      {
+	$self->{lc $temparr[$i]} = lc $temparr[$i+1];
+	$i += 2;
+      }
+  }
 }
 
+sub rearrange 
+{
+  my ($self, $order, @param) = @_;
+  my ($i, %pos);  $i = 0;
+
+  @param = %{$param[0]};
+  foreach (@$order) {
+    foreach (ref($_) eq 'ARRAY' ? @$_ : $_) {
+      $pos{$_} = $i;
+    }
+    $i++;
+  }
+  my (@result,%leftover);
+  $#result = $#$order;
+  while (@param) {
+    my $key = uc(shift(@param));
+    $key =~ s/^\-//;
+    if (exists $pos{$key}) {
+      $result[$pos{$key}] = shift(@param);
+    } else {
+      $leftover{$key} = shift(@param);
+    }
+  }
+  
+    push (@result,$self->make_attributes(\%leftover)) if %leftover;
+    @result;
+}
+
+sub make_attributes {
+    my($self,$attr) = @_;
+    return () unless $attr && ref($attr) && ref($attr) eq 'HASH';
+    my(@att);
+    foreach (keys %{$attr}) {
+	my($key) = $_;
+	$key=~s/^\-//;     # get rid of initial - if present
+	$key=~tr/a-z_/A-Z-/; # parameters are upper case, use dashes
+	push(@att,defined($attr->{$_}) ? qq/$key="$attr->{$_}"/ : qq/$key/);
+    }
+    return @att;
+}
 
 sub new 
 {
@@ -113,8 +159,7 @@ sub new
   my $tmp = shift;
   my $self = {%fields};
   bless $self;
-  $self->_initialize(@_);
-  
+  $self->_initialize(@_) if (scalar(@_) > $[);
   return $self;
 }  
 
