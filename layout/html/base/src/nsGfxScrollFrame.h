@@ -161,6 +161,8 @@ public:
 
   NS_IMETHOD  GetScrollPreference(nsIPresContext* aPresContext, nsScrollPref* aScrollPreference) const;
 
+  virtual void ScrollToRestoredPosition();
+
   virtual nsMargin GetActualScrollbarSizes() const;
   virtual nsMargin GetDesiredScrollbarSizes(nsBoxLayoutState* aState);
 

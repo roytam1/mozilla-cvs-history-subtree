@@ -117,6 +117,7 @@ public:
 
   virtual nsresult GetContentOf(nsIContent** aContent);
   
+  void ScrollToRestoredPosition();
 
 protected:
   nsScrollBoxFrame(nsIPresShell* aShell);

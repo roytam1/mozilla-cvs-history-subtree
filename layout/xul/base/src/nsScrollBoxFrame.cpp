@@ -430,6 +430,11 @@ nsScrollBoxFrame::DoLayout(nsBoxLayoutState& aState)
        PostScrollPortEvent(shell, mHorizontalOverflow, nsScrollPortEvent::horizontal);
   }
 
+  ScrollToRestoredPosition();
+
+  return NS_OK;
+}
+
   /**
    * this code is resposible for restoring the scroll position back to some
    * saved positon. if the user has not moved the scroll position manually
@@ -437,17 +442,16 @@ nsScrollBoxFrame::DoLayout(nsBoxLayoutState& aState)
    * mind that content could incrementally be coming in. we only want to stop
    * when we reach our new position.
    */
+void
+nsScrollBoxFrame::ScrollToRestoredPosition()
+{
+  nsIView* view = GetView();
+  NS_ASSERTION(view, "Scrollbox must always have a view!");
 
-  if ((mRestoreRect.y != -1) &&
-      (mLastPos.x != -1) &&
-      (mLastPos.y != -1)) {
-
+  if (view && mRestoreRect.y != -1 && mLastPos.x != -1 && mLastPos.y != -1) {
     // make sure our scroll position did not change for where we last put
     // it. if it does then the user must have moved it, and we no longer
     // need to restore.
-    if (!view)
-      return NS_OK; // don't freak out if we have no view
-
     nsIScrollableView* scrollingView;
     CallQueryInterface(view, &scrollingView);
     if (scrollingView) {
@@ -494,8 +498,6 @@ nsScrollBoxFrame::DoLayout(nsBoxLayoutState& aState)
       }
     }
   }
-
-  return NS_OK;
 }
 
 void

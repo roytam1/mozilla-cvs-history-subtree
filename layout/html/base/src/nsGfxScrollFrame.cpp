@@ -48,6 +48,7 @@
 #include "nsIScrollableView.h"
 #include "nsWidgetsCID.h"
 #include "nsGfxScrollFrame.h"
+#include "nsScrollBoxFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsXULAtoms.h"
 #include "nsHTMLAtoms.h"
@@ -282,6 +283,11 @@ nsGfxScrollFrame::GetScrollPreference(nsIPresContext* aPresContext, nsScrollPref
   }
 
   return NS_OK;
+}
+
+void nsGfxScrollFrame::ScrollToRestoredPosition() {
+  NS_STATIC_CAST(nsScrollBoxFrame*, mInner->mScrollAreaBox)
+    ->ScrollToRestoredPosition();
 }
 
 nsMargin nsGfxScrollFrame::GetActualScrollbarSizes() const {
