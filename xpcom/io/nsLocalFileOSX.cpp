@@ -577,7 +577,7 @@ NS_IMETHODIMP nsLocalFile::Remove(PRBool recursive)
     err = ::FSDeleteContainer(&fsRef);
   else
     err = ::FSDeleteObject(&fsRef);
-    
+
   return MacErrorMapper(err);
 }
 
@@ -2023,11 +2023,10 @@ nsresult nsLocalFile::MoveCopy(nsIFile* aParentDir, const nsAString& newName, PR
     return rv;
     
   if (isCopy) {
-    err = ::FSCopyObject(&srcRef, &destRef, 0, kFSCatInfoNone, false, false, nsnull, nsnull, &newRef);
-    if (err == noErr && !newName.IsEmpty())
-      err = ::FSRenameUnicode(&newRef, newName.Length(), PromiseFlatString(newName).get(), kTextEncodingUnknown, &newRef);
-    if (err == noErr)
-      mFSRef = newRef;
+    err = ::FSCopyObject(&srcRef, &destRef,
+                         newName.Length(), newName.Length() ? PromiseFlatString(newName).get() : nsnull,
+                         0, kFSCatInfoNone, false, false, nsnull, nsnull, &newRef);
+    // don't update mFSRef on a copy
   }
   else {
     // First, try the quick way which works only within the same volume
@@ -2037,9 +2036,10 @@ nsresult nsLocalFile::MoveCopy(nsIFile* aParentDir, const nsAString& newName, PR
               
     if (err == diffVolErr) {
       // If on different volumes, resort to copy & delete
-      err = ::FSCopyObject(&srcRef, &destRef, 0, kFSCatInfoNone, false, false, nsnull, nsnull, &newRef);
-      if (err == noErr && !newName.IsEmpty())
-        err = ::FSRenameUnicode(&newRef, newName.Length(), PromiseFlatString(newName).get(), kTextEncodingUnknown, &newRef);
+      err = ::FSCopyObject(&srcRef, &destRef,
+                           newName.Length(), newName.Length() ? PromiseFlatString(newName).get() : nsnull,
+                           0, kFSCatInfoNone, false, false, nsnull, nsnull, &newRef);
+
       if (err == noErr)
         mFSRef = newRef;
       err = ::FSDeleteObjects(&srcRef);
