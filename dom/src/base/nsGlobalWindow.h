@@ -205,6 +205,7 @@ public:
   virtual NS_HIDDEN_(PopupControlState) PushPopupControlState(PopupControlState state) const;
   virtual NS_HIDDEN_(void) PopPopupControlState(PopupControlState state) const;
   virtual NS_HIDDEN_(PopupControlState) GetPopupControlState() const;
+  virtual NS_HIDDEN_(OpenAllowValue) GetOpenAllow(const nsAString &aName);
 
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
@@ -258,7 +259,7 @@ protected:
                             nsIURI **aBuiltURI,
                             PRBool *aFreeSecurityPass, JSContext **aCXused);
   PopupControlState CheckForAbusePoint();
-  PRUint32 CheckOpenAllow(PopupControlState aAbuseLevel,
+  OpenAllowValue CheckOpenAllow(PopupControlState aAbuseLevel,
                           const nsAString &aName);
   void     FireAbuseEvents(PRBool aBlocked, PRBool aWindow,
                            const nsAString &aPopupURL,

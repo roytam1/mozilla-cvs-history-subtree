@@ -193,15 +193,6 @@ static const char kDOMSecurityWarningsBundleURL[] = "chrome://global/locale/dom/
 static const char kCryptoContractID[] = NS_CRYPTO_CONTRACTID;
 static const char kPkcs11ContractID[] = NS_PKCS11_CONTRACTID;
 
-// CheckOpenAllow return values:
-enum {
-  allowNot = 0,     // the window opening was denied
-  allowNoAbuse,     // allowed: not a popup
-  allowSelf,        // allowed: it's the same window (_self, _top, et.al.)
-  allowExtant,      // allowed: an already open window
-  allowWhitelisted  // allowed: it's whitelisted or popup blocking is disabled
-};
-
 //*****************************************************************************
 //***    GlobalWindowImpl: Object Management
 //*****************************************************************************
@@ -3089,11 +3080,11 @@ GlobalWindowImpl::CheckForAbusePoint()
    A popup generally will be allowed if it's from a white-listed domain,
    or if its target is an extant window.
    Returns a value from the CheckOpenAllow enum. */
-PRUint32
+OpenAllowValue
 GlobalWindowImpl::CheckOpenAllow(PopupControlState aAbuseLevel,
                                  const nsAString &aName)
 {
-  PRUint32 allowWindow = allowNoAbuse; // (also used for openControlled)
+  OpenAllowValue allowWindow = allowNoAbuse; // (also used for openControlled)
   
   if (aAbuseLevel >= openAbused) {
     allowWindow = allowNot;
@@ -3128,6 +3119,12 @@ GlobalWindowImpl::CheckOpenAllow(PopupControlState aAbuseLevel,
   }
 
   return allowWindow;
+}
+
+OpenAllowValue
+GlobalWindowImpl::GetOpenAllow(const nsAString &aName)
+{
+  return CheckOpenAllow(CheckForAbusePoint(), aName);
 }
 
 /* If a window open is blocked, fire the appropriate DOM events.
@@ -3205,7 +3202,7 @@ GlobalWindowImpl::Open(const nsAString& aUrl,
   nsresult rv;
 
   PopupControlState abuseLevel = CheckForAbusePoint();
-  PRUint32 allowReason = CheckOpenAllow(abuseLevel, aName);
+  OpenAllowValue allowReason = CheckOpenAllow(abuseLevel, aName);
   if (allowReason == allowNot) {
     FireAbuseEvents(PR_TRUE, PR_FALSE, aUrl, aOptions);
     return NS_ERROR_FAILURE; // unlike the public Open method, return an error
@@ -3270,7 +3267,7 @@ GlobalWindowImpl::Open(nsIDOMWindow **_retval)
   }
 
   PopupControlState abuseLevel = CheckForAbusePoint();
-  PRUint32 allowReason = CheckOpenAllow(abuseLevel, name);
+  OpenAllowValue allowReason = CheckOpenAllow(abuseLevel, name);
   if (allowReason == allowNot) {
     FireAbuseEvents(PR_TRUE, PR_FALSE, url, options);
     return NS_OK; // don't open the window, but also don't throw a JS exception
