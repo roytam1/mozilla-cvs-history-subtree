@@ -136,7 +136,7 @@ NS_IMETHODIMP nsImageRequest::OnStartDecode(nsIImageRequest *request, nsISupport
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnStartDecode(request, cx);
+    if (ob) ob->OnStartDecode(request, cx);
   }
 
   return NS_OK;
@@ -152,7 +152,7 @@ NS_IMETHODIMP nsImageRequest::OnStartContainer(nsIImageRequest *request, nsISupp
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnStartContainer(request, cx, image);
+    if (ob) ob->OnStartContainer(request, cx, image);
   }
 
   return NS_OK;
@@ -166,7 +166,7 @@ NS_IMETHODIMP nsImageRequest::OnStartFrame(nsIImageRequest *request, nsISupports
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnStartFrame(request, cx, frame);
+    if (ob) ob->OnStartFrame(request, cx, frame);
   }
 
   return NS_OK;
@@ -180,7 +180,7 @@ NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsISuppo
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnDataAvailable(request, cx, frame, rect);
+    if (ob) ob->OnDataAvailable(request, cx, frame, rect);
   }
 
   return NS_OK;
@@ -194,7 +194,7 @@ NS_IMETHODIMP nsImageRequest::OnStopFrame(nsIImageRequest *request, nsISupports 
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnStopFrame(request, cx, frame);
+    if (ob) ob->OnStopFrame(request, cx, frame);
   }
 
   return NS_OK;
@@ -208,7 +208,7 @@ NS_IMETHODIMP nsImageRequest::OnStopContainer(nsIImageRequest *request, nsISuppo
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnStopContainer(request, cx, image);
+    if (ob) ob->OnStopContainer(request, cx, image);
   }
 
   return NS_OK;
@@ -225,7 +225,7 @@ NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsISupports
 
   while (++i < count) {
     nsIImageDecoderObserver *ob = NS_STATIC_CAST(nsIImageDecoderObserver*, mObservers[i]);
-    ob->OnStopDecode(request, cx, status, statusArg);
+    if (ob) ob->OnStopDecode(request, cx, status, statusArg);
   }
 
   return NS_OK;

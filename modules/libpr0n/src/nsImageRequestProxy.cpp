@@ -51,7 +51,7 @@ nsImageRequestProxy::~nsImageRequestProxy()
 {
   /* destructor code */
   nsCOMPtr<nsPIImageRequest> pr(do_QueryInterface(mOwner));
-  return pr->RemoveObserver(this, status);
+  pr->RemoveObserver(this, NS_OK);
 }
 
 
