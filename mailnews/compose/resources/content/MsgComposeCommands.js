@@ -45,7 +45,6 @@ ioService = ioService.QueryInterface(Components.interfaces.nsIIOService);
 var msgCompose = null;
 var MAX_RECIPIENTS = 0;
 var currentAttachment = null;
-var documentLoaded = false;
 var windowLocked = false;
 var contentChanged = false;
 var currentIdentity = null;
@@ -77,7 +76,7 @@ if (prefs) {
 
 var stateListener = {
 	NotifyComposeFieldsReady: function() {
-		documentLoaded = true;
+		ComposeFieldsReady();
 	},
 
 	SendAndSaveProcessDone: function() {
@@ -606,20 +605,18 @@ function GetArgs(originalData)
 	return args;
 }
 
-function WaitFinishLoadingDocument(msgType)
+function ComposeFieldsReady(msgType)
 {
-	if (documentLoaded)
-	{
-	    //If we are in plain text, we nee to set the wrap column
-		if (! msgCompose.composeHTML)
-    		try
-    		{
-    			window.editorShell.wrapColumn = msgCompose.wrapLength;
-    		}
-    		catch (e)
-    		{
-    			dump("### window.editorShell.wrapColumn exception text: " + e + " - failed\n");
-    		}
+    //If we are in plain text, we nee to set the wrap column
+	if (! msgCompose.composeHTML)
+  		try
+  		{
+  			window.editorShell.wrapColumn = msgCompose.wrapLength;
+  		}
+  		catch (e)
+  		{
+  			dump("### window.editorShell.wrapColumn exception text: " + e + " - failed\n");
+  		}
 		    
 		CompFields2Recipients(msgCompose.compFields, msgType);
 		SetComposeWindowTitle(13);
@@ -627,9 +624,6 @@ function WaitFinishLoadingDocument(msgType)
 		try {
 		window.updateCommands("create");
 		} catch(e) {}
-	}
-	else
-		setTimeout("WaitFinishLoadingDocument(" + msgType + ");", 200);
 }
 
 function ComposeStartup()
@@ -806,8 +800,6 @@ function ComposeStartup()
 		  try {
 			  window.updateCommands("create");
   		} catch(e) {}
-			
-			WaitFinishLoadingDocument(params.type);
 		}
 	}
 }

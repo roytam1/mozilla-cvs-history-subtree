@@ -247,6 +247,7 @@ nsresult nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorShell,
   //
 
   // Now, insert it into the editor...
+  aEditorShell->BeginBatchChanges();
   if ( (aQuoted) )
   {
     if (!aPrefix.IsEmpty())
@@ -296,6 +297,7 @@ nsresult nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorShell,
         aEditorShell->InsertText(aSignature.GetUnicode());
     }
   }
+  aEditorShell->EndBatchChanges();
   
   if (editor)
   {
@@ -365,7 +367,6 @@ nsresult nsMsgCompose::ConvertAndLoadComposeWindow(nsIEditorShell *aEditorShell,
       selCon->ScrollSelectionIntoView(nsISelectionController::SELECTION_NORMAL, nsISelectionController::SELECTION_ANCHOR_REGION);
   }
 
-  NotifyStateListeners(nsMsgCompose::eComposeFieldsReady);
   if (editor)
     editor->EnableUndo(PR_TRUE);
   SetBodyModified(PR_FALSE);
@@ -1354,6 +1355,8 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIChannel *aChannel, n
       }
     }
     
+    mComposeObj->NotifyStateListeners(nsMsgCompose::eComposeFieldsReady);
+
     if (! mHeadersOnly)
       mMsgBody.AppendWithConversion("</html>");
     
@@ -1820,7 +1823,10 @@ nsMsgDocumentStateListener::NotifyDocumentCreated(void)
   if ( mComposeObj->QuotingToFollow() )
     return mComposeObj->BuildQuotedMessageAndSignature();
   else
+  {
+    mComposeObj->NotifyStateListeners(nsMsgCompose::eComposeFieldsReady);
     return mComposeObj->BuildBodyMessageAndSignature();
+  }
 }
 
 nsresult
