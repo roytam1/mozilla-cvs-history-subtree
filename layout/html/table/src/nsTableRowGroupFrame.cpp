@@ -45,7 +45,7 @@
 #include "nsStyleConsts.h"
 #include "nsIContent.h"
 #include "nsIView.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowPath.h"
 #include "nsHTMLIIDs.h"
 #include "nsIDeviceContext.h"
 #include "nsHTMLAtoms.h"
@@ -418,13 +418,12 @@ nsTableRowGroupFrame::ReflowChildren(nsIPresContext*        aPresContext,
       // it's target is the current frame, then make sure we send
       // StyleChange reflow reasons down to the children so that they
       // don't over-optimize their reflow.
-      nsIFrame* target = nsnull;
       nsReflowReason reason = aReflowState.reason;
       if (eReflowReason_Incremental == aReflowState.reason) {
-        aReflowState.reflowState.reflowCommand->GetTarget(target);
-        if (this == target) {
+        nsHTMLReflowCommand *command = aReflowState.reflowState.path->mReflowCommand;
+        if (command) {
           nsReflowType type;
-          aReflowState.reflowState.reflowCommand->GetType(type);
+          command->GetType(type);
           if (eReflowType_StyleChanged == type) {
             reason = eReflowReason_StyleChange;
           }
@@ -1274,23 +1273,18 @@ nsTableRowGroupFrame::IncrementalReflow(nsIPresContext*        aPresContext,
                                         nsRowGroupReflowState& aReflowState,
                                         nsReflowStatus&        aStatus)
 {
-  nsresult  rv = NS_OK;
-
   // determine if this frame is the target or not
-  nsIFrame* target = nsnull;
-  rv = aReflowState.reflowState.reflowCommand->GetTarget(target);
-  if (NS_SUCCEEDED(rv) && target) {
-    if (this == target)
-      rv = IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
-    else {
-      // Get the next frame in the reflow chain
-      nsIFrame* nextFrame;
-      aReflowState.reflowState.reflowCommand->GetNext(nextFrame);
+  nsHTMLReflowCommand *command = aReflowState.reflowState.path->mReflowCommand;
+  if (command)
+    IR_TargetIsMe(aPresContext, aDesiredSize, aReflowState, aStatus);
 
-      rv = IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, nextFrame);
-    }
-  }
-  return rv;
+  nsReflowPath::iterator iter = aReflowState.reflowState.path->FirstChild();
+  nsReflowPath::iterator end = aReflowState.reflowState.path->EndChildren();
+
+  for ( ; iter != end; ++iter)
+    IR_TargetIsChild(aPresContext, aDesiredSize, aReflowState, aStatus, *iter);
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -1415,7 +1409,7 @@ nsTableRowGroupFrame::IR_TargetIsMe(nsIPresContext*        aPresContext,
 {
   nsresult rv = NS_FRAME_COMPLETE;
   nsReflowType type;
-  aReflowState.reflowState.reflowCommand->GetType(type);
+  aReflowState.reflowState.path->mReflowCommand->GetType(type);
 
   switch (type) {
     case eReflowType_ReflowDirty: {

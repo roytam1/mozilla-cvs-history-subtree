@@ -39,7 +39,7 @@
 #include "nsHTMLContainerFrame.h"
 #include "nsCSSRendering.h"
 #include "nsIDocument.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowPath.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsViewsCID.h"
@@ -497,12 +497,11 @@ CanvasFrame::Reflow(nsIPresContext*          aPresContext,
   // Check for an incremental reflow
   if (eReflowReason_Incremental == aReflowState.reason) {
     // See if we're the target frame
-    nsIFrame* targetFrame;
-    aReflowState.reflowCommand->GetTarget(targetFrame);
-    if (this == targetFrame) {
+    nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
+    if (command) {
       // Get the reflow type
-      nsReflowType  reflowType;
-      aReflowState.reflowCommand->GetType(reflowType);
+      nsReflowType reflowType;
+      command->GetType(reflowType);
 
       switch (reflowType) {
       case eReflowType_ReflowDirty:
@@ -517,12 +516,12 @@ CanvasFrame::Reflow(nsIPresContext*          aPresContext,
       default:
         NS_ASSERTION(PR_FALSE, "unexpected reflow command type");
       }
-
-    } else {
-      nsIFrame* nextFrame;
-      // Get the next frame in the reflow chain
-      aReflowState.reflowCommand->GetNext(nextFrame);
-      NS_ASSERTION(nextFrame == mFrames.FirstChild(), "unexpected next reflow command frame");
+    }
+    else {
+#ifdef DEBUG
+      nsReflowPath::iterator iter = aReflowState.path->FirstChild();
+      NS_ASSERTION(*iter == mFrames.FirstChild(), "unexpected next reflow command frame");
+#endif
     }
   }
 
@@ -545,10 +544,10 @@ CanvasFrame::Reflow(nsIPresContext*          aPresContext,
       // Note: the only reason the frame would be dirty would be if it had
       // just been inserted or appended
       kidReflowState.reason = eReflowReason_Initial;
-      kidReflowState.reflowCommand = nsnull;
+      kidReflowState.path = nsnull;
     } else if (isStyleChange) {
       kidReflowState.reason = eReflowReason_StyleChange;
-      kidReflowState.reflowCommand = nsnull;
+      kidReflowState.path = nsnull;
     }
 
     // Reflow the frame

@@ -52,7 +52,7 @@
 #include "nsIRenderingContext.h"
 #include "nsLayoutAtoms.h"
 #include "nsPlaceholderFrame.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowPath.h"
 #include "nsIDocument.h"
 #include "nsIHTMLDocument.h"
 #include "nsIContent.h"
@@ -857,7 +857,6 @@ nsLineLayout::LineIsBreakable() const
 
 nsresult
 nsLineLayout::ReflowFrame(nsIFrame* aFrame,
-                          nsIFrame** aNextRCFrame,
                           nsReflowStatus& aReflowStatus,
                           nsHTMLReflowMetrics* aMetrics,
                           PRBool& aPushedFrame)
@@ -919,32 +918,32 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   // (for example, a block frame that isn't at the start of a
   // line). In this case the reason will be wrong so we need to check
   // the frame state.
+  const nsHTMLReflowState* rs = psd->mReflowState;
   nsReflowReason reason = eReflowReason_Resize;
   nsFrameState state;
   aFrame->GetFrameState(&state);
   if (NS_FRAME_FIRST_REFLOW & state) {
     reason = eReflowReason_Initial;
   }  
-  else if (*aNextRCFrame == aFrame) {
+  else if (rs->reason == eReflowReason_Incremental && // XXX
+           rs->path->HasChild(aFrame)) {
+    // XXXwaterson (above) previously used mBlockReflowState rather than psd->mReflowState.
     reason = eReflowReason_Incremental;
-    // Make sure we only incrementally reflow once
-    *aNextRCFrame = nsnull;
   }
-  else if (psd->mReflowState->reason == eReflowReason_StyleChange) {
+  else if (rs->reason == eReflowReason_StyleChange) {
     reason = eReflowReason_StyleChange;
   }
-  else if (psd->mReflowState->reason == eReflowReason_Dirty) {
+  else if (rs->reason == eReflowReason_Dirty) {
     if (state & NS_FRAME_IS_DIRTY)
       reason = eReflowReason_Dirty;
   }
   else {
-    const nsHTMLReflowState* rs = psd->mReflowState;
     if (rs->reason == eReflowReason_Incremental) {
       // If the incremental reflow command is a StyleChanged reflow and
       // it's target is the current span, then make sure we send
       // StyleChange reflow reasons down to the children so that they
       // don't over-optimize their reflow.
-      nsHTMLReflowCommand* rc = rs->reflowCommand;
+      nsHTMLReflowCommand* rc = rs->path->mReflowCommand;
       if (rc) {
         nsReflowType type;
         rc->GetType(type);

@@ -40,7 +40,7 @@
 #include "nsTableCellFrame.h"
 #include "nsTableFrame.h"
 #include "nsTableRowGroupFrame.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowPath.h"
 #include "nsIStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
@@ -865,24 +865,19 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
   if (eReflowReason_Incremental == aReflowState.reason) {
     // We *must* do this otherwise incremental reflow that's
     // passing through will not work right.
-    nsIFrame* next;
-    aReflowState.reflowCommand->GetNext(next);
+    nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
 
     // if it is a StyleChanged reflow targeted at this cell frame,
     // handle that here
     // first determine if this frame is the target or not
-    nsIFrame *target=nsnull;
-    rv = aReflowState.reflowCommand->GetTarget(target);
-    if ((PR_TRUE==NS_SUCCEEDED(rv)) && target) {
-      if (this == target) {
-        nsReflowType type;
-        aReflowState.reflowCommand->GetType(type);
-        if (eReflowType_StyleChanged == type) {
-          isStyleChanged = PR_TRUE;
-        }
-        else {
-          NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
-        }
+    if (command) {
+      nsReflowType type;
+      command->GetType(type);
+      if (eReflowType_StyleChanged == type) {
+        isStyleChanged = PR_TRUE;
+      }
+      else {
+        NS_ASSERTION(PR_FALSE, "table cell target of illegal incremental reflow type");
       }
     }
     // if any of these conditions are not true, we just pass the reflow command down
@@ -925,7 +920,7 @@ NS_METHOD nsTableCellFrame::Reflow(nsIPresContext*          aPresContext,
   // the special reflow reason
   if (isStyleChanged) {
     kidReflowState.reason = eReflowReason_StyleChange;
-    kidReflowState.reflowCommand = nsnull;
+    kidReflowState.path = nsnull;
     // the following could be optimized with a fair amount of effort
     tableFrame->SetNeedStrategyInit(PR_TRUE);
   }

@@ -699,11 +699,12 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   PRBool needsReflow = PR_FALSE;
   PRBool redrawNow = PR_FALSE;
   nsReflowReason reason;
-  
+  nsReflowPath *path = nsnull;
+
   HandleIncrementalReflow(aState, 
                           aReflowState, 
                           reason,
-                          PR_TRUE,
+                          &path,
                           redrawNow,
                           needsReflow, 
                           redrawAfterReflow, 
@@ -772,8 +773,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
 
     nsHTMLReflowState   reflowState(aPresContext, aReflowState, mFrame, nsSize(size.width, NS_INTRINSICSIZE));
     reflowState.reason = reason;
-    if (reason != eReflowReason_Incremental)
-       reflowState.reflowCommand = nsnull;
+    reflowState.path   = path;
 
     // XXX this needs to subtract out the border and padding of mFrame since it is content size
     reflowState.mComputedWidth = size.width;
@@ -792,8 +792,11 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
 
          reflowState.reason = eReflowReason_StyleChange;
       } else if (reason == eReflowReason_Incremental) {
-         nsReflowType  type;
+        // XXXwaterson FIXME. I'm not sure how to emulate this logic.
+         nsReflowType  type = eReflowType_ReflowDirty;
+#if 0
           reflowState.reflowCommand->GetType(type);
+#endif
 
           if (type != eReflowType_StyleChanged) {
              #ifdef DEBUG_REFLOW
@@ -810,7 +813,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
              reflowState.mComputedWidth = aDesiredSize.width - (border.left + border.right);
              reflowState.availableWidth = reflowState.mComputedWidth;
              reflowState.reason = eReflowReason_StyleChange;
-             reflowState.reflowCommand = nsnull;
+             reflowState.path = nsnull;
           }
       }
 
@@ -865,7 +868,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
                  reflowState.mComputedWidth = aDesiredSize.width - (border.left + border.right);
                  reflowState.availableWidth = reflowState.mComputedWidth;
                  reflowState.reason = eReflowReason_Resize;
-                 reflowState.reflowCommand = nsnull;
+                 reflowState.path = nsnull;
                  mFrame->DidReflow(aPresContext, &reflowState, NS_FRAME_REFLOW_FINISHED);
                  #ifdef DEBUG_REFLOW
                   nsAdaptorAddIndents();
@@ -938,15 +941,31 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   return NS_OK;
 }
 
+static nsReflowPath *
+FindReflowPathFor(nsIFrame *aFrame, nsReflowPath *aReflowPath)
+{
+  nsReflowPath::iterator iter, end = aReflowPath->EndChildren();
+  for (iter = aReflowPath->FirstChild(); iter != end; ++iter) {
+    if (*iter == aFrame)
+      return iter.get();
+
+    nsReflowPath *subtree = FindReflowPathFor(aFrame, iter.get());
+    if (subtree)
+      return subtree;
+  }
+
+  return nsnull;
+}
+
 void
 nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState, 
-                                          const nsHTMLReflowState aReflowState,
-                                          nsReflowReason& aReason,
-                                          PRBool aPopOffIncremental,
-                                          PRBool& aRedrawNow,
-                                          PRBool& aNeedsReflow,
-                                          PRBool& aRedrawAfterReflow,
-                                          PRBool& aMoveFrame)
+                                             const nsHTMLReflowState& aReflowState,
+                                             nsReflowReason& aReason,
+                                             nsReflowPath** aReflowPath,
+                                             PRBool& aRedrawNow,
+                                             PRBool& aNeedsReflow,
+                                             PRBool& aRedrawAfterReflow,
+                                             PRBool& aMoveFrame)
 {
   nsFrameState childState;
   mFrame->GetFrameState(&childState);
@@ -969,16 +988,15 @@ nsBoxToBlockAdaptor::HandleIncrementalReflow(nsBoxLayoutState& aState,
       // if incremental see if the next child in the chain is the child. If so then
       // we will just let it go down. If not then convert it to a dirty. It will get converted back when 
       // needed in the case just below this one.
-      nsIFrame* incrementalChild = nsnull;
-      aReflowState.reflowCommand->GetNext(incrementalChild, PR_FALSE);
       
       // if the increment child is our child then
       // pop it off and continue sending it down
-      if (incrementalChild == mFrame ) {
+      nsReflowPath *path = FindReflowPathFor(mFrame, aReflowState.path);
+      if (path) {
           aNeedsReflow = PR_TRUE;
 
-          if (aPopOffIncremental)
-             aReflowState.reflowCommand->GetNext(incrementalChild);
+          if (aReflowPath)
+            *aReflowPath = path;
 
           // if we hit the target then we have used up the chain.
           // next time a layout 
@@ -1060,7 +1078,7 @@ nsBoxToBlockAdaptor::CanSetMaxElementSize(nsBoxLayoutState& aState, nsReflowReas
       HandleIncrementalReflow(aState, 
                               *reflowState, 
                               aReason,
-                              PR_FALSE,
+                              nsnull,
                               redrawNow,
                               needsReflow, 
                               redrawAfterReflow, 
@@ -1068,6 +1086,7 @@ nsBoxToBlockAdaptor::CanSetMaxElementSize(nsBoxLayoutState& aState, nsReflowReas
 
       // only  incremental reflows can handle maxelementsize being set.
       if (reflowState->reason == eReflowReason_Incremental) {
+#if 0 // XXXwaterson FIXME.
         if (reflowState->reflowCommand) {
           // MaxElement doesn't work on style change reflows.. :-(
           nsReflowType  type;
@@ -1076,6 +1095,7 @@ nsBoxToBlockAdaptor::CanSetMaxElementSize(nsBoxLayoutState& aState, nsReflowReas
           if (type == eReflowType_StyleChanged) 
             return PR_FALSE;
         }
+#endif
 
         return PR_TRUE;
       }
