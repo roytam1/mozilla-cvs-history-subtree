@@ -179,7 +179,7 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
   nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject) {
       nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
-      if (os) {
+      if (os && globalObject) {
           os->NotifyObservers(globalObject->GetDocShell(),
                               "xpinstall-install-blocked", 
                               NS_LITERAL_STRING("install").get());
@@ -346,7 +346,7 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
   nativeThis->UpdateEnabled(globalObject, useWhitelist, &enabled);
   if (!enabled || !globalObject) {
       nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
-      if (os) {
+      if (os && globalObject) {
           os->NotifyObservers(globalObject->GetDocShell(), 
                               "xpinstall-install-blocked", 
                               NS_LITERAL_STRING("install-chrome").get());
@@ -438,7 +438,15 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
   PRBool enabled = PR_FALSE;
   nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject)
+  {
+      nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+      if (os && globalObject) {
+          os->NotifyObservers(globalObject->GetDocShell(),
+                              "xpinstall-install-blocked", 
+                              NS_LITERAL_STRING("install").get());
+      }
       return JS_TRUE;
+  }
 
   // get window.location to construct relative URLs
   nsCOMPtr<nsIURI> baseURL;
