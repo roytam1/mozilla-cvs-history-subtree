@@ -56,11 +56,6 @@ private:
 public:
   // nsIFrame:
 
-  NS_IMETHOD Reflow(nsIPresContext*          aPresContext,
-                    nsHTMLReflowMetrics&     aDesiredSize,
-                    const nsHTMLReflowState& aReflowState,
-                    nsReflowStatus&          aStatus);
-  
   NS_IMETHOD  AppendFrames(nsIPresContext* aPresContext,
                            nsIPresShell&   aPresShell,
                            nsIAtom*        aListName,
@@ -116,7 +111,7 @@ NS_NewSVGGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewF
   nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(aContent);
   if (!transformable) {
 #ifdef DEBUG
-    printf("warning: trying to contruct an SVGGFrame for a content element that doesn't support the right interfaces\n");
+    printf("warning: trying to construct an SVGGFrame for a content element that doesn't support the right interfaces\n");
 #endif
     return NS_ERROR_FAILURE;
   }
@@ -187,38 +182,6 @@ nsSVGGFrame::Init(nsIPresContext*  aPresContext,
   return rv;
 }
 
-
-NS_IMETHODIMP
-nsSVGGFrame::Reflow(nsIPresContext*          aPresContext,
-                   nsHTMLReflowMetrics&     aDesiredSize,
-                   const nsHTMLReflowState& aReflowState,
-                   nsReflowStatus&          aStatus)
-{
-  // This frame is not reflowed and our parent svg container doesn't
-  // care what we return. We just have to pass the reflow through to
-  // our children, in case there is a <foreignObject> among them.
-  
-  
-  nsSize availableSpace(aReflowState.availableWidth,aReflowState.availableHeight);
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsHTMLReflowMetrics desiredChildSize(nsnull);
-    nsHTMLReflowState   childReflowState(aPresContext,
-                                         aReflowState,
-                                         kid,
-                                         availableSpace);
-    kid->WillReflow(aPresContext);
-    kid->Reflow(aPresContext, desiredChildSize, childReflowState, aStatus);
-    kid->SizeTo(aPresContext, desiredChildSize.width, desiredChildSize.height);
-    kid->DidReflow(aPresContext, NS_FRAME_REFLOW_FINISHED);
-    kid->GetNextSibling(&kid);
-  }
-  
-  aStatus = NS_FRAME_COMPLETE;
-  return NS_OK;
-}
-
-
 NS_IMETHODIMP
 nsSVGGFrame::AppendFrames(nsIPresContext* aPresContext,
                       nsIPresShell&   aPresShell,
@@ -251,7 +214,7 @@ nsSVGGFrame::InsertFrames(nsIPresContext* aPresContext,
                       nsIFrame*       aFrameList)
 {
   nsresult  rv = NS_OK;
-
+  
   // Insert the new frames
 #ifdef NS_DEBUG
   nsFrame::VerifyDirtyBitSet(aFrameList);

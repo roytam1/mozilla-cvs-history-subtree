@@ -133,7 +133,7 @@ NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame*
   nsCOMPtr<nsIDOMSVGSVGElement> svgel = do_QueryInterface(aContent);
   if (!svgel) {
 #ifdef DEBUG
-    printf("warning: trying to contruct an SVGOuterSVGFrame for a content element that doesn't support the right interfaces\n");
+    printf("warning: trying to construct an SVGOuterSVGFrame for a content element that doesn't support the right interfaces\n");
 #endif
     return NS_ERROR_FAILURE;
   }
@@ -296,25 +296,6 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
   
   // XXX add in CSS borders ??
 
-  // reflow children: while this is not strictly necessary for svg
-  // frames, we need it for <foreignObject> frames
-
-  nsSize availableSpace(aDesiredSize.width,aDesiredSize.height);
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    nsHTMLReflowMetrics desiredChildSize(nsnull);
-    nsHTMLReflowState   childReflowState(aPresContext,
-                                         aReflowState,
-                                         kid,
-                                         availableSpace);
-    kid->WillReflow(aPresContext);
-    kid->Reflow(aPresContext, desiredChildSize, childReflowState, aStatus);
-    kid->SizeTo(aPresContext, desiredChildSize.width, desiredChildSize.height);
-    kid->DidReflow(aPresContext, NS_FRAME_REFLOW_FINISHED);
-    kid->GetNextSibling(&kid);
-  }
-  
-  
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
 }
@@ -380,7 +361,7 @@ nsSVGOuterSVGFrame::AppendFrames(nsIPresContext* aPresContext,
                       nsIFrame*       aFrameList)
 {
   nsresult  rv = NS_OK;
-
+  
   // Insert the new frames
   mFrames.AppendFrames(this, aFrameList);
 
@@ -767,9 +748,6 @@ NS_IMETHODIMP
 nsSVGOuterSVGFrame::NotifyRedrawSuspended()
 {
   mRedrawSuspended = PR_TRUE;
-#ifdef DEBUG
-  printf("Redraw suspended\n");
-#endif
 
  // get the view manager, so that we can wrap this up in a batch
   // update.
@@ -808,10 +786,6 @@ nsSVGOuterSVGFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::NotifyRedrawUnsuspended()
 {
-#ifdef DEBUG
-  printf("Redraw unsuspended\n");
-#endif
-
   mRedrawSuspended = PR_FALSE;
 
   // get the view manager, so that we can wrap this up in a batch

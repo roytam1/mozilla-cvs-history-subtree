@@ -39,6 +39,8 @@
 #include "nsIDOMSVGMatrix.h"
 #include "nsIDOMSVGSVGElement.h"
 #include "nsIDOMSVGPoint.h"
+#include "libart-incs.h"
+#include "nsSpaceManager.h"
 
 typedef nsBlockFrame nsSVGForeignObjectFrameBase;
 
@@ -61,6 +63,24 @@ private:
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
 public:
   // nsIFrame:
+  NS_IMETHOD  AppendFrames(nsIPresContext* aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aFrameList);
+  NS_IMETHOD  InsertFrames(nsIPresContext* aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aPrevFrame,
+                           nsIFrame*       aFrameList);
+  NS_IMETHOD  RemoveFrame(nsIPresContext* aPresContext,
+                          nsIPresShell&   aPresShell,
+                          nsIAtom*        aListName,
+                          nsIFrame*       aOldFrame);
+  NS_IMETHOD  ReplaceFrame(nsIPresContext* aPresContext,
+                           nsIPresShell&   aPresShell,
+                           nsIAtom*        aListName,
+                           nsIFrame*       aOldFrame,
+                           nsIFrame*       aNewFrame);
   
   NS_IMETHOD Init(nsIPresContext*  aPresContext,
                   nsIContent*      aContent,
@@ -91,14 +111,18 @@ public:
   
 protected:
   // implementation helpers:
+  void Update();
+  ArtUta* DoReflow();
+  ArtUta* GetUta();
   float GetPxPerTwips();
   float GetTwipsPerPx();
   void TransformPoint(float& x, float& y);
   void TransformVector(float& x, float& y);
   void GetCTM(nsIDOMSVGMatrix** ctm);
+  static void AccumulateUta(ArtUta** accu, ArtUta* uta);
 
+  PRBool mIsDirty;
   nsIPresShell* mPresShell; // XXX is a non-owning ref ok?
-
   nsCOMPtr<nsIDOMSVGLength> mX;
   nsCOMPtr<nsIDOMSVGLength> mY;
   nsCOMPtr<nsIDOMSVGLength> mWidth;
@@ -116,7 +140,7 @@ NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIF
   nsCOMPtr<nsIDOMSVGForeignObjectElement> foreignObject = do_QueryInterface(aContent);
   if (!foreignObject) {
 #ifdef DEBUG
-    printf("warning: trying to contruct an SVGForeignObjectFrame for a content element that doesn't support the right interfaces\n");
+    printf("warning: trying to construct an SVGForeignObjectFrame for a content element that doesn't support the right interfaces\n");
 #endif
     return NS_ERROR_FAILURE;
   }
@@ -134,13 +158,12 @@ NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIF
 }
 
 nsSVGForeignObjectFrame::nsSVGForeignObjectFrame()
+    : mIsDirty(PR_TRUE)
 {
-  printf("nsSVGForeignObjectFrame CTOR\n");
 }
 
 nsSVGForeignObjectFrame::~nsSVGForeignObjectFrame()
 {
-  printf("~nsSVGForeignObjectFrame\n");
 //   nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
 //   NS_ASSERTION(transformable, "wrong content element");
 //   nsCOMPtr<nsIDOMSVGAnimatedTransformList> transforms;
@@ -158,6 +181,49 @@ nsSVGForeignObjectFrame::~nsSVGForeignObjectFrame()
       value->RemoveObserver(this);
   if (mHeight && (value = do_QueryInterface(mHeight)))
       value->RemoveObserver(this);
+}
+
+
+NS_IMETHODIMP
+nsSVGForeignObjectFrame::AppendFrames(nsIPresContext* aPresContext,
+                                      nsIPresShell&   aPresShell,
+                                      nsIAtom*        aListName,
+                                      nsIFrame*       aFrameList)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsSVGForeignObjectFrame::InsertFrames(nsIPresContext* aPresContext,
+                                     nsIPresShell&   aPresShell,
+                                     nsIAtom*        aListName,
+                                     nsIFrame*       aPrevFrame,
+                                     nsIFrame*       aFrameList)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsSVGForeignObjectFrame::RemoveFrame(nsIPresContext* aPresContext,
+                                     nsIPresShell&   aPresShell,
+                                     nsIAtom*        aListName,
+                                     nsIFrame*       aOldFrame)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsSVGForeignObjectFrame::ReplaceFrame(nsIPresContext* aPresContext,
+                                      nsIPresShell&   aPresShell,
+                                      nsIAtom*        aListName,
+                                      nsIFrame*       aOldFrame,
+                                      nsIFrame*       aNewFrame)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_UNEXPECTED;
 }
 
 nsresult nsSVGForeignObjectFrame::Init()
@@ -218,6 +284,11 @@ nsresult nsSVGForeignObjectFrame::Init()
 //   NS_ASSERTION(value, "interface not found");
 //   if (value)
 //     value->AddObserver(this);
+
+  // XXX for some reason updating fails when done here. Why is this too early?
+  // anyway - we use a less desirable mechanism now of updating in paint().
+//  Update(); 
+  
   return NS_OK;
 }
 
@@ -256,7 +327,6 @@ nsSVGForeignObjectFrame::Reflow(nsIPresContext*          aPresContext,
                                 nsReflowStatus&          aStatus)
 {
   float twipsPerPx = GetTwipsPerPx();
-
   
   NS_ENSURE_TRUE(mX && mY && mWidth && mHeight, NS_ERROR_FAILURE);
 
@@ -305,17 +375,7 @@ nsSVGForeignObjectFrame::WillModifySVGObservable(nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::DidModifySVGObservable (nsISVGValue* observable)
 {
-  
-//   nsIFrame* kid = mFrames.FirstChild();
-//   while (kid) {
-//     nsISVGFrame* SVGFrame=0;
-//     kid->QueryInterface(NS_GET_IID(nsISVGFrame),(void**)&SVGFrame);
-//     if (SVGFrame)
-//       SVGFrame->NotifyCTMChanged();
-//     kid->GetNextSibling(&kid);
-//   }
-
-  // we have either moved or resized -> reflow XXX
+  Update();
   
   return NS_OK;
 }
@@ -327,6 +387,14 @@ nsSVGForeignObjectFrame::DidModifySVGObservable (nsISVGValue* observable)
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
 {
+  // xxx see comments at the bottom of Init()
+  if (mIsDirty) {
+    ArtUta* dirtyRegion = DoReflow();
+    if (dirtyRegion) {
+      art_free(dirtyRegion);
+    }
+  }
+  
   nsIRenderingContext* ctx = renderingContext->LockMozRenderingContext();
   nsRect dirtyRect = renderingContext->GetDirtyRectTwips();
 
@@ -362,6 +430,7 @@ nsSVGForeignObjectFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
   if (!uta && !bRedraw) return NS_OK;
   
   if (!mParent) {
+    NS_ERROR("invalidating region without parent");
     if (uta)
       art_free(uta);
     return NS_OK;
@@ -408,7 +477,7 @@ nsSVGForeignObjectFrame::GetFrameForPoint(float x, float y, nsIFrame** hit)
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::NotifyCTMChanged()
 {
-//  NS_NOTYETIMPLEMENTED("write me!");
+  Update();
   return NS_OK;
 }
 
@@ -421,6 +490,12 @@ nsSVGForeignObjectFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGForeignObjectFrame::NotifyRedrawUnsuspended()
 {
+  if (mIsDirty) {
+    ArtUta* dirtyRegion = DoReflow();
+    if (dirtyRegion) {
+      InvalidateRegion(dirtyRegion, PR_TRUE);
+    }
+  }
   return NS_OK;
 }
 
@@ -436,9 +511,79 @@ nsSVGForeignObjectFrame::IsRedrawSuspended(PRBool* isSuspended)
   return SVGFrame->IsRedrawSuspended(isSuspended);  
 }
 
-
 //----------------------------------------------------------------------
 // Implementation helpers
+
+void nsSVGForeignObjectFrame::Update()
+{
+  mIsDirty = PR_TRUE;
+  
+  PRBool suspended;
+  IsRedrawSuspended(&suspended);
+  if (!suspended) {
+    ArtUta* dirtyRegion = DoReflow();
+    if (dirtyRegion) {
+      InvalidateRegion(dirtyRegion, PR_TRUE);
+    }
+  }  
+}
+
+ArtUta* nsSVGForeignObjectFrame::DoReflow()
+{
+  NS_ASSERTION(mPresShell, "need a presshell");
+
+  nsCOMPtr<nsIPresContext> presContext;
+  mPresShell->GetPresContext(getter_AddRefs(presContext));  
+
+  // remember the area we have to invalidate after this reflow:
+  ArtUta* dirtyRegion = nsnull;
+  AccumulateUta(&dirtyRegion, GetUta());
+  
+  // initiate a synchronous reflow here and now:  
+  nsSize availableSpace(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
+  nsCOMPtr<nsIRenderingContext> renderingContext;
+  mPresShell->CreateRenderingContext(this,getter_AddRefs(renderingContext));
+
+  // XXX we always pass this off as an initial reflow. is that a problem?
+  nsHTMLReflowState reflowState(presContext, this, eReflowReason_Initial, renderingContext, availableSpace);
+
+  nsCOMPtr<nsISpaceManager> spaceManager;
+  nsSpaceManager* rawPtr = new nsSpaceManager(this);
+  if (!rawPtr) {
+    return dirtyRegion;
+  }
+  spaceManager = do_QueryInterface(rawPtr);
+  reflowState.mSpaceManager = spaceManager.get();
+   
+  nsHTMLReflowMetrics desiredSize(nsnull);
+  nsReflowStatus status;
+  
+  WillReflow(presContext);
+  Reflow(presContext, desiredSize, reflowState, status);
+  SizeTo(presContext, desiredSize.width, desiredSize.height);
+  DidReflow(presContext, NS_FRAME_REFLOW_FINISHED);
+
+  AccumulateUta(&dirtyRegion, GetUta());
+
+  mIsDirty = PR_FALSE;
+
+  return dirtyRegion;
+}
+
+ArtUta* nsSVGForeignObjectFrame::GetUta()
+{
+  // get a uta from our mRect
+  
+  if (mRect.width==0 || mRect.height==0) return nsnull;
+  float pxPerTwips = GetPxPerTwips();
+  ArtIRect irect;
+  irect.x0 = (int)((mRect.x-1) * pxPerTwips);
+  irect.y0 = (int)((mRect.y-1) * pxPerTwips);
+  irect.x1 = (int)((mRect.x+mRect.width+2) * pxPerTwips);
+  irect.y1 = (int)((mRect.y+mRect.height+2) * pxPerTwips);
+
+  return art_uta_from_irect(&irect);
+}
 
 float nsSVGForeignObjectFrame::GetPxPerTwips()
 {
@@ -510,3 +655,19 @@ void nsSVGForeignObjectFrame::GetCTM(nsIDOMSVGMatrix** ctm)
   
   transformable->GetScreenCTM(ctm);  
 }
+
+void nsSVGForeignObjectFrame::AccumulateUta(ArtUta** accu, ArtUta* uta)
+{
+  if (uta == nsnull) return;
+  
+  if (*accu == nsnull) {
+    *accu = uta;
+    return ;
+  }
+  
+  ArtUta* temp = *accu;
+  *accu = art_uta_union(*accu, uta);
+  art_free(temp);
+  art_free(uta);  
+}
+
