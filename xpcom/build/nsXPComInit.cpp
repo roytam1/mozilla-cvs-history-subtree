@@ -83,6 +83,9 @@
 
 #include "nsILocalFile.h"
 #include "nsLocalFile.h"
+#ifdef XP_UNIX
+#include "nsNativeCharsetUtils.h"
+#endif
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsICategoryManager.h"
@@ -335,6 +338,9 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
     rv = nsMemoryImpl::Startup();
     if (NS_FAILED(rv)) return rv;
 
+#ifdef XP_UNIX
+    NS_StartupNativeCharsetUtils();
+#endif
     NS_StartupLocalFile();
 
     StartupSpecialSystemDirectory();
@@ -573,6 +579,9 @@ nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 
     // Shutdown nsLocalFile string conversion
     NS_ShutdownLocalFile();
+#ifdef XP_UNIX
+    NS_ShutdownNativeCharsetUtils();
+#endif
 
     // Shutdown the timer thread and all timers that might still be alive before
     // shutting down the component manager
