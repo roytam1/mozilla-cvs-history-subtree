@@ -97,10 +97,11 @@ endif
 
 export:
 	+$(LOOP_OVER_PREDIRS)	
-	$(INSTALL) -m 644 $(HFILES) $(DIST)/include
-	$(INSTALL) -m 755 $(LIBRARY) $(DIST)/lib
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib
-	$(INSTALL) -m 755 $(PROGRAM) $(DIST)/bin
+	mkdir -p $(DIST)/include $(DIST)/lib $(DIST)/bin
+	$(CP) $(HFILES) $(DIST)/include
+	$(CP) $(LIBRARY) $(DIST)/lib
+	$(CP) $(SHARED_LIBRARY) $(DIST)/lib
+	$(CP) $(PROGRAM) $(DIST)/bin
 	+$(LOOP_OVER_DIRS)
 
 clean:
