@@ -121,9 +121,6 @@ protected:
 	virtual ~nsMsgMailNewsUrl();
 
 	nsCOMPtr<nsIURL> m_baseURL;
-	
-	// protocol specific code to parse a url...
-    virtual nsresult ParseUrl(const nsString& aSpec) = 0;
 
 	char		*m_spec;
     char		*m_protocol;
