@@ -367,6 +367,7 @@ public:
     nsSocketRequest();
     virtual ~nsSocketRequest();
 
+    PRBool IsInitialized() { return mStartFired; }
     PRBool IsSuspended() { return mSuspendCount > 0; }
     PRBool IsCanceled() { return mCanceled; }
 

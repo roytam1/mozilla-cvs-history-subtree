@@ -1180,7 +1180,7 @@ public:
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsITransport> transport = do_QueryInterface(mChannel);
-        return transport->OpenOutputStream(aStartingOffset, 0, 0,
+        return transport->OpenOutputStream(aStartingOffset, -1, 0,
                                            getter_AddRefs(mCacheStream));
     }
 

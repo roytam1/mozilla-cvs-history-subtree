@@ -390,17 +390,6 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
             // Initialize select flags
             mSelectFlags = PR_POLL_EXCEPT;
-
-            if (mReadRequest) {
-                mSelectFlags |= PR_POLL_READ;
-                mReadRequest->OnStart();
-                mReadRequest->SetSocket(mSocketFD);
-            }
-            if (mWriteRequest) {
-                mSelectFlags |= PR_POLL_WRITE;
-                mWriteRequest->OnStart();
-                mWriteRequest->SetSocket(mSocketFD);
-            }
             break;
             
         case eSocketState_Error:
@@ -944,42 +933,75 @@ nsSocketTransport::doReadWrite(PRInt16 aSelectFlags)
         return NS_OK;
     }
 
+    //
     // Process the read request...
+    //
     if (mReadRequest) {
-        if (mReadRequest->IsCanceled() || (mBytesExpected == 0))
+        if (mReadRequest->IsCanceled() || (mBytesExpected == 0)) {
+            LOG(("nsSocketTransport: [this=%x] completing read request due to cancelation\n", this));
             mSelectFlags &= ~PR_POLL_READ;
-        else if (aSelectFlags & PR_POLL_READ)
-            readStatus = mReadRequest->OnRead();
-        else
-            readStatus = NS_BASE_STREAM_WOULD_BLOCK;
-
-        if (mReadRequest->IsSuspended()) {
-            mSelectFlags &= ~PR_POLL_READ;
+            CompleteAsyncRead();
+        }
+        else if (mSelectFlags & PR_POLL_READ) {
+            //
+            // Read data if available
+            //
+            if (aSelectFlags & PR_POLL_READ) {
+                readStatus = mReadRequest->OnRead();
+                if (mReadRequest->IsSuspended()) {
+                    mSelectFlags &= ~PR_POLL_READ;
+                    readStatus = NS_BASE_STREAM_WOULD_BLOCK;
+                }
+                else if (NS_SUCCEEDED(readStatus))
+                    CompleteAsyncRead();
+                else if (NS_FAILED(readStatus) && (readStatus != NS_BASE_STREAM_WOULD_BLOCK))
+                    return readStatus; // this must be a socket error, so bail!
+            }
+            else
+                readStatus = NS_BASE_STREAM_WOULD_BLOCK;
+        }
+        else if (!mReadRequest->IsInitialized()) {
+            mSelectFlags |= PR_POLL_READ;
+            mReadRequest->OnStart();
+            mReadRequest->SetSocket(mSocketFD);
             readStatus = NS_BASE_STREAM_WOULD_BLOCK;
         }
-        else if (NS_SUCCEEDED(readStatus))
-            CompleteAsyncRead();
-        else if (NS_FAILED(readStatus) && (readStatus != NS_BASE_STREAM_WOULD_BLOCK))
-            return readStatus;
     }
 
+    //
     // Process the write request...
+    //
     if (mWriteRequest) {
-        if (mWriteRequest->IsCanceled())
+        if (mWriteRequest->IsCanceled()) {
+            LOG(("nsSocketTransport: [this=%x] completing write request due to cancelation\n", this));
             mSelectFlags &= ~PR_POLL_WRITE;
-        else if (aSelectFlags & PR_POLL_WRITE)
-            writeStatus = mWriteRequest->OnWrite();
-        else
-            writeStatus = NS_BASE_STREAM_WOULD_BLOCK;
+            CompleteAsyncWrite();
+        }
+        else if (mSelectFlags & PR_POLL_WRITE) {
+            //
+            // Write data if possible
+            //
+            if (aSelectFlags & PR_POLL_WRITE) {
+                writeStatus = mWriteRequest->OnWrite();
+                if (mWriteRequest->IsSuspended()) {
+                    mSelectFlags &= ~PR_POLL_WRITE;
+                    writeStatus = NS_BASE_STREAM_WOULD_BLOCK;
+                }
+                else if (NS_SUCCEEDED(writeStatus))
+                    CompleteAsyncWrite();
+                else if (NS_FAILED(writeStatus) && (writeStatus != NS_BASE_STREAM_WOULD_BLOCK))
+                    return writeStatus; // this must be a socket error, so bail!
+            }
+            else
+                writeStatus = NS_BASE_STREAM_WOULD_BLOCK;
 
-        if (mWriteRequest->IsSuspended()) {
-            mSelectFlags &= ~PR_POLL_WRITE;
+        }
+        else if (!mWriteRequest->IsInitialized()) {
+            mSelectFlags |= PR_POLL_WRITE;
+            mWriteRequest->OnStart();
+            mWriteRequest->SetSocket(mSocketFD);
             writeStatus = NS_BASE_STREAM_WOULD_BLOCK;
         }
-        else if (NS_SUCCEEDED(writeStatus))
-            CompleteAsyncWrite();
-        else if (NS_FAILED(writeStatus) && (writeStatus != NS_BASE_STREAM_WOULD_BLOCK))
-            return writeStatus;
     }
 
     LOG(("nsSocketTransport: doReadWrite [readstatus=%x writestatus=%x readsuspend=%d writesuspend=%d mSelectFlags=%hx]\n",
@@ -988,9 +1010,7 @@ nsSocketTransport::doReadWrite(PRInt16 aSelectFlags)
         mWriteRequest ? mWriteRequest->IsSuspended() : 0,
         mSelectFlags));
 
-    //
     // If both requests successfully completed then move to the "done" state.
-    //
     if (NS_SUCCEEDED(readStatus) && NS_SUCCEEDED(writeStatus))
         return NS_OK;
 
@@ -1708,7 +1728,7 @@ nsSocketBS::Poll(PRInt16 event)
 //----------------------------------------------------------------------------
 //
 
-NS_IMPL_ISUPPORTS1(nsSocketBIS, nsIInputStream)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsSocketBIS, nsIInputStream)
 
 nsSocketBIS::nsSocketBIS()
 {
@@ -1796,7 +1816,7 @@ nsSocketBIS::SetObserver(nsIInputStreamObserver *aObserver)
 //----------------------------------------------------------------------------
 //
 
-NS_IMPL_ISUPPORTS1(nsSocketBOS, nsIOutputStream)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsSocketBOS, nsIOutputStream)
 
 nsSocketBOS::nsSocketBOS()
 {
