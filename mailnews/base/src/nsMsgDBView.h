@@ -42,6 +42,10 @@
 #include "nsIDOMElement.h"
 #include "nsIAtom.h"
 
+#include "nsIStringBundle.h"
+
+#define MESSENGER_STRING_URL       "chrome://messenger/locale/messenger.properties"
+
 enum eFieldType {
     kCollationKey,
     kU32,
@@ -78,6 +82,16 @@ protected:
   static nsIAtom* kLowestPriorityAtom;
   static nsIAtom* kLowPriorityAtom;
 
+  static PRUnichar* kHighestPriorityString;
+  static PRUnichar* kHighPriorityString;
+  static PRUnichar* kLowestPriorityString;
+  static PRUnichar* kLowPriorityString;
+  static PRUnichar* kNormalPriorityString;
+  
+  static PRUnichar* kReadString;
+  static PRUnichar* kRepliedString;
+  static PRUnichar* kForwardedString;
+  static PRUnichar* kNewString;
 
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
@@ -211,6 +225,8 @@ protected:
   PRBool IsValidIndex(nsMsgViewIndex index);
   nsresult ToggleIgnored(nsMsgViewIndex * indices, PRInt32 numIndices, PRBool *resultToggleState);
   nsresult GetKeyForFirstSelectedMessage(nsMsgKey *key);
+  PRUnichar * GetString(const PRUnichar *aStringName);
+  void InitializeAtomsAndLiterals();
   PRInt32 GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex);
 
   void FreeAll(nsVoidArray *ptrs);
@@ -244,7 +260,7 @@ protected:
   nsCOMPtr<nsIMessenger> mMessengerInstance;
   nsCOMPtr<nsIMsgWindow> mMsgWindow;
   nsCOMPtr<nsIMsgDBViewCommandUpdater> mCommandUpdater; // we push command update notifications to the UI from this.
+  nsCOMPtr<nsIStringBundle> mMessengerStringBundle;  
 };
-
 
 #endif

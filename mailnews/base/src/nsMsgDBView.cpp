@@ -42,7 +42,7 @@
 #include "nsMsgMimeCID.h"
 
 /* Implementation file */
-
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 
 nsrefcnt nsMsgDBView::gInstanceCount	= 0;
@@ -52,6 +52,16 @@ nsIAtom * nsMsgDBView::kHighPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kLowestPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kLowPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kOfflineMsgAtom	= nsnull;
+
+PRUnichar * nsMsgDBView::kHighestPriorityString = nsnull;
+PRUnichar * nsMsgDBView::kHighPriorityString = nsnull;
+PRUnichar * nsMsgDBView::kLowestPriorityString = nsnull;
+PRUnichar * nsMsgDBView::kLowPriorityString = nsnull;
+PRUnichar * nsMsgDBView::kNormalPriorityString = nsnull;
+PRUnichar * nsMsgDBView::kReadString = nsnull;
+PRUnichar * nsMsgDBView::kRepliedString = nsnull;
+PRUnichar * nsMsgDBView::kForwardedString = nsnull;
+PRUnichar * nsMsgDBView::kNewString = nsnull;
 
 NS_IMPL_ADDREF(nsMsgDBView)
 NS_IMPL_RELEASE(nsMsgDBView)
@@ -79,16 +89,33 @@ nsMsgDBView::nsMsgDBView()
   // initialize any static atoms or unicode strings
   if (gInstanceCount == 0) 
   {
-    kUnreadMsgAtom = NS_NewAtom("unread");
-    kOfflineMsgAtom = NS_NewAtom("offline");
-
-    kHighestPriorityAtom = NS_NewAtom("priority-highest");
-    kHighPriorityAtom = NS_NewAtom("priority-high");
-    kLowestPriorityAtom = NS_NewAtom("priority-lowest");
-    kLowPriorityAtom = NS_NewAtom("priority-low");
+    InitializeAtomsAndLiterals();
   }
   
   gInstanceCount++;
+}
+
+void nsMsgDBView::InitializeAtomsAndLiterals()
+{
+  kUnreadMsgAtom = NS_NewAtom("unread");
+  kOfflineMsgAtom = NS_NewAtom("offline");
+
+  kHighestPriorityAtom = NS_NewAtom("priority-highest");
+  kHighPriorityAtom = NS_NewAtom("priority-high");
+  kLowestPriorityAtom = NS_NewAtom("priority-lowest");
+  kLowPriorityAtom = NS_NewAtom("priority-low");
+
+  // priority strings
+  kHighestPriorityString = GetString(NS_LITERAL_STRING("priorityHighest").get());
+  kHighPriorityString = GetString(NS_LITERAL_STRING("priorityHigh").get());
+  kLowestPriorityString =  GetString(NS_LITERAL_STRING("priorityLowest").get());
+  kLowPriorityString = GetString(NS_LITERAL_STRING("priorityLow").get());
+  kNormalPriorityString = GetString(NS_LITERAL_STRING("priorityNormal").get());
+
+  kReadString = GetString(NS_LITERAL_STRING("read").get());
+  kRepliedString = GetString(NS_LITERAL_STRING("replied").get());
+  kForwardedString = GetString(NS_LITERAL_STRING("forwarded").get());
+  kNewString = GetString(NS_LITERAL_STRING("new").get());
 }
 
 nsMsgDBView::~nsMsgDBView()
@@ -105,7 +132,41 @@ nsMsgDBView::~nsMsgDBView()
     NS_IF_RELEASE(kHighPriorityAtom);
     NS_IF_RELEASE(kLowestPriorityAtom);
     NS_IF_RELEASE(kLowPriorityAtom);
+
+    nsCRT::free(kHighestPriorityString);
+    nsCRT::free(kHighPriorityString);
+    nsCRT::free(kLowestPriorityString);
+    nsCRT::free(kLowPriorityString);
+    nsCRT::free(kNormalPriorityString);
+    
+    nsCRT::free(kReadString);
+    nsCRT::free(kRepliedString);
+    nsCRT::free(kForwardedString);
+    nsCRT::free(kNewString);
   }
+}
+
+// helper function used to fetch strings from the messenger string bundle
+PRUnichar * nsMsgDBView::GetString(const PRUnichar *aStringName)
+{
+	nsresult    res = NS_OK;
+	PRUnichar   *ptrv = nsnull;
+
+	if (!mMessengerStringBundle)
+	{
+		char    *propertyURL = MESSENGER_STRING_URL;
+    nsCOMPtr<nsIStringBundleService> sBundleService = do_GetService(kStringBundleServiceCID, &res);
+		if (NS_SUCCEEDED(res) && sBundleService) 
+			res = sBundleService->CreateBundle(propertyURL, nsnull, getter_AddRefs(mMessengerStringBundle));
+	}
+
+	if (mMessengerStringBundle)
+		res = mMessengerStringBundle->GetStringFromName(aStringName, &ptrv);
+
+	if ( NS_SUCCEEDED(res) && (ptrv) )
+		return ptrv;
+	else
+		return nsCRT::strdup(aStringName);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -192,17 +253,21 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
 
 nsresult nsMsgDBView::FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString)
 {
-  // mscott -> i'll clean this up and used a cached string bundle value
-  // later...
+  const PRUnichar * statusString = nsnull;
 
   if(aFlags & MSG_FLAG_REPLIED)
-    *aStatusString = nsCRT::strdup(NS_LITERAL_STRING("Replied"));
+    statusString = kRepliedString;
 	else if(aFlags & MSG_FLAG_FORWARDED)
-		*aStatusString = nsCRT::strdup(NS_LITERAL_STRING("Forwarded"));
+		statusString = kForwardedString;
 	else if(aFlags & MSG_FLAG_NEW)
-		*aStatusString = nsCRT::strdup(NS_LITERAL_STRING("New"));
+		statusString = kNewString;
 	else if(aFlags & MSG_FLAG_READ)
-		*aStatusString = nsCRT::strdup(NS_LITERAL_STRING("Read"));
+		statusString = kReadString;
+
+  if (statusString)
+    *aStatusString = nsCRT::strdup(statusString);
+  else 
+    *aStatusString = nsnull;
 
   return NS_OK;
 }
@@ -228,33 +293,35 @@ nsresult nsMsgDBView::FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString)
 
 nsresult nsMsgDBView::FetchPriority(nsIMsgHdr *aHdr, PRUnichar ** aPriorityString)
 {
-  // mscott --> fix me and turn me into string bundle calls
   nsMsgPriorityValue priority = nsMsgPriority::notSet;
-  nsAutoString priorityString;
+  const PRUnichar * priorityString = nsnull;
   aHdr->GetPriority(&priority);
+
   switch (priority)
   {
   case nsMsgPriority::highest:
-    priorityString = NS_LITERAL_STRING("Highest");
+    priorityString = kHighestPriorityString;
     break;
   case nsMsgPriority::high:
-    priorityString = NS_LITERAL_STRING("High");
+    priorityString = kHighPriorityString;
     break;
   case nsMsgPriority::low:
-    priorityString = NS_LITERAL_STRING("Low");
+    priorityString = kLowPriorityString;
     break;
   case nsMsgPriority::lowest:
-    priorityString = NS_LITERAL_STRING("Lowest");
+    priorityString = kLowestPriorityString;
     break;
   case nsMsgPriority::normal:
-    priorityString = NS_LITERAL_STRING("Normal");
+    priorityString = kNormalPriorityString;
     break;
   default:
     break;
   }
 
-  if (!priorityString.IsEmpty())
-    *aPriorityString = priorityString.ToNewUnicode();
+  if (priorityString)
+    *aPriorityString = nsCRT::strdup(priorityString);
+  else
+    *aPriorityString = nsnull;
 
   return NS_OK;
 }
