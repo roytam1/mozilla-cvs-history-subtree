@@ -635,7 +635,17 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
     NPPMgtBlk* pNPMgtBlock = (NPPMgtBlk*)pluginType;
 
     CString csPluginDir;
+#ifdef OJI
+    char* szExplicitDLL = strrchr(pNPMgtBlock->pPluginFilename, '\\');
+    if( szExplicitDLL ) {
+        csPluginDir = pNPMgtBlock->pPluginFilename; // MFC copies the string
+        csPluginDir.SetAt( szExplicitDLL - pNPMgtBlock->pPluginFilename, '\0');
+    } else {
+        wfe_GetPluginsDirectory(csPluginDir);
+    }
+#else
     wfe_GetPluginsDirectory(csPluginDir);
+#endif /* OJI */
 
     LPSTR pPathSave = NULL;   // storage for one dir spec
 
