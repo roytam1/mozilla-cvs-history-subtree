@@ -2509,9 +2509,6 @@ NS_IMETHODIMP nsMsgDatabase::ClearNewList(PRBool notify /* = FALSE */)
     delete m_newSet;
     m_newSet = NULL;
   }
-  else {
-    NS_ASSERTION(0, "no set!\n");
-  }
   return err;
 }
 
