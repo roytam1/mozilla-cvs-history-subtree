@@ -346,10 +346,8 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
                               reason, status);
         }
       }
-
-      // Indicate we handled the reflow command
       aWasHandled = PR_TRUE;
-      
+
       // Calculate the total child bounds
       CalculateChildBounds(aPresContext, aChildBounds);
     }
@@ -364,29 +362,47 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
     // marked dirty).  So we might end up reflowing a node twice if we're
     // targeted and have a child/etc as a target as well.
   }
+
   // now handle any targets that are children of this node
-  while (reflowIterator.NextChild(&childFrame))
+  PRBool handledAllChildren = PR_FALSE;
+  if (reflowIterator.NextChild(&childFrame))
   {
-    // See if it's one of our absolutely positioned child frames
-    if (mAbsoluteFrames.ContainsFrame(childFrame)) {
-      // set reflow state for child
-      aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
+    // make sure it only gets set if we have a child
+    handledAllChildren = PR_TRUE;
+    do {
+      // See if it's one of our absolutely positioned child frames
+      if (mAbsoluteFrames.ContainsFrame(childFrame)) {
+        // set reflow state for child
+        aReflowState.SetCurrentReflowNode(reflowIterator.CurrentChild());
       
-      nsReflowStatus  kidStatus;
-      ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
-                          aContainingBlockWidth, aContainingBlockHeight,
-                          childFrame, aReflowState.reason, kidStatus);
-      // We don't need to invalidate anything because the frame should
-      // invalidate any area within its frame that needs repainting, and
-      // because it has a view if it changes size the view manager will
-      // damage the dirty area
-      aWasHandled = PR_TRUE;
-      
-      // Calculate the total child bounds
-      // XXXrjesup - Check to see if this is impacted by being done for multiple children. 
-      CalculateChildBounds(aPresContext, aChildBounds);
-    }
+        nsReflowStatus  kidStatus;
+        ReflowAbsoluteFrame(aDelegatingFrame, aPresContext, aReflowState,
+                            aContainingBlockWidth, aContainingBlockHeight,
+                            childFrame, aReflowState.reason, kidStatus);
+        // We don't need to invalidate anything because the frame should
+        // invalidate any area within its frame that needs repainting, and
+        // because it has a view if it changes size the view manager will
+        // damage the dirty area
+        
+        // Calculate the total child bounds
+        // XXXrjesup - Check to see if this is impacted by being done for multiple children. 
+        CalculateChildBounds(aPresContext, aChildBounds);
+      }
+      else {
+        // At least one of the frames along the reflow path wasn't
+        // absolutely positioned, so we'll need to deal with it in
+        // normal block reflow.
+        handledAllChildren = PR_FALSE;
+      }
+    } while (reflowIterator.NextChild(&childFrame));
   }
+
+  // set aWasHandled to TRUE only if all children were absolute and
+  // we weren't a target, or if we were and we're absolute too.  Since
+  // aWasHandled will be true already if we're an absolute target, only
+  // check the other case.
+  if (!amTarget && handledAllChildren)
+    aWasHandled = PR_TRUE;
 
   return NS_OK;
 }
