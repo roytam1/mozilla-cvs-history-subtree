@@ -27,7 +27,8 @@ NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
 nsImageFrame::nsImageFrame() :
   mInitalized(PR_FALSE),
-  mAlphaData(nsnull)
+  mAlphaData(nsnull),
+  mTimeout(-1)
 {
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
@@ -172,11 +173,14 @@ NS_IMETHODIMP nsImageFrame::GetFormat(gfx_format *aFormat)
 /* attribute long timeout; */
 NS_IMETHODIMP nsImageFrame::GetTimeout(PRInt32 *aTimeout)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  *aTimeout = mTimeout;
+  return NS_OK;
 }
+
 NS_IMETHODIMP nsImageFrame::SetTimeout(PRInt32 aTimeout)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  mTimeout = aTimeout;
+  return NS_OK;
 }
 
 /* readonly attribute unsigned long imageBytesPerRow; */

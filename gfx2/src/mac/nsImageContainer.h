@@ -19,6 +19,7 @@
  * 
  * Contributor(s): 
  *   Stuart Parmenter <pavlov@netscape.com>
+ *   Chris Saari <saari@netscape.com>
  */
 
 #include "nsIImageContainer.h"
@@ -30,7 +31,7 @@
 #include "nsSupportsArray.h"
 
 #include "nsCOMPtr.h"
-
+#include "nsITimer.h"
 #define NS_IMAGECONTAINER_CID \
 { /* aa699204-1dd1-11b2-84a9-a280c268e4fb */         \
      0xaa699204,                                     \
@@ -53,7 +54,12 @@ private:
   nsSupportsArray mFrames;
   nsSize mSize;
   PRUint32 mCurrentFrame;
-
+  PRBool   mCurrentFrameIsFinishedDecoding;
+  PRBool   mDoneDecoding;
+  
+  nsCOMPtr<nsITimer> mTimer;
   nsCOMPtr<nsIImageContainerObserver> mObserver;
+  
+  static void sAnimationTimerCallback ( nsITimer* aTimer, void* aListener );
 };
 

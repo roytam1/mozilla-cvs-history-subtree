@@ -34,6 +34,7 @@
 #include "nsTransform2D.h"
 #include "nsIImageRequest2.h"
 #include "nsIImageDecoderObserver.h"
+#include "nsIImageContainerObserver.h"
 #endif
 
 class nsIFrame;

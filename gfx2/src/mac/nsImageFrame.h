@@ -64,4 +64,6 @@ private:
 
   ImageData mImageData;
   ImageData *mAlphaData;
+  
+  PRInt32 mTimeout; // -1 means display forever
 };

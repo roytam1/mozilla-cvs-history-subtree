@@ -19,9 +19,12 @@
  * 
  * Contributor(s): 
  *   Stuart Parmenter <pavlov@netscape.com>
+ *   Chris Saari <saari@netscape.com>
  */
 
 #include "nsImageContainer.h"
+#include "nsIServiceManager.h"
+#include "nsIImageFrame.h"
 
 NS_IMPL_ISUPPORTS1(nsImageContainer, nsIImageContainer)
 
@@ -30,6 +33,8 @@ nsImageContainer::nsImageContainer()
   NS_INIT_ISUPPORTS();
   /* member initializers and constructor code */
   mCurrentFrame = 0;
+  mCurrentFrameIsFinishedDecoding = PR_FALSE;
+  mDoneDecoding = PR_FALSE;
 }
 
 nsImageContainer::~nsImageContainer()
@@ -103,7 +108,34 @@ NS_IMETHODIMP nsImageContainer::GetFrameAt(PRUint32 index, nsIImageFrame **_retv
 /* void appendFrame (in nsIImageFrame item); */
 NS_IMETHODIMP nsImageContainer::AppendFrame(nsIImageFrame *item)
 {
-    return mFrames.AppendElement(NS_REINTERPRET_CAST(nsISupports*, item));
+  // If this is our second frame, init a timer so we don't display
+  // the next frame until the delay timer has expired for the current
+  // frame.
+  PRUint32 numFrames;
+  this->GetNumFrames(&numFrames);
+  if(!mTimer){
+    if(numFrames) {
+      // Since we have more than one frame we need a timer
+      mTimer = do_CreateInstance("@mozilla.org/timer;1");
+      
+      PRInt32 timeout;
+      nsCOMPtr<nsIImageFrame> currentFrame;
+      this->GetFrameAt(mCurrentFrame, getter_AddRefs(currentFrame));
+      currentFrame->GetTimeout(&timeout);
+      if(timeout != -1 &&
+         timeout >= 0) { // -1 means display this frame forever
+        
+        mTimer->Init(
+          sAnimationTimerCallback, this, timeout, 
+          NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+      }
+    }
+  }
+  
+  if(numFrames) mCurrentFrame++;
+  
+  mCurrentFrameIsFinishedDecoding = PR_FALSE;
+  return mFrames.AppendElement(NS_REINTERPRET_CAST(nsISupports*, item));
 }
 
 /* void removeFrame (in nsIImageFrame item); */
@@ -134,3 +166,56 @@ NS_IMETHODIMP nsImageContainer::SetLoopCount(PRInt32 aLoopCount)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+/* void endFrameDecode (in nsIImageFrame item, in unsigned long timeout); */
+NS_IMETHODIMP nsImageContainer::EndFrameDecode(PRUint32 aFrameNum, PRUint32 aTimeout)
+{
+  // It is now okay to start the timer for the next frame in the animation
+  mCurrentFrameIsFinishedDecoding = PR_TRUE;
+  return NS_OK;
+}
+
+/* void decodingComplete (); */
+NS_IMETHODIMP nsImageContainer::DecodingComplete(void)
+{
+  mDoneDecoding = PR_TRUE;
+  return NS_OK;
+}
+
+void nsImageContainer::sAnimationTimerCallback(nsITimer *aTimer, void *aImageContainer)
+{
+  nsImageContainer* self = NS_STATIC_CAST(nsImageContainer*, aImageContainer);
+  nsCOMPtr<nsIImageFrame> nextFrame;
+  PRInt32 timeout;
+      
+  // If we're done decoding the next frame, go ahead and display it now and reinit
+  // the timer with the next frame's delay time.
+  if(self->mCurrentFrameIsFinishedDecoding) {
+    // If we have the next frame in the sequence set the timer callback from it
+
+    self->GetFrameAt(self->mCurrentFrame + 1, getter_AddRefs(nextFrame));
+    if(nextFrame) {
+      // Go to next frame in sequence
+      nextFrame->GetTimeout(&timeout);
+    } else if (self->mDoneDecoding) {
+      // Go back to the beginning of the loop
+      self->GetFrameAt(0, getter_AddRefs(nextFrame));
+      nextFrame->GetTimeout(&timeout);
+      self->mCurrentFrame = 0;
+    } else {
+      // twiddle our thumbs
+      self->GetFrameAt(self->mCurrentFrame, getter_AddRefs(nextFrame));
+      nextFrame->GetTimeout(&timeout);
+    }
+  }
+  
+  // XXX do notification to FE to draw this frame
+  nsRect* dirtyRect;
+  nextFrame->GetRect(&dirtyRect);
+  self->mObserver->FrameChanged(
+    self, nsnull, 
+    nextFrame, dirtyRect);
+  
+  self->mTimer->Init(
+    sAnimationTimerCallback, aImageContainer, timeout, 
+    NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
+}
