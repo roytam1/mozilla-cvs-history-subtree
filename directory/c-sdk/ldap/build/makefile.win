@@ -20,26 +20,19 @@
 # Contributor(s): 
 
 DEPTH=..\..\..\..
-MODULE=ldapsdk
 
+MAKE_OBJ_TYPE = EXE
 
-LIBNAME = .\$(OBJDIR)\ldapsdk
-DLL = $(LIBNAME).dll
-
-#CPP_OBJS=                               \
-#			.\$(OBJDIR)\someFactory.obj	\
-#			$(NULL)
-
-LLIBS=                        \
-	$(DIST)\lib\liblber_s.lib \
-	$(DIST)\lib\libldap_s.lib \
-	$(LIBNSPR)                \
-	$(NULL)
+PROG1 = .\$(OBJDIR)\dirver.exe
+PROGRAMS = $(PROG1)
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL)  $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin\components
-	$(MAKE_INSTALL)  $(LIBNAME).$(LIB_SUFFIX) $(DIST)\lib
+all:: $(PROGRAMS)
 
+export:: $(PROGRAMS)
 
+clobber::
+	-for %p in ($(PROGRAMS)) do $(RM) %p
+
+$(PROG1):	$(OBJDIR) dirver.c

@@ -77,7 +77,8 @@ OBJS = \
 
 LINCS = \
         -I..\..\include \
-		$(NULL)
+	-I..\..\include\$(OBJDIR) \
+	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
 

@@ -24,5 +24,25 @@ EXPORTS= \
 	disptmpl.h \
 	$(NULL)
 
+DIR_VERSION = 2.0
+DIRSDK_VERSION = 1.0
+
+DIRVER_PROG = ..\build\$(OBJDIR)\dirver.exe
+
+GENERATED_HEADERS = .\$(OBJDIR)\sdkver.h .\$(OBJDIR)\dirver.h
+
+GARBAGE = $(GARBAGE) $(GENERATED_HEADERS)
+
 include <$(DEPTH)\config\rules.mak>
 
+.\$(OBJDIR)\sdkver.h:	$(DIRVER_PROG)
+	$(DIRVER_PROG) $(DIRSDK_VERSION) UseSystemDate $@
+
+.\$(OBJDIR)\dirver.h:	$(DIRVER_PROG)
+	$(DIRVER_PROG) $(DIR_VERSION) UseSystemDate $@
+
+$(GENERATED_HEADERS):	$(OBJDIR)
+
+all:: $(GENERATED_HEADERS)
+
+export:: $(GENERATED_HEADERS)

@@ -17,6 +17,6 @@
 
 DEPTH=..\..\..
 
-DIRS=include libraries build
+DIRS=build include libraries
 
 include <$(DEPTH)\config\rules.mak>
