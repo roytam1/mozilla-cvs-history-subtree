@@ -31,7 +31,9 @@
  * All errors will be printed to the console (cout).
 **/
 SimpleErrorObserver::SimpleErrorObserver() {
+#ifdef TX_EXE
     errStream = &cout;
+#endif
     hideWarnings = MB_FALSE;
 } //-- SimpleErrorObserver
 
@@ -49,16 +51,17 @@ SimpleErrorObserver::SimpleErrorObserver(ostream& errStream) {
  *  level of NORMAL
 **/
 void SimpleErrorObserver::recieveError(String& errorMessage) {
+#ifdef TX_EXE
     *errStream << "error: " << errorMessage << endl;
     errStream->flush();
+#endif
 } //-- recieveError
 
 /**
  *  Notifies this Error observer of a new error using the given error level
 **/
 void SimpleErrorObserver::recieveError(String& errorMessage, ErrorLevel level) {
-
-
+#ifdef TX_EXE
     switch ( level ) {
         case ErrorObserver::FATAL :
             *errStream << "fatal error: ";
@@ -74,9 +77,9 @@ void SimpleErrorObserver::recieveError(String& errorMessage, ErrorLevel level) {
 
     *errStream << errorMessage << endl;
     errStream->flush();
+#endif
 } //-- recieveError
 
 void SimpleErrorObserver::supressWarnings(MBool supress) {
     this->hideWarnings = supress;
 } //-- supressWarnings
-

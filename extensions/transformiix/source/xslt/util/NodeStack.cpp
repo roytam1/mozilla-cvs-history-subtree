@@ -124,9 +124,15 @@ void NodeStack::clear() {
  * @return true if specified Node is contained in the NodeStack
 **/
 MBool NodeStack::contains(Node* node) {
+#if 0
+    // XXX DEBUG OUTPUT
     cout << "NodeStack#contains [enter]\n";
+#endif
     MBool retVal = (indexOf(node) >= 0) ? MB_TRUE : MB_FALSE;
+#if 0
+    // XXX DEBUG OUTPUT
     cout << "NodeStack#contains [exit]\n";
+#endif
     return retVal;
 
 } //-- contains

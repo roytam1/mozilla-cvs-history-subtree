@@ -126,7 +126,10 @@ void ProcessorState::addAttributeSet(Element* attributeSet) {
     if ( !attributeSet ) return;
     String name = attributeSet->getAttribute(NAME_ATTR);
     if ( name.length() == 0 ) {
+#if 0
+        // XXX DEBUG OUTPUT
         cout << "missing required name attribute for xsl:" << ATTRIBUTE_SET <<endl;
+#endif
         return;
     }
     //-- get attribute set, if already exists, then merge

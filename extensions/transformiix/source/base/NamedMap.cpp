@@ -122,8 +122,8 @@ void NamedMap::clear(MBool deleteObjects) {
 } //-- clear
 
 void NamedMap::dumpMap() {
-
-
+#if 0
+    // XXX DEBUG OUTPUT
     cout << "#NamedMap -------- { "<<endl;
 
     for (int i = 0; i < numberOfBuckets; i++) {
@@ -143,6 +143,7 @@ void NamedMap::dumpMap() {
         cout << "}"<<endl;
     }
     cout <<"} #NamedMap"<<endl;
+#endif
 } //-- dumpMap
 
 /**

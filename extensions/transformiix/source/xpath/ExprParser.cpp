@@ -615,10 +615,11 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer) {
  *
 **/
 NodeExpr* ExprParser::createNodeExpr(ExprLexer& lexer) {
-
-    //cout << "creating NodeExpr: "<<endl;
-    if (!lexer.hasMoreTokens() )  cout << "Lexer has no Tokens"<<endl;
-
+#if 0
+    // XXX DEBUG OUTPUT
+    cout << "creating NodeExpr: "<<endl;
+    if (!lexer.hasMoreTokens() ) cout << "Lexer has no Tokens"<<endl;
+#endif
     if (!lexer.hasMoreTokens() )  return 0;
 
     NodeExpr* nodeExpr = 0;
@@ -734,7 +735,10 @@ PatternExpr* ExprParser::createPatternExpr(ExprLexer& lexer) {
         pExpr = createFilterExpr(lexer);
     }
     else {
+#if 0
+        // XXX DEBUG OUTPUT
         cout << "invalid token: " << tok->value << endl;
+#endif
         //-- eat token for now
         lexer.nextToken();
     }

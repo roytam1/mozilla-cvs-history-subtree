@@ -1206,7 +1206,10 @@ void XSLTProcessor::processAction
                 delete dfrag;
 
                 //-- we should add a MessageObserver class
+#if 0 
+		// XXX DEBUG OUTPUT
                 cout << "xsl:message - "<< message << endl;
+#endif
                 break;
             }
             //-- xsl:number
@@ -1282,20 +1285,35 @@ void XSLTProcessor::processAction
                 ExprResult* exprResult = expr->evaluate(node, ps);
                 String data("expr debug: ");
                 expr->toString(data);
+#if 0
+                // XXX DEBUG OUTPUT
                 cout << data << endl;
+#endif
                 data.clear();
+#if 0
+                // XXX DEBUG OUTPUT
                 cout << "result: ";
+#endif
                 if ( exprResult ) {
                     switch ( exprResult->getResultType() ) {
                         case  ExprResult::NODESET:
+#if 0
+                            // XXX DEBUG OUTPUT
                             cout << "#NodeSet - ";
+#endif
                         default:
                             exprResult->stringValue(data);
+#if 0
+                            // XXX DEBUG OUTPUT
                             cout << data;
+#endif
                             break;
                     }
                 }
+#if 0
+                // XXX DEBUG OUTPUT
                 cout << endl;
+#endif
 
                 delete exprResult;
                 break;

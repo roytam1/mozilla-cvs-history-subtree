@@ -170,7 +170,10 @@ ExprResult* LocationStep::evaluate(Node* context, ContextState* cs) {
             }
             break;
         case NAMESPACE_AXIS : //-- not yet implemented
+#if 0
+            // XXX DEBUG OUTPUT
             cout << "namespace axis not yet implemented"<<endl;
+#endif
             break;
         case PARENT_AXIS :
         {
