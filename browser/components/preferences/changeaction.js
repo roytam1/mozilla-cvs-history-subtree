@@ -35,14 +35,11 @@
 # 
 # ***** END LICENSE BLOCK *****
 
-const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
-const kDisabledPluginTypesPref = "plugin.disable_full_page_plugin_for_types";
-
 var gChangeActionDialog = {
-  _item     : null,
-  _bundle   : null,
-  _lastSelectedModeMode : null,
-  _lastSelectedModeSave : null,
+  _item             : null,
+  _bundle           : null,
+  _lastSelectedMode : null,
+  _lastSelectedSave : null,
 
   init: function ()
   {
@@ -54,7 +51,6 @@ var gChangeActionDialog = {
     typeField.value = this._item.typeName;
     
     var extensionField = document.getElementById("extensionField");
-    var bundlePreferences = document.getElementById("bundlePreferences");
     var ext = "." + this._item.extension.toLowerCase();
     var contentType = this._item.type;
     extensionField.value = this._bundle.getFormattedString("extensionStringFormat", [ext, contentType]);
@@ -67,20 +63,13 @@ var gChangeActionDialog = {
     // requires the extapp handler field to be non-empty for the extapp radio
     // button to be selected. 
     var customApp = document.getElementById("customApp");
-    if (this._item.customHandler) {
+    if (this._item.customHandler)
       customApp.file = this._item.customHandler;
-      dump("*** goat = "+ this._item.customHandler.path+"\n");
-      customApp.label = this._getDisplayNameForFile(customApp.file);
-      customApp.image = this._getIconURLForFile(customApp.file);
-    }
-    else {
-      var bundlePreferences = document.getElementById("bundlePreferences");
-      customApp.label = bundlePreferences.getString("downloadHelperNoneSelected");
-    }
+    else
+      customApp.file = null;
 
     var defaultApp = document.getElementById("defaultApp");
-    defaultApp.label = this._item.mimeInfo.defaultDescription;
-    defaultApp.image = this._getIconURLForFile(this._item.mimeInfo.defaultApplicationHandler); 
+    defaultApp.file = this._item.mimeInfo.defaultApplicationHandler;
       
     var pluginName = document.getElementById("pluginName");
     var foundPlugin = false;
@@ -95,13 +84,13 @@ var gChangeActionDialog = {
       }
     }
     if (!foundPlugin) {
-      pluginName.label = bundlePreferences.getString("pluginHelperNoneAvailable");
+      pluginName.label = this._bundle.getString("pluginHelperNoneAvailable");
       document.getElementById("plugin").disabled = true;
     }
       
     // Selected Action Radiogroup
     var handlerGroup = document.getElementById("handlerGroup");
-    if (this._item._handleMode == FILEACTION_OPEN_PLUGIN && this._item.pluginEnabled)
+    if (this._item.handleMode == FILEACTION_OPEN_PLUGIN && this._item.pluginEnabled)
       handlerGroup.selectedItem = document.getElementById("plugin");
     else {
       if (this._item.handleMode == FILEACTION_OPEN_DEFAULT)
@@ -119,7 +108,7 @@ var gChangeActionDialog = {
 
     // We don't let users open .exe files or random binary data directly 
     // from the browser at the moment because of security concerns. 
-    var mimeType = mimeInfo.MIMEType;
+    var mimeType = this._item.mimeInfo.MIMEType;
     if (mimeType == "application/object-stream" ||
         mimeType == "application/x-msdownload") {
       document.getElementById("openApplication").disabled = true;
@@ -128,150 +117,38 @@ var gChangeActionDialog = {
     }
   },
   
-  _setLiteralValue: function (aResource, aProperty, aValue)
-  {
-    var prop = this._rdf.GetResource(this._ncURI(aProperty));
-    var val = this._rdf.GetLiteral(aValue);
-    var oldVal = this._helperApps.GetTarget(aResource, prop, true);
-    if (oldVal)
-      this._helperApps.Change(aResource, prop, oldVal, val);
-    else
-      this._helperApps.Assert(aResource, prop, val, true);
-  },
-  
-  _disableType: function (aContentType)
-  {
-    
-    if (this._item.pluginAvailable) {
-      // Since we're disabling the full page plugin for this content type, 
-      // we must add it to the disabled list if it's not in there already.
-      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                            .getService(Components.interfaces.nsIPrefBranch);
-      var disabled = aContentType;
-      if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
-        disabled = prefs.getCharPref(kDisabledPluginTypesPref);
-        if (disabled.indexOf(aContentType) == -1) 
-          disabled += "," + aContentType;
-      }
-      prefs.setCharPref(kDisabledPluginTypesPref, disabled);   
-      
-      // Also, we update the category manager so that existing browser windows
-      // update.
-      var catman = Components.classes["@mozilla.org/categorymanager;1"]
-                             .getService(Components.interfaces.nsICategoryManager);
-      catman.deleteCategoryEntry("Gecko-Content-Viewers", aContentType, false);     
-    }    
-  },
-  
-  _enableType: function (aContentType)
-  {
-    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                          .getService(Components.interfaces.nsIPrefBranch);
-    // Since we're enabling the full page plugin for this content type, we must
-    // look at the disabled types list and ensure that this type isn't in it.
-    if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
-      var disabledList = prefs.getCharPref(kDisabledPluginTypesPref);
-      if (disabledList == aContentType)
-        prefs.clearUserPref(kDisabledPluginTypesPref);
-      else {
-        var disabledTypes = disabledList.split(",");
-        var disabled = "";
-        for (var i = 0; i < disabledTypes.length; ++i) {
-          if (aContentType != disabledTypes[i])
-            disabled += disabledTypes[i] + (i == disabledTypes.length - 1 ? "" : ",");
-        }
-        prefs.setCharPref(kDisabledPluginTypesPref, disabled);
-      }
-    }
-
-    // Also, we update the category manager so that existing browser windows
-    // update.
-    var catman = Components.classes["@mozilla.org/categorymanager;1"]
-                           .getService(Components.interfaces.nsICategoryManager);
-    catman.addCategoryEntry("Gecko-Content-Viewers", aContentType,
-                            kPluginHandlerContractID, false, true);
-  },
-  
   onAccept: function ()
   {
-    var oldValue, newValue;
-
-    var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
+    var contentType = this._item.mimeInfo.MIMEType;
     var handlerGroup = document.getElementById("handlerGroup");
-    if (handlerGroup.selectedItem.value == "plugin") {
-      this._enableType(mimeInfo.MIMEType);
-
-      this._helperApps.enableFullPagePluginForType(mimeInfo.MIMEType, true);
-      // We need to force the view in the parent window to refresh, since we've
-      // effectively made a change to the datasource (even though we haven't
-      // changed the actual data stored in the RDF datasource). 
+    switch (handlerGroup.selectedItem.value) {
+    case "plugin":
+      this._item.handleMode = FILEACTION_OPEN_PLUGIN;
       var pluginName = document.getElementById("pluginName");
-      var openWith = bundleUCT.getFormattedString("openWith", [pluginName.label]);
-      newValue = this._rdf.GetLiteral(openWith);
-      oldValue = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
-      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldValue, newValue);
-      return true;
+      this._item.action = this._bundle.getFormattedString("openWith", [pluginName.label]);
+      this._item.pluginEnabled = true;
+      break;
+    case "system":
+      this._item.handledOnlyByPlugin = false;
+      this._item.handleMode = FILEACTION_OPEN_DEFAULT;
+      var defaultDescr = this._item.mimeInfo.defaultDescription;
+      this._item.action = this._bundle.getFormattedString("openWith", [defaultDescr]);
+      break;
+    case "app":
+      this._item.handledOnlyByPlugin = false;
+      this._item.handleMode = FILEACTION_OPEN_CUSTOM;
+      var customApp = document.getElementById("customApp");
+      this._item.action = this._bundle.getFormattedString("openWith", [customApp.label]);        
+      break;  
+    case "save":
+      this._item.handledOnlyByPlugin = false;
+      this._item.handleMode = FILEACTION_SAVE_TO_DISK;
+      this._item.action = this._bundle.getString("saveToDisk");
+      break;  
     }
     
-    this._disableType(mimeInfo.MIMEType);
-    
-    var dirty = false;
-    
-    var fileHandlerString = "";
-    if (this._handlerRes) {
-      switch (handlerGroup.selectedItem.value) {
-      case "system":
-        this._setLiteralValue(this._handlerRes, "saveToDisk", "false");
-        this._setLiteralValue(this._handlerRes, "useSystemDefault", "true");
-        fileHandlerString = bundleUCT.getFormattedString("openWith", [mimeInfo.defaultDescription]);
-        break;
-      case "app":
-        this._setLiteralValue(this._handlerRes, "saveToDisk", "false");
-        this._setLiteralValue(this._handlerRes, "useSystemDefault", "false");
-        if (this._extAppRes) {
-          var customApp = document.getElementById("customApp");
-          if (customApp.file) {
-            this._setLiteralValue(this._extAppRes, "path", customApp.file.path);
-            this._setLiteralValue(this._extAppRes, "prettyName", customApp.label);
-            fileHandlerString = bundleUCT.getFormattedString("openWith", [customApp.label]);        
-          }
-        }        
-        break;  
-      case "save":
-        this._setLiteralValue(this._handlerRes, "saveToDisk", "true");
-        this._setLiteralValue(this._handlerRes, "useSystemDefault", "false");
-        fileHandlerString = bundleUCT.getString("saveToDisk");
-        break;  
-      }
-      
-      this._helperApps.flush();
-     
-      // Save selection
-      var fileHandlersList = window.opener.document.getElementById("fileHandlersList");
-      var selection = fileHandlersList.view.selection;
-      var rangeCount = selection.getRangeCount();
-      var ranges = [];
-      for (var i = 0; i < rangeCount; ++i) {
-        var min = { }; var max = { };
-        selection.getRangeAt(i, min, max);
-        ranges.push({ min: min.value, max: max.value });
-      }
-      
-      // Get the template builder to refresh the display by announcing our imaginary
-      // "FileHandler" property has been updated. (NC:FileHandler is a property
-      // that our wrapper DS uses, its value is built dynamically based on real
-      // values of other properties.
-      this._helperApps.enableFullPagePluginForType(mimeInfo.MIMEType, false);
-      var bundleUCT = document.getElementById("bundleUCT");
-      newValue = this._rdf.GetLiteral(fileHandlerString);
-      oldValue = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
-      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldValue, newValue);
-
-      // Restore selection
-      for (i = 0; i < ranges.length; ++i)
-        selection.rangedSelect(ranges[i].min, ranges[i].max, true);
-    }
-      
+    // The opener uses the modifications to the FileAction item to update the
+    // datasource.
     return true;
   },
   
@@ -334,23 +211,13 @@ var gChangeActionDialog = {
     const nsIFilePicker = Components.interfaces.nsIFilePicker;
     var fp = Components.classes["@mozilla.org/filepicker;1"]
                        .createInstance(nsIFilePicker);
-
-    // extract the window title
-    var bundlePreferences = document.getElementById("bundlePreferences");
-    var winTitle = bundlePreferences.getString("fpTitleChooseApp");
+    var winTitle = this._bundle.getString("fpTitleChooseApp");
     fp.init(window, winTitle, nsIFilePicker.modeOpen);
-    
     fp.appendFilters(nsIFilePicker.filterApps);
     if (fp.show() == nsIFilePicker.returnOK && fp.file) {
       var customApp = document.getElementById("customApp");
-      customApp.label = this._getDisplayNameForFile(fp.file);
-      dump("*** customApp.label = " + customApp.label + " = " + this._getDisplayNameForFile(fp.file) + "\n");
       customApp.file = fp.file;
-      customApp.image = this._getIconURLForFile(fp.file);
-
-      var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
-      this._extAppRes = this._rdf.GetResource("urn:mimetype:externalApplication:" + mimeInfo.MIMEType);
-      
+      this._item.customHandler = fp.file;      
       return true;
     }
     return false;
@@ -363,42 +230,15 @@ var gChangeActionDialog = {
                        .createInstance(nsIFilePicker);
 
     // extract the window title
-    var bundlePreferences = document.getElementById("bundlePreferences");
-    var winTitle = bundlePreferences.getString("fpTitleChooseDL");
+    var winTitle = this._bundle.getString("fpTitleChooseDL");
     fp.init(window, winTitle, nsIFilePicker.modeGetFolder);
     if (fp.show() == nsIFilePicker.returnOK && fp.file) {
       var customDownloadFolder = document.getElementById("customDownloadFolder");
-      customDownloadFolder.label = fp.file.path;
       customDownloadFolder.file = fp.file;
-      customDownloadFolder.image = this._getIconURLForFile(fp.file);
+      customDownloadFolder.label = fp.file.path;
       return true;
     }
     return false;
-  },
-  
-  _getDisplayNameForFile: function (aFile)
-  {
-#ifdef XP_WIN
-    var lfw = aFile.QueryInterface(Components.interfaces.nsILocalFileWin);
-    dump("*** boaty = |" + lfw.getVersionInfoField("FileDescription") + "|\n");
-    return lfw.getVersionInfoField("FileDescription"); 
-#else
-    // XXXben - Read the bundle name on OS X.
-    var ios = Components.classes["@mozilla.org/network/io-service;1"]
-                        .getService(Components.interfaces.nsIIOService);
-    var url = ios.newFileURI(aFile).QueryInterface(Components.interfaces.nsIURL);
-    return url.fileName;
-#endif
-  },
-  
-  _getIconURLForFile: function (aFile)
-  {
-    var ios = Components.classes["@mozilla.org/network/io-service;1"]
-                        .getService(Components.interfaces.nsIIOService);
-    var fph = ios.getProtocolHandler("file")
-                 .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
-    var urlspec = fph.getURLSpecFromFile(aFile);
-    return "moz-icon://" + urlspec + "?size=16";  
   },
 };
 

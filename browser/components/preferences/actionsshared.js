@@ -52,7 +52,6 @@ FileAction.prototype = {
   bigIcon     : "",
   typeName    : "",
   action      : "",
-  id          : "",
   mimeInfo    : null,
   customHandler       : "",
   handleMode          : false,

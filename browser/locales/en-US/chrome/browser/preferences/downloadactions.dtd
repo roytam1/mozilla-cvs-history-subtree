@@ -1,5 +1,5 @@
 <!ENTITY  downloadactionsWindow.title         "Download Actions">
-<!ENTITY  fileTypesDescription.label          "Automatically perform the associated action with each of the following file types:">
+<!ENTITY  fileTypesDescription.label          "Automatically perform the associated Action with each of the following file types:">
 
 <!ENTITY  fileHandlerColumn.label             "Action">
 <!ENTITY  fileHandlerColumn.accesskey         "A">
@@ -16,6 +16,8 @@
 <!ENTITY  edit.accesskey                      "C">
 
 <!ENTITY  windowClose.key                     "w">
+<!ENTITY  focusSearch1.key                    "f">
+<!ENTITY  focusSearch2.key                    "k">
 
 <!ENTITY  filter.label                        "Search:">
 <!ENTITY  filter.accesskey                    "S">

@@ -1008,8 +1008,7 @@ nsLocalFile::GetVersionInfoField(const nsACString &aField, nsAString& _retval)
                     UINT size;
                     ::VerQueryValue(ver, subBlock, (void**)&value, &size);
 
-                    NS_CopyNativeToUnicode(Substring((const char *)value, (const char *)value + size), 
-                                           _retval);
+                    NS_CopyNativeToUnicode(nsDependentCString((const char*)value), _retval);
                     if (!_retval.IsEmpty())
                         break;
                 }

@@ -89,19 +89,36 @@ var gDownloadActionsWindow = {
     // Initialize the File Type list
     this._bundle = document.getElementById("bundlePreferences");
     this._tree = document.getElementById("fileHandlersList");
-    this._loadPluginData();
-    this._loadMIMERegistryData();
-    this._view._rowCount = this._actions.length;
-
+    this._loadView();
+    this._tree.treeBoxObject.view = this._view;  
     // Determine any exclusions being applied - e.g. don't show types for which
     // only a plugin handler exists, don't show types lacking extensions, etc. 
+    // This must be called *after* the view is attached, otherwise the tree code
+    // will throw assertions about the row count being out of sync, because it
+    // has no view to ask about it!
     this._updateExclusions();    
-    this._tree.treeBoxObject.view = this._view;    
-    
+
     var indexToSelect = parseInt(this._tree.getAttribute("lastSelected"));
     if (indexToSelect < this._tree.view.rowCount)
       this._tree.view.selection.select(indexToSelect);
     this._tree.focus();    
+  },
+  
+  _loadView: function ()
+  {
+    // Reset ALL the collections and state flags, because we can call this after
+    // the window has initially displayed by resetting the filter. 
+    this._actions = [];
+    this._plugins = {};
+    this._view._filtered = false;
+    this._view._filterSet = [];
+    this._view._usingExclusionSet = false;
+    this._view._exclusionSet = [];
+    this._view._filterValue = "";
+
+    this._loadPluginData();
+    this._loadMIMERegistryData();
+    this._view._rowCount = this._actions.length;
   },
   
   uninit: function ()
@@ -144,8 +161,9 @@ var gDownloadActionsWindow = {
           ++i        
       }      
     }
+    var oldRowCount = this._view._rowCount;
     this._view._rowCount = 0;
-    this._tree.treeBoxObject.rowCountChanged(0, -this._view._rowCount);
+    this._tree.treeBoxObject.rowCountChanged(0, -oldRowCount);
     if (usingExclusionSet) {
       this._view._usingExclusionSet = true;
       this._view._rowCount = this._view._exclusionSet.length;
@@ -222,15 +240,14 @@ var gDownloadActionsWindow = {
       action.typeName = info.description;
 
     // Pretty Action Name
-    action.action = aActionName;
-
-    action.id = MIME_URI(action.type);
-    action.pluginAvailable = aPluginAvailable;
-    action.pluginEnabled = aPluginEnabled;
-    action.editable = aIsEditable;
-    action.handleMode = aHandleMode;
-    action.customHandler = aCustomHandler;
-    action.mimeInfo = info;
+    if (aActionName)
+      action.action         = aActionName;
+    action.pluginAvailable  = aPluginAvailable;
+    action.pluginEnabled    = aPluginEnabled;
+    action.editable         = aIsEditable;
+    action.handleMode       = aHandleMode;
+    action.customHandler    = aCustomHandler;
+    action.mimeInfo         = info;
     
     if (newAction)
       this._actions.push(action);
@@ -308,10 +325,14 @@ var gDownloadActionsWindow = {
       var handledInternally = this._getLiteralValue(handler, "handleInternal") == "true";
       var externalApp       = this._getChildResource(handler, "externalApplication");
       var externalAppPath   = this._getLiteralValue(externalApp, "path");
-      var customHandler = Components.classes["@mozilla.org/file/local;1"]
-                                    .createInstance(Components.interfaces.nsILocalFile);
-      customHandler.initWithPath(externalAppPath);
-      
+      try {
+        var customHandler = Components.classes["@mozilla.org/file/local;1"]
+                                      .createInstance(Components.interfaces.nsILocalFile);
+        customHandler.initWithPath(externalAppPath);
+      }
+      catch (e) {
+        customHandler = null;
+      }      
       var mimeType = this._getLiteralValue(type, "value");
       var typeInfo = this._mimeSvc.getFromTypeAndExtension(mimeType, null);
 
@@ -325,20 +346,34 @@ var gDownloadActionsWindow = {
       }
       else if (useSystemDefault) {
         // Use the System Default handler
-        actionName = this._bundle.getFormattedString("openWith", [typeInfo.defaultDescription]);
+        actionName = this._bundle.getFormattedString("openWith", 
+                                                     [typeInfo.defaultDescription]);
         handleMode = FILEACTION_OPEN_DEFAULT;
       }
       else {
         // Custom Handler
-        actionName = this._bundle.getFormattedString("openWith", [this._getDisplayNameForFile(file)]);
-        handleMode = FILEACTION_OPEN_CUSTOM;
+        if (customHandler) {
+          actionName = this._bundle.getFormattedString("openWith", 
+                                                       [this._getDisplayNameForFile(customHandler)]);
+          handleMode = FILEACTION_OPEN_CUSTOM;
+        }
+        else {
+          // Corrupt datasource, invalid custom handler path. Revert to default.
+          actionName = this._bundle.getFormattedString("openWith", 
+                                                       [typeInfo.defaultDescription]);
+          handleMode = FILEACTION_OPEN_DEFAULT;
+        }
       }
 
-      if (handleInternally)
+      if (handledInternally)
         handleMode = FILEACTION_OPEN_INTERNALLY;
       
       var pluginAvailable = mimeType in this._plugins && this._plugins[mimeType].pluginAvailable;
       var pluginEnabled = pluginAvailable && this._plugins[mimeType].pluginEnabled;
+      if (pluginEnabled) {
+        handleMode = FILEACTION_OPEN_PLUGIN;
+        actionName = null;
+      }
       var action = this._createAction(mimeType, actionName, editable, handleMode, 
                                       customHandler, pluginAvailable, pluginEnabled);
       action.handledOnlyByPlugin = false;
@@ -425,6 +460,100 @@ var gDownloadActionsWindow = {
   {
   },
   
+  _disablePluginForItem: function (aItem)
+  {
+    if (aItem.pluginAvailable) {
+      // Since we're disabling the full page plugin for this content type, 
+      // we must add it to the disabled list if it's not in there already.
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch);
+      var disabled = aItem.type;
+      if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
+        disabled = prefs.getCharPref(kDisabledPluginTypesPref);
+        if (disabled.indexOf(aItem.type) == -1) 
+          disabled += "," + aItem.type;
+      }
+      prefs.setCharPref(kDisabledPluginTypesPref, disabled);   
+      
+      // Also, we update the category manager so that existing browser windows
+      // update.
+      var catman = Components.classes["@mozilla.org/categorymanager;1"]
+                             .getService(Components.interfaces.nsICategoryManager);
+      catman.deleteCategoryEntry("Gecko-Content-Viewers", aItem.type, false);     
+    }    
+  },
+  
+  _enablePluginForItem: function (aItem)
+  {
+    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch);
+    // Since we're enabling the full page plugin for this content type, we must
+    // look at the disabled types list and ensure that this type isn't in it.
+    if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
+      var disabledList = prefs.getCharPref(kDisabledPluginTypesPref);
+      if (disabledList == aItem.type)
+        prefs.clearUserPref(kDisabledPluginTypesPref);
+      else {
+        var disabledTypes = disabledList.split(",");
+        var disabled = "";
+        for (var i = 0; i < disabledTypes.length; ++i) {
+          if (aItem.type != disabledTypes[i])
+            disabled += disabledTypes[i] + (i == disabledTypes.length - 1 ? "" : ",");
+        }
+        prefs.setCharPref(kDisabledPluginTypesPref, disabled);
+      }
+    }
+
+    // Also, we update the category manager so that existing browser windows
+    // update.
+    var catman = Components.classes["@mozilla.org/categorymanager;1"]
+                           .getService(Components.interfaces.nsICategoryManager);
+    catman.addCategoryEntry("Gecko-Content-Viewers", aItem.type,
+                            kPluginHandlerContractID, false, true);
+  },
+  
+  _ensureMIMERegistryEntry: function (aItem)
+  {
+    var root = this._rdf.GetResource("urn:mimetypes:root");
+    var container = Components.classes["@mozilla.org/rdf/container;1"]
+                              .createInstance(Components.interfaces.nsIRDFContainer);
+    container.Init(this._mimeDS, root);
+    
+    var itemResource = this._rdf.GetResource(MIME_URI(aItem.type));
+    var handlerResource = null;
+    if (container.IndexOf(itemResource) == -1) {
+      container.AppendElement(itemResource);
+      this._setLiteralValue(itemResource, "editable", "true");
+      this._setLiteralValue(itemResource, "value", aItem.type);
+      
+      handlerResource = this._rdf.GetResource(HANDLER_URI(aItem.type));
+      this._setLiteralValue(handlerResource, "alwaysAsk", "false");
+      this._setLiteralValue(handlerResource, "editable", "true");
+      var handlerProp = this._rdf.GetResource(NC_URI("handlerProp"));
+      this._mimeDS.Assert(itemResource, handlerProp, handlerResource, true);
+      
+      var extAppResource = this._rdf.GetResource(APP_URI(aItem.type));
+      this._setLiteralValue(handlerResource, "path", "");
+      var extAppProp = this._rdf.GetResource(NC_URI("externalApplication"));
+      this._mimeDS.Assert(handlerResource, extAppProp, extAppResource, true);
+    }
+    else
+      handlerResource = this._getChildResource(itemResource, "handlerProp");
+        
+    return handlerResource;
+  },
+  
+  _setLiteralValue: function (aResource, aProperty, aValue)
+  {
+    var property = this._rdf.GetResource(NC_URI(aProperty));
+    var newValue = this._rdf.GetLiteral(aValue);
+    var oldValue = this._mimeDS.GetTarget(aResource, property, true);
+    if (oldValue)
+      this._mimeDS.Change(aResource, property, oldValue, newValue);
+    else
+      this._mimeDS.Assert(aResource, property, newValue, true);
+  },
+  
   editFileHandler: function ()
   {
     var selection = this._tree.view.selection; 
@@ -434,6 +563,42 @@ var gDownloadActionsWindow = {
     var item = this._view.getItemAtIndex(selection.currentIndex);
     openDialog("chrome://browser/content/preferences/changeaction.xul", 
                "_blank", "modal,centerscreen", item);
+    
+    // Update the database
+    switch (item.handleMode) {
+    case FILEACTION_OPEN_PLUGIN:
+      this._enablePluginForItem(item);
+      // We don't need to adjust the database because plugin settings always
+      // supercede whatever is in the db, leaving it untouched allows the last
+      // user setting(s) to be preserved if they ever revert.
+      break;
+    case FILEACTION_OPEN_DEFAULT:
+      this._disablePluginForItem(item);
+      var handlerRes = this._ensureMIMERegistryEntry(item);
+      this._setLiteralValue(handlerRes, "useSystemDefault", "true");
+      this._setLiteralValue(handlerRes, "saveToDisk", "false");
+      break;
+    case FILEACTION_OPEN_CUSTOM:
+      this._disablePluginForItem(item);
+      var handlerRes = this._ensureMIMERegistryEntry(item);
+      this._setLiteralValue(handlerRes, "useSystemDefault", "false");
+      this._setLiteralValue(handlerRes, "saveToDisk", "false");
+      var extAppRes = this._getChildResource(handlerRes, "externalApplication");
+      this._setLiteralValue(extAppRes, "path", item.customHandler.path);
+      break;
+    case FILEACTION_SAVE_TO_DISK:
+      this._disablePluginForItem(item);
+      var handlerRes = this._ensureMIMERegistryEntry(item);
+      this._setLiteralValue(handlerRes, "useSystemDefault", "false");
+      this._setLiteralValue(handlerRes, "saveToDisk", "true");
+      break;
+    }
+    
+    var rds = this._mimeDS.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
+    rds.Flush();
+    
+    // Update the view
+    this._tree.treeBoxObject.invalidateRow(selection.currentIndex);    
   },
   
   onSelectionChanged: function ()
@@ -463,7 +628,7 @@ var gDownloadActionsWindow = {
         }
 
         var item = this._view.getItemAtIndex(j);
-        if (!item.editable || item.handleMode == FILEACTION_OPEN_INTERNALLY)
+        if (item && (!item.editable || item.handleMode == FILEACTION_OPEN_INTERNALLY))
           canRemove = false;
       }
     }
@@ -505,6 +670,117 @@ var gDownloadActionsWindow = {
 
     this._lastSortAscending = ascending;
     this._lastSortProperty = aProperty;
+  },
+  
+  clearFilter: function ()
+  {    
+    // Clear the Filter and the Tree Display
+    document.getElementById("filter").value = "";
+    this._view._filtered = false;
+    this._view._rowCount = 0;
+    this._tree.treeBoxObject.rowCountChanged(0, -this._view._filterSet.length);
+    this._view._filterSet = [];
+
+    // Just reload the list to make sure deletions are respected
+    this._loadView();
+    this._updateExclusions();    
+    this._tree.treeBoxObject.rowCountChanged(0, this._view.rowCount);
+
+    // Restore selection
+    this._view.selection.clearSelection();
+    for (i = 0; i < this._lastSelectedRanges.length; ++i) {
+      var range = this._lastSelectedRanges[i];
+      this._view.selection.rangedSelect(range.min, range.max, true);
+    }
+    this._lastSelectedRanges = [];
+
+    document.getElementById("actionsIntro").value = this._bundle.getString("actionsAll");
+    document.getElementById("clearFilter").disabled = true;
+  },
+  
+  _actionMatchesFilter: function (aAction)
+  {
+    return aAction.extension.toLowerCase().indexOf(this._view._filterValue) != -1 ||
+           aAction.typeName.toLowerCase().indexOf(this._view._filterValue) != -1 || 
+           aAction.type.toLowerCase().indexOf(this._view._filterValue) != -1 ||
+           aAction.action.toLowerCase().indexOf(this._view._filterValue) != -1;
+  },
+  
+  _filterActions: function (aFilterValue)
+  {
+    this._view._filterValue = aFilterValue;
+    var actions = [];
+    for (var i = 0; i < this._actions.length; ++i) {
+      var action = this._actions[i];
+      if (this._actionMatchesFilter(action)) 
+        actions.push(action);
+    }
+    return actions;
+  },
+  
+  _lastSelectedRanges: [],
+  _saveState: function ()
+  {
+    // Save selection
+    var seln = this._view.selection;
+    this._lastSelectedRanges = [];
+    var rangeCount = seln.getRangeCount();
+    for (var i = 0; i < rangeCount; ++i) {
+      var min = {}; var max = {};
+      seln.getRangeAt(i, min, max);
+      this._lastSelectedRanges.push({ min: min.value, max: max.value });
+    }
+  },
+  
+  _filterTimeout: -1,
+  onFilterInput: function ()
+  {
+    if (this._filterTimeout != -1)
+      clearTimeout(this._filterTimeout);
+   
+    function filterActions()
+    {
+      var filter = document.getElementById("filter").value;
+      if (filter == "") {
+        gDownloadActionsWindow.clearFilter();
+        return;
+      }        
+      var view = gDownloadActionsWindow._view;
+      view._filterSet = gDownloadActionsWindow._filterActions(filter);
+      if (!view._filtered) {
+        // Save Display Info for the Non-Filtered mode when we first
+        // enter Filtered mode. 
+        gDownloadActionsWindow._saveState();
+        view._filtered = true;
+      }
+
+      // Clear the display
+      var oldCount = view._rowCount;
+      view._rowCount = 0;
+      gDownloadActionsWindow._tree.treeBoxObject.rowCountChanged(0, -oldCount);
+      // Set up the filtered display
+      view._rowCount = view._filterSet.length;
+      gDownloadActionsWindow._tree.treeBoxObject.rowCountChanged(0, view.rowCount);
+      
+      view.selection.select(0);
+      document.getElementById("actionsIntro").value = gDownloadActionsWindow._bundle.getString("actionsFiltered");
+      document.getElementById("clearFilter").disabled = false;
+    }
+    window.filterActions = filterActions;
+    this._filterTimeout = setTimeout("filterActions();", 500);
+  },
+  
+  onFilterKeyPress: function (aEvent)
+  {
+    if (aEvent.keyCode == 27) // ESC key
+      this.clearFilter();
+  },
+  
+  focusFilterBox: function ()
+  { 
+    var filter = document.getElementById("filter");
+    filter.focus();
+    filter.select();
   }  
 };
 

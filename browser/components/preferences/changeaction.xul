@@ -81,7 +81,8 @@
       <separator class="thin"/>
       <radio id="saveToDisk" value="save" 
              label="&saveToDisk.label;" accesskey="&saveToDisk.accesskey;"/>
-      <radiogroup id="saveToOptions" class="indent" onselect="gChangeActionDialog.doSaveToDiskEnabling(this.selectedItem);">
+      <radiogroup id="saveToOptions" class="indent" onselect="gChangeActionDialog.doSaveToDiskEnabling(this.selectedItem);"
+                  hidden="true">
         <radio id="saveToDefault" value="default" selected="true"
                label="&saveToDefaultFolder.label;" accesskey="&saveToDefaultFolder.accesskey;"/>
         <radio id="saveToCustom" value="custom"
