@@ -1180,6 +1180,7 @@ AnchorRegExp(CompilerState *state, RENode *ren)
 
     for (ren2 = ren; REOP(ren2) == REOP_LPAREN; ren2 = ren2->kid)
 	;
+    len = 0; /* Avoid warning. */
     switch (REOP(ren2)) {
       case REOP_ALT:
 	len = CountFirstChars(ren2);
@@ -2095,6 +2096,9 @@ MatchRegExp(MatchState *state, jsbytecode *pc, const jschar *cp)
     while (pc < pcend) {
 	op = (REOp) *pc;
 	oplen = reopsize[op];
+        
+        matched = JS_FALSE; /* Avoid warnings. */
+        matchlen = 0;
 
 	switch (op) {
 	  case REOP_EMPTY:
@@ -2651,6 +2655,9 @@ js_ExecuteRegExp(JSContext *cx, JSRegExp *re, JSString *str, size_t *indexp,
 	 * an array object, do return true.
 	 */
 	*rval = JSVAL_TRUE;
+
+        /* Avoid warning.  (gcc doesn't detect that obj is needed iff !test); */
+        obj = NULL; 
     } else {
 	/*
 	 * The array returned on match has element 0 bound to the matched
