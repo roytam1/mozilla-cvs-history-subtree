@@ -3986,7 +3986,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
       tag == nsXULAtoms::treeitem) {
       // Convert to a tree row group frame.
       nsTreeRowGroupFrame* treeRowGroup = (nsTreeRowGroupFrame*)parentFrame;
-      if (treeRowGroup->IsLazy()) {
+      if (treeRowGroup->IsLazy() && !treeRowGroup->IsFull()) {
         treeRowGroup->OnContentAdded(*aPresContext);
         return NS_OK;
       }

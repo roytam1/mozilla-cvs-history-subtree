@@ -275,7 +275,7 @@ void nsTreeRowGroupFrame::OnContentAdded(nsIPresContext& aPresContext)
 
   nsTreeFrame* treeFrame = (nsTreeFrame*)tableFrame;
 
-  if (IsLazy() && !mIsFull && !treeFrame->IsSlatedForReflow()) {
+  if (IsLazy() && !treeFrame->IsSlatedForReflow()) {
     treeFrame->SlateForReflow();
 
     // Schedule a reflow for us.

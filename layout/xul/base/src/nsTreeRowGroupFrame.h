@@ -43,6 +43,8 @@ public:
 
   PRBool ContinueReflow(nscoord y, nscoord height);
 
+  PRBool IsFull() { return mIsFull; };
+
   // Responses to changes
   void OnContentAdded(nsIPresContext& aPresContext);
 
