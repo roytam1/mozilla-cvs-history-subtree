@@ -861,12 +861,12 @@ pref("browser.popups.showPopupBlocker", true);
 pref("viewmanager.do_doublebuffering", false);
 
 pref("dom.disable_open_during_load",              false);
-pref("privacy.popups.first_popup",                true);
+pref("privacy.popups.first_popup",                false);
 pref("privacy.popups.sound_enabled",              false);
 pref("privacy.popups.sound_url",                  "");
 pref("privacy.popups.statusbar_icon_enabled",     true);
 pref("privacy.popups.prefill_whitelist",          false);
-pref("privacy.popups.remove_blacklist",           true);
+pref("privacy.popups.remove_blacklist",           false);
 
 // whether use prefs from system
 pref("config.use_system_prefs", false);
