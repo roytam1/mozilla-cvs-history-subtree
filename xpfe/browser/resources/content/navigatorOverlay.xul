@@ -399,6 +399,7 @@ END of Deprecated -->
   <menu id="tasksMenu"/>
   
   <menu accesskey="&helpMenuCmd.accesskey;" id="menu_Help"/>
+  <!--
   // Menu for testing.
   <menu accesskey="d" value="&debugMenu.label;">
     <menupopup>
@@ -495,6 +496,7 @@ END of Deprecated -->
       <menuitem value="&BloatLeaksCmd.label;"   oncommand="dumpMemoryLeaks();"/>
     </menupopup>
   </menu>
+  -->
   <spring flex="100%"/>
 </menubar>
 
