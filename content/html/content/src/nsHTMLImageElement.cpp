@@ -334,7 +334,11 @@ nsHTMLImageElement::GetComplete(PRBool* aComplete)
   } else {
     result = NS_OK;
 
+#ifdef USE_IMG2
     *aComplete = !mRequest;
+#else
+    *aComplete = !mLoader;
+#endif
   }
 
   return NS_OK;
@@ -947,8 +951,11 @@ NS_IMETHODIMP nsHTMLImageElement::OnStopDecode(nsIImageRequest *request, nsISupp
   nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
 
   // We set mLoader = nsnull to indicate that we're complete.
+#ifdef USE_IMG2
   mRequest = nsnull;
-
+#else
+  mLoader = nsnull;
+#endif
   // Fire the onload event.
   nsEventStatus estatus = nsEventStatus_eIgnore;
   nsEvent event;
@@ -974,8 +981,11 @@ nsresult nsHTMLImageElement::ImageLibCallBack(nsIPresContext* aPresContext,
                                               PRUint32 aStatus)
 {
   nsHTMLImageElement *img = (nsHTMLImageElement *)aClosure;
-
+#ifdef USE_IMG2
   if (!img || !img->mRequest)
+#else
+  if (!img || !img->mLoader)
+#endif
     return NS_OK;
 
   if ((aStatus & NS_IMAGE_LOAD_STATUS_SIZE_AVAILABLE) &&

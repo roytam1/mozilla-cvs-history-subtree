@@ -121,11 +121,12 @@ nsImageFrame::Destroy(nsIPresContext* aPresContext)
       NS_RELEASE(mImageMap);
     }
 
+#ifdef USE_IMG2
     if (mImageRequest)
       mImageRequest->Cancel(NS_ERROR_FAILURE); // NS_BINDING_ABORT ?
     if (mLowImageRequest)
       mLowImageRequest->Cancel(NS_ERROR_FAILURE); // NS_BINDING_ABORT ?
-
+#endif
 
 #ifndef USE_IMG2
   // Release image loader first so that it's refcnt can go to zero
@@ -210,7 +211,6 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
   nsCOMPtr<nsIURI> srcURI;
   NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
   il->LoadImage(srcURI, mListener, aPresContext, getter_AddRefs(mImageRequest));
-//  mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
 #else
   mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
 #endif

@@ -19,13 +19,21 @@
  *
  * Contributor(s): 
  */
+
+#define USE_IMG2 1
+
 #include "nsCOMPtr.h"
 #include "nsHTMLDocument.h"
 #include "nsHTMLParts.h"
 #include "nsHTMLAtoms.h"
 #include "nsIHTMLContent.h"
+#ifdef USE_IMG2
+#include "nsIImageRequest2.h"
+#include "nsIImageLoader.h"
+#else
 #include "nsIImageGroup.h"
 #include "nsIImageRequest.h"
+#endif
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #include "nsHTMLValue.h"
@@ -67,15 +75,20 @@ public:
 
   nsresult CreateSyntheticDocument();
 
+#ifndef USE_IMG2
   nsresult StartImageLoad(nsIURI* aURL, nsIStreamListener*& aListener);
+#endif
   nsresult EndLayout(nsISupports *ctxt, 
                         nsresult status, 
                         const PRUnichar *errorMsg);
   nsresult UpdateTitle( void );
 
   void StartLayout();
-
+#ifdef USE_IMG2
+  nsCOMPtr<nsIImageRequest> mImageRequest;
+#else
   nsIImageRequest*  mImageRequest;
+#endif
   nscolor           mBlack;
 };
 
@@ -94,20 +107,27 @@ public:
   NS_DECL_NSISTREAMLISTENER
 
   nsImageDocument* mDocument;
-  nsIStreamListener* mNextStream;
+#ifdef USE_IMG2
+  nsCOMPtr<nsIStreamListener> mNextStream;
+#else
+  nsIStreamListener *mNextStream;
+#endif
 };
 
 ImageListener::ImageListener(nsImageDocument* aDoc)
 {
+  NS_INIT_ISUPPORTS();
   mDocument = aDoc;
   NS_ADDREF(aDoc);
-  mRefCnt = 1;
 }
 
 ImageListener::~ImageListener()
 {
   NS_RELEASE(mDocument);
+  mDocument = nsnull;
+#ifndef USE_IMG2
   NS_IF_RELEASE(mNextStream);
+#endif
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS(ImageListener, NS_GET_IID(nsIStreamListener))
@@ -120,7 +140,22 @@ ImageListener::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
   rv = channel->GetURI(&uri);
   if (NS_FAILED(rv)) return rv;
   
+#ifdef USE_IMG2
+  nsCOMPtr<nsIStreamListener> kungFuDeathGrip(this);
+  nsCOMPtr<nsIImageLoader> il(do_GetService("@mozilla.org/image/loader;1"));
+  il->LoadImageWithChannel(channel, nsnull, nsnull, getter_AddRefs(mNextStream), 
+                           getter_AddRefs(mDocument->mImageRequest));
+
+  // XXX
+  // if we get a cache hit, and we cancel the channel in the above function,
+  // do we call OnStopRequest before we call StartLayout?
+  // if so, should LoadImageWithChannel() not call channel->Cancel() ?
+
+  mDocument->StartLayout();
+
+#else
   mDocument->StartImageLoad(uri, mNextStream);
+#endif
   NS_RELEASE(uri);
   if (nsnull == mNextStream) {
     return NS_ERROR_FAILURE;
@@ -165,13 +200,17 @@ NS_NewImageDocument(nsIDocument** aInstancePtrResult)
 
 nsImageDocument::nsImageDocument()
 {
+#ifndef USE_IMG2
   mImageRequest = nsnull;
+#endif
   mBlack = NS_RGB(0, 0, 0);
 }
 
 nsImageDocument::~nsImageDocument()
 {
+#ifndef USE_IMG2
   NS_IF_RELEASE(mImageRequest);
+#endif
 }
 
 NS_IMETHODIMP
@@ -201,10 +240,12 @@ nsImageDocument::StartDocumentLoad(const char* aCommand,
   }
 
   *aDocListener = new ImageListener(this);
+  NS_ADDREF(*aDocListener);
 
   return NS_OK;
 }
 
+#ifndef USE_IMG2
 nsresult
 nsImageDocument::StartImageLoad(nsIURI* aURL, nsIStreamListener*& aListener)
 {
@@ -214,6 +255,8 @@ nsImageDocument::StartImageLoad(nsIURI* aURL, nsIStreamListener*& aListener)
   // Tell image group to load the stream now. This will get the image
   // hooked up to the open stream and return the underlying listener
   // so that we can pass it back upwards.
+
+
   nsIPresShell* shell = GetShellAt(0);
   if (nsnull != shell) {
     nsCOMPtr<nsIPresContext> cx;
@@ -240,13 +283,13 @@ nsImageDocument::StartImageLoad(nsIURI* aURL, nsIStreamListener*& aListener)
     }
     NS_RELEASE(shell);
   }
-
   
   // Finally, start the layout going
   StartLayout();
 
   return NS_OK;
 }
+#endif
 
 nsresult
 nsImageDocument::CreateSyntheticDocument()
@@ -397,6 +440,8 @@ nsresult nsImageDocument::UpdateTitle( void )
   // append the image information...
   titleStr.AppendWithConversion( " Image" );
   if (mImageRequest) {
+#ifndef USE_IMG2
+    // XXX we need to do this...
     PRUint32 width, height;
     mImageRequest->GetNaturalDimensions(&width, &height);
     // if we got a valid size (sometimes we do not) then display it
@@ -407,6 +452,7 @@ nsresult nsImageDocument::UpdateTitle( void )
       titleStr.AppendInt((PRInt32)height);
       titleStr.AppendWithConversion(" pixels");
     }
+#endif
   } 
   // set it on the document
   SetTitle(titleStr);
