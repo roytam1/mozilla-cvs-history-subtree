@@ -30,6 +30,7 @@ MODULE = zlib
 EXPORTS = 				\
 	zlib.h				\
 	zconf.h				\
+    crc32.c             \
 	$(NULL)
 
 

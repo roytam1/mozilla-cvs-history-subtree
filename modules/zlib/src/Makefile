@@ -40,7 +40,7 @@ CSRCS		= adler32.c \
 		  $(NULL)
 
 # XXX JDK_GEN should add the _gen/* exports
-EXPORTS		= zlib.h zconf.h
+EXPORTS		= zlib.h zconf.h crc32.c
 
 include $(DEPTH)/config/rules.mk
 
