@@ -2669,6 +2669,8 @@ nsSocketReadRequest::OnRead()
                                     offset,
                                     amount);
 
+    LOG(("nsSocketReadRequest: listener returned [rv=%x]\n", rv));
+
     //
     // Handle the error conditions
     //
