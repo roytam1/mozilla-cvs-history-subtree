@@ -481,7 +481,6 @@
   </vbox>
 
   <statusbar id="status-bar" class="chromeclass-status">
-    <statusbarpanel id="component-bar"/>
     <statusbarpanel id="statusText" flex="1"/>
     <statusbarpanel class="statusbarpanel-progress">
       <progressmeter id="compose-progressmeter" class="progressmeter-statusbar" mode="normal" value="0"/>
