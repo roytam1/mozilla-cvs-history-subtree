@@ -1521,13 +1521,22 @@ nsEventStateManager::DoWheelScroll(nsIPresContext* aPresContext,
 
     if (scrollPage)
       sv->ScrollByPages((numLines > 0) ? 1 : -1);
-    else
-      sv->ScrollByLines(0, numLines);
+    else {
+      PRInt32 vertLines = 0, horizLines = 0;
+      
+      if (msEvent->scrollFlags & nsMouseScrollEvent::kIsHorizontal)
+        horizLines = numLines;
+
+      if (msEvent->scrollFlags & nsMouseScrollEvent::kIsVertical)
+        vertLines = numLines;
+        
+      sv->ScrollByLines(horizLines, vertLines);
+    }
 
     nscoord newXPos, newYPos;
     sv->GetScrollPosition(newXPos, newYPos);
 
-    if (newYPos != yPos) {
+    if (newXPos != xPos || newYPos != yPos) {
       if (focusView)
         ForceViewUpdate(focusView);
     } else
