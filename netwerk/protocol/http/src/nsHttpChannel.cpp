@@ -450,7 +450,7 @@ nsHttpChannel::ProcessNotModified()
 
     // update the cached response headers
     nsCAutoString headers;
-    rv = mCachedResponseHead->Flatten(headers);
+    rv = mCachedResponseHead->Flatten(headers, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     rv = mCacheEntry->SetMetaDataElement("http-headers", headers.get());
@@ -923,7 +923,7 @@ nsHttpChannel::CacheReceivedResponse()
     // the meta data.
 
     nsCAutoString headers;
-    rv = mResponseHead->Flatten(headers);
+    rv = mResponseHead->Flatten(headers, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     rv = mCacheEntry->SetMetaDataElement("http-headers", headers.get());

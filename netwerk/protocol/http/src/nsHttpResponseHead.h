@@ -54,7 +54,10 @@ public:
     nsresult GetHeader(nsHttpAtom h, char **v)      { return mHeaders.GetHeader(h, v); }
     void     ClearHeaders()                         { mHeaders.Clear(); }
 
-    nsresult Flatten(nsACString &);
+    // write out the response status line and headers as a single text block,
+    // optionally pruning out transient headers (ie. headers that only make
+    // sense the first time the response is handled).
+    nsresult Flatten(nsACString &, PRBool pruneTransients);
 
     // parse flattened response head. block must be null terminated. parsing is
     // destructive.

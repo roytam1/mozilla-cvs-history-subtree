@@ -35,7 +35,16 @@ PRLogModuleInfo *gHttpLog = nsnull;
 #include "nsHttpAtomList.h"
 #undef HTTP_ATOM
 
-static struct PLHashTable *gHttpAtomTable;
+// we keep a linked list of atoms allocated on the heap for easy clean up
+// when the atom table is destroyed.
+struct HttpHeapAtom {
+    char                *value;
+    struct HttpHeapAtom *next;
+};
+
+static struct PLHashTable  *gHttpAtomTable = nsnull;
+static struct HttpHeapAtom *gHeapAtomsHead = nsnull;
+static struct HttpHeapAtom *gHeapAtomsTail = nsnull;
 
 // Hash string ignore case, based on PL_HashString
 static PLHashNumber
@@ -108,6 +117,12 @@ nsHttp::DestroyAtomTable()
         PL_HashTableDestroy(gHttpAtomTable);
         gHttpAtomTable = nsnull;
     }
+    while (gHeapAtomsHead) {
+        gHeapAtomsTail = gHeapAtomsHead->next;
+        delete gHeapAtomsHead;
+        gHeapAtomsHead = gHeapAtomsTail;
+    }
+    gHeapAtomsTail = nsnull;
 }
 
 nsHttpAtom
@@ -118,8 +133,39 @@ nsHttp::ResolveAtom(const char *str)
 
     nsHttpAtom atom = { nsnull };
 
-    if (gHttpAtomTable)
+    if (gHttpAtomTable) {
         atom._val = (const char *) PL_HashTableLookup(gHttpAtomTable, str);
+
+        // if the atom could not be found in the atom table, then we'll go
+        // and allocate a new atom on the heap.
+        if (!atom) {
+            HttpHeapAtom *heapAtom = new HttpHeapAtom;
+            if (!heapAtom)
+                return atom;
+            heapAtom->value = PL_strdup(str);
+            if (!heapAtom->value) {
+                delete heapAtom;
+                return atom;
+            }
+            heapAtom->next = 0;
+
+            // append this heap atom to the list of all heap atoms
+            if (!gHeapAtomsHead) {
+                gHeapAtomsHead = heapAtom;
+                gHeapAtomsTail = heapAtom;
+            }
+            else {
+                gHeapAtomsTail->next = heapAtom;
+                gHeapAtomsTail = heapAtom;
+            }
+
+            // now insert the heap atom into the atom table
+            PL_HashTableAdd(gHttpAtomTable, heapAtom->value, heapAtom->value);
+
+            // now assign the value to the atom
+            atom._val = (const char *) heapAtom->value;
+        }
+    }
 
     return atom;
 }

@@ -292,7 +292,7 @@ nsHttpTransaction::HandleContent(char *buf,
         if (mResponseHead) {
 #if defined(PR_LOGGING)
             nsCAutoString headers;
-            mResponseHead->Flatten(headers);
+            mResponseHead->Flatten(headers, PR_FALSE);
             LOG2(("http response [\n%s]\n", headers.get()));                        
 #endif
             PRBool reset = PR_FALSE;

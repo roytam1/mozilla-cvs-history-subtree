@@ -77,6 +77,7 @@ struct nsHttp
 {
     static void DestroyAtomTable();
 
+    // will dynamically add atoms to the table if they don't already exist
     static nsHttpAtom ResolveAtom(const char *);
 
     /* Declare all atoms

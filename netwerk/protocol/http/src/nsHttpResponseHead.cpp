@@ -31,7 +31,7 @@
 //-----------------------------------------------------------------------------
 
 nsresult
-nsHttpResponseHead::Flatten(nsACString &buf)
+nsHttpResponseHead::Flatten(nsACString &buf, PRBool pruneTransients)
 {
     if (mVersion == NS_HTTP_VERSION_0_9)
         return NS_OK;
@@ -50,7 +50,36 @@ nsHttpResponseHead::Flatten(nsACString &buf)
     buf.Append(mStatusText);
     buf.Append("\r\n");
 
-    return mHeaders.Flatten(buf);
+    if (!pruneTransients)
+        return mHeaders.Flatten(buf);
+
+    // otherwise, we need to iterate over the headers and only flatten
+    // those that are appropriate.
+    PRUint32 i, count = mHeaders.Count();
+    for (i=0; i<count; ++i) {
+        nsHttpAtom header;
+        const char *value = mHeaders.PeekHeaderAt(i, header);
+
+        if (!value || header == nsHttp::Connection
+                   || header == nsHttp::Proxy_Connection
+                   || header == nsHttp::Keep_Alive
+                   || header == nsHttp::WWW_Authenticate
+                   || header == nsHttp::Proxy_Authenticate
+                   || header == nsHttp::Trailer
+                   || header == nsHttp::Transfer_Encoding
+                   || header == nsHttp::Upgrade
+                   // XXX this will cause problems when we start honoring
+                   // Cache-Control: no-cache="set-cookie", what to do?
+                   || header == nsHttp::Set_Cookie)
+            continue;
+
+        // otherwise, write out the "header: value\r\n" line
+        buf.Append(header.get());
+        buf.Append(": ");
+        buf.Append(value);
+        buf.Append("\r\n");
+    }
+    return NS_OK;
 }
 
 nsresult
