@@ -45,6 +45,7 @@
 #include "nsNSSCertificate.h"
 #include "nsPKCS12Blob.h"
 #include "nsIX509Cert.h"
+#include "nsINSSDialogs.h"
 #include "nsString.h"
 
 #include "pk11func.h"
@@ -937,6 +938,18 @@ verify_failed:
   *_usages = (PRUnichar **)nsMemory::Alloc(sizeof(PRUnichar *));
   *_count = 0;
   return NS_OK;
+}
+
+/* void view (); */
+NS_IMETHODIMP 
+nsNSSCertificate::View()
+{
+  nsresult rv;
+
+  nsCOMPtr<nsICertificateDialogs> certDialogs;
+  rv = ::getNSSDialogs(getter_AddRefs(certDialogs),
+                       NS_GET_IID(nsICertificateDialogs));
+  return certDialogs->ViewCert(this);
 }
 
 /* nsNSSCertificateDB */
