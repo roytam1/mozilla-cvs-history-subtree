@@ -44,7 +44,7 @@ pref("general.useragent.vendorSub",
 // this application as an extension target, and by the SmartUpdate system to identify
 // this application to the Update server.
 pref("app.id", "{3550f703-e582-4d05-9a08-453d09bdfdc6}");
-pref("app.version", "0.7.1");
+pref("app.version", "0.7");
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
