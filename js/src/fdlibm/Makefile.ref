@@ -65,6 +65,9 @@ DEPTH           = ..
 
 include $(DEPTH)/config.mk
 
+# Set include path to pick up jsautocfg.h/jscpucfg.h
+INCLUDES += -I../$(OBJDIR)
+
 #
 # Default IEEE libm
 #

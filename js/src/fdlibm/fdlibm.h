@@ -29,22 +29,19 @@
 
 
 /* Modified defines start here.. */
+#if defined(XP_MAC) || defined(XP_PC)
+#    include "jscpucfg.h"        /* Use standard Mac or Windows configuration */
+#elif defined(XP_UNIX)
+#    include "jsautocfg.h"       /* Use auto-detected configuration */
+#else
+#    error "Must define one of XP_PC, XP_MAC or XP_UNIX"
+#endif
+
 #ifdef _WIN32
 #define huge myhuge
-#define __LITTLE_ENDIAN
 #endif
 
-/* End here. The rest is the standard file. */
-
-#ifdef __NEWVALID	/* special setup for Sun test regime */
-#if defined(i386) || defined(i486) || \
-	defined(intel) || defined(x86) || defined(i86pc)
-#define __LITTLE_ENDIAN
-#endif
-#endif
-
-
-#ifdef __LITTLE_ENDIAN
+#ifdef IS_LITTLE_ENDIAN
 #define __HI(x) *(1+(int*)&x)
 #define __LO(x) *(int*)&x
 #define __HIp(x) *(1+(int*)x)
