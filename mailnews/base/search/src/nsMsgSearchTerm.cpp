@@ -1026,39 +1026,35 @@ nsresult nsMsgSearchTerm::MatchAge (PRTime msgDate, PRBool *pResult)
 	PRBool result = PR_FALSE;
 	nsresult err = NS_OK;
 
-#ifdef DO_AGE_YET
-	time_t now = XP_TIME();
-	time_t matchDay = now - (m_value.u.age * 60 * 60 * 24);
-	struct tm * matchTime = localtime(&matchDay);
-	
-	// localTime axes previous results so save these.
-	int day = matchTime->tm_mday;
-	int month = matchTime->tm_mon;
-	int year = matchTime->tm_year;
 
-	struct tm * msgTime = localtime(&msgDate);
+	PRTime now = PR_Now();
+	PRTime cutOffDay;
+
+	PRInt64 microSecondsPerSecond, secondsInDays, microSecondsInDays;
+	
+	LL_I2L(microSecondsPerSecond, PR_USEC_PER_SEC);
+  LL_UI2L(secondsInDays, 60 * 60 * 24 * m_value.u.age);
+	LL_MUL(microSecondsInDays, secondsInDays, microSecondsPerSecond);
+
+	LL_SUB(cutOffDay, now, microSecondsInDays); // = now - term->m_value.u.age * 60 * 60 * 24; 
+  // so now cutOffDay is the PRTime cut-off point. Any msg with a time less than that will be past the age .
 
 	switch (m_operator)
 	{
 	case nsMsgSearchOp::IsGreaterThan: // is older than 
-		if (msgDate < matchDay)
+    if (LL_CMP(msgDate, <, cutOffDay))
 			result = PR_TRUE;
 		break;
 	case nsMsgSearchOp::IsLessThan: // is younger than 
-		if (msgDate > matchDay)
+		if (LL_CMP(msgDate, >, cutOffDay))
 			result = PR_TRUE;
 		break;
 	case nsMsgSearchOp::Is:
-		if (matchTime && msgTime)
-			if ((day == msgTime->tm_mday) 
-				&& (month == msgTime->tm_mon)
-				&& (year == msgTime->tm_year))
-				result = PR_TRUE;
+    NS_ASSERTION(PR_FALSE, "not supported yet");
 		break;
 	default:
 		NS_ASSERTION(PR_FALSE, "invalid compare op comparing msg age");
 	}
-#endif // DO_AGE_YET
 	*pResult = result;
 	return err;
 }
@@ -1102,19 +1098,16 @@ nsresult nsMsgSearchTerm::MatchStatus (PRUint32 statusToMatch, PRBool *pResult)
 	switch (m_operator)
 	{
 	case nsMsgSearchOp::Is:
-		if (matches)
-			*pResult = PR_TRUE;
 		break;
 	case nsMsgSearchOp::Isnt:
-		if (!matches)
-			*pResult = PR_TRUE;
+		matches = !matches;
 		break;
 	default:
-		*pResult = PR_FALSE;
 		err = NS_ERROR_FAILURE;
 		NS_ASSERTION(PR_FALSE, "invalid comapre op for msg status");
 	}
 
+  *pResult = matches;
 	return err;	
 }
 

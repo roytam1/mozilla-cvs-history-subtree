@@ -159,14 +159,15 @@ nsresult nsMsgOfflineManager::AdvanceToNextState(nsresult exitStatus)
         break;
       case eDownloadingNews:
         m_curState = eDownloadingMail;
-        if (m_sendUnsentMessages)
-          SendUnsentMessages();
+        if (m_downloadMail)
+          DownloadMail();
         else
           AdvanceToNextState(NS_OK);
         break;
       case eDownloadingMail:
-        if (m_downloadMail)
-          DownloadMail();
+        m_curState = eSendingUnsent;
+        if (m_sendUnsentMessages)
+          SendUnsentMessages();
         else
           AdvanceToNextState(NS_OK);
         break;
@@ -294,6 +295,7 @@ NS_IMETHODIMP nsMsgOfflineManager::SynchronizeForOffline(PRBool downloadNews, PR
   m_sendUnsentMessages = sendUnsentMessages;
   m_window = aMsgWindow;
   m_goOfflineWhenDone = goOfflineWhenDone;
+  m_curState = eNoState;
   if (!downloadNews && !downloadMail && !sendUnsentMessages)
   {
     if (goOfflineWhenDone)
@@ -310,7 +312,7 @@ nsresult nsMsgOfflineManager::SetOnlineState(PRBool online)
   NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
   if (NS_SUCCEEDED(rv) && netService)
   {
-    rv = netService->SetOffline(online);
+    rv = netService->SetOffline(!online);
   }
   return rv;
 }
