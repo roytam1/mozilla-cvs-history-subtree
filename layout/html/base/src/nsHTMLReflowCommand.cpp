@@ -243,6 +243,14 @@ nsresult
 nsHTMLReflowCommand::SetTarget(nsIFrame* aTargetFrame)
 {
   mTargetFrame = aTargetFrame;
+  mTargetList.ReplaceElementAt(aTargetFrame,0);
+  return NS_OK;
+}
+
+nsresult
+nsHTMLReflowCommand::AddTarget(nsIFrame* aTargetFrame)
+{
+  mTargetList.AppendElement(aTargetFrame);
   return NS_OK;
 }
 
@@ -250,7 +258,7 @@ PRBool
 nsHTMLReflowCommand::IsATarget(const nsIFrame* aFrame) const
 {
   // FIX!!!
-  if (aFrame != mTargetFrame)
+  if (mTargetList.IndexOf((void *)aFrame) == -1)
     return PR_FALSE;
   return PR_TRUE;
 }
