@@ -12,12 +12,11 @@
 # under the License.
 #
 # The Original Code is PerLDAP. The Initial Developer of the Original
-# Code is Netscape Communications Corp. and Clayton Donley. Portions
-# created by Netscape are Copyright (C) Netscape Communications
-# Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Code is Leif Hedstrom and Netscape Communications. Portions created
+# by Leif are Copyright (C) Leif Hedstrom, portions created by Netscape
+# are Copyright (C) Netscape Communications Corp. All Rights Reserved.
 #
-# Contributor(s):
+# Contributor(s):	Michelle Wyner <mwyner@perldap.org>
 #
 # DESCRIPTION
 #    This package defines an object class to manage one single LDAP
@@ -42,6 +41,32 @@ $VERSION = "2.0";
 
 
 #############################################################################
+# Initialize the object, from the list of attribute-value pairs. Note that
+# values can be either scalar, or anonymous arrays.
+#
+sub _initialize
+{
+  my ($self, %args) = @_;
+  local $_;
+
+  return unless defined($args{dn});
+
+  foreach (keys(%args))
+    {
+      if (lc($_) eq "dn")
+	{
+	  $self->setDN($args{$_});
+	}
+      else
+	{
+	  $self->values($_, ((ref($args{$_}) eq "ARRAY") ?
+			     @{$args{$_}} : $args{$_}));
+	}
+    }
+}
+
+
+#############################################################################
 # Constructor, for convenience.
 #
 sub new
@@ -51,6 +76,7 @@ sub new
 
   tie %entry, $class;
   $obj = bless \%entry, $class;
+  $obj->_initialize(@_) if (scalar(@_) > $[);
 
   return $obj;
 }
@@ -568,23 +594,19 @@ sub addDNValue
 sub values
 {
   my ($self, $attr) = (shift, lc shift);
-  my (@vals) = @_;
-
   local $_;
 
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if ($attr eq "dn");
 
   # Do we have a getValues() call? If so, quickly return the array!
-  if ($#vals < $[)
+  if (! scalar(@_))
     {
       return unless defined($self->{$attr});
       return @{$self->{$attr}};
     }
 
   # Nope, we have a setValues() call!
-  my (@vals) = @_;
-
   if (defined($self->{$attr}))
     {
       $self->{"_self_obj_"}->{"_${attr}_save_"} = [ @{$self->{$attr}} ]
@@ -596,7 +618,7 @@ sub values
 	unless defined($self->{"_${attr}_save_"});
     }
 
-  $self->{$attr} = [ @vals ];
+  $self->{$attr} = [ @_ ];
   $self->{"_${attr}_modified_"} = 1;
 
   delete $self->{"_${attr}_deleted_"}
