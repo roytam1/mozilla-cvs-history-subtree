@@ -229,6 +229,12 @@ public void setBounds(int x, int y, int w, int h)
 	super.setBounds(x, y, w, h);
     Rectangle boundsRect = new Rectangle(0, 0, w - 1, h - 1);
 	if (webShell != null) {
+		if (boundsRect.width < 1) {
+			boundsRect.width = 1;
+        }
+		if (boundsRect.height < 1) {
+			boundsRect.height = 1;
+		}
 		System.out.println("in BrowserControlCanvas setBounds: x = " + x + " y = " + y + " w = " + w + " h = " + h);
 		try {
             WindowControl wc = (WindowControl)

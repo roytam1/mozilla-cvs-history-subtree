@@ -32,7 +32,8 @@ import org.mozilla.util.ParameterCheck;
 
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.BrowserType;
-import org.mozilla.webclient.CurrentPage;
+import org.mozilla.webclient.CurrentPage2;
+import org.mozilla.webclient.Selection;
 import org.mozilla.webclient.WrapperFactory;
 
 import java.util.Properties;
@@ -40,6 +41,7 @@ import java.io.*;
 import java.net.*;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
 import ice.storm.*;
 
@@ -73,7 +75,22 @@ public void copyCurrentSelectionToSystemClipboard()
 {
     throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::copyCurrentSelectionToSystemClipboard has not yet been implemented.\n");
 }
-            
+
+public Selection getSelection() {
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::getSelection has not yet been implemented.\n");
+}           
+
+public void highlightSelection(Selection selection) {
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::highlightSelection has not yet been implemented.\n");
+}
+
+public void clearAllSelections() {
+    throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::clearAllSelections has not yet been implemented.\n");
+}
+
+ public void findInPage(String stringToFind, boolean forward, boolean matchCase)
+ {
+     throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::findInPage has not yet been implemented.\n");
 public void findInPage(String stringToFind, boolean forward, boolean matchCase)
 {
     throw new UnimplementedException("\nUnimplementedException -----\n API Function CurrentPage::findInPage has not yet been implemented.\n");
