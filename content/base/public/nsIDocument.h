@@ -231,9 +231,12 @@ public:
    */
   NS_IMETHOD GetParentDocument(nsIDocument** aParent) = 0;
   NS_IMETHOD SetParentDocument(nsIDocument* aParent) = 0;
-  NS_IMETHOD AddSubDocument(nsIDocument* aSubDoc) = 0;
-  NS_IMETHOD GetNumberOfSubDocuments(PRInt32* aCount) = 0;
-  NS_IMETHOD GetSubDocumentAt(PRInt32 aIndex, nsIDocument** aSubDoc) = 0;
+
+  NS_IMETHOD SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc) = 0;
+  NS_IMETHOD GetSubDocumentFor(nsIContent *aContent,
+                               nsIDocument** aSubDoc) = 0;
+  NS_IMETHOD FindContentForSubDocument(nsIDocument *aDocument,
+                                       nsIContent **aContent) = 0;
 
   /**
    * Return the root content object for this document.

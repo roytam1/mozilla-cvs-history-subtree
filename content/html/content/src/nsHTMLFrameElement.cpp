@@ -203,7 +203,16 @@ nsHTMLFrameElement::GetContentDocument(nsIDOMDocument** aContentDocument)
 
   nsCOMPtr<nsISupports> tmp;
 
-  presShell->GetSubShellFor(this, getter_AddRefs(tmp));
+
+
+
+
+  //  presShell->GetSubShellFor(this, getter_AddRefs(tmp));
+
+
+
+
+
   NS_ENSURE_TRUE(tmp, NS_OK);
 
   nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(tmp);

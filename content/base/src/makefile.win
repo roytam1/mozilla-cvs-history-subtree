@@ -43,6 +43,7 @@ REQUIRES	= xpcom \
 		  uconv \
 		  chrome \
 		  docshell \
+		  uriloader \
 		  pref \
 		  xpconnect \
 		  util \
@@ -92,9 +93,10 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsHTMLContentSerializer.obj	\
 	.\$(OBJDIR)\nsParserUtils.obj           \
 	.\$(OBJDIR)\nsPlainTextSerializer.obj   \
-	.\$(OBJDIR)\nsContentUtils.obj   \
-	.\$(OBJDIR)\nsScriptLoader.obj   \
-	.\$(OBJDIR)\nsStyleLinkElement.obj   \
+	.\$(OBJDIR)\nsContentUtils.obj		\
+	.\$(OBJDIR)\nsScriptLoader.obj		\
+	.\$(OBJDIR)\nsStyleLinkElement.obj	\
+	.\$(OBJDIR)\nsFrameLoader.obj		\
 	$(NULL)
 
 LINCS=-I..\..\html\base\src -I..\..\html\style\src \

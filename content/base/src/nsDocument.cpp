@@ -440,12 +440,19 @@ nsDocumentChildNodes::DropReference()
   mDocument = nsnull;
 }
 
+class SubDocMapEntry : public PLDHashEntryHdr
+{
+public:
+  nsIContent *mKey; // must be first, to look like PLDHashEntryStub
+  nsIDocument *mSubDocument;
+};
+
 // ==================================================================
 // =
 // ==================================================================
 
 nsDocument::nsDocument() : mIsGoingAway(PR_FALSE),
-                           mCSSLoader(nsnull)
+                           mCSSLoader(nsnull), mSubDocuments(nsnull)
 {
   NS_INIT_REFCNT();
 
@@ -476,6 +483,7 @@ nsDocument::nsDocument() : mIsGoingAway(PR_FALSE),
     mObservers.InsertElementAt(observer, 0);
 }
 
+
 nsDocument::~nsDocument()
 {
   // XXX Inform any remaining observers that we are going away.
@@ -501,11 +509,12 @@ nsDocument::~nsDocument()
 
   mParentDocument = nsnull;
 
-  // Delete references to sub-documents
-  indx = mSubDocuments.Count();
-  while (--indx >= 0) {
-    nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(indx);
-    NS_RELEASE(subdoc);
+  // Kill the subdocument map, doing this will release its strong
+  // references, if any.
+  if (mSubDocuments) {
+    PL_DHashTableDestroy(mSubDocuments);
+
+    mSubDocuments = nsnull;
   }
 
   mRootContent = nsnull;
@@ -650,11 +659,12 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
   NS_IF_RELEASE(mPrincipal);
   mDocumentLoadGroup = nsnull;
 
-  // Delete references to sub-documents
-  PRInt32 indx = mSubDocuments.Count();
-  while (--indx >= 0) {
-    nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(indx);
-    NS_RELEASE(subdoc);
+  // Delete references to sub-documents and kill the subdocument map,
+  // if any. It holds strong references
+  if (mSubDocuments) {
+    PL_DHashTableDestroy(mSubDocuments);
+
+    mSubDocuments = nsnull;
   }
 
   mRootContent = nsnull;
@@ -663,12 +673,12 @@ nsDocument::ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup)
   for (i = 0; i < count; i++) {
     nsCOMPtr<nsIContent> content(dont_AddRef(NS_STATIC_CAST(nsIContent*,mChildren->ElementAt(i))));
     content->SetDocument(nsnull, PR_TRUE, PR_TRUE);
-    ContentRemoved(nsnull, content, indx);
+    ContentRemoved(nsnull, content, i);
   }
   mChildren->Clear();
 
   // Delete references to style sheets
-  indx = mStyleSheets.Count();
+  PRInt32 indx = mStyleSheets.Count();
   while (--indx >= 0) {
     nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(indx);
     sheet->SetOwningDocument(nsnull);
@@ -1137,26 +1147,141 @@ nsDocument::SetParentDocument(nsIDocument* aParent)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsDocument::AddSubDocument(nsIDocument* aSubDoc)
+PR_STATIC_CALLBACK(void)
+SubDocClearEntry(PLDHashTable *table, PLDHashEntryHdr *entry)
 {
-  NS_ADDREF(aSubDoc);
-  mSubDocuments.AppendElement(aSubDoc);
+  SubDocMapEntry *e = NS_STATIC_CAST(SubDocMapEntry *, entry);
+
+  NS_IF_RELEASE(e->mSubDocument);
+}
+
+PR_STATIC_CALLBACK(void)
+SubDocInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry, const void *key)
+{
+  SubDocMapEntry *e =
+    NS_CONST_CAST(SubDocMapEntry *,
+                  NS_STATIC_CAST(const SubDocMapEntry *, entry));
+
+  e->mKey = nsnull;
+  e->mSubDocument = nsnull;
+}
+
+NS_IMETHODIMP
+nsDocument::SetSubDocumentFor(nsIContent *aContent, nsIDocument* aSubDoc)
+{
+  // Assert if aContent is not in mSubDocuments
+
+  if (!aSubDoc) {
+    // aSubDoc is nsnull, remove the mapping
+
+    if (mSubDocuments) {
+      PL_DHashTableOperate(mSubDocuments, aContent, PL_DHASH_REMOVE);
+    }
+  } else {
+    if (!mSubDocuments) {
+      // Create a new hashtable
+
+      static PLDHashTableOps hash_table_ops =
+      {
+        PL_DHashAllocTable,
+        PL_DHashFreeTable,
+        PL_DHashGetKeyStub,
+        PL_DHashVoidPtrKeyStub,
+        PL_DHashMatchEntryStub,
+        PL_DHashMoveEntryStub,
+        SubDocClearEntry,
+        PL_DHashFinalizeStub,
+        SubDocInitEntry
+      };
+
+      mSubDocuments = PL_NewDHashTable(&hash_table_ops, nsnull,
+                                       sizeof(SubDocMapEntry), 16);
+      if (!mSubDocuments) {
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+    }
+
+    // Add a mapping to the hash table
+    SubDocMapEntry *entry =
+      NS_STATIC_CAST(SubDocMapEntry*,
+                     PL_DHashTableOperate(mSubDocuments, aContent,
+                                          PL_DHASH_ADD));
+
+    if (!entry) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    NS_IF_RELEASE(entry->mSubDocument);
+    entry->mSubDocument = aSubDoc;
+    NS_ADDREF(entry->mSubDocument);
+  }
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsDocument::GetNumberOfSubDocuments(PRInt32* aCount)
+nsDocument::GetSubDocumentFor(nsIContent *aContent, nsIDocument** aSubDoc)
 {
-  *aCount = mSubDocuments.Count();
+  *aSubDoc = nsnull;
+
+  if (mSubDocuments) {
+    SubDocMapEntry *entry =
+      NS_STATIC_CAST(SubDocMapEntry*,
+                     PL_DHashTableOperate(mSubDocuments, aContent,
+                                          PL_DHASH_LOOKUP));
+
+    if (PL_DHASH_ENTRY_IS_LIVE(entry)) {
+      *aSubDoc = entry->mSubDocument;
+      NS_ADDREF(*aSubDoc);
+    }
+  }
+
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsDocument::GetSubDocumentAt(PRInt32 aIndex, nsIDocument** aSubDoc)
+struct FindContentData
 {
-  *aSubDoc = (nsIDocument*) mSubDocuments.SafeElementAt(aIndex);
-  NS_IF_ADDREF(*aSubDoc);
+  FindContentData(nsIDocument *aSubDoc)
+    : mSubDocument(aSubDoc), mResult(nsnull)
+  {
+  }
+
+  nsISupports *mSubDocument;
+  nsIContent *mResult;
+};
+
+PR_STATIC_CALLBACK(PLDHashOperator)
+FindContentEnumerator(PLDHashTable *table, PLDHashEntryHdr *hdr,
+                      PRUint32 number, void *arg)
+{
+  SubDocMapEntry *entry = NS_STATIC_CAST(SubDocMapEntry*, hdr);
+  FindContentData *data = NS_STATIC_CAST(FindContentData*, arg);
+
+  if (entry->mSubDocument == data->mSubDocument) {
+    data->mResult = entry->mKey;
+
+    return PL_DHASH_STOP;
+  }
+
+  return PL_DHASH_NEXT;
+}
+
+NS_IMETHODIMP
+nsDocument::FindContentForSubDocument(nsIDocument *aDocument,
+                                      nsIContent **aContent)
+{
+  NS_ENSURE_ARG_POINTER(aDocument);
+
+  if (!mSubDocuments) {
+    *aContent = nsnull;
+    return NS_OK;
+  }
+
+  FindContentData data(aDocument);
+  PL_DHashTableEnumerate(mSubDocuments, FindContentEnumerator, &data);
+
+  *aContent = data.mResult;
+  NS_IF_ADDREF(*aContent);
 
   return NS_OK;
 }
@@ -1710,23 +1835,18 @@ nsDocument::EndLoad()
     if (docShellAsItem) {
       docShellAsItem->GetSameTypeParent(getter_AddRefs(docShellParent));
 
-      nsCOMPtr<nsIDocument> doc;
+      nsCOMPtr<nsIDocument> parent_doc;
 
-      GetDocumentFromDocShellTreeItem(docShellParent, getter_AddRefs(doc));
+      GetDocumentFromDocShellTreeItem(docShellParent,
+                                      getter_AddRefs(parent_doc));
 
-      if (doc) {
-        nsCOMPtr<nsIPresShell> shell;
-        doc->GetShellAt(0, getter_AddRefs(shell));
+      if (parent_doc) {
+        nsCOMPtr<nsIContent> target_content;
 
-        if (shell) {
-          nsCOMPtr<nsIContent> target_content;
+        parent_doc->FindContentForSubDocument(this,
+                                              getter_AddRefs(target_content));
 
-          nsCOMPtr<nsISupports> docshell_identity(docShell);
-          shell->FindContentForShell(docshell_identity,
-                                     getter_AddRefs(target_content));
-
-          target_frame = do_QueryInterface(target_content);
-        }
+        target_frame = do_QueryInterface(target_content);
       }
     }
   }
@@ -2114,8 +2234,8 @@ nsDocument::GetDocumentElement(nsIDOMElement** aDocumentElement)
 
   nsresult res = NS_OK;
 
-  if (nsnull != mRootContent) {
-    res = mRootContent->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aDocumentElement);
+  if (mRootContent) {
+    res = CallQueryInterface(mRootContent, aDocumentElement);
     NS_ASSERTION(NS_OK == res, "Must be a DOM Element");
   } else {
     *aDocumentElement = nsnull;

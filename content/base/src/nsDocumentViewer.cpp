@@ -92,6 +92,7 @@
 #include "nsIDocShellTreeNode.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocShell.h"
+#include "nsIBaseWindow.h"
 #include "nsIFrameDebug.h"
 #include "nsILayoutHistoryState.h"
 #include "nsLayoutAtoms.h"
@@ -922,7 +923,8 @@ DocumentViewerImpl::DocumentViewerImpl()
 #endif
 }
 
-void DocumentViewerImpl::PrepareToStartLoad() {
+void DocumentViewerImpl::PrepareToStartLoad()
+{
   mEnableRendering  = PR_TRUE;
   mStopped          = PR_FALSE;
   mLoaded           = PR_FALSE;
@@ -960,12 +962,14 @@ NS_IMPL_ISUPPORTS6(DocumentViewerImpl,
 DocumentViewerImpl::~DocumentViewerImpl()
 {
   NS_ASSERTION(!mDocument, "User did not call nsIContentViewer::Close");
-  if (mDocument)
+  if (mDocument) {
     Close();
+  }
 
   NS_ASSERTION(!mPresShell, "User did not call nsIContentViewer::Destroy");
-  if (mPresShell)
+  if (mPresShell) {
     Destroy();
+  }
 
   // XXX(?) Revoke pending invalidate events
 
@@ -993,7 +997,7 @@ DocumentViewerImpl::LoadStart(nsISupports *aDoc)
 
   nsresult rv;
   if (!mDocument) {
-    mDocument = do_QueryInterface(aDoc,&rv);
+    mDocument = do_QueryInterface(aDoc, &rv);
   }
   else if (mDocument == aDoc) {
     // Reset the document viewer's state back to what it was 
@@ -1047,14 +1051,15 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 #endif
 
   PRBool makeCX = PR_FALSE;
-  if (!mPresContext) {
+  if (aParentWidget && !mPresContext) {
     // Create presentation context
     if (mIsCreatingPrintPreview) {
-      mPresContext = do_CreateInstance(kPrintPreviewContextCID,&rv);
+      mPresContext = do_CreateInstance(kPrintPreviewContextCID, &rv);
     } else {
-      mPresContext = do_CreateInstance(kGalleyContextCID,&rv);
+      mPresContext = do_CreateInstance(kGalleyContextCID, &rv);
     }
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv))
+      return rv;
 
     mPresContext->Init(aDeviceContext); 
 #ifdef NS_PRINT_PREVIEW
@@ -1066,136 +1071,134 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 
   nsCOMPtr<nsIInterfaceRequestor> requestor(do_QueryInterface(mContainer));
   if (requestor) {
-    nsCOMPtr<nsILinkHandler> linkHandler;
-    requestor->GetInterface(NS_GET_IID(nsILinkHandler), 
-       getter_AddRefs(linkHandler));
-    mPresContext->SetContainer(mContainer);
-    mPresContext->SetLinkHandler(linkHandler);
+    if (mPresContext) {
+      nsCOMPtr<nsILinkHandler> linkHandler;
+      requestor->GetInterface(NS_GET_IID(nsILinkHandler), 
+                              getter_AddRefs(linkHandler));
+      mPresContext->SetContainer(mContainer);
+      mPresContext->SetLinkHandler(linkHandler);
+    }
 
     if (!mIsDoingPrintPreview) {
       // Set script-context-owner in the document
-      nsCOMPtr<nsIScriptGlobalObjectOwner> owner;
-      requestor->GetInterface(NS_GET_IID(nsIScriptGlobalObjectOwner),
-                              getter_AddRefs(owner));
 
-      if (owner) {
-        nsCOMPtr<nsIScriptGlobalObject> global;
-        owner->GetScriptGlobalObject(getter_AddRefs(global));
+      nsCOMPtr<nsIScriptGlobalObject> global;
+      requestor->GetInterface(NS_GET_IID(nsIScriptGlobalObject),
+                              getter_AddRefs(global));
 
-        if (global) {
-          mDocument->SetScriptGlobalObject(global);
-          nsCOMPtr<nsIDOMDocument> domdoc(do_QueryInterface(mDocument));
+      if (global) {
+        mDocument->SetScriptGlobalObject(global);
+        nsCOMPtr<nsIDOMDocument> domdoc(do_QueryInterface(mDocument));
 
-          if (domdoc) {
-            global->SetNewDocument(domdoc, PR_TRUE);
-          }
+        if (domdoc) {
+          global->SetNewDocument(domdoc, PR_TRUE);
         }
       }
     }
   }
 
-  // Create the ViewManager and Root View...
-  rv = MakeWindow(aParentWidget, aBounds);
-  Hide();
+  if (mPresContext) {
+    // Create the ViewManager and Root View...
+    rv = MakeWindow(aParentWidget, aBounds);
+    NS_ENSURE_SUCCESS(rv, rv);
+    Hide();
 
-  if (NS_FAILED(rv)) return rv;
-
-  // Create the style set...
-  nsIStyleSet* styleSet;
-  rv = CreateStyleSet(mDocument, &styleSet);
-  if (NS_FAILED(rv)) return rv;
+    // Create the style set...
+    nsCOMPtr<nsIStyleSet> styleSet;
+    rv = CreateStyleSet(mDocument, getter_AddRefs(styleSet));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Now make the shell for the document
     rv = mDocument->CreateShell(mPresContext, mViewManager, styleSet,
                                 getter_AddRefs(mPresShell));
-    NS_RELEASE(styleSet);
-  if (NS_FAILED(rv)) return rv;
-  mPresShell->BeginObservingDocument();
+    NS_ENSURE_SUCCESS(rv, rv);
 
-      // Initialize our view manager
-      nsRect bounds;
-      mWindow->GetBounds(bounds);
-      nscoord width = bounds.width;
-      nscoord height = bounds.height;
-      float p2t;
-      mPresContext->GetPixelsToTwips(&p2t);
-      width = NSIntPixelsToTwips(width, p2t);
-      height = NSIntPixelsToTwips(height, p2t);
-      mViewManager->DisableRefresh();
-      mViewManager->SetWindowDimensions(width, height);
+    mPresShell->BeginObservingDocument();
 
-      /* Setup default view manager background color */
-      /* This may be overridden by the docshell with the background color for the
-         last document loaded into the docshell */
-      nscolor bgcolor = NS_RGB(0, 0, 0);
-      mPresContext->GetDefaultBackgroundColor(&bgcolor);
-      mViewManager->SetDefaultBackgroundColor(bgcolor);
+    // Initialize our view manager
+    nsRect bounds;
+    mWindow->GetBounds(bounds);
 
-      if (!makeCX) {
-        // Make shell an observer for next time
-        // XXX - we observe the docuement always, see above after preshell is created
-        // mPresShell->BeginObservingDocument();
+    float p2t;
 
-//XXX I don't think this should be done *here*; and why paint nothing
-//(which turns out to cause black flashes!)???
-        // Resize-reflow this time
-        mPresShell->InitialReflow(width, height);
+    mPresContext->GetPixelsToTwips(&p2t);
 
-        // Now trigger a refresh
-        if (mEnableRendering) {
-          mViewManager->EnableRefresh(NS_VMREFRESH_IMMEDIATE);
-        }
+    nscoord width = NSIntPixelsToTwips(bounds.width, p2t);
+    nscoord height = NSIntPixelsToTwips(bounds.height, p2t);
+
+    mViewManager->DisableRefresh();
+    mViewManager->SetWindowDimensions(width, height);
+
+    // Setup default view manager background color */
+
+    // This may be overridden by the docshell with the background color
+    // for the last document loaded into the docshell */
+    nscolor bgcolor = NS_RGB(0, 0, 0);
+    mPresContext->GetDefaultBackgroundColor(&bgcolor);
+    mViewManager->SetDefaultBackgroundColor(bgcolor);
+
+    if (!makeCX) {
+      // Make shell an observer for next time
+
+      // XXX - we observe the docuement always, see above after preshell
+      // is created
+
+      // mPresShell->BeginObservingDocument();
+
+      //XXX I don't think this should be done *here*; and why paint nothing
+      //(which turns out to cause black flashes!)???
+
+      // Resize-reflow this time
+      mPresShell->InitialReflow(width, height);
+
+      // Now trigger a refresh
+      if (mEnableRendering) {
+        mViewManager->EnableRefresh(NS_VMREFRESH_IMMEDIATE);
       }
+    }
 
-  // now register ourselves as a selection listener, so that we get called
-  // when the selection changes in the window
-  nsDocViewerSelectionListener *selectionListener;
-  NS_NEWXPCOM(selectionListener, nsDocViewerSelectionListener);
-  if (!selectionListener) return NS_ERROR_OUT_OF_MEMORY;
-  selectionListener->Init(this);
-  
-  // this is the owning reference. The nsCOMPtr will take care of releasing
-  // our ref to the listener on destruction.
-  NS_ADDREF(selectionListener);
-  mSelectionListener = do_QueryInterface(selectionListener);
-  NS_RELEASE(selectionListener);
-  if (NS_FAILED(rv)) return rv;
-  
-  nsCOMPtr<nsISelection> selection;
-  rv = GetDocumentSelection(getter_AddRefs(selection));
-  if (NS_FAILED(rv)) return rv;
-  
-  nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
-  rv = selPrivate->AddSelectionListener(mSelectionListener);
-  if (NS_FAILED(rv)) return rv;
-  
-  //focus listener
-  // now register ourselves as a focus listener, so that we get called
-  // when the focus changes in the window
-  nsDocViewerFocusListener *focusListener;
-  NS_NEWXPCOM(focusListener, nsDocViewerFocusListener);
-  if (!focusListener) return NS_ERROR_OUT_OF_MEMORY;
-  focusListener->Init(this);
-  
-  // this is the owning reference. The nsCOMPtr will take care of releasing
-  // our ref to the listener on destruction.
-  NS_ADDREF(focusListener);
-  mFocusListener = do_QueryInterface(focusListener);
-  NS_RELEASE(focusListener);
-  if (NS_FAILED(rv)) 
-    return rv;
+    // now register ourselves as a selection listener, so that we get called
+    // when the selection changes in the window
+    nsDocViewerSelectionListener *selectionListener =
+      new nsDocViewerSelectionListener();
+    NS_ENSURE_TRUE(selectionListener, NS_ERROR_OUT_OF_MEMORY);
 
-  if(mDocument)
-  {
-    // get the DOM event receiver
-    nsCOMPtr<nsIDOMEventReceiver> erP (do_QueryInterface(mDocument, &rv));
-    if(NS_FAILED(rv)) 
+    selectionListener->Init(this);
+
+    // mSelectionListener is a owning reference
+    mSelectionListener = do_QueryInterface(selectionListener);
+  
+    nsCOMPtr<nsISelection> selection;
+    rv = GetDocumentSelection(getter_AddRefs(selection));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
+    rv = selPrivate->AddSelectionListener(mSelectionListener);
+    if (NS_FAILED(rv))
       return rv;
-    if(!erP)
-      return NS_ERROR_FAILURE;
 
-    rv = erP->AddEventListenerByIID(mFocusListener, NS_GET_IID(nsIDOMFocusListener));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+    //focus listener
+    // now register ourselves as a focus listener, so that we get called
+    // when the focus changes in the window
+    nsDocViewerFocusListener *focusListener;
+    NS_NEWXPCOM(focusListener, nsDocViewerFocusListener);
+    NS_ENSURE_TRUE(focusListener, NS_ERROR_OUT_OF_MEMORY);
+
+    focusListener->Init(this);
+
+    // mFocusListener is a strong reference
+    mFocusListener = do_QueryInterface(focusListener);
+
+    if(mDocument) {
+      // get the DOM event receiver
+      nsCOMPtr<nsIDOMEventReceiver> erP(do_QueryInterface(mDocument));
+
+      if (erP) {
+        rv = erP->AddEventListenerByIID(mFocusListener,
+                                        NS_GET_IID(nsIDOMFocusListener));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+      }
+    }
   }
 
   return rv;
@@ -1221,14 +1224,14 @@ DocumentViewerImpl::LoadComplete(nsresult aStatus)
   rv = mDocument->GetScriptGlobalObject(getter_AddRefs(global));
 
   // Fail if no ScriptGlobalObject is available...
-  NS_ASSERTION(global, "nsIScriptGlobalObject not set for document!");
-  if (!global) return NS_ERROR_NULL_POINTER;
+  NS_ENSURE_TRUE(global, NS_ERROR_NULL_POINTER);
 
   mLoaded = PR_TRUE;
 
-  /* We need to protect ourself against auto-destruction in case the window is closed
-     while processing the OnLoad event.
-     See bug http://bugzilla.mozilla.org/show_bug.cgi?id=78445 for more explanation.
+  /* We need to protect ourself against auto-destruction in case the
+     window is closed while processing the OnLoad event.  See bug
+     http://bugzilla.mozilla.org/show_bug.cgi?id=78445 for more
+     explanation.
   */
   NS_ADDREF_THIS();
 
@@ -1244,29 +1247,33 @@ DocumentViewerImpl::LoadComplete(nsresult aStatus)
 #ifdef MOZ_TIMELINE
     // if navigator.xul's load is complete, the main nav window is visible
     // mark that point.
+
     if (mDocument) {
       //printf("DEBUG: getting uri from document (%p)\n", mDocument.get());
+
       nsCOMPtr<nsIURI> uri;
       mDocument->GetDocumentURL(getter_AddRefs(uri));
-      if (uri.get() != nsnull) {
+
+      if (uri) {
         //printf("DEBUG: getting spec fro uri (%p)\n", uri.get());
-        char *spec = nsnull;
-        uri->GetSpec(&spec);
-        if (spec && !strcmp(spec, "chrome://navigator/content/navigator.xul")) {
+        nsXPIDLCString spec;
+        uri->GetSpec(getter_Copies(spec));
+        if (spec.get() &&
+            !strcmp(spec.get(), "chrome://navigator/content/navigator.xul")) {
           NS_TIMELINE_MARK("Navigator Window visible now");
         }
-        CRTFREEIF(spec);
       }
     }
 #endif /* MOZ_TIMELINE */
   } else {
     // XXX: Should fire error event to the document...
   }
-  
+
   // Now that the document has loaded, we can tell the presshell
   // to unsuppress painting.
-  if (mPresShell && !mStopped)
+  if (mPresShell && !mStopped) {
     mPresShell->UnsuppressPainting();
+  }
 
   NS_RELEASE_THIS();
 
@@ -1318,8 +1325,6 @@ DocumentViewerImpl::Close()
   // for an object that can be switched in and out so that we don't need
   // to disable scripts during paint suppression.
 
-  nsresult rv;
-
   if (mDocument) {
 #ifdef NS_PRINT_PREVIEW
     // Turn scripting back on 
@@ -1333,20 +1338,27 @@ DocumentViewerImpl::Close()
     // in the DocViewer Init
     nsCOMPtr<nsIScriptGlobalObject> globalObject;
     mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
+
     if (globalObject) {
       globalObject->SetNewDocument(nsnull, PR_TRUE);
     }
+
     // out of band cleanup of webshell
     mDocument->SetScriptGlobalObject(nsnull);
+
     if (mFocusListener) {
       // get the DOM event receiver
-      nsCOMPtr<nsIDOMEventReceiver> erP( do_QueryInterface(mDocument, &rv) );
-      if(NS_SUCCEEDED(rv) && erP)
-        erP->RemoveEventListenerByIID(mFocusListener, NS_GET_IID(nsIDOMFocusListener));
+      nsCOMPtr<nsIDOMEventReceiver> erP(do_QueryInterface(mDocument));
+
+      if(erP) {
+        erP->RemoveEventListenerByIID(mFocusListener,
+                                      NS_GET_IID(nsIDOMFocusListener));
+      }
     }
- }
+  }
 
   mDocument = nsnull;
+
   return NS_OK;
 }
 
@@ -1394,11 +1406,15 @@ DocumentViewerImpl::Destroy()
   if (mPresShell) {
     // Break circular reference (or something)
     mPresShell->EndObservingDocument();
+
     nsCOMPtr<nsISelection> selection;
-    nsresult rv = GetDocumentSelection(getter_AddRefs(selection));
+    GetDocumentSelection(getter_AddRefs(selection));
+
     nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
-    if (NS_SUCCEEDED(rv) && selPrivate && mSelectionListener) 
+
+    if (selPrivate && mSelectionListener) 
       selPrivate->RemoveSelectionListener(mSelectionListener);
+
     mPresShell->Destroy();
     mPresShell = nsnull;
   }
@@ -1437,11 +1453,13 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
   // Assumptions:
   //
   // 1) this document viewer has been initialized with a call to Init().
-  // 2) the stylesheets associated with the document have been added to the document.
+  // 2) the stylesheets associated with the document have been added
+  // to the document.
 
-  // XXX Right now, this method assumes that the layout of the current document
-  // hasn't started yet.  More cleanup will probably be necessary to make this
-  // method work for the case when layout *has* occurred for the current document.
+  // XXX Right now, this method assumes that the layout of the current
+  // document hasn't started yet.  More cleanup will probably be
+  // necessary to make this method work for the case when layout *has*
+  // occurred for the current document.
   // That work can happen when and if it is needed.
   
   nsresult rv;
@@ -1455,46 +1473,66 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
   mDocument = newDoc;
 
   // 1) Set the script global object on the new document
-  nsCOMPtr<nsIInterfaceRequestor> requestor(do_QueryInterface(mContainer));
-  if (requestor) {
-    nsCOMPtr<nsIScriptGlobalObjectOwner> owner;
-    requestor->GetInterface(NS_GET_IID(nsIScriptGlobalObjectOwner),
-       getter_AddRefs(owner));
-    if (nsnull != owner) {
-      nsCOMPtr<nsIScriptGlobalObject> global;
-      rv = owner->GetScriptGlobalObject(getter_AddRefs(global));
-      if (NS_SUCCEEDED(rv) && (nsnull != global)) {
-        mDocument->SetScriptGlobalObject(global);
-        global->SetNewDocument(aDocument, PR_TRUE);
-      }
+  nsCOMPtr<nsIScriptGlobalObject> global(do_GetInterface(mContainer));
+
+  if (global) {
+    mDocument->SetScriptGlobalObject(global);
+    global->SetNewDocument(aDocument, PR_TRUE);
+
+    nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(global));
+
+    if (win) {
+      nsCOMPtr<nsIDOMDocument> dom_doc;
+      win->GetDocument(getter_AddRefs(dom_doc));
+
+      nsCOMPtr<nsIDocument> parent_doc(do_QueryInterface(dom_doc));
+
+      NS_ENSURE_TRUE(parent_doc, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsIDOMElement> frame_element;
+      win->GetFrameElement(getter_AddRefs(frame_element));
+
+      nsCOMPtr<nsIContent> content(do_QueryInterface(frame_element));
+      NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
+
+      parent_doc->SetSubDocumentFor(content, mDocument);
     }
-  }  
+  }
 
-  // 2) Create a new style set for the document
-  nsCOMPtr<nsIStyleSet> styleSet;
-  rv = CreateStyleSet(mDocument, getter_AddRefs(styleSet));
-  if (NS_FAILED(rv)) return rv;
+  // 2) Replace the current pres shell with a new shell for the new document
 
-  // 3) Replace the current pres shell with a new shell for the new document 
-  mPresShell->EndObservingDocument();
-  mPresShell->Destroy();
+  if (mPresShell) {
+    mPresShell->EndObservingDocument();
+    mPresShell->Destroy();
 
-  mPresShell = nsnull;
-  rv = newDoc->CreateShell(mPresContext, mViewManager, styleSet,
-                           getter_AddRefs(mPresShell));
-  if (NS_FAILED(rv)) return rv;
+    mPresShell = nsnull;
+  }
 
-  mPresShell->BeginObservingDocument();
+  // And if we're already given a presshell...
+  if (mPresContext) {
+    // 3) Create a new style set for the document
 
-  // 4) Register the focus listener on the new document
-  if(mDocument)
-  {    
+    nsCOMPtr<nsIStyleSet> styleSet;
+    rv = CreateStyleSet(mDocument, getter_AddRefs(styleSet));
+    if (NS_FAILED(rv))
+      return rv;
+
+    rv = newDoc->CreateShell(mPresContext, mViewManager, styleSet,
+                             getter_AddRefs(mPresShell));
+    if (NS_FAILED(rv)) return rv;
+
+    mPresShell->BeginObservingDocument();
+
+    // 4) Register the focus listener on the new document
+
     nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mDocument, &rv);
-    if(NS_FAILED(rv) || !erP)
-      return rv ? rv : NS_ERROR_FAILURE;
+    NS_WARN_IF_FALSE(erP, "No event receiver in document!");
 
-    rv = erP->AddEventListenerByIID(mFocusListener, NS_GET_IID(nsIDOMFocusListener));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+    if(erP) {
+      rv = erP->AddEventListenerByIID(mFocusListener,
+                                      NS_GET_IID(nsIDOMFocusListener));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+    }
   }
 
   return rv;
@@ -1631,7 +1669,204 @@ DocumentViewerImpl::Show(void)
 
   if (mWindow) {
     mWindow->Show(PR_TRUE);
+
+    if (!mDeviceContext) {
+      mDeviceContext = dont_AddRef(mWindow->GetDeviceContext());
+    }
+
+    if (!mViewManager) {
+      mViewManager = do_CreateInstance(kViewManagerCID);
+      NS_ENSURE_TRUE(mViewManager, NS_ERROR_NOT_AVAILABLE);
+    }
   }
+
+  if (mDocument && !mPresShell && mWindow && mDeviceContext) {
+    nsresult rv;
+
+#ifdef NS_PRINT_PREVIEW
+    // Clear PrintPreview Alternate Device
+    if (mDeviceContext) {
+      mDeviceContext->SetAltDevice(nsnull);
+    }
+#endif
+
+    PRBool makeCX = PR_FALSE;
+
+    // Create presentation context
+    if (mIsCreatingPrintPreview) {
+      NS_ERROR("Whoa, we should not get here!");
+
+      return NS_ERROR_UNEXPECTED;
+    }
+
+    mPresContext = do_CreateInstance(kGalleyContextCID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mPresContext->Init(mDeviceContext); 
+
+    nsRect tbounds;
+    mWindow->GetBounds(tbounds);
+
+    float p2t;
+    mPresContext->GetPixelsToTwips(&p2t);
+    tbounds *= p2t;
+
+    // Initialize the view manager with an offset. This allows the
+    // viewmanager to manage a coordinate space offset from (0,0)
+    rv = mViewManager->Init(mDeviceContext);
+    if (NS_FAILED(rv))
+      return rv;
+
+    rv = mViewManager->SetWindowOffset(tbounds.x, tbounds.y);
+    if (NS_FAILED(rv))
+      return rv;
+
+    // Reset the bounds offset so the root view is set to 0,0. The
+    // offset is specified in nsIViewManager::Init above.
+    // Besides, layout will reset the root view to (0,0) during reflow,
+    // so changing it to 0,0 eliminates placing the root view in the
+    // wrong place initially.
+    tbounds.x = 0;
+    tbounds.y = 0;
+
+    // Create a child window of the parent that is our "root
+    // view/window" Create a view
+    rv = CallCreateInstance(kViewCID, &mView);
+    if (NS_FAILED(rv))
+      return rv;
+    rv = mView->Init(mViewManager, tbounds, nsnull);
+    if (NS_FAILED(rv))
+      return rv;
+
+    rv = mView->CreateWidget(kWidgetCID, nsnull,
+                             /* XXX PARENT!!! */ mWindow->GetNativeData(NS_NATIVE_WIDGET),
+                             PR_TRUE, PR_FALSE);
+
+    if (rv != NS_OK)
+      return rv;
+
+    // Setup hierarchical relationship in view manager
+    mViewManager->SetRootView(mView);
+
+    mView->GetWidget(*getter_AddRefs(mWindow));
+
+    nsCOMPtr<nsIInterfaceRequestor> requestor(do_QueryInterface(mContainer));
+    if (requestor) {
+      if (mPresContext) {
+        nsCOMPtr<nsILinkHandler> linkHandler;
+        requestor->GetInterface(NS_GET_IID(nsILinkHandler), 
+                                getter_AddRefs(linkHandler));
+        mPresContext->SetContainer(mContainer);
+        mPresContext->SetLinkHandler(linkHandler);
+      }
+    }
+
+    if (mPresContext) {
+      Hide();
+
+      // Create the style set...
+      nsCOMPtr<nsIStyleSet> styleSet;
+      rv = CreateStyleSet(mDocument, getter_AddRefs(styleSet));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Now make the shell for the document
+      rv = mDocument->CreateShell(mPresContext, mViewManager, styleSet,
+                                  getter_AddRefs(mPresShell));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      mPresShell->BeginObservingDocument();
+
+      // Initialize our view manager
+      nsRect bounds;
+      mWindow->GetBounds(bounds);
+
+      float p2t;
+
+      mPresContext->GetPixelsToTwips(&p2t);
+
+      nscoord width = NSIntPixelsToTwips(bounds.width, p2t);
+      nscoord height = NSIntPixelsToTwips(bounds.height, p2t);
+
+      mViewManager->DisableRefresh();
+      mViewManager->SetWindowDimensions(width, height);
+
+      // Setup default view manager background color */
+
+      // This may be overridden by the docshell with the background color
+      // for the last document loaded into the docshell */
+      nscolor bgcolor = NS_RGB(0, 0, 0);
+      mPresContext->GetDefaultBackgroundColor(&bgcolor);
+      mViewManager->SetDefaultBackgroundColor(bgcolor);
+
+      // Resize-reflow the already loaded document
+      mPresShell->InitialReflow(width, height);
+
+      // Now trigger a refresh
+      if (mEnableRendering) {
+        mViewManager->EnableRefresh(NS_VMREFRESH_IMMEDIATE);
+      }
+
+      // now register ourselves as a selection listener, so that we
+      // get called when the selection changes in the window
+      nsDocViewerSelectionListener *selectionListener =
+        new nsDocViewerSelectionListener();
+      NS_ENSURE_TRUE(selectionListener, NS_ERROR_OUT_OF_MEMORY);
+
+      selectionListener->Init(this);
+
+      // mSelectionListener is a owning reference
+      mSelectionListener = do_QueryInterface(selectionListener);
+
+      nsCOMPtr<nsISelection> selection;
+      rv = GetDocumentSelection(getter_AddRefs(selection));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
+      rv = selPrivate->AddSelectionListener(mSelectionListener);
+      if (NS_FAILED(rv)) return rv;
+
+      // focus listener
+      // now register ourselves as a focus listener, so that we get
+      // called when the focus changes in the window
+      nsDocViewerFocusListener *focusListener;
+      NS_NEWXPCOM(focusListener, nsDocViewerFocusListener);
+      NS_ENSURE_TRUE(focusListener, NS_ERROR_OUT_OF_MEMORY);
+
+      focusListener->Init(this);
+
+      // mFocusListener is a strong reference
+      mFocusListener = do_QueryInterface(focusListener);
+
+      if(mDocument) {
+        // get the DOM event receiver
+        nsCOMPtr<nsIDOMEventReceiver> erP (do_QueryInterface(mDocument, &rv));
+        if(NS_FAILED(rv)) 
+          return rv;
+        if(!erP)
+          return NS_ERROR_FAILURE;
+
+        rv = erP->AddEventListenerByIID(mFocusListener,
+                                        NS_GET_IID(nsIDOMFocusListener));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+      }
+    }
+
+    // If we get here the document load has already started and the
+    // window is shown because some JS on the page caused it to be
+    // shown...
+
+
+
+
+
+
+    // check if paints are supressed in the parent presshell before
+    // doing this?
+
+
+    mPresShell->UnsuppressPainting();
+  }
+
   return NS_OK;
 }
 
@@ -1643,6 +1878,72 @@ DocumentViewerImpl::Hide(void)
   if (mWindow) {
     mWindow->Show(PR_FALSE);
   }
+
+  if (!mPresShell) {
+    return NS_OK;
+  }
+
+  // Avoid leaking the old viewer.
+  if (mPreviousViewer) {
+    mPreviousViewer->Destroy();
+    mPreviousViewer = nsnull;
+  }
+
+  if (mDeviceContext)
+    mDeviceContext->FlushFontCache();
+
+  // Break circular reference (or something)
+  mPresShell->EndObservingDocument();
+  nsCOMPtr<nsISelection> selection;
+  nsresult rv = GetDocumentSelection(getter_AddRefs(selection));
+  nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
+  if (NS_SUCCEEDED(rv) && selPrivate && mSelectionListener) 
+    selPrivate->RemoveSelectionListener(mSelectionListener);
+  mPresShell->Destroy();
+
+  mPresShell = nsnull;
+  mPresContext  = nsnull;
+  mViewManager  = nsnull;
+  mWindow       = nsnull;
+
+  nsCOMPtr<nsIBaseWindow> base_win(do_QueryInterface(mContainer));
+
+  if (base_win) {
+    base_win->SetParentWidget(nsnull);
+  }
+  
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::GetWidget(nsIWidget **aWidget)
+{
+  *aWidget = mWindow;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::SetWidget(nsIWidget *aWidget)
+{
+  mWindow = aWidget;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::GetDeviceContext(nsIDeviceContext **aDeviceContext)
+{
+  *aDeviceContext = mDeviceContext;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::SetDeviceContext(nsIDeviceContext *aDeviceContext)
+{
+  mDeviceContext = aDeviceContext;
+
   return NS_OK;
 }
 
@@ -2840,15 +3141,41 @@ DocumentViewerImpl::MapContentForPO(PrintObject*   aRootObject,
   NS_ASSERTION(aPresShell, "Pointer is null!");
   NS_ASSERTION(aContent, "Pointer is null!");
 
-  nsCOMPtr<nsISupports> supps;
-  aPresShell->GetSubShellFor(aContent, getter_AddRefs(supps));
-  if (supps) {
-    nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(supps));
+  nsCOMPtr<nsIDocument> doc;
+  aContent->GetDocument(*getter_AddRefs(doc));
+
+  if (!doc) {
+    NS_ERROR("No document!");
+
+    return;
+  }
+
+  nsCOMPtr<nsIDocument> subDoc;
+  doc->GetSubDocumentFor(aContent, getter_AddRefs(subDoc));
+
+  if (subDoc) {
+    nsCOMPtr<nsIPresShell> presShell;
+    subDoc->GetShellAt(0, getter_AddRefs(presShell));
+
+    nsCOMPtr<nsIPresContext> presContext;
+    nsCOMPtr<nsIWebShell> webShell;
+
+    if (presShell) {
+      presShell->GetPresContext(getter_AddRefs(presContext));
+
+      if (presContext) {
+        nsCOMPtr<nsISupports> container;
+        presContext->GetContainer(getter_AddRefs(container));
+
+        webShell = do_QueryInterface(container);
+      }
+    }
+
     if (webShell) {
       PrintObject * po = FindPrintObjectByWS(aRootObject, webShell);
       NS_ASSERTION(po, "PO can't be null!");
 
-      if (po != nsnull) {
+      if (po) {
         po->mContent  = aContent;
 
         // Now, "type" the PO 
@@ -4187,11 +4514,11 @@ DocumentViewerImpl::MakeWindow(nsIWidget* aParentWidget,
   if (NS_FAILED(rv))
     return rv;
 
-   // Reset the bounds offset so the root view is set to 0,0. The offset is
-   // specified in nsIViewManager::Init above. 
-   // Besides, layout will reset the root view to (0,0) during reflow, 
-   // so changing it to 0,0 eliminates placing
-   // the root view in the wrong place initially.
+  // Reset the bounds offset so the root view is set to 0,0. The
+  // offset is specified in nsIViewManager::Init above.
+  // Besides, layout will reset the root view to (0,0) during reflow,
+  // so changing it to 0,0 eliminates placing the root view in the
+  // wrong place initially.
   tbounds.x = 0;
   tbounds.y = 0;
 
@@ -5829,8 +6156,7 @@ DocumentViewerImpl::GetPrintable(PRBool *aPrintable)
 {
   NS_ENSURE_ARG_POINTER(aPrintable);
 
-  
-  if(mIsDoingPrinting==PR_TRUE){
+  if (mIsDoingPrinting==PR_TRUE) {
     *aPrintable = PR_FALSE;
   } else {
     *aPrintable = PR_TRUE;

@@ -2253,12 +2253,13 @@ nsGenericHTMLElement::GetBaseURL(const nsHTMLValue& aBaseHref,
     baseHref.Trim(" \t\n\r");
 
     nsIURI* url = nsnull;
-    {
-      result = NS_NewURI(&url, baseHref, docBaseURL);
-    }
+
+    result = NS_NewURI(&url, baseHref, docBaseURL);
+
     NS_IF_RELEASE(docBaseURL);
     *aBaseURL = url;
   }
+
   return result;
 }
 

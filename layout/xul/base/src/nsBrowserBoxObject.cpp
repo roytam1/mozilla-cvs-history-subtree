@@ -41,6 +41,9 @@
 #include "nsIPresShell.h"
 #include "nsIFrame.h"
 #include "nsIDocShell.h"
+#include "nsIDocument.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIInterfaceRequestorUtils.h"
 #include "nsXPIDLString.h"
 
 class nsBrowserBoxObject : public nsIBrowserBoxObject, public nsBoxObject
@@ -94,12 +97,24 @@ NS_IMETHODIMP nsBrowserBoxObject::GetDocShell(nsIDocShell** aResult)
   if (!mPresShell)
     return NS_OK;
 
-  nsCOMPtr<nsISupports> subShell;
-  mPresShell->GetSubShellFor(mContent, getter_AddRefs(subShell));
-  if(!subShell)
-    return NS_OK;
+  nsCOMPtr<nsIDocument> doc, sub_doc;
+  mPresShell->GetDocument(getter_AddRefs(doc));
 
-  return CallQueryInterface(subShell, aResult); //Addref happens here.
+  doc->GetSubDocumentFor(mContent, getter_AddRefs(sub_doc));
+
+  if (!sub_doc) {
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
+  sub_doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+
+  nsCOMPtr<nsIDocShell> doc_shell(do_GetInterface(sgo));
+
+  *aResult = doc_shell;
+  NS_IF_ADDREF(*aResult);
+
+  return NS_OK;
 }
 
 // Creation Routine ///////////////////////////////////////////////////////////////////////

@@ -4077,7 +4077,7 @@ nsresult
 HTMLContentSink::ProcessAREATag(const nsIParserNode& aNode)
 {
   nsresult rv = NS_OK;
-  if (nsnull != mCurrentMap) {
+  if (mCurrentMap) {
     nsHTMLTag nodeType = nsHTMLTag(aNode.GetNodeType());
     nsIHTMLContent* area;
     rv = CreateContentObject(aNode, nodeType, nsnull, nsnull, &area);

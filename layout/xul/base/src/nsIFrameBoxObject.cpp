@@ -91,7 +91,16 @@ NS_IMETHODIMP nsIFrameBoxObject::GetDocShell(nsIDocShell** aResult)
     return NS_OK;
 
   nsCOMPtr<nsISupports> subShell;
-  mPresShell->GetSubShellFor(mContent, getter_AddRefs(subShell));
+
+
+
+
+  //  mPresShell->GetSubShellFor(mContent, getter_AddRefs(subShell));
+
+
+
+
+
   if(!subShell)
     return NS_OK;
 
