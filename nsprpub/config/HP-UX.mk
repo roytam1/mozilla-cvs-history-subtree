@@ -38,7 +38,7 @@ RANLIB			= echo
 
 CPU_ARCH		= hppa
 
-OS_CFLAGS		+= $(DSO_CFLAGS) -DHPUX -D$(CPU_ARCH) -D_HPUX_SOURCE
+OS_CFLAGS		+= $(DSO_CFLAGS) -DHPUX -D$(CPU_ARCH) -D_HPUX_SOURCE -Dhpux
 
 #
 # The header netdb.h on HP-UX 9 does not declare h_errno.
