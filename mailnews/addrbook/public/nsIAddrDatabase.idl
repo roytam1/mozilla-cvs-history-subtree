@@ -63,7 +63,7 @@
 #define kLastNameColumn           "LastName"
 #define kPhoneticFirstNameColumn  "PhoneticFirstName"
 #define kPhoneticLastNameColumn   "PhoneticLastName"
-#define kPhoneticLastNameColumn   "_PhoneticName"
+#define kPhoneticNameColumn       "_PhoneticName"
 #define kDisplayNameColumn        "DisplayName"
 #define kNicknameColumn           "NickName"
 #define kPriEmailColumn           "PrimaryEmail"
