@@ -30,6 +30,9 @@ extern "C" {
 #include "cryptohi.h"
 #include "base64.h"
 #include "secasn1.h"
+extern "C" {
+#include "pk11pqg.h"
+}
 #include "nsProxiedService.h"
 #include "nsKeygenHandler.h"
 #include "nsVoidArray.h"
@@ -74,6 +77,25 @@ DERTemplate CERTPublicKeyAndChallengeTemplate[] =
     { DER_IA5_STRING, offsetof(CERTPublicKeyAndChallenge,challenge), },
     { 0, }
 };
+
+DERTemplate SECAlgorithmIDTemplate[] = {
+    { DER_SEQUENCE,
+	  0, NULL, sizeof(SECAlgorithmID) },
+    { DER_OBJECT_ID,
+	  offsetof(SECAlgorithmID,algorithm), },
+    { DER_OPTIONAL | DER_ANY,
+	  offsetof(SECAlgorithmID,parameters), },
+    { 0, }
+};
+
+const SEC_ASN1Template SECKEY_PQGParamsTemplate[] = {
+    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(PQGParams) },
+    { SEC_ASN1_INTEGER, offsetof(PQGParams,prime) },
+    { SEC_ASN1_INTEGER, offsetof(PQGParams,subPrime) },
+    { SEC_ASN1_INTEGER, offsetof(PQGParams,base) },
+    { 0, }
+};
+
 
 static NS_DEFINE_IID(kFormProcessorIID,   NS_IFORMPROCESSOR_IID); 
 static NS_DEFINE_IID(kIDOMHTMLSelectElementIID, NS_IDOMHTMLSELECTELEMENT_IID);
@@ -135,7 +157,7 @@ pqg_prime_bits(char *str)
 
 done:
     if (params)
-        PQG_DestroyParams(params);
+        PK11_PQG_DestroyParams(params);
     return primeBits;
 }
 
