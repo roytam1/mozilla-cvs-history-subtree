@@ -7,12 +7,12 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_PRE_4_2_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/manager,
-mozilla/accessible,
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-mozilla/lib/mac/Instrumentation
-mozilla/gfx2
-mozilla/modules/libpr0n
-SeaMonkeyAll
+mozilla/nsprpub,          EDITOR_EMBEDDING_20011025_BRANCH
+mozilla/security/nss,     EDITOR_EMBEDDING_20011025_BRANCH
+mozilla/security/manager, EDITOR_EMBEDDING_20011025_BRANCH
+mozilla/accessible,       EDITOR_EMBEDDING_20011025_BRANCH
+DirectorySDKSourceC,      EDITOR_EMBEDDING_20011025_BRANCH
+mozilla/lib/mac/Instrumentation EDITOR_EMBEDDING_20011025_BRANCH
+mozilla/gfx2,             EDITOR_EMBEDDING_20011025_BRANCH
+mozilla/modules/libpr0n,  EDITOR_EMBEDDING_20011025_BRANCH
+SeaMonkeyAll,             EDITOR_EMBEDDING_20011025_BRANCH
