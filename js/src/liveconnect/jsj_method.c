@@ -652,6 +652,7 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
     if (!arg_start)
 	return NULL;
     arg_start[strlen(arg_start) - 1] = '\0';	/* Get rid of ')' */
+    sig_cstr = NULL;	/* Quiet gcc warning about uninitialized variable */
     for (method = member_descriptor->methods; method; method = method->next) {
 	ms = &method->signature;
 	sig_cstr = convert_java_method_arg_signatures_to_hr_string(cx, ms->arg_signatures,
@@ -694,11 +695,12 @@ jsj_ResolveExplicitMethod(JSContext *cx, JNIEnv *jEnv,
         JS_free(cx, member_descriptor);
         return NULL;
     }
-
+ 
     if (!is_static) {
 	fun = JS_NewFunction(cx, jsj_JavaInstanceMethodWrapper, 0,
 			     JSFUN_BOUND_METHOD, NULL, method_name);
 	member_descriptor->invoke_func_obj = JS_GetFunctionObject(fun);
+	JS_AddRoot(cx, &member_descriptor->invoke_func_obj);
     }
 
     /* THREADSAFETY */
@@ -1325,6 +1327,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
     JSBool *localv, error_occurred;
 
     error_occurred = JS_FALSE;
+    return_val_signature = NULL;    /* Quiet gcc uninitialized variable warning */
 
     methodID = method->methodID;
     signature = &method->signature;
@@ -1576,6 +1579,7 @@ invoke_java_constructor(JSContext *cx,
     JNIEnv *jEnv;
     JSBool *localv;
     JSBool error_occurred = JS_FALSE;
+    java_object = NULL;	    /* Stifle gcc uninitialized variable warning */
     
     methodID = method->methodID;
     signature = &method->signature;

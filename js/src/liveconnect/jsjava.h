@@ -176,7 +176,7 @@ JSJ_SimpleInit(JSContext *cx, JSObject *global_obj,
 
 /* Free up all resources.  Destroy the Java VM if it was created by LiveConnect */
 JS_EXPORT_API(void)
-JSJ_SimpleShutdown();
+JSJ_SimpleShutdown(void);
 
 /*===========================================================================*/
 

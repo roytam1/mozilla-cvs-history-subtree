@@ -636,7 +636,7 @@ jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp)
 
     /* First, figure out which Java VM is calling us */
     java_vm = JSJ_callbacks->get_java_vm(jEnv);
-    if (jsjava_vm == NULL)
+    if (java_vm == NULL)
         return NULL;
 
     /* Get our private JavaVM data */

@@ -546,7 +546,7 @@ jsj_ReportUncaughtJSException(JSContext *cx, JNIEnv *jEnv, jthrowable java_excep
     /* Initialize everything to NULL */
     memset(&report, 0, sizeof(JSErrorReport));
     success = JS_FALSE;
-    filename_jstr = linebuf_jstr = NULL;
+    filename_jstr = linebuf_jstr = message_jstr = NULL;
     filename = message = linebuf = tokenptr = NULL;
 
     lineno = (*jEnv)->GetIntField(jEnv, java_exception, njJSException_lineno);
