@@ -62,6 +62,7 @@ LLIBS=				\
  $(DIST)\lib\raptorevents_s.lib	\
  $(DIST)\lib\raptorxulbase_s.lib \
  $(DIST)\lib\raptorxulcontent_s.lib \
+ $(DIST)\lib\raptorxuloutliner_s.lib	\
 !ifdef MOZ_MATHML
  $(DIST)\lib\raptormathmlbase_s.lib \
  $(DIST)\lib\raptormathmlcontent_s.lib	\
