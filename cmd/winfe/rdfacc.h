@@ -210,6 +210,11 @@ CRDFImage* FetchCustomIcon(HT_Resource r, CCustomImageObject* pObject, BOOL larg
 IconType DetermineIconType(HT_Resource pNode, BOOL largeIcon);
 
 void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int xSrcOffset=-1, int ySrcOffset=-1);
-		// This function tiles and paints the background image in the tree.
+	// This function tiles and paints the background image in the tree.
+
+void Compute3DColors(COLORREF rgbColor, COLORREF &rgbLight, COLORREF &rgbDark);
+	// This function computes the appropriate highlight and shadow colors to
+	// use against a custom background.
+
 void ResolveToPaletteColor(COLORREF& color, HPALETTE hPal);
 #endif // RDFACC_H

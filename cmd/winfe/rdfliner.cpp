@@ -1897,6 +1897,148 @@ void DrawBGSubimage(CRDFImage* pImage, HDC hDC, int xSrcOffset, int ySrcOffset, 
 	}
 }
 
+#define LIGHT_GRAY	RGB(192, 192, 192)
+#define DARK_GRAY	RGB(128, 128, 128)
+#define WHITE		RGB(255, 255, 255)
+#define BLACK		RGB(0, 0, 0)
+
+static void
+GetSystem3DColors(COLORREF rgbBackground, COLORREF& rgbLightColor, COLORREF& rgbDarkColor)
+{
+#ifdef XP_WIN32
+	if (sysInfo.IsWin4_32()) {
+		// These are Windows 95 only
+		rgbLightColor = ::GetSysColor(COLOR_3DLIGHT);
+		rgbDarkColor = ::GetSysColor(COLOR_3DSHADOW);
+	} else {
+		rgbLightColor = LIGHT_GRAY;
+		rgbDarkColor = ::GetSysColor(COLOR_BTNSHADOW);
+	}
+#else
+	rgbLightColor = LIGHT_GRAY;
+	rgbDarkColor = ::GetSysColor(COLOR_BTNSHADOW);
+#endif
+
+	// We need to make sure that both colors are visible against
+	// the background
+	if (rgbLightColor == rgbBackground)
+		rgbLightColor = rgbBackground == LIGHT_GRAY ? WHITE : LIGHT_GRAY;
+
+	if (rgbDarkColor == rgbBackground)
+		rgbDarkColor = rgbBackground == DARK_GRAY ? BLACK : DARK_GRAY;
+}
+
+// Constants for calculating Highlight (TS = "TopShadow") and
+//   shadow (BS = "BottomShadow") values relative to background
+// Taken from UNIX version -- Eric Bina's Visual.c
+//
+// Bias brightness calculation by standard color-sensitivity values
+// (Percents -- UNIX used floats, but we don't need to)
+//
+#define RED_LUMINOSITY 30
+#define GREEN_LUMINOSITY 59
+#define BLUE_LUMINOSITY 11
+
+// Percent effect of intensity, light, and luminosity & on brightness,
+#define INTENSITY_FACTOR  25
+#define LIGHT_FACTOR       0
+#define LUMINOSITY_FACTOR 75
+
+// LITE color model percent to interpolate RGB towards black for BS, TS
+
+#define COLOR_LITE_BS_FACTOR   45
+#define COLOR_LITE_TS_FACTOR   70
+
+// DARK color model - percent to interpolate RGB towards white for BS, TS
+
+#define COLOR_DARK_BS_FACTOR   30
+#define COLOR_DARK_TS_FACTOR   50
+#define MAX_COLOR 255
+
+#define COLOR_DARK_THRESHOLD   51
+#define COLOR_LIGHT_THRESHOLD  204
+
+void Compute3DColors(COLORREF rgbColor, COLORREF &rgbLight, COLORREF &rgbDark)
+{
+	unsigned uRed, uGreen, uBlue;
+	unsigned uRedBack = GetRValue(rgbColor);
+	unsigned uGreenBack = GetGValue(rgbColor);
+	unsigned uBlueBack = GetBValue(rgbColor);
+	unsigned intensity = (uRedBack + uGreenBack + uBlueBack) / 3;
+    unsigned luminosity = ((RED_LUMINOSITY * uRedBack)/ 100)
+	                 + ((GREEN_LUMINOSITY * uGreenBack)/ 100)
+                     + ((BLUE_LUMINOSITY * uBlueBack)/ 100);
+	unsigned backgroundBrightness = ((intensity * INTENSITY_FACTOR) +
+				   (luminosity * LUMINOSITY_FACTOR)) / 100;
+    unsigned f;
+	
+    if (backgroundBrightness < COLOR_DARK_THRESHOLD) {
+        // Dark Background - interpolate 30% toward black
+		uRed =  uRedBack - (COLOR_DARK_BS_FACTOR * uRedBack / 100);
+		uGreen = uGreenBack - (COLOR_DARK_BS_FACTOR * uGreenBack / 100);
+		uBlue = uBlueBack - (COLOR_DARK_BS_FACTOR * uBlueBack / 100);
+
+        rgbDark = RGB(uRed, uGreen, uBlue);
+
+        // This interpolotes to 50% toward white
+		uRed = uRedBack + (COLOR_DARK_TS_FACTOR *
+			(MAX_COLOR - uRedBack) / 100);
+		uGreen = uGreenBack + (COLOR_DARK_TS_FACTOR *
+			(MAX_COLOR - uGreenBack) / 100);
+
+		uBlue = uBlueBack + (COLOR_DARK_TS_FACTOR *
+			(MAX_COLOR - uBlueBack) / 100);
+
+	} else if (backgroundBrightness > COLOR_LIGHT_THRESHOLD) {
+        // Interpolate 45% toward black
+		uRed = uRedBack - (COLOR_LITE_BS_FACTOR * uRedBack / 100);
+		uGreen = uGreenBack - (COLOR_LITE_BS_FACTOR * uGreenBack / 100);
+		uBlue = uBlueBack - (COLOR_LITE_BS_FACTOR * uBlueBack / 100);
+        rgbDark = RGB(uRed, uGreen, uBlue);
+
+	    // Original algorithm (from X source: visual.c) used:
+    	// uRed = uRedBack - (COLOR_LITE_TS_FACTOR * uRedBack / 100),
+        //   where FACTOR is 20%, but that makes no sense!
+        // I think the intention was large interpolation toward white,
+        //  so use max of "medium" range (70%) for smooth continuity across threshhold
+      uRed = uRedBack + (COLOR_LITE_TS_FACTOR * (MAX_COLOR - uRedBack) / 100);
+      uGreen = uGreenBack + (COLOR_LITE_TS_FACTOR * (MAX_COLOR - uGreenBack) / 100);
+      uBlue = uBlueBack + (COLOR_LITE_TS_FACTOR * (MAX_COLOR - uBlueBack) / 100);
+	
+	} else {
+        // Medium Background
+		f = COLOR_DARK_BS_FACTOR + (backgroundBrightness 
+		                * ( COLOR_LITE_BS_FACTOR - COLOR_DARK_BS_FACTOR )
+                        / MAX_COLOR);
+
+		uRed = uRedBack - (f * uRedBack / 100);
+		uGreen = uGreenBack - (f * uGreenBack / 100);
+		uBlue = uBlueBack - (f * uBlueBack / 100);
+        rgbDark = RGB(uRed, uGreen, uBlue);
+
+		f = COLOR_DARK_TS_FACTOR + (backgroundBrightness
+		               * ( COLOR_LITE_TS_FACTOR - COLOR_DARK_TS_FACTOR )
+                       / MAX_COLOR);
+
+        uRed = uRedBack + (f * (MAX_COLOR - uRedBack) / 100);
+		uGreen = uGreenBack + (f * (MAX_COLOR - uGreenBack) / 100);
+		uBlue = uBlueBack + (f * (MAX_COLOR - uBlueBack) / 100);
+    }
+    
+	// Safety check for upper limit
+	uRed = min(MAX_COLOR, uRed);
+	uGreen = min(MAX_COLOR, uGreen);
+	uBlue = min(MAX_COLOR, uBlue);
+
+    rgbLight = RGB(uRed, uGreen, uBlue);
+
+	// If either of these colors is the same as the background color
+	// then use the system 3D element colors instead
+	if (rgbLight == rgbColor || rgbDark == rgbColor) {
+		GetSystem3DColors(rgbColor, rgbLight, rgbDark);
+    }
+}
+
 void PaintBackground(HDC hdc, CRect rect, CRDFImage* pImage, int xSrcOffset, int ySrcOffset)
 { 
 	int totalWidth = rect.Width();
