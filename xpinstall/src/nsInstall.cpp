@@ -73,6 +73,7 @@
 #ifdef XP_MAC
 #include "Gestalt.h"
 #include "nsAppleSingleDecoder.h"
+#include "nsILocalFileMac.h"
 #endif 
 
 #include "nsILocalFile.h"
@@ -1922,9 +1923,13 @@ nsInstall::FileOpFileMacAlias(nsString& aSourcePath, nsString& aAliasPath, PRInt
   *aReturn = nsInstall::SUCCESS;
 
 #ifdef XP_MAC
-  nsFileSpec nsfsSource(aSourcePath, PR_FALSE);
-  nsFileSpec nsfsAlias(aAliasPath, PR_TRUE);
+  //nsFileSpec nsfsSource(aSourcePath, PR_FALSE);
+  //nsFileSpec nsfsAlias(aAliasPath, PR_TRUE);
+  nsCOMPtr<nsILocalFile> nsfsSource;
+  nsCOMPtr<nsILocalFile> nsfsAlias;
   
+  nsfsSource->InitWithPath(aSourcePath.ToNewCString());
+  nsfsAlias->InitWithPath(aAliasPath.ToNewCString());
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_MAC_ALIAS, nsfsSource, nsfsAlias, aReturn);
 
   PRInt32 result = SanityCheck();
@@ -2378,7 +2383,11 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
     }
     
 #ifdef XP_MAC
-	FSSpec finalSpec, extractedSpec = extractHereSpec->GetFSSpec();
+	FSSpec finalSpec, extractedSpec;
+    
+    nsCOMPtr<nsILocalFileMac> tempExtractHereSpec;
+    tempExtractHereSpec = do_QueryInterface(extractHereSpec, &rv);
+    tempExtractHereSpec->GetFSSpec(&extractedSpec);
 	
 	if ( nsAppleSingleDecoder::IsAppleSingleFile(&extractedSpec) )
 	{
@@ -2390,8 +2399,6 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
 	
 		if (decodeErr != noErr)
 		{			
-			if (extractHereSpec)
-				delete extractHereSpec;
 			if (asd)
 				delete asd;
 			return EXTRACTION_FAILED;
@@ -2405,7 +2412,8 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
 			FSpDelete(&extractedSpec);
 			
 			// "real name" in AppleSingle entry may cause file rename
-			*extractHereSpec = finalSpec;
+			tempExtractHereSpec->InitWithFSSpec(&finalSpec);
+			extractHereSpec = do_QueryInterface(tempExtractHereSpec, &rv);
 		}
 	}		
 #endif

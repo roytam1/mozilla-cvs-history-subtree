@@ -39,15 +39,9 @@ GetPersistentStringFromSpec(nsIFile* inSpec, char **string)
 
     if (!string) return NS_ERROR_NULL_POINTER;
 
-#ifdef XP_MAC
-    nsFileSpec interim = inSpec.GetFSSpec(); /* XXX get rid of mError in nsFileSpec */
-    nsresult rv = NS_NewFileSpecWithSpec(interim, getter_AddRefs(spec));
-#else
-    //nsresult rv = NS_NewFileSpecWithSpec(inSpec, getter_AddRefs(spec));
     nsCOMPtr<nsILocalFile> LocalFile = do_QueryInterface(inSpec, &rv);
-#endif
+
     if (NS_SUCCEEDED(rv)) {
-        //rv = spec->GetPersistentDescriptorString(string);
         rv = LocalFile->GetPath(string);
     } 
     else {

@@ -673,7 +673,7 @@ InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
   JSObject *jsObj;
   nsInstallFolder *folder;
 
-  *rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);;
+  *rval = INT_TO_JSVAL(nsInstall::UNEXPECTED_ERROR);
 
   // If there's no private data, this must be the prototype, so ignore
   if(nsnull == nativeThis)
@@ -703,20 +703,12 @@ InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
   {
     return JS_TRUE;
   }
-
-  if ( nativeRet <= JSVAL_INT_MAX )
-    *rval = INT_TO_JSVAL(nativeRet);
-  else
-  {
-    JSInt64 l;
-    jsdouble d;
-
-    JSLL_UI2L( l, nativeRet );
-    JSLL_L2D( d, l );
-
-    JS_NewDoubleValue( cx, d, rval );
-  }
-
+   
+  PRFloat64 f; /* jsdouble's *are* PRFloat64's */
+  
+  LL_L2F( f, nativeRet ); /* make float which is same type for js and nspr (native double) */
+  JS_NewDoubleValue( cx, f, rval );
+  
   return JS_TRUE;
 }
 

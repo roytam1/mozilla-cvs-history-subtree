@@ -490,8 +490,10 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
 #endif
 #ifdef XP_MAC
    // Encode src file, and put into temp file
-        FSSpec sourceSpec = sourceFile.GetFSSpec();
-        FSSpec tempSpec   = tempSrcFile->GetFSSpec();
+        FSSpec sourceSpec, tempSpec;
+        nsCOMPtr<nsILocalFileMac> tempSourceFile;
+        tempSourceFile = do_QueryInterface(sourceFile, &rv);
+        tempSourceFile->GetFSSpec(&sourceSpec);
     
         status = PAS_EncodeFile(&sourceSpec, &tempSpec);   
 
@@ -499,7 +501,7 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
         {
             // set
             PL_strfree(realfile);
-            realfile = PL_strdup(nsNSPRPath(*tempSrcFile));
+            tempSrcFile->GetPath(&realfile);
         }
 #endif
     }
@@ -574,20 +576,36 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
   if ( dd->bMacAppleSingle && status == GDIFF_OK ) 
  {
         // create another file, so that we can decode somewhere
-        nsFileSpec anotherName = *outFileSpec;
-        anotherName.MakeUnique();
+        //nsFileSpec anotherName = *outFileSpec;
+        nsCOMPtr<nsILocalFile> anotherName;
+        nsCOMPtr<nsIFile> bsTemp;
+        
+        outFileSpec->Clone(getter_AddRefs(bsTemp));   //Clone because we'll be changing the name
+        anotherName = do_QueryInterface(bsTemp, &rv); //Set the old name
+        MakeUnique(anotherName);  //Now give it the new name
         
 		// Close the out file so that we can read it 		
 		PR_Close( dd->fOut );
 		dd->fOut = NULL;
 		
 		
-		FSSpec outSpec = outFileSpec->GetFSSpec();
-		FSSpec anotherSpec = anotherName.GetFSSpec();
+		FSSpec outSpec;
+		FSSpec anotherSpec;
+		nsCOMPtr<nsILocalFileMac> outSpecMacSpecific;
+		nsCOMPtr<nsILocalFileMac> anotherNameMacSpecific;
 		
-		if ( outFileSpec->Exists() )
+		anotherNameMacSpecific = do_QueryInterface(anotherName, &rv); //set value to nsILocalFileMac (sheesh)
+		outSpecMacSpecific = do_QueryInterface(outFileSpec, &rv); //ditto 
+		
+		anotherNameMacSpecific->GetFSSpec(&anotherSpec);
+		outSpecMacSpecific->GetFSSpec(&outSpec);
+		
+		outFileSpec->Exists(&flagExists);
+		if ( flagExists )
 		{
-			printf("filesize: %d\n", outFileSpec->GetFileSize());
+		    PRInt64 fileSize;
+		    outFileSpec->GetFileSize(&fileSize);
+			printf("filesize: %d\n", fileSize);
 		}
 		
 			
@@ -597,16 +615,18 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
 		   	goto cleanup;
         }
 		
-        nsFileSpec parent;
+        nsCOMPtr<nsIFile> parent;
         
-        outFileSpec->GetParent(parent);
+        outFileSpec->GetParent(getter_AddRefs(parent));
         
         outFileSpec->Delete(PR_FALSE);
-        anotherName.CopyToDir(parent);
         
-        *outFileSpec = anotherName;
+        char* leaf;
+        anotherName->GetLeafName(&leaf);
+        anotherName->CopyTo(parent, leaf);
         
-        *newFile = outFileSpec;
+        anotherName->Clone(getter_AddRefs(newFile));
+        
 	}
 	
 #endif 

@@ -1092,17 +1092,23 @@ nsInstallFileOpItem::NativeFileOpMacAliasComplete()
 #ifdef XP_MAC
   // XXX gestalt to see if alias manager is around
   
-  FSSpec        *fsPtrAlias = mTarget->GetFSSpecPtr();
+  nsCOMPtr<nsILocalFileMac> localFileMacTarget = do_QueryInterface(mTarget);
+  nsCOMPtr<nsILocalFileMac> localFileMacSrc = do_QueryInterface(mSrc);
+  
+  FSSpec        *fsPtrAlias, *srcPtrAlias;
   AliasHandle   aliasH;
   FInfo         info;
   OSErr         err = noErr;
   
-  err = NewAliasMinimal( mSrc->GetFSSpecPtr(), &aliasH );
+  localFileMacTarget->GetFSSpec(fsPtrAlias);
+  localFileMacSrc->GetFSSpec(srcPtrAlias);
+
+  err = NewAliasMinimal( srcPtrAlias, &aliasH );
   if (err != noErr)  // bubble up Alias Manager error
   	return err;
   	
   // create the alias file
-  FSpGetFInfo(mSrc->GetFSSpecPtr(), &info);
+  FSpGetFInfo(srcPtrAlias, &info);
   FSpCreateResFile(fsPtrAlias, info.fdCreator, info.fdType, smRoman);
   short refNum = FSpOpenResFile(fsPtrAlias, fsRdWrPerm);
   if (refNum != -1)
