@@ -1193,9 +1193,9 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
 	    m_compFields->SetBcc(bccStr.get());
 
       // Set the default security settings
-      m_identity->GetAlwaysEncryptMessage(&aBool);
+      m_identity->GetBoolAttribute("encrypt_mail_always", &aBool);
       m_compFields->SetAlwaysEncryptMessage(aBool);
-      m_identity->GetSignMessage(&aBool);
+      m_identity->GetBoolAttribute("sign_mail", &aBool);
       m_compFields->SetSignMessage(aBool);
 	}
 
