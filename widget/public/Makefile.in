@@ -48,7 +48,6 @@ EXPORTS = \
 	nsITextAreaWidget.h \
 	nsIComboBox.h   \
 	nsIListBox.h    \
-	nsIFileWidget.h \
 	nsIScrollbar.h  \
 	nsGUIEvent.h    \
 	nsIRadioButton.h\
