@@ -347,11 +347,21 @@ static PRStatus PR_CALLBACK SocketConnectContinue(
 
 #elif defined(XP_MAC)
 
+#if 0
     err = _MD_mac_get_nonblocking_connect_error(osfd);
     if (err == -1)
         return PR_FAILURE;
 	else     
 		return PR_SUCCESS;
+#else
+	if (out_flags & PR_POLL_EXCEPT) {
+		PR_SetError(PR_CONNECT_REFUSED_ERROR, 0);
+		return PR_FAILURE;
+	}
+	
+	PR_ASSERT(out_flags & PR_POLL_WRITE);
+	return PR_SUCCESS;
+#endif
 
 #elif defined(XP_BEOS)
 
