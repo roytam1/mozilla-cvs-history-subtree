@@ -62,11 +62,21 @@ treechildren::-moz-tree-image(FilenameColumn, file) {
 
 /* ::::: button items ::::: */
 
+/* up-button */
+
 .up-button {
   list-style-image: url("chrome://global/skin/Filepicker.png");
   -moz-image-region: rect(0px 24px 24px 0px);
   max-width: 36px;
 }
+
+.up-button:hover {
+  list-style-image: url("chrome://global/skin/Filepicker.png");
+  -moz-image-region: rect(24px 24px 48px 0px);
+  max-width: 36px;
+}
+
+/* home-button */
 
 .home-button {
   list-style-image: url("chrome://global/skin/Filepicker.png");
@@ -74,8 +84,22 @@ treechildren::-moz-tree-image(FilenameColumn, file) {
   max-width: 36px;
 }
 
+.home-button:hover {
+  list-style-image: url("chrome://global/skin/Filepicker.png");
+  -moz-image-region: rect(24px 48px 48px 24px);
+  max-width: 36px;
+}
+
+/* new-dir-button */
+
 .new-dir-button {
   list-style-image: url("chrome://global/skin/Filepicker.png");
-  -moz-image-region: rect(0px, 72px, 24x, 48px);
+  -moz-image-region: rect(0px 72px 24px 48px);
+  max-width: 36px;
+}
+
+.new-dir-button:hover {
+  list-style-image: url("chrome://global/skin/Filepicker.png");
+  -moz-image-region: rect(24px 72px 48px 48px);
   max-width: 36px;
 }
