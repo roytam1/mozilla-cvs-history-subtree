@@ -50,6 +50,7 @@ namespace JavaScript {
 //
     namespace JS2Runtime {
         class JSFunction;
+        class JSType;
     }
 
     class Language {
@@ -78,8 +79,6 @@ namespace JavaScript {
 
     struct ParseNode: ArenaObject {
         uint32 pos;               // Position of this statement or expression
-
-        JS2Runtime::PropertyIterator prop;
         
         explicit ParseNode(uint32 pos): pos(pos) {}
     };
@@ -124,6 +123,11 @@ namespace JavaScript {
                                         // not provided
         bool constant;                  // true for const variables and
                                         // parameters
+
+        
+        JS2Runtime::PropertyIterator prop;
+        
+        
         VariableBinding(uint32 pos, ExprNode *name, ExprNode *type,
                         ExprNode *initializer, bool constant):
                 ParseNode(pos), next(0), aliases(0), name(name), type(type),
@@ -789,6 +793,8 @@ namespace JavaScript {
         ExprNode *superclass;           // Superclass expression (classes only);
                                         // nil if omitted
         BlockStmtNode *body;            // The class's body; nil if omitted
+
+        JS2Runtime::JSType *mType;
 
         ClassStmtNode(uint32 pos, Kind kind, IdentifierList *attributes,
                       ExprNode *name, ExprNode *superclass,

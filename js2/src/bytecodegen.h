@@ -53,8 +53,14 @@ namespace ByteCode {
     using namespace JS2Runtime;
 
     typedef enum {
+        NoThis,
+        Inherent,
+        Explicit
+    } ThisFlag;     // maybe have three different invoke ops instead?
 
-        LoadConstantUndefinedOp,//                   --> <undefined value object>
+    typedef enum {
+
+        LoadConstantUndefinedOp,//                     --> <undefined value object>
         LoadConstantTrueOp,     //                     --> <true value object>
         LoadConstantFalseOp,    //                     --> <false value object>
         LoadConstantNullOp,     //                     --> <null value object>
@@ -67,7 +73,7 @@ namespace ByteCode {
         LoadTypeOp,             // <pointer>        XXX !!! XXX
 
 
-        InvokeOp,               // <argCount>          <function> <args>  --> [<result>]
+        InvokeOp,               // <argCount> <thisflag>         <function> <args>  --> [<result>]
 
         GetTypeOp,              //                     <object> --> <type of object>
 
@@ -83,52 +89,67 @@ namespace ByteCode {
         ReturnOp,               //                     <function> <args> <result> --> <result>
         ReturnVoidOp,           //                     <function> <args> -->
 
-        GetConstructorOp,       //                     <type> --> <function> <type>
-        NewObjectOp,            //                     <type> --> <object>
+        GetConstructorOp,       //                     <type> --> <function> 
+        NewObjectOp,            //                     <type> --> <object> <type>
+        TypeOfOp,               //                     <object> --> <string>
+
+        ToBooleanOp,            //                     <object> --> <boolean>
 
 
         JumpFalseOp,            // <target>            <object> -->
         JumpTrueOp,             // <target>            <object> -->
         JumpOp,                 // <target>            
 
-        LogicalXorOp,           //                     <object> <object> --> <object> 
+        LogicalXorOp,           //                     <object> <object> <boolean> <boolean> --> <object> 
         LogicalNotOp,           //                     <object> --> <object>
+
         SwapOp,                 //                     <object1> <object2> --> <object2> <object1>
         DupOp,                  //                     <object> --> <object> <object>
         DupInsertOp,            //                     <object1> <object2> --> <object2> <object1> <object2>
+        DupNOp,                 // <N>                 <object> --> <object> { N times }
+        DupInsertNOp,           // <N>                 <object> { N times }  <object2> --> <object2> <object> { N times }  <object2>
         PopOp,                  //                     <object> -->
     
         // for instance members
         GetFieldOp,             // <slot>              <base> --> <object>
-        SetFieldOp,             // <slot>              <object> <base>  --> 
+        SetFieldOp,             // <slot>              <base> <object> --> <object>
         // for static members
         GetStaticFieldOp,       // <slot>              <base> --> <object>
-        SetStaticFieldOp,       // <slot>              <object> <base>  --> 
+        SetStaticFieldOp,       // <slot>              <base> <object> --> <object>
 
         // for instance methods
-        GetMethodOp,            // <slot>              <base> --> <function> <base> 
+        GetMethodOp,            // <slot>              <base> --> >base> <function>
+        GetMethodRefOp,         // <slot>              <base> --> <bound function> 
         // for static methods
         GetStaticMethodOp,      // <slot>              <base> --> <function>
 
         // for argumentz
         GetArgOp,               // <index>             --> <object>
-        SetArgOp,               // <index>             --> <object>
+        SetArgOp,               // <index>             <object> --> <object>
 
         // for local variables in the immediate scope
         GetLocalVarOp,          // <index>             --> <object>
-        SetLocalVarOp,          // <index>             --> <object>
+        SetLocalVarOp,          // <index>             <object> --> <object>
 
         // for local variables in the nth closure scope
         GetClosureVarOp,        // <depth>, <index>    --> <object>
-        SetClosureVarOp,        // <depth>, <index>    --> <object>
+        SetClosureVarOp,        // <depth>, <index>    <object> --> <object>
+
+        // for array elements
+        GetElementOp,           //                     <base> <index> --> <object>
+        SetElementOp,           //                     <base> <index> <object> --> <object>
 
         // for properties
         GetPropertyOp,          // <poolindex>         <base> --> <object>
-        SetPropertyOp,          // <poolindex>         <object> <base> -->
+        GetInvokePropertyOp,    // <poolindex>         <base> --> <base> <object> 
+        SetPropertyOp,          // <poolindex>         <base> <object> --> <object>
 
         // for all generic names 
         GetNameOp,              // <poolindex>         --> <object>
-        SetNameOp,              // <poolindex>         --> <object>
+        GetTypeOfNameOp,        // <poolindex>         --> <object>
+        SetNameOp,              // <poolindex>         <object> --> <object>
+
+        LoadGlobalObjectOp,     //                     --> <object>
 
         
         PushScopeOp,            // <pointer>        XXX !!! XXX
@@ -221,7 +242,11 @@ namespace ByteCode {
         std::vector<Label> mLabelList;
         std::vector<uint32> mLabelStack;
 
-        
+        bool hasContent()
+        {
+            return (mBuffer->size() > 0);
+        }
+       
 
         void addByte(uint8 v)       { mBuffer->push_back(v); }
         void addPointer(void *v)    { addLong((uint32)v); }

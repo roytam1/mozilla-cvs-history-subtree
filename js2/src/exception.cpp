@@ -48,7 +48,9 @@ namespace JavaScript
         "Stack overflow",                       // stackOverflow
         "Internal error",                       // diabetes
         "Runtime error",                        // runtimeError
-        "Reference error"                       // referenceError
+        "Reference error",                      // referenceError
+        "Range error",                          // burnt the beans
+        "Type error",                           // Sype error
     };
     
 // Return a null-terminated string describing the exception's kind.

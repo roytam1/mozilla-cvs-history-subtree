@@ -105,17 +105,17 @@ namespace JS2Runtime {
     typedef PropertyMap::iterator PropertyIterator;
 
 
-#define PROPERTY_KIND(it)           (it->second.first.mFlag)
-#define PROPERTY(it)                (it->second.first)
-#define ATTR_PROPERTY(it)           (it->second)
-#define PROPERTY_ATTRLIST(it)       (it->second.second)
-#define PROPERTY_VALUEPOINTER(it)   (it->second.first.mData.vp)
-#define PROPERTY_INDEX(it)          (it->second.first.mData.index)
-#define PROPERTY_NAME(it)           (it->first)
-#define PROPERTY_GETTERF(it)        (it->second.first.mData.fPair.getterF)
-#define PROPERTY_SETTERF(it)        (it->second.first.mData.fPair.setterF)
-#define PROPERTY_GETTERI(it)        (it->second.first.mData.iPair.getterI)
-#define PROPERTY_SETTERI(it)        (it->second.first.mData.iPair.setterI)
+#define PROPERTY_KIND(it)           ((it)->second.first.mFlag)
+#define PROPERTY(it)                ((it)->second.first)
+#define ATTR_PROPERTY(it)           ((it)->second)
+#define PROPERTY_ATTRLIST(it)       ((it)->second.second)
+#define PROPERTY_VALUEPOINTER(it)   ((it)->second.first.mData.vp)
+#define PROPERTY_INDEX(it)          ((it)->second.first.mData.index)
+#define PROPERTY_NAME(it)           ((it)->first)
+#define PROPERTY_GETTERF(it)        ((it)->second.first.mData.fPair.getterF)
+#define PROPERTY_SETTERF(it)        ((it)->second.first.mData.fPair.setterF)
+#define PROPERTY_GETTERI(it)        ((it)->second.first.mData.iPair.getterI)
+#define PROPERTY_SETTERI(it)        ((it)->second.first.mData.iPair.setterI)
 
 
 }

@@ -51,7 +51,9 @@ namespace JavaScript
             stackOverflow,
             internalError,
             runtimeError,
-            referenceError
+            referenceError,
+            rangeError,
+            typeError
         };
         
         Kind kind;         // The exception's kind
