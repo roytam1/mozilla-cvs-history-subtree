@@ -115,20 +115,13 @@ static PRLock *_pr_logLock;
 #if defined(WINCE)
 #define CEOutputDebugString(str) \
     PR_BEGIN_MACRO \
-        int neededWChars = 0; \
+        LPWSTR wstr = NULL; \
         \
-        neededWChars = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (str), -1, NULL, 0); \
-        if(0 < neededWChars) \
+        wstr = _PR_MD_MALLOC_A2W(str); \
+        if(NULL != wstr) \
         { \
-            LPTSTR wstr = NULL; \
-            \
-            wstr = (LPWSTR)PR_Malloc(sizeof(WCHAR) * neededWChars); \
-            if(NULL != wstr) \
-            { \
-                MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (str), -1, wstr, neededWChars); \
-                OutputDebugString(wstr); \
-                PR_Free(wstr); \
-            } \
+            OutputDebugString(wstr); \
+            PR_Free(wstr); \
         } \
     PR_END_MACRO
 #endif

@@ -997,7 +997,7 @@ _PR_MD_SET_FD_INHERITABLE(PRFileDesc *fd, PRBool inheritable)
     }
     return PR_SUCCESS;
 #else
-    _PR_MD_CE_NOT_IMPLEMENTED;
+    _PR_MD_MAP_DEFAULT_ERROR(ERROR_CALL_NOT_IMPLEMENTED);
     return PR_FAILURE;
 #endif
 } 

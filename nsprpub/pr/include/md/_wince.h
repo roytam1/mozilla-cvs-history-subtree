@@ -41,6 +41,7 @@
 #include <winnt.h>
 #include <stdlib.h>
 #include "_win32_time.h"
+#include "_win32_unicode.h"
 
 #include "prio.h"
 
