@@ -63,6 +63,9 @@
 #include "nsRect.h"
 #include "nsIWebBrowserChromeFocus.h"
 
+#include "nsIEventQueue.h"
+#include "nsIEventQueueService.h"
+
 static char *sWindowWatcherContractID = "@mozilla.org/embedcomp/window-watcher;1";
 
 
@@ -435,27 +438,65 @@ NS_IMETHODIMP nsDocShellTreeOwner::GetNewWindow(PRInt32 aChromeFlags,
    nsIDocShellTreeItem** aDocShellTreeItem)
 {
   nsresult rv;
-
-  if(mTreeOwner)
-    return mTreeOwner->GetNewWindow(aChromeFlags, aDocShellTreeItem);
+  nsCOMPtr<nsIEventQueueService> eventQService;
+  nsCOMPtr<nsIEventQueue> eventQ;
 
   *aDocShellTreeItem = nsnull;
 
-  NS_ENSURE_TRUE(mWebBrowserChrome, NS_ERROR_FAILURE);
-  aChromeFlags &= ~(nsIWebBrowserChrome::CHROME_WITH_SIZE | nsIWebBrowserChrome::CHROME_WITH_POSITION);
+  //
+  // The first thing to do is push a nested event queue for PLEvent
+  // processing...
+  //
+  // When nsIWebBrowserChrome::CreateBrowserWindow(...) is called, the
+  // embeddor must create a nested message pump, and block until the
+  // initial document has been loaded into the webBrowser.
+  //
+  // The nested event queue is also needed so that event processing from
+  // necko will be handled.
+  //
+  eventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIWebBrowser> webBrowser;
-  rv = mWebBrowserChrome->CreateBrowserWindow(PRUint32(aChromeFlags),
-                            -1, -1, -1, -1, // this is kind of a problem
-                            getter_AddRefs(webBrowser));
-  if (NS_SUCCEEDED(rv) && webBrowser) {
-    nsCOMPtr<nsIInterfaceRequestor> asreq(do_QueryInterface(webBrowser));
-    if (asreq) {
-      nsCOMPtr<nsIDocShell> asshell(do_GetInterface(asreq));
-      if (asshell)
-        rv = CallQueryInterface(asshell, aDocShellTreeItem);
+  //
+  // IMPORTANT: Once the new event queue has been pushed, any early returns
+  // ---------  in this method must pop the queue !!!
+  //
+  rv = eventQService->PushThreadEventQueue(getter_AddRefs(eventQ));
+  if (NS_FAILED(rv)) return rv;
+
+  //
+  // Now, create the new top-level window.  If a tree owner exists, then ask
+  // it for the window, otherwise create it using nsIWebBrowserChrome...
+  //
+  if(mTreeOwner) {
+    rv = mTreeOwner->GetNewWindow(aChromeFlags, aDocShellTreeItem);
+  } 
+  else if (mWebBrowserChrome) {
+    aChromeFlags &= ~(nsIWebBrowserChrome::CHROME_WITH_SIZE | nsIWebBrowserChrome::CHROME_WITH_POSITION);
+
+    nsCOMPtr<nsIWebBrowser> webBrowser;
+    rv = mWebBrowserChrome->CreateBrowserWindow(PRUint32(aChromeFlags),
+                                                -1, -1, -1, -1, // this is kind of a problem
+                                                getter_AddRefs(webBrowser));
+    if (NS_SUCCEEDED(rv) && webBrowser) {
+      nsCOMPtr<nsIInterfaceRequestor> asreq(do_QueryInterface(webBrowser));
+      if (asreq) {
+        nsCOMPtr<nsIDocShell> asshell(do_GetInterface(asreq));
+        if (asshell)
+          rv = CallQueryInterface(asshell, aDocShellTreeItem);
+      }
     }
+  } 
+  // No tree owner or nsIWebBrowserChrome...  We are out of luck :-(
+  else {
+    rv = NS_ERROR_FAILURE;
   }
+
+  //
+  // Pop the nested Event Queue...
+  //
+  (void) eventQService->PopThreadEventQueue(eventQ);
+
   return rv;
 }
 
