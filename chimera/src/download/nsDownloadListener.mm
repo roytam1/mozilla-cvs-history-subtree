@@ -83,6 +83,8 @@ nsDownloadListener::Init(nsIURI *aSource, nsILocalFile *aTarget, const PRUnichar
   mURI = aSource;
   mStartTime = startTime;
 
+  mHelperAppLauncher = nsnull;
+
   InitDialog();
   return NS_OK;
 }
@@ -175,7 +177,9 @@ nsDownloadListener::GetObserver(nsIObserver * *aObserver)
 NS_IMETHODIMP
 nsDownloadListener::SetObserver(nsIObserver * aObserver)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  if (aObserver)
+    mHelperAppLauncher = do_QueryInterface(aObserver);
+  return NS_OK;
 }
 
 #pragma mark -
@@ -191,7 +195,9 @@ nsDownloadListener::OnProgressChange(nsIWebProgress *aWebProgress,
 {
   if (mUserCanceled)
   {
-    if (aRequest)
+    if (mHelperAppLauncher)
+      mHelperAppLauncher->Cancel();
+    else if (aRequest)
       aRequest->Cancel(NS_BINDING_ABORTED);
       
     mUserCanceled = false;
@@ -306,6 +312,8 @@ nsDownloadListener::DownloadDone()
     mWebPersist->SetProgressListener(nsnull);
     mWebPersist = nsnull;
   }
+  
+  mHelperAppLauncher = nsnull;
 
   [mDownloadDisplay onEndDownload];
 }
