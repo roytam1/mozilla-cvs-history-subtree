@@ -747,6 +747,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
   nsBlockReflowState state(aReflowState, aPresContext, this, aMetrics,
                            NS_BLOCK_MARGIN_ROOT & mState);
+  state.mReflowIterator = &reflowIterator;
 
   if (eReflowReason_Resize != aReflowState.reason) {
 #ifdef IBMBIDI
@@ -780,6 +781,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
 
   nsresult rv = NS_OK;
   PRBool isStyleChange = PR_FALSE;
+  PRBool firstTime = PR_TRUE;
 
   switch (aReflowState.reason) {
   case eReflowReason_Initial:
@@ -821,23 +823,19 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
       if (NS_FAILED(rv)) return rv;
 
-      // Now reflow...
-      rv = ReflowDirtyLines(state);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
-      if (NS_FAILED(rv)) return rv;
+      firstTime = PR_FALSE;
+      // we'll reflow dirty lines eventually
     }
+    // any dirty lines are marked but not reflowed yet
 
     // now handle any targets that are children of this node
-    PRBool firstTime; // can't combine with next line due to GCC
-    firstTime = PR_TRUE;
     while (reflowIterator.NextChild(&childFrame))
     {
-      // If we've looped already, Reflow... the previous line.  The
+      // Reflow either the target or the previous child.  The
       // last pass through the loop will be Reflowed after the switch(){}.
-      if (firstTime)
+      if (!firstTime)
       {
         // Now reflow...
-        firstTime = PR_FALSE;
         rv = ReflowDirtyLines(state);
         NS_ASSERTION(NS_SUCCEEDED(rv), "reflow dirty lines failed");
         if (NS_FAILED(rv)) return rv;
@@ -859,6 +857,8 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       rv = PrepareChildIncrementalReflow(state);
       NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
       if (NS_FAILED(rv)) return rv;
+
+      firstTime = PR_FALSE;
     }
     break;
 
@@ -877,6 +877,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
     rv = PrepareResizeReflow(state);
     break;
   }
+  // all cases of the above leave one line marked but not reflowed yet
 
   NS_ASSERTION(NS_SUCCEEDED(rv), "setting up reflow failed");
   if (NS_FAILED(rv)) return rv;
@@ -3681,6 +3682,9 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   // need to repeatedly call GetChildCount here, because the child
   // count can change during the loop!
   for (i = 0; i < aLine->GetChildCount(); i++) { 
+    // Set the command's current reflow node correctly for this child frame
+    aState.mReflowState.SetCurrentReflowNode(aState.mReflowIterator->SelectChild(frame));
+    
     rv = ReflowInlineFrame(aState, aLineLayout, aLine, frame,
                            &lineReflowStatus);
     if (NS_FAILED(rv)) {
