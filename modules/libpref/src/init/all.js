@@ -44,7 +44,7 @@ pref("general.useragent.misc", "rv:1.0.2");
 // see <http://www.mozilla.org/build/revised-user-agent-strings.html>
 pref("general.useragent.locale", "en");
 pref("general.useragent.vendor", "Beonex");
-pref("general.useragent.vendorSub", "0.8.1-stable");
+pref("general.useragent.vendorSub", "0.8.2-stable");
 
 pref("network.search.url","http://www.google.com/search?q=");
 
