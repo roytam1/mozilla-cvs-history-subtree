@@ -352,7 +352,6 @@ PR_IMPLEMENT(PRThread*) PR_AttachThread(
 
 PR_IMPLEMENT(PRStatus) PR_JoinThread(PRThread *thred)
 {
-    int rv = -1;
     void *result = NULL;
     PR_ASSERT(thred != NULL);
 
@@ -376,12 +375,14 @@ PR_IMPLEMENT(PRStatus) PR_JoinThread(PRThread *thred)
     {
         cthread_t id = thred->id;
         result = cthread_join(id);
+        if (NULL == result)
+            PR_SetError(PR_UNKNOWN_ERROR, errno);
     	PR_DELETE(thred->stack);
         memset(thred, 0xaf, sizeof(PRThread));
         PR_ASSERT(result == NULL);
         PR_DELETE(thred);
     }
-    return (0 == rv) ? PR_SUCCESS : PR_FAILURE;
+    return (NULL != result) ? PR_SUCCESS : PR_FAILURE;
 }  /* PR_JoinThread */
 
 PR_IMPLEMENT(void) PR_DetachThread()
@@ -934,7 +935,6 @@ PR_IMPLEMENT(void) PR_ResumeTest(PRThread *thred)
 
 PR_IMPLEMENT(void) PR_SuspendAll()
 {
-#if 0
 #ifdef DEBUG
     PRIntervalTime stime, etime;
 #endif
@@ -972,12 +972,10 @@ PR_IMPLEMENT(void) PR_SuspendAll()
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS,\
         ("End PR_SuspendAll (time %dms)\n", etime - stime));
 #endif
-#endif
 }  /* PR_SuspendAll */
 
 PR_IMPLEMENT(void) PR_ResumeAll()
 {
-#if 0
 #ifdef DEBUG
     PRIntervalTime stime, etime;
 #endif
@@ -1023,9 +1021,8 @@ PR_IMPLEMENT(void *)PR_GetSP(PRThread *thred)
 	    ("in PR_GetSP thred %X thid = %X, sp = %X \n", 
 	    thred, thred->id, thred->sp));
     return thred->sp;
-#endif
 }  /* PR_GetSP */
 
 #endif  /* defined(_PR_CTHREADS) */
 
-/* ptthread.c */
+/* ctthread.c */
