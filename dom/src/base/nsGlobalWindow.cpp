@@ -1055,9 +1055,6 @@ NS_IMETHODIMP GlobalWindowImpl::GetOpener(nsIDOMWindowInternal** aOpener)
 
 NS_IMETHODIMP GlobalWindowImpl::SetOpener(nsIDOMWindowInternal* aOpener)
 {
-  // window.opener is only settable to null...
-  NS_ENSURE_TRUE(!aOpener, NS_ERROR_DOM_NOT_SUPPORTED_ERR);
-
   mOpener = aOpener;
 
   return NS_OK;
