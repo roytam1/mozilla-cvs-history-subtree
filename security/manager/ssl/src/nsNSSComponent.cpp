@@ -1288,11 +1288,17 @@ nsNSSComponent::Init()
   // Do that before NSS init, to make sure we won't get unloaded.
   RegisterObservers();
 
+  // Photon apps initialize NSS themselves, so don't do it here.
+  // Kaie is coming up with a more formal mechanism to do this.
+  // See http://bugzilla.mozilla.org/show_bug.cgi?id=204881.
+  // But for now, we just skip this part - ddrinan
+#if 0
   rv = InitializeNSS(PR_TRUE); // ok to show a warning box on failure
   if (NS_FAILED(rv)) {
     PR_LOG(gPIPNSSLog, PR_LOG_ERROR, ("Unable to Initialize NSS.\n"));
     return rv;
   }
+#endif
 
   InitializeCRLUpdateTimer();
   RegisterPSMContentListener();
