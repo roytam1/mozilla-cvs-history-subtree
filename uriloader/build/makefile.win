@@ -27,6 +27,7 @@ REQUIRES	= xpcom \
 		  rdf \
 		  helperAppDlg \
 		  dom \
+		  uconv \
 		  $(NULL)
 LIBRARY_NAME	= urildr
 MODULE_NAME	= nsURILoaderModule

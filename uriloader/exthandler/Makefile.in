@@ -53,6 +53,7 @@ REQUIRES	= xpcom \
 		  plugin \
 		  pref \
 		  intl \
+		  uconv \
 		  $(NULL)
 
 OSHELPER	= nsOSHelperAppService.cpp
