@@ -88,8 +88,7 @@ nsIDragService     *nsWidget::sDragService = nsnull;
 #endif
 PRUint32            nsWidget::sWidgetCount = 0;
 PRBool              nsWidget::sJustGotActivated = PR_FALSE;
-PRBool              nsWidget::sJustGotDeactivated = PR_FALSE;
-
+nsWidget*						nsWidget::sFocusWidget = 0;
 
 nsWidget::nsWidget()
 {
@@ -132,6 +131,9 @@ nsWidget::nsWidget()
 
 
 nsWidget::~nsWidget( ) {
+
+	if( sFocusWidget == this ) sFocusWidget = 0;
+
   // it's safe to always call Destroy() because it will only allow itself to be called once
   Destroy();
 
@@ -1084,7 +1086,6 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 								d->SetNativeDndData( widget, event );
 								}
 #endif
-
   	  		    InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_MOVE );
       		    result = DispatchMouseEvent(theMouseEvent);
 							}
@@ -1146,7 +1147,7 @@ int nsWidget::GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t
 {
   nsWidget *pWidget = (nsWidget *) data;
 
-	if( widget->class_rec->description && PtWidgetIsClass( widget, PtWindow ) ) {
+	if( PtWidgetIsClass( widget, PtWindow ) ) {
 		if( pWidget->mEventCallback ) {
 
 			/* the WM_ACTIVATE code */
@@ -1174,10 +1175,6 @@ int nsWidget::GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t
 int nsWidget::LostFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo ) 
 {
   nsWidget *pWidget = (nsWidget *) data;
- 	if( sJustGotDeactivated ) {
-		sJustGotDeactivated = PR_FALSE;
-		pWidget->DispatchStandardEvent(NS_DEACTIVATE);
-		}
  	pWidget->DispatchStandardEvent(NS_LOSTFOCUS);
   return Pt_CONTINUE;
 }
