@@ -46,12 +46,12 @@ function setHomePageToCurrentPage()
     var homePageField = document.getElementById("browserStartupHomepage");
     var newVal = "";
 
-    var browser = top.opener.document.getElementById("content");
-    var l = browser.mPanelContainer.childNodes.length;
+    var tabbrowser = top.opener.document.getElementById("content");
+    var l = tabbrowser.browsers.length;
     for (var i = 0; i < l; i++) {
       if (i)
         newVal += "|";
-      newVal += browser.mPanelContainer.childNodes[i].webNavigation.currentURI.spec;
+      newVal += tabbrowser.getBrowserAtIndex(i).webNavigation.currentURI.spec;
     }
     
     homePageField.value = newVal;
