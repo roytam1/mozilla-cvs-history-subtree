@@ -234,6 +234,11 @@ find_end:
             }
                 
             PRUint32 len = nextNL - (nextEq + 1); 
+
+            // allows win32-style \r\n line endings
+            if ( *(nextEq + len) == '\r' )
+                --len;
+
             strncpy(aVal, (nextEq + 1), len);
             *(aVal + len) = 0; // null terminate
             return NS_OK;
