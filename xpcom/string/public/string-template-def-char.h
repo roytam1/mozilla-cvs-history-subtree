@@ -48,8 +48,9 @@
 #define nsTStringTuple_CharT                nsCStringTuple
 #define nsTStringComparator_CharT           nsCStringComparator
 #define nsTDefaultStringComparator_CharT    nsDefaultCStringComparator
-#define nsTPromiseFlatString_CharT          nsPromiseFlatCString
 #define nsTDependentString_CharT            nsDependentCString
 #define nsTDependentSubstring_CharT         nsDependentCSubstring
 #define nsTXPIDLString_CharT                nsXPIDLCString
 #define nsTGetterCopies_CharT               nsCGetterCopies
+#define nsTPromiseFlatString_CharT          nsPromiseFlatCString
+#define TPromiseFlatString_CharT            PromiseFlatCString

@@ -49,8 +49,9 @@
 #undef nsTStringTuple_CharT
 #undef nsTStringComparator_CharT
 #undef nsTDefaultStringComparator_CharT
-#undef nsTPromiseFlatString_CharT
 #undef nsTDependentString_CharT
 #undef nsTDependentSubstring_CharT
 #undef nsTXPIDLString_CharT
 #undef nsTGetterCopies_CharT
+#undef nsTPromiseFlatString_CharT
+#undef TPromiseFlatString_CharT

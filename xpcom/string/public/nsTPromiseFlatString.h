@@ -137,3 +137,26 @@ class nsTPromiseFlatString_CharT : public nsTString_CharT
           Assign(tuple);
         }
   };
+
+inline
+const nsTPromiseFlatString_CharT
+TPromiseFlatString_CharT( const nsTAString_CharT& str )
+  {
+    return nsTPromiseFlatString_CharT(str);
+  }
+
+  // e.g., PromiseFlatCString(Substring(s))
+inline
+const nsTPromiseFlatString_CharT
+TPromiseFlatString_CharT( const nsCStringBase& frag )
+  {
+    return nsTPromiseFlatString_CharT(frag);
+  }
+
+  // e.g., PromiseFlatCString(a + b)
+inline
+const nsTPromiseFlatString_CharT
+TPromiseFlatString_CharT( const nsCStringTuple& tuple )
+  {
+    return nsTPromiseFlatString_CharT(tuple);
+  }
