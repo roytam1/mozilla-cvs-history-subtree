@@ -309,7 +309,7 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
 
   // now create the db view, which will sort it.
-  CreateDBView(newFolder, isThreaded, sortID, sortDirection);
+  CreateDBView(newFolder, isThreaded, viewType, sortID, sortDirection);
 
   // Since SetSentFolderColumns() may alter the template's structure,
   // we need to explicitly force the builder to recompile its rules.
@@ -556,11 +556,31 @@ var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
 
 var gDBView = null;
 
-function CreateDBView(msgFolder, isThreaded, sortKey, sortDirection)
+function CreateDBView(msgFolder, isThreaded, viewType, sortKey, sortDirection)
 {
-    dump("XXX CreateDBView(" + msgFolder + "," + isThreaded + "," + sortKey + "," + sortDirection +")\n");
+    dump("XXX CreateDBView(" + msgFolder + "," + isThreaded + "," + viewType + "," + sortKey + "," + sortDirection + ")\n");
 
-    gDBView = Components.classes["@mozilla.org/messenger/msgdbview;1?type=threaded"].createInstance(Components.interfaces.nsIMsgDBView);
+    var dbviewContractId = "@mozilla.org/messenger/msgdbview;1?type=";
+
+    // eventually, we will not be using nsMsgViewType.eShow*, but for now
+    // this will help us mirror the thread pane
+    var dbViewType = ConvertViewType(viewType);
+    switch (dbViewType) {
+        case nsMsgViewType.eShowUnread:
+            dbviewContractId += "threadswithunread";
+            break;
+        case nsMsgViewType.eShowWatched:
+            dbviewContractId += "watchedthreadswithunread";
+            break;
+        case nsMsgViewType.eShowAll:
+        case nsMsgViewType.eShowRead:
+        default:
+            dbviewContractId += "threaded";
+            break;
+    }
+
+    dump("XXX creating " + dbviewContractId + "\n");
+    gDBView = Components.classes[dbviewContractId].createInstance(Components.interfaces.nsIMsgDBView);
 
     var sortType = ConvertSortKey(sortKey);
     var sortOrder = ConvertSortDirection(sortDirection)
@@ -979,17 +999,22 @@ function IsSpecialFolder(msgFolder, specialFolderNames)
 	return false;
 }
 
+function ConvertViewType(viewType)
+{
+    if (!viewType || (viewType == "")) {
+        return nsMsgViewType.eShowAll;
+    }
+    else {
+        return viewType;
+    }
+}
+
 
 function SetViewType(viewType)
 {
-    //dump("in SetViewType with " + viewType + "\n");
-    if (!viewType || (viewType == "")) {
-        viewType = nsMsgViewType.eShowAll;
-    }
-
     if(messageView)
     {
-        messageView.viewType = viewType;
+        messageView.viewType = ConvertViewType(viewType);
     }
 }
 
