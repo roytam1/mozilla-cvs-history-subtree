@@ -1,6 +1,22 @@
 #include "nsReflowTree.h"
 #include "nsIFrame.h"
 #include "nsHTMLReflowCommand.h"
+#include "pldhash.h"
+
+struct TargettedFrameEntry : public PLDHashEntryStub
+{
+    const nsReflowTree::Node *node;
+};
+
+nsReflowTree::nsReflowTree() : mRoot(0)
+{
+#if 0
+    /* XXX fallible */
+    PL_DHashTableInit(&mTargettedFrames, PL_DHashGetStubOps(), 0,
+                      sizeof TargettedFrameEntry,
+                      45 /* SWAG, but aren't these all? */);
+#endif
+}
 
 /* static */ nsReflowTree::Node *
 nsReflowTree::Node::Create(nsIFrame *forFrame)
@@ -56,7 +72,7 @@ nsReflowTree::Node::GetChild(nsIFrame *forFrame)
 nsReflowTree::Node::ChildChunk::Create(nsReflowTree::Node *node)
 {
     ChildChunk *chunk = new ChildChunk();
-    memset(chunk->mKids + 1, 0, sizeof(chunk->mKids));
+    memset(chunk->mKids + 1, 0, (KIDS_CHUNK_SIZE - 1) * sizeof (ChildChunk));
     chunk->mKids[0] = node;
     chunk->mNext = 0;
 

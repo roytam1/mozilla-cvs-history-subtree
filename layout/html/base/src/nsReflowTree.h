@@ -13,6 +13,7 @@
 // }
 
 #include "nscore.h"
+#include "pldhash.h"
 
 class nsIFrame;
 class nsHTMLReflowCommand;
@@ -20,7 +21,7 @@ class nsHTMLReflowCommand;
 class nsReflowTree
 {
 public:
-    nsReflowTree() : mRoot(0) { }
+    nsReflowTree();
     ~nsReflowTree();
 
     class Node
@@ -107,8 +108,9 @@ public:
     Node *Root() { return mRoot; }
 
 private:
-    Node *AddToTree(nsIFrame *frame);
-    Node *mRoot;
+    Node         *AddToTree(nsIFrame *frame);
+    Node         *mRoot;
+    PLDHashTable mTargettedFrames;
     // Other reflow-state stuff here
 };
 
