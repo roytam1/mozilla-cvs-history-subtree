@@ -166,7 +166,9 @@ dnl ========================================================
 dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
-*-linux*)
+*-mingw*)
+    ;;
+*)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     ;;
 esac
@@ -189,6 +191,21 @@ case "$target" in
     case "${target_cpu}" in
     alpha*)
 	AC_DEFINE(XP_UNIX)
+	AC_DEFINE(_POSIX_SOURCE)
+	AC_DEFINE(_BSD_SOURCE)
+	;;
+    esac
+    ;;
+
+*-irix*)
+    AC_DEFINE(XP_UNIX)
+    MDCPUCFG_H=_irix32.cfg
+    PR_MD_CSRCS=irix.c
+    AS="as -D_ASM $(INCLUDES) -n32"
+    PR_MD_ASFILES=os_Irix.s
+    PR_MD_ARCH_DIR=unix
+    case "${target_cpu}" in
+    alpha*)
 	AC_DEFINE(_POSIX_SOURCE)
 	AC_DEFINE(_BSD_SOURCE)
 	;;
@@ -458,7 +475,11 @@ else
 	USE_NSPR_THREADS=
     else
 	USE_NSPR_THREADS=1
-	AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
+	case "$target" in
+    	*-linux*)
+	    AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
+	    ;;
+	esac
     fi
 fi
 dnl Special thread exceptions
