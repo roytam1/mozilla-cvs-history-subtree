@@ -42,7 +42,10 @@
 #include <shlobj.h>
 #include <intshcut.h>
 
+// XXX: mingw doesn't have an impl of the urlmon header or import lib
+#ifndef __MINGW32__
 #include <urlmon.h> // needed for CopyStgMedium
+#endif
 
 // shellapi.h is needed to build with WIN32_LEAN_AND_MEAN
 #include <shellapi.h>
@@ -955,19 +958,27 @@ NS_IMPL_ISUPPORTS1(nsClipboardImage, nsIClipboardImage)
 
 NS_IMETHODIMP nsClipboardImage::SetNativeImage(void * aNativeImageData)
 {
+#ifdef __MINGW32__
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   if(mStgMedium.hGlobal)
     ReleaseStgMedium(&mStgMedium);
     
   HRESULT err = CopyStgMedium((STGMEDIUM *) aNativeImageData, &mStgMedium);
   return NS_OK;
+#endif
 }
 
 NS_IMETHODIMP nsClipboardImage::GetNativeImage(void * aNativeImageData)
 {
+#ifdef __MINGW32__
+  return NS_ERROR_NOT_IMPLEMENTED;
+#else
   // the caller should be passing in a STGMEDIUM object which we can copy into
 
   HRESULT err = CopyStgMedium(&mStgMedium, (STGMEDIUM *) aNativeImageData);
   return NS_OK;
+#endif
 }
 
 NS_IMETHODIMP nsClipboardImage::ReleaseNativeImage(void * aNativeImageData)
