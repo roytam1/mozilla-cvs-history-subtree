@@ -303,6 +303,8 @@ NS_IMETHODIMP nsAddressBook::GetAbDatabaseFromURI(const char *uri, nsIAddrDataba
 		if(NS_SUCCEEDED(rv))
 			abSession->GetUserProfileDirectory(&dbPath);
 		
+    if (NS_SUCCEEDED(rv) && dbPath)
+    {
 		nsAutoString file; file.AssignWithConversion(&(uri[PL_strlen(kMDBDirectoryRoot)]));
 		PRInt32 pos = file.Find("/");
 		if (pos != -1)
@@ -325,6 +327,7 @@ NS_IMETHODIMP nsAddressBook::GetAbDatabaseFromURI(const char *uri, nsIAddrDataba
 		else
 			rv = NS_ERROR_NULL_POINTER;
 	}
+  }
 	return rv;
 }
 
