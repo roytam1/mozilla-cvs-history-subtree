@@ -91,16 +91,14 @@ menubutton:not([disabled="true"]):hover:active {
 
 /** Toolbar Customization stuff **/
 toolbar[mode="icons"] > toolbarbutton > .toolbarbutton-icon,
-toolbar[mode="text"] > toolbarbutton > .toolbarbutton-text 
+toolbar[mode="text"] > toolbarbutton > .toolbarbutton-text, 
 toolbar[mode="icons"] > toolbarbutton[type="menu-button"] > .toolbarbutton-icon,
 toolbar[mode="text"] > toolbarbutton[type="menu-button"] > .toolbarbutton-text {
 	display: -moz-box;
 }
 
-toolbar[mode="icons"] > toolbarbutton > .toolbarbutton-text,
-toolbar[mode="text"] > toolbarbutton > .toolbarbutton-icon,
-toolbar[mode="text"] > toolbarbutton > toolbarbutton > .toolbarbutton-icon,
-toolbar[mode="icons"] > toolbarbutton > toolbarbutton > .toolbarbutton-text {
+toolbar[mode="icons"] .toolbarbutton-text,
+toolbar[mode="text"] .toolbarbutton-icon {
 	display: none;
 }
 
