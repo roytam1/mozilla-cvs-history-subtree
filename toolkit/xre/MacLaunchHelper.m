@@ -45,6 +45,8 @@ void LaunchChildMac(int aArgc, char** aArgv)
   int i;
   NSTask* child = [[NSTask alloc] init];
   NSMutableArray* args = [[NSMutableArray alloc] init];
+  NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+
   for (i = 1; i < aArgc; ++i) 
     [args addObject: [NSString stringWithCString: aArgv[i]]];
   
@@ -52,5 +54,6 @@ void LaunchChildMac(int aArgc, char** aArgv)
   [child setLaunchPath:[[NSBundle mainBundle] executablePath]];
   [child setArguments:args];
   [child launch];
+  [pool release];
 }
 
