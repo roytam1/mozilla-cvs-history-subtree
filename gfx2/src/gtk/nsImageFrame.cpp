@@ -380,17 +380,44 @@ nsresult nsImageFrame::DrawImage(GdkDrawable *aDest, const GdkGC *aGC, const nsR
 
 
   if (mFormat == nsIGFXFormat::RGBA) {
+    GdkPixbuf *destPb =
+      gdk_pixbuf_get_from_drawable(nsnull,
+                                   aDest, gdk_rgb_get_cmap(),
+                                   aDestPoint->x + aSrcRect->x,
+                                   aDestPoint->y + aSrcRect->y,
+                                   0, 0,
+                                   aSrcRect->width, aSrcRect->height);
 
-    gdk_pixbuf_render_to_drawable_alpha(mImageData.pixbuf,
-                                        aDest,
-                                        aSrcRect->x, aSrcRect->y,
-                                        (aDestPoint->x + aSrcRect->x),
-                                        (aDestPoint->y + aSrcRect->y),
-                                        aSrcRect->width, aSrcRect->height,
-                                        GDK_PIXBUF_ALPHA_FULL,
-                                        100,
-                                        GDK_RGB_DITHER_MAX,
-                                        0, 0);
+    if (!destPb) {
+      printf("get failed!\n");
+      return NS_ERROR_FAILURE;
+    }
+
+    GdkPixbuf *tmpPb = gdk_pixbuf_new(GDK_COLORSPACE_RGB, PR_TRUE, 8,
+                                      aSrcRect->width, aSrcRect->height);
+
+    gdk_pixbuf_copy_area(mImageData.pixbuf,
+                         aSrcRect->x, aSrcRect->y,
+                         aSrcRect->width, aSrcRect->height,
+                         tmpPb,
+                         0, 0);
+
+    gdk_pixbuf_composite(tmpPb, destPb,
+                         0, 0,
+                         aSrcRect->width, aSrcRect->height,
+                         0.0, 0.0,
+                         1.0, 1.0, GDK_INTERP_NEAREST, 255);
+
+    gdk_pixbuf_render_to_drawable(destPb,
+                                  aDest, NS_CONST_CAST(GdkGC*, aGC),
+                                  0, 0,
+                                  (aDestPoint->x + aSrcRect->x),
+                                  (aDestPoint->y + aSrcRect->y),
+                                  aSrcRect->width, aSrcRect->height,
+                                  GDK_RGB_DITHER_MAX, 0, 0);
+
+    gdk_pixbuf_unref(tmpPb);
+    gdk_pixbuf_unref(destPb);
 
   } else if (mFormat == nsIGFXFormat::RGB) {
 
