@@ -22,8 +22,8 @@
 #
 
 MOD_DEPTH	= ../../..
-srcdir		= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk/ldap/libraries/libssldap
-topsrcdir 	= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk
+srcdir		= .
+topsrcdir 	= ../../..
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
@@ -92,15 +92,6 @@ EXTRA_LIBS += $(DYNAMICNSPR)
 endif
 
 ifeq ($(OS_ARCH), WINNT)
-ifdef NS_USE_GCC
-EXTRA_DLL_LIBS = -L$(dist_libdir) -l$(LDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-	-l$(NSS_LIBNAME)
-ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
-EXTRA_DLL_LIBS += -l$(SOFTOKN_LIBNAME)
-endif
-EXTRA_DLL_LIBS += -l$(SSL_LIBNAME) \
-	-l$(PLC_BASENAME) -l$(PLDS_BASENAME) -l$(NSPR_BASENAME)
-else
 EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
             comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
             rpcrt4.lib uuid.lib odbc32.lib odbccp32.lib winmm.lib
@@ -114,7 +105,6 @@ ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
 EXTRA_LIBS += $(dist_libdir)/$(SOFTOKN_LIBNAME).lib
 endif
 EXTRA_LIBS += $(dist_libdir)/$(SSL_LIBNAME).lib
-endif
 endif
 
 ifeq ($(OS_ARCH),OS2)

@@ -22,8 +22,8 @@
 #
 
 MOD_DEPTH	= ../../..
-srcdir		= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk/ldap/clients/tools
-topsrcdir 	= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk
+srcdir		= .
+topsrcdir 	= ../../..
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk

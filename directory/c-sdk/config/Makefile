@@ -34,9 +34,8 @@
 # 
 
 MOD_DEPTH	= ..
-topsrcdir	= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk
-srcdir		= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk/config
-VPATH		= /cygdrive/c/Builds/turdbaby/mozilla/directory/c-sdk/config
+topsrcdir	= ..
+srcdir		= .
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
@@ -93,9 +92,9 @@ ifeq ($(OS_ARCH), OpenVMS)
     XLDOPTS += $(LDFLAGS)
 endif
 
-ifeq ($(MOZ_OS2_TOOLS),EMX)
+ifdef XP_OS2_EMX
 XCFLAGS = $(OS_EXE_CFLAGS)
-XLDOPTS = -Zomf -Zlinker /PM:VIO
+XLDOPTS = -Zlinker /PM:VIO
 endif
 
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
@@ -115,9 +114,7 @@ endif
 
 OUTOPTION = -o # end of the line
 ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
-ifndef NS_USE_GCC
 OUTOPTION = /Fe
-endif
 endif
 
 # Redefine MAKE_OBJDIR for just this directory
