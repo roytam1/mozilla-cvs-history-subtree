@@ -1270,8 +1270,10 @@ js_Interpret(JSContext *cx, jsval *result)
 	    rval = POP();
 	    /* FALL THROUGH */
 	  case JSOP_FORELEM2:
-	    POP_ELEMENT_ID(id);
-	    lval = POP();
+            /* FORELEM2 simply initializes the iteration state and
+               leaves the assignment to the enumerator until after
+               the next property has been acquired.
+            */
 
 	  do_forinloop:
 	    /*
@@ -1384,28 +1386,34 @@ js_Interpret(JSContext *cx, jsval *result)
 		}
 	    }
 
-	    /* Convert lval to a non-null object containing id. */
-	    VALUE_TO_OBJECT(cx, lval, obj);
+            if (op != JSOP_FORELEM2) {
+                /* Convert lval to a non-null object containing id. */
+	        VALUE_TO_OBJECT(cx, lval, obj);
 
-	    /* Make sure rval is a string for uniformity and compatibility. */
-	    if (!JSVAL_IS_INT(rval)) {
-		rval = ATOM_KEY((JSAtom *)rval);
-	    } else if ((cx->version <= JSVERSION_1_1) &&
-		       (cx->version >= JSVERSION_1_0)) {
-		str = js_NumberToString(cx, (jsdouble) JSVAL_TO_INT(rval));
-		if (!str) {
-		    ok = JS_FALSE;
+	        /* Make sure rval is a string for uniformity and compatibility. */
+	        if (!JSVAL_IS_INT(rval)) {
+		    rval = ATOM_KEY((JSAtom *)rval);
+	        } else if ((cx->version <= JSVERSION_1_1) &&
+		           (cx->version >= JSVERSION_1_0)) {
+		    str = js_NumberToString(cx, (jsdouble) JSVAL_TO_INT(rval));
+		    if (!str) {
+		        ok = JS_FALSE;
+		        goto out;
+		    }
+
+		    /* Hold via sp[0] in case the GC runs under OBJ_SET_PROPERTY. */
+		    rval = sp[0] = STRING_TO_JSVAL(str);
+	        }
+
+
+	        /* Set the variable obj[id] to refer to rval. */
+	        ok = OBJ_SET_PROPERTY(cx, obj, id, &rval);
+	        if (!ok)
 		    goto out;
-		}
-
-		/* Hold via sp[0] in case the GC runs under OBJ_SET_PROPERTY. */
-		rval = sp[0] = STRING_TO_JSVAL(str);
-	    }
-
-	    /* Set the variable obj[id] to refer to rval. */
-	    ok = OBJ_SET_PROPERTY(cx, obj, id, &rval);
-	    if (!ok)
-		goto out;
+            }
+            else {
+                PUSH_OPND(rval);
+            }
 
 	    /* Push true to keep looping through properties. */
 	    rval = JSVAL_TRUE;
@@ -2171,6 +2179,16 @@ js_Interpret(JSContext *cx, jsval *result)
 	    ELEMENT_OP(CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval)));
 	    PUSH_OPND(rval);
 	    break;
+
+          case JSOP_ENUMELEM:
+            POP_ELEMENT_ID(id);
+            lval = POP();
+            VALUE_TO_OBJECT(cx, lval, obj);
+            rval = POP();
+            CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval));
+            if (!ok)
+	        goto out;
+            break;
 
 	  case JSOP_PUSHOBJ:
 	    PUSH_OPND(OBJECT_TO_JSVAL(obj));
