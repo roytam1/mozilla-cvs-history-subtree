@@ -45,14 +45,9 @@ nsresult NS_DoIdleEmbeddingStuff()
         return NS_ERROR_FAILURE;
     }
 
-    if (timerQueue->HasReadyTimers(NS_PRIORITY_LOWEST))
+    while (timerQueue->HasReadyTimers(NS_PRIORITY_LOWEST))
     {
-        MSG wmsg;
-        do
-        {
-          timerQueue->FireNextReadyTimer(NS_PRIORITY_LOWEST);
-        } while (timerQueue->HasReadyTimers(NS_PRIORITY_LOWEST) &&
-                 !::PeekMessage(&wmsg, NULL, 0, 0, PM_NOREMOVE));
+        timerQueue->FireNextReadyTimer(NS_PRIORITY_LOWEST);
     }
     return NS_OK;
 }
