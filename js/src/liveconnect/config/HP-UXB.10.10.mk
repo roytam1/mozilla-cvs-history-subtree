@@ -14,8 +14,8 @@
 # Copyright (C) 1998 Netscape Communications Corporation.  All Rights
 # Reserved.
 
-JDK = /share/builds/components/jdk/1.1.5/HP-UX
+JDK = /share/builds/components/jdk/1.1.5/HP-UX10
 
 INCLUDES   += -I$(JDK)/include -I$(JDK)/include/hp-ux
 
-OTHER_LIBS += -L$(JDK)/lib/PA_RISC/native_threads -ljava
+OTHER_LIBS += -L$(JDK)/lib/PA_RISC/green_threads -ljava
