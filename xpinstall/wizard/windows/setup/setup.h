@@ -62,6 +62,7 @@ typedef int PRInt32;
 #define FILE_IDI_GETARCHIVES            "getarchives.idi"
 #define FILE_IDI_GETREDIRECT            "getredirect.idi"
 #define FILE_INI_REDIRECT               "redirect.ini"
+#define WIZ_TEMP_DIR                    "ns_temp"
 
 /* PP: Parse Path */
 #define PP_FILENAME_ONLY                1

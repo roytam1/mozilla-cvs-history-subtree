@@ -113,7 +113,6 @@ HRESULT           GetConfigIni(void);
 void              CleanTempFiles(void);
 void              OutputSetupTitle(HDC hDC);
 HRESULT           SdArchives(LPSTR szFileIdi, LPSTR szDownloadDir);
-DWORD             NumberOfArchivesToDownload(void);
 long              RetrieveArchives(void);
 long              RetrieveRedirectFile(void);
 /* HRESULT           SmartUpdateJars(void); */
@@ -167,6 +166,7 @@ void              SsiSiteSelectorNodeDelete(ssi *ssiTemp);
 ssi*              SsiGetNode(LPSTR szDescription);
 void              UpdateSiteSelector(void);
 DWORD             GetAdditionalComponentsCount(void);
+DWORD             GetTotalArchivesToDownload();
 
 BOOL              bSDInit;
 

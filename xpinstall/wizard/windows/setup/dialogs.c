@@ -1422,6 +1422,11 @@ LRESULT CALLBACK DlgProcProgramFolder(HWND hDlg, UINT msg, WPARAM wParam, LONG l
       if(GetClientRect(hDlg, &rDlg))
         SetWindowPos(hDlg, HWND_TOP, (dwScreenX/2)-(rDlg.right/2), (dwScreenY/2)-(rDlg.bottom/2), 0, 0, SWP_NOSIZE);
 
+      if((diSiteSelector.bShowDialog == FALSE) || (GetTotalArchivesToDownload() == 0))
+        ShowWindow(GetDlgItem(hDlg, IDC_BUTTON_SITE_SELECTOR), SW_HIDE);
+      else
+        ShowWindow(GetDlgItem(hDlg, IDC_BUTTON_SITE_SELECTOR), SW_SHOW);
+
       break;
 
     case WM_COMMAND:
@@ -1438,6 +1443,7 @@ LRESULT CALLBACK DlgProcProgramFolder(HWND hDlg, UINT msg, WPARAM wParam, LONG l
             break;
           }
           lstrcpy(sgProduct.szProgramFolderName, szBuf);
+          dwWizardState = DLG_SITE_SELECTOR;
 
           DestroyWindow(hDlg);
           PostMessage(hWndMain, WM_COMMAND, IDWIZNEXT, 0);
@@ -1446,6 +1452,12 @@ LRESULT CALLBACK DlgProcProgramFolder(HWND hDlg, UINT msg, WPARAM wParam, LONG l
         case IDWIZBACK:
           DestroyWindow(hDlg);
           PostMessage(hWndMain, WM_COMMAND, IDWIZBACK, 0);
+          break;
+
+        case IDC_BUTTON_SITE_SELECTOR:
+          dwWizardState = DLG_PROGRAM_FOLDER;
+          DestroyWindow(hDlg);
+          PostMessage(hWndMain, WM_COMMAND, IDWIZNEXT, 0);
           break;
 
         case IDC_LIST:
@@ -1476,7 +1488,7 @@ LRESULT CALLBACK DlgProcSiteSelector(HWND hDlg, UINT msg, WPARAM wParam, LONG lP
   ssi   *ssiTemp;
   char  szCBDefault[MAX_BUF];
 
-  hwndCBSiteSelector = GetDlgItem(hDlg, IDC_SITE_SELECTOR);
+  hwndCBSiteSelector = GetDlgItem(hDlg, IDC_LIST_SITE_SELECTOR);
 
   switch(msg)
   {
@@ -1505,7 +1517,7 @@ LRESULT CALLBACK DlgProcSiteSelector(HWND hDlg, UINT msg, WPARAM wParam, LONG lP
         else
           SendMessage(hwndCBSiteSelector, CB_SETCURSEL, 0, 0);
       }
-      else if((iIndex = SendMessage(hwndCBSiteSelector, CB_SELECTSTRING, -1, (LPARAM)szSiteSelectorDescription) != CB_ERR))
+      else if((iIndex = SendMessage(hwndCBSiteSelector, CB_SELECTSTRING, -1, (LPARAM)szSiteSelectorDescription)) != CB_ERR)
         SendMessage(hwndCBSiteSelector, CB_SETCURSEL, (WPARAM)iIndex, 0);
       else
         SendMessage(hwndCBSiteSelector, CB_SETCURSEL, 0, 0);
@@ -1520,6 +1532,7 @@ LRESULT CALLBACK DlgProcSiteSelector(HWND hDlg, UINT msg, WPARAM wParam, LONG lP
         case IDWIZNEXT:
           iIndex = SendMessage(hwndCBSiteSelector, CB_GETCURSEL, 0, 0);
           SendMessage(hwndCBSiteSelector, CB_GETLBTEXT, (WPARAM)iIndex, (LPARAM)szSiteSelectorDescription);
+          dwWizardState = DLG_WINDOWS_INTEGRATION;
 
           DestroyWindow(hDlg);
           PostMessage(hWndMain, WM_COMMAND, IDWIZNEXT, 0);
@@ -1854,7 +1867,10 @@ void DlgSequenceNext()
       if(diSiteSelector.bShowDialog)
         InstantiateDialog(dwWizardState, diSiteSelector.szTitle, DlgProcSiteSelector);
       else
+      {
+        dwWizardState = DLG_WINDOWS_INTEGRATION;
         PostMessage(hWndMain, WM_COMMAND, IDWIZNEXT, 0);
+      }
       break;
 
     case DLG_SITE_SELECTOR:

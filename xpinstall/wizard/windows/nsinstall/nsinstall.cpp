@@ -31,6 +31,7 @@
 #define BAR_SPACING   2
 #define BAR_WIDTH     6
 #define MAX_BUF       4096
+#define WIZ_TEMP_DIR  "ns_temp"
 
 char szTitle[4096];
 HINSTANCE hInst;
@@ -60,7 +61,13 @@ GetFullTempPathName(LPCTSTR lpszFileName, DWORD dwBufferLength, LPTSTR lpszBuffe
 	dwLen = GetTempPath(dwBufferLength, lpszBuffer);
 	if (lpszBuffer[dwLen - 1] != '\\')
 		strcat(lpszBuffer, "\\");
+	strcat(lpszBuffer, WIZ_TEMP_DIR);
+
+  dwLen = lstrlen(lpszBuffer);
+	if (lpszBuffer[dwLen - 1] != '\\')
+		strcat(lpszBuffer, "\\");
 	strcat(lpszBuffer, lpszFileName);
+
 	return TRUE;
 }
 
@@ -78,6 +85,29 @@ void AppendBackSlash(LPSTR szInput, DWORD dwInputSize)
       }
     }
   }
+}
+
+HRESULT CreateDirectoriesAll(char* szPath)
+{
+  int     i;
+  int     iLen = lstrlen(szPath);
+  char    szCreatePath[MAX_BUF];
+  HRESULT hrResult;
+
+  ZeroMemory(szCreatePath, MAX_BUF);
+  memcpy(szCreatePath, szPath, iLen);
+  for(i = 0; i < iLen; i++)
+  {
+    if((iLen > 1) &&
+      ((i != 0) && ((szPath[i] == '\\') || (szPath[i] == '/'))) &&
+      (!((szPath[0] == '\\') && (i == 1)) && !((szPath[1] == ':') && (i == 2))))
+    {
+      szCreatePath[i] = '\0';
+      hrResult        = CreateDirectory(szCreatePath, NULL);
+      szCreatePath[i] = szPath[i];
+    }
+  }
+  return(hrResult);
 }
 
 // This function removes a directory and its subdirectories
@@ -268,6 +298,7 @@ ExtractFilesProc(HANDLE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG lParam)
 
 	// Create a file in the temp directory
 	GetFullTempPathName(lpszName, sizeof(szTmpFile), szTmpFile);
+  CreateDirectoriesAll(szTmpFile);
 
 	// Extract the file
 	hResInfo = FindResource((HINSTANCE)hModule, lpszName, lpszType);
@@ -460,6 +491,7 @@ RunInstaller(LPSTR lpCmdLine)
     char                szTmp[MAX_PATH];
     char                szCurrentDirectory[MAX_PATH];
     char                szBuf[MAX_PATH];
+	  DWORD               dwLen;
 
 	// Update UI
 	UpdateProgressBar(100);
@@ -471,7 +503,12 @@ RunInstaller(LPSTR lpCmdLine)
 
     // Setup program is in the directory specified for temporary files
 	  GetFullTempPathName("SETUP.EXE", sizeof(szCmdLine), szCmdLine);
-	  GetTempPath(4096, szTempPath);
+
+	  dwLen = GetTempPath(4096, szTempPath);
+	  if (szTempPath[dwLen - 1] != '\\')
+		  strcat(szTempPath, "\\");
+	  strcat(szTempPath, WIZ_TEMP_DIR);
+
     GetCurrentDirectory(MAX_PATH, szCurrentDirectory);
     GetShortPathName(szCurrentDirectory, szBuf, MAX_PATH);
 
@@ -528,6 +565,7 @@ RunInstaller(LPSTR lpCmdLine)
 	DeleteFile(szTmp);
 	GetFullTempPathName("core.ns", sizeof(szTmp), szTmp);
   DirectoryRemove(szTmp, TRUE);
+  DirectoryRemove(szTempPath, FALSE);
 	return TRUE;
 }
 

@@ -199,7 +199,7 @@ Message0=Setup will add program icons to the Program Folder listed below.  You m
 [Dialog Site Selector]
 Show Dialog=FALSE
 Title=Site Selector
-Message0=Select the region you wish to download from, or leave it on Default for Setup to automatically determine the best place to download from releative to where you are.
+Message0=Select the region you wish to download from, or leave it on Default for Setup to automatically determine the best place to download from relative to where you are.
 
 [Dialog Start Install]
 Show Dialog=FALSE
@@ -309,7 +309,7 @@ Server Path0=$ServerPath$
 
 [Core]
 Source=[XPI PATH]\core.xpi
-Destination=[TEMP]\core.ns
+Destination=[WIZTEMP]\core.ns
 $InstallSize$:core
 Cleanup=TRUE
 Message=Preparing Install, please wait...

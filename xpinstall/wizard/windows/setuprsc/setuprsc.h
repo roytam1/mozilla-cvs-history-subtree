@@ -84,8 +84,10 @@
 #define IDC_LIST1                       1053
 #define IDC_BUTTON1                     1055
 #define IDC_README                      1055
+#define IDC_BUTTON_SITE_SELECTOR        1055
 #define IDC_DOWNLOAD_SIZE               1058
 #define IDC_SITE_SELECTOR               1059
+#define IDC_LIST_SITE_SELECTOR          1059
 #define DLG_WELCOME                     2001
 #define DLG_LICENSE                     2002
 #define DLG_SETUP_TYPE                  2003

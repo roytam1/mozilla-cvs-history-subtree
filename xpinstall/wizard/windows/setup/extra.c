@@ -261,10 +261,14 @@ HRESULT Initialize(HINSTANCE hInstance)
     AppendBackSlash(szTempDir, MAX_BUF);
     lstrcat(szTempDir, "TEMP");
   }
+  lstrcpy(szOSTempDir, szTempDir);
+  AppendBackSlash(szTempDir, MAX_BUF);
+  lstrcat(szTempDir, WIZ_TEMP_DIR);
 
   if(!FileExists(szTempDir))
   {
-    CreateDirectory(szTempDir, NULL);
+    AppendBackSlash(szTempDir, MAX_BUF);
+    CreateDirectoriesAll(szTempDir);
     if(!FileExists(szTempDir))
     {
       char szECreateTempDir[MAX_BUF];
@@ -276,6 +280,7 @@ HRESULT Initialize(HINSTANCE hInstance)
       }
       return(1);
     }
+    RemoveBackSlash(szTempDir);
   }
 
   hbmpBoxChecked         = LoadBitmap(hSetupRscInst, MAKEINTRESOURCE(IDB_BOX_CHECKED));
@@ -558,14 +563,17 @@ HRESULT GetConfigIni()
 
 BOOL LocateJar(siC *siCObject)
 {
+  BOOL bRet;
   char szBuf[MAX_BUF * 2];
   char szSEADirTemp[MAX_BUF];
   char szSetupDirTemp[MAX_BUF];
   char szTempDirTemp[MAX_BUF];
+
+#ifdef XXX_SSU_VERIFY_XPI_FILE_AGAINST_ARCHIVE_LIST
   char szArchiveLstFile[MAX_BUF];
   char *szBufPtr;
   int  iLen;
-  BOOL bRet;
+#endif
 
   /* initialize default behavior */
   bRet = FALSE;
@@ -596,6 +604,26 @@ BOOL LocateJar(siC *siCObject)
     AppendBackSlash(szTempDirTemp, sizeof(szTempDirTemp));
     if(lstrcmpi(szTempDirTemp, szSetupDirTemp) == 0)
     {
+      /* check the temp dir for the .xpi file */
+      lstrcpy(szBuf, szTempDirTemp);
+      AppendBackSlash(szBuf, sizeof(szBuf));
+      lstrcat(szBuf, siCObject->szArchiveName);
+
+      if(FileExists(szBuf))
+      {
+        /* jar file found.  Unset attribute to download from the net */
+        siCObject->dwAttributes &= ~SIC_DOWNLOAD_REQUIRED;
+        /* save the path of where jar was found at */
+        lstrcpy(siCObject->szArchivePath, szTempDirTemp);
+        AppendBackSlash(siCObject->szArchivePath, MAX_BUF);
+        bRet = TRUE;
+      }
+
+#ifdef XXX_SSU_VERIFY_XPI_FILE_AGAINST_ARCHIVE_LIST
+      /* if the archive name is in the archive.lst file, then it was uncompressed
+       * by the self extracting .exe file.  Assume that the .xpi file exists.
+       * This is a safe assumption because the self extracting.exe creates the
+       * archive.lst with what it uncompresses everytime it is run. */
       lstrcpy(szArchiveLstFile, szTempDirTemp);
       AppendBackSlash(szArchiveLstFile, sizeof(szArchiveLstFile));
       lstrcat(szArchiveLstFile, "Archive.lst");
@@ -623,9 +651,12 @@ BOOL LocateJar(siC *siCObject)
           szBufPtr += iLen +1;
         }
       }
+#endif
+
     }
     else
     {
+      /* check the setup dir for the .xpi file */
       lstrcpy(szBuf, szSetupDirTemp);
       AppendBackSlash(szBuf, sizeof(szBuf));
       lstrcat(szBuf, siCObject->szArchiveName);
@@ -749,33 +780,6 @@ HRESULT AddArchiveToIdiFile(siC *siCObject, char *szSComponent, char *szSFile, c
   return(0);
 }
 
-DWORD NumberOfArchivesToDownload()
-{
-  DWORD     dwIndex0;
-  DWORD     dwCounter;
-  siC       *siCObject = NULL;
-
-  dwIndex0  = 0;
-  dwCounter = 0;
-  siCObject = SiCNodeGetObject(dwIndex0, TRUE, AC_ALL);
-  while(siCObject)
-  {
-    if(siCObject->dwAttributes & SIC_SELECTED)
-    {
-      /* if LocateJar returns FALSE, it means that the component could not be found locally,
-       * and therefore needs to be downloaded from the net. */
-      if(LocateJar(siCObject) == FALSE)
-        ++dwCounter;
-    }
-
-    ++dwIndex0;
-    siCObject = SiCNodeGetObject(dwIndex0, TRUE, AC_ALL);
-  }
-
-  return(dwCounter);
-}
-
-
 long RetrieveRedirectFile()
 {
   DWORD     dwIndex0;
@@ -791,7 +795,7 @@ long RetrieveRedirectFile()
   if(lstrcmpi(szBuf, "ENABLED") != 0)
     return(0);
 
-  if(NumberOfArchivesToDownload() == 0)
+  if(GetTotalArchivesToDownload() == 0)
     return(0);
 
   lstrcpy(szFileIdiGetRedirect, szTempDir);
@@ -1475,6 +1479,8 @@ void DeInitDlgReboot(diR *diDialog)
 
 HRESULT InitSetupGeneral()
 {
+  char szBuf[MAX_BUF];
+
   sgProduct.dwMode        = NORMAL;
   sgProduct.dwCustomType  = ST_RADIO0;
 
@@ -1499,6 +1505,9 @@ HRESULT InitSetupGeneral()
 
   if((szSiteSelectorDescription               = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
+
+  if(NS_LoadString(hSetupRscInst, IDS_CB_DEFAULT, szBuf, MAX_BUF) == WIZ_OK);
+    lstrcpy(szSiteSelectorDescription, szBuf);
 
   return(0);
 }
@@ -4047,6 +4056,35 @@ BOOL LocatePathNscpReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
   return(bReturn);
 }
 
+DWORD GetTotalArchivesToDownload()
+{
+  DWORD     dwIndex0;
+  DWORD     dwTotalArchivesToDownload;
+  siC       *siCObject = NULL;
+  char      szIndex0[MAX_BUF];
+
+  dwTotalArchivesToDownload = 0;
+  dwIndex0                  = 0;
+  itoa(dwIndex0,  szIndex0,  10);
+  siCObject = SiCNodeGetObject(dwIndex0, TRUE, AC_ALL);
+  while(siCObject)
+  {
+    if(siCObject->dwAttributes & SIC_SELECTED)
+    {
+      if(LocateJar(siCObject) == FALSE)
+      {
+        ++dwTotalArchivesToDownload;
+      }
+    }
+
+    ++dwIndex0;
+    itoa(dwIndex0, szIndex0, 10);
+    siCObject = SiCNodeGetObject(dwIndex0, TRUE, AC_ALL);
+  }
+
+  return(dwTotalArchivesToDownload);
+}
+
 BOOL LocatePathWinReg(LPSTR szSection, LPSTR szPath, DWORD dwPathSize)
 {
   char  szHKey[MAX_BUF];
@@ -4456,10 +4494,17 @@ HRESULT DecryptVariable(LPSTR szVariable, DWORD dwVariableSize)
     /* parse for the "c:\Windows\profiles\All Users\Start Menu\Programs" path */
     lstrcpy(szVariable, sgProduct.szProgramFolderPath);
   }
-  else if(lstrcmpi(szVariable, "TEMP") == 0)
+  else if(lstrcmpi(szVariable, "WIZTEMP") == 0)
   {
     /* parse for the "c:\Temp" path */
     lstrcpy(szVariable, szTempDir);
+    if(szVariable[strlen(szVariable) - 1] == '\\')
+      szVariable[strlen(szVariable) - 1] = '\0';
+  }
+  else if(lstrcmpi(szVariable, "TEMP") == 0)
+  {
+    /* parse for the "c:\Temp" path */
+    lstrcpy(szVariable, szOSTempDir);
     if(szVariable[strlen(szVariable) - 1] == '\\')
       szVariable[strlen(szVariable) - 1] = '\0';
   }
