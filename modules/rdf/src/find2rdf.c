@@ -69,7 +69,6 @@ parseFindURL(RDFT rdf, RDF_Resource u, RDF_Resource s,
 {
 	RDF_Cursor		c = NULL;
 	RDF_Resource		searchOn = NULL, matchOn = NULL;
-	char			*id, *token, *value;
 	int			loop;
 	findTokenStruct		tokens[5];
 
@@ -293,6 +292,7 @@ FindDisposeCursor(RDFT mcf, RDF_Cursor c)
 			err = remoteStoreDisposeCursor (mcf, c);
 		}
 	}
+	return(0);
 }
 
 

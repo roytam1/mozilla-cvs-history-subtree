@@ -804,11 +804,11 @@ matchStrings(RDF_Resource match, char *data, char *pattern)
 	}
 	else if (match == gCoreVocab->RDF_stringEquals)
 	{
-		ok = (!compareStrings(data, pattern));
+		ok = (PRBool)(!compareStrings(data, pattern));
 	}
 	else if (match == gCoreVocab->RDF_stringNotEquals)
 	{
-		ok = compareStrings(data, pattern);
+		ok = (PRBool)compareStrings(data, pattern);
 	}
 	else if (match == gCoreVocab->RDF_stringStartsWith)
 	{

@@ -55,9 +55,9 @@ extern	int	RDF_VOLUME_DESC_STR, RDF_DIRECTORY_DESC_STR, RDF_FILE_DESC_STR;
 
 XP_BEGIN_PROTOS
 
+void		GuessIEBookmarks(void);
 char *		getVolume(int16 volNum, PRBool afpVols);
 PRDir *		OpenDir(char *name);
-
 RDFT		MakeLFSStore (char* url);
 PRBool		fsRemoveFile(char *filePathname, PRBool justCheckWriteAccess);
 PRBool		fsRemoveDir(char *filePathname, PRBool justCheckWriteAccess);

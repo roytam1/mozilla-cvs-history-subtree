@@ -30,7 +30,10 @@
 extern	int	RDF_UNABLETODELETEFILE, RDF_UNABLETODELETEFOLDER;
 
 
-void GuessIEBookmarks (void) {
+
+void
+GuessIEBookmarks (void)
+{
 #ifdef XP_WIN
   RDF_Resource bmk = RDF_GetResource(NULL, "NC:Bookmarks", true);
   PRDir* ProfilesDir = OpenDir("file:///c|/winnt/profiles/");
@@ -47,6 +50,7 @@ void GuessIEBookmarks (void) {
           strcmp(de->name, "All Users")) {
         RDF_Resource bmkdir = RDF_GetResource(NULL,pn, 1);
         char* name = getMem(300);
+        /* XXX localization ! */
         sprintf(name, "%s's imported Favorites", de->name);
         remoteStoreAdd(gRemoteStore, bmkdir, gCoreVocab->RDF_name, copyString(name), 
                        RDF_STRING_TYPE, 1);
@@ -58,6 +62,7 @@ void GuessIEBookmarks (void) {
   }
 #endif
 }
+
 
 
 char *

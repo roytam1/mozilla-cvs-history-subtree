@@ -145,6 +145,7 @@ typedef struct RDF_FileStruct *RDFFile;
 
 
 RDF	newNavCenterDB();
+void	walkThroughAllBookmarks (RDF_Resource u);
 typedef PRBool (*assertProc)(RDFT r, RDF_Resource u, RDF_Resource  s, void* value, RDF_ValueType type, PRBool tv);
 typedef PRBool (*hasAssertionProc)(RDFT r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv);
 typedef void* (*getSlotValueProc)(RDFT r, RDF_Resource u, RDF_Resource s, RDF_ValueType type,  PRBool inversep, PRBool tv) ;
@@ -323,7 +324,6 @@ RDF_Resource resolveReference (char *tok, RDFFile f) ;
 RDF_Resource resolveGenlPosReference(char* tok,  RDFFile f);
 void beginReadingRDFFile(RDFFile f);
 void gcRDFFile (RDFFile f);
-void GuessIEBookmarks (void) ;
 #ifdef XP_MAC
 char* unescapeURL(char* inURL);
 #endif

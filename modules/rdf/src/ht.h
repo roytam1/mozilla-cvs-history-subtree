@@ -45,9 +45,15 @@
 
 /* HT data structures and defines */
 
-#define ITEM_LIST_SIZE		500		/* XXX ITEM_LIST_SIZE should be dynamic */
-#define ITEM_LIST_ELEMENT_SIZE	20
-#define NUM_MENU_CMDS           39
+#define ITEM_LIST_SIZE			500		/* XXX ITEM_LIST_SIZE should be dynamic */
+#define ITEM_LIST_ELEMENT_SIZE		20
+#define NUM_MENU_CMDS           	39
+
+#define RDF_SITEMAP			1
+#define RDF_RELATED_LINKS		2
+#define FROM_PAGE			1
+#define GUESS_FROM_PREVIOUS_PAGE	2
+#define HTDEL				remoteStoreRemove
 
 
 
@@ -111,8 +117,8 @@ typedef struct _HT_PaneStruct {
 	PRBool				bookmarkmenu;
 	PRBool				special;
 	char				*windowURL;
-    char*               htdburl;
-    RDFT                htdb;
+	char				*htdburl;
+	RDFT				htdb;
 } HT_PaneStruct;
 
 typedef	struct HT_ColumnStruct {
@@ -316,6 +322,7 @@ HT_DropAction			copyRDFLinkURLAt (HT_Resource dropx, char* objURL, char *objTitl
 HT_DropAction			uploadLFSURL (HT_Resource dropTarget, char* objURL);
 HT_DropAction			uploadRDFFileURL (HT_Resource dropTarget, char* objURL);
 HT_DropAction			esfsCopyMoveContentURL (HT_Resource dropTarget, char* objURL);
+void				HTADD(HT_Pane pane, RDF_Resource u, RDF_Resource s, void* v);
 HT_URLSiteMapAssoc *		makeNewSMP (HT_Pane htPane, char* pUrl, char* sitemapurl);
 void				RetainOldSitemaps (HT_Pane htPane, char *pUrl);
 void				populateSBProviders (HT_Pane htPane);
