@@ -208,7 +208,7 @@ int CSelectorButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButton
 							LPCTSTR pStatusText,
 							CSize bitmapSize, int nMaxTextChars, int nMinTextChars, 
 							HT_Resource pNode,
-							DWORD dwButtonStyle, CView* view, CPaneCX* pane, HT_View theView)
+							DWORD dwButtonStyle, CView* view, CPaneCX* pane)
 {
 	pView = view;
 	m_pPane = pane;
@@ -219,11 +219,11 @@ int CSelectorButton::Create(CWnd *pParent, int nToolbarStyle, CSize noviceButton
 	ns->data = this;
 	
 	// Construct the pane and give it our notification struct
-	m_Pane =  HT_GetPane(theView);/*HT_PaneFromResource(HT_GetRDFResource(pNode), ns, (PRBool)TRUE);*/
+	m_Pane = HT_PaneFromResource(HT_GetRDFResource(pNode), ns, (PRBool)TRUE);
     HT_SetPaneFEData(m_Pane, this);
 
 	HT_Resource pEntry = NULL;
-    //	HT_View theView = HT_GetSelectedView(m_Pane);
+	HT_View theView = HT_GetSelectedView(m_Pane);
 	
 	BOOKMARKITEM bookmark; // For now, create with the pictures style. No text ever.
 	return CLinkToolbarButton::Create(pParent, TB_PICTURES, noviceButtonSize, advancedButtonSize,
@@ -634,7 +634,7 @@ void CSelector::AddViewContext(const char* pTitle, CView* pView, CRDFContentView
 							pTitle, pNodeURL, 
 							CSize(23,23), 10, 5, 
 							node,
-                            TB_HAS_DRAGABLE_MENU | TB_HAS_TIMED_MENU, pView, htmlPane, theView);
+                            TB_HAS_DRAGABLE_MENU | TB_HAS_TIMED_MENU, pView, htmlPane);
 	
 	CRect rect;
 	rect.left = (long)m_xpos;
