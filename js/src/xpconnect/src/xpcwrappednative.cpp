@@ -158,7 +158,9 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     if(!wrapper->Init(ccx, parent, siWrapper))
     {
-        wrapper->Release();
+        // If the JSObject got created then it own one of the references
+        if(!wrapper->GetFlatJSObject())
+            wrapper->Release();
         wrapper->Release();
         return nsnull;
     }
@@ -166,7 +168,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     // XXX allow for null Interface?
     if(!wrapper->FindTearOff(ccx, Interface))
     {
-        wrapper->Release();
+        // Second reference will be released by the FlatJSObject's finializer.
         wrapper->Release();
         return nsnull;
     }
@@ -196,7 +198,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     if(wrapperToKill)
     {
-        wrapperToKill->Release();
+        // Second reference will be released by the FlatJSObject's finializer.
         wrapperToKill->Release();
     }
 
@@ -479,6 +481,7 @@ XPCWrappedNative::Release(void)
     NS_LOG_RELEASE(this, cnt, "XPCWrappedNative");
     if(0 == cnt)
     {
+        NS_ASSERTION(!mFlatJSObject,"Caller is releasing internally owned reference!");
         NS_DELETEXPCOM(this);
         return 0;
     }
@@ -1495,11 +1498,17 @@ done:
         delete [] dispatchParams;
 
 #ifdef DEBUG_stats_jband
+    {
     endTime = PR_IntervalNow();
 
-    printf("%s::%s %d ( js->c ) \n", GetInterfaceName(), GetMemberName(desc), PR_IntervalToMilliseconds(endTime-startTime));
+    const char* ifaceName;
+    ifaceInfo->GetNameShared(&ifaceName);
+    const char* methodName = JS_GetStringBytes(JSVAL_TO_STRING(name));
+
+    printf("%s::%s %d ( js->c ) \n", ifaceName, methodName, PR_IntervalToMilliseconds(endTime-startTime));
 
     totalTime += (endTime-startTime);
+    }
 #endif
 
     return retval;
