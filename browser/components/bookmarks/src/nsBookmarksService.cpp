@@ -5461,9 +5461,21 @@ nsBookmarksService::OnAssert(nsIRDFDataSource* aDataSource,
     if (mUpdateBatchNest != 0)  return NS_OK;
 
     PRInt32 count = mObservers.Count();
+    if (count == 0)
+        return NS_OK;
+
+    // Make a copy of the array first, because some
+    // observers remove themselves from the list while
+    // in the callback.  This causes much badness.
+    nsCOMArray<nsIRDFObserver> observersCopy;
     for (PRInt32 i = 0; i < count; ++i)
     {
-        (void) mObservers[i]->OnAssert(this, aSource, aProperty, aTarget);
+        observersCopy.AppendObject(mObservers[i]);
+    }
+
+    for (PRInt32 i = 0; i < count; ++i)
+    {
+        (void) observersCopy[i]->OnAssert(this, aSource, aProperty, aTarget);
     }
 
     return NS_OK;
@@ -5478,9 +5490,21 @@ nsBookmarksService::OnUnassert(nsIRDFDataSource* aDataSource,
     if (mUpdateBatchNest != 0)  return NS_OK;
 
     PRInt32 count = mObservers.Count();
+    if (count == 0)
+        return NS_OK;
+
+    // Make a copy of the array first, because some
+    // observers remove themselves from the list while
+    // in the callback.  This causes much badness.
+    nsCOMArray<nsIRDFObserver> observersCopy;
     for (PRInt32 i = 0; i < count; ++i)
     {
-        (void) mObservers[i]->OnUnassert(this, aSource, aProperty, aTarget);
+        observersCopy.AppendObject(mObservers[i]);
+    }
+
+    for (PRInt32 i = 0; i < count; ++i)
+    {
+        (void) observersCopy[i]->OnUnassert(this, aSource, aProperty, aTarget);
     }
 
     return NS_OK;
@@ -5496,9 +5520,21 @@ nsBookmarksService::OnChange(nsIRDFDataSource* aDataSource,
     if (mUpdateBatchNest != 0)  return NS_OK;
 
     PRInt32 count = mObservers.Count();
+    if (count == 0)
+        return NS_OK;
+
+    // Make a copy of the array first, because some
+    // observers remove themselves from the list while
+    // in the callback.  This causes much badness.
+    nsCOMArray<nsIRDFObserver> observersCopy;
     for (PRInt32 i = 0; i < count; ++i)
     {
-        (void) mObservers[i]->OnChange(this, aSource, aProperty, aOldTarget, aNewTarget);
+        observersCopy.AppendObject(mObservers[i]);
+    }
+
+    for (PRInt32 i = 0; i < count; ++i)
+    {
+        (void) observersCopy[i]->OnChange(this, aSource, aProperty, aOldTarget, aNewTarget);
     }
 
     return NS_OK;
@@ -5514,9 +5550,21 @@ nsBookmarksService::OnMove(nsIRDFDataSource* aDataSource,
     if (mUpdateBatchNest != 0)  return NS_OK;
 
     PRInt32 count = mObservers.Count();
+    if (count == 0)
+        return NS_OK;
+
+    // Make a copy of the array first, because some
+    // observers remove themselves from the list while
+    // in the callback.  This causes much badness.
+    nsCOMArray<nsIRDFObserver> observersCopy;
     for (PRInt32 i = 0; i < count; ++i)
     {
-        (void) mObservers[i]->OnMove(this, aOldSource, aNewSource, aProperty, aTarget);
+        observersCopy.AppendObject(mObservers[i]);
+    }
+
+    for (PRInt32 i = 0; i < count; ++i)
+    {
+        (void) observersCopy[i]->OnMove(this, aOldSource, aNewSource, aProperty, aTarget);
     }
 
     return NS_OK;
