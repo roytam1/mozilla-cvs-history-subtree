@@ -35,8 +35,8 @@ Original Author:
 <!ENTITY Department.accesskey "r">
 <!ENTITY JobTitle.label "Title">
 <!ENTITY JobTitle.accesskey "T">
-<!ENTITY CellularNumber.label "Cellular">
-<!ENTITY CellularNumber.accesskey "C">
+<!ENTITY CellularNumber.label "Mobile">
+<!ENTITY CellularNumber.accesskey "M">
 <!ENTITY PagerNumber.label "Pager">
 <!ENTITY PagerNumber.accesskey "P">
 <!ENTITY FaxNumber.label "Fax">

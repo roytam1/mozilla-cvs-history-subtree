@@ -18,14 +18,14 @@ Communications Corporation. Portions created by Netscape are
 Rights Reserved.
 --> 
 <!-- Title -->
-	<!ENTITY selectAddressWindow.title "Select Addresses">
+<!ENTITY selectAddressWindow.title "Select Addresses">
 <!-- Buttons -->
-	<!ENTITY toButton.label		"To:"> 
-	<!ENTITY ccButton.label		"Cc:"> 
-	<!ENTITY bccButton.label	"Bcc:">  
-	<!ENTITY newButton.label	"New..."> 
-	<!ENTITY editButton.label	"Edit..."> 
-	<!ENTITY removeButton.label	"Remove"> 
+<!ENTITY toButton.label		"To:"> 
+<!ENTITY ccButton.label		"Cc:"> 
+<!ENTITY bccButton.label	"Bcc:">  
+<!ENTITY newButton.label	"New..."> 
+<!ENTITY editButton.label	"Edit..."> 
+<!ENTITY removeButton.label	"Remove"> 
 <!-- Tooltips items -->  
 <!ENTITY addressPickerSearchButton.tooltip "Search the selected address book"> 
 <!ENTITY addressPickerNewButton.tooltip "Create a new address book card"> 
