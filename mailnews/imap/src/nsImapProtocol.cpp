@@ -802,7 +802,6 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
           // open buffered, blocking output stream
           rv = m_transport->OpenOutputStream(nsITransport::OPEN_BLOCKING, 0, 0, getter_AddRefs(m_outputStream));
           if (NS_FAILED(rv)) return rv;
-          SetFlag(IMAP_CONNECTION_IS_OPEN);
         }
       }
     } // if m_runningUrl
@@ -995,18 +994,28 @@ nsImapProtocol::TellThreadToDie(PRBool isSafeToClose)
                 nsImapServerResponseParser::kFolderSelected && isSafeToClose;
   nsCString command;
   nsresult rv = NS_OK;
+  PRUint32 writeCount;
 
   if (m_currentServerCommandTagNumber > 0)
   {
     if (closeNeeded && GetDeleteIsMoveToTrash() &&
         TestFlag(IMAP_CONNECTION_IS_OPEN) && m_outputStream)
     {
-      Close();
+      IncrementCommandTagNumber();
+      command = GetServerCommandTag();
+      command.Append(" close" CRLF);
+      rv = m_outputStream->Write(command.get(), command.Length(),
+                                 &writeCount);
+      Log("SendData", "TellThreadToDie", command.get());
     }
 
     if (NS_SUCCEEDED(rv) && TestFlag(IMAP_CONNECTION_IS_OPEN) && m_outputStream)
     {
-      Logout();
+      IncrementCommandTagNumber();
+      command = GetServerCommandTag();
+      command.Append(" logout" CRLF);
+      rv = m_outputStream->Write(command.get(), command.Length(),
+                                 &writeCount);
       Log("SendData", "TellThreadToDie", command.get());
     }
   }
@@ -5309,7 +5318,7 @@ void nsImapProtocol::Logout()
   ProgressEventFunctionUsingId (IMAP_STATUS_LOGGING_OUT);
 
 /******************************************************************
- * due to the undo functionality we cannot issue a close when logout; there
+ * due to the undo functionality we cannot issule a close when logout; there
  * is no way to do an undo if the message has been permanently expunge
  * jt - 07/12/1999
 
