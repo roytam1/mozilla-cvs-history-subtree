@@ -91,6 +91,8 @@ nsXTFGenericElementWrapper::nsXTFGenericElementWrapper(nsINodeInfo* aNodeInfo,
 nsresult
 nsXTFGenericElementWrapper::Init()
 {
+  nsXTFGenericElementWrapperBase::Init();
+  
   // pass a weak wrapper (non base object ref-counted), so that
   // our mXTFElement can safely addref/release.
   nsISupports *weakWrapper=nsnull;
