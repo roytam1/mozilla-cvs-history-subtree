@@ -935,8 +935,6 @@ nsresult nsMsgDBView::DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indic
       messageArray->AppendElement(msgHdr);
 
   }
-  // ### TODO populate messageArray, probably with nsIMsgDBHdrs, not nsIMessages.
-  // but will need to change move/copy/delete to handle nsIMsgDBHdrs.
   m_folder->DeleteMessages(messageArray, window, deleteStorage, PR_FALSE);
   return rv;
 }
@@ -1690,7 +1688,7 @@ nsMsgKey nsMsgDBView::GetKeyOfFirstMsgInThread(nsMsgKey key)
 	{
 		return firstKeyInThread;
 	}
-	// ### dmb UnreadOnly - this is wrong.
+	// ### dmb UnreadOnly - this is wrong. But didn't seem to matter in 4.x
 	pThread->GetChildKeyAt(0, &firstKeyInThread);
 	return firstKeyInThread;
 }
@@ -1931,6 +1929,14 @@ nsresult nsMsgDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, PRBool /
 	return rv;
 }
 
+nsresult nsMsgDBView::GetThreadContainingIndex(nsMsgViewIndex index, nsIMsgThread **resultThread)
+{
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+
+  nsresult rv = m_db->GetMsgHdrForKey(m_keys[index], getter_AddRefs(msgHdr));
+  NS_ENSURE_SUCCESS(rv, rv);
+  return m_db->GetThreadContainingMsgHdr(msgHdr, resultThread);
+}
 
 nsMsgViewIndex nsMsgDBView::GetIndexForThread(nsIMsgDBHdr *hdr)
 {
@@ -2118,11 +2124,13 @@ nsresult	nsMsgDBView::AddHdr(nsIMsgDBHdr *msgHdr)
 		return NS_OK;
 
   nsMsgKey msgKey, threadId;
+  nsMsgKey threadParent;
   msgHdr->GetMessageKey(&msgKey);
   msgHdr->GetThreadId(&threadId);
+  msgHdr->GetThreadParent(&threadParent);
 
   // ### this isn't quite right, is it? Should be checking that our thread parent key is none?
-	if (msgKey == threadId) 
+	if (threadParent == nsMsgKey_None) 
 		msgFlags |= MSG_VIEW_FLAG_ISTHREAD;
 	nsMsgViewIndex insertIndex = GetInsertIndex(msgHdr);
 	if (insertIndex == nsMsgViewIndex_None)
@@ -2433,12 +2441,9 @@ NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
 nsresult nsMsgDBView::MarkThreadOfMsgRead(nsMsgKey msgId, nsMsgViewIndex msgIndex, nsMsgKeyArray &idsMarkedRead, PRBool bRead)
 {
     nsCOMPtr <nsIMsgThread> threadHdr;
-    nsCOMPtr <nsIMsgDBHdr> msgHdr;
     nsresult rv;
 
-    rv = m_db->GetMsgHdrForKey(msgId, getter_AddRefs(msgHdr));
-    NS_ENSURE_SUCCESS(rv, rv);
-    rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+    GetThreadContainingIndex(msgIndex, getter_AddRefs(threadHdr));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsMsgViewIndex threadIndex;
@@ -2588,10 +2593,7 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
                 // check for collapsed thread with new children
                 if (m_sortType == nsMsgViewSortType::byThread && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
                     nsCOMPtr <nsIMsgThread> threadHdr;
-                    nsCOMPtr <nsIMsgDBHdr> msgHdr;
-                    rv = m_db->GetMsgHdrForKey(m_keys.GetAt(curIndex), getter_AddRefs(msgHdr));
-                    NS_ENSURE_SUCCESS(rv, rv);
-                    rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(threadHdr));
+                    GetThreadContainingIndex(curIndex, getter_AddRefs(threadHdr));
                     NS_ENSURE_SUCCESS(rv, rv);
 
                     NS_ASSERTION(threadHdr, "threadHdr is null");
@@ -3006,16 +3008,12 @@ nsMsgViewIndex	nsMsgDBView::GetThreadFromMsgIndex(nsMsgViewIndex index,
 	nsMsgViewIndex		threadIndex;
 
 	NS_ENSURE_ARG(threadHdr);
-  nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  nsresult rv = m_db->GetMsgHdrForKey(msgKey, getter_AddRefs(msgHdr));
+  nsresult rv = GetThreadContainingIndex(index, threadHdr);
   NS_ENSURE_SUCCESS(rv,nsMsgViewIndex_None);
 
-	m_db->GetThreadContainingMsgHdr(msgHdr, threadHdr);
-
 	if (*threadHdr == nsnull)
-	{
 		return nsMsgViewIndex_None;
-	}
+
   nsMsgKey threadKey;
   (*threadHdr)->GetThreadKey(&threadKey);
 	if (msgKey !=threadKey)
