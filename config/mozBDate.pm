@@ -128,7 +128,7 @@ sub SubstituteBuildNumber($$$) {
 	if (defined($ENV{'MOZ_MILESTONE_RELEASE'})) {
 	    $temp = "GRE_BUILD_ID \"$milestone\"";
 	} else {
-	    $temp = "GRE_BUILD_ID \"${milestone}_${build}\"";
+	    $temp = "GRE_BUILD_ID \"${milestone}f_${build}\"";
 	}
         $id =~ s/GRE_BUILD_ID\s\"\d+\"/$temp/;
         print $OUTFILE $id;
