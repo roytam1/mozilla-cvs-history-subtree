@@ -215,3 +215,4 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible*
 
   return NS_ERROR_FAILURE;
 }
+
