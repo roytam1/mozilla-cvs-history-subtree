@@ -1309,8 +1309,7 @@ var gMarkButton = null;
 
 function SetUpToolbarButtons(uri)
 {
-    // dump("SetUpToolbarButtons("+uri+")\n");
-
+    ///dump("XXX SetUpToolbarButtons("+uri+")\n");
     // eventually, we might want to set up the toolbar differently for imap,
     // pop, and news.  for now, just tweak it based on if it is news or not.
     var forNews = isNewsURI(uri);
@@ -1335,6 +1334,11 @@ function SetUpToolbarButtons(uri)
     }
     if (buttonToShow) {
         buttonToShow.removeAttribute('hidden');
+    }
+
+    // hook for extra toolbar items
+    if ("SetUpExtraToolbarButtons" in top) {
+      SetUpExtraToolbarButtons(uri);
     }
 }
 
