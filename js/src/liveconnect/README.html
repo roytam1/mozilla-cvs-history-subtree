@@ -237,7 +237,7 @@ the method table be searched twice instead of once.</li>
 <li>
 When Java objects are referenced from JS, they are entered into a hash
 table, so as to ensure that the same JS Object wrapper is used every time
-a Java object is reflected into JS.&nbsp; In this way, the behavior of
+a particular Java object is reflected into JS.&nbsp; In this way, the behavior of
 the JS '==' and '===' operators are preserved.&nbsp; Unfortunately, the
 hash table may grow quite large (objects are only removed from the hash
 table when finalized).&nbsp; One solution would be to make it possible
