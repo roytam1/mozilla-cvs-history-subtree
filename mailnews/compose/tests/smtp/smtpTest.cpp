@@ -50,7 +50,7 @@
 
 #ifdef XP_PC
 #define XPCOM_DLL  "xpcom32.dll"
-#define PREF_DLL   "xppref32.dll"
+#define PREF_DLL   "d:\\mozilla\\dist\\win32_d.obj\\bin\\xppref32.dll"
 #define APPSHELL_DLL "d:\\mozilla\\dist\\win32_d.obj\\bin\\nsappshell.dll"
 #else
 #ifdef XP_MAC
@@ -425,7 +425,7 @@ int main()
 
 	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
-//	result = nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
+	result = nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
 	nsComponentManager::RegisterComponent(kFileLocatorCID,  NULL, NS_FILELOCATOR_PROGID, APPSHELL_DLL, PR_FALSE, PR_FALSE);
 
 	result = nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, NULL /* default */);
