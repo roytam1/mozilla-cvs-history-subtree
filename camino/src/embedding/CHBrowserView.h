@@ -118,9 +118,9 @@ enum {
 
 @interface CHBrowserView : NSView 
 {
-  nsIWebBrowser* _webBrowser;
-  CHBrowserListener* _listener;
-  NSWindow* mWindow;
+  nsIWebBrowser*        _webBrowser;
+  CHBrowserListener*    _listener;
+  NSWindow*             mWindow;
   
   nsIDragHelperService* mDragHelper;
   NSPoint               mLastTrackedLocation;
@@ -185,6 +185,12 @@ enum {
 
 - (BOOL)canUndo;
 - (BOOL)canRedo;
+
+- (void)biggerTextSize;
+- (void)smallerTextSize;
+
+- (BOOL)canMakeTextBigger;
+- (BOOL)canMakeTextSmaller;
 
 -(NSString*)getCurrentURLSpec;
 

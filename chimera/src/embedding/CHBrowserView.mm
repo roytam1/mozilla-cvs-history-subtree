@@ -58,6 +58,12 @@
 #include "nsIPrintingPromptService.h"
 #include "nsIPrintSettingsService.h"
 
+// bigger/smaller text
+#include "nsIScriptGlobalObject.h"
+#include "nsIDocShell.h"
+#include "nsIMarkupDocumentViewer.h"
+#include "nsIContentViewer.h"
+
 // Saving of links/images/docs
 #include "nsIWebBrowserFocus.h"
 #include "nsIDOMNSDocument.h"
@@ -94,6 +100,17 @@ typedef unsigned int DragReference;
 
 const char kPersistContractID[] = "@mozilla.org/embedding/browser/nsWebBrowserPersist;1";
 const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
+
+#define MIN_TEXT_ZOOM 0.01f
+#define MAX_TEXT_ZOOM 20.0f
+
+@interface CHBrowserView(Private)
+
+- (nsIContentViewer*)getContentViewer;		// addrefs return value
+- (float)getTextZoom;
+- (void)incrementTextZoom:(float)increment min:(float)min max:(float)max;
+
+@end
 
 @implementation CHBrowserView
 
@@ -782,6 +799,28 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   return [self isCommandEnabled: "cmd_redo"];
 }
 
+- (void)biggerTextSize
+{
+  [self incrementTextZoom:0.25 min:MIN_TEXT_ZOOM max:MAX_TEXT_ZOOM];
+}
+
+- (void)smallerTextSize
+{
+  [self incrementTextZoom:-0.25 min:MIN_TEXT_ZOOM max:MAX_TEXT_ZOOM];
+}
+
+- (BOOL)canMakeTextBigger
+{
+  float zoom = [self getTextZoom];
+  return zoom < MAX_TEXT_ZOOM;
+}
+
+- (BOOL)canMakeTextSmaller
+{
+  float zoom = [self getTextZoom];
+  return zoom > MIN_TEXT_ZOOM;
+}
+
 - (void)moveToBeginningOfDocument:(id)sender
 {
   [self doCommand: "cmd_moveTop"];
@@ -895,6 +934,59 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     NS_IF_ADDREF(*outSink);
   }
 }
+
+
+- (nsIContentViewer*)getContentViewer		// addrefs return value
+{
+  if (!_webBrowser)
+    return NULL;
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+  nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(domWindow));
+  if (!global)
+    return NULL;
+  nsCOMPtr<nsIDocShell> docShell;
+  global->GetDocShell(getter_AddRefs(docShell));
+  if (!docShell)
+    return NULL;
+  
+  nsIContentViewer* cv = NULL;
+  docShell->GetContentViewer(&cv);		// addrefs
+  return cv;
+}
+
+- (float)getTextZoom
+{
+  nsCOMPtr<nsIContentViewer> contentViewer = getter_AddRefs([self getContentViewer]);
+  nsCOMPtr<nsIMarkupDocumentViewer> markupViewer(do_QueryInterface(contentViewer));
+  if (!markupViewer)
+    return 1.0;
+
+  float zoom;
+  markupViewer->GetTextZoom(&zoom);
+  return zoom;
+}
+
+- (void)incrementTextZoom:(float)increment min:(float)min max:(float)max
+{
+  nsCOMPtr<nsIContentViewer> contentViewer = getter_AddRefs([self getContentViewer]);
+  nsCOMPtr<nsIMarkupDocumentViewer> markupViewer(do_QueryInterface(contentViewer));
+  if (!markupViewer)
+    return;
+
+  float zoom;
+  markupViewer->GetTextZoom(&zoom);
+  zoom += increment;
+  
+  if (zoom < min)
+    zoom = min;
+
+  if (zoom > max)
+    zoom = max;
+
+  markupViewer->SetTextZoom(zoom);
+}
+
 
 #pragma mark -
 

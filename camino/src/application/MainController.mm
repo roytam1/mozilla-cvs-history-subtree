@@ -899,9 +899,16 @@ const int kReuseWindowOnAE = 2;
   if ( action == @selector(addBookmark:) )
     return (browserController && ![[browserController getBrowserWrapper] isEmpty]);
   
-  if ( action == @selector(biggerTextSize:) || action == @selector(smallerTextSize:) )
-    return (browserController && ![[browserController getBrowserWrapper] isEmpty]);
-    
+  if ( action == @selector(biggerTextSize:) )
+    return (browserController &&
+            ![[browserController getBrowserWrapper] isEmpty] &&
+            [[[browserController getBrowserWrapper] getBrowserView] canMakeTextBigger]);
+
+  if ( action == @selector(smallerTextSize:) )
+    return (browserController &&
+            ![[browserController getBrowserWrapper] isEmpty] &&
+            [[[browserController getBrowserWrapper] getBrowserView] canMakeTextSmaller]);
+  
   if ( action == @selector(doStop:) )
     return (browserController && [[browserController getBrowserWrapper] isBusy]);
 

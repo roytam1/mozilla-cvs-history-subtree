@@ -57,10 +57,6 @@
 #include "nsIPrefBranch.h"
 #include "nsIContextMenuListener.h"
 #include "nsIDOMWindow.h"
-#include "nsIScriptGlobalObject.h"
-#include "nsIDocShell.h"
-#include "nsIMarkupDocumentViewer.h"
-#include "nsIContentViewer.h"
 #include "CHBrowserService.h"
 #include "nsString.h"
 #include "nsCRT.h"
@@ -801,9 +797,11 @@ static NSArray* sToolbarDefaults = nil;
   else if (action == @selector(stop:))
     return [mBrowserView isBusy];
   else if (action == @selector(bookmarkPage:))
-    return ![[self getBrowserWrapper] isEmpty];
-  else if (action == @selector(biggerTextSize:) || action == @selector(smallerTextSize:))
-    return ![[self getBrowserWrapper] isEmpty];
+    return ![mBrowserView isEmpty];
+  else if (action == @selector(biggerTextSize:))
+    return ![mBrowserView isEmpty] && [[mBrowserView getBrowserView] canMakeTextBigger];
+  else if ( action == @selector(smallerTextSize:))
+    return ![mBrowserView isEmpty] && [[mBrowserView getBrowserView] canMakeTextSmaller];
   else if (action == @selector(newTab:))
     return [self newTabsAllowed];
   else if (action == @selector(closeCurrentTab:))
@@ -1683,59 +1681,14 @@ static NSArray* sToolbarDefaults = nil;
   return mChromeMask;
 }
 
-
 - (IBAction)biggerTextSize:(id)aSender
 {
-  nsCOMPtr<nsIDOMWindow> contentWindow = getter_AddRefs([[mBrowserView getBrowserView] getContentWindow]);
-  nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(contentWindow));
-  if (!global)
-    return;
-  nsCOMPtr<nsIDocShell> docShell;
-  global->GetDocShell(getter_AddRefs(docShell));
-  if (!docShell)
-    return;
-  nsCOMPtr<nsIContentViewer> cv;
-  docShell->GetContentViewer(getter_AddRefs(cv));
-  nsCOMPtr<nsIMarkupDocumentViewer> markupViewer(do_QueryInterface(cv));
-  if (!markupViewer)
-    return;
-  float zoom;
-  markupViewer->GetTextZoom(&zoom);
-  if (zoom >= 20)
-    return;
-  
-  zoom += 0.25;
-  if (zoom > 20)
-    zoom = 20;
-  
-  markupViewer->SetTextZoom(zoom);
+  [[mBrowserView getBrowserView] biggerTextSize];
 }
 
 - (IBAction)smallerTextSize:(id)aSender
 {
-  nsCOMPtr<nsIDOMWindow> contentWindow = getter_AddRefs([[mBrowserView getBrowserView] getContentWindow]);
-  nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(contentWindow));
-  if (!global)
-    return;
-  nsCOMPtr<nsIDocShell> docShell;
-  global->GetDocShell(getter_AddRefs(docShell));
-  if (!docShell)
-    return;
-  nsCOMPtr<nsIContentViewer> cv;
-  docShell->GetContentViewer(getter_AddRefs(cv));
-  nsCOMPtr<nsIMarkupDocumentViewer> markupViewer(do_QueryInterface(cv));
-  if (!markupViewer)
-    return;
-  float zoom;
-  markupViewer->GetTextZoom(&zoom);
-  if (zoom <= 0.01)
-    return;
-
-  zoom -= 0.25;
-  if (zoom < 0.01)
-    zoom = 0.01;
-
-  markupViewer->SetTextZoom(zoom);
+  [[mBrowserView getBrowserView] smallerTextSize];
 }
 
 - (void)getInfo:(id)sender
