@@ -955,7 +955,7 @@ public:
   }
 
   already_AddRefed<nsIContent> get() const {
-    nsIContent* result;
+    nsIContent* result = nsnull;
     if (mNodes) {
       nsCOMPtr<nsIDOMNode> node;
       mNodes->Item(mIndex, getter_AddRefs(node));
@@ -8141,7 +8141,7 @@ nsCSSFrameConstructor::AddDummyFrameToSelect(nsIPresContext*  aPresContext,
   PRUint32 numOptions = 0;
   nsresult rv = aSelectElement->GetLength(&numOptions);
   if (NS_SUCCEEDED(rv) && 0 == numOptions) {
-    nsISelectControlFrame* listFrame;
+    nsISelectControlFrame* listFrame = nsnull;
     CallQueryInterface(aListFrame, &listFrame);
     if (listFrame) {
       nsIFrame* dummyFrame;
@@ -8193,7 +8193,7 @@ nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsIPresContext* aPresContext,
     nsIFrame* frame;
     aPresShell->GetPrimaryFrameFor(aContainer, &frame);
     if (frame) {
-      nsISelectControlFrame* listFrame;
+      nsISelectControlFrame* listFrame = nsnull;
       CallQueryInterface(frame, &listFrame);
 
       if (listFrame) {
@@ -11196,7 +11196,7 @@ nsCSSFrameConstructor::GetInsertionPoint(nsIPresShell* aPresShell,
     if (insertionPoint) {
       // If the insertion point is a scrollable, then walk ``through''
       // it to get the scrolled frame.
-      nsIScrollableFrame* scroll;
+      nsIScrollableFrame* scroll = nsnull;
       CallQueryInterface(insertionPoint, &scroll);
       if (scroll)
         scroll->GetScrolledFrame(nsnull, insertionPoint);
