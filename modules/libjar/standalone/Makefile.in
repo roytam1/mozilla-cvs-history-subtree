@@ -28,11 +28,18 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 include $(srcdir)/../objs.mk
 
+# Make this a true dynamic component even in static builds because
+# this component is shared by installer
+MOZ_STATIC_COMPONENT_LIBS=
+BUILD_STATIC_LIBS=1
+BUILD_SHARED_LIBS=1
+
 MODULE		= jar
 LIBRARY_NAME	= jar$(VERSION_NUMBER)_s
 REQUIRES	= xpcom \
 		  string \
 		  caps \
+		  $(ZLIB_LIBS) \
 		  $(ZLIB_REQUIRES) \
 		  $(NULL)
 
@@ -41,7 +48,7 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= $(MODULES_STANDALONE_LCPPSRCS)
 
-FORCE_STATIC_LIB = 1
+#FORCE_STATIC_LIB = 1
 
 ifneq ($(OS_ARCH),WINNT)
 SHARED_LIBRARY_LIBS = $(DIST)/lib/$(LIB_PREFIX)mozz_s.$(LIB_SUFFIX)
@@ -65,6 +72,9 @@ include $(topsrcdir)/config/rules.mk
 DEFINES += -DSTANDALONE
 
 LOCAL_INCLUDES	= -I$(srcdir)/..
+EXTRA_LIBS += $(topsrcdir)/modules/zlib/standalone/mozz_s.lib
+EXTRA_LIBS += $(topsrcdir)/nsprpub/pr/src/nspr4.lib
+EXTRA_LIBS += $(topsrcdir)/nsprpub/lib/libc/src/plc4.lib
 
 export:: $(MODULES_STANDALONE_CPPSRCS)
 	$(INSTALL) $^ .
