@@ -57,6 +57,8 @@ public:
                                            GetDOMClassIIDsFnc aGetIIDsFptr,
                                            const char *aName);
 
+  static void ShutDown();
+
 protected:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {

@@ -902,6 +902,76 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoID aID,
   return classinfo;
 }
 
+// static
+void
+nsDOMClassInfo::ShutDown()
+{
+  NS_IF_RELEASE(sXPConnect);
+
+  if (sClassInfoData) {
+    PRUint32 i;
+
+    for (i = 0; i < eDOMClassInfoIDCount; i++) {
+      nsDOMClassInfoData *d = sClassInfoData + i;
+
+      NS_IF_RELEASE(d->mCachedClassInfo);
+    }
+
+    nsMemory::Free(sClassInfoData);
+
+    sClassInfoData = nsnull;
+
+#ifdef NS_DEBUG_jst
+    sClassInfoData = (nsDOMClassInfoData *)1;
+#endif
+  }
+
+  JSString *jsnullstring = nsnull;
+
+#ifdef NS_DEBUG_jst
+  jsnullstring = (JSString *)1;
+#endif
+
+  sTop_id             = jsnullstring;
+  sScrollbars_id      = jsnullstring;
+  sLocation_id        = jsnullstring;
+  s_content_id        = jsnullstring;
+  sContent_id         = jsnullstring;
+  sSidebar_id         = jsnullstring;
+  sPrompter_id        = jsnullstring;
+  sMenubar_id         = jsnullstring;
+  sToolbar_id         = jsnullstring;
+  sLocationbar_id     = jsnullstring;
+  sPersonalbar_id     = jsnullstring;
+  sStatusbar_id       = jsnullstring;
+  sDirectories_id     = jsnullstring;
+  sControllers_id     = jsnullstring;
+  sLength_id          = jsnullstring;
+  sOnmousedown_id     = jsnullstring;
+  sOnmouseup_id       = jsnullstring;
+  sOnclick_id         = jsnullstring;
+  sOnmouseover_id     = jsnullstring;
+  sOnmouseout_id      = jsnullstring;
+  sOnkeydown_id       = jsnullstring;
+  sOnkeyup_id         = jsnullstring;
+  sOnkeypress_id      = jsnullstring;
+  sOnmousemove_id     = jsnullstring;
+  sOnfocus_id         = jsnullstring;
+  sOnblur_id          = jsnullstring;
+  sOnsubmit_id        = jsnullstring;
+  sOnreset_id         = jsnullstring;
+  sOnchange_id        = jsnullstring;
+  sOnselect_id        = jsnullstring;
+  sOnload_id          = jsnullstring;
+  sOnunload_id        = jsnullstring;
+  sOnabort_id         = jsnullstring;
+  sOnerror_id         = jsnullstring;
+  sOnpaint_id         = jsnullstring;
+  sOnresize_id        = jsnullstring;
+  sOnscroll_id        = jsnullstring;
+}
+
+
 // Window helper
 
 NS_IMETHODIMP
@@ -1368,9 +1438,9 @@ nsEventRecieverSH::ReallyIsEventName(JSString *jsstr, jschar aFirstChar)
       return PR_TRUE;
 
     break;
-  case 'c':
-  case 'l':
-  case 'p':
+  case 'c' :
+  case 'l' :
+  case 'p' :
     if (jsstr == sOnchange_id    ||
         jsstr == sOnclick_id     ||
         jsstr == sOnload_id      ||

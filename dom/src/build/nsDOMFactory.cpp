@@ -144,6 +144,7 @@ void PR_CALLBACK
 DOMModuleDestructor(nsIModule *self)
 {
   GlobalWindowImpl::ShutDown();
+  nsDOMClassInfo::ShutDown();
 }
 
 NS_IMPL_NSGETMODULE_WITH_DTOR("DOM components", gDOMModuleInfo,
