@@ -81,7 +81,7 @@ nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("~nsFtpProtocolHandler() called"));
      if (mRootConnectionList) {
         mRootConnectionList->Enumerate(DisconnectConnection, nsnull);
-        NS_DELETEXPCOM(mRootConnectionList);
+    //    NS_DELETEXPCOM(mRootConnectionList);
         mRootConnectionList = nsnull;
     }
     mIOSvc = 0;
@@ -284,9 +284,6 @@ nsFtpProtocolHandler::InsertConnection(nsIURI *aKey, nsISupports *aConn) {
     
     if (mRootConnectionList)
     {
-//      nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (i_pTrans, &rv);
-//      trans->SetIdleTimeout(xxx);
-
         mRootConnectionList->Put(&stringKey, aConn);
         return NS_OK;
     }        
