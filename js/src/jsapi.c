@@ -721,6 +721,8 @@ JS_malloc(JSContext *cx, size_t nbytes)
 {
     void *p;
 
+    cx->runtime->gcMallocBytes += nbytes;
+
 #if defined(XP_OS2) || defined(XP_MAC) || defined(AIX) || defined(OSF1)
     if (nbytes == 0) /*DSR072897 - Windows allows this, OS/2 & Mac don't*/
 	nbytes = 1;
@@ -2653,6 +2655,7 @@ JS_SetRegExpInput(JSContext *cx, JSString *input, JSBool multiline)
     res = &cx->regExpStatics;
     res->input = input;
     res->multiline = multiline;
+    cx->runtime->gcPoke = JS_TRUE;
 }
 
 JS_PUBLIC_API(void)
@@ -2668,6 +2671,7 @@ JS_ClearRegExpStatics(JSContext *cx)
     res->parenCount = 0;
     res->lastMatch = res->lastParen = js_EmptySubString;
     res->leftContext = res->rightContext = js_EmptySubString;
+    cx->runtime->gcPoke = JS_TRUE;
 }
 
 JS_PUBLIC_API(void)
@@ -2679,6 +2683,7 @@ JS_ClearRegExpRoots(JSContext *cx)
     /* No locking required, cx is thread-private and input must be live. */
     res = &cx->regExpStatics;
     res->input = NULL;
+    cx->runtime->gcPoke = JS_TRUE;
 }
 
 /* TODO: compile, execute, get/set other statics... */

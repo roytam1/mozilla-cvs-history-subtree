@@ -189,7 +189,9 @@ retry:
 	METER(rt->gcStats.freelen--);
 	METER(rt->gcStats.recycle++);
     } else {
-	if (rt->gcBytes < rt->gcMaxBytes) {
+	if (rt->gcBytes < rt->gcMaxBytes && 
+            (tried_gc || rt->gcMallocBytes < rt->gcMaxBytes)) 
+        {
 	    JS_ARENA_ALLOCATE(thing, &rt->gcArenaPool, sizeof(JSGCThing));
 	    JS_ARENA_ALLOCATE(flagp, &rt->gcFlagsPool, sizeof(uint8));
 	}
@@ -709,6 +711,9 @@ js_GC(JSContext *cx)
 	return;
 
 #endif /* !JS_THREADSAFE */
+
+    /* Reset malloc counter */
+    rt->gcMallocBytes = 0;
 
     /* Drop atoms held by the property cache, and clear property weak links. */
     js_FlushPropertyCache(cx);
