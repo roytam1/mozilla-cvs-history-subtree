@@ -778,6 +778,35 @@
    </TR>
    </TABLE>
 
+  <!-- Result Type conversion tests -->
+   <TABLE>
+   <TR BGColor="#E0E0FF">
+      <TD Colspan="2" ALIGN="CENTER">
+         <B>Automatic Result Type Conversion</B>
+      </TD>
+   </TR>
+   <!-- new test -->
+   <TR>
+      <TD VALIGN="TOP"><B>Test:</B></TD>
+      <TD>
+         &lt;xsl:value-of select="'747' + 8"/&gt;<BR />
+      </TD>
+   </TR>
+   <TR>
+      <TD><B>Desired Result:</B></TD>
+      <TD>
+         <FONT COLOR="blue">755</FONT><BR/>
+      </TD>
+   </TR>
+    <TR>
+      <TD><B>Result:</B></TD>
+      <TD>
+         <FONT COLOR="blue">
+            <xsl:value-of select="'747' + 8"/>
+         </FONT>
+      </TD>
+   </TR>
+   </TABLE>
   </BODY>
 </HTML>
 </xsl:template>
