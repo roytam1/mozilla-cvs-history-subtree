@@ -306,9 +306,13 @@ ns4xPlugin::ns4xPlugin(NPPluginFuncs* callbacks, PRLibrary* aLibrary, NP_PLUGINS
   NS_ASSERTION(HIBYTE(fCallbacks.version) >= NP_VERSION_MAJOR, "callback version is less than NP version");
 
   fShutdownEntry = (NP_PLUGINSHUTDOWN)PR_FindSymbol(aLibrary, "NP_Shutdown");
-#elif defined(XP_MAC) && !TARGET_CARBON
+#elif defined(XP_MAC)
   // get the main entry point
+#if !TARGET_CARBON
   NP_MAIN pfnMain = (NP_MAIN) PR_FindSymbol(aLibrary, "mainRD");
+#else // carbon
+  NP_MAIN pfnMain = (NP_MAIN) PR_FindSymbol(aLibrary, "main");
+#endif
 
   if(pfnMain == NULL)
     return;
@@ -326,23 +330,48 @@ ns4xPlugin::ns4xPlugin(NPPluginFuncs* callbacks, PRLibrary* aLibrary, NP_PLUGINS
     return;
 
 #elif defined(XP_MACOSX)
+  // call into the entry point
+  NP_MAIN pfnMain = (NP_MAIN) PR_FindSymbol(aLibrary, "main");
+  
+  if(pfnMain == NULL)
+    return;
+
+  NPP_ShutdownUPP pfnShutdown;
+  NPPluginFuncs np_callbacks;
+  memset((void*) &np_callbacks, 0, sizeof(np_callbacks));
+  np_callbacks.size = sizeof(np_callbacks);
+  NPError error;
+
+  NS_TRY_SAFE_CALL_RETURN(error, CallNPP_MainEntryProc(pfnMain, 
+                                                       &(ns4xPlugin::CALLBACKS), 
+                                                       &np_callbacks, 
+                                                       &pfnShutdown), aLibrary, nsnull);
+
+  NPP_PLUGIN_LOG(PLUGIN_LOG_BASIC, ("NPP MainEntryProc called: return=%d\n",error));
+
+  if(error != NPERR_NO_ERROR)
+    return;
+
+  if ((np_callbacks.version >> 8) < NP_VERSION_MAJOR)
+    return;
+
   // wrap all plugin entry points tvectors as mach-o callable function pointers.
-  fCallbacks.size = callbacks->size;
-  fCallbacks.version = callbacks->version;
-  fCallbacks.newp = (NPP_NewUPP) TV2FP(callbacks->newp);
-  fCallbacks.destroy = (NPP_DestroyUPP) TV2FP(callbacks->destroy);
-  fCallbacks.setwindow = (NPP_SetWindowUPP) TV2FP(callbacks->setwindow);
-  fCallbacks.newstream = (NPP_NewStreamUPP) TV2FP(callbacks->newstream);
-  fCallbacks.destroystream = (NPP_DestroyStreamUPP) TV2FP(callbacks->destroystream);
-  fCallbacks.asfile = (NPP_StreamAsFileUPP) TV2FP(callbacks->asfile);
-  fCallbacks.writeready = (NPP_WriteReadyUPP) TV2FP(callbacks->writeready);
-  fCallbacks.write = (NPP_WriteUPP) TV2FP(callbacks->write);
-  fCallbacks.print = (NPP_PrintUPP) TV2FP(callbacks->print);
-  fCallbacks.event = (NPP_HandleEventUPP) TV2FP(callbacks->event);
-  fCallbacks.urlnotify = (NPP_URLNotifyUPP) TV2FP(callbacks->urlnotify);
-  fCallbacks.getvalue = (NPP_GetValueUPP) TV2FP(callbacks->getvalue);
-  fCallbacks.setvalue = (NPP_SetValueUPP) TV2FP(callbacks->setvalue);
-  fShutdownEntry = (NP_PLUGINSHUTDOWN) TV2FP(aShutdown);
+  fCallbacks.size = sizeof(fCallbacks);
+  fCallbacks.version = np_callbacks.version;
+  fCallbacks.newp = (NPP_NewUPP) TV2FP(np_callbacks.newp);
+  fCallbacks.destroy = (NPP_DestroyUPP) TV2FP(np_callbacks.destroy);
+  fCallbacks.setwindow = (NPP_SetWindowUPP) TV2FP(np_callbacks.setwindow);
+  fCallbacks.newstream = (NPP_NewStreamUPP) TV2FP(np_callbacks.newstream);
+  fCallbacks.destroystream = (NPP_DestroyStreamUPP) TV2FP(np_callbacks.destroystream);
+  fCallbacks.asfile = (NPP_StreamAsFileUPP) TV2FP(np_callbacks.asfile);
+  fCallbacks.writeready = (NPP_WriteReadyUPP) TV2FP(np_callbacks.writeready);
+  fCallbacks.write = (NPP_WriteUPP) TV2FP(np_callbacks.write);
+  fCallbacks.print = (NPP_PrintUPP) TV2FP(np_callbacks.print);
+  fCallbacks.event = (NPP_HandleEventUPP) TV2FP(np_callbacks.event);
+  fCallbacks.urlnotify = (NPP_URLNotifyUPP) TV2FP(np_callbacks.urlnotify);
+  fCallbacks.getvalue = (NPP_GetValueUPP) TV2FP(np_callbacks.getvalue);
+  fCallbacks.setvalue = (NPP_SetValueUPP) TV2FP(np_callbacks.setvalue);
+  fShutdownEntry = (NP_PLUGINSHUTDOWN) TV2FP(pfnShutdown);
 #else // for everyone else
   memcpy((void*) &fCallbacks, (void*) callbacks, sizeof(fCallbacks));
   fShutdownEntry = aShutdown;
@@ -356,6 +385,33 @@ ns4xPlugin::ns4xPlugin(NPPluginFuncs* callbacks, PRLibrary* aLibrary, NP_PLUGINS
 ns4xPlugin::~ns4xPlugin(void)
 {
   //reset the callbacks list
+#if defined(XP_MACOSX)
+  // release all wrapped plugin entry points.
+  if (fCallbacks.newp)
+    free(fCallbacks.newp);
+  if (fCallbacks.destroy)
+    free(fCallbacks.destroy);
+  if (fCallbacks.setwindow)
+    free(fCallbacks.setwindow);
+  if (fCallbacks.newstream)
+    free(fCallbacks.newstream);
+  if (fCallbacks.asfile)
+    free(fCallbacks.asfile);
+  if (fCallbacks.writeready)
+    free(fCallbacks.writeready);
+  if (fCallbacks.write)
+    free(fCallbacks.write);
+  if (fCallbacks.print)
+    free(fCallbacks.print);
+  if (fCallbacks.event)
+    free(fCallbacks.event);
+  if (fCallbacks.urlnotify)
+    free(fCallbacks.urlnotify);
+  if (fCallbacks.getvalue)
+    free(fCallbacks.getvalue);
+  if (fCallbacks.setvalue)
+    free(fCallbacks.setvalue);
+#endif
   memset((void*) &fCallbacks, 0, sizeof(fCallbacks));
 }
 
@@ -590,39 +646,7 @@ ns4xPlugin::CreatePlugin(nsIServiceManagerObsolete* aServiceMgr,
   if (pluginRefNum == -1)
     return NS_ERROR_FAILURE;
   
-#if TARGET_CARBON
-  // call into the entry point
-  NP_MAIN pfnMain = (NP_MAIN) PR_FindSymbol(aLibrary, "main");
-  
-  printf("[ns4xPlugin::CreatePlugin:  pfnMain = 0x%08X]\n", pfnMain);
-
-  if(pfnMain == NULL)
-    return NS_ERROR_FAILURE;
-
-  NPP_ShutdownUPP pfnShutdown;
-  NPPluginFuncs callbacks;
-  memset((void*) &callbacks, 0, sizeof(callbacks));
-  callbacks.size = sizeof(callbacks);
-  NPError error;
-
-  NS_TRY_SAFE_CALL_RETURN(error, CallNPP_MainEntryProc(pfnMain, 
-                                                       &(ns4xPlugin::CALLBACKS), 
-                                                       &callbacks, 
-                                                       &pfnShutdown), fLibrary, nsnull);
-
-  NPP_PLUGIN_LOG(PLUGIN_LOG_BASIC, ("NPP MainEntryProc called: return=%d\n",error));
-
-  if(error != NPERR_NO_ERROR)
-    return NS_ERROR_FAILURE;
-
-  if ((callbacks.version >> 8) < NP_VERSION_MAJOR)
-    return NS_ERROR_FAILURE;
-
-  // create the new plugin handler
-  ns4xPlugin* plugin = new ns4xPlugin(&callbacks, aLibrary, (NP_PLUGINSHUTDOWN)pfnShutdown, aServiceMgr);
-#else // not carbon
   ns4xPlugin* plugin = new ns4xPlugin(nsnull, aLibrary, nsnull, aServiceMgr);
-#endif
   if(plugin == NULL)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -751,6 +775,10 @@ ns4xPlugin::Shutdown(void)
     NS_TRY_SAFE_CALL_VOID(fShutdownEntry(), fLibrary, nsnull);
 #endif
 
+#if defined(XP_MACOSX)
+    // release the wrapped plugin function.
+    free(fShutdownEntry);
+#endif
     fShutdownEntry = nsnull;
   }
 
@@ -1123,9 +1151,6 @@ _invalidaterect(NPP npp, NPRect *invalidRect)
   NPN_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("NPN_InvalidateRect: npp=%p, top=%d, left=%d, bottom=%d, right=%d\n",
   (void *)npp, invalidRect->top, invalidRect->left, invalidRect->bottom, invalidRect->right));
-
-    printf("[NPN_InvalidateRect: top=%d, left=%d, bottom=%d, right=%d]\n",
-           invalidRect->top, invalidRect->left, invalidRect->bottom, invalidRect->right);
 
   if(!npp)
     return;
