@@ -491,7 +491,7 @@
   		<nc:subheadings>
         	<rdf:Seq>
             	<rdf:li> <rdf:Description ID="using:sidebar" nc:name="Sidebar" nc:link="using_firebird.xhtml#using_the_sidebar"/> </rdf:li>
-            	<rdf:li> <rdf:Description ID="using:tabbed-browsing" nc:name="Tabbed Browsing" nc:link="using_firebird.xhtml#tabbed_browsing"/> </rdf:li>
+            	<rdf:li> <rdf:Description ID="using:tabbed-browsing" nc:name="Tabbed Browsing" nc:link="tabbed_browsing.xhtml"/> </rdf:li>
             	<rdf:li> <rdf:Description ID="using:print-preview" nc:name="Print Preview" nc:link="using_firebird.xhtml#using_print_preview"/> </rdf:li>
               <rdf:li> <rdf:Description ID="using:page-setup" nc:name="Page Setup" nc:link="using_firebird.xhtml#using_page_setup"/> </rdf:li>
         	</rdf:Seq>
