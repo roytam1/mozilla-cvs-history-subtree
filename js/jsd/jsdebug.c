@@ -326,6 +326,18 @@ JSD_AppendSourceText(JSDContext* jsdc,
     return jsd_AppendSourceText(jsdc, jsdsrc, text, length, status);
 }
 
+extern JSD_PUBLIC_API(JSDSourceText*)
+JSD_AppendUCSourceText(JSDContext*     jsdc,
+                       JSDSourceText*  jsdsrc,
+                       const jschar*   text,       /* *not* zero terminated */
+                       size_t          length,
+                       JSDSourceStatus status)
+{
+    JSD_ASSERT_VALID_CONTEXT(jsdc);
+    JSD_ASSERT_VALID_SOURCE_TEXT(jsdsrc);
+    return jsd_AppendUCSourceText(jsdc, jsdsrc, text, length, status);
+}
+
 JSD_PUBLIC_API(JSBool)
 JSD_AddFullSourceText(JSDContext* jsdc, 
                       const char* text,       /* *not* zero terminated */

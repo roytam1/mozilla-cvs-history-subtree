@@ -463,6 +463,19 @@ JSD_AppendSourceText(JSDContext*     jsdc,
                      JSDSourceStatus status);
 
 /*
+* Unicode varient of JSD_AppendSourceText.
+*
+* NOTE: At this point text is stored in 8bit ASCII so this function just
+* extracts the bottom 8bits from each jschar. At some future point we may
+* switch to storing and exposing 16bit Unicode.
+*/
+extern JSD_PUBLIC_API(JSDSourceText*)
+JSD_AppendUCSourceText(JSDContext*     jsdc,
+                       JSDSourceText*  jsdsrc,
+                       const jschar*   text,       /* *not* zero terminated */
+                       size_t          length,
+                       JSDSourceStatus status);
+/*
  * Convienence function for adding complete source of url in one call.
  * same as:
  *   JSDSourceText* jsdsrc;

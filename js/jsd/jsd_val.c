@@ -22,12 +22,6 @@
 
 #include "jsd.h"
 
-/* XXX not yet implemented, waiting for new js/src */
-#ifdef HACK_FOR_OLD_JS /* XXX kill HACK_FOR_OLD_JS ASAP */
-#undef JSVAL_IS_FUNCTION
-#define JSVAL_IS_FUNCTION(x,y) (JS_ASSERT(0),0)
-#endif /* HACK_FOR_OLD_JS */
-
 #ifdef DEBUG
 void JSD_ASSERT_VALID_VALUE(JSDValue* jsdval)
 {
@@ -453,10 +447,7 @@ jsd_GetValueProperty(JSDContext* jsdc, JSDValue* jsdval, JSString* name)
     nameLen   = JS_GetStringLength(name);
 
     /* It's OK if this fails - we just don't get attribs */
-
-#ifndef HACK_FOR_OLD_JS /* XXX kill HACK_FOR_OLD_JS ASAP */
     JS_GetUCPropertyAttributes(cx, obj, nameChars, nameLen, &attrs, &found); 
-#endif /* HACK_FOR_OLD_JS */
 
     if(!JS_GetUCProperty(cx, obj, nameChars, nameLen, &val))
         return NULL;

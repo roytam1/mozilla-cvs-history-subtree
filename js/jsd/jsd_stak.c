@@ -233,15 +233,9 @@ jsd_GetCallObjectForStackFrame(JSDContext* jsdc,
 
     if( jsd_IsValidFrameInThreadState(jsdc, jsdthreadstate, jsdframe) )
     {
-#ifndef HACK_FOR_OLD_JS /* XXX kill HACK_FOR_OLD_JS ASAP */
-                                                                            
         obj = JS_GetFrameCallObject(jsdthreadstate->context, jsdframe->fp); 
         if(obj)                                                             
             jsdval = JSD_NewValue(jsdc, OBJECT_TO_JSVAL(obj));              
-                                                                            
-#else
-    JS_ASSERT(0); 
-#endif /* HACK_FOR_OLD_JS */
     }
 
     JSD_UNLOCK_THREADSTATES(jsdc);
@@ -261,14 +255,9 @@ jsd_GetScopeChainForStackFrame(JSDContext* jsdc,
 
     if( jsd_IsValidFrameInThreadState(jsdc, jsdthreadstate, jsdframe) )
     {
-#ifndef HACK_FOR_OLD_JS /* XXX kill HACK_FOR_OLD_JS ASAP */
         obj = JS_GetFrameScopeChain(jsdthreadstate->context, jsdframe->fp); 
         if(obj)                                                             
             jsdval = JSD_NewValue(jsdc, OBJECT_TO_JSVAL(obj));              
-                                                                            
-#else
-    JS_ASSERT(0); 
-#endif /* HACK_FOR_OLD_JS */
     }
 
     JSD_UNLOCK_THREADSTATES(jsdc);

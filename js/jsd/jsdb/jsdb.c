@@ -16,9 +16,9 @@
  * Reserved.
  */
 
-/*                                   
-* JSDB public and callback functions 
-*/                                   
+/*
+* JSDB public and callback functions
+*/
 
 #include "jsdbpriv.h"
 
@@ -177,24 +177,24 @@ jsdb_ErrorReporter(JSDContext*     jsdc,
     return ourRetVal;
 }
 
-/*                                                         
-* static JSContext*                                        
-* _cloneContext(JSContext *cx)                             
-* {                                                        
-*     JSVersion version;                                   
-*     JSContext *cx2;                                      
-*     cx2 = JS_NewContext(JS_GetRuntime(cx), 8192);        
-*     if (!cx2)                                            
-*         return NULL;                                     
-*     JS_SetErrorReporter(cx2, _ErrorReporter);            
-*     JS_SetGlobalObject(cx2, JS_GetGlobalObject(cx));     
-*     JS_SetContextPrivate(cx2, JS_GetContextPrivate(cx)); 
-*     version = JS_GetVersion(cx);                         
-*     if (version != JSVERSION_DEFAULT)                    
-*         JS_SetVersion(cx2, version);                     
-*     return cx2;                                          
-* }                                                        
-*/                                                         
+/*
+* static JSContext*
+* _cloneContext(JSContext *cx)
+* {
+*     JSVersion version;
+*     JSContext *cx2;
+*     cx2 = JS_NewContext(JS_GetRuntime(cx), 8192);
+*     if (!cx2)
+*         return NULL;
+*     JS_SetErrorReporter(cx2, _ErrorReporter);
+*     JS_SetGlobalObject(cx2, JS_GetGlobalObject(cx));
+*     JS_SetContextPrivate(cx2, JS_GetContextPrivate(cx));
+*     version = JS_GetVersion(cx);
+*     if (version != JSVERSION_DEFAULT)
+*         JS_SetVersion(cx2, version);
+*     return cx2;
+* }
+*/
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
@@ -247,7 +247,7 @@ Write(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     printf(JS_GetStringBytes(str));
     *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
     return JS_TRUE;
-}    
+}
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 Gets(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
@@ -257,7 +257,7 @@ Gets(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         return JS_FALSE;
     *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, buf));
     return JS_TRUE;
-}    
+}
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
@@ -318,14 +318,14 @@ SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 /*         return JS_FALSE;                               */
 /*     }                                                  */
 
-    if(! JS_EvaluateScript(cx, obj, 
+    if(! JS_EvaluateScript(cx, obj,
                            JS_GetStringBytes(textJSString),
                            JS_GetStringLength(textJSString),
                            filename, lineno, rval))
         *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
 /*     JS_GC(cx);              */
 /*     JS_DestroyContext(cx2); */
-                
+
     return JS_TRUE;
 }
 
@@ -339,7 +339,7 @@ NativeBreak(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,"only supported for Windows"));
 #endif
     return JS_TRUE;
-}    
+}
 
 static JSFunctionSpec debugger_functions[] = {
     {"version",         Version,        0},
@@ -358,6 +358,42 @@ static JSClass debugger_global_class = {
 };
 
 /***************************************************************************/
+
+#ifdef JSD_LOWLEVEL_SOURCE
+/*
+ * This facilitates sending source to JSD (the debugger system) in the shell
+ * where the source is loaded using the JSFILE hack in jsscan. The function
+ * below is used as a callback for the jsdbgapi JS_SetSourceHandler hook.
+ * A more normal embedding (e.g. mozilla) loads source itself and can send
+ * source directly to JSD without using this hook scheme.
+ */
+static void
+SendSourceToJSDebugger(const char *filename, uintN lineno,
+                       jschar *str, size_t length,
+                       void **listenerTSData, JSDContext* jsdc)
+{
+    JSDSourceText *jsdsrc = (JSDSourceText *) *listenerTSData;
+
+    if (!jsdsrc) {
+        if (!filename)
+            filename = "typein";
+        if (1 == lineno) {
+            jsdsrc = JSD_NewSourceText(jsdc, filename);
+        } else {
+            jsdsrc = JSD_FindSourceForURL(jsdc, filename);
+            if (jsdsrc && JSD_SOURCE_PARTIAL !=
+                JSD_GetSourceStatus(jsdc, jsdsrc)) {
+                jsdsrc = NULL;
+            }
+        }
+    }
+    if (jsdsrc) {
+        jsdsrc = JSD_AppendUCSourceText(jsdc,jsdsrc, str, length,
+                                        JSD_SOURCE_PARTIAL);
+    }
+    *listenerTSData = jsdsrc;
+}
+#endif /* JSD_LOWLEVEL_SOURCE */
 
 static JSBool
 _initReturn(const char* str, JSBool retval)
@@ -427,6 +463,10 @@ JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
     JSD_SetDebuggerHook(jsdc, jsdb_ExecHookHandler, data);
     JSD_SetDebugBreakHook(jsdc, jsdb_ExecHookHandler, data);
     JSD_SetErrorReporter(jsdc, jsdb_ErrorReporter, data);
+
+#ifdef JSD_LOWLEVEL_SOURCE
+    JS_SetSourceHandler(data->rtDebugger, SendSourceToJSDebugger, jsdc);
+#endif /* JSD_LOWLEVEL_SOURCE */
 
     JS_EvaluateScript(data->cxDebugger, data->globDebugger,
                       load_deb, sizeof(load_deb)-1, "jsdb_autoload", 1,

@@ -37,7 +37,7 @@ static void
 _clearText(JSDContext* jsdc, JSDSourceText* jsdsrc)
 {
     if( jsdsrc->text )
-        MY_XP_HUGE_FREE(jsdsrc->text);
+        free(jsdsrc->text);
     jsdsrc->text        = NULL;
     jsdsrc->textLength  = 0;
     jsdsrc->textSpace   = 0;
@@ -57,36 +57,35 @@ _appendText(JSDContext* jsdc, JSDSourceText* jsdsrc,
 
     if( neededSize > jsdsrc->textSpace )
     {
-        MY_XP_HUGE_CHAR_PTR pBuf;
+        char* newBuf;
         uintN iNewSize;
 
         /* if this is the first alloc, the req might be all that's needed*/
         if( ! jsdsrc->textSpace )
-             iNewSize = length;
+            iNewSize = length;
         else
-             iNewSize = (neededSize * 5 / 4) + MEMBUF_GROW;
+            iNewSize = (neededSize * 5 / 4) + MEMBUF_GROW;
 
-        pBuf = (MY_XP_HUGE_CHAR_PTR) MY_XP_HUGE_ALLOC(iNewSize);
-        if( pBuf )
+        newBuf = (char*) realloc(jsdsrc->text, iNewSize);
+        if( ! newBuf )
         {
-            if( jsdsrc->text )
+            /* try again with the minimal size really asked for */
+            iNewSize = neededSize;
+            newBuf = (char*) realloc(jsdsrc->text, iNewSize);
+            if( ! newBuf )
             {
-                MY_XP_HUGE_MEMCPY(pBuf, jsdsrc->text, jsdsrc->textLength);
-                MY_XP_HUGE_FREE(jsdsrc->text);
+                /* out of memory */
+                _clearText( jsdc, jsdsrc );
+                jsdsrc->status = JSD_SOURCE_FAILED;
+                return JS_FALSE;
             }
-            jsdsrc->text = pBuf;
-            jsdsrc->textSpace = iNewSize;
         }
-        else 
-        {
-            /* LTNOTE: throw an out of memory exception */
-            _clearText( jsdc, jsdsrc );
-            jsdsrc->status = JSD_SOURCE_FAILED;
-            return JS_FALSE;
-        }
+
+        jsdsrc->text = newBuf;
+        jsdsrc->textSpace = iNewSize;
     }
 
-    MY_XP_HUGE_MEMCPY(&jsdsrc->text[jsdsrc->textLength], text, length);
+    memcpy(jsdsrc->text + jsdsrc->textLength, text, length);
     jsdsrc->textLength += length;
     return JS_TRUE;
 }
@@ -110,8 +109,8 @@ static void
 _destroySource(JSDContext* jsdc, JSDSourceText* jsdsrc)
 {
     JS_ASSERT(NULL == jsdsrc->text);  /* must _clearText() first */
-    MY_XP_FREE(jsdsrc->url);
-    MY_XP_FREE(jsdsrc);
+    free(jsdsrc->url);
+    free(jsdsrc);
 }
 
 static void
@@ -185,7 +184,7 @@ strncasecomp (const char* one, const char * two, int n)
             return 0;   
         if (!(*pA && *pB)) 
             return *pA - *pB;
-        tmp = MY_XP_TO_LOWER(*pA) - MY_XP_TO_LOWER(*pB);
+        tmp = tolower(*pA) - tolower(*pB);
         if (tmp) 
             return tmp;
     }
@@ -202,14 +201,14 @@ jsd_BuildNormalizedURL( const char* url_string )
     if( ! url_string )
         return NULL;
 
-    if (!MY_XP_STRNCASECMP(url_string, file_url_prefix, FILE_URL_PREFIX_LEN) &&
+    if (!strncasecomp(url_string, file_url_prefix, FILE_URL_PREFIX_LEN) &&
         url_string[FILE_URL_PREFIX_LEN + 0] == '/' &&
         url_string[FILE_URL_PREFIX_LEN + 1] == '/') {
         new_url_string = JS_smprintf("%s%s",
                                      file_url_prefix,
                                      url_string + FILE_URL_PREFIX_LEN + 2);
     } else {
-        new_url_string = MY_XP_STRDUP(url_string);
+        new_url_string = strdup(url_string);
     }
     return new_url_string;
 }
@@ -430,6 +429,47 @@ jsd_AppendSourceText(JSDContext* jsdc,
     jsdsrc->alterCount  = jsdc->sourceAlterCount++ ;
     jsdsrc->status = status;
     DEBUG_ITERATE_SOURCES(jsdc);
+    JSD_UNLOCK_SOURCE_TEXT(jsdc);
+    return jsdsrc;
+}
+
+JSDSourceText*
+jsd_AppendUCSourceText(JSDContext* jsdc,
+                       JSDSourceText* jsdsrc,
+                       const jschar* text,       /* *not* zero terminated */
+                       size_t length,
+                       JSDSourceStatus status)
+{
+#define UNICODE_TRUNCATE_BUF_SIZE 1024
+    static char* buf = NULL;
+    int remaining = length;
+
+    if(!text || !length)
+        return jsd_AppendSourceText(jsdc, jsdsrc, NULL, 0, status);
+
+    JSD_LOCK_SOURCE_TEXT(jsdc);
+    if(!buf)
+    {
+        buf = malloc(UNICODE_TRUNCATE_BUF_SIZE);
+        if(!buf)
+        {
+            JSD_UNLOCK_SOURCE_TEXT(jsdc);
+            return NULL;
+        }
+    }
+    while(remaining && jsdsrc) {
+        int bytes = JS_MIN(remaining, UNICODE_TRUNCATE_BUF_SIZE);
+        int i;
+        for(i = 0; i < bytes; i++)
+            buf[i] = (const char) *(text++);
+        jsdsrc = jsd_AppendSourceText(jsdc,jsdsrc,
+                                      buf, bytes,
+                                      JSD_SOURCE_PARTIAL);
+        remaining -= bytes;
+    }
+    if(jsdsrc && status != JSD_SOURCE_PARTIAL)
+        jsdsrc = jsd_AppendSourceText(jsdc, jsdsrc, NULL, 0, status);
+
     JSD_UNLOCK_SOURCE_TEXT(jsdc);
     return jsdsrc;
 }

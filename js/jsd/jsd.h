@@ -23,9 +23,24 @@
 #ifndef jsd_h___
 #define jsd_h___
 
-#if 0
-#define HACK_FOR_OLD_JS 1   /* XXX kill HACK_FOR_OLD_JS ASAP */
-#endif
+/*
+* NOTE: This is a *private* header file and should only be included by
+* the sources in js/jsd. Defining EXPORT_JSD_API in an outside module
+* using jsd would be bad.
+*/
+#define EXPORT_JSD_API 1 /* if used, must be set before include of jsdebug.h */
+
+/*
+* These can be controled by the makefile, but this allows a place to set
+* the values always used in the mozilla client, but perhaps done differnetly
+* in other embeddings.
+*/
+#ifdef MOZILLA_CLIENT
+#define JSD_THREADSAFE 1
+#define JSD_HAS_DANGEROUS_THREAD 1
+#define JSD_USE_NSPR_LOCKS 1
+#endif /* MOZILLA_CLIENT */
+
 
 /* Get jstypes.h included first. After that we can use PR macros for doing
 *  this extern "C" stuff!
@@ -66,25 +81,6 @@ JS_BEGIN_EXTERN_C
 
 #define JSD_MAJOR_VERSION 1
 #define JSD_MINOR_VERSION 1
-
-#define MY_XP_STRDUP        strdup
-#define MY_XP_FREE          free
-#define MY_XP_STRNCASECMP   strncasecomp
-#define MY_XP_TO_LOWER      tolower
-
-#ifdef XP_WIN16
-#define MY_XP_HUGE __huge
-#define MY_XP_HUGE_ALLOC(SIZE) halloc(SIZE,1)
-#define MY_XP_HUGE_FREE(SIZE) hfree(SIZE)
-#define MY_XP_HUGE_MEMCPY(DEST, SOURCE, LEN) hmemcpy(DEST, SOURCE, LEN)
-#else
-#define MY_XP_HUGE
-#define MY_XP_HUGE_ALLOC(SIZE) malloc(SIZE)
-#define MY_XP_HUGE_FREE(SIZE) free(SIZE)
-#define MY_XP_HUGE_MEMCPY(DEST, SOURCE, LEN) memcpy(DEST, SOURCE, LEN)
-#endif
-
-#define MY_XP_HUGE_CHAR_PTR char MY_XP_HUGE *
 
 /***************************************************************************/
 /* handy macros */
@@ -191,7 +187,7 @@ typedef struct JSDSourceText
 {
     JSCList          links;      /* we are part of a JSCList */
     char*            url;
-    MY_XP_HUGE_CHAR_PTR text;
+    char*            text;
     uintN            textLength;
     uintN            textSpace;
     JSBool           dirty;
@@ -443,6 +439,13 @@ jsd_AppendSourceText(JSDContext* jsdc,
                      const char* text,       /* *not* zero terminated */
                      size_t length,
                      JSDSourceStatus status);
+
+extern JSDSourceText*
+jsd_AppendUCSourceText(JSDContext* jsdc,
+                       JSDSourceText* jsdsrc,
+                       const jschar* text,       /* *not* zero terminated */
+                       size_t length,
+                       JSDSourceStatus status);
 
 /* convienence function for adding complete source of url in one call */
 extern JSBool

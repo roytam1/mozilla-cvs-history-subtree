@@ -21,6 +21,7 @@ CFLAGS = /nologo /MDd /W3 /Gm /GX /Zi /Od\
          /DWIN32 /DXP_PC /D_WINDOWS /D_WIN32\
          /DJSDEBUGGER\
          /DJSDEBUGGER_C_UI\
+         /DJSD_LOWLEVEL_SOURCE\
          /DJSFILE\
          /c /Fp$(OBJ)\$(PROJ).pch /Fd$(OBJ)\$(PROJ).pdb /YX -Fo$@ $<
 
