@@ -43,6 +43,7 @@
 #include "nsString.h"
 #include "nsIStringBundle.h"
 #include "nsXPIDLString.h"
+#include "nsSpecialSystemDirectory.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 const CLSID CLSID_nsMapiImp = {0x29f458be, 0x8866, 0x11d5, {0xa3, 0xdd, 0x0, 0xb0, 0xd0, 0xf3, 0xba, 0xa7}};
@@ -262,11 +263,105 @@ nsresult saveUserDefaultMailClient()
    return rv;
 }
 
+/** Renames Mapi32.dl in system directory to Mapi32_moz_bak.dll
+ *  copies the mozMapi32.dll from bin directory to the system directory
+ */
+nsresult CopyMozMapiToWinSysDir()
+{
+    nsresult rv;
+    nsAutoString mapiFilePath;
+    nsSpecialSystemDirectory sysDir(nsSpecialSystemDirectory::Win_SystemDirectory);
+    ((nsFileSpec*)&sysDir)->GetNativePathString(mapiFilePath);
+    nsCAutoString filePath;
+    if (!mapiFilePath.IsEmpty()) {
+        filePath.AppendWithConversion(mapiFilePath.get());
+        filePath.Append("Mapi32.dll");
+    }
+
+    nsCOMPtr<nsILocalFile> pCurrentMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
+    if (NS_FAILED(rv) || !pCurrentMapiFile) return rv;        
+    pCurrentMapiFile->InitWithPath(filePath.get());
+
+    nsAutoString mozFilePath;
+    nsSpecialSystemDirectory binDir(nsSpecialSystemDirectory::Moz_BinDirectory);
+    ((nsFileSpec*)&binDir)->GetNativePathString(mozFilePath);
+
+    nsCAutoString mozFile;
+    if (!mozFilePath.IsEmpty()) {
+        mozFile.AppendWithConversion(mozFilePath.get());
+        mozFile.Append("mozMapi32.dll");
+    }
+
+    nsCOMPtr<nsILocalFile> pMozMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
+    if (NS_FAILED(rv) || !pMozMapiFile) return rv;
+    pMozMapiFile->InitWithPath(mozFile.get());
+
+    PRBool bExist;
+    rv = pMozMapiFile->Exists(&bExist);
+    if (NS_FAILED(rv) || !bExist) return rv;
+
+    rv = pCurrentMapiFile->Exists(&bExist);
+    if (NS_SUCCEEDED(rv) && bExist)
+    {
+        rv = pCurrentMapiFile->MoveTo(nsnull, "Mapi32_moz_bak.dll");
+        if (NS_FAILED(rv)) return rv;
+    }
+    
+    nsAutoString fileName;
+    fileName.AssignWithConversion("Mapi32.dll");
+    filePath.AssignWithConversion(mapiFilePath.get());
+    pCurrentMapiFile->InitWithPath(filePath.get());
+    rv = pMozMapiFile->CopyToUnicode(pCurrentMapiFile, fileName.get());
+    return rv ;
+}
+
+/** deletes the Mapi32.dll in system directory and renames Mapi32_moz_bak.dll
+ *  to Mapi32.dll
+ */
+nsresult RestoreBackedUpMapiDll()
+{
+    nsresult rv;
+    nsAutoString mapiFilePath;
+    nsSpecialSystemDirectory sysDir(nsSpecialSystemDirectory::Win_SystemDirectory);
+    ((nsFileSpec*)&sysDir)->GetNativePathString(mapiFilePath);
+
+    nsCAutoString filePath;
+    nsCAutoString previousFileName;
+    if (!mapiFilePath.IsEmpty()) {
+        filePath.AppendWithConversion(mapiFilePath.get());
+        filePath.Append("Mapi32.dll");
+        previousFileName.AppendWithConversion(mapiFilePath.get());
+        previousFileName.Append("Mapi32_moz_bak.dll");
+    }
+
+    nsCOMPtr <nsILocalFile> pCurrentMapiFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
+    if (NS_FAILED(rv) || !pCurrentMapiFile) return NS_ERROR_FAILURE;        
+    pCurrentMapiFile->InitWithPath(filePath);
+    
+    nsCOMPtr<nsILocalFile> pPreviousMapiFile = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
+    if (NS_FAILED(rv) || !pPreviousMapiFile) return NS_ERROR_FAILURE;       
+    pPreviousMapiFile->InitWithPath(previousFileName);
+
+    PRBool bExist;
+    rv = pPreviousMapiFile->Exists(&bExist);
+    if (NS_FAILED(rv) || !bExist) return NS_ERROR_FILE_TARGET_DOES_NOT_EXIST;
+
+    rv = pCurrentMapiFile->Exists(&bExist);
+    if (NS_SUCCEEDED(rv) && bExist) {
+        rv = pCurrentMapiFile->Remove(PR_FALSE);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    rv = pPreviousMapiFile->MoveTo(nsnull, "Mapi32.dll");
+    return rv;
+}
+
 /** Sets Mozilla as default Mail Client
  */
 nsresult setDefaultMailClient()
 {
     nsresult rv;
+    if (!NS_SUCCEEDED(CopyMozMapiToWinSysDir())) return NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     rv = saveDefaultMailClient();
     if (!NS_SUCCEEDED(saveUserDefaultMailClient()) ||
@@ -333,6 +428,7 @@ nsresult setDefaultMailClient()
  */
 nsresult unsetDefaultMailClient() {
     nsresult result = NS_OK;
+    if (!NS_SUCCEEDED(RestoreBackedUpMapiDll())) return NS_ERROR_FAILURE;
     if (verifyRestrictedAccess()) return NS_ERROR_FAILURE;
     nsCAutoString name(GetRegistryKey(HKEY_LOCAL_MACHINE, 
                                       "Software\\Mozilla\\Desktop", 

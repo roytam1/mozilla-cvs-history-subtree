@@ -72,6 +72,14 @@ nsresult saveDefaultMailClient();
 // Saves the current user setting for the default mail client.
 nsresult saveUserDefaultMailClient();
 
+// Renames Mapi32.dl in system directory to Mapi32_moz_bak.dll
+// copies the mozMapi32.dll from bin directory to the system directory
+nsresult CopyMozMapiToWinSysDir();
+
+// deletes the Mapi32.dll in system directory and renames Mapi32_moz_bak.dll
+//  to Mapi32.dll
+nsresult RestoreBackedUpMapiDll();
+
 // Sets mozilla as the default mail client	
 nsresult setDefaultMailClient();
 
