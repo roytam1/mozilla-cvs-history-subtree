@@ -417,41 +417,6 @@ nsHTMLSelectElement::GetOptions(nsIDOMHTMLCollection** aValue)
   return NS_OK;
 }
 
-// elements in the array are guaranteed to be at least of type
-// nsIDOMHTMLOptionElement and to be selected.
-NS_IMETHODIMP
-nsHTMLSelectElement::GetSelectedOptions(nsISupportsArray **_retval)
-{
-  nsCOMPtr<nsIDOMHTMLCollection> allOptions;
-  GetOptions(getter_AddRefs(allOptions));
-  if ( allOptions ) {
-    nsCOMPtr<nsIDOMNode> tempNode;
-    nsCOMPtr<nsISupportsArray> selectedOptions;
-    NS_NewISupportsArray(getter_AddRefs(selectedOptions));
-    PRUint32 length;
-    allOptions->GetLength(&length);
-    PRBool isSelected = PR_FALSE;
-    for ( PRUint32 i = 0; i < length ; i++ ) {
-      allOptions->Item(i,getter_AddRefs(tempNode));
-      nsCOMPtr<nsIDOMHTMLOptionElement> option(do_QueryInterface(tempNode));
-      if ( option )
-      {
-        option->GetSelected(&isSelected);
-        if ( isSelected )
-        {
-          selectedOptions->InsertElementAt(option, 0); // this will add them in reverse order
-        }
-      }      
-    } // end for loop
-    *_retval = selectedOptions;
-    NS_IF_ADDREF(*_retval);
-  }
-  else{
-    *_retval = nsnull;
-  }
-  return NS_OK;
-}
-
 NS_IMETHODIMP
 nsHTMLSelectElement::GetType(nsAWritableString& aType)
 {

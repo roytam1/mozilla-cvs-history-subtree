@@ -234,42 +234,7 @@ NS_IMETHODIMP nsHTMLSelectAccessible::GetAccChildCount(PRInt32 *_retval)
 
 NS_IMETHODIMP nsHTMLSelectAccessible::GetSelectedChildren(nsISupportsArray **_retval)
 {
-  nsCOMPtr<nsIDOMHTMLSelectElement> select(do_QueryInterface(mDOMNode));
-  if( select ) {
-    nsCOMPtr<nsISupportsArray> options;
-    select->GetSelectedOptions(getter_AddRefs(options));
-    if ( options ) {
-      PRUint32 length;
-      options->Count(&length);
-      nsCOMPtr<nsIAccessibilityService> accService(do_GetService("@mozilla.org/accessibilityService;1"));
-      nsCOMPtr<nsISupportsArray> access;
-      NS_NewISupportsArray(getter_AddRefs(access));
-      //convert the options to Accessibles
-      for ( PRUint32 i = 0 ; i < length ; i++ ) {
-        nsCOMPtr<nsISupports> tempOption;
-        options->GetElementAt(i,getter_AddRefs(tempOption)); // this expects the nsISupports
-        if ( tempOption ) {
-          nsCOMPtr<nsIDOMNode> tempNode(do_QueryInterface(tempOption));
-          if ( tempNode && accService && access ) {
-            nsCOMPtr<nsIAccessible> tempAccess;
-            nsCOMPtr<nsIPresContext> context;
-            GetPresContext(context);
-            accService->CreateHTMLSelectOptionAccessible(tempNode, this, context, getter_AddRefs(tempAccess));
-            if ( tempAccess )
-              access->InsertElementAt(tempAccess, 0);
-          } // end if (tempNode...)
-        } // end if (tempOption)
-      } // end for loop
-      *_retval = access;
-      NS_IF_ADDREF(*_retval);
-    }
-    else {
-      *_retval = nsnull;
-    }
-  }
-  else {
-    *_retval = nsnull;
-  }
+  *_retval = nsnull;
   return NS_OK;
 }
 

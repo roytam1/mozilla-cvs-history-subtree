@@ -23,7 +23,6 @@
  */
 
 #include "nsIDOMHTMLElement.idl"
-#include "nsISupportsArray.idl"
 
 [scriptable, uuid(a6cf9090-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMHTMLSelectElement : nsIDOMHTMLElement
@@ -44,6 +43,5 @@ interface nsIDOMHTMLSelectElement : nsIDOMHTMLElement
   void                      remove(in long index);
   void                      blur();
   void                      focus();
-  nsISupportsArray	GetSelectedOptions();
 };
 
