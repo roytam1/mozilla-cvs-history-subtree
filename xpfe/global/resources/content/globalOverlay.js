@@ -76,7 +76,7 @@ function goSetCommandEnabled(id, enabled)
 {
   var node = document.getElementById(id);
 
-  if ( node )
+  if ( node && node.hasAttribute("disabled") == enabled )
   {
     if ( enabled )
       node.removeAttribute("disabled");

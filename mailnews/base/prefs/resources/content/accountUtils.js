@@ -180,7 +180,7 @@ function verifyAccounts(wizardcallback) {
 		        ret = false;
         }
         // hack, set a time out to do this, so that the window can load first
-        setTimeout("showMailIntegrationDialog();",0);
+        //setTimeout("showMailIntegrationDialog();",0);
 
         return ret;
     }

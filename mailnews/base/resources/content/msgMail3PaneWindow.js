@@ -656,7 +656,7 @@ function loadStartFolder(initialUri)
         // we don't persist the "open" state of news servers across sessions, 
         // but we do within a session, so if you open another 3 pane
         // and a news server is "open", we'll update the unread counts.
-        PerformExpandForAllOpenServers();
+        //PerformExpandForAllOpenServers();
     }
     catch(ex)
     {
