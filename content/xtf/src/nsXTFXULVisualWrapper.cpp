@@ -105,6 +105,8 @@ nsXTFXULVisualWrapper::nsXTFXULVisualWrapper(nsINodeInfo* aNodeInfo,
 nsresult
 nsXTFXULVisualWrapper::Init()
 {
+  nsXTFXULVisualWrapperBase::Init();
+  
   // pass a weak wrapper (non base object ref-counted), so that
   // our mXTFElement can safely addref/release.
   nsISupports *weakWrapper=nsnull;
