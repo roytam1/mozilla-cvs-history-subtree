@@ -524,6 +524,11 @@ nsXMLContentSink::CloseElement(nsIContent* aContent, PRBool* aAppendContent)
 
   nsINodeInfo* nodeInfo = aContent->GetNodeInfo();
 
+  if (nodeInfo->NamespaceEquals(kNameSpaceID_XForms)) {
+    // XXX more general solution for this?
+    aContent->DoneAddingChildren();
+  }
+
   if (!nodeInfo->NamespaceEquals(kNameSpaceID_XHTML) &&
       !nodeInfo->NamespaceEquals(kNameSpaceID_SVG)) {
     return NS_OK;
