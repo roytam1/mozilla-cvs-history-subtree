@@ -53,6 +53,9 @@
 #include "nsIScrollable.h"
 #include "nsIPref.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIWalletService.h"
+#include "nsNonPersistAuthPromptCID.h"
+#include "nsDOMWindowPrompter.h"
 
 #include "nsStyleConsts.h"
 
@@ -121,11 +124,27 @@ NS_IMETHODIMP nsXULWindow::GetInterface(const nsIID& aIID, void** aSink)
    NS_ENSURE_ARG_POINTER(aSink);
 
    if (aIID.Equals(NS_GET_IID(nsIPrompt))) {
-     // XXX until nsIWebShellWindow goes away:
-     nsCOMPtr<nsIWebShellWindow> webShellWin = 
-       do_QueryInterface(NS_STATIC_CAST(nsIXULWindow*, this), &rv);
-     if (NS_FAILED(rv)) return rv;
-     return webShellWin->GetPrompter((nsIPrompt**)aSink);
+      rv = EnsurePrompter();
+      if (NS_FAILED(rv)) return rv;
+      return mPrompter->QueryInterface(aIID, aSink);
+   }   
+   if (aIID.Equals(NS_GET_IID(nsIAuthPrompt))) {
+
+      if (!mAuthPrompter) {
+         // Attempt to create a single signon. If that fails, create a simple non-persistent nsIAuthPrompt.
+         mAuthPrompter = do_CreateInstance(NS_SINGLESIGNONPROMPT_CONTRACTID, &rv);
+         if (NS_FAILED(rv))
+            mAuthPrompter = do_CreateInstance(NS_NONPERSISTAUTHPROMPT_CONTRACTID, &rv);
+         if (NS_FAILED(rv)) return rv;
+
+         rv = EnsurePrompter();
+         if (NS_FAILED(rv)) return rv;
+         
+         nsCOMPtr<nsISingleSignOnPrompt> siPrompt(do_QueryInterface(mAuthPrompter));
+         if (NS_FAILED(rv)) return rv;
+         siPrompt->SetPromptDialogs(mPrompter);
+      }
+      return mAuthPrompter->QueryInterface(aIID, aSink);
    }
    if(aIID.Equals(NS_GET_IID(nsIWebBrowserChrome)) && 
       NS_SUCCEEDED(EnsureContentTreeOwner()) &&
@@ -660,6 +679,18 @@ NS_IMETHODIMP nsXULWindow::EnsurePrimaryContentTreeOwner()
    return NS_OK;
 }
 
+NS_IMETHODIMP nsXULWindow::EnsurePrompter()
+{
+   if (mPrompter)
+      return NS_OK;
+   
+   nsCOMPtr<nsIDOMWindowInternal> ourWindow;
+   nsresult rv = GetWindowDOMWindow(getter_AddRefs(ourWindow));
+   if (NS_SUCCEEDED(rv))
+      rv = NS_NewDOMWindowPrompter(getter_AddRefs(mPrompter), ourWindow);
+   return rv;
+}
+ 
 void nsXULWindow::OnChromeLoaded()
 {
   mChromeLoaded = PR_TRUE;

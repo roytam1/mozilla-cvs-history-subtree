@@ -42,7 +42,7 @@
 #include "nsIStreamListener.h"
 #include "nsIStreamObserver.h"
 #include "nsIProxy.h"
-#include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 #include "nsIHTTPEventSink.h"
 
 #ifdef MOZ_NEW_CACHE
@@ -189,8 +189,8 @@ protected:
     // Various event sinks
     nsCOMPtr<nsIHTTPEventSink>          mEventSink;
     nsCOMPtr<nsIHTTPEventSink>          mRealEventSink;
-    nsCOMPtr<nsIPrompt>                 mPrompter;
-    nsCOMPtr<nsIPrompt>                 mRealPrompter;
+    nsCOMPtr<nsIAuthPrompt>             mAuthPrompter;
+    nsCOMPtr<nsIAuthPrompt>             mRealAuthPrompter;
     nsCOMPtr<nsIProgressEventSink>      mProgressEventSink;
     nsCOMPtr<nsIProgressEventSink>      mRealProgressEventSink;
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;

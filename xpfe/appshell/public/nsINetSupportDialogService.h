@@ -27,6 +27,7 @@
 class nsIFactory;
 
 #include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 
 // {05650684-eb9f-11d2-8e19-9ac64aca4d3c}
 #define NS_NETSUPPORTDIALOG_CID \

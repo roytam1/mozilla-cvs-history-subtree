@@ -24,7 +24,8 @@
 
 #include "nsINetSupportDialogService.h"
 
-class nsNetSupportDialog  : public nsIPrompt
+class nsNetSupportDialog  : public nsIPrompt,
+                            public nsIAuthPrompt
 {
 public:
   nsNetSupportDialog();
@@ -32,6 +33,9 @@ public:
 
   // nsIPrompt
   NS_DECL_NSIPROMPT
+  
+  // nsIAuthPrompt
+  NS_DECL_NSIAUTHPROMPT
 
   // COM
   NS_DECL_ISUPPORTS	

@@ -190,6 +190,10 @@ nsresult NS_MsgBuildSmtpUrl(nsIFileSpec * aFilePath,
             if (!smtpPrompt)
                 smtpPrompt = do_GetService(kNetSupportDialogCID);
             smtpUrl->SetPrompt(smtpPrompt);
+            nsCOMPtr<nsIAuthPrompt> smtpAuthPrompt(do_GetInterface(aNotificationCallbacks));
+            if (!smtpAuthPrompt)
+                smtpAuthPrompt = do_GetService(kNetSupportDialogCID);
+            smtpUrl->SetAuthPrompt(smtpAuthPrompt);
 			url->RegisterListener(aUrlListener);
 		}
 		rv = smtpUrl->QueryInterface(NS_GET_IID(nsIURI), (void **) aUrl);

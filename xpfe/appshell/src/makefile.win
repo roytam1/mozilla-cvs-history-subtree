@@ -43,6 +43,7 @@ CPP_OBJS=                               \
      .\$(OBJDIR)\nsWindowMediator.obj        \
     .\$(OBJDIR)\nsDialogParamBlock.obj \
 	.\$(OBJDIR)\nsCommonDialogs.obj \
+	.\$(OBJDIR)\nsDOMWindowPrompter.obj \
 	.\$(OBJDIR)\nsAbout.obj \
 	.\$(OBJDIR)\nsUserInfoWin.obj \
  $(NULL)

@@ -1605,8 +1605,8 @@ nsSmtpProtocol::GetPassword(char **aPassword)
     nsCRT::free(*aPassword);
     *aPassword = 0;
 
-    nsCOMPtr<nsIPrompt> netPrompt;
-    rv = smtpUrl->GetPrompt(getter_AddRefs(netPrompt));
+    nsCOMPtr<nsIAuthPrompt> netPrompt;
+    rv = smtpUrl->GetAuthPrompt(getter_AddRefs(netPrompt));
     if (NS_FAILED(rv)) return rv;
 
     nsXPIDLCString username;
@@ -1684,8 +1684,8 @@ nsSmtpProtocol::GetUsernamePassword(char **aUsername, char **aPassword)
     nsCRT::free(*aPassword);
     *aPassword = 0;
 
-    nsCOMPtr<nsIPrompt> netPrompt;
-    rv = smtpUrl->GetPrompt(getter_AddRefs(netPrompt));
+    nsCOMPtr<nsIAuthPrompt> netPrompt;
+    rv = smtpUrl->GetAuthPrompt(getter_AddRefs(netPrompt));
     if (NS_FAILED(rv)) return rv;
 
     nsXPIDLCString hostname;
@@ -1753,8 +1753,8 @@ nsresult nsSmtpProtocol::RequestOverrideInfo(nsISmtpServer * aSmtpServer)
     if (requiresPassword)
 		  GetPassword(getter_Copies(password));
 
-    nsCOMPtr<nsIPrompt> prompter;
-    m_runningURL->GetPrompt(getter_AddRefs(prompter));
+    nsCOMPtr<nsIAuthPrompt> prompter;
+    m_runningURL->GetAuthPrompt(getter_AddRefs(prompter));
 		rv = m_logonRedirector->Logon(userName, password, prompter, NS_STATIC_CAST(nsIMsgLogonRedirectionRequester *, this), nsMsgLogonRedirectionServiceIDs::Smtp);
 	}
 

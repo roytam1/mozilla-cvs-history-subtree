@@ -42,6 +42,8 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIWidget.h"
 #include "nsIXULWindow.h"
+#include "nsIPrompt.h"
+#include "nsIAuthPrompt.h"
 
 // nsXULWindow
 
@@ -66,6 +68,7 @@ protected:
    NS_IMETHOD EnsureChromeTreeOwner();
    NS_IMETHOD EnsureContentTreeOwner();
    NS_IMETHOD EnsurePrimaryContentTreeOwner();
+   NS_IMETHOD EnsurePrompter();
    
    void OnChromeLoaded();
    void StaggerPosition(PRInt32 &aRequestedX, PRInt32 &aRequestedY,
@@ -103,6 +106,8 @@ protected:
    nsCOMPtr<nsIDocShell>   mDocShell;
    nsCOMPtr<nsIDOMWindowInternal>  mDOMWindow;
    nsCOMPtr<nsIWeakReference> mParentWindow;
+   nsCOMPtr<nsIPrompt>     mPrompter;
+   nsCOMPtr<nsIAuthPrompt> mAuthPrompter;
    nsVoidArray             mContentShells;
    PRBool                  mContinueModalLoop;
    nsresult                mModalStatus;

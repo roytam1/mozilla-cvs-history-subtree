@@ -53,6 +53,9 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIWindowWatcher.h"
 #include "nsPIWindowWatcher.h"
+#include "nsIPrompt.h"
+#include "nsIWalletService.h"
+#include "nsNonPersistAuthPromptCID.h"
 
 static char *sWindowWatcherContractID = "@mozilla.org/embedcomp/window-watcher;1";
 
@@ -108,8 +111,27 @@ NS_IMETHODIMP nsDocShellTreeOwner::GetInterface(const nsIID& aIID, void** aSink)
    if(NS_SUCCEEDED(QueryInterface(aIID, aSink)))
       return NS_OK;
 
-   if(mOwnerRequestor)
+   if(mOwnerRequestor) {
+      if (aIID.Equals(NS_GET_IID(nsIAuthPrompt))) {
+         if (!mAuthPrompter) {
+            nsCOMPtr<nsIPrompt> prompt;
+            nsresult rv = mOwnerRequestor->GetInterface(NS_GET_IID(nsIPrompt), getter_AddRefs(prompt));
+            if (NS_FAILED(rv)) return rv;
+         
+            // Attempt to create a single signon. If that fails, create a simple non-persistent nsIAuthPrompt.
+            mAuthPrompter = do_CreateInstance(NS_SINGLESIGNONPROMPT_CONTRACTID, &rv);
+            if (NS_FAILED(rv))
+               mAuthPrompter = do_CreateInstance(NS_NONPERSISTAUTHPROMPT_CONTRACTID, &rv);
+            if (NS_FAILED(rv)) return rv;
+            
+            nsCOMPtr<nsISingleSignOnPrompt> siPrompt(do_QueryInterface(mAuthPrompter));
+            if (NS_FAILED(rv)) return rv;
+            siPrompt->SetPromptDialogs(prompt);
+         }
+         return mAuthPrompter->QueryInterface(aIID, aSink);
+      }
       return mOwnerRequestor->GetInterface(aIID, aSink);
+   }
 
    return NS_NOINTERFACE;
 }

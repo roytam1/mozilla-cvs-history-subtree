@@ -748,6 +748,8 @@ embedding/components/build/Makefile
 embedding/components/windowwatcher/Makefile
 embedding/components/windowwatcher/public/Makefile
 embedding/components/windowwatcher/src/Makefile
+embedding/components/npauthprompt/Makefile
+embedding/components/npauthprompt/src/Makefile
 embedding/config/Makefile
 embedding/tests/gtkEmbed/Makefile
 "
