@@ -41,11 +41,15 @@
 #include "nsCommandLineServiceMac.h"
 #include "nsCOMPtr.h"
 #include "nsIBaseWindow.h"
+#include "nsIBrowserDOMWindow.h"
 #include "nsIContent.h"
+#include "nsIDocShell.h"
+#include "nsIDocShellTreeItem.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsIDOMWindowUtils.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMNode.h"
 #include "nsIHTMLContent.h"
@@ -57,10 +61,10 @@
 #include "nsIURI.h"
 #include "nsIXULWindow.h"
 #include "nsString.h"
+#include "nsNetUtil.h"
 #include "nsWindowUtils.h"
 #include "nsMacUtils.h"
 #include "nsXPIDLString.h"
-#include "nsIDocShellTreeItem.h"
 #include "nsWindowUtils.h"
 #include "nsReadableUtils.h"
 
@@ -500,11 +504,47 @@ void nsWindowUtils::LoadURLInWindow(WindowPtr wind, const char* urlString)
 
 void nsWindowUtils::LoadURLInXULWindow(nsIXULWindow* inWindow, const char* urlString)
 {
-  nsCOMPtr<nsIDocShellTreeItem> contentShell;
-  inWindow->GetPrimaryContentShell(getter_AddRefs(contentShell));
-  ThrowErrIfNil(contentShell, paramErr);
+  nsCOMPtr<nsIDocShell> docShell;
+  nsCOMPtr<nsIDocShellTreeItem> docItem;
+  nsCOMPtr<nsIBrowserDOMWindow> bwin;
 
-  nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(contentShell));
+  // first try the nsIBrowserDOMWindow helper object
+  // note the actual window used depends on user prefs. this may end up
+  // using a different window!
+
+  inWindow->GetDocShell(getter_AddRefs(docShell));
+  docItem = do_QueryInterface(docShell);
+  if (docItem) {
+    nsCOMPtr<nsIDocShellTreeItem> rootItem;
+    docItem->GetRootTreeItem(getter_AddRefs(rootItem));
+    nsCOMPtr<nsIDOMWindow> rootWin(do_GetInterface(rootItem));
+    if (rootWin) {
+      nsCOMPtr<nsIDOMWindowUtils> utils(do_GetInterface(rootWin));
+      if (utils)
+        utils->GetBrowserDOMWindow(getter_AddRefs(bwin));
+    }
+  }
+  if (bwin) {
+    nsCOMPtr<nsIURI> uri;
+    nsDependentCString urlStr(urlString);
+    NS_NewURI(getter_AddRefs(uri), urlStr, 0, 0);
+    if (uri) {
+      nsCOMPtr<nsIDOMWindow> newBrowserWindow;
+      bwin->OpenURI(uri,
+                    nsIBrowserDOMWindow::OPEN_DEFAULTWINDOW,
+                    nsIBrowserDOMWindow::OPEN_EXTERNAL,
+                    getter_AddRefs(newBrowserWindow));
+      if (newBrowserWindow)
+        return;
+    }
+  }
+
+  // fallback: navigate the XULWindow's content shell directly
+
+  inWindow->GetPrimaryContentShell(getter_AddRefs(docItem));
+  ThrowErrIfNil(docItem, paramErr);
+
+  nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(docItem));
   ThrowErrIfNil(webNav, paramErr);
 
   nsAutoString urlWString; urlWString.AssignWithConversion(urlString);	
