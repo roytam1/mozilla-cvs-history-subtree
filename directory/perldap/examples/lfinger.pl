@@ -24,7 +24,6 @@
 #    "finger" version using LDAP information (using RFC 2307 objectclass).
 #
 #############################################################################
-
 use Getopt::Std;			# To parse command line arguments.
 use Mozilla::LDAP::Connection;		# Main "OO" layer for LDAP
 use Mozilla::LDAP::Utils;		# LULU, utilities.
