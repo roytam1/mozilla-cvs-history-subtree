@@ -29,7 +29,7 @@
 #include "nsIGenericFactory.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
-#include "nsIStreamConverter.h"
+#include "nsIStreamConverter2.h"
 #include "nsIMimeStreamConverter.h"
 #include "nsFileStream.h"
 #include "nsFileSpec.h"
@@ -456,9 +456,9 @@ DoRFC822toHTMLConversion(char *filename, int numArgs)
     *opts = save;
 
   // Create a mime parser (nsIStreamConverter)!
-  nsCOMPtr<nsIStreamConverter> mimeParser;
+  nsCOMPtr<nsIStreamConverter2> mimeParser;
   rv = nsComponentManager::CreateInstance(kStreamConverterCID, 
-                                          NULL, nsIStreamConverter::GetIID(), 
+                                          NULL, nsIStreamConverter2::GetIID(), 
                                           (void **) getter_AddRefs(mimeParser)); 
   if (NS_FAILED(rv) || !mimeParser)
   {
