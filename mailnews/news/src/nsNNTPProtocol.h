@@ -170,7 +170,8 @@ public:
 
 private:
 	// over-rides from nsMsgProtocol
-	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, PRUint32 length);
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length);
 	virtual nsresult CloseSocket();
 
 	// we have our own implementation of SendData which writes to the nntp log
@@ -371,7 +372,7 @@ private:
 	// End of Protocol Methods
 	////////////////////////////////////////////////////////////////////////////////////////
 
-	nsresult ParseURL(nsIURI * aURL, char ** aHostAndPort, PRBool * bValP, char ** aGroup, char ** aMessageID, char ** aCommandSpecificData);
+	nsresult ParseURL(nsIURI * aURL, PRBool * bValP, char ** aGroup, char ** aMessageID, char ** aCommandSpecificData);
 };
 
 NS_BEGIN_EXTERN_C
