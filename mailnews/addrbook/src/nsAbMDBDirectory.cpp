@@ -816,15 +816,23 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard)
 	if (NS_FAILED(rv) || !mDatabase)
 		return NS_ERROR_FAILURE;
 
-	nsCOMPtr<nsIAbMDBCard> dbcard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
-	NS_ENSURE_SUCCESS(rv,rv);
+  nsCOMPtr<nsIAbCard> newCard;
+  nsCOMPtr<nsIAbMDBCard> dbcard(do_QueryInterface(aCard, &rv));
 
-  nsCOMPtr<nsIAbCard> newCard = do_QueryInterface(dbcard, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
+  if (NS_SUCCEEDED(rv)) {
+    newCard = aCard;
+  }  
+  else {
+    dbcard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
+	  NS_ENSURE_SUCCESS(rv,rv);
 
-	rv = newCard->Copy(aCard);
-  NS_ENSURE_SUCCESS(rv,rv);
-  
+    newCard = do_QueryInterface(dbcard, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+	  rv = newCard->Copy(aCard);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
 	dbcard->SetAbDatabase (mDatabase);
 	if (mIsMailingList == 1)
 		mDatabase->CreateNewListCardAndAddToDB(m_dbRowID, newCard, PR_TRUE);

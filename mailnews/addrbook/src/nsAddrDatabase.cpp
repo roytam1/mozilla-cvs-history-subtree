@@ -1541,6 +1541,7 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewCardAndAddToDB(nsIAbCard *newCard, PRBool
 		AddAttributeColumnsToRow(newCard, cardRow);
 		AddRecordKeyColumnToRow(cardRow);
 
+#if 1
     // XXX add comment explaining why we need this (for dnd)
     PRUint32 key = 0;
 	  err = GetIntColumn(cardRow, m_RecordKeyColumnToken, &key, 0);
@@ -1549,6 +1550,7 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewCardAndAddToDB(nsIAbCard *newCard, PRBool
       if (NS_SUCCEEDED(err) && dbnewCard)
         dbnewCard->SetKey(key);
     }
+#endif
 		mdb_err merror = m_mdbPabTable->AddRow(GetEnv(), cardRow);
 		if (merror != NS_OK) return NS_ERROR_FAILURE;
 		cardRow->CutStrongRef(GetEnv());
@@ -1619,10 +1621,10 @@ nsresult nsAddrDatabase::AddListCardColumnsToRow
 		{
 			nsIMdbRow	*pCardRow = nsnull;
 			err = GetRowFromAttribute(kPriEmailColumn, pUTF8Email, PR_TRUE /* lower case */, &pCardRow);
+      PRBool cardWasAdded = PR_FALSE;
 			if (NS_FAILED(err) || !pCardRow)
 			{
 				//New Email, then add a new row with this email
-
 				err  = GetNewRow(&pCardRow);
 
 				if (NS_SUCCEEDED(err) && pCardRow)
@@ -1631,28 +1633,19 @@ nsresult nsAddrDatabase::AddListCardColumnsToRow
 					err = m_mdbPabTable->AddRow(GetEnv(), pCardRow);
 				}
 
-				nsCOMPtr<nsIAbCard>	newCard;
-				CreateABCard(pCardRow, 0, getter_AddRefs(newCard));
-				*pNewCard = newCard;
-				NS_IF_ADDREF(*pNewCard);
+        cardWasAdded = PR_TRUE;
+      }
 
+      NS_ENSURE_TRUE(pCardRow, NS_ERROR_NULL_POINTER);
+
+			nsCOMPtr<nsIAbCard>	newCard;
+			CreateABCard(pCardRow, 0, getter_AddRefs(newCard));
+			*pNewCard = newCard;
+			NS_IF_ADDREF(*pNewCard);
+
+      if (cardWasAdded) {
 				NotifyCardEntryChange(AB_NotifyInserted, newCard, NULL);
 			}
-			else if (pCardRow)
-			{
-				//existing card, get the card ptr
-				mdbOid cardOid;
-
-				if (NS_SUCCEEDED(pCardRow->GetOid(GetEnv(), &cardOid)))
-							{
-          *pNewCard = pCard;
-									NS_IF_ADDREF(*pNewCard);
-								}
-                                pCardRow->CutStrongRef(GetEnv());
-			}
-
-			if (!pCardRow)
-				return NS_ERROR_NULL_POINTER;
 
 			//add a column with address row id to the list row
 			mdb_token listAddressColumnToken;
