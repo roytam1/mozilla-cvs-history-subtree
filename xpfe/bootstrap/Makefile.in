@@ -152,7 +152,7 @@ LIBS = \
 
 
 ifdef NU_CACHE
-LIBS += $(NU_CACHE_LIB)
+LIBS += $(NU_CACHE_LIB) -lmozdbm
 endif
  
 CPPSRCS = \
