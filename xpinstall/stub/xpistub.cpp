@@ -105,11 +105,8 @@ PR_PUBLIC_API(nsresult) XPI_Init(
 #elif defined(XP_PC) || defined(XP_UNIX)
     
     nsCOMPtr<nsILocalFile> file;
-    rv = NS_NewLocalFile(getter_AddRefs(file));
-    if (NS_SUCCEEDED(rv) && file)
-    {
-        file->InitWithPath(aProgramDir);
-    }
+    NS_NewLocalFile(aProgramDir, getter_AddRefs(file));
+    
     rv = NS_InitXPCOM(&gServiceMgr, file); 
         
 #else
