@@ -2096,6 +2096,18 @@ void Compute3DColors(COLORREF rgbColor, COLORREF &rgbLight, COLORREF &rgbDark)
 
     rgbLight = RGB(uRed, uGreen, uBlue);
 
+	// Special case white backgrounds and black backgrounds
+	if (rgbLight == rgbColor && (uRedBack == MAX_COLOR && uGreenBack == MAX_COLOR && uBlueBack == MAX_COLOR))
+	{
+		// For a white separator use medium gray colors.
+		rgbLight = RGB(192,192,192);
+	}
+	else if (rgbDark == rgbColor && rgbColor == 0)
+	{
+		// Use a dark gray color.
+		rgbDark = RGB(64,64,64);
+	}
+
 	// If either of these colors is the same as the background color
 	// then use the system 3D element colors instead
 	if (rgbLight == rgbColor || rgbDark == rgbColor) {

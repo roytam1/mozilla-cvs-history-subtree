@@ -1650,7 +1650,7 @@ void CRDFToolbar::ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, in
    
    pButton->SetTextWithoutResize(strTxt);
 
-   if (!m_bButtonsSameWidth)
+   if (!m_bButtonsSameWidth || HT_IsURLBar(pButton->GetNode()) || HT_IsSeparator(pButton->GetNode()))
 	  pButton->SetButtonSize(pButton->GetButtonSizeFromChars(strTxt, numChars));
 
 // Determine how much additional padding we'll use to fill out a row if this button doesn't fit.
