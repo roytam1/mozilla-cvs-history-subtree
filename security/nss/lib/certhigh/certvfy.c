@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 #include "nspr.h"
 #include "secerr.h"
 #include "secport.h"
@@ -167,6 +164,64 @@ CERT_VerifySignedData(CERTSignedData *sd, CERTCertificate *cert,
     return rv;
 }
 
+
+/*
+ * This must only be called on a cert that is known to have an issuer
+ * with an invalid time
+ */
+CERTCertificate *
+CERT_FindExpiredIssuer(CERTCertDBHandle *handle, CERTCertificate *cert)
+{
+    CERTCertificate *issuerCert = NULL;
+    CERTCertificate *subjectCert;
+    int              count;
+    SECStatus        rv;
+    SECComparison    rvCompare;
+    
+    subjectCert = CERT_DupCertificate(cert);
+    if ( subjectCert == NULL ) {
+	goto loser;
+    }
+    
+    for ( count = 0; count < CERT_MAX_CERT_CHAIN; count++ ) {
+	/* find the certificate of the issuer */
+	issuerCert = CERT_FindCertByName(handle, &subjectCert->derIssuer);
+    
+	if ( ! issuerCert ) {
+	    goto loser;
+	}
+
+	rv = CERT_CertTimesValid(issuerCert);
+	if ( rv == SECFailure ) {
+	    /* this is the invalid issuer */
+	    CERT_DestroyCertificate(subjectCert);
+	    return(issuerCert);
+	}
+
+	/* make sure that the issuer is not self signed.  If it is, then
+	 * stop here to prevent looping.
+	 */
+	rvCompare = SECITEM_CompareItem(&issuerCert->derSubject,
+				 &issuerCert->derIssuer);
+	if (rvCompare == SECEqual) {
+	    PORT_Assert(0);		/* No expired issuer! */
+	    goto loser;
+	}
+	CERT_DestroyCertificate(subjectCert);
+	subjectCert = issuerCert;
+    }
+
+loser:
+    if ( issuerCert ) {
+	CERT_DestroyCertificate(issuerCert);
+    }
+    
+    if ( subjectCert ) {
+	CERT_DestroyCertificate(subjectCert);
+    }
+    
+    return(NULL);
+}
 
 /* Software FORTEZZA installation hack. The software fortezza installer does
  * not have access to the krl and cert.db file. Accept FORTEZZA Certs without
@@ -340,26 +395,21 @@ loser:
 #else
     NSSCertificate *me;
     NSSTime *nssTime;
-    NSSTrustDomain *td;
-    NSSCryptoContext *cc;
-    NSSCertificate *chain[3];
     NSSUsage nssUsage;
+    NSSCertificate *chain[3];
     PRStatus status;
-
     me = STAN_GetNSSCertificate(cert);
-    if (!me) {
-        PORT_SetError(SEC_ERROR_NO_MEMORY);
-	return NULL;
-    }
     nssTime = NSSTime_SetPRTime(NULL, validTime);
     nssUsage.anyUsage = PR_FALSE;
     nssUsage.nss3usage = usage;
     nssUsage.nss3lookingForCA = PR_TRUE;
     memset(chain, 0, 3*sizeof(NSSCertificate *));
-    td   = STAN_GetDefaultTrustDomain();
-    cc = STAN_GetDefaultCryptoContext();
+    if (!me) {
+	PORT_SetError (SEC_ERROR_BAD_DATABASE);
+	return NULL;
+    }
     (void)NSSCertificate_BuildChain(me, nssTime, &nssUsage, NULL, 
-                                    chain, 2, NULL, &status, td, cc);
+                                    chain, 2, NULL, &status);
     nss_ZFreeIf(nssTime);
     if (status == PR_SUCCESS) {
 	/* if it's a root, the chain will only have one cert */
@@ -928,11 +978,11 @@ cert_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 
 	CERT_DestroyCertificate(subjectCert);
 	subjectCert = issuerCert;
-	issuerCert = NULL;
     }
 
+    subjectCert = NULL;
     PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);
-    LOG_ERROR(log,subjectCert,count,0);
+    LOG_ERROR(log,issuerCert,count,0);
 loser:
     rv = SECFailure;
 done:
@@ -1833,7 +1883,7 @@ CERT_GetCertNicknameWithValidity(PRArenaPool *arena, CERTCertificate *cert,
 				 char *expiredString, char *notYetGoodString)
 {
     SECCertTimeValidity validity;
-    char *nickname = NULL, *tmpstr = NULL;
+    char *nickname, *tmpstr;
     
     validity = CERT_CheckCertValidTimes(cert, PR_Now(), PR_FALSE);
 
@@ -1856,16 +1906,11 @@ CERT_GetCertNicknameWithValidity(PRArenaPool *arena, CERTCertificate *cert,
 	if ( validity == secCertTimeExpired ) {
 	    tmpstr = PR_smprintf("%s%s", cert->nickname,
 				 expiredString);
-	} else if ( validity == secCertTimeNotValidYet ) {
+	} else {
 	    /* not yet valid */
 	    tmpstr = PR_smprintf("%s%s", cert->nickname,
 				 notYetGoodString);
-        } else {
-            /* undetermined */
-	    tmpstr = PR_smprintf("%s",
-                        "(NULL) (Validity Unknown)");
-        }
-
+	}
 	if ( tmpstr == NULL ) {
 	    goto loser;
 	}
