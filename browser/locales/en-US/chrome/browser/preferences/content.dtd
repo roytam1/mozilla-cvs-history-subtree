@@ -4,8 +4,9 @@
 <!ENTITY  enbJavaCheck.accesskey            "J">
 <!ENTITY  enableJavaScript.label            "Enable JavaScript">
 <!ENTITY  enableJavaScript.accesskey        "S">
-<!ENTITY  advancedJavaScript.label          "Advanced...">
-<!ENTITY  advancedJavaScript.accesskey      "A">
+<!ENTITY  disableAnnoyances.label           "but disable common annoyances">
+<!ENTITY  disableAnnoyances.accesskey       "y">
+
 
 <!ENTITY  enableImages.label                "Load Images">
 <!ENTITY  enableImages.accesskey            "I">

@@ -76,9 +76,6 @@ var gConnectionsDialog = {
     var shareProxiesPref = document.getElementById("network.proxy.share_proxy_settings");
     shareProxiesPref.disabled = proxyTypePref.value != 1;
     
-    var socksVersionPref = document.getElementById("network.proxy.socks_version");
-    socksVersionPref.disabled = proxyTypePref.value != 1;
-    
     var noProxiesPref = document.getElementById("network.proxy.no_proxies_on");
     noProxiesPref.disabled = proxyTypePref.value != 1;
     
@@ -123,13 +120,14 @@ var gConnectionsDialog = {
       proxyServerURLPref.disabled = proxyTypePref.value != 1 || shareProxiesPref.value;
       proxyPortPref.disabled = proxyServerURLPref.disabled;
     }
+    var socksVersionPref = document.getElementById("network.proxy.socks_version");
+    socksVersionPref.disabled = proxyTypePref.value != 1 || shareProxiesPref.value;
+    
     return undefined;
   },
   
   readProxyProtocolPref: function (aProtocol, aIsPort)
   {
-    
-
     var shareProxiesPref = document.getElementById("network.proxy.share_proxy_settings");
     if (shareProxiesPref.value) {
       var pref = document.getElementById("network.proxy.http" + (aIsPort ? "_port" : ""));    

@@ -84,19 +84,24 @@
         <tabpanel orient="vertical">
           <groupbox align="start">
             <caption label="&accessibility.label;"/>
-            <checkbox id="moveSystemCaret" label="&moveSystemCaret.label;"
+            <checkbox id="moveSystemCaret" label="&moveSystemCaret.label;" 
+                      accesskey="&moveSystemCaret.accesskey;"
                       preference="accessibility.browsewithcaret"/>
             <checkbox id="useTypeAheadFind" label="&useTypeAheadFind.label;"
+                      accesskey="&useTypeAheadFind.accesskey;"
                       preference="accessibility.typeaheadfind"/>
           </groupbox>
           <groupbox align="start">
             <caption label="&browsing.label;"/>
             <checkbox id="enableAutoImageResizing"
                       label="&enableAutoImageResizing.label;"
+                      accesskey="&enableAutoImageResizing.accesskey;"
                       preference="browser.enable_automatic_image_resizing"/>
             <checkbox id="useAutoScrolling" label="&useAutoScrolling.label;"
+                      accesskey="&useAutoScrolling.accesskey;"
                       preference="general.autoScroll"/>
             <checkbox id="useSmoothScrolling" label="&useSmoothScrolling.label;"
+                      accesskey="&useSmoothScrolling.accesskey;"
                       preference="general.smoothScroll"/>
           </groupbox>
           <groupbox>
@@ -116,11 +121,13 @@
             <vbox align="start">
               <checkbox id="enableSmartUpdate"
                         label="&enableSmartUpdate.label;"
+                        accesskey="&enableSmartUpdate.accesskey;"
                         preference="app.update.autoUpdateEnabled"
                         onpreferenceread="return gAdvancedPane.updateAppUpdateUI();"/>
               <vbox class="indent" align="start">
                 <checkbox id="enableAutoInstall"
                           label="&enableAutoInstall.label;"
+                          accesskey="&enableAutoInstall.accesskey;"
                           preference="app.update.autoInstallEnabled"
                           onpreferenceread="return gAdvancedPane.updateAutoInstallUI();"
                           hidden="true"/>
@@ -133,15 +140,17 @@
                     <rows>
                       <row><label id="updateAnd"
                                   preference="app.update.autoUpdateEnabled">&updateAnd.label;</label>
-                           <radio label="&autoDownloadAndInstall.label;" value="0"/></row>
+                           <radio label="&autoDownloadAndInstall.label;" 
+                                  accesskey="&autoDownloadAndInstall.accesskey;" value="0"/></row>
                       <row><hbox/>
-                           <radio label="&autoDownloadAndPrompt.label;" value="1"/></row>
+                           <radio label="&autoDownloadAndPrompt.label;" 
+                                  accesskey="&autoDownloadAndPrompt.accesskey;" value="1"/></row>
                     </rows>
                   </grid>
                 </radiogroup>
                 <separator class="thin"/>
                 <hbox>
-                  <button label="&checkNow.label;"
+                  <button label="&checkNow.label;" accesskey="&appCheckNow.accesskey;"
                           oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_APP);"/>
                 </hbox>
               </vbox>
@@ -152,10 +161,11 @@
             <vbox align="start">
               <checkbox id="enableExtensionUpdate"
                         label="&enableExtensionUpdate.label;"
+                        accesskey="&enableExtensionUpdate.accesskey;"
                         preference="extensions.update.autoUpdateEnabled"/>      
               <separator class="thin"/>
               <hbox class="indent">
-                <button label="&checkNow.label;"
+                <button label="&checkNow.label;" accesskey="&extensionsCheckNow.accesskey;"
                         oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_ADDON);"/>
               </hbox>
             </vbox>
@@ -172,17 +182,20 @@
               <rows>
                 <row>
                   <hbox>
-                    <checkbox id="useSSL2" label="&useSSL2.label;"
+                    <checkbox id="useSSL2" label="&useSSL2.label;" 
+                              accesskey="&useSSL2.accesskey;" 
                               preference="security.enable_ssl2"/>
                   </hbox>
                   <hbox>
                     <checkbox id="useSSL3" label="&useSSL3.label;"
+                              accesskey="&useSSL3.accesskey;"
                               preference="security.enable_ssl3"/>
                   </hbox>
                 </row>
                 <row>
                   <hbox>
                     <checkbox id="useTLS1" label="&useTLS1.label;"
+                              accesskey="&useTLS1.accesskey;"
                               preference="security.enable_tls"/>
                   </hbox>
                   <hbox/>
@@ -194,21 +207,23 @@
             <caption label="&certificates.label;"/>
             <description>&certselect.description;</description>
             <radiogroup id="certSelection" orient="horizontal" preftype="string" 
-	                preference="security.default_personal_cert">
-              <radio label="&certselect.auto;" value="Select Automatically"/>
-              <radio label="&certselect.ask;" value="Ask Every Time"/>
+	                      preference="security.default_personal_cert">
+              <radio label="&certselect.auto;" accesskey="&certselect.auto.accesskey;" 
+                     value="Select Automatically"/>
+              <radio label="&certselect.ask;" accesskey="&certselect.ask.accesskey;" 
+                     value="Ask Every Time"/>
             </radiogroup>
             
             <separator/>
             
             <description>
-              <button label="&viewCertificates.label;" 
+              <button label="&viewCertificates.label;" accesskey="&viewCertificates.accesskey;" 
                       oncommand="gAdvancedPane.showCertificates();"/>
-              <button label="&viewCRLs.label;" 
+              <button label="&viewCRLs.label;" accesskey="&viewCRLs.accesskey;" 
                       oncommand="gAdvancedPane.showCRLs();"/>
-              <button label="&viewOCSP.label;" 
+              <button label="&viewOCSP.label;" accesskey="&viewOCSP.accesskey;" 
                       oncommand="gAdvancedPane.showOCSP();"/>
-              <button label="&viewSecurityDevices.label;" 
+              <button label="&viewSecurityDevices.label;" accesskey="&viewSecurityDevices.accesskey;" 
                       oncommand="gAdvancedPane.showSecurityDevices();"/>
             </description>                              
           </groupbox>
