@@ -197,7 +197,7 @@ compute_java_class_signature(JSContext *cx, JNIEnv *jEnv, JavaSignature *signatu
  * Convert from JavaSignatureChar enumeration to single-character
  * signature used by the JDK and JNI methods.
  */
-static const char
+static char
 get_jdk_signature_char(JavaSignatureChar type)
 {
     return "XVZCBSIJFD[LLLLLL"[(int)type];
