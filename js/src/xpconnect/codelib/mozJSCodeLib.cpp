@@ -63,6 +63,7 @@ const char kScriptSecurityManagerContractID[] = NS_SCRIPTSECURITYMANAGER_CONTRAC
 static JSFunctionSpec gGlobalFunctions[] = {
   {"dump", JSDump, 1},
   {"debug", JSDebug, 1 },
+  {"objectToId", JSObjectToId, 1},
   {"importModule", JSImportModule, 1 },
   {0}
 };

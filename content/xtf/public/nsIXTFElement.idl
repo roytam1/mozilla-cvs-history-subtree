@@ -37,30 +37,78 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsISupports.idl"
+interface nsIAtom;
 
 [scriptable, uuid(f0617ed1-db6a-4704-ac4b-67bf15a77788)]
 interface nsIXTFElement : nsISupports
 {
+  // called when the wrapper object is being destroyed.
   void onDestroyed();
 
-  const unsigned long ELEMENT_TYPE_GENERIC_ELEMENT     = 0;
-  const unsigned long ELEMENT_TYPE_SVG_VISUAL          = 1;
-  const unsigned long ELEMENT_TYPE_XML_VISUAL          = 2;
-  const unsigned long ELEMENT_TYPE_XUL_VISUAL          = 3;
-  
+  // Constants for attribute elementType:
+
+  // Elements of type GENERIC_ELEMENT are required to implement the
+  // nsIXTFGenericElement interface in addition to nsIXTFElement:
+  const unsigned long ELEMENT_TYPE_GENERIC_ELEMENT = 0;
+
+  // Elements of type SVG_VISUAL are required to implement the
+  // nsIXTFSVGVisual interface in addition to nsIXTFElement:
+  const unsigned long ELEMENT_TYPE_SVG_VISUAL      = 1;
+
+  // Elements of type XML_VISUAL are required to implement the
+  // nsIXTFXMLVisual interface in addition to nsIXTFElement:
+  const unsigned long ELEMENT_TYPE_XML_VISUAL      = 2;
+
+  // Elements of type XUL_VISUAL are required to implement the
+  // nsIXTFXULVisual interface in addition to nsIXTFElement:
+  const unsigned long ELEMENT_TYPE_XUL_VISUAL      = 3;
+
+  // elementType identifies the type of wrapper that will be built for
+  // a given xtf element. It must remain constant for the whole
+  // lifetime of the xtf element (i.e. before any onCreated()-calls
+  // until after onDestroyed()-calls).
   readonly attribute unsigned long elementType;
 
-  // getScriptingInterfaces: This array servers 2 purposes: a) All
+  // If isAttributeHandler is set to 'true', the xtf element indicates
+  // that it wants to manage its own attributes. In this case it needs
+  // to implement the nsIXTFAttributeHandler interface in addition to
+  // its other interfaces. 'isAttributeHandler' must remain constant
+  // for the whole lifetime of the xtf element (i.e. before any
+  // onCreated()-calls until after onDestroyed()-calls).
+  readonly attribute boolean isAttributeHandler;
+  
+  // getScriptingInterfaces: This array serves 2 purposes: a) All
   // interfaces in this array will automatically be accessible when
   // our wrapper element is used from JS (other interfaces need to be
   // explicitly QI'ed for), and b) All these interfaces are callable
   // from unpriviliged script.
-  
   void getScriptingInterfaces(out unsigned long count,
                               [array, size_is(count), retval] out nsIIDPtr array);
 
-  // context events:
+  // Notification mask constants:
+  const unsigned long NOTIFY_WILL_CHANGE_DOCUMENT = 0x00000001;
+  const unsigned long NOTIFY_DOCUMENT_CHANGED     = 0x00000002;
+  const unsigned long NOTIFY_WILL_CHANGE_PARENT   = 0x00000004;
+  const unsigned long NOTIFY_PARENT_CHANGED       = 0x00000008;
+  const unsigned long NOTIFY_WILL_INSERT_CHILD    = 0x00000010;
+  const unsigned long NOTIFY_CHILD_INSERTED       = 0x00000020;
+  const unsigned long NOTIFY_WILL_APPEND_CHILD    = 0x00000040;
+  const unsigned long NOTIFY_CHILD_APPENDED       = 0x00000080;
+  const unsigned long NOTIFY_WILL_REMOVE_CHILD    = 0x00000100;
+  const unsigned long NOTIFY_CHILD_REMOVED        = 0x00000200;
+  const unsigned long NOTIFY_WILL_SET_ATTRIBUTE   = 0x00000400;
+  const unsigned long NOTIFY_ATTRIBUTE_SET        = 0x00000800;
+  const unsigned long NOTIFY_WILL_UNSET_ATTRIBUTE = 0x00001000;
+  const unsigned long NOTIFY_ATTRIBUTE_UNSET      = 0x00002000;
   
+  // Events can be masked out by setting the corresponding bit in
+  // notificationMask to '0'. This attribute must remain constant for
+  // the whole lifetime of the xtf element (i.e. before any
+  // onCreated()-calls until after onDestroyed()-calls).
+  readonly attribute unsigned long notificationMask;
+  
+  // Event notifications:
+
   void willChangeDocument(in nsISupports newDoc);
   void documentChanged(in nsISupports newDoc);
   
@@ -76,14 +124,12 @@ interface nsIXTFElement : nsISupports
   void willRemoveChild(in unsigned long index);
   void childRemoved(in unsigned long index);
 
-  void doneAddingChildren();
+  void willSetAttribute(in nsIAtom name, in AString newValue);
+  void attributeSet(in nsIAtom name, in AString newValue);
 
-  // attribute management: xxx these must handle namespaces
-  void setAttribute(in AString name, in AString newValue);
-  void unsetAttribute(in AString name);
-  AString getAttribute(in AString name);
-  boolean hasAttribute(in AString name);
-  unsigned long getAttributeCount();
-  AString getAttributeNameAt(in unsigned long index);
+  void willUnsetAttribute(in nsIAtom name);
+  void attributeUnset(in nsIAtom name);  
+
+  void doneAddingChildren();
 };
 

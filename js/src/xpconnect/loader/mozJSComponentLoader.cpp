@@ -286,6 +286,7 @@ EvalInSandbox(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 static JSFunctionSpec gGlobalFun[] = {
     {"dump", JSDump, 1 },
     {"debug", JSDebug, 1 },
+    {"objectToId", JSObjectToId, 1},
 #ifndef XPCONNECT_STANDALONE
     {"Sandbox", NewSandbox, 0 },
     {"evalInSandbox", EvalInSandbox, 3 },

@@ -36,67 +36,42 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#ifndef __NS_XTFELEMENTWRAPPER_H__
-#define __NS_XTFELEMENTWRAPPER_H__
+#ifndef __NS_XTFVISUALWRAPPER_H__
+#define __NS_XTFVISUALWRAPPER_H__
 
-#include "nsIXTFElementWrapper.h"
-#include "nsXMLElement.h"
-#include "nsIXTFAttributeHandler.h"
+#include "nsXTFElementWrapper.h"
+#include "nsIDOMElement.h"
+#include "nsIAnonymousContentCreator.h"
 
-class nsIXTFElement;
+typedef nsXTFElementWrapper nsXTFVisualWrapperBase;
 
-typedef nsXMLElement nsXTFElementWrapperBase;
-
-class nsXTFElementWrapper : public nsXTFElementWrapperBase,
-                            public nsIXTFElementWrapper,
-                            public nsIClassInfo
+class nsXTFVisualWrapper : public nsXTFVisualWrapperBase,
+                           public nsIAnonymousContentCreator
 {
 protected:
-  nsXTFElementWrapper(nsINodeInfo* aNodeInfo);
-  nsresult Init();
-
+  nsXTFVisualWrapper(nsINodeInfo* aNodeInfo);
+  
 public:
   // nsISupports interface
   NS_DECL_ISUPPORTS_INHERITED
 
-  // nsIXTFElementWrapper
-  NS_DECL_NSIXTFELEMENTWRAPPER
+  // nsIAnonymousContentCreator
+  NS_IMETHOD CreateAnonymousContent(nsIPresContext* aPresContext,
+                                    nsISupportsArray& aAnonymousItems);
+  
+  // If the creator doesn't want to create special frame for frame hierarchy
+  // then it should null out the style content arg and return NS_ERROR_FAILURE
+  NS_IMETHOD CreateFrameFor(nsIPresContext*   aPresContext,
+                            nsIContent *      aContent,
+                            nsIFrame**        aFrame) {
+    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
 
-  // nsIContent specialisations:
-  void SetDocument(nsIDocument* aDocument, PRBool aDeep,
-                   PRBool aCompileEventHandlers);
-  void SetParent(nsIContent* aParent);
-  nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                         PRBool aNotify, PRBool aDeepSetDocument);
-  nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify,
-                         PRBool aDeepSetDocument);
-  nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
-  nsIAtom *GetIDAttributeName() const;
-  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                   nsIAtom* aPrefix, const nsAString& aValue,
-                   PRBool aNotify);
-  nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                   nsAString& aResult)const;
-  PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const;
-  nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
-                     PRBool aNotify);
-  nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
-                         nsIAtom** aName, nsIAtom** aPrefix) const;
-  PRUint32 GetAttrCount() const;
-  void     DoneAddingChildren();
-
-  // nsIClassInfo interface
-  NS_DECL_NSICLASSINFO
-
+  
 protected:
   // to be implemented by subclasses:
-  virtual nsIXTFElement *GetXTFElement()const = 0;
+  virtual void CreateVisualContent(nsIDOMElement **content)=0;
   
-  // implementation helpers:  
-  PRBool AggregatesInterface(REFNSIID aIID);
-
-  PRUint32 mNotificationMask;
-  nsCOMPtr<nsIXTFAttributeHandler> mAttributeHandler;
+  nsCOMPtr<nsIDOMElement> mVisualContent;
 };
 
-#endif // __NS_XTFELEMENTWRAPPER_H__
+#endif // __NS_XTFVISUALWRAPPER_H__

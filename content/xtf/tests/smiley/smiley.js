@@ -18,13 +18,15 @@ smileyElement.mergeTemplate(XTFSVGVisual);
 
 //smileyElement.addProtoObj("_dump", function() {});
 
-smileyElement.appendInitializer("smileyElement_eventsListeners",
+smileyElement.appendInitializer(
+  "smileyElement_eventsListeners",
   function() {
     var instance = this;
     this.mousedownListener = function() {instance._makeSad();};
   });
 
-smileyElement.addProtoObj("_buildVisualContent",
+smileyElement.addProtoObj(
+  "_buildVisualContent",
   function(builder) {
     builder.setElementNamespace(SVG_NS);
     builder.beginElement("g");
@@ -59,7 +61,7 @@ smileyElement.addProtoObj("_makeSad",
   });
 
 // let our 'g' element handle all of our attribs:
-smileyElement.mergeTemplate(XTFMappedAttributes);
+smileyElement.mergeTemplate(XTFMappedAttributeHandler);
 
 smileyElement.mapAttribute("*",
   {

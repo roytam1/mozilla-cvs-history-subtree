@@ -69,6 +69,7 @@ JS_CODELIB_RESOURCES = \
 	StdLib.js \
 	TemplateLib.js \
 	ProfileLib.js \
+	IntrospectionLib.js \
 	IOLib.js \
 	$(NULL)
 

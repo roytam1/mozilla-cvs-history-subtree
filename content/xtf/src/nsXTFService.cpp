@@ -37,21 +37,24 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsCOMPtr.h"
-#include "nsIXTFService.h"
-#include "nsIXTFElementFactory.h"
+#include "nsINodeInfo.h"
+#include "nsIServiceManager.h"
 #include "nsIXTFElement.h"
+#include "nsIXTFElementFactory.h"
 #include "nsIXTFGenericElement.h"
-#include "nsIXTFSVGVisual.h"
+#include "nsIXTFService.h"
 #include "nsIXTFXMLVisual.h"
 #include "nsIXTFXULVisual.h"
+#include "nsInterfaceHashtable.h"
 #include "nsString.h"
-#include "nsINodeInfo.h"
 #include "nsXTFGenericElementWrapper.h"
-#include "nsXTFSVGVisualWrapper.h"
 #include "nsXTFXMLVisualWrapper.h"
 #include "nsXTFXULVisualWrapper.h"
-#include "nsInterfaceHashtable.h"
-#include "nsIServiceManager.h"
+
+#ifdef MOZ_SVG
+#include "nsXTFSVGVisualWrapper.h"
+#include "nsIXTFSVGVisual.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // nsXTFService class 
@@ -150,8 +153,12 @@ nsXTFService::CreateElement(nsIContent** aResult, nsINodeInfo* aNodeInfo)
     }
     case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
     {
+#ifdef MOZ_SVG
       nsCOMPtr<nsIXTFSVGVisual> elem2 = do_QueryInterface(elem);
       return NS_NewXTFSVGVisualWrapper(elem2, aNodeInfo, aResult);
+#else
+      NS_ERROR("xtf svg visuals are only supported in mozilla builds with native svg support");
+#endif
       break;
     }
     case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:

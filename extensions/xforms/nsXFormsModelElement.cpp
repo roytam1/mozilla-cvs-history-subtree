@@ -134,6 +134,13 @@ nsXFormsModelElement::GetElementType(PRUint32 *aType)
 }
 
 NS_IMETHODIMP
+nsXFormsModelElement::GetIsAttributeHandler(PRBool *aIsHandler)
+{
+  *aIsHandler = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsXFormsModelElement::GetScriptingInterfaces(PRUint32 *aCount, nsIID ***aArray)
 {
   PRUint32 count = NS_ARRAY_LENGTH(sScriptingIIDs);
@@ -158,6 +165,13 @@ nsXFormsModelElement::GetScriptingInterfaces(PRUint32 *aCount, nsIID ***aArray)
 
   *aArray = iids;
   *aCount = count;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsModelElement::GetNotificationMask(PRUint32 *aMask)
+{
+  *aMask = 0;
   return NS_OK;
 }
 
@@ -222,38 +236,26 @@ nsXFormsModelElement::ChildRemoved(PRUint32 aIndex)
 }
 
 NS_IMETHODIMP
-nsXFormsModelElement::SetAttribute(const nsAString &aName,
-                                   const nsAString &aNewValue)
+nsXFormsModelElement::WillSetAttribute(nsIAtom *aName,
+                                       const nsAString &aNewValue)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsXFormsModelElement::UnsetAttribute(const nsAString& aName)
+nsXFormsModelElement::AttributeSet(nsIAtom *aName, const nsAString &aNewValue)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsXFormsModelElement::GetAttribute(const nsAString& aName, nsAString& aValue)
+nsXFormsModelElement::WillUnsetAttribute(nsIAtom *aName)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsXFormsModelElement::HasAttribute(const nsAString& aName, PRBool* aHasAttr)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXFormsModelElement::GetAttributeCount(PRUint32* aCount)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXFormsModelElement::GetAttributeNameAt(PRUint32 aIndex, nsAString& aName)
+nsXFormsModelElement::AttributeUnset(nsIAtom *aName)
 {
   return NS_OK;
 }
@@ -389,8 +391,6 @@ nsXFormsModelElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
   mContent = do_QueryInterface(node);
 
   NS_ASSERTION(mContent, "Wrapper is not an nsIContent, we'll crash soon");
-
-  aWrapper->SetShouldHandleAttributes(PR_TRUE);
 
   return NS_OK;
 }

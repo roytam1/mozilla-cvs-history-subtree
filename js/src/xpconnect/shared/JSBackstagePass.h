@@ -102,6 +102,9 @@ JSDump(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 JSBool JS_DLL_CALLBACK
 JSDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
+JSBool JS_DLL_CALLBACK
+JSObjectToId(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
+
 #ifdef MOZ_JSCODELIB
 JSBool JS_DLL_CALLBACK
 JSImportModule(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);

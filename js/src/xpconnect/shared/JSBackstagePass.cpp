@@ -129,6 +129,27 @@ JSDebug(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 #endif
 }
 
+JSBool JS_DLL_CALLBACK
+JSObjectToId(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    if (argc!=1) return JS_FALSE;
+    
+    // xxx If argv[0] is not an obj already, we'll get a transient
+    // address from JS_ValueToObject. Maybe we should throw an exception
+    // instead.
+    
+    JSObject *arg_obj;
+    if (!JS_ValueToObject(cx, argv[0], &arg_obj)) {
+        return JS_FALSE;
+    }
+    
+    char buf[80];
+    sprintf(buf,"%p",arg_obj);
+    JSString *str = JS_NewStringCopyZ(cx, buf);
+    *rval = STRING_TO_JSVAL(str);
+    return JS_TRUE;
+}
+
 #ifdef MOZ_JSCODELIB
 JSBool JS_DLL_CALLBACK
 JSImportModule(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)

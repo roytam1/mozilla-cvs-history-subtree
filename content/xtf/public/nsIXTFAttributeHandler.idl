@@ -37,13 +37,15 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsISupports.idl"
+interface nsIAtom;
 
-interface nsIDOMElement;
-
-[scriptable, uuid(94c05b72-997a-4bb0-a23d-63e40c55b02c)]
-interface nsIXTFElementWrapper : nsISupports
-{  
-  readonly attribute nsIDOMElement elementNode;
-  readonly attribute nsIDOMElement documentFrameElement;
+[scriptable, uuid(72152f7f-7e8d-43fd-8477-3f29ae8d240d)]
+interface nsIXTFAttributeHandler : nsISupports
+{
+  void setAttribute(in nsIAtom name, in AString newValue);
+  void unsetAttribute(in nsIAtom name);
+  AString getAttribute(in nsIAtom name);
+  boolean hasAttribute(in nsIAtom name);
+  unsigned long getAttributeCount();
+  nsIAtom getAttributeNameAt(in unsigned long index);
 };
-

@@ -6897,7 +6897,11 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
   xtfElem->GetElementType(&elementType);
   switch(elementType) {
     case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
+#ifdef MOZ_SVG
       rv = NS_NewXTFSVGDisplayFrame(aPresShell, aContent, &newFrame);
+#else
+      NS_ERROR("xtf svg visuals are only supported in mozilla builds with native svg");
+#endif
       break;
     case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
       // XXX examine display style

@@ -146,10 +146,15 @@ SHARED_LIBRARY_LIBS += \
 endif
 
 ifdef MOZ_XTF
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)gkcontentxtf_s.$(LIB_SUFFIX) \
+		$(NULL)
+
 ifdef MOZ_SVG
-SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)gkxtfbase_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS += \
+		$(DIST)/lib/$(LIB_PREFIX)gkxtfbase_s.$(LIB_SUFFIX) \
+		$(NULL)
 endif
-SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)gkcontentxtf_s.$(LIB_SUFFIX)
 endif
 
 ifdef MOZ_SVG

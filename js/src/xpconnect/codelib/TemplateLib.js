@@ -43,6 +43,7 @@
  */
 
 importModule("resource:/jscodelib/StdLib.js");
+importModule("resource:/jscodelib/IntrospectionLib.js", IntrospectionLib={});
 
 MOZ_EXPORTED_SYMBOLS = [ "Template",
                          "makeTemplate",
@@ -151,7 +152,7 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
       var target = this._proto[p];
       if (target && flags && flags.mergeover) {
         if (typeof(flags.mergeover)=="function") {
-          flags.mergeover(this._proto[p], src._proto[p]);
+          this._proto[p] = flags.mergeover(this._proto[p], src._proto[p]);
           continue;
         }
         else if (flags.mergeover!=true) {
@@ -179,6 +180,35 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
     for (var op in src._ops) { this._ops[op] = src._ops[op]; }
   }
   return this;
+};
+
+Template.prototype._docgen_ = function(context) {
+  var ctx = { __proto__:context };
+  if (!ctx.layout) ctx.layout = "normal";
+
+  var description = "template "+this.name;
+
+  if (ctx.layout == "normal") {
+    description += " {";
+    description += "\nPrototype:{\n";
+    
+    var pctx = {__proto__:context, layout:"brief", ignoreProperties:[/^_/]};
+    // 'public' properties:
+    description += "//'public':\n";
+    description += IntrospectionLib.describeProperties(this._proto, pctx);
+    // 'private' properties:
+    description += "//'private':\n";
+    pctx = {__proto__:context, layout:"brief", onlyProperties:[/^_/]};
+    description += IntrospectionLib.describeProperties(this._proto, pctx);
+    description += "}";
+
+    description += "\nOps:{\n";
+    
+    description += "}";    
+    description += "\n}";
+  }
+
+  return description;
 };
 
 //----------------------------------------------------------------------
