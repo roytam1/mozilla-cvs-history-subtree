@@ -263,6 +263,7 @@ NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccValue(PRUnichar **_retval)
   nsAutoString nameString;
 
   AppendFlatStringFromSubtree(content, &nameString);
+  nameString.CompressWhitespace();
 
   *_retval = nameString.ToNewUnicode();
   return NS_OK;
@@ -695,6 +696,7 @@ NS_IMETHODIMP nsHTMLSelectListChildAccessible::GetAccName(PRUnichar **_retval)
   }
 
   AppendFlatStringFromSubtree(content, &nameString);
+  nameString.CompressWhitespace();
 
   *_retval = nameString.ToNewUnicode();
   return NS_OK;

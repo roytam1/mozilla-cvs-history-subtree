@@ -119,7 +119,6 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIDOMNode* node, nsISupports
 /* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLCheckboxAccessible(nsISupports *aFrame, nsIAccessible **_retval)
 {
-printf("Checkbox created\n");
   nsIFrame* frame;
   nsCOMPtr<nsIDOMNode> node;
   nsCOMPtr<nsIWeakReference> shell;
