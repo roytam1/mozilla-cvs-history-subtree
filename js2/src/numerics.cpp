@@ -35,11 +35,12 @@
 #include <cstring>
 #include <cfloat>
 #include "numerics.h"
-#include "jstypes.h"
+#include "parser.h"
+#include "js2runtime.h"
 
 namespace JavaScript
 {
-    using namespace JSTypes;
+    using namespace JS2Runtime;
 
 //
 // Portable double-precision floating point to string and back conversions
@@ -243,15 +244,15 @@ namespace JavaScript
 // had to move these here since they depend upon the values
 // initialized above, and we can't guarantee order other than
 // lexically in a single file.
-    const JSValue JSTypes::kUndefinedValue;
-    const JSValue JSTypes::kNaNValue = JSValue(nan);
-    const JSValue JSTypes::kTrueValue = JSValue(true);
-    const JSValue JSTypes::kFalseValue = JSValue(false);
-    const JSValue JSTypes::kNullValue = JSValue(JSValue::null_tag);
-    const JSValue JSTypes::kNegativeZero = JSValue(-0.0);
-    const JSValue JSTypes::kPositiveZero = JSValue(0.0);
-    const JSValue JSTypes::kNegativeInfinity = JSValue(negativeInfinity);
-    const JSValue JSTypes::kPositiveInfinity = JSValue(positiveInfinity);
+    const JSValue JS2Runtime::kUndefinedValue;
+    const JSValue JS2Runtime::kNaNValue = JSValue(nan);
+    const JSValue JS2Runtime::kTrueValue = JSValue(true);
+    const JSValue JS2Runtime::kFalseValue = JSValue(false);
+    const JSValue JS2Runtime::kNullValue = JSValue(JSValue::null_tag);
+    const JSValue JS2Runtime::kNegativeZero = JSValue(-0.0);
+    const JSValue JS2Runtime::kPositiveZero = JSValue(0.0);
+    const JSValue JS2Runtime::kNegativeInfinity = JSValue(negativeInfinity);
+    const JSValue JS2Runtime::kPositiveInfinity = JSValue(positiveInfinity);
 
 //
 // Portable double-precision floating point to string and back conversions
