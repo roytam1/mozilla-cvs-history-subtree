@@ -455,7 +455,7 @@ function Startup()
       var arrayArgComponents = window.arguments[1].split("=");
       if (arrayArgComponents) {
         //we should "inherit" the charset menu setting in a new window
-        BrowserSetDefaultCharacterSet(arrayArgComponents[1]);
+        appCore.SetDocumentCharset(arrayArgComponents[1]);
       }
     }
   }
@@ -810,7 +810,8 @@ function BrowserEditBookmarks()
 
 function BrowserPrintPreview()
 {
-  // implement me
+  // this is currently a do-nothing on appCore which is going to die
+  // ???.printPreview();
 }
 
 function BrowserPrint()
@@ -821,21 +822,18 @@ function BrowserPrint()
 
 function BrowserSetDefaultCharacterSet(aCharset)
 {
-  getMarkupDocumentViewer().defaultCharacterSet = aCharset;
+  appCore.SetDocumentCharset(aCharset);
   getWebNavigation().reload(nsIWebNavigation.LOAD_FLAGS_NONE);
 }
 
 function BrowserSetForcedCharacterSet(aCharset)
 {
-  var charsetConverterManager = Components.classes["@mozilla.org/charset-converter-manager;1"]
-                                          .getService(Components.interfaces.nsICharsetConverterManager2);
-  var characterSet = charsetConverterManager.GetCharsetAtom(aCharset);
-  getBrowser().documentCharsetInfo.forcedCharset = characterSet;
+  appCore.SetForcedCharset(aCharset);
 }
 
 function BrowserSetForcedDetector()
 {
-  getBrowser().documentCharsetInfo.forcedDetector = true;
+  appCore.SetForcedDetector();
 }
 
 function BrowserClose()
@@ -1128,8 +1126,8 @@ function postURLToNativeWidget()
 
 function checkForDirectoryListing()
 {
-  if ( "HTTPIndex" in _content &&
-       _content.HTTPIndex instanceof Components.interfaces.nsIHTTPIndex ) {
+  if ("HTTPIndex" in _content &&
+      _content.HTTPIndex instanceof Components.interfaces.nsIHTTPIndex) {
     _content.defaultCharacterset = getMarkupDocumentViewer().defaultCharacterSet;
     _content.parentWindow = window;
   }
