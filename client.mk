@@ -201,6 +201,7 @@ SVG_BRANCH_MODIFIED_FILES = \
 	other-licenses/libart_lgpl/art_uta_rect.h             \
 	other-licenses/libart_lgpl/art_uta_svp.c              \
 	other-licenses/libart_lgpl/art_uta_svp.h              \
+	other-licenses/libart_lgpl/art_uta_vpath.c            \
 	other-licenses/libart_lgpl/art_uta_vpath.h            \
 	other-licenses/libart_lgpl/art_vpath.c                \
 	other-licenses/libart_lgpl/art_vpath_bpath.c          \
