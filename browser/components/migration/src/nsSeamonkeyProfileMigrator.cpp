@@ -57,6 +57,7 @@
 #define FILE_NAME_SECMODDB        NS_LITERAL_STRING("secmod.db")
 #define FILE_NAME_HISTORY         NS_LITERAL_STRING("history.dat")
 #define FILE_NAME_MIMETYPES       NS_LITERAL_STRING("mimeTypes.rdf")
+#define FILE_NAME_DOWNLOADS       NS_LITERAL_STRING("downloads.rdf")
 #define FILE_NAME_PREFS           NS_LITERAL_STRING("prefs.js")
 #define FILE_NAME_SEARCH          NS_LITERAL_STRING("search.rdf")
 #define FILE_NAME_USERCONTENT     NS_LITERAL_STRING("userContent.css")
@@ -95,6 +96,7 @@ nsSeamonkeyProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUn
     COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
     COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
     COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
+    COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
   }
   COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
 
@@ -396,6 +398,7 @@ nsSeamonkeyProfileMigrator::TransformPreferences(const nsAString& aSourcePrefFil
 void
 nsSeamonkeyProfileMigrator::ReadFontsBranch()
 {
+  // XXXben TODO!
   return;
 }
 
@@ -484,5 +487,11 @@ nsSeamonkeyProfileMigrator::CopyBookmarks(PRBool aReplace)
     return CopyFile(FILE_NAME_BOOKMARKS, FILE_NAME_BOOKMARKS);
   return ImportNetscapeBookmarks(FILE_NAME_BOOKMARKS, 
                                  NS_LITERAL_STRING("importedSeamonkeyBookmarksTitle").get());
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::CopyOtherData(PRBool aReplace)
+{
+  return CopyFile(FILE_NAME_DOWNLOADS, FILE_NAME_DOWNLOADS);
 }
 

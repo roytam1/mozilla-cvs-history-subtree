@@ -63,7 +63,7 @@ protected:
   nsresult CopyFormData(PRBool aReplace);
   nsresult CopyPasswords(PRBool aReplace);
   nsresult CopyHotlist(PRBool aReplace);
-  nsresult CopyDownloads(PRBool aReplace);
+  nsresult CopyOtherData(PRBool aReplace);
 
   void     GetOperaProfile(const PRUnichar* aProfile, nsILocalFile** aFile);
 

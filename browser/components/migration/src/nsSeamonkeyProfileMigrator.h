@@ -77,6 +77,7 @@ protected:
   nsresult CopyHistory(PRBool aReplace);
   nsresult CopyPasswords(PRBool aReplace);
   nsresult CopyBookmarks(PRBool aReplace);
+  nsresult CopyOtherData(PRBool aReplace);
 
 private:
   nsCOMPtr<nsISupportsArray> mProfileNames;

@@ -13,7 +13,7 @@ var MigrationWizard = {
               new MigrationItem(nsIBPM.FORMDATA,  "formdata"),
               new MigrationItem(nsIBPM.PASSWORDS, "passwords"),
               new MigrationItem(nsIBPM.BOOKMARKS, "bookmarks"),
-              new MigrationItem(nsIBPM.DOWNLOADS, "downloads")],
+              new MigrationItem(nsIBPM.OTHERDATA, "otherdata")],
   _dataSources: { 
 #ifdef XP_WIN
     "ie":       { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.FORMDATA, nsIBPM.PASSWORDS, nsIBPM.BOOKMARKS], 
@@ -27,11 +27,11 @@ var MigrationWizard = {
     "macie":    { _migrate: [],
                    _import: [] },
 #endif
-    "opera":    { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.BOOKMARKS, nsIBPM.DOWNLOADS],    
+    "opera":    { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.BOOKMARKS, nsIBPM.OTHERDATA],    
                    _import: [0, 1, 2, 5, 6] },
     "dogbert":  { _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.BOOKMARKS],          
                    _import: [5] },
-    "seamonkey":{ _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.PASSWORDS, nsIBPM.BOOKMARKS, nsIBPM.DOWNLOADS], 
+    "seamonkey":{ _migrate: [nsIBPM.SETTINGS, nsIBPM.COOKIES, nsIBPM.HISTORY, nsIBPM.PASSWORDS, nsIBPM.BOOKMARKS, nsIBPM.OTHERDATA], 
                    _import: [5] },
   },
   
@@ -235,7 +235,7 @@ var MigrationWizard = {
   
   observe: function (aSubject, aTopic, aData)
   {
-    var itemToIndex = { "settings": 0, "cookies": 1, "history": 2, "formdata": 3, "passwords": 4, "bookmarks": 5, "downloads": 6 };
+    var itemToIndex = { "settings": 0, "cookies": 1, "history": 2, "formdata": 3, "passwords": 4, "bookmarks": 5, "otherdata": 6 };
     switch (aTopic) {
     case "Migration:Started":
       dump("*** started\n");

@@ -89,7 +89,7 @@ nsOperaProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnicha
   COPY_DATA(CopyFormData,     aReplace, nsIBrowserProfileMigrator::FORMDATA,  NS_LITERAL_STRING("formdata").get());
   COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
   COPY_DATA(CopyHotlist,      aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
-  COPY_DATA(CopyDownloads,    aReplace, nsIBrowserProfileMigrator::DOWNLOADS, NS_LITERAL_STRING("bookmarks").get());
+  COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
 
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
 
@@ -340,9 +340,9 @@ nsOperaProfileMigrator::CopyHotlist(PRBool aReplace)
 }
 
 nsresult
-nsOperaProfileMigrator::CopyDownloads(PRBool aReplace)
+nsOperaProfileMigrator::CopyOtherData(PRBool aReplace)
 {
-  printf("*** copy opera downloads\n");
+  printf("*** copy opera other data\n");
 
   nsCOMPtr<nsIFile> temp;
   mOperaProfile->Clone(getter_AddRefs(temp));

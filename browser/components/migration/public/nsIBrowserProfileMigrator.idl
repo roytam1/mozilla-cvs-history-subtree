@@ -51,7 +51,7 @@ interface nsIBrowserProfileMigrator : nsISupports
   const unsigned long FORMDATA    = 0x0008;
   const unsigned long PASSWORDS   = 0x0010;
   const unsigned long BOOKMARKS   = 0x0020;
-  const unsigned long DOWNLOADS   = 0x0040;
+  const unsigned long OTHERDATA   = 0x0040;
 
   /**
    * Copy user profile information to the current active profile.
