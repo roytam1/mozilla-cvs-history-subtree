@@ -43,11 +43,43 @@ include $(DEPTH)/config/autoconf.mk
 
 # For the moment, just hardcode en-US... more automation coming later.
 
+AB_CD = en-US
+
 # We need a way to make a localized build and a langpack-extension from the
 # same jar.mn
 
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
 
-DEFINES += -DAB_CD=en-US -DAPP_VERSION=$(APP_VERSION)
+DEFINES += -DAB_CD=$(AB_CD) -DAPP_VERSION=$(APP_VERSION)
+
+PROFILE_FILES = \
+	bookmarks.html \
+	localstore.rdf \
+	search.rdf \
+	$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+PROFILE_FILES += win/mimeTypes.rdf
+else
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+PROFILE_FILES += mac/mimeTypes.rdf
+else
+PROFILE_FILES += unix/mimeTypes.rdf
+endif
+endif
+
+PROFILE_CHROME = userChrome-example.css userContent-example.css
+
+libs realchrome:: $(addprefix $(AB_CD)/profile/,$(PROFILE_FILES))
+	$(INSTALL) $^ $(DIST)/bin/defaults/profile
+
+libs realchrome:: $(addprefix $(AB_CD)/profile/chrome/,$(PROFILE_CHROME))
+	$(INSTALL) $^ $(DIST)/bin/defaults/profile/chrome
+
+install:: $(addprefix $(AB_CD)/profile/,$(PROFILE_FILES))
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile
+
+install:: $(addprefix $(AB_CD)/profile/chrome,$(PROFILE_CHROME))
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile/chrome
 
 include $(topsrcdir)/config/rules.mk

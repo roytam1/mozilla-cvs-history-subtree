@@ -13,7 +13,6 @@ bin/.autoreg
 [langenus]
 ; en-US 
 bin\chrome\en-US.jar
-bin\defaults\profile\US\*
 bin\searchplugins\*
 bin\defaults\profile\bookmarks.html
 bin\defaults\profile\localstore.rdf
