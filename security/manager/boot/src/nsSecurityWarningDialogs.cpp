@@ -287,7 +287,7 @@ nsSecurityWarningDialogs::ConfirmDialog(nsIInterfaceRequestor *ctx, const char *
   if (!prefValue && prefName != nsnull) {
     mPref->SetBoolPref(prefName, PR_FALSE);
   } else if (prefValue && showOnce) {
-    mPref->SetBoolPref(showOncePref.get(), PR_TRUE);
+    mPref->SetBoolPref(showOncePref.get(), PR_FALSE);
   }
 
   return rv;
