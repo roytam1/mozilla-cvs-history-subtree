@@ -53,8 +53,16 @@ extern "C" {
 #include "layers.h"
 #endif /* LAYERS */
 
-#include "nsAgg.h"      // nsPluginManager aggregates nsJVMManager
+#include "nsplugin.h"
+#include "nsAgg.h"      /* nsPluginManager aggregates nsJVMManager */
+#ifdef OJI
 #include "nsjvm.h"
+#else  /* OJI */
+/* Just define a dummy struct for NPIJVMPluginManager. In the
+   plugin code, it is never actually dereferenced outside of an
+   `#ifdef OJI'. */
+struct NPIJVMPluginManager;
+#endif /* OJI */
 
 extern int XP_PLUGIN_LOADING_PLUGIN;
 extern int MK_BAD_CONNECT;
@@ -309,7 +317,6 @@ protected:
     // aggregated sub-intefaces:
     NPIJVMPluginManager* GetJVMMgr(const nsIID& aIID);
     nsISupports* fJVMMgr;
-
 };
 
 extern nsPluginManager* thePluginManager;
