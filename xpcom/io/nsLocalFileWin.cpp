@@ -580,7 +580,7 @@ nsLocalFile::OpenNSPRFileDesc(PRInt32 flags, PRInt32 mode, PRFileDesc **_retval)
     if (*_retval)
         return NS_OK;
 
-    return NS_ERROR_FAILURE;
+    return NS_ErrorAccordingToNSPR();
 }
 
 
