@@ -352,13 +352,11 @@ nsHttpChannel::ProcessNormal()
         }
     }
 
-    /*
     // install cache listener if we still have a cache entry open
     if (mCacheEntry) {
         rv = CacheReceivedResponse();
         if (NS_FAILED(rv)) return rv;
     }
-    */
 
     return mListener->OnStartRequest(this, mListenerContext);
 }
