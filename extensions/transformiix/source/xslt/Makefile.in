@@ -46,6 +46,9 @@ REQUIRES +=	  dom \
 		  layout \
 		  uconv \
 		  $(NULL)
+else
+REQUIRES +=	  expat \
+		  $(NULL)
 endif
 
 CPPSRCS = \
@@ -69,6 +72,7 @@ CPPSRCS = \
 ifdef TX_EXE
 CPPSRCS += txHTMLOutput.cpp	\
            txStandaloneXSLTProcessor.cpp \
+           txStandaloneStylesheetCompiler.cpp \
            txTextOutput.cpp \
            txXMLOutput.cpp
 else
@@ -84,5 +88,8 @@ INCLUDES += -I$(srcdir) -I$(srcdir)/../base \
   -I$(srcdir)/../xml -I$(srcdir)/../xml/dom \
   -I$(srcdir)/../xml/parser \
   -I$(srcdir)/../xpath -I$(srcdir)/util -I$(srcdir)/functions
+ifdef TX_EXE
+DEFINES	 += -DXML_DTD -DXML_UNICODE
+endif
 
 libs:: $(OBJS)

@@ -166,7 +166,7 @@ txStylesheetCompiler::startElement(const PRUnichar *aName,
             }
 
             rv = mElementContext->mMappings->
-                addNamespace(nsnull, atts[i].mValue);
+                addNamespace(prefixToBind, atts[i].mValue);
             NS_ENSURE_SUCCESS(rv, rv);
         }
     }
@@ -657,6 +657,8 @@ txStylesheetCompilerState::addInstruction(nsAutoPtr<txInstruction> aInstruction)
 nsresult
 txStylesheetCompilerState::loadIncludedStylesheet(const nsAString& aURI)
 {
+    NS_ENSURE_TRUE(mObserver, NS_ERROR_NOT_IMPLEMENTED);
+
     nsAutoPtr<txToplevelItem> item(new txDummyItem);
     NS_ENSURE_TRUE(item, NS_ERROR_OUT_OF_MEMORY);
 
@@ -691,6 +693,8 @@ nsresult
 txStylesheetCompilerState::loadImportedStylesheet(const nsAString& aURI,
                                                   txStylesheet::ImportFrame* aFrame)
 {
+    NS_ENSURE_TRUE(mObserver, NS_ERROR_NOT_IMPLEMENTED);
+
     txListIterator iter(&aFrame->mToplevelItems);
     iter.next(); // go to the end of the list
 

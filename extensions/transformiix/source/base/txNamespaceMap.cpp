@@ -96,6 +96,9 @@ txNamespaceMap::lookupNamespace(nsIAtom* aPrefix)
     if (aPrefix == txXMLAtoms::xml) {
         return kNameSpaceID_XML;
     }
+    if (aPrefix == txXMLAtoms::xmlns) {
+        return kNameSpaceID_XMLNS;
+    }
 
     nsIAtom* prefix = aPrefix == txXMLAtoms::_empty ? 0 : aPrefix;
 

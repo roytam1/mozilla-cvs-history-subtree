@@ -12,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is TransforMiiX XSLT processor.
+ * The Original Code is TransforMiiX XSLT Processor.
  *
  * The Initial Developer of the Original Code is
- * Jonas Sicking.
- * Portions created by the Initial Developer are Copyright (C) 2002
- * Jonas Sicking. All Rights Reserved.
+ * Axel Hecht.
+ * Portions created by the Initial Developer are Copyright (C) 2003
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Jonas Sicking <jonas@sicking.cc>
+ *  Axel Hecht <axel@pike.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,77 +36,20 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "txXSLTProcessor.h"
-#include "txInstructions.h"
-#include "txAtoms.h"
-#include "txLog.h"
-#include "txStylesheetCompileHandlers.h"
-#ifdef TX_EXE
-#include "txHTMLOutput.h"
-#endif
+#ifndef __TX_STANDALONE_STYLESHEET_COMPILER_H__
+#define __TX_STANDALONE_STYLESHEET_COMPILER_H__
 
-TX_LG_IMPL;
+#include "txStylesheet.h"
 
-/* static */
-MBool
-txXSLTProcessor::init()
-{
-    TX_LG_CREATE;
+/**
+ * API to load XML files into compiled stylesheets.
+ * Parsing is done by expat.
+ */
 
-#ifdef TX_EXE
-    if (!txNamespaceManager::init())
-        return MB_FALSE;
-
-    if (NS_FAILED(txHTMLOutput::init())) {
-        return MB_FALSE;
-    }
-#endif
-
-    if (!txHTMLAtoms::init())
-        return MB_FALSE;
-    if (!txXMLAtoms::init())
-        return MB_FALSE;
-    if (!txXPathAtoms::init())
-        return MB_FALSE;
-    if (!txXSLTAtoms::init())
-        return MB_FALSE;
-    
-    if (!txHandlerTable::init())
-        return MB_FALSE;
-
-    return MB_TRUE;
-}
-
-/* static */
-void
-txXSLTProcessor::shutdown()
-{
-#ifdef TX_EXE
-    txNamespaceManager::shutdown();
-    txHTMLOutput::shutdown();
-#endif
-
-    txHTMLAtoms::shutdown();
-    txXMLAtoms::shutdown();
-    txXPathAtoms::shutdown();
-    txXSLTAtoms::shutdown();
-
-    txHandlerTable::shutdown();
-
-    TX_LG_DELETE;
-}
-
-
-/* static */
+/**
+ * Parse a stylesheet from the aPath.
+ */
 nsresult
-txXSLTProcessor::execute(txExecutionState& aEs)
-{
-    nsresult rv = NS_OK;
-    txInstruction* instr;
-    while ((instr = aEs.getNextInstruction())) {
-        rv = instr->execute(aEs);
-        NS_ENSURE_SUCCESS(rv, rv);
-    }
+TX_CompileStylesheetPath(const nsAString& aHref, txStylesheet** aResult);
 
-    return NS_OK;
-}
+#endif // __TX_STANDALONE_STYLESHEET_COMPILER_H__

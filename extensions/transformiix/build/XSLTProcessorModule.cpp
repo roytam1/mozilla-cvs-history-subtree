@@ -172,7 +172,6 @@ RegisterTransformiix(nsIComponentManager *aCompMgr,
     return rv;
 }
 
-TX_LG_IMPL;
 static PRBool gInitialized = PR_FALSE;
 static nsIExceptionProvider *gXPathExceptionProvider = 0;
 nsINameSpaceManager *gTxNameSpaceManager = 0;
@@ -214,8 +213,6 @@ Initialize(nsIModule* aSelf)
         return rv;
     }
 
-    TX_LG_CREATE;
-
     return NS_OK;
 }
 
@@ -248,8 +245,6 @@ Shutdown(nsIModule* aSelf)
 
     NS_IF_RELEASE(gTxSecurityManager);
     NS_IF_RELEASE(gTxNameSpaceManager);
-
-    TX_LG_DELETE;
 }
 
 // Component Table

@@ -84,6 +84,12 @@ public:
                                  nsresult aResult) = 0;
 };
 
+#define TX_DECL_ACOMPILEOBSERVER \
+  nsrefcnt AddRef(); \
+  nsrefcnt Release(); \
+  nsresult loadURI(const nsAString& aUri, txStylesheetCompiler* aCompiler); \
+  void onDoneCompiling(txStylesheetCompiler* aCompiler, nsresult aResult)
+
 class txStylesheetCompilerState : public txIParseContext
 {
 public:
