@@ -51,7 +51,10 @@
 #define kServerFirstNameColumn NS_LITERAL_STRING("fname")
 #define kServerLastNameColumn NS_LITERAL_STRING("lname")
 #define kServerDisplayNameColumn NS_LITERAL_STRING("Display_name")
-#define kServerNicknameColumn NS_LITERAL_STRING("nick_name")
+// XXX hack.  we are treating nick as screennname, which is wrong
+// but will do for now.  fix this later.
+//#define kServerNicknameColumn NS_LITERAL_STRING("nick_name")
+#define kServerNicknameColumn NS_LITERAL_STRING("screen_name")
 #define kServerPriEmailColumn NS_LITERAL_STRING("email1")
 #define kServer2ndEmailColumn NS_LITERAL_STRING("email2")
 #define kServerPlainTextColumn NS_LITERAL_STRING("Pref_rich_email")
