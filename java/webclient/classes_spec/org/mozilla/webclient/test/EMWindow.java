@@ -21,6 +21,9 @@
  *               Ian Wilkinson <iw@ennoble.com>
  *               Mark Goddard
  *               Ed Burns <edburns@acm.org>
+ *               Ashutosh Kulkarni <ashuk@eng.sun.com>
+ *               Louis-Philippe Gagnon <louis-philippe@macadamian.com>
+ *               Jason Mawdsley <jason@macadamian.com>
  */
 
 package org.mozilla.webclient.test;
@@ -217,7 +220,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 		    }
 		});
 	 
-		pack();
+        //		pack();
 		show();
 		toFront();
 
