@@ -658,6 +658,16 @@ nsSVGAttributes::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
                          nsIAtom* aPrefix, const nsAString& aValue,
                          PRBool aNotify)
 {
+#ifdef DEBUG
+//   nsAutoString str;
+//   aName->ToString(str);
+//   printf("%p :: SetAttr(",this);
+//   printf(NS_ConvertUCS2toUTF8(str).get());
+//   printf("->");
+//   printf(NS_ConvertUCS2toUTF8(aValue).get());
+//   printf(")\n");
+#endif
+  
   NS_ENSURE_ARG_POINTER(aName);
   nsAutoString oldValue;
 
