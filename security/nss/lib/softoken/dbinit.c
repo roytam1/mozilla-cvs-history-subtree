@@ -255,9 +255,7 @@ pk11_DBShutdown(NSSLOWCERTCertDBHandle *certHandle,
     }
 }
 
-static int rdbmapflags(int flags);
 static rdbfunc pk11_rdbfunc;
-static void *pk11_tnx;
 
 /* NOTE: SHLIB_SUFFIX is defined on the command line */
 #define RDBLIB "rdb."SHLIB_SUFFIX
@@ -269,7 +267,7 @@ DB * rdbopen(const char *appName, const char *prefix,
     DB *db;
 
     if (pk11_rdbfunc) {
-	db = (*pk11_rdbfunc)(appName,prefix,type,rdbmapflags(flags));
+	db = (*pk11_rdbfunc)(appName,prefix,type,flags);
 	return db;
     }
 
@@ -285,67 +283,13 @@ DB * rdbopen(const char *appName, const char *prefix,
     /* get the entry point */
     pk11_rdbfunc = (rdbfunc) PR_FindSymbol(lib,"rdbopen");
     if (pk11_rdbfunc) {
-	db = (*pk11_rdbfunc)(appName,prefix,type,rdbmapflags(flags));
-	return db;
+	return (*pk11_rdbfunc)(appName,prefix,type,flags);
     }
 
     /* couldn't find the entry point, unload the library and fail */
     PR_UnloadLibrary(lib);
     return NULL;
 }
-
-/*
- * the following data structures are from rdb.h.
- */
-struct RDBStr {
-    DB	db;
-    int (*xactstart)(DB *db);
-    int (*xactdone)(DB *db, PRBool abort);
-};
-
-#define DB_RDB ((DBTYPE) 0xff)
-#define RDB_RDONLY	1
-#define RDB_RDWR 	2
-#define RDB_CREATE      4
-
-static int
-rdbmapflags(int flags) {
-   switch (flags) {
-   case NO_RDONLY:
-	return RDB_RDONLY;
-   case NO_RDWR:
-	return RDB_RDWR;
-   case NO_CREATE:
-	return RDB_CREATE;
-   default:
-	break;
-   }
-   return 0;
-}
-
-int
-db_BeginTransaction(DB *db)
-{
-    struct RDBStr *rdb = (struct RDBStr *)db;
-    if (db->type != DB_RDB) {
-	return 0;
-    }
-
-    return rdb->xactstart(db);
-}
-
-int
-db_FinishTransaction(DB *db, PRBool abort)
-{
-    struct RDBStr *rdb = (struct RDBStr *)db;
-    if (db->type != DB_RDB) {
-	return 0;
-    }
-
-    return rdb->xactdone(db, abort);
-}
-
-
 
 SECStatus
 db_Copy(DB *dest,DB *src)

@@ -389,26 +389,6 @@ CERT_DecodeDERCertificate (SECItem *derSignedCert, PRBool copyDER, char *nicknam
 extern CERTSignedCrl *
 CERT_DecodeDERCrl (PRArenaPool *arena, SECItem *derSignedCrl,int type);
 
-/*
- * same as CERT_DecodeDERCrl, plus allow options to be passed in
- */
-
-CERTSignedCrl *
-CERT_DecodeDERCrlEx(PRArenaPool *narena, SECItem *derSignedCrl, int type,
-                          PRInt32 options);
-
-/* CRL options to pass */
-
-#define CRL_DECODE_DEFAULT_OPTIONS          0x00000000
-
-/* when CRL_DECODE_DONT_COPY_DER is set, the DER is not copied . The
-   application must then keep derSignedCrl until it destroys the
-   CRL . Ideally, it should allocate derSignedCrl in an arena
-   and pass that arena in as the first argument to CERT_DecodeDERCrlEx */
-
-#define CRL_DECODE_DONT_COPY_DER            0x00000001
-
-
 /* Validate CRL then import it to the dbase.  If there is already a CRL with the
  * same CA in the dbase, it will be replaced if derCRL is more up to date.  
  * If the process successes, a CRL will be returned.  Otherwise, a NULL will 
@@ -552,27 +532,6 @@ extern SECStatus CERT_VerifySignedData(CERTSignedData *sd,
 				       void *wincx);
 
 /*
-** NEW FUNCTIONS with new bit-field-FIELD SECCertificateUsage - please use
-** verify a certificate by checking validity times against a certain time,
-** that we trust the issuer, and that the signature on the certificate is
-** valid.
-**	"cert" the certificate to verify
-**	"checkSig" only check signatures if true
-*/
-extern SECStatus
-CERT_VerifyCertificate(CERTCertDBHandle *handle, CERTCertificate *cert,
-		PRBool checkSig, SECCertificateUsage requiredUsages,
-                int64 t, void *wincx, CERTVerifyLog *log,
-                SECCertificateUsage* returnedUsages);
-
-/* same as above, but uses current time */
-extern SECStatus
-CERT_VerifyCertificateNow(CERTCertDBHandle *handle, CERTCertificate *cert,
-		   PRBool checkSig, SECCertificateUsage requiredUsages,
-                   void *wincx, SECCertificateUsage* returnedUsages);
-
-/*
-** OLD OBSOLETE FUNCTIONS with enum SECCertUsage - DO NOT USE FOR NEW CODE
 ** verify a certificate by checking validity times against a certain time,
 ** that we trust the issuer, and that the signature on the certificate is
 ** valid.
@@ -588,11 +547,6 @@ CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
 extern SECStatus
 CERT_VerifyCertNow(CERTCertDBHandle *handle, CERTCertificate *cert,
 		   PRBool checkSig, SECCertUsage certUsage, void *wincx);
-
-SECStatus
-CERT_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
-		     PRBool checkSig, SECCertUsage certUsage, int64 t,
-		     void *wincx, CERTVerifyLog *log);
 
 /*
 ** This must only be called on a cert that is known to have an issuer

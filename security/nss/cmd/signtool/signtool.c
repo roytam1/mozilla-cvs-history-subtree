@@ -92,7 +92,6 @@ static char *install_script = NULL;
 static int list_certs = 0;
 static int list_modules = 0;
 static int optimize = 0;
-static int enableOCSP = 0;
 static char *tell_who = NULL;
 static char *outfile = NULL;
 static char *cmdFile = NULL;
@@ -115,7 +114,6 @@ typedef enum {
 	LIST_ALL_CERTS_OPT,
 	METAFILE_OPT,
 	OPTIMIZE_OPT,
-	ENABLE_OCSP_OPT,
 	PASSWORD_OPT,
 	VERIFY_OPT,
 	WHO_OPT,
@@ -231,8 +229,6 @@ ProcessCommandFile()
 			type = MODULES_OPT;
 		} else if(!PL_strcasecmp(buf, "optimize")) {
 			type = OPTIMIZE_OPT;
-		} else if(!PL_strcasecmp(buf, "ocsp")) {
-			type = ENABLE_OCSP_OPT;
 		} else if(!PL_strcasecmp(buf, "password")) {
 			type = PASSWORD_OPT;
 		} else if(!PL_strcasecmp(buf, "verify")) {
@@ -376,9 +372,6 @@ parse_args(int argc, char *argv[])
 					break;
 				case 'o':
 					type = OPTIMIZE_OPT;
-					break;
-				case 'O':
-					type = ENABLE_OCSP_OPT;
 					break;
 				case 'p':
 					type = PASSWORD_OPT;
@@ -604,9 +597,6 @@ ProcessOneOpt(OPT_TYPE type, char *arg)
 		break;
 	case OPTIMIZE_OPT:
 		optimize = 1;
-		break;
-	case ENABLE_OCSP_OPT:
-		enableOCSP = 1;
 		break;
 	case PASSWORD_OPT:
 		if(password) {
@@ -933,15 +923,6 @@ main(int argc, char *argv[])
 		errorCount++;
 		retval = -1;
 		goto cleanup;
-	}
-
-	if (enableOCSP) {
-	    SECStatus rv = CERT_EnableOCSPChecking(CERT_GetDefaultCertDB());
-	    if (rv != SECSuccess) {
-	        PR_fprintf(errorFD, "ERROR: Attempt to enable OCSP Checking failed.\n");
-	        errorCount++;
-	        retval = -1;
-	    }
 	}
 
   if (verify)
