@@ -159,9 +159,9 @@ NS_IMETHODIMP nsNetlibService::OpenBlockingStream(const char *aUrl,
         URL_s->load_background = TRUE;
 
         /*
-         * Attach the Data Consumer to the URL_Struct.
+         * Attach the ConnectionInfo object to the URL_Struct.
          *
-         * Both the Data Consumer and the URL_Struct are freed in the 
+         * Both the ConnectionInfo and the URL_Struct are freed in the 
          * bam_exit_routine(...)
          */
         URL_s->fe_data = pConn;
@@ -218,9 +218,33 @@ static void bam_exit_routine(URL_Struct *URL_s, int status, MWContext *window_id
     TRACEMSG(("bam_exit_routine was called...\n"));
 
     if (NULL != URL_s) {
-        /* Release the nsIstreamNotification object held in the URL_Struct. */
-        nsIStreamNotification *pConsumer = (nsIStreamNotification *)URL_s->fe_data;
-        pConsumer->Release();
+        nsConnectionInfo *pConn = (nsConnectionInfo *)URL_s->fe_data;
+
+        PR_ASSERT(pConn);
+
+        /* Release the ConnectionInfo object held in the URL_Struct. */
+        if (pConn) {
+            /* 
+             * Normally, the stream is destroyed when the connection has been
+             * completed.  However, if the URL exit proc was called directly
+             * by NET_GetURL(...), then the stream may still be around...
+             */
+            if (pConn->pNetStream) {
+                pConn->pNetStream->Close();
+                pConn->pNetStream->Release();
+                pConn->pNetStream = NULL;
+            }
+
+            /* Notify the Data Consumer that the Binding has completed... */
+            if (pConn->pConsumer) {
+                pConn->pConsumer->OnStopBinding();
+                pConn->pConsumer->Release();
+                pConn->pConsumer = NULL;
+            }
+
+            pConn->Release();
+            URL_s->fe_data = NULL;
+        }
 
         /* Delete the URL_Struct... */
         NET_FreeURLStruct(URL_s);
