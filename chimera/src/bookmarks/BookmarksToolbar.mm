@@ -93,12 +93,10 @@
 
 - (void)viewWillMoveToWindow:(NSWindow *)newWindow
 {
-  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
-
   if (newWindow)	// moving to window
-    [bmManager addBookmarksClient:self];  
+    [[BookmarksManager sharedBookmarksManager] addBookmarksClient:self];  
   else						// leaving window
-    [bmManager removeBookmarksClient:self];
+    [[BookmarksManager sharedBookmarksManagerDontAlloc] removeBookmarksClient:self];
 }
 
 - (void)drawRect:(NSRect)aRect
@@ -602,8 +600,9 @@
 
 #pragma mark -
 
-- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
+  //NSLog(@"Toolbar notified that %x added in %x, is root %d", bookmark, container, isRoot);
   nsCOMPtr<nsIContent>	toolbarRootContent = getter_AddRefs([[BookmarksManager sharedBookmarksManager] getToolbarRoot]);
   if (container == toolbarRootContent.get())
   {
@@ -616,7 +615,7 @@
   }
 }
 
-- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   nsCOMPtr<nsIContent>	toolbarRootContent = getter_AddRefs([[BookmarksManager sharedBookmarksManager] getToolbarRoot]);
   if (container == toolbarRootContent.get())

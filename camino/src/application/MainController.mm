@@ -147,6 +147,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   nsModuleComponentInfo* comps = GetAppComponents(&numComps);
   CHBrowserService::RegisterAppComponents(comps, numComps);
 
+  // make sure we have a bookmarks manager
+  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+
   // don't open a new browser window if we already have one
   // (for example, from an GetURL Apple Event)
   NSWindow* browserWindow = [self getFrontmostBrowserWindow];
@@ -155,8 +158,6 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   
   [mSplashScreen close];
 
-  // make sure we have a bookmarks manager
-  BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
   [mBookmarksMenu setAutoenablesItems: NO];
 
   // menubar bookmarks

@@ -59,43 +59,66 @@ app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 
 @implementation PreferenceManager
 
+static PreferenceManager* gSharedInstance = nil;
+#if DEBUG
+static BOOL gMadePrefManager;
+#endif
 
-+ (PreferenceManager *) sharedInstance {
-  static PreferenceManager *sSharedInstance = nil;
-	return ( sSharedInstance ? sSharedInstance : (sSharedInstance = [[[PreferenceManager alloc] init] autorelease] ));
++ (PreferenceManager *) sharedInstance
+{
+  if (!gSharedInstance)
+  {
+#if DEBUG
+    if (gMadePrefManager)
+      NSLog(@"Recreating preferences manager on shutdown!");
+    gMadePrefManager = YES;
+#endif
+    gSharedInstance = [[PreferenceManager alloc] init];
+  }
+    
+	return gSharedInstance;
 }
-
 
 - (id) init
 {
-    if ((self = [super init])) {
-        if ([self initInternetConfig] == NO) {
-            // XXXw. throw here
-            NSLog (@"Failed to initialize Internet Config");
-        }
-        if ([self initMozillaPrefs] == NO) {
-            // XXXw. throw here too
-            NSLog (@"Failed to initialize mozilla prefs");
-        }
-        
-        mDefaults = [NSUserDefaults standardUserDefaults];
+  if ((self = [super init]))
+  {
+    if ([self initInternetConfig] == NO) {
+      // XXXw. throw here
+      NSLog (@"Failed to initialize Internet Config");
     }
-    return self;
+
+    if ([self initMozillaPrefs] == NO) {
+      // XXXw. throw here too
+      NSLog (@"Failed to initialize mozilla prefs");
+    }
+    
+    mDefaults = [NSUserDefaults standardUserDefaults];
+  }
+  return self;
 }
 
 - (void) dealloc
 {
-    ::ICStop(mInternetConfig);
-    NS_IF_RELEASE(mPrefs);
+  // XXX this never gets called!
+#if DEBUG
+  NSLog(@"Prefs manager dealloc");
+#endif
 
-    nsresult rv;
-    nsCOMPtr<nsIPrefService> pref(do_GetService(NS_PREF_CONTRACTID, &rv));
-    if (NS_SUCCEEDED(rv)) {
-        //NSLog(@"Saving prefs file");
-        pref->SavePrefFile(nsnull);
-    }
-    
-    [super dealloc];
+  ::ICStop(mInternetConfig);
+  NS_IF_RELEASE(mPrefs);
+
+  nsresult rv;
+  nsCOMPtr<nsIPrefService> pref(do_GetService(NS_PREF_CONTRACTID, &rv));
+  if (NS_SUCCEEDED(rv)) {
+      //NSLog(@"Saving prefs file");
+      pref->SavePrefFile(nsnull);
+  }
+
+  if (self == gSharedInstance)
+    gSharedInstance = NULL;
+  
+  [super dealloc];
 }
 
 - (BOOL) initInternetConfig

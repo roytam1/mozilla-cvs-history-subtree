@@ -708,21 +708,22 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 // If inSiteIconURI is "about:blank", we don't show any icon
 - (void)updateSiteIconImage:(NSImage*)inSiteIcon withURI:(NSString *)inSiteIconURI
 {
-  BOOL resetTabIcon = NO;
-  BOOL tabIconDraggable = YES;
+  BOOL     resetTabIcon     = NO;
+  BOOL     tabIconDraggable = YES;
+  NSImage* siteIcon         = inSiteIcon;
   
   if (![mSiteIconURI isEqualToString:inSiteIconURI])
   {
-    if (!inSiteIcon)
+    if (!siteIcon)
     {
       if ([inSiteIconURI isEqualToString:@"about:blank"]) {
-        inSiteIcon = [NSImage imageNamed:@"smallDocument"];
+        siteIcon = [NSImage imageNamed:@"smallDocument"];
         tabIconDraggable = NO;
       } else
-        inSiteIcon = [NSImage imageNamed:@"globe_ico"];
+        siteIcon = [NSImage imageNamed:@"globe_ico"];
     }
 
-    [self setSiteIconImage: inSiteIcon];
+    [self setSiteIconImage: siteIcon];
     [self setSiteIconURI:   inSiteIconURI];
   
     // update the proxy icon
@@ -740,8 +741,9 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
       [tabItem setTabIcon:mSiteIconImage isDraggable:tabIconDraggable];
   }
   
-  // make sure any bookmarks at this site are updated
-  [[BookmarksManager sharedBookmarksManager] updateProxyImage:inSiteIcon forSiteIcon:inSiteIconURI];
+  // make sure any bookmark items that use this favicon uri are updated
+  if (inSiteIcon)
+    [[BookmarksManager sharedBookmarksManager] updateProxyImage:inSiteIcon forSiteIcon:inSiteIconURI];
 }
 
 - (void)registerNotificationListener

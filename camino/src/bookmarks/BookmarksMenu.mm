@@ -179,7 +179,7 @@
 
 #pragma mark -
 
-- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   if (!container) return;
 
@@ -190,7 +190,7 @@
     [self addBookmark:menu parent:container child:bookmark index:index];
 }
 
-- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   if (!bookmark) return;
   

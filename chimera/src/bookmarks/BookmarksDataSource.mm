@@ -93,7 +93,7 @@ const int kBookmarksRootItemTag = -2;
 
 -(void) windowClosing
 {
-	BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+	BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManagerDontAlloc];
   [bmManager removeBookmarksClient:self];
 }
 
@@ -232,45 +232,36 @@ const int kBookmarksRootItemTag = -2;
 
   BOOL isGroup = NO;
   id checkbox = [mBrowserWindowController getAddBookmarkCheckbox];
-  if (([checkbox superview] != nil) && [checkbox isEnabled] && ([checkbox state] == NSOnState)) {
+  if (([checkbox superview] != nil) && [checkbox isEnabled] && ([checkbox state] == NSOnState))
+  {
+    [mCachedHref release];
     mCachedHref = nil;
     isGroup = YES;
   }
-  
-  // XXX move code into BookmarksService
-  nsAutoString title;
-  [[[mBrowserWindowController getAddBookmarkTitle] stringValue] assignTo_nsAString:title];
 
-  nsAutoString tagName;
-  if (mCachedHref)
-    tagName = NS_LITERAL_STRING("bookmark");
-  else
-    tagName = NS_LITERAL_STRING("folder");
-  
   BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManager];
+  NSString* titleString = [[mBrowserWindowController getAddBookmarkTitle] stringValue];
 
-  nsCOMPtr<nsIDOMDocument> domDoc = getter_AddRefs([bmManager getBookmarksDocument]);
-  nsCOMPtr<nsIDOMElement> elt;
-  domDoc->CreateElementNS(NS_LITERAL_STRING("http://chimera.mozdev.org/bookmarks/"),
-                          tagName,
-                          getter_AddRefs(elt));
-
-  elt->SetAttribute(NS_LITERAL_STRING("name"), title);
-
-  if (mCachedHref) {
-    nsAutoString href;
-    [mCachedHref assignTo_nsAString:href];
-    [mCachedHref release];
-    elt->SetAttribute(NS_LITERAL_STRING("href"), href);
+  // Figure out the parent element.
+  nsCOMPtr<nsIContent> parentContent;
+  
+  NSPopUpButton* popup = [mBrowserWindowController getAddBookmarkFolder];
+  NSMenuItem* selectedItem = [popup selectedItem];
+  int tag = [selectedItem tag];
+  if (tag != kBookmarksRootItemTag)
+  {
+    BookmarkItem* item = BookmarksService::GetWrapperFor(tag);
+    // Get the content node.
+    parentContent = [item contentNode];
   }
-
+  
   if (isGroup)
   {
-    // We have to iterate over each tab and create content nodes using the
-    // title/href of all the pages.  They are inserted underneath the parent.
-    elt->SetAttribute(NS_LITERAL_STRING("group"), NS_LITERAL_STRING("true"));
     id tabBrowser = [mBrowserWindowController getTabBrowser];
-    int count = [tabBrowser numberOfTabViewItems];
+    int count     = [tabBrowser numberOfTabViewItems];
+
+    NSMutableArray* itemsArray = [[NSMutableArray alloc] initWithCapacity:count];
+
     for (int i = 0; i < count; i++)
     {
       BrowserWrapper* browserWrapper = (BrowserWrapper*)[[tabBrowser tabViewItemAtIndex: i] view];
@@ -279,47 +270,26 @@ const int kBookmarksRootItemTag = -2;
       NSString* hrefString;
       [browserWrapper getTitle:&titleString andHref:&hrefString];
 
-      nsAutoString title, href;
-      [titleString assignTo_nsAString:title];
-      [hrefString  assignTo_nsAString:href];
-      
-      nsCOMPtr<nsIDOMElement> childElt;
-      domDoc->CreateElementNS(NS_LITERAL_STRING("http://chimera.mozdev.org/bookmarks/"),
-                              NS_LITERAL_STRING("bookmark"),
-                              getter_AddRefs(childElt));
-      childElt->SetAttribute(NS_LITERAL_STRING("name"), title);
-      childElt->SetAttribute(NS_LITERAL_STRING("href"), href);
-      nsCOMPtr<nsIDOMNode> dummy;
-      elt->AppendChild(childElt, getter_AddRefs(dummy));
+      NSDictionary* itemDict = [NSDictionary dictionaryWithObjectsAndKeys:
+                                                titleString, @"title",
+                                                 hrefString, @"href",
+                                                             nil];
+      [itemsArray addObject:itemDict];
     }
-  }
-  
-  // Figure out the parent element.
-  nsCOMPtr<nsIDOMElement> parentElt;
-  nsCOMPtr<nsIContent> parentContent;
-  NSPopUpButton* popup = [mBrowserWindowController getAddBookmarkFolder];
-  NSMenuItem* selectedItem = [popup selectedItem];
-  int tag = [selectedItem tag];
-  if (tag == kBookmarksRootItemTag)
-  {
-    BookmarksService::GetRootContent(getter_AddRefs(parentContent));
-    parentElt = do_QueryInterface(parentContent);
+    
+    [bmManager addNewBookmarkGroup:titleString items:itemsArray withParent:parentContent];
   }
   else
   {
-    BookmarkItem* item = BookmarksService::GetWrapperFor(tag);
-    // Get the content node.
-    parentContent = [item contentNode];
-    parentElt = do_QueryInterface(parentContent);
+    if (mCachedHref)
+    {
+      [bmManager addNewBookmark:mCachedHref title:titleString withParent:parentContent];
+      [mCachedHref release];
+      mCachedHref = nil;
+    }
+    else
+      [bmManager addNewBookmarkFolder:titleString withParent:parentContent];
   }
-  
-  if (!parentElt) return;
-  
-  nsCOMPtr<nsIDOMNode> dummy;
-  parentElt->AppendChild(elt, getter_AddRefs(dummy));
-
-  nsCOMPtr<nsIContent> childContent(do_QueryInterface(elt));
-  BookmarksService::BookmarkAdded(parentContent, childContent);
 }
 
 -(IBAction)deleteBookmarks: (id)aSender
@@ -412,12 +382,7 @@ const int kBookmarksRootItemTag = -2;
 
 -(void)deleteBookmark:(id)aItem
 {
-  nsCOMPtr<nsIContent> content = [aItem contentNode];
-  nsCOMPtr<nsIDOMElement> child(do_QueryInterface(content));
-  if (!child)
-    return;
-    
-  BookmarksService::DeleteBookmark(child);
+  [aItem remove];
 }
 
 -(IBAction)openBookmark: (id)aSender
@@ -504,12 +469,12 @@ const int kBookmarksRootItemTag = -2;
 
 // BookmarksClient protocol
 
-- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   [self refreshChildrenOfItem:container];
 }
 
-- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   [self refreshChildrenOfItem:container];
 }

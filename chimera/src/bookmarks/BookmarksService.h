@@ -64,10 +64,19 @@ typedef enum
 } EBookmarksFolderType;
 
 
+typedef enum
+{
+  eBookmarkItemBookmark = 1,
+  eBookmarkItemSeparator,		// not supported yet
+  eBookmarkItemFolder,
+  eBookmarkItemGroup
+} EBookmarkItemType;
+
+
 @protocol BookmarksClient
 
-- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container;
-- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container;
+- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot;
+- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot;
 - (void)bookmarkChanged:(nsIContent*)bookmark;
 
 - (void)specialFolder:(EBookmarksFolderType)folderType changedTo:(nsIContent*)newFolderContent;
@@ -80,12 +89,7 @@ public:
 
   static void Init();			// reads bookmarks
   static void Shutdown();
-
-  static void BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
-  static void BookmarkChanged(nsIContent* aItem, bool shouldFlush = true);
-
-  static void DeleteBookmark(nsIDOMElement* aBookmark);
-  
+    
   static void GetRootContent(nsIContent** aResult);
   static BookmarkItem* GetRootItem();
   static BookmarkItem* GetWrapperFor(nsIContent* aItem);
@@ -112,10 +116,20 @@ public:
   
   static bool PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeItem, NSString* title, NSString* url);
 
+public: 	/* but not to be used outside of BoomarksService.cpp */
+
+  static void BookmarkAdded(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
+  static void BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
+  static void BookmarkChanged(nsIContent* aItem, bool shouldFlush = true);
+
+  static void DeleteBookmark(nsIDOMElement* aBookmark);
+
 protected:
 
+  static void NotifyBookmarkAdded(nsIContent* aContainer, nsIContent* aChild, PRBool aChangeRoot);
+  static void NotifyBookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, PRBool aChangeRoot);
+
   static void SpecialBookmarkChanged(EBookmarksFolderType aFolderType, nsIContent* aNewContent);
-  static void BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
 
   static void AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
   static void MoveBookmarkToFolder(nsIDOMElement* aBookmark, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
@@ -169,6 +183,9 @@ protected:
 - (void)setContentNode: (nsIContent*)aContentNode;
 - (void)setSiteIcon:(NSImage*)image;
 
+- (void)itemChanged:(BOOL)flushBookmarks;
+- (void)remove;
+
 - (NSString*)url;
 - (NSImage*)siteIcon;
 - (NSNumber*)contentID;
@@ -186,8 +203,9 @@ protected:
 
 // singleton bookmarks manager object
 
-@interface BookmarksManager : NSObject
+@interface BookmarksManager : NSObject<BookmarksClient>
 {
+  BOOL  mUseSiteIcons;		// only affects the bookmarks toolbar now
 }
 
 + (BookmarksManager*)sharedBookmarksManager;
@@ -208,11 +226,18 @@ protected:
 
 - (NSArray*)getBookmarkGroupURIs:(BookmarkItem*)item;
 
+- (void)addNewBookmark:(NSString*)url title:(NSString*)title withParent:(nsIContent*)parent;
+- (void)addNewBookmarkFolder:(NSString*)title withParent:(nsIContent*)parent;
+
+// itemsArray is an array of NSDictionaries, with "href" and "title" entries
+- (void)addNewBookmarkGroup:(NSString*)titleString items:(NSArray*)itemsArray withParent:(nsIContent*)parent;
+
 - (void)loadProxyImageFor:(id)requestor withURI:(NSString*)inURIString;
 - (void)updateProxyImage:(NSImage*)image forSiteIcon:(NSString*)inSiteIconURI;
 
 - (void)buildFlatFolderList:(NSMenu*)menu fromRoot:(nsIContent*)rootContent;
 
+- (BOOL)useSiteIcons;
 
 @end
 

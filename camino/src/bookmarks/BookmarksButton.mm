@@ -151,7 +151,8 @@
 	if (([bic bookmark] == mBookmarkItem))
     [bic close];
 
-  BookmarksService::DeleteBookmark(mElement);
+  [mBookmarkItem remove];
+  mBookmarkItem = nil;
   mElement = nil;
 }
 
@@ -329,8 +330,7 @@
       for (unsigned int i = 0; i < [contentIds count]; ++i)
       {
         BookmarkItem* item = BookmarksService::GetWrapperFor([[contentIds objectAtIndex:i] unsignedIntValue]);
-        nsCOMPtr<nsIDOMElement> bookmarkElt = do_QueryInterface([item contentNode]);
-        BookmarksService::DeleteBookmark(bookmarkElt);
+        [item remove];
       }
     }
   }

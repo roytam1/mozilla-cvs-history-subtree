@@ -88,7 +88,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   if (self == sharedBookmarkInfoController)
     sharedBookmarkInfoController = nil;
 
-  [[BookmarksManager sharedBookmarksManager] removeBookmarksClient:self];
+  [[BookmarksManager sharedBookmarksManagerDontAlloc] removeBookmarksClient:self];
 
   [mFieldEditor release];
 
@@ -151,7 +151,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self commitField:mDescriptionField toProperty:BookmarksService::gDescriptionAtom];
 
   [[mFieldEditor undoManager] removeAllActions];
-  BookmarksService::BookmarkChanged([mBookmarkItem contentNode], TRUE);
+	[mBookmarkItem itemChanged:YES];
 }
 
 - (void)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom
@@ -284,11 +284,11 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
 
 #pragma mark -
 
-- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkAdded:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
 }
 
-- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container
+- (void)bookmarkRemoved:(nsIContent*)bookmark inContainer:(nsIContent*)container isChangedRoot:(BOOL)isRoot
 {
   if ([mBookmarkItem contentNode] == bookmark)
     mBookmarkItem = nil;
