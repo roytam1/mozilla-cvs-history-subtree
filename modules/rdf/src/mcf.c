@@ -35,6 +35,7 @@
 #include "scook.h"
 #include "atalk.h"
 #include "ht.h"
+#include "utils.h"
 
 	/* globals */
 RDFL		gAllDBs = 0;
@@ -800,7 +801,7 @@ matchStrings(RDF_Resource match, char *data, char *pattern)
 
 	if (match == gCoreVocab->RDF_substring)
 	{
-		ok = (substring(pattern, data) != NULL);
+		ok = substring(pattern, data);
 	}
 	else if (match == gCoreVocab->RDF_stringEquals)
 	{
@@ -868,7 +869,7 @@ nextFindValue (RDF_Cursor c)
 	RDF_Resource ans = NULL;
 
   if (((c->count*sizeof(RDF_Resource *)) < c->size) &&
-  	(*((char *)c->pdata + (c->count*sizeof(RDF_Resource *))) != NULL))
+  	(*(RDF_Resource *)((char *)c->pdata + (c->count*sizeof(RDF_Resource *))) != NULL))
   {
     ans = *(RDF_Resource *)((char *)c->pdata + (c->count*sizeof(RDF_Resource *)));
     c->count++;

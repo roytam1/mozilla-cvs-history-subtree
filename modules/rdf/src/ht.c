@@ -7919,12 +7919,15 @@ RDF_GetNavCenterDB()
 
 
 void
-HTADD(HT_Pane pane, RDF_Resource u, RDF_Resource s, void* v)
+HTADD(HT_Pane pane, RDF_Resource u, RDF_Resource s, void *v)
 {
-  remoteStoreAdd(pane->htdb, u, s, v, 
-                 (s == gCoreVocab->RDF_parent ? RDF_RESOURCE_TYPE : RDF_STRING_TYPE), 1);
-  if ((s == gCoreVocab->RDF_parent) && (containerp(u)))
-    RDF_AddDataSource(pane->db, resourceID(u));
+	remoteStoreAdd(pane->htdb, u, s, v, 
+		((s == gCoreVocab->RDF_parent) ?
+		RDF_RESOURCE_TYPE : RDF_STRING_TYPE), PR_TRUE);
+	if ((s == gCoreVocab->RDF_parent) && (containerp(u)))
+	{
+		RDF_AddDataSource(pane->db, resourceID(u));
+	}
 }
 
 
