@@ -12,12 +12,11 @@
 # under the License.
 #
 # The Original Code is PerLDAP. The Initial Developer of the Original
-# Code is Netscape Communications Corp. and Clayton Donley. Portions
-# created by Netscape are Copyright (C) Netscape Communications
-# Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Code is Leif Hedstrom and Netscape Communications. Portions created
+# by Leif are Copyright (C) Leif Hedstrom, portions created by Netscape
+# are Copyright (C) Netscape Communications Corp. All Rights Reserved.
 #
-# Contributor(s):
+# Contributor(s):	Michelle Wyner <mwyner@perldap.org>
 #
 # DESCRIPTION
 #    This is the main object class for connecting to an LDAP server,
@@ -40,68 +39,10 @@ $VERSION = "2.0";
 
 
 #############################################################################
-# Creator, create and initialize a new LDAP object ("connection"). We support
-# either providing all parameters as a hash array, or as individual
-# arguments.
-#
-sub new
-{
-  my ($class, $self) = (shift, {});
-
-  if (ref $_[$[] eq "HASH")
-    {
-      my ($hash);
-
-      $hash = $_[$[];
-      $self->{"host"} = $hash->{"host"} if defined($hash->{"host"});
-      $self->{"port"} = $hash->{"port"} if defined($hash->{"port"});
-      $self->{"binddn"} = $hash->{"bind"} if defined($hash->{"bind"});
-      $self->{"bindpasswd"} = $hash->{"pswd"} if defined($hash->{"pswd"});
-      $self->{"certdb"} = $hash->{"cert"} if defined($hash->{"cert"});
-    }
-  else
-    {
-      my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth) = @_;
-
-      $self->{"host"} = $host;
-      $self->{"port"} = $port;
-      $self->{"binddn"} = $binddn;
-      $self->{"bindpasswd"} = $bindpasswd;
-      $self->{"certdb"} = $certdb;
-    }
-
-  $self->{"binddn"} = "" unless defined($self->{"binddn"});
-  $self->{"bindpasswd"} = "" unless defined($self->{"bindpasswd"});
-
-  if (!defined($self->{"port"}) || ($self->{"port"} eq ""))
-    {
-      $self->{"port"} = (($self->{"certdb"} ne "") ? LDAPS_PORT : LDAP_PORT);
-    }
-  bless $self, $class;
-
-  return unless $self->init();
-  return $self;
-}
-
-
-#############################################################################
-# Destructor, makes sure we close any open LDAP connections.
-#
-sub DESTROY
-{
-  my ($self) = shift;
-
-  return unless defined($self->{"ld"});
-
-  $self->close();
-}
-
-
-#############################################################################
 # Initialize a normal connection. This seems silly, why not just merge
 # this back into the creator method (new)...
 #
-sub init
+sub _initialize
 {
   my ($self) = shift;
   my ($ret, $ld);
@@ -127,17 +68,88 @@ sub init
 
 
 #############################################################################
+# Creator, create and initialize a new LDAP object ("connection"). We support
+# either providing all parameters as a hash array, or as individual
+# arguments, or (preferably) using key-value pairs. As you can see, we make
+# the assumption that a host name is given, otherwise we try to default to
+# the old argument parsing behaviour (which might fail...).
+#
+sub new
+{
+  my ($class, $self) = (shift, {});
+  my (%args) = ((ref $_[$[] eq "HASH") ? %{$_[$[]} : @_);
+
+  if (defined($args{"host"}))
+    {
+      $self->{"host"} = $args{"host"};
+      $self->{"port"} = $args{"port"} if defined($args{"port"});
+      $self->{"binddn"} = $args{"bind"} if defined($args{"bind"});
+      $self->{"bindpasswd"} = $args{"pswd"} if defined($args{"pswd"});
+      $self->{"certdb"} = $args{"cert"} if defined($args{"cert"});
+    }
+  else
+    {
+      # This is for backward compatibility, use the above instead.
+      my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth) = @_;
+
+      $self->{"host"} = $host;
+      $self->{"port"} = $port;
+      $self->{"binddn"} = $binddn;
+      $self->{"bindpasswd"} = $bindpasswd;
+      $self->{"certdb"} = $certdb;
+    }
+
+  $self->{"binddn"} = "" unless defined($self->{"binddn"});
+  $self->{"bindpasswd"} = "" unless defined($self->{"bindpasswd"});
+
+  if (!defined($self->{"port"}) || ($self->{"port"} eq ""))
+    {
+      $self->{"port"} = (($self->{"certdb"} ne "") ? LDAPS_PORT : LDAP_PORT);
+    }
+  if (defined($args{"verbose"}) && $args{"verbose"})
+    {
+      print STDERR "Created an LDAP connection, with these paramaters:\n\n";
+      print STDERR "LDAP server (host):\t", $self->{"host"}, "\n";
+      print STDERR "LDAP port number:\t", $self->{"port"}, "\n";
+      print STDERR "User Bind-DN:\t\t", ($self->{"binddn"} ne "") ?
+	$self->{"binddn"} : "(anonymous)", "\n";
+      print STDERR "SSL Certificate file:\t", $self->{"certdb"}, "\n" if
+	defined($self->{"certdb"});
+      print STDERR "\t(Passwords are not displayed for security)\n\n\n";
+    }
+
+  bless $self, $class;
+  return unless $self->_initialize();
+  return $self;
+}
+
+
+#############################################################################
+# Destructor, makes sure we close any open LDAP connections.
+#
+sub DESTROY
+{
+  my ($self) = shift;
+
+  return unless defined($self->{"ld"});
+
+  $self->close();
+}
+
+
+#############################################################################
 # Create a new, empty, Entry object, properly tied into the Entry class.
 # This is mostly for convenience, you could directly do the "tie" yourself
 # in your code.
 #
 sub newEntry
 {
-  my (%entry);
-  my ($obj);
+  my ($self) = shift;
+  my (%entry, $obj);
 
   tie %entry, 'Mozilla::LDAP::Entry';
   $obj = bless \%entry, 'Mozilla::LDAP::Entry';
+  $obj->_initialize(@_) if (scalar(@_) > $[);
 
   return $obj;
 }
@@ -229,41 +241,69 @@ sub printError
 #
 sub search
 {
-  my ($self, $basedn, $scope, $filter, $attrsonly, @attrs) = @_;
-  my ($resv, $entry);
-  my ($res) = \$resv;
+  my ($self) = shift;
+  my (%args);
 
-  $scope = Mozilla::LDAP::Utils::str2Scope($scope);
-  $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
+  %args = @_ unless (scalar(@_) % 2);
+  if (! defined($args{"filter"}))
+    {
+      $args{"basedn"} = shift;
+      $args{"scopestr"} = shift;
+      $args{"filter"} = shift;
+      $args{"typesonly"} = shift || 0;
+      $args{"attributes"} = [ @_ ];
+    }
+  else
+    {
+      $args{"scopestr"} = $args{"scope"};
+      $args{"attributes"} = [] unless defined($args{"attributes"});
+      $args{"typesonly"} = 0 unless defined($args{"typesonly"});
+      $args{"typesonly"} = $args{"attrsonly"} if defined($args{"attrsonly"});
+    }
+  $args{"filter"} = "(objectclass=*)" if ($args{"filter"} =~ /^ALL$/i);
+  $args{"scope"} = Mozilla::LDAP::Utils::str2Scope($args{"scopestr"});
 
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
-  if (ldap_is_ldap_url($filter))
+  $self->{"ldres"} = 0;
+  
+  if (ldap_is_ldap_url($args{"filter"}))
     {
-      if (! ldap_url_search_s($self->{"ld"}, $filter, $attrsonly, $res))
+      if (! ldap_url_search_s($self->{"ld"}, $args{"filter"},
+			      $args{"typesonly"}, $self->{"ldres"}))
 	{
-	  $self->{"ldres"} = $res;
 	  $self->{"ldfe"} = 1;
-	  $entry = $self->nextEntry();
+	  return $self->nextEntry();
 	}
     }
   else
     {
-      if (! ldap_search_s($self->{"ld"}, $basedn, $scope, $filter,
-			  defined(\@attrs) ? \@attrs : 0,
-			  defined($attrsonly) ? $attrsonly : 0,
-			  defined($res) ? $res : 0))
+      if (defined($args{"verbose"}) && $args{"verbose"})
 	{
-	  $self->{"ldres"} = $res;
+	  print STDERR "Performing a search with these parameters:\n\n";
+	  print STDERR "Base-DN:\t\t", $args{"basedn"}, "\n";
+	  print STDERR "Search scope:\t\t", $args{"scope"}, " (",
+	    $args{"scopestr"}, ")\n";
+	  print STDERR "Search filter:\t\t", $args{"filter"}, "\n";
+	  print STDERR "Attribute list:\t\t[ ",
+	    join(", ", @{$args{"attributes"}}), " ]\n"
+	      if (defined($args{"attributes"}));
+	  print STDERR "Attributes-only flag:\t", $args{"typesonly"}, "\n\n\n";
+	}
+
+      if (! ldap_search_s($self->{"ld"}, $args{"basedn"}, $args{"scope"},
+			  $args{"filter"}, $args{"attributes"},
+			  $args{"typesonly"}, $self->{"ldres"}))
+	{
 	  $self->{"ldfe"} = 1;
-	  $entry = $self->nextEntry();
+	  return $self->nextEntry();
 	}
     }
 
-  return $entry;
+  return undef;
 }
 
 
@@ -273,25 +313,23 @@ sub search
 sub searchURL
 {
   my ($self, $url, $attrsonly) = @_;
-  my ($resv, $entry);
-  my ($res) = \$resv;
 
   if (defined($self->{"ldres"}))
     {
       ldap_msgfree($self->{"ldres"});
       undef $self->{"ldres"};
     }
+  $self->{"ldres"} = 0;
       
   if (! ldap_url_search_s($self->{"ld"}, $url,
 			  defined($attrsonly) ? $attrsonly : 0,
-			  defined($res) ? $res : 0))
+			  $self->{"ldres"}))
     {
-      $self->{"ldres"} = $res;
       $self->{"ldfe"} = 1;
-      $entry = $self->nextEntry();
+      return $self->nextEntry();
     }
 
-  return $entry;
+  return undef;
 }
 
 
@@ -302,13 +340,23 @@ sub searchURL
 #
 sub browse
 {
-  my ($self, $basedn, @attrs) = @_;
-  my ($scope, $filter);
+  my ($self) = shift;
+  my (%args);
 
-  $scope = Mozilla::LDAP::Utils::str2Scope("BASE");
-  $filter = "(objectclass=*)" ;
+  %args = @_ unless (scalar(@_) % 2);
+  if (! defined($args{"filter"}))
+    {
+      $args{"basedn"} = shift;
+      $args{"attributes"} = ((scalar(@_) > $[) ? [ @_ ] : []);
+    }
+  $args{"scope"} = Mozilla::LDAP::Utils::str2Scope("BASE");
 
-  return  $self->search($basedn, $scope, $filter, 0, @attrs);
+  return $self->search(basedn		=> $args{"basedn"},
+		       scope		=> $args{scope},
+		       filter		=> "(objectclass=*)",
+		       attributes	=> $args{"attributes"},
+		       verbose		=> $args{"verbose"},
+		       );
 }
 
 
@@ -318,10 +366,27 @@ sub browse
 #
 sub compare
 {
-  my ($self, $dn, $attr, $value) = @_;
+  my ($self) = shift;
+  my (%args);
 
-  return ldap_compare_s($self->{"ld"}, $dn, $attr, $value) ==
-    LDAP_COMPARE_TRUE;
+  %args = @_ unless (scalar(@_) % 2);
+  if (! defined($args{"dn"}))
+    {
+      $args{"dn"} = shift;
+      $args{"attribute"} = shift;
+      $args{"value"} = shift;
+    }
+
+  if (defined($args{"verbose"}) && $args{"verbose"})
+    {
+      print STDERR "Performing a compare with these parameters:\n\n";
+      print STDERR "DN:\t\t", $args{"dn"}, "\n";
+      print STDERR "Attribute:\t\t", $args{"attribute"}, "\n";
+      print STDERR "Value:\t\t", $args{"value"}, "\n\n\n";
+    }
+
+  return ldap_compare_s($self->{"ld"}, $args{"dn"}, $args{"attribute"},
+			$args{"value"}) ==LDAP_COMPARE_TRUE;
 }
 
 
@@ -398,7 +463,6 @@ sub nextEntry
 
   return bless \%entry, 'Mozilla::LDAP::Entry';
 }
-
 # This is deprecated...
 *entry = \*nextEntry;
 
@@ -574,8 +638,8 @@ sub update
 
           if ((scalar(@remove) + scalar(@add)) < scalar(@{$vals}))
             {
-              $mod{$key}{"db"} = [ @remove ] if ($#remove >= $[);
-              $mod{$key}{"ab"} = [ @add ] if ($#add >= $[);
+              $mod{$key}{"db"} = [ @remove ] if (scalar(@remove) > $[);
+              $mod{$key}{"ab"} = [ @add ] if (scalar(@add) > $[);
             }
           else
             {
