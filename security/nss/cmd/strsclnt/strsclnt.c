@@ -99,17 +99,6 @@ int ssl3CipherSuites[] = {
     TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA, 	/* l */
     TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,		/* m */
     SSL_RSA_WITH_RC4_128_SHA,                   /* n */
-    TLS_DHE_DSS_WITH_RC4_128_SHA,		/* o */
-    SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,		/* p */
-    SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,		/* q */
-    SSL_DHE_RSA_WITH_DES_CBC_SHA,		/* r */
-    SSL_DHE_DSS_WITH_DES_CBC_SHA,		/* s */
-    TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	    	/* t */
-    TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       	/* u */
-    TLS_RSA_WITH_AES_128_CBC_SHA,     	    	/* v */
-    TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	    	/* w */
-    TLS_DHE_RSA_WITH_AES_256_CBC_SHA,       	/* x */
-    TLS_RSA_WITH_AES_256_CBC_SHA,     	    	/* y */
     0
 };
 
@@ -247,57 +236,30 @@ myBadCertHandler( void *arg, PRFileDesc *fd)
 void 
 printSecurityInfo(PRFileDesc *fd)
 {
-    CERTCertificate * cert = NULL;
-    SSL3Statistics * ssl3stats = SSL_GetStatistics();
-    SECStatus result;
-    SSLChannelInfo    channel;
-    SSLCipherSuiteInfo suite;
+    char * cp;	/* bulk cipher name */
+    char * ip;	/* cert issuer DN */
+    char * sp;	/* cert subject DN */
+    int    op;	/* High, Low, Off */
+    int    kp0;	/* total key bits */
+    int    kp1;	/* secret key bits */
+    int    result;
 
     static int only_once;
 
-    if (only_once && verbose < 2)
-    	return;
-    only_once = 1;
-
-    result = SSL_GetChannelInfo(fd, &channel, sizeof channel);
-    if (result == SECSuccess && 
-        channel.length == sizeof channel && 
-	channel.cipherSuite) {
-	result = SSL_GetCipherSuiteInfo(channel.cipherSuite, 
-					&suite, sizeof suite);
-	if (result == SECSuccess) {
-	    FPRINTF(stderr, 
-	    "strsclnt: SSL version %d.%d using %d-bit %s with %d-bit %s MAC\n",
-	       channel.protocolVersion >> 8, channel.protocolVersion & 0xff,
-	       suite.effectiveKeyBits, suite.symCipherName, 
-	       suite.macBits, suite.macAlgorithmName);
-	    FPRINTF(stderr, 
-	    "strsclnt: Server Auth: %d-bit %s, Key Exchange: %d-bit %s\n",
-	       channel.authKeyBits, suite.authAlgorithmName,
-	       channel.keaKeyBits,  suite.keaTypeName);
-    	}
+    if (! only_once++ && fd) {
+	result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
+	if (result != SECSuccess)
+	    return;
+	PRINTF(
+	"strsclnt: cipher %s, %d secret key bits, %d key bits, status: %d\n",
+	       cp, kp1, kp0, op);
+	PR_Free(cp);
+	PR_Free(ip);
+	PR_Free(sp);
     }
 
-    cert = SSL_LocalCertificate(fd);
-    if (!cert)
-	cert = SSL_PeerCertificate(fd);
-
-    if (verbose && cert) {
-	char * ip = CERT_NameToAscii(&cert->issuer);
-	char * sp = CERT_NameToAscii(&cert->subject);
-        if (sp) {
-	    fprintf(stderr, "strsclnt: subject DN: %s\n", sp);
-	    PR_Free(sp);
-	}
-        if (ip) {
-	    fprintf(stderr, "strsclnt: issuer  DN: %s\n", ip);
-	    PR_Free(ip);
-	}
-	CERT_DestroyCertificate(cert);
-	cert = NULL;
-    }
-    fprintf(stderr,
-    	"strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
+    PRINTF(
+    "strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
     	ssl3stats->hsh_sid_cache_hits, 
 	ssl3stats->hsh_sid_cache_misses,
 	ssl3stats->hsh_sid_cache_not_ok);
@@ -1071,7 +1033,7 @@ main(int argc, char **argv)
     }
     ssl3stats = SSL_GetStatistics();
 
-    if (nickName  && strcmp(nickName, "none")) {
+    if (nickName) {
 
 	cert[kt_rsa] = PK11_FindCertFromNickname(nickName, passwd);
 	if (cert[kt_rsa] == NULL) {

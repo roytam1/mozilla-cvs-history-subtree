@@ -204,6 +204,8 @@ SECU_FilePasswd(PK11SlotInfo *slot, PRBool retry, void *arg)
     if (nb == 0) {
 	fprintf(stderr,"password file contains no data\n");
 	return NULL;
+    } else {
+	return (char*) PORT_Strdup((char*)phrase);
     }
     return (char*) PORT_Strdup((char*)phrase);
 }
@@ -1518,6 +1520,20 @@ SECU_PrintCertNickname(CERTCertificate *cert, void *data)
     PORT_Memset (trusts, 0, sizeof (trusts));
     out = (FILE *)data;
     
+    if ( cert->dbEntry ) {
+	name = cert->dbEntry->nickname;
+	if ( name == NULL ) {
+	    name = cert->emailAddr;
+	}
+	
+        trust = &cert->dbEntry->trust;
+	printflags(trusts, trust->sslFlags);
+	PORT_Strcat(trusts, ",");
+	printflags(trusts, trust->emailFlags);
+	PORT_Strcat(trusts, ",");
+	printflags(trusts, trust->objectSigningFlags);
+	fprintf(out, "%-60s %-5s\n", name, trusts);
+    } else {
 	name = cert->nickname;
 	if ( name == NULL ) {
 	    name = cert->emailAddr;
@@ -1534,6 +1550,7 @@ SECU_PrintCertNickname(CERTCertificate *cert, void *data)
 	    PORT_Memcpy(trusts,",,",3);
 	}
 	fprintf(out, "%-60s %-5s\n", name, trusts);
+    }
 
     return (SECSuccess);
 }
@@ -1651,7 +1668,6 @@ SECU_PrintPublicKey(FILE *out, SECItem *der, char *m, int level)
     return 0;
 }
 
-#ifdef HAVE_EPV_TEMPLATE
 int
 SECU_PrintPrivateKey(FILE *out, SECItem *der, char *m, int level)
 {
@@ -1680,7 +1696,6 @@ SECU_PrintPrivateKey(FILE *out, SECItem *der, char *m, int level)
     PORT_FreeArena(arena, PR_TRUE);
     return 0;
 }
-#endif
 
 int
 SECU_PrintFingerprints(FILE *out, SECItem *derCert, char *m, int level)

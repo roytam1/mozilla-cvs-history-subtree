@@ -608,6 +608,7 @@ AppendAVA(char **bufp, unsigned *buflenp, CERTAVA *ava)
     char *tagName;
     char tmpBuf[384];
     unsigned len, maxLen;
+    int lenLen;
     int tag;
     SECStatus rv;
     SECItem *avaValue = NULL;

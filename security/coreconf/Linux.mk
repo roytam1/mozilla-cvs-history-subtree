@@ -50,10 +50,6 @@ RANLIB			= ranlib
 
 DEFAULT_COMPILER = gcc
 
-ifeq ($(OS_TEST),m68k)
-	OS_REL_CFLAGS	= -DLINUX1_2 -D_XOPEN_SOURCE
-	CPU_ARCH	= m68k
-else		
 ifeq ($(OS_TEST),ppc)
 	OS_REL_CFLAGS	= -DLINUX1_2 -D_XOPEN_SOURCE
 	CPU_ARCH	= ppc
@@ -86,7 +82,6 @@ endif
 endif
 endif
 endif
-endif
 
 
 LIBC_TAG		= _glibc
@@ -97,11 +92,6 @@ ifeq ($(OS_RELEASE),2.0)
 	ifdef BUILD_OPT
 		OPTIMIZER	= -O2
 	endif
-	ifdef MAPFILE
-		MKSHLIB += -Wl,--version-script,$(MAPFILE)
-	endif
-	PROCESS_MAP_FILE = grep -v ';-' $(LIBRARY_NAME).def | \
-         sed -e 's,;+,,' -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,;,' > $@
 endif
 
 ifeq ($(USE_PTHREADS),1)

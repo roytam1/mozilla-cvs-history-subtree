@@ -54,7 +54,7 @@
 NSSCMSMessage *
 NSS_CMSMessage_Create(PLArenaPool *poolp)
 {
-    void *mark = NULL;
+    void *mark;
     NSSCMSMessage *cmsg;
     PRBool poolp_is_ours = PR_FALSE;
 
@@ -63,18 +63,16 @@ NSS_CMSMessage_Create(PLArenaPool *poolp)
 	if (poolp == NULL)
 	    return NULL;
 	poolp_is_ours = PR_TRUE;
-    } 
+    }
 
     if (!poolp_is_ours)
 	mark = PORT_ArenaMark(poolp);
 
     cmsg = (NSSCMSMessage *)PORT_ArenaZAlloc (poolp, sizeof(NSSCMSMessage));
     if (cmsg == NULL) {
-	if (!poolp_is_ours) {
-	    if (mark) {
-		PORT_ArenaRelease(poolp, mark);
-	    }
-	} else
+	if (!poolp_is_ours)
+	    PORT_ArenaRelease(poolp, mark);
+	else
 	    PORT_FreeArena(poolp, PR_FALSE);
 	return NULL;
     }
@@ -83,7 +81,7 @@ NSS_CMSMessage_Create(PLArenaPool *poolp)
     cmsg->poolp_is_ours = poolp_is_ours;
     cmsg->refCount = 1;
 
-    if (mark)
+    if (!poolp_is_ours)
 	PORT_ArenaUnmark(poolp, mark);
 
     return cmsg;

@@ -287,7 +287,7 @@ make_datastruct(char  *data, int len)
 	    datastruct = (Pair *) PORT_Realloc
 		(datastruct, fields * sizeof(Pair));
 	    if (datastruct == NULL) {
-		error_allocate();
+		error_allocate;
 	    }
 	    current = datastruct + (fields - remaining);
 	}
@@ -1060,8 +1060,8 @@ AddPrivKeyUsagePeriod(void             *extHandle,
     if (pkup == NULL) {
 	error_allocate();
     }
-    notBeforeStr = (char *) PORT_Alloc(16 );
-    notAfterStr = (char *) PORT_Alloc(16 );
+    notBeforeStr = (char *) PORT_Alloc(16 * sizeof(char));
+    notAfterStr = (char *) PORT_Alloc(16 * sizeof(char));
     *notBeforeStr = '\0';
     *notAfterStr = '\0';
     pkup->arena = arena;
@@ -1346,15 +1346,17 @@ string_to_oid(char  *string)
 	    string += i;
 	} else {
 	    if (*(string + i) == '.') {
-		*(string + i) = '\0';
+		*(string + i) == '\0';
 		value = atoi(string);
 		string += i + 1;
 	    } else {
 		*(string + i) = '\0';
 		i++;
 		value = atoi(string);
-		while (*(string + i) == ' ')
-		    i++;
+		if (*(string + i) == ' ') {
+		    while (*(string + i) == ' ')
+			i++;
+		}
 		if (*(string + i) != '\0') {
 		    error_out("ERROR: Improperly formated OID");
 		}
@@ -1796,7 +1798,7 @@ MakeNameConstraints(Pair             *data,
 	constraint = find_field(data, which, PR_TRUE);
 	if (constraint != NULL) {
 	    current = (CERTNameConstraint *) PORT_ZAlloc(sizeof(CERTNameConstraint));
-	    if (current == NULL) {
+	    if (current = NULL) {
 		error_allocate();
 	    }
 	}
@@ -1836,7 +1838,7 @@ AddAltName(void              *extHandle,
     SECStatus          rv = SECSuccess;
     SECItem            *issuersAltName = NULL;
     CERTCertificate    *issuerCert = NULL;
-    void               *mark = NULL;
+    void               *mark;
 
 
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
@@ -1893,11 +1895,9 @@ AddAltName(void              *extHandle,
     if (issuerCert != NULL) {
 	CERT_DestroyCertificate(issuerCert);
     }
-#if 0
     if (arena != NULL) {
 	PORT_ArenaRelease (arena, mark);
     }
-#endif
     return rv;
 }
 
@@ -2111,7 +2111,7 @@ return_dbpasswd(PK11SlotInfo *slot, PRBool retry, void *data)
     if (retry == PR_TRUE) {
 	return NULL;
     }
-    rv = PORT_Alloc(4);
+    rv = PORT_Alloc(sizeof(char) * 4);
     PORT_Strcpy(rv, "foo");
     return rv;
 }
@@ -2123,26 +2123,14 @@ FindPrivateKeyFromNameStr(char              *name,
 {
     SECKEYPrivateKey                        *key;
     CERTCertificate                         *cert;
-    CERTCertificate                         *p11Cert;
     SECStatus                               status = SECSuccess;
 
 
-    /* We don't presently have a PK11 function to find a cert by 
-    ** subject name.  
-    ** We do have a function to find a cert in the internal slot's
-    ** cert db by subject name, but it doesn't setup the slot info.
-    ** So, this HACK works, but should be replaced as soon as we 
-    ** have a function to search for certs accross slots by subject name.
-    */
     cert = CERT_FindCertByNameString(certHandle, name);
-    if (cert == NULL || cert->nickname == NULL) {
+    if (cert == NULL) {
 	error_out("ERROR: Unable to retrieve issuers certificate");
     }
-    p11Cert = PK11_FindCertFromNickname(cert->nickname, NULL);
-    if (p11Cert == NULL) {
-	error_out("ERROR: Unable to retrieve issuers certificate");
-    }
-    key = PK11_FindKeyByAnyCert(p11Cert, NULL);
+    key = PK11_FindKeyByAnyCert(cert, NULL);
     return key;
 }
 
@@ -2259,10 +2247,13 @@ main(int argc, char **argv)
 #ifdef TEST
     sleep(20);
 #endif
+    RNG_SystemInfoForRNG();
     SECU_ConfigDirectory(DBdir);
 
+    PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
+
     PK11_SetPasswordFunc(return_dbpasswd);
-    status = NSS_InitReadWrite(DBdir);
+    NSS_InitReadWrite(DBdir);
     if (status != SECSuccess) {
 	SECU_PrintPRandOSError(progName);
 	return -1;
@@ -2286,7 +2277,7 @@ main(int argc, char **argv)
 	    }
 	    pos = form_output + length - remaining;
 	}
-	n = fread(pos, 1, (size_t) (remaining - 1), stdin);
+	n = fread(pos, sizeof(char), (size_t) (remaining - 1), stdin);
 	pos += n;
 	remaining -= n;
     }
@@ -2298,11 +2289,11 @@ main(int argc, char **argv)
 #endif
 #ifdef FILEOUT
     printf("Content-type: text/plain\n\n");
-    fwrite(form_output, 1, (size_t)length, stdout);
+    fwrite(form_output, sizeof(char), (size_t)length, stdout);
     printf("\n");
 #endif
 #ifdef FILEOUT
-    fwrite(form_output, 1, (size_t)length, stdout);
+    fwrite(form_output, sizeof(char), (size_t)length, stdout);
     printf("\n");
     fflush(stdout);
 #endif
@@ -2323,7 +2314,7 @@ main(int argc, char **argv)
     printf("I got that done, woo hoo\n");
     fflush(stdout);
 #endif
-    issuerNameStr = PORT_Alloc(200);
+    issuerNameStr = PORT_Alloc(35 * sizeof(char));
     if (find_field_bool(form_data, "caChoiceradio-SignWithSpecifiedChain",
 			PR_FALSE)) {
 	UChain = PR_TRUE;
@@ -2410,8 +2401,7 @@ main(int argc, char **argv)
 					    NULL);
     if (encodedCertChain) {
 #if !defined(FILEOUT)
-	printf("Content-type: application/x-x509-user-cert\r\n");
-	printf("Content-length: %d\r\n\r\n", encodedCertChain->len);
+	printf("Content-type: application/x-x509-user-cert\n\n");
 	fwrite (encodedCertChain->data, 1, encodedCertChain->len, stdout);
 #else
 	fwrite (encodedCertChain->data, 1, encodedCertChain->len, outfile);
@@ -2426,6 +2416,16 @@ main(int argc, char **argv)
     fclose(outfile);
 #endif
     fflush(stdout);
-    return 0;
+    return;
 }
+
+
+
+
+
+
+
+
+
+
 

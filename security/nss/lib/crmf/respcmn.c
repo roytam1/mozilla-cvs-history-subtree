@@ -32,7 +32,7 @@
  * GPL.
  */
 
-#include "nssrenam.h"
+
 #include "cmmf.h"
 #include "cmmfi.h"
 #include "secitem.h"
@@ -147,7 +147,7 @@ static SECItem*
 cmmf_encode_certificate(CERTCertificate *inCert)
 {
     return SEC_ASN1EncodeItem(NULL, NULL, inCert, 
-			      SEC_ASN1_GET(SEC_SignedCertificateTemplate));
+			      SEC_SignedCertificateTemplate);
 }
 
 CERTCertList*

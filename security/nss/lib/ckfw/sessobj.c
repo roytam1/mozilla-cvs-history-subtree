@@ -103,7 +103,6 @@ nss_ckmdSessionObject_remove_pointer
   return CKR_OK;
 }
 
-#ifdef NSS_DEBUG
 static CK_RV
 nss_ckmdSessionObject_verifyPointer
 (
@@ -112,7 +111,6 @@ nss_ckmdSessionObject_verifyPointer
 {
   return CKR_OK;
 }
-#endif
 
 #endif /* DEBUG */
 
@@ -202,7 +200,7 @@ nss_ckmdSessionObject_GetAttributeSize
   CK_RV *pError
 );
 
-static const NSSItem *
+static NSSItem *
 nss_ckmdSessionObject_GetAttribute
 (
   NSSCKMDObject *mdObject,
@@ -582,7 +580,7 @@ nss_ckmdSessionObject_GetAttributeSize
  * nss_ckmdSessionObject_GetAttribute
  *
  */
-static const NSSItem *
+static NSSItem *
 nss_ckmdSessionObject_GetAttribute
 (
   NSSCKMDObject *mdObject,
@@ -821,7 +819,6 @@ nss_ckmdFindSessionObjects_remove_pointer
   return CKR_OK;
 }
 
-#ifdef NSS_DEBUG
 static CK_RV
 nss_ckmdFindSessionObjects_verifyPointer
 (
@@ -830,7 +827,6 @@ nss_ckmdFindSessionObjects_verifyPointer
 {
   return CKR_OK;
 }
-#endif
 
 #endif /* DEBUG */
 
