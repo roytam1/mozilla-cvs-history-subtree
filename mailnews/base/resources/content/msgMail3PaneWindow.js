@@ -680,6 +680,7 @@ function ClearMessagePane()
 {
 	if(gHaveLoadedMessage)
 	{	
+    gHaveLoadedMessage = false;
 		gCurrentDisplayedMessage = null;
 		if (window.frames["messagepane"].location != "about:blank")
 			window.frames["messagepane"].location = "about:blank";
