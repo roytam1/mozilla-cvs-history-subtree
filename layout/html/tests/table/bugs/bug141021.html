@@ -1,0 +1,36 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//DE//"><html lang="de"><head>
+  <title>Bug 141021</title></head><body>
+  <table border="1">
+   <tbody>
+    <tr>
+     <td>
+      <script>document.write("foo");</script>foo
+     </td>
+     <td>
+      <table border="1">
+       <tbody>
+        <tr>
+         <td>
+          <table border="1" width="439">
+           <tbody>
+            <tr>
+             <td>
+              In Office-Dateien steckt mehr als nur der reine
+              Dokumenteninhalt. Wer Daten austauscht, kann so
+              unwissentlich heikle Zusatzinformationen
+              weitergeben. Wir erklären, wie Sie das Risiko
+              minimieren.
+             </td>
+            </tr>
+           </tbody>
+          </table>
+          <script language="JavaScript" src="bug141021.js"></script>foo
+         </td>
+        </tr>
+       </tbody>
+      </table>
+     </td>
+    </tr>
+   </tbody>
+  </table>
+ </body></html>
