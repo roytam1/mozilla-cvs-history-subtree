@@ -34,10 +34,10 @@
 #include "nsIContent.h"
 #include "nsICSSParser.h"
 #include "nsICSSStyleSheet.h"
-#include "nsIDOMDocument.h"
 #include "nsIDOMNodeObserver.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMStyleSheetCollection.h"
+#include "nsIDOMXULDocument.h"
 #include "nsIDTD.h"
 #include "nsIDocument.h"
 #include "nsIDocumentObserver.h"
@@ -298,7 +298,7 @@ public:
 
 class XULDocumentImpl : public nsIDocument,
                         public nsIRDFDocument,
-                        public nsIDOMDocument,
+                        public nsIDOMXULDocument,
                         public nsIJSScriptObject,
                         public nsIScriptObjectOwner,
                         public nsIHTMLContentContainer,
@@ -486,6 +486,9 @@ public:
     NS_IMETHOD    CreateEntityReference(const nsString& aName, nsIDOMEntityReference** aReturn);
     NS_IMETHOD    GetElementsByTagName(const nsString& aTagname, nsIDOMNodeList** aReturn);
     NS_IMETHOD    GetStyleSheets(nsIDOMStyleSheetCollection** aStyleSheets);
+
+    // nsIDOMXULDocument interface
+    NS_DECL_IDOMXULDOCUMENT
                      
     // nsIDOMNode interface
     NS_IMETHOD    GetNodeName(nsString& aNodeName);
@@ -684,9 +687,10 @@ XULDocumentImpl::QueryInterface(REFNSIID iid, void** result)
         NS_ADDREF(this);
         return NS_OK;
     }
-    else if (iid.Equals(nsIDOMDocument::IID()) ||
+    else if (iid.Equals(nsIDOMXULDocument::IID()) ||
+             iid.Equals(nsIDOMDocument::IID()) ||
              iid.Equals(nsIDOMNode::IID())) {
-        *result = NS_STATIC_CAST(nsIDOMDocument*, this);
+        *result = NS_STATIC_CAST(nsIDOMXULDocument*, this);
         NS_ADDREF(this);
         return NS_OK;
     }
@@ -1986,6 +1990,50 @@ XULDocumentImpl::GetStyleSheets(nsIDOMStyleSheetCollection** aStyleSheets)
 
 
 ////////////////////////////////////////////////////////////////////////
+// nsIDOMXULDocument interface
+
+NS_IMETHODIMP
+XULDocumentImpl::GetElementByID(const nsString& aId, nsIDOMNode** aReturn)
+{
+    nsresult rv;
+
+    nsAutoString uri(aId);
+    const char* documentURL;
+    mDocumentURL->GetSpec(&documentURL);
+
+    rdf_PossiblyMakeAbsolute(documentURL, uri);
+
+    nsCOMPtr<nsIRDFResource> resource;
+    if (NS_FAILED(rv = mRDFService->GetUnicodeResource(uri, getter_AddRefs(resource)))) {
+        NS_ERROR("unable to get resource");
+        return rv;
+    }
+
+    nsCOMPtr<nsISupportsArray> elements;
+    if (NS_FAILED(rv = NS_NewISupportsArray(getter_AddRefs(elements)))) {
+        NS_ERROR("unable to create new ISupportsArray");
+        return rv;
+    }
+
+    if (NS_FAILED(rv = GetElementsForResource(resource, elements))) {
+        NS_ERROR("unable to get elements for resource");
+        return rv;
+    }
+
+    if (elements->Count() > 0) {
+        nsISupports* element = elements->ElementAt(0);
+        rv = element->QueryInterface(nsIDOMNode::IID(), (void**) aReturn);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM node");
+        NS_RELEASE(element);
+        return rv;
+    }
+
+    // XXX else walk the tree looking for the node
+    NS_NOTYETIMPLEMENTED("write me!");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+////////////////////////////////////////////////////////////////////////
 // nsIDOMNode interface
 NS_IMETHODIMP
 XULDocumentImpl::GetNodeName(nsString& aNodeName)
@@ -2022,8 +2070,8 @@ XULDocumentImpl::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 XULDocumentImpl::GetParentNode(nsIDOMNode** aParentNode)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aParentNode = nsnull;
+    return NS_OK;
 }
 
 
@@ -2196,7 +2244,6 @@ XULDocumentImpl::EnumerateProperty(JSContext *aContext)
 PRBool
 XULDocumentImpl::Resolve(JSContext *aContext, jsval aID)
 {
-    NS_NOTYETIMPLEMENTED("write me");
     return PR_TRUE;
 }
 
@@ -2226,7 +2273,7 @@ XULDocumentImpl::GetScriptObject(nsIScriptContext *aContext, void** aScriptObjec
     nsIScriptGlobalObject *global = aContext->GetGlobalObject();
 
     if (nsnull == mScriptObject) {
-        res = NS_NewScriptDocument(aContext, (nsISupports *)(nsIDOMDocument *)this, global, (void**)&mScriptObject);
+        res = NS_NewScriptXULDocument(aContext, (nsISupports *)(nsIDOMXULDocument *)this, global, (void**)&mScriptObject);
     }
     *aScriptObject = mScriptObject;
 

@@ -26,28 +26,28 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIPtr.h"
 #include "nsString.h"
-#include "nsIDOMXULNode.h"
 #include "nsIDOMNode.h"
+#include "nsIDOMXULDocument.h"
 
 
 static NS_DEFINE_IID(kIScriptObjectOwnerIID, NS_ISCRIPTOBJECTOWNER_IID);
 static NS_DEFINE_IID(kIJSScriptObjectIID, NS_IJSSCRIPTOBJECT_IID);
 static NS_DEFINE_IID(kIScriptGlobalObjectIID, NS_ISCRIPTGLOBALOBJECT_IID);
-static NS_DEFINE_IID(kIXULNodeIID, NS_IDOMXULNODE_IID);
 static NS_DEFINE_IID(kINodeIID, NS_IDOMNODE_IID);
+static NS_DEFINE_IID(kIXULDocumentIID, NS_IDOMXULDOCUMENT_IID);
 
-NS_DEF_PTR(nsIDOMXULNode);
 NS_DEF_PTR(nsIDOMNode);
+NS_DEF_PTR(nsIDOMXULDocument);
 
 
 /***********************************************************************/
 //
-// XULNode Properties Getter
+// XULDocument Properties Getter
 //
 PR_STATIC_CALLBACK(JSBool)
-GetXULNodeProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+GetXULDocumentProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
-  nsIDOMXULNode *a = (nsIDOMXULNode*)JS_GetPrivate(cx, obj);
+  nsIDOMXULDocument *a = (nsIDOMXULDocument*)JS_GetPrivate(cx, obj);
 
   // If there's no private data, this must be the prototype, so ignore
   if (nsnull == a) {
@@ -70,12 +70,12 @@ GetXULNodeProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
 /***********************************************************************/
 //
-// XULNode Properties Setter
+// XULDocument Properties Setter
 //
 PR_STATIC_CALLBACK(JSBool)
-SetXULNodeProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
+SetXULDocumentProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
-  nsIDOMXULNode *a = (nsIDOMXULNode*)JS_GetPrivate(cx, obj);
+  nsIDOMXULDocument *a = (nsIDOMXULDocument*)JS_GetPrivate(cx, obj);
 
   // If there's no private data, this must be the prototype, so ignore
   if (nsnull == a) {
@@ -98,45 +98,45 @@ SetXULNodeProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
 
 //
-// XULNode finalizer
+// XULDocument finalizer
 //
 PR_STATIC_CALLBACK(void)
-FinalizeXULNode(JSContext *cx, JSObject *obj)
+FinalizeXULDocument(JSContext *cx, JSObject *obj)
 {
   nsJSUtils::nsGenericFinalize(cx, obj);
 }
 
 
 //
-// XULNode enumerate
+// XULDocument enumerate
 //
 PR_STATIC_CALLBACK(JSBool)
-EnumerateXULNode(JSContext *cx, JSObject *obj)
+EnumerateXULDocument(JSContext *cx, JSObject *obj)
 {
   return nsJSUtils::nsGenericEnumerate(cx, obj);
 }
 
 
 //
-// XULNode resolve
+// XULDocument resolve
 //
 PR_STATIC_CALLBACK(JSBool)
-ResolveXULNode(JSContext *cx, JSObject *obj, jsval id)
+ResolveXULDocument(JSContext *cx, JSObject *obj, jsval id)
 {
   return nsJSUtils::nsGenericResolve(cx, obj, id);
 }
 
 
 //
-// Native method AddBroadcastListener
+// Native method GetElementByID
 //
 PR_STATIC_CALLBACK(JSBool)
-XULNodeAddBroadcastListener(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+XULDocumentGetElementByID(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-  nsIDOMXULNode *nativeThis = (nsIDOMXULNode*)JS_GetPrivate(cx, obj);
+  nsIDOMXULDocument *nativeThis = (nsIDOMXULDocument*)JS_GetPrivate(cx, obj);
   JSBool rBool = JS_FALSE;
+  nsIDOMNode* nativeRet;
   nsAutoString b0;
-  nsIDOMNodePtr b1;
 
   *rval = JSVAL_NULL;
 
@@ -145,104 +145,18 @@ XULNodeAddBroadcastListener(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
     return JS_TRUE;
   }
 
-  if (argc >= 2) {
+  if (argc >= 1) {
 
     nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
 
-    if (JS_FALSE == nsJSUtils::nsConvertJSValToObject((nsISupports **)&b1,
-                                           kINodeIID,
-                                           "Node",
-                                           cx,
-                                           argv[1])) {
+    if (NS_OK != nativeThis->GetElementByID(b0, &nativeRet)) {
       return JS_FALSE;
     }
 
-    if (NS_OK != nativeThis->AddBroadcastListener(b0, b1)) {
-      return JS_FALSE;
-    }
-
-    *rval = JSVAL_VOID;
+    nsJSUtils::nsConvertObjectToJSVal(nativeRet, cx, rval);
   }
   else {
-    JS_ReportError(cx, "Function addBroadcastListener requires 2 parameters");
-    return JS_FALSE;
-  }
-
-  return JS_TRUE;
-}
-
-
-//
-// Native method RemoveBroadcastListener
-//
-PR_STATIC_CALLBACK(JSBool)
-XULNodeRemoveBroadcastListener(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-  nsIDOMXULNode *nativeThis = (nsIDOMXULNode*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
-  nsAutoString b0;
-  nsIDOMNodePtr b1;
-
-  *rval = JSVAL_NULL;
-
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
-  }
-
-  if (argc >= 2) {
-
-    nsJSUtils::nsConvertJSValToString(b0, cx, argv[0]);
-
-    if (JS_FALSE == nsJSUtils::nsConvertJSValToObject((nsISupports **)&b1,
-                                           kINodeIID,
-                                           "Node",
-                                           cx,
-                                           argv[1])) {
-      return JS_FALSE;
-    }
-
-    if (NS_OK != nativeThis->RemoveBroadcastListener(b0, b1)) {
-      return JS_FALSE;
-    }
-
-    *rval = JSVAL_VOID;
-  }
-  else {
-    JS_ReportError(cx, "Function removeBroadcastListener requires 2 parameters");
-    return JS_FALSE;
-  }
-
-  return JS_TRUE;
-}
-
-
-//
-// Native method DoCommand
-//
-PR_STATIC_CALLBACK(JSBool)
-XULNodeDoCommand(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
-{
-  nsIDOMXULNode *nativeThis = (nsIDOMXULNode*)JS_GetPrivate(cx, obj);
-  JSBool rBool = JS_FALSE;
-
-  *rval = JSVAL_NULL;
-
-  // If there's no private data, this must be the prototype, so ignore
-  if (nsnull == nativeThis) {
-    return JS_TRUE;
-  }
-
-  if (argc >= 0) {
-
-    if (NS_OK != nativeThis->DoCommand()) {
-      return JS_FALSE;
-    }
-
-    *rval = JSVAL_VOID;
-  }
-  else {
-    JS_ReportError(cx, "Function doCommand requires 0 parameters");
+    JS_ReportError(cx, "Function getElementByID requires 1 parameters");
     return JS_FALSE;
   }
 
@@ -252,57 +166,55 @@ XULNodeDoCommand(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
 
 /***********************************************************************/
 //
-// class for XULNode
+// class for XULDocument
 //
-JSClass XULNodeClass = {
-  "XULNode", 
+JSClass XULDocumentClass = {
+  "XULDocument", 
   JSCLASS_HAS_PRIVATE,
   JS_PropertyStub,
   JS_PropertyStub,
-  GetXULNodeProperty,
-  SetXULNodeProperty,
-  EnumerateXULNode,
-  ResolveXULNode,
+  GetXULDocumentProperty,
+  SetXULDocumentProperty,
+  EnumerateXULDocument,
+  ResolveXULDocument,
   JS_ConvertStub,
-  FinalizeXULNode
+  FinalizeXULDocument
 };
 
 
 //
-// XULNode class properties
+// XULDocument class properties
 //
-static JSPropertySpec XULNodeProperties[] =
+static JSPropertySpec XULDocumentProperties[] =
 {
   {0}
 };
 
 
 //
-// XULNode class methods
+// XULDocument class methods
 //
-static JSFunctionSpec XULNodeMethods[] = 
+static JSFunctionSpec XULDocumentMethods[] = 
 {
-  {"addBroadcastListener",          XULNodeAddBroadcastListener,     2},
-  {"removeBroadcastListener",          XULNodeRemoveBroadcastListener,     2},
-  {"doCommand",          XULNodeDoCommand,     0},
+  {"getElementByID",          XULDocumentGetElementByID,     1},
   {0}
 };
 
 
 //
-// XULNode constructor
+// XULDocument constructor
 //
 PR_STATIC_CALLBACK(JSBool)
-XULNode(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+XULDocument(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   return JS_FALSE;
 }
 
 
 //
-// XULNode class initialization
+// XULDocument class initialization
 //
-nsresult NS_InitXULNodeClass(nsIScriptContext *aContext, void **aPrototype)
+nsresult NS_InitXULDocumentClass(nsIScriptContext *aContext, void **aPrototype)
 {
   JSContext *jscontext = (JSContext *)aContext->GetNativeContext();
   JSObject *proto = nsnull;
@@ -311,23 +223,23 @@ nsresult NS_InitXULNodeClass(nsIScriptContext *aContext, void **aPrototype)
   JSObject *global = JS_GetGlobalObject(jscontext);
   jsval vp;
 
-  if ((PR_TRUE != JS_LookupProperty(jscontext, global, "XULNode", &vp)) ||
+  if ((PR_TRUE != JS_LookupProperty(jscontext, global, "XULDocument", &vp)) ||
       !JSVAL_IS_OBJECT(vp) ||
       ((constructor = JSVAL_TO_OBJECT(vp)) == nsnull) ||
       (PR_TRUE != JS_LookupProperty(jscontext, JSVAL_TO_OBJECT(vp), "prototype", &vp)) || 
       !JSVAL_IS_OBJECT(vp)) {
 
-    if (NS_OK != NS_InitNodeClass(aContext, (void **)&parent_proto)) {
+    if (NS_OK != NS_InitDocumentClass(aContext, (void **)&parent_proto)) {
       return NS_ERROR_FAILURE;
     }
     proto = JS_InitClass(jscontext,     // context
                          global,        // global object
                          parent_proto,  // parent proto 
-                         &XULNodeClass,      // JSClass
-                         XULNode,            // JSNative ctor
+                         &XULDocumentClass,      // JSClass
+                         XULDocument,            // JSNative ctor
                          0,             // ctor args
-                         XULNodeProperties,  // proto props
-                         XULNodeMethods,     // proto funcs
+                         XULDocumentProperties,  // proto props
+                         XULDocumentMethods,     // proto funcs
                          nsnull,        // ctor props (static)
                          nsnull);       // ctor funcs (static)
     if (nsnull == proto) {
@@ -350,17 +262,17 @@ nsresult NS_InitXULNodeClass(nsIScriptContext *aContext, void **aPrototype)
 
 
 //
-// Method for creating a new XULNode JavaScript object
+// Method for creating a new XULDocument JavaScript object
 //
-extern "C" NS_DOM nsresult NS_NewScriptXULNode(nsIScriptContext *aContext, nsISupports *aSupports, nsISupports *aParent, void **aReturn)
+extern "C" NS_DOM nsresult NS_NewScriptXULDocument(nsIScriptContext *aContext, nsISupports *aSupports, nsISupports *aParent, void **aReturn)
 {
-  NS_PRECONDITION(nsnull != aContext && nsnull != aSupports && nsnull != aReturn, "null argument to NS_NewScriptXULNode");
+  NS_PRECONDITION(nsnull != aContext && nsnull != aSupports && nsnull != aReturn, "null argument to NS_NewScriptXULDocument");
   JSObject *proto;
   JSObject *parent;
   nsIScriptObjectOwner *owner;
   JSContext *jscontext = (JSContext *)aContext->GetNativeContext();
   nsresult result = NS_OK;
-  nsIDOMXULNode *aXULNode;
+  nsIDOMXULDocument *aXULDocument;
 
   if (nsnull == aParent) {
     parent = nsnull;
@@ -376,23 +288,23 @@ extern "C" NS_DOM nsresult NS_NewScriptXULNode(nsIScriptContext *aContext, nsISu
     return NS_ERROR_FAILURE;
   }
 
-  if (NS_OK != NS_InitXULNodeClass(aContext, (void **)&proto)) {
+  if (NS_OK != NS_InitXULDocumentClass(aContext, (void **)&proto)) {
     return NS_ERROR_FAILURE;
   }
 
-  result = aSupports->QueryInterface(kIXULNodeIID, (void **)&aXULNode);
+  result = aSupports->QueryInterface(kIXULDocumentIID, (void **)&aXULDocument);
   if (NS_OK != result) {
     return result;
   }
 
   // create a js object for this class
-  *aReturn = JS_NewObject(jscontext, &XULNodeClass, proto, parent);
+  *aReturn = JS_NewObject(jscontext, &XULDocumentClass, proto, parent);
   if (nsnull != *aReturn) {
     // connect the native object to the js object
-    JS_SetPrivate(jscontext, (JSObject *)*aReturn, aXULNode);
+    JS_SetPrivate(jscontext, (JSObject *)*aReturn, aXULDocument);
   }
   else {
-    NS_RELEASE(aXULNode);
+    NS_RELEASE(aXULDocument);
     return NS_ERROR_FAILURE; 
   }
 

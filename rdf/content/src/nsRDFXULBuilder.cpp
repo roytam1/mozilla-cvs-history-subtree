@@ -24,26 +24,11 @@
   
   TO DO
 
-  1) I need to make sure that the XUL builder only listens to DOM
-     modifications that it should care about. Right now, it'll take
-     any old DOM update and try to whack it into RDF.
-
-  2) I need to implement nsRDFXULBuilder::RemoveAttribute(), and
+  1) Need to implement nsRDFXULBuilder::RemoveAttribute(), and
      figure out how to do nsRDFXULBuilder::Remove() (vanilla) when the
      child isn't a resource element itself.
 
-  3) There's an assertion that's firing when it tries to ask for
-     RDF:ID on an HTML attribute from nsRDFXULBuilder::Remove().
-
-  4) Figure out how to do natural ordering. I was thinking that maybe
-     some kind of partial order relationship between nodes might be
-     simple to implement and easy to work out. For example,
-
-        [foo]--RDF:greaterThan-->[bar]
-
-     I remember talking to RJC about this months ago, and we came to
-     the conclusing that there could get to be nasty cycles; however,
-     it seems like a really simple way to start.
+  2) Implement the remainder of the DOM methods.
 
   */
 
