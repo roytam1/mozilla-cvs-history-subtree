@@ -134,8 +134,8 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 
 #define DOM_DEFAULT_SCRIPTABLE_FLAGS                                          \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
-  nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE |                               \
-  nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY
+  nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE /*|                               \
+  nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY removed to fix accessibility */
 
 #define NODE_SCRIPTABLE_FLAGS                                                 \
   (DOM_DEFAULT_SCRIPTABLE_FLAGS |                                             \

@@ -31,7 +31,7 @@
 #include "nsIFrame.h"
 #include "nsRootAccessible.h"
 #include "nsINameSpaceManager.h"
-//#include "nsMutableAccessible.h"
+#include "nsIDOMHTMLInputElement.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDOMMenuListener.h"
 #include "nsIDOMEventReceiver.h"
@@ -107,6 +107,10 @@ public:
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
+  NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
+  NS_IMETHOD GetAccActionName(PRUint8 index, PRUnichar **_retval);
+  NS_IMETHOD AccDoAction(PRUint8 index);
+
 
   virtual void GetBounds(nsRect& aBounds, nsIFrame** aRelativeFrame);
 
@@ -395,6 +399,35 @@ nsMenuListenerAccessible(aDOMNode, aShell)
   mParent = aParent;
 }
 
+/* void accDoAction (in PRUint8 index); */
+NS_IMETHODIMP nsHTMLSelectButtonAccessible::AccDoAction(PRUint8 index)
+{
+  nsIFrame* frame = nsAccessible::GetBoundsFrame();
+  nsCOMPtr<nsIPresContext> context;
+  GetPresContext(context);
+  frame->FirstChild(context, nsnull, &frame);
+  frame->GetNextSibling(&frame);
+  nsCOMPtr<nsIContent> content;
+  frame->GetContent(getter_AddRefs(content));
+
+  if (index == 0) {
+    nsCOMPtr<nsIDOMHTMLInputElement> element(do_QueryInterface(content));
+    if (element)
+    {
+       element->Click();
+       return NS_OK;
+    }
+  }
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* PRUint8 getAccNumActions (); */
+NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccNumActions(PRUint8 *_retval)
+{
+  *_retval = 1;
+  return NS_OK;;
+}
+
 void nsHTMLSelectButtonAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelativeFrame)
 {
   // get our second child's frame
@@ -420,7 +453,13 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccParent(nsIAccessible **_retval
     return NS_OK;
 }
 
+
 NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccName(PRUnichar **_retval)
+{
+  return GetAccActionName(0, _retval);
+}
+
+NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
 {
    SetupMenuListener();
 
