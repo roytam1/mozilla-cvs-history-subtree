@@ -555,8 +555,17 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
     var count = new Object;
     if (!gThreadPaneCommandUpdater)
       gThreadPaneCommandUpdater = new nsMsgDBViewCommandUpdater();
+
     gDBView.init(messenger, msgWindow, gThreadPaneCommandUpdater);
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
+
+    // based on the collapsed state of the thread pane/message pane splitter,
+    // supress message display if appropriate.
+    var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
+    if (collapsed)
+      gDBView.supressMsgDisplay = true;
+    else
+      gDBView.supressMsgDisplay = false;
     
     var colID = ConvertSortTypeToColumnID(sortType);
     if (colID) {
@@ -700,6 +709,17 @@ function GetSelectedFolderResource()
 //Called when the splitter in between the thread and message panes is clicked.
 function OnClickThreadAndMessagePaneSplitter()
 {
+  var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
+  // collapsed is the previous state, so we must be expanding
+  // the splitter if collapsed is true
+  if (gDBView)
+  {
+    if (collapsed)
+      gDBView.supressMsgDisplay = false;
+    else
+      gDBView.supressMsgDisplay = true;
+  }
+
 /*
 	dump("We are in OnClickThreadAndMessagePaneSplitter()\n");
 	var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
