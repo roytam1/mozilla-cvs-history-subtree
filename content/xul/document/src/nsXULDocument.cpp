@@ -4712,7 +4712,8 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
         rv = gFastLoadService->StartMuxedDocument(aURI, urlspec,
                                                   nsIFastLoadService::NS_FASTLOAD_READ |
                                                   nsIFastLoadService::NS_FASTLOAD_WRITE);
-        if (NS_FAILED(rv) && rv != NS_ERROR_NOT_AVAILABLE)
+        NS_ASSERTION(rv != NS_ERROR_NOT_AVAILABLE, "only reading FastLoad?!");
+        if (NS_FAILED(rv))
             AbortFastLoads();
     }
 
