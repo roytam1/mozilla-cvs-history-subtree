@@ -47,14 +47,13 @@ public:
 
   virtual PRBool OnMove(PRInt32 aX, PRInt32 aY) { return PR_FALSE; }
   virtual PRBool OnPaint(nsPaintEvent & aEvent) { return PR_FALSE; }
-  virtual PRBool OnResize(nsRect &aRect) { return PR_FALSE; }
 
   // These are needed to Override the auto check behavior
   void Armed();
   void DisArmed();
 
 protected:
-  NS_IMETHOD  CreateNative(GtkWidget *parentWindow);
+  NS_IMETHOD  CreateNative(GtkObject *parentWindow);
   virtual void InitCallbacks(char * aName = nsnull);
   virtual void OnDestroySignal(GtkWidget* aGtkWidget);
 
