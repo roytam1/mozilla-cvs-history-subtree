@@ -33,6 +33,7 @@ CPPSRCS		= \
 		TestSocketIO.cpp \
 		TestSocketInput.cpp \
 		TestSocketTransport.cpp \
+        TestOverlappedIO.cpp \
 		TestFileInput.cpp \
 		TestFileTransport.cpp \
 		TestProtocols.cpp \
