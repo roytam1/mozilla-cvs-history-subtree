@@ -1,4 +1,0 @@
-nsIImageDecoder.idl
-nsIImageDecoderObserver.idl
-nsIImageLoader.idl
-nsIImageRequest2.idl
