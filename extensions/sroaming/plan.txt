@@ -1,5 +1,5 @@
 todo:
-- firebird: doesn't start up after the roaming dialog closed
+- firebird: doesn't start up after the roaming dialog closed - bug 209880
 
 don't care (for now):
 - conflict
