@@ -13,10 +13,9 @@
 # under the License.
 #
 # The Original Code is PerLDAP. The Initial Developer of the Original
-# Code is Netscape Communications Corp. and Clayton Donley. Portions
-# created by Netscape are Copyright (C) Netscape Communications
-# Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Code is Leif Hedstrom and Netscape Communications. Portions created
+# by Leif are Copyright (C) Leif Hedstrom, portions created by Netscape
+# are Copyright (C) Netscape Communications Corp. All Rights Reserved.
 #
 # Contributor(s):
 #
@@ -38,8 +37,8 @@ no strict "vars";
 # Configurations, modify these as needed.
 #
 $BIND	= "uid=ldapadmin";
-$BASE	= "o=Netscape Communications Corp.,c=US";
-$PEOPLE	= "ou=people";
+$BASE	= "dc=ogre,dc=com";
+$PEOPLE	= "ou=ogres";
 $GROUPS	= "ou=groups";
 $UID	= "leif-test";
 $CN	= "test-group-1";
@@ -124,27 +123,20 @@ sub attributeEQ
 #################################################################################
 # Setup the test entries.
 #
-$filter = "(uid=$UID)";
-$conn = getConn();
-$nentry = $conn->newEntry();
+#$conn = getConn();
+$conn = new Mozilla::LDAP::Conn(host	=> "localhost",
+				port	=> "389",
+				verbose	=> "1",
+				);
 
-$nentry->setDN("uid=$UID, $PEOPLE, $BASE");
-$nentry->{objectclass} = [ "top", "person", "inetOrgPerson", "mailRecipient" ];
-$nentry->addValue("uid", $UID);
-$nentry->addValue("sn", "Hedstrom");
-$nentry->addValue("givenName", "Leif");
-$nentry->addValue("cn", "Leif Hedstrom");
-$nentry->addValue("cn", "Leif P. Hedstrom");
-$nentry->addValue("cn", "The Swede");
-$nentry->addValue("description", "Test1");
-$nentry->addValue("description", "Test2");
-$nentry->addValue("description", "Test3");
-$nentry->addValue("description", "Test4");
-$nentry->addValue("description", "Test5");
-$nentry->addValue("mail", "leif\@ogre.com");
+$entry = new Mozilla::LDAP::Entry(dn		=> "uid=leif,ou=people,dc=com",
+				  cn		=> "Leif Hedstrom",
+				  sn		=> ["Hedstrom",
+						    "The Swede",
+						    ],
+				  givenName	=> "Leif",
+				  uid		=> "leif",
+				  );
 
-$ent = $conn->search($ld{root}, $ld{scope}, $filter);
-$conn->delete($ent->getDN()) if $ent;
-$conn->add($nentry);
-
-$conn->close();
+$entry2 = $conn->newEntry(dn => "foo",
+			  cn => "bar",);
