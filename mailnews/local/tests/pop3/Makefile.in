@@ -33,22 +33,9 @@ ifdef MOZ_OJI
 endif
 
 LIBS = \
-	-labouturl \
-	-lfileurl \
-	-lftpurl \
-	-lgophurl \
-	-lremoturl \
-	-lhttpurl \
-	-lsockstuburl \
-	-lnetcache \
-	-lmimetype \
-	-lnetcnvts \
-	-lnetwork \
-	-lnetlib \
 	-lmsgbaseutil \
 	-lreg	\
 	-lxpcom	\
-	-lpwcac \
 	-lmozdbm	\
 	-lxp	\
 	-lpref	\
@@ -62,6 +49,7 @@ LIBS = \
 	$(MOZ_GFX_TOOLKIT_LDFLAGS) \
 	-limg		\
 	-lmozutil	\
+	-lneckoutil_s \
 	$(TK_LIBS) \
 	$(NULL)
 
