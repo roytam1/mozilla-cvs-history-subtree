@@ -198,7 +198,7 @@ HRuleFrame::Paint(nsIPresContext*      aPresContext,
     
     nsCSSRendering::PaintBackground(aPresContext, aRenderingContext,
                                     this,aDirtyRect, rect,
-                                    *border, *padding, 0, 0, PR_FALSE);
+                                    *border, *padding, PR_FALSE);
     nsCSSRendering::PaintBorder(aPresContext, aRenderingContext,
                                 this,aDirtyRect, rect, *border,
                                 mStyleContext, 0);

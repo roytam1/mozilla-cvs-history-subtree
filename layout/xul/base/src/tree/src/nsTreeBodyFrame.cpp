@@ -3168,7 +3168,7 @@ nsTreeBodyFrame::PaintBackgroundLayer(nsIStyleContext*     aStyleContext,
   nsCSSRendering::PaintBackgroundWithSC(aPresContext, aRenderingContext,
                                         this, aDirtyRect, aRect,
                                         *myColor, *myBorder, *myPadding,
-                                        0, 0);
+                                        PR_TRUE);
 
   nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
                               aDirtyRect, aRect, *myBorder, mStyleContext, 0);
