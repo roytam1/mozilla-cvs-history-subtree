@@ -18,6 +18,7 @@
 #include "art_alphagamma.h"
 #include "art_svp_point.h"
 #include "art_vpath_dash.h"
+#include "art_pathcode.h"
 #include "art_render.h"
 #include "art_render_gradient.h"
 #include "art_render_svp.h"
