@@ -2656,7 +2656,7 @@ NS_IMETHODIMP nsChromeRegistry::UninstallSkin(const nsACString& aSkinName, PRBoo
   DeselectSkin(aSkinName, aUseProfile);
 
   // Now uninstall it.
-  return UninstallProvider(NS_LITERAL_CSTRING("skin"), aSkinName, aUseProfile);
+  return  UninstallProvider(NS_LITERAL_CSTRING("skin"), aSkinName, aUseProfile);
 }
 
 NS_IMETHODIMP nsChromeRegistry::UninstallLocale(const nsACString& aLocaleName, PRBool aUseProfile)
@@ -2667,41 +2667,49 @@ NS_IMETHODIMP nsChromeRegistry::UninstallLocale(const nsACString& aLocaleName, P
   return UninstallProvider(NS_LITERAL_CSTRING("locale"), aLocaleName, aUseProfile);
 }
 
-static void GetURIForPackage(nsIIOService* aIOService, const nsACString& aPackageName, nsIURI** aResult)
+static void GetURIForProvider(nsIIOService* aIOService, const nsACString& aProviderName, 
+                              const nsACString& aProviderType, nsIURI** aResult)
 {
   nsCAutoString chromeURL("chrome://");
-  chromeURL += aPackageName;
-  chromeURL += "/content/";
+  chromeURL += aProviderName;
+  chromeURL += "/";
+  chromeURL += aProviderType;
+  chromeURL += "/";
 
   nsCOMPtr<nsIURI> uri;
   aIOService->NewURI(chromeURL, nsnull, nsnull, aResult);
 }
 
-NS_IMETHODIMP nsChromeRegistry::UninstallPackage(const nsACString& aPackageName, PRBool aUseProfile)
+nsresult nsChromeRegistry::UninstallFromDynamicDataSource(const nsACString& aPackageName,
+                                                          PRBool aIsOverlay, PRBool aUseProfile)
 {
-  // Remove the package from the package list
-  nsresult rv = UninstallProvider(NS_LITERAL_CSTRING("package"), aPackageName, aUseProfile);
-  if (NS_FAILED(rv)) return rv;
+  nsresult rv;
 
-  // Now disconnect any overlay entries that this package may have supplied.
-  // This is a little tricky - the chrome registry identifies that packages may have
-  // dynamic overlays specified like so: 
-  // - each package entry in the chrome registry datasource has a "chrome:hasOverlays"
-  //   property set to "true"
+  // Disconnect any overlay/stylesheet entries that this package may have 
+  // supplied. This is a little tricky - the chrome registry identifies 
+  // that packages may have dynamic overlays/stylesheets specified like so: 
+  // - each package entry in the chrome registry datasource has a 
+  //   "chrome:hasOverlays"/"chrome:hasStylesheets" property set to "true"
   // - if this property is set, the chrome registry knows to load a dynamic overlay
-  //   datasource over in <profile>/chrome/overlayinfo/<package_name>/overlays.rdf
+  //   datasource over in 
+  //    <profile>/chrome/overlayinfo/<package_name>/content/overlays.rdf
+  //   or
+  //    <profile>/chrome/overlayinfo/<package_name>/skin/stylesheets.rdf
   // To remove this dynamic overlay info when we disable a package:
-  // - first get an enumeration of all the packages that have the "hasOverlays" 
-  //   property set. 
-  // - walk this list, loading the Dynamic Datasource (overlays.rdf) for each
-  //   package
+  // - first get an enumeration of all the packages that have the 
+  //   "hasOverlays" and "hasStylesheets" properties set. 
+  // - walk this list, loading the Dynamic Datasource (overlays.rdf/
+  //   stylesheets.rdf) for each package
   // - enumerate the Seqs in each Dynamic Datasource
   // - for each seq, remove entries that refer to chrome URLs that are supplied
   //   by the package we're removing.
   nsCOMPtr<nsIIOService> ioServ(do_GetService(NS_IOSERVICE_CONTRACTID));
 
   nsCOMPtr<nsIURI> uninstallURI;
-  GetURIForPackage(ioServ, aPackageName, getter_AddRefs(uninstallURI));
+  const nsACString& providerType = aIsOverlay ? NS_LITERAL_CSTRING("content") 
+                                              : NS_LITERAL_CSTRING("skin");
+  GetURIForProvider(ioServ, aPackageName, providerType,
+                    getter_AddRefs(uninstallURI));
   if (!uninstallURI) return NS_ERROR_OUT_OF_MEMORY;
   nsCAutoString uninstallHost;
   uninstallURI->GetHost(uninstallHost);
@@ -2710,7 +2718,8 @@ NS_IMETHODIMP nsChromeRegistry::UninstallPackage(const nsACString& aPackageName,
   mRDFService->GetLiteral(NS_LITERAL_STRING("true").get(), getter_AddRefs(trueLiteral));
   
   nsCOMPtr<nsISimpleEnumerator> e;
-  mChromeDataSource->GetSources(mHasOverlays, trueLiteral, PR_TRUE, getter_AddRefs(e));
+  mChromeDataSource->GetSources(aIsOverlay ? mHasOverlays : mHasStylesheets, 
+                                trueLiteral, PR_TRUE, getter_AddRefs(e));
   do {
     PRBool hasMore;
     e->HasMoreElements(&hasMore);
@@ -2726,13 +2735,13 @@ NS_IMETHODIMP nsChromeRegistry::UninstallPackage(const nsACString& aPackageName,
 
     val.Cut(0, NS_LITERAL_CSTRING("urn:mozilla:package:").Length());
     nsCOMPtr<nsIURI> sourcePackageURI;
-    GetURIForPackage(ioServ, val, getter_AddRefs(sourcePackageURI));
+    GetURIForProvider(ioServ, val, providerType, getter_AddRefs(sourcePackageURI));
     if (!sourcePackageURI) return NS_ERROR_OUT_OF_MEMORY;
 
     PRBool states[] = { PR_FALSE, PR_TRUE };
     for (PRInt32 i = 0; i < 2; ++i) {
       nsCOMPtr<nsIRDFDataSource> overlayDS;
-      rv = GetDynamicDataSource(sourcePackageURI, PR_TRUE, states[i], PR_FALSE,
+      rv = GetDynamicDataSource(sourcePackageURI, aIsOverlay, states[i], PR_FALSE,
                                 getter_AddRefs(overlayDS));
       if (NS_FAILED(rv) || !overlayDS) continue;
 
@@ -2805,6 +2814,18 @@ NS_IMETHODIMP nsChromeRegistry::UninstallPackage(const nsACString& aPackageName,
   while (PR_TRUE);
 
   return rv;
+}
+
+NS_IMETHODIMP nsChromeRegistry::UninstallPackage(const nsACString& aPackageName, PRBool aUseProfile)
+{
+  // Remove the package from the package list
+  nsresult rv = UninstallProvider(NS_LITERAL_CSTRING("package"), aPackageName, aUseProfile);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = UninstallFromDynamicDataSource(aPackageName, PR_TRUE, aUseProfile);
+  if (NS_FAILED(rv)) return rv;
+
+  return UninstallFromDynamicDataSource(aPackageName, PR_FALSE, aUseProfile);
 }
 
 nsresult

@@ -443,7 +443,7 @@ nsInstallLogWriter.prototype = {
     this._fos.write(line, line.length);
   },
   
-  registerChrome: function (aProviderName, aFileURL, aChromeType, aIsProfile)
+  registerChrome: function (aProviderName, aChromeType, aIsProfile)
   {
     var profile = aIsProfile ? "profile" : "global";
     // register\tprofile\tpackage\t<provider_name>
@@ -497,7 +497,29 @@ nsInstallLogReader.prototype = {
     while (more);
     fis.close();
 
-    // Now that we've closed the stream we can remove all the files    
+    // Now that we've closed the stream we can remove all the files, unregister
+    // chrome, etc. 
+    //
+    // The list of lines we pass to the uninstall handler should be in this
+    // order:
+    // 1) File additions
+    // 2) Chrome Package Registrations
+    // 3) Chrome Skin and Locale Registrations
+    //
+    // They must be in this order since skins and locales rely on packages, and
+    // the packages they rely on is not stored in the registration line so we
+    // simply "deselect" for every package installed by the extension.
+    var dependentLines = [];
+    for (var i = 0; i < lines.length; ++i) {
+      var parts = lines[i].split("\t");
+      if (parts[1] == this.TOKEN_REGISTER_CHROME && 
+          (parts[2] == this.CHROME_TYPE_SKIN || 
+           parts[2] == this.CHROME_TYPE_LOCALE)) {
+        dependentLines.push(lines.splice(i, 1));
+      }
+    }
+    lines.concat(dependentLines);
+    
     for (var i = 0; i < lines.length; ++i)
       this._parseLine(lines[i]);
   },
@@ -793,21 +815,80 @@ nsExtensionInstaller.prototype = {
       cr.installLocale(fileURL, this._isProfile);
       type = this._writer.CHROME_TYPE_LOCALE;
     }
-    var providerName = this._getProviderName(aPath);
-    this._writer.registerChrome(providerName, fileURL, type, this._isProfile);
+    var providerNames = this._getProviderNames(aFile, aPath, type);
+    for (var i = 0; i < providerNames.length; ++i)
+      this._writer.registerChrome(providerNames[i], type, this._isProfile);
   },
   
-  _getProviderName: function (aPath)
+  _getProviderNames: function (aFile, aPath, aType)
   {
-    var parts = aPath.split("/");
+    if (aPath.charAt(aPath.length-1) != "/")
+      aPath += "/";
+    var fileName = aPath + "contents.rdf";
     
-    for (var i = 1; i < parts.length; ++i) {
-      var lastPath = parts[parts.length - i];
-      if (lastPath == "")
-        continue;
-      return lastPath;
+    var providerNames = [];
+    
+    var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
+                              .createInstance(Components.interfaces.nsIZipReader);
+    zipReader.init(aFile);
+    zipReader.open();
+
+    try {
+      zipReader.test(fileName);
+      
+      // Extract the contents.rdf file at the location specified in the provider arc
+      // and discover the list of provider names to register for that location.
+      //
+      // The contents.rdf file will look like this:
+      //
+      //   <RDF:Seq about="urn:mozilla:<type>:root">
+      //     <RDF:li resource="urn:mozilla:<type>:itemName1"/>
+      //     <RDF:li resource="urn:mozilla:<type>:itemName2"/>
+      //     ..
+      //   </RDF:Seq>
+      //
+      // We need to explicitly walk this list here, we don't need to do so
+      // for nsIXULChromeRegistry's |installPackage| method since that does
+      // this same thing itself.
+      var chromeManifest = getFile(this._extDirKey, 
+                                   [DIR_EXTENSIONS, DIR_TEMP, 
+                                    getRandomFileName("contents", "rdf")]);
+      if (chromeManifest.exists())
+        chromeManifest.remove(false);
+      chromeManifest.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
+      zipReader.extract(fileName, chromeManifest);
+      
+      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                          .getService(Components.interfaces.nsIRDFService);
+      var fileURL = getURLSpecFromFile(chromeManifest);
+      var ds = rdf.GetDataSourceBlocking(fileURL);
+      
+      var ctr = Components.classes["@mozilla.org/rdf/container;1"]
+                          .createInstance(Components.interfaces.nsIRDFContainer);
+      ctr.Init(ds, rdf.GetResource("urn:mozilla:" + aType + ":root"));
+      
+      var items = ctr.GetElements();
+      while (items.hasMoreElements()) {
+        var item = items.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+        
+        var nameArc = rdf.GetResource(CHROME_NS("name"));
+        var name;
+        if (ds.hasArcOut(item, nameArc))
+          name = stringData(ds.GetTarget(item, nameArc, true));
+        else {
+          var parts = item.Value.split(":");
+          name = parts[parts.length-1];
+        }
+        providerNames.push(name);
+      }
+      
+      chromeManifest.remove(false);
     }
-    return lastPath;
+    catch (e) { }
+    
+    zipReader.close();
+    
+    return providerNames;
   }
 };
 
@@ -880,17 +961,31 @@ nsExtensionUninstaller.prototype = {
     }
   },
   
+  // XXXben - maybe we should find a way to 
+  _packagesForExtension: [],
+  
   onRegisterChrome: function (aProviderName, aFile, aChromeType, aIsProfile)
   {
     switch (aChromeType) {
     case this._reader.CHROME_TYPE_PACKAGE:
+      this._packagesForExtension.push(aProviderName);
       this._cr.uninstallPackage(aProviderName, aIsProfile)
       break;
     case this._reader.CHROME_TYPE_SKIN:
-      this._cr.uninstallSkin(aProviderName, aIsProfile)
+      for (var i = 0; i < this._packagesForExtension.length; ++i) {
+        this._cr.deselectSkinForPackage(aProviderName, 
+                                        this._packagesForExtension[i], 
+                                        aIsProfile);
+      }
+      // this._cr.uninstallSkin(aProviderName, aIsProfile)
       break;
     case this._reader.CHROME_TYPE_LOCALE:
-      this._cr.uninstallLocale(aProviderName, aIsProfile)
+      for (var i = 0; i < this._packagesForExtension.length; ++i) {
+        this._cr.deselectLocaleForPackage(aProviderName, 
+                                          this._packagesForExtension[i], 
+                                          aIsProfile);
+      }
+      // this._cr.uninstallLocale(aProviderName, aIsProfile)
       break;
     }
   }
