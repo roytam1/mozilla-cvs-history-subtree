@@ -240,7 +240,7 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   nsCOMPtr<nsIMimeStreamConverter> mimeConverter = do_QueryInterface(mimeParser);
   if (mimeConverter)
 	  mimeConverter->SetMimeOutputType(nsMimeOutput::nsMimeMessageQuoting);
-  if (NS_FAILED(mimeParser->Init(nsnull, ptr->mStreamListener, nsnull /* the channel */)))
+  if (NS_FAILED(mimeParser->Init(aURL, ptr->mStreamListener, nsnull /* the channel */)))
   {
     NS_RELEASE(ptr);
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
