@@ -392,7 +392,7 @@ JSClass JavaArray_class = {
     JavaArray_getObjectOps,
 };
 
-extern JS_FRIEND_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 
 /* Initialize the JS JavaArray class */

@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include "jspubtd.h"
 #include "jsprvtd.h"
+#include "jshash.h"
 
 JS_BEGIN_EXTERN_C
 

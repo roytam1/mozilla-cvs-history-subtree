@@ -576,7 +576,7 @@ getClass(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-extern JS_FRIEND_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 JSBool
 jsj_init_JavaClass(JSContext *cx, JSObject *global_obj)

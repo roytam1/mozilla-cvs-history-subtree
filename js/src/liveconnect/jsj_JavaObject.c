@@ -674,7 +674,7 @@ JSClass JavaObject_class = {
     JavaObject_getObjectOps,
 };
 
-extern JS_FRIEND_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 
 JSBool
