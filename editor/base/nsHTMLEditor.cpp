@@ -4926,6 +4926,8 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         stuffToPaste.Assign ( text, len / 2 );
         nsAutoEditBatch beginBatching(this);
         rv = InsertHTML(stuffToPaste);
+        if (text)
+          nsMemory::Free(text);
       }
     }
     else if (flavor.EqualsWithConversion(kUnicodeMime))
@@ -4940,6 +4942,8 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromTransferable(nsITransferable *transferable
         // pasting does not inherit local inline styles
         RemoveAllInlineProperties();
         rv = InsertText(stuffToPaste);
+        if (text)
+          nsMemory::Free(text);
       }
     }
     else if (flavor.EqualsWithConversion(kFileMime))
@@ -5522,6 +5526,8 @@ NS_IMETHODIMP nsHTMLEditor::PasteAsPlaintextQuotation(PRInt32 aSelectionType)
         stuffToPaste.Assign ( text, len / 2 );
         nsAutoEditBatch beginBatching(this);
         rv = InsertAsPlaintextQuotation(stuffToPaste, 0);
+        if (text)
+          nsMemory::Free(text);
       }
     }
     nsCRT::free(flav);
