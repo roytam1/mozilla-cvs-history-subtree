@@ -101,8 +101,7 @@ DirectoryServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFile 
   else
     return NS_ERROR_FAILURE;
 
-  nsEmbedCString temp(fileLocation);
-  rv = NS_NewNativeLocalFile(temp, PR_TRUE, getter_AddRefs(localFile));  
+  rv = NS_NewNativeLocalFile(nsEmbedCString(fileLocation), PR_TRUE, getter_AddRefs(localFile));  
   if (NS_FAILED(rv)) return rv;
 
   return localFile->QueryInterface(NS_GET_IID(nsIFile), (void**)_retval);
@@ -159,8 +158,7 @@ int startup_xpcom()
   nsCOMPtr<nsILocalFile> file;
   if (gXPCOMLocation) 
   {
-    nsEmbedCString temp(gXPCOMLocation);
-    rv = NS_NewNativeLocalFile(temp,
+    rv = NS_NewNativeLocalFile(nsEmbedCString(gXPCOMLocation), 
                                PR_TRUE, 
                                getter_AddRefs(file));
   }
@@ -206,8 +204,7 @@ nsresult Register(const char *path)
   nsCOMPtr<nsILocalFile> spec;
   
   if (path) {
-    //nsEmbedCString temp(path);
-    rv = NS_NewNativeLocalFile(nsEmbedCString(path),
+    rv = NS_NewNativeLocalFile(nsEmbedCString(path), 
                                PR_TRUE, 
                                getter_AddRefs(spec));
   }
