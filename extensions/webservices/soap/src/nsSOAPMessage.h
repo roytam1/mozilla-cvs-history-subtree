@@ -27,13 +27,15 @@
 #include "nsISOAPTypeRegistry.h"
 #include "nsISOAPMessage.h"
 #include "nsISecurityCheckedComponent.h"
+#include "nsIXPCScriptable.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 
 class nsSOAPMessage : public nsISOAPMessage, 
-  public nsISecurityCheckedComponent
+  public nsISecurityCheckedComponent,
+  public nsIXPCScriptable 
 {
 public:
   nsSOAPMessage();
@@ -46,6 +48,9 @@ public:
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
+
+  // nsIXPCScriptable
+  NS_DECL_NSIXPCSCRIPTABLE
 
 protected:
 

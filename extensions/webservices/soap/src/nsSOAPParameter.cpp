@@ -201,8 +201,10 @@ nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj,
       if (argc > 1) {
         nsCOMPtr<nsISupports> value;
         nsAutoString type;
-        nsresult rc = nsSOAPJSValue::ConvertJSValToValue(cx,
-                                          argv[1],
+        nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx,
+                                          argc - 1,
+                                          argv + 1,
+                                          PR_FALSE,
                                           getter_AddRefs(value),
                                           type);
         mType = type;

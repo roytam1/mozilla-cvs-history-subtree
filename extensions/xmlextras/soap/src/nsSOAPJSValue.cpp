@@ -578,3 +578,48 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
 
   return NS_OK;
 }
+
+nsresult 
+nsSOAPJSValue::ConvertJSArgsToValue(JSContext* aContext,
+                                 PRUint32 argc,
+                                 jsval* argv,
+                                 PRBool list,
+                                 nsISupports** aValue,
+                                 nsAWritableString & aType)
+{
+  if (argc > 1
+    || list) {
+    nsresult rc;
+    nsCOMPtr<nsISupportsArray> array = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rc);
+    if (NS_FAILED(rc))
+      return rc;
+    nsAutoString type;
+    nsCOMPtr<nsISupports> value;
+    PRUint32 count = argc;
+    while (argc--) {
+      rc = ConvertJSValToValue(aContext, *(argv++), 
+        getter_AddRefs(value), type);
+      if (NS_FAILED(rc))
+        return rc;
+      if (count == 1 && aType.Equals(nsSOAPUtils::kArrayType)) {
+        *aValue = value;
+        NS_IF_ADDREF(*aValue);
+        aType = type;
+        return NS_OK;
+      }
+      nsCOMPtr<nsISOAPParameter> newparam = new nsSOAPParameter();
+      if (!newparam) return NS_ERROR_OUT_OF_MEMORY;
+      newparam->SetAsInterface(NS_GET_IID(nsISOAPJSValue), newparam);
+      newparam->SetType(type);
+      array->InsertElementAt(newparam, count - argc - 1);
+    }
+    aType = nsSOAPUtils::kArrayType;
+    *aValue = array;
+    NS_IF_ADDREF(*aValue);
+    return NS_OK;
+  }
+  else if (argc == 1) {
+    return ConvertJSValToValue(aContext, argv[1], aValue, aType);
+  }
+  return NS_ERROR_FAILURE;
+}

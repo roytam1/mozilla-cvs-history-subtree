@@ -53,6 +53,12 @@ public:
                                       jsval val, 
                                       nsISupports** aValue,
                                       nsAWritableString & aType);
+  static nsresult ConvertJSArgsToValue(JSContext* aContext,
+                                      PRUint32 argc,
+                                      jsval* argv, 
+                                      PRBool list,
+                                      nsISupports** aValue,
+                                      nsAWritableString & aType);
 protected:
   JSObject *mObject;
   JSContext *mContext;

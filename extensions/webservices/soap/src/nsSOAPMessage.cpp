@@ -26,6 +26,7 @@
 #include "nsSOAPTypeRegistry.h"
 #include "nsISOAPMarshaller.h"
 #include "nsISOAPUnmarshaller.h"
+#include "nsSOAPJSValue.h"
 
 /////////////////////////////////////////////
 //
@@ -42,9 +43,10 @@ nsSOAPMessage::~nsSOAPMessage()
 {
 }
 
-NS_IMPL_ISUPPORTS2(nsSOAPMessage, 
+NS_IMPL_ISUPPORTS3(nsSOAPMessage, 
                    nsISOAPMessage, 
-                   nsISecurityCheckedComponent)
+                   nsISecurityCheckedComponent,
+                   nsIXPCScriptable)
 
 /* attribute nsIDOMDocument message; */
 NS_IMETHODIMP nsSOAPMessage::GetMessage(nsIDOMDocument * *aMessage)
@@ -222,6 +224,71 @@ NS_IMETHODIMP nsSOAPMessage::GetTypes(nsISOAPTypeRegistry * *aTypes)
 NS_IMETHODIMP nsSOAPMessage::SetTypes(nsISOAPTypeRegistry * aTypes)
 {
   mTypes = aTypes;
+  return NS_OK;
+}
+
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           nsSOAPMessage
+#define XPC_MAP_QUOTED_CLASSNAME   "SOAPMessage"
+#define                             XPC_MAP_WANT_NEWRESOLVE
+#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
+#include "xpc_map_end.h" /* This will #undef the above */
+
+NS_NAMED_LITERAL_STRING(marshallparameters, "marshallparameters");
+NS_NAMED_LITERAL_STRING(unmarshallparameters, "unmarshallparameters");
+
+static JSBool PR_CALLBACK
+MarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                jsval *rval)
+{
+  nsCOMPtr<nsISupports> value;
+  nsAutoString type;
+  nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx, argc, argv, PR_TRUE, getter_AddRefs(value), type);
+  if (NS_FAILED(rc))
+    return rc;
+// QI to nsISupportsArray and call original function
+  return JS_FALSE;
+}
+
+static JSBool PR_CALLBACK
+UnmarshallJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                jsval *rval)
+{
+  nsCOMPtr<nsISupportsArray> value;
+// Call original function and recieve result into value
+  return JS_FALSE;
+//  result rc = nsSOAPJSValue::ConvertValueToJSVal(cx, value, kArrayType, jsval);
+//  if (NS_FAILED(rc))
+//    return rc;
+}
+
+NS_IMETHODIMP
+nsSOAPMessage::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+  JSObject *obj, jsval id, PRUint32 flags,
+  JSObject **objp, PRBool *_retval)
+{
+  if (!JSVAL_IS_STRING(id)) {
+    return NS_OK;
+  }
+
+  JSString *str = JSVAL_TO_STRING(id);
+  nsLiteralString name(JS_GetStringChars(str));
+  if (name.Equals(marshallparameters)) {
+    JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
+                                        MarshallJSParameters, 0, JSPROP_READONLY);
+    if (!f) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+  } else if (name.Equals(unmarshallparameters)) {
+    JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
+                                        UnmarshallJSParameters, 0, JSPROP_READONLY);
+    if (!f) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+  }
   return NS_OK;
 }
 
