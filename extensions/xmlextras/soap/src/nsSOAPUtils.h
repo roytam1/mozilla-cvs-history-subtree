@@ -50,15 +50,12 @@ public:
   static nsresult GetNamespacePrefix(nsIDOMElement* aElement,
                                      const nsAReadableString & aURI,
                                      nsAWritableString & aPrefix);
-  static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
-                                        nsAWritableString & aEncodingStyle);
-
 #endif
   static nsresult GetNamespaceURI(nsIDOMElement* aElement,
                                   const nsAReadableString & aQName, 
                                   nsAWritableString & aURI);
   static nsresult GetLocalName(const nsAReadableString & aQName, 
-                                  nsAWritableString & aURI);
+                                  nsAWritableString & aLocalName);
 
 // All those missing string functions have to come from somewhere...
 
@@ -101,6 +98,10 @@ public:
   static const nsString kLiteralType;
   static const nsString kXMLSchemaSchemaIDPrefix;
   static const nsString kXMLNameSchemaIDPrefix;
+  static const nsString kXMLNamespaceNamespaceURI;
+  static const nsString kXMLNamespaceURI;
+  static const nsString kXMLNamespacePrefix;
+  static const nsString kXMLPrefix;
 };
 
 #endif

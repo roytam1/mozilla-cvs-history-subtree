@@ -22,6 +22,7 @@
 
 #include "nsSOAPUtils.h"
 #include "nsIDOMText.h"
+#include "nsIDOMNamedNodeMap.h"
 #include "nsCOMPtr.h"
 
 NS_NAMED_LITERAL_STRING(kSOAPEnvURI,"http://schemas.xmlsoap.org/soap/envelope/");
@@ -64,6 +65,11 @@ NS_NAMED_LITERAL_STRING(kLiteralType,"#literal");
 
 NS_NAMED_LITERAL_STRING(kXMLSchemaSchemaIDPrefix, "#schema#");
 NS_NAMED_LITERAL_STRING(kXMLNameSchemaIDPrefix, "#name#");
+
+NS_NAMED_LITERAL_STRING(kXMLNamespaceNamespaceURI, "htp://www.w3.org/2000/xmlns/");
+NS_NAMED_LITERAL_STRING(kXMLNamespaceURI, "htp://www.w3.org/XML/1998/namespace");
+NS_NAMED_LITERAL_STRING(kXMLPrefix, "xml:");
+NS_NAMED_LITERAL_STRING(kXMLNamespacePrefix, "xmlns:");
 
 void 
 nsSOAPUtils::GetSpecificChildElement(
@@ -233,12 +239,54 @@ nsresult nsSOAPUtils::GetNamespaceURI(nsIDOMElement* aElement,
                                   const nsAReadableString & aQName, 
                                   nsAWritableString & aURI)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  aURI.Truncate(0);
+  PRInt32 i = aQName.FindChar(':');
+  if (i < 0) {
+    return NS_OK;
+  }
+  nsAutoString prefix;
+  aQName.Left(prefix, i);
+
+  if (prefix.Equals(kXMLPrefix)) {
+    aURI.Assign(kXMLNamespaceURI);
+    return NS_OK;
+  }
+
+  nsresult rc;
+  nsCOMPtr<nsIDOMNode> current = aElement;
+  nsCOMPtr<nsIDOMNamedNodeMap> attrs;
+  nsCOMPtr<nsIDOMNode> temp;
+  nsAutoString value;
+  while (aElement != nsnull) {
+    rc = current->GetAttributes(getter_AddRefs(attrs));
+    if (NS_FAILED(rc)) return rc;
+    if (attrs) {
+      rc = current->GetLocalName(value);
+      if (NS_FAILED(rc)) return rc;
+      if (value.Equals(prefix)) {
+        return current->GetNamespaceURI(aURI);
+      }
+      rc = attrs->GetNamedItemNS(kXMLNamespaceNamespaceURI, prefix, getter_AddRefs(temp));
+      if (NS_FAILED(rc)) return rc;
+      if (temp != nsnull)
+	return temp->GetNodeValue(aURI);
+    }
+    rc = current->GetParentNode(getter_AddRefs(temp));
+    if (NS_FAILED(rc)) return rc;
+    current = temp;
+  }
+  return NS_ERROR_FAILURE;
 }
+
 nsresult nsSOAPUtils::GetLocalName(const nsAReadableString & aQName, 
-                                  nsAWritableString & aURI)
+                                  nsAWritableString & aLocalName)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  PRInt32 i = aQName.FindChar(':');
+  if (i < 0)
+    aLocalName = aQName;
+  else
+    aQName.Mid(aLocalName, i, aQName.Length() - i);
+  return NS_OK;
 }
 #if 0
 nsresult 
@@ -260,7 +308,7 @@ GetNamespacePrefix(nsIDOMNode* aNode,
           break;
         nsAutoString temp;
         attr->GetNamespaceURI(temp);
-        if (!tmp.Equals(kNamespaceNamespaceURI))
+        if (!tmp.Equals(kXMLNamespaceNamespaceURI))
           continue;
         attr->GetValue(temp);
         if (!localName.Equals(aURI))
@@ -278,53 +326,6 @@ GetNamespacePrefix(nsIDOMNode* aNode,
   }
   aPrefix = nsSOAPUtils::kEmpty;
   return NS_OK;
-}
-
-nsresult 
-GetNamespaceURI(nsIDOMElement* aElement,
-                const nsAReadableString & aPrefix, 
-                nsAWritableString & aURI)
-{
-  nsCOMPtr<nsIDOMElement> scope = aElement;
-  for (;;) {
-    PRBool exists
-    scope->GetAttributeExistsNS(aPrefix, kNamespaceNamespaceURI, &exists);
-    if (exists) {
-      scope->GetAttributeNS(aPrefix, kNamespaceNamespaceURIi, aURI);
-      return NS_OK;
-    }
-    nsCOMPtr<nsIDOMNode> next;
-    scope->GetParentNode(getter_AddRefs(next));
-    if (next)
-      scope = next;
-    else
-      break;
-  }
-  aURI = nsSOAPUtils::kEmpty;
-  return NS_OK;
-}
-
-void
-nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
-                                       nsAWritableString & aEncodingStyle)
-{
-  nsCOMPtr<nsIDOMNode> node = aEntry;
-
-  while (node) {
-    nsAutoString value;
-    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
-    if (element) {
-      element->GetAttributeNS(nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kEncodingStyleAttribute,
-                              value);
-      if (value.Length() > 0) {
-        aEncodingStyle.Assign(value);
-        return;
-      }
-    }
-    nsCOMPtr<nsIDOMNode> temp = node;
-    temp->GetParentNode(getter_AddRefs(node));
-  }
-  aEncodingStyle.Assign(kSOAPEncodingURI);
 }
 
 #endif
