@@ -53,6 +53,7 @@ CPPSRCS = \
 	RDFEnumeration.cpp \
 	RDFTreeNode.cpp \
 	WindowControlImpl.cpp \
+	InputStreamShim.cpp \
 	WrapperFactoryImpl.cpp \
 	motif/MotifBrowserControlCanvas.cpp \
 	motif/gtkmozilla.cpp \

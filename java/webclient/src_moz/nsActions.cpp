@@ -37,6 +37,7 @@
 #include "nsIBaseWindow.h"
 #include "nsISHEntry.h"
 #include "nsIURI.h"
+#include "nsNetUtil.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIWebNavigation.h"
 #include "nsIFindComponent.h"
@@ -45,6 +46,8 @@
 
 #include "ns_util.h"
 #include "rdf_util.h"
+
+#include "InputStreamShim.h"
 
 #include "nsEmbedAPI.h"  // for NS_TermEmbedding
 
@@ -163,11 +166,143 @@ wsLoadURLEvent::handleEvent ()
   return nsnull;
 } // handleEvent()
 
-
 wsLoadURLEvent::~wsLoadURLEvent ()
 {
   if (mURL != nsnull)
     delete mURL;
+}
+
+static jobject test_jobject;
+
+wsLoadFromStreamEvent::wsLoadFromStreamEvent(WebShellInitContext *yourInitCx, 
+                                             void *globalStream,
+                                             nsString &uriToCopy,
+                                             const char *contentTypeToCopy,
+                                             PRInt32 contentLength, 
+                                             void *globalLoadProperties) :
+    nsActionEvent(), mInitContext(yourInitCx), mUriString(uriToCopy),
+    mContentType(PL_strdup(contentTypeToCopy)), 
+    mProperties(globalLoadProperties), mShim(nsnull)
+{
+    mShim = new InputStreamShim((jobject) globalStream, contentLength);
+    NS_IF_ADDREF(mShim);
+    test_jobject = (jobject) globalStream;
+}
+
+wsLoadFromStreamEvent::wsLoadFromStreamEvent(WebShellInitContext *yourInitCx,
+                                             InputStreamShim *yourShim) :
+    nsActionEvent(), mInitContext(yourInitCx), mUriString(nsnull),
+    mContentType(nsnull), mProperties(nsnull), mShim(yourShim)
+{
+}
+
+/**
+
+ * This funky handleEvent allows the java InputStream to be read from
+ * the correct thread (the NativeEventThread), while, on a separate
+ * thread, mozilla's LoadFromStream reads from our nsIInputStream.  This
+ * is accomplished using a "shim" class, InputStreamShim.
+ * InputStreamShim is an nsIInputStream, but it also maintains
+ * information on how to read from the java InputStream.  The important
+ * thing is that InputStreamShim::doReadFromJava() is called on
+ * NativeEventThread() until all the data is read.  This is accomplished
+ * by having this wsLoadFromStream instance copy itself and re-enqueue
+ * itself, if there is more data to read.  
+
+ */
+
+void *
+wsLoadFromStreamEvent::handleEvent ()
+{
+    nsresult rv = NS_ERROR_FAILURE;
+    nsresult readFromJavaStatus = NS_ERROR_FAILURE;
+    nsCOMPtr<nsIURI> uri;
+    wsLoadFromStreamEvent *repeatEvent = nsnull;
+    
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+    
+    // we must have both mInitContext and mShim to do anything
+    if (!mInitContext || !mShim) {
+        return (void *) rv;
+    }
+
+
+    // test code start
+    jclass clazz = env->GetObjectClass(test_jobject);
+    jmethodID mid = nsnull;
+    if (!(mid = env->GetMethodID(clazz, "available", "()I"))) {
+        return (void *) rv;
+    }
+
+    // test code end
+    
+    // Try to read as much as possible off the java InputStream
+    // into the shim's internal buffer.
+
+    // see InputShimStream::doReadFromJava() for the meaning of the
+    // return values.  They are very important.
+    readFromJavaStatus = mShim->doReadFromJava();
+    if (NS_ERROR_FAILURE == readFromJavaStatus) {
+        NS_IF_RELEASE(mShim);
+        return (void *) readFromJavaStatus;
+    }
+    
+    // if this is the first time handleEvent has been called for this
+    // InputStreamShim instance.
+    
+    if (mContentType) {
+        rv = NS_NewURI(getter_AddRefs(uri), mUriString);
+        if (!uri) {
+            return (void *) rv;
+        }
+        
+        // PENDING(edburns): turn the mProperties jobject into an
+        // nsIDocShellLoadInfo instance.
+        
+        // Kick off a LoadStream.  This will cause
+        // InputStreamShim::Read() to be called, 
+        
+        rv = mInitContext->docShell->LoadStream(mShim, uri, mContentType, 
+                                                mShim->getContentLength(), 
+                                                nsnull);
+        if (mProperties) {
+            JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+            ::util_DeleteGlobalRef(env, (jobject) mProperties);
+            mProperties = nsnull;
+        }
+        
+        // make it so we don't issue multiple LoadStream calls 
+        // for this InputStreamShim instance.
+        
+        nsCRT::free(mContentType);
+        mContentType = nsnull;
+    }
+    
+    // if there is more data
+    if (NS_OK == readFromJavaStatus){
+        // and we can create a copy of ourselves
+        if (repeatEvent = new wsLoadFromStreamEvent(mInitContext, mShim)) {
+            // do the loop
+            ::util_PostEvent(mInitContext, (PLEvent *) *repeatEvent);
+            rv = NS_OK;
+        }
+        else {
+            NS_IF_RELEASE(mShim);
+            rv = NS_ERROR_OUT_OF_MEMORY;
+        }
+    }
+    if (NS_ERROR_NOT_AVAILABLE == readFromJavaStatus) {
+        NS_IF_RELEASE(mShim);
+        rv = NS_OK;
+    }
+    
+    return (void *) rv;
+} // handleEvent()
+
+wsLoadFromStreamEvent::~wsLoadFromStreamEvent ()
+{
+    nsCRT::free(mContentType);
+    mContentType = nsnull;
 }
 
 

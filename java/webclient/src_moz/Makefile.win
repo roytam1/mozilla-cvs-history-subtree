@@ -38,6 +38,7 @@ OBJS =                              \
     .\$(OBJDIR)\BookmarksImpl.obj  \
     .\$(OBJDIR)\WrapperFactoryImpl.obj  \
     .\$(OBJDIR)\WindowControlImpl.obj  \
+    .\$(OBJDIR)\InputStreamShim.obj  \
     .\$(OBJDIR)\NavigationImpl.obj  \
     .\$(OBJDIR)\CBrowserContainer.obj  \
     .\$(OBJDIR)\NativeEventThread.obj  \

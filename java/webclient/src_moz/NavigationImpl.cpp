@@ -77,6 +77,74 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
     ::util_ReleaseStringChars(env, urlString, (const jchar *) urlStringChars);
 }
 
+JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeLoadFromStream
+(JNIEnv *env, jobject obj, jint webShellPtr, jobject stream, jstring uri, 
+ jstring contentType, jint contentLength, jobject loadProperties)
+{
+    WebShellInitContext* initContext = (WebShellInitContext *) webShellPtr;
+    PRUnichar *uriStringUniChars = nsnull;
+    PRInt32 uriStringUniCharsLength = -1;
+    const char *contentTypeChars = nsnull;
+    jobject globalStream = nsnull;
+    jobject globalLoadProperties = nsnull;
+    nsString *uriNsString = nsnull;
+    wsLoadFromStreamEvent *actionEvent = nsnull;
+    
+    if (initContext == nsnull || !initContext->initComplete) {
+        ::util_ThrowExceptionToJava(env, "Exception: null webShellPtr passed to nativeLoadFromStream");
+        return;
+    }
+    uriStringUniChars = (PRUnichar *) ::util_GetStringChars(env, uri);
+    uriStringUniCharsLength = (PRInt32) ::util_GetStringLength(env, uri);
+    contentTypeChars = (char *) ::util_GetStringUTFChars(env, contentType);
+    if (!uriStringUniChars || !contentTypeChars) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeLoadFromStream: unable to convert java string to native format");
+        goto NLFS_CLEANUP;
+    }
+
+    if (!(uriNsString = 
+          new nsString(uriStringUniChars, uriStringUniCharsLength))) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeLoadFromStream: unable to convert native string to nsString");
+        goto NLFS_CLEANUP;
+    }
+
+    // the deleteGlobalRef is done in the wsLoadFromStream destructor
+    if (!(globalStream = ::util_NewGlobalRef(env, stream))) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeLoadFromStream: unable to create gloabal ref to stream");
+        goto NLFS_CLEANUP;
+    }
+
+    if (loadProperties) {
+        // the deleteGlobalRef is done in the wsLoadFromStream destructor
+        if (!(globalLoadProperties = 
+              ::util_NewGlobalRef(env, loadProperties))) {
+            ::util_ThrowExceptionToJava(env, "Exception: nativeLoadFromStream: unable to create gloabal ref to properties");
+            goto NLFS_CLEANUP;
+        }
+    }
+
+    if (!(actionEvent = new wsLoadFromStreamEvent(initContext,
+                                                  (void *) globalStream,
+                                                  *uriNsString,
+                                                  contentTypeChars,
+                                                  (PRInt32) contentLength,
+                                                  (void *) 
+                                                  globalLoadProperties))) {
+        ::util_ThrowExceptionToJava(env, "Exception: nativeLoadFromStream: can't create wsLoadFromStreamEvent");
+        goto NLFS_CLEANUP;
+    }
+    ::util_PostEvent(initContext, (PLEvent *) *actionEvent);
+
+ NLFS_CLEANUP:
+    ::util_ReleaseStringChars(env, uri, (const jchar *) uriStringUniChars);
+    ::util_ReleaseStringUTFChars(env, contentType, contentTypeChars);
+    delete uriNsString;
+
+    // note, the deleteGlobalRef for loadProperties happens in the
+    // wsLoadFromStreamEvent destructor.
+}
+
+
 JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeRefresh
 (JNIEnv *env, jobject obj, jint webShellPtr, jlong loadFlags)
 {

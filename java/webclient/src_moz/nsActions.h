@@ -47,7 +47,11 @@
 #include "nsString.h"
 #include "plevent.h"
 
+struct WebShellInitContext;
+class InputStreamShim;
 
+// PENDING(edburns): break out nsAction subclass into separate file 
+// to reduce bloat.
 
 /**
 
@@ -131,6 +135,29 @@ public:
 protected:
         nsIWebNavigation *   mWebNavigation;
         nsString    *   mURL;
+};
+
+class wsLoadFromStreamEvent : public nsActionEvent {
+public:
+    wsLoadFromStreamEvent(WebShellInitContext *yourInitContext, 
+                          void *globalStream,
+                          nsString &uriToCopy,
+                          const char *contentTypeToCopy,
+                          PRInt32 contentLength, void *globalLoadProperties);
+    virtual ~wsLoadFromStreamEvent();
+    void * handleEvent(void);
+
+private:
+    wsLoadFromStreamEvent(WebShellInitContext *yourDocShell, 
+                          InputStreamShim *yourShim);
+
+protected:
+
+    WebShellInitContext *mInitContext;
+    nsString mUriString;
+    char *mContentType;       // MUST be delete'd in destructor
+    void * mProperties;       // MUST be util_deleteGlobalRef'd in destructor.
+    InputStreamShim *mShim;   // DO NOT delete this in the destructor
 };
 
 
@@ -347,8 +374,6 @@ protected:
     nsIDocumentLoaderObserver *mDocObserver;
 };
 
-struct WebShellInitContext;
-
 class wsDeallocateInitContextEvent : public nsActionEvent {
 public:
     wsDeallocateInitContextEvent(WebShellInitContext *yourInitContext);
@@ -516,6 +541,8 @@ public:
 protected:
     void *mJobject;
 };
+
+
 
 
 #endif /* nsActions_h___ */

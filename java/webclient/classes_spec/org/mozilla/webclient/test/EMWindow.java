@@ -48,6 +48,9 @@ import org.mozilla.util.Assert;
 
 import org.w3c.dom.Document;
 
+import java.io.File;
+import java.io.FileInputStream;
+
 /**
  *
 
@@ -171,8 +174,10 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
         stopButton.setEnabled(false);
 		refreshButton = makeItem(buttonsPanel, "Refresh", 3, 0, 1, 1, 0.0, 0.0);
         refreshButton.setEnabled(false);
-	makeItem(buttonsPanel, "Bookmarks",    4, 0, 1, 1, 0.0, 0.0);
-	//	makeItem(buttonsPanel, "DOMViewer",    5, 0, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Bookmarks",    4, 0, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Stream With Len", 5, 0, 1, 1, 0.0, 0.0);
+        makeItem(buttonsPanel, "Stream No Len",   6, 0, 1, 1, 0.0, 0.0);
+	//	makeItem(buttonsPanel, "DOMViewer",    7, 0, 1, 1, 0.0, 0.0);
 
 		// Create the control panel
 		controlPanel = new Panel();
@@ -413,6 +418,33 @@ public void actionPerformed (ActionEvent evt)
             }
             bookmarksFrame.setVisible(true);
         }
+        else if (command.equals("Stream With Len")) {
+            FileDialog fileDialog = new FileDialog(this, "Pick an HTML file",
+                                                   FileDialog.LOAD);
+            fileDialog.show();
+            String file = fileDialog.getFile();
+            String directory = fileDialog.getDirectory();
+
+            if ((null != file) && (null != directory) &&
+                (0 < file.length()) && (0 < directory.length())) {
+                String absPath = directory + file;
+                
+                FileInputStream fis = new FileInputStream(absPath);
+                File tFile = new File(absPath);
+                
+                System.out.println("debug: edburns: file: " + absPath);
+                
+                navigation.loadFromStream(fis, "file:///hello.html",
+                                          "text/html", (int) tFile.length(), 
+                                          null);
+            }
+        }        
+        else if (command.equals("Stream No Len")) {
+            RandomHTMLInputStream rhis = new RandomHTMLInputStream(3);
+            System.out.println("debug: edburns: created RandomHTMLInputStream");
+            navigation.loadFromStream(rhis, "http://randomstream.com/",
+                                      "text/html", -1, null);
+        }        
         else if (command.equals("DOMViewer")) {
             if (null == domViewer) {
                 domViewer = new DOMViewerFrame("DOM Viewer", creator);

@@ -25,13 +25,15 @@ package org.mozilla.webclient.wrapper_native;
 import org.mozilla.util.Assert;
 import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
+import org.mozilla.util.RangeException;
 
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.Navigation;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
-import java.awt.Rectangle;
+import java.io.InputStream;
+import java.util.Properties;
 
 public class NavigationImpl extends ImplObjectNative implements Navigation
 {
@@ -84,6 +86,29 @@ public void loadURL(String absoluteURL)
     }
 }
 
+public void loadFromStream(InputStream stream, String uri,
+                           String contentType, int contentLength,
+                           Properties loadInfo)
+{
+    ParameterCheck.nonNull(stream);
+    ParameterCheck.nonNull(uri);
+    ParameterCheck.nonNull(contentType);
+    if (contentLength < -1 || contentLength == 0) {
+        throw new RangeException("contentLength value " + contentLength +
+                                 " is out of range.  It is should be either -1 or greater than 0.");
+    }
+
+    myFactory.throwExceptionIfNotInitialized();
+    Assert.assert(-1 != nativeWebShell);
+    
+    synchronized(myBrowserControl) {
+        nativeLoadFromStream(nativeWebShell, stream,
+                             uri, contentType, contentLength,
+                             loadInfo);
+    }
+}
+
+
 public void refresh(long loadFlags)
 {
     ParameterCheck.noLessThan(loadFlags, 0);
@@ -110,6 +135,12 @@ public void stop()
 //
 
 public native void nativeLoadURL(int webShellPtr, String absoluteURL);
+
+public native void nativeLoadFromStream(int webShellPtr, InputStream stream,
+                                        String uri, 
+                                        String contentType, 
+                                        int contentLength,
+                                        Properties loadInfo);
 
 public native void nativeRefresh(int webShellPtr, long loadFlags);
 

@@ -140,6 +140,7 @@ void (* nativeAddRef) (JNIEnv *, jobject, jint);
 void (* nativeRelease) (JNIEnv *, jobject, jint);
 // from NavigationImpl.h
 void (* nativeLoadURL) (JNIEnv *, jobject, jint, jstring);
+void (* nativeLoadFromStream) (JNIEnv *, jobject, jint, jobject, jstring, jstring, jint, jobject);
 void (* nativeRefresh) (JNIEnv *, jobject, jint, jlong);
 void (* nativeStop) (JNIEnv *, jobject, jint);
 // from RDFEnumeration.h
@@ -261,6 +262,10 @@ void locateBrowserControlStubFunctions(void * dll) {
   nativeLoadURL = (void (*) (JNIEnv *, jobject, jint, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeLoadURL");
   if (!nativeLoadURL) {
     printf("got dlsym error %s\n", dlerror());
+  }
+  nativeLoadFromStream = (void (*) (JNIEnv *, jobject, jint, jobject, jstring, jstring, jint, jobject)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeLoadFromStream");
+  if (!nativeLoadFromStream) {
+      printf("got dlsym error %s\n", dlerror());
   }
   nativeRefresh = (void (*) (JNIEnv *, jobject, jint, jlong)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeRefresh");
   if (!nativeRefresh) {
@@ -753,6 +758,19 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
   (* nativeLoadURL) (env, obj, webShellPtr, urlString);
 }
 
+/*
+ * Class:     org_mozilla_webclient_wrapper_0005fnative_NavigationImpl
+ * Method:    nativeLoadFromStream
+ * Signature: (ILjava/io/InputStream;Ljava/lang/String;Ljava/lang/String;ILjava/util/Properties;)V
+ */
+JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl_nativeLoadFromStream
+  (JNIEnv *env, jobject obj, jint webShellPtr, jobject javaStream, 
+   jstring absoluteUrl, jstring contentType, jint contentLength, 
+   jobject loadProperties)
+{
+    (* nativeLoadFromStream) (env, obj, webShellPtr, javaStream, absoluteUrl, 
+                              contentType, contentLength, loadProperties
+}
 /*
  * Class:     org_mozilla_webclient_wrapper_0005fnative_NavigationImpl
  * Method:    nativeRefresh
