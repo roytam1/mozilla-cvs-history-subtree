@@ -1697,13 +1697,23 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
   if (lineCount > 0) {
     // Fix any frames deeper in the reflow path.
 
-    // Get the reflow path, which is stored as a stack (i.e., the next
-    // frame in the reflow is at the _end_ of the array).
-    nsVoidArray *path = aState.mReflowState.reflowCommand->GetPath();
+    // Get the reflow path, which is stored as a tree.  Our current node
+    // is in the reflowcommand.
+    nsReflowTree::Node::Iterator reflowNode(aState.mReflowState.GetCurrentReflowNode());
+    // XXX? should we start with the children of this node, or the node itself?
+    // Let's try starting with the child...
 
-    for (PRInt32 i = path->Count() - 1; i >= 0; --i) {
-      nsIFrame *frame = NS_STATIC_CAST(nsIFrame *, path->ElementAt(i));
+    nsIFrame *frame;
+    if (reflowNode.CurrentNode())
+    {
+      reflowNode.CurrentNode()->SetFrame(aState.mNextRCFrame);
+      reflowNode = reflowNode.NextChild(&frame);
+//    frame = reflowNode.CurrentNode()->GetFrame();
+    }
 
+    while (reflowNode.CurrentNode())
+    {
+      // 'frame' is set already
       // Stop if we encounter a non-inline frame in the reflow path.
       const nsStyleDisplay *display;
       ::GetStyleData(frame, &display);
@@ -1718,7 +1728,12 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
         frame->GetPrevInFlow(&prevInFlow);
       } while (--count >= 0 && prevInFlow && (frame = prevInFlow));
 
-      path->ReplaceElementAt(frame, i);
+      reflowNode.CurrentNode()->SetFrame(frame);
+      nsReflowTree::Node::Iterator reflowIterator(reflowNode.CurrentNode());
+      // FIX!!! this doesn't walk more than one branch of the tree!
+      // THIS WILL NOT WORK for release!  We'll need to walk the tree, which
+      // requires recursion or a stack or extra state in the nodes.
+      reflowNode = reflowIterator.NextChild(&frame);
     }
   }
 }
