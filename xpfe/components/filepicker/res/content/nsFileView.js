@@ -354,7 +354,7 @@ nsFileView.prototype = {
     var dirEntries = dir.QueryInterface(nsIFile).directoryEntries;
     var nextFile;
     var fileobj;
-    var time = new Date();
+    //var time = new Date();
 
     while (dirEntries.hasMoreElements()) {
       nextFile = dirEntries.getNext().QueryInterface(nsIFile);
@@ -369,29 +369,32 @@ nsFileView.prototype = {
       }
     }
 
-    time = new Date() - time;
-    dump("load time: " + time/1000 + " seconds\n");
+    //time = new Date() - time;
+    //dump("load time: " + time/1000 + " seconds\n");
 
     this.mFilteredFiles = [];
 
     if (this.mOutliner) {
       var oldRows = this.mTotalRows;
       this.mTotalRows = this.mDirList.length;
-      dump("rowCountChanged(0, " + (this.mDirList.length - oldRows) + ")\n");
       if (this.mDirList.length != oldRows) {
         this.mOutliner.rowCountChanged(0, this.mDirList.length - oldRows);
       }
       this.mOutliner.invalidate();
     }
 
-    time = new Date();
+    //time = new Date();
+
     this.filterFiles();
-    time = new Date() - time;
-    dump("filter time: " + time/1000 + " seconds\n");
-    time = new Date();
+
+    //time = new Date() - time;
+    //dump("filter time: " + time/1000 + " seconds\n");
+    //time = new Date();
+
     this.sort(this.mSortType, this.mReverseSort);
-    time = new Date() - time;
-    dump("sort time: " + time/1000 + " seconds\n");
+
+    //time = new Date() - time;
+    //dump("sort time: " + time/1000 + " seconds\n");
   },
 
   setFilter: function(filter) {
