@@ -102,7 +102,7 @@ interface nsIAbDirectory : nsISupports {
 	boolean hasDirectory(in nsIAbDirectory dir);
 
 	void addCard(in nsIAbCard card);
-	void dropCard(in nsIAbCard card);
+	void dropCard(in string srcDirectoryURI, in nsIAbCard card);
 
 	// Mail list specific
 

@@ -91,10 +91,11 @@ var abDirTreeObserver = {
       
       var rows = xferData[0].split(",");
       var numrows = rows.length;
+      var srcDirectoryURI = GetAbViewURI();
 
       for (var i=0;i<numrows;i++) {
         var card = abView.getCardFromRow(rows[i]);
-        directory.dropCard(card);
+        directory.dropCard(srcDirectoryURI, card);
       }
     },
 
