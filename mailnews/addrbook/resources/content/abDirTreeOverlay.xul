@@ -43,11 +43,7 @@ Contributors:
       onblur="goOnEvent(this,'blur')"
       ondragover="nsDragAndDrop.dragOver(event, abDirTreeObserver);"
       ondragdrop="nsDragAndDrop.drop(event, abDirTreeObserver);">
-      
-    <treecols>
-      <treecol id="DirCol" flex="1" primary="true" hideheader="true"/>
-    </treecols>
-    
+         
     <template>
       <rule>
         <conditions>
@@ -78,5 +74,10 @@ Contributors:
         </action>
       </rule>
     </template>
+
+    <treecols>
+      <treecol id="DirCol" label="&addressbook-sidebar-header.label;" flex="1" primary="true" hideheader="true"/>
+    </treecols>
+
   </tree>
 </overlay>
