@@ -589,7 +589,7 @@ CheckLDAPOperationResult(nsHashKey *aKey, void *aData, void* aClosure)
     LDAPMessage *msgHandle;
     nsCOMPtr<nsILDAPMessage> msg;
     PRBool operationFinished = PR_TRUE;
-    struct timeval timeout = { 1, 0 }; 
+    struct timeval timeout = { 0, 0 }; 
     PRIntervalTime sleepTime = PR_MillisecondsToInterval(40);
 
     // we need to access some of the connection loop's objects
@@ -618,8 +618,9 @@ CheckLDAPOperationResult(nsHashKey *aKey, void *aData, void* aClosure)
 
             // the connection may not exist yet.  sleep for a while
             // and try again
-            //
-        PR_LOG(gLDAPLogModule, PR_LOG_WARNING, ("ldap_result() timed out.\n"));
+
+            // We now poll for 0, so we get a lot of this spew when debugging ldap.
+            //PR_LOG(gLDAPLogModule, PR_LOG_WARNING, ("ldap_result() timed out.\n"));
 
             // The sleep here is to avoid a problem where the LDAP
             // Connection/thread isn't ready quite yet, and we want to
