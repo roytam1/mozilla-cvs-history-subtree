@@ -125,6 +125,9 @@ pkgLdapSDK: FORCE
 buildAndPkgLdapSDK: buildLdapClientSDK pkgLdapSDK
 
 PullSDKComponents: FORCE
+	@echo
+	@echo ==== Starting to pull components ==========
+	@echo
 ifneq ($(DONT_REPULL), 1) 
 ifeq ($(HAVE_CCONF), 1)
 	@if [ -d $(CORECONFDIR)/ ]; then \
