@@ -31,9 +31,6 @@
 #include "nsIDocumentViewer.h"
 #include "nsIDOMWindowInternal.h"
 
-#include "nsIImageGroup.h"
-#include "nsIImageObserver.h"
-
 #include "nsIDocument.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
@@ -355,8 +352,7 @@ public:
 class DocumentViewerImpl : public nsIDocumentViewer,
                            public nsIContentViewerEdit,
                            public nsIContentViewerFile,
-                           public nsIMarkupDocumentViewer,
-                           public nsIImageGroupObserver
+                           public nsIMarkupDocumentViewer
 {
   friend class nsDocViewerSelectionListener;
   
@@ -415,10 +411,6 @@ public:
   typedef void (*CallChildFunc)(nsIMarkupDocumentViewer* aViewer,
                                 void* aClosure);
   nsresult CallChildren(CallChildFunc aFunc, void* aClosure);
-
-  // nsIImageGroupObserver interface
-  virtual void Notify(nsIImageGroup *aImageGroup,
-                      nsImageGroupNotification aNotificationType);
 
   // Printing Methods
   PRBool   PrintPage(nsIPresContext* aPresContext,
@@ -3599,57 +3591,6 @@ DocumentViewerImpl::PrintDocContent(PrintObject* aPO, nsresult& aStatus)
   return PR_FALSE; 
 }
 
-//-------------------------------------------------------
-void DocumentViewerImpl::Notify(nsIImageGroup *aImageGroup,
-                                nsImageGroupNotification aNotificationType)
-{
-  //
-  // Image are being loaded...  Set the flag to delay printing until
-  // all images are loaded.
-  //
-  if (aNotificationType == nsImageGroupNotification_kStartedLoading) {
-    mIsPrinting = PR_TRUE;
-  }
-  //
-  // All the images have been loaded, so the document is ready to print.
-  //
-  // However, at this point we are unable to release the resources that
-  // were allocated for printing...  This is because ImgLib resources will
-  // be deleted and *this* is an ImgLib notification routine.  So, fire an 
-  // event to do the actual printing.
-  //
-  else if(aNotificationType == nsImageGroupNotification_kFinishedLoading) {
-    nsresult rv;
-    nsCOMPtr<nsIEventQueue> eventQ;
-
-    // Get the event queue of the current thread...
-    NS_WITH_SERVICE(nsIEventQueueService, eventQService, kEventQueueService, &rv);
-    if (NS_FAILED(rv)) return;
-
-    rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, 
-                                            getter_AddRefs(eventQ));
-    if (NS_FAILED(rv)) return;
-
-    PRStatus status;
-    PLEvent *event = new PLEvent;
-  
-    if (!event) return;
-
-    //
-    // AddRef this because it is being placed in the PLEvent struct.
-    // It will be Released when DestroyPLEvent is called...
-    //
-    NS_ADDREF_THIS();
-    PL_InitEvent(event, 
-                 this,
-                 (PLHandleEventProc)  DocumentViewerImpl::HandlePLEvent,
-                 (PLDestroyEventProc) DocumentViewerImpl::DestroyPLEvent);
-
-    status = eventQ->PostEvent(event);
-  }
-}
-
-
 NS_IMETHODIMP
 DocumentViewerImpl::SetEnableRendering(PRBool aOn)
 {
@@ -3906,15 +3847,6 @@ nsresult DocumentViewerImpl::DocumentReadyForPrinting()
 
   webContainer = do_QueryInterface(mContainer);
   if(webContainer) {
-    //
-    // Remove ourselves as an image group observer...
-    //
-    nsCOMPtr<nsIImageGroup> imageGroup;
-    mPrt->mPrintPC->GetImageGroup(getter_AddRefs(imageGroup));
-    if (imageGroup) {
-      imageGroup->RemoveObserver(this);
-    }
-
     //
     // Send the document to the printer...
     //
@@ -4444,12 +4376,6 @@ nsresult rv;
           // setup hierarchical relationship in view manager
           mPrt->mPrintVM->SetRootView(mPrt->mPrintView);
           mPrt->mPrintPS->Init(mDocument,mPrt->mPrintPC,mPrt->mPrintVM,mPrt->mPrintSS);
-
-          nsCOMPtr<nsIImageGroup> imageGroup;
-          mPrt->mPrintPC->GetImageGroup(getter_AddRefs(imageGroup));
-          if (imageGroup) {
-            imageGroup->AddObserver(this);
-          }
 
           mPrt->mPrintPS->InitialReflow(width,height);
 
