@@ -216,8 +216,21 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
 
   switch (attrname[0]) {
     case 'A':
-      // kAddressCharSetColumn?
-      rv = NS_ERROR_UNEXPECTED;
+      // AnniversaryYear, AnniversaryMonth, AnniversaryDay
+      switch (attrname[11]) {
+        case 'Y':
+          rv = GetAnniversaryYear(value);
+          break;
+        case 'M':
+          rv = GetAnniversaryMonth(value);
+          break;
+        case 'D':
+          rv = GetAnniversaryDay(value);
+          break;
+        default:
+          rv = NS_ERROR_UNEXPECTED;
+          break;
+      }
       break;
     case 'B':
       // BirthYear, BirthMonth, BirthDay
@@ -241,8 +254,17 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
         case 'o':
           rv = GetCompany(value);
           break;
+        case 'a': // CardType, Category
+          if (attrname[2] == 't')
+            rv = GetCategory(value);
+          else
+            rv = GetCardType(value);
+          break;
         case 'e':
-          rv = GetCellularNumber(value);
+          if (strlen(attrname) <= 14)
+            rv = GetCellularNumber(value);
+          else
+            rv = GetCellularNumberType(value);
           break;
         case 'u':
           switch (attrname[6]) {
@@ -271,14 +293,34 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
     case 'D':
       if (attrname[1] == 'i') 
         rv = GetDisplayName(value);
+      else if (attrname[2] == 'f')
+      {
+        if ((attrname[7] == 'E'))
+          rv = GetDefaultEmail(value);
+        else
+          rv = GetDefaultAddress(value);
+      }
       else 
         rv = GetDepartment(value);
       break;
     case 'F':
-      if (attrname[1] == 'i') 
+      switch (attrname[1]) {
+      case 'i':
         rv = GetFirstName(value);
-      else
-        rv = GetFaxNumber(value);
+        break;
+      case 'a':
+        if ((attrname[2] == 'x'))
+          if (strlen(attrname) <= 9)
+            rv = GetFaxNumber(value);
+          else
+            rv = GetFaxNumberType(value);
+        else
+          rv = GetFamilyName(value);
+        break;
+      default:
+        rv = NS_ERROR_UNEXPECTED;
+        break;
+      }
       break;
     case 'H':
       switch (attrname[4]) {
@@ -295,7 +337,10 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
             rv = GetHomeCountry(value);
           break;
         case 'P':
-          rv = GetHomePhone(value);
+          if (strlen(attrname) <= 9)
+            rv = GetHomePhone(value);
+          else
+            rv = GetHomePhoneType(value);
           break;
         case 'S':
           rv = GetHomeState(value);
@@ -354,7 +399,10 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
           *value = nsCRT::strdup(formatStr);
           break;
         case 'g':
-          rv = GetPagerNumber(value);
+          if (strlen(attrname) <= 11)
+            rv = GetPagerNumber(value);
+          else
+            rv = GetPagerNumberType(value);
           break;
         case 'i':
           rv = GetPrimaryEmail(value);
@@ -365,7 +413,10 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
       }
       break;
     case 'S':
-      rv = GetSecondEmail(value);
+      if (attrname[1] == 'e')
+        rv = GetSecondEmail(value);
+      else
+        rv = GetSpouseName(value);
       break;
     case 'W': 
       if (attrname[1] == 'e') {
@@ -389,7 +440,10 @@ NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **v
               rv = GetWorkCountry(value);
             break;
           case 'P':
-            rv = GetWorkPhone(value);
+            if (strlen(attrname) <= 9)
+              rv = GetWorkPhone(value);
+            else
+              rv = GetWorkPhoneType(value);
             break;
           case 'S':
             rv = GetWorkState(value);
@@ -423,8 +477,21 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
 
   switch (attrname[0]) {
     case 'A':
-      // kAddressCharSetColumn?
-      rv = NS_ERROR_UNEXPECTED;
+      // AnniversaryYear, AnniversaryMonth, AnniversaryDay
+      switch (attrname[5]) {
+        case 'Y':
+          rv = SetAnniversaryYear(value);
+          break;
+        case 'M':
+          rv = SetAnniversaryMonth(value);
+          break;
+        case 'D':
+          rv = SetAnniversaryDay(value);
+          break;
+        default:
+          rv = NS_ERROR_UNEXPECTED;
+          break;
+      }
       break;
     case 'B':
       // BirthYear, BirthMonth, BirthDay
@@ -448,8 +515,17 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
         case 'o':
           rv = SetCompany(value);
           break;
+        case 'a': // CardType, Category
+          if (attrname[2] == 't')
+            rv = SetCategory(value);
+          else
+            rv = SetCardType(value);
+          break;
         case 'e':
-          rv = SetCellularNumber(value);
+          if (strlen(attrname) <= 14)
+            rv = SetCellularNumber(value);
+          else
+            rv = SetCellularNumberType(value);
           break;
         case 'u':
           switch (attrname[6]) {
@@ -478,14 +554,34 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
     case 'D':
       if (attrname[1] == 'i') 
         rv = SetDisplayName(value);
+      else if (attrname[2] == 'f')
+      {
+        if ((attrname[7] == 'E'))
+          rv = SetDefaultEmail(value);
+        else
+          rv = SetDefaultAddress(value);
+      }
       else 
         rv = SetDepartment(value);
       break;
     case 'F':
-      if (attrname[1] == 'i') 
+      switch (attrname[1]) {
+      case 'i':
         rv = SetFirstName(value);
-      else
-        rv = SetFaxNumber(value);
+        break;
+      case 'a':
+        if ((attrname[2] == 'x'))
+          if (strlen(attrname) <= 9)
+            rv = SetFaxNumber(value);
+          else
+            rv = SetFaxNumberType(value);
+        else
+          rv = SetFamilyName(value);
+        break;
+      default:
+        rv = NS_ERROR_UNEXPECTED;
+        break;
+      }
       break;
     case 'H':
       switch (attrname[4]) {
@@ -502,7 +598,10 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
             rv = SetHomeCountry(value);
           break;
         case 'P':
-          rv = SetHomePhone(value);
+          if (strlen(attrname) <= 9)
+            rv = SetHomePhone(value);
+          else
+            rv = SetHomePhoneType(value);
           break;
         case 'S':
           rv = SetHomeState(value);
@@ -555,7 +654,10 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
           }
           break;
         case 'g':
-          rv = SetPagerNumber(value);
+          if (strlen(attrname) <= 11)
+            rv = SetPagerNumber(value);
+          else
+            rv = SetPagerNumberType(value);
           break;
         case 'i':
           rv = SetPrimaryEmail(value);
@@ -566,7 +668,10 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
       }
       break;
     case 'S':
-      rv = SetSecondEmail(value);
+      if (attrname[1] == 'e')
+        rv = SetSecondEmail(value);
+      else
+        rv = SetSpouseName(value);
       break;
     case 'W': 
       if (attrname[1] == 'e') {
@@ -590,7 +695,10 @@ NS_IMETHODIMP nsAbCardProperty::SetCardValue(const char *attrname, const PRUnich
               rv = SetWorkCountry(value);
             break;
           case 'P':
-            rv = SetWorkPhone(value);
+            if (strlen(attrname) <= 9)
+              rv = SetWorkPhone(value);
+            else
+              rv = SetWorkPhoneType(value);
             break;
           case 'S':
             rv = SetWorkState(value);
@@ -638,6 +746,14 @@ nsAbCardProperty::GetSecondEmail(PRUnichar * *aSecondEmail)
 { return GetAttributeName(aSecondEmail, m_SecondEmail); }
 
 NS_IMETHODIMP
+nsAbCardProperty::GetDefaultEmail(PRUnichar * *aDefaultEmail)
+{ return GetAttributeName(aDefaultEmail, m_DefaultEmail); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetCardType(PRUnichar * *aCardType)
+{ return GetAttributeName(aCardType, m_CardType); }
+
+NS_IMETHODIMP
 nsAbCardProperty::GetWorkPhone(PRUnichar * *aWorkPhone)
 { return GetAttributeName(aWorkPhone, m_WorkPhone); }
 
@@ -656,6 +772,26 @@ nsAbCardProperty::GetPagerNumber(PRUnichar * *aPagerNumber)
 NS_IMETHODIMP
 nsAbCardProperty::GetCellularNumber(PRUnichar * *aCellularNumber)
 { return GetAttributeName(aCellularNumber, m_CellularNumber); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetWorkPhoneType(PRUnichar * *aWorkPhoneType)
+{ return GetAttributeName(aWorkPhoneType, m_WorkPhoneType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetHomePhoneType(PRUnichar * *aHomePhoneType)
+{ return GetAttributeName(aHomePhoneType, m_HomePhoneType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetFaxNumberType(PRUnichar * *aFaxNumberType)
+{ return GetAttributeName(aFaxNumberType, m_FaxNumberType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetPagerNumberType(PRUnichar * *aPagerNumberType)
+{ return GetAttributeName(aPagerNumberType, m_PagerNumberType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetCellularNumberType(PRUnichar * *aCellularNumberType)
+{ return GetAttributeName(aCellularNumberType, m_CellularNumberType); }
 
 NS_IMETHODIMP
 nsAbCardProperty::GetHomeAddress(PRUnichar * *aHomeAddress)
@@ -716,6 +852,34 @@ nsAbCardProperty::GetDepartment(PRUnichar * *aDepartment)
 NS_IMETHODIMP
 nsAbCardProperty::GetCompany(PRUnichar * *aCompany)
 { return GetAttributeName(aCompany, m_Company); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetAnniversaryYear(PRUnichar * *aAnniversaryYear)
+{ return GetAttributeName(aAnniversaryYear, m_AnniversaryYear); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetAnniversaryMonth(PRUnichar * *aAnniversaryMonth)
+{ return GetAttributeName(aAnniversaryMonth, m_AnniversaryMonth); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetAnniversaryDay(PRUnichar * *aAnniversaryDay)
+{ return GetAttributeName(aAnniversaryDay, m_AnniversaryDay); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetSpouseName(PRUnichar * *aSpouseName)
+{ return GetAttributeName(aSpouseName, m_SpouseName); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetFamilyName(PRUnichar * *aFamilyName)
+{ return GetAttributeName(aFamilyName, m_FamilyName); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetDefaultAddress(PRUnichar * *aDefaultAddress)
+{ return GetAttributeName(aDefaultAddress, m_DefaultAddress); }
+
+NS_IMETHODIMP
+nsAbCardProperty::GetCategory(PRUnichar * *aCategory)
+{ return GetAttributeName(aCategory, m_Category); }
 
 NS_IMETHODIMP
 nsAbCardProperty::GetWebPage1(PRUnichar * *aWebPage1)
@@ -786,6 +950,14 @@ nsAbCardProperty::SetSecondEmail(const PRUnichar * aSecondEmail)
 { return SetAttributeName(aSecondEmail, m_SecondEmail); }
 
 NS_IMETHODIMP
+nsAbCardProperty::SetDefaultEmail(const PRUnichar * aDefaultEmail)
+{ return SetAttributeName(aDefaultEmail, m_DefaultEmail); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetCardType(const PRUnichar * aCardType)
+{ return SetAttributeName(aCardType, m_CardType); }
+
+NS_IMETHODIMP
 nsAbCardProperty::SetWorkPhone(const PRUnichar * aWorkPhone)
 { return SetAttributeName(aWorkPhone, m_WorkPhone); }
 
@@ -804,6 +976,26 @@ nsAbCardProperty::SetPagerNumber(const PRUnichar * aPagerNumber)
 NS_IMETHODIMP
 nsAbCardProperty::SetCellularNumber(const PRUnichar * aCellularNumber)
 { return SetAttributeName(aCellularNumber, m_CellularNumber); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetWorkPhoneType(const PRUnichar * aWorkPhoneType)
+{ return SetAttributeName(aWorkPhoneType, m_WorkPhoneType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetHomePhoneType(const PRUnichar * aHomePhoneType)
+{ return SetAttributeName(aHomePhoneType, m_HomePhoneType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetFaxNumberType(const PRUnichar * aFaxNumberType)
+{ return SetAttributeName(aFaxNumberType, m_FaxNumberType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetPagerNumberType(const PRUnichar * aPagerNumberType)
+{ return SetAttributeName(aPagerNumberType, m_PagerNumberType); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetCellularNumberType(const PRUnichar * aCellularNumberType)
+{ return SetAttributeName(aCellularNumberType, m_CellularNumberType); }
 
 NS_IMETHODIMP
 nsAbCardProperty::SetHomeAddress(const PRUnichar * aHomeAddress)
@@ -866,6 +1058,34 @@ nsAbCardProperty::SetCompany(const PRUnichar * aCompany)
 { return SetAttributeName(aCompany, m_Company); }
 
 NS_IMETHODIMP
+nsAbCardProperty::SetAnniversaryYear(const PRUnichar * aAnniversaryYear)
+{ return SetAttributeName(aAnniversaryYear, m_AnniversaryYear); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetAnniversaryMonth(const PRUnichar * aAnniversaryMonth)
+{ return SetAttributeName(aAnniversaryMonth, m_AnniversaryMonth); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetAnniversaryDay(const PRUnichar * aAnniversaryDay)
+{ return SetAttributeName(aAnniversaryDay, m_AnniversaryDay); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetSpouseName(const PRUnichar * aSpouseName)
+{ return SetAttributeName(aSpouseName, m_SpouseName); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetFamilyName(const PRUnichar * aFamilyName)
+{ return SetAttributeName(aFamilyName, m_FamilyName); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetDefaultAddress(const PRUnichar * aDefaultAddress)
+{ return SetAttributeName(aDefaultAddress, m_DefaultAddress); }
+
+NS_IMETHODIMP
+nsAbCardProperty::SetCategory(const PRUnichar * aCategory)
+{ return SetAttributeName(aCategory, m_Category); }
+
+NS_IMETHODIMP
 nsAbCardProperty::SetWebPage1(const PRUnichar * aWebPage1)
 { return SetAttributeName(aWebPage1, m_WebPage1); }
 
@@ -925,6 +1145,10 @@ NS_IMETHODIMP nsAbCardProperty::Copy(nsIAbCard* srcCard)
 	SetPrimaryEmail(str);
 	srcCard->GetSecondEmail(getter_Copies(str));
 	SetSecondEmail(str);
+  srcCard->GetDefaultEmail(getter_Copies(str));
+  SetDefaultEmail(str);
+  srcCard->GetCardType(getter_Copies(str));
+  SetCardType(str);
 
 	PRUint32 format;
 	srcCard->GetPreferMailFormat(&format);
@@ -940,6 +1164,16 @@ NS_IMETHODIMP nsAbCardProperty::Copy(nsIAbCard* srcCard)
 	SetPagerNumber(str);
 	srcCard->GetCellularNumber(getter_Copies(str));
 	SetCellularNumber(str);
+  srcCard->GetWorkPhoneType(getter_Copies(str));
+  SetWorkPhoneType(str);
+  srcCard->GetHomePhoneType(getter_Copies(str));
+  SetHomePhoneType(str);
+  srcCard->GetFaxNumberType(getter_Copies(str));
+  SetFaxNumberType(str);
+  srcCard->GetPagerNumberType(getter_Copies(str));
+  SetPagerNumberType(str);
+  srcCard->GetCellularNumberType(getter_Copies(str));
+  SetCellularNumberType(str);
 	srcCard->GetHomeAddress(getter_Copies(str));
 	SetHomeAddress(str);
 	srcCard->GetHomeAddress2(getter_Copies(str));
@@ -970,16 +1204,32 @@ NS_IMETHODIMP nsAbCardProperty::Copy(nsIAbCard* srcCard)
 	SetDepartment(str);
 	srcCard->GetCompany(getter_Copies(str));
 	SetCompany(str);
+
+  srcCard->GetAnniversaryYear(getter_Copies(str));
+  SetAnniversaryYear(str);
+  srcCard->GetAnniversaryMonth(getter_Copies(str));
+  SetAnniversaryMonth(str);
+  srcCard->GetAnniversaryDay(getter_Copies(str));
+  SetAnniversaryDay(str);
+  srcCard->GetSpouseName(getter_Copies(str));
+  SetSpouseName(str);
+  srcCard->GetFamilyName(getter_Copies(str));
+  SetFamilyName(str);
+  srcCard->GetDefaultAddress(getter_Copies(str));
+  SetDefaultAddress(str);
+  srcCard->GetCategory(getter_Copies(str));
+  SetCategory(str);
+
 	srcCard->GetWebPage1(getter_Copies(str));
 	SetWebPage1(str);
 	srcCard->GetWebPage2(getter_Copies(str));
 	SetWebPage2(str);
-	srcCard->GetBirthYear(getter_Copies(str));
-	SetBirthYear(str);
-	srcCard->GetBirthMonth(getter_Copies(str));
-	SetBirthMonth(str);
-	srcCard->GetBirthDay(getter_Copies(str));
-	SetBirthDay(str);
+  srcCard->GetBirthYear(getter_Copies(str));
+  SetBirthYear(str);
+  srcCard->GetBirthMonth(getter_Copies(str));
+  SetBirthMonth(str);
+  srcCard->GetBirthDay(getter_Copies(str));
+  SetBirthDay(str);
 	srcCard->GetCustom1(getter_Copies(str));
 	SetCustom1(str);
 	srcCard->GetCustom2(getter_Copies(str));

@@ -106,11 +106,18 @@ nsAddrDatabase::nsAddrDatabase()
       m_NickNameColumnToken(0),
       m_PriEmailColumnToken(0),
       m_2ndEmailColumnToken(0),
+      m_DefaultEmailColumnToken(0),
+      m_CardTypeColumnToken(0),
       m_WorkPhoneColumnToken(0),
       m_HomePhoneColumnToken(0),
       m_FaxColumnToken(0),
       m_PagerColumnToken(0),
       m_CellularColumnToken(0),
+      m_WorkPhoneTypeColumnToken(0),
+      m_HomePhoneTypeColumnToken(0),
+      m_FaxTypeColumnToken(0),
+      m_PagerTypeColumnToken(0),
+      m_CellularTypeColumnToken(0),
       m_HomeAddressColumnToken(0),
       m_HomeAddress2ColumnToken(0),
       m_HomeCityColumnToken(0),
@@ -123,6 +130,14 @@ nsAddrDatabase::nsAddrDatabase()
       m_WorkStateColumnToken(0),
       m_WorkZipCodeColumnToken(0),
       m_WorkCountryColumnToken(0),
+      m_CompanyColumnToken(0),
+      m_AnniversaryYearColumnToken(0),
+      m_AnniversaryMonthColumnToken(0),
+      m_AnniversaryDayColumnToken(0),
+      m_SpouseNameColumnToken(0),
+      m_FamilyNameColumnToken(0),
+      m_DefaultAddressColumnToken(0),
+      m_CategoryColumnToken(0),
       m_WebPage1ColumnToken(0),
       m_WebPage2ColumnToken(0),
       m_BirthYearColumnToken(0),
@@ -1054,12 +1069,19 @@ nsresult nsAddrDatabase::InitMDBInfo()
             GetStore()->StringToToken(GetEnv(),  kPriEmailColumn, &m_PriEmailColumnToken);
             GetStore()->StringToToken(GetEnv(),  kLowerPriEmailColumn, &m_LowerPriEmailColumnToken);
             GetStore()->StringToToken(GetEnv(),  k2ndEmailColumn, &m_2ndEmailColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kDefaultEmailColumn, &m_DefaultEmailColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kCardTypeColumn, &m_CardTypeColumnToken);
             GetStore()->StringToToken(GetEnv(),  kPreferMailFormatColumn, &m_MailFormatColumnToken);
             GetStore()->StringToToken(GetEnv(),  kWorkPhoneColumn, &m_WorkPhoneColumnToken);
             GetStore()->StringToToken(GetEnv(),  kHomePhoneColumn, &m_HomePhoneColumnToken);
             GetStore()->StringToToken(GetEnv(),  kFaxColumn, &m_FaxColumnToken);
             GetStore()->StringToToken(GetEnv(),  kPagerColumn, &m_PagerColumnToken);
             GetStore()->StringToToken(GetEnv(),  kCellularColumn, &m_CellularColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kWorkPhoneTypeColumn, &m_WorkPhoneTypeColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kHomePhoneTypeColumn, &m_HomePhoneTypeColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kFaxTypeColumn, &m_FaxTypeColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kPagerTypeColumn, &m_PagerTypeColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kCellularTypeColumn, &m_CellularTypeColumnToken);
             GetStore()->StringToToken(GetEnv(),  kHomeAddressColumn, &m_HomeAddressColumnToken);
             GetStore()->StringToToken(GetEnv(),  kHomeAddress2Column, &m_HomeAddress2ColumnToken);
             GetStore()->StringToToken(GetEnv(),  kHomeCityColumn, &m_HomeCityColumnToken);
@@ -1075,6 +1097,13 @@ nsresult nsAddrDatabase::InitMDBInfo()
             GetStore()->StringToToken(GetEnv(),  kJobTitleColumn, &m_JobTitleColumnToken);
             GetStore()->StringToToken(GetEnv(),  kDepartmentColumn, &m_DepartmentColumnToken);
             GetStore()->StringToToken(GetEnv(),  kCompanyColumn, &m_CompanyColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kAnniversaryYearColumn, &m_AnniversaryYearColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kAnniversaryMonthColumn, &m_AnniversaryMonthColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kAnniversaryDayColumn, &m_AnniversaryDayColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kSpouseNameColumn, &m_SpouseNameColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kFamilyNameColumn, &m_FamilyNameColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kDefaultAddressColumn, &m_DefaultAddressColumnToken);
+            GetStore()->StringToToken(GetEnv(),  kCategoryColumn, &m_CategoryColumnToken);
             GetStore()->StringToToken(GetEnv(),  kWebPage1Column, &m_WebPage1ColumnToken);
             GetStore()->StringToToken(GetEnv(),  kWebPage2Column, &m_WebPage2ColumnToken);
             GetStore()->StringToToken(GetEnv(),  kBirthYearColumn, &m_BirthYearColumnToken);
@@ -1158,6 +1187,12 @@ nsresult nsAddrDatabase::AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *ca
     
     card->GetSecondEmail(getter_Copies(unicodeStr));
     Add2ndEmail(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    card->GetDefaultEmail(getter_Copies(unicodeStr));
+    AddDefaultEmail(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+    
+    card->GetCardType(getter_Copies(unicodeStr));
+    AddCardType(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
     
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     card->GetPreferMailFormat(&format);
@@ -1177,6 +1212,21 @@ nsresult nsAddrDatabase::AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *ca
     
     card->GetCellularNumber(getter_Copies(unicodeStr));
     AddCellularNumber(cardRow,NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    card->GetWorkPhoneType(getter_Copies(unicodeStr));
+    AddWorkPhoneType(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+    
+    card->GetHomePhoneType(getter_Copies(unicodeStr));
+    AddHomePhoneType(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+    
+    card->GetFaxNumberType(getter_Copies(unicodeStr));
+    AddFaxNumberType(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+    
+    card->GetPagerNumberType(getter_Copies(unicodeStr));
+    AddPagerNumberType(cardRow,NS_ConvertUCS2toUTF8(unicodeStr).get());
+    
+    card->GetCellularNumberType(getter_Copies(unicodeStr));
+    AddCellularNumberType(cardRow,NS_ConvertUCS2toUTF8(unicodeStr).get());
     
     card->GetHomeAddress(getter_Copies(unicodeStr));
     AddHomeAddress(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
@@ -1222,19 +1272,40 @@ nsresult nsAddrDatabase::AddAttributeColumnsToRow(nsIAbCard *card, nsIMdbRow *ca
       
     card->GetCompany(getter_Copies(unicodeStr)); 
     AddCompany(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
-     
+
+    card->GetAnniversaryYear(getter_Copies(unicodeStr)); 
+    AddAnniversaryYear(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+  
+    card->GetAnniversaryMonth(getter_Copies(unicodeStr)); 
+    AddAnniversaryMonth(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+  
+    card->GetAnniversaryDay(getter_Copies(unicodeStr)); 
+    AddAnniversaryDay(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    card->GetSpouseName(getter_Copies(unicodeStr)); 
+    AddSpouseName(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    card->GetFamilyName(getter_Copies(unicodeStr)); 
+    AddFamilyName(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    card->GetDefaultAddress(getter_Copies(unicodeStr)); 
+    AddDefaultAddress(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
+    card->GetCategory(getter_Copies(unicodeStr)); 
+    AddCategory(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
+
     card->GetWebPage1(getter_Copies(unicodeStr)); 
     AddWebPage1(cardRow,NS_ConvertUCS2toUTF8(unicodeStr).get());
      
     card->GetWebPage2(getter_Copies(unicodeStr)); 
     AddWebPage2(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
-     
+
     card->GetBirthYear(getter_Copies(unicodeStr)); 
     AddBirthYear(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
-      
+  
     card->GetBirthMonth(getter_Copies(unicodeStr)); 
     AddBirthMonth(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
-      
+  
     card->GetBirthDay(getter_Copies(unicodeStr)); 
     AddBirthDay(cardRow, NS_ConvertUCS2toUTF8(unicodeStr).get());
       
@@ -2341,6 +2412,18 @@ nsresult nsAddrDatabase::GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow)
         newCard->SetSecondEmail(tempString.get());
     }
 
+    err = GetStringColumn(cardRow, m_DefaultEmailColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+    {
+        newCard->SetDefaultEmail(tempString.get());
+    }
+
+    err = GetStringColumn(cardRow, m_CardTypeColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+    {
+        newCard->SetCardType(tempString.get());
+    }
+
     PRUint32 format = nsIAbPreferMailFormat::unknown;
     err = GetIntColumn(cardRow, m_MailFormatColumnToken, &format, 0);
     if (NS_SUCCEEDED(err))
@@ -2375,6 +2458,26 @@ nsresult nsAddrDatabase::GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow)
     {
         newCard->SetCellularNumber(tempString.get());
     }
+
+    err = GetStringColumn(cardRow, m_WorkPhoneTypeColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetWorkPhoneType(tempString.get());
+
+    err = GetStringColumn(cardRow, m_HomePhoneTypeColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetHomePhoneType(tempString.get());
+
+    err = GetStringColumn(cardRow, m_FaxTypeColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetFaxNumberType(tempString.get());
+
+    err = GetStringColumn(cardRow, m_PagerTypeColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetPagerNumberType(tempString.get());
+
+    err = GetStringColumn(cardRow, m_CellularTypeColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetCellularNumberType(tempString.get());
 
     err = GetStringColumn(cardRow, m_HomeAddressColumnToken, tempString);
     if (NS_SUCCEEDED(err) && tempString.Length())
@@ -2465,6 +2568,34 @@ nsresult nsAddrDatabase::GetCardFromDB(nsIAbCard *newCard, nsIMdbRow* cardRow)
     {
         newCard->SetCompany(tempString.get());
     }
+
+    err = GetStringColumn(cardRow, m_AnniversaryYearColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetAnniversaryYear(tempString.get());
+
+    err = GetStringColumn(cardRow, m_AnniversaryMonthColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetAnniversaryMonth(tempString.get());
+
+    err = GetStringColumn(cardRow, m_AnniversaryDayColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetAnniversaryDay(tempString.get());
+
+    err = GetStringColumn(cardRow, m_SpouseNameColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetSpouseName(tempString.get());
+
+    err = GetStringColumn(cardRow, m_FamilyNameColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetFamilyName(tempString.get());
+
+    err = GetStringColumn(cardRow, m_DefaultAddressColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetDefaultAddress(tempString.get());
+
+    err = GetStringColumn(cardRow, m_CategoryColumnToken, tempString);
+    if (NS_SUCCEEDED(err) && tempString.Length())
+        newCard->SetCategory(tempString.get());
 
     err = GetStringColumn(cardRow, m_WebPage1ColumnToken, tempString);
     if (NS_SUCCEEDED(err) && tempString.Length())
@@ -3330,3 +3461,14 @@ NS_IMETHODIMP nsAddrDatabase::RemoveExtraCardsInCab(PRUint32 cardTotal, PRUint32
     return NS_OK;
 }
 
+NS_IMETHODIMP nsAddrDatabase::CreateMailListAndAddToDBWithKey(nsIAbDirectory *newList, PRBool notify, PRUint32 *key)
+{
+  NS_ENSURE_ARG_POINTER(key);
+
+  *key = 0;
+  nsresult rv;
+  rv = CreateMailListAndAddToDB(newList, notify);
+  if (NS_SUCCEEDED(rv))
+    *key = m_LastRecordKey;
+  return rv;
+}
