@@ -39,7 +39,7 @@ static void lo_FormatJavaAppInternal(MWContext *context,
 									 PA_Tag *tag,
 									 LO_JavaAppStruct *java_app);
 
-#if 0   // not used
+#if 0   /* not used */
 void
 LO_ClearJavaAppBlock(MWContext *context, LO_JavaAppStruct *java_app)
 {
