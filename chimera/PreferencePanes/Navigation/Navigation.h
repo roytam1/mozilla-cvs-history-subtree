@@ -33,8 +33,8 @@
   IBOutlet NSButton *checkboxNewTabBlank;
   IBOutlet NSButton *checkboxNewWindowBlank;
   
-  IBOutlet NSButton *checkboxOpenTabs;
-  IBOutlet NSButton *checkboxOpenTabsForAEs;
+  IBOutlet id radioOpenTabsForCommand;
+  IBOutlet id radioOpenForAE;
   IBOutlet NSButton *checkboxLoadTabsInBackground;
   
   IBOutlet NSSlider *sliderHistoryDays;

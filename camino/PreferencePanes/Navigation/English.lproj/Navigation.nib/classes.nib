@@ -28,9 +28,9 @@
                 checkboxLoadTabsInBackground = NSButton; 
                 checkboxNewTabBlank = NSButton; 
                 checkboxNewWindowBlank = NSButton; 
-                checkboxOpenTabs = NSButton; 
-                checkboxOpenTabsForAEs = NSButton; 
                 checkboxUseSystemHomePage = NSButton; 
+                radioOpenForAE = id; 
+                radioOpenTabsForCommand = id; 
                 sliderHistoryDays = NSSlider; 
                 textFieldHistoryDays = NSTextField; 
                 textFieldHomePage = NSTextField; 

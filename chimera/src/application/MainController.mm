@@ -76,6 +76,12 @@ extern nsModuleComponentInfo* GetAppComponents(unsigned int * outNumComponents);
 
 static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
+// Constants on how to behave when we are asked to open a URL from
+// another application. These are values of the "browser.reuse_window" pref.
+const int kOpenNewWindowOnAE = 0;
+const int kOpenNewTabOnAE = 1;
+const int kReuseWindowOnAE = 2;
+
 @implementation MainController
 
 -(id)init
@@ -542,24 +548,25 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   // make sure we're initted
   [self preferenceManager];
   
-  PRBool reuseWindow = PR_FALSE;
+  PRInt32 reuseWindow = 0;
   PRBool loadInBackground = PR_FALSE;
   
   nsCOMPtr<nsIPref> prefService ( do_GetService(NS_PREF_CONTRACTID) );
   if ( prefService ) {
-    prefService->GetBoolPref("browser.always_reuse_window", &reuseWindow);
+    prefService->GetIntPref("browser.reuse_window", &reuseWindow);
     prefService->GetBoolPref("browser.tabs.loadInBackground", &loadInBackground);
   }
   
-  // reuse the main window if there is one. The user may have closed all of 
+  // reuse the main window (if there is one) based on the pref in the 
+  // tabbed browsing panel. The user may have closed all of 
   // them or we may get this event at startup before we've had time to load
   // our window.
   BrowserWindowController* controller = [self getMainWindowBrowserController];
-  if (reuseWindow && controller /*&& [controller newTabsAllowed]*/) {
-    // simon wanted to open a new tab here instead of reusing the content area,
-    // but people really want it to reuse the content.
-//    [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground];
-    [controller loadURL: inURLString referrer:nil activate:YES];
+  if (reuseWindow > kOpenNewWindowOnAE && controller) {
+    if (reuseWindow == kOpenNewTabOnAE && [controller newTabsAllowed])
+      [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground];
+    else
+      [controller loadURL: inURLString referrer:nil activate:YES];
   }
   else {
     // should use BrowserWindowController openNewWindowWithURL, but that method

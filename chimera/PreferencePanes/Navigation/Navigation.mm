@@ -65,8 +65,12 @@ const int kDefaultExpireDays = 9;
   [textFieldHistoryDays setIntValue:expireDays];
   [sliderHistoryDays setIntValue:expireDays];
 
-  [checkboxOpenTabs setState:[self getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:&gotPref]];
-  [checkboxOpenTabsForAEs setState:[self getBooleanPref:"browser.always_reuse_window" withSuccess:&gotPref]];
+  [radioOpenTabsForCommand selectCellWithTag:[self getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:&gotPref]];
+  [radioOpenForAE selectCellWithTag:[self getIntPref:"browser.reuse_window" withSuccess:&gotPref]];
+  
+//  [checkboxOpenTabs setState:[self getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:&gotPref]];
+//  [checkboxOpenTabsForAEs setState:[self getBooleanPref:"browser.always_reuse_window" withSuccess:&gotPref]];
+
   [checkboxLoadTabsInBackground setState:[self getBooleanPref:"browser.tabs.loadInBackground" withSuccess:&gotPref]];
 
   BOOL useSystemHomePage = [self getBooleanPref:"chimera.use_system_home_page" withSuccess:&gotPref] && gotPref;  
@@ -111,16 +115,17 @@ const int kDefaultExpireDays = 9;
   if (!mPrefService)
     return;
 
-  if (sender == checkboxOpenTabs) {
-    [self setPref:"browser.tabs.opentabfor.middleclick" toBoolean:[sender state]];
+  if (sender == radioOpenTabsForCommand) {
+    [self setPref:"browser.tabs.opentabfor.middleclick" toBoolean:[[sender selectedCell] tag]];
   }
-  else if (sender == checkboxOpenTabsForAEs) {
-    [self setPref:"browser.always_reuse_window" toBoolean:[sender state]];
+  else if (sender == radioOpenForAE) {
+    [self setPref:"browser.reuse_window" toInt:[[sender selectedCell] tag]];
   }
   else if (sender == checkboxLoadTabsInBackground) {
     [self setPref:"browser.tabs.loadInBackground" toBoolean:[sender state]];
   }
 }
+
 
 - (IBAction)checkboxUseSystemHomePageClicked:(id)sender
 {
