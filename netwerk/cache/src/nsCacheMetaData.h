@@ -94,18 +94,18 @@ private:
                                                     void *arg);
 
     static
-    PLDHashOperator       PR_CALLBACK AccumulateElements(PLDHashTable *table,
+    PLDHashOperator       PR_CALLBACK AccumulateElement(PLDHashTable *table,
                                                          PLDHashEntryHdr *hdr,
                                                          PRUint32 number,
                                                          void *arg);
 
     static
-    PLDHashOperator       PR_CALLBACK FreeElements(PLDHashTable *table,
+    PLDHashOperator       PR_CALLBACK FreeElement(PLDHashTable *table,
                                                    PLDHashEntryHdr *hdr,
                                                    PRUint32 number,
                                                    void *arg);
     static
-    PLDHashOperator       PR_CALLBACK VisitElements(PLDHashTable *table,
+    PLDHashOperator       PR_CALLBACK VisitElement(PLDHashTable *table,
                                                     PLDHashEntryHdr *hdr,
                                                     PRUint32 number,
                                                     void *arg);

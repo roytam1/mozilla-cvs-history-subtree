@@ -168,7 +168,7 @@ nsCacheMetaData::FlattenMetaData(char ** data, PRUint32 * size)
         *data = new char[*size];
         if (*data == nsnull) return NS_ERROR_OUT_OF_MEMORY;
         char* state = *data;
-        PL_DHashTableEnumerate(&table, AccumulateElements, &state);
+        PL_DHashTableEnumerate(&table, AccumulateElement, &state);
     }
 
     return NS_OK;
@@ -199,7 +199,7 @@ nsCacheMetaData::UnflattenMetaData(char * data, PRUint32 size)
 nsresult
 nsCacheMetaData::VisitElements(nsICacheMetaDataVisitor * visitor)
 {
-    (void) PL_DHashTableEnumerate(&table, VisitElements, visitor);
+    (void) PL_DHashTableEnumerate(&table, VisitElement, visitor);
     return NS_OK;
 }
 
@@ -260,7 +260,7 @@ nsCacheMetaData::ClearEntry(PLDHashTable * /* table */,
 void PR_CALLBACK
 nsCacheMetaData::Finalize(PLDHashTable * table)
 {
-    (void) PL_DHashTableEnumerate(table, FreeElements, nsnull);   
+    (void) PL_DHashTableEnumerate(table, FreeElement, nsnull);   
 }
 
 
@@ -280,7 +280,7 @@ nsCacheMetaData::CalculateSize(PLDHashTable *table,
 }
 
 PLDHashOperator PR_CALLBACK
-nsCacheMetaData::AccumulateElements(PLDHashTable *table,
+nsCacheMetaData::AccumulateElement(PLDHashTable *table,
                                  PLDHashEntryHdr *hdr,
                                  PRUint32 number,
                                  void *arg)
@@ -297,7 +297,7 @@ nsCacheMetaData::AccumulateElements(PLDHashTable *table,
 }
 
 PLDHashOperator PR_CALLBACK
-nsCacheMetaData::FreeElements(PLDHashTable *table,
+nsCacheMetaData::FreeElement(PLDHashTable *table,
                               PLDHashEntryHdr *hdr,
                               PRUint32 number,
                               void *arg)
@@ -310,7 +310,7 @@ nsCacheMetaData::FreeElements(PLDHashTable *table,
 
 
 PLDHashOperator PR_CALLBACK
-nsCacheMetaData::VisitElements(PLDHashTable *table,
+nsCacheMetaData::VisitElement(PLDHashTable *table,
                               PLDHashEntryHdr *hdr,
                               PRUint32 number,
                               void *arg)
