@@ -525,7 +525,7 @@ nsFileSpec::nsFileSpec(const char* inString, PRBool inCreateDirs)
 //----------------------------------------------------------------------------------------
 {
 	mError = NS_FILE_RESULT(MacFileHelpers::FSSpecFromFullUnixPath(
-								inString, mSpec, true, true, inCreateDirs));
+								inString, mSpec, false, true, inCreateDirs));
 		// allow a partial path, create as necessary
 	if (mError == NS_FILE_RESULT(fnfErr))
 		mError = NS_OK;
@@ -563,7 +563,7 @@ nsBasicOutStream& operator << (nsBasicOutStream& s, const nsFileSpec& spec)
 void nsFileSpec::operator = (const char* inString)
 //----------------------------------------------------------------------------------------
 {
-	mError = NS_FILE_RESULT(MacFileHelpers::FSSpecFromFullUnixPath(inString, mSpec, true));
+	mError = NS_FILE_RESULT(MacFileHelpers::FSSpecFromFullUnixPath(inString, mSpec, false));
 } // nsFileSpec::operator =
 
 //----------------------------------------------------------------------------------------
