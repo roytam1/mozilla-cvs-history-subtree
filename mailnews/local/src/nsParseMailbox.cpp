@@ -95,7 +95,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartRequest(nsIChannel * /* aChannel */, ns
 				rv = mailDB->Open(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(m_mailDB));
 			}
 			NS_ASSERTION(m_mailDB, "failed to open mail db parsing folder");
-			printf("url file = %s\n", fileName);
+			printf("url file = %s\n", (const char *)fileName);
 		}
 	}
 
