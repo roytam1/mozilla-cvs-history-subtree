@@ -63,6 +63,8 @@ IIRC, I had to:
 - cd xpinstall/wizard/windows/; make
 - cd xpinstall/wizard/windows/nsztool/; make
 - cd xpinstall/wizard/windows/nsinstall/; make
+- if you are using a build dir, copy over xpinstall/wizard/windows/builder/
+  from the source dir
 - cd xpinstall/wizard/windows/builder/
 - set MOZ_SRC=f:\mozsrc\beonex\mozilla\
 - perl build.pl -topsrcdir f:\mozsrc\beonex\mozilla

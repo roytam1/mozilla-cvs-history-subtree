@@ -1,0 +1,14 @@
+1. From mozilla/: find . -type d \! -name CVS | xargs -l -P10 cvs tag -b -l BEONEX_WHATEVER >& ../taglog
+(remove -b to get a static tag)
+2. cvs up -r BEONEX_0_9_BRANCH client.mk 
+3. make -f client.mk checkout
+4. Edit CVS/Tag
+5. In extensions/spellcheck/: find . -not -path "*CVS*" |xargs -n 10 cvs add
+5. In README: cvs add user/; cvs add user/*.txt
+6. ae .cvsignore, remove .mozconfig
+7. cat newtextfiles |xargs -n 10 cvs add
+8. cat newbinfiles |xargs -n 10 cvs add -kb
+9. cvs commit
+
+To update to latest Mozilla source:
+cvs up -r MOZILLA_WHATEVER

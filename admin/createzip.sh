@@ -1,5 +1,5 @@
 echo "I assume, you already created the main patch manually."
 
-find zip/othernew/ -type f |sed -e "s|zip/othernew/||"|xargs -n 1 -iFILE cp FILE zip/othernew/FILE
+find admin/othernew/ -type f |sed -e "s|admin/othernew/||"|xargs -n 1 -iFILE cp FILE admin/othernew/FILE
 rm -f bc-source.zip
-zip -r9q bc-source.zip zip/
+zip -r9q bc-source.zip admin/

@@ -1,22 +1,22 @@
 #! /bin/bash
 
 # Copy binary files and search plugins to the right location
-cp zip/.mozconfig .
+cp admin/.mozconfig .
 #  artwork
-cp zip/artwork/logo.gif xpfe/global/resources/content/
-POSIXLY_CORRECT=1 patch -p 0 --forward < zip/artwork/unix.diff
+cp admin/artwork/logo.gif xpfe/global/resources/content/
+POSIXLY_CORRECT=1 patch -p 0 --forward < admin/artwork/unix.diff
 #  throbber
-cp zip/artwork/b.gif themes/modern/communicator/brand/throbber-single.gif
-cp zip/artwork/throbber.gif themes/modern/communicator/brand/throbber-anim.gif
-cp zip/artwork/b.gif themes/modern/communicator/brand/throbber25-single.gif
-cp zip/artwork/throbber.gif themes/modern/communicator/brand/throbber25-anim.gif
-cp zip/artwork/b.gif themes/classic/communicator/brand/throbber-single.gif
-cp zip/artwork/throbber.gif themes/classic/communicator/brand/throbber-anim.gif
+cp admin/artwork/b.gif themes/modern/communicator/brand/throbber-single.gif
+cp admin/artwork/throbber.gif themes/modern/communicator/brand/throbber-anim.gif
+cp admin/artwork/b.gif themes/modern/communicator/brand/throbber25-single.gif
+cp admin/artwork/throbber.gif themes/modern/communicator/brand/throbber25-anim.gif
+cp admin/artwork/b.gif themes/classic/communicator/brand/throbber-single.gif
+cp admin/artwork/throbber.gif themes/classic/communicator/brand/throbber-anim.gif
 
-cp zip/artwork/b.gif themes/classic/communicator/brand/throbber25-single.gif
-cp zip/artwork/throbber.gif themes/classic/communicator/brand/throbber25-anim.gif
-cp zip/artwork/b.gif themes/classic/global/animthrob_single.gif
-cp zip/artwork/throbber.gif themes/classic/global/animthrob.gif
+cp admin/artwork/b.gif themes/classic/communicator/brand/throbber25-single.gif
+cp admin/artwork/throbber.gif themes/classic/communicator/brand/throbber25-anim.gif
+cp admin/artwork/b.gif themes/classic/global/animthrob_single.gif
+cp admin/artwork/throbber.gif themes/classic/global/animthrob.gif
 
 mkdir README/user/
 mkdir xpfe/bootstrap/icons/
@@ -37,7 +37,7 @@ mv Makefile.in Makefile.in.beonex.save
 mv makefile.win makefile.win.beonex.save
 
 # Actually apply main patch
-POSIXLY_CORRECT=1 patch --forward -p 0 < zip/beonex-comm-p41.diff
+POSIXLY_CORRECT=1 patch --forward -p 0 < admin/beonex-comm.diff
 #> patch-main.out
 
 # Restore
@@ -45,14 +45,14 @@ mv Makefile.in.beonex.save Makefile.in
 mv makefile.win.beonex.save makefile.win
 
 #temp hack
-(cd zip/othernew/; find . -type f| xargs -n 1 -iFILE cp FILE ../../FILE)
+(cd admin/othernew/; find . -type f| xargs -n 1 -iFILE cp FILE ../../FILE)
 
 # Finally patch the makefiles we skipped above
 #  not needed atm
-patch --forward < zip/top-makefiles.diff
+patch --forward < admin/top-makefiles.diff
 
 #New/complete files. Copy them over existing ones (in Mozilla or patch).
-(cd zip/othernew/; find . -type f| xargs -n 1 -iFILE cp FILE ../../FILE)
+(cd admin/othernew/; find . -type f| xargs -n 1 -iFILE cp FILE ../../FILE)
 
 #Inform about fails
 #echo "I found at least the following patch merge fails:"
