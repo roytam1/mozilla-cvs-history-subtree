@@ -351,6 +351,7 @@ INTL_ConvertLineWithoutAutoDetect (int16 fromcsid, int16 tocsid, unsigned char *
     if (fromcsid != tocsid)
     {
         return intl_conv(fromcsid, tocsid, pSrc, block_size);
+    }
     else
     {
         return XP_STRDUP(pSrc);
