@@ -7,9 +7,9 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
-mozilla/security/nss,   NSS_CLIENT_TAG
-mozilla/security/psm,   
-DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-mozilla/lib/mac/Instrumentation
-SeaMonkeyAll
+mozilla/nsprpub,        MOZILLA_0_7_BRANCH
+mozilla/security/nss,   MOZILLA_0_7_BRANCH
+mozilla/security/psm,   MOZILLA_0_7_BRANCH
+DirectorySDKSourceC,    MOZILLA_0_7_BRANCH
+mozilla/lib/mac/Instrumentation, MOZILLA_0_7_BRANCH
+SeaMonkeyAll, 		MOZILLA_0_7_BRANCH
