@@ -51,8 +51,10 @@
 
 #ifdef STANDALONE_REGISTRY
 #include <stdlib.h>
+#if !defined(WINCE)
 #include <assert.h>
 #include <errno.h>
+#endif
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
   #include <Errors.h>
@@ -343,6 +345,7 @@ static REGERR nr_OpenFile(char *path, FILEHANDLE *fh)
     (*fh) = vr_fileOpen(path, XP_FILE_UPDATE_BIN);
     if ( !VALID_FILEHANDLE(*fh) )
     {
+#if !defined(WINCE)
         switch (errno)
         {
 #if defined(XP_MAC) || defined(XP_MACOSX)
@@ -370,6 +373,14 @@ static REGERR nr_OpenFile(char *path, FILEHANDLE *fh)
         default:
             return REGERR_FAIL;
         }
+#else
+        /* try read only */
+        (*fh) = vr_fileOpen(path, XP_FILE_READ_BIN);
+        if ( VALID_FILEHANDLE(*fh) )
+            return REGERR_READONLY;
+        else
+            return REGERR_FAIL;
+#endif
     }
 
     return REGERR_OK;
@@ -453,7 +464,7 @@ static REGERR nr_ReadFile(FILEHANDLE fh, REGOFF offset, int32 len, void *buffer)
         readlen = XP_FileRead(buffer, len, fh );
         /* PR_READ() returns an unreliable length, check EOF separately */
         if (readlen < 0) {
-#if !defined(STANDALONE_REGISTRY) || (!defined(XP_MAC) && !defined(XP_MACOSX))
+#if !defined(WINCE) && (!defined(STANDALONE_REGISTRY) || (!defined(XP_MAC) && !defined(XP_MACOSX)))
     #if defined(STANDALONE_REGISTRY)
             if (errno == EBADF) /* bad file handle, not open for read, etc. */
     #else

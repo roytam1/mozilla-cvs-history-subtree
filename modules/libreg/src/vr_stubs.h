@@ -32,7 +32,9 @@
 
 #ifdef STANDALONE_REGISTRY
 
+#if !defined(WINCE)
 #include <errno.h>
+#endif
 #include <string.h>
 #ifdef XP_MAC
 #include "macstdlibextras.h"  /* For strcasecmp and strncasecmp */
@@ -110,7 +112,11 @@
 #define XP_FREEIF(x)        if ((x)) free((x))
 #define XP_STRCMP(x,y)      strcmp((x),(y))
 #define XP_STRNCMP(x,y,n)   strncmp((x),(y),(n))
+#if !defined(WINCE)
 #define XP_STRDUP(s)        strdup((s))
+#else
+#define XP_STRDUP(s)        _strdup((s))
+#endif
 #define XP_MEMCPY(d, s, l)  memcpy((d), (s), (l))
 #define XP_MEMSET(d, c, l)  memset((d), (c), (l))
 
@@ -118,8 +124,13 @@
 #define PR_Unlock(a)        ((void)0)
 
 #ifdef XP_PC
+#if !defined(WINCE)
   #define XP_STRCASECMP(x,y)  stricmp((x),(y))
   #define XP_STRNCASECMP(x,y,n) strnicmp((x),(y),(n))
+#else
+  #define XP_STRCASECMP(x,y)  _stricmp((x),(y))
+  #define XP_STRNCASECMP(x,y,n) _strnicmp((x),(y),(n))
+#endif
 #else
   #define XP_STRCASECMP(x,y)  strcasecmp((x),(y))
   #define XP_STRNCASECMP(x,y,n) strncasecmp((x),(y),(n))

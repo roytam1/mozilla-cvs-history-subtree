@@ -55,7 +55,9 @@
 
 #ifdef STANDALONE_REGISTRY
 #include <stdlib.h>
+#if !defined(WINCE)
 #include <assert.h>
+#endif
 #endif /*STANDALONE_REGISTRY*/
 
 #include "reg.h"
@@ -1013,9 +1015,31 @@ VR_INTERFACE(REGERR) VR_ValidateComponent(char *component_path)
     }
 
     {
+#if defined(STANDALONE_REGISTRY)
+#if !defined(WINCE)
+        struct stat  statStruct;
+        
+        if ( stat ( path, &statStruct ) != 0 ) {
+            err = REGERR_NOFILE;
+        }
+#else
+        FILE* hackCE = NULL;
+
+        hackCE = fopen(path, "r");
+        if(NULL != hackCE)
+        {
+            fclose(hackCE);
+        }
+        else
+        {
+            err = REGERR_NOFILE;
+        }
+#endif
+#else /* STANDALONE_REGISTRY */
         if ( PR_FAILURE == PR_Access(path, PR_ACCESS_EXISTS) ) {
             err = REGERR_NOFILE;
         }
+#endif /* STANDALONE_REGISTRY */
     }
     if (err != REGERR_OK)
         return err;
