@@ -218,6 +218,7 @@ classic.jar:
   skin/classic/messenger/icons/local-mailhost.gif                       (messenger/icons/local-mailhost.gif)
   skin/classic/messenger/icons/message-mail.gif                         (messenger/icons/message-mail.gif)
   skin/classic/messenger/icons/message-mail-attach.gif                  (messenger/icons/message-mail-attach.gif)
+  skin/classic/messenger/icons/message-mail-hasimage.gif                  (messenger/icons/message-mail-hasimage.gif)
   skin/classic/messenger/icons/message-mail-attach-offl.gif             (messenger/icons/message-mail-attach-offl.gif)
   skin/classic/messenger/icons/message-mail-imapdelete.gif              (messenger/icons/message-mail-imapdelete.gif)
   skin/classic/messenger/icons/message-mail-imapdel-offl.gif            (messenger/icons/message-mail-imapdel-offl.gif)

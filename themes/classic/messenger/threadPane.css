@@ -152,6 +152,10 @@ treechildren:-moz-tree-image(subjectCol, attach) {
   list-style-image: url("chrome://messenger/skin/icons/message-mail-attach.gif");
 }
 
+treechildren:-moz-tree-image(subjectCol, hasimage) {
+  list-style-image: url("chrome://messenger/skin/icons/message-mail-hasimage.gif");
+}
+
 treechildren:-moz-tree-image(subjectCol, imapdeleted) {
   list-style-image: url("chrome://messenger/skin/icons/message-mail-imapdelete.gif");
 }
