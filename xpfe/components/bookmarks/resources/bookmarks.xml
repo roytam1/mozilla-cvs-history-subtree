@@ -650,8 +650,10 @@
                   RDFC.Init(kBMDS, rParent);
                   ix = RDFC.IndexOf(rSource);
                   if (ix >= 1) {
+                    var index = this.mOuter.outlinerBuilder.getIndexOfResource(rSource);
                     RDFC.RemoveElementAt(ix, true);
-                    --row;
+                    if (index < row)
+                      --row;
                   }
                 }
                 catch (ex) { }
