@@ -41,6 +41,13 @@ Program Name=$MainExeFile$
 Program Folder Name=$ProductName$
 Program Folder Path=[DESKTOP]
 
+; Controls the check to see if user is installing on top of a previous
+; installation of the product. If so, then prompt the user that cleanup
+; of destination folder is highly recommended, or instability of product
+; can occurr.
+Cleanup On Upgrade=TRUE
+
+
 Uninstall Filename=$UninstallFile$
 
 ; This key is used as a fail over key.  This url will be used when the
@@ -872,6 +879,10 @@ IDC Recapture Homepage=~Make Netscape.com my home page
 IDC Turbo Mode=~Use Quick Launch for faster startup times when possible
 ;*** LOCALIZE ME BABY ***
 Message Download Paused=Setup has encountered a network problem and has paused the download.  If you have just lost your network connection, please click Resume once your network has been reestablished.
+;*** LOCALIZE ME BABY ***
+Message Cleanup On Upgrade=A previous $ProductNameInternal$ installation has been found in the chosen directory.\n\nUnrecognized 3rd party components will be removed from this directory to prevent version incompatibilities and will have to be re-installed.  Your $ProductNameInternal$ profile information will not be affected.
+;*** LOCALIZE ME BABY ***
+Cleanup On Upgrade Path Box String=Path to be cleaned up:
 
 [Site Selector]
 ; Dictates whether or not to show the pull down menu.
