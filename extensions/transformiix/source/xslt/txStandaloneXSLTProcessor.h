@@ -46,6 +46,8 @@
 #include <fstream.h>
 #endif
 
+class txStreamXMLEventHandler;
+
 /*
  * txStandaloneXSLTProcessor is a front-end to the XSLT Processor
  */
@@ -53,64 +55,6 @@
 class txStandaloneXSLTProcessor : public txXSLTProcessor
 {
 public:
-    /*
-     * Creates a new txStandaloneXSLTProcessor
-     */
-    txStandaloneXSLTProcessor();
-
-    /*
-     * Default destructor for txStandaloneXSLTProcessor
-     */
-    virtual ~txStandaloneXSLTProcessor();
-
-    /*
-     * Methods that return a document
-     */
-
-    /*
-     * Reads an XML document from the given XML input stream. The
-     * XML document is processed using the associated XSL document
-     * retrieved from the XML document's Stylesheet Processing Instruction,
-     * otherwise an empty document will be returned.
-     *
-     * @param xmlInput
-     *
-     * @returns the result tree.
-     */
-    Document* process(istream& xmlInput);
-
-    /*
-     * Processes the given XML Document, the XSL stylesheet
-     * will be retrieved from the XML Stylesheet Processing instruction,
-     * otherwise an empty document will be returned.
-     *
-     * @param xmlDocument the XML document to process
-     *
-     * @returns the result tree.
-     */
-    Document* process(Document& xmlDocument);
-
-    /*
-     * Reads an XML Document from the given XML input stream, and
-     * processes the document using the XSL document derived from
-     * the given XSL input stream.
-     *
-     * @param xmlInput
-     * @param xslInput
-     *
-     * @returns the result tree.
-     */
-    Document* process(istream& xmlInput,
-                      istream& xslInput);
-
-    /*
-     * Processes the given XML Document using the given XSL document
-     *
-     * @returns the result tree.
-     */
-    Document* process(Document& xmlDocument,
-                      Document& xslDocument);
-
     /*
      * Methods that print the result to a stream
      */
@@ -123,16 +67,14 @@ public:
      * The result tree is printed to the given ostream argument,
      * will not close the ostream argument
      */
-    void process(istream& xmlInput,
-                 ostream& out);
+    static void process(istream& xmlInput, ostream& out);
 
     /*
      * Processes the given XML Document, the XSL stylesheet
      * will be retrieved from the XML Stylesheet Processing instruction,
      * otherwise an empty document will be returned.
      */
-    void process(Document& xmlDocument,
-                 ostream& out);
+    static void process(Document& xmlDocument, ostream& out);
 
     /*
      * Reads an XML Document from the given XML input stream, and
@@ -141,7 +83,7 @@ public:
      * The result tree is printed to the given ostream argument,
      * will not close the ostream argument
      */
-    void process(istream& xmlInput,
+    static void process(istream& xmlInput,
                  istream& xslInput,
                  ostream& out);
 
@@ -150,13 +92,13 @@ public:
      * The result tree is printed to the given ostream argument,
      * will not close the ostream argument
      */
-    void process(Document& xmlDocument,
+    static void process(Document& xmlDocument,
                  Document& xslDocument,
                  ostream& out);
 
 private:
-    Document* transform(Document& xmlDocument,
-                        Document& xslDocument,
+    static Document* transform2(Document& aSource,
+                        Node& aStylesheet,
                         ostream& out);
 
     /*
@@ -166,30 +108,15 @@ private:
      * added to the given href argument. If multiple text/xsl stylesheet PIs
      * are found, the one closest to the end of the document is used.
      */
-    void getHrefFromStylesheetPI(Document& xmlDocument,
+    static void getHrefFromStylesheetPI(Document& xmlDocument,
                                  String& href);
 
     /*
      * Parses the contents of data, and returns the type and href psuedo attributes
      */
-    void parseStylesheetPI(String& data,
+    static void parseStylesheetPI(String& data,
                            String& type,
                            String& href);
-};
-
-class txStandaloneHelper : public txIProcessorHelper
-{
-public:
-    txStandaloneHelper();
-    virtual ~txStandaloneHelper();
-
-    txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod);
-    void logMessage(const String& aMessage);
-    Document* createRTFDocument(txOutputMethod aMethod);
-
-private:
-    txOutputXMLEventHandler* mStandaloneOutputHandler;
-    ostream* mOut;
 };
 
 #endif

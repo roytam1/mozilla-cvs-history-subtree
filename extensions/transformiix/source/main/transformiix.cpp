@@ -35,8 +35,9 @@
  */
 
 
-#include "XSLTProcessor.h"
+#include "txStandaloneXSLTProcessor.h"
 #include "CommandLineUtils.h"
+#include <fstream.h>
 
   //--------------/
  //- Prototypes -/
@@ -57,13 +58,8 @@ void printUsage();
 **/
 int main(int argc, char** argv) {
 
-    if (!txInit())
+    if (!txXSLTProcessor::txInit())
         return 1;
-    XSLTProcessor xsltProcessor;
-
-    //-- add ErrorObserver
-    SimpleErrorObserver seo;
-    xsltProcessor.addErrorObserver(seo);
 
     //-- available flags
     StringList flags;
@@ -79,8 +75,8 @@ int main(int argc, char** argv) {
 
     if (!options.get(String("q"))) {
         String copyright("(C) 1999 The MITRE Corporation, Keith Visco, and contributors");
-        cerr << xsltProcessor.getAppName() << " ";
-        cerr << xsltProcessor.getAppVersion() << endl;
+        cerr << "TransforMiiX ";
+        cerr << "1.2a pre" << endl;
         cerr << copyright << endl;
         //-- print banner line
         PRUint32 fillSize = copyright.length() + 1;
@@ -127,18 +123,21 @@ int main(int argc, char** argv) {
         printUsage();
         return -1;
       }
-      xsltProcessor.process(*xmlInput, *xmlFilename, *resultOutput);
+      // TODO, pass xmlFilename to resolve URIs
+      // txStandaloneXSLTProcessor::process(*xmlInput, *resultOutput);
+      cerr << "not yet implemented" << endl;
     }
     else {
         //-- open XSLT file
         ifstream xsltInput(NS_LossyConvertUCS2toASCII(*xsltFilename).get(),
                            ios::in);
-        xsltProcessor.process(*xmlInput, *xmlFilename, xsltInput, *xsltFilename, *resultOutput);
+        // TODO, pass xmlFilename, xsltFilename to resolve URIs
+        txStandaloneXSLTProcessor::process(*xmlInput, xsltInput, *resultOutput);
     }
     resultFileStream.close();
     if (xmlInput != &cin)
         delete xmlInput;
-    txShutdown();
+    txXSLTProcessor::txShutdown();
     return 0;
 } //-- main
 

@@ -81,6 +81,16 @@ public:
     void characters(const String& aData);
 
     /*
+     * Signals to receive characters that don't need output escaping.
+     *
+     * @param aData the characters to receive
+     */
+    void charactersNoOutputEscaping(const String& aData)
+    {
+        NS_ASSERTION(0, "Don't call this in module, we don't do d-o-e"):
+    }
+
+    /*
      * Signals to receive data that should be treated as a comment.
      *
      * @param data the comment data to receive

@@ -38,12 +38,13 @@
 
 #include "txUnknownHandler.h"
 #include <string.h>
-#include "XSLTProcessor.h"
+#include "ProcessorState.h"
 
 PRUint32 txUnknownHandler::kReasonableTransactions = 8;
 
-txUnknownHandler::txUnknownHandler() : mTotal(0),
-                                       mMax(kReasonableTransactions)
+txUnknownHandler::txUnknownHandler(ProcessorState* aState)
+    : mTotal(0), mMax(kReasonableTransactions), 
+    mProcessorState(aState)
 {
     mArray = new txOutputTransaction*[kReasonableTransactions];
 }
@@ -106,16 +107,18 @@ void txUnknownHandler::endDocument()
     // didn't create a document element. Switching to XML output mode
     // anyway.
     txOutputXMLEventHandler* outputHandler =
-        mProcessor->getOutputHandler(eXMLOutput);
+        mProcessorState->getOutputHandler(eTextOutput);
     NS_ASSERTION(outputHandler, "Out of memory, dropping output!");
     if (!outputHandler) {
         return;
     }
     mFormat->mMethod = eXMLOutput;
-    outputHandler->setOutputStream(mOut);
-    outputHandler->setOutputFormat(mFormat);
-    flush(outputHandler);
-    outputHandler->endDocument();
+    txStreamXMLEventHandler* streamHandler = 
+        (txStreamXMLEventHandler*)outputHandler;
+    streamHandler->setOutputStream(mOut);
+    streamHandler->setOutputFormat(mFormat);
+    flush(streamHandler);
+    streamHandler->endDocument();
     delete outputHandler;
 }
 
@@ -195,12 +198,6 @@ void txUnknownHandler::flush(txStreamXMLEventHandler* aHandler)
                 txOneStringTransaction* transaction = (txOneStringTransaction*)mArray[counter];
                 aHandler->comment(transaction->mString);
                 delete transaction;
-                break;
-            }
-            case txOutputTransaction::eEndDocumentTransaction:
-            {
-                aHandler->endDocument();
-                delete mArray[counter];
                 break;
             }
             case txOutputTransaction::ePITransaction:

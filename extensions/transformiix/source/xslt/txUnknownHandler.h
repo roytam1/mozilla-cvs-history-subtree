@@ -42,7 +42,7 @@
 #include "txXMLEventHandler.h"
 #include "TxString.h"
 
-class txXSLTProcessor;
+class ProcessorState;
 
 class txOutputTransaction
 {
@@ -94,7 +94,7 @@ public:
 class txUnknownHandler : public txStreamXMLEventHandler
 {
 public:
-    txUnknownHandler(txXSLTProcessor* aProcessor);
+    txUnknownHandler(ProcessorState* aState);
     virtual ~txUnknownHandler();
 
     /*
@@ -195,7 +195,7 @@ private:
     PRUint32 mTotal, mMax;
     ostream* mOut;
     txOutputFormat* mFormat;
-    txXSLTProcessor* mProcessor;
+    ProcessorState* mProcessorState;
     txOutputTransaction** mArray;
 
     static PRUint32 kReasonableTransactions;

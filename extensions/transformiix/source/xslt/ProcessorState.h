@@ -379,7 +379,9 @@ public:
         mHaveDocumentElement = aHaveDocumentElement;
     }
 
-#ifndef TX_EXE
+#ifdef TX_EXE
+    void setOutputStream(ostream* aOut);
+#else
     void setTransformObserver(nsITransformObserver* aObserver);
 #endif
 
@@ -498,7 +500,10 @@ private:
      */
     XMLSpaceMode getXMLSpaceMode(Node* aNode);
 
-#ifndef TX_EXE
+#ifdef TX_EXE
+    txStreamXMLEventHandler* mStandaloneOutputHandler;
+    ostream* mOut;
+#else
     nsCOMPtr<txIMozillaXMLEventHandler> mMozillaOutputHandler;
     nsWeakPtr mObserver;
 #endif

@@ -40,15 +40,13 @@
 #include "txStandaloneXSLTProcessor.h"
 #include "txURIUtils.h"
 #include "XMLParser.h"
+#include "txSingleNodeContext.h"
+#include "Names.h"
+#include "txUnknownHandler.h"
+#include "txHTMLOutput.h"
+#include "txTextOutput.h"
 
-txStandaloneXSLTProcessor::txStandaloneXSLTProcessor()
-{
-}
-
-txStandaloneXSLTProcessor::~txStandaloneXSLTProcessor()
-{
-}
-
+#if 0
 /*
  * Reads an XML document from the given XML input stream. The
  * XML document is processed using the associated XSL document
@@ -60,11 +58,11 @@ Document* txStandaloneXSLTProcessor::process(istream& xmlInput)
     XMLParser xmlParser;
 
     // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput);
+    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
+        cerr << err;
         return 0;
     }
 
@@ -89,6 +87,7 @@ Document* txStandaloneXSLTProcessor::process(Document& xmlDocument)
 
     // Read in XSL document
     Document* xslDoc = 0;
+    XMLParser xmlParser;
     if (xslInput) {
         xslDoc = xmlParser.parse(*xslInput, href);
         delete xslInput;
@@ -96,11 +95,11 @@ Document* txStandaloneXSLTProcessor::process(Document& xmlDocument)
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
+        cerr << err;
         return 0;
     }
 
-    Document* result = transform(xmlDocument, *xslDoc, NULL);
+    Document* result = transform(xmlDocument, *xslDoc, &cout);
 
     delete xslDoc;
     return result;
@@ -117,25 +116,25 @@ Document* txStandaloneXSLTProcessor::process(istream& xmlInput,
     XMLParser xmlParser;
 
     // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput);
+    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
+        cerr << err;
         return 0;
     }
 
     // Read in XSL document
-    Document* xslDoc = xmlParser.parse(xslInput);
+    Document* xslDoc = xmlParser.parse(xslInput, String("XXX WRONG URI"));
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
+        cerr << err;
         delete xmlDoc;
         return 0;
     }
 
-    Document* result = transform(*xmlDoc, *xslDoc, NULL);
+    Document* result = transform(*xmlDoc, *xslDoc, &cout);
 
     delete xmlDoc;
     delete xslDoc;
@@ -152,6 +151,7 @@ Document* txStandaloneXSLTProcessor::process(Document& xmlDocument,
     Document* result = transform(xmlDocument, xslDocument, NULL);
     return result;
 }
+#endif
 
 /*
  * Reads an XML Document from the given XML input stream.
@@ -167,12 +167,12 @@ void txStandaloneXSLTProcessor::process(istream& xmlInput,
     XMLParser xmlParser;
 
     // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput);
+    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
-        return 0;
+        cerr << err;
+        return;
     }
 
     process(*xmlDoc, out);
@@ -196,15 +196,16 @@ void txStandaloneXSLTProcessor::process(Document& xmlDocument,
 
     // Read in XSL document
     Document* xslDoc = 0;
+    XMLParser xmlParser;
     if (xslInput) {
-        xslDoc = xmlParser.parse(*xslInput);
+        xslDoc = xmlParser.parse(*xslInput, String("XXX WRONG URI"));
         delete xslInput;
     }
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
-        return 0;
+        cerr << err;
+        return;
     }
 
     process(xmlDocument, *xslDoc, out);
@@ -226,22 +227,22 @@ void txStandaloneXSLTProcessor::process(istream& xmlInput,
     XMLParser xmlParser;
 
     // Read in XML Document
-    Document* xmlDoc = xmlParser.parse(xmlInput);
+    Document* xmlDoc = xmlParser.parse(xmlInput, String("XXX WRONG URI"));
     if (!xmlDoc) {
         String err("error reading XML document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
-        return 0;
+        cerr << err;
+        return;
     }
 
     // Read in XSL document
-    Document* xslDoc = xmlParser.parse(xslInput);
+    Document* xslDoc = xmlParser.parse(xslInput, String("XXX WRONG URI"));
     if (!xslDoc) {
         String err("error reading XSL stylesheet document: ");
         err.append(xmlParser.getErrorString());
-        notifyError(err);
+        cerr << err;
         delete xmlDoc;
-        return 0;
+        return;
     }
 
     process(*xmlDoc, *xslDoc, out);
@@ -258,7 +259,7 @@ void txStandaloneXSLTProcessor::process(Document& xmlDocument,
                                         Document& xslDocument,
                                         ostream& out)
 {
-    Document* result = transform(xmlDocument, xslDocument, out);
+    Document* result = transform2(xmlDocument, xslDocument, out);
 
     delete result;
 }
@@ -266,9 +267,9 @@ void txStandaloneXSLTProcessor::process(Document& xmlDocument,
 /*
  * Private worker function
  */
-Document* txStandaloneXSLTProcessor::transform(Document& aSource,
-                                               Document& aStylesheet,
-                                               ostream& out)
+Document* txStandaloneXSLTProcessor::transform2(Document& aSource,
+                                               Node& aStylesheet,
+                                               ostream& aOut)
 {
     Document* result = new Document;
 
@@ -285,34 +286,30 @@ Document* txStandaloneXSLTProcessor::transform(Document& aSource,
             stylesheetElem = (Element*)&aStylesheet;
             stylesheetDoc = aStylesheet.getOwnerDocument();
         }
-        ProcessorState ps(&aSource, stylesheetDoc, result);
+        ProcessorState ps(&aSource, stylesheetDoc);
+        ps.setOutputStream(&aOut);
 
         // Add error observers
-        txListIterator iter(&mErrorObservers);
-        while (iter.hasNext()) {
-            ps.addErrorObserver(*(ErrorObserver*)iter.next());
-        }
+        // XXX todo
 
-        txSingleNodeContext evalContext(&aXMLDocument, &ps);
+        txSingleNodeContext evalContext(&aSource, &ps);
         ps.setEvalContext(&evalContext);
 
         // Index templates and process top level xsl elements
         nsresult rv;
         if (stylesheetElem) {
-            rv = processTopLevel(&aXMLDocument, stylesheetElem, &ps);
+            rv = processTopLevel(&aSource, stylesheetElem, &ps);
         }
         else {
-            rv = processStylesheet(&aXMLDocument, stylesheetDoc, &ps);
+            rv = processStylesheet(&aSource, stylesheetDoc, &ps);
         }
         if (NS_FAILED(rv)) {
             delete result;
             return 0;
         }
 
-        mOut = &aOut;
-
         // Process root of XML source document
-        transform(&aXMLDocument, &ps);
+        transform(&aSource, &ps);
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the result document.
@@ -360,11 +357,11 @@ void txStandaloneXSLTProcessor::parseStylesheetPI(String& data,
                                                   String& type,
                                                   String& href)
 {
-    Int32 size = data.length();
+    PRUint32 size = data.length();
     NamedMap bufferMap;
-    bufferMap.put("type", &type);
-    bufferMap.put("href", &href);
-    int ccount = 0;
+    bufferMap.put(String("type"), &type);
+    bufferMap.put(String("href"), &href);
+    PRUint32 ccount = 0;
     MBool inLiteral = MB_FALSE;
     char matchQuote = '"';
     String sink;
@@ -413,69 +410,3 @@ void txStandaloneXSLTProcessor::parseStylesheetPI(String& data,
         }
     }
 }
-
-txOutputXMLEventHandler*
-txStandaloneHelper::getOutputHandler(txOutputMethod aMethod)
-{
-    if (mStandaloneOutputHandler) {
-        if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
-            txUnknownHandler* oldHandler =
-                (txUnknownHandler*)mStandaloneOutputHandler;
-            if (aMethod == eHTMLOutput) {
-                mStandaloneOutputHandler = new txHTMLOutput();
-            }
-            else {
-                mStandaloneOutputHandler = new txXMLOutput();
-            }
-            NS_ASSERTION(mStandaloneOutputHandler,
-                         "Setting mStandaloneOutputHandler to NULL!");
-            mStandaloneOutputHandler->setOutputStream(mOut);
-            txOutputFormat* format = oldHandler->getOutputFormat();
-            format->mMethod = aMethod;
-            mStandaloneOutputHandler->setOutputFormat(format);
-            oldHandler->flush(mStandaloneOutputHandler);
-            delete oldHandler;
-            return mStandaloneOutputHandler;
-        }
-        delete mStandaloneOutputHandler;
-        mStandaloneOutputHandler = 0;
-    }
-    switch (aMethod) {
-        case eXMLOutput:
-        {
-            mStandaloneOutputHandler = new txXMLOutput();
-            break;
-        }
-        case eHTMLOutput:
-        {
-            mStandaloneOutputHandler = new txHTMLOutput();
-            break;
-        }
-        case eTextOutput:
-        {
-            mStandaloneOutputHandler = new txTextOutput();
-            break;
-        }
-        case eMethodNotSet:
-        {
-            mStandaloneOutputHandler = new txUnknownHandler(this);
-            break;
-        }
-    }
-    if (mOut) {
-        mStandaloneOutputHandler->setOutputStream(mOut);
-    }
-}
-
-void
-txStandaloneHelper::logMessage(const String& aMessage)
-{
-    cout << "xsl:message - "<< aMessage << endl;
-}
-
-Document*
-txStandaloneHelper::createRTFDocument(txOutputMethod aMethod)
-{
-    return new Document();
-}
-

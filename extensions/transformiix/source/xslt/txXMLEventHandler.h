@@ -120,6 +120,13 @@ public:
      * @param aOutputFormat the output format
      */
     virtual void setOutputFormat(txOutputFormat* aOutputFormat) = 0;
+
+    /*
+     * Signals to receive characters that don't need output escaping.
+     *
+     * @param aData the characters to receive
+     */
+    virtual void charactersNoOutputEscaping(const String& aData) = 0;
 };
 
 #ifdef TX_EXE
@@ -139,13 +146,6 @@ public:
      * @param aOutputStream the output stream
      */
     virtual void setOutputStream(ostream* aOutputStream) = 0;
-
-    /*
-     * Signals to receive characters that don't need output escaping.
-     *
-     * @param aData the characters to receive
-     */
-    virtual void charactersNoOutputEscaping(const String& aData) = 0;
 };
 #else
 #define TX_IMOZILLAXMLEVENTHANDLER_IID \

@@ -49,6 +49,9 @@
 #include "XSLTProcessor.h"
 
 #ifdef TX_EXE
+#include "txUnknownHandler.h"
+#include "txTextOutput.h"
+#include "txHTMLOutput.h"
 #else
 #include "nsITransformObserver.h"
 #include "txMozillaTextOutput.h"
@@ -68,6 +71,10 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
       mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
       mRTFDocument(0),
+#ifdef TX_EXE
+      mStandaloneOutputHandler(0),
+      mOut(0),
+#endif
       mOutputHandler(0),
       mResultHandler(0)
 {
@@ -1139,6 +1146,55 @@ txOutputXMLEventHandler*
 ProcessorState::getOutputHandler(txOutputMethod aMethod)
 {
 #ifdef TX_EXE
+    if (mStandaloneOutputHandler) {
+        if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
+            txUnknownHandler* oldHandler =
+                (txUnknownHandler*)mStandaloneOutputHandler;
+            if (aMethod == eHTMLOutput) {
+                mStandaloneOutputHandler = new txHTMLOutput();
+            }
+            else {
+                mStandaloneOutputHandler = new txXMLOutput();
+            }
+            NS_ASSERTION(mStandaloneOutputHandler,
+                         "Setting mStandaloneOutputHandler to NULL!");
+            mStandaloneOutputHandler->setOutputStream(mOut);
+            txOutputFormat* format = getOutputFormat();
+            format->mMethod = aMethod;
+            mStandaloneOutputHandler->setOutputFormat(format);
+            oldHandler->flush(mStandaloneOutputHandler);
+            delete oldHandler;
+            return mStandaloneOutputHandler;
+        }
+        delete mStandaloneOutputHandler;
+        mStandaloneOutputHandler = 0;
+    }
+    switch (aMethod) {
+        case eXMLOutput:
+        {
+            mStandaloneOutputHandler = new txXMLOutput();
+            break;
+        }
+        case eHTMLOutput:
+        {
+            mStandaloneOutputHandler = new txHTMLOutput();
+            break;
+        }
+        case eTextOutput:
+        {
+            mStandaloneOutputHandler = new txTextOutput();
+            break;
+        }
+        case eMethodNotSet:
+        {
+            mStandaloneOutputHandler = new txUnknownHandler(this);
+            break;
+        }
+    }
+    if (mOut) {
+        mStandaloneOutputHandler->setOutputStream(mOut);
+    }
+    return mStandaloneOutputHandler;
 #else
     if (mMozillaOutputHandler) {
         if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
@@ -1172,11 +1228,19 @@ ProcessorState::getOutputHandler(txOutputMethod aMethod)
 #endif
 }
 
+#ifdef TX_EXE
+void
+ProcessorState::setOutputStream(ostream* aOut)
+{
+    mOut = aOut;
+}
+#else
 void
 ProcessorState::setTransformObserver(nsITransformObserver* aObserver)
 {
     mObserver = do_GetWeakReference(aObserver);
 }
+#endif
 
   //-------------------/
  //- Private Methods -/

@@ -124,6 +124,7 @@ Document*
 txXSLTProcessor::createRTFDocument(txOutputMethod aMethod)
 {
 #ifdef TX_EXE
+    return new Document();
 #else
     nsresult rv;
     nsCOMPtr<nsIDOMDocument> domDoc = do_CreateInstance(kXMLDocumentCID, &rv);
@@ -214,6 +215,7 @@ void
 txXSLTProcessor::logMessage(const String& aMessage)
 {
 #ifdef TX_EXE
+    cout << "xsl:message - "<< aMessage << endl;
 #else
     nsresult rv;
     nsCOMPtr<nsIConsoleService> consoleSvc = 
