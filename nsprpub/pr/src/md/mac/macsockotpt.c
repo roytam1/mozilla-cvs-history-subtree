@@ -1391,7 +1391,9 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
         goto ErrorExit;
     }
     
-    while (bytesLeft > 0) {
+    while (bytesLeft > 0)
+    {
+        Boolean disabledNotifications = OTEnterNotifier(endpoint);
     
         PrepareForAsyncCompletion(me, fd->secret->md.osfd);    
 
@@ -1410,15 +1412,20 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 					if (result != kOTFlowErr)
 						break;
 
-					// Blocking write, but the pipe is full. Wait for an event,
-					// hoping that it's a T_GODATA event.
+					// Blocking write, but the pipe is full. Turn notifications on and
+					// wait for an event, hoping that it's a T_GODATA event.
+                    if (disabledNotifications) {
+                        OTLeaveNotifier(endpoint);
+                        disabledNotifications = false;
+                    }
 					WaitOnThisThread(me, PR_INTERVAL_NO_TIMEOUT);
 					result = me->md.osErrCode;
 					if (result != kOTNoError) // got interrupted, or some other error
 						break;
 
 					// Prepare to loop back and try again
-  			   		PrepareForAsyncCompletion(me, fd->secret->md.osfd);  
+					disabledNotifications = OTEnterNotifier(endpoint);
+  			   		PrepareForAsyncCompletion(me, fd->secret->md.osfd);
 				}
 			}
 			while(1);
@@ -1439,19 +1446,23 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
 			        	OSErr tmpResult;
 			        	tmpResult = OTCountDataBytes(endpoint, &count);
 				        fd->secret->md.readReady = ((tmpResult == kOTNoError) && (count > 0));
-		
 						break;
 				    }
 
-					// Blocking read, but no data available. Wait for an event
-					// on this endpoint, and hope that we get a T_DATA event.
+					// Blocking read, but no data available. Turn notifications on and
+					// wait for an event on this endpoint, and hope that we get a T_DATA event.
+                    if (disabledNotifications) {
+                        OTLeaveNotifier(endpoint);
+                        disabledNotifications = false;
+                    }
 					WaitOnThisThread(me, PR_INTERVAL_NO_TIMEOUT);
 					result = me->md.osErrCode;
 					if (result != kOTNoError) // interrupted thread, etc.
 						break;
 
 					// Prepare to loop back and try again
-  			   		PrepareForAsyncCompletion(me, fd->secret->md.osfd);  
+					disabledNotifications = OTEnterNotifier(endpoint);
+  			   		PrepareForAsyncCompletion(me, fd->secret->md.osfd);
 				}
 			}
 			// Retry read if we had to wait for data to show up.
@@ -1459,11 +1470,16 @@ static PRInt32 SendReceiveStream(PRFileDesc *fd, void *buf, PRInt32 amount,
         }
 
 		me->io_pending = PR_FALSE;
+		
         if (opCode == kSTREAM_SEND)
-            fd->secret->md.write.thread = nil;
+            fd->secret->md.write.thread = NULL;
         else
-            fd->secret->md.read.thread  = nil;
+            fd->secret->md.read.thread  = NULL;
 
+        // turn notifications back on
+        if (disabledNotifications)
+            OTLeaveNotifier(endpoint);
+            
         if (result > 0) {
             buf = (void *) ( (UInt32) buf + (UInt32)result );
             bytesLeft -= result;
