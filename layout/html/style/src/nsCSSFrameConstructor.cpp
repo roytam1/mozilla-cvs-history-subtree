@@ -12971,7 +12971,6 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
         ContentReplaced(aPresContext, parentContainer, aBlockContent, aBlockContent, ix);
       }
       else {
-        // XXX uh oh. the block we need to reframe has no parent!
         NS_ERROR("uh oh. the block we need to reframe has no parent!");
       }
       return PR_TRUE;
