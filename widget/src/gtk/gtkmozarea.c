@@ -88,6 +88,7 @@ gtk_mozarea_realize (GtkWidget *widget)
                                         widget->allocation.width, widget->allocation.height);
   gdk_window_set_user_data (mozarea->superwin->shell_window, mozarea);
   widget->window = mozarea->superwin->shell_window;
+  widget->style = gtk_style_attach (widget->style, widget->window);
   /* make sure that we add a reference to this window.
      if we don't then it will be destroyed by both the superwin
      destroy method and the widget class destructor */
