@@ -210,13 +210,13 @@ nsAutoCompleteController::HandleText(PRBool aIgnoreSelection)
     StartSearchTimer();
   } else {
     // Kick off the search only if the cursor is at the end of the textbox
-    PRInt32 selectionStart;
-    mInput->GetSelectionStart(&selectionStart);
-    PRInt32 selectionEnd;
-    mInput->GetSelectionEnd(&selectionEnd);
+  PRInt32 selectionStart;
+  mInput->GetSelectionStart(&selectionStart);
+  PRInt32 selectionEnd;
+  mInput->GetSelectionEnd(&selectionEnd);
 
-    if (selectionStart == selectionEnd && selectionStart == (PRInt32) mSearchString.Length())
-      StartSearchTimer();
+  if (selectionStart == selectionEnd && selectionStart == (PRInt32) mSearchString.Length())
+    StartSearchTimer();
   }
 
   return NS_OK;
@@ -225,11 +225,6 @@ nsAutoCompleteController::HandleText(PRBool aIgnoreSelection)
 NS_IMETHODIMP
 nsAutoCompleteController::HandleEnter(PRBool *_retval)
 {
-  if (!mInput) {
-    *_retval = PR_FALSE;
-    return NS_OK;
-  }
-
   // allow the event through unless there is something selected in the popup
   mInput->GetPopupOpen(_retval);
   if (*_retval) {
@@ -249,11 +244,6 @@ nsAutoCompleteController::HandleEnter(PRBool *_retval)
 NS_IMETHODIMP
 nsAutoCompleteController::HandleEscape(PRBool *_retval)
 {
-  if (!mInput) {
-    *_retval = PR_FALSE;
-    return NS_OK;
-  }
-
   // allow the event through if the popup is closed
   mInput->GetPopupOpen(_retval);
   
@@ -278,9 +268,6 @@ nsAutoCompleteController::HandleKeyNavigation(PRUint16 aKey, PRBool *_retval)
   // By default, don't cancel the event
   *_retval = PR_FALSE;
   
-  if (!mInput)
-    return NS_OK;
-
   nsCOMPtr<nsIAutoCompletePopup> popup;
   mInput->GetPopup(getter_AddRefs(popup));
   NS_ENSURE_TRUE(popup != nsnull, NS_ERROR_FAILURE);
@@ -354,10 +341,6 @@ NS_IMETHODIMP
 nsAutoCompleteController::HandleDelete(PRBool *_retval)
 {
   *_retval = PR_FALSE;
-
-  if (!mInput)
-    return NS_OK;
-
   PRBool isOpen = PR_FALSE;
   mInput->GetPopupOpen(&isOpen);
   if (!isOpen || mRowCount <= 0) {
@@ -746,9 +729,6 @@ nsAutoCompleteController::PerformActionOnCell(const PRUnichar *action, PRInt32 r
 nsresult
 nsAutoCompleteController::OpenPopup()
 {
-  if (!mInput)
-    return NS_OK;
-
   PRUint32 minResults;
   mInput->GetMinResultsForPopup(&minResults);
   if (mRowCount >= minResults)    
@@ -760,9 +740,6 @@ nsAutoCompleteController::OpenPopup()
 nsresult
 nsAutoCompleteController::ClosePopup()
 {
-  if (!mInput)
-    return NS_OK;
-
   nsCOMPtr<nsIAutoCompletePopup> popup;
   mInput->GetPopup(getter_AddRefs(popup));
   NS_ENSURE_TRUE(popup != nsnull, NS_ERROR_FAILURE);
@@ -774,9 +751,6 @@ nsAutoCompleteController::ClosePopup()
 nsresult
 nsAutoCompleteController::StartSearch()
 {
-  if (!mInput)
-    return NS_OK;
-
   mSearchStatus = nsIAutoCompleteController::STATUS_SEARCHING;
   mDefaultIndexCompleted = PR_FALSE;
   
@@ -841,9 +815,6 @@ nsAutoCompleteController::StopSearch()
 nsresult
 nsAutoCompleteController::StartSearchTimer()
 {
-  if (!mInput)
-    return NS_OK;
-
   // Don't create a new search timer if we're already waiting for one to fire.
   // If we don't check for this, we won't be able to cancel the original timer
   // and may crash when it fires (bug 236659).
@@ -871,16 +842,13 @@ nsAutoCompleteController::ClearSearchTimer()
 nsresult
 nsAutoCompleteController::EnterMatch()
 {
-  if (!mInput)
-    return NS_OK;
-
   // If a search is still ongoing, bail out of this function
   // and let the search finish, and tell it to come back here when it's done
   if (mSearchStatus == nsIAutoCompleteController::STATUS_SEARCHING) {
     mEnterAfterSearch = PR_TRUE;
     return NS_OK;
-  }
-  mEnterAfterSearch = PR_FALSE;
+  } else
+    mEnterAfterSearch = PR_FALSE;
   
   nsCOMPtr<nsIAutoCompletePopup> popup;
   mInput->GetPopup(getter_AddRefs(popup));
@@ -937,9 +905,6 @@ nsAutoCompleteController::EnterMatch()
 nsresult
 nsAutoCompleteController::RevertTextValue()
 {
-  if (!mInput)
-    return NS_OK;
-
   nsAutoString oldValue(mSearchString);
   
   PRBool cancel = PR_FALSE;
@@ -956,9 +921,6 @@ nsAutoCompleteController::RevertTextValue()
 nsresult
 nsAutoCompleteController::ProcessResult(PRInt32 aSearchIndex, nsIAutoCompleteResult *aResult)
 {
-  if (!mInput)
-    return NS_OK;
-
   // If this is the first search to return, we should clear out the previous cached results
   PRUint32 searchCount;
   mSearches->Count(&searchCount);
@@ -1017,9 +979,6 @@ nsAutoCompleteController::ProcessResult(PRInt32 aSearchIndex, nsIAutoCompleteRes
 nsresult
 nsAutoCompleteController::PostSearchCleanup()
 {  
-  if (!mInput)
-    return NS_OK;
-
   if (mRowCount) {
     OpenPopup();
     mSearchStatus = nsIAutoCompleteController::STATUS_COMPLETE_MATCH;
@@ -1053,9 +1012,6 @@ nsAutoCompleteController::ClearResults()
 nsresult
 nsAutoCompleteController::CompleteDefaultIndex(PRInt32 aSearchIndex)
 {
-  if (!mInput)
-    return NS_OK;
-
   if (mDefaultIndexCompleted || mEnterAfterSearch || mBackspaced || mRowCount == 0 || mSearchString.Length() == 0)
     return NS_OK;
 
@@ -1088,9 +1044,6 @@ nsAutoCompleteController::CompleteDefaultIndex(PRInt32 aSearchIndex)
 nsresult
 nsAutoCompleteController::CompleteValue(nsString &aValue, PRBool selectDifference)
 {
-  if (!mInput)
-    return NS_OK;
-
   nsString::const_iterator start, end, iter;
   PRInt32 startSelect, endSelect;
 
@@ -1179,8 +1132,13 @@ nsAutoCompleteController::RowIndexToSearch(PRInt32 aRowIndex, PRInt32 *aSearchIn
     PRUint16 searchResult;
     result->GetSearchResult(&searchResult);
     
-    PRUint32 rowCount = 1;
-    if (searchResult == nsIAutoCompleteResult::RESULT_SUCCESS) {
+    PRUint32 rowCount;
+    if (searchResult == nsIAutoCompleteResult::RESULT_FAILURE) {
+      nsAutoString error;
+      result->GetErrorDescription(error);
+      if (!error.IsEmpty())
+        rowCount = 1;
+    } else if (searchResult == nsIAutoCompleteResult::RESULT_SUCCESS) {
       result->GetMatchCount(&rowCount);
     }
     
