@@ -6325,9 +6325,11 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     }
 #endif
     
+#define MERGE_REFLOWS 1
     mIsReflowing = PR_TRUE;
     PRInt64 maxTime;
     PRBool firstTime = PR_TRUE;
+    // XXX FIX!  factor duplicate code from handling of the two queues!
     while (0 != mReflowCommands.Count()) {
       // Construct tree against which we will merge.
       nsReflowTree tree;
@@ -6344,7 +6346,6 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       DumpPath(curr_path,0);
 #endif
 
-#define MERGE_REFLOWS 1
 #if MERGE_REFLOWS
       // now see how many reflows we can merge with the tree.
       for (i = 1; i < mReflowCommands.Count(); i++) {
@@ -6388,6 +6389,49 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       // process the timeout reflow commands completely
       // printf("timeout reflows=%d \n", mTimeoutReflowCommands.Count());
       while (0 != mTimeoutReflowCommands.Count()) {
+        // Construct tree against which we will merge.
+        nsReflowTree tree;
+
+        // Start with a tree with a single branch
+        nsHTMLReflowCommand *curr = (nsHTMLReflowCommand *)
+                                    mTimeoutReflowCommands.ElementAt(0);
+        nsVoidArray *curr_path = curr->GetPath();
+        void *curr_root = curr_path->SafeElementAt(curr_path->Count()-1);
+        nsReflowTree::Node *n = tree.MergeCommand(curr);
+        int i;
+#if 0
+        fprintf(stderr, "Initial path dump:\n");
+        DumpPath(curr_path,0);
+#endif
+
+#if MERGE_REFLOWS
+        // now see how many reflows we can merge with the tree.
+        for (i = 1; i < mTimeoutReflowCommands.Count(); i++) {
+          nsHTMLReflowCommand *command = 
+            NS_STATIC_CAST(nsHTMLReflowCommand *,
+                           mTimeoutReflowCommands.ElementAt(i));
+
+          n = tree.MergeCommand(command);
+          if (!n)
+            continue;         // can't be merged...try next?
+        
+#if 0
+          fprintf(stderr, "Path dump (merged):\n");
+          DumpPath(command->GetPath(),0);
+#endif
+          // remove merged command from the list
+          mTimeoutReflowCommands.RemoveElementAt(i);
+          ReflowCommandRemoved(command);
+          delete command;
+          i--;  // account for the element removal and ensuing shift
+        }
+#endif
+
+        curr->SetReflowTree(&tree);
+        curr->SetCurrentReflowNode(tree.Root());
+        tree.Dump();
+
+        // removes the command when done
         ProcessReflowCommand(mTimeoutReflowCommands, PR_TRUE, desiredSize, maxSize, *rcx);
       }
       if (mReflowCommands.Count() > 0) { // Reflow Commands are still queued up.
