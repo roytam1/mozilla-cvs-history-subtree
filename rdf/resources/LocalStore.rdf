@@ -6,6 +6,10 @@
 
  -->
 
+<?xml version="1.0"?>
+<!-- use a processing instruction to add datasources? -->
+<!-- add a style sheet? -->
+
 <RDF:RDF xmlns:RDF="http://www.w3.org/TR/WD-rdf-syntax#" 
 	 xmlns:nc="http://home.netscape.com/NC-rdf#"
          xmlns:web="http://home.netscape.com/WEB-rdf#">
