@@ -3,7 +3,7 @@
 # $Id$
 #
 # The contents of this file are subject to the Mozilla Public License
-# Version 1.0 (the "License"); you may not use this file except in
+# Version 1.1 (the "License"); you may not use this file except in
 # compliance with the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
 #
@@ -34,18 +34,19 @@ use Mozilla::LDAP::Utils;		# LULU, utilities.
 # Constants, shouldn't have to edit these...
 #
 $APPNAM	= "tabdump";
-$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P cert attr1,attr2,.. srch";
+$USAGE	= "$APPNAM [-nv] -b base -h host -D bind -w pswd -P [-t <sep>] cert attr1,attr2,.. srch";
 
 
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('nvb:h:D:p:s:w:P:'))
+if (!getopts('nvb:h:D:p:s:w:P:t:'))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;
 }
 %ld = Mozilla::LDAP::Utils::ldapArgs();
+$separator = (defined($opt_t) ? $opt_t : "\t");
 
 $attributes = $ARGV[$[];
 $search = $ARGV[$[ + 1];
@@ -67,7 +68,7 @@ while ($entry)
 {
   foreach (@attr)
     {
-      print $entry->{$_}[0], "\t";
+      print $entry->{$_}[0], $separator;
     }
   print "\n";
   $entry = $conn->nextEntry;
