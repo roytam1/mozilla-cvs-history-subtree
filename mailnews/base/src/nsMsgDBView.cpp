@@ -1138,6 +1138,15 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   {
     properties->AppendElement(kHasImageAtom);
   }
+  nsXPIDLCString keywords;
+  msgHdr->GetStringProperty("keywords", getter_Copies(keywords));
+  if (!keywords.IsEmpty())
+  {
+    nsCAutoString keyword(keywords);
+    keyword.Insert("kw-", 0);
+    nsCOMPtr <nsIAtom> keywordAtom = NS_NewAtom(keyword.get());
+    properties->AppendElement(keywordAtom);
+  }
 
 #ifdef SUPPORT_PRIORITY_COLORS
   // add special styles for priority
