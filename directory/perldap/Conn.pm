@@ -971,6 +971,18 @@ Return the (internal) LDAP* connection handle, which you can use
 (carefully) to call the native LDAP API functions. You shouldn't have to
 use this in most cases, unless of course our OO layer is seriously flawed.
 
+=item B<getRes>
+
+Just like B<getLD>, except it returns the internal LDAP return message
+structure. Again, use this very carefully, and be aware that this might
+break in future releases of PerLDAP. These two methods can be used to call
+some useful API functions, like 
+
+    $cld = $conn->getLD();
+    $res = $conn->getRes();
+    $count = Mozilla::LDAP::API::ldap_count_entries($cld, $res);
+
+
 =item B<getErrorCode>
 
 Return the error code (numeric) from the last LDAP API function
