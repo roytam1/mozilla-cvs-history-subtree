@@ -153,6 +153,8 @@ BookmarkParser::Parse(PRFileDesc* file)
     if (! mDataSource)
         return NS_ERROR_NULL_POINTER;
 
+    // Initialize the parser for a run...
+    mState = eBookmarkParserState_Initial;
     mCounter = 0;
     mLastItem = NULL;
     mLine.Truncate();
@@ -170,6 +172,8 @@ BookmarkParser::Parse(PRFileDesc* file)
 
         NS_RELEASE(bookmarks);
     }
+
+    NS_IF_RELEASE(mLastItem);
     return rv;
 }
 
@@ -228,6 +232,7 @@ BookmarkParser::NextToken(void)
             mFolderDate.Truncate();
         }
 
+        NS_IF_RELEASE(mLastItem);
         mLastItem = folder;
 
         if (mState != eBookmarkParserState_InTitle)
@@ -261,11 +266,12 @@ BookmarkParser::DoStateTransition(void)
         mState = eBookmarkParserState_InTitle;
     }
     else if (mLine.Find(kDDString) == 0) {
-#if FIXME
+#if 0 // XXX if it doesn't already have a description? Huh?
         if (remoteStoreGetSlotValue(gLocalStore, mLastItem, gWebData->RDF_description, 
                                     RDF_STRING_TYPE, false, true) 
-            == NULL) mState = eBookmarkParserState_InItemDescription;
+            == NULL)
 #endif
+        mState = eBookmarkParserState_InItemDescription;
     }
     else if (mLine.Find(kOpenDLString) == 0) {
         mStack.AppendElement(mLastItem);
@@ -279,7 +285,7 @@ BookmarkParser::DoStateTransition(void)
         }
     }
     else if (mLine.Find(kSeparatorString) == 0) {
-#if FIXME
+#if FIXME // separators
         addSlotValue(f, createSeparator(), gCoreVocab->RDF_parent, mStack[mStack.Count() - 1], 
                      RDF_RESOURCE_TYPE, NULL);
 #endif
