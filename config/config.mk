@@ -231,7 +231,7 @@ ifndef NSPR10
 NSPR20		= 1
 NSPRDIR		= nsprpub
 DEFINES		+= -DNSPR20
-INCLUDES	+= -I$(DIST)/include
+INCLUDES	+= -I$(DIST)/include -I$(DIST)/include/md
 LIBNSPR		= $(DIST)/lib/libplds21.$(LIB_SUFFIX) \
 		  $(DIST)/lib/libmsgc21.$(LIB_SUFFIX) \
 		  $(DIST)/lib/libnspr21.$(LIB_SUFFIX)
@@ -255,6 +255,7 @@ LIBZIP		= $(DIST)/lib/libzlib.$(LIB_SUFFIX)
 LIBJAVA		= $(DIST)/lib/libjrt.$(LIB_SUFFIX)
 LIBNSPR		= $(DIST)/lib/nspr21.$(LIB_SUFFIX) \
                   $(DIST)/lib/plds21.$(LIB_SUFFIX) \
+		  $(DIST)/lib/plc21.$(LIB_SUFFIX) \
 		  $(DIST)/lib/msgc21.$(LIB_SUFFIX)
 else
 ifeq ($(OS_ARCH),WINNT)
