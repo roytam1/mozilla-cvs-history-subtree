@@ -2351,16 +2351,15 @@ nsBoxFrame::CreateViewForFrame(nsIPresContext* aPresContext,
     PRBool  autoZIndex = PR_FALSE;
     PRBool  fixedBackgroundAttachment = PR_FALSE;
 
-    // Get nsStyleColor and nsStyleDisplay
     const nsStyleBackground* bg = (const nsStyleBackground*)
       aStyleContext->GetStyleData(eStyleStruct_Background);
-    const nsStyleVisibility* vis = 
-      (const nsStyleVisibility*)aStyleContext->GetStyleData(eStyleStruct_Visibility);
+    const nsStyleVisibility* vis = (const nsStyleVisibility*)
+      aStyleContext->GetStyleData(eStyleStruct_Visibility);
 
     if (vis->mOpacity != 1.0f) {
       NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
-        ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p opacity=%g",
-         aFrame, ui->mOpacity));
+        ("nsBoxFrame::CreateViewForFrame: frame=%p opacity=%g",
+         aFrame, vis->mOpacity));
       aForce = PR_TRUE;
     }
 
@@ -2376,7 +2375,7 @@ nsBoxFrame::CreateViewForFrame(nsIPresContext* aPresContext,
       aStyleContext->GetPseudoType(pseudoTag);
       if (pseudoTag == nsLayoutAtoms::scrolledContentPseudo) {
         NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
-          ("nsHTMLContainerFrame::CreateViewForFrame: scrolled frame=%p", aFrame));
+          ("nsBoxFrame::CreateViewForFrame: scrolled frame=%p", aFrame));
         aForce = PR_TRUE;
       }
       NS_IF_RELEASE(pseudoTag);

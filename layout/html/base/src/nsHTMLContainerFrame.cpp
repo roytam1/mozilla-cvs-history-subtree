@@ -454,13 +454,13 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
       aStyleContext->GetStyleData(eStyleStruct_Display);
     const nsStylePosition* position = (const nsStylePosition*)
       aStyleContext->GetStyleData(eStyleStruct_Position);
-    const nsStyleVisibility* vis = 
-      (const nsStyleVisibility*)aStyleContext->GetStyleData(eStyleStruct_Visibility);
+    const nsStyleVisibility* vis = (const nsStyleVisibility*)
+      aStyleContext->GetStyleData(eStyleStruct_Visibility);
     
     if (vis->mOpacity != 1.0f) {
       NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
         ("nsHTMLContainerFrame::CreateViewForFrame: frame=%p opacity=%g",
-         aFrame, ui->mOpacity));
+         aFrame, vis->mOpacity));
       aForce = PR_TRUE;
     }
 

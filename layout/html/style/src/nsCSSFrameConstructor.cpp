@@ -4849,8 +4849,8 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
         }
         if (allowSubframes) {
           // make <noframes> be display:none if frames are enabled
-          nsStyleDisplay* display = (nsStyleDisplay*)aStyleContext->GetMutableStyleData(eStyleStruct_Display);
-          display->mDisplay = NS_STYLE_DISPLAY_NONE;
+          nsStyleDisplay* mutdisplay = (nsStyleDisplay*)aStyleContext->GetMutableStyleData(eStyleStruct_Display);
+          mutdisplay->mDisplay = NS_STYLE_DISPLAY_NONE;
           aState.mFrameManager->SetUndisplayedContent(aContent, aStyleContext);
         } 
         else {
@@ -5321,9 +5321,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         isReplaced = PR_TRUE;
         rv = NS_NewAutoRepeatBoxFrame(aPresShell, &newFrame);
 
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
-
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
 
@@ -5348,8 +5345,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         isReplaced = PR_TRUE;
         rv = NS_NewTitleBarFrame(aPresShell, &newFrame);
 
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
 		  // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
 
@@ -5372,9 +5367,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewResizerFrame(aPresShell, &newFrame);
-
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
 
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
@@ -5583,9 +5575,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         else
           rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, layout);
 
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
-
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
 
@@ -5635,9 +5624,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
           rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, layout);
         }
 
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
-
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
 
@@ -5671,9 +5657,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
           rv = NS_NewXULTreeSliceFrame(aPresShell, &newFrame, PR_FALSE, layout);
         else
           rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, layout);
-
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
 
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
@@ -5713,9 +5696,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
 
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-             aStyleContext->GetStyleData(eStyleStruct_Display);
-
         // Boxes can scroll.
         if (IsScrollable(aPresContext, display)) {
 
@@ -5741,9 +5721,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         NS_NewBulletinBoardLayout(aPresShell, layout);
 
         rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, layout);
-
-        const nsStyleDisplay* display = (const nsStyleDisplay*)
-        aStyleContext->GetStyleData(eStyleStruct_Display);
 
          if (IsScrollable(aPresContext, display)) {
 
@@ -6779,12 +6756,12 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsIPresShell*            aPresShell,
   nsMathMLmtableCreator mathTableCreator(aPresShell); // Used to make table views.
 
   // See if the element is absolute or fixed positioned
-  const nsStylePosition* position = (const nsStylePosition*)
-    aStyleContext->GetStyleData(eStyleStruct_Position);
-  if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+  const nsStyleDisplay* disp = (const nsStyleDisplay*)
+    aStyleContext->GetStyleData(eStyleStruct_Display);
+  if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
     isAbsolutelyPositioned = PR_TRUE;
   }
-  else if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+  else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
     isFixedPositioned = PR_TRUE;
   }
 
@@ -6995,12 +6972,12 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
   //nsSVGTableCreator svgTableCreator(aPresShell); // Used to make table views.
  
   // See if the element is absolute or fixed positioned
-  const nsStylePosition* position = (const nsStylePosition*)
-    aStyleContext->GetStyleData(eStyleStruct_Position);
-  if (NS_STYLE_POSITION_ABSOLUTE == position->mPosition) {
+  const nsStyleDisplay* disp = (const nsStyleDisplay*)
+    aStyleContext->GetStyleData(eStyleStruct_Display);
+  if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
     isAbsolutelyPositioned = PR_TRUE;
   }
-  else if (NS_STYLE_POSITION_FIXED == position->mPosition) {
+  else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
     isFixedPositioned = PR_TRUE;
   }
   if (aTag == nsSVGAtoms::g)
@@ -7161,7 +7138,7 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
  
       if (baseTag.get() != aTag || aNameSpaceID != nameSpaceID) {
         // Construct the frame using the XBL base tag.
-        nsresult rv = ConstructFrameInternal( aPresShell, 
+        rv = ConstructFrameInternal( aPresShell, 
                                   aPresContext,
                                   aState,
                                   aContent,

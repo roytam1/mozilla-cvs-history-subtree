@@ -2173,8 +2173,9 @@ nsComputedDOMStyle::GetBorderColorFor(PRUint8 aSide,
     PRBool foreground;
     border->GetBorderColor(aSide, color, transparent, foreground);
     if (foreground) {
-      nsStyleColor* colorStruct = nsnull;
-      GetStyleData(eStyleStruct_Color,(nsStyleStruct*&)colorStruct,aFrame);
+      const nsStyleColor* colorStruct = nsnull;
+      GetStyleData(eStyleStruct_Color,(const nsStyleStruct*&)colorStruct,
+                   aFrame);
       color = colorStruct->mColor;
     }
 
