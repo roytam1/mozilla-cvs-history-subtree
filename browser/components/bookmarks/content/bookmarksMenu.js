@@ -520,9 +520,16 @@ var BookmarksMenuDNDObserver = {
   {
     var target = aEvent.target;
 
-    // Prevent dragging from an invalid region
-    if (!this.canDrop(aEvent))
-      return;
+    // Prevent dragging from invalid regions
+
+    // can't drag from the empty areas
+    if (target.id == "bookmarks-menu" ||
+        target.id == "bookmarks-chevron" ||
+        target.id == "bookmarks-ptf")
+      return false;
+
+    if (!BookmarksMenu.isBTBookmark(target.id))
+      return false;
 
     // Prevent dragging out of menupopups on non Win32 platforms. 
     // a) on Mac drag from menus is generally regarded as being satanic
@@ -531,10 +538,6 @@ var BookmarksMenuDNDObserver = {
     // the functionality there. 
     if (navigator.platform != "Win32" && target.localName != "toolbarbutton")
       return;
-
-    // bail if dragging from the empty area of the bookmarks toolbar
-    if (target.id == "bookmarks-ptf")
-      return
 
     // a drag start is fired when leaving an open toolbarbutton(type=menu) 
     // (see bug 143031)
@@ -604,10 +607,18 @@ var BookmarksMenuDNDObserver = {
 
     // For RTL PersonalBar bookmarks buttons, orientation should be inverted (only in drop case)
     var PBStyle = window.getComputedStyle(document.getElementById("PersonalToolbar"),'');
-    var isHorizontal = (target.localName == "toolbarbutton");    if ((PBStyle.direction == 'rtl') && isHorizontal) {      if (orientation == BookmarksUtils.DROP_AFTER)        orientation = BookmarksUtils.DROP_BEFORE;      else if (orientation == BookmarksUtils.DROP_BEFORE)        orientation = BookmarksUtils.DROP_AFTER;
+    var isHorizontal = (target.localName == "toolbarbutton");
+    if ((PBStyle.direction == 'rtl') && isHorizontal) {
+      if (orientation == BookmarksUtils.DROP_AFTER)
+        orientation = BookmarksUtils.DROP_BEFORE;
+      else if (orientation == BookmarksUtils.DROP_BEFORE)
+        orientation = BookmarksUtils.DROP_AFTER;
     }
 
     var selTarget   = BookmarksMenu.getBTTarget(target, orientation);
+
+    // we can only test for kCopyAction if the source is a bookmark
+    var checkCopy = aDragSession.isDataFlavorSupported("moz/rdfitem");
 
     const kDSIID      = Components.interfaces.nsIDragService;
     const kCopyAction = kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_LINK;
@@ -626,7 +637,14 @@ var BookmarksMenuDNDObserver = {
       menuTarget.removeChild(menuSeparator);
     }
 
-    if (aDragSession.dragAction & kCopyAction)
+    // doCopy defaults to true; check if we should make it false.
+    // we make it false only if all the selection items have valid parent
+    // bookmark DS containers (i.e. aren't generated via aggregation)
+    var doCopy = true;
+    if (checkCopy && !(aDragSession.dragAction & kCopyAction))
+      doCopy = BookmarksUtils.shouldCopySelection("drag", selection);
+
+    if (doCopy)
       BookmarksUtils.insertAndCheckSelection("drag", selection, selTarget);
     else
       BookmarksUtils.moveAndCheckSelection("drag", selection, selTarget);
@@ -640,12 +658,17 @@ var BookmarksMenuDNDObserver = {
   canDrop: function (aEvent, aDragSession)
   {
     var target = aEvent.target;
-    return BookmarksMenu.isBTBookmark(target.id)       && 
-           target.id != "NC:SystemBookmarksStaticRoot" &&
-           target.id.substring(0,5) != "find:"         ||
-           target.id == "bookmarks-menu"               ||
+    if (!BookmarksMenu.isBTBookmark(target.id))
+      return false;
+
+    var btype = BookmarksUtils.resolveType(target.id);
+
+    return target.id == "bookmarks-menu"               ||
            target.id == "bookmarks-chevron"            ||
-           target.id == "bookmarks-ptf";
+           target.id == "bookmarks-ptf" ||
+          (target.id != "NC:SystemBookmarksStaticRoot" &&
+           btype == "Folder" ||
+           btype == "Bookmark");
   },
 
   canHandleMultipleItems: true,

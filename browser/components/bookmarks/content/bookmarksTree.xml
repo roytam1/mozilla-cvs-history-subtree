@@ -656,31 +656,54 @@
       <field name="builderObserver"><![CDATA[
       ({
         mOuter: this,
+
         canDropOn: function(index)
         {
           var dragSession = DS.getCurrentSession();
           if (!dragSession)
             return false;
-          var selection = BookmarksUtils.getSelectionFromXferData(dragSession);
-          return !selection.containsImmutable;
+
+          var rsrc = this.mOuter.getRowResource(index);
+
+          // we can only test for kCopyAction if the source is a bookmark
+          var checkCopy = dragSession.isDataFlavorSupported("moz/rdfitem");
+          const kCopyAction = kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_LINK;
+          if (!checkCopy || dragSession.dragAction & kCopyAction) {
+              return true;
+          } else {
+              var selection = BookmarksUtils.getSelectionFromXferData(dragSession);
+              // we can't drop into Livemarks, file:/find: URIs, etc.
+              if (!BookmarksUtils.isValidTargetContainer (rsrc, selection))
+                  return false;
+              return true;
+          }
         },
+
         canDropBeforeAfter: function(index, before)
         {
           var dragSession = DS.getCurrentSession();
           if (!dragSession)
             return false;
+
           var selection = BookmarksUtils.getSelectionFromXferData(dragSession);
-          if (selection.containsImmutable)
-            return false;
+          var rsrc = this.mOuter.getRowResource(index);
+          var rsrcParent = this.mOuter.getParentResource(index);
+
+          var rtype = BookmarksUtils.resolveType(rsrc);
+          var rptype = BookmarksUtils.resolveType(rsrcParent);
+
+          if (!BookmarksUtils.isValidTargetContainer (rsrcParent, selection))
+              return false;
 
           if (index != 0)
             return true;
-          if (this.mOuter.getRowResource(index).Value != "NC:BookmarksRoot")
+          if (rsrc.Value != "NC:BookmarksRoot")
             return true;
           return before? false:this.mOuter.treeBoxObject.view.isContainerOpen(0)
         },
+
         onDrop: function(row, orientation)
-        {  
+        {
           var dragSession = DS.getCurrentSession();
           if (!dragSession)
             return;
@@ -699,12 +722,23 @@
           }
           this.mOuter.treeBoxObject.selection.selectEventsSuppressed = true;
           this.mOuter._itemToBeToggled = [];
+
+          // we can only test for kCopyAction if the source is a bookmark
+          var checkCopy = dragSession.isDataFlavorSupported("moz/rdfitem");
           const kCopyAction = kDSIID.DRAGDROP_ACTION_COPY + kDSIID.DRAGDROP_ACTION_LINK;
 
-          if (dragSession.dragAction & kCopyAction)
+          // doCopy defaults to true; check if we should make it false.
+          // we make it false only if all the selection items have valid parent
+          // bookmark DS containers (i.e. aren't generated via aggregation)
+          var doCopy = true;
+          if (checkCopy && !(dragSession.dragAction & kCopyAction))
+            doCopy = BookmarksUtils.shouldCopySelection("drag", selection);
+
+          if (doCopy)
             BookmarksUtils.insertAndCheckSelection("drag", selection, target);
           else
             BookmarksUtils.moveAndCheckSelection  ("drag", selection, target);
+
           if (this.mOuter._itemToBeToggled.length > 0)
             this.mOuter.updateTreeSelection();
           // use of a timer to speedup

@@ -1119,7 +1119,10 @@ var BookmarksUtils = {
       var child = this.getProperty(aResource, NC_NS+"child", aDS);
       if (child || RDFCU.IsContainer(aDS?aDS:BMDS, RDF.GetResource(aResource)))
         return "ImmutableFolder";
-      return "ImmutableBookmark";
+
+      // not a container; make sure it has at least a URL
+      if (this.getProperty(aResource, NC_NS+"URL") != null)
+        return "ImmutableBookmark";
     }
 
     return type;
@@ -1307,6 +1310,24 @@ var BookmarksUtils = {
     var txn = new BookmarkMoveTransaction(aAction, aSelection, aTarget);
     BMSVC.transactionManager.doTransaction(txn);
   }, 
+
+  // returns true if this selection should be copied instead of moved,
+  // if a move was originally requested
+  shouldCopySelection: function (aAction, aSelection)
+  {
+    for (var i = 0; i < aSelection.length; i++) {
+      var parentType = BookmarksUtils.resolveType(aSelection.parent[i]);
+      if (aSelection.type[i] == "ImmutableBookmark" ||
+          aSelection.type[i] == "ImmutableFolder" ||
+          aSelection.parent[i] == null ||
+          (aSelection.type[i] == "Bookmark" && parentType == "Livemark"))
+      {
+        return true;            // if any of these are found
+      }
+    }
+
+    return false;
+  },
 
   getXferDataFromSelection: function (aSelection)
   {

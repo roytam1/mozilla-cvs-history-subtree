@@ -219,7 +219,10 @@ function onViewSelected(aEvent)
   var displayValue;
   var selection = aEvent.target.getTreeSelection();
   var bookmarksView = document.getElementById("bookmarks-view");
-  
+
+  if (selection.length == 0)
+      return;
+
   if (aEvent.target.id == "bookmark-folders-view" && selection)
     bookmarksView.tree.setAttribute("ref",selection.item[0].Value);
       

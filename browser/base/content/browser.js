@@ -2638,7 +2638,12 @@ var proxyIconDNDObserver = {
       aXferData.data.addDataForFlavour("text/html", htmlString);
 
       // we're copying the URL from the proxy icon, not moving
-      aDragAction.action = Components.interfaces.nsIDragService.DRAGDROP_ACTION_COPY;
+      // we specify all of them though, because d&d sucks and OS's
+      // get confused if they don't get the one they want
+      aDragAction.action =
+        Components.interfaces.nsIDragService.DRAGDROP_ACTION_COPY |
+        Components.interfaces.nsIDragService.DRAGDROP_ACTION_MOVE |
+        Components.interfaces.nsIDragService.DRAGDROP_ACTION_LINK;
     }
 }
 
