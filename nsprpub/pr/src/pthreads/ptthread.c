@@ -936,6 +936,9 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
             PR_DestroyLock(pt_book.ml); pt_book.ml = NULL;
         }
         _pt_thread_death(me);
+#ifdef _PR_ZONE_ALLOCATOR
+        _PR_DestroyZones();
+#endif
         _pr_initialized = PR_FALSE;
         return PR_SUCCESS;
     }
