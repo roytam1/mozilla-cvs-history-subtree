@@ -806,12 +806,7 @@ STAN_GetNSSCertificate(CERTCertificate *cc)
 	* here.  sigh.
 	*/
 	SECItem derSerial;
-	SECStatus secrv;
-	secrv = CERT_SerialNumberFromDERCert(&cc->derCert, &derSerial);
-	if (secrv == SECFailure) {
-	    nssArena_Destroy(arena);
-	    return NULL;
-	}
+	CERT_SerialNumberFromDERCert(&cc->derCert, &derSerial);
 	nssItem_Create(arena, &c->serial, derSerial.len, derSerial.data);
 	PORT_Free(derSerial.data);
     }

@@ -6,7 +6,7 @@
 # the License at http://www.mozilla.org/NPL/
 #
 # Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
@@ -38,7 +38,7 @@
 
 CC = xlC_r
 CCC = xlC_r
-CFLAGS += -qarch=com -qnoansialias -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV -DAIX4_3 -DHAVE_LOCALTIME_R
+CFLAGS += -qarch=com -qnoansialias -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV -DAIX4_3
 
 RANLIB = ranlib
 

@@ -6,7 +6,7 @@
 # the License at http://www.mozilla.org/NPL/
 #
 # Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
@@ -54,7 +54,7 @@ RANLIB = echo
 CPU_ARCH = sparc
 GFX_ARCH = x
 
-OS_CFLAGS = -DXP_UNIX -DSVR4 -DSYSV -DSOLARIS -DHAVE_LOCALTIME_R
+OS_CFLAGS = -DXP_UNIX -DSVR4 -DSYSV -DSOLARIS
 OS_LIBS = -lsocket -lnsl -ldl
 
 ASFLAGS	        += -P -L -K PIC -D_ASM -D__STDC__=0

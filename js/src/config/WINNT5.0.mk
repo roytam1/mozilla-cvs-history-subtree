@@ -6,7 +6,7 @@
 # the License at http://www.mozilla.org/NPL/
 #
 # Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
@@ -80,7 +80,7 @@ OPTIMIZER = $(WIN_DEBUG_CFLAGS)
 endif
 endif
 
-OS_CFLAGS = -D_X86_=1 -DXP_PC -DWIN32 -D_WINDOWS -D_WIN32 $(WIN_CFLAGS)
+OS_CFLAGS = -DXP_PC -DWIN32 -D_WINDOWS -D_WIN32 $(WIN_CFLAGS)
 JSDLL_CFLAGS = -DEXPORT_JS_API
 OS_LIBS = -lm -lc
 
@@ -90,14 +90,12 @@ USE_MSVC = 1
 LIB_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib oldnames.lib /nologo\
  /subsystem:windows /dll /debug /pdb:none\
- /machine:I386\
- /opt:ref /opt:noicf
+ /machine:I386
 
 EXE_LINK_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
  advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib oldnames.lib /nologo\
  /subsystem:console /debug /pdb:none\
- /machine:I386\
- /opt:ref /opt:noicf
+ /machine:I386
 
 # CAFEDIR = t:/cafe
 # JCLASSPATH = $(CAFEDIR)/Java/Lib/classes.zip

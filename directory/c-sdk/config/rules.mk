@@ -366,17 +366,7 @@ ifeq ($(OS_ARCH),OS2)
 	@cmd /C "$(FILTER) $(LIBRARY) | grep -v _DLL_InitTerm >>$@.def"
 	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $@.def
 else	# OS2
-ifeq ($(OS_TARGET), OpenVMS)
-	@if test ! -f $(OBJDIR)/VMSuni.opt; then \
-	    echo "Creating universal symbol option file $(OBJDIR)/VMSuni.opt";\
-	    create_opt_uni $(OBJS); \
-	    mv VMSuni.opt $(OBJDIR); \
-	fi
-	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS) $(OBJDIR)/VMSuni.opt
-	@echo "`translate $@`" > $(@:.$(DLL_SUFFIX)=.vms)
-else	# OpenVMS
 	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
-endif	# OpenVMS
 endif   # OS2
 endif	# WINNT
 endif	# AIX 4.1

@@ -6,7 +6,7 @@
 # the License at http://www.mozilla.org/NPL/
 #
 # Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express oqr
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
@@ -54,7 +54,7 @@ SO_SUFFIX = sl
 CPU_ARCH = hppa
 GFX_ARCH = x
 
-OS_CFLAGS = -DXP_UNIX -DHPUX -DSYSV -DHAVE_LOCALTIME_R
+OS_CFLAGS = -DXP_UNIX -DHPUX -DSYSV
 OS_LIBS = -ldld
 
 ifeq ($(OS_RELEASE),B.10)

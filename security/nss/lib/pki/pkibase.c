@@ -1015,7 +1015,8 @@ cert_getUIDFromInstance(nssCryptokiObject *instance, NSSItem *uid,
                                                 &uid[0], /* encoding */
                                                 NULL,  /* issuer   */
                                                 NULL,  /* serial   */
-                                                NULL);  /* subject  */
+                                                NULL,  /* subject  */
+                                                NULL); /* email    */
 #else
     return nssCryptokiCertificate_GetAttributes(instance,
                                                 NULL,  /* XXX sessionOpt */
@@ -1025,7 +1026,8 @@ cert_getUIDFromInstance(nssCryptokiObject *instance, NSSItem *uid,
                                                 NULL,  /* encoding */
                                                 &uid[0], /* issuer */
                                                 &uid[1], /* serial */
-                                                NULL);  /* subject  */
+                                                NULL,  /* subject  */
+                                                NULL); /* email    */
 #endif /* NSS_3_4_CODE */
 }
 

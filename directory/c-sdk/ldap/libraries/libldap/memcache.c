@@ -1101,8 +1101,6 @@ memcache_add_to_ld(LDAP *ld, int msgid, LDAPMessage *pMsg)
     if (nRes != LDAP_SUCCESS)
 	return nRes;
 
-    LDAP_MUTEX_LOCK( ld, LDAP_RESP_LOCK );
-
     for (r = &(ld->ld_responses); *r; r = &((*r)->lm_next))
 	if ((*r)->lm_msgid == msgid)
 	    break;
@@ -1113,8 +1111,6 @@ memcache_add_to_ld(LDAP *ld, int msgid, LDAPMessage *pMsg)
 	}
 
     *r = pCopy;
-
-    LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
     
     return nRes;
 }
@@ -1416,9 +1412,8 @@ memcache_access(LDAPMemCache *cache, int mode,
 	unsigned long key = *((unsigned long*)pData1);
 	char *basedn = (char*)pData3;
 	ldapmemcacheRes *pRes = NULL;
-	void* hashResult = NULL;
 
-	nRes = htable_get(cache->ldmemc_resTmp, pData2, &hashResult);
+	nRes = htable_get(cache->ldmemc_resTmp, pData2, (void**)&pRes);
 	if (nRes == LDAP_SUCCESS)
 	    return( LDAP_ALREADY_EXISTS );
 
@@ -1447,13 +1442,11 @@ memcache_access(LDAPMemCache *cache, int mode,
 	LDAPMessage *pMsg = (LDAPMessage*)pData2;
 	LDAPMessage *pCopy = NULL;
 	ldapmemcacheRes *pRes = NULL;
-	void* hashResult = NULL;
 
-	nRes = htable_get(cache->ldmemc_resTmp, pData1, &hashResult);
+	nRes = htable_get(cache->ldmemc_resTmp, pData1, (void**)&pRes);
 	if (nRes != LDAP_SUCCESS)
 	    return nRes;
 
-	pRes = (ldapmemcacheRes*) hashResult;
 	nRes = memcache_dup_message(pMsg, pMsg->lm_msgid, 0, &pCopy, &size);
 	if (nRes != LDAP_SUCCESS) {
 	    nRes = htable_remove(cache->ldmemc_resTmp, pData1, NULL);
@@ -1521,11 +1514,10 @@ memcache_access(LDAPMemCache *cache, int mode,
     /* Remove cached entries in the temporary cache. */
     else if (mode == MEMCACHE_ACCESS_DELETE) {
 
-	void* hashResult = NULL;
+	ldapmemcacheRes *pCurRes = NULL;
 
 	if ((nRes = htable_remove(cache->ldmemc_resTmp, pData1,
-	                          &hashResult)) == LDAP_SUCCESS) {
-	    ldapmemcacheRes *pCurRes = (ldapmemcacheRes*) hashResult;
+	                          (void**)&pCurRes)) == LDAP_SUCCESS) {
 	    memcache_free_from_list(cache, pCurRes, LIST_TMP);
 	    memcache_free_entry(cache, pCurRes);
 	}
@@ -2129,7 +2121,7 @@ attrkey_clearnode(void **ppTableData, void *pData)
  */
 #define NSLDAPI_CRC32_POLY 0x04c11db7     /* AUTODIN II, Ethernet, & FDDI */
 
-static nsldapi_uint_32 crc32_table[256] = { 
+static unsigned long crc32_table[256] = { 
     0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b, 
     0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61, 
     0x350c9b64, 0x31cd86d3, 0x3c8ea00a, 0x384fbdbd, 0x4c11db70, 0x48d0c6c7, 
@@ -2181,11 +2173,15 @@ static nsldapi_uint_32 crc32_table[256] = {
 static unsigned long
 crc32_convert(char *buf, int len)
 {
-    unsigned char *p;
-	nsldapi_uint_32	crc;
+    char *p;
+#ifdef OSF1V4D
+    unsigned int crc;
+#else
+    unsigned long crc;	    /* FIXME: this is not 32-bits on all platforms! */
+#endif /* OSF1V4D */
 
     crc = 0xffffffff;       /* preload shift register, per CRC-32 spec */
-    for (p = (unsigned char *)buf; len > 0; ++p, --len)
+    for (p = buf; len > 0; ++p, --len)
 	crc = ((crc << 8) ^ crc32_table[(crc >> 24) ^ *p]) & 0xffffffff;
 
     return (unsigned long) ~crc;    /* transmit complement, per CRC-32 spec */

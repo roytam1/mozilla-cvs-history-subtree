@@ -111,6 +111,22 @@ SECStatus PBE_PK11ParamToAlgid(SECOidTag algTag, SECItem *param,
 extern void pk11sdr_Init(void);
 extern void pk11sdr_Shutdown(void);
 
+typedef struct SECMODCallOnceType {
+    PRIntn initialized;
+    PRInt32 inProgress;
+    SECStatus status;
+} SECMODCallOnceType;
+
+typedef SECStatus (PR_CALLBACK *SECMODCallOnceFN)(void *arg);
+
+extern void SECMOD_InitCallOnce();
+
+extern SECStatus SECMOD_CallOnce(SECMODCallOnceType *once,
+                                 SECMODCallOnceFN    func,
+                                 void               *arg);
+
+extern void SECMOD_CleanupCallOnce();
+
 SEC_END_PROTOS
 
 #endif

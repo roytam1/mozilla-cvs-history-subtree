@@ -2261,7 +2261,7 @@ pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr,
 							void *wincx) {
     PK11SlotList *list;
     PK11SlotListElement *le;
-    CERTCertificate * cert = NULL;
+    CERTCertificate * cert;
     PK11SlotInfo *slot = NULL;
     SECStatus rv;
 
@@ -2297,7 +2297,6 @@ pk11_AllFindCertObjectByRecipient(PK11SlotInfo **slotPtr,
 	return NULL;
     }
     *slotPtr = slot;
-    PORT_Assert(cert != NULL);
     return cert;
 }
 
@@ -2341,9 +2340,9 @@ loser:
     return NULL;
 }
 
-static PRCallOnceType keyIDHashCallOnce;
+static SECMODCallOnceType keyIDHashCallOnce;
 
-static PRStatus PR_CALLBACK
+static SECStatus PR_CALLBACK
 pk11_keyIDHash_populate(void *wincx)
 {
     CERTCertList     *certList;
@@ -2352,7 +2351,7 @@ pk11_keyIDHash_populate(void *wincx)
 
     certList = PK11_ListCerts(PK11CertListUser, wincx);
     if (!certList) {
-	return PR_FAILURE;
+	return SECFailure;
     }
 
     for (node = CERT_LIST_HEAD(certList);
@@ -2366,7 +2365,7 @@ pk11_keyIDHash_populate(void *wincx)
 	}
     }
     CERT_DestroyCertList(certList);
-    return PR_SUCCESS;
+    return SECSuccess;
 }
 
 /*
@@ -2379,11 +2378,11 @@ PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *win
 {
     CERTCertificate *cert;
     NSSCMSRecipient *rl;
-    PRStatus rv;
+    SECStatus srv;
     int rlIndex;
 
-    rv = PR_CallOnceWithArg(&keyIDHashCallOnce, pk11_keyIDHash_populate, wincx);
-    if (rv != PR_SUCCESS)
+    srv = SECMOD_CallOnce(&keyIDHashCallOnce, pk11_keyIDHash_populate, wincx);
+    if (srv != SECSuccess)
 	return -1;
 
     cert = pk11_AllFindCertObjectByRecipientNew(recipientlist, wincx, &rlIndex);
@@ -3751,10 +3750,7 @@ loser:
     } else {
 	crls = nssTrustDomain_FindCRLsBySubject(td, &subject);
     }
-    if ((!crls) || (*crls == NULL)) {
-	if (crls) {
-	    nssCRLArray_Destroy(crls);
-	}
+    if (!crls) {
 	if (NSS_GetError() == NSS_ERROR_NOT_FOUND) {
 	    PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
 	}
@@ -4155,4 +4151,55 @@ CERTSignedCrl* PK11_ImportCRL(PK11SlotInfo * slot, SECItem *derCRL, char *url,
 	SEC_DestroyCrl (newCrl);
     }
     return (crl);
+}
+
+/*
+ * This code takes the NSPR CallOnce functionality and modifies it so 
+ * that we can pass an argument to our function
+ */
+static struct {
+    PRLock *ml;
+    PRCondVar *cv;
+} mod_init;
+
+void SECMOD_InitCallOnce(void) {
+    mod_init.ml = PR_NewLock();
+    PORT_Assert(NULL != mod_init.ml);
+    mod_init.cv = PR_NewCondVar(mod_init.ml);
+    PORT_Assert(NULL != mod_init.cv);
+}
+
+void SECMOD_CleanupCallOnce()
+{
+    if (mod_init.ml) {
+	PR_DestroyLock(mod_init.ml);
+	mod_init.ml = NULL;
+    }
+    if (mod_init.cv) {
+	PR_DestroyCondVar(mod_init.cv);
+	mod_init.cv = NULL;
+    }
+}
+
+SECStatus SECMOD_CallOnce(SECMODCallOnceType *once,
+                          SECMODCallOnceFN    func,
+                          void               *arg)
+{
+
+    if (!once->initialized) {
+	if (PR_AtomicSet(&once->inProgress, 1) == 0) {
+	    once->status = (PRStatus)(*func)(arg);
+	    PR_Lock(mod_init.ml);
+	    once->initialized = 1;
+	    PR_NotifyAllCondVar(mod_init.cv);
+	    PR_Unlock(mod_init.ml);
+	} else {
+	    PR_Lock(mod_init.ml);
+	    while (!once->initialized) {
+		PR_WaitCondVar(mod_init.cv, PR_INTERVAL_NO_TIMEOUT);
+	    }
+	    PR_Unlock(mod_init.ml);
+	}
+    }
+    return once->status;
 }

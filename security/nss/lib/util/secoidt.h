@@ -16,11 +16,7 @@
  * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
- * Sun Microsystems, Inc. All Rights Reserved.
- *
  * Contributor(s):
- *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -300,53 +296,8 @@ typedef enum {
 
     SEC_OID_MS_SMIME_ENCRYPTION_KEY_PREFERENCE = 190,
 
-    SEC_OID_SHA256              = 191,
-    SEC_OID_SHA384              = 192,
-    SEC_OID_SHA512              = 193,
-
-    SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION = 194,
-    SEC_OID_PKCS1_SHA384_WITH_RSA_ENCRYPTION = 195,
-    SEC_OID_PKCS1_SHA512_WITH_RSA_ENCRYPTION = 196,
-
-    SEC_OID_AES_128_KEY_WRAP	= 197,
-    SEC_OID_AES_192_KEY_WRAP	= 198,
-    SEC_OID_AES_256_KEY_WRAP	= 199,
-
-    /* Elliptic Curve Cryptography (ECC) OIDs */
-    SEC_OID_ANSIX962_EC_PUBLIC_KEY  = 200,
-    SEC_OID_ANSIX962_ECDSA_SIGNATURE_WITH_SHA1_DIGEST = 201,
-
-    /* ANSI X9.62 named elliptic curves (prime field) */
-    SEC_OID_ANSIX962_EC_PRIME192V1  = 202,
-    SEC_OID_ANSIX962_EC_PRIME192V2  = 203,
-    SEC_OID_ANSIX962_EC_PRIME192V3  = 204,
-    SEC_OID_ANSIX962_EC_PRIME239V1  = 205,
-    SEC_OID_ANSIX962_EC_PRIME239V2  = 206,
-    SEC_OID_ANSIX962_EC_PRIME239V3  = 207,
-    SEC_OID_ANSIX962_EC_PRIME256V1  = 208,
-
-    /* SECG named elliptic curves (prime field) */
-    SEC_OID_SECG_EC_SECP112R1       = 209,
-    SEC_OID_SECG_EC_SECP112R2       = 210,
-    SEC_OID_SECG_EC_SECP128R1       = 211,
-    SEC_OID_SECG_EC_SECP128R2       = 212,
-    SEC_OID_SECG_EC_SECP160K1       = 213,
-    SEC_OID_SECG_EC_SECP160R1       = 214, 
-    SEC_OID_SECG_EC_SECP160R2       = 215,
-    SEC_OID_SECG_EC_SECP192K1       = 216,
-    /* SEC_OID_SECG_EC_SECP192R1 is SEC_OID_ANSIX962_EC_PRIME192V1 */
-    SEC_OID_SECG_EC_SECP224K1       = 217,
-    SEC_OID_SECG_EC_SECP224R1       = 218,
-    SEC_OID_SECG_EC_SECP256K1       = 219,
-    /* SEC_OID_SECG_EC_SECP256R1 is SEC_OID_ANSIX962_EC_PRIME256V1 */
-    SEC_OID_SECG_EC_SECP384R1       = 220,
-    SEC_OID_SECG_EC_SECP521R1       = 221,
-
     SEC_OID_TOTAL
 } SECOidTag;
-
-#define SEC_OID_SECG_EC_SECP192R1 SEC_OID_ANSIX962_EC_PRIME192V1
-#define SEC_OID_SECG_EC_SECP256R1 SEC_OID_ANSIX962_EC_PRIME256V1
 
 /* fake OID for DSS sign/verify */
 #define SEC_OID_SHA SEC_OID_MISS_DSS
