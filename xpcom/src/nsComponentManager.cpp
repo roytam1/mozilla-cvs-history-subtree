@@ -142,7 +142,7 @@ nsFactoryEntry::Init(nsHashtable* dllCollection,
 
 
 ////////////////////////////////////////////////////////////////////////////////
-// autoFree, autoFreeArr
+// autoFree
 ////////////////////////////////////////////////////////////////////////////////
 
 //
@@ -158,16 +158,6 @@ private:
 public:
 	autoFree(void *Ptr=NULL): mPtr(Ptr) {}
 	~autoFree() { PR_FREEIF(mPtr); }
-};
-
-
-class autoFreeArr
-{
-private:
-	void *mPtr;
-public:
-	autoFreeArr(void *Ptr) : mPtr(Ptr) {}
-	~autoFreeArr() { delete []mPtr;	}
 };
 
 
@@ -699,7 +689,7 @@ nsComponentManagerImpl::PlatformFind(const nsCID &aCID, nsFactoryEntry* *result)
     if (NS_SUCCEEDED(rv))
     {
 		nsIRegistry::Key key;
-		rv = mRegistry->GetSubtreeRaw(xpcomKey,library,&key);
+		rv = mRegistry->GetSubtreeRaw(xpcomKey, library, &key);
         if (NS_SUCCEEDED(rv))
         {
 			PlatformGetFileInfo(key, &lastModTime, &fileSize);			
@@ -737,7 +727,7 @@ nsComponentManagerImpl::PlatformProgIDToCLSID(const char *aProgID, nsCID *aClass
 
     if (!(aClass->Parse(cidString)))
     {
-        return rv;
+        return NS_ERROR_FAILURE;
     }
 
     return NS_OK;
