@@ -19,10 +19,6 @@
 #include "msgCore.h"    // precompiled header...
 #include "nsCOMPtr.h"
 
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
-
 #include "nsSmtpService.h"
 #include "nsIMsgMailSession.h"
 #include "nsIMsgIdentity.h"
@@ -56,13 +52,13 @@ nsresult nsSmtpService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
 {
     if (NULL == aInstancePtr)
         return NS_ERROR_NULL_POINTER;
-    if (aIID.Equals(nsISmtpService::GetIID()) || aIID.Equals(kISupportsIID))
+    if (aIID.Equals(nsCOMTypeInfo<nsISmtpService>::GetIID()) || aIID.Equals(kISupportsIID))
 	{
         *aInstancePtr = (void*) ((nsISmtpService*)this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
-	if (aIID.Equals(nsIProtocolHandler::GetIID()))
+	if (aIID.Equals(nsCOMTypeInfo<nsIProtocolHandler>::GetIID()))
 	{
 		*aInstancePtr = (void *) ((nsIProtocolHandler*) this);
 		NS_ADDREF_THIS();
@@ -70,7 +66,6 @@ nsresult nsSmtpService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
 	}
     return NS_NOINTERFACE;
 }
-
 
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID); 
 
