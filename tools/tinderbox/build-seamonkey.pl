@@ -706,6 +706,8 @@ sub RunBloatTest {
 
   # Turn on ref counting to track leaks (bloaty tool).
   $ENV{NSPR_LOG_MODULES} = "xpcomrefcnt:1";
+  $ENV{XPCOM_MEM_BLOAT_LOG} = "1";
+
 
   $Binary = "$BuildDir/$TopLevel/${Topsrcdir}$BinaryName{$fe}";
   
