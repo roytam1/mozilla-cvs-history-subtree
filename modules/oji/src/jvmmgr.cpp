@@ -200,13 +200,13 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
         if (pJVMPI != NULL) {
             nsIPluginInstance* pPIT;
             nsresult err = pJVMPI->GetPluginInstance(env, &pPIT);
-            if (err == NS_OK) {
+            if ( (err == NS_OK) && (pPIT != NULL) ) {
                 nsIJVMPluginInstance* pJVMPIT;
                 if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
                                          (void**)&pJVMPIT) == NS_OK) {
                     nsPluginInstancePeer* pPITP;
                     err = pJVMPIT->GetPeer((nsIPluginInstancePeer**)&pPITP); 
-                    if (err == NS_OK) {
+                    if ( (err == NS_OK) &&(pPITP != NULL) ) {
                         cx = pPITP->GetJSContext();
                         pPITP->Release();
                     }
@@ -317,13 +317,13 @@ map_java_object_to_js_object_impl(JNIEnv *env, jobject applet, char **errp)
             jobject javaObject = applet;
             nsIPluginInstance* pPIT;
             nsresult err = pJVMPI->GetPluginInstance(javaObject, &pPIT);
-            if (err == NS_OK) {
+            if ( (err == NS_OK) && (pPIT != NULL) ) {
                 nsIJVMPluginInstance* pJVMPIT;
                 if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
                                          (void**)&pJVMPIT) == NS_OK) {
                     nsPluginInstancePeer* pPITP;
                     err = pJVMPIT->GetPeer((nsIPluginInstancePeer**)&pPITP); 
-                    if (err == NS_OK) {
+                    if ( (err == NS_OK) &&(pPITP != NULL) ) {
                         nsIJVMPluginTagInfo* pJVMTagInfo;
                         if (pPITP->QueryInterface(kIJVMPluginTagInfoIID,
                                                   (void**)&pJVMTagInfo) == NS_OK) {
