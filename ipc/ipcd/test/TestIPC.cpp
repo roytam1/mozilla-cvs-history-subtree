@@ -216,7 +216,7 @@ int main(int argc, char **argv)
 
         ipcServ->SetMessageObserver(kTestTargetID, new myIpcMessageObserver());
 
-        const char *data =
+        const char data[] =
                 "01 this is a really long message.\n"
                 "02 this is a really long message.\n"
                 "03 this is a really long message.\n"
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
                 "58 this is a really long message.\n"
                 "59 this is a really long message.\n"
                 "60 this is a really long message.\n";
-        SendMsg(ipcServ, 0, kTestTargetID, data, strlen(data)+1, PR_TRUE);
+        SendMsg(ipcServ, 0, kTestTargetID, data, sizeof(data), PR_TRUE);
 
         PRUint32 queryID;
         nsCOMPtr<ipcIClientQueryHandler> handler(new myIpcClientQueryHandler());

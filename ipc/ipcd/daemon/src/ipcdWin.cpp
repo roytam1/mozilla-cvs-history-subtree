@@ -345,8 +345,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     LOG(("daemon started...\n"));
 
-    if (!AcquireLock())
+    if (!AcquireLock()) {
+        // unblock the parent; it should be able to find the IPC window of the
+        // other daemon process.
+        IPC_NotifyParent();
         return 0;
+    }
 
     // initialize global data
     memset(ipcClientArray, 0, sizeof(ipcClientArray));
@@ -363,6 +367,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     ipcHwnd = CreateWindow(IPC_WINDOW_CLASS, IPC_WINDOW_NAME,
                            0, 0, 0, 10, 10, NULL, NULL, NULL, NULL);
+
+    // unblock the parent process; it should now look for the IPC window.
+    IPC_NotifyParent();
+
     if (!ipcHwnd)
         return -1;
 

@@ -56,11 +56,14 @@ CPPSRCS		= \
             ipcModuleReg.cpp \
             ipcCommandModule.cpp
 
-# XXX check $(OS_ARCH) instead?
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+ifeq ($(OS_ARCH),WINNT)
 CPPSRCS +=  ipcdWin.cpp
 else
+ifeq ($(OS_ARCH),BeOS)
+CPPSRCS +=  ipcdStub.cpp
+else
 CPPSRCS +=  ipcdUnix.cpp
+endif
 endif
 
 PROGRAM =   mozipcd$(BIN_SUFFIX)

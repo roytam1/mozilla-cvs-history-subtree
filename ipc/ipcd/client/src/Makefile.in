@@ -52,7 +52,6 @@ MODULE_NAME		= ipcd
 REQUIRES	= \
             xpcom \
             string \
-            necko \
             $(NULL)
 
 CPPSRCS		= \
@@ -61,12 +60,14 @@ CPPSRCS		= \
             ipcModuleFactory.cpp \
             $(NULL)
 
-# XXX use $(OS_ARCH) instead?
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-CPPSRCS +=  ipcTransportWin.cpp
+ifeq ($(OS_ARCH),WINNT)
+CPPSRCS +=  ipcConnectionWin.cpp
 else
-CPPSRCS +=  ipcTransportUnix.cpp
-CPPSRCS +=  ipcSocketProviderUnix.cpp
+ifeq ($(OS_ARCH),BeOS)
+CPPSRCS +=  ipcConnectionStub.cpp
+else
+CPPSRCS +=  ipcConnectionUnix.cpp
+endif
 endif
 
 LOCAL_INCLUDES = \
