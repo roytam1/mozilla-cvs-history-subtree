@@ -52,6 +52,8 @@ JAVAC_ZIP	= $(subst $(BSLASH),$(SLASH),$(JAVA_HOME))/lib/classes.zip
 RANLIB		= echo
 EMACS           = emacs
 RM              = rm -rf
+WHOAMI      = echo $(HOSTNAME)
+
 
 ifdef XP_OS2_EMX
 ######################################################################
