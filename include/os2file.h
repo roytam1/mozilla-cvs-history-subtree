@@ -46,16 +46,15 @@
 #include <sys\stat.h>
 #include "dirent.h"
 
+#ifdef XP_OS2_VACPP
 /*DSR020697 - now using dirent.h for DIR...*/
 
 #define _ST_FSTYPSZ 16
 typedef unsigned long mode_t;
 typedef          long uid_t;
 typedef          long gid_t;
-#ifndef XP_OS2
-   typedef          long off_t;
-#endif
 typedef unsigned long nlink_t;
+#endif
 
 typedef struct timestruc {
     time_t  tv_sec;         /* seconds */
