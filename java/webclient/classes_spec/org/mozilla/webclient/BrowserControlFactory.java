@@ -145,7 +145,9 @@ public class BrowserControlFactory extends Object {
      * <p>Delete a {@link BrowserControl} instance created with {@link
      * #newBrowserControl}.  This method must be called when the user no
      * longer needs a <code>BrowserControl</code> instance.  For
-     * example, when a browser tab closes.</p>
+     * example, when a browser tab closes.  After returning from this
+     * call, any extant references to that <code>BrowserControl</code>
+     * are completely useless.</p>
      *
      * @param toDelete the <code>BrowserControl</code> instance to
      * delete.
