@@ -418,23 +418,13 @@ void XSLTProcessor::processTopLevel
                     }
 
                     //-- get document base
-                    String documentBase;
-                    String currentHref;
-                    //ps->getDocumentHref(element->getOwnerDocument(),
-                    //        currentHref);
-                    if (currentHref.length() == 0) {
-                        documentBase.append(ps->getDocumentBase());
-                    }
-                    else {
-                        //-- Fix for relative URIs (npride)
-                        documentBase.append(ps->getDocumentBase());
-                        documentBase.append('/');
-                        //-- End fix
-                        URIUtils::getDocumentBase(currentHref, documentBase);
-                    }
+                    String realHref;
+                    String thisDocBase = ps->getDocumentBase();
+                    URIUtils::resolveHref(href,thisDocBase,realHref);
+		    
+                    String errMsg,voidBase;
+                    istream* xslInput = URIUtils::getInputStream(realHref,voidBase,errMsg);
 
-                    String errMsg;
-                    istream* xslInput = URIUtils::getInputStream(href,documentBase,errMsg);
                     Document* xslDoc = 0;
                     XMLParser xmlParser;
                     if ( xslInput ) {
@@ -451,7 +441,11 @@ void XSLTProcessor::processTopLevel
                     else {
                         //-- add stylesheet to list of includes
                         ps->addInclude(href, xslDoc);
+                        String newDocBase;
+                        URIUtils::getDocumentBase(realHref, newDocBase);
+                        ps->setDocumentBase(newDocBase);
                         processTopLevel(xslDoc, ps);
+                        ps->setDocumentBase(thisDocBase);
                     }
                     break;
 
