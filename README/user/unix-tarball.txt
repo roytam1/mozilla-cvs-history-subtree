@@ -1,0 +1,134 @@
+Beonex Communicator 0.8
+
+
+Description
+===========
+
+Beonex Communicator is based on Mozilla, i.e. is a sibling of Netscape 6.
+Beonex Communicator contains
+
+ * Navigator - web-browser
+ * Mailnews - email/news client
+ * Composer - web page editor
+
+More info at <http://www.beonex.com/communicator>.
+
+This version bases on the source code of Mozilla 1.0.
+
+
+Installation
+============
+
+Short version
+-------------
+
+Extract the downloaded tarball and start |./beonex-comm/beonex-comm|.
+
+
+Long version
+------------
+
+   1. Requirements
+
+          * OS:
+            A current Linux system, e.g.
+                * Redhat 6.1 or later (incl. 7.x): ok
+                * Debian 2.2: ok
+                * Mandrake 7.2: ok
+                * SuSe 6.4: ok
+            In particular, the required components are
+                * Linux 2.2 or higher
+                * glibc 2.1 or higher
+                * zlib, libjpeg
+                * GTK+/glib 1.2
+          * Processor: min. Pentium 233
+          * RAM: 64 MB, 128 MB recommended
+          * HD: 25 MB
+
+   2. Legal notes
+
+             Beonex Communicator is Open-Source under the MPL.
+             See file LICENSE and Help|About Beonex within Communicator.
+
+   3. Verify file
+
+            If you want to verify that the downloaded file has not been
+            tampered and you have PGP or another OpenPGP-compliant program
+            installed, you can download the signature of this file at
+            <http://www.beonex.com/communicator/version/0.8/install/unix/>.
+            The key can be found at <http://www.beonex.com/about/contacts>.
+
+   4. Open a shell
+
+            Open a shell (command prompt, terminal)
+
+   5. Select a directory to install Communicator in
+
+            (You can install as root and run as normal user.)
+            |cd| into this directory.
+
+   6. Unpack the file you downloaded
+
+            E.g. either
+            tar xvIf beonex-comm-0.8-stable-linux-i686.tar.bz2
+            or
+            bzip -dc beonex-comm-0.8-stable-linux-i686.tar.bz2 | tar xvf -
+
+   7. Start Communicator
+
+          * Run |./beonex-comm/beonex-comm|.
+
+   8. Install additional packages
+
+            via the add-on page
+            <http://www.beonex.com/communicator/version/0.8/add-ons>, e.g.
+          * Java
+          * Flash
+          * German user-interface
+
+   9. Mailing list
+
+            Subscribe to the announce mailing list
+            <http://www.beonex.com/support/announce/mailinglist>. Strongly
+            recommended for security updates.
+
+  10. Get support
+
+            Tell your manager about our support options
+            <http://www.beonex.com/communicator/support>.
+
+  11. Have fun!
+
+
+Release-notes
+=============
+
+Last-minute information about bugs, changes etc. can be found at
+<http://www.beonex.com/communicator/version/0.8/release-notes>.
+
+
+Updates
+=======
+
+While this release should not expire, it is strongly recommended that you use
+the latest version. This is important for your own security (there may be
+security holes we don't know about at the moment).
+
+Check the Beonex Communicator Website <http://www.beonex.com/communicator>,
+if there are newer releases. To keep up-to-date, subscribe to the
+announce mailing list <http://www.beonex.com/support/announce/mailinglist>.
+
+
+Questions
+=========
+
+If you have questions, please read the release-notes and documentation first.
+If there are still open questions, go to the support page
+<http://www.beonex.com/communicator/support>.
+
+
+Distributor
+===========
+
+Beonex
+<http://www.beonex.com>

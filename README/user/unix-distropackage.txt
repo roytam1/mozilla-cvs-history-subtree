@@ -1,0 +1,93 @@
+Beonex Communicator 0.7
+
+
+Description
+===========
+
+Beonex Communicator is based on Mozilla, i.e. is a sibling of Netscape 6.
+Beonex Communicator contains
+
+ * Navigator - web-browser
+ * Mailnews - email/news client
+ * Composer - web page editor
+
+More info at <http://www.beonex.com/communicator>.
+
+This version bases on the source code of Mozilla 0.9.2.1 and Netscape 6.1.
+
+
+Installation
+============
+
+Short version
+-------------
+
+Install the package and start |beonex-comm|.
+
+
+Long version
+------------
+
+   1. Requirements
+
+          * OS: Matching the package(s) you downloaded
+          * Processor: min. Pentium 233
+          * RAM: 64 MB, 128 MB recommended
+          * HD: 25 MB
+
+   2. Legal notes
+
+             Beonex Communicator is Open-Source under the MPL.
+             See file LICENSE and Help|About Beonex within Communicator.
+
+   4. Install
+
+            Install the package(s) in the usual way. Please see the manual
+            of your operating system.
+
+   5. Start Communicator
+
+          * Run |beonex-comm|.
+
+   6. Mailing list
+
+            Subscribe to the announce mailing list
+            <http://www.beonex.com/support/announce/mailinglist>. Strongly
+            recommended for security updates.
+
+   7. Have fun!
+
+
+Release-notes
+=============
+
+Last-minute information about bugs, changes etc. can be found at
+<http://www.beonex.com/communicator/version/0.7/release-notes>.
+
+
+Updates
+=======
+
+While this release should not expire, it is strongly recommended that you use
+the latest version. This is important for your own security (there may be
+security holes we don't know about at the moment).
+
+Check the Beonex Communicator Website <http://www.beonex.com/communicator>,
+if there are newer releases. To keep up-to-date, subscribe to the
+announce mailing list <http://www.beonex.com/support/announce/mailinglist>.
+
+
+Questions
+=========
+
+If you have questions, please read the release-notes and documentation first.
+If there are still open questions, go to the support page
+<http://www.beonex.com/communicator/support>.
+
+
+Distributor
+===========
+
+Ben Bucksch
+Beonex
+<http://www.beonex.com>
