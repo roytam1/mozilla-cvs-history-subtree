@@ -103,6 +103,27 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
   gint x;
   gint y;
 
+#ifdef USE_SUPERWIN
+  if (mIsToplevel && mShell)
+  {
+    if (mMozArea->window)
+    {
+      gdk_window_get_origin(mMozArea->window, &x, &y);
+      aNewRect.x = x + aOldRect.x;
+      aNewRect.y = y + aOldRect.y;
+    }
+    else
+      return NS_ERROR_FAILURE;
+  }
+  else if (mSuperWin)
+  {
+    if (mSuperWin->bin_window)
+    {
+      gdk_window_get_origin(mSuperWin->bin_window, &x, &y);
+      aNewRect.x = x + aOldRect.x;
+      aNewRect.y = y + aOldRect.y;
+    }
+#else
   if (mIsToplevel && mShell)
   {
     if (mShell->window)
@@ -114,16 +135,6 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aOldRect, nsRect& aNewRect)
     else
       return NS_ERROR_FAILURE;
   }
-#ifdef USE_SUPERWIN
-  else if (mSuperWin)
-  {
-    if (mSuperWin->bin_window)
-    {
-      gdk_window_get_origin(mSuperWin->bin_window, &x, &y);
-      aNewRect.x = x + aOldRect.x;
-      aNewRect.y = y + aOldRect.y;
-    }
-#else
   else if (mWidget)
   {
     if (mWidget->window)
