@@ -1211,6 +1211,8 @@ nsHTMLFormElement::OnSubmitClickEnd()
 NS_IMETHODIMP
 nsHTMLFormElement::FlushPendingSubmission()
 {
+  nsCOMPtr<nsIFormSubmission> kunkFuDeathGrip(mPendingSubmission);
+
   if (!mPendingSubmission) {
     return NS_OK;
   }
