@@ -7720,16 +7720,16 @@ case "$target" in
     fi
 
     MACOS_DEPLOYMENT_TARGET=`printf "%02d%02d%02d" "$MACOS_VERSION_MAJOR" "$MACOS_VERSION_MINOR" "$MACOS_VERSION_MICRO"`
+    cat >> confdefs.h <<EOF
+#define MACOS_DEPLOYMENT_TARGET $MACOS_DEPLOYMENT_TARGET
+EOF
+
     ;;
 *)
     MACOS_DEPLOYMENT_TARGET=
     ;;
 esac
 
-
-cat >> confdefs.h <<EOF
-#define MACOS_DEPLOYMENT_TARGET $MACOS_DEPLOYMENT_TARGET
-EOF
 
 
 echo $ac_n "checking whether mmap() sees write()s""... $ac_c" 1>&6
