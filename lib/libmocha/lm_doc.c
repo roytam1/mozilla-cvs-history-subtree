@@ -29,11 +29,7 @@
 #include "xp.h"
 #include "lo_ele.h"
 #include "shist.h"
-<<<<<<< lm_doc.c
 #include "cookies.h"
-=======
-/* #include "cookies.h" */
->>>>>>> 3.3.6.2
 #include "structs.h"            /* for MWContext */
 #include "layout.h"             /* included via -I../layout */
 #include "pa_parse.h"           /* included via -I../libparse */
