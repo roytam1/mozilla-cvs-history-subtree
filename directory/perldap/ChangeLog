@@ -1,12 +1,48 @@
-1999-05-30  Kevin McCarthy  <kevin@perldap.org>
+2000-10-05  Leif Hedstrom  <leif@perldap.org>
 
-	* typemap, API.xs: Updated Perl internal variables.  na=>PL_na,
-	sv_undef=>PL_sv_undef.
-	NOTE: This means we can only compile with Perl 5.004_05 and later now.
+	* Released v1.4.1, finally...
 
-1999-05-30  Kevin McCarthy  <kevin@perldap.org>
+	* Makefile.PL: Remove the POLLUTE hack, v2.0 of PerLDAP will
+	support this properly, and require Perl v5.6.
 
-	* typemap: Translate undef to NULL, so we can pass NULL to API calls.
+2000-09-19  Leif Hedstrom  <leif@perldap.org>
+
+	* Conn.pm (update): Bug fix to allow us to delete() an attribute,
+	call update(), and then add new values (or the same values...) to
+	the entry again.
+
+2000-09-19  Leif Hedstrom  <leif@perldap.org>
+
+	* Entry.pm (DESTROY): Bug fix from daniel.hams@db.com (Daniel
+	Hams) to avoid warnings from Apache and mod_perl.
+
+2000-09-13  Leif Hedstrom  <leif@perldap.org>
+
+	* Utils.pm (askPassword): Oops, stupid typo here, should be
+	"unless $prompt" of course...
+
+2000-09-13  Leif Hedstrom  <leif@perldap.org>
+
+	* Entry.pm (isDeleted): Removed a test which made this function
+	not working at all... :)
+
+2000-09-13  Leif Hedstrom  <leif@perldap.org>
+
+	* Removed an if defined() to avoid warnings with Perl v5.6.
+
+2000-06-24  Wolfram Schmidt  <wschmidt@decefix.iao.fhg.de>
+
+	* Entry.pm (FIRSTKEY): Fix bug for deleting all attributes and calling
+	keys.
+
+2000-05-30  Kevin McCarthy  <kevin@perldap.org>
+
+	* Makefile.PL: Added fix so API.xs compiles under Perl 5.6
+	(POLLUTE=>1)
+
+2000-05-30  Leif Hedstrom  <leif@perldap.org>
+
+	* Lots of small fixes...
 
 1999-09-08  Leif Hedstrom  <leif@perldap.org>
 
@@ -68,6 +104,12 @@
 
 1999-09-07  Leif Hedstrom  <leif@perldap.org>
 
+	* API.xs (avref2charptrptr): Fixed potential core dump, if the
+	argument passed wasn't a proper array.
+	(avref2berptrptr): Ditto.
+
+1999-09-07  Leif Hedstrom  <leif@perldap.org>
+
 	* API.xs (avref2charptrptr): Merged in changes from v1.4.1, fixes
 	a potential core dump.
 	(avref2berptrptr): Ditto.
@@ -93,6 +135,12 @@
 	list of attributes.
 	(compare): Support new options syntax, and verbose.
 
+1999-09-06  Leif Hedstrom  <leif@perldap.org>
+
+	* Conn.pm (search): Removed $res and $resv, set the internal data
+	element directly.
+	(searchURL): Ditto.
+
 1999-09-05  Leif Hedstrom  <leif@perldap.org>
 
 	* Entry.pm (values): Changed $#<xxx> syntax to use scalar.
@@ -115,27 +163,11 @@
 	* Conn.pm (newEntry): Now we support initializing new Entry
 	objects with a list of attribute-value pairs.
 
-1999-08-27  Leif Hedstrom  <leif@perldap.org>
+1999-08-25  John Kristian <kristian@netscape.com>
 
-	* Entry.pm (getLDIFString): Renamed from entry2LDIF.
-	We now overload the stringification ("") operator, to allow us to
-	print an entry directly.
+	* Entry.pm (printLDIF): Bug fix.
 
-1999-08-26  Leif Hedstrom  <leif@netscape.com>
-
-	* Conn.pm (nextEntry): Cleaned up return codes when no entries
-	found, we now return undef.
-
-1999-08-25  Leif Hedstrom  <leif@netscape.com>
-
-	* Entry.pm (setValues): Removed separate function, this is now
-	handled entirely by the values() method.
-	(getValues): Ditto.
-	(values): This is the new, combined method for all xxxValues()
-	handling.
-	(move): Changed to use values().
-	(copy): Ditto.
-	Updated documentation for values(), setValues() and getValues().
+	* LDIF.pm: Cleaned out memory leaks.
 
 1999-08-24  Leif Hedstrom  <leif@netscape.com>
 
@@ -289,6 +321,16 @@
         * Conn.pm (add): Fixed bug 3342, thanks to Kevin McCarthy for
         debugging this, and providing a patch. This fixes the problem with
         adding new entries that has binary data.
+
+1999-05-30  Kevin McCarthy  <kevin@perldap.org>
+
+	* typemap, API.xs: Updated Perl internal variables.  na=>PL_na,
+	sv_undef=>PL_sv_undef.
+	NOTE: This means we can only compile with Perl 5.004_05 and later now.
+
+1999-05-30  Kevin McCarthy  <kevin@perldap.org>
+
+	* typemap: Translate undef to NULL, so we can pass NULL to API calls.
 
 1999-03-23  Leif Hedstrom  <leif@netscape.com>
 
