@@ -387,9 +387,11 @@
              xul:title="&preferencesDefaultTitleMac.title;">
 #endif
       <xul:radiogroup anonid="selector" orient="horizontal" class="paneSelector"/>
-      <xul:deck anonid="paneDeck" flex="1">
-        <children includes="prefpane"/>
-      </xul:deck>
+      <xul:hbox flex="1" class="paneDeckContainer">
+        <xul:deck anonid="paneDeck" flex="1">
+          <children includes="prefpane"/>
+        </xul:deck>
+      </xul:hbox>
       <xul:hbox pack="end" anonid="dlg-buttons" class="prefWindow-dlgbuttons">
         <xul:button dlgtype="extra2" class="dialog-button" hidden="true"/>
         <xul:spacer anonid="spacer" flex="1" hidden="true"/>
@@ -436,12 +438,7 @@
           this._selector.setAttribute("collapsed", "true");
       ]]>
       </constructor>
-      <destructor>
-        var psvc = Components.classes["@mozilla.org/preferences-service;1"]
-                             .getService(Components.interfaces.nsIPrefService);
-        psvc.savePrefFile(null);     
-      </destructor>
-      
+
       <field name="instantApply">false</field>
       
       <property name="preferencePanes" readonly="true"
@@ -460,6 +457,7 @@
           return val;
         </setter>          
       </property>
+      <field name="currentPane">null</field>
       
       <method name="_makePaneButton">
         <parameter name="aPaneElement"/>
@@ -551,6 +549,7 @@
                 oldPane.selected = !(aPaneElement.selected = true);
                 if (!this._initialized || oldPane.id != aPaneElement.id) {
                   this.lastSelected = aPaneElement.id;
+                  this.currentPane = aPaneElement;
                   if (this._shouldAnimate) {
                     aPaneElement.style.opacity = 0.0;
                     this.animate(oldPane, aPaneElement);
@@ -708,8 +707,11 @@
               win.initWithParams(aParams);
             win.focus();
           }
-          else 
-            win = openDialog(aURL, "_blank", "resizable,dialog=no,centerscreen" + (aFeatures != "" ? ("," + aFeatures) : ""), aParams);
+          else {
+            var features = "resizable,dialog=no,centerscreen" + (aFeatures != "" ? ("," + aFeatures) : "");
+            var parentWindow = this.instantApply ? window : window.opener;
+            win = parentWindow.openDialog(aURL, "_blank", features, aParams);
+          }
           return win;
         </body>
       </method>
@@ -727,16 +729,49 @@
           if (instantApply) {
             var panes = this.preferencePanes;
             for (var i = 0; i < panes.length; ++i)
-              panes[i].writePreferences();
+              panes[i].writePreferences(true);
           }
           else {
-            dump("*** write dlgaccept handler for child non-instant-apply case\n");
+            // Clone all the preferences elements from the child document and
+            // insert them into the pane collection of the parent. 
+            var pdoc = window.opener.document;
+            var currentPane = pdoc.documentElement.currentPane;
+            var id = window.location.href + "#childprefs";
+            var childPrefs = pdoc.getElementById(id);
+            if (!childPrefs) {
+              var childPrefs = pdoc.createElement("preferences");
+              currentPane.appendChild(childPrefs);
+              childPrefs.id = id;
+            }
+            var panes = this.preferencePanes;
+            for (var i = 0; i < panes.length; ++i) {
+              var preferences = panes[i].preferences;
+              for (var j = 0; j < preferences.length; ++j) {
+                var prefID = window.location.href + "#" + preferences[j].id;
+                var preference = pdoc.getElementById(prefID);
+                if (!preference) {
+                  var preference = pdoc.createElement("preference");
+                  childPrefs.appendChild(preference);
+                  preference.id       = prefID;
+                  preference.name     = preferences[j].name;
+                  preference.type     = preferences[j].type;
+                  preference.inverted = preferences[j].inverted;
+                  preference.readonly = preferences[j].readonly;
+                  preference.disabled = preferences[j].disabled;
+                }
+                preference.value    = preferences[j].value;
+              }
+            }
           }
         }
         else {
           var panes = this.preferencePanes;
           for (var i = 0; i < panes.length; ++i)
-            panes[i].writePreferences();
+            panes[i].writePreferences(false);
+
+          var psvc = Components.classes["@mozilla.org/preferences-service;1"]
+                               .getService(Components.interfaces.nsIPrefService);
+          psvc.savePrefFile(null);
         }
       ]]>
       </handler>
@@ -760,6 +795,7 @@
     </content>
     <implementation>
       <method name="writePreferences">
+        <parameter name="aFlushToDisk"/>
         <body>
         <![CDATA[
           // Write all values to preferences.
@@ -770,9 +806,11 @@
             preference.valueFromPreferences = preference.value;
             preference.batching = false;
           }
-          var psvc = Components.classes["@mozilla.org/preferences-service;1"]
-                               .getService(Components.interfaces.nsIPrefService);
-          psvc.savePrefFile(null);
+          if (aFlushToDisk) {
+            var psvc = Components.classes["@mozilla.org/preferences-service;1"]
+                                 .getService(Components.interfaces.nsIPrefService);
+            psvc.savePrefFile(null);
+          }
         ]]>
         </body>
       </method>

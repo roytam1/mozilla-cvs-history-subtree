@@ -340,8 +340,12 @@ pref("plugin.default_plugin_disabled", true);
 // plugin finder service
 pref("pfs.datasource.url", "chrome://mozapps/locale/plugins/plugins.properties");
 
-pref("browser.preferences.instantApply", true);
+pref("browser.preferences.instantApply", false);
+#ifdef XP_MACOSX
 pref("browser.preferences.animateFadeIn", true);
+#else
+pref("browser.preferences.animateFadeIn", true);
+#endif
 pref("browser.display.screen_resolution", 96);
 
 pref("browser.download.show_plugins_in_list", true);

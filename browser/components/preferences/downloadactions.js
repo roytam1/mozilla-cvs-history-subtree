@@ -757,7 +757,7 @@ var gDownloadActionsWindow = {
 
     // Just reload the list to make sure deletions are respected
     this._loadView();
-    this._updateExclusions();    
+    this._updateExclusions();
     this._tree.treeBoxObject.rowCountChanged(0, this._view.rowCount);
 
     // Restore selection

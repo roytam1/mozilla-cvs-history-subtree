@@ -41,7 +41,6 @@ var gCookiesWindow = {
                                 .getService(Components.interfaces.nsICookieManager),
   _ds               : Components.classes["@mozilla.org/intl/scriptabledateformat;1"]
                                 .getService(Components.interfaces.nsIScriptableDateFormat),
-  _cookies          : [],
   _hosts            : {},
   _hostOrder        : [],
   _tree             : null,
@@ -739,7 +738,7 @@ var gCookiesWindow = {
 
     // Just reload the list to make sure deletions are respected
     this._loadCookies();
-    this._tree.treeBoxObject.rowCountChanged(0, this._view.rowCount);
+    this._tree.treeBoxObject.view = this._view;
 
     // Restore open state
     for (var i = 0; i < this._openIndices.length; ++i)
