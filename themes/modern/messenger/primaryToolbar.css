@@ -150,6 +150,22 @@
   -moz-image-region: rect(34px 199px 67px 150px) !important;
 } 
 
+#button-address {
+  -moz-image-region: rect(204px 49px 237px 0);
+}
+
+#button-address:hover {
+  -moz-image-region: rect(204px 99px 237px 50px);
+} 
+
+#button-address:hover:active {
+  -moz-image-region: rect(204px 149px 237px 100px);
+} 
+
+#button-address[disabled] {
+  -moz-image-region: rect(204px 199px 237px 150px) !important;
+} 
+
 #button-next {
   -moz-image-region: rect(204px 49px 237px 0);
 }

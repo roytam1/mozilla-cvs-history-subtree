@@ -130,6 +130,22 @@
   -moz-image-region: rect(63px 92px 84px 69px) !important;
 } 
 
+#button-address {
+  -moz-image-region: rect(147px 23px 168px 0px);
+}
+
+#button-address:hover {
+  -moz-image-region: rect(147px 46px 168px 23px);
+} 
+
+#button-address:hover:active {
+  -moz-image-region: rect(147px 69px 168px 46px);
+} 
+
+#button-address[disabled] {
+  -moz-image-region: rect(147px 92px 168px 69px) !important;
+} 
+
 #button-next {
   -moz-image-region: rect(147px 23px 168px 0px);
 }
