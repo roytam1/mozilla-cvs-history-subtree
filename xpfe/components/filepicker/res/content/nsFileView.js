@@ -164,11 +164,7 @@ nsFileView.prototype = {
 
   /* boolean hasNextSibling(in long rowIndex, in long afterIndex); */
   hasNextSibling: function(rowIndex, afterIndex) {
-    if (afterIndex < (this.mTotalRows -1)) {
-      return true;
-    } else {
-      return false;
-    }
+    return (afterIndex < (this.mTotalRows - 1));
   },
 
   /* long getLevel(in long index); */
@@ -443,13 +439,10 @@ nsFileView.prototype = {
   filterFiles: function() {
     for(var i = 0; i < this.mFileList.length; i++) {
       var file = this.mFileList[i];
-      var fileobj;
 
       if ((this.mShowHiddenFiles || !file.isHidden()) &&
           file.unicodeLeafName.search(this.mCurrentFilter) == 0) {
-        fileobj = new Object();
-        fileobj.file = file;
-        this.mFilteredFiles[this.mFilteredFiles.length] = fileobj;
+        this.mFilteredFiles[this.mFilteredFiles.length] = { file : file };
       }
     }
 

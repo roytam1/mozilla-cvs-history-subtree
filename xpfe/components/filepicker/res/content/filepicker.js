@@ -290,26 +290,33 @@ function onCancel()
   return true;
 }
 
+function onDblClick(e) {
+  var t = e.originalTarget;
+  if (t.localName != "outlinerbody")
+    return;
+
+  var file = outlinerView.getSelectedFile();
+  if (!file)
+    return;
+
+  if (file.isSymlink()) {
+    var targetFile = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+    targetFile.initWithUnicodePath(file.unicodeTarget);
+    file = targetFile;
+  }
+
+  if (file.isDirectory()) {
+    gotoDirectory(file);
+  }
+  else if (file.isFile()) {
+    doOKButton();
+  }
+}
+
 function onClick(e) {
   var t = e.originalTarget;
-  if (t.localName == "outlinercol") {
+  if (t.localName == "outlinercol")
     handleColumnClick(t.id);
-  } else if (e.detail == 2 && t.localName == "outlinerbody") {
-    var file = outlinerView.getSelectedFile();
-    if (file) {
-      if (file.isSymlink()) {
-        var targetFile = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
-        targetFile.initWithUnicodePath(file.unicodeTarget);
-        file = targetFile;
-      }
-      if (file.isDirectory()) {
-        gotoDirectory(file);
-      }
-      else if (file.isFile()) {
-        doOKButton();
-      }
-    }
-  }
 }
 
 function convertColumnIDtoSortType(columnID) {
