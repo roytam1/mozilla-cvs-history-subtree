@@ -265,7 +265,7 @@ private:
     XPCLock*  mLock;
 
     // Not meant to be implemented. This makes it a compiler error to
-    // construct or assign an nsAutoLock object incorrectly.
+    // construct or assign an XPCAutoLock object incorrectly.
     XPCAutoLock(void) {}
     XPCAutoLock(XPCAutoLock& /*aMon*/) {}
     XPCAutoLock& operator =(XPCAutoLock& /*aMon*/) {
@@ -273,7 +273,7 @@ private:
     }
 
     // Not meant to be implemented. This makes it a compiler error to
-    // attempt to create an nsAutoLock object on the heap.
+    // attempt to create an XPCAutoLock object on the heap.
 #if (__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95))
     static void* operator new(size_t /*size*/) throw () {
 #else
@@ -284,6 +284,62 @@ private:
     static void operator delete(void* /*memory*/) {}
 };
 
+/************************************************/
+
+class XPCAutoUnlock : public nsAutoLockBase {
+public:
+
+    static XPCLock* NewLock(const char* name)
+                        {return nsAutoMonitor::NewMonitor(name);}
+    static void       DestroyLock(XPCLock* lock)
+                        {nsAutoMonitor::DestroyMonitor(lock);}
+
+    XPCAutoUnlock(XPCLock* lock)
+#ifdef DEBUG
+        : nsAutoLockBase(lock ? (void*) lock : (void*) this, eAutoMonitor),
+#else
+        : nsAutoLockBase(lock, eAutoMonitor),
+#endif
+          mLock(lock)
+    {
+        if(mLock)
+        {
+#ifdef DEBUG
+            PRStatus status =
+#endif
+                PR_ExitMonitor(mLock);
+            NS_ASSERTION(status == PR_SUCCESS, "PR_ExitMonitor failed");
+        }
+    }
+
+    ~XPCAutoUnlock()
+    {
+        if(mLock)
+            PR_EnterMonitor(mLock);
+    }
+
+private:
+    XPCLock*  mLock;
+
+    // Not meant to be implemented. This makes it a compiler error to
+    // construct or assign an XPCAutoUnlock object incorrectly.
+    XPCAutoUnlock(void) {}
+    XPCAutoUnlock(XPCAutoUnlock& /*aMon*/) {}
+    XPCAutoUnlock& operator =(XPCAutoUnlock& /*aMon*/) {
+        return *this;
+    }
+
+    // Not meant to be implemented. This makes it a compiler error to
+    // attempt to create an XPCAutoUnlock object on the heap.
+#if (__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95))
+    static void* operator new(size_t /*size*/) throw () {
+#else
+    static void* operator new(size_t /*size*/) {
+#endif
+        return nsnull;
+    }
+    static void operator delete(void* /*memory*/) {}
+};
 
 /***************************************************************************
 ****************************************************************************

@@ -1204,52 +1204,63 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
     const nsIID* iid = aInterface->GetIID();
     nsISupports* identity = GetIdentityObject();
     nsISupports* obj;
-    JSBool foundInSet = mSet->HasInterface(aInterface);
 
     // If the scriptable helper forbids us from reflecting additional
     // interfaces, then don't even try the QI, just fail.
     if(mScriptableInfo && mScriptableInfo->ClassInfoInterfacesOnly() &&
-       !foundInSet && !mSet->HasInterfaceWithAncestor(aInterface))
+       !mSet->HasInterface(aInterface) && 
+       !mSet->HasInterfaceWithAncestor(aInterface))
     {
         return NS_ERROR_NO_INTERFACE;
     }
 
-    // We are about to call out to other code. So protect our intended tearoff.
+    // We are about to call out to unlock and other code. 
+    // So protect our intended tearoff.
+    
     aTearOff->SetReserved();
     
-    if(NS_FAILED(identity->QueryInterface(*iid, (void**)&obj)) || !obj)
-    {
-        aTearOff->SetInterface(nsnull);
-        return NS_ERROR_NO_INTERFACE;
-    }
+    {   // scoped *un*lock
+        XPCAutoUnlock unlock(GetLock());
 
-    // Guard against trying to build a tearoff for a shared nsIClassInfo.
-    if(iid->Equals(NS_GET_IID(nsIClassInfo)))
-    {
-        nsCOMPtr<nsISupports> alternate_identity(do_QueryInterface(obj));
-        if(alternate_identity.get() != identity)
+        if(NS_FAILED(identity->QueryInterface(*iid, (void**)&obj)) || !obj)
         {
-            NS_RELEASE(obj);
             aTearOff->SetInterface(nsnull);
             return NS_ERROR_NO_INTERFACE;
         }
-    }
 
-    nsIXPCSecurityManager* sm;
-       sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
-                            nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
-    if(sm && NS_FAILED(sm->
-                CanCreateWrapper(ccx, *iid, identity, 
-                                 GetClassInfo(), GetSecurityInfoAddr())))
-    {
-        // the security manager vetoed. It should have set an exception.
-        NS_RELEASE(obj);
-        aTearOff->SetInterface(nsnull);
-        return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
+        // Guard against trying to build a tearoff for a shared nsIClassInfo.
+        if(iid->Equals(NS_GET_IID(nsIClassInfo)))
+        {
+            nsCOMPtr<nsISupports> alternate_identity(do_QueryInterface(obj));
+            if(alternate_identity.get() != identity)
+            {
+                NS_RELEASE(obj);
+                aTearOff->SetInterface(nsnull);
+                return NS_ERROR_NO_INTERFACE;
+            }
+        }
+
+        nsIXPCSecurityManager* sm;
+           sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
+                                nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
+        if(sm && NS_FAILED(sm->
+                    CanCreateWrapper(ccx, *iid, identity, 
+                                     GetClassInfo(), GetSecurityInfoAddr())))
+        {
+            // the security manager vetoed. It should have set an exception.
+            NS_RELEASE(obj);
+            aTearOff->SetInterface(nsnull);
+            return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
+        }
     }
+    // We are relocked from here on...
 
     // If this is not already in our set we need to extend our set.
-    if(!foundInSet && !ExtendSet(ccx, aInterface))
+    // Note: we do not cache the result of the previous call to HasInterface()
+    // because we unlocked and called out in the interim and the result of the
+    // previous call might not be correct anymore.
+
+    if(!mSet->HasInterface(aInterface) && !ExtendSet(ccx, aInterface))
     {
         NS_RELEASE(obj);
         aTearOff->SetInterface(nsnull);
