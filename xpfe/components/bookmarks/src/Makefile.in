@@ -42,6 +42,7 @@ REQUIRES	= xpcom \
 		  webshell \
 		  windowwatcher \
 		  unicharutil \
+		  mozldap \
 		  $(NULL)
 
 CPPSRCS		= nsBookmarksService.cpp \

@@ -35,6 +35,7 @@ REQUIRES	= xpcom \
 		  webshell \
 		  windowwatcher \
 		  unicharutil \
+		  mozldap \
 		  $(NULL)
 
 CPP_OBJS=                               \
