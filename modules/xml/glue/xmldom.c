@@ -134,10 +134,10 @@ void XMLDOM_StartHandler (XMLFile f, const char* elementName, const char** attli
         f->transclusions = (XMLElement*)getMem(sizeof(XMLElement*) * 10);
       } 
       f->transclusions[f->numTransclusions++] = xmle;
-
+#ifdef DOM
       ET_ReflectObject(f->mwcontext, f->transclusions[f->numTransclusions - 1], NULL, LO_DOCUMENT_LAYER_ID, 
 		  f->numTransclusions - 1, LM_TRANSCLUSIONS);
-                       
+#endif                       
     }
   }
 }
