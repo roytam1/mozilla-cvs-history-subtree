@@ -9,7 +9,7 @@
     <content orient="vertical">
       <xul:box class="outliner-columns">
         <children includes="outlinercol|splitter"/>
-        <xul:outlinercol class="outliner-columnpicker"/>
+        <xul:outlinercol class="outliner-columnpicker" fixed="true"/>
       </xul:box>
       <xul:outlinerrows class="outliner-rows" flex="1">
         <children/>
