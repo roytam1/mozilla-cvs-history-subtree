@@ -683,8 +683,8 @@ void CNetscapeView::checkCreateWebWidget() {
         goto chCrFail;
     }
     m_pWebWidget->Show();
-    m_pWebWidget->LoadURL(nsString(START_URL));
-
+//    m_pWebWidget->LoadURL(nsString(START_URL));
+    GetContext()->NormalGetUrl(START_URL);
     return;  
 
     chCrFail:
