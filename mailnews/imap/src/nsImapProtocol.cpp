@@ -3869,8 +3869,11 @@ nsImapProtocol::SetConnectionStatus(PRInt32 status)
 void
 nsImapProtocol::NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key)
 {
-    if (m_imapMessageSink)
-        m_imapMessageSink->NotifyMessageFlags(flags, key);
+  if (m_imapMessageSink)
+  {
+    if (m_imapAction != nsIImapUrl::nsImapMsgFetch || (flags & ~kImapMsgRecentFlag) != kImapMsgSeenFlag)
+       m_imapMessageSink->NotifyMessageFlags(flags, key);
+  }
 }
 
 void
@@ -6877,7 +6880,7 @@ PRBool nsImapProtocol::TryToLogon()
               // login failed!
               // if we failed because of an interrupt, then do not bother the user
               if (server)
-                  rv = server->ForgetPassword();
+                rv = server->ForgetPassword();
 
               if (!DeathSignalReceived())
               {
