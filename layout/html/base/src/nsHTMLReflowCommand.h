@@ -111,6 +111,11 @@ public:
   nsresult SetTarget(nsIFrame* aTargetFrame);
 
   /**
+   * Add a target of the reflow command to a list used by IsATarget
+   */
+  nsresult AddTarget(nsIFrame* aTargetFrame);
+
+  /**
    * Get the tree of the reflow command.
    */
   nsresult GetReflowTree(nsReflowTree** aTree) const
@@ -190,6 +195,7 @@ public:
   nsresult SetCurrentReflowNode(nsReflowTree::Node *node)
   {
     mReflowNode = node;
+    return NS_OK;
   }
 
   /*
@@ -211,6 +217,7 @@ protected:
 private:
   nsReflowType    mType;
   nsIFrame*       mTargetFrame;
+  nsAutoVoidArray mTargetList;
   nsIFrame*       mChildFrame;
   nsIFrame*       mPrevSiblingFrame;
   nsIAtom*        mAttribute;
