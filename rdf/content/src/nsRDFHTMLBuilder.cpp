@@ -179,10 +179,10 @@ RDFHTMLBuilderImpl::AddLeafChild(nsIRDFContent* parent,
     if (NS_FAILED(rv = NS_NewRDFResourceElement(&child, property, nameSpaceID, tag, PR_FALSE)))
         goto done;
 
-    if (NS_FAILED(rv = rdf_AttachTextNode(child, value)))
+    if (NS_FAILED(rv = parent->AppendChildTo(child, PR_TRUE)))
         goto done;
 
-    rv = parent->AppendChildTo(child, PR_TRUE);
+    rv = rdf_AttachTextNode(child, value);
 
 done:
     NS_IF_RELEASE(tag);
