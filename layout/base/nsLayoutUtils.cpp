@@ -505,8 +505,8 @@ static nscoord GetCoord(nsStyleCoord& aCoord, nscoord aIfNotCoord)
 }
 
 /* static */ nscoord
-nsLayoutUtils::GetChildContribution(nsIFrame *aFrame,
-                                    IntrinsicWidthType aType)
+nsLayoutUtils::IntrinsicForContainer(nsIFrame *aFrame,
+                                     IntrinsicWidthType aType)
 {
   NS_PRECONDITION(aFrame, "null frame");
   NS_PRECONDITION(aType == MIN_WIDTH || aType == PREF_WIDTH, "bad type");

@@ -254,8 +254,8 @@ public:
    * and margin.
    */
   enum IntrinsicWidthType { MIN_WIDTH, PREF_WIDTH };
-  static nscoord GetChildContribution(nsIFrame *aFrame,
-                                      IntrinsicWidthType aType);
+  static nscoord IntrinsicForContainer(nsIFrame *aFrame,
+                                       IntrinsicWidthType aType);
 };
 
 #endif // nsLayoutUtils_h__
