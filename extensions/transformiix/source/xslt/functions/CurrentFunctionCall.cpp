@@ -16,7 +16,8 @@ CurrentFunctionCall::CurrentFunctionCall(ProcessorState* aPs)
 /*
  * Evaluates this Expr
  *
- * @return The current node of the context node set
+ * @return NodeSet containing the context node used for the complete
+ * Expr or Pattern.
  */
 ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
 {

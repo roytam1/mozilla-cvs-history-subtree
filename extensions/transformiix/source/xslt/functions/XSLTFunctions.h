@@ -106,7 +106,7 @@ public:
      *         keyValue
      */
     const NodeSet* getNodes(String& aKeyValue, Document* aDoc,
-                            txIMatchContext* aContext);
+                            ProcessorState* aContext);
     
     /*
      * Adds a match/use pair. Returns MB_FALSE if matchString or useString
@@ -123,7 +123,7 @@ private:
      * @param aDoc Document to index and add
      * @returns a NamedMap* containing the index
      */
-    NamedMap* addDocument(Document* aDoc, txIMatchContext* aContext);
+    NamedMap* addDocument(Document* aDoc, ProcessorState* aContext);
 
     /*
      * Recursively searches a node, its attributes and its subtree for
@@ -131,7 +131,7 @@ private:
      * @param aNode node to search
      * @param aMap index to add search result in
      */
-    void indexTree(Node* aNode, NamedMap* aMap, txIMatchContext* aContext);
+    void indexTree(Node* aNode, NamedMap* aMap, ProcessorState* aContext);
 
     /*
      * Tests one node if it matches any of the keys match-patterns. If
@@ -139,7 +139,7 @@ private:
      * @param aNode node to test
      * @param aMap index to add values to
      */
-    void testNode(Node* aNode, NamedMap* aMap, txIMatchContext* aContext);
+    void testNode(Node* aNode, NamedMap* aMap, ProcessorState* aContext);
 
     /*
      * represents one match/use pair

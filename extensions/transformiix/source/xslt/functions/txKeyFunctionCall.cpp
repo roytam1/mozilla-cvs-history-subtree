@@ -21,7 +21,7 @@
 #include "XSLTFunctions.h"
 #include "Names.h"
 #include "XMLDOMUtils.h"
-#include "txNodeSetContext.h"
+#include "txSingleNodeContext.h"
 
 /*
  * txKeyFunctionCall
@@ -85,13 +85,13 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
         for (int i=0; i<nodeSet->size(); i++) {
             String val;
             XMLDOMUtils::getNodeValue(nodeSet->get(i), val);
-            res->add(key->getNodes(val, contextDoc, aContext));
+            res->add(key->getNodes(val, contextDoc, mProcessorState));
         }
     }
     else {
         String val;
         exprResult->stringValue(val);
-        res->append(key->getNodes(val, contextDoc, aContext));
+        res->append(key->getNodes(val, contextDoc, mProcessorState));
     }
     delete exprResult;
     return res;
@@ -130,7 +130,7 @@ txXSLKey::~txXSLKey()
  *         keyValue
  */
 const NodeSet* txXSLKey::getNodes(String& aKeyValue, Document* aDoc,
-                                  txIMatchContext* aContext)
+                                  ProcessorState* aContext)
 {
     NS_ASSERTION(aDoc, "missing document");
     if (!aDoc)
@@ -177,7 +177,7 @@ MBool txXSLKey::addKey(txPattern* aMatch, Expr* aUse)
  * @param aDoc Document to index and add
  * @returns a NamedMap* containing the index
  */
-NamedMap* txXSLKey::addDocument(Document* aDoc, txIMatchContext* aContext)
+NamedMap* txXSLKey::addDocument(Document* aDoc, ProcessorState* aContext)
 {
     NamedMap* map = new NamedMap;
     if (!map)
@@ -195,7 +195,7 @@ NamedMap* txXSLKey::addDocument(Document* aDoc, txIMatchContext* aContext)
  * @param aMap index to add search result in
  */
 void txXSLKey::indexTree(Node* aNode, NamedMap* aMap,
-                         txIMatchContext* aContext)
+                         ProcessorState* aContext)
 {
     testNode(aNode, aMap, aContext);
 
@@ -220,7 +220,7 @@ void txXSLKey::indexTree(Node* aNode, NamedMap* aMap,
  * @param aNode node to test
  * @param aMap index to add values to
  */
-void txXSLKey::testNode(Node* aNode, NamedMap* aMap, txIMatchContext* aContext)
+void txXSLKey::testNode(Node* aNode, NamedMap* aMap, ProcessorState* aContext)
 {
     String val;
     NodeSet *nodeSet;
@@ -230,10 +230,10 @@ void txXSLKey::testNode(Node* aNode, NamedMap* aMap, txIMatchContext* aContext)
     {
         Key* key=(Key*)iter.next();
         if (key->matchPattern->matches(aNode, aContext)) {
-            NodeSet contextNodeSet(aNode);
-            txNodeSetContext evalContext(&contextNodeSet, aContext);
-            evalContext.next();
+            txSingleNodeContext evalContext(aNode, aContext);
+            txIEvalContext* prevCon = aContext->setEvalContext(&evalContext);
             ExprResult* exprResult = key->useExpr->evaluate(&evalContext);
+            aContext->setEvalContext(prevCon);
             if (exprResult->getResultType() == ExprResult::NODESET) {
                 NodeSet* res = (NodeSet*)exprResult;
                 for (int i=0; i<res->size(); i++) {

@@ -415,7 +415,7 @@ MBool txKeyPattern::matches(Node* aNode, txIMatchContext* aContext)
     else
         contextDoc = aNode->getOwnerDocument();
     txXSLKey* key = mProcessorState->getKey(mName);
-    const NodeSet* nodes = key->getNodes(mValue, contextDoc, aContext);
+    const NodeSet* nodes = key->getNodes(mValue, contextDoc, mProcessorState);
     if (!nodes || nodes->isEmpty())
         return MB_FALSE;
     MBool isTrue = nodes->contains(aNode);
@@ -516,6 +516,7 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
 
     while (iter.hasNext()) {
         newNodes.clear();
+        MBool contextIsInPredicate = MB_FALSE;
         txNodeSetContext predContext(&nodes, aContext);
         while (predContext.hasNext()) {
             predContext.next();
@@ -526,12 +527,20 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
                 case ExprResult::NUMBER :
                     // handle default, [position() == numberValue()]
                     if ((double)predContext.position() ==
-                        exprResult->numberValue())
-                        newNodes.append(predContext.getContextNode());
+                        exprResult->numberValue()) {
+                        Node* tmp = predContext.getContextNode();
+                        if (tmp == aNode)
+                            contextIsInPredicate = MB_TRUE;
+                        newNodes.append(tmp);
+                    }
                     break;
                 default:
-                    if (exprResult->booleanValue())
-                        newNodes.append(predContext.getContextNode());
+                    if (exprResult->booleanValue()) {
+                        Node* tmp = predContext.getContextNode();
+                        if (tmp == aNode)
+                            contextIsInPredicate = MB_TRUE;
+                        newNodes.append(tmp);
+                    }
                     break;
             }
             delete exprResult;
@@ -539,8 +548,15 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
         // Move new NodeSet to the current one
         nodes.clear();
         nodes.append(&newNodes);
-        if (!nodes.contains(aNode)) {
-            return MB_FALSE;
+        if (mIsAttr) {
+            // XXX if attribute nodes were unique, we didn't need this
+            if (!nodes.contains(aNode))
+                return MB_FALSE;
+        }
+        else {
+            if (!contextIsInPredicate) {
+                return MB_FALSE;
+            }
         }
         predicate = (Expr*)iter.next();
     }
@@ -548,14 +564,11 @@ MBool txStepPattern::matches(Node* aNode, txIMatchContext* aContext)
     ExprResult* exprResult = predicate->evaluate(&evalContext);
     if (!exprResult)
         return MB_FALSE;
-    switch(exprResult->getResultType()) {
-        case ExprResult::NUMBER :
-            // handle default, [position() == numberValue()]
-            return ((double)evalContext.position() ==
-                    exprResult->numberValue());
-        default:
-            return exprResult->booleanValue();
-    }
+    if (exprResult->getResultType() == ExprResult::NUMBER)
+        // handle default, [position() == numberValue()]
+        return ((double)evalContext.position() == exprResult->numberValue());
+
+    return exprResult->booleanValue();
 } // matches
 
 double txStepPattern::getDefaultPriority()
