@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -70,7 +70,8 @@ collateHistory (RDFT r, RDF_Resource u, PRBool byDateFlag)
 {
   HASHINFO hash = { 4*1024, 0, 0, 0, 0, 0};
   DBT key, data;
-  time_t	last,first,numaccess;
+  time_t	last,first;
+  uint32	numaccess;
   PRBool firstOne = 0;
   DB* db = CallDBOpenUsingFileURL(gGlobalHistoryURL,  O_RDONLY ,0600,
                                   DB_HASH, &hash);
@@ -82,16 +83,18 @@ collateHistory (RDFT r, RDF_Resource u, PRBool byDateFlag)
     while (0 ==   (*db->seq)(db, &key, &data, (firstOne ? R_NEXT : R_FIRST))) {
       char* title =    ((char*)data.data + 16);                /* title */
       char* url =      (char*)key.data;                       /* url */
-      int32 flag = (int32)*((char*)data.data + 3*sizeof(int32));
+      /* int32 flag = (int32)*((char*)data.data + 3*sizeof(int32)); */
+      int32 flag;
+      HIST_COPY_INT32(&flag, (int8 *)data.data + 3 * sizeof(int32));
       firstOne = 1;
 #ifdef XP_UNIX
       if ((/*1 == flag &&*/ displayHistoryItem((char*)key.data))) {
 #else
       if (1 == flag && displayHistoryItem((char*)key.data)) {
 #endif
-	COPY_INT32(&last, (time_t *)((char *)data.data));
-	COPY_INT32(&first, (time_t *)((char *)data.data + 4));
-	COPY_INT32(&numaccess, (time_t *)((char *)data.data + 8));
+	HIST_COPY_INT32(&last, (time_t *)((int8 *)data.data));
+	HIST_COPY_INT32(&first, (time_t *)((int8 *)data.data + sizeof(int32)));
+	HIST_COPY_INT32(&numaccess, (time_t *)((int8 *)data.data + 2*sizeof(int32)));
 
 	collateOneHist(r, u,url,title, last, first, numaccess, byDateFlag);
       }
@@ -366,17 +369,17 @@ updateNewHistItem (DBT *key, DBT *data)
   int32 flg = (int32)*((char*)data->data + 3*sizeof(int32));
   if (!displayHistoryItem((char*)key->data)) return;
   if (grdf != NULL) {
-    COPY_INT32(&last, (time_t *)((char *)data->data));
-    COPY_INT32(&first, (time_t *)((char *)data->data + 4));
-    COPY_INT32(&numaccess, (time_t *)((char *)data->data + 8));
+    HIST_COPY_INT32(&last, (time_t *)((char *)data->data));
+    HIST_COPY_INT32(&first, (time_t *)((char *)data->data + sizeof(int32)));
+    HIST_COPY_INT32(&numaccess, (time_t *)((char *)data->data + 2*sizeof(int32)));
     
     if (hostHash) collateOneHist(grdf, gNavCenter->RDF_History, 
 				 (char*)key->data,                        /* url */
-				 ((char*)data->data + 16),                /* title */
+				 ((char*)data->data + 4*sizeof(int32)),   /* title */
 				 last, first, numaccess, 0);
     if (ByDateOpened) collateOneHist(grdf, gNavCenter->RDF_History, 
 				     (char*)key->data,                        /* url */
-				     ((char*)data->data + 16),                /* title */
+				     ((char*)data->data + 4*sizeof(int32)),   /* title */
 				     last, first, numaccess, 1);
   }
 
