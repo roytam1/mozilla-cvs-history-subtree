@@ -1758,7 +1758,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
   if ( (attachment->m_real_name) && (*attachment->m_real_name))
   	return;
 
-  attachment->mURL->GetSpec(&url);
+  attachment->mURL->GetSpec(getter_Copies(url));
 
   // Otherwise, extract a name from the URL.
   s = url;
