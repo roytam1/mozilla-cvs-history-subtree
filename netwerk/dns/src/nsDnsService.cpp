@@ -184,16 +184,16 @@ private:
     nsTime              mExpires;    
 
     // Platform specific portions
+public:
 #if defined(XP_MAC)
     friend pascal
     void                nsDnsServiceNotifierRoutine(void *       contextPtr,
                                                     OTEventCode  code,
                                                     OTResult     result,
                                                     void *       cookie);
-public:
-    void               ConvertHostEntry();
+
+    void                ConvertHostEntry();
     PRBool              mStringToAddrComplete;
-private:
     InetHostInfo        mInetHostInfo;
 
 #define GET_LOOKUP_FROM_ELEM(_this) \
@@ -462,9 +462,6 @@ nsDNSLookup::nsDNSLookup()
     , mComplete(PR_FALSE)
     , mCacheable(PR_TRUE)
     , mExpires(0)
-#if defined(XP_UNIX)
-    , mNextLookup(nsnull)
-#endif
 {
 	NS_INIT_REFCNT();
 	MOZ_COUNT_CTOR(nsDNSLookup);
