@@ -325,9 +325,10 @@ xptiInterfaceInfoManager::BuildFileList(nsISupportsArray* aSearchPath,
             entries->GetNext(getter_AddRefs(sup));
             if(!sup)
                 return PR_FALSE;
-            nsCOMPtr<nsIFile> file = do_QueryInterface(sup);
+            nsCOMPtr<nsILocalFile> file = do_QueryInterface(sup);
             if(!file)
                 return PR_FALSE;
+            file->SetFollowLinks(PR_FALSE);
 
             PRBool isFile;
             if(NS_FAILED(file->IsFile(&isFile)) || !isFile)
@@ -367,15 +368,21 @@ xptiInterfaceInfoManager::ReadXPTFile(nsILocalFile* aFile,
     XPTCursor cursor;
     PRInt32 flen;
     PRInt64 fileSize;
+    
+    PRBool saveFollowLinks;
+    aFile->GetFollowLinks(&saveFollowLinks);
+    aFile->SetFollowLinks(PR_TRUE);
 
     if(NS_FAILED(aFile->GetFileSize(&fileSize)) || !(flen = nsInt64(fileSize)))
     {
+        aFile->SetFollowLinks(saveFollowLinks);
         return nsnull;
     }
 
     whole = new char[flen];
     if (!whole)
     {
+        aFile->SetFollowLinks(saveFollowLinks);
         return nsnull;
     }
 
@@ -414,6 +421,7 @@ xptiInterfaceInfoManager::ReadXPTFile(nsILocalFile* aFile,
         XPT_DestroyXDRState(state);
     if(whole)
         delete [] whole;
+    aFile->SetFollowLinks(saveFollowLinks);
     return header;
 }
 
