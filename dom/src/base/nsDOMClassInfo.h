@@ -391,7 +391,7 @@ public:
 
 class nsHTMLDocumentSH : public nsDocumentSH
 {
-private:
+protected:
   nsHTMLDocumentSH(nsDOMClassInfoID aID) : nsDocumentSH(aID)
   {
   }
@@ -415,7 +415,7 @@ public:
 
 class nsHTMLFormElementSH : public nsElementSH
 {
-private:
+protected:
   nsHTMLFormElementSH(nsDOMClassInfoID aID) : nsElementSH(aID)
   {
   }
@@ -440,7 +440,7 @@ public:
 
 class nsHTMLOptionCollectionSH : public nsHTMLCollectionSH
 {
-private:
+protected:
   nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsHTMLCollectionSH(aID)
   {
   }
