@@ -65,7 +65,7 @@ char *
 pk11PasswordPrompt(PK11SlotInfo *slot, PRBool retry, void *arg)
 {
   nsresult rv = NS_OK;
-  PRUnichar *tokenName;
+  const PRUnichar *tokenName;
   PRUnichar *password;
   PRBool canceled;
   int *retries = (int *)arg;
