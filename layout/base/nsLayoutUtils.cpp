@@ -470,8 +470,11 @@ nsLayoutUtils::CombineBreakType(PRUint8 aOrigBreakType,
 /* static */ void
 nsLayoutUtils::MarkIntrinsicWidthsDirty(nsIFrame* aFrame)
 {
-  // Mark argument and all ancestors dirty
-  for (nsIFrame *a = aFrame; a; a = a->GetParent())
+  // Mark argument and all ancestors dirty (unless we hit a reflow root
+  // other than aFrame)
+  for (nsIFrame *a = aFrame;
+       a && (!(a->GetStateBits() & NS_FRAME_REFLOW_ROOT) || a == aFrame);
+       a = a->GetParent())
     a->MarkIntrinsicWidthsDirty();
 
   // Mark all descendants dirty (using an nsVoidArray stack rather than
