@@ -1,3 +1,12 @@
+1999-09-05  Leif Hedstrom  <leif@perldap.org>
+
+	* changes2ldif.pl, modattr.pl, qsearch.pl, rmentry.pl,
+	ldappasswd.pl, monitor.pl, rand_mods.pl, tabdump.pl, lfinger.pl,
+	psoftsync.pl, rename.pl: Changed headers.
+
+	* qsearch.pl: Added support for the "-v" flag, and changed all the
+	calls to search() reflect new argument passing syntax.
+
 1999-06-30  Leif Hedstrom  <leif@netscape.com>
 
 	* rmentry.pl: Added support for "-p".

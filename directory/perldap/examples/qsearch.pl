@@ -13,10 +13,9 @@
 # under the License.
 #
 # The Original Code is PerLDAP. The Initial Developer of the Original
-# Code is Netscape Communications Corp. and Clayton Donley. Portions
-# created by Netscape are Copyright (C) Netscape Communications
-# Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Code is Leif Hedstrom and Netscape Communications. Portions created
+# by Leif are Copyright (C) Leif Hedstrom, portions created by Netscape
+# are Copyright (C) Netscape Communications Corp. All Rights Reserved.
 #
 # Contributor(s):
 #
@@ -43,7 +42,7 @@ $USAGE	= "$APPNAM -b base -h host -D bind -w pswd -P cert filter [attr...]";
 #################################################################################
 # Check arguments, and configure some parameters accordingly..
 #
-if (!getopts('b:h:D:p:s:w:P:'))
+if (!getopts('b:h:D:p:s:vw:P:'))
 {
    print "usage: $APPNAM $USAGE\n";
    exit;
@@ -73,11 +72,18 @@ foreach $search (@srch)
 {
   if ($#attr >= $[)
     {
-      $entry = $conn->search($ld{root}, $ld{scope}, $search, 0, @attr);
+      $entry = $conn->search(basedn	=> $ld{base},
+			     scope	=> $ld{scope},
+			     filter	=> $search,
+			     attributes	=> [ @attr ],
+			     verbose	=> $opt_v);
     }
   else
     {
-      $entry = $conn->search($ld{root}, $ld{scope}, "$search");
+      $entry = $conn->search(basedn	=> $ld{base},
+			     scope	=> $ld{scope},
+			     filter	=> $search,
+			     verbose	=> $opt_v);
     }
 
   print "Searched for `$search':\n\n";

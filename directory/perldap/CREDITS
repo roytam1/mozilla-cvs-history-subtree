@@ -4,20 +4,16 @@ this project.
 
 * Leif Hedstrom <leif@perldap.org>
 
-	- Project lead.
+	- Project lead, v1.0 and v2.0.
 	- Wrote some of the API code,  and most of OO layers (Conn.pm,
-	  Entry.pm etc.)
-	- Unix portability test.
+	  Entry.pm, Utils.pm, ACL.pm etc.)
+	- Unix portability tests, and releases.
 	- Port to Windows/NT and ActivePerl.
-
-
-* Clayton Donley
-
-	  - Wrote a lot of the initial API code (API.xs and API.pm).
 
 
 * Kevin McCarthy <kmccarth@perldap.org>
 
+	- New maintainer of API.xs and API.pm
 	- Bug fixes, tons of contribution, particularly to the API.xs file.
 
 
@@ -29,7 +25,13 @@ this project.
 
 * John Kristian <kristian@netscape.com>
 
-	- Rewrote the entire LDIF module, great stuff!
+	- Rewrote the entire LDIF.pm module, which is a standalone LDIF
+          module, which also integrates tightly with PerLDAP if desired.
+
+
+* Clayton Donley
+
+	- Wrote a lot of the initial API code (API.xs and API.pm).
 
 
 * Netscape Netcenter team (Kevin Burns, Max Block, Mark Takacs etc.)

@@ -18,8 +18,8 @@
  * Corp., portions created by Clayton Donley are Copyright (C) Clayton
  * Donley. All Rights Reserved.
  *
- * Contributor(s):
- *
+ * Contributor(s):	Leif Hedstrom <leif@perldap.org>
+ *			Kevin McCarthy <kevin@perldap.org>
  * DESCRIPTION
  *    Constants.
  *

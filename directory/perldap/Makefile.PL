@@ -17,10 +17,10 @@
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
 # Donley. All Rights Reserved.
 #
-# Contributor(s):
+# Contributor(s):	Leif Hedstrom <leif@perldap.org>
 #
 # DESCRIPTION
-#    The Makefile "source".
+#    The Makefile "source", this is mostly rewritten by Leif.
 #
 #############################################################################
 
@@ -156,8 +156,8 @@ push(@extras,
         and $Config{archname} =~ /-object\b/i);
 
 push(@extras,
-     ABSTRACT => 'Perl methods for LDAP C API calls',
-     AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
+     ABSTRACT => 'Perl methods for LDAP C API calls, and OO layers',
+     AUTHOR   => 'Netscape Communications Corp., Inc. and Leif Hedstrom')
     if ($] >= 5.005);
 
 #
