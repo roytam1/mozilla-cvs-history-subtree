@@ -31,15 +31,16 @@
   <binding id="outlinerbody"/>
 
   <binding id="outlinercol">
-    <content autostretch="never">
-      <xul:image class="outlinercol-image" inherits="src"/>
-      <xul:text class="outlinercol-text" inherits="crop,value" flex="1" crop="right"/>
-      <xul:image class="outlinercol-sortdirection"/>
+    <content>
+      <xul:box class="outlinercol-box" flex="1" autostretch="never">
+        <xul:image class="outliner-image" inherits="src"/>
+        <xul:text class="outlinercol-text" inherits="crop,value" flex="1" crop="right"/>
+        <xul:image class="outlinercol-sortdirection"/>
+      </xul:box>
     </content>
     <handlers>
       <handler event="click" action="this.parentNode.outlinerBoxObject.view.cycleHeader(this);"/>
     </handlers>
   </binding>
-
 </bindings>
 
