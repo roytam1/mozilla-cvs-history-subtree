@@ -34,9 +34,8 @@
 # 
 
 MOD_DEPTH	= ..
-topsrcdir	= /cygdrive/c/builds/trunk/mozilla/directory/c-sdk
-srcdir		= /cygdrive/c/builds/trunk/mozilla/directory/c-sdk/config
-VPATH		= /cygdrive/c/builds/trunk/mozilla/directory/c-sdk/config
+topsrcdir	= ..
+srcdir		= .
 
 include $(MOD_DEPTH)/config/autoconf.mk
 
