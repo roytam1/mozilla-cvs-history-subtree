@@ -44,6 +44,7 @@
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocumentInternal)
+  NS_INTERFACE_MAP_ENTRY(nsIAccessibleEventReceiver)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFocusListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMFormListener)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMFormListener)
