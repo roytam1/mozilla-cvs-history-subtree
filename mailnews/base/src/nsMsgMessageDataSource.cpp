@@ -37,7 +37,6 @@
 #include "nsIMsgMailSession.h"
 #include "nsDateTimeFormatCID.h"
 #include "nsMsgBaseCID.h"
-#include "nsIMessageView.h"
 #include "nsMsgUtils.h"
 #include "nsTextFormatter.h"
 
