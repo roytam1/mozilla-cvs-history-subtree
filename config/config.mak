@@ -634,8 +634,13 @@ JAVA_BOOT_CLASSPATH = $(JAVA_BOOT_CLASSPATH:/=\)
 CURDIR=$(MAKEDIR)^\
 !endif
 
+!if "$(OS_TARGET)" == "WINCE"
+XPIDL_PROG=$(MOZ_TOOLS)\bin\xpidl.exe
+XPTLINK_PROG=$(MOZ_TOOLS)\bin\xpt_link.exe
+!else
 XPIDL_PROG=$(DIST)\bin\xpidl.exe
 XPTLINK_PROG=$(DIST)\bin\xpt_link.exe
+!endif
 
 # XXX If you change this name, be _sure_ to update rules.mak;
 # specifically, the rules that compute XPIDL_HEADERS and

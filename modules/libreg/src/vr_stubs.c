@@ -146,6 +146,7 @@ char* vr_findVerRegName()
 extern XP_File vr_fileOpen (const char *name, const char * mode)
 {
     XP_File fh = NULL;
+#if !defined(WINCE)
     struct stat st;
 
     if ( name != NULL ) {
@@ -154,7 +155,13 @@ extern XP_File vr_fileOpen (const char *name, const char * mode)
         else
             fh = fopen( name, XP_FILE_TRUNCATE_BIN );
     }
-
+#else
+    fh = fopen(name, XP_FILE_UPDATE_BIN);
+    if(NULL == fh)
+    {
+        fh = fopen(name, XP_FILE_TRUNCATE_BIN);
+    }
+#endif
     return fh;
 }
 #endif /*STANDALONE_REGISTRY*/

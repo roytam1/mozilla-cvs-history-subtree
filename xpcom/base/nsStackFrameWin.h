@@ -36,7 +36,7 @@
 #define nsStackFrameWin_h___
 
 
-#if defined(_WIN32) && defined(_M_IX86) // WIN32 x86 stack walking code
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE) // WIN32 x86 stack walking code
 #include <windows.h>
 #include <imagehlp.h>
 

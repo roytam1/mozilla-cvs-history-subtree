@@ -3,7 +3,23 @@
 
 #include "nsMemory.h"     // for |nsMemory|
 #include "nscore.h"       // for |NS_XXX_CAST|
+
+#if !defined(WINCE)
 #include <new.h>					// to allow placement |new|
+#else
+#if !defined(WINCE_PLACEMENT_NEW_DEFINED)
+#define WINCE_PLACEMENT_NEW_DEFINED 1
+// WinCE Pocket PC 2002 SDK doesn't define placement, so we do it here.
+inline void* __cdecl operator new(size_t, void* inMem)
+{
+    return inMem;
+}
+inline void __cdecl operator delete(void*, void*)
+{
+    return;
+}
+#endif
+#endif
 
 
   // under Metrowerks (Mac), we don't have autoconf yet

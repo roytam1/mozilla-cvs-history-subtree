@@ -28,7 +28,9 @@
 #include "nsBufferHandleUtils.h"
 #endif
 
+#if !defined(WINCE)
 #include <new.h>
+#endif
 
 
 

@@ -334,7 +334,11 @@ pull_clientmak:
 # nmake has to be hardcoded, or we have to depend on mozilla/config
 # being pulled already to figure out what $(NMAKE) should be.
 
+!if "$(OS_TARGET)" != "WINCE"
 clobber_all: clobber_nspr clobber_psm clobber_seamonkey
+!else
+clobber_all: clobber_nspr clobber_seamonkey
+!endif
 
 build_all: build_nspr build_seamonkey
 

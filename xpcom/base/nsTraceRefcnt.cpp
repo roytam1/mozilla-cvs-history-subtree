@@ -648,6 +648,7 @@ static PRBool LogThisObj(PRInt32 aSerialNumber)
 
 static PRBool InitLog(const char* envVar, const char* msg, FILE* *result)
 {
+#if !defined(WINCE)
   const char* value = getenv(envVar);
   if (value) {
     if (nsCRT::strcmp(value, "1") == 0) {
@@ -677,6 +678,7 @@ static PRBool InitLog(const char* envVar, const char* msg, FILE* *result)
       }
     }
   }
+#endif
   return PR_FALSE;
 }
 
@@ -733,7 +735,12 @@ static void InitTraceLog(void)
     }
   }
 
-  const char* classes = getenv("XPCOM_MEM_LOG_CLASSES");
+  const char* classes = 
+#if !defined(WINCE)
+        getenv("XPCOM_MEM_LOG_CLASSES");
+#else
+        NULL;
+#endif
 
 #ifdef HAVE_CPP_DYNAMIC_CAST_TO_VOID_PTR
   if (classes) {
@@ -744,7 +751,12 @@ static void InitTraceLog(void)
     }
   }
 #else
-  const char* comptr_log = getenv("XPCOM_MEM_COMPTR_LOG");
+  const char* comptr_log = 
+#if !defined(WINCE)
+        getenv("XPCOM_MEM_COMPTR_LOG");
+#else
+        NULL;
+#endif
   if (comptr_log) {
     fprintf(stdout, "### XPCOM_MEM_COMPTR_LOG defined -- but it will not work without dynamic_cast\n");
   }
@@ -788,7 +800,12 @@ static void InitTraceLog(void)
 
   }
 
-  const char* objects = getenv("XPCOM_MEM_LOG_OBJECTS");
+  const char* objects = 
+#if !defined(WINCE)
+        getenv("XPCOM_MEM_LOG_OBJECTS");
+#else
+        NULL;
+#endif
   if (objects) {
     gObjectsToLog = PL_NewHashTable(256,
                                     HashNumber,
@@ -851,7 +868,7 @@ static void InitTraceLog(void)
 
 #endif
 
-#if defined(_WIN32) && defined(_M_IX86) // WIN32 x86 stack walking code
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE) // WIN32 x86 stack walking code
 #include "imagehlp.h"
 #include <stdio.h>
 #include "nsStackFrameWin.h"
@@ -897,10 +914,10 @@ EnsureImageHlpInitialized()
   static PRBool gInitialized = PR_FALSE;
 
   if (! gInitialized) {
-    HMODULE module = ::LoadLibrary("IMAGEHLP.DLL");
+    HMODULE module = ::LoadLibrary(_T("IMAGEHLP.DLL"));
     if (!module) return PR_FALSE;
 
-    _SymSetOptions = (SYMSETOPTIONSPROC) ::GetProcAddress(module, "SymSetOptions");
+    _SymSetOptions = (SYMSETOPTIONSPROC) ::GetProcAddress(module, _T("SymSetOptions"));
     if (!_SymSetOptions) return PR_FALSE;
 
     _SymInitialize = (SYMINITIALIZEPROC) ::GetProcAddress(module, "SymInitialize");
@@ -1606,7 +1623,7 @@ nsTraceRefcnt::LoadLibrarySymbols(const char* aLibraryName,
                                   void* aLibrayHandle)
 {
 #ifdef NS_BUILD_REFCNT_LOGGING
-#if defined(_WIN32) && defined(_M_IX86) /* Win32 x86 only */
+#if defined(_WIN32) && defined(_M_IX86) && !defined(WINCE) /* Win32 x86 only */
   if (!gInitialized)
     InitTraceLog();
 

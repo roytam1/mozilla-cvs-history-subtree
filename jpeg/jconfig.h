@@ -82,6 +82,10 @@
 /* In case we are using a compiler that only has 16-bit size_t: */
 #define MAX_ALLOC_CHUNK 65520L	/* Maximum request to malloc() */
 
+#if defined(WINCE)
+#define NO_GETENV
+#endif
+
 #endif /* XP_WIN */
 
 #ifdef XP_MAC                   /* Macintosh */

@@ -25,6 +25,9 @@ DIRS=public src \
 !if !defined(DISABLE_TESTS)
      tests \
 !endif
-     tools
+!if "$(OS_TARGET)" != "WINCE"
+     tools \
+!endif
+     $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

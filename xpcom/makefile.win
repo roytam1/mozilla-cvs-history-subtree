@@ -23,7 +23,8 @@ DEPTH=..
 
 
 
-DIRS=   typelib        \
+DIRS= \
+	typelib        \
 	glue           \
         base           \
         ds             \

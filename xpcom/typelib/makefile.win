@@ -24,6 +24,9 @@ DEPTH=..\..
 
 
 DIRS=   xpt        \
-        xpidl 
+!if "$(OS_TARGET)" != "WINCE"
+        xpidl \
+!endif
+        $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

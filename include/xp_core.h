@@ -272,7 +272,9 @@ typedef struct _XP_List XP_List;
 /* standard system headers */
 
 #if !defined(RC_INVOKED)
+#if !defined(WINCE)
 #include <assert.h>
+#endif
 #include <ctype.h>
 #ifdef __sgi
 # include <float.h>
@@ -282,7 +284,9 @@ typedef struct _XP_List XP_List;
 #include <stdarg.h>
 #endif
 #include <limits.h>
+#if !defined(WINCE)
 #include <locale.h>
+#endif
 #if defined(XP_WIN) && defined(XP_CPLUSPLUS) && defined(_MSC_VER) && _MSC_VER >= 1020
 /* math.h under MSVC 4.2 needs C++ linkage when C++. */
 extern "C++"    {
@@ -307,7 +311,9 @@ extern "C++"    {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(WINCE)
 #include <time.h>
+#endif
 #endif
 
 #endif /* _XP_Core_ */

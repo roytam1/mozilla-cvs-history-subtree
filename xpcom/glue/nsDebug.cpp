@@ -88,7 +88,9 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#if !defined(WINCE)
 #include <signal.h>
+#endif
 #elif defined(XP_MAC)
    #define TEMP_MAC_HACK
    
@@ -155,12 +157,12 @@ PRBool InDebugger()
 {
    PRBool fReturn = PR_FALSE;
    LPFNISDEBUGGERPRESENT lpfnIsDebuggerPresent = NULL;
-   HINSTANCE hKernel = LoadLibrary("Kernel32.dll");
+   HINSTANCE hKernel = LoadLibrary(_T("Kernel32.dll"));
 
    if(hKernel)
       {
       lpfnIsDebuggerPresent = 
-         (LPFNISDEBUGGERPRESENT)GetProcAddress(hKernel, "IsDebuggerPresent");
+         (LPFNISDEBUGGERPRESENT)GetProcAddress(hKernel, _T("IsDebuggerPresent"));
       if(lpfnIsDebuggerPresent)
          {
          fReturn = (*lpfnIsDebuggerPresent)();
@@ -208,9 +210,11 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
    fflush(stdout);
 
 #if defined(_WIN32)
+#if !defined(WINCE)
    char* assertBehavior = getenv("XPCOM_DEBUG_BREAK");
    if (assertBehavior && PL_strcmp(assertBehavior, "warn") == 0)
      return;
+#endif
 
    if(!InDebugger())
       {
@@ -223,8 +227,13 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
        */
       PROCESS_INFORMATION pi;
       STARTUPINFO si;
-      char executable[MAX_PATH];
-      char* pName;
+      TCHAR executable[MAX_PATH];
+      LPTSTR pName;
+#if defined(WINCE)
+      WCHAR bufCE[1000];
+
+      MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, buf, -1, bufCE, sizeof(bufCE) / sizeof(WCHAR));
+#endif
 
       memset(&pi, 0, sizeof(pi));
 
@@ -233,14 +242,23 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
       si.wShowWindow = SW_SHOW;
 
       if(GetModuleFileName(NULL, executable, MAX_PATH) &&
+#if !defined(UNICODE)
          NULL != (pName = strrchr(executable, '\\')) &&
          NULL != strcpy(pName+1, "windbgdlg.exe") &&
 #ifdef DEBUG_jband
          (printf("Launching %s\n", executable), PR_TRUE) &&
-#endif         
+#endif
+#else
+         NULL != (pName = wcsrchr(executable, _T('\\'))) &&
+         NULL != wcscpy(pName + sizeof(TCHAR), _T("windbgdlg.exe")) &&
+#endif
+#if !defined(WINCE)
          CreateProcess(executable, buf, NULL, NULL, PR_FALSE,
                        DETACHED_PROCESS | NORMAL_PRIORITY_CLASS,
                        NULL, NULL, &si, &pi) &&
+#else
+         CreateProcess(executable, bufCE, NULL, NULL, NULL, 0, NULL, NULL, &si, &pi) &&
+#endif
          WAIT_OBJECT_0 == WaitForSingleObject(pi.hProcess, INFINITE) &&
          GetExitCodeProcess(pi.hProcess, &code))
       {
@@ -250,10 +268,14 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
       switch(code)
          {
          case IDABORT:
+#if !defined(WINCE)
             //This should exit us
             raise(SIGABRT);
             //If we are ignored exit this way..
             _exit(3);
+#else
+            TerminateProcess(GetCurrentProcess(), 3);
+#endif
             break;
          
          case IDIGNORE:
@@ -518,11 +540,15 @@ NS_CheckThreadSafe(void* owningThread, const char* msg)
 {
   static int check = -1;
   if (check == -1) {
+#if !defined(WINCE)
     const char *eVar = getenv("XPCOM_CHECK_THREADSAFE");
     if (eVar && *eVar == '0')
 	check = 0;
     else
         check = gCheckThreadSafeDefault || eVar != 0;
+#else
+    check = gCheckThreadSafeDefault;
+#endif
   }
   if (check) {
     NS_ASSERTION(owningThread == NS_CurrentThread(), msg);
