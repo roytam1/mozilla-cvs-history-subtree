@@ -38,7 +38,7 @@ class nsIRDFMailMessage;
 class nsIRDFMailDataSource : public nsIRDFDataSource {
 public:
 
-  NS_IMETHOD GetAccountList (nsVoidArray* result) = 0;
+  NS_IMETHOD GetAccountList (nsVoidArray** result) = 0;
 
   NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) = 0;
   

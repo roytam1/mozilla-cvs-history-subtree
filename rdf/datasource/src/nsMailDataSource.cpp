@@ -155,23 +155,27 @@ private:
     nsIRDFResource* mResourceHost;
     nsIRDFResource* mResourceAccount;
     nsIRDFResource* mResourceName;
+    nsIRDFResource* mMailRoot;
 
 public:
   
     NS_DECL_ISUPPORTS
     
-    NS_IMETHOD GetAccountList (nsVoidArray* result) {
-        *result = mAccounts;
+    NS_IMETHOD GetAccountList (nsVoidArray** result) {
+        *result = &mAccounts;
         return NS_OK;
     }
 
     NS_IMETHOD AddAccount (nsIRDFMailAccount* folder) {
-        return NS_ERROR_NOT_IMPLEMENTED;
+        mAccounts.AppendElement(folder);
+        return NS_OK;
     }
 
     NS_IMETHOD RemoveAccount (nsIRDFMailAccount* folder) {
         return NS_ERROR_NOT_IMPLEMENTED;
     }
+
+    nsresult InitAccountList (void) ;
 
     MailDataSource(void) {
         NS_INIT_REFCNT();
@@ -179,6 +183,8 @@ public:
         nsresult rv = nsServiceManager::GetService(kRDFServiceCID,
                                                    kIRDFServiceIID,
                                                    (nsISupports**) &gRDFService);
+
+        
 
         PR_ASSERT(NS_SUCCEEDED(rv));
     }
@@ -202,9 +208,16 @@ public:
     NS_IMETHOD Init(const char* uri) {
         if ((mURI = PL_strdup(uri)) == nsnull)
             return NS_ERROR_OUT_OF_MEMORY;
-
-        //XXX get the service manager, initialize the resources (mResourceChild, etc.)
-        
+        gRDFService->GetResource("child", &mResourceChild);
+        gRDFService->GetResource("from", &mResourceFrom);
+        gRDFService->GetResource("subject", &mResourceSubject);
+        gRDFService->GetResource("date", &mResourceDate);
+        gRDFService->GetResource("user", &mResourceUser);
+        gRDFService->GetResource("host", &mResourceHost);
+        gRDFService->GetResource("account", &mResourceAccount);
+        gRDFService->GetResource("name", &mResourceName);
+        gRDFService->GetResource("MailRoot", &mMailRoot);
+        InitAccountList();
         return NS_OK;
     }
 
@@ -885,6 +898,8 @@ MailDataSource::GetTargets(nsIRDFResource* source,
             rv = ac->GetFolderList(&array);
         } 
         NS_IF_RELEASE(ac);
+    } else if (peq(mMailRoot, source) && peq(mResourceChild, property)) {
+        rv = GetAccountList(&array);
     }
     if (array) {
         *targets = new ArrayMailCursor(source, property, array);
@@ -1036,6 +1051,30 @@ MailAccount::InitMailAccount (const char* url) {
             sprintf(fileurl, "mailbox://%s/%s", &url[14], de->name);
             gRDFService->GetResource(fileurl, (nsIRDFResource**)&folder);
             AddFolder(folder);
+        }
+    }
+    free(fileurl);
+    if (dir) PR_CloseDir(dir);
+    return NS_OK;
+}
+
+nsresult
+MailDataSource::InitAccountList (void) {
+    char*  fileurl = (char*) getMem(100);
+    int32 n = PR_SKIP_BOTH;
+    PRDirEntry	*de;
+    PRDir* dir ;
+    nsIRDFMailAccount* folder;
+    sprintf(fileurl, "Mail");
+    dir =  PR_OpenDir(fileurl);
+    if (dir == NULL) {
+        //if (CallPRMkDirUsingFileURL(fileurl, 00700) > -1) dir = OpenDir(fileurl);
+    }
+    while ((dir != NULL) && ((de = PR_ReadDir(dir, (PRDirFlags)(n++))) != NULL)) {
+        if (strchr(de->name, '@')) {              
+            sprintf(fileurl, "mailbox://%s/", de->name);
+            gRDFService->GetResource(fileurl, (nsIRDFResource**)&folder);
+            AddAccount(folder);
         }
     }
     free(fileurl);

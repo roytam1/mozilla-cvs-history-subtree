@@ -833,13 +833,13 @@ static NS_DEFINE_IID(kIRDFServiceIID,           NS_IRDFSERVICE_IID);
   if (NS_FAILED(rv = doc->GetDataBase(db)))
     goto done;
 
-  if (NS_FAILED(rv = service->GetNamedDataSource("rdf:bookmarks", &ds)))
+  if (NS_FAILED(rv = service->GetNamedDataSource("rdf:mail", &ds)))
     goto done;
 
   if (NS_FAILED(rv = db->AddDataSource(ds)))
     goto done;
 
-  if (NS_FAILED(rv = service->GetResource("rdf:bookmarks", &root)))
+  if (NS_FAILED(rv = service->GetResource("MailRoot", &root)))
     goto done;
 
   if (NS_FAILED(rv = doc->SetRootResource(root)))
