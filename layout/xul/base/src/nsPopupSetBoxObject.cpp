@@ -106,7 +106,7 @@ nsPopupSetBoxObject::DestroyPopup()
 NS_IMETHODIMP
 nsPopupSetBoxObject::CreatePopup(nsIDOMElement* aSrcContent, 
                                  nsIDOMElement* aPopupContent, 
-                                 PRInt32 aXPos, PRInt32 aYPos, 
+                                 PRInt32 aXPos, PRInt32 aYPos, PRInt32 aXDelta, PRInt32 aYDelta,
                                  const PRUnichar *aPopupType, const PRUnichar *anAnchorAlignment, 
                                  const PRUnichar *aPopupAlignment)
 {
@@ -136,7 +136,7 @@ nsPopupSetBoxObject::CreatePopup(nsIDOMElement* aSrcContent,
   if (!shell)
     return NS_OK;
 
-  return popupFrame->CreatePopup(srcContent, popupContent, aXPos, aYPos, nsAutoString(aPopupType), nsAutoString(anAnchorAlignment), nsAutoString(aPopupAlignment));
+  return popupFrame->CreatePopup(srcContent, popupContent, aXPos, aYPos, aXDelta, aYDelta, nsAutoString(aPopupType), nsAutoString(anAnchorAlignment), nsAutoString(aPopupAlignment));
 }
 
 NS_IMETHODIMP nsPopupSetBoxObject::GetActiveChild(nsIDOMElement** aResult)

@@ -39,7 +39,7 @@ public:
   static const nsIID& GetIID() { static nsIID iid = NS_IPOPUPSETFRAME_IID; return iid; }
 
   NS_IMETHOD CreatePopup(nsIContent* aElementContent, nsIContent* aPopupContent, 
-                         PRInt32 aXPos, PRInt32 aYPos, 
+                         PRInt32 aXPos, PRInt32 aYPos, PRInt32 aXDelta, PRInt32 aYDelta,
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment) = 0;
 

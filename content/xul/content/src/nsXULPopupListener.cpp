@@ -726,6 +726,9 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
 {
   nsresult rv = NS_OK;
 
+  PRInt32 xDelta = 0;
+  PRInt32 yDelta = 0;
+
   nsAutoString type; type.AssignWithConversion("popup");
   if ( popupType == eXULPopupType_context ) {
     type.AssignWithConversion("context");
@@ -733,11 +736,13 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
     // position the menu two pixels down and to the right from the current
     // mouse position. This makes it easier to dismiss the menu by just
     // clicking.
-    aClientX += 2;
-    aClientY += 2;
+    xDelta += 2;
+    yDelta += 2;
   }
-  else if ( popupType == eXULPopupType_tooltip )
+  else if ( popupType == eXULPopupType_tooltip ) {
     type.AssignWithConversion("tooltip");
+    yDelta += 21;
+  }
 
   nsAutoString identifier;
   mElement->GetAttribute(type, identifier);
@@ -822,8 +827,6 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
         nsAutoString popupAlignment; popupAlignment.AssignWithConversion("topleft");
         mElement->GetAttribute(NS_LITERAL_STRING("popupalign"), popupAlignment);
 
-        PRInt32 xPos = aClientX, yPos = aClientY;
-        
         mPopupContent = popupContent.get();
 
         nsCOMPtr<nsIDOMNode> parent;
@@ -835,7 +838,8 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
         nsCOMPtr<nsIPopupSetBoxObject> popupSetObject(do_QueryInterface(boxObject));
         nsCOMPtr<nsIMenuBoxObject> menuObject(do_QueryInterface(boxObject));
         if (popupSetObject)
-          popupSetObject->CreatePopup(mElement, mPopupContent, xPos, yPos, 
+          popupSetObject->CreatePopup(mElement, mPopupContent,
+                                     aClientX, aClientY, xDelta, yDelta,
                                      type.GetUnicode(), anchorAlignment.GetUnicode(), 
                                      popupAlignment.GetUnicode());
         else if (menuObject)
@@ -874,7 +878,7 @@ XULPopupListenerImpl :: sTooltipCallback (nsITimer *aTimer, void *aPopupListener
       if ( targetDoc ) {
         doc->SetTooltipNode ( self->mPossibleTooltipNode );        
         doc->SetPopupNode ( self->mPossibleTooltipNode );
-        self->LaunchPopup ( self->mMouseClientX, self->mMouseClientY+21);
+        self->LaunchPopup ( self->mMouseClientX, self->mMouseClientY );
         
         // at this point, |mPopupContent| holds the content node of
         // the popup. If there is an attribute on the popup telling us

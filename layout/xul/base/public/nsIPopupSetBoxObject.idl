@@ -31,7 +31,7 @@ interface nsIDOMElement;
 interface nsIPopupSetBoxObject : nsISupports
 {
   void createPopup(in nsIDOMElement srcContent, in nsIDOMElement popupContent,
-                   in long xpos, in long ypos,
+                   in long xPos, in long yPos, in long xDelta, in long yDelta,
                    in wstring popupType, in wstring anchorAlignment, 
                    in wstring popupAlignment);
 

@@ -93,7 +93,7 @@ public:
                           nsIFrame*       aOldFrame);
 
   NS_IMETHOD CreatePopup(nsIContent* aElementContent, nsIContent* aPopupContent, 
-                         PRInt32 aXPos, PRInt32 aYPos, 
+                         PRInt32 aXPos, PRInt32 aYPos, PRInt32 aXDelta, PRInt32 aYDelta,
                          const nsString& aPopupType, const nsString& anAnchorAlignment,
                          const nsString& aPopupAlignment);
 
@@ -136,6 +136,8 @@ protected:
 
   PRInt32 mXPos;                // Active child's x position
   PRInt32 mYPos;                // Active child's y position
+  PRInt32 mXDelta;
+  PRInt32 mYDelta;
   nsAutoString mPopupType;
   PRBool mCreateHandlerSucceeded;  // Did the create handler succeed?
   nsSize mLastPref;

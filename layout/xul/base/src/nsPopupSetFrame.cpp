@@ -365,7 +365,7 @@ nsPopupSetFrame::RePositionPopup(nsBoxLayoutState& aState)
     nsIPresContext* presContext = aState.GetPresContext();
     presContext->GetShell(getter_AddRefs(presShell));
     presShell->GetPrimaryFrameFor ( mElementContent, &frameToSyncTo );
-    ((nsMenuPopupFrame*)activeChild)->SyncViewWithFrame(presContext, popupAnchor, popupAlign, frameToSyncTo, mXPos, mYPos);
+    ((nsMenuPopupFrame*)activeChild)->SyncViewWithFrame(presContext, popupAnchor, popupAlign, frameToSyncTo, mXPos + mXDelta, mYPos + mYDelta);
   }
 }
 
@@ -444,7 +444,7 @@ nsPopupSetFrame::AppendFrames(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsPopupSetFrame::CreatePopup(nsIContent* aElementContent, nsIContent* aPopupContent, 
-                             PRInt32 aXPos, PRInt32 aYPos, 
+                             PRInt32 aXPos, PRInt32 aYPos, PRInt32 aXDelta, PRInt32 aYDelta,
                              const nsString& aPopupType, const nsString& anAnchorAlignment,
                              const nsString& aPopupAlignment)
 {
@@ -455,6 +455,8 @@ nsPopupSetFrame::CreatePopup(nsIContent* aElementContent, nsIContent* aPopupCont
   // Show the popup at the specified position.
   mXPos = aXPos;
   mYPos = aYPos;
+  mXDelta = aXDelta;
+  mYDelta = aYDelta;
 
   if (!OnCreate(aPopupContent))
     return NS_OK;
@@ -627,7 +629,7 @@ nsPopupSetFrame::OnCreate(nsIContent* aPopupContent)
 {
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
-  event.eventStructType = NS_EVENT;
+  event.eventStructType = NS_MOUSE_EVENT;
   event.message = NS_MENU_CREATE;
   event.isShift = PR_FALSE;
   event.isControl = PR_FALSE;
@@ -635,12 +637,18 @@ nsPopupSetFrame::OnCreate(nsIContent* aPopupContent)
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
   event.widget = nsnull;
+  event.refPoint.x = mXPos;
+  event.refPoint.y = mYPos;
 
   if (aPopupContent) {
     nsCOMPtr<nsIPresShell> shell;
     nsresult rv = mPresContext->GetShell(getter_AddRefs(shell));
     if (NS_SUCCEEDED(rv) && shell) {
+      nsCOMPtr<nsIViewManager> vm;
+      if (NS_SUCCEEDED(shell->GetViewManager(getter_AddRefs(vm))))
+        vm->GetWidget(&event.widget);
       rv = shell->HandleDOMEventWithTarget(aPopupContent, &event, &status);
+      NS_IF_RELEASE(event.widget);
     }
 
     if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )
@@ -706,7 +714,7 @@ nsPopupSetFrame::OnDestroy()
 {
   nsEventStatus status = nsEventStatus_eIgnore;
   nsMouseEvent event;
-  event.eventStructType = NS_EVENT;
+  event.eventStructType = NS_MOUSE_EVENT;
   event.message = NS_MENU_DESTROY;
   event.isShift = PR_FALSE;
   event.isControl = PR_FALSE;
@@ -714,6 +722,8 @@ nsPopupSetFrame::OnDestroy()
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
   event.widget = nsnull;
+  event.refPoint.x = mXPos;
+  event.refPoint.y = mYPos;
 
   nsCOMPtr<nsIContent> content;
   GetActiveChildElement(getter_AddRefs(content));
@@ -722,7 +732,11 @@ nsPopupSetFrame::OnDestroy()
     nsCOMPtr<nsIPresShell> shell;
     nsresult rv = mPresContext->GetShell(getter_AddRefs(shell));
     if (NS_SUCCEEDED(rv) && shell) {
+      nsCOMPtr<nsIViewManager> vm;
+      if (NS_SUCCEEDED(shell->GetViewManager(getter_AddRefs(vm))))
+        vm->GetWidget(&event.widget);
       rv = shell->HandleDOMEventWithTarget(content, &event, &status);
+      NS_IF_RELEASE(event.widget);
     }
     if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )
       return PR_FALSE;
