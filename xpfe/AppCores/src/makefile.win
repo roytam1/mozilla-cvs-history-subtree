@@ -56,6 +56,7 @@ LLIBS =				            \
     $(DIST)\lib\js3250.lib      \
     $(DIST)\lib\jsdombase_s.lib \
     $(DIST)\lib\jsdomevents_s.lib \
+    $(DIST)\lib\xpc3250.lib     \
     $(DIST)\lib\raptorbase.lib  \
 	$(DIST)\lib\raptorgfxwin.lib	\
 	$(LIBNSPR)		            \
