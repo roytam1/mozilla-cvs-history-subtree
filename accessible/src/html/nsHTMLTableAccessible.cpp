@@ -46,7 +46,6 @@ nsDOMAccessible(aShell, aDomNode)
 NS_IMETHODIMP nsHTMLTableAccessible::GetAccRole(PRUint32 *_retval)
 {
   *_retval = ROLE_TABLE;
-
   return NS_OK;
 }
 

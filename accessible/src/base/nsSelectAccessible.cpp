@@ -327,7 +327,7 @@ NS_IMETHODIMP nsSelectChildAccessible::GetAccName(PRUnichar **_retval)
      // if its a button and not already registered, 
      // register ourselves as a popup listener   
      if (!mRegistered) {
-       nsCOMPtr<nsIDOMEventReceiver> eventReceiver = do_QueryInterface(mSelectContent);
+       nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(mSelectContent));
        if (!eventReceiver) {
          *_retval = nsnull;
          return NS_ERROR_NOT_IMPLEMENTED;
@@ -361,7 +361,7 @@ NS_IMETHODIMP nsSelectChildAccessible::GetAccName(PRUnichar **_retval)
 nsSelectChildAccessible::~nsSelectChildAccessible()
 {
   if (mRegistered) {
-     nsCOMPtr<nsIDOMEventReceiver> eventReceiver = do_QueryInterface(mSelectContent);
+     nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(mSelectContent));
      if (eventReceiver) 
        eventReceiver->RemoveEventListener(NS_LITERAL_STRING("create"), this, PR_TRUE);   
   }
@@ -447,7 +447,7 @@ nsSelectWindowAccessible::nsSelectWindowAccessible(nsIAtom* aPopupAtom, nsIAcces
 nsSelectWindowAccessible::~nsSelectWindowAccessible()
 {
   if (mRegistered) {
-     nsCOMPtr<nsIDOMEventReceiver> eventReceiver = do_QueryInterface(mContent);
+     nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(mContent));
      if (eventReceiver) 
        eventReceiver->RemoveEventListener(NS_LITERAL_STRING("create"), this, PR_TRUE);   
   }
@@ -490,7 +490,7 @@ NS_IMETHODIMP nsSelectWindowAccessible::GetAccState(PRUint32 *_retval)
    
   if (!mRegistered) {
 
-     nsCOMPtr<nsIDOMEventReceiver> eventReceiver = do_QueryInterface(mContent);
+     nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(mContent));
      if (!eventReceiver) {
        *_retval = 0;
        return NS_ERROR_NOT_IMPLEMENTED;
@@ -608,7 +608,7 @@ nsSelectListAccessible::nsSelectListAccessible(nsIAtom* aPopupAtom, nsIAccessibl
 
 void nsSelectListAccessible::GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aList)
 {
-   nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
    nsIFrame* frame = nsnull;
    shell->GetPrimaryFrameFor(mContent, &frame);
    if (aFrame == frame)
@@ -683,7 +683,7 @@ nsIAccessible* nsListChildAccessible::CreateNewAccessible(nsIAccessible* aAccess
 
 void nsListChildAccessible::GetListAtomForFrame(nsIFrame* aFrame, nsIAtom*& aList)
 {
-   nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
    nsIFrame* frame = nsnull;
    shell->GetPrimaryFrameFor(mSelectContent, &frame);
    if (aFrame == frame)

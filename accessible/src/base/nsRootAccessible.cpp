@@ -83,16 +83,12 @@ NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName)
 // helpers
 nsIFrame* nsRootAccessible::GetFrame()
 {
-  //if (!mFrame) {
-    nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-    nsIFrame* root = nsnull;
-    if (shell) 
-      shell->GetRootFrame(&root);
-  
-    return root;
-  //}
- 
- // return mFrame;
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  nsIFrame* root = nsnull;
+  if (shell) 
+    shell->GetRootFrame(&root);
+
+  return root;
 }
 
 void nsRootAccessible::GetBounds(nsRect& aBounds)

@@ -90,8 +90,9 @@ class nsLinkableAccessible : public nsDOMAccessible
 {
   public:
     nsLinkableAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
-    NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
-    NS_IMETHOD AccDoDefaultAction();
+    NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
+    NS_IMETHOD GetAccActionName(PRUint8 index, PRUnichar **_retval);
+    NS_IMETHOD AccDoAction(PRUint8 index);
     NS_IMETHOD GetAccState(PRUint32 *_retval);
 
   protected:

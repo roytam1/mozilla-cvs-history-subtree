@@ -72,7 +72,7 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
 {
   nsIFrame* f = NS_STATIC_CAST(nsIFrame*, aFrame);
 
-  nsCOMPtr<nsIPresContext> c = do_QueryInterface(aPresContext);
+  nsCOMPtr<nsIPresContext> c(do_QueryInterface(aPresContext));
   NS_ASSERTION(c,"Error non prescontext passed to accessible factory!!!");
 
   nsCOMPtr<nsIPresShell> s;
@@ -94,10 +94,10 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
 NS_IMETHODIMP 
 nsAccessibilityService::CreateHTMLBlockAccessible(nsIAccessible* aAccessible, nsIDOMNode* node, nsISupports* aPresContext, nsIAccessible **_retval)
 {
-  nsCOMPtr<nsIContent> n = do_QueryInterface(node);
+  nsCOMPtr<nsIContent> n(do_QueryInterface(node));
   NS_ASSERTION(n,"Error non nsIContent passed to accessible factory!!!");
 
-  nsCOMPtr<nsIPresContext> c = do_QueryInterface(aPresContext);
+  nsCOMPtr<nsIPresContext> c(do_QueryInterface(aPresContext));
   NS_ASSERTION(c,"Error non prescontext passed to accessible factory!!!");
 
   nsCOMPtr<nsIPresShell> s;
@@ -120,10 +120,10 @@ NS_IMETHODIMP
 nsAccessibilityService::CreateHTMLSelectAccessible(nsIAtom* aPopupAtom, nsIDOMNode* node, nsISupports* aPresContext, nsIAccessible **_retval)
 {
   /*
-  nsCOMPtr<nsIContent> n = do_QueryInterface(node);
+  nsCOMPtr<nsIContent> n(do_QueryInterface(node));
   NS_ASSERTION(n,"Error non nsIContent passed to accessible factory!!!");
 
-  nsCOMPtr<nsIPresContext> c = do_QueryInterface(aPresContext);
+  nsCOMPtr<nsIPresContext> c(do_QueryInterface(aPresContext));
   NS_ASSERTION(c,"Error non prescontext passed to accessible factory!!!");
 
   nsCOMPtr<nsIPresShell> s;
@@ -346,7 +346,7 @@ NS_IMETHODIMP nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aR
   *aRealFrame = NS_STATIC_CAST(nsIFrame*, aFrame);
   nsCOMPtr<nsIContent> content;
   (*aRealFrame)->GetContent(getter_AddRefs(content));
-  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
   *aNode = node;
   NS_ADDREF(*aNode);
 
@@ -373,10 +373,10 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
 {
   *_retval = nsnull;
 
-  nsCOMPtr<nsIContent> content = do_QueryInterface(node);
+  nsCOMPtr<nsIContent> content(do_QueryInterface(node));
   NS_ASSERTION(content,"Error non nsIContent passed to accessible factory!!!");
 
-  nsCOMPtr<nsIPresContext> presContext = do_QueryInterface(aPresContext);
+  nsCOMPtr<nsIPresContext> presContext(do_QueryInterface(aPresContext));
   NS_ASSERTION(presContext,"Error non prescontext passed to accessible factory!!!");
 
   nsCOMPtr<nsIPresShell> presShell;
@@ -419,15 +419,15 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
 nsresult
 NS_NewAccessibilityService(nsIAccessibilityService** aResult)
 {
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
-    if (! aResult)
-        return NS_ERROR_NULL_POINTER;
+  NS_PRECONDITION(aResult != nsnull, "null ptr");
+  if (! aResult)
+      return NS_ERROR_NULL_POINTER;
 
-    nsAccessibilityService* a = new nsAccessibilityService();
-    if (a == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(a);
-    *aResult = a;
-    return NS_OK;
+  nsAccessibilityService* a = new nsAccessibilityService();
+  if (a == nsnull)
+      return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(a);
+  *aResult = a;
+  return NS_OK;
 }
 

@@ -122,7 +122,7 @@ nsFrameTreeWalker::nsFrameTreeWalker(nsIPresContext* aPresContext, nsIDOMNode* a
   nsCOMPtr<nsIPresShell> shell;
   mPresContext->GetShell(getter_AddRefs(shell));
   nsIFrame* frame = nsnull;
-  nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
   shell->GetPrimaryFrameFor(content, &mFrame);
 
   InitDepth();
@@ -295,7 +295,7 @@ PRBool nsFrameTreeWalker::IsSameContent()
 {
   nsCOMPtr<nsIContent> c;
   mFrame->GetContent(getter_AddRefs(c));
-  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(c);
+  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(c));
   if (node == mNodeToFind)
     return PR_TRUE;
   else
@@ -394,7 +394,7 @@ PRBool nsDOMTreeWalker::GetParent()
           accessible = do_QueryInterface(content);
         if (accessible) {
           nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(parentPresShell));
-          nsCOMPtr<nsIDOMNode> node = do_QueryInterface(accessible);
+          nsCOMPtr<nsIDOMNode> node(do_QueryInterface(accessible));
           mAccessible = accessible;
           mDOMNode = node;
           mPresShell = wr;
@@ -700,7 +700,7 @@ nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWea
   }
 #ifdef NS_DEBUG_X
    {
-     nsCOMPtr<nsIPresShell> shell = do_QueryReferent(aShell);
+     nsCOMPtr<nsIPresShell> shell(do_QueryReferent(aShell));
      printf(">>> %p Created Acc - Con: %p  Acc: %p  PS: %p", 
              (nsIAccessible*)this, aContent, aAccessible, shell.get());
      if (shell && aContent != nsnull) {
@@ -723,7 +723,6 @@ nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWea
 #ifdef DEBUG_LEAKS
   printf("nsAccessibles=%d\n", ++gnsAccessibles);
 #endif
-
 }
 
 //-----------------------------------------------------
@@ -916,19 +915,32 @@ NS_IMETHODIMP nsAccessible::GetAccName(PRUnichar * *aAccName)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-  /* attribute wstring accName; */
-NS_IMETHODIMP nsAccessible::GetAccDefaultAction(PRUnichar * *aDefaultAction) 
-{ 
-  // delegate
-  if (mAccessible) {
-    nsresult rv = mAccessible->GetAccDefaultAction(aDefaultAction);
-    if (NS_SUCCEEDED(rv) && *aDefaultAction != nsnull)
-      return rv;
-  }
-
-  *aDefaultAction = 0;
-  return NS_ERROR_NOT_IMPLEMENTED;  
+/* PRUint8 getAccNumActions (); */
+NS_IMETHODIMP nsAccessible::GetAccNumActions(PRUint8 *_retval) 
+{
+  *_retval = 0;
+  if (mAccessible)
+    mAccessible->GetAccNumActions(_retval);
+  return NS_OK;
 }
+
+/* wstring getAccActionName (in PRUint8 index); */
+NS_IMETHODIMP nsAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+{
+  PRUint8 numActions;
+  *_retval = 0;
+  return (mAccessible && NS_SUCCEEDED(GetAccNumActions(&numActions)) && index<numActions)?
+    mAccessible->GetAccActionName(index, _retval): NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void accDoAction (in PRUint8 index); */
+NS_IMETHODIMP nsAccessible::AccDoAction(PRUint8 index) 
+{
+  PRUint8 numActions;
+  return (mAccessible && NS_SUCCEEDED(GetAccNumActions(&numActions)) && index<numActions)?
+    mAccessible->AccDoAction(index): NS_ERROR_NOT_IMPLEMENTED;
+}
+
 
 NS_IMETHODIMP nsAccessible::SetAccName(const PRUnichar * aAccName) 
 { 
@@ -1165,19 +1177,6 @@ NS_IMETHODIMP nsAccessible::AccTakeFocus(void)
   // delegate
   if (mAccessible) {
     nsresult rv = mAccessible->AccTakeFocus();
-    if (NS_SUCCEEDED(rv))
-      return rv;
-  }
-
-  return NS_ERROR_FAILURE;  
-}
-
-  /* void doDefaultAction (); */
-NS_IMETHODIMP nsAccessible::AccDoDefaultAction(void) 
-{ 
-  // delegate
-  if (mAccessible) {
-    nsresult rv = mAccessible->AccDoDefaultAction();
     if (NS_SUCCEEDED(rv))
       return rv;
   }
@@ -1749,7 +1748,7 @@ nsIFrame* nsAccessible::GetFrame()
 
 void nsAccessible::GetPresContext(nsCOMPtr<nsIPresContext>& aContext)
 {
-  nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
 
   if (shell) {
     shell->GetPresContext(getter_AddRefs(aContext));

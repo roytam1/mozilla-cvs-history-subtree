@@ -48,25 +48,25 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccName(PRUnichar * *aAccName)
 /* nsIAccessible getAccFirstChild (); */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccFirstChild(nsIAccessible **_retval)
 {
-    return mRootAccessible->GetAccFirstChild(_retval);
+  return mRootAccessible->GetAccFirstChild(_retval);
 }
 
 /* nsIAccessible getAccLastChild (); */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccLastChild(nsIAccessible **_retval)
 {
-    return mRootAccessible->GetAccLastChild(_retval);
+  return mRootAccessible->GetAccLastChild(_retval);
 }
 
 /* long getAccChildCount (); */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccChildCount(PRInt32 *_retval)
 {
-    return mRootAccessible->GetAccChildCount(_retval);
+  return mRootAccessible->GetAccChildCount(_retval);
 }
 
 /* unsigned long getAccRole (); */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
 {
-    return mRootAccessible->GetAccRole(_retval);
+  return mRootAccessible->GetAccRole(_retval);
 }
 
 //-----------------------------------------------------
@@ -75,7 +75,7 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
 nsHTMLIFrameRootAccessible::nsHTMLIFrameRootAccessible(nsIWeakReference* aShell, nsIDOMNode* aNode):
   nsRootAccessible(aShell)
 {
-    mRealDOMNode = aNode;
+  mRealDOMNode = aNode;
 }
 
 //-----------------------------------------------------
@@ -148,7 +148,7 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccRole(PRUint32 *_retval)
 
 NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible** aAcc)
 {
-    // Start by finding our PresShell and from that
+  // Start by finding our PresShell and from that
   // we get our nsIDocShell in order to walk the DocShell tree
   nsCOMPtr<nsIPresShell> presShell(do_QueryReferent(mPresShell));
   nsCOMPtr<nsIDocShell> docShell;

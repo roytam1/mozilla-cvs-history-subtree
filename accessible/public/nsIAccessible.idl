@@ -20,6 +20,8 @@
  * Original Author: Eric D Vaughan (evaughan@netscape.com)
  * 
  * Contributor(s): 
+ * Aaron Leventhal
+ * John Gaunt
  */
 
 #include "nsISupports.idl"
@@ -27,25 +29,6 @@
 [scriptable, uuid(B26FBE47-9A5F-42a1-822B-082461AE4D6D)]
 interface nsIAccessible : nsISupports
 {
-  /* Can't use these javascript can't tell us if properties are undefined 
-     
-  readonly attribute nsIAccessible accParent;
-  readonly attribute nsIAccessible accNextSibling;
-  readonly attribute nsIAccessible accPreviousSibling;
-  readonly attribute nsIAccessible accFirstChild;
-  readonly attribute nsIAccessible accLastChild;
-  readonly attribute long accChildCount;
-
-  attribute wstring accName;
-  attribute wstring accValue;
-  readonly attribute wstring accDescription;
-  readonly attribute wstring accRole;
-  readonly attribute unsigned long accState;
-  readonly attribute wstring accHelp;
-  readonly attribute wstring accDefaultAction;
-  readonly attribute boolean accFocused;
-  */
-
   nsIAccessible getAccParent();
   nsIAccessible getAccNextSibling();
   nsIAccessible getAccPreviousSibling();
@@ -62,7 +45,7 @@ interface nsIAccessible : nsISupports
   unsigned long getAccRole();
   unsigned long getAccState();
   unsigned long getAccExtState();
-  wstring getAccDefaultAction();
+
   wstring getAccHelp();
   nsIAccessible getAccFocused();
 
@@ -83,7 +66,10 @@ interface nsIAccessible : nsISupports
   void accExtendSelection();
   void accTakeSelection();
   void accTakeFocus();
-  void accDoDefaultAction();
+
+  PRUint8 getAccNumActions();
+  wstring getAccActionName(in PRUint8 index);
+  void accDoAction(in PRUint8 index);   // Action number 0 is the default action
 
  // MSAA State flags - used for bitfield. More than 1 allowed.
   const unsigned long  STATE_UNAVAILABLE        = 0x00000001;  // Disabled, maps to opposite of Java ENABLED, Gnome/ATK SENSITIVE?
@@ -198,5 +184,4 @@ interface nsIAccessible : nsISupports
   const unsigned long  ROLE_CLOCK               = 0x0000003D;
   const unsigned long  ROLE_SPLITBUTTON         = 0x0000003E;   // New in MSAA 2.0 
   const unsigned long  ROLE_IPADDRESS           = 0x0000003F;   // New in MSAA 2.0 
-
 };

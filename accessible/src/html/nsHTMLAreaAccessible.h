@@ -46,8 +46,9 @@ public:
   NS_IMETHOD GetAccNextSibling(nsIAccessible * *aAccNextSibling);
   NS_IMETHOD GetAccPreviousSibling(nsIAccessible * *aAccPreviousSibling);
   NS_IMETHOD GetAccDescription(PRUnichar **_retval);
-  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
-  NS_IMETHOD AccDoDefaultAction();
+  NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
+  NS_IMETHOD GetAccActionName(PRUint8 index, PRUnichar **_retval);
+  NS_IMETHOD AccDoAction(PRUint8 index);
   NS_IMETHOD AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height);
 
 protected:

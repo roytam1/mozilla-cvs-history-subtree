@@ -343,7 +343,7 @@ STDMETHODIMP Accessible::get_accDefaultAction(
   GetNSAccessibleFor(varChild,a);
   if (a) {
      nsXPIDLString name;
-     nsresult rv = a->GetAccDefaultAction(getter_Copies(name));
+     nsresult rv = a->GetAccActionName(0,getter_Copies(name));
      if (NS_FAILED(rv))
         return S_FALSE;
 
@@ -489,7 +489,7 @@ STDMETHODIMP Accessible::accHitTest(
 STDMETHODIMP Accessible::accDoDefaultAction( 
       /* [optional][in] */ VARIANT varChild)
 {
-    if (NS_SUCCEEDED(mAccessible->AccDoDefaultAction()))
+    if (NS_SUCCEEDED(mAccessible->AccDoAction(0)))
       return S_OK;
     else
       return DISP_E_MEMBERNOTFOUND;
