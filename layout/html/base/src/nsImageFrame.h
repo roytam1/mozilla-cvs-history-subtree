@@ -59,6 +59,7 @@ private:
   nsImageFrame *mFrame;
 };
 
+
 struct ImageLoad {
   ImageLoad() : mIntrinsicSize(0,0) { }
   nsCOMPtr<imgIRequest> mRequest;
@@ -184,8 +185,7 @@ protected:
   void GetInnerArea(nsIPresContext* aPresContext,
                     nsRect& aInnerArea) const;
 
-
-  nsresult LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest **aRequest);
+protected:
 
   inline PRBool CanLoadImage(nsIURI *aURI);
 
@@ -197,22 +197,30 @@ protected:
 
   void FireDOMEvent(PRUint32 aMessage);
 
-  nsImageMap*         mImageMap;
+private:
+  nsresult LoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest);
+  nsresult RealLoadImage(const nsAReadableString& aSpec, nsIPresContext *aPresContext, imgIRequest *aRequest);
+  inline int GetImageLoad(imgIRequest *aRequest);
 
-  nsCOMPtr<imgIRequest> mImageRequest;
-  nsCOMPtr<imgIRequest> mLowImageRequest;
+  nsImageMap*         mImageMap;
 
   nsCOMPtr<imgIDecoderObserver> mListener;
 
+  /**
+   * 0 is the current image being displayed on the screen.
+   * 1 is for attribute changed images.
+   * when the load from 1 completes, it will replace 0.
+   */
+  struct ImageLoad mLoads[2];
+
   nsSize mComputedSize;
   nsSize mIntrinsicSize;
-
-  nsTransform2D mTransform;
 
   PRPackedBool        mSizeConstrained;
   PRPackedBool        mGotInitialReflow;
   PRPackedBool        mInitialLoadCompleted;
   PRPackedBool        mCanSendLoadEvent;
+  PRPackedBool        mImageBlocked;   // true if the image has been blocked
 
   PRBool              mFailureReplace;
 

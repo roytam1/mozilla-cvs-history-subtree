@@ -21,7 +21,6 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-
 #include "imgLoader.h"
 
 #include "nsCOMPtr.h"
@@ -61,8 +60,8 @@ imgLoader::~imgLoader()
 
 #define SHOULD_RELOAD(flags) (flags & nsIRequest::LOAD_BYPASS_CACHE || flags & nsIRequest::VALIDATE_ALWAYS)
 
-/* imgIRequest loadImage (in nsIURI aURI, in nsILoadGroup aLoadGroup, in imgIDecoderObserver aObserver, in nsISupports aCX, in nsLoadFlags aLoadFlags, in nsISupports aCacheKey); */
-NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI, nsILoadGroup *aLoadGroup, imgIDecoderObserver *aObserver, nsISupports *aCX, nsLoadFlags aLoadFlags, nsISupports* aCacheKey, imgIRequest **_retval)
+/* imgIRequest loadImage (in nsIURI aURI, in nsILoadGroup aLoadGroup, in imgIDecoderObserver aObserver, in nsISupports aCX, in nsLoadFlags aLoadFlags, in nsISupports cacheKey, in imgIRequest aRequest); */
+NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI, nsILoadGroup *aLoadGroup, imgIDecoderObserver *aObserver, nsISupports *aCX, nsLoadFlags aLoadFlags, nsISupports *cacheKey, imgIRequest *aRequest, imgIRequest **_retval)
 {
   NS_ASSERTION(aURI, "imgLoader::LoadImage -- NULL URI pointer");
 
@@ -241,7 +240,7 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI, nsILoadGroup *aLoadGroup, imgID
       LOG_MSG(gImgLog, "imgLoader::LoadImage", "async open failed.");
 
       rv = CreateNewProxyForRequest(request, aLoadGroup, aObserver,
-                                    aCX, aLoadFlags, _retval);
+                                    aCX, aLoadFlags, aRequest, _retval);
       if (NS_SUCCEEDED(rv)) {
         request->OnStartRequest(newChannel, nsnull);
         request->OnStopRequest(newChannel, nsnull, NS_BINDING_ABORTED);
@@ -259,7 +258,7 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI, nsILoadGroup *aLoadGroup, imgID
 
   LOG_MSG(gImgLog, "imgLoader::LoadImage", "creating proxy request.");
 
-  rv = CreateNewProxyForRequest(request, aLoadGroup, aObserver, aCX, aLoadFlags, _retval);
+  rv = CreateNewProxyForRequest(request, aLoadGroup, aObserver, aCX, aLoadFlags, aRequest, _retval);
 
   NS_RELEASE(request);
 
@@ -333,7 +332,7 @@ NS_IMETHODIMP imgLoader::LoadImageWithChannel(nsIChannel *channel, imgIDecoderOb
   nsCOMPtr<nsILoadGroup> loadGroup;
   channel->GetLoadGroup(getter_AddRefs(loadGroup));
 
-  rv = CreateNewProxyForRequest(request, loadGroup, aObserver, cx, nsIRequest::LOAD_NORMAL, _retval);
+  rv = CreateNewProxyForRequest(request, loadGroup, aObserver, cx, nsIRequest::LOAD_NORMAL, nsnull, _retval);
 
   NS_RELEASE(request);
 
@@ -341,11 +340,11 @@ NS_IMETHODIMP imgLoader::LoadImageWithChannel(nsIChannel *channel, imgIDecoderOb
 }
 
 
-
 nsresult
 imgLoader::CreateNewProxyForRequest(imgRequest *aRequest, nsILoadGroup *aLoadGroup,
                                     imgIDecoderObserver *aObserver, nsISupports *cx,
-                                    nsLoadFlags aLoadFlags, imgIRequest **_retval)
+                                    nsLoadFlags aLoadFlags, imgIRequest *aProxyRequest,
+                                    imgIRequest **_retval)
 {
   LOG_SCOPE_WITH_PARAM(gImgLog, "imgLoader::CreateNewProxyForRequest", "imgRequest", aRequest);
 
@@ -355,9 +354,12 @@ imgLoader::CreateNewProxyForRequest(imgRequest *aRequest, nsILoadGroup *aLoadGro
    */
 
   imgRequestProxy *proxyRequest;
-  NS_NEWXPCOM(proxyRequest, imgRequestProxy);
-  if (!proxyRequest) return NS_ERROR_OUT_OF_MEMORY;
-
+  if (aProxyRequest) {
+    proxyRequest = NS_STATIC_CAST(imgRequestProxy *, aProxyRequest);
+  } else {
+    NS_NEWXPCOM(proxyRequest, imgRequestProxy);
+    if (!proxyRequest) return NS_ERROR_OUT_OF_MEMORY;
+  }
   NS_ADDREF(proxyRequest);
 
   /* It is important to call |SetLoadFlags()| before calling |Init()| because
@@ -372,8 +374,10 @@ imgLoader::CreateNewProxyForRequest(imgRequest *aRequest, nsILoadGroup *aLoadGro
     return rv;
   }
 
-  *_retval = NS_STATIC_CAST(imgIRequest*, proxyRequest);
-  NS_ADDREF(*_retval);
+  if (_retval) {
+    *_retval = NS_STATIC_CAST(imgIRequest*, proxyRequest);
+    NS_ADDREF(*_retval);
+  }
 
   NS_RELEASE(proxyRequest);
 
