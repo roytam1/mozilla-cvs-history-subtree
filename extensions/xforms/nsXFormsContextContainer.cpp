@@ -96,6 +96,7 @@ public:
 
   // nsIXTFElement overrides
   NS_IMETHOD OnDestroyed();
+  NS_IMETHOD CloneState(nsIDOMElement *aElement);
 
   // nsIXFormsControl
   NS_DECL_NSIXFORMSCONTROL
@@ -180,6 +181,22 @@ nsXFormsContextContainer::OnDestroyed()
   mElement = nsnull;
   mContextNode = nsnull;
   
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsContextContainer::CloneState(nsIDOMElement *aElement)
+{
+  nsCOMPtr<nsIXFormsContextControl> other = do_QueryInterface(aElement);
+  if (!other) {
+    NS_WARNING("CloneState called with a different source node");
+    return NS_ERROR_FAILURE;
+  }
+
+  nsAutoString modelID;
+  PRInt32 position, size;
+  other->GetContext(modelID, getter_AddRefs(mContextNode), &position, &size);
+
   return NS_OK;
 }
 

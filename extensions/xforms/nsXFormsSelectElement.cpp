@@ -54,6 +54,10 @@
 #include "nsArray.h"
 #include "nsIDOMEventListener.h"
 #include "nsIDOMEventTarget.h"
+#include "nsIContent.h"
+#include "nsIDocument.h"
+#include "nsIPresShell.h"
+#include "nsISupportsArray.h"
 
 class nsXFormsSelectElement : public nsXFormsXMLVisualStub,
                               public nsIXFormsControl,
@@ -70,6 +74,7 @@ public:
   // nsIXTFVisual overrides
   NS_IMETHOD GetVisualContent(nsIDOMElement **aElement);
   NS_IMETHOD GetInsertionPoint(nsIDOMElement **aPoint);
+  NS_IMETHOD DidLayout();
 
   // nsIXTFElement overrides
   NS_IMETHOD OnDestroyed();
@@ -90,6 +95,7 @@ public:
   NS_DECL_NSIDOMEVENTLISTENER
 
 private:
+  NS_HIDDEN_(void) UpdateSelect1Label();
   NS_HIDDEN_(void) SelectItemsInList(const nsString &aValueList);
   NS_HIDDEN_(void) SelectCopiedItem(nsIDOMNode *aNode);
   NS_HIDDEN_(void) SelectItemsByValue(nsIDOMNode *aNode,
@@ -118,7 +124,8 @@ nsXFormsSelectElement::OnCreated(nsIXTFXMLVisualWrapper *aWrapper)
                                 nsIXTFElement::NOTIFY_CHILD_REMOVED |
                                 nsIXTFElement::NOTIFY_WILL_REMOVE_CHILD |
                                 nsIXTFElement::NOTIFY_BEGIN_ADDING_CHILDREN |
-                                nsIXTFElement::NOTIFY_DONE_ADDING_CHILDREN);
+                                nsIXTFElement::NOTIFY_DONE_ADDING_CHILDREN |
+                                nsIXTFVisual::NOTIFY_DID_LAYOUT);
 
   nsCOMPtr<nsIDOMElement> node;
   aWrapper->GetElementNode(getter_AddRefs(node));
@@ -314,6 +321,24 @@ nsXFormsSelectElement::DoneAddingChildren()
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXFormsSelectElement::DidLayout()
+{
+  // We only care about the initial reflow, so unregister the notification.
+  nsCOMPtr<nsIXTFElementWrapper> wrapper = do_QueryInterface(mElement);
+  wrapper->SetNotificationMask(nsIXTFElement::NOTIFY_PARENT_CHANGED |
+                               nsIXTFElement::NOTIFY_WILL_SET_ATTRIBUTE |
+                               nsIXTFElement::NOTIFY_ATTRIBUTE_SET |
+                               nsIXTFElement::NOTIFY_CHILD_INSERTED |
+                               nsIXTFElement::NOTIFY_CHILD_REMOVED |
+                               nsIXTFElement::NOTIFY_WILL_REMOVE_CHILD |
+                               nsIXTFElement::NOTIFY_BEGIN_ADDING_CHILDREN |
+                               nsIXTFElement::NOTIFY_DONE_ADDING_CHILDREN);
+
+  UpdateSelect1Label();
+  return NS_OK;
+}
+
 // nsIXFormsControl
 
 NS_IMETHODIMP
@@ -372,43 +397,41 @@ nsXFormsSelectElement::Refresh()
     if (result)
       result->GetSingleNodeValue(getter_AddRefs(resultNode));
 
-    if (!resultNode)
-      return NS_OK;
+    if (resultNode) {
+      nsCOMPtr<nsIDOMNodeList> children;
+      resultNode->GetChildNodes(getter_AddRefs(children));
+      if (children) {
+        nsCOMPtr<nsIDOMNode> child;
+        PRUint32 childCount;
+        children->GetLength(&childCount);
 
-    nsCOMPtr<nsIDOMNodeList> children;
-    resultNode->GetChildNodes(getter_AddRefs(children));
+        for (PRUint32 i = 0; i < childCount; ++i) {
+          children->Item(i, getter_AddRefs(child));
 
-    if (!children)
-      return NS_OK;
+          PRUint16 nodeType;
+          child->GetNodeType(&nodeType);
+          switch (nodeType) {
+          case nsIDOMNode::TEXT_NODE:
+            {
+              nsAutoString nodeValue;
+              child->GetNodeValue(nodeValue);
+              SelectItemsInList(nodeValue);
+            }
+            break;
 
-    nsCOMPtr<nsIDOMNode> child;
-    PRUint32 childCount;
-    children->GetLength(&childCount);
+          case nsIDOMNode::ELEMENT_NODE:
+            SelectCopiedItem(child);
+            break;
 
-    for (PRUint32 i = 0; i < childCount; ++i) {
-      children->Item(i, getter_AddRefs(child));
-
-      PRUint16 nodeType;
-      child->GetNodeType(&nodeType);
-      switch (nodeType) {
-      case nsIDOMNode::TEXT_NODE:
-        {
-          nsAutoString nodeValue;
-          child->GetNodeValue(nodeValue);
-          SelectItemsInList(nodeValue);
+          default:
+            break;
+          }
         }
-        break;
-
-      case nsIDOMNode::ELEMENT_NODE:
-        SelectCopiedItem(child);
-        break;
-
-      default:
-        break;
       }
     }
   }
 
+  UpdateSelect1Label();
   return NS_OK;
 }
 
@@ -466,7 +489,71 @@ nsXFormsSelectElement::HandleEvent(nsIDOMEvent *aEvent)
     }
   }
 
+  if (type.EqualsLiteral("change"))
+    UpdateSelect1Label();
+
   return NS_OK;
+}
+
+void
+nsXFormsSelectElement::UpdateSelect1Label()
+{
+  // Hack for select1: we need to manually put the label for the
+  // selected option into the combobox's anonymous span.
+  // knows how to deal with text node children.
+  nsAutoString tag;
+  mElement->GetLocalName(tag);
+  if (!tag.EqualsLiteral("select1"))
+    return;
+
+  nsCOMPtr<nsIContent> elementContent = do_QueryInterface(mElement);
+  nsIDocument *doc = elementContent->GetCurrentDoc();
+  if (!doc)
+    return;
+
+  nsIPresShell *shell = doc->GetShellAt(0);
+  if (!shell)
+    return;
+
+  PRInt32 selIndex;
+  mSelect->GetSelectedIndex(&selIndex);
+  if (selIndex == -1)
+    return;
+
+  nsCOMPtr<nsIDOMHTMLOptionsCollection> options;
+  mSelect->GetOptions(getter_AddRefs(options));
+  nsCOMPtr<nsIDOMNode> selectedOption;
+  options->Item(selIndex, getter_AddRefs(selectedOption));
+
+  nsCOMPtr<nsIDOMNodeList> optionChildren;
+  selectedOption->GetChildNodes(getter_AddRefs(optionChildren));
+  PRUint32 optionChildCount;
+  optionChildren->GetLength(&optionChildCount);
+
+  nsCOMPtr<nsIContent> selectContent = do_QueryInterface(mSelect);
+
+  nsCOMPtr<nsISupportsArray> anonContent;
+  shell->GetAnonymousContentFor(selectContent, getter_AddRefs(anonContent));
+  if (!anonContent)
+    return;
+
+  nsCOMPtr<nsISupports> comboDisplayContent;
+  anonContent->GetElementAt(2, getter_AddRefs(comboDisplayContent));
+  if (!comboDisplayContent)
+    return;
+
+  nsCOMPtr<nsIDOMNode> comboSpan = do_QueryInterface(comboDisplayContent);
+  nsCOMPtr<nsIDOMNode> child, childReturn;
+  while (NS_SUCCEEDED(comboSpan->GetFirstChild(getter_AddRefs(child)))
+                      && child)
+    comboSpan->RemoveChild(child, getter_AddRefs(childReturn));
+
+  nsCOMPtr<nsIDOMNode> clone;
+  for (PRUint32 i = 0; i < optionChildCount; ++i) {
+    optionChildren->Item(i, getter_AddRefs(child));
+    child->CloneNode(PR_TRUE, getter_AddRefs(clone));
+    comboSpan->AppendChild(clone, getter_AddRefs(childReturn));
+  }
 }
 
 // internal methods

@@ -67,6 +67,8 @@ REQUIRES	= \
 		layout \
 		transformiix \
 		schemavalidation \
+		gfx \
+		locale \
 		$(NULL)
 
 XPIDLSRCS	= \

@@ -1979,16 +1979,28 @@ nsComboboxControlFrame::CreateDisplayFrame(nsPresContext* aPresContext)
   nsRefPtr<nsStyleContext> textStyleContext;
   textStyleContext = styleSet->ResolveStyleForNonElement(styleContext);
   if (!textStyleContext) { return NS_ERROR_NULL_POINTER; }
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mDisplayContent));
-  mTextFrame->Init(aPresContext, content, mDisplayFrame, textStyleContext, nsnull);
+  mTextFrame->Init(aPresContext, mDisplayContent, mDisplayFrame, textStyleContext, nsnull);
   mTextFrame->SetInitialChildList(aPresContext, nsnull, nsnull);
 
-  aPresContext->FrameManager()->SetPrimaryFrameFor(content, mTextFrame);
+  aPresContext->FrameManager()->SetPrimaryFrameFor(mDisplayContent, mTextFrame);
+
+  // create an inline frame and put it inside the block frame
+  nsIFrame *inlineFrame = nsnull;
+  rv = NS_NewInlineFrame(shell, &inlineFrame);
+  if (NS_FAILED(rv)) { return rv; }
+  if (!inlineFrame) { return NS_ERROR_NULL_POINTER; }
+  nsRefPtr<nsStyleContext> inlineStyleContext;
+  inlineStyleContext = styleSet->ResolveStyleFor(mSpan, mStyleContext);
+  if (!inlineStyleContext) { return NS_ERROR_NULL_POINTER; }
+  inlineFrame->Init(aPresContext, mSpan, mDisplayFrame, inlineStyleContext, nsnull);
+  inlineFrame->SetInitialChildList(aPresContext, nsnull, nsnull);
+  aPresContext->FrameManager()->SetPrimaryFrameFor(mSpan, inlineFrame);
+  inlineFrame->SetNextSibling(mTextFrame);
 
   rv = mDisplayFrame->Init(aPresContext, mContent, this, styleContext, nsnull);
   if (NS_FAILED(rv)) { return rv; }
 
-  mDisplayFrame->SetInitialChildList(aPresContext, nsnull, mTextFrame);
+  mDisplayFrame->SetInitialChildList(aPresContext, nsnull, inlineFrame);
 
   return NS_OK;
 }
@@ -2027,20 +2039,26 @@ nsComboboxControlFrame::CreateAnonymousContent(nsPresContext* aPresContext,
     // set the value of the text node
     mDisplayContent.swap(labelContent);
     mDisplayContent->SetText(NS_LITERAL_STRING("X"), PR_TRUE);
+    aChildList.AppendElement(mDisplayContent);
 
     nsCOMPtr<nsIDocument> doc = mContent->GetDocument();
     // mContent->AppendChildTo(labelContent, PR_FALSE, PR_FALSE);
 
     nsCOMPtr<nsINodeInfo> nodeInfo;
+    doc->NodeInfoManager()->GetNodeInfo(nsHTMLAtoms::span, nsnull,
+                                        kNameSpaceID_None,
+                                        getter_AddRefs(nodeInfo));
+    nsresult rv = NS_NewHTMLElement(getter_AddRefs(mSpan), nodeInfo);
+    NS_ENSURE_SUCCESS(rv, rv);
+    aChildList.AppendElement(mSpan);
+
     doc->NodeInfoManager()->GetNodeInfo(nsHTMLAtoms::input, nsnull,
                                         kNameSpaceID_None,
                                         getter_AddRefs(nodeInfo));
 
-    aChildList.AppendElement(mDisplayContent);
-
     // create button which drops the list down
     nsCOMPtr<nsIContent> btnContent;
-    nsresult rv = NS_NewHTMLElement(getter_AddRefs(btnContent), nodeInfo);
+    rv = NS_NewHTMLElement(getter_AddRefs(btnContent), nodeInfo);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // make someone to listen to the button. If its pressed by someone like Accessibility
@@ -2116,10 +2134,24 @@ nsComboboxControlFrame::CreateFrameFor(nsPresContext*   aPresContext,
     frameManager->SetPrimaryFrameFor(content, mTextFrame);
     */
 
+    // create an inline frame
+    nsIFrame *inlineFrame = nsnull;
+    rv = NS_NewInlineFrame(shell, &inlineFrame);
+    if (NS_FAILED(rv)) { return rv; }
+    if (!inlineFrame)   { return NS_ERROR_NULL_POINTER; }
+    nsRefPtr<nsStyleContext> inlineStyleContext;
+    inlineStyleContext = styleSet->ResolveStyleFor(mSpan, styleContext);
+    if (!inlineStyleContext) { return NS_ERROR_NULL_POINTER; }
+
+    // initialize the inline frame
+    inlineFrame->Init(aPresContext, mSpan, mDisplayFrame, inlineStyleContext, nsnull);
+    inlineFrame->SetInitialChildList(aPresContext, nsnull, nsnull);
+    inlineFrame->SetNextSibling(mTextFrame);
+
     rv = mDisplayFrame->Init(aPresContext, mContent, this, styleContext, nsnull);
     if (NS_FAILED(rv)) { return rv; }
 
-    mDisplayFrame->SetInitialChildList(aPresContext, nsnull, mTextFrame);
+    mDisplayFrame->SetInitialChildList(aPresContext, nsnull, inlineFrame);
     *aFrame = mDisplayFrame;
     return NS_OK;
   }
@@ -2195,15 +2227,11 @@ nsComboboxControlFrame::SetInitialChildList(nsPresContext* aPresContext,
 
     for (nsIFrame * child = aChildList; child;
          child = child->GetNextSibling()) {
-      nsIFormControlFrame* fcFrame = nsnull;
-      CallQueryInterface(child, &fcFrame);
-      if (fcFrame) {
-        if (fcFrame->GetFormControlType() == NS_FORM_INPUT_BUTTON) {
-          mButtonFrame = child;
-        }
-      } else {
+      nsIAtom *type = child->GetType();
+      if (type == nsLayoutAtoms::gfxButtonControlFrame)
+        mButtonFrame = child;
+      else if (type == nsLayoutAtoms::textFrame)
         mDisplayFrame = child;
-      }
     }
   }
   return rv;
