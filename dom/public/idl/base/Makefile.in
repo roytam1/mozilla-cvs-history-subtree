@@ -39,6 +39,7 @@ SDK_XPIDLSRCS =                                 \
 	$(NULL)
 
 XPIDLSRCS =					\
+	nsIBrowserDOMWindow.idl			\
 	nsIDOMCRMFObject.idl			\
 	nsIDOMCrypto.idl			\
 	nsIDOMHistory.idl			\

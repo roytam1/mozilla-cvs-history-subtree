@@ -93,3 +93,28 @@ nsDOMWindowUtils::SetImageAnimationMode(PRUint16 aMode) {
   return NS_ERROR_NOT_AVAILABLE;
 }
 
+NS_IMETHODIMP
+nsDOMWindowUtils::GetBrowserDOMWindow(nsIBrowserDOMWindow **aBrowserWindow) {
+
+  NS_ENSURE_ARG_POINTER(aBrowserWindow);
+
+  if (mWindow) {
+    *aBrowserWindow = mWindow->mBrowserDOMWindow;
+    NS_IF_ADDREF(*aBrowserWindow);
+    return NS_OK;
+  }
+
+  return NS_ERROR_NOT_AVAILABLE;
+}
+
+NS_IMETHODIMP
+nsDOMWindowUtils::SetBrowserDOMWindow(nsIBrowserDOMWindow *aBrowserWindow) {
+
+  if (mWindow) {
+    mWindow->mBrowserDOMWindow = aBrowserWindow;
+    return NS_OK;
+  }
+
+  return NS_ERROR_NOT_AVAILABLE;
+}
+

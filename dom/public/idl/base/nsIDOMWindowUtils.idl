@@ -37,6 +37,8 @@
 
 #include "nsISupports.idl"
 
+interface nsIBrowserDOMWindow;
+
 /**
  * nsIDOMWindowUtils is intended for giving privileged script access to
  * additional properties and methods of nsIDOMWindow unavailable to
@@ -64,5 +66,12 @@ interface nsIDOMWindowUtils : nsISupports {
    * @see imgIContainer
    */
            attribute unsigned short imageAnimationMode;
+
+  /**
+   * This provides access to yet another layer of utility functions
+   * implemented by script. It will be null for DOMWindows not
+   * corresponding to browsers.
+   */
+           attribute nsIBrowserDOMWindow browserDOMWindow;
 };
 

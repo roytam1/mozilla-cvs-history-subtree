@@ -53,6 +53,7 @@
 // Interfaces Needed
 #include "nsDOMWindowList.h"
 #include "nsIBaseWindow.h"
+#include "nsIBrowserDOMWindow.h"
 #include "nsIChromeEventHandler.h"
 #include "nsIControllers.h"
 #include "nsIObserver.h"
@@ -253,6 +254,9 @@ protected:
   nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
                          float* aT2P);
   nsresult SecurityCheckURL(const char *aURL);
+  nsresult BuildURIfromBase(const char *aURL,
+                            nsIURI **aBuiltURI,
+                            PRBool *aFreeSecurityPass, JSContext **aCXused);
   PopupControlState CheckForAbusePoint();
   PRUint32 CheckOpenAllow(PopupControlState aAbuseLevel,
                           const nsAString &aName);
@@ -312,6 +316,7 @@ protected:
   nsRefPtr<BarPropImpl>         mStatusbar;
   nsRefPtr<BarPropImpl>         mScrollbars;
   nsCOMPtr<nsIWeakReference>    mWindowUtils;
+  nsCOMPtr<nsIBrowserDOMWindow> mBrowserDOMWindow; // held for DOMWindowUtils
   nsTimeoutImpl*                mTimeouts;
   nsTimeoutImpl**               mTimeoutInsertionPoint;
   nsTimeoutImpl*                mRunningTimeout;
