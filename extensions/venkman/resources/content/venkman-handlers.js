@@ -46,7 +46,7 @@ function initHandlers()
 
     console.wwObserver = {observe: wwObserve};
     console.windowWatcher.registerNotification (console.wwObserver);
-    console.windows.hookedWindows = new Array();
+    console.hookedWindows = new Array();
 
     var enumerator = console.windowWatcher.getWindowEnumerator();
     while (enumerator.hasMoreElements())
@@ -63,9 +63,9 @@ function initHandlers()
 function destroyHandlers()
 {
     console.windowWatcher.unregisterNotification (console.wwObserver);
-    while (console.windows.hookedWindows.length)
+    while (console.hookedWindows.length)
     {
-        var win = console.windows.hookedWindows.pop();
+        var win = console.hookedWindows.pop();
         win.removeEventListener ("load", console.onWindowLoad, false);
         win.removeEventListener ("unload", console.onWindowUnload, false);
     }
@@ -77,78 +77,42 @@ function con_winopen (win)
     if ("ChromeWindow" in win && win instanceof win.ChromeWindow &&
         (win.location.href == "about:blank" || win.location.href == ""))
     {
-        //dd ("not loaded yet?");
         setTimeout (con_winopen, 100, win);
         return;
     }
     
     //dd ("window opened: " + win); // + ", " + getInterfaces(win));
-    console.windows.appendChild (new WindowRecord(win, ""));
-    console.windows.hookedWindows.push(win);
+    dispatch ("hook-window-opened", {window: win});
+    console.hookedWindows.push(win);
     win.addEventListener ("load", console.onWindowLoad, false);
     win.addEventListener ("unload", console.onWindowUnload, false);
-    console.scriptsView.freeze();
+    //console.scriptsView.freeze();
 }
 
 console.onWindowLoad =
 function con_winload (e)
 {
-    console.scriptsView.thaw();
+    dispatch ("hook-window-loaded", {event: e});
 }
 
 console.onWindowUnload =
 function con_winunload (e)
 {
-    console.scriptsView.thaw();
+    dispatch ("hook-window-unloaded", {event: e});
 }
 
 console.onWindowClose =
-function con_winunload (win)
+function con_winclose (win)
 {
     //dd ("window closed: " + win);
     if (win.location.href != "chrome://venkman/content/venkman.xul")
     {
-        var winRecord = console.windows.locateChildByWindow(win);
-        if (!ASSERT(winRecord, "onWindowClose: Can't find window record."))
-            return;
-        console.windows.removeChildAtIndex(winRecord.childIndex);
-        var idx = arrayIndexOf(console.windows.hookedWindows, win);
+        var idx = arrayIndexOf(console.hookedWindows, win);
         if (idx != -1)
-            arrayRemoveAt(console.windows.hookedWindows, idx);
+            arrayRemoveAt(console.hookedWindows, idx);
+        dispatch ("hook-window-closed", {window: win});
     }
-    console.scriptsView.freeze();
-}
-
-console.onDebugTrap =
-function con_ondt ()
-{
-    var frame = setCurrentFrameByIndex(0);
-    var type = console.trapType;
-
-    var frameRec = console.stackView.stack.childData[0];
-    console.pushStatus (getMsg(MSN_STATUS_STOPPED, [frameRec.functionName,
-                                                    frameRec.location]));
-    if (type != jsdIExecutionHook.TYPE_INTERRUPTED ||
-        console._lastStackDepth != console.frames.length)
-    {
-        display (formatFrame(frame));
-    }
-
-    displaySource (frame.script.fileName, frame.line, 
-                   (type == jsdIExecutionHook.TYPE_INTERRUPTED) ? 0 : 2);
-    
-    console._lastStackDepth = console.frames.length;
-
-    console.stackView.restoreState();
-    enableDebugCommands()
-
-}
-
-console.onDebugContinue =
-function con_ondc ()
-{
-    console.popStatus();
-    console.sourceView.tree.invalidate();
+    //console.scriptsView.freeze();
 }
 
 console.onLoad =
@@ -191,42 +155,6 @@ function con_unload (e)
 
     destroy();
     return true;
-}
-
-console.onFrameChanged =
-function con_fchanged (currentFrame, currentFrameIndex)
-{
-    var stack = console.stackView.stack;
-    
-    if (currentFrame)
-    {
-        if (currentFrame.isNative)
-            return;
-        
-        var frameRecord = stack.childData[currentFrameIndex];
-        var vr = frameRecord.calculateVisualRow();
-        console.stackView.selectedIndex = vr;
-        console.stackView.scrollTo (vr, 0);
-        var containerRec = console.scripts[currentFrame.script.fileName];
-        if (containerRec)
-        {
-            dispatch ("find-url-soft", {url: containerRec.fileName,
-                      rangeStart: currentFrame.script.baseLineNumber,
-                      rangeEnd: currentFrame.script.baseLineNumber + 
-                                currentFrame.script.lineExtent - 1,
-                      lineNumber: currentFrame.line});
-        }
-        else
-        {
-            dd ("frame from unknown source");
-        }
-    }
-    else
-    {
-        stack.close();
-        stack.childData = new Array();
-        stack.hide();
-    }
 }
 
 console.onInputCompleteLine =
@@ -321,170 +249,6 @@ function con_slkeypress (e)
     }
 }
 
-console.onProjectSelect =
-function con_projsel (e)
-{
-    if (console.projectView.selectedIndex == -1)
-        return;
-    
-    console.scriptsView.selectedIndex = -1;
-    console.stackView.selectedIndex   = -1;
-    console.sourceView.selectedIndex  = -1;
-    
-    var rowIndex = console.projectView.selectedIndex;
-    if (rowIndex == -1 || rowIndex > console.projectView.rowCount)
-        return;
-    var row =
-        console.projectView.childData.locateChildByVisualRow(rowIndex);
-    if (!row)
-    {
-        ASSERT (0, "bogus row index " + rowIndex);
-        return;
-    }
-
-    if (row instanceof BPRecord)
-        dispatch ("find-bp", {breakpointRec: row});
-    else if (row instanceof FileRecord || row instanceof WindowRecord)
-        dispatch ("find-url", {url: row.url});
-}
-            
-console.onStackSelect =
-function con_stacksel (e)
-{
-    if (console.stackView.selectedIndex == -1)
-        return;
-
-    console.scriptsView.selectedIndex = -1;
-    console.projectView.selectedIndex = -1;
-    console.sourceView.selectedIndex  = -1;
-
-    var rowIndex = console.stackView.selectedIndex;
-    if (rowIndex == -1 || rowIndex > console.stackView.rowCount)
-        return;
-    var row =
-        console.stackView.childData.locateChildByVisualRow(rowIndex);
-    if (!row)
-    {
-        ASSERT (0, "bogus row index " + rowIndex);
-        return;
-    }
-
-    var source;
-    
-    var sourceView = console.sourceView;
-    if (row instanceof FrameRecord)
-    {
-        dispatch ("frame", {frameIndex: row.childIndex});
-    }
-    else if (row instanceof ValueRecord && row.jsType == jsdIValue.TYPE_OBJECT)
-    {
-        if (row.parentRecord instanceof FrameRecord &&
-            row == row.parentRecord.scopeRec)
-            return;
-        dispatch ("find-creator", {jsdValue: row.value});
-    }
-}
-
-console.onScriptSelect =
-function con_scptsel (e)
-{
-    if (console.scriptsView.selectedIndex == -1)
-        return;
-
-    console.projectView.selectedIndex = -1;
-    console.stackView.selectedIndex   = -1;
-    console.sourceView.selectedIndex  = -1;
-
-    var rowIndex = console.scriptsView.selectedIndex;
-
-    if (rowIndex == -1 || rowIndex > console.scriptsView.rowCount)
-    {
-        dd ("row out of bounds");
-        return;
-    }
-    
-    var row =
-        console.scriptsView.childData.locateChildByVisualRow(rowIndex);
-    ASSERT (row, "bogus row");
-
-    if (row instanceof ScriptRecord)
-        dispatch ("find-script", {scriptRec: row});
-    else if (row instanceof ScriptContainerRecord)
-        dispatch ("find-url", {url: row.fileName});
-}
-
-console.onScriptClick =
-function con_scptclick (e)
-{
-    if (e.originalTarget.localName == "treecol")
-    {
-        /* resort by column */
-        var rowIndex = new Object();
-        var colID = new Object();
-        var childElt = new Object();
-        
-        var obo = console.scriptsView.tree;
-        obo.getCellAt(e.clientX, e.clientY, rowIndex, colID, childElt);
-        var prop;
-        switch (colID.value)
-        {
-            case "script-name":
-                prop = "functionName";
-                break;
-            case "script-line-start":
-                prop = "baseLineNumber";
-                break;
-            case "script-line-extent":
-                prop = "lineExtent";
-                break;
-        }
-
-        var scriptsRoot = console.scriptsView.childData;
-        var dir = (prop == scriptsRoot._share.sortColumn) ?
-            scriptsRoot._share.sortDirection * -1 : 1;
-        dd ("sort direction is " + dir);
-        scriptsRoot.setSortColumn (prop, dir);
-    }
-}
-
-console.onSourceSelect =
-function con_sourcesel (e)
-{
-    if (console.sourceView.selectedIndex == -1)
-        return;
-    
-    console.scriptsView.selectedIndex = -1;
-    console.stackView.selectedIndex   = -1;
-    console.projectView.selectedIndex = -1;
-}
-
-console.onSourceClick =
-function con_sourceclick (e)
-{
-    var target = e.originalTarget;
-    
-    if (target.localName == "treechildren")
-    {
-        var row = new Object();
-        var colID = new Object();
-        var childElt = new Object();
-        
-        var tree = console.sourceView.tree;
-        tree.getCellAt(e.clientX, e.clientY, row, colID, childElt);
-        if (row.value == -1)
-          return;
-        
-        colID = colID.value;
-        row = row.value;
-        
-        if (colID == "breakpoint-col")
-        {
-            if ("onMarginClick" in console.sourceView.childData)
-                console.sourceView.childData.onMarginClick (e, row + 1);
-        }
-    }
-
-}
 
 console.onTabCompleteRequest =
 function con_tabcomplete (e)

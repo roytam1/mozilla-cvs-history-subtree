@@ -33,7 +33,36 @@
  *
  */
 
-console._bundle = srGetStrBundle("chrome://venkman/locale/venkman.properties");
+function initMsgs ()
+{
+    const nsIPropertyElement = Components.interfaces.nsIPropertyElement;
+    console._bundle =
+        srGetStrBundle("chrome://venkman/locale/venkman.properties");
+    var enumer = console._bundle.getSimpleEnumeration();
+    while (enumer.hasMoreElements())
+    {
+        var prop = enumer.getNext().QueryInterface(nsIPropertyElement);
+        var ary = prop.key.match (/^(msg|msn)/);
+        if (ary)
+        {
+            var constValue;
+            var constName = prop.key.toUpperCase().replace (/\./g, "_");
+            if (ary[1] == "msn")
+            {
+                constName  = constName;
+                constValue = prop.key;
+            }
+            else
+            {
+                constName  = constName;
+                constValue = prop.value.replace (/^\"/, "").replace (/\"$/, "");
+            }
+
+            //dd ("window." + constName + " = " + constValue.quote());
+            eval ("window." + constName + " = " + constValue.quote());
+        }
+    }
+}
 
 function getMsg (msgName, params, deflt)
 {
@@ -92,6 +121,11 @@ const MT_EVAL_OUT  = "EVAL-OUT";
 const MT_FEVAL_IN  = "FEVAL-IN";
 const MT_FEVAL_OUT = "FEVAL-OUT";
 
+/* these messages might be needed to report an exception at startup, before
+ * initMsgs() has been called. */
+window.MSN_ERR_STARTUP        = "msg.err.startup";
+window.MSN_FMT_JSEXCEPTION    = "msn.fmt.jsexception";
+
 /* exception number -> localized message name map, keep in sync with ERR_* from
  * venkman-static.js */
 const exceptionMsgNames = ["err.notimplemented", 
@@ -101,6 +135,8 @@ const exceptionMsgNames = ["err.notimplemented",
                            "err.no.debugger",
                            "err.failure",
                            "err.no.stack"];
+
+if (0) {
 
 /* message values for non-parameterized messages */
 const MSG_ERR_NO_STACK     = getMsg("msg.err.nostack");
@@ -123,6 +159,7 @@ const MSG_WINDOW_REC      = getMsg("msg.window.rec");
 const MSG_FILES_REC       = getMsg("msg.files.rec");
 const MSG_BREAK_REC       = getMsg("msg.break.rec");
 const MSG_CALL_STACK      = getMsg("msg.callstack");
+const MSG_WATCHES         = getMsg("msg.watches");
 
 const MSG_WORD_NATIVE      = getMsg("msg.val.native");
 const MSG_WORD_SCRIPT      = getMsg("msg.val.script");
@@ -207,7 +244,7 @@ const MSN_ERR_BP_NOINDEX     = "msg.err.bp.noindex";
 const MSN_ERR_REQUIRED_PARAM = "err.required.param"; /* also used as exception */
 const MSN_ERR_INVALID_PARAM  = "err.invalid.param";  /* also used as exception */
 const MSN_ERR_SOURCE_LOAD_FAILED = "msg.err.source.load.failed";
-const MSN_ERR_STARTUP        = "msg.err.startup";
+
 
 const MSN_FMT_ARGUMENT       = "fmt.argument";
 const MSN_FMT_PROPERTY       = "fmt.property";
@@ -217,18 +254,19 @@ const MSN_FMT_VALUE_LONG     = "fmt.value.long";
 const MSN_FMT_VALUE_MED      = "fmt.value.med";
 const MSN_FMT_VALUE_SHORT    = "fmt.value.short";
 const MSN_FMT_OBJECT         = "fmt.object";
-const MSN_FMT_JSEXCEPTION    = "fmt.jsexception";
 const MSN_FMT_BADMOJO        = "fmt.badmojo";
 const MSN_FMT_TMP_ASSIGN     = "fmt.tmp.assign";
 const MSN_FMT_LONGSTR        = "fmt.longstr";
 const MSN_FMT_USAGE          = "fmt.usage";
 const MSN_FMT_GUESSEDNAME    = "fmt.guessedname";
 const MSN_FMT_PREFVALUE      = "fmt.prefvalue";
+const MSN_FMT_WATCH_ITEM     = "fmt.watch.item";
 
 const MSN_NO_PROPERTIES      = "msg.noproperties";
 const MSN_NO_CMDMATCH        = "msg.no-commandmatch";
 const MSN_CMDMATCH           = "msg.commandmatch";
 const MSN_CMDMATCH_ALL       = "msg.commandmatch.all";
+const MSN_WATCH_HEADER       = "msg.watch.header";
 const MSN_PROPS_HEADER       = "msg.props.header";
 const MSN_PROPSD_HEADER      = "msg.propsd.header";
 const MSN_BP_HEADER          = "msg.bp.header";
@@ -260,3 +298,4 @@ const MSN_SUBSCRIPT_LOADED = "msg.subscript.load";
 const MSN_STATUS_LOADING   = "msg.status.loading";
 const MSN_STATUS_MARKING   = "msg.status.marking";
 const MSN_STATUS_STOPPED   = "msg.status.stopped";
+}

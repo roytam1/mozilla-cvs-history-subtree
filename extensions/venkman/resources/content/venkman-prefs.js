@@ -60,7 +60,8 @@ function initPrefs()
     console.addPref ("input.history.max", 20);
     console.addPref ("input.dtab.time", 500);
     console.addPref ("initialScripts", "");
-
+    console.addPref ("prettyprint", false);
+    
     var list = console.prefs.prefBranch.getChildList("extensions.venkman.", {});
     for (var p in list)
     {

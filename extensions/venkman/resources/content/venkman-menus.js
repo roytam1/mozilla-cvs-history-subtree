@@ -33,197 +33,217 @@
  *
  */
 
-function initMenus()
+/*
+ * The _C(), _M(), __m(), and __t() functions are defined below.  They are
+ * Venkman specific wrappers around calls the the CommandManager.
+ *
+ * _C(id, name)
+ *  Creates a new context menu attached to the object with the id |id|.
+ *  The label will be derived from the string named "mnu." + |name|.
+ *
+ * _M(parent, name)
+ *  Creates a new menu dropdown in an existing menu bar with the id |parent|.
+ *  The label will be derived from the string named "mnu." + |name|.
+ *
+ * __m(commandName)
+ *  Creates a menuitem for the command named commandName.
+ *
+ * __t(parent, commandName)
+ *  Creates a toolbaritem for the command named |commandName| in the toolbar
+ *  with the id |parent|.
+ */
+
+function initMainMenus()
 {
-    var lastMenu;
-    var cm = console.commandManager;
-
-    /*
-     * The C(), M(), m(), and t() functions are defined below.  They are
-     * Venkman specific wrappers around calls the the CommandManager.
-     *
-     * C(id, name)
-     *  Creates a new context menu attached to the object with the id |id|.
-     *  The label will be derived from the string named "mnu." + |name|.
-     *
-     * M(parent, name)
-     *  Creates a new menu dropdown in an existing menu bar with the id |parent|.
-     *  The label will be derived from the string named "mnu." + |name|.
-     *
-     * m(commandName)
-     *  Creates a menuitem for the command named commandName.
-     *
-     * t(parent, commandName)
-     *  Creates a toolbaritem for the command named |commandName| in the toolbar
-     *  with the id |parent|.
-     */
-
+    
     /* main toolbar */
-    t("maintoolbar", "stop");
-    t("maintoolbar", "-");
-    t("maintoolbar", "cont");
-    t("maintoolbar", "next");
-    t("maintoolbar", "step");
-    t("maintoolbar", "finish");
-    t("maintoolbar", "-");
-    t("maintoolbar", "profile-tb");
-    t("maintoolbar", "pprint");
+    __t("maintoolbar", "stop");
+    __t("maintoolbar", "-");
+    __t("maintoolbar", "cont");
+    __t("maintoolbar", "next");
+    __t("maintoolbar", "step");
+    __t("maintoolbar", "finish");
+    __t("maintoolbar", "-");
+    __t("maintoolbar", "profile-tb");
+    __t("maintoolbar", "toggle-pprint");
 
 
-    M("mainmenu", "file");
-     m("open-url");
-     m("find-file");
-     m("-");
-     m("close");
-     m("save-source");
-     m("save-profile");
-     m("-");
-     m("quit");
+    _M("mainmenu", "file");
+    __m("open-url");
+    __m("find-file");
+    __m("-");
+    __m("close");
+    __m("save-source");
+    __m("save-profile");
+    __m("-");
+    __m("quit");
     
     /* View menu */
-    M("mainmenu", "view");
-     m("reload");
-     m("pprint",        {type: "checkbox",
-                         checkedif: "console.sourceView.prettyPrint"});
-     m("-");
-     m("toggle-chrome", {type: "checkbox",
-                         checkedif: "console.enableChromeFilter"});
+    function isVisible (view)
+    {
+        return "'currentContent' in console.views." + view;
+    };
+
+    _M("mainmenu", "view");
+    _M("mainmenu:view", "toggle-views");
+    __m("toggle-breaks",  {type: "checkbox", checkedif: isVisible("breaks")});
+    __m("toggle-stack",   {type: "checkbox", checkedif: isVisible("stack")});
+    __m("toggle-locals",  {type: "checkbox", checkedif: isVisible("locals")});
+    __m("toggle-scripts", {type: "checkbox", checkedif: isVisible("scripts")});
+    __m("toggle-windows", {type: "checkbox", checkedif: isVisible("windows")});
+    __m("toggle-source",  {type: "checkbox", checkedif: isVisible("source")});
+    __m("toggle-watch",   {type: "checkbox", checkedif: isVisible("watches")});
+    console.lastMenu = "mainmenu:view";
+    __m("-");
+    __m("reload");
+    __m("toggle-pprint", {type: "checkbox",
+                          checkedif: "console.prefs['prettyprint']"});
+    __m("-");
+    __m("toggle-chrome", {type: "checkbox",
+                          checkedif: "console.enableChromeFilter"});
+
+    
      
     /* Debug menu */
-    M("mainmenu", "debug");
-     m("stop", {type: "checkbox",
-                checkedif: "console.jsds.interruptHook"});
-     m("cont");
-     m("next");
-     m("step");
-     m("finish");
-     m("-");
-     m("em-ignore", {type: "radio", name: "em",
-                     checkedif: "console.errorMode == EMODE_IGNORE"});
-     m("em-trace",  {type: "radio", name: "em",
-                     checkedif: "console.errorMode == EMODE_TRACE"});
-     m("em-break",  {type: "radio", name: "em",
-                     checkedif: "console.errorMode == EMODE_BREAK"});
-     m("-");
-     m("tm-ignore", {type: "radio", name: "tm",
-                     checkedif: "console.throwMode == TMODE_IGNORE"});
-     m("tm-trace",  {type: "radio", name: "tm",
-                     checkedif: "console.throwMode == TMODE_TRACE"});
-     m("tm-break",  {type: "radio", name: "tm",
-                     checkedif: "console.throwMode == TMODE_BREAK"});
-     m("-");
-     m("toggle-ias",
-         {type: "checkbox",
-          checkedif: "console.jsds.initAtStartup"});
+    _M("mainmenu", "debug");
+    __m("stop", {type: "checkbox",
+                 checkedif: "console.jsds.interruptHook"});
+    __m("cont");
+    __m("next");
+    __m("step");
+    __m("finish");
+    __m("-");
+    __m("em-ignore", {type: "radio", name: "em",
+                      checkedif: "console.errorMode == EMODE_IGNORE"});
+    __m("em-trace",  {type: "radio", name: "em",
+                      checkedif: "console.errorMode == EMODE_TRACE"});
+    __m("em-break",  {type: "radio", name: "em",
+                      checkedif: "console.errorMode == EMODE_BREAK"});
+    __m("-");
+    __m("tm-ignore",  {type: "radio", name: "tm",
+                       checkedif: "console.throwMode == TMODE_IGNORE"});
+    __m("tm-trace",   {type: "radio", name: "tm",
+                       checkedif: "console.throwMode == TMODE_TRACE"});
+    __m("tm-break",   {type: "radio", name: "tm",
+                       checkedif: "console.throwMode == TMODE_BREAK"});
+    __m("-");
+    __m("toggle-ias", {type: "checkbox",
+                       checkedif: "console.jsds.initAtStartup"});
 
-    M("mainmenu", "profile");
-     m("toggle-profile", {type: "checkbox",
-                          checkedif:
+    _M("mainmenu", "profile");
+    __m("toggle-profile", {type: "checkbox",
+                           checkedif:
                             "console.jsds.flags & COLLECT_PROFILE_DATA"});
-     m("clear-profile");
-     m("save-profile");
+    __m("clear-profile");
+    __m("save-profile");
+}
 
+function initViewMenus()
+{
     /* Context menu for console view */
-    C("output-iframe", "console");
-     m("stop", {type: "checkbox",
-                checkedif: "console.jsds.interruptHook"});
-     m("cont");
-     m("next");
-     m("step");
-     m("finish");
-     m("-");
-     m("em-ignore", {type: "radio", name: "em",
-                     checkedif: "console.errorMode == EMODE_IGNORE"});
-     m("em-trace",  {type: "radio", name: "em",
-                     checkedif: "console.errorMode == EMODE_TRACE"});
-     m("em-break",  {type: "radio", name: "em",
-                     checkedif: "console.errorMode == EMODE_BREAK"});
-     m("-");
-     m("tm-ignore", {type: "radio", name: "tm",
-                     checkedif: "console.throwMode == TMODE_IGNORE"});
-     m("tm-trace",  {type: "radio", name: "tm",
-                     checkedif: "console.throwMode == TMODE_TRACE"});
-     m("tm-break",  {type: "radio", name: "tm",
-                     checkedif: "console.throwMode == TMODE_BREAK"});
+    _C("output-iframe", "console");
+    __m("stop", {type: "checkbox",
+                 checkedif: "console.jsds.interruptHook"});
+    __m("cont");
+    __m("next");
+    __m("step");
+    __m("finish");
+    __m("-");
+    __m("em-ignore", {type: "radio", name: "em",
+                      checkedif: "console.errorMode == EMODE_IGNORE"});
+    __m("em-trace",  {type: "radio", name: "em",
+                      checkedif: "console.errorMode == EMODE_TRACE"});
+    __m("em-break",  {type: "radio", name: "em",
+                      checkedif: "console.errorMode == EMODE_BREAK"});
+    __m("-");
+    __m("tm-ignore", {type: "radio", name: "tm",
+                      checkedif: "console.throwMode == TMODE_IGNORE"});
+    __m("tm-trace",  {type: "radio", name: "tm",
+                      checkedif: "console.throwMode == TMODE_TRACE"});
+    __m("tm-break",  {type: "radio", name: "tm",
+                      checkedif: "console.throwMode == TMODE_BREAK"});
      
     /* Context menu for project view */
-    C("project-tree", "project");
-     m("find-url");
-     m("-");
-     m("clear-all", {enabledif:
-                     "cx.target instanceof BPRecord || " +
-                     "(has('breakpointLabel') && cx.target.childData.length)"});
-     m("clear");
-     m("-");
-     m("save-profile", {enabledif: "has('url')"});
+    _C("project-tree", "project");
+    __m("find-url");
+    __m("-");
+    __m("clear-all", {enabledif:
+                      "cx.target instanceof BPRecord || " +
+                      "(has('breakpointLabel') && cx.target.childData.length)"});
+    __m("clear");
+    __m("-");
+    __m("save-profile", {enabledif: "has('url')"});
 
     /* Context menu for source view */
-    C("source-tree", "source");
-     m("save-source");
-     m("-");
-     m("break",  {enabledif: "cx.lineIsExecutable && !has('breakpointRec')"});
-     m("fbreak", {enabledif: "!cx.lineIsExecutable && !has('breakpointRec')"});
-     m("clear");
-     m("-");
-     m("cont");
-     m("next");
-     m("step");
-     m("finish");
-     m("-");
-     m("pprint", {type: "checkbox",
-                  checkedif: "console.sourceView.prettyPrint"});
+    _C("source-tree", "source");
+    __m("save-source");
+    __m("-");
+    __m("break",  {enabledif: "cx.lineIsExecutable && !has('breakpointRec')"});
+    __m("fbreak", {enabledif: "!cx.lineIsExecutable && !has('breakpointRec')"});
+    __m("clear");
+    __m("-");
+    __m("cont");
+    __m("next");
+    __m("step");
+    __m("finish");
+    __m("-");
+    __m("toggle-pprint", {type: "checkbox",
+                          checkedif: "console.prefs['prettyprint']"});
 
     /* Context menu for script view */
-    C("script-list-tree", "script");
-     m("find-url");
-     m("find-script");
-     m("clear-script", {enabledif: "cx.target.bpcount"});
-     m("-");
-     m("save-profile");
-     m("clear-profile");
+    _C("script-list-tree", "script");
+    __m("find-url");
+    __m("find-script");
+    __m("clear-script", {enabledif: "cx.target.bpcount"});
+    __m("-");
+    __m("save-profile");
+    __m("clear-profile");
      
     /* Context menu for stack view */
-    C("stack-tree", "stack");
-     m("frame",        {enabledif: "cx.target instanceof FrameRecord"});
-     m("find-creator", {enabledif: "cx.target instanceof ValueRecord && " +
-                                   "cx.target.jsType == jsdIValue.TYPE_OBJECT"});
-     m("find-ctor",    {enabledif: "cx.target instanceof ValueRecord && " +
-                                   "cx.target.jsType == jsdIValue.TYPE_OBJECT"});
+    _C("stack-tree", "stack");
+    __m("frame",        {enabledif: "cx.target instanceof FrameRecord"});
+    __m("find-creator",
+         {enabledif: "cx.target instanceof ValueRecord && " +
+                     "cx.target.jsType == jsdIValue.TYPE_OBJECT"});
+    __m("find-ctor",
+         {enabledif: "cx.target instanceof ValueRecord && " +
+                     "cx.target.jsType == jsdIValue.TYPE_OBJECT"});
     
-    function M(parent, id, attribs)
-    {
-        lastMenu = parent + ":" + id;
-        console.commandManager.appendSubMenu(parent, lastMenu,
-                                             getMsg("mnu." + id));
-    }
+}
 
-    function C(elementId, id)
+function _M(parent, id, attribs)
+{
+    console.lastMenu = parent + ":" + id;
+    console.commandManager.appendSubMenu(parent, console.lastMenu,
+                                         getMsg("mnu." + id));
+}
+
+function _C(elementId, id)
+{
+    console.lastMenu = "popup:" + id;
+    console.commandManager.appendPopupMenu("dynamicPopups", console.lastMenu,
+                                           getMsg("popup." + id));
+    var elemObject = document.getElementById(elementId);
+    elemObject.setAttribute ("context", console.lastMenu);
+}
+
+function __m(command, attribs)
+{            
+    if (command != "-")
     {
-        lastMenu = "popup:" + id;
-        console.commandManager.appendPopupMenu("dynamicPopups", lastMenu,
-                                               getMsg("popup." + id));
-        var elemObject = document.getElementById(elementId);
-        elemObject.setAttribute ("context", lastMenu);
-    }
-        
-    function m(command, attribs)
-    {            
-        if (command != "-")
+        if (!(command in console.commandManager.commands))
         {
-            if (!(command in cm.commands))
-            {
-                dd("no such command: " + command)
-                    return;
-            }
-            command = cm.commands[command];
+            dd("no such command: " + command)
+                return;
         }
-        console.commandManager.appendMenuItem(lastMenu, command, attribs);
+        command = console.commandManager.commands[command];
     }
-    
-    function t(parent, command, attribs)
-    {
-        if (command != "-")
-            command = cm.commands[command];
-        console.commandManager.appendToolbarItem(parent, command, attribs);
-    }
+    console.commandManager.appendMenuItem(console.lastMenu, command, attribs);
+}
+
+function __t(parent, command, attribs)
+{
+    if (command != "-")
+        command = console.commandManager.commands[command];
+    console.commandManager.appendToolbarItem(parent, command, attribs);
 }

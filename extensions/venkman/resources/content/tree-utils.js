@@ -49,7 +49,9 @@
  */
 
 function BasicOView()
-{}
+{
+    this.tree = null;
+}
 
 /* functions *you* should call to initialize and maintain the tree state */
 
@@ -113,7 +115,7 @@ function bov_scrollto (line, align)
         if (line < viz) /* underscroll, can't put a row from the first page at */
             line = 0;   /* the bottom. */
         else
-            line = line - total_viz + headerRows;
+            line = line - viz + headerRows;
         
         this.tree.scrollToRow(line);
     }
@@ -259,6 +261,10 @@ function bov_getcelltxt (row, colID)
     if (!this.columnNames)
         return "";
     
+    var ary = colID.match (/:(.*)/);
+    if (ary)
+        colID = ary[1];
+
     var col = this.columnNames[colID];
     
     if (typeof col == "undefined")
@@ -320,16 +326,16 @@ function bov_pactcell (action)
 }
 
 /*
- * record for the TreeOView.  these things take care of keeping the TreeOView
+ * record for the XULTreeView.  these things take care of keeping the XULTreeView
  * properly informed of changes in value and child count.  you shouldn't have
  * to maintain tree state at all.
  *
  * |share| should be an otherwise empty object to store cache data.
- * you should use the same object as the |share| for the TreeOView that you
+ * you should use the same object as the |share| for the XULTreeView that you
  * indend to contain these records.
  *
  */
-function TreeOViewRecord(share)
+function XULTreeViewRecord(share)
 {
     this._share = share;
     this.visualFootprint = 1;
@@ -338,14 +344,14 @@ function TreeOViewRecord(share)
                            * inserted into a live tree */
 }
 
-TreeOViewRecord.prototype.isContainerOpen = false;
+XULTreeViewRecord.prototype.isContainerOpen = false;
 
 /*
  * walk the parent tree to find our tree container.  return null if there is
  * none
  */
-TreeOViewRecord.prototype.findContainerTree =
-function tovr_gettree ()
+XULTreeViewRecord.prototype.findContainerTree =
+function xtvr_gettree ()
 {
     if (!("parentRecord" in this))
         return null;
@@ -365,8 +371,8 @@ function tovr_gettree ()
 }
 
 /* count the number of parents, not including the root node */
-TreeOViewRecord.prototype.__defineGetter__("level", tovr_getLevel);
-function tovr_getLevel ()
+XULTreeViewRecord.prototype.__defineGetter__("level", xtvr_getLevel);
+function xtvr_getLevel ()
 {
     if (!("parentRecord" in this))
         return -1;
@@ -385,14 +391,14 @@ function tovr_getLevel ()
  * to change your mind later.  Do not attach a different name to the same colID,
  * and do no rename the colID.  You have been warned.
  */
-TreeOViewRecord.prototype.setColumnPropertyName =
-function tovr_setcol (colID, propertyName)
+XULTreeViewRecord.prototype.setColumnPropertyName =
+function xtvr_setcol (colID, propertyName)
 {
-    function tovr_getValueShim ()
+    function xtvr_getValueShim ()
     {
         return this._colValues[colID];
     }
-    function tovr_setValueShim (newValue)
+    function xtvr_setValueShim (newValue)
     {
         this._colValues[colID] = newValue;
         /* XXX this.invalidate(); */
@@ -408,13 +414,13 @@ function tovr_setcol (colID, propertyName)
     }
     else
     {
-        this.__defineGetter__(propertyName, tovr_getValueShim);
-        this.__defineSetter__(propertyName, tovr_setValueShim);
+        this.__defineGetter__(propertyName, xtvr_getValueShim);
+        this.__defineSetter__(propertyName, xtvr_setValueShim);
     }
 }
 
-TreeOViewRecord.prototype.setColumnPropertyValue =
-function tovr_setcolv (colID, value)
+XULTreeViewRecord.prototype.setColumnPropertyValue =
+function xtvr_setcolv (colID, value)
 {
     this._colValues[colID] = value;
 }
@@ -422,8 +428,8 @@ function tovr_setcolv (colID, value)
 /*
  * set the default sort column and resort.
  */
-TreeOViewRecord.prototype.setSortColumn =
-function tovr_setcol (colID, dir)
+XULTreeViewRecord.prototype.setSortColumn =
+function xtvr_setcol (colID, dir)
 {
     //dd ("setting sort column to " + colID);
     this._share.sortColumn = colID;
@@ -436,8 +442,8 @@ function tovr_setcol (colID, dir)
  * sort.  setting this to 0 will *not* recover the natural insertion order,
  * it will only affect newly added items.
  */
-TreeOViewRecord.prototype.setSortDirection =
-function tovr_setdir (dir)
+XULTreeViewRecord.prototype.setSortDirection =
+function xtvr_setdir (dir)
 {
     this._share.sortDirection = dir;
 }
@@ -445,8 +451,8 @@ function tovr_setdir (dir)
 /*
  * invalidate this row in the tree
  */
-TreeOViewRecord.prototype.invalidate =
-function tovr_invalidate()
+XULTreeViewRecord.prototype.invalidate =
+function xtvr_invalidate()
 {
     var tree = this.findContainerTree();
     if (tree)
@@ -460,8 +466,8 @@ function tovr_invalidate()
 /*
  * invalidate any data in the cache.
  */
-TreeOViewRecord.prototype.invalidateCache =
-function tovr_killcache()
+XULTreeViewRecord.prototype.invalidateCache =
+function xtvr_killcache()
 {
     this._share.rowCache = new Object();
     this._share.lastComputedIndex = -1;
@@ -470,11 +476,11 @@ function tovr_killcache()
 
 /*
  * default comparator function for sorts.  if you want a custom sort, override
- * this method.  We declare tovr_sortcmp as a top level function, instead of
+ * this method.  We declare xtvr_sortcmp as a top level function, instead of
  * a function expression so we can refer to it later.
  */
-TreeOViewRecord.prototype.sortCompare = tovr_sortcmp;
-function tovr_sortcmp (a, b)
+XULTreeViewRecord.prototype.sortCompare = xtvr_sortcmp;
+function xtvr_sortcmp (a, b)
 {
     var sc = a._share.sortColumn;
     var sd = a._share.sortDirection;    
@@ -499,11 +505,11 @@ function tovr_sortcmp (a, b)
  * the local parameter is used internally to control whether or not the 
  * sorted rows are invalidated.  don't use it yourself.
  */
-TreeOViewRecord.prototype.resort =
-function tovr_resort (leafSort)
+XULTreeViewRecord.prototype.resort =
+function xtvr_resort (leafSort)
 {
     if (!("childData" in this) || this.childData.length < 1 ||
-        (this.childData[0].sortCompare == tovr_sortcmp &&
+        (this.childData[0].sortCompare == xtvr_sortcmp &&
          !("sortColumn" in this._share) || this._share.sortDirection == 0))
     {
         /* if we have no children, or we have the default sort compare and no
@@ -535,7 +541,7 @@ function tovr_resort (leafSort)
                 (rowIndex + this.visualFootprint - 1));
             */
             tree.tree.invalidateRange (rowIndex,
-                                           rowIndex + this.visualFootprint - 1);
+                                       rowIndex + this.visualFootprint - 1);
         }
     }
     /*
@@ -549,8 +555,8 @@ function tovr_resort (leafSort)
  * call this to indicate that this node may have children at one point.  make
  * sure to call it before adding your first child.
  */
-TreeOViewRecord.prototype.reserveChildren =
-function tovr_rkids ()
+XULTreeViewRecord.prototype.reserveChildren =
+function xtvr_rkids ()
 {
     if (!("childData" in this))
         this.childData = new Array();
@@ -562,10 +568,10 @@ function tovr_rkids ()
  * add a child to the end of the child list for this record.  takes care of 
  * updating the tree as well.
  */
-TreeOViewRecord.prototype.appendChild =
-function tovr_appchild (child)
+XULTreeViewRecord.prototype.appendChild =
+function xtvr_appchild (child)
 {
-    if (!(child instanceof TreeOViewRecord))
+    if (!(child instanceof XULTreeViewRecord))
         throw Components.results.NS_ERROR_INVALID_PARAM;
 
     child.isHidden = false;
@@ -575,7 +581,7 @@ function tovr_appchild (child)
     
     if ("isContainerOpen" in this && this.isContainerOpen)
     {
-        //dd ("appendChild: " + tov_formatRecord(child, ""));
+        //dd ("appendChild: " + xtv_formatRecord(child, ""));
         if (this.calculateVisualRow() >= 0)
         {
             var tree = this.findContainerTree();
@@ -595,8 +601,8 @@ function tovr_appchild (child)
  * add a list of children to the end of the child list for this record.
  * faster than multiple appendChild() calls.
  */
-TreeOViewRecord.prototype.appendChildren =
-function tovr_appchild (children)
+XULTreeViewRecord.prototype.appendChildren =
+function xtvr_appchild (children)
 {
     var idx = this.childData.length;
     var delta = 0;
@@ -627,8 +633,8 @@ function tovr_appchild (children)
  * remove a child from this record. updates the tree too.  DONT call this with
  * an index not actually contained by this record.
  */
-TreeOViewRecord.prototype.removeChildAtIndex =
-function tovr_remchild (index)
+XULTreeViewRecord.prototype.removeChildAtIndex =
+function xtvr_remchild (index)
 {
     if (!ASSERT(this.childData.length, "removing from empty childData"))
         return;
@@ -655,8 +661,8 @@ function tovr_remchild (index)
 /*
  * hide this record and all descendants.
  */
-TreeOViewRecord.prototype.hide =
-function tovr_hide ()
+XULTreeViewRecord.prototype.hide =
+function xtvr_hide ()
 {
     if (this.isHidden)
         return;
@@ -674,8 +680,8 @@ function tovr_hide ()
 /*
  * unhide this record and all descendants.
  */
-TreeOViewRecord.prototype.unHide =
-function tovr_uhide ()
+XULTreeViewRecord.prototype.unHide =
+function xtvr_uhide ()
 {
     if (!this.isHidden)
         return;
@@ -690,8 +696,8 @@ function tovr_uhide ()
  * open this record, exposing it's children.  DONT call this method if the record
  * has no children.
  */
-TreeOViewRecord.prototype.open =
-function tovr_open ()
+XULTreeViewRecord.prototype.open =
+function xtvr_open ()
 {
     if (this.isContainerOpen)
         return;
@@ -721,8 +727,8 @@ function tovr_open ()
  * close this record, hiding it's children.  DONT call this method if the record
  * has no children, or if it is already closed.
  */
-TreeOViewRecord.prototype.close =
-function tovr_close ()
+XULTreeViewRecord.prototype.close =
+function xtvr_close ()
 {
     if (!this.isContainerOpen)
         return;
@@ -745,8 +751,8 @@ function tovr_close ()
  * called when a node above this one grows or shrinks.  we need to adjust
  * our own visualFootprint to match the change, and pass the message on.
  */
-TreeOViewRecord.prototype.onVisualFootprintChanged =
-function tovr_vpchange (start, amount)
+XULTreeViewRecord.prototype.onVisualFootprintChanged =
+function xtvr_vpchange (start, amount)
 {
     /* if we're not hidden, but this notification came from a hidden node 
      * (start == -1), ignore it, it doesn't affect us. */
@@ -775,8 +781,8 @@ function tovr_vpchange (start, amount)
  *   node21    4
  * node3       5
  */
-TreeOViewRecord.prototype.calculateVisualRow =
-function tovr_calcrow ()
+XULTreeViewRecord.prototype.calculateVisualRow =
+function xtvr_calcrow ()
 {
     /* if this is the second time in a row that someone asked us, fetch the last
      * result from the cache. */
@@ -824,8 +830,8 @@ function tovr_calcrow ()
  * with a targetRow less than this record's visual row, or greater than this
  * record's visual row + the number of visible children it has.
  */
-TreeOViewRecord.prototype.locateChildByVisualRow =
-function tovr_find (targetRow, myRow)
+XULTreeViewRecord.prototype.locateChildByVisualRow =
+function xtvr_find (targetRow, myRow)
 {
     if (targetRow in this._share.rowCache)
         return this._share.rowCache[targetRow];
@@ -887,16 +893,16 @@ function tovr_find (targetRow, myRow)
     return null;
 }   
 
-/* TOLabelRecords can be used to drop a label into an arbitrary place in an
- * arbitrary tree.  normally, specializations of TreeOViewRecord are tied to
- * a specific tree because of implementation details.  TOLabelRecords are
+/* XTLabelRecords can be used to drop a label into an arbitrary place in an
+ * arbitrary tree.  normally, specializations of XULTreeViewRecord are tied to
+ * a specific tree because of implementation details.  XTLabelRecords are
  * specially designed (err, hacked) to work around these details.  this makes
  * them slower, but more generic.
  *
  * we set up a getter for _share that defers to the parent object.  this lets
- * TOLabelRecords work in any tree.
+ * XTLabelRecords work in any tree.
  */
-function TOLabelRecord (columnName, label, blankCols)
+function XTLabelRecord (columnName, label, blankCols)
 {
     this.setColumnPropertyName (columnName, "label");
     this.label = label;
@@ -909,21 +915,21 @@ function TOLabelRecord (columnName, label, blankCols)
     }
 }
 
-TOLabelRecord.prototype = new TreeOViewRecord (null);
+XTLabelRecord.prototype = new XULTreeViewRecord (null);
 
-TOLabelRecord.prototype.__defineGetter__("_share", tolr_getshare);
+XTLabelRecord.prototype.__defineGetter__("_share", tolr_getshare);
 function tolr_getshare()
 {
     if ("parentRecord" in this)
         return this.parentRecord._share;
 
-    ASSERT (0, "TOLabelRecord cannot be the root of a visible tree.");
+    ASSERT (0, "XTLabelRecord cannot be the root of a visible tree.");
     return null;
 }
 
-/* TORootRecord is used internally by TreeOView, you probably don't need to make
+/* XTRootRecord is used internally by XULTreeView, you probably don't need to make
  * any of these */ 
-function TORootRecord (tree, share)
+function XTRootRecord (tree, share)
 {
     this._share = share;
     this._treeView = tree;
@@ -933,23 +939,23 @@ function TORootRecord (tree, share)
     this.isContainerOpen = true;
 }
 
-/* no cache passed in here, we set it in the TORootRecord contructor instead. */
-TORootRecord.prototype = new TreeOViewRecord (null);
+/* no cache passed in here, we set it in the XTRootRecord contructor instead. */
+XTRootRecord.prototype = new XULTreeViewRecord (null);
 
-TORootRecord.prototype.open =
-TORootRecord.prototype.close =
+XTRootRecord.prototype.open =
+XTRootRecord.prototype.close =
 function torr_notimplemented()
 {
     /* don't do this on a root node */
 }
 
-TORootRecord.prototype.calculateVisualRow =
+XTRootRecord.prototype.calculateVisualRow =
 function torr_calcrow ()
 {
     return null;
 }
 
-TORootRecord.prototype.resort =
+XTRootRecord.prototype.resort =
 function torr_resort ()
 {
     if ("_treeView" in this && this._treeView.frozen) {
@@ -958,7 +964,7 @@ function torr_resort ()
     }
     
     if (!("childData" in this) || this.childData.length < 1 ||
-        (this.childData[0].sortCompare == tovr_sortcmp &&
+        (this.childData[0].sortCompare == xtvr_sortcmp &&
          !("sortColumn" in this._share) || this._share.sortDirection == 0))
     {
         /* if we have no children, or we have the default sort compare but we're
@@ -989,7 +995,7 @@ function torr_resort ()
     }
 }
 
-TORootRecord.prototype.locateChildByVisualRow =
+XTRootRecord.prototype.locateChildByVisualRow =
 function torr_find (targetRow)
 {
     if (targetRow in this._share.rowCache)
@@ -1023,14 +1029,15 @@ function torr_find (targetRow)
     return null;
 }
 
-TORootRecord.prototype.onVisualFootprintChanged =
+XTRootRecord.prototype.onVisualFootprintChanged =
 function torr_vfpchange (start, amount)
 {
     if (!this._treeView.frozen)
     {
         this.invalidateCache();
         this.visualFootprint += amount;
-        if ("_treeView" in this && "tree" in this._treeView)
+        if ("_treeView" in this && "tree" in this._treeView && 
+            this._treeView.tree)
         {
             if (amount != 0)
                 this._treeView.tree.rowCountChanged (start, amount);
@@ -1053,14 +1060,15 @@ function torr_vfpchange (start, amount)
 }
 
 /*
- * TreeOView provides functionality of tree whose elements have multiple
+ * XULTreeView provides functionality of tree whose elements have multiple
  * levels of children.
  */
 
-function TreeOView(share)
+function XULTreeView(share)
 {
-    this.childData = new TORootRecord(this, share);
+    this.childData = new XTRootRecord(this, share);
     this.childData.invalidateCache();
+    this.tree = null;
     this.frozen = 0;
 }
 
@@ -1074,8 +1082,8 @@ function TreeOView(share)
  * Freeze/thaws are nestable, the tree will not update until the number of
  * thaw() calls matches the number of freeze() calls.
  */
-TreeOView.prototype.freeze =
-function tov_freeze ()
+XULTreeView.prototype.freeze =
+function xtv_freeze ()
 {
     if (++this.frozen == 1)
     {
@@ -1088,8 +1096,8 @@ function tov_freeze ()
 /*
  * Reflect any changes to the tee content since the last freeze.
  */
-TreeOView.prototype.thaw =
-function tov_thaw ()
+XULTreeView.prototype.thaw =
+function xtv_thaw ()
 {
     //dd ("thaw " + (this.frozen - 1));
 
@@ -1116,8 +1124,8 @@ function tov_thaw ()
 }
 
 /* scroll the line specified by |line| to the center of the tree */
-TreeOView.prototype.centerLine =
-function tov_ctrln (line)
+XULTreeView.prototype.centerLine =
+function xtv_ctrln (line)
 {
     var first = this.tree.getFirstVisibleRow();
     var last = this.tree.getLastVisibleRow();
@@ -1128,8 +1136,8 @@ function tov_ctrln (line)
  * functions the tree will call to retrieve the list state (nsITreeView.)
  */
 
-TreeOView.prototype.__defineGetter__("rowCount", tov_getRowCount);
-function tov_getRowCount ()
+XULTreeView.prototype.__defineGetter__("rowCount", xtv_getRowCount);
+function xtv_getRowCount ()
 {
     if (!this.childData)
       return 0;
@@ -1137,8 +1145,8 @@ function tov_getRowCount ()
     return this.childData.visualFootprint;
 }
 
-TreeOView.prototype.isContainer =
-function tov_isctr (index)
+XULTreeView.prototype.isContainer =
+function xtv_isctr (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
     /*
@@ -1151,8 +1159,8 @@ function tov_isctr (index)
     return Boolean(row && "childData" in row);
 }
 
-TreeOView.prototype.__defineGetter__("selectedIndex", tov_getsel);
-function tov_getsel()
+XULTreeView.prototype.__defineGetter__("selectedIndex", xtv_getsel);
+function xtv_getsel()
 {
     if (!this.tree || this.tree.selection.getRangeCount() < 1)
         return -1;
@@ -1162,8 +1170,8 @@ function tov_getsel()
     return min.value;
 }
 
-TreeOView.prototype.__defineSetter__("selectedIndex", tov_setsel);
-function tov_setsel(i)
+XULTreeView.prototype.__defineSetter__("selectedIndex", xtv_setsel);
+function xtv_setsel(i)
 {
     this.tree.selection.clearSelection();
     if (i != -1)
@@ -1171,10 +1179,10 @@ function tov_setsel(i)
     return i;
 }
 
-TreeOView.prototype.scrollTo = BasicOView.prototype.scrollTo;
+XULTreeView.prototype.scrollTo = BasicOView.prototype.scrollTo;
 
-TreeOView.prototype.isContainerOpen =
-function tov_isctropen (index)
+XULTreeView.prototype.isContainerOpen =
+function xtv_isctropen (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
     /*
@@ -1186,8 +1194,8 @@ function tov_isctropen (index)
     return row && row.isContainerOpen;
 }
 
-TreeOView.prototype.toggleOpenState =
-function tov_toggleopen (index)
+XULTreeView.prototype.toggleOpenState =
+function xtv_toggleopen (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
     //ASSERT(row, "bogus row");
@@ -1200,8 +1208,8 @@ function tov_toggleopen (index)
     }
 }
 
-TreeOView.prototype.isContainerEmpty =
-function tov_isctrempt (index)
+XULTreeView.prototype.isContainerEmpty =
+function xtv_isctrempt (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
     /*
@@ -1213,27 +1221,24 @@ function tov_isctrempt (index)
     return !row || !row.childData;
 }
 
-TreeOView.prototype.isSeparator =
-function tov_isseparator (index)
+XULTreeView.prototype.isSeparator =
+function xtv_isseparator (index)
 {
     return false;
 }
 
-TreeOView.prototype.getParentIndex =
-function tov_getpi (index)
+XULTreeView.prototype.getParentIndex =
+function xtv_getpi (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
-    /*
-    ASSERT(row, "bogus row " + index);
+    //ASSERT(row, "bogus row " + index);
     var rv = row.parentRecord.calculateVisualRow();
-    dd ("getParentIndex: row " + index + " returning " + rv);
-    return rv;
-    */
-    return row.parentRecord.calculateVisualRow();
+    //dd ("getParentIndex: row " + index + " returning " + rv);
+    return (rv != null) ? rv : -1;
 }
 
-TreeOView.prototype.hasNextSibling =
-function tov_hasnxtsib (rowIndex, afterIndex)
+XULTreeView.prototype.hasNextSibling =
+function xtv_hasnxtsib (rowIndex, afterIndex)
 {
     var row = this.childData.locateChildByVisualRow (rowIndex);
     /*
@@ -1246,8 +1251,8 @@ function tov_hasnxtsib (rowIndex, afterIndex)
     return row.childIndex < row.parentRecord.childData.length - 1;
 }
 
-TreeOView.prototype.getLevel =
-function tov_getlvl (index)
+XULTreeView.prototype.getLevel =
+function xtv_getlvl (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
     /*
@@ -1262,60 +1267,65 @@ function tov_getlvl (index)
     return row.level;
 }
 
-TreeOView.prototype.getImageSrc =
-function tov_getimgsrc (index, colID)
+XULTreeView.prototype.getImageSrc =
+function xtv_getimgsrc (index, colID)
 {
 }
 
-TreeOView.prototype.getProgressMode =
-function tov_getprgmode (index, colID)
+XULTreeView.prototype.getProgressMode =
+function xtv_getprgmode (index, colID)
 {
 }
 
-TreeOView.prototype.getCellValue =
-function tov_getcellval (index, colID)
+XULTreeView.prototype.getCellValue =
+function xtv_getcellval (index, colID)
 {
  }
 
-TreeOView.prototype.getCellText =
-function tov_getcelltxt (index, colID)
+XULTreeView.prototype.getCellText =
+function xtv_getcelltxt (index, colID)
 {
     var row = this.childData.locateChildByVisualRow (index);
     //ASSERT(row, "bogus row " + index);
+
+    var ary = colID.match (/:(.*)/);
+    if (ary)
+        colID = ary[1];
+
     if (row && row._colValues && colID in row._colValues)
         return row._colValues[colID];
     else
         return "";
 }
 
-TreeOView.prototype.getCellProperties =
-function tov_cellprops (row, colID, properties)
+XULTreeView.prototype.getCellProperties =
+function xtv_cellprops (row, colID, properties)
 {}
 
-TreeOView.prototype.getColumnProperties =
-function tov_colprops (colID, elem, properties)
+XULTreeView.prototype.getColumnProperties =
+function xtv_colprops (colID, elem, properties)
 {}
 
-TreeOView.prototype.getRowProperties =
-function tov_rowprops (index, properties)
+XULTreeView.prototype.getRowProperties =
+function xtv_rowprops (index, properties)
 {}
 
-TreeOView.prototype.isSorted =
-function tov_issorted (index)
+XULTreeView.prototype.isSorted =
+function xtv_issorted (index)
 {
     return false;
 }
 
-TreeOView.prototype.canDropOn =
-function tov_dropon (index)
+XULTreeView.prototype.canDropOn =
+function xtv_dropon (index)
 {
     var row = this.childData.locateChildByVisualRow (index);
     //ASSERT(row, "bogus row " + index);
     return (row && ("canDropOn" in row) && row.canDropOn());
 }
 
-TreeOView.prototype.canDropBeforeAfter =
-function tov_dropba (index, before)
+XULTreeView.prototype.canDropBeforeAfter =
+function xtv_dropba (index, before)
 {
     var row = this.childData.locateChildByVisualRow (index);
     //ASSERT(row, "bogus row " + index);
@@ -1323,64 +1333,65 @@ function tov_dropba (index, before)
             row.canDropBeforeAfter(before));
 }
 
-TreeOView.prototype.drop =
-function tov_drop (index, orientation)
+XULTreeView.prototype.drop =
+function xtv_drop (index, orientation)
 {
     var row = this.childData.locateChildByVisualRow (index);
     //ASSERT(row, "bogus row " + index);
     return (row && ("drop" in row) && row.drop(orientation));
 }
 
-TreeOView.prototype.setTree =
-function tov_seto (tree)
+XULTreeView.prototype.setTree =
+function xtv_seto (tree)
 {
+    dd ("setTree: " + tree);
     this.tree = tree;
 }
 
-TreeOView.prototype.cycleHeader =
-function tov_cyclehdr (colID, elt)
+XULTreeView.prototype.cycleHeader =
+function xtv_cyclehdr (colID, elt)
 {
 }
 
-TreeOView.prototype.selectionChanged =
-function tov_selchg ()
+XULTreeView.prototype.selectionChanged =
+function xtv_selchg ()
 {
 }
 
-TreeOView.prototype.cycleCell =
-function tov_cyclecell (row, colID)
+XULTreeView.prototype.cycleCell =
+function xtv_cyclecell (row, colID)
 {
 }
 
-TreeOView.prototype.isEditable =
-function tov_isedit (row, colID)
+XULTreeView.prototype.isEditable =
+function xtv_isedit (row, colID)
 {
     return false;
 }
 
-TreeOView.prototype.setCellText =
-function tov_setct (row, colID, value)
+XULTreeView.prototype.setCellText =
+function xtv_setct (row, colID, value)
 {
 }
 
-TreeOView.prototype.performAction =
-function tov_pact (action)
+XULTreeView.prototype.performAction =
+function xtv_pact (action)
 {
 }
 
-TreeOView.prototype.performActionOnRow =
-function tov_pactrow (action)
+XULTreeView.prototype.performActionOnRow =
+function xtv_pactrow (action)
 {
 }
 
-TreeOView.prototype.performActionOnCell =
-function tov_pactcell (action)
+XULTreeView.prototype.performActionOnCell =
+function xtv_pactcell (action)
 {
 }
 
 /*******************************************************************************/
 
-function tov_formatRecord (rec, indent)
+function xtv_formatRecord (rec, indent)
 {
     var str = "";
     
@@ -1398,16 +1409,16 @@ function tov_formatRecord (rec, indent)
     return (indent + str);
 }
     
-function tov_formatBranch (rec, indent, recurse)
+function xtv_formatBranch (rec, indent, recurse)
 {
     var str = "";
     for (var i = 0; i < rec.childData.length; ++i)
     {
-        str += tov_formatRecord (rec.childData[i], indent) + "\n";
+        str += xtv_formatRecord (rec.childData[i], indent) + "\n";
         if (recurse)
         {
             if ("childData" in rec.childData[i])
-                str += tov_formatBranch(rec.childData[i], indent + "  ",
+                str += xtv_formatBranch(rec.childData[i], indent + "  ",
                                         --recurse);
         }
     }

@@ -46,6 +46,7 @@ function CommandRecord (name, func, usage, help, label, flags)
     this.key = null;
     this.keystr = MSG_VAL_NA;
     this.uiElements = new Object();
+
 }
 
 CommandRecord.prototype.__defineGetter__ ("enabled", cr_getenable);
@@ -306,6 +307,65 @@ CommandManager.prototype.addCommand =
 function cmgr_add (command)
 {
     this.commands[command.name] = command;
+}
+
+/**
+ * Register a hook for a particular command name.  |id| is a human readable
+ * identifier for the hook, and can be used to unregister the hook.  If you
+ * re-use a hook id, the previous hook function will be replaced.
+ * If |before| is |true|, the hook will be called *before* the command executes,
+ * if |before| is |false|, or not specified, the hook will be called *after*
+ * the command executes.
+ */
+CommandManager.prototype.hookCommand =
+function cmgr_hook (commandName, func, id, before)
+{
+    if (!ASSERT(commandName in this.commands,
+                "Unknown command '" + commandName + "'"))
+    {
+        return;
+    }
+    
+    var command = this.commands[commandName];
+    
+    if (before)
+    {
+        if (!("beforeHooks" in command))
+            command.beforeHooks = new Object();
+        command.beforeHooks[id] = func;
+    }
+    else
+    {
+        if (!("afterHooks" in command))
+            command.afterHooks = new Object();
+        command.afterHooks[id] = func;
+    }
+}
+
+CommandManager.prototype.hookCommands =
+function cmgr_hooks (ary)
+{
+    for (var i in ary)
+        this.hookCommand (ary[i][0], ary[i][1], ary[i][2], ary[i][3]);
+}
+
+CommandManager.prototype.unhookCommand =
+function cmgr_hooks (commandName, id, before)
+{
+    var command = this.commands[commandName];
+
+    if (before)
+    {
+        delete command.beforeHooks[id];
+        if (keys(command.beforeHooks).length == 0)
+            delete command.beforeHooks;
+    }
+    else
+    {
+        delete command.afterHooks[id];
+        if (keys(command.afterHooks).length == 0)
+            delete command.afterHooks;
+    }
 }
 
 /**

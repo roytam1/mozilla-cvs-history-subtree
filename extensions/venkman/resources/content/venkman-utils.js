@@ -180,6 +180,12 @@ function dumpObjectTree (o, recurse, compress, level)
     
 }
 
+function getChildById (element, id)
+{
+    var nl = element.getElementsByAttribute("id", id);
+    return nl.item(0);
+}
+
 function getWindowByType (windowType)
 {
     const MEDIATOR_CONTRACTID =

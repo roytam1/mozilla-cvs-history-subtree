@@ -36,59 +36,66 @@
    -
    -->
 
-<!DOCTYPE window SYSTEM "chrome://venkman/locale/venkman.dtd">
+<!DOCTYPE window SYSTEM "chrome://venkman/locale/venkman.dtd" >
 
 <?xml-stylesheet href="chrome://venkman/skin/venkman.css" type="text/css"?>
 
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 
-<?xul-overlay href="chrome://venkman/content/venkman-menus.xul"?>
-<?xul-overlay href="chrome://venkman/content/venkman-scripts.xul"?>
 <?xul-overlay href="chrome://venkman/content/venkman-views.xul"?>
 
 <window id="venkman-window"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-  onload="console.onLoad();" onclose="return console.onClose();"
-  onunload="return console.onUnload();"
+  onload="onLoad();" onclose="return onClose();"
+  onunload="return onUnload();"
   width="640" height="480"
   persist="width height screenX screenY" title="&MainWindow.title;"
-  windowtype="mozapp:venkman">
+  windowtype="mozapp:venkman:floater">
 
-  <overlaytarget id="scripts-overlay-target"/>
-  <overlaytarget id="menu-overlay-target"/>
+  <script>
+    <![CDATA[
+    var console = opener.console;
+    var dd = opener.dd;
+    var windowId;
+
+    function onLoad()
+    {
+        var ary = document.location.search.match(/(?:\?|&)id=([^&]+)/);
+        if (!ary)
+        {
+            dd ("No window id in url " + document.location);
+            return;
+        }
+
+        windowId = ary[1];
+        console.floatWindows[windowId] = window;
+
+        if ("arguments" in window && 0 in window.arguments &&
+            window.arguments[0])
+        {
+            var viewContainer = document.getElementById("view-container");
+            var viewContent   = document.getElementById(window.arguments[0]);
+            console.dispatch ("move-view",
+                              {viewContent: viewContent,
+                               viewContainer: viewContainer});
+        }
+    }
+
+    function onClose()
+    {
+        return true;
+    }
+
+    function onUnload()
+    {
+        console.destroyViews(document);
+    }
+    ]]>
+  </script>
+
   <overlaytarget id="views-overlay-target"/>
 
-  <vbox flex="1">
-    <hbox flex="1" id="top-hbox" persist="height">
-      <vbox id="view-container-1" flex="1" view-container="true"/>
-      <splitter collapse="before"><grippy/></splitter>
-
-      <vbox flex="1">
-
-        <hbox id="view-container-2" flex="1" view-container="true"/>
-        <splitter collapse="after" persist="top"><grippy/></splitter>
-
-        <hbox id="view-container-3" persist="height" view-container="true">
-
-          <!-- console view -->
-
-          <vbox id="console-box" flex="50" persist="width"
-            splitter-collapse="after">
-            <iframe id="output-iframe" flex="1"
-              ondraggesture=
-                "nsDragAndDrop.startDrag(event, contentAreaDNDObserver);"
-              src="chrome://venkman/content/venkman-output-window.html"
-              type="content"/>
-            <textbox id="input-single-line" class="input-widget"
-              onkeypress="console.onSingleLineKeypress(event);"/>
-          </vbox>
-        </hbox>
-      </vbox>
-    </hbox>
-  </vbox>
-
-  <overlaytarget id="statusbar-overlay-target"/>
-
+  <vbox id="view-container" flex="1" view-container="true"/>
 </window>
 

@@ -258,9 +258,7 @@ function initDebugger()
         }
     };
     
-    console.scriptsView.freeze();
     console.jsds.enumerateScripts(enumer);
-    console.scriptsView.thaw();
 
     dd ("} initDebugger");
 }
@@ -292,11 +290,15 @@ function isURLFiltered (url)
 
 function realizeScript(script)
 {
+    /* XXX */
+    return;
+    
     var container;
     if (script.fileName in console.scripts)
     {
         container = console.scripts[script.fileName];
-        if (!("parentRecord" in container))
+        /* XXX script view */
+        if (0 && !("parentRecord" in container))
         {
             /* container record exists but is not inserted in the scripts view,
              * either we are reloading it, or the user added it manually */
@@ -309,7 +311,8 @@ function realizeScript(script)
         container = console.scripts[script.fileName] =
             new ScriptContainerRecord (script.fileName);
         container.reserveChildren();
-        if (!isURLFiltered(script.fileName))
+        /* XXX script view */
+        if (0 && !isURLFiltered(script.fileName))
             console.scriptsView.childData.appendChild(container);
     }    
 
@@ -322,6 +325,9 @@ function realizeScript(script)
     
     container.appendScriptRecord (scriptRec);
     /* check to see if this script contains a breakpoint */
+    /* XXX breaks view */
+    if (0) {
+        
     for (var i = 0; i < console.breakpoints.childData.length; ++i)
     {
         var bpr = console.breakpoints.childData[i];
@@ -341,10 +347,15 @@ function realizeScript(script)
             }
         }
     }
+    }
+    
 }
 
 function unrealizeScript(script)
 {
+    /* XXX */
+    return;
+    
     var container = console.scripts[script.fileName];
     if (!container)
     {
@@ -362,10 +373,9 @@ function unrealizeScript(script)
         dd ("unrealizeScript: unable to locate script record");
         return;
     }
-    
-    if (console.sourceView.provider == scriptRec)
-        console.sourceView.setCurrentSourceProvider(scriptRec.parentRecord);
 
+    /* XXX breaks view */
+    if (0) {
     var bplist = console.breakpoints.childData;
     for (var i = 0; i < bplist.length; ++i)
     {
@@ -383,9 +393,12 @@ function unrealizeScript(script)
             }
         }
     }
+    }
     
     container.removeChildAtIndex (scriptRec.childIndex);
-    if (container.childData.length == 0 && "parentRecord" in container)
+
+    /* XXX scripts view */
+    if (0 && container.childData.length == 0 && "parentRecord" in container)
     {
         console.scriptsView.childData.removeChildAtIndex(container.childIndex);
     }
@@ -432,7 +445,7 @@ function debugTrap (frame, type, rv)
             break;
         case jsdIExecutionHook.TYPE_INTERRUPTED:
             var line;
-            if (console.sourceView.prettyPrint)
+            if (console.prefs["prettyprint"])
                 line = frame.script.pcToLine (frame.pc, PCMAP_PRETTYPRINT);
             else
                 line = frame.line;
@@ -458,24 +471,16 @@ function debugTrap (frame, type, rv)
     
     /* build an array of frames */
     console.frames = new Array(frame);
-
-    console.stackView.stack.unHide();
-    console.stackView.stack.open();
-    var frameRec = new FrameRecord(frame);
-    console.stackView.stack.appendChild (frameRec);
     
     while ((frame = frame.callingFrame))
-    {
-        console.stackView.stack.appendChild (new FrameRecord(frame));
         console.frames.push(frame);
-    }
-
+    
     console.trapType = type;
     window.focus();
     window.getAttention();
 
-    console.jsds.enterNestedEventLoop({onNest: console.onDebugTrap}); 
-
+    console.jsds.enterNestedEventLoop({onNest: eventLoopNested}); 
+    
     /* execution pauses here until someone calls 
      * console.dbg.exitNestedEventLoop() 
      */
@@ -488,10 +493,17 @@ function debugTrap (frame, type, rv)
     
     console.onDebugContinue();
 
+    dispatch ("hook-debug-continue");
+
     if (tn)
         display (getMsg(MSN_CONT, tn), MT_CONT);
 
     return console._continueCodeStack.pop();
+}
+
+function eventLoopNested ()
+{
+    dispatch ("hook-debug-stop");
 }
 
 function getCurrentFrame()
@@ -519,8 +531,6 @@ function setCurrentFrameByIndex (index)
     console.stopFile = (cf.isNative) ? MSG_URL_NATIVE : cf.script.fileName;
     console.stopLine = cf.line;
     delete console._pp_stopLine;
-    console.onFrameChanged (cf, console._currentFrameIndex);
-
     return cf;
 }
 
@@ -533,7 +543,6 @@ function clearCurrentFrame ()
     delete console._pp_stopLine;
     delete console.stopFile;
     delete console._currentFrameIndex;
-    console.onFrameChanged (null, 0);
 }
 
 function findNextExecutableLine (script, line)
@@ -826,6 +835,9 @@ function clearBreakpoint (fileName, line)
 
 function clearBreakpointByNumber (number)
 {
+    /* XXX breaks view */
+    return null;
+    
     var bpr = console.breakpoints.childData[number];
     if (!bpr)
     {
@@ -858,6 +870,9 @@ function clearBreakpointByNumber (number)
     
 function setBreakpoint (fileName, line)
 {
+    /* XXX breaks view */
+    return null;
+
     var scriptRec = console.scripts[fileName];
     
     if (!scriptRec)
@@ -909,6 +924,9 @@ function setBreakpoint (fileName, line)
 
 function setFutureBreakpoint (filePattern, line)
 {
+    /* XXX breaks view */
+    return null;
+
     var bpr = console.breakpoints.locateChildByFileLine (filePattern, line);
     if (bpr)
     {

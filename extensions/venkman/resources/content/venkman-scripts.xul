@@ -57,10 +57,10 @@
     <script src="chrome://communicator/content/contentAreaDD.js"/>
     <script src="chrome://global/content/strres.js"/>
   
+    <script src="chrome://venkman/content/command-manager.js"/>
     <script src="chrome://venkman/content/tree-utils.js"/>
     <script src="chrome://venkman/content/file-utils.js"/>
     <script src="chrome://venkman/content/html-consts.js"/>
-    <script src="chrome://venkman/content/command-manager.js"/>
   
     <script src="chrome://venkman/content/venkman-utils.js"/>
     <script src="chrome://venkman/content/venkman-static.js"/>
@@ -73,7 +73,7 @@
     <script src="chrome://venkman/content/venkman-menus.js"/>
     <script src="chrome://venkman/content/venkman-msg.js"/>
     <script src="chrome://venkman/content/venkman-munger.js"/>
-    <script src="chrome://venkman/content/venkman-trees.js"/>
+    <script src="chrome://venkman/content/venkman-views.js"/>
   
   </overlaytarget>
 

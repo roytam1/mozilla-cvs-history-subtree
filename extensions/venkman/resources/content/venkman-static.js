@@ -97,25 +97,6 @@ function setProfileState(state)
     }
 }
 
-function setPrettyPrintState(state)
-{
-    var tb = document.getElementById("maintoolbar-pprint");
-    if (state)
-    {
-        console.sourceView.prettyPrint = true;
-        tb.setAttribute("state", "true");
-    }
-    else
-    {
-        console.sourceView.prettyPrint = false;
-        tb.removeAttribute("state");
-    }
-
-    if (console.sourceView.details)
-        dispatch("find-script", {scriptRec: console.sourceView.details});
-
-}
-    
 function enableReloadCommand()
 {
     console.commandManager.commands["reload"].enabled = true;
@@ -151,7 +132,22 @@ function disableDebugCommands()
 
 function displayUsageError (e, details)
 {
-    display (details, MT_ERROR);
+    if (!e.isInteractive)
+    {
+        var caller = Components.stack.caller.caller;
+        if (caller.name == display)
+            caller = caller.caller;
+        var error = new Error (details);
+        error.fileName = caller.filename;
+        error.lineNumber = caller.lineNumber;
+        error.name = caller.name;
+        display (formatException(error), MT_ERROR);
+    }
+    else
+    {
+        display (details, MT_ERROR);
+    }
+    
     display (getMsg(MSN_FMT_USAGE, [e.command.name, e.command.usage]), MT_USAGE);
 }
 
@@ -238,7 +234,15 @@ function dispatchCommand (command, e, flags)
         display (getMsg(MSG_ERR_DISABLED, e.command.name),
                  MT_ERROR);
         return null;
-    }                
+    }
+    
+    var h;
+    
+    if ("beforeHooks" in e.command)
+    {
+        for (h in e.command.beforeHooks)
+            e.command.beforeHooks[h](e);
+    }
     
     if (typeof e.command.func == "function")
     {
@@ -256,6 +260,8 @@ function dispatchCommand (command, e, flags)
                 dd ("dispatching command ``" + e.command.name+ "''\n" +
                     dumpObjectTree(e));
                 e.returnValue = e.command.func(e);
+                /* set console.lastEvent *after* dispatching, so the dispatched
+                 * function actually get's a chance to see the last event. */
                 console.lastEvent = e;
             }
             else
@@ -264,10 +270,8 @@ function dispatchCommand (command, e, flags)
             }
 
         }
-        return e;
     }
-    
-    if (typeof e.command.func == "string")
+    else if (typeof e.command.func == "string")
     {
         /* dispatch an alias (semicolon delimited list of subcommands) */
         var commandList = e.command.func.split(";");
@@ -279,14 +283,21 @@ function dispatchCommand (command, e, flags)
             else
                 dispatch (commandList[i], null, flags);
         }
-        return e;
+    }
+    else
+    {
+        display (getMsg(MSN_ERR_NOTIMPLEMENTED, e.command.name),
+                 MT_ERROR);
+        return null;
     }
 
-    /* by process of elimination... */
-    display (getMsg(MSN_ERR_NOTIMPLEMENTED, e.command.name),
-             MT_ERROR);
+    if ("afterHooks" in e.command)
+    {
+        for (h in e.command.afterHooks)
+            e.command.afterHooks[h](e);
+    }
 
-    return null;    
+    return e;
 }
 
 function feedback(e, message, msgtype)
@@ -298,11 +309,11 @@ function feedback(e, message, msgtype)
 function display(message, msgtype)
 {
     if (typeof message == "undefined")
-        throw new BadMojo(ERR_REQUIRED_PARAM, "message");
+        throw new RequiredParam ("message");
 
     if (typeof message != "string" &&
         !(message instanceof Components.interfaces.nsIDOMHTMLElement))
-        throw new BadMojo(ERR_INVALID_PARAM, ["message", String(message)]);
+        throw new InvalidParam ("message", message);
 
     if (typeof msgtype == "undefined")
         msgtype = MT_INFO;
@@ -332,38 +343,6 @@ function display(message, msgtype)
 
     console._outputElement.appendChild(msgRow);
     console.scrollDown();
-}
-
-function setCurrentSource (url, line)
-{
-    var fileRec = console.scripts[url];
-    ASSERT (fileRec, "Attempt to focus unknown source: " + url);
-
-    var lastFile = console._sourceTreeView.url
-    if (lastFile)
-    {
-        var lastFileRec = console.scripts[lastFile];
-        if (lastFileRec)
-        {
-            lastFileRec.lastLine = 
-                console._sourceTreeView.tree.getFirstVisibleRow();
-        }
-    }
-    
-    console._sourceTreeView.setSourceArray(fileRec.source, url);
-    var hdr = document.getElementById("source-line-text");
-    hdr.setAttribute ("label", url);
-    hdr = document.getElementById("source-line-number");
-    hdr.setAttribute ("label", "");    
-}
-
-function scrollSourceLineTop (url, lineNumber)
-{
-    focusSource(url);
-    if (toTop)
-        console._sourceTreeView.tree.scrollToRow(lineNumber - 1);
-    else
-        console._sourceTreeView.centerLine(lineNumber - 1);
 }
 
 function evalInDebuggerScope (script)
@@ -408,7 +387,7 @@ function formatException (ex)
 
     if (ex instanceof Error)
         return getMsg (MSN_FMT_JSEXCEPTION, [ex.name, ex.message, ex.fileName, 
-                                             ex.lineNumber]);    
+                                             ex.lineNumber]);
 
     return String(ex);
 }
@@ -440,7 +419,7 @@ function htmlVA (attribs, href, contents)
     
     return htmlA (attribs, href, contents);
 }
-    
+
 function init()
 {    
     var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
@@ -462,10 +441,20 @@ function init()
 
     console.debuggerWindow = getBaseWindowFromWindow(window);
 
+    initMsgs();
     initPrefs();
     initCommands();
-    initMenus();
-    initTrees();
+    initMainMenus();
+    initViews();
+
+    var hooks =
+    [
+     ["hook-debug-stop",     hookDebugStop,    ":hook-debug-stop", false],
+     ["frame",               hookFrame,        ":hook-frame",      false],
+     ["eval",                hookEval,         ":hook-eval",       false]
+    ];
+
+    console.commandManager.hookCommands(hooks);
     
     disableDebugCommands();
     
@@ -493,6 +482,7 @@ function init()
     console._lastStackDepth = -1;
 
     initDebugger(); /* debugger may need display() to init */
+    initViews();
 
     console.ui = new Object();
     console.ui["status-text"] = document.getElementById ("status-text");
@@ -501,7 +491,7 @@ function init()
     console.pluginState = new Object();
     dispatch("version");
 
-    var ary = console.prefs["initialScripts"].split();
+    ary = console.prefs["initialScripts"].split();
     for (var i = 0; i < ary.length; ++i)
     {
         var url = stringTrim(ary[i]);
@@ -515,15 +505,65 @@ function init()
     dispatch("help");
 
     initHandlers();
+
+    dispatch ("toggle-view windows");
+    dispatch ("toggle-view source");
+    dispatch ("toggle-view watches");
+
 }
 
 function destroy ()
 {
-    destroyTrees();
+    destroyViews(document);
     destroyHandlers();
     detachDebugger();
 }
 
+function hookDebugStop (e)
+{
+    var frame = setCurrentFrameByIndex(0);
+    var type = console.trapType;
+
+    //var frameRec = console.stackView.stack.childData[0];
+    //console.pushStatus (getMsg(MSN_STATUS_STOPPED, [frameRec.functionName,
+    //                                                frameRec.location]));
+    if (type != jsdIExecutionHook.TYPE_INTERRUPTED ||
+        console._lastStackDepth != console.frames.length)
+    {
+        display (formatFrame(frame));
+    }
+
+    displaySource (frame.script.fileName, frame.line, 
+                   (type == jsdIExecutionHook.TYPE_INTERRUPTED) ? 0 : 2);
+    
+    console._lastStackDepth = console.frames.length;
+
+    enableDebugCommands()
+}
+
+function hookFrame (e)
+{
+    if (e.frameIndex)
+    {
+        var jsdFrame = console.frames[e.frameIndex];
+        if (jsdFrame.isNative)
+            return;
+        
+        dispatch ("find-url-soft", {url: jsdFrame.script.fileName,
+                  rangeStart: jsdFrame.script.baseLineNumber,
+                  rangeEnd:   jsdFrame.script.baseLineNumber + 
+                              jsdFrame.script.lineExtent - 1,
+                  lineNumber: jsdFrame.line, 
+                  details:    jsdFrame.script});
+    }
+}
+
+function hookEval()
+{
+    for (var i = 0; i < $.length; ++i)
+        $[i].refresh();
+}
+    
 function insertHyphenatedWord (longWord, containerTag)
 {
     var wordParts = splitLongWord (longWord, MAX_WORD_LEN);
@@ -558,13 +598,6 @@ function matchFileName (pattern)
             rv.push (scriptName);
 
     return rv;
-}
-
-function refreshValues()
-{
-    for (var i = 0; i < $.length; ++i)
-        $[i].refresh();
-    console.stackView.refresh();
 }
 
 function stringToDOM (message)
@@ -627,7 +660,7 @@ function BadMojo (errno, params)
     var msg = getMsg(exceptionMsgNames[errno], params);
     
     dd ("new BadMojo (" + errno + ": " + msg + ") from\n" + getStackTrace());
-    this.message= msg;
+    this.message = msg;
     this.errno = errno;
     this.fileName = Components.stack.caller.filename;
     this.lineNumber = Components.stack.caller.lineNumber;
@@ -638,6 +671,33 @@ BadMojo.prototype.toString =
 function bm_tostring ()
 {
     return formatException (this);
+}
+
+function Failure ()
+{
+    var obj = new BadMojo(ERR_FAILURE);
+    obj.fileName = Components.stack.caller.filename;
+    obj.lineNumber = Components.stack.caller.lineNumber;
+    obj.functionName = Components.stack.caller.name;
+    return obj;
+}
+
+function InvalidParam (name, value)
+{
+    var obj = new BadMojo(ERR_INVALID_PARAM, [name, String(value)]);
+    obj.fileName = Components.stack.caller.filename;
+    obj.lineNumber = Components.stack.caller.lineNumber;
+    obj.functionName = Components.stack.caller.name;
+    return obj;
+}
+
+function RequiredParam (name)
+{
+    var obj = new BadMojo(ERR_REQUIRED_PARAM, name);
+    obj.fileName = Components.stack.caller.filename;
+    obj.lineNumber = Components.stack.caller.lineNumber;
+    obj.functionName = Components.stack.caller.name;
+    return obj;
 }
 
 /* console object */
@@ -651,6 +711,8 @@ console.incompleteLine = "";
 console._lastTabUp = new Date();
 
 console.display = display;
+console.dispatch = dispatch;
+console.dispatchCommand = dispatchCommand;
 
 console.__defineGetter__ ("status", con_getstatus);
 function con_getstatus ()
@@ -786,15 +848,15 @@ function loadTemplate(url)
     var obj = new Object();
     var i;
 
-    var sections = 
-        {"fileHeader"    : /^<!--@section-start-->/m,
-         "sectionHeader" : /^<!--@range-start-->/m,
-         "rangeHeader"   : /^<!--@item-start-->/m,
-         "itemBody"      : /^<!--@item-end-->/m,
-         "rangeFooter"   : /^<!--@range-end-->/m,
-         "sectionFooter" : /^<!--@section-end-->/m,
+    var sections = {
+         "fileHeader"    : /<!--@section-start-->/m,
+         "sectionHeader" : /<!--@range-start-->/m,
+         "rangeHeader"   : /<!--@item-start-->/m,
+         "itemBody"      : /<!--@item-end-->/m,
+         "rangeFooter"   : /<!--@range-end-->/m,
+         "sectionFooter" : /<!--@section-end-->/m,
          "fileFooter"    : 0
-        };
+    };
 
     for (var s in sections)
     {
@@ -804,8 +866,7 @@ function loadTemplate(url)
             if (i == -1)
                 throw "Cant match " + String(sections[s]);
             obj[s] = lines.substr(0, i - 1);
-            i = lines.indexOf("\n", i);
-            lines = lines.substr(i);
+            lines = lines.substr(RegExp.rightContext);
         }
         else
         {
@@ -905,7 +966,7 @@ function writeSummaryHTML(file, summary, fileName)
                 "\\$range-min"        : ranges[rangeIndex],
                 "\\$range-max"        : ranges[rangeIndex - 1],
                 "\\$range-number-prev": rangeIter - 1,
-                "\\$range-number-next": rangeIter,
+                "\\$range-number-next": rangeIter + 1,
                 "\\$range-number"     : rangeIter,
                 "__proto__"           : headerData
             };
@@ -949,26 +1010,13 @@ function SourceText (scriptContainer, url)
 {
     this.lines = new Array();
     this.tabWidth = console.prefs["sourcetext.tab.width"];
-    this.fileName = url;
+    this.url = this.fileName = url;
     this.scriptContainer = scriptContainer;
     this.lineMap = new Array();
 }
 
-SourceText.prototype.invalidate =
-function st_invalidate ()
-{
-    if ("childData" in console.sourceView &&
-        console.sourceView.childData == this)
-    {
-        if (!("lastRowCount" in this) || 
-            this.lastRowCount != this.lines.length)
-        {
-            this.lastRowCount = this.lines.length;
-            console.sourceView.tree.rowCountChanged(0, this.lastRowCount);
-        }    
-        console.sourceView.tree.invalidate();
-    }
-}
+SourceText.LINE_BREAKABLE  = 1;
+SourceText.LINE_BREAKPOINT = 2;
 
 SourceText.prototype.onMarginClick =
 function st_marginclick (e, line)
@@ -984,7 +1032,6 @@ function st_marginclick (e, line)
         else
             setFutureBreakpoint (this.fileName, line);
     }
-    console.sourceView.tree.invalidateRow(line - 1);
 }
 
 SourceText.prototype.isLoaded = false;
@@ -992,18 +1039,14 @@ SourceText.prototype.isLoaded = false;
 SourceText.prototype.reloadSource =
 function st_reloadsrc (cb)
 {
-    var sourceRec = this;
-    
     function reloadCB (status)
     {
-        sourceRec.invalidate();
         if (typeof cb == "function")
             cb(status);
     }
 
     this.isLoaded = false;
     this.lines = new Array();
-    this.invalidate();
     this.loadSource(reloadCB);
 }
 
@@ -1032,7 +1075,7 @@ function st_initmap()
         {
             var script = scriptRec.script;
             if (script.isLineExecutable(j + 1, PCMAP_SOURCETEXT)) {
-                setFlag (j, console.sourceView.LINE_BREAKABLE);
+                setFlag (j, SourceText.LINE_BREAKABLE);
             }
         }
     }
@@ -1111,7 +1154,8 @@ function st_loadsrc (cb)
                 sourceText.markBreakableLines();
             }
             sourceText.isLoaded = true;
-            sourceText.invalidate();
+            dispatch ("hook-source-load-complete",
+                      {sourceText: sourceText, status: status});
             callall(status);
             console.popStatus();
         }
@@ -1125,7 +1169,6 @@ function st_loadsrc (cb)
     {
         src = loadURLNow(url);
         observer.onComplete (src, url, Components.results.NS_OK);
-        this.invalidate();
         delete this.isLoading;
     }
     catch (ex)
@@ -1173,7 +1216,7 @@ function (cb)
     {
         if (this.scriptRecord.script.isLineExecutable(i + 1, PCMAP_PRETTYPRINT))
         {
-            setFlag (i, console.sourceView.LINE_BREAKABLE);
+            setFlag (i, SourceText.LINE_BREAKABLE);
         }
     }
 
@@ -1181,30 +1224,10 @@ function (cb)
         cb (Components.results.NS_OK);
 }
 
-PPSourceText.prototype.invalidate =
-function st_invalidate ()
-{
-    dd ("invalidate ppsourcetext");
-    
-    if ("childData" in console.sourceView &&
-        console.sourceView.childData == this)
-    {
-        var topRow = console.sourceView.tree.getFirstVisibleRow() + 1;
-        if (!("lastRowCount" in this) || 
-            this.lastRowCount != this.lines.length)
-        {
-            this.lastRowCount = this.lines.length;
-            console.sourceView.tree.rowCountChanged(0, this.lastRowCount);
-        }    
-        console.sourceView.scrollTo(topRow, -1);
-        console.sourceView.tree.invalidate();
-    }
-}
-
 function HelpText ()
 {
     this.tabWidth = console.prefs["sourcetext.tab.width"];
-    this.fileName = "x-jsd:help";
+    this.url = this.fileName = "x-jsd:help";
     this.reloadSource();
 }
 
@@ -1222,25 +1245,6 @@ function (cb)
     }
     
     this.lines = str.split("\n");
-    this.invalidate();
     if (typeof cb == "function")
         cb (Components.results.NS_OK);
-}
-        
-HelpText.prototype.invalidate =
-function st_invalidate ()
-{
-    if ("childData" in console.sourceView &&
-        console.sourceView.childData == this)
-    {
-        var topRow = console.sourceView.tree.getFirstVisibleRow() + 1;
-        if (!("lastRowCount" in this) || 
-            this.lastRowCount != this.lines.length)
-        {
-            this.lastRowCount = this.lines.length;
-            console.sourceView.tree.rowCountChanged(0, this.lastRowCount);
-        }    
-        console.sourceView.scrollTo(topRow, -1);
-        console.sourceView.tree.invalidate();
-    }
 }

@@ -38,7 +38,7 @@ const CMD_NEED_STACK = 0x02; // command only works if we're stopped
 const CMD_NO_STACK   = 0x04; // command only works if we're *not* stopped
 const CMD_NO_HELP    = 0x08; // don't whine if there is no help for this command
 
-function initCommands(commandObject)
+function initCommands()
 {
     console.commandManager = new CommandManager();
     
@@ -65,14 +65,18 @@ function initCommands(commandObject)
          ["find-ctor",      cmdFindCreatorOrCtor,  0],
          ["find-file",      cmdFindFile,           CMD_CONSOLE],
          ["find-frame",     cmdFindFrame,          CMD_NEED_STACK],
+         ["find-script",    cmdFindScript,         0],
          ["find-url",       cmdFindURL,            CMD_CONSOLE],
          ["find-url-soft",  cmdFindURL,            0],
-         ["find-script",    cmdFindScript,         0],
          ["finish",         cmdFinish,             CMD_CONSOLE | CMD_NEED_STACK],
+         ["float",          cmdFloat,              CMD_CONSOLE],
          ["focus-input",    cmdFocusInput,         0],
          ["frame",          cmdFrame,              CMD_CONSOLE | CMD_NEED_STACK],
+         ["grout-container",cmdGroutContainer,     0],
          ["help",           cmdHelp,               CMD_CONSOLE],
+         ["hide-view",      cmdHideView,           CMD_CONSOLE],
          ["loadd",          cmdLoadd,              CMD_CONSOLE],
+         ["move-view",      cmdMoveView,           0],
          ["next",           cmdNext,               CMD_CONSOLE | CMD_NEED_STACK],
          ["open-dialog",    cmdOpenDialog,         CMD_CONSOLE],
          ["open-url",       cmdOpenURL,            0],
@@ -80,17 +84,21 @@ function initCommands(commandObject)
          ["pref",           cmdPref,               CMD_CONSOLE],
          ["profile",        cmdProfile,            CMD_CONSOLE],
          ["props",          cmdProps,              CMD_CONSOLE | CMD_NEED_STACK],
-         ["propsd",         cmdPropsd,             CMD_CONSOLE],
+         ["propsd",         cmdProps,              CMD_CONSOLE],
          ["quit",           cmdQuit,               CMD_CONSOLE],
          ["reload",         cmdReload,             CMD_CONSOLE],
          ["save-source",    cmdSaveSource,         CMD_CONSOLE],
          ["save-profile",   cmdSaveProfile,        CMD_CONSOLE],
          ["scope",          cmdScope,              CMD_CONSOLE | CMD_NEED_STACK],
+         ["toggle-view",    cmdToggleView,         CMD_CONSOLE],
          ["startup-init",   cmdStartupInit,        CMD_CONSOLE],
          ["step",           cmdStep,               CMD_CONSOLE | CMD_NEED_STACK],
          ["stop",           cmdStop,               CMD_CONSOLE | CMD_NO_STACK],
          ["tmode",          cmdTMode,              CMD_CONSOLE],
          ["version",        cmdVersion,            CMD_CONSOLE],
+         ["watch-expr",     cmdWatchExpr,          CMD_CONSOLE | CMD_NEED_STACK],
+         ["watch-exprd",    cmdWatchExpr,          CMD_CONSOLE],
+         ["watch-property", cmdWatchProperty,      0],         
          ["where",          cmdWhere,              CMD_CONSOLE | CMD_NEED_STACK],
          
          /* aliases */
@@ -98,15 +106,35 @@ function initCommands(commandObject)
          ["this",           "props this",           CMD_CONSOLE],
          ["toggle-chrome",  "chrome-filter toggle", 0],
          ["toggle-ias",     "startup-init toggle",  0],
+         ["toggle-pprint",  "pprint toggle",        0],
          ["toggle-profile", "profile toggle",       0],
          ["em-cycle",       "emode cycle",          0],
          ["em-ignore",      "emode ignore",         0],
          ["em-trace",       "emode trace",          0],
          ["em-break",       "emode break",          0],
+         ["toggle-breaks",  "toggle-view breaks",   0],
+         ["toggle-locals",  "toggle-view locals",   0],
+         ["toggle-scripts", "toggle-view scripts",  0],
+         ["toggle-source",  "toggle-view source",   0],
+         ["toggle-stack",   "toggle-view stack",    0],
+         ["toggle-watch",   "toggle-view watches",  0],
+         ["toggle-windows", "toggle-view windows",  0],
          ["tm-cycle",       "tmode cycle",          0],
          ["tm-ignore",      "tmode ignore",         0],
          ["tm-trace",       "tmode trace",          0],
-         ["tm-break",       "tmode break",          0]
+         ["tm-break",       "tmode break",          0],
+
+         /* hooks */
+         ["hook-debug-stop",               cmdHook, 0],
+         ["hook-debug-continue",           cmdHook, 0],
+         ["hook-display-sourcetext",       cmdHook, 0],
+         ["hook-display-sourcetext-soft",  cmdHook, 0],
+         ["hook-guess-complete",           cmdHook, 0],
+         ["hook-source-load-complete",     cmdHook, 0],
+         ["hook-window-closed",            cmdHook, 0],
+         ["hook-window-loaded",            cmdHook, 0],
+         ["hook-window-opened",            cmdHook, 0],
+         ["hook-window-unloaded",          cmdHook, 0]
         ];
 
     defineVenkmanCommands (cmdary);
@@ -115,7 +143,7 @@ function initCommands(commandObject)
                                                      "lineNumber"], "int");
     console.commandManager.argTypes.__aliasTypes__ (["scriptText", "windowFlags",
                                                      "expression", "prefValue"],
-                                                    "rest");
+                                                     "rest");
 }
 
 /**
@@ -293,42 +321,7 @@ function cmdChromeFilter (e)
                 console.jsds.insertFilter (console.chromeFilter, null);
             else
                 console.jsds.removeFilter (console.chromeFilter);
-        }
-        
-        console.scriptsView.freeze();
-        for (var container in console.scripts)
-        {
-            if (console.scripts[container].fileName.indexOf("chrome:") == 0)
-            {
-                var rec = console.scripts[container];
-                var scriptList = console.scriptsView.childData;
-                if (e.toggle)
-                {
-                    /* filter is on, remove chrome file from scripts view */
-                    if ("parentRecord" in rec)
-                    {
-                        //dd ("remove index " + rec.childIndex + ", " +
-                        //    rec.fileName);
-                        scriptList.removeChildAtIndex(rec.childIndex);
-                    }
-                    else
-                        dd ("record already seems to out of the tree");
-                }
-                else
-                {
-                    /* filter is off, add chrome file to scripts view */
-                    if (!("parentRecord" in rec))
-                    {
-                        //dd ("cmdChromeFilter: append " +
-                        //    tov_formatRecord(rec, ""));
-                        scriptList.appendChild(rec);
-                    }
-                    else
-                        dd ("record already seems to be in the tree");
-                }
-            }
-        }
-        console.scriptsView.thaw();
+        }        
 
         currentState = 
             console.enableChromeFilter = 
@@ -429,7 +422,6 @@ function cmdCommands (e)
 function cmdCont (e)
 {
     disableDebugCommands();
-    console.stackView.saveState();
     console.jsds.exitNestedEventLoop();
 }
 
@@ -507,6 +499,7 @@ function cmdEval (e)
         else
             dd ("evalInTargetScope returned null");
     }
+
     return true;
 }
 
@@ -555,7 +548,6 @@ function cmdFinish (e)
     setStopState(false);
     console.jsds.functionHook = console._callHook;
     disableDebugCommands()
-    console.stackView.saveState();
     console.jsds.exitNestedEventLoop();
     return true;
 }
@@ -594,62 +586,6 @@ function cmdFindCreatorOrCtor (e)
                      {url: url, rangeStart: line - 1, rangeEnd: line - 1});
 }
 
-function cmdFindURL (e)
-{
-    if (!e.url)
-    {
-        console.sourceView.displaySourceText(null);
-        return null;
-    }
-    
-    var sourceText;
-    
-    if (e.url.indexOf("x-jsd:") == 0)
-    {
-        if (e.url == "x-jsd:help")
-        {
-            dispatch ("help");
-            return e.url;
-        }
-
-        display (getMsg(MSN_ERR_INVALID_PARAM, ["url", e.url]), MT_ERROR);
-        return null;
-    }
-    
-    if (e.url in console.scripts)
-        sourceText = console.scripts[e.url].sourceText;
-    else if (e.url in console.files)
-        sourceText = console.files[e.url];
-    else
-        sourceText = console.files[e.url] = new SourceText (null, e.url);
-
-    console.sourceView.details = null;
-    console.highlightFile = e.url;
-    var line = 1;
-    delete console.highlightStart;
-    delete console.highlightEnd;
-    if ("rangeStart" in e && e.rangeStart != null)
-    {
-        line = e.rangeStart;
-        if (e.rangeEnd != null)
-        {
-            console.highlightStart = e.rangeStart - 1;
-            console.highlightEnd = e.rangeEnd - 1;
-        }
-    }
-    
-    if ("lineNumber" in e && e.lineNumber != null)
-        line = e.lineNumber;
-
-    console.sourceView.displaySourceText(sourceText);
-    console.sourceView.tree.invalidate();
-    if ("command" in e && e.command.name == "find-url-soft")
-        console.sourceView.softScrollTo (line);
-    else
-        console.sourceView.scrollTo (line - 2, -1);
-    return e.url;
-}
-
 function cmdFindFile (e)
 {
     if (!e.fileName || e.fileName == "?")
@@ -665,9 +601,9 @@ function cmdFindFile (e)
 
 function cmdFindFrame (e)
 {
-    var frame = e.frameRec.frame;
+    var frame = console.frames[e.frameIndex];
 
-    displayFrame (frame, e.frameRec.childIndex, true);
+    displayFrame (frame, e.frameIndex, true);
 
     if (frame.isNative)
         return true;
@@ -678,27 +614,28 @@ function cmdFindFrame (e)
         dd ("frame from unknown source");
         return false;
     }
-    var scriptRecord =
-        scriptContainer.locateChildByScript (frame.script);
+    var scriptRecord = scriptContainer.locateChildByScript (frame.script);
     if (!scriptRecord)
     {
         dd ("frame with unknown script");
         return false;
     }
 
-    return cmdFindScript ({scriptRec: scriptRecord});
+    return dispatch ("find-script", {scriptRec: scriptRecord});
 }
 
 function cmdFindScript (e)
 {
     var rv;
 
-    if (console.sourceView.prettyPrint)
+    if (console.prefs["prettyprint"])
     {
         delete console.highlightFile;
         delete console.highlightStart;
         delete console.highlightEnd;
-        console.sourceView.displaySourceText(e.scriptRec.sourceText);
+        dispatch ("hook-display-sourcetext",
+                  {sourceText: e.scriptRec.sourceText, startLine: 1,
+                   details: e.scriptRec.script});
         rv = e.scriptRec.script.fileName;
     }
     else
@@ -706,12 +643,97 @@ function cmdFindScript (e)
         rv = dispatch("find-url", {url: e.scriptRec.parentRecord.fileName,
                                    rangeStart: e.scriptRec.baseLineNumber,
                                    rangeEnd: e.scriptRec.baseLineNumber + 
-                                             e.scriptRec.lineExtent - 1});
+                                             e.scriptRec.lineExtent - 1,
+                                   details: e.scriptRec.script});
     }
 
-    console.sourceView.details = e.scriptRec;
-    
     return rv;
+}
+    
+function cmdFindURL (e)
+{
+    function cb(status)
+    {
+        if (status == Components.results.NS_OK)
+            dispatch (hookName, {sourceText: sourceText, startLine: line});
+    };
+
+    if (!e.url)
+    {
+        dispatch ("hook-display-sourcetext", {sourceText: null, startLine: 0});
+        return null;
+    }
+
+    var sourceText;
+
+    if (e.url.indexOf("x-jsd:") == 0)
+    {
+        switch (e.url)
+        {
+            case "x-jsd:help":
+                sourceText = console.sourceText;
+                break;
+                
+            default:
+                display (getMsg(MSN_ERR_INVALID_PARAM, ["url", e.url]),
+                         MT_ERROR);
+                return null;
+        }
+    }
+    else if (e.url in console.scripts)
+    {
+        sourceText = console.scripts[e.url].sourceText;
+    }
+    else if (e.url in console.files)
+    {
+        sourceText = console.files[e.url];
+    }
+    else
+    {
+        sourceText = console.files[e.url] = new SourceText (null, e.url);
+    }
+
+    var line = 0;
+    console.highlightFile = e.url;
+    
+    delete console.highlightStart;
+    delete console.highlightEnd;
+    if ("rangeStart" in e && e.rangeStart != null)
+    {
+        line = e.rangeStart;
+        if (e.rangeEnd != null)
+        {
+            console.highlightStart = e.rangeStart - 1;
+            console.highlightEnd = e.rangeEnd - 1;
+        }
+    }
+    
+    if ("lineNumber" in e)
+        line = e.lineNumber;
+    
+    var hookName = (e.command.name == "find-url") ?
+        "hook-display-sourcetext" : "hook-display-sourcetext-soft";
+    console.currentSourceText = sourceText;
+
+    if (sourceText.isLoaded)
+        cb(Components.results.NS_OK);
+    else
+        sourceText.loadSource(cb);
+    
+    return e.url;
+}
+
+function cmdFloat (e)
+{
+    if (!e.windowId)
+        e.windowId = "floatwindow:" + ++console.floaterSequence;
+
+    if (!(e.viewId in console.views))
+        throw new InvalidParam ("viewId", e.viewId);
+    
+    var win = openDialog ("chrome://venkman/content/venkman-floater.xul?id=" +
+                          escape(e.windowId), "", e.windowId, e.viewId);
+    return win;
 }
 
 function cmdFocusInput (e)
@@ -726,17 +748,64 @@ function cmdFrame (e)
     else    
         e.frameIndex = getCurrentFrameIndex();
 
-    dispatch ("find-frame",
-              {frameRec: console.stackView.stack.childData[e.frameIndex]});
+    dispatch ("find-frame", {frameIndex: e.frameIndex});
     return true;
 }
-            
+
+function cmdGroutContainer (e)
+{
+    var container = e.viewContainer;
+
+    if (!container)
+        throw new InvalidParam ("container", container);
+
+    if (!ASSERT(container.hasAttribute ("view-container"),
+                "Attempt to grout something that is not a view container"))
+    {
+        return;
+    }
+    
+    var doc = container.ownerDocument;
+    var content = e.viewContainer.firstChild;
+    
+    while (content)
+    {
+        var previousContent = content.previousSibling;
+        var nextContent = content.nextSibling;
+
+        if (content.hasAttribute("grout"))
+        {
+            if (!previousContent || !nextContent ||
+                previousContent.hasAttribute("grout") ||
+                nextContent.hasAttribute("grout"))
+            {
+                container.removeChild(content);
+            }
+        }
+        else
+        {
+            if (nextContent && !nextContent.hasAttribute("grout") &&
+                content.hasAttribute("splitter-collapse"))
+            {
+                var split = doc.createElement("splitter");
+                split.setAttribute("grout", "true");
+                split.setAttribute("collapse",
+                                   content.getAttribute("splitter-collapse"));
+                split.appendChild(doc.createElement("grippy"));
+                container.insertBefore(split, nextContent);
+            }
+        }
+        content = nextContent;
+    }
+}
+
 function cmdHelp (e)
 {
     var ary;
     if (!e.pattern)
     {
-        console.sourceView.displaySourceText(console.sourceText);
+        dispatch ("find-url", {url: "x-jsd:help"});
+        return true;
     }
     else
     {
@@ -756,7 +825,26 @@ function cmdHelp (e)
         }
     }
 
-    return true;    
+    return true;
+}
+
+function cmdHideView(e)
+{
+    if (!(e.viewId in console.views))
+        throw new InvalidParam ("viewId", e.viewId);
+    
+    var view = console.views[e.viewId];
+
+    if (!view || !("currentContent" in view))
+        throw new InvalidParam ("viewId", e.viewId);
+
+    dispatch ("move-view", 
+              {viewContent: view.currentContent, viewContainer: null});    
+}
+
+function cmdHook(e)
+{
+    /* empty function used for "hook" commands. */
 }
 
 function cmdLoadd (e)
@@ -793,6 +881,78 @@ function cmdLoadd (e)
     return null;
 }
 
+function cmdMoveView (e)
+{
+    var viewId = e.viewContent.getAttribute ("id");
+
+    if (!viewId || !(viewId in console.views))
+        throw new InvalidParam ("viewContent", "{" + e.viewContent + "; id='" +
+                                viewId + "'}");
+    
+    ASSERT (!e.viewContainer ||
+            e.viewContent.ownerDocument == e.viewContainer.ownerDocument,
+            "Attempt to put view content in a foreign document, Bad Idea.");
+    
+    var view = console.views[viewId];
+
+    if (!("originalParent" in e.viewContent) && e.viewContent.parentNode)
+    {
+        /* Record the original parent for this content, if we haven't already. */
+        dd ("recording original parent");
+        e.viewContent.originalParent = e.viewContent.parentNode;
+    }
+    
+    if ("currentContent" in view)
+    {
+        /* View is already inserted somewhere, take it out of there first. */
+        if ("onHide" in view)
+            view.onHide();
+        var originalParent = view.currentContent.originalParent;
+        var currentParent = view.currentContent.parentNode;
+
+        currentParent.removeChild (view.currentContent);
+
+        if (view.currentContent.ownerDocument != e.viewContent.ownerDocument)
+        {
+            /* We're moving to a different window, put the previous content
+             * back in its DOM. */
+            dd ("going to new document, append to original parent");
+            originalParent.appendChild(view.currentContent);
+        }
+
+        dispatch ("grout-container",
+                  {viewContainer: currentParent});
+    }
+    else if (e.viewContent.parentNode)
+    {
+        dd ("removing from original parent");
+        e.viewContent.parentNode.removeChild(e.viewContent);
+    }
+    
+    if (e.viewContainer)
+    {
+        /* Relocate the view to the new container. */
+        view.currentContent = e.viewContent;
+        if (e.beforeContent)
+            e.viewContainer.insertBefore (e.viewContent, e.beforeContent);
+        else
+            e.viewContainer.appendChild(e.viewContent);
+
+        if ("onShow" in view)
+            view.onShow();
+
+        /* regrout our container */
+        dispatch ("grout-container", {viewContainer: e.viewContainer});
+    }
+    else if ("originalParent" in e.viewContent)
+    {
+        /* Put the view back where it started. */
+        
+        delete view.currentContent;
+        e.viewContent.originalParent.appendChild (e.viewContent);
+    }
+}
+
 function cmdNext ()
 {
     console._stepOverLevel = 0;
@@ -817,7 +977,19 @@ function cmdOpenURL (e)
 
 function cmdPPrint (e)
 {
-    setPrettyPrintState(!console.sourceView.prettyPrint);
+    var state;
+    
+    if (e.toggle == "toggle")
+        state = console.prefs["prettyprint"] = !console.prefs["prettyprint"];
+    else
+        state = console.prefs["prettyprint"] = e.toggle;
+    
+    var tb = document.getElementById("maintoolbar-pprint");
+    if (state)
+        tb.setAttribute("state", "true");
+    else
+        tb.removeAttribute("state");
+
     return true;
 }
 
@@ -871,11 +1043,12 @@ function cmdProfile(e)
                         [e.toggle ? MSG_VAL_ON : MSG_VAL_OFF]));
 }
 
-function cmdProps (e, forceDebuggerScope)
+function cmdProps (e)
 {
     var v;
-    
-    if (forceDebuggerScope)
+    var debuggerScope = (e.command.name == "evald");
+
+    if (debuggerScope)
         v = evalInDebuggerScope (e.scriptText);
     else
         v = evalInTargetScope (e.scriptText);
@@ -888,15 +1061,10 @@ function cmdProps (e, forceDebuggerScope)
         return false;
     }
     
-    display (getMsg(forceDebuggerScope ? MSN_PROPSD_HEADER : MSN_PROPS_HEADER,
+    display (getMsg(debuggerScope ? MSN_PROPSD_HEADER : MSN_PROPS_HEADER,
                     e.scriptText));
     displayProperties(v);
     return true;
-}
-
-function cmdPropsd (e)
-{
-    return cmdProps (e, true);
 }
 
 function cmdQuit()
@@ -904,20 +1072,27 @@ function cmdQuit()
     goQuitApplication();
 }
 
-function cmdReload ()
+function cmdReload()
 {
-    if (!("childData" in console.sourceView))
-        return false;
-    
-    console.sourceView.childData.reloadSource();
-    return true;
+    function cb(status)
+    {
+        dispatch ("hook-reload-source-complete",
+                  {sourceText: console.currentSourceText, status: status});
+        enableReloadCommand();
+    }
+        
+    if ("currentSourceText" in client)
+    {
+        disableReloadCommand();
+        client.currentSourceText.reloadSource(cb);
+    }
 }
 
 function cmdSaveSource (e)
 {
     if (!e.targetFile || e.targetFile == "?")
     {
-        var fileName = console.sourceView.childData.fileName;
+        var fileName = console.currentSourceText.fileName;
         if (fileName.search(/^\w+:/) < 0)
         {
             var shortName = getFileFromPath(fileName);
@@ -936,7 +1111,7 @@ function cmdSaveSource (e)
     }
 
     var file = fopen (e.targetFile, MODE_WRONLY | MODE_CREATE | MODE_TRUNCATE);
-    var lines = console.sourceView.childData.lines;
+    var lines = console.currentSourceText.lines;
     for (var i = 0; i < lines.length; ++i)
         file.write(lines[i] + "\n");
     file.close();
@@ -1031,7 +1206,6 @@ function cmdSaveProfile (e)
     return file.localFile;
 }
 
-
 function cmdScope ()
 {
     if (getCurrentFrame().scope.propertyCount == 0)
@@ -1062,7 +1236,7 @@ function cmdStep()
     setStopState(true);
     var topFrame = console.frames[0];
     console._stepPast = topFrame.script.fileName;
-    if (console.sourceView.prettyPrint)
+    if (console.prefs["prettyprint"])
     {
         console._stepPast +=
             topFrame.script.pcToLine(topFrame.pc, PCMAP_PRETTYPRINT);
@@ -1072,7 +1246,6 @@ function cmdStep()
         console._stepPast += topFrame.line;
     }
     disableDebugCommands()
-    console.stackView.saveState();
     console.jsds.exitNestedEventLoop();
     return true;
 }
@@ -1144,10 +1317,100 @@ function cmdTMode (e)
     return true;
 }
 
+function cmdToggleView (e)
+{
+    if (!e.viewId in console.views || typeof console.views[e.viewId] != "object")
+    {
+        display (getMsg(MSN_ERR_NO_SUCH_VIEW, e.viewId), MT_ERROR);
+        return;
+    }
+    
+    if (!e.containerId && "currentContent" in console.views[e.viewId])
+    {
+        /* view is already displayed, and user didn't ask to put it somewhere
+         * in particular, so we'll hide it. */
+        dispatch ("move-view",
+                  {viewContent: console.views[e.viewId].currentContent, 
+                   viewContainer: null});
+        return;
+    }
+    
+    var viewContent = document.getElementById(e.viewId);
+    if (!ASSERT(viewContent, "No content for view '" + e.viewId + "'"))
+        throw new Failure();
+        
+    if (!e.containerId)
+        e.containerId = viewContent.getAttribute("default-container");
+    
+    if (!e.containerId)
+        e.containerId = "view-container-1";
+    
+    var viewContainer = document.getElementById(e.containerId);
+    if (!viewContainer)
+    {
+        display (getMsg(MSN_ERR_NO_SUCH_CONTAINER, e.containerId), MT_ERROR);
+        return;
+    }
+
+    dispatch ("move-view",
+              {viewContent: viewContent, viewContainer: viewContainer});
+}    
+
 function cmdVersion ()
 {
     display(MSG_HELLO, MT_HELLO);
     display(getMsg(MSN_VERSION, console.version), MT_HELLO);
+}
+
+function cmdWatchExpr (e)
+{
+    if (!e.expression)
+    {
+        var watches = console.views.watches.childData;
+        var len = watches.length;
+        display (getMsg(MSN_WATCH_HEADER, len));
+        for (var i = 0; i < len; ++i)
+        {
+            display (getMsg(MSN_FMT_WATCH_ITEM, [i, watches[i].displayName,
+                                                 watches[i].displayValue]));
+        }
+        return null;
+    }
+    
+    var refresher;
+    if (e.command.name == "watch-expr")
+    {
+        refresher = function () { 
+                        this.value = evalInTargetScope(e.expression); 
+                    };
+    }
+    else
+    {
+        refresher = function () {
+                        var rv = evalInDebuggerScope(e.expression);
+                        dd ("refreshing: '" + e.expression + "' = " + rv);
+                        this.value = console.jsds.wrapValue(rv);
+                    };
+    }
+    
+    var rec = new ValueRecord(console.jsds.wrapValue(null), e.expression,
+                              0);
+    rec.onPreRefresh = refresher;
+    rec.refresh();
+    console.views.watches.childData.appendChild(rec);
+    return rec;
+}
+
+function cmdWatchProperty (e)
+{
+    var rec = new ValueRecord(console.jsds.wrapValue(null),
+                              e.propertyName, 0);
+    rec.onPreRefresh = function () {
+                           this.value = e.jsdValue.getProperty(e.propertyName);
+                       };
+    rec.onPreRefresh();
+    console.views.watches.childData.appendChild(rec);
+    return rec;
 }
 
 function cmdWhere ()
@@ -1155,4 +1418,3 @@ function cmdWhere ()
     displayCallStack();
     return true;
 }
-
