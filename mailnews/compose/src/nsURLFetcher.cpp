@@ -122,12 +122,6 @@ nsURLFetcher::OnDataAvailable(nsISupports * ctxt, nsIInputStream *aIStream,
 nsresult
 nsURLFetcher::OnStartRequest(nsISupports * /* ctxt */)
 {
-#ifdef NS_DEBUG_richie
-  printf("nsURLFetcher::OnStartRequest() for Content-Type: %s\n", aContentType);
-#endif
-
-  if (aContentType)
-    mContentType = PL_strdup(aContentType);
   return NS_OK;
 }
 
