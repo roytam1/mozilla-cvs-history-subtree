@@ -1339,6 +1339,9 @@ AnchorRegExp(CompilerState *state, RENode *ren)
 	 */
 	break;
 
+      case REOP_EOLONLY:
+        break;
+
       default:
       do_anchor:
 	/*
