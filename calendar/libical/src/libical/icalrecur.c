@@ -2272,11 +2272,6 @@ struct icaltimetype icalrecur_iterator_next(icalrecur_iterator *impl)
 	    }
 	}    
 	
-	if(impl->last.year >= 2038 ){
-	    /* HACK */
-	    return icaltime_null_time();
-	}
-	
     } while(!check_contracting_rules(impl) 
 	    || icaltime_compare(impl->last,impl->dtstart) < 0
             || valid == 0);
