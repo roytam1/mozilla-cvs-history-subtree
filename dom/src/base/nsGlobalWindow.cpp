@@ -4252,8 +4252,6 @@ NavigatorImpl::Preference()
   if (!ncc)
     return NS_ERROR_NOT_AVAILABLE;
 
-  PRBool force_get = PR_FALSE;
-
   PRUint32 argc;
 
   ncc->GetArgc(&argc);
