@@ -278,15 +278,15 @@ makeWidget(PluginInstance *This)
     dialogMessage = AddWidget(gtk_label_new (message), 
                    GTK_DIALOG(dialogWindow)->vbox);
 
+    cancelButton= AddWidget(gtk_button_new_with_label (CANCEL_BUTTON), 
+                   GTK_DIALOG(dialogWindow)->action_area);
+
     okButton= AddWidget(gtk_button_new_with_label (OK_BUTTON), 
                    GTK_DIALOG(dialogWindow)->action_area);
     gtk_object_set_data(GTK_OBJECT(okButton), DIALOGID, dialogWindow);
 
     GTK_WIDGET_SET_FLAGS (okButton, GTK_CAN_DEFAULT);
     gtk_widget_grab_default(okButton);
-
-    cancelButton= AddWidget(gtk_button_new_with_label (CANCEL_BUTTON), 
-                   GTK_DIALOG(dialogWindow)->action_area);
 
     gtk_signal_connect (GTK_OBJECT(okButton),  "clicked",
                         GTK_SIGNAL_FUNC(DialogOKClicked), This);
