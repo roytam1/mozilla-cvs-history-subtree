@@ -1112,7 +1112,7 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     JSString *str = JSVAL_TO_STRING(id);
 
     if (str == sLocation_id) {
-      JSString *val = JS_ValueToString(cx, *vp);
+      JSString *val = ::JS_ValueToString(cx, *vp);
       NS_ENSURE_TRUE(val, NS_ERROR_UNEXPECTED);
 
       nsCOMPtr<nsISupports> native;
@@ -1310,7 +1310,7 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
   if (name_struct->mType == nsGlobalNameStruct::eTypeConstructor) {
     // If there was a JS_DefineUCFunction() I could use it here, but
     // no big deal...
-    JSFunction *f = ::JS_DefineFunction(cx, obj, JS_GetStringBytes(str),
+    JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
                                         StubConstructor, 0, JSPROP_READONLY);
 
     if (!f) {
@@ -1384,7 +1384,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 {
   JSBool did_resolve = JS_FALSE;
 
-  if (!JS_ResolveStandardClass(cx, obj, id, &did_resolve)) {
+  if (!::JS_ResolveStandardClass(cx, obj, id, &did_resolve)) {
     *_retval = JS_FALSE;
 
     return NS_ERROR_UNEXPECTED;
@@ -2147,7 +2147,7 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   if (JSVAL_IS_STRING(id)) {
     JSString *jsstr = JSVAL_TO_STRING(id);
 
-    if (jsstr == sLocation_id && JSVAL_IS_STRING(*vp)) {
+    if (jsstr == sLocation_id) {
       nsCOMPtr<nsISupports> native;
 
       wrapper->GetNative(getter_AddRefs(native));
@@ -2168,11 +2168,12 @@ nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         win->GetLocation(getter_AddRefs(location));
 
         if (location) {
-          JSString *l = JSVAL_TO_STRING(*vp);
+          JSString *val = ::JS_ValueToString(cx, *vp);
+          NS_ENSURE_TRUE(val, NS_ERROR_UNEXPECTED);
 
           nsLiteralString href(NS_REINTERPRET_CAST(const PRUnichar *,
-                                                   ::JS_GetStringChars(l)),
-                               ::JS_GetStringLength(l));
+                                                   ::JS_GetStringChars(val)),
+                               ::JS_GetStringLength(val));
 
           location->SetHref(href);
         }
@@ -2565,7 +2566,7 @@ nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
 
     JSString *str = JSVAL_TO_STRING(id);
 
-    char* cstring = JS_GetStringBytes(str);
+    char* cstring = ::JS_GetStringBytes(str);
 
     nsCOMPtr<nsIInterfaceInfoManager> iim = 
       dont_AddRef(XPTI_GetInterfaceInfoManager());
@@ -2682,7 +2683,8 @@ nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
   }
 
   // vp must refer to an object
-  if (!JSVAL_IS_OBJECT(*vp) && !JS_ConvertValue(cx, *vp, JSTYPE_OBJECT, vp)) {
+  if (!JSVAL_IS_OBJECT(*vp) && !::JS_ConvertValue(cx, *vp, JSTYPE_OBJECT,
+                                                  vp)) {
     return NS_ERROR_UNEXPECTED;
   }
 
@@ -2690,11 +2692,11 @@ nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
 
   if (!JSVAL_IS_NULL(*vp)) {
     JSObject* option_obj = JSVAL_TO_OBJECT(*vp); 
-    JSClass* jsclass = JS_GetClass(cx, option_obj);
+    JSClass* jsclass = ::JS_GetClass(cx, option_obj);
 
     if (jsclass && !((~jsclass->flags) & (JSCLASS_HAS_PRIVATE |
                                           JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
-      nsISupports *s = (nsISupports *)JS_GetPrivate(cx, option_obj);
+      nsISupports *s = (nsISupports *)::JS_GetPrivate(cx, option_obj);
 
       nsCOMPtr<nsIXPConnectWrappedNative> wrapper(do_QueryInterface(s));
       NS_ENSURE_TRUE(wrapper, NS_ERROR_UNEXPECTED);
