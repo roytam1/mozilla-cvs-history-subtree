@@ -53,7 +53,7 @@ public:
     ~ExprParser();
 
     Expr* createExpr(const String& aExpression, txIParseContext* aContext);
-    Pattern* createPattern(const String& aPattern, txIParseContext* aContext);
+    txPattern* createPattern(const String& aPattern, txIParseContext* aContext);
 
     /**
      * Creates an Attribute Value Template using the given value

@@ -156,8 +156,13 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
         return 0;
     }
 
-    if (!buffer.isEmpty())
-        avt->addExpr(new StringExpr(buffer));
+    if (!buffer.isEmpty()) {
+        // don't really create a AVT, but return null
+        // callers check for this and just use their String
+        delete avt;
+        mContext = 0;
+        return 0;
+    }
 
     mContext = 0;
     return avt;
@@ -174,12 +179,16 @@ Expr* ExprParser::createExpr(const String& aExpression,
     return expr;
 } //-- createExpr
 
-Pattern* ExprParser::createPattern(const String& aPattern,
-                                   txIParseContext* aContext)
+txPattern* ExprParser::createPattern(const String& aPattern,
+                                     txIParseContext* aContext)
 {
     mContext = aContext;
+    txPattern* pattern = 0;
     ExprLexer lexer(aPattern);
+    #if 0
+    XXX TODO Implement Pattern Parser
     Pattern* pattern = createUnionExpr(lexer);
+    #endif
     mContext = 0;
     return pattern;
 } //-- createPatternExpr

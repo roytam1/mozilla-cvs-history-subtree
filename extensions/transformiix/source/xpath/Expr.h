@@ -130,7 +130,7 @@ public:
      * For union patterns, add all sub patterns,
      * all other (simple) patterns just add themselves
      */
-    virtual nsresult getSimplePatterns(txList aList);
+    virtual nsresult getSimplePatterns(txList &aList);
 };
 
 #define TX_DECL_PATTERN \
