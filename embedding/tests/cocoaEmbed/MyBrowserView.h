@@ -15,17 +15,27 @@
 - (void)awakeFromNib;
 - (void)setFrame:(NSRect)frameRect;
 
-// NSBrowserListener messages
+// CHBrowserListener messages
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;
 - (void)onProgressChange:(int)currentBytes outOf:(int)maxBytes;
 - (void)onLocationChange:(NSURL*)url;
+- (void)onStatusChange:(NSString*)aMessage;
+- (void)onSecurityStateChange:(unsigned long)newState;
+// Called when a context menu should be shown.
+- (void)onShowContextMenu:(int)flags domEvent:(nsIDOMEvent*)aEvent domNode:(nsIDOMNode*)aNode;
+// Called when a tooltip should be shown or hidden
+- (void)onShowTooltip:(NSPoint)where withText:(NSString*)text;
+- (void)onHideTooltip;
 
-// NSBrowserContainer messages
+// CHBrowserContainer messages
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type;
 - (NSString *)title;
 - (void)setTitle:(NSString *)title;
 - (void)sizeBrowserTo:(NSSize)dimensions;
 - (CHBrowserView*)createBrowserWindow:(unsigned int)mask;
+- (NSMenu*)getContextMenu;
+- (NSWindow*)getNativeWindow;
+- (BOOL)shouldAcceptDragFromSource:(id)dragSource;
 
 @end

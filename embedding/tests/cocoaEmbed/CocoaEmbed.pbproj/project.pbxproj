@@ -160,8 +160,8 @@
 		};
 		29B97316FDCFA39411CA2CEA = {
 			isa = PBXFileReference;
-			path = main.m;
-			refType = 4;
+			path = main.mm;
+			refType = 2;
 		};
 		29B97317FDCFA39411CA2CEA = {
 			children = (
@@ -226,11 +226,12 @@
 			);
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = ../../../embedding/browser/cocoa/src/build;
-				HEADER_SEARCH_PATHS = ../../../embedding/browser/cocoa/src/build/CHBrowserView.framework/Headers;
+				HEADER_SEARCH_PATHS = "../../../dist/include/string ../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/sdk/xpcom/include ../../../dist/include/embed_base ../../../embedding/browser/cocoa/src/build/CHBrowserView.framework/Headers";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = ../../../dist/bin;
 				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
+				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
+				PREBINDING = NO;
 				PRODUCT_NAME = CocoaEmbed;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";

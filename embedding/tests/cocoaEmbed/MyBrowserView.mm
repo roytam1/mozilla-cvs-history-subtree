@@ -8,8 +8,7 @@
 - (IBAction)load:(id)sender
 {
   NSString* str = [urlbar stringValue];
-  NSURL* url = [NSURL URLWithString:str];
-  [browserView loadURI:url flags:NSLoadFlagsNone];
+  [browserView loadURI:str referrer:nil flags:NSLoadFlagsNone];
 }
 
 - (void)awakeFromNib 
@@ -125,6 +124,29 @@
   }
 }
 
+- (void)onStatusChange:(NSString*)aMessage
+{
+  NSLog(@"Status is %@", aMessage);
+}
+
+- (void)onSecurityStateChange:(unsigned long)newState
+{
+}
+
+- (void)onShowContextMenu:(int)flags domEvent:(nsIDOMEvent*)aEvent domNode:(nsIDOMNode*)aNode
+{
+  NSLog(@"Showing context menu");
+}
+
+- (void)onShowTooltip:(NSPoint)where withText:(NSString*)text
+{
+  NSLog(@"Showing tooltip %@", text);
+}
+
+- (void)onHideTooltip
+{
+}
+
 - (NSString *)title 
 {
   NSWindow* window = [self window];
@@ -156,6 +178,21 @@
 {
   // XXX not implemented 
   return NULL;
+}
+
+- (NSMenu*)getContextMenu
+{
+  return nil;
+}
+
+- (NSWindow*)getNativeWindow
+{
+  return [self window];
+}
+
+- (BOOL)shouldAcceptDragFromSource:(id)dragSource
+{
+  return NO;
 }
 
 @end
