@@ -284,7 +284,7 @@
 				FRAMEWORK_SEARCH_PATHS = "";
 				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ ../ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
-				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src";
+				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src /Volumes/Development/Trees/Chimera/mozilla/dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
 				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
@@ -738,6 +738,7 @@
 				F52D5CE0027D412A01A80166,
 				F5960E9C02BA686001000103,
 				F55A4DF40380705A01A80166,
+				F5461CE303AAC4F401A96660,
 			);
 			isa = PBXFrameworksBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3760,6 +3761,24 @@
 		};
 		F5461CBF03AAC36B01A96660 = {
 			fileRef = F5461CBB03AAC25C01A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5461CE203AAC4F401A96660 = {
+			isa = PBXFileReference;
+			name = libjsloader.dylib;
+			path = ../dist/Embed/components/libjsloader.dylib;
+			refType = 2;
+		};
+		F5461CE303AAC4F401A96660 = {
+			fileRef = F5461CE203AAC4F401A96660;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5461CE403AAC51D01A96660 = {
+			fileRef = F5461CE203AAC4F401A96660;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -10104,6 +10123,7 @@
 				F6BD644E01B315FA01A962F7,
 				F6BD644F01B315FA01A962F7,
 				F6BD645001B315FA01A962F7,
+				F5461CE203AAC4F401A96660,
 				F655020201B480F201A962F7,
 				F517941F027F3F2901A967DF,
 				F53A902202C1127A01A967F3,
@@ -10235,6 +10255,7 @@
 				F6BD64A101B3167601A962F7,
 				F6BD64A201B3167601A962F7,
 				F6BD64A301B3167601A962F7,
+				F5461CE403AAC51D01A96660,
 				F6BD64A401B3167601A962F7,
 				F6BD64A501B3167601A962F7,
 				F6BD64A601B3167601A962F7,
