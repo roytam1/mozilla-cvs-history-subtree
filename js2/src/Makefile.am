@@ -1,3 +1,5 @@
+CFLAGS=-Wall -Wconversion
+CPPFLAGS=-Wall -Wconversion
 
 include $(top_srcdir)/common.mk
 
@@ -10,6 +12,7 @@ libjs2_a_SOURCES = \
 	formatter.cpp \
 	hash.cpp \
 	js2runtime.cpp \
+	js2execution.cpp \
 	jsarray.cpp \
 	jsmath.cpp \
 	jsstring.cpp \
