@@ -85,17 +85,17 @@ namespace fd {
 #elif defined(linux)
 
 namespace fd {
-    inline double atan(double x)            { return ::atan(x); }
-    inline double atan2(double x, double y) { return ::atan2(x, y); }
-    inline double ceil(double x)            { return ::ceil(x); }
-    inline double cos(double x)             { return ::cos(x); }
-    inline double fabs(double x)            { return ::fabs(x); }
-    inline double floor(double x)           { return ::floor(x); }
-    inline double fmod(double x, double y)  { return ::fmod(x, y); }
-    inline double sin(double x)             { return ::sin(x); }
-    inline double sqrt(double x)            { return ::sqrt(x); }
-    inline double tan(double x)             { return ::tan(x); }
-    inline double copysign(double x)        { return ::copysign(x); }
+    inline double atan(double x)               { return ::atan(x); }
+    inline double atan2(double x, double y)    { return ::atan2(x, y); }
+    inline double ceil(double x)               { return ::ceil(x); }
+    inline double cos(double x)                { return ::cos(x); }
+    inline double fabs(double x)               { return ::fabs(x); }
+    inline double floor(double x)              { return ::floor(x); }
+    inline double fmod(double x, double y)     { return ::fmod(x, y); }
+    inline double sin(double x)                { return ::sin(x); }
+    inline double sqrt(double x)               { return ::sqrt(x); }
+    inline double tan(double x)                { return ::tan(x); }
+    inline double copysign(double x, double y) { return ::copysign(x, y); }
 }
 
 namespace fd {
@@ -106,10 +106,10 @@ namespace fd {
         double fd_log __P((double));
         double fd_pow __P((double, double));
     }
-    inline double asin(double x)                 { return fd_atan2(x, y); }
-    inline double acos(double x)                 { return fd_copysign(x, y); }
-    inline double exp(double x)                  { return fd_pow(x, y); }
-    inline double log(double x)                  { return fd_pow(x, y); }
+    inline double asin(double x)                 { return fd_asin(x); }
+    inline double acos(double x)                 { return fd_acos(x); }
+    inline double exp(double x)                  { return fd_exp(x); }
+    inline double log(double x)                  { return fd_log(x); }
     inline double pow(double x, double y)        { return fd_pow(x, y); }
 }
 

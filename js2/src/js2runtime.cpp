@@ -2461,19 +2461,19 @@ JSValue Math_acos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     if (argc == 0)
         return kNaNValue;
-    return fd::acos(argv[0].toNumber(cx).f64);
+    return JSValue(fd::acos(argv[0].toNumber(cx).f64));
 }
 JSValue Math_asin(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     if (argc == 0)
         return kNaNValue;
-    return fd::asin(argv[0].toNumber(cx).f64);
+    return JSValue(fd::asin(argv[0].toNumber(cx).f64));
 }
 JSValue Math_atan(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     if (argc == 0)
         return kNaNValue;
-    return fd::atan(argv[0].toNumber(cx).f64);
+    return JSValue(fd::atan(argv[0].toNumber(cx).f64));
 }
 JSValue Math_atan2(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
@@ -2481,19 +2481,19 @@ JSValue Math_atan2(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
         return kNaNValue;
     float64 y = argv[0].toNumber(cx).f64;
     float64 x = argv[1].toNumber(cx).f64;
-    return fd::atan2(y, x);
+    return JSValue(fd::atan2(y, x));
 }
 JSValue Math_ceil(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     if (argc == 0)
         return kNaNValue;
-    return fd::ceil(argv[0].toNumber(cx).f64);
+    return JSValue(fd::ceil(argv[0].toNumber(cx).f64));
 }
 JSValue Math_cos(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
     if (argc == 0)
         return kNaNValue;
-    return fd::cos(argv[0].toNumber(cx).f64);
+    return JSValue(fd::cos(argv[0].toNumber(cx).f64));
 }
 JSValue Math_exp(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
