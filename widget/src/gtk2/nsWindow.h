@@ -229,9 +229,14 @@ public:
     void               GrabPointer  (void);
     void               GrabKeyboard (void);
     void               ReleaseGrabs (void);
-    void               SetPluginType(PRBool aIsXembed);
 
-    Window              mOldFocusWindow;
+    void               SetPluginType(PRBool aIsXembed);
+    void               SetNonXEmbedPluginFocus(void);
+    void               LoseNonXEmbedPluginFocus(void);
+
+    Window             mOldFocusWindow;
+
+    static guint32     mLastButtonPressTime;
 
 #ifdef USE_XIM
     void               IMEComposeStart(void);
