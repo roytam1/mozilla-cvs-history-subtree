@@ -706,7 +706,7 @@ nsWebShell::OnOverLink(nsIContent* aContent,
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsAutoString uStr;
-    rv = textToSubURI->UnEscapeNonAsciiURI(charset, spec, uStr);    
+    rv = textToSubURI->UnEscapeURIForUI(charset, spec, uStr);    
 
     if (NS_SUCCEEDED(rv))
       rv = browserChrome->SetStatus(nsIWebBrowserChrome::STATUS_LINK, uStr.get());
