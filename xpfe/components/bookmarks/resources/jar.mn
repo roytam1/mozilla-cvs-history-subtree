@@ -30,7 +30,7 @@ comm.jar:
 	content/communicator/bookmarks/bookmarksManager.js
 	content/communicator/bookmarks/bookmarksOverlay.xul
 	content/communicator/bookmarks/bm-panel.xul
-	content/communicator/bookmarks/bookmarksPanel.js
+	content/communicator/bookmarks/bm-panel.js
 	content/communicator/bookmarks/findBookmark.xul
 	content/communicator/bookmarks/findBookmark.js
 
