@@ -188,6 +188,7 @@ function onOK()
       const kLFIID = Components.interfaces.nsILocalFile;
       const kLF = Components.classes[kLFContractID].createInstance(kLFIID);
       kLF.initWithUnicodePath(url);
+      if (kLF.exists()) 
       url = kLF.URL;
     }
     catch (e) {
