@@ -18,9 +18,13 @@
 #
 # Contributor(s): 
 
-DEPTH= ../../..
+DEPTH= ../../../..
 
-PLUGLET=test
-CLASSES=test.class
-HTML=test.html
-include ../config/rules.mk
+PLUGLET=DOMViewer
+CLASSES=DOMViewerFactory.class DOMAccessPanel.class DOMTreeDumper.class
+HTML=dom.html
+
+include ../../config/rules.mk
+
+
+

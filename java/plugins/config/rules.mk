@@ -17,15 +17,51 @@
 # Rights Reserved.
 #
 # Contributor(s): 
+# 
+# Igor Kushnirskiy idk@eng.sun.com
 
 
-DOMViewer.jar: DOMViewerFactory.class DOMAccessPanel.class DOMTreeDumper.class manifest
-	$(JDKHOME)/bin/jar cvfm DOMViewer.jar manifest *.class
+include $(DEPTH)/config/autoconf.mk
+include $(DEPTH)/config/config.mk
+
+ifneq ($(PACKAGE_BUILD),)
+	PLUGLETS_DIR=$(DIST)/javadev/examples
+	MISC_DIR=$(DIST)/javadev/misc
+	HTML_DIR=$(DIST)/javadev/html
+else 
+	PLUGLETS_DIR=$(DIST)/bin/plugins
+	MISC_DIR=$(DIST)/bin/res/javadev/pluglets
+	HTML_DIR=$(DIST)/bin/res/javadev/pluglets
+endif
+
+$(PLUGLET).jar: $(CLASSES) manifest
+	$(JDKHOME)/bin/jar cvfm $(PLUGLET).jar manifest *.class
 
 .SUFFIXES: .java .class
 .java.class:
 	$(JDKHOME)/bin/javac -classpath .:../../classes:$(CLASSPATH):JavaDOM.jar $<
 clobber:
 	rm *.class *.jar
-install:
-	cp *.jar $(PLUGLET)
+clean : clobber
+
+
+ifneq ($(HTML),)
+      EXPORT_DEPS += export_html
+endif
+
+ifneq ($(MISC),)
+      EXPORT_DEPS += export_misc
+endif
+
+export: $(PLUGLET).jar $(EXPORT_DEPS)
+	$(INSTALL) $(PLUGLET).jar $(PLUGLETS_DIR)
+
+export_html :
+	$(INSTALL) $(HTML) $(HTML_DIR)
+
+export_misc :
+	$(INSTALL) $(MISC) $(MISC_DIR)
+
+install: export
+
+
