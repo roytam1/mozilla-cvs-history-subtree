@@ -39,7 +39,7 @@
 
 SYSTEM_INFO=`uname -a`
 OS_ARCH=`uname -s`
-if [ $OS_ARCH = "Windows_NT" ]
+if [ $OS_ARCH = "Windows_NT" ] || [ $OS_ARCH = "OS/2" ]
 then
 	NULL_DEVICE=nul
 else
