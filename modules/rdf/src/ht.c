@@ -5841,6 +5841,7 @@ htIsOpLocked(HT_Resource node, RDF_Resource token)
 static PRBool
 rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
 {
+	HT_Pane			paneList;
 	char			*url = NULL, *temp;
 	PRBool			retVal = PR_TRUE;
 	int			loop;
@@ -5876,6 +5877,16 @@ rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 			if (url != NULL)
 			{
 				/* save away url */
+				paneList = gHTTop;
+				while (paneList != NULL)
+				{
+					if ((!paneList->personaltoolbar) &&
+					    (!paneList->toolbar) &&
+					    (!paneList->bookmarkmenu) &&
+					    (!paneList->special))	break;
+					paneList = paneList->next;
+				}
+				if (paneList == NULL)	paneList = gHTTop;
 				HT_LaunchURL(gHTTop, url, NULL);
 
 				XP_FREE(url);
@@ -6815,7 +6826,7 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 		}
 		if (pane != NULL)
 		{
-			if ((view != NULL) && (parent != NULL))
+			if (parent != NULL)
 			{
 				if (startsWith("ftp://", resourceID(u)))
 				{
@@ -6836,7 +6847,10 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 				gAutoOpenPane = NULL;
 				htSetBookmarkAddDateToNow(u);
 
-				HT_SetSelectedView (pane, view);
+				if (view != NULL)
+				{
+					HT_SetSelectedView (pane, view);
+				}
 				retVal = PR_TRUE;
 			}
 		}
