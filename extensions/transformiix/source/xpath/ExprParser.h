@@ -60,7 +60,7 @@ protected:
                                             txIParseContext* aContext);
     static LocationStep* createLocationStep(ExprLexer& lexer,
                                             txIParseContext* aContext);
-    static txNodeTest* createNodeTest(ExprLexer& lexer);
+    static txNodeTypeTest* createNodeTypeTest(ExprLexer& lexer);
     static Expr* createPathExpr(ExprLexer& lexer, txIParseContext* aContext);
     static Expr* createUnionExpr(ExprLexer& lexer, txIParseContext* aContext);
                   

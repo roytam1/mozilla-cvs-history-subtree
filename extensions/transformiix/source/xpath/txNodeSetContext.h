@@ -46,9 +46,11 @@ class txNodeSetContext : public txIEvalContext
 public:
     txNodeSetContext(NodeSet* aContextNodeSet, txIMatchContext* aContext)
         : mContextSet(aContextNodeSet), mPosition(0), mInner(aContext)
-    {}
+    {
+    }
     ~txNodeSetContext()
-    {}
+    {
+    }
 
     // Iteration over the given NodeSet
     MBool hasNext()
@@ -59,12 +61,6 @@ public:
     {
         NS_ASSERTION(mPosition < size(), "Out of bounds.");
         mPosition++;
-    }
-
-    void previous()
-    {
-        NS_ASSERTION(mPosition, "Out of bounds.");
-        mPosition--;
     }
 
     TX_DECL_EVAL_CONTEXT;

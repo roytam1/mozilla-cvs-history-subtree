@@ -76,10 +76,10 @@ FunctionCall::~FunctionCall()
  * Adds the given parameter to this FunctionCall's parameter list
  * @param expr the Expr to add to this FunctionCall's parameter list
 **/
-nsresult FunctionCall::addParam(Expr* expr)
+nsresult FunctionCall::addParam(Expr* aExpr)
 {
-    if (expr)
-      params.add(expr);
+    if (aExpr)
+        params.add(aExpr);
     return NS_OK;
 } //-- addParam
 

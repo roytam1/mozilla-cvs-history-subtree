@@ -85,7 +85,7 @@ ExprResult* ElementAvailableFunctionCall::evaluate(txIEvalContext* aContext)
                     aNSID = mStylesheetNode->lookupNamespaceID(prefixAtom);
                     TX_IF_RELEASE_ATOM(prefixAtom);
                 }
-                if (kNameSpaceID_XSLT == aNSID) {
+                if (aNSID == kNameSpaceID_XSLT) {
                     String localName;
                     XMLUtils::getLocalPart(property, localName);
                     if ( localName.isEqual(APPLY_IMPORTS) ||

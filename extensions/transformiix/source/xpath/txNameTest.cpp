@@ -32,7 +32,7 @@ txNameTest::txNameTest(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID,
     :mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID),
      mNodeType(aNodeType)
 {
-    if (txXMLAtoms::_empty == aPrefix)
+    if (aPrefix == txXMLAtoms::_empty)
         mPrefix = 0;
     NS_ASSERTION(aLocalName, "txNameTest without a local name?");
     TX_IF_ADDREF_ATOM(mPrefix);

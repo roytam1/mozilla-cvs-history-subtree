@@ -43,7 +43,7 @@
 **/
 MultiplicativeExpr::MultiplicativeExpr(Expr* aLeftExpr, Expr* aRightExpr,
                                        short aOp)
-    :mLeftExpr(aLeftExpr), mRightExpr(aRightExpr), mOp(aOp)
+    : mLeftExpr(aLeftExpr), mRightExpr(aRightExpr), mOp(aOp)
 {
 }
 

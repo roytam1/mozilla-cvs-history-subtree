@@ -72,7 +72,7 @@ ExprResult* UnionExpr::evaluate(txIEvalContext* aContext)
 {
     NodeSet* nodes = new NodeSet();
     if (!aContext || (expressions.getLength() == 0) || !nodes)
-            return nodes;
+        return nodes;
 
     txListIterator iter(&expressions);
 

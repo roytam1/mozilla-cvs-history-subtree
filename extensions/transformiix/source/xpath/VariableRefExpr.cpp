@@ -39,7 +39,7 @@ VariableRefExpr::VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName,
     : mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID)
 {
     NS_ASSERTION(mLocalName, "VariableRefExpr without local name?");
-    if (txXMLAtoms::_empty == mPrefix)
+    if (mPrefix == txXMLAtoms::_empty)
         mPrefix = 0;
     TX_IF_ADDREF_ATOM(mPrefix);
     TX_IF_ADDREF_ATOM(mLocalName);
@@ -47,6 +47,7 @@ VariableRefExpr::VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName,
 
 /*
  * Release the local name atom
+ */
 VariableRefExpr::~VariableRefExpr()
 {
     TX_IF_RELEASE_ATOM(mPrefix);
@@ -63,8 +64,7 @@ VariableRefExpr::~VariableRefExpr()
 ExprResult* VariableRefExpr::evaluate(txIEvalContext* aContext)
 {
     ExprResult* exprResult = 0;
-    nsresult rv = NS_OK;
-    rv = aContext->getVariable(mNamespace, mLocalName, exprResult);
+    nsresult rv = aContext->getVariable(mNamespace, mLocalName, exprResult);
     if (NS_FAILED(rv)) {
       // XXX report error, undefined variable
       return 0;

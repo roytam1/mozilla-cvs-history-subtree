@@ -37,9 +37,8 @@
 **/
 LocationStep::LocationStep(txNodeTest* aNodeTest,
                            LocationStepType aAxisIdentifier)
+    : mNodeTest(aNodeTest), mAxisIdentifier(aAxisIdentifier)
 {
-    mNodeTest = aNodeTest;
-    mAxisIdentifier = aAxisIdentifier;
 } //-- LocationStep
 
 /**
@@ -173,15 +172,15 @@ ExprResult* LocationStep::evaluate(txIEvalContext* aContext)
             break;
         case SELF_AXIS :
             if (mNodeTest->matches(node, aContext))
-                    nodes->append(node);
+                nodes->append(node);
             break;
         default: //-- Children Axis
         {
-            Node* tmpNode = node->getFirstChild();
-            while (tmpNode) {
-                if (mNodeTest->matches(tmpNode, aContext))
-                    nodes->append(tmpNode);
-                tmpNode = tmpNode->getNextSibling();
+            node = node->getFirstChild();
+            while (node) {
+                if (mNodeTest->matches(node, aContext))
+                    nodes->append(node);
+                node = node->getNextSibling();
             }
             break;
         }
@@ -282,8 +281,8 @@ void LocationStep::toString(String& aDest) {
         default:
             break;
     }
-    if (mNodeTest)
-        mNodeTest->toString(aDest);
+    NS_ASSERTION(mNodeTest, "mNodeTest is null, that's verboten");
+    mNodeTest->toString(aDest);
 
     PredicateList::toString(aDest);
 } // toString

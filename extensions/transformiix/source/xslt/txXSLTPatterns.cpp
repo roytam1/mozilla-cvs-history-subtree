@@ -324,7 +324,7 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
     #ifdef TX_EXE
     return MB_FALSE; // not implemented
     #else
-    if (Node::ELEMENT_NODE != aNode->getNodeType()) {
+    if (aNode->getNodeType() != Node::ELEMENT_NODE) {
         return MB_FALSE;
     }
 
@@ -347,7 +347,7 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
     }
     nsAutoString value;
     nsresult rv = content->GetAttr(kNameSpaceID_None, idAttr, value);
-    if (NS_CONTENT_ATTR_HAS_VALUE != rv) {
+    if (rv != NS_CONTENT_ATTR_HAS_VALUE) {
         return MB_FALSE; // no ID attribute given
     }
     const nsString ids = mIds.getConstNSString();
@@ -362,7 +362,7 @@ MBool txIdPattern::matches(Node* aNode, txIMatchContext* aContext)
         if (value.Equals(Substring(begin, pos))) {
             return MB_TRUE;
         }
-        while (space == *pos) {
+        while (*pos == space) {
             ++pos; // skip ' '
         }
         begin = pos;

@@ -125,14 +125,7 @@ public:
     **/
     BooleanFunctionCall(BooleanFunctions aType);
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param ps the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_EVALUATE;
 
 private:
     BooleanFunctions mType;
@@ -148,14 +141,7 @@ public:
     ErrorFunctionCall();
     ErrorFunctionCall(const String& errorMsg);
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param ps the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_EVALUATE;
 
     void setErrorMessage(String& errorMsg);
 
@@ -187,14 +173,7 @@ public:
      */
     NodeSetFunctionCall(NodeSetFunctions aType);
 
-    /*
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param ps the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     */
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_EVALUATE;
 
 private:
     NodeSetFunctions mType;
@@ -226,14 +205,7 @@ public:
     **/
     StringFunctionCall(StringFunctions aType);
 
-    /**
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param ps the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-    **/
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_EVALUATE;
 
 private:
     StringFunctions mType;
@@ -260,14 +232,7 @@ public:
      */
     NumberFunctionCall(NumberFunctions aType);
 
-    /*
-     * Evaluates this Expr based on the given context node and processor state
-     * @param context the context node for evaluation of this Expr
-     * @param ps the ContextState containing the stack information needed
-     * for evaluation
-     * @return the result of the evaluation
-     */
-    ExprResult* evaluate(txIEvalContext* aContext);
+    TX_DECL_EVALUATE;
 
 private:
     NumberFunctions mType;

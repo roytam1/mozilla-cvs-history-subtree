@@ -940,7 +940,7 @@ void ProcessorState::receiveError(const String& errorMessage, nsresult aRes)
  * This method is used for XPath Extension Functions.
  * @return the FunctionCall for the function with the given name.
 **/
-#define CHECK_FN(_name) txXSLTAtoms::##_name == aName
+#define CHECK_FN(_name) aName == txXSLTAtoms::##_name
 
 nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
                                              Element* aElem,
@@ -948,7 +948,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
 {
    String err;
 
-   if (kNameSpaceID_None != aID) {
+   if (aID != kNameSpaceID_None) {
        return NS_OK;
    }
    if (CHECK_FN(document)) {
@@ -1110,7 +1110,7 @@ nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
                                                   PRInt32& aID)
 {
     #ifdef DEBUG
-    if (!aPrefix || txXMLAtoms::_empty == aPrefix) {
+    if (!aPrefix || aPrefix == txXMLAtoms::_empty) {
         // default namespace is not forwarded to xpath
         NS_ASSERTION(0, "caller should handle default namespace ''");
         aID = kNameSpaceID_None;
@@ -1118,7 +1118,7 @@ nsresult txPSParseContext::resolveNamespacePrefix(txAtom* aPrefix,
     }
     #endif
     aID = mStyle->lookupNamespaceID(aPrefix);
-    return (kNameSpaceID_Unknown != aID) ? NS_OK : NS_ERROR_FAILURE;
+    return (aID != kNameSpaceID_Unknown) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 nsresult txPSParseContext::resolveFunctionCall(txAtom* aName, PRInt32 aID,

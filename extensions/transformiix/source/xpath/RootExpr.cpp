@@ -44,7 +44,7 @@ RootExpr::RootExpr(MBool aSerialize) {
 ExprResult* RootExpr::evaluate(txIEvalContext* aContext)
 {
     Node* context;
-    if (!aContext && !(context=aContext->getContextNode())) {
+    if (!aContext && context != aContext->getContextNode()) {
         NS_ASSERTION(0, "internal error");
         return 0;
     }

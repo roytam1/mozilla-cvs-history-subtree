@@ -91,8 +91,11 @@ public:
 
 };
 
+#define TX_DECL_EVALUATE \
+    ExprResult* evaluate(txIEvalContext* aContext)
+
 #define TX_DECL_EXPR \
-    ExprResult* evaluate(txIEvalContext* aContext); \
+    TX_DECL_EVALUATE; \
     void toString(String& aDest)
 
 
@@ -118,7 +121,7 @@ public:
      * Adds the given parameter to this FunctionCall's parameter list
      * @param expr the Expr to add to this FunctionCall's parameter list
     **/
-    nsresult addParam(Expr* expr);
+    nsresult addParam(Expr* aExpr);
 
     /*
      * XXX txIEvalContext should be txIParseContest, to do
@@ -286,7 +289,7 @@ public:
     **/
     void add(Expr* expr);
 
-    void evaluatePredicates(NodeSet* nodes, txIMatchContext* aContext);
+    void evaluatePredicates(NodeSet* aNodes, txIMatchContext* aContext);
 
     /**
      * returns true if this predicate list is empty
@@ -547,6 +550,7 @@ class VariableRefExpr : public Expr {
 public:
 
     VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID);
+    ~VariableRefExpr();
 
     TX_DECL_EXPR;
 

@@ -31,7 +31,7 @@
  * Creates a new txNodeTypeTest of the given type
  */
 txNodeTypeTest::txNodeTypeTest(NodeType aNodeType)
-    :mNodeType(aNodeType), mNodeName(0)
+    : mNodeType(aNodeType), mNodeName(0)
 {
 }
 
@@ -57,13 +57,13 @@ MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
 
     switch (mNodeType) {
         case COMMENT_TYPE:
-            return Node::COMMENT_NODE == type;
+            return type == Node::COMMENT_NODE;
         case TEXT_TYPE:
-            return (Node::TEXT_NODE == type ||
-                    Node::CDATA_SECTION_NODE == type) &&
+            return (type == Node::TEXT_NODE ||
+                    type == Node::CDATA_SECTION_NODE) &&
                    !aContext->isStripSpaceAllowed(aNode);
         case PI_TYPE:
-            if (Node::PROCESSING_INSTRUCTION_NODE == type) {
+            if (type == Node::PROCESSING_INSTRUCTION_NODE) {
                 txAtom* localName = 0;
                 MBool result;
                 result = !mNodeName ||
@@ -74,8 +74,8 @@ MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
             }
             return MB_FALSE;
         case NODE_TYPE:
-            return ((Node::TEXT_NODE !=type &&
-                     Node::CDATA_SECTION_NODE !=type) ||
+            return ((type != Node::TEXT_NODE &&
+                     type != Node::CDATA_SECTION_NODE) ||
                     !aContext->isStripSpaceAllowed(aNode));
     }
     return MB_TRUE;

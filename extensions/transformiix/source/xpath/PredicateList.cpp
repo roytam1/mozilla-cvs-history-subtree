@@ -57,20 +57,20 @@ void PredicateList::add(Expr* expr)
     predicates.add(expr);
 } // add
 
-void PredicateList::evaluatePredicates(NodeSet* nodes,
+void PredicateList::evaluatePredicates(NodeSet* aNodes,
                                        txIMatchContext* aContext)
 {
-    NS_ASSERTION(nodes, "called evaluatePredicates with NULL NodeSet");
-    if (!nodes)
+    NS_ASSERTION(aNodes, "called evaluatePredicates with NULL NodeSet");
+    if (!aNodes)
         return;
 
     NodeSet newNodes;
     txListIterator iter(&predicates);
-    while (iter.hasNext() && !nodes->isEmpty()) {
+    while (iter.hasNext() && !aNodes->isEmpty()) {
         Expr* expr = (Expr*)iter.next();
-        txNodeSetContext predContext(nodes, aContext);
+        txNodeSetContext predContext(aNodes, aContext);
         /*
-         * add nodes to newNodes that match the expression
+         * add aNodes to newNodes that match the expression
          * or, if the result is a number, add the node with the right
          * position
          */
@@ -95,8 +95,8 @@ void PredicateList::evaluatePredicates(NodeSet* nodes,
             delete exprResult;
         }
         // Move new NodeSet to the current one
-        nodes->clear();
-        nodes->append(&newNodes);
+        aNodes->clear();
+        aNodes->append(&newNodes);
     }
 }
 

@@ -40,7 +40,7 @@
  * Creates a new BooleanExpr using the given operator
 **/
 BooleanExpr::BooleanExpr(Expr* leftExpr, Expr* rightExpr, short op) 
-    :mOp(op), mLeftExpr(leftExpr), mRightExpr(rightExpr)
+    : mOp(op), mLeftExpr(leftExpr), mRightExpr(rightExpr)
 {
 } // BooleanExpr
 
@@ -69,9 +69,9 @@ ExprResult* BooleanExpr::evaluate(txIEvalContext* aContext)
     }
 
     // check left expression for early decision
-    if ((mOp == OR) && (lval))
+    if (mOp == OR && lval)
         return new BooleanResult(MB_TRUE);
-    if ((mOp == AND) && (!lval)) 
+    if (mOp == AND && !lval) 
         return new BooleanResult(MB_FALSE);
 
     MBool rval = MB_FALSE;

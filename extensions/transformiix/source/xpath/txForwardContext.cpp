@@ -51,7 +51,7 @@ PRUint32 txForwardContext::size()
 PRUint32 txForwardContext::position()
 {
     int pos = mContextSet->indexOf(mContext);
-    NS_ASSERTION(pos>=0, "Context is not member of context node list.");
+    NS_ASSERTION(pos >= 0, "Context is not member of context node list.");
     return (PRUint32)(pos+1);
 }
 

@@ -40,7 +40,7 @@
 
 Node* txNodeSetContext::getContextNode()
 {
-    return mContextSet->get(mPosition-1);
+    return mContextSet->get(mPosition - 1);
 }
 
 PRUint32 txNodeSetContext::size()
@@ -55,7 +55,7 @@ PRUint32 txNodeSetContext::position()
 }
 
 nsresult txNodeSetContext::getVariable(PRInt32 aNamespace, txAtom* aLName,
-                                 ExprResult*& aResult)
+                                       ExprResult*& aResult)
 {
     NS_ASSERTION(mInner, "mInner is null!!!");
     return mInner->getVariable(aNamespace, aLName, aResult);

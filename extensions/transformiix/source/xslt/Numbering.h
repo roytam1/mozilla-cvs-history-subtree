@@ -42,19 +42,19 @@ class Numbering {
 
 public:
 
-    static void doNumbering (Element* xslNumber, String& dest,
-                             ProcessorState* ps);
+    static void doNumbering(Element* xslNumber, String& dest,
+                            ProcessorState* ps);
 
 private:
     static int countPreceedingSiblings
         (txPattern* patternExpr, Node* context, ProcessorState* ps);
 
     static NodeSet* getAncestorsOrSelf
-        ( txPattern* countExpr,
-          txPattern* from,
-          Node* context,
-          ProcessorState* ps,
-          MBool findNearest );
+        (txPattern* countExpr,
+         txPattern* from,
+         Node* context,
+         ProcessorState* ps,
+         MBool findNearest );
 };
 #endif
 

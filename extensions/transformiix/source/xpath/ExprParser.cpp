@@ -54,7 +54,7 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
     AttributeValueTemplate* avt = new AttributeValueTemplate();
 
     if (attValue.isEmpty()) {
-        return avt; //XXX should return 0, but that causes crash in lre12
+        return avt;
     }
 
     PRInt32 size = attValue.length();
@@ -300,9 +300,9 @@ Expr* ExprParser::createFilterExpr(ExprLexer& lexer, txIParseContext* aContext)
         case Token::VAR_REFERENCE :
             {
                 txAtom *prefix, *lName;
-                nsresult rv = NS_OK;
                 PRInt32 nspace;
-                rv = resolveQName(tok->value, prefix, aContext, lName, nspace);
+                nsresult rv = resolveQName(tok->value, prefix, aContext,
+                                           lName, nspace);
                 if (NS_FAILED(rv)) {
                     // XXX error report namespace resolve failed
                     return 0;
@@ -362,7 +362,6 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer,
                                              txIParseContext* aContext)
 {
     FunctionCall* fnCall = 0;
-    nsresult rv = NS_OK;
 
     Token* tok = lexer.nextToken();
     if (tok->type != Token::FUNCTION_NAME) {
@@ -459,8 +458,8 @@ FunctionCall* ExprParser::createFunctionCall(ExprLexer& lexer,
     else {
         txAtom *prefix, *lName;
         PRInt32 namespaceID;
-        nsresult rv = NS_OK;
-        rv = resolveQName(tok->value, prefix, aContext, lName, namespaceID);
+        nsresult rv = resolveQName(tok->value, prefix, aContext,
+                                   lName, namespaceID);
         if (NS_FAILED(rv)) {
             // XXX error report namespace resolve failed
             return 0;
@@ -580,10 +579,9 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer,
                 {
                     // resolve QName
                     txAtom *prefix, *lName;
-                    nsresult rv = NS_OK;
                     PRInt32 nspace;
-                    rv = resolveQName(tok->value, prefix, aContext,
-                                      lName, nspace);
+                    nsresult rv = resolveQName(tok->value, prefix, aContext,
+                                               lName, nspace);
                     if (NS_FAILED(rv)) {
                         // XXX error report namespace resolve failed
                         return 0;
@@ -608,7 +606,7 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer,
                 break;
             default:
                 lexer.pushBack();
-                nodeTest = createNodeTest(lexer);
+                nodeTest = createNodeTypeTest(lexer);
                 if (!nodeTest) {
                     return 0;
                 }
@@ -635,9 +633,9 @@ LocationStep* ExprParser::createLocationStep(ExprLexer& lexer,
  * This method only handles comment(), text(), processing-instructing() and node()
  *
 **/
-txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
+txNodeTypeTest* ExprParser::createNodeTypeTest(ExprLexer& lexer) {
 
-    txNodeTest* nodeTest = 0;
+    txNodeTypeTest* nodeTest = 0;
 
     Token* nodeTok = lexer.nextToken();
 
@@ -673,7 +671,7 @@ txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
     if (nodeTok->type == Token::PROC_INST &&
         lexer.peek()->type == Token::LITERAL) {
         Token* tok = lexer.nextToken();
-        ((txNodeTypeTest*)nodeTest)->setNodeName(tok->value);
+        nodeTest->setNodeName(tok->value);
     }
     if (lexer.nextToken()->type != Token::R_PAREN) {
         lexer.pushBack();
@@ -683,7 +681,7 @@ txNodeTest* ExprParser::createNodeTest(ExprLexer& lexer) {
     }
 
     return nodeTest;
-} //-- createNodeTest
+} //-- createNodeTypeTest
 
 /**
  * Creates a PathExpr using the given ExprLexer
@@ -948,7 +946,6 @@ nsresult ExprParser::resolveQName(const String& aQName,
                                   txAtom*& aPrefix, txIParseContext* aContext,
                                   txAtom*& aLocalName, PRInt32& aNamespace)
 {
-    nsresult rv = NS_OK;
     aNamespace = kNameSpaceID_None;
     String prefix, lName;
     int idx = aQName.indexOf(':');
@@ -958,7 +955,7 @@ nsresult ExprParser::resolveQName(const String& aQName,
         if (!aPrefix) {
             return NS_ERROR_OUT_OF_MEMORY;
         }
-        aQName.subString(idx+1, lName);
+        aQName.subString(idx + 1, lName);
         aLocalName = TX_GET_ATOM(lName);
         if (!aLocalName) {
             return NS_ERROR_OUT_OF_MEMORY;
