@@ -111,7 +111,7 @@ class LossyConvertEncoding
 
 NS_COM
 void
-CopyUCS2toASCII( const nsAString& aSource, nsAWritableCString& aDest )
+CopyUCS2toASCII( const nsAString& aSource, nsACString& aDest )
   {
       // right now, this won't work on multi-fragment destinations
     aDest.SetLength(aSource.Length());
@@ -126,7 +126,7 @@ CopyUCS2toASCII( const nsAString& aSource, nsAWritableCString& aDest )
 
 NS_COM
 void
-CopyASCIItoUCS2( const nsACString& aSource, nsAWritableString& aDest )
+CopyASCIItoUCS2( const nsACString& aSource, nsAString& aDest )
   {
       // right now, this won't work on multi-fragment destinations
     aDest.SetLength(aSource.Length());
@@ -246,7 +246,7 @@ NS_COM
 void 
 CopyUnicodeTo( const nsReadingIterator<PRUnichar>& aSrcStart,
                const nsReadingIterator<PRUnichar>& aSrcEnd,
-               nsAWritableString& aDest )
+               nsAString& aDest )
   {
     nsWritingIterator<PRUnichar> writer;
     aDest.SetLength(Distance(aSrcStart, aSrcEnd));
@@ -260,7 +260,7 @@ NS_COM
 void 
 AppendUnicodeTo( const nsReadingIterator<PRUnichar>& aSrcStart,
                  const nsReadingIterator<PRUnichar>& aSrcEnd,
-                 nsAWritableString& aDest )
+                 nsAString& aDest )
   {
     nsWritingIterator<PRUnichar> writer;
     PRUint32 oldLength = aDest.Length();
@@ -323,18 +323,18 @@ class ConvertToUpperCase
 
 NS_COM
 void
-ToUpperCase( nsAWritableString& aString )
+ToUpperCase( nsAString& aString )
   {
-    nsAWritableString::iterator fromBegin, fromEnd;
+    nsAString::iterator fromBegin, fromEnd;
     ConvertToUpperCase<PRUnichar> converter;
     copy_string(aString.BeginWriting(fromBegin), aString.EndWriting(fromEnd), converter);
   }
 
 NS_COM
 void
-ToUpperCase( nsAWritableCString& aCString )
+ToUpperCase( nsACString& aCString )
   {
-    nsAWritableCString::iterator fromBegin, fromEnd;
+    nsACString::iterator fromBegin, fromEnd;
     ConvertToUpperCase<char> converter;
     copy_string(aCString.BeginWriting(fromBegin), aCString.EndWriting(fromEnd), converter);
   }
@@ -360,18 +360,18 @@ class ConvertToLowerCase
 
 NS_COM
 void
-ToLowerCase( nsAWritableString& aString )
+ToLowerCase( nsAString& aString )
   {
-    nsAWritableString::iterator fromBegin, fromEnd;
+    nsAString::iterator fromBegin, fromEnd;
     ConvertToLowerCase<PRUnichar> converter;
     copy_string(aString.BeginWriting(fromBegin), aString.EndWriting(fromEnd), converter);
   }
 
 NS_COM
 void
-ToLowerCase( nsAWritableCString& aCString )
+ToLowerCase( nsACString& aCString )
   {
-    nsAWritableCString::iterator fromBegin, fromEnd;
+    nsACString::iterator fromBegin, fromEnd;
     ConvertToLowerCase<char> converter;
     copy_string(aCString.BeginWriting(fromBegin), aCString.EndWriting(fromEnd), converter);
   }
