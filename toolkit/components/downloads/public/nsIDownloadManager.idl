@@ -49,6 +49,7 @@ interface nsIWebBrowserPersist;
 interface nsIMIMEInfo;
 interface nsIRDFDataSource;
 interface nsIDownloadProgressListener;
+interface nsISupportsArray;
 
 [scriptable, uuid(9be66cc0-1dd1-11b2-8617-e3a3ed26e3b0)]
 interface nsIDownloadManager : nsISupports {
@@ -174,6 +175,11 @@ interface nsIDownloadManager : nsISupports {
    * The number of files currently being downloaded.
    */
   readonly attribute long activeDownloadCount;
+
+  /**
+   * An enumeration of active downloads.
+   */
+  readonly attribute nsISupportsArray activeDownloads;
 
   /** 
    * Update the download datasource. 

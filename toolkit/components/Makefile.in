@@ -48,7 +48,6 @@ else
 DIRS = 		\
 	autocomplete \
 	console \
-	downloads \
 	filepicker \
 	history \
 	passwordmgr \
@@ -56,12 +55,13 @@ DIRS = 		\
 	satchel \
 	viewconfig \
 	viewsource \
-	build \
 	$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
 DIRS += alerts
 endif
+
+DIRS += downloads build
 
 endif
 

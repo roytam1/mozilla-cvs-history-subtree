@@ -331,6 +331,29 @@ nsDownloadManager::GetActiveDownloadCount(PRInt32* aResult)
 }
 
 NS_IMETHODIMP
+nsDownloadManager::GetActiveDownloads(nsISupportsArray** aResult)
+{
+  nsCOMPtr<nsISupportsArray> ary;
+  NS_NewISupportsArray(getter_AddRefs(ary));
+  mCurrDownloads.Enumerate(BuildActiveDownloadsList, (void*)ary);
+
+  NS_ADDREF(*aResult = ary);
+
+  return NS_OK;
+}
+
+PRInt32 PR_CALLBACK 
+nsDownloadManager::BuildActiveDownloadsList(nsHashKey* aKey, void* aData, void* aClosure)
+{
+  nsCOMPtr<nsISupportsArray> ary(do_QueryInterface((nsISupports*)aClosure));
+  nsCOMPtr<nsIDownload> dl(do_QueryInterface((nsISupports*)aData));  
+
+  ary->AppendElement(dl);
+ 
+  return kHashEnumerateNext;
+}
+
+NS_IMETHODIMP
 nsDownloadManager::SaveState()
 {
   nsCOMPtr<nsISupports> supports;

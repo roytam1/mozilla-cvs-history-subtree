@@ -108,16 +108,16 @@ NS_IMETHODIMP nsAlertsService::ShowAlertNotification(const char * aImageUrl, con
 
   if (aAlertListener)
   {
-#if 0
     nsCOMPtr<nsISupportsInterfacePointer> ifptr = do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsISupports> iSupports (do_QueryInterface(aAlertListener));
     ifptr->SetData(iSupports);
-    ifptr->SetDataIID(&NS_GET_IID(nsIAlertListener));
+    ifptr->SetDataIID(&NS_GET_IID(nsISupports));
     argsArray->AppendElement(ifptr);
-#endif
+#if 0
     argsArray->AppendElement(aAlertListener);
+#endif
   }
   
   rv = wwatch->OpenWindow(0, ALERT_CHROME_URL, "_blank",

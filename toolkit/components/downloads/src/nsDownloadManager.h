@@ -86,6 +86,7 @@ public:
   virtual ~nsDownloadManager();
 
   static PRInt32 PR_CALLBACK CancelAllDownloads(nsHashKey* aKey, void* aData, void* aClosure);
+  static PRInt32 PR_CALLBACK BuildActiveDownloadsList(nsHashKey* aKey, void* aData, void* aClosure);
   nsresult DownloadEnded(const PRUnichar* aPersistentDescriptor, const PRUnichar* aMessage); 
 
 protected:
