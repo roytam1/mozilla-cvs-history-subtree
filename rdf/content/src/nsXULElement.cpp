@@ -335,6 +335,7 @@ public:
     NS_IMETHOD SetLazyState(PRInt32 aFlags);
     NS_IMETHOD ClearLazyState(PRInt32 aFlags);
     NS_IMETHOD GetLazyState(PRInt32 aFlag, PRBool& aValue);
+    NS_IMETHOD ForceElementToOwnResource(PRBool aForce);
 
     // nsIDOMEventReceiver
     NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
@@ -451,6 +452,7 @@ private:
     nsIDOMXULElement*      mBroadcaster;        // [WEAK]
     nsCOMPtr<nsIController>             mController; // [OWNER]
     nsCOMPtr<nsIRDFCompositeDataSource> mDatabase;   // [OWNER]    
+    nsCOMPtr<nsIRDFResource>            mOwnedResource; // [OWNER]
 
     // An unreferenced bare pointer to an aggregate that can implement
     // element-specific APIs.
@@ -1521,6 +1523,24 @@ NS_IMETHODIMP
 RDFElementImpl::GetLazyState(PRInt32 aFlag, PRBool& aResult)
 {
     aResult = (mLazyState & aFlag) ? PR_TRUE : PR_FALSE;
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+RDFElementImpl::ForceElementToOwnResource(PRBool aForce)
+{
+    nsresult rv;
+
+    if (aForce) {
+        rv = GetResource(getter_AddRefs(mOwnedResource));
+        if (NS_FAILED(rv)) return rv;
+    }
+    else {
+        // drop reference
+        mOwnedResource = nsnull;
+    }
+
     return NS_OK;
 }
 

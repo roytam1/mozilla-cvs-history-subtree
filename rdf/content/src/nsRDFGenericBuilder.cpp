@@ -1739,6 +1739,17 @@ RDFGenericBuilderImpl::BuildContentFromTemplate(nsIContent *aTemplateNode,
                 if (NS_FAILED(rv)) return rv;
             }
 
+            // XXX Hackery to ensure that mailnews works. Force the
+            // element to hold a reference to the
+            // resource. Unfortunately, this'll break for HTML
+            // elements.
+            {
+                nsCOMPtr<nsIXULContent> xulele = do_QueryInterface(realKid);
+                if (xulele) {
+                    xulele->ForceElementToOwnResource(PR_TRUE);
+                }
+            }
+
             if (IsContainer(tmplKid, aChild)) {
                 rv = realKid->SetAttribute(kNameSpaceID_None, kContainerAtom, nsAutoString("true"), PR_FALSE);
                 if (NS_FAILED(rv)) return rv;
