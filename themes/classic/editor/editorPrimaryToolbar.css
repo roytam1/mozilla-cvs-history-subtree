@@ -205,18 +205,3 @@
   -moz-image-region: rect(143px 48px 159px 32px) !important;
 }
 
-#spellingButton {
-  list-style-image: url("chrome://messenger/skin/icons/chkspell-normal.gif");
-}
-
-#spellingButton:hover {
-  list-style-image: url("chrome://messenger/skin/icons/chkspell-hover.gif");
-}
-
-#spellingButton:hover:active {
-  list-style-image: url("chrome://messenger/skin/icons/chkspell-select.gif");
-}
-
-#spellingButton[disabled="true"] {
-  list-style-image: url("chrome://messenger/skin/icons/chkspell-disabled.gif");
-}
