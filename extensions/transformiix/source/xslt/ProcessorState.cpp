@@ -44,7 +44,6 @@
 #include "Names.h"
 #include "XMLParser.h"
 #include "txAtoms.h"
-#include "txNodeSetContext.h"
 
 /**
  * Creates a new ProcessorState
@@ -641,9 +640,7 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
         return;
     }
 
-    NodeSet contextset(aContext);
-    txNodeSetContext eContext(&contextset, this);
-    ExprResult* exprResult = avt->evaluate(&eContext);
+    ExprResult* exprResult = avt->evaluate(this);
     delete avt;
     if (!exprResult) {
         // XXX ErrorReport: out of memory
