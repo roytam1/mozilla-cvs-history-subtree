@@ -372,6 +372,7 @@ function onBrowserKeyPress(evt)
     }
     else if (evt.keyCode == 27) { // Escape
       closeFindBar();
+      evt.preventDefault();
     }
     else if (evt.charCode) {
       if (evt.charCode == 32) // Space
