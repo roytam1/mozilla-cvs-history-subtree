@@ -332,7 +332,7 @@ sub delete
   my $ret = 1;
   my $dn = $id;
 
-  if ($id eq "Mozilla::LDAP::Entry")
+  if (ref($id) eq "Mozilla::LDAP::Entry")
     {
       $dn = $id->getDN();
     }
