@@ -1665,6 +1665,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::CopyData(nsIInputStream *aIStream, PRInt32 a
         if (start >=
             &mCopyState->m_dataBuffer[mCopyState->m_leftOver])
         {
+            maxReadCount = FOUR_K;
             mCopyState->m_leftOver = 0;
             break;
         }
