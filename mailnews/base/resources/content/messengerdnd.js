@@ -27,6 +27,8 @@
 var RDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService().QueryInterface(Components.interfaces.nsIRDFService);
 var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService().QueryInterface(Components.interfaces.nsIDragService);
 
+var ctrlKey = false;
+
 function debugDump(msg)
 {
   // uncomment for noise
@@ -147,7 +149,10 @@ var folderObserver = {
         {
             //first check these conditions then proceed further
             debugDump("***isFolderFlavor == true \n");
-        
+
+            if (ctrlKey)
+                return false;
+
             var canCreateSubfolders = GetFolderAttribute(targetResource, "CanCreateSubfolders");
             // if cannot create subfolders then a folder cannot be dropped here     
             if (canCreateSubfolders == "false")
@@ -285,7 +290,12 @@ var folderObserver = {
                     messenger.CopyMessages(sourceFolder, targetFolder, list, false);
                 }
                 else {
-                    messenger.CopyMessages(sourceFolder, targetFolder, list, true);
+                    // fix this, will not work for multiple 3 panes
+                    var sameServer = (sourceServer == targetServer);
+                    if (! ctrlKey && sameServer) {
+                        SetNextMessageAfterDelete();
+                    }
+                    messenger.CopyMessages(sourceFolder, targetFolder, list, (! ctrlKey && sameServer));
                 }
             }
             catch (ex) {
@@ -345,6 +355,11 @@ function BeginDragThreadPane(event)
 
 function BeginDragOutliner(event, outliner, selArray, flavor)
 {
+    if (event.ctrlKey)
+        ctrlKey = true;
+    else
+        ctrlKey = false;
+
     var dragStarted = false;
 
     var transArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
