@@ -109,6 +109,7 @@ SVG_BRANCH_FILES = \
 	htmlparser/public/nsIParser.h \
 	htmlparser/src/nsExpatTokenizer.cpp \
 	htmlparser/src/nsViewSourceHTML.cpp \
+	htmlparser/src/nsWellFormedDTD.cpp \
 	layout/base/public/nsStyleConsts.h \
 	layout/build/Makefile.in \
 	layout/build/makefile.win \

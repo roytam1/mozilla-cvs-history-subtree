@@ -196,7 +196,11 @@ eAutoDetectResult CWellFormedDTD::CanParse(CParserContext& aParserContext,nsStri
        aParserContext.mMimeType.EqualsWithConversion(kXMLApplicationContentType) ||
        aParserContext.mMimeType.EqualsWithConversion(kXHTMLApplicationContentType) ||
        aParserContext.mMimeType.EqualsWithConversion(kRDFTextContentType) ||
-       aParserContext.mMimeType.EqualsWithConversion(kXULTextContentType)) {
+       aParserContext.mMimeType.EqualsWithConversion(kXULTextContentType)
+#ifdef MOZ_SVG
+       || aParserContext.mMimeType.Equals(NS_LITERAL_STRING(kSVGTextContentType))
+#endif
+       ) {
       result=ePrimaryDetect;
     }
     else {
