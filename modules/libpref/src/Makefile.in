@@ -92,7 +92,7 @@ $(LIBRARY): $(OBJS)
 
 unix/unixpref.c: unix/jsbuffer.h
 	@if test ! -d unix; then rm -f unix && mkdir unix; fi
-	$(INSTALL) $(srcdir)/unix/unixpref.c unix/
+	@if test ! -f $@; then $(INSTALL) $(srcdir)/unix/unixpref.c unix/; fi
  
 unix/jsbuffer.h: Makefile $(CONFIG_FILES)
 	@if test ! -d unix; then rm -f unix && mkdir unix; fi
