@@ -571,15 +571,14 @@
       <method name="searchBookmarks">
       <parameter name="aInput"/>
         <body><![CDATA[
+          if(!this.originalRef)
+              this.originalRef = this.tree.getAttribute("ref");
+
           if (!aInput)
             this.tree.setAttribute("ref", this.originalRef);
-          else {
-            if (!this.originalRef) {
-              this.originalRef = this.tree.getAttribute("ref");
-            }
+          else
             this.tree.setAttribute("ref",
                                    "find:datasource=rdf:bookmarks&match=http://home.netscape.com/NC-rdf#Name&method=contains&text=" + encodeURIComponent(aInput));
-          }
         ]]></body>
       </method>
 
