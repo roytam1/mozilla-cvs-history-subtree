@@ -382,12 +382,10 @@ nsNNTPProtocol::nsNNTPProtocol() : m_tempArticleFile(ARTICLE_PATH), m_tempErrorF
 	m_cancelDistribution = nsnull;
 	m_cancelID = nsnull;
 	m_cancelMessageFile = nsnull;
-	m_hostName = nsnull;
 }
 
 nsNNTPProtocol::~nsNNTPProtocol()
 {
-	nsCRT::free(m_hostName);
 	delete m_lineStreamBuffer;
 }
 
@@ -431,7 +429,7 @@ nsresult nsNNTPProtocol::Initialize(nsIURI * aURL)
       return rv;
     }
 	
-	aURL->GetHost(&m_hostName);
+	aURL->GetHost(getter_Copies(m_hostName));
 	// call base class to set up the transport
 	rv = OpenNetworkSocket(aURL);
 
@@ -489,9 +487,7 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 
   if (aURL)
   {
-	  if (m_hostName)
-		  nsCRT::free(m_hostName);
-	  aURL->GetHost(&m_hostName);
+	  aURL->GetHost(getter_Copies(m_hostName));
 	  m_runningURL = do_QueryInterface(aURL);
 
 	  // okay, now fill in our event sinks...Note that each getter ref counts before
