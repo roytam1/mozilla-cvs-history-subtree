@@ -212,19 +212,6 @@ static PRThread* _PR_CreateThread(
         thred->stack->stackSize = stackSize;
         thred->stack->thr = thred;
 
-#ifdef CT_NO_SIGTIMEDWAIT
-      thred->suspendResumeMutex = mutex_alloc();
-      if (thred->suspendResumeMutex)
-	{
-	  mutex_init(thred->suspendResumeMutex);
-	}
-      thred->suspendResumeCV = condition_alloc();
-      if (thred->suspendResumeCV)
-	{
-	  condition_init(thred->suspendResumeCV);
-	}
-#endif
-
 	    /* make the thread counted to the rest of the runtime */
 	    PR_Lock(ct_book.ml);
 	    if (thred->state & CT_THREAD_SYSTEM)
@@ -628,6 +615,7 @@ PR_IMPLEMENT(void) _PR_InitThreads(
     PR_SetThreadPriority(thred, priority);
 
     init_cthread_gc_support();
+    ct_InitTimedWaitThread();
 
 }  /* _PR_InitThreads */
 
@@ -789,39 +777,12 @@ PR_IMPLEMENT(PRStatus) PR_EnumerateThreads(PREnumerator func, void *arg)
 }  /* PR_EnumerateThreads */
 
 /*
- * PR_SuspendAll and PR_ResumeAll are called during garbage collection.  The strategy 
- * we use is to send a SIGUSR2 signal to every gc able thread that we intend to suspend.
- * The signal handler will record the stack pointer and will block until resumed by
- * the resume call.  Since the signal handler is the last routine called for the
- * suspended thread, the stack pointer will also serve as a place where all the
- * registers have been saved on the stack for the previously executing routines.
- *
- * Through global variables, we also make sure that PR_Suspend and PR_Resume does not
- * proceed until the thread is suspended or resumed.
+ * PR_SuspendAll and PR_ResumeAll are called during garbage collection.
  */
-
-/*
- * In the signal handler, we can not use condition variable notify or wait.
- * This does not work consistently across all pthread platforms.  We also can not 
- * use locking since that does not seem to work reliably across platforms.
- * Only thing we can do is yielding while testing for a global condition
- * to change.  This does work on pthread supported platforms.  We may have
- * to play with priortities if there are any problems detected.
- */
-
- /* 
-  * In AIX, you cannot use ANY pthread calls in the signal handler except perhaps
-  * pthread_yield. But that is horribly inefficient. Hence we use only sigwait, no
-  * sigtimedwait is available. We need to use another user signal, SIGUSR1. Actually
-  * SIGUSR1 is also used by exec in Java. So our usage here breaks the exec in Java,
-  * for AIX. You cannot use pthread_cond_wait or pthread_delay_np in the signal
-  * handler as all synchronization mechanisms just break down. 
-  */
 
 static void PR_SuspendSet(PRThread *thred)
 {
-#if 0
-    PRIntn rv;
+    kern_return_t rv;
 
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
 	   ("PR_SuspendSet thred %X thread id = %X\n", thred, thred->id));
@@ -834,52 +795,17 @@ static void PR_SuspendSet(PRThread *thred)
     PR_ASSERT((thred->suspend & CT_THREAD_SUSPENDED) == 0);
 
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
-	   ("doing pthread_kill in PR_SuspendSet thred %X tid = %X\n",
+	   ("doing thread_syspend in PR_SuspendSet thred %X tid = %X\n",
 	   thred, thred->id));
-    rv = pthread_kill (thred->id, SIGUSR2);
-    PR_ASSERT(0 == rv);
-#endif
+    rv = thread_suspend(cthread_thread(thred->id));
+
+    thred->suspend |= CT_THREAD_SUSPENDED;
+
+    PR_ASSERT(KERN_SUCCESS == rv);
 }
-
-static void PR_SuspendTest(PRThread *thred)
-{
-#if 0
-    PRIntn rv;
-
-    PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
-	   ("Begin PR_SuspendTest thred %X thread id = %X\n", thred, thred->id));
-
-
-    /*
-     * Wait for the thread to be really suspended. This happens when the
-     * suspend signal handler stores the stack pointer and sets the state
-     * to suspended. 
-     */
-
-#if defined(CT_NO_SIGTIMEDWAIT)
-    pthread_mutex_lock(&thred->suspendResumeMutex);
-    while ((thred->suspend & CT_THREAD_SUSPENDED) == 0)
-    {
-	    pthread_cond_timedwait(
-	        &thred->suspendResumeCV, &thred->suspendResumeMutex, &onemillisec);
-	}
-	pthread_mutex_unlock(&thred->suspendResumeMutex);
-#else
-    while ((thred->suspend & CT_THREAD_SUSPENDED) == 0)
-    {
-		rv = sigtimedwait(&sigwait_set, NULL, &onemillisec);
-    	PR_ASSERT(-1 == rv);
-	}
-#endif
-
-    PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS,
-        ("End PR_SuspendTest thred %X tid %X\n", thred, thred->id));
-#endif
-}  /* PR_SuspendTest */
 
 PR_IMPLEMENT(void) PR_ResumeSet(PRThread *thred)
 {
-#if 0
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
 	   ("PR_ResumeSet thred %X thread id = %X\n", thred, thred->id));
 
@@ -890,48 +816,10 @@ PR_IMPLEMENT(void) PR_ResumeSet(PRThread *thred)
 
     PR_ASSERT(thred->suspend & CT_THREAD_SUSPENDED);
 
-
     thred->suspend &= ~CT_THREAD_SUSPENDED;
 
-#if defined(CT_NO_SIGTIMEDWAIT)
-	pthread_kill(thred->id, SIGUSR1);
-#endif
-#endif
+    thread_resume(cthread_thread(thred->id));
 }  /* PR_ResumeSet */
-
-PR_IMPLEMENT(void) PR_ResumeTest(PRThread *thred)
-{
-#if 0
-    PRIntn rv;
-
-    PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
-	   ("Begin PR_ResumeTest thred %X thread id = %X\n", thred, thred->id));
-
-    /*
-     * Wait for the threads resume state to change
-     * to indicate it is really resumed 
-     */
-#if defined(CT_NO_SIGTIMEDWAIT)
-    pthread_mutex_lock(&thred->suspendResumeMutex);
-    while ((thred->suspend & CT_THREAD_RESUMED) == 0)
-    {
-	    pthread_cond_timedwait(
-	        &thred->suspendResumeCV, &thred->suspendResumeMutex, &onemillisec);
-    }
-    pthread_mutex_unlock(&thred->suspendResumeMutex);
-#else
-    while ((thred->suspend & CT_THREAD_RESUMED) == 0) {
-		rv = sigtimedwait(&sigwait_set, NULL, &onemillisec);
-    	PR_ASSERT(-1 == rv);
-	}
-#endif
-
-    thred->suspend &= ~CT_THREAD_RESUMED;
-
-    PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, (
-        "End PR_ResumeTest thred %X tid %X\n", thred, thred->id));
-#endif
-}  /* PR_ResumeTest */
 
 PR_IMPLEMENT(void) PR_SuspendAll()
 {
@@ -953,15 +841,6 @@ PR_IMPLEMENT(void) PR_SuspendAll()
     {
 	    if ((thred != me) && (thred->state & CT_THREAD_GCABLE))
     		PR_SuspendSet(thred);
-        thred = thred->next;
-    }
-
-    /* Wait till they are really suspended */
-    thred = ct_book.first;
-    while (thred != NULL)
-    {
-	    if ((thred != me) && (thred->state & CT_THREAD_GCABLE))
-            PR_SuspendTest(thred);
         thred = thred->next;
     }
 
@@ -994,14 +873,6 @@ PR_IMPLEMENT(void) PR_ResumeAll()
     {
 	    if ((thred != me) && (thred->state & CT_THREAD_GCABLE))
     	    PR_ResumeSet(thred);
-        thred = thred->next;
-    }
-
-    thred = ct_book.first;
-    while (thred != NULL)
-    {
-	    if ((thred != me) && (thred->state & CT_THREAD_GCABLE))
-    	    PR_ResumeTest(thred);
         thred = thred->next;
     }
 

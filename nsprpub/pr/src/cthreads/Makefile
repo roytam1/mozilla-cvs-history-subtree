@@ -26,6 +26,7 @@ CSRCS = \
 	ctsynch.c \
 	ctthread.c \
 	ctmisc.c \
+        cttwait.c \
 	$(NULL)
 
 TARGETS	= $(OBJS)

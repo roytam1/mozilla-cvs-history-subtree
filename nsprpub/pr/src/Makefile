@@ -178,7 +178,8 @@ OBJS += \
     cthreads/$(OBJDIR)/ctsynch.$(OBJ_SUFFIX) \
     cthreads/$(OBJDIR)/ctio.$(OBJ_SUFFIX) \
     cthreads/$(OBJDIR)/ctthread.$(OBJ_SUFFIX) \
-    cthreads/$(OBJDIR)/ctmisc.$(OBJ_SUFFIX)
+    cthreads/$(OBJDIR)/ctmisc.$(OBJ_SUFFIX) \
+    cthreads/$(OBJDIR)/cttwait.$(OBJ_SUFFIX)
 else
 ifdef USE_PTHREADS
 OBJS += \

@@ -29,7 +29,7 @@
 
 #if defined(_PR_NO_CTHREAD_KEY_T)
 
-#define MAX_KEYS 15
+#define MAX_KEYS 255
 
 static int cur_key;
 
@@ -70,8 +70,8 @@ cthread_key_create(cthread_key_t *key, destructor_t destructor)
   return 0;
 }
 
-int
-cthread_setspecific(cthread_key_t key, any_t value)
+static any_t *
+get_tpd_array()
 {
   any_t *key_values = cthread_data(cthread_self());
 
@@ -84,23 +84,26 @@ cthread_setspecific(cthread_key_t key, any_t value)
     cthread_set_data(cthread_self(), key_values);
   }
 
+  return key_values;
+}
+
+int
+cthread_setspecific(cthread_key_t key, any_t value)
+{
+  any_t *key_values = get_tpd_array();
+
+  if (key_destructors[key] && key_values[key])
+    (*key_destructors[key])(key_values[key]);
+
   key_values[key] = value;
+
   return 0;
 }
 
 int
 cthread_getspecific(cthread_key_t key, any_t value)
 {
-  any_t *key_values = cthread_data(cthread_self());
-
-  if (!key_values)
-  {
-    key_values = (any_t*)calloc(MAX_KEYS, sizeof(any_t));
-
-    if (!key_values) return 1;
-
-    cthread_set_data(cthread_self(), key_values);
-  }
+  any_t *key_values = get_tpd_array();
 
   *((any_t*)value) = key_values[key];
   return 0;
@@ -113,7 +116,7 @@ _cthread_callkeydestructors()
   int i;
 
   for (i = 0; i < MAX_KEYS; i ++)
-    if (key_destructors[i]) (*key_destructors[i])(key_values[i]);
+    if (key_destructors[i] && key_values[i]) (*key_destructors[i])(key_values[i]);
 
   free(key_values);
 }

@@ -1381,10 +1381,6 @@ struct PRThread {
         void *sp;                                               /* recorded sp for garbage collection */
         PRThread *next, *prev;          /* simple linked list of all threads */
         PRUint32 suspend;                       /* used to store suspend and resume flags */
-#ifdef PT_NO_SIGTIMEDWAIT
-    mutex_t suspendResumeMutex;
-    condition_t suspendResumeCV;
-#endif
 #else /* defined(_PR_PTHREADS) || defined(_PR_CTHREADS) */
     _MDLock threadLock;             /* Lock to protect thread state variables.
                                     * Protects the following fields:

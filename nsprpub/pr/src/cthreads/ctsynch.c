@@ -42,7 +42,7 @@ void _PR_InitLocks(void)
     _PR_MD_INIT_LOCKS();
 }
 
-static void pt_PostNotifies(PRLock *lock, PRBool unlock)
+static void ct_PostNotifies(PRLock *lock, PRBool unlock)
 {
     PRIntn index, rv;
     _CT_Notified post;
@@ -92,7 +92,7 @@ static void pt_PostNotifies(PRLock *lock, PRBool unlock)
         notified = notified->link;
         if (&post != prev) PR_DELETE(prev);
     } while (NULL != notified);
-}  /* pt_PostNotifies */
+}  /* ct_PostNotifies */
 
 PR_IMPLEMENT(PRLock*) PR_NewLock(void)
 {
@@ -151,7 +151,7 @@ PR_IMPLEMENT(PRStatus) PR_Unlock(PRLock *lock)
     {
         mutex_unlock(lock->mutex);
     }
-    else pt_PostNotifies(lock, PR_TRUE);
+    else ct_PostNotifies(lock, PR_TRUE);
 
     return PR_SUCCESS;
 }  /* PR_Unlock */
@@ -163,7 +163,6 @@ PR_IMPLEMENT(PRStatus) PR_Unlock(PRLock *lock)
 /**************************************************************/
 /**************************************************************/
 
-#if 0
 /*
  * This code is used to compute the absolute time for the wakeup.
  * It's moderately ugly, so it's defined here and called in a
@@ -172,9 +171,11 @@ PR_IMPLEMENT(PRStatus) PR_Unlock(PRLock *lock)
 #define CT_NANOPERMICRO 1000UL
 #define CT_BILLION 1000000000UL
 
+#if 0
 static PRStatus ct_TimedWait(
     condition_t cv, mutex_t ml, PRIntervalTime timeout)
 {
+#if 0
     int rv;
     struct timeval now;
     struct timespec tmo;
@@ -204,12 +205,12 @@ static PRStatus ct_TimedWait(
 #else
     return (rv == ETIMEDOUT) ? 0 : rv;
 #endif
+#endif
 }  /* ct_TimedWait */
 #endif
 
-
 /*
- * Notifies just get posted to the to the protecting mutex. The
+ * Notifies just get posted to the protecting mutex. The
  * actual notification is done when the lock is released so that
  * MP systems don't contend for a lock that they can't have.
  */
@@ -281,9 +282,7 @@ PR_IMPLEMENT(void) PR_DestroyCondVar(PRCondVar *cvar)
 
 PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
 {
-#if 0
     PRStatus rv;
-#endif
     PRThread *thred = PR_CurrentThread();
 
     PR_ASSERT(cvar != NULL);
@@ -314,21 +313,20 @@ PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
      * hold until we actually wait.
      */
     if (0 != cvar->lock->notified.length)
-        pt_PostNotifies(cvar->lock, PR_FALSE);
+        ct_PostNotifies(cvar->lock, PR_FALSE);
 
     /*
      * We're surrendering the lock, so clear out the owner field.
      */
     CTHREAD_ZERO_THR_HANDLE(cvar->lock->owner);
 
-#if 0 /* XXX FIX ME */
     if (timeout == PR_INTERVAL_NO_TIMEOUT)
-#endif
+    {
         condition_wait(cvar->cv, cvar->lock->mutex);
-#if 0
+        rv = 0;
+    }
     else
-        rv = ct_TimedWait(&cvar->cv, &cvar->lock->mutex, timeout);
-#endif
+        rv = ct_TimedWait(cvar->cv, cvar->lock->mutex, timeout);
 
     /* We just got the lock back - this better be empty */
     PR_ASSERT(CTHREAD_THR_HANDLE_IS_ZERO(cvar->lock->owner));
@@ -342,11 +340,7 @@ PR_IMPLEMENT(PRStatus) PR_WaitCondVar(PRCondVar *cvar, PRIntervalTime timeout)
         thred->state &= ~CT_THREAD_ABORTED;
         return PR_FAILURE;
     }
-#if 0
     return (rv == 0) ? PR_SUCCESS : PR_FAILURE;
-#else
-    return PR_SUCCESS;
-#endif
 }  /* PR_WaitCondVar */
 
 PR_IMPLEMENT(PRStatus) PR_NotifyCondVar(PRCondVar *cvar)
@@ -661,25 +655,18 @@ PR_IMPLEMENT(void) PRP_DestroyNakedCondVar(PRCondVar *cvar)
 PR_IMPLEMENT(PRStatus) PRP_NakedWait(
     PRCondVar *cvar, PRLock *ml, PRIntervalTime timeout)
 {
-#if 0
     PRStatus rv;
-#endif
     PR_ASSERT(cvar != NULL);
     /* XXX do we really want to assert this in a naked wait? */
     PR_ASSERT(CTHREAD_MUTEX_IS_LOCKED(ml->mutex));
-#if 0 /* XXX fix me -- toshok */
     if (timeout == PR_INTERVAL_NO_TIMEOUT)
-#endif
+    {
         condition_wait(cvar->cv, ml->mutex);
-#if 0
+        rv = 0;
+    }
     else
-        rv = pt_TimedWait(&cvar->cv, &ml->mutex, timeout);
-#endif
-#if 0
+        rv = ct_TimedWait(&cvar->cv, &ml->mutex, timeout);
     return (rv == 0) ? PR_SUCCESS : PR_FAILURE;
-#else
-    return PR_SUCCESS;
-#endif
 }  /* PRP_NakedWait */
 
 PR_IMPLEMENT(PRStatus) PRP_NakedNotify(PRCondVar *cvar)
