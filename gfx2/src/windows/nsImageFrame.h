@@ -59,6 +59,10 @@ public:
   nsImageFrame();
   virtual ~nsImageFrame();
 
+
+  nsresult DrawImage(HDC aDestDC, const nsRect * aSrcRect, const nsPoint * aDestPoint);
+
+
 private:
   /* additional members */
   nsRect mRect;
