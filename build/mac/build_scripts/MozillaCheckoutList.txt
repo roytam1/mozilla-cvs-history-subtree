@@ -1,0 +1,18 @@
+# List of modules to check out. Format is
+#   module, (tag), (date)
+# where tag and date are optional (non-trailing commas are required)
+#
+# Examples:
+#   mozilla/nsprpub, NSPRPUB_CLIENT_TAG
+#   mozilla/gc, , 10/25/2000 12:00:00
+#
+
+mozilla/nsprpub,        NSPRPUB_PRE_4_2_CLIENT_BRANCH
+mozilla/security/nss,   NSS_CLIENT_TAG
+mozilla/security/manager,
+mozilla/accessible,
+DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
+mozilla/lib/mac/Instrumentation
+mozilla/gfx2
+mozilla/modules/libpr0n
+SeaMonkeyAll
