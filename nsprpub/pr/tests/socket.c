@@ -407,15 +407,14 @@ TCP_Server(void *arg)
     DPRINTF(("TCP_Server: PR_BIND netaddr.inet.ip = 0x%lx, netaddr.inet.port = %d\n",
         netaddr.inet.ip, netaddr.inet.port));
 	if (PR_SetNetAddr(PR_IpAddrLoopback, client_domain,
-									PR_NetAddrInetPort(&netaddr),
+									PR_ntohs(PR_NetAddrInetPort(&netaddr)),
 									&tcp_server_addr) == PR_FAILURE) {
         fprintf(stderr,"prsocket_test: PR_SetNetAddr failed\n");
         goto exit;
 	}
 	if ((client_domain == PR_AF_INET6) && (server_domain == PR_AF_INET))
-		PR_ConvertIPv4AddrToIPv6(INADDR_LOOPBACK,
+		PR_ConvertIPv4AddrToIPv6(PR_htonl(INADDR_LOOPBACK),
 								&tcp_server_addr.ipv6.ip);
-		
 
     /*
      * Wake up parent thread because server address is bound and made
@@ -538,14 +537,14 @@ UDP_Server(void *arg)
      */
 
 	if (PR_SetNetAddr(PR_IpAddrLoopback, client_domain,
-									PR_NetAddrInetPort(&netaddr),
+									PR_ntohs(PR_NetAddrInetPort(&netaddr)),
 									&udp_server_addr) == PR_FAILURE) {
         fprintf(stderr,"prsocket_test: PR_SetNetAddr failed\n");
         failed_already=1;
         return;
 	}
 	if ((client_domain == PR_AF_INET6) && (server_domain == PR_AF_INET))
-		PR_ConvertIPv4AddrToIPv6(INADDR_LOOPBACK,
+		PR_ConvertIPv4AddrToIPv6(PR_htonl(INADDR_LOOPBACK),
 								&udp_server_addr.ipv6.ip);
 		
     /*
