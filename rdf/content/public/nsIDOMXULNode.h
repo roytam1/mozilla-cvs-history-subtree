@@ -23,6 +23,7 @@
 #include "nsISupports.h"
 #include "nsString.h"
 #include "nsIScriptContext.h"
+#include "nsIDOMNode.h"
 
 class nsIDOMNode;
 
@@ -30,7 +31,7 @@ class nsIDOMNode;
  { 0x574ed81, 0xc088, 0x11d2, \
   { 0x96, 0xed, 0x0, 0x10, 0x4b, 0x7b, 0x7d, 0xeb } } 
 
-class nsIDOMXULNode : public nsISupports {
+class nsIDOMXULNode : public nsIDOMNode {
 public:
   static const nsIID& IID() { static nsIID iid = NS_IDOMXULNODE_IID; return iid; }
 
@@ -55,7 +56,7 @@ public:
   NS_IMETHOD    DoCommand() { return _to##DoCommand(); }  \
 
 
-extern nsresult NS_InitXULNodeClass(nsIScriptContext *aContext, void **aPrototype);
+extern "C" NS_DOM nsresult NS_InitXULNodeClass(nsIScriptContext *aContext, void **aPrototype);
 
 extern "C" NS_DOM nsresult NS_NewScriptXULNode(nsIScriptContext *aContext, nsISupports *aSupports, nsISupports *aParent, void **aReturn);
 
