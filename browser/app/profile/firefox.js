@@ -123,7 +123,7 @@ pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UT
 
 pref("general.skins.selectedSkin", "classic/1.0");
 pref("general.useragent.vendor", "Firefox");
-pref("general.useragent.vendorSub", "1.0RC1");
+pref("general.useragent.vendorSub", "1.0RC2");
 //#expand __APP_VERSION__
 //);
 
@@ -197,6 +197,8 @@ pref("browser.tabs.opentabfor.middleclick", true);
 pref("browser.tabs.opentabfor.urlbar", true);
 pref("browser.tabs.loadDivertedInBackground", false);
 pref("browser.tabs.loadBookmarksInBackground", false);
+// XXXben - Hide Single Window mode prefs for 1.0 to avoid crashes (see 266759)
+pref("browser.tabs.showSingleWindowModePrefs", false);
 
 // Smart Browsing prefs
 pref("browser.related.enabled", true);
