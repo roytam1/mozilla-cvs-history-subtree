@@ -178,18 +178,19 @@ treechildren:-moz-tree-image(remote-err) {
 }
 
 #button-more {
-  -moz-image-region: rect(63px 23px 84px 0px);
+  list-style-image: url("chrome://messenger/skin/icons/more-normal.gif");
 }
 
 #button-more:hover {
-  -moz-image-region: rect(63px 46px 84px 23px);
+  list-style-image: url("chrome://messenger/skin/icons/more-hover.gif");
 }
 
 #button-more:hover:active,
 #button-more[open] {
-  -moz-image-region: rect(63px 69px 84px 46px);
+  list-style-image: url("chrome://messenger/skin/icons/more-select.gif");
 }
 
 #button-more[disabled] {
-  -moz-image-region: rect(63px 92px 84px 69px) !important;
+  list-style-image: url("chrome://messenger/skin/icons/more-disabled.gif");
 }
+

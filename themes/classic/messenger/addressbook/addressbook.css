@@ -84,52 +84,37 @@
   -moz-image-region: rect(42px 92px 63px 69px) !important;
 } 
 
-#button-newmessage {
-  -moz-image-region: rect(126px 23px 147px 0px);
-}
-
-#button-newmessage:hover {
-  -moz-image-region: rect(126px 46px 147px 23px);
-} 
-
-#button-newmessage:hover:active {
-  -moz-image-region: rect(126px 69px 147px 46px);
-} 
-
-#button-newmessage[disabled] {
-  -moz-image-region: rect(126px 92px 147px 69px) !important;
-}
-
 #button-delete {
-  -moz-image-region: rect(210px 23px 231px 0px);
+  list-style-image: url("chrome://messenger/skin/icons/trash-normal.gif");
 }
 
 #button-delete:hover {
-  -moz-image-region: rect(210px 46px 231px 23px);
-} 
+  list-style-image: url("chrome://messenger/skin/icons/trash-hover.gif");
+}
 
 #button-delete:hover:active {
-  -moz-image-region: rect(210px 69px 231px 46px);
+  list-style-image: url("chrome://messenger/skin/icons/trash-select.gif");
 }
 
 #button-delete[disabled] {
-  -moz-image-region: rect(210px 92px 231px 69px) !important;
+  list-style-image: url("chrome://messenger/skin/icons/trash-disabled.gif");
 }
 
 #button-more {
-  -moz-image-region: rect(210px 23px 231px 0px);
+  list-style-image: url("chrome://messenger/skin/icons/more-normal.gif");
 }
 
 #button-more:hover {
-  -moz-image-region: rect(210px 46px 231px 23px);
-} 
+  list-style-image: url("chrome://messenger/skin/icons/more-hover.gif");
+}
 
-#button-more:hover:active {
-  -moz-image-region: rect(210px 69px 231px 46px);
+#button-more:hover:active,
+#button-more[open] {
+  list-style-image: url("chrome://messenger/skin/icons/more-select.gif");
 }
 
 #button-more[disabled] {
-  -moz-image-region: rect(210px 92px 231px 69px) !important;
+  list-style-image: url("chrome://messenger/skin/icons/more-disabled.gif");
 }
 
 /* ::::: sidebar header ::::: */
