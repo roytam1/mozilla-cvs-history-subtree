@@ -17,6 +17,7 @@ ARCH=`uname -p`
 LD_LIBRARY_PATH=$JDKHOME/lib/$ARCH/client:$JDKHOME/lib/$ARCH:$LD_LIBRARY_PATH
 LD_LIBRARY_PATH=$JDKHOME/lib:$JDKHOME/lib/$ARCH/native_threads:$LD_LIBRARY_PATH
 LD_LIBRARY_PATH=`pwd`/../lib:`pwd`/../..:`pwd`/../../components:$LD_LIBRARY_PATH
+LD_LIBRARY_PATH=`pwd`/../../dist/lib:$LD_LIBRARY_PATH
 
 echo "LD_LIBRARY_PATH =" $LD_LIBRARY_PATH
 
@@ -31,6 +32,10 @@ echo "CLASSPATH =" $CLASSPATH
 libpath=`pwd`/../..:`pwd`/../../components:`pwd`/../lib
 testclass="org.mozilla.webclient.test.EmbeddedMozilla"
 bindir=`pwd`/../..
+
+export LD_LIBRARY_PATH
+export CLASSPATH
+export JDKHOME
 
 args="-native -Djava.library.path=$libpath -classpath $CLASSPATH $testclass $bindir $script_args"
 
