@@ -5599,6 +5599,8 @@ lib/libc/Makefile
 lib/libc/include/Makefile 
 lib/libc/src/Makefile 
 lib/tests/Makefile
+pkg/Makefile
+pkg/linux/Makefile
 pkg/solaris/Makefile
 pkg/solaris/SUNWpr/Makefile
 pkg/solaris/SUNWprx/Makefile
@@ -5631,10 +5633,6 @@ fi
 
 if test -n "$USE_CPLUS"; then
     MAKEFILES="$MAKEFILES pr/src/cplus/Makefile pr/src/cplus/tests/Makefile"
-fi
-
-if test ! -d pkg; then
-    mkdir pkg
 fi
 
 trap '' 1 2 15
