@@ -1403,6 +1403,10 @@ Rights Reserved.
       </toolbarbutton>
       <toolbarbutton id="button-newmsg" class="toolbarbutton-1" label="&newMsgButton.label;" tooltiptext="&newMsgButton.tooltip;" oncommand="MsgNewMessage(event)"/>
       <toolbarseparator class="toolbarseparator-primary"/>
+      
+      <toolbarbutton class="toolbarbutton-1" id="button-address" label="&addressButton.label;" tooltiptext="&addressButton.tooltip;" oncommand="toAddressBook()"/>
+      <toolbarseparator class="toolbarseparator-primary"/>
+      
       <toolbarbutton id="button-reply" class="toolbarbutton-1" label="&replyButton.label;" tooltiptext="&replyButton.tooltip;" observes="button_reply" oncommand="MsgReplyMessage(event)"/>
       <toolbarbutton class="toolbarbutton-1" id="button-replyall" label="&replyAllButton.label;" tooltiptext="&replyAllButton.tooltip;" observes="button_replyall" oncommand="MsgReplyToAllMessage(event)"/>
       <toolbarbutton class="toolbarbutton-1" id="button-forward" label="&forwardButton.label;" tooltiptext="&forwardButton.tooltip;" observes="button_forward" oncommand="MsgForwardMessage(event)"/>
@@ -1493,11 +1497,14 @@ Rights Reserved.
           <menuitem label="&printCmd.label;" accesskey="&printCmd.accesskey;" default="true"/>
           </menupopup>
       </toolbarbutton>
+
       <toolbarbutton class="toolbarbutton-1" id="button-stop" label="&stopButton.label;" tooltiptext="&stopButton.tooltip;" command="cmd_stop"/>
+
       <spacer flex="1"/>
             <hbox id="throbber-box" align="center">
                 <button id="navigator-throbber" oncommand="loadThrobberUrl('messenger.throbber.url')" tooltiptext="&throbber.tooltip;"/>
             </hbox>
+
     </hbox>
   </toolbar>
 </toolbox>

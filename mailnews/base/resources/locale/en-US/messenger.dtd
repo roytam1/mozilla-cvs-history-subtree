@@ -439,6 +439,7 @@ Rights Reserved.
 <!ENTITY markButton.label "Mark">
 <!ENTITY printButton.label "Print">
 <!ENTITY stopButton.label "Stop">
+<!ENTITY addressButton.label "Addresses">
 
 <!--Tooltips-->
 <!ENTITY menuBar.tooltip "Menu Bar">
@@ -458,6 +459,7 @@ Rights Reserved.
 <!ENTITY printButton.tooltip "Print this message">
 <!ENTITY stopButton.tooltip "Stop the current transfer">
 <!ENTITY throbber.tooltip "Go to the &vendorShortName; home page">
+<!ENTITY addressButton.tooltip "Open Address Book">
 
 <!-- Statusbar -->
 <!ENTITY  statusText.label "Document: Done">
