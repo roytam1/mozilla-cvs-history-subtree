@@ -1355,7 +1355,7 @@ nsDocShell::SetCurrentURI(nsIURI *aURI, nsIRequest *aRequest)
     
     NS_ASSERTION(loader, "No document loader");
     if (loader) {
-        loader->FireOnLocationChange(webProgress, nsnull, aURI);
+        loader->FireOnLocationChange(webProgress, aRequest, aURI);
     }
 }
 
