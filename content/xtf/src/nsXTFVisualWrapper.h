@@ -56,12 +56,12 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIAnonymousContentCreator
-  NS_IMETHOD CreateAnonymousContent(nsIPresContext* aPresContext,
+  NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
                                     nsISupportsArray& aAnonymousItems);
   
   // If the creator doesn't want to create special frame for frame hierarchy
   // then it should null out the style content arg and return NS_ERROR_FAILURE
-  NS_IMETHOD CreateFrameFor(nsIPresContext*   aPresContext,
+  NS_IMETHOD CreateFrameFor(nsPresContext*   aPresContext,
                             nsIContent *      aContent,
                             nsIFrame**        aFrame) {
     if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }

@@ -38,25 +38,18 @@
 
 #include "nsCOMPtr.h"
 #include "nsContainerFrame.h"
-#include "nsIPresContext.h"
-#include "nsWeakReference.h"
+#include "nsPresContext.h"
 #include "nsISupportsArray.h"
 #include "nsISVGChildFrame.h"
 #include "nsISVGContainerFrame.h"
 #include "nsISVGOuterSVGFrame.h"
-#include "nsISVGValue.h"
-#include "nsISVGValueObserver.h"
 
-//static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 
-//typedef nsBlockFrame nsXTFSVGDisplayFrameBase;
 typedef nsContainerFrame nsXTFSVGDisplayFrameBase;
 
 class nsXTFSVGDisplayFrame : public nsXTFSVGDisplayFrameBase,
                              public nsISVGChildFrame,
-                             public nsISVGContainerFrame,
-                             public nsSupportsWeakReference,
-                             public nsISVGValueObserver
+                             public nsISVGContainerFrame
 {
   friend nsresult
   NS_NewXTFSVGDisplayFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -73,55 +66,50 @@ private:
 public:
   // nsIFrame:
   
-  NS_IMETHOD  AppendFrames(nsIPresContext* aPresContext,
+  NS_IMETHOD  AppendFrames(nsPresContext* aPresContext,
                            nsIPresShell&   aPresShell,
                            nsIAtom*        aListName,
                            nsIFrame*       aFrameList);
-  NS_IMETHOD  InsertFrames(nsIPresContext* aPresContext,
+  NS_IMETHOD  InsertFrames(nsPresContext* aPresContext,
                            nsIPresShell&   aPresShell,
                            nsIAtom*        aListName,
                            nsIFrame*       aPrevFrame,
                            nsIFrame*       aFrameList);
-  NS_IMETHOD  RemoveFrame(nsIPresContext* aPresContext,
+  NS_IMETHOD  RemoveFrame(nsPresContext* aPresContext,
                           nsIPresShell&   aPresShell,
                           nsIAtom*        aListName,
                           nsIFrame*       aOldFrame);
-  NS_IMETHOD  ReplaceFrame(nsIPresContext* aPresContext,
+  NS_IMETHOD  ReplaceFrame(nsPresContext* aPresContext,
                            nsIPresShell&   aPresShell,
                            nsIAtom*        aListName,
                            nsIFrame*       aOldFrame,
                            nsIFrame*       aNewFrame);
-  NS_IMETHOD Init(nsIPresContext*  aPresContext,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
                   nsIContent*      aContent,
                   nsIFrame*        aParent,
                   nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
-  NS_IMETHOD  AttributeChanged(nsIPresContext* aPresContext,
+  NS_IMETHOD  AttributeChanged(nsPresContext* aPresContext,
                                nsIContent*     aChild,
                                PRInt32         aNameSpaceID,
                                nsIAtom*        aAttribute,
                                PRInt32         aModType);
-  // nsISVGValueObserver
-  NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);
-  NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable);
-
-  // nsISupportsWeakReference
-  // implementation inherited from nsSupportsWeakReference
-
 
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
-  NS_IMETHOD NotifyCTMChanged();
+  NS_IMETHOD NotifyCanvasTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
   NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
   
   // nsISVGContainerFrame interface:
-  NS_IMETHOD_(nsISVGOuterSVGFrame*) GetOuterSVGFrame();
+  nsISVGOuterSVGFrame*GetOuterSVGFrame();
+  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
+  already_AddRefed<nsSVGCoordCtxProvider> GetCoordContextProvider();
 
   
 protected:
@@ -167,15 +155,13 @@ nsresult nsXTFSVGDisplayFrame::Init()
 NS_INTERFACE_MAP_BEGIN(nsXTFSVGDisplayFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
 NS_INTERFACE_MAP_END_INHERITING(nsXTFSVGDisplayFrameBase)
 
 
 //----------------------------------------------------------------------
 // nsIFrame methods
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::Init(nsIPresContext*  aPresContext,
+nsXTFSVGDisplayFrame::Init(nsPresContext*  aPresContext,
                            nsIContent*      aContent,
                            nsIFrame*        aParent,
                            nsStyleContext*  aContext,
@@ -192,7 +178,7 @@ nsXTFSVGDisplayFrame::Init(nsIPresContext*  aPresContext,
 
 
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::AppendFrames(nsIPresContext* aPresContext,
+nsXTFSVGDisplayFrame::AppendFrames(nsPresContext* aPresContext,
                                    nsIPresShell&   aPresShell,
                                    nsIAtom*        aListName,
                                    nsIFrame*       aFrameList)
@@ -203,7 +189,7 @@ nsXTFSVGDisplayFrame::AppendFrames(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::InsertFrames(nsIPresContext* aPresContext,
+nsXTFSVGDisplayFrame::InsertFrames(nsPresContext* aPresContext,
                                    nsIPresShell&   aPresShell,
                                    nsIAtom*        aListName,
                                    nsIFrame*       aPrevFrame,
@@ -235,7 +221,7 @@ nsXTFSVGDisplayFrame::InsertFrames(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::RemoveFrame(nsIPresContext* aPresContext,
+nsXTFSVGDisplayFrame::RemoveFrame(nsPresContext* aPresContext,
                                   nsIPresShell&   aPresShell,
                                   nsIAtom*        aListName,
                                   nsIFrame*       aOldFrame)
@@ -260,7 +246,7 @@ nsXTFSVGDisplayFrame::RemoveFrame(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::ReplaceFrame(nsIPresContext* aPresContext,
+nsXTFSVGDisplayFrame::ReplaceFrame(nsPresContext* aPresContext,
                                    nsIPresShell&   aPresShell,
                                    nsIAtom*        aListName,
                                    nsIFrame*       aOldFrame,
@@ -271,7 +257,7 @@ nsXTFSVGDisplayFrame::ReplaceFrame(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::AttributeChanged(nsIPresContext* aPresContext,
+nsXTFSVGDisplayFrame::AttributeChanged(nsPresContext* aPresContext,
                                        nsIContent*     aChild,
                                        PRInt32         aNameSpaceID,
                                        nsIAtom*        aAttribute,
@@ -287,29 +273,6 @@ nsXTFSVGDisplayFrame::AttributeChanged(nsIPresContext* aPresContext,
 //     printf("\n");
 #endif
 
-  return NS_OK;
-}
-
-//----------------------------------------------------------------------
-// nsISVGValueObserver methods:
-
-NS_IMETHODIMP
-nsXTFSVGDisplayFrame::WillModifySVGObservable(nsISVGValue* observable)
-{
-  return NS_OK;
-}
-
-
-NS_IMETHODIMP
-nsXTFSVGDisplayFrame::DidModifySVGObservable(nsISVGValue* observable)
-{
-  for (nsIFrame* kid = mFrames.FirstChild(); kid;
-       kid = kid->GetNextSibling()) {
-    nsISVGChildFrame* SVGFrame=nsnull;
-    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
-    if (SVGFrame)
-      SVGFrame->NotifyCTMChanged();
-  }  
   return NS_OK;
 }
 
@@ -402,14 +365,14 @@ nsXTFSVGDisplayFrame::InitialUpdate()
 }  
 
 NS_IMETHODIMP
-nsXTFSVGDisplayFrame::NotifyCTMChanged()
+nsXTFSVGDisplayFrame::NotifyCanvasTMChanged()
 {
   for (nsIFrame* kid = mFrames.FirstChild(); kid;
        kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
-      SVGFrame->NotifyCTMChanged();
+      SVGFrame->NotifyCanvasTMChanged();
     }
   }
   return NS_OK;
@@ -453,7 +416,7 @@ nsXTFSVGDisplayFrame::GetBBox(nsIDOMSVGRect **_retval)
 //----------------------------------------------------------------------
 // nsISVGContainerFrame methods:
 
-NS_IMETHODIMP_(nsISVGOuterSVGFrame *)
+nsISVGOuterSVGFrame *
 nsXTFSVGDisplayFrame::GetOuterSVGFrame()
 {
   NS_ASSERTION(mParent, "null parent");
@@ -468,4 +431,32 @@ nsXTFSVGDisplayFrame::GetOuterSVGFrame()
   return containerFrame->GetOuterSVGFrame();  
 }
 
+already_AddRefed<nsIDOMSVGMatrix>
+nsXTFSVGDisplayFrame::GetCanvasTM()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
 
+  return containerFrame->GetCanvasTM();  
+}
+
+already_AddRefed<nsSVGCoordCtxProvider>
+nsXTFSVGDisplayFrame::GetCoordContextProvider()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
+
+  return containerFrame->GetCoordContextProvider();  
+}

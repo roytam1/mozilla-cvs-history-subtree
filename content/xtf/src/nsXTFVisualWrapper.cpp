@@ -40,7 +40,7 @@
 #include "nsXTFVisualWrapper.h"
 #include "nsISupportsArray.h"
 #include "nsIPresShell.h"
-#include "nsIPresContext.h"
+#include "nsPresContext.h"
 #include "nsIDocument.h"
 
 nsXTFVisualWrapper::nsXTFVisualWrapper(nsINodeInfo* aNodeInfo)
@@ -62,7 +62,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsXTFVisualWrapperBase)
 // nsIAnonymousContentCreator implementation:
 
 NS_IMETHODIMP
-nsXTFVisualWrapper::CreateAnonymousContent(nsIPresContext* aPresContext,
+nsXTFVisualWrapper::CreateAnonymousContent(nsPresContext* aPresContext,
                                            nsISupportsArray& aAnonymousItems)
 {
   NS_ASSERTION(mDocument, "no document; cannot create anonymous content");

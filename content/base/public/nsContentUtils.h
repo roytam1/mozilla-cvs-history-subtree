@@ -44,7 +44,6 @@
 
 #include "jspubtd.h"
 #include "nsAString.h"
-#include "nsIDOMNode.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsIJSContextStack.h"
 #include "nsIScriptContext.h"
@@ -56,6 +55,7 @@
 
 class nsIXPConnect;
 class nsIContent;
+class nsIDOMNode;
 class nsIDocument;
 class nsIDocShell;
 class nsINameSpaceManager;
@@ -68,7 +68,10 @@ class imgIDecoderObserver;
 class imgIRequest;
 class imgILoader;
 class nsIPrefBranch;
-class nsIPref;
+class nsIImage;
+class nsIImageLoadingContent;
+class nsIDOMHTMLFormElement;
+class nsIDOMDocument;
 #ifdef MOZ_XTF
 class nsIXTFService;
 #endif
@@ -341,6 +344,57 @@ public:
                             PRInt32 aLoadFlags,
                             imgIRequest** aRequest);
 
+  /**
+   * Method to get an nsIImage from an image loading content
+   *
+   * @param aContent The image loading content.  Must not be null.
+   * @return the nsIImage corresponding to the first frame of the image
+   */
+  static already_AddRefed<nsIImage> GetImageFromContent(nsIImageLoadingContent* aContent);
+
+  /**
+   * Method that decides whether a content node is draggable
+   *
+   * @param aContent The content node to test.
+   * @return whether it's draggable
+   */
+  static PRBool ContentIsDraggable(nsIContent* aContent) {
+    return IsDraggableImage(aContent) || IsDraggableLink(aContent);
+  }
+
+  /**
+   * Method that decides whether a content node is a draggable image
+   *
+   * @param aContent The content node to test.
+   * @return whether it's a draggable image
+   */
+  static PRBool IsDraggableImage(nsIContent* aContent);
+
+  /**
+   * Method that decides whether a content node is a draggable link
+   *
+   * @param aContent The content node to test.
+   * @return whether it's a draggable link
+   */
+  static PRBool IsDraggableLink(nsIContent* aContent);
+
+  /**
+   * Method that gets the URI of the link content.  If the content
+   * isn't a link, return null.
+   *
+   * @param aContent The link content
+   * @return the URI the link points to
+   */
+  static already_AddRefed<nsIURI> GetLinkURI(nsIContent* aContent);
+
+  /**
+   * Method that gets the XLink uri for a content node, if it's an XLink
+   *
+   * @param aContent The content node, possibly an XLink
+   * @return Null if aContent is not an XLink, the URI it points to otherwise
+   */
+  static already_AddRefed<nsIURI> GetXLinkURI(nsIContent* aContent);
+  
   /**
    * Convenience method to create a new nodeinfo that differs only by name
    * from aNodeInfo.
