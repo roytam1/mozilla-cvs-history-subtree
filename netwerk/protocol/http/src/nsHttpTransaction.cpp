@@ -125,6 +125,7 @@ nsHttpTransaction::nsHttpTransaction()
     , mSentData(PR_FALSE)
     , mReceivedData(PR_FALSE)
     , mStatusEventPending(PR_FALSE)
+    , mHasRequestBody(PR_FALSE)
 {
     LOG(("Creating nsHttpTransaction @%x\n", this));
 }
@@ -203,6 +204,8 @@ nsHttpTransaction::Init(PRUint8 caps,
     nsCOMPtr<nsIInputStream> headers = do_QueryInterface(sup, &rv);
 
     if (requestBody) {
+        mHasRequestBody = PR_TRUE;
+
         // wrap the headers and request body in a multiplexed input stream.
         nsCOMPtr<nsIMultiplexInputStream> multi =
             do_CreateInstance(kMultiplexInputStream, &rv);
@@ -271,6 +274,10 @@ nsHttpTransaction::OnTransportStatus(nsresult status, PRUint32 progress)
     
     NS_ASSERTION(PR_GetCurrentThread() == gSocketThread, "wrong thread");
 
+    // nsHttpChannel synthesizes progress events in OnDataAvailable
+    if (status == nsISocketTransport::STATUS_RECEIVING_FROM)
+        return;
+
     PRBool postEvent;
     {
         nsAutoLock lock(mLock);
@@ -278,15 +285,15 @@ nsHttpTransaction::OnTransportStatus(nsresult status, PRUint32 progress)
         // stamp latest socket status
         mTransportStatus = status;
         
-        if (status == nsISocketTransport::STATUS_RECEIVING_FROM) {
-            // ignore the progress argument and use our own.  as a result,
-            // the progress reported will not include the size of the response
-            // headers.  this is OK b/c we only want to report the progress
-            // downloading the body of the response.
-            mTransportProgress = mContentRead;
-            mTransportProgressMax = mContentLength;
-        }
-        else if (status == nsISocketTransport::STATUS_SENDING_TO) {
+        // nsHttpChannel synthesizes progress events in OnDataAvailable
+        if (status == nsISocketTransport::STATUS_RECEIVING_FROM)
+            return;
+
+        if (status == nsISocketTransport::STATUS_SENDING_TO) {
+            // suppress progress when only writing request headers
+            if (!mHasRequestBody)
+                return;
+
             // when uploading, we include the request headers in the progress
             // notifications.
             mTransportProgress = progress;
