@@ -128,7 +128,7 @@ interface nsIX509CertDB : nsISupports {
   nsIX509Cert getDefaultEmailSigningCert();
 
   nsIX509Cert getCertByEmailAddress(in nsIPK11Token aToken,
-                             in wstring aEmailAddress);
+                             in string aEmailAddress);
 
   /*
    * importCertificates

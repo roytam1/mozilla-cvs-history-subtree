@@ -113,6 +113,17 @@ NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature()
   return  NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP nsCMSMessage::CreateEncrypted()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsCMSMessage::CreateSigned()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
 NS_IMPL_ISUPPORTS1(nsCMSDecoder, nsICMSDecoder)
 
 nsCMSDecoder::nsCMSDecoder()

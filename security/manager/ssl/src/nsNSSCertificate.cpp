@@ -3730,3 +3730,117 @@ nsNSSCertificateDB::EnableOCSP()
 
   return nssComponent->EnableOCSP();
 }
+
+/* nsIX509Cert getDefaultEmailEncryptionCert (); */
+NS_IMETHODIMP
+nsNSSCertificateDB::GetDefaultEmailEncryptionCert(nsIX509Cert **_retval)
+{
+  nsresult rv = NS_OK;
+  CERTCertificate *cert = 0;
+  nsXPIDLCString nickname;
+  nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
+  nsNSSCertificate *nssCert = nsnull;
+
+  *_retval = 0;
+
+  static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+  nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
+  if (NS_FAILED(rv)) goto loser;
+
+  rv = prefs->GetCharPref("security.default_mail_cert",
+                          getter_Copies(nickname));
+  if (NS_FAILED(rv)) goto loser;
+
+  /* Find a good cert in the user's database */
+  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), (char*)nickname.get(), 
+           certUsageEmailRecipient, PR_TRUE, ctx);
+
+  if (!cert) { goto loser; }  
+
+  nssCert = new nsNSSCertificate(cert);
+  if (nssCert == nsnull) {
+    rv = NS_ERROR_OUT_OF_MEMORY;
+  }
+  NS_ADDREF(nssCert);
+
+  *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
+
+loser:
+  if (cert) CERT_DestroyCertificate(cert);
+  return rv;
+}
+
+/* nsIX509Cert getDefaultEmailSigningCert (); */
+NS_IMETHODIMP
+nsNSSCertificateDB::GetDefaultEmailSigningCert(nsIX509Cert **_retval)
+{
+  nsresult rv = NS_OK;
+  CERTCertificate *cert = 0;
+  nsXPIDLCString nickname;
+  nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
+  nsNSSCertificate *nssCert = nsnull;
+
+  *_retval = 0;
+
+  static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+  nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
+  if (NS_FAILED(rv)) goto loser;
+
+  rv = prefs->GetCharPref("security.default_mail_cert",
+                          getter_Copies(nickname));
+  if (NS_FAILED(rv)) goto loser;
+
+  /* Find a good cert in the user's database */
+  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), (char*)nickname.get(), 
+           certUsageEmailSigner, PR_TRUE, ctx);
+
+  if (!cert) { goto loser; }  
+
+  nssCert = new nsNSSCertificate(cert);
+  if (nssCert == nsnull) {
+    rv = NS_ERROR_OUT_OF_MEMORY;
+  }
+  NS_ADDREF(nssCert);
+
+  *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
+
+loser:
+  if (cert) CERT_DestroyCertificate(cert);
+  return rv;
+}
+
+/* nsIX509Cert getCertByEmailAddress (in nsIPK11Token aToken, in wstring aEmailAddress); */
+NS_IMETHODIMP
+nsNSSCertificateDB::GetCertByEmailAddress(nsIPK11Token *aToken, const char *aEmailAddress, nsIX509Cert **_retval)
+{
+  CERTCertificate *cert = nsnull;
+  CERTCertList *certList = nsnull;
+  SECStatus sec_rv;
+  nsresult rv = NS_OK;
+
+  certList = CERT_CreateEmailAddrCertList(nsnull, CERT_GetDefaultCertDB(),
+          (char*)aEmailAddress, PR_Now(), PR_TRUE);
+  if (certList == nsnull) {
+    rv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+
+  sec_rv = CERT_FilterCertListByUsage(certList, certUsageEmailRecipient, PR_FALSE);
+
+  if (!CERT_LIST_END(CERT_LIST_HEAD(certList), certList)) {
+    nsNSSCertificate *nssCert = new nsNSSCertificate(CERT_LIST_HEAD(certList)->cert);
+    if (nssCert == nsnull) {
+      rv = NS_ERROR_OUT_OF_MEMORY;
+      goto loser;
+      NS_ADDREF(nssCert);
+      *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
+    }
+  }
+loser:
+  if (certList) {
+    CERT_DestroyCertList(certList);
+  }
+
+  return rv;
+}
+
