@@ -106,7 +106,8 @@
 #include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMHTMLAreaElement.h"
 #include "nsIDOMHTMLLinkElement.h"
-#include "nsIDOMHTMLImageElement.h"
+#include "nsIImageLoadingContent.h"
+#include "nsCopySupport.h"
 #include "nsIDOMHTMLFrameSetElement.h"
 #ifdef MOZ_XUL
 #include "nsIXULDocument.h"  // Temporary code for Bug 136185
@@ -368,7 +369,7 @@ private:
 
   nsresult GetPopupNode(nsIDOMNode** aNode);
   nsresult GetPopupLinkNode(nsIDOMNode** aNode);
-  nsresult GetPopupImageNode(nsIDOMNode** aNode);
+  nsresult GetPopupImageNode(nsIImageLoadingContent** aNode);
 
   void PrepareToStartLoad(void);
 
@@ -2067,16 +2068,22 @@ NS_IMETHODIMP DocumentViewerImpl::CopyLinkLocation()
 
 NS_IMETHODIMP DocumentViewerImpl::CopyImageLocation()
 {
-  NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_INITIALIZED);
-  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIImageLoadingContent> node;
   GetPopupImageNode(getter_AddRefs(node));
   // make noise if we're not in an image
   NS_ENSURE_TRUE(node, NS_ERROR_FAILURE);
 
-  nsAutoString locationText;
-  nsresult rv = mPresShell->GetImageLocation(node, locationText);
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsIURI> uri;
+  node->GetCurrentURI(getter_AddRefs(uri));
+  if (!uri)
+    return NS_ERROR_FAILURE;
 
+  nsCAutoString spec;
+  uri->GetSpec(spec);
+
+  NS_ConvertUTF8toUTF16 locationText(spec);
+
+  nsresult rv;
   nsCOMPtr<nsIClipboardHelper> clipboard =
     do_GetService("@mozilla.org/widget/clipboardhelper;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -2088,12 +2095,12 @@ NS_IMETHODIMP DocumentViewerImpl::CopyImageLocation()
 NS_IMETHODIMP DocumentViewerImpl::CopyImageContents()
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_INITIALIZED);
-  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIImageLoadingContent> node;
   GetPopupImageNode(getter_AddRefs(node));
   // make noise if we're not in an image
   NS_ENSURE_TRUE(node, NS_ERROR_FAILURE);
 
-  return mPresShell->DoCopyImageContents(node);
+  return nsCopySupport::ImageCopy(node, nsIClipboard::kGlobalClipboard);
 }
 
 NS_IMETHODIMP DocumentViewerImpl::GetCopyable(PRBool *aCopyable)
@@ -2361,7 +2368,7 @@ DocumentViewerImpl::GetDefaultCharacterSet(nsACString& aDefaultCharacterSet)
     if (!defCharset.IsEmpty())
       LossyCopyUTF16toASCII(defCharset, mDefaultCharacterSet);
     else
-      mDefaultCharacterSet.Assign(NS_LITERAL_CSTRING("ISO-8859-1"));
+      mDefaultCharacterSet.AssignLiteral("ISO-8859-1");
   }
   aDefaultCharacterSet = mDefaultCharacterSet;
   return NS_OK;
@@ -2811,7 +2818,7 @@ DocumentViewerImpl::GetPopupLinkNode(nsIDOMNode** aNode)
 
 // GetPopupLinkNode: return popup image node or fail
 nsresult
-DocumentViewerImpl::GetPopupImageNode(nsIDOMNode** aNode)
+DocumentViewerImpl::GetPopupImageNode(nsIImageLoadingContent** aNode)
 {
   NS_ENSURE_ARG_POINTER(aNode);
 
@@ -2823,25 +2830,7 @@ DocumentViewerImpl::GetPopupImageNode(nsIDOMNode** aNode)
   nsresult rv = GetPopupNode(getter_AddRefs(node));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // XXX find out if we're an image. this really ought to look for objects
-  // XXX with type "image/...", but this is good enough for now.
-  nsCOMPtr<nsIDOMHTMLImageElement> img(do_QueryInterface(node));
-
-  if (!img) {
-    nsCOMPtr<nsIFormControl> form_control(do_QueryInterface(node));
-
-    if (!form_control || form_control->GetType() != NS_FORM_INPUT_IMAGE) {
-      // We're neither an <img> nor an <input type=image> element,
-      // nothing to return.
-
-      return NS_OK;
-    }
-  }
-
-  // if we made it here, we're an <img> or an <input type=image>.
-  *aNode = node;
-  NS_ADDREF(*aNode);
-
+  CallQueryInterface(node, aNode);
   return NS_OK;
 }
 
@@ -2890,7 +2879,7 @@ NS_IMETHODIMP DocumentViewerImpl::GetInImage(PRBool* aInImage)
   *aInImage = PR_FALSE;
 
   // get the popup image
-  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIImageLoadingContent> node;
   nsresult rv = GetPopupImageNode(getter_AddRefs(node));
   if (NS_FAILED(rv)) return rv;
   NS_ENSURE_TRUE(node, NS_ERROR_FAILURE);
@@ -3741,7 +3730,7 @@ DocumentViewerImpl::InstallNewPresentation()
     mWindow       = nsnull;
   }
 
-  // XXX InstallPrintPreviewListener();
+  mPrintEngine->InstallPrintPreviewListener();
 
   mPrintEngine->GetNewPresentation(mPresShell, mPresContext, mViewManager, mWindow);
 
