@@ -4,13 +4,14 @@
 <!DOCTYPE window SYSTEM "chrome://communicator/locale/pref/pref-smartupdate.dtd" >
  
 <page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-      onload="parent.initPanel('chrome://communicator/content/pref/pref-smartupdate.xul'); initUpdateNotifications();"
+      onload="parent.initPanel('chrome://communicator/content/pref/pref-smartupdate.xul'); initUpdateNotifications(); LoadUninstallableComponents();"
       headertitle="&lHeader;">
   
   <script type="application/x-javascript">
   <![CDATA[
     var _elementIDs = ["XPInstallEnabled", "updateNotificationsEnabled", 
                        "updateFrequency"];
+    const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 
     function initUpdateNotifications()
     {
@@ -44,6 +45,111 @@
         freqMonthly.setAttribute("disabled", "true");
       }
     }
+
+    function UpdateRemoveButton()
+    {
+      dump( "entered UpdateRemoveButton\n" );
+      
+      var list = document.getElementById ( "UninstallComponents" );
+      var button = document.getElementById("RemoveButton");
+      if ( list.selectedCount > 0 )
+        button.setAttribute("disabled", "false");
+      else
+        button.setAttribute("disabled", "true");
+    }
+
+    function LoadUninstallableComponents()
+    {
+      var aSoftwareUninstall = Components.classes["@mozilla.org/xpinstall/software-uninstall;1"]
+                               .getService();
+      aSoftwareUninstall.QueryInterface(Components.interfaces.nsISoftwareUninstall);  
+
+      var packageEnum;
+      packageEnum = aSoftwareUninstall.getInstalledPackages();
+      packageEnum = packageEnum.QueryInterface(Components.interfaces.nsISimpleEnumerator);
+
+      var packageInfo;
+      var regName;
+      var prettyName;
+
+      while (packageEnum.hasMoreElements())
+      {
+        packageInfo = packageEnum.getNext();
+        if (packageInfo) 
+        {
+          packageInfo = packageInfo.QueryInterface(Components.interfaces.nsIXPIPackageInfo);
+          prettyName = packageInfo.prettyName;
+          regName = packageInfo.regName;
+          AddComponent( regName, prettyName );
+        }
+      }
+    }
+
+    function AddComponent( regName, prettyName )
+    {
+      var listitem = document.createElementNS ( XUL_NS, "listitem" );
+      listitem.setAttribute( "id", regName );
+      listitem.setAttribute( "pretty", prettyName);
+
+      var attrCell = document.createElementNS ( XUL_NS, "listcell" );
+      attrCell.setAttribute( "label", prettyName );
+
+      var valueCell = document.createElementNS ( XUL_NS, "listcell" );
+      valueCell.setAttribute( "label", regName); // should be version?  
+                                                 // how do we store the regName for passing on later.
+
+      listitem.appendChild ( attrCell );
+      listitem.appendChild ( valueCell );
+      var list = document.getElementById ( "UninstallComponents" );
+      list.appendChild ( listitem );
+    }
+
+    function BackendRemove( regName, prettyName )
+    {
+      var aSoftwareUninstall = Components.classes["@mozilla.org/xpinstall/software-uninstall;1"]
+                               .getService();
+      aSoftwareUninstall.QueryInterface(Components.interfaces.nsISoftwareUninstall);  
+
+      var result = true;
+      result = aSoftwareUninstall.removePackage(regName, prettyName);
+      return ( result );
+    }
+
+    function RemoveComponents()
+    {
+      dump( "entered RemoveComponent\n" );
+
+      var list = document.getElementById( "UninstallComponents" );
+      var selectedItems = list.selectedItems;
+      var val;
+      var ret;
+      var regName;
+      var prettyName;
+
+      for ( var i = 0; i < selectedItems.length; i++ ) {
+        var fc = selectedItems[i].firstChild;
+        prettyName = fc.getAttribute( "label" );
+
+        var next = fc.nextSibling;
+        if (next)
+        {
+            regName = next.getAttribute( "label" );
+        }
+        dump( "item " + prettyName + " " + regName + " was selected\n" );
+
+        // try and delete component here
+
+        ret = BackendRemove( regName, prettyName ); 
+
+        // if successful, remove from the list
+
+        if ( ret == true ) {
+          list.removeChild( selectedItems[i] );
+        }
+        else
+          alert( "Unable to remove item " + val );
+      }
+    }
   ]]>
   </script>
    
@@ -67,6 +173,21 @@
       <radio id="freqMonthly" label="&monthly.label;" 
              accesskey="&monthly.accesskey;" value="30"/>
     </radiogroup>
+  </groupbox>
+
+  <groupbox flex="1">
+    <caption label="Uninstall"/>
+    <hbox flex="1">
+      <listbox seltype="multiple" id="UninstallComponents" onselect="UpdateRemoveButton();" flex="1">
+        <listcols>
+          <listcol flex="1"/>
+          <listcol flex="2"/>
+        </listcols>
+      </listbox>
+    </hbox>
+    <hbox>
+      <button id="RemoveButton" label="Remove" oncommand="RemoveComponents();" disabled="true"/>
+    </hbox>
   </groupbox>
 
 <!--
