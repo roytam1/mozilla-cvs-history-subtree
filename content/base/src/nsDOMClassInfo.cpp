@@ -39,6 +39,7 @@
 #include "nsLayoutAtoms.h"
 
 // DOM includes
+#include "nsDOMError.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMHTMLDocument.h"
@@ -860,12 +861,15 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                           JSObject *obj, jsval id, jsval *vp,
                           PRBool *_retval)
 {
-  // XXX: We should probably do string to int conversions here
+  int32 n = -1;
 
-  if (JSVAL_IS_INT(id)) {
+  if ((JSVAL_IS_NUMBER(id) || JSVAL_IS_STRING(id)) &&
+      ::JS_ValueToInt32(cx, id, &n)) {
+    if (n < 0) {
+      return NS_ERROR_DOM_INDEX_SIZE_ERR;
+    }
+      
     NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
-
-    PRInt32 n = JSVAL_TO_INT(id);
 
     nsCOMPtr<nsISupports> native;
     wrapper->GetNative(getter_AddRefs(native));
