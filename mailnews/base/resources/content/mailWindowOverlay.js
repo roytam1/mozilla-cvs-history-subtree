@@ -111,7 +111,7 @@ function InitViewMessagesMenu()
   var viewType = gDBView.viewType;
 
   if(allMenuItem)
-      allMenuItem.setAttribute("checked",  (viewFlags & nsMsgViewFlagsType.kUnreadOnly) == 0);
+      allMenuItem.setAttribute("checked",  (viewFlags & nsMsgViewFlagsType.kUnreadOnly) == 0 && (viewType == nsMsgViewType.eShowAllThreads));
 
   var unreadMenuItem = document.getElementById("viewUnreadMessagesMenuItem");
   if(unreadMenuItem)

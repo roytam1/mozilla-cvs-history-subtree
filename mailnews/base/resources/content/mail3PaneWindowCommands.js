@@ -434,7 +434,7 @@ var DefaultController =
       	GoNextMessage(nsMsgNavigationType.toggleThreadKilled, true);
         break;
       case "cmd_watchThread":
-        gdbView.doCommand(nsMsgViewCommandType.toggleThreadWatched);
+        gDBView.doCommand(nsMsgViewCommandType.toggleThreadWatched);
         break;
 			case "cmd_editDraft":
                 if (gDBView.numSelected >= 0)
