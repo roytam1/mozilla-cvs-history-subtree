@@ -328,16 +328,21 @@ struct URL_Struct_ {
     time_t   server_date;                 /* Date: header returned by 
 										   * HTTP servers
 										   */
-	char   * cache_file;                  /* if non-NULL then it contains
-										   * the filename of its local cache 
+    char   * cache_file;                  
+                                           /* if non-NULL then it contains
+                                           * the filename of its local cache 
 										   * file containing it's data
 										   */
+#ifdef NU_CACHE
+    void*    cache_object;
+#else
 	net_MemoryCacheObject * memory_copy;  /* if non-NULL then it contains 
 										   * a structure with
                                            * a pointer to a list of 
 										   * memory segments
                                            * containing it's data
                                            */
+#endif
 
 	void   * fe_data; 					  /* random front end data to be passed
 										   * up the line
@@ -2087,10 +2092,8 @@ extern void NET_PlusToSpace(char *str);
 #define FILE_CACHE_TYPE_URL     12
 #ifdef NU_CACHE
 #define NU_CACHE_TYPE_URL       13
-#define MEMORY_CACHE_TYPE_URL   13 /* Will go away later */
-#else
-#define MEMORY_CACHE_TYPE_URL   13
 #endif
+#define MEMORY_CACHE_TYPE_URL   13 /* Will go away later */
 #define SECURE_HTTP_TYPE_URL    14
 #define INTERNAL_IMAGE_TYPE_URL 15
 #define URN_TYPE_URL            16
