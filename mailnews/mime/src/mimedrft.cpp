@@ -39,6 +39,7 @@
 #include "comi18n.h"
 #include "nsIMsgCompFields.h"
 #include "nsMsgCompCID.h"
+#include "nsIStreamConverter.h"
 
 //
 // Header strings...
@@ -1244,10 +1245,13 @@ mime_parse_stream_complete (nsMIMESession *stream)
       } // end if (messageBody)
       
       //
-      // RICHIE - at this point, we need to create a message compose window via
-      // XP-COM with the information that we have retrieved from the message store.
+      // RICHIE - at this point, we need to create a message compose window or editor
+      // window via XP-COM with the information that we have retrieved from the message store.
       //
-      printf("RICHIE: Time to create the composition window WITH a body!!!!\n");
+      if (mdd->format_out == nsMimeOutput::nsMimeMessageEditorTemplate)
+        printf("RICHIE: Time to create the EDITOR with this template - HAS a body!!!!\n");
+      else
+        printf("RICHIE: Time to create the composition window WITH a body!!!!\n");
       // msgCompWindow = CreateCompositionWindow (fields, body, editorType);
       
       PR_FREEIF(body);
@@ -1260,7 +1264,10 @@ printf("RICHIE: I'm not cleanup up here!\n");
       // RICHIE - at this point, we need to create a message compose window via
       // XP-COM with the information that we have retrieved from the message store.
       //
-      printf("RICHIE: Time to create the composition window WITHOUT a body!!!!\n");
+      if (mdd->format_out == nsMimeOutput::nsMimeMessageEditorTemplate)
+        printf("RICHIE: Time to create the EDITOR with this template - NO body!!!!\n");
+      else
+        printf("RICHIE: Time to create the composition window WITHOUT a body!!!!\n");
       // msgCompWindow = CreateCompositionPane (fields, nsnull, editorType);
     }
     
