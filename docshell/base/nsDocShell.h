@@ -381,9 +381,6 @@ protected:
     // figured out how to do that yet.
     PRPackedBool               mUseExternalProtocolHandler;
 
-    // Disallow popping up new windows with target=
-    PRPackedBool               mDisallowPopupWindows;
-
     // Validate window targets to prevent frameset spoofing
     PRPackedBool               mValidateOrigin;
 
