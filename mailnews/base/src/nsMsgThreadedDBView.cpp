@@ -61,10 +61,10 @@ NS_IMETHODIMP nsMsgThreadedDBView::Init(PRInt32 *pCount)
 
 	m_keys.RemoveAll();
 	m_flags.RemoveAll();
-//	m_levels.RemoveAll(); // ### need to add this method to nsByteArray
+	m_levels.RemoveAll(); 
 	m_prevIdArray.RemoveAll();
 	m_prevFlags.RemoveAll();
-//	m_prevLevels.RemoveAll();
+	m_prevLevels.RemoveAll();
 	m_havePrevView = PR_FALSE;
     m_sortType = nsMsgViewSortType::byThread;	// this sorts by thread, which we will resort.
 	sortType = m_sortType;

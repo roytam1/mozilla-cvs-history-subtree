@@ -50,7 +50,7 @@ protected:
 	PRBool		m_havePrevView;
 	nsMsgKeyArray		m_prevIdArray;
 	nsUInt32Array m_prevFlags;
-	nsByteArray m_prevLevels;
+	nsUint8Array m_prevLevels;
   nsCOMPtr <nsISimpleEnumerator> m_threadEnumerator;
 };
 

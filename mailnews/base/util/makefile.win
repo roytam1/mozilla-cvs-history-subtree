@@ -31,6 +31,7 @@ EXPORTS=                \
 	nsMsgLineBuffer.h	\
 	nsMsgGroupRecord.h  \
 	nsUInt32Array.h	\
+  nsUint8Array.h \
 	nsMsgKeySet.h			\
 	nsMsgFolder.h			\
 	nsMsgDBFolder.h			\
@@ -62,6 +63,7 @@ LCFLAGS =		   \
 CPP_OBJS=                               \
 	.\$(OBJDIR)\nsMsgGroupRecord.obj    \
 	.\$(OBJDIR)\nsMsgLineBuffer.obj     \
+  .\$(OBJDIR)\nsUint8Array.obj \
 	.\$(OBJDIR)\nsUInt32Array.obj		\
 	.\$(OBJDIR)\nsMsgKeySet.obj			\
 	.\$(OBJDIR)\nsMsgFolder.obj			\

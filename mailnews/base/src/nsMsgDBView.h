@@ -28,6 +28,7 @@
 #include "nsIMsgHdr.h"
 #include "nsMsgLineBuffer.h" // for nsByteArray
 #include "nsMsgKeyArray.h"
+#include "nsUint8Array.h"
 
 enum eFieldType {
     kString,
@@ -35,6 +36,13 @@ enum eFieldType {
     kU32,
     kU64
 };
+
+typedef PRInt32 nsMsgDBViewFlags;
+	// flags for GetViewFlags
+const int kOutlineDisplay = 0x1;
+const int kFlatDisplay = 0x2;
+const int kShowIgnored = 0x8;
+const int kUnreadOnly = 0x10;
 
 // I think this will be an abstract implementation class.
 // The classes that implement the outliner support will probably
@@ -72,13 +80,14 @@ protected:
   
   nsMsgKeyArray m_keys;
   nsUInt32Array m_flags;
-  nsByteArray   m_levels;
+  nsUint8Array   m_levels;
 
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;
   nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgDBViewTypeValue m_viewType;
+	nsMsgDBViewFlags	m_viewFlags;
 };
 
 

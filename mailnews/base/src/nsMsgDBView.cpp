@@ -411,9 +411,9 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	nsMsgViewIndex	insertIndex = firstInsertIndex;
 	uint32			numExpanded = 0;
 	nsMsgKeyArray			tempIDArray;
-	nsByteArray		tempFlagArray;
-	nsByteArray		tempLevelArray;
-	nsByteArray		unreadLevelArray;
+	nsUInt32Array		tempFlagArray;
+	nsUint8Array		tempLevelArray;
+	nsUint8Array		unreadLevelArray;
 
 	NS_ASSERTION(flags & MSG_FLAG_ELIDED, "can't expand an already expanded thread");
 	flags &= ~MSG_FLAG_ELIDED;
@@ -434,11 +434,10 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	do
 	{
 		const int listChunk = 200;
-#ifdef ON_BRANCH_YET
 		nsMsgKey	listIDs[listChunk];
 		char		listFlags[listChunk];
 		char		listLevels[listChunk];
-
+#ifdef HAVE_PORT
 		if (m_viewFlags & kUnreadOnly)
 		{
 			if (flags & MSG_FLAG_READ)
@@ -451,6 +450,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 		else
 			rv = m_db->ListIdsInThread(msgHdr,  &startMsg, listChunk, 
 											listIDs, listFlags, listLevels, &numListed);
+#endif
 		// Don't add thread to view, it's already in.
 		for (int i = 0; i < numListed; i++)
 		{
@@ -462,7 +462,6 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 				insertIndex++;
 			}
 		}
-#endif
 		if (numListed < listChunk || startMsg == nsMsgKey_None)
 			break;
 	}
@@ -472,10 +471,8 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	NoteStartChange(firstInsertIndex, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 
 	m_keys.InsertAt(firstInsertIndex, &tempIDArray);
-#ifdef ON_BRANCH_YET
 	m_flags.InsertAt(firstInsertIndex, &tempFlagArray);
   m_levels.InsertAt(firstInsertIndex, &tempLevelArray);
-#endif
 	NoteEndChange(firstInsertIndex, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 	if (pNumExpanded != nsnull)
 		*pNumExpanded = numExpanded;
