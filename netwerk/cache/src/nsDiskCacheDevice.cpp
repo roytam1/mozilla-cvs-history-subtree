@@ -929,7 +929,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
     rv = updateDiskCacheEntries();
     if (NS_FAILED(rv)) return rv;
     
-    for (PRUint32 i = 1; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+    for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
         nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
         for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
             nsDiskCacheRecord* record = bucket++;
@@ -1145,7 +1145,7 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
     if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
     nsCOMPtr<nsICacheEntryInfo> ref(entryInfo);
     
-    for (PRUint32 i = 1; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+    for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
         nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
         for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
             nsDiskCacheRecord* record = bucket++;
@@ -1505,9 +1505,8 @@ nsresult nsDiskCacheDevice::clobberDiskCache()
     rv = openCacheMap();
     if (NS_FAILED(rv)) return rv;
 
-    mCacheMap->Write(mCacheStream);
-
-    return NS_OK;
+    rv = mCacheMap->Write(mCacheStream);
+    return rv;
 }
 
 
@@ -1532,7 +1531,7 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     PRUint32 count = 0;
     nsDiskCacheRecord* sortedRecords = new nsDiskCacheRecord[mCacheMap->EntryCount()];
     if (sortedRecords) {
-        for (PRUint32 i = 1; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+        for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
             nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
             for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
                 nsDiskCacheRecord* record = bucket++;
