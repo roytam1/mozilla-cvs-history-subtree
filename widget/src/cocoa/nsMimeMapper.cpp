@@ -102,6 +102,10 @@ nsMimeMapperMac :: MapMimeTypeToMacOSType ( const char* aMimeStr, PRBool inAddIf
       format = kDragFlavorTypeHFS;
     else if ( PL_strcmp(aMimeStr, kFilePromiseMime) == 0 )
       format = kDragFlavorTypePromiseHFS;
+    else if ( PL_strcmp(aMimeStr, kURLDataMime) == 0 )
+      format = 'url ';
+    else if ( PL_strcmp(aMimeStr, kURLDescriptionMime) == 0 )
+      format = 'urld';
     else if ( PL_strcmp(aMimeStr, kPNGImageMime) == 0 )
       format = kScrapFlavorTypePicture;
     else if ( PL_strcmp(aMimeStr, kJPEGImageMime) == 0 )
@@ -148,12 +152,14 @@ nsMimeMapperMac :: MapMacOSTypeToMimeType ( ResType inMacType, nsCAutoString & o
 {
   switch ( inMacType ) {
   
-    case kScrapFlavorTypeText:      outMimeStr = kTextMime;         break;
-    case kScrapFlavorTypeUnicode:   outMimeStr = kUnicodeMime;      break;
-    case kScrapFlavorTypePicture:   outMimeStr = kNativeImageMime;  break;
-    case kDragFlavorTypeHFS:        outMimeStr = kFileMime;         break;
-    case kDragFlavorTypePromiseHFS: outMimeStr = kFilePromiseMime;  break;
-    case kDragPromisedFlavor:       outMimeStr = kFilePromiseMime;  break;
+    case kScrapFlavorTypeText:      outMimeStr = kTextMime;             break;
+    case kScrapFlavorTypeUnicode:   outMimeStr = kUnicodeMime;          break;
+    case kScrapFlavorTypePicture:   outMimeStr = kNativeImageMime;      break;
+    case kDragFlavorTypeHFS:        outMimeStr = kFileMime;             break;
+    case kDragFlavorTypePromiseHFS: outMimeStr = kFilePromiseMime;      break;
+    case kDragPromisedFlavor:       outMimeStr = kFilePromiseMime;      break;
+    case 'url ':                    outMimeStr = kURLDataMime;          break;
+    case 'urld':                    outMimeStr = kURLDescriptionMime;   break;
     
     // This flavor is the old 4.x Composer flavor for HTML. The actual data is a binary
     // data structure which we do NOT want to deal with in any way shape or form. I am

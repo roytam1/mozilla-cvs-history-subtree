@@ -39,7 +39,9 @@
 #define kFileMime           "application/x-moz-file"
 #define kFilePromiseMime    "application/x-moz-file-promise"
 #define kFilePromiseURLMime "application/x-moz-file-promise-url"
-#define kURLMime            "text/x-moz-url"
+#define kURLMime            "text/x-moz-url"        // data contains url\ntitle
+#define kURLDataMime        "text/x-moz-url-data"   // data contains url only
+#define kURLDescriptionMime "text/x-moz-url-desc"   // data contains description
 #define kNativeImageMime    "application/x-moz-nativeimage"
 
 %}

@@ -552,7 +552,7 @@ printf("looking for data in type %s, mac flavor %ld\n", NS_STATIC_CAST(const cha
       // check if it is present in the current drag item.
       FlavorFlags unused;
       PRBool dataFound = PR_FALSE;
-	  void* dataBuff;
+      void* dataBuff = nsnull;
       PRInt32 dataSize = 0;
       if ( macOSFlavor && ::GetFlavorFlags(mDragRef, itemRef, macOSFlavor, &unused) == noErr ) {	    
         nsresult loadResult = ExtractDataFromOS(mDragRef, itemRef, macOSFlavor, &dataBuff, &dataSize);
@@ -583,17 +583,36 @@ printf("looking for data in type %s, mac flavor %ld\n", NS_STATIC_CAST(const cha
         } // if looking for text/unicode   
       } // else we try one last ditch effort to find our data
 
-	  if ( dataFound ) {
+      if ( dataFound )
+      {
         nsCOMPtr<nsISupports> genericDataWrapper;
-	    if ( strcmp(flavorStr, kFileMime) == 0 ) {
-	      // we have a HFSFlavor struct in |dataBuff|. Create an nsLocalFileMac object.
-	      HFSFlavor* fileData = NS_REINTERPRET_CAST(HFSFlavor*, dataBuff);
-	      NS_ASSERTION ( sizeof(HFSFlavor) == dataSize, "Ooops, we realy don't have a HFSFlavor" );
-	      nsCOMPtr<nsILocalFileMac> file;
-	      if ( NS_SUCCEEDED(NS_NewLocalFileWithFSSpec(&fileData->fileSpec, PR_TRUE, getter_AddRefs(file))) )
-	        genericDataWrapper = do_QueryInterface(file);
-	    }
-	    else {
+        if (strcmp(flavorStr, kFileMime) == 0)
+        {
+          // we have a HFSFlavor struct in |dataBuff|. Create an nsLocalFileMac object.
+          HFSFlavor* fileData = NS_REINTERPRET_CAST(HFSFlavor*, dataBuff);
+          NS_ASSERTION ( sizeof(HFSFlavor) == dataSize, "Ooops, we realy don't have a HFSFlavor" );
+          nsCOMPtr<nsILocalFileMac> file;
+          if ( NS_SUCCEEDED(NS_NewLocalFileWithFSSpec(&fileData->fileSpec, PR_TRUE, getter_AddRefs(file))) )
+            genericDataWrapper = do_QueryInterface(file);
+        }
+        else if ((strcmp(flavorStr, kURLDataMime) == 0) || (strcmp(flavorStr, kURLDescriptionMime) == 0))
+        {
+          // need to convert platform data to unicode
+          const char* castedText        = NS_REINTERPRET_CAST(char*, dataBuff);          
+          PRUnichar*  convertedText     = nsnull;
+          PRInt32     convertedTextLen  = 0;
+          nsPrimitiveHelpers::ConvertPlatformPlainTextToUnicode(castedText, dataSize, 
+                                                                    &convertedText, &convertedTextLen);
+          if (convertedText)
+          {
+            nsMemory::Free(dataBuff);
+            dataBuff = convertedText;
+            dataSize = convertedTextLen * 2;
+            nsPrimitiveHelpers::CreatePrimitiveForData(flavorStr, (void *)dataBuff, dataSize, getter_AddRefs(genericDataWrapper));
+          }
+        }
+        else
+        {
           // we probably have some form of text. The DOM only wants LF, so convert k
           // from MacOS line endings to DOM line endings.
           nsLinebreakHelpers::ConvertPlatformToDOMLinebreaks ( flavorStr, &dataBuff, NS_REINTERPRET_CAST(int*, &dataSize) );            
@@ -807,11 +826,21 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
     // if someone was asking for text/plain, lookup unicode instead so we can convert it.
     PRBool needToDoConversionToPlainText = PR_FALSE;
     const char* actualFlavor = mimeFlavor.get();
-    if ( strcmp(actualFlavor,kTextMime) == 0 ) {
+    if (strcmp(actualFlavor, kTextMime) == 0)
+    {
       actualFlavor = kUnicodeMime;
       needToDoConversionToPlainText = PR_TRUE;
     }
-    else if ( strcmp(actualFlavor, kFilePromiseMime) == 0 ) {
+    else if (strcmp(actualFlavor, kURLDataMime) == 0)
+    {
+      needToDoConversionToPlainText = PR_TRUE;
+    }
+    else if (strcmp(actualFlavor, kURLDescriptionMime) == 0)
+    {
+      needToDoConversionToPlainText = PR_TRUE;
+    }
+    else if (strcmp(actualFlavor, kFilePromiseMime) == 0)
+    {
       nsCOMPtr<nsISupports> imageURLPrimitive;
       PRUint32 dataSize = 0;
       rv = item->GetTransferData(kFilePromiseURLMime, getter_AddRefs(imageURLPrimitive), &dataSize);
@@ -833,7 +862,8 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
         
       return HandleHFSPromiseDrop(inDragRef, inItemIndex, inFlavor, imageURLString, outData, outDataSize);
     }
-    else if ( strcmp(actualFlavor, kNativeImageMime) == 0 ) {
+    else if (strcmp(actualFlavor, kNativeImageMime) == 0)
+    {
       PRUint32 dataSize = 0;
       nsCOMPtr<nsISupports> transferSupports;
       rv = item->GetTransferData(actualFlavor, getter_AddRefs(transferSupports), &dataSize);
@@ -852,7 +882,9 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
       if (!picture) return cantGetFlavorErr; 
 
       PRInt32 pictSize = ::GetHandleSize((Handle)picture);
-      char* pictData = (char*)nsMemory::Alloc(pictSize);
+      char* pictData = nsnull;
+      if (pictSize > 0)
+        pictData = (char*)nsMemory::Alloc(pictSize);
       if (pictData) {
         ::BlockMoveData(*picture, pictData, pictSize);    // doesn't move memory
         *outData = (void*)pictData;
@@ -861,13 +893,14 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
       }
       else
         retVal = cantGetFlavorErr;
+
       ::KillPicture(picture);
-      
       return retVal;
     }
       
     nsCOMPtr<nsISupports> data;
-    if ( NS_SUCCEEDED(item->GetTransferData(actualFlavor, getter_AddRefs(data), outDataSize)) ) {
+    if (NS_SUCCEEDED(item->GetTransferData(actualFlavor, getter_AddRefs(data), outDataSize)))
+    {
       nsPrimitiveHelpers::CreateDataFromPrimitive ( actualFlavor, data, outData, *outDataSize );
 
       // Convert unix to mac linebreaks, since mac linebreaks are required for clipboard compatibility.
@@ -885,7 +918,7 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
       if ( needToDoConversionToPlainText ) {
         char* plainTextData = nsnull;
         PRInt32 plainTextLen = 0;
-        nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText ( castedUnicode, *outDataSize / 2, &plainTextData, &plainTextLen );
+        nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText(castedUnicode, *outDataSize / 2, &plainTextData, &plainTextLen);
         if ( *outData ) {
           nsMemory::Free(*outData);
           *outData = plainTextData;
