@@ -36,42 +36,8 @@ static char* ids[] = {
 };
 #define NUM_IDS ((int) (sizeof(ids) / sizeof(ids[0])))
 
-////////////////////////////////////////////////////////////////////////////////
-
-//#define NS_DISABLE_LOGGING
-#include "nslog.h"
-#include "nsIServiceManager.h"
-
-NS_IMPL_LOG(Foo)
-#define PRINTF  NS_LOG_PRINTF(Foo)
-#define FLUSH   NS_LOG_FLUSH(Foo)
-
-int fact(int n) {
-  NS_LOG_WITH_INDENT(Foo, nsnull);
-  PRINTF("calling fact of %d\n", n);
-  if (n == 0) return 1;
-  int result = n * fact(n - 1);
-  PRINTF("fact of %d is %d\n", n, result);
-  return result;
-}
-
 int main(int argc, char** argv)
 {
-  PRINTF("testing %d\n", 1);
-  FLUSH();
-
-  nsresult rv;
-  nsCOMPtr<nsILoggingService> serv = do_GetService(NS_LOGGINGSERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  fact(3);
-
-#ifdef NS_ENABLE_LOGGING
-  rv = serv->DescribeLogs(Foo);
-  if (NS_FAILED(rv)) return rv;
-#endif
-
-#if 0
   nsID id;
   for (int i = 0; i < NUM_IDS; i++) {
     char* idstr = ids[i];
@@ -89,7 +55,6 @@ int main(int argc, char** argv)
       return -1;
     }
   }
-#endif
 
   return 0;
 }
