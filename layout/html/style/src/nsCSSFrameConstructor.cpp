@@ -4186,9 +4186,8 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
         // Set flag so the events go to the listFrame not child frames.
         // XXX: We should replace this with a real widget manager similar
         // to how the nsFormControlFrame works. Re-directing events is a temporary Kludge.
-      nsIView *listView = listFrame->GetView();
-      NS_ASSERTION(listView, "ListFrame's view is nsnull");
-      //listView->SetViewFlags(NS_VIEW_PUBLIC_FLAG_DONT_CHECK_CHILDREN);
+      NS_ASSERTION(listFrame->GetView(), "ListFrame's view is nsnull");
+      //listFrame->GetView()->SetViewFlags(NS_VIEW_PUBLIC_FLAG_DONT_CHECK_CHILDREN);
 
       // Create display and button frames from the combobox's anonymous content.
       // The anonymous content is appended to existing anonymous content for this
@@ -5145,23 +5144,26 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
         continue;
 
       content->SetNativeAnonymous(PR_TRUE);
-      content->SetParent(aParent);
       content->SetDocument(aDocument, PR_TRUE, PR_TRUE);
-
+      // Set the binding parent first, since setting the parent may cause
+      // relative URIs to change (due to xml:base) and |child| may need to be
+      // able to tell that it's anonymous content as it recomputes its base
+      // URI.
+      nsIContent* bindingParent = content;
 #ifdef MOZ_XUL
       // Only cut XUL scrollbars off if they're not in a XUL document.  This allows
       // scrollbars to be styled from XUL (although not from XML or HTML).
       nsCOMPtr<nsIAtom> tag;
       content->GetTag(getter_AddRefs(tag));
-      if (tag.get() == nsXULAtoms::scrollbar) {
+      if (tag == nsXULAtoms::scrollbar) {
         nsCOMPtr<nsIDOMXULDocument> xulDoc(do_QueryInterface(aDocument));
-        if (xulDoc)
-          content->SetBindingParent(aParent);
-        else content->SetBindingParent(content);
+        if (xulDoc) {
+          bindingParent = aParent;
+        }
       }
-      else
 #endif
-        content->SetBindingParent(content);
+      content->SetBindingParent(bindingParent);
+      content->SetParent(aParent);
     
       nsIFrame * newFrame = nsnull;
       nsresult rv = creator->CreateFrameFor(aPresContext, content, &newFrame);
@@ -6233,7 +6235,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       aState.PushAbsoluteContainingBlock(aPresContext, scrolledFrame, absoluteSaveState);
     }
      
-    ProcessChildren(aPresShell, aPresContext, aState, aContent, scrolledFrame, PR_FALSE,
+    ProcessChildren(aPresShell, aPresContext, aState, aContent, scrolledFrame, PR_TRUE,
                     childItems, PR_TRUE);
 
     nsCOMPtr<nsIAtom> tag;
@@ -10254,8 +10256,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
                                         nsIContent* aContent,
                                         PRInt32 aNameSpaceID,
                                         nsIAtom* aAttribute,
-                                        PRInt32 aModType, 
-                                        nsChangeHint aHint)
+                                        PRInt32 aModType)
 {
   nsresult  result = NS_OK;
 
@@ -10267,17 +10268,6 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   // Get the frame associated with the content which is the highest in the frame tree
   nsIFrame* primaryFrame;
   shell->GetPrimaryFrameFor(aContent, &primaryFrame); 
-  // Get the frame associated with the content whose style context is highest in the style context tree
-  nsIFrame* primaryStyleFrame = primaryFrame;
-  if (primaryFrame) {
-    PRBool providerIsChild = PR_FALSE;
-    nsIFrame *styleContextProvider;
-    primaryFrame->GetParentStyleContextFrame(aPresContext,
-                                             &styleContextProvider,
-                                             &providerIsChild);
-    if (providerIsChild)
-      primaryStyleFrame = styleContextProvider;
-  }
 
 #if 0
   NS_FRAME_LOG(NS_FRAME_TRACE_CALLS,
@@ -10286,17 +10276,15 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
 #endif
 
   // the style tag has its own interpretation based on aHint 
-  if (aHint & nsChangeHint_Unknown) { 
-    nsCOMPtr<nsIStyledContent> styledContent = do_QueryInterface(aContent);
-    if (styledContent) { 
-      // Get style hint from HTML content object. 
-      styledContent->GetMappedAttributeImpact(aAttribute, aModType, aHint);
-    } 
-  }
+  nsChangeHint hint = NS_STYLE_HINT_NONE;
+  nsCOMPtr<nsIStyledContent> styledContent = do_QueryInterface(aContent);
+  if (styledContent) { 
+    // Get style hint from HTML content object. 
+    styledContent->GetAttributeChangeHint(aAttribute, aModType, hint);
+  } 
 
-  PRBool reconstruct = (aHint & nsChangeHint_ReconstructDoc) != 0;
-  PRBool reframe = (aHint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame)) != 0;
-  PRBool restyle = (aHint & ~(nsChangeHint_AttrChange)) != 0;
+  PRBool reconstruct = (hint & nsChangeHint_ReconstructDoc) != 0;
+  PRBool reframe = (hint & (nsChangeHint_ReconstructDoc | nsChangeHint_ReconstructFrame)) != 0;
 
 #ifdef MOZ_XUL
   // The following listbox widget trap prevents offscreen listbox widget
@@ -10348,23 +10336,17 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   }
 
   // apply changes
-  if (primaryFrame && (aHint & nsChangeHint_AttrChange) && !(aHint & ~(nsChangeHint_AttrChange))) {
-    result = primaryFrame->AttributeChanged(aPresContext, aContent, aNameSpaceID, aAttribute, aModType, aHint);
-  }
-  else if (reconstruct) {
+  if (reconstruct) {
     result = ReconstructDocElementHierarchy(aPresContext);
   }
   else if (reframe) {
     result = RecreateFramesForContent(aPresContext, aContent);
   }
-  else if (restyle) {
-    // If there is no frame then there is no point in re-styling it,
-    // is there?
+  else {
     if (primaryFrame) {
-      nsChangeHint maxHint = aHint;
       nsStyleChangeList changeList;
       // put primary frame on list to deal with, re-resolve may update or add next in flows
-      changeList.AppendChange(primaryFrame, aContent, maxHint);
+      changeList.AppendChange(primaryFrame, aContent, hint);
       nsCOMPtr<nsIFrameManager> frameManager;
       shell->GetFrameManager(getter_AddRefs(frameManager));
 
@@ -10372,42 +10354,34 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
       frameManager->HasAttributeDependentStyle(aContent,
                                                aAttribute, aModType, &affects);
       if (affects) {
-#ifdef DEBUG_shaver
-        fputc('+', stderr);
-#endif
         // there is an effect, so compute it
         frameManager->ComputeStyleChangeFor(primaryFrame, 
                                             aNameSpaceID, aAttribute,
-                                            changeList, aHint, maxHint);
-      } else {
-#ifdef DEBUG_shaver
-        fputc('-', stderr);
-#endif
-        // let this frame update itself, but don't walk the whole frame tree
-        maxHint = NS_STYLE_HINT_VISUAL;
+                                            changeList, hint, hint);
       }
 
-      // maxHint is hint for primary only
-      if (maxHint & nsChangeHint_ReconstructDoc) {
+      // hint is for primary only
+      if (hint & nsChangeHint_ReconstructDoc) {
         result = ReconstructDocElementHierarchy(aPresContext);
         changeList.Clear();
-      } else if (maxHint & nsChangeHint_ReconstructFrame) {
+      } else if (hint & nsChangeHint_ReconstructFrame) {
         result = RecreateFramesForContent(aPresContext, aContent);
         changeList.Clear();
-      } else if (maxHint & ~(nsChangeHint_AttrChange | nsChangeHint_Aural)) {
-          // let the frame deal with it, since we don't know how to
-          result = primaryFrame->AttributeChanged(aPresContext, aContent, aNameSpaceID, aAttribute, aModType, maxHint);
+      } else {
+        // let the frame deal with it, since we don't know how to
+        result = primaryFrame->AttributeChanged(aPresContext, aContent,
+                                                aNameSpaceID, aAttribute,
+                                                aModType);
+        // XXXwaterson should probably check for special IB siblings
+        // here, and propagate the AttributeChanged notification to
+        // them, as well. Currently, inline frames don't do anything on
+        // this notification, so it's not that big a deal.
 
-          // XXXwaterson should probably check for special IB siblings
-          // here, and propagate the AttributeChanged notification to
-          // them, as well. Currently, inline and block frames don't
-          // do anything on this notification, so it's not that big a
-          // deal.
+        // handle any children (primary may be on list too)
+        ProcessRestyledFrames(changeList, aPresContext);
       }
-      // handle any children (primary may be on list too)
-      ProcessRestyledFrames(changeList, aPresContext);
     }
-    else {  // no frame now, possibly genetate one with new style data
+    else {
       result = MaybeRecreateFramesForContent(aPresContext, aContent);
     }
   }

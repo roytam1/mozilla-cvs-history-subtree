@@ -1115,7 +1115,7 @@ nsStyleDisplay::nsStyleDisplay(const nsStyleDisplay& aSource)
 
 nsChangeHint nsStyleDisplay::CalcDifference(const nsStyleDisplay& aOther) const
 {
-  nsChangeHint hint = nsChangeHint_None;
+  nsChangeHint hint = nsChangeHint(0);
 
   if (mBinding != aOther.mBinding
       || mPosition != aOther.mPosition
@@ -1427,10 +1427,8 @@ nsChangeHint nsStyleUserInterface::CalcDifference(const nsStyleUserInterface& aO
 
   if (mUserInput == aOther.mUserInput) {
     if (mUserModify == aOther.mUserModify) {
-      if (mUserFocus == aOther.mUserFocus) {
-        return NS_STYLE_HINT_NONE;
-      }
-      return NS_STYLE_HINT_CONTENT;
+      // ignore mUserFocus
+      return NS_STYLE_HINT_NONE;
     }
     return NS_STYLE_HINT_VISUAL;
   }
@@ -1473,10 +1471,8 @@ nsChangeHint nsStyleUIReset::CalcDifference(const nsStyleUIReset& aOther) const
   if (mForceBrokenImageIcon == aOther.mForceBrokenImageIcon) {
     if (mResizer == aOther.mResizer &&
         mUserSelect == aOther.mUserSelect) {
-      if (mKeyEquivalent == aOther.mKeyEquivalent) {
-        return NS_STYLE_HINT_NONE;
-      }
-      return NS_STYLE_HINT_CONTENT;
+      // ignore mKeyEquivalent
+      return NS_STYLE_HINT_NONE;
     }
     return NS_STYLE_HINT_VISUAL;
   }

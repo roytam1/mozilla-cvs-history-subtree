@@ -479,39 +479,6 @@ nsSVGElement::GetInlineStyleRule(nsIStyleRule** aStyleRule)
   return mStyle->GetStyleRule(this, aStyleRule);
 }
 
-NS_IMETHODIMP
-nsSVGElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
-                                       nsChangeHint& aHint) const
-{
-#ifdef DEBUG
-//  nsAutoString str;
-//  ((nsIAtom *)aAttribute)->ToString(str);
-//  printf("nsSVGElement(%p)::GetMappedAttributeImpact(%s)\n", this, NS_ConvertUCS2toUTF8(str).get());
-#endif
-  // We only need the cssframeconstructor to handle changes on
-  // style-related attributes, i.e. the 'style'-attribute and the
-  // svg presentation attributes. Other 'interesting' attributes get
-  // handled by a listener mechanism specific to the SVG
-  // implementation.
-  // For style-related attributes we'll return NS_STYLE_HINT_VISUAL
-  // which will always re-resolve the style context. For any other
-  // attributes we'll return NS_STYLE_HINT_CONTENT which will only
-  // re-resolve the style context if the attribute is used in a css
-  // selector.
-
-  PRBool isPresentationAttr;
-  NS_CONST_CAST(nsSVGElement*,this)->IsPresentationAttribute(aAttribute, &isPresentationAttr);
-  
-  if (aAttribute==nsSVGAtoms::style || isPresentationAttr)
-    aHint = NS_STYLE_HINT_VISUAL;
-  else
-    aHint = NS_STYLE_HINT_CONTENT;
-  
-  
-  return NS_OK;
-}
-
-
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
