@@ -142,7 +142,7 @@ Message1=It is strongly recommended that you exit all Windows programs before ru
 Message2=Click Cancel to quit Setup and then close any programs you have running.  Click Next to continue the Setup program.
 
 [Dialog License]
-Show Dialog=TRUE
+Show Dialog=FALSE
 ;*** LOCALIZE ME BABY ***
 Title=$ProductName$ Setup - Software License Agreement
 License File=license.txt
@@ -347,7 +347,7 @@ Title=$ProductName$ Setup - Start Install
 ;*** LOCALIZE ME BABY ***
 Message Install=Setup has enough information to start copying the program files.  If you want to review or change settings, click Back.  If you are satisfied with the current settings, click Install to begin copying files.
 ;*** LOCALIZE ME BABY ***
-Message Download=Setup has enough information to start downloading and copying the program files.  If you want to review or change settings, click Back.  If you are satisfied with the current settings, make sure you are currently connected to the internet and click Install to begin downloading files.
+Message Download=Setup has enough information to start copying the program files.  If you want to change settings, click Back.  By selecting Install, you acknowledge that there is no warranty or liability whatsoever, not even implied; for further information, see the MPL and NPL licenses, available on the Beonex website. If you are satisfied with the current settings, click Install.
 
 [Dialog Download]
 Show Dialog=TRUE
