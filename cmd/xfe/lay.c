@@ -2334,10 +2334,10 @@ XFE_CreateEmbedWindow(MWContext *context, NPEmbeddedApp *app)
     if (XP_FAIL_ASSERT(lo_struct != NULL))
         return;
 
-    xp = lo_struct->x;
-    yp = lo_struct->y;
-    xs = lo_struct->width;
-    ys = lo_struct->height;
+    xp = lo_struct->objTag.x;
+    yp = lo_struct->objTag.y;
+    xs = lo_struct->objTag.width;
+    ys = lo_struct->objTag.height;
 	
     if (CONTEXT_DATA(context)->is_fullpage_plugin) {
         /* This is a full page plugin */
@@ -2521,9 +2521,9 @@ XFE_RestoreEmbedWindow(MWContext *context, NPEmbeddedApp *app)
                     = ((np_data*) app->np_data)->lo_struct;
 
                 if (embed_struct) {
-                    xp = embed_struct->x + embed_struct->x_offset -
+                    xp = embed_struct->objTag.x + embed_struct->objTag.x_offset -
                         CONTEXT_DATA(context)->document_x;
-                    yp = embed_struct->y + embed_struct->y_offset -
+                    yp = embed_struct->objTag.y + embed_struct->objTag.y_offset -
                         CONTEXT_DATA(context)->document_y;
                 }
             }
@@ -2600,20 +2600,20 @@ XFE_DisplayEmbed (MWContext *context,
     int32 xs, ys;
 
     if (!embed_struct) return;
-    eApp = (NPEmbeddedApp *)embed_struct->FE_Data;
+    eApp = (NPEmbeddedApp *)embed_struct->objTag.FE_Data;
     if (!eApp) return;
 
     /* Shouldn't be here if HIDDEN */
-    if (embed_struct->ele_attrmask & LO_ELE_HIDDEN) 
+    if (embed_struct->objTag.ele_attrmask & LO_ELE_HIDDEN) 
       return;
     
 
     /* Layout might have changed the location of the embed since we
      * created the embed in XFE_GetEmbedSize()
      */
-    xs = embed_struct->x + embed_struct->x_offset -
+    xs = embed_struct->objTag.x + embed_struct->objTag.x_offset -
       CONTEXT_DATA (context)->document_x;
-    ys = embed_struct->y + embed_struct->y_offset -
+    ys = embed_struct->objTag.y + embed_struct->objTag.y_offset -
       CONTEXT_DATA (context)->document_y;
 
     /* If this is a full page plugin, then plugin needs to be notified of
@@ -2654,7 +2654,7 @@ XFE_DisplayEmbed (MWContext *context,
 	   an enclosing layer, in which case we should unmap the
 	   plugin's window */
 	XtSetMappedWhenManaged((Widget)eApp->fe_data,
-			       !(embed_struct->ele_attrmask &LO_ELE_INVISIBLE));
+			       !(embed_struct->objTag.ele_attrmask &LO_ELE_INVISIBLE));
 
 	/* The location of the plugin may have changed since it was
 	 * created, either at the behest of Layout or due to movement
@@ -2690,7 +2690,7 @@ void
 XFE_GetEmbedSize (MWContext *context, LO_EmbedStruct *embed_struct,
 		  NET_ReloadMethod force_reload)
 {
-    NPEmbeddedApp *eApp = (NPEmbeddedApp *)embed_struct->FE_Data;
+    NPEmbeddedApp *eApp = (NPEmbeddedApp *)embed_struct->objTag.FE_Data;
     int32 doc_id;
     lo_TopState *top_state;
 
@@ -2703,8 +2703,8 @@ XFE_GetEmbedSize (MWContext *context, LO_EmbedStruct *embed_struct,
 	/* Determine if this is a fullpage plugin. Do this _now_ so
            that it'll be available when NPL_EmbedCreate() calls back
            to XFE_CreateEmbedWindow() */
-	if((embed_struct->width == 1) &&
-           (embed_struct->height == 1) &&
+	if((embed_struct->objTag.width == 1) &&
+           (embed_struct->objTag.height == 1) &&
 #ifdef OJI
            (embed_struct->attributes.n > 0) &&
            (!strcmp(embed_struct->attributes.names[0], "src")) &&
@@ -2725,18 +2725,18 @@ XFE_GetEmbedSize (MWContext *context, LO_EmbedStruct *embed_struct,
 #endif
 	{
 	    /* hmm, that failed which is unusual */
-	    embed_struct->width = embed_struct->height=1;
+	    embed_struct->objTag.width = embed_struct->objTag.height = 1;
 	    return;
 	}
 	eApp->type = NP_Plugin;
 
-	if (embed_struct->ele_attrmask & LO_ELE_HIDDEN) {
+	if (embed_struct->objTag.ele_attrmask & LO_ELE_HIDDEN) {
 	    /* Hidden plugin. Dont create window for it. */
 	    eApp->fe_data = 0;
 	    eApp->wdata = 0;
-	    embed_struct->width = embed_struct->height=0;
+	    embed_struct->objTag.width = embed_struct->objTag.height=0;
 	    /* --- begin fix for bug# 35087 --- */
-	    embed_struct->FE_Data = (void *)eApp;
+	    embed_struct->objTag.FE_Data = (void *)eApp;
 
             if (NPL_EmbedStart(context, embed_struct, eApp) != NPERR_NO_ERROR) {
 	        /* Spoil sport! */
@@ -2748,7 +2748,7 @@ XFE_GetEmbedSize (MWContext *context, LO_EmbedStruct *embed_struct,
                    to zero!
 
                 XFE_DestroyEmbedWindow(context, eApp) */
-                embed_struct->FE_Data = NULL;
+                embed_struct->objTag.FE_Data = NULL;
 	        return;
 	    }
 	    /* --- end fix for bug# 35087 --- */
@@ -2763,7 +2763,7 @@ XFE_GetEmbedSize (MWContext *context, LO_EmbedStruct *embed_struct,
 	if (NPL_EmbedStart(context, embed_struct, eApp) != NPERR_NO_ERROR) {
 	    /* Spoil sport! */
 	    XFE_DestroyEmbedWindow(context, eApp);
-            embed_struct->FE_Data = NULL;
+            embed_struct->objTag.FE_Data = NULL;
 	    return;
 	}
     }
@@ -3009,8 +3009,8 @@ XFE_GetJavaAppSize (MWContext *context, LO_JavaAppStruct *java_struct,
     LJ_GetJavaAppSize(context, java_struct, reloadMethod);
 #else
     FE_DisplayNoJavaIcon(context, java_struct);
-    java_struct->width = 1;
-    java_struct->height = 1;
+    java_struct->objTag.width = 1;
+    java_struct->objTag.height = 1;
 #endif
 }
 
