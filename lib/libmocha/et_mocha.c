@@ -41,11 +41,7 @@
 #include "pa_parse.h"
 #include "jsjava.h"
 #include "intl_csi.h"
-<<<<<<< et_mocha.c
-#include "netcache.h"
-=======
 /* #include "netcache.h" */
->>>>>>> 3.2.6.2
 
 QueueStackElement * et_TopQueue = NULL;
 

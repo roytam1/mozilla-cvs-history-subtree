@@ -34,13 +34,8 @@
 #include "np.h"
 #include "prefapi.h"
 #include "pa_parse.h"
-<<<<<<< et_moz.c
-#include "netcache.h"
-#include "secnav.h"
-=======
 /* #include "netcache.h" */
 #include "secnav.h"
->>>>>>> 3.3.2.1
 
 
 #define IL_CLIENT
