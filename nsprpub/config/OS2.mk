@@ -26,6 +26,12 @@
 # the macro OS_CFLAGS is set to OS_EXE_CFLAGS inside of the
 #   makefile for the pr/tests directory. ... Hack.
 
+# Specify toolset.  Default to EMX.
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+XP_OS2_VACPP = 1
+else
+XP_OS2_EMX   = 1
+endif
 
 #
 # On OS/2 we proudly support gbash...
@@ -40,7 +46,7 @@ RANLIB = echo
 BSDECHO = echo
 NSINSTALL = nsinstall
 INSTALL	= $(NSINSTALL)
-MAKE_OBJDIR = mkdir $(OBJDIR)
+MAKE_OBJDIR = -mkdir $(OBJDIR)
 IMPLIB = flipper implib -nologo -noignorecase
 FILTER = flipper cppfilt -q
 RC = rc.exe
@@ -84,3 +90,30 @@ OBJDIR_NAME = $(OS_CONFIG)$(CPU_ARCH)$(OBJDIR_TAG).OBJ
 endif
 
 OS_DLLFLAGS = -nologo -DLL -FREE -NOE
+
+ifdef XP_OS2_VACPP
+
+DEFINES += -DXP_OS2_VACPP
+
+else
+
+CC		= gcc
+CCC		= gcc
+LINK	= gcc
+AR      = gcc
+RC 		= rc.exe
+
+DEFINES += -DXP_OS2_EMX
+
+ifdef BUILD_OPT
+OPTIMIZER	= -O3
+else
+OPTIMIZER	= -g
+endif
+
+OS_CFLAGS     = -I. -Wall -Zmt $(DEFINES)
+OS_EXE_CFLAGS = -I. -Wall -Zmt $(DEFINES)
+
+endif
+
+

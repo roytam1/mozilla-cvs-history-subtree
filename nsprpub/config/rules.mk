@@ -316,7 +316,11 @@ endif
 $(OBJDIR)/%.o: %.cpp
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_ARCH), WINNT)
+ifndef XP_OS2_EMX
 	$(CCC) -Fo$@ -c $(CFLAGS) $<
+else
+	$(CCC) -o $@ -c $(CFLAGS) $< 
+endif
 else
 	$(CCC) -o $@ -c $(CFLAGS) $< 
 endif
@@ -333,7 +337,11 @@ ifeq ($(OS_TARGET), WIN16)
 	$(CC) -zq -fo$(OBJDIR)\\$*.o  @w16wccf $*.c
 	rm w16wccf
 else
+ifndef XP_OS2_EMX
 	$(CC) -Fo$@ -c $(CFLAGS) $*.c
+else
+	$(CC) -o $@ -c $(CFLAGS) $*.c
+endif
 endif
 else
 	$(CC) -o $@ -c $(CFLAGS) $*.c
