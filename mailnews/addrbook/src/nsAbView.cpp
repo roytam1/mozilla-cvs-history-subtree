@@ -799,7 +799,7 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
   NS_ENSURE_SUCCESS(rv,rv);
   
   PR_FREEIF(abcard->primaryCollationKey);
-  rv = mCollationKeyGenerator->AllocateRawSortKey(kCollationCaseInSensitive,
+  rv = mCollationKeyGenerator->AllocateRawSortKey(nsICollation::kCollationCaseInSensitive,
     value, &(abcard->primaryCollationKey), &(abcard->primaryCollationKeyLen));
   NS_ENSURE_SUCCESS(rv,rv);
   
@@ -811,7 +811,7 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
   NS_ENSURE_SUCCESS(rv,rv);
   
   PR_FREEIF(abcard->secondaryCollationKey);
-  rv = mCollationKeyGenerator->AllocateRawSortKey(kCollationCaseInSensitive,
+  rv = mCollationKeyGenerator->AllocateRawSortKey(nsICollation::kCollationCaseInSensitive,
     value, &(abcard->secondaryCollationKey), &(abcard->secondaryCollationKeyLen));
   NS_ENSURE_SUCCESS(rv,rv);
   return rv;

@@ -324,7 +324,7 @@ static nsModuleComponentInfo components[] =
     CreateLocaleService },
   { "Collation factory",
     NS_COLLATIONFACTORY_CID,
-    NULL,
+    NS_COLLATIONFACTORY_CONTRACTID,
     nsCollationFactoryConstructor },
   { "Scriptable Date Format",
     NS_SCRIPTABLEDATEFORMAT_CID,
@@ -346,7 +346,7 @@ static nsModuleComponentInfo components[] =
     nsIWin32LocaleImplConstructor },
   { "Collation",
     NS_COLLATION_CID,
-    NULL,
+    NS_COLLATION_CONTRACTID,
     nsCollationWinConstructor },
   { "Date/Time formatter",
     NS_DATETIMEFORMAT_CID,
@@ -362,7 +362,7 @@ static nsModuleComponentInfo components[] =
 
   { "Collation",
     NS_COLLATION_CID,
-    NULL,
+    NS_COLLATION_CONTRACTID,
     nsCollationUnixConstructor },
 
   { "Date/Time formatter",
@@ -378,7 +378,7 @@ static nsModuleComponentInfo components[] =
     nsMacLocaleConstructor },
   { "Collation",
     NS_COLLATION_CID,
-    NULL,
+    NS_COLLATION_CONTRACTID,
 #ifdef USE_UCCOLLATIONKEY
     nsCollationMacUCConstructor },
 #else
@@ -397,7 +397,7 @@ static nsModuleComponentInfo components[] =
     nsOS2LocaleConstructor },
   { "Collation",
     NS_COLLATION_CID,
-    NULL,
+    NS_COLLATION_CONTRACTID,
     nsCollationOS2Constructor },
   { "Date/Time formatter",
     NS_DATETIMEFORMAT_CID,
