@@ -158,6 +158,10 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
           continue;
         } // else merge forced even though property exists
       }
+      else if (!target && flags && flags.mergenew) {
+        this._proto[p] = flags.mergenew(src._proto[p]);
+        continue;
+      }
       // getters & setters need some tlc:
       var getter = src._proto.__lookupGetter__(p);
       var setter = src._proto.__lookupSetter__(p);
@@ -189,9 +193,19 @@ function makeTemplate(name) {
 
 var NamedObjectTemplate = makeTemplate("NamedObjectTemplate");
 
+NamedObjectTemplate.appendInitializer("NamedObjectTemplate",
+  function() {
+    this._objid = (this.__proto__._objcount)++;
+  });
+
+NamedObjectTemplate.addProtoObj("_objcount", 0);
+
 NamedObjectTemplate.addProtoGetter("_objname",
   function() {
-    return "Instance of "+this.__template.name;
+    if (this._objid === undefined)
+      return this.__template.name+" prototype";
+    else
+      return this.__template.name+this._objid;
   });
 
 NamedObjectTemplate.addProtoObj("toString",
@@ -211,6 +225,11 @@ ErrorTemplate.addProtoObj("_error",
     throw(this+": "+message);
   });
 
+ErrorTemplate.addProtoObj("_assert",
+  function(cond, message) {
+    if (!cond) this._error;
+  });
+    
 ErrorTemplate.addProtoObj("_warning",
   function(message) {
     dump(this+": WARNING:"+message+"\n");
@@ -230,18 +249,22 @@ SupportsTemplate.mergeTemplate(ErrorTemplate);
 
 SupportsTemplate.addProtoObj("QueryInterface",
   function(iid) {
+    this._assert(iid, "null interface");
     var l = this._interfaces.length;
     for (var i=0; i<l; ++i) {
-      if (this._interfaces[i].equals(iid))
+      if (this._interfaces[i].equals(iid)) {
+        //this._dump("Successful QI for "+Components.interfacesByID[iid]+" ("+iid+")");
         return this;
+      }
     }
-    this._warning("Interface "+Components.interfacesByID[iid]+" ("+iid+") not found");
+    //this._warning("Interface "+Components.interfacesByID[iid]+" ("+iid+") not found");
     throw Components.results.NS_ERROR_NO_INTERFACE;
   });
 
 SupportsTemplate.addProtoObj("_interfaces",
                              [Components.interfaces.nsISupports],
-                             { mergeover: appendUnique });
+                             { mergenew:  cloneArray,
+                               mergeover: appendUnique });
                                     
 
 SupportsTemplate.addOpsObject("addInterface",
