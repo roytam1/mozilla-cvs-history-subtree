@@ -249,13 +249,13 @@ nsFtpState::EstablishControlConnection()
     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) trying cached control\n", this));
         
     nsISupports* connection;
-    rv = nsFtpProtocolHandler::RemoveConnection(mURL, &connection);
+    (void) nsFtpProtocolHandler::RemoveConnection(mURL, &connection);
     
-    if (NS_SUCCEEDED(rv) && connection) {
+    if (connection) {
         mControlConnection = NS_STATIC_CAST(nsFtpControlConnection*, connection);
         
         // set stream listener of the control connection to be us.
-        mControlConnection->SetStreamListener(NS_STATIC_CAST(nsIStreamListener*, this));
+        (void) mControlConnection->SetStreamListener(NS_STATIC_CAST(nsIStreamListener*, this));
         
         // read cached variables into us.
         mControlConnection->GetChannel(getter_AddRefs(mCPipe));
@@ -318,7 +318,7 @@ nsFtpState::Process() {
                 {
                     KillControlConnnection();
                     PR_LOG(gFTPLog, PR_LOG_DEBUG, ("(%x) Establishing control connection...", this));
-                    rv = EstablishControlConnection();
+                    rv = EstablishControlConnection();  // sets mState
                     mInternalError = rv;
                     if (NS_FAILED(rv)) {
                         mState = FTP_ERROR;
@@ -1742,22 +1742,21 @@ nsFtpState::SetWriteStream(nsIInputStream* aInStream, PRUint32 aWriteCount) {
     return NS_OK;
 }
 
-nsresult 
+void
 nsFtpState::KillControlConnnection() {
-    nsresult rv;
     mCanceled = PR_FALSE;
     mControlReadContinue = PR_FALSE;
     mControlReadBrokenLine = PR_FALSE;
     mControlReadCarryOverBuf.Truncate(0);
-
-    // reference to mCPipe is held by the mControlConnection
 
 #ifdef FTP_SIMULATE_DROPPED_CONTROL_CONNECTION        
         // hack to simulate dropped control connection
         if (mCPipe)
             mCPipe->Cancel(NS_BINDING_ABORTED);
 #endif
-        mCPipe = 0;
+
+    // reference to mCPipe is held by the mControlConnection.  
+    mCPipe = 0;
 
     // if the control goes away, the data socket goes away...
     if (mDPipe) {
@@ -1776,7 +1775,7 @@ nsFtpState::KillControlConnnection() {
     //      e.g. fnf.
 
     if (!mControlConnection)
-        return NS_OK;
+        return;
 
     // kill the reference to ourselves in the control connection.
     mControlConnection->SetStreamListener(nsnull);
@@ -1792,7 +1791,7 @@ nsFtpState::KillControlConnnection() {
         mControlConnection->mCwd        = mCwd;                  
         mControlConnection->mList       = mList;                 
         mControlConnection->mPassword   = mPassword;
-        rv = nsFtpProtocolHandler::InsertConnection(mURL, 
+        nsresult rv = nsFtpProtocolHandler::InsertConnection(mURL, 
                                            NS_STATIC_CAST(nsISupports*, mControlConnection));
         // Can't cache it?  Kill it then.  
         if (NS_FAILED(rv))
@@ -1803,7 +1802,7 @@ nsFtpState::KillControlConnnection() {
 
     NS_RELEASE(mControlConnection);
  
-    return NS_OK;
+    return;
 }
 
 nsresult
@@ -1954,6 +1953,8 @@ nsFtpState::CreateTransport(const char * host, PRInt32 port,
 nsresult 
 nsFtpState::ControlAsyncWrite(nsCString& command)
 {
+    NS_ASSERTION(mControlConnection, "null control connection");
+
     if (mControlConnection)
         return mControlConnection->Write(command);
     return NS_ERROR_FAILURE;

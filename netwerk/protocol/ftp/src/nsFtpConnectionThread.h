@@ -147,7 +147,7 @@ private:
                                      PRUint32 bufferMaxSize,
                                      nsIChannel** o_pTrans);
 
-    nsresult KillControlConnnection();
+    void KillControlConnnection();
     nsresult StopProcessing();
     nsresult EstablishControlConnection();
     nsresult ControlAsyncWrite(nsCString& command);
