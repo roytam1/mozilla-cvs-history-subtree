@@ -9,9 +9,11 @@
 #include "xplocale.h"
 #include "prefapi.h"
 #include "secnav.h"
+#ifndef MOZ_NGLAYOUT
 #ifndef MODULAR_NETLIB
 #include "libimg.h"
 #endif
+#endif /* MOZ_NGLAYOUT */
 #include "il_strm.h"
 #include "cookies.h"
 #include "httpauth.h"
@@ -214,7 +216,11 @@ net_OutputURLDocInfo(MWContext *ctxt, char *which, char **data, int32 *length)
 		&& !PL_strncasecmp(URL_s->content_type, "image", 5))
 	  {
 	/* Have a seat. Lie down.  Tell me about yourself. */
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	il_msg = IL_HTMLImageInfo(URL_s->address);
+#endif /* MOZ_NGLAYOUT */
 	if (il_msg) {
 	  StrAllocCat(output, "<HR>\n");
 	  StrAllocCat(output, il_msg);
@@ -381,8 +387,12 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 	  }
 	else if(!PL_strcasecmp(which, "image-cache"))
 	  {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	IL_DisplayMemCacheInfoAsHTML(cur_entry->format_out, cur_entry->URL_s,
 				     cur_entry->window_id);
+#endif /* MOZ_NGLAYOUT */
 		return(-1);
 	  }
 #ifdef DEBUG

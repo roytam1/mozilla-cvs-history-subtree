@@ -570,6 +570,9 @@ net_setup_file_stream (ActiveEntry * cur_entry)
           }
     
 #ifdef MOZILLA_CLIENT
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		img_type = IL_Type(NET_Socket_Buffer, count);
 		if (img_type && img_type != IL_NOTFOUND)
 		  {
@@ -598,6 +601,7 @@ net_setup_file_stream (ActiveEntry * cur_entry)
 					
 		  }
 		else
+#endif /* MOZ_NGLAYOUT */
 #endif /* MOZILLA_CLIENT */
 		{
 #if defined(XP_MAC)

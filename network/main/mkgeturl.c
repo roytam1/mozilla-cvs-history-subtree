@@ -79,8 +79,10 @@
 
 /* nglayout should render the prefered image load hack obsolete */
 #ifndef MODULAR_NETLIB
+#ifndef MOZ_NGLAYOUT
 #include "libimg.h"             /* Image Lib public API. */ 
 #include "il_strm.h"             /* Image Lib public API. */
+#endif /* MOZ_NGLAYOUT */
 #endif
 
 #include "libi18n.h"
@@ -1237,7 +1239,7 @@ net_release_urls_for_processing(XP_Bool release_prefered, XP_Bool release_prefet
 		if(!release_prefered
 		   || ( (wus->format_out != FO_INTERNAL_IMAGE
 			    && wus->format_out != FO_CACHE_AND_INTERNAL_IMAGE)
-#if defined(MOZILLA_CLIENT) && !defined(MODULAR_NETLIB)
+#if defined(MOZILLA_CLIENT) && !defined(MODULAR_NETLIB) && !defined(MOZ_NGLAYOUT)
 			    || IL_PreferredStream(wus->URL_s) ) )
 #else
 		  ) )

@@ -31,7 +31,9 @@
 #include "mkstream.h"
 #include "cvextcon.h"
 #include "mkformat.h"
+#ifndef MOZ_NGLAYOUT
 #include "il_strm.h"            /* Image Library stream converters. */
+#endif /* MOZ_NGLAYOUT */
 
 #include "mime.h"
 #include "cvactive.h"
@@ -497,7 +499,7 @@ net_RegisterDefaultDecoders (void)
 	 not worth the effort.)
    */
 
-
+#ifndef MOZ_NGLAYOUT
   /* Do the same for the internally-handled image types when the format_out
 	 is SAVE_AS_POSTSCRIPT, because the TEXT->PS code can handle that.  But
 	 do not register converters to feed the image types to the HTML->TEXT
@@ -569,6 +571,7 @@ net_RegisterDefaultDecoders (void)
                                     IL_ViewStream);
   NET_RegisterContentTypeConverter (IMAGE_XBM3,FO_PRESENT_INLINE,NULL,
                                     IL_ViewStream);
+#endif /* MOZ_NGLAYOUT */
 
   /* register default (non)decoders for the text printer
    */
@@ -787,8 +790,10 @@ NET_RegisterMIMEDecoders (void)
 								 NET_MimeEncodingConverter);
 #endif  
 
+#ifndef MOZ_NGLAYOUT
   NET_RegisterContentTypeConverter ("*", FO_MULTIPART_IMAGE,
 									(void *) 1, IL_ViewStream);
+#endif /* MOZ_NGLAYOUT */
 
 #ifdef MOZ_MAIL_NEWS
   /* Decoders for libmsg/compose.c */

@@ -291,7 +291,9 @@ NET_SetMemoryCacheSize(int32 new_size)
 
 	if(new_size <= 0)
 	  {
+#ifndef MOZ_NGLAYOUT
     	IL_SetCacheSize(0);
+#endif /* MOZ_NGLAYOUT */
     	net_ReduceMemoryCacheTo(0);
 		net_MaxMemoryCacheSize = 0;
 		return;
@@ -320,9 +322,11 @@ NET_SetMemoryCacheSize(int32 new_size)
 	
     net_ReduceMemoryCacheTo((uint32) html_cache_size);
 
+#ifndef MOZ_NGLAYOUT
 	/* set the image cache to be the rest
 	 */
     IL_SetCacheSize(image_cache_size);
+#endif /* MOZ_NGLAYOUT */
 
 	return;
 }
