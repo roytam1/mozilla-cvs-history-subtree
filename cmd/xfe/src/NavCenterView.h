@@ -60,7 +60,7 @@ private:
 };
 
 static void notify_cb(HT_Notification ns, HT_Resource n, 
-                         HT_Event whatHappened);
+                         HT_Event whatHappened, void *token, uint32 tokenType);
 
 #endif /* _xfe_navcenterview_h */
 

@@ -150,7 +150,7 @@ XFE_NavCenterView::~XFE_NavCenterView()
 
 //////////////////////////////////////////////////////////////////////////
 void notify_cb(HT_Notification ns, HT_Resource n, 
-                  HT_Event whatHappened)
+                  HT_Event whatHappened, void *token, uint32 tokenType)
 {
   XFE_NavCenterView* theView = (XFE_NavCenterView*)ns->data;
     

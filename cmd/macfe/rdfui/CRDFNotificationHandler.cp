@@ -44,9 +44,11 @@ void
 CRDFNotificationHandler::rdfNotifyProc(
 	HT_Notification	notifyStruct,
 	HT_Resource		node,
-	HT_Event		event)
+	HT_Event		event,
+	void			*token,
+	uint32			tokenType)
 {
 	CRDFNotificationHandler* handler =
 		reinterpret_cast<CRDFNotificationHandler*>(notifyStruct->data);
-	handler->HandleNotification(notifyStruct, node, event);
+	handler->HandleNotification(notifyStruct, node, event, token, tokenType);
 }
