@@ -16,6 +16,7 @@
  * Reserved.
  */
 #include "msgCore.h"
+#include "MailNewsTypes.h"
 #include "MsgCompGlue.h" // need this to get MK_ defines...
 
 #include "nsSmtpProtocol.h"
@@ -26,7 +27,6 @@
 #include "nsIMsgHeaderParser.h"
 #include "nsFileStream.h"
 #include "nsIMsgMailNewsUrl.h"
-#include "nsINetService.h"
 
 #include "nsMsgBaseCID.h"
 
@@ -36,8 +36,6 @@
 #include "prprf.h"
 #include "nsEscape.h"
 
-
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
 
 extern "C" 
@@ -66,8 +64,6 @@ char *XP_AppCodeName = "Mozilla";
 const char *XP_AppCodeName = "Mozilla";
 #endif
 #define NET_IS_SPACE(x) ((((unsigned int) (x)) > 0x7f) ? 0 : isspace(x))
-typedef PRUint32 nsMsgKey;
-const nsMsgKey nsMsgKey_None = 0xffffffff;
 
 /*
  * This function takes an error code and associated error data
@@ -234,20 +230,8 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
 	if (aURL)
 		m_runningURL = do_QueryInterface(aURL);
 
-	const char * hostName = NULL;
-	if (aURL)
-	{
-		aURL->GetHost(&hostName);
-		aURL->GetHostPort(&m_port);
-	}
-
-	if (hostName)
-		m_hostName = PL_strdup(hostName);
-	else
-		m_hostName = NULL;
-	
 	// call base class to set up the url 
-	rv = OpenNetworkSocket(aURL, m_port, m_hostName);
+	rv = OpenNetworkSocket(aURL);
 	
 	m_dataBuf = (char *) PR_Malloc(sizeof(char) * OUTPUT_BUFFER_SIZE);
 	m_dataBufSize = OUTPUT_BUFFER_SIZE;
@@ -293,9 +277,9 @@ const char * nsSmtpProtocol::GetUserDomainName()
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsSmtpProtocol::OnStopBinding(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsSmtpProtocol::OnStopBinding(nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg)
 {
-	nsMsgProtocol::OnStopBinding(aURL, aStatus, aMsg);
+	nsMsgProtocol::OnStopBinding(ctxt, aStatus, aMsg);
 
 	// okay, we've been told that the send is done and the connection is going away. So 
 	// we need to release all of our state
@@ -1248,8 +1232,11 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
                                                nsIMsgHeaderParser::GetIID(),
                                                getter_AddRefs(parser));
 
-			m_runningURL->GetAllRecipients(&addresses);
+			// mscott -- temp hack until i've gotten mime to build...
+			//m_runningURL->GetAllRecipients(&addresses);
+			m_runningURL->GetAllRecipients(&m_addresses);
 
+#if 0
 			if (NS_SUCCEEDED(rv) && parser)
 			{
 				parser->RemoveDuplicateAddresses(nsnull, addresses, nsnull, PR_FALSE, &addrs1);
@@ -1279,6 +1266,7 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
 				m_addresses = m_addressCopy;
 				PR_FREEIF(addresses); // free our original addresses string...
 			} // if parser
+#endif
 		} // if post message
 		
 		rv = nsMsgProtocol::LoadUrl(aURL);
@@ -1292,7 +1280,8 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
  *
  * returns zero or more if the transfer needs to be continued.
  */
-nsresult nsSmtpProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, PRUint32 length)
+nsresult nsSmtpProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
+									      PRUint32 sourceOffset, PRUint32 length)
 {
     PRInt32 status = 0;
     ClearFlag(SMTP_PAUSE_FOR_READ); /* already paused; reset */
