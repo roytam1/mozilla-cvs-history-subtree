@@ -18,7 +18,8 @@
 #ifndef JRITYPES_H
 #define JRITYPES_H
 
-#include "jni.h"
+#include "jri_md.h"
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdarg.h>
