@@ -119,6 +119,12 @@ endif # sparc
 
 INCLUDES	+= -I. 
 
+ifdef NSPR20
+INCLUDES	+= -I$(DIST)/include/nspr20/pr
+else
+INCLUDES	+= -I$(XPDIST)/public/nspr
+endif
+
 ifndef NSBUILDROOT
 JSJAVA_STUBHEADERS = -I$(DEPTH)/sun-java/include/_gen \
 		     -I$(DEPTH)/sun-java/netscape/javascript/_jri \
