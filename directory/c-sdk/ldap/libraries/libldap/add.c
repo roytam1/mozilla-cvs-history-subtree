@@ -36,7 +36,7 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #include "ldap-int.h"
 
 /*
- * ldap_add - initiate an ldap (and X.500) add operation.  Parameters:
+ * ldap_add - initiate an ldap add operation.  Parameters:
  *
  *	ld		LDAP descriptor
  *	dn		DN of the entry to add

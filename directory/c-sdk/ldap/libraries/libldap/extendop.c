@@ -39,7 +39,7 @@ LDAP_CALL
 ldap_extended_operation(
     LDAP		*ld,
     const char		*exoid,
-    struct berval	*exdata,
+    const struct berval	*exdata,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     int			*msgidp
@@ -104,7 +104,7 @@ ldap_extended_operation(
 	/* fill it in */
 	if ( ber_printf( ber, "{it{tsto}", msgid, LDAP_REQ_EXTENDED,
 	    LDAP_TAG_EXOP_REQ_OID, exoid, LDAP_TAG_EXOP_REQ_VALUE,
-	    exdata->bv_val, exdata->bv_len ) == -1 ) {
+	    exdata->bv_val, (int)exdata->bv_len /* XXX lossy cast */ ) == -1 ) {
 		rc = LDAP_ENCODING_ERROR;
 		LDAP_SET_LDERRNO( ld, rc, NULL, NULL );
 		ber_free( ber, 1 );
@@ -142,7 +142,7 @@ LDAP_CALL
 ldap_extended_operation_s(
     LDAP		*ld,
     const char		*requestoid,
-    struct berval	*requestdata,
+    const struct berval	*requestdata,
     LDAPControl		**serverctrls,
     LDAPControl		**clientctrls,
     char		**retoidp,
