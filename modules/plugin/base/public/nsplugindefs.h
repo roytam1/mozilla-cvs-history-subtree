@@ -34,6 +34,10 @@
 #ifndef nsplugindefs_h___
 #define nsplugindefs_h___
 
+#ifndef prtypes_h___
+#include "prtypes.h"
+#endif
+
 #ifdef __OS2__
 #pragma pack(1)
 #endif
