@@ -301,11 +301,9 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
 
   nsCOMPtr<nsIJSEventListener> jsListener(do_QueryInterface(eventListener));
   jsListener->SetEventName(onEventAtom);
+
+  // Handle the event.
   eventListener->HandleEvent(aEvent);
-
-  // Now unbind it.
-  boundContext->BindCompiledEventHandler(scriptObject, onEventAtom, nsnull);
-
   return NS_OK;
 }
 
@@ -411,7 +409,7 @@ nsXBLPrototypeHandler::MouseEventMatched(nsIAtom* aEventType, nsIDOMMouseEvent* 
 
   PRInt32 clickcount;
   aMouseEvent->GetDetail(&clickcount);
-  if (mDetail2 != 0 && (clickcount != mDetail2)) {
+  if (mDetail2 != -1 && (clickcount != mDetail2)) {
     *aResult = PR_FALSE;
     return NS_OK;
   }
