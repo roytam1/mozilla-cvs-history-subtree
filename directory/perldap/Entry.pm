@@ -28,14 +28,14 @@
 
 package Mozilla::LDAP::Entry;
 
-use Mozilla::LDAP::Utils 1.3 qw(normalizeDN);
+use Mozilla::LDAP::Utils 1.0300 qw(normalizeDN);
 use Tie::Hash;
 
 use strict;
 use vars qw($VERSION @ISA);
 
 @ISA = ('Tie::StdHash');
-$VERSION = "1.3";
+$VERSION = "1.0302";
 
 
 #############################################################################

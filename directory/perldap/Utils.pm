@@ -26,7 +26,7 @@
 
 package Mozilla::LDAP::Utils;
 
-use Mozilla::LDAP::API 1.3 qw(:constant);
+use Mozilla::LDAP::API 1.0300 qw(:constant);
 use Mozilla::LDAP::Conn;
 use Exporter;
 
@@ -34,7 +34,7 @@ use strict;
 use vars qw($VERSION @ISA %EXPORT_TAGS);
 
 @ISA = qw(Exporter);
-$VERSION = "1.3";
+$VERSION = "1.0302";
 
 %EXPORT_TAGS = (
 		all => [qw(normalizeDN

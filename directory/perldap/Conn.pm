@@ -29,14 +29,14 @@
 
 package Mozilla::LDAP::Conn;
 
-use Mozilla::LDAP::Utils 1.3 ();
-use Mozilla::LDAP::API 1.3 qw(/.+/);
-use Mozilla::LDAP::Entry 1.3 ();
+use Mozilla::LDAP::Utils 1.0300 ();
+use Mozilla::LDAP::API 1.0300 qw(/.+/);
+use Mozilla::LDAP::Entry 1.0300 ();
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "1.3";
+$VERSION = "1.0302";
 
 
 #############################################################################
