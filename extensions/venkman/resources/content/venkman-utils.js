@@ -231,12 +231,12 @@ function htmlVA (attribs, href, contents)
 function insertHyphenatedWord (longWord, containerTag)
 {
     var wordParts = splitLongWord (longWord, MAX_WORD_LEN);
-    containerTag.appendChild (htmlSpacer());
+    containerTag.appendChild (htmlWBR());
     for (var i = 0; i < wordParts.length; ++i)
     {
         containerTag.appendChild (document.createTextNode (wordParts[i]));
         if (i != wordParts.length)
-            containerTag.appendChild (htmlSpacer());
+            containerTag.appendChild (htmlWBR());
     }
 }
 

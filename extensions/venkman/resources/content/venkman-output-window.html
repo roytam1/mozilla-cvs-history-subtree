@@ -1,8 +1,14 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN">
 <html>
   <head>
-    <LINK REL=StyleSheet HREF='chrome://venkman/skin/venkman-output-default.css'
-      TYPE='text/css' MEDIA='screen'>
+    <script>
+      var css = "chrome://venkman/skin/venkman-output-default.css";
+      if (document.location.search)
+         css = document.location.search.substr(1);
+
+      document.write ("<LINK REL=StyleSheet HREF='" + css + 
+                      "' TYPE='text/css' MEDIA='screen'>");
+    </script>
   </head>
 
   <body id="venkman-session-body">

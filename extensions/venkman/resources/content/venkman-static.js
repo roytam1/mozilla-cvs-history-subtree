@@ -33,7 +33,7 @@
  *
  */
 
-const __vnk_version        = "0.9.10+";
+const __vnk_version        = "0.9.11";
 const __vnk_requiredLocale = "0.9.x";
 var   __vnk_versionSuffix  = "";
 
@@ -310,11 +310,10 @@ function dispatchCommand (command, e, flags)
         var commandList = e.command.func.split(";");
         for (i = 0; i < commandList.length; ++i)
         {
+            var newEvent = Clone (e);
+            delete newEvent.command;            
             commandList[i] = stringTrim(commandList[i]);
-            if (i == 1)
-                dispatch (commandList[i] + " " + e.inputData, null, flags);
-            else
-                dispatch (commandList[i], null, flags);
+            dispatch (commandList[i], newEvent, flags);
         }
     }
     else
@@ -420,7 +419,8 @@ function init()
     console.windowWatcher =
         Components.classes[WW_CTRID].getService(nsIWindowWatcher);
 
-    console.debuggerWindow = getBaseWindowFromWindow(window);
+    console.baseWindow = getBaseWindowFromWindow(window);
+    console.mainWindow = window;
     console.dnd = nsDragAndDrop;
     
     console.files = new Object();
@@ -432,7 +432,7 @@ function init()
 
     initMsgs();
     initPrefs();
-    initCommands(window);
+    initCommands();
 
     /* Some commonly used commands, cached now, for use with dispatchCommand. */
     var cm = console.commandManager;
@@ -458,7 +458,7 @@ function init()
 
     dispatch ("hook-venkman-init");
 
-    initViews(window);
+    initViews();
     initRecords();
     initHandlers(); // handlers may notice windows, which need views and records
 

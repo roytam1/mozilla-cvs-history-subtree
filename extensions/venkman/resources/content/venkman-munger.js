@@ -33,18 +33,6 @@
  *
  */
 
-function htmlSpacer (attribs, contents)
-{
-    if (!attribs)
-        attribs = {"class": "spacer-node"};
-    else if (attribs["class"])
-        attribs["class"] += " spacer-node";
-    else
-        attribs["class"] = "spacer-node";
-    
-    return htmlImg (attribs, contents);
-}
-
 function CMungerEntry (name, regex, className, tagName)
 {
     
@@ -150,7 +138,7 @@ function mng_munge (text, containerTag, data)
                     for (var i in wordParts)
                     {
                         subTag.appendChild (document.createTextNode (wordParts[i]));
-                        subTag.appendChild (htmlSpacer());
+                        subTag.appendChild (htmlWBR());
                     }
                     
                     containerTag.appendChild (subTag);

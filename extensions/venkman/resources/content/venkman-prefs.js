@@ -52,7 +52,7 @@ function initPrefs()
     
     //    console.addPref ("input.commandchar", "/");
     console.addPref ("startupCount", 0);
-    console.addPref ("enableChromeFilter", false);
+    console.addPref ("enableChromeFilter", true);
     console.addPref ("tabWidth", 4);
     console.addPref ("initialScripts", "");
     console.addPref ("prettyprint", false);

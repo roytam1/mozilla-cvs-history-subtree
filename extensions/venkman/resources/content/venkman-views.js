@@ -54,7 +54,7 @@ const DEFAULT_VURLS =
  );
 
 
-function initViews(mainWindow)
+function initViews()
 {
     console.addPref ("layoutState.default", DEFAULT_VURLS);
     console.addPref ("saveLayoutOnExit", true);
@@ -64,7 +64,8 @@ function initViews(mainWindow)
     console.atomService =
         Components.classes[ATOM_CTRID].getService(nsIAtomService);
 
-    console.viewManager = new ViewManager (console.commandManager, mainWindow);
+    console.viewManager = new ViewManager (console.commandManager,
+                                           console.mainWindow);
     console.viewManager.realizeViews (console.views,
                                       console.menuSpecs["popup:showhide"]);
     console.views = console.viewManager.views;
@@ -206,7 +207,7 @@ function initContextMenu (document, id)
             return;
 
         var dp = document.getElementById("dynamic-popups");
-        var popup = console.menuManager.appendPopupMenu (dp, null, id);
+        var popup = console.menuManager.appendPopupMenu (dp, null, id, id);
         var items = console.menuSpecs[id].items;
         console.menuManager.createMenuItems (popup, null, items);
     }
@@ -756,6 +757,15 @@ console.views.scripts.viewId = VIEW_SCRIPTS;
 console.views.scripts.init =
 function scv_init ()
 {
+    var debugIf = "'scriptWrapper' in cx && " +
+        "cx.scriptWrapper.jsdScript.isValid && " +
+        "cx.scriptWrapper.jsdScript.flags & SCRIPT_NODEBUG";
+    var profileIf = "'scriptWrapper' in cx && " +
+        "cx.scriptWrapper.jsdScript.isValid && " +
+        "cx.scriptWrapper.jsdScript.flags & SCRIPT_NOPROFILE";
+    var transientIf = "'scriptInstance' in cx && " +
+        "cx.scriptInstance.scriptManager.disableTransients";
+    
     console.addPref ("scriptsView.groupFiles", true);    
 
     console.menuSpecs["context:scripts"] = {
@@ -764,10 +774,35 @@ function scv_init ()
         [
          ["find-url"],
          ["find-script"],
-         ["clear-script", {enabledif: "cx.target.bpcount"}],
+         ["clear-script", {enabledif: "cx.scriptWrapper.breakpointCount"}],
+         ["-"],
+         [">scripts:instance-flags"],
+         [">scripts:wrapper-flags", {enabledif: "false && has('scriptWrapper')"}],
          ["-"],
          ["save-profile"],
          ["clear-profile"]
+        ]
+    };
+
+    console.menuSpecs["scripts:instance-flags"] = {
+        label: MSG_MNU_SCRIPTS_INSTANCE,
+        items:
+        [
+         ["debug-instance-on"],
+         ["debug-instance-off"],
+         ["debug-transient", {type: "checkbox", checkedif: transientIf}],
+         ["-"],
+         ["profile-instance-on"],
+         ["profile-instance-off"],
+        ]
+    };
+
+    console.menuSpecs["scripts:wrapper-flags"] = {
+        label: MSG_MNU_SCRIPTS_WRAPPER,
+        items:
+        [
+         ["debug-script", {type: "checkbox", checkedif: debugIf}],
+         ["profile-script", {type: "checkbox", checkedif: profileIf}],
         ]
     };
 
@@ -1042,78 +1077,47 @@ function scv_getcprops (index, colID, properties)
 console.views.scripts.getContext =
 function scv_getcx(cx)
 {
-    var selection = this.tree.selection;
-    var row = selection.currentIndex;
-    var rec = this.childData.locateChildByVisualRow (row);
-    var firstRec = rec;
+    cx.urlList = new Array();
+    cx.scriptInstanceList = new Array();
+    cx.scriptWrapperList = new Array();
+    cx.lineNumberList = new Array();
+    cx.toggle = "toggle";
     
-    if (!rec)
+    function recordContextGetter (cx, rec, i)
     {
-        dd ("no record at currentIndex " + row);
-        return cx;
-    }
-    
-    cx.target = rec;
-    
-    if (rec instanceof ScriptInstanceRecord)
-    {
-        cx.url = cx.fileName = rec.fileName;
-        cx.scriptRec = rec.childData[0];
-        cx.scriptRecList = rec.childData;
-    }
-    else if (rec instanceof ScriptRecord)
-    {
-        cx.scriptRec = rec;
-        cx.lineNumber = rec.script.baseLineNumber;
-        cx.rangeStart = cx.lineNumber;
-        cx.rangeEnd   = rec.script.lineExtent + cx.lineNumber;
-    }
-
-    var rangeCount = selection.getRangeCount();
-    if (rangeCount > 0 && !("lineNumberList" in cx))
-    {
-        cx.lineNumberList = new Array();
-    }
-    
-    if (rangeCount > 0)
-    {
-        cx.urlList = cx.fileNameList = new Array();
-        if (firstRec instanceof ScriptRecord)
-            cx.scriptRecList  = new Array();
-        cx.lineNumberList = new Array();
-        cx.rangeStartList = new Array();
-        cx.rangeEndList   = new Array();        
-    }
-    
-    for (var range = 0; range < rangeCount; ++range)
-    {
-        var min = new Object();
-        var max = new Object();
-        selection.getRangeAt(range, min, max);
-        min = min.value;
-        max = max.value;
-
-        for (row = min; row <= max; ++row)
+        if (i == 0)
         {
-            rec = this.childData.locateChildByVisualRow(row);
             if (rec instanceof ScriptInstanceRecord)
             {
-                cx.fileNameList.push (rec.fileName);
+                cx.url = rec.url;
+                cx.scriptInstance = rec.scriptInstance;
             }
             else if (rec instanceof ScriptRecord)
             {
-                //cx.fileNameList.push (rec.script.fileName);
-                if (firstRec instanceof ScriptRecord)
-                    cx.scriptRecList.push (rec);
-                cx.lineNumberList.push (rec.script.baseLineNumber);
-                cx.rangeStartList.push (rec.script.baseLineNumber);
-                cx.rangeEndList.push (rec.script.lineExtent +
-                                      rec.script.baseLineNumber);
+                cx.scriptWrapper = rec.scriptWrapper;
+                cx.scriptInstance = rec.scriptWrapper.scriptInstance;
+                cx.url = cx.scriptInstance.url;
+                cx.lineNumber = rec.baseLineNumber;
             }
         }
-    }
-
-    return cx;
+        else
+        {
+            if (rec instanceof ScriptInstanceRecord)
+            {
+                cx.urlList.push (rec.url);
+                cx.scriptInstanceList.push(rec.scriptInstance);
+            }
+            else if (rec instanceof ScriptRecord)
+            {
+                cx.scriptWrapperList.push (rec.scriptWrapper);
+                cx.lineNumberList.push (rec.baseLineNumber);
+            }
+            
+        }
+        return cx;
+    };
+    
+    return getTreeContext (console.views.scripts, cx, recordContextGetter);
 }    
 
 /*******************************************************************************
@@ -1128,9 +1132,40 @@ console.views.session.viewId = VIEW_SESSION;
 console.views.session.init =
 function ss_init ()
 {
+    function currentScheme (scheme)
+    {
+        var css;
+        
+        switch (scheme)
+        {
+            case "default":
+                css = "console.prefs['sessionView.defaultCSS']";
+                break;
+            case "dark":
+                css = "console.prefs['sessionView.darkCSS']";
+                break;
+            case "light":
+                css = "console.prefs['sessionView.lightCSS']";
+                break;
+        }
+
+        return "console.prefs['sessionView.currentCSS'] == " + css;
+    }
+        
     console.addPref ("sessionView.commandHistory", 20);
     console.addPref ("sessionView.dtabTime", 500);
     console.addPref ("sessionView.maxHistory", 500);
+
+    console.addPref ("sessionView.outputWindow",
+                     "chrome://venkman/content/venkman-output-window.html?$css");
+    console.addPref ("sessionView.currentCSS",
+                     "chrome://venkman/skin/venkman-output-default.css");
+    console.addPref ("sessionView.defaultCSS",
+                     "chrome://venkman/skin/venkman-output-default.css");
+    console.addPref ("sessionView.darkCSS",
+                     "chrome://venkman/skin/venkman-output-dark.css");
+    console.addPref ("sessionView.lightCSS",
+                     "chrome://venkman/skin/venkman-output-light.css");
     
     console.menuSpecs["context:session"] = {
         items:
@@ -1144,9 +1179,33 @@ function ss_init ()
          ["finish"],
          ["-"],
          [">popup:emode"],
-         [">popup:tmode"],         
+         [">popup:tmode"],
+         ["-"],
+         [">session:colors"]
         ]
     };
+
+    console.menuSpecs["session:colors"] = {
+        label: MSG_MNU_SESSION_COLORS,
+        items:
+        [
+         ["session-css-default", {type: "checkbox",
+                                  checkedif: currentScheme ("default")}],
+         ["session-css-dark", {type: "checkbox",
+                               checkedif: currentScheme ("dark")}],
+         ["session-css-light", {type: "checkbox",
+                                checkedif: currentScheme ("light")}]
+        ]
+    };
+        
+    this.cmdary =
+        [
+         ["session-css",          cmdSessionCSS,             CMD_CONSOLE],
+
+         ["session-css-default",  "session-css default",     0],
+         ["session-css-dark",     "session-css dark",        0],
+         ["session-css-light",    "session-css light",       0]
+        ];
 
     /* input history (up/down arrow) related vars */
     this.inputHistory = new Array();
@@ -1158,12 +1217,9 @@ function ss_init ()
 
     this.messageCount = 0;
 
-    this.outputTBody = new htmlTBody({ id: "session-output-tbody" })
-    this.outputTable = null;
-    this.outputWindow = null;
-    this.outputDocument = null;
-    this.intputElement = null;
-
+    this.outputTBody = new htmlTBody({ id: "session-output-tbody" });
+    this.zapDisplayFrame();
+        
     this.munger = new CMunger();
     this.munger.enabled = true;
     this.munger.addRule
@@ -1175,13 +1231,46 @@ function ss_init ()
 
 }
 
+function cmdSessionCSS (e)
+{
+    if (e.css)
+    {
+        var url;
+        
+        switch (e.css.toLowerCase())
+        {
+            case "default":
+                url = console.prefs["sessionView.defaultCSS"];
+                break;
+                
+            case "dark":
+                url = console.prefs["sessionView.darkCSS"];
+                break;
+                
+            case "light":
+                url = console.prefs["sessionView.lightCSS"];
+                break;
+
+            default:
+                url = e.css;
+                break;
+                
+        }
+        
+        console.views.session.changeDisplayCSS (url);
+    }    
+    
+    feedback (e, getMsg(MSN_SESSION_CSS,
+                        console.prefs["sessionView.currentCSS"]));
+}
+
 console.views.session.hooks = new Object();
 
 console.views.session.hooks["focus-input"] =
 function ss_hookFocus(e)
 {
     var sessionView = console.views.session;
-    
+
     if ("inputElement" in sessionView)
         sessionView.inputElement.focus();
 }
@@ -1229,51 +1318,86 @@ function ss_hookResize (e)
     console.views.session.scrollDown();
 }
 
-console.views.session.scrollDown =
-function ss_scroll()
+console.views.session.changeDisplayCSS =
+function ss_changecss (url)
 {
-    if (this.outputWindow)
-        this.outputWindow.scrollTo(0, this.outputDocument.height);
+    console.prefs["sessionView.currentCSS"] = url;
+    if (this.outputDocument)
+    {
+        this.zapDisplayFrame();
+        this.syncDisplayFrame();
+    }
 }
 
-console.views.session.onShow =
-function ss_show ()
+console.views.session.zapDisplayFrame =
+function ss_zap ()
+{
+    if (this.outputTBody && this.outputTBody.parentNode)
+        this.outputTBody.parentNode.removeChild(this.outputTBody);
+    if ("iframe" in this && this.iframe)
+        this.iframe.setAttribute ("src", "about:blank");
+    this.iframe = null;
+    this.outputTable = null;
+    this.outputWindow = null;
+    this.outputDocument = null;
+    this.intputElement = null;
+}
+
+console.views.session.syncDisplayFrame =
+function ss_syncframe ()
 {
     var sessionView = this;
+
     function tryAgain ()
     {
         //dd ("session view trying again...");
-        sessionView.onShow();
+        sessionView.syncDisplayFrame();
     };
 
     var doc = this.currentContent.ownerDocument;
     
     try
     {
-        if ("contentDocument" in doc.getElementById("session-output-iframe"))
+        this.iframe = doc.getElementById("session-output-iframe");
+        if ("contentDocument" in this.iframe)
         {
-            this.outputDocument = 
-                doc.getElementById("session-output-iframe").contentDocument;
+            /* iframe looks ready */
+            dd ("iframe is ready");
+            this.outputDocument = this.iframe.contentDocument;
 
-            var win = this.currentContent.ownerWindow;
-            for (var f = 0; f < win.frames.length; ++f)
+            if (this.iframe.getAttribute ("src") == "about:blank")
             {
-                if (win.frames[f].document == this.outputDocument)
-                {
-                    this.outputWindow = win.frames[f];
-                    break;
-                }
+                dd ("iframe is about:blank");
+                /* but it doesn't point to the right place yet */
+                var docURL = console.prefs["sessionView.outputWindow"];
+                var css = console.prefs["sessionView.currentCSS"];
+                docURL = docURL.replace ("$css", css);
+                this.iframe.setAttribute("src", docURL);
             }
+            else
+            {
+                /* now it is, get the DOM nodes */
+                dd ("iframe has a url");
+                var win = this.currentContent.ownerWindow;
+                for (var f = 0; f < win.frames.length; ++f)
+                {
+                    if (win.frames[f].document == this.outputDocument)
+                    {
+                        this.outputWindow = win.frames[f];
+                        break;
+                    }
+                }
 
-            this.outputTable =
-                this.outputDocument.getElementById("session-output-table");
-            this.inputElement = doc.getElementById("session-sl-input");
+                this.outputTable =
+                    this.outputDocument.getElementById("session-output-table");
+                this.inputElement = doc.getElementById("session-sl-input");
+            }
         }
     }
     catch (ex)
     {
-        //dd ("caught exception showing session view...");
-        //dd (dumpObjectTree(ex));
+        dd ("caught exception showing session view, will try again later.");
+        dd (dumpObjectTree(ex));
     }
     
     if (!this.outputDocument || !this.outputTable || !this.inputElement)
@@ -1287,6 +1411,19 @@ function ss_show ()
 
     this.outputTable.appendChild (this.outputTBody);
     this.scrollDown();
+}
+
+console.views.session.scrollDown =
+function ss_scroll()
+{
+    if (this.outputWindow)
+        this.outputWindow.scrollTo(0, this.outputDocument.height);
+}
+
+console.views.session.onShow =
+function ss_show ()
+{
+    this.syncDisplayFrame();
     this.hooks["focus-input"]();
     initContextMenu(this.currentContent.ownerDocument, "context:session");
 }
@@ -1294,11 +1431,7 @@ function ss_show ()
 console.views.session.onHide =
 function ss_hide ()
 {
-    this.outputTBody.parentNode.removeChild(this.outputTBody);
-    this.outputTable = null;
-    this.outputWindow = null;
-    this.outputDocument = null;
-    this.intputElement = null;
+    this.zapDisplayFrame();
 }
 
 console.views.session.stringToDOM = 

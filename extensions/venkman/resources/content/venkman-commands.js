@@ -38,116 +38,124 @@ const CMD_NEED_STACK = 0x02; // command only works if we're stopped
 const CMD_NO_STACK   = 0x04; // command only works if we're *not* stopped
 const CMD_NO_HELP    = 0x08; // don't whine if there is no help for this command
 
-function initCommands(mainWindow)
+function initCommands()
 {
     console.commandManager = new CommandManager(console.defaultBundle);
     
     var cmdary =
         [/* "real" commands */
-         ["break",          cmdBreak,              CMD_CONSOLE],
-         ["chrome-filter",  cmdChromeFilter,       CMD_CONSOLE],
-         ["clear",          cmdClear,              CMD_CONSOLE],
-         ["clear-all",      cmdClearAll,           CMD_CONSOLE],
-         ["clear-break",    cmdClearBreak,         0],
-         ["clear-fbreak",   cmdClearFBreak,        0],
-         ["clear-profile",  cmdClearProfile,       CMD_CONSOLE],
-         ["clear-script",   cmdClearScript,        0],
-         ["close",          cmdClose,              CMD_CONSOLE],
-         ["commands",       cmdCommands,           CMD_CONSOLE],
+         ["break",          cmdBreak,                               CMD_CONSOLE],
+         ["chrome-filter",  cmdChromeFilter,                        CMD_CONSOLE],
+         ["clear",          cmdClear,                               CMD_CONSOLE],
+         ["clear-all",      cmdClearAll,                            CMD_CONSOLE],
+         ["clear-break",    cmdClearBreak,                                    0],
+         ["clear-fbreak",   cmdClearFBreak,                                   0],
+         ["clear-profile",  cmdClearProfile,                        CMD_CONSOLE],
+         ["clear-script",   cmdClearScript,                                   0],
+         ["close",          cmdClose,                               CMD_CONSOLE],
+         ["commands",       cmdCommands,                            CMD_CONSOLE],
          ["cont",           cmdCont,               CMD_CONSOLE | CMD_NEED_STACK],
-         ["emode",          cmdEMode,              CMD_CONSOLE],
+         ["debug-script",   cmdSetScriptFlag,                                 0],
+         ["debug-instance-on", cmdToggleSomething,                            0],
+         ["debug-instance-off", cmdToggleSomething,                           0],
+         ["debug-instance", cmdSetScriptFlag,                                 0],
+         ["debug-transient", cmdSetTransientFlag,                             0],
+         ["emode",          cmdEMode,                               CMD_CONSOLE],
          ["eval",           cmdEval,               CMD_CONSOLE | CMD_NEED_STACK],
-         ["evald",          cmdEvald,              CMD_CONSOLE],
-         ["fbreak",         cmdFBreak,             CMD_CONSOLE],
-         ["fclear",         cmdFClear,             CMD_CONSOLE],
-         ["fclear-all",     cmdFClearAll,          CMD_CONSOLE],
-         ["find-bp",        cmdFindBp,             0],
-         ["find-creator",   cmdFindCreatorOrCtor,  0],
-         ["find-ctor",      cmdFindCreatorOrCtor,  0],
-         ["find-file",      cmdFindFile,           CMD_CONSOLE],
-         ["find-frame",     cmdFindFrame,          CMD_NEED_STACK],
-         ["find-sourcetext",cmdFindSourceText,     0],
-         ["find-sourcetext-soft",cmdFindSourceText,0],
-         ["find-script",    cmdFindScript,         0],
-         ["find-url",       cmdFindURL,            CMD_CONSOLE],
-         ["find-url-soft",  cmdFindURL,            0],
+         ["evald",          cmdEvald,                               CMD_CONSOLE],
+         ["fbreak",         cmdFBreak,                              CMD_CONSOLE],
+         ["fclear",         cmdFClear,                              CMD_CONSOLE],
+         ["fclear-all",     cmdFClearAll,                           CMD_CONSOLE],
+         ["find-bp",        cmdFindBp,                                        0],
+         ["find-creator",   cmdFindCreatorOrCtor,                             0],
+         ["find-ctor",      cmdFindCreatorOrCtor,                             0],
+         ["find-file",      cmdFindFile,                            CMD_CONSOLE],
+         ["find-frame",     cmdFindFrame,                        CMD_NEED_STACK],
+         ["find-sourcetext", cmdFindSourceText,                               0],
+         ["find-sourcetext-soft", cmdFindSourceText,                          0],
+         ["find-script",    cmdFindScript,                                    0],
+         ["find-url",       cmdFindURL,                             CMD_CONSOLE],
+         ["find-url-soft",  cmdFindURL,                                       0],
          ["finish",         cmdFinish,             CMD_CONSOLE | CMD_NEED_STACK],
-         ["focus-input",    cmdHook,               0],
+         ["focus-input",    cmdHook,                                          0],
          ["frame",          cmdFrame,              CMD_CONSOLE | CMD_NEED_STACK],
-         ["grout-container",cmdGroutContainer,     0],
-         ["help",           cmdHelp,               CMD_CONSOLE],
-         ["hide-view",      cmdHideView,           CMD_CONSOLE],
-         ["loadd",          cmdLoadd,              CMD_CONSOLE],
-         ["move-view",      cmdMoveView,           CMD_CONSOLE],
+         ["grout-container",cmdGroutContainer,                                0],
+         ["help",           cmdHelp,                                CMD_CONSOLE],
+         ["loadd",          cmdLoadd,                               CMD_CONSOLE],
+         ["move-view",      cmdMoveView,                            CMD_CONSOLE],
          ["next",           cmdNext,               CMD_CONSOLE | CMD_NEED_STACK],
-         ["open-dialog",    cmdOpenDialog,         CMD_CONSOLE],
-         ["open-url",       cmdOpenURL,            0],
-         ["pprint",         cmdPPrint,             CMD_CONSOLE],
-         ["pref",           cmdPref,               CMD_CONSOLE],
-         ["profile",        cmdProfile,            CMD_CONSOLE],
+         ["open-dialog",    cmdOpenDialog,                          CMD_CONSOLE],
+         ["open-url",       cmdOpenURL,                                       0],
+         ["pprint",         cmdPPrint,                              CMD_CONSOLE],
+         ["pref",           cmdPref,                                CMD_CONSOLE],
+         ["profile",        cmdProfile,                             CMD_CONSOLE],
+         ["profile-script",       cmdSetScriptFlag,                           0],
+         ["profile-instance",     cmdSetScriptFlag,                           0],
+         ["profile-instance-on",  cmdSetScriptFlag,                           0],
+         ["profile-instance-off", cmdSetScriptFlag,                           0],
          ["props",          cmdProps,              CMD_CONSOLE | CMD_NEED_STACK],
-         ["propsd",         cmdProps,              CMD_CONSOLE],
-         ["quit",           cmdQuit,               CMD_CONSOLE],
-         ["reload",         cmdReload,             CMD_CONSOLE],
-         ["restore-layout", cmdRestoreLayout,      CMD_CONSOLE],
-         ["save-layout",    cmdSaveLayout,         CMD_CONSOLE],
-         ["save-source",    cmdSaveSource,         CMD_CONSOLE],
-         ["save-profile",   cmdSaveProfile,        CMD_CONSOLE],
+         ["propsd",         cmdProps,                               CMD_CONSOLE],
+         ["quit",           cmdQuit,                                CMD_CONSOLE],
+         ["reload",         cmdReload,                              CMD_CONSOLE],
+         ["restore-layout", cmdRestoreLayout,                       CMD_CONSOLE],
+         ["save-layout",    cmdSaveLayout,                          CMD_CONSOLE],
+         ["save-source",    cmdSaveSource,                          CMD_CONSOLE],
+         ["save-profile",   cmdSaveProfile,                         CMD_CONSOLE],
          ["scope",          cmdScope,              CMD_CONSOLE | CMD_NEED_STACK],
-         ["toggle-float",   cmdToggleFloat,        CMD_CONSOLE],
-         ["toggle-save-layout", cmdToggleSaveLayout, 0],
-         ["toggle-view",    cmdToggleView,         CMD_CONSOLE],
-         ["startup-init",   cmdStartupInit,        CMD_CONSOLE],
+         ["toggle-float",   cmdToggleFloat,                         CMD_CONSOLE],
+         ["toggle-save-layout", cmdToggleSaveLayout,                          0],
+         ["toggle-view",    cmdToggleView,                          CMD_CONSOLE],
+         ["startup-init",   cmdStartupInit,                         CMD_CONSOLE],
          ["step",           cmdStep,               CMD_CONSOLE | CMD_NEED_STACK],
-         ["stop",           cmdStop,               CMD_CONSOLE | CMD_NO_STACK],
-         ["tmode",          cmdTMode,              CMD_CONSOLE],
-         ["version",        cmdVersion,            CMD_CONSOLE],
+         ["stop",           cmdStop,                 CMD_CONSOLE | CMD_NO_STACK],
+         ["tmode",          cmdTMode,                               CMD_CONSOLE],
+         ["version",        cmdVersion,                             CMD_CONSOLE],
          ["where",          cmdWhere,              CMD_CONSOLE | CMD_NEED_STACK],
          
          /* aliases */         
-         ["save-default-layout",      "save-layout default",  CMD_CONSOLE],
-         ["profile-tb",               "profile toggle",       CMD_CONSOLE],
-         ["this",                     "props this",           CMD_CONSOLE],
-         ["toggle-chrome",            "chrome-filter toggle", 0],
-         ["toggle-ias",               "startup-init toggle",  0],
-         ["toggle-pprint",            "pprint toggle",        0],
-         ["toggle-profile",           "profile toggle",       0],
-         ["em-cycle",                 "emode cycle",          0],
-         ["em-ignore",                "emode ignore",         0],
-         ["em-trace",                 "emode trace",          0],
-         ["em-break",                 "emode break",          0],
-         ["tm-cycle",                 "tmode cycle",          0],
-         ["tm-ignore",                "tmode ignore",         0],
-         ["tm-trace",                 "tmode trace",          0],
-         ["tm-break",                 "tmode break",          0],
+         ["save-default-layout",      "save-layout default",                  0],
+         ["profile-tb",               "profile toggle",             CMD_CONSOLE],
+         ["this",                     "props this",                 CMD_CONSOLE],
+         ["toggle-chrome",            "chrome-filter toggle",                 0],
+         ["toggle-ias",               "startup-init toggle",                  0],
+         ["toggle-pprint",            "pprint toggle",                        0],
+         ["toggle-profile",           "profile toggle",                       0],
+         ["em-cycle",                 "emode cycle",                          0],
+         ["em-ignore",                "emode ignore",                         0],
+         ["em-trace",                 "emode trace",                          0],
+         ["em-break",                 "emode break",                          0],
+         ["tm-cycle",                 "tmode cycle",                          0],
+         ["tm-ignore",                "tmode ignore",                         0],
+         ["tm-trace",                 "tmode trace",                          0],
+         ["tm-break",                 "tmode break",                          0],
 
          /* hooks */
-         ["hook-break-set",                cmdHook, 0],
-         ["hook-break-clear",              cmdHook, 0],
-         ["hook-debug-stop",               cmdHook, 0],
-         ["hook-debug-continue",           cmdHook, 0],
-         ["hook-display-sourcetext",       cmdHook, 0],
-         ["hook-display-sourcetext-soft",  cmdHook, 0],
-         ["hook-eval-done",                cmdHook, 0],
-         ["hook-fbreak-clear",             cmdHook, 0],
-         ["hook-fbreak-set",               cmdHook, 0],
-         ["hook-guess-complete",           cmdHook, 0],
-         ["hook-transient-script",         cmdHook, 0],
-         ["hook-script-manager-created",   cmdHook, 0],
-         ["hook-script-manager-destroyed", cmdHook, 0],
-         ["hook-script-instance-created",  cmdHook, 0],
-         ["hook-script-instance-sealed",   cmdHook, 0],
-         ["hook-script-instance-destroyed",cmdHook, 0],
-         ["hook-session-display",          cmdHook, 0],
-         ["hook-source-load-complete",     cmdHook, 0],
-         ["hook-window-closed",            cmdHook, 0],
-         ["hook-window-loaded",            cmdHook, 0],
-         ["hook-window-opened",            cmdHook, 0],
-         ["hook-window-resized",           cmdHook, 0],
-         ["hook-window-unloaded",          cmdHook, 0],
-         ["hook-venkman-exit",             cmdHook, 0],
-         ["hook-venkman-query-exit",       cmdHook, 0],
-         ["hook-venkman-started",          cmdHook, 0]
+         ["hook-break-set",                                          cmdHook, 0],
+         ["hook-break-clear",                                        cmdHook, 0],
+         ["hook-debug-stop",                                         cmdHook, 0],
+         ["hook-debug-continue",                                     cmdHook, 0],
+         ["hook-display-sourcetext",                                 cmdHook, 0],
+         ["hook-display-sourcetext-soft",                            cmdHook, 0],
+         ["hook-eval-done",                                          cmdHook, 0],
+         ["hook-fbreak-clear",                                       cmdHook, 0],
+         ["hook-fbreak-set",                                         cmdHook, 0],
+         ["hook-guess-complete",                                     cmdHook, 0],
+         ["hook-transient-script",                                   cmdHook, 0],
+         ["hook-script-manager-created",                             cmdHook, 0],
+         ["hook-script-manager-destroyed",                           cmdHook, 0],
+         ["hook-script-instance-created",                            cmdHook, 0],
+         ["hook-script-instance-sealed",                             cmdHook, 0],
+         ["hook-script-instance-destroyed",                          cmdHook, 0],
+         ["hook-session-display",                                    cmdHook, 0],
+         ["hook-source-load-complete",                               cmdHook, 0],
+         ["hook-window-closed",                                      cmdHook, 0],
+         ["hook-window-loaded",                                      cmdHook, 0],
+         ["hook-window-opened",                                      cmdHook, 0],
+         ["hook-window-resized",                                     cmdHook, 0],
+         ["hook-window-unloaded",                                    cmdHook, 0],
+         ["hook-venkman-exit",                                       cmdHook, 0],
+         ["hook-venkman-query-exit",                                 cmdHook, 0],
+         ["hook-venkman-started",                                    cmdHook, 0]
         ];
 
     cmdary.stringBundle = console.defaultBundle;
@@ -159,7 +167,7 @@ function initCommands(mainWindow)
                                                      "expression", "prefValue"],
                                                      "rest");
 
-    console.commandManager.installKeys(mainWindow.document,
+    console.commandManager.installKeys(console.mainWindow.document,
                                        console.commandManager.commands);
 }
 
@@ -466,6 +474,8 @@ function cmdClearScript (e)
             cmdClearScript ({scriptWrapper: e.scriptWrapperList[i]});
         return true;
     }
+
+    e.scriptWrapper.clearBreakpoints();
     
     return true;
 }
@@ -913,26 +923,6 @@ function cmdHelp (e)
     return true;
 }
 
-function cmdHideView(e)
-{
-    if (!(e.viewId in console.views))
-    {
-        display (getMsg(MSN_ERR_INVALID_PARAM, ["viewId", e.viewId]), MT_ERROR);
-        return;    
-    }
-
-    var view = console.views[e.viewId];
-
-    if (!view || !("currentContent" in view))
-    {
-        display (getMsg(MSN_ERR_INVALID_PARAM, ["viewId", e.viewId]), MT_ERROR);
-        return;    
-    }
-
-    dispatch ("move-view", 
-              {viewContent: view.currentContent, viewContainer: null});    
-}
-
 function cmdHook(e)
 {
     /* empty function used for "hook" commands. */
@@ -1249,7 +1239,7 @@ function cmdSaveProfile (e)
             if (list[i].search(/html|htm|xml|txt/i) == -1)
                 extList += "*." + ext + " ";
         }
-        var rv = pickSaveAs(MSG_SAVE_PROFILE, "$html $xml $txt " + 
+        var rv = pickSaveAs(MSG_SAVE_PROFILE, "$html $xml $text " + 
                             extList + "$all");
         if (rv.reason == PICK_CANCEL)
             return null;
@@ -1322,6 +1312,116 @@ function cmdScope ()
         displayProperties (getCurrentFrame().scope);
     
     return true;
+}
+
+function cmdToggleSomething (e)
+{
+    var ary = e.command.name.match (/(.*)-(on|off|toggle)$/);
+    if (!ary)
+        return;
+    
+    var newEvent = Clone(e);
+    
+    if (ary[2] == "on")
+        newEvent.toggle = true;
+    else if (ary[2] == "off")
+        newEvent.toggle = false;
+    else
+        newEvent.toggle = "toggle";
+
+    dispatch (ary[1], newEvent);
+}
+
+function cmdSetScriptFlag (e)
+{
+    function setFlag (jsdScript)
+    {
+        if (!jsdScript.isValid)
+            return;
+        
+        if (e.toggle == "toggle")
+        {
+            if (jsdScript.flags & flag)
+                jsdScript.flags &= ~flag;
+            else
+                jsdScript.flags |= flag;
+        }
+        else if (e.toggle)
+        {
+            jsdScript.flags |= flag;
+        }
+        else
+        {
+            jsdScript.flags &= ~flag;
+        }    
+    };
+    
+    function setFlagInstance (scriptInstance)
+    {
+        if (scriptInstance.topLevel)
+            setFlag (scriptInstance.topLevel.jsdScript);
+        
+        for (var f in scriptInstance.functions)
+            setFlag (scriptInstance.functions[f].jsdScript);
+    };
+
+    var flag;
+    var i;
+    
+    if (e.command.name.search(/^profile/) == 0)
+        flag = SCRIPT_NOPROFILE;
+    else
+        flag = SCRIPT_NODEBUG;
+    
+    if (e.command.name.search (/script$/) != -1)
+    {
+        if ("scriptWrapperList" in e)
+        {
+            for (i = 0; i < e.scriptWrapperList.length; ++i)
+                setFlag(e.scriptWrapperList[i].jsdScript);
+        }
+        else
+        {
+            setFlag(e.scriptWrapper.jsdScript);
+        }
+    }
+    else
+    {
+        if ("scriptInstanceList" in e)
+        {
+            for (i = 0; i < e.scriptInstanceList.length; ++i)
+                setFlagInstance(e.scriptInstanceList[i]);
+        }
+        else
+        {
+            setFlagInstance(e.scriptInstance);
+        }
+    }
+}
+
+function cmdSetTransientFlag (e)
+{
+    function setFlag (url)
+    {
+        if (!(url in console.scriptManagers))
+            return;
+
+        var scriptManager = console.scriptManagers[url];
+        if (e.toggle == "toggle")
+            scriptManager.disableTransients = !scriptManager.disableTransients;
+        else
+            scriptManager.disableTransients = e.toggle;
+    };
+    
+    if ("urlList" in e)
+    {
+        for (var i = 0; i < e.urlList.length; ++i)
+            setFlag (e.urlList[i]);
+    }
+    else
+    {
+        setFlag (e.url);
+    }
 }
 
 function cmdStartupInit (e)

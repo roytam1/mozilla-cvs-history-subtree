@@ -118,6 +118,8 @@ function mmgr_showpop (event)
             return true;
         
         expr = expr.replace (/\Wand\W/gi, " && ");
+
+        dd ("evaling " + expr);
         try
         {
             return eval("(" + expr + ")");
@@ -139,7 +141,7 @@ function mmgr_showpop (event)
      * return result as this.cx for use if something from this menu is actually
      * dispatched.  this.cx is deleted in |hidePopup|. */
     if (typeof this.contextFunction == "function")
-        cx = this.cx = this.contextFunction (popup.getAttribute("id"));
+        cx = this.cx = this.contextFunction (popup.getAttribute("menuName"));
     else
         cx = this.cx = { menuManager: this };
 
@@ -195,14 +197,13 @@ function mmgr_showpop (event)
  * Internal use only.
  *
  * |hidePopup| is called from the "onpopuphiding" event of menus
- * managed by the CommandManager.  Here we just clean up the context, which
- * would have become the event object used by any command dispatched from the
- * menu.
+ * managed by the CommandManager.  Nothing to do here anymore.
+ * We used to just clean up this.cx, but that's a problem for nested
+ * menus.
  */
 MenuManager.prototype.hidePopup =
 function mmgr_hidepop (id)
 {
-    delete this.cx;
     return true;
 }
 
@@ -216,17 +217,17 @@ function mmgr_hidepop (id)
  * @param attribs Object containing CSS attributes to set on the element.
  */
 MenuManager.prototype.appendSubMenu =
-function mmgr_addsmenu (parentNode, beforeNode, id, label, attribs)
+function mmgr_addsmenu (parentNode, beforeNode, menuName, domId, label, attribs)
 {
     var document = parentNode.ownerDocument;
     
     /* sometimes the menu is already there, for overlay purposes. */
-    var menu = document.getElementById(id);
+    var menu = document.getElementById(domId);
     
     if (!menu)
     {
         menu = document.createElement ("menu");
-        menu.setAttribute ("id", id);
+        menu.setAttribute ("id", domId);
         parentNode.insertBefore(menu, beforeNode);
     }
 
@@ -235,11 +236,13 @@ function mmgr_addsmenu (parentNode, beforeNode, id, label, attribs)
     if (!menupopup)
     {
         menupopup = document.createElement ("menupopup");
-        menupopup.setAttribute ("id", id + "-popup");
+        menupopup.setAttribute ("id", domId + "-popup");
         menu.appendChild(menupopup);    
         menupopup = menu.firstChild;
     }
-    
+
+    menupopup.setAttribute ("menuName", menuName);
+
     menu.setAttribute ("accesskey", getAccessKey(label));
     menu.setAttribute ("label", label.replace("&", ""));
     menu.setAttribute ("isSeparator", true);
@@ -247,7 +250,7 @@ function mmgr_addsmenu (parentNode, beforeNode, id, label, attribs)
     if (typeof attribs == "object")
     {
         for (var p in attribs)
-            menupopup.setAttribute (p, attribs[p]);
+            menu.setAttribute (p, attribs[p]);
     }
 
     this.hookPopup (menupopup);
@@ -267,7 +270,7 @@ function mmgr_addsmenu (parentNode, beforeNode, id, label, attribs)
  * @param attribs Object containing CSS attributes to set on the element.
  */
 MenuManager.prototype.appendPopupMenu =
-function mmgr_addpmenu (parentNode, beforeNode, id, label, attribs)
+function mmgr_addpmenu (parentNode, beforeNode, menuName, id, label, attribs)
 {
     var document = parentNode.ownerDocument;
     var popup = document.createElement ("popup");
@@ -279,6 +282,8 @@ function mmgr_addpmenu (parentNode, beforeNode, id, label, attribs)
         for (var p in attribs)
             popup.setAttribute (p, attribs[p]);
     }
+
+    popup.setAttribute ("menuName", menuName);
 
     parentNode.insertBefore(popup, beforeNode);
     this.hookPopup (popup);
@@ -438,7 +443,7 @@ function mmgr_newmenu (parentNode, beforeNode, menuName, domId, attribs)
 
     var menuSpec = this.menuSpecs[menuName];
     
-    var subMenu = this.appendSubMenu (parentNode, beforeNode, domId,
+    var subMenu = this.appendSubMenu (parentNode, beforeNode, menuName, domId,
                                       menuSpec.label, attribs);
 
     this.createMenuItems (subMenu, null, menuSpec.items);

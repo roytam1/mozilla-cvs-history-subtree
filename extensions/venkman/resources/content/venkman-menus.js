@@ -102,9 +102,7 @@ function initMenus()
                  {type: "checkbox",
                   checkedif: "console.prefs['prettyprint']"}],
          ["-"],
-         ["toggle-chrome",
-                 {type: "checkbox",
-                  checkedif: "console.enableChromeFilter"}],
+         [">session:colors"],
          ["-"],
          ["save-default-layout"],
          ["toggle-save-layout",
@@ -128,6 +126,9 @@ function initMenus()
          [">popup:emode"],
          [">popup:tmode"],
          ["-"],
+         ["toggle-chrome",
+                 {type: "checkbox",
+                  checkedif: "console.enableChromeFilter"}],
          ["toggle-ias",
                  {type: "checkbox",
                   checkedif: "console.jsds.initAtStartup"}],
@@ -225,6 +226,15 @@ function getCommandContext (id)
     {
         if ("getContext" in console.menuSpecs[id])
             cx = console.menuSpecs[id].getContext(cx);
+        else if ("cx" in console.menuManager) 
+        {
+            dd ("using existing context");
+            cx = console.menuManager.cx;
+        }
+        else
+        {
+            dd ("no context at all");
+        }
     }
     else
     {

@@ -54,6 +54,9 @@ const PROP_EXCEPTION = jsdIProperty.FLAG_EXCEPTION;
 const PROP_ERROR     = jsdIProperty.FLAG_ERROR;
 const PROP_HINTED    = jsdIProperty.FLAG_HINTED;
 
+const SCRIPT_NODEBUG   = jsdIScript.FLAG_DEBUG;
+const SCRIPT_NOPROFILE = jsdIScript.FLAG_PROFILE;
+
 const COLLECT_PROFILE_DATA  = jsdIDebuggerService.COLLECT_PROFILE_DATA;
 
 const PCMAP_SOURCETEXT    = jsdIScript.PCMAP_SOURCETEXT;
@@ -116,23 +119,23 @@ function initDebugger()
     else
         console.enableChromeFilter = false;
 
-    var venkmanFilter1 = {  /* glob based filter goes first, because it's the */
-        globalObject: this, /* easiest to match.                              */
+    console.venkmanFilter1 = {  /* glob based filter goes first, because it's */
+        globalObject: this,     /* the easiest to match.                      */
         flags: FILTER_SYSTEM | FILTER_ENABLED,
         urlPattern: null,
         startLine: 0,
         endLine: 0
     };
-    console.jsds.appendFilter (venkmanFilter1);
+    //    console.jsds.appendFilter (venkmanFilter1);
 
-    var venkmanFilter2 = {  /* url based filter for XPCOM callbacks that may  */
-        globalObject: null, /* not happen under our glob.                     */
+    console.venkmanFilter2 = {  /* url based filter for XPCOM callbacks that  */
+        globalObject: null,     /* may not happen under our glob.             */
         flags: FILTER_SYSTEM | FILTER_ENABLED,
         urlPattern: "chrome://venkman/*",
         startLine: 0,
         endLine: 0
     };
-    console.jsds.appendFilter (venkmanFilter2);
+    //    console.jsds.appendFilter (console.venkmanFilter2);
 
     console.throwMode = TMODE_IGNORE;
     console.errorMode = EMODE_IGNORE;
@@ -239,7 +242,6 @@ function jsdExecutionHook (frame, type, rv)
 
     var targetWindow = null;
     var wasModal = false;
-    var ex;
     var cx;
 
     try
@@ -253,20 +255,22 @@ function jsdExecutionHook (frame, type, rv)
     }
     
     var targetWasEnabled = true;
-    var debuggerWasEnabled = console.debuggerWindow.enabled;
-    console.debuggerWindow.enabled = true;
+    var debuggerWasEnabled = console.baseWindow.enabled;
+    console.baseWindow.enabled = true;
     
-    if (cx)
+    if (!ASSERT(cx, "no cx in execution hook"))
+        return hookReturn;
+    
+    var glob = cx.globalObject;
+    if (!ASSERT(glob, "no glob in execution hook"))
+        return hookReturn;
+    
+    console.targetWindow = getBaseWindowFromWindow(glob.getWrappedValue());
+    targetWasEnabled = console.targetWindow.enabled;
+    if (console.targetWindow != console.baseWindow)
     {
         cx.scriptsEnabled = false;
-        var glob = cx.globalObject;
-        if (glob)
-        {
-            console.targetWindow =
-                getBaseWindowFromWindow(glob.getWrappedValue());
-            targetWasEnabled = console.targetWindow.enabled;
-            console.targetWindow.enabled = false;
-        }
+        console.targetWindow.enabled = false;
     }
 
     try
@@ -279,13 +283,15 @@ function jsdExecutionHook (frame, type, rv)
         display (formatException(ex), MT_ERROR);
     }
     
-    if (cx)
-        cx.scriptsEnabled = true;
 
     
-    if (console.targetWindow)
+    if (console.targetWindow && console.targetWindow != console.baseWindow)
+    {
         console.targetWindow.enabled = targetWasEnabled;
-    console.debuggerWindow.enabled = debuggerWasEnabled;
+        cx.scriptsEnabled = true;
+    }
+    
+    console.baseWindow.enabled = debuggerWasEnabled;
     delete console.frames;
     delete console.targetWindow;
     if ("__exitAfterContinue__" in console)
@@ -350,6 +356,7 @@ function ScriptManager (url)
     this.instances = new Array();
     this.transients = new Object();
     this.transientCount = 0;
+    this.disableTransients = false;
 }
 
 ScriptManager.prototype.onScriptCreated =
@@ -398,6 +405,8 @@ function smgr_created (jsdScript)
     {
         //dd ("transient created " + formatScript(jsdScript));
         ++this.transientCount;
+        if (this.disableTransients)
+            jsdScript.flags |= SCRIPT_NODEBUG;
         this.transients[jsdScript.tag] = scriptWrapper;
         scriptWrapper.functionName = MSG_VAL_EVSCRIPT;
         //dispatch ("hook-transient-script", { scriptWrapper: scriptWrapper });
@@ -543,6 +552,14 @@ function si_seal ()
 {
     this.sealDate = new Date();
     this.isSealed = true;
+
+    if (this.url.search (/^chrome:\/\/venkman/) == 0)
+    {
+        var nada = SCRIPT_NODEBUG | SCRIPT_NOPROFILE;
+        for (var f in this.functions)
+            this.functions[f].jsdScript.flags |= nada;
+    }
+
     dispatch ("hook-script-instance-sealed", { scriptInstance: this });
 }
 
@@ -611,7 +628,7 @@ function si_linemap()
 ScriptInstance.prototype.isLineExecutable =
 function si_isexe (line)
 {
-    if (this.topLevel.jsdScript.isValid &&
+    if (this.topLevel && this.topLevel.jsdScript.isValid &&
         this.topLevel.jsdScript.isLineExecutable (line, PCMAP_SOURCETEXT))
     {
         return true;
@@ -777,7 +794,7 @@ function si_guessnames ()
 }
 
 function ScriptWrapper (jsdScript)
-{
+{    
     this.jsdScript = jsdScript;
     this.tag = jsdScript.tag;
     this.functionName = jsdScript.functionName;
@@ -1005,6 +1022,8 @@ const TMODE_BREAK  = 2;
 
 function debugTrap (frame, type, rv)
 {
+    dd ("debug trap");
+    
     var tn = "";
     var retcode = jsdIExecutionHook.RETURN_CONTINUE;
 
