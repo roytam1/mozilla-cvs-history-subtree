@@ -6,8 +6,8 @@
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
 
 !IF "$(CFG)" == ""
-CFG=fdlibm - Win32 Debug
-!MESSAGE No configuration specified.  Defaulting to fdlibm - Win32 Debug.
+CFG=jsshell - Win32 Debug
+!MESSAGE No configuration specified.  Defaulting to jsshell - Win32 Debug.
 !ENDIF 
 
 !IF "$(CFG)" != "js - Win32 Release" && "$(CFG)" != "js - Win32 Debug" &&\
@@ -17,7 +17,7 @@ CFG=fdlibm - Win32 Debug
 !MESSAGE You can specify a configuration when running NMAKE on this makefile
 !MESSAGE by defining the macro CFG on the command line.  For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "js.mak" CFG="fdlibm - Win32 Debug"
+!MESSAGE NMAKE /f "js.mak" CFG="jsshell - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
