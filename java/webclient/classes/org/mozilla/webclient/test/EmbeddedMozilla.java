@@ -77,7 +77,8 @@ public static void printUsage()
     
     public EmbeddedMozilla (String title, String binDir, String url) {
 		super(title);
-        System.out.println("constructed with " + url);
+        System.out.println("constructed with binDir: " + binDir + " url: " + 
+                           url);
 	
 		addWindowListener(new WindowAdapter() {
 		    public void windowClosing(WindowEvent e) {

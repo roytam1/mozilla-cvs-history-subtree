@@ -116,17 +116,30 @@ public static void setAppData(String absolutePathToNativeBrowserBinDir) throws F
         // none loads, then I return a error message.
         // If you think up of a better way, let me know.
         // -- Mark
+
+        Class win32DrawingSurfaceInfoClass;
         
-        Class win32DrawingSurfaceInfoClass = 
-            Class.forName("sun.awt.windows.WDrawingSurfaceInfo");
+        try {
+            win32DrawingSurfaceInfoClass = 
+                Class.forName("sun.awt.windows.WDrawingSurfaceInfo");
+        }
+        catch (Exception e) {
+            win32DrawingSurfaceInfoClass = null;
+        }
         
         if (win32DrawingSurfaceInfoClass != null) {
             platformCanvasClassName = "org.mozilla.webclient.win32.Win32BrowserControlCanvas";
         }
         
         if (null == platformCanvasClassName) {
-            Class motifDrawingSurfaceInfoClass = 
-                Class.forName("sun.awt.motif.MDrawingSurfaceInfo");
+            Class motifDrawingSurfaceInfoClass; 
+            try {
+                motifDrawingSurfaceInfoClass = 
+                    Class.forName("sun.awt.motif.MDrawingSurfaceInfo");
+            }
+            catch (Exception e) {
+                motifDrawingSurfaceInfoClass = null;
+            }
             
             if (motifDrawingSurfaceInfoClass != null) {
                 platformCanvasClassName = "org.mozilla.webclient.motif.MotifBrowserControlCanvas";
