@@ -72,6 +72,7 @@
 #include "nsIPrompt.h"
 #include "nsIMsgStatusFeedback.h" 
 
+#include "nsIFolder.h"
 #include "nsIMsgFolder.h"
 #include "nsIMsgNewsFolder.h"
 
@@ -755,9 +756,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncRead(nsIStreamListener *listener, nsISupports
 {
   nsresult rv;
   nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_runningURL, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  SetNewsFolderAndMsgKey(); // make sure m_newsFolder is set.
+  NS_ENSURE_SUCCESS(rv,rv);
 
   m_channelContext = ctxt;
   m_channelListener = listener;
@@ -1210,6 +1209,8 @@ nsresult nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessag
     char *message_id = 0;
     char *command_specific_data = 0;
 	char * s = 0;
+
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("ParseURL"));
 
 	// get the file path part and store it as the group...
 	aURL->GetPath(getter_Copies(fullPath));
@@ -2589,12 +2590,15 @@ nsNNTPProtocol::SetNewsFolderAndMsgKey()
 
     nsCOMPtr <nsIMsgFolder> folder;
 
-    // if we have a news://host/message-id url, we want news://host for m_newsFolder
+    // if we have a news://host/message-id url, we'll use the server's root folder for the folder
     if (!nsCRT::strncmp(uri, kNewsRootURI, kNewsRootURILen) && m_messageID) {
-        nsCAutoString serverURI(uri);
-        PRUint32 messageIDLen = nsCRT::strlen(m_messageID);
-        serverURI.Cut(serverURI.Length() - messageIDLen, messageIDLen);
-        rv = nntpService->DecomposeNewsURI(serverURI.get(), getter_AddRefs(folder), &m_key);
+        m_key = nsMsgKey_None;
+        nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(m_nntpServer, &rv);
+        NS_ENSURE_SUCCESS(rv,rv);
+        nsCOMPtr<nsIFolder> rootFolder;
+        rv = server->GetRootFolder(getter_AddRefs(rootFolder));
+        NS_ENSURE_SUCCESS(rv,rv);
+        folder = do_QueryInterface(rootFolder, &rv);
     }
     else {
         rv = nntpService->DecomposeNewsURI((const char *)uri, getter_AddRefs(folder), &m_key);
