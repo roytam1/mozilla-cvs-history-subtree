@@ -639,29 +639,31 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
 
     // See if this rule node has cached the fact that the remaining nodes along this
     // path specify no data whatsoever.
-    if (ruleNode->mNoneBits & bit) {
-      // The bit is only set when we are supposed to fully inherit.  Change the rule
-      // detail to reflect this.
-      //detail = eRuleFullInherited;
+    if (ruleNode->mNoneBits & bit)
       break;
+
+    // Failing the following test mean that we have specified no rule information yet 
+    // along this branch, but some ancestor in the rule tree actually has the data.  We 
+    // continue walking up the rule tree without asking the style rules for any information 
+    // (since the bit being set tells us that the rules aren't going to supply any info anyway. 
+    if (!(detail == eRuleNone && ruleNode->mInheritBits & bit)) {
+      // Ask the rule to fill in the properties that it specifies.
+      ruleNode->GetRule(getter_AddRefs(rule));
+      if (rule)
+        rule->MapRuleInfoInto(aRuleData);
+
+      // Now we check to see how many properties have been specified by the rules
+      // we've examined so far.
+      RuleDetail oldDetail = detail;
+      detail = CheckSpecifiedProperties(aSID, *aSpecificData);
+    
+      if (oldDetail == eRuleNone && detail != oldDetail)
+        highestNode = ruleNode;
+
+      if (detail == eRuleFullMixed || detail == eRuleFullInherited)
+        break; // We don't need to examine any more rules.  All properties have been fully specified.
     }
 
-    // Ask the rule to fill in the properties that it specifies.
-    ruleNode->GetRule(getter_AddRefs(rule));
-    if (rule)
-      rule->MapRuleInfoInto(aRuleData);
-
-    // Now we check to see how many properties have been specified by the rules
-    // we've examined so far.
-    RuleDetail oldDetail = detail;
-    detail = CheckSpecifiedProperties(aSID, *aSpecificData);
-    
-    if (oldDetail == eRuleNone && detail != oldDetail)
-      highestNode = ruleNode;
-
-    if (detail == eRuleFullMixed || detail == eRuleFullInherited)
-      break; // We don't need to examine any more rules.  All properties have been fully specified.
-    
     rootNode = ruleNode;
     ruleNode = ruleNode->mParent; // Climb up to the next rule in the tree (a less specific rule).
   }
