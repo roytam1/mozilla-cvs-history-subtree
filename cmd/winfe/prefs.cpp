@@ -1687,6 +1687,29 @@ CLIPreference::Release()
 
 #ifdef MOZ_SMARTUPDATE
 /////////////////////////////////////////////////////////////////////////////
+// CSmartUpdatePreference
+
+class CSmartUpdatePrefs : public ISmartUpdatePrefs {
+	public:
+		CSmartUpdatePrefs();
+
+		// IUnknown methods
+		STDMETHODIMP QueryInterface(REFIID riid, LPVOID FAR* ppvObj);
+		STDMETHODIMP_(ULONG) AddRef();
+		STDMETHODIMP_(ULONG) Release();
+		
+        // ISmartUpdatePrefs methods
+	    STDMETHODIMP_(LONG) RegPack();
+        STDMETHODIMP_(LONG) Uninstall(char* regPackageName);
+        STDMETHODIMP_(LONG) EnumUninstall(void** context, char* packageName,
+                                    LONG len1, char*regPackageName, LONG len2);
+
+	private:
+
+		ULONG	  m_uRef;
+};
+
+/////////////////////////////////////////////////////////////////////////////
 // CSmartUpdatePrefs
 CSmartUpdatePrefs::CSmartUpdatePrefs()
 {
