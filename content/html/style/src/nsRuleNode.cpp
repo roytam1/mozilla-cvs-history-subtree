@@ -1412,10 +1412,8 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     font->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
   }
   else if (aFontData.mSize.IsLengthUnit()) {
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
+    if (parentContext && !inherited)
       parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-    }
 
     font->mFont.size = CalcLength(aFontData.mSize, &parentFont->mFont, nsnull, mPresContext, inherited);
     font->mFixedFont.size = CalcLength(aFontData.mSize, &parentFont->mFixedFont, nsnull, mPresContext, inherited);

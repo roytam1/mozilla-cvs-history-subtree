@@ -249,7 +249,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       aAttributes->GetAttribute(nsHTMLAtoms::pointSize, value);
       if (value.GetUnit() == eHTMLUnit_Integer) {
         PRInt32 val = value.GetIntValue();
-        font.mSize = nsCSSValue(val, eCSSUnit_Integer);
+        font.mSize = nsCSSValue((float)val, eCSSUnit_Point);
       }
       else if (value.GetUnit() == eHTMLUnit_Enumerated) {
         PRInt32 val = value.GetIntValue();
