@@ -16,9 +16,11 @@
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
 # Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
 #
 # DESCRIPTION
 #    "finger" version using LDAP information (using RFC 2307 objectclass).

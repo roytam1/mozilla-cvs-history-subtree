@@ -15,18 +15,21 @@
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
 # Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
 #
 # DESCRIPTION
 #    Lots of Useful Little Utilities, for LDAP related operations.
 #
 #############################################################################
 
+require 5.005;
 package Mozilla::LDAP::Utils;
 
-use Mozilla::LDAP::API 1.4 qw(:constant);
+use Mozilla::LDAP::API 1.5 qw(:constant);
 use Mozilla::LDAP::Conn;
 use Exporter;
 
@@ -34,7 +37,7 @@ use strict;
 use vars qw($VERSION @ISA %EXPORT_TAGS);
 
 @ISA = qw(Exporter);
-$VERSION = "1.4";
+$VERSION = "1.5";
 
 %EXPORT_TAGS = (
 		all => [qw(normalizeDN

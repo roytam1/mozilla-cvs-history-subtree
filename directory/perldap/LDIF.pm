@@ -20,7 +20,7 @@
 # Copyright (C) 1999 Netscape Communications Corporation. All
 # Rights Reserved.
 # 
-# Contributor(s): Leif Hedstrom <leif@netscape.com>
+# Contributor(s): Leif Hedstrom <leif@perldap.org>
 #                 John M. Kristian <kristian@netscape.com>
 # 
 #############################################################################

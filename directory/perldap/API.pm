@@ -15,9 +15,12 @@
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
 # Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
+#    * Kevin McCarthy
 #
 # DESCRIPTION
 #    This is a description.
@@ -247,7 +250,7 @@ require AutoLoader;
 # Add Everything in %EXPORT_TAGS to @EXPORT_OK
 Exporter::export_ok_tags(keys %EXPORT_TAGS);
 
-$VERSION = '1.41';
+$VERSION = '1.5';
 
 # The XS 'constant' routine returns an integer.  There are all constants
 # we want to return something else.

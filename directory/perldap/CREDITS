@@ -11,23 +11,23 @@ this project.
 	- Port to Windows/NT and ActivePerl.
 
 
-* Clayton Donley
-
-	  - Wrote a lot of the initial API code (API.xs and API.pm).
-
-
-* Kevin McCarthy <kmccarth@perldap.org>
+* Kevin McCarthy
 
 	- Bug fixes, tons of contribution, particularly to the API.xs file.
 
 
-* Michelle Wyner <mwyner@perldap.org>
+* Michelle Hedstrom <mwyner@perldap.org>
 
 	- Testing, bug fixes, and documentation, as well as working on new
           modules for PerLDAP v2.0.
 
 
-* John Kristian <kristian@netscape.com>
+* Clayton Donley
+
+	  - Wrote some of the initial API code (API.xs and API.pm).
+
+
+* John Kristian
 
 	- Rewrote the entire LDIF module, great stuff!
 
@@ -38,7 +38,7 @@ this project.
 	- Discovering bugs daily (great, thanks... ;-).
 
 
-* Bob Ferguson <rferguso@netscape.com>
+* Bob Ferguson
 
 	- Primary guinea pig for all my NT builds.
 

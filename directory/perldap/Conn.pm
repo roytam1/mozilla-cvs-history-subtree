@@ -15,9 +15,12 @@
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
 # Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
+#    * Michelle Hedstrom <mwyner@perldap.org>
 #
 # DESCRIPTION
 #    This is the main object class for connecting to an LDAP server,
@@ -27,16 +30,17 @@
 #
 #############################################################################
 
+require 5.005;
 package Mozilla::LDAP::Conn;
 
-use Mozilla::LDAP::Utils 1.4 ();
-use Mozilla::LDAP::API 1.4 qw(/.+/);
-use Mozilla::LDAP::Entry 1.4 ();
+use Mozilla::LDAP::Utils 1.5 ();
+use Mozilla::LDAP::API 1.5 qw(/.+/);
+use Mozilla::LDAP::Entry 1.5 ();
 
 use strict;
 use vars qw($VERSION);
 
-$VERSION = "1.41";
+$VERSION = "1.5";
 
 
 #############################################################################

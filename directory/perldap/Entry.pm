@@ -15,9 +15,12 @@
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
 # Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
+#    * Michelle Hedstrom <mwyner@perldap.org>
 #
 # DESCRIPTION
 #    This package defines an object class to manage one single LDAP
@@ -26,16 +29,17 @@
 #
 #############################################################################
 
+require 5.005;
 package Mozilla::LDAP::Entry;
 
-use Mozilla::LDAP::Utils 1.4 qw(normalizeDN);
+use Mozilla::LDAP::Utils 1.5 qw(normalizeDN);
 use Tie::Hash;
 
 use strict;
 use vars qw($VERSION @ISA);
 
 @ISA = ('Tie::StdHash');
-$VERSION = "1.41";
+$VERSION = "1.5";
 
 
 #############################################################################

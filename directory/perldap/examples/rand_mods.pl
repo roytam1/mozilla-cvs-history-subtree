@@ -12,14 +12,15 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is mozilla.org code.
+# The Original Code is PerLDAP. The Initial Developer of the Original
+# Code is Netscape Communications Corp. and Clayton Donley. Portions
+# created by Netscape are Copyright (C) Netscape Communications
+# Corp., portions created by Clayton Donley are Copyright (C) Clayton
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
-# The Initial Developer of the Original Code is Netscape Communications
-# Corporation. Portions created by Netscape are
-# Copyright (C) 1998 Netscape Communications Corporation. All
-# Rights Reserved.
-#
-# Contributor(s): 
+# Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
 #
 # SYNOPSIS:
 #    Modify an attribute for one or more entries, or possibly delete it.

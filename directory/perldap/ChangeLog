@@ -1,3 +1,12 @@
+2003-06-24  Leif Hedstrom  <leif@perldap.org>
+
+	* Makefile.PL: Lots of changes to support modern C-SDK.
+
+2003-06-24  Leif Hedstrom  <leif@perldap.org>
+
+	* API.xs, typemap: Changed `na' to `PL_na'. This means we now
+	only support Perl 5.005 or later.
+
 2000-09-19  Leif Hedstrom  <leif@perldap.org>
 
 	* Conn.pm (update): Bug fix to allow us to delete() an attribute,

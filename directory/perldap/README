@@ -1,6 +1,6 @@
 #############################################################################
 #                                                                           #
-#            PerLDAP v1.4 - A Perl Developers' Kit for LDAP		    #
+#            PerLDAP v1.5 - A Perl Developers' Kit for LDAP		    #
 #                                                                           #
 #############################################################################
 
@@ -16,11 +16,10 @@ build web applications to access information stored in a directory or
 create directory sync tools between directories and other services.
 
 PerLDAP is an open source development project, the result of a joint effort
-between Netscape and Clayton Donley, an open source developer.  PerLDAP
-currently provides the basic functions to allow Perl users to access and
-manipulate directories easily.  Based on developer feedback and
-involvement, PerLDAP will continue to evolve to include additional
-functionality in future releases.
+between Netscape, Leif Hedstrom, Clayton Donley and several other
+contributors. PerLDAP currently provides the basic functions to allow Perl
+users to access and manipulate directories easily.
+
 
 
 Compiling the PerLDAP Sources
@@ -47,8 +46,8 @@ and an FAQ for PerLDAP is at
 
 Instructions for building the source can be found in the INSTALL file
 in the source distribution. The latest stable release of PerLDAP is
-v1.4, the next version is planned to be v2.0 (development continues on the
-v1.9 development branch).
+v1.5, not further development is planned at this time due to lack of time
+and resources.
 
 
 Getting Started
@@ -116,6 +115,7 @@ License/Copyright
 =================
 
 Portions by Netscape (c) Copyright 1998 Netscape Communications Corp, Inc.
+Portions by Leif Hedstrom (c) Copyright 2003 Leif Hedstrom
 Portions by Clayton Donley (c) Copyright 1998 Clayton Donley
 
 Please read the MPL-1.1.txt file included for information on the Mozilla
@@ -126,6 +126,3 @@ Known Bugs
 
  - The Rebind operation on NT does NOT work properly when set to a Perl
    function.  This is being investigated.
-
- - There are some minor issues with LDIF.pm, which will be fixed in the
-   next release (v1.4.1).

@@ -15,20 +15,23 @@
 # Code is Netscape Communications Corp. and Clayton Donley. Portions
 # created by Netscape are Copyright (C) Netscape Communications
 # Corp., portions created by Clayton Donley are Copyright (C) Clayton
-# Donley. All Rights Reserved.
+# Donley, portions created by Leif Hedstrom are Copyright (C) Leif
+# Hedstrom. All Rights Reserved.
 #
 # Contributor(s):
+#    * Leif Hedstrom <leif@perldap.org>
 #
 # DESCRIPTION
 #    The Makefile "source".
 #
 #############################################################################
 
+require 5.005;
+
 use ExtUtils::MakeMaker;
 use Config;
 use Carp;
 
-$perlpath = $Config{'perlpath'};
 $osname   = $Config{'osname'};
 
 $ldapsdk_loc = $ENV{"LDAPSDKDIR"}; # Full Path to C SDK Top-Level
@@ -87,13 +90,27 @@ $ssl_def = "-DUSE_SSL" unless ($ldapsdk_ssl =~ /^n/i);
 
 
 opendir(DIR,$lib_ldap);
-@files = grep{/ldap|lber/} readdir(DIR);
+if ($ssl_def)
+{
+   @libfiles = grep{/ldap|lber|ssl/} readdir(DIR);
+} else {
+   @libfiles = grep{/ldap|lber/} readdir(DIR);
+ }
 closedir(DIR);
 
-if (!((@ldaplib = grep{/ldapssl.*\.($libexts)$/} @files) && $ssl_def))
+@libs = ();
+foreach $candidate (@libfiles) {
+   $candidate =~ s/^lib//;
+   $candidate =~ s/\.($libexts)$//;
+   push(@libs, $candidate) unless grep(/^$candidate$/, @libs);
+}
+
+if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
 {
-   @ldaplib = grep{/ldap.*\.($libexts)$/} @files;
-   @lberlib = grep{/lber.*\.($libexts)$/} @files;
+   @ldaplib = grep{/^ldap.*$/} @libs;
+   @lberlib = grep{/^lber.*$/} @libs;
+   @ldapslib = grep{/^ssldap.*$/} @libs if $ssl_def;
+   @ssllib = grep{/^ssl[0-9].*$/} @libs if $ssl_def;
 }
 
 if ($#ldaplib < 0)
@@ -110,18 +127,24 @@ if ($#ldaplib > 0)
    }
 }
 
-$lline_ldap = $ldaplib[0];
-$lline_ldap =~ s/^lib//;
-$lline_ldap =~ s/\.($libexts)$//;
-$lline = "-L$lib_ldap -l$lline_ldap";
+#
+# Add "main" LDAP library to link line
+#
+$lline = "-l$ldaplib[0]";
 
+#
+# I think this is obsolete, and will never trigger, but I'll keep it.
+#
 if ($#lberlib >= 0 && $lline =~ /ldap$/)
 {
-   $lline_lber = $lberlib[0];
-   $lline_lber =~ s/^lib//;
-   $lline_lber =~ s/\.($libexts)$//;
-   $lline .= " -l$lline_lber";
+   $lline .= " -l$lberlib[0]";
 }
+
+#
+# Add SSL libraries, if needed
+#
+$lline .= " -l$ldapslib[0]" if ($#ldapslib >= 0);
+$lline .= " -l$ssllib[0]" if ($#ssllib >= 0);
 
 print "Libraries to link with (default: $lline):  ";
 if (!$silent)
@@ -133,6 +156,7 @@ if (!$silent)
   print "\n";
 }
 
+$lib_line = "-L$lib_ldap $lib_line";
 
 # Include directories etc.
 $my_includes = "";
@@ -144,28 +168,20 @@ $my_includes .= " -I$include_ldap" unless ($include_ldap eq "/usr/include");
 if ($osname =~ /mswin/i)
 {
    $my_extlib = "$lib_ldap\\$ldaplib[0]";
-   $my_extlib .= " $lib_ldap\\$lberlib[0]" if $lber_lib;
+   $my_extlib .= " $lib_ldap\\$lberlib[0]" if $#lberlib >= 0;
    push(@extras, 'dynamic_lib' => {
      'OTHERLDFLAGS' => "kernel32.lib oldnames.lib" });
 } else {
    $my_extlib = "";
 }
 
-push(@extras,
-     CAPI => 'TRUE')
-    if ($] >= 5.005 and $^O eq 'MSWin32'
-        and $Config{archname} =~ /-object\b/i);
+if ($^O eq 'MSWin32' and $Config{archname} =~ /-object\b/i) {
+   push(@extras, CAPI => 'TRUE');
+}
 
 push(@extras,
      ABSTRACT => 'Perl methods for LDAP C API calls',
-     AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
-    if ($] >= 5.005);
-
-#
-# Temp fix so this version compiles under Perl 5.6 - have to
-# change internal variables for version 2.0
-#
-push(@extras, POLLUTE => 1) if ($] >= 5.006);
+     AUTHOR   => 'Leif Hedstrom');
 
 #
 # Ok, let's do it!
