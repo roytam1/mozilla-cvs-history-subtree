@@ -712,8 +712,8 @@ nsNSSCertificateDB::ImportValidCACerts(int numCACerts, SECItem *CACerts, nsIInte
     return NS_ERROR_FAILURE;
   }
 
-  for (int i=0; i < numCACerts; i++) {
-    CERTCertificate *cacert = certArray[i];
+  for (int i2=0; i2 < numCACerts; i2++) {
+    CERTCertificate *cacert = certArray[i2];
     if (cacert)
       cacert = CERT_DupCertificate(cacert);
     if (cacert)
