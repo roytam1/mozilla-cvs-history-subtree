@@ -107,15 +107,42 @@
 #include "nsIXPCToolsProfiler.h"
 #endif
 
+/***************************************************************************/
+// compile time switches for instrumentation and stuff....
+
 #ifdef DEBUG
 #define XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS 1
 #endif
 
-#ifdef DEBUG_jband
+#ifdef DEBUG
+#define XPC_REPORT_SHADOWED_WRAPPED_NATIVE_MEMBERS
+#endif
+
+#if defined(DEBUG_jst) || defined(DEBUG_jband)
+#define XPC_CHECK_CLASSINFO_CLAIMS
+#if defined(DEBUG_jst)
+#define XPC_ASSERT_CLASSINFO_CLAIMS
+#endif
+#endif
+
+#if defined(DEBUG_jband)
 #define XPC_DUMP_AT_SHUTDOWN 1
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN 1
 //#define DEBUG_stats_jband 1
 #endif
+
+
+/***************************************************************************/
+// conditional forward declarations....
+
+#ifdef XPC_REPORT_SHADOWED_WRAPPED_NATIVE_MEMBERS
+void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
+                                 XPCWrappedNativeProto* proto);
+#else
+#define DEBUG_ReportShadowedMembers(set, proto) ((void)0)
+#endif
+
+/***************************************************************************/
 
 // Defeat possible Windows macro-mangling of the name
 #ifdef GetClassInfo

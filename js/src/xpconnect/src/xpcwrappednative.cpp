@@ -37,21 +37,18 @@
 
 #include "xpcprivate.h"
 
-// braindead local helper
-#define SET_ERROR_CODE(_y) if(pErr) *pErr = _y
-
-#if defined(DEBUG_jst) || defined(DEBUG_jband)
-#define XPC_CHECK_CLASSINFO_CLAIMS
-#if defined(DEBUG_jst)
-#define XPC_ASSERT_CLASSINFO_CLAIMS
-#endif
-#endif
+/***************************************************************************/
 
 #ifdef XPC_CHECK_CLASSINFO_CLAIMS
 static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper);
 #else
 #define DEBUG_CheckClassInfoClaims(wrapper) ((void)0)
 #endif
+
+/***************************************************************************/
+
+// braindead local helper
+#define SET_ERROR_CODE(_y) if(pErr) *pErr = _y
 
 // static
 XPCWrappedNative*
@@ -662,6 +659,8 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
         if(!newSet)
             return JS_FALSE;
         mSet = newSet;
+
+        DEBUG_ReportShadowedMembers(newSet, GetProto());
     }
     return JS_TRUE;        
 }
@@ -730,93 +729,6 @@ XPCWrappedNative::InitTearOffJSObject(XPCCallContext& ccx,
     to->SetJSObject(obj);
     return JS_TRUE;
 }
-
-/***************************************************************************/
-
-#ifdef XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
-// static
-void
-XPCWrappedNative::HandlePossibleNameCaseError(JSContext* cx,
-                                              XPCNativeSet* set,
-                                              XPCNativeInterface* iface,
-                                              jsval name)
-{
-    XPCCallContext ccx(JS_CALLER, cx);
-    HandlePossibleNameCaseError(ccx, set, iface, name);
-}
-
-// static
-void
-XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
-                                              XPCNativeSet* set,
-                                              XPCNativeInterface* iface,
-                                              jsval name)
-{
-    if(!ccx.IsValid())
-        return;
-
-    JSString* oldJSStr;
-    JSString* newJSStr;
-    PRUnichar* oldStr;
-    PRUnichar* newStr;
-    XPCNativeMember* member;
-    XPCNativeInterface* interface;
-
-    if(JSVAL_IS_STRING(name) &&
-       nsnull != (oldJSStr = JSVAL_TO_STRING(name)) &&
-       nsnull != (oldStr = (PRUnichar*) JS_GetStringChars(oldJSStr)) &&
-       oldStr[0] != 0 &&
-       nsCRT::IsUpper(oldStr[0]) &&
-       nsnull != (newStr = nsCRT::strdup(oldStr)))
-    {
-        newStr[0] = nsCRT::ToLower(newStr[0]);
-        newJSStr = JS_NewUCStringCopyZ(ccx, (const jschar*)newStr);
-        nsCRT::free(newStr);
-        if(newJSStr && (set ? 
-             set->FindMember(STRING_TO_JSVAL(newJSStr), &member, &interface) :
-             (JSBool) iface->FindMember(STRING_TO_JSVAL(newJSStr))))
-        {
-            // found it!
-            const char* ifaceName = interface->GetNameString();
-            const char* goodName = JS_GetStringBytes(newJSStr);
-            const char* badName = JS_GetStringBytes(oldJSStr);
-            char* locationStr = nsnull;
-
-            nsCOMPtr<nsIXPCException> e =
-                dont_AddRef(NS_STATIC_CAST(nsIXPCException*,
-                    nsXPCException::NewException("", NS_OK, nsnull, nsnull)));
-
-            nsCOMPtr<nsIJSStackFrameLocation> loc = nsnull;
-            if(e)
-            {
-                nsresult rv;
-                rv = e->GetLocation(getter_AddRefs(loc));
-                if(NS_SUCCEEDED(rv) && loc)
-                {
-                    rv = loc->ToString(&locationStr);
-                    if(NS_FAILED(rv))
-                        locationStr = nsnull;
-                }
-            }
-
-            if(locationStr && ifaceName && goodName && badName )
-            {
-                printf("**************************************************\n"
-                       "ERROR: JS code at [%s]\n"
-                       "tried to access nonexistent property called\n"
-                       "\'%s\' on interface of type \'%s\'.\n"
-                       "That interface does however have a property called\n"
-                       "\'%s\'. Did you mean to access that lowercase property?\n"
-                       "Please fix the JS code as appropriate.\n"
-                       "**************************************************\n",
-                        locationStr, badName, ifaceName, goodName);
-            }
-            if(locationStr)
-                nsMemory::Free(locationStr);
-        }
-    }
-}
-#endif
 
 /***************************************************************************/
 
@@ -1616,62 +1528,370 @@ NS_IMETHODIMP XPCWrappedNative::DebugDump(PRInt16 depth)
     return NS_OK;
 }
 
+/***************************************************************************/
+
+#ifdef XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
+// static
+void
+XPCWrappedNative::HandlePossibleNameCaseError(JSContext* cx,
+                                              XPCNativeSet* set,
+                                              XPCNativeInterface* iface,
+                                              jsval name)
+{
+    XPCCallContext ccx(JS_CALLER, cx);
+    HandlePossibleNameCaseError(ccx, set, iface, name);
+}
+
+// static
+void
+XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
+                                              XPCNativeSet* set,
+                                              XPCNativeInterface* iface,
+                                              jsval name)
+{
+    if(!ccx.IsValid())
+        return;
+
+    JSString* oldJSStr;
+    JSString* newJSStr;
+    PRUnichar* oldStr;
+    PRUnichar* newStr;
+    XPCNativeMember* member;
+    XPCNativeInterface* interface;
+
+    if(JSVAL_IS_STRING(name) &&
+       nsnull != (oldJSStr = JSVAL_TO_STRING(name)) &&
+       nsnull != (oldStr = (PRUnichar*) JS_GetStringChars(oldJSStr)) &&
+       oldStr[0] != 0 &&
+       nsCRT::IsUpper(oldStr[0]) &&
+       nsnull != (newStr = nsCRT::strdup(oldStr)))
+    {
+        newStr[0] = nsCRT::ToLower(newStr[0]);
+        newJSStr = JS_NewUCStringCopyZ(ccx, (const jschar*)newStr);
+        nsCRT::free(newStr);
+        if(newJSStr && (set ? 
+             set->FindMember(STRING_TO_JSVAL(newJSStr), &member, &interface) :
+             (JSBool) iface->FindMember(STRING_TO_JSVAL(newJSStr))))
+        {
+            // found it!
+            const char* ifaceName = interface->GetNameString();
+            const char* goodName = JS_GetStringBytes(newJSStr);
+            const char* badName = JS_GetStringBytes(oldJSStr);
+            char* locationStr = nsnull;
+
+            nsCOMPtr<nsIXPCException> e =
+                dont_AddRef(NS_STATIC_CAST(nsIXPCException*,
+                    nsXPCException::NewException("", NS_OK, nsnull, nsnull)));
+
+            nsCOMPtr<nsIJSStackFrameLocation> loc = nsnull;
+            if(e)
+            {
+                nsresult rv;
+                rv = e->GetLocation(getter_AddRefs(loc));
+                if(NS_SUCCEEDED(rv) && loc)
+                {
+                    rv = loc->ToString(&locationStr);
+                    if(NS_FAILED(rv))
+                        locationStr = nsnull;
+                }
+            }
+
+            if(locationStr && ifaceName && goodName && badName )
+            {
+                printf("**************************************************\n"
+                       "ERROR: JS code at [%s]\n"
+                       "tried to access nonexistent property called\n"
+                       "\'%s\' on interface of type \'%s\'.\n"
+                       "That interface does however have a property called\n"
+                       "\'%s\'. Did you mean to access that lowercase property?\n"
+                       "Please fix the JS code as appropriate.\n"
+                       "**************************************************\n",
+                        locationStr, badName, ifaceName, goodName);
+            }
+            if(locationStr)
+                nsMemory::Free(locationStr);
+        }
+    }
+}
+#endif
+
 #ifdef XPC_CHECK_CLASSINFO_CLAIMS
 static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
 {
-    if(wrapper && wrapper->GetProto()->GetClassInfo())
+    if(!wrapper || !wrapper->GetProto()->GetClassInfo())
+        return;
+
+    nsISupports* obj = wrapper->GetIdentityObject();
+    for(PRUint16 i = 0; i < wrapper->GetSet()->GetInterfaceCount(); i++)
     {
-        nsISupports* obj = wrapper->GetIdentityObject();
-        for(PRUint16 i = 0; i < wrapper->GetSet()->GetInterfaceCount(); i++)
+        nsIClassInfo* clsInfo = wrapper->GetProto()->GetClassInfo();
+        XPCNativeInterface* iface = wrapper->GetSet()->GetInterfaceAt(i);
+        nsIInterfaceInfo* info = iface->GetInterfaceInfo();
+        const nsIID* iid;
+        nsISupports* ptr;
+
+        info->GetIIDShared(&iid);
+        nsresult rv = obj->QueryInterface(*iid, (void**)&ptr);
+        if(NS_SUCCEEDED(rv))
         {
-            nsIClassInfo* clsInfo = wrapper->GetProto()->GetClassInfo();
-            XPCNativeInterface* iface = wrapper->GetSet()->GetInterfaceAt(i);
-            nsIInterfaceInfo* info = iface->GetInterfaceInfo();
-            const nsIID* iid;
-            nsISupports* ptr;
+            NS_RELEASE(ptr);
+            continue;    
+        }
 
-            info->GetIIDShared(&iid);
-            nsresult rv = obj->QueryInterface(*iid, (void**)&ptr);
-            if(NS_SUCCEEDED(rv))
-            {
-                NS_RELEASE(ptr);
-                continue;    
-            }
+        // Houston, We have a problem...
 
-            // Houston, We have a problem...
+        char* className = nsnull;
+        char* contractID = nsnull;
+        const char* interfaceName;
 
-            char* className = nsnull;
-            char* contractID = nsnull;
-            const char* interfaceName;
-
-            info->GetNameShared(&interfaceName);
-            clsInfo->GetContractID(&contractID);
-            if(wrapper->GetScriptableInfo())
-            {
-                wrapper->GetScriptableInfo()->GetScriptable()->
-                    GetClassName(&className);
-            }
+        info->GetNameShared(&interfaceName);
+        clsInfo->GetContractID(&contractID);
+        if(wrapper->GetScriptableInfo())
+        {
+            wrapper->GetScriptableInfo()->GetScriptable()->
+                GetClassName(&className);
+        }
 
 
-            printf("\n!!! Object's nsIClassInfo lies about it's interfaces!!!\n"
-                   "   classname: %s \n"
-                   "   contractid: %s \n"
-                   "   unimplmented interface name: %s\n\n",
-                   className ? className : "<unknown>",
-                   contractID ? contractID : "<unknown>",
-                   interfaceName);
+        printf("\n!!! Object's nsIClassInfo lies about it's interfaces!!!\n"
+               "   classname: %s \n"
+               "   contractid: %s \n"
+               "   unimplmented interface name: %s\n\n",
+               className ? className : "<unknown>",
+               contractID ? contractID : "<unknown>",
+               interfaceName);
 
 #ifdef XPC_ASSERT_CLASSINFO_CLAIMS
-            NS_ERROR("Fix this QueryInterface or nsIClassInfo");
+        NS_ERROR("Fix this QueryInterface or nsIClassInfo");
 #endif
 
-            if(className) 
-                nsMemory::Free(className);
-            if(contractID) 
-                nsMemory::Free(contractID);
-        }
-    }    
+        if(className) 
+            nsMemory::Free(className);
+        if(contractID) 
+            nsMemory::Free(contractID);
+    }
 }        
+#endif
+
+#ifdef XPC_REPORT_SHADOWED_WRAPPED_NATIVE_MEMBERS
+static void DEBUG_PrintShadowObjectInfo(const char* header,
+                                        XPCNativeSet* set,
+                                        XPCWrappedNativeProto* proto)
+                
+{
+    if(header)
+        printf("%s\n", header);
+
+    nsIClassInfo* clsInfo = proto->GetClassInfo();
+    if(clsInfo)
+    {
+        char* className = nsnull;
+        char* contractID = nsnull;
+            
+        clsInfo->GetContractID(&contractID);
+        if(proto->GetScriptableInfo())
+        {
+            proto->GetScriptableInfo()->GetScriptable()->
+                GetClassName(&className);
+        }
+
+        printf("   classname: %s \n"
+               "   contractid: %s \n",
+               className ? className : "<unknown>",
+               contractID ? contractID : "<unknown>");
+        if(className) 
+            nsMemory::Free(className);
+        if(contractID) 
+            nsMemory::Free(contractID);
+    }
+
+    printf("   claims to implement interfaces:\n");
+
+    PRUint16 count = set->GetInterfaceCount();
+    for(PRUint16 i = 0; i < count; i++)
+    {
+        XPCNativeInterface* iface = set->GetInterfaceAt(i);
+        nsIInterfaceInfo* info = iface->GetInterfaceInfo();
+        const char* interfaceName;
+        info->GetNameShared(&interfaceName);
+        printf("      %s\n", interfaceName);
+    }
+}        
+
+static void ReportSingleMember(jsval ifaceName,
+                               jsval memberName)
+{
+    if(JSVAL_IS_STRING(memberName))
+        printf("%s::%s", JS_GetStringBytes(JSVAL_TO_STRING(ifaceName)),
+                         JS_GetStringBytes(JSVAL_TO_STRING(memberName)));
+    else
+        printf("%s", JS_GetStringBytes(JSVAL_TO_STRING(ifaceName)));
+}
+
+static void ShowHeader(JSBool* printedHeader,
+                       const char* header,
+                       XPCNativeSet* set,
+                       XPCWrappedNativeProto* proto)
+{
+    if(!*printedHeader)
+    {
+        DEBUG_PrintShadowObjectInfo(header, set, proto);
+        *printedHeader = JS_TRUE;
+    }
+
+}
+
+static void ShowOneShadow(jsval ifaceName1,
+                          jsval memberName1,
+                          jsval ifaceName2,
+                          jsval memberName2)
+{
+    ReportSingleMember(ifaceName1, memberName1);
+    printf(" shadows ");
+    ReportSingleMember(ifaceName2, memberName2);
+    printf("\n");
+}
+
+static void ShowDuplicateInterface(jsval ifaceName)
+{
+    printf(" ! %s appears twice in the nsIClassInfo interface set!\n", 
+           JS_GetStringBytes(JSVAL_TO_STRING(ifaceName)));
+}
+
+static JSBool InterfacesAreRelated(XPCNativeInterface* iface1, 
+                                   XPCNativeInterface* iface2)
+{
+    nsIInterfaceInfo* info1 = iface1->GetInterfaceInfo();
+    nsIInterfaceInfo* info2 = iface2->GetInterfaceInfo();
+    
+    if(info1 == info2)
+        return JS_TRUE;    
+
+    nsCOMPtr<nsIInterfaceInfo> current;
+    nsCOMPtr<nsIInterfaceInfo> parent;
+
+    current = info1;
+    while(NS_SUCCEEDED(current->GetParent(getter_AddRefs(parent))) && parent)
+    {
+        current = parent;
+        if(current == info2)
+            return JS_TRUE;    
+    }
+
+    current = info2;
+    while(NS_SUCCEEDED(current->GetParent(getter_AddRefs(parent))) && parent)
+    {
+        current = parent;
+        if(current == info1)
+            return JS_TRUE;    
+    }
+
+    return JS_FALSE;
+}
+
+void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
+                                 XPCWrappedNativeProto* proto)
+{
+    if(!set || set->GetInterfaceCount() < 2)
+        return;
+
+    // a quicky hack to avoid reporting info for the same set too often 
+    static int nextSeenSet = 0;
+    static const int MAX_SEEN_SETS = 20;
+    static XPCNativeSet* SeenSets[MAX_SEEN_SETS];
+    for(int seen = 0; seen < MAX_SEEN_SETS; seen++)
+        if(set == SeenSets[seen])
+            return;
+    SeenSets[nextSeenSet] = set;
+    int localNext = nextSeenSet+1;
+    nextSeenSet = localNext < MAX_SEEN_SETS ? localNext : 0;
+
+
+    const char header[] = 
+        "!!!Object wrapped by XPConnect has members whose names shadow each other!!!";
+
+    JSBool printedHeader = JS_FALSE;
+
+    jsval QIName = proto->GetRuntime()->
+        GetStringJSVal(XPCJSRuntime::IDX_QUERY_INTERFACE);
+
+    PRUint16 ifaceCount = set->GetInterfaceCount();
+    PRUint16 i, j, k, m;
+
+    // First look for duplicate interface entries
+    
+    for(i = 0; i < ifaceCount; i++)
+    {
+        XPCNativeInterface* ifaceOuter = set->GetInterfaceAt(i);
+        for(k = i+1; k < ifaceCount; k++)
+        {
+            XPCNativeInterface* ifaceInner = set->GetInterfaceAt(k);
+            if(ifaceInner == ifaceOuter)
+            {
+                ShowHeader(&printedHeader, header, set, proto);
+                ShowDuplicateInterface(ifaceOuter->GetName());
+            }    
+        }
+    }
+
+    // Now scan for shadowing names
+
+    for(i = 0; i < ifaceCount; i++)
+    {
+        XPCNativeInterface* ifaceOuter = set->GetInterfaceAt(i);
+        jsval ifaceOuterName = ifaceOuter->GetName();
+
+        PRUint16 memberCountOuter = ifaceOuter->GetMemberCount();
+        for(j = 0; j < memberCountOuter; j++)
+        {
+            XPCNativeMember* memberOuter = ifaceOuter->GetMemberAt(j);
+            jsval memberOuterName = memberOuter->GetName();
+
+            if(memberOuterName == QIName)
+                continue;
+
+            for(k = i+1; k < ifaceCount; k++)
+            {
+                XPCNativeInterface* ifaceInner = set->GetInterfaceAt(k);
+                jsval ifaceInnerName = ifaceInner->GetName();
+             
+                // Reported elsewhere.
+                if(ifaceInner == ifaceOuter)
+                    continue;
+                
+                // We consider this not worth reporting because callers will
+                // almost certainly be getting what they expect.
+                if(InterfacesAreRelated(ifaceInner, ifaceOuter))
+                    continue;
+
+                if(ifaceInnerName == memberOuterName)
+                {
+                    ShowHeader(&printedHeader, header, set, proto);
+                    ShowOneShadow(ifaceInnerName, JSVAL_NULL,
+                                  ifaceOuterName, memberOuterName);
+                }
+                
+                PRUint16 memberCountInner = ifaceInner->GetMemberCount();
+
+                for(m = 0; m < memberCountInner; m++)
+                {
+                    XPCNativeMember* memberInner = ifaceInner->GetMemberAt(m);
+                    jsval memberInnerName = memberInner->GetName();
+                        
+                    if(memberInnerName == QIName)
+                        continue;
+                    
+                    if(memberOuterName == memberInnerName)
+                    {
+                        ShowHeader(&printedHeader, header, set, proto);
+                        ShowOneShadow(ifaceOuterName, memberOuterName,
+                                      ifaceInnerName, memberInnerName);
+                    }       
+                }
+            }
+        }
+    }
+}
 #endif
 
 /***************************************************************************/

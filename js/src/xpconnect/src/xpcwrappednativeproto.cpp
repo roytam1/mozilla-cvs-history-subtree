@@ -93,7 +93,11 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx,
     JSBool retval = mJSProtoObject && JS_SetPrivate(ccx, mJSProtoObject, this); 
 
     if(retval)
+    {
         AddRef();
+        DEBUG_ReportShadowedMembers(mSet, this);
+    }
+
     return retval;
 }
 
