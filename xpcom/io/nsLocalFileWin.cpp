@@ -456,7 +456,8 @@ nsLocalFile::ResolvePath(const char* workingPath, PRBool resolveTerminal, char**
     
     // Get the first slash.          
     char* slash = strchr(filePath, '\\');
-            
+
+#if !defined(WINCE)
     if (!slash && filePath[0] != nsnull && filePath[1] == ':' && filePath[2] == '\0')
     {
         // we have a drive letter and a colon (eg 'c:'
@@ -480,11 +481,19 @@ nsLocalFile::ResolvePath(const char* workingPath, PRBool resolveTerminal, char**
         return NS_ERROR_FILE_INVALID_PATH;
     }
         
-
     // We really cant have just a drive letter as
     // a shortcut, so we will skip the first '\\'
     slash = strchr(++slash, '\\');
-    
+
+#else /* WINCE */
+    if (!slash)
+    {
+        // All absolute paths MUST start with a leading slash
+        nsMemory::Free(filePath);
+        return NS_ERROR_FILE_INVALID_PATH;
+    }
+#endif /* WINCE */
+
     while (slash || resolveTerminal)
     {
         // Change the slash into a null so that
@@ -617,10 +626,11 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
     // be done on windows cause its symlinks (shortcuts) use the .lnk
     // file extension.
 
-    char temp[4];
     const char* workingFilePath = mWorkingPath.get();
     const char* nsprPath = workingFilePath;
 
+#if !defined(WINCE)
+    char temp[4];
     if (mWorkingPath.Length() == 2 && mWorkingPath.CharAt(1) == ':') {
         temp[0] = workingFilePath[0];
         temp[1] = workingFilePath[1];
@@ -628,6 +638,7 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
         temp[3] = '\0';
         nsprPath = temp;
     }
+#endif /* !WINCE */
 
     PRStatus status = PR_GetFileInfo64(nsprPath, &mFileInfo64);
     if ( status == PR_SUCCESS )
@@ -709,6 +720,7 @@ nsLocalFile::InitWithPath(const char *filePath)
     if (filePath[0] == 0)
         return NS_ERROR_FAILURE;
     
+#if !defined(WINCE)
     if ( (filePath[2] == 0) && (filePath[1] == ':') )
     {
         // C : //
@@ -728,7 +740,14 @@ nsLocalFile::InitWithPath(const char *filePath)
         if (nativeFilePath) nsCRT::free(nativeFilePath);
         nativeFilePath = (char*) nsMemory::Clone( filePath, strlen(filePath)+1 );
     }
-    
+#else /* WINCE */
+    if (filePath[0] == '\\')
+    {
+        // This is a native path
+        nativeFilePath = (char*) nsMemory::Clone( filePath, strlen(filePath)+1 );
+    }
+#endif /* WINCE */
+
     if (nativeFilePath == nsnull)
         return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
