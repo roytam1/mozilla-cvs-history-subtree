@@ -193,8 +193,8 @@ EmbedWindow::CreateBrowserWindow(PRUint32 aChromeFlags,
   
   if (*_retval)
     return NS_OK;
-  else
-    return NS_ERROR_FAILURE;
+
+  return NS_ERROR_FAILURE;
 
 }
 
@@ -239,15 +239,15 @@ EmbedWindow::SetDimensions(PRUint32 aFlags, PRInt32 aX, PRInt32 aY,
 			   PRInt32 aCX, PRInt32 aCY)
 {
   if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION &&
-      (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER ||
-       aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {
+      (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
+		 nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER))) {
     return mBaseWindow->SetPositionAndSize(aX, aY, aCX, aCY, PR_TRUE);
   }
   else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
     return mBaseWindow->SetPosition(aX, aY);
   }
-  else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER ||
-	   aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER) {
+  else if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
+		     nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {
     return mBaseWindow->SetSize(aCX, aCY, PR_TRUE);
   }
   return NS_ERROR_INVALID_ARG;
@@ -258,15 +258,15 @@ EmbedWindow::GetDimensions(PRUint32 aFlags, PRInt32 *aX,
 			   PRInt32 *aY, PRInt32 *aCX, PRInt32 *aCY)
 {
   if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION &&
-      (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER ||
-       aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {
+      (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
+		 nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER))) {
     return mBaseWindow->GetPositionAndSize(aX, aY, aCX, aCY);
   }
   else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
     return mBaseWindow->GetPosition(aX, aY);
   }
-  else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER ||
-	   aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER) {
+  else if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
+		     nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {
     return mBaseWindow->GetSize(aCX, aCY);
   }
   return NS_ERROR_INVALID_ARG;
