@@ -225,6 +225,7 @@ NS_IMETHODIMP nsWidget::Destroy(void)
     // prevent the widget from causing additional events
     mEventCallback = nsnull;
     ::gtk_widget_destroy(mWidget);
+    ::gtk_widget_destroy(mMozBox);
     mWidget = nsnull;
     if (PR_FALSE == mOnDestroyCalled)
       OnDestroy();
