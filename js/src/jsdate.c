@@ -305,8 +305,19 @@ WeekDay(jsdouble t)
     return (intN) result;
 }
 
-/* LocalTZA gets set by js_InitDateClass() */
-static jsdouble LocalTZA;
+/* LocalTZA is now a function calling PRMJ_LocalGMTDifference with the
+ * target time to get the TZ difference on this date 
+ */
+jsdouble LocalTZA(jsdouble t)
+{
+    int64 ms2s;
+    int64 local;
+    JSLL_UI2L(ms2s, PRMJ_MSEC_PER_SEC);
+    JSLL_D2L(local, t);
+    JSLL_DIV(local, local, ms2s);
+    return(-(PRMJ_LocalGMTDifference(local) * msPerSecond));
+}
+
 
 static jsdouble
 DaylightSavingTA(jsdouble t)
@@ -332,12 +343,14 @@ DaylightSavingTA(jsdouble t)
     return result;
 }
 
-#define LocalTime(t)    ((t) + LocalTZA + DaylightSavingTA(t))
+#define LocalTime(t)    ((t) -LocalTZA(t)/msPerSecond + DaylightSavingTA(t))
 
 static jsdouble
 UTC(jsdouble t)
 {
-    return t - LocalTZA - DaylightSavingTA(t - LocalTZA);
+    jsdouble localAdj;
+    localAdj = LocalTZA(t);
+    return t - localAdj - DaylightSavingTA(t - localAdj);
 }
 
 static intN
@@ -1493,8 +1506,8 @@ date_format(JSContext *cx, jsdouble date, formatspec format, jsval *rval)
 
 	/* offset from GMT in minutes.  The offset includes daylight savings,
 	   if it applies. */
-	jsint minutes = (jsint) floor((LocalTZA + DaylightSavingTA(date))
-				      / msPerMinute);
+       jsint minutes = (jsint) floor((LocalTZA(date) + DaylightSavingTA(date))
+  				      / msPerMinute);
 
 	/* map 510 minutes to 0830 hours */
 	intN offset = (minutes / 60) * 100 + minutes % 60;
@@ -1956,8 +1969,6 @@ js_InitDateClass(JSContext *cx, JSObject *obj)
     JSObject *proto;
     jsdouble *proto_date;
 
-    /* set static LocalTZA */
-    LocalTZA = -(PRMJ_LocalGMTDifference() * msPerSecond);
     proto = JS_InitClass(cx, obj, NULL, &date_class, Date, MAXARGS,
 			 NULL, date_methods, NULL, date_static_methods);
     if (!proto)

@@ -164,21 +164,29 @@ static void PRMJ_basetime(JSInt64 tsecs, PRMJTime *prtm);
  * get the difference in seconds between this time zone and UTC (GMT)
  */
 JSInt32
-PRMJ_LocalGMTDifference()
+PRMJ_LocalGMTDifference(int64 t)
 {
+     
+     time_t local;
+ 
 #if defined(XP_UNIX) || defined(XP_PC) || defined(XP_BEOS)
+     
+struct tm *localtime;
+#ifdef SUNOS4
     struct tm ltime;
 
     /* get the difference between this time zone and GMT */
     memset((char *)&ltime,0,sizeof(ltime));
     ltime.tm_mday = 2;
     ltime.tm_year = 70;
-#ifdef SUNOS4
     ltime.tm_zone = 0;
     ltime.tm_gmtoff = 0;
     return timelocal(&ltime) - (24 * 3600);
 #else
-    return mktime(&ltime) - (24L * 3600L);
+    JSLL_L2UI(local, t);
+
+    localtime = gmtime(&local);
+    return mktime(localtime) - local;
 #endif
 #endif
 #if defined(XP_MAC)
@@ -227,7 +235,8 @@ PRMJ_ToExtendedTime(JSInt32 base_time)
     JSInt64  tmp;
     JSInt64  tmp1;
 
-    diff = PRMJ_LocalGMTDifference();
+    JSLL_UI2L(tmp, base_time);
+    diff = PRMJ_LocalGMTDifference(tmp);
     JSLL_UI2L(tmp, PRMJ_USEC_PER_SEC);
     JSLL_I2L(tmp1,diff);
     JSLL_MUL(tmp,tmp,tmp1);
@@ -242,7 +251,7 @@ PRMJ_ToExtendedTime(JSInt32 base_time)
 #endif
     JSLL_ADD(g1970GMTMicroSeconds,g1970GMTMicroSeconds,low);
 
-    JSLL_I2L(exttime,base_time);
+    JSLL_I2L(exttime,0);
     JSLL_ADD(exttime,exttime,g1970GMTMicroSeconds);
     JSLL_SUB(exttime,exttime,tmp);
     return exttime;
@@ -483,6 +492,7 @@ PRMJ_basetime(JSInt64 tsecs, PRMJTime *prtm)
     JSInt32 minutes = 0;
     JSInt32 hours   = 0;
     JSInt32 isleap  = 0;
+    JSInt32 tmp = 0;
     JSInt64 result;
     JSInt64	result1;
     JSInt64	result2;
@@ -493,7 +503,8 @@ PRMJ_basetime(JSInt64 tsecs, PRMJTime *prtm)
     JSLL_UI2L(result2,0);
 
     /* get the base time via UTC */
-    base = PRMJ_ToExtendedTime(0);
+    JSLL_L2I(tmp, tsecs);
+    base = PRMJ_ToExtendedTime(tmp);
     JSLL_UI2L(result,  PRMJ_USEC_PER_SEC);
     JSLL_DIV(base,base,result);
     JSLL_ADD(tsecs,tsecs,base);
