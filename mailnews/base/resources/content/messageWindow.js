@@ -113,12 +113,9 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 	var folderUri = folderResource.Value;
 	if((folderUri == gCurrentFolderUri) && gCurrentMessageIsDeleted)
 	{
-		//If we knew we were going to be deleted and the deletion has finished, close the window.
 		gCurrentMessageIsDeleted = false;
-		//Use timeout to make sure all folder listeners get event before removing them.  Messes up
-		//folder listener iterator if we don't do this.
-		setTimeout("window.close();",0);
-
+    // navigate to the next message....
+    performNavigation(nsMsgNavigationType.nextMessage);
 	}
 }
 
@@ -138,7 +135,6 @@ function HandleDeleteOrMoveMsgFailed(folder)
 function OnLoadMessageWindow()
 {
 	HideMenus();
-	HideToolbarButtons();
 	CreateMailWindowGlobals();
 	CreateMessageWindowGlobals();
 	verifyAccounts();
@@ -255,18 +251,6 @@ function HideMenus()
 	if(viewThreadedMenu)
 		viewThreadedMenu.setAttribute("hidden", "true");
 
-	var goNextMenu = document.getElementById('goNextMenu');
-	if(goNextMenu)
-		goNextMenu.setAttribute("hidden", "true");
-
-	var goPreviousMenu = document.getElementById('goPreviousMenu');
-	if(goPreviousMenu)
-		goPreviousMenu.setAttribute("hidden", "true");
-
-	var goNextSeparator = document.getElementById('goNextSeparator');
-	if(goNextSeparator)
-		goNextSeparator.setAttribute("hidden", "true");
-
 	var emptryTrashMenu = document.getElementById('menu_emptyTrash');
 	if(emptryTrashMenu)
 		emptryTrashMenu.setAttribute("hidden", "true");
@@ -278,14 +262,6 @@ function HideMenus()
 	var trashSeparator = document.getElementById('trashMenuSeparator');
 	if(trashSeparator)
 		trashSeparator.setAttribute("hidden", "true");
-
-}
-
-function HideToolbarButtons()
-{
-	var nextButton = document.getElementById('button-next');
-	if(nextButton)
-		nextButton.setAttribute("hidden", "true");
 
 }
 
@@ -302,10 +278,10 @@ function CreateMessageWindowGlobals()
 
 function InitializeDataSources()
 {
-    AddDataSources();
-    //Now add datasources to composite datasource
-    gCompositeDataSource.AddDataSource(accountManagerDataSource);
-    gCompositeDataSource.AddDataSource(folderDataSource);
+  AddDataSources();
+  //Now add datasources to composite datasource
+  gCompositeDataSource.AddDataSource(accountManagerDataSource);
+  gCompositeDataSource.AddDataSource(folderDataSource);
 }
 
 function GetSelectedMsgFolders()
@@ -439,6 +415,14 @@ var MessageWindowController =
 			case "cmd_file":
       case "cmd_downloadFlagged":
       case "cmd_toggleWorkOffline":
+			case "cmd_nextMsg":
+      case "button_next":
+			case "cmd_nextUnreadMsg":
+			case "cmd_nextFlaggedMsg":
+			case "cmd_nextUnreadThread":
+			case "cmd_previousMsg":
+			case "cmd_previousUnreadMsg":
+			case "cmd_previousFlaggedMsg":
 				return true;
 			default:
 				return false;
@@ -488,12 +472,10 @@ var MessageWindowController =
 			case "cmd_file":
 				if ( command == "cmd_delete")
 				{
-                    if (isNewsURI(gCurrentMessageUri)) {
-					    goSetMenuValue(command, 'valueNewsMessage');
-                    }
-                    else {
-					    goSetMenuValue(command, 'valueMessage');
-                    }
+          if (isNewsURI(gCurrentMessageUri))
+					   goSetMenuValue(command, 'valueNewsMessage');
+          else
+					   goSetMenuValue(command, 'valueMessage');
 				}
 				return ( gCurrentMessageUri != null);
 			case "cmd_getNewMessages":
@@ -504,6 +486,14 @@ var MessageWindowController =
 				return IsGetNextNMessagesEnabled();
       case "cmd_toggleWorkOffline":
         return true;
+
+			case "cmd_nextMsg":
+      case "button_next":
+			case "cmd_nextUnreadMsg":
+			case "cmd_nextUnreadThread":
+			case "cmd_previousMsg":
+			case "cmd_previousUnreadMsg":
+				return true;
 			default:
 				return false;
 		}
@@ -512,6 +502,7 @@ var MessageWindowController =
 	doCommand: function(command)
 	{
     dump("MessageWindowController.doCommand(" + command + ")\n");
+    var navigationType = nsMsgNavigationType.nextUnreadMessage;
 
 		switch ( command )
 		{
@@ -599,6 +590,28 @@ var MessageWindowController =
       case "cmd_toggleWorkOffline":
         MsgToggleWorkOffline();
         return;
+
+			case "cmd_nextUnreadMsg":
+        performNavigation(nsMsgNavigationType.nextUnreadMessage);
+				break;
+			case "cmd_nextUnreadThread":      
+        performNavigation(nsMsgNavigationType.nextUnreadThread);
+				break;
+			case "cmd_nextMsg":
+        performNavigation(nsMsgNavigationType.nextMessage);
+				break;
+			case "cmd_nextFlaggedMsg":
+        performNavigation(nsMsgNavigationType.nextFlagged);
+				break;
+			case "cmd_previousMsg":
+        performNavigation(nsMsgNavigationType.previousMessage);
+				break;
+			case "cmd_previousUnreadMsg":
+        performNavigation(nsMsgNavigationType.previousUnreadMessage);
+				break;
+			case "cmd_previousFlaggedMsg":
+        performNavigation(nsMsgNavigationType.previousFlagged);
+				break;
 		}
 	},
 	
@@ -606,6 +619,28 @@ var MessageWindowController =
 	{
 	}
 };
+
+function performNavigation(type)
+{
+  var resultId = new Object;
+  var resultIndex = new Object;
+  var threadIndex = new Object;
+  var resultFolder = new Object;
+
+  gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
+  
+  // if we found something....display it.
+  if ((resultId.value != -1) && (resultIndex.value != -1)) 
+  {
+    // load the message key
+    // we need to reset the global URI too.
+    gDBView.loadMessageByMsgKey(resultId.value);
+    return;
+  }
+   
+  // we need to span another folder 
+  CrossFolderNavigation(type, false);
+}
 
 function SetupCommandUpdateHandlers()
 {

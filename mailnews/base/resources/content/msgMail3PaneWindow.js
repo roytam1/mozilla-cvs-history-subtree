@@ -123,23 +123,24 @@ var folderListener = {
 
 						gCurrentLoadingFolderSortType = 0;
 						gCurrentLoadingFolderSortOrder = 0;
-                        gCurrentLoadingFolderViewType = 0;
-                        gCurrentLoadingFolderViewFlags = 0;
+            gCurrentLoadingFolderViewType = 0;
+            gCurrentLoadingFolderViewFlags = 0;
 
-                        SetFocusThreadPane();
-                        if (gNextMessageAfterLoad) {
-                            gNextMessageAfterLoad = false;
+            SetFocusThreadPane();
+            if (gNextMessageAfterLoad) 
+            {
+              gNextMessageAfterLoad = false;
 
-                            // should scroll to new here.
-                            PositionThreadPane();
-                        }
+              // should scroll to new here.
+              PositionThreadPane();
+            }
 					}
 				}
 				if(uri == gCurrentLoadingFolderURI)
 				{
 				  gCurrentLoadingFolderURI = "";
 				  //Now let's select the first new message if there is one
-                  var beforeScrollToNew;
+          var beforeScrollToNew;
 				  if(showPerformance) {
 				    beforeScrollToNew = new Date();
                   }
