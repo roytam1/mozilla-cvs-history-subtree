@@ -608,4 +608,36 @@ private:
     JSDHashTable *mTable;
 };
 
+/***************************************************************************/
+
+class XPCWrappedNativeProtoMap
+{
+public:
+    static XPCWrappedNativeProtoMap* newMap(int size);
+
+    inline XPCWrappedNativeProto* Add(XPCWrappedNativeProto* proto)
+    {
+        NS_PRECONDITION(proto,"bad param");
+        JSDHashEntryStub* entry = (JSDHashEntryStub*)
+            JS_DHashTableOperate(mTable, proto, JS_DHASH_ADD);
+        if(!entry)
+            return nsnull;
+        if(entry->key)
+            return (XPCWrappedNativeProto*) entry->key;
+        entry->key = proto;
+        return proto;
+    }
+
+    inline uint32 Count() {return mTable->entryCount;}
+    inline uint32 Enumerate(JSDHashEnumerator f, void *arg)
+        {return JS_DHashTableEnumerate(mTable, f, arg);}
+
+    ~XPCWrappedNativeProtoMap();
+private:
+    XPCWrappedNativeProtoMap();    // no implementation
+    XPCWrappedNativeProtoMap(int size);
+private:
+    JSDHashTable *mTable;
+};
+
 #endif /* xpcmaps_h___ */

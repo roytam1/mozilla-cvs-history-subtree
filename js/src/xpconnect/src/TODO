@@ -20,26 +20,17 @@
     - VERIFY only share protos if scriptable flag says so.
 
 - FOORPRINT & PERFORMANCE
-    ? Remove mMaybeSecurityInfo. The idea is that wrappers w/o protos
-      would not have security info. Instead we'd have a union of
-      mMaybeProto and mMaybeScope. We'd flag whether or not the object
-      has a proto by whether or not the low bit of one of our members
-      was set (maybe mScriptableInfo?). then we'd have to carefully always
-      mask that bit of that member whenever it is accessed. This saves us 
-      one pointer per wrapper. We have ~1000 live wrappers. That's 4k.
-      Need to check with Mitch to see if we agree that we will *never* 
-      need that security info pointer on objects w/o protos.
     ? look into optional hashtable in interface sets
-        FWIW, I'm thinking this is likely to not be a real win.
+        FWIW, I'm thinking this is likely to not be a real win (and will 
+        certainly have a cost).
         The JS engine caches the bulk of such lookups for us anyway.
-
 
 - CODE MAINTAINABILITY
     - more code comments
 
 - CODE INSTRUMENTATION
     - improve DebugDump stuff
-    - stats gathering/reporting code
+    - more stats gathering/reporting code
     ? debug code to point out *use* of potentially shadowed members
     - add code to discover QIable interfaces not mentioned in nsIClassInfo
 

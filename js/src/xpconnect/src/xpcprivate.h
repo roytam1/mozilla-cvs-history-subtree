@@ -140,6 +140,7 @@
 #define XPC_DUMP_AT_SHUTDOWN
 #define XPC_TRACK_WRAPPER_STATS
 #define XPC_TRACK_SCOPE_STATS
+#define XPC_TRACK_PROTO_STATS
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1
 //#define XPC_REPORT_NATIVE_INTERFACE_AND_SET_FLUSHING
@@ -189,6 +190,7 @@ void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper);
 
 #define XPC_NATIVE_MAP_SIZE              64
 #define XPC_NATIVE_PROTO_MAP_SIZE        16
+#define XPC_DYING_NATIVE_PROTO_MAP_SIZE  16
 #define XPC_NATIVE_INTERFACE_MAP_SIZE    64
 #define XPC_NATIVE_SET_MAP_SIZE          64
 #define XPC_NATIVE_JSCLASS_MAP_SIZE      32
@@ -468,6 +470,9 @@ public:
     XPCNativeScriptableSharedMap* GetNativeScriptableSharedMap() const
         {return mNativeScriptableSharedMap;}
 
+    XPCWrappedNativeProtoMap* GetDyingWrappedNativeProtoMap() const
+        {return mDyingWrappedNativeProtoMap;}
+
     XPCLock* GetMapLock() const {return mMapLock;}
 
     XPCContext* GetXPCContext(JSContext* cx);
@@ -558,6 +563,7 @@ private:
     NativeSetMap*            mNativeSetMap;
     IID2ThisTranslatorMap*   mThisTranslatorMap;
     XPCNativeScriptableSharedMap* mNativeScriptableSharedMap;
+    XPCWrappedNativeProtoMap* mDyingWrappedNativeProtoMap;
     XPCLock* mMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
 };
@@ -1439,12 +1445,6 @@ public:
     JSUint32
     GetClassInfoFlags() const {return mClassInfoFlags;}
 
-    void
-    AddRef();
-
-    void
-    Release();
-
 #ifdef GET_IT
 #undef GET_IT
 #endif
@@ -1483,6 +1483,8 @@ public:
     void ASSERT_SetNotMarked() const {mSet->ASSERT_NotMarked();}
 #endif
 
+    ~XPCWrappedNativeProto();
+
 protected:
     // disable copy ctor and assignment
     XPCWrappedNativeProto(const XPCWrappedNativeProto& r); // not implemented
@@ -1493,8 +1495,6 @@ protected:
                           nsIClassInfo* ClassInfo,
                           PRUint32 ClassInfoFlags,
                           XPCNativeSet* Set);
-
-    ~XPCWrappedNativeProto();
 
     JSBool Init(XPCCallContext& ccx,
                 const XPCNativeScriptableCreateInfo* scriptableCreateInfo);
@@ -1512,7 +1512,6 @@ private:
     XPCNativeSet*            mSet;
     void*                    mSecurityInfo;
     XPCNativeScriptableInfo* mScriptableInfo;
-    nsrefcnt                 mRefCnt;
 };
 
 

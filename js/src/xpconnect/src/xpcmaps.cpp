@@ -593,3 +593,29 @@ XPCNativeScriptableSharedMap::GetNewOrUsed(JSUint32 flags,
 }
 
 /***************************************************************************/
+// implement XPCWrappedNativeProtoMap...
+
+// static
+XPCWrappedNativeProtoMap*
+XPCWrappedNativeProtoMap::newMap(int size)
+{
+    XPCWrappedNativeProtoMap* map = new XPCWrappedNativeProtoMap(size);
+    if(map && map->mTable)
+        return map;
+    delete map;
+    return nsnull;
+}
+
+XPCWrappedNativeProtoMap::XPCWrappedNativeProtoMap(int size)
+{
+    mTable = JS_NewDHashTable(JS_DHashGetStubOps(), nsnull,
+                              sizeof(JSDHashEntryStub), size);
+}
+
+XPCWrappedNativeProtoMap::~XPCWrappedNativeProtoMap()
+{
+    if(mTable)
+        JS_DHashTableDestroy(mTable);
+}
+
+/***************************************************************************/

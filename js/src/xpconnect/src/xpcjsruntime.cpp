@@ -66,8 +66,7 @@ struct JSDyingJSObjectData
     JSContext* cx;
     nsVoidArray* array;
 };
-
-
+ 
 JS_STATIC_DLL_CALLBACK(JSDHashOperator)
 WrappedJSDyingJSObjectFinder(JSDHashTable *table, JSDHashEntryHdr *hdr,
                 uint32 number, void *arg)
@@ -190,6 +189,16 @@ JSClassSweeper(JSDHashTable *table, JSDHashEntryHdr *hdr,
 #endif
 
     delete shared;
+    return JS_DHASH_REMOVE;
+}
+
+JS_STATIC_DLL_CALLBACK(JSDHashOperator)
+DyingProtoKiller(JSDHashTable *table, JSDHashEntryHdr *hdr,
+                 uint32 number, void *arg)
+{
+    XPCWrappedNativeProto* proto = 
+        (XPCWrappedNativeProto*)((JSDHashEntryStub*)hdr)->key;
+    delete proto;
     return JS_DHASH_REMOVE;
 }
 
@@ -342,40 +351,57 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 // Skip this part if XPConnect is shutting down. We get into
                 // bad locking problems with the thread iteration otherwise.
-                if(self->GetXPConnect()->IsShuttingDown())
-                    break;
+                if(!self->GetXPConnect()->IsShuttingDown())
+                {
+                    // Do the marking...
 
-                // Do the marking...
+                    { // scoped lock
+                        nsAutoLock lock(XPCPerThreadData::GetLock());
 
-                { // scoped lock
-                    nsAutoLock lock(XPCPerThreadData::GetLock());
+                        XPCPerThreadData* iterp = nsnull;
+                        XPCPerThreadData* thread;
 
-                    XPCPerThreadData* iterp = nsnull;
-                    XPCPerThreadData* thread;
-
-                    while(nsnull != (thread =
+                        while(nsnull != (thread =
                                      XPCPerThreadData::IterateThreads(&iterp)))
-                    {
-                        XPCCallContext* ccxp = thread->GetCallContext();
-                        while(ccxp)
                         {
-                            // Deal with the strictness of callcontext that
-                            // complains if you ask for a tearoff when
-                            // it is in a state where the tearoff could not
-                            // possibly be valid.
-                            if(ccxp->CanGetTearOff())
+                            XPCCallContext* ccxp = thread->GetCallContext();
+                            while(ccxp)
                             {
-                                XPCWrappedNativeTearOff* to = ccxp->GetTearOff();
-                                if(to)
-                                    to->Mark();
+                            // Deal with the strictness of callcontext that
+                                // complains if you ask for a tearoff when
+                                // it is in a state where the tearoff could not
+                                // possibly be valid.
+                                if(ccxp->CanGetTearOff())
+                                {
+                                    XPCWrappedNativeTearOff* to = ccxp->GetTearOff();
+                                    if(to)
+                                        to->Mark();
+                                }
+                                ccxp = ccxp->GetPrevCallContext();
                             }
-                            ccxp = ccxp->GetPrevCallContext();
                         }
                     }
+
+                    // Do the sweeping...
+                    XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs();
                 }
 
-                // Do the sweeping...
-                XPCWrappedNativeScope::SweepAllWrappedNativeTearOffs();
+                // Now we need to kill the 'Dying' XPCWrappedNativeProtos.
+                // We transfered these native objects to this table when their
+                // JSObject's were finalized. We did not destroy them immediately
+                // at that point because the ordering of JS finalization is not
+                // deterministic and we did not yet know if any wrappers that
+                // might still be referencing the protos where still yet to be
+                // finalized and destroyed. We *do* know that the protos' 
+                // JSObjects would not have been finalized if there were any
+                // wrappers that referenced the proto but where not themselves
+                // slated for finalization in this gc cycle. So... at this point
+                // we know that any and all wrappers that might have been 
+                // referencing the protos in the dying list are themselves dead.
+                // So, we can safely delete all the protos in the list.
+
+                self->mDyingWrappedNativeProtoMap->
+                    Enumerate(DyingProtoKiller, nsnull);
 
                 break;
             }
@@ -555,6 +581,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
    mNativeSetMap(NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mThisTranslatorMap(IID2ThisTranslatorMap::newMap(XPC_THIS_TRANSLATOR_MAP_SIZE)),
    mNativeScriptableSharedMap(XPCNativeScriptableSharedMap::newMap(XPC_NATIVE_JSCLASS_MAP_SIZE)),
+   mDyingWrappedNativeProtoMap(XPCWrappedNativeProtoMap::newMap(XPC_DYING_NATIVE_PROTO_MAP_SIZE)),
    mMapLock(XPCAutoLock::NewLock("XPCJSRuntime::mMapLock")),
    mWrappedJSToReleaseArray()
 {
@@ -598,16 +625,17 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
     self = new XPCJSRuntime(aXPConnect,
                             aJSRuntimeService);
 
-    if(self                                 &&
-       self->GetJSRuntime()                 &&
-       self->GetContextMap()                &&
-       self->GetWrappedJSMap()              &&
-       self->GetWrappedJSClassMap()         &&
-       self->GetIID2NativeInterfaceMap()    &&
-       self->GetClassInfo2NativeSetMap()    &&
-       self->GetNativeSetMap()              &&
-       self->GetThisTraslatorMap()          &&
-       self->GetNativeScriptableSharedMap() &&
+    if(self                                  &&
+       self->GetJSRuntime()                  &&
+       self->GetContextMap()                 &&
+       self->GetWrappedJSMap()               &&
+       self->GetWrappedJSClassMap()          &&
+       self->GetIID2NativeInterfaceMap()     &&
+       self->GetClassInfo2NativeSetMap()     &&
+       self->GetNativeSetMap()               &&
+       self->GetThisTraslatorMap()           &&
+       self->GetNativeScriptableSharedMap()  &&
+       self->GetDyingWrappedNativeProtoMap() &&
        self->GetMapLock())
     {
         return self;

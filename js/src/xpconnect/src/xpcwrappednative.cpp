@@ -315,10 +315,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         
         wrapper = new XPCWrappedNative(identity, proto);
         if(!wrapper)
-        {
-            proto->Release();
             return NS_ERROR_FAILURE;
-        }
     }
     else
     {
@@ -482,7 +479,6 @@ XPCWrappedNative::~XPCWrappedNative()
 
     XPCWrappedNativeProto* proto = GetProto();
 
-
     if(mScriptableInfo && 
        (!HasProto() || 
         (proto && proto->GetScriptableInfo() != mScriptableInfo)))
@@ -496,9 +492,6 @@ XPCWrappedNative::~XPCWrappedNative()
         map->Remove(this);
     }
 
-    if(proto)
-        proto->Release();
-    
     NS_IF_RELEASE(mIdentity);
 }
 
@@ -857,21 +850,22 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
     // The general problem is that propagating release out of xpconnect at
     // shutdown time causes a world of problems.
 
-    // We leak mIdentity.
+    // We leak mIdentity (see above).
 
     // short circuit future finalization
     JS_SetPrivate(ccx, mFlatJSObject, nsnull);
     mFlatJSObject = nsnull; // This makes 'IsValid()' return false.
 
-    // We *must* leak mScriptableInfo (if in use and not shared) because it
-    // may hold a dynamically allocated JSClass that the JS engine can
-    // reference when manipulating the (leaked) mFlatJSObject. That would crash!
+    XPCWrappedNativeProto* proto = GetProto();
 
     if(HasProto())
+        proto->SystemIsBeingShutDown(ccx);
+
+    if(mScriptableInfo && 
+       (!HasProto() || 
+        (proto && proto->GetScriptableInfo() != mScriptableInfo)))
     {
-        mMaybeProto->SystemIsBeingShutDown(ccx);
-        mMaybeProto->Release();
-        mMaybeProto = nsnull;
+        delete mScriptableInfo;
     }
 
     // cleanup the tearoffs...
@@ -886,7 +880,10 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
             {
                 JS_SetPrivate(ccx, to->GetJSObject(), nsnull);
                 to->SetJSObject(nsnull);
-                // We leak the tearoff mNative
+                // We leak the tearoff mNative 
+                // (for the same reason we leak mIdentity - see above).
+                to->SetNative(nsnull);
+                to->SetInterface(nsnull);
             }
         }
     }
@@ -970,7 +967,6 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
                 {
                     // this is bad, very bad
                     NS_RELEASE(wrapper);
-                    newProto->Release();
                     return NS_ERROR_FAILURE;
                 }
             }
@@ -1005,9 +1001,6 @@ XPCWrappedNative::ReparentWrapperIfFound(XPCCallContext& ccx,
 
                 wrapper->mScriptableInfo = newProto->GetScriptableInfo();
             }
-
-            if(wrapper->HasProto())
-                oldProto->Release();
 
             NS_ASSERTION(!newMap->Find(wrapper), "wrapper already in new scope!");
 

@@ -361,10 +361,12 @@ XPCWrappedNativeScope::KillDyingScopes()
 struct ShutdownData
 {
     ShutdownData(XPCCallContext& accx)
-        : ccx(accx), wrapperCount(0), protoCount(0) {}
+        : ccx(accx), wrapperCount(0), 
+          sharedProtoCount(0), nonSharedProtoCount(0) {}
     XPCCallContext& ccx;
     int wrapperCount;
-    int protoCount;
+    int sharedProtoCount;
+    int nonSharedProtoCount;
 };
 
 JS_STATIC_DLL_CALLBACK(JSDHashOperator)
@@ -376,8 +378,8 @@ WrappedNativeShutdownEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
 
     if(wrapper->IsValid())
     {
-        if(!wrapper->HasSharedProto())
-            data->protoCount++;
+        if(wrapper->HasProto() && !wrapper->HasSharedProto())
+            data->nonSharedProtoCount++;
         wrapper->SystemIsBeingShutDown(data->ccx);
         data->wrapperCount++;
     }
@@ -391,7 +393,7 @@ WrappedNativeProtoShutdownEnumerator(JSDHashTable *table, JSDHashEntryHdr *hdr,
     ShutdownData* data = (ShutdownData*) arg;
     ((ClassInfo2WrappedNativeProtoMap::Entry*)hdr)->value->
         SystemIsBeingShutDown(data->ccx);
-    data->protoCount++;
+    data->sharedProtoCount++;
     return JS_DHASH_REMOVE;
 }
 
@@ -438,11 +440,15 @@ XPCWrappedNativeScope::SystemIsBeingShutDown(XPCCallContext& ccx)
 
 #ifdef XPC_DUMP_AT_SHUTDOWN
     if(data.wrapperCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", data.wrapperCount);
-    if(data.protoCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos\n", data.protoCount);
+        printf("deleting nsXPConnect  with %d live XPCWrappedNatives\n", 
+               data.wrapperCount);
+    if(data.sharedProtoCount + data.nonSharedProtoCount)
+        printf("deleting nsXPConnect  with %d live XPCWrappedNativeProtos (%d shared)\n", 
+               data.sharedProtoCount + data.nonSharedProtoCount, 
+               data.sharedProtoCount);
     if(liveScopeCount)
-        printf("deleting nsXPConnect  with %d live XPCWrappedNativeScopes\n", liveScopeCount);
+        printf("deleting nsXPConnect  with %d live XPCWrappedNativeScopes\n", 
+               liveScopeCount);
 #endif
 }
 

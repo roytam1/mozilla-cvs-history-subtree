@@ -73,6 +73,7 @@ class ClassInfo2WrappedNativeProtoMap;
 class NativeSetMap;
 class IID2ThisTranslatorMap;
 class XPCNativeScriptableSharedMap;
+class XPCWrappedNativeProtoMap;
 
 class nsXPCComponents;
 class nsXPCComponents_Interfaces;
