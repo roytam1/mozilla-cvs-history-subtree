@@ -22,16 +22,149 @@
 DEPTH		= ..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
-
-DIRS		= \
-		base \
-		exthandler \
-		prefetch \
-		build \
+VPATH		= \
+		@srcdir@$(VPS)\
+		@srcdir@/base$(VPS)\
+		@srcdir@/exthandler$(VPS)\
+		@srcdir@/prefetch$(VPS)\
 		$(NULL)
+
+MODULE		= uriloader
+LIBRARY_NAME	= uriloader
+EXPORT_LIBRARY = 1
+SHORT_LIBNAME	= urildr
+IS_COMPONENT	= 1
+MODULE_NAME	= nsURILoaderModule
+
+REQUIRES	= xpcom \
+		  string \
+		  necko \
+		  dom \
+		  exthandler \
+		  js \
+		  docshell \
+		  gfx \
+		  layout \
+		  content \
+		  widget \
+		  caps \
+		  intl \
+		  webshell \
+		  xpconnect \
+		  rdf \
+		  mimetype \
+		  windowwatcher \
+		  helperAppDlg \
+		  pref \
+		  plugin \
+		  intl \
+		  uconv \
+		  unicharutil \
+		  nkcache \
+		  chardet \
+		  htmlparser \
+		  $(NULL)
+
+ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+OSDIR		= os2
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+OSDIR		= win
+else
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+OSDIR		= mac
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
+OSDIR		= beos
+else
+OSDIR		= unix
+endif
+endif
+endif
+endif
+
+CPPSRCS 	= \
+		base/nsURILoader.cpp \
+		base/nsDocLoader.cpp	\
+		exthandler/nsExternalHelperAppService.cpp \
+		exthandler/nsExternalProtocolHandler.cpp \
+		exthandler/$(OSDIR)/nsOSHelperAppService.cpp \
+		prefetch/nsPrefetchService.cpp \
+		build/nsURILoaderModule.cpp \
+		$(NULL)
+
+EXPORTS 	= \
+		base/nsURILoader.h \
+		base/nsDocLoader.h \
+		$(NULL)
+
+EXPORTS_SUB_MODULES = exthandler prefetch
+
+exthandler_EXPORTS = \
+		$(srcdir)/exthandler/nsExternalHelperAppService.h \
+		$(srcdir)/exthandler/nsExternalProtocolHandler.h \
+		$(srcdir)/exthandler/$(OSDIR)/nsOSHelperAppService.h \
+		$(srcdir)/exthandler/nsHelperAppRDF.h \
+		$(NULL)
+
+prefetch_EXPORTS = $(srcdir)/prefetch/nsCPrefetchService.h
+
+SDK_XPIDLSRCS	= \
+		nsIURIContentListener.idl \
+		$(NULL)
+
+XPIDLSRCS	= \
+		nsIContentHandler.idl \
+		nsIURILoader.idl \
+		nsCURILoader.idl \
+		nsIDownload.idl \
+		nsIDocumentLoader.idl \
+		nsIWebProgress.idl \
+		nsIWebProgressListener.idl \
+		$(NULL)
+
+XPIDLSRCS_SUB_MODULES = exthandler prefetch
+
+exthandler_XPIDLSRCS = \
+		nsCExternalHandlerService.idl	\
+		nsIExternalProtocolService.idl \
+		nsIExternalHelperAppService.idl	\
+		$(NULL)
+
+prefetch_XPIDLSRCS = nsIPrefetchService.idl
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS		+= \
+		exthandler/mac/nsInternetConfig.cpp \
+		exthandler/mac/nsInternetConfigService.cpp \
+		$(NULL)
+
+exthandler_XPIDLSRCS += nsIInternetConfigService.idl
+endif
+
+LOCAL_INCLUDES	= -I$(srcdir)/prefetch
+
+EXTRA_DSO_LDOPTS = \
+		$(LIBS_DIR) \
+		$(MOZ_UNICHARUTIL_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_JS_LIBS) \
+		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+EXTRA_DSO_LDOPTS += $(TK_LIBS)
+endif
+
+ifeq ($(OS_ARCH),WINNT)
+OS_LIBS		+= shell32.lib
+GARBAGE		+= nsOSHelperAppService.cpp
+endif
+
+GARBAGE_DIRS	+= exthandler/$(OSDIR)
 
 include $(topsrcdir)/config/rules.mk
 
+export::
+	@if test ! -d ./exthandler/$(OSDIR); then $(NSINSTALL) -D exthandler/$(OSDIR); fi
