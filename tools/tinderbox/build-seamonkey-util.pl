@@ -18,6 +18,8 @@ use POSIX qw(sys_wait_h strftime);
 use Cwd;
 use File::Basename; # for basename();
 use Config; # for $Config{sig_name} and $Config{sig_num}
+
+
 $::UtilsVersion = '$Revision$ ';
 
 package TinderUtils;
@@ -27,6 +29,10 @@ package TinderUtils;
 #
 require "post-mozilla.pl" if -e "post-mozilla.pl";
 
+#
+# Test for Time::HiRes, for ms resolution from gettimeofday().
+#
+require "gettime.pl";
 
 sub Setup {
   InitVars();
@@ -841,7 +847,13 @@ sub run_all_tests {
 	  # Generate URL of form file:///<cwd>/startup-test.html?begin=986869495000
 	  # Where begin value is current time.
 	  my ($time, $url, $cwd, $cmd);
-	  $time = time() . "000"; # looks stupid, but 'time()*1000' returns a negative
+
+	  #
+	  #$time = time() . "000"; # looks stupid, but 'time()*1000' returns a negative
+	  # 
+	  # Test for Time::HiRes and report the time.
+	  $time = Time::PossiblyHiRes::getTime();
+
 	  $cwd = Cwd::getcwd();
 	  print "cwd = $cwd\n";
 	  $url  = "\"file:$binary_dir/startup-test.html?begin=$time\"";
