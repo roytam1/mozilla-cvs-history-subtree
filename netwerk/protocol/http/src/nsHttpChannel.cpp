@@ -1,0 +1,478 @@
+#include "nsHttpChannel.h"
+#include "nsHttpTransaction.h"
+#include "nsHttpConnection.h"
+#include "nsHttpHandler.h"
+#include "nsHttp.h"
+#include "netCore.h"
+#include "nsNetCID.h"
+
+static NS_DEFINE_CID(kStreamListenerProxyCID, NS_STREAMLISTENERPROXY_CID);
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel
+//-----------------------------------------------------------------------------
+
+nsHttpChannel::nsHttpChannel()
+    : mTransaction(0)
+    , mConnectionInfo(0)
+    , mCapabilities(0)
+{
+    NS_INIT_ISUPPORTS();
+}
+
+nsHttpChannel::~nsHttpChannel()
+{
+}
+
+nsresult
+nsHttpChannel::Init(nsIURI *uri,
+                    PRUint32 caps,
+                    const char *proxyHost,
+                    PRInt32 proxyPort,
+                    const char *proxyType)
+{
+    nsresult rv;
+
+    LOG(("nsHttpChannel::Init [this=%x]\n"));
+
+    NS_PRECONDITION(uri, "null uri");
+
+    mURI = uri;
+    mCapabilities = caps;
+
+    rv = mURI->GetSpec(getter_Copies(mSpec));
+    if (NS_FAILED(rv)) return rv;
+
+    //
+    // Construct connection info object
+    //
+    nsXPIDLCString host;
+    PRInt32 port = -1;
+    PRBool usingSSL = PR_FALSE;
+    
+    rv = mURI->SchemeIs("https", &usingSSL);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = mURI->GetHost(getter_Copies(host));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = mURI->GetPort(&port);
+    if (NS_FAILED(rv)) return rv;
+
+    if (port == -1)
+        port = 80;
+
+    LOG(("host=%s port=%d\n", host.get(), port));
+
+    mConnectionInfo = new nsHttpConnectionInfo(host, port,
+                                               proxyHost, proxyPort,
+                                               proxyType, usingSSL);
+    if (!mConnectionInfo)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    //
+    // Set request headers
+    //
+    nsCString hostLine;
+    hostLine.Assign(host.get());
+    if (port != -1) {
+        hostLine.Append(':');
+        hostLine.AppendInt(port);
+    }
+    rv = mRequestHeaders.SetHeader(nsHttp::Host, hostLine.get());
+    if (NS_FAILED(rv)) return rv;
+
+    rv = nsHttpHandler::get()->
+            AddStandardRequestHeaders(&mRequestHeaders, caps);
+    if (NS_FAILED(rv)) return rv;
+
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::Connect()
+{
+    LOG(("nsHttpChannel::Connect [this=%x]\n", this));
+
+    nsresult rv = NS_OK;
+
+    rv = SetupTransaction();
+    if (NS_FAILED(rv)) return rv;
+
+    return nsHttpHandler::get()->
+            InitiateTransaction(mTransaction, mConnectionInfo);
+}
+
+nsresult
+nsHttpChannel::SetupTransaction()
+{
+    NS_ENSURE_TRUE(!mTransaction, NS_ERROR_ALREADY_INITIALIZED);
+
+    nsCOMPtr<nsIStreamListener> listenerProxy;
+    nsresult rv = BuildStreamListenerProxy(getter_AddRefs(listenerProxy));
+    if (NS_FAILED(rv)) return rv;
+
+    // Create the transaction object
+    mTransaction = new nsHttpTransaction(listenerProxy);
+    if (!mTransaction)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(mTransaction);
+
+    // Use the URI path if not proxying
+    nsXPIDLCString path;
+    if (mConnectionInfo->ProxyHost() == nsnull) {
+        rv = mURI->GetPath(getter_Copies(path));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return mTransaction->SetRequestInfo(nsHttp::GET,
+                                        HTTP_VERSION_1_1,
+                                        path ? path.get() : mSpec.get(),
+                                        &mRequestHeaders); 
+}
+
+nsresult
+nsHttpChannel::BuildStreamListenerProxy(nsIStreamListener **result)
+{
+    nsresult rv;
+    nsCOMPtr<nsIStreamListenerProxy> proxy
+        = do_CreateInstance(kStreamListenerProxyCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    // Setup proxy back to this thread with default buffer size.
+    rv = proxy->Init(this, nsnull, NS_HTTP_SEGMENT_SIZE, NS_HTTP_BUFFER_SIZE);
+    if (NS_FAILED(rv)) return rv;
+
+    return CallQueryInterface(proxy, result);
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsISupports
+//-----------------------------------------------------------------------------
+
+NS_IMPL_ISUPPORTS5(nsHttpChannel,
+                   nsIRequest,
+                   nsIChannel,
+                   nsIRequestObserver,
+                   nsIStreamListener,
+                   nsIHttpChannel)
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIRequest
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::GetName(PRUnichar **aName)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::IsPending(PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetStatus(nsresult *aStatus)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::Cancel(nsresult status)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::Suspend()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::Resume()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetLoadGroup(nsILoadGroup **aLoadGroup)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetLoadGroup(nsILoadGroup *aLoadGroup)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetLoadFlags(nsLoadFlags *aLoadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIChannel
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::GetOriginalURI(nsIURI **aOriginalURI)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetOriginalURI(nsIURI *aOriginalURI)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetURI(nsIURI **aURI)
+{
+    NS_ENSURE_ARG_POINTER(aURI);
+    *aURI = mURI;
+    NS_IF_ADDREF(*aURI);
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetOwner(nsISupports **aOwner)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetOwner(nsISupports *aOwner)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetNotificationCallbacks(nsIInterfaceRequestor **aCallbacks)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *aCallbacks)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetSecurityInfo(nsISupports **aSecurityInfo)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetContentType(char **aContentType)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetContentType(const char *aContentType)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetContentLength(PRInt32 *aContentLength)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetContentLength(PRInt32 aContentLength)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::Open(nsIInputStream **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
+{
+    LOG(("nsHttpChannel::AsyncOpen [this=%x]\n", this));
+
+    NS_ENSURE_TRUE(!mListener, NS_ERROR_IN_PROGRESS);
+
+    mListener = listener;
+    mListenerContext = context;
+
+    nsresult rv = Connect();
+    if (NS_FAILED(rv)) {
+        mListener = 0;
+        mListenerContext = 0;
+    }
+    return rv;
+}
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIHttpChannel
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::GetRequestMethod(char **aRequestMethod)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetRequestMethod(const char *aRequestMethod)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetRequestURI(char **aRequestURI)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetRequestURI(const char *aRequestURI)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetReferrer(nsIURI **aReferrer)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetReferrer(nsIURI *aReferrer)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetRequestHeader(const char *header, char **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetRequestHeader(const char *header, const char *value)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::VisitRequestHeaders(nsIHttpHeaderVisitor *visitor)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetResponseStatus(PRUint32 *aResponseStatus)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetResponseStatusText(char **aResponseStatusText)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetResponseHeader(const char *header, char **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetResponseHeader(const char *header, const char *value)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::VisitResponseHeaders(nsIHttpHeaderVisitor *visitor)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetCharset(char **aCharset)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIProxy
+//-----------------------------------------------------------------------------
+
+/*
+NS_IMETHODIMP
+nsHttpChannel::GetProxyHost(char **aProxyHost)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetProxyHost(const char *aProxyHost)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetProxyPort(PRInt32 *aProxyPort)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetProxyPort(PRInt32 aProxyPort)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::GetProxyType(char **aProxyType)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP
+nsHttpChannel::SetProxyType(const char *aProxyType)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+*/
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIRequestObserver
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
+{
+    NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
+    return mListener->OnStartRequest(this, mListenerContext);
+}
+
+NS_IMETHODIMP
+nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode)
+{
+    NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
+    return mListener->OnStopRequest(this, mListenerContext, statusCode);
+}
+
+//-----------------------------------------------------------------------------
+// nsHttpChannel::nsIStreamListener
+//-----------------------------------------------------------------------------
+
+NS_IMETHODIMP
+nsHttpChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
+                               nsIInputStream *input,
+                               PRUint32 offset, PRUint32 count)
+{
+    NS_ENSURE_TRUE(mListener, NS_ERROR_NULL_POINTER);
+    return mListener->OnDataAvailable(this, mListenerContext, input, offset, count);
+}

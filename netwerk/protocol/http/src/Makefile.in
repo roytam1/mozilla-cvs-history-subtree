@@ -26,24 +26,17 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= necko
-LIBRARY_NAME	= nkhttp_s
-REQUIRES	= xpcom string pref js nkcache exthandler mimetype wallet dom layout widget caps
+LIBRARY_NAME = nkhttp_s
+REQUIRES	 = xpcom string pref js nkcache exthandler mimetype wallet dom layout widget caps
 
-CPPSRCS		= \
-		nsHTTPHandler.cpp \
-		nsHTTPChannel.cpp \
-		nsHTTPRequest.cpp \
-		nsHTTPResponseListener.cpp \
-		nsHTTPResponse.cpp \
-		nsHTTPEncodeStream.cpp \
-		nsHTTPHeaderArray.cpp \
-		nsHTTPAtoms.cpp \
-		nsBasicAuth.cpp \
-		nsAuth.cpp \
-		nsAuthEngine.cpp \
-		nsHTTPSHandler.cpp \
-		$(NULL)
+CPPSRCS	= \
+        nsHttp.cpp \
+        nsHttpHandler.cpp \
+        nsHttpHeaderArray.cpp \
+        nsHttpConnection.cpp \
+        nsHttpTransaction.cpp \
+        nsHttpChannel.cpp \
+        $(NULL)
 
 LOCAL_INCLUDES=-I$(srcdir)/../../../streamconv/converters
 
