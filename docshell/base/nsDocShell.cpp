@@ -4962,7 +4962,7 @@ nsDocShell::CheckLoadingPermissions(nsISupports *aOwner)
     }
 
     sop = do_QueryInterface(mScriptGlobal);
-
+ 
     nsCOMPtr<nsIPrincipal> principal;
     if (!sop || NS_FAILED(sop->GetPrincipal(getter_AddRefs(principal))) ||
         !principal) {
