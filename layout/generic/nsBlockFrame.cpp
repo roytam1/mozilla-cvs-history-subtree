@@ -653,13 +653,12 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
           nscoord float_min =
             nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                          floatFrame, nsLayoutUtils::MIN_WIDTH);
-          nscoord float_pref =
-            nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                          floatFrame, nsLayoutUtils::PREF_WIDTH);
-
           if (float_min > line_min)
             line_min = float_min;
 
+          nscoord float_pref =
+            nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                          floatFrame, nsLayoutUtils::PREF_WIDTH);
           switch (floatDisp->mFloats) {
             case NS_STYLE_FLOAT_LEFT:
               floats_left_cur += float_pref;
