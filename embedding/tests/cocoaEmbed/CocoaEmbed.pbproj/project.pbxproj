@@ -229,7 +229,7 @@
 				HEADER_SEARCH_PATHS = "../../../dist/include/string ../../../dist/include/nspr ../../../dist/include/xpcom ../../../dist/sdk/xpcom/include ../../../dist/include/embed_base ../../../embedding/browser/cocoa/src/build/CHBrowserView.framework/Headers";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = ../../../dist/bin;
-				OTHER_CFLAGS = "";
+				OTHER_CFLAGS = "-fno-rtti -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				PREBINDING = NO;
 				PRODUCT_NAME = CocoaEmbed;
@@ -1131,7 +1131,7 @@
 		F6BD641101B3156701A962F7 = {
 			isa = PBXFileReference;
 			name = libnslocale.dylib;
-			path = ../../../intl/locale/src/unix/libnslocale.dylib;
+			path = ../../../intl/locale/src/mac/libnslocale.dylib;
 			refType = 2;
 		};
 		F6BD641201B3156701A962F7 = {

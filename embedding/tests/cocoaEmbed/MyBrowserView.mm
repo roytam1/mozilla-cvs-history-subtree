@@ -89,10 +89,9 @@
   }
 }
 
-- (void)onLocationChange:(NSURL*)url 
+- (void)onLocationChange:(NSString*)url 
 {
-  NSString* spec = [url absoluteString];
-  [urlbar setStringValue:spec];
+  [urlbar setStringValue:url];
   
 #ifdef DEBUG_vidur
   const char* str = [spec cString];
