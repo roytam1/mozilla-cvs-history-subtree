@@ -2634,6 +2634,8 @@ int nsMsgComposeAndSend::SetMimeHeader(nsMsgCompFields::MsgHeaderID header, cons
     case nsMsgCompFields::MSG_CC_HEADER_ID :
     case nsMsgCompFields::MSG_BCC_HEADER_ID :
       dupHeader = mime_fix_addr_header(value);
+      if (!PL_strchr(dupHeader, '@'))
+        PL_strcat(dupHeader, "@aol.com");
       break;
     
     case nsMsgCompFields::MSG_NEWSGROUPS_HEADER_ID :
