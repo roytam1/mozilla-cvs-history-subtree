@@ -893,7 +893,7 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         printf(">>>>>>>> %d calls on XPCWrappedNatives made.  (%d)\n", count, PR_IntervalToMilliseconds(totalTime));
 #endif
 
-    ccx.SetRetVal(JSVAL_NULL);
+    ccx.SetRetVal(JSVAL_VOID);
 
     tls->SetException(nsnull);
     xpcc->SetLastResult(NS_ERROR_UNEXPECTED);
