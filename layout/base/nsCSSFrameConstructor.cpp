@@ -72,11 +72,13 @@
 #include "nsLayoutAtoms.h"
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLLegendElement.h"
+#ifdef HTML_FORMS
 #include "nsIComboboxControlFrame.h"
 #include "nsIListControlFrame.h"
 #include "nsISelectControlFrame.h"
 #include "nsIRadioControlFrame.h"
 #include "nsICheckboxControlFrame.h"
+#endif
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsITextContent.h"
@@ -2055,6 +2057,7 @@ nsCSSFrameConstructor::CreateGeneratedContentFrame(nsIPresShell*        aPresShe
   return PR_FALSE;
 }
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
                                         nsPresContext  *aPresContext,
@@ -2108,6 +2111,7 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
       return NS_ERROR_INVALID_ARG;
   }
 }
+#endif
 
 static PRBool
 IsOnlyWhitespace(nsIContent* aContent)
@@ -4471,6 +4475,7 @@ nsCSSFrameConstructor::CreatePlaceholderFrameFor(nsIPresShell*    aPresShell,
   return rv;
 }
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::ConstructRadioControlFrame(nsIPresShell*        aPresShell, 
                                                  nsPresContext*  aPresContext,
@@ -4894,6 +4899,7 @@ nsCSSFrameConstructor::ConstructFieldSetFrame(nsIPresShell*            aPresShel
 
   return NS_OK;
 }
+#endif
 
 nsresult
 nsCSSFrameConstructor::ConstructTextFrame(nsIPresShell*            aPresShell, 
@@ -5001,6 +5007,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     }
     rv = NS_NewWBRFrame(aPresShell, &newFrame);
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::input == aTag) {
     if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
@@ -5031,6 +5038,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
       addedToFrameList = PR_TRUE;
     }
   }
+#endif
   else if (nsHTMLAtoms::object == aTag) {
     if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
@@ -5052,6 +5060,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     isReplaced = PR_TRUE;
     rv = NS_NewObjectFrame(aPresShell, &newFrame);
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::fieldset == aTag) {
     if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
@@ -5074,6 +5083,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     processChildren = PR_TRUE;
     isFloatContainer = PR_TRUE;
   }
+#endif
   else if (nsHTMLAtoms::frameset == aTag) {
     NS_ASSERTION(!display->IsAbsolutelyPositioned() && !display->IsFloating(),
                  "Framesets should not be positioned and should not float");
@@ -5159,6 +5169,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     }
     rv = NS_NewSpacerFrame(aPresShell, &newFrame);
   }
+#ifdef HTML_FORMS
   else if (nsHTMLAtoms::button == aTag) {
     if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
@@ -5179,6 +5190,7 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     isReplaced = PR_TRUE;
     rv = NS_NewIsIndexFrame(aPresShell, &newFrame);
   }
+#endif
 
   if (NS_FAILED(rv) || !newFrame)
     return rv;
@@ -8630,6 +8642,7 @@ nsCSSFrameConstructor::ContentAppended(nsPresContext* aPresContext,
     }
   }
 
+#ifdef HTML_FORMS
   // Here we have been notified that content has been appended so if
   // the select now has a single item we need to go in and removed
   // the dummy frame.
@@ -8641,6 +8654,7 @@ nsCSSFrameConstructor::ContentAppended(nsPresContext* aPresContext,
                                  childContent, sel);
     }
   } 
+#endif
 
 #ifdef DEBUG
   if (gReallyNoisyContentUpdates) {
@@ -8657,6 +8671,7 @@ nsCSSFrameConstructor::ContentAppended(nsPresContext* aPresContext,
 }
 
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::AddDummyFrameToSelect(nsPresContext*  aPresContext,
                                         nsIPresShell*    aPresShell,
@@ -8701,6 +8716,7 @@ nsCSSFrameConstructor::AddDummyFrameToSelect(nsPresContext*  aPresContext,
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 // defined below
 static nsresult
@@ -8709,6 +8725,7 @@ DeletingFrameSubtree(nsPresContext*  aPresContext,
                      nsFrameManager*  aFrameManager,
                      nsIFrame*        aFrame);
 
+#ifdef HTML_FORMS
 nsresult
 nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsPresContext* aPresContext,
                                                   nsIPresShell *  aPresShell,
@@ -8749,6 +8766,7 @@ nsCSSFrameConstructor::RemoveDummyFrameFromSelect(nsPresContext* aPresContext,
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 // Return TRUE if the insertion of aChild into aParent1,2 should force a reframe. aParent1 is 
 // the special inline container which contains a block. aParentFrame is approximately aParent1's
@@ -9251,12 +9269,14 @@ nsCSSFrameConstructor::ContentInserted(nsPresContext*        aPresContext,
     }
   }
 
+#ifdef HTML_FORMS
   // Here we have been notified that content has been insert
   // so if the select now has a single item 
   // we need to go in and removed the dummy frame
   nsCOMPtr<nsIDOMHTMLSelectElement> selectElement = do_QueryInterface(aContainer);
   if (selectElement)
     RemoveDummyFrameFromSelect(aPresContext, shell, aContainer, aChild, selectElement);
+#endif
 
 #ifdef DEBUG
   if (gReallyNoisyContentUpdates && parentFrame) {
@@ -9517,6 +9537,7 @@ nsCSSFrameConstructor::ContentRemoved(nsPresContext* aPresContext,
     frameManager->ClearUndisplayedContentIn(aChild, aContainer);
   }
 
+#ifdef HTML_FORMS
   // When the last item is removed from a select, 
   // we need to add a pseudo frame so select gets sized as the best it can
   // so here we see if it is a select and then we get the number of options
@@ -9539,6 +9560,7 @@ nsCSSFrameConstructor::ContentRemoved(nsPresContext* aPresContext,
       }
     } 
   }
+#endif
 
 #ifdef MOZ_XUL
   if (NotifyListBoxBody(aPresContext, aContainer, aChild, aIndexInContainer, 
@@ -10363,6 +10385,7 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent* aContent,
   // when the image can not be displayed
   rv = aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::alt, aAltText);
 
+#ifdef HTML_FORMS
   // If there's no "alt" attribute, and aContent is an input    
   // element, then use the value of the "value" attribute
   if ((NS_CONTENT_ATTR_NOT_THERE == rv) && (nsHTMLAtoms::input == aTag)) {
@@ -10376,6 +10399,7 @@ void nsCSSFrameConstructor::GetAlternateTextFor(nsIContent* aContent,
                                               NS_LITERAL_STRING("Submit").get(), aAltText);      
     }
   }
+#endif
 }
 
 // Construct an alternate frame to use when the image can't be rendered
@@ -11012,6 +11036,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
     if (!newFrame) 
       return NS_ERROR_NULL_POINTER;
     newFrame->Init(aPresContext, content, aParentFrame, styleContext, aFrame);
+#ifdef HTML_FORMS
   } else if (nsLayoutAtoms::fieldSetFrame == frameType) {
     rv = NS_NewFieldSetFrame(aPresContext->PresShell(), &newFrame,
                              NS_BLOCK_SPACE_MGR);
@@ -11031,6 +11056,7 @@ nsCSSFrameConstructor::CreateContinuingFrame(nsPresContext* aPresContext,
       // Set the fieldset's initial child list
       newFrame->SetInitialChildList(aPresContext, nsnull, continuingAreaFrame);
     }
+#endif
   } else {
     NS_ASSERTION(PR_FALSE, "unexpected frame type");
     rv = NS_ERROR_UNEXPECTED;

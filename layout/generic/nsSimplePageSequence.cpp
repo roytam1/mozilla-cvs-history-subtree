@@ -58,11 +58,13 @@ static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
 
 #define OFFSET_NOT_SET -1
 
+#ifdef HTML_FORMS
 // This is for localization of the "x of n" pages string
 // this class contains a helper method we need to get 
 // a string from a string bundle
 #include "nsFormControlHelper.h"
 #define PRINTING_PROPERTIES "chrome://global/locale/printing.properties"
+#endif
 
 // Print Options
 #include "nsIPrintSettings.h"
@@ -572,11 +574,15 @@ nsSimplePageSequenceFrame::SetPageNumberFormat(const char* aPropName, const char
 {
   // Doing this here so we only have to go get these formats once
   nsAutoString pageNumberFormat;
+#ifdef HTML_FORMS
   // Now go get the Localized Page Formating String
   nsresult rv = nsFormControlHelper::GetLocalizedString(PRINTING_PROPERTIES, NS_ConvertUTF8toUCS2(aPropName).get(), pageNumberFormat);
   if (NS_FAILED(rv)) { // back stop formatting
+#endif
     pageNumberFormat.AssignASCII(aDefPropVal);
+#ifdef HTML_FORMS
   }
+#endif
 
   // Sets the format into a static data memeber which will own the memory and free it
   PRUnichar* uStr = ToNewUnicode(pageNumberFormat);
@@ -716,13 +722,18 @@ nsSimplePageSequenceFrame::StartPrint(nsPresContext*   aPresContext,
   //
   // Get default font name and size to be used for the headers and footers
   nsAutoString fontName;
+#ifdef HTML_FORMS
   rv = nsFormControlHelper::GetLocalizedString(PRINTING_PROPERTIES, NS_LITERAL_STRING("fontname").get(), fontName);
   if (NS_FAILED(rv)) {
+#endif
     fontName.AssignLiteral("serif");
+#ifdef HTML_FORMS
   }
+#endif
 
   nsAutoString fontSizeStr;
   nscoord      pointSize = 10;;
+#ifdef HTML_FORMS
   rv = nsFormControlHelper::GetLocalizedString(PRINTING_PROPERTIES, NS_LITERAL_STRING("fontsize").get(), fontSizeStr);
   if (NS_SUCCEEDED(rv)) {
     PRInt32 errCode;
@@ -731,6 +742,7 @@ nsSimplePageSequenceFrame::StartPrint(nsPresContext*   aPresContext,
       pointSize = 10;
     }
   }
+#endif
   mPageData->mPrintOptions->SetFontNamePointSize(fontName, pointSize);
 
   // Doing this here so we only have to go get these formats once
