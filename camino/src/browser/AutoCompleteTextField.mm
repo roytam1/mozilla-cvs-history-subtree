@@ -463,7 +463,11 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
     [fieldEditor setSelectedRange:NSMakeRange(0,0)];    
     [fieldEditor didChangeText];
   }
-	if ( aLocation > [[fieldEditor string] length] )			// sanity check or AppKit crashes
+  
+  // sanity check and don't update the highlight if we're starting from the
+  // beginning of the string. There's no need for that since no autocomplete
+  // result would ever replace the string from location 0.
+	if ( aLocation > [[fieldEditor string] length] || !aLocation )
     return;
   range = NSMakeRange(aLocation,[[fieldEditor string] length] - aLocation);
   [fieldEditor setSelectedRange:range];

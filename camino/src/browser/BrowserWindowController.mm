@@ -1304,9 +1304,17 @@ static NSArray* sToolbarDefaults = nil;
 {
     if ( [locationString isEqual:@"about:blank"] )
       locationString = @"";
-    [mURLBar setStringUndoably:locationString fromLocation:0];		// updates autocomplete correctly
+
+    // if the urlbar has focus (actually if its field editor has focus), we
+    // need to use one of its routines to update the autocomplete status or
+    // we could find ourselves with stale results and the popup still open. If
+    // it doesn't have focus, we can bypass all that and just use normal routines.
+    if ( [[self window] firstResponder] == [mURLBar fieldEditor] )
+      [mURLBar setStringUndoably:locationString fromLocation:0];		// updates autocomplete correctly
+    else
+      [mURLBar setStringValue:locationString];
     [mLocationSheetURLField setStringValue:locationString];
-    
+
     // don't call [window display] here, no matter how much you might want
     // to, because it forces a redraw of every view in the window and with a lot
     // of tabs, it's dog slow.
