@@ -115,8 +115,8 @@ public:
   // nsIDOMHTMLCollection interface
   NS_DECL_NSIDOMHTMLCOLLECTION
 
-  NS_IMETHOD InsertElementAt(nsIDOMNode* aOption, PRInt32 aIndex);
-  NS_IMETHOD RemoveElementAt(PRInt32 aIndex);
+  nsresult InsertElementAt(nsIDOMNode* aOption, PRInt32 aIndex);
+  nsresult RemoveElementAt(PRInt32 aIndex);
   PRInt32 IndexOf(nsIContent* aOption);
 
   void DropReference();
@@ -125,6 +125,7 @@ private:
   nsCOMPtr<nsISupportsArray> mElements;
   nsHTMLSelectElement* mSelect;
 };
+
 
 class nsHTMLSelectElement : public nsGenericHTMLContainerFormElement,
                             public nsIDOMHTMLSelectElement,
@@ -211,8 +212,8 @@ public:
                                const nsAReadableString& aValue,
                                nsHTMLValue& aResult);
   NS_IMETHOD GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const;
-  NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
-                                      PRInt32& aHint) const;
+  NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                      PRInt32 aModType, PRInt32& aHint) const;
 
 
 protected:
@@ -309,7 +310,7 @@ nsHTMLSelectElement::nsHTMLSelectElement()
   mArtifactsAtTopLevel = 0;
 
   mOptions = new nsHTMLOptionCollection(this);
-  NS_ADDREF(mOptions);
+  NS_IF_ADDREF(mOptions);
 
   mSelected = new nsVoidArraySupports();
   NS_ADDREF(mSelected);
@@ -480,6 +481,7 @@ nsHTMLSelectElement::InsertOptionsIntoList(nsIContent* aOptions,
 #ifdef DEBUG_john
   CheckOptionParity();
 #endif
+
   return NS_OK;
 }
 
@@ -497,7 +499,7 @@ nsHTMLSelectElement::PrintOptions(nsIContent* aOptions, PRInt32 tabs)
     elem->GetTagName(s);
     printf("<%s>\n", NS_ConvertUCS2toUTF8(s).get());
   } else {
-     printf(">>text\n");
+    printf(">>text\n");
   }
 
   // Recurse down into optgroups
@@ -572,6 +574,7 @@ nsHTMLSelectElement::CheckOptionParity()
       break;
     }
   }
+
   return NS_OK;
 }
 #endif
@@ -625,11 +628,13 @@ nsHTMLSelectElement::RemoveOptionsFromList(nsIContent* aOptions,
 #ifdef DEBUG_john
   CheckOptionParity();
 #endif
+
   return NS_OK;
 }
 
-// If the document is such that recursing over these options gets us deeper than
-// four levels, there is something terribly wrong with the world.
+// If the document is such that recursing over these options gets us
+// deeper than four levels, there is something terribly wrong with the
+// world.
 nsresult
 nsHTMLSelectElement::InsertOptionsIntoListRecurse(nsIContent* aOptions,
                                                   PRInt32* aInsertIndex,
@@ -781,6 +786,7 @@ nsHTMLSelectElement::GetContentLevel(nsIContent* aContent, PRInt32* aLevel)
       break;
     }
   }
+
   return NS_OK;
 }
 
@@ -793,6 +799,7 @@ nsHTMLSelectElement::GetOptionAt(nsIContent* aOptions, PRInt32* aListIndex)
   if (*aListIndex == -1) {
     GetOptionAfter(aOptions, aListIndex);
   }
+
   return NS_OK;
 }
 
@@ -810,12 +817,15 @@ nsHTMLSelectElement::GetOptionAfter(nsIContent* aOptions, PRInt32* aListIndex)
   } else {
     nsCOMPtr<nsIContent> parent;
     aOptions->GetParent(*getter_AddRefs(parent));
+
     if (parent) {
       PRInt32 index;
       PRInt32 count;
       parent->IndexOf(aOptions, index);
       parent->ChildCount(count);
+
       GetFirstChildOptionIndex(parent, index+1, count, aListIndex);
+
       if ((*aListIndex) == -1) {
         GetOptionAfter(parent, aListIndex);
       }
@@ -834,8 +844,8 @@ nsHTMLSelectElement::GetFirstOptionIndex(nsIContent* aOptions,
     nsCOMPtr<nsIDOMHTMLOptionElement> elem(do_QueryInterface(aOptions));
     if (elem) {
       GetOptionIndex(elem, aListIndex);
-      // If you nested stuff under the option, you're just plain screwed.  *I'm*
-      // not going to aid and abet your evil deed.
+      // If you nested stuff under the option, you're just plain
+      // screwed.  *I'm* not going to aid and abet your evil deed.
       return NS_OK;
     }
   }
@@ -1135,6 +1145,7 @@ nsHTMLSelectElement::OnOptionSelected(nsISelectControlFrame* aSelectFrame,
   if (NS_SUCCEEDED(rv) && aSelectFrame) {
     rv = aSelectFrame->OnOptionSelected(aPresContext, aIndex, aSelected);
   }
+
   return rv;
 }
 
@@ -1235,10 +1246,13 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
   // To notify the frame if anything gets changed
   nsIFormControlFrame* formControlFrame = nsnull;
   GetPrimaryFrame(this, formControlFrame);
-  nsCOMPtr<nsISelectControlFrame> selectFrame(
-                                    do_QueryInterface(formControlFrame));
+
+  nsCOMPtr<nsISelectControlFrame> selectFrame =
+    do_QueryInterface(formControlFrame);
+
   nsCOMPtr<nsIPresContext> presContext;
   GetPresContext(this, getter_AddRefs(presContext));
+
   if (aIsSelected) {
     // Only select the first value if it's not multiple
     if (!isMultiple) {
@@ -1278,6 +1292,7 @@ nsHTMLSelectElement::SetOptionsSelectedByIndex(PRInt32 aStartIndex,
         if (!aSetDisabled) {
           PRBool isDisabled;
           IsOptionDisabled(indexToAdd, &isDisabled);
+
           if (isDisabled) {
             continue;
           } else {
@@ -1387,21 +1402,26 @@ nsHTMLSelectElement::IsOptionDisabled(PRInt32 aIndex, PRBool* aIsDisabled)
     nsCOMPtr<nsIDOMNode> parent;
     while (1) {
       optionNode->GetParentNode(getter_AddRefs(parent));
+
       // If we reached the top of the doc (scary), we're done
       if (!parent) {
         break;
       }
+
       // If we reached the select element, we're done
       nsCOMPtr<nsIDOMHTMLSelectElement> selectElement(
           do_QueryInterface(parent));
       if (selectElement) {
         break;
       }
-      nsCOMPtr<nsIDOMHTMLOptGroupElement> optGroupElement(
-          do_QueryInterface(parent));
+
+      nsCOMPtr<nsIDOMHTMLOptGroupElement> optGroupElement =
+        do_QueryInterface(parent);
+
       if (optGroupElement) {
         PRBool isDisabled;
         optGroupElement->GetDisabled(&isDisabled);
+
         if (isDisabled) {
           *aIsDisabled = PR_TRUE;
           return NS_OK;
@@ -1411,6 +1431,7 @@ nsHTMLSelectElement::IsOptionDisabled(PRInt32 aIndex, PRBool* aIsDisabled)
         // moron and you deserve not to have optgroup disabling work.
         break;
       }
+
       optionNode = parent;
     }
   }
@@ -1421,10 +1442,10 @@ nsHTMLSelectElement::IsOptionDisabled(PRInt32 aIndex, PRBool* aIsDisabled)
 NS_IMETHODIMP 
 nsHTMLSelectElement::GetValue(nsAWritableString& aValue)
 {
-  nsresult rv = NS_OK;
   PRInt32 selectedIndex;
 
-  rv = GetSelectedIndex(&selectedIndex);
+  nsresult rv = GetSelectedIndex(&selectedIndex);
+
   if (NS_SUCCEEDED(rv) && selectedIndex > -1) {
     nsCOMPtr<nsIDOMNode> node;
 
@@ -1588,8 +1609,9 @@ nsHTMLSelectElement::RemoveFocus(nsIPresContext* aPresContext)
 
     GetDocument(*getter_AddRefs(doc));
 
-    if (!doc)
+    if (!doc) {
       return NS_ERROR_NULL_POINTER;
+    }
 
     nsCOMPtr<nsIContent> rootContent;
     doc->GetRootContent(getter_AddRefs(rootContent));
@@ -1603,8 +1625,7 @@ nsHTMLSelectElement::RemoveFocus(nsIPresContext* aPresContext)
 NS_IMETHODIMP 
 nsHTMLSelectElement::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 {
-  nsresult rv = mOptions->Item(aIndex, aReturn);
-  return rv;
+  return mOptions->Item(aIndex, aReturn);
 }
 
 NS_IMETHODIMP 
@@ -1655,6 +1676,7 @@ nsHTMLSelectElement::SelectSomething()
     if (option) {
       PRBool disabled;
       nsresult rv = option->GetDisabled(&disabled);
+
       if (NS_FAILED(rv) || !disabled) {
         SetSelectedIndex(i);
         break;
@@ -1721,8 +1743,8 @@ nsHTMLSelectElement::DoneAddingContent(PRBool aIsDone)
 
 NS_IMETHODIMP
 nsHTMLSelectElement::StringToAttribute(nsIAtom* aAttribute,
-                              const nsAReadableString& aValue,
-                              nsHTMLValue& aResult)
+                                       const nsAReadableString& aValue,
+                                       nsHTMLValue& aResult)
 {
   if (aAttribute == nsHTMLAtoms::disabled) {
     aResult.SetEmptyValue();
@@ -1747,7 +1769,8 @@ nsHTMLSelectElement::StringToAttribute(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
 {
   if (!aData || !aAttributes)
     return;
@@ -1757,7 +1780,8 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aD
 }
 
 NS_IMETHODIMP
-nsHTMLSelectElement::GetMappedAttributeImpact(const nsIAtom* aAttribute, PRInt32 aModType,
+nsHTMLSelectElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
+                                              PRInt32 aModType,
                                               PRInt32& aHint) const
 {
   if (aAttribute == nsHTMLAtoms::multiple) {
@@ -1778,6 +1802,7 @@ NS_IMETHODIMP
 nsHTMLSelectElement::GetAttributeMappingFunction(nsMapRuleToAttributesFunc& aMapRuleFunc) const
 {
   aMapRuleFunc = &MapAttributesIntoRule;
+
   return NS_OK;
 }
 
@@ -1872,13 +1897,13 @@ NS_IMETHODIMP
 nsHTMLSelectElement::RestoreState(nsIPresContext* aPresContext,
                                   nsIPresState* aState)
 {
-  // XXX This works right now, but since this is only called from RestoreState()
-  // in the frame, this will happen at the first frame creation.  If JavaScript
-  // makes changes before then, and the page is being reloaded, these changes
-  // will be lost.
+  // XXX This works right now, but since this is only called from
+  // RestoreState() in the frame, this will happen at the first frame
+  // creation.  If JavaScript makes changes before then, and the page
+  // is being reloaded, these changes will be lost.
   //
-  // If RestoreState() is called a second time after SaveState() was called,
-  // this will do nothing.
+  // If RestoreState() is called a second time after SaveState() was
+  // called, this will do nothing.
 
   // Get the presentation state object to retrieve our stuff out of.
   nsCOMPtr<nsISupports> supp;
@@ -1959,6 +1984,7 @@ nsHTMLSelectElement::Reset()
   if (formControlFrame) {
     formControlFrame->OnContentReset();
   }
+
   return NS_OK;
 }
 
@@ -1975,6 +2001,7 @@ nsHTMLSelectElement::InitializeOption(nsIDOMHTMLOptionElement * aOption,
   if (selected) {
     (*aNumOptions)++;
   }
+
   return NS_OK;
 }
 
@@ -1999,6 +2026,7 @@ nsHTMLSelectElement::IsSuccessful(nsIContent* aSubmitElement,
   nsAutoString val;
   rv = GetAttr(kNameSpaceID_None, nsHTMLAtoms::name, val);
   *_retval = rv != NS_CONTENT_ATTR_NOT_THERE;
+
   return NS_OK;
 }
 
@@ -2010,6 +2038,7 @@ nsHTMLSelectElement::GetMaxNumValues(PRInt32 *_retval)
   NS_ENSURE_SUCCESS(rv, rv);
 
   *_retval = length;
+
   return NS_OK;
 }
 
@@ -2057,6 +2086,7 @@ nsHTMLSelectElement::GetNamesValues(PRInt32 aMaxNumValues,
   }
 
   aNumValues = sentOptions;
+
   return NS_OK;
 }
 
@@ -2230,13 +2260,13 @@ nsHTMLOptionCollection::NamedItem(const nsAReadableString& aName,
   return rv;
 }
 
-NS_IMETHODIMP
+nsresult
 nsHTMLOptionCollection::InsertElementAt(nsIDOMNode* aOption, PRInt32 aIndex)
 {
   return mElements->InsertElementAt(aOption, aIndex);
 }
 
-NS_IMETHODIMP
+nsresult
 nsHTMLOptionCollection::RemoveElementAt(PRInt32 aIndex)
 {
   return mElements->RemoveElementAt(aIndex);
