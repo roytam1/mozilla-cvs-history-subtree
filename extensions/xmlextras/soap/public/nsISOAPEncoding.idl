@@ -74,7 +74,7 @@ interface nsISOAPEncoding : nsISupports {
   * @return Old encoder registered under that type in the encoding, which
   *   should be kept by the new encoder if it is to be called back.
   */
-  nsISOAPEncoder setEncoder(in AString aSchemaNamespaceURI, in AString aSchemaType, 
+  void setEncoder(in AString aSchemaNamespaceURI, in AString aSchemaType, 
    in nsISOAPEncoder aEncoder);
 
 /**
@@ -101,7 +101,7 @@ interface nsISOAPEncoding : nsISupports {
   * @return Old decoder registered under that type in the encoding, which
   *   should be kept by the new decoder if it is to be called back.
   */
-  nsISOAPDecoder setDecoder(in AString aSchemaNamespaceURI, in AString aSchemaType, 
+  void setDecoder(in AString aSchemaNamespaceURI, in AString aSchemaType, 
    in nsISOAPDecoder aDecoder);
 
 /**

@@ -96,7 +96,7 @@ NS_IMETHODIMP nsSOAPEncodingRegistry::GetStyleURI(nsAString & aStyleURI)
 }
 
 /* nsISOAPEncoder setEncoder (in AString aSchemaNamespaceURI, in AString aSchemaType, in nsISOAPEncoder aEncoder); */
-NS_IMETHODIMP nsSOAPEncodingRegistry::SetEncoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPEncoder *aEncoder, nsISOAPEncoder **_retval)
+NS_IMETHODIMP nsSOAPEncodingRegistry::SetEncoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPEncoder *aEncoder)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -108,7 +108,7 @@ NS_IMETHODIMP nsSOAPEncodingRegistry::GetEncoder(const nsAString & aSchemaNamesp
 }
 
 /* nsISOAPDecoder setDecoder (in AString aSchemaNamespaceURI, in AString aSchemaType, in nsISOAPDecoder aDecoder); */
-NS_IMETHODIMP nsSOAPEncodingRegistry::SetDecoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPDecoder *aDecoder, nsISOAPDecoder **_retval)
+NS_IMETHODIMP nsSOAPEncodingRegistry::SetDecoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPDecoder *aDecoder)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -211,25 +211,20 @@ NS_IMETHODIMP nsSOAPEncoding::GetAlternativeEncoding(const nsAString & aStyleURI
 }
 
 /* nsISOAPEncoder setEncoder (in AString aSchemaNamespaceURI, in AString aSchemaType, in nsISOAPEncoder aEncoder); */
-NS_IMETHODIMP nsSOAPEncoding::SetEncoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPEncoder *aEncoder, nsISOAPEncoder **_retval)
+NS_IMETHODIMP nsSOAPEncoding::SetEncoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPEncoder *aEncoder)
 {
   NS_SOAP_ENSURE_ARG_STRING(aSchemaNamespaceURI);
   NS_SOAP_ENSURE_ARG_STRING(aSchemaType);
   NS_ENSURE_ARG(aEncoder);
-  NS_ENSURE_ARG_POINTER(_retval);
   nsAutoString name(aSchemaNamespaceURI);
   name.Append(nsSOAPUtils::kEncodingSeparator);
   name.Append(aSchemaType);
   nsStringKey nameKey(name);
-  nsISupports* r = nsnull;
   if (aEncoder) {
-    mEncoders->Put(&nameKey, aEncoder, &r);
+    mEncoders->Put(&nameKey, aEncoder, nsnull);
   }
   else {
-    mEncoders->Remove(&nameKey, &r);
-  }
-  if (r == nsnull && mDefaultEncoding != nsnull) {
-    return mDefaultEncoding->GetEncoder(aSchemaNamespaceURI, aSchemaType, _retval);
+    mEncoders->Remove(&nameKey, nsnull);
   }
   return NS_OK;
 }
@@ -252,26 +247,20 @@ NS_IMETHODIMP nsSOAPEncoding::GetEncoder(const nsAString & aSchemaNamespaceURI, 
 }
 
 /* nsISOAPDecoder setDecoder (in AString aSchemaNamespaceURI, in AString aSchemaType, in nsISOAPDecoder aDecoder); */
-NS_IMETHODIMP nsSOAPEncoding::SetDecoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPDecoder *aDecoder, nsISOAPDecoder **_retval)
+NS_IMETHODIMP nsSOAPEncoding::SetDecoder(const nsAString & aSchemaNamespaceURI, const nsAString & aSchemaType, nsISOAPDecoder *aDecoder)
 {
   NS_SOAP_ENSURE_ARG_STRING(aSchemaNamespaceURI);
   NS_SOAP_ENSURE_ARG_STRING(aSchemaType);
-  NS_ENSURE_ARG_POINTER(_retval);
   nsAutoString name(aSchemaNamespaceURI);
   name.Append(nsSOAPUtils::kEncodingSeparator);
   name.Append(aSchemaType);
   nsStringKey nameKey(name);
-  nsISupports* r = nsnull;
   if (aDecoder) {
-    mDecoders->Put(&nameKey, aDecoder, &r);
+    mDecoders->Put(&nameKey, aDecoder, nsnull);
   }
   else {
-    mDecoders->Remove(&nameKey, &r);
+    mDecoders->Remove(&nameKey, nsnull);
   }
-  if (r == nsnull && mDefaultEncoding != nsnull) {
-    return mDefaultEncoding->GetDecoder(aSchemaNamespaceURI, aSchemaType, _retval);
-  }
-  *_retval = (nsISOAPDecoder*)r;
   return NS_OK;
 }
 
@@ -299,25 +288,13 @@ NS_IMETHODIMP nsSOAPEncoding::Encode(nsIVariant *aSource, const nsAString & aNam
   NS_ENSURE_ARG_POINTER(_retval);
 
   nsCOMPtr<nsISOAPEncoder> encoder;
-  if (aSchemaType) {
-    nsAutoString type;
-    nsresult rv = aSchemaType->GetName(type);
-    if (NS_FAILED(rv)) return rv;
-    nsAutoString schemaURI;
-    rv = aSchemaType->GetTargetNamespace(schemaURI);
-    if (NS_FAILED(rv)) return rv;
-    rv = GetEncoder(schemaURI, type, getter_AddRefs(encoder));
-    if (NS_FAILED(rv)) return rv;
-  }
-  if (!encoder) {
-    nsresult rv = GetDefaultEncoder(getter_AddRefs(encoder));
-    if (NS_FAILED(rv)) return rv;
-  }
+  nsresult rv = GetDefaultEncoder(getter_AddRefs(encoder));
+  if (NS_FAILED(rv)) return rv;
   if (encoder) {
     return encoder->Encode(this, aSource, aNamespaceURI, aName, aSchemaType, aAttachments, aDestination,
 		    _retval);
   }
-  _retval = nsnull;
+  *_retval = nsnull;
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -327,24 +304,12 @@ NS_IMETHODIMP nsSOAPEncoding::Decode(nsIDOMElement *aSource, nsISchemaType *aSch
   NS_ENSURE_ARG(aSource);
   NS_ENSURE_ARG_POINTER(_retval);
   nsCOMPtr<nsISOAPDecoder> decoder;
-  if (aSchemaType) {
-    nsAutoString type;
-    nsresult rv = aSchemaType->GetName(type);
-    if (NS_FAILED(rv)) return rv;
-    nsAutoString schemaURI;
-    rv = aSchemaType->GetTargetNamespace(schemaURI);
-    if (NS_FAILED(rv)) return rv;
-    rv = GetDecoder(schemaURI, type, getter_AddRefs(decoder));
-    if (NS_FAILED(rv)) return rv;
-  }
-  if (!decoder) {
-    nsresult rv = GetDefaultDecoder(getter_AddRefs(decoder));
-    if (NS_FAILED(rv)) return rv;
-  }
+  nsresult rv = GetDefaultDecoder(getter_AddRefs(decoder));
+  if (NS_FAILED(rv)) return rv;
   if (decoder) {
     return decoder->Decode(this, aSource, aSchemaType, aAttachments, _retval);
   }
-  _retval = nsnull;
+  *_retval = nsnull;
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
