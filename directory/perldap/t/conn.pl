@@ -141,7 +141,7 @@ $nentry->addValue("mail", "leif\@ogre.com");
 $ent = $conn->search($ld{root}, $ld{scope}, $filter);
 $conn->delete($ent->getDN()) if $ent;
 
-dotPrint("Conn/add");
+dotPrint("Conn/newEntry");
 $conn->add($nentry) || print "not ";
 print "ok\n";
 
@@ -149,7 +149,10 @@ dotPrint("Conn/delete");
 $conn->delete($nentry) || print "not ";
 print "ok\n";
 
-$conn->add($nentry) || die "Can't create entry again...\n";
+dotPrint("Conn/add");
+$conn->add($nentry) || print "not ";
+print "ok\n";
+
 dotPrint("Conn/delete(DN)");
 $conn->delete($nentry->getDN()) || print "not ";
 print "ok\n";
@@ -260,3 +263,8 @@ print "not " if $err;
 print "ok\n";
 
 $conn->delete($ent->getDN()) if $ent;
+
+
+#################################################################################
+# Test error handling (ToDo!)
+#
