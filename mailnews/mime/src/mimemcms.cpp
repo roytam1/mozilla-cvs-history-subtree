@@ -1,76 +1,78 @@
 /* Insert copyright and license here 1996 */
 
-#include "mimempkc.h"
+#include "mimemcms.h"
+#include "nsMimeTypes.h"
 #include "nspr.h"
 
 #define MIME_SUPERCLASS mimeMultipartSignedClass
-MimeDefClass(MimeMultipartSignedPKCS7, MimeMultipartSignedPKCS7Class,
-			 mimeMultipartSignedPKCS7Class, &MIME_SUPERCLASS);
+MimeDefClass(MimeMultipartSignedCMS, MimeMultipartSignedCMSClass,
+			 mimeMultipartSignedCMSClass, &MIME_SUPERCLASS);
 
-static int MimeMultipartSignedPKCS7_initialize (MimeObject *);
+static int MimeMultipartSignedCMS_initialize (MimeObject *);
 
-static void *MimeMultPKCS7_init (MimeObject *);
-static int MimeMultPKCS7_data_hash (char *, PRInt32, void *);
-static int MimeMultPKCS7_sig_hash  (char *, PRInt32, void *);
-static int MimeMultPKCS7_data_eof (void *, PRBool);
-static int MimeMultPKCS7_sig_eof  (void *, PRBool);
-static int MimeMultPKCS7_sig_init (void *, MimeObject *, MimeHeaders *);
-static char * MimeMultPKCS7_generate (void *);
-static void MimeMultPKCS7_free (void *);
-static void MimeMultPKCS7_get_content_info (MimeObject *,
-											SEC_PKCS7ContentInfo **,
+static void *MimeMultCMS_init (MimeObject *);
+static int MimeMultCMS_data_hash (char *, PRInt32, void *);
+static int MimeMultCMS_sig_hash  (char *, PRInt32, void *);
+static int MimeMultCMS_data_eof (void *, PRBool);
+static int MimeMultCMS_sig_eof  (void *, PRBool);
+static int MimeMultCMS_sig_init (void *, MimeObject *, MimeHeaders *);
+static char * MimeMultCMS_generate (void *);
+static void MimeMultCMS_free (void *);
+static void MimeMultCMS_get_content_info (MimeObject *,
+											nsICMSMessage **,
 											char **, PRInt32 *, PRInt32 *, PRBool *);
 
 extern int SEC_ERROR_CERT_ADDR_MISMATCH;
 
 static int
-MimeMultipartSignedPKCS7ClassInitialize(MimeMultipartSignedPKCS7Class *clazz)
+MimeMultipartSignedCMSClassInitialize(MimeMultipartSignedCMSClass *clazz)
 {
   MimeObjectClass          *oclass = (MimeObjectClass *)    clazz;
   MimeMultipartSignedClass *sclass = (MimeMultipartSignedClass *) clazz;
 
-  oclass->initialize  = MimeMultipartSignedPKCS7_initialize;
+  oclass->initialize  = MimeMultipartSignedCMS_initialize;
 
-  sclass->crypto_init           = MimeMultPKCS7_init;
-  sclass->crypto_data_hash      = MimeMultPKCS7_data_hash;
-  sclass->crypto_data_eof       = MimeMultPKCS7_data_eof;
-  sclass->crypto_signature_init = MimeMultPKCS7_sig_init;
-  sclass->crypto_signature_hash = MimeMultPKCS7_sig_hash;
-  sclass->crypto_signature_eof  = MimeMultPKCS7_sig_eof;
-  sclass->crypto_generate_html  = MimeMultPKCS7_generate;
-  sclass->crypto_free           = MimeMultPKCS7_free;
+  sclass->crypto_init           = MimeMultCMS_init;
+  sclass->crypto_data_hash      = MimeMultCMS_data_hash;
+  sclass->crypto_data_eof       = MimeMultCMS_data_eof;
+  sclass->crypto_signature_init = MimeMultCMS_sig_init;
+  sclass->crypto_signature_hash = MimeMultCMS_sig_hash;
+  sclass->crypto_signature_eof  = MimeMultCMS_sig_eof;
+  sclass->crypto_generate_html  = MimeMultCMS_generate;
+  sclass->crypto_free           = MimeMultCMS_free;
 
-  clazz->get_content_info	    = MimeMultPKCS7_get_content_info;
+  clazz->get_content_info	    = MimeMultCMS_get_content_info;
 
   PR_ASSERT(!oclass->class_initialized);
   return 0;
 }
 
 static int
-MimeMultipartSignedPKCS7_initialize (MimeObject *object)
+MimeMultipartSignedCMS_initialize (MimeObject *object)
 {
   return ((MimeObjectClass*)&MIME_SUPERCLASS)->initialize(object);
 }
 
 
-typedef struct MimeMultPKCS7data {
-  HASH_HashType hash_type;
-  HASHContext *data_hash_context;
-  SEC_PKCS7DecoderContext *sig_decoder_context;
-  SEC_PKCS7ContentInfo *content_info;
+typedef struct MimeMultCMSdata {
+  PRInt16 hash_type;
+  nsIHash *data_hash_context;
+  nsCOMPtr<nsICMSDecoder> sig_decoder_context;
+  nsCOMPtr<nsICMSMessage> content_info;
   char *sender_addr;
   PRInt32 decode_error;
   PRInt32 verify_error;
-  SECItem item;
+  unsigned char* item_data;
+  PRUint32 item_len;
   MimeObject *self;
   PRBool parent_is_encrypted_p;
   PRBool parent_holds_stamp_p;
-} MimeMultPKCS7data;
+} MimeMultCMSdata;
 
 
 static void
-MimeMultPKCS7_get_content_info(MimeObject *obj,
-							   SEC_PKCS7ContentInfo **content_info_ret,
+MimeMultCMS_get_content_info(MimeObject *obj,
+							   nsICMSMessage **content_info_ret,
 							   char **sender_email_addr_return,
 							   PRInt32 *decode_error_ret,
 							   PRInt32 *verify_error_ret,
@@ -79,7 +81,7 @@ MimeMultPKCS7_get_content_info(MimeObject *obj,
   MimeMultipartSigned *msig = (MimeMultipartSigned *) obj;
   if (msig && msig->crypto_closure)
 	{
-	  MimeMultPKCS7data *data = (MimeMultPKCS7data *) msig->crypto_closure;
+	  MimeMultCMSdata *data = (MimeMultCMSdata *) msig->crypto_closure;
 
 	  *decode_error_ret = data->decode_error;
 	  *verify_error_ret = data->verify_error;
@@ -93,49 +95,49 @@ MimeMultPKCS7_get_content_info(MimeObject *obj,
 	}
 }
 
-/* #### MimeEncryptedPKCS7 and MimeMultipartSignedPKCS7 have a sleazy,
+/* #### MimeEncryptedCMS and MimeMultipartSignedCMS have a sleazy,
         incestuous, dysfunctional relationship. */
-extern PRBool MimeEncryptedPKCS7_encrypted_p (MimeObject *obj);
-extern PRBool MimePKCS7HeadersAndCertsMatch(MimeObject *obj,
-											 SEC_PKCS7ContentInfo *,
+extern PRBool MimeEncryptedCMS_encrypted_p (MimeObject *obj);
+extern PRBool MimeCMSHeadersAndCertsMatch(MimeObject *obj,
+											 nsICMSMessage *,
 											 char **);
-extern char *MimePKCS7_MakeSAURL(MimeObject *obj);
+extern char *MimeCMS_MakeSAURL(MimeObject *obj);
 extern char *IMAP_CreateReloadAllPartsUrl(const char *url);
 
 static void *
-MimeMultPKCS7_init (MimeObject *obj)
+MimeMultCMS_init (MimeObject *obj)
 {
   MimeHeaders *hdrs = obj->headers;
-  MimeMultPKCS7data *data = 0;
+  MimeMultCMSdata *data = 0;
   char *ct, *micalg;
-  HASH_HashType hash_type;
+  PRInt16 hash_type;
 
   ct = MimeHeaders_get (hdrs, HEADER_CONTENT_TYPE, PR_FALSE, PR_FALSE);
   if (!ct) return 0; /* #### bogus message?  out of memory? */
   micalg = MimeHeaders_get_parameter (ct, PARAM_MICALG, NULL, NULL);
-  PR_FREE(ct);
+  PR_Free(ct);
   ct = 0;
   if (!micalg) return 0; /* #### bogus message?  out of memory? */
 
-  if (!strcasecomp(micalg, PARAM_MICALG_MD5))
-	hash_type = HASH_AlgMD5;
-  else if (!strcasecomp(micalg, PARAM_MICALG_SHA1) ||
-		   !strcasecomp(micalg, PARAM_MICALG_SHA1_2) ||
-		   !strcasecomp(micalg, PARAM_MICALG_SHA1_3) ||
-		   !strcasecomp(micalg, PARAM_MICALG_SHA1_4) ||
-		   !strcasecomp(micalg, PARAM_MICALG_SHA1_5))
-	hash_type = HASH_AlgSHA1;
-  else if (!strcasecomp(micalg, PARAM_MICALG_MD2))
-	hash_type = HASH_AlgMD2;
+  if (!nsCRT::strcasecmp(micalg, PARAM_MICALG_MD5))
+	hash_type = nsIHash.HASH_AlgMD5;
+  else if (!nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1) ||
+		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_2) ||
+		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_3) ||
+		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_4) ||
+		   !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_5))
+	hash_type = nsIHash.HASH_AlgSHA1;
+  else if (!nsCRT::strcasecmp(micalg, PARAM_MICALG_MD2))
+	hash_type = nsIHash.HASH_AlgMD2;
   else
-	hash_type = HASH_AlgNULL;
+	hash_type = nsIHash.HASH_AlgNULL;
 
-  PR_FREE(micalg);
+  PR_Free(micalg);
   micalg = 0;
 
-  if (hash_type == HASH_AlgNULL) return 0; /* #### bogus message? */
+  if (hash_type == nsIHash.HASH_AlgNULL) return 0; /* #### bogus message? */
 
-  data = (MimeMultPKCS7data *) PR_MALLOC(sizeof(*data));
+  data = (MimeMultCMSdata *) PR_MALLOC(sizeof(*data));
   if (!data) return 0;
 
   nsCRT::memset(data, 0, sizeof(*data));
@@ -146,23 +148,20 @@ MimeMultPKCS7_init (MimeObject *obj)
   PR_ASSERT(!data->data_hash_context);
   PR_ASSERT(!data->sig_decoder_context);
 
-  data->data_hash_context = HASH_Create(data->hash_type);
+  data->data_hash_context = do_CreateInstance(NS_HASH_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) return 0;
 
-  PR_ASSERT(data->data_hash_context);
-  if (!data->data_hash_context)
-	{
-	  PR_FREE(data);
-	  return 0;
-	}
+  rv = data->data_hash_context->Create(data->hash_type);
+  if (NS_FAILED(rv)) return 0;
 
   PR_SetError(0,0);
-  HASH_Begin(data->data_hash_context);
+  data->data_hash_context->Begin();
   if (!data->decode_error)
 	{
 	  data->decode_error = PR_GetError();
 	  if (data->decode_error)
 		{
-		  PR_FREE(data);
+		  PR_Free(data);
 		  return 0;
 		}
 	}
@@ -171,7 +170,7 @@ MimeMultPKCS7_init (MimeObject *obj)
 	(obj->parent && mime_crypto_stamped_p(obj->parent));
 
   data->parent_is_encrypted_p =
-	(obj->parent && MimeEncryptedPKCS7_encrypted_p (obj->parent));
+	(obj->parent && MimeEncryptedCMS_encrypted_p (obj->parent));
 
   /* If the parent of this object is a crypto-blob, then it's the grandparent
 	 who would have written out the headers and prepared for a stamp...
@@ -187,16 +186,16 @@ MimeMultPKCS7_init (MimeObject *obj)
 }
 
 static int
-MimeMultPKCS7_data_hash (char *buf, PRInt32 size, void *crypto_closure)
+MimeMultCMS_data_hash (char *buf, PRInt32 size, void *crypto_closure)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
   PR_ASSERT(data && data->data_hash_context);
   if (!data || !data->data_hash_context) return -1;
 
   PR_ASSERT(!data->sig_decoder_context);
 
   PR_SetError(0, 0);
-  HASH_Update(data->data_hash_context, (unsigned char *) buf, size);
+  data->data_hash_context->Update((unsigned char *) buf, size);
   if (!data->verify_error)
 	data->verify_error = PR_GetError();
 
@@ -204,25 +203,24 @@ MimeMultPKCS7_data_hash (char *buf, PRInt32 size, void *crypto_closure)
 }
 
 static int
-MimeMultPKCS7_data_eof (void *crypto_closure, PRBool abort_p)
+MimeMultCMS_data_eof (void *crypto_closure, PRBool abort_p)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
   PR_ASSERT(data && data->data_hash_context);
   if (!data || !data->data_hash_context) return -1;
 
   PR_ASSERT(!data->sig_decoder_context);
 
-  data->item.len = HASH_ResultLen(data->hash_type);
-  data->item.data = (unsigned char *) PR_MALLOC(data->item.len);
-  if (!data->item.data) return MK_OUT_OF_MEMORY;
+  data->item_len = HASH_ResultLen(data->hash_type);
+  data->item_data = (unsigned char *) PR_MALLOC(data->item_len);
+  if (!data->item_data) return MK_OUT_OF_MEMORY;
 
   PR_SetError(0, 0);
-  HASH_End(data->data_hash_context, data->item.data, &data->item.len,
-		   data->item.len);
+  data->data_hash_context->End(data->item_data, &data->item_len, data->item_len);
   if (!data->verify_error)
 	data->verify_error = PR_GetError();
 
-  HASH_Destroy(data->data_hash_context);
+  RELEASE_REF(data->data_hash_context);
   data->data_hash_context = 0;
 
   /* At this point, data->item.data contains a digest for the first part.
@@ -234,14 +232,15 @@ MimeMultPKCS7_data_eof (void *crypto_closure, PRBool abort_p)
 
 
 static int
-MimeMultPKCS7_sig_init (void *crypto_closure,
+MimeMultCMS_sig_init (void *crypto_closure,
 						MimeObject *multipart_object,
 						MimeHeaders *signature_hdrs)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
   MimeDisplayOptions *opts = multipart_object->options;
   char *ct;
   int status = 0;
+  nsresult rv;
 
   PR_ASSERT(!data->data_hash_context);
   PR_ASSERT(!data->sig_decoder_context);
@@ -252,20 +251,17 @@ MimeMultPKCS7_sig_init (void *crypto_closure,
   ct = MimeHeaders_get (signature_hdrs, HEADER_CONTENT_TYPE, PR_TRUE, PR_FALSE);
 
   /* Verify that the signature object is of the right type. */
-  if (!ct || (strcasecomp(ct, APPLICATION_XPKCS7_SIGNATURE) &&
-              strcasecomp(ct, APPLICATION_PKCS7_SIGNATURE)))
+  if (!ct || (nsCRT::strcasecmp(ct, APPLICATION_XPKCS7_SIGNATURE) &&
+              nsCRT::strcasecmp(ct, APPLICATION_PKCS7_SIGNATURE)))
 	status = -1; /* #### error msg about bogus message */
   PR_FREEIF(ct);
   if (status < 0) return status;
 
-  data->sig_decoder_context =
-	SEC_PKCS7DecoderStart(0, 0, /* no content cb */
-						  ((SECKEYGetPasswordKey) opts->passwd_prompt_fn),
-						  opts->passwd_prompt_fn_arg,
-						  NULL, NULL, 
-						  SECMIME_DecryptionAllowed);
-  if (!data->sig_decoder_context)
-	{
+  data->sig_decoder_context = do_CreateInstance(NS_CMSDECODER_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) return 0;
+
+  rv = data->sig_decoder_context->Start(nsnull, nsnull);
+  if (NS_FAILED(rv)) {
 	  status = PR_GetError();
 	  PR_ASSERT(status < 0);
 	  if (status >= 0) status = -1;
@@ -275,18 +271,17 @@ MimeMultPKCS7_sig_init (void *crypto_closure,
 
 
 static int
-MimeMultPKCS7_sig_hash (char *buf, PRInt32 size, void *crypto_closure)
+MimeMultCMS_sig_hash (char *buf, PRInt32 size, void *crypto_closure)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
 
   PR_ASSERT(data && data->sig_decoder_context);
   if (!data || !data->sig_decoder_context) return -1;
 
   PR_ASSERT(!data->data_hash_context);
 
-  if (SECSuccess != SEC_PKCS7DecoderUpdate(data->sig_decoder_context, 
-  											buf, size))
-	{
+  rv = data->sig_decoder_context->Update(buf, buf_size);
+  if (NS_FAILED(rv)) {
 	  if (!data->verify_error)
 		data->verify_error = PR_GetError();
 	  PR_ASSERT(data->verify_error < 0);
@@ -298,9 +293,9 @@ MimeMultPKCS7_sig_hash (char *buf, PRInt32 size, void *crypto_closure)
 }
 
 static int
-MimeMultPKCS7_sig_eof (void *crypto_closure, PRBool abort_p)
+MimeMultCMS_sig_eof (void *crypto_closure, PRBool abort_p)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
 
   if (!data) return -1;
 
@@ -316,7 +311,7 @@ MimeMultPKCS7_sig_eof (void *crypto_closure, PRBool abort_p)
 
   if (data->sig_decoder_context)
 	{
-	  data->content_info = SEC_PKCS7DecoderFinish (data->sig_decoder_context);
+	  data->sig_decoder_context->Finish(getter_Addref(data->content_info));
 	  data->sig_decoder_context = 0;
 	  if (!data->content_info && !data->verify_error)
 		data->verify_error = PR_GetError();
@@ -331,9 +326,9 @@ MimeMultPKCS7_sig_eof (void *crypto_closure, PRBool abort_p)
 
 
 static void
-MimeMultPKCS7_free (void *crypto_closure)
+MimeMultCMS_free (void *crypto_closure)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
   PR_ASSERT(data);
   if (!data) return;
 
@@ -347,28 +342,28 @@ MimeMultPKCS7_free (void *crypto_closure)
 
   if (data->sig_decoder_context)
 	{
-	  SEC_PKCS7ContentInfo *cinfo =
-		SEC_PKCS7DecoderFinish (data->sig_decoder_context);
+	  SEC_CMSContentInfo *cinfo =
+		SEC_CMSDecoderFinish (data->sig_decoder_context);
 	  if (cinfo)
-		SEC_PKCS7DestroyContentInfo(cinfo);
+		SEC_CMSDestroyContentInfo(cinfo);
 	}
 
   if (data->content_info)
 	{
-	  SEC_PKCS7DestroyContentInfo(data->content_info);
+	  SEC_CMSDestroyContentInfo(data->content_info);
 	  data->content_info = 0;
 	}
 
-  PR_FREEIF(data->item.data);
+  PR_FREEIF(data->item_data);
 
   PR_FREE(data);
 }
 
 
 static char *
-MimeMultPKCS7_generate (void *crypto_closure)
+MimeMultCMS_generate (void *crypto_closure)
 {
-  MimeMultPKCS7data *data = (MimeMultPKCS7data *) crypto_closure;
+  MimeMultCMSdata *data = (MimeMultCMSdata *) crypto_closure;
   PRBool signed_p = PR_TRUE;
   PRBool good_p = PR_TRUE;
   PRBool encrypted_p;
@@ -381,7 +376,7 @@ MimeMultPKCS7_generate (void *crypto_closure)
   if (data->content_info)
 	{
 	  good_p =
-		SEC_PKCS7VerifyDetachedSignature(data->content_info,
+		content_info->VerifyDetachedSignature(data->content_info,
 										 certUsageEmailSigner,
 										 &data->item,
 										 data->hash_type,
@@ -396,14 +391,14 @@ MimeMultPKCS7_generate (void *crypto_closure)
 		}
 	  else
 		{
-		  good_p = MimePKCS7HeadersAndCertsMatch(data->self,
+		  good_p = MimeCMSHeadersAndCertsMatch(data->self,
 												 data->content_info,
 												 &data->sender_addr);
 		  if (!good_p && !data->verify_error)
 			data->verify_error = SEC_ERROR_CERT_ADDR_MISMATCH;
 		}
 
-	  if (SEC_PKCS7ContainsCertsOrCrls(data->content_info))
+	  if (SEC_CMSContainsCertsOrCrls(data->content_info))
 		{
 		  /* #### call libsec telling it to import the certs */
 		}
@@ -412,7 +407,7 @@ MimeMultPKCS7_generate (void *crypto_closure)
 		 MIME object, so that we can get at the security info of sub-parts
 		 of the currently-displayed message. */
 #if 0
-	  SEC_PKCS7DestroyContentInfo(data->content_info);
+	  SEC_CMSDestroyContentInfo(data->content_info);
 	  data->content_info = 0;
 #endif /* 0 */
 	}
@@ -440,7 +435,7 @@ MimeMultPKCS7_generate (void *crypto_closure)
 		if (unverified_p && data->self->options)
 			stamp_url = IMAP_CreateReloadAllPartsUrl(data->self->options->url);
 		else
-			stamp_url = MimePKCS7_MakeSAURL(data->self);
+			stamp_url = MimeCMS_MakeSAURL(data->self);
 	}
 
 	result =

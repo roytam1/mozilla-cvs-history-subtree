@@ -53,15 +53,15 @@ NS_IMETHODIMP nsHash::Begin()
   return NS_OK;
 }
 
-NS_IMETHODIMP nsHash::Update(unsigned char* aBuf, PRInt32 aLen)
+NS_IMETHODIMP nsHash::Update(unsigned char* aBuf, PRUint32 aLen)
 {
   HASH_Update(m_ctxt, (const unsigned char*)aBuf, aLen);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsHash::End(unsigned char** aBuf, PRInt32* aResultLen, PRInt32 aMaxResultLen)
+NS_IMETHODIMP nsHash::End(unsigned char* aBuf, PRUint32* aResultLen, PRUint32 aMaxResultLen)
 {
-  HASH_End(m_ctxt, aBuf, aResultLen, aMaxResultLen;
+  HASH_End(m_ctxt, aBuf, aResultLen, aMaxResultLen);
   return NS_OK;
 }
 

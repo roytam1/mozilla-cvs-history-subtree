@@ -107,6 +107,8 @@ OBJS=											\
 		.\$(OBJDIR)\comi18n.obj				\
 		.\$(OBJDIR)\mimecryp.obj		\
 		.\$(OBJDIR)\mimecms.obj			\
+		.\$(OBJDIR)\mimemsig.obj		\
+		.\$(OBJDIR)\mimemcms.obj		\
 		$(NULL)
 
 
