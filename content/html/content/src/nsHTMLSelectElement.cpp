@@ -1409,8 +1409,8 @@ nsHTMLSelectElement::IsOptionDisabled(PRInt32 aIndex, PRBool* aIsDisabled)
       }
 
       // If we reached the select element, we're done
-      nsCOMPtr<nsIDOMHTMLSelectElement> selectElement(
-          do_QueryInterface(parent));
+      nsCOMPtr<nsIDOMHTMLSelectElement> selectElement =
+        do_QueryInterface(parent);
       if (selectElement) {
         break;
       }
@@ -1884,9 +1884,9 @@ nsHTMLSelectElement::SaveState(nsIPresContext* aPresContext,
 {
   nsresult rv = GetPrimaryPresState(this, aState);
   if (*aState) {
-    rv = (*aState)->SetStatePropertyAsSupports(
-            NS_LITERAL_STRING("selecteditems"),
-            mSelected);
+    rv =
+      (*aState)->SetStatePropertyAsSupports(NS_LITERAL_STRING("selecteditems"),
+                                            mSelected);
     NS_ASSERTION(NS_SUCCEEDED(rv), "selecteditems set failed!");
   }
 
@@ -1907,9 +1907,9 @@ nsHTMLSelectElement::RestoreState(nsIPresContext* aPresContext,
 
   // Get the presentation state object to retrieve our stuff out of.
   nsCOMPtr<nsISupports> supp;
-  nsresult rv = aState->GetStatePropertyAsSupports(
-                   NS_LITERAL_STRING("selecteditems"),
-                   getter_AddRefs(supp));
+  nsresult rv =
+    aState->GetStatePropertyAsSupports(NS_LITERAL_STRING("selecteditems"),
+                                       getter_AddRefs(supp));
   nsCOMPtr<nsVoidArraySupports> newArray = do_QueryInterface(supp);
   // If it's the same array, don't restore.  We already have been restored.
   if (newArray && newArray != mSelected) {
