@@ -87,6 +87,7 @@ typedef enum
 @class HistoryDataSource;
 @class BrowserTabView;
 @class PageProxyIcon;
+@class BrowserContentView;
 
 @interface BrowserWindowController : NSWindowController<Find>
 {
@@ -103,7 +104,8 @@ typedef enum
   IBOutlet NSTextField*       mLocationSheetURLField;
   IBOutlet NSView*            mStatusBar;     // contains the status text, progress bar, and lock
   IBOutlet PageProxyIcon*     mProxyIcon;
-
+  IBOutlet BrowserContentView* mContentView;
+  
   IBOutlet id                   mSidebarBrowserView;  // currently unused
   IBOutlet BookmarksDataSource* mSidebarBookmarksDataSource;
   IBOutlet HistoryDataSource* mHistoryDataSource;

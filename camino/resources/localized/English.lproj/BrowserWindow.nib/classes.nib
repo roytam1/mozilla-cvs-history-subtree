@@ -38,7 +38,11 @@
         {
             CLASS = BrowserContentView; 
             LANGUAGE = ObjC; 
-            OUTLETS = {mBookmarksToolbar = BookmarksToolbar; mBrowserContainerView = NSView; }; 
+            OUTLETS = {
+                mBookmarksToolbar = BookmarksToolbar; 
+                mBrowserContainerView = NSView; 
+                mStatusBar = NSView; 
+            }; 
             SUPERCLASS = NSView; 
         }, 
         {CLASS = BrowserTabView; LANGUAGE = ObjC; SUPERCLASS = NSTabView; }, 
@@ -83,6 +87,7 @@
                 mAddBookmarkSheetWindow = NSWindow; 
                 mAddBookmarkTitleField = NSTextField; 
                 mBackItem = NSMenuItem; 
+                mContentView = BrowserContentView; 
                 mForwardItem = NSMenuItem; 
                 mHistoryDataSource = HistoryDataSource; 
                 mImageLinkMenu = NSMenu; 

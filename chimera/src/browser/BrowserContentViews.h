@@ -45,6 +45,7 @@
 {
   IBOutlet BookmarksToolbar *mBookmarksToolbar;
   IBOutlet NSView           *mBrowserContainerView;
+  IBOutlet NSView           *mStatusBar;
 }
 @end
 

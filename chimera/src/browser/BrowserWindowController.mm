@@ -40,6 +40,7 @@
 #import "BrowserWindowController.h"
 
 #import "BrowserWrapper.h"
+#import "BrowserContentViews.h"
 #import "PreferenceManager.h"
 #import "BookmarksDataSource.h"
 #import "HistoryDataSource.h"
@@ -262,17 +263,17 @@ static NSArray* sToolbarDefaults = nil;
 {
     [super windowDidLoad];
 
+    BOOL mustResizeChrome = NO;
+    
     // hide the resize control if specified by the chrome mask
     if ( mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE) )
       [[self window] setShowsResizeIndicator:NO];
     
     if ( mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_STATUSBAR) ) {
-      // remove the status bar at the bottom and adjust the height of the content area.
-      float height = [mStatusBar frame].size.height;
+      // remove the status bar at the bottom
       [mStatusBar removeFromSuperview];
-      [mTabBrowser setFrame:NSMakeRect([mTabBrowser frame].origin.x, [mTabBrowser frame].origin.y - height,
-                               [mTabBrowser frame].size.width, [mTabBrowser frame].size.height + height)];
-
+      mustResizeChrome = YES;
+      
       // clear out everything in the status bar we were holding on to. This will cause us to
       // pass nil for these status items into the CHBrowserwWrapper which is what we want. We'll
       // crash if we give them things that have gone away.
@@ -338,19 +339,24 @@ static NSArray* sToolbarDefaults = nil;
 
     [self setupSidebarTabs];
 
-    [mPersonalToolbar initializeToolbar];
     if ( mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR) ) {
       // remove the personal toolbar and adjust the content area upwards. Removing it
       // from the parent view releases it, so we have to clear out the member var.
-      float height = [mPersonalToolbar frame].size.height;
+      //float height = [mPersonalToolbar frame].size.height;
       [mPersonalToolbar removeFromSuperview];
-      [mTabBrowser setFrame:NSMakeRect([mTabBrowser frame].origin.x, [mTabBrowser frame].origin.y,
-                               [mTabBrowser frame].size.width, [mTabBrowser frame].size.height + height)];
-      mPersonalToolbar = nil;      
+      mPersonalToolbar = nil;
+      mustResizeChrome = YES;
     }
-    else if (![self shouldShowBookmarkToolbar]) {
-      [mPersonalToolbar showBookmarksToolbar:NO];
+    else
+    {
+      [mPersonalToolbar initializeToolbar];
+    
+      if (![self shouldShowBookmarkToolbar])
+        [mPersonalToolbar showBookmarksToolbar:NO];
     }
+    
+    if (mustResizeChrome)
+      [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize

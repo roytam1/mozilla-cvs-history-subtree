@@ -55,6 +55,9 @@
   enclosing control to clip out the shadows. The BrowserContainerView exists
   to handle this, and to draw background in extra space that is created as
   a result.
+  
+  Note that having this code overrides the autoresize behaviour of these views
+  as set in IB.
  ______________
  | Window
  | 
@@ -78,6 +81,9 @@
     | | |                                                       | | |
     | | |_______________________________________________________| | |
     | |___________________________________________________________| |
+    | ____________________________________________________________  |
+    | | Status bar                                                | |
+    | |___________________________________________________________| |
     |_______________________________________________________________|
     
 */
@@ -87,22 +93,61 @@
 
 - (void)resizeSubviewsWithOldSize:(NSSize)oldFrameSize
 {
-  // first resize the toolbar, which can reflow to a different height
-  [mBookmarksToolbar resizeWithOldSuperviewSize: oldFrameSize];
-    
-  // make sure the toolbar doesn't get pushed off the top. This view is not flipped,
-  // so the top is MaxY
-  if (NSMaxY([mBookmarksToolbar frame]) > NSMaxY([self bounds]))
+  float bmToolbarHeight = 0.0;
+  float statusBarHeight = 0.0;
+
+  if (mBookmarksToolbar)
   {
-    NSRect	newFrame = [mBookmarksToolbar frame];
-    newFrame = NSOffsetRect(newFrame, 0, NSMaxY([self bounds]) - NSMaxY([mBookmarksToolbar frame]));
-    [mBookmarksToolbar setFrame:newFrame];
+    // first resize the toolbar, which can reflow to a different height
+    [mBookmarksToolbar resizeWithOldSuperviewSize: oldFrameSize];
+      
+    // make sure the toolbar doesn't get pushed off the top. This view is not flipped,
+    // so the top is MaxY
+    if (NSMaxY([mBookmarksToolbar frame]) > NSMaxY([self bounds]))
+    {
+      NSRect	newFrame = [mBookmarksToolbar frame];
+      newFrame = NSOffsetRect(newFrame, 0, NSMaxY([self bounds]) - NSMaxY([mBookmarksToolbar frame]));
+      [mBookmarksToolbar setFrame:newFrame];
+    }
+    
+    bmToolbarHeight = NSHeight([mBookmarksToolbar frame]);
+  }
+  
+  if (mStatusBar)
+  {
+    statusBarHeight = NSHeight([mStatusBar frame]);
+    NSRect statusRect = [self bounds];
+    statusRect.size.height = statusBarHeight;
+    [mStatusBar setFrame:statusRect];
   }
   
   // figure out how much space is left for the browser view
-  NSRect toolbarFrame, browserFrame;
-  NSDivideRect([self bounds], &toolbarFrame, &browserFrame, NSHeight([mBookmarksToolbar frame]), NSMaxYEdge);
-  [mBrowserContainerView setFrame:browserFrame];
+  NSRect browserRect = [self bounds];
+  // subtract bm toolbar
+  browserRect.size.height -= bmToolbarHeight;
+  
+  // subtract status bar
+  browserRect.size.height -= statusBarHeight;
+  browserRect.origin.y   += statusBarHeight;
+  
+  [mBrowserContainerView setFrame:browserRect];
+}
+
+
+- (void)willRemoveSubview:(NSView *)subview
+{
+  if (subview == mBookmarksToolbar)
+    mBookmarksToolbar = nil;
+  else if (subview == mStatusBar)
+    mStatusBar = nil;
+
+  [super willRemoveSubview:subview];
+}
+
+- (void)didAddSubview:(NSView *)subview
+{
+  // figure out if mStatusBar or mBookmarksToolbar has been added back?
+  [super didAddSubview:subview];
 }
 
 @end
