@@ -63,6 +63,7 @@ REQUIRES	= xpcom \
 		  nkcache \
 		  mimetype \
 		  windowwatcher \
+		  pipnss \
 		  $(NULL)
 
 CPPSRCS		= \
@@ -93,6 +94,7 @@ CPPSRCS		= \
 		nsSmtpServer.cpp \
 		nsSmtpDataSource.cpp \
 		nsSmtpDelegateFactory.cpp \
+        nsMsgComposeSecure.cpp \
 		$(NULL)
 
 EXPORTS		= \
@@ -123,6 +125,7 @@ EXPORTS		= \
 		nsSmtpServer.h \
 		nsSmtpDataSource.h \
 		nsSmtpDelegateFactory.h \
+		nsMsgComposeSecure.h \
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.

@@ -66,6 +66,8 @@ nsMsgCompFields::nsMsgCompFields()
   m_useMultipartAlternative = PR_FALSE;
   m_uuEncodeAttachments = PR_FALSE;
 	m_returnReceipt = PR_FALSE;
+  m_signMessage = PR_FALSE;
+  m_alwaysEncryptMessage = PR_FALSE;
 	m_receiptType = 0;
 
   nsCOMPtr<nsIPref> prefs (do_GetService(NS_PREF_CONTRACTID));
@@ -112,6 +114,8 @@ nsresult nsMsgCompFields::Copy(nsIMsgCompFields* pMsgCompFields)
 	m_returnReceipt = pFields->m_returnReceipt;
 	m_receiptType = pFields->m_receiptType;
 	m_internalCharSet = pFields->m_internalCharSet;
+  m_signMessage = pFields->m_signMessage;
+  m_alwaysEncryptMessage = pFields->m_alwaysEncryptMessage;
 
 	return NS_OK;
 }
@@ -477,6 +481,30 @@ NS_IMETHODIMP nsMsgCompFields::GetReturnReceipt(PRBool *_retval)
 {
   *_retval = m_returnReceipt;
 	return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgCompFields::SetSignMessage(PRBool value)
+{
+  m_signMessage = value;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgCompFields::GetSignMessage(PRBool *_retval)
+{
+  *_retval = m_signMessage;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgCompFields::SetAlwaysEncryptMessage(PRBool value)
+{
+  m_alwaysEncryptMessage = value;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgCompFields::GetAlwaysEncryptMessage(PRBool *_retval)
+{
+  *_retval = m_alwaysEncryptMessage;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgCompFields::SetAttachVCard(PRBool value)

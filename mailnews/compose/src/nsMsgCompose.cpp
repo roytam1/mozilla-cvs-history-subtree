@@ -1191,6 +1191,12 @@ nsresult nsMsgCompose::CreateMessage(const char * originalMsgURI,
 	        bccStr.AppendWithConversion(bccList);
 	    }
 	    m_compFields->SetBcc(bccStr.get());
+
+      // Set the default security settings
+      m_identity->GetAlwaysEncryptMessage(&aBool);
+      m_compFields->SetAlwaysEncryptMessage(aBool);
+      m_identity->GetSignMessage(&aBool);
+      m_compFields->SetSignMessage(aBool);
 	}
 
   // If we don't have an original message URI, nothing else to do...

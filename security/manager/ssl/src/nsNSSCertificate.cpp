@@ -58,6 +58,7 @@
 #include "nsIURI.h"
 #include "nsIWindowWatcher.h"
 #include "nsIPrompt.h"
+#include "nsNSSAutoPtr.h"
 
 #include "nspr.h"
 extern "C" {
@@ -71,6 +72,7 @@ extern "C" {
 }
 #include "ssl.h"
 #include "ocsp.h"
+#include "plbase64.h"
 
 #ifdef PR_LOGGING
 extern PRLogModuleInfo* gPIPNSSLog;
@@ -638,7 +640,6 @@ nsNSSCertificate::nsNSSCertificate(char *certDER, int derLen) :
   {
       mCert->dbhandle = CERT_GetDefaultCertDB();
   }
-  
 }
 
 nsNSSCertificate::nsNSSCertificate(CERTCertificate *cert) : 
@@ -2763,6 +2764,63 @@ nsNSSCertificateDB::ImportCertificates(char * data, PRUint32 length,
   return nsrv;
 }
 
+/*
+ *  [noscript] void importEmailCertificates(in charPtr data, in unsigned long length,
+ *                                     in nsIInterfaceRequestor ctx);
+ */
+NS_IMETHODIMP
+nsNSSCertificateDB::ImportEmailCertificate(char * data, PRUint32 length, 
+                                       nsIInterfaceRequestor *ctx)
+
+{
+  SECStatus srv = SECFailure;
+  nsresult nsrv = NS_OK;
+  CERTCertificate * cert;
+  SECItem **rawCerts;
+  int numcerts;
+  int i;
+ 
+  PRArenaPool *arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+  if (!arena)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  CERTDERCerts *certCollection = getCertsFromPackage(arena, data, length);
+  if (!certCollection) {
+    PORT_FreeArena(arena, PR_FALSE);
+    return NS_ERROR_FAILURE;
+  }
+  cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), certCollection->rawCerts,
+                          (char *)NULL, PR_FALSE, PR_TRUE);
+  if (!cert) {
+    nsrv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+  numcerts = certCollection->numcerts;
+  rawCerts = (SECItem **) PORT_Alloc(sizeof(SECItem *) * numcerts);
+  if ( !rawCerts ) {
+    nsrv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+
+  for ( i = 0; i < numcerts; i++ ) {
+    rawCerts[i] = &certCollection->rawCerts[i];
+  }
+ 
+  srv = CERT_ImportCerts(CERT_GetDefaultCertDB(), certUsageEmailSigner,
+             numcerts, rawCerts, NULL, PR_TRUE, PR_FALSE,
+             NULL);
+  if ( srv != SECSuccess ) {
+    nsrv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+  srv = CERT_SaveSMimeProfile(cert, NULL, NULL);
+  PORT_Free(rawCerts);
+loser:
+  if (arena) 
+    PORT_FreeArena(arena, PR_TRUE);
+  return nsrv;
+}
+
 char *
 default_nickname(CERTCertificate *cert, nsIInterfaceRequestor* ctx)
 {   
@@ -3397,6 +3455,11 @@ nsNSSCertificateDB::getCertType(CERTCertificate *cert)
   char *nick = cert->nickname;
   char *email = cert->emailAddr;
   nsNSSCertTrust trust(cert->trust);
+  /*
+fprintf(stderr, "====> nick: %s  email: %s  has-any-user: %d  hash-any-ca: %d  has-peer100: %d  has-peer001: %d\n",
+  nick, email, (nick) ? trust.HasAnyUser() : 0, (nick) ? trust.HasAnyCA() : 0, (nick) ? trust.HasPeer(PR_TRUE, PR_FALSE, PR_FALSE) : 0, 
+  (email) ? trust.HasPeer(PR_FALSE, PR_TRUE, PR_FALSE) : 0 );
+*/
   if (nick) {
     if (trust.HasAnyUser())
       return nsIX509Cert::USER_CERT;
@@ -3405,7 +3468,7 @@ nsNSSCertificateDB::getCertType(CERTCertificate *cert)
     if (trust.HasPeer(PR_TRUE, PR_FALSE, PR_FALSE))
       return nsIX509Cert::SERVER_CERT;
   }
-  if (email && trust.HasPeer(PR_FALSE, PR_FALSE, PR_TRUE))
+  if (email && trust.HasPeer(PR_FALSE, PR_TRUE, PR_FALSE))
     return nsIX509Cert::EMAIL_CERT;
   return nsIX509Cert::UNKNOWN_CERT;
 }
@@ -3716,4 +3779,159 @@ nsNSSCertificateDB::EnableOCSP()
     return rv;
 
   return nssComponent->EnableOCSP();
+}
+
+/* nsIX509Cert getDefaultEmailEncryptionCert (); */
+NS_IMETHODIMP
+nsNSSCertificateDB::GetEmailEncryptionCert(const PRUnichar* aNickname, nsIX509Cert **_retval)
+{
+  nsresult rv = NS_OK;
+  CERTCertificate *cert = 0;
+  nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
+  nsNSSCertificate *nssCert = nsnull;
+  char *asciiname = NULL;
+  asciiname = NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(aNickname).get());
+
+  *_retval = 0;
+
+  /* Find a good cert in the user's database */
+  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), asciiname, 
+           certUsageEmailRecipient, PR_TRUE, ctx);
+
+  if (!cert) { goto loser; }  
+
+  nssCert = new nsNSSCertificate(cert);
+  if (nssCert == nsnull) {
+    rv = NS_ERROR_OUT_OF_MEMORY;
+  }
+  NS_ADDREF(nssCert);
+
+  *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
+
+loser:
+  if (cert) CERT_DestroyCertificate(cert);
+  return rv;
+}
+
+/* nsIX509Cert getDefaultEmailSigningCert (); */
+NS_IMETHODIMP
+nsNSSCertificateDB::GetEmailSigningCert(const PRUnichar* aNickname, nsIX509Cert **_retval)
+{
+  nsresult rv = NS_OK;
+  CERTCertificate *cert = 0;
+  nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
+  nsNSSCertificate *nssCert = nsnull;
+  char *asciiname = NULL;
+  asciiname = NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(aNickname).get());
+
+  *_retval = 0;
+
+  /* Find a good cert in the user's database */
+  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), asciiname, 
+           certUsageEmailSigner, PR_TRUE, ctx);
+
+  if (!cert) { goto loser; }  
+
+  nssCert = new nsNSSCertificate(cert);
+  if (nssCert == nsnull) {
+    rv = NS_ERROR_OUT_OF_MEMORY;
+  }
+  NS_ADDREF(nssCert);
+
+  *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
+
+loser:
+  if (cert) CERT_DestroyCertificate(cert);
+  return rv;
+}
+
+/* nsIX509Cert getCertByEmailAddress (in nsIPK11Token aToken, in wstring aEmailAddress); */
+NS_IMETHODIMP
+nsNSSCertificateDB::GetCertByEmailAddress(nsIPK11Token *aToken, const char *aEmailAddress, nsIX509Cert **_retval)
+{
+  CERTCertificate *cert = nsnull;
+  CERTCertList *certList = nsnull;
+  SECStatus sec_rv;
+  nsresult rv = NS_OK;
+
+  certList = CERT_CreateEmailAddrCertList(nsnull, CERT_GetDefaultCertDB(),
+          (char*)aEmailAddress, PR_Now(), PR_TRUE);
+  if (certList == nsnull) {
+    rv = NS_ERROR_FAILURE;
+    goto loser;
+  }
+
+  sec_rv = CERT_FilterCertListByUsage(certList, certUsageEmailRecipient, PR_FALSE);
+
+  if (!CERT_LIST_END(CERT_LIST_HEAD(certList), certList)) {
+    nsNSSCertificate *nssCert = new nsNSSCertificate(CERT_LIST_HEAD(certList)->cert);
+    if (nssCert == nsnull) {
+      rv = NS_ERROR_OUT_OF_MEMORY;
+      goto loser;
+    }
+    NS_ADDREF(nssCert);
+    *_retval = NS_STATIC_CAST(nsIX509Cert*, nssCert);
+  }
+loser:
+  if (certList) {
+    CERT_DestroyCertList(certList);
+  }
+
+  return rv;
+}
+
+/* nsIX509Cert constructX509FromBase64 (in string base64); */
+NS_IMETHODIMP
+nsNSSCertificateDB::ConstructX509FromBase64(const char * base64, nsIX509Cert **_retval)
+{
+  if (!_retval) {
+    return NS_ERROR_FAILURE;
+  }
+
+  PRUint32 len = PL_strlen(base64);
+  int adjust = 0;
+
+  /* Compute length adjustment */
+  if (base64[len-1] == '=') {
+    adjust++;
+    if (base64[len-2] == '=') adjust++;
+  }
+
+  nsNSSAutoCPtr<char> certDER (0, &nsCRT::free);
+  PRInt32 lengthDER = 0;
+
+  certDER.setPtr((char*)PL_Base64Decode(base64, len, NULL));
+  if (!*certDER) { 
+    return NS_ERROR_ILLEGAL_VALUE;
+  }
+
+  lengthDER = (len*3)/4 - adjust;
+
+  SECItem secitem_cert;
+  secitem_cert.type = siDERCertBuffer;
+  secitem_cert.data = (unsigned char*)certDER.ptr();
+  secitem_cert.len = lengthDER;
+
+  nsNSSAutoCPtr<CERTCertificate> cert(
+    CERT_NewTempCertificate(CERT_GetDefaultCertDB(), &secitem_cert, nsnull, PR_FALSE, PR_TRUE),
+    CERT_DestroyCertificate
+  );
+  
+  if (!cert) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsNSSCertificate *nsNSS = new nsNSSCertificate(cert);
+  if (!nsNSS) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  nsresult rv = nsNSS->QueryInterface(NS_GET_IID(nsIX509Cert), (void**)_retval);
+
+  if (NS_SUCCEEDED(rv) && *_retval) {
+    NS_ADDREF(*_retval);
+  }
+  
+  NS_RELEASE(nsNSS);
+  return rv;
 }

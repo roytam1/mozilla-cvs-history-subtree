@@ -2185,8 +2185,10 @@ function LoadIdentity(startup)
           }
       }
     }
-}
 
+    // Initialize our security options
+    initSecuritySettings();
+}
 
 function setupAutocomplete()
 {
@@ -2365,3 +2367,51 @@ function DisplaySaveFolderDlg(folderURI)
   return;
 }
 
+function encryptMessage()
+{
+    if (gCurrentIdentity.encryptionCertName == null) {
+        alert("You must choose an encryption certificate first");
+        document.getElementById("menu_securityEncryptAlways").removeAttribute("checked");
+        return;
+    }
+
+    var msgCompFields = msgCompose.compFields;
+    if (msgCompFields) {
+        if (msgCompFields.alwaysEncryptMessage) {
+            msgCompFields.alwaysEncryptMessage = false;
+        } else {
+            msgCompFields.alwaysEncryptMessage = true;
+        }
+    }
+}
+
+function signMessage()
+{
+    if (gCurrentIdentity.signingCertName == null) {
+        alert("You must choose a signing certificate first");
+        document.getElementById("menu_securitySign").removeAttribute("checked");
+        return;
+    }
+
+    var msgCompFields = msgCompose.compFields;
+    if (msgCompFields) {
+        if (msgCompFields.signMessage) {
+            msgCompFields.signMessage = false;
+        } else {
+            msgCompFields.signMessage = true;
+        }
+    }
+}
+
+function initSecuritySettings()
+{
+    document.getElementById("menu_securityEncryptAlways").setAttribute("checked", gCurrentIdentity.alwaysEncryptMessage);
+    document.getElementById("menu_securitySign").setAttribute("checked", gCurrentIdentity.signMessage);
+}
+
+function setSecuritySettings()
+{
+    var msgCompFields = msgCompose.compFields;
+    document.getElementById("menu_securityEncryptAlways").setAttribute("checked", msgCompFields.alwaysEncryptMessage);
+    document.getElementById("menu_securitySign").setAttribute("checked", msgCompFields.signMessage);
+}

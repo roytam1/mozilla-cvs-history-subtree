@@ -30,6 +30,13 @@ function onInit()
 
     setupBiffUI();
     setupMailOnServerUI();
+
+    // disable for bug #14295.  Also see bug 104253 and 103181 for why the elements
+    // are being disabled here.
+    var disabledElem = document.getElementById("server.username");
+    disabledElem.setAttribute("disabled","true");
+    disabledElem = document.getElementById("server.hostName");
+    disabledElem.setAttribute("disabled","true");
 }
 
 function onPreInit(account, accountValues)

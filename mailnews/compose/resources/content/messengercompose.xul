@@ -30,6 +30,8 @@
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/securityOverlay.xul"?>
+
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
@@ -342,6 +344,16 @@
               </rule>
             </template>
           </menu>     
+
+          <menuseparator/>
+          <menu label="&securityMenu.label;">
+            <menupopup onpopupshowing="setSecuritySettings()">
+            <menuitem id="menu_securityEncryptIfPossible" type="checkbox" label="&menu_securityEncryptIfPossible.label;" disabled="true"/>
+            <menuitem id="menu_securityEncryptAlways" type="checkbox" label="&menu_securityEncryptAlways.label;" oncommand="encryptMessage()"/>
+            <menuitem id="menu_securitySign" type="checkbox" label="&menu_securitySign.label;" oncommand="signMessage()"/>
+            </menupopup>
+          </menu>
+
           <!--menuseparator/>
           <menuitem label="&addSignatureCmd.label;" disabled="true" oncommand=""/>      
           <menuitem label="&attachVCardCmd.label;" disabled="true" accesskey="&attachVCardCmd.accesskey;" oncommand="AttachVCard()"/-->     
@@ -469,7 +481,6 @@
                    mode="normal" value="0" statusbar="true"/>
     <statusbarpanel checkfunc="MailCheckBeforeOfflineChange()" id="offline-status" class="statusbarpanel-icononly"/> 
   </statusbar>
-
 
 </window>
 

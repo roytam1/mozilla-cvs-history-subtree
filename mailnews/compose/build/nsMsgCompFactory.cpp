@@ -56,6 +56,7 @@
 #include "nsMsgComposeService.h"
 #include "nsMsgComposeContentHandler.h"
 #include "nsMsgCompose.h"
+#include "nsMsgComposeSecure.h"
 #include "nsMsgComposeParams.h"
 #include "nsMsgComposeProgressParams.h"
 #include "nsMsgSend.h"
@@ -73,6 +74,7 @@
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpService);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpServer);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCompose);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeSecure);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeParams);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeSendListener);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeProgressParams);
@@ -102,6 +104,10 @@ static nsModuleComponentInfo components[] =
     NS_MSGCOMPOSE_CID,
     NS_MSGCOMPOSE_CONTRACTID,
     nsMsgComposeConstructor },
+  { "Msg Compose Secure",
+    NS_MSGCOMPOSESECURE_CID,
+    NS_MSGCOMPOSESECURE_CONTRACTID,
+    nsMsgComposeSecureConstructor },
   { "Msg Compose Service",
     NS_MSGCOMPOSESERVICE_CID,
     NS_MSGCOMPOSESERVICE_CONTRACTID,

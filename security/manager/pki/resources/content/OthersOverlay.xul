@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!-- 
+
+  ADD CORRECT LICENSE HEADER
+
+  -->
+
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+
+<!DOCTYPE window SYSTEM "chrome://pippki/locale/certManager.dtd">
+
+<overlay id="WebSitesOverlay" 
+         xmlns:html="http://www.w3.org/1999/xhtml" 
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+         xmlns:cert="http://netscape.com/rdf-cert#" 
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <vbox id="othersCerts">
+    <html>&certmgr.others;</html>
+    <separator class="thin"/>
+    <outliner id="email-outliner" multiple="true"
+              onselect="email_enableButtons()" flex="1">
+      <outlinercol id="certcol" label="&certmgr.certname;" primary="true" 
+                   class="outlinercol-header outlinercell-inset-header" 
+                   flex="1"/>
+      <splitter class="tree-splitter"/>
+      <outlinercol id="tokencol" label="&certmgr.tokenname;"
+                   class="outlinercol-header outlinercell-inset-header" 
+                   flex="1"/>
+<!--      <outlinercol id="certdbkeycol" collapsed="true" flex="1"/> -->
+      <outlinerbody flex="1" ondblclick="viewCerts();"/>
+    </outliner>
+    <hbox>
+      <button id="email_viewButton" class="normal" 
+              label="&certmgr.view.label;"
+              disabled="true" oncommand="viewCerts();"/>
+      <button id="email_editButton" class="normal" 
+              label="&certmgr.edit.label;"
+              disabled="true" oncommand="editCerts();"/>
+<!-- future - import a DER cert?
+      <button id="email_addButton" class="normal" 
+              label="&certmgr.add.label;"
+              oncommand="addCerts();"/>
+-->
+      <button id="email_deleteButton" class="normal" 
+              label="&certmgr.delete.label;"
+              disabled="true" oncommand="deleteCerts();"/>
+    </hbox>
+  </vbox>
+</overlay>

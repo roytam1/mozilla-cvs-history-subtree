@@ -50,6 +50,7 @@ REQUIRES	= xpcom \
 		  msgdb \
 		  appshell \
 		  nkcache \
+          pipnss \
 		  $(NULL)
 
 ifeq ($(USE_SHORT_LIBNAME),1)

@@ -903,7 +903,7 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 		if (status < 0)
 			goto FAIL;
 
-    if (m_attachment_count > mMultipartRelatedAttachmentCount)
+    if (!m_crypto_closure && m_attachment_count > mMultipartRelatedAttachmentCount)
     {
       status = toppart->SetBuffer(MIME_MULTIPART_BLURB);
     }
@@ -1068,6 +1068,14 @@ nsMsgComposeAndSend::GatherMimeAttachments()
 	status = toppart->Write();
 	if (status < 0)
 		goto FAIL;
+
+  /* Close down encryption stream */
+  if (m_crypto_closure)
+	{
+	  status = m_crypto_closure->FinishCryptoEncapsulation(PR_FALSE);
+	  m_crypto_closure = 0;
+	  if (NS_FAILED(status)) goto FAIL;
+	}
   
   if (mOutputFile) 
   {
@@ -1241,17 +1249,54 @@ nsMsgComposeAndSend::PreProcessPart(nsMsgAttachmentHandler  *ma,
 #pragma optimization_level 4
 #endif // XP_MAC && DEBUG
 
+nsresult nsMsgComposeAndSend::BeginCryptoEncapsulation ()
+{
+  nsresult rv = NS_OK;
+  char*recipients = nsnull;
+  if (mCompFields->GetAlwaysEncryptMessage() || mCompFields->GetSignMessage())
+	{
+	  int status = 0;
+	  recipients = (char *)
+      PR_MALLOC((mCompFields->GetTo()  ? nsCRT::strlen(mCompFields->GetTo())  : 0) +
+				 (mCompFields->GetCc()  ? nsCRT::strlen(mCompFields->GetCc())  : 0) +
+				 (mCompFields->GetBcc() ? nsCRT::strlen(mCompFields->GetBcc()) : 0) +
+				 (mCompFields->GetNewsgroups()
+				  ? nsCRT::strlen(mCompFields->GetNewsgroups()) : 0) +
+				 20);
+	  if (!recipients) return NS_ERROR_OUT_OF_MEMORY;
+	  *recipients = 0;
 # define FROB(X) \
 	  if (X && *X) \
 		{ \
 		  if (*recipients) PL_strcat(recipients, ","); \
 		  PL_strcat(recipients, X); \
-	  }
+		}
+	  FROB(mCompFields->GetTo())
+	  FROB(mCompFields->GetCc())
+	  FROB(mCompFields->GetBcc())
+	  FROB(mCompFields->GetNewsgroups())
+# undef FROB
+    m_crypto_closure = do_CreateInstance(NS_MSGCOMPOSESECURE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) {
+     goto loser;
+    }
+    rv = m_crypto_closure->BeginCryptoEncapsulation(mOutputFile,
+												mCompFields->GetAlwaysEncryptMessage(),
+												mCompFields->GetSignMessage(),
+												recipients, mUserIdentity,
+												(m_deliver_mode == nsMsgSaveAsDraft));
+
+	}
+loser:
+  if (recipients) {
+    PR_Free(recipients);
+  }
+  return rv;
+}
 
 #if defined(XP_MAC) && defined(DEBUG)
 #pragma global_optimizer reset
 #endif // XP_MAC && DEBUG
-
 
 nsresult
 mime_write_message_body(nsIMsgSend *state, char *buf, PRInt32 size)
@@ -1259,10 +1304,18 @@ mime_write_message_body(nsIMsgSend *state, char *buf, PRInt32 size)
 	NS_ENSURE_ARG_POINTER(state);
 
   nsOutputFileStream * output;
+  nsIMsgComposeSecure* crypto_closure;
+
   state->GetOutputStream(&output);
   if (!output || CHECK_SIMULATED_ERROR(SIMULATED_SEND_ERROR_9))
     return NS_MSG_ERROR_WRITING_FILE;
-    
+
+  state->GetCryptoclosure(&crypto_closure);
+  if (crypto_closure)
+  {
+	  return crypto_closure->MimeCryptoWriteBlock (buf, size);
+	}
+
   if (PRInt32(output->write(buf, size)) < size) 
   {
     return NS_MSG_ERROR_WRITING_FILE;
@@ -2666,6 +2719,10 @@ nsMsgComposeAndSend::InitCompositionFields(nsMsgCompFields *fields)
 	mCompFields->SetUseMultipartAlternative(fields->GetUseMultipartAlternative());
 	mCompFields->SetReturnReceipt(fields->GetReturnReceipt());
 	mCompFields->SetUuEncodeAttachments(fields->GetUuEncodeAttachments());
+
+  mCompFields->SetAlwaysEncryptMessage(fields->GetAlwaysEncryptMessage());
+  mCompFields->SetSignMessage(fields->GetSignMessage());
+
 
 	//
   // Check the fields for legitimacy...
@@ -4363,7 +4420,6 @@ NS_IMETHODIMP nsMsgComposeAndSend::SetRunningRequest(nsIRequest *request)
   return NS_OK;
 }
 
-
 NS_IMETHODIMP nsMsgComposeAndSend::GetStatus(nsresult *aStatus)
 {
   NS_ENSURE_ARG(aStatus);
@@ -4374,6 +4430,19 @@ NS_IMETHODIMP nsMsgComposeAndSend::GetStatus(nsresult *aStatus)
 NS_IMETHODIMP nsMsgComposeAndSend::SetStatus(nsresult aStatus)
 {
   m_status = aStatus;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgComposeAndSend::GetCryptoclosure(nsIMsgComposeSecure ** aCryptoclosure)
+{
+  NS_ENSURE_ARG(aCryptoclosure);
+  *aCryptoclosure = m_crypto_closure;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgComposeAndSend::SetCryptoclosure(nsIMsgComposeSecure * aCryptoclosure)
+{
+  m_crypto_closure = aCryptoclosure;
   return NS_OK;
 }
 

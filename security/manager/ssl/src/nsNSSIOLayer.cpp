@@ -155,13 +155,17 @@ nsNSSSocketInfo::nsNSSSocketInfo()
     mForTLSStepUp(PR_FALSE),
     mFirstWrite(PR_TRUE),
     mTLSIntolerant(PR_FALSE),
-    mPort(0)
+    mPort(0),
+    mCAChain(nsnull)
 { 
   NS_INIT_ISUPPORTS();
 }
 
 nsNSSSocketInfo::~nsNSSSocketInfo()
 {
+  if (mCAChain) {
+    CERT_DestroyCertList(mCAChain);
+  }
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS4(nsNSSSocketInfo,
@@ -361,6 +365,15 @@ nsresult nsNSSSocketInfo::GetSSLStatus(nsISSLStatus** _result)
   *_result = mSSLStatus;
   NS_IF_ADDREF(*_result);
 
+  return NS_OK;
+}
+
+nsresult nsNSSSocketInfo::RememberCAChain(CERTCertList *aCertList)
+{
+  if (mCAChain) {
+    CERT_DestroyCertList(mCAChain);
+  }
+  mCAChain = aCertList;
   return NS_OK;
 }
 
