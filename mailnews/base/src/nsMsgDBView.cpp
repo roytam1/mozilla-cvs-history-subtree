@@ -422,6 +422,14 @@ NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
   return NS_OK;
 }
 
+// search view will override this since headers can span db's
+nsresult nsMsgDBView::GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr)
+{
+  nsresult rv = NS_OK;
+  nsMsgKey key = m_keys.GetAt(index);
+  return m_db->GetMsgHdrForKey(key, msgHdr);
+}
+
 NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
 {
   nsresult rv = NS_OK;
@@ -431,7 +439,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
     msgHdr = m_cachedHdr;
   else
   {
-    rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+    GetMsgHdrForViewIndex(aRow, getter_AddRefs(msgHdr));
     if (NS_SUCCEEDED(rv))
     {
       m_cachedHdr = msgHdr;
@@ -2845,10 +2853,17 @@ nsresult nsMsgDBView::FindNextUnread(nsMsgKey startId, nsMsgKey *pResultKey,
             *pResultKey = m_keys.GetAt(curIndex);
             break;
         }
-        // check for collapsed thread with new children
+        // check for collapsed thread with unread children
         if (m_sortType == nsMsgViewSortType::byThread && flags & MSG_VIEW_FLAG_ISTHREAD && flags & MSG_FLAG_ELIDED) {
-            printf("fix this\n");
-            //nsMsgKey threadId = m_keys.GetAt(curIndex);
+            nsCOMPtr<nsIMsgThread> thread;
+            nsMsgKey threadId = m_keys.GetAt(curIndex);
+            rv = GetThreadFromMsgIndex(curIndex, getter_AddRefs(thread));
+            if (NS_SUCCEEDED(rv) && thread) {
+              nsCOMPtr <nsIMsgDBHdr> unreadChild;
+              rv = thread->GetFirstUnreadChild(getter_AddRefs(unreadChild));
+              if (NS_SUCCEEDED(rv) && unreadChild)
+                unreadChild->GetMessageKey(pResultKey);
+            }
             //rv = m_db->GetUnreadKeyInThread(threadId, pResultKey, resultThreadId);
             if (NS_SUCCEEDED(rv) && (*pResultKey != nsMsgKey_None))
                 break;
