@@ -43,6 +43,7 @@ var gCookiesWindow = {
                                 .getService(Components.interfaces.nsIScriptableDateFormat),
   _cookies          : [],
   _hosts            : {},
+  _hostOrder        : [],
   _tree             : null,
   _bundle           : null,
 
@@ -101,15 +102,15 @@ var gCookiesWindow = {
     var rowIndex = 0;
     var cookieItem = null;
     if (!this._view._filtered) {
-      for (var host in this._hosts) {
+      for (var i = 0; i < this._hostOrder.length; ++i) { // (var host in this._hosts) {
         ++rowIndex;
-        var hostItem = this._hosts[host];
-        if (host == strippedHost) {
+        var hostItem = this._hosts[this._hostOrder[i]]; // var hostItem = this._hosts[host];
+        if (this._hostOrder[i] == strippedHost) { // host == strippedHost) {
           // Host matches, look for the cookie within this Host collection
           // and update its data
-          for (var i = 0; i < hostItem.cookies.length; ++i) {
+          for (var j = 0; j < hostItem.cookies.length; ++j) {
             ++rowIndex;
-            var currCookie = hostItem.cookies[i];
+            var currCookie = hostItem.cookies[j];
             if (this._cookieEquals(currCookie, changedCookie, strippedHost)) {
               currCookie.value    = changedCookie.value;
               currCookie.isSecure = changedCookie.isSecure;
@@ -194,8 +195,8 @@ var gCookiesWindow = {
         return this._filterSet[aIndex];
         
       var count = 0, hostIndex = 0;
-      for (var host in gCookiesWindow._hosts) {
-        var currHost = gCookiesWindow._hosts[host];
+      for (var i = 0; i < gCookiesWindow._hostOrder.length; ++i) { // var host in gCookiesWindow._hosts) {
+        var currHost = gCookiesWindow._hosts[gCookiesWindow._hostOrder[i]]; // gCookiesWindow._hosts[host];
         if (!currHost) continue;
         if (count == aIndex)
           return currHost;
@@ -410,6 +411,7 @@ var gCookiesWindow = {
                                      level     : 0,
                                      open      : false,
                                      container : true };
+      this._hostOrder.push(aStrippedHost);
       ++aHostCount.value;
     }
     
@@ -438,7 +440,8 @@ var gCookiesWindow = {
   {
     var e = this._cm.enumerator;
     var hostCount = { value: 0 };
-    this._hosts = { };
+    this._hosts = {};
+    this._hostOrder = [];
     while (e.hasMoreElements()) {
       var cookie = e.getNext().QueryInterface(Components.interfaces.nsICookie);
       if (!cookie) break;
@@ -506,7 +509,7 @@ var gCookiesWindow = {
     var rangeCount = seln.getRangeCount();
     var selectedCookieCount = 0;
     for (i = 0; i < rangeCount; ++i) {
-      var min = { }; var max = { };
+      var min = {}; var max = {};
       seln.getRangeAt(i, min, max);
       for (var j = min.value; j <= max.value; ++j) {
         item = this._view._getItemAtIndex(j);
@@ -626,7 +629,7 @@ var gCookiesWindow = {
     else {
       var rangeCount = seln.getRangeCount();
       for (var i = 0; i < rangeCount; ++i) {
-        var min = { }; var max = { };
+        var min = {}; var max = {};
         seln.getRangeAt(i, min, max);
         nextSelected = min.value;        
         for (var j = min.value; j <= max.value; ++j) {
@@ -664,6 +667,7 @@ var gCookiesWindow = {
   {
     this._cm.removeAll();
     this._hosts = {};
+    this._hostOrder = [];
     
     var oldRowCount = this._view._rowCount;
     this._view._rowCount = 0;
@@ -679,31 +683,47 @@ var gCookiesWindow = {
       this.deleteCookie();
   },
   
-  _lastCookieSortColumn   : "",
-  _lastCookieSortAscending: false,
+  _lastSortProperty : "",
+  _lastSortAscending: false,
   
-  sort: function (aColumn) 
+  sort: function (aProperty) 
   {
-/*
-    var ascending = (aColumn == aLastSortColumn) ? !aLastSortAscending : true;
-    aTable.sort(function (a, b) { return a[aColumn].toLowerCase().localeCompare(b[aColumn].toLowerCase()); });
-    if (!ascending)
-      aTable.reverse();
-    
-    aTree.view.selection.select(-1);
-    aTree.view.selection.select(0);
-    aTree.treeBoxObject.invalidate();
-    aTree.treeBoxObject.ensureRowIsVisible(0);
-    
-    return ascending;
-*/  
-    this._lastCookieSortAscending = gTreeUtils.sort(this._tree,
-                                                    this._view,
-                                                    this._cookies,
-                                                    aColumn,
-                                                    this._lastCookieSortColumn,
-                                                    this._lastCookieSortAscending);
-    this._lastCookieSortColumn = aColumn;
+    var ascending = (aProperty == this._lastSortProperty) ? !this._lastSortAscending : true;
+    // Sort the Non-Filtered Host Collections
+    if (aProperty == "rawHost") {
+      function sortByHost(a, b)
+      {
+        return a.toLowerCase().localeCompare(b.toLowerCase());
+      }
+      this._hostOrder.sort(sortByHost);
+      if (!ascending)
+        this._hostOrder.reverse();
+    }
+        
+    function sortByProperty(a, b) 
+    {
+      return a[aProperty].toLowerCase().localeCompare(b[aProperty].toLowerCase());
+    }
+    for (var host in this._hosts) {
+      var cookies = this._hosts[host].cookies;
+      cookies.sort(sortByProperty);
+      if (!ascending)
+        cookies.reverse();
+    }
+    // Sort the Filtered List, if in Filtered mode
+    if (this._view._filtered) { 
+      this._view._filterSet.sort(sortByProperty);
+      if (!ascending)
+        this._view._filterSet.reverse();
+    }
+
+    this._view.selection.clearSelection();
+    this._view.selection.select(0);
+    this._tree.treeBoxObject.invalidate();
+    this._tree.treeBoxObject.ensureRowIsVisible(0);
+
+    this._lastSortAscending = ascending;
+    this._lastSortProperty = aProperty;
   },
   
   clearFilter: function ()
@@ -750,11 +770,11 @@ var gCookiesWindow = {
   {
     this._view._filterValue = aFilterValue;
     var cookies = [];
-    for (var host in gCookiesWindow._hosts) {
-      var currHost = gCookiesWindow._hosts[host];
+    for (var i = 0; i < gCookiesWindow._hostOrder.length; ++i) { //var host in gCookiesWindow._hosts) {
+      var currHost = gCookiesWindow._hosts[gCookiesWindow._hostOrder[i]]; // gCookiesWindow._hosts[host];
       if (!currHost) continue;
-      for (var i = 0; i < currHost.cookies.length; ++i) {
-        var cookie = currHost.cookies[i];
+      for (var j = 0; j < currHost.cookies.length; ++j) {
+        var cookie = currHost.cookies[j];
         if (this._cookieMatchesFilter(cookie))
           cookies.push(cookie);
       }
@@ -771,7 +791,7 @@ var gCookiesWindow = {
     this._lastSelectedRanges = [];
     var rangeCount = seln.getRangeCount();
     for (var i = 0; i < rangeCount; ++i) {
-      var min = { }; var max = { };
+      var min = {}; var max = {};
       seln.getRangeAt(i, min, max);
       this._lastSelectedRanges.push({ min: min.value, max: max.value });
     }
