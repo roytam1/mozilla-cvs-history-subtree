@@ -523,7 +523,10 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 
 - (void) onBlur:(NSNotification *)aNote
 {
-  [self selectRowAt:-1];
+  // close up the popup and make sure we clear any past selection. We cannot
+  // use |selectAt:-1| because that would show the popup, even for a brief instant
+  // and cause flashing.
+  [mTableView deselectAll:self];
   [self closePopup];
 }
 
