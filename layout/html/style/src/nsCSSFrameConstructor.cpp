@@ -5948,51 +5948,21 @@ nsCSSFrameConstructor::WrapTextFrame(nsIPresContext* aPresContext,
 // Tree Widget Routines
 NS_IMETHODIMP
 nsCSSFrameConstructor::CreateTreeWidgetContent(nsIPresContext* aPresContext,
-                                               nsIContent*     aContainer,
+                                               nsIFrame*       aParentFrame,
                                                nsIContent*     aChild,
-                                               PRInt32         aIndexInContainer,
                                                nsIFrame**      aNewFrame)
 {
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
   nsresult rv = NS_OK;
 
-  // If we have a null parent, then this must be the document element
-  // being inserted
-  
-  // Find the frame that precedes the insertion point.
-  nsIFrame* prevSibling = FindPreviousSibling(shell, aContainer, aIndexInContainer);
-  nsIFrame* nextSibling = nsnull;
-  PRBool    isAppend = PR_FALSE;
-  
-  // If there is no previous sibling, then find the frame that follows
-  if (nsnull == prevSibling) {
-    nextSibling = FindNextSibling(shell, aContainer, aIndexInContainer);
-  }
-
-  // Get the geometric parent.
-  nsIFrame* parentFrame;
-  if ((nsnull == prevSibling) && (nsnull == nextSibling)) {
-
-    // No previous or next sibling so treat this like an appended frame.
-    isAppend = PR_TRUE;
-    shell->GetPrimaryFrameFor(aContainer, &parentFrame);
-  } else {
-    // Use the prev sibling if we have it; otherwise use the next sibling
-    if (nsnull != prevSibling) {
-      prevSibling->GetParent(&parentFrame);
-    } else {
-      nextSibling->GetParent(&parentFrame);
-    }
-  }
-
   // Construct a new frame
-  if (nsnull != parentFrame) {
+  if (nsnull != aParentFrame) {
     nsFrameItems            frameItems;
     nsFrameConstructorState state(mFixedContainingBlock,
-                                  GetAbsoluteContainingBlock(aPresContext, parentFrame),
-                                  GetFloaterContainingBlock(aPresContext, parentFrame));
-    rv = ConstructFrame(aPresContext, state, aChild, parentFrame, PR_FALSE,
+                                  GetAbsoluteContainingBlock(aPresContext, aParentFrame),
+                                  GetFloaterContainingBlock(aPresContext, aParentFrame));
+    rv = ConstructFrame(aPresContext, state, aChild, aParentFrame, PR_FALSE,
                         frameItems);
     
     nsIFrame* newFrame = frameItems.childList;
@@ -6000,22 +5970,7 @@ nsCSSFrameConstructor::CreateTreeWidgetContent(nsIPresContext* aPresContext,
 
     if (NS_SUCCEEDED(rv) && (nsnull != newFrame)) {
       // Notify the parent frame
-      if (isAppend) {
-        rv = ((nsTreeRowGroupFrame*)parentFrame)->TreeAppendFrames(newFrame);
-      } else {
-        if (!prevSibling) {
-          // We're inserting the new frame as the first child. See if the
-          // parent has a :before pseudo-element
-          nsIFrame* firstChild;
-          parentFrame->FirstChild(nsnull, &firstChild);
-
-          if (IsGeneratedContentFor(aContainer, firstChild)) {
-            // Insert the new frames after the :before pseudo-element
-            prevSibling = firstChild;
-          }
-        }
-        rv = ((nsTreeRowGroupFrame*)parentFrame)->TreeInsertFrames(prevSibling, newFrame);
-      }
+      rv = ((nsTreeRowGroupFrame*)aParentFrame)->TreeAppendFrames(newFrame);
       
       // If there are new absolutely positioned child frames, then notify
       // the parent

@@ -187,7 +187,7 @@ nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext)
   nsCOMPtr<nsIContent> childContent;
   for (PRInt32 i = 0; i < count; i++) {
     mContent->ChildAt(i, *getter_AddRefs(childContent));
-    mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, childContent, i,
+    mFrameConstructor->CreateTreeWidgetContent(&aPresContext, this, childContent,
                                                  &mTopFrame);
     printf("Created a frame\n");
     mBottomFrame = mTopFrame;
@@ -220,7 +220,7 @@ nsTreeRowGroupFrame::GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFram
         // There is a content node that wants a frame.
         nsCOMPtr<nsIContent> nextContent;
         mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
-        mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, nextContent, i+1,
+        mFrameConstructor->CreateTreeWidgetContent(&aPresContext, this, nextContent,
                                                    aResult);
         printf("Created a frame\n");
         mBottomFrame = mFrames.FrameAt(i+1);
