@@ -18,20 +18,6 @@
  * Rights Reserved.
  */
 
-function goUpdateMailMenuItems(commandset)
-{
-//  dump("Updating commands for " + commandset.id + "\n");
-    
-  for (var i = 0; i < commandset.childNodes.length; i++)
-  {
-    var commandID = commandset.childNodes[i].getAttribute("id");
-    if (commandID)
-    {
-      goUpdateCommand(commandID);
-    }
-  }
-}
-
 // Controller object for folder pane
 var FolderPaneController =
 {

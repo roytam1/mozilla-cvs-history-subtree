@@ -21,6 +21,20 @@
  *               slucy@objectivesw.co.uk
  */
 
+function goUpdateMailMenuItems(commandset)
+{
+//  dump("Updating commands for " + commandset.id + "\n");
+    
+  for (var i = 0; i < commandset.childNodes.length; i++)
+  {
+    var commandID = commandset.childNodes[i].getAttribute("id");
+    if (commandID)
+    {
+      goUpdateCommand(commandID);
+    }
+  }
+}
+
 function file_init()
 {
     file_attachments();

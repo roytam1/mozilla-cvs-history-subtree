@@ -61,14 +61,18 @@ Rights Reserved.
         <script type="text/javascript" src="chrome://global/content/nsJSComponentManager.js"/>
         <script type="text/javascript" src="chrome://global/content/nsTransferable.js"/>
         <script type="text/javascript" src="chrome://global/content/nsDragAndDrop.js"/>
-	
-	<commands id="commands">
-		<commandset id="CommandUpdate_Mail"
-					commandupdater="true"
-					events="focus,tree-select"
-					oncommandupdate="CommandUpdate_Mail()"/>
-	</commands>
-	
+
+  <commands id="commands">
+
+    <commandset id="mailFileMenuItems"/>
+    <commandset id="mailViewMenuItems"/>
+    <commandset id="mailEditMenuItems"/>
+    <commandset id="mailSearchMenuItems"/>
+    <commandset id="mailGoMenuItems"/>
+    <commandset id="mailMessageMenuItems"/>
+    <commandset id="mailToolbarItems"/>
+  </commands>
+
 	<stringbundleset id="stringbundleset"/>
 
 	<broadcasterset id="broadcasterset"/>
