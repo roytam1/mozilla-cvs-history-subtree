@@ -182,6 +182,9 @@ typedef struct {
 #define CLS "SOFTWARE\\Classes\\"
 #define DI "\\DefaultIcon"
 #define SOP "\\shell\\open\\command"
+#define DDE "\\shell\\open\\ddeexec\\"
+#define DDE_NAME "Firefox" // This must be kept in sync with ID_DDE_APPLICATION_NAME as defined in splash.rc
+#define DDE_COMMAND "\"%1\",,0,0,,,,"
 #define EXE "firefox.exe"
 
 #define CLS_HTML "FirefoxHTML"
@@ -193,6 +196,9 @@ typedef struct {
 
 #define MAKE_KEY_NAME2(PREFIX, MID, SUFFIX) \
   PREFIX MID SUFFIX
+
+#define MAKE_KEY_NAME3(PREFIX, MID, MID2, SUFFIX) \
+  PREFIX MID MID2 SUFFIX
 
 static SETTING gSettings[] = {
   // Extension Manager Keys
@@ -223,6 +229,28 @@ static SETTING gSettings[] = {
   { MAKE_KEY_NAME2(CLS, "GOPHER", SOP), "", VAL_OPEN, PATH_SUBSTITUTION | NON_ESSENTIAL },
   { MAKE_KEY_NAME2(CLS, "CHROME", DI),  "", VAL_ICON, PATH_SUBSTITUTION | NON_ESSENTIAL },
   { MAKE_KEY_NAME2(CLS, "CHROME", SOP), "", VAL_OPEN, PATH_SUBSTITUTION | NON_ESSENTIAL },
+
+  // DDE settings
+  { MAKE_KEY_NAME2(CLS, "HTTP", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "HTTPS", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "FTP", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "GOPHER", DDE), "", DDE_COMMAND, NO_SUBSTITUTION | NON_ESSENTIAL  },
+  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION | NON_ESSENTIAL  },
+  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION | NON_ESSENTIAL  },
+  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "CHROME", DDE), "", DDE_COMMAND, NO_SUBSTITUTION | NON_ESSENTIAL  },
+  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION | NON_ESSENTIAL  },
+  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION | NON_ESSENTIAL  },
+  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
 
   // Windows XP Start Menu
   { MAKE_KEY_NAME2(SMI, "%APPEXE%", DI),  

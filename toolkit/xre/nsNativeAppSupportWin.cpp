@@ -904,7 +904,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
     if (!mCanHandleRequests)
         return 0;
 
-
+#ifdef DEBUG
     printf( "DDE: uType  =%s\n",      uTypeDesc( uType ).get() );
     printf( "     uFmt   =%u\n",      (unsigned)uFmt );
     printf( "     hconv  =%08x\n",    (int)hconv );
@@ -913,6 +913,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
     printf( "     hdata  =%08x\n",    (int)hdata );
     printf( "     dwData1=%08x\n",    (int)dwData1 );
     printf( "     dwData2=%08x\n",    (int)dwData2 );
+#endif
 
     HDDEDATA result = 0;
     if ( uType & XCLASS_BOOL ) {
@@ -932,8 +933,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
     } else if ( uType & XCLASS_DATA ) {
         if ( uType == XTYP_REQUEST ) {
             switch ( FindTopic( hsz1 ) ) {
-                case topicOpenURL: {
-                  MessageBox(NULL, "test", "hello", MB_OK);
+                case topicOpenURL: {                  
                     nsCAutoString start;
                     ParseDDEArg(hsz2, 0, start);
                     if (start.Equals("StartDDE"))
