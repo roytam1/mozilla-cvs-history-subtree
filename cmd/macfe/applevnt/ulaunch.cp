@@ -164,7 +164,7 @@ int LaunchError(ResIDT alertID, OSType creator, const Str63& fileName, OSErr err
 {
 		CMimeMapper * map = CPrefs::sMimeTypes.FindCreator(creator);
 		ErrorManager::PrepareToInteract();
-		ParamText(map->GetAppName(), CStr255(fileName), ErrorManager::OSNumToStr(err), CStr255(""));
+		ParamText(map->GetAppName(), fileName, ErrorManager::OSNumToStr(err), "\p");
 		UDesktop::Deactivate();
 		int retVal = ::CautionAlert(alertID, NULL);
 		UDesktop::Activate();
