@@ -329,21 +329,21 @@ function SwitchView(command)
     case "cmd_viewUnreadMsgs":
 
       viewFlags = viewFlags | nsMsgViewFlagsType.kUnreadOnly;
-      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowAllThreads, nsMsgViewFlagsType.kOutlineDisplay, 
+      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowAllThreads, viewFlags, 
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
     break;
     case "cmd_viewAllMsgs":
       viewFlags = viewFlags & ~nsMsgViewFlagsType.kUnreadOnly;
-      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowAllThreads, nsMsgViewFlagsType.kOutlineDisplay, 
+      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowAllThreads, viewFlags, 
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
     break;
     case "cmd_viewThreadsWithUnread":
-      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
+      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
 
     break;
     case "cmd_viewWatchedThreadsWithUnread":
-      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowWatchedThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
+      CreateDBView(msgWindow.openFolder, nsMsgViewType.eShowWatchedThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
             nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
    break;
     case "cmd_viewKilledThreads":
@@ -560,7 +560,7 @@ function CreateDBViewWithOldViewType(msgFolder, isThreaded, viewType, sortKey, s
       viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
     else   
       viewFlags = nsMsgViewFlagsType.kFlatDisplay;
-  CreateDBView(msgFolder, isThreaded, dbViewType, viewFlags, sortKey, sortDirection);
+  CreateDBView(msgFolder, dbViewType, viewFlags, sortKey, sortDirection);
 }
 
 function CreateDBView(msgFolder, viewType, viewFlags, sortKey, sortDirection)
