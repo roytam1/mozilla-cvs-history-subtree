@@ -231,7 +231,7 @@ public:
   NS_IMETHOD GetDefaultBackgroundColor(nscolor* aColor) = 0;
   NS_IMETHOD GetDefaultBackgroundImage(nsString& aImage) = 0;
   NS_IMETHOD GetDefaultBackgroundImageRepeat(PRUint8* aRepeat) = 0;
-  NS_IMETHOD GetDefaultBackgroundImageOffset(nscoord* aX, nscoord* aY) = 0;
+  NS_IMETHOD GetDefaultBackgroundImageOffset(gfx_coord* aX, gfx_coord* aY) = 0;
   NS_IMETHOD GetDefaultBackgroundImageAttachment(PRUint8* aRepeat) = 0;
   NS_IMETHOD GetDefaultLinkColor(nscolor* aColor) = 0;
   NS_IMETHOD GetDefaultVisitedLinkColor(nscolor* aColor) = 0;
@@ -240,7 +240,7 @@ public:
   NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor) = 0;
   NS_IMETHOD SetDefaultBackgroundImage(const nsString& aImage) = 0;
   NS_IMETHOD SetDefaultBackgroundImageRepeat(PRUint8 aRepeat) = 0;
-  NS_IMETHOD SetDefaultBackgroundImageOffset(nscoord aX, nscoord aY) = 0;
+  NS_IMETHOD SetDefaultBackgroundImageOffset(gfx_coord aX, gfx_coord aY) = 0;
   NS_IMETHOD SetDefaultBackgroundImageAttachment(PRUint8 aRepeat) = 0;
   NS_IMETHOD SetDefaultLinkColor(nscolor aColor) = 0;
   NS_IMETHOD SetDefaultVisitedLinkColor(nscolor aColor) = 0;
@@ -294,13 +294,13 @@ public:
    * Get the visible area associated with this presentation context.
    * This is the size of the visiable area that is used for
    * presenting the document. The returned value is in the standard
-   * nscoord units (as scaled by the device context).
+   * gfx_coord units (as scaled by the device context).
    */
   NS_IMETHOD GetVisibleArea(nsRect& aResult) = 0;
 
   /**
    * Set the currently visible area. The units for r are standard
-   * nscoord units (as scaled by the device context).
+   * gfx_coord units (as scaled by the device context).
    */
   NS_IMETHOD SetVisibleArea(const nsRect& r) = 0;
 
@@ -313,12 +313,12 @@ public:
   /**
    * Return the page width if this is a paginated context.
    */
-  NS_IMETHOD GetPageWidth(gfx_width* aResult) = 0;
+  NS_IMETHOD GetPageWidth(gfx_dimension* aResult) = 0;
 
   /**
    * Return the page height if this is a paginated context
    */
-  NS_IMETHOD GetPageHeight(gfx_height* aResult) = 0;
+  NS_IMETHOD GetPageHeight(gfx_dimension* aResult) = 0;
 
   NS_IMETHOD GetPixelsToTwips(float* aResult) const = 0;
 
