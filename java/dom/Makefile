@@ -25,6 +25,6 @@ srcdir		= .
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = src jni classes
+DIRS = classes jni src
 
 include $(topsrcdir)/config/rules.mk
