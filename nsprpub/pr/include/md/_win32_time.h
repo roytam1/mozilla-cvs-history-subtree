@@ -33,13 +33,13 @@
  * GPL.
  */
 
-#ifndef nspr_wintime_h___
-#define nspr_wintime_h___
+#ifndef nspr_win32_time_h___
+#define nspr_win32_time_h___
 
 #include <windows.h>
 
 /*
- * _wintime.h
+ * _win23_time.h
  *
  * This file mainly exists because when porting NSPR to WinCE there was
  *  a lack of LIBC support.  Conversion between window's FILETIME and
@@ -177,4 +177,4 @@ struct tm {
     int tm_isdst;
 };
 
-#endif /* nspr_wintime_h___ */
+#endif /* nspr_win32_time_h___ */

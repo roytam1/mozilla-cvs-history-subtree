@@ -40,7 +40,7 @@
 #include <winsock.h>
 #include <winnt.h>
 #include <stdlib.h>
-#include "_wintime.h"
+#include "_win32_time.h"
 
 #include "prio.h"
 
@@ -493,8 +493,6 @@ extern PRStatus _MD_CloseFileMap(struct PRFileMap *fmap);
 #define _MD_DELETE_SEMAPHORE(name)    PR_SUCCESS  /* no op */
 
 
-
-
 /*
  * WINCE LIBC support missing some integral parts
  */
@@ -532,10 +530,5 @@ struct stat {
 #define _S_IREAD    0000400 /* stat, can read */
 #define _S_IWRITE   0000200 /* stat, can write */
 #define ENOMEM /* errno, out of memory */
-
-/*
- * Some quick macros.
- */
-#define _PR_MD_CE_NOT_IMPLEMENTED _PR_MD_MAP_DEFAULT_ERROR(ERROR_CALL_NOT_IMPLEMENTED)
 
 #endif /* nspr_wince_defs_h___ */
