@@ -63,8 +63,8 @@ fieldset {
   display: block;
   margin-left: 2px;
   margin-right: 2px;
-  padding: 0.75em 0.625em;
-  border: 2px groove ThreeDFace;
+  padding: 4px 4px 4px 4px;
+  border: 2px solid;
 }
 
 label {
@@ -224,13 +224,7 @@ optgroup[disabled],
 select[disabled],
 select[disabled]:-moz-display-comboboxcontrol-frame {
   color: GrayText;
-  background-color: ThreeDFace;
   cursor: default;
-}
-
-option[disabled],
-optgroup[disabled] {
-  background-color: -moz-field;
 }
 
 /* hidden inputs */
@@ -327,6 +321,7 @@ input[type="checkbox"][disabled]:hover,
 input[type="checkbox"][disabled]:hover:active {
   padding: 1px;
   border-color: ThreeDShadow;
+  background-color: GrayText;
 
   border-width: 1px !important;
   border-style: inset !important;
