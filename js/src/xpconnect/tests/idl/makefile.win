@@ -45,7 +45,6 @@ XPIDLSRCS = \
 	.\xpctest_inout.idl \
 	.\xpctest_multiple.idl \
 	.\xpctest_out.idl \
-	.\xpctest_domstring.idl \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

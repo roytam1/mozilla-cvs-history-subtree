@@ -49,7 +49,6 @@ XPIDLSRCS	= \
 		xpctest_in.idl \
 		xpctest_inout.idl \
 		xpctest_multiple.idl \
-		xpctest_domstring.idl \
 		xpctest_out.idl \
 		$(NULL)
 

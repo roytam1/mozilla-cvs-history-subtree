@@ -20,7 +20,6 @@
  *
  * Contributor(s): 
  *     Don Bragg <dbragg@netscape.com>
- *     Samir Gehani <sgehani@netscape.com>
  */
 
 /*****************************************************************************
@@ -38,7 +37,6 @@
 
 #include "prtypes.h"
 #include "prio.h"
-#include "prthread.h"
 
 #include <stdlib.h>
 #include <Processes.h>
@@ -83,54 +81,26 @@ nsProcess::Init(nsIFile* executable)
 NS_IMETHODIMP  
 nsProcess::Run(PRBool blocking, const char **args, PRUint32 count, PRUint32 *pid)
 {
-    OSErr err = noErr;
-    LaunchParamBlockRec	launchPB;
-    FSSpec resolvedSpec;
-    Boolean bDone = false;
-    ProcessInfoRec info;
+ 	OSErr err = noErr;
+	LaunchParamBlockRec	launchPB;
+    FSSpec* targetSpec;
 
     nsCOMPtr<nsILocalFileMac> macExecutable = do_QueryInterface(mExecutable);
-    macExecutable->GetResolvedFSSpec(&resolvedSpec);
+    macExecutable->GetFSSpec(targetSpec);
+    
+	launchPB.launchAppSpec = targetSpec;
+	launchPB.launchAppParameters = NULL;
+	launchPB.launchBlockID = extendedBlock;
+	launchPB.launchEPBLength = extendedBlockLen;
+	launchPB.launchFileFlags = NULL;
+	launchPB.launchControlFlags = launchContinue + launchNoFileFlags + launchUseMinimum;
+	launchPB.launchControlFlags += launchDontSwitch;
 
-    launchPB.launchAppSpec = &resolvedSpec;
-    launchPB.launchAppParameters = NULL;
-    launchPB.launchBlockID = extendedBlock;
-    launchPB.launchEPBLength = extendedBlockLen;
-    launchPB.launchFileFlags = NULL;
-    launchPB.launchControlFlags = launchContinue + launchNoFileFlags + launchUseMinimum;
-    if (!blocking)
-        launchPB.launchControlFlags += launchDontSwitch;
-
-    err = LaunchApplication(&launchPB);
-    if (err != noErr)
-        return NS_ERROR_FAILURE;
+	err = LaunchApplication(&launchPB);
+	if (err != noErr)
+		return NS_ERROR_FAILURE;
 	
-    // NOTE: blocking mode assumes you are running on a thread 
-    //       other than the UI thread that has teh main event loop
-    if (blocking)
-    {
-        do 
-        {   
-            info.processInfoLength = sizeof(ProcessInfoRec);
-            info.processName = nil;
-            info.processAppSpec = nil;
-            err = GetProcessInformation(&launchPB.launchProcessSN, &info);
-            
-            if (err == noErr)
-            {
-                // still running so sleep some more (200 msecs)
-                PR_Sleep(200);
-            }
-            else
-            {
-                // no longer in process manager's internal list: so assume done
-                bDone = true;
-            }
-        } 
-        while (!bDone);	        
-    }
-
-    return NS_OK;
+	return NS_OK;
 }
 
 NS_IMETHODIMP nsProcess::InitWithPid(PRUint32 pid)

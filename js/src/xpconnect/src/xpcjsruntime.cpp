@@ -225,9 +225,6 @@ XPCJSRuntime::~XPCJSRuntime()
         printf("deleting XPCJSRuntime with %d live nsXPCWrappedNative (found in wrapper check)\n", (int)LiveWrapperCount);        
     JS_HashTableDestroy(DEBUG_WrappedNativeHashtable);
 #endif
-
-    // unwire the readable/JSString sharing magic
-    XPCStringConvert::ShutdownDOMStringFinalizer();
 }
 
 XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
@@ -261,7 +258,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
 
     NS_ASSERTION(!gOldJSGCCallback, "XPCJSRuntime created more than once");
     if(mJSRuntime)
-        gOldJSGCCallback = JS_SetGCCallbackRT(mJSRuntime, GCCallback);
+        gOldJSGCCallback = JS_SetGCCallbackRT(mJSRuntime, (JSGCCallback)GCCallback);
 
     // Install a JavaScript 'debugger' keyword handler in debug builds only
 #ifdef DEBUG

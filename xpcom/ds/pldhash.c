@@ -197,6 +197,13 @@ PL_DHashTableInit(PLDHashTable *table, PLDHashTableOps *ops, void *data,
     return PR_TRUE;
 }
 
+PR_IMPLEMENT(void)
+PL_DHashTableFinish(PLDHashTable *table)
+{
+    table->ops->finalize(table);
+    table->ops->freeTable(table, table->entryStore);
+}
+
 /*
  * Double hashing needs the second hash code to be relatively prime to table
  * size, so we simply make hash2 odd.
@@ -213,31 +220,6 @@ PL_DHashTableInit(PLDHashTable *table, PLDHashTableOps *ops, void *data,
 /* Compute the address of the indexed entry in table. */
 #define ADDRESS_ENTRY(table, index) \
     ((PLDHashEntryHdr *)((table)->entryStore + (index) * (table)->entrySize))
-
-PR_IMPLEMENT(void)
-PL_DHashTableFinish(PLDHashTable *table)
-{
-    char *entryAddr, *entryLimit;
-    PRUint32 entrySize;
-
-    table->ops->finalize(table);
-
-    /* Clear any remaining live entries. */
-    entryAddr = table->entryStore;
-    entrySize = table->entrySize;
-    entryLimit = entryAddr + PR_BIT(table->sizeLog2) * entrySize;
-    while (entryAddr < entryLimit) {
-        PLDHashEntryHdr *entry = (PLDHashEntryHdr *)entryAddr;
-        if (ENTRY_IS_LIVE(entry)) {
-            METER(table->stats.removeEnums++);
-            table->ops->clearEntry(table, entry);
-        }
-
-        entryAddr += entrySize;
-    }
-
-    table->ops->freeTable(table, table->entryStore);
-}
 
 static PLDHashEntryHdr *
 SearchTable(PLDHashTable *table, const void *key, PLDHashNumber keyHash)
@@ -443,20 +425,18 @@ PL_DHashTableRawRemove(PLDHashTable *table, PLDHashEntryHdr *entry)
 PR_IMPLEMENT(PRUint32)
 PL_DHashTableEnumerate(PLDHashTable *table, PLDHashEnumerator etor, void *arg)
 {
-    char *entryAddr, *entryLimit;
-    PRUint32 i, capacity, entrySize;
+    char *entryAddr;
+    PRUint32 i, j, capacity, entrySize;
     PLDHashEntryHdr *entry;
     PLDHashOperator op;
 
     entryAddr = table->entryStore;
     entrySize = table->entrySize;
     capacity = PR_BIT(table->sizeLog2);
-    entryLimit = entryAddr + capacity * entrySize;
-    i = 0;
-    while (entryAddr < entryLimit) {
+    for (i = j = 0; i < capacity; i++) {
         entry = (PLDHashEntryHdr *)entryAddr;
         if (ENTRY_IS_LIVE(entry)) {
-            op = etor(table, entry, i++, arg);
+            op = etor(table, entry, j++, arg);
             if (op & PL_DHASH_REMOVE) {
                 METER(table->stats.removeEnums++);
                 PL_DHashTableRawRemove(table, entry);
@@ -478,7 +458,7 @@ PL_DHashTableEnumerate(PLDHashTable *table, PLDHashEnumerator etor, void *arg)
                            PR_CeilingLog2(capacity) - table->sizeLog2,
                            NULL);
     }
-    return i;
+    return j;
 }
 
 #ifdef PL_DHASHMETER

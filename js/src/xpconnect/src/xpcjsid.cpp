@@ -383,13 +383,13 @@ nsJSIID::HasInstance(JSContext *cx, JSObject *obj,
     if(!JSVAL_IS_PRIMITIVE(v))
     {
         // we have a JSObject
-        JSObject* obj2 = JSVAL_TO_OBJECT(v);
+        JSObject* obj = JSVAL_TO_OBJECT(v);
 
-        NS_ASSERTION(obj2, "when is an object not an object?");
+        NS_ASSERTION(obj, "when is an object not an object?");
 
         // is this really a native xpcom object with a wrapper?
         nsXPCWrappedNative* other_wrapper =
-           nsXPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx,obj2);
+           nsXPCWrappedNativeClass::GetWrappedNativeOfJSObject(cx,obj);
 
         if(!other_wrapper)
             return NS_OK;
