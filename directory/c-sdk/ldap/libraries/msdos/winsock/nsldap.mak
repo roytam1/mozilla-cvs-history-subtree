@@ -54,12 +54,12 @@ MOZ_BITS=32
 !endif
 
 !if !defined(MOZ_LDAP_VER)
-MOZ_LDAP_VER=30
+MOZ_LDAP_VER=40
 !endif
 
 !if !defined(LDAP_SRC)
 !if "$(MOZ_BITS)"=="32"
-LDAP_SRC=$(MOZ_SRC)\mozilla\directory\c-sdk
+LDAP_SRC=$(MOZ_SRC:/=\)\mozilla\directory\c-sdk
 !else
 LDAP_SRC=l:
 !endif
@@ -134,7 +134,7 @@ BUILDDIR=$(LDAP_SRC)\ldap\libraries\msdos\winsock
 VERFILE=$(LDAP_SRC)\ldap\include\sdkver.h
 VERSRC=$(LDAP_SRC)\ldap\build\dirver.c
 VERPROG=$(LDAP_SRC)\ldap\build\dirver.exe
-DIRSDK_VERSION=3.0
+DIRSDK_VERSION=4.0
 
 ########## Security #######################
 !if defined (LINK_SEC)
@@ -197,6 +197,9 @@ SECMODEL=\none
 !endif
 ########## end Security ###################
 
+
+# Dynamic library name
+DYNAMICLIB="$(OUTDIR)\nsldap$(DLL_BITS)v$(MOZ_LDAP_VER).dll"
 
 # Static library name
 STATICLIB=$(OUTDIR)\nsldaps$(DLL_BITS)v$(MOZ_LDAP_VER).lib
@@ -327,9 +330,9 @@ LFLAGS=$(LINKFLAGS_RELEASE)
 
 ############### END ###########################################
 
-DIST_XP = $(MOZ_SRC)\mozilla\dist
+DIST_XP = $(MOZ_SRC:/=\)\mozilla\dist
 DIST=$(DIST_XP)\$(DISTBASE)
-DIST_PUBLIC=$(DIST_XP)\public
+DIST_PUBLIC=$(DIST_XP)\include\ldap
 
 #
 #       Edit these in order to control 16 bit
@@ -366,9 +369,9 @@ LINK_FLAGS= \
 !if "$(MOZ_BITS)"=="32"
     $(OUTDIR)\nsldap.res \
     $(LFLAGS) \
-    $(SECLIB) $(RPCLIB) $(C_RUNTIME) oldnames.lib kernel32.lib user32.lib \
+    $(SECLIB) $(RPCLIB) $(C_RUNTIME) WSOCK32.LIB oldnames.lib kernel32.lib user32.lib \
         /subsystem:windows $(PDB) $(MACHINE) \
-        /dll /def:"$(BUILDDIR)\nsldap$(DLL_BITS).def" \
+        /dll /def:"$(BUILDDIR)\nsldap$(DLL_BITS)40.def" \
         /implib:"$(OUTDIR)/nsldap$(DLL_BITS)v$(MOZ_LDAP_VER).lib" \
     /nodefaultlib /out:"$(OUTDIR)/nsldap$(DLL_BITS)v$(MOZ_LDAP_VER).dll" 
 !else
@@ -394,8 +397,8 @@ RCFLAGS_GENERAL= \
 
 CINCLUDES= \
 !if defined (LINK_SEC) && "$(SEC_MODEL)" != "none"
-    /I$(MOZ_SRC)\ns\include \
-    /I$(MOZ_SRC)\ns\dist\public\nspr \
+    /I$(MOZ_SRC:/=\)\ns\include \
+    /I$(MOZ_SRC:/=\)\ns\dist\public\nspr \
 !endif
     /I$(LDAP_SRC)\ldap\include \
     /I$(LIBLDAP) \
@@ -468,8 +471,8 @@ win16suxrox : \
         $(LIBLDAP)\getoptio.c \
         $(LIBLDAP)\getvalue.c \
         $(LIBLDAP)\setoptio.c \
-        $(LIBLDAP)\vlistctr.c \
-        $(LIBLDAP)\proxyaut.c \
+	$(LIBLDAP)\vlstctrl.c \
+	$(LIBLDAP)\proxctrl.c \
 
 $(LIBLDAP)\countval.c : $(LIBLDAP)\countvalues.c
         copy $(LIBLDAP)\countvalues.c $(LIBLDAP)\countval.c
@@ -492,18 +495,18 @@ $(LIBLDAP)\getvalue.c : $(LIBLDAP)\getvalues.c
 $(LIBLDAP)\setoptio.c : $(LIBLDAP)\setoption.c
         copy $(LIBLDAP)\setoption.c $(LIBLDAP)\setoptio.c
 
-$(LIBLDAP)\vlistctr.c : $(LIBLDAP)\vlistctrl.c
-        copy $(LIBLDAP)\vlistctrl.c $(LIBLDAP)\vlistctr.c
+$(LIBLDAP)\vlstctrl.c : $(LIBLDAP)\vlistctrl.c
+        copy $(LIBLDAP)\vlistctrl.c $(LIBLDAP)\vlstctrl.c
 
-$(LIBLDAP)\proxyaut.c : $(LIBLDAP)\proxyauthctrl.c
-        copy $(LIBLDAP)\proxyauthctrl.c $(LIBLDAP)\proxyaut.c
+$(LIBLDAP)\proxyauthctrl.c : $(LIBLDAP)\proxyauthctrl.c
+        copy $(LIBLDAP)\proxyauthctrl.c $(LIBLDAP)\proxauth.c
 !endif
 
 $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
         @rem <<$(PROD)$(VERSTR).dep
         $(CINCLUDES) -O $(OUTDIR)\nsldap.dep
 <<
-	$(MOZ_TOOLS)\makedep @$(PROD)$(VERSTR).dep -F <<
+	$(MOZ_SRC:/=\)\mozilla\config\makedep @$(PROD)$(VERSTR).dep -F <<
                 $(LIBLDAP)\abandon.c
                 $(LIBLDAP)\add.c
                 $(LIBLDAP)\bind.c
@@ -550,6 +553,7 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
 		$(LIBLDAP)\memcache.c
                 $(LIBLDAP)\message.c
                 $(LIBLDAP)\modify.c
+		$(LIBLDAP)\mozock.c
 		$(LIBLDAP)\open.c
                 $(LIBLDAP)\os-ip.c
 		$(LIBLDAP)\psearch.c
@@ -578,18 +582,17 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
 		$(LIBLDAP)\utf8.c
 !if "$(MOZ_BITS)"=="32"
 		$(LIBLDAP)\vlistctrl.c
-                $(LIBLDAP)\proxyauthctrl.c
+		$(LIBLDAP)\proxyauthctrl.c	
 !else
-		$(LIBLDAP)\vlistctr.c
-                $(LIBLDAP)\proxyaut.c
+		$(LIBLDAP)\vlstctrl.ca
+		$(LIBLDAP)\proxauth.c	
 !endif
-		
                 $(LIBLBER)\bprint.c
                 $(LIBLBER)\decode.c
                 $(LIBLBER)\encode.c
                 $(LIBLBER)\io.c
+		$(LIBLDAP)\dllmain.c
 
-                $(BUILDDIR)\mozock.c
 !if defined(LINK_SEC)
                 $(BUILDDIR)\ssl16.c
 !endif
@@ -639,9 +642,9 @@ install : \
         $(DIST)\lib\nsldaps$(DLL_BITS)v$(MOZ_LDAP_VER).lib \
 !endif
 !if "$(MOZ_BITS)"=="32"
-        $(DIST_PUBLIC)\ldap\lber.h \
-        $(DIST_PUBLIC)\ldap\ldap.h \
-        $(DIST_PUBLIC)\ldap\disptmpl.h \
+        $(DIST_PUBLIC)\lber.h \
+        $(DIST_PUBLIC)\ldap.h \
+        $(DIST_PUBLIC)\disptmpl.h \
 !else
         $(DIST_PUBLIC)\win16\lber.h \
         $(DIST_PUBLIC)\win16\ldap.h \
@@ -661,14 +664,14 @@ $(DIST)\lib\nsldaps$(DLL_BITS)v$(MOZ_LDAP_VER).lib : $(OUTDIR)\nsldaps$(DLL_BITS
 !endif
 
 !if "$(MOZ_BITS)"=="32"
-$(DIST_PUBLIC)\ldap\lber.h : $(LDAP_SRC)\ldap\include\lber.h
-        copy $(LDAP_SRC)\ldap\include\lber.h $(DIST_PUBLIC)\ldap\lber.h
+$(DIST_PUBLIC)\lber.h : $(LDAP_SRC)\ldap\include\lber.h
+        copy $(LDAP_SRC)\ldap\include\lber.h $(DIST_PUBLIC)\lber.h
 
-$(DIST_PUBLIC)\ldap\ldap.h : $(LDAP_SRC)\ldap\include\ldap.h
-        copy $(LDAP_SRC)\ldap\include\ldap.h $(DIST_PUBLIC)\ldap\ldap.h
+$(DIST_PUBLIC)\ldap.h : $(LDAP_SRC)\ldap\include\ldap.h
+        copy $(LDAP_SRC)\ldap\include\ldap.h $(DIST_PUBLIC)\ldap.h
 
-$(DIST_PUBLIC)\ldap\disptmpl.h : $(LDAP_SRC)\ldap\include\disptmpl.h
-        copy $(LDAP_SRC)\ldap\include\disptmpl.h $(DIST_PUBLIC)\ldap\disptmpl.h
+$(DIST_PUBLIC)\disptmpl.h : $(LDAP_SRC)\ldap\include\disptmpl.h
+        copy $(LDAP_SRC)\ldap\include\disptmpl.h $(DIST_PUBLIC)\disptmpl.h
 !else
 $(DIST_PUBLIC)\win16\lber.h : $(LDAP_SRC)\ldap\include\lber.h
         copy $(LDAP_SRC)\ldap\include\lber.h $(DIST_PUBLIC)\win16\lber.h
@@ -713,6 +716,7 @@ clobber_all:
 $(OUTDIR) :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
+
 # 
 # Build static library
 # 
@@ -720,6 +724,7 @@ static: $(STATICLIB)
 
 $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
 !if "$(MOZ_BITS)"=="32"
+	@echo "+++ building static library"
     $(LIBCMD) @<<
     $(LIB_FLAGS) $(DEF_FLAGS) $(OBJ_FILES)
 <<
@@ -735,12 +740,16 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
         +$(OUTDIR)\CHARSET.obj,,
     $(LIBCMD) $(STATICLIB) \
         +$(OUTDIR)\COMPARE.obj   \
-     +$(OUTDIR)\COUNTVAL.obj   \
-     +$(OUTDIR)\DELETE.obj,,
+     +$(OUTDIR)\COMPAT.obj \
+     +$(OUTDIR)\CONTROL.obj,,
     $(LIBCMD) $(STATICLIB) \
-     +$(OUTDIR)\DISPTMPL.obj   \
+     +$(OUTDIR)\COUNTVAL.obj   \
+     +$(OUTDIR)\DELETE.obj \
+     +$(OUTDIR)\DISPTMPL.obj,,
+    $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\DSPARSE.obj   \
-     +$(OUTDIR)\ERROR.obj,,
+     +$(OUTDIR)\ERROR.obj \
+     +$(OUTDIR)\EXTENDOP.obj,,
     $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\FREE.obj   \
      +$(OUTDIR)\FREEVALU.obj   \
@@ -755,36 +764,44 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
      +$(OUTDIR)\GETOPTIO.obj,,
     $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\GETVALUE.obj   \
-     +$(OUTDIR)\MESSAGE.obj   \
-     +$(OUTDIR)\MODIFY.obj,,
+     +$(OUTDIR)\MESSAGE.obj,,
+    $(LIBCMD) $(STATICLIB) \
+     +$(OUTDIR)\MODIFY.obj \
+     +$(OUTDIR)\MOZOCK.obj,,
     copy $(OUTDIR)\OS-IP.obj $(OUTDIR)\OSIP.obj
     $(LIBCMD) $(STATICLIB) \
-     +$(OUTDIR)\MODRDN.obj   \
      +$(OUTDIR)\OPEN.obj   \
      +$(OUTDIR)\OSIP.obj,,
         del $(OUTDIR)\OSIP.obj
     $(LIBCMD) $(STATICLIB) \
+     +$(OUTDIR)\PSEARCH.obj \
+     +$(OUTDIR)\REFERRAL.obj,,
+    $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\REGEX.obj   \
-     +$(OUTDIR)\REQUEST.obj   \
-     +$(OUTDIR)\RESLIST.obj,,
+     +$(OUTDIR)\RENAME.obj,,
     $(LIBCMD) $(STATICLIB) \
+     +$(OUTDIR)\RESLIST.obj \
      +$(OUTDIR)\RESULT.obj   \
-     +$(OUTDIR)\SBIND.obj   \
-     +$(OUTDIR)\SEARCH.obj,,
+     +$(OUTDIR)\SASLBIND.obj,,
     $(LIBCMD) $(STATICLIB) \
-     +$(OUTDIR)\SETOPTIO.obj   \
+     +$(OUTDIR)\SBIND.obj   \
+     +$(OUTDIR)\SEARCH.obj \
+     +$(OUTDIR)\SETOPTIO.obj,,
+    $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\SORT.obj   \
+     +$(OUTDIR)\SORTCTRL.obj   \
      +$(OUTDIR)\SRCHPREF.obj,,
     $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\TMPLOUT.obj   \
      +$(OUTDIR)\UFN.obj   \
-     +$(OUTDIR)\UNESCAPE.obj,,
+     +$(OUTDIR)\UNBIND.obj,,
     $(LIBCMD) $(STATICLIB) \
-     +$(OUTDIR)\UNBIND.obj \
+     +$(OUTDIR)\UNESCAPE.obj \
      +$(OUTDIR)\URL.obj   \
-     +$(OUTDIR)\UTF8.obj   \
-     +$(OUTDIR)\VLISTCTR.obj   \
-     +$(OUTDIR)\PROXYAUT.obj,,,
+     +$(OUTDIR)\UTF8.obj,,
+    $(LIBCMD) $(STATICLIB) \
+     +$(OUTDIR)\VLSTCTRL.obj \
+     +$(OUTDIR)\PROXAUTH.obj,,
     $(LIBCMD) $(STATICLIB) \
      +$(OUTDIR)\BPRINT.obj   \
      +$(OUTDIR)\DECODE.obj,,
@@ -795,6 +812,8 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
 !endif
 
 #
+dynamic:	$(DYNAMICLIB)
+
 "$(OUTDIR)\nsldap$(DLL_BITS)v$(MOZ_LDAP_VER).dll" : "$(OUTDIR)" $(OBJ_FILES) $(OUTDIR)\nsldap.res
    @rem <<$(PROD)$(VERSTR).lk
 !if "$(MOZ_BITS)"=="32"
@@ -808,11 +827,14 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
         $(OUTDIR)\CHARRAY.obj +
         $(OUTDIR)\CHARSET.obj +
         $(OUTDIR)\COMPARE.obj +
+    $(OUTDIR)\COMPAT.obj +
+    $(OUTDIR)\CONTROL.obj +
     $(OUTDIR)\COUNTVAL.obj +
     $(OUTDIR)\DELETE.obj +
     $(OUTDIR)\DISPTMPL.obj +
     $(OUTDIR)\DSPARSE.obj +
     $(OUTDIR)\ERROR.obj +
+    $(OUTDIR)\EXTENDOP.obj +
     $(OUTDIR)\FREE.obj +
     $(OUTDIR)\FREEVALU.obj +
     $(OUTDIR)\FRIENDLY.obj +
@@ -825,29 +847,31 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
     $(OUTDIR)\GETVALUE.obj +
     $(OUTDIR)\MESSAGE.obj +
     $(OUTDIR)\MODIFY.obj +
-    $(OUTDIR)\MODRDN.obj +
     $(OUTDIR)\MOZOCK.obj +
     $(OUTDIR)\OPEN.obj +
     $(OUTDIR)\OS-IP.obj +
+    $(OUTDIR)\PSEARCH.obj +
+    $(OUTDIR)\REFERRAL.obj +
     $(OUTDIR)\REGEX.obj +
+    $(OUTDIR)\RENAME.obj +
     $(OUTDIR)\REQUEST.obj +
     $(OUTDIR)\RESLIST.obj +
     $(OUTDIR)\RESULT.obj +
+    $(OUTDIR)\SASLBIND.obj +
     $(OUTDIR)\SBIND.obj +
     $(OUTDIR)\SEARCH.obj +
     $(OUTDIR)\SETOPTIO.obj +
     $(OUTDIR)\SORT.obj +
+    $(OUTDIR)\SORTCTRL.obj +
     $(OUTDIR)\SRCHPREF.obj +
     $(OUTDIR)\TMPLOUT.obj +
     $(OUTDIR)\UFN.obj +
     $(OUTDIR)\UNBIND.obj +
     $(OUTDIR)\UNESCAPE.obj +
     $(OUTDIR)\URL.obj +
-    $(OUTDIR)\UTF8.OBJ +
-    $(OUTDIR)\VLISTCTRL.OBJ +
-    $(OUTDIR)\PROXYAUTHCTRL.OBJ +
-    $(OUTDIR)\VLISTC.obj +
-
+    $(OUTDIR)\UTF8.obj +
+    $(OUTDIR)\VLSTCTRL.obj +
+    $(OUTDIR)\PROXAUTH.obj +
     $(OUTDIR)\BPRINT.obj +
     $(OUTDIR)\DECODE.obj +
     $(OUTDIR)\ENCODE.obj +
@@ -884,11 +908,12 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
     $(SECSUPPORT1) +
     $(SECSUPPORT2) +
 !endif
-    oldnames.lib libw.lib ldllcew.lib ver.lib 
+    ..\nswsock.lib oldnames.lib libw.lib ldllcew.lib ver.lib 
     .\libldap.def;
 !endif
 <<
-   $(LINK) @$(PROD)$(VERSTR).lk
+    @echo "+++ building dynamic version"
+    $(LINK) @$(PROD)$(VERSTR).lk
 !if "$(MOZ_BITS)"=="16"
     $(RSC) /K $(OUTDIR)\nsldap.res $(OUTDIR)\nsldap$(DLL_BITS)v$(MOZ_LDAP_VER).dll
 !if "$(LINK)"=="link"
@@ -954,3 +979,4 @@ $(VERFILE) : $(VERPROG)
 $(VERPROG) : $(VERSRC)
         cl $(VERSRC) -link -out:$@
 !endif
+

@@ -64,7 +64,6 @@
 		(x)->pValue=(v); (x)->ulValueLen = (l);
 #endif
 
-static void      ssl3_CleanupPeerCerts(ssl3State *ssl3);
 static PK11SymKey *ssl3_GenerateRSAPMS(sslSocket *ss, ssl3CipherSpec *spec,
                                        PK11SlotInfo * serverKeySlot);
 static SECStatus ssl3_GenerateSessionKeys(sslSocket *ss, const PK11SymKey *pms);
@@ -94,30 +93,19 @@ static SECStatus Null_Cipher(void *ctx, unsigned char *output, int *outputLen,
  */
 static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
    /*      cipher_suite                         policy      enabled is_present*/
- { TLS_DHE_RSA_WITH_AES_256_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_RSA_WITH_AES_256_CBC_SHA,     	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
-
+ { TLS_DHE_DSS_WITH_RC4_128_SHA,           SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA, SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,      SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
- { TLS_DHE_DSS_WITH_RC4_128_SHA,           SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { SSL_RSA_WITH_RC4_128_MD5,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_WITH_RC4_128_SHA,               SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_RSA_WITH_AES_128_CBC_SHA,     	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
-
- { SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,      SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
+ { SSL_RSA_WITH_RC4_128_MD5,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,     SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_WITH_3DES_EDE_CBC_SHA,          SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
-
- { SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA, SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
-
- { SSL_DHE_RSA_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { SSL_DHE_DSS_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { SSL_RSA_FIPS_WITH_DES_CBC_SHA,          SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { SSL_DHE_RSA_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
+ { SSL_DHE_DSS_WITH_DES_CBC_SHA,           SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_WITH_DES_CBC_SHA,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
-
  { TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,     SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,    SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_EXPORT_WITH_RC4_40_MD5,         SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
@@ -148,12 +136,13 @@ static const /*SSL3ClientCertificateType */ uint8 fortezza_certificate_types [] 
  */
 #define SSL3_BUFFER_FUDGE     100
 
+#undef BPB
+#define BPB 8 /* Bits Per Byte */
+
 #define SET_ERROR_CODE		/* reminder */
 #define SEND_ALERT		/* reminder */
 #define TEST_FOR_FAILURE	/* reminder */
 #define DEAL_WITH_FAILURE	/* reminder */
-
-#define EXPORT_RSA_KEY_LENGTH 64	/* bytes */
 
 
 /* This is a hack to make sure we don't do double handshakes for US policy */
@@ -179,8 +168,6 @@ static const ssl3BulkCipherDef bulk_cipher_defs[] = {
     {cipher_des40,     calg_des,       8,  5, type_block,   8, 8, kg_export},
     {cipher_idea,      calg_idea,     16, 16, type_block,   8, 8, kg_strong},
     {cipher_fortezza,  calg_fortezza, 10, 10, type_block,  24, 8, kg_null},
-    {cipher_aes_128,   calg_aes,      16, 16, type_block,  16,16, kg_strong},
-    {cipher_aes_256,   calg_aes,      32, 32, type_block,  16,16, kg_strong},
     {cipher_missing,   calg_null,      0,  0, type_stream,  0, 0, kg_null},
 };
 
@@ -202,6 +189,23 @@ static const ssl3KEADef kea_defs[] = { /* indexed by SSL3KeyExchangeAlgorithm */
     {kea_dh_anon_export, kt_dh,       sign_null, PR_TRUE,  512, PR_FALSE},
     {kea_fortezza,       kt_fortezza, sign_dsa,  PR_FALSE,   0, PR_FALSE},
     {kea_rsa_fips,       kt_rsa,      sign_rsa,  PR_FALSE,   0, PR_TRUE },
+};
+
+static const CK_MECHANISM_TYPE kea_alg_defs[] = {
+    0x80000000L,
+    CKM_RSA_PKCS,
+    CKM_DH_PKCS_DERIVE,
+    CKM_KEA_KEY_DERIVE
+};
+
+
+static const ssl3MACDef mac_defs[] = { /* indexed by SSL3MACAlgorithm */
+    /* mac      malg        pad_size  mac_size                       */
+    { mac_null, malg_null,      0,     0          },
+    { mac_md5,  malg_md5,      48,     MD5_LENGTH },
+    { mac_sha,  malg_sha,      40,     SHA1_LENGTH},
+    {hmac_md5,  malg_md5_hmac, 48,     MD5_LENGTH },
+    {hmac_sha,  malg_sha_hmac, 40,     SHA1_LENGTH},
 };
 
 /* must use ssl_LookupCipherSuiteDef to access */
@@ -258,22 +262,6 @@ static const ssl3CipherSuiteDef cipher_suite_defs[] = {
                                   cipher_fortezza, mac_sha, kea_fortezza},
     {SSL_FORTEZZA_DMS_WITH_RC4_128_SHA, cipher_rc4, mac_sha, kea_fortezza},
 
-/* New TLS cipher suites */
-    {TLS_RSA_WITH_AES_128_CBC_SHA,     	cipher_aes_128, mac_sha, kea_rsa},
-    {TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	cipher_aes_128, mac_sha, kea_dhe_dss},
-    {TLS_DHE_RSA_WITH_AES_128_CBC_SHA, 	cipher_aes_128, mac_sha, kea_dhe_rsa},
-    {TLS_RSA_WITH_AES_256_CBC_SHA,     	cipher_aes_256, mac_sha, kea_rsa},
-    {TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dhe_dss},
-    {TLS_DHE_RSA_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dhe_rsa},
-#if 0
-    {TLS_DH_DSS_WITH_AES_128_CBC_SHA,  	cipher_aes_128, mac_sha, kea_dh_dss},
-    {TLS_DH_RSA_WITH_AES_128_CBC_SHA,  	cipher_aes_128, mac_sha, kea_dh_rsa},
-    {TLS_DH_ANON_WITH_AES_128_CBC_SHA, 	cipher_aes_128, mac_sha, kea_dh_anon},
-    {TLS_DH_DSS_WITH_AES_256_CBC_SHA,  	cipher_aes_256, mac_sha, kea_dh_dss},
-    {TLS_DH_RSA_WITH_AES_256_CBC_SHA,  	cipher_aes_256, mac_sha, kea_dh_rsa},
-    {TLS_DH_ANON_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dh_anon},
-#endif
-
     {TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,
                                     cipher_des,    mac_sha,kea_rsa_export_1024},
     {TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,
@@ -282,45 +270,6 @@ static const ssl3CipherSuiteDef cipher_suite_defs[] = {
     {SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA, cipher_3des, mac_sha, kea_rsa_fips},
     {SSL_RSA_FIPS_WITH_DES_CBC_SHA, cipher_des,    mac_sha, kea_rsa_fips},
 
-};
-
-static const CK_MECHANISM_TYPE kea_alg_defs[] = {
-    0x80000000L,
-    CKM_RSA_PKCS,
-    CKM_DH_PKCS_DERIVE,
-    CKM_KEA_KEY_DERIVE
-};
-
-typedef struct SSLCipher2MechStr {
-    SSLCipherAlgorithm  calg;
-    CK_MECHANISM_TYPE   cmech;
-} SSLCipher2Mech;
-
-static const SSLCipher2Mech alg2Mech[] = {
-    { calg_null     , (CK_MECHANISM_TYPE)0x80000000L	},
-    { calg_rc4      , CKM_RC4				},
-    { calg_rc2      , CKM_RC2_CBC			},
-    { calg_des      , CKM_DES_CBC			},
-    { calg_3des     , CKM_DES3_CBC			},
-    { calg_idea     , CKM_IDEA_CBC			},
-    { calg_fortezza , CKM_SKIPJACK_CBC64		},
-    { calg_aes      , CKM_AES_CBC			},
-/*  { calg_init     , (CK_MECHANISM_TYPE)0x7fffffffL    }  */
-};
-
-#define mmech_null     (CK_MECHANISM_TYPE)0x80000000L
-#define mmech_md5      CKM_SSL3_MD5_MAC
-#define mmech_sha      CKM_SSL3_SHA1_MAC
-#define mmech_md5_hmac CKM_MD5_HMAC
-#define mmech_sha_hmac CKM_SHA_1_HMAC
-
-static const ssl3MACDef mac_defs[] = { /* indexed by SSL3MACAlgorithm */
-    /* mac      mmech       pad_size  mac_size                       */
-    { mac_null, mmech_null,       0,  0          },
-    { mac_md5,  mmech_md5,       48,  MD5_LENGTH },
-    { mac_sha,  mmech_sha,       40,  SHA1_LENGTH},
-    {hmac_md5,  mmech_md5_hmac,  48,  MD5_LENGTH },
-    {hmac_sha,  mmech_sha_hmac,  40,  SHA1_LENGTH},
 };
 
 /* indexed by SSL3BulkCipher */
@@ -438,14 +387,12 @@ ssl3_config_match_init(sslSocket *ss)
 {
     ssl3CipherSuiteCfg *      suite;
     const ssl3CipherSuiteDef *cipher_def;
-    SSLCipherAlgorithm        cipher_alg;
-    CK_MECHANISM_TYPE         cipher_mech;
+    CipherAlgorithm           cipher_alg;
     SSL3KEAType               exchKeyType;
     int                       i;
     int                       numPresent		= 0;
     int                       numEnabled		= 0;
     PRBool                    isServer;
-    sslServerCerts           *svrAuth;
 
     if (!ss->enableSSL3 && !ss->enableTLS) {
     	return 0;
@@ -465,19 +412,16 @@ ssl3_config_match_init(sslSocket *ss)
 		continue;
 	    }
 	    cipher_alg=bulk_cipher_defs[cipher_def->bulk_cipher_alg ].calg;
-	    PORT_Assert(  alg2Mech[cipher_alg].calg == cipher_alg);
-	    cipher_mech = alg2Mech[cipher_alg].cmech;
 	    exchKeyType =
 	    	    kea_defs[cipher_def->key_exchange_alg].exchKeyType;
-	    svrAuth = ss->serverCerts + exchKeyType;
 
 	    /* Mark the suites that are backed by real tokens, certs and keys */
 	    suite->isPresent = (PRBool)
 		(((exchKeyType == kt_null) ||
-		    (!isServer || (svrAuth->serverKey &&
-				   svrAuth->serverCertChain)) &&
+		    (!isServer || (ss->serverKey[exchKeyType] &&
+				   ss->serverCertChain[exchKeyType])) &&
 		    PK11_TokenExists(kea_alg_defs[exchKeyType])) &&
-		((cipher_alg == calg_null) || PK11_TokenExists(cipher_mech)));
+		((cipher_alg == calg_null) || PK11_TokenExists(cipher_alg)));
 	    if (suite->isPresent)
 	    	++numPresent;
 	}
@@ -696,6 +640,8 @@ ssl3_VerifySignedHashes(SSL3Hashes *hash, CERTCertificate *cert,
 	PORT_SetError(SSL_ERROR_EXTRACT_PUBLIC_KEY_FAILURE);
     	return SECFailure;
     }
+
+
 
     switch (key->keyType) {
     case rsaKey:
@@ -1079,7 +1025,6 @@ const ssl3BulkCipherDef *cipher_def;
       PK11Context *      clientContext = NULL;
       SECItem *          param;
       CK_ULONG           macLength;
-      SSLCipherAlgorithm calg;
       SECStatus          rv;
       CK_MECHANISM_TYPE  mechanism;
       CK_MECHANISM_TYPE  mac_mech;
@@ -1107,7 +1052,7 @@ const ssl3BulkCipherDef *cipher_def;
 
     mac_param.data = (unsigned char *)&macLength;
     mac_param.len  = sizeof(macLength);
-    mac_mech       = pwSpec->mac_def->mmech;
+    mac_mech       = (CK_MECHANISM_TYPE) pwSpec->mac_def->malg;
 
     if (cipher_def->calg == calg_null) {
 	pwSpec->encode  = Null_Cipher;
@@ -1128,9 +1073,7 @@ const ssl3BulkCipherDef *cipher_def;
 	goto success;
     }
 
-    calg = cipher_def->calg;
-    PORT_Assert(alg2Mech[calg].calg == calg);
-    mechanism = alg2Mech[calg].cmech;
+    mechanism = (CK_MECHANISM_TYPE) cipher_def->calg;
 
     /*
      * build the server context
@@ -1265,7 +1208,7 @@ ssl3_ComputeRecordMAC(
 /*  ssl_GetSpecReadLock(ss);  Don't have "ss"! */
 
     mac_def = spec->mac_def;
-    if (mac_def->mac == mac_null) {
+    if (mac_def->malg == malg_null) {
 	*outLength = 0;
 /*	ssl_ReleaseSpecReadLock(ss); */
 	return SECSuccess;
@@ -1596,7 +1539,7 @@ ssl3_FlushHandshake(sslSocket *ss, PRInt32 flags)
 }
 
 /*
- * Called from ssl3_HandleAlert and from ssl3_HandleCertificate when
+ * Called from ssl3_HandleAlert and from ssl3_HandleCertificates when
  * the remote client sends a negative response to our certificate request.
  * Returns SECFailure if the application has required client auth.
  *         SECSuccess otherwise.
@@ -1612,7 +1555,6 @@ ssl3_HandleNoCertificate(sslSocket *ss)
 	CERT_DestroyCertificate(ss->sec->peerCert);
 	ss->sec->peerCert = NULL;
     }
-    ssl3_CleanupPeerCerts(ss->ssl3);
 
     /* If the server has required client-auth blindly but doesn't
      * actually look at the certificate it won't know that no
@@ -1986,7 +1928,6 @@ ssl3_GenerateSessionKeys(sslSocket *ss, const PK11SymKey *pms)
     CK_SSL3_KEY_MAT_PARAMS key_material_params;
     CK_SSL3_KEY_MAT_OUT    returnedKeys;
     CK_SSL3_MASTER_KEY_DERIVE_PARAMS master_params;
-    SSLCipherAlgorithm calg;
 
     PORT_Assert( ssl_HaveSSL3HandshakeLock(ss));
     PORT_Assert( ssl_HaveSpecWriteLock(ss));
@@ -2092,11 +2033,7 @@ ssl3_GenerateSessionKeys(sslSocket *ss, const PK11SymKey *pms)
     	returnedKeys.pIVClient              = NULL;
     	returnedKeys.pIVServer              = NULL;
     }
-
-    calg = cipher_def->calg;
-    PORT_Assert(     alg2Mech[calg].calg == calg);
-    bulk_mechanism = alg2Mech[calg].cmech;
-
+    bulk_mechanism = (CK_MECHANISM_TYPE) cipher_def->calg;
     params.data    = (unsigned char *)&key_material_params;
     params.len     = sizeof(key_material_params);
 
@@ -2997,7 +2934,7 @@ getWrappingKey( sslSocket *       ss,
     static PZLock *          symWrapKeysLock;
     static ssl3SymWrapKey    symWrapKeys[SSL_NUM_WRAP_MECHS];
 
-    svrPrivKey  = ss->serverCerts[exchKeyType].serverKey;
+    svrPrivKey  = ss->serverKey[exchKeyType];
     PORT_Assert(svrPrivKey != NULL);
     if (!svrPrivKey) {
     	return NULL;	/* why are we here?!? */
@@ -3039,6 +2976,8 @@ getWrappingKey( sslSocket *       ss,
 	}
     }
 
+no_wrapped_key:
+
     if (!masterSecretSlot) 	/* caller doesn't want to create a new one. */
     	goto loser;
 
@@ -3057,7 +2996,7 @@ getWrappingKey( sslSocket *       ss,
      */
     PORT_Memset(&wswk, 0, sizeof wswk);	/* eliminate UMRs. */
 
-    svrCert         = ss->serverCerts[exchKeyType].serverCert;
+    svrCert         = ss->serverCert[exchKeyType];
     svrPubKey       = CERT_ExtractPublicKey(svrCert);
     if (svrPubKey == NULL) {
 	/* CERT_ExtractPublicKey doesn't set error code */
@@ -3254,7 +3193,7 @@ sendDHClientKeyExchange(sslSocket * ss, SECKEYPublicKey * svrPubKey)
     PRBool              isTLS;
     CK_MECHANISM_TYPE	target;
 
-    SECKEYDHParams	dhParam;		/* DH parameters */
+    DHParams		dhParam;		/* DH parameters */
     SECKEYPublicKey	*pubKey = NULL;		/* Ephemeral DH key */
     SECKEYPrivateKey	*privKey = NULL;	/* Ephemeral DH key */
 
@@ -3799,9 +3738,6 @@ ssl3_SendClientKeyExchange(sslSocket *ss)
 	}
     }
 
-    ss->sec->keaType    = ss->ssl3->hs.kea_def->exchKeyType;
-    ss->sec->keaKeyBits = SECKEY_PublicKeyStrength(serverKey) * BPB;
-
     switch (ss->ssl3->hs.kea_def->exchKeyType) {
     case kt_rsa:
 	rv = sendRSAClientKeyExchange(ss, serverKey);
@@ -3826,8 +3762,7 @@ ssl3_SendClientKeyExchange(sslSocket *ss)
 		SSL_GETPID(), ss->fd));
 
 loser:
-    if (serverKey) 
-    	SECKEY_DestroyPublicKey(serverKey);
+    if (serverKey) SECKEY_DestroyPublicKey(serverKey);
     return rv;	/* err code already set. */
 }
 
@@ -4047,12 +3982,6 @@ ssl3_HandleServerHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	PK11SymKey *  wrapKey;     /* wrapping key */
 	SECItem       wrappedMS;   /* wrapped master secret. */
 	CK_FLAGS      keyFlags      = 0;
-	sslSecurityInfo *sec = ss->sec;
-
-        sec->authAlgorithm = sid->authAlgorithm;
-	sec->authKeyBits   = sid->authKeyBits;
-	sec->keaType       = sid->keaType;
-	sec->keaKeyBits    = sid->keaKeyBits;
 
 	slot = SECMOD_LookupSlot(sid->u.ssl3.masterModuleID,
 	                         sid->u.ssl3.masterSlotID);
@@ -4274,7 +4203,7 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	peerKey->arena              = arena;
 	peerKey->keyType            = rsaKey;
 	peerKey->pkcs11Slot         = NULL;
-	peerKey->pkcs11ID           = CK_INVALID_HANDLE;
+	peerKey->pkcs11ID           = CK_INVALID_KEY;
 	if (SECITEM_CopyItem(arena, &peerKey->u.rsa.modulus,        &modulus) ||
 	    SECITEM_CopyItem(arena, &peerKey->u.rsa.publicExponent, &exponent))
 	{
@@ -4356,7 +4285,7 @@ ssl3_HandleServerKeyExchange(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	peerKey->arena              = arena;
 	peerKey->keyType            = dhKey;
 	peerKey->pkcs11Slot         = NULL;
-	peerKey->pkcs11ID           = CK_INVALID_HANDLE;
+	peerKey->pkcs11ID           = CK_INVALID_KEY;
 
 	if (SECITEM_CopyItem(arena, &peerKey->u.dh.prime,        &dh_p) ||
 	    SECITEM_CopyItem(arena, &peerKey->u.dh.base,         &dh_g) ||
@@ -4602,7 +4531,7 @@ done:
  *		copy of the private key, so the caller remains responsible
  *		for destroying its copy after this function returns.
  *
- *	certChain  DER-encoded certs, client cert and its signers.
+ *	certChain  Chain of signers for cert.
  *		Note: ssl takes this reference, and does not copy the chain.
  *		The caller should drop its reference without destroying the
  *		chain.  SSL will free the chain when it is done with it.
@@ -4833,7 +4762,7 @@ ssl3_SendServerHelloSequence(sslSocket *ss)
 	int keyLen;  /* bytes */
 
 	keyLen = PK11_GetPrivateModulusLen(
-			    ss->serverCerts[kea_def->exchKeyType].serverKey);
+				    ss->serverKey[kea_def->exchKeyType]);
 
 	if (keyLen > 0 &&
 	    keyLen * BPB <= kea_def->key_size_limit ) {
@@ -5130,19 +5059,6 @@ compression_found:
 	++ssl3stats.hch_sid_cache_hits;
 	ssl3->hs.isResuming = PR_TRUE;
 
-        ss->sec->authAlgorithm = sid->authAlgorithm;
-	ss->sec->authKeyBits   = sid->authKeyBits;
-	ss->sec->keaType       = sid->keaType;
-	ss->sec->keaKeyBits    = sid->keaKeyBits;
-
-	/* server sids don't remember the server cert we previously sent,
-	** but they do remember the kea type we originally used, so we
-	** can locate it again, provided that the current ssl socket
-	** has had its server certs configured the same as the previous one.
-	*/
-	ss->sec->localCert     = 
-		CERT_DupCertificate(ss->serverCerts[sid->keaType].serverCert);
-
 	ssl_GetXmitBufLock(ss); haveXmitBufLock = PR_TRUE;
 
 	rv = ssl3_SendServerHello(ss);
@@ -5171,8 +5087,7 @@ compression_found:
 	    /* Now, unwrap the client and server write keys with Ks */
 
 	    /* get the slot that the fortezza server private key is in. */
-	    slot = PK11_GetSlotFromPrivateKey(
-	                                ss->serverCerts[kt_fortezza].serverKey);
+	    slot = PK11_GetSlotFromPrivateKey(ss->serverKey[kt_fortezza]);
 	    if (slot == NULL) {
 		ssl_MapLowLevelError(SSL_ERROR_CLIENT_KEY_EXCHANGE_FAILURE);
 		goto loser;
@@ -5584,8 +5499,8 @@ const ssl3KEADef *     kea_def     = ss->ssl3->hs.kea_def;
 	}
 
 	isTLS = (PRBool)(ss->ssl3->pwSpec->version > SSL_LIBRARY_VERSION_3_0);
-	rv = ssl3_SignHashes(&hashes, ss->serverCerts[kt_rsa].serverKey, 
-	                     &signed_hash, isTLS);
+	rv = ssl3_SignHashes(&hashes, ss->serverKey[kt_rsa], &signed_hash, 
+	                     isTLS);
         if (rv != SECSuccess) {
 	    goto loser;		/* ssl3_SignHashes has set err. */
 	}
@@ -6086,7 +6001,6 @@ ssl3_GenerateRSAPMS(sslSocket *ss, ssl3CipherSpec *spec,
     PORT_Assert( ssl_HaveSSL3HandshakeLock(ss) );
 
     if (slot == NULL) {
-	SSLCipherAlgorithm calg;
 	/* The specReadLock would suffice here, but we cannot assert on
 	** read locks.  Also, all the callers who call with a non-null
 	** slot already hold the SpecWriteLock.
@@ -6094,14 +6008,10 @@ ssl3_GenerateRSAPMS(sslSocket *ss, ssl3CipherSpec *spec,
 	PORT_Assert( ssl_HaveSpecWriteLock(ss));
 	PORT_Assert(ss->ssl3->prSpec == ss->ssl3->pwSpec);
 
-        calg = spec->cipher_def->calg;
-	PORT_Assert(alg2Mech[calg].calg == calg);
-
 	/* First get an appropriate slot.  */
 	mechanism_array[0] = CKM_SSL3_PRE_MASTER_KEY_GEN;
 	mechanism_array[1] = CKM_RSA_PKCS;
-	mechanism_array[2] = alg2Mech[calg].cmech;
-
+	mechanism_array[2] = (CK_MECHANISM_TYPE) spec->cipher_def->calg;
 	slot = PK11_GetBestSlotMultiple(mechanism_array, 3, pwArg);
 	if (slot == NULL) {
 	   /* can't find a slot with all three, find a slot with the minimum */
@@ -6238,30 +6148,13 @@ const ssl3KEADef *    kea_def;
 		 && ss->stepDownKeyPair != NULL
 #endif
 		 ) ? ss->stepDownKeyPair->privKey
-		   : ss->serverCerts[kea_def->exchKeyType].serverKey;
-
-    if (ss->ssl3->hs.usedStepDownKey
-#ifdef DEBUG
-	 && kea_def->is_limited /* XXX OR cert is signing only */
-	 && kea_def->exchKeyType == kt_rsa 
-	 && ss->stepDownKeyPair != NULL
-#endif
-	 ) { 
-    	serverKey = ss->stepDownKeyPair->privKey;
-	ss->sec->keaKeyBits = EXPORT_RSA_KEY_LENGTH * BPB;
-    } else {
-	sslServerCerts * sc = ss->serverCerts + kea_def->exchKeyType;
-	serverKey           = sc->serverKey;
-	ss->sec->keaKeyBits = sc->serverKeyBits;
-    }
+		   : ss->serverKey[kea_def->exchKeyType];
 
     if (serverKey == NULL) {
     	SEND_ALERT
 	PORT_SetError(SSL_ERROR_NO_SERVER_KEY_FOR_ALG);
 	return SECFailure;
     }
-
-    ss->sec->keaType    = kea_def->exchKeyType;
 
     switch (kea_def->exchKeyType) {
     case kt_rsa:
@@ -6320,19 +6213,9 @@ ssl3_SendCertificate(sslSocket *ss)
     PORT_Assert( ssl_HaveXmitBufLock(ss));
     PORT_Assert( ssl_HaveSSL3HandshakeLock(ss));
 
-    if (ss->sec->localCert)
-    	CERT_DestroyCertificate(ss->sec->localCert);
-    if (ss->sec->isServer) {
-	sslServerCerts * sc = 
-			ss->serverCerts + ss->ssl3->hs.kea_def->exchKeyType;
-	certChain              = sc->serverCertChain;
-	ss->sec->authKeyBits   = sc->serverKeyBits;
-	ss->sec->authAlgorithm = ss->ssl3->hs.kea_def->signKeyType;
-	ss->sec->localCert     = CERT_DupCertificate(sc->serverCert);
-    } else {
-	certChain          = ss->ssl3->clientCertChain;
-	ss->sec->localCert = CERT_DupCertificate(ss->ssl3->clientCertificate);
-    }
+    certChain = (ss->sec->isServer)
+		      ? ss->serverCertChain[ss->ssl3->hs.kea_def->exchKeyType]
+		      : ss->ssl3->clientCertChain;
 
     if (certChain) {
 	for (i = 0; i < certChain->len; i++) {
@@ -6389,7 +6272,7 @@ ssl3_HandleCertificate(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
     ssl3State *      ssl3  	= ss->ssl3;
     sslSecurityInfo *sec   	= ss->sec;
     CERTCertificate *cert;
-    PRInt32          remaining  = 0;
+    PRInt32          remaining;
     PRInt32          size;
     SECStatus        rv;
     PRBool           isServer	= (PRBool)(!!sec->isServer);
@@ -6422,22 +6305,12 @@ ssl3_HandleCertificate(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	sec->peerCert = NULL;
     }
 
-    ssl3_CleanupPeerCerts(ssl3);
+    remaining = ssl3_ConsumeHandshakeNumber(ss, 3, &b, &length);
+    if (remaining < 0)
+	goto loser;	/* fatal alert already sent by ConsumeHandshake. */
+
     isTLS = (PRBool)(ssl3->prSpec->version > SSL_LIBRARY_VERSION_3_0);
-
-    /* It is reported that some TLS client sends a Certificate message
-    ** with a zero-length message body.  We'll treat that case like a
-    ** normal no_certificates message to maximize interoperability.
-    */
-    if (length) {
-	remaining = ssl3_ConsumeHandshakeNumber(ss, 3, &b, &length);
-	if (remaining < 0)
-	    goto loser;	/* fatal alert already sent by ConsumeHandshake. */
-    }
-
-    if (!remaining) {
-	if (!(isTLS && isServer))
-	    goto alert_loser;
+    if (!remaining && isTLS && isServer) { 
     	/* This is TLS's version of a no_certificate alert. */
     	/* I'm a server. I've requested a client cert. He hasn't got one. */
 	rv = ssl3_HandleNoCertificate(ss);
@@ -6586,23 +6459,9 @@ ssl3_HandleCertificate(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 
     sec->ci.sid->peerCert = CERT_DupCertificate(sec->peerCert);
 
-    if (!sec->isServer) {
-	/* set the server authentication and key exchange types and sizes
-	** from the value in the cert.  If the key exchange key is different,
-	** it will get fixed when we handle the server key exchange message.
-	*/
-	SECKEYPublicKey * pubKey  = CERT_ExtractPublicKey(cert);
-	sec->authAlgorithm = ssl3->hs.kea_def->signKeyType;
-	sec->keaType       = ssl3->hs.kea_def->exchKeyType;
-	if (pubKey) {
-	    sec->keaKeyBits = sec->authKeyBits =
-			      SECKEY_PublicKeyStrength(pubKey) * BPB;
-	    SECKEY_DestroyPublicKey(pubKey); 
-	    pubKey = NULL;
-    	}
-    }
-
+    /* We don't need the CA certs now that we've authenticated the peer cert. */
     ssl3->peerCertChain = certs;  certs = NULL;  arena = NULL;
+    ssl3_CleanupPeerCerts(ssl3);
 
 cert_block:
     if (sec->isServer) {
@@ -6726,6 +6585,7 @@ ssl3_RestartHandshakeAfterServerCert(sslSocket *ss)
 
     if (ss->handshake != NULL) {
 	ss->handshake = ssl_GatherRecord1stHandshake;
+	ssl3_CleanupPeerCerts(ssl3);
 	ss->sec->ci.sid->peerCert = CERT_DupCertificate(ss->sec->peerCert);
 
 	ssl_GetRecvBufLock(ss);
@@ -6946,13 +6806,6 @@ xmit_loser:
     sid->u.ssl3.policy      = ssl3->policy;
     sid->u.ssl3.exchKeyType = ssl3->hs.kea_def->exchKeyType;
     sid->version            = ss->version;
-    sid->authAlgorithm      = sec->authAlgorithm;
-    sid->authKeyBits        = sec->authKeyBits;
-    sid->keaType            = sec->keaType;
-    sid->keaKeyBits         = sec->keaKeyBits;
-    sid->lastAccessTime     = sid->creationTime = ssl_Time();
-    sid->expirationTime     = sid->creationTime + ssl3_sid_timeout;
-    sid->localCert          = CERT_DupCertificate(sec->localCert);
 
     ssl_GetSpecReadLock(ss);	/*************************************/
     symKeySlot = PK11_GetSlotFromKey(ssl3->crSpec->master_secret);
@@ -7706,6 +7559,7 @@ ssl3_FreeKeyPair(ssl3KeyPair * keyPair)
 }
 
 
+#define EXPORT_RSA_KEY_LENGTH 64	/* bytes */
 
 /*
  * Creates the public and private RSA keys for SSL Step down.
@@ -7723,7 +7577,7 @@ ssl3_CreateRSAStepDownKeys(sslSocket *ss)
     ss->stepDownKeyPair = NULL;
 #ifndef HACKED_EXPORT_SERVER
     /* Sigh, should have a get key strength call for private keys */
-    if (PK11_GetPrivateModulusLen(ss->serverCerts[kt_rsa].serverKey) >
+    if (PK11_GetPrivateModulusLen(ss->serverKey[kt_rsa]) >
                                                      EXPORT_RSA_KEY_LENGTH) {
 	/* need to ask for the key size in bits */
 	privKey = SECKEY_CreateRSAPrivateKey(EXPORT_RSA_KEY_LENGTH * BPB,

@@ -52,7 +52,6 @@
 #   cipher.sh - test NSS ciphers
 #   perf.sh   - Nightly performance measurments
 #   tools.sh  - Tests the majority of the NSS tools
-#   fips.sh   - Tests basic functionallity of NSS in FIPS-compliant mode
 #
 # special strings
 # ---------------
@@ -70,15 +69,18 @@
 # file tells the test suite that the output is going to a log, so any
 #  forked() children need to redirect their output to prevent them from
 #  being over written.
+# I need to test how this works with the sourced scripts now...
 #
 ########################################################################
 
-TESTS="cert ssl sdr cipher smime perf tools fips"
+#FIXME - all will be sourced by the wrapper wrapper will do cleanup etc
+
+TESTS="cert ssl sdr cipher smime perf tools"
 SCRIPTNAME=all.sh
 CLEANUP="${SCRIPTNAME}"
-cd `dirname $0`	# will cause problems if sourced 
+cd `dirname $0`	#FIXME - if sourced 
 
-#all.sh should be the first one to try to source the init 
+#all.sh is the one that always needs to source the init - just to be consistant
 if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     cd common
     . init.sh

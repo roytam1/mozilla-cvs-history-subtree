@@ -271,6 +271,15 @@ nssCKFWToken_Create
     goto loser;
   }
 
+  fwToken->mdObjectHash = nssCKFWHash_Create(fwToken->fwInstance, 
+                                arena, pError);
+  if( (nssCKFWHash *)NULL == fwToken->mdObjectHash ) {
+    if( CKR_OK == *pError ) {
+      *pError = CKR_GENERAL_ERROR;
+    }
+    goto loser;
+  }
+
   /* More here */
 
   if( (void *)NULL != (void *)mdToken->Setup ) {
@@ -1315,7 +1324,7 @@ nssCKFWToken_OpenSession
 
   if( CK_TRUE == rw ) {
     /* Read-write session desired */
-    if( CK_TRUE == nssCKFWToken_GetIsWriteProtected(fwToken) ) {
+    if( CK_TRUE != nssCKFWToken_GetIsWriteProtected(fwToken) ) {
       *pError = CKR_TOKEN_WRITE_PROTECTED;
       goto done;
     }
@@ -1396,7 +1405,7 @@ nssCKFWToken_GetMechanismCount
   }
 #endif /* NSSDEBUG */
 
-  if( (void *)NULL == (void *)fwToken->mdToken->GetMechanismCount ) {
+  if( (void *)NULL == fwToken->mdToken->GetMechanismCount ) {
     return 0;
   }
 
@@ -1425,7 +1434,7 @@ nssCKFWToken_GetMechanismTypes
   }
 #endif /* NSSDEBUG */
 
-  if( (void *)NULL == (void *)fwToken->mdToken->GetMechanismTypes ) {
+  if( (void *)NULL == fwToken->mdToken->GetMechanismTypes ) {
     /*
      * This should only be called with a sufficiently-large
      * "types" array, which can only be done if GetMechanismCount

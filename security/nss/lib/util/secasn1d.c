@@ -1349,18 +1349,8 @@ sec_asn1d_parse_bit_string (sec_asn1d_state *state,
 {
     unsigned char byte;
 
-    /*PORT_Assert (state->pending > 0); */
+    PORT_Assert (state->pending > 0);
     PORT_Assert (state->place == beforeBitString);
-
-    if (state->pending == 0) {
-	if (state->dest != NULL) {
-	    SECItem *item = (SECItem *)(state->dest);
-	    item->data = NULL;
-	    item->len = 0;
-	    state->place = beforeEndOfContents;
-	    return 0;
-	}
-    }
 
     if (len == 0) {
 	state->top->status = needBytes;
@@ -2965,17 +2955,14 @@ const SEC_ASN1Template SEC_SkipTemplate[] = {
 */
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_AnyTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_BMPStringTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_BooleanTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_BitStringTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_IA5StringTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_GeneralizedTimeTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_IntegerTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_NullTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_ObjectIDTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_OctetStringTemplate)
+SEC_ASN1_CHOOSER_IMPLEMENT(SEC_UTCTimeTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_PointerToAnyTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_PointerToOctetStringTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_SetOfAnyTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_UTCTimeTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_UTF8StringTemplate)
 
