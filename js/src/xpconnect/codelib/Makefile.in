@@ -68,6 +68,8 @@ DEFINES		+= -DJSFILE -DJS_THREADSAFE
 JS_CODELIB_RESOURCES = \
 	StdLib.js \
 	TemplateLib.js \
+	ProfileLib.js \
+	IOLib.js \
 	$(NULL)
 
 libs::  $(JS_CODELIB_RESOURCES)
