@@ -949,6 +949,9 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
     {
         OSErr err;
         ICInstance icInstance;
+        NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(localFile));
+        nsCOMPtr<nsILocalFileMac> localMacFile(do_QueryInterface(localFile));
+
         err = ::ICStart(&icInstance, 'XPCM');
         if (err == noErr)
         {
@@ -958,11 +961,19 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
             err = ::ICGetPref(icInstance, kICDownloadFolder, &attrs, &icFileSpec, &size);
             if (err == noErr || (err == icTruncatedErr && size >= kICFileSpecHeaderSize))
             {
-                NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(localFile));
-                nsCOMPtr<nsILocalFileMac> localMacFile(do_QueryInterface(localFile));
                 rv = localMacFile->InitWithFSSpec(&icFileSpec.fss);
             }
             ::ICStop(icInstance);
+        }
+        
+        if NS_FAILED(rv)
+        { // We got an error getting the DL folder from IC so try finding the user's Desktop folder
+          FSRef fsRef;
+          err = ::FSFindFolder(kUserDomain, kSystemDesktopFolderType, kCreateFolder, &fsRef);
+          if (err == noErr)
+          {
+            rv = localMacFile->InitWithFSRef(&fsRef);
+          }
         }
     }
 #elif defined (XP_WIN)
