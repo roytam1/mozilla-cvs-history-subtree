@@ -40,6 +40,7 @@
 #define nsControllerCommandManager_h_
 
 
+#include "nsIControllerCommandManager.h"
 #include "nsIControllerCommand.h"
 #include "nsWeakReference.h"
 #include "nsHashtable.h"

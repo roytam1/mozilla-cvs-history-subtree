@@ -120,8 +120,8 @@ interface nsICommandManager : nsISupports
 Arguments to observers "Observe" method are as follows:
 
   void Observe(   in nsISupports aSubject,          // The nsICommandManager calling this Observer
-                  in wstring     aTopic,            // Name of the command whose state changed
-                  in wstring     aDummy );          // Unused string
+                  in string      aTopic,            // Unused
+                  in wstring     aDummy );          // Name of the command
 
 */
 
