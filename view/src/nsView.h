@@ -23,17 +23,33 @@
 #ifndef nsView_h___
 #define nsView_h___
 
+#include "nsISupports.h"
 #include "nsIView.h"
 #include "nsRect.h"
 #include "nsCRT.h"
-#include "nsIWidget.h"
 #include "nsIFactory.h"
 #include "nsIViewObserver.h"
+
+class nsIWindow;
 
 //mmptemp
 
 class nsIPresContext;
 class nsIViewManager;
+
+
+#include "nsGUIEvent.h"
+#include "nsIGUIEventListener.h"
+
+class nsGUIEventListener : public nsIGUIEventListener
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIGUIEVENTLISTENER
+
+  nsGUIEventListener() {} ;
+  virtual ~nsGUIEventListener() {};
+};
 
 class nsView : public nsIView
 {
@@ -62,15 +78,15 @@ public:
                           nsEventStatus* aStatus,
                           PRBool aForceHandle,
                           PRBool& aHandled);
-  NS_IMETHOD  SetPosition(nscoord x, nscoord y);
-  NS_IMETHOD  GetPosition(nscoord *x, nscoord *y) const;
-  NS_IMETHOD  SetDimensions(nscoord width, nscoord height, PRBool aPaint = PR_TRUE);
-  NS_IMETHOD  GetDimensions(nscoord *width, nscoord *height) const;
+  NS_IMETHOD  SetPosition(gfx_coord x, gfx_coord y);
+  NS_IMETHOD  GetPosition(gfx_coord *x, gfx_coord *y) const;
+  NS_IMETHOD  SetDimensions(gfx_coord width, gfx_coord height, PRBool aPaint = PR_TRUE);
+  NS_IMETHOD  GetDimensions(gfx_coord *width, gfx_coord *height) const;
   NS_IMETHOD  SetBounds(const nsRect &aBounds, PRBool aPaint = PR_TRUE);
-  NS_IMETHOD  SetBounds(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight, PRBool aPaint = PR_TRUE);
+  NS_IMETHOD  SetBounds(gfx_coord aX, gfx_coord aY, gfx_coord aWidth, gfx_coord aHeight, PRBool aPaint = PR_TRUE);
   NS_IMETHOD  GetBounds(nsRect &aBounds) const;
-  NS_IMETHOD  SetChildClip(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight);
-  NS_IMETHOD  GetChildClip(nscoord *aLeft, nscoord *aTop, nscoord *aRight, nscoord *aBottom) const;
+  NS_IMETHOD  SetChildClip(gfx_coord aX, gfx_coord aY, gfx_coord aWidth, gfx_coord aHeight);
+  NS_IMETHOD  GetChildClip(gfx_coord *aLeft, gfx_coord *aTop, gfx_coord *aRight, gfx_coord *aBottom) const;
   NS_IMETHOD  SetVisibility(nsViewVisibility visibility);
   NS_IMETHOD  GetVisibility(nsViewVisibility &aVisibility) const;
   NS_IMETHOD  SetZParent(nsIView *aZParent);
@@ -97,14 +113,11 @@ public:
   NS_IMETHOD  SetContentTransparency(PRBool aTransparent);
   NS_IMETHOD  SetClientData(void *aData);
   NS_IMETHOD  GetClientData(void *&aData) const;
-  NS_IMETHOD  GetOffsetFromWidget(nscoord *aDx, nscoord *aDy, nsIWidget *&aWidget);
+  NS_IMETHOD  GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow *aWidget);
   NS_IMETHOD  GetDirtyRegion(nsIRegion*& aRegion) const;
-  NS_IMETHOD  CreateWidget(const nsIID &aWindowIID,
-                           nsWidgetInitData *aWidgetInitData = nsnull,
-                           nsNativeWidget aNative = nsnull,
-                           PRBool aEnableDragDrop = PR_TRUE);
-  NS_IMETHOD  SetWidget(nsIWidget *aWidget);
-  NS_IMETHOD  GetWidget(nsIWidget *&aWidget) const;
+  NS_IMETHOD  CreateWidget(const char *contractid);
+  NS_IMETHOD  SetWidget(nsIWindow *aWidget);
+  NS_IMETHOD  GetWidget(nsIWindow **aWidget) const;
   NS_IMETHOD  HasWidget(PRBool *aHasWidget) const;
   NS_IMETHOD  List(FILE* out = stdout, PRInt32 aIndent = 0) const;
   NS_IMETHOD  SetViewFlags(PRUint32 aFlags);
@@ -124,13 +137,13 @@ public:
 
 
   // Helper function to get the view that's associated with a widget
-  static nsIView*  GetViewFor(nsIWidget* aWidget);
+  static nsIView*  GetViewFor(nsIWindow* aWidget);
 
    // Helper function to determine if the view instance is the root view
   PRBool IsRoot();
 
    // Helper function to determine if the view point is inside of a view
-  PRBool PointIsInside(nsIView& aView, nscoord x, nscoord y) const;
+  PRBool PointIsInside(nsIView& aView, gfx_coord x, gfx_coord y) const;
 
 protected:
   virtual ~nsView();
@@ -140,7 +153,7 @@ protected:
 protected:
   nsIViewManager    *mViewManager;
   nsIView           *mParent;
-  nsIWidget         *mWindow;
+  nsIWindow         *mWindow;
 
   nsIView           *mZParent;
 

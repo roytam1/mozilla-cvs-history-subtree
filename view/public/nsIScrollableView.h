@@ -24,7 +24,7 @@
 #define nsIScrollableView_h___
 
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIViewManager.h"
 
 class nsIView;
@@ -82,7 +82,7 @@ public:
    * @param aWidth return value for width of container
    * @param aHeight return value for height of container
    */
-  NS_IMETHOD  GetContainerSize(nscoord *aWidth, nscoord *aHeight) const = 0;
+  NS_IMETHOD  GetContainerSize(gfx_dimension *aWidth, gfx_dimension *aHeight) const = 0;
 
   /**
    * Set the view that we are scrolling within the scrolling view. 
@@ -130,7 +130,7 @@ public:
   /**
    * Get the position of the scrolled view.
    */
-  NS_IMETHOD  GetScrollPosition(nscoord &aX, nscoord& aY) const = 0;
+  NS_IMETHOD  GetScrollPosition(gfx_coord &aX, gfx_coord& aY) const = 0;
 
   /**
    * Scroll the view to the given x,y, update's the scrollbar's thumb
@@ -141,7 +141,7 @@ public:
    * @param aUpdateFlags passed onto nsIViewManager->UpdateView()
    * @return error status
    */
-  NS_IMETHOD ScrollTo(nscoord aX, nscoord aY, PRUint32 aUpdateFlags) = 0;
+  NS_IMETHOD ScrollTo(gfx_coord aX, gfx_coord aY, PRUint32 aUpdateFlags) = 0;
 
   /**
    * Set the amount to inset when positioning the scrollbars and clip view
@@ -182,14 +182,14 @@ public:
    *        height is 12 points.
    * @return error status
    */
-  NS_IMETHOD SetLineHeight(nscoord aHeight) = 0;
+  NS_IMETHOD SetLineHeight(gfx_dimension aHeight) = 0;
 
   /**
    * Get the height of a line used for line scrolling.
    * @param aHeight out parameter for line height
    * @return error status
    */
-  NS_IMETHOD GetLineHeight(nscoord *aHeight) = 0;
+  NS_IMETHOD GetLineHeight(gfx_dimension *aHeight) = 0;
 
   /**
    * Scroll the view up or down by aNumLines lines. positive

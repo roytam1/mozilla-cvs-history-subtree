@@ -25,11 +25,11 @@
 
 #include <stdio.h>
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsGUIEvent.h"
 
 class nsIWindow;
-class nsIWidget;
+class nsIWindow;
 class nsIViewManager;
 class nsIRegion;
 class nsIRenderingContext;
@@ -39,18 +39,14 @@ class nsIViewObserver;
 class nsVoidArray;
 struct nsRect;
 
-struct nsWidgetInitData {
-  nscoord i;
-};
-
 //this is used by the view clipping APIs since the description of
 //a clip rect is different than a rect
 
 struct nsViewClip {
-  nscoord mLeft;
-  nscoord mRight;
-  nscoord mTop;
-  nscoord mBottom;
+  gfx_coord mLeft;
+  gfx_coord mRight;
+  gfx_coord mTop;
+  gfx_coord mBottom;
 };
 
 // Enumerated type to indicate the visibility of a layer.
@@ -179,8 +175,8 @@ public:
    * @param width new width
    * @param height new height
    */
-  NS_IMETHOD  SetDimensions(gfx_width width, gfx_height height, PRBool aPaint = PR_TRUE) = 0;
-  NS_IMETHOD  GetDimensions(gfx_width *width, gfx_height *height) const = 0;
+  NS_IMETHOD  SetDimensions(gfx_dimension width, gfx_dimension height, PRBool aPaint = PR_TRUE) = 0;
+  NS_IMETHOD  GetDimensions(gfx_dimension *width, gfx_dimension *height) const = 0;
 
   /**
    * Called to indicate that the dimensions and position of the view have
@@ -197,8 +193,8 @@ public:
    * @param aWidth new width
    * @param aHeight new height
    */
-  NS_IMETHOD  SetBounds(nscoord aX, nscoord aY,
-                        nscoord aWidth, nscoord aHeight,
+  NS_IMETHOD  SetBounds(gfx_coord aX, gfx_coord aY,
+                        gfx_coord aWidth, gfx_coord aHeight,
                         PRBool aPaint = PR_TRUE) = 0;
 
   /**
@@ -217,7 +213,7 @@ public:
    * @param aRight new right position
    * @param aBottom new bottom position
    */
-  NS_IMETHOD  SetChildClip(nscoord aLeft, nscoord aTop, nscoord aRight, nscoord aBottom) = 0;
+  NS_IMETHOD  SetChildClip(gfx_coord aLeft, gfx_coord aTop, gfx_coord aRight, gfx_coord aBottom) = 0;
 
   /**
    * Called to get the dimensions and position of the clip for the view.
@@ -226,7 +222,7 @@ public:
    * @param aRight right position
    * @param aBottom bottom position
    */
-  NS_IMETHOD  GetChildClip(nscoord *aLeft, nscoord *aTop, nscoord *aRight, nscoord *aBottom) const = 0;
+  NS_IMETHOD  GetChildClip(gfx_coord *aLeft, gfx_coord *aTop, gfx_coord *aRight, gfx_coord *aBottom) const = 0;
 
   /**
    * Called to indicate that the visibility of a view has been
@@ -410,7 +406,7 @@ public:
    * @param aDy out parameter for y offset
    * @return widget (if there is one) closest to view
    */
-  NS_IMETHOD  GetOffsetFromWidget(nscoord *aDx, nscoord *aDy, nsIWindow *&aWindow) = 0;
+  NS_IMETHOD  GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow *aWindow) = 0;
 
   /**
    * Gets the dirty region associated with this view. Used by the view
@@ -432,10 +428,6 @@ public:
    * @return error status
    */
   NS_IMETHOD CreateWidget(const char *) = 0;
-  NS_IMETHOD CreateWidget(const nsIID &aWindowIID,
-                          nsWidgetInitData *aWidgetInitData = nsnull,
-        					        void *aNative = nsnull,
-                          PRBool aEnableDragDrop = PR_TRUE) = 0;
 
   /**
    * Set the widget associated with this view.
@@ -446,7 +438,7 @@ public:
    *        be destroyed.
    * @return error status
    */
-  NS_IMETHOD SetWidget(nsIWidget *aWidget) = 0;
+  NS_IMETHOD SetWidget(nsIWindow *aWidget) = 0;
 
   /**
    * In 4.0, the "cutout" nature of a view is queryable.
@@ -455,7 +447,7 @@ public:
    * @param aWidget out parameter for widget that this view contains,
    *        or nsnull if there is none.
    */
-  NS_IMETHOD GetWidget(nsIWindow *&aWindow) const = 0;
+  NS_IMETHOD GetWidget(nsIWindow **aWindow) const = 0;
 
 
   /**

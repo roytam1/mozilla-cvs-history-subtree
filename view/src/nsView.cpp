@@ -21,29 +21,20 @@
  */
 
 #include "nsView.h"
-#include "nsIWidget.h"
 #include "nsIViewManager.h"
 #include "nsIFrame.h"
 #include "nsIPresContext.h"
-#include "nsIWidget.h"
-#include "nsIButton.h"
-#include "nsIScrollbar.h"
+#include "nsIWindow.h"
+#include "nsIChildWindow.h"
 #include "nsGUIEvent.h"
-#include "nsIDeviceContext.h"
 #include "nsIComponentManager.h"
-#include "nsIRenderingContext.h"
-#include "nsTransform2D.h"
-#include "nsIScrollableView.h"
 #include "nsVoidArray.h"
-#include "nsGfxCIID.h"
 #include "nsIRegion.h"
 #include "nsIClipView.h"
 
-static NS_DEFINE_IID(kRegionCID, NS_REGION_CID);
-
 //mmptemp
 
-static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
+//static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 
 
 //#define SHOW_VIEW_BORDERS
@@ -52,23 +43,27 @@ static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 //
 // Main events handler
 //
-nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent)
-{ 
-//printf(" %d %d %d (%d,%d) \n", aEvent->widget, aEvent->widgetSupports, 
-//       aEvent->message, aEvent->point.x, aEvent->point.y);
-  nsEventStatus result = nsEventStatus_eIgnore;
-  nsIView       *view = nsView::GetViewFor(aEvent->widget);
 
+NS_IMPL_ISUPPORTS1(nsGUIEventListener, nsIGUIEventListener)
+
+NS_IMETHODIMP nsGUIEventListener::ProcessEvent(const nsGUIEvent *aEvent)
+{ 
+  //printf(" %d %d %d (%d,%d) \n", aEvent->window, aEvent->widgetSupports, 
+  //       aEvent->message, aEvent->point.x, aEvent->point.y);
+  nsEventStatus result = nsEventStatus_eIgnore;
+  nsIView       *view = nsView::GetViewFor(aEvent->window);
+  
   if (nsnull != view)
   {
-    nsIViewManager    *vm;
+    nsCOMPtr<nsIViewManager> vm;
 
-    view->GetViewManager(vm);
-    vm->DispatchEvent(aEvent, &result);
-    NS_RELEASE(vm);
+    view->GetViewManager(*getter_AddRefs(vm));
+    vm->DispatchEvent(NS_CONST_CAST(nsGUIEvent*,aEvent), &result);
   }
 
-  return result;
+
+  return NS_OK;
+  //return result;
 }
 
 MOZ_DECL_CTOR_COUNTER(nsView);
@@ -195,7 +190,7 @@ nsrefcnt nsView::Release()
   return 1;
 }
 
-nsIView* nsView::GetViewFor(nsIWidget* aWidget)
+nsIView* nsView::GetViewFor(nsIWindow* aWidget)
 {           
   nsIView*  view = nsnull;
   void*     clientData;
@@ -324,7 +319,7 @@ NS_IMETHODIMP nsView :: HandleEvent(nsGUIEvent *event, PRUint32 aEventFlags,
   if (*aStatus == nsEventStatus_eIgnore && !(mVFlags & NS_VIEW_PUBLIC_FLAG_DONT_CHECK_CHILDREN)) {
     PRInt32 numkids;
     nsRect  trect;
-    nscoord x, y;
+    gfx_coord x, y;
 
     GetChildCount(numkids); 
     x = event->point.x;
@@ -393,16 +388,16 @@ NS_IMETHODIMP nsView :: IgnoreSetPosition(PRBool aShouldIgnore)
 }
 // XXX End Temporary fix for Bug #19416
 
-NS_IMETHODIMP nsView :: SetPosition(nscoord aX, nscoord aY)
+NS_IMETHODIMP nsView :: SetPosition(gfx_coord aX, gfx_coord aY)
 {
-  nscoord x = aX;
-  nscoord y = aY;
+  gfx_coord x = aX;
+  gfx_coord y = aY;
   if (IsRoot()) {
     // Add view manager's coordinate offset to the root view
     // This allows the view manager to offset it's coordinate space
     // while allowing layout to assume it's coordinate space origin is (0,0)
-    nscoord offsetX;
-    nscoord offsetY;
+    gfx_coord offsetX;
+    gfx_coord offsetY;
     mViewManager->GetOffset(&offsetX, &offsetY);
     x += offsetX;
     y += offsetY;
@@ -427,20 +422,13 @@ NS_IMETHODIMP nsView :: SetPosition(nscoord aX, nscoord aY)
       return NS_OK;
     }
 
-    nsIDeviceContext  *dx;
-    float             scale;
-    nsIWidget         *pwidget = nsnull;
-    nscoord           parx = 0, pary = 0;
+    nsIWindow         *pwidget = nsnull;
+    gfx_coord           parx = 0, pary = 0;
   
-    mViewManager->GetDeviceContext(dx);
-    dx->GetAppUnitsToDevUnits(scale);
-    NS_RELEASE(dx);
-
     GetOffsetFromWidget(&parx, &pary, pwidget);
     NS_IF_RELEASE(pwidget);
     
-    mWindow->Move(NSTwipsToIntPixels((x + parx), scale),
-                  NSTwipsToIntPixels((y + pary), scale));
+    mWindow->Move(x + parx, y + pary);
   }
 
   return NS_OK;
@@ -451,13 +439,6 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
   // if the widget was moved or resized
   if (mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_MOVED || mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_RESIZED)
   {
-    nsIDeviceContext  *dx;
-    float             t2p;
-
-    mViewManager->GetDeviceContext(dx);
-    dx->GetAppUnitsToDevUnits(t2p);
-    NS_RELEASE(dx);
-
     /* You would think that doing a move and resize all in one operation would
      * be faster but its not. Something is really broken here. So I'm comenting 
      * this out for now 
@@ -465,8 +446,8 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
     if (mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_MOVED && mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_RESIZED)
     {
 
-      nscoord parx = 0, pary = 0;
-      nsIWidget         *pwidget = nsnull;
+      gfx_coord parx = 0, pary = 0;
+      nsIWindow         *pwidget = nsnull;
 
       GetOffsetFromWidget(&parx, &pary, pwidget);
       NS_IF_RELEASE(pwidget);
@@ -495,8 +476,8 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
     if (mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_RESIZED) 
     {
 
-      PRInt32 width = NSTwipsToIntPixels(mBounds.width, t2p);
-      PRInt32 height = NSTwipsToIntPixels(mBounds.height, t2p);
+      gfx_dimension width = mBounds.width;
+      gfx_dimension height = mBounds.height;
 
       nsRect bounds;
       mWindow->GetBounds(bounds);
@@ -511,14 +492,14 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
     
     if (mVFlags & NS_VIEW_PUBLIC_FLAG_WIDGET_MOVED) {
       // if we just moved do it.
-      nscoord parx = 0, pary = 0;
-      nsIWidget         *pwidget = nsnull;
+      gfx_coord parx = 0, pary = 0;
+      nsIWindow         *pwidget = nsnull;
 
       GetOffsetFromWidget(&parx, &pary, pwidget);
       NS_IF_RELEASE(pwidget);
 
-      PRInt32 x = NSTwipsToIntPixels(mBounds.x + parx, t2p);
-      PRInt32 y = NSTwipsToIntPixels(mBounds.y + pary, t2p);
+      gfx_coord x = mBounds.x + parx;
+      gfx_coord y = mBounds.y + pary;
 
       nsRect bounds;
       mWindow->GetBounds(bounds);
@@ -536,7 +517,7 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetPosition(nscoord *x, nscoord *y) const
+NS_IMETHODIMP nsView :: GetPosition(gfx_coord *x, gfx_coord *y) const
 {
 
   nsIView *rootView;
@@ -557,7 +538,7 @@ NS_IMETHODIMP nsView :: GetPosition(nscoord *x, nscoord *y) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: SetDimensions(nscoord width, nscoord height, PRBool aPaint)
+NS_IMETHODIMP nsView :: SetDimensions(gfx_coord width, gfx_coord height, PRBool aPaint)
 {
   if ((mBounds.width == width) &&
       (mBounds.height == height))
@@ -594,14 +575,7 @@ NS_IMETHODIMP nsView :: SetDimensions(nscoord width, nscoord height, PRBool aPai
       return NS_OK;
     }
 
-    nsIDeviceContext  *dx;
-    float             t2p;
-  
-    mViewManager->GetDeviceContext(dx);
-    dx->GetAppUnitsToDevUnits(t2p);
-
-    mWindow->Resize(NSTwipsToIntPixels(width, t2p), NSTwipsToIntPixels(height, t2p),
-                    aPaint);
+    mWindow->Resize(width, height, aPaint);
 
     NS_RELEASE(dx);
   }
@@ -609,7 +583,7 @@ NS_IMETHODIMP nsView :: SetDimensions(nscoord width, nscoord height, PRBool aPai
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetDimensions(nscoord *width, nscoord *height) const
+NS_IMETHODIMP nsView :: GetDimensions(gfx_coord *width, gfx_coord *height) const
 {
   *width = mBounds.width;
   *height = mBounds.height;
@@ -623,7 +597,7 @@ NS_IMETHODIMP nsView :: SetBounds(const nsRect &aBounds, PRBool aPaint)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: SetBounds(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight, PRBool aPaint)
+NS_IMETHODIMP nsView :: SetBounds(gfx_coord aX, gfx_coord aY, gfx_coord aWidth, gfx_coord aHeight, PRBool aPaint)
 {
   SetPosition(aX, aY);
   SetDimensions(aWidth, aHeight, aPaint);
@@ -649,7 +623,7 @@ NS_IMETHODIMP nsView :: GetBounds(nsRect &aBounds) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: SetChildClip(nscoord aLeft, nscoord aTop, nscoord aRight, nscoord aBottom)
+NS_IMETHODIMP nsView :: SetChildClip(gfx_coord aLeft, gfx_coord aTop, gfx_coord aRight, gfx_coord aBottom)
 {
   NS_PRECONDITION(aLeft <= aRight && aTop <= aBottom, "bad clip values");
   mChildClip.mLeft = aLeft;
@@ -660,7 +634,7 @@ NS_IMETHODIMP nsView :: SetChildClip(nscoord aLeft, nscoord aTop, nscoord aRight
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetChildClip(nscoord *aLeft, nscoord *aTop, nscoord *aRight, nscoord *aBottom) const
+NS_IMETHODIMP nsView :: GetChildClip(gfx_coord *aLeft, gfx_coord *aTop, gfx_coord *aRight, gfx_coord *aBottom) const
 {
   *aLeft = mChildClip.mLeft;
   *aTop = mChildClip.mTop;
@@ -678,10 +652,10 @@ NS_IMETHODIMP nsView :: SetVisibility(nsViewVisibility aVisibility)
   {
 #ifndef HIDE_ALL_WIDGETS
     if (mVis == nsViewVisibility_kShow)
-      mWindow->Show(PR_TRUE);
+      mWindow->Show();
     else
 #endif
-      mWindow->Show(PR_FALSE);
+      mWindow->Hide();
   }
 
   return NS_OK;
@@ -931,46 +905,25 @@ NS_IMETHODIMP nsView :: GetClientData(void *&aData) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: CreateWidget(const nsIID &aWindowIID,
-                                     nsWidgetInitData *aWidgetInitData,
-                                     nsNativeWidget aNative,
-                                     PRBool aEnableDragDrop)
+NS_IMETHODIMP nsView :: CreateWidget(const char *contractid)
 {
-  nsIDeviceContext  *dx;
-  nsRect            trect = mBounds;
-  float             scale;
-
-  NS_IF_RELEASE(mWindow);
-
-  mViewManager->GetDeviceContext(dx);
-  dx->GetAppUnitsToDevUnits(scale);
-
-  trect *= scale;
-
-  if (NS_OK == LoadWidget(aWindowIID))
+  nsresult rv;
+  mWindow = do_CreateInstance(contractid, &rv);
+  if (NS_SUCCEEDED(rv));
   {
-    PRBool usewidgets;
+    nsCOMPtr<nsIWindow> parent;
+    GetOffsetFromWidget(nsnull, nsnull, getter_AddRefs(parent));
 
-    dx->SupportsNativeWidgets(usewidgets);
-
-    if (PR_TRUE == usewidgets)
-    {
-      if (aNative)
-        mWindow->Create(aNative, trect, ::HandleEvent, dx, nsnull, nsnull, aWidgetInitData);
-      else
-      {
-        nsIWidget *parent;
-        GetOffsetFromWidget(nsnull, nsnull, parent);
-        mWindow->Create(parent, trect, ::HandleEvent, dx, nsnull, nsnull, aWidgetInitData);
-        NS_IF_RELEASE(parent);
-      }
-      if (aEnableDragDrop) {
-        mWindow->EnableDragDrop(PR_TRUE);
-      }
-      
-      // propagate the z-index to the widget.
-      mWindow->SetZIndex(mZindex);
+    nsCOMPtr<nsIChildWindow> cw = do_QueryInterface(mWindow, &rv);
+    if (NS_SUCCEEDED(rv)) {
+      mWindow->Init(parent, 0, 0, 1, 1);
+    } else {
+      NS_ASSERTION(PR_FALSE, "nsView used to create something other than a child window :(");
     }
+      
+    // XXX pav
+    // propagate the z-index to the widget.
+    //    mWindow->SetZIndex(mZindex);
   }
 
   //make sure visibility state is accurate
@@ -985,7 +938,7 @@ NS_IMETHODIMP nsView :: CreateWidget(const nsIID &aWindowIID,
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: SetWidget(nsIWidget *aWidget)
+NS_IMETHODIMP nsView :: SetWidget(nsIWindow *aWidget)
 {
   NS_IF_RELEASE(mWindow);
   mWindow = aWidget;
@@ -999,7 +952,7 @@ NS_IMETHODIMP nsView :: SetWidget(nsIWidget *aWidget)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetWidget(nsIWidget *&aWidget) const
+NS_IMETHODIMP nsView :: GetWidget(nsIWindow *&aWidget) const
 {
   NS_IF_ADDREF(mWindow);
   aWidget = mWindow;
@@ -1017,7 +970,7 @@ NS_IMETHODIMP nsView::HasWidget(PRBool *aHasWidget) const
 //
 nsresult nsView :: LoadWidget(const nsCID &aClassIID)
 {
-  nsresult rv = nsComponentManager::CreateInstance(aClassIID, nsnull, NS_GET_IID(nsIWidget), (void**)&mWindow);
+  nsresult rv = nsComponentManager::CreateInstance(aClassIID, nsnull, NS_GET_IID(nsIWindow), (void**)&mWindow);
 
   if (NS_OK == rv) {
     // Set the widget's client data
@@ -1087,7 +1040,7 @@ NS_IMETHODIMP nsView :: GetViewFlags(PRUint32 *aFlags) const
   return NS_OK;
 }
 
-NS_IMETHODIMP nsView :: GetOffsetFromWidget(nscoord *aDx, nscoord *aDy, nsIWidget *&aWidget)
+NS_IMETHODIMP nsView :: GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow *&aWidget)
 {
   nsIView   *ancestor;
   aWidget = nsnull;
@@ -1103,7 +1056,7 @@ NS_IMETHODIMP nsView :: GetOffsetFromWidget(nscoord *aDx, nscoord *aDy, nsIWidge
 
     if ((nsnull != aDx) && (nsnull != aDy))
     {
-      nscoord offx, offy;
+      gfx_coord offx, offy;
 
       ancestor->GetPosition(&offx, &offy);
 
@@ -1169,7 +1122,7 @@ NS_IMETHODIMP nsView::GetCompositorFlags(PRUint32 *aFlags)
 	return NS_OK;
 }
 
-static void calc_extents(nsIView *view, nsRect *extents, nscoord ox, nscoord oy)
+static void calc_extents(nsIView *view, nsRect *extents, gfx_coord ox, gfx_coord oy)
 {
   nsIView     *kid;
   nsRect      bounds;
@@ -1221,7 +1174,7 @@ nsIView *rootView;
   return PR_FALSE;
 }
 
-PRBool nsView::PointIsInside(nsIView& aView, nscoord x, nscoord y) const
+PRBool nsView::PointIsInside(nsIView& aView, gfx_coord x, gfx_coord y) const
 {
   nsRect clippedRect;
   PRBool empty;
@@ -1246,8 +1199,8 @@ NS_IMETHODIMP nsView::GetClippedRect(nsRect& aClippedRect, PRBool& aIsClipped, P
 {
   // Keep track of the view's offset
   // from its ancestor.
-  nscoord ancestorX = 0;
-  nscoord ancestorY = 0;
+  gfx_coord ancestorX = 0;
+  gfx_coord ancestorY = 0;
 
   aEmpty = PR_FALSE;
   aIsClipped = PR_FALSE;
@@ -1264,10 +1217,10 @@ NS_IMETHODIMP nsView::GetClippedRect(nsRect& aClippedRect, PRBool& aIsClipped, P
      if (flags & NS_VIEW_PUBLIC_FLAG_CLIPCHILDREN) {
       aIsClipped = PR_TRUE;
       // Adjust for clip specified by ancestor
-      nscoord clipLeft;
-      nscoord clipTop;
-      nscoord clipRight;
-      nscoord clipBottom;
+      gfx_coord clipLeft;
+      gfx_coord clipTop;
+      gfx_coord clipRight;
+      gfx_coord clipBottom;
       parentView->GetChildClip(&clipLeft, &clipTop, &clipRight, &clipBottom);
       nsRect clipRect;
       //Offset the cliprect by the amount the child offsets from the parent

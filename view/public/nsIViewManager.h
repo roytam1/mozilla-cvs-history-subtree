@@ -25,7 +25,7 @@
 
 #include "nscore.h"
 #include "nsISupports.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIView.h"
 
 class nsIRegion;
@@ -62,7 +62,7 @@ public:
    * @param aY Y offset of the view manager's coordinate space in twips
    * @result The result of the initialization, NS_OK if no errors
    */
-  NS_IMETHOD  Init(nscoord aX = 0, nscoord aY = 0) = 0;
+  NS_IMETHOD  Init(gfx_coord aX = 0, gfx_coord aY = 0) = 0;
 
   /**
    * Get the root of the view tree.
@@ -104,7 +104,7 @@ public:
    * @param width out parameter for width of window in twips
    * @param height out parameter for height of window in twips
    */
-  NS_IMETHOD  GetWindowDimensions(nscoord *width, nscoord *height) = 0;
+  NS_IMETHOD  GetWindowDimensions(gfx_dimension *width, gfx_dimension *height) = 0;
 
   /**
    * Set the dimensions of the root window.
@@ -113,7 +113,7 @@ public:
    * @param width of window in twips
    * @param height of window in twips
    */
-  NS_IMETHOD  SetWindowDimensions(nscoord width, nscoord height) = 0;
+  NS_IMETHOD  SetWindowDimensions(gfx_dimension width, gfx_dimension height) = 0;
 
   /**
    * Reset the state of scrollbars and the scrolling region
@@ -241,7 +241,7 @@ public:
    * @param x x offset to add to current view position
    * @param y y offset to add to current view position
    */
-  NS_IMETHOD  MoveViewBy(nsIView *aView, nscoord aX, nscoord aY) = 0;
+  NS_IMETHOD  MoveViewBy(nsIView *aView, gfx_coord aX, gfx_coord aY) = 0;
 
   /**
    * Move a view to the specified position,
@@ -251,7 +251,7 @@ public:
    * @param x x value for new view position
    * @param y y value for new view position
    */
-  NS_IMETHOD  MoveViewTo(nsIView *aView, nscoord aX, nscoord aY) = 0;
+  NS_IMETHOD  MoveViewTo(nsIView *aView, gfx_coord aX, gfx_coord aY) = 0;
 
   /**
    * Resize a view to the specified width and height.
@@ -260,7 +260,7 @@ public:
    * @param width new view width
    * @param height new view height
    */
-  NS_IMETHOD  ResizeView(nsIView *aView, nscoord aWidth, nscoord aHeight) = 0;
+  NS_IMETHOD  ResizeView(nsIView *aView, gfx_dimension aWidth, gfx_dimension aHeight) = 0;
 
   /**
    * Set the clipping of a view's children
@@ -483,7 +483,7 @@ public:
    * @result error status
    */
 
-  NS_IMETHOD GetOffset(nscoord *aX, nscoord *aY) = 0;
+  NS_IMETHOD GetOffset(gfx_coord *aX, gfx_coord *aY) = 0;
 
   /**
    * Turn widget on or off widget movement caching

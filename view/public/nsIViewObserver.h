@@ -73,7 +73,7 @@ public:
    * @param aHeight - new height of view
    * @return error status
    */
-  NS_IMETHOD ResizeReflow(nsIView * aView, nscoord aWidth, nscoord aHeight) = 0;
+  NS_IMETHOD ResizeReflow(nsIView * aView, gfx_coord aWidth, gfx_coord aHeight) = 0;
 };
 
 #endif
