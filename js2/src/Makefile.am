@@ -10,6 +10,9 @@ libjs2_a_SOURCES = \
 	formatter.cpp \
 	hash.cpp \
 	js2runtime.cpp \
+	jsarray.cpp \
+	jsmath.cpp \
+	jsstring.cpp \
 	lexer.cpp \
 	mem.cpp \
 	numerics.cpp \
