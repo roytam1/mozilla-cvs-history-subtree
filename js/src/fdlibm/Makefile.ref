@@ -68,7 +68,7 @@ include $(DEPTH)/config.mk
 #
 # Default IEEE libm
 #
-CFLAGS          = -DXP_UNIX $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
+CFLAGS          += -DXP_UNIX $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
 		  -DJSFILE $(XCFLAGS) -D_IEEE_LIBM
 
 
