@@ -369,7 +369,7 @@ PRVCY_PrivacyPolicyConfirmSubmit(MWContext *ctxt,
                                  LO_FormElementStruct *form_element)
 {
   History_entry *entry;
-  XP_Bool value = FALSE, savevalue;
+  PRBool value = PR_FALSE, savevalue;
   Bool returnvalue;
   
   int ret; 
@@ -401,6 +401,7 @@ PRVCY_PrivacyPolicyConfirmSubmit(MWContext *ctxt,
   
   if (value)
     {
+      Bool bvalue;
       savevalue = value;
 /*      returnvalue = 
         (int) FE_SecurityDialog(ctxt, SD_NO_PRIVACY_POLICY, valueptr); */
@@ -415,7 +416,8 @@ PRVCY_PrivacyPolicyConfirmSubmit(MWContext *ctxt,
                         "Continue Submission",
                         "Cancel Submission",
 /*                      TRUE,                                                                   */
-                        &value);
+                        &bvalue);
+      value = (PRBool) bvalue;
       if (value != savevalue)
         {
           ret = PREF_SetBoolPref(prefname, value);
@@ -516,7 +518,7 @@ PRVCY_SiteInfo(MWContext *context) {
     char *argument = 0;
     char *argument2 = 0;
     int32 cookieBehavior;
-    Bool warn;
+    PRBool warn;
     int g = 0;
 
     static XPDialogInfo dialogInfo = {
