@@ -68,6 +68,8 @@ CPPSRCS= \
 	nsSound.cpp \
 	$(NULL)
 
+CSRCS = gtk_moz_window.c
+
 TARGETS = $(LIBRARY)
 
 MKSHLIB :=
