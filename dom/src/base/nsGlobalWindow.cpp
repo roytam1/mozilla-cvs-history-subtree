@@ -22,6 +22,7 @@
  *   Brendan Eich <brendan@mozilla.org>
  *   David Hyatt (hyatt@netscape.com)
  *   Dan Rosen <dr@netscape.com>
+ *   Vidur Apparao <vidur@netscape.com>
  *   Johnny Stenback <jst@netscape.com>
  */
 

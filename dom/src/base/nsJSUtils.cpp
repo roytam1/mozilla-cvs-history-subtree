@@ -18,6 +18,7 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ *   Vidur Apparao <vidur@netscape.com>
  */
 
 /**

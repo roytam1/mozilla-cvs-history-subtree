@@ -20,6 +20,7 @@
  * Contributor(s):
  *   Travis Bogard <travis@netscape.com>
  *   Dan Rosen <dr@netscape.com>
+ *   Vidur Apparao <vidur@netscape.com>
  *   Johnny Stenback <jst@netscape.com>
  */
 
