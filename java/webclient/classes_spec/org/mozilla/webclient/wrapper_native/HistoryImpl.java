@@ -180,6 +180,7 @@ public HistoryEntry [] getHistory()
             
 public HistoryEntry getHistoryEntry(int historyIndex)
 {
+    ParameterCheck.noLessThan(historyIndex, 0);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     HistoryEntry result = null;
@@ -207,6 +208,7 @@ public int getCurrentHistoryIndex()
 
 public void setCurrentHistoryIndex(int historyIndex)
 {
+    ParameterCheck.noLessThan(historyIndex, 0);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     
@@ -229,6 +231,7 @@ public int getHistoryLength()
 
 public String getURLForIndex(int historyIndex)
 {
+    ParameterCheck.noLessThan(historyIndex, 0);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     String result = null;

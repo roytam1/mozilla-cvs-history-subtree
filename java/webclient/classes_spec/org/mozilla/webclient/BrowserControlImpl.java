@@ -137,6 +137,7 @@ void delete()
 
 static void appInitialize(String verifiedBinDirAbsolutePath) throws Exception 
 {
+    ParameterCheck.nonNull(verifiedBinDirAbsolutePath);
     if (null == wrapperFactory) {
         wrapperFactory = createWrapperFactory();
     }

@@ -100,6 +100,7 @@ public void copyCurrentSelectionToSystemClipboard()
             
 public void findInPage(String stringToFind, boolean forward, boolean matchCase)
 {
+    ParameterCheck.nonNull(stringToFind);
     myFactory.throwExceptionIfNotInitialized();
 
     synchronized(myBrowserControl) {

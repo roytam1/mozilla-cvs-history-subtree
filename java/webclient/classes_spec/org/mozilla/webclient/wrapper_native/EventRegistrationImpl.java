@@ -111,6 +111,7 @@ public void delete()
 
 public void addDocumentLoadListener(DocumentLoadListener listener)
 {
+    ParameterCheck.nonNull(listener);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     Assert.assert(null != nativeEventThread);
@@ -123,6 +124,7 @@ public void addDocumentLoadListener(DocumentLoadListener listener)
 
 public void removeDocumentLoadListener(DocumentLoadListener listener)
 {
+    ParameterCheck.nonNull(listener);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     
@@ -134,6 +136,7 @@ public void removeDocumentLoadListener(DocumentLoadListener listener)
 
 public void addMouseListener(MouseListener listener)
 {
+    ParameterCheck.nonNull(listener);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     Assert.assert(null != nativeEventThread);
@@ -154,6 +157,7 @@ public void addMouseListener(MouseListener listener)
 
 public void removeMouseListener(MouseListener listener)
 {
+    ParameterCheck.nonNull(listener);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     

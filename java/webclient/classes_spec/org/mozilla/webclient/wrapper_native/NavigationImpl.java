@@ -75,6 +75,7 @@ public NavigationImpl(WrapperFactory yourFactory,
 
 public void loadURL(String absoluteURL)
 {
+    ParameterCheck.nonNull(absoluteURL);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     
@@ -85,6 +86,7 @@ public void loadURL(String absoluteURL)
 
 public void refresh(long loadFlags)
 {
+    ParameterCheck.noLessThan(loadFlags, 0);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     

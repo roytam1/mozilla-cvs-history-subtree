@@ -103,6 +103,7 @@ NativeEventThread getNativeEventThread()
 
 public void setBounds(Rectangle newBounds)
 {
+    ParameterCheck.nonNull(newBounds);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     
@@ -114,6 +115,8 @@ public void setBounds(Rectangle newBounds)
 
 public void createWindow(int nativeWindow, Rectangle bounds)
 {
+    ParameterCheck.greaterThan(nativeWindow, 0);
+    ParameterCheck.nonNull(bounds);
     myFactory.throwExceptionIfNotInitialized();
 
     synchronized(myBrowserControl) {

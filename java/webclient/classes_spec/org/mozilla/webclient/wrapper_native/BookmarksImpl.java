@@ -110,6 +110,7 @@ public void delete()
 public void addBookmark(BookmarkEntry mayBeNullParent, 
                         BookmarkEntry bookmark)
 {
+    ParameterCheck.nonNull(bookmark);
     myFactory.throwExceptionIfNotInitialized();
     
     if  (!(bookmark instanceof BookmarkEntryImpl)) {
@@ -160,6 +161,7 @@ public TreeModel getBookmarks() throws IllegalStateException
             
 public void removeBookmark(BookmarkEntry bookmark)
 {
+    ParameterCheck.nonNull(bookmark);
     myFactory.throwExceptionIfNotInitialized();
     Assert.assert(-1 != nativeWebShell);
     
@@ -183,6 +185,7 @@ public BookmarkEntry newBookmarkEntry(String url)
 
 public BookmarkEntry newBookmarkFolder(String name)
 {
+    ParameterCheck.nonNull(name);
     BookmarkEntry result = null;
     getBookmarks();
     int newNode;
