@@ -150,7 +150,7 @@ public:
 //   NS_IMETHOD HasClass(nsIAtom* aClass) const;
   
   NS_IMETHOD WalkContentStyleRules(nsRuleWalker* aRuleWalker);
-  NS_IMETHOD GetInlineStyleRule(nsIStyleRule** aStyleRule);
+  NS_IMETHOD GetInlineStyleRule(nsICSSStyleRule** aStyleRule);
   
   // nsIDOMNode
   NS_DECL_NSIDOMNODE
