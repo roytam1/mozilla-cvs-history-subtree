@@ -382,7 +382,7 @@ BEGIN_MESSAGE_MAP(CSelector, CView)
 	ON_WM_RBUTTONDOWN()
 	ON_WM_MOUSEMOVE()
 	ON_WM_TIMER()
-
+	ON_MESSAGE(NSBUTTONDRAGGING, OnButtonDrag)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -1156,6 +1156,36 @@ BOOL CSelectorDropTarget::OnDrop(CWnd* pWnd,
 
 }
 
+LRESULT CSelector::OnButtonDrag(WPARAM wParam, LPARAM lParam)
+{
+	HWND hWnd = (HWND) lParam;
+
+	CWnd *pButton = CWnd::FromHandle(hWnd);
+
+	COleDataSource * pDataSource = new COleDataSource;  
+	CSelectorButton* pSelButton = (CSelectorButton*)pButton;
+	
+    pSelButton->FillInOleDataSource(pDataSource);
+	
+	// Need to clear the selection, since I use that for dropping stuff.
+	HT_SetSelection(HT_TopNode(pSelButton->GetHTView()));
+
+    // Don't start drag until outside this rect 
+    RECT rectDragStart;
+	pButton->GetClientRect(&rectDragStart);
+	pButton->MapWindowPoints(this, &rectDragStart);
+
+	DROPEFFECT effect;
+	CToolbarDropSource * pDropSource = new CToolbarDropSource;
+
+    effect=pDataSource->DoDragDrop(DROPEFFECT_COPY | DROPEFFECT_LINK | DROPEFFECT_MOVE | DROPEFFECT_SCROLL | DROPEFFECT_NONE,
+                            &rectDragStart, pDropSource);
+	
+	delete pDropSource;
+	delete pDataSource;
+	
+	return 1;
+}
 
 DROPEFFECT CSelectorDropTarget::OnDragEnter(CWnd* pWnd, 
                 COleDataObject* pDataObject, DWORD dwKeyState, CPoint point )

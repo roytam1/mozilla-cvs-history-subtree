@@ -237,6 +237,9 @@ public:
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 
+	// Message that is called when a button is being dragged.
+	LRESULT OnButtonDrag(WPARAM wParam, LPARAM lParam);
+
 	// function needed for NavFram.cpp
 	void RearrangeIcons();
 

@@ -2735,8 +2735,10 @@ void RDFGLOBAL_PerformDrop(COleDataObject* pDataObject, HT_Resource theNode, int
 		DropPosition dropPosition = RDFGLOBAL_TranslateDropPosition(theNode, dragFraction);
 
 		HT_Resource node = NULL;
+		BOOL nothingSelected = TRUE;
 		while (node = (HT_GetNextSelection(pView, node)))
 		{
+			nothingSelected = FALSE;
 			if (dropPosition == DROP_BEFORE)
 				HT_DropHTRAtPos(theNode, node, (PRBool)TRUE);
 			else if (dropPosition == DROP_AFTER)
@@ -2744,6 +2746,18 @@ void RDFGLOBAL_PerformDrop(COleDataObject* pDataObject, HT_Resource theNode, int
 			else if (dropPosition == DROP_ON)
 				HT_DropHTROn(theNode, node);
 			else HT_DropHTROn(HT_GetParent(theNode), node);
+		}
+
+		if (nothingSelected)
+		{
+			// Use the top node of the view.
+			HT_Resource node = HT_TopNode(pView);
+			if (dropPosition == DROP_BEFORE)
+				HT_DropHTRAtPos(theNode, node, (PRBool)TRUE);
+			else if (dropPosition == DROP_AFTER)
+				HT_DropHTRAtPos(theNode, node, (PRBool)FALSE);
+			else if (dropPosition == DROP_ON)
+				HT_DropHTROn(theNode, node);
 		}
 	}
 	else if(pDataObject->IsDataAvailable(cfBookmark)) 
@@ -2945,9 +2959,11 @@ DROPEFFECT RDFGLOBAL_TranslateDropAction(HT_Resource dropTarget, COleDataObject*
 		pView = *pBookmark;
 		GlobalUnlock(hBookmark);
 
-		HT_Resource node = HT_GetNextSelection(pView, NULL); 		
+		HT_Resource node = HT_GetNextSelection(pView, NULL); 
+		BOOL nothingSelected = TRUE;
 		while (node != NULL)
 		{
+			nothingSelected = FALSE;
 			HT_DropAction res2;
 			if (dropPosition == DROP_BEFORE)
 				res2 = HT_CanDropHTRAtPos(dropTarget, node, (PRBool)TRUE); 
@@ -2966,6 +2982,20 @@ DROPEFFECT RDFGLOBAL_TranslateDropAction(HT_Resource dropTarget, COleDataObject*
 			res = res2;
 
 			node = HT_GetNextSelection(pView, node);
+		}
+
+		if (nothingSelected)
+		{
+			// Use the top node of the view.
+			HT_Resource node = HT_TopNode(pView);
+			// Should only enter this code when buttons from the selector bar are being dragged.
+			if (dropPosition == DROP_BEFORE)
+				res = HT_CanDropHTRAtPos(dropTarget, node, (PRBool)TRUE); 
+			else if (dropPosition == DROP_AFTER)
+				res = HT_CanDropHTRAtPos(dropTarget, node, (PRBool)FALSE);
+			else if (dropPosition == DROP_ON)
+				res = HT_CanDropHTROn(dropTarget, node);
+			else res = HT_CanDropHTROn(HT_GetParent(dropTarget), node);
 		}
 	}
 	else if (pDataObject->IsDataAvailable(cfBookmark))
