@@ -803,7 +803,7 @@ CHyperTreeFlexTable :: ItemIsAcceptable ( DragReference /*inDragRef*/, ItemRefer
 //
 // Overridden to use our own version of the drag task...
 //
-void 
+OSErr 
 CHyperTreeFlexTable :: DragSelection(
 	const STableCell& 		inCell, 
 	const SMouseDownEvent&	inMouseDown	)
@@ -873,7 +873,7 @@ CHyperTreeFlexTable :: DragSelection(
 		delete curr;
 		
 	mViewBeforeDrag = GetHTView();
-		
+	return noErr;
 } // DragSelection
 
 
@@ -1131,7 +1131,7 @@ CHyperTreeFlexTable :: InlineEditorDone ( )
 // While we normally want to be able to do inline editing, we have to turn it off for panes
 // that don't allow editing (like History). Assumes mRowBeingEdited is correctly set.
 //
-bool
+Boolean
 CHyperTreeFlexTable :: CanDoInlineEditing ( ) 
 {
 	CHyperTreeHeader* header = dynamic_cast<CHyperTreeHeader*>(mTableHeader);
