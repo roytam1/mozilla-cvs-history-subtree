@@ -46,7 +46,7 @@
 
 dialog { 
   padding: 8px 10px 10px 8px;
-  background-color: #FFFBF7;
+  background-color: #FFFCF7 !important;
 }
 
 /* ::::: dialog buttons ::::: */
