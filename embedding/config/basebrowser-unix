@@ -52,6 +52,7 @@ components/libgfxps.so
 components/libgfxxprint.so
 components/gfx.xpt 
 components/libwidget_gtk.so
+components/libwidget_gtk2.so
 components/widget.xpt
 
 ; layout
