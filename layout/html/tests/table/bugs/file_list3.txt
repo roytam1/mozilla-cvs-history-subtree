@@ -1,3 +1,0 @@
-file:///s|/mozilla/layout/html/tests/table/bugs/bug14929.html
-file:///s|/mozilla/layout/html/tests/table/bugs/bug33137.html
-file:///s|/mozilla/layout/html/tests/table/bugs/bug45350.html
