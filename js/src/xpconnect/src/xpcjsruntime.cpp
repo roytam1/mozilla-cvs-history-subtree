@@ -297,7 +297,6 @@ hash_root(const void *key)
 JS_STATIC_DLL_CALLBACK(intN)
 DEBUG_WrapperChecker(JSHashEntry *he, intN i, void *arg)
 {
-// XXX fix this
     NS_ASSERTION(!((XPCWrappedNative*)he->value)->IsValid(), "found a 'valid' wrapper!");
     ++ *((int*)arg);
     return HT_ENUMERATE_NEXT;

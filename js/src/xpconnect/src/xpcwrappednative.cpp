@@ -475,9 +475,6 @@ XPCWrappedNative::SystemIsBeingShutDown(XPCCallContext& ccx)
         delete mFirstChunk.mNextChunk;
         mFirstChunk.mNextChunk = nsnull;
     }
-
-    // XXX do more stuff?
-
 }
 
 /***************************************************************************/

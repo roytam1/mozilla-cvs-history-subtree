@@ -168,8 +168,10 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             nsCOMPtr<nsISupports> isup;
 
             e = (nsIEnumerator*) JSVAL_TO_PRIVATE(*statep);
-            if(NS_SUCCEEDED(e->CurrentItem(getter_AddRefs(isup))) && isup)
+            if(NS_COMFALSE == e->IsDone() &&
+               NS_SUCCEEDED(e->CurrentItem(getter_AddRefs(isup))) && isup)
             {
+                e->Next();
                 nsCOMPtr<nsIInterfaceInfo> iface(do_QueryInterface(isup));
                 if(iface)
                 {
@@ -356,8 +358,10 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             nsCOMPtr<nsISupports> isup;
 
             e = (nsIEnumerator*) JSVAL_TO_PRIVATE(*statep);
-            if(NS_SUCCEEDED(e->CurrentItem(getter_AddRefs(isup))) && isup)
+            if(NS_COMFALSE == e->IsDone() &&
+               NS_SUCCEEDED(e->CurrentItem(getter_AddRefs(isup))) && isup)
             {
+                e->Next();
                 nsCOMPtr<nsISupportsString> holder(do_QueryInterface(isup));
                 if(holder)
                 {
@@ -508,8 +512,10 @@ nsXPCComponents_ClassesByID::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             nsCOMPtr<nsISupports> isup;
 
             e = (nsIEnumerator*) JSVAL_TO_PRIVATE(*statep);
-            if(NS_SUCCEEDED(e->CurrentItem(getter_AddRefs(isup))) && isup)
+            if(NS_COMFALSE == e->IsDone() &&
+               NS_SUCCEEDED(e->CurrentItem(getter_AddRefs(isup))) && isup)
             {
+                e->Next();
                 nsCOMPtr<nsISupportsID> holder(do_QueryInterface(isup));
                 if(holder)
                 {
@@ -664,6 +670,7 @@ nsXPCComponents_Results::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
             void** space = (void**) new char[sizeof(void*)];
             *space = nsnull;
             *statep = PRIVATE_TO_JSVAL(space);
+            return NS_OK;
         }
         case JSENUMERATE_NEXT:
         {

@@ -386,15 +386,15 @@ nsJSIID::NewResolve(nsIXPConnectWrappedNative *wrapper,
     if(!iface)
         return NS_OK;
 
-    jsid idid;
-    if(!JS_ValueToId(cx, id, &idid))
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    XPCNativeMember* member = iface->FindMember(idid);
+    XPCNativeMember* member = iface->FindMember(id);
     if(member && member->IsConstant())
     {
         jsval val;
         if(!member->GetValue(ccx, iface, &val))
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        jsid idid;
+        if(!JS_ValueToId(cx, id, &idid))
             return NS_ERROR_OUT_OF_MEMORY;
 
         *objp = obj;

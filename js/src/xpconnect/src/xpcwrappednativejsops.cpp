@@ -572,74 +572,6 @@ JSClass XPC_WN_NoHelper_JSClass = {
 
 /***************************************************************************/
 
-extern "C" JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
-
-static JSObjectOps XPC_WN_JSOps;
-
-JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_JSOp_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
-                      jsval *statep, jsid *idp)
-{
-    // XXX fix this...
-
-/*
-    Here are the cases:
-
-    set jsclass enumerate to stub (unless noted otherwise)
-
-    if( helper wants NO enumerate )
-        if( DONT_ENUM_STATICS )
-            use enumerate stub - don't use this JSOp thing at all
-        else
-            do shared enumerate - don't use this JSOp thing at all
-    else if( helper wants old enumerate )
-        use this JSOp
-        if( DONT_ENUM_STATICS )
-            call scriptable enumerate
-            call stub
-        else
-            if( set not mutated )
-                call scriptable enumerate
-                call stub
-            else
-                call shared enumerate
-                call scriptable enumerate
-                call stub
-    else // if( helper wants new enumerate )
-        if( DONT_ENUM_STATICS )
-            forward to scriptable enumerate
-        else
-            if( set not mutated )
-                forward to scriptable enumerate
-            else
-                call shared enumerate
-                forward to scriptable enumerate
-*/
-
-    
-    //XPC_WN_NoHelper_NewEnumerate
-    
-    return js_ObjectOps.enumerate(cx, obj, enum_op, statep, idp);
-}
-
-JSObjectOps * JS_DLL_CALLBACK
-XPC_WN_GetObjectOpsStub(JSContext *cx, JSClass *clazz)
-{
-    return &XPC_WN_JSOps;
-}
-
-JSBool xpc_InitWrappedNativeJSOps()
-{
-    if(!XPC_WN_JSOps.newObjectMap)
-    {
-        memcpy(&XPC_WN_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
-        XPC_WN_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
-    }
-    return JS_TRUE;
-}
-
-/***************************************************************************/
-
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_MaybeResolvingPropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval *vp)
 {
@@ -663,7 +595,7 @@ XPC_WN_MaybeResolvingPropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsv
 
 #define POST_HELPER_STUB                                                     \
     if(NS_FAILED(rv))                                                        \
-        Throw(rv, cx);                                                       \
+        return Throw(rv, cx);                                                \
     return retval;
 
 JS_STATIC_DLL_CALLBACK(JSBool)
@@ -774,50 +706,6 @@ XPC_WN_Helper_Mark(JSContext *cx, JSObject *obj, void *arg)
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)
-XPC_WN_Helper_NewEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
-                           jsval *statep, jsid *idp)
-{
-    // XXX fix this!
-
-    XPCCallContext ccx(JS_CALLER, cx, obj);
-    XPCWrappedNative* wrapper = ccx.GetWrapper();
-    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
-
-    switch(enum_op)
-    {
-        case JSENUMERATE_INIT:
-            // XXX fix this!
-            if(1)
-            //if(!wrapper->HasMutatedSet())
-            {
-                if(idp)
-                    *idp = JSVAL_ZERO;
-                *statep = JSVAL_NULL;
-                return JS_TRUE;
-            }
-            // XXX handle this
-            // We need to build a list of the ids that are unique to our
-            // mutated set. Oh joy!
-            return JS_TRUE;
-
-        case JSENUMERATE_NEXT:
-            // XXX handle this
-            return JS_TRUE;
-
-        case JSENUMERATE_DESTROY:
-            // XXX handle this
-            return JS_TRUE;
-
-        default:
-            NS_ERROR("bad enum_op");
-            return JS_FALSE;
-    }
-
-    NS_NOTREACHED("huh?");
-    return JS_FALSE;
-}
-
-JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
                          JSObject **objp)
 {
@@ -874,6 +762,123 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
 
 /***************************************************************************/
 
+extern "C" JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
+
+static JSObjectOps XPC_WN_JSOps;
+
+/*
+    Here are the enumerator cases:
+
+    set jsclass enumerate to stub (unless noted otherwise)
+
+    if( helper wants new enumerate )
+        if( DONT_ENUM_STATICS )
+            forward to scriptable enumerate
+        else
+            if( set not mutated )
+                forward to scriptable enumerate
+            else
+                call shared enumerate
+                forward to scriptable enumerate
+    else if( helper wants old enumerate )
+        use this JSOp
+        if( DONT_ENUM_STATICS )
+            call scriptable enumerate
+            call stub
+        else
+            if( set not mutated )
+                call scriptable enumerate
+                call stub
+            else
+                call shared enumerate
+                call scriptable enumerate
+                call stub
+
+    else //... if( helper wants NO enumerate )
+        if( DONT_ENUM_STATICS )
+            use enumerate stub - don't use this JSOp thing at all
+        else
+            do shared enumerate - don't use this JSOp thing at all
+*/
+
+JS_STATIC_DLL_CALLBACK(JSBool)
+XPC_WN_JSOp_Enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
+                      jsval *statep, jsid *idp)
+{
+    XPCCallContext ccx(JS_CALLER, cx, obj);
+    XPCWrappedNative* wrapper = ccx.GetWrapper();
+    THROW_AND_RETURN_IF_BAD_WRAPPER(cx, wrapper);
+
+    XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
+    if(!si)
+        return Throw(NS_ERROR_XPC_BAD_OP_ON_WN_PROTO, cx);
+
+    PRBool retval = JS_TRUE;
+    nsresult rv;
+        
+    if(si->WantNewEnumerate())
+    {
+        if(enum_op == JSENUMERATE_INIT &&
+           !si->DontEnumStaticProps() && 
+           wrapper->HasMutatedSet() &&
+           !XPC_WN_Shared_Enumerate(cx, obj))
+        {
+            return JS_FALSE;
+        }
+
+        // XXX Might we really need to wrap this call and *also* call 
+        // js_ObjectOps.enumerate ??? 
+
+        rv = si->GetScriptable()->        
+            NewEnumerate(wrapper, cx, obj, enum_op, statep, idp, &retval);
+        if(NS_FAILED(rv))
+            return Throw(rv, cx);
+        return retval;
+    }
+    
+    if(si->WantEnumerate())
+    {
+        if(enum_op == JSENUMERATE_INIT)
+        {
+            if(!si->DontEnumStaticProps() && 
+               wrapper->HasMutatedSet() &&
+               !XPC_WN_Shared_Enumerate(cx, obj))
+            {
+                return JS_FALSE;
+            }
+            rv = si->GetScriptable()->        
+                Enumerate(wrapper, cx, obj, &retval);
+            if(NS_FAILED(rv))
+                return Throw(rv, cx);
+            if(!retval)
+                return JS_FALSE;
+            // Then fall through and call js_ObjectOps.enumerate...
+        }
+    }
+
+    // else call js_ObjectOps.enumerate...
+
+    return js_ObjectOps.enumerate(cx, obj, enum_op, statep, idp);
+}
+
+JSObjectOps * JS_DLL_CALLBACK
+XPC_WN_GetObjectOpsStub(JSContext *cx, JSClass *clazz)
+{
+    return &XPC_WN_JSOps;
+}
+
+JSBool xpc_InitWrappedNativeJSOps()
+{
+    if(!XPC_WN_JSOps.newObjectMap)
+    {
+        memcpy(&XPC_WN_JSOps, &js_ObjectOps, sizeof(JSObjectOps));
+        XPC_WN_JSOps.enumerate = XPC_WN_JSOp_Enumerate;
+    }
+    return JS_TRUE;
+}
+
+/***************************************************************************/
+
 XPCNativeScriptableInfo::XPCNativeScriptableInfo(nsIXPCScriptable* scriptable, 
                                                  JSUint32 flags)
     : mScriptable(scriptable), mFlags(flags)
@@ -908,7 +913,6 @@ XPCNativeScriptableInfo::NewInfo(nsIXPCScriptable* scriptable,
     
     clazz->flags = JSCLASS_HAS_PRIVATE | 
                    JSCLASS_PRIVATE_IS_NSISUPPORTS |
-                   JSCLASS_NEW_ENUMERATE |
                    JSCLASS_NEW_RESOLVE;
 
     if(self->WantAddProperty())
@@ -943,9 +947,20 @@ XPCNativeScriptableInfo::NewInfo(nsIXPCScriptable* scriptable,
     else
         clazz->setProperty = XPC_WN_CannotModifyPropertyStub;
 
-    // We have to figure out enumeration strategy at call time
-    clazz->enumerate = (JSEnumerateOp) XPC_WN_Helper_NewEnumerate;
+    // We figure out most of the enumerate strategy at call time.
+    // Note that we *must* set clazz->getObjectOps = XPC_WN_GetObjectOpsStub
+    // (even for the cases were it does not do much) because with these 
+    // dynamically generated JSClasses, the code in 
+    // XPCWrappedNative::GetWrappedNativeOfJSObject() needs to look for
+    // that XPC_WN_GetObjectOpsStub pointer in order to identify that a given
+    // JSObject represents a wrapper.
+
     clazz->getObjectOps = XPC_WN_GetObjectOpsStub;
+    if(self->WantNewEnumerate() || self->WantEnumerate() || 
+       self->DontEnumStaticProps())
+        clazz->enumerate = JS_EnumerateStub;
+    else
+        clazz->enumerate = XPC_WN_Shared_Enumerate;
 
     // We have to figure out resolve strategy at call time
     clazz->resolve = (JSResolveOp) XPC_WN_Helper_NewResolve;
