@@ -93,6 +93,10 @@ DIRS += \
 endif
 endif
 
+ifdef MOZ_XULRUNNER
+DIRS += bookmarks/public
+endif
+
 ifeq ($(OS_ARCH),WINNT)
 ifndef MOZ_PHOENIX
 ifndef MOZ_XULRUNNER
