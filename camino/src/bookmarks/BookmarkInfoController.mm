@@ -84,6 +84,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   [mKeywordLabel retain];
   [mDescriptionLabel retain];
   [mDockMenuCheckbox retain];
+  [mTabgroupCheckbox retain];
   
   [[BookmarksManager sharedBookmarksManager] addBookmarksClient:self];
 }
@@ -107,6 +108,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   [mKeywordLabel release];
   [mDescriptionLabel release];
   [mDockMenuCheckbox release];
+  [mTabgroupCheckbox release];
   
   [super dealloc];
 }
@@ -157,7 +159,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self commitField:mDescriptionField toProperty:BookmarksService::gDescriptionAtom];
 
   [[mFieldEditor undoManager] removeAllActions];
-	[mBookmarkItem itemChanged:YES];
+  [mBookmarkItem itemChanged:YES];
 }
 
 - (void)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom
@@ -175,6 +177,15 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     BookmarksService::SetDockMenuRoot(NULL);
 }
 
+- (IBAction)tabGroupCheckboxClicked:(id)sender
+{
+  if ([sender state] == NSOnState)
+    [mBookmarkItem contentNode]->SetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, NS_LITERAL_STRING("true"), PR_TRUE);
+  else
+    [mBookmarkItem contentNode]->UnsetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, PR_TRUE);
+  [mBookmarkItem itemChanged:YES];
+}
+
 -(void)setBookmark: (BookmarkItem*) aBookmark
 {
   // See bug 154081 - don't show this window if Bookmark doesn't exist
@@ -182,9 +193,7 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   if (![aBookmark contentNode])
     return;
 
-  nsAutoString group;
-  [aBookmark contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gGroupAtom, group);
-  BOOL isGroup  = !group.IsEmpty();
+  BOOL isGroup  = [aBookmark isGroup];
   BOOL isFolder = !isGroup && [aBookmark isFolder];
 
   // First, Show/Hide the appropriate UI
@@ -195,9 +204,14 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self showUIElementPair: mKeywordLabel     control: mKeywordField];
     [self showUIElementPair: mDescriptionLabel control: mDescriptionField];
 
-    [mDockMenuCheckbox removeFromSuperview];
-    [mNameField    setNextKeyView:mKeywordField];
-    [mKeywordLabel setNextKeyView:mDescriptionField];
+    [mVariableFieldsContainer addSubview:mTabgroupCheckbox];
+    [mVariableFieldsContainer addSubview:mDockMenuCheckbox];
+    [mNameField        setNextKeyView:mTabgroupCheckbox];
+    [mTabgroupCheckbox setNextKeyView:mDockMenuCheckbox];
+    [mDockMenuCheckbox setNextKeyView:mKeywordField];
+    [mKeywordField     setNextKeyView:mDescriptionField];
+
+    [mTabgroupCheckbox setEnabled:![aBookmark isToobarRoot]];
   }
   else if (isFolder)
   {
@@ -206,9 +220,13 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self hideUIElementPair: mKeywordLabel     control: mKeywordField];
     [self showUIElementPair: mDescriptionLabel control: mDescriptionField];
 
-    [mVariableFieldsContainer addSubview: mDockMenuCheckbox];
+    [mVariableFieldsContainer addSubview:mDockMenuCheckbox];
+    [mVariableFieldsContainer addSubview:mTabgroupCheckbox];
     [mNameField        setNextKeyView:mDockMenuCheckbox];
-    [mDockMenuCheckbox setNextKeyView:mDescriptionField];
+    [mDockMenuCheckbox setNextKeyView:mTabgroupCheckbox];
+    [mTabgroupCheckbox setNextKeyView:mDescriptionField];
+    
+    [mTabgroupCheckbox setEnabled:![aBookmark isToobarRoot]];
   }
   else
   {
@@ -218,38 +236,36 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
     [self showUIElementPair: mDescriptionLabel control: mDescriptionField];
 
     [mDockMenuCheckbox removeFromSuperview];
+    [mTabgroupCheckbox removeFromSuperview];
     [mNameField 			setNextKeyView:mLocationField];
     [mLocationField 	setNextKeyView:mKeywordField];
     [mKeywordField    setNextKeyView:mDescriptionField];
   }
   
   // Then, fill with appropriate values from Bookmarks
-  nsAutoString value;
-  [aBookmark contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gNameAtom, value);
-  NSString* bookmarkName = [NSString stringWith_nsAString: value];
-  [mNameField setStringValue: bookmarkName];
+  NSString* bookmarkName = [aBookmark name];
   NSString* infoForString = [NSString stringWithFormat:NSLocalizedString(@"BookmarkInfoTitle", @"Info for "), bookmarkName];
   [[self window] setTitle: infoForString];
 
-  if (isFolder && !isGroup)
+  if (isGroup)
   {
     [mDockMenuCheckbox setState:([aBookmark isDockMenuRoot] ? NSOnState : NSOffState)];
+    [mTabgroupCheckbox setState:NSOnState];
+    [mKeywordField setStringValue: [aBookmark keyword]];
+  }
+  else if (isFolder)
+  {
+    [mDockMenuCheckbox setState:([aBookmark isDockMenuRoot] ? NSOnState : NSOffState)];
+    [mTabgroupCheckbox setState:NSOffState];
+  }
+  else
+  {
+    [mKeywordField setStringValue: [aBookmark keyword]];
+    [mLocationField setStringValue: [aBookmark url]];
   }
   
-  if (!isGroup && !isFolder)
-  {
-    [aBookmark contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gHrefAtom, value);
-    [mLocationField setStringValue: [NSString stringWith_nsAString: value]];
-  }
-    
-  if (!isFolder)
-  {
-    [aBookmark contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gKeywordAtom, value);
-    [mKeywordField setStringValue: [NSString stringWith_nsAString: value]];
-  }
-
-  [aBookmark contentNode]->GetAttr(kNameSpaceID_None, BookmarksService::gDescriptionAtom, value);
-  [mDescriptionField setStringValue: [NSString stringWith_nsAString: value]];
+  [mNameField setStringValue: bookmarkName];
+  [mDescriptionField setStringValue: [aBookmark descriptionString]];
   
   mBookmarkItem = aBookmark;  
 }

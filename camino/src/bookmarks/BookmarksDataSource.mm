@@ -462,11 +462,6 @@ const int kBookmarksRootItemTag = -2;
   [bic showWindow:bic];
 }
 
--(NSString*) resolveKeyword: (NSString*) aKeyword
-{
-  return BookmarksService::ResolveKeyword(aKeyword);
-}
-
 - (void)restoreFolderExpandedStates
 {
   int curRow = 0;

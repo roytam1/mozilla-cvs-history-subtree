@@ -196,6 +196,8 @@ int BookmarksService::CHInsertAfter = 3;
 
 const int BookmarksService::kBookmarksDividerTag = -1;
 
+static NS_DEFINE_CID(kCContentIteratorCID, NS_CONTENTITERATOR_CID);
+
 void
 BookmarksService::Init()
 {
@@ -1046,20 +1048,18 @@ BookmarksService::ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc)
   // this will save the file
   BookmarkAdded(parentContent, childContent, true /* flush */);
 }
-
-static NS_DEFINE_CID(kCContentIteratorCID,  NS_CONTENTITERATOR_CID);
  
-NSString* 
-BookmarksService::ResolveKeyword(NSString* aKeyword)
+bool
+BookmarksService::GetContentForKeyword(NSString* aKeyword, nsIContent** outFoundContent)
 {
   nsAutoString keyword;
   [aKeyword assignTo_nsAString:keyword];
 
   if (keyword.IsEmpty())
-    return @"";
+    return false;
   
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
-  if (!domDoc) return @"";
+  if (!domDoc) return false;
 
   nsCOMPtr<nsIContent> foundContent;
 
@@ -1072,7 +1072,7 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
   
     rv = iterator->Init(root);
     if (NS_FAILED(rv))
-      return @"";
+      return false;
       
     while (iterator->IsDone() == NS_ENUMERATOR_FALSE)
     {
@@ -1094,15 +1094,8 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
     }
   }
   
-  nsAutoString url;
-  if (foundContent)
-  {
-    nsAutoString url;
-    foundContent->GetAttr(kNameSpaceID_None, gHrefAtom, url);
-    return [NSString stringWith_nsAString: url];
-  }
-
-  return @"";
+  NS_IF_ADDREF(*outFoundContent = foundContent);
+  return (foundContent != NULL);
 }
 
 // Is searchItem equal to bookmark or bookmark's parent, grandparent, etc?
@@ -1369,6 +1362,13 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 
 #pragma mark -
 
+@interface BookmarkItem(Private)
+
+- (NSString*)getAttributeValue:(nsIAtom*)atom;
+
+@end
+
+
 @implementation BookmarkItem
 
 -(void)dealloc
@@ -1396,23 +1396,41 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
   return (int)contentID;
 }
 
+- (NSString*)getAttributeValue:(nsIAtom*)atom
+{
+  if (mContentNode)
+  {
+    nsAutoString attributeString;
+    mContentNode->GetAttr(kNameSpaceID_None, atom, attributeString);
+    return [NSString stringWith_nsAString: attributeString];
+  }
+  return @"";
+}
+
 - (NSString *)description
 {
-  nsCOMPtr<nsIContent> item = [self contentNode];
-  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(item));
-  nsAutoString href;
-  element->GetAttribute(NS_LITERAL_STRING("name"), href);
-  NSString* info = [NSString stringWith_nsAString: href];
+  NSString* info = [self getAttributeValue:BookmarksService::gNameAtom];
   return [NSString stringWithFormat:@"<BookmarkItem, name = \"%@\">", info];
+}
+
+- (NSString*)name
+{
+  return [self getAttributeValue:BookmarksService::gNameAtom];
 }
 
 - (NSString *)url
 {
-  nsCOMPtr<nsIContent> item = [self contentNode];
-  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(item));
-  nsAutoString href;
-  element->GetAttribute(NS_LITERAL_STRING("href"), href);
-  return [NSString stringWith_nsAString: href];
+  return [self getAttributeValue:BookmarksService::gHrefAtom];
+}
+
+- (NSString*)keyword
+{
+  return [self getAttributeValue:BookmarksService::gKeywordAtom];
+}
+
+- (NSString*)descriptionString
+{
+  return [self getAttributeValue:BookmarksService::gDescriptionAtom];
 }
 
 - (void)setSiteIcon:(NSImage*)image
@@ -1515,6 +1533,8 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 
 - (nsIDOMElement*)createNewBookmarkElement:(NSString*)urlString title:(NSString*)titleString itemType:(EBookmarkItemType)itemType;
 - (nsIDOMElement*)getNewBookmarkParent:(nsIContent*)inParent;
+
+- (NSString*)expandKeyword:(NSString*)keyword inString:(NSString*)location;
 
 @end
 
@@ -1764,70 +1784,102 @@ static BOOL gMadeBMManager;
   if (group.IsEmpty())
     return nil;
 
-  nsCOMPtr<nsIDOMNode> folderNode = do_QueryInterface(content);
-  if (!folderNode) return nil;
+  PRInt32 numChildren;
+  content->ChildCount(numChildren);
 
-  // use nsIContent::ChildAt
-  nsCOMPtr<nsIDOMNodeList> childNodes;
-  folderNode->GetChildNodes(getter_AddRefs(childNodes));
-  if (!childNodes) return nil;
-  
-  PRUint32 numChildren;
-  childNodes->GetLength(&numChildren);
-  
-  NSMutableArray* uriArray = [[[NSMutableArray alloc] initWithCapacity:(int)numChildren] autorelease];
+  NSMutableArray* uriArray = [[[NSMutableArray alloc] initWithCapacity:numChildren] autorelease];
 
-  for (PRUint32 i = 0; i < numChildren; i ++)
+  for (PRInt32 i = 0; i < numChildren; i ++)
   {
-    nsCOMPtr<nsIDOMNode> child;
-    childNodes->Item(i, getter_AddRefs(child));
-    nsCOMPtr<nsIDOMElement> elt = do_QueryInterface(child);
-    if (elt)
+    nsCOMPtr<nsIContent> child;
+    content->ChildAt(i, *getter_AddRefs(child));
+
+    nsAutoString href;
+    child->GetAttr(kNameSpaceID_None, BookmarksService::gHrefAtom, href);
+    if (!href.IsEmpty())
     {
-      nsAutoString href;
-      elt->GetAttribute(NS_LITERAL_STRING("href"), href);
-      if (!href.IsEmpty())
-      {
-        NSString* url = [NSString stringWith_nsAString: href];
-        [uriArray addObject:url];
-      }
+      NSString* url = [NSString stringWith_nsAString: href];
+      [uriArray addObject:url];
     }
   }
 
   return uriArray;
 }
 
-- (NSString*)resolveBookmarksKeyword:(NSString*)locationString
+- (NSString*)expandKeyword:(NSString*)keyword inString:(NSString*)location
 {
-  NSString *keywordsResult = BookmarksService::ResolveKeyword(locationString);
-  NSString *defaultReturn  = locationString;
-  
-  if ([keywordsResult length] > 0)
-    return keywordsResult;
+  NSRange matchRange = [location rangeOfString:@"%s"];
+  if (matchRange.location != NSNotFound)
+  {
+    return [NSString stringWithFormat:@"%@%@%@",
+                [location substringToIndex:matchRange.location],
+                keyword,
+                [location substringFromIndex:(matchRange.location + matchRange.length)]];
+  }
+    
+  return location;
+}
 
-  // look for "foo bar"
+
+- (NSArray*)resolveBookmarksKeyword:(NSString*)locationString
+{
+  BookmarkItem* foundItem = nil;
+  nsCOMPtr<nsIContent> foundContent;
+  BookmarksService::GetContentForKeyword(locationString, getter_AddRefs(foundContent));
+  if (foundContent)		// we found an item or tab group with the keyword
+  {
+  	foundItem = BookmarksService::GetWrapperFor(foundContent);
+    if ([foundItem isGroup])
+      return [self getBookmarkGroupURIs:foundItem];
+    else
+      return [NSArray arrayWithObject:[foundItem url]];
+  }
+
+  // we didn't find anything. See if the string contains "<keyword> <value>"
   NSRange spaceRange = [locationString rangeOfString:@" "];
   if (spaceRange.location != NSNotFound)
   {
     NSString* firstWord  = [locationString substringToIndex:spaceRange.location];
     NSString* secondWord = [locationString substringFromIndex:(spaceRange.location + spaceRange.length)];
   
-    keywordsResult = BookmarksService::ResolveKeyword(firstWord);
-    if ([keywordsResult length] > 0)
+    BookmarksService::GetContentForKeyword(firstWord, getter_AddRefs(foundContent));
+    if (foundContent)
     {
-      NSRange matchRange = [keywordsResult rangeOfString:@"%s"];
-      if (matchRange.location != NSNotFound)
+      foundItem = BookmarksService::GetWrapperFor(foundContent);
+      if ([foundItem isGroup])
       {
-        NSString* resolvedString = [NSString stringWithFormat:@"%@%@%@",
-                [keywordsResult substringToIndex:matchRange.location],
-                secondWord,
-                [keywordsResult substringFromIndex:(matchRange.location + matchRange.length)]];
-        return resolvedString;
+        // do keyword expansion on each child
+        PRInt32 numChildren;
+        foundContent->ChildCount(numChildren);
+      
+        NSMutableArray* uriArray = [[[NSMutableArray alloc] initWithCapacity:numChildren] autorelease];
+      
+        for (PRInt32 i = 0; i < numChildren; i ++)
+        {
+          nsCOMPtr<nsIContent> child;
+          foundContent->ChildAt(i, *getter_AddRefs(child));
+      
+          nsAutoString href;
+          child->GetAttr(kNameSpaceID_None, BookmarksService::gHrefAtom, href);
+          if (!href.IsEmpty())
+          {
+            NSString* url = [NSString stringWith_nsAString: href];
+            [uriArray addObject:[self expandKeyword:secondWord inString:url]];
+          }
+        }
+    
+        return uriArray;
+      }
+      else
+      {
+        // not a group
+        return [NSArray arrayWithObject:[self expandKeyword:secondWord inString:[foundItem url]]];
       }
     }
   }
 
-  return locationString;
+  // default return: just the string
+  return [NSArray arrayWithObject:locationString];
 }
 
 // return value is addreffed

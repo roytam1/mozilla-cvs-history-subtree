@@ -108,7 +108,7 @@ public:
 
   static void ImportBookmarks(nsIDOMHTMLDocument* aHTMLDoc);
   
-  static NSString* ResolveKeyword(NSString* aKeyword);
+  static bool GetContentForKeyword(NSString* aKeyword, nsIContent** outFoundContent);
 
   static bool IsBookmarkDropValid(BookmarkItem* proposedParent, int index, NSArray* draggedIDs, bool isCopy);
   static bool PerformBookmarkDrop(BookmarkItem* parent, BookmarkItem* beforeItem, int index, NSArray* draggedIDs, bool doCopy);
@@ -186,7 +186,11 @@ protected:
 - (void)itemChanged:(BOOL)flushBookmarks;
 - (void)remove;
 
+- (NSString*)name;
 - (NSString*)url;
+- (NSString*)keyword;
+- (NSString*)descriptionString;
+
 - (NSImage*)siteIcon;
 - (NSNumber*)contentID;
 - (int)intContentID;
@@ -226,7 +230,8 @@ protected:
 
 - (NSArray*)getBookmarkGroupURIs:(BookmarkItem*)item;
 
-- (NSString*)resolveBookmarksKeyword:(NSString*)locationString;
+// returns an array of strings (usually just one, except for tab groups with keywords)
+- (NSArray*)resolveBookmarksKeyword:(NSString*)locationString;
 
 - (void)addNewBookmark:(NSString*)url title:(NSString*)title withParent:(nsIContent*)parent;
 - (void)addNewBookmarkFolder:(NSString*)title withParent:(nsIContent*)parent;

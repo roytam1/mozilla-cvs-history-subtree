@@ -38,6 +38,7 @@
     IBOutlet NSView*      mVariableFieldsContainer;
 
     IBOutlet NSButton*    mDockMenuCheckbox;
+    IBOutlet NSButton*    mTabgroupCheckbox;
     
     BookmarkItem*         mBookmarkItem;
     NSTextView*           mFieldEditor;
@@ -50,5 +51,6 @@
 -(BookmarkItem*)bookmark;
 
 - (IBAction)dockMenuCheckboxClicked:(id)sender;
+- (IBAction)tabGroupCheckboxClicked:(id)sender;
 
 @end

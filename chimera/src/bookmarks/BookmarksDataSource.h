@@ -75,8 +75,6 @@
 -(void)addBookmark:(id)aSender useSelection:(BOOL)aSel isFolder:(BOOL)aIsFolder URL:(NSString*)aURL title:(NSString*)aTitle;
 -(void)addBookmark:(id)aSender withParent:(BookmarkItem*)bmItem isFolder:(BOOL)aIsFolder URL:(NSString*)aURL title:(NSString*)aTitle;
 
--(NSString*)resolveKeyword:(NSString*)aKeyword;
-
 - (IBAction)openBookmark: (id)aSender;
 - (IBAction)openBookmarkInNewTab:(id)aSender;
 - (IBAction)openBookmarkInNewWindow:(id)aSender;
