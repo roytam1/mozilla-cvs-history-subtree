@@ -721,6 +721,9 @@ nsHttpHandler::InitiateTransaction_Locked(nsHttpTransaction *trans,
             NS_RELEASE(conn);
             return rv;
         }
+    } else {
+        // Update the connectionInfo (bug 94038)
+        conn->ConnectionInfo()->SetOriginServer(ci->Host(), ci->Port());
     }
 
     // assign the connection to the transaction.
