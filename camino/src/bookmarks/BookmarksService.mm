@@ -996,7 +996,7 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
 #endif
   
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarks));
-  if (!domDoc) return;
+  if (!domDoc) return @"";
   
   nsCOMPtr<nsIDOMElement> elt;
   domDoc->GetElementById(keyword, getter_AddRefs(elt));
