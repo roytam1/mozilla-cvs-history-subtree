@@ -2189,7 +2189,7 @@ PRBool NodeEnclosesTextControls (nsReflowTree::Node *node)
     {
       if (nsLayoutAtoms::textInputFrame != frameType.get())
       {
-        if (!NodeEnclosesTextControls(reflowIterator.CurrentNode()))
+        if (!NodeEnclosesTextControls(reflowIterator.CurrentChild()))
           return PR_FALSE;
       }
       // else it's a text control, keep searching.
@@ -2206,7 +2206,6 @@ PRBool nsBlockFrame::IsIncrementalDamageConstrained(const nsBlockReflowState& aS
   if (aState.mReflowState.reflowCommand)
   {
     nsReflowTree::Node::Iterator reflowIterator(aState.mReflowState.GetCurrentReflowNode());
-    REFLOW_ASSERTFRAME(this);
     // We need to determine if there are any text controls between this
     // node and _all_ of the targets below us (not including the targets
     // themselves).  We need to walk the tree, skipping over text controls
