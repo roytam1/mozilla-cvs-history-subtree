@@ -1064,7 +1064,11 @@ lm_CheckContainerAccess(JSContext *cx, JSObject *obj, MochaDecoder *decoder,
 #ifdef OJI      // XXX hack
         env = NULL;
 #else
+#ifdef JAVA
         env = LJ_JSJ_CurrentEnv(cx);
+#else
+		env = NULL;
+#endif
 #endif
         if (env == NULL) {
             return JS_FALSE;
@@ -1087,13 +1091,15 @@ lm_CheckContainerAccess(JSContext *cx, JSObject *obj, MochaDecoder *decoder,
         if (!fn)
             return JS_FALSE;
 #ifndef OJI     // XXX hack
+#ifdef JAVA
         if (subjPrincipals && principals) {
             PrintToConsole("Principals of script: ");
             printPrincipalsToConsole(cx, subjPrincipals);
             PrintToConsole("Principals of signed container: ");
             printPrincipalsToConsole(cx, principals);
         }
-#endif
+#endif /* JAVA */
+#endif /* !OJI */
         JS_ReportError(cx, container_error_message, fn);
         return JS_FALSE;
     }
@@ -1621,7 +1627,9 @@ LM_ExtractFromPrincipalsArchive(JSPrincipals *principals, char *name,
     char *result = NULL;
 
 #ifndef OJI      // XXX hack
+#ifdef JAVA
     result = LJ_LoadFromZipFile(data->zip, name);
+#endif
 #endif
     *length = result ? XP_STRLEN(result) : 0;
 
@@ -2000,10 +2008,12 @@ LM_RegisterPrincipals(MochaDecoder *decoder, JSPrincipals *principals,
              * modifying the container principals.
              */
 #ifndef OJI     // XXX hack
+#ifdef JAVA
             PrintToConsole("Intersecting principals ");
             printPrincipalsToConsole(cx, containerPrincipals);
             PrintToConsole("with ");
             printPrincipalsToConsole(cx, principals);
+#endif
 #endif
             if (!intersectPrincipals(decoder, containerPrincipals,
                                      principals))
@@ -2011,8 +2021,10 @@ LM_RegisterPrincipals(MochaDecoder *decoder, JSPrincipals *principals,
                 return NULL;
             }
 #ifndef OJI     // XXX hack
+#ifdef JAVA
             PrintToConsole("yielding ");
             printPrincipalsToConsole(cx, containerPrincipals);
+#endif
 #endif
         } else {
             /*
