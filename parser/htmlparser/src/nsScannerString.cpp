@@ -413,7 +413,7 @@ nsScannerString::ReplaceCharacter(nsScannerIterator& aPosition, PRUnichar aChar)
 
 
   /**
-   * utils
+   * utils -- based on code from nsReadableUtils.cpp
    */
 
 void
