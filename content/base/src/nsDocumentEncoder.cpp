@@ -45,6 +45,9 @@
 #include "nsRange.h"
 #include "nsICharsetConverterManager.h"
 #include "nsHTMLAtoms.h"
+#include "nsITextContent.h"
+#include "nsIEnumerator.h"
+#include "nsISelectionPrivate.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID,
                      NS_ICHARSETCONVERTERMANAGER_CID);
@@ -54,6 +57,12 @@ enum nsRangeIterationDirection {
   kDirectionOut = -1,
   kDirectionIn = 1
 };
+
+#ifdef XP_MAC
+#pragma mark -
+#pragma mark  nsDocumentEncoder declaration 
+#pragma mark -
+#endif
 
 class nsDocumentEncoder : public nsIDocumentEncoder
 {
@@ -76,7 +85,10 @@ public:
 
   NS_IMETHOD EncodeToStream(nsIOutputStream* aStream);
   NS_IMETHOD EncodeToString(nsAWritableString& aOutputString);
-
+  NS_IMETHOD EncodeToStringWithContext(nsAWritableString& aEncodedString, 
+                                       nsAWritableString& aContextString,
+                                       nsAWritableString& aInfoString);
+                                       
 protected:
   nsresult SerializeNodeStart(nsIDOMNode* aNode, PRInt32 aStartOffset,
                               PRInt32 aEndOffset, nsAWritableString& aStr);
@@ -112,9 +124,17 @@ protected:
   nsString          mCharset;
   PRUint32          mFlags;
   PRUint32          mWrapColumn;
+  PRUint32          mStartDepth;
+  PRUint32          mEndDepth;
+  nsVoidArray       mCommonAncestors;
 
   PRBool (* mIncludeInContextFP)(nsIDOMNode *aNode);
 };
+
+#ifdef XP_MAC
+#pragma mark  nsDocumentEncoder implementation 
+#pragma mark -
+#endif
 
 PRBool
 nsDocumentEncoder::IncludeInContext_HTML(nsIDOMNode *aNode)
@@ -160,6 +180,8 @@ nsDocumentEncoder::nsDocumentEncoder()
 
   mFlags = 0;
   mWrapColumn = 72;
+  mStartDepth = 0;
+  mEndDepth = 0;
 }
 
 nsDocumentEncoder::~nsDocumentEncoder()
@@ -489,6 +511,11 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   nsCOMPtr<nsIDOMNode> node;
   nsresult rv = NS_OK;
 
+  // remember how deep into the tag stack the selection really starts.
+  // Note that this will end up only saving the value for the last
+  // range in the selection.  
+  mStartDepth = i;
+
   node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
 
   while (node) {
@@ -497,7 +524,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
   }
 
-  nsCOMPtr<nsIDOMNode> start, endContainer, lastNode;
+  nsCOMPtr<nsIDOMNode> start, endContainer, lastNode, rememberedNode;
 
   nsRangeIterationDirection dir = kDirectionIn;
 
@@ -537,7 +564,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     lastNode = aEnd;
   }
 
-  if (start.get() == aEnd) {
+  if (start.get() == lastNode) {
     SerializeNodeStart(start, aStartOffset, aEndOffset, aOutputString); // Is this correct?
   } else {
     nsVoidArray offsets;
@@ -550,8 +577,10 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
       if (dir == kDirectionIn) {
         if (node == endContainer || node == lastNode) {
           if (aEndOffset > 0)
+          {
             SerializeNodeStart(node, 0, aEndOffset, aOutputString);
-
+            rememberedNode = node;  // remember the last node we opened
+          }
           if (endContainer) {
             if (GetIndex(offsets) >= aEndOffset)
               break;
@@ -560,6 +589,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
           }
         } else {
           SerializeNodeStart(node, 0, -1, aOutputString);
+          rememberedNode = node;  // remember the last node we opened
         }
       } else {
         if (node.get() == aEnd) {
@@ -567,6 +597,8 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
         }
 
         SerializeNodeEnd(node, aOutputString);
+        node->GetParentNode(getter_AddRefs(rememberedNode));  // remember the parent of last node we closed
+        NS_ENSURE_TRUE(node, NS_ERROR_FAILURE);
       }
 
       nsIDOMNode *tmpNode = node;
@@ -574,9 +606,15 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
     }
   }
 
+  // remember how deep into the tag stack the selection really ends.
+  // Note that this will end up only saving the value for the last
+  // range in the selection.
+  mEndDepth = 0;
+  
+  if (rememberedNode) node = rememberedNode;
   while (node && aCommonParent && node.get() != aCommonParent) {
     SerializeNodeEnd(node, aOutputString);
-
+    mEndDepth++;
     nsIDOMNode *tmpNode = node;
     tmpNode->GetParentNode(getter_AddRefs(node));
   }
@@ -686,22 +724,24 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
       break;
   }
 
-  nsVoidArray commonAncestors;
-  nsRange::FillArrayWithAncestors(&commonAncestors, commonParent);
+  mCommonAncestors.Clear();
+
+  nsRange::FillArrayWithAncestors(&mCommonAncestors, commonParent);
 
   nsresult rv = NS_OK;
 
-  rv = SerializeRangeContextStart(commonAncestors, aOutputString);
+  rv = SerializeRangeContextStart(mCommonAncestors, aOutputString);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = SerializeRangeNodes(startAncestors, commonParent, start, startOffset,
                              end, endOffset, aOutputString);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = SerializeRangeContextEnd(commonAncestors, aOutputString);
+  rv = SerializeRangeContextEnd(mCommonAncestors, aOutputString);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCAutoString tmpStr; tmpStr.AssignWithConversion(aOutputString);
+  tmpStr.ReplaceChar('\r','\n');
   printf ("range = '%s'\n", (const char *)tmpStr);
 
   return rv;
@@ -795,6 +835,16 @@ nsDocumentEncoder::EncodeToStream(nsIOutputStream* aStream)
   return rv;
 }
 
+NS_IMETHODIMP
+nsDocumentEncoder::EncodeToStringWithContext(nsAWritableString& aEncodedString, 
+                                             nsAWritableString& aContextString,
+                                             nsAWritableString& aInfoString)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult NS_NewTextEncoder(nsIDocumentEncoder** aResult); // make mac compiler happy
+
 nsresult
 NS_NewTextEncoder(nsIDocumentEncoder** aResult)
 {
@@ -806,3 +856,541 @@ NS_NewTextEncoder(nsIDocumentEncoder** aResult)
 }
 
 
+#ifdef XP_MAC
+#pragma mark -
+#pragma mark  nsDocumentEncoder declaration 
+#pragma mark -
+#endif
+
+class nsHTMLCopyEncoder : public nsDocumentEncoder
+{
+public:
+
+  nsHTMLCopyEncoder();
+  virtual ~nsHTMLCopyEncoder();
+
+  NS_IMETHOD Init(nsIDocument* aDocument, const nsAReadableString& aMimeType, PRUint32 aFlags);
+
+  // overridden methods from nsDocumentEncoder
+  NS_IMETHOD SetSelection(nsISelection* aSelection);
+  NS_IMETHOD EncodeToStringWithContext(nsAWritableString& aEncodedString, 
+                                       nsAWritableString& aContextString,
+                                       nsAWritableString& aInfoString);
+
+protected:
+
+  enum Endpoint
+  {
+    kStart,
+    kEnd
+  };
+  
+  nsresult PromoteRange(nsIDOMRange *inRange);
+  nsresult GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 aOffset, 
+                                  nsCOMPtr<nsIDOMNode> *outNode, PRInt32 *outOffset);
+  nsCOMPtr<nsIDOMNode> GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset);
+  PRBool IsTextNode(nsIDOMNode *aNode);
+  PRBool IsBody(nsIDOMNode* aNode);
+  PRBool IsMozBR(nsIDOMNode* aNode);
+  nsresult GetNodeLocation(nsIDOMNode *inChild, nsCOMPtr<nsIDOMNode> *outParent, PRInt32 *outOffset);
+  PRBool IsFirstNode(nsIDOMNode *aNode);
+  PRBool IsLastNode(nsIDOMNode *aNode);
+  nsresult GetLengthOfDOMNode(nsIDOMNode *aNode, PRUint32 &aCount); 
+  PRBool IsEmptyTextContent(nsIDOMNode* aNode);
+};
+
+#ifdef XP_MAC
+#pragma mark  nsDocumentEncoder implementation 
+#pragma mark -
+#endif
+
+nsHTMLCopyEncoder::nsHTMLCopyEncoder()
+{
+}
+
+nsHTMLCopyEncoder::~nsHTMLCopyEncoder()
+{
+}
+
+NS_IMETHODIMP
+nsHTMLCopyEncoder::Init(nsIDocument* aDocument,
+                        const nsAReadableString& aIgnored,
+                        PRUint32 aFlags)
+{
+  if (!aDocument)
+    return NS_ERROR_INVALID_ARG;
+
+  mDocument = aDocument;
+
+  mMimeType = NS_LITERAL_STRING("text/html");
+
+  mIncludeInContextFP = IncludeInContext_HTML;
+
+  mFlags = aFlags;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLCopyEncoder::SetSelection(nsISelection* aSelection)
+{
+  // normalize selection
+  
+  // there's no Clone() for selection! fix...
+  //nsresult rv = aSelection->Clone(getter_AddRefs(mSelection);
+  //NS_ENSURE_SUCCESS(rv, rv);
+  mSelection = aSelection;
+  
+  nsCOMPtr<nsISelectionPrivate> privSelection = do_QueryInterface(mSelection);
+  NS_ENSURE_TRUE(privSelection, NS_ERROR_FAILURE);
+  
+  // get selection range enumerator
+  nsCOMPtr<nsIEnumerator> enumerator;
+  nsresult rv = privSelection->GetEnumerator(getter_AddRefs(enumerator));
+  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_TRUE(enumerator, NS_ERROR_FAILURE);
+
+  // loop thru the ranges in the selection
+  enumerator->First(); 
+  nsCOMPtr<nsISupports> currentItem;
+  while ((NS_ENUMERATOR_FALSE == enumerator->IsDone()))
+  {
+    rv = enumerator->CurrentItem(getter_AddRefs(currentItem));
+    NS_ENSURE_SUCCESS(rv, rv);
+    NS_ENSURE_TRUE(currentItem, NS_ERROR_FAILURE);
+    
+    nsCOMPtr<nsIDOMRange> range( do_QueryInterface(currentItem) );
+
+    // adjust range to include any ancestors who's children are entirely selected
+    rv = PromoteRange(range);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    enumerator->Next();
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLCopyEncoder::EncodeToStringWithContext(nsAWritableString& aEncodedString, 
+                                             nsAWritableString& aContextString,
+                                             nsAWritableString& aInfoString)
+{
+  nsresult rv = EncodeToString(aEncodedString);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  // now encode common ancestors into aContextString.  Note that the common ancestors
+  // will be for the last range in the selection in the case of multirange selections.
+  // encoding ancestors every range in a multirange selection in a way that could be 
+  // understood by the paste code would be a lot more work to do.  As a practical matter,
+  // selections are single range, and the ones that aren't are table cell selections
+  // where all the cells are in the same table.
+  PRInt32 i = mCommonAncestors.Count();
+  nsCOMPtr<nsIDOMNode> node;
+
+  node = NS_STATIC_CAST(nsIDOMNode *, mCommonAncestors.ElementAt(--i));
+
+  while (node) 
+  {
+    SerializeNodeStart(node, 0, -1, aContextString);
+    node = NS_STATIC_CAST(nsIDOMNode *, mCommonAncestors.ElementAt(--i));
+  }
+
+  i = 0;
+  node = NS_STATIC_CAST(nsIDOMNode *, mCommonAncestors.ElementAt(i));
+
+  while (node) 
+  {
+    SerializeNodeEnd(node, aContextString);
+    node = NS_STATIC_CAST(nsIDOMNode *, mCommonAncestors.ElementAt(++i));
+  }
+
+  // encode range info : the start and end depth of the selection, where the depth is 
+  // distance down in the parent heirarchy.  Later we will need to add leading/trainlig
+  // whitespace info to this.
+  nsAutoString infoString;
+  infoString.AppendInt(mStartDepth);
+  infoString.AppendWithConversion(',');
+  infoString.AppendInt(mEndDepth);
+  aInfoString = infoString;
+  
+  return NS_OK;
+}
+
+
+nsresult 
+nsHTMLCopyEncoder::PromoteRange(nsIDOMRange *inRange)
+{
+  if (!inRange) return NS_ERROR_NULL_POINTER;
+  nsresult rv;
+  nsCOMPtr<nsIDOMNode> startNode, endNode;
+  PRInt32 startOffset, endOffset;
+  
+  rv = inRange->GetStartContainer(getter_AddRefs(startNode));
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = inRange->GetStartOffset(&startOffset);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = inRange->GetEndContainer(getter_AddRefs(endNode));
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = inRange->GetEndOffset(&endOffset);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  nsCOMPtr<nsIDOMNode> opStartNode;
+  nsCOMPtr<nsIDOMNode> opEndNode;
+  PRInt32 opStartOffset, opEndOffset;
+  nsCOMPtr<nsIDOMRange> opRange;
+  
+  rv = GetPromotedPoint( kStart, startNode, startOffset, &opStartNode, &opStartOffset);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = GetPromotedPoint( kEnd, endNode, endOffset, &opEndNode, &opEndOffset);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = inRange->SetStart(opStartNode, opStartOffset);
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = inRange->SetEnd(opEndNode, opEndOffset);
+  return rv;
+} 
+
+nsresult
+nsHTMLCopyEncoder::GetPromotedPoint(Endpoint aWhere, nsIDOMNode *aNode, PRInt32 aOffset, 
+                                  nsCOMPtr<nsIDOMNode> *outNode, PRInt32 *outOffset)
+{
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIDOMNode> node = aNode;
+  nsCOMPtr<nsIDOMNode> parent = aNode;
+  PRInt32 offset = aOffset;
+  
+  // defualt values
+  *outNode = node;
+  *outOffset = offset;
+
+  if (aWhere == kStart)
+  {
+    // some special casing for text nodes
+    if (IsTextNode(aNode))  
+    {
+      // if not at beginning of text node, we are done
+      if (offset >  0) return NS_OK;
+      // else
+      rv = GetNodeLocation(aNode, &parent, &offset);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else
+    {
+      node = GetChildAt(parent,offset);
+    }
+    if (!node) node = parent;
+
+    // finding the real start for this point.  look up the tree for as long as we are the 
+    // first node in the container, and as long as we haven't hit the body node.
+    if (!IsBody(node))
+    {
+      rv = GetNodeLocation(node, &parent, &offset);
+      NS_ENSURE_SUCCESS(rv, rv);
+      if (offset == -1) return NS_OK; // we hit generated content; STOP
+      while ((IsFirstNode(node)) && (!IsBody(parent)))
+      {
+        node = parent;
+        rv = GetNodeLocation(node, &parent, &offset);
+        NS_ENSURE_SUCCESS(rv, rv);
+        if (offset == -1)  // we hit generated content; STOP
+        {
+          // back up a bit
+          parent = node;
+          offset = 0;
+          break;
+        }
+      } 
+      *outNode = parent;
+      *outOffset = offset;
+      return rv;
+    }
+  }
+  
+  if (aWhere == kEnd)
+  {
+    // some special casing for text nodes
+    if (IsTextNode(aNode))  
+    {
+      // if not at end of text node, we are done
+      PRUint32 len;
+      GetLengthOfDOMNode(aNode, len);
+      if (offset < (PRInt32)len) return NS_OK;
+      // else
+      rv = GetNodeLocation(aNode, &parent, &offset);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else
+    {
+      if (offset) offset--; // we want node _before_ offset
+      node = GetChildAt(parent,offset);
+    }
+    if (!node) node = parent;
+    
+    // finding the real end for this point.  look up the tree for as long as we are the 
+    // last node in the container, and as long as we haven't hit the body node.
+    if (!IsBody(node))
+    {
+      rv = GetNodeLocation(node, &parent, &offset);
+      NS_ENSURE_SUCCESS(rv, rv);
+      if (offset == -1) return NS_OK; // we hit generated content; STOP
+      while ((IsLastNode(node)) && (!IsBody(parent)))
+      {
+        node = parent;
+        rv = GetNodeLocation(node, &parent, &offset);
+        NS_ENSURE_SUCCESS(rv, rv);
+        if (offset == -1)  // we hit generated content; STOP
+        {
+          // back up a bit
+          parent = node;
+          offset = 0;
+          break;
+        }
+      } 
+      *outNode = parent;
+      offset++;  // add one since this in an endpoint - want to be AFTER node.
+      *outOffset = offset;
+      return rv;
+    }
+  }
+  
+  return rv;
+}
+
+nsCOMPtr<nsIDOMNode> 
+nsHTMLCopyEncoder::GetChildAt(nsIDOMNode *aParent, PRInt32 aOffset)
+{
+  nsCOMPtr<nsIDOMNode> resultNode;
+  
+  if (!aParent) 
+    return resultNode;
+  
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aParent);
+  nsCOMPtr<nsIContent> cChild;
+  NS_PRECONDITION(content, "null content in nsHTMLCopyEncoder::GetChildAt");
+  
+  if (NS_FAILED(content->ChildAt(aOffset, *getter_AddRefs(cChild))))
+    return resultNode;
+  
+  resultNode = do_QueryInterface(cChild);
+  return resultNode;
+}
+
+PRBool
+nsHTMLCopyEncoder::IsTextNode(nsIDOMNode *aNode)
+{
+  if (!aNode) return PR_FALSE;
+  PRUint16 nodeType;
+  aNode->GetNodeType(&nodeType);
+  if (nodeType == nsIDOMNode::TEXT_NODE)
+    return PR_TRUE;
+  return PR_FALSE;
+}
+
+PRBool 
+nsHTMLCopyEncoder::IsBody(nsIDOMNode* aNode)
+{
+  if (aNode)
+  {
+    nsAutoString tag;
+    nsCOMPtr<nsIAtom> atom;
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+    if (content)
+      content->GetTag(*getter_AddRefs(atom));
+    if (atom)
+    {
+      atom->ToString(tag);
+      tag.ToLowerCase();
+      if (tag.EqualsWithConversion("body"))
+      {
+        return PR_TRUE;
+      }
+    }
+  }
+  return PR_FALSE;
+}
+
+PRBool 
+nsHTMLCopyEncoder::IsMozBR(nsIDOMNode* aNode)
+{
+  if (aNode)
+  {
+    nsAutoString tag;
+    nsCOMPtr<nsIAtom> atom;
+    nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+    if (content)
+      content->GetTag(*getter_AddRefs(atom));
+    if (atom)
+    {
+      atom->ToString(tag);
+      tag.ToLowerCase();
+      if (tag.EqualsWithConversion("br"))
+      {
+        nsCOMPtr<nsIDOMElement> elem = do_QueryInterface(aNode);
+        if (elem)
+        {
+          nsAutoString typeAttrName; typeAttrName.AssignWithConversion("type");
+          nsAutoString typeAttrVal;
+          nsresult res = elem->GetAttribute(typeAttrName, typeAttrVal);
+          typeAttrVal.ToLowerCase();
+          if (NS_SUCCEEDED(res) && (typeAttrVal.EqualsWithConversion("_moz")))
+            return PR_TRUE;
+        }
+        return PR_FALSE;
+      }
+    }
+  }
+  return PR_FALSE;
+}
+
+nsresult 
+nsHTMLCopyEncoder::GetNodeLocation(nsIDOMNode *inChild, nsCOMPtr<nsIDOMNode> *outParent, PRInt32 *outOffset)
+{
+  NS_ASSERTION((inChild && outParent && outOffset), "bad args");
+  nsresult result = NS_ERROR_NULL_POINTER;
+  if (inChild && outParent && outOffset)
+  {
+    result = inChild->GetParentNode(getter_AddRefs(*outParent));
+    if ((NS_SUCCEEDED(result)) && (*outParent))
+    {
+      nsCOMPtr<nsIContent> content = do_QueryInterface(*outParent);
+      nsCOMPtr<nsIContent> cChild = do_QueryInterface(inChild);
+      if (!cChild || !content) return NS_ERROR_NULL_POINTER;
+      result = content->IndexOf(cChild, *outOffset);
+    }
+  }
+  return result;
+}
+
+PRBool
+nsHTMLCopyEncoder::IsFirstNode(nsIDOMNode *aNode)
+{
+  nsCOMPtr<nsIDOMNode> parent;
+  PRInt32 offset, j=0;
+  nsresult rv = GetNodeLocation(aNode, &parent, &offset);
+  if (NS_FAILED(rv)) 
+  {
+    NS_NOTREACHED("failure in IsFirstNode");
+    return PR_FALSE;
+  }
+  if (offset == 0)  // easy case, we are first dom child
+    return PR_TRUE;
+  if (!parent)  
+    return PR_TRUE;
+  
+  // need to check if any nodes before us are really visible.
+  // Mike wrote something for me along these lines in nsSelectionController,
+  // but I don't think it's ready for use yet - revisit.
+  // HACK: for now, simply consider all whitespace text nodes to be 
+  // invisible formatting nodes.
+  nsCOMPtr<nsIDOMNodeList> childList;
+  nsCOMPtr<nsIDOMNode> child;
+
+  rv = parent->GetChildNodes(getter_AddRefs(childList));
+  if (NS_FAILED(rv) || !childList) 
+  {
+    NS_NOTREACHED("failure in IsFirstNode");
+    return PR_TRUE;
+  }
+  while (j < offset)
+  {
+    childList->Item(j, getter_AddRefs(child));
+    if (!IsEmptyTextContent(child)) 
+      return PR_FALSE;
+    j++;
+  }
+  return PR_TRUE;
+}
+
+
+PRBool
+nsHTMLCopyEncoder::IsLastNode(nsIDOMNode *aNode)
+{
+  nsCOMPtr<nsIDOMNode> parent;
+  PRInt32 offset,j;
+  PRUint32 numChildren;
+  nsresult rv = GetNodeLocation(aNode, &parent, &offset);
+  if (NS_FAILED(rv)) 
+  {
+    NS_NOTREACHED("failure in IsLastNode");
+    return PR_FALSE;
+  }
+  GetLengthOfDOMNode(parent, numChildren); 
+  if (offset+1 == (PRInt32)numChildren) // easy case, we are last dom child
+    return PR_TRUE;
+  if (!parent)
+    return PR_TRUE;
+  // need to check if any nodes after us are really visible.
+  // Mike wrote something for me along these lines in nsSelectionController,
+  // but I don't think it's ready for use yet - revisit.
+  // HACK: for now, simply consider all whitespace text nodes to be 
+  // invisible formatting nodes.
+  j = (PRInt32)numChildren-1;
+  nsCOMPtr<nsIDOMNodeList>childList;
+  nsCOMPtr<nsIDOMNode> child;
+  rv = parent->GetChildNodes(getter_AddRefs(childList));
+  if (NS_FAILED(rv) || !childList) 
+  {
+    NS_NOTREACHED("failure in IsLastNode");
+    return PR_TRUE;
+  }
+  while (j > offset)
+  {
+    childList->Item(j, getter_AddRefs(child));
+    j--;
+    if (IsMozBR(child))  // we ignore trailing moz BRs.  
+      continue;
+    if (!IsEmptyTextContent(child)) 
+      return PR_FALSE;
+  }
+  return PR_TRUE;
+}
+
+nsresult
+nsHTMLCopyEncoder::GetLengthOfDOMNode(nsIDOMNode *aNode, PRUint32 &aCount) 
+{
+  aCount = 0;
+  if (!aNode) { return NS_ERROR_NULL_POINTER; }
+  nsresult result=NS_OK;
+  nsCOMPtr<nsIDOMCharacterData>nodeAsChar;
+  nodeAsChar = do_QueryInterface(aNode);
+  if (nodeAsChar) {
+    nodeAsChar->GetLength(&aCount);
+  }
+  else
+  {
+    PRBool hasChildNodes;
+    aNode->HasChildNodes(&hasChildNodes);
+    if (PR_TRUE==hasChildNodes)
+    {
+      nsCOMPtr<nsIDOMNodeList>nodeList;
+      result = aNode->GetChildNodes(getter_AddRefs(nodeList));
+      if (NS_SUCCEEDED(result) && nodeList) {
+        nodeList->GetLength(&aCount);
+      }
+    }
+  }
+  return result;
+}
+
+PRBool
+nsHTMLCopyEncoder::IsEmptyTextContent(nsIDOMNode* aNode)
+{
+  PRBool result = PR_FALSE;
+  nsCOMPtr<nsITextContent> tc(do_QueryInterface(aNode));
+  if (tc) {
+    tc->IsOnlyWhitespace(&result);
+  }
+  return result;
+}
+
+nsresult NS_NewHTMLCopyTextEncoder(nsIDocumentEncoder** aResult); // make mac compiler happy
+
+nsresult
+NS_NewHTMLCopyTextEncoder(nsIDocumentEncoder** aResult)
+{
+  *aResult = new nsHTMLCopyEncoder;
+  if (!*aResult)
+    return NS_ERROR_OUT_OF_MEMORY;
+ NS_ADDREF(*aResult);
+ return NS_OK;
+}
