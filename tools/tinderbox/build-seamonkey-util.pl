@@ -793,8 +793,7 @@ sub run_all_tests {
     }
 
     # Bloat test
-    if (($Settings::BloatStats or $Settings::BloatTest)
-        and $test_result eq 'success') {
+    if ($Settings::BloatTest and $test_result eq 'success') {
         $test_result = BloatTest($binary, $build_dir, $Settings::BloatTestTimeout);
     }
     
