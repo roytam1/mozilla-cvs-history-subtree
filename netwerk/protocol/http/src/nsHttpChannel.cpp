@@ -1317,11 +1317,6 @@ nsHttpChannel::PromptForUserPass(const char *host,
         return rv;
     }
 
-    nsAutoString realmU;
-    realmU.Assign(NS_LITERAL_STRING("\""));
-    realmU.AppendWithConversion(realm);
-    realmU.Append(NS_LITERAL_STRING("\""));
-
     // construct the domain string
     nsCAutoString domain;
     domain.Assign(host);
@@ -1343,13 +1338,27 @@ nsHttpChannel::PromptForUserPass(const char *host,
     rv = bundleSvc->CreateBundle(NECKO_MSGS_URL, getter_AddRefs(bundle));
     if (NS_FAILED(rv)) return rv;
 
+    // figure out what message to display...
     nsXPIDLString message;
-    const PRUnichar *strings[] = { realmU.GetUnicode(), hostU.GetUnicode() };
+    if (proxyAuth) {
+        const PRUnichar *strings[] = { hostU.GetUnicode() };
+        rv = bundle->FormatStringFromName(
+                        NS_LITERAL_STRING("EnterUserPasswordForProxy").get(),
+                        strings, 1,
+                        getter_Copies(message));
+    }
+    else {
+        nsAutoString realmU;
+        realmU.Assign(NS_LITERAL_STRING("\""));
+        realmU.AppendWithConversion(realm);
+        realmU.Append(NS_LITERAL_STRING("\""));
 
-    rv = bundle->FormatStringFromName(
-                    NS_LITERAL_STRING("EnterUserPasswordForRealm").get(),
-                    strings, 2,
-                    getter_Copies(message));
+        const PRUnichar *strings[] = { realmU.GetUnicode(), hostU.GetUnicode() };
+        rv = bundle->FormatStringFromName(
+                        NS_LITERAL_STRING("EnterUserPasswordForRealm").get(),
+                        strings, 2,
+                        getter_Copies(message));
+    }
     if (NS_FAILED(rv)) return rv;
 
     // prompt the user...
