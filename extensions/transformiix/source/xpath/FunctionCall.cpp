@@ -24,7 +24,7 @@
  * $Id$
  */
 
-#include "FunctionLib.h"
+#include "Expr.h"
 
 /**
  * This class represents a FunctionCall as defined by the XSL Working Draft

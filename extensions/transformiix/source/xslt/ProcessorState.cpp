@@ -292,6 +292,15 @@ Element* ProcessorState::findTemplate(Node* node, Node* context, String* mode) {
 } //-- findTemplate
 
 /**
+ * Generates a unique ID for the given node and places the result in
+ * dest
+**/
+void ProcessorState::generateId(Node* node, String& dest) {
+    domHelper.generateId(node, dest);
+} //-- generateId
+
+
+/**
  * Returns the AttributeSet associated with the given name
  * or null if no AttributeSet is found
 **/
@@ -567,6 +576,24 @@ void ProcessorState::recieveError(String& errorMessage, ErrorLevel level) {
     }
     delete iter;
 } //-- recieveError
+
+/**
+ * Returns a call to the function that has the given name.
+ * This method is used for XPath Extension Functions.
+ * @return the FunctionCall for the function with the given name.
+**/
+FunctionCall* ProcessorState::resolveFunctionCall(const String& name) {
+
+   if (GENERATE_ID_FN.isEqual(name)) {
+       return new GenerateIdFunctionCall(&domHelper);
+   }
+
+   String err("invalid function call: ");
+   err.append(name);
+
+   return new ErrorFunctionCall(err);
+
+} //-- resolveFunctionCall
 
 
 /**
