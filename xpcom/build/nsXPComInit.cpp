@@ -847,7 +847,7 @@ NS_GetFrozenFunctions(XPCOMFunctions *functions, const char* libraryPath)
     GET_FUNC(unregisterExitRoutine, UnregisterXPCOMExitRoutineFunc, "NS_UnregisterXPCOMExitRoutine");
 
     // these functions were added post 1.4 (need to check size of |functions|)
-    if (functions->size >= sizeof(XPCOMFunctions)) {
+    if (functions->size > offsetof(XPCOMFunctions, getTraceRefcnt)) {
         GET_FUNC(getDebug,          GetDebugFunc,                   "NS_GetDebug");
         GET_FUNC(getTraceRefcnt,    GetTraceRefcntFunc,             "NS_GetTraceRefcnt");
     }
