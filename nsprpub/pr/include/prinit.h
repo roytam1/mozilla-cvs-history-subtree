@@ -44,12 +44,12 @@ PR_BEGIN_EXTERN_C
 ** The format of the version string is
 **     "<major version>.<minor version> <build date>"
 */
-#define PR_VERSION  "3.5"
-#define PR_VMAJOR   3
-#define PR_VMAJOR_STR "3"
-#define PR_VMINOR   5
+#define PR_VERSION  "4.0 Beta"
+#define PR_VMAJOR   4
+#define PR_VMAJOR_STR "4"
+#define PR_VMINOR   0
 #define PR_VPATCH   0
-#define PR_BETA     PR_FALSE
+#define PR_BETA     PR_TRUE
 
 /*
 ** PRVersionCheck
