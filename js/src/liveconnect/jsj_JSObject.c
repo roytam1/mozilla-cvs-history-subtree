@@ -404,29 +404,30 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     /* Get the Java JNI environment */
     jEnv = jsj_env->jEnv;
 
+    /* Get the pending JS exception if it exists */
     if (JS_IsExceptionPending(jsj_env->cx)) {
         if (!JS_GetPendingException(jsj_env->cx, &pending_exception))
             return;
         
         /* Convert jsval exception to a java object and then use it to
-           create an instance of JSWrappedException. */ 
-        if (!jsj_ConvertJSValueToJavaObject(jsj_env->cx, jEnv, pending_exception, 
+           create an instance of JSException. */ 
+        if (!jsj_ConvertJSValueToJavaObject(jsj_env->cx, jEnv, 
+                                            pending_exception, 
                                             jsj_get_jlObject_descriptor(jsj_env->cx, jEnv),
-                                            &dummy_cost, &java_obj, &dummy_bool))
+                                            &dummy_cost, &java_obj, 
+                                            &dummy_bool))
             goto done;
-
-        java_exception = 
-            (*jEnv)->NewObject(jEnv, njJSWrappedException, 
-                               njJSWrappedException_JSWrappedException,
-                               (jobject)java_obj);
         
+        java_exception = (*jEnv)->NewObject(jEnv, njJSException, 
+                                            njJSException_JSException,
+                                            java_obj);
         if (!java_exception) 
             goto out_of_memory;
         
         /* Throw the newly-created JSException */
         if ((*jEnv)->Throw(jEnv, java_exception) < 0) {
             JS_ASSERT(0);
-            jsj_LogError("Couldn't throw JSWrappedException\n");
+            jsj_LogError("Couldn't throw JSException\n");
             goto done;
         }    
         JS_ClearPendingException(jsj_env->cx);

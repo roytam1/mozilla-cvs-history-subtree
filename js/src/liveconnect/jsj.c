@@ -79,7 +79,6 @@ jclass jlDouble;                        /* java.lang.Double */
 jclass jlString;                        /* java.lang.String */
 jclass njJSObject;                      /* netscape.javascript.JSObject */
 jclass njJSException;                   /* netscape.javascript.JSException */
-jclass njJSWrappedException;                   /* netscape.javascript.JSWrappedException */
 jclass njJSUtil;                        /* netscape.javascript.JSUtil */
 
 jmethodID jlClass_getMethods;           /* java.lang.Class.getMethods() */
@@ -115,7 +114,6 @@ jmethodID jlSystem_identityHashCode;    /* java.lang.System.identityHashCode() *
 jobject jlVoid_TYPE;                    /* java.lang.Void.TYPE value */
 
 jmethodID njJSException_JSException;    /* netscape.javascript.JSException constructor */
-jmethodID njJSWrappedException_JSWrappedException;    /* netscape.javascript.JSWrappedException constructor */
 jmethodID njJSObject_JSObject;          /* netscape.javascript.JSObject constructor */
 jmethodID njJSUtil_getStackTrace;       /* netscape.javascript.JSUtil.getStackTrace() */
 jfieldID njJSObject_internal;           /* netscape.javascript.JSObject.internal */
@@ -123,7 +121,7 @@ jfieldID njJSException_lineno;          /* netscape.javascript.JSException.linen
 jfieldID njJSException_tokenIndex;      /* netscape.javascript.JSException.tokenIndex */
 jfieldID njJSException_source;          /* netscape.javascript.JSException.source */
 jfieldID njJSException_filename;        /* netscape.javascript.JSException.filename */
-jfieldID njJSWrappedException_exception;        /* netscape.javascript.JSWrappedException.exception */
+jfieldID njJSException_wrappedException; /* netscape.javascript.JSException.wrappedException */
 
 /* Obtain a reference to a Java class */
 #define LOAD_CLASS(qualified_name, class)                                    \
@@ -321,7 +319,6 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
 {
     LOAD_CLASS(netscape/javascript/JSObject, njJSObject);
     LOAD_CLASS(netscape/javascript/JSException, njJSException);
-    LOAD_CLASS(netscape/javascript/JSWrappedException, njJSWrappedException);
     LOAD_CLASS(netscape/javascript/JSUtil, njJSUtil);
 
 #if XP_MAC
@@ -333,8 +330,8 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_CONSTRUCTOR(netscape.javascript.JSException, JSException, 
                      "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
                      njJSException);
-    LOAD_CONSTRUCTOR(netscape.javascript.JSWrappedException, 
-                     JSWrappedException, "(Ljava/lang/Object)V", njJSWrappedException);
+    LOAD_CONSTRUCTOR(netscape.javascript.JSException, JSException, 
+                     "(Ljava/lang/Object;)V", njJSException);
     LOAD_FIELDID(netscape.javascript.JSObject, internal, "I", njJSObject);
     LOAD_FIELDID(netscape.javascript.JSException, lineno, "I", njJSException);
     LOAD_FIELDID(netscape.javascript.JSException, tokenIndex, "I", 
@@ -343,8 +340,8 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
                  "Ljava/lang/String;", njJSException);
     LOAD_FIELDID(netscape.javascript.JSException, filename, 
                  "Ljava/lang/String;", njJSException);
-    LOAD_FIELDID(netscape.javascript.JSWrappedException, exception, 
-                 "Ljava/lang/Object;", njJSWrappedException);
+    LOAD_FIELDID(netscape.javascript.JSException, wrappedException, 
+                 "Ljava/lang/Object;", njJSException);
     LOAD_STATIC_METHOD(netscape.javascript.JSUtil, getStackTrace,     
                        "(Ljava/lang/Throwable;)Ljava/lang/String;", njJSUtil);
 
@@ -517,7 +514,6 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
         UNLOAD_CLASS(java/lang/Void,                  jlVoid);
         UNLOAD_CLASS(netscape/javascript/JSObject,    njJSObject);
         UNLOAD_CLASS(netscape/javascript/JSException, njJSException);
-        UNLOAD_CLASS(netscape/javascript/JSWrappedException, njJSWrappedException);
         UNLOAD_CLASS(netscape/javascript/JSUtil,      njJSUtil);
     }
 
