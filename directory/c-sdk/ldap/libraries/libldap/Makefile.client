@@ -114,7 +114,7 @@ INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include \
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
-PLATFORMLIBS	=
+#PLATFORMLIBS	=
 THREADS		=
 THREADSLIB	=
 
@@ -209,6 +209,9 @@ versiont.c:	Makefile.client Version.c
 	< Version.c > $@)
 
 all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLDAP)
+
+ltest::	$(LIBLDAP) test.o
+		$(LINK_EXE) test.o
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
