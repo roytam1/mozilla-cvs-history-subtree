@@ -11,7 +11,7 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla.
+ * The Original Code is Mozilla Communicator.
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
@@ -19,7 +19,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Darin Fisher <darin@netscape.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,24 +34,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsCPrefetchService_h__
-#define nsCPrefetchService_h__
+@import url("chrome://messenger/skin/");
 
-#include "nsIPrefetchService.h"
-
-/**
- * nsPrefetchService : nsIPrefetchService
- */
-#define NS_PREFETCHSERVICE_CLASSNAME \
-    "nsPrefetchService"
-#define NS_PREFETCHSERVICE_CONTRACTID \
-    "@mozilla.org/prefetch-service;1"
-#define NS_PREFETCHSERVICE_CID                       \
-{ /* 6b8bdffc-3394-417d-be83-a81b7c0f63bf */         \
-    0x6b8bdffc,                                      \
-    0x3394,                                          \
-    0x417d,                                          \
-    {0xbe, 0x83, 0xa8, 0x1b, 0x7c, 0x0f, 0x63, 0xbf} \
-}
-
-#endif // !nsCPrefetchService_h__
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
