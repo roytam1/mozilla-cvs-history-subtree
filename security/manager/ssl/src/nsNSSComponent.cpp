@@ -1038,6 +1038,7 @@ nsNSSComponent::ShutdownNSS()
                                 (void*) this);
     }
 
+    SSL_ClearSessionCache();
     ::NSS_Shutdown();
   }
 
