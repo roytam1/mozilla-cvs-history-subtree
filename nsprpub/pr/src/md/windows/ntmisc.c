@@ -646,11 +646,17 @@ PRStatus _MD_CloseFileMap(PRFileMap *fmap)
  ***********************************************************************
  */
 
-#if defined(_M_IX86) || defined(_X86_) && !defined(__MINGW32__)
+#if defined(_M_IX86) || defined(_X86_)
 
 #pragma warning(disable: 4035)
 PRInt32 _PR_MD_ATOMIC_INCREMENT(PRInt32 *val)
-{
+{    
+#if defined(__GNUC__)
+  PRInt32 result;
+  asm volatile ("lock ; xadd %1, %0" : "=m" (val), "=a" (result) : "1" (1)
+);
+  return result + 1;
+#else
     __asm
     {
         mov ecx, val
@@ -658,12 +664,18 @@ PRInt32 _PR_MD_ATOMIC_INCREMENT(PRInt32 *val)
         lock xadd dword ptr [ecx], eax
         inc eax
     }
+#endif /* __GNUC__ */
 }
 #pragma warning(default: 4035)
 
 #pragma warning(disable: 4035)
 PRInt32 _PR_MD_ATOMIC_DECREMENT(PRInt32 *val)
 {
+#if defined(__GNUC__)
+  PRInt32 result;
+  asm volatile("lock ; xadd %1, %0" : "=m" (val), "=a" (result) : "-1" (1));
+  return result - 1;
+#else
     __asm
     {
         mov ecx, val
@@ -671,12 +683,18 @@ PRInt32 _PR_MD_ATOMIC_DECREMENT(PRInt32 *val)
         lock xadd dword ptr [ecx], eax
         dec eax
     }
+#endif /* __GNUC__ */
 }
 #pragma warning(default: 4035)
 
 #pragma warning(disable: 4035)
 PRInt32 _PR_MD_ATOMIC_ADD(PRInt32 *intp, PRInt32 val)
 {
+#if defined(__GNUC__)
+  PRInt32 result;
+  asm volatile("lock ; xadd %1, %0" : "=m" (intp), "=a" (result) : "1" (val));
+  return result + val;
+#else
     __asm
     {
         mov ecx, intp
@@ -685,6 +703,7 @@ PRInt32 _PR_MD_ATOMIC_ADD(PRInt32 *intp, PRInt32 val)
         lock xadd dword ptr [ecx], eax
         add eax, ebx
     }
+#endif /* __GNUC__ */
 }
 #pragma warning(default: 4035)
 
@@ -694,6 +713,7 @@ PRInt32 _PR_MD_ATOMIC_ADD(PRInt32 *intp, PRInt32 val)
 void 
 PR_StackPush(PRStack *stack, PRStackElem *stack_elem)
 {
+#if !defined(__GNUC__)
     __asm
     {
 	mov ebx, stack
@@ -708,6 +728,7 @@ retry:	mov eax,[ebx]
 	mov [ecx],eax
 	mov [ebx],ecx
     }
+#endif /* __GNUC__ */
 }
 #pragma warning(default: 4035)
 
@@ -715,6 +736,7 @@ retry:	mov eax,[ebx]
 PRStackElem * 
 PR_StackPop(PRStack *stack)
 {
+#if !defined(__GNUC__)
     __asm
     {
 	mov ebx, stack
@@ -735,6 +757,7 @@ empty:
 	mov [ebx],eax
 done:	
 	}
+#endif /* __GNUC__ */
 }
 #pragma warning(default: 4035)
 
