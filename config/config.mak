@@ -163,7 +163,6 @@ FINAL_LINK_LIBS=$(DIST)\final-link-libs
 !ifdef MOZ_STATIC_COMPONENT_LIBS
 # Force _all_ exported methods to be |_declspec(dllexport)| when we're
 # building them into the executable.
-CFLAGS=$(CFLAGS) -DEXPORT_JS_API
 CFLAGS=$(CFLAGS) -D_IMPL_NS_APPSHELL
 CFLAGS=$(CFLAGS) -D_IMPL_NS_COOKIE
 CFLAGS=$(CFLAGS) -D_IMPL_NS_DOM
