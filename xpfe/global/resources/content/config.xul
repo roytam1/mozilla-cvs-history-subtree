@@ -60,9 +60,9 @@ Neil Rashbrook <neil@parkwaycc.co.uk>
 </keyset>
 
 <hbox align="center">
-  <label value="&filterPrefs.label;" accesskey="&filterPrefs.accesskey;" control="textbox"/>
+  <label value="Filter" accesskey="I" control="textbox"/>
   <textbox id="textbox" flex="1" type="timed" timeout="500" oncommand="FilterPrefs();"/>
-  <button id="button" label="&showAll.label;" accesskey="&showAll.accesskey;" oncommand="ClearFilter();" disabled="true"/>
+  <button id="button" label="Show All" accesskey="W" oncommand="ClearFilter();" disabled="true"/>
 </hbox>
 
 <tree id="configTree" flex="1" class="plain focusring" seltype="single"
