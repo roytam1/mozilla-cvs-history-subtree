@@ -25,38 +25,22 @@
 #endif
 
 #include "nsNntpService.h"
-
-#include "nsINetService.h"
-
 #include "nsINntpUrl.h"
 #include "nsNNTPProtocol.h"
-
 #include "nsNNTPNewsgroupPost.h"
-#include "nsINetService.h"
-
 #include "nsIMsgMailSession.h"
 #include "nsIMsgIdentity.h"
-
 #include "nsString.h"
-
 #include "nsNewsUtils.h"
-
 #include "nsNewsDatabase.h"
 #include "nsMsgDBCID.h"
-
-#include "nsString.h"
-
 #include "nsNNTPNewsgroup.h"
 #include "nsCOMPtr.h"
 #include "nsMsgBaseCID.h"
 #include "nsMsgNewsCID.h"
-
 #include "nsIMessage.h"
-
 #include "nsINetSupportDialogService.h"
-
 #include "nsIPref.h"
-
 #include "nsCRT.h"  // for nsCRT::strtok
 
 #define PREF_NETWORK_HOSTS_NNTP_SERVER	"network.hosts.nntp_server"
@@ -71,7 +55,6 @@
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 static NS_DEFINE_CID(kCNntpUrlCID, NS_NNTPURL_CID);
-static NS_DEFINE_CID(kCNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 static NS_DEFINE_CID(kCNNTPNewsgroupCID, NS_NNTPNEWSGROUP_CID);
 static NS_DEFINE_CID(kCNNTPNewsgroupPostCID, NS_NNTPNEWSGROUPPOST_CID);
@@ -109,6 +92,12 @@ nsresult nsNntpService::QueryInterface(const nsIID &aIID, void** aInstancePtr)
         NS_ADDREF_THIS();
         return NS_OK;
     }
+	if (aIID.Equals(nsIProtocolHandler::GetIID()))
+	{
+		*aInstancePtr = (void *) ((nsIProtocolHandler*) this);
+		NS_ADDREF_THIS();
+		return NS_OK;
+	}
 
 #if defined(NS_DEBUG)
     /*
@@ -633,7 +622,10 @@ nsNntpService::RunNewsUrl(nsString& urlString, nsString &newsgroupName, nsMsgKey
   if (NS_FAILED(rv) || !nntpUrl) return rv;
   
   nsCOMPtr <nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
-  mailnewsurl->SetSpec(nsAutoCString(urlString));
+  char * urlCstr = nsCRT::strdup(urlString.GetBuffer());
+  if (urlCstr)
+	mailnewsurl->SetSpec(urlCstr);
+  nsCRT::free(urlCstr);
 
   if (newsgroupName != "") {
     nsCOMPtr <nsINNTPNewsgroup> newsgroup;
@@ -804,4 +796,47 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   rv = RunNewsUrl(urlStr, newsgroupNameStr, key, aConsumer, aUrlListener, aURL);
 
   return rv; 
+}
+
+NS_IMETHODIMP nsNntpService::GetScheme(char * *aScheme)
+{
+	nsresult rv = NS_OK;
+	if (aScheme)
+		*aScheme = PL_strdup("news");
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 
+}
+
+NS_IMETHODIMP nsNntpService::GetDefaultPort(PRInt32 *aDefaultPort)
+{
+	nsresult rv = NS_OK;
+	if (aDefaultPort)
+		*aDefaultPort = NEWS_PORT;
+	else
+		rv = NS_ERROR_NULL_POINTER;
+	return rv; 	
+}
+
+NS_IMETHODIMP nsNntpService::MakeAbsolute(const char *aRelativeSpec, nsIURI *aBaseURI, char **_retval)
+{
+	// no such thing as relative urls for smtp.....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsNntpService::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **_retval)
+{
+	// i just haven't implemented this yet...I will be though....
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsNntpService::NewChannel(const char *verb, nsIURI *aURI, nsIEventSinkGetter *eventSinkGetter, nsIEventQueue *eventQueue, nsIChannel **_retval)
+{
+	// mscott - right now, I don't like the idea of returning channels to the caller. They just want us
+	// to run the url, they don't want a channel back...I'm going to be addressing this issue with
+	// the necko team in more detail later on.
+	NS_ASSERTION(0, "unimplemented");
+	return NS_OK;
 }
