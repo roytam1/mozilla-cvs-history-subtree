@@ -20,7 +20,9 @@ Communications Corporation. Portions created by Netscape are
 Rights Reserved.
 -->
 
+<!--
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
+-->
 <?xml-stylesheet href="chrome://messenger/skin/smime/msgReadSMIMEOverlay.css" type="text/css"?> 
 
 <!-- no charset overlay, blah
