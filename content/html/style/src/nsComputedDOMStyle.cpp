@@ -957,8 +957,8 @@ nsComputedDOMStyle::GetBorderCollapse(nsIFrame *aFrame,
   nsROCSSPrimitiveValue* val=GetROCSSPrimitiveValue();
   NS_ENSURE_TRUE(val, NS_ERROR_OUT_OF_MEMORY);
 
-  const nsStyleTable* table = nsnull;
-  GetStyleData(eStyleStruct_Table, (const nsStyleStruct*&)table, aFrame);
+  const nsStyleTableBorder* table = nsnull;
+  GetStyleData(eStyleStruct_TableBorder, (const nsStyleStruct*&)table, aFrame);
 
   if(table) {
     const nsCString& ident=

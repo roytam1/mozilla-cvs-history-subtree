@@ -692,3 +692,78 @@ PRInt32 nsStylePosition::CalcDifference(const nsStylePosition& aOther) const
   }
   return NS_STYLE_HINT_FRAMECHANGE;
 }
+
+// --------------------
+// nsStyleTable
+//
+
+nsStyleTable::nsStyleTable() 
+{ 
+  // values not inherited
+  mLayoutStrategy = NS_STYLE_TABLE_LAYOUT_AUTO;
+  mCols  = NS_STYLE_TABLE_COLS_NONE;
+  mFrame = NS_STYLE_TABLE_FRAME_NONE;
+  mRules = NS_STYLE_TABLE_RULES_ALL;
+  mSpan = 1;
+}
+
+nsStyleTable::~nsStyleTable(void) 
+{ 
+}
+
+nsStyleTable::nsStyleTable(const nsStyleTable& aSource)
+{
+  nsCRT::memcpy((nsStyleTable*)this, &aSource, sizeof(nsStyleTable));
+}
+
+PRInt32 nsStyleTable::CalcDifference(const nsStyleTable& aOther) const
+{
+  if ((mLayoutStrategy == aOther.mLayoutStrategy) &&
+      (mFrame == aOther.mFrame) &&
+      (mRules == aOther.mRules) &&
+      (mCols == aOther.mCols) &&
+      (mSpan == aOther.mSpan))
+    return NS_STYLE_HINT_NONE;
+  return NS_STYLE_HINT_REFLOW;
+}
+
+// -----------------------
+// nsStyleTableBorder
+
+nsStyleTableBorder::nsStyleTableBorder(nsIPresContext* aPresContext) 
+{ 
+  mBorderCollapse = NS_STYLE_BORDER_SEPARATE;
+
+  nsCompatibility compatMode = eCompatibility_Standard;
+  if (aPresContext)
+		aPresContext->GetCompatibilityMode(&compatMode);
+  mEmptyCells = (compatMode == eCompatibility_NavQuirks
+                  ? NS_STYLE_TABLE_EMPTY_CELLS_HIDE     // bug 33244
+                  : NS_STYLE_TABLE_EMPTY_CELLS_SHOW);
+  mCaptionSide = NS_SIDE_TOP;
+  mBorderSpacingX.Reset();
+  mBorderSpacingY.Reset();
+}
+
+nsStyleTableBorder::~nsStyleTableBorder(void) 
+{ 
+}
+
+nsStyleTableBorder::nsStyleTableBorder(const nsStyleTableBorder& aSource)
+{
+  nsCRT::memcpy((nsStyleTableBorder*)this, &aSource, sizeof(nsStyleTableBorder));
+}
+
+PRInt32 nsStyleTableBorder::CalcDifference(const nsStyleTableBorder& aOther) const
+{
+  if ((mBorderCollapse == aOther.mBorderCollapse) &&
+      (mCaptionSide == aOther.mCaptionSide) &&
+      (mBorderSpacingX == aOther.mBorderSpacingX) &&
+      (mBorderSpacingY == aOther.mBorderSpacingY)) {
+    if (mEmptyCells == aOther.mEmptyCells)
+      return NS_STYLE_HINT_NONE;
+    return NS_STYLE_HINT_VISUAL;
+  }
+  else
+    return NS_STYLE_HINT_REFLOW;
+}

@@ -30,7 +30,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIHTMLAttributes.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLTableCaptionElement :  public nsGenericHTMLContainerElement,
                                    public nsIDOMHTMLTableCaptionElement
@@ -191,24 +191,27 @@ nsHTMLTableCaptionElement::AttributeToString(nsIAtom* aAttribute,
   return nsGenericHTMLElement::AttributeToString(aAttribute, aValue, aResult);
 }
 
+static 
+void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
+{
+  if (!aAttributes || !aData || aData->mSID != eStyleStruct_TableBorder || !aData->mTableData)
+    return;
+
+  if (aData->mTableData->mCaptionSide.GetUnit() == eCSSUnit_Null) {
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+    if (value.GetUnit() == eHTMLUnit_Enumerated) {
+      nsCSSValue val(value.GetIntValue(), eCSSUnit_Enumerated);
+      aData->mTableData->mCaptionSide = val;
+    }
+  }
+}
+
 static void
 MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsIMutableStyleContext* aContext,
                   nsIPresContext* aPresContext)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      PRUint8 align = value.GetIntValue();
-      nsStyleTable* tableStyle = (nsStyleTable*)
-        aContext->GetMutableStyleData(eStyleStruct_Table);
-
-      tableStyle->mCaptionSide = align;
-    }
-  }
-
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
                                                 aPresContext);
 }
@@ -233,7 +236,7 @@ NS_IMETHODIMP
 nsHTMLTableCaptionElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                         nsMapAttributesFunc& aMapFunc) const
 {
-  aMapRuleFunc = nsnull;
+  aMapRuleFunc = &MapAttributesIntoRule;
   aMapFunc = &MapAttributesInto;
   return NS_OK;
 }

@@ -63,7 +63,8 @@ private:
                                   // node to node (constructing new nodes as needed to flesh out
                                   // the tree).
 
-  nsCachedStyleData* mStyleData;
+  nsCachedStyleData mStyleData;   // Any data we cached on the rule node.
+
   PRUint32 mInheritBits;          // Used to cache the fact that we can look up cached data under a parent
                                   // rule.  This is not the same thing as CSS inheritance.  
 
@@ -120,6 +121,14 @@ protected:
                                            nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
                                            nsRuleNode* aHighestNode,
                                            const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeTableData(nsStyleTable* aStartTable, const nsCSSTable& aTableData, 
+                                        nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                        nsRuleNode* aHighestNode,
+                                        const RuleDetail& aRuleDetail);
+  const nsStyleStruct* ComputeTableBorderData(nsStyleTableBorder* aStartTable, const nsCSSTable& aTableData, 
+                                              nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                              nsRuleNode* aHighestNode,
+                                              const RuleDetail& aRuleDetail);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData, 
                                       nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
@@ -135,11 +144,12 @@ protected:
   RuleDetail CheckOutlineProperties(const nsCSSMargin& aMargin);
   RuleDetail CheckListProperties(const nsCSSList& aList);
   RuleDetail CheckPositionProperties(const nsCSSPosition& aPosition);
+  RuleDetail CheckTableProperties(const nsCSSTable& aTable);
+  RuleDetail CheckTableBorderProperties(const nsCSSTable& aTable);
 #ifdef INCLUDE_XUL
   RuleDetail CheckXULProperties(const nsCSSXUL& aXUL);
 #endif
 
-  nsCachedStyleData* GetStyleData() { return mStyleData; };
   const nsStyleStruct* GetParentData(const nsStyleStructID& aSID); 
   const nsStyleStruct* GetFontData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetMarginData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
@@ -148,6 +158,8 @@ protected:
   const nsStyleStruct* GetOutlineData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetListData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
   const nsStyleStruct* GetPositionData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetTableData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
+  const nsStyleStruct* GetTableBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* GetXULData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext);
 #endif

@@ -379,8 +379,8 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
       NS_ASSERTION(nsnull!=myBorder, "bad style spacing");
 
 
-      const nsStyleTable* cellTableStyle;
-      GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)cellTableStyle)); 
+      const nsStyleTableBorder* cellTableStyle;
+      GetStyleData(eStyleStruct_TableBorder, ((const nsStyleStruct *&)cellTableStyle)); 
       nsRect  rect(0, 0, mRect.width, mRect.height);
 
 
@@ -395,8 +395,8 @@ NS_METHOD nsTableCellFrame::Paint(nsIPresContext* aPresContext,
         nsTableFrame* tableFrame = nsnull;  // I should be checking my own style context, but border-collapse isn't inheriting correctly
         nsresult rv = nsTableFrame::GetTableFrame(this, tableFrame);
         if ((NS_SUCCEEDED(rv)) && tableFrame) {
-          const nsStyleTable* tableStyle;
-          tableFrame->GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)tableStyle)); 
+          const nsStyleTableBorder* tableStyle;
+          tableFrame->GetStyleData(eStyleStruct_TableBorder, ((const nsStyleStruct *&)tableStyle)); 
           if (NS_STYLE_BORDER_SEPARATE == tableFrame->GetBorderCollapseStyle()) {
             nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
                                         aDirtyRect, rect, *myBorder, mStyleContext, skipSides);

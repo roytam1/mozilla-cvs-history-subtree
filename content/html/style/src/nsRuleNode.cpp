@@ -233,10 +233,8 @@ nsRuleNode::operator new(size_t sz, nsIPresContext* aPresContext)
 void 
 nsRuleNode::Destroy()
 {
-  delete mChildren;
-  if (mStyleData)
-    mStyleData->Destroy(mPresContext);
-  gRefCnt--;
+  // Destroy ourselves.
+  this->~nsRuleNode();
   
   // Don't let the memory be freed, since it will be recycled
   // instead. Don't call the global operator delete.
@@ -250,7 +248,7 @@ void nsRuleNode::CreateRootNode(nsIPresContext* aPresContext, nsIRuleNode** aRes
 }
 
 nsRuleNode::nsRuleNode(nsIPresContext* aContext, nsIStyleRule* aRule, nsRuleNode* aParent)
-    :mPresContext(aContext), mRule(aRule), mParent(aParent), mChildren(nsnull), mStyleData(nsnull), mInheritBits(0)
+    :mPresContext(aContext), mRule(aRule), mParent(aParent), mChildren(nsnull), mInheritBits(0)
 {
   NS_INIT_REFCNT();
   gRefCnt++;
@@ -258,6 +256,8 @@ nsRuleNode::nsRuleNode(nsIPresContext* aContext, nsIStyleRule* aRule, nsRuleNode
 
 nsRuleNode::~nsRuleNode()
 {
+  delete mChildren;
+  gRefCnt--;
 }
 
 NS_IMETHODIMP 
@@ -351,6 +351,10 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStr
     return CheckListProperties((const nsCSSList&)aCSSStruct);
   case eStyleStruct_Position:
     return CheckPositionProperties((const nsCSSPosition&)aCSSStruct);
+  case eStyleStruct_Table:
+    return CheckTableProperties((const nsCSSTable&)aCSSStruct);
+  case eStyleStruct_TableBorder:
+    return CheckTableBorderProperties((const nsCSSTable&)aCSSStruct);
 #ifdef INCLUDE_XUL
   case eStyleStruct_XUL:
     return CheckXULProperties((const nsCSSXUL&)aCSSStruct);
@@ -466,6 +470,26 @@ nsRuleNode::GetPositionData(nsIStyleContext* aContext, nsIMutableStyleContext* a
   return res;
 }
 
+const nsStyleStruct*
+nsRuleNode::GetTableData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSTable tableData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_Table, mPresContext, aContext);
+  ruleData.mTableData = &tableData;
+
+  return WalkRuleTree(eStyleStruct_Table, aContext, aMutableContext, &ruleData, &tableData);
+}
+
+const nsStyleStruct*
+nsRuleNode::GetTableBorderData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
+{
+  nsCSSTable tableData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_TableBorder, mPresContext, aContext);
+  ruleData.mTableData = &tableData;
+
+  return WalkRuleTree(eStyleStruct_TableBorder, aContext, aMutableContext, &ruleData, &tableData);
+}
+
 #ifdef INCLUDE_XUL
 const nsStyleStruct*
 nsRuleNode::GetXULData(nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext)
@@ -485,7 +509,6 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
 {
   // We start at the most specific rule in the tree.  
   nsStyleStruct* startStruct = nsnull;
-  nsCachedStyleData* startData = nsnull;
   
   nsCOMPtr<nsIStyleRule> rule = mRule;
   nsRuleNode* ruleNode = this;
@@ -493,14 +516,11 @@ nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext,
   nsRuleNode* rootNode = this;
   RuleDetail detail = eRuleNone;
   while (ruleNode) {
-    startData = ruleNode->GetStyleData();
-    if (startData) {
-      startStruct = startData->GetStyleData(aSID);
-      if (startStruct)
-        break; // We found a rule with fully specified data.  We don't need to go up
-               // the tree any further, since the remainder of this branch has already
-               // been computed.
-    }
+    startStruct = ruleNode->mStyleData.GetStyleData(aSID);
+    if (startStruct)
+      break; // We found a rule with fully specified data.  We don't need to go up
+             // the tree any further, since the remainder of this branch has already
+             // been computed.
 
     // Ask the rule to fill in the properties that it specifies.
     ruleNode->GetRule(getter_AddRefs(rule));
@@ -612,6 +632,18 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIMutableStyleContext
       aMutableContext->SetStyle(eStyleStruct_Position, *pos);
       return pos;
     }
+    case eStyleStruct_Table:
+    {
+      nsStyleTable* table = new (mPresContext) nsStyleTable();
+      aMutableContext->SetStyle(eStyleStruct_Table, *table);
+      return table;
+    }
+    case eStyleStruct_TableBorder:
+    {
+      nsStyleTableBorder* table = new (mPresContext) nsStyleTableBorder(mPresContext);
+      aMutableContext->SetStyle(eStyleStruct_TableBorder, *table);
+      return table;
+    }
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
     {
@@ -653,6 +685,12 @@ nsRuleNode::ComputeStyleData(const nsStyleStructID& aSID, nsStyleStruct* aStartS
   case eStyleStruct_Position:
     return ComputePositionData((nsStylePosition*)aStartStruct, (const nsCSSPosition&)aStartData, 
                                aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_Table:
+    return ComputeTableData((nsStyleTable*)aStartStruct, (const nsCSSTable&)aStartData, 
+                            aContext, aMutableContext, aHighestNode, aRuleDetail);
+  case eStyleStruct_TableBorder:
+    return ComputeTableBorderData((nsStyleTableBorder*)aStartStruct, (const nsCSSTable&)aStartData, 
+                                  aContext, aMutableContext, aHighestNode, aRuleDetail);
 #ifdef INCLUDE_XUL
   case eStyleStruct_XUL:
     return ComputeXULData((nsStyleXUL*)aStartStruct, (const nsCSSXUL&)aStartData, 
@@ -1013,11 +1051,9 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
     aMutableContext->SetStyle(eStyleStruct_Font, *font);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mInheritedData)
-      aHighestNode->mStyleData->mInheritedData = new (mPresContext) nsInheritedStyleData;
-    aHighestNode->mStyleData->mInheritedData->mFontData = font;
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mFontData = font;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_FONT, aHighestNode);
   }
@@ -1077,11 +1113,9 @@ nsRuleNode::ComputeMarginData(nsStyleMargin* aStartMargin, const nsCSSMargin& aM
     aMutableContext->SetStyle(eStyleStruct_Margin, *margin);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mResetData)
-      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
-    aHighestNode->mStyleData->mResetData->mMarginData = margin;
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mMarginData = margin;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_MARGIN, aHighestNode);
   }
@@ -1325,11 +1359,9 @@ nsRuleNode::ComputeBorderData(nsStyleBorder* aStartBorder, const nsCSSMargin& aM
     aMutableContext->SetStyle(eStyleStruct_Border, *border);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mResetData)
-      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
-    aHighestNode->mStyleData->mResetData->mBorderData = border;
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mBorderData = border;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_BORDER, aHighestNode);
   }
@@ -1390,11 +1422,9 @@ nsRuleNode::ComputePaddingData(nsStylePadding* aStartPadding, const nsCSSMargin&
     aMutableContext->SetStyle(eStyleStruct_Padding, *padding);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mResetData)
-      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
-    aHighestNode->mStyleData->mResetData->mPaddingData = padding;
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mPaddingData = padding;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_PADDING, aHighestNode);
   }
@@ -1462,11 +1492,9 @@ nsRuleNode::ComputeOutlineData(nsStyleOutline* aStartOutline, const nsCSSMargin&
     aMutableContext->SetStyle(eStyleStruct_Outline, *outline);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mResetData)
-      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
-    aHighestNode->mStyleData->mResetData->mOutlineData = outline;
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mOutlineData = outline;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_OUTLINE, aHighestNode);
   }
@@ -1548,11 +1576,9 @@ nsRuleNode::ComputeListData(nsStyleList* aStartList, const nsCSSList& aListData,
     aMutableContext->SetStyle(eStyleStruct_List, *list);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mInheritedData)
-      aHighestNode->mStyleData->mInheritedData = new (mPresContext) nsInheritedStyleData;
-    aHighestNode->mStyleData->mInheritedData->mListData = list;
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mListData = list;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_LIST, aHighestNode);
   }
@@ -1672,16 +1698,178 @@ nsRuleNode::ComputePositionData(nsStylePosition* aStartPos, const nsCSSPosition&
     aMutableContext->SetStyle(eStyleStruct_Position, *pos);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mResetData)
-      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
-    aHighestNode->mStyleData->mResetData->mPositionData = pos;
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mPositionData = pos;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_POSITION, aHighestNode);
   }
 
   return pos;
+}
+
+const nsStyleStruct* 
+nsRuleNode::ComputeTableData(nsStyleTable* aStartTable, const nsCSSTable& aTableData, 
+                             nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                             nsRuleNode* aHighestNode,
+                             const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW TABLE CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleTable* table;
+  if (aStartTable)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    table = new (mPresContext) nsStyleTable(*aStartTable);
+  else
+    table = new (mPresContext) nsStyleTable();
+  
+  nsStyleTable* parentTable = table;
+  if (parentContext)
+    parentTable = (nsStyleTable*)parentContext->GetStyleData(eStyleStruct_Table);
+  PRBool inherited = PR_FALSE;
+
+  // table-layout: auto, enum, inherit
+  if (eCSSUnit_Enumerated == aTableData.mLayout.GetUnit())
+    table->mLayoutStrategy = aTableData.mLayout.GetIntValue();
+  else if (eCSSUnit_Auto == aTableData.mLayout.GetUnit())
+    table->mLayoutStrategy = NS_STYLE_TABLE_LAYOUT_AUTO;
+  else if (eCSSUnit_Inherit == aTableData.mLayout.GetUnit()) {
+    inherited = PR_TRUE;
+    table->mLayoutStrategy = parentTable->mLayoutStrategy;
+  }
+
+  // rules: enum (not a real CSS prop)
+  if (eCSSUnit_Enumerated == aTableData.mRules.GetUnit())
+    table->mRules = aTableData.mRules.GetIntValue();
+
+  // frame: enum (not a real CSS prop)
+  if (eCSSUnit_Enumerated == aTableData.mFrame.GetUnit())
+    table->mFrame = aTableData.mFrame.GetIntValue();
+
+  // cols: enum, int (not a real CSS prop)
+  if (eCSSUnit_Enumerated == aTableData.mCols.GetUnit() ||
+      eCSSUnit_Integer == aTableData.mCols.GetUnit())
+    table->mCols = aTableData.mCols.GetIntValue();
+
+  // span: pixels (not a real CSS prop)
+  nsStyleCoord  coord;
+  if (SetCoord(aTableData.mSpan, coord, coord, SETCOORD_LE, aContext, mPresContext, inherited))
+    table->mSpan = coord.GetCoordValue();
+    
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_Table, *table);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mTableData = table;
+    // Propagate the bit down.
+    PropagateBit(NS_STYLE_INHERIT_TABLE, aHighestNode);
+  }
+
+  return table;
+}
+
+const nsStyleStruct* 
+nsRuleNode::ComputeTableBorderData(nsStyleTableBorder* aStartTable, const nsCSSTable& aTableData, 
+                                   nsIStyleContext* aContext, nsIMutableStyleContext* aMutableContext,
+                                   nsRuleNode* aHighestNode,
+                                   const RuleDetail& aRuleDetail)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW TABLE BORDER CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+  
+  nsStyleTableBorder* table = nsnull;
+  nsStyleTableBorder* parentTable = table;
+  PRBool inherited = PR_FALSE;
+
+  if (aStartTable)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    table = new (mPresContext) nsStyleTableBorder(*aStartTable);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentTable = (nsStyleTableBorder*)parentContext->GetStyleData(eStyleStruct_TableBorder);
+      if (parentTable)
+        table = new (mPresContext) nsStyleTableBorder(*parentTable);
+    }
+  }
+
+  if (!table)
+    table = parentTable = new (mPresContext) nsStyleTableBorder(mPresContext);
+
+  // border-collapse: enum, inherit
+  if (eCSSUnit_Enumerated == aTableData.mBorderCollapse.GetUnit()) {
+    table->mBorderCollapse = aTableData.mBorderCollapse.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aTableData.mBorderCollapse.GetUnit()) {
+    inherited = PR_TRUE;
+    table->mBorderCollapse = parentTable->mBorderCollapse;
+  }
+
+  nsStyleCoord coord;
+
+  // border-spacing-x: length, inherit
+  if (SetCoord(aTableData.mBorderSpacingX, coord, coord, SETCOORD_LENGTH, aContext, mPresContext, inherited)) {
+    table->mBorderSpacingX = coord.GetCoordValue();
+  }
+  else if (eCSSUnit_Inherit == aTableData.mBorderSpacingX.GetUnit()) {
+    inherited = PR_TRUE;
+    table->mBorderSpacingX = parentTable->mBorderSpacingX;
+  }
+  // border-spacing-y: length, inherit
+  if (SetCoord(aTableData.mBorderSpacingY, coord, coord, SETCOORD_LENGTH, aContext, mPresContext, inherited)) {
+    table->mBorderSpacingY = coord.GetCoordValue();
+  }
+  else if (eCSSUnit_Inherit == aTableData.mBorderSpacingY.GetUnit()) {
+    inherited = PR_TRUE;
+    table->mBorderSpacingY = parentTable->mBorderSpacingY;
+  }
+
+  // caption-side: enum, inherit
+  if (eCSSUnit_Enumerated == aTableData.mCaptionSide.GetUnit()) {
+    table->mCaptionSide = aTableData.mCaptionSide.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aTableData.mCaptionSide.GetUnit()) {
+    inherited = PR_TRUE;
+    table->mCaptionSide = parentTable->mCaptionSide;
+  }
+
+  // empty-cells: enum, inherit
+  if (eCSSUnit_Enumerated == aTableData.mEmptyCells.GetUnit()) {
+    table->mEmptyCells = aTableData.mEmptyCells.GetIntValue();
+  }
+  else if (eCSSUnit_Inherit == aTableData.mEmptyCells.GetUnit()) {
+    inherited = PR_TRUE;
+    table->mEmptyCells = parentTable->mEmptyCells;
+  }
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aMutableContext->SetStyle(eStyleStruct_TableBorder, *table);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mTableData = table;
+    // Propagate the bit down.
+    PropagateBit(NS_STYLE_INHERIT_TABLE_BORDER, aHighestNode);
+  }
+
+  return table;
 }
 
 #ifdef INCLUDE_XUL
@@ -1727,11 +1915,9 @@ nsRuleNode::ComputeXULData(nsStyleXUL* aStartXUL, const nsCSSXUL& aXULData,
     aMutableContext->SetStyle(eStyleStruct_XUL, *xul);
   else {
     // We were fully specified and can therefore be cached right on the rule node.
-    if (!aHighestNode->mStyleData)
-      aHighestNode->mStyleData = new (mPresContext) nsCachedStyleData;
-    if (!aHighestNode->mStyleData->mResetData)
-      aHighestNode->mStyleData->mResetData = new (mPresContext) nsResetStyleData;
-    aHighestNode->mStyleData->mResetData->mXULData = xul;
+    if (!aHighestNode->mStyleData.mResetData)
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+    aHighestNode->mStyleData.mResetData->mXULData = xul;
     // Propagate the bit down.
     PropagateBit(NS_STYLE_INHERIT_XUL, aHighestNode);
   }
@@ -2036,6 +2222,106 @@ nsRuleNode::CheckPositionProperties(const nsCSSPosition& aPosData)
   return eRulePartialMixed;
 }
 
+nsRuleNode::RuleDetail 
+nsRuleNode::CheckTableProperties(const nsCSSTable& aTableData)
+{
+  const PRUint32 numTableProps = 5;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aTableData.mLayout.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mLayout.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mFrame.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mFrame.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mRules.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mRules.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mCols.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mCols.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mSpan.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mSpan.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numTableProps)
+    return eRuleFullInherited;
+  else if (totalCount == numTableProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
+nsRuleNode::RuleDetail 
+nsRuleNode::CheckTableBorderProperties(const nsCSSTable& aTableData)
+{
+  const PRUint32 numTableProps = 5;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aTableData.mBorderCollapse.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mBorderCollapse.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mBorderSpacingX.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mBorderSpacingX.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mBorderSpacingY.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mBorderSpacingY.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mCaptionSide.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mCaptionSide.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aTableData.mEmptyCells.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aTableData.mEmptyCells.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numTableProps)
+    return eRuleFullInherited;
+  else if (totalCount == numTableProps)
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+
 #ifdef INCLUDE_XUL
 nsRuleNode::RuleDetail 
 nsRuleNode::CheckXULProperties(const nsCSSXUL& aXULData)
@@ -2064,34 +2350,29 @@ nsRuleNode::CheckXULProperties(const nsCSSXUL& aXULData)
 }
 #endif
 
-const nsStyleStruct* 
+inline const nsStyleStruct* 
 nsRuleNode::GetParentData(const nsStyleStructID& aSID)
 {
   nsRuleNode* ruleNode = mParent;
-  nsCachedStyleData* currData = nsnull;
   nsStyleStruct* currStruct = nsnull;
   while (ruleNode) {
-    currData = ruleNode->GetStyleData();
-    if (currData) {
-      currStruct = currData->GetStyleData(aSID);
-      if (currStruct)
-        break; // We found a rule with fully specified data.  We don't need to go up
-               // the tree any further, since the remainder of this branch has already
-               // been computed.
-    }
-
+    currStruct = ruleNode->mStyleData.GetStyleData(aSID);
+    if (currStruct)
+      break; // We found a rule with fully specified data.  We don't need to go up
+             // the tree any further, since the remainder of this branch has already
+             // been computed.
     ruleNode = ruleNode->mParent; // Climb up to the next rule in the tree (a less specific rule).
   }  
 
   return currStruct; // Just return whatever we found.
 }
 
-const nsStyleStruct* 
+inline const nsStyleStruct* 
 nsRuleNode::GetStyleData(nsStyleStructID aSID, 
                          nsIStyleContext* aContext,
                          nsIMutableStyleContext* aMutableContext)
 {
-  const nsStyleStruct* cachedData = mStyleData ? mStyleData->GetStyleData(aSID) : nsnull;
+  const nsStyleStruct* cachedData = mStyleData.GetStyleData(aSID);
   if (cachedData)
     return cachedData; // We have a fully specified struct. Just return it.
 
@@ -2115,6 +2396,10 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
       return GetListData(aContext, aMutableContext);
     case eStyleStruct_Position:
       return GetPositionData(aContext, aMutableContext);
+    case eStyleStruct_Table:
+      return GetTableData(aContext, aMutableContext);
+    case eStyleStruct_TableBorder:
+      return GetTableBorderData(aContext, aMutableContext);
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
       return GetXULData(aContext, aMutableContext);

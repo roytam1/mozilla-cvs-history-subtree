@@ -1076,6 +1076,9 @@ MapTableFrameInto(const nsIHTMLMappedAttributes* aAttributes,
                   nsRuleData*                    aData,
                   PRUint8                        aBorderStyle)
 {
+  if (!aData->mMarginData)
+    return;
+
   // set up defaults
   nsCSSValue styleVal(aBorderStyle, eCSSUnit_Enumerated);
   if (aData->mMarginData->mBorderStyle->mLeft.GetUnit() == eCSSUnit_Null)
@@ -1155,13 +1158,12 @@ MapTableBorderInto(const nsIHTMLMappedAttributes* aAttributes,
   }
 
   if (borderValue.GetUnit() != eHTMLUnit_Null) {
-    nsStyleTable *tableStyle = (nsStyleTable*)
-      aData->mStyleContext->GetMutableStyleData(eStyleStruct_Table);
-    
     if (borderValue.GetUnit() != eHTMLUnit_Pixel) {
       // empty values of border get rules=all and frame=border
-      tableStyle->mRules = NS_STYLE_TABLE_RULES_ALL;  
-      tableStyle->mFrame = NS_STYLE_TABLE_FRAME_BORDER;
+      if (aData->mTableData) {
+        aData->mTableData->mRules = nsCSSValue(NS_STYLE_TABLE_RULES_ALL, eCSSUnit_Enumerated);
+        aData->mTableData->mFrame = nsCSSValue(NS_STYLE_TABLE_FRAME_BORDER, eCSSUnit_Enumerated);
+      }
       borderValue.SetPixelValue(1);
     }
     else {
@@ -1169,31 +1171,37 @@ MapTableBorderInto(const nsIHTMLMappedAttributes* aAttributes,
       
       if (0 != borderThickness) {
         // border != 0 implies rules=all and frame=border
-        tableStyle->mRules = NS_STYLE_TABLE_RULES_ALL;  
-        tableStyle->mFrame = NS_STYLE_TABLE_FRAME_BORDER;
+        if (aData->mTableData) {
+          aData->mTableData->mRules = nsCSSValue(NS_STYLE_TABLE_RULES_ALL, eCSSUnit_Enumerated);
+          aData->mTableData->mFrame = nsCSSValue(NS_STYLE_TABLE_FRAME_BORDER, eCSSUnit_Enumerated);
+        }
       }
       else {
         // border = 0 implies rules=none and frame=void
-        tableStyle->mRules = NS_STYLE_TABLE_RULES_NONE; 
-        tableStyle->mFrame = NS_STYLE_TABLE_FRAME_NONE;
+        if (aData->mTableData) {
+          aData->mTableData->mRules = nsCSSValue(NS_STYLE_TABLE_RULES_NONE, eCSSUnit_Enumerated);
+          aData->mTableData->mFrame = nsCSSValue(NS_STYLE_TABLE_FRAME_NONE, eCSSUnit_Enumerated);
+        }
       }
     }
 
     PRInt32 borderThickness = borderValue.GetPixelValue();
 
-    // by default, set all border sides to the specified width
-    nsCSSValue widthVal((float)borderThickness, eCSSUnit_Pixel);
-    if (aData->mMarginData->mBorderWidth->mLeft.GetUnit() == eCSSUnit_Null)
-      aData->mMarginData->mBorderWidth->mLeft = widthVal;
-    if (aData->mMarginData->mBorderWidth->mRight.GetUnit() == eCSSUnit_Null)
-      aData->mMarginData->mBorderWidth->mRight = widthVal;
-    if (aData->mMarginData->mBorderWidth->mTop.GetUnit() == eCSSUnit_Null)
-      aData->mMarginData->mBorderWidth->mTop = widthVal;
-    if (aData->mMarginData->mBorderWidth->mBottom.GetUnit() == eCSSUnit_Null)
-      aData->mMarginData->mBorderWidth->mBottom = widthVal;
+    if (aData->mMarginData) {
+      // by default, set all border sides to the specified width
+      nsCSSValue widthVal((float)borderThickness, eCSSUnit_Pixel);
+      if (aData->mMarginData->mBorderWidth->mLeft.GetUnit() == eCSSUnit_Null)
+        aData->mMarginData->mBorderWidth->mLeft = widthVal;
+      if (aData->mMarginData->mBorderWidth->mRight.GetUnit() == eCSSUnit_Null)
+        aData->mMarginData->mBorderWidth->mRight = widthVal;
+      if (aData->mMarginData->mBorderWidth->mTop.GetUnit() == eCSSUnit_Null)
+        aData->mMarginData->mBorderWidth->mTop = widthVal;
+      if (aData->mMarginData->mBorderWidth->mBottom.GetUnit() == eCSSUnit_Null)
+        aData->mMarginData->mBorderWidth->mBottom = widthVal;
 
-    // now account for the frame attribute
-    MapTableFrameInto(aAttributes, aData, aBorderStyle);
+      // now account for the frame attribute
+      MapTableFrameInto(aAttributes, aData, aBorderStyle);
+    }
   }
 }
 
@@ -1207,7 +1215,53 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
   if (!aAttributes)
     return;
 
-  if (aData->mSID == eStyleStruct_Margin && aData->mMarginData) {
+  if (aData->mSID == eStyleStruct_TableBorder && aData->mTableData) {
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+    if (readDisplay && readDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE_CELL) {
+      // cellspacing 
+      nsHTMLValue value;
+      aAttributes->GetAttribute(nsHTMLAtoms::cellspacing, value);
+      if (value.GetUnit() == eHTMLUnit_Pixel) {
+        nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        if (aData->mTableData->mBorderSpacingX.GetUnit() == eCSSUnit_Null)
+          aData->mTableData->mBorderSpacingX = val;
+        if (aData->mTableData->mBorderSpacingY.GetUnit() == eCSSUnit_Null)
+          aData->mTableData->mBorderSpacingY = val;
+      }
+    }
+  }
+
+  if (aData->mSID == eStyleStruct_Table && aData->mTableData) {
+    const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
+                  aData->mStyleContext->GetStyleData(eStyleStruct_Display);
+    if (readDisplay && readDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE_CELL) {
+      MapTableBorderInto(aAttributes, aData, 0);
+
+      nsHTMLValue value;
+      // layout
+      if (aData->mTableData->mLayout.GetUnit() == eCSSUnit_Null) {
+        aAttributes->GetAttribute(nsHTMLAtoms::layout, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated)
+          aData->mTableData->mLayout = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+      }
+      
+      // cols
+      aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
+      if (value.GetUnit() != eHTMLUnit_Null) {
+        if (value.GetUnit() == eHTMLUnit_Integer) 
+          aData->mTableData->mCols = nsCSSValue(value.GetIntValue(), eCSSUnit_Integer);
+        else // COLS had no value, so it refers to all columns
+          aData->mTableData->mCols = nsCSSValue(NS_STYLE_TABLE_COLS_ALL, eCSSUnit_Enumerated);
+      }
+
+      // rules
+      aAttributes->GetAttribute(nsHTMLAtoms::rules, value);
+      if (value.GetUnit() == eHTMLUnit_Enumerated)
+        aData->mTableData->mRules = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
+    }
+  }
+  else if (aData->mSID == eStyleStruct_Margin && aData->mMarginData) {
     const nsStyleDisplay* readDisplay = (nsStyleDisplay*)
                   aData->mStyleContext->GetStyleData(eStyleStruct_Display);
   
@@ -1461,60 +1515,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         }
       }
 
-      // layout
-      nsStyleTable* tableStyle=nsnull;
-      aAttributes->GetAttribute(nsHTMLAtoms::layout, value);
-
-      if (value.GetUnit() == eHTMLUnit_Enumerated) {
-        // it may be another type if illegal
-        tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-        tableStyle->mLayoutStrategy = value.GetIntValue();
-      }
-
-      // cellpadding
-      aAttributes->GetAttribute(nsHTMLAtoms::cellpadding, value);
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        if (nsnull==tableStyle)
-          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-        tableStyle->mCellPadding.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
-      } else if (value.GetUnit() == eHTMLUnit_Percent) {
-        if (!tableStyle)
-          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-        tableStyle->mCellPadding.SetPercentValue(value.GetPercentValue());
-      }
-
-      // cellspacing  (reuses tableStyle if already resolved)
-      // ua.css sets cellspacing
-      aAttributes->GetAttribute(nsHTMLAtoms::cellspacing, value);
-
-      if (value.GetUnit() == eHTMLUnit_Pixel) {
-        if (nsnull==tableStyle)
-          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-        tableStyle->mBorderSpacingX.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
-        tableStyle->mBorderSpacingY.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), sp2t));
-      }
-
-      // cols
-      aAttributes->GetAttribute(nsHTMLAtoms::cols, value);
-
-      if (value.GetUnit() != eHTMLUnit_Null) {
-        if (!tableStyle)
-          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-        if (value.GetUnit() == eHTMLUnit_Integer)
-          tableStyle->mCols = value.GetIntValue();
-        else // COLS had no value, so it refers to all columns
-          tableStyle->mCols = NS_STYLE_TABLE_COLS_ALL;
-      }
-
-      // rules, must come after handling of border which set the default
-      aAttributes->GetAttribute(nsHTMLAtoms::rules, value);
-
-      if (value.GetUnit() == eHTMLUnit_Enumerated) {
-        if (nsnull==tableStyle)
-          tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-        tableStyle->mRules = value.GetIntValue();
-      }
-
       //background: color
       nsGenericHTMLElement::MapBackgroundAttributesInto(aAttributes, aContext,
                                                         aPresContext);
@@ -1529,7 +1529,6 @@ nsHTMLTableElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                              PRInt32& aHint) const
 {
   if ((aAttribute == nsHTMLAtoms::layout) ||
-      (aAttribute == nsHTMLAtoms::cellpadding) ||
       (aAttribute == nsHTMLAtoms::cellspacing) ||
       (aAttribute == nsHTMLAtoms::cols) ||
       (aAttribute == nsHTMLAtoms::rules) ||

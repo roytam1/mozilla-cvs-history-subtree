@@ -269,6 +269,14 @@ void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleDat
       }
     }
   }
+  else if (aData->mSID == eStyleStruct_Table && 
+           aData->mTableData && aData->mTableData->mSpan.GetUnit() == eCSSUnit_Null) {
+    // span: int
+    nsHTMLValue value;
+    aAttributes->GetAttribute(nsHTMLAtoms::span, value);
+    if (value.GetUnit() == eHTMLUnit_Integer)
+      aData->mTableData->mSpan = nsCSSValue(value.GetIntValue(), eCSSUnit_Integer);
+  }
 }
 
 static void
@@ -297,13 +305,6 @@ MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
         textStyle = (nsStyleText*)aContext->GetMutableStyleData(eStyleStruct_Text);
       textStyle->mVerticalAlign.SetIntValue(value.GetIntValue(),
                                             eStyleUnit_Enumerated);
-    }
-
-    // span: int
-    aAttributes->GetAttribute(nsHTMLAtoms::span, value);
-    if (value.GetUnit() == eHTMLUnit_Integer) {
-      nsStyleTable *tableStyle = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-      tableStyle->mSpan = value.GetIntValue();
     }
   }
 

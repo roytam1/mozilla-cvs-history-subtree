@@ -18,6 +18,7 @@
  * Rights Reserved.
  *
  * Contributor(s): 
+ *   David Hyatt <hyatt@netscape.com>
  *   Daniel Glazman <glazman@netscape.com>
  */
 #include "nsCOMPtr.h"
@@ -850,9 +851,6 @@ static PRBool SetCoord(const nsCSSValue& aValue, nsStyleCoord& aCoord,
                        PRInt32 aMask, const nsFont& aFont, 
                        nsIPresContext* aPresContext);
 
-static void MapDeclarationFontInto(nsICSSDeclaration* aDeclaration, 
-                                   nsIMutableStyleContext* aContext, 
-                                   nsIPresContext* aPresContext);
 static void MapDeclarationInto(nsICSSDeclaration* aDeclaration, 
                                nsIMutableStyleContext* aContext, 
                                nsIPresContext* aPresContext);
@@ -862,6 +860,8 @@ static nsresult MapFontForDeclaration(nsICSSDeclaration* aDecl, nsCSSFont& aFont
 static nsresult MapMarginForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSMargin& aMargin); 
 static nsresult MapListForDeclaration(nsICSSDeclaration* aDecl, nsCSSList& aList);
 static nsresult MapPositionForDeclaration(nsICSSDeclaration* aDecl, nsCSSPosition& aPosition);
+static nsresult MapTableForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSTable& aTable);
+
 #ifdef INCLUDE_XUL
 static nsresult MapXULForDeclaration(nsICSSDeclaration* aDecl, nsCSSXUL& aXUL);
 #endif
@@ -951,7 +951,6 @@ CSSImportantRule::GetStrength(PRInt32& aStrength) const
 NS_IMETHODIMP
 CSSImportantRule::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  MapDeclarationFontInto(mDeclaration, aContext, aPresContext);
   return NS_OK;
 }
 
@@ -976,6 +975,8 @@ CSSImportantRule::MapRuleInfoInto(nsRuleData* aRuleData)
     return MapListForDeclaration(mDeclaration, *aRuleData->mListData);
   else if (aRuleData->mPositionData)
     return MapPositionForDeclaration(mDeclaration, *aRuleData->mPositionData);
+  else if (aRuleData->mTableData)
+    return MapTableForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTableData);
 #ifdef INCLUDE_XUL
   else if (aRuleData->mXULData)
     return MapXULForDeclaration(mDeclaration, *aRuleData->mXULData);
@@ -1783,7 +1784,6 @@ CSSStyleRuleImpl::Clone(nsICSSRule*& aClone) const
 NS_IMETHODIMP
 CSSStyleRuleImpl::MapFontStyleInto(nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
 {
-  MapDeclarationFontInto(mDeclaration, aContext, aPresContext);
   return NS_OK;
 }
 
@@ -1808,6 +1808,8 @@ CSSStyleRuleImpl::MapRuleInfoInto(nsRuleData* aRuleData)
     return MapListForDeclaration(mDeclaration, *aRuleData->mListData);
   else if (aRuleData->mPositionData)
     return MapPositionForDeclaration(mDeclaration, *aRuleData->mPositionData);
+  else if (aRuleData->mTableData)
+    return MapTableForDeclaration(mDeclaration, aRuleData->mSID, *aRuleData->mTableData);
 #ifdef INCLUDE_XUL
   else if (aRuleData->mXULData)
     return MapXULForDeclaration(mDeclaration, *aRuleData->mXULData);
@@ -2102,10 +2104,45 @@ MapMarginForDeclaration(nsICSSDeclaration* aDeclaration, const nsStyleStructID& 
   return NS_OK;
 }
 
-static void 
-MapDeclarationFontInto(nsICSSDeclaration* aDeclaration, 
-                       nsIMutableStyleContext* aContext, nsIPresContext* aPresContext)
+static nsresult 
+MapTableForDeclaration(nsICSSDeclaration* aDecl, const nsStyleStructID& aID, nsCSSTable& aTable)
 {
+  if (!aDecl)
+    return NS_OK; // The rule must have a declaration.
+
+  nsCSSTable* ourTable;
+  aDecl->GetData(kCSSTableSID, (nsCSSStruct**)&ourTable);
+  if (!ourTable)
+    return NS_OK; // We don't have any rules for tables.
+
+  if (aID == eStyleStruct_TableBorder) {
+    // border-collapse: enum, inherit
+    if (aTable.mBorderCollapse.GetUnit() == eCSSUnit_Null && ourTable->mBorderCollapse.GetUnit() != eCSSUnit_Null)
+      aTable.mBorderCollapse = ourTable->mBorderCollapse;
+
+    // border-spacing-x: length, inherit
+    if (aTable.mBorderSpacingX.GetUnit() == eCSSUnit_Null && ourTable->mBorderSpacingX.GetUnit() != eCSSUnit_Null)
+      aTable.mBorderSpacingX = ourTable->mBorderSpacingX;
+
+    // border-spacing-y: length, inherit
+    if (aTable.mBorderSpacingY.GetUnit() == eCSSUnit_Null && ourTable->mBorderSpacingY.GetUnit() != eCSSUnit_Null)
+      aTable.mBorderSpacingY = ourTable->mBorderSpacingY;
+
+    // caption-side: enum, inherit
+    if (aTable.mCaptionSide.GetUnit() == eCSSUnit_Null && ourTable->mCaptionSide.GetUnit() != eCSSUnit_Null)
+      aTable.mCaptionSide = ourTable->mCaptionSide;
+
+    // empty-cells: enum, inherit
+    if (aTable.mEmptyCells.GetUnit() == eCSSUnit_Null && ourTable->mEmptyCells.GetUnit() != eCSSUnit_Null)
+      aTable.mEmptyCells = ourTable->mEmptyCells;
+  }
+  else if (aID == eStyleStruct_Table) {
+    // table-layout: auto, enum, inherit
+    if (aTable.mLayout.GetUnit() == eCSSUnit_Null && ourTable->mLayout.GetUnit() != eCSSUnit_Null)
+      aTable.mLayout = ourTable->mLayout;
+  }
+
+  return NS_OK;
 }
 
 static void 
@@ -2528,96 +2565,6 @@ MapDeclarationColorInto(nsICSSDeclaration* aDeclaration,
 }
 
 static void 
-MapDeclarationMarginInto(nsICSSDeclaration* aDeclaration, 
-                         nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                         nsStyleFont* aFont, nsIPresContext* aPresContext)
-{
-}
-
-static void 
-MapDeclarationPositionInto(nsICSSDeclaration* aDeclaration, 
-                           nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                           nsStyleFont* aFont, nsIPresContext* aPresContext)
-{
-}
-
-static void 
-MapDeclarationListInto(nsICSSDeclaration* aDeclaration, 
-                       nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                       nsStyleFont* /*aFont*/, nsIPresContext* aPresContext)
-{
-}
-
-static void 
-MapDeclarationTableInto(nsICSSDeclaration* aDeclaration, 
-                        nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
-                        nsStyleFont* aFont, nsIPresContext* aPresContext)
-{
-  nsCSSTable* ourTable;
-  if (NS_OK == aDeclaration->GetData(kCSSTableSID, (nsCSSStruct**)&ourTable)) {
-    if (nsnull != ourTable) {
-      nsStyleTable* table = (nsStyleTable*)aContext->GetMutableStyleData(eStyleStruct_Table);
-
-      const nsStyleTable* parentTable = table;
-      if (nsnull != aParentContext) {
-        parentTable = (const nsStyleTable*)aParentContext->GetStyleData(eStyleStruct_Table);
-      }
-      nsStyleCoord  coord;
-
-      // border-collapse: enum, inherit
-      if (eCSSUnit_Enumerated == ourTable->mBorderCollapse.GetUnit()) {
-        table->mBorderCollapse = ourTable->mBorderCollapse.GetIntValue();
-      }
-      else if (eCSSUnit_Inherit == ourTable->mBorderCollapse.GetUnit()) {
-        table->mBorderCollapse = parentTable->mBorderCollapse;
-      }
-
-      // border-spacing-x: length, inherit
-      if (SetCoord(ourTable->mBorderSpacingX, coord, coord, SETCOORD_LENGTH, aFont->mFont, aPresContext)) {
-        table->mBorderSpacingX = coord.GetCoordValue();
-      }
-      else if (eCSSUnit_Inherit == ourTable->mBorderSpacingX.GetUnit()) {
-        table->mBorderSpacingX = parentTable->mBorderSpacingX;
-      }
-      // border-spacing-y: length, inherit
-      if (SetCoord(ourTable->mBorderSpacingY, coord, coord, SETCOORD_LENGTH, aFont->mFont, aPresContext)) {
-        table->mBorderSpacingY = coord.GetCoordValue();
-      }
-      else if (eCSSUnit_Inherit == ourTable->mBorderSpacingY.GetUnit()) {
-        table->mBorderSpacingY = parentTable->mBorderSpacingY;
-      }
-
-      // caption-side: enum, inherit
-      if (eCSSUnit_Enumerated == ourTable->mCaptionSide.GetUnit()) {
-        table->mCaptionSide = ourTable->mCaptionSide.GetIntValue();
-      }
-      else if (eCSSUnit_Inherit == ourTable->mCaptionSide.GetUnit()) {
-        table->mCaptionSide = parentTable->mCaptionSide;
-      }
-
-      // empty-cells: enum, inherit
-      if (eCSSUnit_Enumerated == ourTable->mEmptyCells.GetUnit()) {
-        table->mEmptyCells = ourTable->mEmptyCells.GetIntValue();
-      }
-      else if (eCSSUnit_Inherit == ourTable->mEmptyCells.GetUnit()) {
-        table->mEmptyCells = parentTable->mEmptyCells;
-      }
-
-      // table-layout: auto, enum, inherit
-      if (eCSSUnit_Enumerated == ourTable->mLayout.GetUnit()) {
-        table->mLayoutStrategy = ourTable->mLayout.GetIntValue();
-      }
-      else if (eCSSUnit_Auto == ourTable->mLayout.GetUnit()) {
-        table->mLayoutStrategy = NS_STYLE_TABLE_LAYOUT_AUTO;
-      }
-      else if (eCSSUnit_Inherit == ourTable->mLayout.GetUnit()) {
-        table->mLayoutStrategy = parentTable->mLayoutStrategy;
-      }
-    }
-  }
-}
-
-static void 
 MapDeclarationContentInto(nsICSSDeclaration* aDeclaration, 
                           nsIMutableStyleContext* aContext, nsIStyleContext* aParentContext,
                           nsStyleFont* aFont, nsIPresContext* aPresContext)
@@ -2940,7 +2887,6 @@ void MapDeclarationInto(nsICSSDeclaration* aDeclaration,
     MapDeclarationTextInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationDisplayInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationColorInto(aDeclaration, aContext, parentContext, font, aPresContext);
-    MapDeclarationTableInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationContentInto(aDeclaration, aContext, parentContext, font, aPresContext);
     MapDeclarationUIInto(aDeclaration, aContext, parentContext, font, aPresContext);
     

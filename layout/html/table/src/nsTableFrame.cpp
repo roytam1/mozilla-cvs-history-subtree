@@ -3785,8 +3785,8 @@ PRUint8 nsTableFrame::GetBorderCollapseStyle()
 // XXX: could cache this.  But be sure to check style changes if you do!
 nscoord nsTableFrame::GetCellSpacingX()
 {
-  const nsStyleTable* tableStyle;
-  GetStyleData(eStyleStruct_Table, (const nsStyleStruct *&)tableStyle);
+  const nsStyleTableBorder* tableStyle;
+  GetStyleData(eStyleStruct_TableBorder, (const nsStyleStruct *&)tableStyle);
   nscoord cellSpacing = 0;
   PRUint8 borderCollapseStyle = GetBorderCollapseStyle();
   if (NS_STYLE_BORDER_COLLAPSE != borderCollapseStyle) {
@@ -3800,8 +3800,8 @@ nscoord nsTableFrame::GetCellSpacingX()
 // XXX: could cache this. But be sure to check style changes if you do!
 nscoord nsTableFrame::GetCellSpacingY()
 {
-  const nsStyleTable* tableStyle;
-  GetStyleData(eStyleStruct_Table, (const nsStyleStruct *&)tableStyle);
+  const nsStyleTableBorder* tableStyle;
+  GetStyleData(eStyleStruct_TableBorder, (const nsStyleStruct *&)tableStyle);
   nscoord cellSpacing = 0;
   PRUint8 borderCollapseStyle = GetBorderCollapseStyle();
   if (NS_STYLE_BORDER_COLLAPSE != borderCollapseStyle) {
@@ -3811,19 +3811,6 @@ nscoord nsTableFrame::GetCellSpacingY()
   }
   return cellSpacing;
 }
-
-// Get the cellpadding defined on the table. Each cell can override this with style
-nscoord nsTableFrame::GetCellPadding()
-{
-  const nsStyleTable* tableStyle;
-  GetStyleData(eStyleStruct_Table, (const nsStyleStruct *&)tableStyle);
-  nscoord cellPadding = -1;
-  if (tableStyle->mCellPadding.GetUnit() == eStyleUnit_Coord) {
-    cellPadding = tableStyle->mCellPadding.GetCoordValue();
-  }
-  return cellPadding;
-}
-
 
 /* ----- global methods ----- */
 

@@ -391,98 +391,6 @@ PRInt32 StyleDisplayImpl::CalcDifference(const StyleDisplayImpl& aOther) const
   return NS_STYLE_HINT_FRAMECHANGE;
 }
 
-// --------------------
-// nsStyleTable
-//
-
-nsStyleTable::nsStyleTable(void) { }
-nsStyleTable::~nsStyleTable(void) { }
-
-struct StyleTableImpl: public nsStyleTable {
-  StyleTableImpl(void);
-
-  void ResetFrom(const nsStyleTable* aParent, nsIPresContext* aPresContext);
-  void SetFrom(const nsStyleTable& aSource);
-  void CopyTo(nsStyleTable& aDest) const;
-  PRInt32 CalcDifference(const StyleTableImpl& aOther) const;
-  
-private:  // These are not allowed
-  StyleTableImpl(const StyleTableImpl& aOther);
-  StyleTableImpl& operator=(const StyleTableImpl& aOther);
-};
-
-StyleTableImpl::StyleTableImpl()
-{ 
-  ResetFrom(nsnull, nsnull);
-}
-
-void StyleTableImpl::ResetFrom(const nsStyleTable* aParent, nsIPresContext* aPresContext)
-{
-  // values not inherited
-  mLayoutStrategy = NS_STYLE_TABLE_LAYOUT_AUTO;
-  mCols  = NS_STYLE_TABLE_COLS_NONE;
-  mFrame = NS_STYLE_TABLE_FRAME_NONE;
-  mRules = NS_STYLE_TABLE_RULES_ALL;
-  mCellPadding.Reset();
-  mSpan = 1;
-
-  if (aParent) {  // handle inherited properties
-    mBorderCollapse = aParent->mBorderCollapse;
-    mEmptyCells     = aParent->mEmptyCells;
-    mCaptionSide    = aParent->mCaptionSide;
-    mBorderSpacingX = aParent->mBorderSpacingX;
-    mBorderSpacingY = aParent->mBorderSpacingY;
-    mSpanWidth      = aParent->mSpanWidth;
-  }
-  else {
-    mBorderCollapse = NS_STYLE_BORDER_SEPARATE;
-
-    nsCompatibility compatMode = eCompatibility_Standard;
-    if (aPresContext) {
-		  aPresContext->GetCompatibilityMode(&compatMode);
-		}
-    mEmptyCells = (compatMode == eCompatibility_NavQuirks
-                    ? NS_STYLE_TABLE_EMPTY_CELLS_HIDE     // bug 33244
-                    : NS_STYLE_TABLE_EMPTY_CELLS_SHOW);
-
-    mCaptionSide = NS_SIDE_TOP;
-    mBorderSpacingX.Reset();
-    mBorderSpacingY.Reset();
-    mSpanWidth.Reset();
-  }
-}
-
-void StyleTableImpl::SetFrom(const nsStyleTable& aSource)
-{
-  nsCRT::memcpy((nsStyleTable*)this, &aSource, sizeof(nsStyleTable));
-}
-
-void StyleTableImpl::CopyTo(nsStyleTable& aDest) const
-{
-  nsCRT::memcpy(&aDest, (const nsStyleTable*)this, sizeof(nsStyleTable));
-}
-
-PRInt32 StyleTableImpl::CalcDifference(const StyleTableImpl& aOther) const
-{
-  if ((mLayoutStrategy == aOther.mLayoutStrategy) &&
-      (mFrame == aOther.mFrame) &&
-      (mRules == aOther.mRules) &&
-      (mBorderCollapse == aOther.mBorderCollapse) &&
-      (mBorderSpacingX == aOther.mBorderSpacingX) &&
-      (mBorderSpacingY == aOther.mBorderSpacingY) &&
-      (mCellPadding == aOther.mCellPadding) &&
-      (mCaptionSide == aOther.mCaptionSide) &&
-      (mCols == aOther.mCols) &&
-      (mSpan == aOther.mSpan) &&
-      (mSpanWidth == aOther.mSpanWidth)) {
-    if (mEmptyCells == aOther.mEmptyCells) {
-      return NS_STYLE_HINT_NONE;
-    }
-    return NS_STYLE_HINT_VISUAL;
-  }
-  return NS_STYLE_HINT_REFLOW;
-}
-
 //-----------------------
 // nsStyleContent
 //
@@ -808,7 +716,7 @@ protected:
 
   PRUint32                mInheritBits; // Which structs are inherited from the parent context.
   nsIRuleNode*            mRuleNode; // Weak. Rules can't go away without us going away.
-  nsCachedStyleData*      mCachedStyleData; // A pointer to cached style data.
+  nsCachedStyleData       mCachedStyleData; // Our cached style data.
 
   PRInt16           mDataCode;
 
@@ -816,7 +724,6 @@ protected:
   StyleColorImpl          mColor;
   StyleTextImpl           mText;
   StyleDisplayImpl        mDisplay;
-  StyleTableImpl          mTable;
   StyleContentImpl        mContent;
   StyleUserInterfaceImpl  mUserInterface;
 	
@@ -835,12 +742,10 @@ StyleContextImpl::StyleContextImpl(nsIStyleContext* aParent,
     mPseudoTag(aPseudoTag),
     mInheritBits(0),
     mRuleNode(aRuleNode),
-    mCachedStyleData(nsnull),
     mDataCode(-1),
     mColor(),
     mText(),
     mDisplay(),
-    mTable(),
     mContent(),
     mUserInterface()
 {
@@ -869,8 +774,6 @@ StyleContextImpl::~StyleContextImpl()
   // Free up our data structs.
   nsCOMPtr<nsIPresContext> presContext;
   mRuleNode->GetPresContext(getter_AddRefs(presContext));
-  if (mCachedStyleData)
-    mCachedStyleData->Destroy(presContext);
 }
 
 NS_IMPL_ADDREF(StyleContextImpl)
@@ -991,6 +894,9 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
                                      nsIRuleNode* aRuleNode,
                                      nsIStyleContext*& aResult)
 {
+  PRUint32 threshold = 10; // The # of siblings we're willing to examine
+                           // before just giving this whole thing up.
+
   aResult = nsnull;
 
   if ((nsnull != mChild) || (nsnull != mEmptyChild)) {
@@ -1007,6 +913,9 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
             break;
           }
           child = child->mNextSibling;
+          threshold--;
+          if (threshold == 0)
+            break;
         } while (child != mEmptyChild);
       }
     }
@@ -1021,6 +930,9 @@ StyleContextImpl::FindChildWithRules(const nsIAtom* aPseudoTag,
           break;
         }
         child = child->mNextSibling;
+        threshold--;
+        if (threshold == 0)
+          break;
       } while (child != mChild);
     }
   }
@@ -1056,7 +968,7 @@ PRBool StyleContextImpl::Equals(const nsIStyleContext* aOther) const
 const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
 {
   nsStyleStruct*  result = nsnull;
-  const nsStyleStruct* cachedData = mCachedStyleData ? mCachedStyleData->GetStyleData(aSID) : nsnull; 
+  const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
       
   switch (aSID) {
     case eStyleStruct_Font:
@@ -1066,6 +978,8 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
     case eStyleStruct_Outline:
     case eStyleStruct_List:
     case eStyleStruct_Position:
+    case eStyleStruct_Table:
+    case eStyleStruct_TableBorder:
     case eStyleStruct_XUL: 
       if (cachedData) // First look to see if we have computed data.
         return cachedData;  // We do. Just return it.
@@ -1081,9 +995,6 @@ const nsStyleStruct* StyleContextImpl::GetStyleData(nsStyleStructID aSID)
       break;
     case eStyleStruct_Display:
       result = & GETSCDATA(Display);
-      break;
-    case eStyleStruct_Table:
-      result = & GETSCDATA(Table);
       break;
     case eStyleStruct_Content:
       result = & GETSCDATA(Content);
@@ -1129,6 +1040,8 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
     case eStyleStruct_List:
     case eStyleStruct_XUL:
     case eStyleStruct_Position:
+    case eStyleStruct_Table:
+    case eStyleStruct_TableBorder:
       NS_ERROR("YOU CANNOT CALL THIS!  IT'S GOING TO BE REMOVED!\n");
       return nsnull;
     case eStyleStruct_Color:
@@ -1139,9 +1052,6 @@ nsStyleStruct* StyleContextImpl::GetMutableStyleData(nsStyleStructID aSID)
       break;
     case eStyleStruct_Display:
       result = & GETSCDATA(Display);
-      break;
-    case eStyleStruct_Table:
-      result = & GETSCDATA(Table);
       break;
     case eStyleStruct_Content:
       result = & GETSCDATA(Content);
@@ -1176,36 +1086,31 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
   // This method should only be called from nsRuleNode!  It is not a public
   // method!
   nsresult result = NS_OK;
-  if (!mCachedStyleData) {
+  
+  PRBool isReset = mCachedStyleData.IsReset(aSID);
+  if (isReset && !mCachedStyleData.mResetData) {
     nsCOMPtr<nsIPresContext> presContext;
     mRuleNode->GetPresContext(getter_AddRefs(presContext));
-    mCachedStyleData = new (presContext.get()) nsCachedStyleData;
+    mCachedStyleData.mResetData = new (presContext.get()) nsResetStyleData;
   }
-      
-  PRBool isReset = mCachedStyleData->IsReset(aSID);
-  if (isReset && !mCachedStyleData->mResetData) {
+  else if (!isReset && !mCachedStyleData.mInheritedData) {
     nsCOMPtr<nsIPresContext> presContext;
     mRuleNode->GetPresContext(getter_AddRefs(presContext));
-    mCachedStyleData->mResetData = new (presContext.get()) nsResetStyleData;
-  }
-  else if (!isReset && !mCachedStyleData->mInheritedData) {
-    nsCOMPtr<nsIPresContext> presContext;
-    mRuleNode->GetPresContext(getter_AddRefs(presContext));
-    mCachedStyleData->mInheritedData = new (presContext.get()) nsInheritedStyleData;
+    mCachedStyleData.mInheritedData = new (presContext.get()) nsInheritedStyleData;
   }
 
   switch (aSID) {
     case eStyleStruct_Font:
-      mCachedStyleData->mInheritedData->mFontData = (nsStyleFont*)(const nsStyleFont*)(&aStruct);
+      mCachedStyleData.mInheritedData->mFontData = (nsStyleFont*)(const nsStyleFont*)(&aStruct);
       break;
     case eStyleStruct_Color:
       GETSCDATA(Color).SetFrom((const nsStyleColor&)aStruct);
       break;
     case eStyleStruct_List:
-      mCachedStyleData->mInheritedData->mListData = (nsStyleList*)(const nsStyleList*)(&aStruct);
+      mCachedStyleData.mInheritedData->mListData = (nsStyleList*)(const nsStyleList*)(&aStruct);
       break;
     case eStyleStruct_Position:
-      mCachedStyleData->mResetData->mPositionData = (nsStylePosition*)(const nsStylePosition*)(&aStruct);
+      mCachedStyleData.mResetData->mPositionData = (nsStylePosition*)(const nsStylePosition*)(&aStruct);
       break;
     case eStyleStruct_Text:
       GETSCDATA(Text).SetFrom((const nsStyleText&)aStruct);
@@ -1214,7 +1119,10 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       GETSCDATA(Display).SetFrom((const nsStyleDisplay&)aStruct);
       break;
     case eStyleStruct_Table:
-      GETSCDATA(Table).SetFrom((const nsStyleTable&)aStruct);
+      mCachedStyleData.mResetData->mTableData = (nsStyleTable*)(const nsStyleTable*)(&aStruct);
+      break;
+    case eStyleStruct_TableBorder:
+      mCachedStyleData.mInheritedData->mTableData = (nsStyleTableBorder*)(const nsStyleTableBorder*)(&aStruct);
       break;
     case eStyleStruct_Content:
       GETSCDATA(Content).SetFrom((const nsStyleContent&)aStruct);
@@ -1223,20 +1131,20 @@ StyleContextImpl::SetStyle(nsStyleStructID aSID, const nsStyleStruct& aStruct)
       GETSCDATA(UserInterface).SetFrom((const nsStyleUserInterface&)aStruct);
       break;
     case eStyleStruct_Margin:
-      mCachedStyleData->mResetData->mMarginData = (nsStyleMargin*)(const nsStyleMargin*)(&aStruct);
+      mCachedStyleData.mResetData->mMarginData = (nsStyleMargin*)(const nsStyleMargin*)(&aStruct);
       break;
     case eStyleStruct_Padding:
-      mCachedStyleData->mResetData->mPaddingData = (nsStylePadding*)(const nsStylePadding*)(&aStruct);
+      mCachedStyleData.mResetData->mPaddingData = (nsStylePadding*)(const nsStylePadding*)(&aStruct);
       break;
     case eStyleStruct_Border:
-      mCachedStyleData->mResetData->mBorderData = (nsStyleBorder*)(const nsStyleBorder*)(&aStruct);
+      mCachedStyleData.mResetData->mBorderData = (nsStyleBorder*)(const nsStyleBorder*)(&aStruct);
       break;
     case eStyleStruct_Outline:
-      mCachedStyleData->mResetData->mOutlineData = (nsStyleOutline*)(const nsStyleOutline*)(&aStruct);
+      mCachedStyleData.mResetData->mOutlineData = (nsStyleOutline*)(const nsStyleOutline*)(&aStruct);
       break;
 #ifdef INCLUDE_XUL
     case eStyleStruct_XUL:
-      mCachedStyleData->mResetData->mXULData = (nsStyleXUL*)(const nsStyleXUL*)(&aStruct);
+      mCachedStyleData.mResetData->mXULData = (nsStyleXUL*)(const nsStyleXUL*)(&aStruct);
       break;
 #endif
     default:
@@ -1286,7 +1194,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     GETSCDATA(Color).ResetFrom(&(mParent->GETSCDATA(Color)), aPresContext);
     GETSCDATA(Text).ResetFrom(&(mParent->GETSCDATA(Text)), aPresContext);
     GETSCDATA(Display).ResetFrom(&(mParent->GETSCDATA(Display)), aPresContext);
-    GETSCDATA(Table).ResetFrom(&(mParent->GETSCDATA(Table)), aPresContext);
     GETSCDATA(Content).ResetFrom(&(mParent->GETSCDATA(Content)), aPresContext);
     GETSCDATA(UserInterface).ResetFrom(&(mParent->GETSCDATA(UserInterface)), aPresContext);
   }
@@ -1294,7 +1201,6 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
     GETSCDATA(Color).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Display).ResetFrom(nsnull, aPresContext);
-    GETSCDATA(Table).ResetFrom(nsnull, aPresContext);
     GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
     GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
   }
@@ -1367,7 +1273,7 @@ StyleContextImpl::RemapStyle(nsIPresContext* aPresContext, PRBool aRecurse)
       GETSCDATA(Text).ResetFrom(nsnull, aPresContext);
       //GETSCDATA(Position).ResetFrom(nsnull, aPresContext);
       GETSCDATA(Display).ResetFrom(nsnull, aPresContext);
-      GETSCDATA(Table).ResetFrom(nsnull, aPresContext);
+      //GETSCDATA(Table).ResetFrom(nsnull, aPresContext);
       GETSCDATA(Content).ResetFrom(nsnull, aPresContext);
       GETSCDATA(UserInterface).ResetFrom(nsnull, aPresContext);
       //GETSCDATA(Margin).ResetFrom(nsnull, aPresContext);
@@ -1547,11 +1453,24 @@ StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PR
 
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
-      hint = GETSCDATA(Table).CalcDifference(other->GETSCDATA(Table));
+      const nsStyleTable* table = (const nsStyleTable*)GetStyleData(eStyleStruct_Table);
+      const nsStyleTable* otherTable = (const nsStyleTable*)aOther->GetStyleData(eStyleStruct_Table);
+      hint = table->CalcDifference(*otherTable);
       if (aHint < hint) {
         aHint = hint;
       }
     }
+
+    if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
+    if (aHint < NS_STYLE_HINT_MAX) {
+      const nsStyleTableBorder* table = (const nsStyleTableBorder*)GetStyleData(eStyleStruct_TableBorder);
+      const nsStyleTableBorder* otherTable = (const nsStyleTableBorder*)aOther->GetStyleData(eStyleStruct_TableBorder);
+      hint = table->CalcDifference(*otherTable);
+      if (aHint < hint) {
+        aHint = hint;
+      }
+    }
+
     if (aStopAtFirstDifference && aHint > NS_STYLE_HINT_NONE) return NS_OK;
     if (aHint < NS_STYLE_HINT_MAX) {
       hint = GETSCDATA(Content).CalcDifference(other->GETSCDATA(Content));
@@ -1640,8 +1559,6 @@ void StyleContextImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
     totalSize += (long)sizeof(GETSCDATA(Text));
     printf( " - StyleDisplayImpl:       %ld\n", (long)sizeof(GETSCDATA(Display)) );
     totalSize += (long)sizeof(GETSCDATA(Display));
-    printf( " - StyleTableImpl:         %ld\n", (long)sizeof(GETSCDATA(Table)) );
-    totalSize += (long)sizeof(GETSCDATA(Table));
     printf( " - StyleContentImpl:       %ld\n", (long)sizeof(GETSCDATA(Content)) );
     totalSize += (long)sizeof(GETSCDATA(Content));
     printf( " - StyleUserInterfaceImpl: %ld\n", (long)sizeof(GETSCDATA(UserInterface)) );
@@ -1811,7 +1728,7 @@ void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* ou
     );
   
   // TABLE
-  IndentBy(out,aIndent);
+  /*IndentBy(out,aIndent);
   fprintf(out, "<table data=\"%d %d %d %d ",
     (int)GETSCDATA(Table).mLayoutStrategy,
     (int)GETSCDATA(Table).mFrame,
@@ -1821,16 +1738,15 @@ void StyleContextImpl::DumpRegressionData(nsIPresContext* aPresContext, FILE* ou
   fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   GETSCDATA(Table).mBorderSpacingY.ToString(str);
   fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
-  GETSCDATA(Table).mCellPadding.ToString(str);
   fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "%d %d %ld %ld ",
     (int)GETSCDATA(Table).mCaptionSide,
     (int)GETSCDATA(Table).mEmptyCells,
     (long)GETSCDATA(Table).mCols,
     (long)GETSCDATA(Table).mSpan);
-  GETSCDATA(Table).mSpanWidth.ToString(str);
   fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "\" />\n");
+  */
 
   // CONTENT
   IndentBy(out,aIndent);

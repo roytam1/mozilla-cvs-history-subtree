@@ -674,9 +674,9 @@ nsTableOuterFrame::GetMaxWidth(PRUint8         aCaptionSide,
 PRUint8
 nsTableOuterFrame::GetCaptionSide()
 {
-  const nsStyleTable* tableStyle;
+  const nsStyleTableBorder* tableStyle;
   if (mCaptionFrame) {
-    mCaptionFrame->GetStyleData(eStyleStruct_Table, ((const nsStyleStruct *&)tableStyle));
+    mCaptionFrame->GetStyleData(eStyleStruct_TableBorder, ((const nsStyleStruct *&)tableStyle));
     return tableStyle->mCaptionSide;
   }
   else {

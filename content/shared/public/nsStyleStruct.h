@@ -39,21 +39,21 @@
 
 class nsIFrame;
 
-#define NS_STYLE_INHERIT_FONT       0x0001
-#define NS_STYLE_INHERIT_COLOR      0x0002
-#define NS_STYLE_INHERIT_LIST       0x0004
-#define NS_STYLE_INHERIT_POSITION   0x0008
-#define NS_STYLE_INHERIT_TEXT       0x0010
-#define NS_STYLE_INHERIT_DISPLAY    0x0020
-#define NS_STYLE_INHERIT_TABLE      0x0040
-#define NS_STYLE_INHERIT_CONTENT    0x0080
-#define NS_STYLE_INHERIT_UI         0x0100
-
-#define NS_STYLE_INHERIT_MARGIN     0x0400
-#define NS_STYLE_INHERIT_PADDING    0x0800
-#define NS_STYLE_INHERIT_BORDER     0x1000
-#define NS_STYLE_INHERIT_OUTLINE    0x2000
-#define NS_STYLE_INHERIT_XUL        0x4000
+#define NS_STYLE_INHERIT_FONT             0x0001
+#define NS_STYLE_INHERIT_COLOR            0x0002
+#define NS_STYLE_INHERIT_LIST             0x0004
+#define NS_STYLE_INHERIT_POSITION         0x0008
+#define NS_STYLE_INHERIT_TEXT             0x0010
+#define NS_STYLE_INHERIT_DISPLAY          0x0020
+#define NS_STYLE_INHERIT_TABLE            0x0040
+#define NS_STYLE_INHERIT_TABLE_BORDER     0x0080
+#define NS_STYLE_INHERIT_CONTENT          0x0100
+#define NS_STYLE_INHERIT_UI               0x0200
+#define NS_STYLE_INHERIT_MARGIN           0x0400
+#define NS_STYLE_INHERIT_PADDING          0x0800
+#define NS_STYLE_INHERIT_BORDER           0x1000
+#define NS_STYLE_INHERIT_OUTLINE          0x2000
+#define NS_STYLE_INHERIT_XUL              0x4000
 
 enum nsStyleStructID {
   eStyleStruct_Font           = 1,
@@ -62,10 +62,10 @@ enum nsStyleStructID {
   eStyleStruct_Position       = 4,
   eStyleStruct_Text           = 5,
   eStyleStruct_Display        = 6,
-  eStyleStruct_Table          = 7,
-  eStyleStruct_Content        = 8,
-  eStyleStruct_UserInterface  = 9,
-  
+  eStyleStruct_Content        = 7,
+  eStyleStruct_UserInterface  = 8,
+  eStyleStruct_Table          = 9,
+  eStyleStruct_TableBorder    = 10,
   eStyleStruct_Margin         = 11,
   eStyleStruct_Padding        = 12,
   eStyleStruct_Border         = 13,
@@ -523,20 +523,48 @@ struct nsStyleDisplay : public nsStyleStruct {
 
 struct nsStyleTable: public nsStyleStruct {
   nsStyleTable(void);
+  nsStyleTable(const nsStyleTable& aOther);
   ~nsStyleTable(void);
 
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleTable), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleTable& aOther) const;
+  
   PRUint8       mLayoutStrategy;// [reset] see nsStyleConsts.h NS_STYLE_TABLE_LAYOUT_*
   PRUint8       mFrame;         // [reset] see nsStyleConsts.h NS_STYLE_TABLE_FRAME_*
   PRUint8       mRules;         // [reset] see nsStyleConsts.h NS_STYLE_TABLE_RULES_*
+  PRInt32       mCols;          // [reset] an integer if set, or see nsStyleConsts.h NS_STYLE_TABLE_COLS_*
+  PRInt32       mSpan;          // [reset] the number of columns spanned by a colgroup or col
+};
+
+struct nsStyleTableBorder: public nsStyleStruct {
+  nsStyleTableBorder(nsIPresContext* aContext);
+  nsStyleTableBorder(const nsStyleTableBorder& aOther);
+  ~nsStyleTableBorder(void);
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    aContext->FreeToShell(sizeof(nsStyleTableBorder), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleTableBorder& aOther) const;
+  
   PRUint8       mBorderCollapse;// [inherited]
   nsStyleCoord  mBorderSpacingX;// [inherited]
   nsStyleCoord  mBorderSpacingY;// [inherited]
-  nsStyleCoord  mCellPadding;   // [reset] 
   PRUint8       mCaptionSide;   // [inherited]
   PRUint8       mEmptyCells;    // [inherited]
-  PRInt32       mCols;          // [reset] an integer if set, or see nsStyleConsts.h NS_STYLE_TABLE_COLS_*
-  PRInt32       mSpan;          // [reset] the number of columns spanned by a colgroup or col
-  nsStyleCoord  mSpanWidth;     // [reset] the amount of width this col gets from a spanning cell, if any
 };
 
 enum nsStyleContentType {

@@ -35,6 +35,7 @@ struct nsInheritedStyleData
 {
   nsStyleFont* mFontData;
   nsStyleList* mListData;
+  nsStyleTableBorder* mTableData;
 
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
@@ -48,18 +49,20 @@ struct nsInheritedStyleData
       mFontData->Destroy(aContext);
     if (mListData)
       mListData->Destroy(aContext);
+    if (mTableData)
+      mTableData->Destroy(aContext);
     aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
   };
 
   nsInheritedStyleData() 
-    :mFontData(nsnull), mListData(nsnull) {};
+    :mFontData(nsnull), mListData(nsnull), mTableData(nsnull) {};
 };
 
 struct nsResetStyleData
 {
   nsResetStyleData()
     :mMarginData(nsnull), mBorderData(nsnull), mPaddingData(nsnull), 
-     mOutlineData(nsnull), mPositionData(nsnull) {
+     mOutlineData(nsnull), mPositionData(nsnull), mTableData(nsnull) {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
 #endif
@@ -83,6 +86,8 @@ struct nsResetStyleData
       mOutlineData->Destroy(aContext);
     if (mPositionData)
       mPositionData->Destroy(aContext);
+    if (mTableData)
+      mTableData->Destroy(aContext);
 #ifdef INCLUDE_XUL
     if (mXULData)
       mXULData->Destroy(aContext);
@@ -95,6 +100,7 @@ struct nsResetStyleData
   nsStylePadding* mPaddingData;
   nsStyleOutline* mOutlineData;
   nsStylePosition* mPositionData;
+  nsStyleTable* mTableData;
 
 #ifdef INCLUDE_XUL
   nsStyleXUL* mXULData;
@@ -106,31 +112,19 @@ struct nsCachedStyleData
   nsInheritedStyleData* mInheritedData;
   nsResetStyleData* mResetData;
 
-  void* operator new(size_t sz, nsIPresContext* aContext) {
-    void* result = nsnull;
-    aContext->AllocateFromShell(sz, &result);
-    if (result)
-    nsCRT::zero(result, sz);
-    return result;
-  }
-  void Destroy(nsIPresContext* aContext) {
-    if (mInheritedData)
-      mInheritedData->Destroy(aContext);
-    if (mResetData)
-      mResetData->Destroy(aContext);
-  };
-
   static PRBool IsReset(const nsStyleStructID& aSID)
   {
     switch (aSID) {
       case eStyleStruct_Font: // [Inherited]
       case eStyleStruct_List:
+      case eStyleStruct_TableBorder:
         return PR_FALSE; 
       case eStyleStruct_Margin: // [Reset]
       case eStyleStruct_Padding:
       case eStyleStruct_Border:
       case eStyleStruct_Outline:
       case eStyleStruct_Position:
+      case eStyleStruct_Table:
       case eStyleStruct_XUL:
     	  return PR_TRUE;
     }
@@ -155,6 +149,8 @@ struct nsCachedStyleData
         return NS_STYLE_INHERIT_DISPLAY;
       case eStyleStruct_Table:
         return NS_STYLE_INHERIT_TABLE;
+      case eStyleStruct_TableBorder:
+        return NS_STYLE_INHERIT_TABLE_BORDER;
       case eStyleStruct_Content:
         return NS_STYLE_INHERIT_CONTENT;
       case eStyleStruct_UserInterface:
@@ -191,6 +187,10 @@ struct nsCachedStyleData
         return mInheritedData ? mInheritedData->mListData : nsnull;
       case eStyleStruct_Position:
         return mResetData ? mResetData->mPositionData : nsnull;
+      case eStyleStruct_Table:
+        return mResetData ? mResetData->mTableData : nsnull;
+      case eStyleStruct_TableBorder:
+        return mInheritedData ? mInheritedData->mTableData : nsnull;
 #ifdef INCLUDE_XUL
       case eStyleStruct_XUL:
         return mResetData ? mResetData->mXULData : nsnull;
@@ -213,13 +213,15 @@ struct nsRuleData
   nsCSSMargin* mMarginData;
   nsCSSList* mListData;
   nsCSSPosition* mPositionData;
+  nsCSSTable* mTableData;
+
 #ifdef INCLUDE_XUL
   nsCSSXUL* mXULData;
 #endif
 
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
     :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext),
-     mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), mPositionData(nsnull)
+     mFontData(nsnull), mMarginData(nsnull), mListData(nsnull), mPositionData(nsnull), mTableData(nsnull)
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
