@@ -67,6 +67,7 @@ Contributor(s):
   <!-- Content Area -->
   <script type="application/x-javascript" src="chrome://navigator/content/nsBrowserStatusHandler.js"/>
   <script type="application/x-javascript" src="chrome://navigator/content/nsBrowserContentListener.js"/>
+  <script type="application/x-javascript" src="chrome://communicator/content/XPCNativeWrapper.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/contentAreaClick.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/contentAreaDD.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/findUtils.js"/>
