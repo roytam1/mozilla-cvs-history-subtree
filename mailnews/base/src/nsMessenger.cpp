@@ -437,7 +437,7 @@ NS_IMETHODIMP nsMessenger::SetDisplayCharset(const char * aCharset)
     {
       nsCOMPtr<nsIMarkupDocumentViewer> muDV = do_QueryInterface(cv);
       if (muDV) 
-        muDV->SetForceCharacterSet(nsDependentCString(aCharset));
+        muDV->SetDefaultCharacterSet(nsDependentCString(aCharset));
 
       mCurrentDisplayCharset = aCharset;
     }
