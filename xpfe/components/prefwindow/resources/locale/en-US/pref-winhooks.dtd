@@ -22,7 +22,7 @@
 <!-- These entities are used on the "Internet Shortcuts" section of the dialog. -->
 <!ENTITY shortcuts.label "Internet Shortcuts">
 <!ENTITY shortcuts.text  "Select the types of Internet Shortcuts you want to view using &brandShortName;.  Windows will use &brandShortName; when you open any shortcuts of the selected types.">
-<!ENTITY http.label      "Hyper-Text Transfer Protocol (http:)">
+<!ENTITY http.label      "Hypertext Transfer Protocol (http:)">
 <!ENTITY http.accesskey  "H">
 <!ENTITY https.label      "Secure HTTP (https:)">
 <!ENTITY https.accesskey  "S">
@@ -31,4 +31,8 @@
 <!--LOCALIZATION NOTE (chrome.label): Don't translate 'chrome' -->
 <!ENTITY chrome.label     "Chrome Protocol (chrome:)">
 <!ENTITY chrome.accesskey "C">
+
+<!-- This entity is for the "show this dialog" checkbox. -->
+<!ENTITY showDialog.label "Check that Windows is set up to match these preferences each time &brandShortName; starts up.">
+<!ENTITY showDialog.accesskey "k">
 
