@@ -1743,9 +1743,9 @@ NS_IMETHODIMP nsOutlinerBodyFrame::PaintCell(int                  aRowIndex,
           PRBool hasNextSibling;
           mView->HasNextSibling(currentParent, aRowIndex, &hasNextSibling);
           if (hasNextSibling)
-            aRenderingContext.DrawLine(x - (level - i + 1) * mIndentation, y, x - (level - i + 1) * mIndentation, y + mRowHeight);
+            aRenderingContext.DrawLine(x - (maxLevel - i + 1) * mIndentation, y, x - (maxLevel - i + 1) * mIndentation, y + mRowHeight);
           else if (i == level)
-            aRenderingContext.DrawLine(x - (level - i + 1) * mIndentation, y, x - (level - i + 1) * mIndentation, y + mRowHeight / 2);
+            aRenderingContext.DrawLine(x - (maxLevel - i + 1) * mIndentation, y, x - (maxLevel - i + 1) * mIndentation, y + mRowHeight / 2);
         }
 
         PRInt32 parent;
