@@ -209,7 +209,7 @@ LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
    if (ldap_current_attribute == NULL)
       return(NULL);
    Newz(1,ldap_current_mod,1,LDAPMod);
-   ldap_current_mod->mod_type = ldap_current_attribute;
+   ldap_current_mod->mod_type = strdup(ldap_current_attribute);
    if (SvROK(ldap_value_ref))
    {
      if (SvTYPE(SvRV(ldap_value_ref)) == SVt_PVHV)
@@ -249,7 +249,7 @@ LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
       {
          if (ldap_isa_ber == 1)
          {
-            ldap_current_mod->mod_values = (char **)
+            ldap_current_mod->mod_bvalues =
 		avref2berptrptr(ldap_current_value_sv);
          } else {
             ldap_current_mod->mod_values =
@@ -296,6 +296,43 @@ LDAPMod *parse1mod(SV *ldap_value_ref,char *ldap_current_attribute,
    return(ldap_current_mod);
 }
 
+/* calc_mod_size                                                           */
+/* Calculates the number of LDAPMod's buried inside the ldap_change passed */
+/* in.  This is used by hash2mod to calculate the size to allocate in Newz */
+static int
+calc_mod_size(HV *ldap_change)
+{
+   int mod_size = 0;
+   HE *ldap_change_element;
+   SV *ldap_change_element_value_ref;
+   HV *ldap_change_element_value;
+
+   hv_iterinit(ldap_change);
+
+   while((ldap_change_element = hv_iternext(ldap_change)) != NULL)
+   {
+      ldap_change_element_value_ref = hv_iterval(ldap_change,ldap_change_element);
+      /* Hashes can take up multiple mod slots. */
+      if ( (SvROK(ldap_change_element_value_ref)) &&
+           (SvTYPE(SvRV(ldap_change_element_value_ref)) == SVt_PVHV) )
+      {
+         ldap_change_element_value = (HV *)SvRV(ldap_change_element_value_ref);
+         hv_iterinit(ldap_change_element_value);
+         while ( hv_iternext(ldap_change_element_value) != NULL )
+         {
+            mod_size++;
+         }
+      }
+      /* scalars and array references only take up one mod slot */
+      else
+      {
+         mod_size++;
+      }
+   }
+
+   return(mod_size);
+}
+
 
 /* hash2mod - Cycle through all the keys in the hash and properly call */
 /*    the appropriate functions to build a NULL terminated list of     */
@@ -318,11 +355,11 @@ LDAPMod ** hash2mod(SV *ldap_change_ref,int ldap_add_func,const char *func)
 
    ldap_change = (HV *)SvRV(ldap_change_ref);
 
-   Newz(1,ldapmod,1+HvKEYS(ldap_change),LDAPMod *);
+   Newz(1,ldapmod,1+calc_mod_size(ldap_change),LDAPMod *);
    hv_iterinit(ldap_change);
    while((ldap_change_element = hv_iternext(ldap_change)) != NULL)
    {
-      ldap_current_attribute = strdup(hv_iterkey(ldap_change_element,&keylen));
+      ldap_current_attribute = hv_iterkey(ldap_change_element,&keylen);
       ldap_current_value_sv = hv_iterval(ldap_change,ldap_change_element);
       ldap_current_mod = parse1mod(ldap_current_value_sv,
         ldap_current_attribute,ldap_add_func,0);
