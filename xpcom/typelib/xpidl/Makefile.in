@@ -33,14 +33,14 @@ CSRCS = \
 
 # Compile directly against the static lib, so we can use xpidl during the build
 # without the shared library path being set.
-LIBS = $(DIST)/lib/libxpt.a $(LIBIDL_LIBS)
+LIBS = $(DIST)/lib/libxpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
 
 # We are building a build tool
 INTERNAL_TOOLS = 1
 
 include $(topsrcdir)/config/rules.mk
 
-CFLAGS += $(LIBIDL_CFLAGS)
+CFLAGS += $(LIBIDL_CFLAGS) $(NSPR_CFLAGS) -DMDCPUCFG=$(HOST_NSPR_MDCPUCFG)
 
 # Tell the $(PROGRAM) target that we need to be recompiled when libxpt changes.
 EXTRA_DEPS = $(wildcard $(DIST)/lib/libxpt.*)

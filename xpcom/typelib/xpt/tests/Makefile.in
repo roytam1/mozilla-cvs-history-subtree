@@ -30,11 +30,10 @@ CSRCS		= PrimitiveTest.c SimpleTypeLib.c
 # This fixes cout & ostream undefines for gcc 2.7.2.3.
 CPP_PROG_LINK = 1
 
-LIBS		= 		\
-		  -L$(DIST)/bin \
-		  -lxpcom 	\
-		  $(NSPR_LIBS)	\
-		  $(NULL)
+INTERNAL_TOOLS = 1
+
+LIBS		= $(DIST)/lib/libxpt.$(LIB_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
 
+CFLAGS += $(NSPR_CFLAGS) -DMDCPUCFG=$(HOST_NSPR_MDCPUCFG)

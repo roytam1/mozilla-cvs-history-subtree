@@ -29,7 +29,7 @@ CSRCS		= xpt_dump.c xpt_link.c
 
 # Compile directly against the static lib, so we can use the tools
 # during the build without the shared library path being set.
-LIBS		= $(DIST)/lib/libxpt.a
+LIBS		= $(DIST)/lib/libxpt.$(LIB_SUFFIX)
 
 # Tell the $(SIMPLE_PROGRAMS) target that we need to be recompiled
 # when libxpt changes.
@@ -42,4 +42,6 @@ export:: libs install
 INTERNAL_TOOLS = 1
 
 include $(topsrcdir)/config/rules.mk
+
+CFLAGS += $(NSPR_CFLAGS) -DMDCPUCFG=$(HOST_NSPR_MDCPUCFG)
 

@@ -43,4 +43,10 @@ override NO_STATIC_LIB=
 # must be built early.
 export:: libs
 
+# We are building a build tool
+INTERNAL_TOOLS = 1
+
 include $(topsrcdir)/config/rules.mk
+
+CFLAGS += $(NSPR_CFLAGS) -DMDCPUCFG=$(HOST_NSPR_MDCPUCFG)
+
