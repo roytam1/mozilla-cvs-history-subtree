@@ -443,7 +443,10 @@
             // in the original selection now has the index of the first item in the first
             // range. 
             var nextRow = oldRanges[0].min;
-            newRanges.push({min: nextRow, max: nextRow});
+            var maxCount = this.treeBoxObject.view.rowCount;
+            if (nextRow < maxCount) {
+              newRanges.push({min: nextRow, max: nextRow});
+            }
             break;
           // [Category 2] - Commands that insert rows
           case "cmd_paste":
