@@ -182,15 +182,14 @@ static PRBool gInitialized = PR_FALSE;
 PR_STATIC_CALLBACK(nsresult)
 Initialize(nsIModule* aSelf)
 {
-  // XXXwaterson turns out we initialize the module twice, because
-  // nsXULAtoms::AddRefAtoms() creates a namespace manager using the
-  // component manager. We should probably fix that.
-  //NS_PRECONDITION(! gInitialized, "module already initialized");
+  NS_PRECONDITION(!gInitialized, "module already initialized");
   if (gInitialized)
     return NS_OK;
 
   gInitialized = PR_TRUE;
     
+  nsContentUtils::Init();
+
   // Register all of our atoms once
   nsCSSAnonBoxes::AddRefAtoms();
   nsCSSPseudoClasses::AddRefAtoms();
@@ -210,8 +209,6 @@ Initialize(nsIModule* aSelf)
 #ifdef MOZ_SVG
   nsSVGAtoms::AddRefAtoms();
 #endif
-
-  nsContentUtils::Init();
 
   // Add our shutdown observer.
   nsCOMPtr<nsIObserverService> observerService =
@@ -270,8 +267,9 @@ Shutdown(nsIModule* aSelf)
 
   NS_IF_RELEASE(nsContentDLF::gUAStyleSheet);
   NS_IF_RELEASE(nsRuleNode::gLangService);
-  nsContentUtils::Shutdown();
   nsGenericHTMLElement::Shutdown();
+
+  nsContentUtils::Shutdown();
   NS_NameSpaceManagerShutdown();
 }
 
@@ -328,7 +326,7 @@ ctor_(nsISupports* aOuter, REFNSIID aIID, void** aResult) \
   return rv;                                              \
 }
 
-MAKE_CTOR(CreateNameSpaceManager,         nsINameSpaceManager,         NS_NewNameSpaceManager)
+MAKE_CTOR(CreateNameSpaceManager,         nsINameSpaceManager,         NS_GetNameSpaceManager)
 MAKE_CTOR(CreateEventListenerManager,     nsIEventListenerManager,     NS_NewEventListenerManager)
 MAKE_CTOR(CreateEventStateManager,        nsIEventStateManager,        NS_NewEventStateManager)
 MAKE_CTOR(CreateDOMEventGroup,            nsIDOMEventGroup,            NS_NewDOMEventGroup)
@@ -507,7 +505,7 @@ UnregisterHTMLOptionElement(nsIComponentManager* aCompMgr,
 static const nsModuleComponentInfo gComponents[] = {
   { "Namespace manager",
     NS_NAMESPACEMANAGER_CID,
-    nsnull,
+    NS_NAMESPACEMANAGER_CONTRACTID,
     CreateNameSpaceManager },
 
   { "Event listener manager",
