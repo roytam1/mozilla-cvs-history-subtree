@@ -428,6 +428,8 @@ OSErr CPluginHandler::InitCodeResource(NPNetscapeFuncs* funcs, _np_handle* handl
 				nsIPlugin* plugin = NULL;
 				res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
 			    ThrowIf_(res != nsPluginError_NoError || plugin == NULL);
+			    res = plugin->Initialize(thePluginManager);
+			    ThrowIf_(res != nsPluginError_NoError);
 				handle->userPlugin = plugin;
 			} else {
 #ifndef NSPR20
