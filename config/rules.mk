@@ -1499,6 +1499,24 @@ REGCHROME = $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/add-chrome.pl 
 REGCHROME_INSTALL = $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/add-chrome.pl $(if $(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)),-x) $(DESTDIR)$(mozappdir)/chrome/installed-chrome.txt $(_JAR_REGCHROME_DISABLE_JAR)
 
 #############################################################################
+# Packaging Manifests
+#############################################################################
+
+$(MANIFEST_DIR)::
+	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
+
+MANIFEST_DEFINES += $(foreach varname,$(MANIFEST_VARS),-D$(varname)=$($(varname)))
+
+ifneq (,$(MANIFEST_FILES))
+export:: $(patsubst %,$(MANIFEST_DIR)/%,$(MANIFEST_FILES))
+
+$(MANIFEST_DIR)/%: % $(MANIFEST_DIR)
+	$(PERL) $(MOZILLA_DIR)/config/preprocessor.pl -Fsubstitution $(MANIFEST_DEFINES) $< > $@
+
+GARBAGE += $(patsubst %,$(MANIFEST_DIR)/%,$(MANIFEST_FILES))
+endif
+
+#############################################################################
 # Dependency system
 #############################################################################
 ifdef COMPILER_DEPEND

@@ -622,6 +622,24 @@ else
 PUBLIC		= $(DIST)/include
 endif
 
+# Location of packaging manifest files
+MANIFEST_DIR = $(DIST)/manifest
+
+# these are shortened to make manifest files readable
+# for consistency's sake, I add the extra . to LIB_SUFFIX
+MANIFEST_DEFINES =      \
+	-DDLLP=$(DLL_PREFIX)  \
+	-DDLLS=$(DLL_SUFFIX)  \
+	-DLIBP=$(LIB_PREFIX)  \
+	-DLIBS=.$(LIB_SUFFIX) \
+	-DBINS=$(BIN_SUFFIX)
+
+# vars to be passed from the Makefile to the manifest preprocessor
+MANIFEST_VARS =      \
+	SHARED_LIBRARY		 \
+	OS_ARCH            \
+	MOZ_WIDGET_TOOLKIT
+
 SDK_PUBLIC	= $(DIST)/sdk/$(MODULE)/include
 SDK_IDL_DIR	= $(DIST)/sdk/$(MODULE)/idl
 SDK_BIN_DIR	= $(DIST)/sdk/$(MODULE)/bin
