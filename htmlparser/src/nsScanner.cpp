@@ -770,30 +770,30 @@ nsresult nsScanner::GetIdentifier(nsString& aString,PRBool allowPunct) {
   while(current != end) {
  
     theChar=*current;
-    if(theChar) {
-      found=PR_FALSE;
-      switch(theChar) {
-        case ':':
-        case '_':
-        case '-':
-        case '.':
-          found=allowPunct;
-          break;
-        default:
-          found = ('a'<=theChar && theChar<='z') ||
-                  ('A'<=theChar && theChar<='Z') ||
-                  ('0'<=theChar && theChar<='9');
-          break;
-      }
 
-      if(!found) {
-        // If we the current character isn't a valid character for
-        // the identifier, we're done. Copy the results into
-        // the string passed in.
-        CopyUnicodeTo(mCurrentPosition, current, aString);
+    found=PR_FALSE;
+    switch(theChar) {
+      case ':':
+      case '_':
+      case '-':
+      case '.':
+        found=allowPunct;
         break;
-      }
+      default:
+        found = ('a'<=theChar && theChar<='z') ||
+                ('A'<=theChar && theChar<='Z') ||
+                ('0'<=theChar && theChar<='9');
+        break;
     }
+
+    if(!found) {
+      // If we the current character isn't a valid character for the
+      // identifier, we're done. Copy the results into the string
+      // passed in.
+      CopyUnicodeTo(mCurrentPosition, current, aString);
+      break;
+    }
+
     ++current;
   }
 
