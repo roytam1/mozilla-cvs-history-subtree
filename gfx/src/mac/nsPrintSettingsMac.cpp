@@ -44,6 +44,7 @@
 #include "plbase64.h"
 #include "prmem.h"
 #include "nsGfxUtils.h"
+#include "nsCRT.h"
 
 // Constants
 #define PRINTING_PREF_BRANCH            "print."
