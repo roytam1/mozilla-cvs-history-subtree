@@ -46,6 +46,9 @@ public:
   NS_IMETHOD GetAccValue(PRUnichar **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
 
+// helper method to verify frames
+  static PRBool IsCorrectFrame( nsIFrame* aFrame, nsIAtom* aAtom );
+
 };
 
 /*

@@ -170,6 +170,18 @@ public:
   nsCOMPtr<nsIAccessible> mParent;
 };
 
+// -------------Helper method for determination of proper Frame ------
+//static 
+PRBool nsHTMLSelectAccessible::IsCorrectFrame( nsIFrame* aFrame, nsIAtom* aAtom ) {
+  if (!aFrame || !aAtom)
+    return PR_FALSE;
+  nsCOMPtr<nsIAtom> frameType;
+  aFrame->GetFrameType(getter_AddRefs(frameType));
+  if (frameType.get() != aAtom)
+    return PR_FALSE;
+  return PR_TRUE;
+}
+
 //--------- nsHTMLSelectAccessible -----
  
 nsHTMLSelectAccessible::nsHTMLSelectAccessible(nsIDOMNode* aDOMNode, 
@@ -203,9 +215,10 @@ NS_IMETHODIMP nsHTMLSelectAccessible::GetAccLastChild(nsIAccessible **_retval)
 {
   // create a window accessible
   *_retval = new nsHTMLSelectWindowAccessible(this, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
-
-   return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsHTMLSelectAccessible::GetAccFirstChild(nsIAccessible **_retval)
@@ -213,8 +226,9 @@ NS_IMETHODIMP nsHTMLSelectAccessible::GetAccFirstChild(nsIAccessible **_retval)
   // create a text field
 
   *_retval = new nsHTMLSelectTextFieldAccessible(this, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
-
   return NS_OK;
 }
 
@@ -244,11 +258,17 @@ NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccValue(PRUnichar **_retval)
   nsIFrame* frame = nsAccessible::GetBoundsFrame();
   nsCOMPtr<nsIPresContext> context;
   GetPresContext(context);
+  if ( !frame )
+    return NS_ERROR_FAILURE;
   // gets a block frame
   frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return NS_ERROR_FAILURE;
 
   // gets the text
   frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
+    return NS_ERROR_FAILURE;
 
   // get the texts node
   nsCOMPtr<nsIContent> content;
@@ -274,8 +294,14 @@ void nsHTMLSelectTextFieldAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRel
   nsIFrame* frame = nsAccessible::GetBoundsFrame();
   nsCOMPtr<nsIPresContext> context;
   GetPresContext(context);
+  if ( !frame )
+    return;
   frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return;
   frame->GetParent(aRelativeFrame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
+    return;
   frame->GetRect(aBounds);
 }
 
@@ -292,8 +318,9 @@ NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccNextSibling(nsIAccessible *
   GetAccParent(getter_AddRefs(parent));
 
   *_retval = new nsHTMLSelectButtonAccessible(parent, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
-
   return NS_OK;
 } 
 
@@ -392,7 +419,12 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::AccDoAction(PRUint8 index)
   nsCOMPtr<nsIPresContext> context;
   GetPresContext(context);
   frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return NS_ERROR_FAILURE;
   frame->GetNextSibling(&frame);
+  // not sure what kind of frame this is supposed to be, so far doesn't exist
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return NS_ERROR_FAILURE;
   nsCOMPtr<nsIContent> content;
   frame->GetContent(getter_AddRefs(content));
 
@@ -403,6 +435,7 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::AccDoAction(PRUint8 index)
        element->Click();
        return NS_OK;
     }
+    return NS_ERROR_FAILURE;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -421,9 +454,18 @@ void nsHTMLSelectButtonAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelati
   nsCOMPtr<nsIPresContext> context;
   GetPresContext(context);
   frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return;
   frame->GetNextSibling(&frame);
+  // not sure what kind of frame this is supposed to be, so far doesn't exist
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return;
   frame->GetParent(aRelativeFrame);
+  // should be the parent list control frame we started with (?)
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
+    return;
   frame->GetRect(aBounds);
+
 }
 
 NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccRole(PRUint32 *_retval)
@@ -469,8 +511,9 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccNextSibling(nsIAccessible **_r
   GetAccParent(getter_AddRefs(parent));
 
   *_retval = new nsHTMLSelectWindowAccessible(parent, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
-
   return NS_OK;
 } 
 
@@ -480,8 +523,9 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccPreviousSibling(nsIAccessible 
   GetAccParent(getter_AddRefs(parent));
 
   *_retval = new nsHTMLSelectTextFieldAccessible(parent, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
-
   return NS_OK;
 } 
 
@@ -548,8 +592,9 @@ NS_IMETHODIMP nsHTMLSelectWindowAccessible::GetAccPreviousSibling(nsIAccessible 
   GetAccParent(getter_AddRefs(parent));
 
   *_retval = new nsHTMLSelectButtonAccessible(parent, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
-
   return NS_OK;
 } 
 
@@ -562,6 +607,8 @@ NS_IMETHODIMP nsHTMLSelectWindowAccessible::GetAccNextSibling(nsIAccessible **_r
 NS_IMETHODIMP nsHTMLSelectWindowAccessible::GetAccLastChild(nsIAccessible **_retval)
 {
   *_retval = new nsHTMLSelectListAccessible(this, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -569,6 +616,8 @@ NS_IMETHODIMP nsHTMLSelectWindowAccessible::GetAccLastChild(nsIAccessible **_ret
 NS_IMETHODIMP nsHTMLSelectWindowAccessible::GetAccFirstChild(nsIAccessible **_retval)
 {
   *_retval = new nsHTMLSelectListAccessible(this, mDOMNode, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -595,10 +644,16 @@ void nsHTMLSelectWindowAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelati
   nsIFrame* frame = nsnull;
   nsCOMPtr<nsIContent> content(do_QueryInterface(child));
   shell->GetPrimaryFrameFor(content, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
+    return;
 
   // get that frame's parent this should be the window
   frame->GetParent(&frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+    return;
   frame->GetParent(aRelativeFrame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
+    return;
   frame->GetRect(aBounds);
 }
 
@@ -647,6 +702,8 @@ NS_IMETHODIMP nsHTMLSelectListAccessible::GetAccLastChild(nsIAccessible **_retva
   mDOMNode->GetLastChild(getter_AddRefs(last));
 
   *_retval = new nsHTMLSelectOptionAccessible(this, last, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -657,6 +714,8 @@ NS_IMETHODIMP nsHTMLSelectListAccessible::GetAccFirstChild(nsIAccessible **_retv
   mDOMNode->GetFirstChild(getter_AddRefs(first));
 
   *_retval = new nsHTMLSelectOptionAccessible(this, first, mPresShell);
+  if ( ! *_retval )
+    return NS_ERROR_FAILURE;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -691,6 +750,8 @@ NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccNextSibling(nsIAccessible **_r
 
   if (next) {
     *_retval = new nsHTMLSelectOptionAccessible(mParent, next, mPresShell);
+    if ( ! *_retval )
+      return NS_ERROR_FAILURE;
     NS_ADDREF(*_retval);
   }
 
@@ -706,6 +767,8 @@ NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccPreviousSibling(nsIAccessible 
 
   if (prev) {
     *_retval = new nsHTMLSelectOptionAccessible(mParent, prev, mPresShell);
+    if ( ! *_retval )
+      return NS_ERROR_FAILURE;
     NS_ADDREF(*_retval);
   }
 

@@ -43,6 +43,7 @@
 #include "nsIDOMNSHTMLSelectElement.h"
 #include "nsIAccessibleSelectable.h"
 #include "nsIDOMHTMLCollection.h"
+#include "nsLayoutAtoms.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
@@ -69,6 +70,8 @@ nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull
 
   shell->GetDocument(getter_AddRefs(mDocument));
   mDOMNode = do_QueryInterface(mDocument);
+
+  nsLayoutAtoms::AddRefAtoms();
 }
 
 //-----------------------------------------------------
@@ -76,6 +79,7 @@ nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull
 //-----------------------------------------------------
 nsRootAccessible::~nsRootAccessible()
 {
+  nsLayoutAtoms::ReleaseAtoms();
   RemoveAccessibleEventListener(mListener);
 }
 

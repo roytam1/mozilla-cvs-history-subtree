@@ -37,6 +37,7 @@ LLIBS=\
  $(DIST)\lib\accessibility_s.lib      \
  $(DIST)\lib\timer_s.lib       \
  $(DIST)\lib\gkgfxwin.lib \
+ $(DIST)\lib\contentshared_s.lib      \
  $(LIBNSPR)  
 
 include <$(DEPTH)\config\rules.mak>

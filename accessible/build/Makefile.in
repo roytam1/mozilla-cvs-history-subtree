@@ -38,8 +38,11 @@ CPPSRCS		= nsAccessibilityFactory.cpp
 LOCAL_INCLUDES	= -I$(srcdir)/../src
 
 SHARED_LIBRARY_LIBS = \
+    $(DIST)/lib/xpcom.lib                        \
+    $(DIST)/lib/timer_s.lib                      \
 		$(DIST)/lib/libaccessibility_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/libchrome_s.$(LIB_SUFFIX) \
+    $(DIST)/lib/contentshared_s.$(LIB_SUFFIX)    \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \
