@@ -957,11 +957,13 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
           if (rc->IsATarget(parentFrame)) {
             reason = eReflowReason_StyleChange;
           }
+          // else leave reason as resize
         }
         else if (type == eReflowType_ReflowDirty &&
                  (state & NS_FRAME_IS_DIRTY)) {          
           reason = eReflowReason_Dirty;
         }
+        // else leave reason as resize
       }
       // in all cases here, we switched from incremental to something else.
       // stop processing the reflow tree and do a reflow of stylechanged,

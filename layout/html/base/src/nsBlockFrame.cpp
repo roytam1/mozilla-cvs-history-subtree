@@ -1595,6 +1595,7 @@ nsBlockFrame::PrepareChildIncrementalReflow(nsBlockReflowState& aState)
   // Determine the line being impacted
   PRBool isFloater;
   line_iterator line;
+  // mNextRCFrame is the child in the reflow tree of the current block.
   FindLineFor(aState.mNextRCFrame, &isFloater, &line);
   if (line == end_lines()) {
     // This assertion actually fires on lots of pages
@@ -1700,17 +1701,19 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
     // Fix any frames deeper in the reflow path.
 
     // Get the reflow path, which is stored as a tree.  Our current node
-    // is in the reflowcommand.
+    // is in the reflowcommand->CurrentNode().
     nsReflowTree::Node::Iterator reflowNode(aState.mReflowState.GetCurrentReflowNode());
     // XXX? should we start with the children of this node, or the node itself?
-    // Let's try starting with the child...
+    // Let's try starting with the node...
 
     nsIFrame *frame;
     if (reflowNode.CurrentNode())
     {
+      // modify the tree to match the retargeting we're doing.
+      // This might not be necessary, but probably better to be safe and
+      // keep the structures in sync.
       reflowNode.CurrentNode()->SetFrame(aState.mNextRCFrame);
       reflowNode = reflowNode.NextChild(&frame);
-//    frame = reflowNode.CurrentNode()->GetFrame();
     }
 
     while (reflowNode.CurrentNode())
@@ -1730,6 +1733,7 @@ nsBlockFrame::RetargetInlineIncrementalReflow(nsBlockReflowState &aState,
         frame->GetPrevInFlow(&prevInFlow);
       } while (--count >= 0 && prevInFlow && (frame = prevInFlow));
 
+      // modify the tree to match the retargeting we're doing.
       reflowNode.CurrentNode()->SetFrame(frame);
       nsReflowTree::Node::Iterator reflowIterator(reflowNode.CurrentNode());
       // FIX!!! this doesn't walk more than one branch of the tree!
@@ -3684,7 +3688,12 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   for (i = 0; i < aLine->GetChildCount(); i++) { 
     // Set the command's current reflow node correctly for this child frame
     aState.mReflowState.SetCurrentReflowNode(aState.mReflowIterator->SelectChild(frame));
-    
+    // make sure aState matches reflowiterator
+    if (aState.mReflowState.GetCurrentReflowNode())
+      aState.mNextRCFrame = frame;
+    else
+      aState.mNextRCFrame = nsnull;
+
     rv = ReflowInlineFrame(aState, aLineLayout, aLine, frame,
                            &lineReflowStatus);
     if (NS_FAILED(rv)) {
@@ -3782,7 +3791,7 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
                                 nsIFrame* aFrame,
                                 PRUint8* aLineReflowStatus)
 {
- NS_ENSURE_ARG_POINTER(aFrame);
+  NS_ENSURE_ARG_POINTER(aFrame);
   
   *aLineReflowStatus = LINE_REFLOW_OK;
 
