@@ -120,20 +120,30 @@ sub BuildMozilla()
 		BuildProject(":mozilla:lib:libmocha:macbuild:LibMocha.mcp",										"LibMocha$D.o");	
 		BuildProject(":mozilla:network:macbuild:network.mcp",													"Network$D.o");
 		
-		if ( $main::MOZ_LITE == 0 )
+		if ( $main::MOZ_MEDIUM == 1 || $main::MOZ_DARK == 1 )
 			{
-				BuildProject(":mozilla:cmd:macfe:Composer:build:Composer.mcp",						"Composer$D.o");
+				BuildProject(":cmd:macfe:Composer:build:Composer.mcp",						"Composer$D.o");
+
+				if ( $main::MOZ_DARK == 1 )
+					{
+						BuildProject(":lib:libmsg:macbuild:MsgLib.mcp",								"MsgLib$D.o");
+						BuildProject(":cmd:macfe:MailNews:build:MailNews.mcp",						"MailNews$D.o");
+						BuildProject(":directory:c-sdk:ldap:libraries:macintosh:LDAPClient.mcp",	"LDAPClient$D.o");
+					}
 				
 				# Build the appropriate resources target
-				BuildProject(":mozilla:cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
+				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
 			}
 		else
 			{
 				# Build a project with dummy targets to make stub libraries
 				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"Composer$D.o");
+				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
+				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
+				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"LDAPClient$D.o");
 				
 				# Build the appropriate resources target
-				BuildProject(":mozilla:cmd:macfe:projects:client:Client.mcp", 						"Nav_Resources");
+				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Nav_Resources");
 			}
 		
 		BuildProject(":mozilla:cmd:macfe:projects:client:Client.mcp", 								"Client$D");
