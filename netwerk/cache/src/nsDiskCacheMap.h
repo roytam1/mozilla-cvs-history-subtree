@@ -74,10 +74,22 @@ public:
         kBucketsPerTable = (1 << 5)                 // must be a power of 2!
     };
     
-    nsDiskCacheRecord* GetBucket(PRUint32 index) { return mBuckets[index].mRecords; }
+    nsDiskCacheRecord* GetBucket(PRUint32 index)
+    {
+        return mBuckets[index].mRecords;
+    }
+    
+    PRUint32 GetBucketIndex(nsDiskCacheRecord* record)
+    {
+        PRUint32 hashNumber = record->HashNumber();
+        return (hashNumber & (kBucketsPerTable - 1));
+    }
     
     nsresult Read(nsIInputStream* input);
     nsresult Write(nsIOutputStream* output);
+    
+    nsresult ReadBucket(nsIInputStream* input, PRUint32 index);
+    nsresult WriteBucket(nsIOutputStream* output, PRUint32 index);
     
 private:
     struct nsDiskCacheBucket {
