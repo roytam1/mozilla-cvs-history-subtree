@@ -198,6 +198,8 @@ public:
                          PRBool aCompileEventHandlers);
   NS_IMETHOD GetParent(nsIContent*& aResult) const;
   NS_IMETHOD SetParent(nsIContent* aParent);
+  NS_IMETHOD_(PRBool) IsAnonymous() const;
+  NS_IMETHOD_(void) SetAnonymous(PRBool aAnonymous);
   NS_IMETHOD GetNameSpaceID(PRInt32& aNameSpaceID) const;
   NS_IMETHOD GetTag(nsIAtom*& aResult) const;
   NS_IMETHOD GetNodeInfo(nsINodeInfo*& aResult) const;
@@ -385,6 +387,7 @@ protected:
   
   nsINodeInfo* mNodeInfo;                   // OWNER
   nsDOMSlots *mDOMSlots;                    // OWNER
+  // Stores contentID in the higher bits and IsAnonymous in the lower bit
   PRUint32 mContentID;
 };
 
