@@ -386,8 +386,8 @@ private:
         enum _flags 
         {
             none = 0,
-            owned = 1,
-            evaluating = 2
+            evaluating,
+            owned
         };
     };
 

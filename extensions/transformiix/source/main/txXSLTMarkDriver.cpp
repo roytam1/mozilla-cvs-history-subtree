@@ -90,6 +90,8 @@ public:
         mXSL = 0;
         delete mXML;
         mXML = 0;
+        if (mOut && mOut->is_open())
+            mOut->close();
         delete mOut;
         mOut = 0;
         return 0;

@@ -214,7 +214,7 @@ private:
 
     /**
      * Processes the specified template using the given context,
-     * ProcessorState, and parameters. Iterates thru the 
+     * ProcessorState, and parameters. Iterates through the
      * |xsl:param|s and then calls processAction.
      *
      * @param aTemplate xsl:template to process

@@ -210,7 +210,7 @@ void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument,
         }
 
         rv = mDocument->AppendChild(docElement, getter_AddRefs(textContainer));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to append the head element");
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to append the wrapper element");
         if (NS_FAILED(rv)) {
             return;
         }
