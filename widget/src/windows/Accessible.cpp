@@ -21,13 +21,14 @@
  */
 
 #include "nsIAccessible.h"
-
 #include "Accessible.h"
 #include "nsIWidget.h"
 #include "nsWindow.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "nsIAccessibleEventReceiver.h"
+#include "nsReadableUtils.h"
+#include "nsITextContent.h"
 
 /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
@@ -51,7 +52,7 @@ EXTERN_C GUID CDECL CLSID_Accessible =
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd)
+Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd): MozNode(aAcc, aWnd)
 {
   mAccessible = aAcc;  // The nsIAccessible we're proxying from
 
@@ -66,7 +67,6 @@ Accessible::Accessible(nsIAccessible* aAcc, HWND aWnd)
 #ifdef DEBUG_LEAKS
   printf("Accessibles=%d\n", ++gAccessibles);
 #endif
-
 }
 
 //-----------------------------------------------------
@@ -78,42 +78,37 @@ Accessible::~Accessible()
 #ifdef DEBUG_LEAKS
   printf("Accessibles=%d\n", --gAccessibles);
 #endif
-
 }
 
 
 //-----------------------------------------------------
-// IUnknown interface methods - see inknown.h for documentation
+// IUnknown interface methods - see iunknown.h for documentation
 //-----------------------------------------------------
-STDMETHODIMP Accessible::QueryInterface(REFIID riid, void** ppv)
+STDMETHODIMP Accessible::QueryInterface(REFIID iid, void** ppv)
 {
-  *ppv=NULL;
+  *ppv = NULL;
 
-  if ( (IID_IUnknown == riid) || (IID_IAccessible == riid) || (IID_IDispatch  == riid)) {
-    *ppv = this;
-    AddRef();
-    return S_OK;
-  }
-
-  return E_NOINTERFACE;
+  if (IID_IUnknown == iid || IID_IDispatch == iid || IID_IAccessible == iid)
+    *ppv = NS_STATIC_CAST(IAccessible*, this);
+ 
+  if (NULL == *ppv)
+    return MozNode::QueryInterface(iid,ppv);
+    
+  (NS_REINTERPRET_CAST(IUnknown*, *ppv))->AddRef();
+  return S_OK;
 }
 
 //-----------------------------------------------------
 STDMETHODIMP_(ULONG) Accessible::AddRef()
 {
-  return ++m_cRef;
+  return MozNode::AddRef();
 }
 
 
 //-----------------------------------------------------
 STDMETHODIMP_(ULONG) Accessible::Release()
 {
-  if (0 != --m_cRef)
-    return m_cRef;
-
-  delete this;
-
-  return 0;
+  return MozNode::Release();
 }
 
 HINSTANCE Accessible::gmAccLib = 0;
@@ -281,6 +276,7 @@ STDMETHODIMP Accessible::get_accName(
 
   return S_OK;
 }
+
 
 STDMETHODIMP Accessible::get_accValue( 
       /* [optional][in] */ VARIANT varChild,
@@ -588,6 +584,7 @@ STDMETHODIMP Accessible::put_accValue(
   return S_FALSE;
 }
 
+
 // For IDispatch support
 STDMETHODIMP 
 Accessible::GetTypeInfoCount(UINT *p)
@@ -619,6 +616,8 @@ STDMETHODIMP Accessible::Invoke(DISPID dispIdMember, REFIID riid,
   return E_NOTIMPL;
 }
 
+
+        
 //------- Helper methods ---------
 
 void Accessible::GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc)
@@ -670,7 +669,7 @@ RootAccessible::AddRef(void)
 {
   return Accessible::AddRef();
 }
-
+  
 NS_IMETHODIMP_(nsrefcnt) 
 RootAccessible::Release(void)
 {
@@ -752,4 +751,5 @@ PRInt32 RootAccessible::GetIdFor(nsIAccessible* aAccessible)
 
   return mNextId+1;
 }
+
 

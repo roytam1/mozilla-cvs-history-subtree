@@ -172,8 +172,7 @@ NS_IMETHODIMP nsHTMLAreaAccessible::GetAccParent(nsIAccessible * *aAccParent)
 
 nsIAccessible *nsHTMLAreaAccessible::CreateAreaAccessible(nsIDOMNode *aDOMNode)
 {
-  nsresult rv;
-  NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+  nsCOMPtr<nsIAccessibilityService> accService(do_GetService("@mozilla.org/accessibilityService;1"));
   if (accService) {
     nsIAccessible* acc = nsnull;
     accService->CreateHTMLAreaAccessible(mPresShell, aDOMNode, mAccParent, &acc);

@@ -99,8 +99,9 @@ nsIAccessible *nsHTMLImageAccessible::CreateAreaAccessible(PRUint32 areaNum)
   if (!domNode)
     return nsnull;
 
-  nsresult rv;
-  NS_WITH_SERVICE(nsIAccessibilityService, accService, "@mozilla.org/accessibilityService;1", &rv);
+  nsCOMPtr<nsIAccessibilityService> accService(do_GetService("@mozilla.org/accessibilityService;1"));
+  if (!accService)
+    return NULL;
   if (accService) {
     nsIAccessible* acc = nsnull;
     nsCOMPtr<nsISupports> presShell(do_QueryInterface(mPresShell));

@@ -21,6 +21,7 @@
  */
 
 #include "nsAccessible.h"
+#include "nsIAccessibilityService.h"
 #include "nsCOMPtr.h"
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
@@ -398,6 +399,7 @@ public:
   nsCOMPtr<nsIWeakReference> mPresShell;
   nsCOMPtr<nsIAccessible> mAccessible;
   nsCOMPtr<nsIDOMNode> mDOMNode;
+  nsCOMPtr<nsIAccessibilityService> mAccService;
 };
 
 nsDOMTreeWalker::nsDOMTreeWalker(nsIWeakReference* aPresShell, nsIDOMNode* aNode)
@@ -405,6 +407,7 @@ nsDOMTreeWalker::nsDOMTreeWalker(nsIWeakReference* aPresShell, nsIDOMNode* aNode
   mDOMNode = aNode;
   mAccessible = nsnull;
   mPresShell = aPresShell;
+  mAccService = do_GetService("@mozilla.org/accessibilityService;1");
 }
 
 nsRect nsDOMTreeWalker::GetBounds()
@@ -720,33 +723,15 @@ PRInt32 nsDOMTreeWalker::GetCount()
 PRBool nsDOMTreeWalker::GetAccessible()
 {
   mAccessible = nsnull;
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
 
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-
-  if (!content)
+  if (!mAccService || !shell) 
     return PR_FALSE;
 
-  nsCOMPtr<nsIDOMHTMLAreaElement> areaContent(do_QueryInterface(mDOMNode));
-  if (areaContent)   // Area elements are implemented in nsHTMLImageAccessible as children of the image
-    return PR_FALSE; // Return, otherwise the image frame looks like an accessible object in the wrong place
+  nsCOMPtr<nsIAccessible> nsAcc;
+  mAccService->GetAccessibleFor(shell, mDOMNode, getter_AddRefs(nsAcc));
 
-  nsIFrame* frame = GetPrimaryFrame();
-  if (!frame)
-    return PR_FALSE;
-
-  frame->GetAccessible(getter_AddRefs(mAccessible));
-
-  if (!mAccessible)
-    mAccessible = do_QueryInterface(mDOMNode);
-
-  if (!mAccessible) {
-    // is it a link?
-    nsCOMPtr<nsILink> link(do_QueryInterface(mDOMNode));
-    if (link) {
-       nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-       mAccessible = new nsHTMLLinkAccessible(shell, mDOMNode);
-    }
-  }
+  mAccessible = nsAcc;
 
   if (mAccessible)
     return PR_TRUE;
@@ -759,7 +744,7 @@ PRBool nsDOMTreeWalker::GetAccessible()
  * Class nsAccessible
  */
 
-//-----------------------------------------------------
+//-------------------------`----------------------------
 // construction 
 //-----------------------------------------------------
 nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)

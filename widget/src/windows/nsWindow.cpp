@@ -3534,6 +3534,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             if (!mRootAccessible) {
                mRootAccessible = new RootAccessible(acc, wnd); // ref is 0       
                mRootAccessible->AddRef();
+               CoInitialize(NULL);
             }
             // ask accessible to do this do it loads the library dynamically
             LRESULT lAcc = Accessible::LresultFromObject(IID_IAccessible, wParam, mRootAccessible); // ref 1

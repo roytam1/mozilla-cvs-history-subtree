@@ -36,11 +36,14 @@
 #include "nsHTMLFormControlAccessible.h"
 #include "nsLayoutAtoms.h"
 #include "nsSelectAccessible.h"
+#include "nsIDOMNode.h"
 #include "nsHTMLTextAccessible.h"
 #include "nsHTMLTableAccessible.h"
 #include "nsHTMLImageAccessible.h"
 #include "nsHTMLAreaAccessible.h"
 #include "nsHTMLLinkAccessible.h"
+#include "nsILink.h"
+#include "nsIDOMHTMLAreaElement.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -121,6 +124,7 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIAtom* aPopupAtom, nsIDOMNo
 /* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLCheckboxAccessible(nsISupports *aFrame, nsIAccessible **_retval)
 {
+printf("Checkbox created\n");
   nsIFrame* frame;
   nsCOMPtr<nsIDOMNode> node;
   nsCOMPtr<nsIPresShell> shell;
@@ -372,6 +376,53 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
   return NS_ERROR_FAILURE;
 }
 
+/* nsIAccessible GetAccessibleFor (in nsISupports aPresShell, in nsIDOMNode aNode); */
+NS_IMETHODIMP nsAccessibilityService::GetAccessibleFor(nsIPresShell *aPresShell, nsIDOMNode *aNode, 
+                                                       nsIAccessible **_retval) 
+{
+  *_retval = nsnull;
+  nsCOMPtr<nsIPresShell> presShell(do_QueryInterface(aPresShell));
+  if (!presShell)
+    return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
+
+  if (!content)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIDOMHTMLAreaElement> areaContent(do_QueryInterface(aNode));
+  if (areaContent)   // Area elements are implemented in nsHTMLImageAccessible as children of the image
+    return PR_FALSE; // Return, otherwise the image frame looks like an accessible object in the wrong place
+
+  nsIFrame* frame = nsnull;
+  aPresShell->GetPrimaryFrameFor(content, &frame);
+  if (!frame)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIAccessible> newAcc;
+  frame->GetAccessible(getter_AddRefs(newAcc));
+
+  if (!newAcc)
+    newAcc = do_QueryInterface(aNode);
+
+  if (!newAcc) {
+    // is it a link?
+    nsCOMPtr<nsILink> link(do_QueryInterface(aNode));
+    if (link) {
+      *_retval = new nsHTMLLinkAccessible(aPresShell, aNode);
+      NS_IF_ADDREF(*_retval);
+      return NS_OK;
+    }
+  }
+
+  if (!newAcc)
+    return NS_ERROR_FAILURE;
+
+  *_retval = newAcc;
+  NS_ADDREF(*_retval);
+
+  return NS_OK;
+}
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
