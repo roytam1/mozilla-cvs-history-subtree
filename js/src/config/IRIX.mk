@@ -46,7 +46,7 @@ CC	= cc -n32 -DIRIX6_5
 endif
 CCC = CC
 # LD  = CC
-ODD_CFLAGS = -fullwarn -xansi
+ODD_CFLAGS = -xansi
 ifdef BUILD_OPT
 OPTIMIZER += -Olimit 4000
 endif
