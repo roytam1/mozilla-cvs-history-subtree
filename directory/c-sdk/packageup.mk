@@ -43,6 +43,6 @@ all::   FORCE
 
 clean:: FORCE
 	@echo "Cleaning up old package"
-	rm -rf $(TODIR)
+	rm -rf $(TODIR)/*
 
 FORCE::
