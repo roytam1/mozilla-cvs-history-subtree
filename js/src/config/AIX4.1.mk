@@ -35,6 +35,9 @@ OS_CFLAGS = -qarch=com -qinline+$(INLINES) -DXP_UNIX -DAIX -DAIXV3 -DSYSV
 OS_LIBS = -lbsd -lsvld -lm
 #-lpthreads -lc_r
 
-MKSHLIB = $(LD) -bM:SRE -bh:4 -bnoentry
+MKSHLIB = $(LD) -bM:SRE -bh:4 -bnoentry -berok
 XLDFLAGS += -lc
 
+ifdef JS_THREADSAFE
+XLDFLAGS += -lsvld
+endif
