@@ -159,7 +159,11 @@ static struct prldap_errormap_entry prldap_errormap[] = {
     {  PR_ILLEGAL_ACCESS_ERROR, EACCES },	/* XXX: correct mapping ? */
     {  PR_UNKNOWN_ERROR, -1 },
     {  PR_PENDING_INTERRUPT_ERROR, -1 },
+#if defined(BSDI)
+    {  PR_NOT_IMPLEMENTED_ERROR, -1 },
+#else
     {  PR_NOT_IMPLEMENTED_ERROR, ENOTSUP },
+#endif
     {  PR_IO_ERROR, EIO },
     {  PR_IO_TIMEOUT_ERROR, ETIMEDOUT },	/* XXX: correct mapping ? */
     {  PR_IO_PENDING_ERROR, -1 },
@@ -189,7 +193,7 @@ static struct prldap_errormap_entry prldap_errormap[] = {
     {  PR_OPERATION_NOT_SUPPORTED_ERROR, EOPNOTSUPP },
     {  PR_PROTOCOL_NOT_SUPPORTED_ERROR, EPROTONOSUPPORT },
     {  PR_REMOTE_FILE_ERROR, -1 },
-#if defined(OSF1)
+#if defined(OSF1) || defined(BSDI)
     {  PR_BUFFER_OVERFLOW_ERROR, -1 },
 #else
     {  PR_BUFFER_OVERFLOW_ERROR, EOVERFLOW },
@@ -197,7 +201,8 @@ static struct prldap_errormap_entry prldap_errormap[] = {
     {  PR_CONNECT_RESET_ERROR, ECONNRESET },
     {  PR_RANGE_ERROR, ERANGE },
     {  PR_DEADLOCK_ERROR, EDEADLK },
-#if defined(HPUX11) || defined(AIX4_3) || defined(OSF1) || defined(DARWIN)
+#if defined(HPUX11) || defined(AIX4_3) || defined(OSF1) || defined(DARWIN) ||\
+    defined(BSDI)
     {  PR_FILE_IS_LOCKED_ERROR, -1 },	/* XXX: correct mapping ? */
 #else
     {  PR_FILE_IS_LOCKED_ERROR, EDEADLOCK },	/* XXX: correct mapping ? */
