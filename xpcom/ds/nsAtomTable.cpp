@@ -75,7 +75,7 @@ AtomImpl::~AtomImpl()
 {
   NS_PRECONDITION(nsnull != gAtomHashTable, "null atom hashtable");
   if (nsnull != gAtomHashTable) {
-    PL_HashTableRemove(gAtomHashTable, mString);
+    PL_HashTableRemove(gAtomHashTable, &nsLiteralString(mString));
     nsrefcnt cnt = --gAtoms;
     if (0 == cnt) {
       // When the last atom is destroyed, the atom arena is destroyed
@@ -159,14 +159,14 @@ AtomImpl::SizeOf(nsISizeOfHandler* aHandler, PRUint32* _retval) /*FIX: const */
 
 //----------------------------------------------------------------------
 
-static PLHashNumber HashKey(const PRUnichar* k)
+static PLHashNumber HashKey(const nsAReadableString* k)
 {
-  return (PLHashNumber) nsCRT::HashCode(k, nsCRT::strlen(k));
+  return (PLHashNumber) copy_string(k->BeginReading(), k->EndReading(), CalculateHash()).GetHash();
 }
 
 static PRIntn CompareKeys( const nsAReadableString* k1, const PRUnichar* k2 )
 {
-  return Compare(*k1, k2);
+  return Compare(*k1, k2) == 0;
 }
 
 NS_COM nsIAtom* NS_NewAtom(const char* isolatin1)
@@ -194,8 +194,11 @@ NS_COM nsIAtom* NS_NewAtom( const nsAReadableString& aString )
   } else {
       // otherwise, we'll make a new atom
     id = new (aString) AtomImpl();
-    if ( id )
+    if ( id ) {
+//      NS_ADDREF(id);
+
       PL_HashTableRawAdd(gAtomHashTable, hep, hashCode, id->mString, id);
+    }
   }
 
   NS_IF_ADDREF(id);
