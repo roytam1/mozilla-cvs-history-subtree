@@ -382,8 +382,8 @@ mime_display_stream_complete (nsMIMESession *stream)
 #endif /* LOCK_LAST_CACHED_MESSAGE */
   
   // Release the prefs service
-  if (msd->prefs)
-    nsServiceManager::ReleaseService(kPrefCID, msd->prefs);
+  if ( (obj) && (obj->options) && (obj->options->prefs) )
+    nsServiceManager::ReleaseService(kPrefCID, obj->options->prefs);
 
   PR_Free(msd);
 }
@@ -1036,72 +1036,17 @@ extern int MIME_HasAttachments(MWContext *context)
 nsIPref *
 GetPrefServiceManager(MimeDisplayOptions *opt)
 {
-  mime_stream_data  *msd = (mime_stream_data *)opt->stream_closure;
-  if (!msd) 
-    return NULL;
+  if (!opt) 
+    return nsnull;
 
-  nsIPref     *prefs = (nsIPref *)(msd->prefs);
-  return prefs;
+  return opt->prefs;
 }
 
 ////////////////////////////////////////////////////////////////
 // Bridge routines for new stream converter XP-COM interface 
 ////////////////////////////////////////////////////////////////
-void
-mime_bridge_destroy_stream(void *newStream)
-{
-  /*  mime_stream_data  *msd = (mime_stream_data *)((nsMIMESession *)newStream)->data_object; */
-  nsMIMESession     *stream = (nsMIMESession *)newStream;
-  if (!stream)
-    return;
-  
-  PR_FREEIF(stream);
-}
-
-void          
-mime_bridge_set_output_type(void *bridgeStream, nsMimeOutputType aType)
-{
-  nsMIMESession *session = (nsMIMESession *)bridgeStream;
-
-  if (session)
-  {
-    struct mime_stream_data *msd = (struct mime_stream_data *)session->data_object;
-    if (msd)
-      msd->format_out = aType;     // output format type
-  }
-}
-
-nsresult
-mime_bridge_new_new_uri(void *bridgeStream, nsIURI *aURI)
-{
-  nsMIMESession *session = (nsMIMESession *)bridgeStream;
-
-  if (session)
-  {
-    struct mime_stream_data *msd = (struct mime_stream_data *)session->data_object;
-    if (msd)
-    {
-      char *urlString;
-      if (NS_SUCCEEDED(aURI->GetSpec(&urlString)))
-      {
-        if ((urlString) && (*urlString))
-        {
-          PR_FREEIF(msd->url_name);
-          msd->url_name = PL_strdup(urlString);
-          if (!(msd->url_name))
-            return MIME_OUT_OF_MEMORY;
-
-          PR_FREEIF(urlString);
-        }
-      }
-    }
-  }
-
-  return NS_OK;
-}
-
 extern "C" void  *
-mime_bridge_create_stream(
+mime_bridge_create_display_stream(
                           nsIMimeEmitter      *newEmitter,
                           nsStreamConverter   *newPluginObj2,
                           nsIURI              *uri,
@@ -1146,13 +1091,6 @@ mime_bridge_create_stream(
   }
   *****/
 
-  nsresult rv = nsServiceManager::GetService(kPrefCID, kIPrefIID, (nsISupports**)&(msd->prefs));
-  if (! (msd->prefs && NS_SUCCEEDED(rv)))
-	{
-    PR_FREEIF(msd);
-    return NULL;
-  }
-
   // Assign the new mime emitter - will handle output operations
   msd->output_emitter = newEmitter;
   
@@ -1189,6 +1127,14 @@ mime_bridge_create_stream(
     return 0;
   }
   memset(msd->options, 0, sizeof(*msd->options));
+  msd->options->format_out = format_out;     // output format
+
+  nsresult rv = nsServiceManager::GetService(kPrefCID, kIPrefIID, (nsISupports**)&(msd->options->prefs));
+  if (! (msd->options->prefs && NS_SUCCEEDED(rv)))
+	{
+    PR_FREEIF(msd);
+    return nsnull;
+  }
 
   /* handle the case where extracting attachments from nested messages */
 #ifdef RICHIE
@@ -1245,19 +1191,20 @@ mime_bridge_create_stream(
   // Get the libmime prefs...
   MIME_NoInlineAttachments = PR_TRUE;   // false - display as links 
                                         // true - display attachment
-  if (msd->prefs)
-    msd->prefs->GetBoolPref("mail.inline_attachments", &MIME_NoInlineAttachments);
+
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.inline_attachments", &MIME_NoInlineAttachments);
   MIME_NoInlineAttachments = !MIME_NoInlineAttachments;
 
   /* This pref is written down in with the
   opposite sense of what we like to use... */
   MIME_WrapLongLines = PR_TRUE;
-  if (msd->prefs)
-    msd->prefs->GetBoolPref("mail.wrap_long_lines", &MIME_WrapLongLines);
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.wrap_long_lines", &MIME_WrapLongLines);
 
   MIME_VariableWidthPlaintext = PR_TRUE;
-  if (msd->prefs)
-    msd->prefs->GetBoolPref("mail.fixed_width_messages", &MIME_VariableWidthPlaintext);
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.fixed_width_messages", &MIME_VariableWidthPlaintext);
   MIME_VariableWidthPlaintext = !MIME_VariableWidthPlaintext;
 
   msd->options->no_inline_p = MIME_NoInlineAttachments;
@@ -1369,7 +1316,8 @@ mime_bridge_create_stream(
   //
   msd->options->force_user_charset = PR_FALSE;
 
-  msd->prefs->GetBoolPref("mail.force_user_charset", &(msd->options->force_user_charset));
+  if (msd->options->prefs)
+    msd->options->prefs->GetBoolPref("mail.force_user_charset", &(msd->options->force_user_charset));
   if (msd->options->force_user_charset)
   {
     /* For now, we are not going to do this, but I am leaving the code here just in case
@@ -1602,6 +1550,10 @@ GetMSD(MimeDisplayOptions *opt)
 extern "C" nsresult
 mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const char *value)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1618,6 +1570,10 @@ mimeEmitterAddAttachmentField(MimeDisplayOptions *opt, const char *field, const 
 extern "C" nsresult     
 mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char *value)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1634,6 +1590,10 @@ mimeEmitterAddHeaderField(MimeDisplayOptions *opt, const char *field, const char
 extern "C" nsresult     
 mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char *contentType, const char *url)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1650,6 +1610,10 @@ mimeEmitterStartAttachment(MimeDisplayOptions *opt, const char *name, const char
 extern "C" nsresult     
 mimeEmitterEndAttachment(MimeDisplayOptions *opt)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1657,7 +1621,10 @@ mimeEmitterEndAttachment(MimeDisplayOptions *opt)
   if (msd->output_emitter)
   {
     nsIMimeEmitter *emitter = (nsIMimeEmitter *)msd->output_emitter;
-    return emitter->EndAttachment();
+    if (emitter)
+      return emitter->EndAttachment();
+    else
+      return NS_OK;
   }
 
   return NS_ERROR_FAILURE;
@@ -1666,6 +1633,10 @@ mimeEmitterEndAttachment(MimeDisplayOptions *opt)
 extern "C" nsresult     
 mimeEmitterStartBody(MimeDisplayOptions *opt, PRBool bodyOnly, const char *msgID, const char *outCharset)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1682,6 +1653,10 @@ mimeEmitterStartBody(MimeDisplayOptions *opt, PRBool bodyOnly, const char *msgID
 extern "C" nsresult     
 mimeEmitterEndBody(MimeDisplayOptions *opt)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1698,6 +1673,10 @@ mimeEmitterEndBody(MimeDisplayOptions *opt)
 extern "C" nsresult     
 mimeEmitterEndHeader(MimeDisplayOptions *opt)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;
@@ -1715,6 +1694,10 @@ extern "C" nsresult
 mimeEmitterStartHeader(MimeDisplayOptions *opt, PRBool rootMailHeader, PRBool headerOnly, const char *msgID,
                        const char *outCharset)
 {
+  // Check for draft processing...
+  if (opt->format_out == nsMimeOutput::nsMimeMessageDraft)
+    return NS_OK;
+
   mime_stream_data  *msd = GetMSD(opt);
   if (!msd) 
     return NS_ERROR_FAILURE;

@@ -99,9 +99,7 @@ OBJS=											\
 		.\$(OBJDIR)\nsMsgHeaderParser.obj	\
 		.\$(OBJDIR)\nsMimeURLUtils.obj		\
 		.\$(OBJDIR)\nsStreamConverter.obj	\
-#
-# THIS WILL NEED WORK AFTER WE GET A LIBMSG MORE XP-COM-afied
-#			.\$(OBJDIR)\mimedrft.obj		\
+		.\$(OBJDIR)\mimedrft.obj		\
 # XP-COM BRIDGES
 		.\$(OBJDIR)\comi18n.obj				\
 # EXTERNAL (OLD) DEPENDENCIES - SHOULD EVENTUALLY BE REMOVED 
