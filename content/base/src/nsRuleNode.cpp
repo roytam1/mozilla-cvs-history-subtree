@@ -4334,7 +4334,8 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
 }
 
 const nsStyleStruct* 
-nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct,
+                                const nsRuleDataStruct& aData,
                                 nsStyleContext* aContext, 
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)

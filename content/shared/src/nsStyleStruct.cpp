@@ -831,8 +831,7 @@ nsStyleSVGReset::nsStyleSVGReset(const nsStyleSVGReset& aSource)
   memcpy((nsStyleSVGReset*)this, &aSource, sizeof(nsStyleSVGReset));
 }
 
-PRInt32 
-nsStyleSVGReset::CalcDifference(const nsStyleSVGReset& aOther) const
+nsChangeHint nsStyleSVGReset::CalcDifference(const nsStyleSVGReset& aOther) const
 {
   if (mDominantBaseline != aOther.mDominantBaseline)
     return NS_STYLE_HINT_VISUAL;

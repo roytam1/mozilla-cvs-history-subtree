@@ -1222,7 +1222,7 @@ struct nsStyleSVGReset : public nsStyleStruct {
     aContext->FreeToShell(sizeof(nsStyleSVGReset), this);
   };
 
-  PRInt32 CalcDifference(const nsStyleSVGReset& aOther) const;
+  nsChangeHint CalcDifference(const nsStyleSVGReset& aOther) const;
 
   PRUint8          mDominantBaseline; // [reset] see nsStyleConsts.h
 };

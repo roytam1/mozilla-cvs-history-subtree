@@ -483,7 +483,7 @@ protected:
                                       nsStyleContext* aContext,  
                                       nsRuleNode* aHighestNode,
                                       const RuleDetail& aRuleDetail, PRBool aInherited);
-  const nsStyleStruct* ComputeSVGResetData(nsStyleStruct* aStartSVG, const nsCSSStruct& aSVGData, 
+  const nsStyleStruct* ComputeSVGResetData(nsStyleStruct* aStartSVG, const nsRuleDataStruct& aSVGData, 
                                            nsStyleContext* aContext,  
                                            nsRuleNode* aHighestNode,
                                            const RuleDetail& aRuleDetail, PRBool aInherited);
