@@ -2101,7 +2101,10 @@ main
   PR_Init("mozilla", 24, 1, 0);
 #endif                     /* NSRP20 */
 
+#ifdef JAVA
   LJ_SetProgramName(argv[0]);
+#endif
+
   PR_XLock();
   mozilla_thread = PR_CurrentThread();
   fdset_lock = PR_NewNamedMonitor("mozilla-fdset-lock");
@@ -2434,11 +2437,13 @@ main
   PR_StartEvents(0);
 #endif	/* NSPR20 */
 
+#ifdef JAVA
   {
     extern void AwtRegisterXtAppVars(Display *dpy,
 				     XtAppContext ac, char *class);
     AwtRegisterXtAppVars(fe_display, fe_XtAppContext, (char *)fe_progclass);
   }
+#endif
 
  {
  	extern int PR_XGetXtHackFD(void);
