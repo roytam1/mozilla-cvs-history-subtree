@@ -81,8 +81,8 @@ public:
 		PRBool* aResult);
 	
 	//XXX From lib/libmocha/lm.h
-	NS_IMETHOD GetSubjectOriginURL(JSContext *aCx, nsString** aOrigin);
-	NS_IMETHOD GetObjectOriginURL(JSContext *aCx, JSObject *object, nsString** aOrigin);
+	NS_IMETHOD GetSubjectOriginURL(JSContext *aCx, char** aOrigin);
+	NS_IMETHOD GetObjectOriginURL(JSContext *aCx, JSObject *object, char** aOrigin);
 	NS_IMETHOD NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aCodebase, JSPrincipals** aPrincipals);
 
 #if 0
@@ -143,32 +143,26 @@ public:
 #endif
 #endif
 private:
-        NS_IMETHOD GetOriginFromSourceURL(nsString* sourceURL, nsString* *result);
-        PRInt32 CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code);
-        nsIPref* mPrefs;
-        char* FindOriginURL(JSContext *aCx, JSObject *aGlobal);
-	PRBool SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2);
-	PRBool SameOriginsStr(JSContext *aCx, nsString* aOrigin1, nsString* aOrigin2);
-        char* AddSecPolicyPrefix(JSContext *cx, char *pref_str);
-        char* GetSitePolicy(const char *org);
-	char * ParseURL (const char *url, int parts_requested);
-        char * SACopy (char *destination, const char *source);
-	char * SACat (char *destination, const char *source);
-	nsString* GetCanonicalizedOrigin(JSContext *cx, nsString* aUrlString);
-        PRBool PrincipalsCanAccessTarget(JSContext *cx, short target);
-	nsJSFrameIterator* NewJSFrameIterator(void *aContext);
-	PRBool NextJSFrame(struct nsJSFrameIterator **aIterator);
-        PRBool NextJSJavaFrame(struct nsJSFrameIterator *aIterator);
+  NS_IMETHOD GetOriginFromSourceURL(char * sourceURL, char * * result);
+  PRInt32 CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code);
+  nsIPref* mPrefs;
+  char* FindOriginURL(JSContext *aCx, JSObject *aGlobal);
+  PRBool SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2);
+  char* AddSecPolicyPrefix(JSContext *cx, char *pref_str);
+  char* GetSitePolicy(const char *org);
+  char * ParseURL (const char *url, int parts_requested);
+  char * SACopy (char *destination, const char *source);
+  char * SACat (char *destination, const char *source);
+  char * GetCanonicalizedOrigin(JSContext *cx, const char* aUrlString);
+  PRBool PrincipalsCanAccessTarget(JSContext *cx, short target);
+  nsJSFrameIterator* NewJSFrameIterator(void *aContext);
+  PRBool NextJSFrame(struct nsJSFrameIterator **aIterator);
+  PRBool NextJSJavaFrame(struct nsJSFrameIterator *aIterator);
 #if 0
 	void PrintToConsole(const char *data);
 	void PrintPrincipalsToConsole(JSContext *cx, JSPrincipals *principals);
-	
 	PRUint32 GetPrincipalsCount(JSContext *aCx, JSPrincipals *aPrincipals);
-	
 	void InvalidateCertPrincipals(JSContext *cx, JSPrincipals *principals);
-        
-	
-	//Helper funcs for RegisterPrincipals
 #ifdef EARLY_ACCESS_STUFF
 	PRBool CheckEarlyAccess(MochaDecoder *decoder, JSPrincipals *principals);
 #endif
@@ -179,24 +173,10 @@ private:
 	PRBool IsExternalCaptureEnabled(JSContext *cx, JSPrincipals *principals);
 	PRBool CanExtendTrust(JSContext *cx, void *from, void *to);
 	char* GetJavaCodebaseFromOrigin(const char *origin);
-
-	
-	// Glue code for JS stack crawling callbacks
-	
-
-	
-	//Helper funcs
 	JSBool ContinueOnViolation(JSContext *cx, int pref_code);
 	JSBool CheckForPrivilegeContinue(JSContext *cx, char *prop_name, int priv_code, int pref_code);
-	
-	//XXX temporarily
-
-	
-        nsICapsManager * mCapsManager;
+    nsICapsManager * mCapsManager;
 #endif
-	//Local vars
-	
-	
 };
 
 //XXX temporarily bit flags for determining what we want to parse from the URL

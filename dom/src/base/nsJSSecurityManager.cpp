@@ -253,22 +253,17 @@ nsJSSecurityManager::NewJSPrincipals(nsIURI *aURL, nsString* aName, nsString* aC
 
   //Allocate and fill the nsJSPrincipalsData struct
   result = PR_NEWZAP(nsJSPrincipalsData);
-  if (result == nsnull) {
-    return NS_ERROR_FAILURE;
-  }
-  
-  nsString* codebaseStr;
+  if (result == nsnull) return NS_ERROR_FAILURE;
+  char * codebaseStr;
   nsresult rv;
-  if ((rv = GetOriginFromSourceURL(aCodebase, &codebaseStr)) != NS_OK)
-      return rv;
-  
+  if ((rv = GetOriginFromSourceURL(aCodebase->ToNewCString(), &codebaseStr)) != NS_OK) return rv;
   if (!codebaseStr) {
     PR_Free(result);
     return NS_ERROR_FAILURE;
   }
-
-  result->principals.codebase = codebaseStr->ToNewCString();
-  delete codebaseStr;
+  nsString * tmp = new nsString(codebaseStr);
+  result->principals.codebase = tmp->ToNewCString();
+  delete tmp;
   if (result->principals.codebase == nsnull) {
     PR_Free(result);
     return NS_ERROR_FAILURE;
@@ -323,24 +318,19 @@ nsJSSecurityManager::CheckScriptAccess(nsIScriptContext* aContext, void* aObj,
   */
 
 NS_IMETHODIMP
-nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, nsString **aOrigin)
+nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, char * * aOrigin)
 {
-  /*
-   * Get origin from script of innermost interpreted frame.
-   */
+// Get origin from script of innermost interpreted frame.
   JSPrincipals *principals;
   JSStackFrame *fp;
   JSScript *script;
-
 #ifdef OJI
   JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
   JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
   if (pFrameToStartLooking == nsnull) {
     pFrameToStartLooking = JS_FrameIterator(aCx, &pFrameToStartLooking);
     if (pFrameToStartLooking == nsnull) {
-      /*
-      ** There are no frames or scripts at this point.
-      */
+      // There are no frames or scripts at this point.
       pFrameToEndLooking = nsnull;
     }
   }
@@ -348,14 +338,12 @@ nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, nsString **aOrigin)
   JSStackFrame *pFrameToStartLooking = JS_FrameIterator(aCx, &fp);
   JSStackFrame *pFrameToEndLooking   = nsnull;
 #endif
-
   fp = pFrameToStartLooking;
   while (fp  != pFrameToEndLooking) {
     script = JS_GetFrameScript(aCx, fp);
     if (script) {
       principals = JS_GetScriptPrincipals(aCx, script);
-      *aOrigin = new nsString(principals ? principals->codebase 
-                                         : JS_GetScriptFilename(aCx, script));
+      *aOrigin = principals ? (char *)principals->codebase : (char *)JS_GetScriptFilename(aCx, script);
       return *aOrigin ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
     }
     fp = JS_FrameIterator(aCx, &fp);
@@ -363,7 +351,7 @@ nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, nsString **aOrigin)
 #ifdef OJI
   principals = JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
   if (principals) {
-    *aOrigin = new nsString(principals->codebase);
+    *aOrigin = principals->codebase;
     return *aOrigin ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
   }
 #endif
@@ -376,19 +364,15 @@ nsJSSecurityManager::GetSubjectOriginURL(JSContext *aCx, nsString **aOrigin)
 }
 
 NS_IMETHODIMP
-nsJSSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, nsString** aOrigin)
+nsJSSecurityManager::GetObjectOriginURL(JSContext *aCx, JSObject *aObj, char * * aOrigin)
 {
-    JSObject *parent;
-    while (parent = JS_GetParent(aCx, aObj)) {
-        aObj = parent;
-    }
-
-    JSPrincipals *principals;
-    nsresult result = GetContainerPrincipals(aCx, aObj, &principals);
-    if (result != NS_OK)
-      return result;
-    *aOrigin = new nsString(principals ? principals->codebase : nsnull);
-    return *aOrigin ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  JSObject *parent;
+  while (parent = JS_GetParent(aCx, aObj)) aObj = parent;
+  JSPrincipals *principals;
+  nsresult result = GetContainerPrincipals(aCx, aObj, &principals);
+  if (result != NS_OK) return result;
+  *aOrigin = principals ? principals->codebase : nsnull;
+  return *aOrigin ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 NS_IMETHODIMP
@@ -536,254 +520,189 @@ nsJSSecurityManager::AddSecPolicyPrefix(JSContext *cx, char *pref_str)
 char *
 nsJSSecurityManager::GetSitePolicy(const char *org)
 {
-    char *sitepol;
-    char *sp;
-    char *nextsp;
-    char *orghost = 0;
-    char *retval = 0;
-    char *prot;
-    int splen;
-    char *bar;
-    char *end;
-    char *match = 0;
-    int matlen;
-    
-    if (NS_OK != mPrefs->CopyCharPref("js_security.site_policy", &sitepol)) {
-        return 0;
+  char *sitepol, *sp, *nextsp, *orghost = 0, *retval = 0, *prot, *bar, *end, *match = 0;
+  int splen, matlen;
+  nsIURL * url;
+  nsresult rv;
+  NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  if (NS_OK != mPrefs->CopyCharPref("js_security.site_policy", &sitepol)) return 0;
+  /* Site policy comprises text of the form site1-policy,site2-policy,siteNpolicy
+   * where each site-policy is site|policy and policy is presumed to be one of strict/moderate/default
+   * site may be either a URL or a hostname.  In the former case we do a prefix match with the origin URL; in the latter case
+   * we just compare hosts. Process entry by entry.  Take longest match, to account for
+   * cases like: *	http://host/|moderate,http://host/dir/|strict
+   */
+  for (sp = sitepol; sp != 0; sp = nextsp) {
+    if ((nextsp = strchr(sp, ',')) != 0) *nextsp++ = '\0';
+    if ((bar = strchr(sp, '|')) == 0) continue;			/* no | for this entry */
+    *bar = '\0';
+    /* Isolate host, then policy. */
+    sp += strspn(sp, " ");	/* skip leading spaces */
+    end = sp + strcspn(sp, " |"); /* skip up to space or | */
+    *end = '\0';
+    if ((splen = end-sp) == 0) continue;			/* no URL or hostname */
+    /* Check whether this is long enough. */
+    if (match != 0 && matlen >= splen) continue;			/* Nope.  New shorter than old. */
+    /* Check which case, URL or hostname, we're dealing with. */
+    prot = ParseURL(sp, GET_PROTOCOL_PART);
+    rv = url->SetSpec(sp);
+    if (!NS_SUCCEEDED(rv)) return nsnull;
+    url->GetScheme(& prot);
+    if (prot != 0 && *prot != '\0') {
+      /* URL case.  Do prefix match, make sure we're at proper boundaries. */
+      if (PL_strncmp(org, sp, splen) != 0 || (org[splen] != '\0'	/* exact match */
+        && sp[splen-1] != '/'	/* site policy ends with / */
+        && org[splen] != '/'	/* site policy doesn't, but org does */
+        )) {
+        PR_Free(prot);
+        continue;			/* no match */
+      }
     }
-    
-    /* Site policy comprises text of the form
-     *	site1-policy,site2-policy,...,siteNpolicy
-     * where each site-policy is
-     *	site|policy
-     * and policy is presumed to be one of strict/moderate/default
-     * site may be either a URL or a hostname.  In the former case 
-     * we do a prefix match with the origin URL; in the latter case
-     * we just compare hosts.
-     */
-    
-    /* Process entry by entry.  Take longest match, to account for
-     * cases like:
-     *	http://host/|moderate,http://host/dir/|strict
-     */
-    for (sp = sitepol; sp != 0; sp = nextsp) {
-        if ((nextsp = strchr(sp, ',')) != 0) {
-            *nextsp++ = '\0';
-        }
-        
-        if ((bar = strchr(sp, '|')) == 0) {
-            continue;			/* no | for this entry */
-        }
-        *bar = '\0';
-        
-        /* Isolate host, then policy. */
-        sp += strspn(sp, " ");	/* skip leading spaces */
-        end = sp + strcspn(sp, " |"); /* skip up to space or | */
-        *end = '\0';
-        if ((splen = end-sp) == 0) {
-            continue;			/* no URL or hostname */
-        }
-        
-        /* Check whether this is long enough. */
-        if (match != 0 && matlen >= splen) {
-            continue;			/* Nope.  New shorter than old. */
-        }
-        
-        /* Check which case, URL or hostname, we're dealing with. */
-        if ((prot = ParseURL(sp, GET_PROTOCOL_PART)) != 0 && *prot != '\0') {
-            /* URL case.  Do prefix match, make sure we're at proper boundaries. */
-            if (PL_strncmp(org, sp, splen) != 0 || (org[splen] != '\0'	/* exact match */
-                && sp[splen-1] != '/'	/* site policy ends with / */
-                && org[splen] != '/'	/* site policy doesn't, but org does */
-                )) {
-                PR_Free(prot);
-                continue;			/* no match */
-            }
-        }
-        else {
-            /* Host-only case. */
-            PR_FREEIF(prot);
-            
-            if (orghost == 0 && (orghost = ParseURL(org, GET_HOST_PART)) == 0) {
-                return 0;			/* out of mem */
-            }
-            if (PL_strcasecmp(orghost, sp) != 0) {
-                continue;			/* no match */
-            }
-        }
-        /* Had a match.  Remember policy and length of host/URL match. */
-        match = bar;
-        matlen = splen;
+    else {
+      /* Host-only case. */
+      PR_FREEIF(prot);
+      orghost = ParseURL(org, GET_HOST_PART);
+      rv = url->SetSpec((char *)org);
+      if (!NS_SUCCEEDED(rv)) return nsnull;
+      url->GetHost(& orghost);
+      if (orghost == 0) return 0;			/* out of mem */
+      if (PL_strcasecmp(orghost, sp) != 0) continue;			/* no match */
     }
-    
-    if (match != 0) {
-        /* Longest hostname or URL match.  Get policy.
-        ** match points to |.
-        ** Skip spaces after | and after policy name.
-        */
-        ++match;
-        sp = match + strspn(match, " ");
-        end = sp + strcspn(sp, " ");
-        *end = '\0';
-        if (sp != end) {
-            retval = PL_strdup(sp);
-        }
-    }
-    
-    PR_FREEIF(orghost);
-    PR_FREEIF(sitepol);
-    return retval;
+    /* Had a match.  Remember policy and length of host/URL match. */
+    match = bar;
+    matlen = splen;
+  }
+  if (match != 0) {
+    /* Longest hostname or URL match.  Get policy.
+    ** match points to |.
+    ** Skip spaces after | and after policy name.
+    */
+    ++match;
+    sp = match + strspn(match, " ");
+    end = sp + strcspn(sp, " ");
+    *end = '\0';
+    if (sp != end) retval = PL_strdup(sp);
+  }
+  
+  PR_FREEIF(orghost);
+  PR_FREEIF(sitepol);
+  return retval;
 }
 
 NS_IMETHODIMP
 nsJSSecurityManager::CheckPermissions(JSContext *aCx, JSObject *aObj, PRInt16 aTarget, PRBool* aReturn)
 {
-    nsString* subjectOrigin = nsnull;
-    nsString* objectOrigin = nsnull;
-    nsISupports* running;
-    nsIScriptGlobalObjectData *globalData;
-    JSPrincipals *principals;
-    nsresult rv=NS_OK;
+  char * subjectOrigin = nsnull, * objectOrigin = nsnull;
+  nsISupports* running;
+  nsIScriptGlobalObjectData *globalData;
+  JSPrincipals *principals;
+  nsresult rv=NS_OK;
+  /* May be in a layer loaded from a different origin.*/
+  rv = GetSubjectOriginURL(aCx, &subjectOrigin);
+  if (rv != NS_OK) return rv;
+  /*
+  * Hold onto reference to the running decoder's principals
+  * in case a call to GetObjectOriginURL ends up
+  * dropping a reference due to an origin changing
+  * underneath us.
+  */
+  running = (nsISupports*)JS_GetPrivate(aCx, JS_GetGlobalObject(aCx));
+  if (nsnull != running &&
+      NS_OK == running->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) 
+  {
+      globalData->GetPrincipals((void**)&principals);
+      NS_RELEASE(globalData);
+  }
 
-    /* May be in a layer loaded from a different origin.*/
-    rv = GetSubjectOriginURL(aCx, &subjectOrigin);
-    if (rv != NS_OK)
-        return rv;
-
-    /*
-    * Hold onto reference to the running decoder's principals
-    * in case a call to GetObjectOriginURL ends up
-    * dropping a reference due to an origin changing
-    * underneath us.
-    */
-    running = (nsISupports*)JS_GetPrivate(aCx, JS_GetGlobalObject(aCx));
-    if (nsnull != running &&
-        NS_OK == running->QueryInterface(kIScriptGlobalObjectDataIID, (void**)&globalData)) 
-    {
-        globalData->GetPrincipals((void**)&principals);
-        NS_RELEASE(globalData);
-    }
-
-    if (principals) {
-        JSPRINCIPALS_HOLD(aCx, principals);
-    }
-
-    rv = GetObjectOriginURL(aCx, aObj, &objectOrigin);
-
-    if (rv != NS_OK || !subjectOrigin || !objectOrigin) {
-        *aReturn = PR_FALSE;
-        goto out;
-    }
-
-    /* Now see whether the origin methods and servers match. */
-    if (SameOriginsStr(aCx, subjectOrigin, objectOrigin)) {
-        *aReturn = PR_TRUE;
-        goto out;
-    }
-
-    /*
-    * If we failed the origin tests it still might be the case that we
-    *   are a signed script and have permissions to do this operation.
-    * Check for that here
-    */
-    if (aTarget != eJSTarget_Max) {
+  if (principals) JSPRINCIPALS_HOLD(aCx, principals);
+  rv = GetObjectOriginURL(aCx, aObj, &objectOrigin);
+  if (rv != NS_OK || !subjectOrigin || !objectOrigin) {
+      *aReturn = PR_FALSE;
+      goto out;
+  }
+  /* Now see whether the origin methods and servers match. */
+  if (SameOrigins(aCx, subjectOrigin, objectOrigin)) {
+      *aReturn = PR_TRUE;
+      goto out;
+  }
+  /*
+  * If we failed the origin tests it still might be the case that we
+  *   are a signed script and have permissions to do this operation.
+  * Check for that here
+  */
+  if (aTarget != eJSTarget_Max) {
     PRBool canAccess;
-
     CanAccessTarget(aCx, aTarget, &canAccess);
     if (canAccess) {
       *aReturn = PR_TRUE;
       goto out;
     }
-    }
+  }
 
-    JS_ReportError(aCx, "Access error message", subjectOrigin->ToNewCString());
-    *aReturn = PR_FALSE;
+  JS_ReportError(aCx, "Access error message", subjectOrigin);
+  *aReturn = PR_FALSE;
 
 out:
-    delete subjectOrigin;
-    delete objectOrigin;
-
-    if (principals) {
-        JSPRINCIPALS_DROP(aCx, principals);
-    }
-    return NS_OK;
+  if (principals) JSPRINCIPALS_DROP(aCx, principals);
+  return NS_OK;
 }
 
 PRBool
 nsJSSecurityManager::SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2)
 {
-  if (!aOrigin1 || !aOrigin2) {
+  if (!aOrigin1 || !aOrigin2) return PR_FALSE;
+  // Shouldn't return true if both origin1 and origin2 are unknownOriginStr. 
+  nsString * tmp = new nsString(aOrigin1);
+  if (gUnknownOriginStr.EqualsIgnoreCase(*tmp)) 
+  {
+    delete tmp;
     return PR_FALSE;
   }
-
-  nsAutoString origin1(aOrigin1);
-  nsAutoString origin2(aOrigin2);
-
-  return SameOriginsStr(aCx, &origin1, &origin2);
+  delete tmp;
+  if (*aOrigin1 == *aOrigin2) return PR_TRUE;
+  nsString * cmp1 = new nsString(GetCanonicalizedOrigin(aCx, aOrigin1));
+  nsString * cmp2 = new nsString(GetCanonicalizedOrigin(aCx, aOrigin2));
+  
+  PRBool result = PR_FALSE;
+  // Either the strings are equal or they are both file: uris.
+  if (cmp1 && cmp2 && 
+      (*cmp1 == *cmp2 ||
+       (cmp1->Find(gFileUrlPrefix) == 0 && 
+        cmp2->Find(gFileUrlPrefix) == 0)))
+  {
+    result = PR_TRUE;
+  }
+  delete cmp1;
+  delete cmp2;
+  return result;
 }
 
-PRBool
-nsJSSecurityManager::SameOriginsStr(JSContext *aCx, nsString* aOrigin1, 
-                                    nsString* aOrigin2)
+char * 
+nsJSSecurityManager::GetCanonicalizedOrigin(JSContext* aCx, const char * aUrlString)
 {
-    if (!aOrigin1 || !aOrigin2) {
-        return PR_FALSE;
-    }
-    
-    // Shouldn't return true if both origin1 and origin2 are unknownOriginStr. 
-    if (gUnknownOriginStr.EqualsIgnoreCase(*aOrigin1)) {
-        return PR_FALSE;
-    }
-    
-    if (*aOrigin1 == *aOrigin2) {
-        return PR_TRUE;
-    }
-    
-    nsString* cmp1 = GetCanonicalizedOrigin(aCx, aOrigin1);
-    nsString* cmp2 = GetCanonicalizedOrigin(aCx, aOrigin2);
-    
-    PRBool result = PR_FALSE;
-    if (cmp1 && cmp2 && 
-        (*cmp1 == *cmp2 ||
-         (cmp1->Find(gFileUrlPrefix) == 0 && 
-          cmp2->Find(gFileUrlPrefix) == 0)))
-    {
-        // Either the strings are equal or they are both file: uris.
-        result = PR_TRUE;
-    }
-
-    delete cmp1;
-    delete cmp2;
-    return result;
-}
-
-nsString* 
-nsJSSecurityManager::GetCanonicalizedOrigin(JSContext* aCx, nsString* aUrlString)
-{
-  nsString * origin;
+  nsString * buffer;
   nsIURL * url;
   nsresult rv;
+  char * origin = (char *)aUrlString;
   NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
-  if (!NS_SUCCEEDED(rv)) 
-      return nsnull;
+  if (!NS_SUCCEEDED(rv)) return nsnull;
   rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
-  if (!NS_SUCCEEDED(rv)) 
-      return nsnull;
-  char *str = aUrlString->ToNewCString();
-  if (str == nsnull)
-      return nsnull;
-  rv = url->SetSpec(str);
-  delete str;
-  if (!NS_SUCCEEDED(rv)) 
-      return nsnull;
-  url->GetScheme(& str);
-  origin = new nsString(str);
-  url->GetHost(& str);
-  origin->Append(str);
-  if (!origin) {
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  rv = url->SetSpec(origin);
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  url->GetScheme(& origin);
+  buffer = new nsString(origin);
+  url->GetHost(& origin);
+  buffer->Append(origin);
+  if (!buffer) {
     JS_ReportOutOfMemory(aCx);
     return nsnull;
   }
+  origin = buffer->ToNewCString();
+  delete buffer;
   return origin;
 }
 
@@ -1097,37 +1016,35 @@ nsJSSecurityManager::SACat (char *destination, const char *source)
     return destination;
 }
 NS_IMETHODIMP
-nsJSSecurityManager::GetOriginFromSourceURL(nsString* aSourceURL, nsString **result)
+nsJSSecurityManager::GetOriginFromSourceURL(char * aSourceURL, char * * result)
 {
-  if (aSourceURL->Length() == 0 || aSourceURL->EqualsIgnoreCase(gUnknownOriginStr)) {
-    *result = nsnull;
-    return NS_OK;
-  }
-#if 0 //need to get url type 
-  int urlType;
-
-  urlType = NET_URL_Type(sourceURL);
-  if (urlType == MOCHA_TYPE_URL) {
-    NS_ASSERTION(PR_FALSE, "Invalid URL type");/* this shouldn't occur */
-    *result = nsnull;
-    return NS_OK;
-  }
-#endif
-  nsAutoString sourceURL(*aSourceURL);
-
-  //Stripfiledoubleslash
-  if (!sourceURL.Find(gFileDoubleSlashUrlPrefix)) {
-    sourceURL = sourceURL.Cut(gFileDoubleSlashUrlPrefix.Length(), 2); 
-  }
-
-  char* chS = sourceURL.ToNewCString();
-  if (!chS) {
+  nsString * buffer = new nsString(aSourceURL);
+  nsIURL * url;
+  nsresult rv;
+  if (!aSourceURL) {
     *result = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
-
-  *result = new nsString(ParseURL(chS, GET_PROTOCOL_PART|GET_HOST_PART|GET_PATH_PART));
-  delete [] chS;
+  if (buffer->Length() == 0 || buffer->EqualsIgnoreCase(gUnknownOriginStr)) {
+    *result = nsnull;
+    return NS_OK;
+  }
+  char * tempChars = ParseURL(* result, GET_PROTOCOL_PART|GET_HOST_PART|GET_PATH_PART);
+  NS_WITH_SERVICE(nsIComponentManager, compMan,kComponentManagerCID,&rv);
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  rv = compMan->CreateInstance(kURLCID,NULL,nsIURL::GetIID(),(void**)&url);
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  tempChars = buffer->ToNewCString();
+  rv = url->SetSpec(tempChars);
+  if (!NS_SUCCEEDED(rv)) return nsnull;
+  url->GetScheme(& tempChars);
+  buffer->Assign(tempChars);
+  url->GetHost(& tempChars);
+  buffer->Append(tempChars);
+  url->GetPath(& tempChars);
+  buffer->Append(tempChars);
+  *result = buffer->ToNewCString();
+  delete buffer;
   return *result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
