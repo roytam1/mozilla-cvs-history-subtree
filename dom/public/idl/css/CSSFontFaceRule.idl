@@ -1,4 +1,0 @@
-
-   interface CSSFontFaceRule : CSSStyleRule {
-     attribute CSSStyleDeclaration style;
-   };
