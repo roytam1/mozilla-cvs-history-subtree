@@ -638,8 +638,8 @@ sub update
 
           if ((scalar(@remove) + scalar(@add)) < scalar(@{$vals}))
             {
-              $mod{$key}{"db"} = [ @remove ] if (scalar(@remove) > $[);
-              $mod{$key}{"ab"} = [ @add ] if (scalar(@add) > $[);
+              $mod{$key}{"db"} = [ @remove ] if (scalar(@remove));
+              $mod{$key}{"ab"} = [ @add ] if (scalar(@add));
             }
           else
             {
