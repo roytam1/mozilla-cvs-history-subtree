@@ -27,7 +27,7 @@
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsIDImpl, nsISupportsID)
+NS_IMPL_ISUPPORTS2(nsSupportsIDImpl, nsISupportsID, nsISupportsPrimitive)
 
 nsSupportsIDImpl::nsSupportsIDImpl()
     : mData(nsnull)
@@ -39,6 +39,19 @@ nsSupportsIDImpl::~nsSupportsIDImpl()
 {
     if(mData)
       nsMemory::Free(mData);
+}
+
+NS_IMETHODIMP nsSupportsIDImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_ID;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsSupportsIDImpl::GetData(nsID **aData)
@@ -102,7 +115,8 @@ NS_IMETHODIMP nsSupportsIDImpl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsStringImpl, nsISupportsString)
+NS_IMPL_ISUPPORTS2(nsSupportsStringImpl, nsISupportsString,
+                   nsISupportsPrimitive)
 
 nsSupportsStringImpl::nsSupportsStringImpl()
     : mData(nsnull)
@@ -114,6 +128,19 @@ nsSupportsStringImpl::~nsSupportsStringImpl()
 {
     if(mData)
       nsMemory::Free(mData);
+}
+
+NS_IMETHODIMP nsSupportsStringImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_STRING;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsSupportsStringImpl::GetData(char **aData)
@@ -166,7 +193,8 @@ NS_IMETHODIMP nsSupportsStringImpl::SetDataWithLength(PRUint32 aLength, const ch
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsWStringImpl, nsISupportsWString)
+NS_IMPL_ISUPPORTS2(nsSupportsWStringImpl, nsISupportsWString,
+                   nsISupportsPrimitive)
 
 nsSupportsWStringImpl::nsSupportsWStringImpl()
     : mData(nsnull)
@@ -178,6 +206,19 @@ nsSupportsWStringImpl::~nsSupportsWStringImpl()
 {
     if(mData)
       nsMemory::Free(mData);
+}
+
+NS_IMETHODIMP nsSupportsWStringImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_WSTRING;
+
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsSupportsWStringImpl::GetData(PRUnichar **aData)
@@ -233,7 +274,8 @@ NS_IMETHODIMP nsSupportsWStringImpl::SetDataWithLength(PRUint32 aLength, const P
 
 /***************************************************************************/
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsSupportsPRBoolImpl, nsISupportsPRBool)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsSupportsPRBoolImpl, nsISupportsPRBool,
+                              nsISupportsPrimitive)
 
 nsSupportsPRBoolImpl::nsSupportsPRBoolImpl()
     : mData(PR_FALSE)
@@ -242,6 +284,19 @@ nsSupportsPRBoolImpl::nsSupportsPRBoolImpl()
 }
 
 nsSupportsPRBoolImpl::~nsSupportsPRBoolImpl() {}
+
+NS_IMETHODIMP nsSupportsPRBoolImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRBOOL;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRBoolImpl::GetData(PRBool *aData)
 {
@@ -291,7 +346,8 @@ NS_NewISupportsPRBool (nsISupportsPRBool ** aResult)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRUint8Impl, nsISupportsPRUint8)
+NS_IMPL_ISUPPORTS2(nsSupportsPRUint8Impl, nsISupportsPRUint8,
+                   nsISupportsPrimitive)
 
 nsSupportsPRUint8Impl::nsSupportsPRUint8Impl()
     : mData(0)
@@ -300,6 +356,19 @@ nsSupportsPRUint8Impl::nsSupportsPRUint8Impl()
 }
 
 nsSupportsPRUint8Impl::~nsSupportsPRUint8Impl() {}
+
+NS_IMETHODIMP nsSupportsPRUint8Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRUINT8;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRUint8Impl::GetData(PRUint8 *aData)
 {
@@ -338,7 +407,8 @@ NS_IMETHODIMP nsSupportsPRUint8Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRUint16Impl, nsISupportsPRUint16)
+NS_IMPL_ISUPPORTS2(nsSupportsPRUint16Impl, nsISupportsPRUint16,
+                   nsISupportsPrimitive)
 
 nsSupportsPRUint16Impl::nsSupportsPRUint16Impl()
     : mData(0)
@@ -347,6 +417,19 @@ nsSupportsPRUint16Impl::nsSupportsPRUint16Impl()
 }
 
 nsSupportsPRUint16Impl::~nsSupportsPRUint16Impl() {}
+
+NS_IMETHODIMP nsSupportsPRUint16Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRUINT16;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRUint16Impl::GetData(PRUint16 *aData)
 {
@@ -385,7 +468,8 @@ NS_IMETHODIMP nsSupportsPRUint16Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRUint32Impl, nsISupportsPRUint32)
+NS_IMPL_ISUPPORTS2(nsSupportsPRUint32Impl, nsISupportsPRUint32,
+                   nsISupportsPrimitive)
 
 nsSupportsPRUint32Impl::nsSupportsPRUint32Impl()
     : mData(0)
@@ -394,6 +478,19 @@ nsSupportsPRUint32Impl::nsSupportsPRUint32Impl()
 }
 
 nsSupportsPRUint32Impl::~nsSupportsPRUint32Impl() {}
+
+NS_IMETHODIMP nsSupportsPRUint32Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRUINT32;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRUint32Impl::GetData(PRUint32 *aData)
 {
@@ -432,7 +529,8 @@ NS_IMETHODIMP nsSupportsPRUint32Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRUint64Impl, nsISupportsPRUint64)
+NS_IMPL_ISUPPORTS2(nsSupportsPRUint64Impl, nsISupportsPRUint64,
+                   nsISupportsPrimitive)
 
 nsSupportsPRUint64Impl::nsSupportsPRUint64Impl()
     : mData(LL_ZERO)
@@ -441,6 +539,19 @@ nsSupportsPRUint64Impl::nsSupportsPRUint64Impl()
 }
 
 nsSupportsPRUint64Impl::~nsSupportsPRUint64Impl() {}
+
+NS_IMETHODIMP nsSupportsPRUint64Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRUINT64;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRUint64Impl::GetData(PRUint64 *aData)
 {
@@ -479,7 +590,8 @@ NS_IMETHODIMP nsSupportsPRUint64Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRTimeImpl, nsISupportsPRTime)
+NS_IMPL_ISUPPORTS2(nsSupportsPRTimeImpl, nsISupportsPRTime,
+                   nsISupportsPrimitive)
 
 nsSupportsPRTimeImpl::nsSupportsPRTimeImpl()
     : mData(LL_ZERO)
@@ -488,6 +600,19 @@ nsSupportsPRTimeImpl::nsSupportsPRTimeImpl()
 }
 
 nsSupportsPRTimeImpl::~nsSupportsPRTimeImpl() {}
+
+NS_IMETHODIMP nsSupportsPRTimeImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRTIME;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRTimeImpl::GetData(PRTime *aData)
 {
@@ -526,7 +651,8 @@ NS_IMETHODIMP nsSupportsPRTimeImpl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsCharImpl, nsISupportsChar)
+NS_IMPL_ISUPPORTS2(nsSupportsCharImpl, nsISupportsChar,
+                   nsISupportsPrimitive)
 
 nsSupportsCharImpl::nsSupportsCharImpl()
     : mData(0)
@@ -535,6 +661,19 @@ nsSupportsCharImpl::nsSupportsCharImpl()
 }
 
 nsSupportsCharImpl::~nsSupportsCharImpl() {}
+
+NS_IMETHODIMP nsSupportsCharImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_CHAR;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsCharImpl::GetData(char *aData)
 {
@@ -573,7 +712,8 @@ NS_IMETHODIMP nsSupportsCharImpl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRInt16Impl, nsISupportsPRInt16)
+NS_IMPL_ISUPPORTS2(nsSupportsPRInt16Impl, nsISupportsPRInt16,
+                   nsISupportsPrimitive)
 
 nsSupportsPRInt16Impl::nsSupportsPRInt16Impl()
     : mData(0)
@@ -582,6 +722,19 @@ nsSupportsPRInt16Impl::nsSupportsPRInt16Impl()
 }
 
 nsSupportsPRInt16Impl::~nsSupportsPRInt16Impl() {}
+
+NS_IMETHODIMP nsSupportsPRInt16Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRINT16;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRInt16Impl::GetData(PRInt16 *aData)
 {
@@ -620,7 +773,8 @@ NS_IMETHODIMP nsSupportsPRInt16Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRInt32Impl, nsISupportsPRInt32)
+NS_IMPL_ISUPPORTS2(nsSupportsPRInt32Impl, nsISupportsPRInt32,
+                   nsISupportsPrimitive)
 
 nsSupportsPRInt32Impl::nsSupportsPRInt32Impl()
     : mData(0)
@@ -629,6 +783,19 @@ nsSupportsPRInt32Impl::nsSupportsPRInt32Impl()
 }
 
 nsSupportsPRInt32Impl::~nsSupportsPRInt32Impl() {}
+
+NS_IMETHODIMP nsSupportsPRInt32Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRINT32;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRInt32Impl::GetData(PRInt32 *aData)
 {
@@ -667,7 +834,8 @@ NS_IMETHODIMP nsSupportsPRInt32Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsPRInt64Impl, nsISupportsPRInt64)
+NS_IMPL_ISUPPORTS2(nsSupportsPRInt64Impl, nsISupportsPRInt64,
+                   nsISupportsPrimitive)
 
 nsSupportsPRInt64Impl::nsSupportsPRInt64Impl()
     : mData(LL_ZERO)
@@ -676,6 +844,19 @@ nsSupportsPRInt64Impl::nsSupportsPRInt64Impl()
 }
 
 nsSupportsPRInt64Impl::~nsSupportsPRInt64Impl() {}
+
+NS_IMETHODIMP nsSupportsPRInt64Impl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_PRINT64;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsPRInt64Impl::GetData(PRInt64 *aData)
 {
@@ -714,7 +895,8 @@ NS_IMETHODIMP nsSupportsPRInt64Impl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsFloatImpl, nsISupportsFloat)
+NS_IMPL_ISUPPORTS2(nsSupportsFloatImpl, nsISupportsFloat,
+                   nsISupportsPrimitive)
 
 nsSupportsFloatImpl::nsSupportsFloatImpl()
     : mData(float(0.0))
@@ -723,6 +905,19 @@ nsSupportsFloatImpl::nsSupportsFloatImpl()
 }
 
 nsSupportsFloatImpl::~nsSupportsFloatImpl() {}
+
+NS_IMETHODIMP nsSupportsFloatImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_FLOAT;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsFloatImpl::GetData(float *aData)
 {
@@ -761,7 +956,8 @@ NS_IMETHODIMP nsSupportsFloatImpl::ToString(char **_retval)
 
 /***************************************************************************/
 
-NS_IMPL_ISUPPORTS1(nsSupportsDoubleImpl, nsISupportsDouble)
+NS_IMPL_ISUPPORTS2(nsSupportsDoubleImpl, nsISupportsDouble,
+                   nsISupportsPrimitive)
 
 nsSupportsDoubleImpl::nsSupportsDoubleImpl()
     : mData(double(0.0))
@@ -770,6 +966,19 @@ nsSupportsDoubleImpl::nsSupportsDoubleImpl()
 }
 
 nsSupportsDoubleImpl::~nsSupportsDoubleImpl() {}
+
+NS_IMETHODIMP nsSupportsDoubleImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_DOUBLE;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsDoubleImpl::GetData(double *aData)
 {
@@ -809,7 +1018,8 @@ NS_IMETHODIMP nsSupportsDoubleImpl::ToString(char **_retval)
 /***************************************************************************/
 
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsSupportsVoidImpl, nsISupportsVoid)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsSupportsVoidImpl, nsISupportsVoid,
+                              nsISupportsPrimitive)
 
 nsSupportsVoidImpl::nsSupportsVoidImpl()
     : mData(nsnull)
@@ -818,6 +1028,19 @@ nsSupportsVoidImpl::nsSupportsVoidImpl()
 }
 
 nsSupportsVoidImpl::~nsSupportsVoidImpl() {}
+
+NS_IMETHODIMP nsSupportsVoidImpl::GetPrimitiveType(PRUint16 *aPrimitiveType)
+{
+    if(!aPrimitiveType)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    *aPrimitiveType = PRIMITIVE_TYPE_VOID;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsSupportsVoidImpl::GetData(const void * *aData)
 {
