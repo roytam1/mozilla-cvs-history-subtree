@@ -35,7 +35,7 @@
 - (void)showUIElementPair: (id)aLabel control: (id) aControl;
 - (void)hideUIElementPair: (id)aLabel control: (id) aControl;
 - (void)commitChanges:(id)sender;
-- (void)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom;
+- (BOOL)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom;
 
 @end;
 
@@ -142,31 +142,44 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   if (![mBookmarkItem contentNode])
     return;
 
+  BOOL changed = NO;
   // Name
   if ((!changedField && [mNameField superview]) || changedField == mNameField)
-    [self commitField:mNameField toProperty:BookmarksService::gNameAtom];
+    changed |= [self commitField:mNameField toProperty:BookmarksService::gNameAtom];
   
   // Location
   if ((!changedField && [mLocationField superview]) || changedField == mLocationField)
-    [self commitField:mLocationField toProperty:BookmarksService::gHrefAtom];
+    changed |= [self commitField:mLocationField toProperty:BookmarksService::gHrefAtom];
 
   // Keyword
   if ((!changedField && [mKeywordField superview]) || changedField == mKeywordField)
-    [self commitField:mKeywordField toProperty:BookmarksService::gKeywordAtom];
+    changed |= [self commitField:mKeywordField toProperty:BookmarksService::gKeywordAtom];
 
   // Description
   if ((!changedField && [mDescriptionField superview]) || changedField == mDescriptionField)
-    [self commitField:mDescriptionField toProperty:BookmarksService::gDescriptionAtom];
+    changed |= [self commitField:mDescriptionField toProperty:BookmarksService::gDescriptionAtom];
 
   [[mFieldEditor undoManager] removeAllActions];
-  [mBookmarkItem itemChanged:YES];
+  if (changed)
+    [mBookmarkItem itemChanged:YES];
 }
 
-- (void)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom
+// return YES if changed
+- (BOOL)commitField:(id)textField toProperty:(nsIAtom*)propertyAtom
 {
   nsAutoString attributeString;
   [[textField stringValue] assignTo_nsAString:attributeString];
-  [mBookmarkItem contentNode]->SetAttr(kNameSpaceID_None, propertyAtom, attributeString, PR_TRUE);
+  
+  nsAutoString oldAttribValue;
+  [mBookmarkItem contentNode]->GetAttr(kNameSpaceID_None, propertyAtom, oldAttribValue);
+  
+  if (!attributeString.Equals(oldAttribValue))
+  {
+    [mBookmarkItem contentNode]->SetAttr(kNameSpaceID_None, propertyAtom, attributeString, PR_TRUE);
+    return YES;
+  }
+
+  return NO;
 }
 
 - (IBAction)dockMenuCheckboxClicked:(id)sender

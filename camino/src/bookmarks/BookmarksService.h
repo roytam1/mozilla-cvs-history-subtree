@@ -134,7 +134,7 @@ protected:
   static void AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
   static void MoveBookmarkToFolder(nsIDOMElement* aBookmark, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
 
-  static void SaveBookmarksToFile(const nsAString& inFileName);
+  static nsresult SaveBookmarksToFile(const nsAString& inFileName);
 
   static bool FindFolderWithAttribute(const nsAString& inAttribute, const nsAString& inValue, nsIDOMElement** foundElt);
   static bool DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* searchItem);

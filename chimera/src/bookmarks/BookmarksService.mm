@@ -77,28 +77,36 @@
 #include "nsContentCID.h"		// for content iterator CID
 
 // Helper for stripping whitespace
-static void StripWhitespaceNodes(nsIContent* aElement)
+static void StripWhitespaceDOMNodes(nsIDOMNode* aNode)
 {
-  PRInt32 childCount = 0;
-  aElement->ChildCount(childCount);
-  for (PRInt32 i = 0; i < childCount; i++) {
-    nsCOMPtr<nsIContent> child;
-    aElement->ChildAt(i, *getter_AddRefs(child));
-    nsCOMPtr<nsITextContent> text = do_QueryInterface(child);
-    if (text) {
-      PRBool isEmpty = PR_FALSE;
-      text->IsOnlyWhitespace(&isEmpty);
-      if (isEmpty) {
-        // This node contained nothing but whitespace.
-        // Remove it from the content model.
-        aElement->RemoveChildAt(i, PR_TRUE);
-        i--; // Decrement our count, since we just removed this child.
-        childCount--; // Also decrement our total count.
+  if (!aNode) return;
+  
+  nsCOMPtr<nsIDOMNode> curChild;
+  aNode->GetFirstChild(getter_AddRefs(curChild));
+
+	while (curChild)
+  {
+    nsCOMPtr<nsIDOMNode> nextChild;
+    curChild->GetNextSibling(getter_AddRefs(nextChild));
+    
+    nsCOMPtr<nsITextContent> textContent = do_QueryInterface(curChild);
+    if (textContent)
+    {
+      PRBool isWhitespace = PR_FALSE;
+      textContent->IsOnlyWhitespace(&isWhitespace);
+      if (isWhitespace)
+      {
+        nsCOMPtr<nsIDOMNode> dummy;
+        aNode->RemoveChild(curChild, getter_AddRefs(dummy));
       }
     }
     else
-      StripWhitespaceNodes(child);
-  }
+    {
+      StripWhitespaceDOMNodes(curChild);
+    }
+    
+    curChild = nextChild;
+	}
 }
 
 static bool ElementIsOrContains(nsIDOMElement* inSearchRoot, nsIDOMElement* inFindElt)
@@ -534,21 +542,12 @@ BookmarksService::ReadBookmarks()
   profileDirBookmarks->Exists(&fileExists);
   
   // If the bookmarks file does not exist, copy from the defaults so we don't
-  // crash or anything dumb like that. 
+  // crash or anything dumb like that.
   if (!fileExists) {
     nsCOMPtr<nsIFile> defaultBookmarksFile;
     NS_GetSpecialDirectory(NS_APP_PROFILE_DEFAULTS_50_DIR, getter_AddRefs(defaultBookmarksFile));
     defaultBookmarksFile->Append(NS_LITERAL_STRING("bookmarks.xml"));
-    
-    // XXX for some reason unknown to me, leaving this code in causes the program to crash
-    //     with 'cannot dereference null COMPtr.'
-#if I_WANT_TO_CRASH
-    PRBool defaultFileExists;
-    defaultBookmarksFile->Exists(&defaultFileExists);
-    if (defaultFileExists)
-      return;
-#endif
-  
+      
     nsCOMPtr<nsIFile> profileDirectory;
     NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(profileDirectory));
   
@@ -591,9 +590,15 @@ BookmarksService::ReadBookmarks()
   
   gBookmarksFileReadOK = PR_TRUE;
   
+  // strip whitespace here, so we don't have to deal with
+  // whitespace nodes elsewhere in the code.
+  {
+    nsCOMPtr<nsIDOMNode> docNode = do_QueryInterface(gBookmarksDocument);
+    StripWhitespaceDOMNodes(docNode);
+  }  
+  
   nsCOMPtr<nsIContent> rootNode;
   GetRootContent(getter_AddRefs(rootNode));
-  StripWhitespaceNodes(rootNode);
   
   EnsureToolbarRoot();
 }
@@ -625,17 +630,20 @@ BookmarksService::ExportBookmarksToHTML(const nsAString& inFilePath)
   return rv;
 }
 
-void
+nsresult
 BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
 {
-  nsCOMPtr<nsIFile> bookmarksFile;
-  NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(bookmarksFile));
-  bookmarksFile->Append(inFileName);
+  nsCOMPtr<nsIFile> bookmarksTempFile;
+  nsresult rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(bookmarksTempFile));
+  if (NS_FAILED(rv))
+    return rv;
+
+  bookmarksTempFile->Append(NS_LITERAL_STRING("_bookmarks_temp.bak"));
   
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(gBookmarksDocument));
   if (!domDoc) {
     NSLog(@"No bookmarks document to save!");
-    return;
+    return NS_ERROR_FAILURE;
   }
 
   PRBool writeDocType = PR_TRUE;
@@ -647,25 +655,40 @@ BookmarksService::SaveBookmarksToFile(const nsAString& inFileName)
     writeDocType = PR_FALSE;		// maybe check the type too?
 
   nsCOMPtr<nsIOutputStream> outputStream;
-  nsresult rv = NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), bookmarksFile);
-  if (NS_FAILED(rv)) return;
+  rv = NS_NewLocalFileOutputStream(getter_AddRefs(outputStream), bookmarksTempFile);
+  if (NS_FAILED(rv)) return rv;
 
   const char* const kBoomarksHeader = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
 
   PRUint32 bytesWritten = 0;
   rv = outputStream->Write(kBoomarksHeader, strlen(kBoomarksHeader), &bytesWritten);
-  if (NS_FAILED(rv)) return;
+  if (NS_FAILED(rv)) return rv;
 
   if (writeDocType)
   {
     const char* const kDocTypeString = "<!DOCTYPE bookmarks SYSTEM \"http://www.mozilla.org/DTDs/ChimeraBookmarks.dtd\">\n";
     rv = outputStream->Write(kDocTypeString, strlen(kDocTypeString), &bytesWritten);
-    if (NS_FAILED(rv)) return;
+    if (NS_FAILED(rv)) return rv;
   }
   
   nsCOMPtr<nsIDOMSerializer> domSerializer(do_CreateInstance(NS_XMLSERIALIZER_CONTRACTID));
   if (domSerializer)
     rv = domSerializer->SerializeToStream(domDoc, outputStream, "UTF-8");
+  
+  if (NS_SUCCEEDED(rv))
+  {
+    // if the save was OK, now move the file to the final location
+    nsCOMPtr<nsIFile> oldBookmarksFile;
+    rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(oldBookmarksFile));
+    if (NS_FAILED(rv)) return rv;
+    oldBookmarksFile->Append(inFileName);
+    
+    // nuke the old file
+    oldBookmarksFile->Remove(PR_FALSE);
+    
+    // rename the temp file to the final name
+    bookmarksTempFile->MoveTo(NULL, inFileName);
+  }
 }
 
 NSImage*
@@ -1039,7 +1062,7 @@ AddImportedChimeraXMLBookmarks(nsIDOMDocument* inImportDoc, nsIDOMDocument* inDe
       return PR_FALSE;
   }
 
-  // we now have a valid (we think) chimera bookarmarks XML DOM. We need to
+  // we now have a valid (we think) chimera bookmarks XML DOM. We need to
   // move all of the children of the root into the new folder, taking care
   // to fix up ContentIDs (since moving elements between documents does not
   // ensure unique IDs for us, sadly).
@@ -1047,11 +1070,12 @@ AddImportedChimeraXMLBookmarks(nsIDOMDocument* inImportDoc, nsIDOMDocument* inDe
   inImportDoc->GetDocumentElement(getter_AddRefs(importRoot));
   if (!importRoot) return PR_FALSE;
   
+  // remove all whitespace nodes
+  nsCOMPtr<nsIDOMNode> rootNode = do_QueryInterface(importRoot);
+  StripWhitespaceDOMNodes(rootNode);
+  
   nsCOMPtr<nsIContent> rootContent = do_QueryInterface(importRoot);
   if (!rootContent) return PR_FALSE;
-
-  // remove all whitespace nodes
-  StripWhitespaceNodes(rootContent);
 
   PRInt32 numChildren;
   rootContent->ChildCount(numChildren);
@@ -1073,6 +1097,7 @@ AddImportedChimeraXMLBookmarks(nsIDOMDocument* inImportDoc, nsIDOMDocument* inDe
   }
 
   // now nuke the contentIDs
+  // XXX we should nuke any "type=toolbar" attributes that we find.
   nsCOMPtr<nsIDocument> importDoc = do_QueryInterface(inDestDoc);
 
   nsresult rv = NS_OK;
