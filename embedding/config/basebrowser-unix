@@ -228,7 +228,7 @@ res/unixcharset.properties
 ; res/strres.properties 
 
 ; required prefs files
-defaults/pref/all.js
+;defaults/pref/all.js
 defaults/pref/unix.js
 
 
