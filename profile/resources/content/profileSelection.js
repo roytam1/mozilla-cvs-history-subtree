@@ -157,16 +157,15 @@ function loadElements()
 function onStart()
 {
   var profileList = document.getElementById( "profiles" );
-  var item = profileList.selectedItem
+  var item = profileList.selectedItem;
   if (!item)
   {
-    try {
-      profileList.getElementsByTagName("menuitem")[0];
-    }
-    catch (ex) {
-      CreateProfileWizard();
-      return false;
-    } 
+    item = profileList.getElementsByTagName("menuitem")[0];
+  }
+
+  if (!item) {
+    CreateProfileWizard();
+    return false;
   }
 
   var profileList = document.getElementById("profiles");
