@@ -8,6 +8,8 @@ browser.jar:
 *   content/browser/preferences/connection.js
 *   content/browser/preferences/downloads.xul
 *   content/browser/preferences/downloads.js
+*   content/browser/preferences/fonts.xul
+*   content/browser/preferences/fonts.js
 *   content/browser/preferences/general.xul
 *   content/browser/preferences/general.js
 *   content/browser/preferences/languages.xul

@@ -36,6 +36,7 @@
     locale/browser/preferences/content.dtd            (@AB_CD@/chrome/browser/preferences/content.dtd)
     locale/browser/preferences/connection.dtd         (@AB_CD@/chrome/browser/preferences/connection.dtd)
     locale/browser/preferences/downloads.dtd          (@AB_CD@/chrome/browser/preferences/downloads.dtd)
+    locale/browser/preferences/fonts.dtd              (@AB_CD@/chrome/browser/preferences/fonts.dtd)
     locale/browser/preferences/general.dtd            (@AB_CD@/chrome/browser/preferences/general.dtd)
     locale/browser/preferences/languages.dtd          (@AB_CD@/chrome/browser/preferences/languages.dtd)
     locale/browser/preferences/ocsp.dtd               (@AB_CD@/chrome/browser/preferences/ocsp.dtd)

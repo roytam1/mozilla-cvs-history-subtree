@@ -145,6 +145,12 @@ var gAdvancedPane = {
     updates.checkForUpdates([], 0, aType, 
                             Components.interfaces.nsIUpdateService.SOURCE_EVENT_USER,
                             null);  
-  }
+  },
+  
+  showLanguages: function ()
+  {
+    document.documentElement.openSubDialog("chrome://browser/content/preferences/languages.xul",
+                                           "", null);  
+  },
 };
 

@@ -1,31 +1,31 @@
 <!ENTITY  lHeader                           "Web Features">
 
 <!ENTITY  enbJavaCheck.label                "Enable Java">
-<!ENTITY  enbJavaCheck.accesskey            "j">
+<!ENTITY  enbJavaCheck.accesskey            "J">
 <!ENTITY  enableJavaScript.label            "Enable JavaScript">
-<!ENTITY  enableJavaScript.accesskey        "s">
+<!ENTITY  enableJavaScript.accesskey        "S">
 <!ENTITY  advancedJavaScript.label          "Advanced...">
-<!ENTITY  advancedJavaScript.accesskey      "a">
+<!ENTITY  advancedJavaScript.accesskey      "A">
 
 <!ENTITY  enableImages.label                "Load Images">
-<!ENTITY  enableImages.accesskey            "i">
+<!ENTITY  enableImages.accesskey            "I">
 <!ENTITY  forOriginatingSiteOnly.label      "for the originating web site only">
-<!ENTITY  forOriginatingSiteOnly.accesskey  "W">
+<!ENTITY  forOriginatingSiteOnly.accesskey  "w">
 <!ENTITY  popupReject.label                 "Block Popup Windows">
-<!ENTITY  popupReject.accesskey             "b">
+<!ENTITY  popupReject.accesskey             "B">
 <!ENTITY  enableXPInstall.label             "Allow web sites to install software">
 <!ENTITY  enableXPInstall.accesskey         "i">
 
 <!ENTITY  allowedSites.label                "Allowed Sites">
 <!ENTITY  exceptions.label                  "Exceptions">
 
-<!ENTITY fonts.caption                      "Fonts &amp; Colors">
-<!ENTITY fontsInfo.label                    "Select default Fonts and Colors for web pages.">
-<!ENTITY showFontsAndColors.label           "Fonts &amp; Colors...">
-<!ENTITY showFontsAndColors.accesskey       "F">
-
-<!ENTITY languages.caption                  "Languages">
-<!ENTITY languagesInfo.label                "Select default Languages and Character Encoding for web pages.">
-<!ENTITY showLanguages.label                "Languages...">
-<!ENTITY showLanguages.accesskey            "L">
+<!ENTITY  fonts.caption                     "Fonts &amp; Colors">
+<!ENTITY  advancedFonts.label               "Advanced...">
+<!ENTITY  advancedFonts.accesskey           "d">
+<!ENTITY  colors.label                      "Colors...">
+<!ENTITY  colors.accesskey                  "C">
+<!ENTITY  defaultFontSize.label             "Size:">
+<!ENTITY  defaultFontSize.accesskey         "z">
+<!ENTITY  defaultFont.label                 "Default Font:">
+<!ENTITY  defaultFont.accesskey             "F">
 

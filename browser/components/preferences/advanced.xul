@@ -100,6 +100,15 @@
             <checkbox id="useSmoothScrolling" label="&useSmoothScrolling.label;"
                       preference="general.smoothScroll"/>
           </groupbox>
+          <groupbox>
+            <caption label="&languages.caption;"/>
+            <hbox align="center">
+              <description flex="1">&languagesInfo.label;</description>
+              <button label="&showLanguages.label;"
+                      accesskey="&showLanguages.accesskey;"
+                      oncommand="gAdvancedPane.showLanguages();"/>
+            </hbox>
+          </groupbox>
         </tabpanel>
         <tabpanel orient="vertical">
           <groupbox align="start">

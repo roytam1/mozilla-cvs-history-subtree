@@ -84,6 +84,7 @@
       <constructor>
         this.preferences.rootBranchInternal
             .addObserver(this.name, this.preferences, false);
+        dump("*** init! " + this.name + " = " + this.valueFromPreferences + "\n");
         this._setValue(this.valueFromPreferences, false);
       </constructor>
       <destructor>
@@ -206,6 +207,10 @@
               return this._branch
                          .getComplexValue(this.name, Components.interfaces.nsIPrefLocalizedString)
                          .data;
+            case "unichar":
+              var pref = Components.classes["@mozilla.org/preferences;1"] 
+                                   .getService(Components.interfaces.nsIPref);
+              return pref.CopyUnicharPref(this.name);
             case "file":
               var f = this._branch
                           .getComplexValue(this.name, Components.interfaces.nsILocalFile);
@@ -239,6 +244,11 @@
             pls.data = val;
             this.preferences.rootBranch
                 .setComplexValue(this.name, Components.interfaces.nsIPrefLocalizedString, pls);
+            break;
+          case "unichar":
+            var pref = Components.classes["@mozilla.org/preferences;1"] 
+                                 .getService(Components.interfaces.nsIPref);
+            pref.SetUnicharPref(this.name, val);
             break;
           case "file":
             var lf;
@@ -287,7 +297,7 @@
             aElement.value = rv;
           else
             aElement.value = this.instantApply ? this.valueFromPreferences : this.value;
-
+          
           if (this.locked)
             aElement.disabled = true;
         ]]>
@@ -529,7 +539,7 @@
                 oldPane.selected = !(aPaneElement.selected = true);
                 if (!this._initialized || oldPane.id != aPaneElement.id) {
                   this.lastSelected = aPaneElement.id;
-                  aPaneElement.style.opacity = 0.5;
+                  aPaneElement.style.opacity = 0.0;
                   this.animate(oldPane, aPaneElement);
                   this._initialized = true;
                 }
@@ -554,8 +564,8 @@
 
           // Compute the opacity step, using 0.2 as a maximum step size. 
           this._opacityStepSize = sizeDelta != 0 ? this._animateIncrement / sizeDelta : 1.0;
-          if (this._opacityStepSize > 0.1)
-            this._opacityStepSize = 0.1;
+          if (this._opacityStepSize > 0.2)
+            this._opacityStepSize = 0.2;
 
           this._setUpTimer(aOldPane.contentHeight);
         ]]>
@@ -885,3 +895,14 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 # 
 # ***** END LICENSE BLOCK *****
+
+#
+# This is PrefWindow 6. The Code Could Well Be Ready, Are You?
+#
+#    Historical References:
+#    PrefWindow V   (February 1, 2003)
+#    PrefWindow IV  (April 24, 2000)
+#    PrefWindow III (January 6, 2000)
+#    PrefWindow II  (???)
+#    PrefWindow I   (June 4, 1999)
+#

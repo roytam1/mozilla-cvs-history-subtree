@@ -101,15 +101,9 @@ var gContentPane = {
     return undefined;
   },
   
-  showFontsAndColors: function ()
+  showFonts: function ()
   {
-    document.documentElement.openSubDialog("chrome://browser/content/preferences/fontsandcolors.xul",
-                                           "", null);  
-  },
-  
-  showLanguages: function ()
-  {
-    document.documentElement.openSubDialog("chrome://browser/content/preferences/languages.xul",
+    document.documentElement.openSubDialog("chrome://browser/content/preferences/fonts.xul",
                                            "", null);  
   },
 };

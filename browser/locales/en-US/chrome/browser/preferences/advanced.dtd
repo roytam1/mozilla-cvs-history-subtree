@@ -45,3 +45,8 @@
 <!ENTITY viewOCSP.label                 "OCSP">
 <!ENTITY viewSecurityDevices.label      "Security Devices">
 
+<!ENTITY languages.caption                  "Languages">
+<!ENTITY languagesInfo.label                "Choose Languages web pages are displayed in.">
+<!ENTITY showLanguages.label                "Languages...">
+<!ENTITY showLanguages.accesskey            "L">
+

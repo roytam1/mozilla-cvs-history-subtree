@@ -88,6 +88,9 @@
           </vbox>
         </row>
         <row>
+          <separator class="thin"/>
+        </row>
+        <row>
           <menulist id="availableLanguages" oncommand="gLanguagesDialog.onAvailableLanguageSelect();"
                     label="&languages.customize.selectLanguage.label;"
                     label2="&languages.customize.selectLanguage.label;"
