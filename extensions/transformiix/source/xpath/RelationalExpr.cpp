@@ -150,23 +150,28 @@ RelationalExpr::compareResults(txIEvalContext* aContext, txAExprResult* aLeft,
         return PR_FALSE;
 #endif
 
-    if (mOp == LESS_THAN) {
-        return leftDbl < rightDbl;
+    switch (mOp) {
+        case LESS_THAN:
+        {
+            return leftDbl < rightDbl;
+        }
+        case LESS_OR_EQUAL:
+        {
+            return leftDbl <= rightDbl;
+        }
+        case GREATER_THAN:
+        {
+            return leftDbl > rightDbl;
+        }
+        case GREATER_OR_EQUAL:
+        {
+            return leftDbl >= rightDbl;
+        }
+        default:
+        {
+            NS_NOTREACHED("We should have caught all cases");
+        }
     }
-
-    if (mOp == LESS_OR_EQUAL) {
-        return leftDbl <= rightDbl;
-    }
-
-    if (mOp == GREATER_THAN) {
-        return leftDbl > rightDbl;
-    }
-
-    if (mOp == GREATER_OR_EQUAL) {
-        return leftDbl >= rightDbl;
-    }
-
-    NS_NOTREACHED("We should have caught all cases");
 
     return PR_FALSE;
 }

@@ -65,6 +65,7 @@ public:
     txLoadedDocumentEntry(const txLoadedDocumentEntry& aToCopy)
         : nsStringHashKey(aToCopy)
     {
+        NS_ERROR("We're horked.");
     }
     ~txLoadedDocumentEntry()
     {

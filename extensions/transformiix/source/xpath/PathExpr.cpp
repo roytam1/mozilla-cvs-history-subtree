@@ -145,7 +145,14 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                 }
             }
             else {
-                tmpNodes = resNodes;
+                if (!iter.hasPrevious()) {
+                    rv = aContext->recycler()->
+                        getNonSharedNodeSet(resNodes, getter_AddRefs(tmpNodes));
+                    NS_ENSURE_SUCCESS(rv, rv);
+                }
+                else {
+                    tmpNodes = resNodes;
+                }
             }
         }
         nodes = tmpNodes;

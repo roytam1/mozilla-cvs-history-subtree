@@ -138,7 +138,6 @@ txXPathTreeWalker::moveToNextAttribute()
 PRBool
 txXPathTreeWalker::moveToFirstChild()
 {
-    // XXX do we need to check if this is an attribute?
     if (!INNER->firstChild) {
         return PR_FALSE;
     }
@@ -151,7 +150,6 @@ txXPathTreeWalker::moveToFirstChild()
 PRBool
 txXPathTreeWalker::moveToLastChild()
 {
-    // XXX do we need to check if this is an attribute?
     if (!INNER->lastChild) {
         return PR_FALSE;
     }
@@ -164,10 +162,7 @@ txXPathTreeWalker::moveToLastChild()
 PRBool
 txXPathTreeWalker::moveToNextSibling()
 {
-    // XXX are the doc and attribute checks needed?
-    if (INNER->nodeType == Node::DOCUMENT_NODE ||
-        INNER->nodeType == Node::ATTRIBUTE_NODE ||
-        !INNER->nextSibling) {
+    if (!INNER->nextSibling) {
         return PR_FALSE;
     }
 
@@ -179,10 +174,7 @@ txXPathTreeWalker::moveToNextSibling()
 PRBool
 txXPathTreeWalker::moveToPreviousSibling()
 {
-    // XXX are the doc and attribute checks needed?
-    if (INNER->nodeType == Node::DOCUMENT_NODE ||
-        INNER->nodeType == Node::ATTRIBUTE_NODE ||
-        !INNER->previousSibling) {
+    if (!INNER->previousSibling) {
         return PR_FALSE;
     }
 
@@ -210,19 +202,8 @@ txXPathTreeWalker::moveToParent()
     return PR_TRUE;
 }
 
-/* static */
-void
-txXPathTreeWalker::setTo(txXPathNode& aNode, const txXPathNode& aOtherNode)
-{
-    aNode.mInner = aOtherNode.mInner;
-}
-
 txXPathNode::txXPathNode(const txXPathNode& aNode)
     : mInner(aNode.mInner)
-{
-}
-
-txXPathNode::~txXPathNode()
 {
 }
 
@@ -246,11 +227,11 @@ txXPathNodeUtils::getAttr(const txXPathNode& aNode, nsIAtom* aLocalName,
 }
 
 /* static */
-PRBool
-txXPathNodeUtils::getLocalName(const txXPathNode& aNode,
-                               nsIAtom** aLocalName)
+already_AddRefed<nsIAtom>
+txXPathNodeUtils::getLocalName(const txXPathNode& aNode)
 {
-    return aNode.mInner->getLocalName(aLocalName);
+    nsIAtom* localName;
+    return aNode.mInner->getLocalName(&localName) ? localName : nsnull;
 }
 
 /* static */

@@ -74,6 +74,11 @@ private:
                                 txList& aCounters, nsAString& aHead,
                                 nsAString& aTail);
 
+    /**
+     * getSiblingCount uses aWalker to walk the siblings of aWalker's current
+     * position.
+     *
+     */
     static PRInt32 getSiblingCount(const txXPathTreeWalker& aWalker,
                                    txPattern* aCountPattern,
                                    txIMatchContext* aContext);

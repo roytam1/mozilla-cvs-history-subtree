@@ -43,7 +43,6 @@
 #include "nsCRT.h"
 #include "nsReadableUtils.h"
 #include "txHTMLOutput.h"
-#include "txSingleNodeContext.h"
 #include "txTextOutput.h"
 #include "txUnknownHandler.h"
 #include "txURIUtils.h"

@@ -113,6 +113,9 @@ nsXPathExpression::Evaluate(nsIDOMNode *aContextNode,
     *aResult = nsnull;
 
     nsAutoPtr<txXPathNode> contextNode(txXPathNativeNode::createXPathNode(aContextNode));
+    if (!contextNode) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     EvalContextImpl eContext(*contextNode, mRecycler);
     nsRefPtr<txAExprResult> exprResult;

@@ -134,7 +134,7 @@ txKeyValueHashEntry::MatchEntry(const void* aKey) const
         NS_STATIC_CAST(const txKeyValueHashKey*, aKey);
 
     return mKey.mKeyName == key->mKeyName &&
-           mKey.mDocument == key->mDocument &&
+           mKey.mDocumentIdentifier == key->mDocumentIdentifier &&
            mKey.mKeyValue.Equals(key->mKeyValue);
 }
 
@@ -146,7 +146,7 @@ txKeyValueHashEntry::HashKey(const void* aKey)
 
     return key->mKeyName.mNamespaceID ^
            NS_PTR_TO_INT32(key->mKeyName.mLocalName.get()) ^
-           key->mDocument ^
+           key->mDocumentIdentifier ^
            HashString(key->mKeyValue);
 }
 
@@ -163,7 +163,7 @@ txIndexedKeyHashEntry::MatchEntry(const void* aKey) const
         NS_STATIC_CAST(const txIndexedKeyHashKey*, aKey);
 
     return mKey.mKeyName == key->mKeyName &&
-           mKey.mDocumentHashValue == key->mDocumentHashValue;
+           mKey.mDocumentIdentifier == key->mDocumentIdentifier;
 }
 
 PLDHashNumber
@@ -174,7 +174,7 @@ txIndexedKeyHashEntry::HashKey(const void* aKey)
 
     return key->mKeyName.mNamespaceID ^
            NS_PTR_TO_INT32(key->mKeyName.mLocalName.get()) ^
-           key->mDocumentHashValue;
+           key->mDocumentIdentifier;
 }
 
 /*
@@ -192,9 +192,11 @@ txKeyHash::getKeyNodes(const txExpandedName& aKeyName,
     NS_ENSURE_TRUE(mKeyValues.mHashTable.ops && mIndexedKeys.mHashTable.ops,
                    NS_ERROR_OUT_OF_MEMORY);
 
-    PRInt32 hashKey = txXPathNodeUtils::getHashKey(aDocument);
     *aResult = nsnull;
-    txKeyValueHashKey valueKey(aKeyName, hashKey, aKeyValue);
+
+    PRInt32 identifier = txXPathNodeUtils::getUniqueIdentifier(aDocument);
+
+    txKeyValueHashKey valueKey(aKeyName, identifier, aKeyValue);
     txKeyValueHashEntry* valueEntry = mKeyValues.GetEntry(valueKey);
     if (valueEntry) {
         *aResult = valueEntry->mNodeSet;
@@ -216,7 +218,7 @@ txKeyHash::getKeyNodes(const txExpandedName& aKeyName,
         return NS_OK;
     }
 
-    txIndexedKeyHashKey indexKey(aKeyName, hashKey);
+    txIndexedKeyHashKey indexKey(aKeyName, identifier);
     txIndexedKeyHashEntry* indexEntry = mIndexedKeys.AddEntry(indexKey);
     NS_ENSURE_TRUE(indexEntry, NS_ERROR_OUT_OF_MEMORY);
 
@@ -318,7 +320,8 @@ nsresult txXSLKey::indexDocument(const txXPathNode& aDocument,
                                  txKeyValueHash& aKeyValueHash,
                                  txExecutionState& aEs)
 {
-    txKeyValueHashKey key(mName, txXPathNodeUtils::getHashKey(aDocument),
+    txKeyValueHashKey key(mName,
+                          txXPathNodeUtils::getUniqueIdentifier(aDocument),
                           NS_LITERAL_STRING(""));
     return indexTree(aDocument, key, aKeyValueHash, aEs);
 }

@@ -1,42 +1,34 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is TransforMiiX XSLT processor.
+ * 
+ * The Initial Developer of the Original Code is The MITRE Corporation.
+ * Portions created by MITRE are Copyright (C) 1999 The MITRE Corporation.
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
+ * Portions created by Keith Visco as a Non MITRE employee,
+ * (C) 1999 Keith Visco. All Rights Reserved.
+ * 
+ * Contributor(s): 
+ * Keith Visco, kvisco@ziplink.net
+ *    -- original author.
  *
- * The Original Code is mozilla.org code.
+ * Larry Fitzpatrick, OpenText, lef@opentext.com
+ *    -- moved initialization of DEFAULT_SIZE from NodeSet.h to here
  *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2003
- * the Initial Developer. All Rights Reserved.
+ * Olivier Gerardin, ogerardin@vo.lu
+ *    -- fixed numberValue()
  *
- * Contributor(s):
- *   Keith Visco <kvisco@ziplink.net>
- *   Peter Van der Beken <peterv@netscape.com>
- *
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ */
 
 #include "txNodeSet.h"
 #include "TxLog.h"
@@ -96,13 +88,14 @@ txNodeSet::~txNodeSet()
 {
     delete [] mMarks;
 
-    if (mStart) {
+    if (mStartBuffer) {
         while (mStart < mEnd) {
             mStart->~txXPathNode();
             ++mStart;
         }
+
+        nsMemory::Free(mStartBuffer);
     }
-    nsMemory::Free(mStartBuffer);
 }
 
 nsresult txNodeSet::add(const txXPathNode& aNode)
@@ -412,17 +405,17 @@ txNodeSet::sweep()
 void
 txNodeSet::clear()
 {
-    if (mStart) {
-        while (mStart < mEnd){
-            mStart->~txXPathNode();
-            ++mStart;
-        }
+    while (mStart < mEnd) {
+        mStart->~txXPathNode();
+        ++mStart;
+    }
 #ifdef TX_DONT_RECYCLE_BUFFER
+    if (mStartBuffer) {
         nsMemory::Free(mStartBuffer);
         mStartBuffer = mEndBuffer = nsnull;
-#endif
-        mStart = mEnd = mStartBuffer;
     }
+#endif
+    mStart = mEnd = mStartBuffer;
     delete [] mMarks;
     mMarks = nsnull;
     mDirection = kForward;
@@ -499,20 +492,19 @@ txNodeSet::stringValuePointer()
 PRBool txNodeSet::ensureGrowSize(PRInt32 aSize)
 {
     // check if there is enough place in the buffer as is
-    if (mDirection == kForward &&
-        mEnd && mEndBuffer && aSize <= mEndBuffer - mEnd) {
+    if (mDirection == kForward && aSize <= mEndBuffer - mEnd) {
         return PR_TRUE;
     }
-    if (mDirection == kReversed &&
-        mStart && mStartBuffer && aSize <= mStart - mStartBuffer) {
+
+    if (mDirection == kReversed && aSize <= mStart - mStartBuffer) {
         return PR_TRUE;
     }
 
     // check if we just have to align mStart to have enough space
-    PRInt32 oldSize = mStart ? mEnd - mStart : 0;
-    PRInt32 oldLength = mStartBuffer ? mEndBuffer - mStartBuffer : 0;
+    PRInt32 oldSize = mEnd - mStart;
+    PRInt32 oldLength = mEndBuffer - mStartBuffer;
     PRInt32 ensureSize = oldSize + aSize;
-    if (mStart && mStartBuffer && ensureSize <= oldLength) {
+    if (ensureSize <= oldLength) {
         // just move the buffer
         txXPathNode* dest = mStartBuffer;
         if (mDirection == kReversed) {
@@ -527,14 +519,7 @@ PRBool txNodeSet::ensureGrowSize(PRInt32 aSize)
 
     // This isn't 100% safe. But until someone manages to make a 1gig nodeset
     // it should be ok.
-    PRInt32 newLength;
-    if (mStartBuffer) {
-        newLength = oldLength > kTxNodeSetMinSize ? oldLength
-            : kTxNodeSetMinSize;
-    }
-    else {
-        newLength = kTxNodeSetMinSize;
-    }
+    PRInt32 newLength = PR_MAX(oldLength, kTxNodeSetMinSize);
 
     while (newLength < ensureSize) {
         newLength *= kTxNodeSetGrowFactor;
@@ -547,11 +532,12 @@ PRBool txNodeSet::ensureGrowSize(PRInt32 aSize)
         return PR_FALSE;
     }
 
+    txXPathNode* dest = newArr;
+    if (mDirection == kReversed) {
+        dest += newLength - oldSize;
+    }
+
     if (oldSize > 0) {
-        txXPathNode* dest = newArr;
-        if (mDirection == kReversed) {
-            dest += newLength - oldSize;
-        }
         memcpy(dest, mStart, oldSize * sizeof(txXPathNode));
     }
 
@@ -562,16 +548,11 @@ PRBool txNodeSet::ensureGrowSize(PRInt32 aSize)
 #endif
         nsMemory::Free(mStartBuffer);
     }
+
     mStartBuffer = newArr;
     mEndBuffer = mStartBuffer + newLength;
-    if (mDirection == kForward) {
-        mStart = mStartBuffer;
-        mEnd = mStart + oldSize;
-    }
-    else {
-        mEnd = mEndBuffer;
-        mStart = mEnd - oldSize;
-    }
+    mStart = dest;
+    mEnd = dest + oldSize;
 
     return PR_TRUE;
 }

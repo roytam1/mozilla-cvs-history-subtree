@@ -53,17 +53,17 @@ class txKeyValueHashKey
 {
 public:
     txKeyValueHashKey(const txExpandedName& aKeyName,
-                      PRInt32 aDocument,
+                      PRInt32 aDocumentIdentifier,
                       const nsAString& aKeyValue)
         : mKeyName(aKeyName),
           mKeyValue(aKeyValue),
-          mDocument(aDocument)
+          mDocumentIdentifier(aDocumentIdentifier)
     {
     }
 
     txExpandedName mKeyName;
     nsString mKeyValue;
-    PRInt32 mDocument;
+    PRInt32 mDocumentIdentifier;
 };
 
 struct txKeyValueHashEntry : public PLDHashEntryHdr
@@ -89,14 +89,14 @@ class txIndexedKeyHashKey
 {
 public:
     txIndexedKeyHashKey(txExpandedName aKeyName,
-                        PRInt32 aDocumentHashValue)
+                        PRInt32 aDocumentIdentifier)
         : mKeyName(aKeyName),
-          mDocumentHashValue(aDocumentHashValue)
+          mDocumentIdentifier(aDocumentIdentifier)
     {
     }
 
     txExpandedName mKeyName;
-    PRInt32 mDocumentHashValue;
+    PRInt32 mDocumentIdentifier;
 };
 
 struct txIndexedKeyHashEntry : public PLDHashEntryHdr

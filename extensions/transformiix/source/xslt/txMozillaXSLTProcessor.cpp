@@ -57,7 +57,6 @@
 #include "txExecutionState.h"
 #include "txMozillaTextOutput.h"
 #include "txMozillaXMLOutput.h"
-#include "txSingleNodeContext.h"
 #include "txURIUtils.h"
 #include "XMLUtils.h"
 #include "txUnknownHandler.h"
@@ -294,6 +293,9 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     mSource = aSourceDOM;
 
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSourceDOM));
+    if (!sourceNode) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
     aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
@@ -348,9 +350,10 @@ txMozillaXSLTProcessor::DoTransform()
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_UNEXPECTED);
     NS_ASSERTION(mObserver, "no observer");
 
-    // XXX Need to add error observers
-
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(mSource));
+    if (!sourceNode) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
     mSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
@@ -359,6 +362,8 @@ txMozillaXSLTProcessor::DoTransform()
     }
 
     txExecutionState es(mStylesheet);
+
+    // XXX Need to add error observers
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
                                          mObserver);
@@ -434,9 +439,10 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     nsresult rv = ensureStylesheet();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX Need to add error observers
-
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSource));
+    if (!sourceNode) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
     aSource->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
@@ -445,6 +451,8 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
     }
 
     txExecutionState es(mStylesheet);
+
+    // XXX Need to add error observers
 
     txToDocHandlerFactory handlerFactory(&es, sourceDOMDocument, nsnull,
                                          nsnull);
@@ -484,11 +492,14 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     nsresult rv = ensureStylesheet();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX Need to add error observers
-
     nsAutoPtr<txXPathNode> sourceNode(txXPathNativeNode::createXPathNode(aSource));
+    if (!sourceNode) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     txExecutionState es(mStylesheet);
+
+    // XXX Need to add error observers
 
     rv = aOutput->CreateDocumentFragment(aResult);
     NS_ENSURE_SUCCESS(rv, rv);

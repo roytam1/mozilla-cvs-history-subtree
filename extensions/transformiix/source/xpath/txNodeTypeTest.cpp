@@ -61,8 +61,7 @@ PRBool txNodeTypeTest::matches(const txXPathNode& aNode,
             if (type == txXPathNodeType::PROCESSING_INSTRUCTION_NODE) {
                 nsCOMPtr<nsIAtom> localName;
                 return !mNodeName ||
-                        (txXPathNodeUtils::getLocalName(aNode,
-                                                        getter_AddRefs(localName)) &&
+                        ((localName = txXPathNodeUtils::getLocalName(aNode)) &&
                          localName == mNodeName);
             }
             return MB_FALSE;

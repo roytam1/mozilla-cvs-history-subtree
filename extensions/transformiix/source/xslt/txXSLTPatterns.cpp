@@ -352,7 +352,7 @@ MBool txIdPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
 #ifdef TX_EXE
     Element* elem;
     nsresult rv = txXPathNativeNode::getElement(aNode, &elem);
-    NS_ENSURE_SUCCESS(rv, PR_FALSE);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "So why claim it's an element above?");
     if (!elem->getIDValue(value)) {
         return PR_FALSE;
     }

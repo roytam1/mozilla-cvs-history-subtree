@@ -270,7 +270,7 @@ txXMLParser::parse(istream& aInputStream, const nsAString& aUri,
     // ownership to the caller
     *aResultDoc = txXPathNativeNode::createXPathNode(mDocument);
     mDocument = nsnull;
-    return NS_OK;
+    return *aResultDoc ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 const nsAString&

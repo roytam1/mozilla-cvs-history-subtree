@@ -60,8 +60,7 @@ PRBool txNameTest::matches(const txXPathNode& aNode, txIMatchContext* aContext)
         return MB_TRUE;
 
     // Compare local-names
-    nsCOMPtr<nsIAtom> localName;
-    txXPathNodeUtils::getLocalName(aNode, getter_AddRefs(localName));
+    nsCOMPtr<nsIAtom> localName = txXPathNodeUtils::getLocalName(aNode);
     return localName == mLocalName;
 }
 

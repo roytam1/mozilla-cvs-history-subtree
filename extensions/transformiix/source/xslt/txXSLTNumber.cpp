@@ -150,9 +150,8 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
         switch (txXPathNodeUtils::getNodeType(currNode)) {
             case txXPathNodeType::ELEMENT_NODE:
             {
-                nsCOMPtr<nsIAtom> localName;
-                txXPathNodeUtils::getLocalName(currNode,
-                                               getter_AddRefs(localName));
+                nsCOMPtr<nsIAtom> localName =
+                    txXPathNodeUtils::getLocalName(currNode);
                 PRInt32 namespaceID = txXPathNodeUtils::getNamespaceID(currNode);
                 nodeTest = new txNameTest(0, localName, namespaceID,
                                           txXPathNodeType::ELEMENT_NODE);
@@ -226,13 +225,11 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
         // ancestor that matches the from-pattern, so keep going to make
         // sure that there is an ancestor that does.
         if (aFromPattern && aValues.getLength()) {
-            PRBool hasParent = walker.moveToParent();
-            while (hasParent) {
+            PRBool hasParent;
+            while ((hasParent = walker.moveToParent())) {
                 if (aFromPattern->matches(walker.getCurrentPosition(), aContext)) {
                     break;
                 }
-
-                hasParent = walker.moveToParent();
             }
 
             if (!hasParent) {
@@ -442,10 +439,8 @@ txXSLTNumber::getSiblingCount(const txXPathTreeWalker& aWalker,
                               txIMatchContext* aContext)
 {
     PRInt32 value = 1;
-    txXPathTreeWalker walker(aWalker.getCurrentPosition());
-
-    while (walker.moveToPreviousSibling()) {
-        if (aCountPattern->matches(walker.getCurrentPosition(), aContext)) {
+    while (aWalker.moveToPreviousSibling()) {
+        if (aCountPattern->matches(aWalker.getCurrentPosition(), aContext)) {
             ++value;
         }
     }

@@ -66,7 +66,6 @@ public:
     {
         return !(*this == aNode);
     }
-    ~txXPathNode();
 
 private:
     friend class txNodeSet;
