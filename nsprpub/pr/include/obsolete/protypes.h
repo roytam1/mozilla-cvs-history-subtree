@@ -51,7 +51,8 @@ typedef PRIntn intn;
 /* SVR4 typedef of uint is commonly found on UNIX machines. */
 #ifdef XP_UNIX
 #include <sys/types.h>
-#else
+#endif
+#if !defined(XP_UNIX) || defined(NTO)
 typedef PRUintn uint;
 #endif
 
