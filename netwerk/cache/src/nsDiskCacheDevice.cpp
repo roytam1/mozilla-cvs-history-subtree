@@ -43,6 +43,8 @@
 #include "nsIObserverService.h"
 #include "nsIPref.h"
 
+#include "nsQuickSort.h"
+
 static nsresult ensureCacheDirectory(nsIFile * cacheDirectory);
 
 static const char DISK_CACHE_DEVICE_ID[] = { "disk" };
@@ -99,7 +101,7 @@ NS_IMETHODIMP nsDiskCacheObserver::Observe(nsISupports *aSubject, const PRUnicha
             PRInt32 cacheCapacity;
             rv = prefs->GetIntPref(CACHE_DISK_CAPACITY_PREF, &cacheCapacity);
         	if (NS_SUCCEEDED(rv))
-                mDevice->setCacheCapacity(cacheCapacity);
+                mDevice->setCacheCapacity(cacheCapacity * 1024);
         }
     }  else if (NS_LITERAL_STRING("profile-do-change").Equals(aTopic)) {
         // XXX need to regenerate the cache directory. hopefully the
@@ -889,12 +891,10 @@ nsDiskCacheDevice::OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize)
 {
     PRUint32 newCacheSize = (mCacheMap->DataSize() += deltaSize);
 
-#if 0    
     if (newCacheSize > mCacheCapacity) {
         // XXX go toss out some disk cache entries.
         evictDiskCacheEntries();
     }
-#endif
     
     return NS_OK;
 }
@@ -987,8 +987,13 @@ void nsDiskCacheDevice::setCacheDirectory(nsILocalFile* cacheDirectory)
 
 void nsDiskCacheDevice::setCacheCapacity(PRUint32 capacity)
 {
-    // XXX start evicting entries if the new size is smaller!
     mCacheCapacity = capacity;
+    if (mInitialized) {
+        // XXX start evicting entries if the new size is smaller!
+        // XXX need to enter cache service lock here!
+        if (mCacheMap->DataSize() > capacity)
+            evictDiskCacheEntries();
+    }
 }
 
 PRUint32 nsDiskCacheDevice::getCacheCapacity()
@@ -1106,9 +1111,7 @@ inline PRBool isMetaDataFile(const char* name)
     return (name[8] == 'm');
 }
 
-// XXX All these transports and opening/closing of files. We need a way to cache open files,
-// XXX and to seek. Perhaps I should just be using ANSI FILE objects for all of the metadata
-// XXX operations.
+#if 0
 
 nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
 {
@@ -1149,6 +1152,53 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
 
     return NS_OK;
 }
+
+#else
+
+nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
+{
+    nsresult rv;
+    
+    nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
+    if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
+    nsCOMPtr<nsICacheEntryInfo> ref(entryInfo);
+    
+    for (PRUint32 i = 1; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+        nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
+        for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
+            nsDiskCacheRecord* record = bucket++;
+            if (record->HashNumber() == 0)
+                break;
+            nsCOMPtr<nsIFile> file;
+            rv = getFileForHashNumber(record->HashNumber(), PR_TRUE, record->FileGeneration(), getter_AddRefs(file));
+            if (NS_FAILED(rv)) continue;
+            
+            nsCOMPtr<nsIInputStream> input;
+            rv = openInputStream(file, getter_AddRefs(input));
+            if (NS_FAILED(rv)) {
+                // delete non-existent record.
+                mCacheMap->DeleteRecord(record);
+                --bucket;
+                continue;
+            }
+            
+            // read the metadata file.
+            rv = entryInfo->Read(input);
+            input->Close();
+            if (NS_FAILED(rv)) break;
+            
+            // tell the visitor about this entry.
+            PRBool keepGoing;
+            rv = visitor->VisitEntry(DISK_CACHE_DEVICE_ID, entryInfo, &keepGoing);
+            if (NS_FAILED(rv)) return rv;
+            if (!keepGoing) break;
+        }
+    }
+
+    return NS_OK;
+}
+
+#endif
 
 class UpdateEntryVisitor : public nsDiskCacheEntryHashTable::Visitor {
     nsDiskCacheDevice* mDevice;
@@ -1295,11 +1345,9 @@ nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)
     }
     
     // remove from cache map.
-    // XXX should change DeleteRecord() to take an nsDiskCacheRecord instead, to save
-    // two searches.
     nsDiskCacheRecord* record = mCacheMap->GetRecord(diskEntry->getHashNumber());
     if (record->HashNumber() == diskEntry->getHashNumber() && record->FileGeneration() == diskEntry->getGeneration())
-        mCacheMap->DeleteRecord(diskEntry->getHashNumber());
+        mCacheMap->DeleteRecord(record);
 
     return NS_OK;
 }
@@ -1450,6 +1498,8 @@ nsresult nsDiskCacheDevice::scanDiskCacheEntries(nsISupportsArray ** result)
     return NS_OK;
 }
 
+#if 0
+
 nsresult nsDiskCacheDevice::evictDiskCacheEntries()
 {
     nsCOMPtr<nsISupportsArray> entries;
@@ -1497,6 +1547,85 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     return NS_OK;
 }
 
+#else
+
+static int compareRecords(const void* e1, const void* e2, void* /*unused*/)
+{
+    const nsDiskCacheRecord* r1 = (const nsDiskCacheRecord*) e1;
+    const nsDiskCacheRecord* r2 = (const nsDiskCacheRecord*) e2;
+    return (r1->EvictionRank() - r2->EvictionRank());
+}
+
+nsresult nsDiskCacheDevice::evictDiskCacheEntries()
+{
+    nsresult rv;
+
+    if (mCacheMap->DataSize() < mCacheCapacity) return NS_OK;
+    
+    // 1. gather all records into an array, sorted by eviction rank. keep deleting them until we recover enough space.
+    PRUint32 count = 0;
+    nsDiskCacheRecord* sortedRecords = new nsDiskCacheRecord[mCacheMap->EntryCount()];
+    if (sortedRecords) {
+        for (PRUint32 i = 1; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+            nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
+            for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
+                nsDiskCacheRecord* record = bucket++;
+                if (record->HashNumber() == 0)
+                    break;
+                sortedRecords[count++] = *record;
+            }
+        }
+        NS_QuickSort((void*)sortedRecords, count, sizeof(nsDiskCacheRecord), compareRecords, nsnull);
+    } else {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+    
+    // these are sorted by eviction rank. lower eviction ranks are more eligible for eviction.
+    for (PRUint32 i = 0; i < count; ++i) {
+        nsDiskCacheRecord* record = &sortedRecords[i];
+            
+        // XXX if this entry is currently active, then leave it alone,
+        // as it is likely to be modified very soon.
+        nsDiskCacheEntry* diskEntry = mBoundEntries.GetEntry(record->HashNumber());
+        if (diskEntry) continue;
+        
+        // delete the metadata file.
+        nsCOMPtr<nsIFile> metaFile;
+        rv = getFileForHashNumber(record->HashNumber(), PR_TRUE, 0, getter_AddRefs(metaFile));
+        if (NS_SUCCEEDED(rv)) {
+            rv = metaFile->Delete(PR_FALSE);
+        }
+        
+        PRUint32 dataSize = 0;
+
+        // delete the data file
+        nsCOMPtr<nsIFile> dataFile;
+        rv = getFileForHashNumber(record->HashNumber(), PR_FALSE, 0, getter_AddRefs(dataFile));
+        if (NS_SUCCEEDED(rv)) {
+            PRInt64 fileSize;
+            rv = dataFile->GetFileSize(&fileSize);
+            if (NS_SUCCEEDED(rv))
+                LL_L2I(dataSize, fileSize);
+            rv = dataFile->Delete(PR_FALSE);
+        }
+
+        // remove from cache map.
+        nsDiskCacheRecord* deletedRecord = mCacheMap->GetRecord(record->HashNumber());
+        if (record->HashNumber() == deletedRecord->HashNumber() && record->FileGeneration() == deletedRecord->FileGeneration())
+            mCacheMap->DeleteRecord(deletedRecord);
+
+        // update the cache size.
+        if ((mCacheMap->DataSize() -= dataSize) <= mCacheCapacity)
+            break;
+    }
+    
+    delete[] sortedRecords;
+    
+    return NS_OK;
+}
+
+#endif
+
 nsresult nsDiskCacheDevice::readCacheMap()
 {
     nsCOMPtr<nsIFile> file;
@@ -1543,6 +1672,8 @@ nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry)
         if (record->HashNumber() != 0) {
             // eviction of eldest entry in this bucket.
             evictDiskCacheRecord(record);
+        } else {
+            mCacheMap->EntryCount() += 1;
         }
         // newly bound record. fill in the blanks.
         record->SetHashNumber(diskEntry->getHashNumber());
