@@ -104,7 +104,7 @@ ContentBuilder.addProtoObj(
 ContentBuilder.addProtoObj(
   "beginElementNS",
   function(ns, tagname /*, [optional] {attribs} */) {
-    this.builder.setElementNamespace(ns)
+    this.builder.setElementNamespace(ns);
     this.builder.beginElement(tagname);
     if (arguments[2])
       this.attribs(arguments[2]);
@@ -251,13 +251,12 @@ XTFVisual.addProtoObj(
   function(wrapper) {
     this.XTFElement$onCreated(wrapper);
     var builder = ContentBuilder.instantiate();
-    
-    // XXX Don't set document here as it leads to wrappers and their
-    // anonymous content leaking! (See content/xtf/readme.txt)
+    // XXX Don't set document here as leads to wrappers and their anonymous content leaking!
     // XXX For XUL docs, ownerDocument will be null at this
     // point. This leads to some XBL subtleties. See
     // content/xtf/readme.txt for more details.
-    //builder.setDocument(this._wrapper.ownerDocument); 
+    // builder.setDocument(this._wrapper.ownerDocument);
+    
     this._buildVisualContent(builder);
     this._visualContent = builder.root;
   });
@@ -277,11 +276,12 @@ XTFVisual.addProtoGetter(
     return null;
   });
 
-// by default we apply doc style sheets:
+// by default we do not apply doc style sheets:
+// XXX add comment about why not. stuff getting wrapped with different parents and all that.
 XTFVisual.addProtoGetter(
   "applyDocumentStyleSheets",
   function() {
-    return true;
+    return false;
   });
 
 // implementation helpers:
@@ -336,7 +336,7 @@ XTFElementFactory.addInterface(Components.interfaces.nsIXTFElementFactory);
 
 XTFElementFactory.addProtoObj("createElement",
   function(tagname) {
-    this._dump("createElement("+tagname+")\n");
+//    this._dump("createElement("+tagname+")\n");
     var instantiator = this._elements[tagname];
     if (!instantiator) throw Components.results.NS_ERROR_FAILURE;
     return instantiator.instantiate();
@@ -370,7 +370,7 @@ XTFMappedAttributeHandler.addProtoObj(
 XTFMappedAttributeHandler.addProtoObj(
   "setAttribute",
   function(name, value) {
-    this._dump("setAttribute "+name+" "+value);
+//    this._dump("setAttribute "+name+" "+value);
     var attr;
     if ((attr = this._attributemap[name])) {
       if ("set" in attr) 
@@ -402,7 +402,7 @@ XTFMappedAttributeHandler.addProtoObj(
 XTFMappedAttributeHandler.addProtoObj(
   "removeAttribute",
   function(name) {
-    this._dump("removeAttribute "+name);
+//    this._dump("removeAttribute "+name);
     var attr;
     if ((attr = this._attributemap[name])) {
       if ("remove" in attr) 
@@ -437,7 +437,7 @@ XTFMappedAttributeHandler.addProtoObj(
 XTFMappedAttributeHandler.addProtoObj(
   "getAttribute",
   function(name) {
-    this._dump("getAttribute "+name);
+//    this._dump("getAttribute "+name);
     var attr;
     if ((attr = this._attributemap[name])) {
       if ("get" in attr) 
@@ -469,7 +469,7 @@ XTFMappedAttributeHandler.addProtoObj(
 XTFMappedAttributeHandler.addProtoObj(
   "hasAttribute",
   function(name) {
-    this._dump("hasAttribute "+name);
+//    this._dump("hasAttribute "+name);
     var attr;
     if ((attr = this._attributemap[name])) {
       if ("has" in attr)
@@ -498,7 +498,7 @@ XTFMappedAttributeHandler.addProtoObj(
 XTFMappedAttributeHandler.addProtoObj(
   "getAttributeCount",
   function() {
-    this._dump("getAttributeCount"); 
+//    this._dump("getAttributeCount"); 
     return this._getAttributelist().length;
   });
 
@@ -509,7 +509,7 @@ var gAtomservice = Components.classes["@mozilla.org/atom-service;1"]
 XTFMappedAttributeHandler.addProtoObj(
   "getAttributeNameAt",
   function(index) {
-    this._dump("getAttributeNameAt "+index); 
+//    this._dump("getAttributeNameAt "+index); 
     return gAtomservice.getAtom(this._getAttributelist()[index]);
   });
 

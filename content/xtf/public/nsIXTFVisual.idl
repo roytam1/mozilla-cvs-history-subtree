@@ -43,14 +43,18 @@ interface nsIDOMElement;
 [scriptable, uuid(705e7fc8-6fbb-456e-8d18-fd2dae55d477)]
 interface nsIXTFVisual : nsIXTFElement
 {
-  // The content tree routed in 'visualContent' will be rendered where
-  // the xtf visual is placed into an appropriate context. It can be
-  // dynamically manipulated during the lifetime of the xtf visual.
+  // The content tree rooted in 'visualContent' will be rendered where
+  // the xtf visual is placed into an appropriate context. A visual
+  // will be asked for its visual content once at most. The tree
+  // cannot be dynamically replaced during the lifetime of the
+  // element, it may however be dynamically manipulated (i.e. you can
+  // insert/remove content, set attributes, etc., but *not* exchange
+  // the root element for something else).
   readonly attribute nsIDOMElement visualContent;
 
   // Children of the xtf visual which are themselves 'visuals'
   // (i.e. built-ins elements, other xtf visuals or xbl elements with
-  // visual <content>) will be rendered in the context of
+  // visual <content>) will be rendered as if they were children of
   // 'insertionPoint'. 'insertionPoint' should either be null (in
   // which case the children will not be automatically rendered) or
   // point into the 'visualContent' tree.

@@ -65,7 +65,7 @@ public:
   
 protected:
   // to be implemented by subclasses:
-  virtual nsIXTFVisual *GetXTFVisual()const = 0;
+  virtual nsIXTFVisual *GetXTFVisual() const = 0;
   
   nsCOMPtr<nsIDOMElement> mVisualContent;
 };

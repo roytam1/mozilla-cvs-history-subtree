@@ -215,7 +215,7 @@ nsXTFElementWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 
 nsresult
 nsXTFElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                             nsAString& aResult)const
+                             nsAString& aResult) const
 {
   if (aNameSpaceID==kNameSpaceID_None && HandledByInner(aName)) {
     // XXX we don't do namespaced attributes yet
@@ -306,6 +306,13 @@ nsXTFElementWrapper::GetAttrCount() const
   }
   // add wrapper attribs
   return innerCount + nsXTFElementWrapperBase::GetAttrCount();
+}
+
+void
+nsXTFElementWrapper::DoneAddingChildren()
+{
+  if (mNotificationMask & nsIXTFElement::NOTIFY_DONE_ADDING_CHILDREN)
+    GetXTFElement()->DoneAddingChildren();
 }
 
 already_AddRefed<nsINodeInfo>
@@ -533,7 +540,7 @@ nsXTFElementWrapper::AggregatesInterface(REFNSIID aIID)
 }
 
 PRBool
-nsXTFElementWrapper::HandledByInner(nsIAtom *attr)const
+nsXTFElementWrapper::HandledByInner(nsIAtom *attr) const
 {
   PRBool retval = PR_FALSE;
   if (mAttributeHandler)

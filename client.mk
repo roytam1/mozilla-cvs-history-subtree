@@ -94,6 +94,7 @@ XTF_BRANCH_MODIFIED_FILES = \
 	content/base/public/nsINameSpaceManager.h \
 	content/base/src/nsContentUtils.cpp \
 	content/base/src/nsNameSpaceManager.cpp \
+	content/xml/document/src/nsXMLContentSink.cpp \
 	js/src/xpconnect/Makefile.in \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
@@ -104,7 +105,8 @@ XTF_BRANCH_MODIFIED_FILES = \
 	layout/build/Makefile.in \
 	layout/build/nsLayoutModule.cpp \
 	layout/html/style/src/nsCSSFrameConstructor.cpp \
-	layout/html/style/src/nsCSSFrameConstructor.h 
+	layout/html/style/src/nsCSSFrameConstructor.h \
+	layout/svg/base/src/nsSVGGenericContainerFrame.cpp
 
 # List of new files on branch
 XTF_BRANCH_NEW_FILES = \
@@ -187,7 +189,8 @@ XTF_BRANCH_NEW_FILES = \
 	layout/xtf/src/Makefile.in \
 	layout/xtf/src/nsXTFSVGDisplayFrame.cpp \
 	layout/xtf/src/nsXTFXMLDisplayFrame.cpp \
-	layout/xtf/src/nsXTFXULDisplayFrame.cpp
+	layout/xtf/src/nsXTFXULDisplayFrame.cpp \
+	layout/svg/base/src/nsSVGGenericContainerFrame.h 
 
 
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH

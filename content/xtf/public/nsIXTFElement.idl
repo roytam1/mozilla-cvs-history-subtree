@@ -90,18 +90,26 @@ interface nsIXTFElement : nsISupports
   // nsIXTFElementWrapper::notificationMask.
   const unsigned long NOTIFY_WILL_CHANGE_DOCUMENT  = 0x00000001;
   const unsigned long NOTIFY_DOCUMENT_CHANGED      = 0x00000002;
+  
   const unsigned long NOTIFY_WILL_CHANGE_PARENT    = 0x00000004;
   const unsigned long NOTIFY_PARENT_CHANGED        = 0x00000008;
+  
   const unsigned long NOTIFY_WILL_INSERT_CHILD     = 0x00000010;
   const unsigned long NOTIFY_CHILD_INSERTED        = 0x00000020;
+  
   const unsigned long NOTIFY_WILL_APPEND_CHILD     = 0x00000040;
   const unsigned long NOTIFY_CHILD_APPENDED        = 0x00000080;
+  
   const unsigned long NOTIFY_WILL_REMOVE_CHILD     = 0x00000100;
   const unsigned long NOTIFY_CHILD_REMOVED         = 0x00000200;
+  
   const unsigned long NOTIFY_WILL_SET_ATTRIBUTE    = 0x00000400;
   const unsigned long NOTIFY_ATTRIBUTE_SET         = 0x00000800;
+  
   const unsigned long NOTIFY_WILL_REMOVE_ATTRIBUTE = 0x00001000;
   const unsigned long NOTIFY_ATTRIBUTE_REMOVED     = 0x00002000;
+  
+  const unsigned long NOTIFY_DONE_ADDING_CHILDREN  = 0x00004000;
   
   // Event notifications:
 
@@ -124,6 +132,8 @@ interface nsIXTFElement : nsISupports
   void attributeSet(in nsIAtom name, in AString newValue);
 
   void willRemoveAttribute(in nsIAtom name);
-  void attributeRemoved(in nsIAtom name);  
+  void attributeRemoved(in nsIAtom name);
+
+  void doneAddingChildren();
 };
 

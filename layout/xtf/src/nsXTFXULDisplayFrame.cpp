@@ -73,12 +73,7 @@ public:
   NS_IMETHOD CreateFrameFor(nsPresContext*   aPresContext,
                             nsIContent *      aContent,
                             nsIFrame**        aFrame) {
-    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
-  
-private:
-  nsIPresShell* mPresShell; // XXX should get rid of this; make
-                            // GetContentInsertionFrame take as arg
-                            // instead
+    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }  
 };
 
 //----------------------------------------------------------------------
@@ -97,8 +92,7 @@ NS_NewXTFXULDisplayFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 }
 
 nsXTFXULDisplayFrame::nsXTFXULDisplayFrame(nsIPresShell* aPresShell)
-    : nsXTFXULDisplayFrameBase(aPresShell, PR_FALSE, nsnull),
-      mPresShell(aPresShell)
+    : nsXTFXULDisplayFrameBase(aPresShell, PR_FALSE, nsnull)
 {}
 
 //----------------------------------------------------------------------
@@ -125,7 +119,7 @@ nsXTFXULDisplayFrame::GetContentInsertionFrame()
   NS_ASSERTION(content, "element not implementing nsIContent!?");
 
   nsIFrame* insertionFrame = nsnull;
-  mPresShell->GetPrimaryFrameFor(content, &insertionFrame);
+  GetPresContext()->GetPresShell()->GetPrimaryFrameFor(content, &insertionFrame);
   return insertionFrame;
 }
 

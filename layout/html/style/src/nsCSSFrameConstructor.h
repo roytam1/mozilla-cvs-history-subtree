@@ -507,9 +507,8 @@ private:
                                 nsStyleContext*          aStyleContext,
                                 nsIFrame*&               aNewFrame,
                                 PRBool&                  aProcessChildren,
-                                PRBool                   aIsAbsolutelyPositioned,
+                                const nsStyleDisplay*    aStyleDisplay,
                                 PRBool&                  aFrameHasBeenInitialized,
-                                PRBool                   aIsFixedPositioned,
                                 nsFrameItems&            aFrameItems);
 
   nsresult ConstructFieldSetFrame(nsIPresShell*            aPresShell, 
@@ -521,9 +520,8 @@ private:
                                   nsStyleContext*          aStyleContext,
                                   nsIFrame*&               aNewFrame,
                                   PRBool&                  aProcessChildren,
-                                  PRBool                   aIsAbsolutelyPositioned,
-                                  PRBool&                  aFrameHasBeenInitialized,
-                                  PRBool                   aIsFixedPositioned);
+                                  const nsStyleDisplay*    aStyleDisplay,
+                                  PRBool&                  aFrameHasBeenInitialized);
 
   nsresult ConstructTextFrame(nsIPresShell*            aPresShell, 
                               nsPresContext*          aPresContext,
@@ -781,8 +779,6 @@ private:
                         nsIContent*              aContent,
                         nsIFrame*                aParentFrame,
                         nsStyleContext*          aStyleContext,
-                        PRBool                   aIsAbsolutelyPositioned,
-                        PRBool                   aIsFixedPositioned,
                         PRBool                   aCreateBlock);
 
   nsresult MaybeRecreateFramesForContent(nsPresContext*  aPresContext,

@@ -90,7 +90,7 @@ public:
                    nsIAtom* aPrefix, const nsAString& aValue,
                    PRBool aNotify);
   nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                   nsAString& aResult)const;
+                   nsAString& aResult) const;
   PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const;
   nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
                      PRBool aNotify);
@@ -99,6 +99,8 @@ public:
   PRUint32 GetAttrCount() const;
   virtual already_AddRefed<nsINodeInfo> GetExistingAttrNameFromQName(const nsAString& aStr) const;
 
+  virtual void DoneAddingChildren();
+  
   // nsIDOMElement specializations:
   NS_IMETHOD GetAttribute(const nsAString& aName,
                           nsAString& aReturn);
@@ -110,12 +112,12 @@ public:
 
 protected:
   // to be implemented by subclasses:
-  virtual nsIXTFElement *GetXTFElement()const = 0;
+  virtual nsIXTFElement *GetXTFElement() const = 0;
   
   // implementation helpers:  
   PRBool AggregatesInterface(REFNSIID aIID);
 
-  PRBool HandledByInner(nsIAtom* attr)const;
+  PRBool HandledByInner(nsIAtom* attr) const;
   
   PRUint32 mNotificationMask;
   nsCOMPtr<nsIXTFAttributeHandler> mAttributeHandler;

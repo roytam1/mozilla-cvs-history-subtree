@@ -164,7 +164,7 @@ nsXTFInterfaceAggregator::CallMethod(PRUint16 methodIndex,
 
   for (int i=0; i<paramCount; ++i) {
     const nsXPTParamInfo& paramInfo = info->GetParam(i);
-    uint8 flags = paramInfo.IsOut() ? nsXPTCVariant::PTR_IS_DATA : 0;
+    PRUint8 flags = paramInfo.IsOut() ? nsXPTCVariant::PTR_IS_DATA : 0;
     fullPars[i].Init(params[i], paramInfo.GetType(), flags);
   }
   

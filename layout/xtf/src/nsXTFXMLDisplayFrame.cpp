@@ -41,21 +41,129 @@
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
 #include "nsBlockFrame.h"
+#include "nsInlineFrame.h"
 #include "nsIXTFXMLVisual.h"
 #include "nsIDOMElement.h"
 #include "nsIXTFVisualWrapperPrivate.h"
 #include "nsIAnonymousContentCreator.h"
 
-typedef nsBlockFrame nsXTFXMLDisplayFrameBase;
+////////////////////////////////////////////////////////////////////////
+// nsXTFXMLBlockDisplayFrame
 
-class nsXTFXMLDisplayFrame : public nsXTFXMLDisplayFrameBase,
-                             public nsIAnonymousContentCreator
+nsresult NS_NewXTFXMLDisplayFrame(nsIPresShell* aPresShell,
+                                  PRBool isBlock, nsIFrame** aNewFrame);
+  
+
+typedef nsBlockFrame nsXTFXMLBlockDisplayFrameBase;
+
+class nsXTFXMLBlockDisplayFrame : public nsXTFXMLBlockDisplayFrameBase,
+                                  public nsIAnonymousContentCreator
 {
 public:
-  friend nsresult
-  NS_NewXTFXMLDisplayFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
+  nsXTFXMLBlockDisplayFrame();
+
+  // nsISupports interface:
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+private:
+  NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
   
-  nsXTFXMLDisplayFrame(nsIPresShell* aPresShell);
+public:
+  // nsIFrame
+  virtual nsIFrame* GetContentInsertionFrame();
+
+  NS_IMETHOD  DidReflow(nsPresContext*           aPresContext,
+                        const nsHTMLReflowState*  aReflowState,
+                        nsDidReflowStatus         aStatus);
+
+  // nsIAnonymousContentCreator
+  NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
+                                    nsISupportsArray& aAnonymousItems);
+  
+  // If the creator doesn't want to create special frame for frame hierarchy
+  // then it should null out the style content arg and return NS_ERROR_FAILURE
+  NS_IMETHOD CreateFrameFor(nsPresContext*   aPresContext,
+                            nsIContent *      aContent,
+                            nsIFrame**        aFrame) {
+    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }  
+};
+
+//----------------------------------------------------------------------
+// Implementation
+
+nsXTFXMLBlockDisplayFrame::nsXTFXMLBlockDisplayFrame()
+    : nsXTFXMLBlockDisplayFrameBase()
+{}
+
+//----------------------------------------------------------------------
+// nsISupports methods
+
+NS_INTERFACE_MAP_BEGIN(nsXTFXMLBlockDisplayFrame)
+  NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
+NS_INTERFACE_MAP_END_INHERITING(nsXTFXMLBlockDisplayFrameBase)
+
+//----------------------------------------------------------------------
+// nsIFrame methods
+
+nsIFrame*
+nsXTFXMLBlockDisplayFrame::GetContentInsertionFrame()
+{
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
+  
+  nsCOMPtr<nsIDOMElement> childInsertionPoint;
+  visual->GetInsertionPoint(getter_AddRefs(childInsertionPoint));
+  if (!childInsertionPoint) return nsnull; // we don't take visual child content
+  
+  nsCOMPtr<nsIContent> content = do_QueryInterface(childInsertionPoint);
+  NS_ASSERTION(content, "element not implementing nsIContent!?");
+
+  nsIFrame* insertionFrame = nsnull;
+  GetPresContext()->PresShell()->GetPrimaryFrameFor(content, &insertionFrame);
+  return insertionFrame;
+}
+
+
+
+NS_IMETHODIMP
+nsXTFXMLBlockDisplayFrame::DidReflow(nsPresContext*           aPresContext,
+                                const nsHTMLReflowState*  aReflowState,
+                                nsDidReflowStatus         aStatus)
+{
+  nsresult rv = nsXTFXMLBlockDisplayFrameBase::DidReflow(aPresContext, aReflowState, aStatus);
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
+  visual->DidLayout();
+  
+  return rv;
+}
+
+//----------------------------------------------------------------------
+// nsIAnonymousContentCreator methods:
+
+NS_IMETHODIMP
+nsXTFXMLBlockDisplayFrame::CreateAnonymousContent(nsPresContext* aPresContext,
+                                             nsISupportsArray& aAnonymousItems)
+{
+  nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
+  NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
+  return visual->CreateAnonymousContent(aPresContext, aAnonymousItems);
+}
+
+////////////////////////////////////////////////////////////////////////
+// nsXTFXMLInlineDisplayFrame
+
+nsresult NS_NewXTFXMLDisplayFrame(nsIPresShell* aPresShell,
+                                  PRBool isInline, nsIFrame** aNewFrame);
+  
+
+typedef nsInlineFrame nsXTFXMLInlineDisplayFrameBase;
+
+class nsXTFXMLInlineDisplayFrame : public nsXTFXMLInlineDisplayFrameBase,
+                                   public nsIAnonymousContentCreator
+{
+public:
+  nsXTFXMLInlineDisplayFrame();
 
   // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -81,45 +189,27 @@ public:
                             nsIContent *      aContent,
                             nsIFrame**        aFrame) {
     if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
-  
-private:
-  nsIPresShell* mPresShell; // XXX should get rid of this; make
-                            // GetContentInsertionFrame take as arg
-                            // instead
 };
 
 //----------------------------------------------------------------------
 // Implementation
 
-nsresult
-NS_NewXTFXMLDisplayFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
-{
-  nsXTFXMLDisplayFrame* it = new (aPresShell) nsXTFXMLDisplayFrame(aPresShell);
-  if (nsnull == it)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  *aNewFrame = it;
-
-  return NS_OK;
-}
-
-nsXTFXMLDisplayFrame::nsXTFXMLDisplayFrame(nsIPresShell* aPresShell)
-    : nsXTFXMLDisplayFrameBase(),
-      mPresShell(aPresShell)
+nsXTFXMLInlineDisplayFrame::nsXTFXMLInlineDisplayFrame()
+    : nsXTFXMLInlineDisplayFrameBase()
 {}
 
 //----------------------------------------------------------------------
 // nsISupports methods
 
-NS_INTERFACE_MAP_BEGIN(nsXTFXMLDisplayFrame)
+NS_INTERFACE_MAP_BEGIN(nsXTFXMLInlineDisplayFrame)
   NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
-NS_INTERFACE_MAP_END_INHERITING(nsXTFXMLDisplayFrameBase)
+NS_INTERFACE_MAP_END_INHERITING(nsXTFXMLInlineDisplayFrameBase)
 
 //----------------------------------------------------------------------
 // nsIFrame methods
 
 nsIFrame*
-nsXTFXMLDisplayFrame::GetContentInsertionFrame()
+nsXTFXMLInlineDisplayFrame::GetContentInsertionFrame()
 {
   nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
   NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
@@ -132,18 +222,18 @@ nsXTFXMLDisplayFrame::GetContentInsertionFrame()
   NS_ASSERTION(content, "element not implementing nsIContent!?");
 
   nsIFrame* insertionFrame = nsnull;
-  mPresShell->GetPrimaryFrameFor(content, &insertionFrame);
+  GetPresContext()->PresShell()->GetPrimaryFrameFor(content, &insertionFrame);
   return insertionFrame;
 }
 
 
 
 NS_IMETHODIMP
-nsXTFXMLDisplayFrame::DidReflow(nsPresContext*           aPresContext,
-                                const nsHTMLReflowState*  aReflowState,
-                                nsDidReflowStatus         aStatus)
+nsXTFXMLInlineDisplayFrame::DidReflow(nsPresContext*           aPresContext,
+                                      const nsHTMLReflowState*  aReflowState,
+                                      nsDidReflowStatus         aStatus)
 {
-  nsresult rv = nsXTFXMLDisplayFrameBase::DidReflow(aPresContext, aReflowState, aStatus);
+  nsresult rv = nsXTFXMLInlineDisplayFrameBase::DidReflow(aPresContext, aReflowState, aStatus);
   nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
   NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
   visual->DidLayout();
@@ -155,10 +245,28 @@ nsXTFXMLDisplayFrame::DidReflow(nsPresContext*           aPresContext,
 // nsIAnonymousContentCreator methods:
 
 NS_IMETHODIMP
-nsXTFXMLDisplayFrame::CreateAnonymousContent(nsPresContext* aPresContext,
-                                             nsISupportsArray& aAnonymousItems)
+nsXTFXMLInlineDisplayFrame::CreateAnonymousContent(nsPresContext* aPresContext,
+                                                   nsISupportsArray& aAnonymousItems)
 {
   nsCOMPtr<nsIXTFVisualWrapperPrivate> visual = do_QueryInterface(mContent);
   NS_ASSERTION(visual, "huh? associated content not implementing nsIXTFVisualWrapperPrivate");
   return visual->CreateAnonymousContent(aPresContext, aAnonymousItems);
+}
+
+
+////////////////////////////////////////////////////////////////////////
+// Construction API
+
+nsresult
+NS_NewXTFXMLDisplayFrame(nsIPresShell* aPresShell, PRBool isBlock, nsIFrame** aNewFrame)
+{
+  if (isBlock)
+    *aNewFrame = new (aPresShell) nsXTFXMLBlockDisplayFrame();
+  else
+    *aNewFrame = new (aPresShell) nsXTFXMLInlineDisplayFrame();
+  
+  if (nsnull == *aNewFrame)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  return NS_OK;
 }

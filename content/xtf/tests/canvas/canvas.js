@@ -99,7 +99,7 @@ lineElement.addInterface(Components.interfaces.nsIXTFWidget);
 lineElement.addProtoGetter("visual",
   function() {
     if (!this._visual) {
-      var builder = ContentBuilder.instantiate({document:Components.classes["@mozilla.org/svg/svg-document;1"].createInstance()});
+      var builder = ContentBuilder.instantiate();
       builder.setElementNamespace(SVG_NS);
       builder.beginElement("circle");
         builder.attribs({cx:"100", cy:"100", r:"100", style:"fill:red;"});

@@ -73,7 +73,7 @@ public:
   NS_FORWARD_NSIXTFELEMENTWRAPPER(nsXTFGenericElementWrapperBase::)
   
 private:
-  virtual nsIXTFElement *GetXTFElement()const { return mXTFElement; }
+  virtual nsIXTFElement *GetXTFElement() const { return mXTFElement; }
   
   nsCOMPtr<nsIXTFGenericElement> mXTFElement;
 };

@@ -217,10 +217,7 @@ nsContentUtils::GetParserServiceWeakRef()
 nsIXTFService*
 nsContentUtils::GetXTFServiceWeakRef()
 {
-  // XXX: This isn't accessed from several threads, is it?
   if (!sXTFService) {
-    // Lock, recheck sCachedParserService and aquire if this should be
-    // safe for multiple threads.
     nsresult rv = CallGetService(kXTFServiceCID, &sXTFService);
     if (NS_FAILED(rv)) {
       sXTFService = nsnull;

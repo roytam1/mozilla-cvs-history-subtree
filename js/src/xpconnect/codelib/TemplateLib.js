@@ -190,7 +190,7 @@ Template.prototype._error = function(message) {
   throw(this+": "+message);
 };
 
-Template.prototype._assert = function(message) {
+Template.prototype._assert = function(cond, message) {
   if (!cond)
     this._error(message);
 };

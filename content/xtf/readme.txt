@@ -68,17 +68,18 @@ to elements at layout-time rather than content-tree contruction time:
 Accessing an XBL-bound element's interfaces or JS object before
 layout-time usually doesn't yield the expected result. E.g. a listbox
 won't have the members 'appendItem', 'clearSelection', etc. before
-layout-time. Worse, if the visual content has been constructed in a
-different document (because the target doc wasn't available at the
-time of content tree construction time - see above), then the JS
-object obtained before layout time will be different to the one that
-will ultimately receive the bound implementation.  To work around
-these issues, XBL-bound content should a) either be build as late as
-possible (i.e. when requested by the wrapper with a call to
-nsIXTFVisual::GetVisualContent()) or b) if this is not a possibility
-(e.g. because you would like to map attributes directly into the
-visual content tree), all JS object references to the element should
-be re-resolved at the time of the first layout (listen in to
+layout-time, even if QI'ed for nsIDOMXULMenuListElement. Worse, if the
+visual content has been constructed in a different document (because
+the target doc wasn't available at the time of content tree
+construction time - see above), then the JS object obtained before
+layout time will be different to the one that will ultimately receive
+the bound implementation, i.e. even QI'ing at a later stage will
+fail. To work around these issues, XBL-bound content should a) either
+be build as late as possible (i.e. when requested by the wrapper with
+a call to nsIXTFVisual::GetVisualContent()) or b) if this is not a
+possibility (e.g. because you would like to map attributes directly
+into the visual content tree), all JS object references to the element
+should be re-resolved at the time of the first layout (listen in to
 DidLayout() notifications).
 
 
@@ -114,6 +115,16 @@ parentChanged-notifications, a wrapper will be build for the
 notification's 'parent' parameter and groupbox construction
 mysteriously fails.
 
+3.
+Some XUL interfaces can't be used via XPCOM and thus might not work as
+expected. E.g. menulist's
+nsIDOMXULSelectControlElement::insertItemAt() is supposed to return an
+element of type nsIDOMXULSelectControlItemElement. However, since
+menulist's XBL implementation of insertItemAt creates a xul element
+which will only be bound when the next asynchronous layout occurs,
+QI'ing to nsIDOMXULSelectControlItemElement fails. The result is that
+the method call always fails when invoked through XPCOM.  A pragmatic
+solution would be to change the XUL interface signatures to return
+nsIDOMXULElement instead of nsIDOMXULSelectControlItemElement.
 
-
-04/09/2004 Alex Fritze <alex@croczilla.com>
+03. October 2004 Alex Fritze <alex@croczilla.com>
