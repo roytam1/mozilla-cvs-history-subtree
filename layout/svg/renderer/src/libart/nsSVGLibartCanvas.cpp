@@ -256,7 +256,7 @@ nsSVGLibartCanvas::GetArtColor(nscolor rgb, ArtColor& artColor)
       break;
     case nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR:
       artColor[3] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
-      artColor[3] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+      artColor[2] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
       artColor[1] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
       break;
     default:
