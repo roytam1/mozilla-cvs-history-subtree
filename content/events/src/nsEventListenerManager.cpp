@@ -53,7 +53,6 @@
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsDOMPropEnums.h"
 #include "nsDOMError.h"
 #include "nsIJSContextStack.h"
 #include "nsIDocument.h"

@@ -32,7 +32,6 @@
 #include "jsdbgapi.h"
 #include "nsIXPCSecurityManager.h"
 #include "nsHashtable.h"
-#include "nsDOMPropEnums.h"
 #include "nsCOMPtr.h"
 #include "nsIPref.h"
 #include "nsISecurityPref.h"
