@@ -52,4 +52,6 @@ locale/XXXX/cookie/cookie.properties, XXXX/locale/XXXX/cookie/cookie.properties
 # Marquee stuff
 content/xbl-marquee, comm/content/xbl-marquee
 
+# History stuff
+locale/XXXX/communicator/history/history.properties, XXXX/locale/XXXX/communicator/history/history.properties
 
