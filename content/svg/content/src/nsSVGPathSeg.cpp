@@ -50,10 +50,6 @@ cname::GetPathSegTypeAsLetter(nsAWritableString & aPathSegTypeAsLetter) \
 NS_IMPL_ADDREF(ns##basename)                                  \
 NS_IMPL_RELEASE(ns##basename)                                 \
                                                               \
-NS_CLASSINFO_MAP_BEGIN(basename)                              \
-  NS_CLASSINFO_MAP_ENTRY(nsIDOM##basename)                    \
-NS_CLASSINFO_MAP_END                                          \
-                                                              \
 NS_INTERFACE_MAP_BEGIN(ns##basename)                          \
   NS_INTERFACE_MAP_ENTRY(nsISVGValue)                         \
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGPathSeg)                    \

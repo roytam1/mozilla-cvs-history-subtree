@@ -270,6 +270,8 @@
 #include "nsIDOMSVGTransformable.h"
 #include "nsIDOMSVGTransform.h"
 #include "nsIDOMSVGTransformList.h"
+#include "nsIDOMSVGRect.h"
+#include "nsIDOMSVGAnimatedRect.h"
 #endif
 
 static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
@@ -739,6 +741,10 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGPathSegCurvetoQuadraticSmoothRel, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(SVGRect, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)    
+  NS_DEFINE_CLASSINFO_DATA(SVGAnimatedRect, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)    
 #endif
 
   // Transformiix classes
@@ -1842,6 +1848,14 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(SVGPathSegCurvetoQuadraticSmoothRel, nsIDOMSVGPathSegCurvetoQuadraticSmoothRel)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGPathSegCurvetoQuadraticSmoothRel)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGRect, nsIDOMSVGRect)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGRect)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedRect, nsIDOMSVGAnimatedRect)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedRect)
   DOM_CLASSINFO_MAP_END
 #endif
 

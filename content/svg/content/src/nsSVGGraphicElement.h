@@ -33,8 +33,6 @@
 
 typedef nsSVGElement nsSVGGraphicElementBase;
 
-extern void GetSVGGraphicElementIIDs(nsVoidArray& aArray);
-
 class nsSVGGraphicElement : public nsSVGGraphicElementBase,
                             public nsIDOMSVGTransformable // : nsIDOMSVGLocatable
 {

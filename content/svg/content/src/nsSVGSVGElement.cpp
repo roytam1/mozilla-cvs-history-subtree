@@ -107,15 +107,6 @@ nsresult NS_NewSVGSVGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGSVGElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGSVGElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGFitToViewBox)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGElementIIDs)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGSVGElement,nsSVGElement)
@@ -209,10 +200,25 @@ nsSVGSVGElement::Init()
   
   // DOM property: viewBox , #IMPLIED attrib: viewBox
   {
-    nsCOMPtr<nsIDOMSVGRect> envelopeRect;
-    rv = NS_NewSVGRect(getter_AddRefs(envelopeRect), mViewport);
+    //      -----------------
+    //     | SVGAnimatedRect |
+    //      -----------------
+    //             < >
+    //              |
+    //  -------------------------
+    // | SVGRectPrototypeWrapper |
+    //  -------------------------
+    //             < >
+    //              |
+    //              | prototype
+    //         -----------
+    //        | mViewport |
+    //         -----------
+    
+    nsCOMPtr<nsIDOMSVGRect> wrapperRect;
+    rv = NS_NewSVGRectPrototypeWrapper(getter_AddRefs(wrapperRect), mViewport);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = NS_NewSVGAnimatedRect(getter_AddRefs(mViewBox), envelopeRect);
+    rv = NS_NewSVGAnimatedRect(getter_AddRefs(mViewBox), wrapperRect);
     NS_ENSURE_SUCCESS(rv,rv);
     rv = mAttributes->AddMappedSVGValue(nsSVGAtoms::viewBox, mViewBox);
     NS_ENSURE_SUCCESS(rv,rv);

@@ -122,12 +122,6 @@ nsSVGPointList::InsertElementAt(nsIDOMSVGPoint* aElement, PRInt32 index)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGPointList)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGPointList)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGPointList)

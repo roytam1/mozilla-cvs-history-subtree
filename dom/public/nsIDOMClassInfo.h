@@ -219,6 +219,8 @@ enum nsDOMClassInfoID {
   eDOMClassInfo_SVGPathSegCurvetoCubicSmoothRel_id,
   eDOMClassInfo_SVGPathSegCurvetoQuadraticSmoothAbs_id,
   eDOMClassInfo_SVGPathSegCurvetoQuadraticSmoothRel_id,
+  eDOMClassInfo_SVGRect_id,
+  eDOMClassInfo_SVGAnimatedRect_id,
 #endif
   
   // Transformiix classes

@@ -83,14 +83,6 @@ nsresult NS_NewSVGGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGGElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGGElement)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGGraphicElementIIDs)
-NS_CLASSINFO_MAP_END
-
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGGElement,nsSVGGElementBase)

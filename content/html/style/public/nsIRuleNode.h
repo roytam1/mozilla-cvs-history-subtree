@@ -47,8 +47,7 @@ struct nsInheritedStyleData
 #ifdef MOZ_SVG
   nsStyleSVG* mSVGData;
 #endif
-  
-  
+
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
@@ -76,6 +75,7 @@ struct nsInheritedStyleData
     if (mSVGData && (aBits & NS_STYLE_INHERIT_SVG))
       mSVGData = nsnull;
 #endif
+
   };
 
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
@@ -121,9 +121,6 @@ struct nsResetStyleData
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
 #endif
-#ifdef MOZ_SVG
-    mSVGData = nsnull;
-#endif
   };
 
   void* operator new(size_t sz, nsIPresContext* aContext) {
@@ -159,10 +156,6 @@ struct nsResetStyleData
     if (mXULData && (aBits & NS_STYLE_INHERIT_XUL))
       mXULData = nsnull;
 #endif
-#ifdef MOZ_SVG
-    if (mSVGData && (aBits & NS_STYLE_INHERIT_SVG))
-      mSVGData = nsnull;
-#endif
   };
 
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
@@ -192,10 +185,6 @@ struct nsResetStyleData
     if (mXULData && !(aBits & NS_STYLE_INHERIT_XUL))
       mXULData->Destroy(aContext);
 #endif
-#ifdef MOZ_SVG
-    if (mSVGData && !(aBits & NS_STYLE_INHERIT_SVG))
-      mSVGData->Destroy(aContext);
-#endif
     aContext->FreeToShell(sizeof(nsResetStyleData), this);
   };
 
@@ -212,9 +201,6 @@ struct nsResetStyleData
   nsStyleUIReset* mUIData;
 #ifdef INCLUDE_XUL
   nsStyleXUL* mXULData;
-#endif
-#ifdef MOZ_SVG
-  nsStyleSVG* mSVGData;
 #endif
 };
 

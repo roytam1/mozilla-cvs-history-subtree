@@ -34,16 +34,6 @@
 #include "nsIDocument.h"
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN_EXPORTED(SVGGraphicElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGLocatable)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGTransformable)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGElementIIDs)
-NS_CLASSINFO_MAP_END
-
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGGraphicElement, nsSVGGraphicElementBase)

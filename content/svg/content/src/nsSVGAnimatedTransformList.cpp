@@ -95,12 +95,6 @@ nsSVGAnimatedTransformList::Init(nsIDOMSVGTransformList* baseVal)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGAnimatedTransformList)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedTransformList)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGAnimatedTransformList)

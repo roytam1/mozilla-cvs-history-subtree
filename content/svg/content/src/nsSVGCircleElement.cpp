@@ -88,13 +88,6 @@ nsresult NS_NewSVGCircleElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
   return NS_OK;
 }
 
-//----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGCircleElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGCircleElement)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGGraphicElementIIDs)
-NS_CLASSINFO_MAP_END
-
 
 //----------------------------------------------------------------------
 // nsISupports methods

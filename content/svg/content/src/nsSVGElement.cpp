@@ -66,13 +66,6 @@ nsSVGElement::~nsSVGElement()
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN_EXPORTED(SVGElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOM3Node)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGElement,nsGenericElement)

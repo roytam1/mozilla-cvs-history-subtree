@@ -88,14 +88,6 @@ nsresult NS_NewSVGPolylineElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGPolylineElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGPolylineElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedPoints)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGGraphicElementIIDs)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGPolylineElement,nsSVGPolylineElementBase)

@@ -92,14 +92,6 @@ nsresult NS_NewSVGRectElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGRectElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGRectElement)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGGraphicElementIIDs)
-NS_CLASSINFO_MAP_END
-
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGRectElement,nsSVGRectElementBase)

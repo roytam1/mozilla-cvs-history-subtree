@@ -92,12 +92,6 @@ nsSVGPathSegList::~nsSVGPathSegList()
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGPathSegList)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGPathSegList)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGPathSegList)

@@ -46,12 +46,6 @@ nsSVGMatrix::nsSVGMatrix(float a, float b, float c,
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list 
-NS_CLASSINFO_MAP_BEGIN(SVGMatrix)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGMatrix)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGMatrix)

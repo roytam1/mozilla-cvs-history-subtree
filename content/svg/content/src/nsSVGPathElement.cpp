@@ -88,15 +88,6 @@ nsresult NS_NewSVGPathElement(nsIContent **aResult, nsINodeInfo *aNodeInfo)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGPathElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGPathElement)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedPathData)
-  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGGraphicElementIIDs)
-NS_CLASSINFO_MAP_END
-
-
-//----------------------------------------------------------------------
 // nsISupports methods
 
 NS_IMPL_ADDREF_INHERITED(nsSVGPathElement,nsSVGPathElementBase)

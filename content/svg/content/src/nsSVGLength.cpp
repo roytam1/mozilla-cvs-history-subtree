@@ -119,12 +119,6 @@ nsresult nsSVGLength::Init(nsIDOMSVGElement* owner)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGLength)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGLength)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGLength)

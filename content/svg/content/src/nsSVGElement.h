@@ -42,8 +42,6 @@
 #include "nsWeakReference.h"
 #include "nsISVGStyleValue.h"
 
-extern void GetSVGElementIIDs(nsVoidArray& aArray);
-
 class nsSVGElement : public nsGenericElement,    // :nsIHTMLContent:nsIStyledContent:nsIContent
                      public nsIDOMSVGElement,    // :nsIDOMElement:nsIDOMNode
                      public nsISVGValueObserver, 

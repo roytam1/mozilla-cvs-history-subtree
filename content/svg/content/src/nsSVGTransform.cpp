@@ -31,12 +31,6 @@
 #include "nsIWeakReference.h"
 #include "nsSVGMatrix.h"
 
-//----------------------------------------------------------------------
-// XPConnect interface list 
-NS_CLASSINFO_MAP_BEGIN(SVGTransform)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGTransform)
-NS_CLASSINFO_MAP_END
-
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGTransform 'letter' class

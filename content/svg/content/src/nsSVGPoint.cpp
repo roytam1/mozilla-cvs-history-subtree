@@ -43,12 +43,6 @@ nsSVGPoint::nsSVGPoint(float x, float y)
 }
 
 //----------------------------------------------------------------------
-// XPConnect interface list
-NS_CLASSINFO_MAP_BEGIN(SVGPoint)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGPoint)
-NS_CLASSINFO_MAP_END
-
-//----------------------------------------------------------------------
 // nsISupports methods:
 
 NS_IMPL_ADDREF(nsSVGPoint)

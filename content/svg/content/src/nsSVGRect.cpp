@@ -28,17 +28,17 @@
 #include "nsSVGValue.h"
 
 ////////////////////////////////////////////////////////////////////////
-// nsSVGRect 'letter' class
+// nsSVGRect class
 
-class nsSVGRectLetter : public nsIDOMSVGRect,
-                        public nsSVGValue
+class nsSVGRect : public nsIDOMSVGRect,
+                  public nsSVGValue
 {
 public:
   static nsresult Create(nsIDOMSVGRect** result,
                          float x=0.0f, float y=0.0f,
                          float w=0.0f, float h=0.0f);
 protected:
-  nsSVGRectLetter(float x, float y, float w, float h);
+  nsSVGRect(float x, float y, float w, float h);
   
 public:
   // nsISupports interface:
@@ -60,10 +60,10 @@ protected:
 // implementation:
 
 nsresult
-nsSVGRectLetter::Create(nsIDOMSVGRect** result,
+nsSVGRect::Create(nsIDOMSVGRect** result,
                         float x, float y, float w, float h)
 {
-  *result = (nsIDOMSVGRect*) new nsSVGRectLetter(x,y,w,h);
+  *result = (nsIDOMSVGRect*) new nsSVGRect(x,y,w,h);
   if(!*result) return NS_ERROR_OUT_OF_MEMORY;
   
   NS_ADDREF(*result);
@@ -71,7 +71,7 @@ nsSVGRectLetter::Create(nsIDOMSVGRect** result,
 }
 
 
-nsSVGRectLetter::nsSVGRectLetter(float x, float y, float w, float h)
+nsSVGRect::nsSVGRect(float x, float y, float w, float h)
     : mX(x), mY(y), mWidth(w), mHeight(h)
 {
   NS_INIT_ISUPPORTS();
@@ -80,19 +80,27 @@ nsSVGRectLetter::nsSVGRectLetter(float x, float y, float w, float h)
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ISUPPORTS2(nsSVGRectLetter, nsIDOMSVGRect, nsISVGValue);
+NS_IMPL_ADDREF(nsSVGRect)
+NS_IMPL_RELEASE(nsSVGRect)
+
+NS_INTERFACE_MAP_BEGIN(nsSVGRect)
+  NS_INTERFACE_MAP_ENTRY(nsISVGValue)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMSVGRect)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(SVGRect)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsISVGValue)
+NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 // nsISVGValue methods:
 
 NS_IMETHODIMP
-nsSVGRectLetter::SetValueString(const nsAReadableString& aValue)
+nsSVGRect::SetValueString(const nsAReadableString& aValue)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-nsSVGRectLetter::GetValueString(nsAWritableString& aValue)
+nsSVGRect::GetValueString(nsAWritableString& aValue)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -101,12 +109,12 @@ nsSVGRectLetter::GetValueString(nsAWritableString& aValue)
 // nsIDOMSVGRect methods:
 
 /* attribute float x; */
-NS_IMETHODIMP nsSVGRectLetter::GetX(float *aX)
+NS_IMETHODIMP nsSVGRect::GetX(float *aX)
 {
   *aX = mX;
   return NS_OK;
 }
-NS_IMETHODIMP nsSVGRectLetter::SetX(float aX)
+NS_IMETHODIMP nsSVGRect::SetX(float aX)
 {
   WillModify();
   mX = aX;
@@ -115,12 +123,12 @@ NS_IMETHODIMP nsSVGRectLetter::SetX(float aX)
 }
 
 /* attribute float y; */
-NS_IMETHODIMP nsSVGRectLetter::GetY(float *aY)
+NS_IMETHODIMP nsSVGRect::GetY(float *aY)
 {
   *aY = mY;
   return NS_OK;
 }
-NS_IMETHODIMP nsSVGRectLetter::SetY(float aY)
+NS_IMETHODIMP nsSVGRect::SetY(float aY)
 {
   WillModify();
   mY = aY;
@@ -129,12 +137,12 @@ NS_IMETHODIMP nsSVGRectLetter::SetY(float aY)
 }
 
 /* attribute float width; */
-NS_IMETHODIMP nsSVGRectLetter::GetWidth(float *aWidth)
+NS_IMETHODIMP nsSVGRect::GetWidth(float *aWidth)
 {
   *aWidth = mWidth;
   return NS_OK;
 }
-NS_IMETHODIMP nsSVGRectLetter::SetWidth(float aWidth)
+NS_IMETHODIMP nsSVGRect::SetWidth(float aWidth)
 {
   WillModify();
   mWidth = aWidth;
@@ -143,12 +151,12 @@ NS_IMETHODIMP nsSVGRectLetter::SetWidth(float aWidth)
 }
 
 /* attribute float height; */
-NS_IMETHODIMP nsSVGRectLetter::GetHeight(float *aHeight)
+NS_IMETHODIMP nsSVGRect::GetHeight(float *aHeight)
 {
   *aHeight = mHeight;
   return NS_OK;
 }
-NS_IMETHODIMP nsSVGRectLetter::SetHeight(float aHeight)
+NS_IMETHODIMP nsSVGRect::SetHeight(float aHeight)
 {
   WillModify();
   mHeight = aHeight;
@@ -158,18 +166,21 @@ NS_IMETHODIMP nsSVGRectLetter::SetHeight(float aHeight)
 
 
 ////////////////////////////////////////////////////////////////////////
-// nsSVGRect 'envelope' class
+// nsSVGRect prototype wrapper class
+// delegates all 'getter' calls to the given prototype if the property
+// hasn't been set on the object directly
 
-class nsSVGRectEnvelope : public nsIDOMSVGRect,
-                          public nsSVGValue
+class nsSVGRectPrototypeWrapper : public nsIDOMSVGRect,
+                                  public nsSVGValue
 {
 public:
   static nsresult Create(nsIDOMSVGRect** result,
                          nsIDOMSVGRect* prototype,
                          nsIDOMSVGRect* body=nsnull);
 protected:
-  nsSVGRectEnvelope(nsIDOMSVGRect* prototype, nsIDOMSVGRect* body);
-  virtual ~nsSVGRectEnvelope();
+  nsSVGRectPrototypeWrapper(nsIDOMSVGRect* prototype,
+                            nsIDOMSVGRect* body);
+  virtual ~nsSVGRectPrototypeWrapper();
   
 public:
   // nsISupports interface:
@@ -195,26 +206,26 @@ protected:
 // implementation:
 
 nsresult
-nsSVGRectEnvelope::Create(nsIDOMSVGRect** result,
-                          nsIDOMSVGRect* prototype,
-                          nsIDOMSVGRect* body)
+nsSVGRectPrototypeWrapper::Create(nsIDOMSVGRect** result,
+                                  nsIDOMSVGRect* prototype,
+                                  nsIDOMSVGRect* body)
 {
-  *result = (nsIDOMSVGRect*) new nsSVGRectEnvelope(prototype, body);
+  *result = (nsIDOMSVGRect*) new nsSVGRectPrototypeWrapper(prototype, body);
   if(!*result) return NS_ERROR_OUT_OF_MEMORY;
   
   NS_ADDREF(*result);
   return NS_OK;
 }
 
-nsSVGRectEnvelope::nsSVGRectEnvelope(nsIDOMSVGRect* prototype,
-                                     nsIDOMSVGRect* body)
+nsSVGRectPrototypeWrapper::nsSVGRectPrototypeWrapper(nsIDOMSVGRect* prototype,
+                                                     nsIDOMSVGRect* body)
     : mPrototype(prototype), mBody(body)
 {
   NS_INIT_ISUPPORTS();
   NS_ASSERTION(mPrototype, "need prototype");
 }
 
-nsSVGRectEnvelope::~nsSVGRectEnvelope()
+nsSVGRectPrototypeWrapper::~nsSVGRectPrototypeWrapper()
 {
 //   if (mBody) {
 //     nsCOMPtr<nsISVGValue> val = do_QueryInterface(mBody);
@@ -223,12 +234,12 @@ nsSVGRectEnvelope::~nsSVGRectEnvelope()
 //   }
 }
 
-void nsSVGRectEnvelope::EnsureBody()
+void nsSVGRectPrototypeWrapper::EnsureBody()
 {
   if (mBody) return;
 
-  nsSVGRectLetter::Create(getter_AddRefs(mBody));
-  NS_ASSERTION(mBody, "couldn't create letter");
+  nsSVGRect::Create(getter_AddRefs(mBody));
+  NS_ASSERTION(mBody, "couldn't create body");
 //   nsCOMPtr<nsISVGValue> val = do_QueryInterface(mBody);
 //   if (val)
 //     val->AddObserver(this);
@@ -237,26 +248,34 @@ void nsSVGRectEnvelope::EnsureBody()
 //----------------------------------------------------------------------
 // nsISupports methods:
 
-NS_IMPL_ISUPPORTS2(nsSVGRectEnvelope, nsIDOMSVGRect, nsISVGValue);
+NS_IMPL_ADDREF(nsSVGRectPrototypeWrapper)
+NS_IMPL_RELEASE(nsSVGRectPrototypeWrapper)
+
+NS_INTERFACE_MAP_BEGIN(nsSVGRectPrototypeWrapper)
+  NS_INTERFACE_MAP_ENTRY(nsISVGValue)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMSVGRect)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(SVGRect)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsISVGValue)
+NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 // nsISVGValue methods:
 
 NS_IMETHODIMP
-nsSVGRectEnvelope::SetValueString(const nsAReadableString& aValue)
+nsSVGRectPrototypeWrapper::SetValueString(const nsAReadableString& aValue)
 {
   EnsureBody();
   nsCOMPtr<nsISVGValue> val = do_QueryInterface(mBody);
-  NS_ASSERTION(val, "missing interface on letter");
+  NS_ASSERTION(val, "missing interface on body");
 
   return val->SetValueString(aValue);
 }
 
 NS_IMETHODIMP
-nsSVGRectEnvelope::GetValueString(nsAWritableString& aValue)
+nsSVGRectPrototypeWrapper::GetValueString(nsAWritableString& aValue)
 {
   nsCOMPtr<nsISVGValue> val = do_QueryInterface( Delegate() );
-  NS_ASSERTION(val, "missing interface on letter");
+  NS_ASSERTION(val, "missing interface on body");
   
   return val->GetValueString(aValue);
 }
@@ -265,11 +284,11 @@ nsSVGRectEnvelope::GetValueString(nsAWritableString& aValue)
 // nsIDOMSVGRect methods:
 
 /* attribute float x; */
-NS_IMETHODIMP nsSVGRectEnvelope::GetX(float *aX)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::GetX(float *aX)
 {
   return Delegate()->GetX(aX);
 }
-NS_IMETHODIMP nsSVGRectEnvelope::SetX(float aX)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::SetX(float aX)
 {
   WillModify();
   EnsureBody();
@@ -279,11 +298,11 @@ NS_IMETHODIMP nsSVGRectEnvelope::SetX(float aX)
 }
 
 /* attribute float y; */
-NS_IMETHODIMP nsSVGRectEnvelope::GetY(float *aY)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::GetY(float *aY)
 {
   return Delegate()->GetY(aY);
 }
-NS_IMETHODIMP nsSVGRectEnvelope::SetY(float aY)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::SetY(float aY)
 {
   WillModify();
   EnsureBody();
@@ -293,11 +312,11 @@ NS_IMETHODIMP nsSVGRectEnvelope::SetY(float aY)
 }
 
 /* attribute float width; */
-NS_IMETHODIMP nsSVGRectEnvelope::GetWidth(float *aWidth)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::GetWidth(float *aWidth)
 {
   return Delegate()->GetWidth(aWidth);
 }
-NS_IMETHODIMP nsSVGRectEnvelope::SetWidth(float aWidth)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::SetWidth(float aWidth)
 {
   WillModify();
   EnsureBody();
@@ -307,11 +326,11 @@ NS_IMETHODIMP nsSVGRectEnvelope::SetWidth(float aWidth)
 }
 
 /* attribute float height; */
-NS_IMETHODIMP nsSVGRectEnvelope::GetHeight(float *aHeight)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::GetHeight(float *aHeight)
 {
   return Delegate()->GetHeight(aHeight);
 }
-NS_IMETHODIMP nsSVGRectEnvelope::SetHeight(float aHeight)
+NS_IMETHODIMP nsSVGRectPrototypeWrapper::SetHeight(float aHeight)
 {
   WillModify();
   EnsureBody();
@@ -328,11 +347,12 @@ nsresult
 NS_NewSVGRect(nsIDOMSVGRect** result, float x, float y,
               float width, float height)
 {
-  return nsSVGRectLetter::Create(result, x, y, width, height);
+  return nsSVGRect::Create(result, x, y, width, height);
 }
 
 nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result, nsIDOMSVGRect* prototype)
+NS_NewSVGRectPrototypeWrapper(nsIDOMSVGRect** result,
+                              nsIDOMSVGRect* prototype)
 {
-  return nsSVGRectEnvelope::Create(result, prototype);
+  return nsSVGRectPrototypeWrapper::Create(result, prototype);
 }
