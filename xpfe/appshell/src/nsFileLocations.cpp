@@ -229,7 +229,7 @@ static PRBool GetProfileDirectory(nsFileSpec& outSpec)
             else
             {
                 profileService->GetFirstProfile(&currProfileName);
-                if (currProfileName && currProfileName[0])) {
+                if (currProfileName && currProfileName[0]) {
                     profileService->GetProfileDir(currProfileName, getter_AddRefs(currProfileDir));
                 }
             }
