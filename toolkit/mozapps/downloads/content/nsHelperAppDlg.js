@@ -437,19 +437,6 @@ nsUnknownContentTypeDialog.prototype = {
     // initAppAndSaveToDiskValues:
     initAppAndSaveToDiskValues: function() {
       var modeGroup = this.dialogElement("mode");
-
-      // We don't let users open .exe files or random binary data directly 
-      // from the browser at the moment because of security concerns. 
-      var mimeType = this.mLauncher.MIMEInfo.MIMEType;
-      if (mimeType == "application/octet-stream" ||
-          mimeType == "application/x-msdownload") {
-        this.dialogElement("open").disabled = true;
-        var openHandler = this.dialogElement("openHandler");
-        openHandler.disabled = true;
-        openHandler.label = "";
-        modeGroup.selectedItem = this.dialogElement("save");
-        return;
-      }
     
       // Fill in helper app info, if there is any.
       this.chosenApp = this.mLauncher.MIMEInfo.preferredApplicationHandler;
