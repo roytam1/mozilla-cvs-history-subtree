@@ -34,6 +34,7 @@
 #include "stystack.h"
 
 #include "libmocha.h"
+#include "netstream.h"
 
 #define MEMORY_ARENAS 1
 
@@ -1650,5 +1651,7 @@ int32 lo_GetCellTagHeight(LO_Element *pCellElement);
 int32 lo_GetRowSpan(LO_Element *pCellElement);
 int32 lo_GetColSpan(LO_Element *pCellElement);
 int32 lo_GetCellPadding(LO_Element *pCellElement);
+
+extern intn LO_DocumentInfo(MWContext *context, NET_VoidStreamClass *stream);
 
 #endif /* _Layout_h_ */
