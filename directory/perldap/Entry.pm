@@ -295,7 +295,6 @@ sub isDeleted
   my ($self, $attr) = ($_[$[], lc $_[$[ + 1]);
 
   return 0 unless (defined($attr) && ($attr ne ""));
-  return 0 unless defined($self->{$attr});
   return 0 unless defined($self->{"_${attr}_deleted_"});
 
   return 1;
@@ -557,7 +556,7 @@ sub setValues
 
   local $_;
 
-  return 0 unless (defined(@vals) && ($#vals >= $[));
+  return 0 unless ($#vals >= $[);
   return 0 unless (defined($attr) && ($attr ne ""));
   return 0 if ($attr eq "dn");
 
