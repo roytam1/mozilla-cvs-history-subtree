@@ -150,6 +150,9 @@ private:
   PRInt32   mLastUnreadCountWrittenToRegistry;
 
   nsInt64   mIntervalTime;
+
+  HWND mMailNotificationWindow;
+  nsresult CreateMailNotificationWindow();
 };
 
 #endif // __nsMessengerWinIntegration_h
