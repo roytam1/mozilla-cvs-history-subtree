@@ -351,7 +351,7 @@ var DefaultController =
 
 	doCommand: function(command)
 	{
-   		// dump("ThreadPaneController.doCommand(" + command + ")\n");
+   		dump("XXX ThreadPaneController.doCommand(" + command + ")\n");
 
 		switch ( command )
 		{

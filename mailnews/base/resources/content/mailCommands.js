@@ -70,9 +70,10 @@ function ConvertMessagesToResourceArray(messages,  resourceArray)
 	if(!resourceArray)
 	    resourceArray = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 
+    dump("fix this, this needs to be rethought\n");
     for (var i=0; i<messages.length; i++) {
-		var messageResource = messages[i].QueryInterface(Components.interfaces.nsIRDFResource);
-        resourceArray.AppendElement(messageResource);
+        dump("message[" + i + "]=" + messages[i] + "\n");
+        resourceArray.AppendElement(messages[i]);
     }
 
     return resourceArray;
