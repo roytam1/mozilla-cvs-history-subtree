@@ -17,9 +17,10 @@
  */
 
 #include "nsISupports.idl"
-#include "nsIFile.idl"
 #include "nsIFactory.idl"
 #include "nsIEnumerator.idl"
+
+interface nsIFile;
 
 /* should this be in nsroot.idl? */
 native nsCID(nsCID);
