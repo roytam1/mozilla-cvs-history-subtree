@@ -64,26 +64,13 @@ typedef struct nsJSPrincipalsData {
 	void* pNSISecurityContext;
 } nsJSPrincipalsData;
 
-class nsJSSecurityManager : public nsIScriptSecurityManager,
-//                          public nsICapsSecurityCallbacks,
+class nsJSSecurityManager : //public nsICapsSecurityCallbacks,
                             public nsIXPCSecurityManager {
 public:
 	nsJSSecurityManager();
 	virtual ~nsJSSecurityManager();
-	
+
 	NS_DECL_ISUPPORTS
-		
-	//nsIScriptSecurityManager interface
-	
-	NS_IMETHOD CheckScriptAccess(nsIScriptContext* aContext, 
-		void* aObj, 
-		const char* aProp, 
-		PRBool* aResult);
-	
-	//XXX From lib/libmocha/lm.h
-	NS_IMETHOD GetSubjectOriginURL(JSContext *aCx, char** aOrigin);
-	NS_IMETHOD GetObjectOriginURL(JSContext *aCx, JSObject *object, char** aOrigin);
-	NS_IMETHOD NewJSPrincipals(nsIURI *aURL, nsString* aName, nsIPrincipal * * aPrin);
 
 #if 0
         //nsICapsSecurityCallbacks interface
@@ -109,10 +96,6 @@ public:
 	NS_IMETHOD CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo,
 								PRUint16 aMethodIndex, const jsid aName);
 
-  NS_IMETHOD GetContainerPrincipals(JSContext *aCx, JSObject *aContainer, nsIPrincipal * * result);
-  NS_IMETHOD CheckPermissions(JSContext *aCx, JSObject *aObj, short target, PRBool* aReturn);
-	NS_IMETHOD CanAccessTarget(JSContext *aCx, PRInt16 target, PRBool* aReturn);
-  NS_IMETHOD GetPrincipalsFromStackFrame(JSContext *aCx, JSPrincipals** aPrincipals);
 #if 0
   NS_IMETHOD GetCompilationPrincipals(nsIScriptContext *aContext, nsIScriptGlobalObject* aGlobal, 
 		JSPrincipals *aLayoutPrincipals, JSPrincipals** aPrincipals);
@@ -138,14 +121,7 @@ public:
 #endif
 #endif
 private:
-  NS_IMETHOD GetOriginFromSourceURL(nsIURI * origin, char * * result);
-  PRInt32 CheckForPrivilege(JSContext *cx, char *prop_name, int priv_code);
   nsIPref* mPrefs;
-  char* FindOriginURL(JSContext *aCx, JSObject *aGlobal);
-  PRBool SameOrigins(JSContext *aCx, const char* aOrigin1, const char* aOrigin2);
-  char* AddSecPolicyPrefix(JSContext *cx, char *pref_str);
-  char* GetSitePolicy(const char *org);
-  char * GetCanonicalizedOrigin(JSContext *cx, const char* aUrlString);
   PRBool PrincipalsCanAccessTarget(JSContext *cx, short target);
   nsJSFrameIterator* NewJSFrameIterator(void *aContext);
   PRBool NextJSFrame(struct nsJSFrameIterator **aIterator);

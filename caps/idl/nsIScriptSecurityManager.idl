@@ -74,6 +74,11 @@ interface nsIScriptSecurityManager : nsISupports
 							in nsString aName, in nsString aSrc, out JSPrincipals aPrincipals);
 */
 };
+
 %{C++
-extern "C" NS_DOM nsresult NS_NewScriptSecurityManager(nsIScriptSecurityManager ** aInstancePtrResult);
+#define NS_SCRIPTSECURITYMANAGER_CID \
+{ 0x7ee2a4c0, 0x4b93, 0x17d3, \
+{ 0xba, 0x18, 0x00, 0x60, 0xb0, 0xf1, 0x99, 0xa2 }}
+#define NS_SCRIPTSECURITYMANAGER_PROGID "component://netscape/scriptsecuritymanager"
+#define NS_SCRIPTSECURITYMANAGER_CLASSNAME "scriptsecuritymanager"
 %}

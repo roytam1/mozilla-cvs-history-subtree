@@ -391,7 +391,9 @@ nsJSContext::GetSecurityManager(nsIScriptSecurityManager** aInstancePtr)
 		NS_ADDREF(*aInstancePtr);
 		return NS_OK;
 	}
-	nsresult ret = NS_NewScriptSecurityManager(&mSecManager);
+  //XXXARIEL seems like not the best way to make singleton
+  nsresult ret;
+  NS_WITH_SERVICE(nsIScriptSecurityManager,mSecManager,NS_SCRIPTSECURITYMANAGER_PROGID,&ret);
 	if (NS_OK == ret) {
 		*aInstancePtr = mSecManager;
 		NS_ADDREF(*aInstancePtr);
