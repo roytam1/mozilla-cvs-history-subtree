@@ -359,7 +359,9 @@ ldapssl_clientauth_init( const char *certdbpath, void *certdbhandle,
 
 
     /* Open the certificate database */
-    NSS_Init(certdbpath);
+    if ((rc = NSS_Init(certdbpath)) != SECSuccess) {
+	return (-1);
+    }
 
     if (SSL_OptionSetDefault(SSL_ENABLE_SSL2, PR_FALSE)
 	    || SSL_OptionSetDefault(SSL_ENABLE_SSL3, PR_TRUE)) {
@@ -457,6 +459,7 @@ ldapssl_advclientauth_init(
     const int needsecmoddb, const char *secmoddbpath,
     const int sslstrength )
 {
+    int rc = 0;
 
     if ( inited ) {
 	return( 0 );
@@ -468,7 +471,9 @@ ldapssl_advclientauth_init(
 
     ldapssl_basic_init();
 
-    NSS_Init(certdbpath);
+    if ((rc = NSS_Init(certdbpath)) != SECSuccess) {
+	return (-1);
+    }
 
 #if defined(NS_DOMESTIC)
     if (local_SSLPLCY_Install() == PR_FAILURE)
@@ -548,8 +553,10 @@ ldapssl_pkcs_init( const struct ldapssl_pkcs_fns *pfns )
     ldapssl_free((void **)&keydbName);
     ldapssl_free((void **)&keydbpath);
 
-    NSS_Initialize(confDir,certdbPrefix,keydbPrefix,secmodname,
-		NSS_INIT_READONLY);
+    if ((rc = NSS_Initialize(confDir,certdbPrefix,keydbPrefix,
+		secmodname, NSS_INIT_READONLY)) != SECSuccess) {
+	return (-1);
+    }
 
     ldapssl_free((void **)&certdbPrefix);
     ldapssl_free((void **)&keydbPrefix);
