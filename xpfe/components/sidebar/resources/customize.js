@@ -37,39 +37,40 @@ function Init()
 
 function addOption(registry, service, selectIt) {
   
-  var option_title = getAttr(registry, service, 'title');
+  dump("Adding " +service.Value+"\n");
+  var option_title     = getAttr(registry, service, 'title');
   var option_customize = getAttr(registry, service, 'customize');
   var option_content   = getAttr(registry, service, 'content');
 
-  // Check to see if the panel already exists  
-  var list = document.getElementById('selectList'); 
-  var list_length = list.childNodes.length;
-	
-  for (var ii=0; ii < list_length; ii++) {
-    //dump(list.childNodes.item(ii).getAttribute('title') + '\n');
+  var tree = document.getElementById('selectList'); 
+  var treeroot = document.getElementById('selectListRoot'); 
 
-    var content   = list.childNodes.item(ii).getAttribute('content');
-
-    if (content == option_content) {
-      if (selectIt) {
-        list.selectedIndex = ii;
+  // Check to see if the panel already exists...
+  for (var ii = treeroot.firstChild; ii != null; ii = ii.nextSibling) {
+      if (ii.getAttribute('id') == service.Value) {
+	  // we already had the panel installed
+	  tree.selectItem(ii);
+	  return;
       }
-      return;
-    }
   }
 
-  var optionSelect = createOptionTitle(option_title);
-  var option = document.createElement('html:option');
-  
-  option.setAttribute('title', option_title);
-  option.setAttribute('customize', option_customize);
-  option.setAttribute('content', option_content);
- 
-  option.appendChild(optionSelect);
 
-  list.appendChild(option);
+  var item = document.createElement('treeitem');
+  var row  = document.createElement('treerow');
+  var cell = document.createElement('treecell');
+  
+  item.setAttribute('id', service.Value);
+  item.setAttribute('customize', option_customize);
+  item.setAttribute('content', option_content);
+  cell.setAttribute('value', option_title);
+ 
+  item.appendChild(row);
+  row.appendChild(cell);
+  treeroot.appendChild(item);
+
   if (selectIt) {
-    list.selectedIndex = list_length;
+    dump("Selecting new item\n");
+    tree.selectItem(item)
   }
 }
 
@@ -131,10 +132,18 @@ function enableButtons() {
   var down      = document.getElementById('down');
   var list      = document.getElementById('selectList');
   var customize = document.getElementById('customize-button');
-  var index = list.selectedIndex;
-  var noneSelected = (index == -1);
-  var isFirst      = (index == 0);
-  var isLast       = (index == list.options.length - 1);
+
+  var selected = list.selectedItems;
+  var selectedNode = null
+  var noneSelected, isFirst, isLast
+
+  if (selected.length == 0) {
+    noneSelected = true
+  } else {
+    selectedNode = list.selectedItems[0]
+    isFirst = selectedNode == selectedNode.parentNode.firstChild
+    isLast  = selectedNode == selectedNode.parentNode.lastChild
+  }
 
   // up /\ button
   if (noneSelected || isFirst) {
@@ -150,11 +159,10 @@ function enableButtons() {
   }
   // "Customize..." button
   var customizeURL = null;
-  if (!noneSelected) {
-    var option = list.childNodes.item(index);
-    customizeURL = option.getAttribute('customize');
+  if (selectedNode) {
+    customizeURL = selectedNode.getAttribute('customize');
   }
-  if (customizeURL == 'null') {
+  if (customizeURL == null) {
     customize.setAttribute('disabled','true');
   } else {
     customize.setAttribute('disabled','');
@@ -183,20 +191,23 @@ function CustomizePanel()
 
 function RemovePanel()
 {
-  var list        = document.getElementById('selectList');	
-  var index       = list.selectedIndex;
+  var tree = document.getElementById('selectList');	
 
-  if (index != -1) {
-    // XXX prompt user
-    list.options[index] = null;
-
-    // Clean up the selection
-    if (index == list.length) {
-      list.selectedIndex = index - 1;
-    } else {
-      list.selectedIndex = index;
+  var nextNode = null;
+  var numSelected = tree.selectedItems.length
+  while (tree.selectedItems.length > 0) {
+    var selectedNode = tree.selectedItems[0]
+    nextNode = selectedNode.nextSibling;
+    if (!nextNode) {
+      nextNode = selectedNode.previousSibling;
     }
+    selectedNode.parentNode.removeChild(selectedNode)
+  } 
+  
+  if (nextNode) {
+    tree.selectItem(nextNode)
   }
+  enableButtons();
   enableSave();
 }
 
@@ -297,14 +308,7 @@ function otherPanelSelected()
     var preview_button = document.getElementById('preview_button');
     var other_panels = document.getElementById('other-panels');
 
-    var select_list = new Array();
-    for (var i = 0; i < other_panels.options.length; ++i) {
-        if (other_panels.options[i].selected) {
-            select_list[select_list.length] = other_panels.options[i];
-        }
-    }
-
-    if (select_list.length > 0) {
+    if (other_panels.selectedItems.length > 0) {
         add_button.setAttribute('disabled','');
         preview_button.setAttribute('disabled','');
     }
@@ -318,7 +322,7 @@ function AddPanel()
 {
   var tree = document.getElementById('other-panels');
   var database = tree.database;
-  var select_list = document.getElementsByAttribute("selected", "true");
+  var select_list = tree.selectedItems
   var isFirstAddition = true;
   for (var nodeIndex=0; nodeIndex<select_list.length; nodeIndex++) {
     var node = select_list[nodeIndex];
@@ -330,6 +334,7 @@ function AddPanel()
     addOption(database, rdfNode, isFirstAddition);
     isFirstAddition = false;
   }
+  enableButtons();
   enableSave();
 }
 
