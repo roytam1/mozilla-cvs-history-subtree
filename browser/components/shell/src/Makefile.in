@@ -40,6 +40,7 @@ REQUIRES	= \
 		  layout \
 		  content \
 		  widget \
+		  browsercomps \
 		  imglib2 \
 		  gfx \
 		  locale \

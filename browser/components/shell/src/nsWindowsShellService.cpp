@@ -55,6 +55,9 @@
 #include "nsNetUtil.h"
 #include "nsShellService.h"
 #include "nsWindowsShellService.h"
+#include "nsIObserverService.h"
+#include "nsICategoryManager.h"
+#include "nsBrowserCompsCID.h"
 
 #define MOZ_HWND_BROADCAST_MSG_TIMEOUT 5000
 #define MOZ_BACKUP_REGISTRY "SOFTWARE\\Mozilla\\Desktop"
@@ -69,7 +72,7 @@
 #define REG_FAILED(val) \
   (val != ERROR_SUCCESS)
 
-NS_IMPL_ISUPPORTS2(nsWindowsShellService, nsIWindowsShellService, nsIShellService)
+NS_IMPL_ISUPPORTS3(nsWindowsShellService, nsIWindowsShellService, nsIShellService, nsIObserver)
 
 static nsresult
 OpenUserKeyForReading(HKEY aStartKey, const char* aKeyName, HKEY* aKey)
@@ -230,28 +233,6 @@ static SETTING gSettings[] = {
   { MAKE_KEY_NAME2(CLS, "CHROME", DI),  "", VAL_ICON, PATH_SUBSTITUTION | NON_ESSENTIAL },
   { MAKE_KEY_NAME2(CLS, "CHROME", SOP), "", VAL_OPEN, PATH_SUBSTITUTION | NON_ESSENTIAL },
 
-  // DDE settings
-  { MAKE_KEY_NAME2(CLS, "HTTP", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME2(CLS, "HTTPS", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME2(CLS, "FTP", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME2(CLS, "GOPHER", DDE), "", DDE_COMMAND, NO_SUBSTITUTION | NON_ESSENTIAL  },
-  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION | NON_ESSENTIAL  },
-  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION | NON_ESSENTIAL  },
-  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
-  { MAKE_KEY_NAME2(CLS, "CHROME", DDE), "", DDE_COMMAND, NO_SUBSTITUTION | NON_ESSENTIAL  },
-  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION | NON_ESSENTIAL  },
-  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION | NON_ESSENTIAL  },
-  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "ifexec"), "", "StartDDE", NO_SUBSTITUTION },
-
   // Windows XP Start Menu
   { MAKE_KEY_NAME2(SMI, "%APPEXE%", DI),  
     "", 
@@ -270,6 +251,67 @@ static SETTING gSettings[] = {
   // string.
   //     firefox.exe\shell\properties        (default)   REG_SZ  Firefox &Options
 };
+
+static SETTING gDDESettings[] = {
+  { MAKE_KEY_NAME2(CLS, "HTTP", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTP", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "HTTPS", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "HTTPS", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "FTP", DDE), "", DDE_COMMAND, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "FTP", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION },
+  { MAKE_KEY_NAME2(CLS, "GOPHER", DDE), "", DDE_COMMAND, NO_SUBSTITUTION  },
+  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION },
+  { MAKE_KEY_NAME3(CLS, "GOPHER", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION  },
+  { MAKE_KEY_NAME2(CLS, "CHROME", DDE), "", DDE_COMMAND, NO_SUBSTITUTION  },
+  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "Application"), "", DDE_NAME, NO_SUBSTITUTION  },
+  { MAKE_KEY_NAME3(CLS, "CHROME", DDE, "Topic"), "", "WWW_OpenURL", NO_SUBSTITUTION  }
+};
+
+NS_IMETHODIMP
+nsWindowsShellService::Register(nsIComponentManager *aCompMgr, nsIFile *aPath, const char *registryLocation,
+                                const char *componentType, const nsModuleComponentInfo *info)
+{
+    nsresult rv;
+    nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    return catman->AddCategoryEntry("app-startup", "Windows Shell Service", "service," NS_SHELLSERVICE_CONTRACTID, PR_TRUE, PR_TRUE, nsnull);
+}
+
+nsWindowsShellService::nsWindowsShellService()
+:mCheckedThisSession(PR_FALSE)
+{
+  nsCOMPtr<nsIObserverService> obsServ (do_GetService("@mozilla.org/observer-service;1"));
+  obsServ->AddObserver(this, "quit-application", PR_FALSE);
+}
+
+NS_IMETHODIMP
+nsWindowsShellService::RegisterDDESupport()
+{
+  SETTING* end = gDDESettings + sizeof(gDDESettings)/sizeof(SETTING);
+  for (SETTING* settings = gDDESettings; settings < end; ++settings) {
+    nsCAutoString key(settings->keyName);    
+    nsCAutoString data(settings->valueData);    
+
+    SetRegKey(key.get(), settings->valueName, data.get(),
+              PR_FALSE, 0, PR_TRUE, PR_TRUE);
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindowsShellService::UnregisterDDESupport()
+{
+  DeleteRegKey(HKEY_CLASSES_ROOT, "HTTP\\shell\\open\\ddeexec");
+  DeleteRegKey(HKEY_CLASSES_ROOT, "HTTPS\\shell\\open\\ddeexec");
+  DeleteRegKey(HKEY_CLASSES_ROOT, "FTP\\shell\\open\\ddeexec");
+  DeleteRegKey(HKEY_CLASSES_ROOT, "CHROME\\shell\\open\\ddeexec");
+  DeleteRegKey(HKEY_CLASSES_ROOT, "GOPHER\\shell\\open\\ddeexec");
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 nsWindowsShellService::IsDefaultBrowser(PRBool aStartupCheck, PRBool* aIsDefaultBrowser)
@@ -408,6 +450,9 @@ nsWindowsShellService::SetDefaultBrowser(PRBool aClaimAllTypes, PRBool aForAllUs
   SetRegKey(key2.get(), "", NS_ConvertUCS2toUTF8(optionsTitle).get(), PR_TRUE, 
             backupKey, aClaimAllTypes, aForAllUsers);
 
+  // We need to reregister DDE support
+  RegisterDDESupport();
+
   // Refresh the Shell
   ::SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, NULL,
                        (LPARAM)"SOFTWARE\\Clients\\StartMenuInternet",
@@ -451,6 +496,43 @@ nsWindowsShellService::RestoreFileSettings(PRBool aForAllUsers)
                        SMTO_NORMAL|SMTO_ABORTIFHUNG,
                        MOZ_HWND_BROADCAST_MSG_TIMEOUT, NULL);
   return NS_OK;
+}
+
+// Utility function to delete a registry subkey.
+DWORD
+nsWindowsShellService::DeleteRegKey(HKEY baseKey, const char *keyName)
+{
+ // Make sure input subkey isn't null. 
+ if (!keyName || !::strlen(keyName))
+   return ERROR_BADKEY;
+
+ DWORD rc;
+ // Open subkey.
+ HKEY key;
+ rc = ::RegOpenKeyEx(baseKey, keyName, 0, KEY_ENUMERATE_SUB_KEYS | DELETE, &key);
+ 
+ // Continue till we get an error or are done.
+ while (rc == ERROR_SUCCESS) {
+   char subkeyName[_MAX_PATH];
+   DWORD len = sizeof subkeyName;
+   // Get first subkey name.  Note that we always get the
+   // first one, then delete it.  So we need to get
+   // the first one next time, also.
+   rc = ::RegEnumKeyEx(key, 0, subkeyName, &len, 0, 0, 0, 0);
+   if (rc == ERROR_NO_MORE_ITEMS) {
+     // No more subkeys.  Delete the main one.
+     rc = ::RegDeleteKey(baseKey, keyName);
+     break;
+   } 
+   if (rc == ERROR_SUCCESS) {
+     // Another subkey, delete it, recursively.
+     rc = DeleteRegKey(key, subkeyName);
+   }
+ }
+ 
+ // Close the key we opened.
+ ::RegCloseKey(key);
+ return rc;
 }
 
 void
@@ -913,4 +995,20 @@ nsWindowsShellService::GetRegistryEntry(PRInt32 aHKEYConstant,
   return *aResult ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
+NS_IMETHODIMP
+nsWindowsShellService::Observe(nsISupports* aObject, const char* aTopic, const PRUnichar* aMessage)
+{
+  PRBool isDefault;
+  IsDefaultBrowser(PR_TRUE, &isDefault);
+  if (!isDefault)
+    return NS_OK;
+
+  if (!nsCRT::strcmp("app-startup", aTopic))
+    return RegisterDDESupport();
+  
+  if (!nsCRT::strcmp("quit-application", aTopic))
+    return UnregisterDDESupport();
+
+  return NS_OK;
+}
 

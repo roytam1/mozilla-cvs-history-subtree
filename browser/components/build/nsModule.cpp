@@ -99,7 +99,8 @@ static const nsModuleComponentInfo components[] =
   { "Browser Shell Shervice",
     NS_SHELLSERVICE_CID,
     NS_SHELLSERVICE_CONTRACTID,
-    nsWindowsShellServiceConstructor },
+    nsWindowsShellServiceConstructor,
+    nsWindowsShellService::Register },
 
 #elif defined (XP_MACOSX)
   { "Browser Shell Shervice",

@@ -2632,7 +2632,6 @@ var DownloadsButtonDNDObserver = {
       saveURL(url, name, null, true, true);
     }
   },
-
   getSupportedFlavours: function ()
   {
     var flavourSet = new FlavourSet();
@@ -5409,7 +5408,7 @@ var MailIntegration = {
   
   readNews: function ()
   {
-    var shell = window.getShellService();
+    var shell = getShellService();
     if (shell)
       shell.openPreferredApplication(Components.interfaces.nsIShellService.APPLICATION_NEWS);
   },
