@@ -1274,6 +1274,13 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   // if supported by the platform.  otherwise, use nspr ;-)
 
 #if defined(XP_WIN) || defined(XP_OS2)
+  char* arg = PR_GetEnv("XRE_DUMP_CHILD_PARAMS");
+  if (arg && *arg) {
+    printf("*** launching child with\n");
+    for (PRInt32 i = 0; i < gRestartArgc; ++i)
+      printf("*** arg %d = %s\n", i, gRestartArgv[i]);
+    while (1);
+  }
   if (_execv(exePath, gRestartArgv) == -1)
     return NS_ERROR_FAILURE;
 #elif defined(XP_MACOSX)
