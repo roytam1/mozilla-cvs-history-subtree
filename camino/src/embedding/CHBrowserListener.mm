@@ -458,17 +458,10 @@ CHBrowserListener::GetTitle(PRUnichar * *aTitle)
   }
 
   NSString* title = [mContainer title];
-  unsigned int length = [title length];
-  if (length) {
-    *aTitle = (PRUnichar*)nsMemory::Alloc((length+1)*sizeof(PRUnichar));
-    if (!*aTitle) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-    [title getCharacters:*aTitle];
-  }
-  else {
+  if ([title length] > 0)
+    *aTitle = [title createNewUnicodeBuffer];
+  else
     *aTitle = nsnull;
-  }
   
   return NS_OK;
 }

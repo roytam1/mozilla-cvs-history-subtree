@@ -414,7 +414,7 @@ app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
     char *buf;
 
     do {
-        if ((buf = malloc ((unsigned int)size)) == NULL) {
+        if ((buf = (char*)malloc((unsigned int)size)) == NULL) {
             NSLog (@"malloc failed in [PreferenceManager getICStringPref]");
             return nil;
         }
@@ -433,7 +433,7 @@ app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
     }
     CopyPascalStringToC ((ConstStr255Param) buf, buf);
     string = [NSString stringWithCString:buf];
-    free (buf);
+    free(buf);
     return string;
 }
 

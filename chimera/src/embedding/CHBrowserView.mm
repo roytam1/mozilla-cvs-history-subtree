@@ -205,10 +205,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 {
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
   
-  int length = [urlSpec length];
-  PRUnichar* specStr = nsMemory::Alloc((length+1) * sizeof(PRUnichar));
-  [urlSpec getCharacters:specStr];
-  specStr[length] = PRUnichar(0);
+  nsAutoString specStr;
+  [urlSpec assignTo_nsAString:specStr];
   
   nsCOMPtr<nsIURI> referrerURI;
   if ( referrer )
@@ -226,12 +224,10 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
                 nsIWebNavigation::LOAD_FLAGS_BYPASS_PROXY;
   }
 
-  nsresult rv = nav->LoadURI(specStr, navFlags, referrerURI, nsnull, nsnull);
+  nsresult rv = nav->LoadURI(specStr.get(), navFlags, referrerURI, nsnull, nsnull);
   if (NS_FAILED(rv)) {
     // XXX need to throw
   }
-
-  nsMemory::Free(specStr);
 }
 
 - (void)reload:(unsigned int)flags
@@ -324,26 +320,20 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   }    
 }
 
-// XXXbryner This isn't used anywhere. how is it different from getCurrentURLSpec?
 - (NSString*)getCurrentURI
 {
-  nsCOMPtr<nsIURI> uri;
   nsCOMPtr<nsIWebNavigation> nav = do_QueryInterface(_webBrowser);
-  if ( !nav )
-    return nsnull;
+  if (!nav)
+    return nil;
 
+  nsCOMPtr<nsIURI> uri;
   nav->GetCurrentURI(getter_AddRefs(uri));
-  if (!uri) {
-    return nsnull;
-  }
+  if (!uri)
+    return nil;
 
   nsCAutoString spec;
   uri->GetSpec(spec);
-  
-  const char* cstr = spec.get();
-  NSString* str = [NSString stringWithCString:cstr];
-  
-  return str;
+	return [NSString stringWithUTF8String:spec.get()];
 }
 
 - (CHBrowserListener*)getCocoaBrowserListener
@@ -473,14 +463,10 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
       webFind->SetWrapFind(inWrap ? PR_TRUE : PR_FALSE);
       webFind->SetFindBackwards(inBackwards ? PR_TRUE : PR_FALSE);
     
-      PRUnichar* text = (PRUnichar*)nsMemory::Alloc(([inText length]+1)*sizeof(PRUnichar));
-      if ( text ) {
-        [inText getCharacters:text];
-        text[[inText length]] = 0;
-        webFind->SetSearchString(text);
-        webFind->FindNext(&found);
-        nsMemory::Free(text);
-      }
+      nsAutoString findString;
+      [inText assignTo_nsAString:findString];
+      webFind->SetSearchString(findString.get());
+      webFind->FindNext(&found);
     }
     return found;
 }
@@ -554,10 +540,9 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
         return;
     nsAutoString urlStr;
     location->GetHref(urlStr);
-#warning fix me
-    nsCAutoString urlCStr; urlCStr.AssignWithConversion(urlStr);
+
     nsCOMPtr<nsIURI> url;
-    nsresult rv = NS_NewURI(getter_AddRefs(url), urlCStr.get());
+    nsresult rv = NS_NewURI(getter_AddRefs(url), NS_ConvertUCS2toUTF8(urlStr).get());
     if (NS_FAILED(rv))
         return;
     

@@ -254,11 +254,8 @@ CocoaPromptService::Prompt(nsIDOMWindow *parent,
     if (checkValue) {
       *checkValue = (valueBool == YES) ? PR_TRUE : PR_FALSE;
     }
-    PRUint32 length = [valueStr length];
-    PRUnichar* retStr = (PRUnichar*)nsMemory::Alloc((length + 1) * sizeof(PRUnichar));
-    [valueStr getCharacters:retStr];
-    retStr[length] = PRUnichar(0);
-    *value = retStr;
+
+    *value = [valueStr createNewUnicodeBuffer];
   }
   else
     *value = nsnull;
@@ -300,21 +297,11 @@ CocoaPromptService::PromptUsernameAndPassword(nsIDOMWindow *parent,
   // is something other than cancel. If it is, we'd leak any string we allocated
   // to fill in |value|. 
   if (*_retval) {
-    if (checkValue) {
+    if (checkValue)
       *checkValue = (valueBool == YES) ? PR_TRUE : PR_FALSE;
-    }
 
-    PRUint32 length = [userNameStr length];
-    PRUnichar* retStr = (PRUnichar*)nsMemory::Alloc((length + 1) * sizeof(PRUnichar));
-    [userNameStr getCharacters:retStr];
-    retStr[length] = PRUnichar(0);
-    *username = retStr;
-
-    length = [passwordStr length];
-    retStr = (PRUnichar*)nsMemory::Alloc((length + 1) * sizeof(PRUnichar));
-    [passwordStr getCharacters:retStr];
-    retStr[length] = PRUnichar(0);
-    *password = retStr;
+    *username = [userNameStr createNewUnicodeBuffer];
+    *password = [passwordStr createNewUnicodeBuffer];
   } else {
     *username = nsnull;
     *password = nsnull;
@@ -355,15 +342,10 @@ CocoaPromptService::PromptPassword(nsIDOMWindow *parent,
   // is something other than cancel. If it is, we'd leak any string we allocated
   // to fill in |value|. 
   if (*_retval) {
-    if (checkValue) {
+    if (checkValue)
       *checkValue = (valueBool == YES) ? PR_TRUE : PR_FALSE;
-    }
 
-    PRUint32 length = [passwordStr length];
-    PRUnichar* retStr = (PRUnichar*)nsMemory::Alloc((length + 1) * sizeof(PRUnichar));
-    [passwordStr getCharacters:retStr];
-    retStr[length] = PRUnichar(0);
-    *password = retStr;
+    *password = [passwordStr createNewUnicodeBuffer];
   }
   else
     *password = nsnull;
