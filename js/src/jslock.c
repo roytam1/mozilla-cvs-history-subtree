@@ -739,9 +739,10 @@ GetFatlock(void *id)
     uint32 i = GLOBAL_LOCK_INDEX(id);
     if (fl_list_table[i].free == NULL) {
 #ifdef DEBUG
+        if (fl_list_table[i].taken)
         printf("Ran out of fat locks!\n");
 #endif
-        fl_list_table[i].free = ListOfFatlocks(10);
+        fl_list_table[i].free = ListOfFatlocks(fl_list_chunk_len);
     }
     m = fl_list_table[i].free;
     fl_list_table[i].free = m->next;
@@ -808,15 +809,9 @@ js_SetupLocks(int l, int g)
         return JS_FALSE;
     }
     fl_list_table_len = global_lock_count;
-    for (i = 0; i < global_lock_count; i++) {
-        fl_list_table[i].free = ListOfFatlocks(l);
-        if (!fl_list_table[i].free) {
-            fl_list_table_len = i;
-            js_CleanupLocks();
-            return JS_FALSE;
-        }
-        fl_list_table[i].taken = NULL;
-    }
+    for (i = 0; i < global_lock_count; i++)
+        fl_list_table[i].free = fl_list_table[i].taken = NULL;
+    fl_list_chunk_len = l;
 #endif /* !NSPR_LOCK */
     return JS_TRUE;
 }
