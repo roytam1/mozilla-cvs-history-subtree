@@ -171,8 +171,11 @@ var goButtonObserver = {
     {
       var xferData = aXferData.data.split("\n");
       var uri = xferData[0] ? xferData[0] : xferData[1];
-      if (uri)
+      if (uri) {
+        DragDropSecurityCheck(aEvent, aDragSession, uri);
+
         loadURI(uri);
+      }
     },
   getSupportedFlavours: function ()
     {
