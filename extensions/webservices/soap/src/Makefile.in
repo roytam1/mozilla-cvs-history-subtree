@@ -32,8 +32,8 @@ REQUIRES	= xpcom string caps dom js widget layout xpconnect necko
 
 CPPSRCS	= 				\
 		nsSOAPCall.cpp	        \
+		nsDefaultSOAPEncoder.cpp\
 		nsSOAPFault.cpp	        \
-		nsSOAPJSResponseListener.cpp	\
 		nsSOAPJSValue.cpp	\
 		nsSOAPMessage.cpp	\
 		nsSOAPParameter.cpp	\

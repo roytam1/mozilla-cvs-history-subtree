@@ -28,8 +28,8 @@ DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPPSRCS=					\
 	nsSOAPCall.cpp				        \
+	nsDefaultSOAPEncoder.cpp			\
 	nsSOAPFault.cpp	       				\
-	nsSOAPJSResponseListener.cpp	                \
 	nsSOAPJSValue.cpp				\
 	nsSOAPMessage.cpp				\
 	nsSOAPParameter.cpp				\

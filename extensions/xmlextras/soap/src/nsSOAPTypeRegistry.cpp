@@ -20,11 +20,15 @@
  * Contributor(s): 
  */
 
+#include "nsString.h"
+#include "nsSOAPMessage.h"
+#include "nsSOAPType.h"
 #include "nsSOAPTypeRegistry.h"
 #include "nsSOAPUtils.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIDOMNodeList.h"
+#include "nsDefaultSOAPEncoder.h"
 
 NS_IMPL_ISUPPORTS2(nsSOAPTypeRegistry, nsISOAPTypeRegistry, nsISecurityCheckedComponent)
 
@@ -40,8 +44,17 @@ nsSOAPDefaultTypeRegistry::nsSOAPDefaultTypeRegistry()
 {
   mDefault = nsnull;
 #if 0
-  addConfiguration() after parsing some default configuration;
+  addConfiguration() parse some default configuration;
 #endif
+
+  nsCOMPtr<nsISOAPType> type;
+  type = new nsSOAPType();
+  type->SetEncodingStyleURI(nsSOAPUtils::kSOAPEncodingURI);
+
+  nsDefaultSOAPEncoder* encoder = new nsDefaultSOAPEncoder();
+  type->SetMarshaller(encoder);
+  type->SetUnmarshaller(encoder);
+  AddType(type);
 }
 
 nsSOAPTypeRegistry::~nsSOAPTypeRegistry()
@@ -105,19 +118,23 @@ NS_IMETHODIMP nsSOAPTypeRegistry::QueryBySchemaID(const nsAReadableString & aEnc
 NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsISupports **_retval)
 {
   *_retval = nsnull;
+  nsAutoString typeID(aTypeID);
+
   nsCOMPtr<nsISOAPType> type;
   nsAutoString schemaID;
   nsCOMPtr<nsIDOMElement> configuration;
-  nsresult rc = QueryByTypeID(aEncodingStyleURI, aTypeID, getter_AddRefs(type));
-  if (NS_FAILED(rc))
-    return rc;
-  if (!type) {
-    rc = mDefault->QueryByTypeID(aEncodingStyleURI, aTypeID, getter_AddRefs(type));
-    if (NS_FAILED(rc))
-      return rc;
+  for (;;) {
+    QueryByTypeID(aEncodingStyleURI, typeID, getter_AddRefs(type));
+    if (type)
+      break;
+    mDefault->QueryByTypeID(aEncodingStyleURI, typeID, getter_AddRefs(type));
+    if (type)
+      break;
+    PRUint32 i = typeID.RFind(nsSOAPUtils::kTypeSeparator);
+    if (i < 0)
+      return NS_ERROR_NOT_IMPLEMENTED;
+    typeID.Left(typeID, i);
   }
-  if (!type)
-    return NS_ERROR_NOT_IMPLEMENTED;
   nsCOMPtr<nsISOAPMarshaller> marshaller;
   type->GetSchemaID(schemaID);
   type->GetMarshallConfiguration(getter_AddRefs(configuration));
@@ -131,19 +148,27 @@ NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports
 NS_IMETHODIMP nsSOAPTypeRegistry::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, nsISupports **_retval)
 {
   *_retval = nsnull;
+  nsAutoString schemaID(aSchemaID);
+
   nsCOMPtr<nsISOAPType> type;
   nsAutoString typeID;
   nsCOMPtr<nsIDOMElement> configuration;
-  nsresult rc = QueryBySchemaID(aEncodingStyleURI, aSchemaID, getter_AddRefs(type));
-  if (NS_FAILED(rc))
-    return rc;
-  if (!type) {
-    rc = mDefault->QueryBySchemaID(aEncodingStyleURI, aSchemaID, getter_AddRefs(type));
-    if (NS_FAILED(rc))
-      return rc;
+  for (;;) {
+    QueryBySchemaID(aEncodingStyleURI, schemaID, getter_AddRefs(type));
+    if (type)
+      break;
+    mDefault->QueryBySchemaID(aEncodingStyleURI, schemaID, getter_AddRefs(type));
+    if (type)
+      break;
+#if 0
+    PRUint32 i = schemaID.RFind(nsSOAPUtils::kTypeSeparator);
+    if (i < 0)
+#endif
+      return NS_ERROR_NOT_IMPLEMENTED;
+#if 0
+    typeID.Left(schemaID, i);
+#endif
   }
-  if (!type)
-    return NS_ERROR_NOT_IMPLEMENTED;
   nsCOMPtr<nsISOAPUnmarshaller> unmarshaller;
   type->GetSchemaID(typeID);
   type->GetUnmarshallConfiguration(getter_AddRefs(configuration));

@@ -65,6 +65,7 @@ const nsString nsSOAPUtils::kPRInt16Type(NS_LITERAL_STRING("#short"));
 const nsString nsSOAPUtils::kCharType(NS_LITERAL_STRING("#byte"));
 const nsString nsSOAPUtils::kArrayType(NS_LITERAL_STRING("#array"));
 const nsString nsSOAPUtils::kJSObjectTypePrefix(NS_LITERAL_STRING("#js#"));
+const nsString nsSOAPUtils::kTypeSeparator(NS_LITERAL_STRING("#"));
 const nsString nsSOAPUtils::kIIDObjectTypePrefix(NS_LITERAL_STRING("#iid#"));
 const nsString nsSOAPUtils::kNullType(NS_LITERAL_STRING("#null"));
 const nsString nsSOAPUtils::kVoidType(NS_LITERAL_STRING("#void"));

@@ -43,18 +43,20 @@ nsDefaultSOAPEncoder::~nsDefaultSOAPEncoder()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsDefaultSOAPEncoder, nsISOAPEncoder)
+NS_IMPL_ISUPPORTS2(nsDefaultSOAPEncoder, nsISOAPMarshaller, nsISOAPUnmarshaller)
 
-static const char* kStructElementName = "Struct";
-static const char* kStringElementName = "string";
-static const char* kBooleanElementName = "boolean";
-static const char* kDoubleElementName = "double";
+static const nsString kStructElementName(NS_LITERAL_STRING("Struct"));
+static const nsString kStringElementName(NS_LITERAL_STRING("string"));
+static const nsString kBooleanElementName(NS_LITERAL_STRING("boolean"));
+static const nsString kDoubleElementName(NS_LITERAL_STRING("double"));
 static const char* kFloatElementName = "float";
 static const char* kLongElementName = "long";
 static const char* kIntElementName = "int";
 static const char* kShortElementName = "short";
 static const char* kByteElementName = "byte";
 static const char* kArrayElementName = "Array";
+
+#if 0
 
 static void
 GetElementNameForType(PRInt32 aType, PRUnichar** name)
@@ -1019,3 +1021,5 @@ nsDefaultSOAPEncoder::ElementToParameter(nsIDOMElement *element,
 
   return NS_OK;
 }
+
+#endif

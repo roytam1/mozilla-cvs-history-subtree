@@ -23,11 +23,17 @@
 #ifndef nsDefaultSOAPEncoder_h__
 #define nsDefaultSOAPEncoder_h__
 
-#include "nsISOAPEncoder.h"
+#include "nsString.h"
 #include "nsISupportsArray.h"
 #include "jsapi.h"
+#include "nsISOAPMessage.h"
+#include "nsISOAPMarshaller.h"
+#include "nsISOAPUnmarshaller.h"
 
-class nsDefaultSOAPEncoder : public nsISOAPEncoder {
+class nsDefaultSOAPEncoder : 
+  public nsISOAPMarshaller, 
+  public nsISOAPUnmarshaller 
+{
 public:
   nsDefaultSOAPEncoder();
   virtual ~nsDefaultSOAPEncoder();
@@ -35,7 +41,10 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsISOAPEncoder  
-  NS_DECL_NSISOAPENCODER
+  NS_DECL_NSISOAPMARSHALLER
+
+  // nsISOAPEncoder  
+  NS_DECL_NSISOAPUNMARSHALLER
 
 protected:
   nsresult EncodeParameter(nsISOAPParameter* parameter,
@@ -66,11 +75,5 @@ protected:
                                 PRInt32 type,
                                 nsISOAPParameter **_retval);
 };
-
-#define NS_DEFAULTSOAPENCODER_CID               \
-{ /* 0b6e6ef0-56c4-11d4-9a5e-00104bdf5339 */    \
-  0x0b6e6ef0, 0x56c4, 0x11d4,                   \
-  {0x9a, 0x5e, 0x00, 0x10, 0x4b, 0xdf, 0x53, 0x39} }
-#define NS_DEFAULTSOAPENCODER_CONTRACTID NS_SOAPENCODER_CONTRACTID_PREFIX "http://schemas.xmlsoap.org/soap/encoding/"
 
 #endif
