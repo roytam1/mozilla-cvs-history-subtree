@@ -55,7 +55,7 @@ struct JSRegExp {
     size_t      lastIndex;      /* index after last match, for //g iterator */
     uintN       parenCount;     /* number of parenthesized submatches */
     uint8       flags;          /* flags, see jsapi.h */
-    struct RENode *ren;         /* regular expression tree root */
+    jsbytecode  program[1];     /* regular expression bytecode */
 };
 
 extern JSRegExp *
