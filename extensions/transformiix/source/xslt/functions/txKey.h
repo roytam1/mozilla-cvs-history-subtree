@@ -36,11 +36,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef TRANSFRMX_TXKEY_H
-#define TRANSFRMX_TXKEY_H
+#ifndef txKey_h__
+#define txKey_h__
 
-#include "pldhash.h"
-#include "dom.h"
+#include "nsDoubleHashtable.h"
 #include "XMLUtils.h"
 
 class txKeyValueHashKey
@@ -50,40 +49,33 @@ public:
                       Document* aDocument,
                       const nsAString& aKeyValue)
         : mKeyName(aKeyName),
-          mDocument(aDocument),
-          mKeyValue(aKeyValue)
+          mKeyValue(aKeyValue),
+          mDocument(aDocument)
     {
-    }
-    PRBool Equals(const txKeyValueHashKey& aKeyValueHashKey) const
-    {
-        return mKeyName == aKeyValueHashKey.mKeyName &&
-               mDocument == aKeyValueHashKey.mDocument &&
-               mKeyValue.Equals(aKeyValueHashKey.mKeyValue);
-    }
-    PLDHashNumber GetHash() const
-    {
-        return mKeyName.mNamespaceID ^
-               NS_PTR_TO_INT32(mKeyName.mLocalName.get()) ^
-               NS_PTR_TO_INT32(mDocument) ^
-               HashString(mKeyValue);
     }
 
     txExpandedName mKeyName;
-    Document* mDocument;
     nsString mKeyValue;
+    Document* mDocument;
 };
 
 struct txKeyValueHashEntry : public PLDHashEntryHdr
 {
-    txKeyValueHashEntry(const txKeyValueHashKey& aKey) : mKey(aKey)
+    txKeyValueHashEntry(const void* aKey)
+        : mKey(*NS_STATIC_CAST(const txKeyValueHashKey*, aKey))
     {
     }
+
+    // @see nsDoubleHashtable.h
+    const void* GetKey();
+    PRBool MatchEntry(const void* aKey) const;
+    static PLDHashNumber HashKey(const void* aKey);
     
     txKeyValueHashKey mKey;
     NodeSet mNodeSet;
 };
 
-extern PLDHashTableOps gTxKeyValueHashOps;
+DECL_DHASH_WRAPPER(txKeyValueHash, txKeyValueHashEntry, txKeyValueHashKey&);
 
 class txIndexedKeyHashKey
 {
@@ -94,17 +86,6 @@ public:
           mDocument(aDocument)
     {
     }
-    PRBool Equals(const txIndexedKeyHashKey& aIndexedKeyHashKey) const
-    {
-        return mKeyName == aIndexedKeyHashKey.mKeyName &&
-               mDocument == aIndexedKeyHashKey.mDocument;
-    }
-    PLDHashNumber GetHash() const
-    {
-        return mKeyName.mNamespaceID ^
-               NS_PTR_TO_INT32(mKeyName.mLocalName.get()) ^
-               NS_PTR_TO_INT32(mDocument);
-    }
 
     txExpandedName mKeyName;
     Document* mDocument;
@@ -112,45 +93,53 @@ public:
 
 struct txIndexedKeyHashEntry : public PLDHashEntryHdr
 {
-    txIndexedKeyHashEntry(const txIndexedKeyHashKey& aKey) : mKey(aKey),
-                                                             mIndexed(0)
+    txIndexedKeyHashEntry(const void* aKey)
+        : mKey(*NS_STATIC_CAST(const txIndexedKeyHashKey*, aKey)),
+          mIndexed(PR_FALSE)
     {
     }
-    
+
+    // @see nsDoubleHashtable.h
+    const void* GetKey();
+    PRBool MatchEntry(const void* aKey) const;
+    static PLDHashNumber HashKey(const void* aKey);
+
     txIndexedKeyHashKey mKey;
     PRBool mIndexed;
 };
 
-extern PLDHashTableOps gTxIndexedKeyHashOps;
+DECL_DHASH_WRAPPER(txIndexedKeyHash, txIndexedKeyHashEntry,
+                   txIndexedKeyHashKey&);
 
 /**
- * Class representing an <xsl:key>. Or in the case where several <xsl:key>s
- * have the same name one object represents all <xsl:key>s with that name
+ * Class holding all <xsl:key>s of a particular expanded name in the
+ * stylesheet.
  */
 class txXSLKey : public TxObject {
     
 public:
+    txXSLKey(const txExpandedName& aName) : mName(aName)
+    {
+    }
     ~txXSLKey();
     
     /**
-     * Adds a match/use pair. Returns MB_FALSE if matchString or useString
-     * can't be parsed.
+     * Adds a match/use pair.
      * @param aMatch  match-pattern
      * @param aUse    use-expression
-     * @return MB_FALSE if an error occured, MB_TRUE otherwise
+     * @return PR_FALSE if an error occured, PR_TRUE otherwise
      */
-    MBool addKey(txPattern* aMatch, Expr* aUse);
+    PRBool addKey(txPattern* aMatch, Expr* aUse);
 
     /**
      * Indexes a document and adds it to the hash of key values
      * @param aDocument     Document to index and add
-     * @param aKeyName      Name of this key
      * @param aKeyValueHash Hash to add values to
      * @param aEs           txExecutionState to use for XPath evaluation
      */
     nsresult indexDocument(Document* aDocument,
-                           const txExpandedName& aKeyName,
-                           PLDHashTable* aKeyValueHash, txExecutionState* aEs);
+                           txKeyValueHash& aKeyValueHash,
+                           txExecutionState& aEs);
 
 private:
     /**
@@ -161,8 +150,8 @@ private:
      * @param aKeyValueHash Hash to add values to
      * @param aEs           txExecutionState to use for XPath evaluation
      */
-    nsresult indexTree(Node* aNode, txKeyValueHashKey* aKey,
-                       PLDHashTable* aKeyValueHash, txExecutionState* aEs);
+    nsresult indexTree(Node* aNode, txKeyValueHashKey& aKey,
+                       txKeyValueHash& aKeyValueHash, txExecutionState& aEs);
 
     /**
      * Tests one node if it matches any of the keys match-patterns. If
@@ -172,8 +161,8 @@ private:
      * @param aKeyValueHash Hash to add values to
      * @param aEs           txExecutionState to use for XPath evaluation
      */
-    nsresult testNode(Node* aNode, txKeyValueHashKey* aKey,
-                      PLDHashTable* aKeyValueHash, txExecutionState* aEs);
+    nsresult testNode(Node* aNode, txKeyValueHashKey& aKey,
+                      txKeyValueHash& aKeyValueHash, txExecutionState& aEs);
 
     /**
      * represents one match/use pair
@@ -187,6 +176,41 @@ private:
      * List of all match/use pairs. The items as |Key|s
      */
     List mKeys;
+    
+    /**
+     * Name of this key
+     */
+    txExpandedName mName;
 };
 
-#endif //TRANSFRMX_TXKEY_H
+
+class txKeyHash
+{
+public:
+    txKeyHash(txExpandedNameMap& aKeys)
+        : mKeys(aKeys)
+    {
+    }
+    
+    nsresult init();
+
+    nsresult getKeyNodes(const txExpandedName& aKeyName,
+                         Document* aDocument,
+                         const nsAString& aKeyValue,
+                         PRBool aIndexIfNotFound,
+                         txExecutionState& aEs,
+                         const NodeSet** aResult);
+
+private:
+    // Hash of all indexed key-values
+    txKeyValueHash mKeyValues;
+
+    // Hash showing which keys+documents has been indexed
+    txIndexedKeyHash mIndexedKeys;
+    
+    // Map of txXSLKeys
+    txExpandedNameMap& mKeys;
+};
+
+
+#endif //txKey_h__

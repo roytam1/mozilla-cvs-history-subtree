@@ -46,6 +46,7 @@
 #include "Expr.h"
 #include "XMLUtils.h"
 #include "txIXPathContext.h"
+#include "txNamespaceMap.h"
 
 class txHandlerTable;
 class txElementContext;
@@ -99,6 +100,7 @@ public:
     nsresult resolveNamespacePrefix(nsIAtom* aPrefix, PRInt32& aID);
     nsresult resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                  FunctionCall*& aFunction);
+    PRBool caseInsensitiveNameTests();
     void receiveError(const nsAString& aMsg, nsresult aRes);
 
 

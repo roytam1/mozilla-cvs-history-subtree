@@ -297,7 +297,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                          aObserver);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(&sourceDocument, &mVariables);
+    es.init(sourceNode, &mVariables);
 
     // Process root of XML source document
     txXSLTProcessor::execute(es);
@@ -364,7 +364,7 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
                                          nsnull);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(&sourceDocument, &mVariables);
+    es.init(sourceNode, &mVariables);
 
     // Process root of XML source document
     txXSLTProcessor::execute(es);
@@ -413,7 +413,7 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     txToFragmentHandlerFactory handlerFactory(*aResult);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(&sourceDocument, &mVariables);
+    es.init(sourceNode, &mVariables);
 
     // Process root of XML source document
     txXSLTProcessor::execute(es);
@@ -559,7 +559,8 @@ txMozillaXSLTProcessor::LoadStyleSheet(nsITransformMediator* aMediator,
     nsCAutoString charsetVal;
     rv = aChannel->GetContentCharset(charsetVal);
     if (NS_SUCCEEDED(rv)) {
-        nsCOMPtr<nsICharsetAlias> calias = do_GetService(kCharsetAliasCID);
+        nsCOMPtr<nsICharsetAlias> calias =
+            do_GetService(NS_CHARSETALIAS_CONTRACTID);
 
         if (calias) {
             nsAutoString preferred;

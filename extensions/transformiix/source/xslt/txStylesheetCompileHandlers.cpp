@@ -46,6 +46,7 @@
 #include "txStylesheet.h"
 #include "txToplevelItems.h"
 #include "txPatternParser.h"
+#include "txNamespaceMap.h"
 
 txHandlerTable* gTxIgnoreHandler = 0;
 txHandlerTable* gTxRootHandler = 0;

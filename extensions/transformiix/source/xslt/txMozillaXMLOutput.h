@@ -181,6 +181,7 @@ private:
 
     PRPackedBool mInTransform;
     PRPackedBool mCreatingNewDocument;
+    PRPackedBool mDocumentIsHTML;
  
     enum txAction { eCloseElement = 1, eFlushText = 2 };
 };

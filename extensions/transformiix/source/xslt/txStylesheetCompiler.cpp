@@ -559,8 +559,8 @@ txStylesheetCompilerState::resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
        return NS_OK;
    }
    if (aName == txXSLTAtoms::key) {
-       aFunction = new txKeyFunctionCall(mElementContext->mMappings);
-       NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
+       //aFunction = new txKeyFunctionCall(mElementContext->mMappings);
+       //NS_ENSURE_TRUE(aFunction, NS_ERROR_OUT_OF_MEMORY);
 
        return NS_OK;
    }
@@ -609,6 +609,12 @@ txStylesheetCompilerState::resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
    }
 
    return NS_ERROR_XPATH_UNKNOWN_FUNCTION;
+}
+
+PRBool
+txStylesheetCompilerState::caseInsensitiveNameTests()
+{
+    return PR_FALSE;
 }
 
 void

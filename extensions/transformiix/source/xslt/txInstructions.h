@@ -46,6 +46,7 @@
 #include "nsIAtom.h"
 #include "nsString.h"
 #include "XMLUtils.h"
+#include "txNamespaceMap.h"
 
 class Expr;
 

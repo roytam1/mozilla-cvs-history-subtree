@@ -40,7 +40,6 @@
 #define __TX_XPATH_SINGLENODE_CONTEXT
 
 #include "txIXPathContext.h"
-#include "nsLiteralString.h"
 
 class txSingleNodeContext : public txIEvalContext
 {
@@ -71,8 +70,9 @@ public:
     {
         NS_ASSERTION(mInner, "mInner is null!!!");
 #ifdef DEBUG
-        mInner->receiveError(NS_LITERAL_STRING("forwarded error: ") + aMsg,
-                             aRes);
+        nsAutoString error(NS_LITERAL_STRING("forwarded error: "));
+        error.Append(aMsg);
+        mInner->receiveError(error, aRes);
 #else
         mInner->receiveError(aMsg, aRes);
 #endif
