@@ -55,6 +55,7 @@
 #include "nsIRDFContainer.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
+#include "nsIStringBundle.h"
 #include "nsISupportsPrimitives.h"
 #include "nsNetUtil.h"
 #include "nsOperaProfileMigrator.h"
@@ -63,6 +64,9 @@
 #ifdef XP_WIN
 #include <windows.h>
 #endif
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
+#define MIGRATION_BUNDLE "chrome://browser/locale/migration/migration.properties"
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsBrowserProfileMigrator
@@ -372,8 +376,6 @@ nsOperaProfileMigrator::CopyUserContentSheet(nsINIParser* aParser)
 nsresult
 nsOperaProfileMigrator::CopyCookies(PRBool aReplace)
 {
-  printf("*** copy opera cookies\n");
-
   nsresult rv = NS_OK;
 
   nsCOMPtr<nsIFile> temp;
@@ -664,7 +666,6 @@ nsOperaCookieMigrator::ReadHeader()
   mStream->Read32(&mAppVersion);
   mStream->Read32(&mFileVersion);
 
-  printf("*** app = %d, file = %d\n", mAppVersion, mFileVersion);
   if (mAppVersion & 0x1000 && mFileVersion & 0x2000) {
     mStream->Read16(&mTagTypeLength);
     mStream->Read16(&mPayloadTypeLength);
@@ -739,7 +740,6 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
 nsresult
 nsOperaProfileMigrator::CopyPasswords(PRBool aReplace)
 {
-  printf("*** copy opera passwords\n");
   return NS_OK;
 }
 
@@ -757,17 +757,112 @@ nsOperaProfileMigrator::CopyBookmarks(PRBool aReplace)
 
   nsCOMPtr<nsILineInputStream> lineInputStream(do_QueryInterface(fileInputStream));
 
-  nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1"));
-  nsCOMPtr<nsIRDFResource> root, toolbar;
-  rdf->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
-
   nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID));
+  nsCOMPtr<nsIStringBundle> bundle;
+  bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
+
+  nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1"));
+  nsCOMPtr<nsIRDFResource> root;
+  rdf->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), 
+                   getter_AddRefs(root));
+  nsCOMPtr<nsIRDFResource> parentFolder;
+  if (!aReplace) {
+    nsXPIDLString importedOperaHotlistTitle;
+    bundle->GetStringFromName(NS_LITERAL_STRING("importedOperaHotlistTitle").get(), 
+                              getter_Copies(importedOperaHotlistTitle));
+
+    bms->CreateFolderInContainer(importedOperaHotlistTitle.get(), 
+                                 root, -1, getter_AddRefs(parentFolder));
+  }
+  else
+    parentFolder = root;
+
+  CopySmartKeywords(bms, bundle, parentFolder);
+
+  nsCOMPtr<nsIRDFResource> toolbar;
   bms->GetBookmarksToolbarFolder(getter_AddRefs(toolbar));
   
   if (aReplace)
     ClearToolbarFolder(bms, toolbar);
 
-  return ParseBookmarksFolder(lineInputStream, root, toolbar, bms);
+  return ParseBookmarksFolder(lineInputStream, parentFolder, toolbar, bms);
+}
+
+nsresult
+nsOperaProfileMigrator::CopySmartKeywords(nsIBookmarksService* aBMS, 
+                                          nsIStringBundle* aBundle, 
+                                          nsIRDFResource* aParentFolder)
+{
+  nsresult rv = NS_OK;
+
+  nsCOMPtr<nsIFile> smartKeywords;
+  mOperaProfile->Clone(getter_AddRefs(smartKeywords));
+  smartKeywords->Append(NS_LITERAL_STRING("search.ini"));
+
+  nsCAutoString path;
+  smartKeywords->GetNativePath(path);
+  char* pathCopy = ToNewCString(path);
+  if (!pathCopy)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  nsINIParser* parser = new nsINIParser(pathCopy);
+  if (!parser)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  nsXPIDLString importedSearchUrlsTitle;
+  aBundle->GetStringFromName(NS_LITERAL_STRING("importedOperaSearchUrls").get(), 
+                             getter_Copies(importedSearchUrlsTitle));
+
+  nsCOMPtr<nsIRDFResource> keywordsFolder;
+  aBMS->CreateFolderInContainer(importedSearchUrlsTitle.get(), 
+                                aParentFolder, -1, getter_AddRefs(keywordsFolder));
+
+  PRInt32 sectionIndex = 1;
+  char section[35];
+  char *name = nsnull, *url = nsnull, *keyword = nsnull;
+  PRInt32 keyValueLength = 0;
+  do {
+    sprintf(section, "Search Engine %d", sectionIndex++);
+    PRInt32 err = parser->GetStringAlloc(section, "Name", &name, &keyValueLength);
+    if (err != nsINIParser::OK)
+      break;
+
+    err = parser->GetStringAlloc(section, "URL", &url, &keyValueLength);
+    if (err != nsINIParser::OK)
+      continue;
+    err = parser->GetStringAlloc(section, "Key", &keyword, &keyValueLength);
+    if (err != nsINIParser::OK)
+      continue;
+
+    nsAutoString nameStr(NS_ConvertUTF8toUCS2(name));
+    nsCOMPtr<nsIRDFResource> itemRes;
+
+    nsCOMPtr<nsIURI> uri;
+    NS_NewURI(getter_AddRefs(uri), url);
+    if (!uri)
+      return NS_ERROR_OUT_OF_MEMORY;
+    nsCAutoString hostCStr;
+    uri->GetHost(hostCStr);
+    nsAutoString host; host.AssignWithConversion(hostCStr.get());
+
+    const PRUnichar* descStrings[] = { NS_ConvertUTF8toUCS2(keyword).get(), host.get() };
+    nsXPIDLString keywordDesc;
+    aBundle->FormatStringFromName(NS_LITERAL_STRING("importedSearchUrlDesc").get(),
+                                  descStrings, 2, getter_Copies(keywordDesc));
+
+    rv = aBMS->CreateBookmarkInContainer(NS_ConvertUTF8toUCS2(name).get(), 
+                                         url, 
+                                         NS_ConvertUTF8toUCS2(keyword).get(), 
+                                         keywordDesc.get(), 
+                                         nsnull, 
+                                         keywordsFolder,
+                                         -1, 
+                                         getter_AddRefs(itemRes));
+  }
+  while (1);
+
+  return rv;
 }
 
 void

@@ -1131,7 +1131,7 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
 
           const PRUnichar* descStrings[] = { keyword.get(), host.get() };
           nsXPIDLString keywordDesc;
-          rv = bundle->FormatStringFromName(NS_LITERAL_STRING("importedIESearchUrlDesc").get(),
+          rv = bundle->FormatStringFromName(NS_LITERAL_STRING("importedSearchUrlDesc").get(),
                                             descStrings, 2, getter_Copies(keywordDesc));
           bms->CreateBookmarkInContainer(keywordName.get(), 
                                          (char*)url, 
