@@ -279,7 +279,7 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
     CPString ** mozABNameList = NULL; // freed by MSCOM/Mozilla
     CPString ** mozABUrlList = NULL; // freed by MSCOM/Mozilla
     BOOL * mozDirFlagsList = NULL; // freed by MSCOM/Mozilla
-    BOOL neverDidPalmSyncBefore = TRUE; // 1st time palm sync?
+    BOOL neverDidPalmSyncBefore; // 1st time palm sync?
     DWORD mozABIndex;
 
     retval = sync->m_dbHH->OpenDB(FALSE);
@@ -301,14 +301,8 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
     else
       memset(mozABSeen, FALSE, sizeof(DWORD) * mozABCount);
 
-    // See if palm sync was performed before.
-    for(mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
-      if (! (mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag))
-      {
-        neverDidPalmSyncBefore = FALSE;
-        break;
-      }
-    
+    CONDUIT_LOG1(gFD, "first device = %lx\n", sync->m_rSyncProperties.m_FirstDevice);
+    neverDidPalmSyncBefore = (sync->m_rSyncProperties.m_FirstDevice != eNeither);
     // Log moz addrbooks.
     for (mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
     {
@@ -502,7 +496,7 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
     // and the case where Palm ABs have been deleted.
     for(mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
     {
-        if((mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag) && !sync->CategoryExists(*mozABNameList[mozABIndex],  mozDirFlagsList[mozABIndex] & kIsPabDirFlag))
+        if((mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag || neverDidPalmSyncBefore) && !sync->CategoryExists(*mozABNameList[mozABIndex],  mozDirFlagsList[mozABIndex] & kIsPabDirFlag))
         {
             CONDUIT_LOG3(gFD, "\nMoz AB[%d] category index = %d, name = '%s' doesn't exist on Palm so needs to be added to palm\n",
                     mozABIndex, mozCatIndexList[mozABIndex], mozABNameList[mozABIndex]->GetBuffer(0));
