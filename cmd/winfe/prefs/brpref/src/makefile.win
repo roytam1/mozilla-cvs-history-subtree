@@ -50,7 +50,7 @@ LLIBS = $(LLIBS) $(LLIBS16)
 
 MODULE=winprefs 
 DEPTH=..\..\..\..\.. 
-REQUIRES=dllcom winprefs pref dbm nspr js 
+REQUIRES=dllcom winprefs pref dbm nspr js libreg
 CPPSRCS=brpref.cpp pages.cpp brpages.cpp appages.cpp advpages.cpp 
 CPP_OBJS=.\$(OBJDIR)\brpref.obj .\$(OBJDIR)\pages.obj \
     .\$(OBJDIR)\brpages.obj .\$(OBJDIR)\appages.obj \

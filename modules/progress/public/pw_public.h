@@ -42,10 +42,10 @@ XP_BEGIN_PROTOS
 
 typedef void *  pw_ptr;
 
-typedef enum PW_WindowType {
+typedef enum _PW_WindowType {
 	pwApplicationModal,
 	pwStandard
-};
+} PW_WindowType;
 
 typedef void(*PW_CancelCallback) (void * closure);
 
@@ -121,6 +121,8 @@ void PW_DestroyProgressContext(MWContext * context);
 /* destroyed by passing NULL as pw_ptr */
 
 void PW_AssociateWindowWithContext(MWContext * context, pw_ptr pw);
+
+pw_ptr PW_GetAssociatedWindowForContext(MWContext *context);
 
 XP_END_PROTOS
 
