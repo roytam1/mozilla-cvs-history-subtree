@@ -257,6 +257,10 @@ in the same executable (although each JSContext is limited to interaction
 with at most one JVM).&nbsp; However, the API is not fully implemented.&nbsp;
 For example, many global variables will need to become members of the JSJavaVM
 struct so that they are stored on a per-JVM basis.</li>
+
+<li>
+Java and JavaScript use independent garbage collection systems.  A reference between the two worlds must, therefore, take the form of a GC root.  It's possible to create uncollectable objects when cyclic graphs cross the boundary between JS and Java, e.g. a JS object that refers to a Java object that refers back to the original JS object.  There is no simple solution to this dual-GC problem.  Luckily, such cyclic object graphs are extremely rare.
+</li>
 </ul>
 
 <h2>
