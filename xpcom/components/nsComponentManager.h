@@ -203,6 +203,7 @@ protected:
     nsNativeComponentLoader *mNativeComponentLoader;
     nsIComponentLoader  *mStaticComponentLoader;
     nsCOMPtr<nsIFile>   mComponentsDir;
+    nsCOMPtr<nsIFile>   mComponentRegFile;
     PRInt32             mComponentsOffset;
 
     // Shutdown

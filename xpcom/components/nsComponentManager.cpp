@@ -1003,8 +1003,6 @@ nsComponentManagerImpl::ReadPersistentRegistry()
 
     PRFileDesc* fd = nsnull;
 
-    nsCOMPtr<nsIFile> componentReg;
-
     // Can't use NS_GetSpecialDirectory here.  Called before service manager is initialized.
     nsCOMPtr<nsIProperties> directoryService;
     rv = nsDirectoryService::Create(nsnull, 
@@ -1013,11 +1011,12 @@ nsComponentManagerImpl::ReadPersistentRegistry()
     if (NS_FAILED(rv))
         return rv;
     rv = directoryService->Get(NS_XPCOM_COMPONENT_REGISTRY_FILE, NS_GET_IID(nsIFile), 
-                                  getter_AddRefs(componentReg));
+                                  getter_AddRefs(mComponentRegFile));
     if (NS_FAILED(rv))
         return rv;
     
-    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(componentReg, &rv);
+    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(mComponentRegFile,
+                                                         &rv);
     if (NS_FAILED(rv))
         return rv;
 
@@ -1370,6 +1369,10 @@ nsComponentManagerImpl::WritePersistentRegistry()
     if (!mComponentsDir)
         return NS_ERROR_FAILURE;  // this should have been set by Init().
 
+    if (!mComponentRegFile)
+        return NS_ERROR_FAILURE;  // this should have been set by
+                                  // ReadPersistentRegistry().
+
     PRFileDesc* fd = nsnull;
 
     nsCOMPtr<nsIFile> componentReg;
@@ -1432,32 +1435,20 @@ out:
     if (NS_FAILED(rv))
         return rv;
 
-    nsCOMPtr<nsIFile> mainFile;
-    nsCOMPtr<nsIProperties> directoryService;
-    rv = nsDirectoryService::Create(nsnull, 
-                                    NS_GET_IID(nsIProperties), 
-                                    getter_AddRefs(directoryService));
-    if (NS_FAILED(rv))
-        return rv;
-    rv = directoryService->Get(NS_XPCOM_COMPONENT_REGISTRY_FILE, NS_GET_IID(nsIFile), 
-                                  getter_AddRefs(mainFile));
-    if (NS_FAILED(rv))
-        return rv;
-
     PRBool exists;
-    rv = mainFile->Exists(&exists);
+    rv = mComponentRegFile->Exists(&exists);
     if (NS_FAILED(rv))
         return rv;
 
     if (exists) 
     {
-        rv = mainFile->Remove(PR_FALSE);
+        rv = mComponentRegFile->Remove(PR_FALSE);
         if (NS_FAILED(rv))
             return rv;
     }
     
     nsCAutoString leafName; 
-    rv = mainFile->GetNativeLeafName(leafName); 
+    rv = mComponentRegFile->GetNativeLeafName(leafName); 
     
     if (NS_FAILED(rv)) return rv; 
     
