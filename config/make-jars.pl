@@ -1,8 +1,14 @@
 #!/perl
 
-# make-jars [-f] [-v] [-l] [-d <chromeDir>] [-s <srcdir>] < <jar.mn>
+# make-jars [-f] [-v] [-l] [-x] [-d <chromeDir>] [-s <srcdir>] [-z zipprog] < <jar.mn>
 
-if ($^O ne "cygwin") {
+my $cygwin_mountprefix = "";
+if ($^O eq "cygwin") {
+$cygwin_mountprefix = `mount -p | awk '{ if (/^\\//) { print \$1; exit } }'`;
+chomp($cygwin_mountprefix);
+# Remove extra ^M caused by using dos-mode line-endings
+chop $cygwin_mountprefix if (substr($cygwin_mountprefix, -1, 1) eq "\r");
+} else {
 # we'll be pulling in some stuff from the script directory
 require FindBin;
 import FindBin;
@@ -19,16 +25,22 @@ use Cwd;
 use File::Copy;
 use File::Path;
 use IO::File;
+use Config;
 require mozLock;
 import mozLock;
 
 my $objdir = getcwd;
 
-getopts("d:s:f:avlD:p:");
+getopts("d:s:f:avlD:p:xz:");
 
 my $baseFilesDir = ".";
 if (defined($::opt_s)) {
     $baseFilesDir = $::opt_s;
+}
+
+my $maxCmdline = 4000;
+if ($Config{'archname'} =~ /VMS/) {
+    $maxCmdline = 200;
 }
 
 my $chromeDir = ".";
@@ -73,6 +85,21 @@ if (defined($::opt_p)) {
     $preprocessor = $::opt_p;
 }
 
+my $force_x11 = 0;
+if (defined($::opt_x)) {
+    $force_x11 = 1;
+}
+
+my $zipprog = $ENV{ZIP};
+if (defined($::opt_z)) {
+    $zipprog = $::opt_z;
+}
+
+if ($zipprog eq "") {
+    print "A valid zip program must be given via the -z option or the ZIP environment variable. Exiting.\n";
+    exit(1);
+}
+
 my $defines = "";
 while (@ARGV) {
     $defines = "$defines ".shift(@ARGV);
@@ -81,6 +108,7 @@ while (@ARGV) {
 if ($verbose) {
     print "make-jars "
         . "-v -d $chromeDir "
+	. "-z $zipprog "
         . ($fileformat ? "-f $fileformat " : "")
         . ($nofilelocks ? "-l " : "")
         . ($baseFilesDir ? "-s $baseFilesDir " : "")
@@ -90,6 +118,13 @@ if ($verbose) {
 my $win32 = ($^O =~ /((MS)?win32)|cygwin|os2/i) ? 1 : 0;
 my $macos = ($^O =~ /MacOS|darwin/i) ? 1 : 0;
 my $unix  = !($win32 || $macos) ? 1 : 0;
+my $vms   = ($^O =~ /VMS/i) ? 1 : 0;
+
+if ($force_x11) {
+    $win32 = 0;
+    $macos = 0;
+    $unix = 1;
+}
 
 sub foreignPlatformFile
 {
@@ -140,25 +175,25 @@ sub JarIt
 	my $cwd = getcwd;
 	my $err = 0; 
 
-        #print "zip $zipmoveopt -u ../$jarfile.jar $args\n";
+        #print "$zipprog $zipmoveopt -u ../$jarfile.jar $args\n";
 
-	# Handle posix cmdline limits (4096)
-	while (length($args) > 4000) {
+	# Handle posix cmdline limits
+	while (length($args) > $maxCmdline) {
 	    #print "Exceeding POSIX cmdline limit: " . length($args) . "\n";
-	    my $subargs = substr($args, 0, 3999);
+	    my $subargs = substr($args, 0, $maxCmdline-1);
 	    my $pos = rindex($subargs, " ");
 	    $subargs = substr($args, 0, $pos);
 	    $args = substr($args, $pos);
 	    
-	    #print "zip $zipmoveopt -u ../$jarfile.jar $subargs\n";	    
+	    #print "$zipprog $zipmoveopt -u ../$jarfile.jar $subargs\n";
 	    #print "Length of subargs: " . length($subargs) . "\n";
-	    system("zip $zipmoveopt -u ../$jarfile.jar $subargs") == 0 or
+	    system("$zipprog $zipmoveopt -u ../$jarfile.jar $subargs") == 0 or
 		$err = $? >> 8;
 	    zipErrorCheck($err,$lockfile);
 	}
 	#print "Length of args: " . length($args) . "\n";
-        #print "zip $zipmoveopt -u ../$jarfile.jar $args\n";
-        system("zip $zipmoveopt -u ../$jarfile.jar $args") == 0 or
+        #print "$zipprog $zipmoveopt -u ../$jarfile.jar $args\n";
+        system("$zipprog $zipmoveopt -u ../$jarfile.jar $args") == 0 or
 	    $err = $? >> 8;
 	zipErrorCheck($err,$lockfile);
     }
@@ -166,22 +201,23 @@ sub JarIt
     if (!($overrides eq "")) {
 	my $err = 0; 
         print "+++ overriding $overrides\n";
-
-	while (length($args) > 4000) {
-	    #print "Exceeding POSIX cmdline limit: " . length($args) . "\n";
-	    my $subargs = substr($args, 0, 3999);
+          
+	while (length($overrides) > $maxCmdline) {
+	    #print "Exceeding POSIX cmdline limit: " . length($overrides) . "\n";
+	    my $subargs = substr($overrides, 0, $maxCmdline-1);
 	    my $pos = rindex($subargs, " ");
-	    $subargs = substr($args, 0, $pos);
-	    $args = substr($args, $pos);
+	    $subargs = substr($overrides, 0, $pos);
+	    $overrides = substr($overrides, $pos);
 	    
-	    #print "zip $zipmoveopt ../$jarfile.jar $subargs\n";	    
+	    #print "$zipprog $zipmoveopt ../$jarfile.jar $subargs\n";	    
 	    #print "Length of subargs: " . length($subargs) . "\n";
-	    system("zip $zipmoveopt ../$jarfile.jar $subargs") == 0 or
+	    system("$zipprog $zipmoveopt ../$jarfile.jar $subargs") == 0 or
 		$err = $? >> 8;
 	    zipErrorCheck($err,$lockfile);
 	}
-        #print "zip $zipmoveopt ../$jarfile.jar $overrides\n";
-        system("zip $zipmoveopt ../$jarfile.jar $overrides\n") == 0 or 
+	#print "Length of args: " . length($overrides) . "\n";
+        #print "$zipprog $zipmoveopt ../$jarfile.jar $overrides\n";
+        system("$zipprog $zipmoveopt ../$jarfile.jar $overrides\n") == 0 or 
 	    $err = $? >> 8;
 	zipErrorCheck($err,$lockfile);
     }
@@ -261,6 +297,7 @@ sub RegIt
 sub EnsureFileInDir
 {
     my ($destPath, $srcPath, $destFile, $srcFile, $override, $preproc) = @_;
+    my $objPath;
 
     #print "EnsureFileInDir($destPath, $srcPath, $destFile, $srcFile, $override)\n";
 
@@ -316,9 +353,14 @@ sub EnsureFileInDir
         if ($srcPath) {
             $file = $srcPath;
         }
+        $objPath = "$objdir/$destFile";
 
         if (!-e $file) {
-            die "error: file '$file' doesn't exist";
+            if (!-e $objPath) {
+                die "error: file '$file' doesn't exist";
+            } else {
+                $file = "$objPath";
+            }
         }
         if (!-e $dir) {
             mkpath($dir, 0, 0775) || die "can't mkpath $dir: $!";
@@ -328,11 +370,24 @@ sub EnsureFileInDir
 	    my $preproc_file = $file;
 	    if ($^O eq 'cygwin' && $file =~ /^[a-zA-Z]:/) {
 		# convert to a cygwin path
-		$preproc_file =~ s|^([a-zA-Z]):|/cygdrive/\1|;
+		$preproc_file =~ s|^([a-zA-Z]):|$cygwin_mountprefix/\1|;
 	    }
-            if (system("$^X $preprocessor $defines $preproc_file > $destPath") != 0) {
-                die "Preprocessing of $file failed: ".($? >> 8);
-            }
+	    if ($vms) {
+		# use a temporary file otherwise cmd is too long for system()
+		my $tmpFile = "$destPath.tmp";
+		open(TMP, ">$tmpFile") || die("$tmpFile: $!");
+		print(TMP "$^X $preprocessor $defines $preproc_file > $destPath");
+		close(TMP);
+		print "+++ preprocessing $preproc_file > $destPath\n";
+        	if (system("bash \"$tmpFile\"") != 0) {
+                    die "Preprocessing of $file failed (VMS): ".($? >> 8);
+        	}
+		unlink("$tmpFile") || die("$tmpFile: $!");
+	    } else {
+		if (system("$^X $preprocessor $defines $preproc_file > $destPath") != 0) {
+		    die "Preprocessing of $file failed: ".($? >> 8);
+		}
+	    }
         } else {
             copy($file, $destPath) || die "copy($file, $destPath) failed: $!";
         }
