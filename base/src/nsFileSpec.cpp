@@ -58,7 +58,7 @@ NS_NAMESPACE nsFileSpecHelpers
 } NS_NAMESPACE_END
 
 //----------------------------------------------------------------------------------------
-inline nsresult ns_file_convert_result(PRInt32 nativeErr)
+nsresult ns_file_convert_result(PRInt32 nativeErr)
 //----------------------------------------------------------------------------------------
 {
     return nativeErr ?

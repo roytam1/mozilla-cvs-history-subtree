@@ -27,6 +27,15 @@
 //      single-byte char:
 //
 //          nsInputFileStream, nsOutputFileStream
+//                These are the STATICALLY LINKED versions of the file i/o streams,
+//                which wrap the NSPR file i/o plus console i/o.
+//
+//  Related files:
+//          prio.h             the NSPR file i/o C API), which is wrapped by
+//          THIS FILE          statically linked C++ wrappers, which in turn are wrapped by
+//          nsIFileStream.h    COM wrappers for this file, which are wrapped by
+//          nsAutoFileStream.h more easily used, nicer syntax wrappers for the
+//                             COMified ones.  Wrapper of a wrapper of a wrapper.
 //
 //  This suite provide the following services:
 //

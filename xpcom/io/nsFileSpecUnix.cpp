@@ -153,7 +153,7 @@ void nsFileSpec::Delete(PRBool inRecursive)
     {
         if (inRecursive)
         {
-            for (nsDirectoryIterator i(*this); i; i++)
+            for (nsDirectoryIterator i(*this); i.Exists(); i++)
             {
                 nsFileSpec& child = (nsFileSpec&)i;
                 child.Delete(inRecursive);
