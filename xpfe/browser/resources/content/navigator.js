@@ -921,7 +921,7 @@ function QualifySearchTerm()
   // If the text in the URL bar is the same as the currently loaded
   // page's URL then treat this as an empty search term.  This way
   // the user is taken to the search page where s/he can enter a term.
-  if (window.XULBrowserWindow.userTyped.value)
+  if (gBrowser.userTypedValue !== null)
     return document.getElementById("urlbar").value;
   return "";
 }
@@ -1284,9 +1284,12 @@ function BrowserLoadURL(aTriggeringEvent)
       if (openTab && getBrowser().localName == "tabbrowser") {
         // Open link in new tab
         var t = getBrowser().addTab(url);
+
         // Focus new tab unless shift is pressed
-        if (!shiftPressed)
+        if (!shiftPressed) {
+          gBrowser.userTypedValue = null;
           getBrowser().selectedTab = t;
+        }
       }
       else {
         // Open a new window with the URL
@@ -1299,6 +1302,8 @@ function BrowserLoadURL(aTriggeringEvent)
         }
         else
           gURLBar.value = "";
+
+        gBrowser.userTypedValue = null;
 
         // Focus old window if shift was pressed, as there's no
         // way to open a new window in the background
@@ -1896,6 +1901,7 @@ function handleURLBarRevert()
     } else { //if about:blank, urlbar becomes ""
       gURLBar.value = "";
     }
+    gBrowser.userTypedValue = null;
   }
 
   // tell widget to revert to last typed text only if the user
