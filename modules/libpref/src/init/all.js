@@ -142,6 +142,11 @@ pref("browser.search.defaultenginename", "chrome://navigator/locale/navigator.pr
 // Editing these may create a security risk - be sure you know what you're doing
 pref("capability.policy.default.barprop.visible.set", "UniversalBrowserWrite");
 
+pref("capability.policy.default.Document.close", "allAccess");
+pref("capability.policy.default.Document.open", "allAccess");
+pref("capability.policy.default.Document.write", "allAccess");
+pref("capability.policy.default.Document.writeln", "allAccess");
+
 pref("capability.policy.default.Domexception.code", "allAccess");
 pref("capability.policy.default.Domexception.message", "allAccess");
 pref("capability.policy.default.Domexception.name", "allAccess");
@@ -165,19 +170,22 @@ pref("capability.policy.default.Location.search.set", "allAccess");
 pref("capability.policy.default.Navigator.preference.get", "UniversalPreferencesRead");
 pref("capability.policy.default.Navigator.preference.set", "UniversalPreferencesWrite");
 
+pref("capability.policy.default.Window.blur", "allAccess");
 pref("capability.policy.default.Window.close", "allAccess");
+pref("capability.policy.default.Window.closed", "allAccess");
+pref("capability.policy.default.Window.document", "allAccess");
+pref("capability.policy.default.Window.focus", "allAccess");
 pref("capability.policy.default.Window.location.set", "allAccess");
 // window.openDialog is insecure and must be made inaccessible from web scripts - see bug 56009
+pref("capability.policy.default.Window.opendialog", "noAccess");
 
 pref("capability.policy.mailnews.Domexception.tostring", "noAccess");
-pref("capability.policy.mailnews.Htmldocument.domain", "noAccess");
-pref("capability.policy.mailnews.Htmldocument.url", "noAccess");
+pref("capability.policy.mailnews.HTMLDocument.domain", "noAccess");
+pref("capability.policy.mailnews.HTMLDocument.URL", "noAccess");
 //pref("capability.policy.mailnews.nsdocument.location", "noAccess");
+pref("capability.policy.mailnews.sites", "mailbox: imap: news:");
 pref("capability.policy.mailnews.Window.name.set", "noAccess");
 pref("capability.policy.mailnews.Window.location", "noAccess");
-
-// window.openDialog is insecure and must be made inaccessible from web scripts - see bug 56009
-pref("capability.policy.default.Window.opendialog", "noAccess");
 
 pref("javascript.enabled",                  true);
 pref("javascript.allow.mailnews",           false);

@@ -40,6 +40,7 @@
 
 class nsIDocShell;
 class nsString;
+class nsIClassInfo;
 
 /////////////////////
 // nsIPrincipalKey //
@@ -115,12 +116,13 @@ private:
                     nsIPrincipal* aObject, PRUint32 aAction);
     
     PRInt32 
-    GetSecurityLevel(nsIPrincipal *principal, nsCString &aProperty, 
-                     PRUint32 aAction, nsCString &capability);
+    GetSecurityLevel(JSContext* aCx, nsIPrincipal *principal,
+                     nsIClassInfo* aClassInfo, jsval aPropName, 
+                     PRUint32 aAction, nsCString &capability, void** aPolicy);
 
     nsresult
-    GetPrefName(nsIPrincipal *principal, nsCString &property, 
-                nsCString &result);
+    GetPrefName(nsIPrincipal *principal, nsCString &property,
+                PRBool classHasSitePolicy, nsCString &result);
 /*
     nsresult
     CheckXPCPermissions(JSContext *cx, nsISupports* aObj);
@@ -175,6 +177,7 @@ private:
     PrincipalPrefChanged(const char *pref, void *data);
 
     nsObjectHashtable *mOriginToPolicyMap;
+    nsHashtable *mClassPolicies;
     nsCOMPtr<nsIPref> mPrefs;
     nsCOMPtr<nsISecurityPref> mSecurityPrefs;
     nsIPrincipal *mSystemPrincipal;
