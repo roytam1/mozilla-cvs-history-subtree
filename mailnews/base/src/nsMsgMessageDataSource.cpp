@@ -1887,11 +1887,9 @@ nsresult
 nsMsgMessageDataSource::createMessageChildNode(nsIRDFResource *resource, nsIRDFNode** target)
 {
   nsresult rv;
-  nsCOMPtr<nsIMessageView> messageView;
 #if 0
   rv = GetMessageView(getter_AddRefs(messageView));
   NS_ENSURE_SUCCESS(rv,rv);
-#endif
   PRBool hasMessages = PR_FALSE;
   rv = messageView->HasMessages(resource, mWindow, &hasMessages);
   NS_ENSURE_SUCCESS(rv,rv);
@@ -1899,6 +1897,7 @@ nsMsgMessageDataSource::createMessageChildNode(nsIRDFResource *resource, nsIRDFN
   if (hasMessages) {
     return createNode("has messages", target, getRDFService());
   }
+#endif
 
   return NS_RDF_NO_VALUE;
 
