@@ -59,13 +59,13 @@ line[highlighted] > num {
 }
 
 line[stoppedAt] {
-    background: yellow;
+    background: #ecef34;
 }
 
 line[stoppedAt] > num {
     font-weight: bold;
     border-right: 2px orange solid;
-    background: yellow;
+    background: #ecef34;
 }
 
 margin {

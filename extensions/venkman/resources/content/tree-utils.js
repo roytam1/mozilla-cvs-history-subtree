@@ -75,7 +75,7 @@ function bov_setcn (aryNames)
 
 /*
  * scroll the source so |line| is at either the top, center, or bottom
- * of the view, delepding on the value of |align|.
+ * of the view, depending on the value of |align|.
  *
  * line is the one based target line.
  * if align is negative, the line will be scrolled to the top, if align is
