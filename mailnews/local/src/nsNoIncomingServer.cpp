@@ -178,6 +178,7 @@ NS_IMETHODIMP nsNoIncomingServer::CreateDefaultMailboxes(nsIFileSpec *path)
                 if (NS_FAILED(rv)) return rv;
         }
 
+#if 0 // this should get created dynamically. In fact, all of these should.
         rv = path->SetLeafName("Sent Mail");
         if (NS_FAILED(rv)) return rv;
         rv = path->Exists(&exists);
@@ -186,7 +187,6 @@ NS_IMETHODIMP nsNoIncomingServer::CreateDefaultMailboxes(nsIFileSpec *path)
                 rv = path->Touch();
                 if (NS_FAILED(rv)) return rv;
         }
-
         rv = path->SetLeafName("Drafts");
         if (NS_FAILED(rv)) return rv;
         rv = path->Exists(&exists);
@@ -196,6 +196,8 @@ NS_IMETHODIMP nsNoIncomingServer::CreateDefaultMailboxes(nsIFileSpec *path)
                 if (NS_FAILED(rv)) return rv;
         }
 
+#endif
+#if 0
 		// copy the default templates into the Templates folder
 		nsCOMPtr<nsIFileSpec> parentDir;
 		rv = path->GetParent(getter_AddRefs(parentDir));
@@ -222,7 +224,7 @@ NS_IMETHODIMP nsNoIncomingServer::CreateDefaultMailboxes(nsIFileSpec *path)
                 rv = path->Touch();
                 if (NS_FAILED(rv)) return rv;
         }
-
+#endif
         return NS_OK;
 }
 
