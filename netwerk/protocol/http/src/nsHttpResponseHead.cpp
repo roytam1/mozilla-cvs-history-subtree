@@ -74,12 +74,12 @@ nsHttpResponseHead::Parse(char *block)
     do {
         block = p + 2;
 
+		if (*block == 0)
+			break;
+
         p = PL_strstr(block, "\r\n");
         if (!p)
             return NS_ERROR_UNEXPECTED;
-
-        if (p == block)
-            break;
 
         *p = 0;
         rv = ParseHeaderLine(block);

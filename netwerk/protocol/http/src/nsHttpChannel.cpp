@@ -1682,8 +1682,9 @@ nsHttpChannel::SetUploadStream(nsIInputStream *stream)
 NS_IMETHODIMP
 nsHttpChannel::GetResponseStatus(PRUint32 *value)
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
     NS_ENSURE_ARG_POINTER(value);
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
     *value = mResponseHead->Status();
     return NS_OK;
 }
@@ -1691,14 +1692,16 @@ nsHttpChannel::GetResponseStatus(PRUint32 *value)
 NS_IMETHODIMP
 nsHttpChannel::GetResponseStatusText(char **value)
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
     return DupString(mResponseHead->StatusText(), value);
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetResponseHeader(const char *header, char **value)
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
     nsHttpAtom atom = nsHttp::ResolveAtom(header);
     if (!atom)
         return NS_ERROR_NOT_AVAILABLE;
@@ -1708,7 +1711,8 @@ nsHttpChannel::GetResponseHeader(const char *header, char **value)
 NS_IMETHODIMP
 nsHttpChannel::SetResponseHeader(const char *header, const char *value)
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
     nsHttpAtom atom = nsHttp::ResolveAtom(header);
     if (!atom)
         return NS_ERROR_NOT_AVAILABLE;
@@ -1718,14 +1722,16 @@ nsHttpChannel::SetResponseHeader(const char *header, const char *value)
 NS_IMETHODIMP
 nsHttpChannel::VisitResponseHeaders(nsIHttpHeaderVisitor *visitor)
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
     return mResponseHead->Headers().VisitHeaders(visitor);
 }
 
 NS_IMETHODIMP
 nsHttpChannel::GetCharset(char **value)
 {
-    NS_ENSURE_TRUE(mResponseHead, NS_ERROR_NOT_AVAILABLE);
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
     return DupString(mResponseHead->ContentCharset(), value);
 }
 
@@ -1768,12 +1774,12 @@ nsHttpChannel::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
         mCachedResponseHead = 0;
     }
 
-    // notify nsIHttpNotify implementations
-    if (mResponseHead)
+    if (mResponseHead && mTransaction) {
+        // notify nsIHttpNotify implementations
         nsHttpHandler::get()->OnExamineResponse(this);
 
-    if (mTransaction)
         return ProcessResponse();
+    }
 
     // there won't be a response head if we've been cancelled
     return mListener->OnStartRequest(this, mListenerContext);
