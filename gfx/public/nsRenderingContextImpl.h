@@ -95,7 +95,7 @@ public:
   NS_IMETHOD DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint);
   NS_IMETHOD DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect);
   NS_IMETHOD DrawTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect);
-  NS_IMETHOD DrawScaledTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, gfx_dimension aTileHeight, const nsRect * aTargetRect);
+  NS_IMETHOD DrawScaledTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect);
 #endif
 
 
