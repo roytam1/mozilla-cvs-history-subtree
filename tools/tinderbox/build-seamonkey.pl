@@ -206,7 +206,7 @@ sub BuildIt {
     
     chdir $Topsrcdir or die "chdir $Topsrcdir: $!\n";
     
-    #Delete the binaries before rebuilding
+    # Delete the binary before rebuilding
     unless ($TestOnly) {
       
 	  # Only delete if it exists.
@@ -289,11 +289,11 @@ sub BuildIt {
 		}
 
         # Run Editor test.
-		if ($BuildStatus == 0 and $EditorTest) {
+		if ($BuildStatus == 0 and ($EditorTest or $DomToTextConversionTest)) {
 		  $BuildStatusStr = 'success';
-		  print LOG "Running EditorTest ...\n";
-          print "Running EditorTest ...\n";
-		  $BuildStatus = &RunFileBasedTest("EditorTest", "TestOutSinks", 15, "FAILED");
+		  print LOG "Running  DomToTextConversionTest ...\n";
+          print "Running DomToTextConversionTest ...\n";
+		  $BuildStatus = &RunFileBasedTest("DomToTextConversionTest", "TestOutSinks", 15, "FAILED");
 		}
         
 
@@ -361,8 +361,9 @@ sub BuildIt {
       }
     }
     
-    close LOG;
     close OUTLOG;
+    close LOG;
+
     if ($ReportStatus and $ReportFinalStatus) {
 	  system("$mail $Tinderbox_server < ${logfile}.last");
 	} 
