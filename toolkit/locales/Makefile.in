@@ -57,8 +57,6 @@ endif
 XULPPFLAGS += -I$(srcdir)/$(AB_CD)/defines.inc
 
 # Let's imagine we wanted to create a language JARfile without registering it
-# NOTE: we explicitly want the JAR, even if we're building flat chrome, but
-# we specify "both" so that we don't break flat-chrome trees
 
 jar-%: AB_CD = $*
 
@@ -67,7 +65,7 @@ jar-%: %
 	  $(PERL) -I$(topsrcdir)/config $(topsrcdir)/config/make-jars.pl \
 	    $(if $(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)),-x) \
 	    $(if $(CROSS_COMPILE),-o $(OS_ARCH)) $(_NO_FLOCK) \
-	    -f both -d $(DIST)/bin/chrome -s $(srcdir) -t $(topsrcdir) -z $(ZIP) \
+	    -f jar -d $(DIST)/bin/chrome -s $(srcdir) -t $(topsrcdir) -z $(ZIP) \
 	    -p $(topsrcdir)/config/preprocessor.pl -- \
 		  "-I$(srcdir)/$*/defines.inc $(DEFINES) $(ACDEFINES)"
 
