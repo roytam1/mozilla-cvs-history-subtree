@@ -2499,6 +2499,9 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
         }
 
 	line = m_lineStreamBuffer->ReadNextLine(inputStream, status, pauseForMoreData);
+  if (m_newsFolder && line)
+    m_newsFolder->NotifyDownloadedLine(line, m_articleNumber);
+
 	if(pauseForMoreData)
 	{
 		SetFlag(NNTP_PAUSE_FOR_READ);

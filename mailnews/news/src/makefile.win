@@ -61,6 +61,7 @@ CPP_OBJS=   .\$(OBJDIR)\nsNNTPProtocol.obj				\
 			.\$(OBJDIR)\nsNntpIncomingServer.obj			\
 			.\$(OBJDIR)\nsNewsUtils.obj					\
             .\$(OBJDIR)\nsNewsDownloadDialogArgs.obj    \
+      .\$(OBJDIR)\nsNewsDownloader.obj    \
 			$(NULL)
 
 

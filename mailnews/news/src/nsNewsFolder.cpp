@@ -70,7 +70,7 @@
 #include "nsIInterfaceRequestor.h"
 
 #include "nsReadableUtils.h"
-
+#include "nsNewsDownloader.h"
 // we need this because of an egcs 1.0 (and possibly gcc) compiler bug
 // that doesn't allow you to call ::nsISupports::GetIID() inside of a class
 // that multiply inherits from nsISupports
@@ -1661,6 +1661,40 @@ NS_IMETHODIMP nsMsgNewsFolder::SetSaveArticleOffline(PRBool aBool)
   m_downloadMessageForOfflineUse = aBool;
   return NS_OK;
 }
+
+NS_IMETHODIMP nsMsgNewsFolder::DownloadMessagesForOffline(nsISupportsArray *messages, nsIMsgWindow *window)
+{
+  nsMsgKeyArray srcKeyArray;
+#ifdef DEBUG_bienvenu
+//  return DownloadAllForOffline(nsnull, window);
+#endif
+
+  SetSaveArticleOffline(PR_TRUE); // ### TODO need to clear this when we've finished
+  PRUint32 count = 0;
+  PRUint32 i;
+  nsCOMPtr<nsISupports> msgSupports;
+  nsresult rv = messages->Count(&count);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // build up message keys.
+  for (i = 0; i < count; i++)
+  {
+    msgSupports = getter_AddRefs(messages->ElementAt(i));
+    nsMsgKey key;
+    nsCOMPtr <nsIMsgDBHdr> msgDBHdr = do_QueryInterface(msgSupports, &rv);
+    if (msgDBHdr)
+      rv = msgDBHdr->GetMessageKey(&key);
+    if (NS_SUCCEEDED(rv))
+      srcKeyArray.Add(key);
+  }
+	DownloadNewsArticlesToOfflineStore *downloadState = new DownloadNewsArticlesToOfflineStore(window, mDatabase, nsnull);
+	if (downloadState)
+		return downloadState->DownloadArticles(window, this, &srcKeyArray);
+	else
+		return NS_ERROR_OUT_OF_MEMORY;
+  return rv;
+}
+
 
 // line does not have a line terminator (e.g., CR or CRLF)
 NS_IMETHODIMP nsMsgNewsFolder::NotifyDownloadedLine(const char *line, nsMsgKey keyOfArticle)

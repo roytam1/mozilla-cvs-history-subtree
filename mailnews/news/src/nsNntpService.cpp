@@ -257,6 +257,53 @@ nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayCon
   return rv;
 }
 
+NS_IMETHODIMP 
+nsNntpService::FetchMessage(nsIMsgFolder *newsFolder, nsMsgKey key, nsIMsgWindow *aMsgWindow, nsISupports * aConsumer, nsIUrlListener * aUrlListener, nsIURI ** aURL)
+{
+  nsresult rv = NS_OK;
+  NS_ENSURE_ARG_POINTER(newsFolder);
+
+  nsCString uri;
+  nsCString newsgroupName;
+  nsXPIDLCString msgUri;
+  // now create a url for the message
+  nsCOMPtr<nsIMsgNewsFolder> msgNewsFolder = do_QueryInterface(newsFolder);
+  if (!msgNewsFolder)
+    return NS_ERROR_INVALID_ARG;
+
+//  msgNewsFolder->GetAsciiName(getter_Copies(newsgroupName));
+  nsCOMPtr<nsIMsgDatabase> db;
+  nsCOMPtr<nsIMsgDBHdr> msgHdr;
+
+  rv = newsFolder->GetMsgDatabase(aMsgWindow, getter_AddRefs(db));
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+  if (!NS_SUCCEEDED(rv) || !msgHdr)
+    return NS_ERROR_INVALID_ARG;
+
+  newsFolder->GetUriForMsg(msgHdr, getter_Copies(msgUri));
+  nsCOMPtr<nsIURI> myuri;
+
+	rv = ConvertNewsMessageURI2NewsURI(msgUri, uri, newsgroupName, nsnull, &key);
+
+  rv = ConstructNntpUrl(uri, newsgroupName, key, aUrlListener, aMsgWindow, getter_AddRefs(myuri));
+  if (NS_SUCCEEDED(rv))
+  {
+    nsCOMPtr<nsINntpUrl> nntpUrl (do_QueryInterface(myuri));
+    nsCOMPtr<nsIMsgMailNewsUrl> msgUrl (do_QueryInterface(nntpUrl));
+    msgUrl->SetMsgWindow(aMsgWindow);
+    nntpUrl->SetNewsAction(nsINntpUrl::ActionDisplayArticle);
+
+		rv = RunNewsUrl(myuri, aMsgWindow, aConsumer);
+  }
+  if (aURL) 
+  {
+	  *aURL = myuri;
+	  NS_IF_ADDREF(*aURL);
+  }
+
+  return rv;
+}
 
 NS_IMETHODIMP nsNntpService::OpenAttachment(const char *aContentType, 
                                             const char *aFileName,

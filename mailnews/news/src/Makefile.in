@@ -43,6 +43,7 @@ CPPSRCS		= \
 		nsNntpIncomingServer.cpp \
 		nsNewsUtils.cpp \
         nsNewsDownloadDialogArgs.cpp \
+        nsNewsDownloader.cpp \
 		$(NULL)
 
 EXPORTS		= \

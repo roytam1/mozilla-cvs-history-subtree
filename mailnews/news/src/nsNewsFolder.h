@@ -93,6 +93,7 @@ public:
 	NS_IMETHOD GetCanRename(PRBool *aResult);
     NS_IMETHOD OnReadChanged(nsIDBChangeListener * aInstigator);
 
+  NS_IMETHOD DownloadMessagesForOffline(nsISupportsArray *messages, nsIMsgWindow *window);
   NS_IMETHOD Compact(nsIUrlListener *aListener);
 	// for nsMsgLineBuffer
 	virtual PRInt32 HandleLine(char *line, PRUint32 line_size);
