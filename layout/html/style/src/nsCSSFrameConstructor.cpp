@@ -5521,7 +5521,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
       } // End of RESIZER CONSTRUCTION logic
 
       else if (aTag == nsXULAtoms::image) {
-        processChildren = PR_TRUE;
         isReplaced = PR_TRUE;
         rv = NS_NewImageBoxFrame(aPresShell, &newFrame);
       }
