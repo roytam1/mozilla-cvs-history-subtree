@@ -1,5 +1,5 @@
 #
-# Copyright 2002 Sun Microsystems, Inc.  All rights reserved.
+# Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
 # Use is subject to license terms.
 #
 #ident	"$Id$"
@@ -16,14 +16,15 @@ endif
 
 PKGARCHIVE = $(PUBLISH_ROOT)/pkgarchive
 DATAFILES = copyright
-FILES = $(DATAFILES) pkginfo prototype
+FILES = $(DATAFILES) pkginfo
 
 PACKAGE = $(shell basename `pwd`)
 
-PRODUCT_VERSION = 3.5
+PRODUCT_VERSION = $(shell grep JSS_VERSION $(CORE_DEPTH)/jss/org/mozilla/jss/util/jssver.h | sed -e 's/"$$//' -e 's/.*"//' -e 's/ .*//')
 PRODUCT_NAME = JSS_3_5_RTM
 
 LN = /usr/bin/ln
+CP = /usr/bin/cp
 
 CLOBBERFILES = $(FILES)
 
