@@ -18,16 +18,28 @@
 
 #include "mdom.h"
 
+MDomNode::MDomNode(int node_type)
+  : _nodeType(node_type),
+    _parentNode(NULL),
+    _nextSibling(NULL),
+    _prevSibling(NULL),
+    _firstChild(NULL),
+    _lastChild(NULL),
+    _numChildren(0)
+    
+{
+}
+
 int
 MDomNode::getNodeType()
 {
-  return 0;
+  return _nodeType;
 }
 
 MDomNode*
 MDomNode::getParentNode()
 {
-  return 0;
+  return _parentNode;
 }
 
 MDomNodeIterator*
@@ -39,45 +51,121 @@ MDomNode::getChildNodes()
 XP_Bool
 MDomNode::hasChildNodes()
 {
-  return 0;
+  return _numChildren > 0;
 }
 
 MDomNode*
 MDomNode::getFirstChild()
 {
-  return 0;
+  return _firstChild;
 }
 
 MDomNode*
 MDomNode::getPreviousSibling()
 {
-  return 0;
+  return _prevSibling;
 }
 
 MDomNode*
 MDomNode::getNextSibling()
 {
-  return 0;
+  return _nextSibling;
 }
 
 MDomNode*
-MDomNode::insertBefore(MDomNode */*newChild*/,
-                       MDomNode */*refChild*/)
+MDomNode::insertBefore(MDomNode *newChild,
+                       MDomNode *refChild)
 {
-  return 0;
+  /* if the refChild was not actually a child of this
+     node, throw a NotMyChildException */
+  if (refChild && refChild->_parentNode != this)
+    {
+      /* XXX throw NotMyChildException */
+      return NULL;
+    }
+
+  _numChildren++;
+
+  newChild->_parentNode = this;
+  newChild->_nextSibling = refChild;
+  if (refChild)
+    {
+      newChild->_prevSibling = refChild->_prevSibling;
+      refChild->_prevSibling = newChild;
+    }
+  else
+    {
+      newChild->_prevSibling = _lastChild;
+      _lastChild = newChild;
+    }
+
+  if (newChild->_prevSibling)
+    newChild->_prevSibling->_nextSibling = newChild;
+
+  return newChild;
 }
 
 MDomNode*
-MDomNode::replaceChild(MDomNode */*newChild*/,
-                       MDomNode */*refChild*/)
+MDomNode::replaceChild(MDomNode *newChild,
+                       MDomNode *oldChild)
 {
-  return 0;
+  /* if the oldChild was not actually a child of this
+     node, throw a NotMyChildException */
+  if (oldChild->_parentNode != this)
+    {
+      /* XXX throw NotMyChildException */
+      return NULL;
+    }
+
+  newChild->_nextSibling = oldChild->_nextSibling;
+  newChild->_prevSibling = oldChild->_prevSibling;
+  newChild->_parentNode = this;
+
+  if (newChild->_nextSibling)
+    newChild->_nextSibling->_prevSibling = newChild;
+
+  if (newChild->_prevSibling)
+    newChild->_prevSibling->_nextSibling = newChild;
+
+  oldChild->_prevSibling =
+    oldChild->_nextSibling = NULL;
+
+  return oldChild;
 }
 
 MDomNode*
-MDomNode::removeChild(MDomNode */*oldChild*/)
+MDomNode::removeChild(MDomNode *oldChild)
 {
-  return 0;
+  /* if the oldChild was not actually a child of this
+     node, throw a NotMyChildException */
+  if (oldChild->_parentNode != this)
+    {
+      /* XXX throw NotMyChildException */
+      return NULL;
+    }
+
+  _numChildren--;
+
+  if (oldChild->_prevSibling)
+    oldChild->_prevSibling->_nextSibling = oldChild->_nextSibling;
+  if (oldChild->_nextSibling)
+    oldChild->_nextSibling->_prevSibling = oldChild->_prevSibling;
+
+  return oldChild;
+}
+
+MDomElement::MDomElement(JSString *tag_name)
+  : MDomNode(ID_ELEMENT),
+    _tagName(tag_name)
+{
+}
+
+MDomElement::MDomElement(JSString *tag_name,
+                         MDomAttributeList *attributes)
+  : MDomNode(ID_ELEMENT),
+    _tagName(tag_name),
+    _attr_list(attributes)
+{
 }
 
 JSString*
@@ -136,6 +224,12 @@ MDomElement::normalize()
 {
 }
 
+MDomText::MDomText(JSString *text_data)
+  : MDomNode(ID_TEXT),
+    data(text_data)
+{
+}
+
 void
 MDomText::append(JSString */*data*/)
 {
@@ -167,16 +261,38 @@ MDomText::splice(MDomElement */*element*/,
 {
 }
 
+MDomComment::MDomComment(JSString *comment_data)
+  : MDomNode(ID_COMMENT),
+    data(comment_data)
+{
+}
+
+MDomPI::MDomPI(JSString *pi_name,
+               JSString *pi_data)
+  : MDomNode(ID_PI),
+    name(pi_name),
+    data(pi_data)
+{
+}
+
+MDomAttribute::MDomAttribute(JSString *attr_name,
+                             JSString *attr_value)
+  : MDomNode(ID_ATTRIBUTE),
+    _name(attr_name),
+    _value(attr_value)
+{
+}
+
 JSString*
 MDomAttribute::getName()
 {
-  return 0;
+  return _name;
 }
 
 JSString*
 MDomAttribute::getValue()
 {
-  return 0;
+  return _value;
 }
 
 JSString*
@@ -272,55 +388,128 @@ MDomNodeIterator::moveTo(int /*n*/)
 unsigned long
 MDomTreeIterator::numChildren()
 {
-  return 0;
+  return _currentNode->_getNumChildren();
 }
 
 unsigned long
 MDomTreeIterator::numPreviousSiblings()
 {
-  return 0;
+  long num = 0;
+  MDomNode *node = _currentNode->getPreviousSibling();
+
+  while (node)
+    {
+      num++;
+      node = node->getPreviousSibling();
+    }
+
+  return num;
 }
 
 unsigned long
 MDomTreeIterator::numNextSiblings()
 {
-  return 0;
+  long num = 0;
+  MDomNode *node = _currentNode->getNextSibling();
+
+  while (node)
+    {
+      num++;
+      node = node->getNextSibling();
+    }
+
+  return num;
 }
 
 MDomNode*
 MDomTreeIterator::toParent()
 {
-  return 0;
+  MDomNode* parent = _currentNode->getParentNode();
+
+  if (parent)
+    _currentNode = parent;
+
+  return parent;
 }
 
 MDomNode*
 MDomTreeIterator::toPreviousSibling()
 {
-  return 0;
+  MDomNode* prev_sibling = _currentNode->getPreviousSibling();
+
+  if (prev_sibling)
+    _currentNode = prev_sibling;
+
+  return prev_sibling;
 }
 
 MDomNode*
 MDomTreeIterator::toNextSibling()
 {
-  return 0;
+  MDomNode* next_sibling = _currentNode->getNextSibling();
+
+  if (next_sibling)
+    _currentNode = next_sibling;
+
+  return next_sibling;
 }
 
 MDomNode*
 MDomTreeIterator::toFirstChild()
 {
-  return 0;
+  MDomNode* first_child = _currentNode->getFirstChild();
+
+  if (first_child)
+    _currentNode = first_child;
+
+  return first_child;
 }
 
 MDomNode*
 MDomTreeIterator::toLastChild()
 {
-  return 0;
+  MDomNode* last_child = _currentNode->_getLastChild();
+
+  if (last_child)
+    _currentNode = last_child;
+
+  return last_child;
 }
 
+/* does the node index start at zero or one? */
 MDomNode*
-MDomTreeIterator::toNthChild(int /*n*/)
+MDomTreeIterator::toNthChild(int n)
 {
-  return 0;
+  MDomNode *nth_node;
+
+  if (n >= _currentNode->_getNumChildren())
+    {
+      /* throw NoSuchNodeException */
+      return NULL;
+    }
+
+  nth_node = _currentNode->getFirstChild();
+
+  while (n)
+    {
+      nth_node = nth_node->getNextSibling();
+      n--;
+    }
+
+  if (nth_node)
+    _currentNode = nth_node;
+
+  return nth_node;
+}
+
+MDomDocumentFragment::MDomDocumentFragment()
+  : MDomNode(ID_DOCUMENT)
+{
+}
+
+MDomDocument::MDomDocument()
+{
+  masterDoc = this;
 }
 
 MDomDocumentContext*
@@ -330,10 +519,10 @@ MDomDocument::createDocumentContext()
 }
 
 MDomElement*
-MDomDocument::createElement(JSString */*tagName*/,
-                            MDomAttributeList* /*attributes*/)
+MDomDocument::createElement(JSString *tagName,
+                            MDomAttributeList* attributes)
 {
-  return 0;
+  return new MDomElement(tagName, attributes);
 }
 
 MDomText*

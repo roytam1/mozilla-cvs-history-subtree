@@ -26,7 +26,7 @@
 
 PR_STATIC_CALLBACK(void)
 dom_finalize(JSContext *cx,
-	     JSObject *obj)
+             JSObject *obj)
 {
   MDomDOM *dom;
 
@@ -44,10 +44,10 @@ JSClass mdom_dom_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 dom_create_document(JSContext *cx,
-		    JSObject *obj,
-		    uint argc,
-		    jsval *argv,
-		    jsval *rval)
+                    JSObject *obj,
+                    uint argc,
+                    jsval *argv,
+                    jsval *rval)
 {
   MDomDOM *dom;
   JSString *str;
@@ -80,10 +80,10 @@ dom_create_document(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 dom_has_feature(JSContext *cx,
-		JSObject *obj,
-		uint argc,
-		jsval *argv,
-		jsval *rval)
+                JSObject *obj,
+                uint argc,
+                jsval *argv,
+                jsval *rval)
 {
   MDomDOM *dom;
   JSString *str;
@@ -103,7 +103,7 @@ dom_has_feature(JSContext *cx,
 
 static JSFunctionSpec dom_methods[] = {
   {"createDocument",	dom_create_document,	1},
-  {"hasFeature",	dom_has_feature,	1},
+  {"hasFeature",		dom_has_feature,	1},
   {0}
 };
 
@@ -135,18 +135,18 @@ MDOM_NewDOM(JSContext *cx, MDomDOM *dom)
 
 PR_STATIC_CALLBACK(PRBool)
 doccontext_setProperty(JSContext */*cx*/,
-		       JSObject */*obj*/,
-		       jsval /*id*/,
-		       jsval */*vp*/)
+                       JSObject */*obj*/,
+                       jsval /*id*/,
+                       jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 doccontext_getProperty(JSContext */*cx*/,
-		       JSObject */*obj*/,
-		       jsval /*id*/,
-		       jsval */*vp*/)
+                       JSObject */*obj*/,
+                       jsval /*id*/,
+                       jsval */*vp*/)
 {
   return JS_FALSE;
 }
@@ -206,18 +206,18 @@ MDOM_NewDocumentContext(JSContext *cx, MDomDocumentContext *doccontext)
 
 PR_STATIC_CALLBACK(PRBool)
 docfragment_setProperty(JSContext */*cx*/,
-			JSObject */*obj*/,
-			jsval /*id*/,
-			jsval */*vp*/)
+                        JSObject */*obj*/,
+                        jsval /*id*/,
+                        jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 docfragment_getProperty(JSContext */*cx*/,
-			JSObject */*obj*/,
-			jsval /*id*/,
-			jsval */*vp*/)
+                        JSObject */*obj*/,
+                        jsval /*id*/,
+                        jsval */*vp*/)
 {
   return JS_FALSE;
 }
@@ -278,25 +278,25 @@ MDOM_NewDocumentFragment(JSContext *cx, MDomDocumentFragment *docfragment)
 
 PR_STATIC_CALLBACK(PRBool)
 document_setProperty(JSContext */*cx*/,
-		     JSObject */*obj*/,
-		     jsval /*id*/,
-		     jsval */*vp*/)
+                     JSObject */*obj*/,
+                     jsval /*id*/,
+                     jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 document_getProperty(JSContext */*cx*/,
-		     JSObject */*obj*/,
-		     jsval /*id*/,
-		     jsval */*vp*/)
+                     JSObject */*obj*/,
+                     jsval /*id*/,
+                     jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(void)
 document_finalize(JSContext *cx,
-		  JSObject *obj)
+                  JSObject *obj)
 {
   MDomDocument *doc;
 
@@ -308,15 +308,15 @@ document_finalize(JSContext *cx,
 
 
 enum document_slot {
-  DOCUMENT_TYPE		= -1,
-  DOCUMENT_ELEMENT	= -2,
+  DOCUMENT_TYPE			= -1,
+  DOCUMENT_ELEMENT		= -2,
   DOCUMENT_CONTEXTINFO	= -3
 };
 
 static JSPropertySpec document_props[] = {
-  { "documentType",	DOCUMENT_TYPE,		JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "documentType",		DOCUMENT_TYPE,		JSPROP_ENUMERATE|JSPROP_READONLY },
   { "documentElement",	DOCUMENT_ELEMENT,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "contextInfo",	DOCUMENT_CONTEXTINFO,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "contextInfo",		DOCUMENT_CONTEXTINFO,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { 0 }
 };
 
@@ -328,10 +328,10 @@ JSClass mdom_document_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_context(JSContext *cx,
-			JSObject *obj,
-			uint /*argc*/,
-			jsval */*argv*/,
-			jsval *rval)
+                        JSObject *obj,
+                        uint /*argc*/,
+                        jsval */*argv*/,
+                        jsval *rval)
 {
   MDomDocument *doc;
   MDomDocumentContext *new_context;
@@ -359,10 +359,10 @@ document_create_context(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_attribute_list(JSContext *cx,
-			       JSObject *obj,
-			       uint /*argc*/,
-			       jsval */*argv*/,
-			       jsval *rval)
+                               JSObject *obj,
+                               uint /*argc*/,
+                               jsval */*argv*/,
+                               jsval *rval)
 {
   MDomDocument *doc;
   MDomAttributeList *new_attrlist;
@@ -390,10 +390,10 @@ document_create_attribute_list(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_element(JSContext *cx,
-			JSObject *obj,
-			uint /*argc*/,
-			jsval */*argv*/,
-			jsval */*rval*/)
+                        JSObject *obj,
+                        uint /*argc*/,
+                        jsval */*argv*/,
+                        jsval */*rval*/)
 {
   MDomDocument *doc;
 
@@ -406,10 +406,10 @@ document_create_element(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_text_node(JSContext *cx,
-			  JSObject *obj,
-			  uint argc,
-			  jsval *argv,
-			  jsval *rval)
+                          JSObject *obj,
+                          uint argc,
+                          jsval *argv,
+                          jsval *rval)
 {
   MDomDocument *doc;
   MDomText *new_text;
@@ -442,10 +442,10 @@ document_create_text_node(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_comment(JSContext *cx,
-			JSObject *obj,
-			uint argc,
-			jsval *argv,
-			jsval *rval)
+                        JSObject *obj,
+                        uint argc,
+                        jsval *argv,
+                        jsval *rval)
 {
   MDomDocument *doc;
   MDomComment *new_comment;
@@ -478,10 +478,10 @@ document_create_comment(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_pi(JSContext *cx,
-		   JSObject *obj,
-		   uint argc,
-		   jsval *argv,
-		   jsval *rval)
+                   JSObject *obj,
+                   uint argc,
+                   jsval *argv,
+                   jsval *rval)
 {
   MDomDocument *doc;
   MDomPI *new_pi;
@@ -515,10 +515,10 @@ document_create_pi(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_attribute(JSContext *cx,
-			  JSObject *obj,
-			  uint /*argc*/,
-			  jsval */*argv*/,
-			  jsval */*rval*/)
+                          JSObject *obj,
+                          uint /*argc*/,
+                          jsval */*argv*/,
+                          jsval */*rval*/)
 {
   MDomDocument *doc;
 
@@ -531,10 +531,10 @@ document_create_attribute(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_create_tree_iterator(JSContext *cx,
-			      JSObject *obj,
-			      uint argc,
-			      jsval *argv,
-			      jsval *rval)
+                              JSObject *obj,
+                              uint argc,
+                              jsval *argv,
+                              jsval *rval)
 {
   MDomDocument *doc;
   MDomTreeIterator *new_iterator;
@@ -573,10 +573,10 @@ document_create_tree_iterator(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 document_get_elements_by_tag_name(JSContext *cx,
-				  JSObject *obj,
-				  uint argc,
-				  jsval *argv,
-				  jsval *rval)
+                                  JSObject *obj,
+                                  uint argc,
+                                  jsval *argv,
+                                  jsval *rval)
 {
   MDomDocument *doc;
   MDomNodeIterator *new_iterator;
@@ -610,10 +610,10 @@ document_get_elements_by_tag_name(JSContext *cx,
 static JSFunctionSpec document_methods[] = {
   {"createDocumentContext",	document_create_context,		0},
   {"createAttributeList",	document_create_attribute_list,		0},
-  {"createElement",		document_create_element,		2},
+  {"createElement",			document_create_element,		2},
   {"createTextNode",		document_create_text_node,		1},
-  {"createComment",		document_create_comment,		1},
-  {"createPI",			document_create_pi,			2},
+  {"createComment",			document_create_comment,		1},
+  {"createPI",				document_create_pi,			2},
   {"createAttribute",		document_create_attribute,		2},
   {"createTreeIterator",	document_create_tree_iterator,		1},
   {"getElementsByTagName",	document_get_elements_by_tag_name,	1},
@@ -649,25 +649,25 @@ MDOM_NewDocument(JSContext *cx, MDomDocument *doc)
 
 PR_STATIC_CALLBACK(PRBool)
 node_setProperty(JSContext */*cx*/,
-		 JSObject */*obj*/,
-		 jsval /*id*/,
-		 jsval */*vp*/)
+                 JSObject */*obj*/,
+                 jsval /*id*/,
+                 jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 node_getProperty(JSContext */*cx*/,
-		 JSObject */*obj*/,
-		 jsval /*id*/,
-		 jsval */*vp*/)
+                 JSObject */*obj*/,
+                 jsval /*id*/,
+                 jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(void)
 node_finalize(JSContext *cx,
-	      JSObject *obj)
+              JSObject *obj)
 {
   MDomNode *node;
 
@@ -678,23 +678,23 @@ node_finalize(JSContext *cx,
 }
 
 enum node_slot {
-  NODE_TYPE		= -1,
-  NODE_PARENTNODE	= -2,
-  NODE_CHILDNODES	= -3,
+  NODE_TYPE				= -1,
+  NODE_PARENTNODE		= -2,
+  NODE_CHILDNODES		= -3,
   NODE_HASCHILDNODES	= -4,
-  NODE_FIRSTCHILD	= -5,
+  NODE_FIRSTCHILD		= -5,
   NODE_PREVIOUSSIBLING	= -6,
-  NODE_NEXTSIBLING	= -7
+  NODE_NEXTSIBLING		= -7
 };
 
 static JSPropertySpec node_props[] = {
-  { "nodeType",		NODE_TYPE,		JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "parentNode",	NODE_PARENTNODE,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "childNodes",	NODE_CHILDNODES,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "nodeType",			NODE_TYPE,		JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "parentNode",		NODE_PARENTNODE,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "childNodes",		NODE_CHILDNODES,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { "hasChildNodes",	NODE_HASCHILDNODES,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "firstChild",	NODE_FIRSTCHILD,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "firstChild",		NODE_FIRSTCHILD,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { "previousSibling",	NODE_PREVIOUSSIBLING,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "nextSibling",	NODE_NEXTSIBLING,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "nextSibling",		NODE_NEXTSIBLING,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { 0 }
 };
 
@@ -707,10 +707,10 @@ JSClass mdom_node_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 node_insert_before(JSContext *cx,
-		   JSObject *obj,
-		   uint argc,
-		   jsval *argv,
-		   jsval *rval)
+                   JSObject *obj,
+                   uint argc,
+                   jsval *argv,
+                   jsval *rval)
 {
   MDomNode *node;
   MDomNode *ret;
@@ -754,10 +754,10 @@ node_insert_before(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 node_replace_child(JSContext *cx,
-		   JSObject *obj,
-		   uint argc,
-		   jsval *argv,
-		   jsval *rval)
+                   JSObject *obj,
+                   uint argc,
+                   jsval *argv,
+                   jsval *rval)
 {
   MDomNode *node;
   MDomNode *ret;
@@ -801,10 +801,10 @@ node_replace_child(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 node_remove_child(JSContext *cx,
-		  JSObject *obj,
-		  uint argc,
-		  jsval *argv,
-		  jsval *rval)
+                  JSObject *obj,
+                  uint argc,
+                  jsval *argv,
+                  jsval *rval)
 {
   MDomNode *node;
   MDomNode *ret;
@@ -879,25 +879,25 @@ MDOM_NewNode(JSContext *cx, MDomNode *node)
 
 PR_STATIC_CALLBACK(PRBool)
 nodeiterator_setProperty(JSContext */*cx*/,
-			 JSObject */*obj*/,
-			 jsval /*id*/,
-			 jsval */*vp*/)
+                         JSObject */*obj*/,
+                         jsval /*id*/,
+                         jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 nodeiterator_getProperty(JSContext */*cx*/,
-		 JSObject */*obj*/,
-		 jsval /*id*/,
-		 jsval */*vp*/)
+                         JSObject */*obj*/,
+                         jsval /*id*/,
+                         jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(void)
 nodeiterator_finalize(JSContext *cx,
-		      JSObject *obj)
+                      JSObject *obj)
 {
   MDomNodeIterator *nodeiterator;
 
@@ -939,10 +939,10 @@ JSClass mdom_nodeiterator_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 nodeiterator_move_to(JSContext *cx,
-		     JSObject *obj,
-		     uint argc,
-		     jsval *argv,
-		     jsval *rval)
+                     JSObject *obj,
+                     uint argc,
+                     jsval *argv,
+                     jsval *rval)
 {
   MDomNodeIterator *iterator;
   MDomNode *ret;
@@ -1010,25 +1010,25 @@ MDOM_NewNodeIterator(JSContext *cx, MDomNodeIterator *nodeiterator)
 
 PR_STATIC_CALLBACK(PRBool)
 treeiterator_setProperty(JSContext */*cx*/,
-			 JSObject */*obj*/,
-			 jsval /*id*/,
-			 jsval */*vp*/)
+                         JSObject */*obj*/,
+                         jsval /*id*/,
+                         jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 treeiterator_getProperty(JSContext */*cx*/,
-			 JSObject */*obj*/,
-			 jsval /*id*/,
-			 jsval */*vp*/)
+                         JSObject */*obj*/,
+                         jsval /*id*/,
+                         jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(void)
 treeiterator_finalize(JSContext *cx,
-		      JSObject *obj)
+                      JSObject *obj)
 {
   MDomTreeIterator *treeiterator;
 
@@ -1040,25 +1040,25 @@ treeiterator_finalize(JSContext *cx,
 
 
 enum treeiterator_slot {
-  TREEITERATOR_NUMCHILDREN		= -1,
+  TREEITERATOR_NUMCHILDREN			= -1,
   TREEITERATOR_NUMPREVIOUSSIBLINGS	= -2,
   TREEITERATOR_NUMNEXTSIBLINGS		= -3,
-  TREEITERATOR_TOPARENT			= -4,
+  TREEITERATOR_TOPARENT				= -4,
   TREEITERATOR_TOPREVIOUSSIBLINGS	= -5,
   TREEITERATOR_TONEXTSIBLINGS		= -6,
-  TREEITERATOR_TOFIRSTCHILD		= -7,
-  TREEITERATOR_TOLASTCHILD		= -8
+  TREEITERATOR_TOFIRSTCHILD			= -7,
+  TREEITERATOR_TOLASTCHILD			= -8
 };
 
 static JSPropertySpec treeiterator_props[] = {
-  { "numChildren",	TREEITERATOR_NUMCHILDREN,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "numPreviousSiblings", TREEITERATOR_NUMPREVIOUSSIBLINGS, JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "numNextSiblings",	TREEITERATOR_NUMNEXTSIBLINGS,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "toParent",		TREEITERATOR_TOPARENT,		JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "toPreviousSiblings", TREEITERATOR_TOPREVIOUSSIBLINGS,JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "toNextSiblings",	TREEITERATOR_TONEXTSIBLINGS,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "toFirstChild",	TREEITERATOR_TOFIRSTCHILD,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "toLastChild",	TREEITERATOR_TOLASTCHILD,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "numChildren",			TREEITERATOR_NUMCHILDREN,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "numPreviousSiblings",	TREEITERATOR_NUMPREVIOUSSIBLINGS, JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "numNextSiblings",		TREEITERATOR_NUMNEXTSIBLINGS,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "toParent",				TREEITERATOR_TOPARENT,		JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "toPreviousSiblings", 	TREEITERATOR_TOPREVIOUSSIBLINGS,JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "toNextSiblings",		TREEITERATOR_TONEXTSIBLINGS,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "toFirstChild",			TREEITERATOR_TOFIRSTCHILD,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "toLastChild",			TREEITERATOR_TOLASTCHILD,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { 0 }
 };
 
@@ -1070,10 +1070,10 @@ JSClass mdom_treeiterator_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 treeiterator_to_nth_child(JSContext *cx,
-			  JSObject *obj,
-			  uint argc,
-			  jsval *argv,
-			  jsval *rval)
+                          JSObject *obj,
+                          uint argc,
+                          jsval *argv,
+                          jsval *rval)
 {
   MDomTreeIterator *iterator;
   MDomNode *ret;
@@ -1142,25 +1142,25 @@ MDOM_NewTreeIterator(JSContext *cx, MDomTreeIterator *treeiterator)
 
 PR_STATIC_CALLBACK(PRBool)
 attribute_setProperty(JSContext */*cx*/,
-		      JSObject */*obj*/,
-		      jsval /*id*/,
-		      jsval */*vp*/)
+                      JSObject */*obj*/,
+                      jsval /*id*/,
+                      jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 attribute_getProperty(JSContext */*cx*/,
-		      JSObject */*obj*/,
-		      jsval /*id*/,
-		      jsval */*vp*/)
+                      JSObject */*obj*/,
+                      jsval /*id*/,
+                      jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(void)
 attribute_finalize(JSContext *cx,
-		   JSObject *obj)
+                   JSObject *obj)
 {
   MDomAttribute *attribute;
 
@@ -1172,14 +1172,14 @@ attribute_finalize(JSContext *cx,
 
 enum attribute_slot {
   ATTR_SPECIFIED	= -1,
-  ATTR_NAME		= -2,
+  ATTR_NAME			= -2,
   ATTR_VALUE		= -3,
   ATTR_TOSTRING		= -4
 };
 
 static JSPropertySpec attribute_props[] = {
   { "specified",	ATTR_SPECIFIED,	JSPROP_ENUMERATE|JSPROP_READONLY },
-  { "name",		ATTR_SPECIFIED,	JSPROP_ENUMERATE|JSPROP_READONLY },
+  { "name",			ATTR_SPECIFIED,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { "value",		ATTR_SPECIFIED,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { "toString",		ATTR_SPECIFIED,	JSPROP_ENUMERATE|JSPROP_READONLY },
   { 0 }
@@ -1219,18 +1219,18 @@ MDOM_NewAttribute(JSContext *cx, MDomAttribute *attribute)
 
 PR_STATIC_CALLBACK(PRBool)
 attributelist_setProperty(JSContext */*cx*/,
-		      JSObject */*obj*/,
-		      jsval /*id*/,
-		      jsval */*vp*/)
+                          JSObject */*obj*/,
+                          jsval /*id*/,
+                          jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 attributelist_getProperty(JSContext */*cx*/,
-		      JSObject */*obj*/,
-		      jsval /*id*/,
-		      jsval */*vp*/)
+                          JSObject */*obj*/,
+                          jsval /*id*/,
+                          jsval */*vp*/)
 {
   return JS_FALSE;
 }
@@ -1264,10 +1264,10 @@ JSClass mdom_attributelist_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 attributelist_get_attribute(JSContext *cx,
-			    JSObject *obj,
-			    uint argc,
-			    jsval *argv,
-			    jsval *rval)
+                            JSObject *obj,
+                            uint argc,
+                            jsval *argv,
+                            jsval *rval)
 {
   MDomAttributeList *attr_list;
   MDomAttribute *attr;
@@ -1316,10 +1316,10 @@ attributelist_set_attribute(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 attributelist_remove(JSContext *cx,
-		     JSObject *obj,
-		     uint argc,
-		     jsval *argv,
-		     jsval *rval)
+                     JSObject *obj,
+                     uint argc,
+                     jsval *argv,
+                     jsval *rval)
 {
   MDomAttributeList *attr_list;
   MDomAttribute *attr;
@@ -1352,10 +1352,10 @@ attributelist_remove(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 attributelist_item(JSContext *cx,
-		   JSObject *obj,
-		   uint argc,
-		   jsval *argv,
-		   jsval *rval)
+                   JSObject *obj,
+                   uint argc,
+                   jsval *argv,
+                   jsval *rval)
 {
   MDomAttributeList *attr_list;
   MDomAttribute *attr;
@@ -1392,7 +1392,7 @@ static JSFunctionSpec attributelist_methods[] = {
   {"getAttribute",	attributelist_get_attribute,	1},
   {"setAttribute",	attributelist_set_attribute,	1},
   {"remove",		attributelist_remove,		1},
-  {"item",		attributelist_item,		1},
+  {"item",			attributelist_item,		1},
   {0}
 };
 
@@ -1425,18 +1425,18 @@ MDOM_NewAttributeList(JSContext *cx, MDomAttributeList *attributelist)
 
 PR_STATIC_CALLBACK(PRBool)
 element_setProperty(JSContext */*cx*/,
-		    JSObject */*obj*/,
-		    jsval /*id*/,
-		    jsval */*vp*/)
+                    JSObject */*obj*/,
+                    jsval /*id*/,
+                    jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 element_getProperty(JSContext */*cx*/,
-		    JSObject */*obj*/,
-		    jsval /*id*/,
-		    jsval */*vp*/)
+                    JSObject */*obj*/,
+                    jsval /*id*/,
+                    jsval */*vp*/)
 {
   return JS_FALSE;
 }
@@ -1454,7 +1454,7 @@ element_finalize(JSContext *cx,
 }
 
 enum element_slot {
-  ELEMENT_TAGNAME	= -1,
+  ELEMENT_TAGNAME		= -1,
   ELEMENT_ATTRIBUTES	= -2
 };
 
@@ -1473,10 +1473,10 @@ JSClass mdom_element_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 element_normalize(JSContext *cx,
-		  JSObject *obj,
-		  uint /*argc*/,
-		  jsval */*argv*/,
-		  jsval */*rval*/)
+                  JSObject *obj,
+                  uint /*argc*/,
+                  jsval */*argv*/,
+                  jsval */*rval*/)
 {
   MDomElement *element;
 
@@ -1489,10 +1489,10 @@ element_normalize(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_get_attribute(JSContext *cx,
-		      JSObject *obj,
-		      uint argc,
-		      jsval *argv,
-		      jsval *rval)
+                      JSObject *obj,
+                      uint argc,
+                      jsval *argv,
+                      jsval *rval)
 {
   MDomElement *element;
   JSString *str, *ret_str;
@@ -1516,10 +1516,10 @@ element_get_attribute(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_set_attribute(JSContext *cx,
-		      JSObject *obj,
-		      uint argc,
-		      jsval *argv,
-		      jsval */*rval*/)
+                      JSObject *obj,
+                      uint argc,
+                      jsval *argv,
+                      jsval */*rval*/)
 {
   MDomElement *element;
   JSString *name, *value;
@@ -1540,10 +1540,10 @@ element_set_attribute(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_remove_attribute(JSContext *cx,
-			 JSObject *obj,
-			 uint argc,
-			 jsval *argv,
-			 jsval */*rval*/)
+                         JSObject *obj,
+                         uint argc,
+                         jsval *argv,
+                         jsval */*rval*/)
 {
   MDomElement *element;
   JSString *str;
@@ -1563,10 +1563,10 @@ element_remove_attribute(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_get_attribute_node(JSContext *cx,
-			   JSObject *obj,
-			   uint /*argc*/,
-			   jsval */*argv*/,
-			   jsval */*rval*/)
+                           JSObject *obj,
+                           uint /*argc*/,
+                           jsval */*argv*/,
+                           jsval */*rval*/)
 {
   MDomElement *element;
 
@@ -1579,10 +1579,10 @@ element_get_attribute_node(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_set_attribute_node(JSContext *cx,
-			   JSObject *obj,
-			   uint /*argc*/,
-			   jsval */*argv*/,
-			   jsval */*rval*/)
+                           JSObject *obj,
+                           uint /*argc*/,
+                           jsval */*argv*/,
+                           jsval */*rval*/)
 {
   MDomElement *element;
 
@@ -1595,10 +1595,10 @@ element_set_attribute_node(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_remove_attribute_node(JSContext *cx,
-			      JSObject *obj,
-			      uint /*argc*/,
-			      jsval */*argv*/,
-			      jsval */*rval*/)
+                              JSObject *obj,
+                              uint /*argc*/,
+                              jsval */*argv*/,
+                              jsval */*rval*/)
 {
   MDomElement *element;
 
@@ -1611,10 +1611,10 @@ element_remove_attribute_node(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 element_get_elements_by_tag_name(JSContext *cx,
-				 JSObject *obj,
-				 uint /*argc*/,
-				 jsval */*argv*/,
-				 jsval */*rval*/)
+                                 JSObject *obj,
+                                 uint /*argc*/,
+                                 jsval */*argv*/,
+                                 jsval */*rval*/)
 {
   MDomElement *element;
 
@@ -1626,9 +1626,9 @@ element_get_elements_by_tag_name(JSContext *cx,
 }
 
 static JSFunctionSpec element_methods[] = {
-  {"normalize",			element_normalize,			1},
-  {"getAttribute",		element_get_attribute,			1},
-  {"setAttribute",		element_set_attribute,			2},
+  {"normalize",				element_normalize,			1},
+  {"getAttribute",			element_get_attribute,			1},
+  {"setAttribute",			element_set_attribute,			2},
   {"removeAttribute",		element_remove_attribute,		1},
   {"getAttributeNode",		element_get_attribute_node,		1},
   {"setAttributeNode",		element_set_attribute_node,		1},
@@ -1666,18 +1666,18 @@ MDOM_NewElement(JSContext *cx, MDomElement *element)
 
 PR_STATIC_CALLBACK(PRBool)
 text_setProperty(JSContext */*cx*/,
-		    JSObject */*obj*/,
-		    jsval /*id*/,
-		    jsval */*vp*/)
+                 JSObject */*obj*/,
+                 jsval /*id*/,
+                 jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 text_getProperty(JSContext */*cx*/,
-		    JSObject */*obj*/,
-		    jsval /*id*/,
-		    jsval */*vp*/)
+                 JSObject */*obj*/,
+                 jsval /*id*/,
+                 jsval */*vp*/)
 {
   return JS_FALSE;
 }
@@ -1711,10 +1711,10 @@ JSClass mdom_text_class = {
 
 PR_STATIC_CALLBACK(PRBool)
 text_append(JSContext *cx,
-	    JSObject *obj,
-	    uint /*argc*/,
-	    jsval */*argv*/,
-	    jsval */*rval*/)
+            JSObject *obj,
+            uint /*argc*/,
+            jsval */*argv*/,
+            jsval */*rval*/)
 {
   MDomText *text;
 
@@ -1727,10 +1727,10 @@ text_append(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 text_insert(JSContext *cx,
-	    JSObject *obj,
-	    uint /*argc*/,
-	    jsval */*argv*/,
-	    jsval */*rval*/)
+            JSObject *obj,
+            uint /*argc*/,
+            jsval */*argv*/,
+            jsval */*rval*/)
 {
   MDomText *text;
 
@@ -1743,10 +1743,10 @@ text_insert(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 text_delete(JSContext *cx,
-	    JSObject *obj,
-	    uint /*argc*/,
-	    jsval */*argv*/,
-	    jsval */*rval*/)
+            JSObject *obj,
+            uint /*argc*/,
+            jsval */*argv*/,
+            jsval */*rval*/)
 {
   MDomText *text;
 
@@ -1759,10 +1759,10 @@ text_delete(JSContext *cx,
 
 PR_STATIC_CALLBACK(PRBool)
 text_replace(JSContext *cx,
-	     JSObject *obj,
-	     uint /*argc*/,
-	     jsval */*argv*/,
-	     jsval */*rval*/)
+             JSObject *obj,
+             uint /*argc*/,
+             jsval */*argv*/,
+             jsval */*rval*/)
 {
   MDomText *text;
 
@@ -1827,18 +1827,18 @@ MDOM_NewText(JSContext *cx, MDomText *text)
 
 PR_STATIC_CALLBACK(PRBool)
 comment_setProperty(JSContext */*cx*/,
-		    JSObject */*obj*/,
-		    jsval /*id*/,
-		    jsval */*vp*/)
+                    JSObject */*obj*/,
+                    jsval /*id*/,
+                    jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 comment_getProperty(JSContext */*cx*/,
-		    JSObject */*obj*/,
-		    jsval /*id*/,
-		    jsval */*vp*/)
+                    JSObject */*obj*/,
+                    jsval /*id*/,
+                    jsval */*vp*/)
 {
   return JS_FALSE;
 }
@@ -1898,18 +1898,18 @@ MDOM_NewComment(JSContext *cx, MDomComment *comment)
 
 PR_STATIC_CALLBACK(PRBool)
 pi_setProperty(JSContext */*cx*/,
-	       JSObject */*obj*/,
-	       jsval /*id*/,
-	       jsval */*vp*/)
+               JSObject */*obj*/,
+               jsval /*id*/,
+               jsval */*vp*/)
 {
   return JS_FALSE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 pi_getProperty(JSContext */*cx*/,
-	       JSObject */*obj*/,
-	       jsval /*id*/,
-	       jsval */*vp*/)
+               JSObject */*obj*/,
+               jsval /*id*/,
+               jsval */*vp*/)
 {
   return JS_FALSE;
 }
