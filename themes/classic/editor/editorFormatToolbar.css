@@ -333,10 +333,6 @@
 
 /* ..... align menu ..... */
 
-#AlignPopup > menuitem {
-  list-style-image: url("chrome://editor/skin/icons/btn2.gif");
-}
-
 #AlignLeftItem {
   -moz-image-region: rect(146px 16px 162px 0px);
 }
@@ -371,8 +367,8 @@
 
 /* ..... insert menu ..... */
 
-#InsertPopup > menuitem {
-  list-style-image: url("chrome://editor/skin/icons/btn1.gif");
+.insert {
+  list-style-image: url("chrome://editor/skin/icons/btn1.gif") !important;
 }
 
 #InsertLinkItem {
