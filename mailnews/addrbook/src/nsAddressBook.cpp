@@ -96,6 +96,7 @@
 // see bugs bug #116692 and #118454
 #define MOZ_AB_OBJECTCLASS "mozillaAbPersonObsolete"
 
+#if 0
 // for now, these should be in the same order as they are in the import code
 // see importMsgProperties and nsImportStringBundle.h
 
@@ -158,6 +159,7 @@ static ExportAttributesTableStruct EXPORT_ATTRIBUTES_TABLE[] = {
   {kCustom4Column, "custom4", PR_TRUE},
   {kNotesColumn, "description", PR_TRUE},
 };
+#endif
 
 //
 // nsAddressBook
@@ -1503,6 +1505,7 @@ nsAddressBook::ExportDirectoryToDelimitedText(nsIAbDirectory *aDirectory, const 
             else {
               // something we don't support for the current export
               // for example, .tab doesn't export preferred html format
+              continue; // go to next field 
             }
 
             if (i < EXPORT_ATTRIBUTES_TABLE_COUNT - 1) {

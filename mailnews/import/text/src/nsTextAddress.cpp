@@ -1132,23 +1132,12 @@ void nsTextAddress::AddLdifColToDatabase(nsIMdbRow* newRow, char* typeSlot, char
       if (colType.Equals("mail") )
         m_database->AddPrimaryEmail(newRow, column.get());
       else if ( colType.Equals("mobile") )
-    m_database->AddCellularNumber(newRow, column.get());
+        m_database->AddCellularNumber(newRow, column.get());
       else if (colType.Equals("member") && bIsList )
         m_database->AddLdifListMember(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "secondemail"))
-        m_database->Add2ndEmail(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "postaladdress2"))
-        m_database->AddWorkAddress2(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "homepostaladdress2"))
-        m_database->AddHomeAddress2(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "homelocalityname"))
-        m_database->AddHomeCity(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "homestate"))
-        m_database->AddHomeState(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "homepostalcode"))
-        m_database->AddHomeZipCode(newRow, column.get());
-      else if (colType.Equals(MOZ_AB_LDIF_PREFIX "homecountryname"))
-        m_database->AddHomeCountry(newRow, column.get());
+      // check if it starts with our magic prefix
+      else if (colType.Find(MOZ_AB_LDIF_PREFIX) == 0)
+        m_database->AddRowValue(newRow, colType, NS_ConvertUTF8toUCS2(column));
       break; // 'm'
 
     case 'n':

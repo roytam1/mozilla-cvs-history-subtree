@@ -88,6 +88,9 @@ function OnUnloadAddressBook()
 
   RemovePrefObservers();
   CloseAbView();
+
+  // Do absync before return.
+  DoAbsync();
 }
 
 var gAddressBookAbViewListener = {
@@ -130,6 +133,23 @@ function RemovePrefObservers()
   prefBranch.removeObserver(kPrefMailAddrBookLastNameFirst, gMailAddrBookLastNameFirstObserver);
 }
 
+function DoAbsync()
+{
+  // See if we are configured to do this.
+  if (!gPrefs.getBoolPref("mail.absync.performAutoSync"))
+    return;
+
+  try
+  {
+    var syncDriver = Components.classes["@mozilla.org/addressbook/services/syncdriver;1"].getService
+                          (Components.interfaces.nsIAbSyncDriver);     
+    syncDriver.KickIt(null /*no status window*/, window);  
+  }
+  catch(ex)
+  {
+  }
+}
+
 function OnLoadAddressBook()
 {
   gAddressBookBundle = document.getElementById("bundle_addressBook");
@@ -154,6 +174,9 @@ function OnLoadAddressBook()
 
   //workaround - add setTimeout to make sure dynamic overlays get loaded first
   setTimeout('SelectFirstAddressBook()',0);
+
+  // Do absync.
+  setTimeout('DoAbsync()', 0);
   
   // if the pref is locked disable the menuitem New->LDAP directory
   if (gPrefs.prefIsLocked("ldap_2.disable_button_add"))
@@ -682,3 +705,4 @@ function loadThrobberUrl(urlPref)
   messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
   messenger.loadURL(window, url);
 }
+

@@ -230,6 +230,7 @@ protected:
 
   nsresult InitLdapTable();
   nsresult InitLocalABTable();
+  nsresult SetUpABTable(nsIMsgSearchValidityTable *aTable, PRBool isLocal);
 	nsresult EnableDirectoryAttribute(nsIMsgSearchValidityTable *table, nsMsgSearchAttribValue aSearchAttrib);
 };
 

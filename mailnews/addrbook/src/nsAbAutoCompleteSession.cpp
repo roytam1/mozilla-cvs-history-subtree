@@ -416,6 +416,12 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
         card = do_QueryInterface(item, &rv);
 	      if (NS_SUCCEEDED(rv))
 	      {
+          // Skip if it's not a normal card (ie, they can't be added as members).
+          PRBool isNormal;
+          rv = card->GetIsANormalCard(&isNormal);
+          if (!isNormal)
+            continue;
+
           nsXPIDLString pEmailStr;
           nsXPIDLString pDisplayNameStr;
           nsXPIDLString pFirstNameStr;

@@ -18,7 +18,7 @@ Communications Corporation. Portions created by Netscape are
 Rights Reserved.
 --> 
 
-<!ENTITY Name.tab				"Name"> 
+<!ENTITY Contact.tab "Contact"> 
 	<!ENTITY Name.box				"Name"> 
 		<!ENTITY FirstName.label		"First:"> 
 		<!ENTITY LastName.label			"Last:"> 
@@ -31,13 +31,13 @@ Rights Reserved.
 		<!ENTITY PlainText.label		"Plain Text"> 
 		<!ENTITY HTML.label				"HTML"> 
 		<!ENTITY Unknown.label			"Unknown"> 
+<!ENTITY ScreenName.label "Screen Name:"> 
 	<!ENTITY Phones.box				"Phones"> 
 		<!ENTITY WorkPhone.label		"Work:"> 
 		<!ENTITY HomePhone.label		"Home:"> 
 		<!ENTITY FaxNumber.label		"Fax:"> 
 		<!ENTITY PagerNumber.label		"Pager:"> 
 		<!ENTITY CellularNumber.label	"Mobile:"> 
-	
 <!ENTITY Address.tab			"Address"> 
 	<!ENTITY Home.box				"Home"> 
 		<!ENTITY HomeAddress.label		"Address:"> 
@@ -58,7 +58,6 @@ Rights Reserved.
 		<!ENTITY WorkZipCode.label		"Zip/Postal Code:"> 
 		<!ENTITY WorkCountry.label		"Country:">
 		<!ENTITY WorkWebPage.label		"Web Page:"> 
-	
 <!ENTITY Other.tab				"Other"> 
 		<!ENTITY Custom1.label			"Custom 1:"> 
 		<!ENTITY Custom2.label			"Custom 2:"> 
