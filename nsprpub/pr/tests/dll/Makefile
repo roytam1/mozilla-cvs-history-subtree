@@ -30,7 +30,7 @@ endif
 
 CSRCS = mygetval.c mysetval.c
 
-INCLUDES = -I$(DIST)/include
+INCLUDES = -I$(includedir)
 
 OBJS = $(OBJDIR)/mygetval.$(OBJ_SUFFIX) \
 	$(OBJDIR)/mysetval.$(OBJ_SUFFIX)
@@ -89,7 +89,6 @@ ifdef SHARED_LIBRARY
 export:: $(TARGETS)
 	$(NSINSTALL) $(TARGETS) ../$(OBJDIR)/dll
 
-install:: export
 
 clean::
 	rm -rf $(TARGETS)

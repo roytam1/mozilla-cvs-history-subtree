@@ -172,16 +172,14 @@ endif
 
 ################################################################################
 
-all:: export libs install
+all:: export
 
 export::
 	+$(LOOP_OVER_DIRS)
 
-libs::
-	+$(LOOP_OVER_DIRS)
+libs:: export
 
-install::
-	+$(LOOP_OVER_DIRS)
+install:: export
 
 clean::
 	rm -rf $(OBJS) so_locations $(NOSUCHFILE) $(GARBAGE)
@@ -300,9 +298,6 @@ endif
 $(SHARED_LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-ifdef USE_AUTOCONF
-	$(MKSHLIB) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
-else
 ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 	echo "#!" > $(OBJDIR)/lib$(LIBRARY_NAME)_syms
 	nm -B -C -g $(OBJS) \
@@ -352,12 +347,15 @@ ifeq ($(OS_TARGET), OpenVMS)
 	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS) $(OBJDIR)/VMSuni.opt
 	@echo "`translate $@`" > $(@:.$(DLL_SUFFIX)=.vms)
 else	# OpenVMS
+ifdef USE_AUTOCONF
+	$(MKSHLIB) $(OBJS) $(EXTRA_LIBS)
+else
 	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
+endif   # USE_AUTOCONF
 endif	# OpenVMS
 endif   # OS2
 endif	# WINNT
 endif	# AIX 4.1
-endif   # USE_AUTOCONF
 ifdef BUILD_OPT
 	$(STRIP) $@
 endif
@@ -367,10 +365,10 @@ ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 $(RES): $(RESNAME)
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_TARGET),OS2)
-	$(RC) -DOS2 -r $(RESNAME) $(RES)
+	$(RC) -DOS2 -r $< $@
 else
 # The resource compiler does not understand the -U option.
-	$(RC) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$(RES) $(RESNAME)
+	$(RC) $(filter-out -U%,$(DEFINES)) $(INCLUDES) -Fo$@ $<
 endif
 	@echo $(RES) finished
 endif

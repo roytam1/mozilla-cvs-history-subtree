@@ -44,8 +44,7 @@ nsMsgDBView::~nsMsgDBView()
   /* destructor code */
 }
 
-/* void open (in nsIMsgDatabase msgDB, in nsMsgViewSortType viewType); */
-NS_IMETHODIMP nsMsgDBView::Open(nsIMsgDatabase *msgDB, nsMsgViewSortType *viewType, PRInt32 *pCount)
+NS_IMETHODIMP nsMsgDBView::Open(nsIMsgDatabase *msgDB, nsMsgViewSortTypeValue viewType, PRInt32 *pCount)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -60,14 +59,97 @@ NS_IMETHODIMP nsMsgDBView::Init(PRInt32 *pCount)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortType *sortType, PRInt32 numKeysToAdd)
+NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortType *sortType, nsMsgViewSortOrder *sortOrder)
+nsresult nsMsgDBView::ReverseThreads()
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    printf("XXX same sort type, just different sort order.  just reverse threads\n");
+    return NS_OK;
+}
+
+nsresult nsMsgDBView::ReverseSort()
+{
+    PRUint32 num = GetSize();
+
+    // go up half the array swapping values
+    for (PRUint32 i = 0; i < (num / 2); i++) {
+        // swap flags
+        PRUint32 end = num - i - 1;
+        PRUint32 tempFlags = m_flags.GetAt(i);
+        m_flags.SetAt(i, m_flags.GetAt(end));
+        m_flags.SetAt(end, tempFlags);
+
+        // swap keys
+        nsMsgKey tempKey = m_keys.GetAt(i);
+        m_keys.SetAt(i, m_keys.GetAt(end));
+        m_keys.SetAt(end, tempKey);
+
+        // no need to swap elements in m_levels, 
+        // since we won't call ReverseSort() if we
+        // are in threaded mode, so m_levels are all the same.
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::PopulateView()
+{
+    PRUint32 i;
+    for (i=0;i<10;i++) {
+        m_keys.InsertAt(i,i*100+1);
+        m_flags.InsertAt(i,i);
+        //m_levels.InsertAt(i,i%2);
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::DumpView()
+{
+    PRUint32 i;
+    PRUint32 num = GetSize();
+    printf("#:  (key,flag)\n");
+    for (i = 0; i < num; i++) {
+        printf("%d:  (%d,%d)\n",i,m_keys.GetAt(i),m_flags.GetAt(i));
+    }
+    printf("\n");
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
+{
+    nsresult rv;
+
+    printf("XXX nsMsgDBView::Sort(%d,%d)\n",(int)sortType,(int)sortOrder);
+    if (m_sortType == sortType && m_sortValid) {
+        if (m_sortOrder == sortOrder) {
+            printf("XXX same as it ever was.  do nothing\n");
+            return NS_OK;
+        }   
+        else {
+            if (m_sortType != nsMsgViewSortType::byThread) {
+                rv = ReverseSort();
+                NS_ENSURE_SUCCESS(rv,rv);
+            }
+            else {
+                rv = ReverseThreads();
+                NS_ENSURE_SUCCESS(rv,rv);
+            }
+
+            m_sortType = sortType;
+            m_sortOrder = sortOrder;
+            return NS_OK;
+        }
+    }
+
+    printf("XXX ok, sort the beast.\n");
+
+    m_sortType = sortType;
+    m_sortOrder = sortOrder;
+
+    return NS_OK;
 }
 
 nsresult nsMsgDBView::ExpandAll()
@@ -84,10 +166,10 @@ nsresult nsMsgDBView::ExpandAll()
 
 nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded)
 {
-	int				numListed;
+	int				numListed = 0;
 	char			flags = m_flags[index];
 	nsMsgKey		firstIdInThread, startMsg = nsMsgKey_None;
-	nsresult			rv;
+	nsresult		rv = NS_OK;
 	nsMsgViewIndex	firstInsertIndex = index + 1;
 	nsMsgViewIndex	insertIndex = firstInsertIndex;
 	uint32			numExpanded = 0;
@@ -99,7 +181,7 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	NS_ASSERTION(flags & MSG_FLAG_ELIDED, "can't expand an already expanded thread");
 	flags &= ~MSG_FLAG_ELIDED;
 
-	if ((int) index > m_keys.GetSize())
+	if ((PRUint32) index > m_keys.GetSize())
 		return NS_MSG_MESSAGE_NOT_FOUND;
 
 	firstIdInThread = m_keys[index];
@@ -115,11 +197,11 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 	do
 	{
 		const int listChunk = 200;
+#ifdef ON_BRANCH_YET
 		nsMsgKey	listIDs[listChunk];
 		char		listFlags[listChunk];
 		char		listLevels[listChunk];
 
-#ifdef ON_BRANCH_YET
 		if (m_viewFlags & kUnreadOnly)
 		{
 			if (flags & MSG_FLAG_READ)

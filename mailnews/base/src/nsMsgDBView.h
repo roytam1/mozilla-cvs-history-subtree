@@ -43,6 +43,8 @@ public:
 protected:
   nsresult ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded);
   nsresult ExpandAll();
+  nsresult ReverseSort();
+  nsresult ReverseThreads();
 
 	PRInt32	  GetSize(void) {return(m_keys.GetSize());}
 
@@ -63,7 +65,7 @@ protected:
 
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;
-	nsMsgViewSortTypeValue	m_sortType;
+  nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgDBViewTypeValue m_viewType;
 };

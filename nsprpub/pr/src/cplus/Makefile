@@ -38,7 +38,7 @@ OBJS = $(addprefix $(OBJDIR)/,$(CXXSRCS:.cpp=.$(OBJ_SUFFIX)))
 
 TARGETS	= $(OBJS)
 
-INCLUDES = -I$(DIST)/include
+INCLUDES = -I$(includedir)
 
 DEFINES     += -D_NSPR_BUILD_
 
@@ -48,4 +48,3 @@ HEADERS = $(wildcard *.h)
 
 export:: $(TARGETS)
 
-install:: export
