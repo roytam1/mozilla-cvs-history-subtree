@@ -23,7 +23,6 @@
 #include "nscore.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
-#include "nsIBufferInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsFileStream.h"
@@ -291,10 +290,10 @@ NS_IMETHODIMP nsSmtpProtocol::OnStopBinding(nsISupports *ctxt, nsresult aStatus,
 // End of nsIStreamListenerSupport
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-PRInt32 nsSmtpProtocol::ReadLine(nsIBufferInputStream * inputStream, PRUint32 length, char ** line)
+PRInt32 nsSmtpProtocol::ReadLine(nsIInputStream * inputStream, PRUint32 length, char ** line)
 {
 	// I haven't looked into writing this yet. We have a couple of possibilities:
-	// (1) insert ReadLine *yuck* into here or better yet into the nsIBufferInputStream
+	// (1) insert ReadLine *yuck* into here or better yet into the nsIInputStream
 	// then we can just turn around and call it here. 
 	// OR
 	// (2) we write "protocol" specific code for news which looks for a CRLF in the incoming
@@ -350,7 +349,7 @@ PRInt32 nsSmtpProtocol::ReadLine(nsIBufferInputStream * inputStream, PRUint32 le
  *
  * returns the TCP return code from the read
  */
-PRInt32 nsSmtpProtocol::SmtpResponse(nsIBufferInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::SmtpResponse(nsIInputStream * inputStream, PRUint32 length)
 {
 	char * line = nsnull;
 	char cont_char;
@@ -414,7 +413,7 @@ PRInt32 nsSmtpProtocol::SmtpResponse(nsIBufferInputStream * inputStream, PRUint3
     return(0);  /* everything ok */
 }
 
-PRInt32 nsSmtpProtocol::LoginResponse(nsIBufferInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::LoginResponse(nsIInputStream * inputStream, PRUint32 length)
 {
     PRInt32 status = 0;
 	nsAutoString buffer ((const char *) "HELO ", eOneByte);
@@ -440,7 +439,7 @@ PRInt32 nsSmtpProtocol::LoginResponse(nsIBufferInputStream * inputStream, PRUint
 }
     
 
-PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIBufferInputStream * inputStream, PRUint32 length) 
+PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIInputStream * inputStream, PRUint32 length) 
 {
     PRInt32 status = 0;
 	nsAutoString buffer((const char *) "EHLO ", eOneByte);
@@ -466,7 +465,7 @@ PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIBufferInputStream * inputStrea
 }
     
 
-PRInt32 nsSmtpProtocol::SendHeloResponse(nsIBufferInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 length)
 {
     PRInt32 status = 0;
 	nsAutoString buffer (eOneByte);
@@ -562,7 +561,7 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIBufferInputStream * inputStream, PRU
 }
 
 
-PRInt32 nsSmtpProtocol::SendEhloResponse(nsIBufferInputStream * inputStream, PRUint32 length)
+PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 length)
 {
   PRInt32 status = 0;
   nsAutoString buffer(eOneByte);
@@ -636,7 +635,7 @@ PRInt32 nsSmtpProtocol::SendEhloResponse(nsIBufferInputStream * inputStream, PRU
 
 HG76227
 
-PRInt32 nsSmtpProtocol::AuthLoginResponse(nsIBufferInputStream * stream, PRUint32 length)
+PRInt32 nsSmtpProtocol::AuthLoginResponse(nsIInputStream * stream, PRUint32 length)
 {
   PRInt32 status = 0;
 
@@ -1277,7 +1276,7 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
  *
  * returns zero or more if the transfer needs to be continued.
  */
-nsresult nsSmtpProtocol::ProcessProtocolState(nsIURI * url, nsIBufferInputStream * inputStream, 
+nsresult nsSmtpProtocol::ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
 									      PRUint32 sourceOffset, PRUint32 length)
 {
     PRInt32 status = 0;
