@@ -1733,14 +1733,24 @@ void
 nsWindow::HandleXlibExposeEvent(XEvent *event)
 {
   nsPaintEvent pevent;
+
+  pevent.rect = new nsRect(event->xexpose.x, event->xexpose.y,
+                           event->xexpose.width, event->xexpose.height);
+
+  if (event->xexpose.count != 0) {
+    XEvent       extra_event;
+    do {
+      XWindowEvent(event->xany.display, event->xany.window, ExposureMask, (XEvent *)&extra_event);
+      pevent.rect->UnionRect(*pevent.rect, nsRect(extra_event.xexpose.x, extra_event.xexpose.y,
+                                                  extra_event.xexpose.width, extra_event.xexpose.height));
+    } while (extra_event.xexpose.count > 0);
+  }
   
   pevent.message = NS_PAINT;
   pevent.widget = this;
   pevent.eventStructType = NS_PAINT_EVENT;
   pevent.point.x = event->xexpose.x;
   pevent.point.y = event->xexpose.y;
-  pevent.rect = new nsRect(event->xexpose.x, event->xexpose.y,
-                           event->xexpose.width, event->xexpose.height);
   /* XXX fix this */
   pevent.time = 0;
   AddRef();
