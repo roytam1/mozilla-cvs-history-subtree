@@ -42,7 +42,7 @@ locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-s
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-mapi/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/messenger-region/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/necko/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/editor/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/editor/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/mozldap/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/mozapps/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/navigator/
