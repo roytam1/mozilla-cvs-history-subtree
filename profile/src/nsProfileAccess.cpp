@@ -1469,7 +1469,7 @@ nsresult ProfileStruct::InternalizeMigratedFromLocation(nsIRegistry *aRegistry, 
         if (NS_SUCCEEDED(rv))
         {
             // The persistent desc on Mac is base64 encoded so plain ASCII
-            rv = tempLocal->SetPersistentDescriptor(regData.get());
+            rv = tempLocal->SetPersistentDescriptor(regData);
             if (NS_SUCCEEDED(rv))
                 migratedFrom = tempLocal;
         }
@@ -1485,12 +1485,12 @@ nsresult ProfileStruct::InternalizeMigratedFromLocation(nsIRegistry *aRegistry, 
 nsresult ProfileStruct::ExternalizeMigratedFromLocation(nsIRegistry *aRegistry, nsRegistryKey profKey)
 {
     nsresult rv = NS_OK;
-    nsXPIDLCString regData;
+    nsCAutoString regData;
     
     if (migratedFrom)
     {
 #if XP_MAC
-        rv = migratedFrom->GetPersistentDescriptor(getter_Copies(regData));
+        rv = migratedFrom->GetPersistentDescriptor(regData);
 #else
         nsAutoString path;
         rv = resolvedLocation->GetPath(path);
