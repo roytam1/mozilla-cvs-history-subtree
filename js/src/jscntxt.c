@@ -127,9 +127,10 @@ js_DestroyContext(JSContext *cx)
 #if JS_HAS_REGEXPS
     js_FreeRegExpStatics(cx, &cx->regExpStatics);
 #endif
-    js_ForceGC(cx);
 
     if (rtempty) {
+        js_ForceGC(cx);
+
 	/* Free atom state now that we've run the GC. */
 	js_FreeAtomState(cx, &rt->atomState);
     }
