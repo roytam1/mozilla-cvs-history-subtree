@@ -26,7 +26,49 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src
+MODULE		= view
+LIBRARY_NAME	= gkview
+EXPORT_LIBRARY	= 1
+IS_COMPONENT    = 1
+MODULE_NAME	= nsViewModule
+
+REQUIRES	= xpcom \
+		  string \
+		  gfx \
+		  layout \
+		  content \
+		  widget \
+		  dom \
+		  locale \
+		  pref \
+		  necko \
+		  $(NULL)
+
+CPPSRCS		= \
+		src/nsView.cpp \
+		src/nsScrollingView.cpp \
+		src/nsScrollPortView.cpp \
+		src/nsViewManager.cpp \
+		src/nsViewFactory.cpp \
+		$(NULL)
+
+EXPORTS		= \
+		public/nsIView.h \
+		public/nsIViewManager.h \
+		public/nsIScrollableView.h \
+		public/nsViewsCID.h \
+		public/nsIViewObserver.h \
+		public/nsIScrollPositionListener.h \
+		public/nsICompositeListener.h \
+		$(NULL)
+
+EXTRA_DSO_LIBS = gkgfx
+
+EXTRA_DSO_LDOPTS = \
+		$(LIBS_DIR) \
+		$(EXTRA_DSO_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
