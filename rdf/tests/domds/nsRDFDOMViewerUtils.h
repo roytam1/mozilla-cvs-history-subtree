@@ -35,3 +35,5 @@ private:
   
 };
 
+nsresult
+NS_NewDOMViewerObject(const nsIID& iid, void ** result);

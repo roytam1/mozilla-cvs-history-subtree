@@ -70,3 +70,14 @@ nsDOMViewerObject::GetTarget(nsIRDFResource *aProperty,
   return NS_OK;
 
 }
+
+nsresult
+NS_NewDOMViewerObject(const nsIID& iid, void ** aResult) {
+  nsresult rv;
+  nsDOMViewerObject* obj = new nsDOMViewerObject;
+  
+  NS_ADDREF(obj);
+  rv = obj->QueryInterface(iid, aResult);
+  NS_RELEASE(obj);
+  return rv;
+}

@@ -912,9 +912,9 @@ nsRDFDOMDataSource::appendLeafObject(nsString& name,
   nsStringKey leafKey("leaf");
   if (!mModeTable.Get(&leafKey)) return NS_OK;
   
-  nsIRDFDOMViewerObject* viewerObject =
-    NS_STATIC_CAST(nsIRDFDOMViewerObject*,new nsDOMViewerObject);
-  
+  nsIRDFDOMViewerObject* viewerObject;
+  rv = NS_NewDOMViewerObject(NS_GET_IID(nsIRDFDOMViewerObject), (void **)&viewerObject);
+
   nsAutoString type("leaf");
   viewerObject->SetTargetLiteral(kNC_Name, name);
   viewerObject->SetTargetLiteral(kNC_Value, value);
@@ -924,6 +924,7 @@ nsRDFDOMDataSource::appendLeafObject(nsString& name,
   rv = getResourceForObject(viewerObject, getter_AddRefs(resource));
   rv = arcs->AppendElement(resource);
   
+  NS_RELEASE(viewerObject);
   return NS_OK;
 }
 
