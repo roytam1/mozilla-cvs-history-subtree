@@ -73,6 +73,8 @@ public: // create from serialization only
 public:
 	virtual ~CNSNavFrame();
 	CRDFContentView* GetContentView()	{return m_nsContent;}
+	void SetContentView(CRDFContentView* v) { m_nsContent = v; }
+
 	// Add new view to this frame.
 	//void AddViewContext(const char* pUrl, const char* pTitle, CView* pView, CPaneCX* htmlPane = NULL);
 
@@ -80,6 +82,10 @@ public:
 	// otherwise we want to create a window that is docked in this frame.
 	void CreateNewNavCenter(CNSGenFrame* pParentFrame = NULL, BOOL useViewType = FALSE, HT_ViewType viewType = HT_VIEW_BOOKMARK);
 	void DeleteNavCenter();
+
+	static CNSNavFrame* CreateFramedRDFViewFromResource(CWnd* pParent, int xPos, int yPos, 
+										  			    int width, int height, 
+														HT_Resource node);
 
 #ifdef _DEBUG
 	virtual void AssertValid() const;
@@ -95,6 +101,7 @@ public:
 	short CanDock(CPoint pt, BOOL mapDesktop = FALSE);
 	void ForceFloat(BOOL show = TRUE);
 	int32 GetDockStyle() { return m_dwOverDockStyle;}
+	void SetDockStyle(int32 d) { m_dwOverDockStyle = d; }
 	void ExpandWindow();
 	void CollapseWindow();
 
@@ -104,7 +111,9 @@ public:
 public:
     HT_Pane GetHTPane();
 	CNavTitleBar* GetNavTitleBar() { return m_pNavTitle; }
-	BOOL IsTreeVisible() { return m_pSelector->IsTreeVisible(); }
+	BOOL IsTreeVisible() { return TRUE; } //m_pSelector->IsTreeVisible(); }
+	
+	void SetHTNode(HT_Resource node) { m_Node = node; }
 
 protected:  // control bar embedded members
 	friend class CSelector;
@@ -117,7 +126,8 @@ protected:  // control bar embedded members
 	CPoint		m_ptLast;            // last mouse position during drag
 	CDC*		m_pDC;				 // where to draw during drag
 	CDragBar*	m_DragWnd;			// the resize bar, when this frame is docked.
-	
+	HT_Resource m_Node;				// the top node of the view.
+
 	// All of these rects are in the Desktop window's coordinates.
 
 	CRect m_rectDrag;				// bounding rect when this frame is floating

@@ -76,6 +76,7 @@ CNSNavFrame::CNSNavFrame()
 	m_nsContent= 0;
 	m_bDragging = FALSE;
 	m_DragWnd = 0;
+	m_Node = 0;
 }
 
 CNSNavFrame::~CNSNavFrame()
@@ -90,7 +91,7 @@ CNSNavFrame::~CNSNavFrame()
 		PREF_SetRectPref(gPrefFloatRect, (int16)m_rectFloat.left, (int16)m_rectFloat.top, (int16)m_rectFloat.right, (int16)m_rectFloat.bottom);
 	}
 
-	delete m_pNavTitle;
+	// delete m_pNavTitle;
 }
 
 void CNSNavFrame::UpdateTitleBar(HT_View pView)
@@ -199,6 +200,7 @@ void CNSNavFrame::DeleteNavCenter()
 
 BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 {
+/*
 	m_nsContent = new CRDFContentView();
 	m_pSelector = new CSelector(m_nsContent);
 	m_pNavTitle = new CNavTitleBar();
@@ -215,7 +217,8 @@ BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 
 	m_nsContent->Create( NULL, "", WS_CHILD | WS_VISIBLE, rect1, 
 		this , NC_IDW_OUTLINER, pContext);
-
+*/
+	m_nsContent = CRDFContentView::DisplayRDFTreeFromResource(this, 0, 0, 100, 100, m_Node, pContext); 
 	return TRUE;
 }
 
@@ -246,7 +249,7 @@ void CNSNavFrame::OnSize( UINT nType, int cx, int cy )
 	{
 		CRect tempRect;
 		// We want to handle the redraw ourself to reduce the flickering.  
-		m_pSelector->GetClientRect(&tempRect);
+	/*	m_pSelector->GetClientRect(&tempRect);
 		m_pSelector->MapWindowPoints( this, &tempRect);
 		m_pSelector->SetWindowPos( NULL, 0, top, MIN_CATEGORY_WIDTH, cy - STARTY - top, SWP_NOREPOSITION  | SWP_NOREDRAW);
 		if ((tempRect.Height()) < cy - STARTY) 
@@ -261,6 +264,8 @@ void CNSNavFrame::OnSize( UINT nType, int cx, int cy )
 		m_pNavTitle->ShowWindow(SW_SHOW);
 		m_pNavTitle->SetWindowPos(NULL, MIN_CATEGORY_WIDTH+2, top, cx - MIN_CATEGORY_WIDTH, NAVBAR_HEIGHT, SWP_NOREPOSITION);
 		m_nsContent->SetWindowPos( NULL, MIN_CATEGORY_WIDTH+2, top+NAVBAR_HEIGHT, cx - MIN_CATEGORY_WIDTH - 2, cy - STARTY - top - NAVBAR_HEIGHT, 0);
+	*/
+		m_nsContent->SetWindowPos(NULL, 0, 0, cx, cy, 0);
 	}
 	else 
 	{  //dock horiz.
@@ -290,6 +295,24 @@ BOOL CNSNavFrame::PreCreateWindow(CREATESTRUCT & cs)
 					theApp.LoadStandardCursor(IDC_ARROW), 
 					(HBRUSH)(COLOR_BTNFACE + 1));
     return (CFrameWnd::PreCreateWindow(cs));
+}
+
+CNSNavFrame* CNSNavFrame::CreateFramedRDFViewFromResource(CWnd* pParent, int xPos, int yPos,
+											 int width, int height, HT_Resource node)
+{
+	CNSNavFrame* pNavFrame = new CNSNavFrame();
+	pNavFrame->SetHTNode(node);
+	pNavFrame->SetDockStyle(DOCKSTYLE_FLOATING);
+	pNavFrame->Create(NULL, "Navigation Center", WS_POPUP, 
+					  CRect(xPos, yPos, width, height),
+					  pParent);
+	pNavFrame->SetWindowPos(&wndTopMost, xPos, yPos, width, height, 0);
+	pNavFrame->ShowWindow(SW_SHOW);
+	
+	CRDFOutliner* pOutliner = (CRDFOutliner*)(pNavFrame->GetContentView()->GetOutlinerParent()->GetOutliner());
+	pOutliner->SetIsPopup(TRUE);
+
+	return pNavFrame;
 }
 
 //------------------------------------------------------------------------------
@@ -869,6 +892,8 @@ LRESULT CNSNavFrame::OnSizeParent(WPARAM, LPARAM lParam)
 	// dragRect is in the parent window's coordinates(which is the main frame).
 	// the top and bottom coordinates of the dragRect should already be included
 	// in the toolbar.
+
+	if (!m_DragWnd) return 0;
 
 	CRect oldRect;
 	GetWindowRect(&oldRect);

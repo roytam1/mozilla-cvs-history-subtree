@@ -869,7 +869,8 @@ void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 	MapWindowPoints(frame, &point, 1);
 */
 	CPoint point = RequestMenuPlacement();
-	CRDFContentView::DisplayRDFTreeFromResource(NULL, point.x, point.y, 300, 500, m_Node);
+	CNSNavFrame::CreateFramedRDFViewFromResource(NULL, point.x, point.y, 300, 500, m_Node);
+	
 	/*
 	m_pCachedDropMenu->CreateOverflowMenuItem(ID_HOTLIST_VIEW, CString(szLoadString(IDS_MORE_BOOKMARKS)), NULL, NULL );
 

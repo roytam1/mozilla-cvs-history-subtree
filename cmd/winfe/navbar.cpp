@@ -204,7 +204,7 @@ void CNavTitleBar::OnPaint( )
 	HT_GetNodeData(top, gNavCenter->titleBarBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_BackgroundColor);
-	else m_BackgroundColor = RGB(64,64,64);
+	else m_BackgroundColor = RGB(0,0,0);
 
 	// Background image URL
 	m_BackgroundImageURL = "";
@@ -250,9 +250,9 @@ void CNavTitleBar::OnPaint( )
 	CFont arialFont;
 	LOGFONT lf;
 	XP_MEMSET(&lf,0,sizeof(LOGFONT));
-	lf.lfHeight = 100;
+	lf.lfHeight = 120;
 	lf.lfWeight = 700;
-	strcpy(lf.lfFaceName, "Times New Roman");
+	strcpy(lf.lfFaceName, "Arial");
 	arialFont.CreatePointFontIndirect(&lf, &dc);
 	HFONT font = (HFONT)arialFont.GetSafeHandle();
 

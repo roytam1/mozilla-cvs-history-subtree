@@ -127,8 +127,19 @@ private:
 	CString m_BackgroundImageURL;			// The URL of the background image.
 	CRDFImage* m_pBackgroundImage;	// The image for the background.
 
-	CString m_WindowTarget;			// The target window for this tree view.  If == to "", then the
+	BOOL m_bBarColor;				// The color of the tree connections.
+
+	BOOL m_bUseSingleClick;			// Single click vs. double click
+	BOOL m_bUseHyperbolicScaling;	// Whether or not to use hyperbolic scaling.
+
+	CString m_WindowTarget;			// The target window for this tree view.  If "", then the
 									// last active window is assumed.
+
+	BOOL m_bInNavigationMode;	// The tree view has two different sets of defaults that
+								// it will assume if no value is defined for a specific
+								// property.  These defaults are based on whether or not
+								// the user is browsing or managing data.
+	BOOL m_bIsPopup;			// Whether or not we're a popup tree.
 
 public:
     CRDFOutliner (CRDFOutlinerParent* theParent, HT_Pane thePane = NULL, HT_View theView = NULL);
@@ -143,6 +154,9 @@ public:
 	int GetSortType() { return m_nSortType; }
 	
 	// Setters
+	void SetNavigationMode(BOOL inMode);
+	void SetIsPopup(BOOL isPopup) { m_bIsPopup = isPopup; }
+
 	void SetHTView(HT_View v); 
 	void SetWindowTarget(char* target) { m_WindowTarget = target; }
 
@@ -404,7 +418,7 @@ protected:
 };
 
 
-class CRDFContentView : public CWnd
+class CRDFContentView : public CView
 {
 public:
     CRDFOutlinerParent * m_pOutlinerParent;
@@ -421,6 +435,8 @@ public:
 		delete m_pHTMLView;
 	}
 
+	void OnDraw(CDC* pDC) {};
+
 	COutlinerParent* GetOutlinerParent() { return m_pOutlinerParent; }
 
 // This functionality has been folded in from COutlinerView. 
@@ -434,17 +450,17 @@ public:
 
 	CNavTitleBar* GetTitleBar() { return m_pNavBar; }
 
-	static CRDFOutliner* DisplayRDFTreeFromSHACK(CWnd* pParent, int xPos, int yPos, int width, 
+	static CRDFContentView* DisplayRDFTreeFromSHACK(CWnd* pParent, int xPos, int yPos, int width, 
 		int height, char* url,  int32 param_count, char** param_names, char** param_values);
 		// This function can be called to create an embedded RDF tree view using an
 		// external URL and specified targeting.
 	
-	static CRDFOutliner* DisplayRDFTreeFromResource(CWnd* pParent, int xPos, int yPos, int width, 
-		int height, HT_Resource node);
+	static CRDFContentView* DisplayRDFTreeFromResource(CWnd* pParent, int xPos, int yPos, int width, 
+		int height, HT_Resource node, CCreateContext* pContext = NULL);
 		// This function creates an embedded RDF tree view from an existing resource.
 
-	static CRDFOutliner* DisplayRDFTreeFromPane(CWnd* pParent, int xPos, int yPos, int width,
-		int height, HT_Pane pane);
+	static CRDFContentView* DisplayRDFTreeFromPane(CWnd* pParent, int xPos, int yPos, int width,
+		int height, HT_Pane pane, CCreateContext* pContext = NULL);
 		// This function creates an embedded RDF tree view once the pane has been constructed.
 
 protected:

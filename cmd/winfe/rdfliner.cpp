@@ -207,7 +207,7 @@ CRDFOutliner::CRDFOutliner (CRDFOutlinerParent* theParent, HT_Pane thePane, HT_V
 :COutliner(FALSE), m_pAncestor(NULL), m_Pane(thePane), m_View(theView), m_Parent(theParent), m_EditField(NULL),
 m_nSortType(HT_NO_SORT), m_nSortColumn(HT_NO_SORT), m_hEditTimer(0), m_hDragRectTimer(0),
 m_bNeedToClear(FALSE), m_nSelectedColumn(0), m_bDoubleClick(FALSE), m_Node(NULL), 
-m_bDataSourceInWindow(FALSE), m_NavTitleBar(NULL)
+m_bDataSourceInWindow(FALSE), m_NavTitleBar(NULL), m_bInNavigationMode(FALSE), m_bIsPopup(FALSE)
 {
     ApiApiPtr(api);
     m_pUnkUserImage = api->CreateClassInstance(APICLASS_IMAGEMAP,NULL,(APISIGNATURE)IDB_BOOKMARKS);
@@ -886,7 +886,7 @@ void CRDFOutliner::SelectItem(int iSel,int mode,UINT flags)
 			if (m_bNeedToClear)
 			{
 				HT_SetSelection(m_Node);
-				if (m_bNeedToEdit && !m_bDoubleClick)
+				if (m_bNeedToEdit && !m_bDoubleClick && !m_bUseSingleClick)
 				{
 
 					CRDFCommandMap& map = m_Parent->GetColumnCommandMap(); 
@@ -903,6 +903,8 @@ void CRDFOutliner::SelectItem(int iSel,int mode,UINT flags)
 			m_bNeedToClear = FALSE;
 			m_bNeedToEdit = FALSE;
 			m_bDoubleClick = FALSE;
+			if (m_bUseSingleClick)
+				OnSelDblClk(iSel);
 			break;	
 		case OUTLINER_LBUTTONDOWN:
 		case OUTLINER_KEYDOWN:
@@ -977,6 +979,13 @@ BOOL CRDFOutliner::IsDocked()
 	return theFrame->IsChild(this);
 }
 
+void CRDFOutliner::SetNavigationMode(BOOL mode)
+{
+	m_bInNavigationMode = mode;
+	((CRDFOutlinerParent*)GetParent())->EnableHeaders(!m_bInNavigationMode);
+	Invalidate();
+}
+
 void CRDFOutliner::OnSelDblClk(int iLine)
 {
 	if (m_Node)
@@ -988,6 +997,11 @@ void CRDFOutliner::OnSelDblClk(int iLine)
 		else if (!HT_IsSeparator(m_Node))// && !IsDocked()) For now always do double-click behavior
 		{
 			DisplayURL();
+			if (m_bIsPopup)
+			{	
+				// Destroy the entire tree.
+				GetParent()->GetParent()->GetParent()->DestroyWindow();
+			}
 		}
 	}
 }
@@ -1645,6 +1659,12 @@ void CRDFOutliner::OnKillFocus ( CWnd * pNewWnd )
 	((COutlinerParent*)GetParent())->UpdateFocusFrame();
 
 	FocusCheck(pNewWnd, FALSE);
+
+	if (m_bIsPopup)
+	{
+		// Destroy the entire tree.
+		GetParent()->GetParent()->GetParent()->DestroyWindow();
+	}
 }
 	
 void CRDFOutliner::FocusCheck(CWnd* pWnd, BOOL gotFocus)
@@ -1734,18 +1754,35 @@ void CRDFOutliner::OnPaint()
 	void* data;
 	PRBool foundData = FALSE;
 	
+	if (m_bInNavigationMode)
+	{
+		// Options for navigation mode.
+		m_ForegroundColor = RGB(255,255,255);
+		m_BackgroundColor = RGB(0,0,0);
+		m_bHasPipes = FALSE;
+		m_bDrawDividers = FALSE;
+		m_bUseSingleClick = TRUE;
+	}
+	else
+	{
+		// Options for management mode.
+		m_ForegroundColor = RGB(0,0,0);
+		m_BackgroundColor = RGB(240,240,240);
+		m_bHasPipes = TRUE;
+		m_bDrawDividers = TRUE;
+		m_bUseSingleClick = FALSE;
+	}
+
 	// Foreground color
 	HT_GetNodeData(top, gNavCenter->viewFGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_ForegroundColor);
-	else m_ForegroundColor = RGB(0,0,0);
-
+	
 	// background color
 	HT_GetNodeData(top, gNavCenter->viewBGColor, HT_COLUMN_STRING, &data);
 	if (data)
 		WFE_ParseColor((char*)data, &m_BackgroundColor);
-	else m_BackgroundColor = RGB(240,240,240);
-
+	
 	HT_GetNodeData(top, gNavCenter->showTreeConnections, HT_COLUMN_STRING, &data);
 	if (data)
 	{
@@ -1753,8 +1790,7 @@ void CRDFOutliner::OnPaint()
 		if (answer.GetLength() > 0 && (answer.GetAt(0) == 'n' || answer.GetAt(0) == 'N'))
 			m_bHasPipes = FALSE;
 	}
-	else m_bHasPipes = TRUE;
-
+	
 	// Sort foreground color
 	HT_GetNodeData(top, gNavCenter->sortColumnFGColor, HT_COLUMN_STRING, &data);
 	if (data)
@@ -1803,8 +1839,7 @@ void CRDFOutliner::OnPaint()
 		if (answer.GetLength() > 0 && (answer.GetAt(0) == 'n' || answer.GetAt(0) == 'N'))
 			m_bDrawDividers = FALSE;
 	}
-	else m_bDrawDividers = TRUE;
-
+	
 	HPALETTE pOldPalette = NULL;
 	if (sysInfo.m_iBitsPerPixel < 16 && (::GetDeviceCaps(pdc.m_hDC, RASTERCAPS) & RC_PALETTE))
 	{
@@ -2393,15 +2428,15 @@ void CRDFOutliner::DrawColumn(HDC hdc, LPRECT lpColumnRect, LPCTSTR lpszString,
 			CRect newRect(bgRect);
 			if (hasFocus)
 			{	
-				newRect.top +=2;
-				newRect.bottom-=2;
-				newRect.left+=2;
-				newRect.right-=2;
+				newRect.top +=1;
+				newRect.bottom-=1;
+				newRect.left+=1;
+				newRect.right-=1;
 			}
 			::FillRect(hdc, &newRect, theBrush);
 		}
-		else if (!hasFocus)
-			::FrameRect( hdc, &bgRect, theBrush);
+		
+		::FrameRect( hdc, &bgRect, theBrush);
 	}
 
 	// Adjust the text rectangle for the left and right margins
@@ -2409,11 +2444,6 @@ void CRDFOutliner::DrawColumn(HDC hdc, LPRECT lpColumnRect, LPCTSTR lpszString,
 	textRect.right -= COL_LEFT_MARGIN;
 
 	WFE_DrawTextEx( m_iCSID, hdc, (LPTSTR) lpszString, iLength, &textRect, dwDTFormat, dwMoreFormat );
-
-	if (hasFocus)
-	{
-		DrawFocusRect ( hdc, &bgRect );
-	}
 }
 
 int CRDFOutliner::DrawPipes ( int iLineNo, int iColNo, int offset, HDC hdc, void * pLineData )
@@ -2495,7 +2525,7 @@ int CRDFOutliner::DrawPipes ( int iLineNo, int iColNo, int offset, HDC hdc, void
 		}
 	
 		HT_Resource r = (HT_Resource)pLineData;
-		if (r && HT_IsContainer(r))
+		if (r && HT_IsContainer(r) && m_bHasPipes)
 		{
 			// Draw the trigger
 			CBrush outerTrigger(RGB(128,128,128));
@@ -3829,8 +3859,8 @@ void CRDFEditWnd::OnKillFocus( CWnd* pNewWnd )
 
 // =========================================================================
 // RDF Content View
-IMPLEMENT_DYNAMIC(CRDFContentView, CWnd)
-BEGIN_MESSAGE_MAP(CRDFContentView, CWnd)
+IMPLEMENT_DYNAMIC(CRDFContentView, CView)
+BEGIN_MESSAGE_MAP(CRDFContentView, CView)
 	//{{AFX_MSG_MAP(CMainFrame)
 		// NOTE - the ClassWizard will add and remove mapping macros here.
 		//    DO NOT EDIT what you see in these blocks of generated code !
@@ -3845,7 +3875,7 @@ CRDFContentView::CRDFContentView()
 
 int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 {
-    int iRetVal = CWnd::OnCreate ( lpCreateStruct );
+    int iRetVal = CView::OnCreate ( lpCreateStruct );
 	LPCTSTR lpszClass = AfxRegisterWndClass( CS_VREDRAW, ::LoadCursor(NULL, IDC_ARROW));
 
 	m_pNavBar = new CNavTitleBar();
@@ -3864,7 +3894,7 @@ int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 
 void CRDFContentView::OnSize ( UINT nType, int cx, int cy )
 {
-	CWnd::OnSize ( nType, cx, cy );
+	CView::OnSize ( nType, cx, cy );
 	if (IsWindow(m_pOutlinerParent->m_hWnd)) 
 	{
 		m_pNavBar->MoveWindow(0,0, cx, NAVBAR_HEIGHT);
@@ -3896,14 +3926,15 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 		theOutliner->HandleEvent(ns, n, whatHappened);
 }
 
-CRDFOutliner* CRDFContentView::DisplayRDFTreeFromPane(CWnd* pParent, int xPos, int yPos, int width, int height, HT_Pane thePane)
+CRDFContentView* CRDFContentView::DisplayRDFTreeFromPane(CWnd* pParent, int xPos, int yPos, 
+	int width, int height, HT_Pane thePane, CCreateContext* pContext)
 {
 	// Create the windows
 	CRect rClient(xPos, yPos, width, height);
 	
 	CRDFContentView* newView = new CRDFContentView();
 
-	newView->Create( "", NULL, WS_VISIBLE, rClient, pParent, NC_IDW_OUTLINER);
+	newView->Create(NULL, "", WS_CHILD | WS_VISIBLE, rClient, pParent, NC_IDW_OUTLINER, pContext);
 
 	// Get the parent
 	COutlinerParent* newParent = newView->GetOutlinerParent();
@@ -3914,6 +3945,9 @@ CRDFOutliner* CRDFContentView::DisplayRDFTreeFromPane(CWnd* pParent, int xPos, i
 
 	// Retrieve the RDF Outliner.
 	CRDFOutliner* pOutliner = (CRDFOutliner*)newParent->GetOutliner();
+	
+	// Set to navigation mode.
+	pOutliner->SetNavigationMode(TRUE);
 
 	// Set our FE data to be the outliner.
 	HT_SetViewFEData(HT_GetSelectedView(thePane), pOutliner);
@@ -3923,10 +3957,11 @@ CRDFOutliner* CRDFContentView::DisplayRDFTreeFromPane(CWnd* pParent, int xPos, i
 	pTitleBar->SetHTView(HT_GetSelectedView(thePane));
 	pOutliner->SetTitleBar(pTitleBar);
 
-	return (CRDFOutliner*)newParent->GetOutliner();
+	return newView;
 }
 
-CRDFOutliner* CRDFContentView::DisplayRDFTreeFromResource(CWnd* pParent, int xPos, int yPos, int width, int height, HT_Resource node)
+CRDFContentView* CRDFContentView::DisplayRDFTreeFromResource(CWnd* pParent, 
+	int xPos, int yPos, int width, int height, HT_Resource node, CCreateContext* pContext)
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	XP_BZERO(ns, sizeof(HT_NotificationStruct));
@@ -3937,10 +3972,10 @@ CRDFOutliner* CRDFContentView::DisplayRDFTreeFromResource(CWnd* pParent, int xPo
 	HT_Pane thePane = HT_PaneFromResource(HT_GetRDFResource(node), ns, PR_FALSE);
 
 	// Now call our helper function
-	return DisplayRDFTreeFromPane(pParent, xPos, yPos, width, height, thePane);
+	return DisplayRDFTreeFromPane(pParent, xPos, yPos, width, height, thePane, pContext);
 }
 
-CRDFOutliner* CRDFContentView::DisplayRDFTreeFromSHACK(CWnd* pParent, int xPos, int yPos, int width, int height, char* url, int32 param_count, char** param_names, char** param_values)
+CRDFContentView* CRDFContentView::DisplayRDFTreeFromSHACK(CWnd* pParent, int xPos, int yPos, int width, int height, char* url, int32 param_count, char** param_names, char** param_values)
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	XP_BZERO(ns, sizeof(HT_NotificationStruct));

@@ -513,7 +513,7 @@ void CMainFrame::BeginStreamingOfRDFToolbars()
 		ns->data = this;
 		m_BookmarkMenuPane = theApp.m_bInGetCriticalFiles ? NULL : HT_NewQuickFilePane(ns);
 	}
-
+/*
 	if (!theApp.m_bInGetCriticalFiles && AllowDocking() && 
 		!theApp.m_ParentAppWindow && !theApp.m_bKioskMode)
 	{
@@ -523,6 +523,7 @@ void CMainFrame::BeginStreamingOfRDFToolbars()
 		if (bSelVisible)
 			theApp.CreateNewNavCenter(this);
 	}
+	*/
 }
 
 void CMainFrame::OnShowWindow (BOOL bShow, UINT nStatus)
