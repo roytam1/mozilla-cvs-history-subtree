@@ -3910,12 +3910,12 @@ nsImapProtocol::SetConnectionStatus(PRInt32 status)
 }
 
 void
-nsImapProtocol::NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key)
+nsImapProtocol::NotifyMessageFlags(imapMessageFlagsType flags, nsMsgKey key, const char *keywords)
 {
   if (m_imapMessageSink)
   {
     if (m_imapAction != nsIImapUrl::nsImapMsgFetch || (flags & ~kImapMsgRecentFlag) != kImapMsgSeenFlag)
-       m_imapMessageSink->NotifyMessageFlags(flags, key);
+       m_imapMessageSink->NotifyMessageFlags(flags, key, keywords);
   }
 }
 

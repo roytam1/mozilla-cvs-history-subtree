@@ -3893,38 +3893,22 @@ nsresult nsImapMailFolder::SyncFlags(nsIImapFlagAndUidState *flagState)
   for (PRInt32 flagIndex=0; flagIndex < messageIndex; flagIndex++)
   {
     PRUint32 uidOfMessage;
+    nsXPIDLCString keywords;
     flagState->GetUidOfMessage(flagIndex, &uidOfMessage);
     imapMessageFlagsType flags;
     flagState->GetMessageFlags(flagIndex, &flags);
     if (flags & kImapMsgCustomKeywordFlag)
     {
-      char *keywords;
-      nsresult rv = flagState->GetCustomFlags(uidOfMessage, &keywords);
-      if (NS_SUCCEEDED(rv) && keywords)
-      {
-        nsCOMPtr<nsIMsgDBHdr> dbHdr;
-        PRBool containsKey;
-        rv = mDatabase->ContainsKey(uidOfMessage , &containsKey);
-        // if we don't have the header, don't diddle the flags.
-        // GetMsgHdrForKey will create the header if it doesn't exist.
-        if (NS_FAILED(rv) || !containsKey)
-          return rv;
-    
-        rv = mDatabase->GetMsgHdrForKey(uidOfMessage, getter_AddRefs(dbHdr));
-        if (dbHdr && NS_SUCCEEDED(rv))
-        {
-          dbHdr->SetStringProperty("keywords", keywords);
-        }
-      }
+      nsresult rv = flagState->GetCustomFlags(uidOfMessage, getter_Copies(keywords));
     }
-    NotifyMessageFlags(flags, uidOfMessage);
+    NotifyMessageFlags(flags, uidOfMessage, keywords.get());
   }
   return NS_OK;
 }
 
     // message flags operation
 NS_IMETHODIMP
-nsImapMailFolder::NotifyMessageFlags(PRUint32 flags, nsMsgKey msgKey)
+nsImapMailFolder::NotifyMessageFlags(PRUint32 flags, nsMsgKey msgKey, const char *keywords)
 {
   if (NS_SUCCEEDED(GetDatabase(nsnull)) && mDatabase)
   {
@@ -3953,6 +3937,8 @@ nsImapMailFolder::NotifyMessageFlags(PRUint32 flags, nsMsgKey msgKey)
       // make some people very unhappy.
       if (flags & kImapMsgLabelFlags)
         mDatabase->SetLabel(msgKey, (flags & kImapMsgLabelFlags) >> 9);
+      if (keywords)
+        dbHdr->SetStringProperty("keywords", keywords);
     }
   }
   

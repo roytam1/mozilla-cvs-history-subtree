@@ -385,23 +385,26 @@ NS_IMETHODIMP nsImapFlagAndUidState::AddUidCustomFlagPair(PRUint32 uid, const ch
 NS_IMETHODIMP nsImapFlagAndUidState::GetCustomFlags(PRUint32 uid, char **customFlags)
 {
   nsAutoCMonitor(this);
-  if (!m_customFlagsHash)
+  if (m_customFlagsHash)
   {
-    *customFlags = nsnull;
-    return NS_OK;
-  }
-  nsPRUint32Key hashKey(uid);
-  char *value = (char *) m_customFlagsHash->Get(&hashKey);
-  PRUint32 valueLen = 0, curStringLen = 0;
-  do 
-  {
-    curStringLen = strlen(value + valueLen) + 1;
-    valueLen += curStringLen;
-  }
-  while (curStringLen > 1);
+    nsPRUint32Key hashKey(uid);
+    char *value = (char *) m_customFlagsHash->Get(&hashKey);
+    if (value)
+    {
+      PRUint32 valueLen = 0, curStringLen = 0;
+      do 
+      {
+        curStringLen = strlen(value + valueLen) + 1;
+        valueLen += curStringLen;
+      }
+      while (curStringLen > 1);
 
-  *customFlags = (char *) PR_Malloc(valueLen);
-  memcpy(*customFlags, value, valueLen);
+      *customFlags = (char *) PR_Malloc(valueLen);
+      memcpy(*customFlags, value, valueLen);
+      return NS_OK;
+    }
+  }
+  *customFlags = nsnull;
   return NS_OK;
 }
 
