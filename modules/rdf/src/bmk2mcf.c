@@ -45,10 +45,8 @@
 
 
 #include "bmk2mcf.h"
-#include "glue.h"
-#include "mcff2mcf.h"
 #include "utils.h"
-
+#include "time.h"
 #ifdef MOZILLA_CLIENT
 
 	/* extern declarations */
@@ -85,18 +83,6 @@ createContainer (char* id)
 
 
 #ifdef MOZILLA_CLIENT
-
-int16 GetBmCharSetID();
-int16 GetBmCharSetID()
-{
-   /* we need to implement this in a better way */
-   static INTLCharSetID gBmCharSetID = CS_UNKNOWN;
-   if(CS_UNKNOWN == gBmCharSetID)
-	gBmCharSetID = INTL_GetCharSetID(INTL_OldBookmarkCsidSel);
-   return gBmCharSetID;
-}
-
-
 
 char *
 resourceDescription (RDF rdf, RDF_Resource r)
@@ -179,7 +165,7 @@ parseNextBkToken (RDFFile f, char* token)
 	RDF_Resource newFolder;
 	url = PR_smprintf("%s%s.rdf", gBkFolderDate, token);
 	newFolder = createContainer(url);
-	XP_FREE(url);
+	free(url);
 	addSlotValue(f,newFolder, gCoreVocab->RDF_parent, f->stack[f->depth-1], 
 		     RDF_RESOURCE_TYPE, NULL);
 	freeMem(gBkFolderDate);
@@ -189,7 +175,7 @@ parseNextBkToken (RDFFile f, char* token)
       if ((f->db == gLocalStore) || (f->status != IN_TITLE))
 	{
 	      addSlotValue(f, f->lastItem, gCoreVocab->RDF_name, 
-			   convertString2UTF8(GetBmCharSetID(),token), RDF_STRING_TYPE, NULL);
+			   copyString(token), RDF_STRING_TYPE, NULL);
 	}
 
 	if (startsWith("Personal Toolbar", token) && (containerp(f->lastItem))) 
@@ -211,7 +197,8 @@ addDescription (RDFFile f, RDF_Resource r, char* token)
   char* desc = (char*)  remoteStoreGetSlotValue(gLocalStore, r, gWebData->RDF_description, 
 				       RDF_STRING_TYPE, false, true);
   if (desc == NULL) {
-    addSlotValue(f, f->lastItem, gWebData->RDF_description, convertString2UTF8(GetBmCharSetID(), token),
+    addSlotValue(f, f->lastItem, gWebData->RDF_description, 
+                 copyString(token),
 		 RDF_STRING_TYPE, NULL);
   } else {
    addSlotValue(f, f->lastItem, gWebData->RDF_description, 
@@ -315,6 +302,7 @@ newLeafBkItem (RDFFile f, char* token)
 	dateVal = atol(addDate);
 	if ((time = localtime((time_t *) &dateVal)) != NULL)
 	{
+      /* xxx
 #ifdef	XP_MAC
 		time->tm_year += 4;
 		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
@@ -323,8 +311,10 @@ newLeafBkItem (RDFFile f, char* token)
 #else
 		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
 #endif
+
 		addSlotValue(f, newR, gNavCenter->RDF_bookmarkAddDate,
 			(void*)copyString(buffer), RDF_STRING_TYPE, NULL);
+            */
 	}
     }
   if (lastVisit != NULL)
@@ -332,6 +322,7 @@ newLeafBkItem (RDFFile f, char* token)
 	dateVal = atol(lastVisit);
 	if ((time = localtime((time_t *) &dateVal)) != NULL)
 	{
+      /* xxx
 #ifdef	XP_MAC
 		time->tm_year += 4;
 		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
@@ -342,6 +333,7 @@ newLeafBkItem (RDFFile f, char* token)
 #endif
 		addSlotValue(f, newR, gWebData->RDF_lastVisitDate,
 			(void*)copyString(buffer), RDF_STRING_TYPE, NULL);
+            */
 	}
     }
   if (lastModified != NULL)
@@ -349,6 +341,7 @@ newLeafBkItem (RDFFile f, char* token)
 	dateVal = atol(lastModified);
 	if ((time = localtime((time_t *) &dateVal)) != NULL)
 	{
+      /* xxx
 #ifdef	XP_MAC
 		time->tm_year += 4;
 		strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
@@ -359,6 +352,7 @@ newLeafBkItem (RDFFile f, char* token)
 #endif
 		addSlotValue(f, newR, gWebData->RDF_lastModifiedDate,
 			(void*)copyString(buffer), RDF_STRING_TYPE, NULL);
+            */
 	}
     }
   f->lastItem = newR;
@@ -577,7 +571,7 @@ readInBookmarks()
                      gNavCenter->RDF_PersonalToolbarFolderCategory,
                      RDF_RESOURCE_TYPE, "true");
         addSlotValue(f, gPTFolder, gCoreVocab->RDF_name,
-                     copyString(XP_GetString(RDF_PERSONAL_TOOLBAR_NAME)),
+                     copyString("Personal Toolbar"),
                      RDF_STRING_TYPE, "true");
         RDFUtil_SetPTFolder(gPTFolder);
       }

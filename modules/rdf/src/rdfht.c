@@ -23,13 +23,9 @@
 */
 
 #include "rdf-int.h"
-#include "xpassert.h"
-#include "fs2rdf.h"
-#include "glue.h"
 #include "vocab.h"
 #include "vocabint.h"
 #include "bmk2mcf.h"
-#include "ht.h"
 #include "mcf.h"
 
 
@@ -117,9 +113,11 @@ RDF_Init(RDF_InitParams params)
   sRDFInitedB = PR_TRUE;
 
 #ifdef MOZILLA_CLIENT
+  /* xxx
   PREF_SetDefaultCharPref("browser.NavCenter", "http://rdf.netscape.com/rdf/navcntr.rdf");
   PREF_CopyCharPref("browser.NavCenter", &navCenterURL);
-    
+  */
+  navCenterURL = copyString("http://rdf.netscape.com/rdf/navcntr.rdf");
   if (!strchr(navCenterURL, ':')) {
     navCenterURL = makeDBURL(navCenterURL);
   }
