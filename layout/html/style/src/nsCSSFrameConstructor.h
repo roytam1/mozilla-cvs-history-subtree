@@ -666,6 +666,7 @@ protected:
   nsIFrame* GetFloatContainingBlock(nsIPresContext* aPresContext,
                                     nsIFrame*       aFrame);
 
+  nsIContent* PropagateScrollToViewport(nsIPresContext* aPresContext);
 
   // Build a scroll frame: 
   //  Calls BeginBuildingScrollFrame, InitAndRestoreFrame, and then FinishBuildingScrollFrame
