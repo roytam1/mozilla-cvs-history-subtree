@@ -1716,8 +1716,8 @@ sub BloatTest {
       send_results_to_server($bloat, "--", $bloat_testname, ::hostname() );
 
     } else {
-      print_log "TinderboxPrint:Lk:<a title=\"" . $leaks_testname_label . "\">" . PrintSize($leaks) . "B</a>\n\n";
-      print_log "TinderboxPrint:Bl:<a title=\"" . $bloat_testname_label . "\">" . PrintSize($bloat) . "B</a>\n\n";
+      print_log "TinderboxPrint:" . $label_prefix . "Lk:<a title=\"" . $leaks_testname_label . "\">" . PrintSize($leaks) . "B</a>\n\n";
+      print_log "TinderboxPrint:" . $label_prefix . "Bl:<a title=\"" . $bloat_testname_label . "\">" . PrintSize($bloat) . "B</a>\n\n";
     }
 
     return 'success';
