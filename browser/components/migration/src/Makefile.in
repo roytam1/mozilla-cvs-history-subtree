@@ -44,7 +44,8 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= migration
 LIBRARY_NAME	= migration_s
 
-REQUIRES	= xpcom \
+REQUIRES	= \
+      xpcom \
       xpcom_obsolete \
 		  string \
 		  necko \
@@ -61,20 +62,25 @@ REQUIRES	= xpcom \
 		  dom \
 		  $(NULL)
 
-CPPSRCS		= nsProfileMigrator.cpp \
-            nsNetscapeProfileMigratorBase.cpp \
-            nsDogbertProfileMigrator.cpp \
-            nsSeamonkeyProfileMigrator.cpp \
-            nsINIParser.cpp \
-            nsOperaProfileMigrator.cpp \
-            $(NULL)
+CPPSRCS  = nsProfileMigrator.cpp \
+           nsNetscapeProfileMigratorBase.cpp \
+           nsDogbertProfileMigrator.cpp \
+           nsSeamonkeyProfileMigrator.cpp \
+           nsINIParser.cpp \
+           nsOperaProfileMigrator.cpp \
+           $(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
-CPPSRCS += nsIEProfileMigrator.cpp
+CPPSRCS += nsIEProfileMigrator.cpp \
+           $(NULL)
 endif
             
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-CPPSRCS += nsSafariProfileMigrator.cpp nsMacIEProfileMigrator.cpp nsOmniWebProfileMigrator.cpp
+CPPSRCS += nsSafariProfileMigrator.cpp \
+           nsMacIEProfileMigrator.cpp \ 
+           nsOmniWebProfileMigrator.cpp \
+           nsCaminoProfileMigrator.cpp \
+           $(NULL)
 endif            
 
 # we don't want the shared lib, but we want to force the creation of a

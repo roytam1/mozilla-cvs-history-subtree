@@ -114,19 +114,60 @@ private:
 class nsOperaCookieMigrator
 {
 public:
-  nsOperaCookieMigrator(nsIBinaryInputStream* aStream);
+  nsOperaCookieMigrator(nsIInputStream* aSourceStream);
+  nsOperaCookieMigrator() { };
   virtual ~nsOperaCookieMigrator() { };
 
   nsresult Migrate();
 
-  typedef enum { OPEN_DOMAIN  = 0x01, 
-                 DOMAIN_NAME  = 0x1E,
-                 SEGMENT_INFO = 0x03,
-                 COOKIE_ID    = 0x10,
-                 COOKIE_DATA  = 0x11,
-                 EXPIRY_TIME  = 0x12,
-                 LAST_TIME    = 0x13,
-                 TERMINATOR   = 0x9B } TAG;
+  typedef enum { BEGIN_DOMAIN_SEGMENT         = 0x01,
+                 DOMAIN_COMPONENT             = 0x1E,
+                 END_DOMAIN_SEGMENT           = 0x84 | 0x80, // 0x04 | MSB
+                 
+                 BEGIN_PATH_SEGMENT           = 0x02,
+                 PATH_COMPONENT               = 0x1D,
+                 END_PATH_SEGMENT             = 0x05 | 0x80, // 0x05 | MSB
+                 
+                 FILTERING_INFO               = 0x1F,
+                 PATH_HANDLING_INFO           = 0x21,
+                 THIRD_PARTY_HANDLING_INFO    = 0x25,
+
+                 BEGIN_COOKIE_SEGMENT         = 0x03,
+                 COOKIE_ID                    = 0x10,
+                 COOKIE_DATA                  = 0x11,
+                 COOKIE_EXPIRY                = 0x12,
+                 COOKIE_LASTUSED              = 0x13,
+                 COOKIE_COMMENT               = 0x14,
+                 COOKIE_COMMENT_URL           = 0x15,
+                 COOKIE_V1_DOMAIN             = 0x16,
+                 COOKIE_V1_PATH               = 0x17,
+                 COOKIE_V1_PORT_LIMITATIONS   = 0x18,
+                 COOKIE_SECURE                = 0x19 | 0x80, 
+                 COOKIE_VERSION               = 0x1A,
+                 COOKIE_OTHERFLAG_1           = 0x1B | 0x80,
+                 COOKIE_OTHERFLAG_2           = 0x1C | 0x80,
+                 COOKIE_OTHERFLAG_3           = 0x20 | 0x80,
+                 COOKIE_OTHERFLAG_4           = 0x22 | 0x80,
+                 COOKIE_OTHERFLAG_5           = 0x23 | 0x80,
+                 COOKIE_OTHERFLAG_6           = 0x24 | 0x80
+  } TAG;
+
+#if 0
+0x13 time_t last used
+0x14 string comment
+0x15 string url for comment
+0x16 string doain with version=1 cookies
+0x17 string path with version=1 cookies
+0x18 string string port limitation with ersion=1 cookies
+0x19 flag   https
+0x1A int8+  version number of cookie
+0x1B flag   only to server that sent it
+0x1C flag   reserved for delete protection
+0x20 flag   path
+0x22 flag   password
+0x23 flag   http auth
+0x24 flag   third party
+#endif
 
 protected:
   nsresult ReadHeader();
@@ -135,11 +176,12 @@ private:
   nsCOMPtr<nsIBinaryInputStream> mStream;
 
   nsVoidArray mDomainStack;
+  nsVoidArray mPathStack;
   nsVoidArray mTagStack;
 
   PRUint32 mAppVersion;
   PRUint32 mFileVersion;
-  PRUint8  mTagTypeLength;
+  PRUint16 mTagTypeLength;
   PRUint16 mPayloadTypeLength;
 };
 

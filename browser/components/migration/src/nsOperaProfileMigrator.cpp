@@ -372,6 +372,8 @@ nsOperaProfileMigrator::CopyCookies(PRBool aReplace)
 {
   printf("*** copy opera cookies\n");
 
+  nsresult rv = NS_OK;
+
   nsCOMPtr<nsIFile> temp;
   mOperaProfile->Clone(getter_AddRefs(temp));
   nsCOMPtr<nsILocalFile> historyFile(do_QueryInterface(temp));
@@ -380,21 +382,28 @@ nsOperaProfileMigrator::CopyCookies(PRBool aReplace)
 
   nsCOMPtr<nsIInputStream> fileStream;
   NS_NewLocalFileInputStream(getter_AddRefs(fileStream), historyFile);
-  if (!fileStream) return NS_ERROR_OUT_OF_MEMORY;
+  if (!fileStream) 
+    return NS_ERROR_OUT_OF_MEMORY;
 
-  nsCOMPtr<nsIBinaryInputStream> binaryStream = do_QueryInterface(fileStream);
-  nsOperaCookieMigrator* ocm = new nsOperaCookieMigrator(binaryStream);
+  nsOperaCookieMigrator* ocm = new nsOperaCookieMigrator(fileStream);
   if (!ocm)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  ocm->Migrate();
+  rv = ocm->Migrate();
 
-  return NS_OK;
+  if (ocm) {
+    delete ocm;
+    ocm = nsnull;
+  }
+
+  return rv;
 }
 
-nsOperaCookieMigrator::nsOperaCookieMigrator(nsIBinaryInputStream* aStream)
+nsOperaCookieMigrator::nsOperaCookieMigrator(nsIInputStream* aSourceStream)
 {
-  mStream = aStream;
+  mStream = do_CreateInstance("@mozilla.org/binaryinputstream;1");
+  if (mStream)
+    mStream->SetInputStream(aSourceStream);
 }
 
 nsresult
@@ -403,42 +412,146 @@ nsOperaCookieMigrator::Migrate()
   if (!mStream)
     return NS_ERROR_FAILURE;
 
-  nsresult rv = ReadHeader();
-  printf("*** rv = %d\n", rv);
-  if (NS_FAILED(rv))
+  nsresult rv;
+
+  rv = ReadHeader();
+  if (NS_FAILED(rv)) 
     return NS_OK;
 
   PRUint8 tag;
-  PRUint16 length;
+  PRUint16 length, segmentLength;
+  PRTime expiryTime;
+  PRUint8 handlingInfo = 0;
+  PRBool hasHandlingInfo = PR_FALSE;
+  PRBool isSecure = PR_FALSE;
+  PRBool cookieOpen = PR_FALSE;
+
+  nsCAutoString id, data;
   char* buf;
   do {
     mStream->Read8(&tag);
     mTagStack.AppendElement((void*)tag);
+
     switch (tag) {
-    case OPEN_DOMAIN:
+    case BEGIN_DOMAIN_SEGMENT:
+      printf("*** open domain\n");
       mStream->Read16(&length);
       break;
-    case DOMAIN_NAME:
+    case DOMAIN_COMPONENT:
+      printf("*** domain name\n");
       mStream->Read16(&length);
       
-      buf = (char*)malloc((sizeof(char) * length) + 1);
       mStream->ReadBytes(length, &buf);
-      buf[length-1] = '\0';
+      buf[length] = '\0';
       printf("*** domain = %s\n", buf);
       mDomainStack.AppendElement((void*)buf);
       break;
-    case SEGMENT_INFO:
+    case END_DOMAIN_SEGMENT:
+      printf("*** end domain segment\n");
+      // Pop the domain stack
+      break;
 
+    case BEGIN_PATH_SEGMENT:
+      printf("*** open path\n");
+      mStream->Read16(&length);
+      break;
+    case PATH_COMPONENT:
+      printf("*** path name\n");
+      mStream->Read16(&length);
+      
+      mStream->ReadBytes(length, &buf);
+      buf[length] = '\0';
+      printf("*** path = %s\n", buf);
+      mPathStack.AppendElement((void*)buf);
+      break;
+    case END_PATH_SEGMENT:
+      printf("*** end path segment\n");
+      // We receive one "End Path Segment" even if the path stack is empty
+      // i.e. telling us that we are done processing cookies for "/"
+
+      // This is where we use the information gathered in all the other 
+      // states to add a cookie to the Firebird Cookie Manager.
+
+      // Pop the path stack
+      break;
+
+    case FILTERING_INFO:
+      printf("*** open handling info\n");
+      mStream->Read16(&length);
+      mStream->Read8(&handlingInfo);
+      break;
+    case PATH_HANDLING_INFO:
+    case THIRD_PARTY_HANDLING_INFO: 
+      {
+        printf("*** non-supported handling info\n");
+        mStream->Read16(&length);
+        PRUint8 temp;
+        mStream->Read8(&temp);
+      }
+      break;
+
+    case BEGIN_COOKIE_SEGMENT:
+      printf("*** open segment info\n");
+      mStream->Read16(&segmentLength);
+      cookieOpen = PR_TRUE;
       break;
     case COOKIE_ID:
+      printf("*** open cookie id\n");
+      mStream->Read16(&length);
+      mStream->ReadBytes(length, &buf);
+      buf[length] = '\0';
       break;
     case COOKIE_DATA:
+      printf("*** open cookie data\n");
+      mStream->Read16(&length);
+      mStream->ReadBytes(length, &buf);
+      buf[length] = '\0';
       break;
-    case EXPIRY_TIME:
+    case COOKIE_EXPIRY:
+      printf("*** open expiry time\n");
+      mStream->Read16(&length);
+      mStream->Read64(NS_REINTERPRET_CAST(PRUint64*, &expiryTime));
       break;
-    case LAST_TIME:
+    case COOKIE_SECURE:
+      printf("*** SECURE!\n");
       break;
-    case TERMINATOR:
+
+    // We don't support any of these fields but we must read them in
+    // to advance the stream cursor. 
+    case COOKIE_LASTUSED: 
+      {
+        mStream->Read16(&length);
+        PRUint64 temp;
+        mStream->Read64(&temp);
+      }
+      break;
+    case COOKIE_COMMENT:
+    case COOKIE_COMMENT_URL:
+    case COOKIE_V1_DOMAIN:
+    case COOKIE_V1_PATH:
+    case COOKIE_V1_PORT_LIMITATIONS:
+      mStream->Read16(&length);
+      mStream->ReadBytes(length, &buf);
+      buf[length] = '\0';
+      printf("*** generic string = %s\n");
+      break;
+    case COOKIE_VERSION: 
+      {
+        mStream->Read16(&length);
+        PRUint8 temp;
+        mStream->Read8(&temp);
+      }
+      break;
+    case COOKIE_OTHERFLAG_1:
+    case COOKIE_OTHERFLAG_2:
+    case COOKIE_OTHERFLAG_3:
+    case COOKIE_OTHERFLAG_4:
+    case COOKIE_OTHERFLAG_5:
+    case COOKIE_OTHERFLAG_6: 
+      {
+        PRUint8 temp;
+        mStream->Read8(&temp);
+      }
       break;
     }
   }
@@ -453,7 +566,7 @@ nsOperaCookieMigrator::ReadHeader()
 
   printf("*** app = %d, file = %d\n", mAppVersion, mFileVersion);
   if (mAppVersion & 0x1000 && mFileVersion & 0x2000) {
-    mStream->Read8(&mTagTypeLength);
+    mStream->Read16(&mTagTypeLength);
     mStream->Read16(&mPayloadTypeLength);
 
     return NS_OK;
