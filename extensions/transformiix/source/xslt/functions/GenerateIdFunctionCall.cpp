@@ -55,7 +55,7 @@ ExprResult* GenerateIdFunctionCall::evaluate(Node* context, ContextState* cs) {
 
     if (argc > 0) {
         ListIterator* iter = params.iterator();
-        Expr* param = iter->next();
+        Expr* param = (Expr*) iter->next();
         delete iter;
         ExprResult* exprResult = param->evaluate(context, cs);
         if (!exprResult) return new StringResult("");
