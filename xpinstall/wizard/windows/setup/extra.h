@@ -114,6 +114,7 @@ HRESULT           ErrorMsgDiskSpace(ULONGLONG ullDSAvailable, ULONGLONG ullDSReq
 void              SetCustomType(void);
 void              GetAlternateArchiveSearchPath(LPSTR lpszCmdLine);
 BOOL              NeedReboot(void);
+BOOL              LocatePreviousPath(LPSTR szPath, DWORD dwPathSize);
 
 BOOL              bSDInit;
 
