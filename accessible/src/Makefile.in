@@ -33,7 +33,6 @@ REQUIRES	= xpcom string layout widget dom view locale gfx2
 CPPSRCS		= \
 		nsAccessible.cpp \
 		nsAccessibilityService.cpp \
-		nsMutableAccessible.cpp \
 		nsRootAccessible.cpp \
 		nsIFrameRootAccessible.cpp \
 		nsHTMLFormControlAccessible.cpp \

@@ -41,7 +41,6 @@
 #include "nsHTMLImageAccessible.h"
 #include "nsHTMLAreaAccessible.h"
 #include "nsHTMLLinkAccessible.h"
-#include "nsMutableAccessible.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -85,18 +84,6 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
 
   //printf("################################## CreateRootAccessible\n");
   *_retval = new nsRootAccessible(wr);
-  if (*_retval) {
-    NS_ADDREF(*_retval);
-    return NS_OK;
-  } else 
-    return NS_ERROR_OUT_OF_MEMORY;
-}
-
-NS_IMETHODIMP 
-nsAccessibilityService::CreateMutableAccessible(nsISupports* aNode, nsIMutableAccessible **_retval)
-{
-  //printf("################################## CreateMutableAccessible\n");
-  *_retval = new nsMutableAccessible(aNode);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;
@@ -150,15 +137,9 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIAtom* aPopupAtom, nsIDOMNo
     return NS_OK;
   } else 
     return NS_ERROR_OUT_OF_MEMORY;
-    */
+  */
 
-  *_retval = new nsMutableAccessible(node);
-  if (*_retval) {
-    NS_ADDREF(*_retval);
-    return NS_OK;
-  } else 
-    return NS_ERROR_OUT_OF_MEMORY;
-
+  return NS_ERROR_FAILURE;
 }
 
 /* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */

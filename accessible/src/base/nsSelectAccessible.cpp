@@ -31,7 +31,7 @@
 #include "nsIFrame.h"
 #include "nsRootAccessible.h"
 #include "nsINameSpaceManager.h"
-#include "nsMutableAccessible.h"
+//#include "nsMutableAccessible.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDOMMenuListener.h"
 #include "nsIDOMEventReceiver.h"
