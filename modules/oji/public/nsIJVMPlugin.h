@@ -68,6 +68,9 @@ public:
 	NS_IMETHOD
 	GetJavaWrapper(JNIEnv* jenv, jint obj, jobject *jobj) = 0;
 
+	NS_IMETHOD
+	UnwrapJavaWrapper(JNIEnv* jenv, jobject jobj, jint* obj) = 0;
+
 	/**
 	 * This creates a new secure communication channel with Java. The second parameter,
 	 * nativeEnv, if non-NULL, will be the actual thread for Java communication.
