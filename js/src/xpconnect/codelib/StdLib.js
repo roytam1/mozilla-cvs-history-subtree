@@ -37,12 +37,13 @@
  * ----- END LICENSE BLOCK ----- */
 
 /**
- * Library of useful functions.
+ * Collection of useful functions.
  *
  * 
  */
 
-MOZ_EXPORTED_SYMBOLS = [ "appendUnique" ];
+MOZ_EXPORTED_SYMBOLS = [ "appendUnique",
+                         "createDynamicProxy" ];
 
 
 //----------------------------------------------------------------------
@@ -68,3 +69,16 @@ appendUnique._helpstr_ = "append array 'src' to array 'target', \
 ommiting elements that are already present in 'target' and equal under \
 the relation 'equals' (default: '=='). Returns target array";
 
+
+//----------------------------------------------------------------------
+// createDynamicProxy
+
+function createDynamicProxy(objGetter) {
+  return { __noSuchMethod__: function(id, args) {
+                               var obj = objGetter();
+                               return obj[id].apply(obj, args);}
+         };
+}
+
+createDynamicProxy._helpstr_ = "create an object that will forward all method calls to \
+to the object returned by 'objGetter'. 'objGetter' will be called for each method call.";
