@@ -209,7 +209,7 @@ nsStreamXferOp::Start( void ) {
                     // of reading data from the stream and writing it to disk.
                     nsCOMPtr<nsIRequest> dummyRequest;
                     rv = NS_AsyncWriteFromStream(getter_AddRefs(dummyRequest),
-                                                 mOutputTransport, inStream, 0, -1, /*flags?*/
+                                                 mOutputTransport, inStream, 0, -1, 0,
                             NS_STATIC_CAST(nsIStreamObserver*, this));
                     if ( NS_FAILED( rv ) ) {
                         this->OnError( kOpAsyncWrite, rv );

@@ -99,7 +99,7 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
 
     if ( request ) {
         
-      channel = do_QueryInterface(request);
+      aChannel = do_QueryInterface(request);
 
         // Need root nsISupports for later JS_PushArguments call.
         channel = do_QueryInterface( aChannel );
@@ -108,7 +108,7 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
         nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface( aChannel );
         if ( httpChannel ) {
             // Get content-disposition response header.
-            nsCOMPtr<nsIAtom> atom = NS_NewAtom( "content-disposition" );
+            nsCOMPtr<nsIAtom> atom = dont_AddRef(NS_NewAtom( "content-disposition" ));
             if ( atom ) {
                 nsXPIDLCString disp; 
                 rv = httpChannel->GetResponseHeader( atom, getter_Copies( disp ) );

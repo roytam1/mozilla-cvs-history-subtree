@@ -685,9 +685,7 @@ DummyLayoutRequest::Create(nsIRequest** aResult, nsIPresShell* aPresShell)
   if (!request)
       return NS_ERROR_OUT_OF_MEMORY;
 
-  *aResult = request;
-  NS_ADDREF(*aResult);
-  return NS_OK;
+  return request->QueryInterface(NS_GET_IID(nsIRequest), (void**) aResult); 
 }
 
 

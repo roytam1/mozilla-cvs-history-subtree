@@ -191,7 +191,7 @@ nsDateTimeChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsITransport> transport;
-    rv = socketService->CreateTransport(mHost, mPort, nsnull, 0, 32, 32, getter_AddRefs(transport));
+    rv = socketService->CreateTransport(mHost, mPort, nsnull, -1, 32, 32, getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
     if (mCallbacks) {

@@ -712,26 +712,7 @@ ImageNetContextImpl::IsURLInDiskCache(ilIURL *aUrl)
 int 
 ImageNetContextImpl::GetContentLength (ilIURL * aURL)
 {
-    nsresult rv;
-    int content_length=0;
-
-    nsCOMPtr<nsIURI> nsurl = do_QueryInterface(aURL, &rv);
-    if (NS_FAILED(rv)) return 0;
-
-
-    nsCOMPtr<nsIChannel> channel;
-    nsCOMPtr<nsISupports> loadContext (do_QueryReferent(mLoadContext)); 
-    nsCOMPtr<nsILoadGroup> group (do_GetInterface(loadContext));
-    nsCOMPtr<nsIInterfaceRequestor> sink(do_QueryInterface(loadContext));
-
-    rv = NS_OpenURI(getter_AddRefs(channel), nsurl, nsnull, group, sink);
-    if (NS_FAILED(rv)) return 0;
-    // Why would this code ever return anything but zero. we don't do asyncread
-    // on the channel we create? 
-    // Commenting this line for now TODO -gagan
-    //rv = channel->GetContentLength(&content_length);
-    return content_length;
-
+    return -1;
 }
 
 

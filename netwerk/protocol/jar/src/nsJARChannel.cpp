@@ -171,9 +171,9 @@ nsJARChannel::Cancel(nsresult status)
 
     if (mJarExtractionTransport) {
         rv = mJarExtractionTransport->Cancel(status);
-        if (NS_FAILED(rv)) return rv;
         mJarExtractionTransport = nsnull;
     }
+
     mStatus = status;
 	return rv;
 }
@@ -181,29 +181,27 @@ nsJARChannel::Cancel(nsresult status)
 NS_IMETHODIMP
 nsJARChannel::Suspend()
 {
-    nsresult rv;
+    nsresult rv = NS_OK;
     nsAutoMonitor monitor(mMonitor);
 
     if (mJarExtractionTransport) {
         rv = mJarExtractionTransport->Suspend();
-        if (NS_FAILED(rv)) return rv;
     }
 
-	return NS_OK;
+	return rv;
 }
 
 NS_IMETHODIMP
 nsJARChannel::Resume()
 {
-    nsresult rv;
+    nsresult rv = NS_OK;
     nsAutoMonitor monitor(mMonitor);
 
     if (mJarExtractionTransport) {
         rv = mJarExtractionTransport->Resume();
-        if (NS_FAILED(rv)) return rv;
     }
 
-	return NS_OK;
+	return rv;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -600,11 +598,8 @@ nsJARChannel::OnStopRequest(nsIRequest* jarExtractionTransport, nsISupports* con
 
     rv = mUserListener->OnStopRequest(this, mUserContext, aStatus, aStatusArg);
 
-    if (mLoadGroup) {
-        if (NS_SUCCEEDED(rv)) {
-            mLoadGroup->RemoveRequest(this, context, aStatus, aStatusArg);
-        }
-    }
+    if (mLoadGroup)
+        mLoadGroup->RemoveRequest(this, context, aStatus, aStatusArg);
 
     mUserListener = nsnull;
     mUserContext = nsnull;
