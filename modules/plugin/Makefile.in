@@ -22,11 +22,16 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= @srcdir@$(VPS)@srcdir@/base/public
 
-DIRS		= base/public base/src 
+MODULE		= plugin
+XPIDL_MODULE	= layout
+LIBRARY_NAME	= gkplugin
+EXPORT_LIBRARY = 1
+IS_COMPONENT    = 1
+MODULE_NAME	= nsPluginModule
 
 # These subdirs rely on GTK libraries and header files, it is not
 #  buildable on other non-GTK unix builds
@@ -37,7 +42,6 @@ DIRS		+= samples/default/unix
 ifdef ENABLE_TESTS
 DIRS		+= samples/simple
 endif
-
 endif
 
 ifeq ($(OS_ARCH),WINNT)
@@ -48,10 +52,136 @@ ifeq ($(OS_ARCH),OS2)
 DIRS		+= samples/default/os2
 endif
  
+
+REQUIRES	= xpcom \
+		  xpconnect \
+		  string \
+		  java \
+		  pref \
+		  necko \
+		  gtkxtbin \
+		  webshell \
+		  caps \
+		  intl \
+		  uconv \
+		  unicharutil \
+		  dom \
+		  gfx \
+		  content \
+		  widget \
+		  mimetype \
+		  oji \
+		  exthandler \
+		  docshell \
+		  webbrwsr \
+		  windowwatcher \
+		  imglib2 \
+		  layout \
+		  $(NULL)
+# for xlib port
+REQUIRES	+= xlibxtbin xlibrgb
+
+CPPSRCS		= \
+		base/src/ns4xPlugin.cpp \
+		base/src/ns4xPluginInstance.cpp \
+		base/src/nsPluginDocLoaderFactory.cpp \
+		base/src/nsPluginHostImpl.cpp \
+		base/src/nsPluginModule.cpp \
+		base/src/nsPluginInstancePeer.cpp \
+		base/src/nsPluginViewer.cpp \
+		base/src/nsPluginDirServiceProvider.cpp \
+		$(NULL)
+
+ifeq ($(OS_ARCH), BeOS)
+	CPPSRCS += base/src/nsPluginsDirBeOS.cpp
+	CPPSRCS += base/src/nsPluginNativeWindow.cpp
+else
+ifeq ($(OS_ARCH),WINNT)
+	CPPSRCS += base/src/nsPluginsDirWin.cpp
+	CPPSRCS += base/src/nsPluginNativeWindowWin.cpp
+else
+ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+	CPPSRCS += base/src/nsPluginsDirOS2.cpp
+	CPPSRCS += base/src/nsPluginNativeWindow.cpp
+else
+	CPPSRCS += base/src/nsPluginsDirUnix.cpp
+	CPPSRCS += base/src/nsPluginNativeWindow.cpp
+endif
+endif
+endif
+
+EXPORTS		= \
+		base/public/nsplugin.h \
+		base/public/nsplugindefs.h \
+		base/public/nsPluginLogging.h \
+		base/public/nsPluginError.h \
+		base/public/nsDefaultPlugin.h \
+		base/public/nsPluginNativeWindow.h \
+		base/public/nsPluginsCID.h \
+		base/public/npapi.h \
+		base/public/npupp.h \
+		base/src/nsPluginViewer.h \
+		$(NULL)
+
+XPIDLSRCS 	= \
+		nspluginroot.idl \
+		nsIPluginStreamInfo.idl \
+		nsIPluginManager.idl \
+		nsIPluginManager2.idl \
+		nsIPluginInstancePeer.idl \
+		nsIPluginInstancePeer2.idl \
+		nsIPluginInstanceOwner.idl \
+		nsIPlugin.idl \
+		nsIHTTPHeaderListener.idl \
+		nsIFileUtilities.idl \
+		nsIEventHandler.idl \
+		nsICookieStorage.idl \
+		nsIClassicPluginFactory.idl \
+		nsIWindowlessPlugInstPeer.idl \
+		nsIScriptablePlugin.idl \
+		nsIPluginTagInfo.idl \
+		nsIPluginTagInfo2.idl \
+		nsIPluginViewer.idl  \
+		nsIJRILiveConnectPIPeer.idl \
+		nsIJRILiveConnectPlugin.idl \
+		nsIPluginInputStream.idl \
+		nsIPluginStreamListener.idl \
+		nsIPluginInstance.idl \
+		nsPIPluginHost.idl \
+		nsPIPluginInstancePeer.idl \
+		nsIPluginHost.idl \
+		$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+EXTRA_DSO_LIBS	+= gkgfx
+endif
+
+EXTRA_DSO_LDOPTS = \
+		$(LIBS_DIR) \
+		$(EXTRA_DSO_LIBS) \
+		$(MOZ_NECKO_UTIL_LIBS) \
+		$(MOZ_UNICHARUTIL_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+EXTRA_DSO_LDOPTS += $(TK_LIBS)
+endif
+
 include $(topsrcdir)/config/rules.mk
 
-$(DIST)/bin/plugins:
-	$(NSINSTALL) -D $@
+ifeq ($(OS_ARCH),WINNT)
+CXXFLAGS	+= -GX
+OS_LIBS		+= version.lib
+endif
 
-export:: $(DIST)/bin/plugins
+ifdef MOZ_ENABLE_GTK
+CXXFLAGS        += $(MOZ_GTK_CFLAGS)
+CFLAGS          += $(MOZ_GTK_CFLAGS)
+EXTRA_DSO_LDOPTS += -lgtkxtbin -lgtksuperwin $(XLDFLAGS) $(XT_LIBS) $(MOZ_GTK_LDFLAGS)
+endif		#MOZ_ENABLE_GTK
+
+ifdef MOZ_ENABLE_GTK2
+CXXFLAGS        += $(MOZ_GTK2_CFLAGS)
+endif
 
