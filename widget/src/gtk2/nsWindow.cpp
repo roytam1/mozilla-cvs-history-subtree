@@ -1571,7 +1571,8 @@ nsWindow::OnKeyPressEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
 
     // If the event was consumed, return.
     LOGIM(("status %d\n", status));
-    if (status == nsEventStatus_eConsumeNoDefault) {
+    if (status == nsEventStatus_eConsumeNoDefault ||
+        status == nsEventStatus_eConsumeDoDefault) {
         LOGIM(("key press consumed\n"));
         return TRUE;
     }
