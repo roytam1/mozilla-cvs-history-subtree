@@ -1,4 +1,0 @@
-#filter substitution
-
-@AB_CD@.jar:
-+ locale/mozapps/downloads/pref-downloads.dtd    (@AB_CD@/chrome/mozapps/downloads/pref-downloads.dtd)
