@@ -1176,6 +1176,7 @@ nsTableRowGroupFrame::SplitRowGroup(nsIPresContext*          aPresContext,
             aDesiredSize.height = rowRect.YMost();
             aStatus = NS_FRAME_COMPLETE;
             UndoContinuedRow(aPresContext, contRow);
+            contRow = nsnull;
           }
         }
         else { // (firstTruncatedRow != firstRowThisPage)
@@ -1184,6 +1185,7 @@ nsTableRowGroupFrame::SplitRowGroup(nsIPresContext*          aPresContext,
           availHeight -= rowBefore->GetRect().YMost();
 
           UndoContinuedRow(aPresContext, contRow);
+          contRow = nsnull;
           nsTableRowFrame* oldLastRowThisPage = lastRowThisPage;
           lastRowThisPage = firstTruncatedRow;
           aStatus = NS_FRAME_NOT_COMPLETE;
@@ -1196,6 +1198,7 @@ nsTableRowGroupFrame::SplitRowGroup(nsIPresContext*          aPresContext,
             if (aReflowState.mFlags.mIsTopOfPage) {
               // We were better off with the 1st call to SplitSpanningCells, do it again
               UndoContinuedRow(aPresContext, contRow);
+              contRow = nsnull;
               lastRowThisPage = oldLastRowThisPage;
               SplitSpanningCells(*aPresContext, aReflowState, *aTableFrame, *firstRowThisPage,
                                  *lastRowThisPage, aReflowState.mFlags.mIsTopOfPage, availHeight, contRow, 
@@ -1207,6 +1210,7 @@ nsTableRowGroupFrame::SplitRowGroup(nsIPresContext*          aPresContext,
               aDesiredSize.height = rowRect.YMost();
               aStatus = NS_FRAME_COMPLETE;
               UndoContinuedRow(aPresContext, contRow);
+              contRow = nsnull;
             }
           }
         } // if (firstTruncatedRow == firstRowThisPage)
