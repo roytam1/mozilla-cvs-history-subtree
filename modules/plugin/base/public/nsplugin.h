@@ -160,7 +160,7 @@
  *
  * To obtain: QueryInterface on nsIPluginInstancePeer
  */
-#include "nsIWindowlessPluginInstancePeer.h"
+#include "nsIWindowlessPlugInstPeer.h"
 
 /**
  * A plugin stream peer gets create by the browser and associated with each
@@ -216,7 +216,7 @@
  *
  * To obtain: QueryInterface on nsIPluginInstancePeer
  */
-#include "nsILiveConnectPluginInstancePeer.h"
+#include "nsILiveConnectPlugInstPeer.h"
 
 /**
  * The nsIPluginStreamPeer2 interface provides additional plugin stream

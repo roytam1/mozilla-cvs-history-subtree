@@ -24,9 +24,9 @@ MODULE	= plugin
 EXPORTS	=				      \
 	nsIFileUtilities.h		      \
 	nsIJRILiveConnectPlugin.h	      \
-	nsIJRILiveConnectPluginInstancePeer.h \
+	nsIJRILiveConnectPlugInstPeer.h       \
 	nsILiveConnectPlugin.h		      \
-	nsILiveConnectPluginInstancePeer.h    \
+	nsILiveConnectPlugInstPeer.h          \
 	nsIPlugin.h			      \
 	nsIPluginInstance.h		      \
 	nsIPluginInstancePeer.h		      \
@@ -39,7 +39,7 @@ EXPORTS	=				      \
 	nsIPluginTagInfo.h		      \
 	nsIPluginTagInfo2.h		      \
 	nsISeekablePluginStreamPeer.h	      \
-	nsIWindowlessPluginInstancePeer.h     \
+	nsIWindowlessPlugInstPeer.h           \
 	nsplugin.h			      \
 	nsplugindefs.h
 
