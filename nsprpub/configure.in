@@ -316,7 +316,7 @@ case "$target" in
         AC_DEFINE(AIX_HAVE_ATOMIC_OP_H)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_HAVE_OFF64_T)
-        AC_DEFINE(AIX4_3)
+        AC_DEFINE(AIX4_3_PLUS)
         AC_DEFINE(HAVE_SOCKLEN_T)
         USE_IPV6=1
         AIX_LINK_OPTS='-brtl -bnso -berok'

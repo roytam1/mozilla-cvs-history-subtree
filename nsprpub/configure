@@ -2425,7 +2425,7 @@ EOF
 EOF
 
         cat >> confdefs.h <<\EOF
-#define AIX4_3 1
+#define AIX4_3_PLUS 1
 EOF
 
         cat >> confdefs.h <<\EOF

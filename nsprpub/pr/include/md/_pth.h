@@ -167,7 +167,7 @@
 /*
  * These platforms don't have sigtimedwait()
  */
-#if (defined(AIX) && !defined(AIX4_3)) || defined(LINUX) \
+#if (defined(AIX) && !defined(AIX4_3_PLUS)) || defined(LINUX) \
 	|| defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
 	|| defined(BSDI) || defined(VMS)
 #define PT_NO_SIGTIMEDWAIT
