@@ -42,7 +42,7 @@ CSRCS		= xp_alloc.c \
 		  xplocale.c \
 		  $(NULL)
 
-REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf
+REQUIRES	= js nspr dbm security img util jtools layer java lay style pref rdf network
 
 CSRCS		+= allxpstr.c xp_intl.c
 
