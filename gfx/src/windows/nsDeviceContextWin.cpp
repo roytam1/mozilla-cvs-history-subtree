@@ -519,6 +519,8 @@ nsresult nsDeviceContextWin :: GetSysFontInfo(HDC aHDC, nsSystemFontID anID, nsF
     return NS_ERROR_FAILURE;
   }
 
+  aFont->systemFont = PR_TRUE;
+
   return CopyLogFontToNSFont(&aHDC, ptrLogFont, aFont);
 }
 
