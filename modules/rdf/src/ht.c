@@ -29,7 +29,10 @@
 #include "mcf.h"
 #include "scook.h"
 #include "utils.h"
+#include "rdf.h"
 #include "rdfparse.h"
+#include "remstore.h"
+
 
 
 	/* globals */
@@ -5761,7 +5764,7 @@ rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 static XPDialogInfo rdfFindDialogInfo = {
 	(XP_DIALOG_OK_BUTTON | XP_DIALOG_CANCEL_BUTTON),
 	rdfFindDialogHandler,
-	500, 120
+	450, 150
 };
 
 
