@@ -1824,32 +1824,14 @@ NS_IMETHODIMP GlobalWindowImpl::Focus()
 
 NS_IMETHODIMP GlobalWindowImpl::Blur()
 {
-  nsCOMPtr<nsIDocShellTreeItem>
-    docShellAsItem(do_QueryInterface(mDocShell));
-  if (docShellAsItem) {
-    nsCOMPtr<nsIDocShellTreeItem> parent;
-    // Parent regardless of chrome or content boundary
-    docShellAsItem->GetParent(getter_AddRefs(parent));
-
-    nsCOMPtr<nsIBaseWindow> newFocusWin;
-
-    if (parent)
-      newFocusWin = do_QueryInterface(parent);
-    else {
-      nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
-      docShellAsItem->GetTreeOwner(getter_AddRefs(treeOwner));
-      newFocusWin = do_QueryInterface(treeOwner);
-    }
-
-    if (newFocusWin)
-      newFocusWin->SetFocus();
-  }
-
+  // do what Nav4.x did: find some other window to focus
+  nsresult rv = NS_ERROR_FAILURE;
   if (mDocShell) {
-    mDocShell->SetHasFocus(PR_FALSE);
+    rv = mDocShell->Blur();
+    if (NS_SUCCEEDED(rv))
+      mDocShell->SetHasFocus(PR_FALSE);
   }
-
-  return NS_OK;
+  return rv;
 }
 
 NS_IMETHODIMP GlobalWindowImpl::Back()
