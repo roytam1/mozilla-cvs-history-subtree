@@ -201,8 +201,10 @@ CoaleseDirs(char* io_Path)
             (*fwdPtr != '?') && 
             (*fwdPtr != '#'); ++fwdPtr)
     {
+#ifdef XP_PC
         if (*fwdPtr == '\\')
             *fwdPtr = '/';
+#endif
         if (*fwdPtr == '/' && *(fwdPtr+1) == '.' && 
             (*(fwdPtr+2) == '/' || *(fwdPtr+2) == '\\'))
         {
