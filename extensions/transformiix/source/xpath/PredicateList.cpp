@@ -20,8 +20,7 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 #include "Expr.h"
@@ -29,8 +28,6 @@
 /**
  * Represents an ordered list of Predicates,
  * for use with Step and Filter Expressions
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
 **/
 //-- PredicateList Implementation --/
 

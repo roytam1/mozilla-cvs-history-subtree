@@ -19,17 +19,10 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 
 #include "OutputFormat.h"
-
-/**
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
-**/
-
 
 /**
  * Creates a new OutputFormat with the default values.

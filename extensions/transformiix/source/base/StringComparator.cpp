@@ -20,7 +20,6 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 #include "StringComparator.h"
@@ -31,7 +30,7 @@ const String StringComparator::EN_LANG = "en";
 
 /**
  * Returns an instance of the StringComparator which handles the given Language
- * <BR>
+ *
  * Note: Remember to destroy instance when done.
 **/
 StringComparator* StringComparator::getInstance(const String& lang) {

@@ -20,7 +20,6 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 #ifndef TRANSFRMX_STRING_COMPARATOR_H
@@ -40,7 +39,7 @@ public:
 
     /**
      * Returns an instance of the StringComparator which handles the given Language
-     * <BR>
+     *
      * Note: Remember to destroy instance when done.
     **/
     static StringComparator* getInstance(const String& lang);

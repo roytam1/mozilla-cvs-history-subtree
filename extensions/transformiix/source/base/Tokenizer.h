@@ -25,14 +25,11 @@
  * Larry Fitzpatrick, OpenText, lef@opentext.com
  *    -- 19990806, added void return type declaration for ::nextToken()
  *
- * $Id$
  */
 
 /**
  * Tokenizer
  * A simple String tokenizer
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 

@@ -21,7 +21,6 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 #ifndef MITREXSL_VARIABLE_H
@@ -31,10 +30,6 @@
 #include "TxString.h"
 #include "ExprResult.h"
 
-/**
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
-**/
 class VariableBinding : public TxObject {
 
 public:

@@ -20,15 +20,12 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 /**
  * NumberResult
  * Represents the a number as the result of evaluating an Expr
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
 **/
 
 #include "ExprResult.h"

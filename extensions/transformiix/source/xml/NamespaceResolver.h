@@ -16,7 +16,6 @@
  * Peter Van der Beken, Peter.VanderBeken@pandora.be
  *   -- original author.
  *
- * $Id$
  */
 
 

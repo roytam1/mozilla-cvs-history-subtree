@@ -21,7 +21,6 @@
  * Keith Visco 
  *    -- original author.
  *
- * $Id$
  */
 
 

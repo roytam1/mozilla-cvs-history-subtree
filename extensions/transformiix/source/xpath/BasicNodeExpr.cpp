@@ -20,16 +20,10 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ *
  */
 
 #include "Expr.h"
-
-/**
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
-**/
 
 //- Constructors -/
 

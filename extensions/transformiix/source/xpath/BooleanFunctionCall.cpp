@@ -24,7 +24,6 @@
  * Marina Mechtcheriakova, mmarina@mindspring.com
  *   -- added lang() implementation
  *
- * $Id$
  */
 
 #include "FunctionLib.h"
@@ -32,8 +31,6 @@
 
 /**
  * Creates a default BooleanFunctionCall, which always evaluates to False
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
 **/
 BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
 {

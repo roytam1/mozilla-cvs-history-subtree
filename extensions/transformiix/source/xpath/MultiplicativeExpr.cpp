@@ -20,18 +20,15 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 /**
  * Represents a MultiplicativeExpr, an binary expression that
- * performs a multiplicative operation between it's lvalue and rvalue:<BR/>
+ * performs a multiplicative operation between it's lvalue and rvalue:
  *  *   : multiply
  * mod  : modulus
  * div  : divide
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #include "Expr.h"

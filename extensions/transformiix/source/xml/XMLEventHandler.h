@@ -19,7 +19,6 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 
@@ -44,8 +43,6 @@ class AttributeList;
  * that allow handling CDATA characters, comments, etc.
  * I apologize for not throwing Exceptions, I am trying
  * to follow Mozilla.org's guidelines for writing portable C++.
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 class XMLEventHandler {
 

@@ -20,16 +20,13 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 #include "Expr.h"
 
 /**
  * This class represents a FunctionCall as defined by the XSL Working Draft
- * @author <A HREF="mailto:kvisco@ziplink">Keith Visco</A>
- * @version $Revision$ $Date$
 **/
 
 const String FunctionCall::INVALID_PARAM_COUNT =

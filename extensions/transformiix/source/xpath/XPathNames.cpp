@@ -24,13 +24,10 @@
  * Marina Mechtcheriakova, mmarina@mindspring.com
  *   -- added LANG_FN
  *
- * $Id$
  */
 
 /**
  * XPath names
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #include "FunctionLib.h"

@@ -23,13 +23,10 @@
  * Bob Miller, kbob@oblix.com
  *    -- plugged core leak.
  *
- * $Id$
  */
 
 /**
  * A class for keeping an ordered list of Strings
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #ifndef TRANSFRMX_STRINGLIST_H

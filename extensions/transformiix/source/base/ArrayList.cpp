@@ -19,7 +19,6 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 #include "ArrayList.h"
@@ -120,7 +119,7 @@ void ArrayList::clear() {
  * Removes all elements from the list
  * @param deleteObjects allows specifying whether or not to delete the TxObjects
  * that are currently in the list.
- * <BR />
+ *
  * Note: If object deletion is enabled this method will check for duplicate references
  * in the list to prevent possible seg faults and will therefore run slower than an algorithm
  * that doesn't check for duplicates.

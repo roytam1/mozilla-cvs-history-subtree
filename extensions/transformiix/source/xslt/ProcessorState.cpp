@@ -30,7 +30,6 @@
 /**
  * Implementation of ProcessorState
  * Much of this code was ported from XSL:P
- * @version $Revision$ $Date$
 **/
 
 #include "ProcessorState.h"
@@ -865,8 +864,8 @@ FunctionCall* ProcessorState::resolveFunctionCall(const String& name) {
 /**
  * Sorts the given NodeSet by DocumentOrder.
  * @param nodes the NodeSet to sort
- * <BR />
- * <B>Note:</B> I will be moving this functionality elsewhere soon
+ *
+ * Note: I will be moving this functionality elsewhere soon
 **/
 void ProcessorState::sortByDocumentOrder(NodeSet* nodes) {
     if ((!nodes) || (nodes->size() < 2)) return;

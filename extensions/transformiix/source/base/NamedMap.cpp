@@ -25,13 +25,10 @@
  *    -- fixed memory leak in NamedMap::hashKey method by deleting
  *       up char[] chars;
  *
- * $Id$
  */
 
 /**
  * A Named Map for TxObjects
- * @author <a href="kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #include "NamedMap.h"

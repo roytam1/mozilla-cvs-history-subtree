@@ -28,7 +28,6 @@
  * Eric Du, duxy@leyou.com.cn
  *   -- added fix for FreeBSD
  *
- * $Id$
  */
 
 
@@ -42,8 +41,6 @@
 /**
  * A wrapper for the primitive double type, and provides some simple
  * floating point related routines
- * @author <a href="mailto:lef@opentext.com">Larry Fitzpatrick</a>
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
 **/
 class Double : public TxObject {
 
@@ -130,7 +127,6 @@ private:
 /**
  * A wrapper for the primitive int type, and provides some simple
  * integer related routines
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
 **/
 class Integer : public TxObject {
 public:

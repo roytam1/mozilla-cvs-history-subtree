@@ -20,15 +20,12 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 /**
  * StringResult
  * Represents a String as a Result of evaluating an Expr
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 #include "ExprResult.h"
 

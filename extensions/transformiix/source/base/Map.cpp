@@ -20,12 +20,10 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 /*
  * A Hashtable for TxObjects
- * @version $Revision$ $Date$
  */
 
 

@@ -24,7 +24,7 @@
  *
  * Larry Fitzpatrick, OpenText, lef@opentext.com
  *    -- moved initialization of DEFAULT_SIZE to NodeStack.cpp
- * $Id$
+ *
  */
 
 

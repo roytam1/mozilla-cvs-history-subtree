@@ -24,13 +24,10 @@
  * Larry Fitzpatrick, OpenText, lef@opentext.com
  *   -- moved initialization of DEFAULT_SIZE to NodeSet.cpp
  *
- * $Id$
  */
 
 /**
  * NodeSet
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #ifndef TRANSFRMX_NODESET_H

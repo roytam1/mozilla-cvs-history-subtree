@@ -44,8 +44,6 @@
 /**
  * URIUtils
  * A set of utilities for handling URIs
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 
 #ifdef TX_EXE

@@ -24,7 +24,6 @@
  * Tom Kneeland, tomk@mitre.org
  *    -- added PRUint32 to provide a common unsigned integer
  *
- * $Id$
  */
 
 // Basic Definitions used throughout many of these classes

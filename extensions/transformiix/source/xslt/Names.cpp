@@ -28,14 +28,11 @@
  *       W3C XPath 1.0 Recommendation
  *    -- Added lang attr declaration
  *
- * $Id$
  */
 
 /**
  * XSL names used throughout the XSLProcessor.
  * Probably should be wrapped in a Namespace
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 #include "Names.h"
 

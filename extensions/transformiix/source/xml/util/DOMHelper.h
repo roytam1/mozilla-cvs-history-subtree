@@ -19,7 +19,6 @@
  * Keith Visco, kvisco@ziplink.net
  *    -- original author.
  *
- * $Id$
  */
 
 #ifndef TRANSFRMX_DOMHELPER_H
@@ -56,8 +55,6 @@ class OrderInfo : public TxObject {
 
 /**
  * A class used to overcome DOM 1.0 deficiencies
- * @author <a href="mailto:kvisco@ziplink.net">Keith Visco</a>
- * @version $Revision$ $Date$
 **/
 class DOMHelper {
 

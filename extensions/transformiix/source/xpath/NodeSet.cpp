@@ -36,10 +36,8 @@
 #endif
 
 /**
- * NodeSet <BR />
- * This class was ported from XSL:P. <BR />
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
+ * NodeSet
+ * This class was ported from XSL:P.
 **/
 
 

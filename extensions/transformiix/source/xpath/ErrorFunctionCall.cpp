@@ -20,16 +20,10 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
- * $Id$
+ * 
  */
 
 #include "FunctionLib.h"
-
-/**
- * @author <A HREF="mailto:kvisco@ziplink.net">Keith Visco</A>
- * @version $Revision$ $Date$
-**/
 
 /**
  *  Creates an Error FunctionCall with no error message
