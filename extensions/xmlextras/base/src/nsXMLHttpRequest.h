@@ -195,8 +195,6 @@ protected:
 
   PRInt32 mStatus;
   PRBool mAsync;
-
-  static nsISupports *sClassInfo;
 };
 
 #define NS_IPRIVATEJSEVENTLISTENER_IID              \

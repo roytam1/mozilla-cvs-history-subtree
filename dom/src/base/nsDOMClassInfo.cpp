@@ -640,6 +640,9 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
 
   // XML extras classes
+  NS_DEFINE_CLASSINFO_DATA(XMLHttpRequest, nsXMLHttpRequestSH::Create,
+                           0 /* Not used, XMLHttpRequest is it's own
+                                helper */);
   NS_DEFINE_CLASSINFO_DATA(DOMSerializer, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DOMParser, nsDOMGenericSH::Create,
@@ -2889,6 +2892,20 @@ nsCSSStyleDeclSH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
   nsCOMPtr<nsIDOMMediaList> style_decl(do_QueryInterface(aNative));
 
   return style_decl->Item(PRUint32(aNative), aResult);
+}
+
+
+// XMLHttpRequest helper
+
+// XMLHttpRequest is it's own helper so we don't supply one here.
+
+NS_IMETHODIMP
+nsXMLHttpRequestSH::GetHelperForLanguage(PRUint32 language,
+                                         nsISupports **_retval)
+{
+  *_retval = nsnull;
+
+  return NS_OK;
 }
 
 

@@ -165,6 +165,7 @@ public:
     ePkcs11_id,
 
     // XML extras classes
+    eXMLHttpRequest_id,
     eDOMSerializer_id,
     eDOMParser_id,
 

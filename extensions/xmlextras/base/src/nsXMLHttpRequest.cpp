@@ -68,8 +68,6 @@ static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CI
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 #endif
 
-nsISupports *nsXMLHttpRequest::sClassInfo = nsnull;
-
 static JSContext*
 GetSafeContext()
 {
@@ -266,121 +264,6 @@ nsLoadListenerProxy::Error(nsIDOMEvent* aEvent)
 //
 /////////////////////////////////////////////
 
-class nsXMLHttpRequestClassInfo : public nsIClassInfo
-{
-public:
-  nsXMLHttpRequestClassInfo();
-  virtual ~nsXMLHttpRequestClassInfo();
-
-  NS_DECL_ISUPPORTS
-
-  NS_DECL_NSICLASSINFO
-};
-
-
-nsXMLHttpRequestClassInfo::nsXMLHttpRequestClassInfo()
-{
-  NS_INIT_REFCNT();
-}
-
-nsXMLHttpRequestClassInfo::~nsXMLHttpRequestClassInfo()
-{
-}
-
-NS_IMPL_ADDREF(nsXMLHttpRequestClassInfo);
-NS_IMPL_RELEASE(nsXMLHttpRequestClassInfo);
-
-NS_INTERFACE_MAP_BEGIN(nsXMLHttpRequestClassInfo)
-  NS_INTERFACE_MAP_ENTRY(nsIClassInfo)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
-NS_INTERFACE_MAP_END
-
-
-NS_IMETHODIMP
-nsXMLHttpRequestClassInfo::GetInterfaces(PRUint32 *aCount, nsIID ***aArray)
-{
-  *aCount = 2;
-
-  *aArray =
-    NS_STATIC_CAST(nsIID **, nsMemory::Alloc(2 * sizeof(nsIID *)));
-  NS_ENSURE_TRUE(*aArray, NS_ERROR_OUT_OF_MEMORY);
-
-  nsIID *iid = NS_STATIC_CAST(nsIID *, nsMemory::Alloc(sizeof(nsIID)));
-
-  if (!iid) {
-    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(0, *aArray);
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  *iid = NS_GET_IID(nsIXMLHttpRequest);
-
-  *((*aArray) + 0) = iid;
-
-  iid = NS_STATIC_CAST(nsIID *, nsMemory::Alloc(sizeof(nsIID)));
-
-  if (!iid) {
-    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(1, *aArray);
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  *iid = NS_GET_IID(nsIDOMEventTarget);
-
-  *((*aArray) + 1) = iid;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLHttpRequestClassInfo::GetHelperForLanguage(PRUint32 language,
-                                                nsISupports **_retval)
-{
-  *_retval = nsnull;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLHttpRequestClassInfo::GetContractID(char **aContractID)
-{
-  *aContractID = nsnull;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsXMLHttpRequestClassInfo::GetClassDescription(char **aClassDescription)
-{
-  *aClassDescription = nsCRT::strdup("XMLHttpRequest");
-  NS_ENSURE_TRUE(*aClassDescription, NS_ERROR_OUT_OF_MEMORY);
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLHttpRequestClassInfo::GetClassID(nsCID **aClassID)
-{
-  *aClassID = nsnull;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLHttpRequestClassInfo::GetImplementationLanguage(PRUint32 *aImplLanguage)
-{
-  *aImplLanguage = LANGUAGE_CPP;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLHttpRequestClassInfo::GetFlags(PRUint32 *aFlags)
-{
-  *aFlags = nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::DOM_OBJECT;
-
-  return NS_OK;
-}
-
-
 nsXMLHttpRequest::nsXMLHttpRequest()
 {
   NS_INIT_ISUPPORTS();
@@ -401,9 +284,14 @@ nsXMLHttpRequest::~nsXMLHttpRequest()
 }
 
 
-NS_IMPL_ADDREF(nsXMLHttpRequest)
-NS_IMPL_RELEASE(nsXMLHttpRequest)
+// XPConnect interface list for nsXMLHttpRequest
+NS_CLASSINFO_MAP_BEGIN(XMLHttpRequest)
+  NS_CLASSINFO_MAP_ENTRY(nsIXMLHttpRequest)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASSINFO_MAP_END
 
+
+// QueryInterface implementation for nsXMLHttpRequest
 NS_INTERFACE_MAP_BEGIN(nsXMLHttpRequest)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXMLHttpRequest)
   NS_INTERFACE_MAP_ENTRY(nsIXMLHttpRequest)
@@ -413,15 +301,13 @@ NS_INTERFACE_MAP_BEGIN(nsXMLHttpRequest)
   NS_INTERFACE_MAP_ENTRY(nsIRequestObserver)
   NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    if (!sClassInfo) {
-      sClassInfo = new nsXMLHttpRequestClassInfo();
-      NS_ENSURE_TRUE(sClassInfo, NS_ERROR_OUT_OF_MEMORY);
-    }
-
-    foundInterface = sClassInfo;
-  } else
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(XMLHttpRequest)
 NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsXMLHttpRequest)
+NS_IMPL_RELEASE(nsXMLHttpRequest)
+
 
 /* void addEventListener (in string type, in nsIDOMEventListener listener); */
 NS_IMETHODIMP
