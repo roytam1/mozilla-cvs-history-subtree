@@ -257,16 +257,9 @@ ns4xPluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
   mStreamInfo = pluginInfo;
 
   // if we don't know the end of the stream, use 0 instead of -1. bug 59571
-//  if (mNPStream.end == -1)
-  if (mNPStream.end == 0xFFFFFFFF)
+  if (mNPStream.end == -1)
     mNPStream.end = 0;
 
-  if (!mNPStream.pdata) {
-    printf("Akkk, mNPStream.pdata is null\n");
-  }
-  if (mNPStream.ndata != npp->ndata) {
-    printf("Akkk, mNPStream.ndata (0x%08x) != npp->ndata (0x%08x)\n", mNPStream.ndata, npp->ndata);
-  }
   NS_TRY_SAFE_CALL_RETURN(error, CallNPP_NewStreamProc(callbacks->newstream,
                                                        npp,
                                                        (char *)contentType,
