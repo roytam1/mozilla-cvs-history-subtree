@@ -67,13 +67,13 @@ typedef struct il_ColorSpaceData {
        contribution to a depth N pixmap e.g. for a 24 to 16-bit color
        conversion, the output pixel is given by
 
-       uint8 red, green, blue;
-       uint16 output_pixel;
+       PRUint8 red, green, blue;
+       PRUint16 output_pixel;
        output_pixel = r8torgbn[red] + g8torgbn[green] + b8torgbn[blue];
 
        Depth conversion maps are created for the following destination image
        pixmap depths: N = 8, 16 and 32.  The type of the array elements is a
-       uintN. */
+       PRUintn. */
     void *r8torgbn;
     void *g8torgbn;
     void *b8torgbn;
