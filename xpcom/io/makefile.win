@@ -42,6 +42,8 @@ XPIDLSRCS =                         \
         .\nsIPipe.idl               \
         .\nsIFileSpec.idl           \
         .\nsIBaseStream.idl         \
+        .\nsIBinaryInputStream.idl  \
+        .\nsIBinaryOutputStream.idl \
         .\nsIInputStream.idl        \
         .\nsIOutputStream.idl       \
         .\nsIBufferInputStream.idl  \
@@ -65,6 +67,7 @@ LINCS = $(LINCS) -I$(PUBLIC)\raptor     # until we sort out the filespec/widgets
 LCFLAGS = -D_IMPL_NS_COM -D_IMPL_NS_BASE -DWIN32_LEAN_AND_MEAN
 
 CPP_OBJS =                                       \
+        .\$(OBJDIR)\nsBinaryStream.obj           \
         .\$(OBJDIR)\nsEscape.obj                 \
         .\$(OBJDIR)\nsFileSpec.obj               \
         .\$(OBJDIR)\nsFileSpecImpl.obj           \
@@ -75,8 +78,8 @@ CPP_OBJS =                                       \
         .\$(OBJDIR)\nsSegmentedBuffer.obj        \
         .\$(OBJDIR)\nsPipe2.obj                  \
         .\$(OBJDIR)\nsSpecialSystemDirectory.obj \
-        .\$(OBJDIR)\nsUnicharInputStream.obj     \
         .\$(OBJDIR)\nsStorageStream.obj          \
+        .\$(OBJDIR)\nsUnicharInputStream.obj     \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak>

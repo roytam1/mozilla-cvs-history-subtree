@@ -50,6 +50,7 @@
 #include "nsISizeOfHandler.h"
 #include "nsTextFormater.h"
 #include "nsStorageStream.h"
+#include "nsIBinaryInputStream.h"
 
 class dummyComparitor: public nsAVLNodeComparitor {
 public:
@@ -113,4 +114,5 @@ void XXXNeverCalled()
 #endif
     NS_NewSizeOfHandler(0);
     nsStorageStream();
+    NS_NewBinaryInputStream(0, 0);
 }
