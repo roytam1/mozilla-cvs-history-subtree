@@ -320,12 +320,6 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     NS_ASSERTION(aObserver, "no observer");
     NS_ENSURE_ARG_POINTER(aOutputDoc);
 
-    // Do we really need this now that this is not a scriptable function?
-    if (!URIUtils::CanCallerAccess(aSourceDOM) ||
-        !URIUtils::CanCallerAccess(aStyleDOM)) {
-        return NS_ERROR_DOM_SECURITY_ERR;
-    }
-
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
     aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
