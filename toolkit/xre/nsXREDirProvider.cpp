@@ -575,6 +575,9 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
+  rv = localDir->AppendNative(nsDependentCString(gAppData->appName));
+  NS_ENSURE_SUCCESS(rv, rv);
+
 #elif defined(XP_BEOS)
   char appDir[MAXPATHLEN];
   if (find_directory(B_USER_SETTINGS_DIRECTORY, NULL, true, appDir, MAXPATHLEN))
