@@ -73,7 +73,7 @@
     <tree id="cookiesList" flex="1" style="height: 10em;"
           onkeypress="gCookiesWindow.onCookieKeyPress(event)"
           onselect="gCookiesWindow.onCookieSelected();"
-          hidecolumnpicker="true">
+          hidecolumnpicker="true" seltype="single">
       <treecols>
         <treecol id="domainCol" label="&cookiedomain.label;" flex="2" primary="true"
                  class="sortDirectionIndicator" persist="width" onclick="gCookiesWindow.sort('rawHost');" />
