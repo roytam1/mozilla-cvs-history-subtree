@@ -200,7 +200,7 @@ int FilesTest::Persistence(
 	const char* pathAsString = (const char*)myTextFilePath;
 	nsFileSpec mySpec(myTextFilePath);
 
-	nsIOFileStream testStream(mySpec, (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE));
+	nsIOFileStream testStream(mySpec, (PR_RDWR | PR_CREATE_FILE | PR_TRUNCATE));
 	if (!testStream.is_open())
 	{
 		mConsole
@@ -224,11 +224,20 @@ int FilesTest::Persistence(
 	testStream >> mySecondPersistent;
 	
 	mySpec = mySecondPersistent;
-	if (mySpec.Error() || !mySpec.Exists())
+#ifdef XP_MAC
+    if (mySpec.Error())
 	{
 		Failed();
 		return -1;
 	}
+#endif
+
+    if (!mySpec.Exists())
+	{
+		Failed();
+		return -1;
+	}
+    
 	Passed();
 	return 0;
 }

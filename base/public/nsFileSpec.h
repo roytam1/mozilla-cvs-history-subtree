@@ -394,9 +394,9 @@ class NS_BASE nsPersistentFileDescriptor
                                 nsPersistentFileDescriptor(const nsFileSpec& inPath);
         void					operator = (const nsFileSpec& inPath);
         
-    	friend nsBasicInStream& operator >> (nsBasicInStream&, nsPersistentFileDescriptor&);
+    	friend NS_BASE nsBasicInStream& operator >> (nsBasicInStream&, nsPersistentFileDescriptor&);
     		// reads the data from a file
-    	friend nsBasicOutStream& operator << (nsBasicOutStream&, const nsPersistentFileDescriptor&);
+    	friend NS_BASE nsBasicOutStream& operator << (nsBasicOutStream&, const nsPersistentFileDescriptor&);
     	    // writes the data to a file
         friend class nsFileSpec;
 

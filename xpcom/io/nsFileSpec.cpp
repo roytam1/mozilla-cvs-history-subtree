@@ -513,12 +513,14 @@ void nsFileSpec::operator = (const nsFileURL& inURL)
 void nsFileSpec::operator = (const nsPersistentFileDescriptor& inDescriptor)
 //----------------------------------------------------------------------------------------
 {
-#ifdef XP_MAC
+
 	void* data;
 	PRInt32 dataSize;
     inDescriptor.GetData(data, dataSize);
+    
+#ifdef XP_MAC
     char* decodedData = PL_Base64Decode((const char*)data, (int)dataSize, nsnull);
-	// Cast to an alias record and resolve.
+    // Cast to an alias record and resolve.
 	AliasHandle aliasH = nsnull;
 	mError = PtrToHand(decodedData, &(Handle)aliasH, (dataSize * 3) / 4);
 	PR_Free(decodedData);
@@ -529,7 +531,7 @@ void nsFileSpec::operator = (const nsPersistentFileDescriptor& inDescriptor)
 	mError = ::ResolveAlias(nsnull, aliasH, &mSpec, &changed);
 	DisposeHandle((Handle) aliasH);
 #else
-    nsFileSpecHelpers::StringAssign(mPath, inDescriptor.GetString());
+    nsFileSpecHelpers::StringAssign(mPath, (char*)data);
 #endif
 }
 
@@ -708,7 +710,7 @@ nsBasicInStream& operator >> (nsBasicInStream& s, nsPersistentFileDescriptor& d)
 	char bigBuffer[1000];
 	// The first 8 bytes of the data should be a hex version of the data size to follow.
 	PRInt32 bytesRead = 8;
-	s.read(bigBuffer, bytesRead);
+	bytesRead = s.read(bigBuffer, bytesRead);
 	if (bytesRead != 8)
 		return s;
 	bigBuffer[8] = '\0';
