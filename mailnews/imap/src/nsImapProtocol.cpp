@@ -906,7 +906,7 @@ void nsImapProtocol::ParseIMAPandCheckForNewMail(const char* commandString)
 /////////////////////////////////////////////////////////////////////////////////////////////
 // we suppport the nsIStreamListener interface 
 ////////////////////////////////////////////////////////////////////////////////////////////
-NS_IMETHODIMP nsImapProtocol::OnDataAvailable(nsISupports *ctxt, nsIInputStream *aIStream, PRUint32 aSourceOffset, PRUint32 aLength)
+NS_IMETHODIMP nsImapProtocol::OnDataAvailable(nsIChannel * /* aChannel */, nsISupports *ctxt, nsIInputStream *aIStream, PRUint32 aSourceOffset, PRUint32 aLength)
 {
     PR_CEnterMonitor(this);
 
@@ -931,7 +931,7 @@ NS_IMETHODIMP nsImapProtocol::OnDataAvailable(nsISupports *ctxt, nsIInputStream 
 	return res;
 }
 
-NS_IMETHODIMP nsImapProtocol::OnStartRequest(nsISupports *ctxt)
+NS_IMETHODIMP nsImapProtocol::OnStartRequest(nsIChannel * /* aChannel */, nsISupports *ctxt)
 {
     PR_CEnterMonitor(this);
 	nsresult rv = NS_OK;
@@ -943,7 +943,7 @@ NS_IMETHODIMP nsImapProtocol::OnStartRequest(nsISupports *ctxt)
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsImapProtocol::OnStopRequest(nsISupports *ctxt, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsImapProtocol::OnStopRequest(nsIChannel * /* aChannel */, nsISupports *ctxt, nsresult aStatus, const PRUnichar* aMsg)
 {
     PR_CEnterMonitor(this);
 	nsresult rv = NS_OK;
