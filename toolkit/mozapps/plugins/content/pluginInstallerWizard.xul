@@ -66,7 +66,7 @@
   <wizardpage>
     <description value="&pluginWizard.checkingForPlugins.description.label;"/>
     <separator />
-    <progressmeter id="ws_request_progress" mode="undetermined" value="0%"/>
+    <progressmeter id="ws_request_progress" mode="undetermined"/>
   </wizardpage>
 
  <wizardpage label="&pluginWizard.availablePluginsPage.title;"  
@@ -113,7 +113,7 @@
     <separator />
 
     <description id="plugin_install_progress_message" value=""/>
-    <progressmeter id="plugin_install_progress" mode="undetermined" value="0%"/>
+    <progressmeter id="plugin_install_progress" mode="undetermined"/>
   </wizardpage>
 
   <wizardpage id="lastpage" pageid="lastpage" 

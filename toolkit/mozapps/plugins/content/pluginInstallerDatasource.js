@@ -29,7 +29,7 @@ nsRDFItemUpdater.prototype = {
     var ds = this._rdfService.GetDataSource(dsURI);
     var rds = ds.QueryInterface(Components.interfaces.nsIRDFRemoteDataSource)
     if (rds.loaded)
-      this.onDatasourceLoaded(ds);
+      this.onDatasourceLoaded(ds, aPluginRequestItem);
     else {
       var sink = ds.QueryInterface(Components.interfaces.nsIRDFXMLSink);
       sink.addXMLSinkObserver(new nsPluginXMLRDFDSObserver(this, aPluginRequestItem));

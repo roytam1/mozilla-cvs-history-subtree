@@ -186,8 +186,7 @@ nsPluginInstallerWizard.prototype.showLicenses = function (){
   // be installed
   for (pluginInfoItem in this.mPluginInfoArray){
     var myPluginInfoItem = this.mPluginInfoArray[pluginInfoItem];
-
-    if (myPluginInfoItem.toBeInstalled && (myPluginInfoItem.licenseURL != ""))
+    if (myPluginInfoItem.toBeInstalled && myPluginInfoItem.licenseURL && (myPluginInfoItem.licenseURL != ""))
       this.mPluginLicenseArray.push(myPluginInfoItem.pid);
   }
 
