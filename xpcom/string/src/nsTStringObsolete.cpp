@@ -307,7 +307,7 @@ nsTString_CharT::StripChar( char_type aChar, PRInt32 aOffset )
 
     EnsureMutable(); // XXX do this lazily?
 
-    // XXXdarin this code should defer writing until necessary.
+    // XXX(darin): this code should defer writing until necessary.
 
     char_type* to   = mData + aOffset;
     char_type* from = mData + aOffset;
