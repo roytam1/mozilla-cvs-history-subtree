@@ -884,6 +884,7 @@ browser/components/shell/public/Makefile
 browser/installer/Makefile
 browser/installer/unix/Makefile
 browser/installer/windows/Makefile
+browser/base/content/contents-region.rdf
 "
 
 MAKEFILES_xulapp="
