@@ -93,7 +93,6 @@ private:
 	PRInt32 	m_previousResponseCode; 
 	PRInt32		m_continuationResponse;
     nsString    m_responseText;   /* text returned from Smtp server */
-	char	   *m_hostName;
 	PRUint32    m_port;
 
 	char	   *m_addressCopy;
