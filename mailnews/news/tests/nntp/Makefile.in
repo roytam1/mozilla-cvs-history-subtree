@@ -33,21 +33,9 @@ ifdef MOZ_OJI
 endif
 
 LIBS = \
-	-labouturl \
-	-lfileurl \
-	-lftpurl \
-	-lgophurl \
-	-lremoturl \
-	-lhttpurl \
-	-lsockstuburl \
-	-lnetcache \
-	-lmimetype \
-	-lnetcnvts \
-	-lnetwork \
-	-lnetlib \
+	-lneckoutil_s \
 	-lreg	\
 	-lxpcom	\
-	-lpwcac \
 	-lmozdbm	\
 	-lxp	\
 	-lpref	\
@@ -67,6 +55,7 @@ LIBS = \
 	$(DIST)/lib/librdfbase_s.a \
 	$(NSPR_LIBS) \
 	$(TK_LIBS) \
+	-lneckoutil_s \
 	$(NULL)
 
 include $(topsrcdir)/config/config.mk
