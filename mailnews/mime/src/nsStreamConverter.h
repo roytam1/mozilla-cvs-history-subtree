@@ -19,7 +19,7 @@
 #define nsStreamConverter_h_
 
 #include "nsCOMPtr.h"
-#include "nsIStreamConverter.h" 
+#include "nsIStreamConverter2.h" 
 #include "nsIMimeStreamConverter.h"
 #include "nsIOutputStream.h"
 #include "nsIMimeEmitter.h" 
@@ -32,7 +32,7 @@
 #define NS_STREAM_CONVERTER_SEGMENT_SIZE   (4*1024)
 #define NS_STREAM_CONVERTER_BUFFER_SIZE    (1024*1024)//(32*1024)
 
-class nsStreamConverter : public nsIStreamConverter, public nsIMimeStreamConverter, public nsIBufferObserver { 
+class nsStreamConverter : public nsIStreamConverter2, public nsIMimeStreamConverter, public nsIBufferObserver { 
 public: 
   nsStreamConverter();
   virtual ~nsStreamConverter();
