@@ -2318,8 +2318,8 @@ JS_EvaluateUCScriptForPrincipals(JSContext *cx, JSObject *obj,
     if (!script)
 	return JS_FALSE;
     ok = js_Execute(cx, obj, script, NULL, NULL, JS_FALSE, rval);
-    if (!ok)
 #if JS_HAS_ERROR_EXCEPTIONS
+    if (!ok)
         js_ReportUncaughtException(cx);
 #endif
     JS_DestroyScript(cx, script);
