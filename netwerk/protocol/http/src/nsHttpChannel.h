@@ -196,6 +196,9 @@ private:
 
     nsCString                         mContentTypeHint;
     nsCString                         mContentCharsetHint;
+
+    // mProperties must be nsISupports, not nsIProperties, due to aggregation
+    nsCOMPtr<nsISupports>             mProperties;
     
     // cache specific data
     nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry;

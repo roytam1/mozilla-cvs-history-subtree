@@ -147,36 +147,32 @@ nsInstallTrigger::HandleContent(const char * aContentType,
         return NS_ERROR_ILLEGAL_VALUE;
 
 
-#ifdef NS_DEBUG
-    // XXX: if only the owner weren't always null this is what I'd want to do
-
-    // Get the owner of the channel to perform permission checks.
-    //
-    // It's OK if owner is null, this means it was a top level
-    // load and we want to allow installs in that case.
-    nsCOMPtr<nsISupports>  owner;
-    nsCOMPtr<nsIPrincipal> principal;
-    nsCOMPtr<nsIURI>       ownerURI;
-
-    channel->GetOwner( getter_AddRefs( owner ) );
-    if ( owner )
-    {
-        principal = do_QueryInterface( owner );
-        if ( principal )
-        {
-            principal->GetURI( getter_AddRefs( ownerURI ) );
-        }
-    }
-#endif
-
     // Save the referrer if any, for permission checks
+    static const char kReferrerProperty[] = "docshell.internalReferrer";
+    PRBool useReferrer = PR_FALSE;
     nsCOMPtr<nsIURI> referringURI;
-    nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
-    if ( httpChannel )
-    {
-        httpChannel->GetReferrer(getter_AddRefs(referringURI));
-    }
+    nsCOMPtr<nsIProperties> channelprops(do_QueryInterface(channel));
 
+    if (channelprops)
+    {
+        // Get the referrer from the channel properties if we can (not all
+        // channels support our internal-referrer property).
+        //
+        // It's possible docshell explicitly set a null referrer in the case
+        // of typed, pasted, or bookmarked URLs and the like. In this null
+        // referrer case we get NS_ERROR_NO_INTERFACE rather than the usual
+        // NS_ERROR_FAILURE that indicates the property was not set at all.
+        //
+        // A null referrer is automatically whitelisted as an explicit user
+        // action (though they'll still get the confirmation dialog). For a
+        // missing referrer we go to our fall-back plan of using the XPI
+        // location for whitelisting purposes.
+        rv = channelprops->Get(kReferrerProperty,
+                               NS_GET_IID(nsIURI),
+                               getter_AddRefs(referringURI));
+        if (NS_SUCCEEDED(rv) || rv == NS_ERROR_NO_INTERFACE)
+            useReferrer = PR_TRUE;
+    }
 
     // Cancel the current request. nsXPInstallManager restarts the download
     // under its control (shared codepath with InstallTrigger)
@@ -199,14 +195,15 @@ nsInstallTrigger::HandleContent(const char * aContentType,
     // going to honor this request based on PermissionManager settings
     PRBool enabled = PR_FALSE;
 
-    if ( referringURI )
+    if ( useReferrer )
     {
-        // easiest and most common case: base decision on http referrer
+        // easiest and most common case: base decision on the page that
+        // contained the link
         //
         // NOTE: the XPI itself may be from elsewhere; the user can decide if
         // they trust the actual source when they get the install confirmation
         // dialog. The decision we're making here is whether the triggering
-        // site is one which is allowed to annoy the user with modal dialogs
+        // site is one which is allowed to annoy the user with modal dialogs.
 
         enabled = AllowInstall( referringURI );
     }
