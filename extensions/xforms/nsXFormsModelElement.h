@@ -44,13 +44,18 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMDocument.h"
+#include "nsClassHashtable.h"
+#include "nsIDocumentObserver.h"
 
 #include "nsISchemaLoader.h"
+
+class nsIDOMXPathEvaluator;
 
 class nsXFormsModelElement : public nsIXTFGenericElement,
                              public nsIXFormsModelElement,
                              public nsISchemaLoadListener,
-                             public nsIDOMLoadListener
+                             public nsIDOMLoadListener,
+                             public nsIDocumentObserver
 {
 public:
   nsXFormsModelElement() NS_HIDDEN;
@@ -61,6 +66,7 @@ public:
   NS_DECL_NSIXFORMSMODELELEMENT
   NS_DECL_NSISCHEMALOADLISTENER
   NS_DECL_NSIDOMEVENTLISTENER
+  NS_DECL_NSIDOCUMENTOBSERVER
 
   // nsIDOMLoadListener
   NS_IMETHOD Load(nsIDOMEvent* aEvent);
@@ -73,8 +79,11 @@ public:
                                      PRBool aCanBubble, PRBool aCanCancel,
                                      PRBool *aDefaultPrevented);
 private:
+  class ModelItemProperties;
 
   NS_HIDDEN_(nsresult) FinishConstruction();
+  NS_HIDDEN_(PRBool)   ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
+                                   nsIContent *aBindElement);
 
   PRBool IsComplete() const { return (mSchemas.Count() == mSchemaCount)
                                 && mInstanceDataLoaded; }
@@ -82,6 +91,7 @@ private:
   nsCOMPtr<nsIContent> mContent;
   nsCOMArray<nsISchema> mSchemas;
   nsCOMPtr<nsIDOMDocument> mInstanceDocument;
+  nsClassHashtable<nsISupportsHashKey,ModelItemProperties> mProperties;
 
   PRInt32 mSchemaCount;
   PRBool  mInstanceDataLoaded;

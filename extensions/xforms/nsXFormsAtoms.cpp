@@ -42,11 +42,15 @@
 nsIAtom* nsXFormsAtoms::schema;
 nsIAtom* nsXFormsAtoms::instance;
 nsIAtom* nsXFormsAtoms::src;
+nsIAtom* nsXFormsAtoms::bind;
+nsIAtom* nsXFormsAtoms::nodeset;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "schema",   &nsXFormsAtoms::schema },
   { "instance", &nsXFormsAtoms::instance },
-  { "src",      &nsXFormsAtoms::src }
+  { "src",      &nsXFormsAtoms::src },
+  { "bind",     &nsXFormsAtoms::bind },
+  { "nodeset",  &nsXFormsAtoms::nodeset }
 };
 
 void

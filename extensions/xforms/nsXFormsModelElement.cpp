@@ -53,6 +53,10 @@
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMXMLDocument.h"
 #include "nsIDOMEventReceiver.h"
+#include "nsIDOMXPathResult.h"
+#include "nsIDOMXPathEvaluator.h"
+#include "nsIDOMXPathNSResolver.h"
+#include "nsIDOMXPathExpression.h"
 
 #include "nsISchemaLoader.h"
 #include "nsAutoPtr.h"
@@ -101,10 +105,22 @@ EVENT_HELPER_NC(LinkException, "link-exception", PR_TRUE)
 EVENT_HELPER_NC(LinkError, "link-error", PR_TRUE)
 EVENT_HELPER_NC(ComputeException, "compute-exception", PR_TRUE)
 
+struct nsXFormsModelElement::ModelItemProperties
+{
+  nsCOMPtr<nsIDOMXPathExpression> type;
+  nsCOMPtr<nsIDOMXPathExpression> readonly;
+  nsCOMPtr<nsIDOMXPathExpression> required;
+  nsCOMPtr<nsIDOMXPathExpression> relevant;
+  nsCOMPtr<nsIDOMXPathExpression> calculate;
+  nsCOMPtr<nsIDOMXPathExpression> constraint;
+  nsCOMPtr<nsIDOMXPathExpression> p3ptype;
+};
+
 nsXFormsModelElement::nsXFormsModelElement()
   : mSchemaCount(0),
     mInstanceDataLoaded(PR_FALSE)
 {
+  mProperties.Init();  // XXX tune default size
 }
 
 NS_IMPL_ADDREF(nsXFormsModelElement)
@@ -117,6 +133,7 @@ NS_INTERFACE_MAP_BEGIN(nsXFormsModelElement)
   NS_INTERFACE_MAP_ENTRY(nsISchemaLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
+  NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXTFElement)
 NS_INTERFACE_MAP_END
 
@@ -402,6 +419,10 @@ NS_IMETHODIMP
 nsXFormsModelElement::GetInstanceDocument(const nsAString& aInstanceID,
                                           nsIDOMDocument **aDocument)
 {
+  if (!mInstanceDocument)
+    return NS_ERROR_FAILURE; // what sort of exception should this be?
+
+  NS_ADDREF(*aDocument = mInstanceDocument);
   return NS_OK;
 }
 
@@ -494,6 +515,52 @@ nsXFormsModelElement::Error(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
+// nsIDocumentObserver
+NS_IMPL_NSIDOCUMENTOBSERVER_CORE_STUB(nsXFormsModelElement)
+NS_IMPL_NSIDOCUMENTOBSERVER_LOAD_STUB(nsXFormsModelElement)
+NS_IMPL_NSIDOCUMENTOBSERVER_REFLOW_STUB(nsXFormsModelElement)
+NS_IMPL_NSIDOCUMENTOBSERVER_STATE_STUB(nsXFormsModelElement)
+NS_IMPL_NSIDOCUMENTOBSERVER_STYLE_STUB(nsXFormsModelElement)
+
+void
+nsXFormsModelElement::CharacterDataChanged(nsIDocument *aDocument,
+                                           nsIContent  *aContent,
+                                           PRBool       aAppend)
+{
+}
+
+void
+nsXFormsModelElement::AttributeChanged(nsIDocument *aDocument,
+                                       nsIContent  *aContent,
+                                       PRInt32      aNameSpaceID,
+                                       nsIAtom     *aAttribute,
+                                       PRInt32      aModType)
+{
+}
+
+void
+nsXFormsModelElement::ContentAppended(nsIDocument *aDocument,
+                                      nsIContent  *aContent,
+                                      PRInt32      aNewIndexInContainer)
+{
+}
+
+void
+nsXFormsModelElement::ContentInserted(nsIDocument *aDocument,
+                                      nsIContent  *aContainer,
+                                      nsIContent  *aChild,
+                                      PRInt32      aIndexInContainer)
+{
+}
+
+void
+nsXFormsModelElement::ContentRemoved(nsIDocument *aDocument,
+                                     nsIContent  *aContainer,
+                                     nsIContent  *aChild,
+                                     PRInt32      aIndexInContainer)
+{
+}
+
 // internal methods
 
 nsresult
@@ -504,11 +571,52 @@ nsXFormsModelElement::FinishConstruction()
   // 4. construct instance data from initial instance data.  apply all
   // <bind> elements in document order.
 
+  // The instance data is in our mInstanceDocument.
+
+  PRUint32 childCount = mContent->GetChildCount();
+  nsCOMPtr<nsIDOMXPathEvaluator> xpath = do_QueryInterface(mInstanceDocument);
+
+  for (PRUint32 i = 0; i < childCount; ++i) {
+    nsIContent *child = mContent->GetChildAt(i);
+    nsINodeInfo *ni = child->GetNodeInfo();
+
+    if (ni && ni->Equals(nsXFormsAtoms::bind, kNameSpaceID_XForms)) {
+      if (!ProcessBind(xpath, child)) {
+        DispatchBindingExceptionEvent(this);
+        return NS_OK;
+      }
+    }
+  }
+
   // 5. dispatch xforms-rebuild, xforms-recalculate, xforms-revalidate
 
   // mark this model as initialized
 
   return NS_OK;
+}
+
+PRBool
+nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
+                                  nsIContent *aBindElement)
+{
+  nsAutoString expr;
+  aBindElement->GetAttr(kNameSpaceID_None, nsXFormsAtoms::nodeset, expr);
+  if (expr.IsEmpty())
+    return PR_TRUE;
+
+  // nodeset is an XPath PathExpr that refers to a set of nodes.
+  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aBindElement);
+  nsCOMPtr<nsIDOMXPathNSResolver> resolver;
+  aEvaluator->CreateNSResolver(node, getter_AddRefs(resolver));
+
+  nsCOMPtr<nsIDOMXPathResult> result;
+  nsresult rv = aEvaluator->Evaluate(expr, mInstanceDocument, resolver,
+                                     nsIDOMXPathResult::ANY_TYPE, nsnull,
+                                     getter_AddRefs(result));
+  if (NS_FAILED(rv))
+    return PR_FALSE;
+
+  return PR_TRUE;
 }
 
 nsresult

@@ -44,6 +44,8 @@ class nsXFormsAtoms
   static nsIAtom *schema;
   static nsIAtom *instance;
   static nsIAtom *src;
+  static nsIAtom *bind;
+  static nsIAtom *nodeset;
 
   static NS_HIDDEN_(void) InitAtoms();
 
