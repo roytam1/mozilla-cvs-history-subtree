@@ -78,6 +78,8 @@ foreach $search (@srch)
     }
 
   print "Searched for `$search':\n\n";
+  $conn->printError() if $conn->getErrorCode();
+
   while($entry)
     {
       Mozilla::LDAP::Utils::printEntry($entry);

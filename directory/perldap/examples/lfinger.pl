@@ -113,6 +113,8 @@ else
 }
 
 $entry = $conn->search($ld{root}, "subtree", $search, 0, @ATTRIBUTES);
+$conn->printError() if $conn->getErrorCode();
+
 while($entry)
 {
   printIt($entry);

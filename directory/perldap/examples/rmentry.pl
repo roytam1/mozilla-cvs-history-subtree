@@ -63,6 +63,8 @@ $key = "Y" if $opt_I;
 foreach $search (@ARGV)
 {
   $entry = $conn->search($ld{root}, $ld{scope}, $search, 0, @ATTRIBUTES);
+  $conn->printError() if $conn->getErrorCode();
+
   while ($entry)
     {
       if (! $opt_I)
@@ -73,7 +75,11 @@ foreach $search (@ARGV)
 
       if ($key eq "Y")
 	{
-	  $conn->delete($entry->{dn}) unless $opt_n;
+	  if (! $opt_n)
+	    {
+	      $conn->delete($entry->{dn});
+	      $conn->printError() if $conn->getErrorCode();
+	    }
 	  print "Deleted $entry->{dn}\n" if $opt_v;
 	}
 

@@ -90,7 +90,7 @@ foreach $search ($#ARGV >= $[ ? @ARGV : $ld{bind})
       if (!$opt_n)
 	{
 	  $conn->update($entry);
-	  $conn->printError() if $conn->getError();
+	  $conn->printError() if $conn->getErrorCode();
 	}
 
       $entry = $conn->nextEntry();

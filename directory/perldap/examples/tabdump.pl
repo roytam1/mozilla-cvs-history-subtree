@@ -62,6 +62,8 @@ die "Could't connect to LDAP server $ld{host}" unless $conn;
 
 @attr = split(/,/, $attributes);
 $entry = $conn->search($ld{root}, $ld{scope}, $search, 0, @attr);
+$conn->printError() if $conn->getErrorCode();
+
 while ($entry)
 {
   foreach (@attr)
