@@ -26,6 +26,9 @@ include $(MOD_DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
+ifdef USE_AUTOCONF
+CSRCS = $(PR_MD_CSRCS)
+else
 ifeq ($(OS_TARGET), WIN16)
 CSRCS = \
 	w16null.c \
@@ -70,10 +73,11 @@ CSRCS =          \
     $(NULL)
 endif
 endif
+endif # USE_AUTOCONF
 
 TARGETS	= $(OBJS)
 
-INCLUDES = -I$(DIST)/include -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(DIST)/include -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
 include $(topsrcdir)/config/rules.mk
 
