@@ -103,6 +103,8 @@ protected:
    void EnableParent(PRBool aEnable);
    PRBool ConstrainToZLevel(PRBool aImmediate, nsWindowZ *aPlacement,
             nsIWidget *aReqBelow, nsIWidget **aActualBelow);
+   void   PlaceWindowLayersBehind(PRUint32 aLowLevel, PRUint32 aHighLevel,
+                                  nsIXULWindow *aBehind);
    void                    SetContentScrollbarVisibility(PRBool aVisible);
    PRBool                  GetContentScrollbarVisibility();
 
