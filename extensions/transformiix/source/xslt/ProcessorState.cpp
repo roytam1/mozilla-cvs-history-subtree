@@ -195,8 +195,10 @@ void ProcessorState::addTemplate(Element* xslTemplate) {
         namedTemplates.put(name,mObj);
         if ( oldObj ) delete oldObj;
     }
-    patternExprHash.put(match, exprParser.createPatternExpr(match));
-    templates.add(xslTemplate);
+    if (match.length() > 0) {
+        patternExprHash.put(match, exprParser.createPatternExpr(match));
+        templates.add(xslTemplate);
+    }
 } //-- addTempalte
 
 /**

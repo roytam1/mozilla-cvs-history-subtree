@@ -77,8 +77,11 @@ ExprResult* StringExpr::evaluate(Node* context, ContextState* cs) {
  * @return the String representation of this Expr.
 **/
 void StringExpr::toString(String& str) {
-    str.append('\'');
+    UNICODE_CHAR ch = '\'';
+    if (value.indexOf(ch) != NOT_FOUND)
+        ch = '\"';
+    str.append(ch);
     str.append(value);
-    str.append('\'');
+    str.append(ch);
 } //-- toString
 
