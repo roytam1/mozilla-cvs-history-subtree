@@ -54,6 +54,9 @@ static const char DISK_CACHE_DEVICE_ID[] = { "disk" };
 /******************************************************************************
  *  nsDiskCacheObserver
  *****************************************************************************/
+#ifdef XP_MAC
+#pragma mark nsDiskCacheObserver
+#endif
 
 // Using nsIPref will be subsumed with nsIDirectoryService when a selector
 // for the cache directory has been defined.
@@ -258,11 +261,86 @@ static nsresult removeObservers(nsDiskCacheDevice* device)
 
 
 /******************************************************************************
+ *  EvictForClientID
+ *
+ *  Helper class for nsDiskCacheDevice.
+ *
+ *****************************************************************************/
+#ifdef XP_MAC
+#pragma mark -
+#pragma mark EvictForClientID
+#endif
+
+class EvictForClientID : public nsDiskCacheRecordVisitor
+{
+public:
+    EvictForClientID( nsDiskCacheDevice *   device,
+                      nsDiskCacheMap *      cacheMap,
+                      nsDiskCacheBindery *  cacheBindery,
+                      const char *          clientID)
+        : mDevice(device), mCacheMap(cacheMap), mBindery(cacheBindery), mClientID(clientID)
+    {}
+    
+    virtual PRInt32  VisitRecord(nsDiskCacheRecord *  mapRecord);
+ 
+private:
+        nsDiskCacheDevice *  mDevice;
+        nsDiskCacheMap *     mCacheMap;
+        nsDiskCacheBindery * mBindery;
+        const char *         mClientID;
+};
+
+
+PRInt32
+EvictForClientID::VisitRecord(nsDiskCacheRecord *  mapRecord)
+{
+    // read disk cache entry
+    nsDiskCacheEntry * diskEntry = nsnull;
+    char *             clientID  = nsnull;
+    PRInt32            result    = kVisitNextRecord;
+
+    if (mClientID) {
+         // we're just evicting records for a specific client
+        nsresult  rv = mCacheMap->ReadDiskCacheEntry(mapRecord, &diskEntry);
+        if (NS_FAILED(rv))  goto exit;  // XXX or delete record?
+    
+        // get client ID from key
+        rv = ClientIDFromCacheKey(nsLiteralCString(diskEntry->mKeyStart), &clientID);
+        if (NS_FAILED(rv))  goto exit;
+         
+        if (nsCRT::strcmp(mClientID, clientID) != 0) goto exit;
+    }
+    
+    nsDiskCacheBinding * binding = mBindery->FindActiveBinding(mapRecord->HashNumber());
+    if (binding) {
+        // we are currently using this entry, so all we can do is doom it
+        
+        // since we're enumerating the records, we don't want to call DeleteRecord
+        // when nsCacheService::GlobalInstance()->DoomEntry_Locked() calls us back.
+        binding->mDoomed = PR_TRUE;         // mark binding record as 'deleted'
+        nsCacheService::GlobalInstance()->DoomEntry_Locked(binding->mCacheEntry);
+        result = kDeleteRecordAndContinue;  // this will REALLY delete the record
+
+    } else {
+        // entry not in use, just delete storage because we're enumerating the records
+        (void) mCacheMap->DeleteStorage(mapRecord);
+        result = kDeleteRecordAndContinue;  // this will REALLY delete the record
+    }
+
+exit:
+    
+    delete clientID;
+    delete diskEntry;
+    return result;
+}
+
+
+/******************************************************************************
  *  nsDiskCacheDeviceInfo
  *****************************************************************************/
 #ifdef XP_MAC
 #pragma mark -
-#pragma mark DISK CACHE DEVICE INFO
+#pragma mark nsDiskCacheDeviceInfo
 #endif
 
 class nsDiskCacheDeviceInfo : public nsICacheDeviceInfo {
@@ -311,7 +389,7 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetUsageReport(char ** usageReport)
         buffer.Append("directory unavailable");
     }
     buffer.Append("</tt></td></tr>");
-    buffer.Append("<tr><td><b>Files:</b></td><td><tt> XXX</tt></td></tr>");
+    // buffer.Append("<tr><td><b>Files:</b></td><td><tt> XXX</tt></td></tr>");
     buffer.Append("</table>");
     *usageReport = buffer.ToNewCString();
     if (!*usageReport) return NS_ERROR_OUT_OF_MEMORY;
@@ -347,6 +425,10 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetMaximumSize(PRUint32 *aMaximumSize)
 /******************************************************************************
  *  nsDiskCache
  *****************************************************************************/
+#ifdef XP_MAC
+#pragma mark -
+#pragma mark nsDiskCache
+#endif
 
 /**
  *  nsDiskCache::Hash(const char * key)
@@ -373,7 +455,7 @@ static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 #ifdef XP_MAC
 #pragma mark -
-#pragma mark DISK CACHE DEVICE
+#pragma mark nsDiskCacheDevice
 #endif
 
 nsDiskCacheDevice::nsDiskCacheDevice()
@@ -628,10 +710,12 @@ nsDiskCacheDevice::DoomEntry(nsCacheEntry * entry)
     NS_ASSERTION(binding, "DoomEntry: binding == nsnull");
     if (!binding)  return;
 
-    // so it can't be seen by FindEntry() ever again.
-    nsresult rv = mCacheMap->DoomRecord(&binding->mRecord);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "DoomRecord failed.");
-    binding->mDoomed = PR_TRUE; // record in no longer in cache map
+    if (!binding->mDoomed) {
+        // so it can't be seen by FindEntry() ever again.
+        nsresult rv = mCacheMap->DoomRecord(&binding->mRecord);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "DoomRecord failed.");
+        binding->mDoomed = PR_TRUE; // record in no longer in cache map
+    }
 }
 
 
@@ -643,6 +727,7 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
     NS_ENSURE_ARG_POINTER(entry);
     NS_ENSURE_ARG_POINTER(result);
 
+    nsresult             rv;
     nsDiskCacheBinding * binding = GetCacheEntryBinding(entry);
     NS_ASSERTION(binding, "GetTransportForEntry: binding == nsnull");
     if (!binding)  return NS_ERROR_UNEXPECTED;
@@ -656,8 +741,11 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
 #endif
     // check/set binding->mRecord for separate or block file, sync w/mCacheMap
     binding->mRecord.SetDataFileGeneration(binding->mGeneration);
-    nsresult rv = mCacheMap->UpdateRecord(&binding->mRecord);
-    if (NS_FAILED(rv))  return rv;
+    if (!binding->mDoomed) {
+        // record stored in cache map, so update it
+        rv = mCacheMap->UpdateRecord(&binding->mRecord);
+        if (NS_FAILED(rv))  return rv;
+    }
 
     // generate the name of the cache entry from the hash code of its key,
     // modulo the number of files we're willing to keep cached.
@@ -689,14 +777,18 @@ nsresult
 nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
                                    nsIFile **        result)
 {
+    nsresult             rv;
     nsDiskCacheBinding * binding = GetCacheEntryBinding(entry);
     NS_ASSERTION(binding, "GetFileForEntry: binding == nsnull");
     if (!binding)  return NS_ERROR_UNEXPECTED;
     
     // check/set binding->mRecord for separate file, sync w/mCacheMap
     binding->mRecord.SetDataFileGeneration(binding->mGeneration);
-    nsresult rv = mCacheMap->UpdateRecord(&binding->mRecord);
-    if (NS_FAILED(rv))  return rv;
+     if (!binding->mDoomed) {
+        // record stored in cache map, so update it
+       rv = mCacheMap->UpdateRecord(&binding->mRecord);
+        if (NS_FAILED(rv))  return rv;
+    }
     
     nsCOMPtr<nsIFile>  file;
     rv = mCacheMap->GetFileForDiskCacheRecord(&binding->mRecord,
@@ -790,41 +882,21 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
 }
 
 
-/******************************************************************************
- *  EvictForClientID
- *****************************************************************************/
-class EvictForClientID : public nsDiskCacheRecordVisitor
-{
-public:
-    EvictForClientID(nsDiskCacheDevice * device, const char * clientID)
-        : mDevice(device), mClientID(clientID)
-    {}
-    
-    virtual PRInt32  VisitRecord(nsDiskCacheRecord *  mapRecord)
-    {
-        return kVisitNextRecord;
-    }
- 
-private:
-        nsDiskCacheDevice * mDevice;
-        const char *        mClientID;
-};
-
-
 nsresult
 nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
-//    nsresult rv;
+    nsresult rv;
     
     PRUint32 prefixLength  = (clientID ? nsCRT::strlen(clientID) : 0);
     PRInt32  newDataSize   = mCacheMap->TotalSize();
     PRInt32  newEntryCount = mCacheMap->EntryCount();
 
-    EvictForClientID  evictor(this, clientID);
-// XXX    rv = mCacheMap->VisitRecords(&evictor);
+    EvictForClientID  evictor(this, mCacheMap, &mBindery, clientID);
+    rv = mCacheMap->VisitRecords(&evictor);
     
-    return NS_OK;
+    return rv;
 }
+
 
 /**
  *  private methods

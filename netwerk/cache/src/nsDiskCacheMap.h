@@ -130,7 +130,7 @@ public:
         // set blockCount
         NS_ASSERTION( (blockCount>=1) && (blockCount<=4),"invalid block count");
         blockCount = --blockCount;
-        mDataLocation |= (blockCount & eExtraBlocksMask) << eExtraBlocksOffset;
+        mDataLocation |= (blockCount << eExtraBlocksOffset) & eExtraBlocksMask;
         
         mDataLocation |= eLocationInitializedMask;
     }
@@ -186,7 +186,7 @@ public:
         // set blockCount
         NS_ASSERTION( (blockCount>=1) && (blockCount<=4),"invalid block count");
         blockCount = --blockCount;
-        mMetaLocation |= (blockCount & eExtraBlocksMask) << eExtraBlocksOffset;
+        mMetaLocation |= (blockCount << eExtraBlocksOffset) & eExtraBlocksMask;
         
         mMetaLocation |= eLocationInitializedMask;
     }
@@ -273,7 +273,8 @@ class nsDiskCacheRecordVisitor {
  *  nsDiskCacheBucket
  *****************************************************************************/
 enum {
-    kRecordsPerBucket = 256
+    kRecordsPerBucket = 256,
+    kBucketsPerTable = (1 << 5)         // must be a power of 2!
 };
 
 struct nsDiskCacheBucket {
@@ -282,8 +283,9 @@ struct nsDiskCacheBucket {
     void      Swap();
     void      Unswap();
     PRUint32  CountRecords();
+    PRUint32  EvictionRank();   // return largest rank in bucket
     PRInt32   VisitEachRecord( nsDiskCacheRecordVisitor *  visitor,
-                               PRBool *                    dirty);
+                               PRUint32 *                  recordsDeleted);
 };
 
 
@@ -296,36 +298,42 @@ struct nsDiskCacheHeader {
     PRInt32     mDataSize;                          // size of cache in bytes.
     PRInt32     mEntryCount;                        // number of entries stored in cache.
     PRUint32    mIsDirty;                           // dirty flag.
+    PRUint32    mEvictionRank[kBucketsPerTable];
     
     // pad to blocksize
-    enum { kReservedBytes = sizeof(nsDiskCacheBucket) - 4 * sizeof(PRUint32) };
+    enum { kReservedBytes = sizeof(nsDiskCacheBucket)
+                            - sizeof(PRUint32) * 4      // version, size, count, dirty
+                            - sizeof(PRUint32) * kBucketsPerTable   // eviction array
+    };
+                            
     PRUint8     reserved[kReservedBytes];
 
     // XXX need a bitmap?
     
     nsDiskCacheHeader()
-        :   mVersion(nsDiskCache::kCurrentVersion), mDataSize(0),
-            mEntryCount(0), mIsDirty(PR_TRUE)
-    {
-    }
+        : mVersion(nsDiskCache::kCurrentVersion)
+        , mDataSize(0)
+        , mEntryCount(0)
+        , mIsDirty(PR_TRUE)
+    {}
 
     void        Swap()
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mVersion    = ::PR_htonl(mVersion);
-        mDataSize   = ::PR_htonl(mDataSize);
-        mEntryCount = ::PR_htonl(mEntryCount);
-        mIsDirty    = ::PR_htonl(mIsDirty);
+        mVersion     = ::PR_htonl(mVersion);
+        mDataSize    = ::PR_htonl(mDataSize);
+        mEntryCount  = ::PR_htonl(mEntryCount);
+        mIsDirty     = ::PR_htonl(mIsDirty);
 #endif
     }
     
     void        Unswap()
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mVersion    = ::PR_ntohl(mVersion);
-        mDataSize   = ::PR_ntohl(mDataSize);
-        mEntryCount = ::PR_ntohl(mEntryCount);
-        mIsDirty    = ::PR_ntohl(mIsDirty);
+        mVersion     = ::PR_ntohl(mVersion);
+        mDataSize    = ::PR_ntohl(mDataSize);
+        mEntryCount  = ::PR_ntohl(mEntryCount);
+        mIsDirty     = ::PR_ntohl(mIsDirty);
 #endif
     }
 };
@@ -335,10 +343,9 @@ struct nsDiskCacheHeader {
  *  nsDiskCacheMap
  *****************************************************************************/
 
-// XXX initial capacity, enough for 8192 distinct entries.
+// XXX fixed capacity for 8192 entries. Future: make dynamic
 
 enum {
-    kBucketsPerTable = (1 << 5),                 // must be a power of 2!
     kCacheMapSize = sizeof(nsDiskCacheHeader) +
                     kBucketsPerTable * sizeof(nsDiskCacheBucket)
 };
@@ -350,7 +357,9 @@ public:
      nsDiskCacheMap()
         : mCacheDirectory(nsnull)
         , mMapFD(nsnull)
-        {}
+        {
+            NS_ASSERTION(sizeof(nsDiskCacheHeader) == sizeof(nsDiskCacheBucket), "structure misalignment");
+        }
     ~nsDiskCacheMap()                   { (void) Close(); }
 
 /**

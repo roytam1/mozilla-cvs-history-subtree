@@ -174,6 +174,7 @@ nsDiskCacheBinding *
 nsDiskCacheBindery::CreateBinding(nsCacheEntry *       entry,
                                   nsDiskCacheRecord *  record)
 {
+    NS_ASSERTION(initialized, "nsDiskCacheBindery not initialized");
     nsCOMPtr<nsISupports> data;
     nsresult rv = entry->GetData(getter_AddRefs(data));
     if (NS_FAILED(rv) || data) {
@@ -205,6 +206,7 @@ nsDiskCacheBindery::CreateBinding(nsCacheEntry *       entry,
 nsDiskCacheBinding *
 nsDiskCacheBindery::FindActiveBinding(PRUint32  hashNumber)
 {
+    NS_ASSERTION(initialized, "nsDiskCacheBindery not initialized");
     // find hash entry for key
     HashTableEntry * hashEntry;
     hashEntry = (HashTableEntry *) PL_DHashTableOperate(&table, (void*) hashNumber, PL_DHASH_LOOKUP);
@@ -227,6 +229,7 @@ nsDiskCacheBindery::FindActiveBinding(PRUint32  hashNumber)
 nsDiskCacheBinding *
 nsDiskCacheBindery::FindBinding(nsDiskCacheRecord * record)
 {    
+    NS_ASSERTION(initialized, "nsDiskCacheBindery not initialized");
     // find hash entry for key
     HashTableEntry * hashEntry;
     hashEntry = (HashTableEntry *) PL_DHashTableOperate(&table, (void*) record->HashNumber(), PL_DHASH_LOOKUP);

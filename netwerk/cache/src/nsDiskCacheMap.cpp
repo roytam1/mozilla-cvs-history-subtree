@@ -79,15 +79,27 @@ nsDiskCacheBucket::CountRecords()
 }
 
 
+PRUint32
+nsDiskCacheBucket::EvictionRank()
+{
+    PRUint32  rank = 0;
+    for (int i = CountRecords() - 1; i >= 0; --i) {
+        if (rank < mRecords[i].EvictionRank())
+            rank = mRecords[i].EvictionRank();
+    }
+    return rank;
+}
+
+
 PRInt32
 nsDiskCacheBucket::VisitEachRecord(nsDiskCacheRecordVisitor *  visitor,
-                                   PRBool *                    dirty)
+                                   PRUint32 *                  recordsDeleted)
 {
     PRInt32  rv = kVisitNextRecord;
     PRInt32  i = CountRecords();
+
+    *recordsDeleted = 0;
     
-    *dirty = PR_FALSE;
-       
     // call visitor for each entry
     while (i--) {
         rv = visitor->VisitRecord(&mRecords[i]);
@@ -95,7 +107,7 @@ nsDiskCacheBucket::VisitEachRecord(nsDiskCacheRecordVisitor *  visitor,
         
         if (rv == kDeleteRecordAndContinue) {
             mRecords[i].SetHashNumber(0);
-            *dirty = PR_TRUE;
+            *recordsDeleted++;
             continue;
         }
 
@@ -104,8 +116,6 @@ nsDiskCacheBucket::VisitEachRecord(nsDiskCacheRecordVisitor *  visitor,
     
     return rv;
 }
-
-
 
 
 /******************************************************************************
@@ -272,7 +282,7 @@ nsDiskCacheMap::FlushBuckets(PRBool unswap)
         }
     }
 
-    if (sizeof(nsDiskCacheHeader) != bytesWritten) {
+    if ( sizeof(nsDiskCacheBucket) * kBucketsPerTable != bytesWritten) {
         return NS_ERROR_UNEXPECTED;
     }
     
@@ -291,6 +301,8 @@ nsDiskCacheMap::AddRecord( nsDiskCacheRecord *  mapRecord,
     nsresult            rv;
     PRUint32            hashNumber = mapRecord->HashNumber();
     nsDiskCacheBucket * bucket;
+    PRUint32            bucketIndex = GetBucketIndex(hashNumber);
+    int                 i;
 
    oldRecord->SetHashNumber(0);  // signify no record
 
@@ -298,11 +310,16 @@ nsDiskCacheMap::AddRecord( nsDiskCacheRecord *  mapRecord,
     if (NS_FAILED(rv))  return rv;
     
     nsDiskCacheRecord * mostEvictable = &bucket->mRecords[0];
-    for (int i = 0; i < kRecordsPerBucket; ++i) {
+    for (i = 0; i < kRecordsPerBucket; ++i) {
         if (bucket->mRecords[i].HashNumber() == 0) {
             // stick the new record here
             bucket->mRecords[i] = *mapRecord;
             ++mHeader.mEntryCount;
+            
+            // update eviction rank in header if necessary
+            if (mHeader.mEvictionRank[bucketIndex] < mapRecord->EvictionRank())
+                mHeader.mEvictionRank[bucketIndex] = mapRecord->EvictionRank();
+
             return NS_OK;
         }
         
@@ -310,10 +327,16 @@ nsDiskCacheMap::AddRecord( nsDiskCacheRecord *  mapRecord,
             mostEvictable = &bucket->mRecords[i];
     }
     
-    *oldRecord = *mostEvictable;    // i == kRecordsPerBucket, so evict the mostEvictable
-    *mostEvictable = *mapRecord;    // replace it with the new record
+    *oldRecord     = *mostEvictable;    // i == kRecordsPerBucket, so evict the mostEvictable
+    *mostEvictable = *mapRecord;        // replace it with the new record
     
-    // XXX recalc mostEvictable
+    // check if we need to update mostEvictable entry in header
+    if ((oldRecord->HashNumber() != 0) ||
+         (mapRecord->EvictionRank() > mHeader.mEvictionRank[bucketIndex])) {
+         
+        mHeader.mEvictionRank[bucketIndex] = bucket->EvictionRank();
+    }
+    
     return NS_OK;
 }
 
@@ -330,6 +353,12 @@ nsDiskCacheMap::UpdateRecord( nsDiskCacheRecord *  mapRecord)
         if (bucket->mRecords[i].HashNumber() == mapRecord->HashNumber()) {
             // stick the new record here
             bucket->mRecords[i] = *mapRecord;
+            
+            // update eviction rank in header if necessary
+            PRUint32  bucketIndex = GetBucketIndex(mapRecord->HashNumber());
+            if (mHeader.mEvictionRank[bucketIndex] < mapRecord->EvictionRank())
+                mHeader.mEvictionRank[bucketIndex] = mapRecord->EvictionRank();
+            
             return NS_OK;
         }
     }
@@ -372,6 +401,11 @@ nsDiskCacheMap::DeleteRecord( nsDiskCacheRecord *  mapRecord)
             }
             bucket->mRecords[count - 1].SetHashNumber(0);   // clear last record
             mHeader.mEntryCount--;
+            // update eviction rank
+            PRUint32  bucketIndex = GetBucketIndex(mapRecord->HashNumber());
+            if (mHeader.mEvictionRank[bucketIndex] <= mapRecord->EvictionRank()) {
+                mHeader.mEvictionRank[bucketIndex] = bucket->EvictionRank();
+            }
             return NS_OK;
         }
     }
@@ -384,18 +418,19 @@ nsDiskCacheMap::VisitRecords( nsDiskCacheRecordVisitor *  visitor)
 {
     for (PRUint32 i = 0; i < kBucketsPerTable; ++i) {
         // get bucket
-        PRBool dirty;
-        PRBool continueFlag = mBuckets[i].VisitEachRecord(visitor, &dirty);
-        if (dirty) {
+        PRUint32 recordsDeleted;
+        PRBool continueFlag = mBuckets[i].VisitEachRecord(visitor, &recordsDeleted);
+        if (recordsDeleted) {
+            // recalc eviction rank
+            mHeader.mEvictionRank[i] = mBuckets[i].EvictionRank();
+            mHeader.mEntryCount -= recordsDeleted;
             // XXX write bucket
         }
+        if (!continueFlag)  break;
     }
     
     return NS_OK;
 }
-
-
-
 
 
 nsresult
@@ -504,7 +539,7 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
 {
     nsresult            rv        = NS_OK;
     nsDiskCacheEntry *  diskEntry =  CreateDiskCacheEntry(binding);
-    if (!diskEntry)  rv = NS_ERROR_UNEXPECTED;
+    if (!diskEntry)  return NS_ERROR_UNEXPECTED;
     
     PRUint32    size = diskEntry->Size();
     PRUint32    fileIndex;
@@ -533,7 +568,7 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
 
         // deallocate previously used blocks        
         rv = mBlockFile[metaFile - 1].DeallocateBlocks(startBlock, blockCount);
-        if (NS_FAILED(rv))  return rv;
+        if (NS_FAILED(rv))  goto exit;
     }
         
     if (fileIndex == 0) {
@@ -543,35 +578,45 @@ nsDiskCacheMap::WriteDiskCacheEntry(nsDiskCacheBinding *  binding)
         rv = GetLocalFileForDiskCacheRecord(&binding->mRecord,
                                             nsDiskCache::kMetaData,
                                             getter_AddRefs(localFile));
-        if (NS_FAILED(rv))  return rv;
+        if (NS_FAILED(rv))  goto exit;
         
         // open the file
         PRFileDesc * fd;
         rv = localFile->OpenNSPRFileDesc(PR_RDWR | PR_TRUNCATE | PR_CREATE_FILE, 00666, &fd);
-        if (NS_FAILED(rv))  return rv;  // unable to open or create file
+        if (NS_FAILED(rv))  goto exit;  // unable to open or create file
 
         // write the file
         diskEntry->Swap();
         PRInt32 bytesWritten = PR_Write(fd, diskEntry, size);
         
         PRStatus err = PR_Close(mMapFD);
-        if ((bytesWritten != size) || (err != PR_SUCCESS))  return NS_ERROR_UNEXPECTED;
+        if ((bytesWritten != size) || (err != PR_SUCCESS)) {
+            rv = NS_ERROR_UNEXPECTED;
+            goto exit;
+        }
         
     } else {
         // write entry data to disk cache block file
         startBlock = mBlockFile[fileIndex - 1].AllocateBlocks(blocks);
-        if (startBlock < 0)  return NS_ERROR_UNEXPECTED;
+        if (startBlock < 0) {
+            rv = NS_ERROR_UNEXPECTED;
+            goto exit;
+        }
         
-        // update binding so caller can update cache map
+        // update binding and cache map record
         binding->mRecord.SetMetaBlocks(fileIndex, startBlock, blocks);
+        rv = UpdateRecord(&binding->mRecord);
+        if (NS_FAILED(rv))  goto exit;
         // XXX we should probably write out bucket ourselves
 
         // write data
         rv = mBlockFile[fileIndex - 1].WriteBlocks(diskEntry, startBlock, blocks);
-        if (NS_FAILED(rv))  return rv;
+        if (NS_FAILED(rv))  goto exit;
     }
 
-    return NS_OK;
+exit:
+
+    return rv;
 }
 
 
@@ -642,7 +687,7 @@ nsDiskCacheMap::GetFileForDiskCacheRecord(nsDiskCacheRecord * record,
     
     PRInt16 generation = record->Generation();
     char name[32];
-    ::sprintf(name, "%08x%c%02x", record->HashNumber(),  (meta ? 'M' : 'D'), generation);
+    ::sprintf(name, "%08X%c%02X", record->HashNumber(),  (meta ? 'm' : 'd'), generation);
     rv = file->Append(name);
     if (NS_FAILED(rv))  return rv;
     
