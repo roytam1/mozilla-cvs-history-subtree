@@ -157,7 +157,7 @@ typedef struct _HT_ViewStruct {
 typedef	struct _HT_ValueStruct {
 	struct _HT_ValueStruct		*next;
 	uint32				tokenType;
-	void				*token;
+	RDF_Resource			token;
 	void				*data;
 } HT_ValueStruct, *HT_Value;
 
@@ -322,6 +322,7 @@ PRBool				htRemoveChild(HT_Resource parent, HT_Resource child, PRBool moveToTras
 void				ht_SetPassword(HT_Resource node, char *password);
 PRBool				ht_hasPassword(HT_Resource node);
 PRBool				ht_checkPassword(HT_Resource node, PRBool alwaysCheck);
+HT_DropAction			htLaunchSmartNode(HT_Resource dropTarget, char *fullURL);
 HT_DropAction			dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction);
 HT_DropAction			dropOnSmartURL(HT_Resource dropTarget, char *objTitle, PRBool justAction);
 HT_DropAction			dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction);

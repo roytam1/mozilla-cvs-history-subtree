@@ -33,7 +33,7 @@
 #include "rdfparse.h"
 #include "remstore.h"
 
-
+HT_Resource		crap = NULL;
 
 	/* globals */
 HT_Icon			urlList = NULL;
@@ -5039,7 +5039,7 @@ HT_GetNodeData (HT_Resource node, void *token, uint32 tokenType, void **nodeData
 			}
 		}
 
-		if ((values = (HT_Value)getMem(sizeof(HT_ValueStruct))) != NULL)
+		if ((foundData == true) && ((values = (HT_Value)getMem(sizeof(HT_ValueStruct))) != NULL))
 		{
 			values->tokenType = tokenType;
 			values->token = token;
@@ -6670,9 +6670,12 @@ HT_Properties (HT_Resource node)
 		{
 			while ((r = RDF_NextValue(c)) != NULL)
 			{
-				if (htIsPropertyInMoreOptions(r) == PR_FALSE)
+				/* if (RDF_CursorValueType(c) == RDF_STRING_TYPE) */
 				{
-					dynStr = constructHTML(dynStr, node, (void *)r, HT_COLUMN_STRING);
+					if (htIsPropertyInMoreOptions(r) == PR_FALSE)
+					{
+						dynStr = constructHTML(dynStr, node, (void *)r, HT_COLUMN_STRING);
+					}
 				}
 			}
 			RDF_DisposeCursor(c);
@@ -7214,23 +7217,39 @@ HT_ToggleSelection(HT_Resource node)
 PR_PUBLIC_API(PRBool)
 HT_Launch(HT_Resource node, MWContext *context)
 {
-	PRBool		retVal = PR_FALSE;
+	HT_DropAction		dropAction;
+	PRBool			retVal = PR_FALSE;
 
 	XP_ASSERT(node != NULL);
 
 	if (node != NULL)
 	{
+
+		if (crap == NULL)	crap = node;
+
 		if ( (!HT_IsContainer(node)) && (!HT_IsSeparator(node)) )
 		{
-			if (RDF_HasAssertion(node->view->pane->db, node->node,
-				gNavCenter->RDF_Command, gNavCenter->RDF_Command_Launch,
-				RDF_RESOURCE_TYPE, 1))
+			dropAction = htLaunchSmartNode(node, NULL);
+			if (dropAction == DROP_ABORTED)
 			{
 				retVal = PR_TRUE;
-
-				RDF_Assert(node->view->pane->db, node->node,
+			}
+			else if (dropAction == DROP_NOT_ALLOWED)
+			{
+				if (RDF_HasAssertion(node->view->pane->db, node->node,
 					gNavCenter->RDF_Command, gNavCenter->RDF_Command_Launch,
-					RDF_RESOURCE_TYPE);
+					RDF_RESOURCE_TYPE, 1))
+				{
+					retVal = PR_TRUE;
+
+					RDF_Assert(node->view->pane->db, node->node,
+						gNavCenter->RDF_Command, gNavCenter->RDF_Command_Launch,
+						RDF_RESOURCE_TYPE);
+				}
+			}
+			else
+			{
+				retVal = PR_TRUE;
 			}
 		}
 	}
@@ -8276,22 +8295,140 @@ HT_GetPane (HT_View view)
 
 
 HT_DropAction
-dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
+htLaunchSmartNode(HT_Resource dropTarget, char *fullURL)
 {
 	HT_DropAction		dropAction = DROP_NOT_ALLOWED;
 	MWContext		*context;
-	RDF_BT			targetType;
-	RDF_BT			objType;
 	RDF_Resource		postR;
 	URL_Struct		*urls;
-	char			*data, *value, *url, *methodType = NULL, *resultType = NULL;
+	char			*data, *value, *url;
+	char			*methodType = NULL, *resultType = NULL, *prompt = NULL;
 	char			*postData = NULL, *postStr, *temp;
 	uint32			postIndex = 0;
+	PRBool			freeURLFlag = PR_FALSE;
+
+	if (fullURL == NULL)
+	{
+		HT_GetNodeData (dropTarget, gNavCenter->RDF_prompt, HT_COLUMN_STRING, &prompt);
+		if (prompt == NULL)
+		{
+			return(DROP_NOT_ALLOWED);
+		}
+		if ((fullURL = FE_Prompt(XP_GetNavCenterContext(dropTarget->view->pane), prompt, "")) == NULL)
+		{
+			return(DROP_ABORTED);
+		}
+		if (fullURL[0] == '\0')
+		{
+			XP_FREE(fullURL);
+			return(DROP_ABORTED);
+		}
+		freeURLFlag = PR_TRUE;
+	}
+	context = XP_GetNavCenterContext(dropTarget->view->pane);
+	HT_GetNodeData (dropTarget, gNavCenter->RDF_methodType, HT_COLUMN_STRING, &methodType);
+	HT_GetNodeData (dropTarget, gNavCenter->RDF_resultType, HT_COLUMN_STRING, &resultType);
+	if ((context != NULL) && (resultType != NULL))
+	{
+		if (!compareStrings(resultType, "TEXT/HTML"))
+		{
+			if ((methodType != NULL) && (!compareStrings(methodType, "POST")))
+			{
+				if ((url = getBaseURL(fullURL)) != NULL)
+				{
+					temp = NET_Escape(url, URL_XPALPHAS);
+					freeMem(url);
+					url = temp;
+				}
+				do
+				{
+					/* retrieve "post[x]data" */
+					if ((postStr = PR_smprintf("post%ludata", postIndex)) == NULL)	break;
+					postR = RDF_GetResource(NULL, postStr, PR_TRUE);
+					XP_FREE(postStr);
+					if (postR == NULL)	break;
+					data = NULL;
+					HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &data);
+					if (data == NULL)	break;
+
+					/* retrieve "post[x]value" */
+					if ((postStr = PR_smprintf("post%luvalue", postIndex)) == NULL)	break;
+					postR = RDF_GetResource(NULL, postStr, PR_TRUE);
+					XP_FREE(postStr);
+					if (postR == NULL)	break;
+					value = NULL;
+					HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &value);
+
+					++postIndex;
+					
+					temp = PR_smprintf("%s%s%s=%s",
+						((postData != NULL) ? postData : ""),
+						((postData != NULL) ? "&" : ""), data,
+						((value != NULL) ? value : ((url != NULL) ? url:"")));
+					if (postData != NULL)	XP_FREE(postData);
+					postData = temp;
+				} while (true);
+				if ((urls = NET_CreateURLStruct(HT_GetNodeURL(dropTarget),
+					NET_NORMAL_RELOAD)) != NULL)
+				{
+					urls->post_data = postData;
+					urls->post_data_size = (postData != NULL) ? strlen(postData) : 0;
+					urls->post_headers = PR_smprintf("Content-type: application/x-www-form-urlencoded\r\nContent-length: %lu\r\n",
+						urls->post_data_size);
+					urls->method = URL_POST_METHOD;
+					NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
+				}
+				if (url != NULL)
+				{
+					XP_FREE(url);
+				}
+			}
+			else if ((methodType == NULL) || (!compareStrings(methodType, "GET")))
+			{
+				url = PR_smprintf("%s%s", HT_GetNodeURL(dropTarget), fullURL);
+				if (url != NULL)
+				{
+					if ((urls = NET_CreateURLStruct(url, NET_NORMAL_RELOAD)) != NULL)
+					{
+						urls->method = URL_GET_METHOD;
+						NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
+					}
+					XP_FREE(url);
+				}
+			}
+			dropAction = COPY_MOVE_LINK;
+		}
+		else if (!compareStrings(resultType, "TEXT/RDF"))
+		{
+			/* XXX finish this
+			dropAction = COPY_MOVE_LINK;
+			*/
+		}
+	}
+	if (freeURLFlag == PR_TRUE)
+	{
+		if (fullURL != NULL)
+		{
+			XP_FREE(fullURL);
+		}
+	}
+	return(dropAction);
+}
+
+
+
+HT_DropAction
+dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
+{
+	HT_DropAction		dropAction = DROP_NOT_ALLOWED;
+	RDF_BT			targetType;
+	RDF_BT			objType;
+	char			*resultType = NULL;
 
 	targetType  = resourceType(dropTarget->node);
 	objType     = resourceType(dropObject->node);
-	HT_GetNodeData (dropTarget, gNavCenter->RDF_resultType, HT_COLUMN_STRING, &resultType);
-	HT_GetNodeData (dropTarget, gNavCenter->RDF_methodType, HT_COLUMN_STRING, &methodType);
+	HT_GetNodeData (dropTarget, gNavCenter->RDF_resultType,
+			HT_COLUMN_STRING, &resultType);
 	if (justAction)
 	{
 		if ((targetType == RDF_RT) && (objType == RDF_RT))
@@ -8308,82 +8445,8 @@ dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justActio
 		{
 			if (resultType != NULL)
 			{
-				context = XP_GetNavCenterContext(dropTarget->view->pane);
-				if (!compareStrings(resultType, "TEXT/HTML"))
-				{
-					if ((methodType != NULL) && (!compareStrings(methodType, "POST")))
-					{
-						if ((url = getBaseURL(HT_GetNodeURL(dropObject))) != NULL)
-						{
-							temp = NET_Escape(url, URL_XPALPHAS);
-							freeMem(url);
-							url = temp;
-						}
-						do
-						{
-							/* retrieve "post[x]data" */
-							if ((postStr = PR_smprintf("post%ludata", postIndex)) == NULL)	break;
-							postR = RDF_GetResource(NULL, postStr, PR_TRUE);
-							XP_FREE(postStr);
-							if (postR == NULL)	break;
-							data = NULL;
-							HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &data);
-							if (data == NULL)	break;
-
-							/* retrieve "post[x]value" */
-							if ((postStr = PR_smprintf("post%luvalue", postIndex)) == NULL)	break;
-							postR = RDF_GetResource(NULL, postStr, PR_TRUE);
-							XP_FREE(postStr);
-							if (postR == NULL)	break;
-							value = NULL;
-							HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &value);
-
-							++postIndex;
-							
-							temp = PR_smprintf("%s%s%s=%s",
-								((postData != NULL) ? postData : ""),
-								((postData != NULL) ? "&" : ""), data,
-								((value != NULL) ? value : ((url != NULL) ? url:"")));
-							if (postData != NULL)	XP_FREE(postData);
-							postData = temp;
-						} while (true);
-						if ((urls = NET_CreateURLStruct(HT_GetNodeURL(dropTarget),
-							NET_NORMAL_RELOAD)) != NULL)
-						{
-							urls->post_data = postData;
-							urls->post_data_size = (postData != NULL) ? strlen(postData) : 0;
-							urls->post_headers = PR_smprintf("Content-type: application/x-www-form-urlencoded\r\nContent-length: %lu\r\n",
-								urls->post_data_size);
-							urls->method = URL_POST_METHOD;
-							NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
-						}
-						if (url != NULL)
-						{
-							XP_FREE(url);
-						}
-					}
-					else if ((methodType == NULL) || (!compareStrings(methodType, "GET")))
-					{
-						url = PR_smprintf("%s%s", HT_GetNodeURL(dropTarget),
-								HT_GetNodeURL(dropObject));
-						if (url != NULL)
-						{
-							if ((urls = NET_CreateURLStruct(url, NET_NORMAL_RELOAD)) != NULL)
-							{
-								NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
-							}
-							else
-							{
-								freeMem(url);
-							}
-						}
-					}
-				}
-				else if (!compareStrings(resultType, "TEXT/RDF"))
-				{
-					/* XXX finish this */
-				}
-				dropAction = COPY_MOVE_LINK;
+				dropAction = htLaunchSmartNode(dropTarget,
+					getBaseURL(HT_GetNodeURL(dropObject)));
 			}
 		}
 	}
@@ -8396,19 +8459,14 @@ HT_DropAction
 dropOnSmartURL(HT_Resource dropTarget, char *objURL, PRBool justAction)
 {
 	HT_DropAction		dropAction = DROP_NOT_ALLOWED;
-	MWContext		*context;
 	RDF_BT			targetType;
 	RDF_BT			objType;
-	RDF_Resource		postR;
-	URL_Struct		*urls;
-	char			*data, *value, *url, *methodType = NULL, *resultType = NULL;
-	char			*postData = NULL, *postStr, *temp;
-	uint32			postIndex = 0;
+	char			*resultType = NULL;
 
 	targetType  = resourceType(dropTarget->node);
 	objType     = urlResourceType(objURL);
-	HT_GetNodeData (dropTarget, gNavCenter->RDF_resultType, HT_COLUMN_STRING, &resultType);
-	HT_GetNodeData (dropTarget, gNavCenter->RDF_methodType, HT_COLUMN_STRING, &methodType);
+	HT_GetNodeData (dropTarget, gNavCenter->RDF_resultType,
+			HT_COLUMN_STRING, &resultType);
 	if (justAction)
 	{
 		if ((targetType == RDF_RT) && (objType == RDF_RT))
@@ -8425,81 +8483,8 @@ dropOnSmartURL(HT_Resource dropTarget, char *objURL, PRBool justAction)
 		{
 			if (resultType != NULL)
 			{
-				context = XP_GetNavCenterContext(dropTarget->view->pane);
-				if (!compareStrings(resultType, "TEXT/HTML"))
-				{
-					if ((methodType != NULL) && (!compareStrings(methodType, "POST")))
-					{
-						if ((url = getBaseURL(objURL)) != NULL)
-						{
-							temp = NET_Escape(url, URL_XPALPHAS);
-							freeMem(url);
-							url = temp;
-						}
-						do
-						{
-							/* retrieve "post[x]data" */
-							if ((postStr = PR_smprintf("post%ludata", postIndex)) == NULL)	break;
-							postR = RDF_GetResource(NULL, postStr, PR_TRUE);
-							XP_FREE(postStr);
-							if (postR == NULL)	break;
-							data = NULL;
-							HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &data);
-							if (data == NULL)	break;
-
-							/* retrieve "post[x]value" */
-							if ((postStr = PR_smprintf("post%luvalue", postIndex)) == NULL)	break;
-							postR = RDF_GetResource(NULL, postStr, PR_TRUE);
-							XP_FREE(postStr);
-							if (postR == NULL)	break;
-							value = NULL;
-							HT_GetNodeData (dropTarget, postR, HT_COLUMN_STRING, &value);
-
-							++postIndex;
-							
-							temp = PR_smprintf("%s%s%s=%s",
-								((postData != NULL) ? postData : ""),
-								((postData != NULL) ? "&" : ""), data,
-								((value != NULL) ? value : ((url != NULL) ? url:"")));
-							if (postData != NULL)	XP_FREE(postData);
-							postData = temp;
-						} while (true);
-						if ((urls = NET_CreateURLStruct(HT_GetNodeURL(dropTarget),
-							NET_NORMAL_RELOAD)) != NULL)
-						{
-							urls->post_data = postData;
-							urls->post_data_size = (postData != NULL) ? strlen(postData) : 0;
-							urls->post_headers = PR_smprintf("Content-type: application/x-www-form-urlencoded\r\nContent-length: %lu\r\n",
-								urls->post_data_size);
-							urls->method = URL_POST_METHOD;
-							NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
-						}
-						if (url != NULL)
-						{
-							XP_FREE(url);
-						}
-					}
-					else if ((methodType == NULL) || (!compareStrings(methodType, "GET")))
-					{
-						url = PR_smprintf("%s%s", HT_GetNodeURL(dropTarget), objURL);
-						if (url != NULL)
-						{
-							if ((urls = NET_CreateURLStruct(url, NET_NORMAL_RELOAD)) != NULL)
-							{
-								NET_GetURL(urls, FO_CACHE_AND_PRESENT, context, NULL);
-							}
-							else
-							{
-								freeMem(url);
-							}
-						}
-					}
-				}
-				else if (!compareStrings(resultType, "TEXT/RDF"))
-				{
-					/* XXX finish this */
-				}
-				dropAction = COPY_MOVE_LINK;
+				dropAction = htLaunchSmartNode(dropTarget,
+					getBaseURL(objURL));
 			}
 		}
 	}
@@ -8518,8 +8503,9 @@ dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
 	RDF_BT			targetType;
 	RDF_BT			objType;
 
-	if (dropTarget == NULL)	return(DROP_NOT_ALLOWED);
-	if (dropObject == NULL)	return(DROP_NOT_ALLOWED);
+	if (dropTarget == NULL)		return(DROP_NOT_ALLOWED);
+	if (dropObject == NULL)		return(DROP_NOT_ALLOWED);
+	if (dropTarget == dropObject)	return(DROP_NOT_ALLOWED);
 
 	targetType  = resourceType(dropTarget->node);
 	objType     = resourceType(dropObject->node);
@@ -8528,14 +8514,14 @@ dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
 	{
 		return dropOnSmartNode(dropTarget, dropObject, justAction);
 	}
-	if (objType == HISTORY_RT)		return DROP_NOT_ALLOWED;
+	if (objType == HISTORY_RT)		return(DROP_NOT_ALLOWED);
 
 	/* disallow dropping a parent folder into itself or a child folder */
 	elders = dropTarget;
 	while (elders != NULL)
 	{
-		if (elders == dropObject)		return DROP_NOT_ALLOWED;
-		if (elders->node == dropObject->node)	return DROP_NOT_ALLOWED;
+		if (elders == dropObject)		return(DROP_NOT_ALLOWED);
+		if (elders->node == dropObject->node)	return(DROP_NOT_ALLOWED);
 		elders = elders->parent;
 	}
 
@@ -8543,7 +8529,7 @@ dropOn (HT_Resource dropTarget, HT_Resource dropObject, PRBool justAction)
 	{
 		case SEARCH_RT:
 		case HISTORY_RT:
-		return DROP_NOT_ALLOWED;
+		return(DROP_NOT_ALLOWED);
 		break;
 
 		case LFS_RT:
