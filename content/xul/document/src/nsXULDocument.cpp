@@ -4433,6 +4433,8 @@ nsXULDocument::LoadScript(nsIURI* aURI, PRBool* aBlock)
                                        (nsStreamCompleteFunc)DoneLoadingScript, 
                                        this);
         if (NS_FAILED(rv)) return rv;
+
+        *aBlock = PR_TRUE;
     }
 
     return NS_OK;
