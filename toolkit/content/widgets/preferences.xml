@@ -424,6 +424,7 @@
     <implementation implements="nsITimerCallback">
       <constructor>
       <![CDATA[
+        this.setAttribute("animate", !this._shouldAnimate ? "off" : "on");
         if (this.type != "child") {
           var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                                .getService(Components.interfaces.nsIPrefBranch);

@@ -61,12 +61,12 @@
 #endif
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 #ifdef XP_WIN
-            style="&prefWindow.widthWin;">
+            style="&prefWindow.styleWin;">
 #else
 #ifdef XP_MACOSX
-            style="&prefWindow.widthMac;">
+            style="&prefWindow.styleMac;">
 #else
-            style="&prefWindow.widthUnix;">
+            style="&prefWindow.styleUnix;">
 #endif
 #endif
   
