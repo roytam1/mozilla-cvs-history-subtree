@@ -2784,6 +2784,7 @@ NS_IMETHODIMP
 nsBookmarksService::CreateBookmark(const PRUnichar* aName,
                                    const char* aURL,
                                    const PRUnichar* aShortcutURL,
+                                   const PRUnichar* aDescription,
                                    const PRUnichar* aDocCharSet,
                                    nsIRDFResource** aResult)
 {
@@ -2832,6 +2833,17 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName,
       return rv;
   }
 
+  // Literal: Description
+  if (aDescription && !nsDependentString(aDescription).IsEmpty()) {
+    nsCOMPtr<nsIRDFLiteral> descriptionLiteral;
+    rv = gRDF->GetLiteral(aDescription, getter_AddRefs(descriptionLiteral));
+    if (NS_FAILED(rv)) 
+      return rv;
+    rv = mInner->Assert(bookmarkResource, kNC_Description, descriptionLiteral, PR_TRUE);
+    if (NS_FAILED(rv)) 
+      return rv;
+  }
+
   // Date: Date of Creation
   // Convert the current date/time from microseconds (PRTime) to seconds.
   nsCOMPtr<nsIRDFDate> dateLiteral;
@@ -2865,12 +2877,13 @@ NS_IMETHODIMP
 nsBookmarksService::CreateBookmarkInContainer(const PRUnichar* aName,
                                               const char* aURL, 
                                               const PRUnichar* aShortcutURL, 
+                                              const PRUnichar* aDescription, 
                                               const PRUnichar* aDocCharSet, 
                                               nsIRDFResource* aParentFolder,
                                               PRInt32 aIndex,
                                               nsIRDFResource** aResult)
 {
-  nsresult rv = CreateBookmark(aName, aURL, aShortcutURL, aDocCharSet, aResult);
+  nsresult rv = CreateBookmark(aName, aURL, aShortcutURL, aDescription, aDocCharSet, aResult);
   if (NS_SUCCEEDED(rv))
     rv = InsertResource(*aResult, aParentFolder, aIndex);
   return rv;
@@ -2924,7 +2937,7 @@ nsBookmarksService::AddBookmarkImmediately(const char *aURI,
     return rv;
 
   nsCOMPtr<nsIRDFResource> bookmark;
-  return CreateBookmarkInContainer(aTitle, aURI, nsnull, aCharset, destinationFolder, -1, 
+  return CreateBookmarkInContainer(aTitle, aURI, nsnull, nsnull, aCharset, destinationFolder, -1, 
                                    getter_AddRefs(bookmark));
 }
 

@@ -67,11 +67,13 @@ interface nsIBookmarksService : nsISupports
     nsIRDFResource createBookmark(in wstring aName,
                                   in string aURL,
                                   in wstring aShortcutURL,
-                                  in wstring docCharSet);
+                                  in wstring aDescription,
+                                  in wstring aDocCharSet);
     nsIRDFResource createBookmarkInContainer(in wstring aName,
                                              in string aURL,
                                              in wstring aShortcutURL,
-                                             in wstring docCharSet, 
+                                             in wstring aDescription,
+                                             in wstring aDocCharSet, 
                                              in nsIRDFResource aFolder,
                                              in long aIndex);
 

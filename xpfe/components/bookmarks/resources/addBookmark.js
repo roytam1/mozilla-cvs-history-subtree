@@ -250,12 +250,12 @@ function onOK()
       const groups = window.arguments[5];
       for (var i = 0; i < groups.length; ++i) {
         url = getNormalizedURL(groups[i].url);
-        kBMS.createBookmarkInContainer(groups[i].name, url, null,
+        kBMS.createBookmarkInContainer(groups[i].name, url, null, null,
                                        groups[i].charset, group, -1);
       }
     } else if (gFld_URL.value) {
       url = getNormalizedURL(gFld_URL.value);
-      var newBookmark = kBMS.createBookmarkInContainer(gFld_Name.value, url, gFld_ShortcutURL.value, gBookmarkCharset, rFolder, -1);
+      var newBookmark = kBMS.createBookmarkInContainer(gFld_Name.value, url, gFld_ShortcutURL.value, null, gBookmarkCharset, rFolder, -1);
       if (window.arguments.length > 4 && window.arguments[4] == "newBookmark") {
         window.arguments[5].newBookmark = newBookmark;
       }
