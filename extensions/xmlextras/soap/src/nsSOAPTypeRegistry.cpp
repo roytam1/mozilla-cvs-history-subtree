@@ -47,14 +47,7 @@ nsSOAPDefaultTypeRegistry::nsSOAPDefaultTypeRegistry()
   addConfiguration() parse some default configuration;
 #endif
 
-  nsCOMPtr<nsISOAPType> type;
-  type = new nsSOAPType();
-  type->SetEncodingStyleURI(nsSOAPUtils::kSOAPEncodingURI);
-
-  nsDefaultSOAPEncoder* encoder = new nsDefaultSOAPEncoder();
-  type->SetMarshaller(encoder);
-  type->SetUnmarshaller(encoder);
-  AddType(type);
+  nsDefaultSOAPEncoder::RegisterEncoders(this);
 }
 
 nsSOAPTypeRegistry::~nsSOAPTypeRegistry()

@@ -188,7 +188,7 @@ NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters
 NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
 {
   nsCOMPtr<nsISupports> result;
-  nsresult rc = mTypes->Unmarshall(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, getter_AddRefs(result));
+  nsresult rc = mTypes->Unmarshall(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallSchemaType, getter_AddRefs(result));
   if (result)
     return result->QueryInterface(NS_GET_IID(nsISupportsArray), (void**)_retval);
   return rc;

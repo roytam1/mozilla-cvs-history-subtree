@@ -35,23 +35,13 @@
 #include "nsIDOMParser.h"
 #include "nsSOAPUtils.h"
 #include "nsISOAPTypeRegistry.h"
+#include "nsSOAPType.h"
 #include "prprf.h"
 #include "nsReadableUtils.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
 
 static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
-
-nsDefaultSOAPEncoder::nsDefaultSOAPEncoder()
-{
-  NS_INIT_ISUPPORTS();
-}
-
-nsDefaultSOAPEncoder::~nsDefaultSOAPEncoder()
-{
-}
-
-NS_IMPL_ISUPPORTS2(nsDefaultSOAPEncoder, nsISOAPMarshaller, nsISOAPUnmarshaller)
 
 NS_NAMED_LITERAL_STRING(kStructElementName,"Struct");
 NS_NAMED_LITERAL_STRING(kStringElementName,"string");
@@ -64,28 +54,79 @@ NS_NAMED_LITERAL_STRING(kShortElementName,"short");
 NS_NAMED_LITERAL_STRING(kByteElementName,"byte");
 NS_NAMED_LITERAL_STRING(kArrayElementName,"Array");
 
-/* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID, in DOMString aSchemaID, in nsISupports aConfiguration); */
-NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
-{
-  if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
-    return MarshallCall(aMessage,aSource,aEncodingStyleURI,aTypeID,aSchemaID,aScope,aConfiguration, _retval);
-  else if (aTypeID.Equals(nsSOAPUtils::kLiteralType))
-  {
-  }
-  return NS_ERROR_NOT_IMPLEMENTED;
+#define DECLARE_ENCODER(name) \
+class ns##name##Encoder : \
+  public nsISOAPMarshaller, \
+  public nsISOAPUnmarshaller \
+{\
+public:\
+  ns##name##Encoder();\
+  virtual ~ns##name##Encoder();\
+  NS_DECL_ISUPPORTS\
+  NS_DECL_NSISOAPMARSHALLER\
+  NS_DECL_NSISOAPUNMARSHALLER\
+};\
+ns##name##Encoder::ns##name##Encoder() {NS_INIT_ISUPPORTS();}\
+ns##name##Encoder::~ns##name##Encoder() {}
+
+#define REGISTER_ENCODER(name) \
+{\
+  nsresult rc;\
+  nsCOMPtr<nsISOAPType> type = new nsSOAPType();\
+  ns##name##Encoder *handler = new ns##name##Encoder();\
+  nsAutoString temp;\
+  rc = type->SetMarshaller(handler);\
+  if (NS_FAILED(rc)) return rc;\
+  rc = type->SetUnmarshaller(handler);\
+  if (NS_FAILED(rc)) return rc;\
+  rc = type->SetTypeID(nsSOAPUtils::k##name##Type);\
+  if (NS_FAILED(rc)) return rc;\
+  rc = type->SetSchemaID(nsSOAPUtils::k##name##SchemaType);\
+  if (NS_FAILED(rc)) return rc;\
+  rc = type->SetEncodingStyleURI(nsSOAPUtils::kSOAPEncodingURI);\
+  if (NS_FAILED(rc)) return rc;\
+  rc = registry->AddType(type);\
+  if (NS_FAILED(rc)) return rc;\
 }
 
-/* nsISupports unmarshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID, in DOMString aTypeID, in nsISupports aConfiguration); */
-NS_IMETHODIMP nsDefaultSOAPEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
-{
-  if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
-    return UnmarshallCall(aMessage,aSource,aEncodingStyleURI,aSchemaID,aTypeID,aConfiguration, _retval);
-  else if (aTypeID.Equals(nsSOAPUtils::kLiteralType))
-  {
-  }
+// All encoders must be first declared and then registered.
+DECLARE_ENCODER(SOAPCall)
+DECLARE_ENCODER(String)
+DECLARE_ENCODER(PRBool)
+DECLARE_ENCODER(Double)
+DECLARE_ENCODER(Float)
+DECLARE_ENCODER(PRInt64)
+DECLARE_ENCODER(PRInt32)
+DECLARE_ENCODER(PRInt16)
+DECLARE_ENCODER(Char)
+DECLARE_ENCODER(Array)
+DECLARE_ENCODER(Struct)
+DECLARE_ENCODER(Literal)
+DECLARE_ENCODER(Null)
+DECLARE_ENCODER(Void)
+DECLARE_ENCODER(Unknown)
 
-  return NS_ERROR_NOT_IMPLEMENTED;
+NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPTypeRegistry* registry)
+{
+  REGISTER_ENCODER(SOAPCall)
+  REGISTER_ENCODER(String)
+  REGISTER_ENCODER(PRBool)
+  REGISTER_ENCODER(Double)
+  REGISTER_ENCODER(Float)
+  REGISTER_ENCODER(PRInt64)
+  REGISTER_ENCODER(PRInt32)
+  REGISTER_ENCODER(PRInt16)
+  REGISTER_ENCODER(Char)
+  REGISTER_ENCODER(Array)
+  REGISTER_ENCODER(Struct)
+  REGISTER_ENCODER(Literal)
+  REGISTER_ENCODER(Null)
+  REGISTER_ENCODER(Void)
+  REGISTER_ENCODER(Unknown)
+  return NS_OK;
 }
+
+//  Here is the implementation of the encoders.
 
 NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
 "<SOAP-ENV:Header>"
@@ -96,7 +137,7 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 
 //  The default serializers below assume that the above declarations are in place, without bothering to check.
  
-NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
+NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
 {
   nsresult rv;
   
@@ -188,7 +229,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDefaultSOAPEncoder::UnmarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
+NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
 {
   nsresult rv;
   nsCOMPtr<nsISOAPTypeRegistry> types;
@@ -289,6 +330,7 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::UnmarshallCall(nsISOAPMessage *aMessage, nsI
   return NS_OK;
 }
 
+#if 0
 
 static void
 GetElementNameForType(const nsAReadableString & aType, nsAWritableString & aName)
@@ -442,7 +484,6 @@ GetTypeForXSDType(const nsAReadableString & aNamespace, const nsAReadableString 
   }
 }
 
-#if 0
 
 static const char* kArrayTypeQualifiedName = "SOAP-ENC:arrayType";
 static const char* kArrayTypeName = "arrayType";

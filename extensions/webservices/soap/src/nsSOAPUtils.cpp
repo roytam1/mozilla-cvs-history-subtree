@@ -44,9 +44,10 @@ NS_NAMED_LITERAL_STRING(kFaultStringTagName,"faultstring");
 NS_NAMED_LITERAL_STRING(kFaultActorTagName,"faultactor");
 NS_NAMED_LITERAL_STRING(kFaultDetailTagName,"detail");
 
-NS_NAMED_LITERAL_STRING(kSOAPCallType,"#SOAPCallType");
 NS_NAMED_LITERAL_STRING(kEmpty,"");
+NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
 
+NS_NAMED_LITERAL_STRING(kSOAPCallType,"#SOAPCallType");
 NS_NAMED_LITERAL_STRING(kStringType,"#string");
 NS_NAMED_LITERAL_STRING(kPRBoolType,"#boolean");
 NS_NAMED_LITERAL_STRING(kDoubleType,"#double");
@@ -56,12 +57,28 @@ NS_NAMED_LITERAL_STRING(kPRInt32Type,"#int");
 NS_NAMED_LITERAL_STRING(kPRInt16Type,"#short");
 NS_NAMED_LITERAL_STRING(kCharType,"#byte");
 NS_NAMED_LITERAL_STRING(kArrayType,"#array");
+NS_NAMED_LITERAL_STRING(kStructType,"#struct");
 NS_NAMED_LITERAL_STRING(kStructTypePrefix,"#struct#");
-NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
+NS_NAMED_LITERAL_STRING(kLiteralType,"#literal");
 NS_NAMED_LITERAL_STRING(kNullType,"#null");
 NS_NAMED_LITERAL_STRING(kVoidType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownType,"#unknown");
-NS_NAMED_LITERAL_STRING(kLiteralType,"#literal");
+
+NS_NAMED_LITERAL_STRING(kSOAPCallSchemaType,"#SOAPCallType");
+NS_NAMED_LITERAL_STRING(kStringSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#string");
+NS_NAMED_LITERAL_STRING(kPRBoolSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#boolean");
+NS_NAMED_LITERAL_STRING(kDoubleSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#double");
+NS_NAMED_LITERAL_STRING(kFloatSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#float");
+NS_NAMED_LITERAL_STRING(kPRInt64SchemaType,"#schema#http://www.w3.org/1999/XMLSchema#long");
+NS_NAMED_LITERAL_STRING(kPRInt32SchemaType,"#schema#http://www.w3.org/1999/XMLSchema#int");
+NS_NAMED_LITERAL_STRING(kPRInt16SchemaType,"#schema#http://www.w3.org/1999/XMLSchema#short");
+NS_NAMED_LITERAL_STRING(kCharSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#byte");
+NS_NAMED_LITERAL_STRING(kArraySchemaType,"#schema#http://www.w3.org/1999/XMLSchema#array");
+NS_NAMED_LITERAL_STRING(kStructSchemaType,"#schema#http://www.w3.org/1999/XMLSchema#struct");
+NS_NAMED_LITERAL_STRING(kLiteralSchemaType,"#literal");
+NS_NAMED_LITERAL_STRING(kNullSchemaType,"#null");
+NS_NAMED_LITERAL_STRING(kVoidSchemaType,"#void");
+NS_NAMED_LITERAL_STRING(kUnknownSchemaType,"#unknown");
 
 NS_NAMED_LITERAL_STRING(kXMLSchemaSchemaIDPrefix, "#schema#");
 NS_NAMED_LITERAL_STRING(kXMLNameSchemaIDPrefix, "#name#");

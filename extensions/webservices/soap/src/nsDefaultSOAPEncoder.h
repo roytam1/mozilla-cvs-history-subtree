@@ -30,25 +30,13 @@
 #include "nsISOAPMarshaller.h"
 #include "nsISOAPUnmarshaller.h"
 
-class nsDefaultSOAPEncoder : 
-  public nsISOAPMarshaller, 
-  public nsISOAPUnmarshaller 
+class nsDefaultSOAPEncoder
 {
 public:
-  nsDefaultSOAPEncoder();
-  virtual ~nsDefaultSOAPEncoder();
-
-  NS_DECL_ISUPPORTS
-
-  // nsISOAPEncoder  
-  NS_DECL_NSISOAPMARSHALLER
-
-  // nsISOAPEncoder  
-  NS_DECL_NSISOAPUNMARSHALLER
+  static nsresult RegisterEncoders(nsISOAPTypeRegistry* aRegistry);
 
 protected:
-  nsresult MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval);
-  nsresult UnmarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval);
+#if 0
   nsresult StartEmptyMessage(nsISOAPMessage* message);
   nsresult EncodeParameter(nsISOAPParameter* parameter,
                            nsIDOMDocument* document,
@@ -77,6 +65,7 @@ protected:
   nsresult DeserializeParameter(nsIDOMElement *element,
                                 PRInt32 type,
                                 nsISOAPParameter **_retval);
+#endif
 };
 
 #endif
