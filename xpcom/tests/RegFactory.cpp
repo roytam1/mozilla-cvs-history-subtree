@@ -54,7 +54,7 @@ nsresult Register(const char *path)
     nsRegisterProc proc = (nsRegisterProc) PR_FindSymbol(instance,
                                                          "NSRegisterSelf");
     if (proc != NULL) {
-      res = proc(NULL, path);
+      res = proc(path);
     }
     PR_UnloadLibrary(instance);
   } else {
@@ -72,7 +72,7 @@ nsresult Unregister(const char *path)
     nsUnregisterProc proc = (nsUnregisterProc) PR_FindSymbol(instance,
                                                            "NSUnregisterSelf");
     if (proc != NULL) {
-      res = proc(NULL, path);
+      res = proc(path);
     }
     PR_UnloadLibrary(instance);
   } else {

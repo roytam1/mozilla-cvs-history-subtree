@@ -123,19 +123,17 @@ extern "C" NS_EXPORT nsresult NSGetFactory(const nsCID &aCID,
   return NS_NOINTERFACE;
 }
 
-extern "C" NS_EXPORT PRBool NSCanUnload(PRBool force) {
+extern "C" NS_EXPORT PRBool NSCanUnload(void) {
   return PRBool(g_FactoryCount == 0 && g_LockCount == 0);
 }
 
-extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* serviceMgr,
-											 const char *path)
+extern "C" NS_EXPORT nsresult NSRegisterSelf(const char *path)
 {
   return nsRepository::RegisterFactory(kTestLoadedFactoryCID, path, 
                                        PR_TRUE, PR_TRUE);
 }
 
-extern "C" NS_EXPORT nsresult NSUnregisterSelf(nsISupports* serviceMgr,
-											   const char *path)
+extern "C" NS_EXPORT nsresult NSUnregisterSelf(const char *path)
 {
   return nsRepository::UnregisterFactory(kTestLoadedFactoryCID, path);
 }

@@ -153,7 +153,7 @@ NSGetFactory(const nsCID &aClass, nsISupports* serviceMgr, nsIFactory **aFactory
 }
 
 extern "C" NS_EXPORT PRBool
-NSCanUnload(PRBool force)
+NSCanUnload()
 {
     if (gFact && gFact->CanUnload()) {
         nsrefcnt cnt = gFact->Release();
