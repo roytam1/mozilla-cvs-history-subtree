@@ -1194,8 +1194,7 @@ JVM_GetJNIEnv(void)
 
     nsIJVMPlugin* jvm = GetRunningJVM();
     if (jvm) {
-        nsresult err = jvm->GetJNIEnv(&env);
-        PR_ASSERT(err == NS_OK);
+        (void)jvm->GetJNIEnv(&env);
         jvm->Release();
     }
 
