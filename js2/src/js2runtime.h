@@ -1547,8 +1547,8 @@ XXX ...couldn't get this to work...
         
         void reportError(Exception::Kind kind, char *message, size_t pos, const char *arg = NULL);
         void reportError(Exception::Kind kind, char *message, const char *arg = NULL);
-        void Context::reportError(Exception::Kind kind, char *message, const String& name);
-        void Context::reportError(Exception::Kind kind, char *message, size_t pos, const String& name);
+        void reportError(Exception::Kind kind, char *message, const String& name);
+        void reportError(Exception::Kind kind, char *message, size_t pos, const String& name);
 
         
         /* utility routines */
