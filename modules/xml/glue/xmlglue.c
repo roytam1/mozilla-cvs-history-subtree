@@ -119,6 +119,9 @@ xml_complete (NET_StreamClass *stream)
 void
 outputToStream (XMLFile f, char* s)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
   int ans = 0;
   NET_StreamClass *stream = (NET_StreamClass*) f->stream;
   if (s == NULL) {
@@ -154,6 +157,7 @@ outputToStream (XMLFile f, char* s)
   } else {
     strcat(f->outputBuffer, s);
   }
+#endif /* MOZ_NGLAYOUT */
 }
 
 
@@ -322,6 +326,9 @@ xmlhtml_abort(NET_StreamClass *stream, int status)
 
 
 void xmlhtml_complete_int (XMLFile xml) {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
   MWContext *cx = (MWContext *)xml->mwcontext;
   int16 save_offscreen_mode;
 
@@ -351,6 +358,7 @@ void xmlhtml_complete_int (XMLFile xml) {
     newstream->complete(newstream);
     NET_FreeURLStruct(nurls); 
   }     
+#endif /* MOZ_NGLAYOUT */
 }
 
 void
