@@ -38,6 +38,8 @@
 <!ENTITY cmd.change.accesskey             "C">
 <!ENTITY cmd.change.tooltip               "Change how and where to save files to">
 
+<!ENTITY cmd.newWindow.commandKey         "n">
+
 <!ENTITY closeWhenDone.label              "Close when downloads complete">
 <!ENTITY closeWhenDone.tooltip            "Closes the Downloads window when all files are done downloading">
 
