@@ -114,14 +114,14 @@ private:
 	
 	// initialization function given a new url and transport layer
 	void Initialize(nsIURI * aURL);
-	virtual nsresult ProcessProtocolState(nsIURI * url, nsIBufferInputStream * inputStream, 
+	virtual nsresult ProcessProtocolState(nsIURI * url, nsIInputStream * inputStream, 
 									      PRUint32 sourceOffset, PRUint32 length);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// Communication methods --> Reading and writing protocol
 	////////////////////////////////////////////////////////////////////////////////////////
 
-	PRInt32 ReadLine(nsIBufferInputStream * inputStream, PRUint32 length, char ** line);
+	PRInt32 ReadLine(nsIInputStream * inputStream, PRUint32 length, char ** line);
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// Protocol Methods --> This protocol is state driven so each protocol method is 
@@ -129,15 +129,15 @@ private:
 	//						group them together based on functionality. 
 	////////////////////////////////////////////////////////////////////////////////////////
 	
-	PRInt32 SmtpResponse(nsIBufferInputStream * inputStream, PRUint32 length); 
-	PRInt32 LoginResponse(nsIBufferInputStream * inputStream, PRUint32 length);
-	PRInt32 ExtensionLoginResponse(nsIBufferInputStream * inputStream, PRUint32 length);
-	PRInt32 SendHeloResponse(nsIBufferInputStream * inputStream, PRUint32 length);
-	PRInt32 SendEhloResponse(nsIBufferInputStream * inputStream, PRUint32 length);	
+	PRInt32 SmtpResponse(nsIInputStream * inputStream, PRUint32 length); 
+	PRInt32 LoginResponse(nsIInputStream * inputStream, PRUint32 length);
+	PRInt32 ExtensionLoginResponse(nsIInputStream * inputStream, PRUint32 length);
+	PRInt32 SendHeloResponse(nsIInputStream * inputStream, PRUint32 length);
+	PRInt32 SendEhloResponse(nsIInputStream * inputStream, PRUint32 length);	
 
 	PRInt32 AuthLoginUsername();
 	PRInt32 AuthLoginPassword();
-	PRInt32 AuthLoginResponse(nsIBufferInputStream * stream, PRUint32 length);
+	PRInt32 AuthLoginResponse(nsIInputStream * stream, PRUint32 length);
 
 	PRInt32 SendVerifyResponse(); // mscott: this one is apparently unimplemented...
 	PRInt32 SendMailResponse();
