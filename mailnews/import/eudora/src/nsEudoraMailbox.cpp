@@ -1043,12 +1043,14 @@ void nsEudoraMailbox::EmptyAttachments( void)
 
 static char *eudoraAttachLines[] = {
 	"Attachment Converted:",
-	"Attachment converted:"
+	"Attachment converted:",
+  "Pièce jointe convertie :"
 };
 
 static PRInt32 eudoraAttachLen[] = {
 	21,
 	21,
+  24,
 	0
 };
 
