@@ -351,8 +351,6 @@ public:
 
   nsString*           mRef;
   nsScrollPreference  mOriginalScrollPreference;
-  PRBool              mNotAtRef;
-  nsIHTMLContent*     mRefContent;
 
   nsString            mBaseHREF;
   nsString            mBaseTarget;
@@ -2154,7 +2152,6 @@ HTMLContentSink::HTMLContentSink() {
     gSinkLogModuleInfo = PR_NewLogModule("htmlcontentsink");
   }
 #endif
-  mNotAtRef        = PR_TRUE;  
   mInScript = 0;
   mInNotification = 0;
   mInMonolithicContainer = 0;
@@ -2182,7 +2179,6 @@ HTMLContentSink::~HTMLContentSink()
 
   NS_IF_RELEASE(mCurrentForm);
   NS_IF_RELEASE(mCurrentMap);
-  NS_IF_RELEASE(mRefContent);
 
   NS_IF_RELEASE(mNodeInfoManager);
 
@@ -2396,6 +2392,7 @@ HTMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
                ("HTMLContentSink::DidBuildModel: layout final content"));
     mCurrentContext->FlushTags(PR_TRUE);
   }
+
   ScrollToRef();
 
   mDocument->EndLoad();
@@ -3552,45 +3549,15 @@ HTMLContentSink::StartLayout()
 void
 HTMLContentSink::ScrollToRef()
 {
-  if (mNotAtRef && (nsnull != mRef) && (nsnull != mRefContent)) {
-    // See if the ref content has been reflowed by finding its frame
+  if (mRef && mRef->Length() > 0)
+  {
     PRInt32 i, ns = mDocument->GetNumberOfShells();
     for (i = 0; i < ns; i++) {
-      nsCOMPtr<nsIPresShell> shell( dont_AddRef(mDocument->GetShellAt(i)) );
+      nsCOMPtr<nsIPresShell> shell(dont_AddRef(mDocument->GetShellAt(i)));
       if (shell) {
-        nsIFrame* frame;
-        shell->GetPrimaryFrameFor(mRefContent, &frame);
-        if (nsnull != frame) {
-          nsCOMPtr<nsIViewManager> vm;
-          shell->GetViewManager(getter_AddRefs(vm));
-          if (vm) {
-            nsIScrollableView* sview = nsnull;
-            vm->GetRootScrollableView(&sview);
-
-            if (sview) {
-              // Determine the x,y scroll offsets for the given
-              // frame. The offsets are relative to the
-              // ScrollableView's upper left corner so we need frame
-              // coordinates that are relative to that.
-              nsPoint offset;
-              nsIView* view;
-              nsCOMPtr<nsIPresContext> presContext;
-              shell->GetPresContext(getter_AddRefs(presContext));
-              frame->GetOffsetFromView(presContext, offset, &view);
-              nscoord x = 0;
-              nscoord y = offset.y;
-              sview->SetScrollPreference(mOriginalScrollPreference);
-              // XXX If view != scrolledView, then there is a scrolled frame,
-              // e.g., a DIV with 'overflow' of 'scroll', somewhere in the middle,
-              // or maybe an absolutely positioned element that has a view. We
-              // need to handle these cases...
-              sview->ScrollTo(x, y, NS_VMREFRESH_IMMEDIATE);
-
-              // Note that we did this so that we don't bother doing it again
-              mNotAtRef = PR_FALSE;
-            }
-          }
-        }
+        // Scroll to the anchor
+        shell->FlushPendingNotifications();
+        shell->GoToAnchor(*mRef);
       }
     }
   }
@@ -3612,19 +3579,6 @@ HTMLContentSink::ProcessATag(const nsIParserNode& aNode,
                              nsIHTMLContent* aContent)
 {
   AddBaseTagInfo(aContent);
-  if ((nsnull != mRef) && (nsnull == mRefContent)) {
-    nsHTMLValue value;
-    aContent->GetHTMLAttribute(nsHTMLAtoms::name, value);
-    if (eHTMLUnit_String == value.GetUnit()) {
-      nsAutoString tmp;
-      value.GetStringValue(tmp);
-      if (mRef->EqualsIgnoreCase(tmp)) {
-        // Winner. We just found the content that is the named anchor
-        mRefContent = aContent;
-        NS_ADDREF(aContent);
-      }
-    }
-  }
   return NS_OK;
 }
 
