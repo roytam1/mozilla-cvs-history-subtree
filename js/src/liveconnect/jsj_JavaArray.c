@@ -94,7 +94,8 @@ access_java_array_element(JSContext *cx,
         if (JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
             (property_name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) != NULL) {
             if (!strcmp(property_name, "constructor")) {
-                *vp = JSVAL_VOID;
+                if (vp)
+                    *vp = JSVAL_VOID;
                 return JS_TRUE;
             }
         }
@@ -132,7 +133,8 @@ access_java_array_element(JSContext *cx,
                                         JSJMSG_CANT_WRITE_JARRAY, member_name);
                     return JS_FALSE;
                 } else {
-                    *vp = JSVAL_VOID;
+                    if (vp)
+                        *vp = JSVAL_VOID;
                     return JS_TRUE;
                 }
             } else {
