@@ -43,6 +43,7 @@
 #import "PreferenceManager.h"
 
 class BookmarksService;
+@class KeychainService;
 
 @interface MainController : NSObject 
 {
@@ -73,6 +74,8 @@ class BookmarksService;
 
     BookmarksService*       mMenuBookmarks;
     
+    KeychainService*        mKeychainService;
+
     FindDlgController*      mFindDialog;
 
     MVPreferencesController* mPreferencesController;

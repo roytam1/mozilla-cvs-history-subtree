@@ -15,6 +15,9 @@ class nsIPref;
   IBOutlet NSButton* mLeaveEncrypted;
   IBOutlet NSButton* mLoadLowGrade;
   IBOutlet NSButton* mViewMixed;  
+
+  IBOutlet NSButton* mStorePasswords;
+  IBOutlet NSButton* mAutoFillPasswords;
 }
 
 -(IBAction) clearCookies:(id)aSender;
@@ -27,5 +30,9 @@ class nsIPref;
 -(IBAction) clickEnableLeaveEncrypted:(id)sender;
 -(IBAction) clickEnableLoadLowGrade:(id)sender;
 -(IBAction) clickEnableViewMixed:(id)sender;
+
+-(IBAction) clickStorePasswords:(id)sender;
+-(IBAction) clickAutoFillPasswords:(id)sender;
+-(IBAction) launchKeychainAccess:(id)sender;
 
 @end

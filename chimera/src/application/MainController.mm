@@ -45,6 +45,7 @@
 #import "CHBrowserService.h"
 #import "AboutBox.h"
 #import "UserDefaults.h"
+#import "KeychainService.h"
 #import "RemoteDataProvider.h"
 
 #include "nsCOMPtr.h"
@@ -54,7 +55,7 @@
 #include "nsIIOService.h"
 #include "nsIPref.h"
 #include "nsIChromeRegistry.h"
-
+#include "nsIObserverService.h"
 
 #ifdef _BUILD_STATIC_BIN
 #include "nsStaticComponent.h"
@@ -109,6 +110,7 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 -(void)dealloc
 {
   [mFindDialog release];
+  [mKeychainService release];
   [super dealloc];
 #if DEBUG
   NSLog(@"Main controller died");
@@ -154,6 +156,8 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   if (mOffline)
     [mOfflineMenuItem setTitle: @"Go Online"];	// XXX localize me
 */
+  // Initialize the keychain service.
+  mKeychainService = [KeychainService instance];  
 }
 
 -(void)applicationWillTerminate: (NSNotification*)aNotification

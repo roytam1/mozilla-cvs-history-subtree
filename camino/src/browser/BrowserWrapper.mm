@@ -45,6 +45,7 @@
 #import "BrowserTabViewItem.h"
 #import "ToolTip.h"
 #import "PageProxyIcon.h"
+#import "KeychainService.h"
 
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
@@ -104,6 +105,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
     [self addSubview: mBrowserView];
     [mBrowserView setContainer:self];
     [mBrowserView addListener:self];
+    [[KeychainService instance] addListenerToView:mBrowserView];
     mIsBusy = NO;
     mListenersAttached = NO;
     mSecureState = nsIWebProgressListener::STATE_IS_INSECURE;

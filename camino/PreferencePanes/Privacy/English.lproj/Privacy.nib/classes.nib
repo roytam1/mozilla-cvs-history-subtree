@@ -4,12 +4,18 @@
         {
             CLASS = NSPreferencePane; 
             LANGUAGE = ObjC; 
-            OUTLETS = {_firstKeyView = id; _initialKeyView = id; _lastKeyView = id; _window = id; }; 
+            OUTLETS = {
+                "_firstKeyView" = id; 
+                "_initialKeyView" = id; 
+                "_lastKeyView" = id; 
+                "_window" = id; 
+            }; 
             SUPERCLASS = NSObject; 
         }, 
         {
             ACTIONS = {
                 clearCookies = id; 
+                clickAutoFillPasswords = id; 
                 clickEnableCookies = id; 
                 clickEnableJS = id; 
                 clickEnableJava = id; 
@@ -17,20 +23,25 @@
                 clickEnableLoadLowGrade = id; 
                 clickEnableViewMixed = id; 
                 clickPromptForCookie = id; 
+                clickStorePasswords = id; 
+                launchKeychainAccess = id; 
             }; 
             CLASS = OrgMozillaChimeraPreferencePrivacy; 
             LANGUAGE = ObjC; 
             OUTLETS = {
+                mAutoFillPasswords = NSButton; 
                 mCookies = id; 
                 mEnableJS = NSButton; 
                 mEnableJava = NSButton; 
                 mLeaveEncrypted = NSButton; 
                 mLoadLowGrade = NSButton; 
                 mPromptForCookie = NSButton; 
+                mStorePasswords = NSButton; 
                 mViewMixed = NSButton; 
             }; 
-            SUPERCLASS = NSPreferencePane; 
-        }
+            SUPERCLASS = PreferencePaneBase; 
+        }, 
+        {CLASS = PreferencePaneBase; LANGUAGE = ObjC; SUPERCLASS = NSPreferencePane; }
     ); 
     IBVersion = 1; 
 }

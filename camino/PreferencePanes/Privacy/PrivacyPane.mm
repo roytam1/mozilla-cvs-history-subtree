@@ -10,6 +10,10 @@
 #define LEAVE_SITE_PREF      "security.warn_leaving_secure"
 #define MIXEDCONTENT_PREF    "security.warn_viewing_mixed"
 
+// prefs for keychain password autofill
+static const char* const gUseKeychainPref = "chimera.store_passwords_with_keychain";
+static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_autofill";
+
 @implementation OrgMozillaChimeraPreferencePrivacy
 
 - (void) dealloc
@@ -60,6 +64,17 @@
   PRBool viewMixed = PR_TRUE;
   mPrefService->GetBoolPref(MIXEDCONTENT_PREF, &viewMixed);
   [mViewMixed setState:(viewMixed ? NSOnState : NSOffState)];
+
+  // Keychain checkboxes	
+
+  PRBool storePasswords = PR_TRUE;
+  mPrefService->GetBoolPref(gUseKeychainPref, &storePasswords);
+  [mStorePasswords setState:(storePasswords ? NSOnState : NSOffState)];
+  [mAutoFillPasswords setEnabled:storePasswords ? YES : NO];
+
+  PRBool autoFillPasswords = PR_TRUE;
+  mPrefService->GetBoolPref(gAutoFillEnabledPref, &autoFillPasswords);
+  [mAutoFillPasswords setState:(autoFillPasswords ? NSOnState : NSOffState)];
 }
 
 //
@@ -140,4 +155,43 @@
   [self setPref:LEAVE_SITE_PREF toBoolean:[sender state] == NSOnState];
 }
 
+//
+// clickStorePasswords
+//
+-(IBAction) clickStorePasswords:(id)sender
+{
+  if ( !mPrefService )
+    return;
+  if([mStorePasswords state] == NSOnState)
+  {
+      mPrefService->SetBoolPref("chimera.store_passwords_with_keychain", PR_TRUE);
+      [mAutoFillPasswords setEnabled:YES];
+  }
+  else
+  {
+      mPrefService->SetBoolPref("chimera.store_passwords_with_keychain", PR_FALSE);
+      [mAutoFillPasswords setEnabled:NO];
+  }        
+}
+
+//
+// clickAutoFillPasswords
+//
+// Set pref if autofill is enabled
+//
+-(IBAction) clickAutoFillPasswords:(id)sender
+{
+  if ( !mPrefService )
+    return;
+  mPrefService->SetBoolPref("chimera.keychain_passwords_autofill",
+                            [mAutoFillPasswords state] == NSOnState ? PR_TRUE : PR_FALSE);
+}
+
+-(IBAction) launchKeychainAccess:(id)sender
+{
+  if ([[NSWorkspace sharedWorkspace] launchApplication:NSLocalizedString(@"Keychain Access", @"Keychain Access")] == NO) {
+    // XXXw. pop up a dialog warning that Keychain couldn't be launched?
+    NSLog(@"Failed to launch Keychain.");
+  }
+}
 @end

@@ -144,6 +144,16 @@
   return [[self copy] autorelease];
 }
 
+- (PRUnichar*)createNewUnicodeBuffer
+{
+  PRUint32 length = [self length];
+  PRUnichar* retStr = (PRUnichar*)nsMemory::Alloc((length + 1) * sizeof(PRUnichar));
+  [self getCharacters:retStr];
+  retStr[length] = PRUnichar(0);
+  return retStr;
+}
+
+
 @end
 
 
