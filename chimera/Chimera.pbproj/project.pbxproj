@@ -142,7 +142,7 @@
 			buildStyles = (
 				4A9504CCFFE6A4B311CA0CBA,
 				4A9504CDFFE6A4B311CA0CBA,
-				F506E2310228D63D010001CA,
+				F593CA5E034EB88E01A967F3,
 			);
 			isa = PBXProject;
 			knownRegions = (
@@ -846,16 +846,6 @@
 			isa = PBXBuildFile;
 			settings = {
 			};
-		};
-		F506E2310228D63D010001CA = {
-			buildRules = (
-			);
-			buildSettings = {
-				COPY_PHASE_STRIP = YES;
-				OPTIMIZATION_CFLAGS = "-O3";
-			};
-			isa = PBXBuildStyle;
-			name = "Deployment -O3";
 		};
 		F507423C02AD808201A967F3 = {
 			isa = PBXFileReference;
@@ -5583,6 +5573,16 @@
 			isa = PBXBuildFile;
 			settings = {
 			};
+		};
+		F593CA5E034EB88E01A967F3 = {
+			buildRules = (
+			);
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUGGING_SYMBOLS = YES;
+			};
+			isa = PBXBuildStyle;
+			name = DeploymentSymbols;
 		};
 		F5949A46030D58A1014E8430 = {
 			children = (
