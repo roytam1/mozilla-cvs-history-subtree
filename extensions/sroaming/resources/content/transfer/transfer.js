@@ -748,23 +748,14 @@ function TransferProgressListener(transfer, filenr)
   this.filenr = filenr;
   this.file = this.transfer.files[this.filenr];
 
-  /*
-
-        var consumer = Components
-                   .classes["@mozilla.org/network/file-output-stream;1"]
-                   .createInstance(Components.interfaces.nsIFileOutputStream);
-        var buffer = Components
-                   .classes["@mozilla.org/network/buffered-output-stream;1"]
-                   .createInstance(Components.interfaces
-                                   .nsIBufferedOutputStream);
-        var lf = GetIOService().newURI("file:///tmp/foo", null, null)
-                       .QueryInterface(Components.interfaces.nsIFileURL)
-                       .file; // readonly
-        consumer.init(lf, -1, -1, 0);
-  */
         var consumer = Components.classes["@mozilla.org/binaryoutputstream;1"]
                        .createInstance(Components.interfaces
                                        .nsIBinaryOutputStream);
+        /* I don't care about that stream, and it's empty anyways, so
+           just use any outputstream that stores in RAM.
+           nsStorageStream would probably have been more suited, but I don't
+           see how I could instantiate that from JS, and binaryoutputstream
+           works just as well. */
         var buffer = Components
                        .classes["@mozilla.org/network/buffered-output-stream;1"]
                        .createInstance(Components.interfaces
