@@ -26,6 +26,7 @@
  *   Adrian Havill <havill@redhat.com>
  *   Gervase Markham <gerv@gerv.net>
  *   Bradley Baetz <bbaetz@netscape.com>
+ *   Benjamin Smedberg <bsmedberg@covad.net>
  */
 
 #include "nsHttp.h"
@@ -753,14 +754,21 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
     if (PREF_CHANGED(UA_PREF("locale"))) {
         nsCOMPtr<nsIPrefLocalizedString> pls;
         prefs->GetComplexValue(UA_PREF("locale"),
-                                NS_GET_IID(nsIPrefLocalizedString),
-                                getter_AddRefs(pls));
+                               NS_GET_IID(nsIPrefLocalizedString),
+                               getter_AddRefs(pls));
         if (pls) {
             nsXPIDLString uval;
             pls->ToString(getter_Copies(uval));
             if (uval)
-                mLanguage.Adopt(ToNewUTF8String(nsDependentString(uval)));
-        } 
+                CopyUTF16toUTF8(uval, mLanguage);
+        }
+        else {
+            nsXPIDLCString cval;
+            rv = prefs->GetCharPref(UA_PREF("locale"), getter_Copies(cval));
+            if (cval)
+                mLanguage.Assign(cval);
+        }
+
         mUserAgentIsDirty = PR_TRUE;
     }
 
