@@ -33,7 +33,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* new flattening stuff. */
+/* Possibly shared proto object for XPCWrappedNative. */
 
 #include "xpcprivate.h"
 

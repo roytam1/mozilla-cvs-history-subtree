@@ -1578,7 +1578,7 @@ NS_IMETHODIMP
 nsXPCComponents::GetStack(nsIJSStackFrameLocation * *aStack)
 {
     nsresult rv;
-    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
     if(!xpc)
         return NS_ERROR_FAILURE;
     rv = xpc->GetCurrentJSStack(aStack);

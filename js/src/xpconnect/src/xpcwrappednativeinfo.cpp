@@ -33,38 +33,12 @@
  * file under either the NPL or the GPL.
  */
 
-/* new flattening stuff. */
+/* Manage the shared info about interfaces for use by wrappedNatives. */
 
 #include "xpcprivate.h"
 
 /***************************************************************************/
 // XPCNativeMember
-
-// XXX We want to phase this out and have direct private slots on the funobj.
-// See: http://bugzilla.mozilla.org/show_bug.cgi?id=73843
-
-// Tight. No virtual methods.
-class XPCCallableInfo
-{
-public:
-    XPCCallableInfo(XPCNativeInterface* Interface,
-                    XPCNativeMember*    Member)
-        : mInterface(Interface), mMember(Member) {}
-    ~XPCCallableInfo() {}
-
-    XPCNativeInterface* GetInterface() const {return mInterface;}
-    XPCNativeMember*    GetMember() const {return mMember;}
-
-private:
-    // hide these...
-    XPCCallableInfo(const XPCCallableInfo& r); // not implemented
-    XPCCallableInfo& operator= (const XPCCallableInfo& r); // not implemented
-    XPCCallableInfo();   // No implementation
-
-private:
-    XPCNativeInterface* mInterface;
-    XPCNativeMember*    mMember;
-};
 
 // static
 JSBool
@@ -100,8 +74,6 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
 JSBool
 XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 {
-    // XXX locking!
-
     if(IsConstant())
     {
         const nsXPTConstant* constant;
@@ -116,11 +88,17 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         v.type = constant->GetType();
         memcpy(&v.val, &mv.val, sizeof(mv.val));
 
-        if(!XPCConvert::NativeData2JS(ccx, &mVal, &v.val, v.type,
+        jsval resultVal;
+
+        if(!XPCConvert::NativeData2JS(ccx, &resultVal, &v.val, v.type,
                                       nsnull, nsnull, nsnull))
             return JS_FALSE;
 
-        mFlags |= RESOLVED;
+        {   // scoped lock
+            XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());
+            mVal = resultVal;
+            mFlags |= RESOLVED;
+        }
 
         return JS_TRUE;
     }
@@ -146,7 +124,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         if(NS_FAILED(iface->GetInterfaceInfo()->GetMethodInfo(mIndex, &info)))
             return JS_FALSE;
 
-        // XXX ASSUMES that retval is last arg.
+        // Note: ASSUMES that retval is last arg.
         argc = (intN) info->GetParamCount();
         if(argc && info->GetParam((uint8)(argc-1)).IsRetval())
             argc-- ;
@@ -173,13 +151,15 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
     if(!funobj)
         return JS_FALSE;
 
-    mVal = OBJECT_TO_JSVAL(funobj);
-
     if(!JS_SetReservedSlot(ccx, funobj, 0, PRIVATE_TO_JSVAL(iface))||
        !JS_SetReservedSlot(ccx, funobj, 1, PRIVATE_TO_JSVAL(this)))
         return JS_FALSE;
 
-    mFlags |= RESOLVED;
+    {   // scoped lock
+        XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());
+        mVal = OBJECT_TO_JSVAL(funobj);
+        mFlags |= RESOLVED;
+    }
 
     return JS_TRUE;
 }
@@ -330,7 +310,6 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     jsval name;
     jsval interfaceName;
 
-
     // XXX Investigate lazy init? This is a problem given the
     // 'placement new' scheme - we need to at least know how big to make
     // the object. We might do a scan of methods to determine needed size,
@@ -398,7 +377,8 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
         if(info->IsSetter())
         {
             NS_ASSERTION(realTotalCount,"bad setter");
-            // XXX ASSUMES Getter/Setter pairs are next to each other
+            // Note: ASSUMES Getter/Setter pairs are next to each other
+            // This is a rule of the typelib spec.
             cur = &members[realTotalCount-1];
             NS_ASSERTION(cur->GetName() == name,"bad setter");
             NS_ASSERTION(cur->IsReadOnlyAttribute(),"bad setter");
@@ -517,7 +497,6 @@ XPCNativeInterface::DebugDump(PRInt16 depth)
 
 /***************************************************************************/
 // XPCNativeSet
-
 
 // static
 XPCNativeSet*
@@ -861,4 +840,3 @@ XPCNativeSet::DebugDump(PRInt16 depth)
         XPC_LOG_OUTDENT();
 #endif
 }
-

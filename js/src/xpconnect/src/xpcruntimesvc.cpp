@@ -59,7 +59,9 @@ nsJSRuntimeServiceImpl::~nsJSRuntimeServiceImpl() {
     }
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsJSRuntimeServiceImpl, nsIJSRuntimeService);
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsJSRuntimeServiceImpl, 
+                              nsIJSRuntimeService,
+                              nsISupportsWeakReference);
 
 static nsJSRuntimeServiceImpl* gJSRuntimeService = nsnull;
 

@@ -34,7 +34,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* Platform specific code to invoke XPCOM methods on JS objects */
+/* Sharable code and data for wrapper around JSObjects. */
 
 #include "xpcprivate.h"
 
@@ -58,7 +58,7 @@ static inline void DoPostScriptEvaluated(JSContext* cx)
     // If this is a DOM JSContext, then notify nsIScriptContext of script
     // completion so that it can reset its infinite loop detection mechanism.
     //
-    // XXX We rely on the rule that if any JSContext in our JSRuntime has a
+    // Note: We rely on the rule that if any JSContext in our JSRuntime has a
     // private set then that private *must* be a pointer to an nsISupports.
 
     nsISupports *supports = (nsISupports*) JS_GetContextPrivate(cx);
@@ -577,22 +577,18 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     void* mark;
     JSBool foundDependentParam;
     XPCContext* xpcc;
-    nsXPConnect* xpc;
     JSContext* cx;
     JSObject* thisObj;
 
     XPCCallContext ccx(NATIVE_CALLER);
     if(ccx.IsValid())
     {
-        // XXX we'll probably be able to do without some of these?
         xpcc = ccx.GetXPCContext();
-        xpc = ccx.GetXPConnect();
         cx = ccx.GetJSContext();
     }
     else
     {
         xpcc = nsnull;
-        xpc = nsnull;
         cx = nsnull;
     }
 
@@ -618,14 +614,14 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     if(cx)
         older = JS_SetErrorReporter(cx, xpcWrappedJSErrorReporter);
 
-    if(!xpc || !cx || !xpcc || !IsReflectable(methodIndex))
+    if(!cx || !xpcc || !IsReflectable(methodIndex))
         goto pre_call_clean_up;
 
     DoPreScriptEvaluated(cx);
 
     xpcc->SetPendingResult(pending_result);
     xpcc->SetException(nsnull);
-    xpc->SetPendingException(nsnull);
+    ccx.GetThreadData()->SetException(nsnull);
 
     // We use js_AllocStack, js_Invoke, and js_FreeStack so that the gcthings
     // we use as args will be rooted by the engine as we do conversions and
@@ -1012,7 +1008,7 @@ pre_call_clean_up:
         /* cleanup and set failed even if we can't build an exception */
         if(!xpc_exception)
         {
-            xpc->SetPendingException(nsnull); // XXX necessary?
+            ccx.GetThreadData()->SetException(nsnull); // XXX necessary?
             success = JS_FALSE;
         }
         JS_ClearPendingException(cx);
@@ -1119,7 +1115,7 @@ pre_call_clean_up:
             // still be an error and we have to do the right thing here...
             if(NS_FAILED(e_result))
             {
-                xpc->SetPendingException(xpc_exception);
+                ccx.GetThreadData()->SetException(xpc_exception);
                 retval = e_result;
             }
         }
@@ -1138,7 +1134,7 @@ pre_call_clean_up:
     if(!success)
         goto done;
 
-    xpc->SetPendingException(nsnull); // XXX necessary?
+    ccx.GetThreadData()->SetException(nsnull); // XXX necessary?
 
 #define HANDLE_OUT_CONVERSION_FAILURE       \
     PR_BEGIN_MACRO                          \

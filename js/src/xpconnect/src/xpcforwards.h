@@ -52,7 +52,6 @@ class XPCJSStack;
 class nsXPCWrappedJS;
 class nsXPCWrappedJSClass;
 
-class XPCCallableInfo;
 class XPCNativeMember;
 class XPCNativeInterface;
 class XPCNativeSet;

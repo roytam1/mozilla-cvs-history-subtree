@@ -33,7 +33,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* new flattening stuff. */
+/* Wrapper object for reflecting native xpcom objects into JavaScript. */
 
 #include "xpcprivate.h"
 
@@ -1913,8 +1913,10 @@ done:
 #ifdef DEBUG_stats_jband
     endTime = PR_IntervalNow();
 
-// XXX FIXME
-//    printf("%s::%s %d ( js->c ) \n", GetInterfaceName(), GetMemberName(desc), PR_IntervalToMilliseconds(endTime-startTime));
+    printf("%s::%s %d ( js->c ) \n", 
+           ccx.GetInterface()->GetNameString(),
+           ccx.GetInterface()->GetMemberName(ccx, ccx.GetMember()),
+           PR_IntervalToMilliseconds(endTime-startTime));
 
     totalTime += (endTime-startTime);
 #endif

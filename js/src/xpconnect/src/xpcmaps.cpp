@@ -40,10 +40,13 @@
 /***************************************************************************/
 // static shared...
 
+// Note this is returning the bit pattern of the first part of the nsID, not
+// the pointer to the nsID.
+
 static JSDHashNumber JS_DLL_CALLBACK
 HashIIDPtrKey(JSDHashTable *table, const void *key)
 {
-    return (JSHashNumber) *((PRUint32*)key);
+    return *((JSHashNumber*)key);
 }
 
 static JSBool JS_DLL_CALLBACK

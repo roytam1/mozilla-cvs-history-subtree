@@ -41,24 +41,7 @@ class XPCJSStackFrame : public nsIJSStackFrameLocation
 {
 public:
     NS_DECL_ISUPPORTS
-
-    /* readonly attribute boolean isJSFrame; */
-    NS_IMETHOD GetIsJSFrame(PRBool *aIsJSFrame);
-
-    /* readonly attribute string filename; */
-    NS_IMETHOD GetFilename(char * *aFilename);
-
-    /* readonly attribute string function; */
-    NS_IMETHOD GetFunctionName(char * *aFunction);
-
-    /* readonly attribute PRInt32 lineNumber; */
-    NS_IMETHOD GetLineNumber(PRInt32 *aLineNumber);
-
-    /* readonly attribute nsIJSStackFrameLocation caller; */
-    NS_IMETHOD GetCaller(nsIJSStackFrameLocation * *aCaller);
-
-    /* string toString (); */
-    NS_IMETHOD ToString(char **_retval);
+    NS_DECL_NSIJSSTACKFRAMELOCATION
 
     static nsresult CreateStack(JSContext* cx, JSStackFrame* fp,
                                 XPCJSStackFrame** stack);
@@ -133,8 +116,7 @@ XPCJSStackFrame::~XPCJSStackFrame()
         nsMemory::Free(mFilename);
     if(mFunname)
         nsMemory::Free(mFunname);
-    if(mCaller)
-        NS_RELEASE(mCaller);
+    NS_IF_RELEASE(mCaller);
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(XPCJSStackFrame, nsIJSStackFrameLocation)

@@ -160,8 +160,7 @@ XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
         if(cur->mGlobalJSObject &&
            JS_IsAboutToBeFinalized(cx, cur->mGlobalJSObject))
         {
-            // XXX some wrapper invalidation is in order here...
-
+            // XXX some wrapper invalidation may be in order here...
 
             cur->mGlobalJSObject = nsnull;
 

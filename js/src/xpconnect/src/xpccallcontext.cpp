@@ -59,6 +59,8 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
     if(!mXPC)
         return;
 
+    NS_ADDREF(mXPC);
+
     if(!(mThreadData = XPCPerThreadData::GetData()))
         return;
 
@@ -105,8 +107,7 @@ XPCCallContext::XPCCallContext(XPCContext::LangType callerLanguage,
 
     if(!(mXPCContext = nsXPConnect::GetContext(mJSContext, mXPC)))
         return;
-    // XXX we might hook into a list on the contexts???
-
+    
     mPrevCallerLanguage = mXPCContext->SetCallingLangType(mCallerLanguage);
 
     // hook into call context chain for our thread
@@ -299,6 +300,8 @@ XPCCallContext::~XPCCallContext()
         (void) mThreadData->SetCallContext(mPrevCallContext);
 #endif
     }
+
+    NS_IF_RELEASE(mXPC);
 }
 
 NS_IMPL_QUERY_INTERFACE1(XPCCallContext, nsIXPCNativeCallContext)

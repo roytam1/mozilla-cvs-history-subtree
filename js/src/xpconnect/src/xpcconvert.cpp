@@ -195,7 +195,7 @@ static nsresult
 GetDynamicScriptContext(JSContext *aContext,
                         nsIScriptContext** aScriptContext)
 {
-  // XXX We rely on the rule that if any JSContext in our JSRuntime has a
+  // Note: We rely on the rule that if any JSContext in our JSRuntime has a
   // private set then that private *must* be a pointer to an nsISupports.
   nsISupports *supports = (nsIScriptContext*) JS_GetContextPrivate(aContext);
   if (!supports)
@@ -209,13 +209,14 @@ GetDynamicScriptContext(JSContext *aContext,
 /***************************************************************************/
 
 /*
-* Support for 64 bit conversions were 'long long' not supported.
+* Support for 64 bit conversions where 'long long' not supported.
 * (from John Fairhurst <mjf35@cam.ac.uk>)
 */
 
 #ifdef HAVE_LONG_LONG
 
-#define JAM_DOUBLE(cx,v,d) (d=JS_NewDouble(cx,(jsdouble)v),DOUBLE_TO_JSVAL(d))
+#define JAM_DOUBLE(cx,v,d) (d = JS_NewDouble(cx, (jsdouble)v) , \
+                            d ? DOUBLE_TO_JSVAL(d) : JSVAL_ZERO)
 // Win32 can't handle uint64 to double conversion
 #define JAM_DOUBLE_U64(cx,v,d) JAM_DOUBLE(cx,((int64)v),d)
 
@@ -224,17 +225,21 @@ GetDynamicScriptContext(JSContext *aContext,
 inline jsval
 JAM_DOUBLE(JSContext *cx, const int64 &v, jsdouble *dbl)
 {
-   jsdouble d;
-   LL_L2D(d, v);
-   dbl = JS_NewDouble(cx, d);
-   return DOUBLE_TO_JSVAL(dbl);
+    jsdouble d;
+    LL_L2D(d, v);
+    dbl = JS_NewDouble(cx, d);
+    if(!dbl)
+        return JSVAL_ZERO;
+    return DOUBLE_TO_JSVAL(dbl);
 }
 
 inline jsval
 JAM_DOUBLE(JSContext *cx, double v, jsdouble *dbl)
 {
-   dbl = JS_NewDouble(cx, (jsdouble)v);
-   return DOUBLE_TO_JSVAL(dbl);
+    dbl = JS_NewDouble(cx, (jsdouble)v);
+    if(!dbl)
+        return JSVAL_ZERO;
+    return DOUBLE_TO_JSVAL(dbl);
 }
 
 // if !HAVE_LONG_LONG, then uint64 is a typedef of int64
@@ -318,7 +323,6 @@ XPCConvert::NativeData2JS(XPCCallContext& ccx, jsval* d, const void* s,
         switch(type.TagPart())
         {
         case nsXPTType::T_VOID:
-            // XXX implement void* ?
             XPC_LOG_ERROR(("XPCConvert::NativeData2JS : void* params not supported"));
             return JS_FALSE;
 
@@ -487,7 +491,7 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
             if(!JS_ValueToNumber(cx, s, &td))
                 return JS_FALSE;
 #ifdef XP_WIN
-            // XXX Win32 can't handle double to uint64 directly
+            // Note: Win32 can't handle double to uint64 directly
             *((uint64*)d) = (uint64)((int64) td);
 #else
             LL_D2L(*((uint64*)d),td);
@@ -549,7 +553,6 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
         switch(type.TagPart())
         {
         case nsXPTType::T_VOID:
-            // XXX implement void* ?
             XPC_LOG_ERROR(("XPCConvert::JSData2Native : void* params not supported"));
             NS_ASSERTION(0,"void* params not supported");
             return JS_FALSE;

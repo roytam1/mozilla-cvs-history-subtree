@@ -38,7 +38,7 @@
 
 #include "xpcprivate.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsXPConnect,nsIXPConnect)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPConnect,nsIXPConnect,nsISupportsWeakReference)
 
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool nsXPConnect::gOnceAliveNowDead = JS_FALSE;

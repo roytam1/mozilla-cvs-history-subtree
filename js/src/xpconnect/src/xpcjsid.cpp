@@ -694,7 +694,7 @@ nsJSCID::CreateInstance(nsISupports **_retval)
     if(!mDetails.IsValid())
         return NS_ERROR_XPC_BAD_CID;
 
-    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
     if(!xpc)
         return NS_ERROR_UNEXPECTED;
 
@@ -780,7 +780,7 @@ nsJSCID::GetService(nsISupports **_retval)
     if(!mDetails.IsValid())
         return NS_ERROR_XPC_BAD_CID;
 
-    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
     if(!xpc)
         return NS_ERROR_UNEXPECTED;
 
@@ -933,7 +933,7 @@ xpc_NewIDObject(JSContext *cx, JSObject* jsobj, const nsID& aID)
         nsCRT::free(idString);
         if(iid)
         {
-            nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
+            nsXPConnect* xpc = nsXPConnect::GetXPConnect();
             if(xpc)
             {
                 nsCOMPtr<nsIXPConnectJSObjectHolder> holder;

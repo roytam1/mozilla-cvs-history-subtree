@@ -86,7 +86,7 @@ XPCThrower::ThrowBadResult(nsresult rv, nsresult result, XPCCallContext& ccx)
     *  call. So we'll just throw that exception into our JS.
     */
 
-    nsCOMPtr<nsXPConnect> xpc(nsXPConnect::GetXPConnect());
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
     if(xpc)
     {
         nsCOMPtr<nsIXPCException> e;
@@ -196,10 +196,10 @@ XPCThrower::ThrowExceptionObject(JSContext* cx, nsIXPCException* e)
     JSBool success = JS_FALSE;
     if(e)
     {
-        nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
+        nsXPConnect* xpc = nsXPConnect::GetXPConnect();
         if(xpc)
         {
-            // XXX funky
+            // XXX funky JS_GetGlobalObject alert!
             JSObject* glob = JS_GetGlobalObject(cx);
 
             nsCOMPtr<nsIXPConnectJSObjectHolder> holder;

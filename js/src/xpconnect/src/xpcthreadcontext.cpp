@@ -61,7 +61,7 @@ XPCJSContextStack::~XPCJSContextStack()
 void
 XPCJSContextStack::SyncJSContexts()
 {
-    nsCOMPtr<nsXPConnect> xpc = nsXPConnect::GetXPConnect();
+    nsXPConnect* xpc = nsXPConnect::GetXPConnect();
     if(xpc)
         xpc->SyncJSContexts();
 }
@@ -190,8 +190,10 @@ XPCJSContextStack::SetSafeJSContext(JSContext * aSafeJSContext)
  * construction to keep it around even if no one is using it.
  */
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCThreadJSContextStackImpl,
-        nsIThreadJSContextStack, nsIJSContextStack)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsXPCThreadJSContextStackImpl,
+                              nsIThreadJSContextStack, 
+                              nsIJSContextStack, 
+                              nsISupportsWeakReference)
 
 static nsXPCThreadJSContextStackImpl* gXPCThreadJSContextStack = nsnull;
 

@@ -40,7 +40,6 @@
 
 // NOTE: much of the fancy footwork is done in xpcstubs.cpp
 
-
 NS_IMETHODIMP
 nsXPCWrappedJS::AggregatedQueryInterface(REFNSIID aIID, void** aInstancePtr)
 {

@@ -10,7 +10,6 @@
     - followup with shaver on classinfo maps (shared with table driven QI?)
     - deal with shaver's string changes
     ? add HasInstance (or whatever) to nsIClassInfo
-    ? nsXPConnect should impl nsISupportsWeakReference
 
 - VERIFY these things:
     - VERIFY nsXPConnect::ReparentWrappedNativeIfFound

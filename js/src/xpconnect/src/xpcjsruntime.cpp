@@ -303,7 +303,6 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 //
                 // XXX We may decide to not do this on *every* gc cycle.
 
-
                 // Skip this part if XPConnect is shutting down. We get into
                 // bad locking problems with the thread iteration otherwise.
                 if(self->GetXPConnect()->IsShuttingDown())
@@ -352,7 +351,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 // Release all the members whose JSObjects are now known
                 // to be dead.
 
-                // XXX We *really* need to enter and exit a lock and pick these
+                // XXX We ought to enter and exit a lock and pick these
                 // elements off one at a time!
 
                 for(PRInt32 i = dyingWrappedJSArray->Count() - 1; i >= 0; i--)
@@ -444,9 +443,6 @@ XPCJSRuntime::~XPCJSRuntime()
 #endif
         delete mWrappedJSClassMap;
     }
-
-
-    // XXX clear these maps???
 
     if(mIID2NativeInterfaceMap)
     {

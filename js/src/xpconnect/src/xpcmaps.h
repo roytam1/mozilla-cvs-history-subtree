@@ -40,6 +40,11 @@
 
 // Maps...
 
+// Note that most of the declarations for hash table entries begin with
+// a pointer to something or another. This makes them look enough like
+// the JSDHashEntryStub struct that the default OPs (JS_DHashGetStubOps())
+// just do the right thing for most of our needs.
+
 // no virtuals in the maps - all the common stuff inlined
 // templates could be used to good effect here.
 
