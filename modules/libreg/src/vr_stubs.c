@@ -178,11 +178,8 @@ char *strdup(const char *source)
         return newAllocation;
 }
 
-#endif /* XP_MAC */
 
-#if defined(XP_MAC) || defined(XP_UNIX)
-
-int vr_strcasecmp(const char *str1, const char *str2)
+int strcasecmp(const char *str1, const char *str2)
 {
 	char 	currentChar1, currentChar2;
 
@@ -211,7 +208,7 @@ int vr_strcasecmp(const char *str1, const char *str2)
 	return currentChar1 - currentChar2;
 }
 
-int vr_strncasecmp(const char *str1, const char *str2, int length)
+int strncasecmp(const char *str1, const char *str2, int length)
 {
 	char 	currentChar1, currentChar2;
 
@@ -240,7 +237,7 @@ int vr_strncasecmp(const char *str1, const char *str2, int length)
 
 	return currentChar1 - currentChar2;
 }
-#endif /* XP_MAC || XP_UNIX */
+#endif /* XP_MAC */
 
 
 /* ------------------------------------------------------------------

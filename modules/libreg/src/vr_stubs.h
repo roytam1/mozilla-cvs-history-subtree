@@ -96,13 +96,11 @@
 #define XP_STRCASECMP(x,y)  stricmp((x),(y))
 #define XP_STRNCASECMP(x,y,n) strnicmp((x),(y),(n))
 
-#endif
+#else
 
-#if defined(XP_MAC) || defined(XP_UNIX)
 #define XP_STRCASECMP(x,y)  strcasecmp((x),(y))
 #define XP_STRNCASECMP(x,y,n) strncasecmp((x),(y),(n))
-extern int vr_strcasecmp(const char *str1, const char *str2);
-extern int vr_strncasecmp(const char *str1, const char *str2, int length);
+
 #endif
 
 typedef FILE          * XP_File;
@@ -130,6 +128,12 @@ typedef int             XP_Bool;
 extern XP_File VR_StubOpen (const char *name, const char * mode);
 #else
 extern XP_File VR_StubOpen (const char * mode);
+#endif
+
+#ifdef XP_MAC
+extern int strcasecmp(const char *str1, const char *str2);
+extern int strncasecmp(const char *str1, const char *str2, int length);
+extern char * strdup(const char *str);
 #endif
 
 #endif /* _VR_STUBS_H_ */
