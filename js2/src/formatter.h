@@ -75,16 +75,23 @@ namespace JavaScript
         virtual void printString16(const String &s);
         virtual void printVFormat8(const char *format, va_list args);
       public:
-        
-	virtual ~Formatter() { }   // keeping gcc happy
+
+#ifdef __GNUC__ // Workaround for gcc pedantry.  No one should be calling delete on a raw Formatter.
+	    virtual ~Formatter() {}
+#endif
 
         Formatter &operator<<(char ch) {printChar8(ch); return *this;}
         Formatter &operator<<(char16 ch) {printChar16(ch); return *this;}
         Formatter &operator<<(const char *str) {printZStr8(str); return *this;}
         Formatter &operator<<(const String &s) {printString16(s); return *this;}
+        Formatter &operator<<(bool b);
+        Formatter &operator<<(uint8 i) {printFormat(*this, "%u", i); return *this;}
         Formatter &operator<<(uint32 i) {printFormat(*this, "%u", i); return *this;}
         Formatter &operator<<(int32 i) {printFormat(*this, "%d", i); return *this;}
-        Formatter &operator<<(uint8 i) {printFormat(*this, "%u", i); return *this;}
+
+        // Cause compile-time undefined YOU_TRIED_TO_PRINT_A_RAW_POINTER identifier errors for accidental printing of pointers.
+        // The error occurs at the place where you try to instantiate this template; the compiler may or may not tell you where it is.
+        template<class T> Formatter &operator<<(const T *s) {YOU_TRIED_TO_PRINT_A_RAW_POINTER(s); return *this;}
 
         friend void printString(Formatter &f, const char *strBegin, const char *strEnd) {f.printStr8(strBegin, strEnd);}
         friend void printString(Formatter &f, const char16 *strBegin, const char16 *strEnd) {f.printStr16(strBegin, strEnd);}

@@ -217,6 +217,14 @@ void JS::Formatter::printVFormat8(const char *format, va_list args)
 }
 
 
+// Write either "true" or "false".
+JS::Formatter &JS::Formatter::operator<<(bool b)
+{
+    printZStr8(b ? "true" : "false");
+    return *this;
+}
+
+
 // Write the printf format using the supplied args.
 void JS::printFormat(Formatter &f, const char *format, ...)
 {
