@@ -59,6 +59,7 @@ pref("slider.snapMultiplier", 6);
 pref("browser.fixup.alternate.enabled", true);
 pref("browser.fixup.alternate.prefix", "www.");
 pref("browser.fixup.alternate.suffix", ".com");
+pref("browser.fixup.hide_user_pass", true);
 
 // Scripts & Windows prefs
 pref("browser.block.target_new_window",     false);
@@ -70,7 +71,7 @@ pref("dom.disable_window_status_change",    false);
 pref("dom.disable_window_open_feature.titlebar",    false);
 pref("dom.disable_window_open_feature.close",       false);
 pref("dom.disable_window_open_feature.toolbar",     false);
-pref("dom.disable_window_open_feature.location",    false);
+pref("dom.disable_window_open_feature.location",    true);
 pref("dom.disable_window_open_feature.directories", false);
 pref("dom.disable_window_open_feature.personalbar", false);
 pref("dom.disable_window_open_feature.menubar",     false);
