@@ -206,13 +206,20 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, int mode)
             flags = OPEN_EXISTING;
     }
 
-    file = CreateFile(name,
-                      access,
-                      FILE_SHARE_READ|FILE_SHARE_WRITE,
-                      NULL,
-                      flags,
-                      flag6,
-                      NULL);
+    file =
+#if !defined(WINCE)
+           CreateFile
+#else
+           CreateFileA
+#endif
+                      (
+                       name,
+                       access,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE,
+                       NULL,
+                       flags,
+                       flag6,
+                       NULL);
     if (file == INVALID_HANDLE_VALUE) {
 		_PR_MD_MAP_OPEN_ERROR(GetLastError());
         return -1; 
@@ -264,13 +271,20 @@ _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, int mode)
             flags = OPEN_EXISTING;
     }
 
-    file = CreateFile(name,
-                      access,
-                      FILE_SHARE_READ|FILE_SHARE_WRITE,
-                      lpSA,
-                      flags,
-                      flag6,
-                      NULL);
+    file =
+#if !defined(WINCE)
+          CreateFile
+#else
+          CreateFileA
+#endif
+                      (
+                       name,
+                       access,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE,
+                       lpSA,
+                       flags,
+                       flag6,
+                       NULL);
     if (lpSA != NULL) {
         _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
     }
@@ -457,7 +471,11 @@ void FlipSlashes(char *cp, int len)
         if (cp[0] == '/') {
             cp[0] = PR_DIRECTORY_SEPARATOR;
         }
+#if !defined(WINCE)
         cp = _mbsinc(cp);
+#else
+        cp++;
+#endif
     }
 } /* end FlipSlashes() */
 
@@ -510,7 +528,24 @@ _PR_MD_OPEN_DIR(_MDDir *d, const char *name)
     strcpy(&filename[len], "\\*.*");
     FlipSlashes( filename, strlen(filename) );
 
+#if !defined(WINCE)
     d->d_hdl = FindFirstFile( filename, &(d->d_entry) );
+#else
+    {
+        LPWSTR ceFilename = _PR_MD_MALLOC_A2W(filename);
+
+        if(NULL != ceFilename)
+        {
+            d->d_hdl = FindFirstFile( ceFilename, &(d->d_entry) );
+            PR_Free(ceFilename);
+        }
+        else
+        {
+            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+            return PR_FAILURE;
+        }
+    }
+#endif
     if ( d->d_hdl == INVALID_HANDLE_VALUE ) {
 		_PR_MD_MAP_OPENDIR_ERROR(GetLastError());
         return PR_FAILURE;
@@ -538,6 +573,8 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
             if (rv == 0) {
                 break;
             }
+            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
+                 continue;
             fileName = GetFileFromDIR(d);
             if ( (flags & PR_SKIP_DOT) &&
                  (fileName[0] == '.') && (fileName[1] == '\0'))
@@ -545,8 +582,6 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
             if ( (flags & PR_SKIP_DOT_DOT) &&
                  (fileName[0] == '.') && (fileName[1] == '.') &&
                  (fileName[2] == '\0'))
-                 continue;
-            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
                  continue;
             return fileName;
         }
@@ -562,7 +597,13 @@ _PR_MD_READ_DIR(_MDDir *d, PRIntn flags)
 PRInt32
 _PR_MD_DELETE(const char *name)
 {
-    if (DeleteFile(name)) {
+    if (
+#if !defined(WINCE)
+        DeleteFile(name)
+#else
+        DeleteFileA(name)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_DELETE_ERROR(GetLastError());
@@ -669,7 +710,14 @@ _PR_MD_STAT(const char *fn, struct stat *info)
      * In order to do this we'll need read access to the file.
      * We won't mind sharing the file.
      */
-    readHandle = CreateFile(fn,
+    readHandle = 
+#if !defined(WINCE)
+                 CreateFile
+#else
+                 CreateFileA
+#endif
+                           (
+                            fn,
                             GENERIC_READ,
                             FILE_SHARE_READ | FILE_SHARE_WRITE,
                             NULL,
@@ -1035,7 +1083,13 @@ PRInt32
 _PR_MD_RENAME(const char *from, const char *to)
 {
     /* Does this work with dot-relative pathnames? */
-    if (MoveFile(from, to)) {
+    if (
+#if !defined(WINCE)
+        MoveFile(from, to)
+#else
+        MoveFileA(from, to)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_RENAME_ERROR(GetLastError());
@@ -1068,7 +1122,11 @@ _PR_MD_ACCESS(const char *name, PRAccessHow how)
 #else
     DWORD attribs = 0;
 
+#if !defined(WINCE)
     attribs = GetFileAttributes(name);
+#else
+    attribs = GetFileAttributesA(name);
+#endif
     if((DWORD)-1 != attribs)
     {
         switch(how)
@@ -1099,7 +1157,13 @@ PRInt32
 _PR_MD_MKDIR(const char *name, PRIntn mode)
 {
     /* XXXMB - how to translate the "mode"??? */
-    if (CreateDirectory(name, NULL)) {
+    if (
+#if !defined(WINCE)
+        CreateDirectory(name, NULL)
+#else
+        CreateDirectoryA(name, NULL)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_MKDIR_ERROR(GetLastError());
@@ -1123,7 +1187,11 @@ _PR_MD_MAKE_DIR(const char *name, PRIntn mode)
         sa.bInheritHandle = FALSE;
         lpSA = &sa;
     }
+#if !defined(WINCE)
     rv = CreateDirectory(name, lpSA);
+#else
+    rv = CreateDirectoryA(name, lpSA);
+#endif
     if (lpSA != NULL) {
         _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
     }
@@ -1138,7 +1206,13 @@ _PR_MD_MAKE_DIR(const char *name, PRIntn mode)
 PRInt32
 _PR_MD_RMDIR(const char *name)
 {
-    if (RemoveDirectory(name)) {
+    if (
+#if !defined(WINCE)
+        RemoveDirectory(name)
+#else
+        RemoveDirectoryA(name)
+#endif
+        ) {
         return 0;
     } else {
 		_PR_MD_MAP_RMDIR_ERROR(GetLastError());
@@ -1149,6 +1223,7 @@ _PR_MD_RMDIR(const char *name)
 PRStatus
 _PR_MD_LOCKFILE(PRInt32 f)
 {
+#if !defined(WINCE)
     PRStatus  rc = PR_SUCCESS;
 	DWORD     rv;
 
@@ -1163,6 +1238,10 @@ _PR_MD_LOCKFILE(PRInt32 f)
     }
 
     return rc;
+#else
+    PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
+    return PR_FAILURE;
+#endif
 } /* end _PR_MD_LOCKFILE() */
 
 PRStatus
@@ -1176,6 +1255,7 @@ _PR_MD_TLOCKFILE(PRInt32 f)
 PRStatus
 _PR_MD_UNLOCKFILE(PRInt32 f)
 {
+#if !defined(WINCE)
 	PRInt32   rv;
     
     rv = UnlockFile( (HANDLE) f,
@@ -1191,6 +1271,10 @@ _PR_MD_UNLOCKFILE(PRInt32 f)
 		_PR_MD_MAP_DEFAULT_ERROR(GetLastError());
 		return PR_FAILURE;
     }
+#else
+    PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
+    return PR_FAILURE;
+#endif
 } /* end _PR_MD_UNLOCKFILE() */
 
 PRInt32

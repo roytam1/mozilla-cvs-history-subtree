@@ -618,20 +618,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
 #if !defined(WINCE)
     h = LoadLibrary(name);
 #else
-    {
-        LPWSTR ceName = NULL;
-        
-        ceName = _PR_MD_MALLOC_A2W(name);
-        if(NULL != ceName)
-        {
-            h = LoadLibrary(ceName);
-            PR_Free(ceName);
-        }
-        else
-        {
-            h = NULL;
-        }
-    }
+    h = LoadLibraryA(name);
 #endif
     if (h < (HINSTANCE)HINSTANCE_ERROR) {
         oserr = _MD_ERRNO();
@@ -1245,20 +1232,7 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
 #if !defined(WINCE)
     f = GetProcAddress(lm->dlh, name);
 #else
-    {
-        LPWSTR ceName = NULL;
-
-        ceName = _PR_MD_MALLOC_A2W(name);
-        if(NULL != ceName)
-        {
-            f = GetProcAddress(lm->dlh, ceName);
-            PR_Free(ceName);
-        }
-        else
-        {
-            f = NULL;
-        }
-    }
+    f = GetProcAddressA(lm->dlh, name);
 #endif
 #endif  /* WIN32 || WIN16 */
 

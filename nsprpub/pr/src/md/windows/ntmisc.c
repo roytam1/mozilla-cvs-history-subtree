@@ -545,8 +545,6 @@ errorExit:
     BOOL retVal;
     char *cmdLine = NULL;
     PRProcess *proc = NULL;
-    LPWSTR cePath = NULL;
-    LPWSTR ceCmdLine = NULL;
 
     proc = PR_NEW(PRProcess);
     if (!proc) {
@@ -559,27 +557,14 @@ errorExit:
         goto errorExit;
     }
 
-    if(NULL != path)
-    {
-        cePath = _PR_MD_MALLOC_A2W(path);
-        if(NULL == cePath)
-        {
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            goto errorExit;
-        }
-    }
-    if(NULL != cmdLine)
-    {
-        ceCmdLine = _PR_MD_MALLOC_A2W(cmdLine);
-        if(NULL == ceCmdLine)
-        {
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-            goto errorExit;
-        }
-    }
-
-    retVal = CreateProcess(cePath,
-                           ceCmdLine,
+    retVal =
+#if !defined(WINCE)
+             CreateProcess(
+#else
+             CreateProcessA(
+#endif
+                           path,
+                           cmdLine,
                            NULL,  /* not supported */
                            NULL,  /* not supported */
                            FALSE, /* not supported */
@@ -599,26 +584,10 @@ errorExit:
     proc->md.handle = procInfo.hProcess;
     proc->md.id = procInfo.dwProcessId;
 
-    if(cePath)
-    {
-        PR_Free(cePath);
-    }
-    if(ceCmdLine)
-    {
-        PR_Free(ceCmdLine);
-    }
     PR_DELETE(cmdLine);
     return proc;
 
 errorExit:
-    if(cePath)
-    {
-        PR_Free(cePath);
-    }
-    if(ceCmdLine)
-    {
-        PR_Free(ceCmdLine);
-    }
     if (cmdLine) {
         PR_DELETE(cmdLine);
     }

@@ -94,3 +94,31 @@ LPWSTR _PR_MD_MALLOC_A2W(LPCSTR inString)
 
     return retval;
 }
+
+#if defined(WINCE)
+
+/*
+** WINCE Only
+**
+** This entire section of code dedicated to doing conversions between
+**  ANSI code page APIs and UNICODE APIs (funcA to funcW).
+** This is similar to what NT does to support the funcAs.
+*/
+
+void OutputDebugStringA(LPCSTR inString)
+{
+    LPWSTR str = NULL;
+
+    str = _PR_MD_MALLOC_A2W(inString);
+    if(NULL != str)
+    {
+        OutputDebugStringW(str);
+        PR_Free(str);
+    }
+    else
+    {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+    }
+}
+
+#endif /* WINCE */

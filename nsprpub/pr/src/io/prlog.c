@@ -109,23 +109,6 @@ static PRLock *_pr_logLock;
 #define WIN32_DEBUG_FILE (FILE*)-2
 #endif
 
-/*
-** CE needs a different OutputDebugString (UNICODE only).
-*/
-#if defined(WINCE)
-#define CEOutputDebugString(str) \
-    PR_BEGIN_MACRO \
-        LPWSTR wstr = NULL; \
-        \
-        wstr = _PR_MD_MALLOC_A2W(str); \
-        if(NULL != wstr) \
-        { \
-            OutputDebugString(wstr); \
-            PR_Free(wstr); \
-        } \
-    PR_END_MACRO
-#endif
-
 /* Macros used to reduce #ifdef pollution */
 
 #if defined(_PR_USE_STDIO_FOR_LOGGING)
@@ -262,7 +245,7 @@ void _PR_InitLog(void)
 #if !defined(WINCE)
                     OutputDebugString(str);
 #else
-                    CEOutputDebugString(str);
+                    OutputDebugStringA(str);
 #endif
                     PR_smprintf_free(str);
                 }
@@ -466,7 +449,7 @@ PR_IMPLEMENT(void) PR_LogPrint(const char *fmt, ...)
 #if !defined(WINCE)
             OutputDebugString( line );
 #else
-            CEOutputDebugString( line );
+            OutputDebugStringA( line );
 #endif
         else
             _PUT_LOG(logFile, line, nb);
