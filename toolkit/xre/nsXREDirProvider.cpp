@@ -68,6 +68,7 @@
 #endif
 #ifdef XP_BEOS
 #include <be/kernel/image.h>
+#include <FindDirectory.h>
 #endif
 #ifdef XP_UNIX
 #include <ctype.h>
@@ -579,15 +580,15 @@ nsXREDirProvider::GetUserAppDataDirectory(nsILocalFile** aFile)
   if (find_directory(B_USER_SETTINGS_DIRECTORY, NULL, true, appDir, MAXPATHLEN))
     return NS_ERROR_FAILURE;
 
-  int len = strlen(path);
-  path[len]   = '/';
-  path[len+1] = '\0';
+  int len = strlen(appDir);
+  appDir[len]   = '/';
+  appDir[len+1] = '\0';
 
   rv = NS_NewNativeLocalFile(nsDependentCString(appDir), PR_TRUE,
                              getter_AddRefs(localDir));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = localFile->AppendNative(nsDependentCString(gAppData->appName));
+  rv = localDir->AppendNative(nsDependentCString(gAppData->appName));
   NS_ENSURE_SUCCESS(rv, rv);
 
 #elif defined(XP_UNIX)
