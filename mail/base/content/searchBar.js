@@ -166,7 +166,7 @@ function initializeSearchBar()
 
 function onEnterInSearchBar()
 {
-   if (gSearchInput.value == "") 
+   if (gSearchInput.value == "" || gSearchInput.showingSearchCriteria) 
    {
      if (gSearchInput.searchMode == kQuickSearchHighlight)
        removeHighlighting();
@@ -178,11 +178,8 @@ function onEnterInSearchBar()
 
        if (gDefaultSearchViewTerms)
        {
-         if (gQSViewIsDirty)
-         {
            initializeSearchBar();
            onSearch(gDefaultSearchViewTerms);
-         }
        }
        else
         restorePreSearchView();
@@ -359,57 +356,60 @@ function createSearchTerms()
   // does this break if the user types "foo|bar" expecting to see subjects with that string?
   // I claim no, since "foo|bar" will be a hit for "foo" || "bar"
   // they just might get more false positives
-  var termList = gSearchInput.value.split("|");
-  for (var i = 0; i < termList.length; i ++)
+  if (!gSearchInput.showingSearchCriteria) // ignore the text box value if it's just showing the search criteria string
   {
-    // if the term is empty, skip it
-    if (termList[i] == "")
-      continue;
-
-    // create, fill, and append the subject term
-    var term;
-    var value;
-
-    // if our search criteria is subject or subject|sender then add a term for the subject
-    if (gSearchInput.searchMode == kQuickSearchSubject || gSearchInput.searchMode == kQuickSearchSenderOrSubject)
+    var termList = gSearchInput.value.split("|");
+    for (var i = 0; i < termList.length; i ++)
     {
-       term = gSearchSession.createTerm();
-       value = term.value;
-       value.str = termList[i];
-       term.value = value;
-       term.attrib = nsMsgSearchAttrib.Subject;
-       term.op = nsMsgSearchOp.Contains;
-       term.booleanAnd = false;
-       searchTermsArray.AppendElement(term);
-     }
+      // if the term is empty, skip it
+      if (termList[i] == "")
+        continue;
 
-     if (gSearchInput.searchMode == kQuickSearchBody)
-     {
-       // what do we do for news and imap users that aren't configured for offline use?
-       // in these cases the body search will never return any matches. Should we try to 
-       // see if body is a valid search scope in this particular case before doing the search?
-       // should we switch back to a subject/sender search behind the scenes?
-       term = gSearchSession.createTerm();
-       value = term.value;
-       value.str = termList[i];
-       term.value = value;
-       term.attrib = nsMsgSearchAttrib.Body;
-       term.op = nsMsgSearchOp.Contains; 
-       term.booleanAnd = false;
-       searchTermsArray.AppendElement(term);       
-     }
+      // create, fill, and append the subject term
+      var term;
+      var value;
 
-    // create, fill, and append the sender (or recipient) term
-    if (gSearchInput.searchMode == kQuickSearchSender || gSearchInput.searchMode == kQuickSearchSenderOrSubject)
-    {
-      term = gSearchSession.createTerm();
-      value = term.value;
-      value.str = termList[i];
-      term.value = value;
-      term.attrib = searchAttrib;
-      term.op = nsMsgSearchOp.Contains; 
-      term.booleanAnd = false;
-      searchTermsArray.AppendElement(term);
+      // if our search criteria is subject or subject|sender then add a term for the subject
+      if (gSearchInput.searchMode == kQuickSearchSubject || gSearchInput.searchMode == kQuickSearchSenderOrSubject)
+      {
+         term = gSearchSession.createTerm();
+         value = term.value;
+         value.str = termList[i];
+         term.value = value;
+         term.attrib = nsMsgSearchAttrib.Subject;
+         term.op = nsMsgSearchOp.Contains;
+         term.booleanAnd = false;
+         searchTermsArray.AppendElement(term);
+       }
+
+       if (gSearchInput.searchMode == kQuickSearchBody)
+       {
+         // what do we do for news and imap users that aren't configured for offline use?
+         // in these cases the body search will never return any matches. Should we try to 
+         // see if body is a valid search scope in this particular case before doing the search?
+         // should we switch back to a subject/sender search behind the scenes?
+         term = gSearchSession.createTerm();
+         value = term.value;
+         value.str = termList[i];
+         term.value = value;
+         term.attrib = nsMsgSearchAttrib.Body;
+         term.op = nsMsgSearchOp.Contains; 
+         term.booleanAnd = false;
+         searchTermsArray.AppendElement(term);       
+       }
+
+      // create, fill, and append the sender (or recipient) term
+      if (gSearchInput.searchMode == kQuickSearchSender || gSearchInput.searchMode == kQuickSearchSenderOrSubject)
+      {
+        term = gSearchSession.createTerm();
+        value = term.value;
+        value.str = termList[i];
+        term.value = value;
+        term.attrib = searchAttrib;
+        term.op = nsMsgSearchOp.Contains; 
+        term.booleanAnd = false;
+        searchTermsArray.AppendElement(term);
+      }
     }
   }
 
