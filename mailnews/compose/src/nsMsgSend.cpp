@@ -2161,7 +2161,7 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
               if (NS_SUCCEEDED(rv))
               {
                 rv = fileUrl->GetFileExtension(fileExt);
-                if (NS_SUCCEEDED(rv))
+                if (NS_SUCCEEDED(rv) && !fileExt.IsEmpty())
                   mimeFinder->GetTypeFromExtension(fileExt.get(), &(m_attachments[newLoc].m_type));
               }
 
@@ -2172,7 +2172,7 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
                 if (NS_SUCCEEDED(rv))
                 {
                   rv = fileUrl->GetFileExtension(fileExt);
-                  if (NS_SUCCEEDED(rv))
+                  if (NS_SUCCEEDED(rv) && !fileExt.IsEmpty())
                     mimeFinder->GetTypeFromExtension(fileExt.get(), &(m_attachments[newLoc].m_type));
                 }
               }
