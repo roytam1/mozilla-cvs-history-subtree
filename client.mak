@@ -81,6 +81,7 @@ SVG_BRANCH_FILES = \
 	content/html/style/src/nsCSSParser.cpp \
 	content/html/style/src/nsCSSStyleRule.cpp \
 	content/html/style/src/nsICSSDeclaration.h \
+	content/macbuild/contentSVG.mcp \
 	content/makefile.win \
 	content/shared/public/MANIFEST \
 	content/shared/public/Makefile.in \
@@ -100,6 +101,7 @@ SVG_BRANCH_FILES = \
 	content/shared/src/nsStyleUtil.cpp \
 	content/xml/document/src/nsXMLDocument.cpp \
 	content/xml/document/src/nsXMLDocument.h \
+	dom/macbuild/dom_svgIDL.mcp \
 	dom/public/idl/Makefile.in \
 	dom/public/idl/makefile.win \
 	dom/public/nsIDOMClassInfo.h \
@@ -117,6 +119,7 @@ SVG_BRANCH_FILES = \
 	layout/html/style/src/nsCSSFrameConstructor.cpp \
 	layout/html/style/src/nsCSSFrameConstructor.h \
 	layout/html/tests/makefile.win \
+	layout/macbuild/layoutsvg.mcp \
 	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
 	uriloader/exthandler/nsExternalHelperAppService.cpp \
 	xpfe/browser/src/nsBrowserInstance.cpp
