@@ -590,7 +590,7 @@ endif
 INCLUDES	+= -I$(srcdir)/src -I$(srcdir)/. -I$(DEPTH)/dist/public/nls -I$(DEPTH)/dist/public/security \
 		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/ldap \
 		-I$(DEPTH)/modules/libimg/public \
-		-I$(topsrcdir)/l10n/us
+		-I$(DEPTH)/l10n/us -I$(topsrcdir)/l10n/us
 
 
 #######################################################################

@@ -320,8 +320,8 @@ CSRCS		= commands.c
 
 include $(topsrcdir)/config/rules.mk
 
-INCLUDES	+= -I$(OBJDIR) -I$(srcdir)/.. -I$(srcdir)/../DtWidgets -I$(DEPTH)/modules/libreg/include \
-		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/security -I$(DEPTH)/dist/public/ldap
+INCLUDES	+= -I$(OBJDIR) -I$(srcdir)/.. -I$(srcdir)/../DtWidgets -I$(topsrcdir)/modules/libreg/include \
+		-I$(topsrcdir)/lib/libmsg -I$(DEPTH)/dist/public/security -I$(DEPTH)/dist/public/ldap
 
 #ifdef MOZ_MAIL_NEWS
 #CFLAGS		+= -DEDITOR
