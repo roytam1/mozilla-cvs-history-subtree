@@ -125,7 +125,8 @@
     d->mName = nsnull;                                                        \
     d->mGetIIDsFptr = nsnull;                                                 \
     d->mConstructorFptr = _ctor;                                              \
-    d->mClassInfoFlags = nsIClassInfo::MAIN_THREAD_ONLY;                      \
+    d->mClassInfoFlags = nsIClassInfo::MAIN_THREAD_ONLY |                     \
+                         nsIClassInfo::DOM_OBJECT;                            \
     d->mScriptableFlags = _flags
 
 #define NS_DEFINE_CLASSINFO_DATA_TAIL                                         \
@@ -1372,7 +1373,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
 
       nsCOMPtr<nsIDOMWindow> content;
-      nsresult rv = window->GetContent(getter_AddRefs(content));
+      rv = window->GetContent(getter_AddRefs(content));
       NS_ENSURE_SUCCESS(rv, rv);
 
       jsval v;
@@ -1396,7 +1397,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       NS_ENSURE_TRUE(window, NS_ERROR_UNEXPECTED);
 
       nsCOMPtr<nsIDOMLocation> location;
-      nsresult rv = window->GetLocation(getter_AddRefs(location));
+      rv = window->GetLocation(getter_AddRefs(location));
       NS_ENSURE_SUCCESS(rv, rv);
 
       jsval v;
