@@ -100,7 +100,6 @@ public:
 
     Type                     mType;
     PRInt32                  mLineNo;
-    nsXULPrototypeElement*   mParent;             // [WEAK]
 
     virtual ~nsXULPrototypeNode()
     {
@@ -109,7 +108,7 @@ public:
 
 protected:
     nsXULPrototypeNode(Type aType, PRInt32 aLineNo)
-        : mType(aType), mLineNo(aLineNo), mParent(nsnull)
+        : mType(aType), mLineNo(aLineNo)
     {
         MOZ_COUNT_DTOR(nsXULPrototypeNode);
     }

@@ -30,12 +30,6 @@
   TO DO
   -----
 
-  1. Factor merging code out into a subroutine so that the tricky pos
-     junk isn't typed in two places.
-
-  2. Make sure that forward references add their children to the
-     document-to-element map.
-
 */
 
 #include "nsCOMPtr.h"
@@ -329,8 +323,10 @@ PRBool
 XULContentSinkImpl::ContextStack::IsInsideXULTemplate()
 {
     if (mDepth) {
-        nsXULPrototypeNode* node = mTop->mNode;
-        while (node) {
+        Entry* entry = mTop;
+        while (entry) {
+            nsXULPrototypeNode* node = entry->mNode;
+
             if (node->mType == nsXULPrototypeNode::eType_Element) {
                 nsXULPrototypeElement* element =
                     NS_REINTERPRET_CAST(nsXULPrototypeElement*, node);
@@ -340,9 +336,9 @@ XULContentSinkImpl::ContextStack::IsInsideXULTemplate()
                     return PR_TRUE;
                 }
             }
-        }
 
-        node = node->mParent;
+            entry = entry->mNext;
+        }
     }
     return PR_FALSE;
 }
@@ -1181,31 +1177,49 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode, nsXULPrototypeElem
 {
     // Add tag attributes to the element
     nsresult rv;
-
-#if FIXME
-    // Check for an 'id' attribute.  If we're inside a XUL template,
-    // then _everything_ needs to have an ID for the 'template'
-    // attribute hookup.
-    nsAutoString id;
-    rv = element->GetAttribute(kNameSpaceID_None, kIdAtom, id);
-    if (NS_FAILED(rv)) return rv;
-
-    if (rv != NS_CONTENT_ATTR_HAS_VALUE && mContextStack.IsInsideXULTemplate()) {
-        id = "$";
-        id.Append(PRInt32(element.get()), 16);
-        rv = element->SetAttribute(kNameSpaceID_None, kIdAtom, id, PR_FALSE);
-        if (NS_FAILED(rv)) return rv;
-    }
-#endif
-
     PRInt32 count = aNode.GetAttributeCount();
-    nsXULPrototypeAttribute* attrs = new nsXULPrototypeAttribute[count];
+
+    PRBool generateIDAttr = PR_FALSE;
+    if (mContextStack.IsInsideXULTemplate()) {
+        // Check for an 'id' attribute.  If we're inside a XUL
+        // template, then _everything_ needs to have an ID for the
+        // 'template' attribute hookup.
+        generateIDAttr = PR_TRUE;
+
+        for (PRInt32 i = 0; i < count; i++) {
+            if (aNode.GetKeyAt(i).Equals("id")) {
+                generateIDAttr = PR_FALSE;
+                break;
+            }
+        }
+    }
+
+    // Create storage for the attributes
+    PRInt32 numattrs = count;
+    if (generateIDAttr)
+        ++numattrs;
+
+    nsXULPrototypeAttribute* attrs = new nsXULPrototypeAttribute[numattrs];
     if (! attrs)
         return NS_ERROR_OUT_OF_MEMORY;
 
     aElement->mAttributes    = attrs;
-    aElement->mNumAttributes = count;
+    aElement->mNumAttributes = numattrs;
 
+    if (generateIDAttr) {
+        // Deal with generating an ID attribute for stuff inside a XUL
+        // template
+        nsAutoString id = "$";
+        id.Append(PRInt32(aElement), 16);
+
+        attrs->mNameSpaceID = kNameSpaceID_None;
+        attrs->mName        = kIdAtom;
+        attrs->mValue       = id;
+
+        ++attrs;
+    }
+
+    // Copy the attributes into the prototype
     for (PRInt32 i = 0; i < count; i++) {
         const nsString& qname = aNode.GetKeyAt(i);
 
@@ -1218,16 +1232,18 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode, nsXULPrototypeElem
                    ("xul: unable to parse attribute '%s' at line %d",
                     (const char*) nsCAutoString(qname), aNode.GetSourceLineNumber()));
 
-            // Bring it.
+            // Bring it. We'll just fail to copy an attribute that we
+            // can't parse. And that's one less attribute to worry
+            // about.
+            --(aElement->mNumAttributes);
             continue;
         }
 
-        nsXULPrototypeAttribute* attr = &(attrs[i]);
-        attr->mNameSpaceID = nameSpaceID;
-        attr->mName        = name;
-        attr->mValue       = aNode.GetValueAt(i);
+        attrs->mNameSpaceID = nameSpaceID;
+        attrs->mName        = name;
+        attrs->mValue       = aNode.GetValueAt(i);
 
-        nsRDFParserUtils::StripAndConvert(attr->mValue);
+        nsRDFParserUtils::StripAndConvert(attrs->mValue);
 
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gLog, PR_LOG_DEBUG)) {
@@ -1241,12 +1257,15 @@ XULContentSinkImpl::AddAttributes(const nsIParserNode& aNode, nsXULPrototypeElem
                     aNode.GetSourceLineNumber(),
                     NS_STATIC_CAST(const char*, extraWhiteSpace),
                     NS_STATIC_CAST(const char*, nsCAutoString(qname)),
-                    NS_STATIC_CAST(const char*, nsCAutoString(attr->mValue))));
+                    NS_STATIC_CAST(const char*, nsCAutoString(attrs->mValue))));
         }
 #endif
+
+        ++attrs;
     }
 
-    // Add any derived attributes to a XUL prototype element.
+    // XUL elements may require some additional work to compute
+    // derived information.
     if (aElement->mNameSpaceID == kNameSpaceID_XUL) {
         nsAutoString value;
 
