@@ -36,7 +36,6 @@ CPPSRCS		= \
 		nsRDFDOMNodeList.cpp \
 		nsRDFElement.cpp \
 		nsRDFGenericBuilder.cpp \
-		nsRDFXULBuilder.cpp \
 		nsXULAttributes.cpp \
 		nsXULContentSink.cpp \
 		nsXULContentUtils.cpp \
