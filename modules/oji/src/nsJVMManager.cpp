@@ -942,7 +942,11 @@ nsJVMManager::IsLiveConnectEnabled(void)
 		return (status == nsJVMStatus_Enabled || status == nsJVMStatus_Running);
 	}
 #endif
+#ifdef MOZ_MINOTAUR
+    return PR_FALSE;
+#else
 	return PR_TRUE;
+#endif
 }
 
 /*
