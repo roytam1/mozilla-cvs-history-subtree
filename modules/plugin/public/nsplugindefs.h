@@ -303,11 +303,12 @@ struct nsPluginEvent {
 /*
  *  Non-standard event types that can be passed to HandleEvent
  */
-enum nsEventType {
-    nsEventType_getFocusEvent        = (osEvt + 16),
-    nsEventType_loseFocusEvent       = (osEvt + 17),
-    nsEventType_adjustCursorEvent    = (osEvt + 18),
-    nsEventType_menuCommandEvent     = (osEvt + 19)
+enum nsPluginEventType {
+    nsPluginEventType_Idle                 = 0,
+    nsPluginEventType_GetFocusEvent        = (osEvt + 16),
+    nsPluginEventType_LoseFocusEvent       = (osEvt + 17),
+    nsPluginEventType_AdjustCursorEvent    = (osEvt + 18),
+    nsPluginEventType_MenuCommandEvent     = (osEvt + 19)
 };
 
 #endif /* XP_MAC */
