@@ -82,7 +82,7 @@
 #  include <unistd.h>
 #endif /* USE_SYSCONF */
 
-#if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI) && !defined(XP_OS2)
 #define NSLDAPI_HAVE_POLL	1
 #endif
 
