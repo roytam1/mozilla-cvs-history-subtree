@@ -26,7 +26,7 @@
 
   <RDF:Description about='urn:clienturl:toolbar:mynetscape'>
     <NC:title>My Netscape</NC:title>
-    <NC:contenth>http://home.netscape.com/bookmark/6_0/tstart.html</NC:content>
+    <NC:content>http://home.netscape.com/bookmark/6_0/tstart.html</NC:content>
   </RDF:Description>
 
   <RDF:Description about='urn:clienturl:toolbar:home'>
