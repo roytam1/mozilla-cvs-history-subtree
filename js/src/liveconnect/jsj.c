@@ -269,6 +269,39 @@ init_java_VM_reflection(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
   
 }
 
+#if XP_MAC
+
+/**
+ * Workaround for the fact that MRJ loads a different instance of the shared library.
+ */
+
+#include "netscape_javascript_JSObject.h"
+
+static JSObject_RegisterNativeMethods(JNIEnv* jEnv)
+{
+	// Manually load the required native methods.
+	static JNINativeMethod nativeMethods[] = {
+		"initClass", "()V", (void*)&Java_netscape_javascript_JSObject_initClass,
+		"getMember", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getMember,
+		"getSlot", "(I)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getSlot,
+		"setMember", "(Ljava/lang/String;Ljava/lang/Object;)V", (void*)&Java_netscape_javascript_JSObject_setMember,
+		"setSlot", "(ILjava/lang/Object;)V", (void*)&Java_netscape_javascript_JSObject_setSlot,
+		"removeMember", "(Ljava/lang/String;)V", (void*)&Java_netscape_javascript_JSObject_removeMember,
+		"call", "(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_call,
+		"eval", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_eval,
+		
+		"toString", "()Ljava/lang/String;", (void*)&Java_netscape_javascript_JSObject_toString,
+		"getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow,
+		"finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize,
+	};
+	(*jEnv)->RegisterNatives(jEnv, njJSObject, nativeMethods, sizeof(nativeMethods) / sizeof(JNINativeMethod));
+	
+	// call the initClass method, since we nailed the static initializer for testing.
+	Java_netscape_javascript_JSObject_initClass(jEnv, njJSObject);
+}
+
+#endif
+
 /* Load Netscape-specific Java extension classes, methods, and fields */
 static JSBool
 init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
@@ -276,6 +309,10 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     LOAD_CLASS(netscape/javascript/JSObject,    njJSObject);
     LOAD_CLASS(netscape/javascript/JSException, njJSException);
     LOAD_CLASS(netscape/javascript/JSUtil,      njJSUtil);
+
+#if XP_MAC
+	JSObject_RegisterNativeMethods(jEnv);
+#endif
 
     LOAD_CONSTRUCTOR(netscape.javascript.JSObject,
                                             JSObject,           "(I)V",                         njJSObject);
