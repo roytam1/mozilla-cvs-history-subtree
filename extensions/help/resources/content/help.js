@@ -44,9 +44,9 @@ var key = {
  "?advanced_pref":  "chrome://help/locale/cs_nav_prefs_advanced.html",
  "?advanced_pref_advanced":  "chrome://help/locale/cs_nav_prefs_advanced.html#Advanced",
  "?advanced_pref_cache":  "chrome://help/locale/cs_nav_prefs_advanced.html#Cache",
- "?advanced_pref_software_installation": "chrome://help/locale/cs_nav_prefs_advanced.html#Software_Installation",
- "?advanced_pref_software_mouse_wheel": "chrome://help/locale/cs_nav_prefs_advanced.html#Mouse_Wheel",
- "?advanced_pref_software_system":  "chrome://help/locale/cs_nav_prefs_advanced.html#system",
+ "?advanced_pref_installation": "chrome://help/locale/cs_nav_prefs_advanced.html#Software_Installation",
+ "?advanced_pref_mouse_wheel": "chrome://help/locale/cs_nav_prefs_advanced.html#Mouse_Wheel",
+ "?advanced_pref_system":  "chrome://help/locale/cs_nav_prefs_advanced.html#system",
 
  "?nover_noencrypt":  "chrome://help/locale/ssl_page_info_help.html#Not_Verified_Not Encrypted",
  "?ver_encrypt":  "chrome://help/locale/ssl_page_info_help.html#Verified_Encrypted",
