@@ -30,4 +30,3 @@ examples/modattr.pl
 examples/rename.pl
 examples/psoftsync.pl
 examples/changes2ldif.pl
-install-bin
