@@ -1991,7 +1991,7 @@ nsMsgLocalMailFolder::CopyFolderLocal(nsIMsgFolder *srcFolder, PRBool isMoveFold
       nsCOMPtr <nsIMsgDatabase> destDB;
       NS_NewFileSpecWithSpec(newPath, getter_AddRefs(dbFileSpec));
       rv = msgDBService->OpenMailDBFromFileSpec(dbFileSpec, PR_FALSE, PR_TRUE, getter_AddRefs(destDB));
-      if (NS_SUCCEEDED(rv) && destDB)
+      if (rv == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE && destDB)
         destDB->SetSummaryValid(PR_TRUE);
       destDB->Close(PR_TRUE);
     }
