@@ -84,6 +84,13 @@ PRBool IsWin95OrWin98()
   return gIsWIN95OR98;
 }
 
+// This must be called to clamp string lengths to 8K for Win95/98/ME.
+inline void CheckLength(PRUint32 *aLength)
+{
+  if (*aLength > 8192 && IsWin95OrWin98())
+    *aLength = 8192;
+}
+
 extern PRBool UseAFunctions();
 
 #undef USER_DEFINED
@@ -4052,6 +4059,8 @@ nsFontWin::~nsFontWin()
 PRInt32
 nsFontWin::GetWidth(HDC aDC, const char* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   SIZE size;
   ::GetTextExtentPoint32(aDC, aString, aLength, &size);
   size.cx -= mOverhangCorrection;
@@ -4103,6 +4112,8 @@ void
 nsFontWin::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const char* aString, PRUint32 aLength, INT* lpDx)
 {
+  CheckLength(&aLength);
+
   NS_ExtTextOutA(aDC, this, aX, aY, 0, NULL, aString, aLength, lpDx);
 }
 
@@ -4113,6 +4124,8 @@ nsFontWin::GetBoundingMetrics(HDC                aDC,
                               PRUint32           aLength,
                               nsBoundingMetrics& aBoundingMetrics)
 {
+  CheckLength(&aLength);
+
   return GetBoundingMetricsCommonA(aDC, mOverhangCorrection, aString, aLength, aBoundingMetrics);
 }
 #endif
@@ -4134,6 +4147,8 @@ nsFontWinUnicode::~nsFontWinUnicode()
 PRInt32
 nsFontWinUnicode::GetWidth(HDC aDC, const PRUnichar* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   SIZE size;
   ::GetTextExtentPoint32W(aDC, aString, aLength, &size);
   size.cx -= mOverhangCorrection;
@@ -4144,6 +4159,8 @@ void
 nsFontWinUnicode::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const PRUnichar* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   // Due to a bug in WIN95 unicode rendering of truetype fonts
   // with underline or strikeout, we need to set a clip rect
   // to prevent the underline and/or strikethru from being rendered
@@ -4184,6 +4201,8 @@ nsFontWinUnicode::GetBoundingMetrics(HDC                aDC,
                                      PRUint32           aLength,
                                      nsBoundingMetrics& aBoundingMetrics)
 {
+  CheckLength(&aLength);
+
   aBoundingMetrics.Clear();
   nsAutoChar16Buffer buffer;
 
@@ -4227,6 +4246,8 @@ PRInt32
 nsFontWinNonUnicode::GetWidth(HDC aDC, const PRUnichar* aString,
   PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   nsAutoCharBuffer buffer;
 
   PRInt32 destLength = aLength;
@@ -4249,6 +4270,8 @@ void
 nsFontWinNonUnicode::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const PRUnichar* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   nsAutoCharBuffer buffer;
   PRInt32 destLength = aLength;
 
@@ -4270,6 +4293,8 @@ nsFontWinNonUnicode::GetBoundingMetrics(HDC                aDC,
                                         PRUint32           aLength,
                                         nsBoundingMetrics& aBoundingMetrics)
 {
+  CheckLength(&aLength);
+
   aBoundingMetrics.Clear();
   nsAutoCharBuffer buffer;
   PRInt32 destLength = aLength;
@@ -4401,6 +4426,8 @@ PRInt32
 nsFontWinSubstitute::GetWidth(HDC aDC, const PRUnichar* aString,
   PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   if (mIsForIgnorable)
     return 0;
   nsAutoChar16Buffer buffer;
@@ -4418,6 +4445,8 @@ void
 nsFontWinSubstitute::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const PRUnichar* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   if (mIsForIgnorable)
     return;
   nsAutoChar16Buffer buffer;
@@ -4434,6 +4463,8 @@ nsFontWinSubstitute::GetBoundingMetrics(HDC                aDC,
                                         PRUint32           aLength,
                                         nsBoundingMetrics& aBoundingMetrics)
 {
+  CheckLength(&aLength);
+
   aBoundingMetrics.Clear();
   if (mIsForIgnorable)
     return NS_OK;
@@ -4622,6 +4653,8 @@ nsFontSubset::Convert(const PRUnichar* aString, PRUint32 aLength,
 PRInt32
 nsFontSubset::GetWidth(HDC aDC, const PRUnichar* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   nsAutoCharBuffer buffer;
   Convert(aString, aLength, buffer, &aLength);
   if (aLength) {
@@ -4637,6 +4670,8 @@ void
 nsFontSubset::DrawString(HDC aDC, PRInt32 aX, PRInt32 aY,
   const PRUnichar* aString, PRUint32 aLength)
 {
+  CheckLength(&aLength);
+
   nsAutoCharBuffer buffer;
   Convert(aString, aLength, buffer, &aLength);
   if (aLength) {
@@ -4651,6 +4686,8 @@ nsFontSubset::GetBoundingMetrics(HDC                aDC,
                                  PRUint32           aLength,
                                  nsBoundingMetrics& aBoundingMetrics)
 {
+  CheckLength(&aLength);
+
   aBoundingMetrics.Clear();
   nsAutoCharBuffer buffer;
   Convert(aString, aLength, buffer, &aLength);
