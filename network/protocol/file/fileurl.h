@@ -19,11 +19,11 @@
 #ifndef FILEURL_H
 #define FILEURL_H
 
-#include "cstream.h"
+#include "netstream.h"
 
 extern void NET_InitFileProtocol(void);
 
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 net_CloneWysiwygLocalFile(MWContext *window_id, URL_Struct *URL_s,
 			  uint32 nbytes, const char * wysiwyg_url,
 			  const char * base_href);
