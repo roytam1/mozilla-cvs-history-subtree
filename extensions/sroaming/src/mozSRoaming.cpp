@@ -75,7 +75,6 @@ NS_IMPL_ISUPPORTS1(mozSRoaming,
 mozSRoaming::mozSRoaming()
     : mFiles(10)
 {
-    printf("mozSRoaming ctor\n");
     mHavePrefs = PR_FALSE;
     mIsRoaming = PR_FALSE;
     mMethod = 0;
@@ -83,7 +82,6 @@ mozSRoaming::mozSRoaming()
 
 mozSRoaming::~mozSRoaming()
 {
-    printf("mozSRoaming dtor\n");
 }
 
 
@@ -235,11 +233,13 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
            Item 0: 1 = download, 2 = upload
            Item 1: Number of files (n below)
          String array
-           Item 0..(n-1): filenames
+           Item 1..(n): filenames
        From dialog (upon close)
          Int array
-           Item 0..(n-1): 1 = Use server version, 2 = Use local version.
-                          For each file. Indices are the same as To/String
+           Item 0:      3 = OK, 4 = Cancel
+           Item 1..(n): if OK:
+                        1 = Use server version, 2 = Use local version.
+                        For each file. Indices are the same as To/String
      */
     nsCOMPtr<nsIDialogParamBlock> ioParamBlock
              (do_CreateInstance("@mozilla.org/embedcomp/dialogparam;1", &rv));
@@ -251,10 +251,11 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
 
     // filenames
     ioParamBlock->SetInt(1, files.Count());
-    for (PRInt32 i = files.Count() - 1; i >= 0; i--)
+    PRInt32 i;
+    for (i = files.Count() - 1; i >= 0; i--)
     {
         NS_ConvertASCIItoUCS2 filename(*files.CStringAt(i));
-        ioParamBlock->SetString(i, filename.get());
+        ioParamBlock->SetString(i + 1, filename.get());
     }
 
     nsCOMPtr<nsIDOMWindow> window;
@@ -267,14 +268,25 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
     if (NS_FAILED(rv))
         return rv;
 
+    PRInt32 value = 0;
+    ioParamBlock->GetInt(0, &value);
+    printf("got back: %s - %d\n", files.CStringAt(i)->get(), value);
+    if (value != 3 && value != 4)
+      return NS_ERROR_INVALID_ARG;
+    if (value == 4) // cancel
+    {
+      printf("Cancel clicked\n");
+      return NS_ERROR_ABORT;
+    }
+    printf("OK clicked\n");
+
     /* I am assuming that the sequence of iteration here is the same as in the
        last |for| statement. If that is not true, the indices gotten from
        param block will not match the array and we will interpret the result
        wrongly. */
-    for (PRInt32 i = files.Count() - 1; i >= 0; i--)
+    for (i = files.Count() - 1; i >= 0; i--)
     {
-        PRInt32 value = 0;
-        ioParamBlock->GetInt(i, &value);
+        ioParamBlock->GetInt(i + 1, &value);
         printf("got back: %s - %d\n", files.CStringAt(i)->get(), value);
         if (value != 1 && value != 2)
             return NS_ERROR_INVALID_ARG;

@@ -49,15 +49,16 @@
 %dialogDTD;
 ]>
 
-<window
+<dialog
   id="profileWindow"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
   class="color-dialog non-resizable"
   title="&windowtitle.label;"
   orient="vertical"
   style="width: 60em;"
-  onunload="onExit();"
   onload="StartUp();"
+  ondialogaccept="return onOK();"
+  ondialogcancel="return onCancel();"
   >
 
   <script type="application/x-javascript"
@@ -119,9 +120,5 @@
   </vbox>
 
   <separator orient="vertical"/>
-
-  <hbox id="okCancelButtons"/>
-
-  <separator orient="vertical"/>
   
-</window>
+</dialog>

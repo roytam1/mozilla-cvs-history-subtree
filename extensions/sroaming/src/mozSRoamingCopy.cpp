@@ -213,7 +213,8 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
     // Check for conflicts
     nsCStringArray conflicts(10);
     nsCStringArray copyfiles(10);
-    for (PRInt32 i = files->Count() - 1; i >= 0; i--)
+    PRInt32 i;
+    for (i = files->Count() - 1; i >= 0; i--)
     {
         nsCString& file = *files->CStringAt(i);
         printf("checking file -%s-\n", file.get());
@@ -267,7 +268,7 @@ nsresult mozSRoamingCopy::DownUpLoad(PRBool download)
 
     // Copy
     printf("copying %d files\n", copyfiles.Count());
-    for (PRInt32 i = copyfiles.Count() - 1; i >= 0; i--)
+    for (i = copyfiles.Count() - 1; i >= 0; i--)
     {
         nsCString& file = *copyfiles.CStringAt(i);
         printf("copying file -%s-\n", file.get());

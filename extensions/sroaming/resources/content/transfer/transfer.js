@@ -296,6 +296,8 @@ Transfer.prototype =
         }
         bos.init(fos, 32768);
         ssl.init(bos, progress);
+        file.fos = fos; // for flush after finished
+        file.bos = bos; // dito
         channel.asyncOpen(ssl, null);
       }
       else
@@ -342,14 +344,21 @@ Transfer.prototype =
     if (this.serial)
       this.nextFile();
 
+    var file = this.files[filei];
+    if (file.fos) // only for download
+      file.fos.flush();
+    if (file.bos) // dito
+      file.bos.flush();
+
     // check, if we're all done
     var done = true;
     var failed = false;
     for (var i = 0, l = this.files.length; i < l; i++)
     {
-      if (this.files[i].status == "failed")
+      var file = this.files[i];
+      if (file.status == "failed")
         failed = true; // |done| stays true
-      else if (this.files[i].status != "done") // failed already tested above
+      else if (file.status != "done") // failed already tested above
         done = false;
     }
     if (done)
@@ -619,6 +628,8 @@ function TransferFile(transfer, filei, // hooks to owner
   this.progress = 0.0;
   this.channel = null;
   this.progressListener = null;
+  this.fos = null;
+  this.bos = null;
 
   this.transfer = transfer;
   this.filei = filei;
@@ -734,8 +745,9 @@ TransferProgressListener.prototype =
       /* HTTP gives us NS_OK, although the request failed with an HTTP error
          code, so check for that.
          FTP gives us NS_OK, although the transfer is still ongoing
-         (bug XXX), but onStatus gives us END_FTP_TRANSACTION, if the
-         request *really* stopped, so just ignore this NS_OK for FTP here. */
+         (bug no. ?), but onStatus gives us END_FTP_TRANSACTION, if the
+         request *really* stopped, so just ignore this NS_OK for FTP here.
+         Correction: We can't rely on END_FTP_TRANSACTION either *sigh*. */
       var channel = this.file.channel;
       var scheme = channel.URI.scheme;
       if (!channel || !channel.URI)
@@ -916,6 +928,25 @@ TransferProgressListener.prototype =
     // dummy
   },
 
+  /* XXX
+  // nsIDocShellTreeItem (wtf?)
+  name : "dummy in transfer.js",
+  itemType : 0,
+  parent : null,
+  sameTypeParent : null,
+  rootTreeItem : null,
+  sameTypeRootTreeItem : null,
+  treeOwner : null,
+  childOffset : 0,
+  nameEquals : function(name)
+  {
+    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+  },
+  findItemWithName : function(name, requestor)
+  {
+    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+  },
+  */
 
   // Prompts
 
@@ -1252,7 +1283,7 @@ TransferProgressListener.prototype =
 
   QueryInterface : function(aIID)
   {
-    // ddump("QI: " + aIID.toString() + "\n");
+    ddump("QI: " + aIID.toString() + "\n");
     if (aIID.equals(Components.interfaces.nsIProgressEventSink)
      || aIID.equals(Components.interfaces.nsIRequestObserver)
      || aIID.equals(Components.interfaces.nsIStreamListener)
@@ -1262,6 +1293,7 @@ TransferProgressListener.prototype =
      || aIID.equals(Components.interfaces.nsIAuthPrompt)
      || aIID.equals(Components.interfaces.nsIFTPEventSink)
      || aIID.equals(Components.interfaces.nsIHttpEventSink)
+     || aIID.equals(Components.interfaces.nsIDocShellTreeItem)
      || aIID.equals(Components.interfaces.nsIInterfaceRequestor))
       return this;
     throw Components.results.NS_NOINTERFACE;

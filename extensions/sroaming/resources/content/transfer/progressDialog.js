@@ -381,6 +381,14 @@ function onClose()
   return true;
 }
 
+
+// called, if the user presses Cancel in the conflict resolve dialog
+function onCancel()
+{
+  onClose();
+  CloseDialog();
+}
+
 function SetWindowLocation()
 {
 }

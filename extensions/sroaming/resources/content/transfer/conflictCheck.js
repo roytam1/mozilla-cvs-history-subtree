@@ -261,6 +261,11 @@ function download(transfer, remoteListing)
                                  localFiles);
                /* for the mismatching files, pass the stats of the server
                   and local versions to the dialog */
+        if (answer.button != 3) // cancel pressed
+        {
+          onCancel();
+          return;
+        }
         transfer.files = extractFiles(answer.server, transfer.files);
                /* only transfer those files that the user explicitly selected
                   for transfer, saving the rest from being overwritten. */
@@ -286,9 +291,14 @@ function download(transfer, remoteListing)
       move(kListingTransferFilename, kListingDownloadedFilename);
 
       ddump("transfer done");
+
+      CloseIfPossible();
+            /* in case there were no files to be transferred and
+               the progress callback in progressDialog.js thus didn't fire. */
     });
     transfer.transfer();
   }, false);
+  // if you add anything here, pay attention for Cancel (see above)
 }
 
 
@@ -346,7 +356,11 @@ function upload(transfer, remoteListing)
                                    localFiles);
                  /* for the mismatching files, pass the stats of the server
                     and local versions to the dialog */
-          // XXX exit out, if user pressed cancel
+          if (answer.button != 3) // cancel pressed
+          {
+            onCancel();
+            return;
+          }
           transfer.files = extractFiles(answer.local, transfer.files);
                  /* only transfer those files that the user explicitly selected
                     for transfer, saving the rest from being overwritten. */
@@ -385,6 +399,10 @@ function uploadStep4(transfer, localFiles)
         ddump("Step 6: Skipped, because transfer failed");
 
       ddump("transfer done");
+
+      CloseIfPossible();
+            /* in case there were no files to be transferred and
+               the progress callback in progressDialog.js thus didn't fire. */
     });
     transfer.transfer();
 }
@@ -538,8 +556,6 @@ function loadAndReadListingFile(filename, loadedCallback)
   
   var loaded = function()
   {
-  ddump("loaded:");
-    // XXX works? (reference)
     result.value = readListingFile(domdoc);
     loadedCallback();
   }
@@ -605,7 +621,6 @@ function readListingFile(listingFileDOM)
     }
     if (listing == undefined)
     {
-      alert("malformed listing file");
       dumpError("malformed listing file");
       return;
     }
@@ -769,7 +784,10 @@ function localFilesStats(checkFiles)
   @param localFiles   FilesStats  The versions of the files as they are
                                   in the local profile.
                                   Files must be a superset of filesList.
-  @result  Object with properties |server| and |local|, both FilesList
+  @result  Object with properties |button|, |server| and |local|.
+                             |button|: 3 == OK, 4 == Cancel
+                             |server| and |local| are both |FilesList|s,
+                             if OK clicked.
                              Each file will be *either* in |local| or |server|.
                              If a fatal error occurred or the user pressed
                              Cancel, both arrays will be empty.
@@ -787,14 +805,13 @@ function conflictAsk(download, filesList, serverFiles, localFiles)
                 .classes["@mozilla.org/embedcomp/dialogparam;1"]
                 .createInstance(Components.interfaces.nsIDialogParamBlock);
     param.SetInt(0, download ? 1 : 2);
-    /*  XXX */
     param.SetInt(1, filesList.length);
     for (var i = 0, l = filesList.length; i < l; i++)
     {
       var filename = filesList[i].filename;
       var sf = findEntry(filename, serverFiles);
       var lf = findEntry(filename, localFiles);
-      param.SetString(i, filename
+      param.SetString(i + 1, filename
                          + (sf ? "," + sf.lastModified + "," + sf.size : ",,")
                          + (lf ? "," + lf.lastModified + "," + lf.size : ",,")
                       );
@@ -807,7 +824,9 @@ function conflictAsk(download, filesList, serverFiles, localFiles)
     windowWatcher.openWindow(window, kConflDlg, null,
                              "centerscreen,chrome,modal,titlebar",
                              param);
-    // XXX what do we get in the case of Cancel by user?
+    result.button = param.GetInt(0);
+    if (result.button != 3) // Not OK (Cancel or invalid)
+      return result;
 
     // read result from dialog
     /* I am assuming that the sequence of iteration here is the same as in the
@@ -816,7 +835,7 @@ function conflictAsk(download, filesList, serverFiles, localFiles)
        wrongly. */
     for (var i = 0, l = filesList.length; i < l; i++)
     {
-      var value = param.GetInt(i);
+      var value = param.GetInt(i + 1);
       if (value == 1) // use server version
         result.server.push(filesList[i]);
       else if (value == 2) // use local version
@@ -847,7 +866,7 @@ function makeNSIFileFromRelFilename(filename)
  */
 function move(from, to)
 {
-  ddump("mv " + from + " to " + to);
+  ddump("move " + from + " to " + to);
   var lf = makeNSIFileFromRelFilename(from);
   if (lf && lf.exists())
     lf.moveTo(null, to);
@@ -858,7 +877,7 @@ function move(from, to)
  */
 function remove(filename)
 {
-  ddump("rm " + filename);
+  ddump("remove " + filename);
   var lf = makeNSIFileFromRelFilename(filename);
   if (lf && lf.exists())
     lf.remove(false);

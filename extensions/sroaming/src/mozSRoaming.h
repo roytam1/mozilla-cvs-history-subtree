@@ -85,6 +85,7 @@ public:
      *                  be uploaded / downloaded. The rest of files in the
      *                  files param should *not* be uploaded / downloaded.
      *                  Wants an array passed in, items will be added to that.
+     * @return NS_ERROR_ABORT, if the user clicked Cancel.
      */
     nsresult ConflictResolveUI(PRBool download, const nsCStringArray& files,
                                nsCStringArray* result);

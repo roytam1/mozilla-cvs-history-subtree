@@ -113,8 +113,8 @@ function LoadElements()
   // filenames
   for (var i = 0; i < gCount; i++)
   {
-    var value = params.GetString(i);
-    ddump("Passing in: String " + i + " is " + value);
+    var value = params.GetString(i + 1);
+    ddump("Passing in: String " + (i + 1) + " is " + value);
     var values = value.split(",");
     if (values.length != 1 && values.length != 5)
       dumpError("Bad file param");
@@ -141,21 +141,29 @@ function ClearParam()
   params.SetInt(1, 0);
 }
 
-function onExit()
+function onOK()
 {
-  ddump("ShutDown()");
+  ddump("onOK()");
+  params.SetInt(0, 3); // OK
   for (var i = 0; i < gCount; i++)
   {
     var radiogroup = document.getElementById("file" + i);
     var choice = Number(radiogroup.value);
-    if (choice != 1 && choice != 2) // XXX nothign selected? cancel?
+    if (choice != 1 && choice != 2)
     {
       dumpError("Bad radiogroup value: -" + radiogroup.value +
                 "- -" + choice + "-");
-      choice = 0;
+      onCancel();
     }
-    filename = params.SetInt(i, choice);
-    ddump("Passing back: Int " + i + " is " + choice);
+    params.SetInt(i + 1, choice);
+    ddump("Passing back: Int " + (i + 1) + " is " + choice);
   }
+  return true;
+}
+
+function onCancel()
+{
+  ddump("onCancel()");
+  params.SetInt(0, 4); // Cancel
   return true;
 }
