@@ -28,10 +28,11 @@
 
 #include "nsSVGRenderItem.h"
 #include "libart-incs.h"
-
+#include "nsStyleConsts.h"
 
 struct nsSVGFillStyle 
 {
+  PRInt8 fillrule; // see nsStyleConsts.h
 };
 
 class nsSVGFill : public nsSVGRenderItem

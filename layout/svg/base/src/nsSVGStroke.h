@@ -32,7 +32,11 @@
 
 struct nsSVGStrokeStyle 
 {
-  PRInt8 linecap; // see nsStyleConsts.h
+  nsString dasharray; // XXX
+  float dashoffset;
+  PRInt8 linecap;   // see nsStyleConsts.h
+  PRInt8 linejoin;  // see nsStyleConsts.h
+  float miterlimit; 
   float  width;
 };
 

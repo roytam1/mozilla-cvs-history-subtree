@@ -1035,8 +1035,13 @@ nsCSSSVG::nsCSSSVG(void)
 nsCSSSVG::nsCSSSVG(const nsCSSSVG& aCopy)
     : mFill(aCopy.mFill),
       mFillOpacity(aCopy.mFillOpacity),
+      mFillRule(aCopy.mFillRule),
       mStroke(aCopy.mStroke),
+      mStrokeDasharray(aCopy.mStrokeDasharray),
+      mStrokeDashoffset(aCopy.mStrokeDashoffset),
       mStrokeLinecap(aCopy.mStrokeLinecap),
+      mStrokeLinejoin(aCopy.mStrokeLinejoin),
+      mStrokeMiterlimit(aCopy.mStrokeMiterlimit),
       mStrokeOpacity(aCopy.mStrokeOpacity),
       mStrokeWidth(aCopy.mStrokeWidth)
 {
@@ -1061,8 +1066,13 @@ void nsCSSSVG::List(FILE* out, PRInt32 aIndent) const
 
   mFill.AppendToString(buffer, eCSSProperty_fill);
   mFillOpacity.AppendToString(buffer, eCSSProperty_fill_opacity);
+  mFillRule.AppendToString(buffer, eCSSProperty_fill_rule);
   mStroke.AppendToString(buffer, eCSSProperty_stroke);
+  mStrokeDasharray.AppendToString(buffer, eCSSProperty_stroke_dasharray);
+  mStrokeDashoffset.AppendToString(buffer, eCSSProperty_stroke_dashoffset);
   mStrokeLinecap.AppendToString(buffer, eCSSProperty_stroke_linecap);
+  mStrokeLinejoin.AppendToString(buffer, eCSSProperty_stroke_linejoin);
+  mStrokeMiterlimit.AppendToString(buffer, eCSSProperty_stroke_miterlimit);
   mStrokeOpacity.AppendToString(buffer, eCSSProperty_stroke_opacity);
   mStrokeWidth.AppendToString(buffer, eCSSProperty_stroke_width);
   fputs(buffer, out);
@@ -1841,16 +1851,26 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
     // nsCSSSVG
     case eCSSProperty_fill:
     case eCSSProperty_fill_opacity:
+    case eCSSProperty_fill_rule:
     case eCSSProperty_stroke:
+    case eCSSProperty_stroke_dasharray:
+    case eCSSProperty_stroke_dashoffset:
     case eCSSProperty_stroke_linecap:
+    case eCSSProperty_stroke_linejoin:
+    case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
     case eCSSProperty_stroke_width:
       CSS_ENSURE(SVG) {
         switch (aProperty) {
           case eCSSProperty_fill:              mSVG->mFill = aValue;            break;
           case eCSSProperty_fill_opacity:      mSVG->mFillOpacity = aValue;     break;
+          case eCSSProperty_fill_rule:         mSVG->mFillRule = aValue;        break;
           case eCSSProperty_stroke:            mSVG->mStroke = aValue;          break;
+          case eCSSProperty_stroke_dasharray:  mSVG->mStrokeDasharray = aValue; break;
+          case eCSSProperty_stroke_dashoffset: mSVG->mStrokeDashoffset = aValue; break;
           case eCSSProperty_stroke_linecap:    mSVG->mStrokeLinecap = aValue;   break;
+          case eCSSProperty_stroke_linejoin:   mSVG->mStrokeLinejoin = aValue; break;
+          case eCSSProperty_stroke_miterlimit: mSVG->mStrokeMiterlimit = aValue; break;
           case eCSSProperty_stroke_opacity:    mSVG->mStrokeOpacity = aValue;   break;
           case eCSSProperty_stroke_width:      mSVG->mStrokeWidth = aValue;     break;
           CSS_BOGUS_DEFAULT; // make compiler happy
@@ -2627,8 +2647,13 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
       // nsCSSSVG
       case eCSSProperty_fill:
       case eCSSProperty_fill_opacity:
+      case eCSSProperty_fill_rule:
       case eCSSProperty_stroke:
+      case eCSSProperty_stroke_dasharray:
+      case eCSSProperty_stroke_dashoffset:
       case eCSSProperty_stroke_linecap:
+      case eCSSProperty_stroke_linejoin:
+      case eCSSProperty_stroke_miterlimit:
       case eCSSProperty_stroke_opacity:
       case eCSSProperty_stroke_width:
         if (nsnull != mSVG) {
@@ -2636,8 +2661,13 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
             switch (aProperty) {
               CSS_CASE_IMPORTANT(eCSSProperty_fill,              mSVG->mFill);
               CSS_CASE_IMPORTANT(eCSSProperty_fill_opacity,      mSVG->mFillOpacity);
+              CSS_CASE_IMPORTANT(eCSSProperty_fill_rule,         mSVG->mFillRule);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke,            mSVG->mStroke);
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke_dasharray,  mSVG->mStrokeDasharray);
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke_dashoffset, mSVG->mStrokeDashoffset);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_linecap,    mSVG->mStrokeLinecap);
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke_linejoin,   mSVG->mStrokeLinejoin);
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke_miterlimit, mSVG->mStrokeMiterlimit);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_opacity,    mSVG->mStrokeOpacity);
               CSS_CASE_IMPORTANT(eCSSProperty_stroke_width,      mSVG->mStrokeWidth);
               CSS_BOGUS_DEFAULT; // make compiler happy
@@ -3345,18 +3375,28 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
     // nsCSSSVG
     case eCSSProperty_fill:
     case eCSSProperty_fill_opacity:
+    case eCSSProperty_fill_rule:
     case eCSSProperty_stroke:
+    case eCSSProperty_stroke_dasharray:
+    case eCSSProperty_stroke_dashoffset:
     case eCSSProperty_stroke_linecap:
+    case eCSSProperty_stroke_linejoin:
+    case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
     case eCSSProperty_stroke_width:
       CSS_CHECK(SVG) {
         switch(aProperty) {
-        case eCSSProperty_fill:              mSVG->mFill.Reset();          break;
-        case eCSSProperty_fill_opacity:      mSVG->mFillOpacity.Reset();   break;
-        case eCSSProperty_stroke:            mSVG->mStroke.Reset();        break;
-        case eCSSProperty_stroke_linecap:    mSVG->mStrokeLinecap.Reset(); break;
-        case eCSSProperty_stroke_opacity:    mSVG->mStrokeOpacity.Reset(); break;
-        case eCSSProperty_stroke_width:      mSVG->mStrokeWidth.Reset();   break;
+          case eCSSProperty_fill:              mSVG->mFill.Reset();             break;
+          case eCSSProperty_fill_opacity:      mSVG->mFillOpacity.Reset();      break;
+          case eCSSProperty_fill_rule:         mSVG->mFillRule.Reset();         break;
+          case eCSSProperty_stroke:            mSVG->mStroke.Reset();           break;
+          case eCSSProperty_stroke_dasharray:  mSVG->mStrokeDasharray.Reset();  break;
+          case eCSSProperty_stroke_dashoffset: mSVG->mStrokeDashoffset.Reset(); break;
+          case eCSSProperty_stroke_linecap:    mSVG->mStrokeLinecap.Reset();    break;
+          case eCSSProperty_stroke_linejoin:   mSVG->mStrokeLinejoin.Reset();   break;
+          case eCSSProperty_stroke_miterlimit: mSVG->mStrokeMiterlimit.Reset(); break;
+          case eCSSProperty_stroke_opacity:    mSVG->mStrokeOpacity.Reset(); break;
+          case eCSSProperty_stroke_width:      mSVG->mStrokeWidth.Reset();   break;
        CSS_BOGUS_DEFAULT; // Make compiler happy
         }
       }
@@ -4118,18 +4158,28 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
     // nsCSSSVG
     case eCSSProperty_fill:
     case eCSSProperty_fill_opacity:
+    case eCSSProperty_fill_rule:
     case eCSSProperty_stroke:
+    case eCSSProperty_stroke_dasharray:
+    case eCSSProperty_stroke_dashoffset:
     case eCSSProperty_stroke_linecap:
+    case eCSSProperty_stroke_linejoin:
+    case eCSSProperty_stroke_miterlimit:
     case eCSSProperty_stroke_opacity:
     case eCSSProperty_stroke_width:
       if (nsnull != mSVG) {
         switch (aProperty) {
-          case eCSSProperty_fill:           aValue = mSVG->mFill;          break;
-          case eCSSProperty_fill_opacity:   aValue = mSVG->mFillOpacity;   break;
-          case eCSSProperty_stroke:         aValue = mSVG->mStroke;        break;
-          case eCSSProperty_stroke_linecap: aValue = mSVG->mStrokeLinecap; break;
-          case eCSSProperty_stroke_opacity: aValue = mSVG->mStrokeOpacity; break;
-          case eCSSProperty_stroke_width:   aValue = mSVG->mStrokeWidth;   break;
+          case eCSSProperty_fill:              aValue = mSVG->mFill;             break;
+          case eCSSProperty_fill_opacity:      aValue = mSVG->mFillOpacity;      break;
+          case eCSSProperty_fill_rule:         aValue = mSVG->mFillRule;         break;
+          case eCSSProperty_stroke:            aValue = mSVG->mStroke;           break;
+          case eCSSProperty_stroke_dasharray:  aValue = mSVG->mStrokeDasharray;  break;
+          case eCSSProperty_stroke_dashoffset: aValue = mSVG->mStrokeDashoffset; break;
+          case eCSSProperty_stroke_linecap:    aValue = mSVG->mStrokeLinecap;    break;
+          case eCSSProperty_stroke_linejoin:   aValue = mSVG->mStrokeLinejoin;   break;
+          case eCSSProperty_stroke_miterlimit: aValue = mSVG->mStrokeMiterlimit; break;
+          case eCSSProperty_stroke_opacity:    aValue = mSVG->mStrokeOpacity;    break;
+          case eCSSProperty_stroke_width:      aValue = mSVG->mStrokeWidth;      break;
           CSS_BOGUS_DEFAULT; // make compiler happy
         }
       }

@@ -64,7 +64,18 @@ nsSVGFill::Build(ArtVpath* path, const nsSVGFillStyle& style)
   ArtSVP* uncrossedSVP = art_svp_uncross(svp);
   art_svp_free(svp);
   
-  ArtWindRule wind = ART_WIND_RULE_NONZERO;
+  ArtWindRule wind;
+  switch (style.fillrule) {
+    case NS_STYLE_FILL_RULE_NONZERO:
+      wind = ART_WIND_RULE_NONZERO;
+      break;
+    case NS_STYLE_FILL_RULE_EVENODD:
+      wind = ART_WIND_RULE_ODDEVEN;
+      break;
+    default:
+      NS_ERROR("not reached");
+  }
+  
   mSvp = art_svp_rewind_uncrossed (uncrossedSVP, wind);
   art_svp_free (uncrossedSVP);
 }

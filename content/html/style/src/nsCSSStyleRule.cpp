@@ -1730,12 +1730,27 @@ MapSVGForDeclaration(nsICSSDeclaration* aDecl, nsCSSSVG& aSVG)
   // fill-opacity:
   if (aSVG.mFillOpacity.GetUnit() == eCSSUnit_Null && ourSVG->mFillOpacity.GetUnit() != eCSSUnit_Null)
     aSVG.mFillOpacity = ourSVG->mFillOpacity;
+  // fill-rule:
+  if (aSVG.mFillRule.GetUnit() == eCSSUnit_Null && ourSVG->mFillRule.GetUnit() != eCSSUnit_Null)
+    aSVG.mFillRule = ourSVG->mFillRule;
   // stroke:
   if (aSVG.mStroke.GetUnit() == eCSSUnit_Null && ourSVG->mStroke.GetUnit() != eCSSUnit_Null)
     aSVG.mStroke = ourSVG->mStroke;
+  // stroke-dasharray:
+  if (aSVG.mStrokeDasharray.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeDasharray.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeDasharray = ourSVG->mStrokeDasharray;
+  // stroke-dashoffset:
+  if (aSVG.mStrokeDashoffset.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeDashoffset.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeDashoffset = ourSVG->mStrokeDashoffset;
   // stroke-linecap: enum, inherit
   if (aSVG.mStrokeLinecap.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeLinecap.GetUnit() != eCSSUnit_Null)
     aSVG.mStrokeLinecap = ourSVG->mStrokeLinecap;
+  // stroke-linejoin
+  if (aSVG.mStrokeLinejoin.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeLinejoin.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeLinejoin = ourSVG->mStrokeLinejoin;
+  // stroke-miterlimit:
+  if (aSVG.mStrokeMiterlimit.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeMiterlimit.GetUnit() != eCSSUnit_Null)
+    aSVG.mStrokeMiterlimit = ourSVG->mStrokeMiterlimit;
   // stroke-opacity:
   if (aSVG.mStrokeOpacity.GetUnit() == eCSSUnit_Null && ourSVG->mStrokeOpacity.GetUnit() != eCSSUnit_Null)
     aSVG.mStrokeOpacity = ourSVG->mStrokeOpacity;

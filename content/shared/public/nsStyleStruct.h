@@ -1022,8 +1022,13 @@ struct nsStyleSVG : public nsStyleStruct {
   // all [inherit]ed
   nsStyleSVGPaint  mFill;
   float            mFillOpacity;
+  PRUint8          mFillRule; // see nsStyleConsts.h
   nsStyleSVGPaint  mStroke;
-  PRUint8          mStrokeLinecap; // see nsStyleConsts.h
+  nsString         mStrokeDasharray; // XXX we want a parsed value here
+  float            mStrokeDashoffset;
+  PRUint8          mStrokeLinecap;  // see nsStyleConsts.h
+  PRUint8          mStrokeLinejoin; // see nsStyleConsts.h
+  float            mStrokeMiterlimit;
   float            mStrokeOpacity;
   float            mStrokeWidth; // in pixels
 };

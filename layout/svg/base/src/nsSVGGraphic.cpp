@@ -150,10 +150,16 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
       svgStyle->mStrokeWidth > 0 &&
       mExpansion > 0) {
     nsSVGStrokeStyle strokeStyle;
+    strokeStyle.dasharray = svgStyle->mStrokeDasharray; 
+    strokeStyle.dashoffset = svgStyle->mStrokeDashoffset;
     strokeStyle.linecap = svgStyle->mStrokeLinecap;
+    strokeStyle.linejoin = svgStyle->mStrokeLinejoin;
+    strokeStyle.miterlimit = svgStyle->mStrokeMiterlimit;
     strokeStyle.width = svgStyle->mStrokeWidth * mExpansion;
+    
     mStroke.SetColor(svgStyle->mStroke.mColor);
     mStroke.SetOpacity(svgStyle->mStrokeOpacity);
+    
     mStroke.Build(mVPath, strokeStyle);
     AccumulateUta(&dirtyRegion, mStroke.GetUta());
   }
@@ -167,8 +173,11 @@ nsSVGGraphic::Update(nsSVGGraphicUpdateFlags flags, nsASVGGraphicSource* source)
 
   if (svgStyle->mFill.mType == eStyleSVGPaintType_Color) {
     nsSVGFillStyle fillStyle;
+    fillStyle.fillrule = svgStyle->mFillRule;
+    
     mFill.SetColor(svgStyle->mFill.mColor);
     mFill.SetOpacity(svgStyle->mFillOpacity);
+    
     mFill.Build(mVPath, fillStyle);
     AccumulateUta(&dirtyRegion, mFill.GetUta());
   }

@@ -50,13 +50,76 @@ nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
     default:
       NS_ERROR("not reached");
   }
+
+  ArtPathStrokeJoinType jointype;
+  switch(style.linejoin) {
+    case NS_STYLE_STROKE_LINEJOIN_MITER:
+      jointype = ART_PATH_STROKE_JOIN_MITER;
+      break;
+    case NS_STYLE_STROKE_LINEJOIN_ROUND:
+      jointype = ART_PATH_STROKE_JOIN_ROUND;
+      break;
+    case NS_STYLE_STROKE_LINEJOIN_BEVEL:
+      jointype = ART_PATH_STROKE_JOIN_BEVEL;
+      break;
+    default:
+      NS_ERROR("not reached");
+  }
+
+  if (style.dasharray.Length() > 0) {
+    ArtVpathDash dash;
+    dash.offset = style.dashoffset;
+
+    // XXX parsing of the dasharray string should be done elsewhere
+
+    char* str;
+    {
+      nsAutoString temp(style.dasharray);
+      str = temp.ToNewCString();
+    }
+
+    // array elements are separated by commas. count them to get our
+    // max no of elems. 
+    dash.n_dash = 0;
+    char* cp = str;
+    while (*cp) {
+      if (*cp == ',')
+        ++dash.n_dash;
+      ++cp;
+    }
+    ++dash.n_dash;
+
+    if (dash.n_dash > 0) {
+      // get the elements
+      dash.dash = new double[dash.n_dash];
+      cp = str;
+      char *elem;
+      int count = 0;
+      while (elem = nsCRT::strtok(cp, "',", &cp)) {
+        char *end;
+        dash.dash[count++] = PR_strtod(elem, &end);
+#ifdef DEBUG
+        printf("[%f]",dash.dash[count-1]);
+#endif
+      }
+      dash.n_dash = count;
+      nsMemory::Free(str);
+
+      // create a dashed vpath:
+      path = art_vpath_dash(path, &dash);
+
+      // clean up
+      delete[] dash.dash;
+    }
+  }
+    
   
-  mSvp = art_svp_vpath_stroke (path,
-                               ART_PATH_STROKE_JOIN_MITER,
-                               captype,
-                               style.width,
-                               4, // miter limit
-                               getFlatness());
+  mSvp = art_svp_vpath_stroke(path,
+                              jointype,
+                              captype,
+                              style.width,
+                              style.miterlimit,
+                              getFlatness());
 }
 
 double nsSVGStroke::getFlatness()

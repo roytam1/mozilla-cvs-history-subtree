@@ -429,8 +429,13 @@ struct nsCSSSVG : public nsCSSStruct {
 
   nsCSSValue mFill;
   nsCSSValue mFillOpacity;
+  nsCSSValue mFillRule;
   nsCSSValue mStroke;
+  nsCSSValue mStrokeDasharray;
+  nsCSSValue mStrokeDashoffset;
   nsCSSValue mStrokeLinecap;
+  nsCSSValue mStrokeLinejoin;
+  nsCSSValue mStrokeMiterlimit;
   nsCSSValue mStrokeOpacity;
   nsCSSValue mStrokeWidth;
 };

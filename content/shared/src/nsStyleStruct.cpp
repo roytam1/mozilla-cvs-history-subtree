@@ -661,14 +661,19 @@ nsStyleXUL::CalcDifference(const nsStyleXUL& aOther) const
 //
 nsStyleSVG::nsStyleSVG() 
 { 
-    mFill.mType    = eStyleSVGPaintType_None;
-    mFill.mColor   = NS_RGB(0,0,0);
-    mFillOpacity   = 1.0f;
-    mStroke.mType  = eStyleSVGPaintType_None;
-    mStroke.mColor = NS_RGB(0,0,0);
-    mStrokeLinecap = NS_STYLE_STROKE_LINECAP_BUTT;
-    mStrokeOpacity = 1.0f;
-    mStrokeWidth   = 1.0f;
+    mFill.mType       = eStyleSVGPaintType_None;
+    mFill.mColor      = NS_RGB(0,0,0);
+    mFillOpacity      = 1.0f;
+    mFillRule         = NS_STYLE_FILL_RULE_NONZERO;
+    mStroke.mType     = eStyleSVGPaintType_None;
+    mStroke.mColor    = NS_RGB(0,0,0);
+    mStrokeDasharray.Truncate();
+    mStrokeDashoffset = 0.0f;
+    mStrokeLinecap    = NS_STYLE_STROKE_LINECAP_BUTT;
+    mStrokeLinejoin   = NS_STYLE_STROKE_LINEJOIN_MITER;
+    mStrokeMiterlimit = 4.0f;
+    mStrokeOpacity    = 1.0f;
+    mStrokeWidth      = 1.0f;
 }
 
 nsStyleSVG::~nsStyleSVG() 
@@ -682,13 +687,16 @@ nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
   mFill.mType = aSource.mFill.mType;
   if (mFill.mType == eStyleSVGPaintType_Color)
     mFill.mColor = aSource.mFill.mColor;
-
   mFillOpacity = aSource.mFillOpacity;
-
+  mFillRule = aSource.mFillRule;
   mStroke.mType = aSource.mStroke.mType;
   if (mStroke.mType == eStyleSVGPaintType_Color)
     mStroke.mColor = aSource.mStroke.mColor;
+  mStrokeDasharray = aSource.mStrokeDasharray;
+  mStrokeDashoffset = aSource.mStrokeDashoffset;
   mStrokeLinecap = aSource.mStrokeLinecap;
+  mStrokeLinejoin = aSource.mStrokeLinejoin;
+  mStrokeMiterlimit = aSource.mStrokeMiterlimit;
   mStrokeOpacity = aSource.mStrokeOpacity;
   mStrokeWidth = aSource.mStrokeWidth;
 }
@@ -696,12 +704,17 @@ nsStyleSVG::nsStyleSVG(const nsStyleSVG& aSource)
 PRInt32 
 nsStyleSVG::CalcDifference(const nsStyleSVG& aOther) const
 {
-  if ( mStroke.mType  != aOther.mStroke.mType  ||
-       mStrokeWidth   != aOther.mStrokeWidth   ||
-       mStrokeLinecap != aOther.mStrokeLinecap ||
-       mStrokeOpacity != aOther.mStrokeOpacity ||
-       mFill.mType    != aOther.mFill.mType    ||
-       mFillOpacity   != aOther.mFillOpacity )
+  if ( mFill.mType       != aOther.mFill.mType       ||
+       mFillOpacity      != aOther.mFillOpacity      ||
+       mFillRule         != aOther.mFillRule         ||
+       mStroke.mType     != aOther.mStroke.mType     ||
+       mStrokeDasharray  != aOther.mStrokeDasharray  ||
+       mStrokeDashoffset != aOther.mStrokeDashoffset ||
+       mStrokeLinecap    != aOther.mStrokeLinecap    ||
+       mStrokeLinejoin   != aOther.mStrokeLinejoin   ||
+       mStrokeMiterlimit != aOther.mStrokeMiterlimit ||
+       mStrokeOpacity    != aOther.mStrokeOpacity    ||
+       mStrokeWidth      != aOther.mStrokeWidth      )
     return NS_STYLE_HINT_VISUAL;
 
   if ( (mStroke.mType == eStyleSVGPaintType_Color && mStroke.mColor != aOther.mStroke.mColor) ||
