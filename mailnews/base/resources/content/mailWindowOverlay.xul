@@ -1424,24 +1424,25 @@ Rights Reserved.
         <menuitem label="&searchAddressesCmd.label;" 
                   accesskey="&searchAddressesCmd.accesskey;" 
                   oncommand="MsgSearchAddresses()"/>
+        <menuseparator/>
+
         <menuitem label="&filtersCmd.label;"
                   accesskey="&filtersCmd.accesskey;"
                   oncommand="MsgFilters(null);"/>
+        <menuitem label="&filtersApply.label;"
+                  accesskey="&filtersApply.accesskey;"
+                  oncommand="MsgApplyFilters(null);"/>
+        <menuseparator/>
+
+
         <menuitem label="&junkMailCmd.label;" 
                   accesskey="&junkMailCmd.accesskey;" 
                   oncommand="MsgJunkMail()"/>
-        <menuseparator/>
-        <menuitem label="&markSelectedAsJunk.label;" 
-                  oncommand="JunkSelectedMessages(true);"/>
-        <menuitem label="&markSelectedAsNotJunk.label;" 
-                  oncommand="JunkSelectedMessages(false);"/>
         <menuitem label="&runJunkControls.label;"
 	          accesskey="&runJunkControls.accesskey;"
 	          oncommand="analyzeMessages();"/>
         <menuseparator/>
-        <menuitem label="&filtersApply.label;"
-                  accesskey="&filtersApply.accesskey;"
-                  oncommand="MsgApplyFilters(null);"/>
+
         <menuitem label="&importCmd.label;" 
                   accesskey="&importCmd.accesskey;" 
                   oncommand="toImport();"/>
