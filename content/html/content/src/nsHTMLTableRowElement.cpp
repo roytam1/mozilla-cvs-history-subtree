@@ -212,7 +212,7 @@ void DebugList(nsIDOMHTMLTableElement* aTable) {
 
 nsresult
 NS_NewHTMLTableRowElement(nsIHTMLContent** aInstancePtrResult,
-                          nsINodeInfo *aNodeInfo)
+                          nsINodeInfo *aNodeInfo, PRBool aFromParser)
 {
   NS_ENSURE_ARG_POINTER(aInstancePtrResult);
 

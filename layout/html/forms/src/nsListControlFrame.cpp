@@ -1762,13 +1762,10 @@ nsListControlFrame::SetInitialChildList(nsIPresContext* aPresContext,
                                         nsIFrame*       aChildList)
 {
   // First check to see if all the content has been added
-  nsCOMPtr<nsISelectElement> element(do_QueryInterface(mContent));
-  if (element) {
-    element->IsDoneAddingChildren(&mIsAllContentHere);
-    if (!mIsAllContentHere) {
-      mIsAllFramesHere    = PR_FALSE;
-      mHasBeenInitialized = PR_FALSE;
-    }
+  mIsAllContentHere = mContent->IsDoneAddingChildren();
+  if (!mIsAllContentHere) {
+    mIsAllFramesHere    = PR_FALSE;
+    mHasBeenInitialized = PR_FALSE;
   }
   nsresult rv = nsGfxScrollFrame::SetInitialChildList(aPresContext, aListName, aChildList);
 
@@ -2306,15 +2303,12 @@ nsListControlFrame::AddOption(nsIPresContext* aPresContext, PRInt32 aIndex)
   GetNumberOfOptions(&numOptions);
 
   if (!mIsAllContentHere) {
-    nsCOMPtr<nsISelectElement> element(do_QueryInterface(mContent));
-    if (element) {
-      element->IsDoneAddingChildren(&mIsAllContentHere);
-      if (!mIsAllContentHere) {
-        mIsAllFramesHere    = PR_FALSE;
-        mHasBeenInitialized = PR_FALSE;
-      } else {
-        mIsAllFramesHere = aIndex == numOptions-1;
-      }
+    mIsAllContentHere = mContent->IsDoneAddingChildren();
+    if (!mIsAllContentHere) {
+      mIsAllFramesHere    = PR_FALSE;
+      mHasBeenInitialized = PR_FALSE;
+    } else {
+      mIsAllFramesHere = aIndex == numOptions-1;
     }
   }
   
