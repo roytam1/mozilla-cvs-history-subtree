@@ -61,8 +61,7 @@ Mozilla::LDAP::Utils::userCredentials(\%ld) unless $opt_n;
 $conn = new Mozilla::LDAP::Conn(\%ld);
 die "Could't connect to LDAP server $ld{host}" unless $conn;
 
-#$conn->setDefaultRebindProc($ld{bind}, $ld{pswd}, 128);
-#$conn->setRebindProc(\&LdapUtils::rebindProc);
+$conn->setDefaultRebindProc($ld{bind}, $ld{pswd});
 
 ($change, $search) = @ARGV;
 if (($change eq "") || ($search eq ""))
