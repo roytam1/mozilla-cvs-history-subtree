@@ -1773,36 +1773,33 @@ BOOL CNetscapeApp::InitInstance()
 	if ((iStartupMode & STARTUP_BROWSER || iStartupMode & STARTUP_EDITOR || // if startup browser or editor
 	    !(iStartupMode & (STARTUP_BROWSER|STARTUP_NEWS|STARTUP_MAIL|STARTUP_ADDRESS
 			|STARTUP_INBOX|STARTUP_COMPOSE|STARTUP_FOLDER|STARTUP_FOLDERS|STARTUP_NETCASTER)) ||    // or invalid data
-	    m_bKioskMode ))  {                                                  // or kiosk mode - start browser
+	    m_bKioskMode ))  
+	{                                                  // or kiosk mode - start browser
 #ifdef EDITOR
-	    if ( (bIsGold && (iStartupMode & STARTUP_EDITOR)) && !(iStartupMode & STARTUP_BROWSER))
-			{   //start the editor
-		theApp.m_EditTmplate->OpenDocumentFile(NULL);
+	    if (bIsGold && (iStartupMode & STARTUP_EDITOR))
+		{   //start the editor
+			theApp.m_EditTmplate->OpenDocumentFile(NULL);
 				CMainFrame *pMainFrame = (CMainFrame *)FEU_GetLastActiveFrame(MWContextBrowser, TRUE);
 				if(pMainFrame) pMainFrame->OnLoadHomePage();//suppose to load what ever was on the command line
 	    }
-			else
 #endif // EDITOR
-			if ((iStartupMode & STARTUP_BROWSER) && !(iStartupMode & STARTUP_EDITOR) )
-			{       //start the browser
-		    theApp.m_ViewTmplate->OpenDocumentFile(NULL);
-					CMainFrame *pMainFrame = (CMainFrame *)FEU_GetLastActiveFrame(MWContextBrowser, FALSE);
-				if(pMainFrame) pMainFrame->OnLoadHomePage(); //suppose to load what ever was on the command line
-	    }
-#ifdef EDITOR
-			else if ((iStartupMode & STARTUP_BROWSER) && (iStartupMode & STARTUP_EDITOR) )
+		
+		if (iStartupMode & STARTUP_BROWSER)
+		{
+			theApp.m_ViewTmplate->OpenDocumentFile(NULL);  //open browser window
+			CGenericFrame *pFrame = (CGenericFrame *)FEU_GetLastActiveFrame(MWContextBrowser, FALSE);
+			if (pFrame)
 			{
-				    //start both of these guys since there preferences were set 
-				//theApp.m_EditTmplate->OpenDocumentFile(NULL);                             
-		    theApp.m_ViewTmplate->OpenDocumentFile(NULL);  //open browser window
-					CGenericFrame *pFrame = (CGenericFrame *)FEU_GetLastActiveFrame(MWContextBrowser, FALSE);
-					if (pFrame){
-						CMainFrame *pMainFrame = (CMainFrame*)pFrame;
-						pMainFrame->OnLoadHomePage();
-						pFrame->OnOpenComposerWindow();
-					}
+				CMainFrame *pMainFrame = (CMainFrame*)pFrame;
+				pMainFrame->OnLoadHomePage();
+				// Now that we have the frame, dynamically create the toolbars (We won't enter this function
+			    // from JavaScript. FE_MakeNewWindow is used instead.)
+				pMainFrame->CreateMainToolbar();
+				pMainFrame->CreateLocationBar();
+				pMainFrame->CreateLinkBar();  
+				pMainFrame->GetChrome()->FinishedAddingBrowserToolbars();
 			}
-#endif // EDITOR
+		}
 	}
 
 		if(m_pFrameList && m_pFrameList->GetMainContext())

@@ -242,6 +242,20 @@ MWContext *CFE_CreateNewDocWindow(MWContext *pContext, URL_Struct *pURL)	{
 	}
     
     pFrame = (CMainFrame *) pGenFrame;
+
+	// Now that we have the frame, dynamically create the toolbars (We won't enter this function
+	// from JavaScript. FE_MakeNewWindow is used instead.)
+	if (!pFrame->IsEditFrame())
+	{
+		pFrame->CreateMainToolbar();
+
+		if (!theApp.m_bInGetCriticalFiles) { // if we are here, don't show link bar
+			pFrame->CreateLocationBar();
+			pFrame->CreateLinkBar();  
+			pFrame->GetChrome()->FinishedAddingBrowserToolbars();
+		}
+	}
+
 	MWContext *pNewContext = pFrame->GetMainContext()->GetContext();
 
 	//	Appropriate assignment of options/prefs can only happen if we are also

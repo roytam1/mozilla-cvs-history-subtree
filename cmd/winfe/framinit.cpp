@@ -280,6 +280,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		//I'm hardcoding string since I don't want it translated.
 	    GetChrome()->CreateCustomizableToolbar("Browser", 5, TRUE);
 
+/*
         // Now that the application palette has been created (if 
         //   appropriate) we can create the url bar.  The animation 
         //   might need custom colors so we need the palette to be around
@@ -291,6 +292,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 			CreateLinkBar();  
 			GetChrome()->FinishedAddingBrowserToolbars();
 		}
+*/
 
 		LPNSSTATUSBAR pIStatusBar = NULL;
 		GetChrome()->QueryInterface( IID_INSStatusBar, (LPVOID *) &pIStatusBar );

@@ -250,6 +250,8 @@ public:
 	// customizable toolbar. 
 	void FinishedAddingNewWindows(void){}
 
+	CDragToolbar**	GetVisibleToolbarArray() { return m_pToolbarArray; };
+
 	//Controlling the animated icon
     void StopAnimation();
 	void StartAnimation();
@@ -288,6 +290,10 @@ public:
 	void RemoveExternalTab(UINT nTabID);
 
 	void SetBottomBorder(BOOL bBottomBorder);
+
+	int FindDragToolbarFromWindow(CWnd *pWindow, CDragToolbar **pToolbarArray);
+	int FindDragToolbarFromID(UINT nToolbarID, CDragToolbar **pToolbarArray);
+	
 	// Generated message map functions
 	//{{AFX_MSG(CCustToolbar)
 	afx_msg void OnSize( UINT nType, int cx, int cy );
@@ -327,8 +333,6 @@ private:
 	int  GetNextClosedButtonX(HTAB_BITMAP tabType, int nNumClosedButtons, int nClosedStartX);
 	void GetClosedButtonRegion(HTAB_BITMAP tabType, int nNumClosedButtons, CRgn &rgn);
 	HBITMAP CreateHorizTab(UINT nID);
-	int FindDragToolbarFromWindow(CWnd *pWindow, CDragToolbar **pToolbarArray);
-	int FindDragToolbarFromID(UINT nToolbarID, CDragToolbar **pToolbarArray);
 	void ShowDragToolbar(int nIndex, BOOL bShow);
 	void OpenDragToolbar(int nIndex);
 	void OpenExternalTab(int nIndex);
@@ -339,6 +343,7 @@ private:
 	void DrawClosedTab(HDC hCompatibleDC, HDC hDestDC, HTAB_BITMAP tabType, int nNumClosedButtons,
 		  			   BOOL bMouseOver, int nStartX, int nBottom);
 
+	
 	DECLARE_MESSAGE_MAP()
 
 };

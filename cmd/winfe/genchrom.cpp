@@ -773,11 +773,13 @@ BOOL CGenericChrome::procTabNavigation( UINT nChar, UINT firstTime, UINT control
 void CGenericChrome::ShowToolbar(UINT nToolbarID, BOOL bShow)
 {
 	if(m_pCustToolbar)
+	{
 		m_pCustToolbar->ShowToolbar(nToolbarID, bShow);
 
-	if (nToolbarID == ID_PERSONAL_TOOLBAR) // Hack. Show Aurora if and only if a personal toolbar is shown.
-	{
-		if (m_pParent->IsKindOf(RUNTIME_CLASS(CGenericFrame)))
+		if (nToolbarID == ID_PERSONAL_TOOLBAR && 
+			bShow &&
+			(m_pCustToolbar->FindDragToolbarFromID(nToolbarID, m_pCustToolbar->GetVisibleToolbarArray()) != -1) &&
+			m_pParent->IsKindOf(RUNTIME_CLASS(CGenericFrame)))
 		{
 			CGenericFrame* genFrame = (CGenericFrame*)m_pParent;
 			
@@ -790,15 +792,8 @@ void CGenericChrome::ShowToolbar(UINT nToolbarID, BOOL bShow)
 				// Show the selector if the pref says we should.
 				BOOL bSelVisible;
 				PREF_GetBoolPref(gPrefSelectorVisible, &bSelVisible);
-				if (bSelVisible && bShow)
+				if (bSelVisible)
 					theApp.CreateNewNavCenter(genFrame);
-			}
-
-			CNSNavFrame* navFrame = genFrame->GetDockedNavCenter();
-			if (navFrame && !bShow)
-			{
-				// Destroy the Nav Center.
-				navFrame->DeleteNavCenter();
 			}
 		}
 	}
