@@ -28,9 +28,12 @@ Rights Reserved.
         onload="onAlertLoad()">
   
   <script type="application/x-javascript" src="chrome://communicator/content/alerts/alert.js"/>
-  <hbox class="alertBox" flex="1" align="start">
 
-    <image id="alertImage" autostretch="never"/>
+  <hbox class="alertBox" flex="1">
+    
+    <hbox class="alertImageBox" align="center" valign="center">
+      <image id="alertImage" autostretch="never"/>
+    </hbox>
 
     <vbox flex="1">
       <label id="alertTitleLabel" class="alertTitle plain">*</label>

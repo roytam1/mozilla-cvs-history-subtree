@@ -60,8 +60,8 @@ function onAlertLoad()
   document.getElementById('alertTextLabel').firstChild.nodeValue = window.arguments[2];
   gAlertTextClickable = window.arguments[3];
   gAlertCookie = window.arguments[4];
-  
-  window.outerWidth = 80 + window.arguments[2].length * 7; // icon is 77 pixels
+ 
+  window.outerWidth = 40 + window.arguments[2].length * 7; // icon is 26 pixels
 
   if (gAlertTextClickable)
     document.getElementById('alertTextLabel').setAttribute('clickable', true);
@@ -84,7 +84,7 @@ function onAlertLoad()
   gWidth = window.outerWidth + 10;
 
   window.moveTo(screen.availWidth, screen.availHeight); // move it offscreen initially
-  setTimeout('window.resizeTo(gWidth - 10, 1);', 1); 
+  setTimeout('window.resizeTo(gWidth - 10, 1);', 1);   
   setTimeout('animateAlert();', 10);
 }
 
