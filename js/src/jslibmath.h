@@ -27,13 +27,23 @@
 #include <math.h>
 #include "jsconfig.h"
 
-#ifdef XP_MAC
-#define JS_HAS_FDLIBM_MATH 0
+/*
+ * Define which platforms on which to use fdlibm.  Not used
+ * by default since there can be problems with endian-ness and such.
+ */
+
+#if defined(WIN32)
+#elif defined(SUNOS4)
+#elif defined(IRIX)
+#elif defined(SOLARIS)
+#elif defined(HPUX)
+#elif defined(linux)
+#define JS_USE_FDLIBM_MATH 1
 #else
-#define JS_HAS_FDLIBM_MATH 1
+#define JS_USE_FDLIBM_MATH 0
 #endif
 
-#if !JS_HAS_FDLIBM_MATH
+#if !JS_USE_FDLIBM_MATH
 
 /*
  * Use system provided math routines.
@@ -407,7 +417,7 @@ extern double fd_copysign __P((double, double));
 
 #endif
 
-#endif /* JS_HAS_FDLIBM_MATH */
+#endif /* JS_USE_FDLIBM_MATH */
 
 #endif /* _LIBMATH_H */
 
