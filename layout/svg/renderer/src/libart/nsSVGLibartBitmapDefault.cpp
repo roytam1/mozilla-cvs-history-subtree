@@ -69,9 +69,7 @@ public:
 
   // nsISVGLibartBitmap interface:
   NS_IMETHOD_(PRUint8 *) GetBits();
-  NS_IMETHOD_(int) GetIndexR();
-  NS_IMETHOD_(int) GetIndexG();
-  NS_IMETHOD_(int) GetIndexB();
+  NS_IMETHOD_(nsISVGLibartBitmap::PixelFormat) GetPixelFormat();
   NS_IMETHOD_(int) GetLineStride();
   NS_IMETHOD_(int) GetWidth();
   NS_IMETHOD_(int) GetHeight();
@@ -130,10 +128,10 @@ nsSVGLibartBitmapDefault::Init(nsIRenderingContext* ctx,
 }
 
 nsresult
-NS_NewSVGLibartBitmapDefault(nsISVGLibartBitmap **result,
-                             nsIRenderingContext *ctx,
-                             nsIPresContext* presContext,
-                             const nsRect & rect)
+NS_NewSVGLibartBitmap(nsISVGLibartBitmap **result,
+                      nsIRenderingContext *ctx,
+                      nsIPresContext* presContext,
+                      const nsRect & rect)
 {
   nsSVGLibartBitmapDefault* bm = new nsSVGLibartBitmapDefault();
   if (!bm) return NS_ERROR_OUT_OF_MEMORY;
@@ -196,22 +194,10 @@ nsSVGLibartBitmapDefault::GetBits()
   return bits;
 }
 
-NS_IMETHODIMP_(int)
-nsSVGLibartBitmapDefault::GetIndexR()
+NS_IMETHODIMP_(nsISVGLibartBitmap::PixelFormat)
+nsSVGLibartBitmapDefault::GetPixelFormat()
 {
-  return 0;
-}
-
-NS_IMETHODIMP_(int)
-nsSVGLibartBitmapDefault::GetIndexG()
-{
-  return 1;
-}
-
-NS_IMETHODIMP_(int)
-nsSVGLibartBitmapDefault::GetIndexB()
-{
-  return 2;
+  return PIXEL_FORMAT_24_RGB;
 }
 
 NS_IMETHODIMP_(int)

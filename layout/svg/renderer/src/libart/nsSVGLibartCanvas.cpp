@@ -100,13 +100,8 @@ nsSVGLibartCanvas::Init(nsIRenderingContext* ctx,
   NS_ASSERTION(mRenderingContext, "empty rendering context");
 
   mDirtyRect = dirtyRect;
-#if defined(MOZ_ENABLE_GTK2)
-  NS_NewSVGLibartBitmapGdk(getter_AddRefs(mBitmap), ctx, presContext,
-                           dirtyRect);
-#else
-  NS_NewSVGLibartBitmapDefault(getter_AddRefs(mBitmap), ctx, presContext,
-                               dirtyRect);
-#endif
+  NS_NewSVGLibartBitmap(getter_AddRefs(mBitmap), ctx, presContext,
+                        dirtyRect);
   if (!mBitmap) {
     NS_ERROR("could not construct bitmap");
     return NS_ERROR_FAILURE;
@@ -234,8 +229,20 @@ nsSVGLibartCanvas::InvokeRender(ArtRender* render)
 NS_IMETHODIMP_(void)
 nsSVGLibartCanvas::GetArtColor(nscolor rgb, ArtColor& artColor)
 {
-  artColor[mBitmap->GetIndexR()] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
-  artColor[mBitmap->GetIndexG()] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
-  artColor[mBitmap->GetIndexB()] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+  switch (mBitmap->GetPixelFormat()) {
+    case nsISVGLibartBitmap::PIXEL_FORMAT_24_RGB:
+      artColor[0] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
+      artColor[1] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+      artColor[2] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+      break;
+    case nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR:
+      artColor[3] = ART_PIX_MAX_FROM_8(NS_GET_R(rgb));
+      artColor[3] = ART_PIX_MAX_FROM_8(NS_GET_G(rgb));
+      artColor[1] = ART_PIX_MAX_FROM_8(NS_GET_B(rgb));
+      break;
+    default:
+      NS_ERROR("unknown pixel format");
+      break;
+  }
 }
 

@@ -48,7 +48,7 @@ typedef PRUint32 nscolor;
 
 ////////////////////////////////////////////////////////////////////////
 // nsISVGLibartBitmap
-// Abstraction of a 24 bpp libart-compatible bitmap hiding
+// Abstraction of a libart-compatible bitmap hiding
 // platform-specific implementation details
 
 // {18E4F62F-60A4-42D1-BCE2-43445656096E}
@@ -60,10 +60,13 @@ class nsISVGLibartBitmap : public nsISupports
 public:
   static const nsIID& GetIID() { static nsIID iid = NS_ISVGLIBARTBITMAP_IID; return iid; }
 
+  enum PixelFormat {
+    PIXEL_FORMAT_24_RGB  = 1, // linux, windows
+    PIXEL_FORMAT_32_ABGR = 2  // mac
+  };
+  
   NS_IMETHOD_(PRUint8 *) GetBits()=0;
-  NS_IMETHOD_(int) GetIndexR()=0;
-  NS_IMETHOD_(int) GetIndexG()=0;
-  NS_IMETHOD_(int) GetIndexB()=0;
+  NS_IMETHOD_(PixelFormat) GetPixelFormat()=0;
   NS_IMETHOD_(int) GetLineStride()=0;
   NS_IMETHOD_(int) GetWidth()=0;
   NS_IMETHOD_(int) GetHeight()=0;
@@ -77,35 +80,13 @@ public:
   NS_IMETHOD_(void) Flush()=0;
 };
 
-
-////////////////////////////////////////////////////////////////////////
-// classes implementing this interface:
-
-// nsSVGLibartBitmapWindows
-// XXX
-
-// nsSVGLibartBitmapXLib
-// XXX
-
-// nsSVGLibartBitmapMac
-// XXX
-
-#if defined(MOZ_ENABLE_GTK2)
+// The libart backend expects to find a statically linked class
+// implementing the above interface and instantiable with the
+// following method:
 nsresult
-NS_NewSVGLibartBitmapGdk(nsISVGLibartBitmap **result,
-                         nsIRenderingContext *ctx,
-                         nsIPresContext *presContext,
-                         const nsRect & rect);
-#else
-// nsSVGLibartBitmapDefault: an implementation based on nsIImage that
-// should work on all platforms but doesn't support obtaining
-// RenderingContexts with Lock/UnlockRenderingContext
-nsresult
-NS_NewSVGLibartBitmapDefault(nsISVGLibartBitmap **result,
-                             nsIRenderingContext *ctx,
-                             nsIPresContext* presContext,
-                             const nsRect & rect);
-#endif
-
+NS_NewSVGLibartBitmap(nsISVGLibartBitmap **result,
+                      nsIRenderingContext *ctx,
+                      nsIPresContext* presContext,
+                      const nsRect & rect);
 
 #endif // __NS_ISVGLIBART_BITMAP_H__
