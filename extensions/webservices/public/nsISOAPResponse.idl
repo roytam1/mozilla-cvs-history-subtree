@@ -45,18 +45,6 @@ interface nsISOAPResponse : nsISOAPMessage {
   attribute nsISOAPMessage respondingTo;
 
   /**
-   * Did the response generate a fault?
-   *
-   * @returns Whether a fault was generated a not. If the return value
-   *          is <code>true</code>, the fault details can be obtained
-   *          from the <code>fault</code> property.  For a message with
-   *          no unmarshallable document or without a standard SOAP
-   *          fault, this returns false.  This does not rely on the
-   *          response parameters having been deserialized.
-   */
-  readonly attribute boolean generatedFault;
-
-  /**
    * The fault returned in the response, if one was generated. NULL
    * if there was no fault.  This does not rely on the response
    * parameters having been deserialized.
