@@ -1,9 +1,9 @@
 toolkit.jar:
 +  content/global/MPL-1.1.html                (MPL-1.1.html)
-+  content/global/contents.rdf                (contents.rdf)
-+  content/global-platform/contents.rdf       (contents-platform.rdf)
-+  content/global-region/contents.rdf         (contents-region.rdf)
-*+ content/global/xul.css                     (xul.css)
+*  content/global/contents.rdf                (contents.rdf)
+*  content/global-platform/contents.rdf       (contents-platform.rdf)
+*  content/global-region/contents.rdf         (contents-region.rdf)
+*  content/global/xul.css                     (xul.css)
 +  content/global/buildconfig.html            (buildconfig.html)
 +  content/global/charsetOverlay.js           (charsetOverlay.js)
 +  content/global/charsetOverlay.xul          (charsetOverlay.xul)
