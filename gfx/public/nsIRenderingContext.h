@@ -542,7 +542,6 @@ public:
   NS_IMETHOD GetWidth(const PRUnichar *aString, PRUint32 aLength,
                       nscoord &aWidth, PRInt32 *aFontID = nsnull) = 0;
 
-#ifdef _WIN32
   /**
    * Returns the dimensions of a string, i.e., the overall extent of a string
    * whose rendering may involve switching between different fonts that have
@@ -559,6 +558,7 @@ public:
   NS_IMETHOD GetDimensions(const PRUnichar* aString, PRUint32 aLength,
                            nsDimensions& aDimensions, PRInt32* aFontID = nsnull) = 0;
 
+#ifdef _WIN32
   /**
    * Given an available width and an array of break points,
    * returns the dimensions (in app units) of the text that fit and

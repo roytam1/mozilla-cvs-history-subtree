@@ -1881,6 +1881,10 @@ nsFontGTK::LoadFont(void)
   gdk_error_trap_pop();
   if (gdkFont) {
     XFontStruct* xFont = (XFontStruct*) GDK_FONT_XFONT(gdkFont);
+
+    mMaxAscent = xFont->max_bounds.ascent;
+    mMaxDescent = xFont->max_bounds.descent;
+
     if (mCharSetInfo == &ISO106461) {
       mMap = GetMapFor10646Font(xFont);
       if (!mMap) {
