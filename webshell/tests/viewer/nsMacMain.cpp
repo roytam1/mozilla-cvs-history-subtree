@@ -412,7 +412,7 @@ nsNativeBrowserWindow::DispatchMenuItem(PRInt32 aID)
 /**
  * Quit AppleEvent handler.
  */
-static pascal OSErr handleQuitApplication(const AppleEvent*, AppleEvent*, UInt32)
+static pascal OSErr handleQuitApplication(const AppleEvent*, AppleEvent*, SInt32)
 {
 	if (gTheApp != nsnull) {
 		gTheApp->Exit();
@@ -431,7 +431,7 @@ int main(int argc, char **argv)
 
 	// Install an a Quit AppleEvent handler.
 	OSErr err = AEInstallEventHandler(kCoreEventClass, kAEQuitApplication,
-									NewAEEventHandlerProc(handleQuitApplication), 0, false);
+									NewAEEventHandlerUPP(handleQuitApplication), 0, false);
 	NS_ASSERTION((err==noErr), "AEInstallEventHandler failed");
 
 	// Start up XPCOM?
