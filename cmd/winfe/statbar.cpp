@@ -428,10 +428,7 @@ void CNetscapeStatusBar::SetupMode()
             // WHS -- I'm assuming we'll always have these, probably not good in the long term
 			//
 
-  			idx = CommandToIndex(ID_SEPARATOR);
-			if(idx > -1) {
-	            SetPaneInfo( idx,        ID_SEPARATOR,        SBPS_STRETCH, 0 );
-			}
+  			
 
 			idx = CommandToIndex(IDS_TRANSFER_STATUS);
 			if(idx > -1) {
