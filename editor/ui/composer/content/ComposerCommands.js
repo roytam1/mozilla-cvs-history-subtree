@@ -751,7 +751,14 @@ function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFiles
     // for 4.x parity as well as improving readability of file locally on server
     // this will always send crlf for upload (http/ftp)
     if (!isLocalFile) // if we aren't saving locally then send both cr and lf
+    {
       outputFlags |= webPersist.ENCODE_FLAGS_CR_LINEBREAKS | webPersist.ENCODE_FLAGS_LF_LINEBREAKS;
+
+      // we want to serialize the output for all remote publishing
+      // some servers can handle only one connection at a time
+      // some day perhaps we can make this user-configurable per site?
+      persistObj.persistFlags = persistObj.persistFlags | webPersist.PERSIST_FLAGS_SERIALIZE_OUTPUT;
+    }
 
     // note: we always want to set the replace existing files flag since we have
     // already given user the chance to not replace an existing file (file picker)
