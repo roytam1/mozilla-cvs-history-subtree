@@ -39,6 +39,10 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefBranchInternal.h"
 
+#if 0
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
+#endif
 
 
 /******************************************************************************
