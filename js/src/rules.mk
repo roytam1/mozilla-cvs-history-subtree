@@ -66,8 +66,8 @@ endif
 endif
 
 # Java stuff
-$(CLASSDIR)/$(OBJDIR)/%.class: %.java
-	$(MAKE_OBJDIR)
+$(CLASSDIR)/$(OBJDIR)/$(JARPATH)/%.class: %.java
+	mkdir -p $(@D)
 	$(JAVAC) $(JAVAC_FLAGS) $<
 
 define MAKE_OBJDIR

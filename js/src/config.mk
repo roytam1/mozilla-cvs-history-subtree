@@ -66,7 +66,7 @@ NS_USE_NATIVE = 1
 # Java stuff
 CLASSDIR     = $(DEPTH)/liveconnect/classes
 JAVA_CLASSES = $(patsubst %.java,%.class,$(JAVA_SRCS))
-TARGETS     += $(addprefix $(CLASSDIR)/$(OBJDIR)/, $(JAVA_CLASSES))
+TARGETS     += $(addprefix $(CLASSDIR)/$(OBJDIR)/$(JARPATH)/, $(JAVA_CLASSES))
 JAVAC        = $(JDK)/bin/javac
 JAVAC_FLAGS  = -classpath "$(CLASSPATH)" -d $(CLASSDIR)/$(OBJDIR)
 ifeq ($(OS_ARCH), WINNT)
