@@ -5894,7 +5894,7 @@ void handleClient(void* inArg)
                 **  mime type, otherwise, say it is text/html. 
                 */
                 PR_fprintf(aFD, "HTTP/1.1 200 OK%s", crlf);
-                PR_fprintf(aFD, "Server: $Id$%s", crlf);
+                PR_fprintf(aFD, "Server: %s%s", "$Id$", crlf);
                 if(NULL != getData)
                 {
                     if(NULL == cookieData || (NULL != cookieData && 0 != strcmp(getData, cookieData)))
