@@ -1385,7 +1385,7 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
 
                 profileItem->updateProfileEntry = PR_TRUE;
 
-                profileItem->profileName = NS_ConvertASCIItoUCS2(nsUnescape(unixProfileName)).ToNewUnicode();
+                profileItem->profileName = NS_ConvertASCIItoUCS2(unixProfileName).GetUnicode();
                 profileItem->profileLocation = NS_ConvertASCIItoUCS2(profileLocation).ToNewUnicode();
                 profileItem->isMigrated = NS_ConvertASCIItoUCS2(REGISTRY_NO_STRING).ToNewUnicode();
 
