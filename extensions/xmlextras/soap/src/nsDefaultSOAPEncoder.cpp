@@ -37,6 +37,8 @@
 #include "nsISOAPTypeRegistry.h"
 #include "prprf.h"
 #include "nsReadableUtils.h"
+#include "nsIDOMNamedNodeMap.h"
+#include "nsIDOMAttr.h"
 
 static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
 
@@ -68,14 +70,16 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::Marshall(nsISOAPMessage *aMessage, nsISuppor
   if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
     return MarshallCall(aMessage,aSource,aEncodingStyleURI,aTypeID,aSchemaID,aConfiguration, _retval);
   
-
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsISupports unmarshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aSchemaID, in DOMString aTypeID, in nsISupports aConfiguration); */
 NS_IMETHODIMP nsDefaultSOAPEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  if (aTypeID.Equals(nsSOAPUtils::kSOAPCallType))
+    return UnmarshallCall(aMessage,aSource,aEncodingStyleURI,aSchemaID,aTypeID,aConfiguration, _retval);
+
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
@@ -85,7 +89,6 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 "</SOAP-ENV:Body>"
 "</SOAP-ENV:Envelope>");
  
-/* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID, in DOMString aSchemaID, in nsISupports aConfiguration); */
 NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports *aConfiguration, nsISupports **_retval)
 {
   nsresult rv;
@@ -123,7 +126,10 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
   rv = aMessage->SetMessage(document);
   if (NS_FAILED(rv)) return rv;
 
+  nsCOMPtr<nsIDOMElement> header;
   nsCOMPtr<nsIDOMElement> body;
+  rv = aMessage->GetHeader(getter_AddRefs(header));
+  if (NS_FAILED(rv)) return rv;
   rv = aMessage->GetBody(getter_AddRefs(body));
   if (NS_FAILED(rv)) return rv;
 
@@ -145,20 +151,25 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
   nsCOMPtr<nsISupports> result;
   nsCOMPtr<nsIDOMElement> element;
   nsAutoString type;
-  nsAutoString schemaType;
+  PRBool isHeader;
   for (PRUint32 i = 0; i < count; i++) {
     next = dont_AddRef(parameters->ElementAt(i));
     param = do_QueryInterface(next);
     rv = param->GetType(type);
     if (NS_FAILED(rv)) return rv;
-    rv = param->GetSchemaType(schemaType);
+    rv = param->GetHeader(&isHeader);
     if (NS_FAILED(rv)) return rv;
-    rv = types->Marshall(aMessage, next, encodingStyleURI, type, schemaType, getter_AddRefs(result));
+    rv = types->Marshall(aMessage, next, encodingStyleURI, type, getter_AddRefs(result));
     if (NS_FAILED(rv)) return rv;
     if (result != nsnull) {
       element = do_QueryInterface(result);
       if (element == nsnull) return NS_ERROR_FAILURE;
-      rv = body->AppendChild(element, getter_AddRefs(ignored));
+      if (!header) {
+        rv = body->AppendChild(element, getter_AddRefs(ignored));
+      }
+      else {
+        rv = header->AppendChild(element, getter_AddRefs(ignored));
+      }
       if (NS_FAILED(rv)) return rv;
     }
   }
@@ -169,12 +180,100 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
   return NS_OK;
 }
 
+NS_IMETHODIMP nsDefaultSOAPEncoder::UnmarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
+{
+  nsresult rv;
+  nsCOMPtr<nsISOAPTypeRegistry> types;
+  rv = aMessage->GetTypes(getter_AddRefs(types));
+  nsCOMPtr<nsIDOMElement> header;
+  nsCOMPtr<nsIDOMElement> body;
+  nsCOMPtr<nsISupportsArray> array = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID);
+  rv = aMessage->GetHeader(getter_AddRefs(header));
+  if (NS_FAILED(rv)) return rv;
+  rv = aMessage->GetBody(getter_AddRefs(body));
+  if (NS_FAILED(rv)) return rv;
+  if (!body) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIDOMElement> current;
+
+  nsAutoString method;
+  rv = aMessage->GetMethodName(method);
+  if (NS_FAILED(rv)) return rv;
+  if (!method.IsEmpty()) {
+    nsSOAPUtils::GetFirstChildElement(body, getter_AddRefs(current));
+    body = current;
+    if (!body) return NS_ERROR_FAILURE;
+    rv = current->GetNamespaceURI(method);
+    if (NS_FAILED(rv)) return rv;
+    aMessage->SetTargetObjectURI(method);
+    if (NS_FAILED(rv)) return rv;
+    rv = current->GetLocalName(method);
+    if (NS_FAILED(rv)) return rv;
+    aMessage->SetMethodName(method);
+  }
+  nsCOMPtr<nsIDOMElement> next;
+  nsCOMPtr<nsIDOMNamedNodeMap> attrs;
+  nsCOMPtr<nsIDOMNode> attr;
+  nsCOMPtr<nsISupports> result;
+  nsAutoString encoding;
+  nsAutoString type;
+  PRBool isHeader = header != nsnull;
+  if (!isHeader)
+    header = body;
+  PRUint32 count = 0;
+  for (;;) {
+    nsSOAPUtils::GetFirstChildElement(header, getter_AddRefs(current));
+    while (current) {
+      rv = current->GetAttributes(getter_AddRefs(attrs));
+      if (NS_FAILED(rv)) return rv;
+// Get the encoding
+      rv = attrs->GetNamedItemNS(nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kEncodingStyleAttribute, getter_AddRefs(attr));
+      if (NS_FAILED(rv)) return rv;
+      if (attr) {
+	attr->GetNodeValue(encoding);
+      }
+      else {
+	encoding = aEncodingStyleURI;
+      }
+// Get the schema type
+      rv = attrs->GetNamedItemNS(nsSOAPUtils::kXSIURI, nsSOAPUtils::kXSITypeAttribute, getter_AddRefs(attr));
+      if (NS_FAILED(rv)) return rv;
+      if (attr) {
+	attr->GetNodeValue(type);
+      }
+      else {
+	type.Truncate(0);
+      }
+      rv = types->Unmarshall(aMessage, current, encoding, type, getter_AddRefs(result));
+      if (NS_FAILED(rv)) return rv;
+      if (result) {
+	nsCOMPtr<nsISOAPParameter> param = do_QueryInterface(result);
+	if (param) {
+	  rv = param->SetHeader(isHeader);
+          if (NS_FAILED(rv)) return rv;
+	  rv = array->InsertElementAt(param, count++);
+          if (NS_FAILED(rv)) return rv;
+	}
+      }
+      nsSOAPUtils::GetNextSiblingElement(current, getter_AddRefs(next));
+      current = next;
+    }
+    if (isHeader)
+      header = body;
+    else
+      break;
+  }
+  *_retval = result;
+  NS_ADDREF(*_retval);
+  return NS_OK;
+}
+
+
 static void
 GetElementNameForType(const nsAReadableString & aType, nsAWritableString & aName)
 {
   if (aType.Equals(nsSOAPUtils::kNullType) || aType.Equals(nsSOAPUtils::kVoidType))
     aName = kStructElementName;
-  else if (aType.Equals(nsSOAPUtils::kWStringType))
+  else if (aType.Equals(nsSOAPUtils::kStringType))
     aName = kStringElementName;
   else if (aType.Equals(nsSOAPUtils::kPRBoolType))
     aName = kBooleanElementName;
@@ -202,7 +301,7 @@ static void
 GetTypeForElementName(const nsAReadableString & aName, nsAWritableString & aType)
 {
   if (aName.Equals(kStringElementName))
-    aType = nsSOAPUtils::kWStringType;
+    aType = nsSOAPUtils::kStringType;
   else if (aName.Equals(kBooleanElementName))
     aType = nsSOAPUtils::kPRBoolType;
   else if (aName.Equals(kDoubleElementName))
@@ -240,7 +339,7 @@ NS_NAMED_LITERAL_STRING(kXSDUrTypeName, "ur-type");
 static void
 GetXSDTypeForType(const nsAReadableString & aType, nsAWritableString & aNamespace, nsAWritableString & aLocalName)
 {
-  if (aType.Equals(nsSOAPUtils::kWStringType)) {
+  if (aType.Equals(nsSOAPUtils::kStringType)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDStringName;
   }
@@ -291,7 +390,7 @@ GetTypeForXSDType(const nsAReadableString & aNamespace, const nsAReadableString 
 {
   if (aNamespace.Equals(nsSOAPUtils::kXSDURI)) {
     if (aLocalName.Equals(kXSDStringName))
-      aType = nsSOAPUtils::kWStringType;
+      aType = nsSOAPUtils::kStringType;
     else if (aLocalName.Equals(kXSDBooleanName))
       aType = nsSOAPUtils::kPRBoolType;
     else if (aLocalName.Equals(kXSDDoubleName))

@@ -101,8 +101,7 @@ interface nsISOAPTypeRegistry : nsISupports {
    */
   nsISupports marshall(
       in nsISOAPMessage aMessage, in nsISupports aSource, 
-      in AString aEncodingStyleURI, in AString aTypeID, 
-      in AString aSchemaID);
+      in AString aEncodingStyleURI, in AString aTypeID);
 
   /**
    * Unmarshall the source node into the specified

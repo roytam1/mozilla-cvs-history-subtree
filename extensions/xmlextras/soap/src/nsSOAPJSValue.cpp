@@ -254,7 +254,7 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
 
       *vp = JSVAL_VOID;
 
-  } else if (aType.Equals(nsSOAPUtils::kWStringType)) {
+  } else if (aType.Equals(nsSOAPUtils::kStringType)) {
 
       nsCOMPtr<nsISupportsWString> wstr = do_QueryInterface(aValue);
       if (!wstr) return NS_ERROR_FAILURE;
@@ -404,7 +404,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
   }
   else if (JSVAL_IS_STRING(val)) {
     JSString* jsstr;
-    aType = nsSOAPUtils::kWStringType;
+    aType = nsSOAPUtils::kStringType;
     
     jsstr = JSVAL_TO_STRING(val);
     if (jsstr) {

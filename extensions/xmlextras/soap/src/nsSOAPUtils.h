@@ -64,6 +64,7 @@ public:
   static const nsString kXSIURI;
   static const nsString kXSDURI;
   static const nsString kXSIPrefix;
+  static const nsString kXSITypeAttribute;
   static const nsString kXSDPrefix;
   static const nsString kEncodingStyleAttribute;
   static const nsString kEnvelopeTagName;
@@ -76,7 +77,7 @@ public:
   static const nsString kFaultDetailTagName;
   static const nsString kSOAPCallType;
   static const nsString kEmpty;
-  static const nsString kWStringType;
+  static const nsString kStringType;
   static const nsString kPRBoolType;
   static const nsString kDoubleType;
   static const nsString kFloatType;
@@ -90,6 +91,7 @@ public:
   static const nsString kNullType;
   static const nsString kVoidType;
   static const nsString kUnknownType;
+  static const nsString kLiteralType;
 };
 
 #endif

@@ -25,6 +25,7 @@
 interface nsISOAPStruct;
 interface nsISOAPHeader;
 interface nsISupportsArray;
+interface nsIDOMNode;
 
 /**
  * This interface encapsulates an arbitrary parameter to be used
@@ -85,6 +86,7 @@ interface nsISOAPParameter : nsISupports {
    *       nsISOAPParameter).</li>
    *   <li><code>#struct#&lt;struct type&gt;</code> - The value is
    *       a soap struct interface.</li>
+   *   <li><code>#literal</code> - The value is . DOMNode</li>
    *   <li>Types not beginning with '#' are permitted for custom uses</li>
    * </ul>
    * </p>
@@ -112,12 +114,9 @@ interface nsISOAPParameter : nsISupports {
   [noscript] attribute nsISupports value;
 
   /**
-   * An optional actorURI specifically for this parameter. The
-   * default is to place all parameters in the main body or
-   * in the main call object, but this will cause a parameter
-   * to be placed into a header.
+   * A flag indicating that this parameter belongs in the header.
    */
-  attribute AString actorURI;
+  attribute PRBool header;
 
   /**
    * A convenience method to set the value and type as a AString.
@@ -125,7 +124,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In AString parameter specifying the parameter value.
    */
-  [noscript] void setAsWString(in AString aValue);
+  void setAsString(in AString aValue);
 
   /**
    * A convenience method to set the value and type as a boolean.
@@ -133,7 +132,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In boolean parameter specifying the parameter value.
    */
-  [noscript] void setAsBoolean(in PRBool aValue);
+  void setAsBoolean(in PRBool aValue);
 
   /**
    * A convenience method to set the value and type as a double.
@@ -141,7 +140,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In double parameter specifying the parameter value.
    */
-  [noscript] void setAsDouble(in double aValue);
+  void setAsDouble(in double aValue);
 
   /**
    * A convenience method to set the value and type as a float.
@@ -149,7 +148,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In float parameter specifying the parameter value.
    */
-  [noscript] void setAsFloat(in float aValue);
+  void setAsFloat(in float aValue);
 
   /**
    * A convenience method to set the value and type as a long.
@@ -157,7 +156,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In long parameter specifying the parameter value.
    */
-  [noscript] void setAsLong(in PRInt64 aValue);
+  void setAsLong(in PRInt64 aValue);
 
   /**
    * A convenience method to set the value and type as an int.
@@ -165,7 +164,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In int parameter specifying the parameter value.
    */
-  [noscript] void setAsInt(in PRInt32 aValue);
+  void setAsInt(in PRInt32 aValue);
 
   /**
    * A convenience method to set the value and type as a short.
@@ -173,7 +172,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In short parameter specifying the parameter value.
    */
-  [noscript] void setAsShort(in PRInt16 aValue);
+  void setAsShort(in PRInt16 aValue);
 
   /**
    * A convenience method to set the value and type as a byte.
@@ -181,7 +180,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In byte parameter specifying the parameter value.
    */
-  [noscript] void setAsByte(in PRUint8 aValue);
+  void setAsByte(in PRUint8 aValue);
 
   /**
    * A convenience method to set the value and type as an array.
@@ -189,7 +188,7 @@ interface nsISOAPParameter : nsISupports {
    *
    * @param aValue In nsISupportsArray parameter specifying the parameter value.
    */
-  [noscript] void setAsArray(in nsISupportsArray aValue);
+  void setAsArray(in nsISupportsArray aValue);
 
   /**
    * A convenience method to set the value and type as a struct
@@ -198,16 +197,15 @@ interface nsISOAPParameter : nsISupports {
    * @param aStructType In AString, type of struct
    * @param aValue In nsISOAPStruct parameter specifying value.
    */
-  [noscript] void setAsStruct(in AString aStructType, in nsISOAPStruct aValue);
+  void setAsStruct(in AString aStructType, in nsISOAPStruct aValue);
 
   /**
-   * A convenience method to set the value and type as a header
-   * This sets the type to "#header
+   * A convenience method to set the value and type as literal content
+   * This sets the type to "#literal"
    *
-   * @param aStructType In AString, type of struct
-   * @param aValue In nsISOAPStruct parameter specifying value.
+   * @param aValue In nsIDOMNode parameter specifying value.
    */
-  [noscript] void setAsHeader(in nsISOAPHeader aValue);
+  void setAsLiteral(in nsIDOMNode aValue);
 };
 
 %{ C++

@@ -181,7 +181,7 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
 NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
 {
   nsCOMPtr<nsISupports> ignore;
-  return mTypes->Marshall(this, SOAPParameters, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, nsSOAPUtils::kSOAPCallType, getter_AddRefs(ignore));
+  return mTypes->Marshall(this, SOAPParameters, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, getter_AddRefs(ignore));
 }
 
 /* nsISupportsArray unmarshallParameters (); */

@@ -115,7 +115,7 @@ NS_IMETHODIMP nsSOAPTypeRegistry::QueryBySchemaID(const nsAReadableString & aEnc
 }
 
 /* nsISupports marshall (in nsISOAPMessage aMessage, in nsISupports aSource, in DOMString aEncodingStyleURI, in DOMString aTypeID); */
-NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsISupports **_retval)
+NS_IMETHODIMP nsSOAPTypeRegistry::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, nsISupports **_retval)
 {
   *_retval = nsnull;
   nsAutoString typeID(aTypeID);

@@ -31,6 +31,7 @@ NS_NAMED_LITERAL_STRING(kSOAPEncodingPrefix,"SOAP-ENC");
 NS_NAMED_LITERAL_STRING(kXSIURI,"http://www.w3.org/1999/XMLSchema-instance");
 NS_NAMED_LITERAL_STRING(kXSDURI,"http://www.w3.org/1999/XMLSchema");
 NS_NAMED_LITERAL_STRING(kXSIPrefix,"xsi");
+NS_NAMED_LITERAL_STRING(kXSITypeAttribute,"xsi");
 NS_NAMED_LITERAL_STRING(kXSDPrefix,"xsd");
 NS_NAMED_LITERAL_STRING(kEncodingStyleAttribute,"encodingStyle");
 NS_NAMED_LITERAL_STRING(kEnvelopeTagName,"Envelope");
@@ -42,10 +43,10 @@ NS_NAMED_LITERAL_STRING(kFaultStringTagName,"faultstring");
 NS_NAMED_LITERAL_STRING(kFaultActorTagName,"faultactor");
 NS_NAMED_LITERAL_STRING(kFaultDetailTagName,"detail");
 
-NS_NAMED_LITERAL_STRING(kSOAPCallType,"#nsSOAPUtils::kSOAPCallType");
+NS_NAMED_LITERAL_STRING(kSOAPCallType,"#SOAPCallType");
 NS_NAMED_LITERAL_STRING(kEmpty,"");
 
-NS_NAMED_LITERAL_STRING(kWStringType,"#DOMString");
+NS_NAMED_LITERAL_STRING(kStringType,"#string");
 NS_NAMED_LITERAL_STRING(kPRBoolType,"#boolean");
 NS_NAMED_LITERAL_STRING(kDoubleType,"#double");
 NS_NAMED_LITERAL_STRING(kFloatType,"#float");
@@ -59,6 +60,7 @@ NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
 NS_NAMED_LITERAL_STRING(kNullType,"#null");
 NS_NAMED_LITERAL_STRING(kVoidType,"#void");
 NS_NAMED_LITERAL_STRING(kUnknownType,"#unknown");
+NS_NAMED_LITERAL_STRING(kLiteralType,"#literal");
 
 void 
 nsSOAPUtils::GetSpecificChildElement(

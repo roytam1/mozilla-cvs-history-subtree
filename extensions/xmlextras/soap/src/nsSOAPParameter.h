@@ -61,6 +61,8 @@ protected:
   nsString mType;
   nsString mSchemaType;
   nsCOMPtr<nsISupports> mValue;
+  PRBool mHeader;
+  PRBool mMustUnderstand;
   nsString mActorURI;
 };
 

@@ -107,27 +107,27 @@ NS_IMETHODIMP nsSOAPParameter::GetValue(nsISupports * *aValue)
 /* void setValue (in nsISupports aValue); */
 NS_IMETHODIMP nsSOAPParameter::SetValue(nsISupports *aValue)
 {
-    mValue = aValue;
-    return NS_OK;
-}
-
-/* attribute AString actorURI; */
-NS_IMETHODIMP nsSOAPParameter::GetActorURI(nsAWritableString & aActorURI)
-{
-  NS_ENSURE_ARG_POINTER(&aActorURI);
-  aActorURI.Assign(mActorURI);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPParameter::SetActorURI(const nsAReadableString & aActorURI)
-{
-  mActorURI.Assign(aActorURI);
+  mValue = aValue;
   return NS_OK;
 }
 
-/* void setAsWString (in AString aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsWString(const nsAReadableString & aValue)
+/* attribute boolean header; */
+NS_IMETHODIMP nsSOAPParameter::GetHeader(PRBool *aHeader)
 {
-    mType.Assign(nsSOAPUtils::kWStringType);
+  NS_ENSURE_ARG_POINTER(aHeader);
+  *aHeader = mHeader;
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetHeader(PRBool aHeader)
+{
+  mHeader = aHeader;
+  return NS_OK;
+}
+
+/* void setAsString (in AString aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsString(const nsAReadableString & aValue)
+{
+    mType.Assign(nsSOAPUtils::kStringType);
     nsCOMPtr<nsISupportsWString> value = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
     value->SetData(ToNewUnicode(aValue));
     mValue = value;
@@ -217,6 +217,14 @@ NS_IMETHODIMP nsSOAPParameter::SetAsStruct(const nsAReadableString & aStructType
 {
     mType.Assign(nsSOAPUtils::kStructTypePrefix);
     mType.Append(aStructType);
+    mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
+    return NS_OK;
+}
+
+/* void setAsLiteral (in nsIDOMNode aValue); */
+NS_IMETHODIMP nsSOAPParameter::SetAsLiteral(nsIDOMNode *aValue)
+{
+    mType.Assign(nsSOAPUtils::kLiteralType);
     mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
     return NS_OK;
 }
