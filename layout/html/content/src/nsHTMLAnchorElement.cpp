@@ -329,8 +329,7 @@ nsHTMLAnchorElement::StringToAttribute(nsIAtom* aAttribute,
     }
   }
   else if (aAttribute == nsHTMLAtoms::suppress) {
-    nsAutoString val(aValue);
-    if (val.EqualsIgnoreCase("true")) {
+    if (nsCRT::strcasecmp(nsPromiseFlatString(aValue), NS_LITERAL_STRING("true"))) {
       aResult.SetEmptyValue();  // XXX? shouldn't just leave "true"
       return NS_CONTENT_ATTR_HAS_VALUE;
     }
@@ -464,9 +463,9 @@ nsHTMLAnchorElement::GetHost(nsAWritableString& aHost)
         (void)url->GetPort(&port);
         if (-1 != port) {
           aHost.Append(NS_LITERAL_STRING(":"));
-          char cbuf[64];
-          PR_snprintf(cbuf, sizeof(cbuf), "%d", port);
-          aHost.Append(NS_ConvertASCIItoUCS2(cbuf));
+          nsAutoString portStr;
+          portStr.AppendInt(port);
+          aHost.Append(portStr);
         }
       }
       NS_RELEASE(url);
@@ -581,13 +580,13 @@ nsHTMLAnchorElement::GetPort(nsAWritableString& aPort)
   if (NS_OK == result) {
     result = NS_NewURI(&url, href);
     if (NS_OK == result) {
-      aPort.SetLength(0);
+      aPort.Truncate(0);
       PRInt32 port;
       (void)url->GetPort(&port);
       if (-1 != port) {
-        char cbuf[64];
-        PR_snprintf(cbuf, sizeof(cbuf), "%d", port);
-        aPort.Append(NS_ConvertASCIItoUCS2(cbuf));
+        nsAutoString portStr;
+        portStr.AppendInt(port);
+        aPort.Append(portStr);
       }
       NS_RELEASE(url);
     }

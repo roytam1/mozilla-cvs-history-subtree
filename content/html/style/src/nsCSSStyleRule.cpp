@@ -835,8 +835,7 @@ DOMCSSDeclarationImpl::RemoveProperty(const nsAReadableString& aPropertyName,
   nsresult rv = GetCSSDeclaration(getter_AddRefs(decl), PR_TRUE);
 
   if (NS_SUCCEEDED(rv) && decl) {
-    // XXX FIX THIS!!!
-    nsCSSProperty prop = nsCSSProps::LookupProperty(nsAutoString(aPropertyName));
+    nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
     nsCSSValue val;
 
     rv = decl->RemoveProperty(prop, val);

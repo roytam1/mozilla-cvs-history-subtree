@@ -870,7 +870,7 @@ NS_IMETHODIMP nsHTMLDocument::SetTitle(const nsAReadableString& aTitle)
     mDocumentTitle = new nsString(aTitle);
   }
   else {
-    *mDocumentTitle = aTitle;
+    mDocumentTitle->Assign(aTitle);
   }
 
   // Pass on to any interested containers
@@ -1645,9 +1645,8 @@ nsHTMLDocument::SetDomain(const nsAReadableString& aDomain)
     nsAutoString suffix;
     current.Right(suffix, aDomain.Length());
     PRUnichar c = current.CharAt(current.Length() - aDomain.Length() - 1);
-    // FIX ME to be more efficient
-    nsAutoString str(aDomain);
-    if (suffix.EqualsIgnoreCase(str) && (c == '.' || c == '/'))
+    if (suffix.EqualsIgnoreCase(nsPromiseFlatString(aDomain)) &&
+        (c == '.' || c == '/'))
       ok = PR_TRUE;
   }
   if (!ok) {

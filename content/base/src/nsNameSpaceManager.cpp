@@ -97,8 +97,7 @@ static void ReleaseTable()
 static PRInt32 FindNameSpaceID(const nsAReadableString& aURI)
 {
   NS_ASSERTION(nsnull != gURIToIDTable, "no URI table");
-  nsAutoString uri(aURI);
-  nsStringKey key(uri);
+  nsStringKey key(aURI);
   void* value = gURIToIDTable->Get(&key);
   if (nsnull != value) {
     return PRInt32(value);

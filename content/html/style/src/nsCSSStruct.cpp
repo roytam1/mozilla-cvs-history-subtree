@@ -3324,8 +3324,7 @@ CSSDeclarationImpl::AppendComment(const nsAReadableString& aComment)
     mComments = new nsStringArray();
   }
   if ((nsnull != mComments) && (nsnull != mOrder)) {
-    // XXX nsStringArray::Append() doesn't take nsAReadableString!!!!
-    mComments->AppendString(nsAutoString(aComment));
+    mComments->AppendString(aComment);
     mOrder->AppendElement((void*)-mComments->Count());
     result = NS_OK;
   }
@@ -3917,8 +3916,7 @@ NS_IMETHODIMP
 CSSDeclarationImpl::GetValue(const nsAReadableString& aProperty,
                              nsAWritableString& aValue)
 {
-  // XXX FIX THIS!!!
-  nsCSSProperty propID = nsCSSProps::LookupProperty(nsAutoString(aProperty));
+  nsCSSProperty propID = nsCSSProps::LookupProperty(aProperty);
   return GetValue(propID, aValue);
 }
 
@@ -3960,13 +3958,13 @@ PRBool CSSDeclarationImpl::AppendValueToString(nsCSSProperty aProperty, const ns
         // we can lookup the property in the ColorTable and then
         // get a string mapping the name
         nsAutoString tmpStr;
-        nsCString str;
+        nsCAutoString str;
         if (nsCSSProps::GetColorName(aValue.GetIntValue(), str)){
-          tmpStr.AppendWithConversion(str);
+          aResult.Append(NS_ConvertASCIItoUCS2(str));
         } else {
           tmpStr.AppendInt(aValue.GetIntValue(), 10);
+          aResult.Append(tmpStr);
         }
-        aResult.Append(tmpStr);
       }
       break;
 
@@ -4442,8 +4440,7 @@ NS_IMETHODIMP
 CSSDeclarationImpl::GetValueIsImportant(const nsAReadableString& aProperty,
                                         PRBool& aIsImportant)
 {
-  // XXX FIX THIS!!!
-  nsCSSProperty propID = nsCSSProps::LookupProperty(nsAutoString(aProperty));
+  nsCSSProperty propID = nsCSSProps::LookupProperty(aProperty);
   return GetValueIsImportant(propID, aIsImportant);
 }
 

@@ -316,7 +316,7 @@ nsJSContext::~nsJSContext()
 NS_IMPL_ISUPPORTS(nsJSContext, NS_GET_IID(nsIScriptContext));
 
 NS_IMETHODIMP
-nsJSContext::EvaluateStringWithValue(const nsString& aScript,
+nsJSContext::EvaluateStringWithValue(const nsAReadableString& aScript,
                                      void *aScopeObject,
                                      nsIPrincipal *aPrincipal,
                                      const char *aURL,
@@ -402,7 +402,7 @@ nsJSContext::EvaluateStringWithValue(const nsString& aScript,
       ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
                                               jsprin,
-                                              (jschar*)aScript.GetUnicode(),
+                                              (jschar*)(const PRUnichar*)nsPromiseFlatString(aScript),
                                               aScript.Length(),
                                               aURL,
                                               aLineNo,
@@ -433,13 +433,13 @@ nsJSContext::EvaluateStringWithValue(const nsString& aScript,
 }
 
 NS_IMETHODIMP
-nsJSContext::EvaluateString(const nsString& aScript,
+nsJSContext::EvaluateString(const nsAReadableString& aScript,
                             void *aScopeObject,
                             nsIPrincipal *aPrincipal,
                             const char *aURL,
                             PRUint32 aLineNo,
                             const char* aVersion,
-                            nsString& aRetValue,
+                            nsAWritableString& aRetValue,
                             PRBool* aIsUndefined)
 {
   if (!mScriptsEnabled) {
@@ -518,7 +518,7 @@ nsJSContext::EvaluateString(const nsString& aScript,
       ok = ::JS_EvaluateUCScriptForPrincipals(mContext,
                                               (JSObject *)aScopeObject,
                                               jsprin,
-                                              (jschar*)aScript.GetUnicode(),
+                                              (jschar*)(const PRUnichar*)nsPromiseFlatString(aScript),
                                               aScript.Length(),
                                               aURL,
                                               aLineNo,
@@ -628,7 +628,7 @@ nsJSContext::CompileScript(const PRUnichar* aText,
 NS_IMETHODIMP
 nsJSContext::ExecuteScript(void* aScriptObject,
                            void *aScopeObject,
-                           nsString* aRetValue,
+                           nsAWritableString* aRetValue,
                            PRBool* aIsUndefined)
 {
   if (!mScriptsEnabled) {
@@ -717,7 +717,8 @@ AtomToEventHandlerName(nsIAtom *aName, char *charName, PRUint32 charNameSize)
 }
 
 NS_IMETHODIMP
-nsJSContext::CompileEventHandler(void *aTarget, nsIAtom *aName, const nsString& aBody,
+nsJSContext::CompileEventHandler(void *aTarget, nsIAtom *aName,
+                                 const nsAReadableString& aBody,
                                  PRBool aShared, void** aHandler)
 {
   JSPrincipals *jsprin = nsnull;
@@ -741,7 +742,7 @@ nsJSContext::CompileEventHandler(void *aTarget, nsIAtom *aName, const nsString& 
   JSFunction* fun =
       ::JS_CompileUCFunctionForPrincipals(mContext, target, jsprin,
                                           charName, 1, gEventArgv,
-                                          (jschar*)aBody.GetUnicode(),
+                                          (jschar*)(const PRUnichar*)nsPromiseFlatString(aBody),
                                           aBody.Length(),
                                           //XXXbe filename, lineno:
                                           nsnull, 0);
@@ -767,7 +768,7 @@ nsJSContext::CompileFunction(void* aTarget,
                              const nsCString& aName,
                              PRUint32 aArgCount,
                              const char** aArgArray,
-                             const nsString& aBody,
+                             const nsAReadableString& aBody,
                              const char* aURL,
                              PRUint32 aLineNo,
                              PRBool aShared,
@@ -791,7 +792,7 @@ nsJSContext::CompileFunction(void* aTarget,
   JSFunction* fun =
       ::JS_CompileUCFunctionForPrincipals(mContext, target, jsprin,
                                           aName, aArgCount, aArgArray,
-                                          (jschar*)aBody.GetUnicode(),
+                                          (jschar*)(const PRUnichar*)nsPromiseFlatString(aBody),
                                           aBody.Length(),
                                           aURL, aLineNo);
 

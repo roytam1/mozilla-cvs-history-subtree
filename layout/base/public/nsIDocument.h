@@ -306,7 +306,7 @@ public:
     * NOTE: we may way to place the result in a stream,
     * but we will use a string for now -- gpk
   */
-  NS_IMETHOD   CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection = nsnull) = 0;
+  NS_IMETHOD   CreateXIF(nsAWritableString & aBuffer, nsIDOMSelection* aSelection = nsnull) = 0;
   NS_IMETHOD   ToXIF(nsIXIFConverter * aConverter, nsIDOMNode* aNode) = 0;
   virtual void BeginConvertToXIF(nsIXIFConverter * aConverter, nsIDOMNode* aNode) = 0;
   virtual void ConvertChildrenToXIF(nsIXIFConverter * aConverter, nsIDOMNode* aNode) = 0;

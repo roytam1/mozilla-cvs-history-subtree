@@ -357,7 +357,7 @@ public:
     * document to XIF (XML Interchange Format)
     * and places the result in aBuffer.
     */
-  NS_IMETHOD   CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection);
+  NS_IMETHOD   CreateXIF(nsAWritableString & aBuffer, nsIDOMSelection* aSelection);
   NS_IMETHOD   ToXIF(nsIXIFConverter * aConverter, nsIDOMNode* aNode);
   virtual void BeginConvertToXIF(nsIXIFConverter * aConverter, nsIDOMNode* aNode);
   virtual void ConvertChildrenToXIF(nsIXIFConverter * aConverter, nsIDOMNode* aNode);

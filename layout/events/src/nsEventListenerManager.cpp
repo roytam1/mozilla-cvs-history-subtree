@@ -622,7 +622,7 @@ nsresult
 nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
                                                nsIScriptObjectOwner *aScriptObjectOwner,
                                                nsIAtom *aName,
-                                               const nsString& aBody,
+                                               const nsAReadableString& aBody,
                                                REFNSIID aIID,
                                                PRBool aDeferCompilation)
 {

@@ -893,7 +893,7 @@ DOMMediaListImpl::Delete(const nsAReadableString& aOldMedium)
   if (!aOldMedium.Length())
     return NS_ERROR_DOM_NOT_FOUND_ERR;
 
-  nsCOMPtr<nsIAtom> old(dont_AddRef(NS_NewAtom(nsAutoString(aOldMedium))));
+  nsCOMPtr<nsIAtom> old(dont_AddRef(NS_NewAtom(aOldMedium)));
   NS_ENSURE_TRUE(old, NS_ERROR_OUT_OF_MEMORY);
 
   PRInt32 indx = IndexOf(old);
@@ -913,7 +913,7 @@ DOMMediaListImpl::Append(const nsAReadableString& aNewMedium)
   if (!aNewMedium.Length())
     return NS_ERROR_DOM_NOT_FOUND_ERR;
 
-  nsCOMPtr<nsIAtom> media(dont_AddRef(NS_NewAtom(nsAutoString(aNewMedium))));
+  nsCOMPtr<nsIAtom> media(dont_AddRef(NS_NewAtom(aNewMedium)));
   NS_ENSURE_TRUE(media, NS_ERROR_OUT_OF_MEMORY);
 
   PRInt32 indx = IndexOf(media);

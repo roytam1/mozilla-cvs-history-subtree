@@ -4255,10 +4255,6 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       }
     }
     NS_IF_RELEASE(rcx);
-
-    HandlePostedDOMEvents();
-    HandlePostedAttributeChanges();
-
     mIsReflowing = PR_FALSE;
 
     if (aInterruptible) {
@@ -4317,7 +4313,6 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
   HandlePostedDOMEvents();
   HandlePostedAttributeChanges();
   HandlePostedReflowCallbacks();
-
   return NS_OK;
 }
 

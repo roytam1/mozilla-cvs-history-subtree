@@ -157,7 +157,7 @@ nsHTMLContentSinkStream::Initialize(nsIOutputStream* aOutStream,
   mStream = aOutStream;
   mString = aOutString;
   if (aCharsetOverride != nsnull)
-    mCharsetOverride.AssignWithConversion(nsAutoString(*aCharsetOverride).GetUnicode());
+    mCharsetOverride.Assign(*aCharsetOverride);
 
   mPreLevel = 0;
 
@@ -227,10 +227,10 @@ nsHTMLContentSinkStream::InitEncoders()
   // Initialize a charset encoder if we're using the stream interface
   if (mStream)
   {
-    nsAutoString charsetName; charsetName.AssignWithConversion(mCharsetOverride);
+    nsAutoString charsetName; charsetName.Assign(mCharsetOverride);
     NS_WITH_SERVICE(nsICharsetAlias, calias, kCharsetAliasCID, &res);
     if (NS_SUCCEEDED(res) && calias) {
-      nsAutoString temp; temp.AssignWithConversion(mCharsetOverride);
+      nsAutoString temp; temp.Assign(mCharsetOverride);
       res = calias->GetPreferred(temp, charsetName);
     }
     if (NS_FAILED(res))
@@ -1072,7 +1072,7 @@ nsHTMLContentSinkStream::OpenContainer(const nsIParserNode& aNode)
         {
           const nsString& value=aNode.GetValueAt(i);
           if (mCharsetOverride.IsEmpty())
-            mCharsetOverride.AssignWithConversion(value.GetUnicode());
+            mCharsetOverride.Assign(value);
           InitEncoders();
         }
         else if (key.EqualsWithConversion("uri"))

@@ -1531,11 +1531,10 @@ NS_IMETHODIMP
 nsDOMSelection::ToString(const nsAReadableString& aFormatType, PRUint32 aFlags, PRInt32 aWrapCount, nsAWritableString& aReturn)
 {
   nsresult rv = NS_OK;
-  nsAutoString formatTypeStr(aFormatType);
   
   nsCOMPtr<nsIDocumentEncoder> encoder;
   nsCAutoString formatType = NS_DOC_ENCODER_PROGID_BASE;
-  formatType.AppendWithConversion(formatTypeStr);
+  formatType.Append(NS_ConvertUCS2toUTF8(aFormatType));
   rv = nsComponentManager::CreateInstance(formatType,
                                           nsnull,
                                           NS_GET_IID(nsIDocumentEncoder),
@@ -1555,18 +1554,14 @@ nsDOMSelection::ToString(const nsAReadableString& aFormatType, PRUint32 aFlags, 
   // Flags should always include OutputSelectionOnly if we're coming from here:
   aFlags |= nsIDocumentEncoder::OutputSelectionOnly;
 
-  rv = encoder->Init(doc, formatTypeStr, aFlags);
+  rv = encoder->Init(doc, aFormatType, aFlags);
   NS_ENSURE_SUCCESS(rv, rv);
 
   encoder->SetSelection(this);
   if (aWrapCount != 0)
     encoder->SetWrapColumn(aWrapCount);
 
-  // XXX To avoid a copy, we'd have to send nsAWritableStrings
-  // all the way down.
-  nsAutoString str;
-  rv = encoder->EncodeToString(str);
-  aReturn = str;
+  rv = encoder->EncodeToString(aReturn);
 
   return rv;
 }
@@ -4346,7 +4341,7 @@ nsDOMSelection::Collapse(nsIDOMNode* aParentNode, PRInt32 aOffset)
     content->GetTag(tag);
     if (tag)
     {
-	    nsString tagString;
+	    nsAutoString tagString;
 	    tag->ToString(tagString);
 	    char * tagCString = tagString.ToNewCString();
 	    printf ("Sel. Collapse to %p %s %d\n", content, tagCString, aOffset);
@@ -5162,7 +5157,7 @@ nsDOMSelection::Extend(nsIDOMNode* aParentNode, PRInt32 aOffset)
     content->GetTag(tag);
     if (tag)
     {
-	    nsString tagString;
+	    nsAutoString tagString;
 	    tag->ToString(tagString);
 	    char * tagCString = tagString.ToNewCString();
 	    printf ("Sel. Extend to %p %s %d\n", content, tagCString, aOffset);

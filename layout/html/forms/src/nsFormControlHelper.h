@@ -145,7 +145,7 @@ public:
   * @returns PR_TRUE if aValue = "1", PR_FALSE otherwise
   */
 
-  static PRBool GetBool(const nsString& aValue);
+  static PRBool GetBool(const nsAReadableString& aValue);
 
  /** 
   * Utility to convert a PRBool to a string
@@ -155,7 +155,7 @@ public:
 
   */
 
-  static void  GetBoolString(const PRBool aValue, nsString& aResult);
+  static void  GetBoolString(const PRBool aValue, nsAWritableString& aResult);
 
   // XXX similar functionality needs to be added to widget library and these
   //     need to change to use it.

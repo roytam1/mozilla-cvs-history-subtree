@@ -434,7 +434,7 @@ nsDOMImplementation::CreateDocumentType(const nsAReadableString& aQualifiedName,
   NS_ENSURE_ARG_POINTER(aReturn);
 
   return NS_NewDOMDocumentType(aReturn, aQualifiedName, nsnull, nsnull,
-                               aPublicId, aSystemId, nsAutoString());
+                               aPublicId, aSystemId, nsString());
 }
 
 NS_IMETHODIMP
@@ -1067,13 +1067,11 @@ NS_IMETHODIMP nsDocument::SetDocumentCharacterSet(const nsAReadableString& aChar
 {
   if (!mCharacterSet.Equals(aCharSetID)) {
     mCharacterSet = aCharSetID;
-    nsAutoString charSetTopic;
-    charSetTopic.AssignWithConversion("charset");
     PRInt32 n = mCharSetObservers.Count();
     for (PRInt32 i = 0; i < n; i++) {
       nsIObserver* observer = (nsIObserver*) mCharSetObservers.ElementAt(i);
-      observer->Observe((nsIDocument*) this, charSetTopic.GetUnicode(),
-                        nsAutoString(aCharSetID).GetUnicode());
+      observer->Observe((nsIDocument*) this, NS_LITERAL_STRING("charset"),
+                        nsPromiseFlatString(aCharSetID));
     }
   }
   return NS_OK;
@@ -2264,7 +2262,7 @@ nsDocument::GetElementsByTagNameNS(const nsAReadableString& aNamespaceURI,
 
   nsContentList* list = nsnull;
 
-  if (!aNamespaceURI.Equals(NS_ConvertASCIItoUCS2("*"))) {
+  if (!aNamespaceURI.Equals(NS_LITERAL_STRING("*"))) {
     mNameSpaceManager->GetNameSpaceID(aNamespaceURI, nameSpaceId);
 
     if (nameSpaceId == kNameSpaceID_Unknown) {
@@ -2587,7 +2585,7 @@ nsDocument::GetPlugins(nsIDOMPluginArray** aPlugins)
 NS_IMETHODIMP    
 nsDocument::GetNodeName(nsAWritableString& aNodeName)
 {
-  aNodeName.Assign(NS_ConvertASCIItoUCS2("#document"));
+  aNodeName.Assign(NS_LITERAL_STRING("#document"));
   return NS_OK;
 }
 
@@ -3453,7 +3451,7 @@ nsDocument::ToXIF(nsIXIFConverter* aConverter, nsIDOMNode* aNode)
 } 
 
 NS_IMETHODIMP
-nsDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
+nsDocument::CreateXIF(nsAWritableString & aBuffer, nsIDOMSelection* aSelection)
 {
     nsresult result=NS_OK;
 
@@ -3468,25 +3466,25 @@ nsDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
     if (aSelection)
       converter->SetSelection(aSelection);
 
-    converter->AddStartTag( NS_ConvertToString("section") , PR_TRUE); 
-    converter->AddStartTag( NS_ConvertToString("section_head") , PR_TRUE);
+    converter->AddStartTag( NS_LITERAL_STRING("section") , PR_TRUE); 
+    converter->AddStartTag( NS_LITERAL_STRING("section_head") , PR_TRUE);
 
-    converter->BeginStartTag( NS_ConvertToString("document_info") );
-    converter->AddAttribute(NS_ConvertToString("charset"),mCharacterSet);
+    converter->BeginStartTag( NS_LITERAL_STRING("document_info") );
+    converter->AddAttribute(NS_LITERAL_STRING("charset"),mCharacterSet);
     nsCOMPtr<nsIURI> uri (getter_AddRefs(GetDocumentURL()));
     if (uri)
     {
       char* spec = 0;
       if (NS_SUCCEEDED(uri->GetSpec(&spec)) && spec)
       {
-        converter->AddAttribute(NS_ConvertToString("uri"), NS_ConvertToString(spec));
+        converter->AddAttribute(NS_LITERAL_STRING("uri"), NS_ConvertToString(spec));
         Recycle(spec);
       }
     }
-    converter->FinishStartTag(NS_ConvertToString("document_info"),PR_TRUE,PR_TRUE);
+    converter->FinishStartTag(NS_LITERAL_STRING("document_info"),PR_TRUE,PR_TRUE);
 
-    converter->AddEndTag(NS_ConvertToString("section_head"), PR_TRUE, PR_TRUE);
-    converter->AddStartTag(NS_ConvertToString("section_body"), PR_TRUE);
+    converter->AddEndTag(NS_LITERAL_STRING("section_head"), PR_TRUE, PR_TRUE);
+    converter->AddStartTag(NS_LITERAL_STRING("section_body"), PR_TRUE);
 
     nsCOMPtr<nsIDOMDocumentType> doctype;
     GetDoctype(getter_AddRefs(doctype));
@@ -3496,28 +3494,28 @@ nsDocument::CreateXIF(nsString & aBuffer, nsIDOMSelection* aSelection)
       doctype->GetName(tmpStr);
 
       if (tmpStr.Length()) {
-        docTypeStr.AppendWithConversion("DOCTYPE ");
+        docTypeStr.Append(NS_LITERAL_STRING("DOCTYPE "));
         docTypeStr.Append(tmpStr);
 
         doctype->GetPublicId(tmpStr);
         if (tmpStr.Length()) {
-          docTypeStr.AppendWithConversion(" PUBLIC \"");
+          docTypeStr.Append(NS_LITERAL_STRING(" PUBLIC \""));
           docTypeStr.Append(tmpStr);
-          docTypeStr.AppendWithConversion('"');
+          docTypeStr.Append(PRUnichar('"'));
         }
 
         doctype->GetSystemId(tmpStr);
         if (tmpStr.Length()) {
-          docTypeStr.AppendWithConversion(" SYSTEM \"");
+          docTypeStr.Append(NS_LITERAL_STRING(" SYSTEM \""));
           docTypeStr.Append(tmpStr);
-          docTypeStr.AppendWithConversion('"');
+          docTypeStr.Append(PRUnichar('"'));
         }
 
         doctype->GetInternalSubset(tmpStr);
         if (tmpStr.Length()) {
-          docTypeStr.AppendWithConversion(" [\n");
+          docTypeStr.Append(NS_LITERAL_STRING(" [\n"));
           docTypeStr.Append(tmpStr);
-          docTypeStr.AppendWithConversion("\n]");
+          docTypeStr.Append(NS_LITERAL_STRING("\n]"));
         }
       }
       if (docTypeStr.Length())

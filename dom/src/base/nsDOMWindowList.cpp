@@ -146,9 +146,10 @@ nsDOMWindowList::NamedItem(const nsAReadableString& aName, nsIDOMWindow** aRetur
       }
     }
 
-    mDocShellNode->FindChildWithName(nsAutoString(aName).GetUnicode(), PR_FALSE, PR_FALSE,
+    mDocShellNode->FindChildWithName(nsPromiseFlatString(aName),
+                                     PR_FALSE, PR_FALSE,
                                      nsnull, getter_AddRefs(item));
-    
+
     nsCOMPtr<nsIScriptGlobalObject> globalObject(do_GetInterface(item));
     NS_ASSERTION(globalObject, "Couldn't get to the globalObject");
     if (globalObject) {

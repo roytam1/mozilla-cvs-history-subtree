@@ -594,7 +594,7 @@ nsGenericDOMDataNode::ConvertContentToXIF(const nsIContent *aOuterContent,
             continue;   // This range doesn't intersect the node at all
 
           // Put all of our text into the buffer, initially:
-          nsString  buffer;
+          nsAutoString  buffer;
           mText.AppendTo(buffer);
 
           // Clip to whatever is inside the range:
@@ -635,7 +635,7 @@ nsGenericDOMDataNode::ConvertContentToXIF(const nsIContent *aOuterContent,
   }
   else  
   {
-    nsString  buffer;
+    nsAutoString  buffer;
     mText.AppendTo(buffer);
     aConverter->AddContent(buffer);
   }
@@ -652,11 +652,11 @@ nsGenericDOMDataNode::ToCString(nsAWritableString& aBuf, PRInt32 aOffset,
     while (cp < end) {
       PRUnichar ch = *cp++;
       if (ch == '\r') {
-        aBuf.Append(NS_ConvertASCIItoUCS2("\\r"));
+        aBuf.Append(NS_LITERAL_STRING("\\r"));
       } else if (ch == '\n') {
-        aBuf.Append(NS_ConvertASCIItoUCS2("\\n"));
+        aBuf.Append(NS_LITERAL_STRING("\\n"));
       } else if (ch == '\t') {
-        aBuf.Append(NS_ConvertASCIItoUCS2("\\t"));
+        aBuf.Append(NS_LITERAL_STRING("\\t"));
       } else if ((ch < ' ') || (ch >= 127)) {
         char buf[10];
         PR_snprintf(buf, sizeof(buf), "\\u%04x", ch);
@@ -672,15 +672,15 @@ nsGenericDOMDataNode::ToCString(nsAWritableString& aBuf, PRInt32 aOffset,
     while (cp < end) {
       PRUnichar ch = *cp++;
       if (ch == '\r') {
-        aBuf.Append(NS_ConvertASCIItoUCS2("\\r"));
+        aBuf.Append(NS_LITERAL_STRING("\\r"));
       } else if (ch == '\n') {
-        aBuf.Append(NS_ConvertASCIItoUCS2("\\n"));
+        aBuf.Append(NS_LITERAL_STRING("\\n"));
       } else if (ch == '\t') {
-        aBuf.Append(NS_ConvertASCIItoUCS2("\\t"));
+        aBuf.Append(NS_LITERAL_STRING("\\t"));
       } else if ((ch < ' ') || (ch >= 127)) {
         char buf[10];
         PR_snprintf(buf, sizeof(buf), "\\u%04x", ch);
-        aBuf.Append(NS_ConvertASCIItoUCS2(buf));
+        aBuf.Append(NS_LITERAL_STRING(buf));
       } else {
         aBuf.Append(ch);
       }

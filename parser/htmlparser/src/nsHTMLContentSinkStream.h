@@ -198,7 +198,7 @@ protected:
 
     nsCOMPtr<nsISaveAsCharset> mCharsetEncoder;
     nsCOMPtr<nsIEntityConverter> mEntityConverter;
-    nsCAutoString mCharsetOverride;
+    nsString mCharsetOverride;
 };
 
 

@@ -247,7 +247,7 @@ nsComputedDOMStyle::GetPropertyCSSValue(const nsAReadableString& aPropertyName,
   nsresult rv = NS_OK;
 
   // XXX FIX THIS!!!
-  nsCSSProperty prop = nsCSSProps::LookupProperty(nsAutoString(aPropertyName));
+  nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
 
   switch (prop) {
   case eCSSProperty_behavior :

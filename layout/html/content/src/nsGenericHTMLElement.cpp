@@ -172,8 +172,7 @@ nsDOMCSSAttributeDeclaration::RemoveProperty(const nsAReadableString& aPropertyN
     PRInt32 hint;
     decl->GetStyleImpact(&hint);
 
-    nsAutoString propName(aPropertyName);
-    nsCSSProperty prop = nsCSSProps::LookupProperty(propName);
+    nsCSSProperty prop = nsCSSProps::LookupProperty(aPropertyName);
     nsCSSValue val;
 
     rv = decl->RemoveProperty(prop, val);
@@ -1577,7 +1576,6 @@ nsGenericHTMLElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom *aAttribute,
   nsresult  result = mAttributes ? mAttributes->GetAttribute(aAttribute, &value) :
                      NS_CONTENT_ATTR_NOT_THERE;
 
-  char cbuf[20];
   nscolor color;
   if (NS_CONTENT_ATTR_HAS_VALUE == result) {
     nsIHTMLContent* htmlContent;
@@ -1606,25 +1604,35 @@ nsGenericHTMLElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom *aAttribute,
       break;
 
     case eHTMLUnit_Integer:
-      aResult.Truncate();
-      PR_snprintf(cbuf, sizeof(cbuf), "%d", value->GetIntValue());
-      aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
-      break;
+      {
+        nsAutoString intStr;
+        intStr.AppendInt(value->GetIntValue());
+
+        aResult.Assign(intStr);
+        break;
+      }
 
     case eHTMLUnit_Pixel:
-      aResult.Truncate();
-      PR_snprintf(cbuf, sizeof(cbuf), "%d", value->GetPixelValue());
-      aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
-      break;
+      {
+        nsAutoString intStr;
+        intStr.AppendInt(value->GetPixelValue());
+
+        aResult.Assign(intStr);
+        break;
+      }
 
     case eHTMLUnit_Percent:
-      aResult.Truncate();
-      PR_snprintf(cbuf, sizeof(cbuf), "%d", PRInt32(value->GetPercentValue() * 100.0f));      
-      aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
-      aResult.Append(NS_LITERAL_STRING("%"));
-      break;
+      {
+        nsAutoString intStr;
+        intStr.AppendInt(PRInt32(value->GetPercentValue() * 100.0f));
+
+        aResult.Assign(intStr);
+        aResult.Append(PRUnichar('%'));
+        break;
+      }
 
     case eHTMLUnit_Color:
+      char cbuf[20];
       color = nscolor(value->GetColorValue());
       PR_snprintf(cbuf, sizeof(cbuf), "#%02x%02x%02x",
                   NS_GET_R(color), NS_GET_G(color), NS_GET_B(color));
@@ -2193,21 +2201,21 @@ PRBool
 nsGenericHTMLElement::ValueOrPercentToString(const nsHTMLValue& aValue,
                                              nsAWritableString& aResult)
 {
-  char cbuf[64];
+  nsAutoString intStr;
   aResult.Truncate(0);
   switch (aValue.GetUnit()) {
     case eHTMLUnit_Integer:
-      PR_snprintf(cbuf, sizeof(cbuf), "%d", aValue.GetIntValue());
-      aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
+      intStr.AppendInt(aValue.GetIntValue());
+      aResult.Append(intStr);
       return PR_TRUE;
     case eHTMLUnit_Pixel:
-      PR_snprintf(cbuf, sizeof(cbuf), "%d", aValue.GetPixelValue());
-      aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
+      intStr.AppendInt(aValue.GetPixelValue());
+      aResult.Append(intStr);
       return PR_TRUE;
     case eHTMLUnit_Percent:
-      PR_snprintf(cbuf, sizeof(cbuf), "%d", PRInt32(aValue.GetPercentValue() * 100.0f));
-      aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
-      aResult.Append(NS_LITERAL_STRING("%"));
+      intStr.AppendInt(PRInt32(aValue.GetPercentValue() * 100.0f));
+      aResult.Append(intStr);
+      aResult.Append(PRUnichar('%'));
       return PR_TRUE;
     default:
       break;
@@ -2219,25 +2227,25 @@ PRBool
 nsGenericHTMLElement::ValueOrPercentOrProportionalToString(const nsHTMLValue& aValue,
                                                            nsAWritableString& aResult)
 {
-  char cbuf[64];
+  nsAutoString intStr;
   aResult.Truncate(0);
   switch (aValue.GetUnit()) {
   case eHTMLUnit_Integer:
-    PR_snprintf(cbuf, sizeof(cbuf), "%d", aValue.GetIntValue());
-    aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
+    intStr.AppendInt(aValue.GetIntValue());
+    aResult.Append(intStr);
     return PR_TRUE;
   case eHTMLUnit_Pixel:
-    PR_snprintf(cbuf, sizeof(cbuf), "%d", aValue.GetPixelValue());
-    aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
+    intStr.AppendInt(aValue.GetPixelValue());
+    aResult.Append(intStr);
     return PR_TRUE;
   case eHTMLUnit_Percent:
-    PR_snprintf(cbuf, sizeof(cbuf), "%d", PRInt32(aValue.GetPercentValue() * 100.0f));
-    aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
+    intStr.AppendInt(PRInt32(aValue.GetPercentValue() * 100.0f));
+    aResult.Append(intStr);
     aResult.Append(NS_LITERAL_STRING("%"));
     return PR_TRUE;
   case eHTMLUnit_Proportional:
-    PR_snprintf(cbuf, sizeof(cbuf), "%d", aValue.GetIntValue());
-    aResult.Append(NS_ConvertASCIItoUCS2(cbuf));
+    intStr.AppendInt(aValue.GetIntValue());
+    aResult.Append(intStr);
     aResult.Append(NS_LITERAL_STRING("*"));
     return PR_TRUE;
   default:
@@ -3121,10 +3129,9 @@ nsGenericHTMLElement::MapBackgroundAttributesInto(const nsIHTMLMappedAttributes*
       aPresContext->GetCompatibilityMode(&mode);
       if (eCompatibility_NavQuirks == mode &&
           eHTMLUnit_Empty == value.GetUnit()) {
-        nsAutoString spec;
         nsStyleColor* color;
         color = (nsStyleColor*)aContext->GetMutableStyleData(eStyleStruct_Color);
-        color->mBackgroundImage = spec;
+        color->mBackgroundImage.Truncate();
         color->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
         color->mBackgroundRepeat = NS_STYLE_BG_REPEAT_XY;
       }
@@ -3706,7 +3713,9 @@ nsGenericHTMLLeafFormElement::SetForm(nsIForm* aForm)
 }
 
 nsresult
-nsGenericHTMLLeafFormElement::SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, const nsAReadableString& aValue,
+nsGenericHTMLLeafFormElement::SetAttribute(PRInt32 aNameSpaceID,
+                                           nsIAtom* aName,
+                                           const nsAReadableString& aValue,
                                            PRBool aNotify)
 {
   // Add the control to the hash table
@@ -3721,7 +3730,8 @@ nsGenericHTMLLeafFormElement::SetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName,
     mForm->AddElementToTable(control, aValue);
   }
 
-  return nsGenericHTMLElement::SetAttribute(aNameSpaceID, aName, aValue, aNotify);
+  return nsGenericHTMLElement::SetAttribute(aNameSpaceID, aName, aValue,
+                                            aNotify);
 }
 
 nsresult

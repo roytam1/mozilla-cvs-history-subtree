@@ -285,7 +285,7 @@ nsCommentNode::GetTag(nsIAtom*& aResult) const
 NS_IMETHODIMP
 nsCommentNode::GetNodeName(nsAWritableString& aNodeName)
 {
-  aNodeName.Assign(NS_ConvertASCIItoUCS2("#comment"));
+  aNodeName.Assign(NS_LITERAL_STRING("#comment"));
   return NS_OK;
 }
 

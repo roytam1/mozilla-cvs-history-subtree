@@ -836,8 +836,7 @@ nsHTMLImageElement::GetSrc(nsAWritableString& aSrc)
 
   if (nsnull != baseURL && relURLSpec.Length() > 0) {
     // Get absolute URL.
-    nsAutoString srcStr(aSrc);
-    rv = NS_MakeAbsoluteURI(srcStr, relURLSpec, baseURL);
+    rv = NS_MakeAbsoluteURI(aSrc, relURLSpec, baseURL);
   }
   else {
     // Absolute URL is same as relative URL.

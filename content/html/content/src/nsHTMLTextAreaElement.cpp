@@ -352,9 +352,8 @@ nsHTMLTextAreaElement::GetValue(nsAWritableString& aValue)
 {
   nsIFormControlFrame* formControlFrame = nsnull;
   if (NS_OK == nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame)) {
-    nsAutoString val;
-    formControlFrame->GetProperty(nsHTMLAtoms::value, val);
-    aValue.Assign(val);
+    formControlFrame->GetProperty(nsHTMLAtoms::value, aValue);
+
     return NS_OK;
   }
    //XXX: Should this ASSERT instead of getting the default value here?
@@ -369,8 +368,7 @@ nsHTMLTextAreaElement::SetValue(const nsAReadableString& aValue)
   if (NS_OK == nsGenericHTMLElement::GetPrimaryFrame(this, formControlFrame)) {
     nsIPresContext* presContext;
     nsGenericHTMLElement::GetPresContext(this, &presContext);
-    nsAutoString value(aValue);
-    formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, value);
+    formControlFrame->SetProperty(presContext, nsHTMLAtoms::value, aValue);
     NS_IF_RELEASE(presContext);
   }
   // Set the attribute in the DOM too, we call SetAttribute with aNotify

@@ -2426,8 +2426,7 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     if (receiver && NS_SUCCEEDED(receiver->GetListenerManager(getter_AddRefs(manager)))) {
       nsCOMPtr<nsIScriptObjectOwner> objOwner(do_QueryInterface(global));
       if (objOwner) {
-        // XXX FIX ME to be more efficient
-        ret = manager->AddScriptEventListener(context, objOwner, aAttribute, nsAutoString(aValue), aIID, PR_FALSE);
+        ret = manager->AddScriptEventListener(context, objOwner, aAttribute, aValue, aIID, PR_FALSE);
       }
     }
   }
@@ -2436,8 +2435,7 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     if (NS_SUCCEEDED(GetListenerManager(getter_AddRefs(manager)))) {
       nsCOMPtr<nsIScriptObjectOwner> objOwner(do_QueryInterface(mContent));
       if (objOwner) {
-        // XXX FIX ME to be more efficient
-        ret = manager->AddScriptEventListener(context, objOwner, aAttribute, nsAutoString(aValue), aIID, PR_TRUE);
+        ret = manager->AddScriptEventListener(context, objOwner, aAttribute, aValue, aIID, PR_TRUE);
       }
     }
   }

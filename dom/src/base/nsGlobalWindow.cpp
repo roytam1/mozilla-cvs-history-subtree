@@ -884,7 +884,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetStatus(const nsAReadableString& aStatus)
    nsCOMPtr<nsIWebBrowserChrome> browserChrome;
    GetWebBrowserChrome(getter_AddRefs(browserChrome));
    if(browserChrome)
-      browserChrome->SetJSStatus(nsAutoString(aStatus).GetUnicode());
+      browserChrome->SetJSStatus(nsPromiseFlatString(aStatus));
 
    return NS_OK;
 }
@@ -902,7 +902,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetDefaultStatus(const nsAReadableString& aDefau
    nsCOMPtr<nsIWebBrowserChrome> browserChrome;
    GetWebBrowserChrome(getter_AddRefs(browserChrome));
    if(browserChrome)
-      browserChrome->SetJSDefaultStatus(nsAutoString(aDefaultStatus).GetUnicode());
+      browserChrome->SetJSDefaultStatus(nsPromiseFlatString(aDefaultStatus));
 
    return NS_OK;
 }
@@ -923,7 +923,7 @@ NS_IMETHODIMP GlobalWindowImpl::SetName(const nsAReadableString& aName)
    nsresult result = NS_OK;
    nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
    if(docShellAsItem)
-      result = docShellAsItem->SetName(nsAutoString(aName).GetUnicode());
+      result = docShellAsItem->SetName(nsPromiseFlatString(aName));
    return result;
 }
 
@@ -1933,7 +1933,7 @@ NS_IMETHODIMP GlobalWindowImpl::Escape(const nsAReadableString& aStr, nsAWritabl
 
    PRInt32 maxByteLen, srcLen;
    srcLen = aStr.Length();
-   const PRUnichar* src = nsAutoString(aStr).GetUnicode();
+   const PRUnichar* src = nsPromiseFlatString(aStr);
 
    // Get the expected length of result string
    result = encoder->GetMaxLength(src, srcLen, &maxByteLen);

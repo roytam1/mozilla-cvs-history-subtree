@@ -4182,15 +4182,15 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                 if (NS_FAILED(rv)) return rv;
 
                 PRInt32 millis = -1;
-                PRUnichar *uriAttrib = nsnull;
-    
+                nsAutoString uriAttrib;
+
                 PRInt32 semiColon = result.FindCharInSet(";,");
                 nsAutoString token;
                 if (semiColon > -1)
                     result.Left(token, semiColon);
                 else
                     token = result;
-    
+
                 PRBool done = PR_FALSE;
                 while (!done && !token.IsEmpty()) {
                     token.CompressWhitespace();
@@ -4204,7 +4204,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                               break;
                             ++iter;
                            }
-            
+
                         if (tokenIsANumber) {
                             PRInt32 err;
                             millis = token.ToInteger(&err) * 1000;
@@ -4219,7 +4219,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                         if (loc > -1)
                             token.Cut(0, loc+1);
                         token.Trim(" \"'");
-                        uriAttrib = token.ToNewUnicode();
+                        uriAttrib.Assign(token);
                     } else {
                         // Increment to the next token.
                         if (semiColon > -1) {
@@ -4235,12 +4235,11 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                 } // end while
 
                 nsCOMPtr<nsIURI> uri;
-                if (!uriAttrib) {
+                if (uriAttrib.Length() == 0) {
                     uri = baseURI;
                 } else {
-                    nsAutoString str(uriAttrib);
-                    rv = NS_NewURI(getter_AddRefs(uri), str, baseURI);
-                    nsMemory::Free(uriAttrib);
+                    rv = NS_NewURI(getter_AddRefs(uri), 
+                                   uriAttrib, baseURI);
                 }
 
                 if (NS_SUCCEEDED(rv)) {

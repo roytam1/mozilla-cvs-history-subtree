@@ -83,7 +83,7 @@ public:
   virtual nsresult AddScriptEventListener(nsIScriptContext*aContext,
                                           nsIScriptObjectOwner *aScriptObjectOwner,
                                           nsIAtom *aName,
-                                          const nsString& aFunc,
+                                          const nsAReadableString& aFunc,
                                           REFNSIID aIID,
                                           PRBool aDeferCompilation) = 0;
 
