@@ -298,6 +298,11 @@ sub SetupEnv {
     $ENV{DISPLAY} = $Settings::DisplayServer;
     $ENV{MOZCONFIG} = "$Settings::BaseDir/$Settings::MozConfigFileName" 
       if $Settings::MozConfigFileName ne '' and -e $Settings::MozConfigFileName;
+
+	# Mail test needs build-time env set.  -mcafee
+	if($Settings::MailBloatTest) {
+	  $ENV{BUILD_MAIL_SMOKETEST} = "1";
+	}
 }
 
 sub SetupPath {
