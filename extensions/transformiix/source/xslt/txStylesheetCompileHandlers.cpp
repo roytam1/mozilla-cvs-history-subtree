@@ -748,7 +748,7 @@ txFnStartComment(PRInt32 aNamespaceID,
 nsresult
 txFnEndComment(txStylesheetCompilerState& aState)
 {
-    txInstruction* instr = new txCreateComment;
+    txInstruction* instr = new txComment;
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
     nsresult rv = aState.addInstruction(instr);

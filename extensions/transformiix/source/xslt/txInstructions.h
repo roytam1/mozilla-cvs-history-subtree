@@ -116,7 +116,7 @@ public:
     txInstruction* mTarget;
 };
 
-class txCreateComment : public txInstruction
+class txComment : public txInstruction
 {
 public:
     TX_DECL_TXINSTRUCTION

@@ -195,7 +195,7 @@ txConditionalGoto::execute(txExecutionState& aEs)
 }
 
 nsresult
-txCreateComment::execute(txExecutionState& aEs)
+txComment::execute(txExecutionState& aEs)
 {
     txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
     PRUint32 length = handler->mValue.Length();
