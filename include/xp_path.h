@@ -25,8 +25,8 @@
  *   -- Wan-Teh Chang <wtc@netscape.com>, 18 September 1998
  */
 
-#ifndef _XP_OSDEP_H
-#define _XP_OSDEP_H
+#ifndef _XP_PATH_H
+#define _XP_PATH_H
 
 #if defined(XP_UNIX) || defined(XP_MAC)
 #define DIRECTORY_SEPARATOR '/'
@@ -42,12 +42,13 @@
 #error "Unknown platform"
 #endif
 
-/*
- * For backward compatibility.
- */
 #define PR_DIRECTORY_SEPARATOR DIRECTORY_SEPARATOR
 #define PR_DIRECTORY_SEPARATOR_STR DIRECTORY_SEPARATOR_STR
 #define PR_PATH_SEPARATOR PATH_SEPARATOR
 #define PR_PATH_SEPARATOR_STR PATH_SEPARATOR_STR
 
-#endif /* _XP_OSDEP_H */
+#ifdef XP_MAC
+#define MAXPATHLEN 512
+#endif
+
+#endif /* _XP_PATH_H */

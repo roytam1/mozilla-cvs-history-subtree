@@ -20,7 +20,7 @@
 #ifndef _XP_File_
 #define _XP_File_
 
-#include "xp_osdep.h"  /* for PR_DIRECTORY_SEPARATOR, etc. */
+#include "xp_path.h"
 
 #define XP_FILE_NATIVE_PATH char *
 #define XP_FILE_URL_PATH char*
@@ -263,9 +263,6 @@ typedef enum XP_FileType {
 	xpJSConfig                  /* Javascript 'jsc' config cache file */
 } XP_FileType;
 
-#ifdef XP_MAC
-#define MAXPATHLEN 512
-#endif
 
 #define XP_FILE_READ             "r"
 #define XP_FILE_READ_BIN         "rb"
