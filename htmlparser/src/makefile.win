@@ -59,6 +59,7 @@ CPPSRCS=					\
 	nsExpatDTD.cpp			\
 	prstrm.cpp				\
 	nsParserModule.cpp			\
+	nsXIFDTD.cpp				\
 	$(NULL)
 
 CPP_OBJS=					\
@@ -91,6 +92,7 @@ CPP_OBJS=					\
 	.\$(OBJDIR)\nsExpatDTD.obj		\
 	.\$(OBJDIR)\prstrm.obj			\
 	.\$(OBJDIR)\nsParserModule.obj		\
+	.\$(OBJDIR)\nsXIFDTD.obj		\
 	$(NULL)
 
 EXPORTS=					\
