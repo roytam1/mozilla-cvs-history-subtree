@@ -74,6 +74,7 @@
 
 #include "prefapi.h"
 #include "NSReg.h"
+#include "softupdt.h"
 
 #if defined(_HPUX_SOURCE)
 /* I don't know where this is coming from...  "ld -y Error" says
@@ -343,7 +344,11 @@ fe_GetURL (MWContext *context, URL_Struct *url, Boolean skip_get_url)
 #ifdef EDITOR
       !(context->is_editor) &&
 #endif
+#if 1
+      (needNewWindow = MSG_NewWindowRequiredForURL(context, url)) &&
+#else
       (needNewWindow = MSG_NewWindowRequired(context, url->address)) &&
+#endif
       XP_STRCMP(url->address, "search-libmsg:"))
     {
 
@@ -362,7 +367,13 @@ fe_GetURL (MWContext *context, URL_Struct *url, Boolean skip_get_url)
 		new_context = fe_FindNonCustomBrowserContext(context);
 	    }
 
-	  if ( new_context )
+          if (!new_context )
+            {
+              context = fe_MakeWindow (XtParent (CONTEXT_WIDGET (context)), context,
+                                       url, NULL, MWContextBrowser, FALSE);
+              return (context ? 0 : -1);
+            }
+          else
 	    {
 			/* If we find a new browser context, use it to display URL 
 			 */
@@ -2571,8 +2582,12 @@ fe_MinimalNoUICleanup()
   fe_SaveBookmarks ();
 
   PREF_SavePrefFile();
+  
+#ifdef JAVA
   NR_ShutdownRegistry();
-
+  SU_Shutdown();
+#endif
+  
   RDF_Shutdown();
   GH_SaveGlobalHistory ();
   NET_SaveCookies(NULL);
@@ -3367,7 +3382,7 @@ char* fe_GetLDAPTmpFile(char *name) {
 	if (!home) home = "";
 	if (!name) return NULL;
 
-	sprintf(tmp, "%.900s/.netscape/", home);
+	PR_snprintf(tmp, sizeof(tmp), "%.900s/.netscape/", home);
 
 #ifdef _XP_TMP_FILENAME_FOR_LDAP_
 	/* we need to write this */
@@ -3747,7 +3762,7 @@ fe_display_docString(MWContext* context,
     if (s == NULL) {
         static char buf[128];
 		s = buf;    
-		sprintf(s, "Debug: no documentationString resource for widget %s",
+		PR_snprintf(s, sizeof(buf),"Debug: no documentationString resource for widget %s",
 				XtName(widget));
     }
 #endif /*DEBUG*/
@@ -3873,7 +3888,7 @@ fe_tooltips_display_stage_two(Widget widget, TipInfo* info)
 							   */
         static char buf[256];
 		s = buf;
-		sprintf(s, "Debug: no tipString resource for widget %s\n"
+		PR_snprintf(s, sizeof(buf), "Debug: no tipString resource for widget %s\n"
 				"This message only appears in a DEBUG build",
 				XtName(widget));
     }
@@ -3934,8 +3949,8 @@ fe_tooltips_display_stage_two(Widget widget, TipInfo* info)
      *    geometry spec. No more attack of the killer tomatoes...djw
      */
     {
-		char buf[128];
-		sprintf(buf, "%dx%d", width, height);
+		char buf[16];
+		PR_snprintf(buf, sizeof(buf), "%dx%d", width, height);
 		XtVaSetValues(parent, XmNwidth, width, XmNheight, height,
 					  XmNgeometry, buf, 0);
     }
@@ -4151,8 +4166,8 @@ fe_HTMLTips_display_stage_two(Widget widget, HTMLTipData_t* info)
      *    geometry spec. No more attack of the killer tomatoes...djw
      */
     {
-		char buf[128];
-		sprintf(buf, "%dx%d", width, height);
+		char buf[16];
+		PR_snprintf(buf, sizeof(buf),"%dx%d", width, height);
 		XtVaSetValues(parent, XmNwidth, width, XmNheight, height,
 					  XmNgeometry, buf, 0);
     }
@@ -5181,6 +5196,13 @@ Boolean fe_ToolTipIsShowing(void)
 	return fe_tooltip_is_showing;
 }
 
+#ifdef MOZ_MAIL_NEWS
+MSG_IMAPUpgradeType FE_PromptIMAPSubscriptionUpgrade(MWContext *context,
+                                                        const char *hostName)
+{
+    return fe_promptIMAPSubscriptionUpgrade(context,hostName);
+}
+#endif
 
 /* Get URL for referral if there is one. */
 char *fe_GetURLForReferral(History_entry *he)

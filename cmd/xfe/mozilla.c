@@ -2801,7 +2801,7 @@ main
 #endif
 
 
-#ifdef MOZ_MAIL_NEWS
+#ifdef JAVA
   /* Startup softupdate */
   SU_Startup();
 #endif /* MOZ_MAIL_NEWS */
