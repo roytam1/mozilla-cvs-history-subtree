@@ -178,9 +178,6 @@ public:
   // The available space within the current band.
   nsRect mAvailSpaceRect;
 
-  // The maximum x-most of each line
-  nscoord mKidXMost;
-
   // The combined area of all floats placed so far
   nsRect mFloatCombinedArea;
 

@@ -97,7 +97,6 @@ nsBlockReflowState::nsBlockReflowState(const nsHTMLReflowState& aReflowState,
 
   mPresContext = aPresContext;
   mNextInFlow = NS_STATIC_CAST(nsBlockFrame*, mBlock->GetNextInFlow());
-  mKidXMost = 0;
 
   // Compute content area width (the content area is inside the border
   // and padding)
@@ -460,20 +459,6 @@ nsBlockReflowState::RecoverStateFrom(nsLineList::iterator aLine,
   // Make the line being recovered the current line
   mCurrentLine = aLine;
 
-  // Recover mKidXMost and mMaxElementWidth
-  nscoord xmost = aLine->mBounds.XMost();
-  if (xmost > mKidXMost) {
-#ifdef DEBUG
-    if (CRAZY_WIDTH(xmost)) {
-      nsFrame::ListTag(stdout, mBlock);
-      printf(": WARNING: xmost:%d\n", xmost);
-    }
-#endif
-#ifdef NOISY_KIDXMOST
-    printf("%p RecoverState block %p aState.mKidXMost=%d\n", this, mBlock, xmost); 
-#endif
-    mKidXMost = xmost;
-  }
   if (GetFlag(BRS_COMPUTEMAXELEMENTWIDTH)) {
 #ifdef DEBUG
     if (nsBlockFrame::gNoisyMaxElementWidth) {

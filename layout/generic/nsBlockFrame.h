@@ -392,10 +392,6 @@ protected:
    */
   nsresult MarkLineDirty(line_iterator aLine);
 
-  // XXX blech
-  void PostPlaceLine(nsBlockReflowState& aState,
-                     nsLineBox* aLine);
-
   // XXX where to go
   PRBool ShouldJustifyLine(nsBlockReflowState& aState,
                            line_iterator aLine);

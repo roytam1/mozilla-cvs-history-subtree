@@ -1067,9 +1067,6 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
   // What are those cases, and do we get the wrong behavior?
 
   // Compute final width
-#ifdef NOISY_KIDXMOST
-  printf("%p aState.mKidXMost=%d\n", this, aState.mKidXMost); 
-#endif
   // Use style defined width
   aMetrics.width = borderPadding.left + aReflowState.mComputedWidth +
     borderPadding.right;
@@ -2788,9 +2785,6 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
                aState.mPrevBottomMargin);
 #endif
         
-        // Post-process the "line"
-        PostPlaceLine(aState, aLine);
-        
         // If the block frame that we just reflowed happens to be our
         // first block, then its computed ascent is ours
         if (frame == GetTopBlockChild(aState.mPresContext)) {
@@ -3598,12 +3592,6 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
 
   aState.mY = newY;
   
-  // If we're reflowing the line just to incrementally update the
-  // maximum width, then don't post-place the line. It's doing work we
-  // don't need, and it will update things like aState.mKidXMost that
-  // we don't want updated...
-  PostPlaceLine(aState, aLine);
-
   // Add the already placed current-line floats to the line
   aLine->AppendFloats(aState.mCurrentLineFloats);
 
@@ -3657,27 +3645,6 @@ nsBlockFrame::PlaceLine(nsBlockReflowState& aState,
   }
 
   return PR_FALSE;
-}
-
-void
-nsBlockFrame::PostPlaceLine(nsBlockReflowState& aState,
-                            nsLineBox* aLine)
-{
-  // Update xmost
-  nscoord xmost = aLine->mBounds.XMost();
-
-#ifdef DEBUG
-  if (CRAZY_WIDTH(xmost)) {
-    ListTag(stdout);
-    printf(": line=%p xmost=%d\n", NS_STATIC_CAST(void*, aLine), xmost);
-  }
-#endif
-  if (xmost > aState.mKidXMost) {
-    aState.mKidXMost = xmost;
-#ifdef NOISY_KIDXMOST
-    printf("%p PostPlaceLine aState.mKidXMost=%d\n", this, aState.mKidXMost); 
-#endif
-  }
 }
 
 void
