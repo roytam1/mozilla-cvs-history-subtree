@@ -20,11 +20,7 @@
  * Contributor(s): 
  */
 #include "nsPresContext.h"
-#include "nsIDeviceContext.h"
 #include "nsUnitConversion.h"
-#include "nsIView.h"
-#include "nsIWidget.h"
-#include "nsGfxCIID.h"
 #include "nsLayoutAtoms.h"
 #include "prlog.h"
 
@@ -100,7 +96,9 @@ PrintPreviewContext::GetPageWidth(nscoord* aResult)
     return NS_ERROR_NULL_POINTER;
   }
 
-#ifdef NS_DEBUG
+// XXX pav
+//#ifdef NS_DEBUG
+#if 0
   if (UseFakePageSize()) {
     // For testing purposes make the page width smaller than the visible
     // area

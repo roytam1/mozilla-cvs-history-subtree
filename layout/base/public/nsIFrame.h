@@ -26,6 +26,8 @@
 #include "nslayout.h"
 #include "nsISupports.h"
 #include "nsSize.h"
+#include "nsRect.h"
+#include "nsMargin.h"
 #include "nsGUIEvent.h"
 #include "nsStyleConsts.h"
 #include "nsStyleStruct.h"
@@ -56,11 +58,11 @@ class nsIAtom;
 class nsIContent;
 class nsIPresContext;
 class nsIPresShell;
-class nsIRenderingContext;
+class nsIDrawable;
 class nsISizeOfHandler;
 class nsIStyleContext;
 class nsIView;
-class nsIWidget;
+class nsIWindow;
 class nsAutoString;
 class nsString;
 class nsIFocusTracker; 
@@ -699,7 +701,7 @@ public:
    * the call.
    */
   NS_IMETHOD  Paint(nsIPresContext*      aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable*         aDrawable,
                     const nsRect&        aDirtyRect,
                     nsFramePaintLayer    aWhichLayer) = 0;
 
@@ -760,7 +762,7 @@ public:
    * the correct horizontal offset
    */
   NS_IMETHOD  GetPointFromOffset(nsIPresContext*          inPresContext,
-                                 nsIRenderingContext*     inRendContext,
+                                 nsIDrawable*             inDrawable,
                                  PRInt32                  inOffset,
                                  nsPoint*                 outPoint) = 0;
   
@@ -941,7 +943,7 @@ public:
   // Justification helper method that is used to remove trailing
   // whitespace before justification.
   NS_IMETHOD TrimTrailingWhiteSpace(nsIPresContext* aPresContext,
-                                    nsIRenderingContext& aRC,
+                                    nsIDrawable*    aDrawable,
                                     nscoord& aDeltaWidth) = 0;
 
   /**
@@ -973,7 +975,7 @@ public:
    * recursively upwards.
    */
   NS_IMETHOD  GetWindow(nsIPresContext* aPresContext,
-                        nsIWidget**     aWidget) const = 0;
+                        nsIWindow**     aWidget) const = 0;
 
   /**
    * Get the "type" of the frame. May return a NULL atom pointer

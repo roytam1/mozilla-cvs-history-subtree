@@ -49,7 +49,6 @@
 #include "nsIStyleContext.h"
 #include "nsLayoutAtoms.h"
 #include "nsILookAndFeel.h"
-#include "nsWidgetsCID.h"
 #include "nsIComponentManager.h"
 #include "nsIURIContentListener.h"
 #include "nsIInterfaceRequestor.h"
@@ -76,8 +75,6 @@ PrefChangedCallback(const char* aPrefName, void* instance_data)
 }
 
 static NS_DEFINE_IID(kIPresContextIID, NS_IPRESCONTEXT_IID);
-static NS_DEFINE_CID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
-static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 
 nsPresContext::nsPresContext()
   : mDefaultFont("serif", NS_FONT_STYLE_NORMAL,
@@ -368,22 +365,28 @@ nsPresContext::PreferenceChanged(const char* aPrefName)
   if (mShell) {
     mShell->SetPreferenceStyleRules(PR_TRUE);
   }
-
+#if 0
   if (mDeviceContext) {
     mDeviceContext->FlushFontCache();
     RemapStyleAndReflow();
   }
+#endif
 }
 
 NS_IMETHODIMP
-nsPresContext::Init(nsIDeviceContext* aDeviceContext)
+nsPresContext::Init(nsIOutputDevice *aOutputDevice)
 {
   NS_ASSERTION(!(mInitialized == PR_TRUE), "attempt to reinit pres context");
 
+  mLangService = do_GetService(NS_LANGUAGEATOMSERVICE_PROGID);
+  mPrefs = do_GetService(NS_PREF_PROGID);
+
+// XXX pav
   mDeviceContext = dont_QueryInterface(aDeviceContext);
 
   mLangService = do_GetService(NS_LANGUAGEATOMSERVICE_CONTRACTID);
   mPrefs = do_GetService(NS_PREF_CONTRACTID);
+
   if (mPrefs) {
     // Register callbacks so we're notified when the preferences change
     mPrefs->RegisterCallback("font.", PrefChangedCallback, (void*)this);
@@ -544,28 +547,6 @@ nsPresContext::SetImageAnimationMode(nsImageAnimation aMode)
   return NS_OK;
 }
 
-/* This function has now been depricated.  It is no longer necesary to
- * hold on to presContext just to get a nsLookAndFeel.  nsLookAndFeel is
- * now a service provided by ServiceManager.
- */
-NS_IMETHODIMP
-nsPresContext::GetLookAndFeel(nsILookAndFeel** aLookAndFeel)
-{
-  NS_PRECONDITION(nsnull != aLookAndFeel, "null ptr");
-  if (nsnull == aLookAndFeel) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  nsresult result = NS_OK;
-  if (! mLookAndFeel) {
-    mLookAndFeel = do_GetService(kLookAndFeelCID,&result);
-  }
-  *aLookAndFeel = mLookAndFeel;
-  NS_IF_ADDREF(*aLookAndFeel);
-  return result;
-}
-
-
-
 NS_IMETHODIMP
 nsPresContext::GetBaseURL(nsIURI** aResult)
 {
@@ -685,6 +666,7 @@ nsPresContext::GetMetricsFor(const nsFont& aFont, nsIFontMetrics** aResult)
   }
 
   nsIFontMetrics* metrics = nsnull;
+#if 0 // XXX pav
   if (mDeviceContext) {
     nsCOMPtr<nsIAtom> langGroup;
     if (mLanguage) {
@@ -692,6 +674,7 @@ nsPresContext::GetMetricsFor(const nsFont& aFont, nsIFontMetrics** aResult)
     }
     mDeviceContext->GetMetricsFor(aFont, langGroup, metrics);
   }
+#endif
   *aResult = metrics;
   return NS_OK;
 }
@@ -916,9 +899,11 @@ nsPresContext::GetPixelsToTwips(float* aResult) const
   }
 
   float p2t = 1.0f;
+#if 0 // XXX pav
   if (mDeviceContext) {
     mDeviceContext->GetDevUnitsToAppUnits(p2t);
   }
+#endif
   *aResult = p2t;
   return NS_OK;
 }
@@ -932,9 +917,11 @@ nsPresContext::GetTwipsToPixels(float* aResult) const
   }
 
   float app2dev = 1.0f;
+#if 0 // XXX pav
   if (mDeviceContext) {
     mDeviceContext->GetAppUnitsToDevUnits(app2dev);
   }
+#endif
   *aResult = app2dev;
   return NS_OK;
 }
@@ -948,6 +935,7 @@ nsPresContext::GetScaledPixelsToTwips(float* aResult) const
   }
 
   float scale = 1.0f;
+#if 0 // XXX pav
   if (mDeviceContext)
   {
     float p2t;
@@ -955,19 +943,8 @@ nsPresContext::GetScaledPixelsToTwips(float* aResult) const
     mDeviceContext->GetCanonicalPixelScale(scale);
     scale = p2t * scale;
   }
+#endif
   *aResult = scale;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsPresContext::GetDeviceContext(nsIDeviceContext** aResult) const
-{
-  NS_PRECONDITION(nsnull != aResult, "null ptr");
-  if (nsnull == aResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  *aResult = mDeviceContext;
-  NS_IF_ADDREF(*aResult);
   return NS_OK;
 }
 
@@ -992,7 +969,7 @@ nsPresContext::GetImageGroup(nsIImageGroup** aResult)
     {
       nsCOMPtr<nsISupports> loadContext;
       loadHandler->GetLoadCookie(getter_AddRefs(loadContext));
-      rv = mImageGroup->Init(mDeviceContext, loadContext);
+      rv = mImageGroup->Init(loadContext);
     }
 
     if (NS_OK != rv) {

@@ -26,9 +26,8 @@
 #include "nsIFormControlFrame.h"
 #include "nsIFormManager.h"
 #include "nsISupports.h"
-#include "nsIWidget.h"
 #include "nsLeafFrame.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIStyleContext.h"
 #include "nsIPresContext.h"
 
@@ -95,7 +94,7 @@ public:
   
 
   static nscoord CalculateSize (nsIPresContext*       aPresContext, 
-                                nsIRenderingContext*  aRendContext,
+                                nsIDrawable*          aDrawable,
                                 nsIFormControlFrame*  aFrame,
                                 const nsSize&         aCSSSize, 
                                 nsInputDimensionSpec& aDimensionSpec, 
@@ -107,11 +106,11 @@ public:
 
   static nscoord GetTextSize(nsIPresContext* aContext, nsIFormControlFrame* aFrame,
                              const nsString& aString, nsSize& aSize,
-                             nsIRenderingContext *aRendContext);
+                             nsIDrawable* aDrawable);
 
   static nscoord GetTextSize(nsIPresContext* aContext, nsIFormControlFrame* aFrame,
                              PRInt32 aNumChars, nsSize& aSize,
-                             nsIRenderingContext *aRendContext);
+                             nsIDrawable* aDrawable);
 
   static nsresult GetFont(nsIFormControlFrame *  aFormFrame,
                           nsIPresContext*        aPresContext, 
@@ -124,7 +123,7 @@ public:
                                  nsIFontMetrics** aFontMet);
 
   static nscoord CalcNavQuirkSizing(nsIPresContext*      aPresContext, 
-                                    nsIRenderingContext* aRendContext,
+                                    nsIDrawable*         aDrawable,
                                     nsIFontMetrics*      aFontMet, 
                                     nsIFormControlFrame* aFrame,
                                     nsInputDimensionSpec& aSpec,
@@ -253,7 +252,7 @@ public:
    /**
     * Paint a fat line. The line is drawn as a polygon with a specified width.
 	  *  
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
     * @param aSX starting x in pixels
 	  * @param aSY starting y in pixels
 	  * @param aEX ending x in pixels
@@ -263,21 +262,21 @@ public:
     * @param aOnePixel number of twips in a single pixel.
     */
 
-  static void PaintLine(nsIRenderingContext& aRenderingContext, 
+  static void PaintLine(nsIDrawable* aDrawable, 
                  nscoord aSX, nscoord aSY, nscoord aEX, nscoord aEY, 
                  PRBool aHorz, nscoord aWidth, nscoord aOnePixel);
 
    /**
     * Draw an arrow glyph. 
 	  * 
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
     * @param aSX upper left x coordinate pixels
    	* @param aSY upper left y coordinate pixels
     * @param aType @see nsArrowDirection enumeration 
     * @param aOnePixel number of twips in a single pixel.
     */
 
-  static void PaintArrowGlyph(nsIRenderingContext& aRenderingContext, 
+  static void PaintArrowGlyph(nsIDrawable *aDrawable, 
                               nscoord aSX, nscoord aSY, nsArrowDirection aArrowDirection, 
                               nscoord aOnePixel);
 
@@ -285,7 +284,7 @@ public:
     * Draw an arrow 
    	* 
     * @param aArrowDirection @see nsArrowDirection enumeration
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
 		* @param aPresContext the presentation context
 		* @param aDirtyRect rectangle requiring update
     * @param aOnePixel number of TWIPS in a single pixel
@@ -296,19 +295,19 @@ public:
     */
 
   static void PaintArrow(nsArrowDirection aArrowDirection,
-			 nsIRenderingContext& aRenderingContext,
-			 nsIPresContext* aPresContext, 
-		 	 const nsRect& aDirtyRect,
+                         nsIDrawable* aDrawable,
+                         nsIPresContext* aPresContext, 
+                         const nsRect& aDirtyRect,
                          nsRect& aRect, 
-			 nscoord aOnePixel, 
+                         nscoord aOnePixel, 
                          nsIStyleContext* aArrowStyle,
-			 const nsStyleSpacing& aSpacing,
-			 nsIFrame* aForFrame,
+                         const nsStyleSpacing& aSpacing,
+                         nsIFrame* aForFrame,
                          nsRect& aFrameRect);
    /**
     * Paint a scrollbar
 	  * 
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
 		* @param aPresContext the presentation context
 		* @param aDirtyRect rectangle requiring update
     * @param aRect width and height of the scrollbar
@@ -320,54 +319,54 @@ public:
     * @param aFrameRect the rectangle for the frame passed as aForFrame
     */
 
-  static void PaintScrollbar(nsIRenderingContext& aRenderingContext,
-																	nsIPresContext* aPresContext, 
-																  const nsRect& aDirtyRect,
-                                  nsRect& aRect, 
-																  PRBool aHorizontal, 
-																  nscoord aOnePixel, 
-                                  nsIStyleContext* aScrollbarStyleContext,
-                                  nsIStyleContext* aScrollbarArrowStyleContext,
-																	nsIFrame* aForFrame,
-                                  nsRect& aFrameRect);
+  static void PaintScrollbar(nsIDrawable* aDrawable,
+                             nsIPresContext* aPresContext, 
+                             const nsRect& aDirtyRect,
+                             nsRect& aRect, 
+                             PRBool aHorizontal, 
+                             nscoord aOnePixel, 
+                             nsIStyleContext* aScrollbarStyleContext,
+                             nsIStyleContext* aScrollbarArrowStyleContext,
+                             nsIFrame* aForFrame,
+                             nsRect& aFrameRect);
    /**
     * Paint a fixed size checkmark
 	  * 
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
 	  * @param aPixelsToTwips scale factor for convering pixels to twips.
     */
 
-  static void PaintFixedSizeCheckMark(nsIRenderingContext& aRenderingContext, 
-                                     float aPixelsToTwips);
+  static void PaintFixedSizeCheckMark(nsIDrawable* aDrawable, 
+                                      float aPixelsToTwips);
                        
   /**
     * Paint a checkmark
 	  * 
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
 	  * @param aPixelsToTwips scale factor for convering pixels to twips.
     * @param aWidth width in twips
     * @param aHeight height in twips
     */
 
-  static void PaintCheckMark(nsIRenderingContext& aRenderingContext,
+  static void PaintCheckMark(nsIDrawable* aDrawable,
                              float aPixelsToTwips, const nsRect & aRect);
 
    /**
     * Paint a fixed size checkmark border
 	  * 
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
 	  * @param aPixelsToTwips scale factor for convering pixels to twips.
     * @param aBackgroundColor color for background of the checkbox 
     */
 
-  static void PaintFixedSizeCheckMarkBorder(nsIRenderingContext& aRenderingContext,
+  static void PaintFixedSizeCheckMarkBorder(nsIDrawable* aDrawable,
                          float aPixelsToTwips, const nsStyleColor& aBackgroundColor);
 
    /**
     * Paint a rectangular button. Includes background, string, and focus indicator
 	  * 
     * @param aPresContext the presentation context
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
     * @param aDirtyRect rectangle requiring update
     * @param aRect  x,y, width, and height of the button in TWIPS
     * @param aShift if PR_TRUE offset button as if it were pressed
@@ -378,7 +377,7 @@ public:
     */
 
   static void PaintRectangularButton(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
+                            nsIDrawable* aDrawable,
                             const nsRect& aDirtyRect, const nsRect& aRect, 
                             PRBool aShift, PRBool aShowFocus, PRBool aDisabled,
 							              PRBool aDrawOutline,
@@ -389,13 +388,13 @@ public:
    /**
     * Paint a focus indicator.
 	  * 
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
     * @param aDirtyRect rectangle requiring update
 	  * @param aInside border inside
     * @param aOutside border outside
     */
 
-  static void PaintFocus(nsIRenderingContext& aRenderingContext,
+  static void PaintFocus(nsIDrawable* aDrawable,
                          const nsRect& aDirtyRect, nsRect& aInside, nsRect& aOutside);
 
    /**
@@ -414,7 +413,7 @@ public:
     * Paint a circular background
 	  * 
     * @param aPresContext the presentation context
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
     * @param aDirtyRect rectangle requiring update
     * @param aStyleContext style context specifying colors and spacing
     * @param aInset if PR_TRUE draw inset, otherwise draw outset
@@ -424,7 +423,7 @@ public:
     */
 
   static void PaintCircularBackground(nsIPresContext* aPresContext,
-                         nsIRenderingContext& aRenderingContext,
+                         nsIDrawable* aDrawable,
                          const nsRect& aDirtyRect, nsIStyleContext* aStyleContext, PRBool aInset,
                          nsIFrame* aForFrame, PRUint32 aWidth, PRUint32 aHeight);
 
@@ -433,7 +432,7 @@ public:
     * Paint a circular border
 	  * 
     * @param aPresContext the presentation context
-    * @param aRenderingContext the rendering context
+    * @param aDrawable the drawing area
     * @param aDirtyRect rectangle requiring update
     * @param aStyleContext style context specifying colors and spacing
     * @param aInset if PR_TRUE draw inset, otherwise draw outset
@@ -443,7 +442,7 @@ public:
     */
 
   static void PaintCircularBorder(nsIPresContext* aPresContext,
-                         nsIRenderingContext& aRenderingContext,
+                         nsIDrawable* aDrawable,
                          const nsRect& aDirtyRect, nsIStyleContext* aStyleContext, PRBool aInset,
                          nsIFrame* aForFrame, PRUint32 aWidth, PRUint32 aHeight);
 

@@ -437,7 +437,7 @@ public:
   NS_IMETHOD SetProperty(nsIPresContext* aPresContext, nsIAtom* aName, const nsAReadableString& aValue);
   NS_IMETHOD GetProperty(nsIAtom* aName, nsAWritableString& aValue); 
   virtual void SetFocus(PRBool aOn = PR_TRUE, PRBool aRepaint = PR_FALSE);
-  virtual nsWidgetInitData* GetWidgetInitData(nsIPresContext* aPresContext);
+  virtual void* GetWidgetInitData(nsIPresContext* aPresContext);
 
   /** handler for attribute changes to mContent */
   NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext,
@@ -491,7 +491,7 @@ public:
                             nsMargin&                aPadding);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -557,7 +557,7 @@ protected:
                                        nsRect &aSubBounds);
 
   PRInt32 CalculateSizeNavQuirks (nsIPresContext*       aPresContext, 
-                                  nsIRenderingContext*  aRendContext,
+                                  nsIDrawable*          aDrawable,
                                   nsIFormControlFrame*  aFrame,
                                   const nsSize&         aCSSSize, 
                                   nsInputDimensionSpec& aSpec, 
@@ -570,7 +570,7 @@ protected:
                                   nsMargin&             aPadding);
 
   PRInt32 CalculateSizeStandard (nsIPresContext*       aPresContext, 
-                                  nsIRenderingContext*  aRendContext,
+                                 nsIDrawable*           aDrawable,
                                   nsIFormControlFrame*  aFrame,
                                   const nsSize&         aCSSSize, 
                                   nsInputDimensionSpec& aSpec, 
@@ -623,18 +623,18 @@ protected:
 
 
   virtual void PaintTextControlBackground(nsIPresContext* aPresContext,
-                                          nsIRenderingContext& aRenderingContext,
+                                          nsIDrawable*    aDrawable,
                                           const nsRect& aDirtyRect,
                                           nsFramePaintLayer aWhichLayer);
 
   virtual void PaintTextControl(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect, nsString& aText,
                                 nsIStyleContext* aStyleContext,
                                 nsRect& aRect);
 
   virtual void PaintChild(nsIPresContext*      aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable*         aDrawable,
                           const nsRect&        aDirtyRect,
                           nsIFrame*            aFrame,
                           nsFramePaintLayer    aWhichLayer);

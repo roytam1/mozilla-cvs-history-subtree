@@ -24,12 +24,11 @@
 #include "nsImageFrame.h"
 #include "nsString.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIFrameImageLoader.h"
 #include "nsIPresShell.h"
 #include "nsHTMLIIDs.h"
 #include "nsIImage.h"
-#include "nsIWidget.h"
 #include "nsHTMLAtoms.h"
 #include "nsIHTMLAttributes.h"
 #include "nsIDocument.h"
@@ -52,7 +51,6 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsCSSRendering.h"
 #include "nsIDOMHTMLAnchorElement.h"
 #include "nsIDOMHTMLImageElement.h"
-#include "nsIDeviceContext.h"
 #include "nsINameSpaceManager.h"
 #include "nsTextFragment.h"
 #include "nsIDOMHTMLMapElement.h"
@@ -390,11 +388,11 @@ nsImageFrame::MeasureString(const PRUnichar*     aString,
                             PRInt32              aLength,
                             nscoord              aMaxWidth,
                             PRUint32&            aMaxFit,
-                            nsIRenderingContext& aContext)
+                            nsIFontMetrics*      aMetrics)
 {
   nscoord totalWidth = 0;
   nscoord spaceWidth;
-  aContext.GetWidth(' ', spaceWidth);
+  aMetrics->GetCCharWidth(' ', &spaceWidth);
 
   aMaxFit = 0;
   while (aLength > 0) {
@@ -410,8 +408,8 @@ nsImageFrame::MeasureString(const PRUnichar*     aString,
     }
   
     // Measure this chunk of text, and see if it fits
-    nscoord width;
-    aContext.GetWidth(aString, len, width);
+    gfx_coord width;
+    aMetrics->GetStringWidth(aString, len, &width);
     PRBool  fits = (totalWidth + width) <= aMaxWidth;
 
     // If it fits on the line, or it's the first word we've processed then
@@ -448,7 +446,7 @@ nsImageFrame::MeasureString(const PRUnichar*     aString,
 // between words if a word would extend past the edge of the rectangle
 void
 nsImageFrame::DisplayAltText(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsString&      aAltText,
                              const nsRect&        aRect)
 {
@@ -458,30 +456,33 @@ nsImageFrame::DisplayAltText(nsIPresContext*      aPresContext,
     (const nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
 
   // Set font and color
-  aRenderingContext.SetColor(color->mColor);
-  aRenderingContext.SetFont(font->mFont);
+  aDrawable->SetForegroundColor(color->mColor);
+
+  // XXX pav
+  //  aRenderingContext.SetFont(font->mFont);
 
   // Format the text to display within the formatting rect
-  nsIFontMetrics* fm;
-  aRenderingContext.GetFontMetrics(fm);
+  nsCOMPtr<nsIFontMetrics> fm;
+  aDrawable->GetFontMetrics(getter_AddRefs(fm));
 
-  nscoord maxDescent, height;
-  fm->GetMaxDescent(maxDescent);
-  fm->GetHeight(height);
+  gfx_coord maxDescent, height;
+  fm->GetMaxDescent(&maxDescent);
+  fm->GetHeight(&height);
 
   // XXX It would be nice if there was a way to have the font metrics tell
   // use where to break the text given a maximum width. At a minimum we need
   // to be able to get the break character...
   const PRUnichar* str = aAltText.GetUnicode();
   PRInt32          strLen = aAltText.Length();
-  nscoord          y = aRect.y;
+  gfx_coord          y = aRect.y;
   while ((strLen > 0) && ((y + maxDescent) < aRect.YMost())) {
     // Determine how much of the text to display on this line
     PRUint32  maxFit;  // number of characters that fit
-    MeasureString(str, strLen, aRect.width, maxFit, aRenderingContext);
+    MeasureString(str, strLen, aRect.width, maxFit, fm);
     
     // Display the text
-    aRenderingContext.DrawString(str, maxFit, aRect.x, y);
+    // XXX pav
+    aDrawable->DrawString(str, maxFit, aRect.x, y);
 
     // Move to the next line
     str += maxFit;
@@ -489,7 +490,6 @@ nsImageFrame::DisplayAltText(nsIPresContext*      aPresContext,
     y += height;
   }
 
-  NS_RELEASE(fm);
 }
 
 struct nsRecessedBorder : public nsStyleSpacing {
@@ -519,7 +519,7 @@ struct nsRecessedBorder : public nsStyleSpacing {
 
 void
 nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
-                                 nsIRenderingContext& aRenderingContext,
+                                 nsIDrawable*         aDrawable,
                                  PRInt32              aIconId)
 {
   // Calculate the inner area
@@ -528,7 +528,7 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
 
   // Display a recessed one pixel border
   float   p2t;
-  nscoord borderEdgeWidth;
+  gfx_coord borderEdgeWidth;
   aPresContext->GetScaledPixelsToTwips(&p2t);
   borderEdgeWidth = NSIntPixelsToTwips(1, p2t);
 
@@ -540,7 +540,7 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
 
   // Paint the border
   nsRecessedBorder recessedBorder(borderEdgeWidth);
-  nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this, inner,
+  nsCSSRendering::PaintBorder(aPresContext, aDrawable, this, inner,
                               inner, recessedBorder, mStyleContext, 0);
 
   // Adjust the inner rect to account for the one pixel recessed border,
@@ -552,14 +552,14 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
 
   // Clip so we don't render outside the inner rect
   PRBool clipState;
-  aRenderingContext.PushState();
-  aRenderingContext.SetClipRect(inner, nsClipCombine_kIntersect, clipState);
+
+  // XXX pav
+  //  aRenderingContext.SetClipRect(inner, nsClipCombine_kIntersect, clipState);
 
   // Display the icon
-  nsIDeviceContext* dc;
-  aRenderingContext.GetDeviceContext(dc);
   nsIImage*         icon;
 
+#if 0
   if (NS_SUCCEEDED(dc->LoadIconImage(aIconId, icon)) && icon) {
     aRenderingContext.DrawImage(icon, inner.x, inner.y);
 
@@ -571,23 +571,20 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
 
     NS_RELEASE(icon);
   }
-
-  NS_RELEASE(dc);
+#endif
 
   // If there's still room, display the alt-text
   if (!inner.IsEmpty()) {
     nsAutoString altText;
     if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::alt, altText)) {
-      DisplayAltText(aPresContext, aRenderingContext, altText, inner);
+      DisplayAltText(aPresContext, aDrawable, altText, inner);
     }
   }
-
-  aRenderingContext.PopState(clipState);
 }
 
 NS_METHOD
 nsImageFrame::Paint(nsIPresContext* aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable* aDrawable,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer)
 {
@@ -595,7 +592,7 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
     mStyleContext->GetStyleData(eStyleStruct_Display);
   if (disp->IsVisible() && mRect.width && mRect.height) {
     // First paint background and borders
-    nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+    nsLeafFrame::Paint(aPresContext, aDrawable, aDirtyRect,
                        aWhichLayer);
 
     // first get to see if lowsrc image is here
@@ -607,21 +604,27 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
     // if lowsrc is here 
     if (mLowSrcImageLoader != nsnull) {
       lowImage = mLowSrcImageLoader->GetImage();
-      lowSrcLinesLoaded = lowImage != nsnull?lowImage->GetDecodedY2():-1;
+      gfx_coord decodedY2;
+      lowImage->GetDecodedY2(&decodedY2);
+      lowSrcLinesLoaded = lowImage != nsnull?decodedY2:-1;
     }
 
     image = mImageLoader.GetImage();
-    imgSrcLinesLoaded = image != nsnull?image->GetDecodedY2():-1;
+    gfx_coord decodedY2;
+    image->GetDecodedY2(&decodedY2);
+    imgSrcLinesLoaded = image != nsnull?decodedY2:-1;
 
     if (nsnull == image && nsnull == lowImage) {
       // No image yet, or image load failed. Draw the alt-text and an icon
       // indicating the status
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
           !mInitialLoadCompleted) {
-        DisplayAltFeedback(aPresContext, aRenderingContext,
+#if 0 // XXX pav
+        DisplayAltFeedback(aPresContext, aDrawable,
                            mImageLoader.GetLoadImageFailed()
                            ? NS_ICON_BROKEN_IMAGE
                            : NS_ICON_LOADING_IMAGE);
+#endif
       }
     }
     else {
@@ -635,24 +638,34 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
           float p2t;
           aPresContext->GetScaledPixelsToTwips(&p2t);
           if (image != nsnull) {
-            inner.width  = NSIntPixelsToTwips(image->GetWidth(), p2t);
-            inner.height = NSIntPixelsToTwips(image->GetHeight(), p2t);
+            gfx_width width;
+            gfx_height height;
+            image->GetWidth(&width);
+            image->GetWidth(&height);
+            inner.width  = NSIntPixelsToTwips(width, p2t);
+            inner.height = NSIntPixelsToTwips(height, p2t);
           } else if (lowImage != nsnull) {
-            inner.width  = NSIntPixelsToTwips(lowImage->GetWidth(), p2t);
-            inner.height = NSIntPixelsToTwips(lowImage->GetHeight(), p2t);
+            gfx_width width;
+            gfx_height height;
+            lowImage->GetWidth(&width);
+            lowImage->GetWidth(&height);
+            inner.width  = NSIntPixelsToTwips(width, p2t);
+            inner.height = NSIntPixelsToTwips(height, p2t);
           }
         }
 
+        // XXX pav
         if (image != nsnull && imgSrcLinesLoaded > 0) {
-          aRenderingContext.DrawImage(image, inner);
+          //        aRenderingContext.DrawImage(image, inner);
         } else if (lowImage != nsnull && lowSrcLinesLoaded > 0) {
-          aRenderingContext.DrawImage(lowImage, inner);
+          //        aRenderingContext.DrawImage(lowImage, inner);
         }
 
       }
 
       nsImageMap* map = GetImageMap(aPresContext);
       if (nsnull != map) {
+#if 0 // XXX pav
         nsRect inner;
         GetInnerArea(aPresContext, inner);
         PRBool clipState;
@@ -662,9 +675,11 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
         aRenderingContext.Translate(inner.x, inner.y);
         map->Draw(aPresContext, aRenderingContext);
         aRenderingContext.PopState(clipState);
+#endif
       }
 
 #ifdef DEBUG
+#if 0 // XXX pav
       if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) &&
           GetShowFrameBorders()) {
         nsImageMap* map = GetImageMap(aPresContext);
@@ -680,13 +695,14 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
         }
       }
 #endif
+#endif
     }
 
     NS_IF_RELEASE(lowImage);
     NS_IF_RELEASE(image);
   }
   
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 nsImageMap*

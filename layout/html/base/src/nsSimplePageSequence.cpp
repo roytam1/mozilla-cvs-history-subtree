@@ -23,14 +23,14 @@
 #include "nsSimplePageSequence.h"
 #include "nsIPresContext.h"
 #include "nsIReflowCommand.h"
-#include "nsIRenderingContext.h"
 #include "nsIStyleContext.h"
 #include "nsHTMLAtoms.h"
 #include "nsHTMLIIDs.h"
-#include "nsIDeviceContext.h"
 #include "nsIViewManager.h"
 #include "nsIPresShell.h"
 #include "nsIStyleSet.h"
+#include "nsIDrawable.h"
+
 
 nsresult
 NS_NewSimplePageSequenceFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
@@ -295,30 +295,30 @@ nsSimplePageSequenceFrame::GetFrameName(nsString& aResult) const
 
 NS_IMETHODIMP
 nsSimplePageSequenceFrame::Paint(nsIPresContext*      aPresContext,
-                                 nsIRenderingContext& aRenderingContext,
+                                 nsIDrawable*         aDrawable,
                                  const nsRect&        aDirtyRect,
                                  nsFramePaintLayer    aWhichLayer)
 {
   if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
     // Paint a white background
-    aRenderingContext.SetColor(NS_RGB(255,255,255));
-    aRenderingContext.FillRect(aDirtyRect);
+    aDrawable->SetForegroundColor(NS_RGB(255,255,255));
+    aDrawable->FillRectangle(aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
     // XXX Crop marks or hash marks would be nice. Use style info...
   }
 
-  return nsContainerFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+  return nsContainerFrame::Paint(aPresContext, aDrawable, aDirtyRect,
                                  aWhichLayer);
 }
 
 void
 nsSimplePageSequenceFrame::PaintChild(nsIPresContext*      aPresContext,
-                                      nsIRenderingContext& aRenderingContext,
+                                      nsIDrawable*         aDrawable,
                                       const nsRect&        aDirtyRect,
                                       nsIFrame*            aFrame,
                                       nsFramePaintLayer    aWhichLayer)
 {
   // Let the page paint
-  nsContainerFrame::PaintChild(aPresContext, aRenderingContext,
+  nsContainerFrame::PaintChild(aPresContext, aDrawable,
                                aDirtyRect, aFrame, aWhichLayer);
 
   if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
@@ -328,7 +328,8 @@ nsSimplePageSequenceFrame::PaintChild(nsIPresContext*      aPresContext,
     float   p2t;
     aPresContext->GetPixelsToTwips(&p2t);
 
-    aRenderingContext.SetColor(NS_RGB(0, 0, 0));
+    // XXX pav do we need to set the color here ???
+    //    aDrawable->SetForegroundColor(NS_RGB(0, 0, 0));
     aFrame->GetRect(pageBounds);
     pageBounds.Inflate(NSToCoordRound(p2t), NSToCoordRound(p2t));
     
@@ -375,8 +376,9 @@ nsSimplePageSequenceFrame::Print(nsIPresContext*         aPresContext,
   }
 
   // Begin printing of the document
-  nsCOMPtr<nsIDeviceContext> dc;
-  aPresContext->GetDeviceContext(getter_AddRefs(dc));
+  // XXX pav
+  //  nsCOMPtr<nsIDeviceContext> dc;
+  //  aPresContext->GetDeviceContext(getter_AddRefs(dc));
   nsCOMPtr<nsIPresShell>     presShell;
   aPresContext->GetShell(getter_AddRefs(presShell));
   nsCOMPtr<nsIViewManager>   vm;
@@ -417,7 +419,9 @@ nsSimplePageSequenceFrame::Print(nsIPresContext*         aPresContext,
         rv = NS_ERROR_ABORT;
         break;
       }
-      rv = dc->BeginPage();
+
+      // XXX pav
+      //      rv = dc->BeginPage();
       if (NS_FAILED(rv)) {
         if (nsnull != aStatusCallback) {
           aStatusCallback->OnError(ePrintError_Error);
@@ -443,7 +447,9 @@ nsSimplePageSequenceFrame::Print(nsIPresContext*         aPresContext,
         rv = NS_ERROR_ABORT;
         break;
       }
-      rv = dc->EndPage();
+
+      // XXX pav
+      //      rv = dc->EndPage();
       if (NS_FAILED(rv)) {
         if (nsnull != aStatusCallback) {
           aStatusCallback->OnError(ePrintError_Error);

@@ -34,7 +34,7 @@
 #include "nsIDocument.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
-#include "nsWidgetsCID.h"
+#include "nsIDrawable.h"
 #include "nsViewsCID.h"
 #include "nsHTMLAtoms.h"
 #include "nsIScrollableView.h"
@@ -122,7 +122,7 @@ public:
                              PRInt32&        aCursor);
   
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -163,7 +163,7 @@ public:
 #endif
 
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
 
@@ -642,12 +642,12 @@ nsHTMLFramesetFrame::GetFrameForPoint(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsHTMLFramesetFrame::Paint(nsIPresContext*      aPresContext,
-                           nsIRenderingContext& aRenderingContext,
+                           nsIDrawable*         aDrawable,
                            const nsRect&        aDirtyRect,
                            nsFramePaintLayer    aWhichLayer)
 {
   //printf("frameset paint %X (%d,%d,%d,%d) \n", this, aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
-  return nsHTMLContainerFrame::Paint(aPresContext, aRenderingContext,
+  return nsHTMLContainerFrame::Paint(aPresContext, aDrawable,
                                      aDirtyRect, aWhichLayer);
 }
 
@@ -1605,7 +1605,7 @@ nsHTMLFramesetBorderFrame::Reflow(nsIPresContext*          aPresContext,
 
 NS_METHOD
 nsHTMLFramesetBorderFrame::Paint(nsIPresContext*      aPresContext,
-                                 nsIRenderingContext& aRenderingContext,
+                                 nsIDrawable*         aDrawable,
                                  const nsRect&        aDirtyRect,
                                  nsFramePaintLayer    aWhichLayer)
 {
@@ -1619,6 +1619,9 @@ nsHTMLFramesetBorderFrame::Paint(nsIPresContext*      aPresContext,
   nscolor hltColor = NS_RGB(255,255,255);
   nscolor sdwColor = NS_RGB(128,128,128);
 
+
+  // XXX pav use nsISystemLook
+#if 0
   nsILookAndFeel * lookAndFeel;
   if (NS_OK == nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, kILookAndFeelIID, (void**)&lookAndFeel)) {
    lookAndFeel->GetColor(nsILookAndFeel::eColor_WidgetBackground,  bgColor);
@@ -1627,6 +1630,7 @@ nsHTMLFramesetBorderFrame::Paint(nsIPresContext*      aPresContext,
    lookAndFeel->GetColor(nsILookAndFeel::eColor_Widget3DHighlight, hltColor);
    NS_RELEASE(lookAndFeel);
   }
+#endif
 
   float t2p;
   aPresContext->GetTwipsToPixels(&t2p);
@@ -1648,10 +1652,10 @@ nsHTMLFramesetBorderFrame::Paint(nsIPresContext*      aPresContext,
   if (mVisibility) {
     color = (NO_COLOR == mColor) ? bgColor : mColor;
   }
-  aRenderingContext.SetColor(color);
+  aDrawable->SetForegroundColor(color);
   // draw grey or white first
   for (int i = 0; i < widthInPixels; i++) {
-    aRenderingContext.DrawLine (x0, y0, x1, y1);
+    aDrawable->DrawLine(x0, y0, x1, y1);
     if (mVertical) {
       x0 += pixelWidth;
       x1 =  x0;
@@ -1666,30 +1670,30 @@ nsHTMLFramesetBorderFrame::Paint(nsIPresContext*      aPresContext,
   }
 
   if (widthInPixels >= 5) {
-    aRenderingContext.SetColor(hltColor);
+    aDrawable->SetForegroundColor(hltColor);
     x0 = (mVertical) ? pixelWidth : 0;
     y0 = (mVertical) ? 0 : pixelWidth;
     x1 = (mVertical) ? x0 : mRect.width;
     y1 = (mVertical) ? mRect.height : y0;
-    aRenderingContext.DrawLine(x0, y0, x1, y1);
+    aDrawable->DrawLine(x0, y0, x1, y1);
   }
 
   if (widthInPixels >= 2) {
-    aRenderingContext.SetColor(sdwColor);
+    aDrawable->SetForegroundColor(sdwColor);
     x0 = (mVertical) ? mRect.width - (2 * pixelWidth) : 0;
     y0 = (mVertical) ? 0 : mRect.height - (2 * pixelWidth);
     x1 = (mVertical) ? x0 : mRect.width;
     y1 = (mVertical) ? mRect.height : y0;
-    aRenderingContext.DrawLine(x0, y0, x1, y1);
+    aDrawable->DrawLine(x0, y0, x1, y1);
   }
 
   if (widthInPixels >= 1) {
-    aRenderingContext.SetColor(fgColor);
+    aDrawable->SetForegroundColor(fgColor);
     x0 = (mVertical) ? mRect.width - pixelWidth : 0;
     y0 = (mVertical) ? 0 : mRect.height - pixelWidth;
     x1 = (mVertical) ? x0 : mRect.width;
     y1 = (mVertical) ? mRect.height : y0;
-    aRenderingContext.DrawLine(x0, y0, x1, y1);
+    aDrawable->DrawLine(x0, y0, x1, y1);
   }
 
   return NS_OK;
@@ -1789,7 +1793,7 @@ nsHTMLFramesetBlankFrame::Reflow(nsIPresContext*          aPresContext,
 
 NS_METHOD
 nsHTMLFramesetBlankFrame::Paint(nsIPresContext*      aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable*         aDrawable,
                                 const nsRect&        aDirtyRect,
                                 nsFramePaintLayer    aWhichLayer)
 {
@@ -1797,9 +1801,11 @@ nsHTMLFramesetBlankFrame::Paint(nsIPresContext*      aPresContext,
     return NS_OK;
   }
   nscolor white = NS_RGB(255,255,255);
-  aRenderingContext.SetColor (white);
+  aDrawable->SetForegroundColor (white);
   // XXX FillRect doesn't seem to work
   //aRenderingContext.FillRect (mRect);
+
+  // XXX pav use setlinewidth??
 
   float p2t;
   aPresContext->GetPixelsToTwips(&p2t);
@@ -1809,9 +1815,9 @@ nsHTMLFramesetBlankFrame::Paint(nsIPresContext*      aPresContext,
   nscoord y1 = mRect.height;
   nscoord pixel = NSIntPixelsToTwips(1, p2t);
 
-  aRenderingContext.SetColor(white);
+  aDrawable->SetForegroundColor(white);
   for (int i = 0; i < mRect.width; i += pixel) {
-    aRenderingContext.DrawLine (x0, y0, x1, y1);
+    aDrawable->DrawLine (x0, y0, x1, y1);
     x0 += NSIntPixelsToTwips(1, p2t);
     x1 =  x0;
   }

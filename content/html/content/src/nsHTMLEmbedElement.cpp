@@ -33,6 +33,7 @@
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
 #include "nsIFrame.h"
+#include "nsIWindow.h"
 #include "nsObjectFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsObjectFrame.h"

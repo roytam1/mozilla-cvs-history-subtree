@@ -67,7 +67,6 @@
 #include "nsStyleChangeList.h"
 #include "nsIFormControl.h"
 #include "nsCSSAtoms.h"
-#include "nsIDeviceContext.h"
 #include "nsTextFragment.h"
 #include "nsISupportsArray.h"
 #include "nsIAnonymousContentCreator.h"
@@ -93,7 +92,7 @@
 
 // XXX - temporary, this is for GfxList View
 #include "nsViewsCID.h"
-#include "nsWidgetsCID.h"
+#include "nsIWindow.h"
 // to here
 
 #include "nsInlineFrame.h"
@@ -3637,6 +3636,8 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
   // is scrollable
   PRBool  isScrollable = PR_TRUE;
   if (aPresContext) {
+    // XXX pav
+#if 0
     nsIDeviceContext* dc;
     aPresContext->GetDeviceContext(&dc);
     if (dc) {
@@ -3646,6 +3647,7 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
       }
       NS_RELEASE(dc);
     }
+#endif
   }
 
   //isScrollable = PR_FALSE;
@@ -3872,6 +3874,7 @@ nsCSSFrameConstructor::GetFormElementRenderingMode(nsIPresContext*		aPresContext
 			} 
 
 		case eWidgetRendering_Native: 
+#if 0
 		  PRBool useNativeWidgets = PR_FALSE;
 	    nsIDeviceContext* dc;
 	    aPresContext->GetDeviceContext(&dc);
@@ -3885,6 +3888,7 @@ nsCSSFrameConstructor::GetFormElementRenderingMode(nsIPresContext*		aPresContext
 			if (useNativeWidgets) 
 				return eWidgetRendering_Native;
 			else
+#endif
 				return eWidgetRendering_Gfx;
 	}
 	return eWidgetRendering_Gfx; 
@@ -4113,18 +4117,9 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
             nsIView * view;
             listFrame->GetView(aPresContext, &view);
             if (view != nsnull) {
-              nsWidgetInitData widgetData;
               view->SetFloating(PR_TRUE);
-              widgetData.mWindowType  = eWindowType_popup;
-              widgetData.mBorderStyle = eBorderStyle_default;
     
-#ifdef XP_MAC
-              static NS_DEFINE_IID(kCPopUpCID,  NS_POPUP_CID);
-              view->CreateWidget(kCPopUpCID, &widgetData, nsnull);
-#else
-              static NS_DEFINE_IID(kCChildCID, NS_CHILD_CID);
-              view->CreateWidget(kCChildCID, &widgetData, nsnull);
-#endif   
+              view->CreateWidget("mozilla.gfx.window.popup.2");
             }
 
             nsCOMPtr<nsIStyleContext> gfxScrolledStyle;
@@ -4306,10 +4301,12 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
             nsIView *listView; 
             listFrame->GetView(aPresContext, &listView);
             NS_ASSERTION(nsnull != listView,"ListFrame's view is nsnull");
+#if 0
             nsIWidget * viewWidget;
             listView->GetWidget(viewWidget);
             //viewWidget->SetOverrideShow(PR_TRUE);
             NS_RELEASE(viewWidget);
+#endif
             //listView->SetViewFlags(NS_VIEW_PUBLIC_FLAG_DONT_CHECK_CHILDREN);
 
             nsIFrame* frame = nsnull;
@@ -6219,7 +6216,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
 }
 #endif
 
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 
 
 
@@ -9438,11 +9434,11 @@ SyncAndInvalidateView(nsIPresContext* aPresContext,
   }
   else if (NS_STYLE_VISIBILITY_HIDDEN == disp->mVisible) {
     // If it has a widget, hide the view because the widget can't deal with it
-    nsIWidget* widget = nsnull;
-    aView->GetWidget(widget);
-    if (widget) {
+    nsIWindow* window = nsnull;
+    aView->GetWidget(window);
+    if (window) {
       viewIsVisible = PR_FALSE;
-      NS_RELEASE(widget);
+      NS_RELEASE(window);
     }
     else {
       // If it's a scroll frame, then hide the view. This means that

@@ -26,7 +26,6 @@
 #include "nsLayoutAtoms.h"
 #include "nsIViewManager.h"
 #include "nsIScrollableView.h"
-#include "nsIDeviceContext.h"
 #include "nsIPresContext.h"
 #include "nsIReflowCommand.h"
 #include "nsIPresShell.h"
@@ -321,11 +320,16 @@ ViewportFrame::CalculateFixedContainingBlockSize(nsIPresContext*          aPresC
     if (NS_SUCCEEDED(kidView->QueryInterface(kScrollViewIID, (void**)&scrollingView))) {
       // Get the scrollbar dimensions
       float             sbWidth, sbHeight;
+
+
+      // XXX pav
+#if 0
       nsCOMPtr<nsIDeviceContext> dc;
       aPresContext->GetDeviceContext(getter_AddRefs(dc));
 
       dc->GetScrollBarDimensions(sbWidth, sbHeight);
-      
+#endif
+ 
       // See if the scrollbars are visible
       PRBool  vertSBVisible, horzSBVisible;
       

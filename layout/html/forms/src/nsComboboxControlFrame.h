@@ -100,7 +100,7 @@ public:
                          nsEventStatus* aEventStatus);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 #ifdef NS_DEBUG

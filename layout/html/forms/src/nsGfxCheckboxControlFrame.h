@@ -59,7 +59,7 @@ public:
                               PRInt32         aHint) ;
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -128,11 +128,11 @@ protected:
 protected:
 
   virtual void PaintCheckBox(nsIPresContext* aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable* aDrawable,
                              const nsRect& aDirtyRect,
                              nsFramePaintLayer aWhichLayer);
-  virtual void PaintMixedMark(nsIRenderingContext& aRenderingContext,
-                               float aPixelsToTwips, const nsRect& aRect) ;
+  virtual void PaintMixedMark(nsIDrawable* aDrawable,
+                              float aPixelsToTwips, const nsRect& aRect) ;
 
   //GFX-rendered state variables
   PRBool           mInClickEvent;

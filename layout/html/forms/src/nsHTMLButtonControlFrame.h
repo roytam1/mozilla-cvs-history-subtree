@@ -31,7 +31,6 @@
 #include "nsIFormControl.h"
 #include "nsFormFrame.h"
 
-#include "nsIRenderingContext.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIStyleContext.h"
@@ -46,7 +45,6 @@
 #include "nsStyleConsts.h"
 #include "nsIHTMLAttributes.h"
 #include "nsGenericHTMLElement.h"
-#include "nsIWidget.h"
 #include "nsIComponentManager.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
@@ -68,7 +66,7 @@ public:
   NS_IMETHOD  QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -156,7 +154,6 @@ protected:
   PRIntn GetSkipSides() const;
   PRBool mInline;
   nsFormFrame* mFormFrame;
-  nsCursor mPreviousCursor;
   nsRect mTranslatedRect;
   PRBool mDidInit;
   nsButtonFrameRenderer mRenderer;

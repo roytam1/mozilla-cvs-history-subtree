@@ -48,6 +48,8 @@
 #include "nsIStyleContext.h"
 #include "nsIServiceManager.h"
 #include "nsFrame.h"
+#include "nsIDrawable.h"
+#include "nsIWindow.h"
 #include "nsIReflowCommand.h"
 #include "nsIViewManager.h"
 #include "nsCRT.h"
@@ -60,7 +62,6 @@
 #include "nsIViewObserver.h"
 #include "nsContainerFrame.h"
 #include "nsHTMLIIDs.h"
-#include "nsIDeviceContext.h"
 #include "nsIEventStateManager.h"
 #include "nsDOMEvent.h"
 #include "nsHTMLParts.h"
@@ -555,25 +556,25 @@ public:
   // nsICompositeListener methods
 	NS_IMETHOD WillRefreshRegion(nsIViewManager *aViewManager,
                                nsIView *aView,
-                               nsIRenderingContext *aContext,
+                               nsIDrawable *aDrawable,
                                nsIRegion *aRegion,
                                PRUint32 aUpdateFlags);
 
 	NS_IMETHOD DidRefreshRegion(nsIViewManager *aViewManager,
                               nsIView *aView,
-                              nsIRenderingContext *aContext,
+                              nsIDrawable *aDrawable,
                               nsIRegion *aRegion,
                               PRUint32 aUpdateFlags);
 
 	NS_IMETHOD WillRefreshRect(nsIViewManager *aViewManager,
                              nsIView *aView,
-                             nsIRenderingContext *aContext,
+                             nsIDrawable *aDrawable,
                              const nsRect *aRect,
                              PRUint32 aUpdateFlags);
 
 	NS_IMETHOD DidRefreshRect(nsIViewManager *aViewManager,
                             nsIView *aView,
-                            nsIRenderingContext *aContext,
+                            nsIDrawable *aDrawable,
                             const nsRect *aRect,
                             PRUint32 aUpdateFlags);
 
@@ -840,8 +841,8 @@ public:
   NS_IMETHOD GetReflowBatchingStatus(PRBool* aBatch);
   
   NS_IMETHOD ClearFrameRefs(nsIFrame* aFrame);
-  NS_IMETHOD CreateRenderingContext(nsIFrame *aFrame,
-                                    nsIRenderingContext** aContext);
+  NS_IMETHOD GetDrawableForFrame(nsIFrame *aFrame,
+                                 nsIDrawable** aContext);
   NS_IMETHOD CantRenderReplacedElement(nsIPresContext* aPresContext,
                                        nsIFrame*       aFrame);
   NS_IMETHOD GoToAnchor(const nsString& aAnchorName) const;
@@ -876,7 +877,7 @@ public:
   //nsIViewObserver interface
 
   NS_IMETHOD Paint(nsIView *aView,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable *aDrawable,
                    const nsRect&        aDirtyRect);
   NS_IMETHOD HandleEvent(nsIView*        aView,
                          nsGUIEvent*     aEvent,
@@ -2325,15 +2326,16 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
     nsSize                maxSize(bounds.width, bounds.height);
     nsHTMLReflowMetrics   desiredSize(nsnull);
     nsReflowStatus        status;
-    nsIRenderingContext*  rcx = nsnull;
+    nsCOMPtr<nsIDrawable> drawable;
 
-    nsresult rv=CreateRenderingContext(rootFrame, &rcx);
-	if (NS_FAILED(rv)) return rv;
+    nsresult rv=GetDrawableForFrame(rootFrame, getter_AddRefs(drawable));
+    if (NS_FAILED(rv)) return rv;
 
     mIsReflowing = PR_TRUE;
 
+    // XXX pav addref drawable here ?
     nsHTMLReflowState reflowState(mPresContext, rootFrame,
-                                  eReflowReason_Initial, rcx, maxSize);
+                                  eReflowReason_Initial, drawable, maxSize);
     nsIView*          view;
 
     rootFrame->WillReflow(mPresContext);
@@ -2361,7 +2363,6 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
     }
 #endif
     VERIFY_STYLE_TREE;
-    NS_IF_RELEASE(rcx);
     NS_FRAME_LOG(NS_FRAME_TRACE_CALLS, ("exit nsPresShell::InitialReflow"));
     MOZ_TIMER_DEBUGLOG(("Stop: Reflow: PresShell::InitialReflow(), this=%p\n", this));
     MOZ_TIMER_STOP(mReflowWatch);
@@ -2433,13 +2434,13 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
     nsSize                maxSize(bounds.width, bounds.height);
     nsHTMLReflowMetrics   desiredSize(nsnull);
     nsReflowStatus        status;
-    nsIRenderingContext*  rcx = nsnull;
+    nsCOMPtr<nsIDrawable> drawable;
 
-    nsresult rv=CreateRenderingContext(rootFrame, &rcx);
-	if (NS_FAILED(rv)) return rv;
+    nsresult rv=GetDrawableForFrame(rootFrame, getter_AddRefs(drawable));
+    if (NS_FAILED(rv)) return rv;
 
     nsHTMLReflowState reflowState(mPresContext, rootFrame,
-                                  eReflowReason_Resize, rcx, maxSize);
+                                  eReflowReason_Resize, drawable, maxSize);
     nsIView*          view;
 
     rootFrame->WillReflow(mPresContext);
@@ -2465,7 +2466,6 @@ PresShell::ResizeReflow(nscoord aWidth, nscoord aHeight)
     }
 #endif
     VERIFY_STYLE_TREE;
-    NS_IF_RELEASE(rcx);
     NS_FRAME_LOG(NS_FRAME_TRACE_CALLS, ("exit nsPresShell::ResizeReflow"));
 
     // XXX if debugging then we should assert that the cache is empty
@@ -2881,13 +2881,13 @@ PresShell::StyleChangeReflow()
     nsSize                maxSize(bounds.width, bounds.height);
     nsHTMLReflowMetrics   desiredSize(nsnull);
     nsReflowStatus        status;
-    nsIRenderingContext*  rcx = nsnull;
+    nsCOMPtr<nsIDrawable> drawable;
 
-    nsresult rv=CreateRenderingContext(rootFrame, &rcx);
-	if (NS_FAILED(rv)) return rv;
+    nsresult rv=GetDrawableForFrame(rootFrame, getter_AddRefs(drawable));
+    if (NS_FAILED(rv)) return rv;
 
     nsHTMLReflowState reflowState(mPresContext, rootFrame,
-                                  eReflowReason_StyleChange, rcx, maxSize);
+                                  eReflowReason_StyleChange, drawable, maxSize);
     nsIView*          view;
 
     rootFrame->WillReflow(mPresContext);
@@ -2914,7 +2914,6 @@ PresShell::StyleChangeReflow()
     }
 #endif
     VERIFY_STYLE_TREE;
-    NS_IF_RELEASE(rcx);
     NS_FRAME_LOG(NS_FRAME_TRACE_CALLS, ("exit nsPresShell::StyleChangeReflow"));
   }
 
@@ -3243,8 +3242,8 @@ PresShell::ClearFrameRefs(nsIFrame* aFrame)
 }
 
 NS_IMETHODIMP
-PresShell::CreateRenderingContext(nsIFrame *aFrame,
-                                  nsIRenderingContext** aResult)
+PresShell::GetDrawableForFrame(nsIFrame *aFrame,
+                               nsIDrawable** aResult)
 {
   NS_PRECONDITION(nsnull != aResult, "null ptr");
   if (nsnull == aResult) {
@@ -3260,26 +3259,19 @@ PresShell::CreateRenderingContext(nsIFrame *aFrame,
   if (nsnull == view)
     aFrame->GetOffsetFromView(mPresContext, pt, &view);
 
-  nsCOMPtr<nsIWidget> widget;
+  nsCOMPtr<nsIWindow> window;
   if (nsnull != view) {
     nsCOMPtr<nsIViewManager> vm;
     view->GetViewManager(*getter_AddRefs(vm));
-    vm->GetWidgetForView(view, getter_AddRefs(widget));
+    vm->GetWidgetForView(view, getter_AddRefs(window));
   }
 
-  nsCOMPtr<nsIDeviceContext> dx;
+  nsCOMPtr<nsIDrawable> drawable(do_QueryInterface(window, &rv));
+  if (NS_FAILED(rv))
+    return rv;
 
-  nsIRenderingContext* result = nsnull;
-  rv = mPresContext->GetDeviceContext(getter_AddRefs(dx));
-  if (NS_SUCCEEDED(rv) && dx) {
-    if (nsnull != widget) {
-      rv = dx->CreateRenderingContext(widget, result);
-    }
-    else {
-      rv = dx->CreateRenderingContext(result);
-    }
-  }
-  *aResult = result;
+  *aResult = drawable;
+  NS_IF_ADDREF(*aResult);
 
   return rv;
 }
@@ -4560,7 +4552,7 @@ PresShell::GetPlaceholderFrameFor(nsIFrame*  aFrame,
 // then it pushes the current rendering context and sets the clip rect.
 // Returns PR_TRUE if the clip rect is set and PR_FALSE otherwise
 static PRBool
-SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
+SetClipRect(nsIDrawable* aDrawable, nsIFrame* aFrame)
 {
   PRBool clipState;
   const nsStyleDisplay* display;
@@ -4595,8 +4587,9 @@ SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
     }
 
     // Set updated clip-rect into the rendering context
-    aRenderingContext.PushState();
-    aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
+    //    aRenderingContext.PushState();
+    // XXX pav
+    //    aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
     return PR_TRUE;
   }
 
@@ -4605,7 +4598,7 @@ SetClipRect(nsIRenderingContext& aRenderingContext, nsIFrame* aFrame)
 
 NS_IMETHODIMP
 PresShell::Paint(nsIView              *aView,
-                 nsIRenderingContext& aRenderingContext,
+                 nsIDrawable          *aDrawable,
                  const nsRect&        aDirtyRect)
 {
   void*     clientData;
@@ -4624,18 +4617,19 @@ PresShell::Paint(nsIView              *aView,
 
     // If the frame is absolutely positioned, then the 'clip' property
     // applies
-    PRBool  setClipRect = SetClipRect(aRenderingContext, frame);
+    PRBool  setClipRect = SetClipRect(aDrawable, frame);
 
-    rv = frame->Paint(mPresContext, aRenderingContext, aDirtyRect,
+    rv = frame->Paint(mPresContext, aDrawable, aDirtyRect,
                       NS_FRAME_PAINT_LAYER_BACKGROUND);
-    rv = frame->Paint(mPresContext, aRenderingContext, aDirtyRect,
+    rv = frame->Paint(mPresContext, aDrawable, aDirtyRect,
                       NS_FRAME_PAINT_LAYER_FLOATERS);
-    rv = frame->Paint(mPresContext, aRenderingContext, aDirtyRect,
+    rv = frame->Paint(mPresContext, aDrawable, aDirtyRect,
                       NS_FRAME_PAINT_LAYER_FOREGROUND);
                       
     if (setClipRect) {
       PRBool clipState;
-      aRenderingContext.PopState(clipState);
+      // XXX unset clipping
+      //      aRenderingContext.PopState(clipState);
     }
 
 #ifdef NS_DEBUG
@@ -4643,13 +4637,13 @@ PresShell::Paint(nsIView              *aView,
     if (nsIFrameDebug::GetShowFrameBorders()) {
       nsRect r;
       frame->GetRect(r);
-      aRenderingContext.SetColor(NS_RGB(0,0,255));
-      aRenderingContext.DrawRect(0, 0, r.width, r.height);
+      aDrawable->SetForegroundColor(NS_RGB(0,0,255));
+      aDrawable->DrawRectangle(0, 0, r.width, r.height);
     }
     // Draw a border around the current event target
     if ((nsIFrameDebug::GetShowEventTargetFrameBorder()) && (aView == mCurrentTargetView)) {
-      aRenderingContext.SetColor(NS_RGB(128,0,128));
-      aRenderingContext.DrawRect(mCurrentTargetRect.x, mCurrentTargetRect.y, mCurrentTargetRect.width, mCurrentTargetRect.height);
+      aDrawable->SetForegroundColor(NS_RGB(128,0,128));
+      aDrawable->DrawRectangle(mCurrentTargetRect.x, mCurrentTargetRect.y, mCurrentTargetRect.width, mCurrentTargetRect.height);
     }
 #endif
   }
@@ -5068,12 +5062,12 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 
   if (0 != mReflowCommands.Count()) {
     nsHTMLReflowMetrics   desiredSize(nsnull);
-    nsIRenderingContext*  rcx;
+    nsCOMPtr<nsIDrawable> drawable;
     nsIFrame*             rootFrame;        
 
 
     mFrameManager->GetRootFrame(&rootFrame);
-    nsresult rv=CreateRenderingContext(rootFrame, &rcx);
+    nsresult rv=GetDrawableForFrame(rootFrame, getter_AddRefs(drawable));
 	  if (NS_FAILED(rv)) return rv;
 
 #ifdef DEBUG
@@ -5104,7 +5098,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       nsSize          maxSize;
       rootFrame->GetSize(maxSize);
       if (aInterruptible) beforeReflow = PR_Now();
-      rc->Dispatch(mPresContext, desiredSize, maxSize, *rcx); // dispatch the reflow command
+      rc->Dispatch(mPresContext, desiredSize, maxSize, drawable); // dispatch the reflow command
       if (aInterruptible) afterReflow = PR_Now();
       ReflowCommandRemoved(rc);
       NS_RELEASE(rc);
@@ -5124,7 +5118,6 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
           break;          
       }
     }
-    NS_IF_RELEASE(rcx);
     mIsReflowing = PR_FALSE;
 
     if (aInterruptible) {
@@ -5357,7 +5350,6 @@ PresShell::RemoveDummyLayoutRequest(void)
 #include "nsViewsCID.h"
 #include "nsWidgetsCID.h"
 #include "nsIScrollableView.h"
-#include "nsIDeviceContext.h"
 #include "nsIURL.h"
 #include "nsILinkHandler.h"
 
@@ -5458,7 +5450,7 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
 
     nsRect r1, r2;
     nsIView* v1, *v2;
-    nsIWidget* w1, *w2;
+    nsIWindow* w1, *w2;
     for (;;) {
       if (((nsnull == k1) && (nsnull != k2)) ||
           ((nsnull != k1) && (nsnull == k2))) {
@@ -5501,8 +5493,8 @@ CompareTrees(nsIPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
             LogVerifyMessage(k1, k2, "child widgets are not matched\n");
           }
           else if (nsnull != w1) {
-            w1->GetBounds(r1);
-            w2->GetBounds(r2);
+          v1->GetBounds(r1);
+          v2->GetBounds(r2);
             if (r1 != r2) {
               LogVerifyMessage(k1, k2, "(widget rects)", r1, r2);
             }
@@ -5752,9 +5744,7 @@ PresShell::VerifyIncrementalReflow()
   }
 
   NS_ASSERTION(NS_OK == rv, "failed to create presentation context");
-  nsCOMPtr<nsIDeviceContext> dc;
-  mPresContext->GetDeviceContext(getter_AddRefs(dc));
-  cx->Init(dc);
+  cx->Init();
 
   // Get our scrolling preference
   nsScrollPreference scrolling;
@@ -5766,9 +5756,10 @@ PresShell::VerifyIncrementalReflow()
   if (NS_OK == rv) {
     scrollView->GetScrollPreference(scrolling);
   }
-  nsIWidget* rootWidget;
+  nsIWindow* rootWidget;
   rootView->GetWidget(rootWidget);
-  void* nativeParentWidget = rootWidget->GetNativeData(NS_NATIVE_WIDGET);
+  // XXX pav
+  void* nativeParentWidget = nsnull;//rootWidget->GetNativeData(NS_NATIVE_WIDGET);
 
   // Create a new view manager.
   rv = nsComponentManager::CreateInstance(kViewManagerCID, nsnull,
@@ -5777,7 +5768,7 @@ PresShell::VerifyIncrementalReflow()
   if (NS_FAILED(rv)) {
     NS_ASSERTION(NS_OK == rv, "failed to create view manager");
   }
-  rv = vm->Init(dc);
+  rv = vm->Init();
   if (NS_FAILED(rv)) {
     NS_ASSERTION(NS_OK == rv, "failed to init view manager");
   }
@@ -5942,7 +5933,7 @@ PresShellViewEventListener::ScrollPositionDidChange(nsIScrollableView *aView, ns
 NS_IMETHODIMP
 PresShellViewEventListener::WillRefreshRegion(nsIViewManager *aViewManager,
                                      nsIView *aView,
-                                     nsIRenderingContext *aContext,
+                                     nsIDrawable *aDrawable,
                                      nsIRegion *aRegion,
                                      PRUint32 aUpdateFlags)
 {
@@ -5952,7 +5943,7 @@ PresShellViewEventListener::WillRefreshRegion(nsIViewManager *aViewManager,
 NS_IMETHODIMP
 PresShellViewEventListener::DidRefreshRegion(nsIViewManager *aViewManager,
                                     nsIView *aView,
-                                    nsIRenderingContext *aContext,
+                                    nsIDrawable *aDrawable,
                                     nsIRegion *aRegion,
                                     PRUint32 aUpdateFlags)
 {
@@ -5962,7 +5953,7 @@ PresShellViewEventListener::DidRefreshRegion(nsIViewManager *aViewManager,
 NS_IMETHODIMP
 PresShellViewEventListener::WillRefreshRect(nsIViewManager *aViewManager,
                                    nsIView *aView,
-                                   nsIRenderingContext *aContext,
+                                   nsIDrawable *aDrawable,
                                    const nsRect *aRect,
                                    PRUint32 aUpdateFlags)
 {
@@ -5972,7 +5963,7 @@ PresShellViewEventListener::WillRefreshRect(nsIViewManager *aViewManager,
 NS_IMETHODIMP
 PresShellViewEventListener::DidRefreshRect(nsIViewManager *aViewManager,
                                   nsIView *aView,
-                                  nsIRenderingContext *aContext,
+                                  nsIDrawable *aDrawable,
                                   const nsRect *aRect,
                                   PRUint32 aUpdateFlags)
 {

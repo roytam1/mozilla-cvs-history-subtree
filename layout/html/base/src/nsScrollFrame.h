@@ -82,7 +82,7 @@ public:
                     nsReflowStatus&          aStatus);
 
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
 
@@ -117,8 +117,8 @@ public:
                                     PRBool aHorizontalVisible);
 
   NS_IMETHOD GetClipSize(nsIPresContext* aPresContext, 
-                         nscoord *aWidth, 
-                         nscoord *aHeight) const;
+                         gfx_width *aWidth, 
+                         gfx_height *aHeight) const;
 
   NS_IMETHOD GetScrollPosition(nsIPresContext* aContext, nscoord &aX, nscoord& aY) const;
   NS_IMETHOD ScrollTo(nsIPresContext* aContext, nscoord aX, nscoord aY, PRUint32 aFlags);

@@ -27,7 +27,7 @@
 #include "nsIStyleContext.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIFontMetrics.h"
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLayoutAtoms.h"
@@ -495,9 +495,11 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
 
     const nsStyleFont* font;
     GetStyleData(eStyleStruct_Font, (const nsStyleStruct*&)font);
-    aReflowState.rendContext->SetFont(font->mFont);
+
+    // XXX pav
+    //    aReflowState.rendContext->SetFont(font->mFont);
     nsCOMPtr<nsIFontMetrics> fm;
-    aReflowState.rendContext->GetFontMetrics(*getter_AddRefs(fm));
+    aReflowState.drawable->GetFontMetrics(getter_AddRefs(fm));
 
     // Compute final height of the frame.
     //
@@ -509,9 +511,9 @@ nsInlineFrame::ReflowFrames(nsIPresContext* aPresContext,
     // The height of our box is the sum of our font size plus the top
     // and bottom border and padding. The height of children do not
     // affect our height.
-    fm->GetMaxAscent(aMetrics.ascent);
-    fm->GetMaxDescent(aMetrics.descent);
-    fm->GetHeight(aMetrics.height);
+    fm->GetMaxAscent(&aMetrics.ascent);
+    fm->GetMaxDescent(&aMetrics.descent);
+    fm->GetHeight(&aMetrics.height);
     aMetrics.ascent += aReflowState.mComputedBorderPadding.top;
     aMetrics.descent += aReflowState.mComputedBorderPadding.bottom;
     aMetrics.height += aReflowState.mComputedBorderPadding.top +

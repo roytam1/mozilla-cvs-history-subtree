@@ -34,7 +34,7 @@
 #include "nsIStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsIFontMetrics.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsLayoutAtoms.h"
 #include "nsPlaceholderFrame.h"
 #include "nsIReflowCommand.h"
@@ -1859,10 +1859,12 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
   // Get the parent frame's font for all of the frames in this span
   const nsStyleFont* parentFont;
   spanFrame->GetStyleData(eStyleStruct_Font, (const nsStyleStruct*&)parentFont);
-  nsIRenderingContext* rc = mBlockReflowState->rendContext;
-  rc->SetFont(parentFont->mFont);
+  nsIDrawable* dr = mBlockReflowState->drawable;
+
+  // XXX pav
+  //  dr->SetFont(parentFont->mFont);
   nsCOMPtr<nsIFontMetrics> fm;
-  rc->GetFontMetrics(*getter_AddRefs(fm));
+  dr->GetFontMetrics(getter_AddRefs(fm));
 
   PRBool zeroEffectiveSpanBox = PR_FALSE;
   PRBool preMode = (mStyleText->mWhiteSpace == NS_STYLE_WHITESPACE_PRE) ||
@@ -1980,7 +1982,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
     // is based on the line-height value, not the font-size. Also
     // compute the top leading.
     nscoord logicalHeight =
-      nsHTMLReflowState::CalcLineHeight(mPresContext, rc, spanFrame);
+      nsHTMLReflowState::CalcLineHeight(mPresContext, dr, spanFrame);
     nscoord contentHeight = spanFramePFD->mBounds.height -
       spanFramePFD->mBorderPadding.top - spanFramePFD->mBorderPadding.bottom;
     nscoord leading = logicalHeight - contentHeight;
@@ -2110,7 +2112,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
             // of the parent's box. This is identical to the baseline
             // alignment except for the addition of the subscript
             // offset to the baseline Y.
-            fm->GetSubscriptOffset(parentSubscript);
+            fm->GetSubscriptOffset(&parentSubscript);
             revisedBaselineY = baselineY + parentSubscript;
             if (frameSpan) {
               pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
@@ -2127,7 +2129,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
             // of the parent's box. This is identical to the baseline
             // alignment except for the subtraction of the superscript
             // offset to the baseline Y.
-            fm->GetSuperscriptOffset(parentSuperscript);
+            fm->GetSuperscriptOffset(&parentSuperscript);
             revisedBaselineY = baselineY - parentSuperscript;
             if (frameSpan) {
               pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
@@ -2156,7 +2158,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           case NS_STYLE_VERTICAL_ALIGN_MIDDLE:
             // Align the midpoint of the frame with 1/2 the parents
             // x-height above the baseline.
-            fm->GetXHeight(parentXHeight);
+            fm->GetXHeight(&parentXHeight);
             if (frameSpan) {
               pfd->mBounds.y = baselineY -
                 (parentXHeight + pfd->mBounds.height)/2;
@@ -2171,7 +2173,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           case NS_STYLE_VERTICAL_ALIGN_TEXT_TOP:
             // The top of the logical box is aligned with the top of
             // the parent elements text.
-            fm->GetMaxAscent(parentAscent);
+            fm->GetMaxAscent(&parentAscent);
             if (frameSpan) {
               pfd->mBounds.y = baselineY - parentAscent -
                 pfd->mBorderPadding.top + frameSpan->mTopLeading;
@@ -2185,7 +2187,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           case NS_STYLE_VERTICAL_ALIGN_TEXT_BOTTOM:
             // The bottom of the logical box is aligned with the
             // bottom of the parent elements text.
-            fm->GetMaxDescent(parentDescent);
+            fm->GetMaxDescent(&parentDescent);
             if (frameSpan) {
               pfd->mBounds.y = baselineY + parentDescent -
                 pfd->mBounds.height + pfd->mBorderPadding.bottom -
@@ -2222,7 +2224,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
         // Similar to a length value (eStyleUnit_Coord) except that the
         // percentage is a function of the elements line-height value.
         elementLineHeight =
-          nsHTMLReflowState::CalcLineHeight(mPresContext, rc, frame);
+          nsHTMLReflowState::CalcLineHeight(mPresContext, dr, frame);
         percentOffset = nscoord(
           textStyle->mVerticalAlign.GetPercentValue() * elementLineHeight
           );
@@ -2336,13 +2338,13 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
 #endif
         nscoord minimumLineHeight = mMinLineHeight;
         nscoord fontAscent, fontHeight;
-        fm->GetMaxAscent(fontAscent);
+        fm->GetMaxAscent(&fontAscent);
         if (nsHTMLReflowState::UseComputedHeight()) {
           fontHeight = parentFont->mFont.size;
         }
         else 
         {
-          fm->GetHeight(fontHeight);
+          fm->GetHeight(&fontHeight);
         }
 
         nscoord leading = minimumLineHeight - fontHeight;
@@ -2515,7 +2517,7 @@ nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
     else if (pfd->GetFlag(PFD_ISNONEMPTYTEXTFRAME)) {
       nscoord deltaWidth = 0;
       pfd->mFrame->TrimTrailingWhiteSpace(mPresContext,
-                                          *mBlockReflowState->rendContext,
+                                          mBlockReflowState->drawable,
                                           deltaWidth);
 #ifdef NOISY_TRIM
       nsFrame::ListTag(stdout, (psd == mRootSpan

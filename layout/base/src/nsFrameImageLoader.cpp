@@ -25,12 +25,11 @@
 #include "nsIView.h"
 #include "nsIFrame.h"
 #include "nsIURL.h"
+#include "nsIImage.h"
 #include "nsIImageGroup.h"
 #include "nsIImageRequest.h"
 #include "nsIStyleContext.h"
 #include "nsCOMPtr.h"
-#include "nsIDeviceContext.h"
-#include "nsXPIDLString.h"
 
 #ifdef DEBUG
 #undef NOISY_IMAGE_LOADING
@@ -154,13 +153,14 @@ nsFrameImageLoader::Init(nsIPresContext* aPresContext,
     mDesiredSize = *aDesiredSize;
 
     float t2p,devScale;
+#if 0 // XXX pav
     nsIDeviceContext  *theDC;
 
     aPresContext->GetTwipsToPixels(&t2p);
     aPresContext->GetDeviceContext(&theDC);
     theDC->GetCanonicalPixelScale(devScale);
     NS_RELEASE(theDC);
-    
+#endif
     desiredWidth = NSToCoordRound((mDesiredSize.width * t2p)/devScale);
     desiredHeight = NSToCoordRound((mDesiredSize.height * t2p)/devScale);
   }
@@ -431,8 +431,11 @@ nsFrameImageLoader::GetNaturalImageSize(PRUint32* naturalWidth,
                                         PRUint32 *naturalHeight)
 {
   if(mImage){  
+    // XXX pav
+#if 0
     *naturalWidth = mImage->GetNaturalWidth();
     *naturalHeight = mImage->GetNaturalHeight();
+#endif
   }else{
     *naturalWidth = 0;
     *naturalHeight = 0;

@@ -73,12 +73,12 @@ public:
   //
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
   virtual void PaintRadioButton(nsIPresContext* aPresContext,
-                        nsIRenderingContext& aRenderingContext,
+                        nsIDrawable* aDrawable,
                         const nsRect& aDirtyRect);
 
   virtual PRInt32 GetMaxNumValues() { return 1; }

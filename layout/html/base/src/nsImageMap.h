@@ -34,7 +34,7 @@ class nsIContent;
 class nsIDOMHTMLAreaElement;
 class nsIDOMHTMLMapElement;
 class nsIPresContext;
-class nsIRenderingContext;
+class nsIDrawable;
 class nsIURI;
 class nsString;
 class nsIDOMEvent;
@@ -67,7 +67,7 @@ public:
    */
   PRBool IsInside(nscoord aX, nscoord aY);
 
-  void Draw(nsIPresContext* aCX, nsIRenderingContext& aRC);
+  void Draw(nsIPresContext* aCX, nsIDrawable* aDrawable);
   
   /** 
    * Called just before the nsImageFrame releases us. 

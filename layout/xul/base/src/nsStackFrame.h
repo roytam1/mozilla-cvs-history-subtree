@@ -49,13 +49,13 @@ public:
 
       // Paint one child frame
   virtual void PaintChild(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
-                             const nsRect&        aDirtyRect,
-                             nsIFrame*            aFrame,
-                             nsFramePaintLayer    aWhichLayer);
+                          nsIDrawable*         aDrawable,
+                          const nsRect&        aDirtyRect,
+                          nsIFrame*            aFrame,
+                          nsFramePaintLayer    aWhichLayer);
 
   virtual void PaintChildren(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsRect&        aDirtyRect,
                              nsFramePaintLayer    aWhichLayer);
 

@@ -29,7 +29,7 @@
 class  nsIContent;
 class  nsIFrame;
 class  nsIPresContext;
-class  nsIRenderingContext;
+class  nsIDrawable;
 struct nsRect;
 struct nsHTMLReflowState;
 struct nsSize;
@@ -137,7 +137,7 @@ public:
                        PRInt32&        aCursor);
 
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
 

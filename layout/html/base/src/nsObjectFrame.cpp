@@ -25,7 +25,8 @@
 #include "nsHTMLContainerFrame.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
-#include "nsWidgetsCID.h"
+#include "nsIWindow.h"
+#include "nsIChildWindow.h"
 #include "nsViewsCID.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
@@ -175,7 +176,7 @@ private:
   char              **mParamNames;
   char              **mParamVals;
   char              *mDocumentBase;
-  nsIWidget         *mWidget;
+  nsCOMPtr<nsIWindow>mWindow;
   nsIPresContext    *mContext;
   nsCOMPtr<nsITimer> mPluginTimer;
   nsIPluginHost     *mPluginHost;
@@ -194,7 +195,6 @@ nsObjectFrame::~nsObjectFrame()
   if (nsnull != mInstanceOwner)
     mInstanceOwner->CancelTimer();
 
-  NS_IF_RELEASE(mWidget);
   NS_IF_RELEASE(mInstanceOwner);
   NS_IF_RELEASE(mFullURL);
 }
@@ -202,10 +202,9 @@ nsObjectFrame::~nsObjectFrame()
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kViewCID, NS_VIEW_CID);
 static NS_DEFINE_IID(kIViewIID, NS_IVIEW_IID);
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kIHTMLContentIID, NS_IHTMLCONTENT_IID);
 static NS_DEFINE_IID(kILinkHandlerIID, NS_ILINKHANDLER_IID);
-static NS_DEFINE_IID(kCAppShellCID, NS_APPSHELL_CID);
+//static NS_DEFINE_IID(kCAppShellCID, NS_APPSHELL_CID);
 static NS_DEFINE_IID(kIPluginHostIID, NS_IPLUGINHOST_IID);
 static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 
@@ -451,7 +450,8 @@ nsObjectFrame::CreateWidget(nsIPresContext* aPresContext,
 
     viewMan->InsertChild(parView, view, 0);
 
-    result = view->CreateWidget(kWidgetCID);
+    // XXX pav
+    //    result = view->CreateWidget(kWidgetCID);
 
     if (NS_OK != result) {
       result = NS_OK;       //XXX why OK? MMP
@@ -664,7 +664,8 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
         // (Eventually this will move somewhere else.)
         if (classid.EqualsWithConversion("browser"))
         {
-          widgetCID = kCAppShellCID;
+          // XXX pav
+          //          widgetCID = kCAppShellCID;
 	        rv = InstantiateWidget(aPresContext, aMetrics, aReflowState, widgetCID);
         }
         else
@@ -849,9 +850,9 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
 
 nsresult
 nsObjectFrame::InstantiateWidget(nsIPresContext*          aPresContext,
-							nsHTMLReflowMetrics&     aMetrics,
-							const nsHTMLReflowState& aReflowState,
-							nsCID aWidgetCID)
+                                 nsHTMLReflowMetrics&     aMetrics,
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsCID aWidgetCID)
 {
   nsresult rv;
 
@@ -869,15 +870,16 @@ nsObjectFrame::InstantiateWidget(nsIPresContext*          aPresContext,
   PRInt32 height = NSTwipsToIntPixels(aMetrics.height, t2p);
   nsRect r = nsRect(x, y, width, height);
 
-  static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
-  if((rv = nsComponentManager::CreateInstance(aWidgetCID, nsnull, kIWidgetIID, (void**)&mWidget)) != NS_OK)
+  mWindow = do_CreateInstance("mozilla.gfx.window.child.2", &rv);
+  if (NS_FAILED(rv))
     return rv;
 
-  nsIWidget *parent;
+  nsIWindow *parent;
   parentWithView->GetOffsetFromWidget(nsnull, nsnull, parent);
-  mWidget->Create(parent, r, nsnull, nsnull);
+  nsCOMPtr<nsIChildWindow> cw(do_QueryInterface(mWindow));
+  cw->Init(parent, r.x, r.y, r.width, r.height);
 
-  mWidget->Show(PR_TRUE);
+  mWindow->Show();
   return rv;
 }
 
@@ -1203,11 +1205,11 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
         //~~~
         mInstanceOwner->ReleasePluginPort((nsPluginPort *)window->window);
 
-		if (mWidget)
+		if (mWindow)
 		{
 			PRInt32 x = NSTwipsToIntPixels(origin.x, t2p);
 			PRInt32 y = NSTwipsToIntPixels(origin.y, t2p);
-			mWidget->Move(x, y);
+			mWindow->Move(x, y);
 		}
       }
     }
@@ -1217,7 +1219,7 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsObjectFrame::Paint(nsIPresContext* aPresContext,
-                     nsIRenderingContext& aRenderingContext,
+                     nsIDrawable* aDrawable,
                      const nsRect& aDirtyRect,
                      nsFramePaintLayer aWhichLayer)
 {
@@ -1228,7 +1230,7 @@ nsObjectFrame::Paint(nsIPresContext* aPresContext,
 
 	nsIFrame * child = mFrames.FirstChild();
 	if (child != NULL) {	// This is an image
-		nsObjectFrameSuper::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+		nsObjectFrameSuper::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 		return NS_OK;
 	}
 
@@ -1397,7 +1399,6 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   mNumAttrs = 0;
   mAttrNames = nsnull;
   mAttrVals = nsnull;
-  mWidget = nsnull;
   mContext = nsnull;
   mNumParams = 0;
   mParamNames = nsnull;
@@ -1485,7 +1486,6 @@ nsPluginInstanceOwner::~nsPluginInstanceOwner()
     mDocumentBase = nsnull;
   }
 
-  NS_IF_RELEASE(mWidget);
   mContext = nsnull;
 }
 
@@ -2346,7 +2346,8 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 			GUItoMacEvent(anEvent, macEvent);
 			event = &macEvent;
 		}
-		nsPluginPort* port = (nsPluginPort*)mWidget->GetNativeData(NS_NATIVE_PLUGIN_PORT);
+    // XXX pav
+    //		nsPluginPort* port = (nsPluginPort*)mWidget->GetNativeData(NS_NATIVE_PLUGIN_PORT);
 		nsPluginEvent pluginEvent = { event, nsPluginPlatformWindowRef(port->port) };
 		PRBool eventHandled = PR_FALSE;
 		mInstance->HandleEvent(&pluginEvent, &eventHandled);
@@ -2448,14 +2449,18 @@ nsPluginPort* nsPluginInstanceOwner::GetPluginPort()
 //!!! Port must be released for windowless plugins on Windows, because it is HDC !!!
 
   nsPluginPort* result = NULL;
-	if (mWidget != NULL)
+	if (mWindow)
   {//~~~
 #ifdef XP_WIN
     if(mPluginWindow.type == nsPluginWindowType_Drawable)
-      result = (nsPluginPort*) mWidget->GetNativeData(NS_NATIVE_GRAPHIC);
+      ;
+    // XXX pav
+    //      result = (nsPluginPort*) mWindow->GetNativeData(NS_NATIVE_GRAPHIC);
     else
 #endif
-      result = (nsPluginPort*) mWidget->GetNativeData(NS_NATIVE_PLUGIN_PORT);
+      ;
+      // XXX pav
+      //      result = (nsPluginPort*) mWindow->GetNativeData(NS_NATIVE_PLUGIN_PORT);
 	}
 	return result;
 }
@@ -2464,10 +2469,12 @@ nsPluginPort* nsPluginInstanceOwner::GetPluginPort()
 void nsPluginInstanceOwner::ReleasePluginPort(nsPluginPort * pluginPort)
 {
 #ifdef XP_WIN
-	if (mWidget != NULL)
+	if (mWindow)
   {
     if(mPluginWindow.type == nsPluginWindowType_Drawable)
-      mWidget->FreeNativeData((HDC)pluginPort, NS_NATIVE_GRAPHIC);
+      ;
+    // XXX pav
+    //      mWindow->FreeNativeData((HDC)pluginPort, NS_NATIVE_GRAPHIC);
   }
 #endif
 }
@@ -2497,7 +2504,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
       {
         mOwner->GetView(mContext, &view);
         if (view)
-          view->GetWidget(mWidget);
+          view->GetWidget(*getter_AddRefs(mWindow));
 
         if (PR_TRUE == windowless)
         {
@@ -2507,9 +2514,9 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
                                          // so let's postpone passing HDC till paint event
                                          // when it is really needed. Change spec?
         }
-        else if (mWidget)
+        else if (mWindow)
         {
-          mWidget->Resize(mPluginWindow.width, mPluginWindow.height, PR_FALSE);
+          mWindow->Resize(mPluginWindow.width, mPluginWindow.height, PR_FALSE);
           mPluginWindow.window = GetPluginPort();
           mPluginWindow.type = nsPluginWindowType_Window;
 

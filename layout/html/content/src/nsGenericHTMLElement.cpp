@@ -1125,7 +1125,7 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsIContent* aOuter,
           }
 
           //Click or return key
-          if (aEvent->message == NS_MOUSE_LEFT_CLICK || keyEvent->keyCode == NS_VK_RETURN) {
+          if (aEvent->message == NS_MOUSE_LEFT_CLICK || keyEvent->keyCode == nsIDOMKeyEvent::DOM_VK_RETURN) {
             nsAutoString target;
             nsIURI* baseURL = nsnull;
             GetBaseURL(baseURL);

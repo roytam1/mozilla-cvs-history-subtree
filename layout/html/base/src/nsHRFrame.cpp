@@ -23,7 +23,7 @@
 #include "nsHTMLParts.h"
 #include "nsIHTMLContent.h"
 #include "nsLeafFrame.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIStyleContext.h"
 #include "nsColor.h"
 #include "nsIPresContext.h"
@@ -35,7 +35,6 @@
 #include "nsStyleConsts.h"
 #include "nsCSSRendering.h"
 #include "nsIDOMHTMLHRElement.h"
-#include "nsIDeviceContext.h"
 #include "nsStyleUtil.h"
 #include "nsLayoutAtoms.h"
 
@@ -53,7 +52,7 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus);
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*    aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
@@ -89,7 +88,7 @@ HRuleFrame::HRuleFrame()
 
 NS_METHOD
 HRuleFrame::Paint(nsIPresContext*      aPresContext,
-                  nsIRenderingContext& aRenderingContext,
+                  nsIDrawable*         aDrawable,
                   const nsRect&        aDirtyRect,
                   nsFramePaintLayer    aWhichLayer)
 {
@@ -139,10 +138,10 @@ HRuleFrame::Paint(nsIPresContext*      aPresContext,
       (nsStyleSpacing*)mStyleContext->GetStyleData(eStyleStruct_Spacing);
     color = (nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
     
-    nsCSSRendering::PaintBackground(aPresContext, aRenderingContext,
+    nsCSSRendering::PaintBackground(aPresContext, aDrawable,
                                     this,aDirtyRect, rect, *color, 
                                     *spacing, 0, 0);
-    nsCSSRendering::PaintBorder(aPresContext, aRenderingContext,
+    nsCSSRendering::PaintBorder(aPresContext, aDrawable,
                                 this,aDirtyRect, rect, *spacing,
                                 mStyleContext, 0);
   } else {
@@ -153,21 +152,21 @@ HRuleFrame::Paint(nsIPresContext*      aPresContext,
 
     // When a rule is not shaded, then we use a uniform color and
     // draw half-circles on the end points.
-    aRenderingContext.SetColor (colors[0]);
+    aDrawable->SetForegroundColor (colors[0]);
     nscoord diameter = height;
     if ((diameter > width) || (diameter < NSIntPixelsToTwips(3, p2t))) {
       // The half-circles on the ends of the rule aren't going to
       // look right so don't bother drawing them.
-      aRenderingContext.FillRect(x0, y0, width, height);
+      aDrawable->FillRectangle(x0, y0, width, height);
     } else {
-      aRenderingContext.FillArc(x0, y0, diameter, diameter, 90.0f, 270.0f);
-      aRenderingContext.FillArc(x0 + width - diameter, y0,
-                                diameter, diameter, 270.0f, 180.0f);
-      aRenderingContext.FillRect(x0 + diameter/2, y0,
-                                 width - diameter, height);
+      aDrawable->FillArc(x0, y0, diameter, diameter, 90.0f, 270.0f);
+      aDrawable->FillArc(x0 + width - diameter, y0,
+                         diameter, diameter, 270.0f, 180.0f);
+      aDrawable->FillRectangle(x0 + diameter/2, y0,
+                               width - diameter, height);
      }
   }
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 NS_IMETHODIMP
@@ -242,7 +241,7 @@ HRuleFrame::Reflow(nsIPresContext*          aPresContext,
   nsCOMPtr<nsIFontMetrics> fm;
   aPresContext->GetMetricsFor(f, getter_AddRefs(fm));
   nscoord fontHeight;
-  fm->GetHeight(fontHeight);
+  fm->GetHeight(&fontHeight);
 
   aDesiredSize.height =
     (minLineHeight < fontHeight ? fontHeight : minLineHeight) +

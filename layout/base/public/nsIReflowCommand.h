@@ -28,7 +28,7 @@
 class  nsIAtom;
 class  nsIFrame;
 class  nsIPresContext;
-class  nsIRenderingContext;
+class  nsIDrawable;
 struct nsHTMLReflowMetrics;
 struct nsSize;
 
@@ -109,7 +109,7 @@ public:
   NS_IMETHOD Dispatch(nsIPresContext*      aPresContext,
                       nsHTMLReflowMetrics& aDesiredSize,
                       const nsSize&        aMaxSize,
-                      nsIRenderingContext& aRendContext) = 0;
+                      nsIDrawable*         aDrawable) = 0;
 
   /**
    * Get the next frame in the command processing path. If requested removes the

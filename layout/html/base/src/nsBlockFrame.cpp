@@ -729,7 +729,7 @@ nsBlockReflowState::nsBlockReflowState(const nsHTMLReflowState& aReflowState,
   mMaximumWidth = 0;
 
   mMinLineHeight = nsHTMLReflowState::CalcLineHeight(mPresContext,
-                                                     aReflowState.rendContext,
+                                                     aReflowState.drawable,
                                                      aReflowState.frame);
 }
 
@@ -4046,17 +4046,17 @@ nsBlockFrame::ReflowBlockFrame(nsBlockReflowState& aState,
 
         // For bullets that are placed next to a child block, there will
         // be no correct ascent value. Therefore, make one up...
-        nscoord ascent = 0;
+        gfx_coord ascent = 0;
         const nsStyleFont* font;
         frame->GetStyleData(eStyleStruct_Font,
                             (const nsStyleStruct*&) font);
-        nsIRenderingContext& rc = *aState.mReflowState.rendContext;
-        rc.SetFont(font->mFont);
-        nsIFontMetrics* fm;
-        rv = rc.GetFontMetrics(fm);
+        nsIDrawable *dr = aState.mReflowState.drawable;
+        // XXX pav
+        //        drawable->SetFont(font->mFont);
+        nsCOMPtr<nsIFontMetrics> fm;
+        rv = dr->GetFontMetrics(getter_AddRefs(fm));
         if (NS_SUCCEEDED(rv) && (nsnull != fm)) {
-          fm->GetMaxAscent(ascent);
-          NS_RELEASE(fm);
+          fm->GetMaxAscent(&ascent);
         }
         rv = NS_OK;
 
@@ -6216,7 +6216,7 @@ static void ComputeCombinedArea(nsLineBox* aLine,
 
 NS_IMETHODIMP
 nsBlockFrame::Paint(nsIPresContext*      aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable*         aDrawable,
                     const nsRect&        aDirtyRect,
                     nsFramePaintLayer    aWhichLayer)
 {
@@ -6254,12 +6254,12 @@ nsBlockFrame::Paint(nsIPresContext*      aPresContext,
 
     // Paint background, border and outline
     nsRect rect(0, 0, mRect.width, mRect.height);
-    nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+    nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                     aDirtyRect, rect, *color, *spacing, 0, 0);
-    nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+    nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                 aDirtyRect, rect, *spacing, mStyleContext,
                                 skipSides);
-    nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+    nsCSSRendering::PaintOutline(aPresContext, aDrawable, this,
                                  aDirtyRect, rect, *spacing, mStyleContext, 0);
   }
 
@@ -6267,20 +6267,22 @@ nsBlockFrame::Paint(nsIPresContext*      aPresContext,
   // leak out of us. Note that because overflow'-clip' only applies to
   // the content area we do this after painting the border and background
   if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
-    aRenderingContext.PushState();
-    SetOverflowClipRect(aRenderingContext);
+    // XXX pav
+    //    aRenderingContext.PushState();
+    //    SetOverflowClipRect(aRenderingContext);
   }
 
   // Child elements have the opportunity to override the visibility
   // property and display even if the parent is hidden
   if (NS_FRAME_PAINT_LAYER_FLOATERS == aWhichLayer) {
-    PaintFloaters(aPresContext, aRenderingContext, aDirtyRect);
+    PaintFloaters(aPresContext, aDrawable, aDirtyRect);
   }
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
   if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
     PRBool clipState;
-    aRenderingContext.PopState(clipState);
+    // XXX pav
+    //    aRenderingContext.PopState(clipState);
   }
 
 #if 0
@@ -6297,11 +6299,11 @@ nsBlockFrame::Paint(nsIPresContext*      aPresContext,
         band.GetAvailableSpace(y, availArea);
   
         // Render a box and a diagonal line through the band
-        aRenderingContext.SetColor(NS_RGB(0,255,0));
-        aRenderingContext.DrawRect(0, availArea.y,
-                                   mRect.width, availArea.height);
-        aRenderingContext.DrawLine(0, availArea.y,
-                                   mRect.width, availArea.YMost());
+        aDrawable->SetForegroundColor(NS_RGB(0,255,0));
+        aDrawable->DrawRectangle(PR_FALSE, 0, availArea.y,
+                                 mRect.width, availArea.height);
+        aDrawable->DrawLine(0, availArea.y,
+                            mRect.width, availArea.YMost());
   
         // Render boxes and opposite diagonal lines around the
         // unavailable parts of the band.
@@ -6312,13 +6314,13 @@ nsBlockFrame::Paint(nsIPresContext*      aPresContext,
             nsRect r;
             trapezoid->GetRect(r);
             if (nsBandTrapezoid::OccupiedMultiple == trapezoid->mState) {
-              aRenderingContext.SetColor(NS_RGB(0,255,128));
+              aDrawable->SetForegroundColor(NS_RGB(0,255,128));
             }
             else {
-              aRenderingContext.SetColor(NS_RGB(128,255,0));
+              aDrawable->SetForegroundColor(NS_RGB(128,255,0));
             }
-            aRenderingContext.DrawRect(r);
-            aRenderingContext.DrawLine(r.x, r.YMost(), r.XMost(), r.y);
+            aDrawable->DrawRectangle(r.x, r.y, r.width, r.height);
+            aDrawable->DrawLine(r.x, r.YMost(), r.XMost(), r.y);
           }
         }
         y = availArea.YMost();
@@ -6332,7 +6334,7 @@ nsBlockFrame::Paint(nsIPresContext*      aPresContext,
 
 void
 nsBlockFrame::PaintFloaters(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
+                            nsIDrawable*    aDrawable,
                             const nsRect& aDirtyRect)
 {
   for (nsLineBox* line = mLines; nsnull != line; line = line->mNext) {
@@ -6342,11 +6344,11 @@ nsBlockFrame::PaintFloaters(nsIPresContext* aPresContext,
     nsFloaterCache* fc = line->GetFirstFloater();
     while (fc) {
       nsIFrame* floater = fc->mPlaceholder->GetOutOfFlowFrame();
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect,
+      PaintChild(aPresContext, aDrawable, aDirtyRect,
                  floater, NS_FRAME_PAINT_LAYER_BACKGROUND);
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect,
+      PaintChild(aPresContext, aDrawable, aDirtyRect,
                  floater, NS_FRAME_PAINT_LAYER_FLOATERS);
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect,
+      PaintChild(aPresContext, aDrawable, aDirtyRect,
                  floater, NS_FRAME_PAINT_LAYER_FOREGROUND);
       fc = fc->Next();
     }
@@ -6355,7 +6357,7 @@ nsBlockFrame::PaintFloaters(nsIPresContext* aPresContext,
 
 void
 nsBlockFrame::PaintChildren(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
+                            nsIDrawable *aDrawable,
                             const nsRect& aDirtyRect,
                             nsFramePaintLayer aWhichLayer)
 {
@@ -6398,7 +6400,7 @@ nsBlockFrame::PaintChildren(nsIPresContext* aPresContext,
       nsIFrame* kid = line->mFirstChild;
       PRInt32 n = line->GetChildCount();
       while (--n >= 0) {
-        PaintChild(aPresContext, aRenderingContext, aDirtyRect, kid,
+        PaintChild(aPresContext, aDrawable, aDirtyRect, kid,
                    aWhichLayer);
         kid->GetNextSibling(&kid);
       }
@@ -6423,7 +6425,7 @@ nsBlockFrame::PaintChildren(nsIPresContext* aPresContext,
   if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
     if ((nsnull != mBullet) && HaveOutsideBullet()) {
       // Paint outside bullets manually
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect, mBullet,
+      PaintChild(aPresContext, aDrawable, aDirtyRect, mBullet,
                  aWhichLayer);
     }
   }

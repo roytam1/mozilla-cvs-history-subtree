@@ -943,7 +943,7 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
       {
         // For backwards compat, trigger checks/radios/buttons with space or enter (bug 25300)
         nsKeyEvent * keyEvent = (nsKeyEvent *)aEvent;
-        if (keyEvent->keyCode == NS_VK_RETURN || keyEvent->charCode == NS_VK_SPACE) {
+        if (keyEvent->keyCode == nsIDOMKeyEvent::DOM_VK_RETURN || keyEvent->charCode == nsIDOMKeyEvent::DOM_VK_SPACE) {
           switch(type) {
             case NS_FORM_INPUT_CHECKBOX:
             case NS_FORM_INPUT_RADIO:

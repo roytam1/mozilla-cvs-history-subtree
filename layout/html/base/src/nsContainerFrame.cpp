@@ -23,7 +23,7 @@
 #include "nsContainerFrame.h"
 #include "nsIContent.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsISpaceManager.h"
 #include "nsIStyleContext.h"
 #include "nsRect.h"
@@ -41,6 +41,7 @@
 #include "nsCOMPtr.h"
 #include "nsLayoutAtoms.h"
 #include "nsIViewManager.h"
+#include "nsIWindow.h"
 
 #ifdef NS_DEBUG
 #undef NOISY
@@ -126,11 +127,11 @@ nsContainerFrame::FirstChild(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsContainerFrame::Paint(nsIPresContext*      aPresContext,
-                        nsIRenderingContext& aRenderingContext,
+                        nsIDrawable*         aDrawable,
                         const nsRect&        aDirtyRect,
                         nsFramePaintLayer    aWhichLayer)
 {
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   return NS_OK;
 }
 
@@ -142,16 +143,13 @@ nsContainerFrame::Paint(nsIPresContext*      aPresContext,
 // rect's are also in our coordinate system)
 void
 nsContainerFrame::PaintChildren(nsIPresContext*      aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable*         aDrawable,
                                 const nsRect&        aDirtyRect,
                                 nsFramePaintLayer    aWhichLayer)
 {
-  const nsStyleDisplay* disp = (const nsStyleDisplay*)
-    mStyleContext->GetStyleData(eStyleStruct_Display);
-
   nsIFrame* kid = mFrames.FirstChild();
   while (nsnull != kid) {
-    PaintChild(aPresContext, aRenderingContext, aDirtyRect, kid, aWhichLayer);
+    PaintChild(aPresContext, aDrawable, aDirtyRect, kid, aWhichLayer);
     kid->GetNextSibling(&kid);
   }
 }
@@ -159,7 +157,7 @@ nsContainerFrame::PaintChildren(nsIPresContext*      aPresContext,
 // Paint one child frame
 void
 nsContainerFrame::PaintChild(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsRect&        aDirtyRect,
                              nsIFrame*            aFrame,
                              nsFramePaintLayer    aWhichLayer)
@@ -203,18 +201,23 @@ nsContainerFrame::PaintChild(nsIPresContext*      aPresContext,
       // coordinate system.
       damageArea.x -= kidRect.x;
       damageArea.y -= kidRect.y;
-      aRenderingContext.Translate(kidRect.x, kidRect.y);
+
+
+      // XXX pav
+      //      aRenderingContext.Translate(kidRect.x, kidRect.y);
 
       // Paint the kid
-      aFrame->Paint(aPresContext, aRenderingContext, damageArea, aWhichLayer);
+      aFrame->Paint(aPresContext, aDrawable, damageArea, aWhichLayer);
       // don't use PushState and PopState, because they're slow
-      aRenderingContext.Translate(-kidRect.x, -kidRect.y);
+
+      // XXX pav
+      //      aRenderingContext.Translate(-kidRect.x, -kidRect.y);
 
 #ifdef NS_DEBUG
       // Draw a border around the child
       if (nsIFrameDebug::GetShowFrameBorders() && !kidRect.IsEmpty()) {
-        aRenderingContext.SetColor(NS_RGB(255,0,0));
-        aRenderingContext.DrawRect(kidRect);
+        aDrawable->SetForegroundColor(NS_RGB(255,0,0));
+        aDrawable->DrawRectangle(kidRect.x, kidRect.y, kidRect.width, kidRect.height);
       }
 #endif
     }
@@ -488,11 +491,11 @@ nsContainerFrame::SyncFrameViewAfterReflow(nsIPresContext* aPresContext,
     }
     else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
       // If it has a widget, hide the view because the widget can't deal with it
-      nsIWidget* widget = nsnull;
-      aView->GetWidget(widget);
-      if (widget) {
+      nsCOMPtr<nsIWindow> window;
+      aView->GetWidget(*getter_AddRefs(window));
+      if (window) {
         viewIsVisible = PR_FALSE;
-        NS_RELEASE(widget);
+        window = nsnull;
       }
       else {
         // If it's a scroll frame, then hide the view. This means that

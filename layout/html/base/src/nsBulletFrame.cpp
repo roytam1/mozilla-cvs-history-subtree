@@ -32,7 +32,7 @@
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
 #include "nsIReflowCommand.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIURL.h"
 #include "nsLayoutAtoms.h"
 #include "prprf.h"
@@ -109,7 +109,7 @@ nsBulletFrame::GetFrameType(nsIAtom** aType) const
 
 NS_IMETHODIMP
 nsBulletFrame::Paint(nsIPresContext*      aCX,
-                     nsIRenderingContext& aRenderingContext,
+                     nsIDrawable*         aDrawable,
                      const nsRect&        aDirtyRect,
                      nsFramePaintLayer    aWhichLayer)
 {
@@ -132,7 +132,8 @@ nsBulletFrame::Paint(nsIPresContext*      aCX,
           nsRect innerArea(mPadding.left, mPadding.top,
                            mRect.width - (mPadding.left + mPadding.right),
                            mRect.height - (mPadding.top + mPadding.bottom));
-          aRenderingContext.DrawImage(image, innerArea);
+          // XXX pav
+          aDrawable->DrawImage(image, nsnull, &innerArea, &innerArea);
           return NS_OK;
         }
       }
@@ -144,7 +145,7 @@ nsBulletFrame::Paint(nsIPresContext*      aCX,
       (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
 
     nsCOMPtr<nsIFontMetrics> fm;
-    aRenderingContext.SetColor(myColor->mColor);
+    aDrawable->SetForegroundColor(myColor->mColor);
 
     nsAutoString text;
     switch (listStyleType) {
@@ -154,21 +155,21 @@ nsBulletFrame::Paint(nsIPresContext*      aCX,
     default:
     case NS_STYLE_LIST_STYLE_BASIC:
     case NS_STYLE_LIST_STYLE_DISC:
-      aRenderingContext.FillEllipse(mPadding.left, mPadding.top,
-                                    mRect.width - (mPadding.left + mPadding.right),
-                                    mRect.height - (mPadding.top + mPadding.bottom));
+      aDrawable->FillEllipse(mPadding.left, mPadding.top,
+                             mRect.width - (mPadding.left + mPadding.right),
+                             mRect.height - (mPadding.top + mPadding.bottom));
       break;
 
     case NS_STYLE_LIST_STYLE_CIRCLE:
-      aRenderingContext.DrawEllipse(mPadding.left, mPadding.top,
-                                    mRect.width - (mPadding.left + mPadding.right),
-                                    mRect.height - (mPadding.top + mPadding.bottom));
+      aDrawable->DrawEllipse(mPadding.left, mPadding.top,
+                             mRect.width - (mPadding.left + mPadding.right),
+                             mRect.height - (mPadding.top + mPadding.bottom));
       break;
 
     case NS_STYLE_LIST_STYLE_SQUARE:
-      aRenderingContext.FillRect(mPadding.left, mPadding.top,
-                                 mRect.width - (mPadding.left + mPadding.right),
-                                 mRect.height - (mPadding.top + mPadding.bottom));
+      aDrawable->FillRectangle(mPadding.left, mPadding.top,
+                               mRect.width - (mPadding.left + mPadding.right),
+                               mRect.height - (mPadding.top + mPadding.bottom));
       break;
 
     case NS_STYLE_LIST_STYLE_DECIMAL:
@@ -217,8 +218,9 @@ nsBulletFrame::Paint(nsIPresContext*      aCX,
     case NS_STYLE_LIST_STYLE_KHMER:
       aCX->GetMetricsFor(myFont->mFont, getter_AddRefs(fm));
       GetListItemText(aCX, *myList, text);
-      aRenderingContext.SetFont(fm);
-      aRenderingContext.DrawString(text, mPadding.left, mPadding.top);
+      // XXX pav
+      //      aRenderingContext.SetFont(fm);
+      aDrawable->DrawString(text.GetUnicode(), text.Length(), mPadding.left, mPadding.top);
       break;
     }
   }
@@ -994,7 +996,7 @@ nsBulletFrame::GetDesiredSize(nsIPresContext*  aCX,
     case NS_STYLE_LIST_STYLE_BASIC:
     case NS_STYLE_LIST_STYLE_SQUARE:
       aCX->GetTwipsToPixels(&t2p);
-      fm->GetMaxAscent(ascent);
+      fm->GetMaxAscent(&ascent);
       bulletSize = NSTwipsToIntPixels(
         (nscoord)NSToIntRound(0.8f * (float(ascent) / 2.0f)), t2p);
       if (bulletSize < 1) {
@@ -1055,12 +1057,12 @@ nsBulletFrame::GetDesiredSize(nsIPresContext*  aCX,
     case NS_STYLE_LIST_STYLE_MYANMAR:
     case NS_STYLE_LIST_STYLE_KHMER:
       GetListItemText(aCX, *myList, text);
-      fm->GetHeight(aMetrics.height);
-      aReflowState.rendContext->SetFont(fm);
-      aReflowState.rendContext->GetWidth(text, aMetrics.width);
+      fm->GetHeight(&aMetrics.height);
+      aReflowState.drawable->SetFontMetrics(fm);
+      fm->GetStringWidth(text.GetUnicode(), text.Length(), &aMetrics.width);
       aMetrics.width += mPadding.right;
-      fm->GetMaxAscent(aMetrics.ascent);
-      fm->GetMaxDescent(aMetrics.descent);
+      fm->GetMaxAscent(&aMetrics.ascent);
+      fm->GetMaxDescent(&aMetrics.descent);
       break;
   }
 }

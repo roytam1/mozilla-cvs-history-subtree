@@ -100,7 +100,7 @@ public:
   NS_IMETHOD IsSplittable(nsSplittableType& aIsSplittable) const;
   NS_IMETHOD IsPercentageBase(PRBool& aBase) const;
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
@@ -377,12 +377,12 @@ protected:
   //----------------------------------------
   //XXX
   virtual void PaintChildren(nsIPresContext* aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*    aDrawable,
                              const nsRect& aDirtyRect,
                              nsFramePaintLayer aWhichLayer);
 
   void PaintFloaters(nsIPresContext* aPresContext,
-                     nsIRenderingContext& aRenderingContext,
+                     nsIDrawable*    aDrawable,
                      const nsRect& aDirtyRect);
 
   void PropogateReflowDamage(nsBlockReflowState& aState,

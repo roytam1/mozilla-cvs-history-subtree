@@ -29,7 +29,7 @@
 #include "nsHTMLAtoms.h"
 #include "nsIStyleContext.h"
 #include "nsIFontMetrics.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsLayoutAtoms.h"
 
 //FOR SELECTION
@@ -42,7 +42,7 @@ public:
   // nsIFrame
 #ifdef NS_DEBUG
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*    aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 #endif
@@ -87,7 +87,7 @@ BRFrame::~BRFrame()
 #ifdef NS_DEBUG
 NS_IMETHODIMP
 BRFrame::Paint(nsIPresContext* aPresContext,
-               nsIRenderingContext& aRenderingContext,
+               nsIDrawable*    aDrawable,
                const nsRect& aDirtyRect,
                nsFramePaintLayer aWhichLayer)
 {
@@ -95,8 +95,8 @@ BRFrame::Paint(nsIPresContext* aPresContext,
     float p2t;
     aPresContext->GetPixelsToTwips(&p2t);
     nscoord five = NSIntPixelsToTwips(5, p2t);
-    aRenderingContext.SetColor(NS_RGB(0, 255, 255));
-    aRenderingContext.FillRect(0, 0, five, five*2);
+    aDrawable->SetForegroundColor(NS_RGB(0, 255, 255));
+    aDrawable->FillRectangle(0, 0, five, five*2);
   }
   return NS_OK;
 }
@@ -143,16 +143,19 @@ BRFrame::Reflow(nsIPresContext* aPresContext,
       // here for cases where the line-height is less that 1.
       const nsStyleFont* font = (const nsStyleFont*)
         mStyleContext->GetStyleData(eStyleStruct_Font);
-      aReflowState.rendContext->SetFont(font->mFont);
+
+      // XXX pav
+
+      //      aReflowState.drawable->SetFont(font->mFont);
       nsCOMPtr<nsIFontMetrics> fm;
-      aReflowState.rendContext->GetFontMetrics(*getter_AddRefs(fm));
+      aReflowState.drawable->GetFontMetrics(getter_AddRefs(fm));
       if (fm) {
-        nscoord ascent, descent;
-        fm->GetMaxAscent(ascent);
-        fm->GetMaxDescent(descent);
+        gfx_coord ascent, descent;
+        fm->GetMaxAscent(&ascent);
+        fm->GetMaxDescent(&descent);
         nscoord logicalHeight =
           aReflowState.CalcLineHeight(aPresContext,
-                                       aReflowState.rendContext,
+                                       aReflowState.drawable,
                                        this);
         nscoord leading = logicalHeight - ascent - descent;
         aMetrics.height = logicalHeight;

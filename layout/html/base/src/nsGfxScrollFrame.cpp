@@ -24,7 +24,6 @@
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsIReflowCommand.h"
-#include "nsIDeviceContext.h"
 #include "nsPageFrame.h"
 #include "nsViewsCID.h"
 #include "nsIServiceManager.h"
@@ -34,7 +33,7 @@
 #include "nsHTMLIIDs.h"
 #include "nsCSSRendering.h"
 #include "nsIScrollableView.h"
-#include "nsWidgetsCID.h"
+#include "gfxtypes.h"
 #include "nsGfxScrollFrame.h"
 #include "nsLayoutAtoms.h"
 #include "nsIXMLContent.h"
@@ -56,7 +55,6 @@
 #include "nsIGfxTextControlFrame.h"
 #include "nsIDOMHTMLTextAreaElement.h"
 
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kScrollingViewCID, NS_SCROLLING_VIEW_CID);
 static NS_DEFINE_IID(kViewCID, NS_VIEW_CID);
 
@@ -146,8 +144,8 @@ public:
   nsresult LayoutBox(nsBoxLayoutState& aState, nsIBox* aBox, const nsRect& aRect);
 
    PRBool AddRemoveScrollbar       (PRBool& aHasScrollbar, 
-                                  nscoord& aXY, 
-                                  nscoord& aSize, 
+                                  gfx_coord& aXY, 
+                                  gfx_width& aSize, 
                                   nscoord aSbSize, 
                                   PRBool aOnRightOrBottom, 
                                   PRBool aAdd);
@@ -260,8 +258,8 @@ nsGfxScrollFrame::GetScrolledFrame(nsIPresContext* aPresContext, nsIFrame *&aScr
  */
 NS_IMETHODIMP
 nsGfxScrollFrame::GetClipSize(nsIPresContext* aPresContext, 
-                              nscoord *aWidth, 
-                              nscoord *aHeight) const
+                              gfx_width *aWidth, 
+                              gfx_height *aHeight) const
 {
    nsRect rect;
    mInner->mScrollAreaBox->GetBounds(rect);
@@ -566,13 +564,13 @@ nsGfxScrollFrame::GetPadding(nsMargin& aMargin)
 
 NS_IMETHODIMP
 nsGfxScrollFrame::Paint(nsIPresContext*      aPresContext,
-                     nsIRenderingContext& aRenderingContext,
-                     const nsRect&        aDirtyRect,
-                     nsFramePaintLayer    aWhichLayer)
+                        nsIDrawable*         aDrawable,
+                        const nsRect&        aDirtyRect,
+                        nsFramePaintLayer    aWhichLayer)
 {
   // Paint our children
-  return nsBoxFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
-                                 aWhichLayer);
+  return nsBoxFrame::Paint(aPresContext, aDrawable, aDirtyRect,
+                           aWhichLayer);
 }
 
 NS_IMETHODIMP
@@ -725,9 +723,9 @@ nsGfxScrollFrame::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
 
 NS_IMETHODIMP
 nsGfxScrollFrame::Reflow(nsIPresContext*   aPresContext,
-                     nsHTMLReflowMetrics&     aDesiredSize,
-                     const nsHTMLReflowState& aReflowState,
-                     nsReflowStatus&          aStatus)
+                         nsHTMLReflowMetrics&     aDesiredSize,
+                         const nsHTMLReflowState& aReflowState,
+                         nsReflowStatus&          aStatus)
 {
   DO_GLOBAL_REFLOW_COUNT("nsGfxScrollFrame", aReflowState.reason);
 
@@ -997,7 +995,7 @@ nsGfxScrollFrameInner::AddRemoveScrollbar(nsBoxLayoutState& aState, nsRect& aScr
 }
 
 PRBool
-nsGfxScrollFrameInner::AddRemoveScrollbar(PRBool& aHasScrollbar, nscoord& aXY, nscoord& aSize, nscoord aSbSize, PRBool aRightOrBottom, PRBool aAdd)
+nsGfxScrollFrameInner::AddRemoveScrollbar(PRBool& aHasScrollbar, gfx_coord& aXY, gfx_height& aSize, nscoord aSbSize, PRBool aRightOrBottom, PRBool aAdd)
 { 
    nscoord size = aSize;
 
@@ -1207,7 +1205,7 @@ nsGfxScrollFrameInner::Layout(nsBoxLayoutState& aState)
   nsCOMPtr<nsIFontMetrics> fm;
   presContext->GetMetricsFor(f, getter_AddRefs(fm));
   nscoord fontHeight = 1;
-  fm->GetHeight(fontHeight);
+  fm->GetHeight(&fontHeight);
 
   nscoord maxX = scrolledContentSize.width - scrollAreaRect.width;
   nscoord maxY = scrolledContentSize.height - scrollAreaRect.height;

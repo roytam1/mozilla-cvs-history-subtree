@@ -650,11 +650,11 @@ NS_IMETHODIMP nsFileControlFrame::GetProperty(nsIAtom* aName, nsAWritableString&
 
 NS_METHOD
 nsFileControlFrame::Paint(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable* aDrawable,
                           const nsRect& aDirtyRect,
                           nsFramePaintLayer aWhichLayer)
 {
-  return nsAreaFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsAreaFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 //----------------------------------------------------------------------

@@ -309,8 +309,8 @@ public:
    * Given a frame, create a rendering context suitable for use with
    * the frame.
    */
-  NS_IMETHOD CreateRenderingContext(nsIFrame *aFrame,
-                                    nsIRenderingContext** aContext) = 0;
+  NS_IMETHOD GetDrawableForFrame(nsIFrame *aFrame,
+                                 nsIDrawable** aContext) = 0;
 
   /**
    * Notification that we were unable to render a replaced element.

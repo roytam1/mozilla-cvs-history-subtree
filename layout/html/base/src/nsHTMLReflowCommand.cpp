@@ -111,7 +111,7 @@ void nsHTMLReflowCommand::BuildPath()
 NS_IMETHODIMP nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
                                             nsHTMLReflowMetrics& aDesiredSize,
                                             const nsSize&        aMaxSize,
-                                            nsIRenderingContext& aRendContext)
+                                            nsIDrawable*         aDrawable)
 {
   // Build the path from the target frame (index 0) to the root frame
   BuildPath();
@@ -133,7 +133,7 @@ NS_IMETHODIMP nsHTMLReflowCommand::Dispatch(nsIPresContext*      aPresContext,
     mPath.RemoveElementAt(mPath.Count() - 1);
 
     nsHTMLReflowState reflowState(aPresContext, root, *this,
-                                  &aRendContext, aMaxSize);
+                                  aDrawable, aMaxSize);
     nsReflowStatus    status;
     nsIView*          view;
 

@@ -43,7 +43,7 @@ public:
                   nsIFrame*        aPrevInFlow);
   NS_IMETHOD Destroy(nsIPresContext* aPresContext);
   NS_IMETHOD Paint(nsIPresContext* aCX,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;

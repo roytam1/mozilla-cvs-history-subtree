@@ -95,7 +95,7 @@ public:
 
 
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
 
@@ -142,8 +142,8 @@ public:
   NS_IMETHOD GetScrollbarBox(PRBool aVertical, nsIBox** aResult);
 
   NS_IMETHOD GetClipSize(nsIPresContext* aPresContext, 
-                         nscoord *aWidth, 
-                         nscoord *aHeight) const;
+                         gfx_width *aWidth, 
+                         gfx_height *aHeight) const;
  
   NS_IMETHOD  GetScrollPreference(nsIPresContext* aPresContext, nsScrollPref* aScrollPreference) const;
 

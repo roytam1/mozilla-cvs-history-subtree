@@ -66,8 +66,8 @@ public:
   * Gets the size of the area that lies inside the scrollbars but clips the scrolled frame
   */
   NS_IMETHOD GetClipSize(nsIPresContext* aPresContext, 
-                         nscoord *aWidth, 
-                         nscoord *aHeight) const = 0;
+                         gfx_width *aWidth, 
+                         gfx_height *aHeight) const = 0;
   /**
    * Get information about whether the vertical and horizontal scrollbars
    * are currently visible

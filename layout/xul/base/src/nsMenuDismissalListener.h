@@ -24,12 +24,12 @@
 #ifndef nsMenuDismissalListener_h__
 #define nsMenuDismissalListener_h__
 
-#include "nsIWidget.h"
 #include "nsIDOMMouseListener.h"
 #include "nsIRollupListener.h"
 #include "nsIMenuRollup.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsCOMPtr.h"
+#include "nsIWindow.h"
 
 class nsMenuPopupFrame;
 class nsIPresContext;
@@ -67,7 +67,7 @@ public:
   
 protected:
   nsIMenuParent* mMenuParent;
-  nsCOMPtr<nsIWidget> mWidget;
+  nsCOMPtr<nsIWindow> mWindow;
   PRBool mEnabled;
 };
 

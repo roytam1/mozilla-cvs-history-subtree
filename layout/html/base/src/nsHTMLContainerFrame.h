@@ -46,7 +46,7 @@ struct nsStylePosition;
 class nsHTMLContainerFrame : public nsContainerFrame {
 public:
   NS_IMETHOD  Paint(nsIPresContext* aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable*     aDrawable,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer);
 

@@ -26,6 +26,7 @@
 #include "nsVoidArray.h"
 
 class nsIAtom;
+class nsIDrawable;
 
 /**
  * An HTML reflow command
@@ -51,7 +52,7 @@ public:
   NS_IMETHOD Dispatch(nsIPresContext*      aPresContext,
                       nsHTMLReflowMetrics& aDesiredSize,
                       const nsSize&        aMaxSize,
-                      nsIRenderingContext& aRendContext);
+                      nsIDrawable*         aDrawable);
   NS_IMETHOD GetNext(nsIFrame*& aNextFrame, PRBool aRemove);
   NS_IMETHOD GetTarget(nsIFrame*& aTargetFrame) const;
   NS_IMETHOD SetTarget(nsIFrame* aTargetFrame);

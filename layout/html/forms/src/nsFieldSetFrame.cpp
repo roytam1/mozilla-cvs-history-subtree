@@ -66,7 +66,7 @@ public:
                     nsReflowStatus& aStatus);
                                
   NS_METHOD Paint(nsIPresContext* aPresContext,
-                  nsIRenderingContext& aRenderingContext,
+                  nsIDrawable* aDrawable,
                   const nsRect& aDirtyRect,
                   nsFramePaintLayer aWhichLayer);
 
@@ -152,7 +152,7 @@ nsFieldSetFrame::SetInitialChildList(nsIPresContext* aPresContext,
 // this is identical to nsHTMLContainerFrame::Paint except for the background and border. 
 NS_IMETHODIMP
 nsFieldSetFrame::Paint(nsIPresContext* aPresContext,
-                       nsIRenderingContext& aRenderingContext,
+                       nsIDrawable* aDrawable,
                        const nsRect& aDirtyRect,
                        nsFramePaintLayer aWhichLayer)
 {
@@ -182,7 +182,7 @@ nsFieldSetFrame::Paint(nsIPresContext* aPresContext,
        
         nsRect rect(0, yoff, mRect.width, mRect.height - yoff);
 
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, *color, *spacing, 0, 0);
 
 
@@ -197,12 +197,13 @@ nsFieldSetFrame::Paint(nsIPresContext* aPresContext,
           clipRect.width = mLegendRect.x - rect.x;
           clipRect.height = border.top;
 
-          aRenderingContext.PushState();
-          aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
-          nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+          // XXX pav
+          //          aDrawable->PushState();
+          //          aDrawable->SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
+          nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                       aDirtyRect, rect, *spacing, mStyleContext, skipSides);
   
-          aRenderingContext.PopState(clipState);
+          //          aDrawable->PopState(clipState);
 
 
           // draw right side
@@ -211,12 +212,13 @@ nsFieldSetFrame::Paint(nsIPresContext* aPresContext,
           clipRect.width -= (mLegendRect.x + mLegendRect.width);
           clipRect.height = border.top;
 
-          aRenderingContext.PushState();
-          aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
-          nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+          // XXX pav
+          //          aDrawable->PushState();
+          //          aDrawable->SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
+          nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                       aDirtyRect, rect, *spacing, mStyleContext, skipSides);
   
-          aRenderingContext.PopState(clipState);
+          //          aDrawable->PopState(clipState);
 
         
           // draw bottom
@@ -225,34 +227,35 @@ nsFieldSetFrame::Paint(nsIPresContext* aPresContext,
           clipRect.y += border.top;
           clipRect.height = mRect.height - (yoff + border.top);
         
-          aRenderingContext.PushState();
-          aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
-          nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+          // XXX pav
+          //          aDrawable->PushState();
+          //          aDrawable->SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
+          nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                       aDirtyRect, rect, *spacing, mStyleContext, skipSides);
   
-          aRenderingContext.PopState(clipState);
+          //          aDrawable->PopState(clipState);
         } else {
 
           
-          nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+          nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                       aDirtyRect, nsRect(0,0,mRect.width, mRect.height), *spacing, mStyleContext, skipSides);
         }
     }
   }
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
 #ifdef DEBUG
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
     nsIView* view;
     GetView(aPresContext, &view);
     if (nsnull != view) {
-      aRenderingContext.SetColor(NS_RGB(0,0,255));
+      aDrawable->SetForegroundColor(NS_RGB(0,0,255));
     }
     else {
-      aRenderingContext.SetColor(NS_RGB(255,0,0));
+      aDrawable->SetForegroundColor(NS_RGB(255,0,0));
     }
-    aRenderingContext.DrawRect(0, 0, mRect.width, mRect.height);
+    aDrawable->DrawRectangle(0, 0, mRect.width, mRect.height);
   }
 #endif
   return NS_OK;

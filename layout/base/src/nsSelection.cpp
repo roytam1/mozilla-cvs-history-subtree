@@ -46,6 +46,9 @@
 #include "nsIDOMNodeList.h"
 #include "nsITextContent.h"
 
+#include "nsIWindow.h"
+#include "nsIDrawable.h"
+
 #include "nsISelectionListener.h"
 #include "nsIContentIterator.h"
 #include "nsIDocumentEncoder.h"
@@ -63,7 +66,6 @@
 // included for view scrolling
 #include "nsIViewManager.h"
 #include "nsIScrollableView.h"
-#include "nsIDeviceContext.h"
 #include "nsITimer.h"
 #include "nsITimerCallback.h"
 #include "nsIServiceManager.h"
@@ -5832,35 +5834,25 @@ nsDOMSelection::GetPointFromOffset(nsIFrame *aFrame, PRInt32 aContentOffset, nsP
   if (!presContext)
     return NS_ERROR_NULL_POINTER;
   
-  nsCOMPtr<nsIDeviceContext> deviceContext;
-
-	rv = presContext->GetDeviceContext(getter_AddRefs(deviceContext));
-
-	if (NS_FAILED(rv))
-		return rv;
-
-  if (!deviceContext)
-		return NS_ERROR_NULL_POINTER;
-
   //
   // Now get the closest view with a widget so we can create
   // a rendering context.
   //
 
-  nsCOMPtr<nsIWidget> widget;
+  nsCOMPtr<nsIWindow> window;
   nsIView *closestView = 0;
   nsPoint offset(0, 0);
 
   rv = aFrame->GetOffsetFromView(presContext, offset, &closestView);
 
-  while (!widget && closestView)
+  while (!window && closestView)
   {
-    rv = closestView->GetWidget(*getter_AddRefs(widget));
+    rv = closestView->GetWidget(*getter_AddRefs(window));
 
     if (NS_FAILED(rv))
       return rv;
 
-    if (!widget)
+    if (!window)
     {
       rv = closestView->GetParent(closestView);
 
@@ -5872,27 +5864,28 @@ nsDOMSelection::GetPointFromOffset(nsIFrame *aFrame, PRInt32 aContentOffset, nsP
   if (!closestView)
     return NS_ERROR_FAILURE;
 
+
+  // XXX pav this code is probably not needed, since nsIFontMetrics contains the info about
+  // widths and heights now..
   //
-  // Create a rendering context. This context is used by text frames
+  // QI the window to a drawable.  This context is used by text frames
   // to calculate text widths so it can figure out where the point is
   // in the frame.
   //
 
-	nsCOMPtr<nsIRenderingContext> rendContext;
-
-	rv = deviceContext->CreateRenderingContext(closestView, *getter_AddRefs(rendContext));		
+  nsCOMPtr<nsIDrawable> drawable(do_QueryInterface(window, &rv));
   
 	if (NS_FAILED(rv))
 		return rv;
 
-  if (!rendContext)
+  if (!drawable)
 		return NS_ERROR_NULL_POINTER;
 
   //
   // Now get the point and return!
   //
 
-	rv = aFrame->GetPointFromOffset(presContext, rendContext, aContentOffset, aPoint);
+	rv = aFrame->GetPointFromOffset(presContext, drawable, aContentOffset, aPoint);
 
   return rv;
 }

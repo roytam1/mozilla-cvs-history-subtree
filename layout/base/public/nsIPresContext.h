@@ -46,7 +46,6 @@ struct nsFont;
 
 class nsIContent;
 class nsIDocument;
-class nsIDeviceContext;
 class nsIFontMetrics;
 class nsIFrame;
 class nsIImage;
@@ -59,7 +58,6 @@ class nsIAtom;
 class nsString;
 class nsIEventStateManager;
 class nsIURI;
-class nsILookAndFeel;
 
 #define NS_IPRESCONTEXT_IID   \
 { 0x0a5d12e0, 0x944e, 0x11d1, \
@@ -104,7 +102,7 @@ public:
   /**
    * Initialize the presentation context from a particular device.
    */
-  NS_IMETHOD Init(nsIDeviceContext* aDeviceContext) = 0;
+  NS_IMETHOD Init(void) = 0;
 
   /**
    * Stop the presentation in preperation for destruction.
@@ -140,11 +138,6 @@ public:
    */
   NS_IMETHOD GetImageAnimationMode(nsImageAnimation* aModeResult) = 0;
   NS_IMETHOD SetImageAnimationMode(nsImageAnimation aMode) = 0;
-
-  /**
-   * Get look and feel object
-   */
-  NS_IMETHOD GetLookAndFeel(nsILookAndFeel** aLookAndFeel) = 0;
 
   /** 
    * Get base url for presentation
@@ -320,12 +313,12 @@ public:
   /**
    * Return the page width if this is a paginated context.
    */
-  NS_IMETHOD GetPageWidth(nscoord* aResult) = 0;
+  NS_IMETHOD GetPageWidth(gfx_width* aResult) = 0;
 
   /**
    * Return the page height if this is a paginated context
    */
-  NS_IMETHOD GetPageHeight(nscoord* aResult) = 0;
+  NS_IMETHOD GetPageHeight(gfx_height* aResult) = 0;
 
   NS_IMETHOD GetPixelsToTwips(float* aResult) const = 0;
 
@@ -337,9 +330,6 @@ public:
    * differing size of a "pixel" from device to device.
    */
   NS_IMETHOD GetScaledPixelsToTwips(float* aScale) const = 0;
-
-  //be sure to Relase() after you are done with the Get()
-  NS_IMETHOD GetDeviceContext(nsIDeviceContext** aResult) const = 0;
 
   NS_IMETHOD GetEventStateManager(nsIEventStateManager** aManager) = 0;
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection) = 0;

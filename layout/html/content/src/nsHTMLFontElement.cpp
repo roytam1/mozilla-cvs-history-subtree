@@ -27,7 +27,6 @@
 #include "nsGenericHTMLElement.h"
 #include "nsHTMLAtoms.h"
 #include "nsHTMLIIDs.h"
-#include "nsIDeviceContext.h"
 #include "nsIStyleContext.h"
 #include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
@@ -213,8 +212,12 @@ MapFontAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
     aAttributes->GetAttribute(nsHTMLAtoms::face, value);
     if (value.GetUnit() == eHTMLUnit_String) {
 
+
+      // XXX pav
+#if 0
       nsCOMPtr<nsIDeviceContext> dc;
       aPresContext->GetDeviceContext(getter_AddRefs(dc));
+
       if (dc) {
         nsAutoString  familyList;
 
@@ -279,12 +282,16 @@ MapFontAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
           }
 */
         }
+
         else {
           font->mFont.name = defaultFont.name;
           font->mFixedFont.name= defaultFixedFont.name;
         }
+
         font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
       }
+#endif
+
     }
 
     // pointSize: int, enum

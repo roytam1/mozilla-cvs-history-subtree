@@ -30,6 +30,7 @@
 #include "nsBoxFrame.h"
 #include "nsIXULTreeSlice.h"
 
+class nsIDrawable;
 class nsCSSFrameConstructor;
 class nsXULTreeOuterGroupFrame;
 class nsTreeItemDragCapturer;
@@ -62,7 +63,7 @@ public:
     // overridden for d&d setup and feedback
   NS_IMETHOD Init ( nsIPresContext*  aPresContext, nsIContent* aContent,
                       nsIFrame* aParent, nsIStyleContext* aContext, nsIFrame* aPrevInFlow) ;
-  NS_IMETHOD Paint(nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext,
+  NS_IMETHOD Paint(nsIPresContext* aPresContext, nsIDrawable* aDrawable,
                     const nsRect& aDirtyRect, nsFramePaintLayer aWhichLayer);
   NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext, nsIContent* aChild,
                                  PRInt32 aNameSpaceID, nsIAtom* aAttribute, PRInt32 aHint) ;
@@ -113,12 +114,12 @@ public:
 protected: 
 
     // handle drawing the drop feedback
-  void PaintDropFeedback ( nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext,
+  void PaintDropFeedback ( nsIPresContext* aPresContext, nsIDrawable* aDrawable,
                              PRBool aPaintSorted ) ;
-  void PaintSortedDropFeedback ( nscolor inColor, nsIRenderingContext& inRenderingContext, float & inP2T ) ;
-  void PaintOnContainerDropFeedback ( nscolor inColor, nsIRenderingContext& inRenderingContext, 
+  void PaintSortedDropFeedback ( nscolor inColor, nsIDrawable* aDrawable, float & inP2T ) ;
+  void PaintOnContainerDropFeedback ( nscolor inColor, nsIDrawable* aDrawable, 
                                         nsIPresContext* inPresContext, float & inP2T ) ;
-  void PaintInBetweenDropFeedback ( nscolor inColor, nsIRenderingContext& inRenderingContext, 
+  void PaintInBetweenDropFeedback ( nscolor inColor, nsIDrawable* aDrawable, 
                                         nsIPresContext* inPresContext, float & inP2T ) ;
 
     // helpers for drop feedback

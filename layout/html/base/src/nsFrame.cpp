@@ -29,6 +29,7 @@
 #include "nsIArena.h"
 #include "nsString.h"
 #include "nsIStyleContext.h"
+#include "nsIDrawable.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsIPresContext.h"
@@ -46,7 +47,6 @@
 
 #include "nsIDOMText.h"
 #include "nsDocument.h"
-#include "nsIDeviceContext.h"
 #include "nsHTMLIIDs.h"
 #include "nsIEventStateManager.h"
 #include "nsISelection.h"
@@ -621,7 +621,7 @@ nsFrame::DisplaySelection(nsIPresContext* aPresContext, PRBool isOkToTurnOn)
 }
 
 void
-nsFrame::SetOverflowClipRect(nsIRenderingContext& aRenderingContext)
+nsFrame::SetOverflowClipRect(nsIDrawable *aDrawable)
 {
   // 'overflow-clip' only applies to block-level elements and replaced
   // elements that have 'overflow' set to 'hidden', and it is relative
@@ -644,13 +644,13 @@ nsFrame::SetOverflowClipRect(nsIRenderingContext& aRenderingContext)
   }
 
   // Set updated clip-rect into the rendering context
-  PRBool clipState;
-  aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
+  // XXX pav
+  //  aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect, clipState);
 }
 
 NS_IMETHODIMP
 nsFrame::Paint(nsIPresContext*      aPresContext,
-               nsIRenderingContext& aRenderingContext,
+               nsIDrawable*         aDrawable,
                const nsRect&        aDirtyRect,
                nsFramePaintLayer    aWhichLayer)
 {
@@ -725,9 +725,8 @@ nsFrame::Paint(nsIPresContext*      aPresContext,
     rect.height-=2;
     rect.x++;
     rect.y++;
-    aRenderingContext.SetColor(NS_RGB(0,0,255));
-    nsRect drawrect(1, 1, rect.width, rect.height);
-    aRenderingContext.DrawRect(drawrect);
+    aDrawable->SetForegroundColor(NS_RGB(0,0,255));
+    aDrawable->DrawRectangle(1, 1, rect.width, rect.height);
     SelectionDetails *deletingDetails = details;
     while ((deletingDetails = details->mNext) != nsnull) {
       delete details;
@@ -1835,7 +1834,7 @@ nsFrame::AdjustFrameSize(nscoord aExtraSpace, nscoord& aUsedSpace)
 
 NS_IMETHODIMP
 nsFrame::TrimTrailingWhiteSpace(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRC,
+                                nsIDrawable*    aDrawable,
                                 nscoord& aDeltaWidth)
 {
   aDeltaWidth = 0;
@@ -2018,12 +2017,12 @@ NS_IMETHODIMP nsFrame::GetOffsetFromView(nsIPresContext* aPresContext,
 }
 
 NS_IMETHODIMP nsFrame::GetWindow(nsIPresContext* aPresContext,
-                                 nsIWidget**     aWindow) const
+                                 nsIWindow**     aWindow) const
 {
   NS_PRECONDITION(nsnull != aWindow, "null OUT parameter pointer");
   
   nsIFrame*  frame;
-  nsIWidget* window = nsnull;
+  nsIWindow* window = nsnull;
   for (frame = (nsIFrame*)this; nsnull != frame; frame->GetParentWithView(aPresContext, &frame)) {
     nsIView* view;
      
@@ -2542,7 +2541,7 @@ nsFrame::GetSelected(PRBool *aSelected) const
 }
 
 NS_IMETHODIMP
-nsFrame::GetPointFromOffset(nsIPresContext* inPresContext, nsIRenderingContext* inRendContext, PRInt32 inOffset, nsPoint* outPoint)
+nsFrame::GetPointFromOffset(nsIPresContext* inPresContext, nsIDrawable* inDrawable, PRInt32 inOffset, nsPoint* outPoint)
 {
   NS_PRECONDITION(outPoint != nsnull, "Null parameter");
   nsPoint bottomLeft(0, 0);

@@ -42,7 +42,7 @@ public:
 
   // nsIFrame
   NS_IMETHOD  Paint(nsIPresContext*      aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable*         aDrawable,
                     const nsRect&        aDirtyRect,
                     nsFramePaintLayer    aWhichLayer);
 
@@ -59,7 +59,7 @@ public:
 protected:
   nsSimplePageSequenceFrame();
   virtual void PaintChild(nsIPresContext*      aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable*         aDrawable,
                           const nsRect&        aDirtyRect,
                           nsIFrame*            aFrame,
                           nsFramePaintLayer    aWhichLayer);

@@ -23,7 +23,7 @@
 #include "nsFormControlHelper.h"
 #include "nsHTMLParts.h"
 #include "nsIHTMLContent.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
@@ -40,11 +40,7 @@
 #include "nsDOMEvent.h"
 #include "nsIFontMetrics.h"
 #include "nsIFormControl.h"
-#include "nsIDeviceContext.h"
 #include "nsHTMLAtoms.h"
-#include "nsIButton.h"  // remove this when GetCID is pure virtual
-#include "nsICheckButton.h"  //remove this
-#include "nsITextWidget.h"  //remove this
 #include "nsISupports.h"
 #include "nsStyleConsts.h"
 #include "nsUnitConversion.h"
@@ -69,7 +65,6 @@ static NS_DEFINE_CID(kStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 // done I10N
 
 
-static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
 static NS_DEFINE_IID(kIFormControlIID, NS_IFORMCONTROL_IID);
 static NS_DEFINE_IID(kIFormControlFrameIID, NS_IFORMCONTROLFRAME_IID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -171,12 +166,15 @@ nsresult nsFormControlHelper::GetFrameFontFM(nsIPresContext* aPresContext,
   const nsFont * font = nsnull;
   // Get frame font
   if (NS_SUCCEEDED(aFrame->GetFont(aPresContext, font))) {
+    // XXX pav
+#if 0
     nsCOMPtr<nsIDeviceContext> deviceContext;
     aPresContext->GetDeviceContext(getter_AddRefs(deviceContext));
     NS_ASSERTION(deviceContext, "Couldn't get the device context"); 
     if (font != nsnull) { // Get font metrics
       return deviceContext->GetMetricsFor(*font, *aFontMet);
     }
+#endif
   }
   return NS_ERROR_FAILURE;
 }
@@ -231,7 +229,7 @@ nsFormControlHelper::GetWrapPropertyEnum(nsIContent * aContent, nsHTMLTextWrap& 
 
 nscoord 
 nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext, 
-                                        nsIRenderingContext* aRendContext,
+                                        nsIDrawable*         aDrawable,
                                         nsIFontMetrics*      aFontMet, 
                                         nsIFormControlFrame* aFrame,
                                         nsInputDimensionSpec& aSpec,
@@ -245,9 +243,9 @@ nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext,
   nscoord ascent;
   nscoord descent;
   nscoord maxCharWidth;
-  aFontMet->GetMaxAscent(ascent);
-  aFontMet->GetMaxDescent(descent);
-  aFontMet->GetMaxAdvance(maxCharWidth);
+  aFontMet->GetMaxAscent(&ascent);
+  aFontMet->GetMaxDescent(&descent);
+  aFontMet->GetMaxAdvance(&maxCharWidth);
 
   ascent       = NSToCoordRound(ascent * t2p);
   descent      = NSToCoordRound(descent * t2p);
@@ -257,8 +255,8 @@ nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext,
   GetRepChars(aPresContext, char1, char2);
 
   nscoord char1Width, char2Width;
-  aRendContext->GetWidth(char1, char1Width);
-  aRendContext->GetWidth(char2, char2Width);
+  aFontMet->GetCCharWidth(char1, &char1Width);
+  aFontMet->GetCCharWidth(char2, &char2Width);
   char1Width = NSToCoordRound(char1Width * t2p);
   char2Width = NSToCoordRound(char2Width * t2p);
 
@@ -280,9 +278,14 @@ nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext,
     nscoord scrollbarWidth  = 0;
     nscoord scrollbarHeight = 0;
     float   scale;
-    nsCOMPtr<nsIDeviceContext> dx;
-    aPresContext->GetDeviceContext(getter_AddRefs(dx));
+
+    // XXX pav use nsISystemLook (service)
+    //    nsCOMPtr<nsIDeviceContext> dx;
+    //    aPresContext->GetDeviceContext(getter_AddRefs(dx));
+
+#if 0
     if (dx) { 
+
       float sbWidth;
       float sbHeight;
       dx->GetCanonicalPixelScale(scale);
@@ -291,7 +294,10 @@ nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext,
       scrollbarHeight = PRInt32(sbHeight * scale);
       scrollbarWidth  = NSToCoordRound(scrollbarWidth * t2p);
       scrollbarHeight  = NSToCoordRound(scrollbarHeight * t2p);
-    } else {
+
+    } else 
+#endif
+    {
       NS_ASSERTION(0, "Couldn't get the device context"); 
       scrollbarWidth  = 16;
       scrollbarHeight = 16;
@@ -329,7 +335,7 @@ nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext,
   } else if (NS_FORM_INPUT_BUTTON == type ||
              NS_FORM_INPUT_SUBMIT == type ||
              NS_FORM_INPUT_RESET  == type) {
-    GetTextSize(aPresContext, aFrame, *aSpec.mColDefaultValue, aSize, aRendContext);
+    GetTextSize(aPresContext, aFrame, *aSpec.mColDefaultValue, aSize, aDrawable);
     aSize.width  = NSToCoordRound(aSize.width * t2p);
     aSize.height = NSToCoordRound(aSize.height * t2p);
     width  = 3 * aSize.width / 2;
@@ -357,17 +363,17 @@ nsFormControlHelper::CalcNavQuirkSizing(nsIPresContext*      aPresContext,
 
 nscoord 
 nsFormControlHelper::GetTextSize(nsIPresContext* aPresContext, nsIFormControlFrame* aFrame,
-                                const nsString& aString, nsSize& aSize,
-                                nsIRenderingContext *aRendContext)
+                                 const nsString& aString, nsSize& aSize,
+                                 nsIDrawable* aDrawable)
 {
   nsCOMPtr<nsIFontMetrics> fontMet;
   nsresult res = GetFrameFontFM(aPresContext, aFrame, getter_AddRefs(fontMet));
   if (NS_SUCCEEDED(res) && fontMet) {
-    aRendContext->SetFont(fontMet);
+    aDrawable->SetFontMetrics(fontMet);
 
     // measure string
-    aRendContext->GetWidth(aString, aSize.width);
-    fontMet->GetHeight(aSize.height);
+    fontMet->GetStringWidth(aString.GetUnicode(), aString.Length(), &aSize.width);
+    fontMet->GetHeight(&aSize.height);
   } else {
     NS_ASSERTION(PR_FALSE, "Couldn't get Font Metrics"); 
     aSize.width = 0;
@@ -376,8 +382,8 @@ nsFormControlHelper::GetTextSize(nsIPresContext* aPresContext, nsIFormControlFra
   char char1, char2;
   nsCompatibility mode = GetRepChars(aPresContext, char1, char2);
   nscoord char1Width, char2Width;
-  aRendContext->GetWidth(char1, char1Width);
-  aRendContext->GetWidth(char2, char2Width);
+  fontMet->GetCCharWidth(char1, &char1Width);
+  fontMet->GetCCharWidth(char2, &char2Width);
 
   if (eCompatibility_Standard == mode) {
     return ((char1Width + char2Width) / 2) + 1;
@@ -389,7 +395,7 @@ nsFormControlHelper::GetTextSize(nsIPresContext* aPresContext, nsIFormControlFra
 nscoord
 nsFormControlHelper::GetTextSize(nsIPresContext* aPresContext, nsIFormControlFrame* aFrame,
                                 PRInt32 aNumChars, nsSize& aSize,
-                                nsIRenderingContext *aRendContext)
+                                nsIDrawable* aDrawable)
 {
   nsAutoString val;
   char char1, char2;
@@ -401,12 +407,12 @@ nsFormControlHelper::GetTextSize(nsIPresContext* aPresContext, nsIFormControlFra
   for (i = 1; i < aNumChars; i+=2) {
     val.AppendWithConversion(char2);  
   }
-  return GetTextSize(aPresContext, aFrame, val, aSize, aRendContext);
+  return GetTextSize(aPresContext, aFrame, val, aSize, aDrawable);
 }
   
 PRInt32
 nsFormControlHelper::CalculateSize (nsIPresContext*       aPresContext, 
-                                    nsIRenderingContext*  aRendContext,
+                                    nsIDrawable*          aDrawable,
                                     nsIFormControlFrame*  aFrame,
                                     const nsSize&         aCSSSize, 
                                     nsInputDimensionSpec& aSpec, 
@@ -475,7 +481,7 @@ nsFormControlHelper::CalculateSize (nsIPresContext*       aPresContext,
     PRInt32 col = ((colAttr.GetUnit() == eHTMLUnit_Pixel) ? colAttr.GetPixelValue() : colAttr.GetIntValue());
     if (aSpec.mColSizeAttrInPixels) {
       // need to set charWidth and aDesiredSize.height
-      charWidth = GetTextSize(aPresContext, aFrame, 1, aDesiredSize, aRendContext);
+      charWidth = GetTextSize(aPresContext, aFrame, 1, aDesiredSize, aDrawable);
       col = (col <= 0) ? 15 : col; // XXX why a default of 15 pixels, why hide it
                                    // XXX this conflicts with a default of 20 found in nsGfxTextControlFrame.
       aDesiredSize.width = NSIntPixelsToTwips(col, p2t);
@@ -485,12 +491,12 @@ nsFormControlHelper::CalculateSize (nsIPresContext*       aPresContext,
         nsCOMPtr<nsIFontMetrics> fontMet;
         nsresult res = GetFrameFontFM(aPresContext, aFrame, getter_AddRefs(fontMet));
         if (NS_SUCCEEDED(res) && fontMet) {
-          aRendContext->SetFont(fontMet);
+          aDrawable->SetFontMetrics(fontMet);
           aSpec.mColDefaultSize = col;
-          charWidth = CalcNavQuirkSizing(aPresContext, aRendContext, fontMet, 
+          charWidth = CalcNavQuirkSizing(aPresContext, aDrawable, fontMet, 
                                          aFrame, aSpec, aDesiredSize);
         } else {
-          charWidth = GetTextSize(aPresContext, aFrame, col, aDesiredSize, aRendContext);
+          charWidth = GetTextSize(aPresContext, aFrame, col, aDesiredSize, aDrawable);
         }
       }
     }
@@ -503,20 +509,20 @@ nsFormControlHelper::CalculateSize (nsIPresContext*       aPresContext,
   } else {
     // set aDesiredSize for height calculation below. CSS may override width
     if (NS_CONTENT_ATTR_HAS_VALUE == valStatus) { // use width of initial value 
-      charWidth = GetTextSize(aPresContext, aFrame, valAttr, aDesiredSize, aRendContext);
+      charWidth = GetTextSize(aPresContext, aFrame, valAttr, aDesiredSize, aDrawable);
     } else if (aSpec.mColDefaultValue) {          // use default value
-      charWidth = GetTextSize(aPresContext, aFrame, *aSpec.mColDefaultValue, aDesiredSize, aRendContext);
+      charWidth = GetTextSize(aPresContext, aFrame, *aSpec.mColDefaultValue, aDesiredSize, aDrawable);
     } else if (aSpec.mColDefaultSizeInPixels) {   // use default width in pixels
-      charWidth = GetTextSize(aPresContext, aFrame, 1, aDesiredSize, aRendContext);
+      charWidth = GetTextSize(aPresContext, aFrame, 1, aDesiredSize, aDrawable);
       aDesiredSize.width = aSpec.mColDefaultSize;
     } else  {                                     // use default width in num characters
       if (eCompatibility_NavQuirks == qMode) {
         nsCOMPtr<nsIFontMetrics> fontMet;
         nsresult res = GetFrameFontFM(aPresContext, aFrame, getter_AddRefs(fontMet));
         if (NS_SUCCEEDED(res) && fontMet) {
-          aRendContext->SetFont(fontMet);
+          aDrawable->SetFontMetrics(fontMet);
           // this passes in a 
-          charWidth = CalcNavQuirkSizing(aPresContext, aRendContext, fontMet, 
+          charWidth = CalcNavQuirkSizing(aPresContext, aDrawable, fontMet, 
                                          aFrame, aSpec, aDesiredSize);
         } else {
           NS_ASSERTION(fontMet, "Couldn't get Font Metrics"); 
@@ -524,7 +530,7 @@ nsFormControlHelper::CalculateSize (nsIPresContext*       aPresContext,
           aDesiredSize.width = 1500;
         }
       } else {
-        charWidth = GetTextSize(aPresContext, aFrame, aSpec.mColDefaultSize, aDesiredSize, aRendContext); 
+        charWidth = GetTextSize(aPresContext, aFrame, aSpec.mColDefaultSize, aDesiredSize, aDrawable); 
       }
     }
     aMinSize.width = aDesiredSize.width;
@@ -683,7 +689,7 @@ nsFormControlHelper::GetFont(nsIFormControlFrame * aFormFrame,
 //
 
 void 
-nsFormControlHelper::PaintLine(nsIRenderingContext& aRenderingContext, 
+nsFormControlHelper::PaintLine(nsIDrawable* aDrawable, 
                               nscoord aSX, nscoord aSY, nscoord aEX, nscoord aEY, 
                               PRBool aHorz, nscoord aWidth, nscoord aOnePixel)
 {
@@ -714,7 +720,8 @@ nsFormControlHelper::PaintLine(nsIRenderingContext& aRenderingContext,
     p[4].x = nscoord(float(aSX)*aOnePixel);
     p[4].y = nscoord(float(aSY)*aOnePixel);
   }
-  aRenderingContext.FillPolygon(p, 5);
+  const nsPoint *pts = p;
+  aDrawable->FillPolygon(&pts, 5);
 
 }
 
@@ -750,9 +757,10 @@ nsFormControlHelper::SetupPoints(PRUint32 aNumberOfPoints, nscoord* aPoints, nsP
 
 //---------------------------------------------------------------------------
 void 
-nsFormControlHelper::PaintArrowGlyph(nsIRenderingContext& aRenderingContext, 
-                 nscoord aSX, nscoord aSY, nsArrowDirection aArrowDirection,
-								 nscoord aOnePixel)
+nsFormControlHelper::PaintArrowGlyph(nsIDrawable* aDrawable, 
+                                     nscoord aSX, nscoord aSY,
+                                     nsArrowDirection aArrowDirection,
+                                     nscoord aOnePixel)
 {
   nsPoint polygon[3];
 
@@ -775,49 +783,50 @@ nsFormControlHelper::PaintArrowGlyph(nsIRenderingContext& aRenderingContext,
 		break;
   }
  
-  aRenderingContext.FillPolygon(polygon, 3);
+  const nsPoint *pts = polygon;
+  aDrawable->FillPolygon(&pts, 3);
 }
 
 //---------------------------------------------------------------------------
 void 
 nsFormControlHelper::PaintArrow(nsArrowDirection aArrowDirection,
-					                    nsIRenderingContext& aRenderingContext,
-															nsIPresContext* aPresContext, 
-															const nsRect& aDirtyRect,
-                                                            nsRect& aRect, 
-															nscoord aOnePixel, 
-															nsIStyleContext* aArrowStyle,
-															const nsStyleSpacing& aSpacing,
-															nsIFrame* aForFrame,
-                                                            nsRect& aFrameRect)
+                                nsIDrawable* aDrawable,
+                                nsIPresContext* aPresContext, 
+                                const nsRect& aDirtyRect,
+                                nsRect& aRect, 
+                                nscoord aOnePixel, 
+                                nsIStyleContext* aArrowStyle,
+                                const nsStyleSpacing& aSpacing,
+                                nsIFrame* aForFrame,
+                                nsRect& aFrameRect)
 {
   // Draw border using CSS
   const nsStyleColor* color = (const nsStyleColor*)
       aArrowStyle->GetStyleData(eStyleStruct_Color);
-  nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, aForFrame,
+  nsCSSRendering::PaintBackground(aPresContext, aDrawable, aForFrame,
                                     aDirtyRect, aRect,  *color, aSpacing, 0, 0);
-  nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aForFrame,
+  nsCSSRendering::PaintBorder(aPresContext, aDrawable, aForFrame,
                                aDirtyRect, aRect, aSpacing, aArrowStyle, 0);
 
   // Draw the glyph in black
-  aRenderingContext.SetColor(NS_RGB(0, 0, 0));
+  aDrawable->SetForegroundColor(NS_RGB(0, 0, 0));
    // Draw arrow centered in the rectangle
-  PaintArrowGlyph(aRenderingContext, aRect.x + (aRect.width / 2), aRect.y + (aRect.height / 2), aArrowDirection, aOnePixel);
+  PaintArrowGlyph(aDrawable, aRect.x + (aRect.width / 2), aRect.y + (aRect.height / 2), aArrowDirection, aOnePixel);
 
 }
 
 //---------------------------------------------------------------------------
 void 
-nsFormControlHelper::PaintScrollbar(nsIRenderingContext& aRenderingContext,
-																	nsIPresContext* aPresContext, 
-																  const nsRect& aDirtyRect,
-                                  nsRect& aRect, 
-																  PRBool aHorizontal, 
-																  nscoord aOnePixel, 
-                                  nsIStyleContext* aScrollbarStyleContext,
-                                  nsIStyleContext* aScrollbarArrowStyleContext,
-																	nsIFrame* aForFrame,
-                                  nsRect& aFrameRect)
+nsFormControlHelper::PaintScrollbar(nsIDrawable* aDrawable,
+                                    nsIPresContext* aPresContext, 
+                                    const nsRect& aDirtyRect,
+                                    nsRect& aRect, 
+                                    PRBool aHorizontal, 
+                                    nscoord aOnePixel, 
+                                    nsIStyleContext* aScrollbarStyleContext,
+                                    nsIStyleContext* aScrollbarArrowStyleContext,
+                                    nsIFrame* aForFrame,
+                                    nsRect& aFrameRect)
 {
   // Get the Scrollbar's Style structs
   const nsStyleColor* scrollbarColor =
@@ -830,25 +839,25 @@ nsFormControlHelper::PaintScrollbar(nsIRenderingContext& aRenderingContext,
     (const nsStyleColor*)aScrollbarArrowStyleContext->GetStyleData(eStyleStruct_Color);
 
   // Paint background for scrollbar
-  nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, aForFrame,
+  nsCSSRendering::PaintBackground(aPresContext, aDrawable, aForFrame,
                                     aDirtyRect, aRect, *scrollbarColor, *arrowSpacing, 0, 0);
 
   if (PR_TRUE == aHorizontal) {
     // Draw horizontal Arrow
 		nscoord arrowWidth = aRect.height;
 		nsRect arrowLeftRect(aRect.x, aRect.y, arrowWidth, arrowWidth);
-    PaintArrow(eArrowDirection_Left,aRenderingContext,aPresContext, 
+    PaintArrow(eArrowDirection_Left,aDrawable,aPresContext, 
 			        aDirtyRect, arrowLeftRect,aOnePixel, aScrollbarArrowStyleContext,
 					*arrowSpacing, aForFrame, aFrameRect);
 
 		nsRect thumbRect(aRect.x+arrowWidth, aRect.y, arrowWidth, arrowWidth);
-    nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, aForFrame,
+    nsCSSRendering::PaintBackground(aPresContext, aDrawable, aForFrame,
                                     aDirtyRect, thumbRect, *arrowColor, *arrowSpacing, 0, 0);
-    nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aForFrame,
+    nsCSSRendering::PaintBorder(aPresContext, aDrawable, aForFrame,
                                 aDirtyRect, thumbRect, *arrowSpacing,aScrollbarArrowStyleContext, 0);
 
     nsRect arrowRightRect(aRect.x + (aRect.width - arrowWidth), aRect.y, arrowWidth, arrowWidth);
-	  PaintArrow(eArrowDirection_Right,aRenderingContext,aPresContext, 
+	  PaintArrow(eArrowDirection_Right,aDrawable,aPresContext, 
 			        aDirtyRect, arrowRightRect,aOnePixel, aScrollbarArrowStyleContext,
 					*arrowSpacing, aForFrame, aFrameRect);
 
@@ -857,18 +866,18 @@ nsFormControlHelper::PaintScrollbar(nsIRenderingContext& aRenderingContext,
 		// Paint vertical arrow
 		nscoord arrowHeight = aRect.width;
 		nsRect arrowUpRect(aRect.x, aRect.y, arrowHeight, arrowHeight);
-	  PaintArrow(eArrowDirection_Up,aRenderingContext,aPresContext, 
+	  PaintArrow(eArrowDirection_Up,aDrawable,aPresContext, 
 			        aDirtyRect, arrowUpRect,aOnePixel, aScrollbarArrowStyleContext,
 					*arrowSpacing, aForFrame, aFrameRect);
 
 		nsRect thumbRect(aRect.x, aRect.y+arrowHeight, arrowHeight, arrowHeight);
-    nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, aForFrame,
+    nsCSSRendering::PaintBackground(aPresContext, aDrawable, aForFrame,
                                     aDirtyRect, thumbRect, *arrowColor, *arrowSpacing, 0, 0);
-    nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aForFrame,
+    nsCSSRendering::PaintBorder(aPresContext, aDrawable, aForFrame,
                                 aDirtyRect, thumbRect, *arrowSpacing,aScrollbarArrowStyleContext, 0);
 
 		nsRect arrowDownRect(aRect.x, aRect.y + (aRect.height - arrowHeight), arrowHeight, arrowHeight);
-	  PaintArrow(eArrowDirection_Down,aRenderingContext,aPresContext, 
+	  PaintArrow(eArrowDirection_Down,aDrawable,aPresContext, 
 			        aDirtyRect, arrowDownRect,aOnePixel, aScrollbarArrowStyleContext,
 					*arrowSpacing, aForFrame, aFrameRect);
   }
@@ -878,8 +887,8 @@ nsFormControlHelper::PaintScrollbar(nsIRenderingContext& aRenderingContext,
 
 
 void
-nsFormControlHelper::PaintFixedSizeCheckMark(nsIRenderingContext& aRenderingContext,
-                         float aPixelsToTwips)
+nsFormControlHelper::PaintFixedSizeCheckMark(nsIDrawable* aDrawable,
+                                             float aPixelsToTwips)
 {
 
     // Offsets to x,y location, These offsets are used to place the checkmark in the middle
@@ -893,18 +902,19 @@ nsFormControlHelper::PaintFixedSizeCheckMark(nsIRenderingContext& aRenderingCont
     // way the checkmark looks under Windows. Using a polygon does not correctly 
     // represent a checkmark under Windows. This is due to round-off error in the
     // Twips to Pixel conversions.
-  PaintLine(aRenderingContext, 0 + ox, 2 + oy, 0 + ox, 4 + oy, PR_FALSE, 1, onePixel);
-  PaintLine(aRenderingContext, 1 + ox, 3 + oy, 1 + ox, 5 + oy, PR_FALSE, 1, onePixel);
-  PaintLine(aRenderingContext, 2 + ox, 4 + oy, 2 + ox, 6 + oy, PR_FALSE, 1, onePixel);
-  PaintLine(aRenderingContext, 3 + ox, 3 + oy, 3 + ox, 5 + oy, PR_FALSE, 1, onePixel);
-  PaintLine(aRenderingContext, 4 + ox, 2 + oy, 4 + ox, 4 + oy, PR_FALSE, 1, onePixel);
-  PaintLine(aRenderingContext, 5 + ox, 1 + oy, 5 + ox, 3 + oy, PR_FALSE, 1, onePixel);
-  PaintLine(aRenderingContext, 6 + ox, 0 + oy, 6 + ox, 2 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 0 + ox, 2 + oy, 0 + ox, 4 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 1 + ox, 3 + oy, 1 + ox, 5 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 2 + ox, 4 + oy, 2 + ox, 6 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 3 + ox, 3 + oy, 3 + ox, 5 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 4 + ox, 2 + oy, 4 + ox, 4 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 5 + ox, 1 + oy, 5 + ox, 3 + oy, PR_FALSE, 1, onePixel);
+  PaintLine(aDrawable, 6 + ox, 0 + oy, 6 + ox, 2 + oy, PR_FALSE, 1, onePixel);
 }
 
 void
-nsFormControlHelper::PaintFixedSizeCheckMarkBorder(nsIRenderingContext& aRenderingContext,
-                         float aPixelsToTwips, const nsStyleColor& aBackgroundColor)
+nsFormControlHelper::PaintFixedSizeCheckMarkBorder(nsIDrawable* aDrawable,
+                                                   float aPixelsToTwips,
+                                                   const nsStyleColor& aBackgroundColor)
 {
     // Offsets to x,y location
   PRUint32 ox = 0;
@@ -914,28 +924,27 @@ nsFormControlHelper::PaintFixedSizeCheckMarkBorder(nsIRenderingContext& aRenderi
   nscoord twelvePixels = NSIntPixelsToTwips(12, aPixelsToTwips);
 
     // Draw Background
-  aRenderingContext.SetColor(aBackgroundColor.mColor);
-  nsRect rect(0, 0, twelvePixels, twelvePixels);
-  aRenderingContext.FillRect(rect);
+  aDrawable->SetForegroundColor(aBackgroundColor.mColor);
+  aDrawable->FillRectangle(0, 0, twelvePixels, twelvePixels);
 
     // Draw Border
-  aRenderingContext.SetColor(NS_RGB(128, 128, 128));
-  PaintLine(aRenderingContext, 0 + ox, 0 + oy, 11 + ox, 0 + oy, PR_TRUE, 1, onePixel);
-  PaintLine(aRenderingContext, 0 + ox, 0 + oy, 0 + ox, 11 + oy, PR_FALSE, 1, onePixel);
+  aDrawable->SetForegroundColor(NS_RGB(128, 128, 128));
+  PaintLine(aDrawable, 0 + ox, 0 + oy, 11 + ox, 0 + oy, PR_TRUE, 1, onePixel);
+  PaintLine(aDrawable, 0 + ox, 0 + oy, 0 + ox, 11 + oy, PR_FALSE, 1, onePixel);
 
-  aRenderingContext.SetColor(NS_RGB(192, 192, 192));
-  PaintLine(aRenderingContext, 1 + ox, 11 + oy, 11 + ox, 11 + oy, PR_TRUE, 1, onePixel);
-  PaintLine(aRenderingContext, 11 + ox, 1 + oy, 11 + ox, 11 + oy, PR_FALSE, 1, onePixel);
+  aDrawable->SetForegroundColor(NS_RGB(192, 192, 192));
+  PaintLine(aDrawable, 1 + ox, 11 + oy, 11 + ox, 11 + oy, PR_TRUE, 1, onePixel);
+  PaintLine(aDrawable, 11 + ox, 1 + oy, 11 + ox, 11 + oy, PR_FALSE, 1, onePixel);
 
-  aRenderingContext.SetColor(NS_RGB(0, 0, 0));
-  PaintLine(aRenderingContext, 1 + ox, 1 + oy, 10 + ox, 1 + oy, PR_TRUE, 1, onePixel);
-  PaintLine(aRenderingContext, 1 + ox, 1 + oy, 1 + ox, 10 + oy, PR_FALSE, 1, onePixel);
+  aDrawable->SetForegroundColor(NS_RGB(0, 0, 0));
+  PaintLine(aDrawable, 1 + ox, 1 + oy, 10 + ox, 1 + oy, PR_TRUE, 1, onePixel);
+  PaintLine(aDrawable, 1 + ox, 1 + oy, 1 + ox, 10 + oy, PR_FALSE, 1, onePixel);
 
 }
 
 //Draw a checkmark in any size.
 void
-nsFormControlHelper::PaintCheckMark(nsIRenderingContext& aRenderingContext,
+nsFormControlHelper::PaintCheckMark(nsIDrawable* aDrawable,
                                     float aPixelsToTwips, const nsRect & aRect)
 {
  // Width and height of the fixed size checkmark in TWIPS.
@@ -945,7 +954,7 @@ nsFormControlHelper::PaintCheckMark(nsIRenderingContext& aRenderingContext,
   if ((fixedSizeCheckmarkWidth == aRect.width)  &&
       (fixedSizeCheckmarkHeight == aRect.height)) {
       // Standard size, so draw a fixed size check mark instead of a scaled check mark.
-      PaintFixedSizeCheckMark(aRenderingContext, aPixelsToTwips);
+      PaintFixedSizeCheckMark(aDrawable, aPixelsToTwips);
     return;
   }
 
@@ -978,13 +987,14 @@ nsFormControlHelper::PaintCheckMark(nsIRenderingContext& aRenderingContext,
     checkedPolygon[polyIndex].y = nscoord((((checkedPolygonDef[defIndex]) - centery) * (size)) + (aRect.height / 2) + aRect.y);
     polyIndex++;
   }
-  
-  aRenderingContext.FillPolygon(checkedPolygon, checkpoints);
+
+  const nsPoint *pts = checkedPolygon;
+  aDrawable->FillPolygon(&pts, checkpoints);
 }
 
 void
-nsFormControlHelper::PaintFocus(nsIRenderingContext& aRenderingContext,
-                            const nsRect& aDirtyRect, nsRect& aInside, nsRect& aOutside)
+nsFormControlHelper::PaintFocus(nsIDrawable* aDrawable,
+                                const nsRect& aDirtyRect, nsRect& aInside, nsRect& aOutside)
                       
 {
       // draw dashed line to indicate selection, XXX don't calc rect every time
@@ -995,71 +1005,72 @@ nsFormControlHelper::PaintFocus(nsIRenderingContext& aRenderingContext,
       borderStyles[i] = NS_STYLE_BORDER_STYLE_DOTTED;
       borderColors[i] = black;
     }
-    nsCSSRendering::DrawDashedSides(0, aRenderingContext,aDirtyRect, borderStyles, borderColors, aOutside,
+    nsCSSRendering::DrawDashedSides(0, aDrawable,aDirtyRect, borderStyles, borderColors, aOutside,
                                     aInside, PR_FALSE, nsnull);
 }
 
 
 void 
 nsFormControlHelper::PaintRectangularButton(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
-                            const nsRect& aDirtyRect, const nsRect& aRect, 
-                            PRBool aPressed, 
-                            PRBool aShowFocus, 
-                            PRBool aDisabled,
-                            PRBool aDrawOutline,
-                            nsIStyleContext* outlineStyle,
-                            nsIStyleContext* focusStyle,
-                            nsIStyleContext* aStyleContext, 
-                            nsString& aLabel, 
-                            nsIFrame* aForFrame)
+                                            nsIDrawable* aDrawable,
+                                            const nsRect& aDirtyRect,
+                                            const nsRect& aRect, 
+                                            PRBool aPressed, 
+                                            PRBool aShowFocus, 
+                                            PRBool aDisabled,
+                                            PRBool aDrawOutline,
+                                            nsIStyleContext* outlineStyle,
+                                            nsIStyleContext* focusStyle,
+                                            nsIStyleContext* aStyleContext, 
+                                            nsString& aLabel, 
+                                            nsIFrame* aForFrame)
                           
 {
-    nsIFormControlFrame * formFrame;
-    nsresult result = aForFrame->QueryInterface(kIFormControlFrameIID, (void**)&formFrame);
-    if (NS_OK != result) {
-      NS_RELEASE(formFrame);
-    }
+  nsIFormControlFrame * formFrame;
+  nsresult result = aForFrame->QueryInterface(kIFormControlFrameIID, (void**)&formFrame);
+  if (NS_OK != result) {
+    NS_RELEASE(formFrame);
+  }
 
-    aRenderingContext.PushState();
-     // Draw border using CSS
-     // Get the Scrollbar's Arrow's Style structs
-    const nsStyleSpacing* spacing =
+  // XXX pav
+  //  aRenderingContext.PushState();
+  // Draw border using CSS
+  // Get the Scrollbar's Arrow's Style structs
+  const nsStyleSpacing* spacing =
     (const nsStyleSpacing*)aStyleContext->GetStyleData(eStyleStruct_Spacing);
-    const nsStyleColor* color =
+  const nsStyleColor* color =
     (const nsStyleColor*)aStyleContext->GetStyleData(eStyleStruct_Color);
 
-	
-    nsRect rect(aRect.x, aRect.y, aRect.width, aRect.height);
+  nsRect rect(aRect.x, aRect.y, aRect.width, aRect.height);
 
-	const nsStyleSpacing* outline = (const nsStyleSpacing*)outlineStyle->GetStyleData(eStyleStruct_Spacing);
-  	const nsStyleSpacing* focus = (const nsStyleSpacing*)focusStyle->GetStyleData(eStyleStruct_Spacing);
+  const nsStyleSpacing* outline = (const nsStyleSpacing*)outlineStyle->GetStyleData(eStyleStruct_Spacing);
+  const nsStyleSpacing* focus = (const nsStyleSpacing*)focusStyle->GetStyleData(eStyleStruct_Spacing);
  
-	nsMargin outlineBorder;
-    outline->CalcBorderFor(aForFrame, outlineBorder);
+  nsMargin outlineBorder;
+  outline->CalcBorderFor(aForFrame, outlineBorder);
 
- 	nsMargin focusBorder;
-    focus->CalcBorderFor(aForFrame, focusBorder);
+  nsMargin focusBorder;
+  focus->CalcBorderFor(aForFrame, focusBorder);
 
-	int left = (focusBorder.left > outlineBorder.left) ? focusBorder.left : outlineBorder.left;
-	int right = (focusBorder.right > outlineBorder.right) ? focusBorder.right : outlineBorder.right;
-	int top = (focusBorder.top > outlineBorder.top) ? focusBorder.top : outlineBorder.top;
-	int bottom = (focusBorder.bottom > outlineBorder.bottom) ? focusBorder.bottom : outlineBorder.bottom;
+  int left = (focusBorder.left > outlineBorder.left) ? focusBorder.left : outlineBorder.left;
+  int right = (focusBorder.right > outlineBorder.right) ? focusBorder.right : outlineBorder.right;
+  int top = (focusBorder.top > outlineBorder.top) ? focusBorder.top : outlineBorder.top;
+  int bottom = (focusBorder.bottom > outlineBorder.bottom) ? focusBorder.bottom : outlineBorder.bottom;
 
-	if (aShowFocus) {
-		int l = left - focusBorder.left;
-		int t = top - focusBorder.top;
-		int b = bottom - focusBorder.bottom;
-		int r = right - focusBorder.right;
+  if (aShowFocus) {
+    int l = left - focusBorder.left;
+    int t = top - focusBorder.top;
+    int b = bottom - focusBorder.bottom;
+    int r = right - focusBorder.right;
 
-		int w = aRect.width - (l + r);
-		int h = aRect.height - (t + b);
+    int w = aRect.width - (l + r);
+    int h = aRect.height - (t + b);
 
-		nsRect focusRect(l, t, w, h);
+    nsRect focusRect(l, t, w, h);
 
-		nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aForFrame,
-								   aDirtyRect, focusRect, *focus, aStyleContext, 0);
-	} 
+    nsCSSRendering::PaintBorder(aPresContext, aDrawable, aForFrame,
+                                aDirtyRect, focusRect, *focus, aStyleContext, 0);
+  }
 	
 	if (aDrawOutline) {
 		int l = left - outlineBorder.left;
@@ -1072,8 +1083,8 @@ nsFormControlHelper::PaintRectangularButton(nsIPresContext* aPresContext,
 
 		nsRect outlineRect(l, t, w, h);
 
-		nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aForFrame,
-								   aDirtyRect, outlineRect, *outline, aStyleContext, 0);
+		nsCSSRendering::PaintBorder(aPresContext, aDrawable, aForFrame,
+                                aDirtyRect, outlineRect, *outline, aStyleContext, 0);
 	}
 
 	rect.x += left;
@@ -1081,25 +1092,25 @@ nsFormControlHelper::PaintRectangularButton(nsIPresContext* aPresContext,
 	rect.width -= (left + right);
 	rect.height -= (top + bottom);
 
-	nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, aForFrame,
-                                    aDirtyRect, rect,  *color, *spacing, 0, 0);
-    nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aForFrame,
-                               aDirtyRect, rect, *spacing,aStyleContext, 0);
+	nsCSSRendering::PaintBackground(aPresContext, aDrawable, aForFrame,
+                                  aDirtyRect, rect,  *color, *spacing, 0, 0);
+  nsCSSRendering::PaintBorder(aPresContext, aDrawable, aForFrame,
+                              aDirtyRect, rect, *spacing,aStyleContext, 0);
 
-    nsMargin border;
-    spacing->CalcBorderFor(aForFrame, border);
+  nsMargin border;
+  spacing->CalcBorderFor(aForFrame, border);
 
 
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nscoord onePixel = NSIntPixelsToTwips(1, p2t);
+  float p2t;
+  aPresContext->GetScaledPixelsToTwips(&p2t);
+  nscoord onePixel = NSIntPixelsToTwips(1, p2t);
 
-    nsRect outside(aRect.x, aRect.y, aRect.width, aRect.height);
-    outside.Deflate(border);
-    outside.Deflate(onePixel, onePixel);
+  nsRect outside(aRect.x, aRect.y, aRect.width, aRect.height);
+  outside.Deflate(border);
+  outside.Deflate(onePixel, onePixel);
 
-    nsRect inside(outside);
-    inside.Deflate(onePixel, onePixel);
+  nsRect inside(outside);
+  inside.Deflate(onePixel, onePixel);
 
 /*
     if (aShowFocus) { 
@@ -1108,57 +1119,68 @@ nsFormControlHelper::PaintRectangularButton(nsIPresContext* aPresContext,
     }
 	*/
 
-	aRenderingContext.SetColor(NS_RGB(255,255,255));
+	aDrawable->SetForegroundColor(NS_RGB(255,255,255));
 
-    float appUnits;
-    float devUnits;
-    float scale;
-    nsIDeviceContext * context;
-    aRenderingContext.GetDeviceContext(context);
+  float appUnits;
+  float devUnits;
+  float scale;
 
-    context->GetCanonicalPixelScale(scale);
-    context->GetAppUnitsToDevUnits(devUnits);
-    context->GetDevUnitsToAppUnits(appUnits);
+  // XXX pav
+#if 0
+  nsIDeviceContext * context;
+  aRenderingContext.GetDeviceContext(context);
 
-    const nsFont * font = nsnull;
-    nsresult res = formFrame->GetFont(aPresContext, font);
-    if (NS_SUCCEEDED(res) && font != nsnull) {
-      aRenderingContext.SetFont(*font);
-    }
+  context->GetCanonicalPixelScale(scale);
+  context->GetAppUnitsToDevUnits(devUnits);
+  context->GetDevUnitsToAppUnits(appUnits);
+  NS_RELEASE(context);
+#endif
 
-    nscoord ascent;
-    nscoord descent;
+  const nsFont * font = nsnull;
+  nsresult res = formFrame->GetFont(aPresContext, font);
+  if (NS_SUCCEEDED(res) && font != nsnull) {
+    aDrawable->SetFont(font);
+  }
+
+  nscoord ascent;
+  nscoord descent;
   
-    nscoord textWidth;
-    nscoord textHeight;
-    aRenderingContext.GetWidth(aLabel, textWidth);
+  nscoord textWidth;
+  nscoord textHeight;
 
-    nsIFontMetrics* metrics;
-    context->GetMetricsFor(*font, metrics);
-    metrics->GetMaxAscent(ascent);
-    metrics->GetMaxDescent(descent);
-    textHeight = ascent + descent;
+  // XXX pav
+  nsCOMPtr<nsIFontMetrics> metrics;
+  aDrawable->GetFontMetrics(getter_AddRefs(metrics));
 
-    nscoord x = ((inside.width  - textWidth) / 2)  + inside.x;
-    nscoord y = ((inside.height - textHeight) / 2) + inside.y;
-    if (PR_TRUE == aPressed) {
-      x += onePixel;
-      y += onePixel;
-    }
+  metrics->GetStringWidth(aLabel.GetUnicode(), aLabel.Length(), &textWidth);
+
+#if 0
+  context->GetMetricsFor(*font, getter_AddRefs(metrics));
+#endif
+  metrics->GetMaxAscent(&ascent);
+  metrics->GetMaxDescent(&descent);
+  textHeight = ascent + descent;
+
+  nscoord x = ((inside.width  - textWidth) / 2)  + inside.x;
+  nscoord y = ((inside.height - textHeight) / 2) + inside.y;
+  if (PR_TRUE == aPressed) {
+    x += onePixel;
+    y += onePixel;
+  }
 
 	if (aDisabled) {
-	   aRenderingContext.SetColor(NS_RGB(255,255,255));
-       aRenderingContext.DrawString(aLabel, x+onePixel, y+onePixel);
+    aDrawable->SetForegroundColor(NS_RGB(255,255,255));
+    aDrawable->DrawString(aLabel.GetUnicode(), aLabel.Length(), x+onePixel, y+onePixel);
 	}
 
-	aRenderingContext.SetColor(color->mColor);
-    aRenderingContext.DrawString(aLabel, x, y);
+	aDrawable->SetForegroundColor(color->mColor);
+  aDrawable->DrawString(aLabel.GetUnicode(), aLabel.Length(), x, y);
 
-    NS_RELEASE(context);
-    PRBool clipEmpty;
-    aRenderingContext.PopState(clipEmpty);
+  // XXX pav
+  //  PRBool clipEmpty;
+  //  aRenderingContext.PopState(clipEmpty);
 
-    NS_RELEASE(formFrame);
+  NS_RELEASE(formFrame);
 }
 
 
@@ -1174,7 +1196,7 @@ nsFormControlHelper::GetCircularRect(PRUint32 aWidth, PRUint32 aHeight, nsRect& 
 
 void
 nsFormControlHelper::PaintCircularBackground(nsIPresContext* aPresContext,
-                         nsIRenderingContext& aRenderingContext,
+                         nsIDrawable* aDrawable,
                          const nsRect& aDirtyRect, nsIStyleContext* aStyleContext, PRBool aInset,
                          nsIFrame* aForFrame, PRUint32 aWidth, PRUint32 aHeight)
 {
@@ -1188,10 +1210,10 @@ nsFormControlHelper::PaintCircularBackground(nsIPresContext* aPresContext,
   outside.Deflate(onePixel, onePixel);
   outside.Deflate(onePixel, onePixel);
   const nsStyleColor* color = (const nsStyleColor*)
-     aStyleContext->GetStyleData(eStyleStruct_Color);
-  aRenderingContext.SetColor(color->mBackgroundColor);
-  aRenderingContext.FillArc(outside, 0, 180);
-  aRenderingContext.FillArc(outside, 180, 360);
+    aStyleContext->GetStyleData(eStyleStruct_Color);
+  aDrawable->SetForegroundColor(color->mBackgroundColor);
+  aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 0, 180);
+  aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 180, 360);
 }
 
 //XXX: TODO Remove this. It is no longer needed since circular borders
@@ -1199,14 +1221,15 @@ nsFormControlHelper::PaintCircularBackground(nsIPresContext* aPresContext,
 //to 1/2 the width of the border
 void
 nsFormControlHelper::PaintCircularBorder(nsIPresContext* aPresContext,
-                         nsIRenderingContext& aRenderingContext,
+                         nsIDrawable* aDrawable,
                          const nsRect& aDirtyRect, nsIStyleContext* aStyleContext, PRBool aInset,
                          nsIFrame* aForFrame, PRUint32 aWidth, PRUint32 aHeight)
 {
   const PRUint32 standardWidth = 180;
   const PRUint32 standardHeight = 180;
 
-  aRenderingContext.PushState();
+  // XXX pav
+  //  aRenderingContext.PushState();
 
   float p2t;
   aPresContext->GetScaledPixelsToTwips(&p2t);
@@ -1227,9 +1250,9 @@ nsFormControlHelper::PaintCircularBorder(nsIPresContext* aPresContext,
     if (PR_TRUE == aInset) {
       outside.Deflate(onePixel, onePixel);
       outside.Deflate(onePixel, onePixel);
-      aRenderingContext.SetColor(NS_RGB(192,192,192));
-      aRenderingContext.FillArc(outside, 0, 180);
-      aRenderingContext.FillArc(outside, 180, 360);
+      aDrawable->SetForegroundColor(NS_RGB(192,192,192));
+      aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 0, 180);
+      aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 180, 360);
       outside.SetRect(0, 0, twelvePixels, twelvePixels);
     }
 
@@ -1237,37 +1260,37 @@ nsFormControlHelper::PaintCircularBorder(nsIPresContext* aPresContext,
 //    PRUint8 borderStyle = aBorderStyle.GetBorderStyle(NS_SIDE_TOP),
 //    nscolor borderColor = aBorderStyle.GetBorderColor(NS_SIDE_TOP),
 		
-    aRenderingContext.SetColor(NS_RGB(128,128,128));
-//    aRenderingContext.SetColor(borderColor);
-    PaintLine(aRenderingContext, 4, 0, 7, 0, PR_TRUE, 1, onePixel);
-    PaintLine(aRenderingContext, 2, 1, 3, 1, PR_TRUE, 1, onePixel);
-    PaintLine(aRenderingContext, 8, 1, 9, 1, PR_TRUE, 1, onePixel);
+    aDrawable->SetForegroundColor(NS_RGB(128,128,128));
+//    aDrawable.SetForegroundColor(borderColor);
+    PaintLine(aDrawable, 4, 0, 7, 0, PR_TRUE, 1, onePixel);
+    PaintLine(aDrawable, 2, 1, 3, 1, PR_TRUE, 1, onePixel);
+    PaintLine(aDrawable, 8, 1, 9, 1, PR_TRUE, 1, onePixel);
 
-    PaintLine(aRenderingContext, 1, 2, 1, 3, PR_FALSE, 1, onePixel);
-    PaintLine(aRenderingContext, 0, 4, 0, 7, PR_FALSE, 1, onePixel);
-    PaintLine(aRenderingContext, 1, 8, 1, 9, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 1, 2, 1, 3, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 0, 4, 0, 7, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 1, 8, 1, 9, PR_FALSE, 1, onePixel);
 
     // Black
 //    nscolor borderColor = aBorderStyle.GetBorderColor(NS_SIDE_BOTTOM);
-//    aRenderingContext.SetColor(borderColor);
-    aRenderingContext.SetColor(NS_RGB(0,0,0));
-    PaintLine(aRenderingContext, 4, 1, 7, 1, PR_TRUE, 1, onePixel);
-    PaintLine(aRenderingContext, 2, 2, 3, 2, PR_TRUE, 1, onePixel);
-    PaintLine(aRenderingContext, 8, 2, 9, 2, PR_TRUE, 1, onePixel);
+//    aDrawable->SetForegroundColor(borderColor);
+    aDrawable->SetForegroundColor(NS_RGB(0,0,0));
+    PaintLine(aDrawable, 4, 1, 7, 1, PR_TRUE, 1, onePixel);
+    PaintLine(aDrawable, 2, 2, 3, 2, PR_TRUE, 1, onePixel);
+    PaintLine(aDrawable, 8, 2, 9, 2, PR_TRUE, 1, onePixel);
 
-    PaintLine(aRenderingContext, 2, 2, 2, 3, PR_FALSE, 1, onePixel);
-    PaintLine(aRenderingContext, 1, 4, 1, 7, PR_FALSE, 1, onePixel);
-    PaintLine(aRenderingContext, 2, 8, 2, 8, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 2, 2, 2, 3, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 1, 4, 1, 7, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 2, 8, 2, 8, PR_FALSE, 1, onePixel);
 
     // Gray
-    aRenderingContext.SetColor(NS_RGB(192, 192, 192));
-    PaintLine(aRenderingContext, 2, 9, 3, 9, PR_TRUE, 1, onePixel);
-    PaintLine(aRenderingContext, 8, 9, 9, 9, PR_TRUE, 1, onePixel);
-    PaintLine(aRenderingContext, 4, 10, 7, 10, PR_TRUE, 1, onePixel);
+    aDrawable->SetForegroundColor(NS_RGB(192, 192, 192));
+    PaintLine(aDrawable, 2, 9, 3, 9, PR_TRUE, 1, onePixel);
+    PaintLine(aDrawable, 8, 9, 9, 9, PR_TRUE, 1, onePixel);
+    PaintLine(aDrawable, 4, 10, 7, 10, PR_TRUE, 1, onePixel);
 
-    PaintLine(aRenderingContext, 9, 3, 9, 3, PR_FALSE, 1, onePixel);
-    PaintLine(aRenderingContext, 10, 4, 10, 7, PR_FALSE, 1, onePixel);
-    PaintLine(aRenderingContext, 9, 8, 9, 9, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 9, 3, 9, 3, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 10, 4, 10, 7, PR_FALSE, 1, onePixel);
+    PaintLine(aDrawable, 9, 8, 9, 9, PR_FALSE, 1, onePixel);
 
     outside.Deflate(onePixel, onePixel);
     outside.Deflate(onePixel, onePixel);
@@ -1276,22 +1299,23 @@ nsFormControlHelper::PaintCircularBorder(nsIPresContext* aPresContext,
   } else {
     nsFormControlHelper::GetCircularRect(aWidth, aHeight, outside);
     
-    aRenderingContext.SetColor(NS_RGB(128,128,128));
-    aRenderingContext.FillArc(outside, 46, 225);
-    aRenderingContext.SetColor(NS_RGB(255,255,255));
-    aRenderingContext.FillArc(outside, 225, 360);
-    aRenderingContext.FillArc(outside, 0, 44);
+    aDrawable->SetForegroundColor(NS_RGB(128,128,128));
+    aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 46, 225);
+    aDrawable->SetForegroundColor(NS_RGB(255,255,255));
+    aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 225, 360);
+    aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 0, 44);
 
     outside.Deflate(onePixel, onePixel);
-    aRenderingContext.SetColor(NS_RGB(0,0,0));
-    aRenderingContext.FillArc(outside, 46, 225);
-    aRenderingContext.SetColor(NS_RGB(192,192,192));
-    aRenderingContext.FillArc(outside, 225, 360);
-    aRenderingContext.FillArc(outside, 0, 44);
+    aDrawable->SetForegroundColor(NS_RGB(0,0,0));
+    aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 46, 225);
+    aDrawable->SetForegroundColor(NS_RGB(192,192,192));
+    aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 225, 360);
+    aDrawable->FillArc(outside.x, outside.y, outside.width, outside.height, 0, 44);
   }
 
-  PRBool clip;
-  aRenderingContext.PopState(clip);
+  // XXX pav
+  //  PRBool clip;
+  //  aRenderingContext.PopState(clip);
 }
 
 

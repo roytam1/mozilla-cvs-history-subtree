@@ -25,7 +25,6 @@
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsIReflowCommand.h"
-#include "nsIDeviceContext.h"
 #include "nsPageFrame.h"
 #include "nsViewsCID.h"
 #include "nsIView.h"
@@ -123,8 +122,8 @@ nsScrollFrame::GetScrolledFrame(nsIPresContext* aPresContext, nsIFrame *&aScroll
 
 NS_IMETHODIMP
 nsScrollFrame::GetClipSize(   nsIPresContext* aPresContext, 
-                              nscoord *aWidth, 
-                              nscoord *aHeight) const
+                              gfx_width *aWidth, 
+                              gfx_height *aHeight) const
 {
     nsIScrollableView* scrollingView;
     nsIView*           view;
@@ -188,16 +187,23 @@ nsScrollFrame::GetScrollPreference(nsIPresContext* aPresContext, nsScrollPref* a
 */
 NS_IMETHODIMP
 nsScrollFrame::GetScrollbarSizes(nsIPresContext* aPresContext, 
-                             nscoord *aVbarWidth, 
-                             nscoord *aHbarHeight) const
+                                 nscoord *aVbarWidth, 
+                                 nscoord *aHbarHeight) const
 {
-  float             sbWidth, sbHeight;
+  float sbWidth, sbHeight;
+
+
+#if 0
+  // XXX pav nsISystemLook
   nsCOMPtr<nsIDeviceContext> dc;
   aPresContext->GetDeviceContext(getter_AddRefs(dc));
 
   dc->GetScrollBarDimensions(sbWidth, sbHeight);
   *aVbarWidth = NSToCoordRound(sbWidth);
   *aHbarHeight = NSToCoordRound(sbHeight);
+#endif
+
+
   return NS_OK;
 }
 
@@ -940,7 +946,7 @@ nsScrollFrame::Reflow(nsIPresContext*          aPresContext,
 
 NS_IMETHODIMP
 nsScrollFrame::Paint(nsIPresContext*      aPresContext,
-                     nsIRenderingContext& aRenderingContext,
+                     nsIDrawable*         aDrawable,
                      const nsRect&        aDirtyRect,
                      nsFramePaintLayer    aWhichLayer)
 {
@@ -955,19 +961,19 @@ nsScrollFrame::Paint(nsIPresContext*      aPresContext,
         mStyleContext->GetStyleData(eStyleStruct_Spacing);
 
       nsRect  rect(0, 0, mRect.width, mRect.height);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, 0);
-      nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintOutline(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, 0);
     }
   }
 
   // Paint our children
-  nsresult rv = nsContainerFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
-                                 aWhichLayer);
+  nsresult rv = nsContainerFrame::Paint(aPresContext, aDrawable, aDirtyRect,
+                                        aWhichLayer);
   if (NS_FAILED(rv)) return rv;
   
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 NS_IMETHODIMP

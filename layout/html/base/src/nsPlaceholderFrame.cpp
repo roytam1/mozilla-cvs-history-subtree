@@ -24,7 +24,7 @@
 #include "nsHTMLIIDs.h"
 #include "nsIContent.h"
 #include "nsIPresContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIStyleContext.h"
 #include "nsLayoutAtoms.h"
 
@@ -75,20 +75,20 @@ nsPlaceholderFrame::GetFrameType(nsIAtom** aType) const
 #ifdef DEBUG
 NS_IMETHODIMP
 nsPlaceholderFrame::Paint(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable* aDrawable,
                           const nsRect& aDirtyRect,
                           nsFramePaintLayer aWhichLayer)
 {
   if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
     float p2t;
     aPresContext->GetPixelsToTwips(&p2t);
-    aRenderingContext.SetColor(NS_RGB(0, 255, 255));
+    aDrawable->SetForegroundColor(NS_RGB(0, 255, 255));
     nscoord x = NSIntPixelsToTwips(-5, p2t);
-    aRenderingContext.FillRect(x, 0, NSIntPixelsToTwips(13, p2t),
-                               NSIntPixelsToTwips(3, p2t));
+    aDrawable->FillRectangle(x, 0, NSIntPixelsToTwips(13, p2t),
+                             NSIntPixelsToTwips(3, p2t));
     nscoord y = NSIntPixelsToTwips(-10, p2t);
-    aRenderingContext.FillRect(0, y, NSIntPixelsToTwips(3, p2t),
-                               NSIntPixelsToTwips(10, p2t));
+    aDrawable->FillRectangle(0, y, NSIntPixelsToTwips(3, p2t),
+                             NSIntPixelsToTwips(10, p2t));
   }
   return NS_OK;
 }

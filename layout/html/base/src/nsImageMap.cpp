@@ -22,7 +22,7 @@
 #include "nsImageMap.h"
 #include "nsString.h"
 #include "nsVoidArray.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresContext.h"
 #include "nsIURL.h"
 #include "nsIURL.h"
@@ -57,7 +57,7 @@ public:
 
   virtual PRBool IsInside(nscoord x, nscoord y) = 0;
   virtual void Draw(nsIPresContext* aCX,
-                    nsIRenderingContext& aRC) = 0;
+                    nsIDrawable *aDrawable) = 0;
   virtual void GetRect(nsIPresContext* aCX, nsRect& aRect) = 0;
   virtual void GetShapeName(nsString& aResult) const = 0;
 
@@ -371,7 +371,7 @@ public:
 
   virtual PRBool IsInside(nscoord x, nscoord y);
   virtual void Draw(nsIPresContext* aCX,
-                    nsIRenderingContext& aRC);
+                    nsIDrawable*    aDrawable);
   virtual void GetRect(nsIPresContext* aCX, nsRect& aRect);
   virtual void GetShapeName(nsString& aResult) const;
 };
@@ -390,7 +390,7 @@ PRBool DefaultArea::IsInside(nscoord x, nscoord y)
   return PR_TRUE;
 }
 
-void DefaultArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
+void DefaultArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
 }
 
@@ -412,7 +412,7 @@ public:
 
   virtual PRBool IsInside(nscoord x, nscoord y);
   virtual void Draw(nsIPresContext* aCX,
-                    nsIRenderingContext& aRC);
+                    nsIDrawable* aDrawable);
   virtual void GetRect(nsIPresContext* aCX, nsRect& aRect);
   virtual void GetShapeName(nsString& aResult) const;
 };
@@ -444,7 +444,7 @@ PRBool RectArea::IsInside(nscoord x, nscoord y)
   return PR_FALSE;
 }
 
-void RectArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
+void RectArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   if (mHasFocus) {
     if (mNumCoords >= 4) {
@@ -457,10 +457,10 @@ void RectArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
       if ((x1 > x2)|| (y1 > y2)) {
         return;
       }
-      aRC.DrawLine(x1, y1, x1, y2);
-      aRC.DrawLine(x1, y2, x2, y2);
-      aRC.DrawLine(x1, y1, x2, y1);
-      aRC.DrawLine(x2, y1, x2, y2);
+      aDrawable->DrawLine(x1, y1, x1, y2);
+      aDrawable->DrawLine(x1, y2, x2, y2);
+      aDrawable->DrawLine(x1, y1, x2, y1);
+      aDrawable->DrawLine(x2, y1, x2, y2);
     }
   }
 }
@@ -497,7 +497,7 @@ public:
 
   virtual PRBool IsInside(nscoord x, nscoord y);
   virtual void Draw(nsIPresContext* aCX,
-                    nsIRenderingContext& aRC);
+                    nsIDrawable* aDrawable);
   virtual void GetRect(nsIPresContext* aCX, nsRect& aRect);
   virtual void GetShapeName(nsString& aResult) const;
 };
@@ -573,7 +573,7 @@ PRBool PolyArea::IsInside(nscoord x, nscoord y)
   return PR_FALSE;
 }
 
-void PolyArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
+void PolyArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   if (mHasFocus) {
     if (mNumCoords >= 6) {
@@ -585,13 +585,13 @@ void PolyArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
       for (PRInt32 i = 2; i < mNumCoords; i += 2) {
         x1 = NSIntPixelsToTwips(mCoords[i], p2t);
         y1 = NSIntPixelsToTwips(mCoords[i+1], p2t);
-        aRC.DrawLine(x0, y0, x1, y1);
+        aDrawable->DrawLine(x0, y0, x1, y1);
         x0 = x1;
         y0 = y1;
       }
       x1 = NSIntPixelsToTwips(mCoords[0], p2t);
       y1 = NSIntPixelsToTwips(mCoords[1], p2t);
-      aRC.DrawLine(x0, y0, x1, y1);
+      aDrawable->DrawLine(x0, y0, x1, y1);
     }
   }
 }
@@ -632,7 +632,7 @@ public:
 
   virtual PRBool IsInside(nscoord x, nscoord y);
   virtual void Draw(nsIPresContext* aCX,
-                    nsIRenderingContext& aRC);
+                    nsIDrawable* aDrawable);
   virtual void GetRect(nsIPresContext* aCX, nsRect& aRect);
   virtual void GetShapeName(nsString& aResult) const;
 };
@@ -666,7 +666,7 @@ PRBool CircleArea::IsInside(nscoord x, nscoord y)
   return PR_FALSE;
 }
 
-void CircleArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
+void CircleArea::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   if (mHasFocus) {
     if (mNumCoords >= 3) {
@@ -681,7 +681,7 @@ void CircleArea::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
       nscoord x = x1 - radius;
       nscoord y = y1 - radius;
       nscoord w = 2 * radius;
-      aRC.DrawEllipse(x, y, w, w);
+      aDrawable->DrawEllipse(x, y, w, w);
     }
   }
 }
@@ -1020,12 +1020,12 @@ nsImageMap::IsInside(nscoord aX, nscoord aY)
 }
 
 void
-nsImageMap::Draw(nsIPresContext* aCX, nsIRenderingContext& aRC)
+nsImageMap::Draw(nsIPresContext* aCX, nsIDrawable* aDrawable)
 {
   PRInt32 i, n = mAreas.Count();
   for (i = 0; i < n; i++) {
     Area* area = (Area*) mAreas.ElementAt(i);
-    area->Draw(aCX, aRC);
+    area->Draw(aCX, aDrawable);
   }
 }
 

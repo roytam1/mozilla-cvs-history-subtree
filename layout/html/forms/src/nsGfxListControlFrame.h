@@ -316,7 +316,7 @@ protected:
   nsresult Deselect();
   nsIFrame *GetOptionFromChild(nsIFrame* aParentFrame);
   PRBool   IsAncestor(nsIView* aAncestor, nsIView* aChild);
-  nsIView* GetViewFor(nsIWidget* aWidget);
+  nsIView* GetViewFor(nsIWindow* aWindow);
   PRBool   IsInDropDownMode();
   PRBool   IsOptionElement(nsIContent* aContent);
   PRBool   IsOptionElementFrame(nsIFrame *aFrame);

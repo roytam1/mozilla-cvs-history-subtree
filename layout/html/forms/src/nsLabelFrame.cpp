@@ -29,7 +29,6 @@
 #include "nsIFormControl.h"
 #include "nsFormFrame.h"
 
-#include "nsIRenderingContext.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIStyleContext.h"
@@ -38,19 +37,15 @@
 #include "nsHTMLIIDs.h"
 #include "nsISupports.h"
 #include "nsHTMLAtoms.h"
-#include "nsIImage.h"
 #include "nsStyleUtil.h"
-#include "nsDOMEvent.h"
 #include "nsIDOMHTMLCollection.h"
 #include "nsStyleConsts.h"
 #include "nsIHTMLAttributes.h"
 #include "nsGenericHTMLElement.h"
-#include "nsIWidget.h"
 #include "nsIComponentManager.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsViewsCID.h"
-#include "nsColor.h"
 #include "nsIDocument.h"
 #include "nsIHTMLDocument.h"
 #include "nsIDOMHTMLAnchorElement.h"
@@ -79,7 +74,7 @@ public:
                   nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -115,7 +110,6 @@ protected:
 
   PRIntn GetSkipSides() const;
   PRBool mInline;
-  nsCursor mPreviousCursor;
   nsMouseState mLastMouseState;
   PRBool mControlIsInside;
   nsIFormControlFrame* mControlFrame;
@@ -149,7 +143,6 @@ nsLabelFrame::nsLabelFrame()
 {
   mInline          = PR_TRUE;
   mLastMouseState  = eMouseNone;
-  mPreviousCursor  = eCursor_standard;
   mControlIsInside = PR_FALSE;
   mControlFrame    = nsnull;
   mTranslatedRect  = nsRect(0,0,0,0);
@@ -461,11 +454,11 @@ nsLabelFrame::SetInitialChildList(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsLabelFrame::Paint(nsIPresContext* aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable* aDrawable,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer)
 {
-  return nsHTMLContainerFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsHTMLContainerFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 // XXX a hack until the reflow state does this correctly

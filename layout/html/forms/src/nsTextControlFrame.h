@@ -91,7 +91,7 @@ public:
   NS_IMETHOD SetProperty(nsIPresContext* aPresContext, nsIAtom* aName, const nsAReadableString& aValue)=0;
   NS_IMETHOD GetProperty(nsIAtom* aName, nsAWritableString& aValue)=0; 
 
-  virtual nsWidgetInitData* GetWidgetInitData(nsIPresContext* aPresContext)=0;
+  virtual void* GetWidgetInitData(nsIPresContext* aPresContext)=0;
 
   NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext,
                               nsIContent*     aChild,

@@ -1,4 +1,3 @@
-
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
@@ -24,7 +23,7 @@
 
 #include "nsCoord.h"
 #include "nsISelectionListener.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsITimer.h"
 #include "nsICaret.h"
 #include "nsWeakPtr.h"
@@ -94,7 +93,7 @@ protected:
     nsWeakPtr             mDomSelectionWeak;
 
     nsCOMPtr<nsITimer>              mBlinkTimer;
-    nsCOMPtr<nsIRenderingContext>   mRendContext;
+    nsCOMPtr<nsIDrawable>   mDrawable;
 
     PRUint32              mBlinkRate;         // time for one cyle (off then on), in milliseconds
     nscoord               mCaretTwipsWidth;   // caret width in twips

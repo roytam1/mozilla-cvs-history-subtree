@@ -29,6 +29,8 @@
 #include "nsIPluginHost.h"
 #include "nsplugin.h"
 
+class nsIWindow;
+class nsIDrawable;
 class nsPluginInstanceOwner;
 
 #define nsObjectFrameSuper nsHTMLContainerFrame
@@ -50,7 +52,7 @@ public:
   NS_IMETHOD DidReflow(nsIPresContext* aPresContext,
                        nsDidReflowStatus aStatus);
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*    aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -122,7 +124,7 @@ private:
   nsPluginInstanceOwner *mInstanceOwner;
   nsIURI                *mFullURL;
   nsIFrame              *mFirstChild;
-  nsIWidget				      *mWidget;
+  nsCOMPtr<nsIWindow>    mWindow;
 };
 
 

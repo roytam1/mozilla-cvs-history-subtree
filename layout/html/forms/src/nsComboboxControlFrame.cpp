@@ -41,8 +41,9 @@
 #include "nsIPresShell.h"
 #include "nsIPresState.h"
 #include "nsISupportsArray.h"
-#include "nsIDeviceContext.h"
 #include "nsIView.h"
+#include "nsIDrawable.h"
+#include "nsIWindow.h"
 #include "nsIScrollableView.h"
 #include "nsIEventStateManager.h"
 #include "nsIDOMNode.h"
@@ -541,7 +542,7 @@ nsComboboxControlFrame::ShowPopup(PRBool aShowPopup)
 void 
 nsComboboxControlFrame::ShowList(nsIPresContext* aPresContext, PRBool aShowList)
 {
-  nsCOMPtr<nsIWidget> widget;
+  nsCOMPtr<nsIWindow> window;
 
   // Get parent view
   nsIFrame * listFrame;
@@ -550,7 +551,7 @@ nsComboboxControlFrame::ShowList(nsIPresContext* aPresContext, PRBool aShowList)
     listFrame->GetView(aPresContext, &view);
     NS_ASSERTION(view != nsnull, "nsComboboxControlFrame view is null");
     if (view) {
-    	view->GetWidget(*getter_AddRefs(widget));
+    	view->GetWidget(*getter_AddRefs(window));
     }
   }
 
@@ -572,8 +573,10 @@ nsComboboxControlFrame::ShowList(nsIPresContext* aPresContext, PRBool aShowList)
   aPresContext->GetShell(getter_AddRefs(presShell));
   presShell->FlushPendingNotifications();
 
-  if (widget)
-    widget->CaptureRollupEvents((nsIRollupListener *)this, mDroppedDown, PR_TRUE);
+  if (window) {
+    // XXX pav
+    //    window->CaptureRollupEvents((nsIRollupListener *)this, mDroppedDown, PR_TRUE);
+  }
 
 }
 
@@ -777,11 +780,15 @@ nsComboboxControlFrame::ReflowItems(nsIPresContext* aPresContext,
   //printf("*****************\n");
   const nsStyleFont* dspFont;
   mDisplayFrame->GetStyleData(eStyleStruct_Font,  (const nsStyleStruct *&)dspFont);
+
+  // XXX pav
+  nsIFontMetrics *fontMet = nsnull;
+#if 0
   nsCOMPtr<nsIDeviceContext> deviceContext;
   aPresContext->GetDeviceContext(getter_AddRefs(deviceContext));
   NS_ASSERTION(deviceContext, "Couldn't get the device context"); 
-  nsIFontMetrics * fontMet;
   deviceContext->GetMetricsFor(dspFont->mFont, fontMet);
+#endif
 
   nscoord visibleHeight;
   //nsCOMPtr<nsIFontMetrics> fontMet;
@@ -1175,6 +1182,10 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
   // that will be the default width of the dropdown button
   // the height will be the height of the text
   nscoord scrollbarWidth = -1;
+
+
+  // XXX pav use nsISystemLook
+#if 0
   nsCOMPtr<nsIDeviceContext> dx;
   aPresContext->GetDeviceContext(getter_AddRefs(dx));
   if (dx) { 
@@ -1192,7 +1203,8 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
     dx->GetCanonicalPixelScale(scale); 
     scrollbarWidth = NSIntPixelsToTwips(info.mSize, p2t*scale);
   }  
-  
+#endif
+
   // set up a new reflow state for use throughout
   nsHTMLReflowState firstPassState(aReflowState);
   nsHTMLReflowMetrics dropdownDesiredSize(nsnull);
@@ -2258,7 +2270,7 @@ nsComboboxControlFrame::Destroy(nsIPresContext* aPresContext)
   nsFormControlFrame::RegUnRegAccessKey(mPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
 
   if (mDroppedDown) {
-    nsCOMPtr<nsIWidget> widget;
+    nsCOMPtr<nsIWindow> window;
     // Get parent view
     nsIFrame * listFrame;
     if (NS_OK == mListControlFrame->QueryInterface(kIFrameIID, (void **)&listFrame)) {
@@ -2266,9 +2278,11 @@ nsComboboxControlFrame::Destroy(nsIPresContext* aPresContext)
       listFrame->GetView(aPresContext, &view);
       NS_ASSERTION(view != nsnull, "nsComboboxControlFrame view is null");
       if (view) {
-    	  view->GetWidget(*getter_AddRefs(widget));
-        if (widget)
-          widget->CaptureRollupEvents((nsIRollupListener *)this, PR_FALSE, PR_TRUE);
+    	  view->GetWidget(*getter_AddRefs(window));
+        if (window) {
+          // XXX pav
+          //widget->CaptureRollupEvents((nsIRollupListener *)this, PR_FALSE, PR_TRUE);
+        }
       }
     }
   }
@@ -2419,7 +2433,7 @@ nsComboboxControlFrame::RestoreState(nsIPresContext* aPresContext, nsIPresState*
 
 NS_METHOD 
 nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable* aDrawable,
                              const nsRect& aDirtyRect,
                              nsFramePaintLayer aWhichLayer)
 {
@@ -2427,7 +2441,7 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
   printf("%p paint layer %d at (%d, %d, %d, %d)\n", this, aWhichLayer, 
     aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
 #endif
-  nsAreaFrame::Paint(aPresContext,aRenderingContext,aDirtyRect,aWhichLayer);
+  nsAreaFrame::Paint(aPresContext,aDrawable,aDirtyRect,aWhichLayer);
 
   //if (mGoodToGo) {
   //  return NS_OK;
@@ -2435,14 +2449,18 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
 
   if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
     if (mDisplayFrame) {
-      aRenderingContext.PushState();
+
+      // XXX pav
+      //      aDrawable->PushState();
       PRBool clipEmpty;
       nsRect clipRect;
       mDisplayFrame->GetRect(clipRect);
-      aRenderingContext.SetClipRect(clipRect, nsClipCombine_kReplace, clipEmpty);
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect, 
+
+      // XXX pav
+      //      aDrawable->SetClipRect(clipRect, nsClipCombine_kReplace, clipEmpty);
+      PaintChild(aPresContext, aDrawable, aDirtyRect, 
                  mDisplayFrame, NS_FRAME_PAINT_LAYER_BACKGROUND);
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect, 
+      PaintChild(aPresContext, aDrawable, aDirtyRect, 
                  mDisplayFrame, NS_FRAME_PAINT_LAYER_FOREGROUND);
 
       /////////////////////
@@ -2452,12 +2470,12 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
       nsresult rv = mPresContext->GetEventStateManager(getter_AddRefs(stateManager));
       if (NS_SUCCEEDED(rv)) {
         if (NS_SUCCEEDED(rv) && !nsFormFrame::GetDisabled(this) && mFocused == this) {
-          aRenderingContext.SetLineStyle(nsLineStyle_kDotted);
-          aRenderingContext.SetColor(0);
+          aDrawable.SetLineStyle(nsLineStyle_kDotted);
+          aDrawable.SetForegroundColor(0);
         } else {
           const nsStyleColor* myColor = (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
-          aRenderingContext.SetColor(myColor->mBackgroundColor);
-          aRenderingContext.SetLineStyle(nsLineStyle_kSolid);
+          aDrawable.SetForegroundColor(myColor->mBackgroundColor);
+          aDrawable.SetLineStyle(nsLineStyle_kSolid);
         }
         //aRenderingContext.DrawRect(clipRect);
         float p2t;
@@ -2477,12 +2495,15 @@ nsComboboxControlFrame::Paint(nsIPresContext* aPresContext,
                                    clipRect.x, clipRect.y);
       }
       /////////////////////
-      aRenderingContext.PopState(clipEmpty);
+
+
+      // XXX pav
+      //      aDrawable->PopState(clipEmpty);
     }
   }
   
   // Call to the base class to draw selection borders when appropriate
-  return nsFrame::Paint(aPresContext,aRenderingContext,aDirtyRect,aWhichLayer);
+  return nsFrame::Paint(aPresContext,aDrawable,aDirtyRect,aWhichLayer);
 }
 
 

@@ -27,7 +27,7 @@
 class nsIFrame;
 class nsIPresContext;
 class nsIReflowCommand;
-class nsIRenderingContext;
+class nsIDrawable;
 class nsISpaceManager;
 class nsLineLayout;
 
@@ -128,8 +128,8 @@ struct nsHTMLReflowState {
   // NS_UNCONSTRAINEDSIZE, and only page mode involves a constrained height
   nscoord              availableWidth, availableHeight;
 
-  // rendering context to use for measurement
-  nsIRenderingContext* rendContext;
+  // drawable to use for measurement
+  nsIDrawable* drawable;
 
   // is the current context at the top of a page?
   PRPackedBool     isTopOfPage;
@@ -222,7 +222,7 @@ struct nsHTMLReflowState {
   nsHTMLReflowState(nsIPresContext*          aPresContext,
                     nsIFrame*                aFrame,
                     nsReflowReason           aReason,
-                    nsIRenderingContext*     aRenderingContext,
+                    nsIDrawable*             aDrawable,
                     const nsSize&            aAvailableSpace);
 
   // Initialize a <b>root</b> reflow state for an <b>incremental</b>
@@ -230,7 +230,7 @@ struct nsHTMLReflowState {
   nsHTMLReflowState(nsIPresContext*          aPresContext,
                     nsIFrame*                aFrame,
                     nsIReflowCommand&        aReflowCommand,
-                    nsIRenderingContext*     aRenderingContext,
+                    nsIDrawable*             aDrawable,
                     const nsSize&            aAvailableSpace);
 
   // Initialize a reflow state for a child frames reflow. Some state
@@ -300,7 +300,7 @@ struct nsHTMLReflowState {
    * the return value will be <0 which is illegal (CSS2 spec: section 10.8.1).
    */
   static nscoord CalcLineHeight(nsIPresContext* aPresContext,
-                                nsIRenderingContext* aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 nsIFrame* aFrame);
 
   static PRBool UseComputedHeight();

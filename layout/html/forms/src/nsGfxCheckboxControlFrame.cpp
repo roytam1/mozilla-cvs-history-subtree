@@ -21,7 +21,6 @@
  */
 
 #include "nsGfxCheckboxControlFrame.h"
-#include "nsICheckButton.h"
 #include "nsHTMLAtoms.h"
 #include "nsHTMLParts.h"
 #include "nsFormFrame.h"
@@ -268,11 +267,12 @@ nsGfxCheckboxControlFrame::InitializeControl(nsIPresContext* aPresContext)
 //------------------------------------------------------------
 void
 nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
-                                         nsIRenderingContext& aRenderingContext,
+                                         nsIDrawable* aDrawable,
                                          const nsRect& aDirtyRect,
                                          nsFramePaintLayer aWhichLayer)
 {
-  aRenderingContext.PushState();
+  // XXX pav
+  //  aRenderingContext.PushState();
 
   float p2t;
   aPresContext->GetScaledPixelsToTwips(&p2t);
@@ -288,7 +288,7 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
 
   const nsStyleColor* color = (const nsStyleColor*)
                                   mStyleContext->GetStyleData(eStyleStruct_Color);
-  aRenderingContext.SetColor(color->mColor);
+  aDrawable->SetForegroundColor(color->mColor);
 
   if ( IsTristateCheckbox() ) {
     // Get current checked state through content model.
@@ -296,11 +296,11 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
     CheckState checked = GetCheckboxState();
     switch ( checked ) {   
       case eOn:
-        nsFormControlHelper::PaintCheckMark(aRenderingContext, p2t, checkRect);
+        nsFormControlHelper::PaintCheckMark(aDrawable, p2t, checkRect);
         break;
 
       case eMixed:
-        PaintMixedMark(aRenderingContext, p2t, checkRect);
+        PaintMixedMark(aDrawable, p2t, checkRect);
         break;
 
 			  // no special drawing otherwise
@@ -315,12 +315,13 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
     PRBool checked = PR_FALSE;
     GetCurrentCheckState(&checked);
     if ( checked ) {
-      nsFormControlHelper::PaintCheckMark(aRenderingContext, p2t, checkRect);
+      nsFormControlHelper::PaintCheckMark(aDrawable, p2t, checkRect);
     }
   }
   
-  PRBool clip;
-  aRenderingContext.PopState(clip);
+  // XXX pav
+  //  PRBool clip;
+  //  aRenderingContext.PopState(clip);
 }
 
 
@@ -332,8 +333,8 @@ nsGfxCheckboxControlFrame::PaintCheckBox(nsIPresContext* aPresContext,
 // bar inside the box. Only used for tri-state checkboxes.
 //
 void
-nsGfxCheckboxControlFrame::PaintMixedMark ( nsIRenderingContext& aRenderingContext,
-                                             float aPixelsToTwips, const nsRect& aRect)
+nsGfxCheckboxControlFrame::PaintMixedMark (nsIDrawable* aDrawable,
+                                           float aPixelsToTwips, const nsRect& aRect)
 {
   const PRUint32 checkpoints = 4;
   const PRUint32 checksize   = 6; //This is value is determined by added 2 units to the end
@@ -363,8 +364,9 @@ nsGfxCheckboxControlFrame::PaintMixedMark ( nsIRenderingContext& aRenderingConte
     checkedPolygon[polyIndex].y = nscoord((((checkedPolygonDef[defIndex]) - centery) * (size)) + (aRect.height / 2) + aRect.y);
     polyIndex++;
   }
-  
-  aRenderingContext.FillPolygon(checkedPolygon, checkpoints);
+
+  const nsPoint *pts = checkedPolygon;
+  aDrawable->FillPolygon(&pts, checkpoints);
 
 } // PaintMixedMark
 
@@ -372,7 +374,7 @@ nsGfxCheckboxControlFrame::PaintMixedMark ( nsIRenderingContext& aRenderingConte
 //------------------------------------------------------------
 NS_METHOD 
 nsGfxCheckboxControlFrame::Paint(nsIPresContext* aPresContext,
-                              nsIRenderingContext& aRenderingContext,
+                              nsIDrawable* aDrawable,
                               const nsRect& aDirtyRect,
                               nsFramePaintLayer aWhichLayer)
 {
@@ -382,7 +384,7 @@ nsGfxCheckboxControlFrame::Paint(nsIPresContext* aPresContext,
     return NS_OK;
 
   // Paint the background
-  nsFormControlFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  nsFormControlFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
     PRBool doDefaultPainting = PR_TRUE;
     // Paint the checkmark 
@@ -403,21 +405,21 @@ nsGfxCheckboxControlFrame::Paint(nsIPresContext* aPresContext,
         nscoord y = (mRect.height - height) / 2;
         nsRect rect(x, y, width, height); 
 
-        nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                           aDirtyRect, rect, *myColor, *mySpacing, 0, 0);
-        nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+        nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                     aDirtyRect, rect, *mySpacing, mCheckButtonFaceStyle, 0);
         doDefaultPainting = PR_FALSE;
       }
     } 
 
     if (doDefaultPainting) {
-      PaintCheckBox(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+      PaintCheckBox(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
     }
   }
   
   // Call to the base class to draw selection borders when appropriate
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 //------------------------------------------------------------

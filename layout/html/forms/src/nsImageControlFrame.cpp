@@ -25,21 +25,15 @@
 #include "nsIFormControlFrame.h"
 #include "nsIFormControl.h"
 #include "nsHTMLParts.h"
-#include "nsIRenderingContext.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIStyleContext.h"
-#include "nsLeafFrame.h"
-#include "nsCSSRendering.h"
 #include "nsHTMLIIDs.h"
 #include "nsIViewManager.h"
 #include "nsISupports.h"
 #include "nsHTMLAtoms.h"
 #include "nsIView.h"
 #include "nsViewsCID.h"
-#include "nsIDeviceContext.h"
-#include "nsIFontMetrics.h"
-#include "nsIImage.h"
 #include "nsStyleUtil.h"
 #include "nsDOMEvent.h"
 #include "nsStyleConsts.h"
@@ -144,7 +138,6 @@ protected:
   nsFormFrame* mFormFrame;
   nsMouseState mLastMouseState;
   nsPoint mLastClickPoint; 
-  nsCursor mPreviousCursor;
   nsRect mTranslatedRect;
   PRBool mGotFocus;
 
@@ -155,7 +148,6 @@ nsImageControlFrame::nsImageControlFrame()
 {
   mLastMouseState = eMouseNone;
   mLastClickPoint = nsPoint(0,0);
-  mPreviousCursor = eCursor_standard;
   mTranslatedRect = nsRect(0,0,0,0);
   mGotFocus       = PR_FALSE;
   mFormFrame      = nsnull;

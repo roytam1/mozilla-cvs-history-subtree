@@ -20,7 +20,7 @@
  * Contributor(s): 
  */
 #include "nsButtonFrameRenderer.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsCSSRendering.h"
 #include "nsIPresContext.h"
 #include "nsGenericHTMLElement.h"
@@ -108,24 +108,24 @@ nsButtonFrameRenderer::Redraw(nsIPresContext* aPresContext)
 }
 
 void 
-nsButtonFrameRenderer::PaintButton     (nsIPresContext* aPresContext,
-          nsIRenderingContext& aRenderingContext,
-          const nsRect& aDirtyRect,
-          nsFramePaintLayer aWhichLayer,
-          const nsRect& aRect)
+nsButtonFrameRenderer::PaintButton(nsIPresContext* aPresContext,
+                                   nsIDrawable* aDrawable,
+                                   const nsRect& aDirtyRect,
+                                   nsFramePaintLayer aWhichLayer,
+                                   const nsRect& aRect)
 {
   //printf("painted width='%d' height='%d'\n",aRect.width, aRect.height);
 
   // draw the border and background inside the focus and outline borders
-  PaintBorderAndBackground(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer, aRect);
+  PaintBorderAndBackground(aPresContext, aDrawable, aDirtyRect, aWhichLayer, aRect);
 
   // draw the focus and outline borders
-  PaintOutlineAndFocusBorders(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer, aRect);
+  PaintOutlineAndFocusBorders(aPresContext, aDrawable, aDirtyRect, aWhichLayer, aRect);
 }
 
 void
 nsButtonFrameRenderer::PaintOutlineAndFocusBorders(nsIPresContext* aPresContext,
-          nsIRenderingContext& aRenderingContext,
+          nsIDrawable* aDrawable,
           const nsRect& aDirtyRect,
           nsFramePaintLayer aWhichLayer,
           const nsRect& aRect)
@@ -146,7 +146,7 @@ nsButtonFrameRenderer::PaintOutlineAndFocusBorders(nsIPresContext* aPresContext,
 
       const nsStyleSpacing* spacing = (const nsStyleSpacing*)mOuterFocusStyle ->GetStyleData(eStyleStruct_Spacing);
 
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, mFrame,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, mFrame,
                                   aDirtyRect, rect, *spacing, mOuterFocusStyle, 0);
     }
 
@@ -157,7 +157,7 @@ nsButtonFrameRenderer::PaintOutlineAndFocusBorders(nsIPresContext* aPresContext,
 
       const nsStyleSpacing* spacing = (const nsStyleSpacing*)mInnerFocusStyle ->GetStyleData(eStyleStruct_Spacing);
 
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, mFrame,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, mFrame,
                                   aDirtyRect, rect, *spacing, mInnerFocusStyle, 0);
     }
   }
@@ -167,7 +167,7 @@ nsButtonFrameRenderer::PaintOutlineAndFocusBorders(nsIPresContext* aPresContext,
 
 void
 nsButtonFrameRenderer::PaintBorderAndBackground(nsIPresContext* aPresContext,
-          nsIRenderingContext& aRenderingContext,
+          nsIDrawable* aDrawable,
           const nsRect& aDirtyRect,
           nsFramePaintLayer aWhichLayer,
           const nsRect& aRect)
@@ -194,10 +194,10 @@ nsButtonFrameRenderer::PaintBorderAndBackground(nsIPresContext* aPresContext,
 
   // paint the border and background
 
-  nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, mFrame,
+  nsCSSRendering::PaintBackground(aPresContext, aDrawable, mFrame,
                                   aDirtyRect, buttonRect,  *color, *spacing, 0, 0);
 
-  nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, mFrame,
+  nsCSSRendering::PaintBorder(aPresContext, aDrawable, mFrame,
                               aDirtyRect, buttonRect, *spacing, context, 0);
 
 }

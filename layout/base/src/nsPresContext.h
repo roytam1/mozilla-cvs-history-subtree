@@ -37,7 +37,6 @@
 #define nsPresContext_h___
 
 #include "nsIPresContext.h"
-#include "nsIDeviceContext.h"
 #include "nsVoidArray.h"
 #include "nsFont.h"
 #include "nsCRT.h"
@@ -49,7 +48,6 @@
 #include "nsIURL.h"
 #include "nsIEventStateManager.h"
 #include "nsIObserver.h"
-#include "nsILookAndFeel.h"
 
 // Base class for concrete presentation context classes
 class nsPresContext : public nsIPresContext, public nsIObserver {
@@ -60,7 +58,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIPresContext methods
-  NS_IMETHOD Init(nsIDeviceContext* aDeviceContext);
+  NS_IMETHOD Init(nsIOutputDevice* aOutputDevice);
   NS_IMETHOD Stop(PRBool aStopChrome = PR_TRUE);
   NS_IMETHOD SetShell(nsIPresShell* aShell);
   NS_IMETHOD GetShell(nsIPresShell** aResult);
@@ -70,7 +68,6 @@ public:
   NS_IMETHOD SetWidgetRenderingMode(nsWidgetRendering aMode);
   NS_IMETHOD GetImageAnimationMode(nsImageAnimation* aModeResult);
   NS_IMETHOD SetImageAnimationMode(nsImageAnimation aMode);
-  NS_IMETHOD GetLookAndFeel(nsILookAndFeel** aLookAndFeel);
   NS_IMETHOD GetBaseURL(nsIURI** aURLResult);
   NS_IMETHOD GetMedium(nsIAtom** aMediumResult) = 0;
   NS_IMETHOD RemapStyleAndReflow(void);
@@ -142,7 +139,6 @@ public:
   NS_IMETHOD GetPixelsToTwips(float* aResult) const;
   NS_IMETHOD GetTwipsToPixels(float* aResult) const;
   NS_IMETHOD GetScaledPixelsToTwips(float* aScale) const;
-  NS_IMETHOD GetDeviceContext(nsIDeviceContext** aResult) const;
   NS_IMETHOD GetEventStateManager(nsIEventStateManager** aManager);
   NS_IMETHOD GetDefaultDirection(PRUint8* aDirection);
   NS_IMETHOD SetDefaultDirection(PRUint8 aDirection);
@@ -170,15 +166,12 @@ protected:
   nsIPresShell*         mShell;         // [WEAK]
   nsCOMPtr<nsIPref>     mPrefs;
   nsRect                mVisibleArea;
-  nsCOMPtr<nsIDeviceContext>  mDeviceContext; // could be weak, but better safe than sorry. Cannot reintroduce cycles
-                                              // since there is no dependency from gfx back to layout.
   nsCOMPtr<nsILanguageAtomService> mLangService;
   nsCOMPtr<nsILanguageAtom> mLanguage;
   nsLanguageSpecificTransformType mLanguageSpecificTransformType;
   nsCOMPtr<nsIImageGroup> mImageGroup;
   nsILinkHandler*       mLinkHandler;   // [WEAK]
   nsISupports*          mContainer;     // [WEAK]
-  nsCOMPtr<nsILookAndFeel> mLookAndFeel;
   nsFont                mDefaultFont;
   nsFont                mDefaultFixedFont;
   PRInt32               mFontScaler;

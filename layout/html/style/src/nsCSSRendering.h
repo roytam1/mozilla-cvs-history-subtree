@@ -22,7 +22,7 @@
 #ifndef nsCSSRendering_h___
 #define nsCSSRendering_h___
 
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIStyleContext.h"
 struct nsPoint;
 
@@ -37,7 +37,7 @@ public:
    * of aForFrame
    */
   static void PaintBorder(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable* aDrawable,
                           nsIFrame* aForFrame,
                           const nsRect& aDirtyRect,
                           const nsRect& aBorderArea,
@@ -57,7 +57,7 @@ public:
    * of aForFrame
    */
   static void PaintOutline(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable* aDrawable,
                           nsIFrame* aForFrame,
                           const nsRect& aDirtyRect,
                           const nsRect& aBorderArea,
@@ -78,7 +78,7 @@ public:
    * of aForFrame
    */
   static void PaintBorderEdges(nsIPresContext* aPresContext,
-                               nsIRenderingContext& aRenderingContext,
+                               nsIDrawable* aDrawable,
                                nsIFrame* aForFrame,
                                const nsRect& aDirtyRect,
                                const nsRect& aBorderArea,
@@ -96,7 +96,7 @@ public:
    * of aForFrame
    */
   static void PaintBackground(nsIPresContext* aPresContext,
-                              nsIRenderingContext& aRenderingContext,
+                              nsIDrawable* aDrawable,
                               nsIFrame* aForFrame,
                               const nsRect& aDirtyRect,
                               const nsRect& aBorderArea,
@@ -106,7 +106,7 @@ public:
                               nscoord aDY);
 
   static void DrawDashedSides(PRIntn startSide,
-                              nsIRenderingContext& aContext,
+                              nsIDrawable* aDrawable,
                               const nsRect& aDirtyRect,
                               const PRUint8 borderStyles[],
                               const nscolor borderColors[],    
@@ -116,7 +116,7 @@ public:
                               nsRect* aGap);
 
   static void DrawDashedSides(PRIntn startSide,
-                              nsIRenderingContext& aContext,
+                              nsIDrawable* aDrawable,
                               const nsRect& aDirtyRect,
                               const nsStyleSpacing& aSpacing,  
                               PRBool aDoOutline,
@@ -128,7 +128,7 @@ public:
   /** draw the dashed segements of a segmented border */
   //XXX: boy is it annoying that we have 3 methods to draw dashed sides!
   //     they clearly can be factored.
-  static void DrawDashedSegments(nsIRenderingContext& aContext,
+  static void DrawDashedSegments(nsIDrawable* aDrawable,
                                  const nsRect& aBounds,
                                  nsBorderEdges * aBorderEdges,
                                  PRIntn aSkipSides,
@@ -143,7 +143,7 @@ protected:
    * of aForFrame
    */
   static void PaintRoundedBorder(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable* aDrawable,
                           nsIFrame* aForFrame,
                           const nsRect& aDirtyRect,
                           const nsRect& aBorderArea,
@@ -154,13 +154,13 @@ protected:
                           PRBool aIsOutline=PR_FALSE);
 
 
-  static void RenderSide(nsFloatPoint aPoints[],nsIRenderingContext& aRenderingContext,
+  static void RenderSide(nsFloatPoint aPoints[],nsIDrawable* aDrawable,
                         const nsStyleSpacing& aBorderStyle,nsIStyleContext* aStyleContext,
                         PRUint8 aSide,nsMargin  &aBorThick,nscoord aTwipsPerPixel,
                         PRBool aIsOutline=PR_FALSE);
 
   static void PaintRoundedBackground(nsIPresContext* aPresContext,
-                              nsIRenderingContext& aRenderingContext,
+                              nsIDrawable* aDrawable,
                               nsIFrame* aForFrame,
                               const nsRect& aDirtyRect,
                               const nsRect& aBorderArea,
@@ -177,14 +177,14 @@ protected:
                                 PRBool aSpecialCase);
 
   static PRIntn MakeSide(nsPoint aPoints[],
-                         nsIRenderingContext& aContext,
+                         nsIDrawable* aDrawable,
                          PRIntn whichSide,
                          const nsRect& outside, const nsRect& inside,
                          PRIntn aSkipSides,
                          PRIntn borderPart, float borderFrac,
                          nscoord twipsPerPixel);
 
-  static void DrawSide(nsIRenderingContext& aContext,
+  static void DrawSide(nsIDrawable* aDrawable,
                        PRIntn whichSide,
                        const PRUint8 borderStyle,
                        const nscolor borderColor,
@@ -196,11 +196,11 @@ protected:
                        nsRect* aGap = 0);
 
 
-  static void DrawLine (nsIRenderingContext& aContext, 
+  static void DrawLine (nsIDrawable* aDrawable, 
                         nscoord aX1, nscoord aY1, nscoord aX2, nscoord aY2,
                         nsRect* aGap);
 
-  static void FillPolygon (nsIRenderingContext& aContext, 
+  static void FillPolygon (nsIDrawable* aDrawable, 
                            const nsPoint aPoints[],
                            PRInt32 aNumPoints,
                            nsRect* aGap);
@@ -232,7 +232,7 @@ public:
  *  @param aCurInex -- a pointer to an Integer that tells were to put the points into the array, incremented when finished
  *	@update 3/26/99 dwc
  */
-  void SubDivide(nsIRenderingContext *aRenderingContext,nsPoint  aPointArray[],PRInt32 *aCurIndex);
+  void SubDivide(nsIDrawable *aDrawable,nsPoint  aPointArray[],PRInt32 *aCurIndex);
 
 /** ---------------------------------------------------
  *  Divide a Quadratic Bezier curve at the mid-point

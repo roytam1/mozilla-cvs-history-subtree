@@ -48,19 +48,19 @@ public:
 
 
 	 virtual void PaintButton(nsIPresContext* aPresContext,
-							  nsIRenderingContext& aRenderingContext,
+							  nsIDrawable* aDrawable,
 							  const nsRect& aDirtyRect,
 							  nsFramePaintLayer aWhichLayer,
 							  const nsRect& aRect);
 
 	 virtual void PaintOutlineAndFocusBorders(nsIPresContext* aPresContext,
-						  nsIRenderingContext& aRenderingContext,
+						  nsIDrawable* aDrawable,
 						  const nsRect& aDirtyRect,
 						  nsFramePaintLayer aWhichLayer,
 						  const nsRect& aRect);
 
 	 virtual void PaintBorderAndBackground(nsIPresContext* aPresContext,
-						  nsIRenderingContext& aRenderingContext,
+						  nsIDrawable* aDrawable,
 						  const nsRect& aDirtyRect,
 						  nsFramePaintLayer aWhichLayer,
 						  const nsRect& aRect);

@@ -29,7 +29,6 @@
 #include "nsIHTMLContent.h"
 #include "nsIFormControl.h"
 #include "nsINameSpaceManager.h"
-#include "nsIDeviceContext.h" 
 #include "nsIDOMHTMLCollection.h" 
 #include "nsIDOMNSHTMLOptionCollection.h"
 #include "nsIDOMHTMLSelectElement.h" 
@@ -39,7 +38,7 @@
 #include "nsFormFrame.h"
 #include "nsIScrollableView.h"
 #include "nsIDOMHTMLOptGroupElement.h"
-#include "nsWidgetsCID.h"
+#include "nsIDrawable.h"
 #include "nsIReflowCommand.h"
 #include "nsIPresShell.h"
 #include "nsHTMLParts.h"
@@ -52,7 +51,7 @@
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIComponentManager.h"
-#include "nsILookAndFeel.h"
+#include "nsIWindow.h"
 #include "nsLayoutAtoms.h"
 #include "nsIFontMetrics.h"
 #include "nsVoidArray.h"
@@ -66,7 +65,6 @@
 // included for view scrolling
 #include "nsIViewManager.h"
 #include "nsIScrollableView.h"
-#include "nsIDeviceContext.h"
 #include "nsITimer.h"
 #include "nsITimerCallback.h"
 
@@ -823,6 +821,9 @@ nsGfxListControlFrame::Reflow(nsIPresContext*          aPresContext,
         optFrame->GetStyleContext(getter_AddRefs(optStyle));
         if (optStyle) {
           const nsStyleFont* styleFont = (const nsStyleFont*)optStyle->GetStyleData(eStyleStruct_Font);
+
+          // XXX pav
+#if 0
           nsCOMPtr<nsIDeviceContext> deviceContext;
           aPresContext->GetDeviceContext(getter_AddRefs(deviceContext));
           NS_ASSERTION(deviceContext, "Couldn't get the device context"); 
@@ -830,10 +831,11 @@ nsGfxListControlFrame::Reflow(nsIPresContext*          aPresContext,
           result = deviceContext->GetMetricsFor(styleFont->mFont, fontMet);
           if (NS_SUCCEEDED(result) && fontMet != nsnull) {
             if (fontMet) {
-              fontMet->GetHeight(heightOfARow);
+              fontMet->GetHeight(&heightOfARow);
             }
             NS_RELEASE(fontMet);
           }
+#endif
         }
       }
     }
@@ -938,8 +940,8 @@ nsGfxListControlFrame::Reflow(nsIPresContext*          aPresContext,
     nsCOMPtr<nsIFontMetrics> fontMet;
     nsresult res = nsFormControlHelper::GetFrameFontFM(aPresContext, this, getter_AddRefs(fontMet));
     if (NS_SUCCEEDED(res) && fontMet) {
-      aReflowState.rendContext->SetFont(fontMet);
-      fontMet->GetHeight(visibleHeight);
+      aReflowState.drawable->SetFontMetrics(fontMet);
+      fontMet->GetHeight(&visibleHeight);
       mMaxHeight = visibleHeight;
     }
   }
@@ -1448,12 +1450,14 @@ nsGfxListControlFrame::CaptureMouseEvents(nsIPresContext* aPresContext, PRBool a
       // XXX this is temp code
 #if 1
       //if (!mIsScrollbarVisible) {
-        nsIWidget * widget;
-        view->GetWidget(widget);
-        if (nsnull != widget) {
+        nsIWindow * window;
+        view->GetWidget(window);
+        if (nsnull != window) {
           printf("Capture is set on widget to %s\n", aGrabMouseEvents?"On":"Off");
-          widget->CaptureMouse(aGrabMouseEvents);
-          NS_RELEASE(widget);
+
+          // XXX pav
+          //          widget->CaptureMouse(aGrabMouseEvents);
+          NS_RELEASE(window);
         }
       //}
 #endif
@@ -1465,17 +1469,21 @@ nsGfxListControlFrame::CaptureMouseEvents(nsIPresContext* aPresContext, PRBool a
 
 //---------------------------------------------------------
 nsIView* 
-nsGfxListControlFrame::GetViewFor(nsIWidget* aWidget)
+nsGfxListControlFrame::GetViewFor(nsIWindow *aWindow)
 {           
   nsIView*  view = nsnull;
   void*     clientData;
 
-  NS_PRECONDITION(nsnull != aWidget, "null widget ptr");
+  NS_PRECONDITION(nsnull != aWindow, "null widget ptr");
 	
   // The widget's client data points back to the owning view
-  if (aWidget && NS_SUCCEEDED(aWidget->GetClientData(clientData))) {
+
+  // XXX pav getInterface?? 
+#if 0
+  if (aWindow && NS_SUCCEEDED(aWindow->GetClientData(clientData))) {
     view = (nsIView*)clientData;
   }
+#endif
 
   return view;
 }

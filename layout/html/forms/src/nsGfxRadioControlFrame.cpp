@@ -26,7 +26,6 @@
 #include "nsFormFrame.h"
 #include "nsIFormControl.h"
 #include "nsIContent.h"
-#include "nsWidgetsCID.h"
 #include "nsIComponentManager.h"
 #include "nsCOMPtr.h"
 #include "nsCSSRendering.h"
@@ -270,8 +269,8 @@ nsGfxRadioControlFrame::HandleEvent(nsIPresContext* aPresContext,
 //--------------------------------------------------------------
 void
 nsGfxRadioControlFrame::PaintRadioButton(nsIPresContext* aPresContext,
-                                      nsIRenderingContext& aRenderingContext,
-                                      const nsRect& aDirtyRect)
+                                         nsIDrawable* aDrawable,
+                                         const nsRect& aDirtyRect)
 {
    
   PRBool checked = PR_TRUE;
@@ -298,9 +297,9 @@ nsGfxRadioControlFrame::PaintRadioButton(nsIPresContext* aPresContext,
      // so create a temporary style color struct and set it up appropriately
      nsStyleColor tmpColor     = *myColor;
      tmpColor.mBackgroundColor = myColor->mColor;
-     nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+     nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                         aDirtyRect, rect, tmpColor, *mySpacing, 0, 0);
-     nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+     nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *mySpacing, mRadioButtonFaceStyle, 0);
    }
   }
@@ -309,7 +308,7 @@ nsGfxRadioControlFrame::PaintRadioButton(nsIPresContext* aPresContext,
 //--------------------------------------------------------------
 NS_METHOD 
 nsGfxRadioControlFrame::Paint(nsIPresContext* aPresContext,
-                           nsIRenderingContext& aRenderingContext,
+                           nsIDrawable* aDrawable,
                            const nsRect& aDirtyRect,
                            nsFramePaintLayer aWhichLayer)
 {
@@ -319,14 +318,14 @@ nsGfxRadioControlFrame::Paint(nsIPresContext* aPresContext,
 		return NS_OK;
 
      // Paint the background
-  nsFormControlFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  nsFormControlFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
   if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) {
-    PaintRadioButton(aPresContext, aRenderingContext, aDirtyRect);
+    PaintRadioButton(aPresContext, aDrawable, aDirtyRect);
   }
 
   // Call to the base class to draw selection borders when appropriate
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 

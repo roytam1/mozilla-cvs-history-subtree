@@ -44,7 +44,8 @@
 #include "nsIDocument.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
-#include "nsWidgetsCID.h"
+#include "nsIWindow.h"
+#include "nsIDrawable.h"
 #include "nsViewsCID.h"
 #include "nsHTMLAtoms.h"
 #include "nsIScrollableView.h"
@@ -113,7 +114,7 @@ public:
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -164,7 +165,7 @@ public:
     * @see nsIFrame::Paint
     */
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -281,18 +282,18 @@ PRBool nsHTMLFrameOuterFrame::IsInline()
 
 NS_IMETHODIMP
 nsHTMLFrameOuterFrame::Paint(nsIPresContext* aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable* aDrawable,
                              const nsRect& aDirtyRect,
                              nsFramePaintLayer aWhichLayer)
 {
   //printf("outer paint %X (%d,%d,%d,%d) \n", this, aDirtyRect.x, aDirtyRect.y, aDirtyRect.width, aDirtyRect.height);
   nsIFrame* firstChild = mFrames.FirstChild();
   if (nsnull != firstChild) {
-    firstChild->Paint(aPresContext, aRenderingContext, aDirtyRect,
+    firstChild->Paint(aPresContext, aDrawable, aDirtyRect,
                       aWhichLayer);
   }
   if (IsInline()) {
-    return nsHTMLContainerFrame::Paint(aPresContext, aRenderingContext,
+    return nsHTMLContainerFrame::Paint(aPresContext, aDrawable,
                                        aDirtyRect, aWhichLayer);
   } else {
     return NS_OK;
@@ -646,7 +647,7 @@ nsHTMLFrameInnerFrame::GetFrameType(nsIAtom** aType) const
 
 NS_IMETHODIMP
 nsHTMLFrameInnerFrame::Paint(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsRect&        aDirtyRect,
                              nsFramePaintLayer    aWhichLayer)
 {
@@ -656,8 +657,8 @@ nsHTMLFrameInnerFrame::Paint(nsIPresContext*      aPresContext,
   if (!mSubShell) {
     const nsStyleColor* color =
       (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
-    aRenderingContext.SetColor(color->mBackgroundColor);
-    aRenderingContext.FillRect(mRect);
+    aDrawable->SetForegroundColor(color->mBackgroundColor);
+    aDrawable->FillRectangle(mRect.x, mRect.y, mRect.width, mRect.height);
   }
   return NS_OK;
 }
@@ -844,7 +845,10 @@ nsHTMLFrameInnerFrame::CreateDocShell(nsIPresContext* aPresContext,
   presShell->GetViewManager(getter_AddRefs(viewMan));  
   rv = view->Init(viewMan, viewBounds, parView);
   viewMan->InsertChild(parView, view, 0);
-  rv = view->CreateWidget(kCChildCID);
+
+  // XXX pav
+  //  rv = view->CreateWidget(kCChildCID);
+
   SetView(aPresContext, view);
 
   // if the visibility is hidden, reflect that in the view
@@ -854,11 +858,11 @@ nsHTMLFrameInnerFrame::CreateDocShell(nsIPresContext* aPresContext,
     view->SetVisibility(nsViewVisibility_kHide);
   }
 
-  nsCOMPtr<nsIWidget> widget;
-  view->GetWidget(*getter_AddRefs(widget));
+  nsCOMPtr<nsIWindow> window;
+  view->GetWidget(*getter_AddRefs(window));
 
-  mSubShell->InitWindow(nsnull, widget, 0, 0, NSToCoordRound(aSize.width * t2p),
-    NSToCoordRound(aSize.height * t2p));
+  mSubShell->InitWindow(nsnull, window, 0, 0, NSToCoordRound(aSize.width * t2p),
+                        NSToCoordRound(aSize.height * t2p));
   mSubShell->Create();
 
   mSubShell->SetVisibility(PR_TRUE);

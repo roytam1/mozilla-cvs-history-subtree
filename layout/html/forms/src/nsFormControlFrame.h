@@ -27,9 +27,8 @@
 #include "nsFormControlHelper.h"
 #include "nsIFormManager.h"
 #include "nsISupports.h"
-#include "nsIWidget.h"
 #include "nsLeafFrame.h"
-#include "nsCoord.h"
+#include "gfxtypes.h"
 #include "nsIStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsCOMPtr.h"
@@ -97,7 +96,7 @@ public:
     * @see nsIFrame::Paint
     */
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*    aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
 
@@ -120,19 +119,6 @@ public:
   NS_IMETHOD Destroy(nsIPresContext *aPresContext);
 
   // new behavior
-
-  /**
-    * Get the class id of the widget associated with this frame
-    * @return the class id
-    */
-  virtual const nsIID& GetCID(); 
-
-  /**
-    * Get the interface id of widget associated with this frame
-    * @return the interface id
-    */
-  virtual const nsIID& GetIID(); 
-
   NS_IMETHOD GetType(PRInt32* aType) const;
   NS_IMETHOD GetName(nsString* aName);
   NS_IMETHOD GetValue(nsString* aName);
@@ -169,7 +155,7 @@ public:
     * Perform opertations before the widget associated with this frame has been
     * created.
     */
-  virtual nsWidgetInitData* GetWidgetInitData(nsIPresContext* aPresContext);  
+  virtual void* GetWidgetInitData(nsIPresContext* aPresContext);  
 
   void GetWidgetSize(nsSize& aSize) const { aSize.width  = mWidgetSize.width; 
                                             aSize.height = mWidgetSize.height; }
@@ -233,13 +219,13 @@ public:
    * where focus has a border and non-focus does not. Call in Paint if you have the focus
    *
    * @param aPresContext
-   * @param aRenderingContext
+   * @param aDrawable
    * @param aFrame - the frame that we are painting
    * @param aDirtyRect - the dirty area
    * @param aRect - the area to paint within the dirty area
    */
   static nsresult PaintSpecialBorder(nsIPresContext* aPresContext, 
-                                     nsIRenderingContext& aRenderingContext,
+                                     nsIDrawable*    aDrawable,
                                      nsIFrame *aFrame,
                                      const nsRect& aDirtyRect,
                                      const nsRect& aRect);

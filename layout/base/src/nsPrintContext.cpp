@@ -20,11 +20,7 @@
  * Contributor(s): 
  */
 #include "nsPresContext.h"
-#include "nsIDeviceContext.h"
 #include "nsUnitConversion.h"
-#include "nsIView.h"
-#include "nsIWidget.h"
-#include "nsGfxCIID.h"
 #include "nsLayoutAtoms.h"
 
 static NS_DEFINE_IID(kIPresContextIID, NS_IPRESCONTEXT_IID);
@@ -81,7 +77,9 @@ PRInt32 width,height;
     return NS_ERROR_NULL_POINTER;
   }
 
+#if 0 // XXX pav
   mDeviceContext->GetDeviceSurfaceDimensions(width,height);
+#endif
   // a xp margin can be added here
   *aResult = width;
 
@@ -91,14 +89,16 @@ PRInt32 width,height;
 NS_IMETHODIMP
 PrintContext::GetPageHeight(nscoord* aResult)
 {
-PRInt32 width,height;
+  PRInt32 width,height;
 
   NS_PRECONDITION(nsnull != aResult, "null ptr");
   if (nsnull == aResult) {
     return NS_ERROR_NULL_POINTER;
   }
 
+#if 0 // XXX pav
   mDeviceContext->GetDeviceSurfaceDimensions(width,height);
+#endif
   // a xp margin or header/footer space can be added here
   *aResult = height;
 

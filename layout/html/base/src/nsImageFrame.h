@@ -48,7 +48,7 @@ public:
                   nsIStyleContext* aContext,
                   nsIFrame*        aPrevInFlow);
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*    aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
   NS_IMETHOD Reflow(nsIPresContext*          aPresContext,
@@ -111,15 +111,15 @@ protected:
                      PRInt32              aLength,
                      nscoord              aMaxWidth,
                      PRUint32&            aMaxFit,
-                     nsIRenderingContext& aContext);
+                     nsIFontMetrics*      aMetrics);
 
   void DisplayAltText(nsIPresContext*      aPresContext,
-                      nsIRenderingContext& aRenderingContext,
+                      nsIDrawable*         aDrawable,
                       const nsString&      aAltText,
                       const nsRect&        aRect);
 
   void DisplayAltFeedback(nsIPresContext*      aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable*         aDrawable,
                           PRInt32              aIconId);
 
   void GetInnerArea(nsIPresContext* aPresContext,

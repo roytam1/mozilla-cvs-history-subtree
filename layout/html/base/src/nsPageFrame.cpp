@@ -25,7 +25,7 @@
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsIReflowCommand.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsHTMLAtoms.h"
 #include "nsHTMLIIDs.h"
 #include "nsLayoutAtoms.h"

@@ -21,8 +21,6 @@
  */
 
 #include "nsGfxButtonControlFrame.h"
-#include "nsIButton.h"
-#include "nsWidgetsCID.h"
 #include "nsIFontMetrics.h"
 #include "nsFormControlFrame.h"
 #include "nsISupportsArray.h"
@@ -169,25 +167,6 @@ nsGfxButtonControlFrame::IsBrowse(PRInt32 type)
   return rv;
 }
 
-/*
- * FIXME: this ::GetIID() method has no meaning in life and should be
- * removed.
- * Pierre Phaneuf <pp@ludusdesign.com>
- */
-const nsIID&
-nsGfxButtonControlFrame::GetIID()
-{
-  static NS_DEFINE_IID(kButtonIID, NS_IBUTTON_IID);
-  return kButtonIID;
-}
-  
-const nsIID&
-nsGfxButtonControlFrame::GetCID()
-{
-  static NS_DEFINE_IID(kButtonCID, NS_BUTTON_CID);
-  return kButtonCID;
-}
-
 #ifdef DEBUG
 NS_IMETHODIMP
 nsGfxButtonControlFrame::GetFrameName(nsString& aResult) const
@@ -222,7 +201,7 @@ nsGfxButtonControlFrame::DoNavQuirksReflow(nsIPresContext*          aPresContext
   nsresult res = nsFormControlHelper::GetFrameFontFM(aPresContext, (nsIFormControlFrame *)this, getter_AddRefs(fontMet));
   nsSize desiredSize;
   if (NS_SUCCEEDED(res) && fontMet) {
-    aReflowState.rendContext->SetFont(fontMet);
+    aReflowState.drawable->SetFontMetrics(fontMet);
 
     // Get the text from the "value" attribute 
     // for measuring the height, width of the text
@@ -252,7 +231,7 @@ nsGfxButtonControlFrame::DoNavQuirksReflow(nsIPresContext*          aPresContext
     nsInputDimensionSpec btnSpec(NULL, PR_FALSE, nsnull, 
                                   &value,0, 
                                   PR_FALSE, NULL, 1);
-    nsFormControlHelper::CalcNavQuirkSizing(aPresContext, aReflowState.rendContext, 
+    nsFormControlHelper::CalcNavQuirkSizing(aPresContext, aReflowState.drawable, 
                                             fontMet, (nsIFormControlFrame*)this, 
                                             btnSpec, desiredSize);
 

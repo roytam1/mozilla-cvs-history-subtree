@@ -190,7 +190,7 @@ public:
                          nsIAtom*        aListName,
                          nsIFrame**      aFirstChild) const;
   NS_IMETHOD  Paint(nsIPresContext*      aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable*         aDrawable,
                     const nsRect&        aDirtyRect,
                     nsFramePaintLayer    aWhichLayer);
   NS_IMETHOD  HandleEvent(nsIPresContext* aPresContext, 
@@ -208,7 +208,7 @@ public:
                                nsIFrame**     aFrame);
 
   NS_IMETHOD  GetPointFromOffset(nsIPresContext*        inPresContext,
-                                 nsIRenderingContext*   inRendContext,
+                                 nsIDrawable*           inDrawable,
                                  PRInt32                inOffset,
                                  nsPoint*               outPoint);
 
@@ -247,7 +247,7 @@ public:
   NS_IMETHOD  SetView(nsIPresContext* aPresContext, nsIView* aView);
   NS_IMETHOD  GetParentWithView(nsIPresContext* aPresContext, nsIFrame** aParent) const;
   NS_IMETHOD  GetOffsetFromView(nsIPresContext* aPresContext, nsPoint& aOffset, nsIView** aView) const;
-  NS_IMETHOD  GetWindow(nsIPresContext* aPresContext, nsIWidget**) const;
+  NS_IMETHOD  GetWindow(nsIPresContext* aPresContext, nsIWindow**) const;
   NS_IMETHOD  GetFrameType(nsIAtom** aType) const;
   NS_IMETHOD  IsPercentageBase(PRBool& aBase) const;
   NS_IMETHOD  GetNextSibling(nsIFrame** aNextSibling) const;
@@ -289,7 +289,7 @@ public:
   NS_IMETHOD CanContinueTextRun(PRBool& aContinueTextRun) const;
   NS_IMETHOD AdjustFrameSize(nscoord aExtraSpace, nscoord& aUsedSpace);
   NS_IMETHOD TrimTrailingWhiteSpace(nsIPresContext* aPresContext,
-                                    nsIRenderingContext& aRC,
+                                    nsIDrawable*    aDrawable,
                                     nscoord& aDeltaWidth);
 
   // Selection Methods
@@ -447,7 +447,7 @@ protected:
   // elements and replaced elements that have 'overflow' set to 'hidden'. This
   // member function assumes that the caller has checked that the clip property
   // applies to its situation.
-  void SetOverflowClipRect(nsIRenderingContext& aRenderingContext);
+  void SetOverflowClipRect(nsIDrawable* aRenderingContext);
 
   nsRect           mRect;
   nsIContent*      mContent;

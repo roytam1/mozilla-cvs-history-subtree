@@ -20,7 +20,7 @@
  * Contributor(s): 
  */
 #include "nsHTMLContainerFrame.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIStyleContext.h"
@@ -28,7 +28,6 @@
 #include "nsCSSRendering.h"
 #include "nsIContent.h"
 #include "nsLayoutAtoms.h"
-#include "nsIWidget.h"
 #include "nsILinkHandler.h"
 #include "nsHTMLValue.h"
 #include "nsGUIEvent.h"
@@ -45,16 +44,15 @@
 #include "nsHTMLIIDs.h"
 #include "nsDOMEvent.h"
 #include "nsIScrollableView.h"
-#include "nsWidgetsCID.h"
+#include "nsIWindow.h"
 #include "nsIStyleSet.h"
 #include "nsCOMPtr.h"
 
 static NS_DEFINE_IID(kScrollViewIID, NS_ISCROLLABLEVIEW_IID);
-static NS_DEFINE_IID(kCChildCID, NS_CHILD_CID);
 
 NS_IMETHODIMP
 nsHTMLContainerFrame::Paint(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
+                            nsIDrawable* aDrawable,
                             const nsRect& aDirtyRect,
                             nsFramePaintLayer aWhichLayer)
 {
@@ -78,11 +76,11 @@ nsHTMLContainerFrame::Paint(nsIPresContext* aPresContext,
         mStyleContext->GetStyleData(eStyleStruct_Spacing);
 
       nsRect  rect(0, 0, mRect.width, mRect.height);
-      nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                       aDirtyRect, rect, *color, *spacing, 0, 0);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, skipSides);
-      nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintOutline(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, 0);
       
       // The sole purpose of this is to trigger display
@@ -93,7 +91,7 @@ nsHTMLContainerFrame::Paint(nsIPresContext* aPresContext,
       if (!mFrames.FirstChild())
       {
         nsFrame::Paint(aPresContext,
-                       aRenderingContext, aDirtyRect, aWhichLayer);
+                       aDrawable, aDirtyRect, aWhichLayer);
       }
     }
   }
@@ -102,10 +100,10 @@ nsHTMLContainerFrame::Paint(nsIPresContext* aPresContext,
   // override the visibility property and display even if their parent is
   // hidden
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
   // see if we have to draw a selection frame around this container
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 /**
@@ -599,11 +597,11 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
         }
         else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
           // If it has a widget, hide the view because the widget can't deal with it
-          nsIWidget* widget = nsnull;
-          view->GetWidget(widget);
-          if (widget) {
+          nsIWindow* window = nsnull;
+          view->GetWidget(window);
+          if (window) {
             viewIsVisible = PR_FALSE;
-            NS_RELEASE(widget);
+            NS_RELEASE(window);
           }
           else {
             // If it's a container element, then leave the view visible, but
@@ -637,7 +635,10 @@ nsHTMLContainerFrame::CreateViewForFrame(nsIPresContext* aPresContext,
         // XXX If it's fixed positioned, then create a widget so it floats
         // above the scrolling area
         if (NS_STYLE_POSITION_FIXED == position->mPosition) {
-          view->CreateWidget(kCChildCID);
+
+
+          // XXX pav
+          //          view->CreateWidget(kCChildCID);
         }
 
         viewManager->SetViewOpacity(view, color->mOpacity);

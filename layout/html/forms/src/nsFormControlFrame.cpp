@@ -23,28 +23,23 @@
 #include "nsFormControlFrame.h"
 #include "nsHTMLParts.h"
 #include "nsIHTMLContent.h"
-#include "nsIRenderingContext.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIStyleContext.h"
 #include "nsLeafFrame.h"
 #include "nsCSSRendering.h"
 #include "nsHTMLIIDs.h"
+#include "nsIWindow.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsCoord.h"
-#include "nsWidgetsCID.h"
 #include "nsViewsCID.h"
 #include "nsIComponentManager.h"
 #include "nsGUIEvent.h"
 #include "nsDOMEvent.h"
 #include "nsIFontMetrics.h"
 #include "nsIFormControl.h"
-#include "nsIDeviceContext.h"
 #include "nsHTMLAtoms.h"
-#include "nsIButton.h"  // remove this when GetCID is pure virtual
-#include "nsICheckButton.h"  //remove this
-#include "nsITextWidget.h"  //remove this
 #include "nsISupports.h"
 #include "nsStyleConsts.h"
 #include "nsUnitConversion.h"
@@ -94,7 +89,6 @@
 
 const PRInt32 kSizeNotSet = -1;
 
-static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
 static NS_DEFINE_IID(kIFormControlIID, NS_IFORMCONTROL_IID);
 static NS_DEFINE_IID(kIFormControlFrameIID, NS_IFORMCONTROLFRAME_IID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -433,19 +427,19 @@ nsFormControlFrame::SetClickPoint(nscoord aX, nscoord aY)
 // they could be blended, and bordered, and so on...
 NS_METHOD
 nsFormControlFrame::Paint(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable*    aDrawable,
                           const nsRect& aDirtyRect,
                           nsFramePaintLayer aWhichLayer)
 {
 
-  nsresult rv = nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
-                            aWhichLayer);
+  nsresult rv = nsLeafFrame::Paint(aPresContext, aDrawable, aDirtyRect,
+                                   aWhichLayer);
 
  if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer)
  {
     nsRect rect(0, 0, mRect.width, mRect.height);
     PaintSpecialBorder(aPresContext, 
-                       aRenderingContext,
+                       aDrawable,
                        this,
                        aDirtyRect,
                        rect);    
@@ -555,7 +549,7 @@ nsFormControlFrame::Reflow(nsIPresContext*          aPresContext,
 }
 
 
-nsWidgetInitData* 
+void* 
 nsFormControlFrame::GetWidgetInitData(nsIPresContext* aPresContext)
 {
   return nsnull;
@@ -643,25 +637,6 @@ nsFormControlFrame::ScrollIntoView(nsIPresContext* aPresContext)
                    NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
     }
   }
-}
-
-/*
- * FIXME: this ::GetIID() method has no meaning in life and should be
- * removed.
- * Pierre Phaneuf <pp@ludusdesign.com>
- */
-const nsIID&
-nsFormControlFrame::GetIID()
-{
-  static NS_DEFINE_IID(kButtonIID, NS_IBUTTON_IID);
-  return kButtonIID;
-}
-  
-const nsIID&
-nsFormControlFrame::GetCID()
-{
-  static NS_DEFINE_IID(kButtonCID, NS_BUTTON_CID);
-  return kButtonCID;
 }
 
 NS_IMETHODIMP
@@ -935,7 +910,7 @@ nsFormControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
 //-------------------------------------------------------------------------
 // static 
 nsresult nsFormControlFrame::PaintSpecialBorder(nsIPresContext* aPresContext, 
-                                                nsIRenderingContext& aRenderingContext,
+                                                nsIDrawable*    aDrawable,
                                                 nsIFrame *aFrame,
                                                 const nsRect& aDirtyRect,
                                                 const nsRect& aRect)
@@ -962,7 +937,7 @@ nsresult nsFormControlFrame::PaintSpecialBorder(nsIPresContext* aPresContext,
       // paint the border
 
       const nsStyleSpacing* spacing = (const nsStyleSpacing*)specialBorderStyle ->GetStyleData(eStyleStruct_Spacing);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, aFrame,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, aFrame,
                                   aDirtyRect, aRect, *spacing, specialBorderStyle, 0);
     }
 
@@ -976,6 +951,8 @@ nsresult nsFormControlFrame::PaintSpecialBorder(nsIPresContext* aPresContext,
 nsresult 
 nsFormControlFrame::GetScreenHeight(nsIPresContext* aPresContext, nscoord& aHeight)
 {
+  // XXX pav use nsIScreenManager
+#if 0
   aHeight = 0;
   nsIDeviceContext* context;
   aPresContext->GetDeviceContext( &context );
@@ -989,7 +966,7 @@ nsFormControlFrame::GetScreenHeight(nsIPresContext* aPresContext, nscoord& aHeig
 		NS_RELEASE( context );
 		return NS_OK;
 	}
-
+#endif
   return NS_ERROR_FAILURE;
 }
 
@@ -1032,17 +1009,19 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
     // if we don't have a parent view then 
     // check to see if we have a widget and adjust our offset for the widget
     if (parent == nsnull) {
-      nsIWidget * widget;
-      containingView->GetWidget(widget);
-      if (nsnull != widget) {
+      nsIWindow * window;
+      containingView->GetWidget(window);
+      if (nsnull != window) {
         // Add in the absolute offset of the widget.
         nsRect absBounds;
         nsRect lc;
-        widget->WidgetToScreen(lc, absBounds);
+
+        // XXX pav
+        //        window->WidgetToScreen(lc, absBounds);
         // Convert widget coordinates to twips   
         aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
         aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
-        NS_RELEASE(widget);
+        NS_RELEASE(window);
       }
       rv = NS_OK;
     } else {
@@ -1060,17 +1039,19 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsIPresContext* aPresContext,
           viewOffset.x -= x;
           viewOffset.y -= y;
         }
-        nsIWidget * widget;
-        parent->GetWidget(widget);
-        if (nsnull != widget) {
+        nsIWindow * window;
+        parent->GetWidget(window);
+        if (nsnull != window) {
           // Add in the absolute offset of the widget.
           nsRect absBounds;
           nsRect lc;
-          widget->WidgetToScreen(lc, absBounds);
+
+          // XXX pav
+          //          widget->WidgetToScreen(lc, absBounds);
           // Convert widget coordinates to twips   
           aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
           aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
-          NS_RELEASE(widget);
+          NS_RELEASE(window);
           break;
         }
         parent->GetParent(parent);

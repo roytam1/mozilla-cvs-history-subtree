@@ -37,8 +37,7 @@
 #include "nsIDOMCharacterData.h"
 #include "nsIContent.h"
 #include "nsIPresShell.h"
-#include "nsIRenderingContext.h"
-#include "nsIDeviceContext.h"
+#include "nsIDrawable.h"
 #include "nsIView.h"
 #include "nsIScrollableView.h"
 #include "nsIViewManager.h"
@@ -297,7 +296,8 @@ NS_IMETHODIMP nsCaret::GetWindowRelativeCoordinates(nsRect& outCoordinates, PRBo
   err = presShell->GetPresContext(getter_AddRefs(presContext));
   if (NS_FAILED(err))
     return err;
-  
+
+#if 0  
   // ... then get a device context
   nsCOMPtr<nsIDeviceContext>    dx;
   err = presContext->GetDeviceContext(getter_AddRefs(dx));
@@ -328,6 +328,8 @@ NS_IMETHODIMP nsCaret::GetWindowRelativeCoordinates(nsRect& outCoordinates, PRBo
   outCoordinates.height = frameRect.height;
   outCoordinates.width  = frameRect.width;
   
+#endif
+
   return NS_OK;
 }
 
@@ -707,26 +709,29 @@ void nsCaret::DrawCaret()
   if (NS_FAILED(presShell->GetPresContext(getter_AddRefs(presContext))))
     return;
 
+
+#if 0
+
   // if the view changed, or we don't have a rendering context, make one
   // because of drawing issues, always make a new RC at the momemt. See bug 28068
   if (
 #ifdef DONT_REUSE_RENDERING_CONTEXT
       PR_TRUE ||
 #endif
-      (mLastCaretView != drawingView) || !mRendContext)
+      (mLastCaretView != drawingView) || !mDrawable)
   {
-    mRendContext = nsnull;    // free existing one if we have one
+    mDrawable = nsnull;    // free existing one if we have one
     
+
+#if 0
     nsCOMPtr<nsIDeviceContext>    dx;
     if (NS_FAILED(presContext->GetDeviceContext(getter_AddRefs(dx))) || !dx)
       return;
       
-    if (NS_FAILED(dx->CreateRenderingContext(drawingView, *getter_AddRefs(mRendContext))) || !mRendContext)
+    if (NS_FAILED(dx->CreateRenderingContext(drawingView, *getter_AddRefs(mDrawable))) || !mRendContext)
       return;      
+#endif
   }
-
-  // push a known good state
-  mRendContext->PushState();
 
   // views are not refcounted
   mLastCaretView = drawingView;
@@ -736,7 +741,7 @@ void nsCaret::DrawCaret()
     nsPoint   framePos(0, 0);
     nsRect    caretRect = frameRect;
     
-    mLastCaretFrame->GetPointFromOffset(presContext, mRendContext, mLastContentOffset, &framePos);
+    mLastCaretFrame->GetPointFromOffset(presContext, mDrawable, mLastContentOffset, &framePos);
     caretRect += framePos;
     
     //printf("Content offset %ld, frame offset %ld\n", focusOffset, framePos.x);
@@ -770,16 +775,17 @@ void nsCaret::DrawCaret()
       inRendContext.SetColor(NS_RGB(85, 85, 85));   // we are drawing it; gray
     */
     
-  mRendContext->SetColor(NS_RGB(255,255,255));
-  mRendContext->InvertRect(mCaretRect);
+  mDrawable->SetForegroundColor(NS_RGB(255,255,255));
 
-  PRBool emptyClip;   // I know what you're thinking. "Did he fire six shots or only five?"
-  mRendContext->PopState(emptyClip);
+  // XXX pav
+  //  mRendContext->InvertRect(mCaretRect);
+
+#endif
 
   ToggleDrawnStatus();
 
 #ifdef DONT_REUSE_RENDERING_CONTEXT
-  mRendContext = nsnull;
+  mDrawable = nsnull;
 #endif
 }
 

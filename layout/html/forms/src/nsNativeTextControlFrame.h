@@ -38,7 +38,7 @@ public:
   NS_IMETHOD SetProperty(nsIPresContext* aPresContext, nsIAtom* aName, const nsAReadableString& aValue);
   NS_IMETHOD GetProperty(nsIAtom* aName, nsAWritableString& aValue); 
 
-  virtual nsWidgetInitData* GetWidgetInitData(nsIPresContext* aPresContext);
+  virtual void* GetWidgetInitData(nsIPresContext* aPresContext);
 
   NS_IMETHOD AttributeChanged(nsIPresContext* aPresContext,
                               nsIContent*     aChild,

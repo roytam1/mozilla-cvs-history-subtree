@@ -53,7 +53,6 @@
 #include "nsIScrollableView.h"
 #include "nsIScrollableFrame.h" //to turn off scroll bars
 #include "nsFormControlFrame.h" //for registering accesskeys
-#include "nsIDeviceContext.h" // to measure fonts
 #include "nsIPresState.h" //for saving state
 #include "nsLinebreakConverter.h" //to strip out carriage returns
 #include "nsIEditorMailSupport.h"
@@ -96,6 +95,8 @@
 
 #include "nsITransactionManager.h"
 #include "nsITransactionListener.h"
+
+#include "nsIDrawable.h"
 
 #define DEFAULT_COLUMN_WIDTH 20
 #define GUESS_INPUT_SIZE 150  // 10 pixels wide
@@ -298,7 +299,7 @@ nsTextInputListener::KeyPress(nsIDOMEvent* aKeyEvent)
 
 //END KeyListener
 
-//BEGIN NS_IDOMSELECTIONLISTENER
+//BEGIN NS_IDOMSELECITONLISTENER
 
 NS_IMETHODIMP
 nsTextInputListener::NotifySelectionChanged(nsIDOMDocument* aDoc, nsISelection* aSel, PRInt16 aReason)
@@ -1254,13 +1255,13 @@ nsGfxTextControlFrame2::ReflowStandard(nsIPresContext*          aPresContext,
     nsInputDimensionSpec textSpec(nsnull, PR_FALSE, nsnull,
                                   nsnull, width, 
                                   PR_FALSE, nsnull, 1);
-    CalculateSizeStandard(aPresContext, aReflowState.rendContext, this,
+    CalculateSizeStandard(aPresContext, aReflowState.drawable, this,
                           textSpec, aDesiredSize, minSize, ignore, aBorder, aPadding, usingDefaultSize);
   } else {
     nsInputDimensionSpec areaSpec(nsHTMLAtoms::cols, PR_FALSE, nsnull, 
                                   nsnull, GetDefaultColumnWidth(), 
                                   PR_FALSE, nsHTMLAtoms::rows, 1);
-    CalculateSizeStandard(aPresContext, aReflowState.rendContext, this, 
+    CalculateSizeStandard(aPresContext, aReflowState.drawable, this, 
                           areaSpec, aDesiredSize, minSize, ignore, aBorder, aPadding, usingDefaultSize);
   }
 
@@ -1275,6 +1276,9 @@ nsGfxTextControlFrame2::ReflowStandard(nsIPresContext*          aPresContext,
     nscoord scrollbarWidth  = 0;
     nscoord scrollbarHeight = 0;
     float   scale;
+
+    // XXX pav use nsISystemLook
+#if 0
     nsCOMPtr<nsIDeviceContext> dx;
     aPresContext->GetDeviceContext(getter_AddRefs(dx));
     if (dx) { 
@@ -1288,6 +1292,7 @@ nsGfxTextControlFrame2::ReflowStandard(nsIPresContext*          aPresContext,
       scrollbarWidth  = nsFormControlFrame::GetScrollbarWidth(p2t);
       scrollbarHeight = scrollbarWidth;
     }
+#endif
 
     aDesiredSize.height += scrollbarHeight;
     minSize.height      += scrollbarHeight;
@@ -1305,7 +1310,7 @@ nsGfxTextControlFrame2::ReflowStandard(nsIPresContext*          aPresContext,
 
 PRInt32
 nsGfxTextControlFrame2::CalculateSizeStandard (nsIPresContext*       aPresContext, 
-                                              nsIRenderingContext*  aRendContext,
+                                               nsIDrawable*          aDrawable,
                                               nsIFormControlFrame*  aFrame,
                                               nsInputDimensionSpec& aSpec, 
                                               nsSize&               aDesiredSize, 
@@ -1337,8 +1342,8 @@ nsGfxTextControlFrame2::CalculateSizeStandard (nsIPresContext*       aPresContex
   nsCOMPtr<nsIFontMetrics> fontMet;
   nsresult res = nsFormControlHelper::GetFrameFontFM(aPresContext, aFrame, getter_AddRefs(fontMet));
   if (NS_SUCCEEDED(res) && fontMet) {
-    aRendContext->SetFont(fontMet);
-    fontMet->GetHeight(fontHeight);
+    aDrawable->SetFontMetrics(fontMet);
+    fontMet->GetHeight(&fontHeight);
     aDesiredSize.height = fontHeight;
   } else {
     aDesiredSize.height = GUESS_INPUT_SIZE; // punt
@@ -1356,8 +1361,10 @@ nsGfxTextControlFrame2::CalculateSizeStandard (nsIPresContext*       aPresContex
 #else
   // XP implementation of AveCharWidth
   nsAutoString aveStr; 
+  // XXX pav GetAveCharWidth should be implimented everywhere.. remove this ifdef
   aveStr.AssignWithConversion(" ABCDEFGHIJKLMNOPQRSTUVWXYabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+=-0987654321~`';\":[]}{?><,./\\|");
-  aRendContext->GetWidth(aveStr, charWidth);
+  // XXX we know the length here, so lets put it in instead of doing Length()
+  fontMet->GetStringWidth(aveStr.GetUnicode(), aveStr.Length(), &charWidth);
   charWidth /= aveStr.Length();
   // Round to the nearest twip
   nscoord onePixel = NSIntPixelsToTwips(1, p2t);  // get the rounding right
@@ -1420,7 +1427,7 @@ nsGfxTextControlFrame2::CalculateSizeStandard (nsIPresContext*       aPresContex
 
 PRInt32
 nsGfxTextControlFrame2::CalculateSizeNavQuirks (nsIPresContext*       aPresContext, 
-                                              nsIRenderingContext*  aRendContext,
+                                                nsIDrawable*          aDrawable,
                                               nsIFormControlFrame*  aFrame,
                                               nsInputDimensionSpec& aSpec, 
                                               nsSize&               aDesiredSize, 
@@ -1450,14 +1457,14 @@ nsGfxTextControlFrame2::CalculateSizeNavQuirks (nsIPresContext*       aPresConte
   nsCOMPtr<nsIFontMetrics> fontMet;
   nsresult res = nsFormControlHelper::GetFrameFontFM(aPresContext, aFrame, getter_AddRefs(fontMet));
   if (NS_SUCCEEDED(res) && fontMet) {
-    aRendContext->SetFont(fontMet);
+    aDrawable->SetFontMetrics(fontMet);
 
     // Calculate the min size of the text control as one char
     // save the current default col size
     nscoord tmpCol        = aSpec.mColDefaultSize;
     aSpec.mColDefaultSize = 1;
     charWidth = nsFormControlHelper::CalcNavQuirkSizing(aPresContext, 
-                                                        aRendContext, fontMet, 
+                                                        aDrawable, fontMet, 
                                                         aFrame, aSpec, aDesiredSize);
     // set the default col size back
     aMinSize.width        = aDesiredSize.width;
@@ -1472,7 +1479,7 @@ nsGfxTextControlFrame2::CalculateSizeNavQuirks (nsIPresContext*       aPresConte
       aSpec.mColDefaultSize = col;
     }
     charWidth = nsFormControlHelper::CalcNavQuirkSizing(aPresContext, 
-                                                        aRendContext, fontMet, 
+                                                        aDrawable, fontMet, 
                                                         aFrame, aSpec, aDesiredSize);
     aDesiredSize.height = aDesiredSize.height * aSpec.mRowDefaultSize;
   } else {
@@ -1518,13 +1525,13 @@ nsGfxTextControlFrame2::ReflowNavQuirks(nsIPresContext*          aPresContext,
     nsInputDimensionSpec textSpec(nsnull, PR_FALSE, nsnull,
                                   nsnull, width, 
                                   PR_FALSE, nsnull, 1);
-    CalculateSizeNavQuirks(aPresContext, aReflowState.rendContext, this,  
+    CalculateSizeNavQuirks(aPresContext, aReflowState.drawable, this,  
                            textSpec, aDesiredSize, mMinSize, ignore, aBorder, aPadding, usingDefaultSize);
   } else {
     nsInputDimensionSpec areaSpec(nsHTMLAtoms::cols, PR_FALSE, nsnull, 
                                   nsnull, GetDefaultColumnWidth(), 
                                   PR_FALSE, nsHTMLAtoms::rows, 1);
-    CalculateSizeNavQuirks(aPresContext, aReflowState.rendContext, this,  
+    CalculateSizeNavQuirks(aPresContext, aReflowState.drawable, this,  
                            areaSpec, aDesiredSize, mMinSize, ignore, aBorder, aPadding, usingDefaultSize);
   }
 

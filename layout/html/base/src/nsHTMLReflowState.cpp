@@ -28,8 +28,7 @@
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsLayoutAtoms.h"
-#include "nsIDeviceContext.h"
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIFontMetrics.h"
 #include "nsBlockFrame.h"
 #include "nsLineBox.h"
@@ -46,11 +45,11 @@
 nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
                                      nsIFrame*            aFrame,
                                      nsReflowReason       aReason,
-                                     nsIRenderingContext* aRenderingContext,
+                                     nsIDrawable*         aDrawable,
                                      const nsSize&        aAvailableSpace)
   : mReflowDepth(0)
 {
-  NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");
+  NS_PRECONDITION(nsnull != aDrawable, "no rendering context");
 
   parentReflowState = nsnull;
   frame = aFrame;
@@ -58,7 +57,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
   reflowCommand = nsnull;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
-  rendContext = aRenderingContext;
+  drawable = aDrawable;
   mSpaceManager = nsnull;
   mLineLayout = nsnull;
   isTopOfPage = PR_FALSE;
@@ -70,11 +69,11 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
 nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
                                      nsIFrame*            aFrame,
                                      nsIReflowCommand&    aReflowCommand,
-                                     nsIRenderingContext* aRenderingContext,
+                                     nsIDrawable* aDrawable,
                                      const nsSize&        aAvailableSpace)
   : mReflowDepth(0)
 {
-  NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");  
+  NS_PRECONDITION(nsnull != aDrawable, "no rendering context");  
 
   reason = eReflowReason_Incremental;
   parentReflowState = nsnull;
@@ -82,7 +81,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
   reflowCommand = &aReflowCommand;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
-  rendContext = aRenderingContext;
+  drawable = aDrawable;
   mSpaceManager = nsnull;
   mLineLayout = nsnull;
   isTopOfPage = PR_FALSE;
@@ -108,7 +107,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*          aPresContext,
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
-  rendContext = aParentReflowState.rendContext;
+  drawable = aParentReflowState.drawable;
   mSpaceManager = aParentReflowState.mSpaceManager;
   mLineLayout = aParentReflowState.mLineLayout;
   isTopOfPage = aParentReflowState.isTopOfPage;
@@ -131,7 +130,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*          aPresContext,
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
-  rendContext = aParentReflowState.rendContext;
+  drawable = aParentReflowState.drawable;
   mSpaceManager = aParentReflowState.mSpaceManager;
   mLineLayout = aParentReflowState.mLineLayout;
   isTopOfPage = aParentReflowState.isTopOfPage;
@@ -155,7 +154,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*          aPresContext,
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
-  rendContext = aParentReflowState.rendContext;
+  drawable = aParentReflowState.drawable;
   mSpaceManager = aParentReflowState.mSpaceManager;
   mLineLayout = aParentReflowState.mLineLayout;
   isTopOfPage = aParentReflowState.isTopOfPage;
@@ -714,11 +713,11 @@ nsHTMLReflowState::CalculateHypotheticalBox(nsIPresContext*    aPresContext,
     frame->GetStyleData(eStyleStruct_Font, (const nsStyleStruct*&)font);
     aPresContext->GetMetricsFor(font->mFont, &metrics);
     if (metrics) {
-      nscoord   ascent;
+      gfx_coord   ascent;
 
       // Adjust the y-offset up by the font ascent. That will translate from
       // the baseline to the top of where the text would be
-      metrics->GetMaxAscent(ascent);
+      metrics->GetMaxAscent(&ascent);
       placeholderOffset.y -= ascent;
       NS_RELEASE(metrics);
     }
@@ -2102,10 +2101,10 @@ GetNonInheritedLineHeightStyleContext(nsIStyleContext* aStyleContext)
 }
 
 static nscoord
-ComputeLineHeight(nsIRenderingContext* aRenderingContext,
+ComputeLineHeight(nsIDrawable* aDrawable,
                   nsIStyleContext* aStyleContext)
 {
-  NS_PRECONDITION(nsnull != aRenderingContext, "no rendering context");
+  NS_PRECONDITION(nsnull != aDrawable, "no rendering context");
 
   nscoord lineHeight = -1;
 
@@ -2143,14 +2142,22 @@ ComputeLineHeight(nsIRenderingContext* aRenderingContext,
     // font's normal line height (em height + leading).
     nscoord emHeight = -1;
     nscoord normalLineHeight = -1;
+
+
+    // XXX pav
+    nsCOMPtr<nsIFontMetrics> fm;
+#if 0
     nsCOMPtr<nsIDeviceContext> deviceContext;
-    aRenderingContext->GetDeviceContext(*getter_AddRefs(deviceContext));
+    aDrawable->GetDeviceContext(*getter_AddRefs(deviceContext));
     nsCOMPtr<nsIAtom> langGroup;
     if (display->mLanguage) {
       display->mLanguage->GetLanguageGroup(getter_AddRefs(langGroup));
     }
-    nsCOMPtr<nsIFontMetrics> fm;
+
     deviceContext->GetMetricsFor(font->mFont, langGroup, *getter_AddRefs(fm));
+#endif
+
+
 #ifdef NEW_FONT_HEIGHT_APIS
     if (fm) {
       fm->GetEmHeight(emHeight);
@@ -2185,14 +2192,14 @@ ComputeLineHeight(nsIRenderingContext* aRenderingContext,
 
 nscoord
 nsHTMLReflowState::CalcLineHeight(nsIPresContext* aPresContext,
-                                  nsIRenderingContext* aRenderingContext,
+                                  nsIDrawable* aDrawable,
                                   nsIFrame* aFrame)
 {
   nscoord lineHeight = -1;
   nsCOMPtr<nsIStyleContext> sc;
   aFrame->GetStyleContext(getter_AddRefs(sc));
   if (sc) {
-    lineHeight = ComputeLineHeight(aRenderingContext, sc);
+    lineHeight = ComputeLineHeight(aDrawable, sc);
   }
   if (lineHeight < 0) {
     // Negative line-heights are not allowed by the spec. Translate
@@ -2203,9 +2210,10 @@ nsHTMLReflowState::CalcLineHeight(nsIPresContext* aPresContext,
       lineHeight = font->mFont.size;
     }
     else {
-      aRenderingContext->SetFont(font->mFont);
+      // XXX pav
+      //      aDrawable->SetFont(font->mFont);
       nsCOMPtr<nsIFontMetrics> fm;
-      aRenderingContext->GetFontMetrics(*getter_AddRefs(fm));
+      aDrawable->GetFontMetrics(getter_AddRefs(fm));
 #ifdef NEW_FONT_HEIGHT_APIS
       if (fm) {
         fm->GetNormalLineHeight(lineHeight);
@@ -2236,16 +2244,20 @@ nsHTMLReflowState::ComputeHorizontalValue(nscoord aContainingBlockWidth,
     aResult = aCoord.GetCoordValue();
   }
   else if (eStyleUnit_Chars == aUnit) {
-    if ((nsnull == rendContext) || (nsnull == frame)) {
+    if ((nsnull == drawable) || (nsnull == frame)) {
       // We can't compute it without a rendering context or frame, so
       // pretend its zero...
     }
     else {
       const nsStyleFont* font;
       frame->GetStyleData(eStyleStruct_Font, (const nsStyleStruct*&) font);
-      rendContext->SetFont(font->mFont);
+
+      // XXX pav
+      //      rendContext->SetFont(font->mFont);
       nscoord fontWidth;
-      rendContext->GetWidth('M', fontWidth);
+      nsCOMPtr<nsIFontMetrics> fm;
+      drawable->GetFontMetrics(getter_AddRefs(fm));
+      fm->GetCCharWidth('M', &fontWidth);
       aResult = aCoord.GetIntValue() * fontWidth;
     }
   }

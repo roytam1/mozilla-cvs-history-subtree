@@ -48,7 +48,7 @@ public:
                         nsIFrame**      aFirstChild) const;
   NS_IMETHOD Destroy(nsIPresContext* aPresContext);
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable*         aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
   NS_IMETHOD GetFrameForPoint(nsIPresContext* aPresContext,
@@ -163,12 +163,12 @@ protected:
                                  nsIFrame**     aFrame);
 
   virtual void PaintChildren(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsRect&        aDirtyRect,
                              nsFramePaintLayer    aWhichLayer);
 
   virtual void PaintChild(nsIPresContext*      aPresContext,
-                          nsIRenderingContext& aRenderingContext,
+                          nsIDrawable*         aDrawable,
                           const nsRect&        aDirtyRect,
                           nsIFrame*            aFrame,
                           nsFramePaintLayer    aWhichLayer);

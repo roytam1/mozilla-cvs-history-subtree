@@ -30,7 +30,7 @@
 #include "nsIFormControl.h"
 #include "nsFormFrame.h"
 
-#include "nsIRenderingContext.h"
+#include "nsIDrawable.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIStyleContext.h"
@@ -45,12 +45,11 @@
 #include "nsStyleConsts.h"
 #include "nsIHTMLAttributes.h"
 #include "nsGenericHTMLElement.h"
-#include "nsIWidget.h"
 #include "nsIComponentManager.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsViewsCID.h"
-#include "nsColor.h"
+#include "gfxtypes.h"
 #include "nsIDocument.h"
 #include "nsButtonFrameRenderer.h"
 #include "nsFormControlFrame.h"
@@ -80,7 +79,6 @@ nsHTMLButtonControlFrame::nsHTMLButtonControlFrame()
   : nsHTMLContainerFrame()
 {
   mInline = PR_TRUE;
-  mPreviousCursor = eCursor_standard;
   mTranslatedRect = nsRect(0,0,0,0);
   mDidInit = PR_FALSE;
   mRenderer.SetNameSpace(kNameSpaceID_None);
@@ -458,7 +456,7 @@ nsHTMLButtonControlFrame::SetInitialChildList(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsHTMLButtonControlFrame::Paint(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect,
                                 nsFramePaintLayer aWhichLayer)
 {
@@ -467,11 +465,11 @@ nsHTMLButtonControlFrame::Paint(nsIPresContext* aPresContext,
 	if (disp->IsVisible())
   {
     nsRect rect(0, 0, mRect.width, mRect.height);
-    mRenderer.PaintButton(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer, rect);
+    mRenderer.PaintButton(aPresContext, aDrawable, aDirtyRect, aWhichLayer, rect);
   }
 
 #if 0 // old way
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
 #else // temporary
     // XXX This is temporary
@@ -490,19 +488,21 @@ nsHTMLButtonControlFrame::Paint(nsIPresContext* aPresContext,
   rect.x = 0;
   rect.y = 0;
   rect.Deflate(border);
-  aRenderingContext.PushState();
-  PRBool clipEmpty;
 
-  aRenderingContext.SetClipRect(rect, nsClipCombine_kIntersect, clipEmpty);
+  // XXX pav
+  //  aRenderingContext.PushState();
+  //  PRBool clipEmpty;
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  //  aRenderingContext.SetClipRect(rect, nsClipCombine_kIntersect, clipEmpty);
 
-  aRenderingContext.PopState(clipEmpty);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
+
+  //  aRenderingContext.PopState(clipEmpty);
 
 #endif
 
   // to draw border when selected in editor
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 // XXX a hack until the reflow state does this correctly

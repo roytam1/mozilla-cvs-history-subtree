@@ -52,19 +52,15 @@
 #include "nsIDOMRange.h"
 #include "nsLayoutCID.h"
 
+#include "nsIWindow.h"
+#include "nsIWebShell.h"
 #include "nsViewsCID.h"
-#include "nsWidgetsCID.h"
-#include "nsGfxCIID.h"
-#include "nsIDeviceContext.h"
-#include "nsIDeviceContextSpec.h"
-#include "nsIDeviceContextSpecFactory.h"
 #include "nsIViewManager.h"
 #include "nsIView.h"
 
 #include "nsIPref.h"
 #include "nsIPageSequenceFrame.h"
 #include "nsIURL.h"
-#include "nsIWebShell.h"
 #include "nsIContentViewerEdit.h"
 #include "nsIContentViewerFile.h"
 #include "nsIMarkupDocumentViewer.h"
@@ -191,8 +187,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIContentViewer interface...
-  NS_IMETHOD Init(nsIWidget* aParentWidget,
-                  nsIDeviceContext* aDeviceContext,
+  NS_IMETHOD Init(nsIWindow* aParentWidget,
                   const nsRect& aBounds);
   NS_IMETHOD BindToDocument(nsISupports* aDoc, const char* aCommand);
   NS_IMETHOD SetContainer(nsISupports* aContainer);
@@ -242,7 +237,7 @@ protected:
 private:
   void ForceRefresh(void);
   nsresult CreateStyleSet(nsIDocument* aDocument, nsIStyleSet** aStyleSet);
-  nsresult MakeWindow(nsIWidget* aParentWidget,
+  nsresult MakeWindow(nsIWindow* aParentWidget,
                       const nsRect& aBounds);
 
   nsresult GetDocumentSelection(nsISelection **aSelection);
@@ -264,14 +259,13 @@ protected:
   // class, please make the ownership explicit (pinkerton, scc).
   
   nsISupports* mContainer; // [WEAK] it owns me!
-  nsCOMPtr<nsIDeviceContext> mDeviceContext;   // ??? can't hurt, but...
   nsIView*                 mView;        // [WEAK] cleaned up by view mgr
 
   // the following seven items are explicitly in this order
   // so they will be destroyed in the reverse order (pinkerton, scc)
   nsCOMPtr<nsITransformMediator> mTransformMediator;
   nsCOMPtr<nsIDocument>    mDocument;
-  nsCOMPtr<nsIWidget>      mWindow;      // ??? should we really own it?
+  nsCOMPtr<nsIWindow>      mWindow;      // ??? should we really own it?
   nsCOMPtr<nsIViewManager> mViewManager;
   nsCOMPtr<nsIPresContext> mPresContext;
   nsCOMPtr<nsIPresShell>   mPresShell;
@@ -288,7 +282,6 @@ protected:
 
 
   // printing members
-  nsIDeviceContext  *mPrintDC;
   nsIPresContext    *mPrintPC;
   nsIStyleSet       *mPrintSS;
   nsIPresShell      *mPrintPS;
@@ -312,7 +305,6 @@ protected:
 // Class IDs
 static NS_DEFINE_CID(kViewManagerCID,       NS_VIEW_MANAGER_CID);
 static NS_DEFINE_CID(kScrollingViewCID,     NS_SCROLLING_VIEW_CID);
-static NS_DEFINE_CID(kWidgetCID,            NS_CHILD_CID);
 static NS_DEFINE_CID(kViewCID,              NS_VIEW_CID);
 
 nsresult
@@ -429,9 +421,6 @@ DocumentViewerImpl::~DocumentViewerImpl()
     mPresContext->SetLinkHandler(nsnull);
   }
 
-  if (mDeviceContext)
-    mDeviceContext->FlushFontCache();
-
   if (mPresShell) {
     // Break circular reference (or something)
     mPresShell->EndObservingDocument();
@@ -487,8 +476,7 @@ DocumentViewerImpl::GetContainer(nsISupports** aResult)
 }
 
 NS_IMETHODIMP
-DocumentViewerImpl::Init(nsIWidget* aParentWidget,
-                         nsIDeviceContext* aDeviceContext,
+DocumentViewerImpl::Init(nsIWindow* aParentWidget,
                          const nsRect& aBounds)
 {
   nsresult rv;
@@ -496,8 +484,6 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
   if (!mDocument) {
     return NS_ERROR_NULL_POINTER;
   }
-
-  mDeviceContext = dont_QueryInterface(aDeviceContext);
 
   PRBool makeCX = PR_FALSE;
   if (!mPresContext) {
@@ -509,7 +495,7 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 #endif
     if (NS_FAILED(rv)) return rv;
 
-    mPresContext->Init(aDeviceContext); 
+    mPresContext->Init(NULL);  // XXX pav
     makeCX = PR_TRUE;
   }
 
@@ -841,7 +827,7 @@ DocumentViewerImpl::Show(void)
 {
   NS_PRECONDITION(mWindow, "null window");
   if (mWindow) {
-    mWindow->Show(PR_TRUE);
+    mWindow->Show();
   }
   return NS_OK;
 }
@@ -851,11 +837,15 @@ DocumentViewerImpl::Hide(void)
 {
   NS_PRECONDITION(mWindow, "null window");
   if (mWindow) {
-    mWindow->Show(PR_FALSE);
+    mWindow->Hide();
   }
   return NS_OK;
 }
 
+<<<<<<< nsDocumentViewer.cpp
+NS_IMETHODIMP
+DocumentViewerImpl::PrintContent(nsIWebShell  *aParent)
+=======
 nsresult
 DocumentViewerImpl::FindFrameSetWithIID(nsIContent * aParentContent, const nsIID& aIID)
 {
@@ -880,6 +870,7 @@ DocumentViewerImpl::FindFrameSetWithIID(nsIContent * aParentContent, const nsIID
 nsresult
 DocumentViewerImpl::PrintContent(nsIWebShell *      aParent,
                                  nsIDeviceContext * aDContext)
+>>>>>>> 1.75
 {
   NS_ENSURE_ARG_POINTER(aParent);
   NS_ENSURE_ARG_POINTER(aDContext);
@@ -1196,7 +1187,7 @@ DocumentViewerImpl::CreateStyleSet(nsIDocument* aDocument,
 }
 
 nsresult
-DocumentViewerImpl::MakeWindow(nsIWidget* aParentWidget,
+DocumentViewerImpl::MakeWindow(nsIWindow* aParentWidget,
                                const nsRect& aBounds)
 {
   nsresult rv;
@@ -1206,10 +1197,6 @@ DocumentViewerImpl::MakeWindow(nsIWidget* aParentWidget,
                                           NS_GET_IID(nsIViewManager), 
                                           getter_AddRefs(mViewManager));
 
-  nsCOMPtr<nsIDeviceContext> dx;
-  mPresContext->GetDeviceContext(getter_AddRefs(dx));
-
- 
   nsRect tbounds = aBounds;
   float p2t;
   mPresContext->GetPixelsToTwips(&p2t);
@@ -1240,7 +1227,7 @@ DocumentViewerImpl::MakeWindow(nsIWidget* aParentWidget,
     return rv;
   }
 
-  rv = mView->CreateWidget(kWidgetCID, nsnull, aParentWidget->GetNativeData(NS_NATIVE_WIDGET));
+  rv = mView->CreateWidget(aParentWidget);
 
   if (rv != NS_OK)
     return rv;
@@ -1507,9 +1494,6 @@ DocumentViewerImpl::GetSaveable(PRBool *aSaveable)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-static NS_DEFINE_IID(kIDeviceContextSpecFactoryIID, NS_IDEVICE_CONTEXT_SPEC_FACTORY_IID);
-static NS_DEFINE_IID(kDeviceContextSpecFactoryCID, NS_DEVICE_CONTEXT_SPEC_FACTORY_CID);
-
 
 /** ---------------------------------------------------
  *  See documentation above in the nsIContentViewerfile class definition
@@ -1519,14 +1503,9 @@ NS_IMETHODIMP
 DocumentViewerImpl::Print(PRBool aSilent,FILE *aFile, nsIPrintListener *aPrintListener)
 {
 nsCOMPtr<nsIWebShell>                 webContainer;
-nsCOMPtr<nsIDeviceContextSpecFactory> factory;
 PRInt32                               width,height;
 
-  nsComponentManager::CreateInstance(kDeviceContextSpecFactoryCID, 
-                                     nsnull,
-                                     kIDeviceContextSpecFactoryIID,
-                                     (void **)getter_AddRefs(factory));
-
+#if 0 // XXX pav
   if (factory) {
 
 #ifdef DEBUG_dcone
@@ -1678,6 +1657,8 @@ PRInt32                               width,height;
       return NS_ERROR_FAILURE;
     }
   }
+
+#endif
   return NS_OK;
 }
 

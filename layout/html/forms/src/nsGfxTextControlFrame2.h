@@ -180,7 +180,7 @@ protected:
                             nsMargin&                aPadding);
 
   PRInt32 CalculateSizeStandard (nsIPresContext*       aPresContext, 
-                                  nsIRenderingContext*  aRendContext,
+                                 nsIDrawable*          aDrawable,
                                   nsIFormControlFrame*  aFrame,
                                   nsInputDimensionSpec& aSpec, 
                                   nsSize&               aDesiredSize, 
@@ -191,7 +191,7 @@ protected:
                                   PRBool                aIsUsingDefSize);
 
   PRInt32 CalculateSizeNavQuirks (nsIPresContext*       aPresContext, 
-                                  nsIRenderingContext*  aRendContext,
+                                  nsIDrawable*          aDrawable,
                                   nsIFormControlFrame*  aFrame,
                                   nsInputDimensionSpec& aSpec, 
                                   nsSize&               aDesiredSize, 
