@@ -47,7 +47,7 @@ endif
 
 endif # MOZ_JAVA
 
-ifeq ($(subst /,_,$(shell uname -s)),OS2)
+ifeq ($(subst /,,$(shell uname -s)),OS2)
 DIRS	+= spellchk
 endif
 

@@ -83,18 +83,14 @@ wfWrite(NET_StreamClass *stream, const unsigned char *str, int32 len)
 	return ((int)nfstrm_Write((nfstrm *)data->fpStream, (char *)str, (jint)len, NULL));
 }
 
-#ifndef XP_OS2
 extern "C"
-#endif
 unsigned int wfWriteReady(NET_StreamClass *stream)
 {
 	struct stream_data *data = (struct stream_data *) stream->data_object;	
 	return ((unsigned int)nfstrm_IsWriteReady((nfstrm *)data->fpStream, NULL));
 }
 
-#ifndef XP_OS2
 extern "C"
-#endif
 void wfComplete(NET_StreamClass *stream)
 {
 	struct stream_data *data = (struct stream_data *) stream->data_object;
@@ -123,9 +119,7 @@ void wfComplete(NET_StreamClass *stream)
 	return;
 }
 
-#ifndef XP_OS2
 extern "C"
-#endif
 void wfAbort(NET_StreamClass *stream, int status)
 {
 	struct stream_data *data = (struct stream_data *) stream->data_object;
