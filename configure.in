@@ -3248,7 +3248,7 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix irc spellcheck"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix inspector irc spellcheck"
 dnl MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet"
 
 dnl Check if Thai Rendering Extension needs to be enabled
