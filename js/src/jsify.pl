@@ -402,8 +402,8 @@ sub convert_declarations {
     ($line) = @_;
     $line =~ s/PR_EXTERN/EXTERN/g;
     $line =~ s/PR_IMPLEMENT/IMPLEMENT/g;
-    $line =~ s/PR_CALLBACK/CALLBACK/g;
-    $line =~ s/PR_STATIC_CALLBACK/STATIC_CALLBACK/g;
+    $line =~ s/PR_CALLBACK/DLL_CALLBACK/g;
+    $line =~ s/PR_STATIC_CALLBACK/STATIC_DLL_CALLBACK/g;
     $line =~ s/PR_IMPORT/IMPORT/g;
     $line =~ s/PR_PUBLIC_API/PUBLIC_API/g;
     $line =~ s/PR_PUBLIC_DATA/PUBLIC_DATA/g;
