@@ -2026,182 +2026,205 @@ nsresult nsFrame::GetContentAndOffsetsFromPoint(nsIPresContext* aCX,
   if (!aNewContent)
     return NS_ERROR_NULL_POINTER;
 
-  // Traverse through children and look for the best one to give this
-  // to if it fails the getposition call, make it yourself also only
-  // look at primary list
-  nsIView  *view         = nsnull;
-  nsIFrame *kid          = nsnull;
-  nsIFrame *closestFrame = nsnull;
+  // first check to see if the point is outside this frame and if this frame is actually an HREF with a non-null link
+  // if this is then stop searching now. if the point is inside the frame then let it carry on as normal.
 
+  nsCOMPtr<nsIDOMHTMLAnchorElement> a(do_QueryInterface(mContent));
+  PRBool isLink(PR_FALSE);
+  nsRect thisRect;
+  result = GetRect(thisRect);
+
+  nsIView  *view         = nsnull;
   result = GetClosestViewForFrame(aCX, this, &view);
 
   if (NS_FAILED(result))
     return result;
 
-  result = FirstChild(aCX, nsnull, &kid);
+  
+  nsPoint offsetPoint;
+  GetOffsetFromView(aCX, offsetPoint, &view);
+  thisRect.x = offsetPoint.x;
+  thisRect.y = offsetPoint.y;
 
-  if (NS_SUCCEEDED(result) && nsnull != kid) {
-#define HUGE_DISTANCE 999999 //some HUGE number that will always fail first comparison
+  if (NS_FAILED(result))
+    return result;
 
-    PRInt32 closestXDistance = HUGE_DISTANCE;
-    PRInt32 closestYDistance = HUGE_DISTANCE;
+  if (!thisRect.Contains(aPoint) && a)
+  {
+    nsAutoString href;
+    a->GetHref(href);
+    if (!href.IsEmpty())
+    {
+      isLink = PR_TRUE;
+    }
+  }
 
-    while (nsnull != kid) {
+  if (!isLink)
+  {
+    // Traverse through children and look for the best one to give this
+    // to if it fails the getposition call, make it yourself also only
+    // look at primary list
+    nsIFrame *kid          = nsnull;
+    nsIFrame *closestFrame = nsnull;
 
-      // Skip over generated content kid frames, or frames
-      // that don't have a proper parent-child relationship!
 
-      PRBool skipThisKid = PR_FALSE;
-      nsFrameState frameState;
-      result = kid->GetFrameState(&frameState);
+    result = FirstChild(aCX, nsnull, &kid);
 
-      if (NS_FAILED(result))
-        return result;
+    if (NS_SUCCEEDED(result) && nsnull != kid) {
+  #define HUGE_DISTANCE 999999 //some HUGE number that will always fail first comparison
 
-      if (frameState & NS_FRAME_GENERATED_CONTENT) {
-        // It's generated content, so skip it!
-        skipThisKid = PR_TRUE;
-      }
-#if 0
-      else {
-        // The frame's content is not generated. Now check
-        // if it is anonymous content!
+      PRInt32 closestXDistance = HUGE_DISTANCE;
+      PRInt32 closestYDistance = HUGE_DISTANCE;
 
-        nsCOMPtr<nsIContent> kidContent;
+      while (nsnull != kid) {
 
-        result = kid->GetContent(getter_AddRefs(kidContent));
+        // Skip over generated content kid frames, or frames
+        // that don't have a proper parent-child relationship!
 
-        if (NS_SUCCEEDED(result) && kidContent) {
-          nsCOMPtr<nsIContent> content;
+        PRBool skipThisKid = PR_FALSE;
+        nsFrameState frameState;
+        result = kid->GetFrameState(&frameState);
 
-          result = kidContent->GetParent(*getter_AddRefs(content));
+        if (NS_FAILED(result))
+          return result;
 
-          if (NS_SUCCEEDED(result) && content) {
-            PRInt32 kidCount = 0;
+        if (frameState & NS_FRAME_GENERATED_CONTENT) {
+          // It's generated content, so skip it!
+          skipThisKid = PR_TRUE;
+        }
+  #if 0
+        else {
+          // The frame's content is not generated. Now check
+          // if it is anonymous content!
 
-            result = content->ChildCount(kidCount);
-            if (NS_SUCCEEDED(result)) {
+          nsCOMPtr<nsIContent> kidContent;
 
-              PRInt32 kidIndex = 0;
-              result = content->IndexOf(kidContent, kidIndex);
+          result = kid->GetContent(getter_AddRefs(kidContent));
 
-              // IndexOf() should return -1 for the index if it doesn't
-              // find kidContent in it's child list.
+          if (NS_SUCCEEDED(result) && kidContent) {
+            nsCOMPtr<nsIContent> content;
 
-              if (NS_SUCCEEDED(result) && (kidIndex < 0 || kidIndex >= kidCount)) {
-                // Must be anonymous content! So skip it!
-                skipThisKid = PR_TRUE;
+            result = kidContent->GetParent(*getter_AddRefs(content));
+
+            if (NS_SUCCEEDED(result) && content) {
+              PRInt32 kidCount = 0;
+
+              result = content->ChildCount(kidCount);
+              if (NS_SUCCEEDED(result)) {
+
+                PRInt32 kidIndex = 0;
+                result = content->IndexOf(kidContent, kidIndex);
+
+                // IndexOf() should return -1 for the index if it doesn't
+                // find kidContent in it's child list.
+
+                if (NS_SUCCEEDED(result) && (kidIndex < 0 || kidIndex >= kidCount)) {
+                  // Must be anonymous content! So skip it!
+                  skipThisKid = PR_TRUE;
+                }
               }
             }
           }
         }
-      }
-#endif //XXX we USED to skip anonymous content i dont think we should anymore leaving this here as a flah
+  #endif //XXX we USED to skip anonymous content i dont think we should anymore leaving this here as a flah
 
-      if (skipThisKid) {
-        kid->GetNextSibling(&kid);
-        continue;
-      }
+        if (skipThisKid) {
+          kid->GetNextSibling(&kid);
+          continue;
+        }
 
-      // Kid frame has content that has a proper parent-child
-      // relationship. Now see if the aPoint inside it's bounding
-      // rect or close by.
+        // Kid frame has content that has a proper parent-child
+        // relationship. Now see if the aPoint inside it's bounding
+        // rect or close by.
 
-      nsRect rect;
-      nsPoint offsetPoint(0,0);
-      nsIView * kidView = nsnull;
+        nsRect rect;
+        nsPoint offsetPoint(0,0);
+        nsIView * kidView = nsnull;
 
-      kid->GetRect(rect);
-      kid->GetOffsetFromView(aCX, offsetPoint, &kidView);
+        kid->GetRect(rect);
+        kid->GetOffsetFromView(aCX, offsetPoint, &kidView);
 
-      rect.x = offsetPoint.x;
-      rect.y = offsetPoint.y;
+        rect.x = offsetPoint.x;
+        rect.y = offsetPoint.y;
 
-      nscoord fromTop = aPoint.y - rect.y;
-      nscoord fromBottom = aPoint.y - rect.y - rect.height;
+        nscoord fromTop = aPoint.y - rect.y;
+        nscoord fromBottom = aPoint.y - rect.y - rect.height;
 
-      PRInt32 yDistance;
-      if (fromTop > 0 && fromBottom < 0)
-        yDistance = 0;
-      else
-        yDistance = PR_MIN(abs(fromTop), abs(fromBottom));
-
-      if (yDistance <= closestYDistance && rect.width > 0 && rect.height > 0)
-      {
-        if (yDistance < closestYDistance)
-          closestXDistance = HUGE_DISTANCE;
-
-        nscoord fromLeft = aPoint.x - rect.x;
-        nscoord fromRight = aPoint.x - rect.x - rect.width;
-
-        PRInt32 xDistance;
-        if (fromLeft > 0 && fromRight < 0)
-          xDistance = 0;
+        PRInt32 yDistance;
+        if (fromTop > 0 && fromBottom < 0)
+          yDistance = 0;
         else
-          xDistance = PR_MIN(abs(fromLeft), abs(fromRight));
+          yDistance = PR_MIN(abs(fromTop), abs(fromBottom));
 
-        if (xDistance == 0 && yDistance == 0)
+        if (yDistance <= closestYDistance && rect.width > 0 && rect.height > 0)
         {
-          closestFrame = kid;
-          break;
-        }
+          if (yDistance < closestYDistance)
+            closestXDistance = HUGE_DISTANCE;
 
-        if (xDistance < closestXDistance || (xDistance == closestXDistance && rect.x <= aPoint.x))
-        {
-          closestXDistance = xDistance;
-          closestYDistance = yDistance;
-          closestFrame     = kid;
+          nscoord fromLeft = aPoint.x - rect.x;
+          nscoord fromRight = aPoint.x - rect.x - rect.width;
+
+          PRInt32 xDistance;
+          if (fromLeft > 0 && fromRight < 0)
+            xDistance = 0;
+          else
+            xDistance = PR_MIN(abs(fromLeft), abs(fromRight));
+
+          if (xDistance == 0 && yDistance == 0)
+          {
+            closestFrame = kid;
+            break;
+          }
+
+          if (xDistance < closestXDistance || (xDistance == closestXDistance && rect.x <= aPoint.x))
+          {
+            closestXDistance = xDistance;
+            closestYDistance = yDistance;
+            closestFrame     = kid;
+          }
+          // else if (xDistance > closestXDistance)
+          //   break;//done
         }
-        // else if (xDistance > closestXDistance)
-        //   break;//done
-      }
     
-      kid->GetNextSibling(&kid);
-    }
-    if (closestFrame) {
-
-      // If we cross a view boundary, we need to adjust
-      // the coordinates because GetPosition() expects
-      // them to be relative to the closest view.
-
-      nsPoint newPoint     = aPoint;
-      nsIView *closestView = nsnull;
-
-      result = GetClosestViewForFrame(aCX, closestFrame, &closestView);
-
-      if (NS_FAILED(result))
-        return result;
-
-      if (closestView && view != closestView)
-      {
-        nscoord vX = 0, vY = 0;
-        result = closestView->GetPosition(&vX, &vY);
-        if (NS_SUCCEEDED(result))
-        {
-          newPoint.x -= vX;
-          newPoint.y -= vY;
-        }
+        kid->GetNextSibling(&kid);
       }
+      if (closestFrame) {
 
-      // printf("      0x%.8x   0x%.8x  %4d  %4d\n",
-      //        closestFrame, closestView, closestXDistance, closestYDistance);
+        // If we cross a view boundary, we need to adjust
+        // the coordinates because GetPosition() expects
+        // them to be relative to the closest view.
 
-      return closestFrame->GetContentAndOffsetsFromPoint(aCX, newPoint, aNewContent,
-                                                         aContentOffset, aContentOffsetEnd,aBeginFrameContent);
+        nsPoint newPoint     = aPoint;
+        nsIView *closestView = nsnull;
+
+        result = GetClosestViewForFrame(aCX, closestFrame, &closestView);
+
+        if (NS_FAILED(result))
+          return result;
+
+        if (closestView && view != closestView)
+        {
+          nscoord vX = 0, vY = 0;
+          result = closestView->GetPosition(&vX, &vY);
+          if (NS_SUCCEEDED(result))
+          {
+            newPoint.x -= vX;
+            newPoint.y -= vY;
+          }
+        }
+
+        // printf("      0x%.8x   0x%.8x  %4d  %4d\n",
+        //        closestFrame, closestView, closestXDistance, closestYDistance);
+
+        return closestFrame->GetContentAndOffsetsFromPoint(aCX, newPoint, aNewContent,
+                                                           aContentOffset, aContentOffsetEnd,aBeginFrameContent);
+      }
     }
   }
 
   if (!mContent)
     return NS_ERROR_NULL_POINTER;
 
-  nsRect thisRect;
-  result = GetRect(thisRect);
-  if (NS_FAILED(result))
-    return result;
-  nsPoint offsetPoint;
-  GetOffsetFromView(aCX, offsetPoint, &view);
-  thisRect.x = offsetPoint.x;
-  thisRect.y = offsetPoint.y;
 
   result = mContent->GetParent(*aNewContent);
   if (*aNewContent){
@@ -3427,6 +3450,9 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
   PRBool found = PR_FALSE;
 	PRBool selectable;
   PRUint8 selectStyle;
+  nsPoint point;
+  nsPoint offset;
+  nsIView * view; //used for call of get offset from view
 
   while (!found)
   {
@@ -3465,8 +3491,6 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
         nearStoppingFrame = lastFrame;
         farStoppingFrame = firstFrame;
       }
-      nsPoint offset;
-      nsIView * view; //used for call of get offset from view
       aBlockFrame->GetOffsetFromView(aPresContext, offset,&view);
       nscoord newDesiredX  = aPos->mDesiredX - offset.x;//get desired x into blockframe coordinates!
 #ifdef IBMBIDI
@@ -3505,7 +3529,6 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
         result = aPos->mTracker->GetPresContext(getter_AddRefs(context));
         if (NS_FAILED(result))
           return result;
-        nsPoint point;
         point.x = aPos->mDesiredX;
 
         nsRect tempRect;
@@ -3569,110 +3592,11 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
           if (!rect.width || !rect.height)
             result = NS_ERROR_FAILURE;
           else
-          {
-            //we may need to check for inline frame here.
-            //if so, stop outside the inline frame.
-            if (aPos->mInlineFrameStop)
-            {
-              const nsStyleDisplay* display;
-              aPos->mInlineFrameStop = PR_FALSE; //default to fail
-              resultFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-
-              //declarations for check for content with href.
-              nsCOMPtr<nsIContent> content;
-              PRBool isLink(PR_FALSE);
-              nsCOMPtr<nsIDOMHTMLAnchorElement> a;
-              nsAutoString href;
-              
-              //check that we are on the last frame
-              nsIFrame *inFlow;
-
-              nsRect tempRect;
-              PRBool pointAfter(PR_FALSE); // is the point after the  selected frame or in front of it?
-              resultFrame->GetRect(tempRect);                    
-              if (tempRect.width && tempRect.height && ((tempRect.x + tempRect.width) < point.x))
-              {
-                pointAfter = PR_TRUE;
-                resultFrame->GetNextInFlow(&inFlow);
-              }
-              else //the point is before the inline frame we need to check for previous frames...
-              {
-                resultFrame->GetPrevInFlow(&inFlow);
-              }
-              //end check that we were in the last frame in flow
-              resultFrame->IsSelectable(&selectable, &selectStyle);
-			        if (!selectable)
-                return NS_ERROR_FAILURE;//cant go to unselectable frame
-        
-              if (selectable && selectStyle != NS_STYLE_USER_SELECT_ALL && 
-                  display->mDisplay == NS_STYLE_DISPLAY_INLINE && !inFlow) 
-              {
-                //we need to look for the nearest parent that does NOT have the inline style...
-                nsIFrame *resultFrameParent;
-                nsIFrame *currentFrame = resultFrame;
-                currentFrame->GetParent(&resultFrameParent);
-                currentFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-                while (display->mDisplay == NS_STYLE_DISPLAY_INLINE)
-                {
-                  //check for a link. if we hit one we know we have 1 more level to go
-                  currentFrame->GetContent(getter_AddRefs(content));
-                  nsCOMPtr<nsIDOMHTMLAnchorElement> a(do_QueryInterface(content));
-                  if (a)
-                  {
-                    a->GetHref(href);
-                    if (!href.IsEmpty())
-                    {
-                      isLink = PR_TRUE;
-                      break;
-                    }
-                  }
-                  currentFrame = resultFrameParent;
-                  currentFrame->GetParent(&resultFrameParent);
-                  if (!resultFrameParent)
-                    break;
-                  currentFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-                }
-                //get next in flow...
-                if (isLink)
-                {
-                  nsCOMPtr<nsIContent> parentContent;
-                  //reuse the content variable here
-                  currentFrame->GetContent(getter_AddRefs(content));
-                  if (content)
-                  {
-                    content->GetParent(*getter_AddRefs(parentContent));
-                    if (parentContent)
-                    {
-                      PRInt32 contentOffset;
-                      result = parentContent->IndexOf(content, contentOffset);
-                      if (NS_SUCCEEDED(result))
-                      {
-                        resultFrame = currentFrame;
-                        aPos->mResultFrame = resultFrame;
-                        aPos->mResultContent = parentContent;
-                        aPos->mContentOffset = contentOffset;
-                        aPos->mInlineFrameStop = PR_TRUE;//success
-                        if (tempRect.Contains(point))
-                          aPos->mContentOffsetEnd = ++aPos->mContentOffset;
-                        else 
-                        {
-                          if (pointAfter)
-                            aPos->mContentOffset++;
-                          aPos->mContentOffsetEnd = aPos->mContentOffset;
-                          return NS_OK;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
             result = resultFrame->GetContentAndOffsetsFromPoint(context,point,
                                           getter_AddRefs(aPos->mResultContent),
                                           aPos->mContentOffset,
                                           aPos->mContentOffsetEnd,
                                           aPos->mPreferLeft);
-          }
         }
         if (NS_SUCCEEDED(result))
         {
@@ -3704,7 +3628,6 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
         nsCOMPtr<nsIPresContext> context;
         result = aPos->mTracker->GetPresContext(getter_AddRefs(context));
 
-        nsPoint point;
         point.x = aPos->mDesiredX;
         point.y = 0;
 
@@ -3722,54 +3645,6 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
             aPos->mPreferLeft = PR_FALSE;
           else
             aPos->mPreferLeft = PR_TRUE;
-          //now check for user_select_all. its its set then start at the respective edge of this content
-          //to make sure we go over
-          if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
-          {
-            //get parent frame until we no longer have this style
-            //then grab the content and set the offsets accordingly
-            nsIFrame *parentFrame = resultFrame;
-            nsIFrame *currentFrame;
-            nsCOMPtr<nsIContent> newContent;
-            PRInt32 newOffset;
-
-            PRUint8 parentStyle;
-            do 
-            {
-              currentFrame = parentFrame;
-              currentFrame->GetParent(&parentFrame);
-              if (parentFrame)
-                parentFrame->IsSelectable(&selectable, &parentStyle);
-            }
-            while (parentFrame && (parentStyle == NS_STYLE_USER_SELECT_ALL));
-            if (parentFrame)
-            {
-              nsCOMPtr<nsIContent> parentContent;
-              currentFrame->GetContent(getter_AddRefs(newContent));
-
-              if (newContent)
-              {
-                result = newContent->GetParent(*getter_AddRefs(parentContent));
-                if (NS_SUCCEEDED(result) && parentContent)
-                {
-                  if (NS_SUCCEEDED(parentContent->IndexOf(newContent, newOffset)))
-                  {
-                    aPos->mResultContent = parentContent;
-                    if (aPos->mDirection == eDirNext)
-                      aPos->mContentOffset = newOffset;
-                    else //previous
-                      aPos->mContentOffset = newOffset+1;
-                    aPos->mContentOffsetEnd = aPos->mContentOffset;
-                    aPos->mInlineFrameStop = PR_TRUE;//success
-                    aPos->mResultFrame = parentFrame;
-                    return NS_OK;
-
-                  }
-                }
-              }
-            }
-
-          }
         }
         else {
           if (aPos->mDirection == eDirPrevious && (resultFrame == nearStoppingFrame))
@@ -3798,6 +3673,161 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
       if (aPos->mDirection == eDirPrevious)
         aPos->mStartOffset = -1;//start from end
      return aBlockFrame->PeekOffset(aPresContext, aPos);
+    }
+  }
+
+  aPos->mResultFrame->IsSelectable(&selectable, &selectStyle);
+  //now check for user_select_all. its its set then start at the respective edge of this content
+  //to make sure we go over
+  if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
+  {
+    //get parent frame until we no longer have this style
+    //then grab the content and set the offsets accordingly
+    nsIFrame *parentFrame = aPos->mResultFrame;
+    nsIFrame *currentFrame;
+    nsCOMPtr<nsIContent> newContent;
+    PRInt32 newOffset;
+
+    PRUint8 parentStyle;
+    do 
+    {
+      currentFrame = parentFrame;
+      currentFrame->GetParent(&parentFrame);
+      if (parentFrame)
+        parentFrame->IsSelectable(&selectable, &parentStyle);
+    }
+    while (parentFrame && (parentStyle == NS_STYLE_USER_SELECT_ALL));
+    if (parentFrame)
+    {
+      nsCOMPtr<nsIContent> parentContent;
+      currentFrame->GetContent(getter_AddRefs(newContent));
+
+      if (newContent)
+      {
+        result = newContent->GetParent(*getter_AddRefs(parentContent));
+        if (NS_SUCCEEDED(result) && parentContent)
+        {
+          if (NS_SUCCEEDED(parentContent->IndexOf(newContent, newOffset)))
+          {
+            aPos->mResultContent = parentContent;
+            if (aPos->mDirection == eDirNext)
+              aPos->mContentOffset = newOffset;
+            else //previous
+              aPos->mContentOffset = newOffset+1;
+            aPos->mContentOffsetEnd = aPos->mContentOffset;
+            aPos->mInlineFrameStop = PR_TRUE;//success
+            aPos->mResultFrame = parentFrame;
+            return NS_OK;
+
+          }
+        }
+      }
+    }
+
+  }
+
+  
+  //we may need to check for inline frame here.
+  //if so, stop outside the inline frame.
+  if (aPos->mInlineFrameStop)
+  {
+    const nsStyleDisplay* display;
+    aPos->mInlineFrameStop = PR_FALSE; //default to fail
+    aPos->mResultFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+
+    //declarations for check for content with href.
+    nsCOMPtr<nsIContent> content;
+    PRBool isLink(PR_FALSE);
+    nsCOMPtr<nsIDOMHTMLAnchorElement> a;
+    nsAutoString href;
+    
+    //check that we are on the last frame
+    nsIFrame *inFlow;
+
+    nsRect tempRect;
+    PRBool pointAfter(PR_FALSE); // is the point after the  selected frame or in front of it?
+    aPos->mResultFrame->GetRect(tempRect);                    
+    if (tempRect.width && tempRect.height && ((tempRect.x + tempRect.width) < point.x))
+    {
+      pointAfter = PR_TRUE;
+      aPos->mResultFrame->GetNextInFlow(&inFlow);
+    }
+    else //the point is before the inline frame we need to check for previous frames...
+    {
+      aPos->mResultFrame->GetPrevInFlow(&inFlow);
+    }
+    //end check that we were in the last frame in flow
+    aPos->mResultFrame->IsSelectable(&selectable, &selectStyle);
+		if (!selectable)
+      return NS_ERROR_FAILURE;//cant go to unselectable frame
+
+    if (selectable && selectStyle != NS_STYLE_USER_SELECT_ALL && 
+        display->mDisplay == NS_STYLE_DISPLAY_INLINE && !inFlow) 
+    {
+      //we need to look for the nearest parent that does NOT have the inline style...
+      nsIFrame *resultFrameParent;
+      nsIFrame *currentFrame = aPos->mResultFrame;
+      currentFrame->GetParent(&resultFrameParent);
+      currentFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+      while (display->mDisplay == NS_STYLE_DISPLAY_INLINE)
+      {
+        //check for a link. if we hit one we know we have 1 more level to go
+        currentFrame->GetContent(getter_AddRefs(content));
+        nsCOMPtr<nsIDOMHTMLAnchorElement> a(do_QueryInterface(content));
+        if (a)
+        {
+          a->GetHref(href);
+          if (!href.IsEmpty())
+          {
+            isLink = PR_TRUE;
+            break;
+          }
+        }
+        currentFrame = resultFrameParent;
+        currentFrame->GetParent(&resultFrameParent);
+        if (!resultFrameParent)
+          break;
+        currentFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+      }
+      //get next in flow...
+      if (isLink)
+      {
+        nsCOMPtr<nsIContent> parentContent;
+        //reuse the content variable here
+        currentFrame->GetContent(getter_AddRefs(content));
+        if (content)
+        {
+          content->GetParent(*getter_AddRefs(parentContent));
+          if (parentContent)
+          {
+            PRInt32 contentOffset;
+            result = parentContent->IndexOf(content, contentOffset);
+            if (NS_SUCCEEDED(result))
+            {
+              aPos->mResultFrame = aPos->mResultFrame;
+              aPos->mResultContent = parentContent;
+              aPos->mContentOffset = contentOffset;
+              aPos->mInlineFrameStop = PR_TRUE;//success
+
+              point.x = aPos->mDesiredX;
+              point.y = tempRect.height + offset.y;
+              result = aPos->mResultFrame->GetOffsetFromView(aPresContext, offset,&view);
+              if (NS_FAILED(result))
+                return result;
+
+              if (tempRect.Contains(point))
+                aPos->mContentOffsetEnd = ++aPos->mContentOffset;
+              else 
+              {
+                if (pointAfter)
+                  aPos->mContentOffset++;
+                aPos->mContentOffsetEnd = aPos->mContentOffset;
+                return NS_OK;
+              }
+            }
+          }
+        }
+      }
     }
   }
   return NS_OK;
@@ -4317,7 +4347,7 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           nsIView * view; //used for call of get offset from view
           firstFrame->GetOffsetFromView(aPresContext, offsetPoint, &view);
 
-          offsetPoint.x = 0;//all the way to the left
+          offsetPoint.x = -1;//all the way to the left
 
           result = firstFrame->GetContentAndOffsetsFromPoint(context,
                                                              offsetPoint,
