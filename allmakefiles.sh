@@ -419,6 +419,13 @@ rdf/tests/localfile/Makefile
 rdf/tests/rdfsink/Makefile
 rdf/tests/rdfcat/Makefile
 rdf/tests/rdfpoll/Makefile
+rdf/protocol/Makefile
+rdf/protocol/rdf/Makefile
+rdf/protocol/rdf/src/Makefile
+rdf/protocol/urn/Makefile
+rdf/protocol/urn/src/Makefile
+rdf/protocol/nc/Makefile
+rdf/protocol/nc/src/Makefile
 sun-java/Makefile
 sun-java/stubs/Makefile
 sun-java/stubs/include/Makefile

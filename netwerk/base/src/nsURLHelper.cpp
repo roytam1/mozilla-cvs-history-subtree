@@ -30,7 +30,7 @@ const int EscapeChars[256] =
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,       /* 0x */
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,  	    /* 1x */
         0,1023,   0, 512, 761,   0,1023,   0,1023,1023,1023,1023,1023,1023, 959, 912,       /* 2x   !"#$%&'()*+,-./	 */
-     1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1008, 896,   0,1008,   0, 768,       /* 3x  0123456789:;<=>?	 */
+     1023,1023,1023,1023,1023,1023,1023,1023,1023,1023, 912, 896,   0,1008,   0, 768,       /* 3x  0123456789:;<=>?	 */
       992,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,       /* 4x  @ABCDEFGHIJKLMNO  */
      1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023, 896, 896, 896, 896,1023,       /* 5x  PQRSTUVWXYZ[\]^_	 */
         0,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,1023,       /* 6x  `abcdefghijklmno	 */
@@ -75,7 +75,7 @@ nsURLEscape(const char* str, PRInt16 mask, nsCString &result)
     src = (const unsigned char *) str;
 
  	char tempBuffer[100];
- 	int tempBufferPos = 0;
+ 	unsigned int tempBufferPos = 0;
 
     char c1[] = " ";
     char c2[] = " ";
@@ -86,7 +86,10 @@ nsURLEscape(const char* str, PRInt16 mask, nsCString &result)
     {
 
         c1[0] = *(src+1);
-        c2[0] = *(src+2);
+        if (*(src+1) == '\0') 
+            c2[0] = '\0';
+        else
+            c2[0] = *(src+2);
         unsigned char c = *src++;
 
         /* if the char has not to be escaped or whatever follows % is 
@@ -103,12 +106,12 @@ nsURLEscape(const char* str, PRInt16 mask, nsCString &result)
             tempBuffer[tempBufferPos++] = hexChars[c >> 4];	/* high nibble */
             tempBuffer[tempBufferPos++] = hexChars[c & 0x0f]; /* low nibble */
         }
- 		if(tempBufferPos == 96)
- 		{
- 			tempBuffer[tempBufferPos] = '\0';
+        if(tempBufferPos >= sizeof(tempBuffer) - 4)
+ 	    {
+ 		    tempBuffer[tempBufferPos] = '\0';
  	        result += tempBuffer;
- 			tempBufferPos = 0;
- 		}
+            tempBufferPos = 0;
+ 	    }
 	}
  	tempBuffer[tempBufferPos] = '\0';
  	result += tempBuffer;
@@ -148,7 +151,10 @@ nsURLUnescape(char* str, char **result)
     while (*src) {
 
         c1[0] = *(src+1);
-        c2[0] = *(src+2);
+        if (*(src+1) == '\0') 
+            c2[0] = '\0';
+        else
+            c2[0] = *(src+2);
 
         /* check for valid escaped sequence */
         if (*src != HEX_ESCAPE || PL_strpbrk(pc1, hexChars) == 0 || 
