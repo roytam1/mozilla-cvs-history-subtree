@@ -86,6 +86,7 @@ nsIAtom * nsMsgDBView::kAttachMsgAtom = nsnull;
 nsIAtom * nsMsgDBView::kHasUnreadAtom = nsnull;
 nsIAtom * nsMsgDBView::kWatchThreadAtom = nsnull;
 nsIAtom * nsMsgDBView::kIgnoreThreadAtom = nsnull;
+nsIAtom * nsMsgDBView::kHasImageAtom = nsnull;
 
 nsIAtom * nsMsgDBView::mLabelPrefColorAtoms[PREF_LABELS_MAX] = {nsnull, nsnull, nsnull, nsnull, nsnull};
 
@@ -161,6 +162,7 @@ void nsMsgDBView::InitializeAtomsAndLiterals()
   kHasUnreadAtom = NS_NewAtom("hasUnread");
   kWatchThreadAtom = NS_NewAtom("watch");
   kIgnoreThreadAtom = NS_NewAtom("ignore");
+  kHasImageAtom = NS_NewAtom("hasimage");
 
 #ifdef SUPPORT_PRIORITY_COLORS
   kHighestPriorityAtom = NS_NewAtom("priority-highest");
@@ -204,6 +206,7 @@ nsMsgDBView::~nsMsgDBView()
     NS_IF_RELEASE(kHasUnreadAtom);
     NS_IF_RELEASE(kWatchThreadAtom);
     NS_IF_RELEASE(kIgnoreThreadAtom);
+    NS_IF_RELEASE(kHasImageAtom);
 
 #ifdef SUPPORT_PRIORITY_COLORS
     NS_IF_RELEASE(kHighestPriorityAtom);
@@ -1111,7 +1114,14 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
 
   if (mIsNews)
     properties->AppendElement(kNewsMsgAtom);
-    
+
+  nsXPIDLCString imageSize;
+  msgHdr->GetStringProperty("imageSize", getter_Copies(imageSize));
+  if (!imageSize.IsEmpty())
+  {
+    properties->AppendElement(kHasImageAtom);
+  }
+
 #ifdef SUPPORT_PRIORITY_COLORS
   // add special styles for priority
   nsMsgPriorityValue priority;
