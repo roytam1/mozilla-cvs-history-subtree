@@ -21,6 +21,7 @@
  *   Johnny Stenback <jst@netscape.com> (original author)
  */
 
+#include "nscore.h"
 #include "nsDOMClassInfo.h"
 #include "nsCRT.h"
 #include "nsIServiceManager.h"
@@ -2291,19 +2292,6 @@ nsDOMClassInfo::CheckAccess(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                    nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
 
     if (NS_FAILED(rv)) {
-      // The security manager vetoed access to prop_name on real_obj,
-      // tell XPConnect about this so that XPConnect doesn't hide this
-      // error from the caller
-      nsCOMPtr<nsIXPCNativeCallContext> cnccx;
-
-      sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
-
-      if (cnccx) {
-        // Tell XPConnect that an exception was already thrown
-
-        cnccx->SetExceptionWasThrown(PR_TRUE);
-      }
-
       // Let XPConnect know that the access was not granted.
       *_retval = PR_FALSE;
     }
@@ -2506,18 +2494,6 @@ nsWindowSH::doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
                                     isLocation ? "location" : "scriptglobals",
                                     nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
 
-  if (NS_SUCCEEDED(rv)) {
-    return rv;
-  }
-
-  // Security check failed. The above call set a JS exception. The
-  // following lines ensure that the exception is propagated.
-
-  nsCOMPtr<nsIXPCNativeCallContext> cnccx;
-  sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
-  if (cnccx)
-    cnccx->SetExceptionWasThrown(PR_TRUE);
-
   return rv; // rv is from CheckPropertyAccess()
 }
 
@@ -2555,18 +2531,6 @@ nsWindowSH::doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
   rv = sSecMan->CheckPropertyAccess(cx, global, "Window",
                                     isLocation ? "location" : "scriptglobals",
                                     nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
-
-  if (NS_SUCCEEDED(rv)) {
-    return rv;
-  }
-
-  // Security check failed. The above call set a JS exception. The
-  // following lines ensure that the exception is propagated.
-
-  nsCOMPtr<nsIXPCNativeCallContext> cnccx;
-  sXPConnect->GetCurrentNativeCallContext(getter_AddRefs(cnccx));
-  if (cnccx)
-    cnccx->SetExceptionWasThrown(PR_TRUE);
 
   return rv; // rv is from CheckPropertyAccess()
 }
@@ -4828,7 +4792,7 @@ nsHistorySH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
 
   nsCOMPtr<nsIDOMHistory> history(do_QueryInterface(aNative));
 
-  return history->Item(PRUint32(aNative), aResult);
+  return history->Item(NS_PTR_TO_INT32(aNative), aResult);
 }
 
 
