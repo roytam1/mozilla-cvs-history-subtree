@@ -362,7 +362,7 @@ endif
 
 ifeq ($(OS_ARCH),FreeBSD)
 ifeq ($(USE_PTHREADS),1)
-EXTRA_LIBS = -lc_r
+LDOPTS += -pthread
 endif
 LDOPTS += -Xlinker -R $(PWD)/$(DIST)/lib
 endif
@@ -378,7 +378,7 @@ ifeq ($(OS_ARCH),AIX)
 LIBPTHREAD = -lpthreads
 else
   ifeq ($(OS_ARCH),FreeBSD)
-  LIBPTHREAD = -lc_r
+  LIBPTHREAD =
   else
     ifeq ($(OS_ARCH)$(basename $(OS_RELEASE)),HP-UXB.10)
     LIBPTHREAD = -ldce
