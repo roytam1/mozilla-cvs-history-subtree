@@ -27,6 +27,16 @@
  *  and Named Anchors, should be placed in EditorContent.css instead of here.
 */
 
+:link, :link:active, :visited, :visited:active {
+ text-decoration: underline;
+}
+:link{
+ color: blue;
+}
+:visited{
+ color: purple;
+}
+
 /* Override the browser's pointer cursor over links */
 a:link, a:visited, a:active, a:out-of-date {
   cursor: text;
