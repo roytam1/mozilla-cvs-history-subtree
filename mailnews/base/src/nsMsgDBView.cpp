@@ -35,6 +35,7 @@
 #include "nsQuickSort.h"
 #include "nsIMsgImapMailFolder.h"
 #include "nsImapCore.h"
+#include "nsMsgFolderFlags.h"
 
 #include "nsIDOMElement.h"
 #include "nsDateTimeFormatCID.h"
@@ -72,6 +73,7 @@ nsMsgDBView::nsMsgDBView()
   m_currentlyDisplayedMsgKey = nsMsgKey_None;
   mNumSelectedRows = 0;
   mSupressMsgDisplay = PR_FALSE;
+  mSpecialFolder = PR_FALSE;
 
   // initialize any static atoms or unicode strings
   if (gInstanceCount == 0) 
@@ -113,7 +115,12 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
   if (!mHeaderParser)
     mHeaderParser = do_CreateInstance(NS_MAILNEWS_MIME_HEADER_PARSER_CONTRACTID);
 
-  nsresult rv = aHdr->GetMime2DecodedAuthor(getter_Copies(unparsedAuthor));
+  nsresult rv = NS_OK;
+  if (mSpecialFolder)
+    rv = aHdr->GetMime2DecodedRecipients(getter_Copies(unparsedAuthor));
+  else
+    rv = aHdr->GetMime2DecodedAuthor(getter_Copies(unparsedAuthor));
+  
   // *sigh* how sad, we need to convert our beautiful unicode string to utf8 
   // so we can extract the name part of the address...then convert it back to 
   // unicode again.
@@ -808,7 +815,10 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     }
     else if (aColID[1] == 'e') // sort by sender
     {
-      sortType = nsMsgViewSortType::byAuthor;
+      if (mSpecialFolder)
+        sortType = nsMsgViewSortType::byRecipient;
+      else
+        sortType = nsMsgViewSortType::byAuthor;
     }
     else if (aColID[1] == 'i') // size
     {
@@ -970,6 +980,14 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sor
     NS_ENSURE_SUCCESS(rv,rv);
 	  m_db->AddListener(this);
     m_folder = folder;
+
+    // for sent, unsent and draft folders, be sure to set mSpecialFolder so we'll show the recipient field
+    // in place of the author.
+    PRUint32 folderFlags = 0;
+    m_folder->GetFlags(&folderFlags);
+    if ( (folderFlags & MSG_FOLDER_FLAG_DRAFTS) || (folderFlags & MSG_FOLDER_FLAG_SENTMAIL)
+          || (folderFlags & MSG_FOLDER_FLAG_QUEUE))
+      mSpecialFolder = PR_TRUE;
   }
 #ifdef HAVE_PORT
 	CacheAdd ();

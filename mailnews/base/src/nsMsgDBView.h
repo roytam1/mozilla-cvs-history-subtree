@@ -213,7 +213,7 @@ protected:
   nsUInt32Array m_flags;
   nsUint8Array   m_levels;
 
-  // cache the most recently asked fo header and corresponding msgKey.
+  // cache the most recently asked for header and corresponding msgKey.
   nsCOMPtr <nsIMsgDBHdr>  m_cachedHdr;
   nsMsgKey                m_cachedMsgKey;
 
@@ -222,6 +222,7 @@ protected:
   nsMsgKey                m_currentlyDisplayedMsgKey;
 
   nsCOMPtr <nsIMsgFolder> m_folder;
+  PRBool mSpecialFolder; // for special folders, the Sender column really shows recipients.
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;
   nsMsgViewSortTypeValue  m_sortType;
