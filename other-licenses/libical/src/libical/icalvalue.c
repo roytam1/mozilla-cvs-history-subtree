@@ -713,10 +713,10 @@ char* icalvalue_text_as_ical_string(icalvalue* value) {
 		break;
 	    }
 
-/* 	    case '\\': 
-	    case '"': */
 	    case ';':
-	    case ',':{
+	    case ',':
+	    case '"':
+	    case '\\':{
 		icalmemory_append_char(&str,&str_p,&buf_sz,'\\');
 		icalmemory_append_char(&str,&str_p,&buf_sz,*p);
 		line_length+=3;
