@@ -442,7 +442,7 @@ char *nsIMAPGenericParser::CreateQuoted(PRBool /*skipToEnd*/)
     + 1;	// one char past opening '"'
   
   int  charIndex = 0;
-  int  tokenIndex = 0;
+  int  escapeCharsCut = 0;
   PRBool closeQuoteFound = PR_FALSE;
   nsCString returnString(currentChar);
   
@@ -468,7 +468,7 @@ char *nsIMAPGenericParser::CreateQuoted(PRBool /*skipToEnd*/)
       charIndex++;
       
       // account for charIndex not reflecting the eat of the escape character
-      tokenIndex++;
+      escapeCharsCut++;
     }
     else
       charIndex++;
@@ -491,13 +491,13 @@ char *nsIMAPGenericParser::CreateQuoted(PRBool /*skipToEnd*/)
       //			fCurrentTokenPlaceHolder -= charDiff;
       //			if (!nsCRT::strcmp(fCurrentTokenPlaceHolder, CRLF))
       //				fAtEndOfLine = PR_TRUE;
-      AdvanceTokenizerStartingPoint ((fNextToken - fLineOfTokens) + returnString.Length() + 2);
+      AdvanceTokenizerStartingPoint ((fNextToken - fLineOfTokens) + returnString.Length() + escapeCharsCut + 2);
       if (!nsCRT::strcmp(fLineOfTokens, CRLF))
         fAtEndOfLine = PR_TRUE;
     }
     else
     {
-      fCurrentTokenPlaceHolder += tokenIndex + charIndex + 1 - strlen(fNextToken);
+      fCurrentTokenPlaceHolder += escapeCharsCut + charIndex + 1 - strlen(fNextToken);
       if (!*fCurrentTokenPlaceHolder)
         *fCurrentTokenPlaceHolder = ' ';	// put the token delimiter back
                                                 /*	if (!nsCRT::strcmp(fNextToken, CRLF))
