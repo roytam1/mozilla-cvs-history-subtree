@@ -47,7 +47,7 @@ include $(DEPTH)/config/autoconf.mk
 include $(topsrcdir)/config/rules.mk
 
 # override these variables in special situations
-STAGE_DIR = $(DEPTH)/stage
+STAGE_DIR = $(DEPTH)/stage$(if $*,/$*)
 PACKAGE_LIST = $(srcdir)/packages.list
 PACKAGE_FLAGS = 
 HANDLERS = xptmerge,touch
