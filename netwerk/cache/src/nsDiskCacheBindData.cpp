@@ -26,27 +26,51 @@
 
 #include "nsDiskCacheBindData.h"
 
+
+/******************************************************************************
+ *  Utility Functions
+ *****************************************************************************/
+
+nsDiskCacheBindData *
+GetBindDataFromCacheEntry(nsCacheEntry * entry)
+{
+    nsCOMPtr<nsISupports> data;
+    nsresult rv = entry->GetData(getter_AddRefs(data));
+    if (NS_FAILED(rv))  return nsnull;
+    
+    return (nsDiskCacheBindData *)data.get();
+}
+
+
 /******************************************************************************
  *  nsDiskCacheBindData
  *****************************************************************************/
 
 NS_IMPL_THREADSAFE_ISUPPORTS0(nsDiskCacheBindData);
 
-PLDHashNumber
-nsDiskCacheBindData::Hash(const char* key)
+nsDiskCacheBindData::nsDiskCacheBindData(nsCacheEntry* entry)
+    :   mCacheEntry(entry)
 {
-    PLDHashNumber h = 0;
-    for (const PRUint8* s = (PRUint8*) key; *s != '\0'; ++s)
-        h = (h >> (PL_DHASH_BITS - 4)) ^ (h << 4) ^ *s;
-    return (h == 0 ? ULONG_MAX : h);
+    NS_INIT_ISUPPORTS();
+    PR_INIT_CLIST(this);
+    mRecord.SetHashNumber(nsDiskCache::Hash(entry->Key()->get()));
+}
+
+nsDiskCacheBindData::~nsDiskCacheBindData()
+{
+    // XXX if PR_CLIST_IS_EMPTY(this) then remove entry from hashtable
+    PR_REMOVE_LINK(this);       // XXX why are we still on a list?
 }
 
 
 /******************************************************************************
- *  nsDiskCacheHashTable
+ *  nsDiskCacheBindery
+ *
+ *  Keeps track of bound disk cache entries to detect for collisions.
+ *
  *****************************************************************************/
 
-PLDHashTableOps nsDiskCacheHashTable::ops =
+PLDHashTableOps nsDiskCacheBindery::ops =
 {
     PL_DHashAllocTable,
     PL_DHashFreeTable,
@@ -59,13 +83,13 @@ PLDHashTableOps nsDiskCacheHashTable::ops =
 };
 
 
-nsDiskCacheHashTable::nsDiskCacheHashTable()
+nsDiskCacheBindery::nsDiskCacheBindery()
     : initialized(PR_FALSE)
 {
 }
 
 
-nsDiskCacheHashTable::~nsDiskCacheHashTable()
+nsDiskCacheBindery::~nsDiskCacheBindery()
 {
     if (initialized)
         PL_DHashTableFinish(&table);
@@ -73,7 +97,7 @@ nsDiskCacheHashTable::~nsDiskCacheHashTable()
 
 
 nsresult
-nsDiskCacheHashTable::Init()
+nsDiskCacheBindery::Init()
 {
     nsresult rv = NS_OK;
     initialized = PL_DHashTableInit(&table, &ops, nsnull,
@@ -85,137 +109,171 @@ nsDiskCacheHashTable::Init()
 }
 
 
+// XXX need to have nsDiskCacheRecord passed in
 nsDiskCacheBindData *
-nsDiskCacheHashTable::GetEntry(const char * key)
+nsDiskCacheBindery::CreateBindDataForCacheEntry(nsCacheEntry * entry)
 {
-    return GetEntry(nsDiskCacheBindData::Hash(key));
+    nsCOMPtr<nsISupports> data;
+    nsresult rv = entry->GetData(getter_AddRefs(data));
+    if (NS_FAILED(rv) || data) {
+        NS_ASSERTION(!data, "cache entry already has bind data");
+        return nsnull;
+    }
+    
+    nsDiskCacheBindData * bindData = new nsDiskCacheBindData(entry);
+    if (!bindData)  return nsnull;
+    
+    data = bindData; // add ref
+    entry->SetData(data.get());     // XXX why .get() ?
+    
+    // XXX add bindData to collision detection system
+
+    return bindData;
+}
+
+
+// XXX if we read an entry off of disk (FindEntry)
+// XXX      - it may already have a generation number
+// XXX      - generation number conflict is an error
+// XXX new entries (BindEntry)
+// XXX      - assign generation number
+
+// XXX FindActiveBindData(hashNumber) // there can be only one
+// XXX FindBindData(hashNumber, generation)
+
+// XXX UnbindEntry(nsDiskCacheBindData * bindData); // called from DeactivateEntry()
+
+nsDiskCacheBindData *
+nsDiskCacheBindery::GetEntry(const char * key)
+{
+    return GetEntry(nsDiskCache::Hash(key));
 }
 
 
 nsDiskCacheBindData *
-nsDiskCacheHashTable::GetEntry(PLDHashNumber key)
+nsDiskCacheBindery::GetEntry(PLDHashNumber key)
 {
     nsDiskCacheBindData * result = nsnull;
-    NS_ASSERTION(initialized, "nsDiskCacheHashTable not initialized");
+    NS_ASSERTION(initialized, "nsDiskCacheBindery not initialized");
     HashTableEntry * hashEntry;
     hashEntry = (HashTableEntry*) PL_DHashTableOperate(&table, (void*) key, PL_DHASH_LOOKUP);
     if (PL_DHASH_ENTRY_IS_BUSY(hashEntry)) {
-        result = hashEntry->mDiskCacheBindData;
+        result = hashEntry->mBindData;
     }
     return result;
 }
 
 
 nsresult
-nsDiskCacheHashTable::AddEntry(nsDiskCacheBindData * entry)
+nsDiskCacheBindery::AddEntry(nsDiskCacheBindData * bindData)
 {
-    NS_ENSURE_ARG_POINTER(entry);
-    NS_ASSERTION(initialized, "nsDiskCacheHashTable not initialized");
+    NS_ENSURE_ARG_POINTER(bindData);
+    NS_ASSERTION(initialized, "nsDiskCacheBindery not initialized");
 
     HashTableEntry * hashEntry;
     hashEntry = (HashTableEntry *) PL_DHashTableOperate(&table,
-                                                        (void*) entry->getHashNumber(),
+                                                        (void*) bindData->mRecord.HashNumber(),
                                                         PL_DHASH_ADD);
     if (!hashEntry) return NS_ERROR_OUT_OF_MEMORY;
     
-    NS_ADDREF(hashEntry->mDiskCacheBindData = entry);
+    NS_ADDREF(hashEntry->mBindData = bindData);
 
     return NS_OK;
 }
 
 
 void
-nsDiskCacheHashTable::RemoveEntry(nsDiskCacheBindData * entry)
+nsDiskCacheBindery::RemoveEntry(nsDiskCacheBindData * bindData)
 {
-    NS_ASSERTION(initialized, "nsDiskCacheHashTable not initialized");
-    NS_ASSERTION(entry, "### cacheEntry == nsnull");
+    NS_ASSERTION(initialized, "nsDiskCacheBindery not initialized");
+    NS_ASSERTION(bindData, "### bindData == nsnull");
 
-    (void) PL_DHashTableOperate(&table, (void*) entry->getHashNumber(), PL_DHASH_REMOVE);
+    (void) PL_DHashTableOperate(&table, (void*) bindData->mRecord.HashNumber(), PL_DHASH_REMOVE);
 }
 
 
 void
-nsDiskCacheHashTable::VisitEntries(Visitor *visitor)
+nsDiskCacheBindery::VisitEntries(Visitor *visitor)
 {
     PL_DHashTableEnumerate(&table, VisitEntry, visitor);
 }
 
 
 PLDHashOperator PR_CALLBACK
-nsDiskCacheHashTable::VisitEntry(PLDHashTable *        table,
-                                 PLDHashEntryHdr *     header,
-                                 PRUint32              number,
-                                 void *                arg)
+nsDiskCacheBindery::VisitEntry(PLDHashTable *        table,
+                               PLDHashEntryHdr *     header,
+                               PRUint32              number,
+                               void *                arg)
 {
     HashTableEntry* hashEntry = (HashTableEntry *) header;
     Visitor *visitor = (Visitor*) arg;
-    return (visitor->VisitEntry(hashEntry->mDiskCacheBindData) ? PL_DHASH_NEXT : PL_DHASH_STOP);
+    return (visitor->VisitEntry(hashEntry->mBindData) ? PL_DHASH_NEXT : PL_DHASH_STOP);
 }
 
 /**
  *  hash table operation callback functions
  */
 const void * PR_CALLBACK
-nsDiskCacheHashTable::GetKey(PLDHashTable * /*table*/, PLDHashEntryHdr * header)
+nsDiskCacheBindery::GetKey(PLDHashTable * /*table*/, PLDHashEntryHdr * header)
 {
     HashTableEntry * hashEntry = (HashTableEntry *) header;
-    return (void*) hashEntry->mDiskCacheBindData->getHashNumber();
+    return (void*) hashEntry->mBindData->mRecord.HashNumber();
 }
 
 
 PLDHashNumber PR_CALLBACK
-nsDiskCacheHashTable::HashKey( PLDHashTable *table, const void *key)
+nsDiskCacheBindery::HashKey( PLDHashTable *table, const void *key)
 {
     return (PLDHashNumber) key;
 }
 
 
 PRBool PR_CALLBACK
-nsDiskCacheHashTable::MatchEntry(PLDHashTable *             /* table */,
-                                 const PLDHashEntryHdr *       header,
-                                 const void *                  key)
+nsDiskCacheBindery::MatchEntry(PLDHashTable *             /* table */,
+                               const PLDHashEntryHdr *       header,
+                               const void *                  key)
 {
     HashTableEntry * hashEntry = (HashTableEntry *) header;
-    return (hashEntry->mDiskCacheBindData->getHashNumber() == (PLDHashNumber) key);
+    return (hashEntry->mBindData->mRecord.HashNumber() == (PLDHashNumber) key);
 }
 
 void PR_CALLBACK
-nsDiskCacheHashTable::MoveEntry(PLDHashTable *                  /* table */,
-                                const PLDHashEntryHdr *            fromHeader,
-                                PLDHashEntryHdr       *            toHeader)
+nsDiskCacheBindery::MoveEntry(PLDHashTable *                  /* table */,
+                              const PLDHashEntryHdr *            fromHeader,
+                              PLDHashEntryHdr       *            toHeader)
 {
     HashTableEntry * fromEntry = (HashTableEntry *) fromHeader;
     HashTableEntry * toEntry = (HashTableEntry *) toHeader;
     toEntry->keyHash = fromEntry->keyHash;
-    toEntry->mDiskCacheBindData = fromEntry->mDiskCacheBindData;
-    fromEntry->mDiskCacheBindData = nsnull;
+    toEntry->mBindData = fromEntry->mBindData;
+    fromEntry->mBindData = nsnull;
 }
 
 
 void PR_CALLBACK
-nsDiskCacheHashTable::ClearEntry(PLDHashTable *             /* table */,
-                                 PLDHashEntryHdr *             header)
+nsDiskCacheBindery::ClearEntry(PLDHashTable *             /* table */,
+                               PLDHashEntryHdr *             header)
 {
     HashTableEntry* hashEntry = (HashTableEntry *) header;
     hashEntry->keyHash = 0;
-    NS_IF_RELEASE(hashEntry->mDiskCacheBindData);
+    NS_IF_RELEASE(hashEntry->mBindData);
 }
 
 
 void PR_CALLBACK
-nsDiskCacheHashTable::Finalize(PLDHashTable * table)
+nsDiskCacheBindery::Finalize(PLDHashTable * table)
 {
     (void) PL_DHashTableEnumerate(table, FreeCacheEntries, nsnull);
 }
 
 
 PLDHashOperator PR_CALLBACK
-nsDiskCacheHashTable::FreeCacheEntries(PLDHashTable *             /* table */,
-                                       PLDHashEntryHdr *             header,
-                                       PRUint32                      number,
-                                       void *                        arg)
+nsDiskCacheBindery::FreeCacheEntries(PLDHashTable *             /* table */,
+                                     PLDHashEntryHdr *             header,
+                                     PRUint32                      number,
+                                     void *                        arg)
 {
     HashTableEntry *entry = (HashTableEntry *) header;
-    NS_IF_RELEASE(entry->mDiskCacheBindData);
+    NS_IF_RELEASE(entry->mBindData);
     return PL_DHASH_NEXT;
 }

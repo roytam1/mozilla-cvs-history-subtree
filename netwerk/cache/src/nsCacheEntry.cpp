@@ -110,11 +110,11 @@ nsCacheEntry::~nsCacheEntry()
 
 
 nsresult
-nsCacheEntry::CreateCacheEntry( const char *          key,
-                                PRBool                streamBased,
-                                nsCacheStoragePolicy  storagePolicy,
-                                nsCacheDevice *       device,
-                                nsCacheEntry **       result)
+nsCacheEntry::Create( const char *          key,
+                      PRBool                streamBased,
+                      nsCacheStoragePolicy  storagePolicy,
+                      nsCacheDevice *       device,
+                      nsCacheEntry **       result)
 {
     nsCString* newKey = new nsCString(key);
     if (!newKey) return NS_ERROR_OUT_OF_MEMORY;

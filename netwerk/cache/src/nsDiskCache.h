@@ -26,5 +26,22 @@
 #ifndef _nsDiskCache_h_
 #define _nsDiskCache_h_
 
+#include "nsCacheEntry.h"
+
+class nsDiskCacheBindData;
+
+nsDiskCacheBindData *
+GetBindDataFromCacheEntry(nsCacheEntry * entry);
+
+class nsDiskCache {
+public:
+    enum {
+            kCurrentVersion = 0x00010003      // XXX whats the format?
+    };
+
+    enum { kData, kMetaData };
+
+    static PLDHashNumber    Hash(const char* key);
+};
 
 #endif // _nsDiskCache_h_

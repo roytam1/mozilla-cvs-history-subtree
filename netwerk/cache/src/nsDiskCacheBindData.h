@@ -36,6 +36,8 @@
 #include "nsITransport.h"
 #endif
 
+#include "nsDiskCacheMap.h"
+
 
 /******************************************************************************
  *  nsDiskCacheBindData
@@ -50,19 +52,8 @@ class nsDiskCacheBindData : public nsISupports, public PRCList {
 public:
     NS_DECL_ISUPPORTS
 
-    nsDiskCacheBindData(nsCacheEntry* entry)
-        :   mCacheEntry(entry),
-            mGeneration(0)
-    {
-        NS_INIT_ISUPPORTS();
-        PR_INIT_CLIST(this);
-        mHashNumber = Hash(entry->Key()->get());
-    }
-
-    virtual ~nsDiskCacheBindData()
-    {
-        PR_REMOVE_LINK(this);
-    }
+    nsDiskCacheBindData(nsCacheEntry* entry);
+    virtual ~nsDiskCacheBindData();
 
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
     /**
@@ -75,61 +66,64 @@ public:
         return mTransports[mode - 1];
     }
 #endif
-    
-    nsCacheEntry* getCacheEntry()
-    {
-        return mCacheEntry;
-    }
-    
-    PRUint32 getGeneration()
-    {
-        return mGeneration;
-    }
-    
-    void setGeneration(PRUint32 generation)
-    {
-        mGeneration = generation;
-    }
-    
-    PLDHashNumber getHashNumber()
-    {
-        return mHashNumber;
-    }
-    
-    nsrefcnt getRefCount()
-    {
-        return mRefCnt;
-    }
-    
-    static PLDHashNumber Hash(const char* key);
-    
+
+
+// XXX make friends
+public:
+    nsDiskCacheRecord       mRecord;
+    PRInt32                 mGeneration;    // possibly just reservation
+    nsCacheEntry*           mCacheEntry;    // back pointer to parent nsCacheEntry
+
 private:
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
     nsCOMPtr<nsITransport>  mTransports[3];
 #endif
-    nsCacheEntry*           mCacheEntry;    // back pointer to parent nsCacheEntry
-    PRUint32                mGeneration;    // XXX part of nsDiskCacheRecord
-    PLDHashNumber           mHashNumber;    // XXX part of nsDiskCacheRecord
-// XXX    nsDiskCacheRecord       mMapRecord;
 };
 
 
 /******************************************************************************
- *  nsDiskCacheHashTable
+ *  Utility Functions
+ *****************************************************************************/
+
+nsDiskCacheBindData *   GetBindDataFromCacheEntry(nsCacheEntry * entry);
+
+
+
+/******************************************************************************
+ *  nsDiskCacheBindery
  *
- *  Used to keep track of nsDiskCacheEntries associated with active/bound (and
+ *  Used to keep track of nsDiskCacheBindData associated with active/bound (and
  *  possibly doomed) entries.  Lookups on 4 byte disk hash to find collisions
  *  (which need to be doomed, instead of just evicted.  Collisions are linked
  *  using a PRCList to keep track of current generation number.
  *
+ *  Used to detect hash number collisions, and find available generation numbers.
+ *
+ *  Not all nsDiskCacheBindData have a generation number.
+ *
+ *  Generation numbers may be aquired late, or lost (when data fits in block file)
+ *
+ *  Collisions can occur:
+ *      BindEntry()       - hashnumbers collide (possibly different keys)
+ *
+ *  Generation number required:
+ *      DeactivateEntry() - metadata written to disk, may require file
+ *      GetFileForEntry() - force data to require file
+ *      writing to stream - data size may require file
+ *
+ *  BindData can be kept in PRCList in order of generation numbers.
+ *  BindData with no generation number can be Appended to PRCList (last).
+ *
  *****************************************************************************/
 
-class nsDiskCacheHashTable {
+class nsDiskCacheBindery {
 public:
-    nsDiskCacheHashTable();
-    ~nsDiskCacheHashTable();
+    nsDiskCacheBindery();
+    ~nsDiskCacheBindery();
 
     nsresult                Init();
+
+    nsDiskCacheBindData *   CreateBindDataForCacheEntry(nsCacheEntry * entry);
 
     nsDiskCacheBindData *   GetEntry(const char *              key);
     nsDiskCacheBindData *   GetEntry(PLDHashNumber             key);
@@ -145,7 +139,7 @@ public:
     
 private:
     struct HashTableEntry : PLDHashEntryHdr {
-        nsDiskCacheBindData *  mDiskCacheBindData;                    // STRONG ref?
+        nsDiskCacheBindData *  mBindData;
     };
 
     // PLDHashTable operation callbacks

@@ -25,121 +25,73 @@
 #ifndef _nsDiskCacheEntry_h_
 #define _nsDiskCacheEntry_h_
 
+#include "nsDiskCacheMap.h"
+
+#include "nsCacheEntry.h"
+
+#include "nsICacheVisitor.h"
+
 #include "nspr.h"
 #include "nscore.h"
 #include "nsError.h"
 
-#include "nsIInputStream.h"
-#include "nsIOutputStream.h"
-#include "nsICacheVisitor.h"
-
-#include "nsCacheEntry.h"
 
 
 /******************************************************************************
- *  MetaData
+ *  nsDiskCacheEntry
  *****************************************************************************/
-struct MetaDataHeader {
-    PRUint32        mHeaderSize;
-//  PRUint32        mHashNumber;    // XXX
-//  PRUint32        mMetaLocation;  // XXX
+struct nsDiskCacheEntry {
+    PRUint32        mHeaderVersion; // useful for stand-alone metadata files
+    PRUint32        mMetaLocation;  // for verification
     PRInt32         mFetchCount;
     PRUint32        mLastFetched;
     PRUint32        mLastModified;
     PRUint32        mExpirationTime;
     PRUint32        mDataSize;
-    PRUint32        mKeySize;
-    PRUint32        mMetaDataSize;
-//  void *          mKeyPtrSpace;       // XXX  don't need this
-//  void *          mMetaDataPtrSpace;  // XXX  don't need this, we'll calculate it when necessary
-    // followed by null-terminated key and metadata string values.
+    PRUint32        mKeySize;       // includes terminating null byte
+    PRUint32        mMetaDataSize;  // includes terminating null byte
+    char            mKeyStart[1];   // start of key data
+    //              mMetaDataStart = mKeyStart[mKeySize];
 
-    MetaDataHeader()
-        :   mHeaderSize(sizeof(MetaDataHeader)),
-            mFetchCount(0),
-            mLastFetched(0),
-            mLastModified(0),
-            mExpirationTime(0),
-            mDataSize(0),
-            mKeySize(0),
-            mMetaDataSize(0)
-    {
-    }
+    PRUint32        Size()    { return sizeof(nsDiskCacheEntry) + mKeySize + mMetaDataSize; }
 
-    MetaDataHeader(nsCacheEntry* entry)
-        :   mHeaderSize(sizeof(MetaDataHeader)),
-            mFetchCount(entry->FetchCount()),
-            mLastFetched(entry->LastFetched()),
-            mLastModified(entry->LastModified()),
-            mExpirationTime(entry->ExpirationTime()),
-            mDataSize(entry->DataSize()),
-            mKeySize(entry->Key()->Length() + 1),
-            mMetaDataSize(0)
+    nsCacheEntry *  CreateCacheEntry(nsCacheDevice *  device);
+                                     
+    PRBool          CheckConsistency(PRUint32  size);
+
+    void Swap()         // host to network (memory to disk)
     {
-    }
-    
-    void Swap()
-    {
-#if defined(IS_LITTLE_ENDIAN)
-        mHeaderSize     = ::PR_htonl(mHeaderSize);
-        mFetchCount     = ::PR_htonl(mFetchCount);
-        mLastFetched    = ::PR_htonl(mLastFetched);
-        mLastModified   = ::PR_htonl(mLastModified);
-        mExpirationTime = ::PR_htonl(mExpirationTime);
-        mDataSize       = ::PR_htonl(mDataSize);
-        mKeySize        = ::PR_htonl(mKeySize);
-        mMetaDataSize   = ::PR_htonl(mMetaDataSize);
+#if defined(IS_LITTLE_ENDIAN)   
+        mHeaderVersion      = ::PR_htonl(mHeaderVersion);
+        mMetaLocation       = ::PR_htonl(mMetaLocation);
+        mFetchCount         = ::PR_htonl(mFetchCount);
+        mLastFetched        = ::PR_htonl(mLastFetched);
+        mLastModified       = ::PR_htonl(mLastModified);
+        mExpirationTime     = ::PR_htonl(mExpirationTime);
+        mDataSize           = ::PR_htonl(mDataSize);
+        mKeySize            = ::PR_htonl(mKeySize);
+        mMetaDataSize       = ::PR_htonl(mMetaDataSize);
 #endif
     }
     
-    void Unswap()
+    void Unswap()       // network to host (disk to memory)
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mHeaderSize     = ::PR_ntohl(mHeaderSize);
-        mFetchCount     = ::PR_ntohl(mFetchCount);
-        mLastFetched    = ::PR_ntohl(mLastFetched);
-        mLastModified   = ::PR_ntohl(mLastModified);
-        mExpirationTime = ::PR_ntohl(mExpirationTime);
-        mDataSize       = ::PR_ntohl(mDataSize);
-        mKeySize        = ::PR_ntohl(mKeySize);
-        mMetaDataSize   = ::PR_ntohl(mMetaDataSize);
+        mHeaderVersion      = ::PR_ntohl(mHeaderSize);
+        mMetaLocation       = ::PR_ntohl(mMetaLocation);
+        mFetchCount         = ::PR_ntohl(mFetchCount);
+        mLastFetched        = ::PR_ntohl(mLastFetched);
+        mLastModified       = ::PR_ntohl(mLastModified);
+        mExpirationTime     = ::PR_ntohl(mExpirationTime);
+        mDataSize           = ::PR_ntohl(mDataSize);
+        mKeySize            = ::PR_ntohl(mKeySize);
+        mMetaDataSize       = ::PR_ntohl(mMetaDataSize);
 #endif
     }
 };
 
-struct MetaDataFile : MetaDataHeader {
-    char*           mKey;
-    char*           mMetaData;
+nsDiskCacheEntry *  CreateDiskCacheEntry(nsDiskCacheBindData *  bindData);
 
-    MetaDataFile()
-        :   mKey(nsnull), mMetaData(nsnull)
-    {
-    }
-    
-    MetaDataFile(nsCacheEntry* entry)
-        :   MetaDataHeader(entry),
-            mKey(nsnull), mMetaData(nsnull)
-    {
-    }
-    
-    ~MetaDataFile()
-    {
-        delete[] mKey;
-        delete[] mMetaData;
-    }
-    
-    nsresult Init(nsCacheEntry* entry)
-    {
-        PRUint32 size = 1 + entry->Key()->Length();
-        mKey = new char[size];
-        if (!mKey) return NS_ERROR_OUT_OF_MEMORY;
-        nsCRT::memcpy(mKey, entry->Key()->get(), size);
-        return entry->FlattenMetaData(&mMetaData, &mMetaDataSize);
-    }
-
-    nsresult Read(nsIInputStream* input);
-    nsresult Write(nsIOutputStream* output);
-};
 
 
 /******************************************************************************
@@ -150,24 +102,20 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSICACHEENTRYINFO
 
-    nsDiskCacheEntryInfo(const char * deviceID)
+    nsDiskCacheEntryInfo(const char * deviceID, nsDiskCacheEntry * diskEntry)
         : mDeviceID(deviceID)
+        , mDiskEntry(diskEntry)
     {
         NS_INIT_ISUPPORTS();
     }
 
     virtual ~nsDiskCacheEntryInfo() {}
     
-    nsresult Read(nsIInputStream * input)
-    {
-        return mMetaDataFile.Read(input);
-    }
-    
-    const char* Key() { return mMetaDataFile.mKey; }
+    const char* Key() { return mDiskEntry->mKeyStart; }
     
 private:
-    const char * mDeviceID;
-    MetaDataFile mMetaDataFile;
+    const char *        mDeviceID;
+    nsDiskCacheEntry *  mDiskEntry;
 };
 
 

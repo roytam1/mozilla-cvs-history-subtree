@@ -55,11 +55,11 @@ public:
     ~nsCacheEntry();
 
 
-    static nsresult  CreateCacheEntry( const char *          key,
-                                       PRBool                streamBased,
-                                       nsCacheStoragePolicy  storagePolicy,
-                                       nsCacheDevice *       device,
-                                       nsCacheEntry **       result);
+    static nsresult  Create( const char *          key,
+                             PRBool                streamBased,
+                             nsCacheStoragePolicy  storagePolicy,
+                             nsCacheDevice *       device,
+                             nsCacheEntry **       result);
                                       
     nsCString *  Key()  { return mKey; }
 

@@ -27,6 +27,7 @@
 
 #include "nsCacheDevice.h"
 #include "nsDiskCacheBindData.h"
+#include "nsDiskCacheBlockFile.h"
 #include "nsDiskCacheEntry.h"
 
 #include "nsILocalFile.h"
@@ -80,6 +81,19 @@ public:
     PRUint32                getCacheSize();
     PRUint32                getEntryCount();
 
+
+    
+private:    
+    /**
+     *  Private methods
+     */
+    nsresult    InitializeCacheDirectory();
+    nsresult    GetCacheTrashDirectory(nsIFile ** result);
+    nsresult    EvictDiskCacheEntries();
+
+
+#if 0
+    // Old Code
     nsresult getFileForHashNumber(PLDHashNumber hashNumber, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForDiskCacheEntry(nsDiskCacheBindData * bindData, PRBool meta, nsIFile ** result);
@@ -97,27 +111,26 @@ public:
     nsresult deleteDiskCacheEntry(nsDiskCacheBindData * bindData);
     
     nsresult scavengeDiskCacheEntries(nsDiskCacheBindData * bindData);
-
     nsresult evictDiskCacheEntries();
 
-    nsresult InitializeCacheDirectory();
-    
     nsresult openCacheMap();
     nsresult readCacheMap();
     nsresult writeCacheMap();
 
     nsresult updateCacheMap(nsDiskCacheBindData * bindData);
+
     nsresult evictDiskCacheRecord(nsDiskCacheRecord * record);
+#endif
     
-private:
+    /**
+     *  Member variables
+     */
     PRBool                  mInitialized;
     nsCOMPtr<nsIObserver>   mPrefsObserver;     // XXX ?
     nsCOMPtr<nsILocalFile>  mCacheDirectory;
-    nsDiskCacheHashTable    mBoundEntries;      // XXX rename to refer to active entries
+    nsDiskCacheBindery      mBindery;
     PRUint32                mCacheCapacity;     // XXX need soft/hard limits, currentTotal
-    nsDiskCacheMap*         mCacheMap;
-    nsANSIFileStream*       mCacheStream;       // XXX should be owned by cache map
-//  XXX need array of cache block files
+    nsDiskCacheMap *        mCacheMap;
 };
 
 #endif // _nsDiskCacheDevice_h_
