@@ -291,6 +291,7 @@ nsHTMLDocument::nsHTMLDocument()
     mBaseTarget(nsnull),
     mLastModified(nsnull),
     mReferrer(nsnull),
+    mNumForms(0),
     mIsWriting(0)
 {
   mImages = nsnull;
@@ -2870,6 +2871,27 @@ nsHTMLDocument::GetElementsByName(const nsAString& aElementName,
   *aReturn = elements;
   NS_ADDREF(*aReturn);
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLDocument::AddedForm()
+{
+  mNumForms++;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLDocument::RemovedForm()
+{
+  mNumForms--;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLDocument::GetNumFormsSynchronous(PRInt32* aNumForms)
+{
+  *aNumForms = mNumForms;
   return NS_OK;
 }
 

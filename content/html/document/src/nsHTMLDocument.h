@@ -177,6 +177,9 @@ public:
                          nsISupports **aResult);
 
   NS_IMETHOD GetFormControlElements(nsIDOMNodeList** aReturn);
+  NS_IMETHOD AddedForm();
+  NS_IMETHOD RemovedForm();
+  NS_IMETHOD GetNumFormsSynchronous(PRInt32* aNumForms);
 
 protected:
   nsresult GetPixelDimensions(nsIPresShell* aShell,
@@ -245,6 +248,9 @@ protected:
   nsContentList *mLayers;
   
   nsIParser *mParser;
+
+  /** # of forms in the document, synchronously set */
+  PRInt32 mNumForms;
 
 //ahmed 12-2
 #ifdef IBMBIDI
