@@ -111,3 +111,25 @@ ship:
 ifdef BUILD_SHIP
 	cp $(SHIP_DIR)/$(JSREFJAR) $(BUILD_SHIP)
 endif
+
+CWD = $(shell pwd)
+shipSource: $(SHIP_DIR)/jsref_src.lst .FORCE
+	mkdir -p $(SHIP_DIR)
+	cd $(MOZ_DEPTH)/.. ; \
+	  zip $(CWD)/$(SHIP_DIR)/jsref_src.jar -@ < $(CWD)/$(SHIP_DIR)/jsref_src.lst
+ifdef BUILD_SHIP
+	cp $(SHIP_DIR)/jsref_src.jar $(BUILD_SHIP)
+endif
+
+JSREFSRCDIRS := $(shell cat $(DEPTH)/SpiderMonkey.rsp)
+$(SHIP_DIR)/jsref_src.lst: .FORCE
+	mkdir -p $(SHIP_DIR)
+	rm -f $@
+	touch $@
+	for d in $(JSREFSRCDIRS); do                                \
+	  cd $(MOZ_DEPTH)/..;                                       \
+	  ls -1 -d $$d | grep -v CVS | grep -v \.OBJ >> $(CWD)/$@;  \
+	  cd $(CWD);                                                \
+	done
+
+.FORCE:
