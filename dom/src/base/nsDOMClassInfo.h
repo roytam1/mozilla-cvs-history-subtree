@@ -56,12 +56,12 @@ public:
                                            GetDOMClassIIDsFnc aGetIIDsFptr,
                                            const char *aName);
 
+protected:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsDOMClassInfo(aID);
   }
 
-protected:
   static nsresult Init();
 
   nsDOMClassInfoID mID;

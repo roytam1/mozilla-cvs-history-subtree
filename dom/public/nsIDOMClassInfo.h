@@ -152,10 +152,6 @@ public:
 
     eDOMClassInfoIDCount // This one better be the last one in this list
   };
-
-  nsISupports* GetClassInfoInstance(nsDOMClassInfoID aID,
-                                    GetDOMClassIIDsFnc aGetIIDsFptr,
-                                    const char *aName);
 };
 
 

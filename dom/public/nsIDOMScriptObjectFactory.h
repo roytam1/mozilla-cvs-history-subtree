@@ -24,6 +24,7 @@
 #define nsIDOMScriptObjectFactory_h__
 
 #include "nsISupports.h"
+#include "nsIDOMClassInfo.h"
 #include "nsString.h"
 
 #define NS_IDOM_SCRIPT_OBJECT_FACTORY_IID   \
@@ -31,6 +32,8 @@
   { 0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32 } }
 
 class nsIScriptContext;
+class nsIScriptGlobalObject;
+class nsIDOMEventListener;
 
 class nsIDOMScriptObjectFactory : public nsISupports {
 public:  
@@ -45,6 +48,11 @@ public:
                                 nsIDOMEventListener ** aInstancePtrResult) = 0;
 
   NS_IMETHOD NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal) = 0;
+
+  NS_IMETHOD_(nsISupports *)
+    GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+                         GetDOMClassIIDsFnc aGetIIDsFptr,
+                         const char *aName) = 0;
 };
 
 #endif /* nsIDOMScriptObjectFactory_h__ */

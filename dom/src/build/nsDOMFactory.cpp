@@ -43,7 +43,7 @@
 #include "nsIScriptEventListener.h"
 #include "nsIJSEventListener.h"
 #include "nsIScriptContext.h"
-#include "plhash.h"
+#include "nsDOMClassInfo.h"
 
 extern nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
                                        nsIScriptContext **aContext);
@@ -73,6 +73,10 @@ public:
                                 nsIDOMEventListener ** aInstancePtrResult);
 
   NS_IMETHOD NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
+
+  NS_IMETHOD_(nsISupports *)
+    GetClassInfoInstance(nsDOMClassInfo::nsDOMClassInfoID aID,
+                         GetDOMClassIIDsFnc aGetIIDsFptr, const char *aName);
 };
 
 nsDOMSOFactory::nsDOMSOFactory()
@@ -114,6 +118,14 @@ NS_IMETHODIMP
 nsDOMSOFactory::NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal)
 {
   return NS_NewScriptGlobalObject(aGlobal);
+}
+
+NS_IMETHODIMP_(nsISupports *)
+nsDOMSOFactory::GetClassInfoInstance(nsIDOMClassInfo::nsDOMClassInfoID aID,
+                                     GetDOMClassIIDsFnc aGetIIDsFptr,
+                                     const char *aName)
+{
+  return nsDOMClassInfo::GetClassInfoInstance(aID, aGetIIDsFptr, aName);
 }
 
 //////////////////////////////////////////////////////////////////////
