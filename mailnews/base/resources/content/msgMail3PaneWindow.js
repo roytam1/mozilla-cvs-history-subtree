@@ -123,8 +123,7 @@ var folderListener = {
 						gCurrentLoadingFolderSortOrder = 0;
             gCurrentLoadingFolderViewType = 0;
             gCurrentLoadingFolderViewFlags = 0;
-
-            SetFocusThreadPane();
+            
             var scrolled = false;
             if (gNextMessageAfterLoad) 
             {

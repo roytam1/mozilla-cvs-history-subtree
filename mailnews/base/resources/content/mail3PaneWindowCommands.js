@@ -912,6 +912,15 @@ function MsgDeleteFolder()
     }
 }
 
+function SetFocusThreadPaneIfNotOnMessagePane()
+{
+  var focusedElement = WhichPaneHasFocus();
+
+  if((focusedElement != GetThreadOutliner()) &&
+     (focusedElement != GetMessagePane()))
+     SetFocusThreadPane();
+}
+
 // 3pane related commands.  Need to go in own file.  Putting here for the moment.
 function MsgNextMessage()
 {
