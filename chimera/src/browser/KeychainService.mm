@@ -271,7 +271,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   //
   attr.tag = kAccountKCItemAttr;
   attr.data = (char*)[username UTF8String];
-  attr.length = strlen(attr.data);
+  attr.length = strlen(NS_REINTERPRET_CAST(const char*, attr.data));
   status = KCSetAttribute(inItemRef, &attr);
   if(status != noErr)
     NSLog(@"Couldn't update keychain item account");
@@ -1015,6 +1015,13 @@ FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInput
     return NS_ERROR_FAILURE;
   *outUsername = *outPassword = nsnull;
 
+  // pages can specify that they don't want autofill by setting a
+  // "autocomplete=off" attribute on the form. 
+  nsAutoString autocomplete;
+  inFormElement->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
+  if ( autocomplete.EqualsIgnoreCase("off") )
+    return NS_OK;
+  
   //
   // Search the form the password field and the preceding text field
   // We are only interested in signon forms, so we require
@@ -1056,6 +1063,9 @@ FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInput
 
     bool isText = (type.IsEmpty() || type.Equals(NS_LITERAL_STRING("text"), nsCaseInsensitiveStringComparator()));
     bool isPassword = type.Equals(NS_LITERAL_STRING("password"), nsCaseInsensitiveStringComparator());
+    inputElement->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
+    if ( autocomplete.EqualsIgnoreCase("off") )
+      isPassword = false;
 
     if(!isText && !isPassword)
       continue;
