@@ -32,6 +32,7 @@
  * 04/12/2000       IBM Corp.      DispatchMouseEvent changes.
  * 04/14/2000       IBM Corp.      Ported CaptureRollupEvents changes from Windows.
  * 06/09/2000       IBM Corp.      Added cases for more cursors in SetCursor.
+ * 06/14/2000       IBM Corp.      Removed dead menu code to fix build break.
  *
  */
 
@@ -49,11 +50,11 @@
 #include "nsISupportsArray.h"
 #include "nsITimer.h"
 #include "nsIMenuBar.h"
-#include "nsIMenuItem.h"
+//#include "nsIMenuItem.h"
 #include "nsHashtable.h"
-#include "nsMenu.h"
+//#include "nsMenu.h"
 #include "nsDragService.h"
-#include "nsContextMenu.h"
+//#include "nsContextMenu.h"
 #include "nsIRollupListener.h"
 #include "nsIRegion.h"
 
@@ -146,7 +147,7 @@ nsWindow::nsWindow() : nsBaseWidget()
    mFont            = nsnull;
    mOS2Toolkit      = nsnull;
    mMenuBar         = nsnull;
-   mActiveMenu      = nsnull;
+//   mActiveMenu      = nsnull;
 }
 
 // Do a little work in both create methods & call on to a common DoCreate()
@@ -422,7 +423,7 @@ void nsWindow::OnDestroy()
    delete mFont;
 
    // release menubar
-   NS_IF_RELEASE(mMenuBar);
+//   NS_IF_RELEASE(mMenuBar);
 
    // dispatching of the event may cause the reference count to drop to 0
    // and result in this object being deleted. To avoid that, add a
@@ -560,6 +561,7 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
             
    switch( msg)
    {
+#if 0
       case WM_COMMAND: // fire off menu selections
       {
          USHORT usSrc = SHORT1FROMMP( mp2);
@@ -575,6 +577,7 @@ PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
       case WM_MENUEND:
          result = OnActivateMenu( HWNDFROMMP(mp2), FALSE);
          break;
+#endif
 
 #if 0  // Tooltips appear to be gone
       case WMU_SHOW_TOOLTIP:
@@ -1285,10 +1288,11 @@ PRBool nsWindow::OnControl( MPARAM mp1, MPARAM mp2)
 // XXX should this only be in nsFrameWindow?
 //     Probably worth trying for abstraction reasons.
 //
+#if 0
 PRBool nsWindow::OnMenuClick( USHORT aCmd)
 {
    PRBool result = PR_TRUE;
-
+   
    // find if this is a menuitem being clicked or a submenu
    // (actually I don't think submenu items generate wm_commands...)
    MENUITEM mI = { 0 };
@@ -1399,7 +1403,9 @@ PRBool nsWindow::OnActivateMenu( HWND hwndMenu, BOOL aActivate)
 
    return result;
 }
+#endif
 
+#if 0
 // (there needs to be a distinct nsTopLevelWindow class)
 nsresult nsWindow::SetMenuBar( nsIMenuBar *aMenuBar)
 {
@@ -1431,6 +1437,7 @@ void nsWindow::SetContextMenu( nsContextMenu *aMenu)
 {
    mActiveMenu = aMenu;
 }
+#endif
 
 // --------------------------------------------------------------------------
 // Hierarchy - children & parent --------------------------------------------
