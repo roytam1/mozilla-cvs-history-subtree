@@ -2001,107 +2001,6 @@ static PRStatus pt_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
     }
 }  /* pt_GetPeerName */
 
-static PRStatus pt_GetSockOpt(
-    PRFileDesc *fd, PRSockOption optname, void* optval, PRInt32* optlen)
-{
-    PRIntn rv = -1;
-    PRInt32 level, name;
-
-    if (pt_TestAbort()) return PR_FAILURE;
-
-    /*
-     * PR_SockOpt_Nonblocking is a special case that does not
-     * translate to a getsockopt() call.
-     */
-    if (PR_SockOpt_Nonblocking == optname)
-    {
-        PR_ASSERT(sizeof(PRIntn) <= *optlen);
-        *((PRIntn *) optval) = (PRIntn) fd->secret->nonblocking;
-        *optlen = sizeof(PRIntn);
-        return PR_SUCCESS;
-    }
-
-    rv = _PR_MapOptionName(optname, &level, &name);
-    if (0 == rv)
-    {
-        if (PR_SockOpt_Linger == optname)
-        {
-            struct linger linger;
-            pt_SockLen len = sizeof(linger);
-            rv = getsockopt(fd->secret->md.osfd, level, name,
-                (char *) &linger, &len);
-            if (0 == rv)
-            {
-                ((PRLinger*)(optval))->polarity = linger.l_onoff
-                    ? PR_TRUE : PR_FALSE;
-                ((PRLinger*)(optval))->linger = PR_SecondsToInterval(
-                    linger.l_linger);
-                *optlen = sizeof(PRLinger);
-            }
-        }
-        else
-        {
-            /* Make sure the pointer type cast below is safe */
-            PR_ASSERT(sizeof(PRInt32) == sizeof(PRIntn));
-            rv = getsockopt(fd->secret->md.osfd, level, name,
-                optval, (pt_SockLen*)optlen);
-        }
-    }
-
-    if (rv == -1) {
-        pt_MapError(_PR_MD_MAP_GETSOCKOPT_ERROR, errno);
-        return PR_FAILURE;
-    } else {
-        return PR_SUCCESS;
-    }
-}  /* pt_GetSockOpt */
-
-static PRStatus pt_SetSockOpt(
-    PRFileDesc *fd, PRSockOption optname, const void* optval, PRInt32 optlen)
-{
-    PRIntn rv = -1;
-    PRInt32 level, name;
-
-    if (pt_TestAbort()) return PR_FAILURE;
-
-    /*
-     * PR_SockOpt_Nonblocking is a special case that does not
-     * translate to a setsockopt() call.
-     */
-    if (PR_SockOpt_Nonblocking == optname)
-    {
-        PR_ASSERT(sizeof(PRIntn) == optlen);
-        fd->secret->nonblocking = *((PRIntn *) optval) ? PR_TRUE : PR_FALSE;
-        return PR_SUCCESS;
-    }
-
-    rv = _PR_MapOptionName(optname, &level, &name);
-    if (0 == rv)
-    {
-        if (PR_SockOpt_Linger == optname)
-        {
-            struct linger linger;
-            linger.l_onoff = ((PRLinger*)(optval))->polarity;
-            linger.l_linger = PR_IntervalToSeconds(
-                ((PRLinger*)(optval))->linger);
-            rv = setsockopt(fd->secret->md.osfd, level, name,
-                (char *) &linger, sizeof(linger));
-        }
-        else
-        {
-            rv = setsockopt(fd->secret->md.osfd, level, name,
-                optval, optlen);
-        }
-    }
-
-    if (rv == -1) {
-        pt_MapError(_PR_MD_MAP_SETSOCKOPT_ERROR, errno);
-        return PR_FAILURE;
-    } else {
-        return PR_SUCCESS;
-    }
-}  /* pt_SetSockOpt */
-
 static PRStatus pt_GetSocketOption(PRFileDesc *fd, PRSocketOptionData *data)
 {
     PRIntn rv;
@@ -2439,8 +2338,8 @@ static PRIOMethods _pr_tcp_methods = {
     pt_TransmitFile,
     pt_GetSockName,
     pt_GetPeerName,
-    pt_GetSockOpt,
-    pt_SetSockOpt,
+    (PRGetsockoptFN)_PR_InvalidStatus,
+    (PRSetsockoptFN)_PR_InvalidStatus,
     pt_GetSocketOption,
     pt_SetSocketOption,
     pt_SendFile, 
@@ -2478,8 +2377,8 @@ static PRIOMethods _pr_udp_methods = {
     (PRTransmitfileFN)_PR_InvalidInt,
     pt_GetSockName,
     pt_GetPeerName,
-    pt_GetSockOpt,
-    pt_SetSockOpt,
+    (PRGetsockoptFN)_PR_InvalidStatus,
+    (PRSetsockoptFN)_PR_InvalidStatus,
     pt_GetSocketOption,
     pt_SetSocketOption,
     (PRSendfileFN)_PR_InvalidInt, 

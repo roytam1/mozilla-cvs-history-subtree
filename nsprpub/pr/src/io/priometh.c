@@ -247,26 +247,6 @@ PR_IMPLEMENT(PRStatus) PR_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
 	return((fd->methods->getpeername)(fd,addr));
 }
 
-PR_IMPLEMENT(PRStatus) PR_GetSockOpt(
-    PRFileDesc *fd, PRSockOption optname, void* optval, PRInt32* optlen)
-{
-#if defined(DEBUG)
-    static PRBool warn = PR_TRUE;
-    if (warn) warn = _PR_Obsolete("PR_GetSockOpt()", "PR_GetSocketOption()");
-#endif
-	return((fd->methods->getsockopt)(fd, optname, optval, optlen));
-}
-
-PR_IMPLEMENT(PRStatus) PR_SetSockOpt(
-    PRFileDesc *fd, PRSockOption optname, const void* optval, PRInt32 optlen)
-{
-#if defined(DEBUG)
-    static PRBool warn = PR_TRUE;
-    if (warn) warn = _PR_Obsolete("PR_SetSockOpt()", "PR_SetSocketOption()");
-#endif
-	return((fd->methods->setsockopt)(fd, optname, optval, optlen));
-}
-
 PR_IMPLEMENT(PRStatus) PR_GetSocketOption(
     PRFileDesc *fd, PRSocketOptionData *data)
 {

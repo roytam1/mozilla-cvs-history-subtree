@@ -976,116 +976,6 @@ static PRStatus PR_CALLBACK SocketGetPeerName(PRFileDesc *fd, PRNetAddr *addr)
 	return PR_SUCCESS;
 }
 
-static PRStatus PR_CALLBACK SocketGetSockOpt(
-    PRFileDesc *fd, PRSockOption optname, void* optval, PRInt32* optlen)
-{
-    PRInt32 level, name;
-    PRStatus rv;
-
-    /*
-     * PR_SockOpt_Nonblocking is a special case that does not
-     * translate to a getsockopt() call
-     */
-    if (PR_SockOpt_Nonblocking == optname)
-    {
-        PR_ASSERT(sizeof(PRIntn) <= *optlen);
-        *((PRIntn *) optval) = (PRIntn) fd->secret->nonblocking;
-        *optlen = sizeof(PRIntn);
-        return PR_SUCCESS;
-    }
-
-    rv = _PR_MapOptionName(optname, &level, &name);
-    if (PR_SUCCESS == rv)
-    {
-        if (PR_SockOpt_Linger == optname)
-        {
-#if !defined(XP_BEOS)
-            struct linger linger;
-            PRInt32 len = sizeof(linger);
-            rv = _PR_MD_GETSOCKOPT(
-                fd, level, name, (char *) &linger, &len);
-            if (PR_SUCCESS == rv)
-            {
-                ((PRLinger*)(optval))->polarity = linger.l_onoff
-                    ? PR_TRUE : PR_FALSE;
-                ((PRLinger*)(optval))->linger = PR_SecondsToInterval(
-                    linger.l_linger);
-                *optlen = sizeof(PRLinger);
-            }
-#else
-            PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
-            return PR_FAILURE;
-#endif
-        }
-        else
-        {
-            rv = _PR_MD_GETSOCKOPT(
-                fd, level, name, (char*)optval, optlen);
-        }
-    }
-    return rv;
-}
-
-static PRStatus PR_CALLBACK SocketSetSockOpt(
-    PRFileDesc *fd, PRSockOption optname, const void* optval, PRInt32 optlen)
-{
-	PRInt32 level, name;
-    PRStatus rv;
-
-    /*
-     * PR_SockOpt_Nonblocking is a special case that does not
-     * translate to a setsockopt call.
-     */
-    if (PR_SockOpt_Nonblocking == optname)
-    {
-        PRBool fNonblocking = *((PRIntn *) optval) ? PR_TRUE : PR_FALSE;
-        PR_ASSERT(sizeof(PRIntn) == optlen);
-#ifdef WINNT
-        PR_ASSERT((fd->secret->md.io_model_committed == PR_FALSE)
-            || (fd->secret->nonblocking == fNonblocking));
-        if (fd->secret->md.io_model_committed
-            && (fd->secret->nonblocking != fNonblocking))
-        {
-            /*
-             * On NT, once we have associated a socket with the io
-             * completion port, we can't disassociate it.  So we
-             * can't change the nonblocking option of the socket
-             * afterwards.
-             */
-            PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-            return PR_FAILURE;
-        }
-#endif
-        fd->secret->nonblocking = fNonblocking;
-        return PR_SUCCESS;
-    }
-
-    rv = _PR_MapOptionName(optname, &level, &name);
-    if (PR_SUCCESS == rv)
-    {
-        if (PR_SockOpt_Linger == optname)
-        {
-#if !defined(XP_BEOS)
-            struct linger linger;
-            linger.l_onoff = ((PRLinger*)(optval))->polarity ? 1 : 0;
-            linger.l_linger = PR_IntervalToSeconds(
-                ((PRLinger*)(optval))->linger);
-            rv = _PR_MD_SETSOCKOPT(
-                fd, level, name, (char *) &linger, sizeof(linger));
-#else
-            PR_SetError( PR_NOT_IMPLEMENTED_ERROR, 0 );
-            return PR_FAILURE;
-#endif
-        }
-        else
-        {
-            rv = _PR_MD_SETSOCKOPT(
-                fd, level, name, (const char*)optval, optlen);
-        }
-    }
-    return rv;
-}
-
 static PRInt16 PR_CALLBACK SocketPoll(
     PRFileDesc *fd, PRInt16 in_flags, PRInt16 *out_flags)
 {
@@ -1123,8 +1013,8 @@ static PRIOMethods tcpMethods = {
 	SocketTransmitFile,
 	SocketGetName,
 	SocketGetPeerName,
-	SocketGetSockOpt,
-	SocketSetSockOpt,
+	(PRGetsockoptFN)_PR_InvalidStatus,
+	(PRSetsockoptFN)_PR_InvalidStatus,
 	_PR_SocketGetSocketOption,
 	_PR_SocketSetSocketOption,
     SocketSendFile, 
@@ -1162,8 +1052,8 @@ static PRIOMethods udpMethods = {
 	(PRTransmitfileFN)_PR_InvalidInt,
 	SocketGetName,
 	SocketGetPeerName,
-	SocketGetSockOpt,
-	SocketSetSockOpt,
+	(PRGetsockoptFN)_PR_InvalidStatus,
+	(PRSetsockoptFN)_PR_InvalidStatus,
 	_PR_SocketGetSocketOption,
 	_PR_SocketSetSocketOption,
     (PRSendfileFN)_PR_InvalidInt, 

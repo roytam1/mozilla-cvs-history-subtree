@@ -188,7 +188,7 @@ PRIntn main(PRIntn argc, char **argv)
             if (PR_FAILURE == rv)
             {
                 failed = PR_TRUE;
-                PL_FPrintError(err, "PR_GetHostName");
+                PL_FPrintError(err, "PR_GetSystemInfo");
                 return 2;
             }
             name = me;  /* just leak the storage */

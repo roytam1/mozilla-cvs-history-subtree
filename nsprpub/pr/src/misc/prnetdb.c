@@ -187,15 +187,6 @@ void _PR_InitNet(void)
 #endif
 }
 
-PR_IMPLEMENT(PRStatus) PR_GetHostName(char *name, PRUint32 namelen)
-{
-#if defined(DEBUG)
-    static PRBool warn = PR_TRUE;
-    if (warn) warn = _PR_Obsolete("PR_GetHostName()", "PR_GetSystemInfo()");
-#endif
-    return PR_GetSystemInfo(PR_SI_HOSTNAME, name, namelen);
-}
-
 /*
 ** Allocate space from the buffer, aligning it to "align" before doing
 ** the allocation. "align" must be a power of 2.
@@ -1054,29 +1045,6 @@ PR_IsNetAddrType(const PRNetAddr *addr, PRNetAddrValue val)
     }
     return PR_FALSE;
 }
-
-PR_IMPLEMENT(PRNetAddr*) PR_CreateNetAddr(PRNetAddrValue val, PRUint16 port)
-{
-    PRNetAddr *addr = NULL;
-    if ((PR_IpAddrAny == val) || (PR_IpAddrLoopback == val))
-    {
-        addr = PR_NEWZAP(PRNetAddr);
-        if (NULL == addr)
-            PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-        else
-            if (PR_FAILURE == PR_InitializeNetAddr(val, port, addr))
-                PR_DELETE(addr);  /* and that will make 'addr' == NULL */
-    }
-    else
-        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-    return addr;
-}  /* PR_CreateNetAddr */
-
-PR_IMPLEMENT(PRStatus) PR_DestroyNetAddr(PRNetAddr *addr)
-{
-    PR_Free(addr);
-    return PR_SUCCESS;
-}  /* PR_DestroyNetAddr */
 
 #ifndef _PR_INET6
 #define XX 127
