@@ -66,9 +66,11 @@
 
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
-#include "nsIAccessible.h"
 #include "nsINameSpaceManager.h"
+#ifdef ACCESSIBILITY
+#include "nsIAccessible.h"
 #include "nsIAccessibilityService.h"
+#endif
 
 #ifdef IBMBIDI
 #include "nsBidiFrames.h"
@@ -454,7 +456,9 @@ public:
                                   PRBool               aCheckVis,
                                   PRBool*              aIsVisible);
 
+#ifdef ACCESSIBILITY
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
+#endif
 
   // nsIHTMLReflow
   NS_IMETHOD Reflow(nsIPresContext* aPresContext,
@@ -764,6 +768,7 @@ private:
 #endif
 };
 
+#ifdef ACCESSIBILITY
 NS_IMETHODIMP nsTextFrame::GetAccessible(nsIAccessible** aAccessible)
 {
   if (mRect.width > 0 || mRect.height > 0) {
@@ -777,6 +782,7 @@ NS_IMETHODIMP nsTextFrame::GetAccessible(nsIAccessible** aAccessible)
   }
   return NS_ERROR_FAILURE;
 }
+#endif
 
 //-----------------------------------------------------------------------------
 NS_IMETHODIMP nsTextFrame::QueryInterface(const nsIID& aIID,

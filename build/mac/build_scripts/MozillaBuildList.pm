@@ -737,8 +737,11 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:src:base:MANIFEST",                          "$distdirectory:dom:");
 
     #ACCESSIBLE
-    InstallFromManifest(":mozilla:accessible:public:MANIFEST",                     "$distdirectory:accessible:");
-    
+    if ($main::options{accessible})
+    {
+        InstallFromManifest(":mozilla:accessible:public:MANIFEST",                 "$distdirectory:accessible:");    
+    }
+
     #JSURL
     InstallFromManifest(":mozilla:dom:src:jsurl:MANIFEST_IDL",                     "$distdirectory:idl:");
 
@@ -1100,7 +1103,10 @@ sub BuildIDLProjects()
 
     BuildIDLProject(":mozilla:layout:macbuild:layoutIDL.mcp",                       "layout");
 
-    BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.mcp",               "accessible"); 
+    if ($main::options{accessible})
+    {
+        BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.mcp",           "accessible"); 
+    }
 
     BuildIDLProject(":mozilla:rdf:macbuild:RDFIDL.mcp",                             "rdf");
 
@@ -1635,7 +1641,7 @@ sub BuildAccessiblityProjects()
     }
     
     EndBuildModule("accessiblity");
-} # imglib2
+}
 
 #//--------------------------------------------------------------------------------------------------
 #// Build Editor Projects

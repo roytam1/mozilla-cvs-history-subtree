@@ -62,7 +62,9 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nsImageMapUtils.h"
 #include "nsIFrameManager.h"
 #include "nsIScriptSecurityManager.h"
+#ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
+#endif
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 
@@ -152,6 +154,7 @@ nsImageFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return NS_NOINTERFACE;
 }
 
+#ifdef ACCESSIBILITY
 NS_IMETHODIMP nsImageFrame::GetAccessible(nsIAccessible** aAccessible)
 {
   nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
@@ -163,6 +166,7 @@ NS_IMETHODIMP nsImageFrame::GetAccessible(nsIAccessible** aAccessible)
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 NS_IMETHODIMP_(nsrefcnt) nsImageFrame::AddRef(void)
 {

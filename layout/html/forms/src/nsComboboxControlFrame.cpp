@@ -63,7 +63,9 @@
 #include "nsListControlFrame.h"
 #include "nsIElementFactory.h"
 #include "nsContentCID.h"
+#ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
+#endif
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 
@@ -347,17 +349,19 @@ nsComboboxControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return nsAreaFrame::QueryInterface(aIID, aInstancePtr);
 }
 
+#ifdef ACCESSIBILITY
 NS_IMETHODIMP nsComboboxControlFrame::GetAccessible(nsIAccessible** aAccessible)
 {
   nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
 
   if (accService) {
     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent);
-    return accService->CreateHTMLSelectAccessible(node, mPresContext, aAccessible);
+    return accService->CreateHTMLComboboxAccessible(node, mPresContext, aAccessible);
   }
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 
 

@@ -58,7 +58,9 @@
 #include "nsVoidArray.h"
 #include "nsIScrollableFrame.h"
 #include "nsIDOMEventTarget.h"
+#ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
+#endif
 #include "nsISelectElement.h"
 #include "nsIPrivateDOMEvent.h"
 
@@ -553,17 +555,19 @@ nsListControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return nsScrollFrame::QueryInterface(aIID, aInstancePtr);
 }
 
+#ifdef ACCESSIBILITY
 NS_IMETHODIMP nsListControlFrame::GetAccessible(nsIAccessible** aAccessible)
 {
   nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
 
   if (accService) {
     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent);
-    return accService->CreateHTMLSelectAccessible(node, mPresContext, aAccessible);
+    return accService->CreateHTMLListboxAccessible(node, mPresContext, aAccessible);
   }
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 //---------------------------------------------------------
 // Reflow is overriden to constrain the listbox height to the number of rows and columns

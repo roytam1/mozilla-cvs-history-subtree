@@ -210,8 +210,10 @@ protected:
   nsresult GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd);
   nsresult MouseClickForAltText(nsIPresContext* aPresContext);
   //Helper method
+#ifdef ACCESSIBILITY
   nsresult FireEventForAccessibility(nsIPresContext* aPresContext,
 			    		                       const nsAReadableString& aEventType);
+#endif
 
   void SelectAll(nsIPresContext* aPresContext);
   PRBool IsImage() const
@@ -1041,7 +1043,9 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
           GetChecked(&checked);
           SetChecked(!checked);
           // Fire an event to notify accessibility
+#ifdef ACCESSIBILITY
           FireEventForAccessibility( aPresContext, NS_LITERAL_STRING("CheckboxStateChange"));
+#endif
         }
         break;
 
@@ -1059,9 +1063,11 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
           }
           SetChecked(PR_TRUE);
           // Fire an event to notify accessibility
+#ifdef ACCESSIBILITY
           if ( selectedRadiobtn != this ) {
             FireEventForAccessibility( aPresContext, NS_LITERAL_STRING("RadiobuttonStateChange"));;
           }
+#endif
         }
         break;
 
@@ -1586,6 +1592,7 @@ nsHTMLInputElement::GetSelectionRange(PRInt32* aSelectionStart,
   return NS_OK;
 }
 
+#ifdef ACCESSIBILITY
 nsresult
 nsHTMLInputElement::FireEventForAccessibility(nsIPresContext* aPresContext,
                                               const nsAReadableString& aEventType)
@@ -1629,3 +1636,4 @@ nsHTMLInputElement::FireEventForAccessibility(nsIPresContext* aPresContext,
 
   return NS_OK;
 }
+#endif

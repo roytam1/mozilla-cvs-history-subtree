@@ -44,7 +44,9 @@
 #include "nsStyleConsts.h"
 #include "nsFormFrame.h"
 #include "nsFormControlFrame.h"
+#ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
+#endif
 
 //Enumeration of possible mouse states used to detect mouse clicks
 /*enum nsMouseState {
@@ -83,7 +85,9 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
+#ifdef ACCESSIBILITY
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
+#endif
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsString& aResult) const {
@@ -206,6 +210,7 @@ nsImageControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return nsImageControlFrameSuper::QueryInterface(aIID, aInstancePtr);
 }
 
+#ifdef ACCESSIBILITY
 NS_IMETHODIMP nsImageControlFrame::GetAccessible(nsIAccessible** aAccessible)
 {
   nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
@@ -217,6 +222,7 @@ NS_IMETHODIMP nsImageControlFrame::GetAccessible(nsIAccessible** aAccessible)
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 nsrefcnt nsImageControlFrame::AddRef(void)
 {

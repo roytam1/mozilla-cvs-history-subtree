@@ -20,6 +20,7 @@
  * Contributor(s): 
  */
 
+#include "nsIAccessible.h"
 #include "nsRootAccessible.h"
 #include "nsCOMPtr.h"
 #include "nsIDocument.h"
@@ -35,6 +36,7 @@
 #include "nsHTMLFormControlAccessible.h"
 #include "nsHTMLLinkAccessible.h"
 #include "nsIURI.h"
+#include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIXULDocument.h"
 #include "nsIDOMDocument.h"
@@ -42,10 +44,13 @@
 #include "nsINameSpaceManager.h"
 #include "nsIDOMNSHTMLSelectElement.h"
 #include "nsIAccessibleSelectable.h"
-#include "nsIDOMHTMLCollection.h"
 #include "nsLayoutAtoms.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
+#include "nsIAccessibilityService.h"
+#include "nsIServiceManager.h"
+#include "nsHTMLSelectListAccessible.h"
+#include "nsIDOMHTMLSelectElement.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
@@ -63,7 +68,8 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell), nsDocAccessibleMixin(aShell)
+nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell):nsAccessible(nsnull,aShell), 
+  nsDocAccessibleMixin(aShell), mAccService(do_GetService("@mozilla.org/accessibilityService;1"))
 {
   mListener = nsnull;
   nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
@@ -126,6 +132,11 @@ NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole)
     return NS_ERROR_FAILURE;
   }
 
+  /*
+  // Commenting this out for now.
+  // It was requested that we always use pane objects instead of client objects.
+  // However, it might be asked that we put client objects back.
+
   nsCOMPtr<nsIPresContext> context; 
   shell->GetPresContext(getter_AddRefs(context));
   nsCOMPtr<nsISupports> container;
@@ -143,8 +154,17 @@ NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole)
   }
 
   *aAccRole = ROLE_CLIENT;
+  */
+
+  *aAccRole = ROLE_PANE;
   return NS_OK;  
 }
+
+NS_IMETHODIMP nsRootAccessible::GetAccState(PRUint32 *aAccState)
+{
+  return nsDocAccessibleMixin::GetAccState(aAccState);
+}
+
 
 NS_IMETHODIMP nsRootAccessible::GetAccValue(nsAWritableString& aAccValue)
 {
@@ -224,67 +244,61 @@ NS_IMETHODIMP nsRootAccessible::RemoveAccessibleEventListener(nsIAccessibleEvent
 NS_IMETHODIMP nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
 {
   if (mListener) {
-    nsCOMPtr<nsIDOMEventTarget> t;
-    aEvent->GetOriginalTarget(getter_AddRefs(t));
-  
-    nsCOMPtr<nsIContent> content(do_QueryInterface(t));  
-    if (!content)
-      return NS_OK;
+    // optionTargetNode is set to current option for HTML selects
+    nsCOMPtr<nsIDOMNode> targetNode, optionTargetNode; 
+    nsresult rv = GetTargetNode(aEvent, targetNode);
+    if (NS_FAILED(rv))
+      return rv;
+
+    // Check to see if it's a select element. If so, need the currently focused option
+    nsCOMPtr<nsIDOMHTMLSelectElement> selectElement(do_QueryInterface(targetNode));
+    if (selectElement)     // ----- Target Node is an HTML <select> element ------
+      nsHTMLSelectOptionAccessible::GetFocusedOptionNode(mPresShell, targetNode, optionTargetNode);
 
     nsAutoString eventType;
     aEvent->GetType(eventType);
 
-    // the "focus" type is pulled from nsDOMEvent.cpp
-    if ( eventType.EqualsIgnoreCase("focus") ) {
-      if (mCurrentFocus == content)
-        return NS_OK;
-      mCurrentFocus = content;
-    }
+    nsCOMPtr<nsIAccessible> accessible;
 
-    nsIFrame* frame = nsnull;
-    nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-    shell->GetPrimaryFrameFor(content, &frame);
-    if (!frame)
-      return NS_OK;
-
-    nsCOMPtr<nsIAccessible> a;
-    frame->GetAccessible(getter_AddRefs(a));
-    if (!a)
-      a = do_QueryInterface(content);
-
-    if (!a) {
-      // is it a link?
-      nsCOMPtr<nsILink> link(do_QueryInterface(content));
-      if (link) {
-        #ifdef DEBUG
-        printf("focus link!\n");
-        #endif
-        nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
-        if (node)
-          a = new nsHTMLLinkAccessible(node, mPresShell);
-      }
-    }
-
-    if (a) {
+    if (NS_SUCCEEDED(mAccService->GetAccessibleFor(targetNode, getter_AddRefs(accessible)))) {
       if ( eventType.EqualsIgnoreCase("focus") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, a);
+        if (mCurrentFocus != targetNode) {
+          mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, accessible);
+          mCurrentFocus = targetNode;
+        }
       }
       else if ( eventType.EqualsIgnoreCase("change") ) {
-        nsCOMPtr<nsIDOMNSHTMLSelectElement> select(do_QueryInterface(content));
-        if ( select ) {
-          mListener->HandleEvent(nsIAccessibleEventListener::EVENT_SELECTION, a);
+        if (optionTargetNode) {   // Set to current option only for HTML selects
+          mListener->HandleEvent(nsIAccessibleEventListener::EVENT_SELECTION, accessible);
+          if (mCurrentFocus != optionTargetNode &&
+            NS_SUCCEEDED(mAccService->GetAccessibleFor(optionTargetNode, getter_AddRefs(accessible)))) {
+              mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, accessible);
+              mCurrentFocus = optionTargetNode;
+          }
         }
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
+        else 
+          mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, accessible);
       }
       else if ( eventType.EqualsIgnoreCase("CheckboxStateChange") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
+        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, accessible);
       }
       else if ( eventType.EqualsIgnoreCase("RadiobuttonStateChange") ) {
-        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, a);
+        mListener->HandleEvent(nsIAccessibleEventListener::EVENT_STATE_CHANGE, accessible);
       }
     }
   }
   return NS_OK;
+}
+
+NS_IMETHODIMP nsRootAccessible::GetTargetNode(nsIDOMEvent *aEvent, nsCOMPtr<nsIDOMNode>& aTargetNode)
+{
+  nsCOMPtr<nsIDOMEventTarget> domEventTarget;
+  aEvent->GetOriginalTarget(getter_AddRefs(domEventTarget));
+
+  nsresult rv;
+  aTargetNode = do_QueryInterface(domEventTarget, &rv);
+
+  return rv;
 }
 
 // ------- nsIDOMFocusListener Methods (1) -------------
@@ -430,3 +444,35 @@ NS_IMETHODIMP nsDocAccessibleMixin::GetDocument(nsIDocument **doc)
   return NS_ERROR_FAILURE;
 }
 
+NS_IMETHODIMP nsDocAccessibleMixin::GetAccState(PRUint32 *aAccState)
+{
+  // Screen readers need to know when the document is finished loading (STATE_BUSY flag)
+  // We do it this way, rather than via nsIWebProgressListener, because
+  // if accessibility was turned on after a document already finished loading, 
+  // we would get no state changes from nsIWebProgressListener.
+  // The GetBusyFlags method, however, always has the current busy state information for us.
+
+  *aAccState = 0;
+  if (mDocument) {
+    nsCOMPtr<nsIPresShell> presShell;
+    mDocument->GetShellAt(0, getter_AddRefs(presShell));
+    if (presShell) {
+      nsCOMPtr<nsIPresContext> context; 
+      presShell->GetPresContext(getter_AddRefs(context));
+      if (context) {
+        nsCOMPtr<nsISupports> container;
+        context->GetContainer(getter_AddRefs(container));
+        if (container) {
+          nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(container));
+          if (docShell) {
+            PRUint32 busyFlags;
+            docShell->GetBusyFlags(&busyFlags);
+            if (busyFlags != nsIDocShell::BUSY_FLAGS_NONE)
+              *aAccState = nsIAccessible::STATE_BUSY;
+          }
+        }
+      }
+    }
+  }
+  return NS_OK;
+}

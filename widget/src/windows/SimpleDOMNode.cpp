@@ -193,7 +193,7 @@ STDMETHODIMP SimpleDOMNode::get_attributes(
   *aNumAttribs = 0;
 
   if (!content || !domElement) 
-    return S_FALSE;
+    return E_FAIL;
   PRInt32 numAttribs;
   content->GetAttributeCount(numAttribs);
   if (numAttribs > aMaxAttribs)
@@ -272,7 +272,7 @@ STDMETHODIMP SimpleDOMNode::get_computedStyle(
   PRUint32 length;
   nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
   if (NS_FAILED(GetComputedStyleDeclaration(getter_AddRefs(cssDecl), &length)))
-    return S_FALSE;
+    return E_FAIL;
 
   PRUint32 index, realIndex;
   for (index = realIndex = 0; index < length && realIndex < aMaxStyleProperties; index ++) {
@@ -301,7 +301,7 @@ STDMETHODIMP SimpleDOMNode::get_computedStyleForProperties(
   nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
   nsresult rv = GetComputedStyleDeclaration(getter_AddRefs(cssDecl), &length);
   if (NS_FAILED(rv))
-    return S_FALSE;
+    return E_FAIL;
 
   PRUint32 index;
   for (index = 0; index < aNumStyleProperties; index ++) {
@@ -335,18 +335,12 @@ ISimpleDOMNode* SimpleDOMNode::MakeSimpleDOMNode(nsIDOMNode *node)
   if (!doc)
     return NULL;
 
-  nsCOMPtr<nsIPresShell> shell;
-  doc->GetShellAt(0, getter_AddRefs(shell));
-  if (!shell)
-    return NULL;
-
   nsCOMPtr<nsIAccessibilityService> accService(do_GetService("@mozilla.org/accessibilityService;1"));
   if (!accService)
     return NULL;
 
   nsCOMPtr<nsIAccessible> nsAcc;
-  nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(shell)));
-  accService->GetAccessibleFor(wr, node, getter_AddRefs(nsAcc));
+  accService->GetAccessibleFor(node, getter_AddRefs(nsAcc));
   if (nsAcc) {
     nsCOMPtr<nsIAccessibleDocument> nsAccDoc(do_QueryInterface(nsAcc));
     if (nsAccDoc) 

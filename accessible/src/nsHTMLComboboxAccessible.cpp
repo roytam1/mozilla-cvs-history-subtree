@@ -55,12 +55,12 @@ nsHTMLComboboxAccessible::~nsHTMLComboboxAccessible()
   if (mRegistered) {
     nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(mDOMNode));
     if (eventReceiver) 
-      eventReceiver->RemoveEventListener(NS_LITERAL_STRING("popupshowing"), this, PR_TRUE);   
+      eventReceiver->RemoveEventListener(NS_LITERAL_STRING("create"), this, PR_TRUE);   
   }
 }
 
-/** Inherit the ISupports impl from nsAccessible -- handle nsIDOMXULListener ourself */
-NS_IMPL_ISUPPORTS_INHERITED(nsHTMLComboboxAccessible, nsAccessible, nsIDOMXULListener)
+/** Inherit the ISupports impl from nsAccessible -- handle nsIDOMMenuListener ourself */
+NS_IMPL_ISUPPORTS_INHERITED(nsHTMLComboboxAccessible, nsAccessible, nsIDOMMenuListener)
 
 /** 
   * Tell our caller we are a combobox 
@@ -157,7 +157,7 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::GetAccState(PRUint32 *_retval)
   * Set our state to open and (TBD) fire an event to MSAA saying our state
   *     has changed.
   */
-NS_IMETHODIMP nsHTMLComboboxAccessible::PopupShowing(nsIDOMEvent* aEvent)
+NS_IMETHODIMP nsHTMLComboboxAccessible::Create(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_TRUE;
 
@@ -170,7 +170,7 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::PopupShowing(nsIDOMEvent* aEvent)
   * Set our state to not open and (TDB) fire an event to MSAA saying
   *     our state has changed.
   */
-NS_IMETHODIMP nsHTMLComboboxAccessible::PopupHiding(nsIDOMEvent* aEvent)
+NS_IMETHODIMP nsHTMLComboboxAccessible::Destroy(nsIDOMEvent* aEvent)
 { 
   mOpen = PR_FALSE;
 
@@ -194,7 +194,7 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::Close(nsIDOMEvent* aEvent)
 
 /**
   * If we aren't already registered, register ourselves as a
-  *     listener to "popupshowing" events on our DOM node. Set our
+  *     listener to "create" events on our DOM node. Set our
   *     state to registered, but don't notify MSAA as they 
   *     don't need to know about this state.
   */
@@ -204,7 +204,7 @@ nsHTMLComboboxAccessible::SetupMenuListener()
   // if not already registered as a popup listener, register ourself
   if (!mRegistered) {
     nsCOMPtr<nsIDOMEventReceiver> eventReceiver(do_QueryInterface(mDOMNode));
-    if (eventReceiver && NS_SUCCEEDED(eventReceiver->AddEventListener(NS_LITERAL_STRING("popupshowing"), this, PR_TRUE)))
+    if (eventReceiver && NS_SUCCEEDED(eventReceiver->AddEventListener(NS_LITERAL_STRING("create"), this, PR_TRUE)))
       mRegistered = PR_TRUE;
   }
 }

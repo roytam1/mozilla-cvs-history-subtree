@@ -106,7 +106,10 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccRole(PRUint32 *_retval)
   return NS_OK;
 }
 
-// ------- nsIAccessibleDocument Methods (5) ---------------
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccState(PRUint32 *aAccState)
+{
+  return nsDocAccessibleMixin::GetAccState(aAccState);
+}
 
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetURL(nsAWritableString& aURL)
 {
@@ -179,7 +182,7 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccNextSibling(nsIAccessible **_ret
     return accessible->GetAccNextSibling(_retval);
 
   *_retval = nsnull;
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_FAILURE;
 }
 
   /* nsIAccessible getAccPreviousSibling (); */
@@ -191,7 +194,7 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccPreviousSibling(nsIAccessible **
     return accessible->GetAccPreviousSibling(_retval);
 
   *_retval = nsnull;
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible** aAcc)

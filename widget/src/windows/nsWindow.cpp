@@ -56,8 +56,10 @@
 #include "prtime.h"
 #include "nsIRenderingContextWin.h"
 
+#ifdef ACCESSIBILITY
 #include "nsIAccessible.h"
 #include "Accessible.h"
+#endif
 
 #include <imm.h>
 #ifdef MOZ_AIMM
@@ -443,7 +445,11 @@ NS_IMETHODIMP nsWindow::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 // nsWindow constructor
 //
 //-------------------------------------------------------------------------
+#ifdef ACCESSIBILITY
 nsWindow::nsWindow() : nsBaseWidget(), mRootAccessible(NULL)
+#else
+nsWindow::nsWindow() : nsBaseWidget()
+#endif
 {
     NS_INIT_REFCNT();
     mWnd                = 0;
@@ -522,8 +528,10 @@ UINT nsWindow::gCurrentKeyboardCP = 0;
 //-------------------------------------------------------------------------
 nsWindow::~nsWindow()
 {
+#ifdef ACCESSIBILITY
   if (mRootAccessible)
     mRootAccessible->Release();
+#endif
 
   mIsDestroying = PR_TRUE;
   if (gCurrentWindow == this) {
@@ -3568,6 +3576,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         nsServiceManager::ReleaseService(kCClipboardCID, clipboard);
       } break;
 
+#ifdef ACCESSIBILITY
       case WM_GETOBJECT: 
       {
         if (lParam == OBJID_CLIENT) {
@@ -3577,10 +3586,9 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // create the COM accessible object
             if (acc) 
             {
-              HWND wnd = GetWindowHandle();
+               HWND wnd = GetWindowHandle();
                mRootAccessible = new RootAccessible(acc, wnd); // ref is 0       
                mRootAccessible->AddRef();
-               CoInitialize(NULL);
             }
           }
           if (mRootAccessible) {
@@ -3596,9 +3604,8 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         }
         *aRetValue = NULL;
         return PR_FALSE;
-      }
-      break;
-
+      } break;
+#endif
       default: {
         // Handle both flavors of mouse wheel events.
         if ((msg == WM_MOUSEWHEEL) || (msg == uMSH_MOUSEWHEEL)) {
@@ -4362,9 +4369,10 @@ PRBool nsWindow::DispatchMouseEvent(PRUint32 aEventType, nsPoint* aPoint)
 
 //-------------------------------------------------------------------------
 //
-// Deal with all sort of mouse event
+// Deal with accessibile event
 //
 //-------------------------------------------------------------------------
+#ifdef ACCESSIBILITY
 PRBool nsWindow::DispatchAccessibleEvent(PRUint32 aEventType, nsIAccessible** aAcc, nsPoint* aPoint)
 {
   PRBool result = PR_FALSE;
@@ -4395,6 +4403,8 @@ PRBool nsWindow::DispatchAccessibleEvent(PRUint32 aEventType, nsIAccessible** aA
 
   return result;
 }
+#endif
+
 //-------------------------------------------------------------------------
 //
 // Deal with focus messages

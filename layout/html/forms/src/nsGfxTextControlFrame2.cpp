@@ -91,7 +91,9 @@
 #include "nsIScriptGlobalObject.h" //needed for notify selection changed to update the menus ect.
 #include "nsIDOMWindowInternal.h" //needed for notify selection changed to update the menus ect.
 #include "nsITextContent.h" //needed to create initial text control content
+#ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
+#endif
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
 
@@ -1278,6 +1280,7 @@ nsGfxTextControlFrame2::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return nsBoxFrame::QueryInterface(aIID, aInstancePtr);
 }
 
+#ifdef ACCESSIBILITY
 NS_IMETHODIMP nsGfxTextControlFrame2::GetAccessible(nsIAccessible** aAccessible)
 {
   nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
@@ -1289,6 +1292,7 @@ NS_IMETHODIMP nsGfxTextControlFrame2::GetAccessible(nsIAccessible** aAccessible)
 
   return NS_ERROR_FAILURE;
 }
+#endif
 
 nsGfxTextControlFrame2::nsGfxTextControlFrame2(nsIPresShell* aShell):nsStackFrame(aShell)
 {

@@ -30,6 +30,7 @@
 #include "nsIDOMFormListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDocument.h"
+#include "nsIAccessibilityService.h"
 
 class nsDocAccessibleMixin
 {
@@ -39,6 +40,8 @@ class nsDocAccessibleMixin
     virtual ~nsDocAccessibleMixin();
 
     NS_DECL_NSIACCESSIBLEDOCUMENT
+
+    NS_IMETHOD GetAccState(PRUint32 *aAccState);
 
   protected:
     nsCOMPtr<nsIDocument> mDocument;
@@ -63,6 +66,7 @@ class nsRootAccessible : public nsAccessible,
     NS_IMETHOD GetAccValue(nsAWritableString& aAccValue);
     NS_IMETHOD GetAccParent(nsIAccessible * *aAccParent);
     NS_IMETHOD GetAccRole(PRUint32 *aAccRole);
+    NS_IMETHOD GetAccState(PRUint32 *aAccState);
 
     // ----- nsIAccessibleEventReceiver -------------------
 
@@ -86,6 +90,7 @@ class nsRootAccessible : public nsAccessible,
     NS_DECL_NSIACCESSIBLEDOCUMENT
 
   protected:
+    NS_IMETHOD GetTargetNode(nsIDOMEvent *aEvent, nsCOMPtr<nsIDOMNode>& aTargetNode);
     virtual void GetBounds(nsRect& aRect, nsIFrame** aRelativeFrame);
     virtual nsIFrame* GetFrame();
 
@@ -93,7 +98,8 @@ class nsRootAccessible : public nsAccessible,
     // it is the callers responsibility to remove the listener
     // otherwise we will get into circular referencing problems
     nsIAccessibleEventListener* mListener;
-    nsCOMPtr<nsIContent> mCurrentFocus;
+    nsCOMPtr<nsIDOMNode> mCurrentFocus;
+    nsCOMPtr<nsIAccessibilityService> mAccService;
 };
 
 

@@ -37,6 +37,13 @@
 #include "nsINameSpaceManager.h"
 #include "String.h"
 
+// for the COM IEnumVARIANT solution in get_AccSelection()
+#define _ATLBASE_IMPL
+#include <atlbase.h>
+extern CComModule _Module;
+#define _ATLCOM_IMPL
+#include <atlcom.h>
+
  /* For documentation of the accessibility architecture, 
  * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
  */
@@ -55,6 +62,7 @@ EXTERN_C GUID CDECL CLSID_Accessible =
  * Class Accessible
  */
 
+CComModule _Module;
 
 //-----------------------------------------------------
 // construction 
@@ -154,7 +162,7 @@ STDMETHODIMP Accessible::AccessibleObjectFromWindow(
     }
     
 
-    return S_FALSE;
+    return E_FAIL;
 }
 
 STDMETHODIMP Accessible::NotifyWinEvent(
@@ -176,7 +184,7 @@ STDMETHODIMP Accessible::NotifyWinEvent(
          return gmNotifyWinEvent(event, hwnd, idObjectType, idObject);
     }
     
-    return S_FALSE;
+    return E_FAIL;
 }
 
 
@@ -220,7 +228,8 @@ STDMETHODIMP Accessible::get_accParent( IDispatch __RPC_FAR *__RPC_FAR *ppdispPa
   if (pWnd) {
     // get the accessible.
     void* ptr = nsnull;
-    if (AccessibleObjectFromWindow(pWnd, OBJID_WINDOW, IID_IAccessible, &ptr) != S_FALSE) {
+    HRESULT result = AccessibleObjectFromWindow(pWnd, OBJID_WINDOW, IID_IAccessible, &ptr);
+    if (SUCCEEDED(result)) {
       IAccessible* a = (IAccessible*)ptr;
       // got one? return it.
       if (a) {
@@ -231,7 +240,7 @@ STDMETHODIMP Accessible::get_accParent( IDispatch __RPC_FAR *__RPC_FAR *ppdispPa
   }
 
   *ppdispParent = NULL;
-  return S_FALSE;  
+  return E_FAIL;  
 }
 
 STDMETHODIMP Accessible::get_accChildCount( long __RPC_FAR *pcountChildren)
@@ -266,7 +275,7 @@ STDMETHODIMP Accessible::get_accChild(
   }
 
   *ppdispChild = NULL;
-  return S_FALSE;
+  return E_FAIL;
 }
 
 STDMETHODIMP Accessible::get_accName( 
@@ -339,12 +348,12 @@ STDMETHODIMP Accessible::get_accRole(
    GetNSAccessibleFor(varChild,a);
 
    if (!a)
-     return S_FALSE;
+     return E_FAIL;
 
    PRUint32 role = 0;
    nsresult rv = a->GetAccRole(&role);
    if (NS_FAILED(rv))
-     return S_FALSE;
+     return E_FAIL;
 
    pvarRole->lVal = role;
    return S_OK;
@@ -361,12 +370,12 @@ STDMETHODIMP Accessible::get_accState(
    nsCOMPtr<nsIAccessible> a;
    GetNSAccessibleFor(varChild,a);
    if (!a)
-     return S_FALSE;
+     return E_FAIL;
 
    PRUint32 state;
    nsresult rv = a->GetAccState(&state);
    if (NS_FAILED(rv))
-     return S_FALSE;
+     return E_FAIL;
 
    pvarState->lVal = state;
 
@@ -415,13 +424,85 @@ STDMETHODIMP Accessible::get_accFocus(
   }
 
   pvarChild->vt = VT_EMPTY;
-  return S_FALSE;
+  return E_FAIL;
 }
-
+/**
+  * This method is called when a client wants to know which children of a node
+  *  are selected. Currently we only handle this for HTML selects, which are the
+  *  only nsIAccessible objects to implement nsIAccessibleSelectable.
+  *
+  * The VARIANT return value arguement is expected to either contain a single IAccessible
+  *  or an IEnumVARIANT of IAccessibles. We return the IEnumVARIANT regardless of the number
+  *  of options selected, unless there are none selected in which case we return an empty
+  *  VARIANT.
+  *
+  * The typedefs at the beginning set up the structure that will contain an array 
+  *  of the IAccessibles. It implements the IEnumVARIANT interface, allowing us to 
+  *  use it to return the IAccessibles in the VARIANT.
+  *
+  * We get the selected options from the select's accessible object and then put create 
+  *  IAccessible objects for them and put those in the CComObject<EnumeratorType> 
+  *  object. Then we put the CComObject<EnumeratorType> object in the VARIANT and return.
+  *
+  * returns a VT_EMPTY VARIANT if:
+  *  - there are no options in the select
+  *  - none of the options are selected
+  *  - there is an error QIing to IEnumVARIANT
+  *  - The object is not the type that can have children selected
+  */
 STDMETHODIMP Accessible::get_accSelection( 
       /* [retval][out] */ VARIANT __RPC_FAR *pvarChildren)
 {
+  typedef VARIANT                      ItemType;              /* type of the object to be stored in container */
+  typedef ItemType                     EnumeratorExposedType; /* the type of the item exposed by the enumerator interface */
+  typedef IEnumVARIANT                 EnumeratorInterface;   /* a COM enumerator ( IEnumXXXXX ) interface */
+  typedef _Copy<EnumeratorExposedType> EnumeratorCopyPolicy;  /* Copy policy class */
+  typedef CComEnum<EnumeratorInterface,
+                   &__uuidof(EnumeratorInterface),
+                   EnumeratorExposedType,
+                   EnumeratorCopyPolicy > EnumeratorType;
+
+  IEnumVARIANT* pUnk = NULL;
+  CComObject<EnumeratorType>* pEnum = NULL;
+  VariantInit(pvarChildren);
   pvarChildren->vt = VT_EMPTY;
+  
+  nsCOMPtr<nsIAccessibleSelectable> select(do_QueryInterface(mAccessible));
+  if (select) {  // do we have an nsIAccessibleSelectable?
+    // we have an accessible that can have children selected
+    nsCOMPtr<nsISupportsArray> selectedOptions;
+    // gets the selected options as nsIAccessibles.
+    select->GetSelectedChildren(getter_AddRefs(selectedOptions));
+    if (selectedOptions) { // false if the select has no children or none are selected
+      PRUint32 length;
+      selectedOptions->Count(&length);
+      CComVariant* optionArray = new CComVariant[length]; // needs to be a CComVariant to go into the EnumeratorType object
+
+      // 1) Populate an array to store in the enumeration
+      for (PRUint32 i = 0 ; i < length ; i++) {
+        nsCOMPtr<nsISupports> tempOption;
+        selectedOptions->GetElementAt(i,getter_AddRefs(tempOption)); // this expects an nsISupports
+        if (tempOption) {
+          nsCOMPtr<nsIAccessible> tempAccess(do_QueryInterface(tempOption));
+          if ( tempAccess ) {
+            optionArray[i] = NewAccessible(tempAccess, nsnull, mWnd);
+          }
+        }
+      }
+
+      // 2) Create and initialize the enumeration
+      HRESULT hr = CComObject<EnumeratorType>::CreateInstance(&pEnum);
+      pEnum->Init(&optionArray[0], &optionArray[length], NULL, AtlFlagCopy);
+      pEnum->QueryInterface(IID_IEnumVARIANT, reinterpret_cast<void**>(&pUnk));
+      delete [] optionArray; // clean up, the Init call copies the data (AtlFlagCopy)
+
+      // 3) Put the enumerator in the VARIANT
+      if (!pUnk)
+        return NS_ERROR_FAILURE;
+      pvarChildren->vt = VT_UNKNOWN;    // this must be VT_UNKNOWN for an IEnumVARIANT
+      pvarChildren->punkVal = pUnk;
+    }
+  }
   return S_OK;
 }
 
@@ -464,7 +545,7 @@ STDMETHODIMP Accessible::accSelect(
     return S_OK;
   }
 
-  return S_FALSE;
+  return E_FAIL;
 }
 
 STDMETHODIMP Accessible::accLocation( 
@@ -492,7 +573,7 @@ STDMETHODIMP Accessible::accLocation(
     return S_OK;
   }
 
-  return S_FALSE;  
+  return E_FAIL;  
 }
 
 STDMETHODIMP Accessible::accNavigate( 
@@ -539,7 +620,7 @@ STDMETHODIMP Accessible::accNavigate(
      return NS_OK;
   } else {
      pvarEndUpAt->vt = VT_EMPTY;
-     return S_FALSE;
+     return E_FAIL;
   }
 }
 
@@ -573,7 +654,7 @@ STDMETHODIMP Accessible::accHitTest(
   } else {
       // no child at that point
       pvarChild->vt = VT_EMPTY;
-      return S_FALSE;
+      return E_FAIL;
   }
 
   return S_OK;
@@ -589,14 +670,14 @@ STDMETHODIMP Accessible::put_accName(
       /* [optional][in] */ VARIANT varChild,
       /* [in] */ BSTR szName)
 {
-  return S_FALSE;
+  return E_NOTIMPL;
 }
 
 STDMETHODIMP Accessible::put_accValue( 
       /* [optional][in] */ VARIANT varChild,
       /* [in] */ BSTR szValue)
 {
-  return S_FALSE;
+  return E_NOTIMPL;
 }
 
 
@@ -745,7 +826,7 @@ STDMETHODIMP DocAccessible::get_URL(/* [out] */ BSTR __RPC_FAR *aURL)
       return S_OK;
     }
   }
-  return S_FALSE;
+  return E_FAIL;
 }
 
 STDMETHODIMP DocAccessible::get_title( /* [out] */ BSTR __RPC_FAR *aTitle)
@@ -758,7 +839,7 @@ STDMETHODIMP DocAccessible::get_title( /* [out] */ BSTR __RPC_FAR *aTitle)
       return S_OK;
     }
   }
-  return S_FALSE;
+  return E_FAIL;
 }
 
 STDMETHODIMP DocAccessible::get_mimeType(/* [out] */ BSTR __RPC_FAR *aMimeType)
@@ -771,7 +852,7 @@ STDMETHODIMP DocAccessible::get_mimeType(/* [out] */ BSTR __RPC_FAR *aMimeType)
       return S_OK;
     }
   }
-  return S_FALSE;
+  return E_FAIL;
 }
 
 STDMETHODIMP DocAccessible::get_docType(/* [out] */ BSTR __RPC_FAR *aDocType)
@@ -784,7 +865,7 @@ STDMETHODIMP DocAccessible::get_docType(/* [out] */ BSTR __RPC_FAR *aDocType)
       return S_OK;
     }
   }
-  return S_FALSE;
+  return E_FAIL;
 }
 
 STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID,
@@ -799,13 +880,13 @@ STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID
     return S_OK;
   }
 
-  return S_FALSE;
+  return E_FAIL;
 }
 
 
 STDMETHODIMP DocAccessible::put_alternateViewMediaTypes( /* [in] */ BSTR __RPC_FAR *commaSeparatedMediaTypes)
 {
-  return S_FALSE;
+  return E_NOTIMPL;
 }
 
 //----- Root Accessible -----
