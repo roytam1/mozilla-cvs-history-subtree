@@ -64,6 +64,15 @@
 #include <dlfcn.h>
 #endif
 
+#ifdef XP_MAC
+/*
+ * This libdl stuff is breaking our build on Mac OSX, so I'm getting
+ * rid of it.
+ * --rogc 10/7/2002
+ */
+#undef HAVE_LIBDL
+#endif
+
 #ifdef HAVE_LIBDL
 #include <dlfcn.h>
 #endif
