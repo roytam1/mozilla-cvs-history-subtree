@@ -37,17 +37,10 @@ public:
   XFE_MNView(XFE_Component *toplevel_component, XFE_View *parent_view, MWContext *context, MSG_Pane *p);
   virtual ~XFE_MNView();
 
-  MSG_Pane *getPane();
-  void setPane(MSG_Pane *new_pane);
-
-  void destroyPane();
-
 	/* the one command method we have. */
 	char *commandToString(CommandType cmd, void *calldata, XFE_CommandInfo *info);
 
-  virtual void paneChanged(XP_Bool asynchronous, MSG_PANE_CHANGED_NOTIFY_CODE notify_code, int32 value);
 
-	virtual void updateCompToolbar();
   /* used by toplevel to see which view can handle a command.  Returns true
      if we can handle it. */
   virtual Boolean handlesCommand(CommandType cmd, void *calldata = NULL,
@@ -58,12 +51,28 @@ public:
                                                  XFE_CommandInfo* i = NULL);
 
 
+  virtual void updateCompToolbar();
+
+  // these next two are useful in updating more than one window's chrome.
+  static const char *folderChromeNeedsUpdating;
+  static const char *MNChromeNeedsUpdating;
+
+  virtual void paneChanged(XP_Bool asynchronous, MSG_PANE_CHANGED_NOTIFY_CODE notify_code, int32 value);
+
+  MSG_Pane *getPane();
+  void setPane(MSG_Pane *new_pane);
+
+  void destroyPane();
+
+  static MSG_Master *getMaster();
+
+#ifdef MOZ_MAIL_NEWS
+
   XP_Bool isDisplayingNews();
 
   static MSG_BIFF_STATE getBiffState();
   static void setBiffState(MSG_BIFF_STATE state);
 
-  static MSG_Master *getMaster();
   static void destroyMasterAndShutdown(); // only do this if we're shutting down the application
 
   static const char *bannerNeedsUpdating;  // notify the parent frame that the MNBanner needs updating.
@@ -71,10 +80,6 @@ public:
   static const char *newsgroupsHaveChanged;
   static const char *msgWasDeleted;    // in case we need to close a frame 
   static const char *folderDeleted;    // in case we need to close a frame 
-
-  // these next two are useful in updating more than one window's chrome.
-  static const char *folderChromeNeedsUpdating;
-  static const char *MNChromeNeedsUpdating;
 
   // icons used in the mail/news outliners and proxy icons
 
@@ -122,9 +127,16 @@ public:
 	static fe_icon closedSpoolIcon;
 
   static fe_icon collectionsIcon;
+#endif /* MOZ_MAIL_NEWS */
+
 protected:
   MSG_Pane *m_pane;
 
+  static MSG_Master *m_master;
+
+#ifdef MOZ_MAIL_NEWS
+
+  static MSG_Prefs *m_prefs;
 	/* useful in both the threadview and msgview. */
 	XP_Bool m_displayingNewsgroup;
 
@@ -135,21 +147,20 @@ protected:
 					// Indicating how many folder being
 					// loaded in the meantime
 
-  static MSG_Master *m_master;
-  static MSG_Prefs *m_prefs;
-
-  virtual MSG_MotionType commandToMsgNav(CommandType cmd);
-  virtual MSG_CommandType commandToMsgCmd(CommandType cmd);
-  virtual MSG_PRIORITY commandToPriority(CommandType cmd);
-
-  virtual char *priorityToString(MSG_PRIORITY priority);
-
   virtual void getNewNews();
   virtual void getNewMail();
   virtual void markReadByDate();
 
   // update the biff desktop icon
   XFE_CALLBACK_DECL(updateBiffState)
+
+#endif /* MOZ_MAIL_NEWS */
+
+  virtual MSG_MotionType commandToMsgNav(CommandType cmd);
+  virtual MSG_CommandType commandToMsgCmd(CommandType cmd);
+  virtual MSG_PRIORITY commandToPriority(CommandType cmd);
+
+  virtual char *priorityToString(MSG_PRIORITY priority);
 };
 
 extern "C" MSG_Master *fe_getMNMaster();
