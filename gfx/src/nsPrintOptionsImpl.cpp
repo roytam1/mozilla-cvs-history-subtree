@@ -213,8 +213,7 @@ nsPrintOptions::GetMarginInTwips(nsMargin& aMargin)
 NS_IMETHODIMP 
 nsPrintOptions::ShowNativeDialog()
 {
-
-  return NS_OK;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /** ---------------------------------------------------
@@ -703,6 +702,14 @@ NS_IMETHODIMP nsPrintOptions::SetPrintSilent(PRBool aPrintSilent)
   return NS_OK;
 }
 
+/* [noscript] voidPtr GetNativeData (in short aDataType); */
+NS_IMETHODIMP nsPrintOptions::GetNativeData(PRInt16 aDataType, void * *_retval)
+{
+  NS_ENSURE_ARG_POINTER(_retval);
+  *_retval = nsnull;
+
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 //-----------------------------------------------------
 //-- Protected Methods
