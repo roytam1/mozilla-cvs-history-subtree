@@ -202,7 +202,7 @@
             </menupopup>
           </menu>
           <menuseparator/>
-          <menuitem label="&sendNowCmd.label;" accesskey="&sendNowCmd.accesskey;" command="cmd_sendNow"/>
+          <menuitem label="&sendNowCmd.label;" accesskey="&sendNowCmd.accesskey;" command="cmd_sendNow" id="menu-item-send-now"/>
           <menuitem label="&sendLaterCmd.label;" accesskey="&sendLaterCmd.accesskey;" command="cmd_sendLater"/>
           <menuseparator/>
           <!--Page setup gets overlaid here from platformGlobalOverlay.xul / -->

@@ -772,11 +772,6 @@ nsIOService::SetOffline(PRBool offline)
     nsresult rv1 = NS_OK;
     nsresult rv2 = NS_OK;
     if (offline) {
-        // don't care if notification fails
-        if (observerService)
-            (void)observerService->Notify(this,
-                                          NS_LITERAL_STRING("network:offline-status-changed").get(),
-                                          NS_LITERAL_STRING("offline").get());
     	mOffline = PR_TRUE;		// indicate we're trying to shutdown
         // be sure to try and shutdown both (even if the first fails)
         if (mDNSService)
@@ -785,6 +780,12 @@ nsIOService::SetOffline(PRBool offline)
             rv2 = mSocketTransportService->Shutdown();
         if (NS_FAILED(rv1)) return rv1;
         if (NS_FAILED(rv2)) return rv2;
+
+        // don't care if notification fails
+        if (observerService)
+            (void)observerService->Notify(NS_STATIC_CAST(nsIIOService *,this),
+                                          NS_LITERAL_STRING("network:offline-status-changed").get(),
+                                          NS_LITERAL_STRING("offline").get());
 
     }
     else if (!offline && mOffline) {
@@ -800,7 +801,7 @@ nsIOService::SetOffline(PRBool offline)
                                 // brought up the services
         // don't care if notification fails
         if (observerService)
-            (void)observerService->Notify(this,
+            (void)observerService->Notify(NS_STATIC_CAST(nsIIOService *,this),
                                           NS_LITERAL_STRING("network:offline-status-changed").get(),
                                           NS_LITERAL_STRING("online").get());
     }

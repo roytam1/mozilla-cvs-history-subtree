@@ -504,6 +504,7 @@ function QuoteSelectedMessage(){
 }
 
 
+    goUpdateCommand("cmd_sendNow");
 function SetupCommandUpdateHandlers()
 {
 //  dump("SetupCommandUpdateHandlers\n");
@@ -574,6 +575,10 @@ function AddMessageComposeOfflineObserver()
   observerService.AddObserver(messageComposeOfflineObserver, "network:offline-status-changed");
   
   isOffline = ioService.offline;
+    var sendNowMenuItem = document.getElementById("menu-item-send-now");
+
+    // don't use goUpdateCommand here ... the defaultController might not be installed yet
+    goSetCommandEnabled("cmd_sendNow", defaultController.isCommandEnabled("cmd_sendNow"));
   // set the initial state of the send button
   MessageComposeOfflineStateChanged(isOffline);
 }
@@ -2238,7 +2243,7 @@ var attachmentBucketObserver = {
       var rawData = aData.data;
       switch (aData.flavour.contentType) {
       case "text/x-moz-url":
-      case "text/nsmessage":
+      case "text/nsmessageOrfolder":
         var separator = rawData.indexOf("\n");
         if (separator != -1) {
           prettyName = rawData.substr(separator+1);
@@ -2281,7 +2286,7 @@ var attachmentBucketObserver = {
     {
       var flavourSet = new FlavourSet();
       flavourSet.appendFlavour("text/x-moz-url");
-      flavourSet.appendFlavour("text/nsmessage");
+      flavourSet.appendFlavour("text/nsmessageOrfolder");
       flavourSet.appendFlavour("application/x-moz-file", "nsIFile");
       return flavourSet;
     }
