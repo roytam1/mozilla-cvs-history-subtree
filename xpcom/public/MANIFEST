@@ -31,3 +31,4 @@ nsIEventQueueService.h
 nsICollection.h
 nsIAllocator.h
 nsIGenericFactory.h
+nsrootidl.h

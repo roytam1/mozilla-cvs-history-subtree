@@ -53,6 +53,7 @@ EXPORTS		= \
 		  nsIEventQueueService.h \
 		  nsIGenericFactory.h \
 		  nsIRegistry.h \
+		  nsrootidl.h \
 		  $(NULL)
 
 EXPORTS := $(addprefix $(srcdir)/, $(EXPORTS))
