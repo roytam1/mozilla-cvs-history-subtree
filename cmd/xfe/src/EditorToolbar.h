@@ -63,6 +63,13 @@ public:
 	Widget     getChildrenManager() { return m_rowcol; };
 	void       show();
 
+	// Logo methods
+	virtual void			showLogo			() {}
+	virtual void			hideLogo			() {}
+
+	virtual XP_Bool			isLogoShown			() { return False; } 
+	virtual XFE_Logo *		getLogo				() { return NULL; } 
+
 private:
 	XFE_ComponentList* m_update_list;
 	Widget             m_rowcol;
