@@ -1,5 +1,7 @@
 classic.jar:
 +    skin/classic/communicator/communicator.css               (communicator.css)
++    skin/classic/communicator/icons/online.png               (icons/online.png)
++    skin/classic/communicator/icons/offline.png               (icons/offline.png)
 +    skin/classic/communicator/smileys.css               (smileys.css)
 +    skin/classic/communicator/button.css              (button.css)
 +    skin/classic/communicator/icons/smileys/smiley-smile.png       (icons/smileys/smiley-smile.png)
@@ -135,5 +137,6 @@ classic.jar:
      skin/classic/messenger/accountcentral/offline.png      (accountcentral/offline.png)
      skin/classic/messenger/accountcentral/search-messages.png  (accountcentral/search-messages.png)
      skin/classic/messenger/accountcentral/manage-subscriptions.png  (accountcentral/manage-subscriptions.png)
+     skin/classic/messenger/accountcentral/manage-rss.png  (accountcentral/manage-rss.png)
      skin/classic/messenger/accountcentral/writemail.png    (accountcentral/writemail.png)
 
