@@ -95,6 +95,10 @@ treechildren::-moz-tree-cell-text(leaf, linkTree) {
   color: blue;
 }
 
+treechildren::-moz-tree-cell(leaf, linkTree, selected, focus) {
+  background-color: -moz-dialog;
+}
+
 /* ::::: lines connecting cells ::::: */
 
 treechildren::-moz-tree-line {
