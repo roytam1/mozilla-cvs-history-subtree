@@ -929,11 +929,7 @@ enum {
 		(JRIEnv*)CallUniversalProc((UniversalProcPtr)(FUNC), uppNPN_GetJavaEnvProcInfo)	
 
 #else
-#ifdef OJI
-typedef JNIEnv* (* NP_LOADDS NPN_GetJavaEnvUPP)(void);
-#else
 typedef JRIEnv* (* NP_LOADDS NPN_GetJavaEnvUPP)(void);
-#endif /* ! OJI */
 #define NewNPN_GetJavaEnvProc(FUNC)		\
 		((NPN_GetJavaEnvUPP) (FUNC))
 #define CallNPN_GetJavaEnvProc(FUNC)		\

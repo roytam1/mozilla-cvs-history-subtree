@@ -2258,10 +2258,10 @@ NS_DEFINE_IID(kLiveConnectPluginIID, NS_ILIVECONNECTPLUGIN_IID);
 #pragma pointers_in_D0
 #endif
 
-#if defined(OJI)
 jclass NP_EXPORT
 npn_getJavaClass(np_handle* handle)
 {
+#if defined(OJI)
     if (handle->userPlugin) {
         nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
         nsILiveConnectPlugin* lcPlugin;
@@ -2282,12 +2282,7 @@ npn_getJavaClass(np_handle* handle)
         if (env == NULL) return NULL;
         return (jclass) env->NewGlobalRef(handle->f->javaClass);
     }
-    return NULL;
-}
 #elif defined(JAVA)
-java_lang_Class* NP_EXPORT
-npn_getJavaClass(np_handle* handle)
-{
     if (handle->userPlugin) {
         nsIPlugin* userPluginClass = (nsIPlugin*)handle->userPlugin;
         nsILiveConnectPlugin* lcPlugin;
@@ -2308,9 +2303,9 @@ npn_getJavaClass(np_handle* handle)
         if (env == NULL) return NULL;
         return (java_lang_Class*)JRI_GetGlobalRef(env, handle->f->javaClass);
     }
+#endif /* JAVA */
     return NULL;
 }
-#endif /* JAVA */
 
 #if defined(OJI)
 jobject NP_EXPORT
@@ -2423,7 +2418,7 @@ npn_getJavaPeer(NPP npp)
 		return (jref)JRI_GetGlobalRef(npn_getJavaEnv(), instance->javaInstance);
 	}
     else {
-		struct java_lang_Class* clazz = npn_getJavaClass(instance->handle);
+		jclass clazz = npn_getJavaClass(instance->handle);
         if (clazz) {
             JRIEnv* env = npn_getJavaEnv();		/* may start up the java runtime */
 			if (classPlugin == NULL) {
@@ -2835,11 +2830,13 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
 
         /* tell the mocha thread to set us up with the window when it can */
         if (
+#if 0
             // XXX This is what we really want here, because it doesn't actually
             // start up the jvm, it just checks that the plugin is LiveConnected.
             // The problem is that by deferring the jvm startup, we cause it to 
             // happen later on the wrong thread. 
-#if defined(JAVA) || defined(OJI)
+            np_IsLiveConnected(handle)
+#elif defined(JAVA) || defined(OJI)
             npn_getJavaClass(handle)
 #else
             FALSE
