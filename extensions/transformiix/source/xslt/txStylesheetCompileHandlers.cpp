@@ -450,7 +450,7 @@ txFnEndStylesheet(txStylesheetCompilerState& aState)
 }
 
 nsresult
-txFnStartElementConinueTopLevel(PRInt32 aNamespaceID,
+txFnStartElementContinueTopLevel(PRInt32 aNamespaceID,
                                 nsIAtom* aLocalName,
                                 nsIAtom* aPrefix,
                                 txStylesheetAttr* aAttributes,
@@ -1729,7 +1729,7 @@ txFnEndForEach(txStylesheetCompilerState& aState)
 }
 
 nsresult
-txFnStartElementConinueTemplate(PRInt32 aNamespaceID,
+txFnStartElementContinueTemplate(PRInt32 aNamespaceID,
                                 nsIAtom* aLocalName,
                                 nsIAtom* aPrefix,
                                 txStylesheetAttr* aAttributes,
@@ -1742,7 +1742,7 @@ txFnStartElementConinueTemplate(PRInt32 aNamespaceID,
 }
 
 nsresult
-txFnTextConinueTemplate(const nsAString& aStr,
+txFnTextContinueTemplate(const nsAString& aStr,
                         txStylesheetCompilerState& aState)
 {
     TX_RETURN_IF_WHITESPACE(aStr, aState);
@@ -2634,11 +2634,11 @@ txHandlerTableData gTxForEachTableData = {
   { { kNameSpaceID_XSLT, "sort", txFnStartSort, txFnEndSort },
     { 0, 0, 0, 0 } },
   // Other
-  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  { 0, 0, txFnStartElementContinueTemplate, 0 },
   // LRE
-  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  { 0, 0, txFnStartElementContinueTemplate, 0 },
   // Text
-  txFnTextConinueTemplate
+  txFnTextContinueTemplate
 };
 
 txHandlerTableData gTxTopVariableTableData = {
@@ -2670,11 +2670,11 @@ txHandlerTableData gTxParamTableData = {
   { { kNameSpaceID_XSLT, "param", txFnStartParam, txFnEndParam },
     { 0, 0, 0, 0 } },
   // Other
-  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  { 0, 0, txFnStartElementContinueTemplate, 0 },
   // LRE
-  { 0, 0, txFnStartElementConinueTemplate, 0 },
+  { 0, 0, txFnStartElementContinueTemplate, 0 },
   // Text
-  txFnTextConinueTemplate
+  txFnTextContinueTemplate
 };
 
 txHandlerTableData gTxImportTableData = {
@@ -2682,7 +2682,7 @@ txHandlerTableData gTxImportTableData = {
   { { kNameSpaceID_XSLT, "import", txFnStartImport, txFnEndImport },
     { 0, 0, 0, 0 } },
   // Other
-  { 0, 0, txFnStartElementConinueTopLevel, 0 },
+  { 0, 0, txFnStartElementContinueTopLevel, 0 },
   // LRE
   { 0, 0, txFnStartOtherTop, txFnEndOtherTop }, // XXX what should we do here?
   // Text
