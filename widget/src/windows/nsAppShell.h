@@ -52,6 +52,9 @@ class nsAppShell : public nsIAppShell
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSIAPPSHELL
+
+  private:
+    nsDispatchListener*     mDispatchListener;
 };
 
 #endif // nsAppShell_h__

@@ -233,8 +233,8 @@ nsDOMSOFactory::Observe(nsISupports *aSubject,
 #ifdef MOZ_XUL
     // Flush the XUL cache since it holds JS roots, and we're about to
     // start the final GC.
-    nsCOMPtr<nsIXULPrototypeCache> cache =
-      do_GetService("@mozilla.org/xul/xul-prototype-cache;1");
+    static NS_DEFINE_CID(kXULPrototypeCacheCID, NS_XULPROTOTYPECACHE_CID);
+    nsCOMPtr<nsIXULPrototypeCache> cache(do_GetService(kXULPrototypeCacheCID));
 
     if (cache)
       cache->Flush();

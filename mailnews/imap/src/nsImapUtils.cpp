@@ -292,9 +292,12 @@ nsImapMailboxSpec::nsImapMailboxSpec()
 
 nsImapMailboxSpec::~nsImapMailboxSpec()
 {
-	nsCRT::free(allocatedPathName);
-	nsCRT::free(unicharPathName);
-	nsCRT::free(hostName);
+	if (allocatedPathName)
+		nsCRT::free(allocatedPathName);
+	if (unicharPathName)
+		nsCRT::free(unicharPathName);
+	if (hostName)
+		nsCRT::free(hostName);
 }
 
 NS_IMPL_GETSET(nsImapMailboxSpec, Folder_UIDVALIDITY, PRInt32, folder_UIDVALIDITY);

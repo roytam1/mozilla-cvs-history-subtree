@@ -316,6 +316,7 @@ nsViewerApp::Initialize(int argc, char** argv)
     return rv;
   }
   mAppShell->Create(&argc, argv);
+  mAppShell->SetDispatchListener((nsDispatchListener*) this);
 
   // Load preferences
   rv = CallGetService(NS_PREFSERVICE_CONTRACTID, &mPrefService);
@@ -746,6 +747,15 @@ nsViewerApp::OpenWindow(PRUint32 aNewChromeMask, nsBrowserWindow*& aNewWindow)
   aNewWindow = bw;
 
   return NS_OK;
+}
+
+//----------------------------------------
+
+// nsDispatchListener implementation
+
+void
+nsViewerApp::AfterDispatch()
+{
 }
 
 //----------------------------------------

@@ -97,8 +97,6 @@ typedef PRUint8 nsHttpVersion;
 #define NS_HTTP_DEFAULT_PORT  80
 #define NS_HTTPS_DEFAULT_PORT 443
 
-#define NS_HTTP_HEADER_SEPS ", \t"
-
 //-----------------------------------------------------------------------------
 // http atoms...
 //-----------------------------------------------------------------------------

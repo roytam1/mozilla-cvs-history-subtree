@@ -43,6 +43,7 @@
 #include "nsSOAPMessage.h"
 #include "nsSOAPParameter.h"
 #include "nsSOAPHeaderBlock.h"
+#include "nsSOAPEncoding.h"
 #include "nsSOAPException.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMAttr.h"
@@ -716,12 +717,12 @@ NS_IMETHODIMP
       break;
     nsSOAPUtils::GetNextSiblingElement(element, getter_AddRefs(next));
   }
-  if (NS_SUCCEEDED(rv)) {
+  if (!NS_FAILED(rv)) {
     if (count) {
       parameters =
           (nsISOAPParameter * *)nsMemory::Realloc(parameters,
-                                                  count *
-                                                  sizeof(*parameters));
+                                                    count *
+                                                    sizeof(*parameters));
     }
   }
   else {
@@ -734,6 +735,12 @@ NS_IMETHODIMP
   }
   *aCount = count;
   *aParameters = parameters;
+  if (count) {
+    parameters =
+        (nsISOAPParameter * *)nsMemory::Realloc(parameters,
+                                              count *
+                                              sizeof(*parameters));
+  }
   return rv;
 }
 

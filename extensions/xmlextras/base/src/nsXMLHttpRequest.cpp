@@ -132,6 +132,8 @@ nsXMLHttpRequest::nsXMLHttpRequest()
     mCrossSiteAccessEnabled(PR_FALSE),
     mLoopingForSyncLoad(PR_FALSE)
 {
+  mEventQService = do_GetService(kEventQueueServiceCID);
+
   // Keep this last so that everything is initialized by the time we call this
   ChangeState(XML_HTTP_REQUEST_UNINITIALIZED, PR_FALSE);
 }
@@ -241,7 +243,6 @@ nsXMLHttpRequest::GetOnreadystatechange(nsIOnReadystatechangeHandler * *aOnready
   NS_ENSURE_ARG_POINTER(aOnreadystatechange);
 
   *aOnreadystatechange = mOnReadystatechangeListener;
-  NS_IF_ADDREF(*aOnreadystatechange);
 
   return NS_OK;
 }
@@ -264,7 +265,6 @@ nsXMLHttpRequest::GetOnload(nsIDOMEventListener * *aOnLoad)
   NS_ENSURE_ARG_POINTER(aOnLoad);
 
   *aOnLoad = mOnLoadListener;
-  NS_IF_ADDREF(*aOnLoad);
 
   return NS_OK;
 }
@@ -286,7 +286,6 @@ nsXMLHttpRequest::GetOnerror(nsIDOMEventListener * *aOnerror)
   NS_ENSURE_ARG_POINTER(aOnerror);
 
   *aOnerror = mOnErrorListener;
-  NS_IF_ADDREF(*aOnerror);
 
   return NS_OK;
 }
@@ -942,7 +941,6 @@ nsXMLHttpRequest::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult
   mXMLParserStreamListener = nsnull;
   mReadRequest = nsnull;
   mContext = nsnull;
-  mChannel->SetNotificationCallbacks(nsnull);
 
   if (NS_FAILED(status)) {
     // This can happen if the user leaves the page while the request was still
@@ -1013,7 +1011,6 @@ nsXMLHttpRequest::RequestCompleted()
     return NS_ERROR_FAILURE;
   }
   privevent->SetTarget(this);
-  privevent->SetCurrentTarget(this);
 
   // We might have been sent non-XML data. If that was the case,
   // we should null out the document member. The idea in this
@@ -1190,7 +1187,7 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   }
 
   // Create an empty document from it (resets current document as well)
-  nsString emptyStr;
+  nsAutoString emptyStr;
   rv = implementation->CreateDocument(emptyStr, 
                                       emptyStr, 
                                       nsnull, 
@@ -1225,8 +1222,7 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
 
   if (!mAsync) {
     if(!mEventQService) {
-      mEventQService = do_GetService(kEventQueueServiceCID, &rv);
-      NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+      return NS_ERROR_FAILURE;
     }
 
     mLoopingForSyncLoad = PR_TRUE;

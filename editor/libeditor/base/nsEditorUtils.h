@@ -276,8 +276,7 @@ class nsEditorHookUtils
 {
   public:
     static PRBool   DoAllowDragHook(nsIDOMDocument *aDoc, nsIDOMEvent *aEvent);
-    static PRBool   DoDragHook(nsIDOMDocument *aDoc, nsIDOMEvent *aEvent,
-                                    nsITransferable *aTrans);
+    static PRBool   DoDragHook(nsIDOMDocument *aDoc, nsITransferable *aTrans);
     static PRBool   DoAllowDropHook(nsIDOMDocument *aDoc, nsIDOMEvent *aEvent,
                                     nsIDragSession *aSession);
     static PRBool   DoInsertionHook(nsIDOMDocument *aDoc, nsIDOMEvent *aEvent,

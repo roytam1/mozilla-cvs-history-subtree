@@ -176,7 +176,7 @@ public:
 
 private:
 
-  nsresult InitializeNSS(PRBool showWarningBox);
+  nsresult InitializeNSS();
   nsresult ShutdownNSS();
 
 #ifdef XP_MACOSX

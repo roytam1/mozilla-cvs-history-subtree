@@ -168,7 +168,11 @@ public:
     /*
      * Virtual methods from ExprResult
      */
-    TX_DECL_EXPRRESULT
+    ExprResult* clone();
+    short getResultType();
+    MBool booleanValue();
+    double numberValue();
+    void stringValue(nsAString& aStr);
 
 private:
 

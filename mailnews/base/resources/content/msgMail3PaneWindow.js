@@ -256,9 +256,6 @@ var folderListener = {
            {
              Search("");
            }
-           else {
-             ViewChangeByValue(pref.getIntPref("mailnews.view.last"));
-           }
          }
        } 
        else if (eventType == "ImapHdrDownloaded") {

@@ -386,7 +386,13 @@ var messageHeaderSink = {
 
     onEndMsgDownload: function(url)
     {
-      OnMsgLoaded(url);
+      if (url)
+      {
+        var msgFolder = url.folder;
+        var msgURI = GetLoadedMessage();
+        if (msgFolder && msgURI)
+          OnMsgLoaded(msgFolder, msgURI);
+      }
     },
 
     mSecurityInfo  : null,

@@ -517,8 +517,11 @@ private:
 class RelationalExpr : public Expr {
 
 public:
-    enum RelationalExprType {
-        EQUAL,
+
+    //-- RelationalExpr Types
+    //-- LF, changed from static const short to enum
+    enum _RelationalExprType {
+        EQUAL = 1,
         NOT_EQUAL,
         LESS_THAN,
         GREATER_THAN,
@@ -526,17 +529,18 @@ public:
         GREATER_OR_EQUAL
     };
 
-    RelationalExpr(Expr* aLeftExpr, Expr* aRightExpr, RelationalExprType aOp);
+     RelationalExpr(Expr* leftExpr, Expr* rightExpr, short op);
+     ~RelationalExpr();
 
     TX_DECL_EXPR;
 
 private:
-    PRBool compareResults(ExprResult* aLeft, ExprResult* aRight);
+    short op;
+    Expr* leftExpr;
+    Expr* rightExpr;
 
-    nsAutoPtr<Expr> mLeftExpr;
-    nsAutoPtr<Expr> mRightExpr;
-    RelationalExprType mOp;
-};
+    MBool compareResults(ExprResult* left, ExprResult* right);
+}; //-- RelationalExpr
 
 /**
  * VariableRefExpr

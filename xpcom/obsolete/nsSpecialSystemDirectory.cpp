@@ -133,13 +133,26 @@ NS_COM void StartupSpecialSystemDirectory()
        startup. Replacing these older calls with a single call to SHGetSpecialFolderPath
        effectively removes these calls from the performace radar.  We need to 
        support the older way of file location lookup on systems that do not have
-       IE4. (Note: gets the ansi version: SHGetSpecialFolderPathA).
+       IE4. 
     */ 
-    gShell32DLLInst = LoadLibrary("Shell32.dll");
+    gShell32DLLInst = LoadLibrary("shfolder.dll");
     if(gShell32DLLInst)
     {
         gGetSpecialPathProc  = (GetSpecialPathProc) GetProcAddress(gShell32DLLInst, 
-                                                                   "SHGetSpecialFolderPathA");
+                                                                   "SHGetSpecialFolderPath");
+    }
+    
+    if (!gGetSpecialPathProc)
+    {
+        if (gShell32DLLInst)
+            FreeLibrary(gShell32DLLInst);
+
+        gShell32DLLInst = LoadLibrary("Shell32.dll");
+        if(gShell32DLLInst)
+        {
+            gGetSpecialPathProc  = (GetSpecialPathProc) GetProcAddress(gShell32DLLInst, 
+                                                                       "SHGetSpecialFolderPath");
+        }
     }
 #endif
 }

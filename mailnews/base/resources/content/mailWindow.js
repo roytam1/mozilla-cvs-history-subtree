@@ -133,7 +133,7 @@ function CreateMailWindowGlobals()
   // double register the status feedback object as the xul browser window implementation
   window.XULBrowserWindow = window.MsgStatusFeedback;
 
-  statusFeedback = Components.classes[statusFeedbackContractID].createInstance();
+  statusFeedback           = Components.classes[statusFeedbackContractID].createInstance();
   statusFeedback = statusFeedback.QueryInterface(Components.interfaces.nsIMsgStatusFeedback);
 
   /*
@@ -308,8 +308,8 @@ nsMsgStatusFeedback.prototype =
     {
       if (!this.statusTextFld ) this.statusTextFld = document.getElementById("statusText");
       if (!this.statusBar) this.statusBar = document.getElementById("statusbar-icon");
-      if (!this.throbber)   this.throbber = document.getElementById("navigator-throbber");
-      if (!this.stopCmd)   this.stopCmd = document.getElementById("cmd_stop");
+      if(!this.throbber)   this.throbber = document.getElementById("navigator-throbber");
+      if(!this.stopCmd)   this.stopCmd = document.getElementById("cmd_stop");
     },
 
   // nsIXULBrowserWindow implementation
@@ -350,20 +350,18 @@ nsMsgStatusFeedback.prototype =
       // Turn progress meter on.
       this.statusBar.setAttribute("mode","undetermined");
 
-      // start the throbber
-      if (this.throbber)
-        this.throbber.setAttribute("busy", true);
+      // turn throbber on
+      this.throbber.setAttribute("busy", true);
 
       //turn on stop button and menu
-      if (this.stopCmd)
-        this.stopCmd.removeAttribute("disabled");
+    this.stopCmd.removeAttribute("disabled");
     },
   startMeteors : function()
     {
       this.pendingStartRequests++;
       // if we don't already have a start meteor timeout pending
       // and the meteors aren't spinning, then kick off a start
-      if (!this.startTimeoutID && !this.meteorsSpinning && window.MsgStatusFeedback)
+      if (!this.startTimeoutID && !this.meteorsSpinning)
         this.startTimeoutID = setTimeout('window.MsgStatusFeedback._startMeteors();', 500);
 
       // since we are going to start up the throbber no sense in processing
@@ -386,16 +384,13 @@ nsMsgStatusFeedback.prototype =
       this.showStatusString(msg);
       defaultStatus = msg;
 
-      // stop the throbber
-      if (this.throbber)
-        this.throbber.setAttribute("busy", false);
+      this.throbber.setAttribute("busy", false);
 
       // Turn progress meter off.
       this.statusBar.setAttribute("mode","normal");
       this.statusBar.value = 0;  // be sure to clear the progress bar
       this.statusBar.label = "";
-      if (this.stopCmd)
-        this.stopCmd.setAttribute("disabled", "true");
+      this.stopCmd.setAttribute("disabled", "true");
 
       this.meteorsSpinning = false;
       this.stopTimeoutID = null;
@@ -416,7 +411,7 @@ nsMsgStatusFeedback.prototype =
       // AND the meteors are currently running then fire a stop timeout to shut them down.
       if (this.pendingStartRequests == 0 && !this.stopTimeoutID)
       {
-        if (this.meteorsSpinning && window.MsgStatusFeedback)
+        if (this.meteorsSpinning)
           this.stopTimeoutID = setTimeout('window.MsgStatusFeedback._stopMeteors();', 500);
       }
   },

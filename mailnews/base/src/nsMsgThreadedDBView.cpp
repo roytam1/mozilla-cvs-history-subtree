@@ -571,39 +571,6 @@ nsresult nsMsgThreadedDBView::OnNewHeader(nsMsgKey newKey, nsMsgKey aParentKey, 
   return rv;
 }
 
-
-NS_IMETHODIMP nsMsgThreadedDBView::OnParentChanged (nsMsgKey aKeyChanged, nsMsgKey oldParent, nsMsgKey newParent, nsIDBChangeListener *aInstigator)
-{
-  // we need to adjust the level of the hdr whose parent changed, and invalidate that row,
-  // iff we're in threaded mode.
-  if (PR_FALSE && m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
-  {
-    nsMsgViewIndex childIndex = FindViewIndex(aKeyChanged);
-    if (childIndex != nsMsgViewIndex_None)
-    {
-			nsMsgViewIndex parentIndex = FindViewIndex(newParent);
-			PRInt32 newParentLevel = (parentIndex == nsMsgViewIndex_None) ? -1 : m_levels[parentIndex];
-			nsMsgViewIndex oldParentIndex = FindViewIndex(oldParent);
-			PRInt32 oldParentLevel = (oldParentIndex != nsMsgViewIndex_None || newParent == nsMsgKey_None) 
-				? m_levels[oldParentIndex] : -1 ;
-      PRInt32 levelChanged = m_levels[childIndex];
-			PRInt32 parentDelta = oldParentLevel - newParentLevel;
-			m_levels[childIndex] = (newParent == nsMsgKey_None) ? 0 : newParentLevel + 1;
-			if (parentDelta > 0)
-			{
-				for (nsMsgViewIndex viewIndex = childIndex + 1; viewIndex < GetSize() && m_levels[viewIndex] > levelChanged;  viewIndex++)
-				{
-					m_levels[viewIndex] = m_levels[viewIndex] - parentDelta;
-					NoteChange(viewIndex, 1, nsMsgViewNotificationCode::changed);
-				}
-			}
-      NoteChange(childIndex, 1, nsMsgViewNotificationCode::changed);
-    }
-  }
-  return NS_OK;
-}
-
-
 nsMsgViewIndex nsMsgThreadedDBView::GetInsertInfoForNewHdr(nsIMsgDBHdr *newHdr, nsMsgViewIndex parentIndex, PRInt32 targetLevel)
 {
   PRInt32 viewSize = GetSize();

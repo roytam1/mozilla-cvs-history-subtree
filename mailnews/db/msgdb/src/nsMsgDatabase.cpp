@@ -1593,14 +1593,12 @@ NS_IMETHODIMP nsMsgDatabase::DeleteHeader(nsIMsgDBHdr *msg, nsIDBChangeListener 
 }
 
 NS_IMETHODIMP
-nsMsgDatabase::UndoDelete(nsIMsgDBHdr *aMsgHdr)
+nsMsgDatabase::UndoDelete(nsIMsgDBHdr *msgHdr)
 {
-    if (aMsgHdr)
+    if (msgHdr)
     {
-        nsMsgHdr* msgHdr = NS_STATIC_CAST(nsMsgHdr*, aMsgHdr);  // closed system, so this is ok
-        // force deleted flag, so SetHdrFlag won't bail out because  deleted flag isn't set
-        msgHdr->m_flags |= MSG_FLAG_EXPUNGED; 
-        SetHdrFlag(msgHdr, PR_FALSE, MSG_FLAG_EXPUNGED); // clear deleted flag in db
+        SetHdrFlag(msgHdr, PR_FALSE, MSG_FLAG_EXPUNGED);
+        // ** do we need to update folder info regarding the message size
     }
     return NS_OK;
 }

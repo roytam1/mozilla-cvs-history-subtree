@@ -73,6 +73,7 @@ public:
 		return NS_OK;
 		}
 
+	NS_IMETHOD SetDispatchListener(nsDispatchListener * aDispatchListener);
 	NS_IMETHOD Exit(void);
 
 public:

@@ -74,18 +74,13 @@ enum {
 nsresult
 ipcTransport::PlatformInit()
 {
-#ifdef XP_UNIX
     PRNetAddr addr; // this way we know our buffer is large enough ;-)
     IPC_GetDefaultSocketPath(addr.local.path, sizeof(addr.local.path));
 
     ipcSocketProviderUnix::SetSocketPath(addr.local.path);
     return NS_OK;
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
-#ifdef XP_UNIX
 static NS_METHOD ipcWriteMessage(nsIOutputStream *stream,
                                  void            *closure,
                                  char            *segment,
@@ -105,13 +100,11 @@ static NS_METHOD ipcWriteMessage(nsIOutputStream *stream,
 
     return NS_OK;
 }
-#endif
 
 // runs on main thread or socket thread
 nsresult
 ipcTransport::SendMsg_Internal(ipcMessage *msg)
 {
-#ifdef XP_UNIX
     LOG(("ipcTransport::SendMsg_Internal [msg=%p dataLen=%u]\n", msg, msg->DataLen()));
     
     if (nsIThread::IsMainThread()) {
@@ -135,16 +128,12 @@ ipcTransport::SendMsg_Internal(ipcMessage *msg)
 
     delete msg; // done with message
     return NS_OK;
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
 // runs on main thread or socket thread
 nsresult
 ipcTransport::Connect()
 {
-#ifdef XP_UNIX
     LOG(("ipcTransport::Connect\n"));
 
     if (++mConnectionAttemptCount > 20) {
@@ -183,16 +172,12 @@ ipcTransport::Connect()
     }
 
     return asyncIn->AsyncWait(mReceiver, 0, nsnull);
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
 // runs on main thread or socket thread
 nsresult
 ipcTransport::Disconnect()
 {
-#ifdef XP_UNIX
     if (nsIThread::IsMainThread()) {
         LOG(("  proxy to socket thread\n"));
         nsresult rv;
@@ -210,12 +195,8 @@ ipcTransport::Disconnect()
         mOutputStream = nsnull;
     }
     return NS_OK;
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
-#ifdef XP_UNIX
 // runs on socket transport thread
 void
 ipcTransport::OnConnectionLost(nsresult reason)
@@ -307,7 +288,6 @@ ipcTransport::OnSocketEvent(PRUint32 type, PRUint32 uparam, void *vparam)
     }
     return NS_OK;
 }
-#endif
 
 //----------------------------------------------------------------------------
 // ipcReceiver
@@ -323,7 +303,6 @@ ipcReceiver::ReadSegment(nsIInputStream *stream,
                          PRUint32        count,
                          PRUint32       *countRead)
 {
-#ifdef XP_UNIX
     ipcReceiver *self = (ipcReceiver *) closure;
 
     *countRead = 0;
@@ -350,15 +329,11 @@ ipcReceiver::ReadSegment(nsIInputStream *stream,
     }
 
     return NS_OK;
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
 
 NS_IMETHODIMP
 ipcReceiver::OnInputStreamReady(nsIAsyncInputStream *stream)
 {
-#ifdef XP_UNIX
     LOG(("ipcReceiver::OnInputStreamReady\n"));
 
     nsresult rv;
@@ -377,8 +352,4 @@ ipcReceiver::OnInputStreamReady(nsIAsyncInputStream *stream)
 
     // continue reading...
     return stream->AsyncWait(this, 0, nsnull);
-#else
-    return NS_ERROR_NOT_IMPLEMENTED;
-#endif
 }
-

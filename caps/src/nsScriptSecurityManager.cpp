@@ -457,9 +457,9 @@ nsScriptSecurityManager::CheckObjectAccess(JSContext *cx, JSObject *obj,
     JSObject* target = JSVAL_IS_PRIMITIVE(*vp) ? obj : JSVAL_TO_OBJECT(*vp);
 
     // Do the same-origin check -- this sets a JS exception if the check fails.
-    // Pass the parent object's class name, as we have no class-info for it.
+    // Pass the target object's class name, as we have no class-info for it.
     nsresult rv =
-        ssm->CheckPropertyAccess(cx, target, JS_GetClass(cx, obj)->name, id,
+        ssm->CheckPropertyAccess(cx, target, JS_GetClass(cx, target)->name, id,
                                  nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
 
     if (NS_FAILED(rv))
@@ -2047,7 +2047,7 @@ nsScriptSecurityManager::SavePrincipal(nsIPrincipal* aToSave)
 ///////////////// Capabilities API /////////////////////
 NS_IMETHODIMP
 nsScriptSecurityManager::IsCapabilityEnabled(const char *capability,
-                                             PRBool *result)
+                                                 PRBool *result)
 {
     nsresult rv;
     JSStackFrame *fp = nsnull;
@@ -2097,12 +2097,9 @@ nsScriptSecurityManager::IsCapabilityEnabled(const char *capability,
 
     if (!previousPrincipal)
     {
-        // No principals on the stack, all native code.  Allow
-        // execution if the subject principal is the system principal.
-
-        return SubjectPrincipalIsSystem(result);
+        // No principals on the stack, all native code.  Allow execution.
+        *result = PR_TRUE;
     }
-
     return NS_OK;
 }
 

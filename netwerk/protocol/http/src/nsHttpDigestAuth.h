@@ -91,8 +91,6 @@ class nsHttpDigestAuth : public nsIHttpAuthenticator
     // result is in mHashBuf
     nsresult MD5Hash(const char *buf, PRUint32 len);
 
-    nsresult GetMethodAndPath(nsIHttpChannel *, PRBool, nsCString &, nsCString &);
-
   protected:
     nsCOMPtr<nsISignatureVerifier> mVerifier;
     char                           mHashBuf[DIGEST_LENGTH];

@@ -2823,10 +2823,8 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
             
         case POP3_WAIT_FOR_START_OF_CONNECTION_RESPONSE:
         {
-            status = WaitForStartOfConnectionResponse(aInputStream, aLength);
+            WaitForStartOfConnectionResponse(aInputStream, aLength);
 
-            if(status)
-            {
             PRBool prefBool = PR_FALSE;
             m_pop3Server->GetAuthLogin(&prefBool);
 
@@ -2839,7 +2837,6 @@ nsresult nsPop3Protocol::ProcessProtocolState(nsIURI * url, nsIInputStream * aIn
             }
             else
                 m_pop3ConData->next_state = POP3_SEND_USERNAME;;
-            }
 
             break;
         }

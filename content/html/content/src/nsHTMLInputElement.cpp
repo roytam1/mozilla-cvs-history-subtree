@@ -106,7 +106,6 @@
 
 // input type=image
 #include "nsImageLoadingContent.h"
-#include "nsIDOMWindowInternal.h"
 
 // XXX align=left, hspace, vspace, border? other nav4 attrs
 
@@ -1055,8 +1054,6 @@ nsHTMLInputElement::SetFocus(nsIPresContext* aPresContext)
   PRBool isActive = PR_FALSE;
   focusController->GetActive(&isActive);
   if (!isActive) {
-    nsCOMPtr<nsIDOMWindowInternal> domWin(do_QueryInterface(globalObj));
-    focusController->SetFocusedWindow(domWin);
     focusController->SetFocusedElement(this);
     return NS_OK;
   }
@@ -1148,8 +1145,6 @@ nsHTMLInputElement::Select()
     PRBool isActive = PR_FALSE;
     focusController->GetActive(&isActive);
     if (!isActive) {
-      nsCOMPtr<nsIDOMWindowInternal> domWin(do_QueryInterface(globalObj));
-      focusController->SetFocusedWindow(domWin);
       focusController->SetFocusedElement(this);
       SelectAll(presContext);
       return NS_OK;

@@ -179,6 +179,12 @@ nsAppShell::ReleaseGlobals()
 
 NS_IMPL_ISUPPORTS1(nsAppShell, nsIAppShell)
 
+//-------------------------------------------------------------------------
+NS_IMETHODIMP nsAppShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
+{
+  return NS_OK;
+}
+
 static void event_processor_callback(gpointer data,
                                      gint source,
                                      GdkInputCondition condition)

@@ -313,14 +313,12 @@ function fillFolderPaneContextMenu()
 
 function SetupRenameMenuItem(folderResource, numSelected, isServer, serverType, specialFolder)
 {
-  var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+  var isSpecialFolder = specialFolder != 'none';
   var isMail = serverType != 'nntp';
   var folderTree = GetFolderTree();
-  var isSpecialFolder = !(specialFolder == "none" || (specialFolder == "Junk" && CanRenameDeleteJunkMail(msgFolder.URI)));
   var canRename = GetFolderAttribute(folderTree, folderResource, "CanRename") == "true";
-  canRename = canRename || !isSpecialFolder;
 
-  ShowMenuItem("folderPaneContext-rename", (numSelected <= 1) && !isServer && !isSpecialFolder && canRename);
+  ShowMenuItem("folderPaneContext-rename", (numSelected <= 1) && !isServer && (specialFolder == "none") && canRename);
   var folder = GetMsgFolderFromResource(folderResource);
   EnableMenuItem("folderPaneContext-rename", !isServer && folder.isCommandEnabled("cmd_renameFolder"));
 
@@ -332,9 +330,8 @@ function SetupRenameMenuItem(folderResource, numSelected, isServer, serverType, 
 
 function SetupRemoveMenuItem(folderResource, numSelected, isServer, serverType, specialFolder)
 {
-  var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
   var isMail = serverType != 'nntp';
-  var isSpecialFolder = !(specialFolder == "none" || (specialFolder == "Junk" && CanRenameDeleteJunkMail(msgFolder.URI)));
+  var isSpecialFolder = specialFolder != "none";
   //Can't currently delete Accounts or special folders.
   var showRemove = (numSelected <=1) && (isMail && !isSpecialFolder) && !isServer;
 

@@ -111,13 +111,11 @@ function OpenBrowserWindow()
   handler = handler.getService();
   handler = handler.QueryInterface(Components.interfaces.nsICmdLineHandler);
   var url = handler.chromeUrlForTask;
-  var wintype = document.documentElement.getAttribute('windowtype');
+  var wintype = document.firstChild.getAttribute('windowtype');
   var startpage;
-  var windowMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"].getService(Components.interfaces.nsIWindowMediator);
-  var browserWin = windowMediator.getMostRecentWindow("navigator:browser");
  
-  // if a browser window already exists then check pref for how new window should be opened
-  if (browserWin)
+  // if current window is a browser window then check pref for how new window should be opened
+  if (wintype == "navigator:browser")
   {
     try {
       switch ( pref.getIntPref("browser.windows.loadOnNewWindow") )

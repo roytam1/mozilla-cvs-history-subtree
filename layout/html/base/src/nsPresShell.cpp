@@ -780,13 +780,11 @@ NS_IMPL_QUERY_INTERFACE2(nsDummyLayoutRequest, nsIRequest, nsIChannel);
 nsresult
 nsDummyLayoutRequest::Create(nsIRequest** aResult, nsIPresShell* aPresShell)
 {
-  *aResult = new nsDummyLayoutRequest(aPresShell);
-  if (!*aResult)
+  nsDummyLayoutRequest* request = new nsDummyLayoutRequest(aPresShell);
+  if (!request)
       return NS_ERROR_OUT_OF_MEMORY;
 
-  NS_ADDREF(*aResult);
-
-  return NS_OK; 
+  return request->QueryInterface(NS_GET_IID(nsIRequest), (void**) aResult); 
 }
 
 
@@ -2635,25 +2633,12 @@ static void CheckForFocus(nsPIDOMWindow* aOurWindow,
   // Walk up the document chain, starting with focusedWindow's document.
   // We stop walking when we find a document that has a null DOMWindow
   // (meaning that the DOMWindow has a new document now) or find ourWin
-  // as the document's window.  We also stop if we hit aDocument, since
-  // that means there is a child document which loaded before us that's
-  // already been given focus.
+  // as the document's window.
 
   nsCOMPtr<nsIDOMDocument> focusedDOMDoc;
   focusedWindow->GetDocument(getter_AddRefs(focusedDOMDoc));
 
   nsCOMPtr<nsIDocument> curDoc = do_QueryInterface(focusedDOMDoc);
-  if (!curDoc) {
-    // This can happen if the previously focused DOM window has been
-    // unhooked from its document during document teardown.  We don't
-    // really have any other inforation to help us determine where
-    // focusedWindow fits into the DOM window hierarchy.  For now, we'll
-    // go ahead and allow this window to take focus, so that something
-    // ends up focused.
-
-    curDoc = aDocument;
-  }
-
   while (curDoc) {
     nsCOMPtr<nsIScriptGlobalObject> globalObject;
     curDoc->GetScriptGlobalObject(getter_AddRefs(globalObject));
@@ -2663,8 +2648,6 @@ static void CheckForFocus(nsPIDOMWindow* aOurWindow,
 
     nsCOMPtr<nsIDocument> parentDoc;
     curDoc->GetParentDocument(getter_AddRefs(parentDoc));
-    if (parentDoc == aDocument)
-      return;
     curDoc = parentDoc;
   }
 
@@ -6094,7 +6077,12 @@ PresShell::HandleEvent(nsIView         *aView,
                        PRBool          aForceHandle,
                        PRBool&         aHandled)
 {
-  NS_ASSERTION(aView, "null view");
+  void*     clientData;
+  nsIFrame* frame;
+  nsresult  rv = NS_OK;
+  
+  NS_ASSERTION(!(nsnull == aView), "null view");
+
   aHandled = PR_TRUE;
 
   if (mIsDestroying || mIsReflowing) {
@@ -6102,22 +6090,18 @@ PresShell::HandleEvent(nsIView         *aView,
   }
 
 #ifdef ACCESSIBILITY
-  if (aEvent->eventStructType == NS_ACCESSIBLE_EVENT) {
-    return HandleEventInternal(aEvent, aView,
-                               NS_EVENT_FLAG_INIT, aEventStatus);
-  }
+  if (aEvent->eventStructType == NS_ACCESSIBLE_EVENT)
+    return HandleEventInternal(aEvent, aView, NS_EVENT_FLAG_INIT, aEventStatus);
 #endif
 
   // Check for a theme change up front, since the frame type is irrelevant
-  if (aEvent->message == NS_THEMECHANGED && mPresContext) {
+  if (aEvent->message == NS_THEMECHANGED && mPresContext)
     return mPresContext->ThemeChanged();
-  }
 
-  // Check for a system color change up front, since the frame type is
-  // irrelevant
+  // Check for a system color change up front, since the frame type is irrelevenat
   if ((aEvent->message == NS_SYSCOLORCHANGED) && mPresContext) {
-    nsCOMPtr<nsIViewManager> vm;
-    if ((NS_SUCCEEDED(GetViewManager(getter_AddRefs(vm)))) && vm) {
+    nsIViewManager *vm;
+    if ((NS_SUCCEEDED(GetViewManager(&vm))) && vm) {
       // Only dispatch system color change when the message originates from
       // from the root views widget. This is necessary to prevent us from 
       // dispatching the SysColorChanged notification for each child window 
@@ -6133,188 +6117,207 @@ PresShell::HandleEvent(nsIView         *aView,
     return NS_OK;
   }
 
-  void* clientData;
-  aView->GetClientData(clientData);
-  nsIFrame* frame = (nsIFrame *)clientData;
 
-  nsresult rv = NS_OK;
-  
-  if (frame) {
+  // We really don't want to just drop a focus event on the floor here,
+  // because the widget-level focus change will have already happened
+  // by the time we get the event.  Rather than dropping it, manually
+  // update the focus controller here.
+
+  if (aEvent->message == NS_GOTFOCUS && !mDidInitialReflow && mDocument) {
+    nsCOMPtr<nsIScriptGlobalObject> sgo;
+    mDocument->GetScriptGlobalObject(getter_AddRefs(sgo));
+    if (sgo) {
+      nsCOMPtr<nsPIDOMWindow> pWindow = do_QueryInterface(sgo);
+      if (pWindow) {
+        nsCOMPtr<nsIFocusController> controller;
+        pWindow->GetRootFocusController(getter_AddRefs(controller));
+        if (controller) {
+          nsCOMPtr<nsIDOMWindowInternal> domWin = do_QueryInterface(sgo);
+          controller->SetFocusedWindow(domWin);
+          controller->SetFocusedElement(nsnull);
+        }
+      }
+    }
+  }
+
+  aView->GetClientData(clientData);
+  frame = (nsIFrame *)clientData;
+
+/*  if (mSelection && aEvent->eventStructType == NS_KEY_EVENT)
+  {//KEY HANDLERS WILL GET RID OF THIS 
+    if (mSelectionFlags && NS_SUCCEEDED(mSelection->HandleKeyEvent(mPresContext, aEvent)))
+    {  
+      return NS_OK;
+    }
+  }
+*/
+  if (nsnull != frame) {
     PushCurrentEventInfo(nsnull, nsnull);
 
-    // key and IME events go to the focused frame
     nsCOMPtr<nsIEventStateManager> manager;
-    if ((NS_IS_KEY_EVENT(aEvent) || NS_IS_IME_EVENT(aEvent) ||
-         aEvent->message == NS_CONTEXTMENU_KEY) &&
-        NS_SUCCEEDED(mPresContext->GetEventStateManager(getter_AddRefs(manager)))) {
-
-      manager->GetFocusedFrame(&mCurrentEventFrame);
-      if (!mCurrentEventFrame) {
+    if (NS_SUCCEEDED (mPresContext->GetEventStateManager(getter_AddRefs(manager)))) {
+      //change 6-01-00 mjudge,ftang adding ime as an event that needs focused element
+      if (NS_IS_KEY_EVENT(aEvent) || NS_IS_IME_EVENT(aEvent) || aEvent->message == NS_CONTEXTMENU_KEY) { 
+        //Key events go to the focused frame, not point based.
+        manager->GetFocusedFrame(&mCurrentEventFrame);
+        if (!mCurrentEventFrame) {
 #if defined(MOZ_X11)
-        if (NS_IS_IME_EVENT(aEvent)) {
-          // bug 52416
-          // Lookup region (candidate window) of UNIX IME grabs
-          // input focus from Mozilla but wants to send IME event
-          // to redraw pre-edit (composed) string
-          // If Mozilla does not have input focus and event is IME,
-          // sends IME event to pre-focused element
-          nsCOMPtr<nsIScriptGlobalObject> ourGlobal;
-          mDocument->GetScriptGlobalObject(getter_AddRefs(ourGlobal));
-          nsCOMPtr<nsPIDOMWindow> ourWindow = do_QueryInterface(ourGlobal);
-          if (ourWindow) {
-            nsCOMPtr<nsIFocusController> focusController;
-            ourWindow->GetRootFocusController(getter_AddRefs(focusController));
-            if (focusController) {
-              PRBool active = PR_FALSE;
-              // check input focus is in Mozilla
-              focusController->GetActive(&active);
-              if (!active) {
-                // if not, search for pre-focused element
-                nsCOMPtr<nsIDOMElement> focusedElement;
-                focusController->GetFocusedElement(getter_AddRefs(focusedElement));
-                if (focusedElement) {
-                  // get mCurrentEventContent from focusedElement
-                  CallQueryInterface(focusedElement, &mCurrentEventContent);
+          if (NS_IS_IME_EVENT(aEvent)) {
+            // bug 52416
+            // Lookup region (candidate window) of UNIX IME grabs
+            // input focus from Mozilla but wants to send IME event
+            // to redraw pre-edit (composed) string
+            // If Mozilla does not have input focus and event is IME,
+            // sends IME event to pre-focused element
+            nsCOMPtr<nsIScriptGlobalObject> ourGlobal;
+            mDocument->GetScriptGlobalObject(getter_AddRefs(ourGlobal));
+            nsCOMPtr<nsPIDOMWindow> ourWindow = do_QueryInterface(ourGlobal);
+            if (ourWindow) {
+              nsCOMPtr<nsIFocusController> focusController;
+              ourWindow->GetRootFocusController(getter_AddRefs(focusController));
+              if (focusController) {
+                PRBool active = PR_FALSE;
+                // check input focus is in Mozilla
+                focusController->GetActive(&active);
+                if (!active) {
+                  // if not, search for pre-focused element
+                  nsCOMPtr<nsIDOMElement> focusedElement;
+                  focusController->GetFocusedElement(getter_AddRefs(focusedElement));
+                  if (focusedElement) {
+                    // get mCurrentEventContent from focusedElement
+                    CallQueryInterface(focusedElement, &mCurrentEventContent);
+                  }
                 }
               }
             }
           }
-        }
-#endif /* defined(MOZ_X11) */
-        if (!mCurrentEventContent) {
+          if (!mCurrentEventContent) {
+            // fallback, call existing codes
+            mDocument->GetRootContent(&mCurrentEventContent);
+          }
+#else /* defined(MOZ_X11) */
           mDocument->GetRootContent(&mCurrentEventContent);
+#endif /* defined(MOZ_X11) */
+          mCurrentEventFrame = nsnull;
         }
-        mCurrentEventFrame = nsnull;
+        if (mCurrentEventContent && InZombieDocument(mCurrentEventContent)) {
+          return RetargetEventToParent(aView, aEvent, aEventStatus, 
+                                       aForceHandle, aHandled, mCurrentEventContent);
+        }
       }
-      if (mCurrentEventContent && InZombieDocument(mCurrentEventContent)) {
-        return RetargetEventToParent(aView, aEvent, aEventStatus, aForceHandle,
-                                     aHandled, mCurrentEventContent);
-      }
-    }
-    else if (!InClipRect(frame, aEvent->point)) {
-      // we only check for the clip rect on this frame ... all frames with clip
-      // have views so any viewless children of this frame cannot have clip. 
-      // Furthermore if the event is not in the clip for this frame, then none
-      // of the children can get it either.
-      if (aForceHandle) {
-        mCurrentEventFrame = frame;
-      }
-      else {
-        mCurrentEventFrame = nsnull;
-      }
-      aHandled = PR_FALSE;
-      rv = NS_OK;
-    } else {
-      // aEvent->point is relative to aView's upper left corner. We need
-      // a point that is in the same coordinate system as frame's rect
-      // so that the frame->mRect.Contains(aPoint) calls in 
-      // GetFrameForPoint() work. The assumption here is that frame->GetView()
-      // will return aView, and frame's parent view is aView's parent.
+      else if (!InClipRect(frame, aEvent->point)) {
+        // we only check for the clip rect on this frame ... all frames with clip have views so any
+        // viewless children of this frame cannot have clip. Furthermore if the event is not in the clip
+        // for this frame, then none of the children can get it either.
+        if (aForceHandle) {
+          mCurrentEventFrame = frame;
+        }
+        else {
+          mCurrentEventFrame = nsnull;
+        }
+        aHandled = PR_FALSE;
+        rv = NS_OK;
+      } else {
+        // aEvent->point is relative to aView's upper left corner. We need
+        // a point that is in the same coordinate system as frame's rect
+        // so that the frame->mRect.Contains(aPoint) calls in 
+        // GetFrameForPoint() work. The assumption here is that frame->GetView()
+        // will return aView, and frame's parent view is aView's parent.
 
-      nsPoint eventPoint;
-      frame->GetOrigin(eventPoint);
-      eventPoint += aEvent->point;
+        nsPoint eventPoint;
+        frame->GetOrigin(eventPoint);
+        eventPoint += aEvent->point;
 
-      nsPoint originOffset;
-      nsIView *view = nsnull;
-      frame->GetOriginToViewOffset(mPresContext, originOffset, &view);
+        nsPoint originOffset;
+        nsIView *view = nsnull;
+        frame->GetOriginToViewOffset(mPresContext, originOffset, &view);
 
 #ifdef DEBUG_kin
-      NS_ASSERTION(view == aView, "view != aView");
+        NS_ASSERTION(view == aView, "view != aView");
 #endif // DEBUG_kin
 
-      if (view == aView)
-        eventPoint -= originOffset;
+        if (view == aView)
+          eventPoint -= originOffset;
 
-      rv = frame->GetFrameForPoint(mPresContext, eventPoint,
-                                   NS_FRAME_PAINT_LAYER_FOREGROUND,
-                                   &mCurrentEventFrame);
-      if (NS_FAILED(rv)) {
-        rv = frame->GetFrameForPoint(mPresContext, eventPoint,
-                                     NS_FRAME_PAINT_LAYER_FLOATERS,
-                                     &mCurrentEventFrame);
-        if (NS_FAILED(rv)) {
-          rv = frame->GetFrameForPoint(mPresContext, eventPoint,
-                                       NS_FRAME_PAINT_LAYER_BACKGROUND,
-                                       &mCurrentEventFrame);
+        rv = frame->GetFrameForPoint(mPresContext, eventPoint, NS_FRAME_PAINT_LAYER_FOREGROUND, &mCurrentEventFrame);
+        if (NS_FAILED (rv)) {
+          rv = frame->GetFrameForPoint(mPresContext, eventPoint, NS_FRAME_PAINT_LAYER_FLOATERS, &mCurrentEventFrame);
           if (NS_FAILED (rv)) {
-            if (aForceHandle) {
-              mCurrentEventFrame = frame;
+            rv = frame->GetFrameForPoint(mPresContext, eventPoint, NS_FRAME_PAINT_LAYER_BACKGROUND, &mCurrentEventFrame);
+            if (NS_FAILED (rv)) {
+              if (aForceHandle) {
+                 mCurrentEventFrame = frame;
+              }
+              else {
+                 mCurrentEventFrame = nsnull;
+              }
+              aHandled = PR_FALSE;
+              rv = NS_OK;
             }
-            else {
+          }
+        }
+
+        if (mCurrentEventFrame) {
+          nsCOMPtr<nsIContent> targetElement;
+          mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
+                                                 getter_AddRefs(targetElement));
+
+          // If there is no content for this frame, target it anyway.  Some
+          // frames can be targeted but do not have content, particularly
+          // windows with scrolling off.
+          if (targetElement) {
+            // Bug 103055, bug 185889: mouse events apply to *elements*, not all
+            // nodes.  Thus we get the nearest element parent here.
+            // XXX we leave the frame the same even if we find an element
+            // parent, so that the text frame will receive the event (selection
+            // and friends are the ones who care about that anyway)
+            //
+            // We use weak pointers because during this tight loop, the node
+            // will *not* go away.  And this happens on every mousemove.
+            while (targetElement &&
+                   !targetElement->IsContentOfType(nsIContent::eELEMENT)) {
+              nsIContent* temp = targetElement;
+              temp->GetParent(*getter_AddRefs(targetElement));
+            }
+
+            // If we found an element, target it.  Otherwise, target *nothing*.
+            if (!targetElement) {
+              NS_IF_RELEASE(mCurrentEventContent);
               mCurrentEventFrame = nsnull;
+            } else if (targetElement != mCurrentEventContent) {
+              NS_IF_RELEASE(mCurrentEventContent);
+              mCurrentEventContent = targetElement;
+              NS_ADDREF(mCurrentEventContent);
             }
-            aHandled = PR_FALSE;
-            rv = NS_OK;
           }
         }
+
       }
-
-      if (mCurrentEventFrame) {
-        nsCOMPtr<nsIContent> targetElement;
-        mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
-                                               getter_AddRefs(targetElement));
-
-        // If there is no content for this frame, target it anyway.  Some
-        // frames can be targeted but do not have content, particularly
-        // windows with scrolling off.
-        if (targetElement) {
-          // Bug 103055, bug 185889: mouse events apply to *elements*, not all
-          // nodes.  Thus we get the nearest element parent here.
-          // XXX we leave the frame the same even if we find an element
-          // parent, so that the text frame will receive the event (selection
-          // and friends are the ones who care about that anyway)
-          //
-          // We use weak pointers because during this tight loop, the node
-          // will *not* go away.  And this happens on every mousemove.
-          while (targetElement &&
-                 !targetElement->IsContentOfType(nsIContent::eELEMENT)) {
-            nsIContent* temp = targetElement;
-            temp->GetParent(*getter_AddRefs(targetElement));
-          }
-
-          // If we found an element, target it.  Otherwise, target *nothing*.
-          if (!targetElement) {
-            NS_IF_RELEASE(mCurrentEventContent);
-            mCurrentEventFrame = nsnull;
-          } else if (targetElement != mCurrentEventContent) {
-            NS_IF_RELEASE(mCurrentEventContent);
-            mCurrentEventContent = targetElement;
-            NS_ADDREF(mCurrentEventContent);
-          }
-        }
+      if (GetCurrentEventFrame()) {
+        rv = HandleEventInternal(aEvent, aView, NS_EVENT_FLAG_INIT, aEventStatus);
       }
-
     }
-    if (GetCurrentEventFrame()) {
-      rv = HandleEventInternal(aEvent, aView,
-                               NS_EVENT_FLAG_INIT, aEventStatus);
-    }
-
 #ifdef NS_DEBUG
-    if ((nsIFrameDebug::GetShowEventTargetFrameBorder()) &&
-        (GetCurrentEventFrame())) {
+    if ((nsIFrameDebug::GetShowEventTargetFrameBorder()) && (GetCurrentEventFrame())) {
       nsIView *oldView = mCurrentTargetView;
       nsPoint offset(0,0);
       nsRect oldTargetRect(mCurrentTargetRect);
       mCurrentEventFrame->GetRect(mCurrentTargetRect);
       mCurrentEventFrame->GetView(mPresContext, &mCurrentTargetView);
-      if (!mCurrentTargetView ) {
-        mCurrentEventFrame->GetOffsetFromView(mPresContext, offset,
-                                              &mCurrentTargetView);
+      if ( ! mCurrentTargetView ) {
+        mCurrentEventFrame->GetOffsetFromView(mPresContext, offset, &mCurrentTargetView);
       }
       if (mCurrentTargetView) {
         mCurrentTargetRect.x = offset.x;
         mCurrentTargetRect.y = offset.y;
         // use aView or mCurrentTargetView??
-        if ((mCurrentTargetRect != oldTargetRect) ||
-            (mCurrentTargetView != oldView)) {
-
-          nsCOMPtr<nsIViewManager> vm;
-          if ((NS_SUCCEEDED(GetViewManager(getter_AddRefs(vm)))) && vm) {
+        if ( (mCurrentTargetRect != oldTargetRect) || (mCurrentTargetView != oldView)) {
+          nsIViewManager *vm;
+          if ((NS_SUCCEEDED (GetViewManager(&vm))) && vm) {
             vm->UpdateView(mCurrentTargetView,mCurrentTargetRect,0);
             if (oldView)
               vm->UpdateView(oldView,oldTargetRect,0);
+            NS_IF_RELEASE(vm);
           }
         }
       }
@@ -6323,16 +6326,8 @@ PresShell::HandleEvent(nsIView         *aView,
     PopCurrentEventInfo();
   }
   else {
-    // Focus events need to be dispatched even if no frame was found, since
-    // we don't want the focus controller to be out of sync.
-
-    if (!NS_EVENT_NEEDS_FRAME(aEvent)) {
-      mCurrentEventFrame = nsnull;
-      return HandleEventInternal(aEvent, aView,
-                                 NS_EVENT_FLAG_INIT, aEventStatus);
-    }
-
     aHandled = PR_FALSE;
+    rv = NS_OK;
   }
 
   return rv;
@@ -6350,8 +6345,7 @@ PresShell::HandleEventWithTarget(nsEvent* aEvent, nsIFrame* aFrame, nsIContent* 
 }
 
 nsresult
-PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
-                               PRUint32 aFlags, nsEventStatus* aStatus)
+PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView, PRUint32 aFlags, nsEventStatus* aStatus)
 {
 #ifdef ACCESSIBILITY
   if (aEvent->eventStructType == NS_ACCESSIBLE_EVENT)
@@ -6372,69 +6366,57 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
   }
 #endif
 
-  nsCOMPtr<nsIEventStateManager> manager;
-  nsresult rv = mPresContext->GetEventStateManager(getter_AddRefs(manager));
+  nsresult rv = NS_OK;
 
-  if (NS_SUCCEEDED(rv) &&
-      (!NS_EVENT_NEEDS_FRAME(aEvent) || GetCurrentEventFrame())) {
+  nsIEventStateManager *manager;
+  if (NS_SUCCEEDED (mPresContext->GetEventStateManager(&manager)) && GetCurrentEventFrame()) {
+    //1. Give event to event manager for pre event state changes and generation of synthetic events.
+    rv = manager->PreHandleEvent(mPresContext, aEvent, mCurrentEventFrame, aStatus, aView);
 
-    // 1. Give event to event manager for pre event state changes and
-    //    generation of synthetic events.
-    rv = manager->PreHandleEvent(mPresContext, aEvent, mCurrentEventFrame,
-                                 aStatus, aView);
-
-    // 2. Give event to the DOM for third party and JS use.
+    //2. Give event to the DOM for third party and JS use.
     if ((GetCurrentEventFrame()) && NS_SUCCEEDED (rv)) {
       if (mCurrentEventContent) {
-        rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull,
-                                                  aFlags, aStatus);
+        rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
+                                           aFlags, aStatus);
       }
       else {
-        nsCOMPtr<nsIContent> targetContent;
-        rv = mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
-                                                    getter_AddRefs(targetContent));
-        if (NS_SUCCEEDED(rv) && targetContent) {
+        nsIContent* targetContent;
+        if (NS_SUCCEEDED (mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent, &targetContent)) && nsnull != targetContent) {
           rv = targetContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
                                              aFlags, aStatus);
+          NS_RELEASE(targetContent);
         }
       }
 
-      // Continue with second dispatch to system event handlers.
+      //Continue with second dispatch to system event handlers.
       // Need to null check mCurrentEventContent and mCurrentEventFrame
       // since the previous dispatch could have nuked them.
       if (mCurrentEventContent) {
-        rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull,
-                                                  aFlags | NS_EVENT_FLAG_SYSTEM_EVENT,
-                                                  aStatus);
+        rv = mCurrentEventContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
+                                           aFlags | NS_EVENT_FLAG_SYSTEM_EVENT, aStatus);
       }
       else if (mCurrentEventFrame) {
-        nsCOMPtr<nsIContent> targetContent;
-        rv = mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent,
-                                                    getter_AddRefs(targetContent));
-        if (NS_SUCCEEDED(rv) && targetContent) {
+        nsIContent* targetContent;
+        if (NS_SUCCEEDED (mCurrentEventFrame->GetContentForEvent(mPresContext, aEvent, &targetContent)) && nsnull != targetContent) {
           rv = targetContent->HandleDOMEvent(mPresContext, aEvent, nsnull, 
-                                             aFlags | NS_EVENT_FLAG_SYSTEM_EVENT,
-                                             aStatus);
+                                             aFlags | NS_EVENT_FLAG_SYSTEM_EVENT, aStatus);
+          NS_RELEASE(targetContent);
         }
       }
 
-      // 3. Give event to the Frames for browser default processing.
+      //3. Give event to the Frames for browser default processing.
       // XXX The event isn't translated into the local coordinate space
       // of the frame...
-      if (GetCurrentEventFrame() && NS_SUCCEEDED (rv) &&
-          aEvent->eventStructType != NS_EVENT) {
-        rv = mCurrentEventFrame->HandleEvent(mPresContext, (nsGUIEvent*)aEvent,
-                                             aStatus);
+      if (GetCurrentEventFrame() && NS_SUCCEEDED (rv) && aEvent->eventStructType != NS_EVENT) {
+        rv = mCurrentEventFrame->HandleEvent(mPresContext, (nsGUIEvent*)aEvent, aStatus);
       }
 
-      // 4. Give event to event manager for post event state changes and
-      //    generation of synthetic events.
-      if (NS_SUCCEEDED (rv) &&
-          (GetCurrentEventFrame() || !NS_EVENT_NEEDS_FRAME(aEvent))) {
-        rv = manager->PostHandleEvent(mPresContext, aEvent, mCurrentEventFrame,
-                                      aStatus, aView);
+      //4. Give event to event manager for post event state changes and generation of synthetic events.
+      if ((GetCurrentEventFrame()) && NS_SUCCEEDED (rv)) {
+        rv = manager->PostHandleEvent(mPresContext, aEvent, mCurrentEventFrame, aStatus, aView);
       }
     }
+    NS_RELEASE(manager);
   }
   return rv;
 }

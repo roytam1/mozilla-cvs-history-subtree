@@ -49,7 +49,11 @@ public:
     txResultTreeFragment(txResultBuffer* aBuffer);
     ~txResultTreeFragment();
 
-    TX_DECL_EXPRRESULT
+    virtual ExprResult* clone();
+    virtual short getResultType();
+    virtual void stringValue(nsAString& aResult);
+    virtual MBool booleanValue();
+    virtual double numberValue();
 
     nsresult flushToHandler(txAXMLEventHandler* aHandler);
 

@@ -61,12 +61,6 @@ void StringResult::stringValue(nsAString& str)  {
     str.Append(mValue);
 } //-- stringValue
 
-nsAString*
-StringResult::stringValuePointer()
-{
-    return &mValue;
-}
-
 MBool StringResult::booleanValue() {
    return !mValue.IsEmpty();
 } //-- booleanValue

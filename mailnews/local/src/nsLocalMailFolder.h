@@ -218,7 +218,6 @@ protected:
 	virtual const char* GetIncomingServerType();
   nsresult InitCopyState(nsISupports* aSupport, nsISupportsArray* messages,
                          PRBool isMove, nsIMsgCopyServiceListener* listener, nsIMsgWindow *msgWindow, PRBool isMoveFolder, PRBool allowUndo);
-	void CopyPropertiesToMsgHdr(nsIMsgDBHdr *destHdr, nsIMsgDBHdr *srcHdr);
   nsresult OnCopyCompleted(nsISupports *srcSupport, PRBool moveCopySucceeded);
 	virtual nsresult CreateBaseMessageURI(const char *aURI);
   virtual nsresult SpamFilterClassifyMessage(const char *aURI, nsIMsgWindow *aMsgWindow, nsIJunkMailPlugin *aJunkMailPlugin);

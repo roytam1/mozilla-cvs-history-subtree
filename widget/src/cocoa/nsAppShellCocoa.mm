@@ -115,6 +115,14 @@ nsAppShellCocoa::Exit(void)
 }
 
 
+NS_IMETHODIMP
+nsAppShellCocoa::SetDispatchListener(nsDispatchListener* aDispatchListener)
+{
+  // nobody uses this except viewer
+  return NS_OK;
+}
+
+
 //-------------------------------------------------------------------------
 //
 // respond to notifications that an event queue has come or gone

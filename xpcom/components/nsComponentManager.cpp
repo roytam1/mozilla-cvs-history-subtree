@@ -267,7 +267,7 @@ factory_GetKey(PLDHashTable *aTable, PLDHashEntryHdr *aHdr)
 {
     nsFactoryTableEntry* entry = NS_STATIC_CAST(nsFactoryTableEntry*, aHdr);
 
-    return &entry->mFactoryEntry->mCid;
+    return &entry->mFactoryEntry->cid;
 }
 
 PR_STATIC_CALLBACK(PLDHashNumber)
@@ -286,7 +286,7 @@ factory_MatchEntry(PLDHashTable *aTable, const PLDHashEntryHdr *aHdr,
         NS_STATIC_CAST(const nsFactoryTableEntry*, aHdr);
     const nsCID *cidp = NS_REINTERPRET_CAST(const nsCID*, aKey);
 
-    return (entry->mFactoryEntry->mCid).Equals(*cidp);
+    return (entry->mFactoryEntry->cid).Equals(*cidp);
 }
 
 PR_STATIC_CALLBACK(void)
@@ -335,8 +335,8 @@ contractID_ClearEntry(PLDHashTable *aTable, PLDHashEntryHdr *aHdr)
 {
     nsContractIDTableEntry* entry = NS_STATIC_CAST(nsContractIDTableEntry*, aHdr);
     if (entry->mFactoryEntry != kNonExistentContractID && 
-        entry->mFactoryEntry->mTypeIndex == NS_COMPONENT_TYPE_SERVICE_ONLY && 
-        entry->mFactoryEntry->mCid.Equals(kEmptyCID)) {
+        entry->mFactoryEntry->typeIndex == NS_COMPONENT_TYPE_SERVICE_ONLY && 
+        entry->mFactoryEntry->cid.Equals(kEmptyCID)) {
         // this object is owned by the hash.
         // nsFactoryEntry is arena allocated. So we dont delete it.
         // We call the destructor by hand.
@@ -367,21 +367,18 @@ MOZ_DECL_CTOR_COUNTER(nsFactoryEntry)
 nsFactoryEntry::nsFactoryEntry(const nsCID &aClass, 
                                const char *aLocation,
                                PRUint32 locationlen,
-                               int aType,
-                               class nsFactoryEntry* parent)
-: mCid(aClass), mTypeIndex(aType), mParent(parent)
+                               int aType)
+    : cid(aClass), typeIndex(aType)
 {
     // Arena allocate the location string
-    mLocation = ArenaStrndup(aLocation, locationlen, &nsComponentManagerImpl::gComponentManager->mArena);
+    location = ArenaStrndup(aLocation, locationlen, &nsComponentManagerImpl::gComponentManager->mArena);
 }
 
-nsFactoryEntry::nsFactoryEntry(const nsCID &aClass, 
-                               nsIFactory *aFactory, 
-                               class nsFactoryEntry* parent)
-: mCid(aClass), mTypeIndex(NS_COMPONENT_TYPE_FACTORY_ONLY), mParent(parent)
+nsFactoryEntry::nsFactoryEntry(const nsCID &aClass, nsIFactory *aFactory)
+    : cid(aClass), typeIndex(NS_COMPONENT_TYPE_FACTORY_ONLY)
 {
-    mFactory = aFactory;
-    mLocation = nsnull;
+    factory = aFactory;
+    location = nsnull;
 }
 
 // nsFactoryEntry is usually arena allocated including the strings it
@@ -389,32 +386,41 @@ nsFactoryEntry::nsFactoryEntry(const nsCID &aClass,
 nsFactoryEntry::~nsFactoryEntry(void)
 {
     // Release the reference to the factory
-    mFactory = nsnull;
+    factory = nsnull;
 
     // Release any service reference
     mServiceObject = nsnull;
-
-    // nsFactoryEntry is arena allocated. So we dont delete it.
-    // We call the destructor by hand.
-    if (mParent)
-        mParent->~nsFactoryEntry();
 }
 
 nsresult
 nsFactoryEntry::ReInit(const nsCID &aClass, const char *aLocation, int aType)
 {
-    NS_ENSURE_TRUE(mTypeIndex != NS_COMPONENT_TYPE_FACTORY_ONLY, NS_ERROR_INVALID_ARG);
+    NS_ENSURE_TRUE(typeIndex != NS_COMPONENT_TYPE_FACTORY_ONLY, NS_ERROR_INVALID_ARG);
     // cid has to match
     // SERVICE_ONLY entries can be promoted to an entry of another type
-    NS_ENSURE_TRUE((mTypeIndex == NS_COMPONENT_TYPE_SERVICE_ONLY || mCid.Equals(aClass)),
+    NS_ENSURE_TRUE((typeIndex == NS_COMPONENT_TYPE_SERVICE_ONLY || cid.Equals(aClass)),
                    NS_ERROR_INVALID_ARG);
 
     // Arena allocate the location string
-    mLocation = ArenaStrdup(aLocation, &nsComponentManagerImpl::gComponentManager->mArena);
+    location = ArenaStrdup(aLocation, &nsComponentManagerImpl::gComponentManager->mArena);
 
-    mTypeIndex = aType;
+    typeIndex = aType;
     return NS_OK;
 }
+
+nsresult
+nsFactoryEntry::ReInit(const nsCID &aClass, nsIFactory *aFactory)
+{
+    // cids has to match
+    // SERVICE_ONLY entries can be promoted to an entry of another type
+    NS_ENSURE_TRUE((typeIndex == NS_COMPONENT_TYPE_SERVICE_ONLY || cid.Equals(aClass)),
+                   NS_ERROR_INVALID_ARG);
+    // We are going to let native component be overridden by a factory.
+    factory = aFactory;
+    typeIndex = NS_COMPONENT_TYPE_FACTORY_ONLY;
+    return NS_OK;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hashtable Enumeration
@@ -644,7 +650,7 @@ ConvertFactoryEntryToCID(PLDHashTable *table,
     if (entry) {
         nsFactoryEntry *fe = entry->mFactoryEntry;
 
-        wrapper->SetData(&fe->mCid);
+        wrapper->SetData(&fe->cid);
         *retval = wrapper;
         NS_ADDREF(*retval);
         return NS_OK;
@@ -1209,7 +1215,7 @@ nsComponentManagerImpl::ReadPersistentRegistry()
 
         //need to find the location for this cid.
         nsFactoryEntry *cidEntry = GetFactoryEntry(aClass);
-        if (!cidEntry || cidEntry->mTypeIndex < 0)
+        if (!cidEntry || cidEntry->typeIndex < 0)
             continue; //what should we really do?
 
         nsContractIDTableEntry* contractIDTableEntry =
@@ -1274,18 +1280,13 @@ ContractIDWriter(PLDHashTable *table,
 {
     char *contractID   = ((nsContractIDTableEntry*)hdr)->mContractID;
     nsFactoryEntry *factoryEntry = ((nsContractIDTableEntry*)hdr)->mFactoryEntry;
-
-    // for now, we only save out the top most parent.
-    while (factoryEntry != kNonExistentContractID && factoryEntry->mParent)
-        factoryEntry = factoryEntry->mParent;
-
-    if (factoryEntry == kNonExistentContractID || factoryEntry->mTypeIndex < 0)
+    if (factoryEntry == kNonExistentContractID || factoryEntry->typeIndex < 0)
         return PL_DHASH_NEXT;
 
     PRFileDesc* fd = ((PersistentWriterArgs*)arg)->mFD;
 
     char cidString[UID_STRING_LENGTH];
-    GetIDString(factoryEntry->mCid, cidString);
+    GetIDString(factoryEntry->cid, cidString);
     PR_fprintf(fd, "%s,%s\n", contractID, cidString); // what if this fails?
     return PL_DHASH_NEXT;
 }
@@ -1300,20 +1301,16 @@ ClassIDWriter(PLDHashTable *table,
     PRFileDesc* fd = ((PersistentWriterArgs*)arg)->mFD;
     nsLoaderdata *loaderData = ((PersistentWriterArgs*)arg)->mLoaderData;
 
-    // for now, we only save out the top most parent.
-    while (factoryEntry->mParent)
-        factoryEntry = factoryEntry->mParent;
-
-    if (factoryEntry->mTypeIndex < 0) {
+    if (factoryEntry->typeIndex < 0)
         return PL_DHASH_NEXT;
-    }
+
 
     char cidString[UID_STRING_LENGTH];
-    GetIDString(factoryEntry->mCid, cidString);
+    GetIDString(factoryEntry->cid, cidString);
 
     char *contractID = nsnull, *className = nsnull;
 
-    nsCOMPtr<nsIClassInfo> classInfo = do_QueryInterface(factoryEntry->mFactory);
+    nsCOMPtr<nsIClassInfo> classInfo = do_QueryInterface(factoryEntry->factory);
     if (classInfo)
     {
         classInfo->GetContractID(&contractID);
@@ -1321,10 +1318,10 @@ ClassIDWriter(PLDHashTable *table,
     }
 
     const char * loaderName = nsnull;
-    if (factoryEntry->mTypeIndex)
-        loaderName = loaderData[factoryEntry->mTypeIndex].type;
+    if (factoryEntry->typeIndex)
+        loaderName = loaderData[factoryEntry->typeIndex].type;
 
-    char* location = factoryEntry->mLocation;
+    char* location = factoryEntry->location;
 
     // cid,contract_id,type,class_name,inproc_server
     PR_fprintf(fd,
@@ -1608,7 +1605,7 @@ nsComponentManagerImpl::LoadFactory(nsFactoryEntry *aEntry,
     if (NS_FAILED(rv)) {
         PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
                ("nsComponentManager: FAILED to load factory from %s (%s)\n",
-                (const char *)aEntry->mLocation, mLoaderData[aEntry->mTypeIndex].type));
+                (const char *)aEntry->location, mLoaderData[aEntry->typeIndex].type));
         return rv;
     }
 
@@ -1728,7 +1725,6 @@ nsComponentManagerImpl::GetClassObject(const nsCID &aClass, const nsIID &aIID,
 
     nsCOMPtr<nsIFactory> factory;
 
-#ifdef PR_LOGGING
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
         char *buf = aClass.ToString();
@@ -1736,7 +1732,6 @@ nsComponentManagerImpl::GetClassObject(const nsCID &aClass, const nsIID &aIID,
         if (buf)
             PR_Free(buf);
     }
-#endif
 
     PR_ASSERT(aResult != nsnull);
 
@@ -1761,12 +1756,10 @@ nsComponentManagerImpl::GetClassObjectByContractID(const char *contractID,
 
     nsCOMPtr<nsIFactory> factory;
 
-#ifdef PR_LOGGING
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
         PR_LogPrint("nsComponentManager: GetClassObject(%s)", contractID);
     }
-#endif
 
     PR_ASSERT(aResult != nsnull);
     
@@ -1802,10 +1795,10 @@ nsComponentManagerImpl::ContractIDToClassID(const char *aContractID, nsCID *aCla
 
     nsFactoryEntry *fe = GetFactoryEntry(aContractID, strlen(aContractID));
     if (fe && fe != kNonExistentContractID) {
-        *aClass = fe->mCid;
+        *aClass = fe->cid;
         rv = NS_OK;
     }
-#ifdef PR_LOGGING
+
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS)) {
         char *buf = 0;
         if (NS_SUCCEEDED(rv))
@@ -1816,7 +1809,7 @@ nsComponentManagerImpl::ContractIDToClassID(const char *aContractID, nsCID *aCla
         if (buf)
             PR_Free(buf);
     }
-#endif
+
     return rv;
 }
 
@@ -1836,7 +1829,7 @@ nsComponentManagerImpl::CLSIDToContractID(const nsCID &aClass,
     NS_WARNING("Need to implement CLSIDToContractID");
 
     nsresult rv = NS_ERROR_FACTORY_NOT_REGISTERED;
-#ifdef PR_LOGGING
+
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
         char *buf = aClass.ToString();
@@ -1846,7 +1839,7 @@ nsComponentManagerImpl::CLSIDToContractID(const nsCID &aClass,
         if (buf)
             PR_Free(buf);
     }
-#endif
+
     return rv;
 }
 
@@ -1937,7 +1930,7 @@ nsComponentManagerImpl::CreateInstance(const nsCID &aClass,
         rv = NS_ERROR_FACTORY_NOT_REGISTERED;
     }
 
-#ifdef PR_LOGGING
+
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS)) 
     {
         char *buf = aClass.ToString();
@@ -1947,7 +1940,6 @@ nsComponentManagerImpl::CreateInstance(const nsCID &aClass,
         if (buf)
             PR_Free(buf);
     }
-#endif
 
     return rv;
 }
@@ -2168,7 +2160,7 @@ nsComponentManagerImpl::RegisterService(const nsCID& aClass, nsISupports* aServi
             return NS_ERROR_OUT_OF_MEMORY;
         entry = new (mem) nsFactoryEntry(aClass, nsnull);
 
-        entry->mTypeIndex = NS_COMPONENT_TYPE_SERVICE_ONLY;
+        entry->typeIndex = NS_COMPONENT_TYPE_SERVICE_ONLY;
         nsFactoryTableEntry* factoryTableEntry =
             NS_STATIC_CAST(nsFactoryTableEntry*,
                            PL_DHashTableOperate(&mFactories, &aClass,
@@ -2232,7 +2224,7 @@ nsComponentManagerImpl::RegisterService(const char* aContractID, nsISupports* aS
             return NS_ERROR_OUT_OF_MEMORY;
         entry = new (mem) nsFactoryEntry(kEmptyCID, nsnull);
 
-        entry->mTypeIndex = NS_COMPONENT_TYPE_SERVICE_ONLY;
+        entry->typeIndex = NS_COMPONENT_TYPE_SERVICE_ONLY;
 
         nsContractIDTableEntry* contractIDTableEntry =
             NS_STATIC_CAST(nsContractIDTableEntry*,
@@ -2411,7 +2403,7 @@ nsComponentManagerImpl::GetServiceByContractID(const char* aContractID,
     }
 
 #ifdef XPCOM_CHECK_PENDING_CIDS  
-    rv = AddPendingCID(entry->mCid);
+    rv = AddPendingCID(entry->cid);
     if (NS_FAILED(rv))
         return rv;
 #endif
@@ -2426,7 +2418,7 @@ nsComponentManagerImpl::GetServiceByContractID(const char* aContractID,
     mon.Enter();
 
 #ifdef XPCOM_CHECK_PENDING_CIDS 
-    RemovePendingCID(entry->mCid);
+    RemovePendingCID(entry->cid);
 #endif
 
     if (NS_FAILED(rv))
@@ -2651,8 +2643,13 @@ nsComponentManagerImpl::RegisterFactory(const nsCID &aClass,
                                         nsIFactory *aFactory, 
                                         PRBool aReplace)
 {
+    nsFactoryEntry *entry = nsnull;
+    nsIDKey key(aClass);
+
     nsAutoMonitor mon(mMon);
-#ifdef PR_LOGGING
+
+    entry = GetFactoryEntry(aClass, key);
+
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
         char *buf = aClass.ToString();
@@ -2662,40 +2659,35 @@ nsComponentManagerImpl::RegisterFactory(const nsCID &aClass,
         if (buf)
             PR_Free(buf);
     }
-#endif
-    nsFactoryEntry *entry = nsnull;
-    nsFactoryTableEntry* factoryTableEntry = NS_STATIC_CAST(nsFactoryTableEntry*,
-                                                            PL_DHashTableOperate(&mFactories, 
-                                                                                 &aClass,
-                                                                                 PL_DHASH_ADD));
-    
-    if (!factoryTableEntry) 
-        return NS_ERROR_OUT_OF_MEMORY;
-    
-    
-    if (PL_DHASH_ENTRY_IS_BUSY(factoryTableEntry)) {
-        entry = factoryTableEntry->mFactoryEntry;
-    } 
 
-    if (entry && !aReplace) 
-    {
+
+    if (entry && !aReplace) {
         // Already registered
         PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
                ("\t\tFactory already registered."));
         return NS_ERROR_FACTORY_EXISTS;
     }
 
-    void *mem;
-    PL_ARENA_ALLOCATE(mem, &mArena, sizeof(nsFactoryEntry));
-    if (!mem)
-        return NS_ERROR_OUT_OF_MEMORY;
+    if (entry) {
+        entry->ReInit(aClass, aFactory);
+    }
+    else {
+        void *mem;
+        PL_ARENA_ALLOCATE(mem, &mArena, sizeof(nsFactoryEntry));
+        if (!mem)
+            return NS_ERROR_OUT_OF_MEMORY;
+        entry = new (mem) nsFactoryEntry(aClass, aFactory);
 
-    entry = new (mem) nsFactoryEntry(aClass, aFactory, entry);
-     
-    if (!entry)
-        return NS_ERROR_OUT_OF_MEMORY;
+        nsFactoryTableEntry* factoryTableEntry =
+            NS_STATIC_CAST(nsFactoryTableEntry*,
+                           PL_DHashTableOperate(&mFactories, &aClass,
+                                                PL_DHASH_ADD));
 
-    factoryTableEntry->mFactoryEntry = entry;
+        if (!factoryTableEntry)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        factoryTableEntry->mFactoryEntry = entry;
+    }
     
     // Update the ContractID->CLSID Map
     if (aContractID) {
@@ -2816,7 +2808,7 @@ nsComponentManagerImpl::RegisterComponentCommon(const nsCID &aClass,
     // Normalize proid and classname
     const char *contractID = (aContractID && *aContractID) ? aContractID : nsnull;
     const char *className = (aClassName && *aClassName) ? aClassName : nsnull;
-#ifdef PR_LOGGING
+
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS))
     {
         char *buf = aClass.ToString();
@@ -2828,7 +2820,7 @@ nsComponentManagerImpl::RegisterComponentCommon(const nsCID &aClass,
         if (buf)
             PR_Free(buf);
     }
-#endif
+
     if (entry && !aReplace) {
         PR_LOG(nsComponentManagerLog, PR_LOG_ERROR,
                ("\t\tFactory already registered."));
@@ -2995,9 +2987,9 @@ DeleteFoundCIDs(PLDHashTable *aTable,
     UnregisterConditions* data = (UnregisterConditions*)aData;
 
     nsFactoryEntry* factoryEntry = entry->mFactoryEntry;
-    if (data->cid->Equals(factoryEntry->mCid) && 
-        ((data->regName && !PL_strcasecmp(factoryEntry->mLocation, data->regName)) ||
-         (data->factory && data->factory == factoryEntry->mFactory.get())))
+    if (data->cid->Equals(factoryEntry->cid) && 
+        ((data->regName && !PL_strcasecmp(factoryEntry->location, data->regName)) ||
+         (data->factory && data->factory == factoryEntry->factory.get())))
         return PL_DHASH_REMOVE;
 
     return PL_DHASH_NEXT;
@@ -3028,7 +3020,6 @@ nsresult
 nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
                                           nsIFactory *aFactory)
 {
-#ifdef PR_LOGGING
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS)) 
     {
         char *buf = aClass.ToString();
@@ -3037,7 +3028,7 @@ nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
         if (buf)
             PR_Free(buf);
     }
-#endif
+
     nsFactoryEntry *old;
 
     // first delete all contract id entries that are registered with this cid.      
@@ -3048,7 +3039,7 @@ nsComponentManagerImpl::UnregisterFactory(const nsCID &aClass,
     nsresult rv = NS_ERROR_FACTORY_NOT_REGISTERED;
     old = GetFactoryEntry(aClass, key);
 
-    if (old && (old->mFactory.get() == aFactory))
+    if (old && (old->factory.get() == aFactory))
     {   
         nsAutoMonitor mon(mMon);
         PL_DHashTableOperate(&mFactories, &aClass, PL_DHASH_REMOVE);
@@ -3065,7 +3056,6 @@ nsresult
 nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
                                             const char *registryName)
 {
-#ifdef PR_LOGGING
     if (PR_LOG_TEST(nsComponentManagerLog, PR_LOG_ALWAYS)) 
     {
         char *buf = aClass.ToString();
@@ -3074,7 +3064,6 @@ nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
         if (buf)
             PR_Free(buf);
     }
-#endif
 
     NS_ENSURE_ARG_POINTER(registryName);
     nsFactoryEntry *old;
@@ -3085,7 +3074,7 @@ nsComponentManagerImpl::UnregisterComponent(const nsCID &aClass,
     // next check to see if there is a CID registered
     nsIDKey key(aClass);
     old = GetFactoryEntry(aClass, key);
-    if (old && old->mLocation && !PL_strcasecmp(old->mLocation, registryName))
+    if (old && old->location && !PL_strcasecmp(old->location, registryName))
     {   
         nsAutoMonitor mon(mMon);
         PL_DHashTableOperate(&mFactories, &aClass, PL_DHASH_REMOVE);
@@ -3217,7 +3206,7 @@ nsComponentManagerImpl::AutoRegisterImpl(PRInt32 when,
     if (!mCategoryManager) {
         NS_WARNING("mCategoryManager is null");
         return NS_ERROR_UNEXPECTED;
-    }
+	}
 
     nsCOMPtr<nsISimpleEnumerator> loaderEnum;
     rv = mCategoryManager->EnumerateCategory("component-loader",

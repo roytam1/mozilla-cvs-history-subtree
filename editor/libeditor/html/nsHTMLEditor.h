@@ -682,7 +682,6 @@ protected:
   PRBool HavePrivateHTMLFlavor( nsIClipboard *clipboard );
   nsresult   ParseCFHTML(nsCString & aCfhtml, PRUnichar **aStuffToPaste, PRUnichar **aCfcontext);
   nsresult   DoContentFilterCallback(const nsAString &aFlavor,
-                                     PRBool aWillDeleteSelection,
                                      nsIDOMNode **aFragmentAsNode,      
                                      nsIDOMNode **aFragStartNode,
                                      PRInt32 *aFragStartOffset,

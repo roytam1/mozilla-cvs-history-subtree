@@ -297,8 +297,7 @@ nsEditorHookUtils::DoAllowDragHook(nsIDOMDocument *aDoc, nsIDOMEvent *aDragEvent
 }
 
 PRBool
-nsEditorHookUtils::DoDragHook(nsIDOMDocument *aDoc, nsIDOMEvent *aEvent,
-                              nsITransferable *aTrans)
+nsEditorHookUtils::DoDragHook(nsIDOMDocument *aDoc, nsITransferable *aTrans)
 {
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   GetHookEnumeratorFromDocument(aDoc, getter_AddRefs(enumerator));
@@ -316,7 +315,7 @@ nsEditorHookUtils::DoDragHook(nsIDOMDocument *aDoc, nsIDOMEvent *aEvent,
     if (override)
     {
       PRBool canInvokeDrag = PR_TRUE;
-      nsresult hookResult = override->OnCopyOrDrag(aEvent, aTrans, &canInvokeDrag);
+      nsresult hookResult = override->OnCopyOrDrag(aTrans, &canInvokeDrag);
       NS_ASSERTION(NS_SUCCEEDED(hookResult), "hook failure in OnCopyOrDrag");
       if (!canInvokeDrag)
         return PR_FALSE;

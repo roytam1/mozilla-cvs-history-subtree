@@ -509,14 +509,15 @@ nsresult nsImapProtocol::Initialize(nsIImapHostSessionList * aHostSessionList, n
 
 nsImapProtocol::~nsImapProtocol()
 {
-  PR_Free(m_userName);
-  PR_Free(m_serverKey);
-  PR_Free(m_fetchBodyIdList);
+  PR_FREEIF(m_userName);
+  PR_FREEIF(m_serverKey);
+  PR_FREEIF(m_fetchBodyIdList);
 
   NS_IF_RELEASE(m_flagState);
 
-  PR_Free(m_dataOutputBuf);
-  delete m_inputStreamBuffer;
+  PR_FREEIF(m_dataOutputBuf);
+  if (m_inputStreamBuffer)
+    delete m_inputStreamBuffer;
 
   // **** We must be out of the thread main loop function
   NS_ASSERTION(m_imapThreadIsRunning == PR_FALSE, "Oops, thread is still running.\n");
@@ -959,10 +960,6 @@ NS_IMETHODIMP nsImapProtocol::Run()
     }
         
     me->m_runningUrl = nsnull;
-    if (m_inputStream)
-      m_inputStream->Close();
-    if (m_outputStream)
-      m_outputStream->Close();
     if (m_transport)
     {
         // make sure the transport closes (even if someone is still indirectly
@@ -1043,7 +1040,7 @@ NS_IMETHODIMP
 nsImapProtocol::TellThreadToDie(PRBool isSaveToClose)
 {
     // **** jt - This routine should only be called by imap service.
-  nsAutoCMonitor mon(this);
+  nsAutoCMonitor(this);
 
   m_urlInProgress = PR_TRUE;  // let's say it's busy so no one tries to use
                               // this about to die connection.
@@ -1079,6 +1076,10 @@ nsImapProtocol::TellThreadToDie(PRBool isSaveToClose)
 
   Log("TellThreadToDie", nsnull, "close socket connection");
 
+  // kill the socket connection
+  if (m_transport)
+    m_transport->Close(NS_ERROR_ABORT);
+
   PR_EnterMonitor(m_threadDeathMonitor);
   m_threadShouldDie = PR_TRUE;
   PR_ExitMonitor(m_threadDeathMonitor);
@@ -1102,7 +1103,7 @@ nsImapProtocol::TellThreadToDie(PRBool isSaveToClose)
 NS_IMETHODIMP
 nsImapProtocol::GetLastActiveTimeStamp(PRTime* aTimeStamp)
 {
-  nsAutoCMonitor mon(this);
+  nsAutoCMonitor(this);
   if (aTimeStamp)
       *aTimeStamp = m_lastActiveTime;
   return NS_OK;
@@ -1115,7 +1116,7 @@ nsImapProtocol::PseudoInterruptMsgLoad(nsIMsgFolder *aImapFolder, nsIMsgWindow *
 
   *interrupted = PR_FALSE;
 
-  nsAutoCMonitor mon(this);
+  nsAutoCMonitor(this);
 
   if (m_runningUrl && !TestFlag(IMAP_CLEAN_UP_URL_STATE))
   {
@@ -1897,8 +1898,8 @@ NS_IMETHODIMP nsImapProtocol::CanHandleUrl(nsIImapUrl * aImapUrl,
           }
         }
         
-        PR_Free(urlHostName);
-        PR_Free(urlUserName);
+        PR_FREEIF(urlHostName);
+        PR_FREEIF(urlUserName);
       }
     }
   }
@@ -2898,7 +2899,7 @@ nsImapProtocol::FetchMessage(const char * messageIds,
             headersToDL = PR_smprintf("%s %s",dbHeaders, arbitraryHeaders.get());
 
           if (aolImapServer)
-            what = strdup(" XAOL-ENVELOPE INTERNALDATE)");
+            what = nsCRT::strdup(" XAOL-ENVELOPE INTERNALDATE)");
           else if (gUseEnvelopeCmd)
             what = PR_smprintf(" ENVELOPE BODY.PEEK[HEADER.FIELDS (%s)])", headersToDL);
           else
@@ -4064,10 +4065,10 @@ void nsImapProtocol::AddFolderRightsForUser(const char *mailboxName, const char 
         m_imapServerSink->AddFolderRights(mailboxName, userName, rights);
       }
     }
-    PR_Free(aclRightsInfo->hostName);
-    PR_Free(aclRightsInfo->mailboxName);
-    PR_Free(aclRightsInfo->rights);
-    PR_Free(aclRightsInfo->userName);
+    PR_FREEIF(aclRightsInfo->hostName);
+    PR_FREEIF(aclRightsInfo->mailboxName);
+    PR_FREEIF(aclRightsInfo->rights);
+    PR_FREEIF(aclRightsInfo->userName);
     
     delete aclRightsInfo;
   }
@@ -4128,15 +4129,15 @@ void nsImapProtocol::ClearAllFolderRights(const char *mailboxName,
 
     if (aclRightsInfo->hostName && aclRightsInfo->mailboxName)
     {
-      if (m_imapExtensionSink)
-      {
-        m_imapExtensionSink->ClearFolderRights(this, aclRightsInfo);
-        WaitForFEEventCompletion();
-      }
-    }
-    PR_Free(aclRightsInfo->hostName);
-    PR_Free(aclRightsInfo->mailboxName);
-    
+            if (m_imapExtensionSink)
+            {
+                m_imapExtensionSink->ClearFolderRights(this, aclRightsInfo);
+            WaitForFEEventCompletion();
+            }
+        }
+        PR_FREEIF(aclRightsInfo->hostName);
+        PR_FREEIF(aclRightsInfo->mailboxName);
+
     delete aclRightsInfo;
   }
   else
@@ -4435,7 +4436,7 @@ nsImapProtocol::AlertUserEventUsingId(PRUint32 aMessageId)
       nsCOMPtr<nsIMsgWindow> msgWindow;
       GetMsgWindow(getter_AddRefs(msgWindow));
       m_imapServerSink->FEAlert(progressString, msgWindow);
-      PR_Free(progressString);
+      PR_FREEIF(progressString);
     } 
   }
 }
@@ -4494,8 +4495,8 @@ nsImapProtocol::ShowProgress()
 		    progressString = nsTextFormatter::smprintf(m_progressString, (const PRUnichar *) unicodeMailboxName, ++m_progressIndex, m_progressCount);
 		    if (progressString)
 		    {
-			    PercentProgressUpdateEvent(progressString, m_progressIndex,m_progressCount);
-			    nsTextFormatter::smprintf_free(progressString);
+			  PercentProgressUpdateEvent(progressString, m_progressIndex,m_progressCount);
+			  nsTextFormatter::smprintf_free(progressString);
 		    }
 	    }
     }
@@ -4504,7 +4505,7 @@ nsImapProtocol::ShowProgress()
 void
 nsImapProtocol::ProgressEventFunctionUsingId(PRUint32 aMsgId)
 {
-  if (m_imapMiscellaneousSink && aMsgId != m_lastProgressStringId)
+    if (m_imapMiscellaneousSink && aMsgId != m_lastProgressStringId)
   {
     m_imapMiscellaneousSink->ProgressStatus(this, aMsgId, nsnull);
     m_lastProgressStringId = aMsgId;
@@ -5060,16 +5061,13 @@ void nsImapProtocol::OnAppendMsgFromFile()
         if (mailboxName)
         {
           imapMessageFlagsType flagsToSet = kImapMsgSeenFlag;
-          // we assume msg is read, for appending to sent/drafts folder, because
+          // we assume true, for appending to sent/drafts folder, because
           // in that case, we don't have a msg hdr (and we want the msg to be read)
-					PRUint32 msgFlags = MSG_FLAG_READ;
+          PRBool read = PR_TRUE; 
           if (m_imapMessageSink)
-            m_imapMessageSink->GetCurMoveCopyMessageFlags(m_runningUrl, &msgFlags);
-
-          if (!(msgFlags & MSG_FLAG_READ))
-            flagsToSet &= ~kImapMsgSeenFlag;
-					if (msgFlags & MSG_FLAG_MDN_REPORT_SENT)
-						flagsToSet |= kImapMsgMDNSentFlag;
+            m_imapMessageSink->IsCurMoveCopyMessageRead(m_runningUrl, &read);
+          if (!read)
+                  flagsToSet &= ~MSG_FLAG_READ;
           UploadMessageFromFile(fileSpec, mailboxName, flagsToSet);
           PR_Free( mailboxName );
         }
@@ -5078,6 +5076,19 @@ void nsImapProtocol::OnAppendMsgFromFile()
             HandleMemoryFailure();
         }
     }
+}
+
+void nsImapProtocol::CheckAndSetMDNSentFlag(nsImapAction imapAction, nsMsgKey key)
+{
+  // If we're appending msg to folder and we support
+  // MDNSent flag then flag the msg with "MDNSent".
+  if ((imapAction == nsIImapUrl::nsImapAppendMsgFromFile) &&
+      (GetServerStateParser().SupportsUserFlags() & kImapMsgSupportMDNSentFlag))
+  {
+    nsCAutoString newMsgId;
+    newMsgId.AppendInt(key);
+    Store(newMsgId.get(), "+FLAGS ($MDNSent)", PR_TRUE);
+  }
 }
 
 void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
@@ -5158,7 +5169,10 @@ void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
         if (GetServerStateParser().GetCapabilityFlag() &
           kUidplusCapability)
         {
-          nsMsgKey newKey = GetServerStateParser().CurrentResponseUID();
+          nsMsgKey newKey =
+            GetServerStateParser().CurrentResponseUID();
+          // See if we have to mark "MDN sent" flag on the msg.
+          CheckAndSetMDNSentFlag(imapAction, newKey);
           if (m_imapExtensionSink)
           {
             m_imapExtensionSink->SetAppendMsgUid(this, newKey,
@@ -5217,6 +5231,8 @@ void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
                 delete searchResult;
                 if (newkey != nsMsgKey_None)
                 {
+                  // See if we have to mark "MDN sent" flag on the msg.
+                  CheckAndSetMDNSentFlag(imapAction, newkey);
                   m_imapExtensionSink->SetAppendMsgUid
                     (this, newkey, m_runningUrl);
                   WaitForFEEventCompletion();
@@ -5229,7 +5245,7 @@ void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
     }
   }
 done:
-  PR_Free(dataBuffer);
+  PR_FREEIF(dataBuffer);
   fileSpec->CloseStream();
   nsMemory::Free(escapedName);
 }

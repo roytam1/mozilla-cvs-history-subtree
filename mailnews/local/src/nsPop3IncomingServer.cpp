@@ -166,16 +166,7 @@ NS_IMETHODIMP nsPop3IncomingServer::PerformBiff()
         if (NS_SUCCEEDED(rv) && valid)
           rv = pop3Service->GetNewMail(msgWindow, urlListener, inbox, this, nsnull);
         else
-        {
-          PRBool isLocked;
-          inbox->GetLocked(&isLocked);
-          if (!isLocked)
-          {
-            rv = localInbox->ParseFolder(msgWindow, urlListener);
-          }
-          if (NS_SUCCEEDED(rv))
-            rv = localInbox->SetCheckForNewMessagesAfterParsing(PR_TRUE);
-        }
+          rv = localInbox->SetCheckForNewMessagesAfterParsing(PR_TRUE);
       }
     }
     else
@@ -275,7 +266,7 @@ NS_IMETHODIMP nsPop3IncomingServer::GetNewMail(nsIMsgWindow *aMsgWindow, nsIUrlL
 NS_IMETHODIMP
 nsPop3IncomingServer::GetDownloadMessagesAtStartup(PRBool *getMessagesAtStartup)
 {
-    // GetMessages is not automatically done for pop servers at startup.
+    // GetMessagese is not automatically done for pop servers at startup.
     // We need to trigger that action. Return true.
     *getMessagesAtStartup = PR_TRUE;
     return NS_OK;

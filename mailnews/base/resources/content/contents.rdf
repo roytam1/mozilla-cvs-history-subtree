@@ -67,7 +67,7 @@
 
   <!-- messenger items for Navigator -->
   <RDF:Seq about="chrome://navigator/content/navigatorOverlay.xul">
-    <RDF:li>chrome://messenger/content/mailOverlay.xul</RDF:li>
+    <RDF:li>chrome://messenger/content/mailNavigatorOverlay.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger items for Messenger -->

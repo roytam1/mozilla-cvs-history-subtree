@@ -92,12 +92,7 @@ function StartUp()
   }
 
   var autoSelectLastProfile = document.getElementById("autoSelectLastProfile");
-  var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                    .getService(Components.interfaces.nsIPrefBranch);
-  if (prefs.getBoolPref("profile.manage_only_at_launch"))
-    autoSelectLastProfile.hidden = true;
-  else
-    autoSelectLastProfile.checked = profile.startWithLastUsedProfile;
+  autoSelectLastProfile.checked = profile.startWithLastUsedProfile;
 
   var profileList = document.getElementById("profiles");
   profileList.focus();
@@ -224,10 +219,9 @@ function onStart()
     if (offlineState.checked != ioService.offline)
       ioService.offline = offlineState.checked;
   }
-
+  
   var autoSelectLastProfile = document.getElementById("autoSelectLastProfile");
-  if (!autoSelectLastProfile.hidden)
-    profile.startWithLastUsedProfile = autoSelectLastProfile.checked;
+  profile.startWithLastUsedProfile = autoSelectLastProfile.checked;
   
   try {
     profile.currentProfile = profilename;
@@ -235,7 +229,6 @@ function onStart()
   catch (ex) {
 	  var brandName = gBrandBundle.getString("brandShortName");    
     var message;
-    var fatalError = false;
     switch (ex.result) {
       case Components.results.NS_ERROR_FILE_ACCESS_DENIED:
         message = gProfileManagerBundle.getFormattedString("profDirLocked", [brandName, profilename]);
@@ -245,24 +238,11 @@ function onStart()
         message = gProfileManagerBundle.getFormattedString("profDirMissing", [brandName, profilename]);
         message = message.replace(/\s*<html:br\/>/g,"\n");
         break;
-      case Components.results.NS_ERROR_ABORT:
-        message = gProfileManagerBundle.getFormattedString("profileSwitchFailed", [brandName, profilename, brandName, brandName]);
-        message = message.replace(/\s*<html:br\/>/g,"\n");
-        fatalError = true;
-        break;
       default:
         message = ex.message;
         break;
   }
       promptService.alert(window, null, message);
-
-      if (fatalError)
-      {
-        var appShellService = Components.classes["@mozilla.org/appshell/appShellService;1"]
-                              .getService(Components.interfaces.nsIAppShellService);
-        appShellService.quit(Components.interfaces.nsIAppShellService.eForceQuit);
-      }
-
       return false;
   }
   

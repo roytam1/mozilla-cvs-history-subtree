@@ -79,6 +79,7 @@ class nsAppShell : public nsIAppShell
     int CountStoredEvents();
     void *GetNextEvent();
     
+    nsDispatchListener	*mDispatchListener;
     port_id					eventport;
     sem_id					syncsem;
     BList events[PRIORITY_LEVELS];

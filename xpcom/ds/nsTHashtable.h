@@ -43,14 +43,6 @@
 #include "nsDebug.h"
 #include NEW_H
 
-// helper function for nsTHashtable::Clear()
-PR_EXTERN(PLDHashOperator) PR_CALLBACK
-PL_DHashStubEnumRemove(PLDHashTable    *table,
-                       PLDHashEntryHdr *entry,
-                       PRUint32         ordinal,
-                       void            *userArg);
-
-
 /**
  * a base class for templated hashtables.
  *
@@ -284,6 +276,14 @@ protected:
                                                 PRUint32         number,
                                                 void            *arg);
 };
+
+// helper function for Reset()
+PR_EXTERN(PLDHashOperator) PR_CALLBACK
+PL_DHashStubEnumRemove(PLDHashTable    *table,
+                       PLDHashEntryHdr *entry,
+                       PRUint32         ordinal,
+                       void            *userArg);
+
 
 //
 // template definitions

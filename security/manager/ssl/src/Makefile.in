@@ -110,6 +110,8 @@ REQUIRES	= nspr \
 
 EXTRA_DEPS = $(NSS_DEP_LIBS)
 
+include $(topsrcdir)/config/rules.mk
+
 # Use local includes because they are inserted before INCLUDES
 # so that Mozilla's nss.h is used, not glibc's
 LOCAL_INCLUDES += -I$(DIST)/public/nss \
@@ -121,6 +123,3 @@ EXTRA_DSO_LDOPTS += \
 		$(MOZ_JS_LIBS) \
 		$(NSS_LIBS) \
 		$(NULL)
-
-include $(topsrcdir)/config/rules.mk
-

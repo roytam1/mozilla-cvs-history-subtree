@@ -75,7 +75,15 @@ PRBool nsAppShell::mInitializedToolbox = PR_FALSE;
 // nsISupports implementation macro
 //
 //-------------------------------------------------------------------------
+NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShell, nsIAppShell)
+
+NS_IMETHODIMP nsAppShell::SetDispatchListener(nsDispatchListener* aDispatchListener)
+{
+  mDispatchListener = aDispatchListener;
+  return NS_OK;
+}
 
 //-------------------------------------------------------------------------
 //
@@ -110,6 +118,9 @@ NS_IMETHODIMP nsAppShell::Run(void)
 
 	mMacPump->StartRunning();
 	mMacPump->DoMessagePump();
+
+  //if (mDispatchListener)
+    //mDispatchListener->AfterDispatch();
 
 	if (mExitCalled)	// hack: see below
 	{

@@ -261,6 +261,10 @@ WSPCallContext::CallCompletionListener()
     rv = XPTC_InvokeByIndex(mAsyncListener, 3, 2, dispatchParams);
   }
   else if (response) {
+    // pre-fill the call context into param 0.
+    dispatchParams[0].val.p = NS_STATIC_CAST(nsIWebServiceCallContext*, this);
+    dispatchParams[0].SetValIsInterface();
+
     nsCOMPtr<nsIWSDLBinding> binding;
     rv = mOperation->GetBinding(getter_AddRefs(binding));
     if (NS_FAILED(rv)) {
@@ -403,8 +407,6 @@ WSPCallContext::CallCompletionListener()
     dispatchParams[paramIndex].val.p =
         NS_STATIC_CAST(nsIWebServiceCallContext*, this);
     dispatchParams[paramIndex].SetValIsInterface();
-    dispatchParams[paramIndex].type.flags = 
-      XPT_TDP_POINTER | TD_INTERFACE_TYPE;
 
     rv = XPTC_InvokeByIndex(mAsyncListener, mListenerMethodIndex,
                             paramCount, dispatchParams);

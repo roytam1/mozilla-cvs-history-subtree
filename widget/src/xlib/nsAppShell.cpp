@@ -149,6 +149,8 @@ static const char *event_names[] =
 
 nsAppShell::nsAppShell()  
 { 
+  mDispatchListener = 0;
+
   if (!sEventQueueList)
     sEventQueueList = new nsVoidArray();
 
@@ -280,6 +282,12 @@ NS_METHOD nsAppShell::Create(int* bac, char ** bav)
   PR_LOG(XlibWidgetsLM, PR_LOG_DEBUG, ("nsAppShell::Create(dpy=%p)\n",
          mDisplay));
 
+  return NS_OK;
+}
+
+NS_METHOD nsAppShell::SetDispatchListener(nsDispatchListener* aDispatchListener) 
+{
+  mDispatchListener = aDispatchListener;
   return NS_OK;
 }
 

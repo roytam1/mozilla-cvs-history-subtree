@@ -1133,8 +1133,9 @@ NS_IMETHODIMP nsImapMailFolder::CompactAll(nsIUrlListener *aListener,  nsIMsgWin
 NS_IMETHODIMP nsImapMailFolder::EmptyTrash(nsIMsgWindow *msgWindow,
                                            nsIUrlListener *aListener)
 {
+    nsresult rv;
     nsCOMPtr<nsIMsgFolder> trashFolder;
-    nsresult rv = GetTrashFolder(getter_AddRefs(trashFolder));
+    rv = GetTrashFolder(getter_AddRefs(trashFolder));
     if (NS_SUCCEEDED(rv))
     {
        nsCOMPtr<nsIMsgAccountManager> accountManager = 
@@ -3734,6 +3735,7 @@ nsImapMailFolder::ParseAdoptedMsgLine(const char *adoptedMessageLine, nsMsgKey u
   return rv;
 }
 
+
 NS_IMETHODIMP
 nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage, 
                                           PRBool markRead,
@@ -3755,18 +3757,78 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
   nsCOMPtr<nsIMsgDBHdr> msgHdr;
   m_curMsgUid = uidOfMessage;
   res = GetMessageHeader(m_curMsgUid, getter_AddRefs(msgHdr));
-
-  if (msgHdr && markRead)
+  nsXPIDLCString messageID;
+  nsCOMPtr<nsIMsgMailNewsUrl> msgUrl(do_QueryInterface(imapUrl, &res));
+  nsCOMPtr<nsIMsgWindow> msgWindow;
+  res = msgUrl->GetMsgWindow(getter_AddRefs(msgWindow));
+  if (msgHdr)
+  {
+    // if we didn't get the message id when we downloaded the message header,
+    // we cons up an md5: message id. If we've done that, set needMsgID to true
+    // so we'll try to extract the message id out of the mime headers for the whole message.
+    msgHdr->GetMessageId(getter_Copies(messageID));
+    if (!strncmp(messageID, "md5:", 4))
+      needMsgID = PR_TRUE;
+    if (markRead || needMsgID)
+    {
+      if (NS_SUCCEEDED(res))
       {
         PRBool isRead;
         msgHdr->GetIsRead(&isRead);
+        if (!isRead || needMsgID)
+        {
+          PRUint32 msgFlags, newFlags;
+          msgHdr->GetFlags(&msgFlags);
+
+          if (NS_SUCCEEDED(res))
+          {
+            nsCOMPtr<nsIMimeHeaders> mimeHeaders;
+            res = msgUrl->GetMimeHeaders(getter_AddRefs(mimeHeaders));
+            if (NS_SUCCEEDED(res) && mimeHeaders)
+            {
               if (!isRead)
               {
+                nsXPIDLCString mdnDnt;
+                mimeHeaders->ExtractHeader("Disposition-Notification-To",
+                                           PR_FALSE, getter_Copies(mdnDnt));
+                if (mdnDnt.Length() && !(msgFlags & MSG_FLAG_MDN_REPORT_SENT))
+                {
+                  if(NS_SUCCEEDED(res))
+                  {
+                    nsCOMPtr<nsIMsgMdnGenerator> mdnGenerator;
+                    mdnGenerator =
+                      do_CreateInstance(NS_MSGMDNGENERATOR_CONTRACTID, &res);
+                    if (mdnGenerator && !(msgFlags & MSG_FLAG_IMAP_DELETED))
+                    {
+                        mdnGenerator->Process(nsIMsgMdnGenerator::eDisplayed,
+                                              msgWindow, this, uidOfMessage, 
+                                              mimeHeaders, PR_FALSE);
+                        msgUrl->SetMimeHeaders(nsnull);
+                    }
+                 }
+                 msgHdr->SetFlags(msgFlags & ~MSG_FLAG_MDN_REPORT_NEEDED);
+                 msgHdr->OrFlags(MSG_FLAG_MDN_REPORT_SENT, &newFlags);
+                }
+              }
+              if (needMsgID)
+              {
+                nsXPIDLCString messageID;
+                mimeHeaders->ExtractHeader("Message-Id",
+                                           PR_FALSE, getter_Copies(messageID));
+                if (messageID.Length())
+                  msgHdr->SetMessageId(messageID);
+              }
+            }
+          }
+          if (markRead)
+          {
             msgHdr->MarkRead(PR_TRUE);
             commit = PR_TRUE;
           }
         }
-
+      }
+    }
+  }
   if (commit && mDatabase)
     mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
 
@@ -4231,15 +4293,22 @@ nsImapMailFolder::SetImageCacheSessionForUrl(nsIMsgMailNewsUrl *mailurl)
   return rv;
 }
 
-NS_IMETHODIMP nsImapMailFolder::GetCurMoveCopyMessageFlags(nsIImapUrl *runningUrl, PRUint32 *aResult)
+NS_IMETHODIMP nsImapMailFolder::IsCurMoveCopyMessageRead(nsIImapUrl *runningUrl, PRBool *aResult)
 {
   nsCOMPtr <nsISupports> copyState;
   runningUrl->GetCopyState(getter_AddRefs(copyState));
   if (copyState)
   {
     nsCOMPtr<nsImapMailCopyState> mailCopyState = do_QueryInterface(copyState);
-    if (mailCopyState && mailCopyState->m_message)
-      mailCopyState->m_message->GetFlags(aResult);
+    if (mailCopyState)
+    {
+      PRUint32 flags;
+      if (mailCopyState->m_message)
+      {
+        mailCopyState->m_message->GetFlags(&flags);
+        *aResult =(flags & MSG_FLAG_READ) != 0;
+      }
+    }
   }
   return NS_OK;
 }
@@ -5258,16 +5327,7 @@ const char *nsMsgIMAPFolderACL::GetRightsStringForUser(const char *inUserName)
   nsXPIDLCString userName;
   userName.Assign(inUserName);
   if (!userName.Length())
-  {
-    nsCOMPtr <nsIMsgIncomingServer> server;
-
-    nsresult rv = m_folder->GetServer(getter_AddRefs(server));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "error getting server");
-    if (NS_FAILED(rv)) return nsnull;
-    // we need the real user name to match with what the imap server returns
-    // in the acl response.
-    server->GetRealUsername(getter_Copies(userName));
-  }
+    m_folder->GetUsername(getter_Copies(userName));
   nsCStringKey userKey(userName.get());
   
   return (const char *)m_rightsHash->Get(&userKey);
@@ -6982,11 +7042,6 @@ NS_IMETHODIMP nsImapMailFolder::RenameClient(nsIMsgWindow *msgWindow, nsIMsgFold
         msgFolder->GetParentMsgFolder(getter_AddRefs(msgParent));
         msgFolder->SetParent(nsnull);
         msgParent->PropagateDelete(msgFolder,PR_FALSE, nsnull);
-
-        // Reset online status now that the folder is renamed.
-        nsCOMPtr <nsIMsgImapMailFolder> oldImapFolder = do_QueryInterface(msgFolder);
-        if (oldImapFolder)
-          oldImapFolder->SetVerifiedAsOnlineFolder(PR_FALSE);
 
         nsCOMPtr<nsISupports> childSupports(do_QueryInterface(child));
         nsCOMPtr<nsISupports> parentSupports;

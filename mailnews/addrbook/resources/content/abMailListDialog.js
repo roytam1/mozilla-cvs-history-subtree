@@ -320,8 +320,6 @@ function OnLoadEditList()
 
   document.addEventListener("keypress", awDocumentKeyPress, true);
 
-  moveToAlertPosition();
-
   // workaround for bug 118337 - for mailing lists that have more rows than fits inside
   // the display, the value of the textbox inside the new row isn't inherited into the input -
   // the first row then appears to be duplicated at the end although it is actually empty.
@@ -338,6 +336,8 @@ function AppendLastRow()
   var listName = document.getElementById('ListName');
   if ( listName )
     listName.focus();
+
+  moveToAlertPosition();
 }
 
 function AppendNewRowAndSetFocus()

@@ -482,7 +482,7 @@ nsImapIncomingServer::LoadNextQueuedUrl(PRBool *aResult)
   PRBool urlRun = PR_FALSE;
   PRBool keepGoing = PR_TRUE;
   
-  nsAutoCMonitor mon(this);
+  nsAutoCMonitor(this);
   m_urlQueue->Count(&cnt);
 
   while (cnt > 0 && !urlRun && keepGoing)
@@ -538,7 +538,7 @@ nsImapIncomingServer::AbortQueuedUrls()
   PRUint32 cnt = 0;
   nsresult rv = NS_OK;
   
-  nsAutoCMonitor mon(this);
+  nsAutoCMonitor(this);
   m_urlQueue->Count(&cnt);
   
   while (cnt > 0)

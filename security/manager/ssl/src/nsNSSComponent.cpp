@@ -1033,7 +1033,7 @@ nsNSSComponent::TryCFM2MachOMigration(nsIFile *cfmPath, nsIFile *machoPath)
 #endif
 
 nsresult
-nsNSSComponent::InitializeNSS(PRBool showWarningBox)
+nsNSSComponent::InitializeNSS()
 {
   // Can be called both during init and profile change.
   // Needs mutex protection.
@@ -1215,9 +1215,7 @@ nsNSSComponent::InitializeNSS(PRBool showWarningBox)
 
     // We might want to use different messages, depending on what failed.
     // For now, let's use the same message.
-    if (showWarningBox) {
-      ShowAlert(ai_nss_init_problem);
-    }
+    ShowAlert(ai_nss_init_problem);
   }
 
   return NS_OK;
@@ -1232,7 +1230,6 @@ nsNSSComponent::ShutdownNSS()
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("nsNSSComponent::ShutdownNSS\n"));
 
   nsAutoLock lock(mutex);
-  nsresult rv = NS_OK;
 
   if (hashTableCerts) {
     PL_HashTableEnumerateEntries(hashTableCerts, certHashtable_clearEntry, 0);
@@ -1255,14 +1252,13 @@ nsNSSComponent::ShutdownNSS()
     mShutdownObjectList->evaporateAllNSSResources();
     if (SECSuccess != ::NSS_Shutdown()) {
       PR_LOG(gPIPNSSLog, PR_LOG_ALWAYS, ("NSS SHUTDOWN FAILURE\n"));
-      rv = NS_ERROR_FAILURE;
     }
     else {
       PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("NSS shutdown =====>> OK <<=====\n"));
     }
   }
 
-  return rv;
+  return NS_OK;
 }
  
 NS_IMETHODIMP
@@ -1288,7 +1284,7 @@ nsNSSComponent::Init()
   // Do that before NSS init, to make sure we won't get unloaded.
   RegisterObservers();
 
-  rv = InitializeNSS(PR_TRUE); // ok to show a warning box on failure
+  rv = InitializeNSS();
   if (NS_FAILED(rv)) {
     PR_LOG(gPIPNSSLog, PR_LOG_ERROR, ("Unable to Initialize NSS.\n"));
     return rv;
@@ -1611,12 +1607,7 @@ nsNSSComponent::Observe(nsISupports *aSubject, const char *aTopic,
     StopCRLUpdateTimer();
 
     if (needsCleanup) {
-      if (NS_FAILED(ShutdownNSS())) {
-        nsCOMPtr<nsIProfileChangeStatus> status = do_QueryInterface(aSubject);
-        if (status) {
-          status->ChangeFailed();
-        }
-      }
+      ShutdownNSS();
     }
     mShutdownObjectList->allowUI();
 
@@ -1636,12 +1627,8 @@ nsNSSComponent::Observe(nsISupports *aSubject, const char *aTopic,
     }
     
     if (needsInit) {
-      if (NS_FAILED(InitializeNSS(PR_FALSE))) { // do not show a warning box on failure
+      if (NS_FAILED(InitializeNSS())) {
         PR_LOG(gPIPNSSLog, PR_LOG_ERROR, ("Unable to Initialize NSS after profile switch.\n"));
-        nsCOMPtr<nsIProfileChangeStatus> status = do_QueryInterface(aSubject);
-        if (status) {
-          status->ChangeFailed();
-        }
       }
     }
 

@@ -64,6 +64,7 @@ public:
   NS_IMETHOD            GetNativeEvent(PRBool &aRealEvent, void *&aEvent);
   NS_IMETHOD            DispatchNativeEvent(PRBool aRealEvent, void *aEvent);
   
+  NS_IMETHOD            SetDispatchListener(nsDispatchListener* aDispatchListener);
   NS_IMETHOD            Exit();
   virtual void *        GetNativeData(PRUint32 aDataType);
   static void           DispatchXEvent(XEvent *event);
@@ -75,6 +76,7 @@ public:
   static Display       *mDisplay;
  private:
   static XlibRgbHandle *mXlib_rgb_handle;
+  nsDispatchListener*   mDispatchListener;
   
   static void HandleButtonEvent(XEvent *event, nsWidget *aWidget);
   static void HandleMotionNotifyEvent(XEvent *event, nsWidget *aWidget);

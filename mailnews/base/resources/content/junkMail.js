@@ -160,14 +160,9 @@ function onAccept()
   storeSettings(gSpamSettings[gCurrentServer.key].settings, gCurrentServer.spamSettings.loggingEnabled);
 
   for (var key in gSpamSettings) {
-    try {
-      // if they hit ok, set the "real" server's spam settings.  
-      // this will set prefs.
-      gSpamSettings[key].server.spamSettings = gSpamSettings[key].settings;
-    }
-    catch (ex) {
-      dump("spam setting not saved: " + ex);
-    }
+    // if they hit ok, set the "real" server's spam settings.  
+    // this will set prefs.
+    gSpamSettings[key].server.spamSettings = gSpamSettings[key].settings;
   }
   return true;
 }

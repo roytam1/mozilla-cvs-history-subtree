@@ -234,7 +234,6 @@ nsSmtpProtocol::~nsSmtpProtocol()
 	PR_Free(m_addressCopy);
 	PR_Free(m_verifyAddress);
 	PR_Free(m_dataBuf);
-	delete m_lineStreamBuffer;
 }
 
 void nsSmtpProtocol::Initialize(nsIURI * aURL)
@@ -286,7 +285,6 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
     m_originalContentLength = 0;
     m_totalAmountRead = 0;
 
-    m_lineStreamBuffer = new nsMsgLineStreamBuffer(OUTPUT_BUFFER_SIZE, PR_TRUE);
     // ** may want to consider caching the server capability to save lots of
     // round trip communication between the client and server
     nsCOMPtr<nsISmtpServer> smtpServer;
@@ -381,6 +379,39 @@ nsresult aStatus)
 // End of nsIStreamListenerSupport
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+PRInt32 nsSmtpProtocol::ReadLine(nsIInputStream * inputStream, PRUint32 length, char ** line)
+{
+  nsCOMPtr<nsISearchableInputStream> bufferInputStr = do_QueryInterface(inputStream);
+  PRUint32 numBytesLastRead = 0;  // total number of bytes read into the current line
+
+  if (bufferInputStr)
+  {
+    // only try to read out an entire line...if we don't have a full line yet then wait for
+    // more data....
+    PRBool found = PR_FALSE;
+    PRUint32 offset = 0;
+    bufferInputStr->Search("\n", PR_TRUE,  &found, &offset); 
+    if (found && offset < OUTPUT_BUFFER_SIZE - 1)
+    {
+	    m_dataBuf[0] = '\0';
+      inputStream->Read(m_dataBuf, offset + 1 /* + 1 to read past the \n */, &numBytesLastRead);
+      m_dataBuf[numBytesLastRead] = '\0';
+
+      *line = m_dataBuf;
+    }
+	else
+      return -1; // inform caller to block
+
+  }
+	else
+  {
+    NS_ASSERTION(0, "uhoh.....our input stream is no longer searchable");
+    return 0; 
+  }
+
+  return numBytesLastRead;
+}
+
 void nsSmtpProtocol::UpdateStatus(PRInt32 aStatusID)
 {
 	if (m_statusFeedback)
@@ -409,24 +440,20 @@ void nsSmtpProtocol::UpdateStatusWithString(const PRUnichar * aStatusString)
  */
 PRInt32 nsSmtpProtocol::SmtpResponse(nsIInputStream * inputStream, PRUint32 length)
 {
-  char * line = nsnull;
-  char cont_char;
-  PRUint32 ln = 0;
-  PRBool pauseForMoreData = PR_FALSE;
+	char * line = nsnull;
+	char cont_char;
+	PRInt32 bytesRead = 0;
 
-	if (!m_lineStreamBuffer)
-		return -1; // this will force an error and at least we won't crash
+  bytesRead = ReadLine(inputStream, length, &line);
 
-	line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
-
-  if(pauseForMoreData || !line)
+  if (bytesRead < 0) // we are blocked waiting for more data...
   {
-      SetFlag(SMTP_PAUSE_FOR_READ); /* pause */
-      PR_Free(line);
-      return(ln);
-  }
-
-  m_totalAmountRead += ln;
+     m_nextState = SMTP_RESPONSE;
+     SetFlag(SMTP_PAUSE_FOR_READ);
+     return 0; 
+	}
+	
+  m_totalAmountRead += bytesRead;
 
   PR_LOG(SMTPLogModule, PR_LOG_ALWAYS, ("SMTP Response: %s", line));
 	cont_char = ' '; /* default */
@@ -461,8 +488,13 @@ PRInt32 nsSmtpProtocol::SmtpResponse(nsIInputStream * inputStream, PRUint32 leng
 		m_nextState = m_nextStateAfterResponse;
 		ClearFlag(SMTP_PAUSE_FOR_READ); /* don't pause */
 	}
+  else
+  {
+    inputStream->Available(&length); // refresh the length as it has changed...
+    if (!length)
+       SetFlag(SMTP_PAUSE_FOR_READ);
+  }
 
-  PR_Free(line);
   return(0);  /* everything ok */
 }
 
@@ -993,7 +1025,7 @@ PRInt32 nsSmtpProtocol::AuthLoginPassword()
     {
       unsigned char digest[DIGEST_LENGTH];
       char * decodedChallenge = PL_Base64Decode(m_responseText.get(), 
-        m_responseText.Length(), nsnull);
+        m_responseText.Length() - 2 /* subtract CRLF */, nsnull);
       
       if (decodedChallenge)
         rv = MSGCramMD5(decodedChallenge, strlen(decodedChallenge), password.get(), password.Length(), digest);
