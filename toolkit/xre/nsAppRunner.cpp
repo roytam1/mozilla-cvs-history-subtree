@@ -87,6 +87,7 @@
 #include "nsXPCOM.h"
 #include "nsXPIDLString.h"
 
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsXULAppAPI.h"
 #include "nsXREDirProvider.h"
 #include "nsWindowCreator.h"
@@ -1442,6 +1443,17 @@ SelectProfile(nsIProfileLock* *aResult, nsINativeAppSupport* aNative)
       PR_fprintf(PR_STDERR, "Success: created profile '%s'\n", arg);
     }
     profileSvc->Flush();
+
+    // XXXben need to ensure prefs.js exists here so the tinderboxes will
+    //        not go orange.
+    nsCOMPtr<nsILocalFile> prefsJSFile;
+    profile->GetRootDir(getter_AddRefs(prefsJSFile));
+    prefsJSFile->AppendNative(NS_LITERAL_CSTRING("prefs.js"));
+    PRBool exists;
+    prefsJSFile->Exists(&exists);
+    if (!exists)
+      prefsJSFile->Create(nsIFile::NORMAL_FILE_TYPE, 0644);
+
     return rv;
   }
 
