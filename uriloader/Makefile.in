@@ -65,6 +65,7 @@ REQUIRES	= xpcom \
 		  nkcache \
 		  chardet \
 		  htmlparser \
+		  prefetch \
 		  $(NULL)
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
@@ -127,12 +128,14 @@ XPIDLSRCS	= \
 
 XPIDLSRCS_SUB_MODULES = exthandler prefetch
 
+exthandler_MODULE = exthandler
 exthandler_XPIDLSRCS = \
-		nsCExternalHandlerService.idl	\
+		nsCExternalHandlerService.idl \
 		nsIExternalProtocolService.idl \
 		nsIExternalHelperAppService.idl	\
 		$(NULL)
 
+prefetch_MODULE = prefetch
 prefetch_XPIDLSRCS = nsIPrefetchService.idl
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
@@ -162,9 +165,9 @@ OS_LIBS		+= shell32.lib
 GARBAGE		+= nsOSHelperAppService.cpp
 endif
 
-GARBAGE_DIRS	+= exthandler/$(OSDIR)
+PWD		:= $(shell pwd)
+MAKE_DIRS	+= $(addprefix $(PWD)/,base build exthandler prefetch exthandler/$(OSDIR))
 
 include $(topsrcdir)/config/rules.mk
 
-export::
-	@if test ! -d ./exthandler/$(OSDIR); then $(NSINSTALL) -D exthandler/$(OSDIR); fi
+
