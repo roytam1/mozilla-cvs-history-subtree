@@ -2239,7 +2239,9 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
             charCode = 0x0000001D;
             break;
         default:
+#if DEBUG
             printf("### FIX ME - Convert NSString to C string with current encoding... ###\n");
+#endif
             break;
         }
     }
