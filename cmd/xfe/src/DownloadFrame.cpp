@@ -1049,7 +1049,7 @@ fe_save_as_nastiness (MWContext *context, URL_Struct *url,
   /* Hold on to the saved data. */
   XP_MEMCPY(&saved_data, &url->savedData, sizeof(SHIST_SavedData));
 
-  /* make damn sure the form_data slot is zero'd or else all
+  /* make sure the form_data slot is zero'd or else all
    * hell will break loose
    */
   XP_MEMSET (&url->savedData, 0, sizeof (SHIST_SavedData));
