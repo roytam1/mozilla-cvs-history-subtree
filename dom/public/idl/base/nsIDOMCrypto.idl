@@ -39,6 +39,9 @@
 
 #include "domstubs.idl"
 
+interface nsIDOMNode;
+interface nsIDOMEventListener;
+
 [scriptable, uuid(33276f5d-3499-4ab9-acea-d85a9fceeccd)]
 interface nsIDOMCrypto : nsISupports
 {
@@ -55,4 +58,11 @@ interface nsIDOMCrypto : nsISupports
   void                      alert(in DOMString message);
   void                      logout();
   void                      disableRightClick();
+  void                      enableSmartCardEvents(in nsIDOMNode window);
+  //void                      addTokenListener(in DOMString type, 
+  //                                           in nsIDOMEventListener listener,
+  //                                           in boolean useCapture );
+  //void                      removeTokenListener(in DOMString type, 
+  //                                              in nsIDOMEventListener listener,
+  //                                              in boolean useCapture );
 };
