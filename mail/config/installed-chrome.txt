@@ -45,7 +45,7 @@ locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/necko/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/editor/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/mozldap/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/mozapps/
-locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/navigator/
+locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/navigator/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/en-US/communicator/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/global/
 locale,install,url,jar:resource:/chrome/en-US-mail.jar!/locale/global-region/

@@ -58,6 +58,8 @@
 + locale/@AB_CD@/communicator/utilityOverlay.dtd            (@AB_CD@/chrome/communicator/utilityOverlay.dtd)
 + locale/@AB_CD@/communicator/pref/prefutilities.properties (@AB_CD@/chrome/communicator/pref/prefutilities.properties)
 + locale/@AB_CD@/communicator/pref/pref-fonts.dtd           (@AB_CD@/chrome/communicator/pref/pref-fonts.dtd)
+* locale/navigator/contents.rdf         (generic/chrome/navigator/contents.rdf)
+  locale/navigator/navigator.properties (@AB_CD@/chrome/navigator/navigator.properties)
 + locale/global/charset.dtd                 (@AB_CD@/chrome/global/charset.dtd)
 + locale/global/brand.properties            (@AB_CD@/chrome/global/brand.properties)
 * locale/global/brand.dtd                   (@AB_CD@/chrome/global/brand.dtd)

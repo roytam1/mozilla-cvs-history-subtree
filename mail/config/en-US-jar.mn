@@ -34,8 +34,7 @@ locale/mozapps/profile,                                   en-US/locale/mozapps/p
 locale/mozapps/update,                                    en-US/locale/mozapps/update
 locale/mozapps/xpinstall,                                 en-US/locale/mozapps/xpinstall
 
-locale/en-US/navigator/contents.rdf,                      en-US/locale/en-US/navigator/contents.rdf
-locale/en-US/navigator/navigator.properties,              en-US/locale/en-US/navigator/navigator.properties
+locale/navigator,                                         en-US/locale/navigator
 
 #################################################################################################
 # global

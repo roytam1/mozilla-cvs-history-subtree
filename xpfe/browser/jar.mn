@@ -30,6 +30,7 @@ comm.jar:
         content/navigator/mailNavigatorOverlay.xul     (resources/content/mailNavigatorOverlay.xul)
         content/navigator/searchconfig.properties      (resources/content/searchconfig.properties)
 
+#ifndef MOZ_XUL_APP
 en-US.jar:
 *       locale/en-US/navigator/contents.rdf                 (resources/locale/en-US/contents.rdf)
         locale/en-US/navigator/viewSource.dtd               (resources/locale/en-US/viewSource.dtd)
@@ -48,3 +49,4 @@ en-US.jar:
 US.jar:
 *       locale/US/navigator-region/contents.rdf             (resources/locale/en-US/contents-region.rdf)
         locale/US/navigator-region/region.properties        (resources/locale/en-US/region.properties)
+#endif
