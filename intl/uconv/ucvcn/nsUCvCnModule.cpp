@@ -61,6 +61,8 @@
 #include "nsGB2312ToUnicodeV2.h"
 #include "nsUnicodeToGB2312V2.h"
 #include "nsUnicodeToGB2312GL.h"
+#include "nsISO2022CNToUnicode.h"
+#include "nsUnicodeToISO2022CN.h"
 #include "gbku.h"
 
 //----------------------------------------------------------------------------
@@ -88,6 +90,8 @@ NS_UCONV_REG_UNREG("gb18030", "Unicode" , NS_GB18030TOUNICODE_CID)
 NS_UCONV_REG_UNREG("Unicode", "gb18030",  NS_UNICODETOGB18030_CID)
 NS_UCONV_REG_UNREG("Unicode", "gb18030.2000-0",  NS_UNICODETOGB18030Font0_CID)
 NS_UCONV_REG_UNREG("Unicode", "gb18030.2000-1",  NS_UNICODETOGB18030Font1_CID)
+NS_UCONV_REG_UNREG("ISO-2022-CN", "Unicode" , NS_ISO2022CNTOUNICODE_CID)
+
 NS_CONVERTER_REGISTRY_END
 
 NS_IMPL_NSUCONVERTERREGSELF
@@ -106,6 +110,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsGB18030ToUnicode);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToGB18030);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToGB18030Font0);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToGB18030Font1);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsISO2022CNToUnicode);
 
 
 static const nsModuleComponentInfo components[] = 
@@ -181,6 +186,11 @@ static const nsModuleComponentInfo components[] =
     ENCODER_NAME_BASE "gb18030" , NS_UNICODETOGB18030_CID, 
     NS_UNICODEENCODER_CONTRACTID_BASE "gb18030",
     nsUnicodeToGB18030Constructor, 
+  },
+  {
+    DECODER_NAME_BASE "ISO-2022-CN" , NS_ISO2022CNTOUNICODE_CID,
+    NS_UNICODEDECODER_CONTRACTID_BASE "ISO-2022-CN",
+    nsISO2022CNToUnicodeConstructor,
   }
 };
 
