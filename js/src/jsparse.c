@@ -1129,9 +1129,12 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	catchtail = pn;
 	while(js_PeekToken(cx, ts) == TOK_CATCH) {
 	    /*
-	     * legal catch forms are:
+	     * legal catch form is:
 	     * catch (v)
+             * 
+             * The form
 	     * catch (v : <boolean_expression>)
+             * has been pulled pending resolution in ECMA.
 	     */
 
 	    /* catch node */
@@ -1151,14 +1154,15 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_BEFORE_CATCH);
 	    MUST_MATCH_TOKEN(TOK_NAME, JSMSG_CATCH_IDENTIFIER);
 	    pn3->pn_atom = ts->token.t_atom;
+            pn3->pn_expr = NULL;
+#if JS_HAS_CATCH_GUARD
 	    if (js_PeekToken(cx, ts) == TOK_COLON) {
 		(void)js_GetToken(cx, ts); /* eat `:' */
 		pn3->pn_expr = Expr(cx, ts, tc);
 		if (!pn3->pn_expr)
 		    return NULL;
-	    } else {
-		pn3->pn_expr = NULL;
-	    }
+	    } 
+#endif
 	    pn2->pn_kid1 = pn3;
 
 	    MUST_MATCH_TOKEN(TOK_RP, JSMSG_PAREN_AFTER_CATCH);
