@@ -479,7 +479,7 @@ nsTransportWrapper::GetNotificationCallbacks(nsIInterfaceRequestor **result)
 
 NS_IMETHODIMP nsCacheEntryDescriptor::
 nsTransportWrapper::SetNotificationCallbacks(nsIInterfaceRequestor *requestor,
-                                             PRUint32 flags)
+                                                 PRBool isBackground)
 {
     //    if (!mCacheEntry)       return NS_ERROR_NOT_AVAILABLE;
 

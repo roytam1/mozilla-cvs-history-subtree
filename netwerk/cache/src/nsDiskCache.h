@@ -28,10 +28,6 @@
 
 #include "nsCacheEntry.h"
 
-class nsDiskCacheBindData;
-
-nsDiskCacheBindData *
-GetBindDataFromCacheEntry(nsCacheEntry * entry);
 
 class nsDiskCache {
 public:

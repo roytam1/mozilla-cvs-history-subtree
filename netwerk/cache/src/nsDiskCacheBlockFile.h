@@ -62,8 +62,8 @@ public:
     nsresult  Trim();
     PRInt32   AllocateBlocks( PRInt32  numBlocks);
     nsresult  DeallocateBlocks( PRInt32  startBlock, PRInt32  numBlocks);
-    nsresult  WriteBlocks( char * buffer, PRInt32  startBlock, PRInt32  numBlocks);
-    nsresult  ReadBlocks(  char * buffer, PRInt32   startBlock, PRInt32  numBlocks);
+    nsresult  WriteBlocks( void * buffer, PRInt32  startBlock, PRInt32  numBlocks);
+    nsresult  ReadBlocks(  void * buffer, PRInt32   startBlock, PRInt32  numBlocks);
     
 private:
     nsresult  FlushBitMap();

@@ -26,14 +26,14 @@
 #define _nsDiskCacheDevice_h_
 
 #include "nsCacheDevice.h"
-#include "nsDiskCacheBindData.h"
+#include "nsDiskCacheBinding.h"
 #include "nsDiskCacheBlockFile.h"
 #include "nsDiskCacheEntry.h"
 
 #include "nsILocalFile.h"
 #include "nsIObserver.h"
 
-class nsDiskCacheBindData;
+class nsDiskCacheBinding;
 class nsDiskCacheMap;
 class nsDiskCacheRecord;
 
@@ -80,8 +80,6 @@ public:
     PRUint32                getCacheCapacity();
     PRUint32                getCacheSize();
     PRUint32                getEntryCount();
-
-
     
 private:    
     /**
@@ -90,37 +88,6 @@ private:
     nsresult    InitializeCacheDirectory();
     nsresult    GetCacheTrashDirectory(nsIFile ** result);
     nsresult    EvictDiskCacheEntries();
-
-
-#if 0
-    // Old Code
-    nsresult getFileForHashNumber(PLDHashNumber hashNumber, PRBool meta, PRUint32 generation, nsIFile ** result);
-    nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
-    nsresult getFileForDiskCacheEntry(nsDiskCacheBindData * bindData, PRBool meta, nsIFile ** result);
-
-    static nsresult getTransportForFile(nsIFile* file, nsCacheAccessMode mode, nsITransport ** result);
-    static nsresult openInputStream(nsIFile* file, nsIInputStream ** result);
-    static nsresult openOutputStream(nsIFile* file, nsIOutputStream ** result);
-
-    nsresult visitEntries(nsICacheVisitor * visitor);
-    
-    nsresult readDiskCacheEntry(const char * key, nsDiskCacheBindData ** bindData);
-
-    nsresult updateDiskCacheEntries();
-    nsresult updateDiskCacheEntry(nsDiskCacheBindData * bindData);
-    nsresult deleteDiskCacheEntry(nsDiskCacheBindData * bindData);
-    
-    nsresult scavengeDiskCacheEntries(nsDiskCacheBindData * bindData);
-    nsresult evictDiskCacheEntries();
-
-    nsresult openCacheMap();
-    nsresult readCacheMap();
-    nsresult writeCacheMap();
-
-    nsresult updateCacheMap(nsDiskCacheBindData * bindData);
-
-    nsresult evictDiskCacheRecord(nsDiskCacheRecord * record);
-#endif
     
     /**
      *  Member variables

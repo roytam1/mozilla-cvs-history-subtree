@@ -90,7 +90,7 @@ struct nsDiskCacheEntry {
     }
 };
 
-nsDiskCacheEntry *  CreateDiskCacheEntry(nsDiskCacheBindData *  bindData);
+nsDiskCacheEntry *  CreateDiskCacheEntry(nsDiskCacheBinding *  binding);
 
 
 

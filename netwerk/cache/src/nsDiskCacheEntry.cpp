@@ -24,12 +24,10 @@
 
 #include "nsDiskCache.h"
 #include "nsDiskCacheEntry.h"
-#include "nsDiskCacheBindData.h"
+#include "nsDiskCacheBinding.h"
 #include "nsDiskCacheMap.h"
 
 #include "nsCache.h"
-
-NS_IMPL_THREADSAFE_ISUPPORTS0(nsDiskCacheEntry);
 
 
 /******************************************************************************
@@ -39,7 +37,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS0(nsDiskCacheEntry);
 /**
  *  CreateCacheEntry()
  *
- *  Creates an nsCacheEntry and sets all fields except for the bindData.
+ *  Creates an nsCacheEntry and sets all fields except for the binding.
  */
 nsCacheEntry *
 nsDiskCacheEntry::CreateCacheEntry(nsCacheDevice *  device)
@@ -94,20 +92,27 @@ nsDiskCacheEntry::CheckConsistency(PRUint32  size)
  *  Prepare an nsCacheEntry for writing to disk
  */
 nsDiskCacheEntry *
-CreateDiskCacheEntry(nsDiskCacheBindData *  bindData)
+CreateDiskCacheEntry(nsDiskCacheBinding *  binding)
 {
-    nsCacheEntry * entry = bindData->mCacheEntry;
+    nsCacheEntry * entry = binding->mCacheEntry;
     if (!entry)  return nsnull;
     
     PRUint32  keySize = entry->Key()->Length() + 1;
     PRUint32  size = sizeof(nsDiskCacheEntry) +
                      keySize + entry->MetaDataSize();
-                     
-    nsDiskCacheEntry * diskEntry = (nsDiskCacheEntry *)new char[size];
+    
+    // pad size so we can write to block files without overrunning buffer
+    PRInt32 pad = size;
+    if      (pad <  1024) pad =  1024;
+    else if (pad <  4096) pad =  4096;
+    else if (pad < 16384) pad = 16384;
+    // XXX be more precise
+    
+    nsDiskCacheEntry * diskEntry = (nsDiskCacheEntry *)new char[pad];
     if (!diskEntry)  return nsnull;
     
     diskEntry->mHeaderVersion   = nsDiskCache::kCurrentVersion;
-    diskEntry->mMetaLocation    = bindData->mRecord.MetaLocation();
+    diskEntry->mMetaLocation    = binding->mRecord.MetaLocation();
     diskEntry->mFetchCount      = entry->FetchCount();
     diskEntry->mLastFetched     = entry->LastFetched();
     diskEntry->mLastModified    = entry->LastModified();

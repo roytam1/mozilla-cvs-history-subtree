@@ -37,7 +37,7 @@
 #include "nsDiskCacheBlockFile.h"
  
  
-class nsDiskCacheBindData;
+class nsDiskCacheBinding;
 class nsDiskCacheEntry;
 
 /******************************************************************************
@@ -95,25 +95,25 @@ public:
     }
     
     // HashNumber accessors
-    PRUint32  HashNumber() const                 { return mHashNumber; }
-    void      SetHashNumber(PRUint32 hashNumber) { mHashNumber = hashNumber; }
+    PRUint32  HashNumber() const                  { return mHashNumber; }
+    void      SetHashNumber( PRUint32 hashNumber) { mHashNumber = hashNumber; }
 
     // EvictionRank accessors
-    PRUint32  EvictionRank() const             { return mEvictionRank; }
-    void      SetEvictionRank(PRUint32 rank)   { mEvictionRank = rank; }
+    PRUint32  EvictionRank() const              { return mEvictionRank; }
+    void      SetEvictionRank( PRUint32 rank)   { mEvictionRank = rank; }
 
     // DataLocation accessors
     PRBool    DataLocationInitialized() { return mDataLocation & eLocationInitializedMask; }
     
-    PRUint32  DataLocation()                     { return mDataLocation; }
-    void      SetDataLocation(PRUint32 location) { mDataLocation = location; }
+    PRUint32  DataLocation()                      { return mDataLocation; }
+    void      SetDataLocation( PRUint32 location) { mDataLocation = location; }
     
     PRUint32  DataFile() const
     {
         return (PRUint32)(mDataLocation & eLocationSelectorMask) >> eLocationSelectorOffset;
     }
 
-    void      SetDataBlocks(PRUint32 index, PRUint32 startBlock, PRUint32 blockCount)
+    void      SetDataBlocks( PRUint32 index, PRUint32 startBlock, PRUint32 blockCount)
     {
         // clear everything
         mDataLocation = 0;
@@ -150,7 +150,7 @@ public:
         return (mDataLocation & eFileGenerationMask);
     }
 
-    void       SetDataFileGeneration(PRUint16 generation)
+    void       SetDataFileGeneration( PRUint8 generation)
     {
         // clear everything, (separate file index = 0)
         mDataLocation = 0;
@@ -162,14 +162,14 @@ public:
     PRBool    MetaLocationInitialized() { return mMetaLocation & eLocationInitializedMask; }
     
     PRUint32  MetaLocation()                     { return mMetaLocation; }
-    void      SetMetaLocation(PRUint32 location) { mMetaLocation = location; }
+    void      SetMetaLocation( PRUint32 location) { mMetaLocation = location; }
     
     PRUint32  MetaFile() const
     {
         return (PRUint32)(mMetaLocation & eLocationSelectorMask) >> eLocationSelectorOffset;
     }
 
-    void      SetMetaBlocks(PRUint32 index, PRUint32 startBlock, PRUint32 blockCount)
+    void      SetMetaBlocks( PRUint32 index, PRUint32 startBlock, PRUint32 blockCount)
     {
         // clear everything
         mMetaLocation = 0;
@@ -206,7 +206,7 @@ public:
         return (mMetaLocation & eFileGenerationMask);
     }
 
-    void       SetMetaFileGeneration(PRUint16 generation)
+    void       SetMetaFileGeneration( PRUint8 generation)
     {
         // clear everything, (separate file index = 0)
         mMetaLocation = 0;
@@ -215,12 +215,17 @@ public:
     }
 
 
-    PRUint16   Generation() const
+    PRUint8   Generation() const
     {
-        if (DataFile() == 0)       return DataGeneration();
-        else if (MetaFile() == 0)  return MetaGeneration();
+        if ((mDataLocation & eLocationInitializedMask)  &&
+            (DataFile() == 0))
+            return DataGeneration();
+            
+        if ((mMetaLocation & eLocationInitializedMask)  &&
+            (MetaFile() == 0))
+            return MetaGeneration();
         
-        return SHRT_MAX;  // no generation
+        return 0;  // no generation
     }
 
 
@@ -260,7 +265,7 @@ enum {  kDeleteRecordAndContinue = -1,
 class nsDiskCacheRecordVisitor {
     public:
 
-    virtual PRInt32  VisitRecord(nsDiskCacheRecord *  mapRecord) = 0;
+    virtual PRInt32  VisitRecord( nsDiskCacheRecord *  mapRecord) = 0;
 };
 
 
@@ -277,8 +282,8 @@ struct nsDiskCacheBucket {
     void      Swap();
     void      Unswap();
     PRUint32  CountRecords();
-    PRInt32   VisitEachRecordInBucket(nsDiskCacheRecordVisitor * visitor,
-                                      PRBool *                   dirty);
+    PRInt32   VisitEachRecord( nsDiskCacheRecordVisitor *  visitor,
+                               PRBool *                    dirty);
 };
 
 
@@ -356,12 +361,12 @@ public:
  *  Creates a new cache map file if one doesn't exist.
  *  Returns error if it detects change in format or cache wasn't closed.
  */
-    nsresult  Open(nsILocalFile *  cacheDirectory);
+    nsresult  Open( nsILocalFile *  cacheDirectory);
     nsresult  Close();
 
 //  nsresult  Flush();
     nsresult  FlushHeader();
-    nsresult  FlushBuckets(PRBool unswap);
+    nsresult  FlushBuckets( PRBool unswap);
 
 /**
  *  Record operations
@@ -375,43 +380,41 @@ public:
 /**
  *  Disk Entry operations
  */
-    nsresult    OpenBlockFiles();
-    nsresult    CloseBlockFiles();
-    
-    nsresult    GetFileForDiskCacheRecord(nsDiskCacheRecord * record,
-                                          PRBool              meta,
-                                          nsIFile **          result);
+    nsresult    DoomRecord( nsDiskCacheRecord *  record);
+    nsresult    DeleteStorage( nsDiskCacheRecord *  record);
+    nsresult    DeleteRecordAndStorage( nsDiskCacheRecord *  record);
+
+    nsresult    GetFileForDiskCacheRecord( nsDiskCacheRecord * record,
+                                           PRBool              meta,
+                                           nsIFile **          result);
                                           
-    nsresult    GetLocalFileForDiskCacheRecord(nsDiskCacheRecord * record,
-                                               PRBool              meta,
-                                               nsILocalFile **     result);
+    nsresult    GetLocalFileForDiskCacheRecord( nsDiskCacheRecord *  record,
+                                                PRBool               meta,
+                                                nsILocalFile **      result);
 
-    nsresult    GetBlockFileForIndex(PRUint32 index, nsILocalFile ** result);
-    PRUint32    GetBlockSizeForIndex(PRUint32 index);
+    nsresult    ReadDiskCacheEntry( nsDiskCacheRecord *  record,
+                                    nsDiskCacheEntry **  result);
 
-    nsresult    ReadDiskCacheEntry( nsDiskCacheRecord * record, nsDiskCacheEntry ** result);
-
-    nsresult    WriteDiskCacheEntry( nsDiskCacheEntry *     diskEntry,
-                                     nsDiskCacheBindData *  bindData);
+    nsresult    WriteDiskCacheEntry( nsDiskCacheBinding *  binding);
     
     /**
      *  Statistical Operations
      */
-    void     IncrementTotalSize(PRInt32  delta)
+    void     IncrementTotalSize( PRInt32  delta)
              {
                 mHeader.mDataSize += delta;
                 mHeader.mIsDirty   = PR_TRUE;
              }
              
-    void     DecrementTotalSize(PRInt32  delta)
+    void     DecrementTotalSize( PRInt32  delta)
              {
                 mHeader.mDataSize -= delta;
                 mHeader.mIsDirty   = PR_TRUE;
              }
     
-    PRInt32 TotalSize()   { return mHeader.mDataSize; }
+    PRInt32  TotalSize()   { return mHeader.mDataSize; }
     
-    PRInt32 EntryCount()  { return mHeader.mEntryCount; }
+    PRInt32  EntryCount()  { return mHeader.mEntryCount; }
 
 
 private:
@@ -419,19 +422,26 @@ private:
     /**
      *  Private methods
      */
+    nsresult    OpenBlockFiles();
+    nsresult    CloseBlockFiles();
 
-    nsresult GetBucketForHashNumber(PRUint32  hashNumber, nsDiskCacheBucket ** result)
+    nsresult    GetBlockFileForIndex( PRUint32 index, nsILocalFile ** result);
+    PRUint32    GetBlockSizeForIndex( PRUint32 index);
+    
+    nsresult    DeleteStorage( nsDiskCacheRecord * record, PRBool metaData);
+
+    nsresult GetBucketForHashNumber( PRUint32  hashNumber, nsDiskCacheBucket ** result)
     {
         *result = &mBuckets[GetBucketIndex(hashNumber)];
         return NS_OK;
     }
 
-    PRUint32 GetBucketIndex(PRUint32 hashNumber)
+    PRUint32 GetBucketIndex( PRUint32 hashNumber)
     {
         return (hashNumber & (kBucketsPerTable - 1));
     }
 
-    
+   
 
 /**
  *  data members

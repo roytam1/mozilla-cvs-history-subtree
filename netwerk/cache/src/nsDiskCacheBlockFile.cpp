@@ -254,7 +254,7 @@ nsDiskCacheBlockFile::DeallocateBlocks( PRInt32  startBlock, PRInt32  numBlocks)
  *  WriteBlocks
  *****************************************************************************/
 nsresult
-nsDiskCacheBlockFile::WriteBlocks( char *   buffer,
+nsDiskCacheBlockFile::WriteBlocks( void *   buffer,
                                    PRInt32  startBlock,
                                    PRInt32  numBlocks)
 {
@@ -286,7 +286,7 @@ nsDiskCacheBlockFile::WriteBlocks( char *   buffer,
  *  ReadBlocks
  *****************************************************************************/
 nsresult
-nsDiskCacheBlockFile::ReadBlocks(  char *    buffer,
+nsDiskCacheBlockFile::ReadBlocks(  void *    buffer,
                                    PRInt32   startBlock,
                                    PRInt32   numBlocks)
 {
