@@ -133,6 +133,12 @@ define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); else true; fi
 endef
 
+ifdef WRAP_SYSTEM_INCLUDES
+export::
+	mkdir -p $(dist_includedir)/system_wrappers
+	$(PERL) $(srcdir)/make-system-wrappers.pl $(dist_includedir)/system_wrappers < $(srcdir)/system-headers
+endif
+
 export:: $(TARGETS)
 	rm -f $(dist_bindir)/nspr-config
 
