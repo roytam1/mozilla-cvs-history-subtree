@@ -377,7 +377,7 @@ nsCSSValue::Image::Image(nsIURI* aURI, const PRUnichar* aString,
     : (PRInt32)nsIRequest::LOAD_BACKGROUND;
 
   if (mURI &&
-      NS_SUCCEEDED(nsContentUtils::CanLoadImage(mURI, nsnull, aDocument))) {
+      nsContentUtils::CanLoadImage(mURI, nsnull, aDocument)) {
     nsContentUtils::LoadImage(mURI, aDocument, nsnull,
                               loadFlag,
                               getter_AddRefs(mRequest));

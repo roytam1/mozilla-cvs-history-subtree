@@ -451,14 +451,22 @@ nsScriptLoader::ProcessScriptElement(nsIDOMHTMLScriptElement *aElement,
     
     // After the security manager, the content-policy stuff gets a veto
     if (globalObject) {
-      nsCOMPtr<nsIDOMWindow> domWin(do_QueryInterface(globalObject));
-
-      PRBool shouldLoad = PR_TRUE;
-      rv = NS_CheckContentLoadPolicy(nsIContentPolicy::SCRIPT,
-                                     scriptURI, aElement, domWin, &shouldLoad);
-      if (NS_SUCCEEDED(rv) && !shouldLoad) {
-        return FireErrorNotification(NS_ERROR_NOT_AVAILABLE, aElement,
-                                     aObserver);
+      PRInt16 shouldLoad = nsIContentPolicy::ACCEPT;
+      nsIURI *docURI = mDocument->GetDocumentURI();
+      rv = NS_CheckContentLoadPolicy(nsIContentPolicy::TYPE_SCRIPT,
+                                     scriptURI,
+                                     docURI,
+                                     aElement,
+                                     NS_LossyConvertUCS2toASCII(type),
+                                     nsnull,    //extra
+                                     &shouldLoad);
+      if (NS_FAILED(rv) || NS_CP_REJECTED(shouldLoad)) {
+        if (NS_FAILED(rv) || shouldLoad != nsIContentPolicy::REJECT_TYPE) {
+          return FireErrorNotification(NS_ERROR_CONTENT_BLOCKED, aElement,
+                                       aObserver);
+        }
+        return FireErrorNotification(NS_ERROR_CONTENT_BLOCKED_SHOW_ALT,
+                                     aElement, aObserver);
       }
 
       request->mURI = scriptURI;
