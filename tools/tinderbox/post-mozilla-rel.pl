@@ -51,31 +51,31 @@ sub shorthost {
 
 sub stagesymbols {
   my $builddir = shift;
-  my $symbolstagedir = shift;
-  TinderUtils::run_shell_command "rm -rf $builddir/../symbols";
-  TinderUtils::run_shell_command "mkdir $builddir/../symbols";
   TinderUtils::run_shell_command "make -C $builddir deliver";
-  TinderUtils::run_shell_command "mv $builddir/dist/symbols $builddir/../symbols";
-  
 }
 
-sub maketalkbackglue {
+sub makefullsoft {
   my $builddir = shift;
   # should go in config
   my $moforoot = "leaf\%mozilla.org\@cvs.mozilla.org:/mofo"; 
   TinderUtils::run_shell_command "cd $builddir; cvs -d$moforoot co -d fullsoft talkback/fullsoft";
-  TinderUtils::run_shell_command "cd $builddir/fullsoft; make";
+  TinderUtils::run_shell_command "make -C $builddir/fullsoft";
+  TinderUtils::run_shell_command "make -C $builddir/fullsoft fullcircle-push";
 }
 
 sub processtalkback {
   # first argument is whether to make a new talkback build on server
+  #                and upload debug symbols
   # second argument is where we're building our tree
-  my $uploadsymbols = shift;
+  my $makefullsoft      = shift;
   my $builddir      = shift;   
-  # put symbols in builddir/../symbols
-  stagesymbols($builddir, "$builddir/../symbols"); 
-  maketalkbackglue($builddir);
-
+  # put symbols in builddir/dist/buildid
+  stagesymbols($builddir); 
+  if ($makefullsoft) {
+    $ENV{FC_UPLOADSYMS} = 1;
+    makefullsoft($builddir);
+  }
+  
 }
 
 sub packit {
@@ -92,6 +92,8 @@ sub packit {
     }
     TinderUtils::print_log "INSTALLER_URL is " . $ENV{INSTALLER_URL} . "\n";
 
+    mkdir($package_location, 0775);
+
     # the Windows installer scripts currently require Activestate Perl.
     # Put it ahead of cygwin perl in the path.
     my $save_path;
@@ -101,8 +103,12 @@ sub packit {
     }
 
     # the one operation we care about saving status of
-    $status = TinderUtils::run_shell_command "make -C $packaging_dir installer";
-    
+    if ($Settings::sea_installer || $Settings::stub_installer) {
+      $status = TinderUtils::run_shell_command "make -C $packaging_dir installer";
+    } else {
+      $status = 0;
+    }
+
     if (is_windows()) {
       $ENV{PATH} = $save_path;
       #my $dos_stagedir = `cygpath -w $stagedir`;
@@ -168,7 +174,7 @@ sub pushit {
 
   my $ssh_opts = "";
   my $scp_opts = "";
-  if ($Settings::ssh_version ne '') {
+  if (defined($Settings::ssh_version) && $Settings::ssh_version ne '') {
     $ssh_opts = "-".$Settings::ssh_version;
     $scp_opts = "-oProtocol=".$Settings::ssh_version;
   }
