@@ -90,7 +90,6 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/js/xtf.js \
 	content/xtf/public/Makefile.in \
 	content/xtf/public/nsIXMLContentBuilder.idl \
-	content/xtf/public/nsIXMLContentFragment.idl \
 	content/xtf/public/nsIXTFElement.idl \
 	content/xtf/public/nsIXTFElementFactory.idl \
 	content/xtf/public/nsIXTFElementWrapper.idl \
@@ -102,7 +101,7 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/public/nsIXTFXMLVisualWrapper.idl \
 	content/xtf/src/Makefile.in \
 	content/xtf/src/nsIXTFService.h \
-	content/xtf/src/nsXMLContentFragment.cpp \
+	content/xtf/src/nsXMLContentBuilder.cpp \
 	content/xtf/src/nsXTFGenericElementWrapper.cpp \
 	content/xtf/src/nsXTFGenericElementWrapper.h \
 	content/xtf/src/nsXTFInterfaceAggregator.cpp \
@@ -115,6 +114,19 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/src/nsXTFXMLVisualWrapper.cpp \
 	content/xtf/src/nsXTFXMLVisualWrapper.h \
 	content/xtf/tests/Makefile.in \
+	content/xtf/tests/canvas/Makefile.in \
+	content/xtf/tests/canvas/canvas.js \
+	content/xtf/tests/canvas/canvas.xml \
+	content/xtf/tests/canvas/nsIXTFCanvas.idl \
+	content/xtf/tests/canvas/nsIXTFWidget.idl \
+	content/xtf/tests/perf/Makefile.in \
+	content/xtf/tests/perf/perf.js \
+	content/xtf/tests/perf/smiley100-control.svg \
+	content/xtf/tests/perf/smiley100.svg \
+	content/xtf/tests/perf/smiley25-control.svg \
+	content/xtf/tests/perf/smiley25.svg \
+	content/xtf/tests/perf/smiley50-control.svg \
+	content/xtf/tests/perf/smiley50.svg \
 	content/xtf/tests/smiley/Makefile.in \
 	content/xtf/tests/smiley/smiley.js \
 	content/xtf/tests/smiley/smiley.svg \
