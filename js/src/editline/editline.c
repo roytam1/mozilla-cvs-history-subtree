@@ -1343,4 +1343,4 @@ STATIC KEYMAP	MetaMap[16]= {
     {	'w',		copy_region	},
     {	0,		NULL		}
 };
-                         
+
