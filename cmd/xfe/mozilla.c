@@ -2384,6 +2384,12 @@ main
     fe_globalData.user_prefs_file = strdup (buf);
     /* check if preferences previously existed */
     status=XP_Stat(buf, &statPrefs, xpUserPrefs);
+    
+    /* moved this here because NET_InitNetLib needs to happen
+     * before PREF_Init
+     */
+    NET_InitNetLib(fe_globalPrefs.network_buffer_size,50);
+    
     PREF_Init((char*) fe_globalData.user_prefs_file);
 #ifdef MOZ_MAIL_NEWS
     if (status!=0)              /* stuff to run the first time a user starts */
@@ -2841,21 +2847,6 @@ main
 #endif
   SECNAV_Init();
 
-#ifdef SCO_SV
-  {
-     char scoslswitch[] = "D3f3atTh3SC0L1c1";
-     if (scoslswitch[sizeof(scoslswitch)-2] == '1')
-     {
-         /* licensing code is in ns/nspr/src/md_SCOOS.c */
-         sco_license_check();
-         /* now that security has been initialized, we can
-            check for Domestic permission */
-         if (SSL_IsDomestic())
-             sco_domestic_check();
-     }
-  }
-#endif
-
   /* Must be called after ekit, since user agent is configurable */
   /* Must also be called after SECNAV_Init, since crypto is dynamic */
   build_user_agent_string(versionLocale);
@@ -2870,8 +2861,9 @@ main
   if (fe_globalData.show_splash)
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_INITIALIZING_NETWORK_LIBRARY));
 #endif
-  /* The unit for tcp buffer size is changed from ktypes to btyes */
-  NET_InitNetLib (fe_globalPrefs.network_buffer_size, 50);
+
+  /* NET_InitNetLib has been moved before PREF_Init */
+  NET_FinishInitNetLib();
 
 #ifdef UNIX_ASYNC_DNS
   if (fe_UseAsyncDNS())
