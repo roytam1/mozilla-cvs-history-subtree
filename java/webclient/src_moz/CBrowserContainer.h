@@ -88,6 +88,7 @@ protected:
   jobject mMouseTarget;
   jobject mPrompt;
   nsCOMPtr<nsIDOMEventTarget> mDomEventTarget;
+  static PRInt32 mInstanceCount;
 
 //
 // The following arguments are used in the takeActionOnNode method.

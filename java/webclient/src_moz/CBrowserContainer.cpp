@@ -44,6 +44,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
 jobject gPromptProperties = nsnull;
 
+PRInt32 CBrowserContainer::mInstanceCount = 0;
 
 CBrowserContainer::CBrowserContainer(nsIWebBrowser *pOwner, JNIEnv *env,
                                      WebShellInitContext *yourInitContext) :
@@ -57,6 +58,7 @@ CBrowserContainer::CBrowserContainer(nsIWebBrowser *pOwner, JNIEnv *env,
     if (!util_StringConstantsAreInitialized()) {
         util_InitStringConstants();
     }
+    mInstanceCount++;
 }
 
 
@@ -75,6 +77,7 @@ CBrowserContainer::~CBrowserContainer()
     }
     properties = nsnull;
     currentDOMEvent = nsnull;
+    mInstanceCount--;
 }
 
 
@@ -1213,7 +1216,12 @@ NS_IMETHODIMP CBrowserContainer::RemoveDocumentLoadListener()
     return rv;
 }
 
-
+NS_IMETHODIMP CBrowserContainer::GetInstanceCount(PRInt32 *outCount)
+{
+    PR_ASSERT(outCount);
+    *outCount = mInstanceCount;
+    return NS_OK;
+}
 
 NS_IMETHODIMP CBrowserContainer::RemoveAllListeners()
 {

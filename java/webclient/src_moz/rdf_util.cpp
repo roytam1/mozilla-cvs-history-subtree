@@ -67,6 +67,17 @@ nsresult rdf_InitRDFUtils()
         if (NS_FAILED(rv)) {
             return rv;
         }
+#ifdef _WIN32
+
+        // PENDING(edburns): HACK workaround for bug 59530.  This
+        // workaround forces the nsBookmarksService to leak so that it
+        // never gets destructed, thus the timer never gets canceled and
+        // thus the fact that the static nsCOMPtr instance has gone away
+        // doesn't matter.
+
+        nsIBookmarksService *raw = (nsIBookmarksService *) gBookmarks.get();
+        raw->AddRef();
+#endif
     }
 
     if (nsnull == gBookmarksDataSource) {

@@ -50,6 +50,7 @@ public:
   NS_IMETHOD RemoveAllListeners() = 0;
   NS_IMETHOD RemoveMouseListener() = 0;
   NS_IMETHOD RemoveDocumentLoadListener() = 0;
+  NS_IMETHOD GetInstanceCount(PRInt32 *outCount) = 0;
 
 };
 
@@ -59,7 +60,8 @@ public:
   NS_IMETHOD SetPrompt(jobject target); \
   NS_IMETHOD RemoveAllListeners(); \
   NS_IMETHOD RemoveMouseListener(); \
-  NS_IMETHOD RemoveDocumentLoadListener();
+  NS_IMETHOD RemoveDocumentLoadListener(); \
+  NS_IMETHOD GetInstanceCount(PRInt32 *outCount); \
 
 
 #endif

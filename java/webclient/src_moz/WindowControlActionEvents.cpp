@@ -83,6 +83,12 @@ wsDeallocateInitContextEvent::handleEvent ()
     if (!mInitContext) {
         return (void *) NS_ERROR_UNEXPECTED;
     }
+    PRBool isLastWindow = PR_TRUE;
+    PRInt32 winCount;
+    if (NS_SUCCEEDED(mInitContext->browserContainer->
+                     GetInstanceCount(&winCount))) {
+        isLastWindow = (1 == winCount);
+    }
 
     mInitContext->parentHWnd = nsnull;
 
@@ -144,7 +150,12 @@ wsDeallocateInitContextEvent::handleEvent ()
     util_DeallocateShareInitContext(&(mInitContext->shareContext));
 
     //  delete mInitContext;
-    NS_TermEmbedding();
+    if (isLastWindow) {
+        NS_TermEmbedding();
+#ifdef _WIN32
+        _exit(0);
+#endif
+    }
     return (void *) NS_OK;
 } // handleEvent()
 
