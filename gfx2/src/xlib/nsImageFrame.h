@@ -25,6 +25,10 @@
 
 #include "nsRect.h"
 
+#include <X11/Xlib.h>
+
+#include <gdk/gdk.h>
+
 #define NS_IMAGEFRAME_CID \
 { /* 27d55516-1dd2-11b2-9b33-d9a6328f49bd */         \
      0x27d55516,                                     \
@@ -53,6 +57,9 @@ public:
 
   nsImageFrame();
   virtual ~nsImageFrame();
+
+  //  nsresult DrawImage(Display * display, Drawable dest, const GC gc, const nsRect * aSrcRect, const nsPoint * aDestPoint);
+  nsresult DrawImage(GdkDrawable *dest, const GdkGC *gc, const nsRect * aSrcRect, const nsPoint * aDestPoint);
 
 private:
   /* additional members */

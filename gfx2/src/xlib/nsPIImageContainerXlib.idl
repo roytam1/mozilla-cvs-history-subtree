@@ -25,12 +25,20 @@
 #include "gfxtypes.idl"
 
 %{C++
-#include <X11/Xlib.h>    
+#include <X11/Xlib.h>
+#include <gdk/gdk.h>
+#include "nsRect.h"
+#include "nsPoint.h"
 %}
 
 [ptr] native Display(Display);
 native Drawable(Drawable);
 native GC(GC);
+
+[ptr] native GdkDrawable(GdkDrawable);
+[ptr] native GdkGC(GdkGC);
+
+[ptr] native nsPoint(nsPoint);
 
 /**
  * nsPIImageContainerXlib interface
@@ -43,10 +51,12 @@ native GC(GC);
 interface nsPIImageContainerXlib : nsISupports
 {
   /**
-   */
   void drawImage(in Display display,
                  in Drawable dest,
-                 [const] in GC gc, // XCopyGC if you are planning on changing it
-                 in PRInt32 width,
-                 in PRInt32 height);
+                 [const] in GC gc, 
+                 [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint);
+  */
+  void drawImage(in GdkDrawable dest,
+                 [const] in GdkGC gc, // XCopyGC if you are planning on changing it
+                 [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint);
 };

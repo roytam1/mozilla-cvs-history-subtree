@@ -270,3 +270,32 @@ NS_IMETHODIMP nsImageFrame::SetAlphaData(const PRUint8 *data, PRUint32 length, P
 
   return NS_OK;
 }
+
+
+
+nsresult nsImageFrame::DrawImage(GdkDrawable *dest, const GdkGC *gc, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+{
+#if 0
+  GdkPixmap *image = gdk_pixmap_new(mSurface->GetDrawable(), width, height, gdk_rgb_get_visual()->depth);
+#endif
+
+  gdk_draw_rgb_image(dest, NS_CONST_CAST(GdkGC *, gc),
+                     (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y), mRect.width, aSrcRect->height,
+                     GDK_RGB_DITHER_MAX,
+                     mImageData.data + (aSrcRect->y * mImageData.bytesPerRow),
+                     mImageData.bytesPerRow);
+
+#if 0
+  printf(" (%f, %f), (%i, %i), %i, %i\n}\n", pt.x, pt.y, x, y, width, height);
+
+  gdk_window_copy_area(GDK_ROOT_PARENT(), mGC, 0, 0,
+                       image, 0, 0, width, height);
+
+  gdk_window_copy_area(mSurface->GetDrawable(), mGC, pt.x + x, pt.y + y,
+                       image, sr.x, 0, sr.width, height);
+
+  gdk_pixmap_unref(image);
+#endif
+
+  return NS_OK;
+}

@@ -23,6 +23,10 @@
 
 #include "nsImageContainer.h"
 
+#include "nsCOMPtr.h"
+
+#include "nsImageFrame.h"
+
 NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerXlib)
 
 nsImageContainer::nsImageContainer()
@@ -129,8 +133,15 @@ NS_IMETHODIMP nsImageContainer::SetLoopCount(PRInt32 aLoopCount)
 
 /** nsPIImageContainerXlib methods **/
 
-/* void drawImage (in Display display, in Drawable dest, [const] in GC gc, in PRInt32 width, in PRInt32 height); */
-NS_IMETHODIMP nsImageContainer::DrawImage(Display * display, Drawable dest, const GC gc, PRInt32 width, PRInt32 height)
+NS_IMETHODIMP nsImageContainer::DrawImage(GdkDrawable *dest, const GdkGC *gc, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsresult rv;
+
+  nsCOMPtr<nsIImageFrame> img;
+  rv = this->GetCurrentFrame(getter_AddRefs(img));
+
+  if (NS_FAILED(rv))
+    return rv;
+
+  return NS_REINTERPRET_CAST(nsImageFrame*, img.get())->DrawImage(dest, gc, aSrcRect, aDestPoint);
 }
