@@ -41,4 +41,17 @@ install:: $(FILES)
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile/US
 
+DESKTOP_ICONS := \
+	abcardWindow.ico \
+	addressbookWindow.ico \
+	messengerWindow.ico \
+	msgcomposeWindow.ico \
+	$(NULL) 
+
+libs:: $(DESKTOP_ICONS)
+	$(INSTALL) $^ $(DIST)/bin/chrome/icons/default
+
+install:: $(DESKTOP_ICONS)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/chrome/icons/default
+
 
