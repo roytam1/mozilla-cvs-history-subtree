@@ -668,11 +668,6 @@ nsCacheService::ActivateEntry(nsCacheRequest * request,
     } else {
         ++mCacheMisses;
     }
-    if (!entry && !(request->AccessRequested() & nsICache::ACCESS_WRITE)) {
-        // this is a READ-ONLY request
-        rv = NS_ERROR_CACHE_KEY_NOT_FOUND;
-        goto error;
-    }
 
     if (entry &&
         ((request->AccessRequested() == nsICache::ACCESS_WRITE) ||
@@ -689,6 +684,12 @@ nsCacheService::ActivateEntry(nsCacheRequest * request,
     }
 
     if (!entry) {
+		if (! (request->AccessRequested() & nsICache::ACCESS_WRITE)) {
+			// this is a READ-ONLY request
+		    rv = NS_ERROR_CACHE_KEY_NOT_FOUND;
+			goto error;
+		}
+
         entry = new nsCacheEntry(request->mKey,
                                  request->IsStreamBased(),
                                  request->StoragePolicy());
@@ -1018,20 +1019,44 @@ nsCacheService::DeactivateEntry(nsCacheEntry * entry)
 nsresult
 nsCacheService::ProcessPendingRequests(nsCacheEntry * entry)
 {
-    nsresult  rv = NS_OK;
+    nsresult            rv = NS_OK;
+    nsCacheRequest *    request = (nsCacheRequest *)PR_LIST_HEAD(&entry->mRequestQ);
+    nsCacheRequest *    nextRequest;
+    PRBool              newWriter = PR_FALSE;
+    
+    if (request == &entry->mRequestQ)  return NS_OK;    // no queued requests
 
     if (!entry->IsDoomed() && entry->IsInvalid()) {
         // 1st descriptor closed w/o MarkValid()
-        // XXX assert no open descriptors
-        // XXX find best requests to promote to 1st Writer
-        // XXX process ACCESS_WRITE (shouldn't have any of these)
-        // XXX ACCESS_READ_WRITE, ACCESS_READ
-        NS_ASSERTION(PR_TRUE,
-                     "closing descriptors w/o calling MarkValid is not supported yet.");
+        NS_ASSERTION(PR_CLIST_IS_EMPTY(&entry->mDescriptorQ), "shouldn't be here with open descriptors");
+
+#if DEBUG
+        // verify no ACCESS_WRITE requests(shouldn't have any of these)
+        while (request != &entry->mRequestQ) {
+            NS_ASSERTION(request->AccessRequested() != nsICache::ACCESS_WRITE,
+                         "ACCESS_WRITE request should have been given a new entry");
+            request = (nsCacheRequest *)PR_NEXT_LINK(request);
+        }
+        request = (nsCacheRequest *)PR_LIST_HEAD(&entry->mRequestQ);        
+#endif
+        // find first request with ACCESS_READ_WRITE (if any) and promote it to 1st writer
+        while (request != &entry->mRequestQ) {
+            if (request->AccessRequested() == nsICache::ACCESS_READ_WRITE) {
+                newWriter = PR_TRUE;
+                break;
+            }
+
+            request = (nsCacheRequest *)PR_NEXT_LINK(request);
+        }
+        
+        if (request == &entry->mRequestQ)   // no requests asked for ACCESS_READ_WRITE, back to top
+            request = (nsCacheRequest *)PR_LIST_HEAD(&entry->mRequestQ);
+        
+        // XXX what should we do if there are only READ requests in queue?
+        // XXX serialize their accesses, give them only read access, but force them to check validate flag?
+        // XXX or do readers simply presume the entry is valid
     }
 
-    nsCacheRequest *   request = (nsCacheRequest *)PR_LIST_HEAD(&entry->mRequestQ);
-    nsCacheRequest *   nextRequest;
     nsCacheAccessMode  accessGranted = nsICache::ACCESS_NONE;
 
     while (request != &entry->mRequestQ) {
@@ -1052,10 +1077,11 @@ nsCacheService::ProcessPendingRequests(nsCacheEntry * entry)
                 if (NS_FAILED(rv)) {
                     // XXX what to do?
                 }
-            } else if (entry->IsValid()) {
+            } else if (entry->IsValid() || newWriter) {
                 rv = entry->RequestAccess(request, &accessGranted);
                 NS_ASSERTION(NS_SUCCEEDED(rv),
                              "if entry is valid, RequestAccess must succeed.");
+                // XXX if (newWriter)  NS_ASSERTION( accessGranted == request->AccessRequested(), "why not?");
 
                 // entry->CreateDescriptor dequeues request, and queues descriptor
                 nsCOMPtr<nsICacheEntryDescriptor> descriptor;
@@ -1078,6 +1104,7 @@ nsCacheService::ProcessPendingRequests(nsCacheEntry * entry)
             // Synchronous request
             request->WakeUp();
         }
+        if (newWriter)  break;  // process remaining requests after validation
         request = nextRequest;
     }
 
