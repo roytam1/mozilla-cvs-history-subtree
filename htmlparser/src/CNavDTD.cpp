@@ -658,7 +658,32 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
         return result;
       }
     }
+    else if(mDTDState==NS_HTMLPARSER_ALTERNATECONTENT) {
+      if(eHTMLTag_noscript!=theTag || theType!=eToken_end) {
+        // attribute source is a part of start token.
+        if(theType!=eToken_attribute) {
+          aToken->AppendSource(mScratch);
+        }
+        IF_FREE(aToken);
+        return result;
+      }
+      else {
+        // If you're here then we have seen a /noscript.
+        // After handling the text token intentionally
+        // fall thro' such that /noscript gets handled.
+        CTextToken theTextToken(mScratch);        
+        result=HandleStartToken(&theTextToken);
+        
+        if(NS_FAILED(result)) {
+          return result;
+        }
 
+        mScratch.Truncate();
+        mScratch.SetCapacity(0);
+      }
+    }
+
+   
     /* ---------------------------------------------------------------------------------
        This section of code is used to "move" misplaced content from one location in 
        our document model to another. (Consider what would happen if we found a <P> tag
@@ -666,7 +691,7 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
        deque until we can deal with it.
        ---------------------------------------------------------------------------------
      */
-    if(!execSkipContent && mDTDState!=NS_HTMLPARSER_ALTERNATECONTENT) {
+    if(!execSkipContent) {
 
       switch(theTag) {
         case eHTMLTag_html:
@@ -1224,7 +1249,7 @@ nsresult CNavDTD::WillHandleStartTag(CToken* aToken,eHTMLTags aTag,nsCParserNode
   STOP_TIMER()
   MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: CNavDTD::WillHandleStartTag(), this=%p\n", this));
 
-  if(mParser && mDTDState!=NS_HTMLPARSER_ALTERNATECONTENT) {
+  if(mParser) {
 
     CObserverService* theService=mParser->GetObserverService();
     if(theService) {
@@ -1661,8 +1686,7 @@ eHTMLTags FindAutoCloseTargetForEndTag(eHTMLTags aCurrentTag,nsDTDContext& aCont
     PRInt32 theChildIndex=GetIndexOfChildOrSynonym(aContext,aCurrentTag);
     
     if(kNotFound<theChildIndex) {
-      if((thePrevTag==aContext[theChildIndex]) || 
-         (eHTMLTag_noscript==aCurrentTag)){  //bug 54571
+      if(thePrevTag==aContext[theChildIndex]){
         return aContext[theChildIndex];
       } 
     
@@ -3186,17 +3210,16 @@ nsresult CNavDTD::OpenNoscript(const nsIParserNode *aNode,nsEntryStack* aStyleSt
       if(result==NS_HTMLPARSER_ALTERNATECONTENT) {
         // We're here because the sink has identified that
         // JS is enabled and therefore noscript content should
-        // not be treated as a regular content,i.e., make sure
-        // that head elements are handled correctly and may be
-        // residual style.
+        // not be treated as a regular content
+        ++mHasOpenNoXXX;
+        mScratch.Truncate();
+        mScratch.SetCapacity(0);
+        
+        mBodyContext->Push(aNode,aStyleStack);
+        
         mDTDState=result;
-        // Though NS_HTMLPARSER_ALTERNATECONTENT is a succeeded message we don't want to propagate it
-        // because there are lots of places where we don't check for succeeded result instead
-        // we check for NS_OK. Also, this message is pertinent to the DTD only 
         result=NS_OK; 
       }
-      mHasOpenNoXXX++;
-      mBodyContext->Push(aNode,aStyleStack);
     }
   }
   
@@ -3758,7 +3781,6 @@ nsresult CNavDTD::AddHeadLeaf(nsIParserNode *aNode){
     // within NOSCRIPT and since JS is enanbled we should not process
     // this content. However, when JS is disabled alternate content
     // would become regular content.
-    if(mDTDState!=NS_HTMLPARSER_ALTERNATECONTENT) {
       result=OpenHead(aNode);
       if(NS_OK==result) {
         if(eHTMLTag_title==theTag) {
@@ -3769,7 +3791,6 @@ nsresult CNavDTD::AddHeadLeaf(nsIParserNode *aNode){
           nsAutoString theString2(theBD);
 
           theString2.CompressWhitespace();
-
           STOP_TIMER()
           MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: CNavDTD::AddHeadLeaf(), this=%p\n", this));
           mSink->SetTitle(theString2);
@@ -3796,8 +3817,7 @@ nsresult CNavDTD::AddHeadLeaf(nsIParserNode *aNode){
         }
       }  
     }
-    else result=AddLeaf(aNode);
-  }
+  
   return result;
 }
 
