@@ -72,7 +72,7 @@ nsReflowTree::Node::GetChild(nsIFrame *forFrame)
 nsReflowTree::Node::ChildChunk::Create(nsReflowTree::Node *node)
 {
     ChildChunk *chunk = new ChildChunk();
-    memset(chunk->mKids + 1, 0, (KIDS_CHUNK_SIZE - 1) * sizeof (ChildChunk));
+    memset(&chunk->mKids[1], 0, (KIDS_CHUNK_SIZE - 1)*sizeof(chunk->mKids[0]));
     chunk->mKids[0] = node;
     chunk->mNext = 0;
 
@@ -131,7 +131,7 @@ nsReflowTree::Node *
 nsReflowTree::MergeCommand(nsHTMLReflowCommand *command)
 {
     nsIFrame *frame;
-    if (NS_FAILED(command->GetTarget(/* ref */ frame)))
+    if (NS_FAILED(command->GetTarget(/* ref */ frame)) || !frame)
         return nsnull;
 
     if (mRoot) {
