@@ -44,7 +44,7 @@
   
   <!-- category tree entries for mail/news -->
   <treechildren id="panelChildren">
-      <treeitem id="mailnews-1">
+      <treeitem id="mailnews">
         <treerow>       
           <treecell url="chrome://messenger/content/pref-mailnews.xul" label="&mailonly.label;"/> 
         </treerow>
