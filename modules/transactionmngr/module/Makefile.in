@@ -84,10 +84,6 @@ SHARED_LIBRARY_LIBS = \
   $(DIST)/lib/$(LIB_PREFIX)ipccom_s.$(LIB_SUFFIX) \
   $(NULL)
 
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-EXTRA_DSO_LIBS = mozipcd
-endif
-
 EXTRA_DSO_LDOPTS = \
   $(LIBS_DIR) \
   $(NSPR_LIBS) \

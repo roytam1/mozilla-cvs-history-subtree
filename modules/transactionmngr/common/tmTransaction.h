@@ -44,13 +44,13 @@
 //
 // Message format
 //
-// |------------------------------------|\
-// |Action - Post/Flush/Attach etc      | \
+// |------------------------------------|--
+// |Action - Post/Flush/Attach etc      |  |
 // |------------------------------------|  |
 // |QueueID                             |  |- this is the tmMsg
 // |------------------------------------|  |
-// |Status                              | / 
-// |------------------------------------|/
+// |Status                              |  | 
+// |------------------------------------|--
 // |Message Data                        |
 // |------------------------------------|
 //
@@ -66,6 +66,8 @@ struct tmMsg {
   PRUint32 action;
   nsresult status;
 };
+
+const PRUint32 TM_INVALID_ID = 0xFFFFFFFF;
 
 class tmTransaction
 {

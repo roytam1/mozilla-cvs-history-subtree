@@ -63,7 +63,7 @@ tmTransactionService::~tmTransactionService() {
 
   mWaitingMessages.Iterate();
   waiting_msg* msg = nsnull;
-  while (msg = (waiting_msg *)mWaitingMessages.Next()) {
+  while ((msg = (waiting_msg *)mWaitingMessages.Next())) {
     // clean up the struct
     PL_strfree(msg->queueName);
     delete msg->trans;
@@ -72,7 +72,7 @@ tmTransactionService::~tmTransactionService() {
 
   mQueueMaps.Iterate();
   queue_mapping *qmap = nsnull;
-  while (qmap = (queue_mapping *)mQueueMaps.Next()) {
+  while ((qmap = (queue_mapping *)mQueueMaps.Next())) {
     // clean up the struct
     PL_strfree(qmap->queueName);
     PL_strfree(qmap->joinedQueueName);
@@ -116,8 +116,7 @@ tmTransactionService::Init(const nsACString & aProfileName) {
 
 NS_IMETHODIMP
 tmTransactionService::Attach(const nsACString & aQueueName, 
-                             tmITransactionObserver *aObserver,
-                             PRBool aAsync) {
+                             tmITransactionObserver *aObserver) {
 
   nsresult rv = NS_ERROR_OUT_OF_MEMORY;  // prime the return value
 
@@ -158,7 +157,7 @@ tmTransactionService::Attach(const nsACString & aQueueName,
 
     // send the attach msg
     if (NS_SUCCEEDED(rv))
-      SendMessage(trans);
+      SendMessage(trans, PR_TRUE);
     delete trans;  
   }
   return rv;
@@ -187,8 +186,8 @@ tmTransactionService::Detach(const nsACString & aQueueName) {
         mWaitingMessages.Add((void *)msg);
       }
       else {
-      // send it
-      SendMessage(trans);
+        // send it
+        SendMessage(trans, PR_FALSE);
       }
     }
     delete trans;
@@ -218,8 +217,8 @@ tmTransactionService::Flush(const nsACString & aQueueName) {
         mWaitingMessages.Add((void *)msg);
       }
       else {
-      // send it
-      SendMessage(trans);
+        // send it
+        SendMessage(trans, PR_TRUE);
       }
     }
     delete trans;
@@ -258,7 +257,7 @@ tmTransactionService::PostTransaction(const nsACString & aQueueName,
       else {
         // send it
         printf("PostTransaction - sending it right away\n");
-        SendMessage(trans);
+        SendMessage(trans, PR_FALSE);
         delete trans;
       }
     }
@@ -314,7 +313,7 @@ tmTransactionService::OnMessageAvailable(const nsID & aTarget,
 // Protected Member Functions
 
 void
-tmTransactionService::SendMessage(tmTransaction *aTrans) {
+tmTransactionService::SendMessage(tmTransaction *aTrans, PRBool aSync) {
 
   if (!aTrans)
     return;
@@ -327,7 +326,8 @@ tmTransactionService::SendMessage(tmTransaction *aTrans) {
     ipcService->SendMessage(0, 
                             kTransModuleID, 
                             aTrans->GetRawMessage(), 
-                            aTrans->GetRawMessageLength());
+                            aTrans->GetRawMessageLength(),
+                            aSync);
 }
 
 nsresult
@@ -338,7 +338,7 @@ tmTransactionService::OnAttachReply(tmTransaction *aTrans) {
 
     mQueueMaps.Iterate();
     queue_mapping* qmap = nsnull;
-    while (qmap = (queue_mapping *)mQueueMaps.Next()) {
+    while ((qmap = (queue_mapping *)mQueueMaps.Next())) {
       if (qmap && 
           PL_strcmp(qmap->joinedQueueName, (char*)aTrans->GetMessage()) == 0) {
 
@@ -422,13 +422,13 @@ tmTransactionService::DispatchStoredMessages(queue_mapping *aQMapping) {
 
   mWaitingMessages.Iterate();
   waiting_msg *msg = nsnull;
-  while (msg = (waiting_msg *)mWaitingMessages.Next()) {
+  while ((msg = (waiting_msg *)mWaitingMessages.Next())) {
     // if the message is waiting on the queue passed in
     if (PL_strcmp(aQMapping->queueName, msg->queueName) == 0) {
 
       // found a match, send it and remove
       msg->trans->SetQueueID(aQMapping->queueID);
-      SendMessage(msg->trans);
+      SendMessage(msg->trans, PR_FALSE);
       mWaitingMessages.Remove((void *)msg);
 
       // clean up the struct
@@ -446,7 +446,7 @@ tmTransactionService::GetQueueID(const nsACString & aQueueName) {
 
   mQueueMaps.Iterate();
   queue_mapping* qmap = nsnull;
-  while (qmap = (queue_mapping *)mQueueMaps.Next()) {
+  while ((qmap = (queue_mapping *)mQueueMaps.Next())) {
     if (qmap && 
         PL_strcmp(qmap->queueName, PromiseFlatCString(aQueueName).get()) == 0)
       return qmap->queueID;
@@ -459,7 +459,7 @@ tmTransactionService::GetJoinedQueueName(PRUint32 aQueueID) {
 
   mQueueMaps.Iterate();
   queue_mapping* qmap = nsnull;
-  while (qmap = (queue_mapping *)mQueueMaps.Next()) {
+  while ((qmap = (queue_mapping *)mQueueMaps.Next())) {
     if (qmap && qmap->queueID == aQueueID)
       return qmap->joinedQueueName;
   }
@@ -471,7 +471,7 @@ tmTransactionService::GetQueueMap(PRUint32 aQueueID) {
 
   mQueueMaps.Iterate();
   queue_mapping* qmap = nsnull;
-  while (qmap = (queue_mapping *)mQueueMaps.Next()) {
+  while ((qmap = (queue_mapping *)mQueueMaps.Next())) {
     if (qmap && qmap->queueID == aQueueID)
       return qmap;
   }

@@ -60,14 +60,14 @@ void init(in ACString aProfileName);
   * Called when a consumer of a type of data wants to post transactions
   *   to be shared to interested applications.
   *
-  * @param aClient
-  *        a handle back to the caller, this will be used to notify
-  *        the application when transactions and messages come in.
-  *
   * @param aQueueName
-  *        the name of the area to listen for transaction from. ie cookies
+  *        the name of the domain to listen for transactions from. ie cookies
+  *
+  * @param aObserver
+  *        this will be used to notify the application when transactions
+  *        and messages come in.
   */
-void attach(in ACString aQueueName, in tmITransactionObserver aObserver, in boolean aAsync);
+void attach(in ACString aQueueName, in tmITransactionObserver aObserver);
 
 /**
   * Called when a consumer of a type of data wants to stop posting

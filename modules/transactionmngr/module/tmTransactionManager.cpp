@@ -50,7 +50,7 @@ tmTransactionManager::~tmTransactionManager() {
 
   mQueues.Iterate();
   tmQueue *queue = nsnull;
-  while(queue = (tmQueue *)mQueues.Next()) {
+  while((queue = (tmQueue *)mQueues.Next())) {
     mQueues.RemoveAt(mQueues.GetIterator());
     delete queue;
   }
@@ -147,7 +147,7 @@ tmTransactionManager::GetQueue(const char *aQueueName) {
 
   mQueues.Iterate();
   tmQueue *queue = nsnull;
-  while(queue = (tmQueue *)mQueues.Next()) {
+  while((queue = (tmQueue *)mQueues.Next())) {
     if (PL_strcmp(queue->GetName(), aQueueName) == 0)
       return queue;
   }

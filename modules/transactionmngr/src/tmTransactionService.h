@@ -173,8 +173,7 @@ public:
     *          transaction
     */
   NS_IMETHOD Attach(const nsACString & aQueueName, 
-                    tmITransactionObserver *aObserver,
-                    PRBool aAsync);
+                    tmITransactionObserver *aObserver);
 
   /**
     * Sends a message to remove the listener from the queue named by the arg
@@ -228,8 +227,11 @@ protected:
   /**
     * Pulls the raw message out of the transaction and sends it to the IPC
     *   service to be delivered to the TM.
+    *
+    * @param aSync    If TRUE, calling thread will be blocked until
+    *                 a reply is received.
     */
-  void SendMessage(tmTransaction *aTrans);
+  void SendMessage(tmTransaction *aTrans, PRBool aSync);
 
   // handlers for reply messages from TransactionManager
 

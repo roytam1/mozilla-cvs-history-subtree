@@ -39,10 +39,10 @@
 #define _tmUtils_H_
 
 #include "nscore.h"
+#include "nsError.h"
 #include "nsID.h"
 #include "prlog.h"
 #include <stdio.h>
-#include "nserror.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // match NS_ERROR_FOO error code formats
@@ -57,10 +57,6 @@
 #define TM_ERROR_QUEUE_EXISTS             NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_TM, 4)
 #define TM_SUCCESS_DELETE_QUEUE           NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_TM, 6)
 
-enum {
-  TM_BLAH = -1,
-  TM_INVALID_ID = -1
-};
 
 // Transaction Actions
 enum {
@@ -76,3 +72,4 @@ enum {
 };
 
 #endif
+

@@ -43,7 +43,7 @@
 #include "ipcIService.h"
 
 // core & xpcom ns includes
-#include "nsdebug.h"
+#include "nsDebug.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentRegistrar.h"
@@ -226,7 +226,7 @@ PRInt32 main(PRInt32 argc, char *argv[])
     printf("tmModuleTest: using profileName [%s]\n", profileName);
 
     // attach to the queue in the transaction manager
-    gTransServ->Attach(nsDependentCString(queueName), observ, PR_TRUE);
+    gTransServ->Attach(nsDependentCString(queueName), observ);
     printf("tmModuleTest: observing queue [%s]\n", queueName);
 
 

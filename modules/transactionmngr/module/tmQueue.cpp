@@ -49,12 +49,12 @@ tmQueue::~tmQueue() {
   // empty the vectors
   mTransactions.Iterate();
   tmTransaction *trans = nsnull;
-  while(trans = (tmTransaction *)mTransactions.Next())
+  while((trans = (tmTransaction *)mTransactions.Next()))
     delete trans;
 
   mListeners.Iterate();
   PRUint32 *id = nsnull;
-  while(id = (PRUint32 *)mListeners.Next())
+  while((id = (PRUint32 *)mListeners.Next()))
     delete id;
 
   mTM = nsnull;
@@ -108,7 +108,7 @@ tmQueue::AttachClient(PRUint32 aClientID) {
   if (NS_SUCCEEDED(status)) {
     mTransactions.Iterate();
     tmTransaction *trans = nsnull;
-    while(trans = (tmTransaction *)mTransactions.Next())
+    while((trans = (tmTransaction *)mTransactions.Next()))
       mTM->SendTransaction(aClientID, trans);
   }
   return status;
@@ -121,7 +121,7 @@ tmQueue::DetachClient(PRUint32 aClientID) {
 
   mListeners.Iterate();
   PRUint32 *id = nsnull;
-  while(id = (PRUint32 *)mListeners.Next()) {
+  while((id = (PRUint32 *)mListeners.Next())) {
     if(*id == aClientID) {
       status = mListeners.RemoveAt(mListeners.GetIterator());
       if (NS_SUCCEEDED(status))
@@ -151,7 +151,7 @@ tmQueue::FlushQueue(PRUint32 aClientID) {
 
   mTransactions.Iterate();
   tmTransaction *trans = nsnull;
-  while(trans = (tmTransaction *)mTransactions.Next())
+  while((trans = (tmTransaction *)mTransactions.Next()))
     delete trans;
 
   mTransactions.Clear();  // sets the vector's slots to nsnull
@@ -190,7 +190,7 @@ tmQueue::PostTransaction(tmTransaction *aTrans) {
     // send the transaction to all members of mListeners except the owner
     mListeners.Iterate();
     PRUint32 *id = nsnull;
-    while(id = (PRUint32 *)mListeners.Next()) {
+    while((id = (PRUint32 *)mListeners.Next())) {
       printf("Q::PostTransaction - sending to others\n");
       if (ownerID != *id)
         mTM->SendTransaction(*id, aTrans);
