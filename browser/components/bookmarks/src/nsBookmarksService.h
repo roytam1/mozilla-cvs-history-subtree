@@ -100,6 +100,9 @@ public:
     nsCOMPtr<nsIRDFResource>        mLivemarkLoadingBookmark;
     nsCOMPtr<nsIRDFResource>        mLivemarkLoadFailedBookmark;
 
+    // utility to update the forward proxy based on the URL
+    static nsresult UpdateBookmarkForwardProxy(nsIRDFDataSource* aDS, nsIRDFResource* aBookmarkResource);
+
 protected:
     // System Bookmark parsing
 #if defined(XP_MAC) || defined(XP_MACOSX)
@@ -176,8 +179,6 @@ protected:
     nsresult InitDataSource();
 
     nsresult GetLastModifiedFolders(nsISimpleEnumerator **aResult);
-
-    nsresult UpdateBookmarkForwardProxy(nsIRDFResource* aBookmarkResource);
 
     nsresult UpdateLivemarkChildren(nsIRDFResource* aSource);
 
