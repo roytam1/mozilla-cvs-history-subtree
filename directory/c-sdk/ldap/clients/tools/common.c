@@ -539,7 +539,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	fputs(password_string,stdout);
 	fflush(stdout);
 	if (fgets(pbuf,256,stdin) == NULL) {
-	    rp = NULL;
+	    passwd = NULL;
 	} else {
 	    char *tmp;
 
