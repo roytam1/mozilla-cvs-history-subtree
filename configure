@@ -12271,7 +12271,11 @@ MOZ_LIBART_CFLAGS=
 MOZ_LIBART_LIBS=
 
 if test "$MOZ_SVG"; then
-  # Check whether --with-libart-prefix or --without-libart-prefix was given.
+  if test "$MOZ_INTERNAL_LIBART_LGPL"; then
+            MOZ_LIBART_CFLAGS='-I${DIST}/include/libart_lgpl'
+    MOZ_LIBART_LIBS='-lmoz_art_lgpl -lm'
+  else
+    # Check whether --with-libart-prefix or --without-libart-prefix was given.
 if test "${with_libart_prefix+set}" = set; then
   withval="$with_libart_prefix"
   libart_prefix="$withval"
@@ -12312,7 +12316,7 @@ fi
   # Extract the first word of "libart-config", so it can be a program name with args.
 set dummy libart-config; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:12316: checking for $ac_word" >&5
+echo "configure:12320: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_path_LIBART_CONFIG'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -12347,7 +12351,7 @@ fi
 
   min_libart_version=$LIBART_VERSION
   echo $ac_n "checking for LIBART - version >= $min_libart_version""... $ac_c" 1>&6
-echo "configure:12351: checking for LIBART - version >= $min_libart_version" >&5
+echo "configure:12355: checking for LIBART - version >= $min_libart_version" >&5
   no_libart=""
   if test "$LIBART_CONFIG" = "no" ; then
     no_libart=yes
@@ -12371,7 +12375,7 @@ echo "configure:12351: checking for LIBART - version >= $min_libart_version" >&5
   echo $ac_n "cross compiling; assumed OK... $ac_c"
 else
   cat > conftest.$ac_ext <<EOF
-#line 12375 "configure"
+#line 12379 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -12429,7 +12433,7 @@ int main ()
 
 
 EOF
-if { (eval echo configure:12433: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:12437: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
 then
   :
 else
@@ -12463,7 +12467,7 @@ fi
           CFLAGS="$CFLAGS $LIBART_CFLAGS"
           LIBS="$LIBS $LIBART_LIBS"
           cat > conftest.$ac_ext <<EOF
-#line 12467 "configure"
+#line 12471 "configure"
 #include "confdefs.h"
 
 #include <stdio.h>
@@ -12473,7 +12477,7 @@ int main() {
  return 0; 
 ; return 0; }
 EOF
-if { (eval echo configure:12477: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:12481: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
    echo "*** The test program compiled, but did not run. This usually means"
           echo "*** that the run-time linker is not finding LIBART or finding the wrong"
@@ -12507,9 +12511,11 @@ rm -f conftest*
   rm -f conf.libarttest
 
 
-  MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
-  MOZ_LIBART_LIBS=$LIBART_LIBS
+    MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
+    MOZ_LIBART_LIBS=$LIBART_LIBS
+  fi
 fi
+
 
 
 
@@ -13184,6 +13190,7 @@ s%@LIBART_CFLAGS@%$LIBART_CFLAGS%g
 s%@LIBART_LIBS@%$LIBART_LIBS%g
 s%@MOZ_LIBART_CFLAGS@%$MOZ_LIBART_CFLAGS%g
 s%@MOZ_LIBART_LIBS@%$MOZ_LIBART_LIBS%g
+s%@MOZ_INTERNAL_LIBART_LGPL@%$MOZ_INTERNAL_LIBART_LGPL%g
 s%@MOZ_XUL@%$MOZ_XUL%g
 s%@AR_FLAGS@%$AR_FLAGS%g
 s%@AR_LIST@%$AR_LIST%g

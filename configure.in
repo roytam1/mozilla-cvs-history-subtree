@@ -3785,15 +3785,23 @@ MOZ_LIBART_CFLAGS=
 MOZ_LIBART_LIBS=
 
 if test "$MOZ_SVG"; then
-  AM_PATH_LIBART($LIBART_VERSION,,
-    AC_MSG_ERROR(SVG requires at least version $LIBART_VERSION of libart))
+  if test "$MOZ_INTERNAL_LIBART_LGPL"; then
+    dnl libart's configure hasn't been run yet, but we know what the
+    dnl answer should be anyway
+    MOZ_LIBART_CFLAGS='-I${DIST}/include/libart_lgpl'
+    MOZ_LIBART_LIBS='-lmoz_art_lgpl -lm'
+  else
+    AM_PATH_LIBART($LIBART_VERSION,,
+      AC_MSG_ERROR(SVG requires at least version $LIBART_VERSION of libart))
 
-  MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
-  MOZ_LIBART_LIBS=$LIBART_LIBS
+    MOZ_LIBART_CFLAGS=$LIBART_CFLAGS
+    MOZ_LIBART_LIBS=$LIBART_LIBS
+  fi
 fi
 
 AC_SUBST(MOZ_LIBART_CFLAGS)
 AC_SUBST(MOZ_LIBART_LIBS)
+AC_SUBST(MOZ_INTERNAL_LIBART_LGPL)
 
 dnl ========================================================
 dnl disable xul

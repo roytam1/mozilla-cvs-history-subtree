@@ -920,6 +920,11 @@ if [ "$MOZ_MATHML" ]; then
 "
 fi
 
+#libart
+if [ "$MOZ_INTERNAL_LIBART_LGPL" ]; then
+    MAKEFILES_libart="other-licenses/libart_lgpl/Makefile"
+fi
+
 # svg
 if [ "$MOZ_SVG" ]; then
     MAKEFILES_content="$MAKEFILES_content
@@ -1106,6 +1111,7 @@ $MAKEFILES_l10n_lang
 $MAKEFILES_langpacks
 $MAKEFILES_content
 $MAKEFILES_layout
+$MAKEFILES_libart
 $MAKEFILES_libreg
 $MAKEFILES_libimg
 $MAKEFILES_libpr0n

@@ -418,6 +418,19 @@ SVG_BRANCH_FILES := \
 	xpfe/browser/src/nsBrowserInstance.cpp
 
 ####################################
+# CVS defined for libart (pulled and built if MOZ_INTERNAL_LIBART_LGPL is set)
+#
+CVSCO_LIBART := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/other-licenses/libart_lgpl
+
+ifdef MOZ_INTERNAL_LIBART_LGPL
+FASTUPDATE_LIBART := fast_update $(CVSCO_LIBART)
+CHECKOUT_LIBART := cvs_co $(CVSCO_LIBART)
+else
+CHECKOUT_LIBART := true
+FASTUPDATE_LIBART := true
+endif
+
+####################################
 # CVS defines for Calendar (pulled and built if MOZ_CALENDAR is set)
 #
 CVSCO_CALENDAR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/calendar
@@ -494,6 +507,7 @@ real_checkout:
         cvs_co $(CVSCO_IMGLIB2) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
 	$(CHECKOUT_CALENDAR) && \
+	$(CHECKOUT_LIBART) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
@@ -564,6 +578,7 @@ real_fast-update:
 	fast_update $(CVSCO_IMGLIB2) && \
 	fast_update $(CVSCO_SEAMONKEY) && \
 	$(FASTUPDATE_CALENDAR) && \
+	$(FASTUPDATE_LIBART) && \
 	fast_update $(CVSCO_NOSUBDIRS)
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
