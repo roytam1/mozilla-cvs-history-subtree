@@ -45,6 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE			= ipcd_test
 LIBRARY_NAME	= testmodule
+SHORT_LIBNAME	= testmod
 MODULE_NAME		= ipcd_test
 
 FORCE_SHARED_LIB	= 1

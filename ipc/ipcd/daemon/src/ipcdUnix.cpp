@@ -70,7 +70,9 @@ IPC_Sleep(int seconds)
     }
     LOG(("\ndone sleeping\n"));
 }
+#endif
 
+#if defined(XP_UNIX)
 //-----------------------------------------------------------------------------
 // ipc directory and locking...
 //-----------------------------------------------------------------------------
@@ -88,11 +90,7 @@ static PRBool AcquireDaemonLock(const char *baseDir)
 
     char *lockFile = (char *) malloc(len);
     memcpy(lockFile, baseDir, dirLen);
-#ifdef XP_OS2
-    lockFile[dirLen] = '\\';
-#else
     lockFile[dirLen] = '/';
-#endif
     memcpy(lockFile + dirLen + 1, lockName, sizeof(lockName));
 
     // 
@@ -105,7 +103,6 @@ static PRBool AcquireDaemonLock(const char *baseDir)
     if (ipcLockFD == -1)
         return PR_FALSE;
 
-#ifndef XP_OS2
     //
     // we use fcntl for locking.  assumption: filesystem should be local.
     // this API is nice because the lock will be automatically released
@@ -132,7 +129,6 @@ static PRBool AcquireDaemonLock(const char *baseDir)
     char buf[32];
     int nb = PR_snprintf(buf, sizeof(buf), "%u\n", (unsigned long) getpid());
     write(ipcLockFD, buf, nb);
-#endif
 
     return PR_TRUE;
 }
@@ -412,10 +408,12 @@ int main(int argc, char **argv)
     else
         PL_strncpyz(addr.local.path, argv[1], sizeof(addr.local.path));
 
+#ifndef XP_OS2
     if (!InitDaemonDir(addr.local.path)) {
         LOG(("InitDaemonDir failed\n"));
         goto end;
     }
+#endif
 
     listenFD = PR_OpenTCPSocket(PR_AF_LOCAL);
     if (!listenFD) {
@@ -442,11 +440,13 @@ end:
 
     //IPC_Sleep(5);
 
+#ifndef XP_OS2
     // it is critical that we release the lock before closing the socket,
     // otherwise, a client might launch another daemon that would be unable
     // to acquire the lock and would then leave the client without a daemon.
  
     ShutdownDaemonDir();
+#endif
 
     if (listenFD) {
         LOG(("closing socket\n"));
