@@ -46,9 +46,10 @@
 #include "nsInternetSearchService.h"
 #include "nsRelatedLinksHandlerImpl.h"
 #include "nsUrlbarHistory.h"
+#endif
+
 #include "nsDownloadManager.h"
 #include "nsDownloadProxy.h"
-#endif
 
 #include "rdf.h"
 #include "nsTimeBomb.h"
@@ -77,9 +78,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(LocalSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(InternetSearchDataSource, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(RelatedLinksHandlerImpl, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUrlbarHistory)
+#endif
+
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDownloadProxy)
-#endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimeBomb)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontPackageHandler)
@@ -185,11 +187,11 @@ static const nsModuleComponentInfo components[] = {
       NS_URLBARHISTORY_CONTRACTID, nsUrlbarHistoryConstructor },
     { "nsUrlbarHistory", NS_URLBARHISTORY_CID,
       NS_URLBARAUTOCOMPLETE_CONTRACTID, nsUrlbarHistoryConstructor },
+#endif
     { "Download Manager", NS_DOWNLOADMANAGER_CID, NS_DOWNLOADMANAGER_CONTRACTID,
       nsDownloadManagerConstructor },
     { "Download", NS_DOWNLOAD_CID, NS_DOWNLOAD_CONTRACTID,
       nsDownloadProxyConstructor },
-#endif
     { "Netscape TimeBomb", NS_TIMEBOMB_CID, NS_TIMEBOMB_CONTRACTID, nsTimeBombConstructor},
     { "nsCharsetMenu", NS_CHARSETMENU_CID,
       NS_RDF_DATASOURCE_CONTRACTID_PREFIX NS_CHARSETMENU_PID,
