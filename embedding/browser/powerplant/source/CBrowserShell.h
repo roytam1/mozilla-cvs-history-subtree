@@ -30,6 +30,8 @@
 #include <LString.h>
 #include <LDragAndDrop.h>
 
+#include "CHeaderSniffer.h"
+
 #include "nsCOMPtr.h"
 #include "nsAString.h"
 #include "nsIWebBrowser.h"
@@ -119,7 +121,7 @@ public:
                                               const EventRecord* keyboardEvent);
     virtual OSStatus HandleOffsetToPos(PRInt32 offset, PRInt16 *pointX, PRInt16 *pointY);
     virtual OSStatus HandlePosToOffset(PRInt16 currentPointX, PRInt16 currentPointY, 
-                                       PRInt32 *offset, PRInt16 *regionClass);
+                                       PRInt32 *offset, PRInt16 *regionClass);    
     
     // CBrowserShell
         
@@ -154,12 +156,10 @@ public:
     NS_METHOD               GetCurrentURL(nsACString& urlText);
 
         // Puts up a Save As dialog and saves current URI and all images, etc.
-    NS_METHOD               SaveDocument();
-        // Puts up a Save As dialog and saves current URI only.
-    NS_METHOD               SaveCurrentURI();
-        // Same as above but without UI
-    NS_METHOD               SaveDocument(const FSSpec& destFile);
-    NS_METHOD               SaveCurrentURI(const FSSpec& destFile);
+    NS_METHOD               SaveDocument(ESaveFormat inSaveFormat = eSaveFormatUnspecified);
+        // Puts up a Save As dialog and saves the given URI. Pass null to save the current page.
+    NS_METHOD               SaveLink(nsIURI* inURI);
+    NS_METHOD               SaveInternal(nsIURI* inURI, nsIDOMDocument* inDocument, const nsAString& inSuggestedFilename, Boolean inBypassCache, ESaveFormat inSaveFormat = eSaveFormatUnspecified);
     
        // Puts up a find dialog and does the find operation                        
     Boolean                 Find();
@@ -202,11 +202,11 @@ protected:
                                          PRBool& wrapFind,
                                          PRBool& entireWord,
                                          PRBool& caseSensitive);
-   virtual Boolean          DoSaveFileDialog(FSSpec& outSpec, Boolean& outIsReplacing);
 
    NS_METHOD                GetClipboardHandler(nsIClipboardCommands **aCommand);
    
    Boolean                  HasFormElements();
+   NS_METHOD                GetHRefFromDOMNode(nsIDOMNode *aNode, nsAString& outHRef);
 
    virtual void             PostOpenURLEvent(const nsACString& url, const nsACString& referrer);
     
