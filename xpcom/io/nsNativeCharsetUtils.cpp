@@ -1004,7 +1004,9 @@ NS_CopyUnicodeToNative(const nsAString &input, nsACString &output)
 
     const nsPromiseFlatString &flat = PromiseFlatString(input);
     UniChar *inputStr = (UniChar*)flat.get();
-    size_t inputLen = flat.Length() + 1; // include null char
+    // maximum length of unicode string of length x converted to native
+    // codepage is x*2
+    size_t inputLen = (flat.Length()*2) + 1; // include null char
 
     // resultLen must be >= inputLen or the unicode conversion will fail
     size_t resultLen = inputLen;
