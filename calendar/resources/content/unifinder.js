@@ -241,9 +241,6 @@ function formatUnifinderEventTime( time )
 
 function unifinderDoubleClickEvent( event )
 {
-   // we only care about button 0 (left click) events
-   if (event.button != 0) return;
-        
    // find event by id
    
    var calendarEvent = getCalendarEventFromEvent( event );
@@ -542,10 +539,7 @@ var treeView =
             return( startText );
          
          case "unifinder-search-results-tree-col-enddate":
-            var eventEndDate = getNextOrPreviousRecurrence( calendarEvent );
-            var eventLength = calendarEvent.end.getTime() - calendarEvent.start.getTime();
-            var actualEndDate = eventEndDate.getTime() + eventLength;
-            var eventEndDate = new Date( actualEndDate );
+            var eventEndDate = new Date( calendarEvent.end.getTime() );
             var endTime = formatUnifinderEventTime( eventEndDate );
             var endDate = formatUnifinderEventDate( eventEndDate );
             if( calendarEvent.allDay )

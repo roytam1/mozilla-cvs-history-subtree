@@ -393,18 +393,19 @@ MOZ_META_COMPONENTS_mail += \
 	nsMimeEmitterModule \
 	nsMsgComposeModule \
 	local_mail_services \
+	nsAbSyncModule \
 	nsComm4xMailImportModule \
 	$(NULL)
 
 ifdef USE_SHORT_LIBNAME
-MOZ_META_COMPONENTS_mail_comps += emitter msgcompo msglocal
+MOZ_META_COMPONENTS_mail_comps += emitter msgcompo msglocal absyncsv
 ifeq ($(OS_ARCH),WINNT)
 MOZ_META_COMPONENTS_mail_comps += impComm4xMail
 else
 MOZ_META_COMPONENTS_mail_comps += imp4Mail
 endif
 else
-MOZ_META_COMPONENTS_mail_comps += mimeemitter msgcompose localmail impComm4xMail
+MOZ_META_COMPONENTS_mail_comps += mimeemitter msgcompose localmail absyncsvc impComm4xMail
 endif
 
 ifdef MOZ_PSM

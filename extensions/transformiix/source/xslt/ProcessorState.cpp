@@ -99,7 +99,7 @@ void txLoadedDocumentsHash::Add(Document* aDocument)
     }
 
     nsAutoString baseURI;
-    aDocument->getBaseURI(baseURI);
+    mSourceDocument->getBaseURI(baseURI);
     txLoadedDocumentEntry* entry = AddEntry(baseURI);
     if (entry) {
         entry->mDocument = aDocument;
@@ -1268,11 +1268,6 @@ nsresult txPSParseContext::resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                                FunctionCall*& aFunction)
 {
     return mPS->resolveFunctionCall(aName, aID, mStyle, aFunction);
-}
-
-PRBool txPSParseContext::caseInsensitiveNameTests()
-{
-    return PR_FALSE;
 }
 
 void txPSParseContext::receiveError(const nsAString& aMsg, nsresult aRes)

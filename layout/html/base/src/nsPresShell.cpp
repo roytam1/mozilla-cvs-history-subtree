@@ -5989,8 +5989,8 @@ PresShell::HandleEvent(nsIView         *aView,
   if (nsnull != frame) {
     PushCurrentEventInfo(nsnull, nsnull);
 
-    nsCOMPtr<nsIEventStateManager> manager;
-    if (NS_OK == mPresContext->GetEventStateManager(getter_AddRefs(manager))) {
+    nsIEventStateManager *manager;
+    if (NS_OK == mPresContext->GetEventStateManager(&manager)) {
       //change 6-01-00 mjudge,ftang adding ime as an event that needs focused element
       if (NS_IS_KEY_EVENT(aEvent) || NS_IS_IME_EVENT(aEvent) || aEvent->message == NS_CONTEXTMENU_KEY) { 
         //Key events go to the focused frame, not point based.
@@ -6133,6 +6133,7 @@ PresShell::HandleEvent(nsIView         *aView,
       if (GetCurrentEventFrame()) {
         rv = HandleEventInternal(aEvent, aView, NS_EVENT_FLAG_INIT, aEventStatus);
       }
+      NS_RELEASE(manager);
     }
 #ifdef NS_DEBUG
     if ((nsIFrameDebug::GetShowEventTargetFrameBorder()) && (GetCurrentEventFrame())) {

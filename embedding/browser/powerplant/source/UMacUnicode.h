@@ -23,10 +23,12 @@
 #ifndef __UMacUnicode__
 #define __UMacUnicode__
 
+#include "nsIPlatformCharset.h"
+#include "nsIUnicodeEncoder.h"
+#include "nsIUnicodeDecoder.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
 
-#include <UnicodeConverter.h>
 
 class CPlatformUCSConversion {
 public:
@@ -34,7 +36,9 @@ public:
      virtual ~CPlatformUCSConversion(){};
      
      static CPlatformUCSConversion* GetInstance();
-          
+     
+     NS_IMETHOD SetCharsetSelector(nsPlatformCharsetSel aSel);
+     
      NS_IMETHOD UCSToPlatform(const nsAString& aIn, nsACString& aOut);
      NS_IMETHOD UCSToPlatform(const nsAString& aIn, Str255& aOut);  
   
@@ -43,11 +47,15 @@ public:
 
 private:
      static CPlatformUCSConversion *mgInstance;
-     static UnicodeToTextInfo sEncoderInfo;
-     static TextToUnicodeInfo sDecoderInfo;
      
-     nsresult PrepareEncoder();
-     nsresult PrepareDecoder();
+     NS_IMETHOD PreparePlatformCharset();
+     NS_IMETHOD PrepareEncoder();
+     NS_IMETHOD PrepareDecoder();
+     
+     nsPlatformCharsetSel mCharsetSel;
+     nsAutoString mPlatformCharset;
+     nsCOMPtr<nsIUnicodeEncoder> mEncoder;
+     nsCOMPtr<nsIUnicodeDecoder> mDecoder;
 };
 
 #endif // __UMacUnicode__

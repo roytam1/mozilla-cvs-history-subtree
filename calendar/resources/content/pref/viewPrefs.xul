@@ -65,13 +65,13 @@
    </script>>
 
 <groupbox>
-	<caption label="&pref.calendar.view.dayview.caption;"/>
+	<caption label="Day View"/>
 <hbox flex="1" align="center">
 	<description flex="1" >&pref.hour.help.description;</description>
 </hbox>
 <hbox flex="1" align="center">
-	<description flex="1" >&pref.calendar.view.restrict.label;</description>
-	<description>&pref.calendar.view.starttime.label;</description>
+	<description flex="1" >Restrict Views to </description>
+	<description>Start time:</description>
 	 <menulist id="daystarthour" preftype="int" prefstring="calendar.event.defaultstarthour"  value="8">
 		 <menupopup id="daystarthour">
 			 <menuitem label="&pref.hour.00;"    value="0"/>
@@ -100,7 +100,7 @@
 			 <menuitem label="&pref.hour.23;"    value="23"/>
 		</menupopup>
 	</menulist>
-	<description>&pref.calendar.view.endtime.label;</description>
+	<description>End time:</description>
 	 <menulist id="dayendhour" preftype="int" prefstring="calendar.event.defaultendhour"  value="17">
 		 <menupopup id="dayendhour">
 			 <menuitem label="&pref.hour.00;"    value="0"/>
@@ -132,7 +132,7 @@
 </hbox>
 </groupbox>
 <groupbox>
-	<caption label="&pref.calendar.view.weekview.caption;"/>
+	<caption label="Week View"/>
 	<hbox  align="center">
          <description>&pref.weekstarts.label;</description>
          <menulist id="weekstarts" prefstring="calendar.week.start">

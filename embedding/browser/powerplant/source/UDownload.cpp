@@ -224,7 +224,7 @@ NS_IMETHODIMP CDownload::OnProgressChange(nsIWebProgress *aWebProgress, nsIReque
     if (aMaxTotalProgress == -1)
         mPercentComplete = -1;
     else
-        mPercentComplete = (PRInt32)(((float)aCurTotalProgress / (float)aMaxTotalProgress) * 100.0 + 0.5);
+        mPercentComplete = ((float)aCurTotalProgress / (float)aMaxTotalProgress) * 100.0;
     
     MsgOnDLProgressChangeInfo info(this, aCurTotalProgress, aMaxTotalProgress);
     BroadcastMessage(msg_OnDLProgressChange, &info);

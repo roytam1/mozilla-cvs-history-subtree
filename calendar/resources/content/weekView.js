@@ -572,9 +572,7 @@ WeekView.prototype.refreshDisplay = function( )
    
    var weekNumber = this.getWeekNumber();
 
-   var weekViewStringBundle = srGetStrBundle("chrome://calendar/locale/calendar.properties");
-   
-   var dateString = weekViewStringBundle.GetStringFromName( "Week" )+" "+weekNumber+ ": "+firstDayMonthName + " " + firstDayOfWeek.getDate() + " - " +
+   var dateString = "Week "+weekNumber+ ": "+firstDayMonthName + " " + firstDayOfWeek.getDate() + " - " +
                     lastDayMonthName  + " " + lastDayOfWeek.getDate();
    
    var weekTextItem = document.getElementById( "week-title-text" );

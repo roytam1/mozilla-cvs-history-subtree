@@ -1491,7 +1491,7 @@ function SidebarFinishClick() {
   if (is_collapsed != sidebarObj.collapsed) {
     if (gMustInit)
       sidebar_overlay_init();
-    setTimeout("sidebarObj.panels.refresh();",100);
+    sidebarObj.panels.refresh();
   }
 }
 

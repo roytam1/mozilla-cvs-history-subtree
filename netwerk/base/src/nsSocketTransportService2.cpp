@@ -260,6 +260,10 @@ nsSocketTransportService::ServiceEventQ()
     {
         nsAutoLock lock(mEventQLock);
 
+        // wait should not block
+        if (mThreadEvent)
+            PR_WaitForPollableEvent(mThreadEvent);
+
         head = mEventQ.mHead;
         mEventQ.mHead = nsnull;
         mEventQ.mTail = nsnull;
@@ -589,11 +593,8 @@ nsSocketTransportService::Run()
             //
             // service the event queue (mPollList[0].fd == mThreadEvent)
             //
-            if (mPollList[0].out_flags == PR_POLL_READ) {
-                // acknowledge pollable event (wait should not block)
-                PR_WaitForPollableEvent(mThreadEvent);
+            if (mPollList[0].out_flags == PR_POLL_READ)
                 active = ServiceEventQ();
-            }
         }
         else {
             //

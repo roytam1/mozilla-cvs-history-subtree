@@ -63,7 +63,7 @@ class nsIMenuBar;
 #ifdef ACCESSIBILITY
 struct IAccessible;
 #include "nsIAccessible.h"
-class RootAccessible;
+#include "nsIAccessibleEventListener.h"
 #endif
 
 #define IME_MAX_CHAR_POS       64
@@ -587,7 +587,7 @@ protected:
     static UINT uWM_HEAP_DUMP;       // Dump heap to a file
 
 #ifdef ACCESSIBILITY
-    RootAccessible* mRootAccessible;
+    IAccessible* mRootAccessible;
     static BOOL gIsAccessibilityOn;
 #endif
 

@@ -245,6 +245,8 @@ NS_IMETHODIMP CPromptService::ConfirmEx(nsIDOMWindow *parent, const PRUnichar *d
 {
     NS_ENSURE_ARG_POINTER(buttonPressed);
 
+    nsresult resultErr = NS_OK;
+
     StDialogHandler	theHandler(dlog_ConfirmEx, CBrowserChrome::GetLWindowForDOMWindow(parent));
     LWindow			 *theDialog = theHandler.GetDialog();
     nsCAutoString   cStr;

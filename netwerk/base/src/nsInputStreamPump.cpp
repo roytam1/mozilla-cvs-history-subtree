@@ -266,10 +266,6 @@ nsInputStreamPump::AsyncRead(nsIStreamListener *listener, nsISupports *ctxt)
         if (NS_FAILED(rv)) return rv;
     }
 
-    // release our reference to the original stream.  from this point forward,
-    // we only reference the "stream" via mAsyncStream.
-    mStream = 0;
-
     // mStreamOffset now holds the number of bytes currently read.  we use this
     // to enforce the mStreamLength restriction.
     mStreamOffset = 0;
@@ -460,13 +456,11 @@ nsInputStreamPump::OnStateStop()
 {
     LOG(("  OnStateStop [this=%x status=%x]\n", this, mStatus));
 
-    // in most cases mAsyncStream is already closed (NOTE: Close is idempotent).
-    // however, mAsyncStream may still be open if mStreamLength was reached
-    // before EOF.
     if (mCloseWhenDone)
-        mAsyncStream->Close();
-
+        mStream->Close();
+    mStream = 0;
     mAsyncStream = 0;
+
     mEventQ = 0;
     mIsPending = PR_FALSE;
 

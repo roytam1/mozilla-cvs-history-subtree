@@ -43,7 +43,6 @@
 #include "nsIDownload.h"
 #include "nsIWebProgressListener.h"
 #include "nsIHelperAppLauncherDialog.h"
-#include "nsIExternalHelperAppService.h"
 
 #include "nsIURI.h"
 #include "nsILocalFile.h"

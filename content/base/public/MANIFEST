@@ -30,6 +30,5 @@ nsIStyleSheetLinkingElement.h
 nsITextContent.h
 nsIContentList.h
 nsIFrameLoader.h
-nsIXPathEvaluatorInternal.h
 mozISanitizingSerializer.h
 nsContentCID.h

@@ -497,8 +497,8 @@ void CMfcEmbedApp::OnNewEditor()
                                     PR_TRUE,PR_TRUE);
     if (pEditorFrame)
     {
-        pEditorFrame->InitEditor();
         pEditorFrame->m_wndBrowserView.OpenURL("about:blank");
+        pEditorFrame->InitEditor();
     }
 }
 

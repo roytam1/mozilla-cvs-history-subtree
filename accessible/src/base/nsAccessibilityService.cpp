@@ -101,14 +101,14 @@
   * nsAccessibility Service
   */
 
-nsAccessibilityService::nsAccessibilityService():mIsActive(PR_TRUE)
+nsAccessibilityService::nsAccessibilityService()
 {
   nsLayoutAtoms::AddRefAtoms();
 }
 
 nsAccessibilityService::~nsAccessibilityService()
 {
-  Shutdown();
+  nsLayoutAtoms::ReleaseAtoms();
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsAccessibilityService, nsIAccessibilityService);
@@ -230,16 +230,6 @@ nsAccessibilityService::GetShellFromNode(nsIDOMNode *aNode, nsIWeakReference **a
 /**
   * nsIAccessibilityService methods:
   */
-
-NS_IMETHODIMP nsAccessibilityService::Shutdown()
-{
-  if (mIsActive) {
-   nsLayoutAtoms::ReleaseAtoms();
-   mIsActive = PR_FALSE;
-  }
-
-  return NS_OK;
-}
 
 NS_IMETHODIMP 
 nsAccessibilityService::CreateAccessible(nsIDOMNode* aDOMNode, nsISupports* aDocument, nsIAccessible **_retval)

@@ -2396,7 +2396,7 @@ NS_IMETHODIMP nsDocShell::GotoIndex(PRInt32 aIndex)
 NS_IMETHODIMP
 nsDocShell::LoadURI(const PRUnichar * aURI,
                     PRUint32 aLoadFlags,
-                    nsIURI * aReferringURI,
+                    nsIURI * aReferingURI,
                     nsIInputStream * aPostStream,
                     nsIInputStream * aHeaderStream)
 {
@@ -2441,7 +2441,7 @@ nsDocShell::LoadURI(const PRUnichar * aURI,
     PRUint32 loadType = MAKE_LOAD_TYPE(LOAD_NORMAL, aLoadFlags); 
     loadInfo->SetLoadType(ConvertLoadTypeToDocShellLoadInfo(loadType));
     loadInfo->SetPostDataStream(aPostStream);
-    loadInfo->SetReferrer(aReferringURI);
+    loadInfo->SetReferrer(aReferingURI);
     loadInfo->SetHeadersStream(aHeaderStream);
 
     rv = LoadURI(uri, loadInfo, 0, PR_TRUE);
@@ -2787,7 +2787,7 @@ nsDocShell::GetCurrentURI(nsIURI ** aURI)
 }
 
 NS_IMETHODIMP
-nsDocShell::GetReferringURI(nsIURI ** aURI)
+nsDocShell::GetReferingURI(nsIURI ** aURI)
 {
     NS_ENSURE_ARG_POINTER(aURI);
 

@@ -28,7 +28,7 @@
 			onset="this.update(val)"
 			onget="return this.mValue"/>
          
-        <property name="ondatepick" 
+      <property name="ondatepick" 
 			onset="this.callback = val;"
 			/>
 
@@ -36,15 +36,14 @@
 			<![CDATA[
 				this.mTextBox = document.getAnonymousNodes(this)[0].childNodes[0];
 				this.mPopup = document.getAnonymousNodes(this)[0].childNodes[1].childNodes[0];
-				this.calendar = document.getAnonymousNodes(this)[0].childNodes[1].childNodes[0].childNodes[0];
-                
+				
 				var val = this.getAttribute("value");
 
 				if (val) this.value = val;
 				else this.value = new Date();
             
-                val = this.getAttribute("ondatepick");
-            
+            val = this.getAttribute("ondatepick");
+            dump( "\ncallback is "+val );
 				if (val) this.callback = new Function( val );
             
 			]]>
@@ -57,22 +56,13 @@
 					this.mTextBox.setAttribute("value", this.getPrettyDate(this.mValue));
 				} else {
 					this.mValue = aValue;
-                    this.mTextBox.setAttribute("value", this.getPrettyDate(this.mValue));
-                    if( this.callback )
-                        this.callback();
+               this.mTextBox.setAttribute("value", this.getPrettyDate(this.mValue));
 				}
                 
 			]]></body>
 		</method>
 
-		<method name="refreshDisplay">
-			<body><![CDATA[
-              this.calendar.refreshDisplay( );
-              alert( "in refresh display" );  
-			]]></body>
-		</method>
-        
-        <method name="getPrettyDate">
+		<method name="getPrettyDate">
 		<parameter name="aValue"/>
 			<body><![CDATA[
 				return (aValue.getMonth()+1) + "/" + aValue.getDate() + "/" + aValue.getFullYear();

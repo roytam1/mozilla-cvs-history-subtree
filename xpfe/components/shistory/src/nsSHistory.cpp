@@ -597,7 +597,7 @@ nsSHistory::GetCurrentURI(nsIURI** aResultURI)
 
 
 NS_IMETHODIMP
-nsSHistory::GetReferringURI(nsIURI** aURI)
+nsSHistory::GetReferingURI(nsIURI** aURI)
 {
     *aURI = nsnull;
     // Not implemented
@@ -624,7 +624,7 @@ nsSHistory::GetSessionHistory(nsISHistory** aSessionHistory)
 NS_IMETHODIMP
 nsSHistory::LoadURI(const PRUnichar* aURI,
                     PRUint32 aLoadFlags,
-                    nsIURI* aReferringURI,
+                    nsIURI* aReferingURI,
                     nsIInputStream* aPostStream,
                     nsIInputStream* aExtraHeaderStream)
 {

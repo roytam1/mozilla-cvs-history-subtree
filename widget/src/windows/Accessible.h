@@ -54,6 +54,7 @@
 #include "SimpleDOMNode.h"
 #include "nsIDOMElement.h"
 #include "nsIContent.h"
+
 #include "nsString.h"
 
 struct FlagBits {
@@ -286,9 +287,7 @@ public:
     virtual ~RootAccessible();
 
     STDMETHODIMP      QueryInterface(REFIID, void**);
-    NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
-    NS_IMETHOD_(nsrefcnt) AddRef(void);
-    NS_IMETHOD_(nsrefcnt) Release(void);
+    NS_DECL_ISUPPORTS
 
     virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accChild( 
         /* [in] */ VARIANT varChild,
@@ -299,8 +298,6 @@ public:
 
     PRUint32 GetIdFor(nsIAccessible* aAccessible);
     virtual void GetNSAccessibleFor(VARIANT varChild, nsCOMPtr<nsIAccessible>& aAcc);
-    void Shutdown();
-    void ShutdownAll();
 
   private:
     // list of accessible that may have had
@@ -308,8 +305,6 @@ public:
     static nsAccessibleEventMap gList[MAX_LIST_SIZE];
     static PRInt32 gListCount;
     static PRInt32 gNextPos;
-    static PRInt32 gActiveRootAccessibles;
-    PRBool mIsActive;
 };
 #endif
 

@@ -89,11 +89,11 @@
                         <hbox class="field-label-box-class" pack="end">
                             <description>&calendar.publish.url.label;</description>
                         </hbox>
-                        <textbox flex="1" id="publish-remotePath-textbox" onkeypress="checkURLField()"/>
+                        <textbox flex="1" id="publish-remotePath-textbox"/>
                     </row>
                     <row align="center">
                         <hbox class="field-label-box-class" pack="end"/>
-                        <description>&calendar.publish.example.url.description;</description>
+                        <description>Something like http://www.myserver.com/webdav/test.ics</description>
                     </row>
                     
                     <!-- Username -->    
@@ -105,7 +105,7 @@
                     </row>
                     <row align="center">
                         <hbox class="field-label-box-class" pack="end"/>
-                        <description>&calendar.publish.username.description;</description>
+                        <description>(Optional) The username to upload to this server.</description>
                     </row>
                     
                     <!-- Password -->    
@@ -117,7 +117,7 @@
                     </row>
                     <row align="center">
                         <hbox class="field-label-box-class" pack="end"/>
-                        <description>&calendar.publish.password.description;</description>
+                        <description>(Optional) The password to upload to this server.</description>
                     </row>
                   </rows>
                </grid>

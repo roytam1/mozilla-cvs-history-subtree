@@ -2865,7 +2865,7 @@ nsWebBrowserPersist::StoreURIAttribute(
         attrNode->GetNodeValue(oldValue);
         if (!oldValue.IsEmpty())
         {
-            NS_ConvertUCS2toUTF8 oldCValue(oldValue);
+            nsCAutoString oldCValue; oldCValue.AssignWithConversion(oldValue);
             return StoreURI(oldCValue.get(), aNeedsPersisting, aData);
         }
     }
@@ -2995,7 +2995,7 @@ nsWebBrowserPersist::FixupAnchor(nsIDOMNode *aNode)
     {
         nsString oldValue;
         attrNode->GetNodeValue(oldValue);
-        NS_ConvertUCS2toUTF8 oldCValue(oldValue);
+        nsCString oldCValue; oldCValue.AssignWithConversion(oldValue);
 
         // Skip empty values and self-referencing bookmarks
         if (oldCValue.IsEmpty() || oldCValue.CharAt(0) == '#')

@@ -139,26 +139,39 @@ CalendarEventSelection.prototype.onSelectionChanged = function calSel_onSelectio
 {
    if( this.selectedEvents.length > 0 )
    {
-      var ArrayOfElements = document.getElementsByAttribute( "disabledwhennoeventsselected", "true" );
-
-      for( var i = 0; i < ArrayOfElements.length; i++ )
-         ArrayOfElements[i].removeAttribute( "disabled" );
+      document.getElementById( "cut_command" ).removeAttribute( "disabled" );
       
-      if( this.selectedEvents.length != 1 )
+      document.getElementById( "copy_command" ).removeAttribute( "disabled" );
+
+      document.getElementById( "delete_command" ).removeAttribute( "disabled" );
+      document.getElementById( "delete_command_no_confirm" ).removeAttribute( "disabled" );
+
+      if( this.selectedEvents.length == 1 )
+         document.getElementById( "modify_command" ).removeAttribute( "disabled" );
+	   else
          document.getElementById( "modify_command" ).setAttribute( "disabled", "true" );
 
       if (gMailAccounts)
       {
          document.getElementById("send_event_command").removeAttribute("disabled");
       }
+
+      document.getElementById( "print_command" ).removeAttribute( "disabled" );
    }
    else
    {
-      var ArrayOfElements = document.getElementsByAttribute( "disabledwhennoeventsselected", "true" );
+      document.getElementById( "cut_command" ).setAttribute( "disabled", "true" );
+      
+      document.getElementById( "copy_command" ).setAttribute( "disabled", "true" );
 
-      for( var i = 0; i < ArrayOfElements.length; i++ )
-         ArrayOfElements[i].setAttribute( "disabled", "true" );
+      document.getElementById( "delete_command" ).setAttribute( "disabled", "true" );
+      document.getElementById( "delete_command_no_confirm" ).setAttribute( "disabled", "true" );
 
+      document.getElementById( "modify_command" ).setAttribute( "disabled", "true" );
+
+      document.getElementById("send_event_command").setAttribute("disabled", "true");
+
+      document.getElementById("print_command").setAttribute("disabled", "true");
    }
 
    for( var index in this.observerList )

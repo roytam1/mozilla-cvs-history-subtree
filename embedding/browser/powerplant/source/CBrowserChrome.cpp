@@ -79,7 +79,7 @@ const PRInt32     kGrowIconSize = 15;
 CBrowserChrome::CBrowserChrome(CBrowserShell *aShell,
                                UInt32 aChromeFlags,
                                Boolean aIsMainContent) :
-    mBrowserShell(aShell), mBrowserWindow(nsnull),
+    mBrowserWindow(nsnull), mBrowserShell(aShell),
     mChromeFlags(aChromeFlags), mIsMainContent(aIsMainContent),
     mSizeToContent(false),    
     mInModalLoop(false), mWindowVisible(false),
@@ -409,7 +409,7 @@ NS_IMETHODIMP CBrowserChrome::GetSiteWindow(void * *aSiteWindow)
     NS_ENSURE_ARG(aSiteWindow);
     NS_ENSURE_STATE(mBrowserWindow);
 
-    *aSiteWindow = mBrowserWindow->GetMacWindow();
+    *aSiteWindow = mBrowserWindow->Compat_GetMacWindow();
     
     return NS_OK;
 }
@@ -498,6 +498,8 @@ void CBrowserChrome::ListenToMessage(MessageT inMessage, void* ioParam)
     {
         case msg_OnNetStopChange:
             {
+                const MsgNetStartInfo *info = reinterpret_cast<MsgNetStartInfo*>(ioParam);
+
                 mInitialLoadComplete = true;
 
                 // See if we need to size it and show it

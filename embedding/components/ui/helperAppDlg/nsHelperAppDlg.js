@@ -515,7 +515,9 @@ nsHelperAppDialog.prototype = {
         return this.helperAppChoice() != this.mLauncher.MIMEInfo.preferredApplicationHandler;
     },
 
-    updateMIMEInfo: function() {
+    // See if the user changed things, and if so, update the
+    // mimeTypes.rdf entry for this mime type.
+    updateHelperAppPref: function() {
         var needUpdate = false;
         // If current selection differs from what's in the mime info object,
         // then we need to update.
@@ -552,20 +554,16 @@ nsHelperAppDialog.prototype = {
         
         // Make sure mime info has updated setting for the "always ask" flag.
         this.mLauncher.MIMEInfo.alwaysAskBeforeHandling = this.dialogElement( "alwaysAskMe" ).checked;
-
-        return needUpdate;        
-    },
-    
-    // See if the user changed things, and if so, update the
-    // mimeTypes.rdf entry for this mime type.
-    updateHelperAppPref: function() {
-        // We update by passing this mime info into the "Edit Type" helper app
-        // pref dialog.  It will update the data source and close the dialog
-        // automatically.
-        this.mDialog.openDialog( "chrome://communicator/content/pref/pref-applications-edit.xul",
-                                 "_blank",
-                                 "chrome,modal=yes,resizable=no",
-                                 this );
+        
+        if ( needUpdate ) {
+            // We update by passing this mime info into the "Edit Type" helper app
+            // pref dialog.  It will update the data source and close the dialog
+            // automatically.
+            this.mDialog.openDialog( "chrome://communicator/content/pref/pref-applications-edit.xul",
+                                     "_blank",
+                                     "chrome,modal=yes,resizable=no",
+                                     this );
+        }
     },
     
     // onOK:
@@ -603,7 +601,6 @@ nsHelperAppDialog.prototype = {
         // "Save to Disk" dialog. In those cases, we don't want to
         // update the helper application preferences in the RDF file.
         try {
-            var needUpdate = this.updateMIMEInfo();
             if ( this.dialogElement( "saveToDisk" ).selected )
                 this.mLauncher.saveToDisk( null, false );
             else
@@ -612,10 +609,8 @@ nsHelperAppDialog.prototype = {
             // Update user pref for this mime type (if necessary). We do not
             // store anything in the mime type preferences for the ambiguous
             // type application/octet-stream.
-            if ( needUpdate &&
-                 this.mLauncher.MIMEInfo.MIMEType != "application/octet-stream" ) {
+            if ( this.mLauncher.MIMEInfo.MIMEType != "application/octet-stream" )
                 this.updateHelperAppPref();
-            }
  
         } catch(e) { }
             

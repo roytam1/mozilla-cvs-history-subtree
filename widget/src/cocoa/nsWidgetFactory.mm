@@ -170,7 +170,7 @@ static nsModuleComponentInfo components[] =
 		NS_DRAGHELPERSERVICE_CID,
 		"@mozilla.org/widget/draghelperservice;1",
 		nsDragHelperServiceConstructor },
-	{   "Cocoa Bidi Keyboard",
+		{ "Gtk Bidi Keyboard",
 		NS_BIDIKEYBOARD_CID,
 		"@mozilla.org/widget/bidikeyboard;1",
 		nsBidiKeyboardConstructor },
