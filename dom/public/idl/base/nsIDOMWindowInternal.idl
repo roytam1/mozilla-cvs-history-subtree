@@ -37,39 +37,37 @@ interface nsIDOMWindowInternal : nsIDOMWindow
   readonly attribute nsIDOMScreen                screen;
   readonly attribute nsIDOMHistory               history;
 
-  /* Wwhhhhhaaaaaaaaggghh, this is an invalid name in IDL
-   * [replaceable] _content;
-   */
+  /* [replaceable] content */
   readonly attribute nsIDOMWindow                content;
 
-  /* [replaceable] sidebar; */
+  /* [replaceable] sidebar */
   readonly attribute nsISidebar                  sidebar;
 
-  /* [replaceable] prompter; */
+  /* [replaceable] prompter */
   readonly attribute nsIPrompt                   prompter;
 
-  /* [replaceable] menubar; */
+  /* [replaceable] menubar */
   readonly attribute nsIDOMBarProp               menubar;
 
-  /* [replaceable] toolbar; */
+  /* [replaceable] toolbar */
   readonly attribute nsIDOMBarProp               toolbar;
 
-  /* [replaceable] locationbar; */
+  /* [replaceable] locationbar */
   readonly attribute nsIDOMBarProp               locationbar;
 
-  /* [replaceable] personalbar; */
+  /* [replaceable] personalbar */
   readonly attribute nsIDOMBarProp               personalbar;
 
-  /* [replaceable] statusbar; */
+  /* [replaceable] statusbar */
   readonly attribute nsIDOMBarProp               statusbar;
 
-  /* [replaceable] directories; */
+  /* [replaceable] directories */
   readonly attribute nsIDOMBarProp               directories;
   readonly attribute boolean                     closed;
   readonly attribute nsIDOMCrypto                crypto;
   readonly attribute nsIDOMPkcs11                pkcs11;
 
-  /* [replaceable] controllers; */
+  /* [replaceable] controllers */
   readonly attribute nsIControllers              controllers;
            attribute nsIDOMWindowInternal        opener;
            attribute DOMString                   status;
@@ -90,15 +88,17 @@ interface nsIDOMWindowInternal : nsIDOMWindow
   readonly attribute long                        pageXOffset;
   readonly attribute long                        pageYOffset;
 
-  /* [replaceable] length; */
+  /* [replaceable] length */
   readonly attribute unsigned long               length;
 
-  // Make these 4 methods JS only? 
-  void                      dump(in DOMString str);
-  void                      alert(in DOMString text /*, ... */);
-  boolean                   confirm(in DOMString text /*, ... */);
+  void                      alert(in DOMString text);
+  boolean                   confirm(in DOMString text);
+
   // XXX prompt() should return a null string if cancel is pressed
-  DOMString                 prompt(in DOMString data /*, ... */);
+  DOMString                 prompt(in DOMString aMessage,
+                                   in DOMString aInitial,
+                                   in DOMString aTitle,
+                                   in unsigned long aSavePassword);
 
   void                      focus();
   void                      blur();
@@ -120,18 +120,11 @@ interface nsIDOMWindowInternal : nsIDOMWindow
 
   void                      clearTimeout(in long timerID);
   void                      clearInterval(in long timerID);
-  long                      setTimeout(/* ... */);
-  long                      setInterval(/* ... */);
+  //[noscript] long           setTimeout(/* in function,
+  //                                        in unsigned long timeout */);
+  //[noscript] long           setInterval(/* in function,
+  //                                        in unsigned long timeout */);
 
-  // This method is here for backwards compatibility with 4.x only,
-  // it's implementation is a nop
-  void                      setResizable(in boolean resizable);
-
-  void                      captureEvents(in long eventFlags);
-  void                      releaseEvents(in long eventFlags);
-  void                      routeEvent(in nsIDOMEvent evt);
-  void                      enableExternalCapture();
-  void                      disableExternalCapture();
   void                      setCursor(in DOMString cursor);
 
   [noscript] nsIDOMWindow   open(in DOMString url, in DOMString name,

@@ -41,6 +41,7 @@
 #include "nsIDOMNavigator.h"
 #include "nsIDOMNSLocation.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsIDOMJSWindow.h"
 #include "nsIDOMEventProp.h"
 #include "nsIJSScriptObject.h"
 #include "nsIScriptGlobalObject.h"
@@ -79,7 +80,8 @@ class nsIDocShellLoadInfo;
 // GlobalWindowImpl: Global Object for Scripting
 //*****************************************************************************   
 class GlobalWindowImpl : public nsIScriptGlobalObject,
-                         public nsIDOMWindowInternal,
+                         public nsIDOMWindowInternalEx,
+                         public nsIDOMJSWindow,
                          public nsIScriptObjectPrincipal,
                          public nsIDOMEventReceiver,
                          public nsPIDOMWindow, 
@@ -116,6 +118,9 @@ public:
 
   // nsIDOMWindowInternalEx
   NS_DECL_NSIDOMWINDOWINTERNALEX
+
+  // nsIDOMJSWindow
+  NS_DECL_NSIDOMJSWINDOW
 
   XPC_DECLARE_IXPCSCRIPTABLE
 
@@ -282,6 +287,32 @@ protected:
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
   nsCOMPtr<nsIPrincipal>        mDocumentPrincipal;
+
+  // nsIXPCScriptable code
+  nsresult DefineStaticJSIds(JSContext *cx);
+  PRBool DidDefineStaticJSIds()
+  {
+    return sLocation_id;
+  }
+
+  static nsIXPConnect *sXPConnect;
+  static PRUint32 sInstanceCount;
+
+  static jsid sTop_id;
+  static jsid sScrollbars_id;
+  static jsid sLocation_id;
+  static jsid s_content_id;
+  static jsid sContent_id;
+  static jsid sSidebar_id;
+  static jsid sPrompter_id;
+  static jsid sMenubar_id;
+  static jsid sToolbar_id;
+  static jsid sLocationbar_id;
+  static jsid sPersonalbar_id;
+  static jsid sStatusbar_id;
+  static jsid sDirectories_id;
+  static jsid sControllers_id;
+  static jsid sLength_id;
 };
 
 /*
@@ -346,26 +377,7 @@ public:
   NS_IMETHOD_(void)       SetDocShell(nsIDocShell *aDocShell);
 
   // nsIDOMLocation
-  NS_IMETHOD    GetHash(nsAWritableString& aHash);
-  NS_IMETHOD    SetHash(const nsAReadableString& aHash);
-  NS_IMETHOD    GetHost(nsAWritableString& aHost);
-  NS_IMETHOD    SetHost(const nsAReadableString& aHost);
-  NS_IMETHOD    GetHostname(nsAWritableString& aHostname);
-  NS_IMETHOD    SetHostname(const nsAReadableString& aHostname);
-  NS_IMETHOD    GetHref(nsAWritableString& aHref);
-  NS_IMETHOD    SetHref(const nsAReadableString& aHref);
-  NS_IMETHOD    GetPathname(nsAWritableString& aPathname);
-  NS_IMETHOD    SetPathname(const nsAReadableString& aPathname);
-  NS_IMETHOD    GetPort(nsAWritableString& aPort);
-  NS_IMETHOD    SetPort(const nsAReadableString& aPort);
-  NS_IMETHOD    GetProtocol(nsAWritableString& aProtocol);
-  NS_IMETHOD    SetProtocol(const nsAReadableString& aProtocol);
-  NS_IMETHOD    GetSearch(nsAWritableString& aSearch);
-  NS_IMETHOD    SetSearch(const nsAReadableString& aSearch);
-  NS_IMETHOD    Reload(PRBool aForceget);
-  NS_IMETHOD    Replace(const nsAReadableString& aUrl);
-  NS_IMETHOD    Assign(const nsAReadableString& aUrl);
-  NS_IMETHOD    ToString(nsAWritableString& aReturn);
+  NS_DECL_NSIDOMLOCATION
 
   // nsIJSScriptObject
   // XXX all these should go away!!!
@@ -374,7 +386,7 @@ public:
   virtual PRBool    SetProperty(JSContext *aContext, JSObject *aObj,
                                 jsval aID, jsval *aVp);
 
-  nsresult SetHrefWithContext(JSContext* cx, jsval val);
+  nsresult SetHrefWithContext(JSContext* cx, const nsAReadableString& aHref);
 
 protected:
   nsresult SetURL(nsIURI* aURL);

@@ -42,6 +42,7 @@ XPIDLSRCS =					\
 	.\nsIDOMWindow.idl			\
 	.\nsIDOMWindowCollection.idl		\
 	.\nsIDOMWindowInternal.idl		\
+	.\nsIDOMJSWindow.idl			\
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
