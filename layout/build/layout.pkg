@@ -9,7 +9,7 @@ dist/bin/components/@SHARED_LIBRARY@
 !xpt dist/bin/components/content_html.xpt
 !xpt dist/bin/components/content_htmldoc.xpt
 !xpt dist/bin/components/content_xmldoc.xpt
-!xpt dist/bin/components/xslt.xpt
+!xpt dist/bin/components/content_xslt.xpt
 #if MOZ_XUL
 !xpt dist/bin/components/xultmpl.xpt
 !xpt dist/bin/components/layout_xul_tree.xpt
