@@ -47,6 +47,7 @@ XPCWrappedNativeProto::XPCWrappedNativeProto(XPCWrappedNativeScope* Scope,
     : mScope(Scope),
       mJSProtoObject(nsnull),
       mClassInfo(ClassInfo),
+      mClassInfoFlags(0),
       mSet(Set),
       mSecurityInfo(nsnull),
       mScriptableInfo(nsnull),
@@ -74,6 +75,9 @@ JSBool
 XPCWrappedNativeProto::Init(XPCCallContext& ccx,
                             const XPCNativeScriptableInfo* scriptableInfo)
 {
+    if(mClassInfo && NS_FAILED(mClassInfo->GetFlags(&mClassInfoFlags)))
+        return JS_FALSE;
+
     if(scriptableInfo && scriptableInfo->GetScriptable())
     {
         mScriptableInfo = scriptableInfo->Clone();
@@ -122,7 +126,7 @@ XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
     {
         ClassInfo2WrappedNativeProtoMap* map = mScope->GetWrappedNativeProtoMap();
         {   // scoped lock
-            nsAutoLock lock(mScope->GetRuntime()->GetMapLock());  
+            XPCAutoLock lock(mScope->GetRuntime()->GetMapLock());  
             map->Remove(mClassInfo);
         }
     }
@@ -159,7 +163,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
     ClassInfo2WrappedNativeProtoMap* map = Scope->GetWrappedNativeProtoMap();
 
     {   // scoped lock
-        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
         proto = map->Find(ClassInfo);
         if(proto)
         {
@@ -183,7 +187,7 @@ XPCWrappedNativeProto::GetNewOrUsed(XPCCallContext& ccx,
     proto->AddRef();
 
     {   // scoped lock
-        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
         map->Add(ClassInfo, proto);
     }
 

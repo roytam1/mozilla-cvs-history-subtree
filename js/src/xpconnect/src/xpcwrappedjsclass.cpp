@@ -86,7 +86,7 @@ nsXPCWrappedJSClass::GetNewOrUsed(XPCCallContext& ccx, REFNSIID aIID)
     XPCJSRuntime* rt = ccx.GetRuntime();
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         IID2WrappedJSClassMap* map = rt->GetWrappedJSClassMap();
         clazz = map->Find(aIID);
         NS_IF_ADDREF(clazz);
@@ -126,7 +126,7 @@ nsXPCWrappedJSClass::nsXPCWrappedJSClass(XPCCallContext& ccx, REFNSIID aIID,
     NS_ADDREF_THIS();
 
     {   // scoped lock
-        nsAutoLock lock(mRuntime->GetMapLock());  
+        XPCAutoLock lock(mRuntime->GetMapLock());  
         mRuntime->GetWrappedJSClassMap()->Add(this);
     }
 
@@ -170,7 +170,7 @@ nsXPCWrappedJSClass::~nsXPCWrappedJSClass()
         delete [] mDescriptors;
     if(mRuntime)
     {   // scoped lock
-        nsAutoLock lock(mRuntime->GetMapLock());  
+        XPCAutoLock lock(mRuntime->GetMapLock());  
         mRuntime->GetWrappedJSClassMap()->Remove(this);
     }
     if(mName)
@@ -677,7 +677,7 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
                             mRuntime->GetThisTraslatorMap();
 
                         {
-                            nsAutoLock lock(mRuntime->GetMapLock()); // scoped lock
+                            XPCAutoLock lock(mRuntime->GetMapLock()); // scoped lock
                             translator = map->Find(mIID);
                         }
 

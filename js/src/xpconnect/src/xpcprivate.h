@@ -120,6 +120,10 @@
 #define XPC_REPORT_SHADOWED_WRAPPED_NATIVE_MEMBERS
 #endif
 
+#ifdef DEBUG
+#define XPC_CHECK_WRAPPER_THREADSAFETY
+#endif
+
 #if defined(DEBUG_jst) || defined(DEBUG_jband)
 #define XPC_CHECK_CLASSINFO_CLAIMS
 #if defined(DEBUG_jst)
@@ -142,6 +146,12 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
                                  XPCWrappedNativeProto* proto);
 #else
 #define DEBUG_ReportShadowedMembers(set, proto) ((void)0)
+#endif
+
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper);
+#else
+#define DEBUG_CheckWrapperThreadSafety(w) ((void)0)
 #endif
 
 /***************************************************************************/
@@ -188,6 +198,80 @@ extern const char XPC_ARG_FORMATTER_FORMAT_STR[]; // format string
         result = nsnull; \
     *dest = result; \
     return (result || !src) ? NS_OK : NS_ERROR_OUT_OF_MEMORY
+
+/***************************************************************************/
+
+// We PROMISE to never screw this up.
+#ifdef WIN32
+#pragma warning(disable : 4355) // OK to pass "this" in member initializer
+#endif
+
+typedef PRMonitor XPCLock; 
+
+// This is a cloned subset of nsAutoMonitor. We want the use of a monitor -
+// mostly because we need reenterability - but we also want to support passing
+// a null monitor in without things blowing up. This is used for wrappers that
+// are gaurenteeded to be used only on one thread. We avoid lock overhead by
+// using a null monitor. By changing this class we can avoid having multiplte
+// code paths or (conditional) manual calls to PR_{Enter,Exit}Monitor.
+//
+// Note that xpconnect only makes *one* monitor and *mostly* holds it locked 
+// only through very small critical sections.
+
+class XPCAutoLock : public nsAutoLockBase {
+public:
+
+    static XPCLock* NewLock(const char* name) 
+                        {return nsAutoMonitor::NewMonitor(name);}
+    static void       DestroyLock(XPCLock* lock)
+                        {nsAutoMonitor::DestroyMonitor(lock);}
+
+    XPCAutoLock(XPCLock* lock)
+#ifdef DEBUG
+        : nsAutoLockBase(lock ? (void*) lock : (void*) this, eAutoMonitor),
+#else
+        : nsAutoLockBase(lock, eAutoMonitor),
+#endif
+          mLock(lock)
+    {
+        if(mLock)
+            PR_EnterMonitor(mLock);
+    }
+
+    ~XPCAutoLock()
+    {
+        if(mLock)
+        {
+#ifdef DEBUG
+            PRStatus status = 
+#endif
+                PR_ExitMonitor(mLock);
+            NS_ASSERTION(status == PR_SUCCESS, "PR_ExitMonitor failed");
+        }
+    }
+
+private:
+    XPCLock*  mLock;
+
+    // Not meant to be implemented. This makes it a compiler error to
+    // construct or assign an nsAutoLock object incorrectly.
+    XPCAutoLock(void) {}
+    XPCAutoLock(XPCAutoLock& /*aMon*/) {}
+    XPCAutoLock& operator =(XPCAutoLock& /*aMon*/) {
+        return *this;
+    }
+
+    // Not meant to be implemented. This makes it a compiler error to
+    // attempt to create an nsAutoLock object on the heap.
+#if (__GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95))
+    static void* operator new(size_t /*size*/) throw () {
+#else
+    static void* operator new(size_t /*size*/) {
+#endif
+        return nsnull;
+    }
+    static void operator delete(void* /*memory*/) {}
+};
 
 /***************************************************************************/
 
@@ -277,8 +361,7 @@ public:
     IID2ThisTranslatorMap* GetThisTraslatorMap() const
         {return mThisTranslatorMap;}
 
-    PRLock* GetMapLock() const {return mMapLock;}
-    PRLock* GetContextMapLock() const {return mContextMapLock;}
+    XPCLock* GetMapLock() const {return mMapLock;}
 
     XPCContext* GetXPCContext(JSContext* cx);
     XPCContext* SyncXPCContextList(JSContext* cx = nsnull);
@@ -328,11 +411,11 @@ public:
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
    void DEBUG_AddWrappedNative(nsIXPConnectWrappedNative* wrapper)
-        {nsAutoLock lock(mMapLock);
+        {XPCAutoLock lock(GetMapLock());
          JS_HashTableAdd(DEBUG_WrappedNativeHashtable, wrapper, wrapper);}
 
    void DEBUG_RemoveWrappedNative(nsIXPConnectWrappedNative* wrapper)
-        {nsAutoLock lock(mMapLock);
+        {XPCAutoLock lock(GetMapLock());
          JS_HashTableRemove(DEBUG_WrappedNativeHashtable, wrapper);}
 
 private:
@@ -364,8 +447,7 @@ private:
     ClassInfo2NativeSetMap*  mClassInfo2NativeSetMap;
     NativeSetMap*            mNativeSetMap;
     IID2ThisTranslatorMap*   mThisTranslatorMap;
-    PRLock* mMapLock;
-    PRLock* mContextMapLock;
+    XPCLock* mMapLock;
     nsVoidArray mWrappedJSToReleaseArray;
 
 };
@@ -1843,9 +1925,9 @@ private:
 class XPCNativeScriptableInfo
 {
 public:
-    nsIXPCScriptable* GetScriptable() const  {return mScriptable;}
-    JSUint32          GetFlags() const       {return mFlags;}
-    JSClass*          GetJSClass()           {return &mJSClass;}
+    nsIXPCScriptable* GetScriptable() const {return mScriptable;}
+    JSUint32          GetFlags() const      {return mFlags;}
+    JSClass*          GetJSClass()          {return &mJSClass;}
 
     JSBool            BuildJSClass();
     
@@ -1936,9 +2018,26 @@ public:
     XPCNativeScriptableInfo* GetScriptableInfo()   {return mScriptableInfo;}
     void**                   GetSecurityInfoAddr() {return &mSecurityInfo;}
 
+    JSUint32                 GetClassInfoFlags() const {return mClassInfoFlags;}
+
     JSBool                   IsShared() const {return nsnull != mClassInfo.get();}
     void                     AddRef();
     void                     Release();
+
+#ifdef GET_IT
+#undef GET_IT
+#endif
+#define GET_IT(f_) const {return (JSBool)(mClassInfoFlags & nsIClassInfo:: f_ );}
+
+    JSBool ClassIsSingleton()           GET_IT(SINGLETON)
+    JSBool ClassIsThreadSafe()          GET_IT(THREADSAFE)
+    JSBool ClassIsMainThreadOnly()      GET_IT(MAIN_THREAD_ONLY)
+    JSBool ClassIsDOMObject()           GET_IT(DOM_OBJECT)
+
+#undef GET_IT
+    
+    XPCLock* GetLock() const 
+        {return ClassIsThreadSafe() ? GetRuntime()->GetMapLock() : nsnull;}
 
     void SetScriptableInfo(XPCNativeScriptableInfo* si)
         {NS_ASSERTION(!mScriptableInfo, "leak here!"); mScriptableInfo = si;}
@@ -1979,6 +2078,7 @@ private:
     XPCWrappedNativeScope*   mScope;
     JSObject*                mJSProtoObject;
     nsCOMPtr<nsIClassInfo>   mClassInfo;
+    JSUint32                 mClassInfoFlags;
     XPCNativeSet*            mSet;
     void*                    mSecurityInfo;
     XPCNativeScriptableInfo* mScriptableInfo;
@@ -2063,12 +2163,21 @@ public:
                                XPCWrappedNativeTearOff** pTearOff = nsnull);
 
     XPCWrappedNativeProto* GetProto()          const {return mProto;}
-    XPCNativeSet*          GetSet()            const {return mSet;}
     nsISupports*           GetIdentityObject() const {return mIdentity;}
     JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}
 
+    XPCNativeSet* GetSet() const 
+        {XPCAutoLock al(GetLock()); return mSet;}
+
+private:
+    void SetSet(XPCNativeSet* set)
+        {XPCAutoLock al(GetLock()); mSet = set;}
+public:
+
     void** GetSecurityInfoAddr() const {return mProto->GetSecurityInfoAddr();}
     nsIClassInfo* GetClassInfo() const {return mProto->GetClassInfo();}
+
+    XPCLock* GetLock() const {return mProto->GetLock();}
 
     // XXX the rules may change here...
     JSBool IsValid() const {return nsnull != mFlatJSObject;}
@@ -2167,6 +2276,10 @@ private:
     XPCNativeScriptableInfo* mScriptableInfo;
 
     XPCWrappedNativeTearOffChunk mFirstChunk;
+
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+    PRThread*   mThread; // Don't want to overload _mOwningThread
+#endif
 };
 
 /***************************************************************************/

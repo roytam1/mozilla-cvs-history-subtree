@@ -740,7 +740,7 @@ nsXPConnect::SetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTra
     IID2ThisTranslatorMap* map = rt->GetThisTraslatorMap();
 
     {
-        nsAutoLock lock(rt->GetMapLock()); // scoped lock
+        XPCAutoLock lock(rt->GetMapLock()); // scoped lock
         if(_retval)
         {
             old = map->Find(aIID);
@@ -764,7 +764,7 @@ nsXPConnect::GetFunctionThisTranslator(const nsIID & aIID, nsIXPCFunctionThisTra
     IID2ThisTranslatorMap* map = rt->GetThisTraslatorMap();
 
     {
-        nsAutoLock lock(rt->GetMapLock()); // scoped lock
+        XPCAutoLock lock(rt->GetMapLock()); // scoped lock
         old = map->Find(aIID);
         NS_IF_ADDREF(old);
         *_retval = old;

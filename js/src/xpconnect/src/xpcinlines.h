@@ -506,13 +506,13 @@ inline void XPCNativeSet::ASSERT_NotMarked()
 inline JSBool 
 XPCWrappedNative::HasInterfaceNoQI(XPCNativeInterface* aInterface)
 {
-    return mSet->HasInterface(aInterface);
+    return GetSet()->HasInterface(aInterface);
 }
 
 inline JSBool 
 XPCWrappedNative::HasInterfaceNoQI(const nsIID& iid)
 {
-    return nsnull != mSet->FindInterfaceWithIID(iid);
+    return nsnull != GetSet()->FindInterfaceWithIID(iid);
 }
 
 inline XPCWrappedNativeTearOff*
@@ -520,7 +520,8 @@ XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
                               XPCNativeInterface* aInterface,
                               JSBool needJSObject /* = JS_FALSE */)
 {
-    // XXX locking !
+    XPCAutoLock al(GetLock()); // hold the lock throughout
+
     XPCWrappedNativeTearOff* firstAvailable = nsnull;
 
     XPCWrappedNativeTearOffChunk* lastChunk;

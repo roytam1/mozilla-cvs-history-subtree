@@ -73,7 +73,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
     {   // scoped lock
-        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
         wrapper = map->Find(identity);
         NS_IF_ADDREF(wrapper);
     }
@@ -195,7 +195,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCWrappedNative* wrapperToKill = nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
 
         // Deal with the case where the wrapper got created as a side effect
         // of one of our calls out of this code (or on another thread).
@@ -245,7 +245,7 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
     Native2WrappedNativeMap* map = Scope->GetWrappedNativeMap();
 
     {   // scoped lock
-        nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(Scope->GetRuntime()->GetMapLock());  
         wrapper = map->Find(identity);
         if(!wrapper)
             return nsnull;
@@ -271,6 +271,10 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
 {
     NS_INIT_ISUPPORTS();
     NS_ADDREF(mIdentity);
+
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+    mThread = PR_GetCurrentThread();
+#endif
 }
 
 XPCWrappedNative::~XPCWrappedNative()
@@ -282,7 +286,7 @@ XPCWrappedNative::~XPCWrappedNative()
     {
         Native2WrappedNativeMap* map = mProto->GetScope()->GetWrappedNativeMap();
         {   // scoped lock
-            nsAutoLock lock(mProto->GetScope()->GetRuntime()->GetMapLock());  
+            XPCAutoLock lock(mProto->GetScope()->GetRuntime()->GetMapLock());  
             map->Remove(this);
         }
 
@@ -650,8 +654,8 @@ XPCWrappedNative::GetWrappedNativeOfJSObject(JSContext* cx,
 JSBool 
 XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
 {
-    // XXX add locking
-
+    // This is only called while locked (during XPCWrappedNative::FindTearOff).
+    
     if(!mSet->HasInterface(aInterface))
     {
         XPCNativeSet* newSet = 
@@ -659,6 +663,7 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
                                        mSet->GetInterfaceCount());
         if(!newSet)
             return JS_FALSE;
+
         mSet = newSet;
 
         DEBUG_ReportShadowedMembers(newSet, GetProto());
@@ -672,17 +677,19 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
                               XPCNativeInterface* aInterface,
                               JSBool needJSObject)
 {
+    // This is only called while locked (during XPCWrappedNative::FindTearOff).
+
     // Determine if the object really does this interface...
 
     const nsIID* iid = aInterface->GetIID();
     nsISupports* identity = GetIdentityObject();
     nsISupports* obj;
-    JSBool foundInSet = GetSet()->HasInterface(aInterface);
+    JSBool foundInSet = mSet->HasInterface(aInterface);
 
     // If the scriptable helper forbids us from reflecting additional 
     // interfaces, then don't even try the QI, just fail.
     if(mScriptableInfo && mScriptableInfo->ClassInfoInterfacesOnly() &&
-       !foundInSet && !GetSet()->HasInterfaceWithAncestor(aInterface))
+       !foundInSet && !mSet->HasInterfaceWithAncestor(aInterface))
     {
         return JS_FALSE;
     }
@@ -721,6 +728,8 @@ JSBool
 XPCWrappedNative::InitTearOffJSObject(XPCCallContext& ccx, 
                                       XPCWrappedNativeTearOff* to)
 {
+    // This is only called while locked (during XPCWrappedNative::FindTearOff).
+
     JSObject* obj = JS_NewObject(ccx, &XPC_WN_Tearoff_JSClass,
                                  GetScope()->GetPrototypeJSObject(),
                                  mFlatJSObject);
@@ -1482,7 +1491,7 @@ NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithMember(jsval name, nsIInterface
     XPCNativeInterface* iface;
     XPCNativeMember*  member;
 
-    if(mSet->FindMember(name, &member, &iface) && iface)
+    if(GetSet()->FindMember(name, &member, &iface) && iface)
     {
         nsIInterfaceInfo* temp = iface->GetInterfaceInfo();
         NS_IF_ADDREF(temp);
@@ -1496,7 +1505,7 @@ NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithMember(jsval name, nsIInterface
 /* XPCNativeInterface FindInterfaceWithName (in JSVal name); */
 NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithName(jsval name, nsIInterfaceInfo * *_retval)
 {
-    XPCNativeInterface* iface = mSet->FindNamedInterface(name);
+    XPCNativeInterface* iface = GetSet()->FindNamedInterface(name);
     if(iface)
     {
         nsIInterfaceInfo* temp = iface->GetInterfaceInfo();
@@ -1635,10 +1644,12 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
         return;
 
     nsISupports* obj = wrapper->GetIdentityObject();
-    for(PRUint16 i = 0; i < wrapper->GetSet()->GetInterfaceCount(); i++)
+    XPCNativeSet* set = wrapper->GetSet();
+    PRUint16 count = set->GetInterfaceCount();
+    for(PRUint16 i = 0; i < count; i++)
     {
         nsIClassInfo* clsInfo = wrapper->GetClassInfo();
-        XPCNativeInterface* iface = wrapper->GetSet()->GetInterfaceAt(i);
+        XPCNativeInterface* iface = set->GetInterfaceAt(i);
         nsIInterfaceInfo* info = iface->GetInterfaceInfo();
         const nsIID* iid;
         nsISupports* ptr;
@@ -1938,6 +1949,13 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
             }
         }
     }
+}
+#endif
+
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper)
+{
+    
 }
 #endif
 

@@ -177,7 +177,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             case JSGC_MARK_END:
             {
                 {
-                    nsAutoLock lock(self->mMapLock); // lock the wrapper map
+                    XPCAutoLock lock(self->GetMapLock()); // lock the wrapper map
                     JSDyingJSObjectData data = {cx, dyingWrappedJSArray};
 
                     // Add any wrappers whose JSObjects are to be finalized to
@@ -438,9 +438,7 @@ XPCJSRuntime::~XPCJSRuntime()
     }
 
     if(mMapLock)
-        PR_DestroyLock(mMapLock);
-    if(mContextMapLock)
-        PR_DestroyLock(mContextMapLock);
+        XPCAutoLock::DestroyLock(mMapLock);
     NS_IF_RELEASE(mJSRuntimeService);
 
 #ifdef XPC_CHECK_WRAPPERS_AT_SHUTDOWN
@@ -468,8 +466,7 @@ XPCJSRuntime::XPCJSRuntime(nsXPConnect* aXPConnect,
    mClassInfo2NativeSetMap(ClassInfo2NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mNativeSetMap(NativeSetMap::newMap(XPC_NATIVE_SET_MAP_SIZE)),
    mThisTranslatorMap(IID2ThisTranslatorMap::newMap(XPC_THIS_TRANSLATOR_MAP_SIZE)),
-   mMapLock(PR_NewLock()),
-   mContextMapLock(PR_NewLock()),
+   mMapLock(XPCAutoLock::NewLock("XPCJSRuntime::mMapLock")),
    mWrappedJSToReleaseArray()
 {
 
@@ -522,8 +519,7 @@ XPCJSRuntime::newXPCJSRuntime(nsXPConnect* aXPConnect,
        self->GetClassInfo2NativeSetMap() &&
        self->GetNativeSetMap()           &&
        self->GetThisTraslatorMap()       &&
-       self->GetMapLock()                &&
-       self->GetContextMapLock())
+       self->GetMapLock())
     {
         return self;
     }
@@ -539,7 +535,7 @@ XPCJSRuntime::GetXPCContext(JSContext* cx)
     // find it in the map.
 
     { // scoped lock
-        nsAutoLock lock(mContextMapLock);
+        XPCAutoLock lock(GetMapLock());
         xpcc = mContextMap->Find(cx);
     }
 
@@ -575,7 +571,7 @@ XPCContext*
 XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
 {
     // hold the map lock through this whole thing
-    nsAutoLock lock(mContextMapLock);
+    XPCAutoLock lock(GetMapLock());
 
     // get rid of any XPCContexts that represent dead JSContexts
     mContextMap->Enumerate(KillDeadContextsCB, mJSRuntime);
@@ -616,7 +612,7 @@ void
 XPCJSRuntime::PurgeXPCContextList()
 {
     // hold the map lock through this whole thing
-    nsAutoLock lock(mContextMapLock);
+    XPCAutoLock lock(GetMapLock());
 
     // get rid of all XPCContexts
     mContextMap->Enumerate(PurgeContextsCB, nsnull);
@@ -677,7 +673,6 @@ XPCJSRuntime::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("mXPConnect @ %x", mXPConnect));
         XPC_LOG_ALWAYS(("mJSRuntime @ %x", mJSRuntime));
         XPC_LOG_ALWAYS(("mMapLock @ %x", mMapLock));
-        XPC_LOG_ALWAYS(("mContextMapLock @ %x", mContextMapLock));
         XPC_LOG_ALWAYS(("mJSRuntimeService @ %x", mJSRuntimeService));
 
         XPC_LOG_ALWAYS(("mWrappedJSToReleaseArray @ %x with %d wrappers(s)", \

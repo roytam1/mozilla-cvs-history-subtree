@@ -279,7 +279,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         iface = map->Find(*iid);
     }
 
@@ -300,7 +300,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         XPCNativeInterface* iface2 = map->Add(iface);
         if(!iface2)
         {
@@ -335,7 +335,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         iface = map->Find(*iid);
     }
 
@@ -347,7 +347,7 @@ XPCNativeInterface::GetNewOrUsed(XPCCallContext& ccx, nsIInterfaceInfo* info)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         XPCNativeInterface* iface2 = map->Add(iface);
         if(!iface2)
         {
@@ -617,7 +617,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         set = map->Find(&key);
     }
 
@@ -629,7 +629,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, const nsIID* iid)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         XPCNativeSet* set2 = map->Add(&key, set);
         if(!set2)
         {
@@ -659,7 +659,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         set = map->Find(classInfo);
     }
 
@@ -716,7 +716,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
                 XPCNativeSetKey key(set, nsnull, 0);
                 
                 {   // scoped lock
-                    nsAutoLock lock(rt->GetMapLock());  
+                    XPCAutoLock lock(rt->GetMapLock());  
                     XPCNativeSet* set2 = map2->Add(&key, set);
                     if(!set2)
                     {
@@ -741,7 +741,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx, nsIClassInfo* classInfo)
 
     if(set)
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         XPCNativeSet* set2 = map->Add(classInfo, set);
         NS_ASSERTION(set2, "failed to add our set!");
         NS_ASSERTION(set2 == set, "hashtables inconsistent!");
@@ -772,7 +772,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
     XPCNativeSetKey key(otherSet, newInterface, position);
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         set = map->Find(&key);
     }
 
@@ -788,7 +788,7 @@ XPCNativeSet::GetNewOrUsed(XPCCallContext& ccx,
         return nsnull;
 
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         XPCNativeSet* set2 = map->Add(&key, set);
         if(!set2)
         {

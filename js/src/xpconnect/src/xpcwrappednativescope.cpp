@@ -52,7 +52,7 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
 {
     // add ourselves to the scopes list
     {   // scoped lock
-        nsAutoLock lock(mRuntime->GetMapLock());  
+        XPCAutoLock lock(mRuntime->GetMapLock());  
         mNext = gScopes;
         gScopes = this;
     }
@@ -128,7 +128,7 @@ void
 XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
 {
     // Hold the lock until return...
-    nsAutoLock lock(rt->GetMapLock());  
+    XPCAutoLock lock(rt->GetMapLock());  
 
     // Since the JSGC_END call happens outside of a lock,
     // it is possible for us to get called here twice before the FinshedGC 
@@ -177,7 +177,7 @@ XPCWrappedNativeScope::FinishedFinalizationPhaseOfGC(JSContext* cx)
         return;
 
     // Hold the lock until return...
-    nsAutoLock lock(rt->GetMapLock());  
+    XPCAutoLock lock(rt->GetMapLock());  
     KillDyingScopes();
 }        
 
@@ -417,7 +417,7 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
     // XXX We are assuming that the scope count is low enough that traversing
     // the linked list is more reasonable then doing a hashtable lookup.
     {   // scoped lock
-        nsAutoLock lock(ccx.GetRuntime()->GetMapLock());  
+        XPCAutoLock lock(ccx.GetRuntime()->GetMapLock());  
         for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
         {
             if(obj == cur->GetGlobalJSObject())

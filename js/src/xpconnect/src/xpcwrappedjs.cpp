@@ -210,7 +210,7 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
 
     // look for the root wrapper
     {   // scoped lock
-        nsAutoLock lock(rt->GetMapLock());  
+        XPCAutoLock lock(rt->GetMapLock());  
         root = map->Find(rootJSObj);
     }
     if(root)
@@ -232,7 +232,7 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
                                                 aOuter);
             if(root)
             {   // scoped lock
-                nsAutoLock lock(rt->GetMapLock());  
+                XPCAutoLock lock(rt->GetMapLock());  
                 map->Add(root);
             }
             goto return_wrapper;
@@ -252,7 +252,7 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
             if(!root)
                 goto return_wrapper;
             {   // scoped lock
-                nsAutoLock lock(rt->GetMapLock());  
+                XPCAutoLock lock(rt->GetMapLock());  
                 map->Add(root);
             }
         }
@@ -277,10 +277,6 @@ return_wrapper:
         NS_RELEASE(clazz);
     return wrapper;
 }
-
-#ifdef WIN32
-#pragma warning(disable : 4355) // OK to pass "this" in member initializer
-#endif
 
 nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
                                JSObject* aJSObj,
@@ -347,7 +343,7 @@ nsXPCWrappedJS::~nsXPCWrappedJS()
             JSObject2WrappedJSMap* map = rt->GetWrappedJSMap();
             if(map)
             {
-                nsAutoLock lock(rt->GetMapLock());  
+                XPCAutoLock lock(rt->GetMapLock());  
                 map->Remove(this);
             }
         }
