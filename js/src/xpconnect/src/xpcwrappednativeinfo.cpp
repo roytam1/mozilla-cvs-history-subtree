@@ -84,6 +84,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 {
     // XXX locking!
 
+    // XXX Is this necessary?  can we ever get here w/o being in a request?
     AutoJSRequest req(ccx); // scoped JS Request
     
     if(IsConstant())
@@ -279,6 +280,14 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
     jsval idval;
     jsid id;
     jsid nameID;
+
+
+    // XXX Investigate lazy init? This is a problem given the 
+    // 'placement new' scheme - we need to at least know how big to make
+    // the object. We might do a scan of methods to determine needed size,
+    // then make our object, but avoid init'ing *any* members until asked?
+    // Find out how often we create these objects w/o really looking at 
+    // (or using) the members.
     
     JSContext* cx = ccx.GetJSContext();
 
@@ -437,6 +446,7 @@ const char*
 XPCNativeInterface::GetMemberName(XPCCallContext& ccx,
                                   const XPCNativeMember* member) const
 {
+    // XXX Is this necessary?  can we ever get here w/o being in a request?
     AutoJSRequest req(ccx); // scoped JS Request
 
     jsval idval;

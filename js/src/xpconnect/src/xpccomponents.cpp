@@ -196,19 +196,18 @@ nsXPCComponents_Interfaces::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     }
 }
 
-/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP 
 nsXPCComponents_Interfaces::Resolve(nsIXPConnectWrappedNative *wrapper, 
                                     JSContext * cx, JSObject * obj, 
-                                    jsid id, PRBool *_retval)
+                                    jsval id, PRBool *_retval)
 {
     *_retval = JS_TRUE;
 
-    jsval idval;
     const char* name = nsnull;
 
-    if(JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
-       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
+    if(JSVAL_IS_STRING(id) &&
+       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(id))) &&
        name[0] != '{') // we only allow interfaces by name here
     {
         nsCOMPtr<nsIJSIID> nsid = 
@@ -387,19 +386,18 @@ nsXPCComponents_Classes::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
     }
 }
 
-/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP 
 nsXPCComponents_Classes::Resolve(nsIXPConnectWrappedNative *wrapper, 
                                  JSContext * cx, JSObject * obj, 
-                                 jsid id, PRBool *_retval)
+                                 jsval id, PRBool *_retval)
 {
     *_retval = JS_TRUE;
 
-    jsval idval;
     const char* name = nsnull;
 
-    if(JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
-       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
+    if(JSVAL_IS_STRING(id) &&
+       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(id))) &&
        name[0] != '{') // we only allow contractids here
     {
         nsCOMPtr<nsIJSCID> nsid = 
@@ -554,19 +552,18 @@ IsRegisteredCLSID(const char* str)
     return registered;
 }
 
-/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP 
 nsXPCComponents_ClassesByID::Resolve(nsIXPConnectWrappedNative *wrapper, 
                                      JSContext * cx, JSObject * obj, 
-                                     jsid id, PRBool *_retval)
+                                     jsval id, PRBool *_retval)
 {
     *_retval = JS_TRUE;
 
-    jsval idval;
     const char* name = nsnull;
 
-    if(JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
-       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))) &&
+    if(JSVAL_IS_STRING(id) &&
+       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(id))) &&
        name[0] == '{' && 
        IsRegisteredCLSID(name)) // we only allow canonical CLSIDs here
     {
@@ -688,19 +685,18 @@ nsXPCComponents_Results::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 }
 
 
-/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP 
 nsXPCComponents_Results::Resolve(nsIXPConnectWrappedNative *wrapper, 
                                  JSContext * cx, JSObject * obj, 
-                                 jsid id, PRBool *_retval)
+                                 jsval id, PRBool *_retval)
 {
     *_retval = JS_TRUE;
 
-    jsval idval;
     const char* name = nsnull;
 
-    if(JS_IdToValue(cx, id, &idval) && JSVAL_IS_STRING(idval) &&
-       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(idval))))
+    if(JSVAL_IS_STRING(id) &&
+       nsnull != (name = JS_GetStringBytes(JSVAL_TO_STRING(id))))
     {
         const char* rv_name;
         void* iter = nsnull;
@@ -1560,10 +1556,10 @@ nsXPCComponents::GetManager(nsIComponentManager * *aManager)
 #define XPC_MAP_FLAGS               0
 #include "xpc_map_end.h" /* This will #undef the above */
 
-/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP 
 nsXPCComponents::Resolve(nsIXPConnectWrappedNative *wrapper, 
-                         JSContext * cx, JSObject * obj, jsid id, 
+                         JSContext * cx, JSObject * obj, jsval id, 
                          PRBool *_retval)
 {
     XPCJSRuntime* rt = nsXPConnect::GetRuntime();
@@ -1572,10 +1568,14 @@ nsXPCComponents::Resolve(nsIXPConnectWrappedNative *wrapper,
     
     *_retval = JS_TRUE;
 
-    if(id == rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT) ||
-       id == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
+    jsid idid;
+    if(!JS_ValueToId(cx, id, &idid))
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    if(idid == rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT) ||
+       idid == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
     {
-        *_retval = OBJ_DEFINE_PROPERTY(cx, obj, id, JSVAL_VOID, 
+        *_retval = OBJ_DEFINE_PROPERTY(cx, obj, idid, JSVAL_VOID, 
                                        nsnull, nsnull, 
                                        JSPROP_ENUMERATE |
                                        JSPROP_READONLY |
@@ -1586,26 +1586,29 @@ nsXPCComponents::Resolve(nsIXPConnectWrappedNative *wrapper,
     return NS_OK;
 }
 
-/* PRBool getProperty (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id, in JSValPtr vp); */
+/* PRBool getProperty (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in JSValPtr vp); */
 NS_IMETHODIMP 
 nsXPCComponents::GetProperty(nsIXPConnectWrappedNative *wrapper, 
                              JSContext * cx, JSObject * obj, 
-                             jsid id, jsval * vp, PRBool *_retval)
+                             jsval id, jsval * vp, PRBool *_retval)
 {
     XPCContext* xpcc = nsXPConnect::GetContext(cx);
     if(!xpcc)
         return NS_ERROR_FAILURE;
-        
+
+    jsid idid;
+    if(!JS_ValueToId(cx, id, &idid))
+        return NS_ERROR_OUT_OF_MEMORY;
 
     PRBool doResult = JS_FALSE;
     nsresult res;
     XPCJSRuntime* rt = xpcc->GetRuntime();
-    if(id == rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT))
+    if(idid == rt->GetStringID(XPCJSRuntime::IDX_LAST_RESULT))
     {
         res = xpcc->GetLastResult();
         doResult = JS_TRUE;
     }
-    else if(id == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
+    else if(idid == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
     {
         res = xpcc->GetPendingResult();
         doResult = JS_TRUE;
@@ -1621,10 +1624,10 @@ nsXPCComponents::GetProperty(nsIXPConnectWrappedNative *wrapper,
     return NS_OK;
 }
 
-/* PRBool setProperty (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id, in JSValPtr vp); */
+/* PRBool setProperty (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id, in JSValPtr vp); */
 NS_IMETHODIMP 
 nsXPCComponents::SetProperty(nsIXPConnectWrappedNative *wrapper, 
-                             JSContext * cx, JSObject * obj, jsid id, 
+                             JSContext * cx, JSObject * obj, jsval id, 
                              jsval * vp, PRBool *_retval)
 {
     XPCContext* xpcc = nsXPConnect::GetContext(cx);
@@ -1634,8 +1637,12 @@ nsXPCComponents::SetProperty(nsIXPConnectWrappedNative *wrapper,
     XPCJSRuntime* rt = xpcc->GetRuntime();
     if(!rt)
         return NS_ERROR_FAILURE;
-    
-    if(id == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
+
+    jsid idid;
+    if(!JS_ValueToId(cx, id, &idid))
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    if(idid == rt->GetStringID(XPCJSRuntime::IDX_RETURN_CODE))
     {
         nsresult rv;
         if(JS_ValueToECMAUint32(cx, *vp, (uint32*)&rv))

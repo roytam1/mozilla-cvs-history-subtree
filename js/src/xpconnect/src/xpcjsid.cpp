@@ -370,11 +370,11 @@ nsJSIID::NewID(const char* str)
 }
 
 
-/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSID id); */
+/* PRBool resolve (in nsIXPConnectWrappedNative wrapper, in JSContextPtr cx, in JSObjectPtr obj, in JSVal id); */
 NS_IMETHODIMP
 nsJSIID::Resolve(nsIXPConnectWrappedNative *wrapper,
                  JSContext * cx, JSObject * obj,
-                 jsid id, PRBool *_retval)
+                 jsval id, PRBool *_retval)
 {
     *_retval = JS_TRUE;
 
@@ -386,14 +386,18 @@ nsJSIID::Resolve(nsIXPConnectWrappedNative *wrapper,
     if(!iface)
         return NS_OK;
 
-    XPCNativeMember* member = iface->FindMember(id);
+    jsid idid;
+    if(!JS_ValueToId(cx, id, &idid))
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    XPCNativeMember* member = iface->FindMember(idid);
     if(member && member->IsConstant())
     {
         jsval val;
         if(!member->GetValue(ccx, iface, &val))
             return NS_ERROR_OUT_OF_MEMORY;
 
-        *_retval = OBJ_DEFINE_PROPERTY(cx, obj, id, val,
+        *_retval = OBJ_DEFINE_PROPERTY(cx, obj, idid, val,
                                        nsnull, nsnull,
                                        JSPROP_ENUMERATE |
                                        JSPROP_READONLY |
