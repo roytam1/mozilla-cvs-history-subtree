@@ -322,7 +322,7 @@
                 <menuitem label="&goHomeCmd.label;"    accesskey="&goHomeCmd.accesskey;"    command="Browser:Home" key="goHome"/>
                 <menuseparator id="startHistorySeparator"/>
                 <menuseparator hidden="true" id="endHistorySeparator"/>
-                <menuitem accesskey="&historySidebarCmd.accesskey;" command="viewHistorySidebar" key="key_gotoHistory"/>
+                <menuitem observes="viewHistorySidebar" accesskey="&historySidebarCmd.accesskey;" key="key_gotoHistory"/>
               </menupopup>
             </menu>
 
