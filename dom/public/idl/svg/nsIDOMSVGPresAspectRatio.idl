@@ -18,16 +18,14 @@
  * 
  * Contributor(s):
  *
- *        Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  * 
  */
 
-
 #include "domstubs.idl"
 
-
 [scriptable, uuid(7ae42f27-4799-4e7c-86c6-e1dae6ad5157)]
-interface msIDOMSVGPreserveAspectRatio : nsISupports
+interface nsIDOMSVGPreserveAspectRatio : nsISupports
 { 
   // Alignment Types
   const unsigned short SVG_PRESERVEASPECTRATIO_UNKNOWN  = 0;

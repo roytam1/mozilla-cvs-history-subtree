@@ -18,10 +18,9 @@
  * 
  * Contributor(s):
  *
- *        Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  * 
  */
-
 
 #include "nsIDOMSVGElement.idl"
 
@@ -72,11 +71,13 @@ interface nsIDOMSVGPathElement
   float          getTotalLength();
   nsIDOMSVGPoint getPointAtLength(in float distance);
   unsigned long  getPathSegAtLength(in float distance);
+
   nsIDOMSVGPathSegClosePath createSVGPathSegClosePath();
   nsIDOMSVGPathSegMovetoAbs createSVGPathSegMovetoAbs(in float x, in float y);
   nsIDOMSVGPathSegMovetoRel createSVGPathSegMovetoRel(in float x, in float y);
   nsIDOMSVGPathSegLinetoAbs createSVGPathSegLinetoAbs(in float x, in float y);
   nsIDOMSVGPathSegLinetoRel createSVGPathSegLinetoRel(in float x, in float y);
+
   nsIDOMSVGPathSegCurvetoCubicAbs     createSVGPathSegCurvetoCubicAbs(in float x,
                                                                       in float y,
                                                                       in float x1,
@@ -97,6 +98,7 @@ interface nsIDOMSVGPathElement
                                                                           in float y,
                                                                           in float x1,
                                                                           in float y1);
+
   nsIDOMSVGPathSegArcAbs createSVGPathSegArcAbs(in float x, in float y, in float r1,
                                                 in float r2, in float angle,
                                                 in boolean largeArcFlag,
@@ -105,10 +107,12 @@ interface nsIDOMSVGPathElement
                                                 in float r2, in float angle,
                                                 in boolean largeArcFlag,
                                                 in boolean sweepFlag);
+
   nsIDOMSVGPathSegLinetoHorizontalAbs createSVGPathSegLinetoHorizontalAbs(in float x);
   nsIDOMSVGPathSegLinetoHorizontalRel createSVGPathSegLinetoHorizontalRel(in float x);
   nsIDOMSVGPathSegLinetoVerticalAbs   createSVGPathSegLinetoVerticalAbs(in float y);
   nsIDOMSVGPathSegLinetoVerticalRel   createSVGPathSegLinetoVerticalRel(in float y);
+
   nsIDOMSVGPathSegCurvetoCubicSmoothAbs     createSVGPathSegCurvetoCubicSmoothAbs(in float x,
                                                                                   in float y,
                                                                                   in float x2,

@@ -1,8 +1,8 @@
 nsIDOMSVGAnimatedLength.idl
 nsIDOMSVGAnimatedPathData.idl
 nsIDOMSVGAnimatedPoints.idl
+nsIDOMSVGAnimPreserveAspRatio.idl
 nsIDOMSVGAnimatedRect.idl
-nsIDOMSVGAnimPresAspRatio.idl
 nsIDOMSVGAnimTransformList.idl
 nsIDOMSVGCircleElement.idl
 nsIDOMSVGDocument.idl
@@ -22,10 +22,10 @@ nsIDOMSVGPointList.idl
 nsIDOMSVGPolygonElement.idl
 nsIDOMSVGPolylineElement.idl
 nsIDOMSVGPresAspectRatio.idl
-nsIDOMSVGRectElement.idl
 nsIDOMSVGRect.idl
-nsIDOMSVGStylable.idl
+nsIDOMSVGRectElement.idl
 nsIDOMSVGSVGElement.idl
-nsIDOMSVGTransformable.idl
+nsIDOMSVGStylable.idl
 nsIDOMSVGTransform.idl
 nsIDOMSVGTransformList.idl
+nsIDOMSVGTransformable.idl

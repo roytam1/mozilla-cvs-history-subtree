@@ -18,16 +18,13 @@
  * 
  * Contributor(s):
  *
- *        Alex Fritze <alex.fritze@crocodile-clips.com>
+ *    Alex Fritze <alex.fritze@crocodile-clips.com> (original author)
  * 
  */
 
-
 #include "nsIDOMElement.idl"
 
-
 interface nsIDOMSVGSVGElement;
-
 
 [scriptable, uuid(e0be7cbb-81c1-4663-8f95-109d96a60b6b)]
 interface nsIDOMSVGElement : nsIDOMElement 
