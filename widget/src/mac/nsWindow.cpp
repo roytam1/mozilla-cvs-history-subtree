@@ -87,7 +87,6 @@ inline void GetPortVisibleRegion(GrafPtr port, RgnHandle visRgn)
 
 #endif
 
-
 //-------------------------------------------------------------------------
 //
 // nsWindow constructor
@@ -208,10 +207,8 @@ nsresult nsWindow::StandardCreate(nsIWidget *aParent,
 	if (mWindowPtr == nsnull) {
 		if (aParent)
 			mWindowPtr = (WindowPtr)aParent->GetNativeData(NS_NATIVE_DISPLAY);
-/* this is always null
 		else if (aAppShell)
 			mWindowPtr = (WindowPtr)aAppShell->GetNativeData(NS_NATIVE_SHELL);
-*/
 	}
 	return NS_OK;
 }
@@ -1610,7 +1607,6 @@ PRBool nsWindow::RgnIntersects(RgnHandle aTheRegion, RgnHandle aIntersectRgn)
  *  @param   aY -- y offset amount 
  *  @return  NOTHING
  */
- 
 NS_IMETHODIMP nsWindow::CalcOffset(PRInt32 &aX,PRInt32 &aY)
 {
 	aX = aY = 0;
@@ -1714,8 +1710,8 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aLocalRect, nsRect& aGlobal
 		//
 		// Convert the local rect to global, except for this level.
 		theParent->WidgetToScreen(aLocalRect, aGlobalRect);
-	  NS_RELEASE(theParent);
-
+		NS_RELEASE(theParent);
+	  
 		// the offset from our parent is in the x/y of our bounding rect
 		nsRect myBounds;
 		GetBounds(myBounds);
@@ -1755,7 +1751,7 @@ NS_IMETHODIMP nsWindow::ScreenToWidget(const nsRect& aGlobalRect, nsRect& aLocal
 		//
 		// Convert the local rect to global, except for this level.
 		theParent->WidgetToScreen(aGlobalRect, aLocalRect);
-	  NS_RELEASE(theParent);
+		NS_RELEASE(theParent);
 	  
 		// the offset from our parent is in the x/y of our bounding rect
 		nsRect myBounds;
@@ -1812,9 +1808,7 @@ void  nsWindow::ConvertToDeviceCoordinates(nscoord &aX, nscoord &aY)
 	aY += offY;
 }
 
-NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener, 
-                                            PRBool aDoCapture, 
-                                            PRBool aConsumeRollupEvent)
+NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener, PRBool aDoCapture)
 {
   if (aDoCapture) {
     NS_IF_RELEASE(gRollupListener);
