@@ -800,7 +800,8 @@ public void mouseEntered(java.awt.event.MouseEvent e)
             System.out.println("Shift ");
         }
         if (e.isMetaDown()) {
-            System.out.println("Meta ");
+            // PENDING(edburns): this is always sent for some reason
+            //System.out.println("Meta ");
         }
         String href = eventProps.getProperty("href");
         if (null != href) {
