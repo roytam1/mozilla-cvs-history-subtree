@@ -121,7 +121,7 @@ NS_IMETHODIMP nsOSHelperAppService::LaunchAppWithTempFile(nsIMIMEInfo * aMIMEInf
     }    
     else // use the system default
     {
-      HOBJECT hobject = WinQueryObject( path );
+      HOBJECT hobject = WinQueryObject( path.get() );
       if (WinSetObjectData( hobject, "OPEN=DEFAULT" ))
         rv = NS_OK;
       else
