@@ -34,7 +34,7 @@ LIBRARY_NAME	= webbrwsr
 EXPORT_LIBRARY = 1
 GRE_MODULE	= 1
 
-MANFIFEST_FILES = webbrowser.pkg
+PACKAGE_FILE = webbrowser.pkg
 
 REQUIRES	= xpcom \
 		  string \
