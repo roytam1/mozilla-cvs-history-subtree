@@ -245,7 +245,8 @@ nsFastLoadFileReader::StartMuxedDocument(nsISupports* aURI, const char* aURISpec
     if (uriMapEntry->mDocMapEntry)
         return NS_ERROR_UNEXPECTED;
 
-    NS_ADDREF(uriMapEntry->mObject = key);
+    uriMapEntry->mObject = key;
+    NS_ADDREF(uriMapEntry->mObject);
     uriMapEntry->mDocMapEntry = docMapEntry;
     TRACE_MUX(('r', "start %p (%p) %s\n", aURI, key.get(), aURISpec));
     return NS_OK;
@@ -631,7 +632,8 @@ nsFastLoadFileReader::DeserializeObject(nsISupports* *aObject)
     rv = serializable->Read(this);
     if (NS_FAILED(rv)) return rv;
 
-    NS_ADDREF(*aObject = object);
+    *aObject = object;
+    NS_ADDREF(*aObject);
     return NS_OK;
 }
 
@@ -939,7 +941,8 @@ nsFastLoadFileWriter::StartMuxedDocument(nsISupports* aURI, const char* aURISpec
     if (uriMapEntry->mDocMapEntry)
         return NS_ERROR_UNEXPECTED;
 
-    NS_ADDREF(uriMapEntry->mObject = key);
+    uriMapEntry->mObject = key;
+    NS_ADDREF(uriMapEntry->mObject);
     uriMapEntry->mDocMapEntry = docMapEntry;
     TRACE_MUX(('w', "start %p (%p) %s\n", aURI, key.get(), aURISpec));
     return NS_OK;

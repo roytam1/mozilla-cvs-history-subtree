@@ -137,7 +137,8 @@ nsFastLoadService::NewFastLoadFile(const char* aBaseName, nsIFile* *aResult)
     rv = file->Append(name);
     if (NS_FAILED(rv)) return rv;
 
-    NS_ADDREF(*aResult = file);
+    *aResult = file;
+    NS_ADDREF(*aResult);
     return NS_OK;
 }
 
@@ -158,7 +159,8 @@ nsFastLoadService::NewInputStream(nsIInputStream* aSrcStream,
                                                   rawptr);
 
     *aCheckSum = reader->GetChecksum();
-    NS_ADDREF(*aResult = stream);
+    *aResult = stream;
+    NS_ADDREF(*aResult);
     return NS_OK;
 }
 
