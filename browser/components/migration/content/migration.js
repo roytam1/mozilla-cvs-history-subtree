@@ -26,10 +26,12 @@ var MigrationWizard = {
       this._migrator = window.arguments[1].QueryInterface(kIMig);
       this._autoMigrate = window.arguments[2].QueryInterface(kIPStartup);
       
-      // Show the "nothing" option in the automigrate case to provide an
-      // easily identifiable way to avoid migration and create a new profile.
-      var nothing = document.getElementById("nothing");
-      nothing.hidden = false;
+      if (this._autoMigrate) {
+        // Show the "nothing" option in the automigrate case to provide an
+        // easily identifiable way to avoid migration and create a new profile.
+        var nothing = document.getElementById("nothing");
+        nothing.hidden = false;
+      }
     }
     
     this.onImportSourcePageShow();
