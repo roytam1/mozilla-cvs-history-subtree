@@ -36,6 +36,7 @@
 #include "nsFileStream.h"
 #include "nsIServiceManager.h"
 #include "nsIMsgIdentity.h"
+#include "nsIMsgCompFields.h"
 
 static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID); 
 
@@ -179,7 +180,50 @@ char
 					 rand_buf[8], rand_buf[9], rand_buf[10], rand_buf[11]);
 }
 
-// end of copyied code which needs fixed....
+// end of copied code which needs fixed....
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Implementation of nsMsgSMIMEComposeFields
+/////////////////////////////////////////////////////////////////////////////////////////
+
+NS_IMPL_ISUPPORTS1(nsMsgSMIMEComposeFields, nsIMsgSMIMECompFields)
+
+nsMsgSMIMEComposeFields::nsMsgSMIMEComposeFields()
+{
+  NS_INIT_ISUPPORTS();
+}
+
+nsMsgSMIMEComposeFields::~nsMsgSMIMEComposeFields()
+{
+}
+
+NS_IMETHODIMP nsMsgSMIMEComposeFields::SetSignMessage(PRBool value)
+{
+  mSignMessage = value;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgSMIMEComposeFields::GetSignMessage(PRBool *_retval)
+{
+  *_retval = mSignMessage;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgSMIMEComposeFields::SetAlwaysEncryptMessage(PRBool value)
+{
+  mAlwaysEncryptMessage = value;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgSMIMEComposeFields::GetAlwaysEncryptMessage(PRBool *_retval)
+{
+  *_retval = mAlwaysEncryptMessage;
+  return NS_OK;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Implementation of nsMsgComposeSecure
+/////////////////////////////////////////////////////////////////////////////////////////
 
 NS_IMPL_ISUPPORTS1(nsMsgComposeSecure, nsIMsgComposeSecure)
 
@@ -216,22 +260,69 @@ nsMsgComposeSecure::~nsMsgComposeSecure()
   PR_FREEIF(mMultipartSignedBoundary);
 }
 
-/* void beginCryptoEncapsulation (in nsOutputFileStream aStream, in boolean aEncrypt, in boolean aSign, in string aRecipeints, in boolean aIsDraft); */
-NS_IMETHODIMP nsMsgComposeSecure::BeginCryptoEncapsulation(nsOutputFileStream * aStream, PRBool aEncrypt, PRBool aSign, const char *aRecipients, nsIMsgIdentity * aIdentity, PRBool aIsDraft)
+NS_IMETHODIMP nsMsgComposeSecure::RequiresCryptoEncapsulation(nsIMsgIdentity * aIdentity, nsIMsgCompFields * aCompFields, PRBool * aRequiresEncryptionWork)
 {
-  nsresult rv;
+  NS_ENSURE_ARG_POINTER(aRequiresEncryptionWork);
 
-  PR_ASSERT(aEncrypt || aSign);
-  if (!aEncrypt && !aSign) return NS_ERROR_FAILURE;
+  nsresult rv = NS_OK;
+  *aRequiresEncryptionWork = PR_FALSE;
+
+  PRBool alwaysEncryptMessages = PR_FALSE;
+  PRBool signMessage = PR_FALSE;
+  rv = ExtractEncryptionState(aIdentity, aCompFields, &signMessage, &alwaysEncryptMessages);
+
+  if (alwaysEncryptMessages || signMessage)
+    *aRequiresEncryptionWork = PR_TRUE;
+
+  return NS_OK;
+}
+
+nsresult nsMsgComposeSecure::ExtractEncryptionState(nsIMsgIdentity * aIdentity, nsIMsgCompFields * aComposeFields, PRBool * aSignMessage, PRBool * aEncrypt)
+{
+  if (!aComposeFields && !aIdentity)
+    return NS_OK; // kick out...invalid args....
+
+  nsCOMPtr<nsISupports> securityInfo;
+  if (aComposeFields)
+    aComposeFields->GetSecurityInfo(getter_AddRefs(securityInfo));
+
+  if (securityInfo) // if we were given security comp fields, use them.....
+  {
+    nsCOMPtr<nsIMsgSMIMECompFields> smimeCompFields = do_QueryInterface(securityInfo);
+    if (smimeCompFields)
+    {
+      smimeCompFields->GetSignMessage(aSignMessage);
+      smimeCompFields->GetAlwaysEncryptMessage(aEncrypt);
+    }
+  }
+  else if (aIdentity)  // get the default info from the identity....
+  {
+    aIdentity->GetBoolAttribute("encrypt_mail_always", aEncrypt);
+    aIdentity->GetBoolAttribute("sign_mail", aSignMessage);
+  }
+
+  return NS_OK;
+}
+
+/* void beginCryptoEncapsulation (in nsOutputFileStream aStream, in boolean aEncrypt, in boolean aSign, in string aRecipeints, in boolean aIsDraft); */
+NS_IMETHODIMP nsMsgComposeSecure::BeginCryptoEncapsulation(nsOutputFileStream * aStream, const char * aRecipients, nsIMsgCompFields * aCompFields, nsIMsgIdentity * aIdentity, PRBool aIsDraft)
+{
+  nsresult rv = NS_OK;
+
+  PRBool encryptMessages = PR_FALSE;
+  PRBool signMessage = PR_FALSE;
+  ExtractEncryptionState(aIdentity, aCompFields, &signMessage, &encryptMessages);
+
+  if (!signMessage && !encryptMessages) return NS_ERROR_FAILURE;
 
   mStream = aStream;
   mIsDraft = aIsDraft;
 
-  if (aEncrypt && aSign)
+  if (encryptMessages && signMessage)
 	  mCryptoState = mime_crypto_signed_encrypted;
-  else if (aEncrypt)
+  else if (encryptMessages)
 	  mCryptoState = mime_crypto_encrypted;
-  else if (aSign)
+  else if (signMessage)
 	  mCryptoState = mime_crypto_clear_signed;
   else
 	  PR_ASSERT(0);
@@ -239,7 +330,7 @@ NS_IMETHODIMP nsMsgComposeSecure::BeginCryptoEncapsulation(nsOutputFileStream * 
   aIdentity->GetUnicharAttribute("signing_cert_name", getter_Copies(mSigningCertName));
   aIdentity->GetUnicharAttribute("encryption_cert_name", getter_Copies(mEncryptionCertName));
 
-  rv = MimeCryptoHackCerts(aRecipients, aEncrypt, aSign);
+  rv = MimeCryptoHackCerts(aRecipients, encryptMessages, signMessage);
   if (NS_FAILED(rv)) {
     goto FAIL;
   }

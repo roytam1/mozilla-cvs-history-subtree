@@ -23,10 +23,27 @@
 #define _nsMsgComposeSecure_H_
 
 #include "nsIMsgComposeSecure.h"
+#include "nsIMsgSMIMECompFields.h"
 #include "nsCOMPtr.h"
 #include "nsICMS.h"
 #include "nsIX509Cert.h"
 #include "nsIMimeConverter.h"
+
+class nsIMsgCompFields;
+
+class nsMsgSMIMEComposeFields : public nsIMsgSMIMECompFields 
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIMSGSMIMECOMPFIELDS
+
+  nsMsgSMIMEComposeFields();
+  virtual ~nsMsgSMIMEComposeFields();
+
+private:
+  PRBool mSignMessage;
+  PRBool mAlwaysEncryptMessage;
+};
 
 typedef enum {
   mime_crypto_none,				/* normal unencapsulated MIME message */
@@ -52,6 +69,8 @@ private:
   nsresult MimeFinishMultipartSigned (PRBool aOuter);
   nsresult MimeFinishEncryption (PRBool aSign);
   nsresult MimeCryptoHackCerts(const char *aRecipients, PRBool aEncrypt, PRBool aSign);
+
+  nsresult ExtractEncryptionState(nsIMsgIdentity * aIdentity, nsIMsgCompFields * aComposeFields, PRBool * aSignMessage, PRBool * aEncrypt);
 
   mimeDeliveryCryptoState mCryptoState;
   nsOutputFileStream *mStream;
