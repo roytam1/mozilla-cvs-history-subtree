@@ -74,7 +74,32 @@ NS_INTERFACE_MAP_BEGIN(nsNntpUrl)
    NS_INTERFACE_MAP_ENTRY(nsINntpUrl)
    NS_INTERFACE_MAP_ENTRY(nsIMsgMessageUrl)
    NS_INTERFACE_MAP_ENTRY(nsIMsgI18NUrl)
+   NS_INTERFACE_MAP_ENTRY(nsISerializable)
 NS_INTERFACE_MAP_END_INHERITING(nsMsgMailNewsUrl)
+
+////////////////////////////////////////////////////////////////////////////////////
+// Begin nsISerializable specific support
+////////////////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP nsNntpUrl::Read(nsIObjectInputStream * aStream)
+{
+    NS_NOTREACHED("nsNntpUrl::Read");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsNntpUrl::Write(nsIObjectOutputStream * aStream)
+{
+    NS_NOTREACHED("nsNntpUrl::Write");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsNntpUrl::GetCID(nsCID * aResult)
+{
+    nsCID myCID = NS_NNTPURL_CID;
+
+    *aResult = myCID;
+    return NS_OK;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Begin nsINntpUrl specific support

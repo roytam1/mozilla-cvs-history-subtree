@@ -233,7 +233,7 @@ nsFileIO::GetInputStream(nsIInputStream * *aInputStream)
         NS_ADDREF(*aInputStream);
 #else
         rv = NS_NewBufferedInputStream(aInputStream,
-                                       fileIn, NS_OUTPUT_STREAM_BUFFER_SIZE);
+                                       fileIn, NS_INPUT_STREAM_BUFFER_SIZE);
 #endif
     }
     NS_RELEASE(fileIn);

@@ -38,6 +38,7 @@ class nsMailtoUrl : public nsIMailtoUrl, public nsIURI
 {
 public:
     NS_DECL_ISUPPORTS
+    NS_DECL_NSISERIALIZABLE
     NS_DECL_NSIURI
     NS_DECL_NSIMAILTOURL
 

@@ -21,7 +21,7 @@
  *   Gagan Saksena <gagan@netscape.com> (original author)
  */
 
-#include "nsISupports.idl"
+#include "nsISerializable.idl"
 
 /**
  * URIs are essentially structured names for things -- anything.
@@ -64,7 +64,7 @@
 %}
 
 [scriptable, uuid(07a22cc0-0ce5-11d3-9331-00104ba0fd40)]
-interface nsIURI : nsISupports
+interface nsIURI : nsISerializable
 {
 
     /**
@@ -178,7 +178,7 @@ interface nsIURI : nsISupports
  * *** What you most likely will want is NS_STANDARDURL_CID which is much more 
  * full featured. Look at nsIURL.idl for more details.
  *
- * NOTE: CIDs are declared in nsNetCID.h
+ * NOTE: CIDs are declared in build/nsNetCID.h
  */
 
 %{C++

@@ -63,6 +63,7 @@ public:
     static NS_METHOD ShutdownGlobalObjects();
 
     NS_DECL_AGGREGATED
+    NS_DECL_NSISERIALIZABLE
     NS_DECL_NSIURI
     NS_DECL_NSIURL
     NS_DECL_NSIFILEURL

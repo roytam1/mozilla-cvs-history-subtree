@@ -43,7 +43,7 @@ static const char *kLDAPSSLScheme = "ldaps";
 
 // Constructor and destructor
 //
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsLDAPURL, nsILDAPURL, nsIURI)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsLDAPURL, nsILDAPURL, nsIURI, nsISerializable)
 
 nsLDAPURL::nsLDAPURL()
     : mPort(0),
@@ -55,6 +55,29 @@ nsLDAPURL::nsLDAPURL()
 
 nsLDAPURL::~nsLDAPURL()
 {
+}
+
+// TODO: implement nsISerializable methods
+
+NS_IMETHODIMP
+nsLDAPURL::Read(nsIObjectInputStream *aStream)
+{
+    NS_NOTREACHED("nsLDAPURL::Read");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsLDAPURL::Write(nsIObjectOutputStream *aStream)
+{
+    NS_NOTREACHED("nsLDAPURL::Write");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsLDAPURL::GetCID(nsCID *aResult)
+{
+    NS_NOTREACHED("nsLDAPURL::GetCID");
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 // A string representation of the URI. Setting the spec 

@@ -233,16 +233,21 @@ nsStdURL::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
     if(!aInstancePtr)
         return NS_ERROR_INVALID_POINTER;
 
-    if (aIID.Equals(NS_GET_IID(nsISupports)))
+    if (aIID.Equals(NS_GET_IID(nsISupports))) {
         *aInstancePtr = GetInner();
+    }
     else if (aIID.Equals(kThisStdURLImplementationCID) ||   // used by Equals
-            aIID.Equals(NS_GET_IID(nsIURL)) ||
-            aIID.Equals(NS_GET_IID(nsIURI)) ||
-            aIID.Equals(NS_GET_IID(nsIFileURL)))
+             aIID.Equals(NS_GET_IID(nsIURL)) ||
+             aIID.Equals(NS_GET_IID(nsIURI)) ||
+             aIID.Equals(NS_GET_IID(nsIFileURL))) {
         *aInstancePtr = NS_STATIC_CAST(nsIURL*, this);
+    }
     else if (aIID.Equals(NS_GET_IID(nsIStandardURL))) {
-		*aInstancePtr = NS_STATIC_CAST(nsIStandardURL*, this);
-	}
+        *aInstancePtr = NS_STATIC_CAST(nsIStandardURL*, this);
+    }
+    else if (aIID.Equals(NS_GET_IID(nsISerializable))) {
+        *aInstancePtr = NS_STATIC_CAST(nsISerializable*, this);
+    }
     else {
         *aInstancePtr = nsnull;
         return NS_NOINTERFACE;
@@ -250,6 +255,33 @@ nsStdURL::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
     NS_ADDREF((nsISupports*)*aInstancePtr);
     return NS_OK;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// nsISerializable methods:
+
+NS_IMETHODIMP
+nsStdURL::Read(nsIObjectInputStream* aStream)
+{
+    NS_NOTREACHED("nsStdURL::Read");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsStdURL::Write(nsIObjectOutputStream* aStream)
+{
+    NS_NOTREACHED("nsStdURL::Write");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsStdURL::GetCID(nsCID *aResult)
+{
+    NS_NOTREACHED("nsStdURL::GetCID");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// nsIURI methods:
 
 NS_IMETHODIMP
 nsStdURL::Equals(nsIURI *i_OtherURI, PRBool *o_Equals)

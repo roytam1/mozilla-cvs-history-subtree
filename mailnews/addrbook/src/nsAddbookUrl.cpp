@@ -94,7 +94,7 @@ nsAddbookUrl::~nsAddbookUrl()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsAddbookUrl, nsIURI)
+NS_IMPL_ISUPPORTS2(nsAddbookUrl, nsIURI, nsISerializable)
 
 //
 // This will do the parsing for a single address book entry print operation.
@@ -394,6 +394,28 @@ NS_IMETHODIMP nsAddbookUrl::Clone(nsIURI **_retval)
 NS_IMETHODIMP nsAddbookUrl::Resolve(const char *relativePath, char **result) 
 {
 	return m_baseURL->Resolve(relativePath, result);
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// Begin nsISerializable support
+////////////////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP nsAddbookUrl::Read(nsIObjectInputStream *aStream)
+{
+    NS_NOTREACHED("nsAddbookUrl::Read");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsAddbookUrl::Write(nsIObjectOutputStream *aStream)
+{
+    NS_NOTREACHED("nsAddbookUrl::Write");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsAddbookUrl::GetCID(nsCID *aResult)
+{
+    NS_NOTREACHED("nsAddbookUrl::GetCID");
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 //
