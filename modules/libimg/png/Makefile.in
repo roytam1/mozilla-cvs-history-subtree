@@ -26,6 +26,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+
 MODULE		= png
 LIBRARY_NAME	= png
 
@@ -47,6 +48,42 @@ CSRCS		= \
 		pngrtran.c \
 		pngwutil.c \
 		$(NULL)
+
+
+# We can compile MMX code if we have gcc and an x86 processor...
+ifdef GNU_CC
+#
+# Lots of Unixish x86 flavors
+#
+ifneq (,$(filter SunOS Linux FreeBSD NetBSD OpenBSD BSD_OS,$(OS_ARCH)))
+ifeq (86,$(findstring 86,$(OS_TEST)))
+CSRCS		+= pnggccrd.c
+DEFINES		+= -DPNG_USE_PNGCCRD
+endif
+endif
+#
+# BeOS/Intel
+#
+ifeq ($(OS_ARCH)$(OS_TEST),BeOSBePC)
+CSRCS		+= pnggccrd.c
+DEFINES		+= -DPNG_USE_PNGCCRD
+endif
+#
+# Neutrino/Intel
+#
+ifeq ($(OS_TARGET)$(OS_TEST),NTOx86)
+CSRCS		+= pnggccrd.c
+DEFINES		+= -DPNG_USE_PNGCCRD
+endif
+#
+# OS/2
+#
+ifeq ($(OS_ARCH),OS2)
+CSRCS		+= pnggccrd.c
+DEFINES		+= -DPNG_USE_PNGCCRD
+endif
+endif
+
 
 EXPORTS		= png.h pngconf.h
 
