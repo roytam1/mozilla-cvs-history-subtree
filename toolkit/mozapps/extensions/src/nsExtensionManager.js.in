@@ -805,6 +805,14 @@ nsExtensionInstaller.prototype = {
           this._registerChrome(chromeFile, providers[i], item.Value);
         }
       }
+      
+      // XXXben - this doesn't handle the case where there is no provided locale
+      // or skin that matches any installed item - also will reset any per-package
+      // locale and skin settings, but we can live with that for now. 
+      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                         .getService(Components.interfaces.nsIXULChromeRegistry);
+      cr.selectLocale(cr.getSelectedLocale("global"), this._isProfile);
+      cr.selectSkin(cr.getSelectedSkin("global"), this._isProfile);
     }
   },
   
@@ -1106,6 +1114,8 @@ nsThemeInstaller.prototype = {
       // Create a logger to log install operations for uninstall
       this._writer = new nsInstallLogWriter(this._themeID, aIsProfile);
       this._writer.open();
+      
+      var canInstall = true;
 
       // Insert the theme into the theme list. 
       this._extensionDS.insertForthcomingItem(this._themeID, nsIUpdateItem.TYPE_THEME, 
@@ -1125,12 +1135,6 @@ nsThemeInstaller.prototype = {
       aJARFile.copyTo(destinationDir, aJARFile.leafName);
       this._writer.addFile(destinationFile.QueryInterface(Components.interfaces.nsILocalFile));
 
-      // Use the Chrome Registry API to install the theme there
-      var filePath = "jar:" + getURLSpecFromFile(destinationFile) + "!/";      
-      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                         .getService(Components.interfaces.nsIXULChromeRegistry);
-      cr.installSkin(filePath, aIsProfile, false);
-    
       var nameArc = rdf.GetResource(CHROME_NS("name"));
       var ctr = Components.classes["@mozilla.org/rdf/container;1"]
                           .createInstance(Components.interfaces.nsIRDFContainer);
@@ -1139,13 +1143,47 @@ nsThemeInstaller.prototype = {
       var elts = ctr.GetElements();
       while (elts.hasMoreElements()) {
         var elt = elts.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-        if (getItemType(elt.Value) != -1) {
+        var chromeSkinPrefix = "urn:mozilla:skin:";
+        if (elt.Value.substr(0, chromeSkinPrefix.length) == chromeSkinPrefix) {
           var name = chromeMetadata.GetTarget(elt, nameArc, true);
-          name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
           
-          this._writer.installSkin(name, aIsProfile);
+          // Check to see if the em:internalName property on the theme install
+          // manifest matches the chrome:name property on the theme's CR entry. 
+          var manifestRoot = rdf.GetResource("urn:mozilla:install-manifest");
+          var internalName = themeMetadata.GetTarget(manifestRoot, 
+                                                     rdf.GetResource(EM_NS("internalName")),
+                                                     true);
+          if (!internalName.EqualsNode(name)) {
+            var consoleService = Components.classes["@mozilla.org/consoleservice;1"]
+                                           .getService(Components.interfaces.nsIConsoleService);
+            consoleService.logStringMessage("Could not install theme because chrome:name arc in " +
+                                            "the theme's contents.rdf file (" + stringData(name) +
+                                            ") does not match the em:internalName arc in the theme's " + 
+                                            "install.rdf file (" + stringData(internalName) + ")");
+            var fileURL = getURLSpecFromFile(themeManifest);
+            var uri = Components.classes["@mozilla.org/network/standard-url;1"]
+                                .createInstance(Components.interfaces.nsIURI);
+            uri.spec = fileURL;
+            var url = uri.QueryInterface(Components.interfaces.nsIURL);
+            showMalformedError(url.fileName);
+            canInstall = false;
+          }
+
+          if (canInstall) {
+            name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+            this._writer.installSkin(name, aIsProfile);
+          }
         }
       }
+
+      if (canInstall) {
+        // Use the Chrome Registry API to install the theme there
+        var filePath = "jar:" + getURLSpecFromFile(destinationFile) + "!/";      
+        var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                          .getService(Components.interfaces.nsIXULChromeRegistry);
+        cr.installSkin(filePath, aIsProfile, false);
+      }
+    
       this._writer.close();
       
       this._extensionDS.doneInstallingTheme(this._themeID);
