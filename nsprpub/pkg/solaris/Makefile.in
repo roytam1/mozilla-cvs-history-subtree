@@ -24,17 +24,17 @@ DIRS = \
 	SUNWpr \
 	SUNWprd
 
+include $(srcdir)/Makefile.com
+
 PROTO = \
 	$(ROOT) \
 	$(ROOT)/usr/lib/mps \
 	$(ROOT)/usr/include/mps
 
-ifeq ($(ARCH), sparc)
+ifeq ($(MACH), sparc)
 	PROTO += $(ROOT)/usr/lib/mps/sparcv9 \
 	$(ROOT)/usr/lib/mps/cpu/sparcv8plus
 endif
-
-include $(srcdir)/Makefile.com
 
 abs_dist64_libdir = $(shell echo $(abs_dist_libdir) | sed -e "s|_OPT|_64_OPT|g" -e "s|_DBG|_64_DBG|g")
 
