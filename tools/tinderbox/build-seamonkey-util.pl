@@ -1111,6 +1111,7 @@ sub get_profile_dir {
         # *nix
         if ($Settings::VendorName) {
           $profile_dir = "$build_dir/.".lc($Settings::VendorName)."/".lc($Settings::ProductName)."/$Settings::MozProfileName";
+          $profile_dir = <$profile_dir*>;
         }
         else {
           $profile_dir = "$build_dir/.".lc($Settings::ProductName)."/$Settings::MozProfileName";
