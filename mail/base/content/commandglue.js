@@ -821,10 +821,10 @@ function FolderPaneSelectionChange()
                   if (folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
                   {
                     viewType = nsMsgViewType.eShowQuickSearchResults;
-                    var searchTermString = dbFolderInfo.getCharPtrProperty("searchStr");
+                    var searchTermString = dbFolderInfo.GetCharPtrProperty("searchStr");
                     // trick the view code into updating the real folder...
                     gCurrentVirtualFolderUri = uriToLoad;
-                    var srchFolderUri = dbFolderInfo.getCharPtrProperty("searchFolderUri");
+                    var srchFolderUri = dbFolderInfo.GetCharPtrProperty("searchFolderUri");
                     var srchFolderUriArray = srchFolderUri.split('|');
                     // cross folder search
                     var filterService = Components.classes["@mozilla.org/messenger/services/filters;1"].getService(Components.interfaces.nsIMsgFilterService);
@@ -1035,8 +1035,8 @@ function  CreateVirtualFolder(newName, parentFolder, searchFolderURIs, searchTer
       var dbFolderInfo = vfdb.dBFolderInfo;
       // set the view string as a property of the db folder info
       // set the original folder name as well.
-      dbFolderInfo.setCharPtrProperty("searchStr", searchTermString);
-      dbFolderInfo.setCharPtrProperty("searchFolderUri", searchFolderURIs);
+      dbFolderInfo.SetCharPtrProperty("searchStr", searchTermString);
+      dbFolderInfo.SetCharPtrProperty("searchFolderUri", searchFolderURIs);
       vfdb.summaryValid = true;
       vfdb.Close(true);
       parentFolder.NotifyItemAdded(newFolder);

@@ -385,7 +385,7 @@ function createSearchTermsWithList(aTermsArray)
     if (msgDatabase)
     {
       var dbFolderInfo = msgDatabase.dBFolderInfo;
-      var srchFolderUri = dbFolderInfo.getCharPtrProperty("searchFolderUri");
+      var srchFolderUri = dbFolderInfo.GetCharPtrProperty("searchFolderUri");
       var srchFolderUriArray = srchFolderUri.split('|');
       for (var i in srchFolderUriArray) 
       {
