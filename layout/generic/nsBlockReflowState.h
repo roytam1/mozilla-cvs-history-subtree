@@ -226,16 +226,11 @@ public:
   PRInt32 mLineNumber;
 
   // block reflow state flags
-#define BRS_UNCONSTRAINEDWIDTH    0x00000001
-#define BRS_UNCONSTRAINEDHEIGHT   0x00000002
-#define BRS_SHRINKWRAPWIDTH       0x00000004
-#define BRS_NEEDRESIZEREFLOW      0x00000008
-#define BRS_ISTOPMARGINROOT       0x00000020  // Is this frame a root for top/bottom margin collapsing?
-#define BRS_ISBOTTOMMARGINROOT    0x00000040
-#define BRS_APPLYTOPMARGIN        0x00000080  // See ShouldApplyTopMargin
-#define BRS_COMPUTEMAXELEMENTWIDTH 0x00000100
-#define BRS_COMPUTEMAXWIDTH       0x00000200
-#define BRS_LASTFLAG              BRS_COMPUTEMAXWIDTH
+#define BRS_UNCONSTRAINEDHEIGHT   0x00000001
+#define BRS_ISTOPMARGINROOT       0x00000002  // Is this frame a root for top/bottom margin collapsing?
+#define BRS_ISBOTTOMMARGINROOT    0x00000004
+#define BRS_APPLYTOPMARGIN        0x00000008  // See ShouldApplyTopMargin
+#define BRS_LASTFLAG              BRS_APPLYTOPMARGIN
 
   PRInt16 mFlags;
  
