@@ -207,18 +207,18 @@ nsImageLoader::RedrawDirtyFrame(const nsRect* aDamageRect)
   //       we have to at least invalidate the frame's bounds, hence
   //       as long as we have a frame we'll use its size.
   //
-  // XXX - Add a NotifyImageLoaded to nsIFrame and call that, passing the 
-  //       damage rect (image size)
 
   // Invalidate the entire frame
   // XXX We really only need to invalidate the client area of the frame...    
   mFrame->GetRect(bounds);
   bounds.x = bounds.y = 0;
 
+  // XXX this should be ok, but there is some crappy ass bug causing it not to work
+  // XXX seems related to the "body fixup rule" dealing with the canvas and body frames...
+#if 0
   // Invalidate the entire frame only if the frame has a tiled background
   // image, otherwise just invalidate the intersection of the frame's bounds
   // with the damaged rect.
-
   nsCOMPtr<nsIStyleContext> styleContext;
   mFrame->GetStyleContext(getter_AddRefs(styleContext));
   const nsStyleBackground* bg = (const nsStyleBackground*)styleContext->GetStyleData(eStyleStruct_Background);
@@ -235,6 +235,7 @@ nsImageLoader::RedrawDirtyFrame(const nsRect* aDamageRect)
     }
   }
 
+#endif
   if ((bounds.width > 0) && (bounds.height > 0)) {
 
     // XXX We should tell the frame the damage area and let it invalidate
