@@ -41,43 +41,43 @@ void CommandLineUtils::getOptions
 
             if ((arg.length()>0) && (arg.charAt(0) == '-')) {
 
-	            // clean up previous flag
+                // clean up previous flag
                 if (flag.length()>0) {
                     options.put(flag, new String(arg));
                     flag.clear();
-	            }
-	            // get next flag
+                }
+                // get next flag
                 arg.subString(1,flag);
 
-	            //-- check full flag, otherwise try to find
-	            //-- flag within string
-	            if (!flags.contains(flag)) {
+                //-- check full flag, otherwise try to find
+                //-- flag within string
+                if (!flags.contains(flag)) {
                     Int32 idx = 1;
                     String tmpFlag;
-	                while(idx <= flag.length()) {
+                    while(idx <= flag.length()) {
                         flag.subString(0,idx, tmpFlag);
                         if (flags.contains(tmpFlag)) {
-	                        if (idx < flag.length()) {
+                            if (idx < flag.length()) {
                                 String* value = new String();
                                 flag.subString(idx, *value);
                                 options.put(tmpFlag,value);
-	                            break;
-	                        }
-	                    }
-	                    else if (idx == flag.length()) {
+                                break;
+                            }
+                        }
+                        else if (idx == flag.length()) {
                             cout << "invalid option: -" << flag << endl;
-	                    }
-	                    ++idx;
-	                }// end while
-	            }
+                        }
+                        ++idx;
+                    }// end while
+                }
             }// if flag char '-'
-	        else {
-	            // Store both flag key and number key
+            else {
+                // Store both flag key and number key
                 if (flag.length() > 0) options.put(flag, new String(arg));
                 flag.clear();
-	        }
+            }
 
-	    }// end for
+        }// end for
         if (flag.length()>0) options.put(flag, new String("no value"));
 } //-- getOptions
 

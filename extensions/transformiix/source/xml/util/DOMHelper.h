@@ -72,7 +72,7 @@ public:
 
     /**
      * Deletes this DOMHelper
-	**/
+    **/
     virtual ~DOMHelper();
 
    /**
@@ -115,8 +115,8 @@ private:
 
 
     /**
-	 * Adds the given child/parent mapping to the list of parents
-	**/
+     * Adds the given child/parent mapping to the list of parents
+    **/
     void addParentReference(Node* child, Node* parent);
 
     /**
@@ -131,7 +131,7 @@ private:
      * DocumentOrder of
      * @return the DocumentOrder for the given Node
     **/
-	OrderInfo* getDocumentOrder(Node* node);
+    OrderInfo* getDocumentOrder(Node* node);
 
 
     /**
@@ -141,7 +141,7 @@ private:
 
     /**
      * A Hashtable of Node/OrderInfo mappings
-	**/
+    **/
     HashTable orders;
 
     /**

@@ -100,7 +100,7 @@ public:
      * @param nodes the NodeSet to sort
      * <BR />
      * <B>Note:</B> I will be moving this functionality elsewhere soon
-	**/
+    **/
     virtual void sortByDocumentOrder(NodeSet* nodes) = 0;
 
 }; //-- ContextState

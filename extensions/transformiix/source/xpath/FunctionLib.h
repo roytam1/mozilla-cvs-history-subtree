@@ -345,9 +345,9 @@ public:
 
     enum numberFunctions {
         NUMBER = 1,            //-- number()
-	    ROUND,                 //-- round()
-	    FLOOR,                 //-- floor()
-	    CEILING                //-- ceiling()
+        ROUND,                 //-- round()
+        FLOOR,                 //-- floor()
+        CEILING                //-- ceiling()
     };
 
     /**

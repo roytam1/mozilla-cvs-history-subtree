@@ -48,8 +48,8 @@ BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
             FunctionCall::setName(XPathNames::BOOLEAN_FN);
             break;
         case TX_LANG:
-			FunctionCall::setName(XPathNames::LANG_FN);
-			break;
+            FunctionCall::setName(XPathNames::LANG_FN);
+            break;
         case TX_NOT :
             FunctionCall::setName(XPathNames::NOT_FN);
             break;
@@ -93,11 +93,11 @@ ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
                 String arg1, lang;
                 evaluateToString((Expr*)iter->next(),context, cs, arg1);
                 lang = ((Element*)context)->getAttribute(LANG_ATTR);
-				arg1.toUpperCase(); // case-insensitive comparison
-				lang.toUpperCase();
+                arg1.toUpperCase(); // case-insensitive comparison
+                lang.toUpperCase();
                 result->setValue((MBool)(lang.indexOf(arg1) == 0));
-			}
-			break;
+            }
+            break;
         case TX_NOT :
             if ( requireParams(1,1,cs) ) {
                 param = (Expr*)iter->next();
