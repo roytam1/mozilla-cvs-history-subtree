@@ -130,7 +130,7 @@ var folderListener = {
                         if (gNextMessageAfterLoad) {
                             gNextMessageAfterLoad = false;
 
-             // should scroll to new here.
+                            // should scroll to new here.
                             PositionThreadPane();
                         }
 					}
@@ -897,9 +897,7 @@ function ClearMessageSelection()
 
 function GetCompositeDataSource(command)
 {
-	if(command == "GetNewMessages" || command == "DeleteMessages" || command == "Copy"  || 
-	   command == "Move" ||  command == "NewFolder" ||  command == "MarkAllMessagesRead" || 
-     command == "DownloadFlagged")
+	if (command == "GetNewMessages" || command == "NewFolder" || command == "MarkAllMessagesRead")
 	{
         return GetFolderDatasource();
 	}

@@ -235,15 +235,14 @@ function CreateMessageWindowGlobals()
 {
 	gCompositeDataSource = Components.classes[compositeDataSourceContractID].createInstance();
 	gCompositeDataSource = gCompositeDataSource.QueryInterface(Components.interfaces.nsIRDFCompositeDataSource);
-
 }
 
 function InitializeDataSources()
 {
-	AddDataSources();
-	//Now add datasources to composite datasource
-	gCompositeDataSource.AddDataSource(accountManagerDataSource);
-  gCompositeDataSource.AddDataSource(folderDataSource);
+    AddDataSources();
+    //Now add datasources to composite datasource
+    gCompositeDataSource.AddDataSource(accountManagerDataSource);
+    gCompositeDataSource.AddDataSource(folderDataSource);
 }
 
 function GetSelectedMsgFolders()

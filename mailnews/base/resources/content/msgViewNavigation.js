@@ -20,7 +20,7 @@
 
 /*  This file contains the js functions necessary to implement view navigation within the 3 pane. */
 
-var Bundle = srGetStrBundle("chrome://messenger/locale/messenger.properties");
+var gMessengerBundle = srGetStrBundle("chrome://messenger/locale/messenger.properties");
 var commonDialogs = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
 commonDialogs = commonDialogs.QueryInterface(Components.interfaces.nsICommonDialogs);
 var accountManager = Components.classes["@mozilla.org/messenger/account-manager;1"].getService(Components.interfaces.nsIMsgAccountManager);
@@ -133,8 +133,6 @@ function GoNextMessage(type, startFromBeginning)
   try {
     dump("XXX GoNextMessage(" + type + "," + startFromBeginning + ")\n");
 
-    var selection = new Object;
-
     var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
     var outlinerSelection = outlinerView.selection;
     var currentIndex = outlinerSelection.currentIndex;
@@ -145,7 +143,6 @@ function GoNextMessage(type, startFromBeginning)
     var status = gDBView.navigateStatus(type);
 
     dump("XXX status = " + status + "\n");
-    dump("XXX selection = " + selection.value + "\n");
 
     var resultId = new Object;
     var resultIndex = new Object;
@@ -154,15 +151,82 @@ function GoNextMessage(type, startFromBeginning)
 
     gDBView.viewNavigate(type, resultId, resultIndex, threadIndex, true /* wrap */, resultFolder);
 
-    dump("XXX selection = " + selection.value + "\n");
-    dump("XXX resultID = " + resultId.value + "\n");
+    dump("XXX resultId = " + resultId.value + "\n");
     dump("XXX resultIndex = " + resultIndex.value + "\n");
-    dump("XXX threadIndex = " + threadIndex.value + "\n");
-    dump("XXX resultFolder = " + resultFolder.value + "\n");
 
-    outlinerSelection.select(resultIndex.value);
+    // only scroll and select if we found something
+    if ((resultId.value != -1) && (resultIndex.value != -1)) {
+        outlinerSelection.select(resultIndex.value);
+        EnsureRowInThreadOutlinerIsVisible(resultIndex.value); 
+        return;
+    }
 
-    EnsureRowInThreadOutlinerIsVisible(resultIndex.value); 
+    if (type != nsMsgNavigationType.nextUnreadMessage) {
+        // only do cross folder navigation for "next unread message"
+        return;
+    }
+
+    var nextMode = pref.GetIntPref("mailnews.nav_crosses_folders");
+    // 0: "next" goes to the next folder, without prompting
+    // 1: "next" goes to the next folder, and prompts (the default)
+    // 2: "next" does nothing when there are no unread messages
+
+    // not crossing folders, don't find next
+    if (nextMode == 2) return;
+
+    var originalFolderURI = gDBView.msgFolder.URI;
+    var nextFolderURI = null;
+    var done = false;
+    var startAtURI = originalFolderURI;
+    var i = 0;
+    var allServers = accountManager.allServers;
+    var numServers = allServers.Count();
+
+    // XXX fix this
+    // this will search the originalFolderURI server twice
+    while (!done) {
+        dump("start looking at " + startAtURI + "\n");
+        nextFolderURI = FindNextFolder(startAtURI);
+        if (!nextFolderURI) {
+            if (i == numServers) {
+                // no more servers, we're done
+                done = true;
+            }
+            else {
+                // get the uri for the next server and start there
+                startAtURI = allServers.GetElementAt(i).QueryInterface(Components.interfaces.nsIMsgIncomingServer).serverURI;
+                i++;
+            }
+        }
+        else {
+            // got a folder with unread messages, start with it
+            done = true;    
+        }
+    }
+
+    if (nextFolderURI && (originalFolderURI != nextFolderURI)) {
+        var nextFolderResource = RDF.GetResource(nextFolderURI);
+        var nextFolder = nextFolderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+        switch (nextMode) {
+            case 0:
+                // do this unconditionally
+                gNextMessageAfterLoad = true;
+                SelectFolder(nextFolderURI);
+                dump("XXX we need code to select the correct type of message, after we load the folder\n");
+                break;
+            case 1:
+                var promptText = gMessengerBundle.formatStringFromName("advanceNextPrompt", [ nextFolder.name ], 1); 
+                if (commonDialogs.Confirm(window, promptText, promptText)) {
+                    gNextMessageAfterLoad = true;
+                    SelectFolder(nextFolderURI);
+                    dump("XXX we need code to select the correct type of message, after we load the folder\n");
+                }
+                break;
+            default:
+                dump("huh?");
+                break;
+        }
+    }
   }
   catch (ex) {
     dump("XXX ex = " + ex + "\n");

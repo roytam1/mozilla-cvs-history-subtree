@@ -725,7 +725,7 @@ function MsgMarkAllRead()
 
 function MsgDownloadFlagged()
 {
-    dump("fix this, this won't work anymore\n");
+    dump("XXX fix this MsgDownloadFlagged(), this won't work anymore\n");
     var compositeDataSource = GetCompositeDataSource("DownloadFlagged");
     var folder = GetLoadedMsgFolder();
 
@@ -735,7 +735,7 @@ function MsgDownloadFlagged()
 
 function MsgDownloadSelected()
 {
-    dump("fix this, this won't work anymore\n");
+    dump("XXX fix MsgDownloadSelected(), this won't work anymore\n");
     var selectedMessages = GetSelectedMessages();
     var compositeDataSource = GetCompositeDataSource("DownloadSelected");
     DownloadSelectedMessages(compositeDataSource, selectedMessages);
@@ -743,7 +743,7 @@ function MsgDownloadSelected()
 
 function MsgMarkThreadAsRead()
 {
-    dump("fix this, this won't work anymore\n");
+    dump("XXX fix MsgMarkThreadAsRead(), this won't work anymore\n");
     var messageList = GetSelectedMessages();
     if(messageList.length == 1)
     {

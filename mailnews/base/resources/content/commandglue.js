@@ -725,6 +725,7 @@ function OnClickThreadAndMessagePaneSplitter()
 
 function PositionThreadPane()
 {
+    dump("need for cross folder navigation. fix me: PositionThreadPane()\n");
 /*
        var tree = GetThreadTree();
   
