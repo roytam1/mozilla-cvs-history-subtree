@@ -74,6 +74,24 @@ nsPNGDecoder::~nsPNGDecoder()
 /* void init (in imgILoad aLoad); */
 NS_IMETHODIMP nsPNGDecoder::Init(imgILoad *aLoad)
 {
+#ifdef PNG_READ_UNKNOWN_CHUNKS_SUPPORTED
+  static const png_byte unused_chunks[]=
+       { 98,  75,  71,  68, '\0',   /* bKGD */
+         99,  72,  82,  77, '\0',   /* cHRM */
+        104,  73,  83,  84, '\0',   /* hIST */
+        105,  67,  67,  80, '\0',   /* iCCP */
+        105,  84,  88, 116, '\0',   /* iTXt */
+        111,  70,  70, 115, '\0',   /* oFFs */
+        112,  67,  65,  76, '\0',   /* pCAL */
+        115,  67,  65,  76, '\0',   /* sCAL */
+        112,  72,  89, 115, '\0',   /* pHYs */
+        115,  66,  73,  84, '\0',   /* sBIT */
+        115,  80,  76,  84, '\0',   /* sPLT */
+        116,  69,  88, 116, '\0',   /* tEXt */
+        116,  73,  77,  69, '\0',   /* tIME */
+        122,  84,  88, 116, '\0'}   /* zTXt */
+#endif
+
   mImageLoad = aLoad;
   mObserver = do_QueryInterface(aLoad);  // we're holding 2 strong refs to the request.
 
@@ -93,6 +111,12 @@ NS_IMETHODIMP nsPNGDecoder::Init(imgILoad *aLoad)
     png_destroy_read_struct(&mPNG, NULL, NULL);
     return NS_ERROR_OUT_OF_MEMORY;
   }
+
+#ifdef PNG_READ_UNKNOWN_CHUNKS_SUPPORTED
+  /* Ignore unused chunks */
+  png_set_keep_unknown_chunks(mPNG, mInfo, 0,
+      unused_chunks, sizeof(unused_chunks)/5);   
+#endif
 
   /* use this as libpng "progressive pointer" (retrieve in callbacks) */
   png_set_progressive_read_fn(mPNG, NS_STATIC_CAST(png_voidp, this),
