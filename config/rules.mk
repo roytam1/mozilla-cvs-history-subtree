@@ -1510,6 +1510,12 @@ REGCHROME_INSTALL = $(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/add-ch
 $(PACKAGE_DIR)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
 
+ifdef PACKAGE_FILE
+ifndef MODULE
+$(error MODULE must be defined if PACKAGE_FILE is defined.)
+endif
+endif
+
 # vars to be passed from the Makefile to the manifest preprocessor
 PACKAGE_VARS +=      \
 	SHARED_LIBRARY		 \
@@ -1540,7 +1546,7 @@ realpackages: $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
 $(PACKAGE_DIR)/%:: % $(PACKAGE_DIR) Makefile Makefile.in
 	$(PERL) $(MOZILLA_DIR)/config/preprocessor.pl -Fsubstitution $(PACKAGE_DEFINES) $< > $@
 
-$(PACKAGE_DIR)/%::
+$(PACKAGE_DIR)/%:: | $(PACKAGE_DIR)
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PACKAGE_DIR)/.headerlist $(notdir $@)
 
 GARBAGE += $(patsubst %,$(PACKAGE_DIR)/%,$(PACKAGE_FILE))
