@@ -27,9 +27,10 @@ PROG6 = .\$(OBJDIR)\urltest.exe
 PROG7 = .\$(OBJDIR)\TestFileInput2.exe
 PROG8 = .\$(OBJDIR)\TestFileTransport.exe
 PROG9 = .\$(OBJDIR)\TestRawCache.exe
+PROGA = .\$(OBJDIR)\TestCacheMgr.exe
 PROGRAMS = \
 #$(PROG1) $(PROG2) $(PROG3) $(PROG4) $(PROG5) $(PROG6) $(PROG7) $(PROG8) \
-           $(PROG9)
+           $(PROG9) $(PROGA)
 
 LCFLAGS=-DUSE_NSREG -GX
 
