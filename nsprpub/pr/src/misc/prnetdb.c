@@ -842,6 +842,8 @@ static struct protoent *getprotobyname_r(const char* name)
 {
 #ifdef XP_OS2_VACPP
 	return getprotobyname((char *)name);
+#elif defined(WINCE)
+    return NULL;
 #else
 	return getprotobyname(name);
 #endif
@@ -849,7 +851,11 @@ static struct protoent *getprotobyname_r(const char* name)
 
 static struct protoent *getprotobynumber_r(PRInt32 number)
 {
+#if !defined(WINCE)
 	return getprotobynumber(number);
+#else
+    return NULL;
+#endif
 } /* getprotobynumber_r */
 
 #endif /* !defined(_PR_HAVE_GETPROTO_R) */

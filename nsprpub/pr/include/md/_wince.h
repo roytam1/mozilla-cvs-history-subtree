@@ -531,6 +531,6 @@ struct stat {
 #define _S_IFREG    0100000 /* stat, is a normal file */
 #define _S_IREAD    0000400 /* stat, can read */
 #define _S_IWRITE   0000200 /* stat, can write */
-#define ENOMEM /* errno, out of memory */
+#define ENOMEM 12 /* errno, out of memory */
 
 #endif /* nspr_wince_defs_h___ */
