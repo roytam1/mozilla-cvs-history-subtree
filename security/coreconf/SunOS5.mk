@@ -39,11 +39,7 @@ ifeq ($(USE_64), 1)
 	ARCHFLAG=-xarch=v9
 	LD=/usr/ccs/bin/ld
 else
-  ifdef USE_HYBRID
-	ARCHFLAG=-xarch=v8plus
-  else
 	ARCHFLAG=-xarch=v8
-  endif
 endif
 
 #
@@ -113,12 +109,13 @@ endif
 # Purify doesn't like -MDupdate
 NOMD_OS_CFLAGS += $(DSO_CFLAGS) $(OS_DEFINES) $(SOL_CFLAGS)
 
-MKSHLIB  = $(LD) $(DSO_LDOPTS)
+MKSHLIB  = $(LD)
+MKSHLIB += $(DSO_LDOPTS)
 
 # ld options:
 # -G: produce a shared object
 # -z defs: no unresolved symbols allowed
-DSO_LDOPTS += -G -h $(notdir $@)
+DSO_LDOPTS += -G
 
 # -KPIC generates position independent code for use in shared libraries.
 # (Similarly for -fPIC in case of gcc.)
@@ -128,5 +125,6 @@ else
 	DSO_CFLAGS += -KPIC
 endif
 
+HAVE_PURIFY  = 1
 NOSUCHFILE   = /solaris-rm-f-sucks
 

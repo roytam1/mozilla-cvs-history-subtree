@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "prio.h"
@@ -76,40 +60,6 @@ static PRFileDesc *PushLayer(PRFileDesc *stack)
     PRStatus rv = PR_PushIOLayer(stack, PR_GetLayersIdentity(stack), layer);
     if (verbosity > quiet)
         PR_fprintf(logFile, "Pushed layer(0x%x) onto stack(0x%x)\n", layer, stack);
-    PR_ASSERT(PR_SUCCESS == rv);
-    return stack;
-}  /* PushLayer */
-
-static PRFileDesc *PushNewLayers(PRFileDesc *stack)
-{
-	PRDescIdentity tmp_identity;
-    PRFileDesc *layer;
-    PRStatus rv;
-
-	/* push a dummy layer */
-    tmp_identity = PR_GetUniqueIdentity("Dummy 1");
-    layer = PR_CreateIOLayerStub(tmp_identity, PR_GetDefaultIOMethods());
-    rv = PR_PushIOLayer(stack, PR_GetLayersIdentity(stack), layer);
-    if (verbosity > quiet)
-        PR_fprintf(logFile, "Pushed layer(0x%x) onto stack(0x%x)\n", layer,
-															stack);
-    PR_ASSERT(PR_SUCCESS == rv);
-
-	/* push a data procesing layer */
-    layer = PR_CreateIOLayerStub(identity, &myMethods);
-    rv = PR_PushIOLayer(stack, PR_GetLayersIdentity(stack), layer);
-    if (verbosity > quiet)
-        PR_fprintf(logFile, "Pushed layer(0x%x) onto stack(0x%x)\n", layer,
-													stack);
-    PR_ASSERT(PR_SUCCESS == rv);
-
-	/* push another dummy layer */
-    tmp_identity = PR_GetUniqueIdentity("Dummy 2");
-    layer = PR_CreateIOLayerStub(tmp_identity, PR_GetDefaultIOMethods());
-    rv = PR_PushIOLayer(stack, PR_GetLayersIdentity(stack), layer);
-    if (verbosity > quiet)
-        PR_fprintf(logFile, "Pushed layer(0x%x) onto stack(0x%x)\n", layer,
-															stack);
     PR_ASSERT(PR_SUCCESS == rv);
     return stack;
 }  /* PushLayer */
@@ -281,7 +231,6 @@ PRIntn main(PRIntn argc, char **argv)
     PRIntn mits;
     PLOptStatus os;
     PRFileDesc *client, *service;
-    PRFileDesc *client_stack, *service_stack;
     PRNetAddr any_address;
     const char *server_name = NULL;
     const PRIOMethods *stubMethods;
@@ -418,41 +367,6 @@ PRIntn main(PRIntn argc, char **argv)
 
         rv = PR_Close(client); PR_ASSERT(PR_SUCCESS == rv);
         rv = PR_Close(service); PR_ASSERT(PR_SUCCESS == rv);
-        /* with layering, using new style stack */
-        if (verbosity > silent)
-            PR_fprintf(logFile,
-							"Beginning layered test with new style stack\n");
-        client = PR_NewTCPSocket(); PR_ASSERT(NULL != client);
-    	client_stack = PR_CreateIOLayer(client);
-        PushNewLayers(client_stack);
-        service = PR_NewTCPSocket(); PR_ASSERT(NULL != service);
-    	service_stack = PR_CreateIOLayer(service);
-        PushNewLayers(service_stack);
-        rv = PR_InitializeNetAddr(PR_IpAddrAny, default_port, &any_address);
-        PR_ASSERT(PR_SUCCESS == rv);
-        rv = PR_Bind(service, &any_address); PR_ASSERT(PR_SUCCESS == rv);
-        rv = PR_Listen(service, 10); PR_ASSERT(PR_SUCCESS == rv);
-
-        minor_iterations = mits;
-        server_thread = PR_CreateThread(
-            PR_USER_THREAD, Server, service_stack,
-            PR_PRIORITY_HIGH, thread_scope,
-            PR_JOINABLE_THREAD, 16 * 1024);
-        PR_ASSERT(NULL != server_thread);
-
-        client_thread = PR_CreateThread(
-            PR_USER_THREAD, Client, client_stack,
-            PR_PRIORITY_NORMAL, thread_scope,
-            PR_JOINABLE_THREAD, 16 * 1024);
-        PR_ASSERT(NULL != client_thread);
-
-        rv = PR_JoinThread(client_thread);
-        PR_ASSERT(PR_SUCCESS == rv);
-        rv = PR_JoinThread(server_thread);
-        PR_ASSERT(PR_SUCCESS == rv);
-
-        rv = PR_Close(client_stack); PR_ASSERT(PR_SUCCESS == rv);
-        rv = PR_Close(service_stack); PR_ASSERT(PR_SUCCESS == rv);
         if (verbosity > silent)
             PR_fprintf(logFile, "Ending layered test\n");
     }

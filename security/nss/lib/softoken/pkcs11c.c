@@ -716,35 +716,6 @@ finish_des:
 	context->destroy = (PK11Destroy) DES_DestroyContext;
 
 	break;
-    case CKM_AES_CBC_PAD:
-	context->doPad = PR_TRUE;
-	context->blockSize = 16;
-	/* fall thru */
-    case CKM_AES_ECB:
-    case CKM_AES_CBC:
-	if (key_type != CKK_AES) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	att = pk11_FindAttribute(key,CKA_VALUE);
-	if (att == NULL) {
-	    crv = CKR_KEY_HANDLE_INVALID;
-	    break;
-	}
-	context->cipherInfo = AES_CreateContext(
-	    (unsigned char*)att->attrib.pValue,
-	    (unsigned char*)pMechanism->pParameter,
-	    pMechanism->mechanism == CKM_AES_ECB ? NSS_AES : NSS_AES_CBC,
-	    PR_TRUE, att->attrib.ulValueLen, 16);
-	pk11_FreeAttribute(att);
-	if (context->cipherInfo == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->update = (PK11Cipher) AES_Encrypt;
-	context->destroy = (PK11Destroy) AES_DestroyContext;
-
-	break;
     default:
 	crv = CKR_MECHANISM_INVALID;
 	break;
@@ -1122,35 +1093,6 @@ finish_des:
 	}
 	context->update = (PK11Cipher) DES_Decrypt;
 	context->destroy = (PK11Destroy) DES_DestroyContext;
-
-	break;
-    case CKM_AES_CBC_PAD:
-	context->doPad = PR_TRUE;
-	context->blockSize = 16;
-	/* fall thru */
-    case CKM_AES_ECB:
-    case CKM_AES_CBC:
-	if (key_type != CKK_AES) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	att = pk11_FindAttribute(key,CKA_VALUE);
-	if (att == NULL) {
-	    crv = CKR_KEY_HANDLE_INVALID;
-	    break;
-	}
-	context->cipherInfo = AES_CreateContext(
-	    (unsigned char*)att->attrib.pValue,
-	    (unsigned char*)pMechanism->pParameter,
-	    pMechanism->mechanism == CKM_AES_ECB ? NSS_AES : NSS_AES_CBC,
-	    PR_TRUE, att->attrib.ulValueLen,16);
-	pk11_FreeAttribute(att);
-	if (context->cipherInfo == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->update = (PK11Cipher) AES_Decrypt;
-	context->destroy = (PK11Destroy) AES_DestroyContext;
 
 	break;
     default:
@@ -1924,16 +1866,6 @@ pk11_InitCBCMac(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	blockSize = 8;
 	PORT_Memset(ivBlock,0,blockSize);
 	cbc_mechanism.mechanism = CKM_CDMF_CBC;
-	cbc_mechanism.pParameter = &ivBlock;
-	cbc_mechanism.ulParameterLen = blockSize;
-	break;
-    case CKM_AES_MAC_GENERAL:
-	mac_bytes = *(CK_ULONG *)pMechanism->pParameter;
-	/* fall through */
-    case CKM_AES_MAC:
-	blockSize = 16;
-	PORT_Memset(ivBlock,0,blockSize);
-	cbc_mechanism.mechanism = CKM_AES_CBC;
 	cbc_mechanism.pParameter = &ivBlock;
 	cbc_mechanism.ulParameterLen = blockSize;
 	break;
@@ -2837,7 +2769,7 @@ CK_RV NSC_GenerateRandom(CK_SESSION_HANDLE hSession,
  */
 CK_RV
 pk11_pbe_key_gen(SECOidTag algtag,CK_MECHANISM_PTR pMechanism,
-				char *buf,CK_ULONG *key_length, PRBool faulty3DES)
+				char *buf,int *key_length, PRBool faulty3DES)
 {
     SECAlgorithmID algid;
     SECItem *pbe_key = NULL, mech;
@@ -2890,138 +2822,6 @@ pk11_pbe_key_gen(SECOidTag algtag,CK_MECHANISM_PTR pMechanism,
     return CKR_OK;
 }
 
-
-static CK_RV
-nsc_SetupBulkKeyGen(CK_MECHANISM_TYPE mechanism,
-			CK_KEY_TYPE *key_type,CK_ULONG *key_length) {
-    CK_RV crv = CKR_OK;
-
-    switch (mechanism) {
-    case CKM_RC2_KEY_GEN:
-	*key_type = CKK_RC2;
-	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
-#if NSS_SOFTOKEN_DOES_RC5
-    case CKM_RC5_KEY_GEN:
-	*key_type = CKK_RC5;
-	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
-#endif
-    case CKM_RC4_KEY_GEN:
-	*key_type = CKK_RC4;
-	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
-    case CKM_GENERIC_SECRET_KEY_GEN:
-	*key_type = CKK_GENERIC_SECRET;
-	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
-    case CKM_CDMF_KEY_GEN:
-	*key_type = CKK_CDMF;
-	*key_length = 8;
-	break;
-    case CKM_DES_KEY_GEN:
-	*key_type = CKK_DES;
-	*key_length = 8;
-	break;
-    case CKM_DES2_KEY_GEN:
-	*key_type = CKK_DES2;
-	*key_length = 16;
-	break;
-    case CKM_DES3_KEY_GEN:
-	*key_type = CKK_DES3;
-	*key_length = 24;
-	break;
-    case CKM_AES_KEY_GEN:
-	*key_type = CKK_AES;
-	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
-    default:
-	PORT_Assert(0);
-	crv = CKR_MECHANISM_INVALID;
-	break;
-    }
-
-    return crv;
-}
-
-static CK_RV
-nsc_SetupPBEKeyGen(CK_MECHANISM_TYPE mechanism,SECOidTag *algtag,
-			CK_KEY_TYPE *key_type,CK_ULONG *key_length) {
-    CK_RV crv = CKR_OK;
-
-    switch (mechanism) {
-    case CKM_PBE_MD2_DES_CBC:
-	*algtag = SEC_OID_PKCS5_PBE_WITH_MD2_AND_DES_CBC;
-	*key_type = CKK_DES;
-	break;
-    case CKM_PBE_MD5_DES_CBC:
-	*algtag = SEC_OID_PKCS5_PBE_WITH_MD5_AND_DES_CBC;
-	*key_type = CKK_DES;
-	break;
-    case CKM_PBE_SHA1_RC4_40:
-	*algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_40_BIT_RC4;
-	*key_length = 5;
-	*key_type = CKK_RC4;
-	break;
-    case CKM_PBE_SHA1_RC4_128:
-	*algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_128_BIT_RC4;
-	*key_length = 16;
-	*key_type = CKK_RC4;
-	break;
-    case CKM_PBE_SHA1_RC2_40_CBC:
-	*algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_40_BIT_RC2_CBC;
-	*key_length = 5;
-	*key_type = CKK_RC2;
-	break;
-    case CKM_PBE_SHA1_RC2_128_CBC:
-	*algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_128_BIT_RC2_CBC;
-	*key_length = 16;
-	*key_type = CKK_RC2;
-	break;
-    case CKM_PBE_SHA1_DES3_EDE_CBC:
-	*algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_3KEY_TRIPLE_DES_CBC;
-	*key_length = 24;
-	*key_type = CKK_DES3;
-	break;
-    case CKM_PBE_SHA1_DES2_EDE_CBC:
-	*algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_2KEY_TRIPLE_DES_CBC;
-	*key_length = 16;
-	*key_type = CKK_DES2;
-	break;
-    case CKM_NETSCAPE_PBE_SHA1_DES_CBC:
-	*algtag = SEC_OID_PKCS5_PBE_WITH_SHA1_AND_DES_CBC;
-	*key_type = CKK_DES;
-	break;
-    case CKM_NETSCAPE_PBE_SHA1_FAULTY_3DES_CBC:
-    case CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC:
-	*algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC;
-	*key_type = CKK_DES3;
-	break;
-    case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC:
-	*algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_40_BIT_RC2_CBC;
-	*key_type = CKK_RC2;
-	break;
-    case CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC:
-	*algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_128_BIT_RC2_CBC;
-	*key_type = CKK_RC2;
-	break;
-    case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC4:
-	*algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_40_BIT_RC4;
-	*key_type = CKK_RC4;
-	break;
-    case CKM_NETSCAPE_PBE_SHA1_128_BIT_RC4:
-	*algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_128_BIT_RC4;
-	*key_type = CKK_RC4;
-	break;
-    default:
-	PORT_Assert(0);
-	crv = CKR_MECHANISM_INVALID;
-	break;
-    }
-
-    return crv;
-}
-
 /* NSC_GenerateKey generates a secret key, creating a new key object. */
 CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
     CK_MECHANISM_PTR pMechanism,CK_ATTRIBUTE_PTR pTemplate,CK_ULONG ulCount,
@@ -3030,7 +2830,7 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
     PK11Object *key;
     PK11Session *session;
     PRBool checkWeak = PR_FALSE;
-    CK_ULONG key_length = 0;
+    int key_length = 0;
     CK_KEY_TYPE key_type;
     CK_OBJECT_CLASS objclass = CKO_SECRET_KEY;
     CK_RV crv = CKR_OK;
@@ -3047,7 +2847,6 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
      * produce them any more.  The affected algorithm was 3DES.
      */
     PRBool faultyPBE3DES = PR_FALSE;
-
 
     /*
      * now lets create an object to hang the attributes off of
@@ -3082,51 +2881,119 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
     /* Now Set up the parameters to generate the key (based on mechanism) */
     key_gen_type = pk11_bulk; /* bulk key by default */
     switch (pMechanism->mechanism) {
-    case CKM_CDMF_KEY_GEN:
-    case CKM_DES_KEY_GEN:
-    case CKM_DES2_KEY_GEN:
-    case CKM_DES3_KEY_GEN:
-	checkWeak = PR_TRUE;
-	break;
     case CKM_RC2_KEY_GEN:
-    case CKM_RC4_KEY_GEN:
-    case CKM_GENERIC_SECRET_KEY_GEN:
-    case CKM_AES_KEY_GEN:
+	key_type = CKK_RC2;
+	if (key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
+	break;
 #if NSS_SOFTOKEN_DOES_RC5
     case CKM_RC5_KEY_GEN:
+	key_type = CKK_RC5;
+	if (key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
+	break;
 #endif
-	crv = nsc_SetupBulkKeyGen(pMechanism->mechanism,&key_type,&key_length);
+    case CKM_RC4_KEY_GEN:
+	key_type = CKK_RC4;
+	if (key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
+	break;
+    case CKM_GENERIC_SECRET_KEY_GEN:
+	key_type = CKK_GENERIC_SECRET;
+	if (key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
+	break;
+    case CKM_CDMF_KEY_GEN:
+	key_type = CKK_CDMF;
+	key_length = 8;
+	checkWeak = PR_TRUE;
+	break;
+    case CKM_DES_KEY_GEN:
+	key_type = CKK_DES;
+	key_length = 8;
+	checkWeak = PR_TRUE;
+	break;
+    case CKM_DES2_KEY_GEN:
+	key_type = CKK_DES2;
+	key_length = 16;
+	checkWeak = PR_TRUE;
+	break;
+    case CKM_DES3_KEY_GEN:
+	key_type = CKK_DES3;
+	key_length = 24;
+	checkWeak = PR_TRUE;
 	break;
     case CKM_SSL3_PRE_MASTER_KEY_GEN:
 	key_type = CKK_GENERIC_SECRET;
 	key_length = 48;
 	key_gen_type = pk11_ssl;
 	break;
+    case CKM_PBE_MD2_DES_CBC:
+	algtag = SEC_OID_PKCS5_PBE_WITH_MD2_AND_DES_CBC;
+	key_type = CKK_DES;
+	goto have_key_type;
+    case CKM_PBE_MD5_DES_CBC:
+	algtag = SEC_OID_PKCS5_PBE_WITH_MD5_AND_DES_CBC;
+	key_type = CKK_DES;
+	goto have_key_type;
+    case CKM_NETSCAPE_PBE_SHA1_DES_CBC:
+	algtag = SEC_OID_PKCS5_PBE_WITH_SHA1_AND_DES_CBC;
+	key_type = CKK_DES;
+	goto have_key_type;
     case CKM_NETSCAPE_PBE_SHA1_FAULTY_3DES_CBC:
 	faultyPBE3DES = PR_TRUE;
     case CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC:
+	algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC;
+	key_type = CKK_DES3;
+	goto have_key_type;
     case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC:
-    case CKM_NETSCAPE_PBE_SHA1_DES_CBC:
+	algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_40_BIT_RC2_CBC;
+	key_type = CKK_RC2;
+	goto have_key_type;
     case CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC:
+	algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_128_BIT_RC2_CBC;
+	key_type = CKK_RC2;
+	goto have_key_type;
     case CKM_NETSCAPE_PBE_SHA1_40_BIT_RC4:
+	algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_40_BIT_RC4;
+	key_type = CKK_RC4;
+	goto have_key_type;
     case CKM_NETSCAPE_PBE_SHA1_128_BIT_RC4:
-    case CKM_PBE_SHA1_DES3_EDE_CBC:
-    case CKM_PBE_SHA1_DES2_EDE_CBC:
-    case CKM_PBE_SHA1_RC2_128_CBC:
-    case CKM_PBE_SHA1_RC2_40_CBC:
-    case CKM_PBE_SHA1_RC4_128:
+	algtag = SEC_OID_PKCS12_PBE_WITH_SHA1_AND_128_BIT_RC4;
+	key_type = CKK_RC4;
+	goto have_key_type;
     case CKM_PBE_SHA1_RC4_40:
-    case CKM_PBE_MD5_DES_CBC:
-    case CKM_PBE_MD2_DES_CBC:
+	algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_40_BIT_RC4;
+	key_length = 5;
+	key_type = CKK_RC4;
+	goto have_key_type;
+    case CKM_PBE_SHA1_RC4_128:
+	algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_128_BIT_RC4;
+	key_length = 16;
+	key_type = CKK_RC4;
+	goto have_key_type;
+    case CKM_PBE_SHA1_RC2_40_CBC:
+	algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_40_BIT_RC2_CBC;
+	key_length = 5;
+	key_type = CKK_RC2;
+	goto have_key_type;
+    case CKM_PBE_SHA1_RC2_128_CBC:
+	algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_128_BIT_RC2_CBC;
+	key_length = 16;
+	key_type = CKK_RC2;
+	goto have_key_type;
+    case CKM_PBE_SHA1_DES3_EDE_CBC:
+	algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_3KEY_TRIPLE_DES_CBC;
+	key_length = 24;
+	key_type = CKK_DES3;
+	goto have_key_type;
+    case CKM_PBE_SHA1_DES2_EDE_CBC:
+	algtag = SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_2KEY_TRIPLE_DES_CBC;
+	key_length = 16;
+	key_type = CKK_DES2;
+	checkWeak = PR_FALSE;
+have_key_type:
 	key_gen_type = pk11_pbe;
-	crv = nsc_SetupPBEKeyGen(pMechanism->mechanism,&algtag,
-							&key_type,&key_length);
 	break;
     default:
 	crv = CKR_MECHANISM_INVALID;
-	break;
     }
-
     /* make sure we aren't going to overflow the buffer */
     if (sizeof(buf) < key_length) {
 	/* someone is getting pretty optimistic about how big their key can
@@ -3326,7 +3193,7 @@ CK_RV NSC_GenerateKeyPair (CK_SESSION_HANDLE hSession,
 	rsaPriv = RSA_NewKey(public_modulus_bits, &pubExp);
 	PORT_Free(pubExp.data);
 	if (rsaPriv == NULL) {
-	    crv = CKR_DEVICE_ERROR;
+	    crv = CKR_HOST_MEMORY;
 	    break;
 	}
         /* now fill in the RSA dependent paramenters in the public key */
@@ -3416,7 +3283,7 @@ kpg_done:
 	PORT_Free(pqgParam.subPrime.data);
 	PORT_Free(pqgParam.base.data);
 
-	if (rv != SECSuccess) { crv = CKR_DEVICE_ERROR; break; }
+	if (rv != SECSuccess) { crv = CKR_HOST_MEMORY; break; }
 
 	/* store the generated key into the attributes */
         crv = pk11_AddAttributeType(publicKey,CKA_VALUE,
@@ -3465,7 +3332,7 @@ dsagn_done:
 	PORT_Free(dhParam.prime.data);
 	PORT_Free(dhParam.base.data);
 	if (rv != SECSuccess) { 
-	  crv = CKR_DEVICE_ERROR;
+	  crv = CKR_HOST_MEMORY; 
 	  break;
 	}
 

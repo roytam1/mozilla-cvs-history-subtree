@@ -65,7 +65,6 @@ static cipherPolicy ssl_ciphers[] = {	   /*   Export           France   */
  {  SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA, SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,      SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  SSL_RSA_WITH_RC4_128_MD5,		    SSL_RESTRICTED,  SSL_NOT_ALLOWED },
- {  SSL_RSA_WITH_RC4_128_SHA,		    SSL_RESTRICTED,  SSL_NOT_ALLOWED },
  {  SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  SSL_RSA_WITH_3DES_EDE_CBC_SHA,	    SSL_RESTRICTED,  SSL_NOT_ALLOWED },
  {  SSL_RSA_FIPS_WITH_DES_CBC_SHA,	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
@@ -79,7 +78,8 @@ static cipherPolicy ssl_ciphers[] = {	   /*   Export           France   */
  {  0,					    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED }
 };
 
-static const sslSocketOps ssl_default_ops = {	/* No SSL. */
+static
+sslSocketOps ssl_default_ops = {	/* No SSL, No Socks. */
     ssl_DefConnect,
     NULL,
     ssl_DefBind,
@@ -94,7 +94,24 @@ static const sslSocketOps ssl_default_ops = {	/* No SSL. */
     ssl_DefGetsockname
 };
 
-static const sslSocketOps ssl_secure_ops = {	/* SSL. */
+static
+sslSocketOps ssl_socks_ops = {		/* No SSL, has socks. */
+    ssl_SocksConnect,
+    ssl_SocksAccept,
+    ssl_SocksBind,
+    ssl_SocksListen,
+    ssl_DefShutdown,
+    ssl_DefClose,
+    ssl_SocksRecv,
+    ssl_SocksSend,
+    ssl_SocksRead,
+    ssl_SocksWrite,
+    ssl_DefGetpeername,
+    ssl_SocksGetsockname
+};
+
+static
+sslSocketOps ssl_secure_ops = {		/* SSL, no socks. */
     ssl_SecureConnect,
     NULL,
     ssl_DefBind,
@@ -107,6 +124,22 @@ static const sslSocketOps ssl_secure_ops = {	/* SSL. */
     ssl_SecureWrite,
     ssl_DefGetpeername,
     ssl_DefGetsockname
+};
+
+static
+sslSocketOps ssl_secure_socks_ops = {	/* Both SSL and Socks. */
+    ssl_SecureSocksConnect,
+    ssl_SecureSocksAccept,
+    ssl_SocksBind,
+    ssl_SocksListen,
+    ssl_SecureShutdown,
+    ssl_SecureClose,
+    ssl_SecureRecv,
+    ssl_SecureSend,
+    ssl_SecureRead,
+    ssl_SecureWrite,
+    ssl_DefGetpeername,
+    ssl_SocksGetsockname
 };
 
 /*
@@ -174,15 +207,26 @@ ssl_FindSocket(PRFileDesc *fd)
     PORT_Assert(ssl_layer_id != 0);
 
     layer = PR_GetIdentitiesLayer(fd, ssl_layer_id);
-    if (layer == NULL) {
-	PORT_SetError(PR_BAD_DESCRIPTOR_ERROR);
+    if (layer == NULL)
 	return NULL;
-    }
 
     ss = (sslSocket *)layer->secret;
     ss->fd = layer;
     return ss;
 }
+
+#if 0	/* dead code. */
+PRFileDesc *
+ssl_FindTop(sslSocket *ss)
+{
+    PRFileDesc *fd = ss->fd;
+
+    while (fd->higher != NULL)
+	fd = fd->higher;
+
+    return fd;
+}
+#endif
 
 sslSocket *
 ssl_DupSocket(sslSocket *os)
@@ -192,7 +236,7 @@ ssl_DupSocket(sslSocket *os)
 
     ss = ssl_NewSocket();
     if (ss) {
-	ss->useSocks           = PR_FALSE;
+	ss->useSocks           = os->useSocks;
 	ss->useSecurity        = os->useSecurity;
 	ss->requestCertificate = os->requestCertificate;
 	ss->requireCertificate = os->requireCertificate;
@@ -209,6 +253,8 @@ ssl_DupSocket(sslSocket *os)
 	ss->url                = !os->url    ? NULL : PORT_Strdup(os->url);
 
 	ss->ops      = os->ops;
+	ss->peer     = os->peer;
+	ss->port     = os->port;
 	ss->rTimeout = os->rTimeout;
 	ss->wTimeout = os->wTimeout;
 	ss->cTimeout = os->cTimeout;
@@ -272,6 +318,13 @@ ssl_DupSocket(sslSocket *os)
 		goto losage;
 	    }
 	}
+	if (ss->useSocks) {
+	    /* Create security data */
+	    rv = ssl_CopySocksInfo(ss, os);
+	    if (rv != SECSuccess) {
+		goto losage;
+	    }
+	}
     }
     return ss;
 
@@ -313,6 +366,7 @@ ssl_FreeSocket(sslSocket *ss)
 #endif
 
     /* Free up socket */
+    ssl_DestroySocksInfo(fs->socks);
     ssl_DestroySecurityInfo(fs->sec);
     ssl3_DestroySSL3Info(fs->ssl3);
     PORT_Free(fs->saveBuf.buf);
@@ -351,11 +405,11 @@ ssl_FreeSocket(sslSocket *ss)
 
     /* Destroy locks. */
     if (fs->firstHandshakeLock) {
-    	PZ_DestroyMonitor(fs->firstHandshakeLock);
+    	PR_DestroyMonitor(fs->firstHandshakeLock);
 	fs->firstHandshakeLock = NULL;
     }
     if (fs->ssl3HandshakeLock) {
-    	PZ_DestroyMonitor(fs->ssl3HandshakeLock);
+    	PR_DestroyMonitor(fs->ssl3HandshakeLock);
 	fs->ssl3HandshakeLock = NULL;
     }
     if (fs->specLock) {
@@ -364,19 +418,19 @@ ssl_FreeSocket(sslSocket *ss)
     }
 
     if (fs->recvLock) {
-    	PZ_DestroyLock(fs->recvLock);
+    	PR_DestroyLock(fs->recvLock);
 	fs->recvLock = NULL;
     }
     if (fs->sendLock) {
-    	PZ_DestroyLock(fs->sendLock);
+    	PR_DestroyLock(fs->sendLock);
 	fs->sendLock = NULL;
     }
     if (fs->xmitBufLock) {
-    	PZ_DestroyMonitor(fs->xmitBufLock);
+    	PR_DestroyMonitor(fs->xmitBufLock);
 	fs->xmitBufLock = NULL;
     }
     if (fs->recvBufLock) {
-    	PZ_DestroyMonitor(fs->recvBufLock);
+    	PR_DestroyMonitor(fs->recvBufLock);
 	fs->recvBufLock = NULL;
     }
     if (fs->cipherSpecs) {
@@ -394,7 +448,11 @@ ssl_FreeSocket(sslSocket *ss)
 static void
 ssl_ChooseOps(sslSocket *ss)
 {
-    ss->ops = ss->useSecurity ? &ssl_secure_ops       : &ssl_default_ops;
+    if (ss->useSocks)  {
+    	ss->ops = ss->useSecurity ? &ssl_secure_socks_ops : &ssl_socks_ops ;
+    } else {
+    	ss->ops = ss->useSecurity ? &ssl_secure_ops       : &ssl_default_ops;
+    }
 }
 
 /* Called from SSL_Enable (immediately below) */
@@ -403,6 +461,12 @@ PrepareSocket(sslSocket *ss)
 {
     SECStatus     rv = SECSuccess;
 
+    if (ss->useSocks) {
+	rv = ssl_CreateSocksInfo(ss);
+	if (rv != SECSuccess) {
+	    return rv;
+	}
+    }
     if (ss->useSecurity) {
 	rv = ssl_CreateSecurityInfo(ss);
 	if (rv != SECSuccess) {
@@ -428,6 +492,7 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
 
     if (!ss) {
 	SSL_DBG(("%d: SSL[%d]: bad socket in Enable", SSL_GETPID(), fd));
+	PORT_SetError(PR_BAD_DESCRIPTOR_ERROR);
 	return SECFailure;
     }
 
@@ -436,12 +501,8 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
 
     switch (which) {
       case SSL_SOCKS:
-	ss->useSocks = PR_FALSE;
+	ss->useSocks = on;
 	rv = PrepareSocket(ss);
-	if (on) {
-	    PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	    rv = SECFailure;
-	}
 	break;
 
       case SSL_SECURITY:
@@ -551,6 +612,7 @@ SSL_OptionGet(PRFileDesc *fd, PRInt32 which, PRBool *pOn)
     }
     if (!ss) {
 	SSL_DBG(("%d: SSL[%d]: bad socket in Enable", SSL_GETPID(), fd));
+	PORT_SetError(PR_BAD_DESCRIPTOR_ERROR);
 	*pOn = PR_FALSE;
 	return SECFailure;
     }
@@ -559,7 +621,7 @@ SSL_OptionGet(PRFileDesc *fd, PRInt32 which, PRBool *pOn)
     ssl_GetSSL3HandshakeLock(ss);
 
     switch (which) {
-    case SSL_SOCKS:               on = PR_FALSE;               break;
+    case SSL_SOCKS:               on = ss->useSocks;           break;
     case SSL_SECURITY:            on = ss->useSecurity;        break;
     case SSL_REQUEST_CERTIFICATE: on = ss->requestCertificate; break;
     case SSL_REQUIRE_CERTIFICATE: on = ss->requireCertificate; break;
@@ -597,7 +659,7 @@ SSL_OptionGetDefault(PRInt32 which, PRBool *pOn)
     }
 
     switch (which) {
-    case SSL_SOCKS:               on = PR_FALSE;                        break;
+    case SSL_SOCKS:               on = ssl_defaults.useSocks;           break;
     case SSL_SECURITY:            on = ssl_defaults.useSecurity;        break;
     case SSL_REQUEST_CERTIFICATE: on = ssl_defaults.requestCertificate; break;
     case SSL_REQUIRE_CERTIFICATE: on = ssl_defaults.requireCertificate; break;
@@ -632,11 +694,7 @@ SSL_OptionSetDefault(PRInt32 which, PRBool on)
 {
     switch (which) {
       case SSL_SOCKS:
-	ssl_defaults.useSocks = PR_FALSE;
-	if (on) {
-	    PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	    return SECFailure;
-	}
+	ssl_defaults.useSocks = on;
 	break;
 
       case SSL_SECURITY:
@@ -810,6 +868,7 @@ SSL_CipherPrefSet(PRFileDesc *fd, PRInt32 which, PRBool enabled)
     
     if (!ss) {
 	SSL_DBG(("%d: SSL[%d]: bad socket in CipherPrefSet", SSL_GETPID(), fd));
+	PORT_SetError(PR_BAD_DESCRIPTOR_ERROR);
 	return SECFailure;
     }
     if (SSL_IS_SSL2_CIPHER(which)) {
@@ -832,6 +891,7 @@ SSL_CipherPrefGet(PRFileDesc *fd, PRInt32 which, PRBool *enabled)
     }
     if (!ss) {
 	SSL_DBG(("%d: SSL[%d]: bad socket in CipherPrefGet", SSL_GETPID(), fd));
+	PORT_SetError(PR_BAD_DESCRIPTOR_ERROR);
 	*enabled = PR_FALSE;
 	return SECFailure;
     }
@@ -906,6 +966,7 @@ SSL_ImportFD(PRFileDesc *model, PRFileDesc *fd)
 	if (ss == NULL) {
 	    SSL_DBG(("%d: SSL[%d]: bad model socket in ssl_ImportFD", 
 	    	      SSL_GETPID(), model));
+	    SET_ERROR_CODE
 	    return NULL;
 	}
 	ns = ssl_DupSocket(ss);
@@ -1135,8 +1196,6 @@ ssl_Recv(PRFileDesc *fd, void *buf, PRInt32 len, PRIntn flags,
     }
     SSL_LOCK_READER(ss);
     ss->rTimeout = timeout;
-    if (!ss->fdx)
-	ss->wTimeout = timeout;
     rv = (*ss->ops->recv)(ss, (unsigned char*)buf, len, flags);
     SSL_UNLOCK_READER(ss);
     return rv;
@@ -1156,8 +1215,6 @@ ssl_Send(PRFileDesc *fd, const void *buf, PRInt32 len, PRIntn flags,
     }
     SSL_LOCK_WRITER(ss);
     ss->wTimeout = timeout;
-    if (!ss->fdx)
-	ss->rTimeout = timeout;
     rv = (*ss->ops->send)(ss, (const unsigned char*)buf, len, flags);
     SSL_UNLOCK_WRITER(ss);
     return rv;
@@ -1176,8 +1233,6 @@ ssl_Read(PRFileDesc *fd, void *buf, PRInt32 len)
     }
     SSL_LOCK_READER(ss);
     ss->rTimeout = PR_INTERVAL_NO_TIMEOUT;
-    if (!ss->fdx)
-	ss->wTimeout = PR_INTERVAL_NO_TIMEOUT;
     rv = (*ss->ops->read)(ss, (unsigned char*)buf, len);
     SSL_UNLOCK_READER(ss);
     return rv;
@@ -1196,8 +1251,6 @@ ssl_Write(PRFileDesc *fd, const void *buf, PRInt32 len)
     }
     SSL_LOCK_WRITER(ss);
     ss->wTimeout = PR_INTERVAL_NO_TIMEOUT;
-    if (!ss->fdx)
-	ss->rTimeout = PR_INTERVAL_NO_TIMEOUT;
     rv = (*ss->ops->write)(ss, (const unsigned char*)buf, len);
     SSL_UNLOCK_WRITER(ss);
     return rv;
@@ -1217,6 +1270,7 @@ ssl_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
 }
 
 /*
+** XXX this code doesn't work properly inside a Socks server.
 */
 SECStatus
 ssl_GetPeerInfo(sslSocket *ss)
@@ -1230,6 +1284,20 @@ ssl_GetPeerInfo(sslSocket *ss)
 
     osfd = ss->fd->lower;
     ci   = &ss->sec->ci;
+
+    /* If ssl_SocksConnect() has previously recorded the peer's IP & port,
+     * use that.
+     */
+    if ((ss->port != 0) &&
+	((ss->peer.pr_s6_addr32[0] != 0) || (ss->peer.pr_s6_addr32[1] != 0) ||
+	 (ss->peer.pr_s6_addr32[2] != 0) || (ss->peer.pr_s6_addr32[3] != 0))) {
+	/* SOCKS code has already recorded the peer's IP addr and port.
+	 * (NOT the proxy's addr and port) in ss->peer & port.
+	 */
+	ci->peer = ss->peer;
+	ci->port = ss->port;
+	return SECSuccess;
+    }
 
     PORT_Memset(&sin, 0, sizeof(sin));
     rv = osfd->methods->getpeername(osfd, &sin);
@@ -1261,7 +1329,7 @@ ssl_GetSockName(PRFileDesc *fd, PRNetAddr *name)
     return (PRStatus)(*ss->ops->getsockname)(ss, name);
 }
 
-SECStatus PR_CALLBACK
+int PR_CALLBACK
 SSL_SetSockPeerID(PRFileDesc *fd, char *peerID)
 {
     sslSocket *ss;
@@ -1274,7 +1342,7 @@ SSL_SetSockPeerID(PRFileDesc *fd, char *peerID)
     }
 
     ss->peerID = PORT_Strdup(peerID);
-    return SECSuccess;
+    return 0;
 }
 
 static PRInt16 PR_CALLBACK
@@ -1292,11 +1360,11 @@ ssl_Poll(PRFileDesc *fd, PRInt16 how_flags, PRInt16 *out_flags)
     }
 
     if ((ret_flags & PR_POLL_WRITE) && 
-        ss->useSecurity && 
-	!ss->connected && 
+        ( (ss->useSocks && ss->handshake) || 
+	  (ss->useSecurity && !ss->connected && 
 	   /* XXX There needs to be a better test than the following. */
 	   /* Don't check ss->securityHandshake. */
-	(ss->handshake || ss->nextHandshake)) {
+	   (ss->handshake || ss->nextHandshake)))) {
     	/* The user is trying to write, but the handshake is blocked waiting
 	 * to read, so tell NSPR NOT to poll on write.
 	 */
@@ -1729,7 +1797,7 @@ ssl_NewSocket(void)
 	int i;
  
 	ss->useSecurity        = ssl_defaults.useSecurity;
-	ss->useSocks           = PR_FALSE;
+	ss->useSocks           = ssl_defaults.useSocks;
 	ss->requestCertificate = ssl_defaults.requestCertificate;
 	ss->requireCertificate = ssl_defaults.requireCertificate;
 	ss->handshakeAsClient  = ssl_defaults.handshakeAsClient;
@@ -1740,6 +1808,8 @@ ssl_NewSocket(void)
 	ss->fdx                = ssl_defaults.fdx;
 	ss->v2CompatibleHello  = ssl_defaults.v2CompatibleHello;
 	ss->detectRollBack     = ssl_defaults.detectRollBack;
+	memset(&ss->peer, 0, sizeof(ss->peer));
+	ss->port               = 0;
 	ss->noCache            = ssl_defaults.noCache;
 	ss->peerID             = NULL;
 	ss->rTimeout	       = PR_INTERVAL_NO_TIMEOUT;
@@ -1770,15 +1840,14 @@ ssl_NewSocket(void)
 	ssl2_InitSocketPolicy(ss);
 	ssl3_InitSocketPolicy(ss);
 
-	ss->firstHandshakeLock = PZ_NewMonitor(nssILockSSL);
-	ss->ssl3HandshakeLock  = PZ_NewMonitor(nssILockSSL);
+	ss->firstHandshakeLock = PR_NewMonitor();
+	ss->ssl3HandshakeLock  = PR_NewMonitor();
 	ss->specLock           = NSSRWLock_New(SSL_LOCK_RANK_SPEC, NULL);
-	ss->recvBufLock        = PZ_NewMonitor(nssILockSSL);
-	ss->xmitBufLock        = PZ_NewMonitor(nssILockSSL);
-	ss->writerThread       = NULL;
+	ss->recvBufLock        = PR_NewMonitor();
+	ss->xmitBufLock        = PR_NewMonitor();
 	if (ssl_lock_readers) {
-	    ss->recvLock       = PZ_NewLock(nssILockSSL);
-	    ss->sendLock       = PZ_NewLock(nssILockSSL);
+	    ss->recvLock       = PR_NewLock();
+	    ss->sendLock       = PR_NewLock();
 	}
     }
     return ss;
