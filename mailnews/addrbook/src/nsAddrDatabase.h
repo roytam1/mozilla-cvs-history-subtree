@@ -239,8 +239,8 @@ public:
 	NS_IMETHOD GetCardCount(PRUint32 *count);
 	NS_IMETHOD RemoveExtraCardsInCab(PRUint32 cardTotal, PRUint32 nCabMax);
 
-  NS_IMETHOD SetCardValue(nsIAbCard *card, const PRUnichar *name, const PRUnichar *value, PRBool notify);
-  NS_IMETHOD GetCardValue(nsIAbCard *card, const PRUnichar *name, PRUnichar **value);
+  NS_IMETHOD SetCardValue(nsIAbCard *card, const char *name, const PRUnichar *value, PRBool notify);
+  NS_IMETHOD GetCardValue(nsIAbCard *card, const char *name, PRUnichar **value);
 
 	// nsAddrDatabase methods:
 

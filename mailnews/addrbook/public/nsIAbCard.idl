@@ -100,8 +100,8 @@ interface nsIAbCard : nsISupports {
 	attribute string mailListURI;
 
     // remove this crap, just have getCardUnicharValue
-	wstring getCardValue(in string attrname);
-	wstring getCardUnicharValue(in wstring attrname);
+	wstring getCardValue(in string name);
+	wstring getCardUnicharValue(in string name);
 
 	void setCardValue(in string attrname, in wstring value);
 

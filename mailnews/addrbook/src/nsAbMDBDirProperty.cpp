@@ -185,7 +185,7 @@ NS_IMETHODIMP nsAbMDBDirProperty::ClearDatabase()
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsAbMDBDirProperty::GetValueForCard(nsIAbCard *card, const PRUnichar *name, PRUnichar **value)
+NS_IMETHODIMP nsAbMDBDirProperty::GetValueForCard(nsIAbCard *card, const char *name, PRUnichar **value)
 {
   nsresult rv;
   nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);
@@ -196,7 +196,7 @@ NS_IMETHODIMP nsAbMDBDirProperty::GetValueForCard(nsIAbCard *card, const PRUnich
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBDirProperty::SetValueForCard(nsIAbCard *card, const PRUnichar *name, const PRUnichar *value)
+NS_IMETHODIMP nsAbMDBDirProperty::SetValueForCard(nsIAbCard *card, const char *name, const PRUnichar *value)
 {
   nsresult rv;
   nsCOMPtr <nsIAbMDBCard> mdbcard = do_QueryInterface(card, &rv);

@@ -179,8 +179,8 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addListDirNode(in nsIMdbRow listRow);
 
     /**
-	 * use for getting and setting generic attributes
+	 * use for getting and setting generic string attributes
 	 */
-    void setCardValue(in nsIAbCard card, in wstring name, in wstring value, in boolean notify);
-    wstring getCardValue(in nsIAbCard card, in wstring name);
+    void setCardValue(in nsIAbCard card, in string name, in wstring value, in boolean notify);
+    wstring getCardValue(in nsIAbCard card, in string name);
 };

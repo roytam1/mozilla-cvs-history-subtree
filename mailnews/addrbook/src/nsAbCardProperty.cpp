@@ -146,12 +146,9 @@ NS_IMETHODIMP nsAbCardProperty::SetMailListURI(const char *aMailListURI)
 		return NS_ERROR_NULL_POINTER;
 }
 
-NS_IMETHODIMP nsAbCardProperty::GetCardUnicharValue(const PRUnichar *attrname, PRUnichar **value)
+NS_IMETHODIMP nsAbCardProperty::GetCardUnicharValue(const char *name, PRUnichar **value)
 {
-  // XXX do this conversion in the caller
-  nsCAutoString str;
-  str.AssignWithConversion(attrname);
-  return GetCardValue(str.get(), value);
+  return GetCardValue(name, value);
 }
 
 NS_IMETHODIMP nsAbCardProperty::GetCardValue(const char *attrname, PRUnichar **value)

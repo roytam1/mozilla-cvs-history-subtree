@@ -140,7 +140,7 @@ NS_METHOD nsAbDirectoryQuerySimpleBooleanExpression::Create(nsISupports* aOuter,
         return NS_ERROR_NO_AGGREGATION;
 
     nsAbDirectoryQuerySimpleBooleanExpression* it = new nsAbDirectoryQuerySimpleBooleanExpression ();
-    if (it == NULL)
+    if (!it)
         return NS_ERROR_OUT_OF_MEMORY;
 
     NS_IF_ADDREF(it);
@@ -243,7 +243,7 @@ NS_METHOD nsAbDirectoryQueryArguments::Create(nsISupports* aOuter, REFNSIID aIID
         return NS_ERROR_NO_AGGREGATION;
 
     nsAbDirectoryQueryArguments* it = new nsAbDirectoryQueryArguments();
-    if (it == NULL)
+    if (!it)
         return NS_ERROR_OUT_OF_MEMORY;
 
     NS_IF_ADDREF(it);
@@ -760,7 +760,7 @@ nsresult nsAbDirectoryQuery::queryMatch (nsIAbCard* card,
             NS_ENSURE_SUCCESS(rv, rv);
 
             _propertyValue = new nsAbDirectoryQueryPropertyValue(n.get (), supports);
-            if (_propertyValue == NULL)
+            if (!_propertyValue)
                 return NS_ERROR_OUT_OF_MEMORY;
         }
         else if (n.EqualsWithConversion ("card:URI"))
@@ -776,20 +776,20 @@ nsresult nsAbDirectoryQuery::queryMatch (nsIAbCard* card,
             v.AssignWithConversion (uri.get ());
 
             _propertyValue = new nsAbDirectoryQueryPropertyValue(n.get (), v.get ());
-            if (_propertyValue == NULL)
+            if (!_propertyValue)
                 return NS_ERROR_OUT_OF_MEMORY;
         }
         else
         {
             nsXPIDLString value;
-            rv = card->GetCardValue (n.get (), getter_Copies (value));
+            rv = card->GetCardValue (n.get(), getter_Copies (value));
             NS_ENSURE_SUCCESS(rv, rv);
 
-            if (!value.get () || value.Length () == 0)
+            if (!value.get() || value.Length () == 0)
                 continue;
 
             _propertyValue = new nsAbDirectoryQueryPropertyValue(n.get (), value.get ());
-            if (_propertyValue == NULL)
+            if (!_propertyValue)
                 return NS_ERROR_OUT_OF_MEMORY;
         }
 
@@ -819,7 +819,7 @@ nsresult nsAbDirectoryQuery::queryMatch (nsIAbCard* card,
         arguments,
         nsIAbDirectoryQueryResult::queryResultMatch,
         propertyValues);
-    if (_queryResult == NULL)
+    if (!_queryResult)
         return NS_ERROR_OUT_OF_MEMORY;
     queryResult = _queryResult;
 
@@ -835,7 +835,7 @@ nsresult nsAbDirectoryQuery::queryFinished (nsIAbDirectoryQueryArguments* argume
         arguments,
         nsIAbDirectoryQueryResult::queryResultComplete,
         0);
-    if (_queryResult == NULL)
+    if (!_queryResult)
         return NS_ERROR_OUT_OF_MEMORY;
     queryResult = _queryResult;
 
@@ -850,7 +850,7 @@ nsresult nsAbDirectoryQuery::queryError (nsIAbDirectoryQueryArguments* arguments
         arguments,
         nsIAbDirectoryQueryResult::queryResultError,
         0);
-    if (_queryResult == NULL)
+    if (!_queryResult)
         return NS_ERROR_OUT_OF_MEMORY;
     queryResult = _queryResult;
 

@@ -226,17 +226,6 @@ NS_IMETHODIMP nsAbView::Init(const char *aURI, nsIAbViewListener *abViewListener
   rv = EnumerateCards();
   NS_ENSURE_SUCCESS(rv, rv);
 
-#if 1
-  for (PRInt32 ii=0;ii<mCards.Count();ii++) {
-    nsIAbCard *card = ((AbCard *)(mCards.ElementAt(ii)))->card;
-    nsAutoString value;
-    value = NS_LITERAL_STRING("_foobar_value").get();
-    value.AppendInt(ii);
-    rv = mDirectory->SetValueForCard(card, NS_LITERAL_STRING("_FooBar").get(),value.get());
-    NS_ENSURE_SUCCESS(rv,rv);
-  }
-#endif
-
   // see if the persisted sortColumn is valid.
   // it may not be, if you migrated from older versions, or switched between
   // a mozilla build and a commercial build, which have different columns.
@@ -245,7 +234,7 @@ NS_IMETHODIMP nsAbView::Init(const char *aURI, nsIAbViewListener *abViewListener
   if (nsCRT::strcmp(colID, NS_LITERAL_STRING(GENERATED_NAME_COLUMN_ID).get()) && mCards.Count()) {
     nsIAbCard *card = ((AbCard *)(mCards.ElementAt(0)))->card;
     nsXPIDLString value;
-    rv = card->GetCardUnicharValue(colID, getter_Copies(value));
+    rv = GetCardValue(card, colID, getter_Copies(value));
     if (NS_FAILED(rv))
       actualSortColumn = NS_LITERAL_STRING(GENERATED_NAME_COLUMN_ID).get();
   }
@@ -425,25 +414,32 @@ NS_IMETHODIMP nsAbView::GetLevel(PRInt32 index, PRInt32 *_retval)
 
 nsresult nsAbView::GetCardValue(nsIAbCard *card, const PRUnichar *colID, PRUnichar **_retval)
 {
-  return mDirectory->GetValueForCard(card, colID, _retval);
+  nsresult rv;
+  
+  // "G" == "GeneratedName"
+  // "_" == generic column (like _ScreenName)
+  // else, standard column (like PrimaryEmail)
+  if (colID[0] == 'G')
+    rv = card->GetGeneratedName(mGeneratedNameFormat, _retval);
+  else {
+    // XXX do this conversion once, and cache it.
+    nsCAutoString column;
+    column.AssignWithConversion(colID);
+
+    if (colID[0] == '_') {
+      // needs to fail if illegal value (think, running mozilla & ns)
+      rv = mDirectory->GetValueForCard(card, column.get(), _retval);
+    }
+    else 
+      rv = card->GetCardUnicharValue(column.get(), _retval);
+  }
+  return rv;
 }
 
 NS_IMETHODIMP nsAbView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnichar **_retval)
 {
   nsIAbCard *card = ((AbCard *)(mCards.ElementAt(row)))->card;
-
-  nsresult rv;
-
-  // "G" == "GeneratedName"
-  if (colID[0] == 'G')
-    rv = card->GetGeneratedName(mGeneratedNameFormat, _retval);
-  else if (colID[0] == '_') 
-    rv = GetCardValue(card, colID, _retval);
-  else 
-    rv = card->GetCardUnicharValue(colID, _retval);
-
-  NS_ENSURE_SUCCESS(rv,rv);
-  return rv;
+  return GetCardValue(card, colID, _retval);
 }
 
 NS_IMETHODIMP nsAbView::SetOutliner(nsIOutlinerBoxObject *outliner)
@@ -679,13 +675,7 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
   nsresult rv;
   nsXPIDLString value;
 
-  // XXX fix me, do this with const to avoid the strcpy
-  if (colID[0] == 'G') // "G" == "GeneratedName"
-    rv = abcard->card->GetGeneratedName(mGeneratedNameFormat, getter_Copies(value));
-  else if (colID[0] == '_') 
-    rv = GetCardValue(abcard->card, colID, getter_Copies(value));
-  else
-    rv = abcard->card->GetCardUnicharValue(colID, getter_Copies(value));
+  rv = GetCardValue(abcard->card, colID, getter_Copies(value));
   NS_ENSURE_SUCCESS(rv,rv);
   
   // XXX be smarter about the allocation
@@ -695,10 +685,11 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
   NS_ENSURE_SUCCESS(rv,rv);
   
   // XXX fix me, do this with const to avoid the strcpy
-  rv = abcard->card->GetCardUnicharValue(NS_LITERAL_STRING(PRIMARY_EMAIL_COLUMN_ID).get(), getter_Copies(value));
+  // hardcode email to be our secondary key
+  rv = GetCardValue(abcard->card, NS_LITERAL_STRING(PRIMARY_EMAIL_COLUMN_ID).get(), getter_Copies(value));
   NS_ENSURE_SUCCESS(rv,rv);
   
- // XXX be smarter about the allocation
+  // XXX be smarter about the allocation
   if (abcard->secondaryCollationKey)
     nsMemory::Free(abcard->secondaryCollationKey);
   rv = CreateCollationKey(value, &(abcard->secondaryCollationKey), &(abcard->secondaryCollationKeyLen));
@@ -851,7 +842,7 @@ PRInt32 nsAbView::FindIndexForInsert(AbCard *abcard)
   for (i=0; i < count; i++) {
     void *current = mCards.ElementAt(i);
     PRInt32 value = inplaceSortCallback(item, current, (void *)(&closure));
-    // XXX not right, for ascending and descending
+    // XXX fix me, this is not right for both ascending and descending
     if (value <= 0) 
       break;
   }

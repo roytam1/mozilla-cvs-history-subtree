@@ -69,7 +69,7 @@ interface nsIAbMDBCard : nsISupports {
 	// a directory listener of an inserted event
 	void copyCard(in nsIAbMDBCard srcCardDB);
 
-	wstring getStringAttribute(in wstring name);
-	void setStringAttribute(in wstring name, in wstring value);
+	wstring getStringAttribute(in string name);
+	void setStringAttribute(in string name, in wstring value);
 };
 

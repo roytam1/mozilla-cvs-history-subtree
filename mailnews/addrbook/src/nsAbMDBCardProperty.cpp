@@ -114,7 +114,7 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetAbDatabase(nsIAddrDatabase* database)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBCardProperty::SetStringAttribute(const PRUnichar *name, const PRUnichar *value)
+NS_IMETHODIMP nsAbMDBCardProperty::SetStringAttribute(const char *name, const PRUnichar *value)
 {
   NS_ASSERTION(mCardDatabase, "no db");
   if (!mCardDatabase)
@@ -123,7 +123,7 @@ NS_IMETHODIMP nsAbMDBCardProperty::SetStringAttribute(const PRUnichar *name, con
   return mCardDatabase->SetCardValue(this, name, value, PR_TRUE /* notify */);
 }
 
-NS_IMETHODIMP nsAbMDBCardProperty::GetStringAttribute(const PRUnichar *name, PRUnichar **value)
+NS_IMETHODIMP nsAbMDBCardProperty::GetStringAttribute(const char *name, PRUnichar **value)
 {
   NS_ASSERTION(mCardDatabase, "no db");
   if (!mCardDatabase)

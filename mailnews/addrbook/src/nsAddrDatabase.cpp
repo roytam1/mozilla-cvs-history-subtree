@@ -2011,10 +2011,10 @@ NS_IMETHODIMP nsAddrDatabase::DeleteCardFromMailList(nsIAbDirectory *mailList, n
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAddrDatabase::SetCardValue(nsIAbCard *card, const PRUnichar *column, const PRUnichar *value, PRBool notify)
+NS_IMETHODIMP nsAddrDatabase::SetCardValue(nsIAbCard *card, const char *name, const PRUnichar *value, PRBool notify)
 {
   NS_ENSURE_ARG_POINTER(card);
-  NS_ENSURE_ARG_POINTER(column);
+  NS_ENSURE_ARG_POINTER(name);
   NS_ENSURE_ARG_POINTER(value);
 
   nsresult rv = NS_OK;
@@ -2038,21 +2038,17 @@ NS_IMETHODIMP nsAddrDatabase::SetCardValue(nsIAbCard *card, const PRUnichar *col
 
   INTL_ConvertFromUnicode(value, nsCRT::strlen(value), getter_Copies(utf8Str));
 
-  // XXX fix me, make the caller do this conversion
   mdb_token token;
-  nsCAutoString columnStr;
-  columnStr.AssignWithConversion(column);
-  GetStore()->StringToToken(GetEnv(), columnStr.get(), &token);
+  GetStore()->StringToToken(GetEnv(), name, &token);
 
 	rv = AddCharStringColumn(cardRow, token, utf8Str.get());
   NS_ENSURE_SUCCESS(rv,rv);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAddrDatabase::GetCardValue(nsIAbCard *card, const PRUnichar *column, PRUnichar **value)
+NS_IMETHODIMP nsAddrDatabase::GetCardValue(nsIAbCard *card, const char *name, PRUnichar **value)
 {
   nsresult rv = NS_OK;
-  *value = nsCRT::strdup(column);
 
   nsIMdbRow* cardRow = nsnull;
 	mdbOid rowOid;
@@ -2068,19 +2064,19 @@ NS_IMETHODIMP nsAddrDatabase::GetCardValue(nsIAbCard *card, const PRUnichar *col
 
   if (!cardRow) {
     *value = nsnull;
+    // XXX explain how this can happen when adding cards when editing a mailing list
     return NS_OK;
   }
 
-  // XXX fix me, make the caller do this conversion
   mdb_token token;
-  nsCAutoString columnStr;
-  columnStr.AssignWithConversion(column);
-  GetStore()->StringToToken(GetEnv(), columnStr.get(), &token);
+  GetStore()->StringToToken(GetEnv(), name, &token);
 
   // XXX fix me, avoid extra copying and allocations (did dmb already do this on the trunk?)
   nsAutoString tempString;
   rv = GetStringColumn(cardRow, token, tempString);
   if (NS_FAILED(rv)) {
+    // if you migrated from older versions, or switched between
+    // a mozilla build and a commercial build, which have different columns.
     *value = nsnull;
     return NS_OK;
   }
