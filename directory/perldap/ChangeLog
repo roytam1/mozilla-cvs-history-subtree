@@ -1,3 +1,11 @@
+1998-12-15  Leif Hedstrom  <leif@netscape.com>
+
+	* API.xs (RET_CPP): Test for NULL pointers, bug #1387.
+	(RET_BVPP): Dito.
+
+	* Utils.pm (ldapArgs): Fixed bug where "-s 0" would not be honored
+	(I'm an idiot, OK?).
+
 1998-12-14  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (getRes): New method, to return the internal result message.
