@@ -324,7 +324,7 @@ NS_IMPL_ISUPPORTS1( nsRegistryValue,        nsIRegistryValue )
 | Vanilla nsRegistry constructor.                                              |
 ------------------------------------------------------------------------------*/
 nsRegistry::nsRegistry() 
-    : mReg(0), mCurRegFile(NULL), mCurRegID(0) {
+    : mReg(0), mCurRegFile(nsnull), mCurRegID(0) {
     NS_INIT_REFCNT();
 #ifdef EXTRA_THREADSAFE
     mregLock = PR_NewLock();
@@ -417,7 +417,7 @@ NS_IMETHODIMP nsRegistry::OpenWellKnownRegistry( nsWellKnownRegistry regid ) {
             directoryService->Get("xpcom.currentProcess.componentRegistry", NS_GET_IID(nsIFile), 
                                           (void**)&registryLocation);
 
-            if (registryLocation != NULL)
+            if (registryLocation != nsnull)
                 foundReg = PR_TRUE;
         }
         break;
@@ -477,7 +477,7 @@ NS_IMETHODIMP nsRegistry::Close() {
         mReg = 0;
         if (mCurRegFile)
           nsCRT::free(mCurRegFile);
-        mCurRegFile = NULL;
+        mCurRegFile = nsnull;
         mCurRegID = 0;
     }
     return regerr2nsresult( err );
@@ -627,12 +627,11 @@ NS_IMETHODIMP nsRegistry::GetInt( nsRegistryKey baseKey, const char *path, PRInt
 | implement it "manually" using NR_RegGetEntry                                 |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistry::GetLongLong( nsRegistryKey baseKey, const char *path, PRInt64 *result ) {
-    nsresult rv = NS_OK;
     REGERR err = REGERR_OK;
     
     PR_Lock(mregLock);
     
-    unsigned long length = sizeof PRInt64;
+    uint32 length = sizeof(PRInt64);
     err = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, result, &length);
     
     PR_Unlock(mregLock);
@@ -1188,7 +1187,7 @@ nsRegistryNode::nsRegistryNode( HREG hReg, char *name, RKEY childKey )
     : mReg( hReg ), mChildKey( childKey ) {
     NS_INIT_REFCNT();
 
-    PR_ASSERT(name != NULL);
+    PR_ASSERT(name != nsnull);
     strcpy(mName, name);
 
 #ifdef EXTRA_THREADSAFE
@@ -1212,7 +1211,7 @@ nsRegistryNode::~nsRegistryNode()
 | using NR_RegEnumSubkeys.                                                     |
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistryNode::GetName( char **result ) {
-    if (result == NULL) return NS_ERROR_NULL_POINTER;
+    if (result == nsnull) return NS_ERROR_NULL_POINTER;
     // Make sure there is a place to put the result.
     *result = nsCRT::strdup( mName );
     if ( !*result ) return NS_ERROR_OUT_OF_MEMORY;
@@ -1225,7 +1224,7 @@ NS_IMETHODIMP nsRegistryNode::GetName( char **result ) {
 ------------------------------------------------------------------------------*/
 NS_IMETHODIMP nsRegistryNode::GetKey( nsRegistryKey *r_key ) {
     nsresult rv = NS_OK;
-    if (r_key == NULL) return NS_ERROR_NULL_POINTER;
+    if (r_key == nsnull) return NS_ERROR_NULL_POINTER;
     *r_key = mChildKey;
     return rv;
 }
@@ -1353,10 +1352,10 @@ nsRegistryFactory::CreateInstance(nsISupports *aOuter,
     nsresult rv = NS_OK;
     nsRegistry* newRegistry;
 
-    if(aResult == NULL) {
+    if(aResult == nsnull) {
         return NS_ERROR_NULL_POINTER;
     } else {
-        *aResult = NULL;
+        *aResult = nsnull;
     }
 
     if(0 != aOuter) {
@@ -1365,7 +1364,7 @@ nsRegistryFactory::CreateInstance(nsISupports *aOuter,
 
     NS_NEWXPCOM(newRegistry, nsRegistry);
 
-    if(newRegistry == NULL) {
+    if(newRegistry == nsnull) {
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
