@@ -58,8 +58,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsImapServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsImapServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsImapServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsImapServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsImapServiceLog)
 
 #define PREF_MAIL_ROOT_IMAP "mail.root.imap"
 
@@ -2986,7 +2986,7 @@ nsImapService::BuildSubscribeDatasourceWithPath(nsIImapIncomingServer *aServer, 
 	nsresult rv;
 
 #ifdef DEBUG_sspitzer
-	PRINTF("BuildSubscribeDatasourceWithPath(%s)\n",folderPath);
+	PRINTF(("BuildSubscribeDatasourceWithPath(%s)\n",folderPath));
 #endif
 	nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(aServer);
 	if (!server) return NS_ERROR_FAILURE;

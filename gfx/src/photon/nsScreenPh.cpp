@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsScreenPhLog)
-#define PRINTF NS_LOG_PRINTF(nsScreenPhLog)
-#define FLUSH  NS_LOG_FLUSH(nsScreenPhLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsScreenPhLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsScreenPhLog)
 
 nsScreenPh :: nsScreenPh (  )
 {
@@ -79,7 +79,7 @@ nsScreenPh :: nsScreenPh (  )
   }
   else
   {
-    PRINTF("nsScreenPh::nsScreenPh The PHIG environment variable must be set, try setting it to 1\n");  
+    PRINTF(("nsScreenPh::nsScreenPh The PHIG environment variable must be set, try setting it to 1\n"));  
   }
 }
 

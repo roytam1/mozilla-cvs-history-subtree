@@ -68,8 +68,8 @@
 #include "nslog.h"
 
 NS_DECL_LOG(HTTPLog)
-#define PRINTF NS_LOG_PRINTF(HTTPLog)
-#define FLUSH  NS_LOG_FLUSH(HTTPLog)
+#define PRINTF(args) NS_LOG_PRINTF(HTTPLog, args)
+#define FLUSH()      NS_LOG_FLUSH(HTTPLog)
 
 static NS_DEFINE_CID(kNetModuleMgrCID, NS_NETMODULEMGR_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -2115,7 +2115,7 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
             authLine.Left(authType, space);
 
 #if defined(DEBUG_shaver) || defined(DEBUG_gagan)
-        PRINTF("Auth type: \"%s\"\n", authType.GetBuffer());
+        PRINTF(("Auth type: \"%s\"\n", authType.GetBuffer()));
 #endif
         // normalize to lowercase
         char *authLower = nsCRT::strdup(authType.GetBuffer());
@@ -2200,7 +2200,7 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
             if (pEngine)
                 pEngine->GetAuthStringForRealm(mURI, authRealm, getter_Copies(authString));
 
-            PRINTF(">>>>> Authentication for Realm: [realm=%s, auth=%s]\n\n", (const char*) authRealm, (const char*) authString);
+            PRINTF((">>>>> Authentication for Realm: [realm=%s, auth=%s]\n\n", (const char*) authRealm, (const char*) authString));
         }
 
         // Skip prompting if we already have an authentication string.
@@ -2256,7 +2256,7 @@ nsHTTPChannel::Authenticate(const char *iChallenge, PRBool iProxyAuth)
     }
 
 #if defined(DEBUG_shaver) || defined(DEBUG_gagan)
-    PRINTF("Auth string: %s\n", (const char *)authString);
+    PRINTF(("Auth string: %s\n", (const char *)authString));
 #endif
 
     // Construct a new channel
@@ -2376,7 +2376,7 @@ nsHTTPChannel::ProcessStatusCode(void)
                 {
                     rv = GetRequestHeader(nsHTTPAtoms::Authorization,
                             getter_Copies(authString));
-                    PRINTF(">>>>> Auth Accepted!! [realm=%s, auth=%s]\n\n", mAuthRealm, (const char*) authString);
+                    PRINTF((">>>>> Auth Accepted!! [realm=%s, auth=%s]\n\n", mAuthRealm, (const char*) authString));
                     if (mAuthRealm)
                         pEngine->SetAuthStringForRealm(mURI, mAuthRealm, authString);
                     else
@@ -2386,7 +2386,7 @@ nsHTTPChannel::ProcessStatusCode(void)
                 {
                     rv = GetRequestHeader(nsHTTPAtoms::Authorization,
                             getter_Copies(authString));
-                    PRINTF(">>>>> Auth Rejected!! [realm=%s, auth=%s]\n\n", mAuthRealm, (const char*) authString);
+                    PRINTF((">>>>> Auth Rejected!! [realm=%s, auth=%s]\n\n", mAuthRealm, (const char*) authString));
                     pEngine->SetAuthString(mURI, 0);
 
                     NS_WITH_SERVICE(nsIWalletService, walletService, 

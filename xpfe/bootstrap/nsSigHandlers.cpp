@@ -59,8 +59,8 @@ extern "C" char * strsignal(int);
 #include "nslog.h"
 
 NS_IMPL_LOG(nsSigHandlersLog)
-#define PRINTF NS_LOG_PRINTF(nsSigHandlersLog)
-#define FLUSH  NS_LOG_FLUSH(nsSigHandlersLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSigHandlersLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSigHandlersLog)
 
 static char _progname[1024] = "huh?";
 
@@ -82,16 +82,16 @@ void abnormal_exit_handler(int signum)
 	 )
   {
     PR_CurrentThread();
-    PRINTF("prog = %s\npid = %d\nsignal = %s\n", 
-           _progname, getpid(), strsignal(signum));
+    PRINTF(("prog = %s\npid = %d\nsignal = %s\n", 
+           _progname, getpid(), strsignal(signum)));
 
-    PRINTF("Sleeping for 5 minutes.\n");
-    PRINTF("Type 'gdb %s %d' to attatch your debugger to this thread.\n",
-           _progname, getpid());
+    PRINTF(("Sleeping for 5 minutes.\n"));
+    PRINTF(("Type 'gdb %s %d' to attatch your debugger to this thread.\n",
+           _progname, getpid()));
 
     sleep(300);
 
-    PRINTF("Done sleeping...\n");
+    PRINTF(("Done sleeping...\n"));
   }
 #endif
 
@@ -107,22 +107,22 @@ ah_crap_handler(int signum)
 {
   PR_CurrentThread();
 
-  PRINTF("prog = %s\npid = %d\nsignal = %s\n",
+  PRINTF(("prog = %s\npid = %d\nsignal = %s\n",
          _progname,
          getpid(),
-         strsignal(signum));
+         strsignal(signum)));
   
-  PRINTF("stack logged to someplace\n");
+  PRINTF(("stack logged to someplace\n"));
   nsTraceRefcnt::WalkTheStack(stdout);
 
-  PRINTF("Sleeping for 5 minutes.\n");
-  PRINTF("Type 'gdb %s %d' to attatch your debugger to this thread.\n",
+  PRINTF(("Sleeping for 5 minutes.\n"));
+  PRINTF(("Type 'gdb %s %d' to attatch your debugger to this thread.\n",
          _progname,
-         getpid());
+         getpid()));
 
   sleep(300);
 
-  PRINTF("Done sleeping...\n");
+  PRINTF(("Done sleeping...\n"));
 } 
 #endif // CRAWL_STACK_ON_SIGSEGV
 
@@ -179,11 +179,11 @@ void InstallUnixSignalHandlers(const char *ProgramName)
 
 		if (setrlimit(RLIMIT_NOFILE, &rl) < 0) {
 		    perror("setrlimit(RLIMIT_NOFILE)");
-		    PRINTF("Cannot exceed hard limit for open files");
+		    PRINTF(("Cannot exceed hard limit for open files"));
 		}
 #if defined(DEBUG)
 	    	if (getrlimit(RLIMIT_NOFILE, &rl) == 0)
-          PRINTF("File descriptors set to %d\n", rl.rlim_cur);
+          PRINTF(("File descriptors set to %d\n", rl.rlim_cur));
 #endif //DEBUG
 	    }
     }

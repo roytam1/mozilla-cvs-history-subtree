@@ -31,8 +31,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsBlockBandDataLog)
-#define PRINTF NS_LOG_PRINTF(nsBlockBandDataLog)
-#define FLUSH  NS_LOG_FLUSH(nsBlockBandDataLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsBlockBandDataLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsBlockBandDataLog)
 
 nsBlockBandData::nsBlockBandData()
   : mSpaceManager(nsnull),
@@ -87,8 +87,8 @@ nsBlockBandData::GetAvailableSpace(nscoord aY, nsRect& aResult)
   ComputeAvailSpaceRect();
   aResult = mAvailSpace;
 #ifdef REALLY_NOISY_COMPUTEAVAILSPACERECT
-  PRINTF("nsBBD %p GetAvailableSpace(%d) returing (%d, %d, %d, %d)\n",
-         this, aY, aResult.x, aResult.y, aResult.width, aResult.height);
+  PRINTF(("nsBBD %p GetAvailableSpace(%d) returing (%d, %d, %d, %d)\n",
+         this, aY, aResult.x, aResult.y, aResult.width, aResult.height));
 #endif
   return NS_OK;
 }
@@ -149,7 +149,7 @@ void
 nsBlockBandData::ComputeAvailSpaceRect()
 {
 #ifdef REALLY_NOISY_COMPUTEAVAILSPACERECT
-  PRINTF("nsBlockBandData::ComputeAvailSpaceRect %p with count %d\n", this, mCount);
+  PRINTF(("nsBlockBandData::ComputeAvailSpaceRect %p with count %d\n", this, mCount));
 #endif
   if (0 == mCount) {
     mAvailSpace.x = 0;
@@ -178,7 +178,7 @@ nsBlockBandData::ComputeAvailSpaceRect()
       trapezoid = &mTrapezoids[i];
       if (trapezoid->mState != nsBandTrapezoid::Available) {
 #ifdef REALLY_NOISY_COMPUTEAVAILSPACERECT
-        PRINTF("band %p checking !Avail trap %p with frame %p\n", this, trapezoid, trapezoid->mFrame);
+        PRINTF(("band %p checking !Avail trap %p with frame %p\n", this, trapezoid, trapezoid->mFrame));
 #endif
         const nsStyleDisplay* display;
         if (nsBandTrapezoid::OccupiedMultiple == trapezoid->mState) {
@@ -219,7 +219,7 @@ nsBlockBandData::ComputeAvailSpaceRect()
     leftFloaters = 1;
   }
 #ifdef REALLY_NOISY_COMPUTEAVAILSPACERECT
-  PRINTF("band %p has floaters %d, %d\n", this, leftFloaters, rightFloaters);
+  PRINTF(("band %p has floaters %d, %d\n", this, leftFloaters, rightFloaters));
 #endif
   mLeftFloaters = leftFloaters;
   mRightFloaters = rightFloaters;
@@ -266,8 +266,8 @@ nsBlockBandData::ComputeAvailSpaceRect()
     mAvailSpace.width = NS_UNCONSTRAINEDSIZE;
   }
 #ifdef REALLY_NOISY_COMPUTEAVAILSPACERECT
-  PRINTF("  ComputeAvailSpaceRect settting state mAvailSpace (%d,%d,%d,%d)\n", 
-         mAvailSpace.x, mAvailSpace.y, mAvailSpace.width, mAvailSpace.height);
+  PRINTF(("  ComputeAvailSpaceRect settting state mAvailSpace (%d,%d,%d,%d)\n", 
+         mAvailSpace.x, mAvailSpace.y, mAvailSpace.width, mAvailSpace.height));
 #endif
 
 }
@@ -497,11 +497,11 @@ nsBlockBandData::GetMaxElementSize(nsIPresContext* aPresContext,
 #ifdef DEBUG
 void nsBlockBandData::List()
 {
-  PRINTF("nsBlockBandData %p sm=%p, sm coord = (%d,%d), mSpace = (%d,%d)\n",
+  PRINTF(("nsBlockBandData %p sm=%p, sm coord = (%d,%d), mSpace = (%d,%d)\n",
           this, mSpaceManager, mSpaceManagerX, mSpaceManagerY,
-         mSpace.width, mSpace.height);
-  PRINTF("  availSpace=(%d, %d, %d, %d), floaters l=%d r=%d\n",
+         mSpace.width, mSpace.height));
+  PRINTF(("  availSpace=(%d, %d, %d, %d), floaters l=%d r=%d\n",
           mAvailSpace.x, mAvailSpace.y, mAvailSpace.width, mAvailSpace.height,
-         mLeftFloaters, mRightFloaters);
+         mLeftFloaters, mRightFloaters));
 }
 #endif

@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsImageXlibLog)
-#define PRINTF NS_LOG_PRINTF(nsImageXlibLog)
-#define FLUSH  NS_LOG_FLUSH(nsImageXlibLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsImageXlibLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsImageXlibLog)
 
 #define IsFlagSet(a,b) ((a) & (b))
 
@@ -83,7 +83,7 @@ nsImageXlib::~nsImageXlib()
       NS_ASSERTION(nsnull != mDisplay,"display is null.");
 
 #ifdef XLIB_PIXMAP_DEBUG
-      PRINTF("XFreePixmap(display = %p)\n",mDisplay);
+      PRINTF(("XFreePixmap(display = %p)\n",mDisplay));
 #endif
 
       XFreePixmap(mDisplay, mAlphaPixmap);
@@ -96,7 +96,7 @@ nsImageXlib::~nsImageXlib()
     NS_ASSERTION(nsnull != mDisplay,"display is null.");
 
 #ifdef XLIB_PIXMAP_DEBUG
-    PRINTF("XFreePixmap(display = %p)\n",mDisplay);
+    PRINTF(("XFreePixmap(display = %p)\n",mDisplay));
 #endif
 
     XFreePixmap(mDisplay, mImagePixmap);

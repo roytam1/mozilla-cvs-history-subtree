@@ -114,13 +114,13 @@ NS_IMPL_LOG_ENABLED(nsGlobalWindowLog)
 #else
 NS_IMPL_LOG(nsGlobalWindowLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsGlobalWindowLog)
-#define FLUSH  NS_LOG_FLUSH(nsGlobalWindowLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsGlobalWindowLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsGlobalWindowLog)
 
 // log for js dump commands: 
 NS_IMPL_LOG_ENABLED(DUMP)
-#define DUMP_PRINTF NS_LOG_PRINTF(DUMP)
-#define DUMP_FLUSH  NS_LOG_FLUSH(DUMP)
+#define DUMP_PRINTF(args) NS_LOG_PRINTF(DUMP, args)
+#define DUMP_FLUSH()      NS_LOG_FLUSH(DUMP)
 
 // CIDs
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
@@ -1483,7 +1483,7 @@ NS_IMETHODIMP GlobalWindowImpl::Dump(const nsAReadableString& aStr)
 #endif
 
   if (cstr) {
-    DUMP_PRINTF("%s", cstr);
+    DUMP_PRINTF(("%s", cstr));
     nsCRT::free(cstr);
   }
 
@@ -1654,7 +1654,7 @@ NS_IMETHODIMP GlobalWindowImpl::Home()
   nsString homeURL;
   if (!url) {
     // if all else fails, use this
-    PRINTF("all else failed.  using %s as the home page\n", DEFAULT_HOME_PAGE);
+    PRINTF(("all else failed.  using %s as the home page\n", DEFAULT_HOME_PAGE));
     homeURL.AssignWithConversion(DEFAULT_HOME_PAGE);
   }
   else

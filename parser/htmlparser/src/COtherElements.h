@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(COtherElementsLog)
-#define PRINTF NS_LOG_PRINTF(COtherElementsLog)
-#define FLUSH  NS_LOG_FLUSH(COtherElementsLog)
+#define PRINTF(args) NS_LOG_PRINTF(COtherElementsLog, args)
+#define FLUSH()      NS_LOG_FLUSH(COtherElementsLog)
 
 /************************************************************************
   This union is a bitfield which describes the group membership
@@ -2368,88 +2368,88 @@ void CElementTable::DebugDumpGroups(CElement* aTag){
 
   const char* tag=nsHTMLTags::GetStringValue(aTag->mTag);
   const char* prefix="     ";
-  PRINTF("\n\nTag: <%s>\n",tag);
-  PRINTF(prefix);
+  PRINTF(("\n\nTag: <%s>\n",tag));
+  PRINTF((prefix));
 
   if(aTag->IsContainer()) {
-    if(aTag->mContainsGroups.mBits.mHead)           PRINTF("head ");    
-    if(aTag->mContainsGroups.mBits.mHeadMisc)       PRINTF("headmisc ");  
-    if(aTag->mContainsGroups.mBits.mHeadContent)    PRINTF("headcontent ");  
-    if(aTag->mContainsGroups.mBits.mTable)          PRINTF("table ");
-    if(aTag->mContainsGroups.mBits.mTextContainer)  PRINTF("text ");
-    if(aTag->mContainsGroups.mBits.mTopLevel)       PRINTF("toplevel ");
-    if(aTag->mContainsGroups.mBits.mDTDInternal)    PRINTF("internal ");
+    if(aTag->mContainsGroups.mBits.mHead)           PRINTF(("head "));    
+    if(aTag->mContainsGroups.mBits.mHeadMisc)       PRINTF(("headmisc "));  
+    if(aTag->mContainsGroups.mBits.mHeadContent)    PRINTF(("headcontent "));  
+    if(aTag->mContainsGroups.mBits.mTable)          PRINTF(("table "));
+    if(aTag->mContainsGroups.mBits.mTextContainer)  PRINTF(("text "));
+    if(aTag->mContainsGroups.mBits.mTopLevel)       PRINTF(("toplevel "));
+    if(aTag->mContainsGroups.mBits.mDTDInternal)    PRINTF(("internal "));
 
     if(aTag->mContainsGroups.mBits.mFlowEntity) {
-      PRINTF("block inline ");
+      PRINTF(("block inline "));
     }
     else {
 
       if (aTag->mContainsGroups.mBits.mBlockEntity)  {
-        PRINTF("blockEntity ");
+        PRINTF(("blockEntity "));
       }
 
       if (aTag->mContainsGroups.mBits.mBlock)  {
-        PRINTF("block ");
+        PRINTF(("block "));
       }
 
       if(aTag->mContainsGroups.mBits.mInlineEntity)   {
-        PRINTF("inline ");
+        PRINTF(("inline "));
       }
 
       else {
 
-        if(aTag->mContainsGroups.mBits.mFontStyle )     PRINTF("fontstyle ");
-        if(aTag->mContainsGroups.mBits.mPhrase)         PRINTF("phrase ");
-        if(aTag->mContainsGroups.mBits.mSpecial)        PRINTF("special ");
-        if(aTag->mContainsGroups.mBits.mFormControl)    PRINTF("form ");
-        if(aTag->mContainsGroups.mBits.mHeading)        PRINTF("heading ");  
-        if(aTag->mContainsGroups.mBits.mFrame)          PRINTF("frame ");
-        if(aTag->mContainsGroups.mBits.mList)           PRINTF("list ");
-        if(aTag->mContainsGroups.mBits.mPreformatted)   PRINTF("pre ");
-        if(aTag->mContainsGroups.mBits.mSelf)           PRINTF("self ");
-        if(aTag->mContainsGroups.mBits.mLeaf)           PRINTF("leaf ");
-        if(aTag->mContainsGroups.mBits.mWhiteSpace)     PRINTF("ws ");
-        if(aTag->mContainsGroups.mBits.mComment)        PRINTF("comment ");
+        if(aTag->mContainsGroups.mBits.mFontStyle )     PRINTF(("fontstyle "));
+        if(aTag->mContainsGroups.mBits.mPhrase)         PRINTF(("phrase "));
+        if(aTag->mContainsGroups.mBits.mSpecial)        PRINTF(("special "));
+        if(aTag->mContainsGroups.mBits.mFormControl)    PRINTF(("form "));
+        if(aTag->mContainsGroups.mBits.mHeading)        PRINTF(("heading "));  
+        if(aTag->mContainsGroups.mBits.mFrame)          PRINTF(("frame "));
+        if(aTag->mContainsGroups.mBits.mList)           PRINTF(("list "));
+        if(aTag->mContainsGroups.mBits.mPreformatted)   PRINTF(("pre "));
+        if(aTag->mContainsGroups.mBits.mSelf)           PRINTF(("self "));
+        if(aTag->mContainsGroups.mBits.mLeaf)           PRINTF(("leaf "));
+        if(aTag->mContainsGroups.mBits.mWhiteSpace)     PRINTF(("ws "));
+        if(aTag->mContainsGroups.mBits.mComment)        PRINTF(("comment "));
       }
     
     }
 
     if(aTag->mIncludeKids) {
-      PRINTF("\n%s",prefix);
+      PRINTF(("\n%s",prefix));
       eHTMLTags *theKid=aTag->mIncludeKids;
-      PRINTF("+ ");
+      PRINTF(("+ "));
       while(eHTMLTag_unknown!=*theKid){
         tag=nsHTMLTags::GetCStringValue(*theKid++);
-        PRINTF("%s ",tag);
+        PRINTF(("%s ",tag));
       }
     }
 
     if(aTag->mExcludeKids) {
-      PRINTF("\n%s",prefix);
+      PRINTF(("\n%s",prefix));
       eHTMLTags *theKid=aTag->mExcludeKids;
-      PRINTF("- ");
+      PRINTF(("- "));
       while(eHTMLTag_unknown!=*theKid){
         tag=nsHTMLTags::GetCStringValue(*theKid++);
-        PRINTF("%s ",tag);
+        PRINTF(("%s ",tag));
       }
     }
 
     if(!aTag->mContainsGroups.mBits.mSelf){
-      PRINTF("\n%s - self",prefix);
+      PRINTF(("\n%s - self",prefix));
     }
  
   }
   else {
-    PRINTF("empty\n");
+    PRINTF(("empty\n"));
   }
 }
 
 void CElementTable::DebugDumpContainment(CElement* anElement){
   const char* tag=nsHTMLTags::GetStringValue(anElement->mTag);
   const char* prefix="     ";
-  PRINTF("\n\nTag: <%s>\n",tag);
-  PRINTF(prefix);
+  PRINTF(("\n\nTag: <%s>\n",tag));
+  PRINTF((prefix));
 
   int count=0;
   int i=0;
@@ -2457,11 +2457,11 @@ void CElementTable::DebugDumpContainment(CElement* anElement){
     CElement* theChild=mElements[i];
     if(anElement->CanContain(theChild,0)){
       tag=nsHTMLTags::GetCStringValue(theChild->mTag);
-      PRINTF("%s ",tag);
+      PRINTF(("%s ",tag));
       count++;
       if(18==count) {
         count=0;
-        PRINTF("\n%s",prefix);
+        PRINTF(("\n%s",prefix));
       }
     }
   }
@@ -2471,14 +2471,14 @@ void CElementTable::DebugDumpInlineElements(const char* aTitle) {
   PRInt32   theTagID=eHTMLTag_unknown;
   PRBool    result=PR_FALSE;
 
-  PRINTF("Inline Elements -- %s: \n",aTitle);
+  PRINTF(("Inline Elements -- %s: \n",aTitle));
   while(theTagID<=eHTMLTag_userdefined) {
     CElement *theTag=GetElement((eHTMLTags)theTagID);
     if(theTag) {
       result=theTag->IsInlineElement(eHTMLTag_unknown);
       if(result) {
         const char* theName=nsHTMLTags::GetCStringValue(theTag->mTag);
-        PRINTF("  %s\n",theName);
+        PRINTF(("  %s\n",theName));
       }
     }
     theTagID++;
@@ -2489,14 +2489,14 @@ void CElementTable::DebugDumpBlockElements(const char* aTitle) {
   PRInt32   theTagID=eHTMLTag_unknown;
   PRBool    result=PR_FALSE;
 
-  PRINTF("Block Elements -- %s: \n",aTitle);
+  PRINTF(("Block Elements -- %s: \n",aTitle));
   while(theTagID<=eHTMLTag_userdefined) {
     CElement *theTag=GetElement((eHTMLTags)theTagID);
     if(theTag) {
       result=theTag->IsBlockElement(eHTMLTag_unknown);
       if(result) {
         const char* theName=nsHTMLTags::GetCStringValue(theTag->mTag);
-        PRINTF("  %s\n",theName);
+        PRINTF(("  %s\n",theName));
       }
     }
     theTagID++;
@@ -2508,12 +2508,12 @@ void CElementTable::DebugDumpContainment(const char* aTitle){
   DebugDumpContainment(mElements[eHTMLTag_head]);
   DebugDumpContainment(mElements[eHTMLTag_html]);
   DebugDumpContainment(mElements[eHTMLTag_table]);
-  PRINTF("\n");
+  PRINTF(("\n"));
 #endif
 
-  PRINTF("==================================================\n");
-  PRINTF("%s\n",aTitle);
-  PRINTF("==================================================\n");
+  PRINTF(("==================================================\n"));
+  PRINTF(("%s\n",aTitle));
+  PRINTF(("==================================================\n"));
   int i=0;
 
   for(i=1;i<NS_HTML_TAG_MAX;i++){

@@ -30,16 +30,16 @@
 #include "nslog.h"
 
 NS_DECL_LOG(OutlookDebugLogLog)
-#define PRINTF NS_LOG_PRINTF(OutlookDebugLogLog)
-#define FLUSH  NS_LOG_FLUSH(OutlookDebugLogLog)
+#define PRINTF(args) NS_LOG_PRINTF(OutlookDebugLogLog, args)
+#define FLUSH()      NS_LOG_FLUSH(OutlookDebugLogLog)
 
 #ifdef IMPORT_DEBUG
 #include "stdio.h"
 
-#define	IMPORT_LOG0( x)	PRINTF( x)
-#define	IMPORT_LOG1( x, y)	PRINTF( x, y)
-#define	IMPORT_LOG2( x, y, z)	PRINTF( x, y, z)
-#define	IMPORT_LOG3( a, b, c, d)	PRINTF( a, b, c, d)
+#define	IMPORT_LOG0( x)	PRINTF(( x))
+#define	IMPORT_LOG1( x, y)	PRINTF(( x, y))
+#define	IMPORT_LOG2( x, y, z)	PRINTF(( x, y, z))
+#define	IMPORT_LOG3( a, b, c, d)	PRINTF(( a, b, c, d))
 
 #else
 

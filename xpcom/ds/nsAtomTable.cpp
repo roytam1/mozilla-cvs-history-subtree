@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsAtomTableLog)
-#define PRINTF NS_LOG_PRINTF(nsAtomTableLog)
-#define FLUSH  NS_LOG_FLUSH(nsAtomTableLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsAtomTableLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsAtomTableLog)
 
 /**
  * The shared hash table for atom lookups.
@@ -59,7 +59,7 @@ NS_COM void NS_PurgeAtomTable(void)
 #if defined(DEBUG) && (defined(XP_UNIX) || defined(XP_PC))
     if (gAtoms) {
       if (NS_LOG_ENABLED(nsAtomTableLog)) {
-        PRINTF("*** leaking %d atoms\n", gAtoms);
+        PRINTF(("*** leaking %d atoms\n", gAtoms));
         PL_HashTableEnumerateEntries(gAtomHashTable, DumpAtomLeaks, 0);
       }
     }

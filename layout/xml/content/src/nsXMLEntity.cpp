@@ -35,8 +35,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsXMLEntityLog)
-#define PRINTF NS_LOG_PRINTF(nsXMLEntityLog)
-#define FLUSH  NS_LOG_FLUSH(nsXMLEntityLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXMLEntityLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXMLEntityLog)
 
 
 class nsXMLEntity : public nsIDOMEntity,

@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsStackLayoutLog)
-#define PRINTF NS_LOG_PRINTF(nsStackLayoutLog)
-#define FLUSH  NS_LOG_FLUSH(nsStackLayoutLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsStackLayoutLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsStackLayoutLog)
 
 nsCOMPtr<nsIBoxLayout> nsStackLayout::gInstance = new nsStackLayout();
 
@@ -267,7 +267,7 @@ nsStackLayout::Layout(nsIBox* aBox, nsBoxLayoutState& aState)
      }
      NS_BOX_ASSERTION(aBox, passes < 10,"Infinite loop! Someone won't stop growing!!");
      //if (passes > 3)
-     //   PRINTF("Growing!!!\n");
+     //   PRINTF(("Growing!!!\n"));
 
      passes++;
    } while(grow);

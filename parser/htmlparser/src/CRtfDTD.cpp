@@ -50,8 +50,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(CRtfDTDLog)
-#define PRINTF NS_LOG_PRINTF(CRtfDTDLog)
-#define FLUSH  NS_LOG_FLUSH(CRtfDTDLog)
+#define PRINTF(args) NS_LOG_PRINTF(CRtfDTDLog, args)
+#define FLUSH()      NS_LOG_FLUSH(CRtfDTDLog)
 
 
 static NS_DEFINE_IID(kIHTMLContentSinkIID, NS_IHTML_CONTENT_SINK_IID);
@@ -416,9 +416,9 @@ NS_IMETHODIMP CRtfDTD::BuildModel(nsIParser* aParser,nsITokenizer* aTokenizer,ns
           if(n>50) n=50;
           for(int i=0;i<n;i++){
             CToken* theToken=aTokenizer->GetTokenAt(i);
-            PRINTF("\nToken[%i],%p",i,theToken);
+            PRINTF(("\nToken[%i],%p",i,theToken));
           }
-          PRINTF("\n");
+          PRINTF(("\n"));
 #endif
 
           CToken* theToken=mTokenizer->PopToken();

@@ -43,8 +43,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(xcDllLog)
-#define PRINTF NS_LOG_PRINTF(xcDllLog)
-#define FLUSH  NS_LOG_FLUSH(xcDllLog)
+#define PRINTF(args) NS_LOG_PRINTF(xcDllLog, args)
+#define FLUSH()      NS_LOG_FLUSH(xcDllLog)
 
 nsDll::nsDll(const char *codeDllName, int type)
   : m_dllName(NULL),
@@ -509,7 +509,7 @@ void nsDll::BreakAfterLoad(const char *nsprPath)
         {
             // Loading a dll that we want to break on
             // Put your breakpoint here
-            PRINTF("...Loading module %s\n", nsprPath);
+            PRINTF(("...Loading module %s\n", nsprPath));
             // Break in the debugger here.
 #if defined(linux) && defined(__i386)
             asm("int $3");

@@ -40,8 +40,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDialogLog)
-#define PRINTF NS_LOG_PRINTF(nsDialogLog)
-#define FLUSH  NS_LOG_FLUSH(nsDialogLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDialogLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDialogLog)
 
 NS_IMPL_ADDREF(nsDialog)
 NS_IMPL_RELEASE(nsDialog)
@@ -96,7 +96,7 @@ NS_METHOD nsDialog::SetLabel(const nsString& aText)
   VERIFY(::SetWindowText(mWnd, label));
   NS_FREE_STR_BUF(label);
 #endif
-  PRINTF("nsDialog::SetLabel not implemented\n");
+  PRINTF(("nsDialog::SetLabel not implemented\n"));
   return NS_OK;
 }
 
@@ -115,7 +115,7 @@ NS_METHOD nsDialog::GetLabel(nsString& aBuffer)
   aBuffer.Append(label);
   NS_FREE_CHAR_BUF(label);
 #endif
-  PRINTF("nsDialog::SetLabel not implemented\n");
+  PRINTF(("nsDialog::SetLabel not implemented\n"));
   return NS_OK;
 }
 

@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFontMetricsOS2Log)
-#define PRINTF NS_LOG_PRINTF(nsFontMetricsOS2Log)
-#define FLUSH  NS_LOG_FLUSH(nsFontMetricsOS2Log)
+#define PRINTF(args) NS_LOG_PRINTF(nsFontMetricsOS2Log, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFontMetricsOS2Log)
 
 #undef USER_DEFINED
 #define USER_DEFINED "x-user-def"
@@ -990,7 +990,7 @@ nsFontMetricsOS2::InitializeGlobalFonts(HPS aPS)
 #ifdef MOZ_MATHML
       // XXX need a better way to deal with non-TrueType fonts?
       if (!(fontType & TRUETYPE_FONTTYPE)) {
-          //PRINTF("rejecting %s\n", logFont->lfFaceName);
+          //PRINTF(("rejecting %s\n", logFont->lfFaceName));
         return 1;
       }
 #endif

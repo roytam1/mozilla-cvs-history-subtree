@@ -55,7 +55,7 @@ public:
         
         ~nsInstanceCounter()
         {
-          //PRINTF("%s %ld\n", mDescription, mInstanceCount);
+          //PRINTF(("%s %ld\n", mDescription, mInstanceCount));
         }
 
         nsInstanceCounter& operator ++()          // prefix

@@ -45,8 +45,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgCopyLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgCopyLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgCopyLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgCopyLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgCopyLog)
 
 static NS_DEFINE_CID(kStandardUrlCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kMsgCopyServiceCID,NS_MSGCOPYSERVICE_CID);
@@ -81,7 +81,7 @@ nsresult
 CopyListener::OnStartCopy()
 {
 #ifdef NS_DEBUG
-  PRINTF("CopyListener::OnStartCopy()\n");
+  PRINTF(("CopyListener::OnStartCopy()\n"));
 #endif
 
   if (mComposeAndSend)
@@ -93,7 +93,7 @@ nsresult
 CopyListener::OnProgress(PRUint32 aProgress, PRUint32 aProgressMax)
 {
 #ifdef NS_DEBUG
-  PRINTF("CopyListener::OnProgress() %d of %d\n", aProgress, aProgressMax);
+  PRINTF(("CopyListener::OnProgress() %d of %d\n", aProgress, aProgressMax));
 #endif
 
   if (mComposeAndSend)
@@ -124,13 +124,13 @@ CopyListener::OnStopCopy(nsresult aStatus)
   if (NS_SUCCEEDED(aStatus))
   {
 #ifdef NS_DEBUG
-    PRINTF("CopyListener: SUCCESSFUL ON THE COPY OPERATION!\n");
+    PRINTF(("CopyListener: SUCCESSFUL ON THE COPY OPERATION!\n"));
 #endif
   }
   else
   {
 #ifdef NS_DEBUG
-    PRINTF("CopyListener: COPY OPERATION FAILED!\n");
+    PRINTF(("CopyListener: COPY OPERATION FAILED!\n"));
 #endif
   }
 

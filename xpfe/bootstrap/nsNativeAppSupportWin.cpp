@@ -41,8 +41,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsNativeAppSupportWinLog)
-#define PRINTF NS_LOG_PRINTF(nsNativeAppSupportWinLog)
-#define FLUSH  NS_LOG_FLUSH(nsNativeAppSupportWinLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNativeAppSupportWinLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNativeAppSupportWinLog)
 
 // Define this macro to 1 to get DDE debugging output.
 #define MOZ_DEBUG_DDE 0
@@ -115,7 +115,7 @@ struct Mutex {
           mState( -1 ) {
         mHandle = CreateMutex( 0, FALSE, mName.GetBuffer() );
         #if MOZ_DEBUG_DDE
-        PRINTF( "CreateMutex error = 0x%08X\n", (int)GetLastError() );
+        PRINTF(( "CreateMutex error = 0x%08X\n", (int)GetLastError() ));
         #endif
     }
     ~Mutex() {
@@ -126,7 +126,7 @@ struct Mutex {
             BOOL rc = CloseHandle( mHandle );
             #if MOZ_DEBUG_DDE
             if ( !rc ) {
-              PRINTF( "CloseHandle error = 0x%08X\n", (int)GetLastError() );
+              PRINTF(( "CloseHandle error = 0x%08X\n", (int)GetLastError() ));
             }
             #endif
         }
@@ -134,11 +134,11 @@ struct Mutex {
     BOOL Lock( DWORD timeout ) {
         if ( mHandle ) {
             #if MOZ_DEBUG_DDE
-          PRINTF( "Waiting (%d msec) for DDE mutex...\n", (int)timeout );
+          PRINTF(( "Waiting (%d msec) for DDE mutex...\n", (int)timeout ));
             #endif
             mState = WaitForSingleObject( mHandle, timeout );
             #if MOZ_DEBUG_DDE
-            PRINTF( "...wait complete, result = 0x%08X\n", (int)mState );
+            PRINTF(( "...wait complete, result = 0x%08X\n", (int)mState ));
             #endif
             return mState == WAIT_OBJECT_0;
         } else {
@@ -148,7 +148,7 @@ struct Mutex {
     void Unlock() {
         if ( mHandle && mState == WAIT_OBJECT_0 ) {
             #if MOZ_DEBUG_DDE
-          PRINTF( "Releasing DDE mutex\n" );
+          PRINTF(( "Releasing DDE mutex\n" ));
             #endif
             ReleaseMutex( mHandle );
             mState = -1;
@@ -259,7 +259,7 @@ nsSplashScreenWin::nsSplashScreenWin()
 
 nsSplashScreenWin::~nsSplashScreenWin() {
 #if MOZ_DEBUG_DDE
-  PRINTF( "splash screen dtor called\n" );
+  PRINTF(( "splash screen dtor called\n" ));
 #endif
     // Make sure dialog is gone.
     Hide();
@@ -583,7 +583,7 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
 						// Get command line to pass to server.
 						LPTSTR cmd = GetCommandLine();
 						#if MOZ_DEBUG_DDE
-						PRINTF( "Acting as DDE client, cmd=%s\n", cmd );
+						PRINTF(( "Acting as DDE client, cmd=%s\n", cmd ));
 						#endif
 						rc = (UINT)DdeClientTransaction( (LPBYTE)cmd,
                                                      strlen( cmd ) + 1,
@@ -599,14 +599,14 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
 						} else {
 							// Something went wrong.  Not much we can do, though...
 							#if MOZ_DEBUG_DDE
-							PRINTF( "DdeClientTransaction failed, error = 0x%08X\n",
-                      (int)DdeGetLastError( mInstance ) );
+							PRINTF(( "DdeClientTransaction failed, error = 0x%08X\n",
+                      (int)DdeGetLastError( mInstance ) ));
 							#endif
 						}
 					} else {
 						// We're going to be the server...
 						#if MOZ_DEBUG_DDE
-						PRINTF( "Setting up DDE server...\n" );
+						PRINTF(( "Setting up DDE server...\n" ));
 						#endif
 
 						// Next step is to register a DDE service.
@@ -614,27 +614,27 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
 
 						if ( rc ) {
 							#if MOZ_DEBUG_DDE
-							PRINTF( "...DDE server started\n" );
+							PRINTF(( "...DDE server started\n" ));
 							#endif
 							// Tell app to do its thing.
 							*aResult = PR_TRUE;
 							rv = NS_OK;
 						} else {
 							#if MOZ_DEBUG_DDE
-							PRINTF( "DdeNameService failed, error = 0x%08X\n",
-                      (int)DdeGetLastError( mInstance ) );
+							PRINTF(( "DdeNameService failed, error = 0x%08X\n",
+                      (int)DdeGetLastError( mInstance ) ));
 							#endif
 						}
 					}
 				} else {
 					#if MOZ_DEBUG_DDE
-					PRINTF( "DdeCreateStringHandle failed, error = 0x%08X\n",
-                  (int)DdeGetLastError( mInstance ) );
+					PRINTF(( "DdeCreateStringHandle failed, error = 0x%08X\n",
+                  (int)DdeGetLastError( mInstance ) ));
 					#endif
 				}
 			} else {
 				#if MOZ_DEBUG_DDE
-				PRINTF( "DdeInitialize failed, error = 0x%08X\n", (int)rc );
+				PRINTF(( "DdeInitialize failed, error = 0x%08X\n", (int)rc ));
 				#endif
 			}
 
@@ -765,14 +765,14 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
                                               ULONG dwData2 ) { // transaction-specific data
 
     #if MOZ_DEBUG_DDE
-  PRINTF( "DDE: uType  =%s\n",      uTypeDesc( uType ).GetBuffer() );
-  PRINTF( "     uFmt   =%u\n",      (unsigned)uFmt );
-  PRINTF( "     hconv  =%08x\n",    (int)hconv );
-  PRINTF( "     hsz1   =%08x:%s\n", (int)hsz1, hszValue( mInstance, hsz1 ).GetBuffer() );
-  PRINTF( "     hsz2   =%08x:%s\n", (int)hsz2, hszValue( mInstance, hsz2 ).GetBuffer() );
-  PRINTF( "     hdata  =%08x\n",    (int)hdata );
-  PRINTF( "     dwData1=%08x\n",    (int)dwData1 );
-  PRINTF( "     dwData2=%08x\n",    (int)dwData2 );
+  PRINTF(( "DDE: uType  =%s\n",      uTypeDesc( uType ).GetBuffer() ));
+  PRINTF(( "     uFmt   =%u\n",      (unsigned)uFmt ));
+  PRINTF(( "     hconv  =%08x\n",    (int)hconv ));
+  PRINTF(( "     hsz1   =%08x:%s\n", (int)hsz1, hszValue( mInstance, hsz1 ).GetBuffer() ));
+  PRINTF(( "     hsz2   =%08x:%s\n", (int)hsz2, hszValue( mInstance, hsz2 ).GetBuffer() ));
+  PRINTF(( "     hdata  =%08x\n",    (int)hdata ));
+  PRINTF(( "     dwData1=%08x\n",    (int)dwData1 ));
+  PRINTF(( "     dwData2=%08x\n",    (int)dwData2 ));
     #endif
 
     HDDEDATA result = 0;
@@ -795,7 +795,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
             DWORD bytes;
             LPBYTE request = DdeAccessData( hdata, &bytes );
             #if MOZ_DEBUG_DDE
-            PRINTF( "Handling dde request: [%s]...\n", (char*)request );
+            PRINTF(( "Handling dde request: [%s]...\n", (char*)request ));
             #endif
             HandleRequest( request );
             result = (HDDEDATA)DDE_FACK;
@@ -823,7 +823,7 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request ) {
             (const char*)arg ) {
             // Launch browser.
             #if MOZ_DEBUG_DDE
-          PRINTF( "Launching browser on url [%s]...\n", (const char*)arg );
+          PRINTF(( "Launching browser on url [%s]...\n", (const char*)arg ));
             #endif
             (void)OpenWindow( "chrome://navigator/content/", arg );
         }
@@ -831,7 +831,7 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request ) {
                  (const char*)arg ) {
             // Launch chrome.
             #if MOZ_DEBUG_DDE
-          PRINTF( "Launching chrome url [%s]...\n", (const char*)arg );
+          PRINTF(( "Launching chrome url [%s]...\n", (const char*)arg ));
             #endif
             (void)OpenWindow( arg, "" );
         }
@@ -839,19 +839,19 @@ nsNativeAppSupportWin::HandleRequest( LPBYTE request ) {
                  (const char*)arg ) {
             // Launch composer.
             #if MOZ_DEBUG_DDE
-          PRINTF( "Launching editor on url [%s]...\n", arg );
+          PRINTF(( "Launching editor on url [%s]...\n", arg ));
             #endif
             (void)OpenWindow( "chrome://editor/content/", arg );
         } else if ( NS_SUCCEEDED( args->GetCmdLineValue( "-mail", getter_Copies(arg))) &&
                     (const char*)arg ) {
             // Launch composer.
             #if MOZ_DEBUG_DDE
-          PRINTF( "Launching mail...\n" );
+          PRINTF(( "Launching mail...\n" ));
             #endif
             (void)OpenWindow( "chrome://messenger/content/", "" );
         } else {
             #if MOZ_DEBUG_DDE
-          PRINTF( "Unknown request [%s]\n", (char*) request );
+          PRINTF(( "Unknown request [%s]\n", (char*) request ));
             #endif
         }
     
@@ -1001,7 +1001,7 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
                                              (void**)aResult );
     if ( NS_FAILED( rv ) || NS_FAILED( ( rv = (*aResult)->Initialize( argc, argv ) ) ) ) {
         #if MOZ_DEBUG_DDE
-        PRINTF( "Error creating command line service = 0x%08X\n", (int)rv );
+        PRINTF(( "Error creating command line service = 0x%08X\n", (int)rv ));
         #endif
     }
 
@@ -1043,7 +1043,7 @@ nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args ) {
             }
         } else {
             #ifdef MOZ_DEBUG_DDE
-            PRINTF( "GetHiddenWindowAndJSContext failed, rv=0x%08X\n", (int)rv );
+            PRINTF(( "GetHiddenWindowAndJSContext failed, rv=0x%08X\n", (int)rv ));
             #endif
         }
     }

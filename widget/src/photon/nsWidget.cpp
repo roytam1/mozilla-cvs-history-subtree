@@ -47,8 +47,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsWidgetLog)
-#define PRINTF NS_LOG_PRINTF(nsWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(nsWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWidgetLog)
 
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 static NS_DEFINE_CID(kRegionCID, NS_REGION_CID);
@@ -352,15 +352,15 @@ the PtRealizeWidget functions */
 	  {
         PtWidget_t *parent = PtWidgetParent(mWidget);
         PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::Show Failed to Realize this=<%p> mWidget=<%p> mWidget->Parent=<%p> parent->IsRealized=<%d> ", this, mWidget,parent, PtWidgetIsRealized(parent) ));
-        //PRINTF("nsWidget::Show Failed to Realize this=<%p> mWidget=<%p> mWidget->Parent=<%p> parent->IsRealized=<%d> ", this, mWidget,parent, PtWidgetIsRealized(parent) );
+        //PRINTF(("nsWidget::Show Failed to Realize this=<%p> mWidget=<%p> mWidget->Parent=<%p> parent->IsRealized=<%d> ", this, mWidget,parent, PtWidgetIsRealized(parent) ));
       }
 
        if (mWidget->rid == -1)
        {
         PtRegionWidget_t *region = (PtRegionWidget_t *) mWidget;
 
-        PRINTF("nsWidget::errno = %s", strerror(errno));
-        PRINTF("nsWidget PtRealizeWidget <%p> rid=<%d> parent rid <%d>", mWidget, mWidget->rid, region->parent);
+        PRINTF(("nsWidget::errno = %s", strerror(errno)));
+        PRINTF(("nsWidget PtRealizeWidget <%p> rid=<%d> parent rid <%d>", mWidget, mWidget->rid, region->parent));
          NS_ASSERTION(0,"nsWidget::Show mWidget's rid == -1");
          //DebugBreak();
          //abort();
@@ -965,7 +965,7 @@ NS_METHOD nsWidget::doPaint()
   }
   else
   {
-    //PRINTF("nsWidget::doPaint ERROR widget=<%p> PtWidgetIsRealized(widget)=<%d>", widget, PtWidgetIsRealized(widget));
+    //PRINTF(("nsWidget::doPaint ERROR widget=<%p> PtWidgetIsRealized(widget)=<%d>", widget, PtWidgetIsRealized(widget)));
   }
 
   return res;
@@ -1026,7 +1026,7 @@ NS_METHOD nsWidget::Invalidate(const nsRect & aRect, PRBool aIsSynchronous)
 NS_IMETHODIMP nsWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSynchronous)
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::InvalidateRegion  isSync=<%d>",aIsSynchronous));
-  //PRINTF("nsWidget::InvalidateRegion  isSync=<%d> mWidget=<%p> mUpdateArea=<%p> IsRealized=<%d> ",aIsSynchronous, mWidget, mUpdateArea, PtWidgetIsRealized(mWidget) ); 
+  //PRINTF(("nsWidget::InvalidateRegion  isSync=<%d> mWidget=<%p> mUpdateArea=<%p> IsRealized=<%d> ",aIsSynchronous, mWidget, mUpdateArea, PtWidgetIsRealized(mWidget) )); 
 #if 1
     mUpdateArea->Union(*aRegion);
     if (aIsSynchronous)
@@ -1057,10 +1057,10 @@ NS_IMETHODIMP nsWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSyn
   }
 
   PtWidgetArea( mWidget, &area ); // parent coords
-  //PRINTF("nsWidget::InvalidateRegion mWidget=<%p> area=<%d,%d,%d,%d>", mWidget, area.pos.x, area.pos.y, area.size.w, area.size.h);
+  //PRINTF(("nsWidget::InvalidateRegion mWidget=<%p> area=<%d,%d,%d,%d>", mWidget, area.pos.x, area.pos.y, area.size.w, area.size.h));
   if ((PtWidgetIsClass(mWidget, PtWindow)) || (PtWidgetIsClass(mWidget, PtRegion)))
   {
-    PRINTF("nsWidget::InvalidateRegion mWidget=<%p> is a PtWindow");
+    PRINTF(("nsWidget::InvalidateRegion mWidget=<%p> is a PtWindow"));
 	area.pos.x = area.pos.y = 0;  
   }
   
@@ -1069,7 +1069,7 @@ NS_IMETHODIMP nsWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSyn
   {
     nsRegionRect *r = &(regionRectSet->mRects[i]);
 
-    //PRINTF("nsWidget::InvalidateRegion r=<%d,%d,%d,%d>",r->x, r->y, r->width, r->height );
+    //PRINTF(("nsWidget::InvalidateRegion r=<%d,%d,%d,%d>",r->x, r->y, r->width, r->height ));
 
     temp_rect.SetRect(r->x, r->y, r->width, r->height);
 	  
@@ -1078,7 +1078,7 @@ NS_IMETHODIMP nsWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSyn
     extent.lr.x = extent.ul.x + temp_rect.width - 1;
     extent.lr.y = extent.ul.y + temp_rect.height - 1;
 		
-    //PRINTF("nsWidget::InvalidateRegion damaging widget=<%p> %d rect=<%d,%d,%d,%d>", mWidget, i,extent.ul.x, extent.ul.y, extent.lr.x, extent.lr.y);
+    //PRINTF(("nsWidget::InvalidateRegion damaging widget=<%p> %d rect=<%d,%d,%d,%d>", mWidget, i,extent.ul.x, extent.ul.y, extent.lr.x, extent.lr.y));
 #if 0
       PtDamageExtent( mWidget, &extent );
 #else
@@ -1154,7 +1154,7 @@ PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::GetParentClippedArea parent at: %d,%d
       {
         rect.width = 0;
         rect.height = 0;
-        //PRINTF( "  Out of bounds !" );
+        //PRINTF(( "  Out of bounds !" ));
         break;
       }
       else
@@ -1488,7 +1488,7 @@ PRBool nsWidget::DispatchWindowEvent(nsGUIEvent* event)
   PRBool ret;
  
   DispatchEvent(event, status);
-  //PRINTF("nsWidget::DispatchWindowEvent  status=<%d> convtered=<%d>", status, ConvertStatus(status) );
+  //PRINTF(("nsWidget::DispatchWindowEvent  status=<%d> convtered=<%d>", status, ConvertStatus(status) ));
 
   ret = ConvertStatus(status);
   return ret;
@@ -1559,7 +1559,7 @@ void nsWidget::InitMouseEvent(PhPointerEvent_t *aPhButtonEvent,
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG,("nsWidget::InitMouseEvent "));
 
-  //PRINTF("nsWidget::InitMouseEvent click_count=%d", aPhButtonEvent->click_count);
+  //PRINTF(("nsWidget::InitMouseEvent click_count=%d", aPhButtonEvent->click_count));
 
   anEvent.message = aEventType;
   anEvent.widget  = aWidget;
@@ -1585,7 +1585,7 @@ void nsWidget::InitMouseEvent(PhPointerEvent_t *aPhButtonEvent,
 //-------------------------------------------------------------------------
 PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 {
-  //PRINTF("nsWidget::DispatchMouseEvent ");
+  //PRINTF(("nsWidget::DispatchMouseEvent "));
 
   PRBool result = PR_FALSE;
   if (nsnull == mEventCallback && nsnull == mMouseListener) {
@@ -1607,11 +1607,11 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 //         GetBounds(rect);
 //         if (rect.Contains(event.point.x, event.point.y)) {
 //           if (mCurrentWindow == NULL || mCurrentWindow != this) {
-//             PRINTF("Mouse enter");
+//             PRINTF(("Mouse enter"));
 //             mCurrentWindow = this;
 //           }
 //         } else {
-//           PRINTF("Mouse exit");
+//           PRINTF(("Mouse exit"));
 //         }
 
       } break;
@@ -1630,7 +1630,7 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
         break;
 
     case NS_DRAGDROP_DROP:
-      PRINTF("nsWidget::DispatchMouseEvent, NS_DRAGDROP_DROP");
+      PRINTF(("nsWidget::DispatchMouseEvent, NS_DRAGDROP_DROP"));
       break;
 
     default:
@@ -1646,7 +1646,7 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 //-------------------------------------------------------------------------
 PRBool nsWidget::DispatchMouseEvent( PhPoint_t &aPos, PRUint32 aEvent )
 {
-//  PRINTF( ">>> nsWidget::DispatchMouseEvent" ); fflush( stdout );
+//  PRINTF(( ">>> nsWidget::DispatchMouseEvent" )); fflush( stdout );
 
   PRBool result = PR_FALSE;
   if( nsnull == mEventCallback && nsnull == mMouseListener )
@@ -1807,7 +1807,7 @@ PRUint32 nsWidget::nsConvertKey(unsigned long keysym, PRBool *aIsChar )
 
   const int length = sizeof(nsKeycodes) / sizeof(struct nsKeyConverter);
 
-  //PRINTF("nsWidget::nsConvertKey - Looking for <%x> length=<%d>", keysym, length);
+  //PRINTF(("nsWidget::nsConvertKey - Looking for <%x> length=<%d>", keysym, length));
 
   if (aIsChar)
   {
@@ -1834,7 +1834,7 @@ PRUint32 nsWidget::nsConvertKey(unsigned long keysym, PRBool *aIsChar )
   for (int i = 0; i < length; i++) {
     if (nsKeycodes[i].keysym == keysym)
     {
-      //PRINTF("nsWidget::nsConvertKey - Converted <%x> to <%x>", keysym, nsKeycodes[i].vkCode);
+      //PRINTF(("nsWidget::nsConvertKey - Converted <%x> to <%x>", keysym, nsKeycodes[i].vkCode));
       if (aIsChar)
         *aIsChar = (nsKeycodes[i].isChar);
       return (nsKeycodes[i].vkCode);
@@ -1876,7 +1876,7 @@ void nsWidget::InitKeyEvent(PhKeyEvent_t *aPhKeyEvent,
     	keysym = nsConvertKey(aPhKeyEvent->key_cap, &IsChar);
 
 
-    //PRINTF("nsWidget::InitKeyEvent EventType=<%d> key_cap=<%lu> converted=<%lu> IsChar=<%d>", aEventType, aPhKeyEvent->key_cap, keysym, IsChar);
+    //PRINTF(("nsWidget::InitKeyEvent EventType=<%d> key_cap=<%lu> converted=<%lu> IsChar=<%d>", aEventType, aPhKeyEvent->key_cap, keysym, IsChar));
 
     anEvent.isShift =   ( aPhKeyEvent->key_mods & Pk_KM_Shift ) ? PR_TRUE : PR_FALSE;
     anEvent.isControl = ( aPhKeyEvent->key_mods & Pk_KM_Ctrl )  ? PR_TRUE : PR_FALSE;
@@ -1887,7 +1887,7 @@ void nsWidget::InitKeyEvent(PhKeyEvent_t *aPhKeyEvent,
 	{
       anEvent.charCode = aPhKeyEvent->key_sym;
       anEvent.keyCode =  0;  /* I think the spec says this should be 0 */
-      //PRINTF("nsWidget::InitKeyEvent charCode=<%d>", anEvent.charCode);
+      //PRINTF(("nsWidget::InitKeyEvent charCode=<%d>", anEvent.charCode));
 
       if ((anEvent.isControl) || (anEvent.isAlt))
       {
@@ -1904,7 +1904,7 @@ void nsWidget::InitKeyEvent(PhKeyEvent_t *aPhKeyEvent,
       anEvent.keyCode  =  (keysym  & 0x00FF);
     }
 
-    //PRINTF("nsWidget::InitKeyEvent Modifiers Valid=<%d,%d,%d> Shift=<%d> Control=<%d> Alt=<%d> Meta=<%d>", (aPhKeyEvent->key_flags & Pk_KF_Scan_Valid), (aPhKeyEvent->key_flags & Pk_KF_Sym_Valid), (aPhKeyEvent->key_flags & Pk_KF_Cap_Valid), anEvent.isShift, anEvent.isControl, anEvent.isAlt, anEvent.isMeta);
+    //PRINTF(("nsWidget::InitKeyEvent Modifiers Valid=<%d,%d,%d> Shift=<%d> Control=<%d> Alt=<%d> Meta=<%d>", (aPhKeyEvent->key_flags & Pk_KF_Scan_Valid), (aPhKeyEvent->key_flags & Pk_KF_Sym_Valid), (aPhKeyEvent->key_flags & Pk_KF_Cap_Valid), anEvent.isShift, anEvent.isControl, anEvent.isAlt, anEvent.isMeta));
   }
 }
 
@@ -1919,16 +1919,16 @@ PRBool  nsWidget::DispatchKeyEvent(PhKeyEvent_t *aPhKeyEvent)
 
   if ( (aPhKeyEvent->key_flags & Pk_KF_Cap_Valid) == 0)
   {
-     //PRINTF("nsWidget::DispatchKeyEvent throwing away invalid key: Modifiers Valid=<%d,%d,%d> this=<%p>",
+     //PRINTF(("nsWidget::DispatchKeyEvent throwing away invalid key: Modifiers Valid=<%d,%d,%d> this=<%p>",
 	 //    (aPhKeyEvent->key_flags & Pk_KF_Scan_Valid), (aPhKeyEvent->key_flags & Pk_KF_Sym_Valid), (aPhKeyEvent->key_flags & Pk_KF_Cap_Valid), this );
 
      return PR_TRUE;
-  }
+  })
 
 
   if ( PtIsFocused(mWidget) != 2)
   {
-    //PRINTF("nsWidget::DispatchKeyEvent Not on focus leaf! PtIsFocused(mWidget)=<%d>", PtIsFocused(mWidget));
+    //PRINTF(("nsWidget::DispatchKeyEvent Not on focus leaf! PtIsFocused(mWidget)=<%d>", PtIsFocused(mWidget)));
      return PR_FALSE;
   }
   
@@ -1947,39 +1947,39 @@ PRBool  nsWidget::DispatchKeyEvent(PhKeyEvent_t *aPhKeyEvent)
   nsWindow *w = (nsWindow *) this;
 
 #if 0
-PRINTF("nsWidget::DispatchKeyEvent KeyEvent Info: this=<%p> key_flags=<%lu> key_mods=<%lu>  key_sym=<%lu> key_cap=<%lu> key_scan=<%d> Focused=<%d>",
-       this, aPhKeyEvent->key_flags, aPhKeyEvent->key_mods, aPhKeyEvent->key_sym, aPhKeyEvent->key_cap, aPhKeyEvent->key_scan, PtIsFocused(mWidget));
+PRINTF(("nsWidget::DispatchKeyEvent KeyEvent Info: this=<%p> key_flags=<%lu> key_mods=<%lu>  key_sym=<%lu> key_cap=<%lu> key_scan=<%d> Focused=<%d>",
+       this, aPhKeyEvent->key_flags, aPhKeyEvent->key_mods, aPhKeyEvent->key_sym, aPhKeyEvent->key_cap, aPhKeyEvent->key_scan, PtIsFocused(mWidget)));
 #endif	
 
   w->AddRef();
   
   if (aPhKeyEvent->key_flags & Pk_KF_Key_Down)
   {
-    //PRINTF("nsWidget::DispatchKeyEvent Before Key Down ");
+    //PRINTF(("nsWidget::DispatchKeyEvent Before Key Down "));
     InitKeyEvent(aPhKeyEvent, this, keyEvent, NS_KEY_DOWN);
     result = w->OnKey(keyEvent); 
-    //PRINTF("nsWidget::DispatchKeyEvent after Key_Down event result=<%d>", result);
+    //PRINTF(("nsWidget::DispatchKeyEvent after Key_Down event result=<%d>", result));
 
-    //PRINTF("nsWidget::DispatchKeyEvent Before Key Press");
+    //PRINTF(("nsWidget::DispatchKeyEvent Before Key Press"));
     InitKeyEvent(aPhKeyEvent, this, keyEvent, NS_KEY_PRESS);
     result = w->OnKey(keyEvent); 
   }
   else if (aPhKeyEvent->key_flags & Pk_KF_Key_Repeat)
   {
-    //PRINTF("nsWidget::DispatchKeyEvent Before Key Press");
+    //PRINTF(("nsWidget::DispatchKeyEvent Before Key Press"));
     InitKeyEvent(aPhKeyEvent, this, keyEvent, NS_KEY_PRESS);
     result = w->OnKey(keyEvent);   
   }
   else if (PkIsKeyDown(aPhKeyEvent->key_flags) == 0)
   {
-    //PRINTF("nsWidget::DispatchKeyEvent Before Key Up");
+    //PRINTF(("nsWidget::DispatchKeyEvent Before Key Up"));
     InitKeyEvent(aPhKeyEvent, this, keyEvent, NS_KEY_UP);
     result = w->OnKey(keyEvent); 
   }
 
   w->Release();
 
-//PRINTF("nsWidget::DispatchKeyEvent after events result=<%d>", result);
+//PRINTF(("nsWidget::DispatchKeyEvent after events result=<%d>", result));
  
   return result;
 }
@@ -1994,7 +1994,7 @@ PRINTF("nsWidget::DispatchKeyEvent KeyEvent Info: this=<%p> key_flags=<%lu> key_
 int nsWidget::RawEventHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo )
 {
   //PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::RawEventHandler raweventhandler widget=<%p> this=<%p> IsFocused=<%d>", widget, data,  PtIsFocused(widget) ));
-//PRINTF("nsWidget::RawEventHandler raweventhandler widget=<%p> this=<%p> IsFocused=<%d>", widget, data,  PtIsFocused(widget));
+//PRINTF(("nsWidget::RawEventHandler raweventhandler widget=<%p> this=<%p> IsFocused=<%d>", widget, data,  PtIsFocused(widget)));
 
   // Get the window which caused the event and ask it to process the message
   nsWidget *someWidget = (nsWidget*) data;
@@ -2020,7 +2020,7 @@ PRBool nsWidget::HandleEvent( PtCallbackInfo_t* aCbInfo )
   PhEvent_t* event = aCbInfo->event;
 
 
-//PRINTF("nsWidget::HandleEvent entering this=<%p> mWidget=<%p> Event Consumed=<%d>  Event=<%s>",
+//PRINTF(("nsWidget::HandleEvent entering this=<%p> mWidget=<%p> Event Consumed=<%d>  Event=<%s>",
 //	this, mWidget, (event->processing_flags & Ph_CONSUMED), (const char *) nsCAutoString(PhotonEventToString(event)) );
 
 #if 0 
@@ -2272,7 +2272,7 @@ PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::HandleEvent entering this=<%p> mWidge
     }
 
   return result;
-}
+})
 
 
 void nsWidget::ScreenToWidget( PhPoint_t &pt )
@@ -2419,7 +2419,7 @@ void nsWidget::UpdateWidgetDamage()
 
 #if defined(ENABLE_DOPAINT)
   // HACK, call RawDrawFunc directly instead of Damaging the widget
-    PRINTF("nsWidget::UpdateWidgetDamaged calling doPaint");
+    PRINTF(("nsWidget::UpdateWidgetDamaged calling doPaint"));
   doPaint();
 #else
     if (NS_FAILED(mUpdateArea->GetRects(&regionRectSet)))
@@ -2548,7 +2548,7 @@ int nsWidget::WorkProc( void *data )
       if( PtWidgetIsRealized( dqe->widget ))
       {
 #if defined( ENABLE_DOPAINT)
-        PRINTF("nsWidget::WorkProc calling doPaint");
+        PRINTF(("nsWidget::WorkProc calling doPaint"));
         dqe->inst->doPaint();
 #else		
         nsRegionRectSet *regionRectSet = nsnull;
@@ -2558,14 +2558,14 @@ int nsWidget::WorkProc( void *data )
 
         PtWidgetArea( dqe->widget, &area ); // parent coords
         PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsWidget::WorkProc damaging widget=<%p> area=<%d,%d,%d,%d>", dqe->widget, area.pos.x, area.pos.y, area.size.w, area.size.h));
-//PRINTF("nsWidget::WorkProc PtWindow origin at (%d,%d) IsEmpty=<%d>", area.pos.x, area.pos.y, dqe->inst->mUpdateArea->IsEmpty());
+//PRINTF(("nsWidget::WorkProc PtWindow origin at (%d,%d) IsEmpty=<%d>", area.pos.x, area.pos.y, dqe->inst->mUpdateArea->IsEmpty()));
 
 // this was enabled... what was it doing?
 #if 0
         /* Is forcing the damage to 0,0 really a good idea here?? */
         if ((PtWidgetIsClass(dqe->widget, PtWindow)) || (PtWidgetIsClass(dqe->widget, PtRegion)))
 		{
-		  PRINTF("nsWidget::WorkProc Forced PtWindow origin to 0,0");
+		  PRINTF(("nsWidget::WorkProc Forced PtWindow origin to 0,0"));
 		  area.pos.x = area.pos.y = 0;
 		}
 #endif
@@ -2645,14 +2645,14 @@ int nsWidget::GotFocusCallback( PtWidget_t *widget, void *data, PtCallbackInfo_t
 
 /*
   if (widget->parent)
-  PRINTF("nsWidget::GotFocusCallback widget->parent=<%p> PtIsFocused(widget)=<%d>", widget->parent, PtIsFocused(widget));
+  PRINTF(("nsWidget::GotFocusCallback widget->parent=<%p> PtIsFocused(widget)=<%d>", widget->parent, PtIsFocused(widget)));
   else
-  PRINTF("nsWidget::GotFocusCallback widget->parent=<%p>", widget->parent);
+  PRINTF(("nsWidget::GotFocusCallback widget->parent=<%p>", widget->parent));
 */  
   
   if ((!widget->parent) || (PtIsFocused(widget) != 2))
   {
-    //PRINTF("nsWidget::GotFocusCallback widget->parent=<%p>", widget->parent);
+    //PRINTF(("nsWidget::GotFocusCallback widget->parent=<%p>", widget->parent));
      return Pt_CONTINUE;
   }
 

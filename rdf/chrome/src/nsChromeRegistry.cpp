@@ -80,8 +80,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsChromeRegistryLog)
-#define PRINTF NS_LOG_PRINTF(nsChromeRegistryLog)
-#define FLUSH  NS_LOG_FLUSH(nsChromeRegistryLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsChromeRegistryLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsChromeRegistryLog)
 
 static char kChromePrefix[] = "chrome://";
 static char kAllPackagesName[] = "all-packages.rdf";
@@ -1723,7 +1723,7 @@ NS_IMETHODIMP nsChromeRegistry::InstallProvider(const nsCString& aProviderType,
                                                 PRBool aRemove)
 {
   // XXX don't allow local chrome overrides of install chrome!
-  PRINTF("*** Chrome Registration of %s: Checking for contents.rdf at %s\n", (const char*)aProviderType, (const char*)aBaseURL);
+  PRINTF(("*** Chrome Registration of %s: Checking for contents.rdf at %s\n", (const char*)aProviderType, (const char*)aBaseURL));
 
   // Load the data source found at the base URL.
   nsCOMPtr<nsIRDFDataSource> dataSource;
@@ -2637,7 +2637,7 @@ nsChromeRegistry::ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength)
       if (isSelection) {
         nsAutoString name; name.AssignWithConversion(chromeLocation);
         rv = SelectSkin(name.GetUnicode(), isProfile);
-        PRINTF("***** Chrome Registration: Selecting skin %s as default\n", (const char*)chromeLocation);
+        PRINTF(("***** Chrome Registration: Selecting skin %s as default\n", (const char*)chromeLocation));
       }
       else 
         rv = InstallSkin(chromeURL, isProfile, PR_FALSE);
@@ -2648,7 +2648,7 @@ nsChromeRegistry::ProcessNewChromeBuffer(char *aBuffer, PRInt32 aLength)
       if (isSelection) {
         nsAutoString name; name.AssignWithConversion(chromeLocation);
         rv = SelectLocale(name.GetUnicode(), isProfile);
-        PRINTF("***** Chrome Registration: Selecting locale %s as default\n", (const char*)chromeLocation);
+        PRINTF(("***** Chrome Registration: Selecting locale %s as default\n", (const char*)chromeLocation));
       }
       else 
         rv = InstallLocale(chromeURL, isProfile);

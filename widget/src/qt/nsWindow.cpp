@@ -40,8 +40,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsWindowLog)
-#define PRINTF NS_LOG_PRINTF(nsWindowLog)
-#define FLUSH  NS_LOG_FLUSH(nsWindowLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWindowLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWindowLog)
 
 static bool gAppTopWindowSet = PR_FALSE;
 
@@ -527,7 +527,7 @@ ChildWindow::~ChildWindow()
 {
 #ifdef NOISY_DESTROY
   IndentByDepth(stdout);
-  PRINTF("ChildWindow::~ChildWindow:%p\n", this);
+  PRINTF(("ChildWindow::~ChildWindow:%p\n", this));
 #endif
   if (mEventHandler && mParent) {
       ((nsWidget*)(mParent.get()))->RemoveChildEventHandler(mEventHandler);

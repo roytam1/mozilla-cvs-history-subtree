@@ -41,8 +41,8 @@ static PRMonitor* gLogMonitor = nsnull;
 static nsObjectHashtable* gSettings = nsnull;
 
 NS_IMPL_LOG_ENABLED(LogInfo)
-#define PRINTF  NS_LOG_PRINTF(LogInfo)
-#define FLUSH   NS_LOG_FLUSH(LogInfo)
+#define PRINTF(args) NS_LOG_PRINTF(LogInfo, args)
+#define FLUSH()      NS_LOG_FLUSH(LogInfo)
 
 NS_DEFINE_CID(kLoggingServiceCID, NS_LOGGINGSERVICE_CID);
 
@@ -109,28 +109,28 @@ RecordSetting(const char* name, const char* value)
     if (nsCRT::strcasecmp(value, "ERROR") == 0 ||
         nsCRT::strcasecmp(value, "2") == 0) {
         level = 2;
-        PRINTF("### NS_LOG: %s = ERROR\n", name);
+        PRINTF(("### NS_LOG: %s = ERROR\n", name));
     }
     else if (nsCRT::strcasecmp(value, "WARN") == 0 ||
              nsCRT::strcasecmp(value, "WARNING") == 0 ||
              nsCRT::strcasecmp(value, "3") == 0) {
         level = 3;
-        PRINTF("### NS_LOG: %s = WARN\n", name);
+        PRINTF(("### NS_LOG: %s = WARN\n", name));
     }
     else if (nsCRT::strcasecmp(value, "STDOUT") == 0 ||
              nsCRT::strcasecmp(value, "OUT") == 0 ||
              nsCRT::strcasecmp(value, "4") == 0) {
         level = 4;
-        PRINTF("### NS_LOG: %s = STDOUT\n", name);
+        PRINTF(("### NS_LOG: %s = STDOUT\n", name));
     }
     else if (nsCRT::strcasecmp(value, "DBG") == 0 ||
              nsCRT::strcasecmp(value, "DEBUG") == 0 ||
              nsCRT::strcasecmp(value, "5") == 0) {
         level = 5;
-        PRINTF("### NS_LOG: %s = DBG\n", name);
+        PRINTF(("### NS_LOG: %s = DBG\n", name));
     }
     else {
-        PRINTF("### NS_LOG error: %s = %s (bad level)\n", name, value);
+        PRINTF(("### NS_LOG error: %s = %s (bad level)\n", name, value));
     }
 
     nsCStringKey key(name);
@@ -164,7 +164,7 @@ nsLoggingService::Init()
     {
         const char* nspr_log_modules = getenv("NSPR_LOG_MODULES");
         if (nspr_log_modules) {
-            PRINTF("### NS_LOG: using NSPR_LOG_MODULES (instead of .nslog)\n");
+            PRINTF(("### NS_LOG: using NSPR_LOG_MODULES (instead of .nslog)\n"));
             char* head = nsCRT::strdup(nspr_log_modules);
             char* rest = nsCRT::strdup(nspr_log_modules);
             while (1) {
@@ -178,8 +178,8 @@ nsLoggingService::Init()
         }
         const char* nspr_log_file = getenv("NSPR_LOG_FILE");
         if (nspr_log_file) {
-            PRINTF("### NS_LOG: using NSPR_LOG_FILE (instead of .nslog) -- logging to %s\n", 
-                    nspr_log_file);
+            PRINTF(("### NS_LOG: using NSPR_LOG_FILE (instead of .nslog) -- logging to %s\n", 
+                    nspr_log_file));
             outputPath = nspr_log_file;
         }
     }
@@ -333,7 +333,7 @@ DescribeLog(nsHashKey *aKey, void *aData, void* closure)
 NS_IMETHODIMP
 nsLoggingService::DescribeLogs(nsILog* out)
 {
-    NS_LOG_PRINTF(out)("%-20.20s %-8.8s %s\n", "LOG NAME", "ENABLED", "DESTINATION");
+    NS_LOG_PRINTF(out, ("%-20.20s %-8.8s %s\n", "LOG NAME", "ENABLED", "DESTINATION"));
     mLogs.Enumerate(DescribeLog, out);
     return NS_OK;
 }
@@ -509,8 +509,8 @@ nsLog::Describe(nsILog* out)
     }
 //    NS_LOG(out, ("  %-20.20s %-8.8s %s\n", mName, levelName, dest));
     PRBool enabled = mControlFlags & nsILog::DEFAULT_ENABLED;
-    NS_LOG_PRINTF(out)("%-20.20s %-8.8s %s\n", 
-                       mName, (enabled ? "yes" : "no"), dest);
+    NS_LOG_PRINTF(out, ("%-20.20s %-8.8s %s\n", 
+                        mName, (enabled ? "yes" : "no"), dest));
     if (dest) nsCRT::free(dest);
     return NS_OK;
 }

@@ -42,8 +42,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMathMLmsubsupFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsMathMLmsubsupFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsMathMLmsubsupFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMathMLmsubsupFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMathMLmsubsupFrameLog)
 
 //
 // <msubsup> -- attach a subscript-superscript pair to a base - implementation
@@ -170,7 +170,7 @@ nsMathMLmsubsupFrame::Place(nsIPresContext*      aPresContext,
     NS_ASSERTION(NS_SUCCEEDED(rv),"failed to get next child");
   }
 #ifdef NS_DEBUG
-  if (3 != count) PRINTF("msubsup: invalid markup");
+  if (3 != count) PRINTF(("msubsup: invalid markup"));
 #endif
   if ((3 != count) || !baseFrame || !subScriptFrame || !supScriptFrame) {
     // report an error, encourage people to get their markups in order

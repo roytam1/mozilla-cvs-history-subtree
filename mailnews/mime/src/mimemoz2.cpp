@@ -74,8 +74,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(mimemoz2Log)
-#define PRINTF NS_LOG_PRINTF(mimemoz2Log)
-#define FLUSH  NS_LOG_FLUSH(mimemoz2Log)
+#define PRINTF(args) NS_LOG_PRINTF(mimemoz2Log, args)
+#define FLUSH()      NS_LOG_FLUSH(mimemoz2Log)
 
 static NS_DEFINE_IID(kIPrefIID, NS_IPREF_IID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
@@ -517,14 +517,14 @@ NotifyEmittersOfAttachmentList(MimeDisplayOptions     *opt,
 
       /* rhp - for now, just leave these here, but they are really
                not necessary
-               PRINTF("URL for Part      : %s\n", spec);
-               PRINTF("Real Name         : %s\n", tmp->real_name);
-               PRINTF("Desired Type      : %s\n", tmp->desired_type);
-               PRINTF("Real Type         : %s\n", tmp->real_type);
-               PRINTF("Real Encoding     : %s\n", tmp->real_encoding); 
-               PRINTF("Description       : %s\n", tmp->description);
-               PRINTF("Mac Type          : %s\n", tmp->x_mac_type);
-               PRINTF("Mac Creator       : %s\n", tmp->x_mac_creator);
+               PRINTF(("URL for Part      : %s\n", spec));
+               PRINTF(("Real Name         : %s\n", tmp->real_name));
+               PRINTF(("Desired Type      : %s\n", tmp->desired_type));
+               PRINTF(("Real Type         : %s\n", tmp->real_type));
+               PRINTF(("Real Encoding     : %s\n", tmp->real_encoding)); 
+               PRINTF(("Description       : %s\n", tmp->description));
+               PRINTF(("Mac Type          : %s\n", tmp->x_mac_type));
+               PRINTF(("Mac Creator       : %s\n", tmp->x_mac_creator));
       */
     }
 

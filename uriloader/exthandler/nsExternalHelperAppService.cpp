@@ -62,8 +62,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsExternalHelperAppServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsExternalHelperAppServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsExternalHelperAppServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsExternalHelperAppServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsExternalHelperAppServiceLog)
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID, NS_RDFXMLDATASOURCE_CID);
@@ -178,7 +178,7 @@ nsresult nsExternalHelperAppService::InitDataSource()
     PRBool loaded;
     rv = remoteDS->GetLoaded(&loaded);
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed getload\n");
-    PRINTF("After refresh: datasource is %s\n", loaded ? "loaded" : "not loaded");
+    PRINTF(("After refresh: datasource is %s\n", loaded ? "loaded" : "not loaded"));
 #endif
 
   // initialize our resources if we haven't done so already...

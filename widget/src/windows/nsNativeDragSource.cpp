@@ -25,8 +25,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsNativeDragSourceLog)
-#define PRINTF NS_LOG_PRINTF(nsNativeDragSourceLog)
-#define FLUSH  NS_LOG_FLUSH(nsNativeDragSourceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNativeDragSourceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNativeDragSourceLog)
 
 
 /*
@@ -77,23 +77,23 @@ STDMETHODIMP_(ULONG) nsNativeDragSource::Release(void)
 
 STDMETHODIMP nsNativeDragSource::QueryContinueDrag(BOOL fEsc, DWORD grfKeyState)
 {
-  //PRINTF("QueryContinueDrag\n");
+  //PRINTF(("QueryContinueDrag\n"));
   if (fEsc) {
-    //PRINTF("QueryContinueDrag: fEsc\n");
+    //PRINTF(("QueryContinueDrag: fEsc\n"));
     return ResultFromScode(DRAGDROP_S_CANCEL);
   }
 
   if (!(grfKeyState & MK_LBUTTON)) {
-    //PRINTF("QueryContinueDrag: grfKeyState & MK_LBUTTON\n");
+    //PRINTF(("QueryContinueDrag: grfKeyState & MK_LBUTTON\n"));
     return ResultFromScode(DRAGDROP_S_DROP);
   }
 
-  //PRINTF("QueryContinueDrag: NOERROR\n");
+  //PRINTF(("QueryContinueDrag: NOERROR\n"));
 	return NOERROR;
 }
 
 STDMETHODIMP nsNativeDragSource::GiveFeedback(DWORD dwEffect)
 {
-  //PRINTF("GiveFeedback\n");
+  //PRINTF(("GiveFeedback\n"));
 	return ResultFromScode(DRAGDROP_S_USEDEFAULTCURSORS);
 }

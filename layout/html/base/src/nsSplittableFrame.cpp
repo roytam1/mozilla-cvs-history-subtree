@@ -28,8 +28,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsSplittableFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsSplittableFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsSplittableFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSplittableFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSplittableFrameLog)
 
 NS_IMETHODIMP
 nsSplittableFrame::Init(nsIPresContext*  aPresContext,

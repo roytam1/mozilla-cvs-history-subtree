@@ -67,8 +67,8 @@ NS_IMPL_LOG_ENABLED(nsScriptSecurityManagerLog)
 #else
 NS_IMPL_LOG(nsScriptSecurityManagerLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsScriptSecurityManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsScriptSecurityManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsScriptSecurityManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsScriptSecurityManagerLog)
 
 static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
@@ -1490,7 +1490,7 @@ nsScriptSecurityManager::GetScriptSecurityManager()
                 NS_WARNING("failed to install xpconnect security manager!");    
             } 
             else {
-                PRINTF("!!!!! xpc security manager registered");
+                PRINTF(("!!!!! xpc security manager registered"));
             }
         }
         else {

@@ -40,8 +40,8 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDebugRobotLog)
-#define PRINTF NS_LOG_PRINTF(nsDebugRobotLog)
-#define FLUSH  NS_LOG_FLUSH(nsDebugRobotLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDebugRobotLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDebugRobotLog)
 
 static NS_DEFINE_IID(kIRobotSinkObserverIID, NS_IROBOTSINKOBSERVER_IID);
 
@@ -265,9 +265,9 @@ extern "C" NS_EXPORT int DebugRobot(
     rv = uri->QueryInterface(NS_GET_IID(nsIURI), (void**)&url);
     NS_RELEASE(uri);
     if (NS_OK != rv) {
-      PRINTF("invalid URL: '");
+      PRINTF(("invalid URL: '"));
       fputs(*urlName, stdout);
-      PRINTF("'\n");
+      PRINTF(("'\n"));
       NS_RELEASE(myObserver);
       return -1;
     }
@@ -293,7 +293,7 @@ extern "C" NS_EXPORT int DebugRobot(
                                       (void **)&parser);
 
     if (NS_OK != rv) {
-      PRINTF("can't make parser\n");
+      PRINTF(("can't make parser\n"));
       NS_RELEASE(myObserver);
       return -1;
     }
@@ -301,7 +301,7 @@ extern "C" NS_EXPORT int DebugRobot(
     nsIRobotSink* sink;
     rv = NS_NewRobotSink(&sink);
     if (NS_OK != rv) {
-      PRINTF("can't make parser\n");
+      PRINTF(("can't make parser\n"));
       NS_RELEASE(myObserver);
       return -1;
     }

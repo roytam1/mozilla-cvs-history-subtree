@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsRenderingContextBeOSLog)
-#define PRINTF NS_LOG_PRINTF(nsRenderingContextBeOSLog)
-#define FLUSH  NS_LOG_FLUSH(nsRenderingContextBeOSLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsRenderingContextBeOSLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsRenderingContextBeOSLog)
 
 #define NS_TO_GDK_RGB(ns) (ns & 0xff) << 16 | (ns & 0xff00) | ((ns >> 16) & 0xff)
 
@@ -607,7 +607,7 @@ NS_IMETHODIMP nsRenderingContextBeOS::SetLineStyle(nsLineStyle aLineStyle)
 {
   if (aLineStyle != mCurrentLineStyle)
   {
-    PRINTF("nsRenderingContextBeOS::SetLineStyle not implemented!\n");
+    PRINTF(("nsRenderingContextBeOS::SetLineStyle not implemented!\n"));
 #if 0
     switch(aLineStyle)
     { 
@@ -1317,7 +1317,7 @@ nsRenderingContextBeOS::CopyOffScreenBits(nsDrawingSurface aSrcSurf,
 				}
 			}
 			else
-				PRINTF("nsRenderingContextBeOS::CopyOffScreenBits - FIXME: should render from surface without bitmap!?!?!\n");
+				PRINTF(("nsRenderingContextBeOS::CopyOffScreenBits - FIXME: should render from surface without bitmap!?!?!\n"));
 //				NS_ASSERTION(0, "attempt to blit with bad BViews");
 
 			srcview->UnlockLooper();

@@ -42,8 +42,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgCompUtilsLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgCompUtilsLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgCompUtilsLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgCompUtilsLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgCompUtilsLog)
 
 /* for StrAllocCat */
 #include "xp_str.h"
@@ -533,7 +533,7 @@ mime_generate_headers (nsMsgCompFields *fields,
 #ifdef NS_DEBUG
       else 
       {
-        PRINTF("SUCCESS:  %s -> %s\n",n2,newHeader);
+        PRINTF(("SUCCESS:  %s -> %s\n",n2,newHeader));
       }
 #endif
     }

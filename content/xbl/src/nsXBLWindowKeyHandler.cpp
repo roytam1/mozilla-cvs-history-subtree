@@ -48,8 +48,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsXBLWindowKeyHandlerLog)
-#define PRINTF NS_LOG_PRINTF(nsXBLWindowKeyHandlerLog)
-#define FLUSH  NS_LOG_FLUSH(nsXBLWindowKeyHandlerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXBLWindowKeyHandlerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXBLWindowKeyHandlerLog)
 
 PRUint32 nsXBLWindowKeyHandler::gRefCnt = 0;
 nsIAtom* nsXBLWindowKeyHandler::kKeyDownAtom = nsnull;
@@ -249,7 +249,7 @@ nsXBLWindowKeyHandler::WalkHandlersInternal(nsIDOMKeyEvent* aKeyEvent, nsIAtom* 
       nsCAutoString idc; idc.AssignWithConversion(id);
    
       if (!idc.IsEmpty())
-      PRINTF("Key matched with id of: %s", (const char*)idc);
+      PRINTF(("Key matched with id of: %s", (const char*)idc));
 */
 
       elt->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::disabled, disabled);

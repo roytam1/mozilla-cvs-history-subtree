@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLayoutHistoryStateLog)
-#define PRINTF NS_LOG_PRINTF(nsLayoutHistoryStateLog)
-#define FLUSH  NS_LOG_FLUSH(nsLayoutHistoryStateLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLayoutHistoryStateLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLayoutHistoryStateLog)
 
 MOZ_DECL_CTOR_COUNTER(HistoryKey);
 
@@ -110,7 +110,7 @@ nsLayoutHistoryState::AddState(PRUint32 aContentID,
   if (replaced)
   {
     // done this way by indication of warren@netscape.com [ipg]
-    PRINTF("nsLayoutHistoryState::AddState OOPS!. There was already a state in the hash table for the key\n");
+    PRINTF(("nsLayoutHistoryState::AddState OOPS!. There was already a state in the hash table for the key\n"));
   }
 
   return NS_OK;
@@ -129,7 +129,7 @@ nsLayoutHistoryState::GetState(PRUint32 aContentID,
     *aState = (nsIPresState *)state;
   }
   else {
-    PRINTF("nsLayoutHistoryState::GetState, ERROR getting History state for the key\n");
+    PRINTF(("nsLayoutHistoryState::GetState, ERROR getting History state for the key\n"));
     *aState = nsnull;
     rv = NS_OK;
   }

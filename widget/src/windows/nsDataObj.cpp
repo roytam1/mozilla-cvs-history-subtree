@@ -37,17 +37,17 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDataObjLog)
-#define PRINTF NS_LOG_PRINTF(nsDataObjLog)
-#define FLUSH  NS_LOG_FLUSH(nsDataObjLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDataObjLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDataObjLog)
 
 #if 0
-#define PRNTDEBUG(_x) PRINTF(_x);
-#define PRNTDEBUG2(_x1, _x2) PRINTF(_x1, _x2);
-#define PRNTDEBUG3(_x1, _x2, _x3) PRINTF(_x1, _x2, _x3);
+#define PRNTDEBUG(_x) PRINTF((_x));
+#define PRNTDEBUG2(_x1, _x2) PRINTF((_x1, _x2));
+#define PRNTDEBUG3(_x1, _x2, _x3) PRINTF((_x1, _x2, _x3));
 #else
-#define PRNTDEBUG(_x) // PRINTF(_x);
-#define PRNTDEBUG2(_x1, _x2) // PRINTF(_x1, _x2);
-#define PRNTDEBUG3(_x1, _x2, _x3) // PRINTF(_x1, _x2, _x3);
+#define PRNTDEBUG(_x) // PRINTF((_x));
+#define PRNTDEBUG2(_x1, _x2) // PRINTF((_x1, _x2));
+#define PRNTDEBUG3(_x1, _x2, _x3) // PRINTF((_x1, _x2, _x3));
 #endif
 
 ULONG nsDataObj::g_cRef = 0;
@@ -151,7 +151,7 @@ BOOL nsDataObj::FormatsMatch(const FORMATETC& source, const FORMATETC& target) c
 //-----------------------------------------------------
 STDMETHODIMP nsDataObj::GetData(LPFORMATETC pFE, LPSTGMEDIUM pSTM)
 {
-  PRINTF("nsDataObj::GetData2");
+  PRINTF(("nsDataObj::GetData2"));
   PRNTDEBUG("nsDataObj::GetData");
   PRNTDEBUG3("  format: %d  Text: %d", pFE->cfFormat, CF_TEXT);
   if ( !mTransferable )

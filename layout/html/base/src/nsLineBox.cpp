@@ -33,8 +33,8 @@ NS_IMPL_LOG_ENABLED(nsLineBoxLog)
 #else
 NS_IMPL_LOG(nsLineBoxLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsLineBoxLog)
-#define FLUSH  NS_LOG_FLUSH(nsLineBoxLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLineBoxLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLineBoxLog)
 
 #ifdef DEBUG
 #include "nsISizeOfHandler.h"
@@ -437,8 +437,8 @@ nsLineBox::SetCombinedArea(const nsRect& aCombinedArea)
     }
     MaybeFreeData();
   }
-  PRINTF("nsLB::SetCombinedArea(1) %p (%d, %d, %d, %d)\n", 
-         this, aCombinedArea.x, aCombinedArea.y, aCombinedArea.width, aCombinedArea.height);
+  PRINTF(("nsLB::SetCombinedArea(1) %p (%d, %d, %d, %d)\n", 
+         this, aCombinedArea.x, aCombinedArea.y, aCombinedArea.width, aCombinedArea.height));
 }
 
 void
@@ -447,8 +447,8 @@ nsLineBox::GetCombinedArea(nsRect* aResult)
   NS_ASSERTION(aResult, "null arg");
   if (aResult) {
     *aResult = mData ? mData->mCombinedArea : mBounds;
-    PRINTF("nsLB::SetCombinedArea(1) %p (%d, %d, %d, %d)\n", 
-           this, aResult->x, aResult->y, aResult->width, aResult->height);
+    PRINTF(("nsLB::SetCombinedArea(1) %p (%d, %d, %d, %d)\n", 
+           this, aResult->x, aResult->y, aResult->width, aResult->height));
   }
 }
 

@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsAppShellLog)
-#define PRINTF NS_LOG_PRINTF(nsAppShellLog)
-#define FLUSH  NS_LOG_FLUSH(nsAppShellLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsAppShellLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsAppShellLog)
 
 //-------------------------------------------------------------------------
 //
@@ -118,7 +118,7 @@ NS_METHOD nsAppShell::Create(int *bac, char **bav)
     aDisplay = XOpenDisplay(NULL);
     
     if (aDisplay == NULL) {
-      PRINTF("%s: Cannot connect to X server\n",argv[0]);
+      PRINTF(("%s: Cannot connect to X server\n",argv[0]));
       exit(1);
     }
 

@@ -14,8 +14,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(stopwatchLog)
-#define PRINTF NS_LOG_PRINTF(stopwatchLog)
-#define FLUSH  NS_LOG_FLUSH(stopwatchLog)
+#define PRINTF(args) NS_LOG_PRINTF(stopwatchLog, args)
+#define FLUSH()      NS_LOG_FLUSH(stopwatchLog)
 
 // #define MILLISECOND_RESOLUTION to track time with greater precision
 //  If not defined the resolution is to the second only
@@ -235,7 +235,7 @@ double Stopwatch::GetCPUTime(){
                                      &ftUser.ftFileTime);
     if (ret != PR_TRUE){
       ret = GetLastError ();
-      PRINTF("%s 0x%lx\n"," Error on GetProcessTimes", (int)ret);
+      PRINTF(("%s 0x%lx\n"," Error on GetProcessTimes", (int)ret));
     }
 
     /*
@@ -271,7 +271,7 @@ void Stopwatch::Print(void) {
 #ifdef MOZ_PERF_METRICS
    RAPTOR_STOPWATCH_TRACE(("Real time %d:%d:%d.%d, CP time %.3f\n", hours, min, sec, ms, CpuTime()));
 #else
-   PRINTF("Real time %d:%d:%d.%d, CP time %.3f\n", hours, min, sec, ms, CpuTime());
+   PRINTF(("Real time %d:%d:%d.%d, CP time %.3f\n", hours, min, sec, ms, CpuTime()));
 #endif
 }
 

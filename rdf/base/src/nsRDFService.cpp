@@ -68,8 +68,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsRDFServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsRDFServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsRDFServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsRDFServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsRDFServiceLog)
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -246,7 +246,7 @@ LiteralImpl::~LiteralImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: LiteralImpl\n", gInstanceCount);
+    PRINTF(("%d - RDF: LiteralImpl\n", gInstanceCount));
 #endif
 
     gRDFService->UnregisterLiteral(this);
@@ -351,7 +351,7 @@ DateImpl::~DateImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: DateImpl\n", gInstanceCount);
+    PRINTF(("%d - RDF: DateImpl\n", gInstanceCount));
 #endif
 }
 
@@ -453,7 +453,7 @@ IntImpl::~IntImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: IntImpl\n", gInstanceCount);
+    PRINTF(("%d - RDF: IntImpl\n", gInstanceCount));
 #endif
 }
 
@@ -589,7 +589,7 @@ RDFServiceImpl::~RDFServiceImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: RDFServiceImpl\n", gInstanceCount);
+    PRINTF(("%d - RDF: RDFServiceImpl\n", gInstanceCount));
 #endif
 
     if (mNamedDataSources) {

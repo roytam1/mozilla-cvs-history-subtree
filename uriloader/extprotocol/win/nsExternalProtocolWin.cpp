@@ -31,8 +31,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsExternalProtocolWinLog)
-#define PRINTF NS_LOG_PRINTF(nsExternalProtocolWinLog)
-#define FLUSH  NS_LOG_FLUSH(nsExternalProtocolWinLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsExternalProtocolWinLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsExternalProtocolWinLog)
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ nsresult nsExternalProtocol::DefaultLaunch( nsIURI *pUri)
 		}
 		LONG r = (LONG) ::ShellExecute( NULL, "open", uriStr, NULL, NULL, SW_SHOWNORMAL);
 		if (r < 32) {
-			PRINTF("ShellExecute failed: %d\n", (int)r);
+			PRINTF(("ShellExecute failed: %d\n", (int)r));
 			rv = NS_ERROR_FAILURE;
 		}
 		else

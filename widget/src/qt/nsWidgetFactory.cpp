@@ -45,8 +45,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsWidgetFactoryLog)
-#define PRINTF NS_LOG_PRINTF(nsWidgetFactoryLog)
-#define FLUSH  NS_LOG_FLUSH(nsWidgetFactoryLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWidgetFactoryLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWidgetFactoryLog)
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(ChildWindow)

@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsCollationUnixLog)
-#define PRINTF NS_LOG_PRINTF(nsCollationUnixLog)
-#define FLUSH  NS_LOG_FLUSH(nsCollationUnixLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsCollationUnixLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsCollationUnixLog)
 
 //#define DEBUG_UNIX_COLLATION
 
@@ -161,11 +161,11 @@ nsresult nsCollationUnix::Initialize(nsILocale* locale)
 #if defined(DEBUG_UNIX_COLLATION)
   nsAutoCString tmp(mLocale);
   if (NULL != (const char *)tmp) {
-    PRINTF("nsCollationUnix::Initialize mLocale = %s\n", (const char *)tmp);
+    PRINTF(("nsCollationUnix::Initialize mLocale = %s\n", (const char *)tmp));
   }
   nsAutoCString tmp2(mCharset);
   if (NULL != (const char *)tmp2) {
-    PRINTF("nsCollationUnix::Initialize mCharset = %s\n", (const char *)tmp2);
+    PRINTF(("nsCollationUnix::Initialize mCharset = %s\n", (const char *)tmp2));
   }
 #endif
 

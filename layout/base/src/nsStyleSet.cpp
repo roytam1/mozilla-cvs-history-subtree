@@ -42,8 +42,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsStyleSetLog)
-#define PRINTF NS_LOG_PRINTF(nsStyleSetLog)
-#define FLUSH  NS_LOG_FLUSH(nsStyleSetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsStyleSetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsStyleSetLog)
 
 #ifdef MOZ_PERF_METRICS
   #include "nsITimeRecorder.h"
@@ -323,7 +323,7 @@ StyleSetImpl::~StyleSetImpl()
  #ifdef DEBUG
   NS_ASSERTION( mStyleContextCache.Count() == 0, "StyleContextCache is not empty in StyleSet destructor: style contexts are being leaked");
   if (mStyleContextCache.Count() > 0) {
-    PRINTF("*** Leaking %d style context instances (reported by the StyleContextCache) ***\n", mStyleContextCache.Count());
+    PRINTF(("*** Leaking %d style context instances (reported by the StyleContextCache) ***\n", mStyleContextCache.Count()));
   }
  #endif
 #endif
@@ -684,7 +684,7 @@ NS_IMETHODIMP StyleSetImpl::EnableQuirkStyleSheet(PRBool aEnable)
     }
   }
   if (mQuirkStyleSheet) {
-    PRINTF( "%s Quirk StyleSheet\n", aEnable ? "Enabling" : "Disabling" );
+    PRINTF(( "%s Quirk StyleSheet\n", aEnable ? "Enabling" : "Disabling" ));
     mQuirkStyleSheet->SetEnabled(aEnable);
   }
   return rv;
@@ -774,12 +774,12 @@ nsIStyleContext* StyleSetImpl::GetContext(nsIPresContext* aPresContext,
       aUsedRules = PRBool(nsnull != aRules);
     }
 #ifdef NOISY_DEBUG
-    PRINTF("+++ NewSC %d +++\n", ++gNewCount);
+    PRINTF(("+++ NewSC %d +++\n", ++gNewCount));
 #endif
   }
 #ifdef NOISY_DEBUG
   else {
-    PRINTF("--- SharedSC %d ---\n", ++gSharedCount);
+    PRINTF(("--- SharedSC %d ---\n", ++gSharedCount));
   }
 #endif
 
@@ -1397,7 +1397,7 @@ StyleSetImpl::StartTimer(PRUint32 aTimerID)
     if (mTimerEnabled) {
       MOZ_TIMER_START(mStyleResolutionWatch);
     } else {
-      PRINTF( "Attempt to start timer while disabled - ignoring\n" );
+      PRINTF(( "Attempt to start timer while disabled - ignoring\n" ));
     }
   }
   else 
@@ -1416,7 +1416,7 @@ StyleSetImpl::StopTimer(PRUint32 aTimerID)
     if (mTimerEnabled) {
       MOZ_TIMER_STOP(mStyleResolutionWatch);
     } else {
-      PRINTF( "Attempt to stop timer while disabled - ignoring\n" );
+      PRINTF(( "Attempt to stop timer while disabled - ignoring\n" ));
     }
   }
   else 
@@ -1478,7 +1478,7 @@ PRUint32 StyleContextCache::Count(void)
   Tickle("From Count()");
 #endif
 
-  PRINTF("StyleContextCache count: %ld\n", (long)mCount);
+  PRINTF(("StyleContextCache count: %ld\n", (long)mCount));
 
   return mCount;
 }
@@ -1499,7 +1499,7 @@ nsresult StyleContextCache::AddContext(scKey aKey, nsIStyleContext *aContext)
       }
       DumpStats();
     } else {
-      PRINTF( "Context already in list in StyleContextCache::AddContext\n");
+      PRINTF(( "Context already in list in StyleContextCache::AddContext\n"));
       rv = NS_ERROR_FAILURE;
     }
   }
@@ -1526,7 +1526,7 @@ nsresult StyleContextCache::RemoveContext(scKey aKey, nsIStyleContext *aContext)
         NS_ASSERTION(GetList(aKey) == nsnull, "Failed to delete list in StyleContextCache::RemoveContext");
       } 
       else {
-        PRINTF( "Error removing all contexts in StyleContextCache::RemoveContext\n");
+        PRINTF(( "Error removing all contexts in StyleContextCache::RemoveContext\n"));
       }
     }
   }
@@ -1586,10 +1586,10 @@ PRBool HashTableEnumDump(nsHashKey *aKey, void *aData, void* closure)
   }
   if (nsnull == aKey && nsnull == aData && closure != nsnull) {
     // dump the cumulatives
-    PRINTF("----------------------------------------------------------------------------------\n");
-    PRINTF("(%d lists, %ld contexts) List Lengths: Min=%ld Max=%ld Average=%ld Unary=%ld\n", 
-           (int)nCount, (long)nTotal, (long)nMin, (long)nMax, (long)(nCount>0 ? nTotal/nCount : 0), (long)nUnary);
-    PRINTF("----------------------------------------------------------------------------------\n");
+    PRINTF(("----------------------------------------------------------------------------------\n"));
+    PRINTF(("(%d lists, %ld contexts) List Lengths: Min=%ld Max=%ld Average=%ld Unary=%ld\n", 
+           (int)nCount, (long)nTotal, (long)nMin, (long)nMax, (long)(nCount>0 ? nTotal/nCount : 0), (long)nUnary));
+    PRINTF(("----------------------------------------------------------------------------------\n"));
     return PR_TRUE;
   }
 
@@ -1597,9 +1597,9 @@ PRBool HashTableEnumDump(nsHashKey *aKey, void *aData, void* closure)
   nsVoidArray *pList = (nsVoidArray *)aData;
   if (pList) {
     PRUint32 count = pList->Count();
-    PRINTF("List Length at key %lu:\t%ld\n", 
+    PRINTF(("List Length at key %lu:\t%ld\n", 
            (unsigned long)aKey->HashValue(),
-           (long)count );
+           (long)count ));
     nCount++;
     nTotal += count;
     if (count > nMax) nMax = count;
@@ -1625,7 +1625,7 @@ PRBool HashTableEnumTickle(nsHashKey *aKey, void *aData, void* closure)
       if (pContext) {
         scKey key;
         pContext->GetStyleContextKey(key);
-        PRINTF( "%p tickled\n");
+        PRINTF(( "%p tickled\n"));
       }
     }
   }
@@ -1635,20 +1635,20 @@ PRBool HashTableEnumTickle(nsHashKey *aKey, void *aData, void* closure)
 void StyleContextCache::DumpStats(void)
 {
 #ifdef DUMP_CACHE_STATS
-  PRINTF("StyleContextCache DumpStats BEGIN\n");
+  PRINTF(("StyleContextCache DumpStats BEGIN\n"));
   HashTableEnumDump(nsnull, nsnull, nsnull);
   mHashTable.Enumerate(HashTableEnumDump);
   HashTableEnumDump(nsnull, nsnull, "HACK!");
-  PRINTF("StyleContextCache DumpStats END\n");
+  PRINTF(("StyleContextCache DumpStats END\n"));
 #endif
 }
 
 void StyleContextCache::Tickle(const char *msg)
 {
 #ifdef DEBUG
-  PRINTF("Tickling: %s\n", msg ? msg : "");
+  PRINTF(("Tickling: %s\n", msg ? msg : ""));
   mHashTable.Enumerate(HashTableEnumTickle);
-  PRINTF("Tickle done.\n");
+  PRINTF(("Tickle done.\n"));
 #endif
 }
 
@@ -1668,7 +1668,7 @@ StyleSetImpl::AddStyleContext(nsIStyleContext *aNewStyleContext)
     scKey key;
     aNewStyleContext->GetStyleContextKey(key);
     rv = mStyleContextCache.AddContext(key,aNewStyleContext);
-    PRINTF( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count());
+    PRINTF(( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count()));
   }
 
 #else // DONT USE_FAST_CACHE
@@ -1677,7 +1677,7 @@ StyleSetImpl::AddStyleContext(nsIStyleContext *aNewStyleContext)
   NS_ASSERTION((mStyleContextCache.IndexOf(aNewStyleContext) == -1), "StyleContext added in AddStyleContext is already in cache");
   if (aNewStyleContext) {
     rv = mStyleContextCache.AppendElement(aNewStyleContext);
-    PRINTF( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count());
+    PRINTF(( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count()));
   }
 
 #endif // USE_FAST_CACHE
@@ -1699,7 +1699,7 @@ StyleSetImpl::RemoveStyleContext(nsIStyleContext *aNewStyleContext)
     scKey key;
     aNewStyleContext->GetStyleContextKey(key);
     rv = mStyleContextCache.RemoveContext(key,aNewStyleContext);
-    PRINTF( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count());
+    PRINTF(( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count()));
   }
 
 #else //DONT USE_FAST_CACHE
@@ -1708,7 +1708,7 @@ StyleSetImpl::RemoveStyleContext(nsIStyleContext *aNewStyleContext)
   NS_ASSERTION((mStyleContextCache.IndexOf(aNewStyleContext) != -1), "StyleContext removed in AddStyleContext is not in cache");
   if (aNewStyleContext) {
     rv = mStyleContextCache.RemoveElement(aNewStyleContext);
-    PRINTF( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count());
+    PRINTF(( "StyleContextCount: %ld\n", (long)mStyleContextCache.Count()));
   }
 
 #endif //#ifdef USE_FAST_CACHE

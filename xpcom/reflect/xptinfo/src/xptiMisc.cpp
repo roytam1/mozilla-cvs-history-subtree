@@ -26,8 +26,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(xptiMiscLog)
-#define PRINTF NS_LOG_PRINTF(xptiMiscLog)
-#define FLUSH  NS_LOG_FLUSH(xptiMiscLog)
+#define PRINTF(args) NS_LOG_PRINTF(xptiMiscLog, args)
+#define FLUSH()      NS_LOG_FLUSH(xptiMiscLog)
 
 struct xptiFileTypeEntry
 {
@@ -87,7 +87,7 @@ xptiAutoLog::xptiAutoLog(xptiInterfaceInfoManager* mgr,
         }
         else
         {
-            PRINTF("xpti failed to open log file for writing\n");
+            PRINTF(("xpti failed to open log file for writing\n"));
         }
     }
 };

@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDragServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsDragServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsDragServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDragServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDragServiceLog)
 
 NS_IMPL_ADDREF_INHERITED(nsDragService, nsBaseDragService)
 NS_IMPL_RELEASE_INHERITED(nsDragService, nsBaseDragService)
@@ -151,7 +151,7 @@ GtkTargetList *nsDragService::RegisterDragItemsAndFlavors(nsISupportsArray *inAr
   GtkTargetList *targetlist;
   targetlist = gtk_target_list_new(nsnull, numDragItems);
 
-  PRINTF("nsDragService::RegisterDragItemsAndFlavors");
+  PRINTF(("nsDragService::RegisterDragItemsAndFlavors"));
 
   for (unsigned int i = 0; i < numDragItems; ++i)
   {
@@ -192,7 +192,7 @@ GtkTargetList *nsDragService::RegisterDragItemsAndFlavors(nsISupportsArray *inAr
 PRBool nsDragService::DoConvert(GdkAtom type)
 {
 
-  PRINTF("nsDragService::DoRealConvert(%li)\n    {", type);
+  PRINTF(("nsDragService::DoRealConvert(%li)\n    {", type));
   int e = 0;
   // Set a flag saying that we're blocking waiting for the callback:
   mBlocking = PR_TRUE;
@@ -201,7 +201,7 @@ PRBool nsDragService::DoConvert(GdkAtom type)
   // ask X what kind of data we can get
   //
 #ifdef DEBUG_DRAG
-  PRINTF("     Doing real conversion of atom type '%s'", gdk_atom_name(type));
+  PRINTF(("     Doing real conversion of atom type '%s'", gdk_atom_name(type)));
 #endif
   gtk_selection_convert(mWidget,
                         GDK_SELECTION_PRIMARY,
@@ -211,7 +211,7 @@ PRBool nsDragService::DoConvert(GdkAtom type)
   // Now we need to wait until the callback comes in ...
   // i is in case we get a runaway (yuck).
 #ifdef DEBUG_DRAG
-  PRINTF("      Waiting for the callback... mBlocking = %d", mBlocking);
+  PRINTF(("      Waiting for the callback... mBlocking = %d", mBlocking));
 #endif /* DEBUG_CLIPBOARD */
   for (e=0; mBlocking == PR_TRUE && e < 1000; ++e)
   {
@@ -219,7 +219,7 @@ PRBool nsDragService::DoConvert(GdkAtom type)
   }
 
 #ifdef DEBUG_DRAG
-  PRINTF("    }");
+  PRINTF(("    }"));
 #endif
 
   if (mSelectionData.length > 0)
@@ -245,7 +245,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsDragService::GetData this=<%p>", this));
 
 #ifdef DEBUG_DRAG
-  PRINTF("nsClipboard::GetNativeClipboardData()");
+  PRINTF(("nsClipboard::GetNativeClipboardData()"));
 #endif /* DEBUG_CLIPBOARD */
 
 
@@ -253,7 +253,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
 
   // make sure we have a good transferable
   if (!aTransferable) {
-    PRINTF("  GetData: Transferable is null!");
+    PRINTF(("  GetData: Transferable is null!"));
     return NS_ERROR_FAILURE;
   }
 
@@ -283,8 +283,8 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
   }
 
 #ifdef DEBUG_CLIPBOARD
-  PRINTF("  Got the callback: '%s', %d",
-         mSelectionData.data, mSelectionData.length);
+  PRINTF(("  Got the callback: '%s', %d",
+         mSelectionData.data, mSelectionData.length));
 #endif /* DEBUG_CLIPBOARD */
 
   // We're back from the callback, no longer blocking:
@@ -327,7 +327,7 @@ NS_IMETHODIMP nsDragService::IsDataFlavorSupported(const char *aDataFlavor, PRBo
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsDragService::IsDataFlavorSupported this=<%p>", this));
 
-  PRINTF("nsDragService::IsDataFlavorSupported");
+  PRINTF(("nsDragService::IsDataFlavorSupported"));
   if (!aDataFlavor || !_retval)
     return NS_ERROR_FAILURE;
 
@@ -341,7 +341,7 @@ NS_IMETHODIMP nsDragService::GetCurrentSession (nsIDragSession **aSession)
 {
   PR_LOG(PhWidLog, PR_LOG_DEBUG, ("nsDragService::GetCurrentSession this=<%p>", this));
 
-  PRINTF("nsDragService::GetCurrentSession");
+  PRINTF(("nsDragService::GetCurrentSession"));
   if (!aSession)
     return NS_ERROR_FAILURE;
 
@@ -358,7 +358,7 @@ nsDragService::DragLeave (GtkWidget	       *widget,
 			                    GdkDragContext   *context,
 			                    guint             time)
 {
-  PRINTF("leave");
+  PRINTF(("leave"));
   //gHaveDrag = PR_FALSE;
 }
 
@@ -370,7 +370,7 @@ nsDragService::DragMotion(GtkWidget	       *widget,
 			                    gint              y,
 			                    guint             time)
 {
-  PRINTF("drag motion");
+  PRINTF(("drag motion"));
   GtkWidget *source_widget;
 
 #if 0
@@ -380,9 +380,9 @@ nsDragService::DragMotion(GtkWidget	       *widget,
 #endif
 
   source_widget = gtk_drag_get_source_widget (context);
-  PRINTF("motion, source %s", source_widget ?
+  PRINTF(("motion, source %s", source_widget ?
 	          gtk_type_name (GTK_OBJECT (source_widget)->klass->type) :
-         "unknown");
+         "unknown"));
 
   gdk_drag_status (context, context->suggested_action, time);
   
@@ -397,7 +397,7 @@ nsDragService::DragDrop(GtkWidget	       *widget,
 			                  gint              y,
 			                  guint             time)
 {
-  PRINTF("drop");
+  PRINTF(("drop"));
   //gHaveDrag = PR_FALSE;
 
   if (context->targets){
@@ -421,7 +421,7 @@ nsDragService::DragDataReceived  (GtkWidget          *widget,
 			                            guint               time)
 {
   if ((data->length >= 0) && (data->format == 8)) {
-    PRINTF ("Received \"%s\"", (gchar *)data->data);
+    PRINTF( ("Received \"%s\"", (gchar *)data->data));
     gtk_drag_finish (context, PR_TRUE, PR_FALSE, time);
     return;
   }
@@ -449,6 +449,6 @@ nsDragService::DragDataDelete(GtkWidget          *widget,
 			                        GdkDragContext     *context,
 			                        gpointer            data)
 {
-  PRINTF ("Delete the data!");
+  PRINTF( ("Delete the data!"));
 }
 #endif

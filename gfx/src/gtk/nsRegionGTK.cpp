@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsRegionGTKLog)
-#define PRINTF NS_LOG_PRINTF(nsRegionGTKLog)
-#define FLUSH  NS_LOG_FLUSH(nsRegionGTKLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsRegionGTKLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsRegionGTKLog)
 
 #ifdef DEBUG_REGIONS
 static int nRegions;
@@ -44,7 +44,7 @@ nsRegionGTK::nsRegionGTK()
 
 #ifdef DEBUG_REGIONS
   ++nRegions;
-  PRINTF("REGIONS+ = %i\n", nRegions);
+  PRINTF(("REGIONS+ = %i\n", nRegions));
 #endif
 
   mRegion = nsnull;
@@ -54,7 +54,7 @@ nsRegionGTK::~nsRegionGTK()
 {
 #ifdef DEBUG_REGIONS
   --nRegions;
-  PRINTF("REGIONS- = %i\n", nRegions);
+  PRINTF(("REGIONS- = %i\n", nRegions));
 #endif
 
   if (mRegion)

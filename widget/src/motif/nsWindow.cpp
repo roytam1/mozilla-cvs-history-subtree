@@ -49,8 +49,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsWindowLog)
-#define PRINTF NS_LOG_PRINTF(nsWindowLog)
-#define FLUSH  NS_LOG_FLUSH(nsWindowLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWindowLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWindowLog)
 
 static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
 
@@ -633,8 +633,8 @@ NS_METHOD nsWindow::Move(PRInt32 aX, PRInt32 aY)
 NS_METHOD nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
 //#if 0
-  PRINTF("$$$$$$$$$ %s::Resize %d %d   Repaint: %s\n", 
-         gInstanceClassName, aWidth, aHeight, (aRepaint?"true":"false"));
+  PRINTF(("$$$$$$$$$ %s::Resize %d %d   Repaint: %s\n", 
+         gInstanceClassName, aWidth, aHeight, (aRepaint?"true":"false")));
 //#endif
 
   // ignore resizes smaller than or equal to 1x1
@@ -815,7 +815,7 @@ NS_METHOD nsWindow::SetFont(const nsFont &aFont)
 
       NS_RELEASE(metrics);
     } else {
-      PRINTF("****** Error: Metrics is NULL!\n");
+      PRINTF(("****** Error: Metrics is NULL!\n"));
       return NS_ERROR_FAILURE;
     }
 
@@ -1243,15 +1243,15 @@ nsWindow::DebugPrintEvent(nsGUIEvent &   aEvent,
 
   static int sPrintCount=0;
 
-  PRINTF("%4d %-26s(this=%-8p , widget=%-8p",
+  PRINTF(("%4d %-26s(this=%-8p , widget=%-8p",
          sPrintCount++,
          (const char *) nsAutoCString(debug_GuiEventToString(&aEvent)),
          this,
-         (void *) aWidget);
+         (void *) aWidget));
   
-  PRINTF(" , x=%-3d, y=%d)",aEvent.point.x,aEvent.point.y);
+  PRINTF((" , x=%-3d, y=%d)",aEvent.point.x,aEvent.point.y));
 
-  PRINTF("\n");
+  PRINTF(("\n"));
 }
 #endif // DEBUG
 //////////////////////////////////////////////////////////////////
@@ -1348,12 +1348,12 @@ PRBool nsWindow::OnPaint(nsPaintEvent &event)
     event.renderingContext = nsnull;
 #if 0
     if (event.rect) {
-    PRINTF("nsWindow::OnPaint(this=%p, {%i,%i,%i,%i})\n", this,
+    PRINTF(("nsWindow::OnPaint(this=%p, {%i,%i,%i,%i})\n", this,
             event.rect->x, event.rect->y,
-           event.rect->width, event.rect->height);
+           event.rect->width, event.rect->height));
     }
     else {
-      PRINTF("nsWindow::OnPaint(this=%p, NO RECT)\n", this);
+      PRINTF(("nsWindow::OnPaint(this=%p, NO RECT)\n", this));
     }
 #endif
     static NS_DEFINE_CID(kRenderingContextCID, NS_RENDERING_CONTEXT_CID);
@@ -1432,7 +1432,7 @@ PRBool nsWindow::OnScroll(nsScrollbarEvent & aEvent, PRUint32 cPos)
 void nsWindow::SetResizeRect(nsRect& aRect) 
 {
   mResizeRect = aRect;
-  PRINTF("SetResizeRect: %i %i\n",mResizeRect.width,mResizeRect.height);
+  PRINTF(("SetResizeRect: %i %i\n",mResizeRect.width,mResizeRect.height));
 }
 
 void nsWindow::GetResizeRect(nsRect* aRect)
@@ -1525,9 +1525,9 @@ extern "C" void nsWindow_ResizeWidget(Widget w)
   nsWindow *win = 0;
 
   // Get the new size for the window
-  PRINTF("Zuperdee says %-8p\n",(Widget&) w);
+  PRINTF(("Zuperdee says %-8p\n",(Widget&) w));
   XtVaGetValues(w, XmNuserData, &win, XmNwidth, &width, XmNheight, &height, nsnull);
-  PRINTF("%i %i\n",width,height);
+  PRINTF(("%i %i\n",width,height));
 
   // Setup the resize rectangle for the window.
   nsRect bounds;
@@ -1587,6 +1587,6 @@ NS_METHOD nsWindow::EnableFileDrop(PRBool aEnable)
 NS_METHOD nsWindow::CaptureMouse(PRBool aCapture)
 {
   //XXX:Implement this.
-  PRINTF("nsWindow::CaptureMouse called\n");
+  PRINTF(("nsWindow::CaptureMouse called\n"));
   return NS_OK;
 }

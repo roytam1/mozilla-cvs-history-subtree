@@ -47,8 +47,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsPluginInstancePeerLog)
-#define PRINTF NS_LOG_PRINTF(nsPluginInstancePeerLog)
-#define FLUSH  NS_LOG_FLUSH(nsPluginInstancePeerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsPluginInstancePeerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsPluginInstancePeerLog)
 
 nsPluginInstancePeerImpl::nsPluginInstancePeerImpl()
 {
@@ -132,7 +132,7 @@ nsresult nsPluginInstancePeerImpl::QueryInterface(const nsIID& iid, void** insta
 
 NS_IMETHODIMP nsPluginInstancePeerImpl::GetValue(nsPluginInstancePeerVariable variable, void *value)
 {
-  PRINTF("instance peer getvalue %d called\n", variable);
+  PRINTF(("instance peer getvalue %d called\n", variable));
   return NS_ERROR_FAILURE;
 }
 
@@ -232,7 +232,7 @@ nsPluginStreamToFile::nsPluginStreamToFile(const char* target, nsIPluginInstance
 	// construct the URL we'll use later in calls to GetURL()
 	mFileURL = mFileSpec;	
 
-	PRINTF("File URL = %s\n", mFileURL.GetAsString());
+	PRINTF(("File URL = %s\n", mFileURL.GetAsString()));
 }
 
 nsPluginStreamToFile::~nsPluginStreamToFile()
@@ -839,7 +839,7 @@ NS_IMETHODIMP nsPluginInstancePeerImpl::GetMayScript(PRBool *result)
 
 NS_IMETHODIMP nsPluginInstancePeerImpl::SetWindowSize(PRUint32 width, PRUint32 height)
 {
-  PRINTF("instance peer setwindowsize called\n");
+  PRINTF(("instance peer setwindowsize called\n"));
   return NS_OK;
 }
 

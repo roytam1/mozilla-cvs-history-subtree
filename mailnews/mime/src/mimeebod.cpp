@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(mimeebodLog)
-#define PRINTF NS_LOG_PRINTF(mimeebodLog)
-#define FLUSH  NS_LOG_FLUSH(mimeebodLog)
+#define PRINTF(args) NS_LOG_PRINTF(mimeebodLog, args)
+#define FLUSH()      NS_LOG_FLUSH(mimeebodLog)
 
 #define MIME_SUPERCLASS mimeObjectClass
 MimeDefClass(MimeExternalBody, MimeExternalBodyClass,
@@ -488,7 +488,7 @@ MimeExternalBody_debug_print (MimeObject *obj, PRFileDesc *stream, PRInt32 depth
   for (i=0; i < depth; i++)
 	PR_Write(stream, "  ", 2);
 /***
-  FPRINTF(stream,
+  FPRINTF((stream,
 		  "<%s %s\n"
 		  "\tcontent-type: %s\n"
 		  "\tcontent-type: %s\n"
@@ -498,7 +498,7 @@ MimeExternalBody_debug_print (MimeObject *obj, PRFileDesc *stream, PRInt32 depth
 		  ct ? ct : "<none>",
 		  ct2 ? ct2 : "<none>",
 		  bod->body ? bod->body : "<none>",
-		  (PRUint32) obj);
+		  (PRUint32) obj));
 ***/
   PR_FREEIF(addr);
   PR_FREEIF(ct);

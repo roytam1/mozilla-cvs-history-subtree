@@ -25,8 +25,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(TestGtkEmbedLog)
-#define PRINTF NS_LOG_PRINTF(TestGtkEmbedLog)
-#define FLUSH  NS_LOG_FLUSH(TestGtkEmbedLog)
+#define PRINTF(args) NS_LOG_PRINTF(TestGtkEmbedLog, args)
+#define FLUSH()      NS_LOG_FLUSH(TestGtkEmbedLog)
 
 // mozilla specific headers
 #include "nsIDOMKeyEvent.h"
@@ -871,7 +871,7 @@ gint dom_mouse_click_cb   (GtkMozEmbed *embed, nsIDOMMouseEvent *event,
   //  g_print("dom_mouse_click_cb\n");
   PRUint16 button;
   event->GetButton(&button);
-  PRINTF("button was %d\n", button);
+  PRINTF(("button was %d\n", button));
   return NS_OK;
 }
 

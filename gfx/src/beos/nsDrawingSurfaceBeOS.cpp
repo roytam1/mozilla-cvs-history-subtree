@@ -25,8 +25,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDrawingSurfaceBeOSLog)
-#define PRINTF NS_LOG_PRINTF(nsDrawingSurfaceBeOSLog)
-#define FLUSH  NS_LOG_FLUSH(nsDrawingSurfaceBeOSLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDrawingSurfaceBeOSLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDrawingSurfaceBeOSLog)
 
 static NS_DEFINE_IID(kIDrawingSurfaceIID, NS_IDRAWING_SURFACE_IID);
 
@@ -153,7 +153,7 @@ NS_IMETHODIMP nsDrawingSurfaceBeOS :: Lock(PRInt32 aX, PRInt32 aY,
   mLockFlags = aFlags;
 #endif
 	mView->LockLooper();
-  PRINTF("nsDrawingSurfaceBeOS :: Lock not implemented\n");
+  PRINTF(("nsDrawingSurfaceBeOS :: Lock not implemented\n"));
 
 	return NS_OK;
 }
@@ -161,7 +161,7 @@ NS_IMETHODIMP nsDrawingSurfaceBeOS :: Lock(PRInt32 aX, PRInt32 aY,
 NS_IMETHODIMP nsDrawingSurfaceBeOS :: Unlock(void)
 {
 	mView->UnlockLooper();
-  PRINTF("nsDrawingSurfaceBeOS :: Unlock not implemented\n");
+  PRINTF(("nsDrawingSurfaceBeOS :: Unlock not implemented\n"));
 	return NS_OK;
 #if 0
 

@@ -39,8 +39,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsBoxLayoutStateLog)
-#define PRINTF NS_LOG_PRINTF(nsBoxLayoutStateLog)
-#define FLUSH  NS_LOG_FLUSH(nsBoxLayoutStateLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsBoxLayoutStateLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsBoxLayoutStateLog)
 
 nsBoxLayoutState::nsBoxLayoutState(nsIPresContext* aPresContext):mPresContext(aPresContext), 
                                                                  mReflowState(nsnull), 
@@ -165,7 +165,7 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
          break;
 
          case eReflowReason_StyleChange:
-           // PRINTF("STYLE CHANGE REFLOW. Blowing away all box caches!!\n");
+           // PRINTF(("STYLE CHANGE REFLOW. Blowing away all box caches!!\n"));
             aRootBox->MarkChildrenStyleChange();
             // fall through to dirty
 

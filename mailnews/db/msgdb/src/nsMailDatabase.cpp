@@ -30,8 +30,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMailDatabaseLog)
-#define PRINTF NS_LOG_PRINTF(nsMailDatabaseLog)
-#define FLUSH  NS_LOG_FLUSH(nsMailDatabaseLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMailDatabaseLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMailDatabaseLog)
 
 
 nsMailDatabase::nsMailDatabase()
@@ -322,16 +322,16 @@ void nsMailDatabase::UpdateFolderFlag(nsIMsgDBHdr *mailHdr, PRBool bSet,
 					}
 				} else 
 				{
-					PRINTF("Didn't find %s where expected at position %ld\n"
+					PRINTF(("Didn't find %s where expected at position %ld\n"
 						  "instead, found %s.\n",
-                           X_MOZILLA_STATUS, (long) position, buf);
+                           X_MOZILLA_STATUS, (long) position, buf));
 					SetReparse(PR_TRUE);
 				}			
 			} 
 			else 
 			{
-				PRINTF("Couldn't read old status line at all at position %ld\n",
-                       (long) position);
+				PRINTF(("Couldn't read old status line at all at position %ld\n",
+                       (long) position));
 				SetReparse(PR_TRUE);
 			}
 #ifdef XP_MAC
@@ -344,8 +344,8 @@ void nsMailDatabase::UpdateFolderFlag(nsIMsgDBHdr *mailHdr, PRBool bSet,
 		}
 		else
 		{
-			PRINTF("Couldn't open mail folder for update%s!\n",
-                   (const char*)m_folderSpec);
+			PRINTF(("Couldn't open mail folder for update%s!\n",
+                   (const char*)m_folderSpec));
 			PR_ASSERT(PR_FALSE);
 		}
 	}
@@ -476,7 +476,7 @@ nsresult nsMailDatabase::SetFolderInfoValid(nsFileSpec *folderName, int num, int
 
 	if (pMessageDB == NULL)
 	{
-		PRINTF("Exception opening summary file\n");
+		PRINTF(("Exception opening summary file\n"));
 		return NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE;
 	}
 	

@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(ilclientLog)
-#define PRINTF NS_LOG_PRINTF(ilclientLog)
-#define FLUSH  NS_LOG_FLUSH(ilclientLog)
+#define PRINTF(args) NS_LOG_PRINTF(ilclientLog, args)
+#define FLUSH()      NS_LOG_FLUSH(ilclientLog)
 
 #undef PIN_CHROME 
 /* Note that default cache size is set in 
@@ -643,8 +643,8 @@ il_delete_container(il_container *ic)
          */
         if (ic->is_url_loading) {
 #ifdef DEBUG_kipp
-            PRINTF("il_delete_container: bad: can't delete ic=%p '%s'\n",
-                   ic, ic->url_address ? ic->url_address : "(null)");
+            PRINTF(("il_delete_container: bad: can't delete ic=%p '%s'\n",
+                   ic, ic->url_address ? ic->url_address : "(null)"));
 #endif
             ic->state = IC_ABORT_PENDING;
             return;
@@ -663,9 +663,9 @@ il_delete_container(il_container *ic)
         /* delete the image */
         if (!(ic->image || ic->mask)) {
 #ifdef DEBUG_kipp
-            PRINTF("il_delete_container: bad: ic=%p '%s' image=%p mask=%p\n",
+            PRINTF(("il_delete_container: bad: ic=%p '%s' image=%p mask=%p\n",
                    ic, ic->url_address ? ic->url_address : "(null)",
-                   ic->image, ic->mask);
+                   ic->image, ic->mask));
 #endif
             return;
         }
@@ -877,8 +877,8 @@ IL_FlushCache(PRUint8 img_catagory)
     {
         if (ic->is_in_use ||((img_catagory == 0 )&&(ic->moz_type == TYPE_CHROME))){
 #ifdef DEBUG_kipp
-            PRINTF("IL_FlushCache: il_container %p in use '%s'\n",
-                   ic, ic->url_address ? ic->url_address : "(null)");
+            PRINTF(("IL_FlushCache: il_container %p in use '%s'\n",
+                   ic, ic->url_address ? ic->url_address : "(null)"));
 #endif
             ic = ic->next;
             continue;

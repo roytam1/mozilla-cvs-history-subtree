@@ -72,8 +72,8 @@
 #include "nslog.h"
 
 NS_DECL_LOG(nsXULDocumentLog)
-#define PRINTF NS_LOG_PRINTF(nsXULDocumentLog)
-#define FLUSH  NS_LOG_FLUSH(nsXULDocumentLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXULDocumentLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXULDocumentLog)
 
 #define gXULLog nsXULDocumentLog
 

@@ -84,8 +84,8 @@ static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 #include "nslog.h"
 
 NS_IMPL_LOG(nsViewSourceHTMLLog)
-#define PRINTF NS_LOG_PRINTF(nsViewSourceHTMLLog)
-#define FLUSH  NS_LOG_FLUSH(nsViewSourceHTMLLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsViewSourceHTMLLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsViewSourceHTMLLog)
 
 #ifdef RAPTOR_PERF_METRICS
 #include "stopwatch.h"
@@ -646,9 +646,9 @@ NS_IMETHODIMP CViewSourceHTML::DidBuildModel(nsresult anErrorCode,PRBool aNotify
 
 #ifdef RAPTOR_PERF_METRICS
   NS_STOP_STOPWATCH(vsTimer);
-  PRINTF("viewsource timer: ");
+  PRINTF(("viewsource timer: "));
   vsTimer.Print();
-  PRINTF("\n");
+  PRINTF(("\n"));
 #endif 
 
   return result;

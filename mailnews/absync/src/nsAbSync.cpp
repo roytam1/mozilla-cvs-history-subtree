@@ -48,8 +48,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsAbSyncLog)
-#define PRINTF NS_LOG_PRINTF(nsAbSyncLog)
-#define FLUSH  NS_LOG_FLUSH(nsAbSyncLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsAbSyncLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsAbSyncLog)
 
 static NS_DEFINE_CID(kCAbSyncPostEngineCID, NS_ABSYNC_POST_ENGINE_CID); 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
@@ -558,7 +558,7 @@ NS_IMETHODIMP nsAbSync::OnStopOperation(PRInt32 aTransactionID, nsresult aStatus
   mCurrentState = nsIAbSyncState::nsIAbSyncIdle;
 
 #ifdef DEBUG_rhp
-  PRINTF("ABSYNC: OnStopOperation: Status = %d\n", aStatus);
+  PRINTF(("ABSYNC: OnStopOperation: Status = %d\n", aStatus));
 #endif
   return NS_OK;
 }
@@ -754,7 +754,7 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
       return NS_ERROR_FAILURE;
 
 #ifdef DEBUG_rhp
-    PRINTF("ABSYNC: GENERATING PROTOCOL FOR CARD - Address Book Card Key: %d\n", aKey);
+    PRINTF(("ABSYNC: GENERATING PROTOCOL FOR CARD - Address Book Card Key: %d\n", aKey));
 #endif
 
     char *tVal = PR_smprintf("%d", (aKey * -1));
@@ -1122,7 +1122,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
   mCurrentPostRecord = 1;
 
 #ifdef DEBUG_rhp
-  PRINTF("ABSYNC: AnalyzeAllRecords:\n");
+  PRINTF(("ABSYNC: AnalyzeAllRecords:\n"));
 #endif
 
   //
@@ -1332,11 +1332,11 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
         }
 
 #ifdef DEBUG_rhp
-        PRINTF("------ Entry #%d --------\n", readCount);
-        PRINTF("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].serverID);
-        PRINTF("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].localID);
-        PRINTF("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].CRC);
-        PRINTF("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].flags);
+        PRINTF(("------ Entry #%d --------\n", readCount));
+        PRINTF(("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].serverID));
+        PRINTF(("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].localID));
+        PRINTF(("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].CRC));
+        PRINTF(("Old Sync Table: %d\n", mOldSyncMapingTable[readCount].flags));
 #endif
 
         readCount++;
@@ -1405,7 +1405,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
           {
 #ifdef DEBUG_rhp
   char *t = singleProtocolLine.ToNewCString();
-  PRINTF("ABSYNC: ADDING Card: %s\n", t);
+  PRINTF(("ABSYNC: ADDING Card: %s\n", t));
   PR_FREEIF(t);
 #endif
             char *tVal3 = PR_smprintf("%d", mCurrentPostRecord);
@@ -1425,7 +1425,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
           {
 #ifdef DEBUG_rhp
   char *t = singleProtocolLine.ToNewCString();
-  PRINTF("ABSYNC: MODIFYING Card: %s\n", t);
+  PRINTF(("ABSYNC: MODIFYING Card: %s\n", t));
   PR_FREEIF(t);
 #endif
             char *tVal4 = PR_smprintf("%d", mCurrentPostRecord);
@@ -1465,7 +1465,7 @@ nsAbSync::AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *director
       if (tVal)
       {
 #ifdef DEBUG_rhp
-        PRINTF("ABSYNC: DELETING Card: %d\n", mOldSyncMapingTable[readCount].serverID);
+        PRINTF(("ABSYNC: DELETING Card: %d\n", mOldSyncMapingTable[readCount].serverID));
 #endif
 
         char *tVal2 = PR_smprintf("%d", mCurrentPostRecord);
@@ -1567,7 +1567,7 @@ nsAbSync::PatchHistoryTableWithNewID(PRInt32 clientID, PRInt32 serverID, PRInt32
     if (mNewSyncMapingTable[i].localID == (clientID * aMultiplier))
     {
 #ifdef DEBUG_rhp
-      PRINTF("ABSYNC: PATCHING History Table - Client: %d - Server: %d\n", clientID, serverID);
+      PRINTF(("ABSYNC: PATCHING History Table - Client: %d - Server: %d\n", clientID, serverID));
 #endif
 
       mNewSyncMapingTable[i].serverID = serverID;
@@ -2613,7 +2613,7 @@ nsAbSync::AddNewUsers()
           serverID = val->ToInteger(&errorCode);
 
 #ifdef DEBUG_rhp
-          PRINTF("ABSYNC: ADDING Card: %d\n", serverID);
+          PRINTF(("ABSYNC: ADDING Card: %d\n", serverID));
 #endif
         }
 
@@ -2894,7 +2894,7 @@ nsAbSync::AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTag
   {
 #ifdef DEBUG_rhp
   char *t = aTagValue->ToNewCString();
-  PRINTF("Email: %s\n", t);
+  PRINTF(("Email: %s\n", t));
   PR_FREEIF(t);
 #endif
     aCard->SetPrimaryEmail(aTagValue->GetUnicode());

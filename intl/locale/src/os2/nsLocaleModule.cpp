@@ -55,8 +55,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLocaleModuleLog)
-#define PRINTF NS_LOG_PRINTF(nsLocaleModuleLog)
-#define FLUSH  NS_LOG_FLUSH(nsLocaleModuleLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLocaleModuleLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLocaleModuleLog)
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
@@ -260,7 +260,7 @@ nsLocaleModule::RegisterSelf(nsIComponentManager *aCompMgr,
 {
   nsresult rv = NS_OK;
 
-  PRINTF("*** Registering locale components\n");
+  PRINTF(("*** Registering locale components\n"));
 
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
@@ -269,8 +269,8 @@ nsLocaleModule::RegisterSelf(nsIComponentManager *aCompMgr,
                                          cp->mContractID, aPath, PR_TRUE,
                                          PR_TRUE);
     if (NS_FAILED(rv)) {
-      PRINTF("nsLocaleModule: unable to register %s component => %x\n",
-             cp->mDescription, rv);
+      PRINTF(("nsLocaleModule: unable to register %s component => %x\n",
+             cp->mDescription, rv));
       break;
     }
     cp++;
@@ -284,14 +284,14 @@ nsLocaleModule::UnregisterSelf(nsIComponentManager* aCompMgr,
                                nsIFile* aPath,
                                const char* registryLocation)
 {
-  PRINTF("*** Unregistering locale components\n");
+  PRINTF(("*** Unregistering locale components\n"));
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
     nsresult rv = aCompMgr->UnregisterComponentSpec(*cp->mCID, aPath);
     if (NS_FAILED(rv)) {
-      PRINTF("nsLocaleModule: unable to unregister %s component => %x\n",
-             cp->mDescription, rv);
+      PRINTF(("nsLocaleModule: unable to unregister %s component => %x\n",
+             cp->mDescription, rv));
     }
     cp++;
   }

@@ -41,8 +41,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDeviceContextXlibLog)
-#define PRINTF NS_LOG_PRINTF(nsDeviceContextXlibLog)
-#define FLUSH  NS_LOG_FLUSH(nsDeviceContextXlibLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDeviceContextXlibLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDeviceContextXlibLog)
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_IID(kDeviceContextIID, NS_IDEVICE_CONTEXT_IID);
@@ -99,11 +99,11 @@ NS_IMETHODIMP nsDeviceContextXlib::Init(nsNativeWidget aNativeWidget)
   {
     once = PR_FALSE;
 
-    PRINTF("nsDeviceContextXlib::Init(dpy=%p  screen=%p  visual=%p  depth=%d)\n",
+    PRINTF(("nsDeviceContextXlib::Init(dpy=%p  screen=%p  visual=%p  depth=%d)\n",
            mDisplay,
            mScreen,
            mVisual,
-           mDepth);
+           mDepth));
   }
 #endif /* DEBUG */
 

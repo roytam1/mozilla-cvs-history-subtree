@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsEditorTxnLogLog)
-#define PRINTF NS_LOG_PRINTF(nsEditorTxnLogLog)
-#define FLUSH  NS_LOG_FLUSH(nsEditorTxnLogLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsEditorTxnLogLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsEditorTxnLogLog)
 
 #define LOCK_LOG(doc)
 #define UNLOCK_LOG(doc)
@@ -399,7 +399,7 @@ nsEditorTxnLog::Write(const char *aBuffer)
   if (mEditorLog)
     mEditorLog->Write(aBuffer);
   else
-    PRINTF(aBuffer);
+    PRINTF((aBuffer));
 
   return NS_OK;
 }
@@ -413,7 +413,7 @@ nsEditorTxnLog::WriteInt(const char *aFormat, PRInt32 aInt)
   if (mEditorLog)
     mEditorLog->WriteInt(aFormat, aInt);
   else
-    PRINTF(aFormat, aInt);
+    PRINTF((aFormat, aInt));
 
   return NS_OK;
 }

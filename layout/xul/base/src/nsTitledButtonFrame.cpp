@@ -79,8 +79,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTitledButtonFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsTitledButtonFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsTitledButtonFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTitledButtonFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTitledButtonFrameLog)
 
 #define ONLOAD_CALLED_TOO_EARLY 1
 
@@ -430,7 +430,7 @@ nsTitledButtonFrame::UpdateAttributes(nsIPresContext*  aPresContext, nsIAtom* aA
            mTitle.ToCString(a,100);
            value.ToCString(b,100);
 
-           PRINTF(" value changed '%s'->'%s'\n",a,b);
+           PRINTF((" value changed '%s'->'%s'\n",a,b));
            */
            aResize = PR_TRUE;
            mTitle = value;
@@ -492,14 +492,14 @@ nsTitledButtonFrame::Paint(nsIPresContext* aPresContext,
 {	
 #ifdef DEBUG_shaver
     if (dump_stack) {
-        FPRINTF(stderr, "Paint(%p)\n", this);
+        FPRINTF((stderr, "Paint(%p)\n", this));
         void *bt[15];
         
         int n = backtrace(bt, sizeof bt / sizeof (bt[0]));
         if (n) {
             char **names = backtrace_symbols(bt, n);
             for (int i = 5; i < n; ++i)
-                PRINTF("\t\t%s\n", names[i]);
+                PRINTF(("\t\t%s\n", names[i]));
             free(names);
         }
     }
@@ -817,7 +817,7 @@ nsTitledButtonFrame::CalculateTitleForWidth(nsIPresContext* aPresContext, nsIRen
            char chc[100];
            copy.ToCString(chc,100);
 
-           PRINTF("i=%d, i2=%d, diff=%d, old='%s', new='%s', aWidth=%d\n", i, i2, i2-i, cht,chc, aWidth);
+           PRINTF(("i=%d, i2=%d, diff=%d, old='%s', new='%s', aWidth=%d\n", i, i2, i2-i, cht,chc, aWidth));
            */
            mCroppedTitle = elipsisLeft + copy + mCroppedTitle;
            break;

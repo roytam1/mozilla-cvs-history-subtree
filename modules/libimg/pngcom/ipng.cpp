@@ -45,8 +45,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(IMGLIBLog)
-#define PRINTF NS_LOG_PRINTF(IMGLIBLog)
-#define FLUSH  NS_LOG_FLUSH(IMGLIBLog)
+#define PRINTF(args) NS_LOG_PRINTF(IMGLIBLog, args)
+#define FLUSH()      NS_LOG_FLUSH(IMGLIBLog)
 
 #define MINIMUM_DELAY_TIME 10
 
@@ -428,12 +428,12 @@ il_png_error_handler(png_structp png_ptr, png_const_charp msg)
      * been defined.  Adapted from readpng2_error_handler() in "PNG: The
      * Definitive Guide" (O'Reilly, 1999). */
 
-    PRINTF("nspng libpng error: %s\n", msg);
+    PRINTF(("nspng libpng error: %s\n", msg));
     FLUSH();
 
     ipng_p = (ipng_structp)png_get_error_ptr(png_ptr);
     if (ipng_p == NULL) {            /* we are completely hosed now */
-      PRINTF("nspng severe error:  jmpbuf not recoverable.\n");
+      PRINTF(("nspng severe error:  jmpbuf not recoverable.\n"));
       FLUSH();
       PR_ASSERT(ipng_p != NULL);   /* instead of exit(99); */
     }

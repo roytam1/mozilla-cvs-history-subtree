@@ -56,8 +56,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgSendLaterLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgSendLaterLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgSendLaterLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgSendLaterLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgSendLaterLog)
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kCMsgMailSessionCID, NS_MSGMAILSESSION_CID);
@@ -172,7 +172,7 @@ nsMsgSendLater::OnStopRequest(nsIChannel *channel, nsISupports *ctxt, nsresult s
     rv = CompleteMailFileSend();
 
 #ifdef NS_DEBUG
-    PRINTF("nsMsgSendLater: Success on getting message...\n");
+    PRINTF(("nsMsgSendLater: Success on getting message...\n"));
 #endif
     
     // If the send operation failed..try the next one...
@@ -354,7 +354,7 @@ nsresult
 SendOperationListener::OnStartSending(const char *aMsgID, PRUint32 aMsgSize)
 {
 #ifdef NS_DEBUG
-  PRINTF("SendOperationListener::OnStartSending()\n");
+  PRINTF(("SendOperationListener::OnStartSending()\n"));
 #endif
   return NS_OK;
 }
@@ -363,7 +363,7 @@ nsresult
 SendOperationListener::OnProgress(const char *aMsgID, PRUint32 aProgress, PRUint32 aProgressMax)
 {
 #ifdef NS_DEBUG
-  PRINTF("SendOperationListener::OnProgress()\n");
+  PRINTF(("SendOperationListener::OnProgress()\n"));
 #endif
   return NS_OK;
 }
@@ -372,7 +372,7 @@ nsresult
 SendOperationListener::OnStatus(const char *aMsgID, const PRUnichar *aMsg)
 {
 #ifdef NS_DEBUG
-  PRINTF("SendOperationListener::OnStatus()\n");
+  PRINTF(("SendOperationListener::OnStatus()\n"));
 #endif
 
   return NS_OK;
@@ -389,7 +389,7 @@ SendOperationListener::OnStopSending(const char *aMsgID, nsresult aStatus, const
     if (NS_SUCCEEDED(aStatus))
     {
 #ifdef NS_DEBUG
-      PRINTF("nsMsgSendLater: Success on the message send operation!\n");
+      PRINTF(("nsMsgSendLater: Success on the message send operation!\n"));
 #endif
 
       PRBool    deleteMsgs = PR_TRUE;
@@ -569,7 +569,7 @@ nsMsgSendLater::StartNextMailFileSend()
   {
     // Call any listeners on this operation and then exit cleanly
 #ifdef NS_DEBUG
-    PRINTF("nsMsgSendLater: Finished \"Send Later\" operation.\n");
+    PRINTF(("nsMsgSendLater: Finished \"Send Later\" operation.\n"));
 #endif
     NotifyListenersOnStopSending(NS_OK, nsnull, mTotalSendCount, mTotalSentSuccessfully);
     return NS_OK;
@@ -601,7 +601,7 @@ nsMsgSendLater::StartNextMailFileSend()
 #ifdef NS_DEBUG
   nsXPIDLCString      subject;
   mMessage->GetSubject(getter_Copies(subject));
-  PRINTF("Sending message: [%s]\n", (const char*)subject);
+  PRINTF(("Sending message: [%s]\n", (const char*)subject));
 #endif
 
   mTempFileSpec = nsMsgCreateTempFileSpec("nsqmail.tmp"); 

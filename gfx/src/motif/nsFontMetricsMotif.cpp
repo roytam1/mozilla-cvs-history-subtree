@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFontMetricsMotifLog)
-#define PRINTF NS_LOG_PRINTF(nsFontMetricsMotifLog)
-#define FLUSH  NS_LOG_FLUSH(nsFontMetricsMotifLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFontMetricsMotifLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFontMetricsMotifLog)
 
 static NS_DEFINE_IID(kIFontMetricsIID, NS_IFONT_METRICS_IID);
 
@@ -95,7 +95,7 @@ NS_IMETHODIMP nsFontMetricsMotif :: Init(const nsFont& aFont, nsIAtom* aLangGrou
     dpi = 100;
 
 #ifdef NOISY_FONTS
-  PRINTF("looking for font %s (%d)", wildstring, aFont.size / 20);
+  PRINTF(("looking for font %s (%d)", wildstring, aFont.size / 20));
 #endif
 
   //font properties we care about:
@@ -166,7 +166,7 @@ NS_IMETHODIMP nsFontMetricsMotif :: Init(const nsFont& aFont, nsIAtom* aLangGrou
     mFontHandle = ::XLoadFont(dpy, nametouse);
 
 #ifdef NOISY_FONTS
-    PRINTF(" is: %s\n", nametouse);
+    PRINTF((" is: %s\n", nametouse));
 #endif
 
     ::XFreeFontInfo(fnames, fonts, numnames);
@@ -176,7 +176,7 @@ NS_IMETHODIMP nsFontMetricsMotif :: Init(const nsFont& aFont, nsIAtom* aLangGrou
     //ack. we're in real trouble, go for fixed...
 
 #ifdef NOISY_FONTS
-    PRINTF(" is: %s\n", "fixed (final fallback)");
+    PRINTF((" is: %s\n", "fixed (final fallback)"));
 #endif
 
     mFontHandle = ::XLoadFont(dpy, "fixed");

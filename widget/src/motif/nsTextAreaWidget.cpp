@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTextAreaWidgetLog)
-#define PRINTF NS_LOG_PRINTF(nsTextAreaWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(nsTextAreaWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTextAreaWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTextAreaWidgetLog)
 
 NS_IMPL_ADDREF(nsTextAreaWidget)
 NS_IMPL_RELEASE(nsTextAreaWidget)
@@ -65,7 +65,7 @@ NS_METHOD nsTextAreaWidget::Create(nsIWidget *aParent,
   aParent->AddChild(this);
   Widget parentWidget = nsnull;
 
-  PRINTF("aParent 0x%x\n", (unsigned int)aParent);
+  PRINTF(("aParent 0x%x\n", (unsigned int)aParent));
 
   if (aParent) {
     parentWidget = (Widget) aParent->GetNativeData(NS_NATIVE_WIDGET);
@@ -76,7 +76,7 @@ NS_METHOD nsTextAreaWidget::Create(nsIWidget *aParent,
   InitToolkit(aToolkit, aParent);
   InitDeviceContext(aContext, parentWidget);
 
-  PRINTF("Parent 0x%x\n", (unsigned int)parentWidget);
+  PRINTF(("Parent 0x%x\n", (unsigned int)parentWidget));
 
   mWidget = ::XtVaCreateManagedWidget("button",
                                     xmTextWidgetClass, 

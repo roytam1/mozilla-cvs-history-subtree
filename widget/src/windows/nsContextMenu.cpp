@@ -46,8 +46,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsContextMenuLog)
-#define PRINTF NS_LOG_PRINTF(nsContextMenuLog)
-#define FLUSH  NS_LOG_FLUSH(nsContextMenuLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsContextMenuLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsContextMenuLog)
 
 // CIDs
 #include "nsWidgetsCID.h"
@@ -374,7 +374,7 @@ nsEventStatus nsContextMenu::MenuItemSelected(const nsMenuEvent & aMenuEvent)
 {
 #ifdef saari_debug
   char* menuLabel = GetACPString(mLabel);
-  PRINTF("Menu Item Selected %s\n", menuLabel);
+  PRINTF(("Menu Item Selected %s\n", menuLabel));
   delete[] menuLabel;
 #endif
   if (nsnull != mListener) {
@@ -387,7 +387,7 @@ nsEventStatus nsContextMenu::MenuItemSelected(const nsMenuEvent & aMenuEvent)
 
 nsEventStatus nsContextMenu::MenuSelected(const nsMenuEvent & aMenuEvent)
 {
-  //PRINTF("nsMenu::MenuSelected called\n");
+  //PRINTF(("nsMenu::MenuSelected called\n"));
   
   if(mConstructed){
 	MenuDestruct(aMenuEvent);
@@ -528,7 +528,7 @@ nsIMenuItem * nsContextMenu::FindMenuItem(nsIContextMenu * aMenu, PRUint32 aId)
 //-------------------------------------------------------------------------
 nsEventStatus nsContextMenu::MenuDeselected(const nsMenuEvent & aMenuEvent)
 {
-//PRINTF("nsMenu::MenuDeselected called\n");  
+//PRINTF(("nsMenu::MenuDeselected called\n"));  
   //MenuDestruct(aMenuEvent);
   //mConstructed = false;
 
@@ -546,7 +546,7 @@ nsEventStatus nsContextMenu::MenuConstruct(
     void              * menuNode,
 	void              * aWebShell)
 {
-  //PRINTF("nsMenu::MenuConstruct called \n");
+  //PRINTF(("nsMenu::MenuConstruct called \n"));
    // Begin menuitem inner loop
     nsCOMPtr<nsIDOMNode> menuitemNode;
     ((nsIDOMNode*)mDOMNode)->GetFirstChild(getter_AddRefs(menuitemNode));
@@ -580,7 +580,7 @@ nsEventStatus nsContextMenu::MenuConstruct(
 //-------------------------------------------------------------------------
 nsEventStatus nsContextMenu::MenuDestruct(const nsMenuEvent & aMenuEvent)
 {
-  //PRINTF("nsMenu::MenuDestruct called \n");
+  //PRINTF(("nsMenu::MenuDestruct called \n"));
   // We cannot call RemoveAll() yet because menu item selection may need it
   //RemoveAll();
   
@@ -657,7 +657,7 @@ void nsContextMenu::LoadSubMenu(
 {
   nsString menuName;
   menuElement->GetAttribute(nsAutoString("value"), menuName);
-  //PRINTF("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
+  //PRINTF(("Creating Menu [%s] \n", menuName.ToNewCString())); // this leaks
 
   // Create nsMenu
   nsIMenu * pnsMenu = nsnull;
@@ -750,7 +750,7 @@ void nsContextMenu::LoadSubMenu(
 {
   nsString menuName;
   menuElement->GetAttribute(nsAutoString("value"), menuName);
-  //PRINTF("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
+  //PRINTF(("Creating Menu [%s] \n", menuName.ToNewCString())); // this leaks
 
   // Create nsMenu
   nsIMenu * pnsMenu = nsnull;

@@ -34,8 +34,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(CreateElementTxnLog)
-#define PRINTF NS_LOG_PRINTF(CreateElementTxnLog)
-#define FLUSH  NS_LOG_FLUSH(CreateElementTxnLog)
+#define PRINTF(args) NS_LOG_PRINTF(CreateElementTxnLog, args)
+#define FLUSH()      NS_LOG_FLUSH(CreateElementTxnLog)
 
 CreateElementTxn::CreateElementTxn()
   : EditTxn()
@@ -76,8 +76,8 @@ NS_IMETHODIMP CreateElementTxn::Do(void)
 {
 #ifdef NS_LOGGING
   char* nodename = mTag.ToNewCString();
-  PRINTF("Do Create Element parent = %p <%s>, offset = %d\n", 
-         mParent.get(), nodename, mOffsetInParent);
+  PRINTF(("Do Create Element parent = %p <%s>, offset = %d\n", 
+         mParent.get(), nodename, mOffsetInParent));
   nsMemory::Free(nodename);
 #endif
 
@@ -120,7 +120,7 @@ NS_IMETHODIMP CreateElementTxn::Do(void)
   NS_ASSERTION(((NS_SUCCEEDED(result)) && (mNewNode)), "could not create element.");
   if (!mNewNode) return NS_ERROR_NULL_POINTER;
 
-  PRINTF("  newNode = %p\n", mNewNode.get());
+  PRINTF(("  newNode = %p\n", mNewNode.get()));
   // insert the new node
   nsCOMPtr<nsIDOMNode> resultNode;
   if (CreateElementTxn::eAppend==(PRInt32)mOffsetInParent)
@@ -171,8 +171,8 @@ NS_IMETHODIMP CreateElementTxn::Do(void)
 
 NS_IMETHODIMP CreateElementTxn::Undo(void)
 {
-  PRINTF("Undo Create Element, mParent = %p, node = %p\n",
-         mParent.get(), mNewNode.get());
+  PRINTF(("Undo Create Element, mParent = %p, node = %p\n",
+         mParent.get(), mNewNode.get()));
   NS_ASSERTION(mEditor && mParent, "bad state");
   if (!mEditor || !mParent) return NS_ERROR_NOT_INITIALIZED;
 
@@ -183,7 +183,7 @@ NS_IMETHODIMP CreateElementTxn::Undo(void)
 
 NS_IMETHODIMP CreateElementTxn::Redo(void)
 {
-  PRINTF("Redo Create Element\n");
+  PRINTF(("Redo Create Element\n"));
   NS_ASSERTION(mEditor && mParent, "bad state");
   if (!mEditor || !mParent) return NS_ERROR_NOT_INITIALIZED;
 

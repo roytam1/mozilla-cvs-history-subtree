@@ -78,8 +78,8 @@ NS_IMPL_LOG_ENABLED(nsEventStateManagerLog)
 #else
 NS_IMPL_LOG(nsEventStateManagerLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsEventStateManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsEventStateManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsEventStateManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsEventStateManagerLog)
 
 //we will use key binding by default now. this wil lbreak viewer for now
 #define NON_KEYBINDING 0  
@@ -319,7 +319,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
     break;
   case NS_GOTFOCUS:
     {
-      PRINTF("Got focus.\n");
+      PRINTF(("Got focus.\n"));
 
       EnsureDocument(aPresContext);
 

@@ -31,8 +31,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsPlaceholderFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsPlaceholderFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsPlaceholderFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsPlaceholderFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsPlaceholderFrameLog)
 
 nsresult
 NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)

@@ -59,8 +59,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgCreateLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgCreateLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgCreateLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgCreateLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgCreateLog)
 
 
 // CID's needed
@@ -173,7 +173,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutpu
     ReleaseMessageServiceFromURI(mURI, mMessageService);
     mMessageService = nsnull;
 #ifdef NS_DEBUG
-    PRINTF("Failed to create MIME stream converter...\n");
+    PRINTF(("Failed to create MIME stream converter...\n"));
 #endif
     return rv;
   }
@@ -194,7 +194,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutpu
     ReleaseMessageServiceFromURI(mURI, mMessageService);
     mMessageService = nsnull;
 #ifdef NS_DEBUG
-    PRINTF("Unable to get the nsIStreamListener interface from libmime\n");
+    PRINTF(("Unable to get the nsIStreamListener interface from libmime\n"));
 #endif
     return NS_ERROR_UNEXPECTED;
   }  
@@ -232,7 +232,7 @@ nsMsgDraft::ProcessDraftOrTemplateOperation(const PRUnichar *msgURI, nsMimeOutpu
     ReleaseMessageServiceFromURI(mURI, mMessageService);
     mMessageService = nsnull;
 #ifdef NS_DEBUG
-    PRINTF("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
+    PRINTF(("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n"));
 #endif
 
     return NS_ERROR_UNEXPECTED;

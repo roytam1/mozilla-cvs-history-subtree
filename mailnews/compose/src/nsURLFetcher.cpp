@@ -43,8 +43,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsURLFetcherLog)
-#define PRINTF NS_LOG_PRINTF(nsURLFetcherLog)
-#define FLUSH  NS_LOG_FLUSH(nsURLFetcherLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsURLFetcherLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsURLFetcherLog)
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -276,7 +276,7 @@ nsresult
 nsURLFetcher::OnStopRequest(nsIChannel *aChannel, nsISupports * /* ctxt */, nsresult aStatus, const PRUnichar* aMsg)
 {
 #ifdef NS_DEBUG_rhp
-  PRINTF("nsURLFetcher::OnStopRequest()\n");
+  PRINTF(("nsURLFetcher::OnStopRequest()\n"));
 #endif
 
   // it's possible we could get in here from the channel calling us with an OnStopRequest and from our

@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(PtRawDrawContainerLog)
-#define PRINTF NS_LOG_PRINTF(PtRawDrawContainerLog)
-#define FLUSH  NS_LOG_FLUSH(PtRawDrawContainerLog)
+#define PRINTF(args) NS_LOG_PRINTF(PtRawDrawContainerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(PtRawDrawContainerLog)
 
 /* prototype declarations */
 PtWidgetClass_t *CreateRawDrawContainerClass( void );
@@ -59,7 +59,7 @@ static void raw_draw_container_draw( PtWidget_t *widget, PhTile_t *damage )
 
   if (widget == NULL)
   {
-    PRINTF("raw_draw_container_draw NULL widget!\n");
+    PRINTF(("raw_draw_container_draw NULL widget!\n"));
     return;	
   }
 

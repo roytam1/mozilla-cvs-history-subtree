@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsCSSScannerLog)
-#define PRINTF NS_LOG_PRINTF(nsCSSScannerLog)
-#define FLUSH  NS_LOG_FLUSH(nsCSSScannerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsCSSScannerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsCSSScannerLog)
 
 #ifdef NS_DEBUG
 static char* kNullPointer = "null pointer";
@@ -220,11 +220,11 @@ void nsCSSScanner::InitErrorReporting(nsIURI* aURI)
 
 void nsCSSScanner::ReportError(const nsAReadableString& aError)
 {
-  PRINTF("CSS Error (%s :%u.%u): %s.\n",
+  PRINTF(("CSS Error (%s :%u.%u): %s.\n",
          mFileName.get(),
          mLineNumber,
          mColNumber,
-         NS_ConvertUCS2toUTF8(aError).GetBuffer());
+         NS_ConvertUCS2toUTF8(aError).GetBuffer()));
 
   // Log it to the JavaScript console
   nsCOMPtr<nsIConsoleService> consoleService
@@ -292,7 +292,7 @@ PRInt32 nsCSSScanner::Read(PRInt32& aErrorCode)
 #endif
   }
   mLastRead = rv;
-//PRINTF("Read => %x\n", rv);
+//PRINTF(("Read => %x\n", rv));
   return rv;
 }
 
@@ -306,7 +306,7 @@ PRInt32 nsCSSScanner::Peek(PRInt32& aErrorCode)
     mPushback[0] = PRUnichar(ch);
     mPushbackCount++;
   }
-//PRINTF("Peek => %x\n", mLookAhead);
+//PRINTF(("Peek => %x\n", mLookAhead));
   return PRInt32(mPushback[mPushbackCount - 1]);
 }
 

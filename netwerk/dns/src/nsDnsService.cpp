@@ -41,8 +41,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsDnsServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsDnsServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsDnsServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDnsServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDnsServiceLog)
 
 //static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
@@ -153,13 +153,13 @@ public:
 
         PR_ExplodeTime(mExpires, PR_LocalTimeParameters, &et);
         PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        PRINTF("\nDNS %s expires %s\n", mHostName, buf);
+        PRINTF(("\nDNS %s expires %s\n", mHostName, buf));
 
         PR_ExplodeTime(nsTime(), PR_LocalTimeParameters, &et);
         PR_FormatTimeUSEnglish(buf, sizeof(buf), "%c", &et);
-        PRINTF("now %s ==> %s\n", buf,
+        PRINTF(("now %s ==> %s\n", buf,
                 mExpires < nsTime()
-                ? "expired" : "valid");
+                ? "expired" : "valid"));
         FLUSH();
 #endif
         return mExpires < nsTime();
@@ -411,7 +411,7 @@ nsDNSLookup::Reset(void)
     mComplete = PR_FALSE;
     mStatus = NS_OK;
     mExpires = LL_ZERO;
-//    PRINTF("DNS reset for %s\n", mHostName);
+//    PRINTF(("DNS reset for %s\n", mHostName));
 }
 
 nsDNSLookup::~nsDNSLookup(void)
@@ -692,7 +692,7 @@ nsDNSLookup::Resume(nsDNSRequest* req)
     PRUint32 reqCount;
     
     if (mComplete && !IsExpired()) {
-//        PRINTF("\nDNS cache hit for %s\n", mHostName);
+//        PRINTF(("\nDNS cache hit for %s\n", mHostName));
         rv = req->FireStop(mStatus);
         return rv;
     }
@@ -710,11 +710,11 @@ nsDNSLookup::Resume(nsDNSRequest* req)
     if (reqCount == 1) {
         // if this was the first request, then we need to kick off
         // the lookup
-//        PRINTF("\nDNS cache miss for %s\n", mHostName);
+//        PRINTF(("\nDNS cache miss for %s\n", mHostName));
         rv = InitiateLookup();
     }
     else {
-//        PRINTF("DNS consolidating lookup for %s\n", mHostName);
+//        PRINTF(("DNS consolidating lookup for %s\n", mHostName));
     }
     return rv;
 }

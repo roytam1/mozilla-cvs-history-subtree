@@ -34,8 +34,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMenuLog)
-#define PRINTF NS_LOG_PRINTF(nsMenuLog)
-#define FLUSH  NS_LOG_FLUSH(nsMenuLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMenuLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMenuLog)
 
 static NS_DEFINE_CID(kMenuCID,             NS_MENU_CID);
 static NS_DEFINE_CID(kMenuItemCID,         NS_MENUITEM_CID);
@@ -347,7 +347,7 @@ NS_METHOD nsMenu::InsertItemAt(const PRUint32 aCount, nsISupports * aMenuItem)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::RemoveItem(const PRUint32 aCount)
 {
-  PRINTF("nsMenu::RemoveItem - FIXME: not implemented\n");
+  PRINTF(("nsMenu::RemoveItem - FIXME: not implemented\n"));
 #if 0
   //nsISupports * supports = (nsISupports *)mItems->ElementAt(aCount);
   mItems->RemoveElementAt(aCount);
@@ -360,7 +360,7 @@ NS_METHOD nsMenu::RemoveItem(const PRUint32 aCount)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenu::RemoveAll()
 {
-  PRINTF("nsMenu::RemoveAll - FIXME: not implemented\n");
+  PRINTF(("nsMenu::RemoveAll - FIXME: not implemented\n"));
 #if 0
   while (mItems->Count()) {
     mItems->RemoveElementAt(0);
@@ -615,7 +615,7 @@ void nsMenu::LoadSubMenu(nsIMenu *       pParentMenu,
 {
   nsString menuName;
   menuElement->GetAttribute(NS_ConvertASCIItoUCS2("value"), menuName);
-  //PRINTF("Creating Menu [%s] \n", menuName.ToNewCString()); // this leaks
+  //PRINTF(("Creating Menu [%s] \n", menuName.ToNewCString())); // this leaks
 
   // Create nsMenu
   nsIMenu * pnsMenu = nsnull;
@@ -654,7 +654,7 @@ void nsMenu::LoadSubMenu(nsIMenu *       pParentMenu,
         menuitemElement->GetNodeName(menuitemNodeType);
 
 #ifdef DEBUG_saari
-PRINTF("Type [%s] %d\n", menuitemNodeType.ToNewCString(), menuitemNodeType.Equals("menuseparator"));
+PRINTF(("Type [%s] %d\n", menuitemNodeType.ToNewCString(), menuitemNodeType.Equals("menuseparator")));
 #endif
 
         if (menuitemNodeType.Equals("menuitem")) {

@@ -44,8 +44,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDocLoaderLog)
-#define PRINTF NS_LOG_PRINTF(nsDocLoaderLog)
-#define FLUSH  NS_LOG_FLUSH(nsDocLoaderLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDocLoaderLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDocLoaderLog)
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
@@ -1445,7 +1445,7 @@ void nsDocLoaderImpl::DumpChannelInfo()
   PRInt32 current=0, max=0;
 
   
-  PRINTF("==== DocLoader=%x\n", this);
+  PRINTF(("==== DocLoader=%x\n", this));
 
   count = mChannelInfoList.Count();
   for(i=0; i<count; i++) {
@@ -1458,9 +1458,9 @@ void nsDocLoaderImpl::DumpChannelInfo()
       rv = info->mURI->GetSpec(getter_Copies(buffer));
     }
 
-    PRINTF("  [%d] current=%d  max=%d [%s]\n", i,
+    PRINTF(("  [%d] current=%d  max=%d [%s]\n", i,
            info->mCurrentProgress, 
-           info->mMaxProgress, (const char *)buffer);
+           info->mMaxProgress, (const char *)buffer));
 #endif /* DEBUG */
 
     current += info->mCurrentProgress;
@@ -1473,7 +1473,7 @@ void nsDocLoaderImpl::DumpChannelInfo()
     }
   }
 
-  PRINTF("\nCurrent=%d   Total=%d\n====\n", current, max);
+  PRINTF(("\nCurrent=%d   Total=%d\n====\n", current, max));
 }
 #endif /* 0 */
 

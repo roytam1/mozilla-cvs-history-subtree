@@ -45,8 +45,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsSVGContainerFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsSVGContainerFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsSVGContainerFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSVGContainerFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSVGContainerFrameLog)
 
 nsresult
 NS_NewSVGContainerFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsRoot)
@@ -408,11 +408,11 @@ nsSVGContainerFrame::Paint ( nsIPresContext* aPresContext,
   // if we aren't visible then we are done.
   if (!disp->IsVisibleOrCollapsed()) 
 	   return NS_OK;  
-  //PRINTF("nsSVGContainerFrame::Paint Start\n");
+  //PRINTF(("nsSVGContainerFrame::Paint Start\n"));
   // if we are visible then tell our superclass to paint
   nsresult r = nsHTMLContainerFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
                        aWhichLayer);
-  //PRINTF("nsSVGContainerFrame::Paint End\n");
+  //PRINTF(("nsSVGContainerFrame::Paint End\n"));
 
   return r;
 }

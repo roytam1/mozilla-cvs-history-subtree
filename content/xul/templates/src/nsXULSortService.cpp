@@ -110,8 +110,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsXULSortServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsXULSortServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsXULSortServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXULSortServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXULSortServiceLog)
 
 
 
@@ -441,7 +441,7 @@ XULSortServiceImpl::~XULSortServiceImpl(void)
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: XULSortServiceImpl\n", gInstanceCount);
+    PRINTF(("%d - RDF: XULSortServiceImpl\n", gInstanceCount));
 #endif
 
 	--gRefCnt;

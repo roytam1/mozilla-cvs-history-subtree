@@ -37,8 +37,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsXMLDocumentTypeLog)
-#define PRINTF NS_LOG_PRINTF(nsXMLDocumentTypeLog)
-#define FLUSH  NS_LOG_FLUSH(nsXMLDocumentTypeLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXMLDocumentTypeLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXMLDocumentTypeLog)
 
 
 class nsXMLDocumentType : public nsIDOMDocumentType,

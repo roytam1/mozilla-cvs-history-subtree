@@ -63,8 +63,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsPICSLog)
-#define PRINTF NS_LOG_PRINTF(nsPICSLog)
-#define FLUSH  NS_LOG_FLUSH(nsPICSLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsPICSLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsPICSLog)
 
 static NS_DEFINE_CID(kPrefCID,                    NS_PREF_CID);
 
@@ -404,14 +404,14 @@ nsPICS::ProcessPICSLabel(char *label)
 	  rs = ParsePICSLabel(label);
     status = CompareToUserSettings(rs, "http://www.w3.org/");
     if(status == PICS_NO_RATINGS) {
-      PRINTF("PICS_PassFailReturnVal  %d", status);
+      PRINTF(("PICS_PassFailReturnVal  %d", status));
         if(mPICSPagesMustBeRatedPref)
             status = PICS_RATINGS_FAILED;
         else
             status = PICS_RATINGS_PASSED;
     }
   }
-	PRINTF("\nPICS_PassFailReturnVal  %d\n", status);
+	PRINTF(("\nPICS_PassFailReturnVal  %d\n", status));
 	FreeRatingsStruct(rs);
 	return status;
 }
@@ -671,8 +671,8 @@ nsPICS::ParsePICSLabel(char * label)
 	while((rating_value = (PICS_RatingValue *)HTList_nextObject(list_ptr)) != NULL) {
 
 		if (rating_value->name) 
-          PRINTF(" rating_value->name: %s\n", rating_value->name);
-		PRINTF(" rating_value->value: %f\n\n", rating_value->value);
+          PRINTF((" rating_value->name: %s\n", rating_value->name));
+		PRINTF((" rating_value->value: %f\n\n", rating_value->value));
 
 	}
 

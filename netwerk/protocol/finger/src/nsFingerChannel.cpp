@@ -39,8 +39,8 @@ NS_IMPL_LOG_ENABLED(nsFingerChannelLog)
 #else
 NS_IMPL_LOG(nsFingerChannelLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsFingerChannelLog)
-#define FLUSH  NS_LOG_FLUSH(nsFingerChannelLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFingerChannelLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFingerChannelLog)
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
@@ -104,8 +104,8 @@ nsFingerChannel::Init(nsIURI* uri)
       mHost = cString;
     }
 
-    PRINTF("Status:mUser = %s, mHost = %s\n", (const char*)mUser,
-           (const char*)mHost);
+    PRINTF(("Status:mUser = %s, mHost = %s\n", (const char*)mUser,
+           (const char*)mHost));
     if (!*(const char *)mHost) return NS_ERROR_NOT_INITIALIZED;
 
     return NS_OK;
@@ -459,9 +459,9 @@ NS_IMETHODIMP
 nsFingerChannel::OnStopRequest(nsIChannel* aChannel, nsISupports* aContext,
                                nsresult aStatus, const PRUnichar* aStatusArg)
 {
-    PRINTF("nsFingerChannel::OnStopRequest, mActAsObserver=%d\n",
-           mActAsObserver);
-    PRINTF("  aChannel = %p\n", aChannel);
+    PRINTF(("nsFingerChannel::OnStopRequest, mActAsObserver=%d\n",
+           mActAsObserver));
+    PRINTF(("  aChannel = %p\n", aChannel));
     nsresult rv = NS_OK;
 
     if (NS_FAILED(aStatus) || !mActAsObserver) {
@@ -539,7 +539,7 @@ nsFingerChannel::SendRequest(nsIChannel* aChannel) {
   charstream = do_QueryInterface(result, &rv);
   if (NS_FAILED(rv)) return rv;
 
-  PRINTF("Sending: %s\n", requestBuffer.GetBuffer());
+  PRINTF(("Sending: %s\n", requestBuffer.GetBuffer()));
 
   rv = aChannel->SetTransferCount(requestBuffer.Length());
   if (NS_FAILED(rv)) return rv;

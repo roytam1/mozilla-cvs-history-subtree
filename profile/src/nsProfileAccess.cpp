@@ -40,8 +40,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsProfileAccessLog)
-#define PRINTF NS_LOG_PRINTF(nsProfileAccessLog)
-#define FLUSH  NS_LOG_FLUSH(nsProfileAccessLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsProfileAccessLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsProfileAccessLog)
 
 #define NS_IMPL_IDS
 #include "nsICharsetConverterManager.h"
@@ -1374,7 +1374,7 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
 
             if (NS_FAILED(rv)) return rv;
 
-            PRINTF("%s exists:  %d\n",profileLocation.GetBuffer(), exists);
+            PRINTF(("%s exists:  %d\n",profileLocation.GetBuffer(), exists));
             if (exists) {
                 ProfileStruct*  profileItem     = new ProfileStruct();
                 if (!profileItem)
@@ -1396,7 +1396,7 @@ nsProfileAccess::Get4xProfileInfo(const char *registryName)
 				//delete profileItem;
             }
             else {
-                PRINTF("no 4.x profile\n");
+                PRINTF(("no 4.x profile\n"));
             }
         }
 #endif /* XP_UNIX */

@@ -70,8 +70,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsSecureBrowserUIImplLog)
-#define PRINTF NS_LOG_PRINTF(nsSecureBrowserUIImplLog)
-#define FLUSH  NS_LOG_FLUSH(nsSecureBrowserUIImplLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSecureBrowserUIImplLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSecureBrowserUIImplLog)
 
 static NS_DEFINE_CID(kCStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kCommonDialogsCID,         NS_CommonDialog_CID );
@@ -514,7 +514,7 @@ nsSecureBrowserUIImpl::OnSecurityChange(nsIWebProgress *aWebProgress,
 
     nsXPIDLCString temp;
     aURI->GetSpec(getter_Copies(temp));
-    PRINTF("OnSecurityChange: (%x) %s\n", state, (const char*)temp);
+    PRINTF(("OnSecurityChange: (%x) %s\n", state, (const char*)temp));
 #endif
 
 

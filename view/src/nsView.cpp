@@ -41,8 +41,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsViewLog)
-#define PRINTF NS_LOG_PRINTF(nsViewLog)
-#define FLUSH  NS_LOG_FLUSH(nsViewLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsViewLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsViewLog)
 
 static NS_DEFINE_IID(kRegionCID, NS_REGION_CID);
 
@@ -59,8 +59,8 @@ static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 //
 nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent)
 { 
-//PRINTF(" %d %d %d (%d,%d) \n", aEvent->widget, aEvent->widgetSupports, 
-//       aEvent->message, aEvent->point.x, aEvent->point.y);
+//PRINTF((" %d %d %d (%d,%d) \n", aEvent->widget, aEvent->widgetSupports, 
+//       aEvent->message, aEvent->point.x, aEvent->point.y));
   nsEventStatus result = nsEventStatus_eIgnore;
   nsIView       *view = nsView::GetViewFor(aEvent->widget);
 
@@ -229,7 +229,7 @@ NS_IMETHODIMP nsView :: Init(nsIViewManager* aManager,
                              const nsIView *aParent,
                              nsViewVisibility aVisibilityFlag)
 {
-  //PRINTF(" \n callback=%d data=%d", aWidgetCreateCallback, aCallbackData);
+  //PRINTF((" \n callback=%d data=%d", aWidgetCreateCallback, aCallbackData));
   NS_PRECONDITION(nsnull != aManager, "null ptr");
   if (nsnull == aManager) {
     return NS_ERROR_NULL_POINTER;
@@ -313,8 +313,8 @@ NS_IMETHODIMP nsView :: HandleEvent(nsGUIEvent *event, PRUint32 aEventFlags,
                                     nsEventStatus* aStatus, PRBool aForceHandle, PRBool& aHandled)
 {
   NS_ENSURE_ARG_POINTER(aStatus);
-//PRINTF(" %d %d %d %d (%d,%d) \n", this, event->widget, event->widgetSupports, 
-//       event->message, event->point.x, event->point.y);
+//PRINTF((" %d %d %d %d (%d,%d) \n", this, event->widget, event->widgetSupports, 
+//       event->message, event->point.x, event->point.y));
 
   // Hold a refcount to the observer. The continued existence of the observer will
   // delay deletion of this view hierarchy should the event want to cause its
@@ -375,8 +375,8 @@ NS_IMETHODIMP nsView :: HandleEvent(nsGUIEvent *event, PRUint32 aEventFlags,
      we are not visible. -EDV
   else if (mVis == nsViewVisibility_kHide) {
       nsIFrame* frame = (nsIFrame*)mClientData;
-      printf("Throwing away=%d %d %d (%d,%d) \n", this, event->widget, 
-              event->message, event->point.x, event->point.y);
+      PRINTF(("Throwing away=%d %d %d (%d,%d) \n", this, event->widget, 
+              event->message, event->point.x, event->point.y));
 
   }
   */
@@ -488,7 +488,7 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
       else if (bounds.width == width && bounds.height == bounds.height)
          mVFlags &= ~NS_VIEW_PUBLIC_FLAG_WIDGET_RESIZED;
       else {
-      PRINTF("%d) SetBounds(%d,%d,%d,%d)\n", this, x, y, width, height);
+      PRINTF(("%d) SetBounds(%d,%d,%d,%d)\n", this, x, y, width, height));
          mWindow->Resize(x,y,width,height, PR_TRUE);
          mVFlags &= ~NS_VIEW_PUBLIC_FLAG_WIDGET_RESIZED;
          mVFlags &= ~NS_VIEW_PUBLIC_FLAG_WIDGET_MOVED;
@@ -507,7 +507,7 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
       mWindow->GetBounds(bounds);
 
       if (bounds.width != width || bounds.height != bounds.height) {
-        PRINTF("%d) Resize(%d,%d)\n", this, width, height);
+        PRINTF(("%d) Resize(%d,%d)\n", this, width, height));
         mWindow->Resize(width,height, PR_TRUE);
       }
 
@@ -529,7 +529,7 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
       mWindow->GetBounds(bounds);
       
       if (bounds.x != x || bounds.y != y) {
-        PRINTF("%d) Move(%d,%d)\n", this, x, y);
+        PRINTF(("%d) Move(%d,%d)\n", this, x, y));
          mWindow->Move(x,y);
       }
 

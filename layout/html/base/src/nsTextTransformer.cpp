@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTextTransformerLog)
-#define PRINTF NS_LOG_PRINTF(nsTextTransformerLog)
-#define FLUSH  NS_LOG_FLUSH(nsTextTransformerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTextTransformerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTextTransformerLog)
 
 nsAutoTextBuffer::nsAutoTextBuffer()
   : mBuffer(mAutoBuffer),
@@ -1419,8 +1419,8 @@ nsTextTransformer::SelfTest(nsILineBreaker* aLineBreaker,
       // Do forwards test
       if (gNoisy) {
         nsAutoString uc2(st->text);
-        PRINTF("%s forwards test: '%s", isAsciiTest ? "ascii" : "unicode", uc2);
-        PRINTF("'\n");
+        PRINTF(("%s forwards test: '%s", isAsciiTest ? "ascii" : "unicode", uc2));
+        PRINTF(("'\n"));
       }
       tx.Init2(&frag, 0, preModeValue[preMode], NS_STYLE_TEXT_TRANSFORM_NONE);
 
@@ -1430,10 +1430,10 @@ nsTextTransformer::SelfTest(nsILineBreaker* aLineBreaker,
       while ((bp = tx.GetNextWord(PR_FALSE, &wordLen, &contentLen, &ws, &transformed))) {
         if (gNoisy) {
           nsCAutoString tmp; tmp.AssignWithConversion(bp, wordLen);
-          PRINTF("  '%s", (const char*)tmp);
-          PRINTF("': ws=%s wordLen=%d (%d) contentLen=%d (offset=%d)\n",
+          PRINTF(("  '%s", (const char*)tmp));
+          PRINTF(("': ws=%s wordLen=%d (%d) contentLen=%d (offset=%d)\n",
                  ws ? "yes" : "no",
-                 wordLen, *expectedResults, contentLen, tx.mOffset);
+                 wordLen, *expectedResults, contentLen, tx.mOffset));
         }
         if (*expectedResults != wordLen) {
           error = PR_TRUE;
@@ -1450,8 +1450,8 @@ nsTextTransformer::SelfTest(nsILineBreaker* aLineBreaker,
       // Do backwards test
       if (gNoisy) {
         nsAutoString uc2(st->text);
-        PRINTF("%s backwards test: '%s", isAsciiTest ? "ascii" : "unicode", uc2);
-        PRINTF("'\n");
+        PRINTF(("%s backwards test: '%s", isAsciiTest ? "ascii" : "unicode", uc2));
+        PRINTF(("'\n"));
       }
       tx.Init2(&frag, frag.GetLength(), NS_STYLE_WHITESPACE_NORMAL,
                NS_STYLE_TEXT_TRANSFORM_NONE);
@@ -1460,10 +1460,10 @@ nsTextTransformer::SelfTest(nsILineBreaker* aLineBreaker,
         --expectedResults;
         if (gNoisy) {
           nsCAutoString tmp; tmp.AssignWithConversion(bp, wordLen);
-          PRINTF("  '%s", (const char*)tmp);
-          PRINTF("': ws=%s wordLen=%d contentLen=%d (offset=%d)\n",
+          PRINTF(("  '%s", (const char*)tmp));
+          PRINTF(("': ws=%s wordLen=%d contentLen=%d (offset=%d)\n",
                  ws ? "yes" : "no",
-                 wordLen, contentLen, tx.mOffset);
+                 wordLen, contentLen, tx.mOffset));
         }
         if (*expectedResults != wordLen) {
           error = PR_TRUE;
@@ -1477,7 +1477,7 @@ nsTextTransformer::SelfTest(nsILineBreaker* aLineBreaker,
       }
 
       if (error) {
-        PRINTF("nsTextTransformer: self test %d failed\n", testNum);
+        PRINTF(("nsTextTransformer: self test %d failed\n", testNum));
       }
       testNum++;
     }

@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDeviceContextSpecFactoryWLog)
-#define PRINTF NS_LOG_PRINTF(nsDeviceContextSpecFactoryWLog)
-#define FLUSH  NS_LOG_FLUSH(nsDeviceContextSpecFactoryWLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDeviceContextSpecFactoryWLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDeviceContextSpecFactoryWLog)
 
 nsDeviceContextSpecFactoryWin :: nsDeviceContextSpecFactoryWin()
 {
@@ -103,7 +103,7 @@ NS_IMETHODIMP nsDeviceContextSpecFactoryWin :: CreateDeviceContextSpec(nsIDevice
     PL_strcpy(device, &(((char *)devnames)[devnames->wDeviceOffset]));
     PL_strcpy(driver, &(((char *)devnames)[devnames->wDriverOffset]));
 
-    PRINTF("printer: driver %s, device %s\n", driver, device);
+    PRINTF(("printer: driver %s, device %s\n", driver, device));
 
     nsIDeviceContextSpec  *devspec = nsnull;
 

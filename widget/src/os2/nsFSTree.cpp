@@ -48,8 +48,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFSTreeLog)
-#define PRINTF NS_LOG_PRINTF(nsFSTreeLog)
-#define FLUSH  NS_LOG_FLUSH(nsFSTreeLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFSTreeLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFSTreeLog)
 
 // helper Dos* style functions
 APIRET DosQueryNumDrives( PULONG cDrives);
@@ -466,7 +466,7 @@ void fsTree::SendMsg( fsDir *aDir, RQPacket::Cmd aCmd)
    APIRET rc = mRQQueue.Write( &packet);
 
    if( rc)
-       PRINTF( "ERROR: fsTree::SendMsg (RQ) rc = %d\n", (int)rc);
+       PRINTF(( "ERROR: fsTree::SendMsg (RQ) rc = %d\n", (int)rc));
 }
 
 void fsTree::SendMsg( fsDir *aDir, CBPacket::Cmd aCmd)
@@ -475,7 +475,7 @@ void fsTree::SendMsg( fsDir *aDir, CBPacket::Cmd aCmd)
    APIRET rc = mCBQueue.Write( &packet);
 
    if( rc)
-       PRINTF( "ERROR: fsTree::SendMsg (CB 1) rc = %d\n", (int)rc);
+       PRINTF(( "ERROR: fsTree::SendMsg (CB 1) rc = %d\n", (int)rc));
 }
 
 void fsTree::SendMsg( fsFile *aFile, CBPacket::Cmd aCmd)
@@ -484,7 +484,7 @@ void fsTree::SendMsg( fsFile *aFile, CBPacket::Cmd aCmd)
    APIRET rc = mCBQueue.Write( &packet);
 
    if( rc)
-       PRINTF( "ERROR: fsTree::SendMsg (CB 2) rc = %d\n", (int)rc);
+       PRINTF(( "ERROR: fsTree::SendMsg (CB 2) rc = %d\n", (int)rc));
 }
 
 void fsTree::SendCompleteMsg()
@@ -493,7 +493,7 @@ void fsTree::SendCompleteMsg()
    APIRET rc = mCBQueue.Write( &packet);
 
    if( rc)
-       PRINTF( "ERROR: fsTree::SendMsg (CB 3) rc = %d\n", (int)rc);
+       PRINTF(( "ERROR: fsTree::SendMsg (CB 3) rc = %d\n", (int)rc));
 }
 
 // Scanner thread ---------------------------------------------------------------
@@ -521,7 +521,7 @@ void fsTree::Scan()
       APIRET rc = mRQQueue.Read( &pkt);
       if( rc)
       {
-          PRINTF( "scanThread got rc %d, quitting\n", (int)rc);
+          PRINTF(( "scanThread got rc %d, quitting\n", (int)rc));
          break;
       }
 
@@ -788,7 +788,7 @@ void fsTree::Notify()
       APIRET rc = mCBQueue.Read( &pkt);
       if( rc)
       {
-          PRINTF( "notifyThread got rc %d, quitting\n", (int)rc);
+          PRINTF(( "notifyThread got rc %d, quitting\n", (int)rc));
          break;
       }
 

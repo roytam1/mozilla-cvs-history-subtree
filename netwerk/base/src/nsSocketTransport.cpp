@@ -55,8 +55,8 @@
 // the file nspr.log
 //
 NS_IMPL_LOG(nsSocketTransportLog)
-#define PRINTF NS_LOG_PRINTF(nsSocketTransportLog)
-#define FLUSH  NS_LOG_FLUSH(nsSocketTransportLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSocketTransportLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSocketTransportLog)
 
 static NS_DEFINE_CID(kSocketProviderService, NS_SOCKETPROVIDERSERVICE_CID);
 static NS_DEFINE_CID(kDNSService, NS_DNSSERVICE_CID);
@@ -298,7 +298,7 @@ nsresult nsSocketTransport::Init(nsSocketTransportService* aService,
                 const char * socketType = aSocketTypes[type];
                 
                 if (socketType == nsnull) continue;
-                PRINTF("pushing io layer: %s\n", socketType);
+                PRINTF(("pushing io layer: %s\n", socketType));
                 mSocketTypes[mSocketTypeCount] = nsCRT::strdup(socketType);
                 if (!mSocketTypes[mSocketTypeCount])
                 {

@@ -26,8 +26,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsWindowsHooksUtilLog)
-#define PRINTF NS_LOG_PRINTF(nsWindowsHooksUtilLog)
-#define FLUSH  NS_LOG_FLUSH(nsWindowsHooksUtilLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWindowsHooksUtilLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWindowsHooksUtilLog)
 
 // Where Mozilla stores its own registry values.
 const char * const mozillaKeyName = "Software\\Mozilla\\Desktop";
@@ -230,7 +230,7 @@ PRBool RegistryEntry::isAlreadySet() const {
 // Gives registry entry the desired setting.
 nsresult RegistryEntry::set() {
 #ifdef DEBUG_law
-  PRINTF( "Setting %s=%s\n", (const char*)fullName(), (const char*)setting );
+  PRINTF(( "Setting %s=%s\n", (const char*)fullName(), (const char*)setting ));
 #endif
     nsresult result = NS_ERROR_FAILURE;
 

@@ -111,8 +111,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsHTMLDocumentLog)
-#define PRINTF NS_LOG_PRINTF(nsHTMLDocumentLog)
-#define FLUSH  NS_LOG_FLUSH(nsHTMLDocumentLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsHTMLDocumentLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsHTMLDocumentLog)
 
 
 #define DETECTOR_CONTRACTID_MAX 127
@@ -571,7 +571,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
             {
 #ifdef DEBUG_charset
  							char* cCharset = charset.ToNewCString();
-							PRINTF("From HTTP Header, charset = %s\n", cCharset);
+							PRINTF(("From HTTP Header, charset = %s\n", cCharset));
  							Recycle(cCharset);
  #endif
               charset = preferred;
@@ -715,7 +715,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 #ifdef DEBUG_charset
    		nsAutoString d(defaultCharsetFromWebShell);
  			char* cCharset = d.ToNewCString();
- 			PRINTF("From default charset, charset = %s\n", cCharset);
+ 			PRINTF(("From default charset, charset = %s\n", cCharset));
  			Recycle(cCharset);
  #endif
         charset = defaultCharsetFromWebShell;
@@ -740,8 +740,8 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 #ifdef DEBUG_charset
 				nsAutoString d(requestCharset);
 			  char* cCharset = d.ToNewCString();
-			  PRINTF("From request charset, charset = %s req=%d->%d\n", 
-			  		cCharset, charsetSource, requestCharsetSource);
+			  PRINTF(("From request charset, charset = %s req=%d->%d\n", 
+			  		cCharset, charsetSource, requestCharsetSource));
 			  Recycle(cCharset);
 #endif
         charsetSource = requestCharsetSource;
@@ -760,7 +760,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 #ifdef DEBUG_charset
 				nsAutoString d(forceCharsetFromWebShell);
 			  char* cCharset = d.ToNewCString();
-			  PRINTF("From force, charset = %s \n", cCharset);
+			  PRINTF(("From force, charset = %s \n", cCharset));
 			  Recycle(cCharset);
 #endif
 				charset = forceCharsetFromWebShell;
@@ -865,7 +865,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
           csAtom->ToString(charset);
           charsetSource = kCharsetFromParentFrame;  
 
-          // PRINTF("### 0 >>> Having parent CS = %s\n", charset.ToNewCString());
+          // PRINTF(("### 0 >>> Having parent CS = %s\n", charset.ToNewCString()));
         }
       }
     }
@@ -939,8 +939,8 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
 #ifdef DEBUG_charset
 	  char* cCharset = charset.ToNewCString();
-	  PRINTF("set to parser charset = %s source %d\n", 
-		  		cCharset, charsetSource);
+	  PRINTF(("set to parser charset = %s source %d\n", 
+		  		cCharset, charsetSource));
 				  Recycle(cCharset);
 #endif
     mParser->SetDocumentCharset( charset, charsetSource);
@@ -3724,7 +3724,7 @@ void printDOMRefs(nsIDOMNode * aNode, PRInt32 aLevel)
 
   PRInt32 i;
   for (i=0;i<aLevel;i++) {
-    PRINTF(".");
+    PRINTF(("."));
   }
 
   nsIDOMElement* domElement;
@@ -3753,7 +3753,7 @@ void printDOMRefs(nsIDOMNode * aNode, PRInt32 aLevel)
     }
   }
 
-  PRINTF("[%s] (0x%x)\n", (cStr?cStr:"<?>"), aNode);
+  PRINTF(("[%s] (0x%x)\n", (cStr?cStr:"<?>"), aNode));
   delete[] cStr;
 
   PRBool hasChildren;

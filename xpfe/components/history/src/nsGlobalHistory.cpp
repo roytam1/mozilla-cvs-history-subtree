@@ -65,8 +65,8 @@ NS_IMPL_LOG_ENABLED(nsGlobalHistoryLog)
 #else
 NS_IMPL_LOG(nsGlobalHistoryLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsGlobalHistoryLog)
-#define FLUSH  NS_LOG_FLUSH(nsGlobalHistoryLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsGlobalHistoryLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsGlobalHistoryLog)
 
 PRInt32 nsGlobalHistory::gRefCnt;
 nsIRDFService* nsGlobalHistory::gRDFService;
@@ -683,7 +683,7 @@ nsGlobalHistory::SaveLastPageVisited(const char *aURL)
 
   rv = prefs->SetCharPref(BROWSER_HISTORY_LAST_PAGE_VISITED_PREF, aURL);
 
-  PRINTF("XXX saving last page visited as: %s\n", aURL);
+  PRINTF(("XXX saving last page visited as: %s\n", aURL));
 
   return rv;
 }
@@ -704,7 +704,7 @@ nsGlobalHistory::GetLastPageVisted(char **_retval)
 
   *_retval = nsCRT::strdup((const char *)lastPageVisited);
 
-  PRINTF("XXX getting last page visited as: %s\n", (const char *)lastPageVisited);
+  PRINTF(("XXX getting last page visited as: %s\n", (const char *)lastPageVisited));
 
   return NS_OK;
 }

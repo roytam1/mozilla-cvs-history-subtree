@@ -43,8 +43,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsWidgetLog)
-#define PRINTF NS_LOG_PRINTF(nsWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(nsWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWidgetLog)
 
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
@@ -1337,11 +1337,11 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 //              GetBounds(rect);
 //              if (rect.Contains(event.point.x, event.point.y)) {
 //              if (mCurrentWindow == NULL || mCurrentWindow != this) {
-//              PRINTF("Mouse enter");
+//              PRINTF(("Mouse enter"));
 //              mCurrentWindow = this;
 //              }
 //              } else {
-//              PRINTF("Mouse exit");
+//              PRINTF(("Mouse exit"));
 //              }
           }
           break;

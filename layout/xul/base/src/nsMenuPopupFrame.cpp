@@ -54,8 +54,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMenuPopupFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsMenuPopupFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsMenuPopupFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMenuPopupFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMenuPopupFrameLog)
 
 static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
@@ -179,7 +179,7 @@ nsMenuPopupFrame::Init(nsIPresContext*  aPresContext,
   // XXX make sure we are hidden (shouldn't this be done automatically?)
   ourView->SetVisibility(nsViewVisibility_kHide);
 #ifdef XP_MAC
-  PRINTF("XP Popups: This is a nag to indicate that an inconsistent hack is being done on the Mac for popups.\n");
+  PRINTF(("XP Popups: This is a nag to indicate that an inconsistent hack is being done on the Mac for popups.\n"));
   static NS_DEFINE_IID(kCPopupCID,  NS_POPUP_CID);
   ourView->CreateWidget(kCPopupCID, &widgetData, nsnull);
 #else

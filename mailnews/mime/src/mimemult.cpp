@@ -33,8 +33,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(mimemultLog)
-#define PRINTF NS_LOG_PRINTF(mimemultLog)
-#define FLUSH  NS_LOG_FLUSH(mimemultLog)
+#define PRINTF(args) NS_LOG_PRINTF(mimemultLog, args)
+#define FLUSH()      NS_LOG_FLUSH(mimemultLog)
 
 #define MIME_SUPERCLASS mimeContainerClass
 MimeDefClass(MimeMultipart, MimeMultipartClass,
@@ -592,18 +592,18 @@ MimeMultipart_debug_print (MimeObject *obj, PRFileDesc *stream, PRInt32 depth)
   for (i=0; i < depth; i++)
 	PR_Write(stream, "  ", 2);
 /**
-  FPRINTF(stream, "<%s %s (%d kid%s) boundary=%s 0x%08X>\n",
+  FPRINTF((stream, "<%s %s (%d kid%s) boundary=%s 0x%08X>\n",
 		  obj->clazz->class_name,
 		  addr ? addr : "???",
 		  cont->nchildren, (cont->nchildren == 1 ? "" : "s"),
 		  (mult->boundary ? mult->boundary : "(none)"),
-		  (PRUint32) mult);
+		  (PRUint32) mult));
 **/
   PR_FREEIF(addr);
 
 /*
   if (cont->nchildren > 0)
-  FPRINTF(stream, "\n");
+  FPRINTF((stream, "\n"));
  */
 
   for (i = 0; i < cont->nchildren; i++)
@@ -615,7 +615,7 @@ MimeMultipart_debug_print (MimeObject *obj, PRFileDesc *stream, PRInt32 depth)
 
 /*
   if (cont->nchildren > 0)
-  FPRINTF(stream, "\n");
+  FPRINTF((stream, "\n"));
  */
 
   return 0;

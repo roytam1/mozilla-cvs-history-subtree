@@ -76,8 +76,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(testLog)
-#define PRINTF NS_LOG_PRINTF(testLog)
-#define FLUSH  NS_LOG_FLUSH(testLog)
+#define PRINTF(args) NS_LOG_PRINTF(testLog, args)
+#define FLUSH()      NS_LOG_FLUSH(testLog)
 
 /////////////////////////////////////////////////////////////////////////////////
 // Define keys for all of the interfaces we are going to require for this test
@@ -109,14 +109,14 @@ int main(int argc, char *argv[])
 
 	if (NS_FAILED(rv)) 
   {
-      PRINTF("Failed to get event queue\n");
+      PRINTF(("Failed to get event queue\n"));
     return rv;
   }
 
   rv = pEventQService->CreateThreadEventQueue();
 	if (NS_FAILED(rv)) 
   {
-      PRINTF("Failed to create event queue\n");
+      PRINTF(("Failed to create event queue\n"));
     return rv;
   }
 
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     }
  if (NS_FAILED(prefs->ReadUserPrefs()))
  {
-     PRINTF("Failed on reading user prefs!\n");
+     PRINTF(("Failed on reading user prefs!\n"));
    exit(-1);
  }
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
   NS_WITH_SERVICE(nsIMsgAccountManager, accountManager, NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
   if (NS_FAILED(rv)) 
   {
-      PRINTF("Failure getting Mail Session!\n");
+      PRINTF(("Failure getting Mail Session!\n"));
     return rv;
   }  
 
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
                                   (void **)getter_AddRefs(identity));
   if (NS_FAILED(rv)) 
   {
-      PRINTF("Failure getting Identity!\n");
+      PRINTF(("Failure getting Identity!\n"));
     return rv;
   }  
   
@@ -163,12 +163,12 @@ int main(int argc, char *argv[])
                                           (void **) getter_AddRefs(pMsgSendLater)); 
   if (NS_SUCCEEDED(rv) && pMsgSendLater) 
   { 
-      PRINTF("We succesfully obtained a nsIMsgSendLater interface....\n");    
+      PRINTF(("We succesfully obtained a nsIMsgSendLater interface....\n"));    
     pMsgSendLater->SendUnsentMessages(identity, nsnull);
   }
 
 #if defined(XP_PC) && !defined(XP_OS2)
-  PRINTF("Sitting in an event processing loop ...Hit Cntl-C to exit...");
+  PRINTF(("Sitting in an event processing loop ...Hit Cntl-C to exit..."));
   while (1)
   {
     MSG msg;

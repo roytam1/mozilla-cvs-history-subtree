@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsGtkIMEHelperLog)
-#define PRINTF NS_LOG_PRINTF(nsGtkIMEHelperLog)
-#define FLUSH  NS_LOG_FLUSH(nsGtkIMEHelperLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsGtkIMEHelperLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsGtkIMEHelperLog)
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
@@ -337,13 +337,13 @@ nsIMEPreedit::IMSetTextRange(const PRInt32 aLen,
   END_OFFSET(count) = aLen;
 
 #ifdef  NOISY_XIM
-  PRINTF("IMSetTextRange()\n");
+  PRINTF(("IMSetTextRange()\n"));
   for (i = 0; i < *textRangeListLengthResult; i++) {
-    PRINTF("	i=%d start=%d end=%d attr=%d\n",
+    PRINTF(("	i=%d start=%d end=%d attr=%d\n",
 	   i,
 	   (*textRangeListResult)[i].mStartOffset,
 	   (*textRangeListResult)[i].mEndOffset,
-           (*textRangeListResult)[i].mRangeType);
+           (*textRangeListResult)[i].mRangeType));
   }
 #endif /* NOISY_XIM */
 }
@@ -565,7 +565,7 @@ nsIMEStatus::CreateNative() {
   }
 
   if (!mFontset) {
-    PRINTF("Error : XCreateFontSet() !\n");
+    PRINTF(("Error : XCreateFontSet() !\n"));
     return;
   }
   int screen = DefaultScreen(display);

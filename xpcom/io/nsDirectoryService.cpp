@@ -60,8 +60,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDirectoryServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsDirectoryServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsDirectoryServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDirectoryServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDirectoryServiceLog)
 
 #ifdef XP_MAC
 #define COMPONENT_REGISTRY_NAME "Component Registry"

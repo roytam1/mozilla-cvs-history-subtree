@@ -32,8 +32,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsBufferManagerLog)
-#define PRINTF NS_LOG_PRINTF(nsBufferManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsBufferManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsBufferManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsBufferManagerLog)
 
 
 #define NS_MEMORY_ERROR 1000
@@ -1435,7 +1435,7 @@ void SVDebugDump(const nsStringValueImpl<CharType> &aString) {
   while(cp<end_cp) {
     if(outp==outendp) {
       *outp=0; //write null
-      PRINTF("%s",theBuffer);
+      PRINTF(("%s",theBuffer));
       outp=theBuffer;
       cp--;
     }
@@ -1445,7 +1445,7 @@ void SVDebugDump(const nsStringValueImpl<CharType> &aString) {
     cp++;
   } //while
   *outp=0; //force a null
-  PRINTF("%s",theBuffer);
+  PRINTF(("%s",theBuffer));
 
 }
 

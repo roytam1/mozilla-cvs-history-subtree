@@ -26,8 +26,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(xptiInterfaceInfoManagerLog)
-#define PRINTF NS_LOG_PRINTF(xptiInterfaceInfoManagerLog)
-#define FLUSH  NS_LOG_FLUSH(xptiInterfaceInfoManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(xptiInterfaceInfoManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(xptiInterfaceInfoManagerLog)
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(xptiInterfaceInfoManager, nsIInterfaceInfoManager)
 
@@ -100,11 +100,11 @@ xptiInterfaceInfoManager::xptiInterfaceInfoManager()
         if(mStatsLogFile && 
            NS_SUCCEEDED(mStatsLogFile->InitWithPath(statsFilename)))
         {
-            PRINTF("* Logging xptinfo stats to: %s\n", statsFilename);
+            PRINTF(("* Logging xptinfo stats to: %s\n", statsFilename));
         }
         else
         {
-            PRINTF("* Failed to create xptinfo stats file: %s\n", statsFilename);
+            PRINTF(("* Failed to create xptinfo stats file: %s\n", statsFilename));
             mStatsLogFile = nsnull;
         }
     }
@@ -116,11 +116,11 @@ xptiInterfaceInfoManager::xptiInterfaceInfoManager()
         if(mAutoRegLogFile && 
            NS_SUCCEEDED(mAutoRegLogFile->InitWithPath(autoRegFilename)))
         {
-            PRINTF("* Logging xptinfo autoreg to: %s\n", autoRegFilename);
+            PRINTF(("* Logging xptinfo autoreg to: %s\n", autoRegFilename));
         }
         else
         {
-            PRINTF("* Failed to create xptinfo autoreg file: %s\n", autoRegFilename);
+            PRINTF(("* Failed to create xptinfo autoreg file: %s\n", autoRegFilename));
             mAutoRegLogFile = nsnull;
         }
     }
@@ -846,7 +846,7 @@ xptiInterfaceInfoManager::DoFullValidationMergeFromFileList(nsISupportsArray* aF
                               name, aWorkingSet);
         nsMemory::Free(name);
 
-//        PRINTF("* found %s\n", fileRecord.GetName());
+//        PRINTF(("* found %s\n", fileRecord.GetName()));
 
 
         if(xptiFileType::IsXPT(fileRecord.GetName()))
@@ -1284,7 +1284,7 @@ xptiInterfaceInfoManager::DEBUG_DumpFileList(nsISupportsArray* aFileList)
         if(NS_FAILED(file->GetLeafName(&name)))
             return PR_FALSE;
 
-        PRINTF("* found %s\n", name);
+        PRINTF(("* found %s\n", name));
         nsMemory::Free(name);
     }
     return PR_TRUE;
@@ -1297,7 +1297,7 @@ xptiInterfaceInfoManager::DEBUG_DumpFileListInWorkingSet(xptiWorkingSet* aWorkin
     {
         xptiFile& record = aWorkingSet->GetFileAt(i);
     
-        PRINTF("! has %s\n", record.GetName());
+        PRINTF(("! has %s\n", record.GetName()));
     }        
     return PR_TRUE;
 }        
@@ -1315,7 +1315,7 @@ xptiInterfaceInfoManager::DEBUG_DumpFileArray(nsILocalFile** aFileArray,
         if(NS_FAILED(file->GetLeafName(&name)))
             return PR_FALSE;
 
-        PRINTF("found file: %s\n", name);
+        PRINTF(("found file: %s\n", name));
         nsMemory::Free(name);
     }        
     return PR_TRUE;        

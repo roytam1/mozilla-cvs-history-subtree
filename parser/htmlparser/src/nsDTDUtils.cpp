@@ -32,8 +32,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDTDUtilsLog)
-#define PRINTF NS_LOG_PRINTF(nsDTDUtilsLog)
-#define FLUSH  NS_LOG_FLUSH(nsDTDUtilsLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDTDUtilsLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDTDUtilsLog)
 
 MOZ_DECL_CTOR_COUNTER(nsEntryStack);
 MOZ_DECL_CTOR_COUNTER(nsDTDContext);
@@ -1342,7 +1342,7 @@ CNodeRecycler::~CNodeRecycler() {
 #if 1
   PRInt32 count=gNodeCount-mSharedNodes.GetSize();
   if(count) {
-    PRINTF("%i of %i nodes leaked!\n",count,gNodeCount);
+    PRINTF(("%i of %i nodes leaked!\n",count,gNodeCount));
   }
 #endif
 #endif

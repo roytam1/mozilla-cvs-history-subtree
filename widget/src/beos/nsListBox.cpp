@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsListBoxLog)
-#define PRINTF NS_LOG_PRINTF(nsListBoxLog)
-#define FLUSH  NS_LOG_FLUSH(nsListBoxLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsListBoxLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsListBoxLog)
 
 
 NS_IMPL_ADDREF(nsListBox)
@@ -94,7 +94,7 @@ PRInt32  nsListBox::FindItem(nsString &aItem, PRInt32 aStartPos)
 
   return index;
 #endif
-	PRINTF("nsListBox::FindItem not implemented\n");
+	PRINTF(("nsListBox::FindItem not implemented\n"));
 	return -1;
 }
 
@@ -375,7 +375,7 @@ NS_METHOD nsListBox::GetBounds(nsRect &aRect)
 #if 0
   nsWindow::GetNonClientBounds(aRect);
 #endif
-  PRINTF("nsListBox::GetBounds not wrong\n");	// the following is just a placeholder
+  PRINTF(("nsListBox::GetBounds not wrong\n"));	// the following is just a placeholder
   nsWindow::GetClientBounds(aRect);
   return NS_OK;
 }

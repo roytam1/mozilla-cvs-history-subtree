@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(DeleteElementTxnLog)
-#define PRINTF NS_LOG_PRINTF(DeleteElementTxnLog)
-#define FLUSH  NS_LOG_FLUSH(DeleteElementTxnLog)
+#define PRINTF(args) NS_LOG_PRINTF(DeleteElementTxnLog, args)
+#define FLUSH()      NS_LOG_FLUSH(DeleteElementTxnLog)
 
 DeleteElementTxn::DeleteElementTxn()
   : EditTxn()
@@ -55,7 +55,7 @@ DeleteElementTxn::~DeleteElementTxn()
 
 NS_IMETHODIMP DeleteElementTxn::Do(void)
 {
-  PRINTF("%p Do Delete Element element = %p\n", this, mElement.get());
+  PRINTF(("%p Do Delete Element element = %p\n", this, mElement.get()));
   if (!mElement) return NS_ERROR_NOT_INITIALIZED;
 
   nsresult result = mElement->GetParentNode(getter_AddRefs(mParent));
@@ -79,7 +79,7 @@ NS_IMETHODIMP DeleteElementTxn::Do(void)
   p = parentElementTag.ToNewCString();
   if (c&&p)
   {
-    PRINTF("  DeleteElementTxn:  deleting child %s from parent %s\n", c, p); 
+    PRINTF(("  DeleteElementTxn:  deleting child %s from parent %s\n", c, p)); 
     nsCRT::free(c);
     nsCRT::free(p);
   }
@@ -96,7 +96,7 @@ NS_IMETHODIMP DeleteElementTxn::Do(void)
 
 NS_IMETHODIMP DeleteElementTxn::Undo(void)
 {
-  PRINTF("%p Undo Delete Element element = %p, parent = %p\n", this, mElement.get(), mParent.get());
+  PRINTF(("%p Undo Delete Element element = %p, parent = %p\n", this, mElement.get(), mParent.get()));
   if (!mParent) { return NS_OK; } // this is a legal state, the txn is a no-op
   if (!mElement) { return NS_ERROR_NULL_POINTER; }
 
@@ -117,7 +117,7 @@ NS_IMETHODIMP DeleteElementTxn::Undo(void)
   p = parentElementTag.ToNewCString();
   if (c&&p)
   {
-    PRINTF("  DeleteElementTxn:  inserting child %s back into parent %s\n", c, p); 
+    PRINTF(("  DeleteElementTxn:  inserting child %s back into parent %s\n", c, p)); 
     nsCRT::free(c);
     nsCRT::free(p);
   }
@@ -131,7 +131,7 @@ NS_IMETHODIMP DeleteElementTxn::Undo(void)
 
 NS_IMETHODIMP DeleteElementTxn::Redo(void)
 {
-  PRINTF("%p Redo Delete Element element = %p, parent = %p\n", this, mElement.get(), mParent.get());
+  PRINTF(("%p Redo Delete Element element = %p, parent = %p\n", this, mElement.get(), mParent.get()));
   if (!mParent) { return NS_OK; } // this is a legal state, the txn is a no-op
   if (!mElement) { return NS_ERROR_NULL_POINTER; }
 

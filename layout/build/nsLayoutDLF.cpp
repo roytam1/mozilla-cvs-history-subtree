@@ -42,8 +42,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLayoutDLFLog)
-#define PRINTF NS_LOG_PRINTF(nsLayoutDLFLog)
-#define FLUSH  NS_LOG_FLUSH(nsLayoutDLFLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLayoutDLFLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLayoutDLFLog)
 
 #define VIEW_SOURCE_HTML
 
@@ -244,7 +244,7 @@ nsLayoutDLF::CreateInstance(const char *aCommand,
       }
     }
     if (NS_FAILED(rv)) {
-      PRINTF("*** open of %s failed: error=%x\n", UA_CSS_URL, rv);
+      PRINTF(("*** open of %s failed: error=%x\n", UA_CSS_URL, rv));
       return rv;
     }
   }
@@ -358,7 +358,7 @@ nsLayoutDLF::CreateDocument(const char* aCommand,
     nsAutoString tmp;
     aURL->ToString(tmp);
     fputs(tmp, stdout);
-    PRINTF(": creating document\n");
+    PRINTF((": creating document\n"));
   }
 #endif
 
@@ -534,7 +534,7 @@ RegisterTypes(nsIComponentManager* aCompMgr,
                 NS_DOCUMENT_LOADER_FACTORY_CONTRACTID_PREFIX "%s;1?type=%s",
                 aCommand, contentType);
 #ifdef NOISY_REGISTRY
-    PRINTF("Register %s => %s\n", contractid, aPath);
+    PRINTF(("Register %s => %s\n", contractid, aPath));
 #endif
     rv = aCompMgr->RegisterComponentSpec(kDocumentFactoryImplCID, "Layout",
                                          contractid, aPath, PR_TRUE, PR_TRUE);

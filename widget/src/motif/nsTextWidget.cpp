@@ -32,8 +32,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTextWidgetLog)
-#define PRINTF NS_LOG_PRINTF(nsTextWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(nsTextWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTextWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTextWidgetLog)
 
 extern int mIsPasswordCallBacksInstalled;
 
@@ -74,11 +74,11 @@ NS_METHOD nsTextWidget::Create(nsIWidget *aParent,
                                nsIToolkit *aToolkit,
                                nsWidgetInitData *aInitData)
 {
-  PRINTF("nsTextWidget::Create called\n");
+  PRINTF(("nsTextWidget::Create called\n"));
   aParent->AddChild(this);
   Widget parentWidget = nsnull;
 
-  PRINTF("aParent 0x%x\n", (unsigned int)aParent);
+  PRINTF(("aParent 0x%x\n", (unsigned int)aParent));
 
   if (aParent) {
     parentWidget = (Widget) aParent->GetNativeData(NS_NATIVE_WIDGET);

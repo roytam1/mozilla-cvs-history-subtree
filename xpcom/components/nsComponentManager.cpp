@@ -87,8 +87,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsComponentManagerLog)
-#define PRINTF NS_LOG_PRINTF(nsComponentManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsComponentManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsComponentManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsComponentManagerLog)
 
 // Enable printing of critical errors on screen even for release builds
 #define PRINT_CRITICAL_ERROR_TO_SCREEN
@@ -901,7 +901,7 @@ nsresult nsComponentManagerImpl::PlatformPrePopulateRegistry()
         // put the {contractid, Cid} mapping into our map
         nsCStringKey key(contractidString);
         mContractIDs->Put(&key, aClass);
-        //  PRINTF("Populating [ %s, %s ]\n", cidString, contractidString);
+        //  PRINTF(("Populating [ %s, %s ]\n", cidString, contractidString));
     }
 
     (void)mRegistry->SetBufferSize( 10*1024 );
@@ -1270,8 +1270,8 @@ MakeRegistryName(const char *aDllName, const char *prefix, char **regName)
     *regName = registryName;
 
 #ifdef DEBUG_shaver_off
-    PRINTF("MakeRegistryName(%s, %s, &[%s])\n",
-            aDllName, prefix, *regName);
+    PRINTF(("MakeRegistryName(%s, %s, &[%s])\n",
+            aDllName, prefix, *regName));
 #endif
 
     return NS_OK;
@@ -1833,7 +1833,7 @@ CanUnload_enumerate(nsHashKey *key, void *aData, void *aClosure)
     (struct CanUnload_closure *)aClosure;
 
     if (loader == closure->native) {
-        PRINTF("CanUnload_enumerate: skipping native\n");
+        PRINTF(("CanUnload_enumerate: skipping native\n"));
         return PR_TRUE;
     }
 

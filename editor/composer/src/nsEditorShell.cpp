@@ -129,8 +129,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsEditorShellLog)
-#define PRINTF NS_LOG_PRINTF(nsEditorShellLog)
-#define FLUSH  NS_LOG_FLUSH(nsEditorShellLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsEditorShellLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsEditorShellLog)
 
 ///////////////////////////////////////
 
@@ -564,7 +564,7 @@ nsEditorShell::PrepareDocumentForEditing(nsIDocumentLoader* aLoader, nsIURI *aUr
         temp++;
     }
 
-    PRINTF("PrepareDocumentForEditing: Editor is editing %s\n", pageURLString ? pageURLString : "");
+    PRINTF(("PrepareDocumentForEditing: Editor is editing %s\n", pageURLString ? pageURLString : ""));
 
      // only save the file spec if this is a local file, and is not              
      // about:blank                                                              
@@ -821,7 +821,7 @@ nsEditorShell::SetWebShellWindow(nsIDOMWindowInternal* aWin)
   nsAutoString str(name);
 
   char* cstr = str.ToNewCString();
-  PRINTF("Attaching to WebShellWindow[%s]\n", cstr);
+  PRINTF(("Attaching to WebShellWindow[%s]\n", cstr));
   nsCRT::free(cstr);
 #endif
 */
@@ -2618,7 +2618,7 @@ nsEditorShell::Rewrap(PRBool aRespectNewlines)
   if (NS_FAILED(rv))
     return NS_OK;
 #ifdef DEBUG_akkana
-  PRINTF("nsEditorShell::Rewrap to %ld columns\n", (long)wrapCol);
+  PRINTF(("nsEditorShell::Rewrap to %ld columns\n", (long)wrapCol));
 #endif
 
   nsCOMPtr<nsISelection> selection;
@@ -2682,7 +2682,7 @@ NS_IMETHODIMP
 nsEditorShell::StripCites()
 {
 #ifdef DEBUG_akkana
-  PRINTF("nsEditorShell::StripCites()\n");
+  PRINTF(("nsEditorShell::StripCites()\n"));
 #endif
 
   nsCOMPtr<nsISelection> selection;
@@ -5037,7 +5037,7 @@ nsEditorShell::RunUnitTests()
     err = editor->DebugUnitTests(&numTests, &numTestsFailed);
 
 #ifdef APP_DEBUG
-  PRINTF("\nRan %ld tests, of which %ld failed\n", (long)numTests, (long)numTestsFailed);
+  PRINTF(("\nRan %ld tests, of which %ld failed\n", (long)numTests, (long)numTestsFailed));
 #endif
 
   return NS_OK;
@@ -5388,7 +5388,7 @@ nsEditorShell::HandleMouseClickOnElement(nsIDOMElement *aElement, PRInt32 aClick
   TagName.ToLowerCase();
   char szTagName[64];
   TagName.ToCString(szTagName, 64);
-  PRINTF("***** Element clicked on: %s, x=%d, y=%d\n", szTagName, x, y);
+  PRINTF(("***** Element clicked on: %s, x=%d, y=%d\n", szTagName, x, y));
 #endif
 */
   if (mDisplayMode == eDisplayModeAllTags) 

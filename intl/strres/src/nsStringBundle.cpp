@@ -58,8 +58,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsStringBundleLog)
-#define PRINTF NS_LOG_PRINTF(nsStringBundleLog)
-#define FLUSH  NS_LOG_FLUSH(nsStringBundleLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsStringBundleLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsStringBundleLog)
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kStandardUrlCID, NS_STANDARDURL_CID);
@@ -109,7 +109,7 @@ nsStringBundle::nsStringBundle(const char* aURLSpec, nsILocale* aLocale, nsresul
   if (!in) {
 #ifdef NS_DEBUG
     if ( NS_OK == *aResult)
-      PRINTF("OpenBlockingStream returned success value, but pointer is NULL\n");
+      PRINTF(("OpenBlockingStream returned success value, but pointer is NULL\n"));
 #endif
     *aResult = NS_ERROR_UNEXPECTED;
     return;
@@ -118,7 +118,7 @@ nsStringBundle::nsStringBundle(const char* aURLSpec, nsILocale* aLocale, nsresul
   *aResult = nsComponentManager::CreateInstance(kPersistentPropertiesCID, NULL,
                                                 NS_GET_IID(nsIPersistentProperties), (void**) &mProps);
   if (NS_FAILED(*aResult)) {
-    PRINTF("create nsIPersistentProperties failed\n");
+    PRINTF(("create nsIPersistentProperties failed\n"));
     return;
   }
   *aResult = mProps->Load(in);
@@ -143,8 +143,8 @@ nsStringBundle::GetStringFromID(PRInt32 aID, nsString& aResult)
 
 #ifdef DEBUG_tao_
   char *s = aResult.ToNewCString();
-  PRINTF("\n** GetStringFromID: aResult=%s, len=%d\n", s?s:"null", 
-         aResult.Length());
+  PRINTF(("\n** GetStringFromID: aResult=%s, len=%d\n", s?s:"null", 
+         aResult.Length()));
   delete s;
 #endif /* DEBUG_tao_ */
 
@@ -161,8 +161,8 @@ nsStringBundle::GetStringFromName(const nsString& aName, nsString& aResult)
 #ifdef DEBUG_tao_
   char *s = aResult.ToNewCString(),
        *ss = aName.ToNewCString();
-  PRINTF("\n** GetStringFromName: aName=%s, aResult=%s, len=%d\n", 
-         ss?ss:"null", s?s:"null", aResult.Length());
+  PRINTF(("\n** GetStringFromName: aName=%s, aResult=%s, len=%d\n", 
+         ss?ss:"null", s?s:"null", aResult.Length()));
   delete s;
 #endif /* DEBUG_tao_ */
   return ret;
@@ -340,7 +340,7 @@ nsStringBundle::OpenInputStream(nsString& aURLStr, nsIInputStream*& in)
 #ifdef DEBUG_tao_
   {
     char *s = aURLStr.ToNewCString();
-    PRINTF("\n** nsStringBundle::OpenInputStream: %s\n", s?s:"null");
+    PRINTF(("\n** nsStringBundle::OpenInputStream: %s\n", s?s:"null"));
     delete s;
   }
 #endif
@@ -511,7 +511,7 @@ nsExtensibleStringBundle::nsExtensibleStringBundle(const char * aRegistryKey,
     res = mBundle->AppendElement(bundle);
     if (NS_FAILED(res)) goto done1;
 
-    // PRINTF("Name = %s\n", name);
+    // PRINTF(("Name = %s\n", name));
 
 done1:
     NS_IF_RELEASE(base);
@@ -674,7 +674,7 @@ nsStringBundleService::nsStringBundleService() :
   mBundleMap(MAX_CACHED_BUNDLES, PR_TRUE)
 {
 #ifdef DEBUG_tao_
-  PRINTF("\n++ nsStringBundleService::nsStringBundleService ++\n");
+  PRINTF(("\n++ nsStringBundleService::nsStringBundleService ++\n"));
 #endif
   NS_INIT_REFCNT();
 
@@ -844,11 +844,11 @@ nsStringBundleService::CreateBundle(const char* aURLSpec, nsILocale* aLocale,
                                     nsIStringBundle** aResult)
 {
 #ifdef DEBUG_tao_
-  PRINTF("\n++ nsStringBundleService::CreateBundle ++\n");
+  PRINTF(("\n++ nsStringBundleService::CreateBundle ++\n"));
   {
     nsAutoString aURLStr(aURLSpec);
     char *s = aURLStr.ToNewCString();
-    PRINTF("\n** nsStringBundleService::CreateBundle: %s\n", s?s:"null");
+    PRINTF(("\n** nsStringBundleService::CreateBundle: %s\n", s?s:"null"));
     delete s;
   }
 #endif

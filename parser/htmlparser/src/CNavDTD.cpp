@@ -57,8 +57,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(CNavDTDLog)
-#define PRINTF NS_LOG_PRINTF(CNavDTDLog)
-#define FLUSH  NS_LOG_FLUSH(CNavDTDLog)
+#define PRINTF(args) NS_LOG_PRINTF(CNavDTDLog, args)
+#define FLUSH()      NS_LOG_FLUSH(CNavDTDLog)
 
 static NS_DEFINE_IID(kIHTMLContentSinkIID, NS_IHTML_CONTENT_SINK_IID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);                 
@@ -478,9 +478,9 @@ nsresult CNavDTD::BuildModel(nsIParser* aParser,nsITokenizer* aTokenizer,nsIToke
           if(n>50) n=50;
           for(int i=0;i<n;i++){
             CToken* theToken=aTokenizer->GetTokenAt(i);
-            PRINTF("\nToken[%i],%p",i,theToken);
+            PRINTF(("\nToken[%i],%p",i,theToken));
           }
-          PRINTF("\n");
+          PRINTF(("\n"));
 #endif
 
           if(mDTDState!=NS_ERROR_HTMLPARSER_STOPPARSING) {
@@ -582,11 +582,11 @@ nsresult CNavDTD::DidBuildModel(nsresult anErrorCode,PRBool aNotifySink,nsIParse
         if(2==gShowCRC) { 
           if(mComputedCRC32!=mExpectedCRC32) { 
             if(mExpectedCRC32!=0) { 
-              PRINTF("CRC Computed: %u  Expected CRC: %u\n,",mComputedCRC32,mExpectedCRC32); 
+              PRINTF(("CRC Computed: %u  Expected CRC: %u\n,",mComputedCRC32,mExpectedCRC32)); 
               result = aSink->DidBuildModel(2); 
             } 
             else { 
-              PRINTF("Computed CRC: %u.\n",mComputedCRC32); 
+              PRINTF(("Computed CRC: %u.\n",mComputedCRC32)); 
               result = aSink->DidBuildModel(3); 
             } 
           } 
@@ -646,7 +646,7 @@ nsresult CNavDTD::HandleToken(CToken* aToken,nsIParser* aParser){
        ---------------------------------------------------------------------------------
      */
 
-    // PRINTF("token: %p\n",aToken);
+    // PRINTF(("token: %p\n",aToken));
 
    if(mSkipTarget){  //handle a preexisting target...
       if((theTag==mSkipTarget) && (eToken_end==theType)){

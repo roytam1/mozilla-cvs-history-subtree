@@ -32,8 +32,8 @@
 #include "nsVoidArray.h"
 #include "nslog.h"
 
-#define CHARSET_PRINTF NS_LOG_PRINTF(nsICharsetConverterManagerLog)
-#define CHARSET_FLUSH  NS_LOG_FLUSH(nsICharsetConverterManagerLog)
+#define CHARSET_PRINTF(args) NS_LOG_PRINTF(nsICharsetConverterManagerLog, args)
+#define CHARSET_FLUSH()      NS_LOG_FLUSH(nsICharsetConverterManagerLog)
 
 #define NS_ICHARSETCONVERTERMANAGER_IID \
   {0x3c1c0161, 0x9bd0, 0x11d3, { 0x9d, 0x9, 0x0, 0x50, 0x4, 0x0, 0x7, 0xb2}}
@@ -90,8 +90,8 @@ nsUConverterRegSelf( const char* aFromCharset,                          \
   res = registry -> SetStringUTF8(key, "destination", aToCharset);      \
   if (NS_FAILED(res))                                                   \
     goto done;                                                          \
-  CHARSET_PRINTF("RegSelf %s to %s converter complete\n",               \
-                 aFromCharset, aToCharset);                             \
+  CHARSET_PRINTF(("RegSelf %s to %s converter complete\n",               \
+                 aFromCharset, aToCharset));                             \
 done:                                                                   \
   return res;                                                           \
 }
@@ -111,7 +111,7 @@ _InstanceClass##UnRegSelf (nsIComponentManager *aCompMgr,             \
                            nsIFile *aPath,                            \
                            const char* registryLocation)              \
 {                                                                     \
-  CHARSET_PRINTF("UnRegSelf " _From " to " _To "converter not implement\n");  \
+  CHARSET_PRINTF(("UnRegSelf " _From " to " _To "converter not implement\n"));  \
   return NS_OK;                                                       \
 }
 

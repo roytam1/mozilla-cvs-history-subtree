@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFontMetricsPhLog)
-#define PRINTF NS_LOG_PRINTF(nsFontMetricsPhLog)
-#define FLUSH  NS_LOG_FLUSH(nsFontMetricsPhLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFontMetricsPhLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFontMetricsPhLog)
 
 #include <errno.h>
 
@@ -168,7 +168,7 @@ nsFontMetricsPh :: Init ( const nsFont& aFont, nsIAtom* aLangGroup,
 	app2twip *= (app2dev * textZoom);
 	PRInt32 sizePoints = NSTwipsToFloorIntPoints(nscoord(mFont->size * app2twip * 0.90));
   
-	//PRINTF("FONTSIZE: %f, %f, %f, %f, %d, %d (%d)\n", app2dev, app2twip, scale, textZoom, \
+	//PRINTF(("FONTSIZE: %f, %f, %f, %f, %d, %d (%d)\n", app2dev, app2twip, scale, textZoom, \
 	//	mFont->size, sizePoints, sizePoints2);
 
 	char NSFontName[64];	/* Local buffer to keep the fontname in */
@@ -249,7 +249,7 @@ nsFontMetricsPh :: Init ( const nsFont& aFont, nsIAtom* aLangGroup,
 
 	delete [] str;
 	return NS_OK;
-}
+})
 
 NS_IMETHODIMP
 nsFontMetricsPh :: Destroy()

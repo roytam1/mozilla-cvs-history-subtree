@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsSubscribableServerLog)
-#define PRINTF NS_LOG_PRINTF(nsSubscribableServerLog)
-#define FLUSH  NS_LOG_FLUSH(nsSubscribableServerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSubscribableServerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSubscribableServerLog)
 
 #if defined(DEBUG_sspitzer_) || defined(DEBUG_seth_)
 #define DEBUG_SUBSCRIBE 1
@@ -175,7 +175,7 @@ nsSubscribableServer::AddToSubscribeDS(const char *aName, PRBool addAsSubscribed
 	if (!aName) return NS_ERROR_FAILURE;
 
 #ifdef DEBUG_SUBSCRIBE
-	PRINTF("AddToSubscribeDS(%s,%d,%d)\n",aName,addAsSubscribed,changeIfExists);
+	PRINTF(("AddToSubscribeDS(%s,%d,%d)\n",aName,addAsSubscribed,changeIfExists));
 #endif
 	nsXPIDLCString serverUri;
 
@@ -210,7 +210,7 @@ nsSubscribableServer::SetPropertiesInSubscribeDS(const char *uri, const PRUnicha
 	nsresult rv;
 
 #ifdef DEBUG_SUBSCRIBE
-	PRINTF("SetPropertiesInSubscribeDS(%s,??,??,%d,%d)\n",uri,subscribed,changeIfExists);
+	PRINTF(("SetPropertiesInSubscribeDS(%s,??,??,%d,%d)\n",uri,subscribed,changeIfExists));
 #endif
 		
 	nsCOMPtr<nsIRDFLiteral> nameLiteral;
@@ -304,7 +304,7 @@ nsSubscribableServer::FindAndAddParentToSubscribeDS(const char *uri, const char 
 {
 	nsresult rv;
 #ifdef DEBUG_SUBSCRIBE
-	PRINTF("FindAndAddParentToSubscribeDS(%s,%s,%s,??)\n",uri,serverUri,aName);
+	PRINTF(("FindAndAddParentToSubscribeDS(%s,%s,%s,??)\n",uri,serverUri,aName));
 #endif
 
 	nsCOMPtr <nsIRDFResource> parentResource;

@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsImapMailDatabaseLog)
-#define PRINTF NS_LOG_PRINTF(nsImapMailDatabaseLog)
-#define FLUSH  NS_LOG_FLUSH(nsImapMailDatabaseLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsImapMailDatabaseLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsImapMailDatabaseLog)
 
 nsImapMailDatabase::nsImapMailDatabase()
 {
@@ -67,9 +67,9 @@ NS_IMETHODIMP nsImapMailDatabase::Open(nsIFileSpec *aFolderName, PRBool create, 
 	}
 
 #if defined(DEBUG_bienvenu) || defined(DEBUG_jefft)
-    PRINTF("really opening db in nsImapMailDatabase::Open(%s, %s, %p, %s) -> %s\n",
+    PRINTF(("really opening db in nsImapMailDatabase::Open(%s, %s, %p, %s) -> %s\n",
            (const char*)folderName, create ? "TRUE":"FALSE",
-           pMessageDB, upgrading ? "TRUE":"FALSE", (const char*)folderName);
+           pMessageDB, upgrading ? "TRUE":"FALSE", (const char*)folderName));
 #endif
 	// if the old summary doesn't exist, we're creating a new one.
 	if (!summarySpec.Exists() && create)

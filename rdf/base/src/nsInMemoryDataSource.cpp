@@ -80,8 +80,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsInMemoryDataSourceLog)
-#define PRINTF NS_LOG_PRINTF(nsInMemoryDataSourceLog)
-#define FLUSH  NS_LOG_FLUSH(nsInMemoryDataSourceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsInMemoryDataSourceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsInMemoryDataSourceLog)
 
 #if defined(MOZ_THREADSAFE_RDF)
 #define NS_AUTOLOCK(_lock) nsAutoLock _autolock(_lock)
@@ -173,7 +173,7 @@ Assertion::~Assertion()
     MOZ_COUNT_DTOR(RDF_Assertion);
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: Assertion\n", gInstanceCount);
+    PRINTF(("%d - RDF: Assertion\n", gInstanceCount));
 #endif
 
     NS_RELEASE(mSource);
@@ -408,7 +408,7 @@ InMemoryAssertionEnumeratorImpl::~InMemoryAssertionEnumeratorImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF( "%d - RDF: InMemoryAssertionEnumeratorImpl\n", gInstanceCount);
+    PRINTF(( "%d - RDF: InMemoryAssertionEnumeratorImpl\n", gInstanceCount));
 #endif
 
     if (mNextAssertion)
@@ -563,7 +563,7 @@ InMemoryArcsEnumeratorImpl::~InMemoryArcsEnumeratorImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF( "%d - RDF: InMemoryArcsEnumeratorImpl\n", gInstanceCount);
+    PRINTF(( "%d - RDF: InMemoryArcsEnumeratorImpl\n", gInstanceCount));
 #endif
 
     NS_RELEASE(mDataSource);
@@ -742,7 +742,7 @@ InMemoryDataSource::~InMemoryDataSource()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: InMemoryDataSource\n", gInstanceCount);
+    PRINTF(("%d - RDF: InMemoryDataSource\n", gInstanceCount));
 #endif
 
     if (mForwardArcs) {

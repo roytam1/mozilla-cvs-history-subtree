@@ -72,7 +72,7 @@ typedef struct il_container_struct il_container;
 
 #include "nslog.h"
 NS_DECL_LOG(IMGLIBLog)
-#define ILTRACE(l,t) NS_LOG_PRINTF(IMGLIBLog) t     // level, l, no longer used
+#define ILTRACE(l,t) NS_LOG_PRINTF(IMGLIBLog, t)     // level, l, no longer used
 
 #define FREE_IF_NOT_NULL(x)    do {if (x) {PR_FREEIF(x); (x) = NULL;}} while (0)
 

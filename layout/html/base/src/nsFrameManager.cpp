@@ -56,8 +56,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFrameManagerLog)
-#define PRINTF NS_LOG_PRINTF(nsFrameManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsFrameManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFrameManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFrameManagerLog)
 
 #define NEW_CONTEXT_PARENTAGE_INVARIANT
 
@@ -71,9 +71,9 @@ NS_IMPL_LOG(nsFrameManagerLog)
 
   #ifdef NOISY_DEBUG
     #define NOISY_TRACE(_msg) \
-          PRINTF(("%s",_msg));
+          PRINTF((("%s",_msg)));
     #define NOISY_TRACE_FRAME(_msg,_frame) \
-          PRINTF(("%s ",_msg)); nsFrame::ListTag(stdout,_frame); PRINTF(("\n"));
+          PRINTF((("%s ",_msg))); nsFrame::ListTag(stdout,_frame); PRINTF((("\n")));
   #else
     #define NOISY_TRACE(_msg);
     #define NOISY_TRACE_FRAME(_msg,_frame);
@@ -391,7 +391,7 @@ NS_IMPL_RELEASE(FrameManager)
 FrameManager::~FrameManager()
 {
 #ifdef NOISY_EVENTS
-  PRINTF(("%p ~FrameManager() start\n", this));
+  PRINTF((("%p ~FrameManager() start\n", this)));
 #endif
   nsCOMPtr<nsIPresContext> presContext;
   mPresShell->GetPresContext(getter_AddRefs(presContext));
@@ -415,7 +415,7 @@ FrameManager::~FrameManager()
   delete mUndisplayedMap;
   DestroyPropertyList(presContext);
 #ifdef NOISY_EVENTS
-  PRINTF(("%p ~FrameManager() end\n", this));
+  PRINTF((("%p ~FrameManager() end\n", this)));
 #endif
 }
 
@@ -765,7 +765,7 @@ void
 FrameManager::RevokePostedEvents()
 {
 #ifdef NOISY_EVENTS
-  PRINTF(("%p ~RevokePostedEvents() start\n", this));
+  PRINTF((("%p ~RevokePostedEvents() start\n", this)));
 #endif
   if (mPostedEvents) {
     mPostedEvents = nsnull;
@@ -789,7 +789,7 @@ FrameManager::RevokePostedEvents()
     }
   }
 #ifdef NOISY_EVENTS
-  PRINTF(("%p ~RevokePostedEvents() end\n", this));
+  PRINTF((("%p ~RevokePostedEvents() end\n", this)));
 #endif
 }
 
@@ -848,7 +848,7 @@ FrameManager::DequeuePostedEventFor(nsIFrame* aFrame)
 void
 FrameManager::HandlePLEvent(CantRenderReplacedElementEvent* aEvent) {
 #ifdef NOISY_EVENTS
-  PRINTF(("FrameManager::HandlePLEvent() start for FM %p\n", aEvent->owner));
+  PRINTF((("FrameManager::HandlePLEvent() start for FM %p\n", aEvent->owner)));
 #endif
   FrameManager* frameManager = (FrameManager*)aEvent->owner;
 
@@ -875,7 +875,7 @@ FrameManager::HandlePLEvent(CantRenderReplacedElementEvent* aEvent) {
     frameManager->mStyleSet->CantRenderReplacedElement(presContext, aEvent->mFrame);        
   }
 #ifdef NOISY_EVENTS
-  PRINTF(("FrameManager::HandlePLEvent() end for FM %p\n", aEvent->owner));
+  PRINTF((("FrameManager::HandlePLEvent() end for FM %p\n", aEvent->owner)));
 #endif
 }
 
@@ -900,7 +900,7 @@ FrameManager::CantRenderReplacedElement(nsIPresContext* aPresContext,
                                         nsIFrame*       aFrame)
 {
 #ifdef NOISY_EVENTS
-  PRINTF(("%p FrameManager::CantRenderReplacedElement called\n", this));
+  PRINTF((("%p FrameManager::CantRenderReplacedElement called\n", this)));
 #endif
   nsIEventQueueService* eventService;
   nsresult              rv;
@@ -952,10 +952,10 @@ DumpContext(nsIFrame* aFrame, nsIStyleContext* aContext)
       frameDebug->GetFrameName(name);
       fputs(name, stdout);
     }
-    PRINTF(" (%p)", aFrame);
+    PRINTF((" (%p)", aFrame));
   }
   if (aContext) {
-    PRINTF(" style: %p ", aContext);
+    PRINTF((" style: %p ", aContext));
 
     nsIAtom* pseudoTag;
     aContext->GetPseudoType(pseudoTag);

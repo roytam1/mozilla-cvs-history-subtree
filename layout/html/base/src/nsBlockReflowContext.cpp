@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsBlockReflowContextLog)
-#define PRINTF NS_LOG_PRINTF(nsBlockReflowContextLog)
-#define FLUSH  NS_LOG_FLUSH(nsBlockReflowContextLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsBlockReflowContextLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsBlockReflowContextLog)
 
 #ifdef NS_DEBUG
 #undef  NOISY_MAX_ELEMENT_SIZE
@@ -116,8 +116,8 @@ nsBlockReflowContext::ComputeCollapsedTopMargin(nsIPresContext* aPresContext,
 
 #ifdef NOISY_VERTICAL_MARGINS
   nsFrame::ListTag(stdout, aRS.frame);
-  PRINTF(": topMargin=%d generationalTopMargin=%d => %d\n",
-         topMargin, generationalTopMargin, collapsedTopMargin);
+  PRINTF((": topMargin=%d generationalTopMargin=%d => %d\n",
+         topMargin, generationalTopMargin, collapsedTopMargin));
 #endif
 
   return collapsedTopMargin;
@@ -423,11 +423,11 @@ nsBlockReflowContext::DoReflowBlock(nsHTMLReflowState &aReflowState,
 
 #ifdef NOISY_VERTICAL_MARGINS
     nsFrame::ListTag(stdout, mOuterReflowState.frame);
-    PRINTF(": reflowing ");
+    PRINTF((": reflowing "));
     nsFrame::ListTag(stdout, aFrame);
-    PRINTF(" prevBottomMargin=%d, collapsedTopMargin=%d => %d\n",
+    PRINTF((" prevBottomMargin=%d, collapsedTopMargin=%d => %d\n",
            aPrevBottomMargin, topMargin,
-           MaxMargin(topMargin, aPrevBottomMargin));
+           MaxMargin(topMargin, aPrevBottomMargin)));
 #endif
 
     // Collapse that value with the previous bottom margin to perform
@@ -552,8 +552,8 @@ nsBlockReflowContext::DoReflowBlock(nsHTMLReflowState &aReflowState,
     // Update the reflow metrics with the maximum width
     mMetrics.mMaximumWidth = mMetrics.width;
 #ifdef NOISY_REFLOW
-    PRINTF("*** nsBlockReflowContext::ReflowBlock block %p returning max width %d\n", 
-           aFrame, mMetrics.mMaximumWidth);
+    PRINTF(("*** nsBlockReflowContext::ReflowBlock block %p returning max width %d\n", 
+           aFrame, mMetrics.mMaximumWidth));
 #endif
     // The second reflow is just as a resize reflow with the constrained
     // width
@@ -569,16 +569,16 @@ nsBlockReflowContext::DoReflowBlock(nsHTMLReflowState &aReflowState,
 #ifdef DEBUG
   if (!NS_INLINE_IS_BREAK_BEFORE(aFrameReflowStatus)) {
     if (CRAZY_WIDTH(mMetrics.width) || CRAZY_HEIGHT(mMetrics.height)) {
-      PRINTF("nsBlockReflowContext: ");
+      PRINTF(("nsBlockReflowContext: "));
       nsFrame::ListTag(stdout, aFrame);
-      PRINTF(" metrics=%d,%d!\n", mMetrics.width, mMetrics.height);
+      PRINTF((" metrics=%d,%d!\n", mMetrics.width, mMetrics.height));
     }
     if ((nsnull != mMetrics.maxElementSize) &&
         ((nscoord(0xdeadbeef) == mMetrics.maxElementSize->width) ||
          (nscoord(0xdeadbeef) == mMetrics.maxElementSize->height))) {
-      PRINTF("nsBlockReflowContext: ");
+      PRINTF(("nsBlockReflowContext: "));
       nsFrame::ListTag(stdout, aFrame);
-      PRINTF(" didn't set max-element-size!\n");
+      PRINTF((" didn't set max-element-size!\n"));
       mMetrics.maxElementSize->width = 0;
       mMetrics.maxElementSize->height = 0;
     }
@@ -589,35 +589,35 @@ nsBlockReflowContext::DoReflowBlock(nsHTMLReflowState &aReflowState,
     if ((nsnull != mMetrics.maxElementSize) &&
         ((mMetrics.maxElementSize->width > mMetrics.width) ||
          (mMetrics.maxElementSize->height > mMetrics.height))) {
-      PRINTF("nsBlockReflowContext: ");
+      PRINTF(("nsBlockReflowContext: "));
       nsFrame::ListTag(stdout, aFrame);
-      PRINTF(": WARNING: maxElementSize=%d,%d > metrics=%d,%d\n",
+      PRINTF((": WARNING: maxElementSize=%d,%d > metrics=%d,%d\n",
              mMetrics.maxElementSize->width,
              mMetrics.maxElementSize->height,
-             mMetrics.width, mMetrics.height);
+             mMetrics.width, mMetrics.height));
     }
 #endif
     if ((mMetrics.width == nscoord(0xdeadbeef)) ||
         (mMetrics.height == nscoord(0xdeadbeef)) ||
         (mMetrics.ascent == nscoord(0xdeadbeef)) ||
         (mMetrics.descent == nscoord(0xdeadbeef))) {
-      PRINTF("nsBlockReflowContext: ");
+      PRINTF(("nsBlockReflowContext: "));
       nsFrame::ListTag(stdout, aFrame);
-      PRINTF(" didn't set whad %d,%d,%d,%d!\n",
+      PRINTF((" didn't set whad %d,%d,%d,%d!\n",
              mMetrics.width, mMetrics.height,
-             mMetrics.ascent, mMetrics.descent);
+             mMetrics.ascent, mMetrics.descent));
     }
   }
 #endif
 #ifdef NOISY_MAX_ELEMENT_SIZE
   if (!NS_INLINE_IS_BREAK_BEFORE(aFrameReflowStatus)) {
     if (nsnull != mMetrics.maxElementSize) {
-      PRINTF("  ");
+      PRINTF(("  "));
       nsFrame::ListTag(stdout, aFrame);
-      PRINTF(": maxElementSize=%d,%d wh=%d,%d\n",
+      PRINTF((": maxElementSize=%d,%d wh=%d,%d\n",
              mMetrics.maxElementSize->width,
              mMetrics.maxElementSize->height,
-             mMetrics.width, mMetrics.height);
+             mMetrics.width, mMetrics.height));
     }
   }
 #endif
@@ -698,12 +698,12 @@ nsBlockReflowContext::PlaceBlock(PRBool aForceFit,
     nscoord newBottomMargin = MaxMargin(collapsedBottomMargin, mTopMargin);
     *aBottomMarginResult = newBottomMargin;
 #ifdef NOISY_VERTICAL_MARGINS
-    PRINTF("  ");
+    PRINTF(("  "));
     nsFrame::ListTag(stdout, mOuterReflowState.frame);
-    PRINTF(": ");
+    PRINTF((": "));
     nsFrame::ListTag(stdout, mFrame);
-    PRINTF(" -- collapsing top & bottom margin together; y=%d spaceY=%d\n",
-           y, mSpace.y);
+    PRINTF((" -- collapsing top & bottom margin together; y=%d spaceY=%d\n",
+           y, mSpace.y));
 #endif
 
     y = mSpace.y;

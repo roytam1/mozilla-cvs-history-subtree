@@ -26,8 +26,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsImagePhLog)
-#define PRINTF NS_LOG_PRINTF(nsImagePhLog)
-#define FLUSH  NS_LOG_FLUSH(nsImagePhLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsImagePhLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsImagePhLog)
 
 #include "nspr.h"
 
@@ -321,7 +321,7 @@ NS_IMETHODIMP nsImagePh :: Draw(nsIRenderingContext &aContext, nsDrawingSurface 
 	//	mPhImage.alpha = &pg_alpha;
 	//	PgDrawPhImagemx(&pos, &mPhImage, 0);
 	//	mPhImage.alpha = nsnull;
-		PRINTF("DRAW IMAGE: with 8 bit alpha!!\n");
+		PRINTF(("DRAW IMAGE: with 8 bit alpha!!\n"));
 	}
 
   	return NS_OK;

@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(DeleteTextTxnLog)
-#define PRINTF NS_LOG_PRINTF(DeleteTextTxnLog)
-#define FLUSH  NS_LOG_FLUSH(DeleteTextTxnLog)
+#define PRINTF(args) NS_LOG_PRINTF(DeleteTextTxnLog, args)
+#define FLUSH()      NS_LOG_FLUSH(DeleteTextTxnLog)
 
 DeleteTextTxn::DeleteTextTxn()
   : EditTxn()
@@ -64,7 +64,7 @@ NS_IMETHODIMP DeleteTextTxn::Init(nsIEditor *aEditor,
 
 NS_IMETHODIMP DeleteTextTxn::Do(void)
 {
-  PRINTF("Do Delete Text\n");
+  PRINTF(("Do Delete Text\n"));
   NS_ASSERTION(mEditor && mElement, "bad state");
   if (!mEditor || !mElement) { return NS_ERROR_NOT_INITIALIZED; }
   // get the text that we're about to delete
@@ -96,7 +96,7 @@ NS_IMETHODIMP DeleteTextTxn::Do(void)
 //     was it an insertion point or an extended selection?
 NS_IMETHODIMP DeleteTextTxn::Undo(void)
 {
-  PRINTF("Undo Delete Text\n");
+  PRINTF(("Undo Delete Text\n"));
   NS_ASSERTION(mEditor && mElement, "bad state");
   if (!mEditor || !mElement) { return NS_ERROR_NOT_INITIALIZED; }
 

@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsComboBoxLog)
-#define PRINTF NS_LOG_PRINTF(nsComboBoxLog)
-#define FLUSH  NS_LOG_FLUSH(nsComboBoxLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsComboBoxLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsComboBoxLog)
 
 static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
@@ -87,7 +87,7 @@ PRInt32  nsComboBox::FindItem(nsString &aItem, PRInt32 aStartPos)
 
   return index;
 #endif
-	PRINTF("nsListBox::FindItem not implemented\n");
+	PRINTF(("nsListBox::FindItem not implemented\n"));
 	return -1;
 }
 
@@ -299,7 +299,7 @@ NS_METHOD nsComboBox::GetBounds(nsRect &aRect)
 #if 0
   nsWindow::GetNonClientBounds(aRect);
 #endif
-  PRINTF("nsListBox::GetBounds not wrong\n");	// the following is just a placeholder
+  PRINTF(("nsListBox::GetBounds not wrong\n"));	// the following is just a placeholder
   nsWindow::GetClientBounds(aRect);
   return NS_OK;
 }

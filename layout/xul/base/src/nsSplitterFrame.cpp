@@ -57,8 +57,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsSplitterFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsSplitterFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsSplitterFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSplitterFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSplitterFrameLog)
 
 #define REAL_TIME_DRAG
 
@@ -518,7 +518,7 @@ nsSplitterFrameInner::MouseUp(nsIPresContext* aPresContext, nsGUIEvent* aEvent)
 
           mPressed = PR_FALSE;
 
-          //PRINTF("MouseUp\n");
+          //PRINTF(("MouseUp\n"));
 
       }
 }
@@ -528,7 +528,7 @@ nsSplitterFrameInner::MouseDrag(nsIPresContext* aPresContext, nsGUIEvent* aEvent
 {
         if (mDragging) {
 
-          //PRINTF("Dragging\n");
+          //PRINTF(("Dragging\n"));
 
           PRBool isHorizontal = !mOuter->IsHorizontal();
            // convert coord to pixels
@@ -573,7 +573,7 @@ nsSplitterFrameInner::MouseDrag(nsIPresContext* aPresContext, nsGUIEvent* aEvent
            // take our current position and substract the start location
            pos -= start;
 
-           //PRINTF("Diff=%d\n", pos);
+           //PRINTF(("Diff=%d\n", pos));
            
            ResizeType resizeAfter  = GetResizeAfter();
 
@@ -605,7 +605,7 @@ nsSplitterFrameInner::MouseDrag(nsIPresContext* aPresContext, nsGUIEvent* aEvent
                 if (currentState == Dragging) {
                     if (oldPos > 0 && oldPos > pos)
                     {
-                      //PRINTF("Collapse right\n");
+                      //PRINTF(("Collapse right\n"));
                         if (GetCollapseDirection() == After) 
                         {
                              mOuter->mContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::state, NS_ConvertASCIItoUCS2("collapsed"), PR_TRUE);
@@ -614,7 +614,7 @@ nsSplitterFrameInner::MouseDrag(nsIPresContext* aPresContext, nsGUIEvent* aEvent
 
                     } else if (oldPos < 0 && oldPos < pos)
                     {
-                      //PRINTF("Collapse left\n");
+                      //PRINTF(("Collapse left\n"));
                         if (GetCollapseDirection() == Before) 
                         {
                           mOuter->mContent->SetAttribute(kNameSpaceID_None, nsXULAtoms::state, NS_ConvertASCIItoUCS2("collapsed"), PR_TRUE);
@@ -639,12 +639,12 @@ nsSplitterFrameInner::MouseDrag(nsIPresContext* aPresContext, nsGUIEvent* aEvent
 
 
 
-            // PRINTF("----- resize ----- ");
+            // PRINTF(("----- resize ----- "));
             /*
             for (i=0; i < mChildInfosBeforeCount; i++) 
-            PRINTF("before, index=%d, current=%d, changed=%d\n", mChildInfosBefore[i].index, mChildInfosBefore[i].current, mChildInfosBefore[i].changed);
+            PRINTF(("before, index=%d, current=%d, changed=%d\n", mChildInfosBefore[i].index, mChildInfosBefore[i].current, mChildInfosBefore[i].changed));
             for (i=0; i < mChildInfosAfterCount; i++) 
-            PRINTF("after, index=%d, current=%d, changed=%d\n", mChildInfosAfter[i].index, mChildInfosAfter[i].current, mChildInfosAfter[i].changed);
+            PRINTF(("after, index=%d, current=%d, changed=%d\n", mChildInfosAfter[i].index, mChildInfosAfter[i].current, mChildInfosAfter[i].changed));
             */
 
             /*
@@ -920,7 +920,7 @@ nsSplitterFrameInner::MouseDown(nsIDOMEvent* aMouseEvent)
 
   mDragStartPx = c;
     
-  //PRINTF("Pressed mDragStartPx=%d\n",mDragStartPx);
+  //PRINTF(("Pressed mDragStartPx=%d\n",mDragStartPx));
 
   return NS_OK;
 }
@@ -928,7 +928,7 @@ nsSplitterFrameInner::MouseDown(nsIDOMEvent* aMouseEvent)
 nsresult
 nsSplitterFrameInner::MouseMove(nsIDOMEvent* aMouseEvent)
 {  
-  //PRINTF("Mouse move\n");
+  //PRINTF(("Mouse move\n"));
 
   if (!mPressed)
       return NS_OK;
@@ -1049,7 +1049,7 @@ nsSplitterFrameInner::AdjustChildren(nsIPresContext* aPresContext)
   AdjustChildren(aPresContext, mChildInfosAfter, mChildInfosAfterCount, isHorizontal);
    
   
-  // PRINTF("----- Posting Dirty -----\n");
+  // PRINTF(("----- Posting Dirty -----\n"));
 
    
 #ifdef REAL_TIME_DRAG
@@ -1122,7 +1122,7 @@ nsSplitterFrameInner::AdjustChildren(nsIPresContext* aPresContext)
 void
 nsSplitterFrameInner::AdjustChildren(nsIPresContext* aPresContext, nsSplitterInfo* aChildInfos, PRInt32 aCount, PRBool aIsHorizontal)
 {
-  ///PRINTF("------- AdjustChildren------\n");
+  ///PRINTF(("------- AdjustChildren------\n"));
 
     nsBoxLayoutState state(aPresContext);
 
@@ -1155,7 +1155,7 @@ nsSplitterFrameInner::AdjustChildren(nsIPresContext* aPresContext, nsSplitterInf
 void
 nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildBox, nscoord aOnePixel, PRBool aIsHorizontal, nscoord* aSize)
 {
-  //PRINTF("current=%d, pref=%d", current/onePixel, pref/onePixel);
+  //PRINTF(("current=%d, pref=%d", current/onePixel, pref/onePixel));
  
   nscoord current = 0;
 
@@ -1212,7 +1212,7 @@ nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildB
   aChildBox->MarkDirty(aState);
 #endif
 
-  //PRINTF("\n");
+  //PRINTF(("\n"));
 }
 
 

@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsPersistentPropertiesLog)
-#define PRINTF NS_LOG_PRINTF(nsPersistentPropertiesLog)
-#define FLUSH  NS_LOG_FLUSH(nsPersistentPropertiesLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsPersistentPropertiesLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsPersistentPropertiesLog)
 
 static PLHashNumber
 HashKey(const PRUnichar *aString)
@@ -108,7 +108,7 @@ nsPersistentProperties::Load(nsIInputStream *aIn)
   ret = NS_NewConverterStream(&mIn, nsnull, aIn, 0, &uesc);
 #endif /* XPCOM_STANDALONE */
   if (ret != NS_OK) {
-      PRINTF("NS_NewConverterStream failed\n");
+      PRINTF(("NS_NewConverterStream failed\n"));
     return NS_ERROR_FAILURE;
   }
   c = Read();
@@ -236,7 +236,7 @@ nsPersistentProperties::SetStringProperty(const nsString& aKey, nsString& aNewVa
 #ifdef NS_ENABLE_LOGGING
     char buf[128];
     aKey.ToCString(buf, sizeof(buf));
-    PRINTF("warning: property %s already exists\n", buf);
+    PRINTF(("warning: property %s already exists\n", buf));
 #endif
     return NS_OK;
   }

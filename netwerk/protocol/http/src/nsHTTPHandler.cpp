@@ -58,8 +58,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(HTTPLog)
-#define PRINTF NS_LOG_PRINTF(HTTPLog)
-#define FLUSH  NS_LOG_FLUSH(HTTPLog)
+#define PRINTF(args) NS_LOG_PRINTF(HTTPLog, args)
+#define FLUSH()      NS_LOG_FLUSH(HTTPLog)
 
 #ifdef XP_UNIX
 #include <sys/utsname.h>
@@ -150,8 +150,8 @@ CategoryCreateService( const char *category )
         }
 
 #ifdef DEBUG_HTTP_STARTUP_CATEGORY
-        PRINTF("HTTP Handler: Instantiating contractid %s \
-                in http startup category.\n", (const char *)contractID);
+        PRINTF(("HTTP Handler: Instantiating contractid %s \
+                in http startup category.\n", (const char *)contractID));
 #endif /* DEBUG_HTTP_STARTUP_CATEGORY */
         nsCOMPtr<nsISupports> instance = do_GetService(contractID, &rv);
         if (NS_FAILED(rv))

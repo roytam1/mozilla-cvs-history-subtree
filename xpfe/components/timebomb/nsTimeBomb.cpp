@@ -38,8 +38,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTimeBombLog)
-#define PRINTF NS_LOG_PRINTF(nsTimeBombLog)
-#define FLUSH  NS_LOG_FLUSH(nsTimeBombLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTimeBombLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTimeBombLog)
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
@@ -133,7 +133,7 @@ nsTimeBomb::CheckWithUI(PRBool *expired)
     
     if (NS_SUCCEEDED(rv) && val)
     {
-      PRINTF("********  Expired version  ********\n");
+      PRINTF(("********  Expired version  ********\n"));
         DisplayURI("chrome://communicator/content/timebomb/expireText.xul", PR_FALSE);
         *expired = PR_TRUE;
         return NS_OK;
@@ -143,7 +143,7 @@ nsTimeBomb::CheckWithUI(PRBool *expired)
     
     if (NS_SUCCEEDED(rv) && val)
     {
-      PRINTF("********  ABOUT TO EXPIRE  ********\n");
+      PRINTF(("********  ABOUT TO EXPIRE  ********\n"));
         DisplayURI("chrome://communicator/content/timebomb/warnText.xul", PR_FALSE);
     }
 

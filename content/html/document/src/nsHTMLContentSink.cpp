@@ -115,8 +115,8 @@
 #undef PR_NewLogModule
 
 NS_IMPL_LOG(nsHTMLContentSinkLog)
-#define PRINTF NS_LOG_PRINTF(nsHTMLContentSinkLog)
-#define FLUSH  NS_LOG_FLUSH(nsHTMLContentSinkLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsHTMLContentSinkLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsHTMLContentSinkLog)
 
 #ifdef ALLOW_ASYNCH_STYLE_SHEETS
 const PRBool kBlockByDefault=PR_FALSE;
@@ -1018,7 +1018,7 @@ GetOptionText(const nsIParserNode& aNode, nsString& aText)
   }
     nsAutoString x;
     char* y = aText.ToNewCString();
-    PRINTF("foo");
+    PRINTF(("foo"));
 }
 #endif
 

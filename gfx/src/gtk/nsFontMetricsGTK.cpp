@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFontMetricsGTKLog)
-#define PRINTF NS_LOG_PRINTF(nsFontMetricsGTKLog)
-#define FLUSH  NS_LOG_FLUSH(nsFontMetricsGTKLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFontMetricsGTKLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFontMetricsGTKLog)
 
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
@@ -762,7 +762,7 @@ static PRBool
 FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *aData)
 {
 #ifdef REALLY_NOISY_FONTS
-  PRINTF("font = '%s'\n", aFamily);
+  PRINTF(("font = '%s'\n", aFamily));
 #endif
 
   if (!IsASCIIFontName(aFamily)) {
@@ -946,7 +946,7 @@ void nsFontMetricsGTK::RealizeFont()
     {
       mXHeight = nscoord(pr * f);
 #ifdef REALLY_NOISY_FONTS
-      PRINTF("xHeight=%d\n", mXHeight);
+      PRINTF(("xHeight=%d\n", mXHeight));
 #endif
     }
   }
@@ -957,7 +957,7 @@ void nsFontMetricsGTK::RealizeFont()
      * fonts served by xfsft (not xfstt!) */
     mUnderlineOffset = -NSToIntRound(pr * f);
 #ifdef REALLY_NOISY_FONTS
-    PRINTF("underlineOffset=%d\n", mUnderlineOffset);
+    PRINTF(("underlineOffset=%d\n", mUnderlineOffset));
 #endif
   }
   else
@@ -973,7 +973,7 @@ void nsFontMetricsGTK::RealizeFont()
     /* this will only be provided from adobe .afm fonts */
     mUnderlineSize = nscoord(MAX(f, NSToIntRound(pr * f)));
 #ifdef REALLY_NOISY_FONTS
-    PRINTF("underlineSize=%d\n", mUnderlineSize);
+    PRINTF(("underlineSize=%d\n", mUnderlineSize));
 #endif
   }
   else
@@ -987,7 +987,7 @@ void nsFontMetricsGTK::RealizeFont()
   {
     mSuperscriptOffset = nscoord(MAX(f, NSToIntRound(pr * f)));
 #ifdef REALLY_NOISY_FONTS
-    PRINTF("superscriptOffset=%d\n", mSuperscriptOffset);
+    PRINTF(("superscriptOffset=%d\n", mSuperscriptOffset));
 #endif
   }
   else
@@ -999,7 +999,7 @@ void nsFontMetricsGTK::RealizeFont()
   {
     mSubscriptOffset = nscoord(MAX(f, NSToIntRound(pr * f)));
 #ifdef REALLY_NOISY_FONTS
-    PRINTF("subscriptOffset=%d\n", mSubscriptOffset);
+    PRINTF(("subscriptOffset=%d\n", mSubscriptOffset));
 #endif
   }
   else
@@ -1388,7 +1388,7 @@ CheckMap(nsFontCharSetMap* aEntry)
         res = gCharSetManager->GetUnicodeEncoder(charset,
           getter_AddRefs(converter));
         if (NS_FAILED(res)) {
-          PRINTF("=== %s failed (%s)\n", aEntry->mInfo->mCharSet, __FILE__);
+          PRINTF(("=== %s failed (%s)\n", aEntry->mInfo->mCharSet, __FILE__));
         }
       }
     }
@@ -1493,11 +1493,11 @@ static char* gDumpStyles[3] = { "normal", "italic", "oblique" };
 static PRIntn
 DumpCharSet(PLHashEntry* he, PRIntn i, void* arg)
 {
-  PRINTF("        %s\n", (char*) he->key);
+  PRINTF(("        %s\n", (char*) he->key));
   nsFontCharSet* charSet = (nsFontCharSet*) he->value;
   for (int sizeIndex = 0; sizeIndex < charSet->mSizesCount; sizeIndex++) {
     nsFontGTK* size = &charSet->mSizes[sizeIndex];
-    PRINTF("          %d %s\n", size->mSize, size->mName);
+    PRINTF(("          %d %s\n", size->mSize, size->mName));
   }
   return HT_ENUMERATE_NEXT;
 }
@@ -1508,15 +1508,15 @@ DumpFamily(nsFontFamily* aFamily)
   for (int styleIndex = 0; styleIndex < 3; styleIndex++) {
     nsFontStyle* style = aFamily->mStyles[styleIndex];
     if (style) {
-      PRINTF("  style: %s\n", gDumpStyles[styleIndex]);
+      PRINTF(("  style: %s\n", gDumpStyles[styleIndex]));
       for (int weightIndex = 0; weightIndex < 8; weightIndex++) {
         nsFontWeight* weight = style->mWeights[weightIndex];
         if (weight) {
-          PRINTF("    weight: %d\n", (weightIndex + 1) * 100);
+          PRINTF(("    weight: %d\n", (weightIndex + 1) * 100));
           for (int stretchIndex = 0; stretchIndex < 9; stretchIndex++) {
             nsFontStretch* stretch = weight->mStretches[stretchIndex];
             if (stretch) {
-              PRINTF("      stretch: %d\n", stretchIndex + 1);
+              PRINTF(("      stretch: %d\n", stretchIndex + 1));
               PL_HashTableEnumerateEntries(stretch->mCharSets, DumpCharSet,
                 nsnull);
             }
@@ -1532,7 +1532,7 @@ DumpFamilyEnum(PLHashEntry* he, PRIntn i, void* arg)
 {
   char buf[256];
   ((nsString*) he->key)->ToCString(buf, sizeof(buf));
-  PRINTF("family: %s\n", buf);
+  PRINTF(("family: %s\n", buf));
   nsFontFamily* family = (nsFontFamily*) he->value;
   DumpFamily(family);
 
@@ -1647,7 +1647,7 @@ nsFontGTK::LoadFont(void)
 
 #ifdef NS_FONT_DEBUG_LOAD_FONT
     if (gDebug & NS_FONT_DEBUG_LOAD_FONT) {
-      PRINTF("loaded %s\n", mName);
+      PRINTF(("loaded %s\n", mName));
     }
 #endif
 
@@ -1655,7 +1655,7 @@ nsFontGTK::LoadFont(void)
 
 #ifdef NS_FONT_DEBUG_LOAD_FONT
   else if (gDebug & NS_FONT_DEBUG_LOAD_FONT) {
-    PRINTF("cannot load %s\n", mName);
+    PRINTF(("cannot load %s\n", mName));
   }
 #endif
 
@@ -2493,7 +2493,7 @@ GetFontNames(char* aPattern, nsFontNodeArray* aNodes)
 {
 #ifdef NS_FONT_DEBUG_CALL_TRACE
   if (gDebug & NS_FONT_DEBUG_CALL_TRACE) {
-    PRINTF("GetFontNames %s\n", aPattern);
+    PRINTF(("GetFontNames %s\n", aPattern));
   }
 #endif
 
@@ -2591,7 +2591,7 @@ GetFontNames(char* aPattern, nsFontNodeArray* aNodes)
     }
     if (!charSetInfo) {
 #ifdef NOISY_FONTS
-      PRINTF("cannot find charset %s\n", charSetName);
+      PRINTF(("cannot find charset %s\n", charSetName));
 #endif
       charSetInfo = &Unknown;
     }
@@ -2604,7 +2604,7 @@ GetFontNames(char* aPattern, nsFontNodeArray* aNodes)
           &charSetInfo->mLangGroup);
         if (NS_FAILED(res)) {
 #ifdef NOISY_FONTS
-          PRINTF("=== cannot get lang group for %s\n", charSetInfo->mCharSet);
+          PRINTF(("=== cannot get lang group for %s\n", charSetInfo->mCharSet));
 #endif
         }
       }
@@ -2670,7 +2670,7 @@ GetFontNames(char* aPattern, nsFontNodeArray* aNodes)
     int weightNumber = (int) gWeights->Get(&weightKey);
     if (!weightNumber) {
 #ifdef NOISY_FONTS
-      PRINTF("cannot find weight %s\n", weightName);
+      PRINTF(("cannot find weight %s\n", weightName));
 #endif
       weightNumber = NS_FONT_WEIGHT_NORMAL;
     }
@@ -2688,7 +2688,7 @@ GetFontNames(char* aPattern, nsFontNodeArray* aNodes)
     int stretchIndex = (int) gStretches->Get(&setWidthKey);
     if (!stretchIndex) {
 #ifdef NOISY_FONTS
-      PRINTF("cannot find stretch %s\n", setWidth);
+      PRINTF(("cannot find stretch %s\n", setWidth));
 #endif
       stretchIndex = 5;
     }
@@ -3112,16 +3112,16 @@ nsFontMetricsGTK::FindFont(PRUnichar aChar)
 
 #ifdef NS_FONT_DEBUG_CALL_TRACE
   if (gDebug & NS_FONT_DEBUG_CALL_TRACE) {
-    PRINTF("FindFont(%04X)[", aChar);
+    PRINTF(("FindFont(%04X)[", aChar));
     for (PRInt32 i = 0; i < mFonts.Count(); i++) {
-      PRINTF("%s, ", mFonts.CStringAt(i)->GetBuffer());
+      PRINTF(("%s, ", mFonts.CStringAt(i)->GetBuffer()));
     }
-    PRINTF("]\nreturns ");
+    PRINTF(("]\nreturns "));
     if (font) {
-      PRINTF("%s\n", font->mName ? font->mName : "(substitute)");
+      PRINTF(("%s\n", font->mName ? font->mName : "(substitute)"));
     }
     else {
-      PRINTF("NULL\n");
+      PRINTF(("NULL\n"));
     }
   }
 #endif

@@ -70,8 +70,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsSpecialSystemDirectoryLog)
-#define PRINTF NS_LOG_PRINTF(nsSpecialSystemDirectoryLog)
-#define FLUSH  NS_LOG_FLUSH(nsSpecialSystemDirectoryLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsSpecialSystemDirectoryLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsSpecialSystemDirectoryLog)
 
 class SystemDirectoriesKey : public nsHashKey {
 public:
@@ -349,7 +349,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
         }
 #elif defined(XP_OS2)
         {
-            // PRINTF( "*** Warning warning OS_DriveDirectory called for");
+            // PRINTF(( "*** Warning warning OS_DriveDirectory called for"));
             
             ULONG ulBootDrive = 0;
             char  buffer[] = " :\\OS2\\";
@@ -357,7 +357,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                              &ulBootDrive, sizeof ulBootDrive);
             buffer[0] = 'A' - 1 + ulBootDrive; // duh, 1-based index...
             *this = buffer;
-            PRINTF( "Got OS_DriveDirectory: %s\n", buffer);
+            PRINTF(( "Got OS_DriveDirectory: %s\n", buffer));
         }
 #elif defined(XP_MAC)
         {
@@ -839,7 +839,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                              &ulBootDrive, sizeof ulBootDrive);
             buffer[0] = 'A' - 1 + ulBootDrive; // duh, 1-based index...
             *this = buffer;
-            PRINTF( "Got OS2_SystemDirectory: %s\n", buffer);
+            PRINTF(( "Got OS2_SystemDirectory: %s\n", buffer));
             break;
         }
 
@@ -851,7 +851,7 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
                              &ulBootDrive, sizeof ulBootDrive);
             buffer[0] = 'A' - 1 + ulBootDrive; // duh, 1-based index...
             *this = buffer;
-            PRINTF( "Got OS2_OS2Directory: %s\n", buffer);
+            PRINTF(( "Got OS2_OS2Directory: %s\n", buffer));
             break;
         }
 
@@ -866,9 +866,9 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             szPath[len] = '\\';     
             szPath[len + 1] = '\0';
             if (fSuccess) {
-                PRINTF ("Got OS2_DesktopDirectory: %s\n", szPath);
+                PRINTF( ("Got OS2_DesktopDirectory: %s\n", szPath));
             } else {
-                PRINTF ("Failed getting OS2_DesktopDirectory: %s\n", szPath);
+                PRINTF( ("Failed getting OS2_DesktopDirectory: %s\n", szPath));
             }
             break;           
         }

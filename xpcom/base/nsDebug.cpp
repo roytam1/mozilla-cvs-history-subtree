@@ -121,20 +121,20 @@
 #undef BREAK
 
 NS_IMPL_LOG_ENABLED(ASSERT)
-#define ASSERT_PRINTF NS_LOG_PRINTF(ASSERT)
-#define ASSERT_FLUSH  NS_LOG_FLUSH(ASSERT)
+#define ASSERT_PRINTF(args) NS_LOG_PRINTF(ASSERT, args)
+#define ASSERT_FLUSH()      NS_LOG_FLUSH(ASSERT)
 
 NS_IMPL_LOG_ENABLED(ABORT)
-#define ABORT_PRINTF NS_LOG_PRINTF(ABORT)
-#define ABORT_FLUSH  NS_LOG_FLUSH(ABORT)
+#define ABORT_PRINTF(args) NS_LOG_PRINTF(ABORT, args)
+#define ABORT_FLUSH()      NS_LOG_FLUSH(ABORT)
 
 NS_IMPL_LOG_ENABLED(WARN)
-#define WARN_PRINTF NS_LOG_PRINTF(WARN)
-#define WARN_FLUSH  NS_LOG_FLUSH(WARN)
+#define WARN_PRINTF(args) NS_LOG_PRINTF(WARN, args)
+#define WARN_FLUSH()      NS_LOG_FLUSH(WARN)
 
 NS_IMPL_LOG_ENABLED(BREAK)
-#define BREAK_PRINTF NS_LOG_PRINTF(BREAK)
-#define BREAK_FLUSH  NS_LOG_FLUSH(BREAK)
+#define BREAK_PRINTF(args) NS_LOG_PRINTF(BREAK, args)
+#define BREAK_FLUSH()      NS_LOG_FLUSH(BREAK)
 
 /*
  * Determine if debugger is present in windows.
@@ -179,7 +179,7 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
                "%s: '%s', file %s, line %d",
                aStr, aExpr, aFile, aLine);
 
-   ASSERT_PRINTF("%s", buf);
+   ASSERT_PRINTF(("%s", buf));
    ASSERT_FLUSH();
 
 #if defined(_WIN32)
@@ -241,7 +241,7 @@ NS_COM void nsDebug::Assertion(const char* aStr, const char* aExpr,
 
 NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 {
-    BREAK_PRINTF("at file %s, line %d", aFile, aLine);
+    BREAK_PRINTF(("at file %s, line %d", aFile, aLine));
     BREAK_FLUSH();
 
 #ifdef XP_MAC
@@ -314,7 +314,7 @@ NS_COM void nsDebug::Break(const char* aFile, PRIntn aLine)
 NS_COM void nsDebug::Warning(const char* aMessage,
                              const char* aFile, PRIntn aLine)
 {
-  WARN_PRINTF("%s, file %s, line %d", aMessage, aFile, aLine);
+  WARN_PRINTF(("%s, file %s, line %d", aMessage, aFile, aLine));
   WARN_FLUSH();
 }
 
@@ -335,7 +335,7 @@ NS_COM PRBool nsDebug::WarnIfFalse(const char* aStr, const char* aExpr,
 
 NS_COM void nsDebug::Abort(const char* aFile, PRIntn aLine)
 {
-  ABORT_PRINTF("at file %s, line %d", aFile, aLine);
+  ABORT_PRINTF(("at file %s, line %d", aFile, aLine));
   ABORT_FLUSH();
 #if defined(_WIN32)
 #ifdef _M_IX86

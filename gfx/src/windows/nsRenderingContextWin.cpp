@@ -33,8 +33,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsRenderingContextWinLog)
-#define PRINTF NS_LOG_PRINTF(nsRenderingContextWinLog)
-#define FLUSH  NS_LOG_FLUSH(nsRenderingContextWinLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsRenderingContextWinLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsRenderingContextWinLog)
 
 //#define GFX_DEBUG
 
@@ -1569,10 +1569,10 @@ static void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
           *dest++ = formB;
       else
           *dest++ = PresentationFormB(*src, eIsolated);
-//PRINTF("%x %d %d %d %x\n" ,*src,leftJ, thisJ, rightJ, 
+//PRINTF(("%x %d %d %d %x\n" ,*src,leftJ, thisJ, rightJ, 
 //PresentationFormB(*src, DecideForm(leftJ, thisJ, rightJ)));
       src--;
-   }
+   })
    if(eTr != thisJ)
      leftNoTrJ = thisJ;
    formB = PresentationFormB(*src, DecideForm(leftNoTrJ, rightJ, eNJ));
@@ -1580,7 +1580,7 @@ static void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
        *dest++ = formB;
    else
        *dest++ = PresentationFormB(*src, eIsolated);
-//PRINTF("%x %d %d %d %x\n" ,*src, thisJ, rightJ, eNJ,
+//PRINTF(("%x %d %d %d %x\n" ,*src, thisJ, rightJ, eNJ,
 //PresentationFormB(*src, DecideForm( thisJ, rightJ, eNJ)));
    src--;
    PRUnichar *lSrc = aBuf;
@@ -1619,7 +1619,7 @@ for(PRUint32 k=0;k<aBufLen;k++)
   PRINTF(("%x ", aBuf[k]));
 PRINTF(("]\n"));
 #endif
-}
+})
 //============ End of Arabic Basic to Presentation Form B Code ============
 
 static PRBool NeedComplexScriptHandling(const PRUnichar *aString, PRUint32 aLen,
@@ -2712,7 +2712,7 @@ FoundFont:
           rv = prevFont->GetBoundingMetrics(mDC, italicSlope, &pstr[start], i - start, rawbm);
           if (NS_FAILED(rv)) {
 #ifdef NS_DEBUG
-            PRINTF("GetBoundingMetrics() failed for: 0x%04X...\n", pstr[start]);
+            PRINTF(("GetBoundingMetrics() failed for: 0x%04X...\n", pstr[start]));
             prevFont->DumpFontInfo();
 #endif
             if (selectedFont != mCurrFont) {
@@ -2749,7 +2749,7 @@ FoundFont:
       rv = prevFont->GetBoundingMetrics(mDC, italicSlope, &pstr[start], i - start, rawbm);
       if (NS_FAILED(rv)) {
 #ifdef NS_DEBUG
-        PRINTF("GetBoundingMetrics() failed for: 0x%04X...\n", pstr[start]);
+        PRINTF(("GetBoundingMetrics() failed for: 0x%04X...\n", pstr[start]));
         prevFont->DumpFontInfo();
 #endif
         if (selectedFont != mCurrFont) {

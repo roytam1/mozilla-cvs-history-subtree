@@ -30,8 +30,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDrawingSurfacePhLog)
-#define PRINTF NS_LOG_PRINTF(nsDrawingSurfacePhLog)
-#define FLUSH  NS_LOG_FLUSH(nsDrawingSurfacePhLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDrawingSurfacePhLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDrawingSurfacePhLog)
 
 NS_IMPL_ISUPPORTS2(nsDrawingSurfacePh, nsIDrawingSurface, nsIDrawingSurfacePh)
 
@@ -107,7 +107,7 @@ NS_IMETHODIMP nsDrawingSurfacePh :: Lock(PRInt32 aX, PRInt32 aY,
                                           void **aBits, PRInt32 *aStride,
                                           PRInt32 *aWidthBytes, PRUint32 aFlags)
 {
-	PRINTF("Lock()\n");
+	PRINTF(("Lock()\n"));
 	PhArea_t    dst_area, src_area;
 	int         format = 0, bpl;
 
@@ -165,13 +165,13 @@ NS_IMETHODIMP nsDrawingSurfacePh :: Lock(PRInt32 aX, PRInt32 aY,
 	}
 	*aStride = *aWidthBytes = bpl * dst_area.size.w;
 
-	PRINTF("end Lock()\n");
+	PRINTF(("end Lock()\n"));
 	return NS_OK;
 }
 
 NS_IMETHODIMP nsDrawingSurfacePh :: Unlock(void)
 {
-	PRINTF("UnLock\n");
+	PRINTF(("UnLock\n"));
 	PdOffscreenContext_t *off_dc = (PdOffscreenContext_t *) mDrawContext;
 	PhArea_t    dst_area, src_area;
 
@@ -199,7 +199,7 @@ NS_IMETHODIMP nsDrawingSurfacePh :: Unlock(void)
 
 	mLocked = PR_FALSE;
 
-	PRINTF("end UnLock\n");
+	PRINTF(("end UnLock\n"));
   return NS_OK;
 }
 

@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsUnicodeMappingUtilLog)
-#define PRINTF NS_LOG_PRINTF(nsUnicodeMappingUtilLog)
-#define FLUSH  NS_LOG_FLUSH(nsUnicodeMappingUtilLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsUnicodeMappingUtilLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsUnicodeMappingUtilLog)
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
@@ -45,7 +45,7 @@ static int gUnicodeMappingUtilCount = 0;
 
 int PrefChangedCallback( const char* aPrefName, void* instance_data)
 {
-	//PRINTF("PrefChangeCallback \n");
+	//PRINTF(("PrefChangeCallback \n"));
 	nsUnicodeMappingUtil::GetSingleton()->Reset();
 	return 0;
 }
@@ -340,7 +340,7 @@ PrefEnumCallback(const char* aName, void* aClosure)
   Self->mGenericFontMapping[script][type] = fontname;
 #ifdef DEBUG_ftang_font
   char* utf8 = fontname->ToNewUTF8String();
-  PRINTF("font %d %d %s= %s\n",script , type, aName,utf8);
+  PRINTF(("font %d %d %s= %s\n",script , type, aName,utf8));
   Recycle(utf8); 
 #endif
 }

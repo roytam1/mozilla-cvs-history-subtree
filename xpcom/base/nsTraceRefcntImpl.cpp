@@ -60,8 +60,8 @@
 #undef fprintf
 
 NS_IMPL_LOG_ENABLED(TRACE)
-#define PRINTF NS_LOG_PRINTF(TRACE)
-#define FLUSH  NS_LOG_FLUSH(TRACE)
+#define PRINTF(args) NS_LOG_PRINTF(TRACE, args)
+#define FLUSH()      NS_LOG_FLUSH(TRACE)
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -492,8 +492,8 @@ nsTraceRefcnt::DumpStatistics(StatisticsType type, FILE* out)
     nsVoidArray entries;
     PL_HashTableEnumerateEntries(gBloatView, BloatEntry::DumpEntry, &entries);
 
-//    PRINTF("nsTraceRefcnt::DumpStatistics: %d entries\n",
-//           entries.Count());
+//    PRINTF(("nsTraceRefcnt::DumpStatistics: %d entries\n",
+//            entries.Count()));
 
     // Sort the entries alphabetically by classname.
     PRInt32 i, j;
@@ -639,27 +639,27 @@ static PRBool InitLog(const char* envVar, const char* msg, FILE* *result)
   if (value) {
     if (nsCRT::strcmp(value, "1") == 0) {
       *result = stdout;
-      PRINTF("%s defined -- logging %s to stdout\n", 
-              envVar, msg);
+      PRINTF(("%s defined -- logging %s to stdout\n", 
+              envVar, msg));
       return PR_TRUE;
     }
     else if (nsCRT::strcmp(value, "2") == 0) {
       *result = stderr;
-      PRINTF("%s defined -- logging %s to stderr\n", 
-              envVar, msg);
+      PRINTF(("%s defined -- logging %s to stderr\n", 
+              envVar, msg));
       return PR_TRUE;
     }
     else {
       FILE *stream = ::fopen(value, "w");
       if (stream != NULL) {
         *result = stream;
-        PRINTF("%s defined -- logging %s to %s\n", 
-                envVar, msg, value);
+        PRINTF(("%s defined -- logging %s to %s\n", 
+                envVar, msg, value));
         return PR_TRUE;
       }
       else {
-        PRINTF("%s defined -- unable to log %s to %s\n", 
-                envVar, msg, value);
+        PRINTF(("%s defined -- unable to log %s to %s\n", 
+                envVar, msg, value));
         return PR_FALSE;
       }
     }
@@ -714,7 +714,7 @@ static void InitTraceLog(void)
     }
     else {
       gLogToLeaky = PR_FALSE;
-      PRINTF("ERROR: XPCOM_MEM_LEAKY_LOG defined, but can't locate __log_addref and __log_release symbols\n");
+      PRINTF(("ERROR: XPCOM_MEM_LEAKY_LOG defined, but can't locate __log_addref and __log_release symbols\n"));
       fflush(stdout);
     }
   }
@@ -726,13 +726,13 @@ static void InitTraceLog(void)
     (void)InitLog("XPCOM_MEM_COMPTR_LOG", "nsCOMPtr", &gCOMPtrLog);
   } else {
     if (getenv("XPCOM_MEM_COMPTR_LOG")) {
-      PRINTF("XPCOM_MEM_COMPTR_LOG defined -- but XPCOM_MEM_LOG_CLASSES is not defined\n");
+      PRINTF(("XPCOM_MEM_COMPTR_LOG defined -- but XPCOM_MEM_LOG_CLASSES is not defined\n"));
     }
   }
 #else
   const char* comptr_log = getenv("XPCOM_MEM_COMPTR_LOG");
   if (comptr_log) {
-    PRINTF("XPCOM_MEM_COMPTR_LOG defined -- but it will not work without dynamic_cast\n");
+    PRINTF(("XPCOM_MEM_COMPTR_LOG defined -- but it will not work without dynamic_cast\n"));
   }
 #endif
 
@@ -745,10 +745,10 @@ static void InitTraceLog(void)
                                   PL_CompareValues,
                                   NULL, NULL);
     if (NS_WARN_IF_FALSE(gTypesToLog, "out of memory")) {
-      PRINTF("XPCOM_MEM_LOG_CLASSES defined -- unable to log specific classes\n");
+      PRINTF(("XPCOM_MEM_LOG_CLASSES defined -- unable to log specific classes\n"));
     }
     else {
-      PRINTF("XPCOM_MEM_LOG_CLASSES defined -- only logging these classes: ");
+      PRINTF(("XPCOM_MEM_LOG_CLASSES defined -- only logging these classes: "));
       const char* cp = classes;
       for (;;) {
         char* cm = (char*) strchr(cp, ',');
@@ -756,12 +756,12 @@ static void InitTraceLog(void)
           *cm = '\0';
         }
         PL_HashTableAdd(gTypesToLog, nsCRT::strdup(cp), (void*)1);
-        PRINTF("%s ", cp);
+        PRINTF(("%s ", cp));
         if (!cm) break;
         *cm = ',';
         cp = cm + 1;
       }
-      PRINTF("\n");
+      PRINTF(("\n"));
     }
 
     gSerialNumbers = PL_NewHashTable(256,
@@ -782,13 +782,13 @@ static void InitTraceLog(void)
                                     NULL, NULL);
 
     if (NS_WARN_IF_FALSE(gObjectsToLog, "out of memory")) {
-      PRINTF("XPCOM_MEM_LOG_OBJECTS defined -- unable to log specific objects\n");
+      PRINTF(("XPCOM_MEM_LOG_OBJECTS defined -- unable to log specific objects\n"));
     }
     else if (! (gRefcntsLog || gAllocLog || gCOMPtrLog)) {
-      PRINTF("XPCOM_MEM_LOG_OBJECTS defined -- but none of XPCOM_MEM_(REFCNT|ALLOC|COMPTR)_LOG is defined\n");
+      PRINTF(("XPCOM_MEM_LOG_OBJECTS defined -- but none of XPCOM_MEM_(REFCNT|ALLOC|COMPTR)_LOG is defined\n"));
     }
     else {
-      PRINTF("XPCOM_MEM_LOG_OBJECTS defined -- only logging these objects: ");
+      PRINTF(("XPCOM_MEM_LOG_OBJECTS defined -- only logging these objects: "));
       const char* cp = objects;
       for (;;) {
         char* cm = (char*) strchr(cp, ',');
@@ -812,13 +812,13 @@ static void InitTraceLog(void)
         }
         for(PRInt32 serialno = bottom; serialno <= top; serialno++) {
           PL_HashTableAdd(gObjectsToLog, (const void*)serialno, (void*)1);
-          PRINTF("%d ", serialno);
+          PRINTF(("%d ", serialno));
         }
         if (!cm) break;
         *cm = ',';
         cp = cm + 1;
       }
-      PRINTF("\n");
+      PRINTF(("\n"));
     }
   }
 
@@ -1474,7 +1474,7 @@ nsTraceRefcnt::LoadLibrarySymbols(const char* aLibraryName,
     InitTraceLog();
 
   if (gAllocLog || gRefcntsLog) {
-    PRINTF("Loading symbols for %s\n", aLibraryName);
+    PRINTF(("Loading symbols for %s\n", aLibraryName));
     fflush(stdout);
 
     HANDLE myProcess = ::GetCurrentProcess();    
@@ -1510,8 +1510,8 @@ nsTraceRefcnt::LoadLibrarySymbols(const char* aLibraryName,
         0,
         NULL 
         );
-      PRINTF("ERROR: LoadLibrarySymbols for %s: %s\n",
-              aLibraryName, lpMsgBuf);
+      PRINTF(("ERROR: LoadLibrarySymbols for %s: %s\n",
+              aLibraryName, lpMsgBuf));
       fflush(stdout);
       LocalFree( lpMsgBuf );
     }

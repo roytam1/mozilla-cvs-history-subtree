@@ -64,8 +64,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsJSEnvironmentLog)
-#define PRINTF NS_LOG_PRINTF(nsJSEnvironmentLog)
-#define FLUSH  NS_LOG_FLUSH(nsJSEnvironmentLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsJSEnvironmentLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsJSEnvironmentLog)
 
 const size_t gStackSize = 8192;
 
@@ -176,7 +176,7 @@ NS_ScriptErrorReporter(JSContext *cx,
 #ifdef NS_ENABLE_LOGGING
   char *errorStr = error.ToNewCString();
   if (errorStr) {
-    PRINTF("%s\n", errorStr);
+    PRINTF(("%s\n", errorStr));
     nsMemory::Free(errorStr);
   }
 #endif

@@ -50,8 +50,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsHTMLContentSinkStreamLog)
-#define PRINTF NS_LOG_PRINTF(nsHTMLContentSinkStreamLog)
-#define FLUSH  NS_LOG_FLUSH(nsHTMLContentSinkStreamLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsHTMLContentSinkStreamLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsHTMLContentSinkStreamLog)
 
 static NS_DEFINE_CID(kSaveAsCharsetCID, NS_SAVEASCHARSET_CID);
 static NS_DEFINE_CID(kEntityConverterCID, NS_ENTITYCONVERTER_CID);
@@ -660,12 +660,12 @@ void nsHTMLContentSinkStream::AddStartTag(const nsIParserNode& aNode)
 
 #ifdef DEBUG_prettyprint
   if (isDirty)
-    PRINTF("AddStartTag(%s): BBO=%d, BAO=%d, BBC=%d, BAC=%d\n",
+    PRINTF(("AddStartTag(%s): BBO=%d, BAO=%d, BBC=%d, BAC=%d\n",
            name.ToNewCString(),
            BreakBeforeOpen(tag),
            BreakAfterOpen(tag),
            BreakBeforeClose(tag),
-           BreakAfterClose(tag));
+           BreakAfterClose(tag)));
 #endif
 
   if ((mDoFormat || isDirty) && mPreLevel == 0 && mColPos != 0
@@ -726,12 +726,12 @@ void nsHTMLContentSinkStream::AddEndTag(const nsIParserNode& aNode)
 
 #ifdef DEBUG_prettyprint
   if (isDirty)
-    PRINTF("AddEndTag(%s): BBO=%d, BAO=%d, BBC=%d, BAC=%d\n",
+    PRINTF(("AddEndTag(%s): BBO=%d, BAO=%d, BBC=%d, BAC=%d\n",
            aNode.GetText().ToNewCString(),
            BreakBeforeOpen(tag),
            BreakAfterOpen(tag),
            BreakBeforeClose(tag),
-           BreakAfterClose(tag));
+           BreakAfterClose(tag)));
 #endif
 
   if (tag == eHTMLTag_unknown)

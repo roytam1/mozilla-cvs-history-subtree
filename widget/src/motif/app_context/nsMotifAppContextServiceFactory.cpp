@@ -32,8 +32,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMotifAppContextServiceFactoryLog)
-#define PRINTF NS_LOG_PRINTF(nsMotifAppContextServiceFactoryLog)
-#define FLUSH  NS_LOG_FLUSH(nsMotifAppContextServiceFactoryLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMotifAppContextServiceFactoryLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMotifAppContextServiceFactoryLog)
 
 static NS_DEFINE_CID(kCMotifAppContextServiceCID, NS_MOTIF_APP_CONTEXT_SERVICE_CID);
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
@@ -129,7 +129,7 @@ NSRegisterSelf(nsISupports* aServMgr, const char *fullpath)
   nsresult rv;
 
 #ifdef NS_DEBUG
-  PRINTF("*** Registering MotifAppContextService\n");
+  PRINTF(("*** Registering MotifAppContextService\n"));
 #endif
 
   nsCOMPtr<nsIServiceManager>

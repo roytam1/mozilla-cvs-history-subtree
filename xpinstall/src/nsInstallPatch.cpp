@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsInstallPatchLog)
-#define PRINTF NS_LOG_PRINTF(nsInstallPatchLog)
-#define FLUSH  NS_LOG_FLUSH(nsInstallPatchLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsInstallPatchLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsInstallPatchLog)
 
 #ifdef XP_MAC
 #include "PatchableAppleSingle.h"
@@ -608,7 +608,7 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
 		{
 		    PRInt64 fileSize;
 		    outFileSpec->GetFileSize(&fileSize);
-			PRINTF("filesize: %d\n", fileSize);
+			PRINTF(("filesize: %d\n", fileSize));
 		}
 		
 			

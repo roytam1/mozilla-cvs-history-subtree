@@ -120,14 +120,14 @@ typedef unsigned long HMTX;
 #undef FLUSH
 
 NS_IMPL_LOG(nsWebShellLog)
-#define PRINTF NS_LOG_PRINTF(nsWebShellLog)
-#define FLUSH  NS_LOG_FLUSH(nsWebShellLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsWebShellLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsWebShellLog)
 
 #define gLogModule nsWebShellLog
 
 NS_IMPL_LOG(nsWebShellCallsLog)
-#define CALLS_PRINTF NS_LOG_PRINTF(nsWebShellCallsLog)
-#define CALLS_FLUSH  NS_LOG_FLUSH(nsWebShellCallsLog)
+#define CALLS_PRINTF(args) NS_LOG_PRINTF(nsWebShellCallsLog, args)
+#define CALLS_FLUSH()      NS_LOG_FLUSH(nsWebShellCallsLog)
 
 //NS_IMPL_LOG(nsWebShellHistoryLog)
 //#define HISTORY_PRINTF NS_LOG_PRINTF(nsWebShellHistoryLog)
@@ -153,7 +153,7 @@ nsWebShell::nsWebShell() : nsDocShell()
 #ifdef DEBUG
   // We're counting the number of |nsWebShells| to help find leaks
   ++gNumberOfWebShells;
-  PRINTF("WEBSHELL+ = %ld\n", gNumberOfWebShells);
+  PRINTF(("WEBSHELL+ = %ld\n", gNumberOfWebShells));
 #endif
 
   NS_INIT_REFCNT();
@@ -203,7 +203,7 @@ nsWebShell::~nsWebShell()
 #ifdef DEBUG
   // We're counting the number of |nsWebShells| to help find leaks
   --gNumberOfWebShells;
-  PRINTF("WEBSHELL- = %ld\n", gNumberOfWebShells);
+  PRINTF(("WEBSHELL- = %ld\n", gNumberOfWebShells));
 #endif
 }
 
@@ -1191,7 +1191,7 @@ nsWebShell::OnEndURLLoad(nsIDocumentLoader* loader,
 #if 0
   const char* spec;
   aURL->GetSpec(&spec);
-  PRINTF("nsWebShell::OnEndURLLoad:%p: loader=%p url=%s status=%d\n", this, loader, spec, aStatus);
+  PRINTF(("nsWebShell::OnEndURLLoad:%p: loader=%p url=%s status=%d\n", this, loader, spec, aStatus));
 #endif
   /*
    *Fire the OnEndDocumentLoad of the webshell observer
@@ -1357,7 +1357,7 @@ NS_IMETHODIMP nsWebShell::Create()
   NS_ENSURE_SUCCESS(eventService->GetThreadEventQueue(NS_CURRENT_THREAD,
    &mThreadEventQueue), NS_ERROR_FAILURE);
 
-  CALLS_PRINTF("nsWebShell::Init: this=%p", this);
+  CALLS_PRINTF(("nsWebShell::Init: this=%p", this));
 
   // HACK....force the uri loader to give us a load cookie for this webshell...then get it's
   // doc loader and store it...as more of the docshell lands, we'll be able to get rid

@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsStringLog)
-#define PRINTF NS_LOG_PRINTF(nsStringLog)
-#define FLUSH  NS_LOG_FLUSH(nsStringLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsStringLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsStringLog)
 
 #ifndef RICKG_TESTBED
 #include "prdtoa.h"
@@ -1543,7 +1543,7 @@ NS_COM int fputs(const nsCString& aString, FILE* out)
 void nsCString::DebugDump(void) const {
   
   if(mStr && (eOneByte==mCharSize)) {
-    PRINTF("\n%s",mStr);
+    PRINTF(("\n%s",mStr));
   }
 }
        

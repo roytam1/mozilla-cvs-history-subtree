@@ -30,8 +30,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsFrameUtilLog)
-#define PRINTF NS_LOG_PRINTF(nsFrameUtilLog)
-#define FLUSH  NS_LOG_FLUSH(nsFrameUtilLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFrameUtilLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFrameUtilLog)
 
 static NS_DEFINE_IID(kIFrameUtilIID, NS_IFRAME_UTIL_IID);
 
@@ -532,33 +532,33 @@ nsFrameUtil::CompareTrees(Node* tree1, Node* tree2)
       if (nsnull == tree2) {
         break;
       }
-      PRINTF("first tree prematurely ends\n");
+      PRINTF(("first tree prematurely ends\n"));
       return PR_FALSE;
     }
     else if (nsnull == tree2) {
-      PRINTF("second tree prematurely ends\n");
+      PRINTF(("second tree prematurely ends\n"));
       return PR_FALSE;
     }
 
     // Check the attributes that we care about
     if (0 != PL_strcmp(tree1->type, tree2->type)) {
-      PRINTF("frame type mismatch: %s vs. %s\n", tree1->type, tree2->type);
-      PRINTF("Node 1:\n");
+      PRINTF(("frame type mismatch: %s vs. %s\n", tree1->type, tree2->type));
+      PRINTF(("Node 1:\n"));
       DumpNode(tree1, stdout, 1);
-      PRINTF("Node 2:\n");
+      PRINTF(("Node 2:\n"));
       DumpNode(tree2, stdout, 1);
       return PR_FALSE;
     }
     if (tree1->state != tree2->state) {
-      PRINTF("frame state mismatch: 0x%x vs. 0x%x\n",
-             tree1->state, tree2->state);
+      PRINTF(("frame state mismatch: 0x%x vs. 0x%x\n",
+             tree1->state, tree2->state));
     }
     if (tree1->bbox != tree2->bbox) {
-      PRINTF("frame bbox mismatch: %d,%d,%d,%d vs. %d,%d,%d,%d\n",
+      PRINTF(("frame bbox mismatch: %d,%d,%d,%d vs. %d,%d,%d,%d\n",
              tree1->bbox.x, tree1->bbox.y,
              tree1->bbox.width, tree1->bbox.height,
              tree2->bbox.x, tree2->bbox.y,
-             tree2->bbox.width, tree2->bbox.height);
+             tree2->bbox.width, tree2->bbox.height));
     }
 
     // Check child lists too
@@ -567,10 +567,10 @@ nsFrameUtil::CompareTrees(Node* tree1, Node* tree2)
     for (;;) {
       if (nsnull == list1) {
         if (nsnull != list2) {
-          PRINTF("first tree prematurely ends (no child lists)\n");
-          PRINTF("Node 1:\n");
+          PRINTF(("first tree prematurely ends (no child lists)\n"));
+          PRINTF(("Node 1:\n"));
           DumpNode(tree1, stdout, 1);
-          PRINTF("Node 2:\n");
+          PRINTF(("Node 2:\n"));
           DumpNode(tree2, stdout, 1);
           return PR_FALSE;
         }
@@ -579,17 +579,17 @@ nsFrameUtil::CompareTrees(Node* tree1, Node* tree2)
         }
       }
       if (nsnull == list2) {
-        PRINTF("second tree prematurely ends (no child lists)\n");
-        PRINTF("Node 1:\n");
+        PRINTF(("second tree prematurely ends (no child lists)\n"));
+        PRINTF(("Node 1:\n"));
         DumpNode(tree1, stdout, 1);
-        PRINTF("Node 2:\n");
+        PRINTF(("Node 2:\n"));
         DumpNode(tree2, stdout, 1);
         return PR_FALSE;
       }
       if (0 != PL_strcmp(list1->name, list2->name)) {
-        PRINTF("child-list name mismatch: %s vs. %s\n",
+        PRINTF(("child-list name mismatch: %s vs. %s\n",
                list1->name ? list1->name : "(null)",
-               list2->name ? list2->name : "(null)");
+               list2->name ? list2->name : "(null)"));
       }
       else {
         PRBool equiv = CompareTrees(list1->node, list2->node);
@@ -616,9 +616,9 @@ nsFrameUtil::CompareRegressionData(FILE* aFile1, FILE* aFile2)
 
   nsresult rv = NS_OK;
   if (!CompareTrees(tree1, tree2)) {
-    PRINTF("Regression data 1:\n");
+    PRINTF(("Regression data 1:\n"));
     DumpTree(tree1, stdout, 0);
-    PRINTF("Regression data 2:\n");
+    PRINTF(("Regression data 2:\n"));
     DumpTree(tree2, stdout, 0);
     rv = NS_ERROR_FAILURE;
   }

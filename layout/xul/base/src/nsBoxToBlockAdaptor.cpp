@@ -58,8 +58,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsBoxToBlockAdaptorLog)
-#define PRINTF NS_LOG_PRINTF(nsBoxToBlockAdaptorLog)
-#define FLUSH  NS_LOG_FLUSH(nsBoxToBlockAdaptorLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsBoxToBlockAdaptorLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsBoxToBlockAdaptorLog)
 
 static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 
@@ -75,7 +75,7 @@ nsAdaptorAddIndents()
 {
     for(PRInt32 i=0; i < gIndent2; i++)
     {
-      PRINTF(" ");
+      PRINTF((" "));
     }
 }
 
@@ -120,7 +120,7 @@ nsAdaptorPrintReason(nsHTMLReflowState& aReflowState)
           break;
     }
 
-    PRINTF("%s",reflowReasonString);
+    PRINTF(("%s",reflowReasonString));
 }
 
 #endif
@@ -559,7 +559,7 @@ nsBoxToBlockAdaptor::DoLayout(nsBoxLayoutState& aState)
 
 #ifdef DEBUG_GROW
             DumpBox(stdout);
-            PRINTF(" GREW from (%d,%d) -> (%d,%d)\n", ourRect.width, ourRect.height, desiredSize.width, desiredSize.height);
+            PRINTF((" GREW from (%d,%d) -> (%d,%d)\n", ourRect.width, ourRect.height, desiredSize.width, desiredSize.height));
 #endif
 
          if (desiredSize.width > ourRect.width)
@@ -598,13 +598,13 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
 
 #ifdef DEBUG_REFLOW
   nsAdaptorAddIndents();
-  PRINTF("Reflowing: ");
+  PRINTF(("Reflowing: "));
   nsFrame::ListTag(stdout, mFrame);
-  PRINTF("\n");
+  PRINTF(("\n"));
   gIndent2++;
 #endif
 
-  //PRINTF("width=%d, height=%d\n", aWidth, aHeight);
+  //PRINTF(("width=%d, height=%d\n", aWidth, aHeight));
   nsIBox* parent;
   GetParentBox(&parent);
   nsIFrame* frame;
@@ -613,7 +613,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   frame->GetFrameState(&frameState);
 
  // if (frameState & NS_STATE_CURRENTLY_IN_DEBUG)
-  //   PRINTF("In debug\n");
+  //   PRINTF(("In debug\n"));
   
   if (mSpaceManager == nsnull) {
       mSpaceManager = new nsSpaceManager(mFrame);
@@ -733,7 +733,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
         if (needsReflow) {
            Redraw(aState);
            redrawAfterReflow = PR_TRUE;
-           //PRINTF("Redrawing!!!/n");
+           //PRINTF(("Redrawing!!!/n"));
         }
 
    } break;
@@ -838,10 +838,10 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
           if (type != nsIReflowCommand::StyleChanged) {
              #ifdef DEBUG_REFLOW
                 nsAdaptorAddIndents();
-                PRINTF("Size=(%d,%d)\n",reflowState.mComputedWidth, reflowState.mComputedHeight);
+                PRINTF(("Size=(%d,%d)\n",reflowState.mComputedWidth, reflowState.mComputedHeight));
                 nsAdaptorAddIndents();
                 nsAdaptorPrintReason(reflowState);
-                PRINTF("\n");
+                PRINTF(("\n"));
              #endif
 
              mFrame->WillReflow(aPresContext);
@@ -859,10 +859,10 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
 
     #ifdef DEBUG_REFLOW
       nsAdaptorAddIndents();
-      PRINTF("Size=(%d,%d)\n",reflowState.mComputedWidth, reflowState.mComputedHeight);
+      PRINTF(("Size=(%d,%d)\n",reflowState.mComputedWidth, reflowState.mComputedHeight));
       nsAdaptorAddIndents();
       nsAdaptorPrintReason(reflowState);
-      PRINTF("\n");
+      PRINTF(("\n"));
     #endif
 
        // place the child and reflow
@@ -875,7 +875,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
     nsFrameState  kidState;
     mFrame->GetFrameState(&kidState);
 
-    // PRINTF("width: %d, height: %d\n", aDesiredSize.mCombinedArea.width, aDesiredSize.mCombinedArea.height);
+    // PRINTF(("width: %d, height: %d\n", aDesiredSize.mCombinedArea.width, aDesiredSize.mCombinedArea.height));
 
     // see if the overflow option is set. If it is then if our child's bounds overflow then
     // we will set the child's rect to include the overflow size.
@@ -886,7 +886,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
 
          // include the overflow size in our child's rect?
          if (mIncludeOverflow) {
-           //PRINTF("OutsideChildren width=%d, height=%d\n", aDesiredSize.mOverflowArea.width, aDesiredSize.mOverflowArea.height);
+           //PRINTF(("OutsideChildren width=%d, height=%d\n", aDesiredSize.mOverflowArea.width, aDesiredSize.mOverflowArea.height));
              aDesiredSize.width = aDesiredSize.mOverflowArea.width;
              if (aDesiredSize.width <= aWidth)
                aDesiredSize.height = aDesiredSize.mOverflowArea.height;
@@ -901,7 +901,7 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
                  #ifdef DEBUG_REFLOW
                   nsAdaptorAddIndents();
                   nsAdaptorPrintReason(reflowState);
-                  PRINTF("\n");
+                  PRINTF(("\n"));
                  #endif
                  mFrame->WillReflow(aPresContext);
                  mFrame->Reflow(aPresContext, aDesiredSize, reflowState, aStatus);
@@ -974,13 +974,13 @@ nsBoxToBlockAdaptor::Reflow(nsBoxLayoutState& aState,
   if (aHeight != NS_INTRINSICSIZE && aDesiredSize.height != aHeight)
   {
           nsAdaptorAddIndents();
-          PRINTF("*****got taller!*****\n");
+          PRINTF(("*****got taller!*****\n"));
          
   }
   if (aWidth != NS_INTRINSICSIZE && aDesiredSize.width != aWidth)
   {
           nsAdaptorAddIndents();
-          PRINTF("*****got wider!******\n");
+          PRINTF(("*****got wider!******\n"));
          
   }
 #endif

@@ -44,8 +44,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(mimeobjLog)
-#define PRINTF NS_LOG_PRINTF(mimeobjLog)
-#define FLUSH  NS_LOG_FLUSH(mimeobjLog)
+#define PRINTF(args) NS_LOG_PRINTF(mimeobjLog, args)
+#define FLUSH()      NS_LOG_FLUSH(mimeobjLog)
 
 MimeDefClass (MimeObject, MimeObjectClass, mimeObjectClass, NULL);
 
@@ -335,9 +335,9 @@ MimeObject_debug_print (MimeObject *obj, PRFileDesc *stream, PRInt32 depth)
   for (i=0; i < depth; i++)
 	PR_Write(stream, "  ", 2);
 /*
-  FPRINTF(stream, "<%s %s 0x%08X>\n", obj->clazz->class_name,
+  FPRINTF((stream, "<%s %s 0x%08X>\n", obj->clazz->class_name,
 		  addr ? addr : "???",
-		  (PRUint32) obj);
+		  (PRUint32) obj));
 */
   PR_FREEIF(addr);
   return 0;

@@ -54,8 +54,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsPop3ProtocolLog)
-#define PRINTF NS_LOG_PRINTF(nsPop3ProtocolLog)
-#define FLUSH  NS_LOG_FLUSH(nsPop3ProtocolLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsPop3ProtocolLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsPop3ProtocolLog)
 
 #define PREF_MAIL_ALLOW_AT_SIGN_IN_USER_NAME "mail.allow_at_sign_in_user_name"
 #define EXTRA_SAFETY_SPACE 3096
@@ -1838,13 +1838,13 @@ nsPop3Protocol::GetMsg()
             	// We'll leave a debug message to warn people.
 
                 #ifdef DEBUG
-                PRINTF("Call to GetDiskSpaceAvailable FAILED! \n");
+                PRINTF(("Call to GetDiskSpaceAvailable FAILED! \n"));
                 #endif
             }
             else
             {
 				#ifdef DEBUG
-				PRINTF("GetDiskSpaceAvailable returned: %d bytes\n", mailboxSpaceLeft);
+				PRINTF(("GetDiskSpaceAvailable returned: %d bytes\n", mailboxSpaceLeft));
 				#endif
 
             	// Original comment from old implimentation follows...
@@ -1867,7 +1867,7 @@ nsPop3Protocol::GetMsg()
             	{
             		// Not enough disk space!
 					#ifdef DEBUG
-					PRINTF("Not enough disk space! Raising error! \n");
+					PRINTF(("Not enough disk space! Raising error! \n"));
 					#endif
             		// Should raise an error at this point.
             		// First, we need to delete our references to the two interfaces..

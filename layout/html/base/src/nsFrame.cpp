@@ -71,8 +71,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFrameLog)
 
 // For triple-click pref
 #include "nsIPref.h"
@@ -142,8 +142,8 @@ nsIFrameDebug::GetVerifyTreeEnable()
     if (nsnull == gFrameVerifyTreeLogModuleInfo) {
       gFrameVerifyTreeLogModuleInfo = PR_NewLogModule("frameverifytree");
       gFrameVerifyTreeEnable = 0 != gFrameVerifyTreeLogModuleInfo->level;
-      PRINTF("Note: frameverifytree is %sabled",
-             gFrameVerifyTreeEnable ? "en" : "dis");
+      PRINTF(("Note: frameverifytree is %sabled",
+             gFrameVerifyTreeEnable ? "en" : "dis"));
     }
   }
   return gFrameVerifyTreeEnable;
@@ -166,8 +166,8 @@ nsIFrameDebug::GetVerifyStyleTreeEnable()
     if (nsnull == gStyleVerifyTreeLogModuleInfo) {
       gStyleVerifyTreeLogModuleInfo = PR_NewLogModule("styleverifytree");
       gStyleVerifyTreeEnable = 0 != gStyleVerifyTreeLogModuleInfo->level;
-      PRINTF("Note: styleverifytree is %sabled",
-             gStyleVerifyTreeEnable ? "en" : "dis");
+      PRINTF(("Note: styleverifytree is %sabled",
+             gStyleVerifyTreeEnable ? "en" : "dis"));
     }
   }
   return gStyleVerifyTreeEnable;
@@ -1257,8 +1257,8 @@ nsFrame::HandleMultiplePress(nsIPresContext* aPresContext,
   else
     return NS_OK;
 #ifdef DEBUG_akkana
-  if (selectPara) PRINTF("Selecting Paragraph");
-  else PRINTF("Selecting Line");
+  if (selectPara) PRINTF(("Selecting Paragraph"));
+  else PRINTF(("Selecting Line"));
 #endif
 
   // Line or paragraph selection:
@@ -1689,12 +1689,13 @@ nsresult nsFrame::GetContentAndOffsetsFromPoint(nsIPresContext* aCX,
         }
       }
 
-      // PRINTF("      0x%.8x   0x%.8x  %4d  %4d",
+      // PRINTF(("      0x%.8x   0x%.8x  %4d  %4d",
       //        closestFrame, closestView, closestXDistance, closestYDistance));
 
       return closestFrame->GetContentAndOffsetsFromPoint(aCX, newPoint, aNewContent,
                                                          aContentOffset, aContentOffsetEnd,aBeginFrameContent);
-    }  }
+    }
+  }
 
   if (!mContent)
     return NS_ERROR_NULL_POINTER;
@@ -2899,7 +2900,7 @@ nsFrame::PeekOffsetParagraph(nsIPresContext* aPresContext,
                              nsPeekOffsetStruct *aPos)
 {
 #ifdef DEBUG_paragraph
-  PRINTF("Selecting paragraph");
+  PRINTF(("Selecting paragraph"));
 #endif
   nsIFrame* blockFrame;
   nsCOMPtr<nsILineIterator> iter (getter_AddRefs(GetBlockFrameAndLineIter(this, &blockFrame)));
@@ -2909,9 +2910,9 @@ nsFrame::PeekOffsetParagraph(nsIPresContext* aPresContext,
   PRInt32 thisLine;
   nsresult result = iter->FindLineContaining(this, &thisLine);
 #ifdef DEBUG_paragraph
-  PRINTF("Looping %s from line %d",
+  PRINTF(("Looping %s from line %d",
          aPos->mDirection == eDirPrevious ? "back" : "forward",
-         thisLine);
+         thisLine));
 #endif
   if (NS_FAILED(result) || thisLine < 0)
     return result ? result : NS_ERROR_UNEXPECTED;
@@ -2932,7 +2933,7 @@ nsFrame::PeekOffsetParagraph(nsIPresContext* aPresContext,
       if (NS_FAILED(result) || !firstFrameOnLine || !numFramesOnLine)
       {
 #ifdef DEBUG_paragraph
-        PRINTF("End loop at line %d", i);
+        PRINTF(("End loop at line %d", i));
 #endif
         break;
       }
@@ -2941,7 +2942,7 @@ nsFrame::PeekOffsetParagraph(nsIPresContext* aPresContext,
     {
       // Fill in aPos with the info on the new position
 #ifdef DEBUG_paragraph
-      PRINTF("Found a paragraph break at line %d", i);
+      PRINTF(("Found a paragraph break at line %d", i));
 #endif
 
       // Save the old direction, but now go one line back the other way
@@ -2957,7 +2958,7 @@ nsFrame::PeekOffsetParagraph(nsIPresContext* aPresContext,
                                               i,
                                               0);
       if (NS_FAILED(result))
-        PRINTF("GetNextPrevLineFromeBlockFrame failed");
+        PRINTF(("GetNextPrevLineFromeBlockFrame failed"));
 
 #else /* SIMPLE -- alas, nope */
       int edgeCase = 0;//no edge case. this should look at thisLine

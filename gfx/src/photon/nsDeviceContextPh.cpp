@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDeviceContextPhLog)
-#define PRINTF NS_LOG_PRINTF(nsDeviceContextPhLog)
-#define FLUSH  NS_LOG_FLUSH(nsDeviceContextPhLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDeviceContextPhLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDeviceContextPhLog)
 
 static NS_DEFINE_IID(kIDeviceContextSpecIID, NS_IDEVICE_CONTEXT_SPEC_IID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
@@ -160,7 +160,7 @@ nsresult nsDeviceContextPh :: Init(nsNativeDeviceContext aContext, nsIDeviceCont
   mHeightFloat = (float)(psize->h / 10);
   dim.w = psize->w / 10;
   dim.h = psize->h / 10;
-  PRINTF("PRINT: %d, %d\n", (int)mWidthFloat, (int)mHeightFloat);
+  PRINTF(("PRINT: %d, %d\n", (int)mWidthFloat, (int)mHeightFloat));
   PpPrintSetPC(pc, INITIAL_PC, 0 , Pp_PC_SOURCE_SIZE, &dim );
   
   return NS_OK;
@@ -180,10 +180,10 @@ void nsDeviceContextPh :: GetPrinterRect(int *width, int *height)
 	memset( &rect, 0, sizeof(rect));
 	memset( &margins, 0, sizeof(margins));
 
-	PRINTF("PC: %X\n", pc);
+	PRINTF(("PC: %X\n", pc));
 	PpPrintGetPC(pc, Pp_PC_PAPER_SIZE, (const void **)&psize );
 	PpPrintGetPC(pc, Pp_PC_NONPRINT_MARGINS, (const void **)&non_print );
-	PRINTF("SIZE: %d, %d\n", psize->w, psize->h);
+	PRINTF(("SIZE: %d, %d\n", psize->w, psize->h));
 	dim.w = (psize->w - ( non_print->ul.x + non_print->lr.x )) * 100 / 1000;
 	dim.h = (psize->h - ( non_print->ul.x + non_print->lr.x )) * 100 / 1000;
 
@@ -334,7 +334,7 @@ NS_IMETHODIMP nsDeviceContextPh :: CreateRenderingContext(nsIRenderingContext *&
 		PR_LOG(PhGfxLog, PR_LOG_DEBUG,("nsDeviceContextPh::CreateRenderingContext - mDC=<%p>\n", mDC));
 
 		PhGC_t * aGC = (PhGC_t *) mDC;
-		PRINTF("CreateRenderingContext\n");
+		PRINTF(("CreateRenderingContext\n"));
 		
 		rv = surf->Init(aGC);
 		if (NS_OK == rv)
@@ -485,7 +485,7 @@ NS_IMETHODIMP nsDeviceContextPh :: GetClientRect(nsRect &aRect)
 	  aRect.y = 0;
 	  aRect.width = NSToIntRound(mWidth * mDevUnitsToAppUnits);
 	  aRect.height = NSToIntRound(mHeight * mDevUnitsToAppUnits);
-	  PRINTF("GetClientRect: printer: %d, %d - %d, %d\n", mWidth, mHeight, aRect.width, aRect.height);
+	  PRINTF(("GetClientRect: printer: %d, %d - %d, %d\n", mWidth, mHeight, aRect.width, aRect.height));
 	}
 	else
 		rv = GetRect ( aRect );
@@ -550,7 +550,7 @@ NS_IMETHODIMP nsDeviceContextPh :: GetDeviceSurfaceDimensions(PRInt32 &aWidth, P
 {
 	if (mSpec)
 	{
-		PRINTF("PRINT: GetDeviceSurfaceDimensions\n");
+		PRINTF(("PRINT: GetDeviceSurfaceDimensions\n"));
 		aWidth = NSToIntRound(mWidthFloat * mDevUnitsToAppUnits);
 		aHeight = NSToIntRound(mHeightFloat * mDevUnitsToAppUnits);
 		return (NS_OK);
@@ -650,14 +650,14 @@ NS_IMETHODIMP nsDeviceContextPh :: BeginDocument(void)
   PpPrintContext_t *pc = ((nsDeviceContextSpecPh *)mSpec)->GetPrintContext();
 
 	PhDrawContext_t *dc = PhDCSetCurrent(NULL);
-	PRINTF("Begin: %X, ", dc);
+	PRINTF(("Begin: %X, ", dc));
 	PhDCSetCurrent(dc);
 
   PpStartJob(pc);
   PpContinueJob(pc);
 
 	dc = PhDCSetCurrent(NULL);
-	PRINTF("%X\n", dc);
+	PRINTF(("%X\n", dc));
 	PhDCSetCurrent(dc);
 
   return NS_OK;
@@ -665,7 +665,7 @@ NS_IMETHODIMP nsDeviceContextPh :: BeginDocument(void)
 
 NS_IMETHODIMP nsDeviceContextPh :: EndDocument(void)
 {
-  PRINTF("EndDocument\n");
+  PRINTF(("EndDocument\n"));
   PpPrintContext_t *pc = ((nsDeviceContextSpecPh *)mSpec)->GetPrintContext();
   PpSuspendJob(pc);
   PpEndJob(pc);
@@ -708,13 +708,13 @@ NS_IMETHODIMP nsDeviceContextPh :: EndDocument(void)
 
 NS_IMETHODIMP nsDeviceContextPh :: BeginPage(void)
 {
-	PRINTF("BeginPage\n");
+	PRINTF(("BeginPage\n"));
   	return NS_OK;
 }
 
 NS_IMETHODIMP nsDeviceContextPh :: EndPage(void)
 {
-	PRINTF("EndPage\n");
+	PRINTF(("EndPage\n"));
   PpPrintNewPage(((nsDeviceContextSpecPh *)mSpec)->GetPrintContext());
 	return NS_OK;
 #if 0
@@ -810,7 +810,7 @@ nsresult nsDeviceContextPh :: GetDisplayInfo(PRInt32 &aWidth, PRInt32 &aHeight, 
   }
   else
   {
-    PRINTF("The PHIG environment variable must be set, try setting it to 1\n");  
+    PRINTF(("The PHIG environment variable must be set, try setting it to 1\n"));  
   }
 
   PR_LOG(PhGfxLog, PR_LOG_DEBUG,("nsDeviceContextPh::GetDisplayInfo aWidth=<%d> aHeight=<%d> aDepth=<%d>\n", aWidth, aHeight, aDepth));

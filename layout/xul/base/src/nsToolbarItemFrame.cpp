@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsToolbarItemFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsToolbarItemFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsToolbarItemFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsToolbarItemFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsToolbarItemFrameLog)
 
 // Drag & Drop, Clipboard Support
 static NS_DEFINE_CID(kCDragServiceCID,         NS_DRAGSERVICE_CID);
@@ -157,7 +157,7 @@ nsToolbarItemFrame::HandleEvent(nsIPresContext* aPresContext,
     } 
     nsServiceManager::ReleaseService(kCDragServiceCID, dragService); 
   } */
-  PRINTF("ToolbarItem %d\n", aEvent->message);
+  PRINTF(("ToolbarItem %d\n", aEvent->message));
   return nsBoxFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 }
 

@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsCommandLineServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsCommandLineServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsCommandLineServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsCommandLineServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsCommandLineServiceLog)
 
 nsCmdLineService::nsCmdLineService()
 	:  mArgCount(0), mArgc(0), mArgv(0)
@@ -141,7 +141,7 @@ nsCmdLineService::Initialize(int aArgc, char ** aArgv)
 #if 0
   for (i=0; i<mArgCount; i++)
   {
-    PRINTF("Argument: %s, ****** Value: %s\n", (char *)mArgList.ElementAt(i), (char *) mArgValueList.ElementAt(i));      
+    PRINTF(("Argument: %s, ****** Value: %s\n", (char *)mArgList.ElementAt(i), (char *) mArgValueList.ElementAt(i)));      
   }
 #endif /* 0 */
 
@@ -267,13 +267,13 @@ nsCmdLineService::PrintCmdArgs()
 {
 
    if (mArgCount == 0) {
-     PRINTF("No command line options provided\n");
+     PRINTF(("No command line options provided\n"));
      return;
    }
    
    for (int i=0; i<mArgCount; i++)
    {
-     PRINTF("Argument: %s, ****** Value: %s\n", mArgList.ElementAt(i), mArgValueList.ElementAt(i));      
+     PRINTF(("Argument: %s, ****** Value: %s\n", mArgList.ElementAt(i), mArgValueList.ElementAt(i)));      
 
    }
 

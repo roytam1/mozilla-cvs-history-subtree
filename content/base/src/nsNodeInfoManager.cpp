@@ -32,8 +32,8 @@ NS_IMPL_LOG_ENABLED(nsNodeInfoManagerLog)
 #else
 NS_IMPL_LOG(nsNodeInfoManagerLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsNodeInfoManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsNodeInfoManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNodeInfoManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNodeInfoManagerLog)
 
 nsNodeInfoManager* nsNodeInfoManager::gAnonymousNodeInfoManager = nsnull;
 PRUint32 nsNodeInfoManager::gNodeManagerCount = 0;
@@ -74,7 +74,7 @@ nsNodeInfoManager::nsNodeInfoManager()
                                   nsNodeInfoInner::KeyCompare,
                                   PL_CompareValues, nsnull, nsnull);
 
-  PRINTF("Creating NodeInfoManager, gcount = %d\n", gNodeManagerCount);
+  PRINTF(("Creating NodeInfoManager, gcount = %d\n", gNodeManagerCount));
 }
 
 
@@ -95,7 +95,7 @@ nsNodeInfoManager::~nsNodeInfoManager()
   if (mNodeInfoHash)
     PL_HashTableDestroy(mNodeInfoHash);
 
-  PRINTF("Removing NodeInfoManager, gcount = %d\n", gNodeManagerCount);
+  PRINTF(("Removing NodeInfoManager, gcount = %d\n", gNodeManagerCount));
 }
 
 

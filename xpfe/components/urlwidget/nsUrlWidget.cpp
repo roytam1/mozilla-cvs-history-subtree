@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsUrlWidgetLog)
-#define PRINTF NS_LOG_PRINTF(nsUrlWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(nsUrlWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsUrlWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsUrlWidgetLog)
 
 // Define this macro to turn on console debug output.                       
 //#define DEBUG_URLWIDGET
@@ -114,7 +114,7 @@ nsUrlWidget::SetURLToHiddenControl( char const *aURL, nsIDOMWindowInternal *pare
 	if ((aURL != NULL) && (hEdit != NULL))
 	{
         #ifdef DEBUG_URLWIDGET
-      PRINTF( "nsUrlWidget; window=0x%08X, url=[%s]\n", (int)hEdit, aURL );
+      PRINTF(( "nsUrlWidget; window=0x%08X, url=[%s]\n", (int)hEdit, aURL ));
         #endif
 		::SendMessage(hEdit, WM_SETTEXT, (WPARAM)0, (LPARAM)aURL);
 	}
@@ -128,13 +128,13 @@ NS_IMPL_ISUPPORTS1( nsUrlWidget, nsIUrlWidget );
 nsUrlWidget::nsUrlWidget() {
   NS_INIT_ISUPPORTS();
 #ifdef DEBUG_URLWIDGET
-  PRINTF( "nsUrlWidget ctor called\n" );
+  PRINTF(( "nsUrlWidget ctor called\n" ));
 #endif
 }
 
 
 nsUrlWidget::~nsUrlWidget() {
 #ifdef DEBUG_URLWIDGET
-  PRINTF( "nsUrlWidget dtor called\n" );
+  PRINTF(( "nsUrlWidget dtor called\n" ));
 #endif
 }

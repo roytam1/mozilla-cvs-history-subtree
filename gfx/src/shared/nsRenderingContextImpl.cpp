@@ -29,8 +29,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsRenderingContextImplLog)
-#define PRINTF NS_LOG_PRINTF(nsRenderingContextImplLog)
-#define FLUSH  NS_LOG_FLUSH(nsRenderingContextImplLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsRenderingContextImplLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsRenderingContextImplLog)
 
 const nsPoint *gPts;
 
@@ -458,10 +458,10 @@ float         fx,fy,smag;
 	}else{
     // draw the curve 
 #ifdef DEBUGCURVE
-    PRINTF("LINE 1- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y),
-           NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y));
-    PRINTF("LINE 2- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc2.x),NSToCoordRound(curve1.mAnc2.y),
-           NSToCoordRound(curve2.mAnc2.x),NSToCoordRound(curve2.mAnc2.y));
+    PRINTF(("LINE 1- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y),
+           NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y)));
+    PRINTF(("LINE 2- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc2.x),NSToCoordRound(curve1.mAnc2.y),
+           NSToCoordRound(curve2.mAnc2.x),NSToCoordRound(curve2.mAnc2.y)));
 #endif
     aRenderingContext->DrawStdLine(NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y),NSToCoordRound(curve1.mAnc2.x),NSToCoordRound(curve1.mAnc2.y)); 
     aRenderingContext->DrawStdLine(NSToCoordRound(curve1.mAnc2.x),NSToCoordRound(curve1.mAnc2.y),NSToCoordRound(curve2.mAnc2.x),NSToCoordRound(curve2.mAnc2.y));
@@ -476,10 +476,10 @@ float         fx,fy,smag;
 void 
 QBezierCurve::DebugPrint()
 {
-  PRINTF("CURVE COORDINATES\n");
-  PRINTF("Anchor 1 %f %f\n",mAnc1.x,mAnc1.y);
-  PRINTF("Control %f %f\n",mCon.x,mCon.y);
-  PRINTF("Anchor %f %f\n",mAnc2.x,mAnc2.y);
+  PRINTF(("CURVE COORDINATES\n"));
+  PRINTF(("Anchor 1 %f %f\n",mAnc1.x,mAnc1.y));
+  PRINTF(("Control %f %f\n",mCon.x,mCon.y));
+  PRINTF(("Anchor %f %f\n",mAnc2.x,mAnc2.y));
 
 }
 
@@ -514,10 +514,10 @@ float         fx,fy,smag;
     aThePoints[(*aNumPts)++].MoveTo(NSToCoordRound(curve2.mAnc2.x),NSToCoordRound(curve2.mAnc2.y));
 
 #ifdef DEBUGCURVE
-    PRINTF("LINE 1- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y),
-           NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y));
-    PRINTF("LINE 2- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc2.x),NSToCoordRound(curve1.mAnc2.y),
-           NSToCoordRound(curve2.mAnc2.x),NSToCoordRound(curve2.mAnc2.y));
+    PRINTF(("LINE 1- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y),
+           NSToCoordRound(curve1.mAnc1.x),NSToCoordRound(curve1.mAnc1.y)));
+    PRINTF(("LINE 2- %d,%d %d,%d\n",NSToCoordRound(curve1.mAnc2.x),NSToCoordRound(curve1.mAnc2.y),
+           NSToCoordRound(curve2.mAnc2.x),NSToCoordRound(curve2.mAnc2.y)));
 #endif
 
 	}

@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsPluginsDirBeOSLog)
-#define PRINTF NS_LOG_PRINTF(nsPluginsDirBeOSLog)
-#define FLUSH  NS_LOG_FLUSH(nsPluginsDirBeOSLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsPluginsDirBeOSLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsPluginsDirBeOSLog)
 
 #include "nsSpecialSystemDirectory.h"
 
@@ -102,7 +102,7 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
 {
     const char* pathname = fileSpec.GetCString();
 
-	PRINTF("IsPluginFile(%s)\n", pathname);
+	PRINTF(("IsPluginFile(%s)\n", pathname));
 
 	return PR_TRUE;
 }
@@ -131,7 +131,7 @@ nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
         const char* path = this->GetCString();
         pLibrary = outLibrary = PR_LoadLibrary(path);
 
-        PRINTF("LoadPlugin() %s returned %lx\n",path,(unsigned long)pLibrary);
+        PRINTF(("LoadPlugin() %s returned %lx\n",path,(unsigned long)pLibrary));
 
         return NS_OK;
 }
@@ -154,14 +154,14 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
     if((procedure = (BeOS_Plugin_GetMIMEDescription)PR_FindSymbol(pLibrary,"NP_GetMIMEDescription")) != 0) {
         mimedescr = procedure();
     } else {
-        PRINTF("Cannot get plugin info: no GetMIMEDescription procedure!\n");
+        PRINTF(("Cannot get plugin info: no GetMIMEDescription procedure!\n"));
         return NS_ERROR_FAILURE;
     }
 
 	info.fName = GetFileName(path);
 
-    PRINTF("GetMIMEDescription() %lx returned \"%s\"\n",
-           (unsigned long)procedure, mimedescr);
+    PRINTF(("GetMIMEDescription() %lx returned \"%s\"\n",
+           (unsigned long)procedure, mimedescr));
 
     // copy string
     
@@ -199,7 +199,7 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
         if(descr)
             *descr++=0;
 
-        PRINTF("Registering plugin for: \"%s\",\"%s\",\"%s\"\n", mtype,descr ? descr : "null",exten ? exten : "null");
+        PRINTF(("Registering plugin for: \"%s\",\"%s\",\"%s\"\n", mtype,descr ? descr : "null",exten ? exten : "null"));
 
         if(!*mtype && !descr && !exten) {
             i--;

@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTimerLog)
-#define PRINTF NS_LOG_PRINTF(nsTimerLog)
-#define FLUSH  NS_LOG_FLUSH(nsTimerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTimerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTimerLog)
 
 //
 // Copied from the unix version, Rhapsody needs to 
@@ -151,7 +151,7 @@ TimerImpl::Init(nsTimerCallbackFunc aFunc,
     mClosure = aClosure;
     // mRepeat = aRepeat;
 
-    PRINTF("TimerImpl::Init() not implemented\n");
+    PRINTF(("TimerImpl::Init() not implemented\n"));
 
 #ifdef RHAPSODY_NEEDS_TO_IMPLEMENT_THIS
     mTimerId = XtAppAddTimeOut(gAppContext, aDelay,(XtTimerCallbackProc)nsTimerExpired, this);
@@ -170,7 +170,7 @@ TimerImpl::Init(nsITimerCallback *aCallback,
     mCallback = aCallback;
     // mRepeat = aRepeat;
 
-    PRINTF("TimerImpl::Init() not implmented.\n");
+    PRINTF(("TimerImpl::Init() not implmented.\n"));
 
 #ifdef RHAPSODY_NEEDS_TO_IMPLEMENT_THIS
     mTimerId = XtAppAddTimeOut(gAppContext, aDelay, (XtTimerCallbackProc)nsTimerExpired, this);
@@ -195,7 +195,7 @@ void
 TimerImpl::Cancel()
 {
 
-  PRINTF("TimerImpl::Cancel() not implemented.\n");
+  PRINTF(("TimerImpl::Cancel() not implemented.\n"));
 
 #ifdef RHAPSODY_NEEDS_TO_IMPLEMENT_THIS
   XtRemoveTimeOut(mTimerId);

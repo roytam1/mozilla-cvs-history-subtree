@@ -29,8 +29,8 @@ NS_IMPL_LOG_ENABLED(IMECommitTxnLog)
 #else
 NS_IMPL_LOG(IMECommitTxnLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(IMECommitTxnLog)
-#define FLUSH  NS_LOG_FLUSH(IMECommitTxnLog)
+#define PRINTF(args) NS_LOG_PRINTF(IMECommitTxnLog, args)
+#define FLUSH()      NS_LOG_FLUSH(IMECommitTxnLog)
 
 // #define DEBUG_IME
 nsIAtom *IMECommitTxn::gIMECommitTxnName = nsnull;
@@ -66,19 +66,19 @@ NS_IMETHODIMP IMECommitTxn::Init(void)
 
 NS_IMETHODIMP IMECommitTxn::Do(void)
 {
-	PRINTF("Do IME Commit");
+	PRINTF(("Do IME Commit"));
 	return NS_OK;
 }
 
 NS_IMETHODIMP IMECommitTxn::Undo(void)
 {
-	PRINTF("Undo IME Commit");
+	PRINTF(("Undo IME Commit"));
 	return NS_OK;
 }
 
 NS_IMETHODIMP IMECommitTxn::Merge(PRBool *aDidMerge, nsITransaction *aTransaction)
 {
-	PRINTF("Merge IME Commit");
+	PRINTF(("Merge IME Commit"));
 	NS_ASSERTION(aDidMerge, "null ptr- aDidMerge");
 	NS_ASSERTION(aTransaction, "null ptr- aTransaction");
 	if((nsnull == aDidMerge) || (nsnull == aTransaction))

@@ -26,8 +26,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(MainWidgetLog)
-#define PRINTF NS_LOG_PRINTF(MainWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(MainWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(MainWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(MainWidgetLog)
 
 MainWidget::MainWidget()
 {
@@ -38,13 +38,13 @@ MainWidget::MainWidget()
 	m_edit    = new QLineEdit( this );
 	m_progressBar = NULL;
 
-	PRINTF("done creating MainWidget parts...\n");
+	PRINTF(("done creating MainWidget parts...\n"));
 
 	m_load->setGeometry( 10, 10, 50, 25 );
 	m_quit->setGeometry( 70, 10, 50, 25 );
 	m_mozilla->setGeometry( 0, 40, 500, 460 );
 	m_edit-> setGeometry( 130, 10, width() - 140, 25 );
-	PRINTF("done setting MainWidget parts geometry...\n");
+	PRINTF(("done setting MainWidget parts geometry...\n"));
 
 	m_mozilla->setFocusPolicy( QWidget::StrongFocus );
 	m_mozilla->setMouseTracking( TRUE );
@@ -84,15 +84,15 @@ void MainWidget::handleReturnPressed()
 /* private slot */
 void MainWidget::handleURLLoadStarted()
 {
-	PRINTF("URL Load Started...\n");
+	PRINTF(("URL Load Started...\n"));
 	QApplication::setOverrideCursor( waitCursor );
 	if ( !m_progressBar )
 	{
-		PRINTF("Creating Progress Bar...\n");
+		PRINTF(("Creating Progress Bar...\n"));
 		m_progressBar = new QProgressBar( 100, m_mozilla );
 	}
 	else
-		PRINTF("Using available Progress Bar...\n");
+		PRINTF(("Using available Progress Bar...\n"));
 
 	m_progressBar->setProgress( 0 );
 	m_progressBar->move( ( m_mozilla->width() - m_progressBar->width() ) / 2,
@@ -104,14 +104,14 @@ void MainWidget::handleURLLoadStarted()
 /* private slot */
 void MainWidget::handleURLLoadProgressed( const char *url, int progress, int max )
 {
-	PRINTF("URL Load Progressed...\n");
+	PRINTF(("URL Load Progressed...\n"));
 	m_progressBar->setProgress( progress / max * 100 );
 }
 
 /* private slot */
 void MainWidget::handleURLLoadEnded()
 {
-	PRINTF("URL Load Ended...\n");
+	PRINTF(("URL Load Ended...\n"));
 	m_progressBar->hide();
 	QApplication::restoreOverrideCursor();
 }

@@ -27,8 +27,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(InsertElementTxnLog)
-#define PRINTF NS_LOG_PRINTF(InsertElementTxnLog)
-#define FLUSH  NS_LOG_FLUSH(InsertElementTxnLog)
+#define PRINTF(args) NS_LOG_PRINTF(InsertElementTxnLog, args)
+#define FLUSH()      NS_LOG_FLUSH(InsertElementTxnLog)
 
 InsertElementTxn::InsertElementTxn()
   : EditTxn()
@@ -69,9 +69,9 @@ NS_IMETHODIMP InsertElementTxn::Do(void)
     nsString namestr;
     mNode->GetNodeName(namestr);
     char* nodename = namestr.ToNewCString();
-    PRINTF("%p Do Insert Element of %p <%s> into parent %p at offset %d\n", 
+    PRINTF(("%p Do Insert Element of %p <%s> into parent %p at offset %d\n", 
            this, nodeAsContent.get(), nodename,
-           parentAsContent.get(), mOffset); 
+           parentAsContent.get(), mOffset)); 
     nsMemory::Free(nodename);
   }
 
@@ -119,8 +119,8 @@ NS_IMETHODIMP InsertElementTxn::Do(void)
 
 NS_IMETHODIMP InsertElementTxn::Undo(void)
 {
-  PRINTF("%p Undo Insert Element of %p into parent %p at offset %d\n", 
-         this, mNode.get(), mParent.get(), mOffset);
+  PRINTF(("%p Undo Insert Element of %p into parent %p at offset %d\n", 
+         this, mNode.get(), mParent.get(), mOffset));
   if (!mNode || !mParent) return NS_ERROR_NOT_INITIALIZED;
 
   nsCOMPtr<nsIDOMNode> resultNode;

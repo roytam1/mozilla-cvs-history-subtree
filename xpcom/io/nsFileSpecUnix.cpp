@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsFileSpecUnixLog)
-#define PRINTF NS_LOG_PRINTF(nsFileSpecUnixLog)
-#define FLUSH  NS_LOG_FLUSH(nsFileSpecUnixLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFileSpecUnixLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFileSpecUnixLog)
 
 #if defined(_SCO_DS)
 #define _SVID3  /* for statvfs.h */
@@ -530,8 +530,8 @@ PRInt64 nsFileSpec::GetDiskSpaceAvailable() const
         return bytes; /* hope for the best as we did in cheddar */
  
 #ifdef DEBUG_DISK_SPACE
-    PRINTF("DiskSpaceAvailable: %d bytes\n", 
-           fs_buf.f_bsize * (fs_buf.f_bavail - 1));
+    PRINTF(("DiskSpaceAvailable: %d bytes\n", 
+           fs_buf.f_bsize * (fs_buf.f_bavail - 1)));
 #endif
 
     LL_I2L( bytes, (fs_buf.f_bsize * (fs_buf.f_bavail - 1) ) );

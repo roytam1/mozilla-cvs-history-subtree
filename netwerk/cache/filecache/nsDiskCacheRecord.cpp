@@ -45,8 +45,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDiskCacheRecordLog)
-#define PRINTF NS_LOG_PRINTF(nsDiskCacheRecordLog)
-#define FLUSH  NS_LOG_FLUSH(nsDiskCacheRecordLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDiskCacheRecordLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDiskCacheRecordLog)
 
 #if !defined(IS_LITTLE_ENDIAN) && !defined(IS_BIG_ENDIAN)
 ERROR! Must have a byte order
@@ -79,7 +79,7 @@ nsDiskCacheRecord::nsDiskCacheRecord(nsIDBAccessor* db, nsNetDiskCache* aCache) 
   NS_INIT_REFCNT();
   NS_ASSERTION(mDiskCache, "Must have an nsNetDiskCache");
   NS_ADDREF(mDiskCache);
-  PRINTF("CACHE: nsDiskCacheRecord(): %p created\n", this);
+  PRINTF(("CACHE: nsDiskCacheRecord(): %p created\n", this));
 }
 
 // mem alloced. so caller should do free() on key. 
@@ -121,7 +121,7 @@ nsDiskCacheRecord::Init(const char* key, PRUint32 length, PRInt32 ID)
 
 nsDiskCacheRecord::~nsDiskCacheRecord()
 {
-  PRINTF("CACHE: ~nsDiskCacheRecord(%d, %s): %p destroyed\n", mRecordID, mKey, this);
+  PRINTF(("CACHE: ~nsDiskCacheRecord(%d, %s): %p destroyed\n", mRecordID, mKey, this));
   if(mKey)
     nsMemory::Free(mKey) ;
   if(mMetaData)

@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTextServicesDocumentLog)
-#define PRINTF NS_LOG_PRINTF(nsTextServicesDocumentLog)
-#define FLUSH  NS_LOG_FLUSH(nsTextServicesDocumentLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTextServicesDocumentLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTextServicesDocumentLog)
 
 #define LOCK_DOC(doc)
 #define UNLOCK_DOC(doc)
@@ -1797,7 +1797,7 @@ nsTextServicesDocument::SetSelection(PRInt32 aOffset, PRInt32 aLength)
   UNLOCK_DOC(this);
 
   //**** KDEBUG ****
-  // PRINTF("\n * Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+  // PRINTF(("\n * Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
   //**** KDEBUG ****
 
   return result;
@@ -1839,8 +1839,8 @@ nsTextServicesDocument::DeleteSelection()
   LOCK_DOC(this);
 
   //**** KDEBUG ****
-  // PRINTF("\n---- Before Delete\n");
-  // PRINTF("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+  // PRINTF(("\n---- Before Delete\n"));
+  // PRINTF(("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
   // PrintOffsetTable();
   //**** KDEBUG ****
 
@@ -1904,8 +1904,8 @@ nsTextServicesDocument::DeleteSelection()
     }
 
   //**** KDEBUG ****
-    // PRINTF("\n---- Middle Delete\n");
-    // PRINTF("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+    // PRINTF(("\n---- Middle Delete\n"));
+    // PRINTF(("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
   // PrintOffsetTable();
   //**** KDEBUG ****
 
@@ -2031,8 +2031,8 @@ nsTextServicesDocument::DeleteSelection()
   result = RemoveInvalidOffsetEntries();
 
   //**** KDEBUG ****
-  // PRINTF("\n---- After Delete\n");
-  // PRINTF("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+  // PRINTF(("\n---- After Delete\n"));
+  // PRINTF(("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
   // PrintOffsetTable();
   //**** KDEBUG ****
 
@@ -2091,8 +2091,8 @@ nsTextServicesDocument::InsertText(const nsString *aText)
   if (SelectionIsValid())
   {
     //**** KDEBUG ****
-    // PRINTF("\n---- Before Insert\n");
-    // PRINTF("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+    // PRINTF(("\n---- Before Insert\n"));
+    // PRINTF(("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
     // PrintOffsetTable();
     //**** KDEBUG ****
 
@@ -2273,8 +2273,8 @@ nsTextServicesDocument::InsertText(const nsString *aText)
     }
 
     //**** KDEBUG ****
-    // PRINTF("\n---- After Insert\n");
-    // PRINTF("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+    // PRINTF(("\n---- After Insert\n"));
+    // PRINTF(("Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
     // PrintOffsetTable();
     //**** KDEBUG ****
   }
@@ -2304,7 +2304,7 @@ nsTextServicesDocument::InsertNode(nsIDOMNode *aNode,
                                    PRInt32 aPosition)
 {
   //**** KDEBUG ****
-  // PRINTF("** InsertNode: 0x%.8x  0x%.8x  %d\n", aNode, aParent, aPosition);
+  // PRINTF(("** InsertNode: 0x%.8x  0x%.8x  %d\n", aNode, aParent, aPosition));
   // FLUSH();
   //**** KDEBUG ****
 
@@ -2317,7 +2317,7 @@ nsresult
 nsTextServicesDocument::DeleteNode(nsIDOMNode *aChild)
 {
   //**** KDEBUG ****
-  // PRINTF("** DeleteNode: 0x%.8x\n", aChild);
+  // PRINTF(("** DeleteNode: 0x%.8x\n", aChild));
   // FLUSH();
   //**** KDEBUG ****
 
@@ -2397,7 +2397,7 @@ nsTextServicesDocument::SplitNode(nsIDOMNode *aExistingRightNode,
                                   nsIDOMNode *aNewLeftNode)
 {
   //**** KDEBUG ****
-  // PRINTF("** SplitNode: 0x%.8x  %d  0x%.8x\n", aExistingRightNode, aOffset, aNewLeftNode);
+  // PRINTF(("** SplitNode: 0x%.8x  %d  0x%.8x\n", aExistingRightNode, aOffset, aNewLeftNode));
   // FLUSH();
   //**** KDEBUG ****
 
@@ -2416,7 +2416,7 @@ nsTextServicesDocument::JoinNodes(nsIDOMNode  *aLeftNode,
   nsresult result;
 
   //**** KDEBUG ****
-  // PRINTF("** JoinNodes: 0x%.8x  0x%.8x  0x%.8x\n", aLeftNode, aRightNode, aParent);
+  // PRINTF(("** JoinNodes: 0x%.8x  0x%.8x  0x%.8x\n", aLeftNode, aRightNode, aParent));
   // FLUSH();
   //**** KDEBUG ****
 
@@ -3105,7 +3105,7 @@ nsTextServicesDocument::SetSelectionInternal(PRInt32 aOffset, PRInt32 aLength, P
     mSelEndOffset = mSelStartOffset;
 
    //**** KDEBUG ****
-    // PRINTF("\n* Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+    // PRINTF(("\n* Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
    //**** KDEBUG ****
 
     return NS_OK;
@@ -3155,7 +3155,7 @@ nsTextServicesDocument::SetSelectionInternal(PRInt32 aOffset, PRInt32 aLength, P
   }
 
   //**** KDEBUG ****
-  // PRINTF("\n * Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset);
+  // PRINTF(("\n * Sel: (%2d, %4d) (%2d, %4d)\n", mSelStartIndex, mSelStartOffset, mSelEndIndex, mSelEndOffset));
   //**** KDEBUG ****
 
   return result;
@@ -4450,10 +4450,10 @@ nsTextServicesDocument::PrintOffsetTable()
   for (i = 0; i < mOffsetTable.Count(); i++)
   {
     entry = (OffsetEntry *)mOffsetTable[i];
-    PRINTF("ENTRY %4d: 0x%.8x  %c  %c  %4d  %4d  %4d\n",
+    PRINTF(("ENTRY %4d: 0x%.8x  %c  %c  %4d  %4d  %4d\n",
            i, (PRInt32)entry->mNode,  entry->mIsValid ? 'V' : 'N',
            entry->mIsInsertedText ? 'I' : 'B',
-           entry->mNodeOffset, entry->mStrOffset, entry->mLength);
+           entry->mNodeOffset, entry->mStrOffset, entry->mLength));
   }
 
   FLUSH();
@@ -4471,7 +4471,7 @@ nsTextServicesDocument::PrintContentNode(nsIContent *aContent)
   atom->ToString(tmpStr);
   tmpStr.ToCString(tmpBuf, 256);
 
-  PRINTF("%s", tmpBuf);
+  PRINTF(("%s", tmpBuf));
 
   nsCOMPtr<nsIDOMNode> node = do_QueryInterface(aContent);
 
@@ -4492,10 +4492,10 @@ nsTextServicesDocument::PrintContentNode(nsIContent *aContent)
         return;
 
       str.ToCString(tmpBuf, 256);
-      PRINTF(":  \"%s\"", tmpBuf);
+      PRINTF((":  \"%s\"", tmpBuf));
     }
   }
 
-  PRINTF("\n");
+  PRINTF(("\n"));
   FLUSH();
 }

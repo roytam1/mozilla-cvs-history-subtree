@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDrawingSurfaceOS2Log)
-#define PRINTF NS_LOG_PRINTF(nsDrawingSurfaceOS2Log)
-#define FLUSH  NS_LOG_FLUSH(nsDrawingSurfaceOS2Log)
+#define PRINTF(args) NS_LOG_PRINTF(nsDrawingSurfaceOS2Log, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDrawingSurfaceOS2Log)
 
 // Base class -- fonts, palette and xpcom -----------------------------------
 
@@ -280,8 +280,8 @@ nsresult nsOffscreenSurface::Lock( PRInt32 aX, PRInt32 aY,
                             (PBITMAPINFO2) mInfoHeader);
    if( rc != mInfoHeader->cy) PMERROR( "GpiQueryBitmapBits");
 
-   PRINTF("Lock, requested %d x %d and got %d x %d\n",
-          aWidth, aHeight, (int) mInfoHeader->cx, aHeight);
+   PRINTF(("Lock, requested %d x %d and got %d x %d\n",
+          aWidth, aHeight, (int) mInfoHeader->cx, aHeight));
 
    // Okay.  Now have current state of bitmap in mBits.
    *aStride = lStride;
@@ -371,7 +371,7 @@ nsresult nsOffscreenSurface::GetPixelFormat( nsPixelFormat *aFormat)
          break;
 
       default:
-         PRINTF( "Bad bit-depth for GetPixelFormat (%d)\n", bih.cBitCount);
+         PRINTF(( "Bad bit-depth for GetPixelFormat (%d)\n", bih.cBitCount));
          break;
    }
 
@@ -416,7 +416,7 @@ nsresult nsOnscreenSurface::Lock( PRInt32 aX, PRInt32 aY,
 {
    EnsureProxy();
 
-   PRINTF( "Locking through a proxy\n");
+   PRINTF(( "Locking through a proxy\n"));
 
    // blit our 'real' bitmap to the proxy surface
    PRUint32 width, height;

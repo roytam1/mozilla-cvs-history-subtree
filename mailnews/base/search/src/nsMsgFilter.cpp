@@ -39,8 +39,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgFilterLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgFilterLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgFilterLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgFilterLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgFilterLog)
 
 static const char *kImapPrefix = "//imap:";
 
@@ -620,7 +620,7 @@ nsMsgFilter::GetVersion()
 #ifdef DEBUG
 void nsMsgFilter::Dump()
 {
-	PRINTF("filter %s type = %c desc = %s\n", m_filterName.GetBuffer(), m_type + '0', m_description.GetBuffer());
+	PRINTF(("filter %s type = %c desc = %s\n", m_filterName.GetBuffer(), m_type + '0', m_description.GetBuffer()));
 }
 #endif
 

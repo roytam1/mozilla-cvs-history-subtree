@@ -53,8 +53,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsNativeComponentLoaderLog)
-#define PRINTF NS_LOG_PRINTF(nsNativeComponentLoaderLog)
-#define FLUSH  NS_LOG_FLUSH(nsNativeComponentLoaderLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNativeComponentLoaderLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNativeComponentLoaderLog)
 
 #define PRINT_CRITICAL_ERROR_TO_SCREEN 1
 #define USE_REGISTRY 1
@@ -245,12 +245,12 @@ NS_IMETHODIMP
 nsNativeComponentLoader::AutoRegisterComponents(PRInt32 aWhen,
                                                 nsIFile *aDirectory)
 {
-    PRINTF("nsNativeComponentLoader: autoregistering begins.\n");
+    PRINTF(("nsNativeComponentLoader: autoregistering begins.\n"));
 
     nsresult rv = RegisterComponentsInDir(aWhen, aDirectory);
 
-    PRINTF("nsNativeComponentLoader: autoregistering %s\n",
-           NS_FAILED(rv) ? "FAILED" : "succeeded");
+    PRINTF(("nsNativeComponentLoader: autoregistering %s\n",
+           NS_FAILED(rv) ? "FAILED" : "succeeded"));
     return rv;
 }
 
@@ -591,12 +591,12 @@ nsNativeComponentLoader::DumpLoadError(nsDll *dll,
 
     // Dump to screen if needed
 #ifdef PRINT_CRITICAL_ERROR_TO_SCREEN
-    PRINTF("**************************************************\n"
+    PRINTF(("**************************************************\n"
            "nsNativeComponentLoader: %s(%s) Load FAILED with error: %s\n"
            "**************************************************\n",
            aCallerName,
            dll->GetDisplayPath(), 
-           (const char *) errorMsg);
+           (const char *) errorMsg));
 #endif
 
     return NS_OK;
@@ -931,8 +931,8 @@ nsresult
 nsNativeComponentLoader::RegisterDeferredComponents(PRInt32 aWhen,
                                                     PRBool *aRegistered)
 {
-    PRINTF("nNCL: registering deferred (%d)\n",
-            mDeferredComponents.Count());
+    PRINTF(("nNCL: registering deferred (%d)\n",
+            mDeferredComponents.Count()));
     *aRegistered = PR_FALSE;
     if (!mDeferredComponents.Count())
         return NS_OK;
@@ -950,11 +950,11 @@ nsNativeComponentLoader::RegisterDeferredComponents(PRInt32 aWhen,
     }
 
     if (*aRegistered)
-        PRINTF("nNCL: registered deferred, %d left\n",
-                mDeferredComponents.Count());
+        PRINTF(("nNCL: registered deferred, %d left\n",
+                mDeferredComponents.Count()));
     else
-        PRINTF("nNCL: didn't register any components, %d left\n",
-                mDeferredComponents.Count());
+        PRINTF(("nNCL: didn't register any components, %d left\n",
+                mDeferredComponents.Count()));
     /* are there any fatal errors? */
     return NS_OK;
 }

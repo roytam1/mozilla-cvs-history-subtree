@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgThreadLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgThreadLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgThreadLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgThreadLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgThreadLog)
 
 NS_IMPL_ISUPPORTS(nsMsgThread, NS_GET_IID(nsMsgThread))
 
@@ -241,7 +241,7 @@ NS_IMETHODIMP nsMsgThread::AddChild(nsIMsgDBHdr *child, nsIMsgDBHdr *inReplyTo, 
 					announcer->NotifyParentChangedAll(msgKey, oldThreadParent, newHdrKey, nsnull);
 #ifdef DEBUG_bienvenu1
 				if (newHdrKey != m_threadKey)
-					PRINTF("adding second level child\n");
+					PRINTF(("adding second level child\n"));
 #endif
 				// If this hdr was the root, then the new hdr is the root.
 				if (msgKey == m_threadRootKey)
@@ -676,7 +676,7 @@ nsMsgThreadEnumerator::nsMsgThreadEnumerator(nsMsgThread *thread, nsMsgKey start
 				child->GetMessageKey(&msgKey);
 				child->GetThreadParent(&threadParent);
 
-				PRINTF("index = %ld key = %ld parent = %lx\n", childIndex, msgKey, threadParent);
+				PRINTF(("index = %ld key = %ld parent = %lx\n", childIndex, msgKey, threadParent));
 			}
 		}
 #endif
@@ -726,7 +726,7 @@ PRInt32 nsMsgThreadEnumerator::MsgKeyFirstChildIndex(nsMsgKey inMsgKey)
 		}
 	}
 #ifdef DEBUG_bienvenu1
-	PRINTF("first child index of %ld = %ld\n", inMsgKey, firstChildIndex);
+	PRINTF(("first child index of %ld = %ld\n", inMsgKey, firstChildIndex));
 #endif
 	return firstChildIndex;
 }
@@ -808,7 +808,7 @@ nsresult nsMsgThreadEnumerator::Prefetch()
 #ifdef DEBUG_bienvenu1
 	nsMsgKey debugMsgKey;
 	mResultHdr->GetMessageKey(&debugMsgKey);
-	PRINTF("next for %ld = %ld\n", mThreadParentKey, debugMsgKey);
+	PRINTF(("next for %ld = %ld\n", mThreadParentKey, debugMsgKey));
 #endif
 
     return rv;
@@ -880,7 +880,7 @@ NS_IMETHODIMP nsMsgThread::GetRootHdr(PRInt32 *resultIndex, nsIMsgDBHdr **result
 			return ret;
     else
     {
-        PRINTF("need to reset thread root key\n");
+        PRINTF(("need to reset thread root key\n"));
 		  PRUint32 numChildren;
       nsMsgKey threadParentKey = nsMsgKey_None;
 		  GetNumChildren(&numChildren);

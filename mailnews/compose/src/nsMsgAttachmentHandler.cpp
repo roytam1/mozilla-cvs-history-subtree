@@ -44,8 +44,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgAttachmentHandlerLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgAttachmentHandlerLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgAttachmentHandlerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgAttachmentHandlerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgAttachmentHandlerLog)
 
 static  NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
@@ -724,7 +724,7 @@ nsMsgAttachmentHandler::SnarfAttachment(nsMsgCompFields *compFields)
 
         // For now, just do the encoding, but in the old world we would ask the
         // user about doing this conversion
-        PRINTF("...we could ask the user about this conversion, but for now, nahh..\n");
+        PRINTF(("...we could ask the user about this conversion, but for now, nahh..\n"));
 			}
 
 		  /* make sure the file type and create are set.	*/

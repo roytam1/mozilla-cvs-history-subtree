@@ -40,12 +40,12 @@
  *     NS_IMPL_LOG(Foo)
  *
  *     // Then define PRINTF and FLUSH routines for your log module:
- *     #define PRINTF NS_LOG_PRINT(Foo)
- *     #define FLUSH  NS_LOG_FLUSH(Foo)
+ *     #define PRINTF(args) NS_LOG_PRINT(Foo, args)
+ *     #define FLUSH()      NS_LOG_FLUSH(Foo)
  *
  *     void main() {
  *         // Then use it like this:
- *         PRINTF("hello world %d", 42);
+ *         PRINTF(("hello world %d", 42));
  *
  *         FLUSH(); // not necessary, but might be useful for synchronization
  *     }
@@ -64,10 +64,10 @@
  *
  *     int fact(int n) {
  *        NS_LOG_WITH_INDENT(Foo, "fact");
- *        PRINTF("calling fact of %d\n", n);
+ *        PRINTF(("calling fact of %d\n", n));
  *        if (n == 0) return 1;
  *        int result = n * fact(n - 1);
- *        PRINTF("fact of %d is %d\n", n, result);
+ *        PRINTF(("fact of %d is %d\n", n, result));
  *        return result;
  *     }
  *
@@ -174,10 +174,10 @@ protected:
 #define NS_LOG_ENABLED(_log)                                  \
     ((_log) && (_log)->Test())
 
-#define NS_LOG_PRINTF(_log)                                   \
-    (!NS_LOG_ENABLED(_log)) ? NS_OK : (_log)->Printf
+#define NS_LOG_PRINTF(_log, _args)                            \
+    (!NS_LOG_ENABLED(_log)) ? NS_OK : (_log)->Printf _args
 
-#define NS_LOG_FLUSH(_log)                (_log)->Flush
+#define NS_LOG_FLUSH(_log)                (_log)->Flush()
 
 #define NS_LOG_WITH_INDENT(_log, _msg)    nsLogIndent _indent_##_log(_log, _msg)
 #define NS_LOG_BEGIN_INDENT(_log)         ((_log)->IncreaseIndent())
@@ -185,14 +185,12 @@ protected:
 
 #else  // !NS_ENABLE_LOGGING
 
-inline void nsNoop(...) {}
-
 #define NS_DECL_LOG(_log)                 /* nothing */
 #define NS_IMPL_LOG(_log)                 /* nothing */
 #define NS_IMPL_LOG_ENABLED(_log)         /* nothing */
 #define NS_LOG_ENABLED(_log)              0
-#define NS_LOG_PRINTF(_log)               nsNoop
-#define NS_LOG_FLUSH(_log)                nsNoop
+#define NS_LOG_PRINTF(_log, _args)        0
+#define NS_LOG_FLUSH(_log)                0
 #define NS_LOG_WITH_INDENT(_log, _msg)    ((void)0)
 #define NS_LOG_BEGIN_INDENT(_log)         ((void)0)
 #define NS_LOG_END_INDENT(_log)           ((void)0)
@@ -203,13 +201,9 @@ inline void nsNoop(...) {}
 #undef  PR_LOG_TEST
 #define PR_LOG_TEST(_log, _level)         NS_LOG_ENABLED(_log)
 #undef  PR_LOG
-#define PR_LOG(_log, _level, _args)       NS_LOG_PRINTF(_log) _args
+#define PR_LOG(_log, _level, _args)       NS_LOG_PRINTF(_log, _args)
 #define PRLogModuleInfo                   #error use_NS_DECL_LOG_instead
 #define PR_NewLogModule                   #error use_NS_IMPL_LOG_instead
-#undef  PR_ASSERT
-#define PR_ASSERT(x)                      NS_ASSERTION(x, #x)
-#define printf                            use_NS_LOG_PRINTF_instead
-#define fprintf                           use_NS_LOG_PRINTF_instead
 
 ////////////////////////////////////////////////////////////////////////////////
 #endif // nslog_h__

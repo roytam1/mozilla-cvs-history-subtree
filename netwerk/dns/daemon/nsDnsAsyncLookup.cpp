@@ -70,8 +70,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDnsAsyncLookupLog)
-#define PRINTF NS_LOG_PRINTF(nsDnsAsyncLookupLog)
-#define FLUSH  NS_LOG_FLUSH(nsDnsAsyncLookupLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDnsAsyncLookupLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDnsAsyncLookupLog)
 
 #if defined(__linux)
 // Didn't find gettdtablehi() or gettdtablesize() on linux. Using FD_SETSIZE
@@ -410,14 +410,14 @@ blockingGethostbyname (const char *name, int out_fd)
         char *p = buf + sizeof (int);
 
 #if defined(DNS_DEBUG)
-        PRINTF("gethostbyname complete\n");
+        PRINTF(("gethostbyname complete\n"));
         for (i=0; h->h_addr_list[i]; i++);
-        PRINTF("%d addresses for %s\n",i,h->h_name);
-        PRINTF("address: ");
+        PRINTF(("%d addresses for %s\n",i,h->h_name));
+        PRINTF(("address: "));
         for (i = 0; i <= h->h_length; i++){
-          PRINTF("%2.2x", (unsigned char)h->h_addr_list[0][i]);
+          PRINTF(("%2.2x", (unsigned char)h->h_addr_list[0][i]));
         }
-        PRINTF("\n");
+        PRINTF(("\n"));
 #endif
 
         hostentToBytes (h, p, &size);
@@ -452,7 +452,7 @@ spawnHelperProcess (const char *name)
 
     if (pipe(fds))
     {
-        PRINTF("Can't make pipe\n");
+        PRINTF(("Can't make pipe\n"));
         return 0;
     }
 
@@ -461,7 +461,7 @@ spawnHelperProcess (const char *name)
     switch (forked = fork())
     {
     case -1:
-        PRINTF("Can't fork\n");
+        PRINTF(("Can't fork\n"));
         removeFromDnsQueue (obj);
         break;
 
@@ -588,14 +588,14 @@ int main (int argc, char **argv)
                 else if (!strncmp (buffer, "lookup:", 7))
                 {
 #if defined(DNS_DEBUG)
-                  PRINTF("received lookup request for: %s\n",name);
+                  PRINTF(("received lookup request for: %s\n",name));
 #endif
                     obj = spawnHelperProcess (name);
                     obj->accept_fd = accept_fd;
                     char hId[5];
                     *(int *)&hId[0] = (int) obj->id;
                     if (!obj)
-                        PRINTF("spawn Error\n");
+                        PRINTF(("spawn Error\n"));
                     else
                     {
                         send (obj->accept_fd, hId, sizeof (int), 0);

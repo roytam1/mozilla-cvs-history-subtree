@@ -80,8 +80,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsRDFContentSinkLog)
-#define PRINTF NS_LOG_PRINTF(nsRDFContentSinkLog)
-#define FLUSH  NS_LOG_FLUSH(nsRDFContentSinkLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsRDFContentSinkLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsRDFContentSinkLog)
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -366,7 +366,7 @@ RDFContentSinkImpl::~RDFContentSinkImpl()
 {
 #ifdef DEBUG_REFS
     --gInstanceCount;
-    PRINTF("%d - RDF: RDFContentSinkImpl\n", gInstanceCount);
+    PRINTF(("%d - RDF: RDFContentSinkImpl\n", gInstanceCount));
 #endif
 
     NS_IF_RELEASE(mDocumentURL);

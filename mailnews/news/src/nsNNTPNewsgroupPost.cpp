@@ -31,8 +31,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsNNTPNewsgroupPostLog)
-#define PRINTF NS_LOG_PRINTF(nsNNTPNewsgroupPostLog)
-#define FLUSH  NS_LOG_FLUSH(nsNNTPNewsgroupPostLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNNTPNewsgroupPostLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNNTPNewsgroupPostLog)
 
 // for CRLF
 //#include "fe_proto.h"
@@ -108,8 +108,8 @@ nsNNTPNewsgroupPost::IsValid(PRBool *_retval)
     }
 
     *_retval=valid;
-    PRINTF("nsNNTPNewsgroupPost::IsValid() -> %s (%d is first invalid)\n",
-           *_retval ? "TRUE": "FALSE", i);
+    PRINTF(("nsNNTPNewsgroupPost::IsValid() -> %s (%d is first invalid)\n",
+           *_retval ? "TRUE": "FALSE", i));
     return NS_OK;
 }
 
@@ -168,7 +168,7 @@ nsNNTPNewsgroupPost::GetFullMessage(char **message)
     
     *message=m_messageBuffer;
 
-    PRINTF("Assembled message:\n%s\n",m_messageBuffer);
+    PRINTF(("Assembled message:\n%s\n",m_messageBuffer));
     return NS_OK;
 }
 

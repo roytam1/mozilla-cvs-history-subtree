@@ -46,8 +46,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLocalSearchServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsLocalSearchServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsLocalSearchServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLocalSearchServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLocalSearchServiceLog)
 
 static NS_DEFINE_CID(kRDFServiceCID,               NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kTextToSubURICID,             NS_TEXTTOSUBURI_CID);
@@ -283,7 +283,7 @@ LocalSearchDataSource::parseResourceIntoFindTokens(nsIRDFResource *u, findTokenP
 
 	if (NS_FAILED(rv = u->GetValueConst(&uri)))	return(rv);
 
-	PRINTF("Find: %s\n", (const char*) uri);
+	PRINTF(("Find: %s\n", (const char*) uri));
 
 	if (!(id = PL_strdup(uri + sizeof(kFindProtocol) - 1)))
 		return(NS_ERROR_OUT_OF_MEMORY);

@@ -31,8 +31,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsDropTargetLog)
-#define PRINTF NS_LOG_PRINTF(nsDropTargetLog)
-#define FLUSH  NS_LOG_FLUSH(nsDropTargetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsDropTargetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsDropTargetLog)
 
 //Don't forget to RegisterDragDrop and to 
 //CoLockObjectExternal.
@@ -40,7 +40,7 @@ NS_IMPL_LOG(nsDropTargetLog)
 //
 nsDropTarget::nsDropTarget(nsIWidget  * aWindow)
 {
-    PRINTF("nsDropTarget::nsDropTarget\n");
+    PRINTF(("nsDropTarget::nsDropTarget\n"));
     m_refs        = 0;
     m_pWin = aWindow; 
     NS_ADDREF(aWindow);
@@ -51,7 +51,7 @@ nsDropTarget::nsDropTarget(nsIWidget  * aWindow)
 //
 nsDropTarget::~nsDropTarget()
 {
-    PRINTF("nsDropTarget::Drop\n");
+    PRINTF(("nsDropTarget::Drop\n"));
     ;    
 }
 
@@ -61,7 +61,7 @@ nsDropTarget::~nsDropTarget()
 //
 STDMETHODIMP nsDropTarget::QueryInterface(REFIID riid, LPVOID FAR* ppv)
 {
-    PRINTF("nsDropTarget::QueryInterface\n");
+    PRINTF(("nsDropTarget::QueryInterface\n"));
     if (riid == IID_IUnknown)
         *ppv = this;                     
     else if (riid == IID_IDropTarget)
@@ -84,7 +84,7 @@ STDMETHODIMP nsDropTarget::QueryInterface(REFIID riid, LPVOID FAR* ppv)
 //
 STDMETHODIMP_(ULONG) nsDropTarget::AddRef(void)
 {
-    PRINTF("nsDropTarget::AddRef\n");
+    PRINTF(("nsDropTarget::AddRef\n"));
 	return ++m_refs;
 }
 
@@ -92,7 +92,7 @@ STDMETHODIMP_(ULONG) nsDropTarget::AddRef(void)
 //
 STDMETHODIMP_(ULONG) nsDropTarget::Release(void)
 {
-    PRINTF("nsDropTarget::Release\n");
+    PRINTF(("nsDropTarget::Release\n"));
    if(--m_refs == 0){
    //And now we can delete this object 
     delete this;
@@ -108,7 +108,7 @@ STDMETHODIMP_(ULONG) nsDropTarget::Release(void)
 //
 DWORD   nsDropTarget::FindDragDropEffect(DWORD grfKeyState, POINTL /* pointl */)
 {
-    PRINTF("nsDropTarget::FindDragDropEffect\n");
+    PRINTF(("nsDropTarget::FindDragDropEffect\n"));
     DWORD   dwRet;
     
 	//          no modifier -- DROPEFFECT_MOVE or source default
@@ -131,7 +131,7 @@ STDMETHODIMP nsDropTarget::DragEnter (LPDATAOBJECT pDataObj,
                                       POINTL pointl, 
                                       LPDWORD pdwEffect)
 {
-    PRINTF("nsDropTarget::DragEnter\n");
+    PRINTF(("nsDropTarget::DragEnter\n"));
     *pdwEffect = FindDragDropEffect(grfKeyState, pointl);
     return NOERROR;
 }
@@ -142,7 +142,7 @@ STDMETHODIMP nsDropTarget::DragOver  (DWORD grfKeyState,
                                       POINTL pointl, 
                                       LPDWORD pdwEffect)
 {
-    PRINTF("nsDropTarget::DragOver\n");
+    PRINTF(("nsDropTarget::DragOver\n"));
     *pdwEffect = FindDragDropEffect(grfKeyState, pointl);
     return NOERROR;
 }
@@ -153,7 +153,7 @@ STDMETHODIMP nsDropTarget::DragOver  (DWORD grfKeyState,
 //
 STDMETHODIMP nsDropTarget::DragLeave (void)
 {
-    PRINTF("nsDropTarget::DragLeave\n");
+    PRINTF(("nsDropTarget::DragLeave\n"));
     return NOERROR;
 }
 
@@ -164,8 +164,8 @@ STDMETHODIMP nsDropTarget::Drop (LPDATAOBJECT pIDataObject,
                                  POINTL pointl, 
                                  LPDWORD pdwEffect)
 {
-    PRINTF("nsDropTarget::Drop\n");
-    PRINTF("pIDataObject 0x%x\n", pIDataObject);
+    PRINTF(("nsDropTarget::Drop\n"));
+    PRINTF(("pIDataObject 0x%x\n", pIDataObject));
     pIDataObject->AddRef();
     if (nsnull != m_pWin) {
       nsEventStatus status;
@@ -182,11 +182,11 @@ STDMETHODIMP nsDropTarget::Drop (LPDATAOBJECT pIDataObject,
 
    if (pIDataObject != NULL) {
      IDataObject * presistStorage;
-     //PRINTF("QueryInterface for persist\n");
+     //PRINTF(("QueryInterface for persist\n"));
      pIDataObject->QueryInterface(IID_IDataObject,(LPVOID *)&presistStorage);
-     //PRINTF("Done QueryInterface for persist\n");
+     //PRINTF(("Done QueryInterface for persist\n"));
      if (presistStorage != NULL) {
-         PRINTF("$$$$$$$$$$$$$$$ Got it!\n");
+         PRINTF(("$$$$$$$$$$$$$$$ Got it!\n"));
        FORMATETC pFE;
        presistStorage->QueryGetData(&pFE);
 
@@ -194,16 +194,16 @@ STDMETHODIMP nsDropTarget::Drop (LPDATAOBJECT pIDataObject,
 
        STGMEDIUM pSTM;
        HRESULT st = presistStorage->GetDataHere(&pFE, &pSTM);
-       PRINTF("st 0x%X\n", st);
+       PRINTF(("st 0x%X\n", st));
 	        if (NOERROR != st) {
 		        return FALSE;
 	        }
 //TYMED_STORAGE, TYMED_STREAM, TYMED_HGLOBAL, or TYMED_FILE
-          //PRINTF("%s\n", pSTM.lpszFileName);
+          //PRINTF(("%s\n", pSTM.lpszFileName));
        {
 
 	        //HRESULT hr = pIDataObject->GetData(&pFE, &pSTM);
-           //PRINTF("hr 0x%X\n", hr);
+           //PRINTF(("hr 0x%X\n", hr));
 	        //if (NOERROR != hr) {
 		      //  return FALSE;
 	        //}
@@ -235,7 +235,7 @@ STDMETHODIMP nsDropTarget::Drop (LPDATAOBJECT pIDataObject,
 
 
      } else {
-         PRINTF("^^^^^^^^^^^^^^^^^ Didn't!\n");
+         PRINTF(("^^^^^^^^^^^^^^^^^ Didn't!\n"));
      }
    }
 

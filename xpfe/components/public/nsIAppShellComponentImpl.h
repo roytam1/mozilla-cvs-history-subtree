@@ -139,8 +139,8 @@ public:
 nsIAppShellService *nsAppShellComponentImpl::mAppShell   = 0; \
 nsICmdLineService  *nsAppShellComponentImpl::mCmdLine    = 0;
 
-#define NS_IAPPSHELLCOMPONENTIMPL_PRINTF NS_LOG_PRINTF(nsIAppShellComponentImplLog)
-#define NS_IAPPSHELLCOMPONENTIMPL_FLUSH  NS_LOG_FLUSH(nsIAppShellComponentImplLog)
+#define NS_IAPPSHELLCOMPONENTIMPL_PRINTF(args) NS_LOG_PRINTF(nsIAppShellComponentImplLog, args)
+#define NS_IAPPSHELLCOMPONENTIMPL_FLUSH()      NS_LOG_FLUSH(nsIAppShellComponentImplLog)
 
 // Macros to define ctor/dtor for implementation class.
 // These differ in debug vs. non-debug situations.
@@ -148,10 +148,10 @@ nsICmdLineService  *nsAppShellComponentImpl::mCmdLine    = 0;
 #define NS_IMPL_IAPPSHELLCOMPONENTIMPL_CTORDTOR(className) \
 NS_DECL_LOG(nsIAppShellComponentImplLog) \
 nsAppShellComponentImpl::nsAppShellComponentImpl() { \
-    NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " component created\n" ); \
+    NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " component created\n" )); \
 } \
 nsAppShellComponentImpl::~nsAppShellComponentImpl() { \
-    NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " component destroyed\n" ); \
+    NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " component destroyed\n" )); \
 }
 #else
 #define NS_IMPL_IAPPSHELLCOMPONENTIMPL_CTORDTOR(className)
@@ -316,7 +316,7 @@ className##Module::RegisterSelf(nsIComponentManager *compMgr, \
     rv = compMgr->RegisterComponentSpec( className::GetCID(), #className, \
                                           contractId, aPath, PR_TRUE, PR_TRUE ); \
     if ( NS_SUCCEEDED( rv ) ) { \
-        NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " registration successful\n" ); \
+        NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " registration successful\n" )); \
         if ( autoInit ) { \
             /* Add to appshell component list. */ \
             nsIRegistry *registry; \
@@ -334,16 +334,16 @@ className##Module::RegisterSelf(nsIComponentManager *compMgr, \
                 nsRegistryKey key; \
                 rv = registry->AddSubtree( nsIRegistry::Common, buffer, &key ); \
                 if ( NS_SUCCEEDED( rv ) ) { \
-                    NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " added to appshell component list\n" ); \
+                    NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " added to appshell component list\n" )); \
                 } else { \
-                    NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " not added to appshell component list, rv=0x%X\n", (int)rv ); \
+                    NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " not added to appshell component list, rv=0x%X\n", (int)rv )); \
                 } \
             } else { \
-                NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " not added to appshell component list, rv=0x%X\n", (int)rv ); \
+                NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " not added to appshell component list, rv=0x%X\n", (int)rv )); \
             } \
         } \
     } else { \
-        NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " registration failed, RegisterComponent rv=0x%X\n", (int)rv ); \
+        NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " registration failed, RegisterComponent rv=0x%X\n", (int)rv )); \
     } \
  \
     return rv; \
@@ -356,16 +356,16 @@ className##Module::UnregisterSelf( nsIComponentManager *compMgr, \
     nsresult rv = NS_OK; \
     if (NS_FAILED(rv)) \
     { \
-        NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " registration failed, GetService rv=0x%X\n", (int)rv ); \
+        NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " registration failed, GetService rv=0x%X\n", (int)rv )); \
         return rv; \
     } \
  \
     /* Unregister our component. */ \
     rv = compMgr->UnregisterComponentSpec( className::GetCID(), aPath); \
     if ( NS_SUCCEEDED( rv ) ) { \
-        NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " unregistration successful\n" ); \
+        NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " unregistration successful\n" )); \
     } else { \
-        NS_IAPPSHELLCOMPONENTIMPL_PRINTF(#className " unregistration failed, UnregisterComponent rv=0x%X\n", (int)rv ); \
+        NS_IAPPSHELLCOMPONENTIMPL_PRINTF((#className " unregistration failed, UnregisterComponent rv=0x%X\n", (int)rv )); \
     } \
  \
     return rv; \

@@ -50,8 +50,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsChromeProtocolHandlerLog)
-#define PRINTF NS_LOG_PRINTF(nsChromeProtocolHandlerLog)
-#define FLUSH  NS_LOG_FLUSH(nsChromeProtocolHandlerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsChromeProtocolHandlerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsChromeProtocolHandlerLog)
 
 #define gLog nsChromeProtocolHandlerLog
 
@@ -677,7 +677,7 @@ nsChromeProtocolHandler::NewChannel(nsIURI* aURI,
 
         //nsXPIDLCString oldSpec;
         //aURI->GetSpec(getter_Copies(oldSpec));
-        //PRINTF("*************************** %s", (const char*)oldSpec);
+        //PRINTF(("*************************** %s", (const char*)oldSpec));
 
         nsXPIDLCString spec;
         rv = reg->ConvertChromeURL(chromeURI, getter_Copies(spec));

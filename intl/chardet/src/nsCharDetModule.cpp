@@ -50,8 +50,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsCharDetModuleLog)
-#define PRINTF NS_LOG_PRINTF(nsCharDetModuleLog)
-#define FLUSH  NS_LOG_FLUSH(nsCharDetModuleLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsCharDetModuleLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsCharDetModuleLog)
 
 NS_DEFINE_CID(kJAPSMDetectorCID,  NS_JA_PSMDETECTOR_CID);
 NS_DEFINE_CID(kJAStringPSMDetectorCID,  NS_JA_STRING_PSMDETECTOR_CID);
@@ -216,7 +216,7 @@ nsCharDetModule::GetClassObject(nsIComponentManager *aCompMgr,
 		rv = NS_ERROR_FACTORY_NOT_REGISTERED;
 #ifdef DEBUG
     char* cs = aClass.ToString();
-    PRINTF("+++ nsCharDetModule: unable to create factory for %s\n", cs);
+    PRINTF(("+++ nsCharDetModule: unable to create factory for %s\n", cs));
     nsCRT::free(cs);
 #endif
   }
@@ -304,7 +304,7 @@ nsCharDetModule::RegisterSelf(nsIComponentManager *aCompMgr,
 {
   nsresult rv = NS_OK;
 
-  PRINTF("*** Registering CharDet components\n");
+  PRINTF(("*** Registering CharDet components\n"));
 
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
@@ -313,8 +313,8 @@ nsCharDetModule::RegisterSelf(nsIComponentManager *aCompMgr,
                                          cp->mContractID, aPath, PR_TRUE,
                                          PR_TRUE);
     if (NS_FAILED(rv)) {
-      PRINTF("nsCharDetModule: unable to register %s component => %x\n",
-             cp->mDescription, rv);
+      PRINTF(("nsCharDetModule: unable to register %s component => %x\n",
+             cp->mDescription, rv));
       break;
     }
     cp++;
@@ -405,14 +405,14 @@ nsCharDetModule::UnregisterSelf(nsIComponentManager* aCompMgr,
                                 nsIFile* aPath,
                                 const char* registryLocation)
 {
-  PRINTF("*** Unregistering CharDet components\n");
+  PRINTF(("*** Unregistering CharDet components\n"));
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
     nsresult rv = aCompMgr->UnregisterComponentSpec(*cp->mCID, aPath);
     if (NS_FAILED(rv)) {
-      PRINTF("nsCharDetModule: unable to unregister %s component => %x\n",
-             cp->mDescription, rv);
+      PRINTF(("nsCharDetModule: unable to unregister %s component => %x\n",
+             cp->mDescription, rv));
     }
     cp++;
   }

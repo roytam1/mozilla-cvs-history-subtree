@@ -45,8 +45,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsBoxLog)
-#define PRINTF NS_LOG_PRINTF(nsBoxLog)
-#define FLUSH  NS_LOG_FLUSH(nsBoxLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsBoxLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsBoxLog)
 
 
 //#define DEBUG_LAYOUT
@@ -64,7 +64,7 @@ nsBoxAddIndents()
 {
     for(PRInt32 i=0; i < gIndent; i++)
     {
-      PRINTF(" ");
+      PRINTF((" "));
     }
 }
 #endif
@@ -170,9 +170,9 @@ nsBox::BeginLayout(nsBoxLayoutState& aState)
 
       char ch[100];
       reason.ToCString(ch,100);
-      PRINTF("%s Layout: ", ch);
+      PRINTF(("%s Layout: ", ch));
       DumpBox(stdout);
-      PRINTF("\n");
+      PRINTF(("\n"));
       gIndent++;
   #endif
 
@@ -199,7 +199,7 @@ nsBox::EndLayout(nsBoxLayoutState& aState)
 #ifdef REFLOW_COELESCED
 void Coelesced()
 {
-  PRINTF("Coelesed=%d\n", ++coelesced);
+  PRINTF(("Coelesed=%d\n", ++coelesced));
 
 }
 
@@ -367,7 +367,7 @@ nsBox::MarkChildrenStyleChange()
   // only reflow if we aren't already dirty.
   if (HasStyleChange()) {   
 #ifdef DEBUG_COELESCED
-    PRINTF("StyleChange reflows coelesced=%d\n", ++StyleCoelesced);  
+    PRINTF(("StyleChange reflows coelesced=%d\n", ++StyleCoelesced));  
 #endif
     return NS_OK;
   }

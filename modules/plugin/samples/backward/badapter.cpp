@@ -43,8 +43,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(badapterLog)
-#define PRINTF NS_LOG_PRINTF(badapterLog)
-#define FLUSH  NS_LOG_FLUSH(badapterLog)
+#define PRINTF(args) NS_LOG_PRINTF(badapterLog, args)
+#define FLUSH()      NS_LOG_FLUSH(badapterLog)
 
 ////////////////////////////////////////////////////////////////////////////////
 // SECTION 3 - Classes
@@ -582,22 +582,22 @@ nsresult fromNPError[] = {
 char* NPP_GetMIMEDescription(void)
 {
     int freeFac = 0;
-    PRINTF("MIME description\n");
+    PRINTF(("MIME description\n"));
     if (thePlugin == NULL) {
         freeFac = 1;
         NSGetFactory(thePluginManager, kPluginCID, NULL, NULL, (nsIFactory** )&thePlugin);
     }
-    PRINTF("Allocated Plugin 0x%08x\n", thePlugin);
+    PRINTF(("Allocated Plugin 0x%08x\n", thePlugin));
     const char * ret;
     nsresult err = thePlugin->GetMIMEDescription(&ret);
     if (err) return NULL;
-    PRINTF("Get response %s\n", ret);
+    PRINTF(("Get response %s\n", ret));
     if (freeFac) {
-        PRINTF("Freeing plugin...");
+        PRINTF(("Freeing plugin..."));
         thePlugin->Release();
         thePlugin = NULL;
     }
-    PRINTF("Done\n");
+    PRINTF(("Done\n"));
     return (char*)ret;
 }
 
@@ -623,22 +623,22 @@ NPP_SetValue(NPP instance, NPNVariable variable, void *value)
 NPError
 NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     int freeFac = 0;
-    PRINTF("MIME description\n");
+    PRINTF(("MIME description\n"));
     if (thePlugin == NULL) {
         freeFac = 1;
         if (NSGetFactory(thePluginManager, kPluginCID, NULL, NULL, (nsIFactory** )&thePlugin) != NS_OK)
             return NPERR_GENERIC_ERROR;
     }
-    PRINTF("Allocated Plugin 0x%08x\n", thePlugin);
+    PRINTF(("Allocated Plugin 0x%08x\n", thePlugin));
     nsresult err = thePlugin->GetValue((nsPluginVariable)variable, value);
     if (err) return NPERR_GENERIC_ERROR;
-    PRINTF("Get response %08x\n", ret);
+    PRINTF(("Get response %08x\n", ret));
     if (freeFac) {
-        PRINTF("Freeing plugin...");
+        PRINTF(("Freeing plugin..."));
         thePlugin->Release();
         thePlugin = NULL;
     }
-    PRINTF("Done\n");
+    PRINTF(("Done\n"));
     return NPERR_NO_ERROR;
 }
 #endif // XP_UNIX

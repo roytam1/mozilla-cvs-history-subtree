@@ -27,8 +27,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsStatisticsLog)
-#define PRINTF NS_LOG_PRINTF(nsStatisticsLog)
-#define FLUSH  NS_LOG_FLUSH(nsStatisticsLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsStatisticsLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsStatisticsLog)
 
 inline PLHashNumber
 nsStatistics::HashPRInt32(const void* aKey)

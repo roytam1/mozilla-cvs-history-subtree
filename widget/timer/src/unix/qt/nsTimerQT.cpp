@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsTimerQtLog)
-#define PRINTF NS_LOG_PRINTF(nsTimerQtLog)
-#define FLUSH  NS_LOG_FLUSH(nsTimerQtLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsTimerQtLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsTimerQtLog)
 
 static NS_DEFINE_IID(kITimerIID, NS_ITIMER_IID);
 

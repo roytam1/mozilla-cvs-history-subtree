@@ -35,8 +35,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsConsoleServiceLog)
-#define PRINTF NS_LOG_PRINTF(nsConsoleServiceLog)
-#define FLUSH  NS_LOG_FLUSH(nsConsoleServiceLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsConsoleServiceLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsConsoleServiceLog)
 
 NS_IMPL_THREADSAFE_ISUPPORTS(nsConsoleService, NS_GET_IID(nsIConsoleService));
 
@@ -80,9 +80,9 @@ nsConsoleService::~nsConsoleService()
         nsresult rv;
         rv = mListeners->Count(&listenerCount);
         if (listenerCount != 0) {
-            PRINTF("WARNING - %d console error listeners still registered!\n"
+            PRINTF(("WARNING - %d console error listeners still registered!\n"
                    "More calls to nsIConsoleService::UnregisterListener needed.\n",
-                   listenerCount);
+                   listenerCount));
         }
     }
 #endif

@@ -43,8 +43,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsXMLProcessingInstructionLog)
-#define PRINTF NS_LOG_PRINTF(nsXMLProcessingInstructionLog)
-#define FLUSH  NS_LOG_FLUSH(nsXMLProcessingInstructionLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXMLProcessingInstructionLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXMLProcessingInstructionLog)
 
 
 class nsXMLProcessingInstruction : public nsIDOMProcessingInstruction,

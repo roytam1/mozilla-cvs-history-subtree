@@ -49,8 +49,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsAbSyncPostEngineLog)
-#define PRINTF NS_LOG_PRINTF(nsAbSyncPostEngineLog)
-#define FLUSH  NS_LOG_FLUSH(nsAbSyncPostEngineLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsAbSyncPostEngineLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsAbSyncPostEngineLog)
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
@@ -435,7 +435,7 @@ nsresult
 nsAbSyncPostEngine::OnStopRequest(nsIChannel *aChannel, nsISupports * /* ctxt */, nsresult aStatus, const PRUnichar* aMsg)
 {
 #ifdef NS_DEBUG_rhp
-  PRINTF("nsAbSyncPostEngine::OnStopRequest()\n");
+  PRINTF(("nsAbSyncPostEngine::OnStopRequest()\n"));
 #endif
 
   char  *tProtResponse = nsnull;
@@ -809,7 +809,7 @@ nsAbSyncPostEngine::KickTheSyncOperation(void)
   PR_FREEIF(protString);
 
 #ifdef DEBUG_rhp
-  PRINTF("COMMAND = %s\n", tCommand);
+  PRINTF(("COMMAND = %s\n", tCommand));
 #endif
 
   if (!tCommand)

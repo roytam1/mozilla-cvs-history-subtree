@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsString2Log)
-#define PRINTF NS_LOG_PRINTF(nsString2Log)
-#define FLUSH  NS_LOG_FLUSH(nsString2Log)
+#define PRINTF(args) NS_LOG_PRINTF(nsString2Log, args)
+#define FLUSH()      NS_LOG_FLUSH(nsString2Log)
 
 static const char* kPossibleNull = "Error: possible unintended null in string";
 static const char* kNullPointerError = "Error: unexpected null ptr";
@@ -1757,7 +1757,7 @@ void nsString::DebugDump(void) const {
   }
 
   if(theBuffer) {
-    PRINTF("\n%s",theBuffer);
+    PRINTF(("\n%s",theBuffer));
   }
 }
        

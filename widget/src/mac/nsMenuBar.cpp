@@ -52,8 +52,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMenuBarLog)
-#define PRINTF NS_LOG_PRINTF(nsMenuBarLog)
-#define FLUSH  NS_LOG_FLUSH(nsMenuBarLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMenuBarLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMenuBarLog)
 
 
 static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
@@ -210,7 +210,7 @@ nsMenuBar::MenuSelected(const nsMenuEvent & aMenuEvent)
 
   nsCOMPtr<nsIMenuListener> menuListener;
   //((nsISupports*)mMenuVoidArray[i-1])->QueryInterface(NS_GET_IID(nsIMenuListener), (void**)&menuListener);
-  //PRINTF("gPreviousMenuStack.Count() = %d ", gPreviousMenuStack.Count());
+  //PRINTF(("gPreviousMenuStack.Count() = %d ", gPreviousMenuStack.Count()));
 #if !TARGET_CARBON
   nsCOMPtr<nsIMenu> theMenu;
   gPreviousMenuStack.GetMenuAt(gPreviousMenuStack.Count() - 1, getter_AddRefs(theMenu));

@@ -43,8 +43,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMathMLmoverFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsMathMLmoverFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsMathMLmoverFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMathMLmoverFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMathMLmoverFrameLog)
 
 //
 // <mover> -- attach an overscript to a base - implementation
@@ -267,7 +267,7 @@ nsMathMLmoverFrame::Place(nsIPresContext*      aPresContext,
   }
   if ((2 != count) || !baseFrame || !overFrame) {
 #ifdef NS_DEBUG
-      PRINTF("mover: invalid markup");
+      PRINTF(("mover: invalid markup"));
 #endif
     // report an error, encourage people to get their markups in order
     return ReflowError(aPresContext, aRenderingContext, aDesiredSize);

@@ -37,8 +37,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsProxyEventObjectLog)
-#define PRINTF NS_LOG_PRINTF(nsProxyEventObjectLog)
-#define FLUSH  NS_LOG_FLUSH(nsProxyEventObjectLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsProxyEventObjectLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsProxyEventObjectLog)
 
 static NS_DEFINE_IID(kProxyObject_Identity_Class_IID, NS_PROXYEVENT_IDENTITY_CLASS_IID);
 
@@ -93,8 +93,8 @@ nsProxyEventObject::DebugDump(const char * message, PRUint32 hashKey)
 
     if (message)
     {
-        PRINTF("\n-=-=-=-=-=-=-=-=-=-=-=-=-\n");
-        PRINTF("%s\n", message);
+        PRINTF(("\n-=-=-=-=-=-=-=-=-=-=-=-=-\n"));
+        PRINTF(("%s\n", message));
 
         if(strcmp(message, "Create") == 0)
         {
@@ -106,39 +106,39 @@ nsProxyEventObject::DebugDump(const char * message, PRUint32 hashKey)
             outstandingProxyObjects--;
         }
     }
-    PRINTF("nsProxyEventObject @ %x with mRefCnt = %d\n", this, mRefCnt);
+    PRINTF(("nsProxyEventObject @ %x with mRefCnt = %d\n", this, mRefCnt));
 
     PRBool isRoot = mRoot == nsnull;
-    PRINTF("%s wrapper around  @ %x\n", isRoot ? "ROOT":"non-root\n", GetRealObject());
+    PRINTF(("%s wrapper around  @ %x\n", isRoot ? "ROOT":"non-root\n", GetRealObject()));
 
     nsCOMPtr<nsISupports> rootObject = do_QueryInterface(mProxyObject->mRealObject);
     nsCOMPtr<nsISupports> rootQueue = do_QueryInterface(mProxyObject->mDestQueue);
     nsProxyEventKey key(rootObject, rootQueue, mProxyObject->mProxyType);
-    PRINTF("Hashkey: %d\n", key.HashCode());
+    PRINTF(("Hashkey: %d\n", key.HashCode()));
         
     char* name;
     GetClass()->GetInterfaceInfo()->GetName(&name);
-    PRINTF("interface name is %s\n", name);
+    PRINTF(("interface name is %s\n", name));
     if(name)
         nsMemory::Free(name);
     char * iid = GetClass()->GetProxiedIID().ToString();
-    PRINTF("IID number is %s\n", iid);
+    PRINTF(("IID number is %s\n", iid));
     delete iid;
-    PRINTF("nsProxyEventClass @ %x\n", mClass);
+    PRINTF(("nsProxyEventClass @ %x\n", mClass));
     
     if(mNext)
     {
         if(isRoot)
         {
-            PRINTF("Additional wrappers for this object...\n");
+            PRINTF(("Additional wrappers for this object...\n"));
         }
         mNext->DebugDump(nsnull, 0);
     }
 
-    PRINTF("[proxyobjects] %d total used in system, %d outstading\n", totalProxyObjects, outstandingProxyObjects);
+    PRINTF(("[proxyobjects] %d total used in system, %d outstading\n", totalProxyObjects, outstandingProxyObjects));
 
     if (message)
-        PRINTF("-=-=-=-=-=-=-=-=-=-=-=-=-\n");
+        PRINTF(("-=-=-=-=-=-=-=-=-=-=-=-=-\n"));
 
     PR_ExitMonitor(mon);
 }

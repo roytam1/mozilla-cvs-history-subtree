@@ -34,8 +34,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsNativeFormControlFrameLog)
-#define PRINTF NS_LOG_PRINTF(nsNativeFormControlFrameLog)
-#define FLUSH  NS_LOG_FLUSH(nsNativeFormControlFrameLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNativeFormControlFrameLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNativeFormControlFrameLog)
 
 static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
 static NS_DEFINE_IID(kViewCID, NS_VIEW_CID);
@@ -298,7 +298,7 @@ NS_METHOD nsNativeFormControlFrame::HandleEvent(nsIPresContext* aPresContext,
   // unfortunately native widgets don't seem to handle this right. 
   // so use the old code for native stuff. -EDV
 
-	//PRINTF(" %d %d %d %d (%d,%d) \n", this, aEvent->widget, aEvent->widgetSupports, 
+	//PRINTF((" %d %d %d %d (%d,%d) \n", this, aEvent->widget, aEvent->widgetSupports, 
 	//       aEvent->message, aEvent->point.x, aEvent->point.y));
 
 	PRInt32 type;

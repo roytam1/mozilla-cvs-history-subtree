@@ -25,8 +25,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsXPLookAndFeelLog)
-#define PRINTF NS_LOG_PRINTF(nsXPLookAndFeelLog)
-#define FLUSH  NS_LOG_FLUSH(nsXPLookAndFeelLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXPLookAndFeelLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXPLookAndFeelLog)
  
 static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
@@ -199,7 +199,7 @@ static int PR_CALLBACK intPrefChanged (const char *newpref, void *data)
         np->intVar = intpref;
         np->isSet = PR_TRUE;
 #ifdef DEBUG_akkana
-        PRINTF("====== Changed int pref %s to %d\n", np->name, np->intVar);
+        PRINTF(("====== Changed int pref %s to %d\n", np->name, np->intVar));
 #endif
       }
     }
@@ -223,7 +223,7 @@ static int PR_CALLBACK floatPrefChanged (const char *newpref, void *data)
         np->floatVar = (float)intpref / 100.;
         np->isSet = PR_TRUE;
 #ifdef DEBUG_akkana
-        PRINTF("====== Changed float pref %s to %f\n", np->name, np->floatVar);
+        PRINTF(("====== Changed float pref %s to %f\n", np->name, np->floatVar));
 #endif
       }
     }
@@ -251,8 +251,8 @@ static int PR_CALLBACK colorPrefChanged (const char *newpref, void *data)
           np->isSet = PR_TRUE;
           np->colorVar = (nscolor)thecolor;
 #ifdef DEBUG_akkana
-          PRINTF("====== Changed color pref %s to 0x%lx\n",
-                 np->name, (long)np->colorVar);
+          PRINTF(("====== Changed color pref %s to 0x%lx\n",
+                 np->name, (long)np->colorVar));
 #endif
         }
         PL_strfree(colorStr);

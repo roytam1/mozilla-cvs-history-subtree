@@ -33,8 +33,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsNativeDragTargetLog)
-#define PRINTF NS_LOG_PRINTF(nsNativeDragTargetLog)
-#define FLUSH  NS_LOG_FLUSH(nsNativeDragTargetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsNativeDragTargetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsNativeDragTargetLog)
 
 #if (_MSC_VER == 1100)
 #define INITGUID
@@ -228,7 +228,7 @@ STDMETHODIMP nsNativeDragTarget::DragEnter(LPDATAOBJECT pIDataSource,
 												                   POINTL       pt, 
                                            DWORD*       pdwEffect)
 {
-  PRINTF("DragEnter\n");
+  PRINTF(("DragEnter\n"));
 
 	if (mDragService) {
 
@@ -259,7 +259,7 @@ STDMETHODIMP nsNativeDragTarget::DragOver(DWORD   grfKeyState,
                                           POINTL  pt, 
                                           LPDWORD pdwEffect)
 {
-  PRINTF("DragOver\n");
+  PRINTF(("DragOver\n"));
 	if (mDragService) {
     // Now process the native drag state and then dispatch the event
     ProcessDrag(nsnull, NS_DRAGDROP_OVER, grfKeyState, pt, pdwEffect);
@@ -273,7 +273,7 @@ STDMETHODIMP nsNativeDragTarget::DragOver(DWORD   grfKeyState,
 //-----------------------------------------------------
 STDMETHODIMP nsNativeDragTarget::DragLeave() {
 
-  PRINTF("DragLeave\n");
+  PRINTF(("DragLeave\n"));
 	if (mDragService) {
 
     // dispatch the event into Gecko

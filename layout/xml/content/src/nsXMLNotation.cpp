@@ -35,8 +35,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsXMLNotationLog)
-#define PRINTF NS_LOG_PRINTF(nsXMLNotationLog)
-#define FLUSH  NS_LOG_FLUSH(nsXMLNotationLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXMLNotationLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXMLNotationLog)
 
 
 class nsXMLNotation : public nsIDOMNotation,

@@ -47,8 +47,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMenuItemLog)
-#define PRINTF NS_LOG_PRINTF(nsMenuItemLog)
-#define FLUSH  NS_LOG_FLUSH(nsMenuItemLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMenuItemLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMenuItemLog)
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
@@ -229,7 +229,7 @@ nsEventStatus nsMenuItem::MenuItemSelected(const nsMenuEvent & aMenuEvent)
 
 nsEventStatus nsMenuItem::MenuSelected(const nsMenuEvent & aMenuEvent)
 {
-  PRINTF("nsMenuItem::MenuSelected called\n");
+  PRINTF(("nsMenuItem::MenuSelected called\n"));
   if(mXULCommandListener)
     return mXULCommandListener->MenuSelected(aMenuEvent);
 
@@ -238,7 +238,7 @@ nsEventStatus nsMenuItem::MenuSelected(const nsMenuEvent & aMenuEvent)
 
 nsEventStatus nsMenuItem::MenuDeselected(const nsMenuEvent & aMenuEvent)
 {
-  PRINTF("nsMenuItem::MenuDeselected called\n");
+  PRINTF(("nsMenuItem::MenuDeselected called\n"));
   return nsEventStatus_eIgnore;
 }
 
@@ -247,13 +247,13 @@ nsEventStatus nsMenuItem::MenuConstruct(const nsMenuEvent &aMenuEvent,
                                         void *menuNode,
                                         void *aWebShell)
 {
-  PRINTF("nsMenuItem::MenuConstruct called\n");
+  PRINTF(("nsMenuItem::MenuConstruct called\n"));
   return nsEventStatus_eIgnore;
 }
 
 nsEventStatus nsMenuItem::MenuDestruct(const nsMenuEvent & aMenuEvent)
 {
-  PRINTF("nsMenuItem::MenuDestruct called\n");
+  PRINTF(("nsMenuItem::MenuDestruct called\n"));
   return nsEventStatus_eIgnore;
 }
 
@@ -262,7 +262,7 @@ NS_METHOD nsMenuItem::Create(nsISupports *aParent,
                              const nsString &aLabel,
                              PRBool aIsSeparator)
 {
-  PRINTF("nsMenuItem::Create called\n");
+  PRINTF(("nsMenuItem::Create called\n"));
   if (nsnull == aParent) {
     return NS_ERROR_FAILURE;
   }

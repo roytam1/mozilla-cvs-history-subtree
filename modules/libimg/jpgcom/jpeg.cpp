@@ -67,8 +67,8 @@ int il_debug;
 #include "nslog.h"
 
 NS_IMPL_LOG(IMGLIBLog)
-#define PRINTF NS_LOG_PRINTF(IMGLIBLog)
-#define FLUSH  NS_LOG_FLUSH(IMGLIBLog)
+#define PRINTF(args) NS_LOG_PRINTF(IMGLIBLog, args)
+#define FLUSH()      NS_LOG_FLUSH(IMGLIBLog)
 
 /*
  * States that the jpeg decoder might be in

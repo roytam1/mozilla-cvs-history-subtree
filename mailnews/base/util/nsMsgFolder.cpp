@@ -54,8 +54,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgFolderLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgFolderLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgFolderLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgFolderLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgFolderLog)
 
 static NS_DEFINE_CID(kStandardUrlCID, NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
@@ -632,7 +632,7 @@ nsMsgFolder::parseURI(PRBool needServer)
       // was never called
       // (we should ALWAYS handle this case, but try to design
       // the code so we have a parent wherever possible)
-      PRINTF("No parent->");
+      PRINTF(("No parent->"));
 #endif
       rv = accountManager->FindServer(userName,
                                       hostName,

@@ -69,8 +69,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsCSSStyleSheetLog)
-#define PRINTF NS_LOG_PRINTF(nsCSSStyleSheetLog)
-#define FLUSH  NS_LOG_FLUSH(nsCSSStyleSheetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsCSSStyleSheetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsCSSStyleSheetLog)
 
 //#define DEBUG_RULES
 //#define EVENT_DEBUG
@@ -1980,7 +1980,7 @@ CSSStyleSheetImpl::CheckRuleForAttributes(nsICSSRule *aRule)
           nsAutoString str;
           sel->mAttr->ToString(str);
           char * chars = str.ToNewCString();
-          FPRINTF(stderr, "[%s@%p]", chars, this);
+          FPRINTF((stderr, "[%s@%p]", chars, this));
           nsMemory::Free(chars);
 #endif
           AtomKey key(sel->mAttr);
@@ -3013,8 +3013,8 @@ static PRBool SelectorMatches(nsIPresContext* aPresContext,
               if (contentTag) {
                 contentTag->ToString(strTag);
               }
-              PRINTF("Tag: %s PseudoClass: %s EventState: %d\n", 
-                     strTag.ToNewCString(), strPseudo.ToNewCString(), (int)eventState);
+              PRINTF(("Tag: %s PseudoClass: %s EventState: %d\n", 
+                     strTag.ToNewCString(), strPseudo.ToNewCString(), (int)eventState));
 #endif
             }
             if (nsCSSAtoms::activePseudo == pseudoClass->mAtom) {

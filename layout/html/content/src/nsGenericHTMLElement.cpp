@@ -95,8 +95,8 @@
 #undef fprintf
 
 NS_IMPL_LOG(nsGenericHTMLElementLog)
-#define PRINTF NS_LOG_PRINTF(nsGenericHTMLElementLog)
-#define FLUSH  NS_LOG_FLUSH(nsGenericHTMLElementLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsGenericHTMLElementLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsGenericHTMLElementLog)
 
 // XXX todo: add in missing out-of-memory checks
 

@@ -51,8 +51,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsXULCommandDispatcherLog)
-#define PRINTF NS_LOG_PRINTF(nsXULCommandDispatcherLog)
-#define FLUSH  NS_LOG_FLUSH(nsXULCommandDispatcherLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXULCommandDispatcherLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXULCommandDispatcherLog)
 
 #define gLog nsXULCommandDispatcherLog
 
@@ -270,7 +270,7 @@ nsXULCommandDispatcher::UpdateCommands(const nsAReadableString& aEventName)
 #if 0
   {
     char*   actionString = aEventName.ToNewCString();
-    PRINTF("Doing UpdateCommands(\"%s\")\n", actionString);
+    PRINTF(("Doing UpdateCommands(\"%s\")\n", actionString));
     free(actionString);    
   }
 #endif
@@ -371,20 +371,20 @@ nsXULCommandDispatcher::Focus(nsIDOMEvent* aEvent)
   aEvent->GetOriginalTarget(getter_AddRefs(t));
   
 #if 0
-  PRINTF("%d : Focus occurred on: ", this);
+  PRINTF(("%d : Focus occurred on: ", this));
   nsCOMPtr<nsIDOMElement> domDebugElement = do_QueryInterface(t);
   if (domDebugElement) {
-      PRINTF("A Focusable DOM Element");
+      PRINTF(("A Focusable DOM Element"));
   }
   nsCOMPtr<nsIDOMDocument> domDebugDocument = do_QueryInterface(t);
   if (domDebugDocument) {
     nsCOMPtr<nsIDOMHTMLDocument> htmlDoc = do_QueryInterface(t);
     if (htmlDoc) {
-        PRINTF("Window with an HTML doc (happens twice)");
+        PRINTF(("Window with an HTML doc (happens twice)"));
     }
-    else PRINTF("Window with a XUL doc (happens twice)");
+    else PRINTF(("Window with a XUL doc (happens twice)"));
   }
-  PRINTF("\n");
+  PRINTF(("\n"));
 #endif /* DEBUG_hyatt */
 
   nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(t);
@@ -440,20 +440,20 @@ nsXULCommandDispatcher::Blur(nsIDOMEvent* aEvent)
   aEvent->GetOriginalTarget(getter_AddRefs(t));
 
 #if 0
-  PRINTF("%d : Blur occurred on: ", this);
+  PRINTF(("%d : Blur occurred on: ", this));
   nsCOMPtr<nsIDOMElement> domDebugElement = do_QueryInterface(t);
   if (domDebugElement) {
-      PRINTF("A Focusable DOM Element");
+      PRINTF(("A Focusable DOM Element"));
   }
   nsCOMPtr<nsIDOMDocument> domDebugDocument = do_QueryInterface(t);
   if (domDebugDocument) {
     nsCOMPtr<nsIDOMHTMLDocument> htmlDoc = do_QueryInterface(t);
     if (htmlDoc) {
-        PRINTF("Window with an HTML doc (happens twice)");
+        PRINTF(("Window with an HTML doc (happens twice)"));
     }
-    else PRINTF("Window with a XUL doc (happens twice)");
+    else PRINTF(("Window with a XUL doc (happens twice)"));
   }
-  PRINTF("\n");
+  PRINTF(("\n"));
 #endif /* DEBUG_hyatt */
 
   nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(t);
@@ -631,7 +631,7 @@ nsXULCommandDispatcher::SetSuppressFocus(PRBool aSuppressFocus)
   else if(mSuppressFocus > 0)
     --mSuppressFocus;
 
-  //PRINTF("mSuppressFocus == %d\n", mSuppressFocus);
+  //PRINTF(("mSuppressFocus == %d\n", mSuppressFocus));
   
   // we are unsuppressing after activating, so update focus-related commands
   // we need this to update commands in the case where an element is focussed.

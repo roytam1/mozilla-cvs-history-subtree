@@ -36,8 +36,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsMsgDBFolderLog)
-#define PRINTF NS_LOG_PRINTF(nsMsgDBFolderLog)
-#define FLUSH  NS_LOG_FLUSH(nsMsgDBFolderLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsMsgDBFolderLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsMsgDBFolderLog)
 
 #if defined(XP_OS2)
 #define MAX_FILE_LENGTH_WITHOUT_EXTENSION 8
@@ -821,7 +821,7 @@ NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *e
 	char *uri;
 
 	GetURI(&uri);
-	PRINTF("read total %ld for %s\n", mNumTotalMessages, uri);
+	PRINTF(("read total %ld for %s\n", mNumTotalMessages, uri));
 	PR_Free(uri);
 #endif
 	mCharset.AssignWithConversion(charset);
@@ -958,7 +958,7 @@ NS_IMETHODIMP nsMsgDBFolder::WriteToFolderCacheElem(nsIMsgFolderCacheElement *el
 	char *uri;
 
 	GetURI(&uri);
-	PRINTF("writing total %ld for %s\n", mNumTotalMessages, uri);
+	PRINTF(("writing total %ld for %s\n", mNumTotalMessages, uri));
 	PR_Free(uri);
 #endif
 	return rv;

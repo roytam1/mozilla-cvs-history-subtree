@@ -39,8 +39,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsAppShellLog)
-#define PRINTF NS_LOG_PRINTF(nsAppShellLog)
-#define FLUSH  NS_LOG_FLUSH(nsAppShellLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsAppShellLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsAppShellLog)
 
 /* Global Definitions */
 PRBool nsAppShell::gExitMainLoop = PR_FALSE;
@@ -98,7 +98,7 @@ nsAppShell::~nsAppShell()
 
     if (err==-1)
     {
-        PRINTF("nsAppShell::~EventQueueTokenQueue Run Error calling PtAppRemoveFd mFD=<%d> errno=<%d>", mFD, errno);
+        PRINTF(("nsAppShell::~EventQueueTokenQueue Run Error calling PtAppRemoveFd mFD=<%d> errno=<%d>", mFD, errno));
     }  
     mFD = -1;
   }

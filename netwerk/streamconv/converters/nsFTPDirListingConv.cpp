@@ -56,8 +56,8 @@ NS_IMPL_LOG_ENABLED(nsFTPDirListingConvLog)
 #else
 NS_IMPL_LOG(nsFTPDirListingConvLog)
 #endif
-#define PRINTF NS_LOG_PRINTF(nsFTPDirListingConvLog)
-#define FLUSH  NS_LOG_FLUSH(nsFTPDirListingConvLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFTPDirListingConvLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFTPDirListingConvLog)
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -156,7 +156,7 @@ nsFTPDirListingConv::Convert(nsIInputStream *aFromStream,
 #ifdef NS_ENABLED_LOGGING
     char *unescData = convertedData.ToNewCString();
     nsUnescape(unescData);
-    PRINTF("::OnData() sending the following %d bytes...\n\n%s\n\n", convertedData.Length(), unescData);
+    PRINTF(("::OnData() sending the following %d bytes...\n\n%s\n\n", convertedData.Length(), unescData));
     nsMemory::Free(unescData);
 #endif
 
@@ -276,7 +276,7 @@ nsFTPDirListingConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
         mBuffer.Truncate();
     }
 
-    PRINTF("::OnData() received the following %d bytes...\n\n%s\n\n", streamLen, buffer);
+    PRINTF(("::OnData() received the following %d bytes...\n\n%s\n\n", streamLen, buffer));
 
     if (!mSentHeading) {
         // build up the 300: line
@@ -308,7 +308,7 @@ nsFTPDirListingConv::OnDataAvailable(nsIChannel *channel, nsISupports *ctxt,
 #ifdef NS_ENABLE_LOGGING
     char *unescData = indexFormat.ToNewCString();
     nsUnescape(unescData);
-    PRINTF("::OnData() sending the following %d bytes...\n\n%s\n\n", indexFormat.Length(), unescData);
+    PRINTF(("::OnData() sending the following %d bytes...\n\n%s\n\n", indexFormat.Length(), unescData));
     nsMemory::Free(unescData);
 #endif
 

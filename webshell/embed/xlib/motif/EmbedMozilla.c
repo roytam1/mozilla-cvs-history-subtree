@@ -28,8 +28,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(EmbedMozillaLog)
-#define PRINTF NS_LOG_PRINTF(EmbedMozillaLog)
-#define FLUSH  NS_LOG_FLUSH(EmbedMozillaLog)
+#define PRINTF(args) NS_LOG_PRINTF(EmbedMozillaLog, args)
+#define FLUSH()      NS_LOG_FLUSH(EmbedMozillaLog)
 
 static XtGeometryResult
 GeometryManager(Widget w, XtWidgetGeometry *request, XtWidgetGeometry *reply);
@@ -180,9 +180,9 @@ CoreRealize(Widget w,XtValueMask *mask,XSetWindowAttributes* wa)
 {
   XmEmbedMozilla em = (XmEmbedMozilla) w;
 
-  PRINTF("Realize(%s,window = %p\n",
+  PRINTF(("Realize(%s,window = %p\n",
           XtName(w),
-         em->embed_mozilla.embed_window);
+         em->embed_mozilla.embed_window));
   
   em->core.window = em->embed_mozilla.embed_window;
 }

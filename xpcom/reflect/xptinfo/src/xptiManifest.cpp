@@ -26,8 +26,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(xptiManifestLog)
-#define PRINTF NS_LOG_PRINTF(xptiManifestLog)
-#define FLUSH  NS_LOG_FLUSH(xptiManifestLog)
+#define PRINTF(args) NS_LOG_PRINTF(xptiManifestLog, args)
+#define FLUSH()      NS_LOG_FLUSH(xptiManifestLog)
 
 
 static const char g_MainManifestFilename[] = "xpti.dat";
@@ -237,7 +237,7 @@ ReadManifestIntoMemory(xptiInterfaceInfoManager* aMgr,
         char* path;
         if(!shown && NS_SUCCEEDED(aFile->GetPath(&path)) && path)
         {
-            PRINTF("Type Manifest File: %s\n", path);
+            PRINTF(("Type Manifest File: %s\n", path));
             nsMemory::Free(path);
             shown = PR_TRUE;        
         } 

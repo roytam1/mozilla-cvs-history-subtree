@@ -41,8 +41,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsCookieHTTPNotifyLog)
-#define PRINTF NS_LOG_PRINTF(nsCookieHTTPNotifyLog)
-#define FLUSH  NS_LOG_FLUSH(nsCookieHTTPNotifyLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsCookieHTTPNotifyLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsCookieHTTPNotifyLog)
 
 static NS_DEFINE_CID(kINetModuleMgrCID, NS_NETMODULEMGR_CID);
 
@@ -122,7 +122,7 @@ nsCookieHTTPNotify::nsCookieHTTPNotify()
 {
     NS_INIT_REFCNT();
     mCookieService = nsnull;
-    PRINTF("CookieHTTPNotify Created.\n");
+    PRINTF(("CookieHTTPNotify Created.\n"));
 }
 
 nsCookieHTTPNotify::~nsCookieHTTPNotify()

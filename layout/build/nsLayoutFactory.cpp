@@ -72,8 +72,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLayoutFactoryLog)
-#define PRINTF NS_LOG_PRINTF(nsLayoutFactoryLog)
-#define FLUSH  NS_LOG_FLUSH(nsLayoutFactoryLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLayoutFactoryLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLayoutFactoryLog)
 
 class nsIDocumentLoaderFactory;
 
@@ -182,7 +182,7 @@ nsLayoutFactory::nsLayoutFactory(const nsCID &aClass)
   mClassID = aClass;
 #if 0
   char* cs = aClass.ToString();
-  PRINTF("+++ Creating layout factory for %s\n", cs);
+  PRINTF(("+++ Creating layout factory for %s\n", cs));
   nsCRT::free(cs);
 #endif
 }
@@ -191,7 +191,7 @@ nsLayoutFactory::~nsLayoutFactory()
 {
 #if 0
   char* cs = mClassID.ToString();
-  PRINTF("+++ Destroying layout factory for %s\n", cs);
+  PRINTF(("+++ Destroying layout factory for %s\n", cs));
   nsCRT::free(cs);
 #endif
 }
@@ -200,8 +200,8 @@ NS_IMPL_ISUPPORTS(nsLayoutFactory, NS_GET_IID(nsIFactory))
 
 #ifdef DEBUG
 #define LOG_NEW_FAILURE(_msg,_ec)                                           \
-  PRINTF("nsLayoutFactory::CreateInstance failed for %s: error=%d(0x%x)\n", \
-         _msg, _ec, _ec)
+  PRINTF(("nsLayoutFactory::CreateInstance failed for %s: error=%d(0x%x)\n", \
+         _msg, _ec, _ec))
 #else
 #define LOG_NEW_FAILURE(_msg,_ec)
 #endif

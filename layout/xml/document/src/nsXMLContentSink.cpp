@@ -78,8 +78,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsXMLContentSinkLog)
-#define PRINTF NS_LOG_PRINTF(nsXMLContentSinkLog)
-#define FLUSH  NS_LOG_FLUSH(nsXMLContentSinkLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsXMLContentSinkLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsXMLContentSinkLog)
 
 static char kNameSpaceSeparator = ':';
 static char kNameSpaceDef[] = "xmlns";
@@ -774,7 +774,7 @@ NS_IMETHODIMP
 nsXMLContentSink::AddXMLDecl(const nsIParserNode& aNode)
 {
   // XXX We'll ignore it for now
-  PRINTF("nsXMLContentSink::AddXMLDecl\n");
+  PRINTF(("nsXMLContentSink::AddXMLDecl\n"));
   return NS_OK;
 }
 
@@ -1375,21 +1375,21 @@ nsXMLContentSink::AddText(const nsString& aString)
 NS_IMETHODIMP
 nsXMLContentSink::AddUnparsedEntity(const nsIParserNode& aNode)
 {
-  PRINTF("nsXMLContentSink::AddUnparsedEntity\n");
+  PRINTF(("nsXMLContentSink::AddUnparsedEntity\n"));
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXMLContentSink::AddNotation(const nsIParserNode& aNode)
 {
-  PRINTF("nsXMLContentSink::AddNotation\n");
+  PRINTF(("nsXMLContentSink::AddNotation\n"));
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXMLContentSink::AddEntityReference(const nsIParserNode& aNode)
 {
-  PRINTF("nsXMLContentSink::AddEntityReference\n");
+  PRINTF(("nsXMLContentSink::AddEntityReference\n"));
   return NS_OK;
 }
 

@@ -59,8 +59,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsEventListenerManagerLog)
-#define PRINTF NS_LOG_PRINTF(nsEventListenerManagerLog)
-#define FLUSH  NS_LOG_FLUSH(nsEventListenerManagerLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsEventListenerManagerLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsEventListenerManagerLog)
 
 static NS_DEFINE_IID(kIEventListenerManagerIID, NS_IEVENTLISTENERMANAGER_IID);
 static NS_DEFINE_IID(kIDOMEventListenerIID, NS_IDOMEVENTLISTENER_IID);
@@ -996,7 +996,7 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_COMPOSITION_END:
     case NS_COMPOSITION_QUERY:
     case NS_RECONVERSION_QUERY:
-      PRINTF("DOM: got composition event\n");
+      PRINTF(("DOM: got composition event\n"));
       if (nsnull != mCompositionListeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent,aPresContext,empty,aEvent);
@@ -1059,7 +1059,7 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
       break;
 
     case NS_TEXT_EVENT:
-      PRINTF("DOM: got text event\n");
+      PRINTF(("DOM: got text event\n"));
       if (nsnull != mTextListeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent,aPresContext,empty,aEvent);

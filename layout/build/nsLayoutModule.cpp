@@ -76,8 +76,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLayoutModuleLog)
-#define PRINTF NS_LOG_PRINTF(nsLayoutModuleLog)
-#define FLUSH  NS_LOG_FLUSH(nsLayoutModuleLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLayoutModuleLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLayoutModuleLog)
 
 static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
 static nsLayoutModule *gModule = NULL;
@@ -404,7 +404,7 @@ nsLayoutModule::RegisterSelf(nsIComponentManager *aCompMgr,
 {
   nsresult rv = NS_OK;
 
-  PRINTF("*** Registering layout components\n");
+  PRINTF(("*** Registering layout components\n"));
 
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
@@ -412,8 +412,8 @@ nsLayoutModule::RegisterSelf(nsIComponentManager *aCompMgr,
     rv = aCompMgr->RegisterComponentSpec(cp->mCID, cp->mDescription,
                                          cp->mContractID, aPath, PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) {
-      PRINTF("nsLayoutModule: unable to register %s component => %x\n",
-             cp->mDescription, rv);
+      PRINTF(("nsLayoutModule: unable to register %s component => %x\n",
+             cp->mDescription, rv));
       break;
     }
     cp++;
@@ -429,14 +429,14 @@ nsLayoutModule::UnregisterSelf(nsIComponentManager* aCompMgr,
                                nsIFile* aPath,
                                const char* registryLocation)
 {
-  PRINTF("*** Unregistering layout components\n");
+  PRINTF(("*** Unregistering layout components\n"));
   Components* cp = gComponents;
   Components* end = cp + NUM_COMPONENTS;
   while (cp < end) {
     nsresult rv = aCompMgr->UnregisterComponentSpec(cp->mCID, aPath);
     if (NS_FAILED(rv)) {
-      PRINTF("nsLayoutModule: unable to unregister %s component => %x\n",
-             cp->mDescription, rv);
+      PRINTF(("nsLayoutModule: unable to unregister %s component => %x\n",
+             cp->mDescription, rv));
     }
     cp++;
   }

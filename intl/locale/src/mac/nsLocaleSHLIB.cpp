@@ -41,8 +41,8 @@
 #include "nslog.h"
 
 NS_IMPL_LOG(nsLocaleSHLIBLog)
-#define PRINTF NS_LOG_PRINTF(nsLocaleSHLIBLog)
-#define FLUSH  NS_LOG_FLUSH(nsLocaleSHLIBLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsLocaleSHLIBLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsLocaleSHLIBLog)
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 
@@ -107,7 +107,7 @@ extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* serviceMgr,
 			*aFactory = NULL;
 			delete factory;
 		}
-    PRINTF("returning nsLocaleFactory\n");
+    PRINTF(("returning nsLocaleFactory\n"));
 			return res;
 	}
 

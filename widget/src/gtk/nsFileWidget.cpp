@@ -32,8 +32,8 @@
 #include "nsIToolkit.h"
 
 NS_IMPL_LOG(nsFileWidgetLog)
-#define PRINTF NS_LOG_PRINTF(nsFileWidgetLog)
-#define FLUSH  NS_LOG_FLUSH(nsFileWidgetLog)
+#define PRINTF(args) NS_LOG_PRINTF(nsFileWidgetLog, args)
+#define FLUSH()      NS_LOG_FLUSH(nsFileWidgetLog)
 
 NS_IMPL_ISUPPORTS1(nsFileWidget, nsIFileWidget)
 
@@ -118,7 +118,7 @@ static void file_cancel_clicked(GtkWidget *w, PRBool *ret)
 
 static gint file_delete_window(GtkWidget *w, gpointer data)
 {
-  PRINTF("window closed\n");
+  PRINTF(("window closed\n"));
   gtk_main_quit();
   return PR_TRUE;
 }
@@ -165,7 +165,7 @@ PRBool nsFileWidget::Show()
           buff[outLength] = '\0';
           gtk_file_selection_set_filename(fs, (const gchar*) buff);
 #if defined(debug_nhotta)
-          PRINTF("debug: file name is %s\n", buff);
+          PRINTF(("debug: file name is %s\n", buff));
 #endif
           delete [] buff;
         }
@@ -310,7 +310,7 @@ NS_IMETHODIMP nsFileWidget::SetFilterList(PRUint32 aNumberOfFilters,
     // we need *.{htm, html, xul, etc}
     char *foo = aTitles[i].ToNewCString();
     char *filters = aFilters[i].ToNewCString();
-    PRINTF("%20s %s\n", foo, filters);
+    PRINTF(("%20s %s\n", foo, filters));
 
     menu_item = gtk_menu_item_new_with_label(nsAutoCString(aTitles[i]));
 
