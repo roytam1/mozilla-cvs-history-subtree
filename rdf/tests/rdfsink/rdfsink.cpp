@@ -25,7 +25,7 @@
 #include "nsIRDFDataSource.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
-#include "nsIRDFResourceManager.h"
+#include "nsIRDFService.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
@@ -59,7 +59,7 @@ static NS_DEFINE_CID(kNetServiceCID,            NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kRDFBookMarkDataSourceCID, NS_RDFBOOKMARKDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFHTMLDocumentCID,       NS_RDFHTMLDOCUMENT_CID);
 static NS_DEFINE_CID(kRDFMemoryDataSourceCID,   NS_RDFMEMORYDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFResourceManagerCID,    NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
 static NS_DEFINE_CID(kRDFStreamDataSourceCID,   NS_RDFSTREAMDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFTreeDocumentCID,       NS_RDFTREEDOCUMENT_CID);
@@ -77,7 +77,7 @@ static NS_DEFINE_CID(kNameSpaceManagerCID,      NS_NAMESPACEMANAGER_CID);
 
 //NS_DEFINE_IID(kIPostToServerIID,       NS_IPOSTTOSERVER_IID);
 NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
-NS_DEFINE_IID(kIRDFResourceManagerIID, NS_IRDFRESOURCEMANAGER_IID);
+NS_DEFINE_IID(kIRDFServiceIID,         NS_IRDFSERVICE_IID);
 
 static nsresult
 SetupRegistry(void)
@@ -87,7 +87,7 @@ SetupRegistry(void)
     nsRepository::RegisterFactory(kRDFBookMarkDataSourceCID, RDF_DLL,    PR_FALSE, PR_FALSE);
     nsRepository::RegisterFactory(kRDFHTMLDocumentCID,       RDF_DLL,    PR_FALSE, PR_FALSE);
     nsRepository::RegisterFactory(kRDFMemoryDataSourceCID,   RDF_DLL,    PR_FALSE, PR_FALSE);
-    nsRepository::RegisterFactory(kRDFResourceManagerCID,    RDF_DLL,    PR_FALSE, PR_FALSE);
+    nsRepository::RegisterFactory(kRDFServiceCID,            RDF_DLL,    PR_FALSE, PR_FALSE);
     nsRepository::RegisterFactory(kRDFSimpleDataBaseCID,     RDF_DLL,    PR_FALSE, PR_FALSE);
     nsRepository::RegisterFactory(kRDFStreamDataSourceCID,   RDF_DLL,    PR_FALSE, PR_FALSE);
     nsRepository::RegisterFactory(kRDFTreeDocumentCID,       RDF_DLL,    PR_FALSE, PR_FALSE);
