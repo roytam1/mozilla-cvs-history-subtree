@@ -122,7 +122,7 @@ var gDownloadsPane = {
     var downloadFolder = document.getElementById("downloadFolder");
 
     var customDirPref = document.getElementById("browser.download.dir");
-    var customIndex = this._fileToIndex(customDirPref.value);
+    var customIndex = customDirPref.value ? this._fileToIndex(customDirPref.value) : 0;
     
     if (folderListPref.value == 0 || customIndex == 0)
       downloadFolder.label = bundlePreferences.getString("desktopFolderName");
@@ -136,7 +136,8 @@ var gDownloadsPane = {
     var fph = ios.getProtocolHandler("file")
                  .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
     var currentDirPref = document.getElementById("browser.download.downloadDir");
-    var urlspec = fph.getURLSpecFromFile(currentDirPref.value);
+    var downloadDir = currentDirPref.value || this._indexToFile(folderListPref.value);
+    var urlspec = fph.getURLSpecFromFile(downloadDir);
     downloadFolder.image = "moz-icon://" + urlspec + "?size=16";
     
     return undefined;

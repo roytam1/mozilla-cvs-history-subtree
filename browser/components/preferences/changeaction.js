@@ -36,7 +36,7 @@
 # ***** END LICENSE BLOCK *****
 
 const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
-const kDisabledPluginTypesPref = "browser.download.pluginOverrideTypes";
+const kDisabledPluginTypesPref = "plugin.disable_full_page_plugin_for_types";
 
 var gChangeActionDialog = {
   _rdf            : null,
@@ -177,11 +177,13 @@ var gChangeActionDialog = {
       this._helperApps.Assert(aResource, prop, val, true);
   },
   
-  _ensureTypeIsInDisabledList: function (aContentType)
+  _disableType: function (aContentType)
   {
     var pluginAvailable = this._helperApps.getLiteralValue(this._itemRes.Value, 
                                                            "FilePluginAvailable") == "true";
     if (pluginAvailable) {
+      // Since we're disabling the full page plugin for this content type, 
+      // we must add it to the disabled list if it's not in there already.
       var prefs = Components.classes["@mozilla.org/preferences-service;1"]
                             .getService(Components.interfaces.nsIPrefBranch);
       var disabled = aContentType;
@@ -192,90 +194,121 @@ var gChangeActionDialog = {
       }
       prefs.setCharPref(kDisabledPluginTypesPref, disabled);   
       
+      // Also, we update the category manager so that existing browser windows
+      // update.
       var catman = Components.classes["@mozilla.org/categorymanager;1"]
                              .getService(Components.interfaces.nsICategoryManager);
       catman.deleteCategoryEntry("Gecko-Content-Viewers", aContentType, false);     
     }    
   },
   
+  _enableType: function (aContentType)
+  {
+    var prefs = Components.classes["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch);
+    // Since we're enabling the full page plugin for this content type, we must
+    // look at the disabled types list and ensure that this type isn't in it.
+    if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
+      var disabledList = prefs.getCharPref(kDisabledPluginTypesPref);
+      dump("*** enabling for type = " + aContentType + " = " + kDisabledPluginTypesPref + "\n");
+      if (disabledList == aContentType)
+        prefs.clearUserPref(kDisabledPluginTypesPref);
+      else {
+        var disabledTypes = disabledList.split(",");
+        var disabled = "";
+        for (var i = 0; i < disabledTypes.length; ++i) {
+          if (aContentType != disabledTypes[i])
+            disabled += disabledTypes[i] + (i == disabledTypes.length - 1 ? "" : ",");
+        }
+        prefs.setCharPref(kDisabledPluginTypesPref, disabled);
+      }
+    }
+
+    // Also, we update the category manager so that existing browser windows
+    // update.
+    var catman = Components.classes["@mozilla.org/categorymanager;1"]
+                           .getService(Components.interfaces.nsICategoryManager);
+    catman.addCategoryEntry("Gecko-Content-Viewers", aContentType,
+                            kPluginHandlerContractID, false, true);
+  },
+  
   onAccept: function ()
   {
+    var bundleUCT = document.getElementById("bundleUCT");
+
     var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
     var handlerGroup = document.getElementById("handlerGroup");
     if (handlerGroup.selectedItem.value == "plugin") {
-      var prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                            .getService(Components.interfaces.nsIPrefBranch);
-      if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) {
-        var disabled = prefs.getCharPref(kDisabledPluginTypesPref);
-        if (disabled == mimeInfo.MIMEType)
-          prefs.clearUserPref(kDisabledPluginTypesPref);
-        else {
-          var disabledTypes = disabled.split(",");
-          for (var i = 0; i < disabledTypes.length; ++i) {
-            if (mimeInfo.MIMEType != disabledTypes[i])
-              disabled += disabledTypes[i] + (i == disabledTypes.length - 1 ? "" : ",");
-          }
-          prefs.setCharPref(kDisabledPluginTypesPref, disabled);
-        }
- 
-        var catman = Components.classes["@mozilla.org/categorymanager;1"]
-                               .getService(Components.interfaces.nsICategoryManager);
-        catman.addCategoryEntry("Gecko-Content-Viewers", mimeInfo.MIMEType,
-                                kPluginHandlerContractID, false, true);
-
-        var newHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
-        this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, newHandler);
-      }
+      this._enableType(mimeInfo.MIMEType);
+      // We need to force the view in the parent window to refresh, since we've
+      // effectively made a change to the datasource (even though we haven't
+      // changed the actual data stored in the RDF datasource). 
+      var pluginName = document.getElementById("pluginName");
+      var openWith = bundleUCT.getFormattedString("openWith", [pluginName.label]);
+      var newHandler = this._rdf.GetLiteral(openWith);
+      var oldHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
+      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldHandler, newHandler);
       return;
     }
     
-    this._ensureTypeIsInDisabledList(mimeInfo.MIMEType);
+    this._disableType(mimeInfo.MIMEType);
     
     var dirty = false;
     
+    var fileHandlerString = "";
     if (this._handlerRes) {
-      dump("*** selected = " + handlerGroup.selectedItem.value + "\n");
       switch (handlerGroup.selectedItem.value) {
       case "system":
         this._setLiteralValue(this._handlerRes, "saveToDisk", "false");
         this._setLiteralValue(this._handlerRes, "useSystemDefault", "true");
+        fileHandlerString = bundleUCT.getFormattedString("openWith", [mimeInfo.defaultDescription]);
         break;
       case "app":
         this._setLiteralValue(this._handlerRes, "saveToDisk", "false");
         this._setLiteralValue(this._handlerRes, "useSystemDefault", "false");
+        if (this._extAppRes) {
+          var customApp = document.getElementById("customApp");
+          if (customApp.file) {
+            this._setLiteralValue(this._extAppRes, "path", customApp.file.path);
+            this._setLiteralValue(this._extAppRes, "prettyName", customApp.label);
+            fileHandlerString = bundleUCT.getFormattedString("openWith", [customApp.label]);        
+          }
+        }        
         break;  
       case "save":
         this._setLiteralValue(this._handlerRes, "saveToDisk", "true");
         this._setLiteralValue(this._handlerRes, "useSystemDefault", "false");
+        fileHandlerString = bundleUCT.getString("saveToDisk");
         break;  
       }
       
-      dirty = true;
-    }
-      
-    if (this._extAppRes) {
-      var customApp = document.getElementById("customApp");
-      if (customApp.file) {
-        this._setLiteralValue(this._extAppRes, "path", customApp.file.path);
-        this._setLiteralValue(this._extAppRes, "prettyName", customApp.label);
-      }
-      
-      dirty = true;
-    }
-    
-    if (dirty) {
       this._helperApps.flush();
      
+      // Save selection
+      var fileHandlersList = window.opener.document.getElementById("fileHandlersList");
+      var selection = fileHandlersList.view.selection;
+      var rangeCount = selection.getRangeCount();
+      var ranges = [];
+      for (var i = 0; i < rangeCount; ++i) {
+        var min = { }; var max = { };
+        selection.getRangeAt(i, min, max);
+        ranges.push({ min: min.value, max: max.value });
+      }
+      
       // Get the template builder to refresh the display by announcing our imaginary
       // "FileHandler" property has been updated. (NC:FileHandler is a property
       // that our wrapper DS uses, its value is built dynamically based on real
       // values of other properties.
-      var newHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
-      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, newHandler);
-      
-      // ... this doesn't seem to work, so...
-      var fileHandlersList = window.opener.document.getElementById("fileHandlersList");
-      fileHandlersList.builder.rebuild();
+      var bundleUCT = document.getElementById("bundleUCT");
+      var pluginName = document.getElementById("pluginName");
+      var openWith = bundleUCT.getFormattedString("openWith", [pluginName.label]);
+      var newHandler = this._rdf.GetLiteral(openWith);
+      var oldHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
+      this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, oldHandler, newHandler);
+
+      // Restore selection
+      for (i = 0; i < ranges.length; ++i)
+        selection.rangedSelect(ranges[i].min, ranges[i].max, true);
     }
       
     return true;

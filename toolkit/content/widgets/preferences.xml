@@ -436,6 +436,11 @@
           this._selector.setAttribute("collapsed", "true");
       ]]>
       </constructor>
+      <destructor>
+        var psvc = Components.classes["@mozilla.org/preferences-service;1"]
+                             .getService(Components.interfaces.nsIPrefService);
+        psvc.savePrefFile(null);     
+      </destructor>
       
       <field name="instantApply">false</field>
       

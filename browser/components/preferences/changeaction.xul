@@ -53,6 +53,7 @@
   <script type="application/x-javascript" src="chrome://browser/content/preferences/changeaction.js"/>
   
   <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
+  <stringbundle id="bundleUCT" src="chrome://mozapps/locale/downloads/unknownContentType.properties"/>
 
   <hbox id="changeActionHeader" align="center" class="indent">
     <image id="typeIcon"/>
@@ -100,4 +101,3 @@
   </vbox>
 </dialog>
 
-        

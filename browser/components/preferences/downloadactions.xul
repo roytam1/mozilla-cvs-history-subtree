@@ -74,22 +74,22 @@
             <content uri="?uri"/>
             <member container="?uri" child="?type"/>
             <triple subject="?type" 
-                    predicate="http://home.netscape.com/NC-rdf#FileType"
-                    object="?file-type"/>
-            <triple subject="?type" 
-                    predicate="http://home.netscape.com/NC-rdf#FileMIMEType"
-                    object="?file-mime-type"/>
-            <triple subject="?type" 
-                    predicate="http://home.netscape.com/NC-rdf#FileHandler"
-                    object="?file-handler"/>
-            <triple subject="?type" 
-                    predicate="http://home.netscape.com/NC-rdf#FileIcon"
-                    object="?file-icon"/>
-            <triple subject="?type" 
                     predicate="http://home.netscape.com/NC-rdf#FileHandleAuto"
                     object="true"/>
           </conditions>
           <bindings>
+            <binding subject="?type" 
+                    predicate="http://home.netscape.com/NC-rdf#FileType"
+                    object="?file-type"/>
+            <binding subject="?type" 
+                    predicate="http://home.netscape.com/NC-rdf#FileMIMEType"
+                    object="?file-mime-type"/>
+            <binding subject="?type" 
+                    predicate="http://home.netscape.com/NC-rdf#FileHandler"
+                    object="?file-handler"/>
+            <binding subject="?type" 
+                    predicate="http://home.netscape.com/NC-rdf#FileIcon"
+                    object="?file-icon"/>
             <binding subject="?type"
                     predicate="http://home.netscape.com/NC-rdf#FileExtension"
                     object="?file-extension"/>

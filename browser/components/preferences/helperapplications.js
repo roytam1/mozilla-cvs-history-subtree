@@ -38,8 +38,7 @@
 var gRDF;
 
 const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
-const kDisabledPluginTypesPref = "browser.download.pluginOverrideTypes";
-const kPluginOverrideTypesNotHandled = "browser.download.pluginOverrideTypesNotHandled";
+const kDisabledPluginTypesPref = "plugin.disable_full_page_plugin_for_types";
 
 ///////////////////////////////////////////////////////////////////////////////
 // MIME Types DataSource Wrapper
@@ -266,6 +265,7 @@ HelperApps.prototype = {
             handler = handler.QueryInterface(Components.interfaces.nsIRDFResource);
             return gRDF.GetLiteral(!(this.getLiteralValue(handler.Value, "alwaysAsk") == "true"));
           }
+          return gRDF.GetLiteral("true");
         }
         else if (aProperty.EqualsNode(this._fileTypeArc)) {
           if (typeInfo.description == "") {
@@ -328,17 +328,15 @@ HelperApps.prototype = {
           try {
             return gRDF.GetLiteral("moz-icon://goat." + typeInfo.primaryExtension + "?size=16");
           }
-          catch (e) {
-            return gRDF.GetLiteral("moz-icon://goat?size=16&contentType=" + typeInfo.MIMEType);
-          }
+          catch (e) { }
+          return gRDF.GetLiteral("moz-icon://goat?size=16&contentType=" + typeInfo.MIMEType);
         }
         else if (aProperty.EqualsNode(this._largeFileIconArc)) {
           try {
             return gRDF.GetLiteral("moz-icon://goat." + typeInfo.primaryExtension + "?size=32");
           }
-          catch (e) {
-            return gRDF.GetLiteral("moz-icon://goat?size=32&contentType=" + typeInfo.MIMEType);
-          }
+          catch (e) { }
+          return gRDF.GetLiteral("moz-icon://goat?size=32&contentType=" + typeInfo.MIMEType);
         }
         else if (aProperty.EqualsNode(this._fileExtensionArc)) {
           try {
@@ -510,7 +508,17 @@ HelperApps.prototype = {
   
   destroy: function () {
     this._inner.RemoveObserver(this);
-  }
+  },
+  
+  QueryInterface: function nsExtensionManager_QueryInterface (aIID) 
+  {
+    if (!aIID.equals(Components.interfaces.nsIRDFRemoteDataSource) &&
+        !aIID.equals(Components.interfaces.nsIRDFDataSource) &&
+        !aIID.equals(Components.interfaces.nsIRDFObserver) &&
+        !aIID.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }  
 };
 
 /**

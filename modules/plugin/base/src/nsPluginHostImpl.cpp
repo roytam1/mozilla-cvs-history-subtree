@@ -3630,6 +3630,12 @@ nsPluginTag::RegisterWithCategoryManager(PRBool aOverrideInternalTypes,
 
   const char *contractId = "@mozilla.org/content/plugin/document-loader-factory;1";
 
+  nsCOMPtr<nsIPrefBranch> psvc(do_GetService(NS_PREFSERVICE_CONTRACTID));
+  nsXPIDLCString overrideTypes;
+  if (psvc)
+    psvc->GetCharPref("plugin.disable_full_page_plugin_for_types", getter_Copies(overrideTypes));
+
+  nsACString::const_iterator start, end;
   for(int i = 0; i < mVariants; i++) {
     if (aType == ePluginUnregister) {
       nsXPIDLCString value;
@@ -3644,12 +3650,19 @@ nsPluginTag::RegisterWithCategoryManager(PRBool aOverrideInternalTypes,
         }
       }
     } else {
-      catMan->AddCategoryEntry("Gecko-Content-Viewers",
-                               mMimeTypeArray[i],
-                               contractId,
-                               PR_FALSE, /* persist: broken by bug 193031 */
-                               aOverrideInternalTypes, /* replace if we're told to */
-                               nsnull);
+      overrideTypes.BeginReading(start);
+      overrideTypes.EndReading(end);
+      
+      nsDependentCString mimeType(mMimeTypeArray[i]);
+
+      if (overrideTypes.IsEmpty() || !FindInReadable(mimeType, start, end)) {
+        catMan->AddCategoryEntry("Gecko-Content-Viewers",
+                                 mMimeTypeArray[i],
+                                 contractId,
+                                 PR_FALSE, /* persist: broken by bug 193031 */
+                                 aOverrideInternalTypes, /* replace if we're told to */
+                                 nsnull);
+      }
     }
 
     PLUGIN_LOG(PLUGIN_LOG_NOISY,
