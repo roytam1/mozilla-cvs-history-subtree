@@ -26,13 +26,10 @@ DIRS = \
 
 PROTO = \
 	$(ROOT) \
-	$(ROOT)/usr \
-	$(ROOT)/usr/lib \
 	$(ROOT)/usr/lib/mps \
+	$(ROOT)/usr/lib/mps/cpu/sparcv8plus \
 	$(ROOT)/usr/lib/mps/sparcv9 \
-	$(ROOT)/usr/include \
-	$(ROOT)/usr/include/mps \
-	$(ROOT)/usr/include/mps/sparcv9
+	$(ROOT)/usr/include/mps
 
 include $(srcdir)/Makefile.com
 
@@ -49,7 +46,7 @@ clean clobber::
 	$(RM) awk_pkginfo bld_awk_pkginfo
 	$(RM) -r $(ROOT)
 
-$(ROOT) $(ROOT)/%:
+$(ROOT):
 	mkdir -p $@
 
 $(ROOT)/usr/lib/mps/sparcv9: $(ROOT)/usr/lib
@@ -58,6 +55,9 @@ $(ROOT)/usr/lib/mps/sparcv9: $(ROOT)/usr/lib
 $(ROOT)/usr/lib/mps: $(ROOT)/usr/lib
 	mkdir -p $@
 	$(CP) -r $(abs_dist_libdir)/*.so $@
+$(ROOT)/usr/lib/mps/cpu/sparcv8plus:
+	mkdir -p $@
+	$(CP) -r $(abs_dist_libdir)/cpu/sparcv8plus/*.so $@
 $(ROOT)/usr/include/mps: $(ROOT)/usr/include
 	mkdir -p $@
 	$(CP) -r $(abs_dist_includedir)/* $@
