@@ -783,14 +783,38 @@ const gXPInstallObserver = {
             buttonKey = "xpinstallWarningButton";
           }
 
-          var messageString = browserBundle.getFormattedString(messageKey, [brandShortName, host]);
-          var buttonString = browserBundle.getString(buttonKey);
-          var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
-          tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
-                                 webNav.currentURI, "xpinstall-install-edit-permissions",
-                                 null, "top");
+          if (!gPrefService.getBoolPref("xpinstall.enabled")) {
+            var messageString = browserBundle.getFormattedString("xpinstallDisabledWarning", 
+                                                                 [brandShortName, host]);
+            var buttonString = browserBundle.getString("xpinstallDisabledWarningButton");
+            tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
+                                   "", "xpinstall-install-edit-prefs",
+                                   null, "top");
+          }
+          else {            
+            var messageString = browserBundle.getFormattedString(messageKey, [brandShortName, host]);
+            var buttonString = browserBundle.getString(buttonKey);
+            var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
+            tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
+                                   webNav.currentURI, "xpinstall-install-edit-permissions",
+                                   null, "top");
+          }
         }
       }
+      break;
+    case "xpinstall-install-edit-prefs":
+      var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                         .getService(Components.interfaces.nsIWindowMediator);
+      var optionsWindow = wm.getMostRecentWindow("Browser:Options");
+      if (optionsWindow) {
+        optionsWindow.focus();
+        optionsWindow.switchPage("catFeaturesbutton");
+      }
+      else
+        openDialog("chrome://browser/content/pref/pref.xul", "PrefWindow",
+                   "chrome,titlebar,resizable,modal", "catFeaturesbutton");
+      var tabbrowser = getBrowser();
+      tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
       break;
     case "xpinstall-install-edit-permissions":
       var uri = aSubject.QueryInterface(Components.interfaces.nsIURI);
@@ -992,6 +1016,7 @@ function delayedStartup()
   os.addObserver(gBrowser.browsers[0], "browser:purge-session-history", false);
   os.addObserver(gXPInstallObserver, "xpinstall-install-blocked", false);
   os.addObserver(gXPInstallObserver, "xpinstall-install-edit-permissions", false);
+  os.addObserver(gXPInstallObserver, "xpinstall-install-edit-prefs", false);
 
   gPrefService = Components.classes["@mozilla.org/preferences-service;1"]
                               .getService(Components.interfaces.nsIPrefService);
@@ -1162,6 +1187,9 @@ function Shutdown()
     .getService(Components.interfaces.nsIObserverService);
   os.removeObserver(gSessionHistoryObserver, "browser:purge-session-history");
   os.removeObserver(gBrowser.browsers[0], "browser:purge-session-history");
+  os.removeObserver(gXPInstallObserver, "xpinstall-install-blocked");
+  os.removeObserver(gXPInstallObserver, "xpinstall-install-edit-permissions");
+  os.removeObserver(gXPInstallObserver, "xpinstall-install-edit-prefs");
 
 #ifdef MOZ_ENABLE_XREMOTE
   // remove remote support

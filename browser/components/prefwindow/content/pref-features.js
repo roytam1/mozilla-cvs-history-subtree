@@ -34,9 +34,12 @@
 # 
 # ***** END LICENSE BLOCK *****
 
-var _elementIDs = ["advancedJavaAllow", "enableJavaScript", "enableImagePref",
-                   "popupPolicy", "allowWindowMoveResize", "allowWindowFlip", "allowControlContextMenu", 
-                   "allowHideStatusBar", "allowWindowStatusChange", "allowImageSrcChange"];
+var _elementIDs = ["advancedJavaAllow", "enableSoftwareInstall", 
+                   "enableJavaScript", "enableImagePref",
+                   "popupPolicy", "allowWindowMoveResize", 
+                   "allowWindowFlip", "allowControlContextMenu", 
+                   "allowHideStatusBar", "allowWindowStatusChange", 
+                   "allowImageSrcChange"];
 var gImagesPref, gImagesEnabled, gImagesRestricted;
 
 function Startup()
