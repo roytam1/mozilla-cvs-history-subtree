@@ -147,3 +147,4 @@ nsSelectsAreaFrame::Paint(nsIPresContext*      aPresContext,
 
   return rv;
 }
+
