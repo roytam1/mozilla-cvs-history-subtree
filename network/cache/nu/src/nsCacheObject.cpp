@@ -15,13 +15,15 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
+#include <memory.h>
 #include "prmem.h"
 #include "prprf.h"
 #include "plstr.h"
 
 #include "nsCacheObject.h"
 #include "nsCacheTrace.h"
-
+#include "nsCacheModule.h"
+#include "nsCacheManager.h"
 /* 
  * nsCacheObject
  *
@@ -333,10 +335,8 @@ void* nsCacheObject::Info(void) const
         //Add the Postdata len
         pThis->m_info_size += m_PostDataLen+1;
 
-        void* new_obj = PR_Malloc(m_info_size * sizeof(char));
+        void* new_obj = PR_Calloc(1, m_info_size * sizeof(char));
      
-        memset(new_obj, 0, m_info_size *sizeof(char));
-
         if (!new_obj)
         {
             PR_Free(new_obj);
@@ -510,9 +510,19 @@ void nsCacheObject::PostData(const char* i_data, const PRUint32 i_Len)
 
 PRUint32 nsCacheObject::Read(char* o_Buffer, PRUint32 len)
 {
-    return len;
+    PR_ASSERT(m_Module >=0);
+    if (0 <= m_Module)
+    {
+        nsCacheModule* pModule = nsCacheManager::GetInstance()->GetModule(m_Module);
+        if (pModule)
+        {
+            return pModule->Read(this, o_Buffer, len);
+        }
+    }
+    return 0;
 }
 
+#if 0
 /* Caller must free returned string */
 // TODO  change to use PR_stuff...
 const char* nsCacheObject::Trace() const
@@ -520,7 +530,7 @@ const char* nsCacheObject::Trace() const
     char linebuffer[256];
     char* total;
 
-    sprintf(linebuffer, "nsCacheObject:URL=%s,SIZE=%d,ET=%s,\n\tLM=%d,LA=%d,EXP=%d,HITS=%d\n", 
+    PR_Sprintf(linebuffer, "nsCacheObject:URL=%s,SIZE=%d,ET=%s,\n\tLM=%d,LA=%d,EXP=%d,HITS=%d\n", 
         m_URL, 
         m_Size,
         m_Etag,
@@ -530,12 +540,22 @@ const char* nsCacheObject::Trace() const
         m_Hits);
 
     total = new char[PL_strlen(linebuffer) +1];
-    strcpy(total, linebuffer);
+    PL_strcpy(total, linebuffer);
 
     return total;
 }
+#endif
 
 PRUint32 nsCacheObject::Write(const char* i_Buffer, const PRUint32 len)
 {
-    return len;
+    PR_ASSERT(m_Module >=0);
+    if (0 <= m_Module)
+    {
+        nsCacheModule* pModule = nsCacheManager::GetInstance()->GetModule(m_Module);
+        if (pModule)
+        {   
+            return pModule->Write(this, i_Buffer, len);
+        }
+    }
+    return 0;
 }

@@ -62,6 +62,7 @@ public:
     const PRUint32      Entries(void) const;
 
     nsEnumeration*      Enumeration(void) const;
+    /* Enumerations wiht a function pointer - TODO */
 
     //TODO move to own interface for both Garbage Collection and Revalidation
     virtual
@@ -78,11 +79,11 @@ public:
     /* Cant do additions, deletions, validations, expirations */
     PRBool              IsReadOnly(void) const; 
 
-    nsCacheModule*      Next(void) const;
-    void                Next(nsCacheModule*);
+    nsCacheModule*      NextModule(void) const;
+    void                NextModule(nsCacheModule*);
 
-    virtual
-        PRBool          ReduceSizeTo(const PRUint32 i_NewSize);
+    virtual 
+        PRUint32        Read(nsCacheObject* pObject, char* o_Buffer, PRUint32 len);
 
     virtual
         PRBool          Remove(const char* i_url) = 0;
@@ -99,13 +100,19 @@ public:
     const PRUint32      Size(void) const;
 
     virtual
-    void                SetSize(const PRUint32 i_size);
+        void            SetSize(const PRUint32 i_size);
 
     PRUint32            SizeInUse(void) const;
 
     const char*         Trace(void) const;
 
+    virtual
+        PRUint32        Write(nsCacheObject* pObject, const char* i_Buffer, PRUint32 len);
+
 protected:
+
+    virtual
+        PRBool          ReduceSizeTo(const PRUint32 i_NewSize);
 
     PRUint32            m_Entries;
     PRUint32            m_Size;
@@ -133,7 +140,7 @@ inline const PRUint32 nsCacheModule::Entries() const
 inline 
 nsEnumeration* nsCacheModule::Enumeration(void) const
 {
-	MonitorLocker ml((nsMonitorable*)this);
+    MonitorLocker ml((nsMonitorable*)this);
     if (!m_pEnumeration)
     {
         PR_ASSERT(m_pIterator);
@@ -154,22 +161,22 @@ inline PRBool nsCacheModule::IsReadOnly(void) const
     return PR_FALSE;
 }
 
-inline nsCacheModule* nsCacheModule::Next(void) const 
+inline nsCacheModule* nsCacheModule::NextModule(void) const 
 {
     return m_pNext;
 }
 
-inline void nsCacheModule::Next(nsCacheModule* pNext) 
+inline void nsCacheModule::NextModule(nsCacheModule* pNext) 
 {
-	/* No overwriting */
-	PR_ASSERT(m_pNext == 0);
-	if (m_pNext)
-	{
-                /* ERROR */
-                delete m_pNext; //Worst case. 
+    /* No overwriting */
+    PR_ASSERT(m_pNext == 0);
+    if (m_pNext)
+    {
+        /* ERROR */
+        delete m_pNext; //Worst case. 
 
-	}
-        m_pNext = pNext;
+    }
+    m_pNext = pNext;
 }
 
 inline const PRUint32 nsCacheModule::Size() const

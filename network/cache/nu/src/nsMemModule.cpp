@@ -60,23 +60,23 @@ PRBool nsMemModule::AddObject(nsCacheObject* io_pObject)
 #endif
 
     if (io_pObject)
-	{
+    {
         MonitorLocker ml(this);
-		if (m_pFirstObject) 
-		{
-			LastObject()->Next(new nsMemCacheObject(io_pObject)); 
-		}
-		else
-		{
-			m_pFirstObject = new nsMemCacheObject(io_pObject);
-		}
-		m_Entries++;
+        if (m_pFirstObject) 
+        {
+            LastObject()->Next(new nsMemCacheObject(io_pObject)); 
+        }
+        else
+        {
+            m_pFirstObject = new nsMemCacheObject(io_pObject);
+        }
+        m_Entries++;
 
         io_pObject->Module(nsCacheManager::MEM);
 
         return PR_TRUE;
-	}
-	return PR_FALSE;
+    }
+    return PR_FALSE;
 }
 
 PRBool nsMemModule::Contains(const char* i_url) const
@@ -134,49 +134,54 @@ void nsMemModule::GarbageCollect(void)
 nsCacheObject* nsMemModule::GetObject(const PRUint32 i_index) const
 {
     MonitorLocker ml((nsMonitorable*)this);
-	nsMemCacheObject* pNth = 0;
-	if (m_pFirstObject)
-	{
-		PRUint32 index = 0;
-		pNth = m_pFirstObject;
-		while (pNth->Next() && (index++ != i_index ))
-		{
-			pNth = pNth->Next();
-		}
-	}
-	return pNth->ThisObject();
+    nsMemCacheObject* pNth = 0;
+    if (m_pFirstObject)
+    {
+        PRUint32 index = 0;
+        pNth = m_pFirstObject;
+        while (pNth->Next() && (index++ != i_index ))
+        {
+            pNth = pNth->Next();
+        }
+    }
+    return pNth->ThisObject();
 }
 
 nsCacheObject* nsMemModule::GetObject(const char* i_url) const
 {
-	MonitorLocker ml((nsMonitorable*)this);
+    MonitorLocker ml((nsMonitorable*)this);
     if (m_pFirstObject && i_url && *i_url)
-	{
-		nsMemCacheObject* pObj = m_pFirstObject;
-		int inlen = PL_strlen(i_url);
-		do
-		{
-			if (0 == PL_strncasecmp(pObj->ThisObject()->Address(), i_url, inlen))
-				return pObj->ThisObject();
-			pObj = pObj->Next();
-		}
-		while (pObj);
-	}
-	return 0;
+    {
+        nsMemCacheObject* pObj = m_pFirstObject;
+        int inlen = PL_strlen(i_url);
+        do
+        {
+            if (0 == PL_strncasecmp(pObj->ThisObject()->Address(), i_url, inlen))
+                return pObj->ThisObject();
+            pObj = pObj->Next();
+        }
+        while (pObj);
+    }
+    return 0;
 }
 
 nsMemCacheObject* nsMemModule::LastObject(void) const
 {
-	MonitorLocker ml((nsMonitorable*)this);
-	
+    MonitorLocker ml((nsMonitorable*)this);
+    
     nsMemCacheObject* pLast = 0;
-	if (m_pFirstObject)
-	{
-		pLast = m_pFirstObject;
-		while (pLast->Next())
-			pLast = pLast->Next();
-	}
-	return pLast;
+    if (m_pFirstObject)
+    {
+        pLast = m_pFirstObject;
+        while (pLast->Next())
+            pLast = pLast->Next();
+    }
+    return pLast;
+}
+
+PRUint32 nsMemModule::Read(nsCacheObject* pObject, char* o_Buffer, PRUint32 len)
+{
+    return 0;
 }
 
 PRBool nsMemModule::ReduceSizeTo(const PRUint32 i_NewSize)
@@ -195,6 +200,11 @@ PRBool nsMemModule::Remove(const PRUint32 i_index)
 {
     //TODO
     return PR_FALSE;
+}
+
+PRUint32 nsMemModule::Write(nsCacheObject* pObject, const char* i_Buffer, PRUint32 len)
+{
+    return 0;
 }
 
 /*

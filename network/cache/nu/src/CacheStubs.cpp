@@ -199,6 +199,12 @@ CacheObject_IsPartial(const void* pThis)
     return pThis ? ((nsCacheObject*)pThis)->IsPartial() : PR_FALSE;
 }
 
+PRUint32
+CacheObject_Read(const void* pThis, char* o_Buffer, PRUint32 i_Len)
+{
+    return pThis ? ((nsCacheObject*)pThis)->Read(o_Buffer, i_Len) : 0;
+}
+
 void
 CacheObject_SetAddress(void* pThis, const char* i_Address)
 {

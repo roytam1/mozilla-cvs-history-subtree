@@ -219,6 +219,11 @@ PRBool nsDiskModule::InitDB(void)
     return PR_TRUE;
 }
 
+PRUint32 nsDiskModule::Read(nsCacheObject* pObject, char* o_Buffer, PRUint32 len)
+{
+    return 0;
+}
+
 PRBool nsDiskModule::ReduceSizeTo(const PRUint32 i_NewSize)
 {
     //TODO
@@ -250,7 +255,7 @@ PRBool nsDiskModule::Revalidate(void)
 
 void nsDiskModule::SetSize(const PRUint32 i_Size)
 {
-	MonitorLocker ml(this);
+    MonitorLocker ml(this);
     m_Size = i_Size;
     if (m_Size >0)
     {
@@ -260,6 +265,12 @@ void nsDiskModule::SetSize(const PRUint32 i_Size)
     {
         RemoveAll();
     }
+}
+
+PRUint32 nsDiskModule::Write(nsCacheObject* pObject, const char* i_Buffer, PRUint32 len)
+{
+    ENSURE_INIT;
+    return 0;
 }
 
 #undef ENSURE_INIT

@@ -73,6 +73,7 @@ PR_BEGIN_EXTERN_C
     extern PRUint32         CacheObject_Hits(const void* pThis);
     extern PRBool           CacheObject_IsExpired(const void* pThis);
     extern PRBool           CacheObject_IsPartial(const void* pThis);
+    extern PRUint32         CacheObject_Read(const void* pThis, char* o_Destination, PRUint32 i_Len);
     extern void             CacheObject_SetAddress(void* pThis, const char* i_Address);
     extern void             CacheObject_SetCharset(void* pThis, const char* i_CharSet);
     extern void             CacheObject_SetContentEncoding(void* pThis, const char* i_Encoding);

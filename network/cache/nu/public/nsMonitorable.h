@@ -37,8 +37,8 @@ public:
     NS_IMETHOD_(nsrefcnt)   AddRef(void);
     NS_IMETHOD_(nsrefcnt)   Release(void);
 */
-	PRBool		Lock(void);
-	void		Unlock(void);
+    PRBool      Lock(void);
+    void        Unlock(void);
 
 protected:
 
@@ -46,14 +46,14 @@ protected:
     {
     public:
         MonitorLocker(nsMonitorable* i_pThis): 
-			m_pMonitorable(i_pThis) 
-		{ 
-			if (m_pMonitorable) m_pMonitorable->Lock();
-		}
+            m_pMonitorable(i_pThis) 
+        { 
+            if (m_pMonitorable) m_pMonitorable->Lock();
+        }
         ~MonitorLocker() 
-		{ 
-			if (m_pMonitorable) m_pMonitorable->Unlock();
-		}
+        { 
+            if (m_pMonitorable) m_pMonitorable->Unlock();
+        }
     private:
         nsMonitorable* m_pMonitorable;
     };
@@ -75,8 +75,8 @@ nsMonitorable::~nsMonitorable()
 {
     if (m_pMonitor)
     {
-	PR_DestroyMonitor(m_pMonitor);
-	m_pMonitor = 0;
+    PR_DestroyMonitor(m_pMonitor);
+    m_pMonitor = 0;
     }
 }
 

@@ -62,6 +62,8 @@ public:
     nsCacheObject*  GetObject(const PRUint32 i_index) const;
     nsCacheObject*  GetObject(const char* i_url) const;
 
+    PRUint32        Read(nsCacheObject* pObject, char* o_Buffer, PRUint32 len);
+
     PRBool          ReduceSizeTo(const PRUint32 i_NewSize);
 
     PRBool          Remove(const char* i_url);
@@ -70,6 +72,8 @@ public:
 //    PRBool          RemoveAll(void);
     
     PRBool          Revalidate(void);
+
+    PRUint32        Write(nsCacheObject* pObject, const char* i_Buffer, PRUint32 len);
 
     // Start of nsMemModule specific stuff...
     // Here is a sample implementation using linked list

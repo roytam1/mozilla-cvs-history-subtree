@@ -56,7 +56,7 @@ public:
     ~nsCacheManager();
 
     PRInt32                 AddModule(nsCacheModule* i_cacheModule);
-    
+                            // InsertModule
     PRBool                  Contains(const char* i_url) const;
     
     /* Number of modules in the cache manager */
@@ -90,9 +90,10 @@ protected:
     void                    Init();
   
     nsCacheModule*          LastModule() const;
-    PRBool                  Lock(void);
-    void                    Unlock(void);
+    //PRBool                  Lock(void);
+    //void                    Unlock(void);
 
+/*
     class MgrMonitor
     {
     public:
@@ -101,6 +102,7 @@ protected:
     };
 
     friend MgrMonitor;
+*/
 
 private:
     nsCacheModule*      m_pFirstModule;
@@ -115,8 +117,8 @@ private:
 inline
 nsDiskModule* nsCacheManager::GetDiskModule() const
 {
-    PR_ASSERT(m_pFirstModule && m_pFirstModule->Next());
-    return (m_pFirstModule) ? (nsDiskModule*) m_pFirstModule->Next() : NULL;
+    PR_ASSERT(m_pFirstModule && m_pFirstModule->NextModule());
+    return (m_pFirstModule) ? (nsDiskModule*) m_pFirstModule->NextModule() : NULL;
 }
 
 inline
@@ -132,6 +134,7 @@ PRBool nsCacheManager::IsOffline(void) const
     return m_bOffline;
 }
 
+/*
 inline
 PRBool nsCacheManager::Lock(void)
 {
@@ -144,6 +147,7 @@ PRBool nsCacheManager::Lock(void)
     PR_EnterMonitor(m_pMonitor);
     return PR_TRUE;
 }
+*/
 
 inline
 void  nsCacheManager::Offline(PRBool i_bSet) 
@@ -151,6 +155,7 @@ void  nsCacheManager::Offline(PRBool i_bSet)
     m_bOffline = i_bSet;
 }
 
+/*
 inline
 void nsCacheManager::Unlock(void)
 {
@@ -158,5 +163,6 @@ void nsCacheManager::Unlock(void)
     if (m_pMonitor)
         PR_ExitMonitor(m_pMonitor);
 }
+*/
 
 #endif
