@@ -105,17 +105,25 @@ REQUIRES	=\
 		  style \
 		  util \
 		  java \
+		  $(NULL)
+
+ifdef MOZ_LDAP
+REQUIRES += \
 		  ldap \
+		  $(NULL)
+endif
+
+REQUIRES += \
 		  xfeicons \
 		  progress \
 		  $(NULL)
 
 ifdef MOZ_FULLCIRCLE
-REQUIRES += fullsoft
+REQUIRES       += fullsoft
 endif
 
 ifdef OJI
-REQUIRES +=	  oji \
+REQUIRES       += oji \
 		  ojiimpl
 endif
 
@@ -292,7 +300,7 @@ ifdef MOZ_LOC_INDEP
 BASIC_LIBS	+= $(DIST)/lib/libli.a
 endif
 
-ifdef JAVA_OR_OJI
+ifdef JAVA_OR_NSJVM
 JAVA_JMC = $(DIST)/lib/libjmc.a      # XXX To be removed...
 endif
 
@@ -312,7 +320,7 @@ BASIC_LIBS	+= \
 BASIC_LIBS_2	= \
 		  $(DIST)/lib/lib$(LITE_PREFIX)xp.a \
 		  $(DIST)/lib/libdbm.a \
-                  $(DIST)/lib/libcaps.a \
+		  $(DIST)/lib/libcaps.a \
 		  $(DIST)/lib/lib$(LITE_PREFIX)rdf.a \
 		  $(NULL)
 
@@ -397,12 +405,11 @@ BASIC_LIBS += $(DIST)/lib/libxpcom.a \
 ########################################################################
 # Java
 #
-ifdef JAVA_OR_OJI
 
+ifdef MOZ_JAVA
 #
 # Monolithic Java
 #
-ifdef MOZ_JAVA
 
 BASIC_LIBS	+= \
 		  $(DIST)/lib/lib$(LITE_PREFIX)applet.a \
@@ -439,35 +446,42 @@ endif
 
 BASIC_LIBS	+= $(DIST)/lib/libjrt.a
 
-else  # MOZ_JAVA
+else # !MOZ_JAVA
 
 #
 # OJI
 #
 
+ifdef MOZ_OJI
+
 BASIC_LIBS      += $(DIST)/lib/liboji.a
+
+ifdef NSJVM
 
 ifdef EDITOR
 BASIC_LIBS	+= $(DIST)/lib/libedtplug.a
 endif
+BASIC_LIBS      += $(DIST)/lib/libsoftupdate.a
+else # !NSJVM
+BASIC_LIBS	+= \
+		  $(DIST)/lib/libstubsj.a \
+		  $(DIST)/lib/libstubnj.a \
+		  $(NULL)
+endif # !NSJVM
 
-BASIC_LIBS      += $(DIST)/lib/libsoftupdate.a \
-		   $(DIST)/lib/libprgrss.a \
+BASIC_LIBS      += $(DIST)/lib/libprgrss.a \
 		   $(NULL)
 
-endif # MOZ_JAVA
-
-else  # JAVA_OR_OJI
-
-#
+else  # !MOZ_OJI
 # No Monolithic Java, no OJI, just stubs.
-#
+
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libstubsj.a \
 		  $(DIST)/lib/libstubnj.a \
 		  $(NULL)
 
-endif  # JAVA_OR_OJI
+endif  # !MOZ_OJI
+endif  # !MOZ_JAVA
 
 # XXX To a DSO...
 #BASIC_LIBS	+= $(DIST)/lib/libzlib.a
@@ -486,11 +500,7 @@ BASIC_LIBS	+= $(DIST)/lib/libstyle.a
 ifdef MOZ_SECURITY
 BASIC_LIBS	+= $(DIST)/lib/libjar.a
 else
-EXPORT_LIB	= $(DIST)/lib/libhtmldlgs.a 
-endif
-
-ifndef MOZ_SECURITY
-EXPORT_LIB	+= $(DIST)/lib/libsecfree.a 
+EXPORT_LIB	= $(DIST)/lib/libhtmldlgs.a $(DIST)/lib/libsecfree.a 
 endif
 
 LOCALES		= $(LOCALE_MAP) $(MAIL_IM_HACK) $(NEWS_IM_HACK)
