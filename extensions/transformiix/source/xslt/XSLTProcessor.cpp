@@ -59,6 +59,7 @@
 #include "nsILoadGroup.h"
 #include "nsIChannel.h"
 #include "nsNetCID.h"
+#include "nsIDOMClassInfo.h"
 //#include "nslog.h"
 #else
 #include "printers.h"
@@ -138,7 +139,23 @@ XSLTProcessor::~XSLTProcessor() {
 } //-- ~XSLTProcessor
 
 #ifdef MOZ_XSL
-NS_IMPL_ISUPPORTS1(XSLTProcessor, nsIDocumentTransformer)
+
+// XPConnect interface list for XSLTProcessor
+NS_CLASSINFO_MAP_BEGIN(XSLTProcessor)
+  NS_CLASSINFO_MAP_ENTRY(nsIDocumentTransformer)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for XSLTProcessor
+NS_INTERFACE_MAP_BEGIN(XSLTProcessor)
+  NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
+  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(XSLTProcessor)
+NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(XSLTProcessor)
+NS_IMPL_RELEASE(XSLTProcessor)
+
 #endif
 
 /**
