@@ -69,8 +69,6 @@ private:
   nsresult CopyCookies(PRBool aReplace);
   nsresult CopyProxyPreferences(nsIPrefBranch* aPrefs);
   nsresult CopySecurityPrefs(nsIPrefBranch* aPrefs);
-  void     SetProxyPref(const nsACString& aHostPort, const char* aPref, const char* aPortPref, nsIPrefBranch* aPrefs);
-
   nsresult CopyHistory(PRBool aReplace);
 
   PRBool   KeyIsURI(const nsAString& aKey, char** aRealm);

@@ -54,4 +54,12 @@
     NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, itemString); \
   }
 
+#include "nsIPrefBranch.h"
+#include "nsString.h"
+
+// Proxy utilities shared by the Opera and IE migrators
+void ParseOverrideServers(char* aServers, nsIPrefBranch* aBranch);
+void SetProxyPref(const nsACString& aHostPort, const char* aPref, 
+                  const char* aPortPref, nsIPrefBranch* aPrefs);
+
 #endif

@@ -1776,28 +1776,8 @@ nsIEProfileMigrator::CopyProxyPreferences(nsIPrefBranch* aPrefs)
     
     length = LARGE_BUFFER;
     LONG r = ::RegQueryValueEx(key, "ProxyOverride", 0, &type, (LPBYTE)&buf, &length);
-    if (r == ERROR_SUCCESS) {
-      // First check to see if the value is "<local>", if so, set the field to 
-      // "localhost,127.0.0.1"
-      nsCAutoString override; override = (char*)buf;
-      if (override.Equals("<local>")) {
-        aPrefs->SetCharPref("network.proxy.no_proxies_on", "localhost,127.0.0.1");
-      }
-      else {
-        // If it's not, then replace every ";" character with ","
-        PRInt32 offset = 0, temp = 0;
-        while (offset != -1) {
-          offset = override.FindChar(';', offset);
-          const nsACString& host = Substring(override, temp, offset < 0 ? override.Length() - temp : offset - temp);
-          if (host.Equals("<local>"))
-            override.Replace(temp, 7, NS_LITERAL_CSTRING("localhost,127.0.0.1"));
-          temp = offset + 1;
-          if (offset != -1)
-            override.Replace(offset, 1, NS_LITERAL_CSTRING(","));
-        }
-        aPrefs->SetCharPref("network.proxy.no_proxies_on", override.get());
-      }
-    }
+    if (r == ERROR_SUCCESS)
+      ParseOverrideServers(buf, aPrefs);
 
     length = LARGE_BUFFER;
     r = ::RegQueryValueEx(key, "ProxyServer", 0, &type, (LPBYTE)&buf, &length);
@@ -1844,22 +1824,46 @@ nsIEProfileMigrator::CopyProxyPreferences(nsIPrefBranch* aPrefs)
   return NS_OK;
 }
 
-void
-nsIEProfileMigrator::SetProxyPref(const nsACString& aHostPort, 
-                                  const char* aPref, 
-                                  const char* aPortPref,
-                                  nsIPrefBranch* aPrefs) 
+void ParseOverrideServers(char* aServers, nsIPrefBranch* aBranch)
+{
+  // First check to see if the value is "<local>", if so, set the field to 
+  // "localhost,127.0.0.1"
+  nsCAutoString override; override = (char*)aServers;
+  if (override.Equals("<local>")) {
+    aBranch->SetCharPref("network.proxy.no_proxies_on", "localhost,127.0.0.1");
+  }
+  else {
+    // If it's not, then replace every ";" character with ","
+    PRInt32 offset = 0, temp = 0;
+    while (offset != -1) {
+      offset = override.FindChar(';', offset);
+      const nsACString& host = Substring(override, temp, offset < 0 ? override.Length() - temp : offset - temp);
+      if (host.Equals("<local>"))
+        override.Replace(temp, 7, NS_LITERAL_CSTRING("localhost,127.0.0.1"));
+      temp = offset + 1;
+      if (offset != -1)
+        override.Replace(offset, 1, NS_LITERAL_CSTRING(","));
+    }
+    aBranch->SetCharPref("network.proxy.no_proxies_on", override.get());
+  }
+}
+
+void SetProxyPref(const nsACString& aHostPort, const char* aPref, 
+                  const char* aPortPref, nsIPrefBranch* aPrefs) 
 {
   nsCAutoString hostPort(aHostPort);  
   PRInt32 portDelimOffset = hostPort.RFindChar(':');
   if (portDelimOffset) {
-    nsCAutoString host(Substring(aHostPort, 0, portDelimOffset));    
-    nsCAutoString port(Substring(aHostPort, portDelimOffset + 1, aHostPort.Length() - portDelimOffset + 1));
+    nsCAutoString host(Substring(hostPort, 0, portDelimOffset));    
+    nsCAutoString port(Substring(hostPort, portDelimOffset + 1, hostPort.Length() - portDelimOffset + 1));
     
     aPrefs->SetCharPref(aPref, host.get());
-    aPrefs->SetCharPref(aPortPref, port.get());
+    PRInt32 stringErr;
+    PRInt32 portValue = port.ToInteger(&stringErr);
+    aPrefs->SetIntPref(aPortPref, portValue);
   }
   else {
     aPrefs->SetCharPref(aPref, hostPort.get());
   }
 }
+

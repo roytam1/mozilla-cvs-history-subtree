@@ -93,11 +93,12 @@ protected:
   nsresult CopyPreferences(PRBool aReplace);
   nsresult ParseColor(nsINIParser* aParser, char* aSectionName, char** aResult);
   nsresult CopyUserContentSheet(nsINIParser* aParser);
+  nsresult CopyProxySettings(nsINIParser* aParser, nsIPrefBranch* aBranch);
+  nsresult GetInteger(nsINIParser* aParser, char* aSectionName, 
+                      char* aKeyName, PRInt32* aResult);
 
   nsresult CopyCookies(PRBool aReplace);
   nsresult CopyHistory(PRBool aReplace);
-  nsresult CopyPasswords(PRBool aReplace);
-  nsresult CopyOtherData(PRBool aReplace);
 
   nsresult CopyBookmarks(PRBool aReplace);
   void     ClearToolbarFolder(nsIBookmarksService* aBookmarksService, nsIRDFResource* aToolbarFolder);
@@ -126,11 +127,11 @@ public:
 
   typedef enum { BEGIN_DOMAIN_SEGMENT         = 0x01,
                  DOMAIN_COMPONENT             = 0x1E,
-                 END_DOMAIN_SEGMENT           = 0x84 | 0x80, // 0x04 | MSB
+                 END_DOMAIN_SEGMENT           = 0x84 | 0x80, // 0x04 | (1 << 8)
                  
                  BEGIN_PATH_SEGMENT           = 0x02,
                  PATH_COMPONENT               = 0x1D,
-                 END_PATH_SEGMENT             = 0x05 | 0x80, // 0x05 | MSB
+                 END_PATH_SEGMENT             = 0x05 | 0x80, // 0x05 | (1 << 8)
                  
                  FILTERING_INFO               = 0x1F,
                  PATH_HANDLING_INFO           = 0x21,

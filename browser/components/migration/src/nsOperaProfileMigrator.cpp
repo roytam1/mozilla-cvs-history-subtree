@@ -35,6 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsAppDirectoryServiceDefs.h"
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsCRT.h"
 #include "nsDirectoryServiceDefs.h"
@@ -98,9 +99,7 @@ nsOperaProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUnicha
   COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
   COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
   COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
-  COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
   COPY_DATA(CopyBookmarks,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
-  COPY_DATA(CopyOtherData,    aReplace, nsIBrowserProfileMigrator::OTHERDATA, NS_LITERAL_STRING("otherdata").get());
 
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
 
@@ -316,6 +315,7 @@ nsOperaProfileMigrator::CopyPreferences(PRBool aReplace)
   }
 
   // Copy Proxy Settings
+  CopyProxySettings(parser, branch);
 
   // Copy User Content Sheet
   if (aReplace)
@@ -330,31 +330,86 @@ nsOperaProfileMigrator::CopyPreferences(PRBool aReplace)
 }
 
 nsresult
+nsOperaProfileMigrator::CopyProxySettings(nsINIParser* aParser, 
+                                          nsIPrefBranch* aBranch)
+{
+  PRInt32 networkProxyType = 0;
+
+  const char* protocols[4] = { "HTTP", "HTTPS", "FTP", "GOPHER" };
+  const char* protocols_l[4] = { "http", "https", "ftp", "gopher" };
+  char toggleBuf[15], serverBuf[20], serverPrefBuf[20], 
+       serverPortPrefBuf[25];
+  PRInt32 length, err, enabled;
+  for (PRUint32 i = 0; i < 4; ++i) {
+    sprintf(toggleBuf, "Use %s", protocols[i]);
+    GetInteger(aParser, "Proxy", toggleBuf, &enabled);
+    if (enabled) {
+      // Enable the "manual configuration" setting if we have at least
+      // one protocol using a Proxy. 
+      networkProxyType = 1;
+    }
+
+    sprintf(serverBuf, "%s Server", protocols[i]);
+    char* proxyServer = nsnull;
+    err = aParser->GetStringAlloc("Proxy", serverBuf, &proxyServer, &length);
+    if (err != nsINIParser::OK)
+      continue;
+
+    sprintf(serverPrefBuf, "network.proxy.%s", protocols_l[i]);
+    sprintf(serverPortPrefBuf, "network.proxy.%s_port", protocols_l[i]);
+    SetProxyPref(nsDependentCString(proxyServer), serverPrefBuf, serverPortPrefBuf, aBranch);
+  }
+
+  GetInteger(aParser, "Proxy", "Use Automatic Proxy Configuration", &enabled);
+  if (enabled)
+    networkProxyType = 2;
+  char* configURL = nsnull;
+  err = aParser->GetStringAlloc("Proxy", "Automatic Proxy Configuration URL", &configURL, &length);
+  if (err == nsINIParser::OK)
+    aBranch->SetCharPref("network.proxy.autoconfig_url", configURL);
+
+  GetInteger(aParser, "Proxy", "No Proxy Servers Check", &enabled);
+  if (enabled) {
+    char* servers = nsnull;
+    err = aParser->GetStringAlloc("Proxy", "No Proxy Servers", &servers, &length);
+    if (err == nsINIParser::OK)
+      ParseOverrideServers(servers, aBranch);
+  }
+
+  aBranch->SetIntPref("network.proxy.type", networkProxyType);
+
+  return NS_OK;
+}
+
+nsresult
+nsOperaProfileMigrator::GetInteger(nsINIParser* aParser, 
+                                   char* aSectionName, 
+                                   char* aKeyName, 
+                                   PRInt32* aResult)
+{
+  char val[20];
+  PRInt32 length = 20;
+
+  PRInt32 err = aParser->GetString(aSectionName, aKeyName, val, &length);
+  if (err != nsINIParser::OK)
+    return NS_ERROR_FAILURE;
+
+  nsCAutoString valueStr((char*)val);
+  PRInt32 stringErr;
+  *aResult = valueStr.ToInteger(&stringErr);
+
+  return NS_OK;
+}
+
+
+nsresult
 nsOperaProfileMigrator::ParseColor(nsINIParser* aParser, char* aSectionName, char** aResult)
 {
-#define CHAR_BUF_LENGTH 5
-  char rbuf[CHAR_BUF_LENGTH], gbuf[CHAR_BUF_LENGTH], bbuf[CHAR_BUF_LENGTH];
-  PRInt32 bufSize = CHAR_BUF_LENGTH;
   PRInt32 r, g, b;
 
-  nsCAutoString valStr;
-  PRInt32 err, strerr;
-  err = aParser->GetString(aSectionName, "Red", rbuf, &bufSize);
-  if (err != nsINIParser::OK) return NS_ERROR_FAILURE;
-  valStr = rbuf;
-  r = valStr.ToInteger(&strerr);
-  
-  bufSize = CHAR_BUF_LENGTH;
-  err = aParser->GetString(aSectionName, "Green", gbuf, &bufSize);
-  if (err != nsINIParser::OK) return NS_ERROR_FAILURE;
-  valStr = gbuf;
-  g = valStr.ToInteger(&strerr);
-
-  bufSize = CHAR_BUF_LENGTH;
-  err = aParser->GetString(aSectionName, "Blue", bbuf, &bufSize);
-  if (err != nsINIParser::OK) return NS_ERROR_FAILURE;
-  valStr = bbuf;
-  b = valStr.ToInteger(&strerr);
+  GetInteger(aParser, aSectionName, "Red", &r);
+  GetInteger(aParser, aSectionName, "Green", &g);
+  GetInteger(aParser, aSectionName, "Blue", &b);
 
   sprintf(*aResult, "#%02X%02X%02X", r, g, b);
 
@@ -364,13 +419,32 @@ nsOperaProfileMigrator::ParseColor(nsINIParser* aParser, char* aSectionName, cha
 nsresult 
 nsOperaProfileMigrator::CopyUserContentSheet(nsINIParser* aParser)
 {
+  nsresult rv = NS_OK;
+
   char* userContentCSS = nsnull;
   PRInt32 size;
   PRInt32 err = aParser->GetStringAlloc("User Prefs", "Local CSS File", &userContentCSS, &size);
   if (err == nsINIParser::OK && userContentCSS) {
     // Copy the file
+    nsCOMPtr<nsILocalFile> userContentCSSFile(do_CreateInstance("@mozilla.org/file/local;1"));
+    if (!userContentCSSFile)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    userContentCSSFile->InitWithNativePath(nsDependentCString(userContentCSS));
+    PRBool exists;
+    userContentCSSFile->Exists(&exists);
+    if (!exists)
+      return NS_OK;
+
+    nsCOMPtr<nsIFile> profileChromeDir;
+    NS_GetSpecialDirectory(NS_APP_USER_CHROME_DIR,
+                           getter_AddRefs(profileChromeDir));
+    if (!profileChromeDir)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = userContentCSSFile->CopyToNative(profileChromeDir, nsDependentCString("userContent.css"));
   }
-  return NS_OK;
+  return rv;
 }
 
 nsresult
@@ -678,8 +752,6 @@ nsOperaCookieMigrator::ReadHeader()
 nsresult
 nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
 {
-  printf("*** copy opera history\n");
-
   nsCOMPtr<nsIBrowserHistory> hist(do_GetService(NS_GLOBALHISTORY_CONTRACTID));
 
   nsCOMPtr<nsIFile> temp;
@@ -734,12 +806,6 @@ nsOperaProfileMigrator::CopyHistory(PRBool aReplace)
   }
   while (moreData);
 
-  return NS_OK;
-}
-
-nsresult
-nsOperaProfileMigrator::CopyPasswords(PRBool aReplace)
-{
   return NS_OK;
 }
 
@@ -834,18 +900,15 @@ nsOperaProfileMigrator::CopySmartKeywords(nsIBookmarksService* aBMS,
     err = parser->GetStringAlloc(section, "Key", &keyword, &keyValueLength);
     if (err != nsINIParser::OK)
       continue;
-    err = parser->GetStringAlloc(section, "Is post", &isPost, &keyValueLength);
-    if (err != nsINIParser::OK)
+
+    PRInt32 post;
+    err = GetInteger(parser, section, "Is post", &post);
+    if (post)
       continue;
 
     if (nsDependentCString(url).IsEmpty() || 
         nsDependentCString(keyword).IsEmpty() ||
         nsDependentCString(name).IsEmpty())
-      continue;
-
-    PRInt32 stringErr;
-    PRInt32 post = nsCAutoString(isPost).ToInteger(&stringErr);
-    if (post) 
       continue;
 
     nsAutoString nameStr; nameStr.Assign(NS_ConvertUTF8toUCS2(name));
@@ -856,13 +919,16 @@ nsOperaProfileMigrator::CopySmartKeywords(nsIBookmarksService* aBMS,
       if (index >= length - 2)
         break;
 
-      if (nameStr.CharAt(index + 1) == '&')
+      // Assume "&&" is an escaped ampersand in the search query title. 
+      if (nameStr.CharAt(index + 1) == '&') {
+        nameStr.Cut(index, 1);
+        index += 2;
         continue;
+      }
 
       nameStr.Cut(index, 1);
-      break;
     }
-    while (1);
+    while (index < length);
 
     nsCOMPtr<nsIRDFResource> itemRes;
 
@@ -1059,40 +1125,6 @@ nsOperaProfileMigrator::ParseBookmarksFolder(nsILineInputStream* aStream,
   while (1);
 
 done:
-  return NS_OK;
-}
-
-nsresult
-nsOperaProfileMigrator::CopyOtherData(PRBool aReplace)
-{
-  printf("*** copy opera other data\n");
-
-  nsCOMPtr<nsIFile> temp;
-  mOperaProfile->Clone(getter_AddRefs(temp));
-  nsCOMPtr<nsILocalFile> historyFile(do_QueryInterface(temp));
-
-  historyFile->Append(NS_LITERAL_STRING("download.dat"));
-
-  nsCOMPtr<nsIInputStream> fileStream;
-  NS_NewLocalFileInputStream(getter_AddRefs(fileStream), historyFile);
-  if (!fileStream) return NS_ERROR_OUT_OF_MEMORY;
-
-  nsCOMPtr<nsILineInputStream> lineStream = do_QueryInterface(fileStream);
-
-  nsAutoString buffer;
-  PRBool moreData = PR_FALSE;
-
-  // Format is "title\nurl\nlastvisitdate"
-  do {
-    nsresult rv = lineStream->ReadLine(buffer, &moreData);
-    if (NS_FAILED(rv))
-      return rv;
-
-    printf("*** download = %ws\n", buffer.get());
-  }
-  while (moreData);
-
-
   return NS_OK;
 }
 
