@@ -342,7 +342,7 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
   boolean shouldStoreMsgOffline(in nsMsgKey msgKey);
   boolean hasMsgOffline(in nsMsgKey msgKey);
   nsIFileChannel getOfflineFileChannel(in nsMsgKey msgKey);
-  void DownloadMessagesForOffline(in nsISupportsArray messages);        
+  void DownloadMessagesForOffline(in nsISupportsArray messages, in nsIMsgWindow window);        
 	nsIMsgFolder getChildWithURI(in string uri, in boolean deep);
   void downloadAllForOffline(in nsIUrlListener listener, in nsIMsgWindow window);
 	/**

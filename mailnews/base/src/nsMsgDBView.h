@@ -72,6 +72,7 @@ protected:
   // atoms used for styling the view. we're going to have a lot of
   // these so i'm going to make them static.
   static nsIAtom* kUnreadMsgAtom;
+  static nsIAtom* kOfflineMsgAtom;
   static nsIAtom* kHighestPriorityAtom;
   static nsIAtom* kHighPriorityAtom;
   static nsIAtom* kLowestPriorityAtom;
@@ -183,6 +184,10 @@ protected:
   nsresult ToggleWatched( nsMsgViewIndex* indices,	PRInt32 numIndices);
   nsresult SetThreadWatched(nsIMsgThread *thread, nsMsgViewIndex index, PRBool watched);
   nsresult SetThreadIgnored(nsIMsgThread *thread, nsMsgViewIndex threadIndex, PRBool ignored);
+  nsresult DownloadForOffline(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices);
+  nsresult DownloadFlaggedForOffline(nsIMsgWindow *window);
+
+
   nsMsgViewIndex	GetThreadFromMsgIndex(nsMsgViewIndex index, 
 													 nsIMsgThread **threadHdr);
 

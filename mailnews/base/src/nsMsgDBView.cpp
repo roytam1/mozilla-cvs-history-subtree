@@ -51,6 +51,7 @@ nsIAtom * nsMsgDBView::kHighestPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kHighPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kLowestPriorityAtom	= nsnull;
 nsIAtom * nsMsgDBView::kLowPriorityAtom	= nsnull;
+nsIAtom * nsMsgDBView::kOfflineMsgAtom	= nsnull;
 
 NS_IMPL_ADDREF(nsMsgDBView)
 NS_IMPL_RELEASE(nsMsgDBView)
@@ -79,6 +80,7 @@ nsMsgDBView::nsMsgDBView()
   if (gInstanceCount == 0) 
   {
     kUnreadMsgAtom = NS_NewAtom("unread");
+    kOfflineMsgAtom = NS_NewAtom("offline");
 
     kHighestPriorityAtom = NS_NewAtom("priority-highest");
     kHighPriorityAtom = NS_NewAtom("priority-high");
@@ -98,6 +100,7 @@ nsMsgDBView::~nsMsgDBView()
   if (gInstanceCount <= 0) 
   {
     NS_IF_RELEASE(kUnreadMsgAtom);
+    NS_IF_RELEASE(kOfflineMsgAtom);
     NS_IF_RELEASE(kHighestPriorityAtom);
     NS_IF_RELEASE(kHighPriorityAtom);
     NS_IF_RELEASE(kLowestPriorityAtom);
@@ -540,6 +543,9 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   char    flags = m_flags.GetAt(aRow);
   if (!(flags & MSG_FLAG_READ))
     properties->AppendElement(kUnreadMsgAtom);  
+
+  if (flags & MSG_FLAG_OFFLINE)
+    properties->AppendElement(kOfflineMsgAtom);  
 
   if (colID[0] == 'p') // for the priority column, add special styles....
   {
@@ -1193,6 +1199,10 @@ NS_IMETHODIMP nsMsgDBView::DoCommand(nsMsgViewCommandTypeValue command)
   switch (command)
   {
 
+  case nsMsgViewCommandType::downloadSelectedForOffline:
+    return DownloadForOffline(mMsgWindow, indices, numIndices);
+  case nsMsgViewCommandType::downloadFlaggedForOffline:
+    return DownloadFlaggedForOffline(mMsgWindow);
   case nsMsgViewCommandType::markMessagesRead:
   case nsMsgViewCommandType::markMessagesUnread:
   case nsMsgViewCommandType::toggleMessageRead:
@@ -1265,8 +1275,10 @@ NS_IMETHODIMP nsMsgDBView::GetCommandStatus(nsMsgViewCommandTypeValue command, P
   case nsMsgViewCommandType::deleteMsg:
   case nsMsgViewCommandType::deleteNoTrash:
   case nsMsgViewCommandType::markThreadRead:
+  case nsMsgViewCommandType::downloadSelectedForOffline:
     *selectable_p = (numindices > 0);
     break;
+  case nsMsgViewCommandType::downloadFlaggedForOffline:
   case nsMsgViewCommandType::markAllRead:
     *selectable_p = PR_TRUE;
     break;
@@ -1447,6 +1459,58 @@ nsresult nsMsgDBView::DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indic
 
   }
   m_folder->DeleteMessages(messageArray, window, deleteStorage, PR_FALSE);
+  return rv;
+}
+
+nsresult nsMsgDBView::DownloadForOffline(nsIMsgWindow *window, nsMsgViewIndex *indices, PRInt32 numIndices)
+{
+  nsresult rv = NS_OK;
+	nsCOMPtr<nsISupportsArray> messageArray;
+	NS_NewISupportsArray(getter_AddRefs(messageArray));
+  for (nsMsgViewIndex index = 0; index < (nsMsgViewIndex) numIndices; index++)
+  {
+    nsMsgKey key = m_keys.GetAt(indices[index]);
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (msgHdr)
+    {
+      PRUint32 flags;
+      msgHdr->GetFlags(&flags);
+      if (! (flags & MSG_FLAG_OFFLINE))
+        messageArray->AppendElement(msgHdr);
+    }
+  }
+  m_folder->DownloadMessagesForOffline(messageArray, window);
+  return rv;
+}
+
+nsresult nsMsgDBView::DownloadFlaggedForOffline(nsIMsgWindow *window)
+{
+  nsresult rv = NS_OK;
+	nsCOMPtr<nsISupportsArray> messageArray;
+	NS_NewISupportsArray(getter_AddRefs(messageArray));
+    nsCOMPtr <nsISimpleEnumerator> enumerator;
+  rv = m_db->EnumerateMessages(getter_AddRefs(enumerator));
+  if (NS_SUCCEEDED(rv) && enumerator)
+  {
+    PRBool hasMore;
+
+	  while (NS_SUCCEEDED(rv = enumerator->HasMoreElements(&hasMore)) && (hasMore == PR_TRUE)) 
+	  {
+      nsCOMPtr <nsIMsgDBHdr> pHeader;
+      rv = enumerator->GetNext(getter_AddRefs(pHeader));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "nsMsgDBEnumerator broken");
+      if (pHeader && NS_SUCCEEDED(rv))
+      {
+        PRUint32 flags;
+        pHeader->GetFlags(&flags);
+        if ((flags & MSG_FLAG_MARKED) && !(flags & MSG_FLAG_OFFLINE))
+          messageArray->AppendElement(pHeader);
+      }
+    }
+  }
+  m_folder->DownloadMessagesForOffline(messageArray, window);
   return rv;
 }
 

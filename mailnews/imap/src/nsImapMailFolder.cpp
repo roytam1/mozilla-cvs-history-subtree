@@ -3147,12 +3147,12 @@ nsImapMailFolder::SetupMsgWriteStream(const char * aNativeString, PRBool addDumm
     return rv;
 }
 
-NS_IMETHODIMP nsImapMailFolder::DownloadMessagesForOffline(nsISupportsArray *messages)
+NS_IMETHODIMP nsImapMailFolder::DownloadMessagesForOffline(nsISupportsArray *messages, nsIMsgWindow *window)
 {
   nsCAutoString messageIds;
   nsMsgKeyArray srcKeyArray;
 #ifdef DEBUG_bienvenu
-  return DownloadAllForOffline(nsnull, nsnull);
+//  return DownloadAllForOffline(nsnull, window);
 #endif
   nsresult rv = BuildIdsAndKeyArray(messages, messageIds, srcKeyArray);
   if (NS_FAILED(rv)) return rv;
@@ -3160,7 +3160,7 @@ NS_IMETHODIMP nsImapMailFolder::DownloadMessagesForOffline(nsISupportsArray *mes
   if (NS_FAILED(rv)) return rv;
 
   SetNotifyDownloadedLines(PR_TRUE); // ### TODO need to clear this when we've finished
-  rv = imapService->DownloadMessagesForOffline(messageIds, this, nsnull, nsnull);
+  rv = imapService->DownloadMessagesForOffline(messageIds, this, nsnull, window);
   return rv;
 }
 

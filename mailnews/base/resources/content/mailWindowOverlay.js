@@ -739,20 +739,12 @@ function MsgMarkAllRead()
 
 function MsgDownloadFlagged()
 {
-    dump("XXX fix this MsgDownloadFlagged(), this won't work anymore\n");
-    var compositeDataSource = GetCompositeDataSource("DownloadFlagged");
-    var folder = GetLoadedMsgFolder();
-
-    if(folder)
-        DownloadFlaggedMessages(compositeDataSource, folder);
+	gDBView.doCommand(nsMsgViewCommandType.downloadFlaggedForOffline);
 }
 
 function MsgDownloadSelected()
 {
-    dump("XXX fix MsgDownloadSelected(), this won't work anymore\n");
-    var selectedMessages = GetSelectedMessages();
-    var compositeDataSource = GetCompositeDataSource("DownloadSelected");
-    DownloadSelectedMessages(compositeDataSource, selectedMessages);
+	gDBView.doCommand(nsMsgViewCommandType.downloadSelectedForOffline);
 }
 
 function MsgMarkThreadAsRead()

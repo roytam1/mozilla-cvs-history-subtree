@@ -182,7 +182,7 @@ public:
 
   NS_IMETHOD Shutdown(PRBool shutdownChildren);
 
-  NS_IMETHOD DownloadMessagesForOffline(nsISupportsArray *messages);
+  NS_IMETHOD DownloadMessagesForOffline(nsISupportsArray *messages, nsIMsgWindow *msgWindow);
 
   NS_IMETHOD DownloadAllForOffline(nsIUrlListener *listener, nsIMsgWindow *msgWindow);
     // nsIMsgImapMailFolder methods
