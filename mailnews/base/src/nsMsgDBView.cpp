@@ -129,6 +129,22 @@ nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
   return rv;
 }
 
+// call this AFTER calling ::Sort.
+nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
+{
+  if (mCurrentSortColumn && aNewSortColumn != mCurrentSortColumn)
+    mCurrentSortColumn->RemoveAttribute(NS_LITERAL_STRING("sortDirection"));
+
+  // set the new sort direction on the new sort column
+  mCurrentSortColumn = aNewSortColumn;
+
+  if (m_sortOrder == nsMsgViewSortOrder::ascending)
+    mCurrentSortColumn->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("ascending"));
+  else
+    mCurrentSortColumn->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("descending"));
+  return NS_OK;
+}
+
 nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
 {
   nsAutoString currentView;
@@ -346,17 +362,8 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
     }
 
     Sort(sortType, sortOrder);
+    UpdateSortUI(aElement);
 
-    // if the current sort column is NOT equal to the new sort column then clear out the 
-    // sortDirection attribute so we don't leave a sort icon for the column.
-    if (mCurrentSortColumn && mCurrentSortColumn.get() != aElement)
-      mCurrentSortColumn->RemoveAttribute(NS_LITERAL_STRING("sortDirection"));     
-
-    mCurrentSortColumn = aElement;
-    if (sortOrder == nsMsgViewSortOrder::ascending)
-      aElement->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("ascending"));
-    else
-      aElement->SetAttribute(NS_LITERAL_STRING("sortDirection"), NS_LITERAL_STRING("descending"));
   } // if performSort
 
   return NS_OK;
@@ -379,6 +386,23 @@ NS_IMETHODIMP nsMsgDBView::PerformActionOnRow(const PRUnichar *action, PRInt32 r
 
 NS_IMETHODIMP nsMsgDBView::PerformActionOnCell(const PRUnichar *action, PRInt32 row, const PRUnichar *colID)
 {
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetSortedColumn(nsIDOMElement ** aColumn)
+{
+  *aColumn = mCurrentSortColumn;
+  NS_IF_ADDREF(*aColumn);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDBView::SetSortedColumn(nsIDOMElement * aColumn)
+{
+  if (!mCurrentSortColumn)
+    UpdateSortUI(aColumn);
+
+  mCurrentSortColumn = aColumn;
   return NS_OK;
 }
 
@@ -416,9 +440,13 @@ NS_IMETHODIMP nsMsgDBView::Close()
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::Init(PRInt32 *pCount)
+NS_IMETHODIMP nsMsgDBView::Init(nsIMessenger * aMessengerInstance, nsIMsgWindow * aMsgWindow /*, PRInt32 *pCount */)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  mMsgWindow = aMsgWindow;
+  mMessengerInstance = aMessengerInstance;
+
+  // what is pCount?
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)

@@ -24,6 +24,8 @@
 #define _nsMsgDBView_H_
 
 #include "nsIMsgDBView.h"
+#include "nsIMsgWindow.h"
+#include "nsIMessenger.h"
 #include "nsIMsgDatabase.h"
 #include "nsIMsgHdr.h"
 #include "nsMsgLineBuffer.h" // for nsByteArray
@@ -71,6 +73,10 @@ protected:
   nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
+
+  // toggles ascending/descending or adds the sort attribute
+  // also cleans up the attributes on the previously sorted column.
+  nsresult UpdateSortUI(nsIDOMElement * aNewSortColumn);
 
 
   // routines used in building up view
@@ -181,6 +187,10 @@ protected:
   // I18N date formater service which we'll want to cache locally.
   nsCOMPtr<nsIDateTimeFormat> mDateFormater;
   nsCOMPtr<nsIMsgHeaderParser> mHeaderParser;
+  // i'm not sure if we are going to permamently need a nsIMessenger instance or if we'll be able
+  // to phase it out eventually....for now we need it though.
+  nsCOMPtr<nsIMessenger> mMessengerInstance;
+  nsCOMPtr<nsIMsgWindow> mMsgWindow;
 };
 
 
