@@ -14,6 +14,7 @@
         title="&prefWindow.title;" 
         style="&prefWindow.size;"
         onload="Startup();"
+        windowtype="Mail:Options"
         ondialogaccept="return hPrefWindow.onOK(event);"
         ondialogcancel="return hPrefWindow.onCancel(event);"
         persist="screenX screenY"> 
