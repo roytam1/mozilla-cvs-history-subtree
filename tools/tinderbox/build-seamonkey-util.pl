@@ -931,7 +931,7 @@ sub run_all_tests {
 	  system("cp bloat_Inbox Inbox");
 
 	  # Remove the Inbox.msf file.
-	  unlink("Inbox.msf");
+	  # unlink("Inbox.msf");
 
 	  $test_result = BloatTest($binary, $build_dir, " -mail", "mail",
 							   $Settings::BloatTestTimeout);
