@@ -67,7 +67,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_pluglet_mozilla_PlugletInputStream_close
  */
 JNIEXPORT jint JNICALL Java_org_mozilla_pluglet_mozilla_PlugletInputStream_nativeRead
     (JNIEnv *env, jobject jthis, jbyteArray b, jint off, jint len) {
-    PRUint32 retval = 0;
+    PRUint32 retval = -1;
     nsIInputStream * input = (nsIInputStream*)env->GetLongField(jthis, peerFID);
     if (input) {
 	PR_LOG(PlugletLog::log, PR_LOG_DEBUG,
