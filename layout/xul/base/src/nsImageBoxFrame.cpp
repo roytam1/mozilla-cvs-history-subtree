@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -57,6 +57,7 @@
 #include "nsImageMap.h"
 #include "nsILinkHandler.h"
 #include "nsIURL.h"
+#include "nsILoadGroup.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
 #include "nsHTMLContainerFrame.h"
@@ -72,6 +73,10 @@
 #include "nsIStyleSet.h"
 #include "nsIStyleContext.h"
 #include "nsBoxLayoutState.h"
+
+#include "nsIServiceManager.h"
+#include "nsIURI.h"
+#include "nsNetUtil.h"
 
 #include "nsFormControlHelper.h"
 
@@ -135,10 +140,14 @@ nsImageBoxFrame::AttributeChanged(nsIPresContext* aPresContext,
   return NS_OK;
 }
 
+#ifdef USE_IMG2
+nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell), mIntrinsicSize(0,0)
+#else
 nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell)
+#endif
 {
   mSizeFrozen = PR_FALSE;
-	mHasImage = PR_FALSE;
+  mHasImage = PR_FALSE;
   NeedsRecalc();
 }
 
@@ -158,7 +167,12 @@ NS_METHOD
 nsImageBoxFrame::Destroy(nsIPresContext* aPresContext)
 {
   // Release image loader first so that it's refcnt can go to zero
+#ifdef USE_IMG2
+  if (mImageRequest)
+    mImageRequest->Cancel(NS_ERROR_FAILURE);
+#else
   mImageLoader.StopAllLoadImages(aPresContext);
+#endif
 
   return nsLeafBoxFrame::Destroy(aPresContext);
 }
@@ -171,6 +185,17 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
                           nsIStyleContext* aContext,
                           nsIFrame*        aPrevInFlow)
 {
+#ifdef USE_IMG2
+  if (!mListener) {
+    nsImgListener *listener;
+    NS_NEWXPCOM(listener, nsImgListener);
+    NS_ADDREF(listener);
+    listener->SetFrame(this);
+    listener->QueryInterface(NS_GET_IID(imgIDecoderObserver), getter_AddRefs(mListener));
+    NS_RELEASE(listener);
+  }
+#endif
+
   nsresult  rv = nsLeafBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
   
   mHasImage = PR_FALSE;
@@ -178,29 +203,64 @@ nsImageBoxFrame::Init(nsIPresContext*  aPresContext,
   // Always set the image loader's base URL, because someone may
   // decide to change a button _without_ an image to have an image
   // later.
-  nsIURI* baseURL = nsnull;
-  nsIHTMLContent* htmlContent;
-  if (NS_SUCCEEDED(mContent->QueryInterface(kIHTMLContentIID, (void**)&htmlContent))) {
-    htmlContent->GetBaseURL(baseURL);
-    NS_RELEASE(htmlContent);
-  }
-  else {
-    nsIDocument* doc;
-    if (NS_SUCCEEDED(mContent->GetDocument(doc))) {
-      doc->GetBaseURL(baseURL);
-      NS_RELEASE(doc);
-    }
-  }
+  nsCOMPtr<nsIURI> baseURL;
+  GetBaseURI(getter_AddRefs(baseURL));
 
   // Initialize the image loader. Make sure the source is correct so
   // that UpdateAttributes doesn't double start an image load.
   nsAutoString src;
   GetImageSource(src);
+
+#ifdef USE_IMG2
+
+  PRBool needLoad = PR_FALSE;
+
+  if (!src.IsEmpty()) {
+    mHasImage = PR_TRUE;
+    needLoad = PR_TRUE;
+  }
+
+  nsCOMPtr<nsIURI> srcURI;
+  NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
+
+  // if we don't have an image request, then we certainly need to load
+  if (!mImageRequest) {
+    needLoad = PR_TRUE;
+  } else {
+    // check to see if the uri we are about to load is the same as the
+    // one the image request came from.
+    nsCOMPtr<nsIURI> requestURI;
+    mImageRequest->GetURI(getter_AddRefs(requestURI));
+    PRBool eq;
+    requestURI->Equals(srcURI, &eq);
+
+    if (eq) {
+      needLoad = PR_FALSE;
+    } else {
+      needLoad = PR_TRUE;
+      mImageRequest->Cancel(NS_ERROR_FAILURE);
+      mImageRequest = nsnull;
+    }
+  }
+
+  if (mHasImage && needLoad) {
+    nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+    if (NS_FAILED(rv))
+      return rv;
+
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+
+    il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
+  }
+#else
   if (!src.IsEmpty()) {
     mHasImage = PR_TRUE;
   }
-  mImageLoader.Init(this, UpdateImageFrame, nsnull, baseURL, src);
-  NS_IF_RELEASE(baseURL);
+
+  if (mHasImage)
+    mImageLoader.Init(this, UpdateImageFrame, nsnull, baseURL, src);
+#endif
 
   PRBool a,b;
   UpdateAttributes(aPresContext, nsnull, a, b);
@@ -229,12 +289,12 @@ nsImageBoxFrame::GetImageSource(nsString& aResult)
 void
 nsImageBoxFrame::UpdateAttributes(nsIPresContext*  aPresContext, nsIAtom* aAttribute, PRBool& aResize, PRBool& aRedraw)
 {
-    aResize = PR_FALSE;
-    aRedraw = PR_FALSE;
+  aResize = PR_FALSE;
+  aRedraw = PR_FALSE;
 
-    if (aAttribute == nsnull || aAttribute == nsHTMLAtoms::src) {
-        UpdateImage(aPresContext, aResize);
-    }
+  if (aAttribute == nsnull || aAttribute == nsHTMLAtoms::src) {
+    UpdateImage(aPresContext, aResize);
+  }
 }
 
 void
@@ -242,6 +302,57 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
 {
   aResize = PR_FALSE;
 
+#ifdef USE_IMG2
+
+  // get the new image src
+  nsAutoString src;
+  GetImageSource(src);
+
+  if (src.IsEmpty()) {
+    mSizeFrozen = PR_TRUE;
+    mHasImage = PR_FALSE;
+    aResize = PR_TRUE;
+
+    mImageRequest = nsnull;
+    
+    return;
+  }
+
+  nsCOMPtr<nsIURI> baseURI;
+  GetBaseURI(getter_AddRefs(baseURI));
+  nsCOMPtr<nsIURI> srcURI;
+  NS_NewURI(getter_AddRefs(srcURI), src, baseURI);
+
+  if (mImageRequest) {
+    nsCOMPtr<nsIURI> requestURI;
+    mImageRequest->GetURI(getter_AddRefs(requestURI));
+    PRBool eq;
+    requestURI->Equals(srcURI, &eq);
+    // if the source uri and the current one are the same, return
+    if (eq)
+      return;
+  }
+
+  mSizeFrozen = PR_FALSE;
+  mHasImage = PR_TRUE;
+
+  // otherwise, we need to load the new uri
+  if (mImageRequest) {
+    mImageRequest->Cancel(NS_ERROR_FAILURE);
+    mImageRequest = nsnull;
+  }
+
+  nsresult rv;
+  nsCOMPtr<imgILoader> il(do_GetService("@mozilla.org/image/loader;1", &rv));
+
+  nsCOMPtr<nsILoadGroup> loadGroup;
+  GetLoadGroup(aPresContext, getter_AddRefs(loadGroup));
+
+  il->LoadImage(srcURI, loadGroup, mListener, aPresContext, getter_AddRefs(mImageRequest));
+
+  aResize = PR_TRUE;
+
+#else
   // see if the source changed
   // get the old image src
   nsAutoString oldSrc;
@@ -254,18 +365,19 @@ nsImageBoxFrame::UpdateImage(nsIPresContext*  aPresContext, PRBool& aResize)
    // see if the images are different
   if (!oldSrc.Equals(src)) {      
 
-        if (!src.IsEmpty()) {
-          mSizeFrozen = PR_FALSE;
-          mHasImage = PR_TRUE;
-        } else {
-          mSizeFrozen = PR_TRUE;
-          mHasImage = PR_FALSE;
-        }
+    if (!src.IsEmpty()) {
+      mSizeFrozen = PR_FALSE;
+      mHasImage = PR_TRUE;
+    } else {
+      mSizeFrozen = PR_TRUE;
+      mHasImage = PR_FALSE;
+    }
 
-        mImageLoader.UpdateURLSpec(aPresContext, src);  
+    mImageLoader.UpdateURLSpec(aPresContext, src);  
 
-        aResize = PR_TRUE;
+    aResize = PR_TRUE;
   }
+#endif
 }
 
 NS_IMETHODIMP
@@ -310,6 +422,16 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
   if (NS_FRAME_PAINT_LAYER_FOREGROUND != aWhichLayer)
     return NS_OK;
 
+#ifdef USE_IMG2
+  nsCOMPtr<gfxIImageContainer> imgCon;
+  mImageRequest->GetImage(getter_AddRefs(imgCon));
+
+  if (imgCon) {
+    nsPoint p(rect.x, rect.y);
+    aRenderingContext.DrawImage(imgCon, &rect, &p);
+  }
+
+#else
   nsCOMPtr<nsIImage> image ( dont_AddRef(mImageLoader.GetImage()) );
   if ( !image ) {
   }
@@ -318,7 +440,8 @@ nsImageBoxFrame::PaintImage(nsIPresContext* aPresContext,
     // borders and padding)
     aRenderingContext.DrawImage(image, rect);
   }
-  
+#endif
+
   return NS_OK;
 }
 
@@ -358,10 +481,17 @@ nsImageBoxFrame::GetImageSize(nsIPresContext* aPresContext)
       return;
 	  } else {
       // Ask the image loader for the *intrinsic* image size
+#ifdef USE_IMG2
+      if (mIntrinsicSize.width > 0 && mIntrinsicSize.height > 0) {
+        mImageSize.width = mIntrinsicSize.width;
+        mImageSize.height = mIntrinsicSize.height;
+        return;
+      } else {
+#else
       mImageLoader.GetDesiredSize(aPresContext, nsnull, desiredSize);
-
       if (desiredSize.width == 1 || desiredSize.height == 1)
       {
+#endif
         mImageSize.width = kDefaultSizeInTwips;
         mImageSize.height = kDefaultSizeInTwips;
         return;
@@ -444,3 +574,196 @@ nsImageBoxFrame::GetFrameName(nsString& aResult) const
   aResult.AssignWithConversion("ImageBox");
   return NS_OK;
 }
+
+
+
+void
+nsImageBoxFrame::GetBaseURI(nsIURI **uri)
+{
+  nsresult rv;
+  nsCOMPtr<nsIURI> baseURI;
+  nsCOMPtr<nsIHTMLContent> htmlContent(do_QueryInterface(mContent, &rv));
+  if (NS_SUCCEEDED(rv)) {
+    htmlContent->GetBaseURL(*getter_AddRefs(baseURI));
+  }
+  else {
+    nsCOMPtr<nsIDocument> doc;
+    rv = mContent->GetDocument(*getter_AddRefs(doc));
+    if (NS_SUCCEEDED(rv)) {
+      doc->GetBaseURL(*getter_AddRefs(baseURI));
+    }
+  }
+  *uri = baseURI;
+  NS_IF_ADDREF(*uri);
+}
+
+#ifdef USE_IMG2
+void
+nsImageBoxFrame::GetLoadGroup(nsIPresContext *aPresContext, nsILoadGroup **aLoadGroup)
+{
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+
+  if (!shell)
+    return;
+
+  nsCOMPtr<nsIDocument> doc;
+  shell->GetDocument(getter_AddRefs(doc));
+  if (!doc)
+    return;
+
+  doc->GetDocumentLoadGroup(aLoadGroup);
+}
+
+
+NS_IMETHODIMP nsImageBoxFrame::OnStartDecode(imgIRequest *request, nsIPresContext *aPresContext)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageContainer *image)
+{ 
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  mHasImage = PR_TRUE;
+  mSizeFrozen = PR_FALSE;
+
+  nscoord w, h;
+  image->GetWidth(&w);
+  image->GetHeight(&h);
+
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+
+  mIntrinsicSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
+
+  nsBoxLayoutState state(aPresContext);
+
+  this->MarkDirty(state);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStartFrame(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageFrame *frame)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnDataAvailable(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageFrame *frame, const nsRect * rect)
+{
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  nsBoxLayoutState state(aPresContext);
+  this->Redraw(state);
+
+#if 0
+
+  // XXX we need to make sure that the reflow from the OnContainerStart has been
+  // processed before we start calling invalidate
+
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+  nsRect r(*rect);
+  r *= p2t; // convert to twips
+
+  Invalidate(aPresContext, nsRect(r.x, r.y, r.width, r.height), PR_FALSE);
+#endif
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStopFrame(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageFrame *frame)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStopContainer(imgIRequest *request, nsIPresContext *aPresContext, gfxIImageContainer *image)
+{
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::OnStopDecode(imgIRequest *request, nsIPresContext *aPresContext, nsresult status, const PRUnichar *statusArg)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsImageBoxFrame::FrameChanged(gfxIImageContainer *container, nsIPresContext *aPresContext, gfxIImageFrame *newframe, nsRect * dirtyRect)
+{
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  nsBoxLayoutState state(aPresContext);
+  this->Redraw(state);
+
+  return NS_OK;
+}
+#endif
+
+
+
+#ifdef USE_IMG2
+NS_IMPL_ISUPPORTS2(nsImgListener, imgIDecoderObserver, gfxIImageContainerObserver)
+
+nsImgListener::nsImgListener()
+{
+  NS_INIT_ISUPPORTS();
+}
+
+nsImgListener::~nsImgListener()
+{
+}
+
+NS_IMETHODIMP nsImgListener::OnStartDecode(imgIRequest *request, nsISupports *cx)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartDecode(request, pc);
+}
+
+NS_IMETHODIMP nsImgListener::OnStartContainer(imgIRequest *request, nsISupports *cx, gfxIImageContainer *image)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartContainer(request, pc, image);
+}
+
+NS_IMETHODIMP nsImgListener::OnStartFrame(imgIRequest *request, nsISupports *cx, gfxIImageFrame *frame)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartFrame(request, pc, frame);
+}
+
+NS_IMETHODIMP nsImgListener::OnDataAvailable(imgIRequest *request, nsISupports *cx, gfxIImageFrame *frame, const nsRect * rect)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnDataAvailable(request, pc, frame, rect);
+}
+
+NS_IMETHODIMP nsImgListener::OnStopFrame(imgIRequest *request, nsISupports *cx, gfxIImageFrame *frame)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopFrame(request, pc, frame);
+}
+
+NS_IMETHODIMP nsImgListener::OnStopContainer(imgIRequest *request, nsISupports *cx, gfxIImageContainer *image)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopContainer(request, pc, image);
+}
+
+NS_IMETHODIMP nsImgListener::OnStopDecode(imgIRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopDecode(request, pc, status, statusArg);
+}
+
+NS_IMETHODIMP nsImgListener::FrameChanged(gfxIImageContainer *container, nsISupports *cx, gfxIImageFrame *newframe, nsRect * dirtyRect)
+{
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->FrameChanged(container, pc, newframe, dirtyRect);
+}
+
+#endif
+
+
