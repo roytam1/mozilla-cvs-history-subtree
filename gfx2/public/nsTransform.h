@@ -23,7 +23,6 @@
 
 #include "nsMatrix.h"
 
-
 /**
  * @file nsTransform.h
  */
@@ -35,7 +34,7 @@
  * @see nsMatrix
  */
 class nsTransform {
- public:
+public:
   nsTransform();
   virtual ~nsTransform();
 
@@ -51,48 +50,55 @@ class nsTransform {
   enum {
     NS_TRANSFORM_UNKNOWN   = 0,
 
-  /**
-   * A "matrix(...)" transformation.
-   */
-    NS_TRANSFORM_MATRIX    = 1,
+    NS_TRANSFORM_IDENTITY  = 1,
 
-  /**
-   * A "translate(...)" transformation.
-   */
-    NS_TRANSFORM_TRANSLATE = 2,
+    /**
+     * A "matrix(...)" transformation.
+     */
+    NS_TRANSFORM_MATRIX    = 2,
 
-  /**
-   * A "scale(...)" transformation.
-   */
-    NS_TRANSFORM_SCALE     = 3,
+    /**
+     * A "translate(...)" transformation.
+     */
+    NS_TRANSFORM_TRANSLATE = 3,
 
-  /**
-   * A "rotate(...)" transformation.
-   */
-    NS_TRANSFORM_ROTATE    = 4,
+    /**
+     * A "scale(...)" transformation.
+     */
+    NS_TRANSFORM_SCALE     = 4,
 
-  /**
-   * A "skewX(...)" transformation.
-   */
-    NS_TRANSFORM_SKEWX     = 5,
+    /**
+     * A "rotate(...)" transformation.
+     */
+    NS_TRANSFORM_ROTATE    = 5,
 
-  /**
-   * A "skewY(...)" transformation.
-   */
-    NS_TRANSFORM_SKEWY     = 6
+    /**
+     * A "skewX(...)" transformation.
+     */
+    NS_TRANSFORM_SKEWX     = 6,
+
+    /**
+     * A "skewY(...)" transformation.
+     */
+    NS_TRANSFORM_SKEWY     = 7
   };
   //@}
 
-  unsigned short getType() const;
-  nsMatrix *getMatrix() const;
-  float getAngle() const;
+  unsigned short GetType() const;
+  nsMatrix *GetMatrix() const;
+  float GetAngle() const;
+
+  /**
+   * Sets the transform type to NS_TRANSFORM_IDENTITY.
+   */
+  void SetIdentity();
 
   /**
    * Sets the transform type to NS_TRANSFORM_MATRIX, with parameter matrix defining the new transformation.
    *
    * @param matrix The new matrix for the transformation.
    */
-  void setMatrix(nsMatrix *matrix);
+  void SetMatrix(nsMatrix *matrix);
 
   /**
    * Sets the transform type to NS_TRANSFORM_TRANSLATE, with parameters tx and ty defining the translation amounts
@@ -100,7 +106,7 @@ class nsTransform {
    * @param tx The translation amount in X.
    * @param ty The translation amount in Y.
    */
-  void setTranslate(float tx, float ty);
+  void SetTranslate(float tx, float ty);
 
   /**
    * Sets the transform type to NS_TRANSFORM_SCALE, with parameters sx and sy defining the scale amounts.
@@ -108,7 +114,7 @@ class nsTransform {
    * @param sx The scale factor in X.
    * @param sy The scale factor in Y.
    */
-  void setScale(float sx, float sy);
+  void SetScale(float sx, float sy);
 
   /**
    * Sets the transform type to NS_TRANSFORM_ROTATE, with parameter angle defining the rotation angle and
@@ -118,19 +124,20 @@ class nsTransform {
    * @param cx The x coordinate of centre of rotation.
    * @param cy The y coordinate of centre of rotation.
    */
-  void setRotate(float angle, float cx, float cy);
+  void SetRotate(float angle, float cx, float cy);
 
   /**
    * Sets the transform type to NS_TRANSFORM_SKEWX, with parameter angle defining the amount of skew.
    *
    * @param angle The skew angle.
    */
-  void setSkewX(float angle);
+  void SetSkewX(float angle);
 
   /**
    * Sets the transform type to NS_TRANSFORM_SKEWY, with parameter angle defining the amount of skew.
    *
    * @param angle The skew angle.
    */
-  void setSkewY(float angle);
+  void SetSkewY(float angle);
 };
+
