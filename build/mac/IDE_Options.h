@@ -72,7 +72,7 @@
 		#pragma peephole 			off
 		#pragma optimize_for_size 	off
 	#else
-		#pragma traceback 			on					/* leave on until the final release, so MacsBug logs are interpretable */
+		#pragma traceback 			off					/* leave on until the final release, so MacsBug logs are interpretable */
 		#pragma global_optimizer 	on
 		#pragma optimization_level 	4
 		#pragma scheduling 			603
