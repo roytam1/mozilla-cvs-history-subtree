@@ -177,6 +177,12 @@ XPCCallContext::GetScriptableInfo() const
     return mScriptableInfo;
 }
 
+inline JSBool                       
+XPCCallContext::CanGetSet() const
+{
+    return mState >= HAVE_NAME;
+}
+
 inline XPCNativeSet*
 XPCCallContext::GetSet() const
 {

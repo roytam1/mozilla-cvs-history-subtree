@@ -613,6 +613,7 @@ public:
     inline XPCWrappedNativeTearOff*     GetTearOff() const ;
 
     inline XPCNativeScriptableInfo*     GetScriptableInfo() const ;
+    inline JSBool                       CanGetSet() const ;
     inline XPCNativeSet*                GetSet() const ;
     inline XPCNativeInterface*          GetInterface() const ;
     inline XPCNativeMember*             GetMember() const ;

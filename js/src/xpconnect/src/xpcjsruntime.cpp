@@ -217,6 +217,43 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 // Do the marking...
                 XPCWrappedNativeScope::MarkAllInterfaceSets();
+
+                // Mark the sets used in the call contexts. There is a small 
+                // chance that a wrapper's set will change *while* a call is
+                // happening which uses that wrapper's old interfface set. So,
+                // we need to do this marking to avoid collecting those sets
+                // that might no longer be otherwise reachable from the wrappers
+                // or the wrapperprotos.
+
+                // Skip this part if XPConnect is shutting down. We get into
+                // bad locking problems with the thread iteration otherwise.
+                if(!self->GetXPConnect()->IsShuttingDown())
+                { // scoped lock
+                    nsAutoLock lock(XPCPerThreadData::GetLock());
+                    
+                    XPCPerThreadData* iterp = nsnull;
+                    XPCPerThreadData* thread;
+
+                    while(nsnull != (thread = 
+                                     XPCPerThreadData::IterateThreads(&iterp)))
+                    {
+                        XPCCallContext* ccxp = thread->GetCallContext();
+                        while(ccxp)
+                        {
+                            // Deal with the strictness of callcontext that
+                            // complains if you ask for a set when
+                            // it is in a state where the set could not 
+                            // possibly be valid.
+                            if(ccxp->CanGetSet())
+                            {
+                                XPCNativeSet* set = ccxp->GetSet();
+                                if(set)
+                                    set->Mark();
+                            }
+                            ccxp = ccxp->GetPrevCallContext();    
+                        }    
+                    }
+                }
                 
                 // Do the sweeping...
                 self->mClassInfo2NativeSetMap->
