@@ -47,7 +47,7 @@
 #   MOZ_MAKE_FLAGS       - Flags to pass to $(MAKE)
 #
 
-CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r nscp_beta1_BRANCH 
+MOZ_CO_BRANCH := nscp_beta1_BRANCH 
 
 CWD		:= $(shell pwd)
 ifneq (, $(wildcard client.mk))
@@ -85,6 +85,10 @@ ifneq ($(CVS_ROOT_IN_TREE),)
 ifneq ($(CVS_ROOT_IN_TREE),$(CVSROOT))
   CVS_FLAGS := -d $(CVS_ROOT_IN_TREE)
 endif
+endif
+
+ifdef MOZ_CO_BRANCH
+  CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r $(MOZ_CO_BRANCH)
 endif
 
 CVSCO	      = cvs $(CVS_FLAGS) co $(CVS_CO_FLAGS)
@@ -126,6 +130,10 @@ ifeq "$(origin MOZ_CO_FLAGS)" "undefined"
   CVS_CO_FLAGS := -P
 else
   CVS_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+
+ifdef MOZ_CO_BRANCH
+  CVS_CO_FLAGS := $(CVS_CO_FLAGS) -r $(MOZ_CO_BRANCH)
 endif
 
 ifdef MOZ_CO_DATE
