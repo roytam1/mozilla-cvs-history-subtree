@@ -412,6 +412,13 @@ LINK_LIBS= \
     $(DIST)\lib\jpeg$(MOZ_BITS)$(VERSION_NUMBER).lib \
     $(DIST)\lib\dbm$(MOZ_BITS).lib \
 !endif
+!if defined(MOZ_RAPTOR)
+ $(RAPTOR_DIST)\lib\raptorbase.lib	\
+ $(RAPTOR_DIST)\lib\raptorgfx.lib	\
+ $(RAPTOR_DIST)\lib\raptorhtml.lib	\
+ $(RAPTOR_DIST)\lib\util.lib        \
+ $(RAPTOR_DIST)\lib\jsdom.lib       \
+!endif
 !if "$(WINOS)" == "WIN95"
     $(DIST)\lib\xpcom$(MOZ_BITS).lib
 !else
@@ -576,6 +583,9 @@ CDISTINCLUDES= \
     /I$(XPDIST)\public\coreincl \
 !ifndef NO_SECURITY
     /I$(XPDIST)\public\jar \
+!endif
+!if defined(MOZ_RAPTOR)
+	/I$(XPDIST)\public\raptor \
 !endif
     /I$(XPDIST)\public\util
 
@@ -1789,9 +1799,38 @@ install:    \
 !IF EXIST($(DIST)\bin\libreg$(MOZ_BITS).dll)
 	    $(OUTDIR)\libreg$(MOZ_BITS).dll    \
 !ENDIF
+### Copy Raptor DLLs
+!ifdef MOZ_RAPTOR
+!IF EXIST($(RAPTOR_DIST)\bin\raptorbase.dll)
+	    $(OUTDIR)\raptorbase.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorhtml.dll)
+	    $(OUTDIR)\raptorhtml.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorgfx.dll)
+	    $(OUTDIR)\raptorgfx.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorweb.dll)
+	    $(OUTDIR)\raptorweb.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorhtmlpars.dll)
+	    $(OUTDIR)\raptorhtmlpars.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\jsdom.dll)
+	    $(OUTDIR)\jsdom.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll)
+	    $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\netlib.dll)
+	    $(OUTDIR)\netlib.dll    \
+!ENDIF
+!else
+### End Raptor DLLs
 !IF EXIST($(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll    \
 !ENDIF
+!endif
 !ifdef EDITOR
 !IF EXIST($(SPELLCHK_DATA)\pen4s324.dat)
 	   $(OUTDIR)\spellchk\pen4s324.dat    \
@@ -1950,8 +1989,10 @@ $(OUTDIR)\xpcom$(MOZ_BITS).dll:   $(DIST)\bin\xpcom$(MOZ_BITS).dll
 $(OUTDIR)\libreg$(MOZ_BITS).dll:   $(DIST)\bin\libreg$(MOZ_BITS).dll
     @IF EXIST $(DIST)\bin\libreg$(MOZ_BITS).dll copy $(DIST)\bin\libreg$(MOZ_BITS).dll $(OUTDIR)\libreg$(MOZ_BITS).dll
 
+!ifndef MOZ_RAPTOR
 $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll:   $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll
     @IF EXIST $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll copy $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll
+!endif
 $(OUTDIR)\java\bin\jbn32$(VERSION_NUMBER).dll:   $(DIST)\bin\jbn32$(VERSION_NUMBER).dll
     @IF NOT EXIST "$(OUTDIR)\java/$(NULL)" mkdir "$(OUTDIR)\java"
     @IF NOT EXIST "$(OUTDIR)\java\bin/$(NULL)" mkdir "$(OUTDIR)\java\bin"
@@ -2089,6 +2130,26 @@ $(OUTDIR)\mnrc$(MOZ_BITS).dll:   $(DIST)\bin\mnrc$(MOZ_BITS).dll
 
 $(OUTDIR)\xpstrdll.dll:   $(DIST)\bin\xpstrdll.dll
     @IF EXIST $(DIST)\bin\$(@F) copy $(DIST)\bin\$(@F) $@
+
+### Copy Raptor dlls
+!ifdef MOZ_RAPTOR
+$(OUTDIR)\raptorbase.dll:   $(RAPTOR_DIST)\bin\raptorbase.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorhtml.dll:   $(RAPTOR_DIST)\bin\raptorhtml.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorgfx.dll:   $(RAPTOR_DIST)\bin\raptorgfx.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorweb.dll:   $(RAPTOR_DIST)\bin\raptorweb.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorhtmlpars.dll:   $(RAPTOR_DIST)\bin\raptorhtmlpars.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\jsdom.dll:   $(RAPTOR_DIST)\bin\jsdom.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll:   $(RAPTOR_DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\netlib.dll:   $(RAPTOR_DIST)\bin\netlib.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+!endif
 
 $(OUTDIR)\spellchk\$(SPELLCHK_DLL):   $(DIST)\bin\$(SPELLCHK_DLL) 
     @IF NOT EXIST "$(OUTDIR)\spellchk/$(NULL)" mkdir "$(OUTDIR)\spellchk"
