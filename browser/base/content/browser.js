@@ -703,7 +703,7 @@ const gPopupBlockerObserver = {
     
     if (gBrowser.selectedBrowser.pageReport) {
       this._reportButton.setAttribute("blocked", "true");
-      if (gPrefService.getBoolPref("privacy.popups.showBrowserMessage")) {
+      if (gPrefService && gPrefService.getBoolPref("privacy.popups.showBrowserMessage")) {
         var bundle_browser = document.getElementById("bundle_browser");
         var brandBundle = document.getElementById("bundle_brand");
         var brandShortName = brandBundle.getString("brandShortName");
@@ -2038,7 +2038,7 @@ function getShortcutOrURI(aURL, aPostDataRef)
             //          enctypes.
             aPostDataRef.value = unescape(aPostDataRef.value);
             if (aPostDataRef.value.match(/%s/))
-              aPostDataRef.value = getPostDataStream(aPostDataRef.value, encodeURIComponent(text), 
+              aPostDataRef.value = getPostDataStream(aPostDataRef.value, text), 
                                                      "application/x-www-form-urlencoded");
             else {
               shortcutURL = null;
