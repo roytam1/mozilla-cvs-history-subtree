@@ -1386,34 +1386,32 @@ js_Interpret(JSContext *cx, jsval *result)
 		}
 	    }
 
+	    /* Make sure rval is a string for uniformity and compatibility. */
+	    if (!JSVAL_IS_INT(rval)) {
+		rval = ATOM_KEY((JSAtom *)rval);
+	    } else if ((cx->version <= JSVERSION_1_1) &&
+		       (cx->version >= JSVERSION_1_0)) {
+		str = js_NumberToString(cx, (jsdouble) JSVAL_TO_INT(rval));
+		if (!str) {
+		    ok = JS_FALSE;
+		    goto out;
+		}
+
+		/* Hold via sp[0] in case the GC runs under OBJ_SET_PROPERTY. */
+		rval = sp[0] = STRING_TO_JSVAL(str);
+	    }
+
             if (op != JSOP_FORELEM2) {
                 /* Convert lval to a non-null object containing id. */
 	        VALUE_TO_OBJECT(cx, lval, obj);
-
-	        /* Make sure rval is a string for uniformity and compatibility. */
-	        if (!JSVAL_IS_INT(rval)) {
-		    rval = ATOM_KEY((JSAtom *)rval);
-	        } else if ((cx->version <= JSVERSION_1_1) &&
-		           (cx->version >= JSVERSION_1_0)) {
-		    str = js_NumberToString(cx, (jsdouble) JSVAL_TO_INT(rval));
-		    if (!str) {
-		        ok = JS_FALSE;
-		        goto out;
-		    }
-
-		    /* Hold via sp[0] in case the GC runs under OBJ_SET_PROPERTY. */
-		    rval = sp[0] = STRING_TO_JSVAL(str);
-	        }
-
 
 	        /* Set the variable obj[id] to refer to rval. */
 	        ok = OBJ_SET_PROPERTY(cx, obj, id, &rval);
 	        if (!ok)
 		    goto out;
             }
-            else {
+            else
                 PUSH_OPND(rval);
-            }
 
 	    /* Push true to keep looping through properties. */
 	    rval = JSVAL_TRUE;
