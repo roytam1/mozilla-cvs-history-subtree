@@ -23,6 +23,7 @@ DEPTH=..\..\..
 MODULE          = msgbsutl
 LIBRARY_NAME    = msgbsutl
 META_COMPONENT  = mail
+EXPORT_LIBRARY  = 1
 
 include <$(DEPTH)\config\config.mak>
 
