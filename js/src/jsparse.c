@@ -620,7 +620,7 @@ Condition(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	if (JSVERSION_IS_ECMA(cx->version))
 	    goto no_rewrite;
 	pn->pn_type = TOK_EQOP;
-	pn->pn_op = cx->jsop_eq;
+	pn->pn_op = (JSOp)cx->jsop_eq;
 	pn2 = pn->pn_left;
 	switch (pn2->pn_op) {
 	  case JSOP_SETARG:

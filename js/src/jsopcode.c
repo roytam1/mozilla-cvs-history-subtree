@@ -728,7 +728,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     op = JSOP_NOP;
     while (pc < endpc) {
 	lastop = op;
-	op = saveop = *pc;
+	op = saveop = (JSOp)*pc;
 	if (op >= JSOP_LIMIT) {
 	    switch (op) {
 	      case JSOP_GETPROP2:
@@ -1881,7 +1881,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		(void) PopOff(ss, op);
 		lval = POP_STR();
 #if JS_HAS_SHARP_VARS
-		op = pc[len];
+		op = (JSOp)pc[len];
 		if (op == JSOP_DEFSHARP) {
 		    pc += len;
 		    cs = &js_CodeSpec[op];

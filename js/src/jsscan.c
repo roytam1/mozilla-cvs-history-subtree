@@ -49,9 +49,9 @@
 
 static struct keyword {
     char        *name;
-    int16       tokentype;      /* JSTokenType */
-    int8        op;             /* JSOp */
-    uint8       version;        /* JSVersion */
+    JSTokenType tokentype;      /* JSTokenType */
+    JSOp        op;             /* JSOp */
+    JSVersion   version;        /* JSVersion */
 } keywords[] = {
     {"break",           TOK_BREAK,              JSOP_NOP},
     {"case",            TOK_CASE,               JSOP_NOP},
@@ -735,7 +735,7 @@ retry:
 	    struct keyword *kw;
 
 	    kw = &keywords[atom->kwindex];
-	    ts->token.t_op = kw->op;
+	    ts->token.t_op = (JSOp)kw->op;
 	    RETURN(kw->tokentype);
 	}
 	ts->token.t_op = JSOP_NAME;
@@ -959,7 +959,7 @@ retry:
       case '=':
 	if (MatchChar(ts, c)) {
 #if JS_HAS_TRIPLE_EQOPS
-	    ts->token.t_op = MatchChar(ts, c) ? JSOP_NEW_EQ : cx->jsop_eq;
+	    ts->token.t_op = MatchChar(ts, c) ? JSOP_NEW_EQ : (JSOp)cx->jsop_eq;
 #else
 	    ts->token.t_op = cx->jsop_eq;
 #endif
@@ -973,7 +973,7 @@ retry:
       case '!':
 	if (MatchChar(ts, '=')) {
 #if JS_HAS_TRIPLE_EQOPS
-	    ts->token.t_op = MatchChar(ts, '=') ? JSOP_NEW_NE : cx->jsop_ne;
+	    ts->token.t_op = MatchChar(ts, '=') ? JSOP_NEW_NE : (JSOp)cx->jsop_ne;
 #else
 	    ts->token.t_op = cx->jsop_ne;
 #endif
@@ -1167,7 +1167,7 @@ skipline:
     }
 
     JS_ASSERT(c < TOK_LIMIT);
-    RETURN(c);
+    RETURN((JSTokenType)c);
 
 #undef INIT_TOKENBUF
 #undef FINISH_TOKENBUF
