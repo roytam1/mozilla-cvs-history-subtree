@@ -494,6 +494,9 @@ jsj_DupJavaStringUTF(JSContext *cx, JNIEnv *jEnv, jstring jstr);
 JSJavaThreadState *
 jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp);
 
+JSJavaThreadState *
+jsj_SetJavaJSJEnv(JSJavaThreadState* java_jsj_env);
+
 #ifdef DEBUG
 #define DEBUG_LOG(args) printf args
 #endif

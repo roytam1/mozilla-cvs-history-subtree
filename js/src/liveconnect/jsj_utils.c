@@ -326,6 +326,8 @@ jsj_GetJavaArrayLength(JSContext *cx, JNIEnv *jEnv, jarray java_array)
     return array_length;
 }
 
+static JSJavaThreadState *the_java_jsj_env = NULL;
+
 JSJavaThreadState *
 jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
 {
@@ -334,7 +336,10 @@ jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
 
     *envp = NULL;
     err_msg = NULL;
-    jsj_env = JSJ_callbacks->map_js_context_to_jsj_thread(cx, &err_msg);
+    
+    jsj_env = the_java_jsj_env;
+    if (jsj_env == NULL)
+	    jsj_env = JSJ_callbacks->map_js_context_to_jsj_thread(cx, &err_msg);
     if (!jsj_env) {
         if (err_msg) {
             JS_ReportError(cx, err_msg);
@@ -345,4 +350,20 @@ jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
     if (envp)
         *envp = jsj_env->jEnv;
     return jsj_env;
+}
+
+/**
+ * Since only one Java thread is allowed to enter JavaScript, this function is
+ * used to enforce the use of that thread's state. The static global the_java_jsj_env
+ * overrides using JSJ_callbacks->map_js_context_to_jsj_thread, which maps
+ * native threads to JSJavaThreadStates. This isn't appropriate when Java calls
+ * JavaScript, as there can be a many to one mapping from Java threads to native
+ * threads.
+ */
+JSJavaThreadState *
+jsj_SetJavaJSJEnv(JSJavaThreadState* java_jsj_env)
+{
+    JSJavaThreadState *old_jsj_env = the_java_jsj_env;
+    the_java_jsj_env = java_jsj_env;
+    return old_jsj_env;
 }
