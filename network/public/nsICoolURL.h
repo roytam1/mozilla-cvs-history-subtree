@@ -90,7 +90,7 @@ public:
     NS_IMETHOD          DebugString(const char* *o_URLString) const=0;
 #endif //DEBUG
 
-    static const nsIID& IID() { 
+    static const nsIID& GetIID() { 
         // {6DA32F00-BD64-11d2-B00F-006097BFC036}
         static const nsIID NS_ICOOLURL_IID = 
         { 0x6da32f00, 0xbd64, 0x11d2, { 0xb0, 0xf, 0x0, 0x60, 0x97, 0xbf, 0xc0, 0x36 } };
@@ -98,7 +98,8 @@ public:
     };
 };
 
-
+// Should change to NS_METHOD CreateURL(nsICoolURL* *o_URL, const char* i_URL)
+// and be placed where?
 extern NS_NET
     nsICoolURL* CreateURL(const char* i_URL);
 

@@ -20,6 +20,7 @@
 #define _nsIProtocolInstance_h_
 
 #include "nsISupports.h"
+class nsIInputStream;
 
 /* 
     The nsIProtocolInstance class is a common interface to all protocol
@@ -41,7 +42,7 @@ public:
     */
     NS_IMETHOD          GetInputStream( nsIInputStream* *o_Stream) = 0;
 
-    static const nsIID& IID() { 
+    static const nsIID& GetIID() { 
         // {3594D180-CB85-11d2-A1BA-444553540000}
 		static const nsIID NS_IProtocolInstance_IID = 
             { 0x3594d180, 0xcb85, 0x11d2, { 0xa1, 0xba, 0x44, 0x45, 0x53, 0x54, 0x0, 0x0 } };
@@ -49,5 +50,8 @@ public:
 	};
 
 };
+
+//Possible errors
+#define NS_ERROR_ALREADY_CONNECTED NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_NETWORK, 150);
 
 #endif /* _nsIProtocolInstance_h_ */
