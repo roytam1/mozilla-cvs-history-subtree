@@ -25,6 +25,7 @@
 #include "nsIStreamListener.h"
 #include "nsHTTPResponseListener.h"
 #include "nsIChannel.h"
+#include "nsISocketTransport.h"
 #include "nsIBufferInputStream.h"
 #include "nsHTTPChannel.h"
 #include "nsHTTPResponse.h"
@@ -32,7 +33,6 @@
 #include "nsCRT.h"
 #include "nsIStreamConverterService.h"
 #include "nsIStreamConverter.h"
-#include "nsSocketTransport.h"
 
 #include "nsHTTPAtoms.h"
 #include "nsIHttpNotify.h"
@@ -346,9 +346,13 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
 
 					if (cl != -1 && cl - i_Length >= 0)
 					{
-						nsSocketTransport* trans = NS_STATIC_CAST (nsSocketTransport*, channel);
-						if (trans != NULL)
-						{
+
+                        nsresult rv;
+                        nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (channel, &rv);
+
+                        if (NS_SUCCEEDED (rv))
+                        {
+    						// nsSocketTransport* trans = NS_STATIC_CAST (nsSocketTransport*, channel);
 							trans -> SetBytesAllowed (cl - i_Length);
 							mContentLengthDone = PR_TRUE;
 
@@ -365,7 +369,7 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
 					nsString2 fromStr ( "chunked" );
 					nsString2 toStr   ("unchunked");
 				    nsCOMPtr<nsIStreamListener> converterListener;
-					rv = StreamConvService -> AsyncConvertData (fromStr.GetUnicode(), toStr.GetUnicode(), mResponseDataListener, nsnull, getter_AddRefs (converterListener));
+					rv = StreamConvService -> AsyncConvertData (fromStr.GetUnicode(), toStr.GetUnicode(), mResponseDataListener, channel, getter_AddRefs (converterListener));
 					if (NS_FAILED(rv)) return rv;
 					mResponseDataListener = converterListener;
 					mChunkConverterPushed = PR_TRUE;

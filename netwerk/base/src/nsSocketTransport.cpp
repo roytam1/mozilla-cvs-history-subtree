@@ -447,8 +447,6 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
         // Fall into the Done state...
         //
       case eSocketState_Done:
-        printf ("eSocketState_Done\n");
-
         PR_LOG(gSocketLog, PR_LOG_DEBUG, 
                ("Transport [%s:%d %x] is in done state.\n", 
                 mHostName, mPort, this));
@@ -457,7 +455,6 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
         if (GetFlag(eSocketRead_Done)) {
           // Fire a notification that the read has finished...
           if (mReadListener) {
-            printf ("eSocketState_Done: firing OnStopRequest ()\n");
             mReadListener->OnStopRequest(this, mReadContext, mStatus, nsnull);
             mReadListener = null_nsCOMPtr();
             mReadContext  = null_nsCOMPtr();
@@ -531,7 +528,6 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
 
       case eSocketState_WaitReadWrite:
         // Process the read request...
-        printf ("eSocketState_WaitReadWrite: mBytesAllowed=%d\n", mBytesAllowed);
         if (GetReadType() != eSocketRead_None)
         {
             if (mBytesAllowed == 0)
@@ -989,16 +985,12 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
     {
       nsresult rv1;
 
-      printf ("doRead (): calling OnDataAvailable, offset=%d, totalBytes=%d, mBytesAllowed=%d\n", mReadOffset, totalBytesWritten, mBytesAllowed);
-
       if (mBytesAllowed != -1 && mBytesAllowed != 0)
             mBytesAllowed -= totalBytesWritten;
 
       rv1 = mReadListener->OnDataAvailable(this, mReadContext, mReadPipeIn, 
                                            mReadOffset, 
                                            totalBytesWritten);
-
-      printf ("doRead (): OnDataAvailable complete, mBytesAllowed=%d\n", mBytesAllowed);
 
       //
       // If the consumer returns failure, then cancel the operation...
@@ -1016,9 +1008,6 @@ nsresult nsSocketTransport::doRead(PRInt16 aSelectFlags)
   if (NS_SUCCEEDED(rv)) {
     if (info.bEOF || mBytesAllowed == 0)
     {
-
-      printf ("doRead (): EOF condition detected, mBytesAllowed=%d\n", mBytesAllowed);
-
       // EOF condition
       mSelectFlags &= (~PR_POLL_READ);
       rv = NS_OK;
@@ -1303,13 +1292,8 @@ nsSocketTransport::SetBytesAllowed (PRInt32 bytes)
 {
 	mBytesAllowed = bytes;
 
-    printf ("nsSocketTransport::SetBytesAllowed (): bytes = %d\n", bytes);
-
     if (bytes == 0)
-    {
-        // XXX/ruslan: potential raise cond. here?
-        mService -> wakeup (this);
-    }
+        mService -> Wakeup (this);
 
     return NS_OK;
 }

@@ -210,7 +210,6 @@ interface nsIChannel : nsIRequest
      * notifications.
      */
     attribute nsIInterfaceRequestor notificationCallbacks;
-
 };
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -426,9 +426,7 @@ nsSocketTransportService::Run(void)
     nsSocketTransport* transport;
     int i;
 
-    printf ("Calling PR_Poll ....\n");
     count = PR_Poll(mSelectFDSet, mSelectFDSetCount, pollTimeout);
-    printf ("Calling PR_Poll .... done\n");
 
     if (-1 == count) {
       // XXX: PR_Poll failed...  What should happen?
@@ -484,13 +482,9 @@ nsSocketTransportService::Run(void)
             //
             NS_ASSERTION(!(mSelectFDSet[0].out_flags & PR_POLL_EXCEPT), 
                          "Exception on Pollable event.");
-            printf ("Waiting for pollable event ....\n");
             PR_WaitForPollableEvent(mThreadEvent);
-            printf ("Waiting for pollable event ....done \n");
 
-            printf ("ProcessWorkQ ...\n");
             rv = ProcessWorkQ();
-            printf ("ProcessWorkQ done \n");
           }
 #else
           //
@@ -521,9 +515,7 @@ nsSocketTransportService::Run(void)
 
 #ifndef USE_POLLABLE_EVENT
     /* Process any pending operations on the mWorkQ... */
-    printf ("ProcessWorkQ another\n");
     rv = ProcessWorkQ();
-    printf ("ProcessWorkQ another done\n");
 #endif /* !USE_POLLABLE_EVENT */
   }
 
@@ -611,16 +603,26 @@ nsSocketTransportService::ReuseTransport(nsIChannel* i_Transport,
     return NS_OK;
 }
 
-nsresult
-nsSocketTransportService::wakeup (nsSocketTransport* transport)
+/**
+ * wakeup the transport from PR_Poll ()
+ */
+
+NS_IMETHODIMP
+nsSocketTransportService::Wakeup (nsIChannel* i_Transport)
 {
-    printf ("Setting pollable event ....\n");
+    nsSocketTransport *transport = NS_STATIC_CAST (nsSocketTransport *, i_Transport);
+
+    if (transport == NULL)
+        return NS_ERROR_NULL_POINTER;
+
     AddToWorkQ (transport);
 
 #ifdef USE_POLLABLE_EVENT
     PR_SetPollableEvent (mThreadEvent);
+#else
+    // XXX/ruslan: normally we would call PR_Interrupt (), but since it did work
+    //  wait till NSPR fixes it one day
 #endif
-    printf ("Setting pollable event .... done\n");
     return NS_OK;
 }
 

@@ -25,6 +25,7 @@
 
 #include "nsIStreamConverter.h"
 #include "nsIFactory.h"
+#include "nsCOMPtr.h"
 
 #define NS_HTTPCHUNKCONVERTER_CID					\
 {													\
@@ -83,6 +84,8 @@ private:
 	
 	char mLenBuf[20];
 	PRUint32	mLenBufCnt;
+    
+    nsCOMPtr<nsISupports>   mAsyncConvContext;
 };
 
 

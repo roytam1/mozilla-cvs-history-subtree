@@ -67,7 +67,6 @@ REQUIRES= necko
 INCS = $(INCS)                  \
         -I$(DEPTH)\dist\include \
         -I..\public \
-	-I..\..\..\base\src \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak> 
