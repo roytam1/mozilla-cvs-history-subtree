@@ -374,7 +374,7 @@ void CNetscapeEditView::OnCharacterNoTextStyles()
 
 void CNetscapeEditView::OnCharacterNone()
 {
-	XP_Bool prefBool;
+	PRBool prefBool;
 	PREF_GetBoolPref("editor.hints.removelinks",&prefBool);
     // Warn user if any links are included 
 	if ( EDT_SelectionContainsLink(GET_MWCONTEXT) &&
@@ -390,7 +390,7 @@ void CNetscapeEditView::OnCharacterNone()
         UINT nRetVal = dlg.DoModal();
         if ( dlg.m_bDontShowAgain ) {
             // Suppress showing this again in futures
-			PREF_SetBoolPref("editor.hints.removelinks",FALSE);
+			PREF_SetBoolPref("editor.hints.removelinks",PR_FALSE);
         }
         if( nRetVal != IDOK ){
             OnCharacterNoTextStyles();
@@ -1900,9 +1900,11 @@ void CNetscapeEditView::OnInsertHRule()
 
 			PREF_GetIntPref("editor.hrule.height",&iHeight);
 			PREF_GetIntPref("editor.hrule.width",&iWidth);
-			PREF_GetBoolPref("editor.hrule.width_percent",&(pData->bWidthPercent));
+      PRBool widthPercent;
+			PREF_GetBoolPref("editor.hrule.width_percent",&widthPercent);
+      pData->bWidthPercent = (XP_Bool)widthPercent;
 			// Confusing! Pref and UI use "Shading" but tag param is NOSHADE
-            BOOL bShading;
+            PRBool bShading;
             PREF_GetBoolPref("editor.hrule.shading",&bShading);
             pData->bNoShade = !bShading;
 

@@ -577,7 +577,9 @@ void CPrintCX::Initialize(BOOL bOwnDC, RECT *pRect, BOOL bInitialPalette, BOOL b
 		printRes.cx = 0;
 		printRes.cy = 0;
 #ifdef XP_WIN32
-		PREF_GetBoolPref("browser.print_background",&m_printBk);
+    PRBool printBk;
+		PREF_GetBoolPref("browser.print_background",&printBk);
+    m_printBk = printBk;
 #endif
 	}
 	else {
