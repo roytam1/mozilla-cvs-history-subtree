@@ -991,6 +991,18 @@ static NSArray* sToolbarDefaults = nil;
   [mSidebarDrawer toggle:aSender];
 }
 
+// map command-left arrow to 'back'
+- (void)moveToBeginningOfLine:(id)sender
+{
+  [self back:sender];
+}
+
+// map command-left arrow to 'forward'
+- (void)moveToEndOfLine:(id)sender
+{
+  [self forward:sender];
+}
+
 -(void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer activate:(BOOL)activate
 {
     if (mInitialized) {
