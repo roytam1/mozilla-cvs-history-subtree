@@ -604,7 +604,7 @@ nsresult nsImapProtocol::SetupWithUrl(nsIURI * aURL, nsISupports* aConsumer)
       if (NS_SUCCEEDED(rv) && aURL)
       {
         aURL->GetPort(&port);
-        aURL->GetHost(getter_Copies(hostName));
+        server->GetRealHostName(getter_Copies(hostName));
 
         ClearFlag(IMAP_CONNECTION_IS_OPEN); 
         PRBool isSecure = PR_FALSE;
@@ -6560,7 +6560,7 @@ PRBool nsImapProtocol::TryToLogon()
 		password = nsCRT::strdup(m_logonCookie);
 	else
 		rv = server->GetPassword(&password);
-    rv = server->GetUsername(&userName);
+    rv = server->GetRealUsername(&userName);
 
   }
       
