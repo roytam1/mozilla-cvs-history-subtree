@@ -1745,12 +1745,12 @@ NS_IMETHODIMP nsLinkableAccessible::GetAccNumActions(PRUint8 *_retval)
 }
 
 /* wstring getAccActionName (in PRUint8 index); */
-NS_IMETHODIMP nsLinkableAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+NS_IMETHODIMP nsLinkableAccessible::GetAccActionName(PRUint8 index, nsAWritableString& _retval)
 {
   // Action 0 (default action): Jump to link
   if (index == 0) {   
     if (IsALink()) {
-      *_retval = ToNewUnicode(NS_LITERAL_STRING("jump")); 
+      _retval = NS_LITERAL_STRING("jump"); 
       return NS_OK;
     }
   }

@@ -69,20 +69,19 @@ NS_IMETHODIMP nsHTMLFormControlAccessible::AppendLabelFor(nsIContent *aLookNode,
 }
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTMLFormControlAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLFormControlAccessible::GetAccName(nsAWritableString& _retval)
 {
   nsCOMPtr<nsIContent> walkUpContent(do_QueryInterface(mDOMNode));
   nsCOMPtr<nsIDOMHTMLLabelElement> labelElement;
   nsCOMPtr<nsIDOMHTMLFormElement> formElement;
-  nsAutoString nameString;
   nsresult rv = NS_OK;
 
-  
+  nsAutoString label;
   // go up tree get name of ancestor label if there is one. Don't go up farther than form element
-  while (walkUpContent && nameString.IsEmpty() && !formElement) {
+  while (walkUpContent && label.IsEmpty() && !formElement) {
     labelElement = do_QueryInterface(walkUpContent);
     if (labelElement) 
-      rv = AppendFlatStringFromSubtree(walkUpContent, &nameString);
+      rv = AppendFlatStringFromSubtree(walkUpContent, &label);
     formElement = do_QueryInterface(walkUpContent); // reached top ancestor in form
     nsCOMPtr<nsIContent> nextParent;
     walkUpContent->GetParent(*getter_AddRefs(nextParent));
@@ -100,11 +99,11 @@ NS_IMETHODIMP nsHTMLFormControlAccessible::GetAccName(PRUnichar **_retval)
     elt->GetAttribute(NS_LITERAL_STRING("id"), forId);
     // Actually we'll be walking down the content this time, with a depth first search
     if (!forId.IsEmpty())
-      AppendLabelFor(walkUpContent,&forId,&nameString); 
+      AppendLabelFor(walkUpContent,&forId,&label); 
   } 
   
-  nameString.CompressWhitespace();
-  *_retval = nameString.ToNewUnicode();
+  label.CompressWhitespace();
+  _retval.Assign(label);
   
   return NS_OK;
 }
@@ -158,7 +157,7 @@ NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccNumActions(PRUint8 *_retval)
 }
 
 /* wstring getAccActionName (in PRUint8 index); */
-NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccActionName(PRUint8 index, nsAWritableString& _retval)
 {
   if (index == 0) {
     // check or uncheck
@@ -169,9 +168,9 @@ NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccActionName(PRUint8 index, PRUnicha
       element->GetChecked(&checked);
 
     if (checked)
-      *_retval = ToNewUnicode(NS_LITERAL_STRING("uncheck"));
+      _retval = NS_LITERAL_STRING("uncheck");
     else
-      *_retval = ToNewUnicode(NS_LITERAL_STRING("check"));
+      _retval = NS_LITERAL_STRING("check");
 
     return NS_OK;
   }
@@ -207,10 +206,10 @@ NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 }
 
 /* wstring getAccActionName (in PRUint8 index); */
-NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetAccActionName(PRUint8 index, nsAWritableString& _retval)
 {
   if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("select"));
+    _retval = NS_LITERAL_STRING("select");
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -251,10 +250,10 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 }
 
 /* wstring getAccActionName (in PRUint8 index); */
-NS_IMETHODIMP nsHTMLButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLButtonAccessible::GetAccActionName(PRUint8 index, nsAWritableString& _retval)
 {
   if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("press"));
+    _retval = NS_LITERAL_STRING("press");
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -279,9 +278,8 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetAccRole(PRUint32 *_retval)
 }
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTMLButtonAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLButtonAccessible::GetAccName(nsAWritableString& _retval)
 {
-  *_retval = nsnull;
   nsCOMPtr<nsIDOMHTMLInputElement> button(do_QueryInterface(mDOMNode));
 
   if (!button)
@@ -290,8 +288,7 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetAccName(PRUnichar **_retval)
   nsAutoString name;
   button->GetValue(name);
   name.CompressWhitespace();
-
-  *_retval = name.ToNewUnicode();
+  _retval.Assign(name);
 
   return NS_OK;
 }
@@ -312,10 +309,10 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccNumActions(PRUint8 *_retval)
 }
 
 /* wstring getAccActionName (in PRUint8 index); */
-NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccActionName(PRUint8 index, nsAWritableString& _retval)
 {
   if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("press"));
+    _retval = NS_LITERAL_STRING("press");
     return NS_OK;
   }
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -349,19 +346,19 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccState(PRUint32 *_retval)
 
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccName(nsAWritableString& _retval)
 {
-  *_retval = nsnull;
   nsresult rv = NS_ERROR_FAILURE;
-  nsAutoString name;
   nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
 
+  nsAutoString name;
   if (content)
     rv = AppendFlatStringFromSubtree(content, &name);
 
-  if (NS_SUCCEEDED(rv))  {
+  if (NS_SUCCEEDED(rv)) {
+    // Temp var needed until CompressWhitespace built for nsAWritableString
     name.CompressWhitespace();
-    *_retval = name.ToNewUnicode();
+    _retval.Assign(name);
   }
 
   return rv;
@@ -383,13 +380,11 @@ NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccRole(PRUint32 *_retval)
 }
 
 /* wstring getAccValue (); */
-NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccValue(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccValue(nsAWritableString& _retval)
 {
   nsCOMPtr<nsIDOMHTMLTextAreaElement> textArea(do_QueryInterface(mDOMNode));
   if (textArea) {
-    nsAutoString valueString;
-    textArea->GetValue(valueString);
-    *_retval = ToNewUnicode(valueString);
+    textArea->GetValue(_retval);
     return NS_OK;
   }
   

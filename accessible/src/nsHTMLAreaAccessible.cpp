@@ -57,30 +57,21 @@ NS_IMETHODIMP nsHTMLAreaAccessible::GetAccRole(PRUint32 *_retval)
 }
 
 /* wstring getAccValue (); */
-NS_IMETHODIMP nsHTMLAreaAccessible::GetAccValue(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLAreaAccessible::GetAccValue(nsAWritableString& _retval)
 {
-  *_retval = 0;
   nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(mDOMNode));
-  if (elt) {
-    nsAutoString hrefString;
-    elt->GetAttribute(NS_LITERAL_STRING("href"), hrefString);
-    *_retval = hrefString.ToNewUnicode();
-  }
+  if (elt) 
+    elt->GetAttribute(NS_LITERAL_STRING("href"), _retval);
   return NS_OK;
 }
 
 /* wstring getAccDescription (); */
-NS_IMETHODIMP nsHTMLAreaAccessible::GetAccDescription(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLAreaAccessible::GetAccDescription(nsAWritableString& _retval)
 {
   // Still to do - follow IE's standard here
-  *_retval = 0;
-  nsAutoString shapeString;
   nsCOMPtr<nsIDOMHTMLAreaElement> area(do_QueryInterface(mDOMNode));
-  if (area) {
-    area->GetShape(shapeString);
-    if (!shapeString.IsEmpty())
-      *_retval = ToNewUnicode(shapeString);
-  }
+  if (area) 
+    area->GetShape(_retval);
   return NS_OK;
 }
 

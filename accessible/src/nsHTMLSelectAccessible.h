@@ -43,7 +43,7 @@ public:
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccRole(PRUint32 *_retval);
-  NS_IMETHOD GetAccValue(PRUnichar **_retval);
+  NS_IMETHOD GetAccValue(nsAWritableString& _retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
 
 // helper method to verify frames
@@ -64,7 +64,7 @@ public:
   NS_IMETHOD GetAccRole(PRUint32 *_retval);
   NS_IMETHOD GetAccNextSibling(nsIAccessible **_retval);
   NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
-  NS_IMETHOD GetAccName(PRUnichar **_retval);
+  NS_IMETHOD GetAccName(nsAWritableString& _retval);
 
   nsCOMPtr<nsIAccessible> mParent;
 };

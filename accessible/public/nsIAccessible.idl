@@ -38,16 +38,16 @@ interface nsIAccessible : nsISupports
   nsIAccessible getAccLastChild();
 
   long getAccChildCount();
-  wstring getAccName();
-  wstring getAccValue();
-  void setAccName(in wstring name);
+  DOMString getAccName();
+  DOMString getAccValue();
+  void setAccName(in DOMString name);
 
-  wstring getAccDescription();
+  DOMString getAccDescription();
   unsigned long getAccRole();
   unsigned long getAccState();
   unsigned long getAccExtState();
 
-  wstring getAccHelp();
+  DOMString getAccHelp();
   nsIAccessible getAccFocused();
 
   nsIAccessible accGetAt(in long x, in long y);
@@ -69,7 +69,7 @@ interface nsIAccessible : nsISupports
   void accTakeFocus();
 
   PRUint8 getAccNumActions();
-  wstring getAccActionName(in PRUint8 index);
+  DOMString getAccActionName(in PRUint8 index);
   void accDoAction(in PRUint8 index);   // Action number 0 is the default action
 
   nsIDOMNode accGetDOMNode();

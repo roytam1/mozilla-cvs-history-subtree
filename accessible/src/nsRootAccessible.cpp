@@ -44,6 +44,7 @@
 #include "nsIAccessibleSelectable.h"
 #include "nsIDOMHTMLCollection.h"
 #include "nsLayoutAtoms.h"
+#include "nsString.h"
 #include "nsXPIDLString.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
@@ -85,7 +86,7 @@ nsRootAccessible::~nsRootAccessible()
 }
 
   /* attribute wstring accName; */
-NS_IMETHODIMP nsRootAccessible::GetAccName(PRUnichar * *aAccName) 
+NS_IMETHODIMP nsRootAccessible::GetAccName(nsAWritableString& aAccName) 
 { 
   return GetTitle(aAccName);
 }
@@ -146,7 +147,7 @@ NS_IMETHODIMP nsRootAccessible::GetAccRole(PRUint32 *aAccRole)
   return NS_OK;  
 }
 
-NS_IMETHODIMP nsRootAccessible::GetAccValue(PRUnichar * *aAccValue)
+NS_IMETHODIMP nsRootAccessible::GetAccValue(nsAWritableString& aAccValue)
 {
   return GetURL(aAccValue);
 }
@@ -320,27 +321,27 @@ NS_IMETHODIMP nsRootAccessible::Input(nsIDOMEvent* aEvent) { return NS_OK; }
 
 // ------- nsIAccessibleDocument Methods (5) ---------------
 
-NS_IMETHODIMP nsRootAccessible::GetURL(PRUnichar **aURL)
+NS_IMETHODIMP nsRootAccessible::GetURL(nsAWritableString& aURL)
 {
   return nsDocAccessibleMixin::GetURL(aURL);
 }
 
-NS_IMETHODIMP nsRootAccessible::GetTitle(PRUnichar **aTitle)
+NS_IMETHODIMP nsRootAccessible::GetTitle(nsAWritableString& aTitle)
 {
   return nsDocAccessibleMixin::GetTitle(aTitle);
 }
 
-NS_IMETHODIMP nsRootAccessible::GetMimeType(PRUnichar **aMimeType)
+NS_IMETHODIMP nsRootAccessible::GetMimeType(nsAWritableString& aMimeType)
 {
   return nsDocAccessibleMixin::GetMimeType(aMimeType);
 }
 
-NS_IMETHODIMP nsRootAccessible::GetDocType(PRUnichar **aDocType)
+NS_IMETHODIMP nsRootAccessible::GetDocType(nsAWritableString& aDocType)
 {
   return nsDocAccessibleMixin::GetDocType(aDocType);
 }
 
-NS_IMETHODIMP nsRootAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
+NS_IMETHODIMP nsRootAccessible::GetNameSpaceURIForID(PRInt16 aNameSpaceID, nsAWritableString& aNameSpaceURI)
 {
   return nsDocAccessibleMixin::GetNameSpaceURIForID(aNameSpaceID, aNameSpaceURI);
 }
@@ -373,67 +374,47 @@ NS_IMETHODIMP nsDocAccessibleMixin::GetURL(nsAWritableString& aURL)
   // mDocument->GetDocumentURL(getter_AddRefs(pURI));
   nsXPIDLCString path;
   pURI->GetSpec(getter_Copies(path));
-  CopyASCIItoUCS2(nsDependentCString(path), aURL);
+  CopyASCIItoUCSn2(nsDependentCString(path), aURL);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocAccessibleMixin::GetTitle(PRUnichar **aTitle)
+NS_IMETHODIMP nsDocAccessible Mixin::GetTitle(nsAWritableString& aTitle)
 {
-  const nsString* docTitle = mDocument->GetDocumentTitle();
-  if (docTitle && !docTitle->IsEmpty())
-    *aTitle = docTitle->ToNewUnicode();
-  else *aTitle = ToNewUnicode(NS_LITERAL_STRING("Document"));
+  // This doesn't leak - we don't own the const pointer that's returned
+  aTitle = *(mDocument->GetDocumentTitle());
   return NS_OK;
 }
 
-NS_IMETHODIMP nsDocAccessibleMixin::GetMimeType(PRUnichar **aMimeType)
+NS_IMETHODIMP nsDocAccessibleMixin::GetMimeType(nsAWritableString& aMimeType)
 {
-  *aMimeType = nsnull;
-  if (mDocument) {
-    nsAutoString mimeType;
-    if (NS_SUCCEEDED(mDocument->GetContentType(mimeType))) {
-       *aMimeType = mimeType.ToNewUnicode();
-      return NS_OK;
-    }
-  }
+  if (mDocument)
+    return mDocument->GetContentType(aMimeType); 
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsDocAccessibleMixin::GetDocType(PRUnichar **aDocType)
+NS_IMETHODIMP nsDocAccessibleMixin::GetDocType(nsAWritableString& aDocType)
 {
-  *aDocType = nsnull;
   nsCOMPtr<nsIXULDocument> xulDoc(do_QueryInterface(mDocument));
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(mDocument));
   nsCOMPtr<nsIDOMDocumentType> docType;
 
   if (xulDoc) {
-    *aDocType = ToNewUnicode(NS_LITERAL_STRING("window")); // doctype not implemented for XUL at time of writing - causes assertion
+    aDocType = NS_LITERAL_STRING("window"); // doctype not implemented for XUL at time of writing - causes assertion
     return NS_OK;
   }
   else if (domDoc && NS_SUCCEEDED(domDoc->GetDoctype(getter_AddRefs(docType))) && docType) {
-    nsAutoString docTypeString;
-    nsresult rv = docType->GetName(docTypeString);
-    if (NS_SUCCEEDED(rv)) {
-       *aDocType = docTypeString.ToNewUnicode();
-      return NS_OK;
-    }
+    return docType->GetName(aDocType);
   }
 
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP nsDocAccessibleMixin::GetNameSpaceURIForID(PRInt16 aNameSpaceID, PRUnichar **aNameSpaceURI)
+NS_IMETHODIMP nsDocAccessibleMixin::GetNameSpaceURIForID(PRInt16 aNameSpaceID, nsAWritableString& aNameSpaceURI)
 {
-  *aNameSpaceURI = nsnull;
   if (mDocument) {
     nsCOMPtr<nsINameSpaceManager> nameSpaceManager;
-
-    if (NS_SUCCEEDED(mDocument->GetNameSpaceManager(*getter_AddRefs(nameSpaceManager)))) {
-      nsAutoString nameSpaceURI;
-      nameSpaceManager->GetNameSpaceURI(aNameSpaceID, nameSpaceURI);
-      *aNameSpaceURI = nameSpaceURI.ToNewUnicode();
-      return NS_OK;
-    }
+    if (NS_SUCCEEDED(mDocument->GetNameSpaceManager(*getter_AddRefs(nameSpaceManager)))) 
+      return nameSpaceManager->GetNameSpaceURI(aNameSpaceID, aNameSpaceURI);
   }
   return NS_ERROR_FAILURE;
 }

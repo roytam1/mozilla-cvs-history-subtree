@@ -57,7 +57,7 @@ public:
   NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
   NS_IMETHOD GetAccParent(nsIAccessible **_retval);
   NS_IMETHOD GetAccRole(PRUint32 *_retval);
-  NS_IMETHOD GetAccValue(PRUnichar **_retval);
+  NS_IMETHOD GetAccValue(nsAWritableString& _retval);
 
   virtual void GetBounds(nsRect& aBounds, nsIFrame** aRelativeFrame);
 
@@ -108,13 +108,13 @@ public:
   NS_IMETHOD GetAccNextSibling(nsIAccessible **_retval);
   NS_IMETHOD GetAccPreviousSibling(nsIAccessible **_retval);
   NS_IMETHOD GetAccParent(nsIAccessible **_retval);
-  NS_IMETHOD GetAccName(PRUnichar **_retval);
+  NS_IMETHOD GetAccName(nsAWritableString& _retval);
   NS_IMETHOD GetAccRole(PRUint32 *_retval);
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccChildCount(PRInt32 *_retval);
   NS_IMETHOD GetAccNumActions(PRUint8 *_retval);
-  NS_IMETHOD GetAccActionName(PRUint8 index, PRUnichar **_retval);
+  NS_IMETHOD GetAccActionName(PRUint8 index, nsAWritableString& _retval);
   NS_IMETHOD AccDoAction(PRUint8 index);
 
 
@@ -193,14 +193,12 @@ nsHTMLSelectAccessible::nsHTMLSelectAccessible(nsIDOMNode* aDOMNode,
 
 NS_IMPL_ISUPPORTS_INHERITED1(nsHTMLSelectAccessible, nsAccessible, nsIAccessibleSelectable)
 
-NS_IMETHODIMP nsHTMLSelectAccessible::GetAccValue(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLSelectAccessible::GetAccValue(nsAWritableString& _retval)
 {
   nsCOMPtr<nsIAccessible> text;
   GetAccFirstChild(getter_AddRefs(text));
   if (text)
     return text->GetAccValue(_retval);
-
-  *_retval = nsnull;
 
   return NS_ERROR_FAILURE;
 }
@@ -254,7 +252,7 @@ nsLeafAccessible(aDOMNode, aShell)
   mParent = aParent;
 }
 
-NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccValue(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccValue(nsAWritableString& _retval)
 {
   nsIFrame* frame = nsAccessible::GetBoundsFrame();
   nsCOMPtr<nsIPresContext> context;
@@ -275,17 +273,11 @@ NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccValue(PRUnichar **_retval)
   nsCOMPtr<nsIContent> content;
   frame->GetContent(getter_AddRefs(content));
 
-  if (!content) {
-    *_retval = nsnull;
+  if (!content) 
     return NS_ERROR_FAILURE;
-  }
 
-  nsAutoString nameString;
+  AppendFlatStringFromSubtree(content, &_retval);
 
-  AppendFlatStringFromSubtree(content, &nameString);
-  nameString.CompressWhitespace();
-
-  *_retval = nameString.ToNewUnicode();
   return NS_OK;
 }
 
@@ -483,12 +475,12 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccParent(nsIAccessible **_retval
 }
 
 
-NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccName(nsAWritableString& _retval)
 {
   return GetAccActionName(0, _retval);
 }
 
-NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccActionName(PRUint8 index, nsAWritableString& _retval)
 {
    SetupMenuListener();
 
@@ -498,9 +490,9 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccActionName(PRUint8 index, PRUn
    // and Open if closed.
 
    if (mOpen)
-       *_retval = ToNewUnicode(NS_LITERAL_STRING("Close"));
+       _retval = NS_LITERAL_STRING("Close");
    else
-       *_retval = ToNewUnicode(NS_LITERAL_STRING("Open"));
+       _retval = NS_LITERAL_STRING("Open");
 
   return NS_OK;
 }
@@ -776,20 +768,20 @@ NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccPreviousSibling(nsIAccessible 
   return NS_OK;
 } 
 
-NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLSelectOptionAccessible::GetAccName(nsAWritableString& _retval)
 {
-  nsAutoString nameString;
-
   nsCOMPtr<nsIContent> content (do_QueryInterface(mDOMNode));
   if (!content) {
-    *_retval = nsnull;
     return NS_ERROR_FAILURE;
   }
 
-  AppendFlatStringFromSubtree(content, &nameString);
-  nameString.CompressWhitespace();
-
-  *_retval = nameString.ToNewUnicode();
-  return NS_OK;
+  nsAutoString option;
+  nsresult rv = AppendFlatStringFromSubtree(content, &option);
+  if (NS_SUCCEEDED(rv)) {
+    // Temp var needed until CompressWhitespace built for nsAWritableString
+    option.CompressWhitespace();
+    _retval.Assign(option);
+  }
+  return rv;
 }
 

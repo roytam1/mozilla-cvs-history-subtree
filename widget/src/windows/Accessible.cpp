@@ -28,7 +28,6 @@
 #include "nsIWidget.h"
 #include "nsWindow.h"
 #include "nsCOMPtr.h"
-#include "nsXPIDLString.h"
 #include "nsIAccessibleEventReceiver.h"
 #include "nsReadableUtils.h"
 #include "nsITextContent.h"
@@ -273,18 +272,18 @@ STDMETHODIMP Accessible::get_accChild(
 
 STDMETHODIMP Accessible::get_accName( 
       /* [optional][in] */ VARIANT varChild,
-      /* [retval][out] */ BSTR __RPC_FAR *pszValue)
+      /* [retval][out] */ BSTR __RPC_FAR *pszName)
 {
-  *pszValue = NULL;
+  *pszName = NULL;
   nsCOMPtr<nsIAccessible> a;
   GetNSAccessibleFor(varChild,a);
   if (a) {
-     nsXPIDLString name;
-     nsresult rv = a->GetAccName(getter_Copies(name));
+     nsAutoString name;
+     nsresult rv = a->GetAccName(name);
      if (NS_FAILED(rv))
         return S_FALSE;
 
-     *pszValue = ::SysAllocString(name.get());
+     *pszName = ::SysAllocString(name.GetUnicode());
   }
 
   return S_OK;
@@ -299,12 +298,12 @@ STDMETHODIMP Accessible::get_accValue(
   nsCOMPtr<nsIAccessible> a;
   GetNSAccessibleFor(varChild,a);
   if (a) {
-     nsXPIDLString name;
-     nsresult rv = a->GetAccValue(getter_Copies(name));
+     nsAutoString value;
+     nsresult rv = a->GetAccValue(value);
      if (NS_FAILED(rv))
         return S_FALSE;
 
-     *pszValue = ::SysAllocString(name.get());
+     *pszValue = ::SysAllocString(value.GetUnicode());
   }
 
   return S_OK;
@@ -313,18 +312,18 @@ STDMETHODIMP Accessible::get_accValue(
 
 STDMETHODIMP Accessible::get_accDescription( 
       /* [optional][in] */ VARIANT varChild,
-      /* [retval][out] */ BSTR __RPC_FAR *pszValue)
+      /* [retval][out] */ BSTR __RPC_FAR *pszDescription)
 {
-  *pszValue = NULL;
+  *pszDescription = NULL;
   nsCOMPtr<nsIAccessible> a;
   GetNSAccessibleFor(varChild,a);
   if (a) {
-     nsXPIDLString name;
-     nsresult rv = a->GetAccDescription(getter_Copies(name));
+     nsAutoString description;
+     nsresult rv = a->GetAccDescription(description);
      if (NS_FAILED(rv))
         return S_FALSE;
 
-     *pszValue = ::SysAllocString(name.get());
+     *pszDescription = ::SysAllocString(description.GetUnicode());
   }
 
   return S_OK;
@@ -435,12 +434,12 @@ STDMETHODIMP Accessible::get_accDefaultAction(
   nsCOMPtr<nsIAccessible> a;
   GetNSAccessibleFor(varChild,a);
   if (a) {
-     nsXPIDLString name;
-     nsresult rv = a->GetAccActionName(0,getter_Copies(name));
+     nsAutoString defaultAction;
+     nsresult rv = a->GetAccActionName(0,defaultAction);
      if (NS_FAILED(rv))
         return S_FALSE;
 
-     *pszDefaultAction = ::SysAllocString(name.get());
+     *pszDefaultAction = ::SysAllocString(defaultAction.GetUnicode());
   }
 
   return S_OK;
@@ -741,9 +740,9 @@ STDMETHODIMP DocAccessible::get_URL(/* [out] */ BSTR __RPC_FAR *aURL)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    nsXPIDLString pszURL;
-    if (NS_SUCCEEDED(accDoc->GetURL(getter_Copies(pszURL)))) {
-      *aURL= ::SysAllocString(pszURL);
+    nsAutoString URL;
+    if (NS_SUCCEEDED(accDoc->GetURL(URL))) {
+      *aURL= ::SysAllocString(URL.GetUnicode());
       return S_OK;
     }
   }
@@ -754,9 +753,9 @@ STDMETHODIMP DocAccessible::get_title( /* [out] */ BSTR __RPC_FAR *aTitle)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    nsXPIDLString pszTitle;
-    if (NS_SUCCEEDED(accDoc->GetTitle(getter_Copies(pszTitle)))) {
-      *aTitle= ::SysAllocString(pszTitle);
+    nsAutoString title;
+    if (NS_SUCCEEDED(accDoc->GetTitle(title))) { // getter_Copies(pszTitle)))) {
+      *aTitle= ::SysAllocString(title.GetUnicode());
       return S_OK;
     }
   }
@@ -767,9 +766,9 @@ STDMETHODIMP DocAccessible::get_mimeType(/* [out] */ BSTR __RPC_FAR *aMimeType)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    nsXPIDLString pszMimeType;
-    if (NS_SUCCEEDED(accDoc->GetMimeType(getter_Copies(pszMimeType)))) {
-      *aMimeType= ::SysAllocString(pszMimeType);
+    nsAutoString mimeType;
+    if (NS_SUCCEEDED(accDoc->GetMimeType(mimeType))) {
+      *aMimeType= ::SysAllocString(mimeType.GetUnicode());
       return S_OK;
     }
   }
@@ -780,9 +779,9 @@ STDMETHODIMP DocAccessible::get_docType(/* [out] */ BSTR __RPC_FAR *aDocType)
 {
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
-    nsXPIDLString pszDocType;
-    if (NS_SUCCEEDED(accDoc->GetDocType(getter_Copies(pszDocType)))) {
-      *aDocType= ::SysAllocString(pszDocType);
+    nsAutoString docType;
+    if (NS_SUCCEEDED(accDoc->GetDocType(docType))) {
+      *aDocType= ::SysAllocString(docType.GetUnicode());
       return S_OK;
     }
   }
@@ -795,9 +794,9 @@ STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID
   nsCOMPtr<nsIAccessibleDocument> accDoc(do_QueryInterface(mAccessible));
   if (accDoc) {
     *aNameSpaceURI = NULL;
-    nsXPIDLString pszNameSpaceURI;
-    if (NS_SUCCEEDED(accDoc->GetNameSpaceURIForID(aNameSpaceID, getter_Copies(pszNameSpaceURI)))) 
-      *aNameSpaceURI = ::SysAllocString(pszNameSpaceURI);
+    nsAutoString nameSpaceURI;
+    if (NS_SUCCEEDED(accDoc->GetNameSpaceURIForID(aNameSpaceID, nameSpaceURI))) 
+      *aNameSpaceURI = ::SysAllocString(nameSpaceURI.GetUnicode());
     return S_OK;
   }
 

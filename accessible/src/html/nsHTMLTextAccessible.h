@@ -33,7 +33,7 @@ class nsHTMLTextAccessible : public nsLinkableAccessible
 
 public:
   nsHTMLTextAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell);
-  NS_IMETHOD GetAccName(PRUnichar **_retval); 
+  NS_IMETHOD GetAccName(nsAWritableString& _retval); 
   NS_IMETHOD GetAccRole(PRUint32 *_retval); 
   NS_IMETHOD GetAccFirstChild(nsIAccessible **_retval);
   NS_IMETHOD GetAccLastChild(nsIAccessible **_retval);

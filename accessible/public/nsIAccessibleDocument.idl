@@ -17,22 +17,22 @@
  * Copyright (C) 1999 Netscape Communications Corporation. All
  * Rights Reserved.
  * 
- * Original Author: Eric D Vaughan (evaughan@netscape.com)
+ * Original Author: Aaron Leventhal
  * 
  * Contributor(s): 
- * Aaron Leventhal
  * John Gaunt
  */
 
 #include "nsISupports.idl"
 #include "nsIAccessible.idl"
+#include "domstubs.idl"
 
 [scriptable, uuid(8781FC88-355F-4439-881F-6504A0A1CEB6)]
 interface nsIAccessibleDocument : nsISupports
 {
-  wstring getURL();
-  wstring getTitle();
-  wstring getMimeType();
-  wstring getDocType();
-  wstring getNameSpaceURIForID(in short nameSpaceID);
+  DOMString getURL();
+  DOMString getTitle();
+  DOMString getMimeType();
+  DOMString getDocType();
+  DOMString getNameSpaceURIForID(in short nameSpaceID);
 };

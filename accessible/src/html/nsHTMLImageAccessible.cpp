@@ -56,19 +56,21 @@ nsLinkableAccessible(aDOMNode, aShell)
 }
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTMLImageAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLImageAccessible::GetAccName(nsAWritableString& _retval)
 {
+  nsresult rv = NS_ERROR_FAILURE;
+
   nsCOMPtr<nsIContent> imageContent(do_QueryInterface(mDOMNode));
   if (imageContent) {
-    nsAutoString nameString;
-    nsresult rv = AppendFlatStringFromContentNode(imageContent, &nameString);
+    nsAutoString name;
+    rv = AppendFlatStringFromContentNode(imageContent, &name);
     if (NS_SUCCEEDED(rv)) {
-      nameString.CompressWhitespace();
-      *_retval = nameString.ToNewUnicode();
+      // Temp var needed until CompressWhitespace built for nsAWritableString
+      name.CompressWhitespace();
+      _retval.Assign(name);
     }
-    return rv;
   }
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return rv;
 }
 
 /* wstring getAccRole (); */

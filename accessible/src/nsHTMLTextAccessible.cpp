@@ -37,19 +37,10 @@ nsLinkableAccessible(aDomNode, aShell)
 }
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTMLTextAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLTextAccessible::GetAccName(nsAWritableString& _retval)
 { 
 
-  nsAutoString nameString;
-  nsresult rv = NS_OK;
-  //if (IsALink()) {
-  //  rv = AppendFlatStringFromSubtree(mLinkContent, &nameString);
-  //}
-  //else 
-  mDOMNode->GetNodeValue(nameString);
-  nameString.CompressWhitespace();
-  *_retval = nameString.ToNewUnicode();
-  return rv;
+  return mDOMNode->GetNodeValue(_retval);
 }
 
 /* unsigned long getAccRole (); */
