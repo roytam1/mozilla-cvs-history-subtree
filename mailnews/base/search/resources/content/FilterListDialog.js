@@ -44,7 +44,7 @@ function onLoad()
     reorderUpButton = document.getElementById("reorderUpButton");
     reorderDownButton = document.getElementById("reorderDownButton");
 
-    doSetOKCancel(onOk, null);
+    doSetOKCancel(onOk, onCancel);
 
     updateButtons();
 
@@ -69,6 +69,14 @@ function onOk()
     // make sure to save the filter to disk
     var filterList = currentFilterList();
     if (filterList) filterList.saveToDefaultFile();
+    window.close();
+}
+
+function onCancel()
+{
+    var filterList = currentFilterList();
+    if( filterList )
+        filterList.reloadFilters();
     window.close();
 }
 

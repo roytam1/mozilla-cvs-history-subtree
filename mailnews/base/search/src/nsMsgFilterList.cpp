@@ -555,6 +555,32 @@ nsresult nsMsgFilterList::LoadTextFilters(nsIOFileStream *aStream)
 	return err;
 }
 
+nsresult nsMsgFilterList::ReloadFilters()
+{
+  nsresult ret = NS_OK;
+  if( !m_defaultFile )
+    return NS_ERROR_FAILURE;
+
+  //Clean the Array
+  m_filters->Clear();
+
+  //Get FileSpec
+  nsFileSpec filterSpec;
+  ret = m_defaultFile->GetFileSpec( &filterSpec );
+  if( NS_FAILED(ret) )
+    return NS_ERROR_FAILURE;
+
+  //Reopen the File
+  nsIOFileStream *fileStream = new nsIOFileStream(filterSpec);
+  if( !fileStream )
+    return NS_ERROR_FAILURE ;
+  ret = LoadTextFilters( fileStream );
+  fileStream->close();
+  delete fileStream;
+
+  return ret;
+}
+
 // parse condition like "(subject, contains, fred) AND (body, isn't, "foo)")"
 // values with close parens will be quoted.
 // what about values with close parens and quotes? e.g., (body, isn't, "foo")")

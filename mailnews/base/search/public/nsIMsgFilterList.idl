@@ -80,7 +80,7 @@ interface nsIMsgFilterList : nsISupports {
     // (such as the filter list dialog)
     attribute nsIFileSpec defaultFile;
     void saveToDefaultFile();
-    
+    void reloadFilters();    
 
     // marking noscript because headers is a null-seperated list
     // of strings, which is not scriptable
