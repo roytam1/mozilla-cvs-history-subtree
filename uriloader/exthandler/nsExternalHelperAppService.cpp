@@ -582,7 +582,7 @@ nsresult nsExternalHelperAppService::FillContentHandlerProperties(const char * a
   // always ask
   FillLiteralValueFromTarget(contentTypeHandlerNodeResource,kNC_AlwaysAsk, &stringValue);
   aMIMEInfo->SetAlwaysAskBeforeHandling(!stringValue ||
-                                        !falseString.Equals(stringValue)));
+                                        !falseString.Equals(stringValue));
 
   // now digest the external application information
 
