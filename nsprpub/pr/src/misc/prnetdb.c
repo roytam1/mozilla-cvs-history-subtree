@@ -614,10 +614,14 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 		af = AF_INET;
 	}
 	if (hostaddr->raw.family == PR_AF_INET6) {
+#if defined(_PR_INET6) || defined(_PR_INET6_PROBE)
 		if (af == AF_INET6) {
 			addr = &hostaddr->ipv6.ip;
 			addrlen = sizeof(hostaddr->ipv6.ip);
-		} else {
+		}
+		else
+#endif
+		{
 			PR_ASSERT(af == AF_INET);
 			if (!_PR_IN6_IS_ADDR_V4MAPPED(&hostaddr->ipv6.ip)) {
 				PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
