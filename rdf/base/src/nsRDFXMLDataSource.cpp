@@ -683,6 +683,54 @@ RDFXMLDataSourceImpl::Unassert(nsIRDFResource* source,
     return rv;
 }
 
+NS_IMETHODIMP
+RDFXMLDataSourceImpl::Change(nsIRDFResource* aSource,
+                             nsIRDFResource* aProperty,
+                             nsIRDFNode* aOldTarget,
+                             nsIRDFNode* aNewTarget)
+{
+    nsresult rv;
+
+    if (mIsLoading) {
+        NS_NOTYETIMPLEMENTED("hmm, why is this being called?");
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    else if (mIsWritable) {
+        rv = mInner->Change(aSource, aProperty, aOldTarget, aNewTarget);
+
+        if (rv == NS_RDF_ASSERTION_ACCEPTED)
+            mIsDirty = PR_TRUE;
+
+        return rv;
+    }
+    else {
+        return NS_RDF_ASSERTION_REJECTED;
+    }
+}
+
+NS_IMETHODIMP
+RDFXMLDataSourceImpl::Move(nsIRDFResource* aOldSource,
+                           nsIRDFResource* aNewSource,
+                           nsIRDFResource* aProperty,
+                           nsIRDFNode* aTarget)
+{
+    nsresult rv;
+
+    if (mIsLoading) {
+        NS_NOTYETIMPLEMENTED("hmm, why is this being called?");
+        return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    else if (mIsWritable) {
+        rv = mInner->Move(aOldSource, aNewSource, aProperty, aTarget);
+        if (rv == NS_RDF_ASSERTION_ACCEPTED)
+            mIsDirty = PR_TRUE;
+
+        return rv;
+    }
+    else {
+        return NS_RDF_ASSERTION_REJECTED;
+    }
+}
 
 NS_IMETHODIMP
 RDFXMLDataSourceImpl::Flush(void)
