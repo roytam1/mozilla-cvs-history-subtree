@@ -57,6 +57,13 @@ NS_IMETHODIMP nsImageContainer::Init(nscoord aWidth, nscoord aHeight)
   return NS_OK;
 }
 
+/* readonly attribute gfx_format preferredAlphaChannelFormat; */
+NS_IMETHODIMP nsImageContainer::GetPreferredAlphaChannelFormat(gfx_format *aFormat)
+{
+  *aFormat = nsIGFXFormat::RGB_A8;
+  return NS_OK;
+}
+
 /* readonly attribute nscoord width; */
 NS_IMETHODIMP nsImageContainer::GetWidth(nscoord *aWidth)
 {

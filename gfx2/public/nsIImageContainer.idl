@@ -47,6 +47,10 @@ interface nsIImageContainer : nsISupports
   void init(in nscoord aWidth,
             in nscoord aHeight);
 
+
+  /* this should probably be on the device context (or equiv) */
+  readonly attribute gfx_format preferredAlphaChannelFormat;
+
   /**
    * The width of the container rectangle.
    */
@@ -88,7 +92,4 @@ interface nsIImageContainer : nsISupports
    * @note -1 means forever.
    */
   attribute long loopCount;
-
-
-
 };
