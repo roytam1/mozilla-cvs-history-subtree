@@ -667,6 +667,33 @@ cookie_IsInDomain(char* domain, char* host, int hostLength) {
   return PR_FALSE;
 }
 
+static PRBool
+cookie_pathOK(const char* cookiePath, const char* currentPath) {
+  if (!cookiePath || !currentPath) {
+    return PR_FALSE;
+  }
+
+  // determine length of each, excluding trailing slash if present
+  int cookiePathLen = PL_strlen(cookiePath);
+  int currentPathLen = PL_strlen(currentPath);
+  if (cookiePathLen && cookiePath[cookiePathLen-1] == '/') {
+    cookiePathLen--;
+  }
+  if (currentPathLen && currentPath[currentPathLen-1] == '/') {
+    currentPathLen--;
+  }
+
+  // test for equality case
+  if (currentPathLen == cookiePathLen &&
+      !PL_strncmp(currentPath, cookiePath, currentPathLen)) {
+    return PR_TRUE;
+  }
+
+  // test for subpath case
+  return (currentPathLen > cookiePathLen && (currentPath[cookiePathLen] == '/') &&
+          !PL_strncmp(currentPath, cookiePath, cookiePathLen));
+}
+
 /* returns PR_TRUE if authorization is required
 ** 
 **
@@ -740,8 +767,8 @@ COOKIE_GetCookie(char * address, nsIIOService* ioService) {
       continue;
     }
 
-    /* shorter strings always come last so there can be no ambiquity */
-    if(cookie_s->path && !PL_strncmp(path.get(), cookie_s->path, PL_strlen(cookie_s->path))) {
+    /* shorter path strings always come last so there can be no ambiquity */
+    if(cookie_pathOK(cookie_s->path, path.get())) {
 
       /* if the cookie is secure and the path isn't, dont send it */
       if (cookie_s->isSecure & !isSecure) {
