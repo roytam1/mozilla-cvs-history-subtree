@@ -11,9 +11,9 @@ mozilla/nsprpub,        NSPRPUB_CLIENT_BRANCH
 mozilla/security/nss,   NSS_CLIENT_TAG
 mozilla/security/psm,   
 mozilla/security/manager,
-mozilla/accessible,	FOLDER_PANE_20010807_BRANCH
+mozilla/accessible,     FOLDER_PANE_20010807_BRANCH
 DirectorySDKSourceC,    LDAPCSDK_40_BRANCH
-mozilla/lib/mac/Instrumentation
-mozilla/gfx2		FOLDER_PANE_20010807_BRANCH
-mozilla/modules/libpr0n	FOLDER_PANE_20010807_BRANCH
-SeaMonkeyAll            FOLDER_PANE_20010807_BRANCH
+mozilla/lib/mac/Instrumentation,
+mozilla/gfx2,  FOLDER_PANE_20010807_BRANCH
+mozilla/modules/libpr0n, FOLDER_PANE_20010807_BRANCH
+SeaMonkeyAll,            FOLDER_PANE_20010807_BRANCH
