@@ -36,7 +36,9 @@ use overload
 @ISA = ('Tie::StdHash');
 $VERSION = "2.0";
 
+package Mozilla::LDAP::Schema::Attribute;
 
+package Mozilla::LDAP::Schema::ObjectClass;
 
 #############################################################################
 # Mandatory TRUE return value.
