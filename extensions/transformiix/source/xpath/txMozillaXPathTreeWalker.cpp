@@ -501,6 +501,8 @@ txXPathNodeUtils::getNodeName(const txXPathNode& aNode, nsAString& aName)
             node->GetNodeName(aName);
         }
 
+        aName.Truncate();
+
         return;
     }
 
