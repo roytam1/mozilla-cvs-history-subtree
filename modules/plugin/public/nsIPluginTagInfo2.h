@@ -40,6 +40,13 @@
 // Plugin Tag Info Interface
 // These extensions to nsIPluginTagInfo are only available in Communicator 5.0.
 
+enum nsPluginTagType {
+    nsPluginTagType_Unknown,
+    nsPluginTagType_Embed,
+    nsPluginTagType_Object,
+    nsPluginTagType_Applet
+};
+
 class nsIPluginTagInfo2 : public nsIPluginTagInfo {
 public:
 
