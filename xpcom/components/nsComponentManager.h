@@ -163,8 +163,7 @@ protected:
     nsresult PlatformFind(const nsCID &aCID, nsFactoryEntry* *result);
     nsresult PlatformProgIDToCLSID(const char *aProgID, nsCID *aClass);
     nsresult PlatformCLSIDToProgID(nsCID *aClass, char* *aClassName, char* *aProgID);
-	void     GetTimeStampFileSize(nsIRegistry::Key Key,PRTime *lastModifiedTime,PRUint32 *fileSize);
-	nsresult nsComponentManagerImpl::PlatformDeleteKey(nsIRegistry::Key Key, const char *keyname);
+	void     PlatformGetFileInfo(nsIRegistry::Key Key,PRTime *lastModifiedTime,PRUint32 *fileSize);
 
 protected:
     nsHashtable*  mFactories;
@@ -208,8 +207,9 @@ protected:
  * alpha0.20 : First time we did versioning
  * alpha0.30 : Changing autoreg to begin registration from ./components on unix
  * alpha0.40 : repository -> component manager
+ * alpha0.50 : using nsIRegistry
  */
-#define NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING "alpha0.45"
+#define NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING "alpha0.51"
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
