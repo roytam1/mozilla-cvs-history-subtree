@@ -4496,7 +4496,16 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
     }
   }
 #endif  
-  
+ 
+  // reverse our list of plugins
+  nsPluginTag *next,*prev = nsnull;
+  for (nsPluginTag *cur = mPlugins; cur; cur = next) {
+    next = cur->mNext;
+    cur->mNext = prev;
+    prev = cur;
+  }
+  mPlugins = prev;
+
   return NS_OK;
 }
 
