@@ -868,6 +868,7 @@ browser/app/Makefile
 browser/app/profile/Makefile
 browser/app/profile/chrome/Makefile
 browser/base/Makefile
+browser/locales/Makefile
 browser/components/Makefile
 browser/components/bookmarks/Makefile
 browser/components/bookmarks/public/Makefile
@@ -894,6 +895,7 @@ chrome/tools/chromereg/Makefile
 toolkit/Makefile
 toolkit/content/Makefile
 toolkit/content/buildconfig.html
+toolkit/locales/Makefile
 toolkit/obsolete/Makefile
 toolkit/components/autocomplete/Makefile
 toolkit/components/autocomplete/public/Makefile
@@ -936,6 +938,7 @@ mail/app/profile/Makefile
 mail/base/Makefile
 mail/base/skin/mac/Makefile
 mail/base/skin/Makefile
+mail/locales/Makefile
 mail/components/Makefile
 mail/components/compose/Makefile
 mail/components/compose/skin/mac/Makefile
