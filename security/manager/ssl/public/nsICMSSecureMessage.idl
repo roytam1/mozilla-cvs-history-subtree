@@ -32,10 +32,10 @@ interface nsIX509Cert;
 interface nsICMSSecureMessage : nsISupports
 {
   /**
-   * encryptionCert - a BASE64 string representing the user's encryption
+   * getCertByPrefID - a BASE64 string representing a user's
    *   certificate (or NULL if there isn't one)
    */
-  readonly attribute string encryptionCert;
+  string getCertByPrefID(in string certID);
 
   /**
    * decodeCert - decode a BASE64 string into an X509Certificate object

@@ -63,9 +63,9 @@ nsCMSSecureMessage::~nsCMSSecureMessage()
 {
 }
 
-// nsCMSSecureMessage::GetEncryptionCert
+/* string getCertByPrefID (in string certID); */
 NS_IMETHODIMP nsCMSSecureMessage::
-GetEncryptionCert(char ** _retval)
+GetCertByPrefID(const char *certID, char **_retval)
 {
   nsresult rv = NS_OK;
   CERTCertificate *cert = 0;
@@ -78,8 +78,7 @@ GetEncryptionCert(char ** _retval)
   nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
   if (NS_FAILED(rv)) goto done;
 
-  // XXX Fix this XXX //
-  rv = prefs->GetCharPref("spam.session.certnickname",
+  rv = prefs->GetCharPref(certID,
                           getter_Copies(nickname));
   if (NS_FAILED(rv)) goto done;
 
