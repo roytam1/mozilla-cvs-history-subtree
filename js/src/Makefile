@@ -22,8 +22,6 @@ ifdef MOZ_OJI
 DIRS = liveconnect
 endif
 
-DIRS	+=	fdlibm
-
 LIBRARY_NAME	= js
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
@@ -213,19 +211,8 @@ else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
 
-# ripped from mozilla/config/rules.mk
 $(FDLIBM_LIBRARY):
-		@if test -d fdlibm; then				\
-			set -e;					\
-			set $(EXIT_ON_ERROR);			\
-			echo "cd fdlibm; $(MAKE) $(OBJDIR)/$(@F)";		\
-			oldDir=`pwd`;				\
-			cd fdlibm; $(MAKE) $(OBJDIR)/$(@F); cd $$oldDir;	\
-			set +e;					\
-		else						\
-			echo "Error - directory fdlibm does not exit...";	\
-		fi;						\
-		$(CLICK_STOPWATCH);
+	cd fdlibm; $(MAKE)
 
 # this requires clobbering and recompiling with XCFLAGS=-DJSFILE
 js:
