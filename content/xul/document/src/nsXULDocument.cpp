@@ -4271,7 +4271,7 @@ nsXULDocument::ResumeWalk()
                     rv = element->AppendChildTo(child, PR_FALSE);
                     if (NS_FAILED(rv)) return rv;
 
-                    rv = AddElementToMap(element);
+                    rv = AddElementToMap(child);
                     if (NS_FAILED(rv)) return rv;
                 }
                 else if (mContextStack.Depth() == 1) {
@@ -4520,7 +4520,22 @@ nsresult
 nsXULDocument::CreateElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult)
 {
     // Create a content model element from a prototype element.
+    NS_PRECONDITION(aPrototype != nsnull, "null ptr");
+    if (! aPrototype)
+        return NS_ERROR_NULL_POINTER;
+
     nsresult rv;
+
+#ifdef PR_LOGGING
+    if (PR_LOG_TEST(gXULLog, PR_LOG_ALWAYS)) {
+        nsAutoString tagstr;
+        aPrototype->mTag->ToString(tagstr);
+        
+        PR_LOG(gXULLog, PR_LOG_ALWAYS,
+               ("xul: creating <%s> from prototype",
+                (const char*) nsCAutoString(tagstr)));
+    }
+#endif
 
     nsCOMPtr<nsIContent> result;
 
