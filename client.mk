@@ -52,7 +52,7 @@
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG = <tag>
+MOZ_CO_TAG = FIREBIRD_0_6_RELEASE
 NSPR_CO_TAG = FIREBIRD_0_6_RELEASE
 PSM_CO_TAG = FIREBIRD_0_6_RELEASE
 NSS_CO_TAG = FIREBIRD_0_6_RELEASE
