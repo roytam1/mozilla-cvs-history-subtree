@@ -138,3 +138,9 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
    background-image: url("chrome://global/skin/scrollbar/btn-up.gif")
 }
 
+/* :::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
+/* ::::::::::::::::::::: MEDIA PRINT :::::::::::::::::::::: */
+/* :::::::::::::::::::::::::::::::::::::::::::::::::::::::: */
+@media print {
+
+}
