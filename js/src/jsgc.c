@@ -190,7 +190,7 @@ retry:
 	METER(rt->gcStats.recycle++);
     } else {
 	if (rt->gcBytes < rt->gcMaxBytes && 
-            (tried_gc || rt->gcMallocBytes < 0x10000)) 
+            (tried_gc || rt->gcMallocBytes < rt->gcMaxBytes)) 
         {
 	    JS_ARENA_ALLOCATE(thing, &rt->gcArenaPool, sizeof(JSGCThing));
 	    JS_ARENA_ALLOCATE(flagp, &rt->gcFlagsPool, sizeof(uint8));
