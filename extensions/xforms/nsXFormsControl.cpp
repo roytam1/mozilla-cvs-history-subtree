@@ -79,12 +79,14 @@ nsXFormsControl::GetModelAndBind(nsIDOMElement **aBindElement)
     nsCOMPtr<nsIContent> bindContent = do_QueryInterface(*aBindElement);
     nsIContent *modelContent = bindContent;
 
-    while ((modelContent = modelContent->GetParent())) {
-      nsINodeInfo *nodeInfo = modelContent->GetNodeInfo();
-      if (nodeInfo &&
-          nodeInfo->NamespaceEquals(NS_LITERAL_STRING("http://www.w3.org/2002/xforms")) &&
-          nodeInfo->NameAtom() == nsXFormsAtoms::model)
-        break;
+    if (modelContent) {
+      while ((modelContent = modelContent->GetParent())) {
+        nsINodeInfo *nodeInfo = modelContent->GetNodeInfo();
+        if (nodeInfo &&
+            nodeInfo->NamespaceEquals(NS_LITERAL_STRING("http://www.w3.org/2002/xforms")) &&
+            nodeInfo->NameAtom() == nsXFormsAtoms::model)
+          break;
+      }
     }
 
     modelWrapper = do_QueryInterface(modelContent);
