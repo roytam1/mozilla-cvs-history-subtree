@@ -945,13 +945,27 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
     // At this point we know that at least one of 'left', 'width', and 'right'
     // is 'auto', but not all three. Examine the various combinations
     if (widthIsAuto) {
+      nscoord availWidth = containingBlockWidth - mComputedOffsets.left -
+          mComputedMargin.left - mComputedBorderPadding.left -
+          mComputedBorderPadding.right -
+          mComputedMargin.right - mComputedOffsets.right;
+      if (availWidth < 0)
+        availWidth = 0;
+
       if (leftIsAuto || rightIsAuto) {
         if (NS_FRAME_IS_REPLACED(mFrameType)) {
           // For a replaced element we use the intrinsic size
           mComputedWidth = NS_INTRINSICSIZE;
         } else {
           // The width is shrink-to-fit
-          mComputedWidth = NS_SHRINKWRAPWIDTH;
+          nscoord prefWidth = frame->GetPrefWidth();
+          if (prefWidth < availWidth) {
+            mComputedWidth = prefWidth;
+          } else {
+            nscoord minWidth = frame->GetMinWidth();
+            mComputedWidth = PR_MAX(minWidth, availWidth);
+          }
+          AdjustComputedWidth(PR_FALSE);
         }
 
         if (leftIsAuto) {
@@ -962,12 +976,7 @@ nsHTMLReflowState::InitAbsoluteConstraints(nsPresContext* aPresContext,
 
       } else {
         // Only 'width' is 'auto' so just solve for 'width'
-        mComputedWidth = containingBlockWidth - mComputedOffsets.left -
-          mComputedMargin.left - mComputedBorderPadding.left -
-          mComputedBorderPadding.right -
-          mComputedMargin.right - mComputedOffsets.right;
-
-        mComputedWidth = PR_MAX(mComputedWidth, 0);
+        mComputedWidth = availWidth;
 
         AdjustComputedWidth(PR_FALSE);
 
