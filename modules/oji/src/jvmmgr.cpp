@@ -54,15 +54,21 @@ void stopAsyncCursors(void);
 }
 #endif // XP_MAC
 
-////////////////////////////////////////////////////////////////////////////////
-
-NS_IMPL_AGGREGATED(nsJVMMgr);
-
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
 static NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
 static NS_DEFINE_IID(kIJNIPluginIID, NS_IJNIPLUGIN_IID);
 static NS_DEFINE_IID(kISymantecDebugManagerIID, NS_ISYMANTECDEBUGMANAGER_IID);
+static NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
+static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
+static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID);
+static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
+static NS_DEFINE_IID(kIJVMConsoleIID, NS_IJVMCONSOLE_IID);
+static NS_DEFINE_IID(kISymantecDebuggerIID, NS_ISYMANTECDEBUGGER_IID);
+
+////////////////////////////////////////////////////////////////////////////////
+
+NS_IMPL_AGGREGATED(nsJVMMgr);
 
 NS_METHOD
 nsJVMMgr::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
@@ -166,32 +172,31 @@ map_jsj_thread_to_js_context_impl(JNIEnv *env, char **errp)
     *errp = NULL;
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-      nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
-      jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
-      if (pJVMPI != NULL) {
-       jobject javaObject = pJVMPI->AttachThreadToJavaObject(env);
-        if (javaObject != NULL) {
-          nsIPluginInstance* pPIT = 
-            pJVMPI->GetPluginInstance(javaObject);
-            if (pPIT != NULL) {
-                 nsIJVMPluginInstance* pJVMPIT;
-NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
-                 if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
-                             (void**)&pJVMPIT) == NS_OK) {
-                   nsPluginInstancePeer* pPITP = 
-                        (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
-                   if (pPITP != NULL) {
-                     cx = pPITP->GetJSContext();
-                     pPITP->Release();
-                   }
-                   pJVMPIT->Release();
-                 }
-             pPIT->Release();
+        nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
+        jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
+        if (pJVMPI != NULL) {
+            jobject javaObject = pJVMPI->AttachThreadToJavaObject(env);
+            if (javaObject != NULL) {
+                nsIPluginInstance* pPIT = 
+                    pJVMPI->GetPluginInstance(javaObject);
+                if (pPIT != NULL) {
+                    nsIJVMPluginInstance* pJVMPIT;
+                    if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
+                                             (void**)&pJVMPIT) == NS_OK) {
+                        nsPluginInstancePeer* pPITP = 
+                            (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
+                        if (pPITP != NULL) {
+                            cx = pPITP->GetJSContext();
+                            pPITP->Release();
+                        }
+                        pJVMPIT->Release();
+                    }
+                    pPIT->Release();
+                }
             }
+            pJVMPI->Release();
         }
-        pJVMPI->Release();
-      }
-      pJVMMgr->Release();
+        pJVMMgr->Release();
     }
     if (jvmMochaPrefsEnabled == PR_FALSE)
     {
@@ -201,8 +206,8 @@ NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
 
     if ( cx == NULL )
     {
-       *errp = strdup("Java thread could not be associated with a JSContext");
-       return NULL;
+        *errp = strdup("Java thread could not be associated with a JSContext");
+        return NULL;
     }
 
     return cx;
@@ -221,18 +226,18 @@ map_js_context_to_jsj_thread_impl(JSContext *cx, char **errp)
     *errp = NULL;
     if (ret != LM_MOJA_OK)
     {
-       *errp = strdup("ET_InitMoja(0) failed.");
-	      return NULL;
+        *errp = strdup("ET_InitMoja(0) failed.");
+        return NULL;
     }
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
 
     if (pJVMMgr != NULL) {
-      if (pJVMMgr->GetJSJavaVM() == NULL)
-      {
-         *errp = strdup("Failed to attach to a java vm");
+        if (pJVMMgr->GetJSJavaVM() == NULL)
+        {
+            *errp = strdup("Failed to attach to a java vm");
 	        return NULL;
-      }
-      pJVMMgr->Release();
+        }
+        pJVMMgr->Release();
     }
 
     return JSJ_AttachCurrentThreadToJava(pJVMMgr->GetJSJavaVM(), NULL, NULL);
@@ -267,48 +272,46 @@ map_java_object_to_js_object_impl(JNIEnv *env, jobject applet, char **errp)
     if (!env->IsInstanceOf(applet,
                            env->FindClass("java/applet/Applet"))) {
         env->ThrowNew(env->FindClass("java/lang/IllegalArgumentException"),
-                     "JSObject.getWindow() requires a java.applet.Applet argument");
+                      "JSObject.getWindow() requires a java.applet.Applet argument");
         return 0;
     }
 
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-      nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
-      jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
-      if (pJVMPI != NULL) {
-       jobject javaObject = applet;
-        nsIPluginInstance* pPIT = 
-          pJVMPI->GetPluginInstance(javaObject);
-          if (pPIT != NULL) {
-               nsIJVMPluginInstance* pJVMPIT;
-NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
-               if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
-                           (void**)&pJVMPIT) == NS_OK) {
-                 nsPluginInstancePeer* pPITP = 
-                      (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
-                 if (pPITP != NULL) {
-                   nsIJVMPluginTagInfo* pJVMTagInfo;
-NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
-                   if (pPITP->QueryInterface(kIJVMPluginTagInfoIID,
-                               (void**)&pJVMTagInfo) == NS_OK) {
-                      mayscript = pJVMTagInfo->GetMayScript();
-                      pJVMTagInfo->Release();
-                   }
-                   cx = pPITP->GetMWContext();
-                   pPITP->Release();
-                 }
-                 pJVMPIT->Release();
-               }
-           pPIT->Release();
-          }
-        pJVMPI->Release();
-      }
-      pJVMMgr->Release();
+        nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
+        jvmMochaPrefsEnabled = pJVMMgr->IsJVMAndMochaPrefsEnabled();
+        if (pJVMPI != NULL) {
+            jobject javaObject = applet;
+            nsIPluginInstance* pPIT = 
+                pJVMPI->GetPluginInstance(javaObject);
+            if (pPIT != NULL) {
+                nsIJVMPluginInstance* pJVMPIT;
+                if (pPIT->QueryInterface(kIJVMPluginInstanceIID,
+                                         (void**)&pJVMPIT) == NS_OK) {
+                    nsPluginInstancePeer* pPITP = 
+                        (nsPluginInstancePeer*)pJVMPIT->GetPeer(); 
+                    if (pPITP != NULL) {
+                        nsIJVMPluginTagInfo* pJVMTagInfo;
+                        if (pPITP->QueryInterface(kIJVMPluginTagInfoIID,
+                                                  (void**)&pJVMTagInfo) == NS_OK) {
+                            mayscript = pJVMTagInfo->GetMayScript();
+                            pJVMTagInfo->Release();
+                        }
+                        cx = pPITP->GetMWContext();
+                        pPITP->Release();
+                    }
+                    pJVMPIT->Release();
+                }
+                pPIT->Release();
+            }
+            pJVMPI->Release();
+        }
+        pJVMMgr->Release();
     }
 
     if (  (mayscript            == PR_FALSE)
-        ||(jvmMochaPrefsEnabled == PR_FALSE)
-       )
+          ||(jvmMochaPrefsEnabled == PR_FALSE)
+        )
     {
         *errp = strdup("JSObject.getWindow() requires mayscript attribute on this Applet or java preference is disabled");
         goto except;
@@ -343,16 +346,16 @@ get_java_vm_impl(char **errp)
     
     nsJVMMgr* pJVMMgr = JVM_GetJVMMgr();
     if (pJVMMgr != NULL) {
-      nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
-      if (pJVMPI != NULL) {
-        pJavaVM = pJVMPI->GetJavaVM();
-        pJVMPI->Release();
-      }
-      pJVMMgr->Release();
+        nsIJVMPlugin* pJVMPI = pJVMMgr->GetJVMPlugin();
+        if (pJVMPI != NULL) {
+            pJavaVM = pJVMPI->GetJavaVM();
+            pJVMPI->Release();
+        }
+        pJVMMgr->Release();
     }
     if ( pJavaVM == NULL )
     {
-       *errp = strdup("Could not find a JavaVM to attach to.");
+        *errp = strdup("Could not find a JavaVM to attach to.");
     }
     return pJavaVM;
 }
@@ -383,16 +386,15 @@ nsJVMMgr::JSJInit()
     
     if(fJSJavaVM == NULL)
     {
-      JSJ_Init(&jsj_callbacks);
+        JSJ_Init(&jsj_callbacks);
 
-      if( (pJVMPI = GetJVMPlugin()) != NULL)
-      {
-        fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), pJVMPI->GetClassPath());
-        pJVMPI->Release();
-      }
+        if( (pJVMPI = GetJVMPlugin()) != NULL)
+        {
+            fJSJavaVM = JSJ_ConnectToJavaVM(JVM_GetJavaVM(), pJVMPI->GetClassPath());
+            pJVMPI->Release();
+        }
     }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -778,8 +780,6 @@ nsJVMPluginTagInfo::~nsJVMPluginTagInfo(void)
 
 NS_IMPL_AGGREGATED(nsJVMPluginTagInfo);
 
-static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
-
 NS_METHOD
 nsJVMPluginTagInfo::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
@@ -892,8 +892,6 @@ nsJVMPluginTagInfo::GetMayScript(void)
     return (fPluginTagInfo->GetAttribute("mayscript") != NULL);
 }
 
-static NS_DEFINE_IID(kIPluginTagInfo2IID, NS_IPLUGINTAGINFO2_IID);
-
 NS_METHOD
 nsJVMPluginTagInfo::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr,
                            nsIPluginTagInfo2* info)
@@ -930,7 +928,6 @@ JVM_GetJVMMgr(void)
 {
 	nsresult result = NS_OK;
     if (thePluginManager == NULL) {
-        static NS_DEFINE_IID(kIPluginManagerIID, NS_IPLUGINMANAGER_IID);
         result = nsPluginManager::Create(NULL, kIPluginManagerIID, (void**)&thePluginManager);
 		if (result != NS_OK)
 			return NULL;
@@ -984,8 +981,6 @@ JVM_AddToClassPathRecursively(const char* dirPath)
     }
     return err;
 }
-
-static NS_DEFINE_IID(kIJVMConsoleIID, NS_IJVMCONSOLE_IID);
 
 // This will get the JVMConsole if one is available. You have to Release it 
 // when you're done with it.
@@ -1055,8 +1050,6 @@ JVM_PrintToConsole(const char* msg)
         console->Release();
     }
 }
-
-static NS_DEFINE_IID(kISymantecDebuggerIID, NS_ISYMANTECDEBUGGER_IID);
 
 PR_IMPLEMENT(void)
 JVM_StartDebugger(void)
