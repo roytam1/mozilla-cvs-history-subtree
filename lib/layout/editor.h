@@ -243,6 +243,22 @@ char* EDT_AlignString(ED_Alignment align);
 #define EDT_RGB(r,g,b)  (ED_Color(r,g,b))
 #define EDT_LO_COLOR(pLoColor)  ED_Color(pLoColor)
 
+/* Gives us quick access to first cell in each column or row 
+ *  with location and index data
+*/
+struct _EDT_CellLayoutData {
+    int32                 X;                 /* X value of cell */
+    int32                 Y;                 /* Y value of cell */
+    int32                 iColumn;           /* Geometric column index */
+    int32                 iRow;              /* Geometric row index */
+    int32                 iCellsInColumn;    /* Total number of cells in each column */
+    int32                 iCellsInRow;       /*  and row */
+    LO_Element            *pLoCell;          /* Layout element pointer */
+    CEditTableCellElement *pEdCell;          /* Corresponding edit element object */
+};
+
+typedef struct _EDT_CellLayoutData EDT_CellLayoutData;
+
 
 // Editor selections
 
@@ -261,12 +277,31 @@ Declare_GrowableArray(LO_CellStruct,LO_CellStruct*)                  // TXP_Grow
 //List of tables encountered during Relayout()
 Declare_GrowableArray(LO_TableStruct,LO_TableStruct*)                // TXP_GrowableArray_LO_TableStruct
 
+Declare_GrowableArray(EDT_CellLayoutData, EDT_CellLayoutData*)       // TXP_GrowableArray_EDT_CellLayoutData
+
 Declare_PtrStack(ED_Alignment,ED_Alignment)             // TXP_PtrStack_ED_Alignment
 Declare_PtrStack(TagType,TagType)                       // TXP_PtrStack_TagType
 Declare_PtrStack(CEditTextElement,CEditTextElement*)    // TXP_PtrStack_CEditTextElement
 Declare_PtrStack(ED_TextFormat,int32)                   // TXP_PtrStack_ED_TextFormat
 Declare_PtrStack(CEditCommandGroup,CEditCommandGroup*)  // TXP_PtrStack_CEditCommandGroup
 Declare_PtrStack(CParseState,CParseState*)              // TXP_PtrStack_CParseState
+
+
+/* iTableMode param for CEditTableElement::SetSizeMode() */
+#define ED_MODE_TABLE_PERCENT     0x0001   /* Convert table to use % of parent width */
+#define ED_MODE_TABLE_PIXELS      0x0002   /* Convert table to use absolute pixels */
+#define ED_MODE_CELL_PERCENT      0x0004   /* Convert all cells to use % of parent width */
+#define ED_MODE_CELL_PIXELS       0x0008   /* Convert all cells to use absolute pixels */
+#define ED_MODE_USE_TABLE_WIDTH   0x0010   /* Set WIDTH param for table */
+#define ED_MODE_NO_TABLE_WIDTH    0x0020   /* Remove WIDTH param for table */
+#define ED_MODE_USE_TABLE_HEIGHT  0x0040   /* Set HEIGHT param for table*/
+#define ED_MODE_NO_TABLE_HEIGHT   0x0080   /* Remove HEIGHT param table */
+#define ED_MODE_USE_CELL_WIDTH    0x0100   /* Set WIDTH param for all cells */
+#define ED_MODE_NO_CELL_WIDTH     0x0200   /* Remove WIDTH param for all cells */
+#define ED_MODE_USE_CELL_HEIGHT   0x0400   /* Set HEIGHT param for all cells*/
+#define ED_MODE_NO_CELL_HEIGHT    0x0800   /* Remove HEIGHT param for all cells*/
+#define ED_MODE_USE_COLS          0x1000   /* Use COLS param for table (only 1st row used) */
+#define ED_MODE_NO_COLS           0x2000   /* Remove COLS param for table (all cell widths used) */
 
 #ifdef DEBUG
     #define DEBUG_EDIT_LAYOUT
@@ -840,9 +875,11 @@ public:
 
     void InsertRows(int32 Y, int32 newY, intn number, CEditTableElement* pSource = NULL);
     void InsertColumns(int32 X, int32 newX, intn number, CEditTableElement* pSource = NULL);
-    void DeleteRows(int32 Y, intn number, CEditTableElement* pUndoContainer = NULL);
+//cmanske: I doubt we will ever revive the old undo system, so skip it here
+//    void DeleteRows(int32 Y, intn number, CEditTableElement* pUndoContainer = NULL);
+    void DeleteRows(int32 Y, intn number);
     void DeleteColumns(int32 X, intn number, CEditTableElement* pUndoContainer = NULL);
-    
+
     // Not used much - index based
     CEditTableRowElement* FindRow(intn number);
 
@@ -858,6 +895,7 @@ public:
     //  (bSpan is FALSE, so Y must match exactly)
     // If pCell is NULL, use the same Y and bSpan as used for GetFirstCellInRow()
     // The logical row is written to the element's m_iGetRow
+    // Note: If cell has ROWSPAN > 1, this will skip the next actual row
     CEditTableCellElement* GetNextCellInRow(CEditTableCellElement *pCell = NULL);
     
     // Find previous and cell using supplied cell's Y value 
@@ -868,12 +906,33 @@ public:
     // Same as above, but finds columns
     CEditTableCellElement* GetFirstCellInColumn(int32 X, XP_Bool bSpan = FALSE);
     CEditTableCellElement* GetFirstCellInColumn(CEditTableCellElement *pCell, XP_Bool bSpan = FALSE);
+    // Note: If cell has COPSPAN > 1, this will skip the next actual column
     CEditTableCellElement* GetNextCellInColumn(CEditTableCellElement *pCell = NULL);
     
     // Find previous and last cell using supplied cell's X value 
     //  (does not depend on data from GetFirstCellInRow)
     CEditTableCellElement* GetPreviousCellInColumn(CEditTableCellElement *pCell);
     CEditTableCellElement* GetLastCellInColumn(CEditTableCellElement *pCell);
+
+    // Find first cell in column or row exactly at the specified col or row index grid
+    CEditTableCellElement *GetFirstCellAtColumnIndex(intn iIndex);
+    CEditTableCellElement *GetFirstCellAtRowIndex(intn iIndex);
+
+    // This gets the next geometric column or row 
+    //  using supplied X or Y value as current location
+    // (these use the tables m_RowLayoutData and m_ColumnLayoutData)
+    CEditTableCellElement* GetFirstCellInNextColumn(int32 iCurrentColumnX);
+    CEditTableCellElement* GetFirstCellInNextRow(int32 iCurrentRowY);
+
+    // Get the defining left (for columns) and top (for rows) value from
+    //  the index into m_ColumnLayoutData and m_RowLayoutData 
+    int32 GetColumnX(intn iIndex);
+    int32 GetRowY(intn iIndex);
+
+    // Use m_ColumnLayoutData and m_RowLayoutData
+    // to get grid coordinates of a cell
+    intn GetColumnIndex(int32 X);
+    intn GetRowIndex(int32 Y);
 
     CEditCaptionElement* GetCaption();
     void SetCaption(CEditCaptionElement*);
@@ -906,8 +965,22 @@ public:
     void GetParentSize(MWContext *pContext, int32 *pWidth, int32 *pHeight = NULL, LO_TableStruct *pLoTable = NULL);
 
     // See edttypes.h for dConvert table and all rows and cells to Percent mode or not
-    void SetTableMode(MWContext *pContext, int iTableMode);
-    int32 GetInterCellSpace() {return m_iInterCellSpace; }
+    // Current bWidthPercent, bHeightPercent, bWidthDefined, and bHeightDefined are saved...
+    void SetSizeMode(MWContext *pContext, int iTableMode);
+    // ... to be restored by this after relayout after table, col, or row resizing
+    void RestoreSizeMode(MWContext *pContext);
+
+    // Next two use m_RowLayoutData and m_ColumnLayoutData
+    // Clear all row and column layout data
+    void DeleteLayoutData();
+    
+    // Add new cell to column and/or row layout data
+    void AddLayoutData(CEditTableCellElement *pEdCell, LO_Element *pLoCell);
+
+    int32 GetCellSpacing() {return m_iCellSpacing; }
+    int32 GetCellPadding() {return m_iCellPadding; }
+    int32 GetCellBorder() {return m_iCellBorder; }
+
     int32 GetWidth() {return m_iWidthPixels; }
     int32 GetHeight() {return m_iHeightPixels; }
     int32 GetWidthOrPercent() { return m_iWidth; }
@@ -924,31 +997,39 @@ public:
 
     // Analogous routine for rows
     CEditTableRowElement* GetFirstRow();
-    
-    // This just counts rows - return m_iRows if it is set
-    intn GetRows();
-    
-    // Max of number of columns in all rows
-    intn GetColumns();
-    // See comment below for m_iMaxColumns
-    intn GetMaxColumns() {return m_iMaxColumns; }
 
+    // Use following BEFORE we layout and build our m_RowLayoutData and m_ColumnLayoutData    
+    // This counts row elements in table and also saves result in m_iRows
+    intn CountRows();
+    // Max of number of columns 
+    // (may be more than number of cells in any particular
+    //  row because of ROWSPAN effect)
+    intn CountColumns();
+
+    intn GetRows()     {m_iRows = m_RowLayoutData.Size(); return m_iRows;}
+    intn GetColumns()  {m_iColumns = m_ColumnLayoutData.Size(); return m_iColumns;}
+    
     // Get number of columns between given values    
     intn GetColumnsSpanned(int32 iStartX, int32 iEndX);
 
-    // Also figure these out during FixupTableData
-    // Used to tell when we are in first row or column of table
-    int32 GetFirstColumnX() {return m_iFirstColumnX;}
-    void SetFirstColumnX(int32 X) {m_iFirstColumnX = X;}
-    int32 GetFirstRowY() {return m_iFirstRowY;}
-    void SetFirstRowY(int32 Y) { m_iFirstRowY = Y;}
+    // Test if any cell in the first row has COLSPAN > 1
+    XP_Bool FirstRowHasColSpan();
+
+    
+    // 1. Fixup COLSPAN and ROWSPAN errors, 
+    //    If all cells in a column have COLSPAN > 1,
+    //    that is bad, so fix it. Same for ROWSPAN
+    // 2. Save accurate number of cells in each column,
+    //    compensating for COLSPAN and ROWSPAN
+    //    Uses m_ColumnLayoutData and m_RowLayoutData
+    void FixupColumnsAndRows();
 
 private:
     ED_Color m_backgroundColor;
     char* m_pBackgroundImage;
     ED_Alignment m_align;
     ED_Alignment m_malign;
-
+    
     //Actual width, as determined from layout
     // See comments for similar params in CEditTableCellElement
     int32   m_iWidthPixels;       
@@ -961,19 +1042,24 @@ private:
     XP_Bool m_bHeightPercent;       
 
     // Pixels between cells
-    int32   m_iInterCellSpace;
+    int32   m_iCellSpacing;
+    // Space between border and cell contents
+    int32   m_iCellPadding;
+    // Cell border is 1 if table border is > 0
+    int32   m_iCellBorder;
 
-    int32   m_iFirstColumnX;
-    int32   m_iFirstRowY;
+    // Save last value of m_bWidthPercent, m_bWidthDefined,
+    //  bHeightPercent, and bHeightDefined here
+    //   during table, col, and row resizing.
+    // Call RestoreTableSizeMode to reset back to these values
+    XP_Bool m_bSaveWidthPercent;       
+    XP_Bool m_bSaveHeightPercent;
+    XP_Bool m_bSaveWidthDefined;       
+    XP_Bool m_bSaveHeightDefined;
 
-    // Total number in table
-    // Columns are tricky - max number of possible columns,
-    //    which is sensitive to ROWSPAN and COLSPAN
-    //    calculated in CEditBuffer::FixupTableData()
-    // Thus, this may be more than GetColumns(), which doesn't include RowSpan effect
-    int32   m_iMaxColumns;
-    
-    // Rows are straight forward. This should == result of GetRows();
+    // Maximum number of "geometric" columns
+    // (May be > number in individual rows because of ROWSPAN)
+    int32   m_iColumns;
     int32   m_iRows;
 
     // Used by GetFirstCell() and GetNextCellInTable()
@@ -989,6 +1075,10 @@ private:
 
 public:
     intn m_iBackgroundSaveIndex;
+
+    // Let CEditBuffer access this directly
+    TXP_GrowableArray_EDT_CellLayoutData m_ColumnLayoutData;
+    TXP_GrowableArray_EDT_CellLayoutData m_RowLayoutData;
 
 };
 
@@ -1091,6 +1181,8 @@ public:
 
     XP_Bool IsTableData();
 
+    virtual void StreamOut(IStreamOut *pOut);
+
     void SetData( EDT_TableCellData *pData );
     // Supply the csid if getting data for table not
     //  yet part of doc, as when pasting from stream
@@ -1128,20 +1220,34 @@ public:
     //  given X (for column) or Y (for row)value
     // GetNext... continue using same X or Y
     // (These just call same functions in CEditTableElement)
-    CEditTableCellElement* GetFirstCellInRow(int32 Y, XP_Bool bSpan = FALSE);
-    CEditTableCellElement* GetFirstCellInColumn(int32 X, XP_Bool bSpan = FALSE);
-    CEditTableCellElement* GetNextCellInRow();
-    CEditTableCellElement* GetNextCellInColumn();
+    // If X or Y is not supplied, it is taken from "this" cell's X or Y
+    CEditTableCellElement* GetFirstCellInRow(int32 Y = -1, XP_Bool bSpan = FALSE);
+    CEditTableCellElement* GetFirstCellInColumn(int32 X = -1, XP_Bool bSpan = FALSE);
+    CEditTableCellElement* GetNextCellInRow(CEditTableCellElement *pCell = NULL);
+    CEditTableCellElement* GetNextCellInColumn(CEditTableCellElement *pCell = NULL);
+
+    XP_Bool AllCellsInColumnAreSelected();
+    XP_Bool AllCellsInRowAreSelected();
 
     // Test if cell contains only 1 container with 
     //  just the empty text field every new cell has
     XP_Bool IsEmpty();
 
+    // Keep these in synch when selecting so
+    //  we don't always have to rely on LO_Elements
+    XP_Bool IsSelected() { return m_bSelected; }
+    void    SetSelected(XP_Bool bSelected) { m_bSelected = bSelected; }
+
     // Move contents of supplied cell into this cell
     void MergeCells(CEditTableCellElement* pCell);
 
     // Delete all contents, leaving just the minimum empty text element
-    void DeleteContents();
+    // Set param to TRUE only when deleting all selected cells
+    // using CEditBuffer::DeleteSelectedCells()
+    void DeleteContents(XP_Bool bMarkAsDeleted = FALSE);
+
+    inline XP_Bool IsDeleted() { return m_bDeleted; }
+    inline void SetDeleted(XP_Bool bDeleted) {m_bDeleted = bDeleted;}
 
     // Get all text from a cell. If bJoinParagrphs is FALSE,
     //  appropriate CR/LF is added between containers,
@@ -1166,6 +1272,12 @@ public:
     XP_Bool GetWidthPercent() { return m_bWidthPercent; }
     XP_Bool GetHeightPercent() { return m_bHeightPercent; }
 
+    // This gets the width including the cell border,
+    //   padding inside cell, and inter-cell space to the next cell
+    // Supply pTable if available for efficiency
+    int32 GetFullWidth(CEditTableElement *pTable = NULL);
+    int32 GetFullHeight(CEditTableElement *pTable = NULL);
+
     // These will do appropriate action using SetData
     void IncreaseColSpan(int32 iIncrease);
     void IncreaseRowSpan(int32 iIncrease);
@@ -1178,6 +1290,42 @@ public:
     // This switches parent and next pointers
     //   to those saved during SwitchLinkage
     void RestoreLinkage();
+
+    // Save current percent and "defined" values -- do this before resizing, which may need
+    //  to change the mode for better control of resizing
+    // Since this is always called when we know the cell's data,
+    //  supply the bWidthDefined and bHeightDefined values
+    //  (percent mode params are held in class member variables)
+    void SaveSizeMode(XP_Bool bWidthDefined, XP_Bool bHeightDefined);
+    
+    // Restore saved width and height percent modes,
+    //   readjust m_bWidth an m_bHeight, and call SetData to set tag data
+    void RestoreSizeMode(int32 iParentWidth, int32 iParentHeight);
+
+    // Calculate the Percent iWidth or iHeight from the 
+    //  iWidthPixels and iHeightPixels in pData...
+    void CalcPercentWidth(EDT_TableCellData *pData);
+    void CalcPercentHeight(EDT_TableCellData *pData);
+
+    // ...vice versa
+    void CalcPixelWidth(EDT_TableCellData *pData);
+    void CalcPixelHeight(EDT_TableCellData *pData);
+
+    void SetWidth(XP_Bool bWidthDefined, XP_Bool bWidthPercent, int32 iWidthPixels);
+    void SetHeight(XP_Bool bHeightDefined, XP_Bool bHeightPercent, int32 iHeightPixels);
+
+    // Next two are used when dragging the right border
+    // Set all cells in a column to the width supplied
+    void SetColumnWidthRight(CEditTableElement *pTable, LO_Element *pLoCell, EDT_TableCellData *pData);
+    // Set all cells in a row to the width params supplied in pData
+    void SetRowHeightBottom(CEditTableElement *pTable, LO_Element *pLoCell, EDT_TableCellData *pData);
+
+    // Next two are use when resizing inside table cell property dialog
+    // Supplying bWidthDefined or bHeightDefined allows clearing this for entire col or row
+    // Set all cells in a column to the width supplied
+    void SetColumnWidthLeft(CEditTableElement *pTable, CEditTableCellElement *pEdCell, EDT_TableCellData *pData);
+    // Set all cells in a row to the width supplied
+    void SetRowHeightTop(CEditTableElement *pTable, CEditTableCellElement *pEdCell, EDT_TableCellData *pData);
 
 private:
     ED_Color m_backgroundColor;
@@ -1209,14 +1357,33 @@ private:
     int32   m_iWidth;       
     int32   m_iHeight;       
 
+    // Save last value of m_bWidthPercent, m_bWidthDefined,
+    //  bHeightPercent, and bHeightDefined here
+    //   during table, col, and row resizing.
+    // Call RestoreTableSizeMode to reset back to these values
+    XP_Bool m_bSaveWidthPercent;       
+    XP_Bool m_bSaveHeightPercent;
+    XP_Bool m_bSaveWidthDefined;       
+    XP_Bool m_bSaveHeightDefined;
+
     // This is used to temporarily switch cell to 
     //  a table created for copying contents
     // These are used by SwitchLinkage() and RestoreLinkage()
     CEditElement *m_pSaveParent;
     CEditElement *m_pSaveNext;
 
-public:
+    // This should be TRUE only if cell is also in CEditBuffer::m_SelectedEdCells list
+    XP_Bool       m_bSelected;
+    
+    // Deleting an arbitrary set of cells is tricky 
+    // since some cells only have contents deleted,
+    // and we want to leave those selected, so we can't rely on 
+    // m_SeletectedEdCells list to be empty after "deleting" all cells
+    // This marks cells to be skipped over on successive recursions.
+    // Must call CEditTable::ResetDeletedCells() to clear these flags when done
+    XP_Bool      m_bDeleted;
 
+public:
     intn m_iBackgroundSaveIndex;
 };
 
@@ -2807,6 +2974,8 @@ private:
     XP_Bool        m_bWidthPercent;
     XP_Bool        m_bHeightPercent;
     XP_Bool        m_bPercentOriginal;
+    XP_Bool        m_bFirstTime;
+    XP_Bool        m_bCenterSizing;
     int            m_iWidthMsgID;
 };
 
@@ -2998,7 +3167,14 @@ public:
 
 	void Reflow( CEditElement *pStartElement, int iOffset,
             CEditElement *pEndElement = 0, intn relayoutFlags = 0 );
-            
+
+    // Call these instead of Relayout( pTable )
+    //  when we want to relayout entire table because we are changing
+    //  either the table size or cell size(s)
+    // bChangeWidth and bChangeHeight tell us which dimension is changing
+    void ResizeTable(CEditTableElement *pTable, XP_Bool bChangeWidth = FALSE, XP_Bool bChangeHeight = FALSE);
+    void ResizeTableCell(CEditTableElement *pTable, XP_Bool bChangeWidth = FALSE, XP_Bool bChangeHeight = FALSE);
+
     // Relayout current selected table (or parent of selected cells)
     void RelayoutSelectedTable();
 
@@ -3219,6 +3395,11 @@ public:
     EDT_TableCellData* GetTableCellData();
 
     void ChangeTableSelection(ED_HitType iHitType, ED_MoveSelType iMoveType, EDT_TableCellData *pData = NULL);
+    
+    // This examines all selected cells and 
+    //  returns appropriate type, including checking if
+    //  all cells in a row or column are selected
+    ED_HitType GetTableSelectionType();
 
     void SelectAndMoveToNextTableCell(XP_Bool bForward, EDT_TableCellData *pData = NULL);
     void SetTableCellData(EDT_TableCellData *pData);
@@ -3282,6 +3463,11 @@ public:
     // Show where we can drop during  dragNdrop. Handles tables as well
     XP_Bool PositionDropCaret(int32 x, int32 y);
     void DeleteSelectionAndPositionCaret(int32 x, int32 y);
+
+    // If all cells in a col or row are selected,
+    //  this removes the row or col. Otherwise, just cell contents
+    //  are deleted to minimize disturbing table structure
+    void DeleteSelectedCells();
 
     // Data for table currently being dragged.  Accessible to all edit windows
     static EDT_DragTableData* m_pDragTableData;
@@ -3563,8 +3749,8 @@ public:
 
 private:
     // CLM: Dynamic object sizing
-    CSizingObject *m_pSizingObject;
-    
+    CSizingObject     *m_pSizingObject;
+
 public:
     // Table sizing, selection, add row or col interface
     
@@ -3576,14 +3762,10 @@ public:
     //  If TRUE, returns ED_HIT_SEL_ALL_CELLS instead of ED_HIT_SEL_TABLE
     ED_HitType GetTableHitRegion(int32 xVal, int32 yVal, LO_Element **ppElement, XP_Bool bModifierKeyPressed = FALSE);
 
-    // Get the corresponding CEditTableElement if LoElementType == LO_TABLE,
-    //   or CEditTableCellElement if LoElementType = LO_CELL
-    CEditElement* GetTableElementFromLO_Element(LO_Element *pLoElement, int16 LoElementType);
-
     // Tells us where to insert or replace cell (cell we are over is in *ppElement)
     ED_DropType GetTableDropRegion(int32 *pX, int32 *pY, int32 *pWidth, int32 *pHeight, LO_Element **ppElement);
 
-    // Used withing editor - use supplied cell's X and Y and get LO_CellStruct from it
+    // Used within editor - use supplied cell's X and Y and get LO_CellStruct from it
     //   to pass to following version.
     // iHitType can be set to just 1 cell, or entire row or column
     XP_Bool SelectTableElement(CEditTableCellElement *pCell, ED_HitType iHitType);
@@ -3668,9 +3850,6 @@ public:
     //  clear the selection. Call when deleting an element
     void ClearTableIfContainsElement(CEditElement *pElement);
     
-    // Called from front ends before during redrawing of screen
-    void ClearLastTableSelection();
-
     XP_Bool IsTableSelected() {return m_pSelectedEdTable != NULL; }
     XP_Bool IsTableOrCellSelected() { return (XP_Bool)(m_pSelectedEdTable ? TRUE : m_SelectedEdCells.Size()); }
     int     GetSelectedCellCount() { return m_SelectedEdCells.Size(); }
@@ -3679,7 +3858,8 @@ public:
     // For special cell highlighting during drag and drop
     // pLoElement can be the table or any cell that is starting cell,
     //  all cells from starting cell will have attribute removed
-    void ClearCellAttrmask(LO_Element *pLoElement, uint16 attrmask );
+//NOT USED???
+//    void ClearCellAttrmask(LO_Element *pLoElement, uint16 attrmask );
 
     // Start Column or Row search from current element
     // This works on geometric location data, not "logical" row or column
@@ -4304,6 +4484,10 @@ public:
 // Find the current context's URL in the cached history data and update the
 //   corresponding Title. Used by CEditBuffer::SetPageData()
 void edt_UpdateEditHistoryTitle(MWContext * pMWContext, char * pTitle);
+
+// Get the corresponding CEditTableElement if LoElementType == LO_TABLE,
+//   or CEditTableCellElement if LoElementType = LO_CELL
+CEditElement* edt_GetTableElementFromLO_Element(LO_Element *pLoElement, int16 LoElementType);
 
 #endif  // _EDITOR_H
 #endif  // EDITOR

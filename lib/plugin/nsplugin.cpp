@@ -25,7 +25,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "npglue.h" 
-#ifdef JAVA
+#ifdef OJI
 #include "jvmmgr.h" 
 #endif
 #include "xp_mem.h"
@@ -154,7 +154,7 @@ NPIJVMPluginManager*
 nsPluginManager::GetJVMMgr(const nsIID& aIID)
 {
     NPIJVMPluginManager* result = NULL;
-#ifdef JAVA
+#ifdef OJI
     if (fJVMMgr == NULL) {
         // The plugin manager is the outer of the JVM manager
         if (JVMMgr::Create(this, kISupportsIID, (void**)&fJVMMgr) != NS_OK)
@@ -197,7 +197,7 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
         AddRef(); 
         return NS_OK; 
     } 
-#ifdef JAVA
+#ifdef OJI
     // Aggregates...
     if (fJVMInstancePeer == NULL) {
         np_instance* instance = (np_instance*) npp->ndata;
@@ -369,6 +369,12 @@ NS_METHOD_(void)
 nsPluginInstancePeer::UnregisterWindow(void* window)
 {
 	npn_unregisterwindow(npp, window);
+}
+
+NS_METHOD_(PRInt16)
+nsPluginInstancePeer::AllocateMenuID(PRBool isSubmenu)
+{
+	return npn_allocateMenuID(npp, isSubmenu);
 }
 
 NS_METHOD_(jref)

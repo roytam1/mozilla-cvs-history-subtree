@@ -1889,6 +1889,15 @@ XP_Bool CEditSubDocElement::Reduce( CEditBuffer* /* pBuffer */ ){
 
 // class CEditTableElement
 
+// Default table params for constructors and ::NewData()
+//  Its alot easier to edit with > 1 pixels for these
+//  Easier to select, size, and drag cells, rows, and columns
+#define ED_DEFAULT_TABLE_BORDER 3
+#define ED_DEFAULT_CELL_SPACING 3
+// Space between edge of cell and contents
+// Extra here makes it easier to place caret inside a cell
+#define ED_DEFAULT_CELL_PADDING 3
+
 CEditTableElement::CEditTableElement(intn columns, intn rows)
     : CEditElement(0, P_TABLE, 0),
       m_backgroundColor(),
@@ -1902,9 +1911,9 @@ CEditTableElement::CEditTableElement(intn columns, intn rows)
       m_iHeightPixels(1),
       m_bWidthPercent(FALSE),
       m_bHeightPercent(FALSE),
-      m_iInterCellSpace(0),
-      m_iFirstColumnX(0),
-      m_iFirstRowY(0),
+      m_iCellSpacing(ED_DEFAULT_CELL_SPACING),
+      m_iCellPadding(ED_DEFAULT_CELL_PADDING),
+      m_iCellBorder(0),
       m_pFirstCellInColumnOrRow(0),
       m_pNextCellInColumnOrRow(0),
       m_iGetRow(0),
@@ -1912,8 +1921,12 @@ CEditTableElement::CEditTableElement(intn columns, intn rows)
       m_iColX(0),
       m_bSpan(0),
       m_iRows(0),
-      m_iMaxColumns(0),
-      m_pCurrentCell(0)
+      m_iColumns(0),
+      m_pCurrentCell(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE)
 {
     EDT_TRY {
         for (intn row = 0; row < rows; row++ ){
@@ -1940,9 +1953,9 @@ CEditTableElement::CEditTableElement(CEditElement *pParent, PA_Tag *pTag, int16 
       m_iHeightPixels(1),
       m_bWidthPercent(FALSE),
       m_bHeightPercent(FALSE),
-      m_iInterCellSpace(0),
-      m_iFirstColumnX(0),
-      m_iFirstRowY(0),
+      m_iCellSpacing(ED_DEFAULT_CELL_SPACING),
+      m_iCellPadding(ED_DEFAULT_CELL_PADDING),
+      m_iCellBorder(0),
       m_pFirstCellInColumnOrRow(0),
       m_pNextCellInColumnOrRow(0),
       m_iGetRow(0),
@@ -1950,8 +1963,12 @@ CEditTableElement::CEditTableElement(CEditElement *pParent, PA_Tag *pTag, int16 
       m_iColX(0),
       m_bSpan(0),
       m_iRows(0),
-      m_iMaxColumns(0),
-      m_pCurrentCell(0)
+      m_iColumns(0),
+      m_pCurrentCell(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE)
 {
     switch( m_align ) {
     case ED_ALIGN_CENTER:
@@ -1988,9 +2005,9 @@ CEditTableElement::CEditTableElement(IStreamIn *pStreamIn, CEditBuffer *pBuffer)
       m_iHeightPixels(1),
       m_bWidthPercent(FALSE),
       m_bHeightPercent(FALSE),
-      m_iInterCellSpace(0),
-      m_iFirstColumnX(0),
-      m_iFirstRowY(0),
+      m_iCellSpacing(ED_DEFAULT_CELL_SPACING),
+      m_iCellPadding(ED_DEFAULT_CELL_PADDING),
+      m_iCellBorder(0),
       m_pFirstCellInColumnOrRow(0),
       m_pNextCellInColumnOrRow(0),
       m_iGetRow(0),
@@ -1998,13 +2015,17 @@ CEditTableElement::CEditTableElement(IStreamIn *pStreamIn, CEditBuffer *pBuffer)
       m_iColX(0),
       m_bSpan(0),
       m_iRows(0),
-      m_iMaxColumns(0),
-      m_pCurrentCell(0)
+      m_iColumns(0),
+      m_pCurrentCell(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE)
 {
     m_align = (ED_Alignment) pStreamIn->ReadInt();
     m_malign = (ED_Alignment) pStreamIn->ReadInt();
 
-    // Get width from stream -- needed for pasting tables/cells
+    // Get size data from stream -- needed for pasting tables/cells
     // We must get CSID from buffer since element is not in doc yet
     //TODO: Should we pass in CSID from paste stream instead?
     PA_Tag* pTag = CEditElement::TagOpen(0);
@@ -2021,13 +2042,22 @@ CEditTableElement::CEditTableElement(IStreamIn *pStreamIn, CEditBuffer *pBuffer)
         if( !m_bHeightPercent )
             m_iHeightPixels = m_iHeight;
 
+        m_iCellSpacing = pData->iCellSpacing;
+        m_iCellPadding = pData->iCellPadding;
+
+        if( pData->bBorderWidthDefined && pData->iBorderWidth > 0 )
+            m_iCellBorder = 1;
+        else 
+            m_iCellBorder = 0;
+
         EDT_FreeTableData(pData);
     }
     PA_FreeTag( pTag );
 }
 
 CEditTableElement::~CEditTableElement(){
-   delete m_pBackgroundImage;
+    delete m_pBackgroundImage;
+    DeleteLayoutData();
 }
 
 PA_Tag* CEditTableElement::TagOpen( int iEditOffset ){
@@ -2119,6 +2149,9 @@ CEditTableCellElement* CEditTableElement::GetFirstCell()
         if( pChild && pChild->IsTableCell() )
         {
             m_pCurrentCell = pChild->TableCell();
+            // Initialize these also so we can follow
+            //  this call with GetNextCellInRow() or GetNextCellInColumn()
+            m_pFirstCellInColumnOrRow = m_pNextCellInColumnOrRow = m_pCurrentCell;
             return m_pCurrentCell;
         }
     }
@@ -2132,13 +2165,13 @@ CEditTableCellElement* CEditTableElement::GetNextCellInTable(intn *pRowCounter)
     return m_pCurrentCell;
 }
 
-// Total number of rows is reliable, even with COLSPAN and ROWSPAN effects
-intn CEditTableElement::GetRows()
+// The numbe of rows can simply be counted
+intn CEditTableElement::CountRows()
 {
     m_iRows = 0;
     for ( CEditElement* pChild = GetChild();
-            pChild;
-                pChild = pChild->GetNextSibling())
+        pChild;
+        pChild = pChild->GetNextSibling())
     {
         if ( pChild->IsTableRow() )
         {
@@ -2148,36 +2181,60 @@ intn CEditTableElement::GetRows()
     return m_iRows;
 }
 
-// Get maximum number of rows in any column,
-//  but doesn't account for effect of ROWSPAN 
-//  on following rows. 
-//  Use GetMaxColumns() for actual number of columns as displayed
-// TODO: THIS MUST BE RESOLVED! WHICH COLUMNS VALUE SHOULD BE USED FOR "COLS=x" TAG?
-intn CEditTableElement::GetColumns()
+// Counting columns is more difficult because ROWSPAN > 1 in a cell
+//  pushes cells in following rows to the right.
+//  Thus the total number of geometric columns may be greater
+//  than a simple count of the number of cells in a row
+// So we use a strategy similar to how we fill in m_ColumnLayoutData:
+//  we count the number of unique X values for all cells
+intn CEditTableElement::CountColumns()
 {
-    intn maxCols = 0;
+    TXP_GrowableArray_int32 X_Array;
+    CEditTableCellElement *pCell = GetFirstCell();
 
-    for ( CEditElement* pChild = GetChild();
-            pChild;
-                pChild = pChild->GetNextSibling())
+    while( pCell )
     {
-        if ( pChild->IsTableRow() )
+        int32 iCellX = pCell->GetX();
+        XP_Bool bFound = FALSE;
+
+        // See if cell's X was already found
+        intn iSize = X_Array.Size();
+        for( intn i=0; i < iSize; i++ )
         {
-            // This now returns accurate value, including COLSPAN effects
-            //   but only after first relayout (depends on accurate m_iColumn)
-            intn cols = pChild->TableRow()->GetCells();
-            if (cols > maxCols)
+            if( iCellX == X_Array[i] )
             {
-                maxCols = cols;
+                bFound = TRUE;
+                break;
             }
         }
+        if( !bFound )
+            X_Array.Add(iCellX);
+
+        pCell = GetNextCellInTable();
     }
-    return maxCols;
+    m_iColumns = X_Array.Size();
+
+    return m_iColumns;
 }
 
 CEditTableRowElement* CEditTableElement::GetRow(int32 Y, intn *pRow)
 {
-    intn iRow = 0;
+    intn iRow = GetRowIndex(Y);
+    if( iRow >= 0 )
+    {
+        CEditTableCellElement *pCell = GetFirstCellAtRowIndex(iRow);
+        if( pRow )
+            *pRow = iRow;
+
+        if( pCell )
+            return (CEditTableRowElement*)pCell->GetParent();
+    }
+    return NULL;
+
+// Old method -- less efficient.
+// Needed only if we must use GetRow() before table is layed out,
+//  because thats when the m_RowLayoutData is built (in CEditBuffer::FixupTableData())
+#if 0
     for ( CEditElement* pChild = GetChild();
             pChild;
                 pChild = pChild->GetNextSibling())
@@ -2200,6 +2257,7 @@ CEditTableRowElement* CEditTableElement::GetRow(int32 Y, intn *pRow)
         }
     }
     return NULL;
+#endif
 }
 
 CEditTableCellElement* CEditTableElement::GetFirstCellInRow(CEditTableCellElement *pCell, XP_Bool bSpan)
@@ -2294,6 +2352,63 @@ CEditTableCellElement* CEditTableElement::GetPreviousCellInRow(CEditTableCellEle
     return NULL;
 }
 
+CEditTableCellElement* CEditTableElement::GetFirstCellAtColumnIndex(intn iIndex)
+{
+    if( iIndex < m_ColumnLayoutData.Size() )
+        return m_ColumnLayoutData[iIndex]->pEdCell;
+
+    return NULL;
+}
+
+CEditTableCellElement* CEditTableElement::GetFirstCellAtRowIndex(intn iIndex)
+{
+    if( iIndex < m_RowLayoutData.Size() )
+        return m_RowLayoutData[iIndex]->pEdCell;
+
+    return NULL;
+}
+
+// Get the defining left (for columns) and top (for rows) value from index
+int32 CEditTableElement::GetColumnX(intn iIndex)
+{
+    if( iIndex < m_ColumnLayoutData.Size() )
+        return m_ColumnLayoutData[iIndex]->X;
+
+    return 0;
+}
+
+int32 CEditTableElement::GetRowY(intn iIndex)
+{
+    if( iIndex < m_RowLayoutData.Size() )
+        return m_RowLayoutData[iIndex]->Y;
+
+    return 0;
+}
+
+// Get grid coordinates of a cell
+intn CEditTableElement::GetColumnIndex(int32 X)
+{
+    intn iCount = m_ColumnLayoutData.Size();
+    for( intn i=0; i < iCount; i++ )
+    {
+        if( m_ColumnLayoutData[i]->X == X )
+            return i;
+    }
+    return -1;
+}
+
+intn CEditTableElement::GetRowIndex(int32 Y)
+{
+    intn iCount = m_RowLayoutData.Size();
+    for( intn i=0; i < iCount; i++ )
+    {
+        if( m_RowLayoutData[i]->Y == Y )
+            return i;
+    }
+    return -1;
+}
+
+
 CEditTableCellElement* CEditTableElement::GetFirstCellInColumn(CEditTableCellElement *pCell, XP_Bool bSpan)
 {
     return GetFirstCellInColumn(pCell->GetX(), bSpan);
@@ -2301,10 +2416,9 @@ CEditTableCellElement* CEditTableElement::GetFirstCellInColumn(CEditTableCellEle
 
 // Get first cell of a "real" (geometric) row, based on location
 // If bSpan is TRUE, this will also get a cell that spans 
-//   given X, even if left of cell != X
+//   given X, even if left edge of cell < X
 CEditTableCellElement* CEditTableElement::GetFirstCellInColumn(int32 X, XP_Bool bSpan)
 {
-
     CEditTableCellElement *pCell = GetFirstCell();
     m_iGetRow = 0;
     m_iColX = X;
@@ -2312,8 +2426,10 @@ CEditTableCellElement* CEditTableElement::GetFirstCellInColumn(int32 X, XP_Bool 
     while( pCell )
     {
         int32 iCellX = pCell->GetX();
-        if( ( bSpan && (X >= iCellX) && (X <= (iCellX + pCell->GetWidth()))) ||
-            (!bSpan && (X == iCellX)) )
+        // Note: Using GetWidth() is OK (and more efficient) here since all that matters is
+        //  the cell's right edge spans (is > than) left-edge X value
+        if( (!bSpan && X == iCellX) ||
+            ( bSpan && X >= iCellX && X <= (iCellX + pCell->GetWidth()) ) )
         {
             m_pFirstCellInColumnOrRow = m_pNextCellInColumnOrRow = pCell;
             return pCell;
@@ -2340,8 +2456,8 @@ CEditTableCellElement* CEditTableElement::GetNextCellInColumn(CEditTableCellElem
     while( pCell )
     {
         int32 iCellX = pCell->GetX();
-        if( ( m_bSpan && (m_iColX >= iCellX) && (m_iColX <= (iCellX + pCell->GetWidth()))) ||
-            (!m_bSpan && (m_iColX == iCellX)) )
+        if( (!m_bSpan && m_iColX == iCellX) ||  // Must have exact match
+            ( m_bSpan && m_iColX >= iCellX && m_iColX <= (iCellX + pCell->GetWidth()) ) ) //GetWidth is OK here
         {
             m_pNextCellInColumnOrRow = pCell;
             return pCell;
@@ -2387,54 +2503,166 @@ CEditTableCellElement* CEditTableElement::GetPreviousCellInColumn(CEditTableCell
     return NULL;
 }
 
+CEditTableCellElement* CEditTableElement::GetFirstCellInNextColumn(int32 iCurrentColumnX)
+{
+    intn iCount = m_ColumnLayoutData.Size();
+    intn i;
+
+    // Scan data to find current cell's column in our layout data
+    for( i = 0; i < iCount; i++ )
+    {
+        if( iCurrentColumnX == m_ColumnLayoutData[i]->X )
+            break;
+    }
+    if( i+1 >= iCount )
+        return NULL;    // No cell is after the current column
+
+    return m_ColumnLayoutData[i+1]->pEdCell;
+}
+
+CEditTableCellElement* CEditTableElement::GetFirstCellInNextRow(int32 iCurrentRowY)
+{
+    intn iCount = m_RowLayoutData.Size();
+    intn i;
+
+    // Scan data to find current cell's row in our layout data
+    for( i = 0; i < iCount; i++ )
+    {
+        if( iCurrentRowY == m_RowLayoutData[i]->Y )
+            break;
+    }
+    if( i+1 >= iCount )
+        return NULL;    // No cell is after the current row
+
+    return m_RowLayoutData[i+1]->pEdCell;
+}
+
 // Figure out how many columns are included between given X values
-// Too many COLSPAN and ROWSPAN settings may make this an underestimate
 intn CEditTableElement::GetColumnsSpanned(int32 iStartX, int32 iEndX)
 {
     if( iStartX == iEndX )
         return 0;
 
-    intn iBestGuessColumns = 0;
-    CEditTableRowElement* pRow = GetFirstRow();
-    while( pRow )
+    intn iColumns = 0;
+    intn iTotalColumns = m_ColumnLayoutData.Size();
+    for( intn i = 0; i < iTotalColumns; i++ )
     {
-        intn iColumns = 0;
-        CEditTableCellElement *pCell = pRow->GetFirstCell();
+        if( iStartX <= m_ColumnLayoutData[i]->X &&
+            iEndX > m_ColumnLayoutData[i]->X )
+        {
+            iColumns++;
+        }
+    }
+    return iColumns;
+}
+
+// Test if any cell in the first row has COLSPAN > 1
+XP_Bool CEditTableElement::FirstRowHasColSpan()
+{
+    CEditTableCellElement* pCell = GetFirstCell();
+    while( pCell )
+    {
+        if( pCell->GetColSpan() > 1 )
+            return TRUE;
+
+        pCell = GetNextCellInRow();
+    } 
+
+    return FALSE;
+}
+
+// Currently (4/24/98) not called
+// This should be done at least the before the first time a table is layed out
+//   when a file is loaded. It fixes problems that cause major headaches with
+//   rowspan and columnspan
+// TODO: Should we also pad rows to insure that table is rectangular? (no ragged right edge)
+void CEditTableElement::FixupColumnsAndRows()
+{
+    CEditTableCellElement *pFirstCell = GetFirstCell();
+    if( !pFirstCell )
+        return;
+
+    CEditTableCellElement *pCell;
+    intn iColumns = m_ColumnLayoutData.Size();
+    intn iRows = m_RowLayoutData.Size();
+    intn i, iMinSpan, iDecrease;
+    // We will find the maximum number of columns in all rows
+    m_iColumns = 0;
+
+    for ( i = 0; i < iColumns; i++ )
+    {
+        CEditTableCellElement *pFirstCellInCol = m_ColumnLayoutData[i]->pEdCell;
+        pCell = pFirstCellInCol; 
+        iMinSpan = 2;
+
+        // Scan column to check for minimum COLSPAN
         while( pCell )
         {
-            int32 iCellX = pCell->GetX();
-            int32 iWidth = pCell->GetWidth();
+            if( pCell->GetColSpan() < iMinSpan )
+                iMinSpan = pCell->GetColSpan();
 
-            // Cell is past region - not a good row to use, so quit now
-            if( (iCellX+iWidth) > iEndX )
+            // Any cell with value of 1 means column is OK
+            if( iMinSpan == 1 )
                 break;
 
-            if( iCellX == iStartX )
+            pCell = GetNextCellInColumn(pCell);
+        }
+        if( iMinSpan > 1 )
+        {
+            // We have a bad column
+            // Go back through to fixup COLSPAN values
+            pCell = pFirstCellInCol;
+            iDecrease = iMinSpan - 1;
+
+            while( pCell )
             {
-                if( (iCellX + iWidth) <= iEndX )
-                {
-                    iColumns += pCell->GetColSpan();
-                    // If this cell exactly spans desired area,
-                    //  then we know the number of columns for sure
-                    if( (iCellX + pCell->GetWidth() + m_iInterCellSpace) == iEndX)
-                    {
-                        return iColumns;
-                    }
-                    // We need to find more cells
-                    //  between current cell and end,
-                    //  so start at next possible cell in this row
-                    iStartX = iCellX + iWidth + m_iInterCellSpace;
-                    // Use what we have so far as our best guess
-                    if( iColumns > iBestGuessColumns )
-                        iBestGuessColumns = iColumns;
-                }
+                pCell->DecreaseColSpan(iDecrease);
+                pCell = GetNextCellInColumn(pCell);
             }
-            pCell = pCell->GetNextCellInLogicalRow();
-        }                
-        pRow = pRow->GetNextRow();
+        }
+        intn iCellsInRow = m_ColumnLayoutData[i]->iCellsInRow;
+        CEditTableRowElement *pRow = (CEditTableRowElement*)pCell->GetParent();
+        if( pRow )
+            pRow->SetColumns(iCellsInRow);
+            
+        if( m_iColumns > iCellsInRow)
+            m_iColumns = iCellsInRow;
     }
-    return iBestGuessColumns;
+
+    // Do the same for ROWSPAN
+    for ( i = 0; i < iRows; i++ )
+    {
+        CEditTableCellElement *pFirstCellInRow = m_RowLayoutData[i]->pEdCell;
+        pCell = pFirstCellInRow; 
+        iMinSpan = 2;
+
+        // Scan Row to check for minimum ROWSPAN
+        while( pCell )
+        {
+            if( pCell->GetRowSpan() < iMinSpan )
+                iMinSpan = pCell->GetRowSpan();
+
+            if( iMinSpan == 1 ) // Row is OK
+                break;
+
+            pCell = GetNextCellInRow(pCell);
+        }
+        if( iMinSpan > 1 )
+        {
+            // We have a bad row
+            // Go back through to fixup ROWSPAN values
+            pCell = pFirstCellInRow;
+            iDecrease = iMinSpan - 1;
+
+            while( pCell )
+            {
+                pCell->DecreaseRowSpan(iDecrease);
+                pCell = GetNextCellInRow(pCell);
+            }
+        }
+    }
 }
+
 
 void CEditTableElement::InsertRows(int32 Y, int32 iNewY, intn number, CEditTableElement* pSource)
 {
@@ -2442,7 +2670,6 @@ void CEditTableElement::InsertRows(int32 Y, int32 iNewY, intn number, CEditTable
     {
         return; /* A waste of time, but legal. */
     }
-    intn rows = GetRows();
     if ( number < 0 || Y < 0 )
     {
         /* Illegal. */
@@ -2520,7 +2747,6 @@ void CEditTableElement::InsertColumns(int32 X, int32 iNewX, intn number, CEditTa
     {
         return; /* A waste of time, but legal. */
     }
-    intn rows = GetRows();
     if ( number < 0 || X < 0 )
     {
         /* Illegal. */
@@ -2534,8 +2760,6 @@ void CEditTableElement::InsertColumns(int32 X, int32 iNewX, intn number, CEditTa
     {
         CEditTableRowElement* pSourceRow = pSource ? pSource->FindRow(0) : 0;
         pRow->InsertCells(X, iNewX, number, pSourceRow);
-        //  CURRENTLY, pSource IS NEVER USED
-        //  Was used for UNDO BUFFER, so delete was meant for that
         if( pSourceRow )
             delete pSourceRow;
         
@@ -2543,103 +2767,73 @@ void CEditTableElement::InsertColumns(int32 X, int32 iNewX, intn number, CEditTa
     }
 }
 
-
-// TODO: THIS ISN'T CORRECT YET - DELETING MULTIPLE ROWS IS A REAL PAIN!
-void CEditTableElement::DeleteRows(int32 Y, intn number, CEditTableElement* pUndoContainer)
+// Note: no saving to pUndoContainer any more
+void CEditTableElement::DeleteRows(int32 Y, intn number)
 {
-    intn i;
     if ( number == 0 ) {
         return; /* A waste of time, but legal. */
     }
-    GetEditBuffer()->ClearTableAndCellSelection();
-    intn rows = GetRows();
     if ( number < 0 || Y < 0 ){
         /* Illegal. */
         XP_ASSERT(FALSE);
         return;
     }
-    TXP_GrowableArray_int32 deleted;
-    deleted.SetSize(m_iMaxColumns);
-    for( i = 0; i < m_iMaxColumns; i++ )
-        deleted[i] = 0;
 
-    // Get row -- this should never fail since Y should 
-    //  have come from a valid cell!
-    CEditTableRowElement* pRow = GetRow(Y);
-    for( i = 0; i < number; i++ )
+    intn iRowIndex = GetRowIndex(Y);
+    // Abort if invalid Y value
+    if( iRowIndex == -1 )
+        return;    
+
+    // Restrict number of rows we can delete
+    intn iLastIndex = min(iRowIndex + number - 1, m_iRows-1);
+
+    for( ; iRowIndex <= iLastIndex; iRowIndex++ )
     {
-        while( pRow )
+        Y = GetRowY(iRowIndex);
+        CEditTableRowElement *pRow = GetRow(Y);
+
+        // Get first cell starting at or spanning the Y value (TRUE)
+        CEditTableCellElement *pCell = GetFirstCellInRow(Y, TRUE);
+        while( pCell )
         {
-            // Must get next row now since we might delete it
-            CEditTableRowElement *pNextRow = pRow->GetNextRow();
+            // Get next cell before we delete the one we're at
+            CEditTableCellElement *pNextCell = GetNextCellInRow();
 
-            // Check if all cells in the row will be deleted
-            XP_Bool bDeleteRow = TRUE;
-            CEditTableCellElement *pCell = pRow->GetFirstCell();
-            while( pCell )
+            if( Y == pCell->GetY() )
             {
-                int32 iCellY = pCell->GetY();
-                // We keep row if any cell is not at same top
-                //   or we will reduce rowspan rather than delete cell
-                if( (Y != iCellY) ||
-                    (pCell->GetRowSpan() > number) )
-                {
-                    bDeleteRow = FALSE;
-                    break;
-                }    
-                pCell = pCell->GetNextCellInLogicalRow();
-            }
+                // Cell is in same row as delete row
+                // Unselect if selected and delete the cell
+                if( pCell->IsSelected() )
+                    GetEditBuffer()->SelectCell(FALSE, NULL, pCell);
 
-            if( bDeleteRow )
-            {
-                if ( pUndoContainer )
-                {
-                    pRow->Unlink();
-                    pRow->InsertAsLastChild(pUndoContainer);
-                }
-                else {
-                    delete pRow;
-                }
+                delete pCell;
+                // Note: We don't worry about deleting cells with rowspan > 1
+                //  even though that might upset the column layout for cells
+                //  below the deleted rows. 
+                // We might want to revisit this later -- we would have to 
+                //  insert blank cells into rows below when rowspan > number
+                //  of rows we are deleting
             }
-            // Get all cells that are at or span (TRUE param) given Y value
-            pCell = GetFirstCellInRow(Y, TRUE);
-            while( pCell )
+            else if( pCell->GetRowSpan() > 1 )
             {
-                intn iRowSpan = pCell->GetRowSpan();
-                CEditTableCellElement *pNextCell = pCell->GetNextCellInRow();
-                if( pCell->GetY() == Y)
-                {
-                    if( iRowSpan > number )
-                    {
-                        pCell->DecreaseRowSpan(number);
-                    } else {
-                        //TODO: CAN'T USE pUndoContainer - this wants a CEditTableRowElement*
-                        pRow->DeleteCells(pCell->GetX(), pCell->GetColSpan() /*, pUndoContainer*/);
-                    }
-                    break;
-                } else {
-                    // Cell is actually in row above
-                    // The amount available is simpler than for columns,
-                    //  since we always know what row we're in
-                    int32 iSpanAvailable = iRowSpan - pCell->GetRow();
-                    if( iSpanAvailable > 0 )
-                    {
-                        // Decresae the column span instead of deleting
-                        intn iDecrease = min(iSpanAvailable, number);
-                        pCell->DecreaseRowSpan(iDecrease);
-                    } else {
-                        // Should never get here?
-                        XP_ASSERT(FALSE);
-                    }
-                }
-                pCell = pNextCell;
+                // Cell spans the delete row 
+                //  (its actually in a row above the delete row)
+                // Reduce its rowspan instead of deleting
+                pCell->DecreaseRowSpan(1);
             }
-            // Next row. TODO: THIS IS NOT ENTIRELY CORRECT: ROWSPAN MAY CAUSE UNEVEN ROWS BELOW
-            // (We need to track number of rows deleted (or RowSpan reduced) for each column)
-            pRow = pNextRow;
+#ifdef DEBUG
+            else
+                XP_TRACE(("CEditTableElement::DeleteRows: Rowspan doesnt agree with rowlayout"));
+#endif
+            pCell = pNextCell;
         }
-        
-    } 
+        // Delete the row if all cells were deleted (should always be true?)
+        // VERY IMPORTANT. Never call anything to cause
+        //   relayout else our m_RowLayoutData and entire coordinate
+        //   system will be altered
+        if( pRow && pRow->GetChild() == NULL )
+            delete pRow;
+    }
 }
 
 void CEditTableElement::DeleteColumns(int32 X, intn number, CEditTableElement* pUndoContainer){
@@ -2647,7 +2841,6 @@ void CEditTableElement::DeleteColumns(int32 X, intn number, CEditTableElement* p
     {
         return; /* A waste of time, but legal. */
     }
-    // Note: ClearTableAndCellSelection() is done in DeleteCells();
     if ( number < 0 || X < 0 )
      {
         /* Illegal. */
@@ -2745,7 +2938,12 @@ void CEditTableElement::FinishedLoad( CEditBuffer* pBuffer ){
     CEditTableRowElement* pRow = NULL;
     CEditElement* pNext = 0;
     
-    if ( GetRows() <= 0 ) {
+    // For efficiency, get count rows only
+    //  if we haven't layed out table
+    if( m_iRows <= 0 )
+        m_iRows = CountRows();
+
+    if ( m_iRows <= 0 ) {
         // Force a row
         CEditTableRowElement* pTempRow = new CEditTableRowElement();
         pTempRow->InsertAsFirstChild(this);
@@ -2863,9 +3061,15 @@ void CEditTableElement::SetData( EDT_TableData *pData ){
     m_iHeight = pData->iHeight;
     m_bHeightPercent = pData->bHeightPercent;
 
-    m_iInterCellSpace = pData->iInterCellSpace;
+    m_iCellSpacing = pData->iCellSpacing;
+    m_iCellPadding = pData->iCellPadding;
+    if( pData->bBorderWidthDefined && pData->iBorderWidth > 0 )
+        m_iCellBorder = 1;
+    else 
+        m_iCellBorder = 0;
+
     m_iRows = pData->iRows;
-    m_iMaxColumns = pData->iColumns;
+    m_iColumns = pData->iColumns;
 }
 
 char* CEditTableElement::CreateTagData(EDT_TableData *pData, XP_Bool bPrinting) {
@@ -2875,8 +3079,8 @@ char* CEditTableElement::CreateTagData(EDT_TableData *pData, XP_Bool bPrinting) 
     if( bPrinting && pData->malign != ED_ALIGN_DEFAULT ){
         pNew = PR_sprintf_append( pNew, "ALIGN=%s ", EDT_AlignString(pData->malign) );
     }
-    // If you don't mention the border, you get a zero pixel boarder.
-    // If you just say BORDER, it's like BOARDER=1
+    // If you don't mention the border, you get a zero pixel border.
+    // If you just say BORDER, it's like BORDER=1
     if ( pData->bBorderWidthDefined ){
         if ( pData->iBorderWidth == 1 ) {
             /* Neatness counts. */
@@ -2893,7 +3097,7 @@ char* CEditTableElement::CreateTagData(EDT_TableData *pData, XP_Bool bPrinting) 
         pNew = PR_sprintf_append( pNew, "CELLPADDING=%d ", pData->iCellPadding );
     }
     if ( pData->bUseCols ){
-        int cols = (int) GetColumns();
+        int cols = (int) GetColumns(); //Should we use CountColumns()?
         if ( cols == 0 ) {
             cols = (int) pData->iColumns;
         }
@@ -2963,8 +3167,10 @@ EDT_TableData* CEditTableElement::GetData()
     pRet->iHeight = m_iHeight;
     pRet->iHeightPixels = m_iHeightPixels;
 
-    pRet->iInterCellSpace = m_iInterCellSpace;
-    pRet->iColumns = m_iMaxColumns;
+    pRet->iCellSpacing = m_iCellSpacing;
+    pRet->iCellPadding = m_iCellPadding;
+    pRet->iRows = m_iRows;
+    pRet->iColumns = m_iColumns;
     PA_FreeTag( pTag );
     return pRet;
 }
@@ -2993,8 +3199,9 @@ EDT_TableData* CEditTableElement::ParseParams( PA_Tag *pTag, int16 csid ){
         pData->malign = malign;
     }
 
-    pData->iRows = GetRows();
-    pData->iColumns = GetColumns();
+    pData->iRows = GetRows();        // Should we use CountRows()? NO THIS IS CALLED EVERY GetData call
+    pData->iColumns = GetColumns();  // Should we use CountColumns()?
+
     // If you just say BORDER, it's the same as BORDER=1
     // If you say BORDER=0, it's different than not saying BORDER at all
     pData->bBorderWidthDefined = edt_FetchParamBoolExist(pTag, PARAM_BORDER, csid);
@@ -3043,19 +3250,19 @@ EDT_TableData* CEditTableElement::NewData(){
     pData->malign = ED_ALIGN_DEFAULT;
     pData->bUseCols = TRUE;
     pData->iRows = 1;
-    pData->iColumns = 2;
+    pData->iColumns = 1;
     pData->bBorderWidthDefined = TRUE;
-    pData->iBorderWidth = 2; //1; //cmanske: Increase these for easier selection?
-    pData->iCellSpacing = 2; //1;
-    pData->iCellPadding = 3; //1; Extra here makes it easier to place caret
-    pData->bWidthDefined = TRUE;
-    pData->bWidthPercent = TRUE;
-    pData->iWidth = 100;
-    pData->iWidthPixels = 0;
-    pData->iInterCellSpace = 0;
+    pData->iBorderWidth = ED_DEFAULT_TABLE_BORDER;
+    pData->iCellSpacing = ED_DEFAULT_CELL_SPACING;
+    pData->iCellPadding = ED_DEFAULT_CELL_PADDING;
+    pData->bWidthDefined = FALSE;
+    pData->bWidthPercent = FALSE; // Percent mode is a pain
+    pData->iWidth = 1;
+    pData->iWidthPixels = 1;
     pData->bHeightDefined = FALSE;
-    pData->bHeightPercent = TRUE;
-    pData->iHeight = 100;
+    pData->bHeightPercent = FALSE;
+    pData->iHeight = 1;
+    pData->iHeightPixels = 1;
     pData->pColorBackground = 0;
     pData->pBackgroundImage = 0;
     pData->bBackgroundNoSave = FALSE;
@@ -3171,14 +3378,14 @@ void CEditTableElement::GetParentSize(MWContext *pContext, int32 *pWidth, int32 
     if( !pLoTable )
         pLoTable = GetLoTable();
 
-    int32 iMaxWidth = 1;
-    int32 iMaxHeight = 1;
+    int32 iParentWidth = 1;
+    int32 iParentHeight = 1;
 
     if( pLoTable )
     {
         // Get viewing window
         int32 iXOrigin, iYOrigin;
-        FE_GetDocAndWindowPosition(pContext, &iXOrigin, &iYOrigin, &iMaxWidth, &iMaxHeight);
+        FE_GetDocAndWindowPosition(pContext, &iXOrigin, &iYOrigin, &iParentWidth, &iParentHeight);
 
 	    // Get extra margin
 	    int32 iMarginWidth;
@@ -3190,122 +3397,347 @@ void CEditTableElement::GetParentSize(MWContext *pContext, int32 *pWidth, int32 
 
         if( pParentCell  )
         {
-            iMaxWidth = pParentCell->width - (2 * pParentCell->border_horiz_space);
-            iMaxHeight = pParentCell->height - (2 * pParentCell->border_vert_space);
+            iParentWidth = pParentCell->width - (2 * pParentCell->border_horiz_space);
+            iParentHeight = pParentCell->height - (2 * pParentCell->border_vert_space);
         } else {
-            iMaxWidth -= 2 * iMarginWidth;
-            iMaxHeight -= 2 * iMarginHeight;
+            iParentWidth -= 2 * iMarginWidth;
+            iParentHeight -= 2 * iMarginHeight;
         }
     }
     if( pWidth )
-        *pWidth = iMaxWidth;
+        *pWidth = iParentWidth;
     
     if( pHeight )
-        *pHeight = iMaxHeight;
+        *pHeight = iParentHeight;
 }
 
-void CEditTableElement::SetTableMode(MWContext *pContext, int iMode)
+void CEditTableElement::SetSizeMode(MWContext *pContext, int iMode)
 {
-
-    int32 iMaxWidth, iMaxHeight;
-    XP_Bool bPercent = (XP_Bool)(iMode & ED_TABLE_PERCENT);
-    XP_Bool bPixels = (XP_Bool)(iMode & ED_TABLE_PIXELS);
-    XP_Bool bUseCols = (XP_Bool)(iMode & ED_TABLE_USE_COLS);
-    XP_Bool bNoCols = (XP_Bool)(iMode & ED_TABLE_NO_COLS);
+    int32 iParentWidth, iParentHeight;
+    XP_Bool bCellPercent = (XP_Bool)(iMode & ED_MODE_CELL_PERCENT);
+    XP_Bool bTablePercent = (XP_Bool)(iMode & ED_MODE_TABLE_PERCENT);
+    XP_Bool bCellPixels = (XP_Bool)(iMode & ED_MODE_CELL_PIXELS);
+    XP_Bool bTablePixels = (XP_Bool)(iMode & ED_MODE_TABLE_PIXELS);
+    XP_Bool bUseCols = (XP_Bool)(iMode & ED_MODE_USE_COLS);
+    XP_Bool bNoCols = (XP_Bool)(iMode & ED_MODE_NO_COLS);
     XP_Bool bChanged = FALSE;
+    XP_Bool bSetTableWidth = iMode & ED_MODE_USE_TABLE_WIDTH;
+    XP_Bool bClearTableWidth = iMode & ED_MODE_NO_TABLE_WIDTH;
+    XP_Bool bSetTableHeight = iMode & ED_MODE_USE_TABLE_HEIGHT;
+    XP_Bool bClearTableHeight = iMode & ED_MODE_NO_TABLE_HEIGHT;
 
-    if( (bPixels && m_bWidthPercent) || (bPercent && !m_bWidthPercent) || 
-        (bPixels && m_bHeightPercent) || (bPercent && !m_bHeightPercent) ||
-        bUseCols || bNoCols )
+    XP_Bool bSetCellWidth = iMode & ED_MODE_USE_CELL_WIDTH;
+    XP_Bool bClearCellWidth = iMode & ED_MODE_NO_CELL_WIDTH;
+    XP_Bool bSetCellHeight = iMode & ED_MODE_USE_CELL_HEIGHT;
+    XP_Bool bClearCellHeight = iMode & ED_MODE_NO_CELL_HEIGHT;
+    
+    //XP_TRACE(("SetSizeMode: bPixels=%d, bPercent=%d, bSetCellWidth=%d, bClearCellWidth=%d", bPixels, bPercent, bSetCellWidth, bClearCellWidth));
+
+    // Save current values to restore after resizing
+    m_bSaveWidthPercent = m_bWidthPercent;
+    m_bSaveHeightPercent = m_bHeightPercent;
+
+    // First set values for the table
+    if( (bTablePixels && m_bWidthPercent) || (bTablePercent && !m_bWidthPercent) || 
+        (bTablePixels && m_bHeightPercent) || (bTablePercent && !m_bHeightPercent) ||
+        bUseCols || bNoCols || bSetTableWidth || bSetTableHeight || 
+        bClearTableWidth || bClearTableHeight )
     {
         EDT_TableData *pTableData = GetData();
         if( !pTableData )
             return;
 
-        GetParentSize(pContext, &iMaxWidth, &iMaxHeight);
+        // Save these to restore after relayout of table
+        m_bSaveWidthDefined = pTableData->bWidthDefined;
+        m_bSaveHeightDefined = pTableData->bHeightDefined;
+        m_bSaveWidthPercent = pTableData->bWidthPercent;
+        m_bSaveHeightPercent = pTableData->bHeightPercent;
 
-        pTableData->bWidthPercent = bPercent;
-        pTableData->bHeightPercent = bPercent;
-        if( bPercent )
+        GetParentSize(pContext, &iParentWidth, &iParentHeight);
+
+        if( (pTableData->bWidthDefined && bClearTableWidth) ||
+            (!pTableData->bWidthDefined && bSetTableWidth) )
         {
-            pTableData->iWidth = m_iWidthPixels * 100 / iMaxWidth;
-            pTableData->bWidthDefined = TRUE;
-            pTableData->iHeight = m_iHeightPixels * 100 / iMaxHeight;
-            pTableData->bHeightDefined = TRUE;
-        } else if( bPixels ){
-            pTableData->iWidth = m_iWidthPixels;    
-            pTableData->bWidthDefined = TRUE;
-            pTableData->iHeight = m_iHeightPixels;
-            pTableData->bHeightDefined = TRUE;
+            pTableData->bWidthDefined = bSetTableWidth;
         }
+        if( (pTableData->bHeightDefined && bClearTableHeight) ||
+            (!pTableData->bHeightDefined && bSetTableHeight) )
+        {
+            pTableData->bHeightDefined = bSetTableHeight;
+        }
+
+        if( (bTablePixels && pTableData->bWidthPercent) ||
+            (bTablePercent && !pTableData->bWidthPercent) )
+        {
+            if( bTablePercent )
+            {
+                pTableData->bWidthPercent = TRUE;
+                pTableData->iWidth = m_iWidthPixels * 100 / iParentWidth;
+            } else if( bTablePixels ){
+                pTableData->bWidthPercent = FALSE;
+                pTableData->iWidth = m_iWidthPixels;    
+            }
+        }
+        if( (bTablePixels && pTableData->bHeightPercent) ||
+            (bTablePercent && !pTableData->bHeightPercent) )
+        {
+            pTableData->bHeightPercent = bTablePercent;
+            if( bTablePercent )
+            {
+                pTableData->bHeightPercent = TRUE;
+                pTableData->iHeight = m_iHeightPixels * 100 / iParentHeight;
+            } else if( bTablePixels ){
+                pTableData->bHeightPercent = FALSE;
+                pTableData->iHeight = m_iHeightPixels;
+            }
+        }
+
         if( bUseCols )
             pTableData->bUseCols = TRUE;
-        else if( bNoCols )
+        if( bNoCols )
             pTableData->bUseCols = FALSE;
 
         SetData(pTableData);
         EDT_FreeTableData(pTableData);
     }
 
-
-    // Scan through entire table to reset all rows and cells
-    CEditElement  *pRow = GetChild();
-    CEditTableCellElement *pCell;
-    int iRow = 0;
-    while( pRow )
+    // Process cells only if asked to set or clear the width or height
+    if( bCellPixels || bCellPercent ||
+        bSetCellWidth || bClearCellWidth ||
+        bSetCellHeight || bClearCellHeight )
     {
-        if( pRow->IsTableRow() )
+        // Scan through entire table to set all cells
+        CEditTableCellElement *pCell = GetFirstCell();
+        if( pCell )
         {
-            pCell = (CEditTableCellElement*)(pRow->GetChild());
-
-            if( pCell )
-            {
-                iMaxWidth = pCell->GetParentWidth();
-                iMaxHeight = pCell->GetParentHeight();
-            }
-            else 
-            {
-                XP_TRACE(("ROW HAS NO CHILD!"));
-            }
-            while( pCell )
-            {
-                bPercent = iMode & ED_TABLE_PERCENT;
-                bPixels = iMode & ED_TABLE_PIXELS;
-                XP_Bool bSetSize = iMode & ED_TABLE_USE_CELL_WIDTH;
-                XP_Bool bClearSize = iMode & ED_TABLE_NO_CELL_WIDTH;
-                bChanged = FALSE;
-                if( bPixels || bPercent || bSetSize || bClearSize )
-                {
-                    EDT_TableCellData *pCellData = pCell->GetData();
-                    if( pCellData )
-                    {
-                        if( (bPercent && !pCellData->bWidthPercent) ||
-                            (bPixels && pCellData->bWidthPercent) )
-                        {
-                            pCellData->bWidthPercent = bPercent;
-                            if( bPercent )
-                                pCellData->iWidth = (pCellData->iWidthPixels * 100) / iMaxWidth;
-                            else
-                                pCellData->iWidth = pCellData->iWidthPixels;
-                            bChanged = TRUE;
-                        }
-                        if( (pCellData->bWidthDefined && bClearSize) ||
-                            (!pCellData->bWidthDefined && bSetSize) )
-                        {
-                            pCellData->bWidthDefined = bSetSize;
-                            bChanged = TRUE;
-                        }
-                        if( bChanged )
-                            pCell->SetData(pCellData);
-                    
-                        EDT_FreeTableCellData(pCellData);
-                    }
-                }
-                pCell = (CEditTableCellElement*)pCell->GetNextSibling();
-            }
+            iParentWidth = pCell->GetParentWidth();
+            iParentHeight = pCell->GetParentHeight();
         }
-        pRow = pRow->GetNextSibling();
-        iRow++;
+
+        while( pCell )
+        {
+            // Only set cell's data if we change from current settings
+            bChanged = FALSE;
+            EDT_TableCellData *pCellData = pCell->GetData();
+            if( pCellData )
+            {
+                if( (pCellData->bWidthDefined && bClearCellWidth) ||
+                    (!pCellData->bWidthDefined && bSetCellWidth) )
+                {
+                    pCellData->bWidthDefined = bSetCellWidth;
+                    bChanged = TRUE;
+                }
+                if( (pCellData->bHeightDefined && bClearCellHeight) ||
+                    (!pCellData->bHeightDefined && bSetCellHeight) )
+                {
+                    pCellData->bHeightDefined = bSetCellHeight;
+                    bChanged = TRUE;
+                }
+
+                // Save the current m_bWidthPercent, m_bHeightPercent, bWidthDefined, and bHeightDefined
+                pCell->SaveSizeMode(pCellData->bWidthDefined, pCellData->bHeightDefined);
+
+                if( (bCellPixels && pCellData->bWidthPercent) ||
+                    (bCellPercent && !pCellData->bWidthPercent) )
+                {
+                    if( bCellPercent )
+                    {
+                        pCellData->bWidthPercent = TRUE;
+                        pCellData->iWidth = (pCellData->iWidthPixels * 100) / iParentWidth;
+                    } else {
+                        pCellData->bWidthPercent = FALSE;
+                        pCellData->iWidth = pCellData->iWidthPixels;
+                    }
+                    bChanged = TRUE;
+                }
+                if( (bCellPixels && pCellData->bHeightPercent) ||
+                    (bCellPercent && !pCellData->bHeightPercent) )
+                {
+                    if( bCellPercent )
+                    {
+                        pCellData->bHeightPercent = TRUE;
+                        pCellData->iHeight = (pCellData->iHeightPixels * 100) / iParentHeight;
+                    } else {
+                        pCellData->bHeightPercent = FALSE;
+                        pCellData->iHeight = pCellData->iHeightPixels;
+                    }
+                    bChanged = TRUE;
+                }
+
+                if( bChanged )
+                    pCell->SetData(pCellData);
+            
+                EDT_FreeTableCellData(pCellData);
+            }
+            pCell = GetNextCellInTable();
+        }
+    }
+}
+
+void CEditTableElement::RestoreSizeMode(MWContext *pContext)
+{
+    int32 iParentWidth;
+    int32 iParentHeight;
+    EDT_TableData *pTableData = GetData();
+
+    if( pTableData && pContext )
+    {
+        // First restore the size mode for the table
+        GetParentSize(pContext, &iParentWidth, &iParentHeight);
+        if( m_bSaveWidthPercent )
+        {
+            // Convert existing Pixel value to % of parent size
+            pTableData->iWidth = (m_iWidthPixels * 100) / iParentWidth;
+            pTableData->iHeight = (m_iHeightPixels * 100) / iParentHeight;
+        } else {
+            // Converting to pixels is simple - just use the pixel value we already have
+            pTableData->iWidth = m_iWidthPixels;
+            pTableData->iHeight = m_iHeightPixels;
+        }
+        pTableData->bWidthDefined = m_bSaveWidthDefined;
+        pTableData->bHeightDefined = m_bSaveHeightDefined;
+        pTableData->bWidthPercent = m_bSaveWidthPercent;
+        pTableData->bHeightPercent = m_bSaveHeightPercent;
+        SetData(pTableData);
+        EDT_FreeTableData(pTableData);
+        
+        // Scan through entire table to reset all cells
+        CEditTableCellElement *pCell = GetFirstCell();
+        if( pCell )
+        {
+            iParentWidth = pCell->GetParentWidth();
+            iParentHeight = pCell->GetParentHeight();
+        }
+        while( pCell )
+        {
+            pCell->RestoreSizeMode(iParentWidth, iParentHeight);
+            pCell = GetNextCellInTable();
+        }
+        
+    }
+}
+
+void CEditTableElement::DeleteLayoutData()
+{
+    intn i;
+    intn iColumns = m_ColumnLayoutData.Size();
+    intn iRows = m_RowLayoutData.Size();
+
+    for ( i = 0; i < iColumns; i++ )
+    {
+        if( m_ColumnLayoutData[i] )
+            delete m_ColumnLayoutData[i];
+    }
+    //Note: This does NOT free any memory,
+    //      it just sets m_iSize = 0;
+    m_ColumnLayoutData.Empty();
+
+    for ( i = 0; i < iRows; i++ )
+    {
+        if( m_RowLayoutData[i] )
+            delete m_RowLayoutData[i];
+    }
+    m_RowLayoutData.Empty();
+}
+
+// Store data for first cell in each column and row in growable arrays
+void CEditTableElement::AddLayoutData(CEditTableCellElement *pEdCell, LO_Element *pLoCell)
+{
+    if( !pEdCell || !pLoCell )
+        return;
+
+    EDT_CellLayoutData *pColData;
+    EDT_CellLayoutData *pRowData;
+
+    intn i;
+    intn iCurrentColumns = m_ColumnLayoutData.Size();
+    intn iCurrentRows = m_RowLayoutData.Size();
+    // We always add the cell the first time here
+    XP_Bool bNewColumn = iCurrentColumns == 0;    
+    XP_Bool bNewRow = iCurrentRows == 0;    
+
+    for( i = 0; i < iCurrentColumns; i++ )
+    {
+        if( pLoCell->lo_cell.x == m_ColumnLayoutData[i]->X )
+        {
+            // We already have the first cell in this column
+            // Just increase the column count
+            // Note: We count geometric columns, so we must look at COLSPAN
+            m_ColumnLayoutData[i]->iCellsInColumn += lo_GetColSpan(pLoCell);
+            break;
+        } 
+        else if( pLoCell->lo_cell.x > m_ColumnLayoutData[i]->X &&
+                 ( i+1 == iCurrentColumns ||
+                   pLoCell->lo_cell.x < m_ColumnLayoutData[i+1]->X ) )
+        {
+            // We are at the last existing cell in array or
+            // this cell's X is between current cell's and 
+            // the next cell in array
+            // so we have a new column to insert between existing columns
+            bNewColumn = TRUE;
+            // The index to insert at is the NEXT location
+            i++;
+            break;
+        }
+    }
+
+    if( bNewColumn )
+    {
+        pColData = new EDT_CellLayoutData;
+        if( !pColData )
+            return;
+        pColData->X = pLoCell->lo_cell.x;
+        pColData->Y = pLoCell->lo_cell.y;
+        pColData->pEdCell = pEdCell;
+        pColData->pLoCell = pLoCell;
+        pColData->iColumn = i;
+        pColData->iCellsInColumn = lo_GetColSpan(pLoCell);
+        // These are ignored for column data
+        pColData->iCellsInRow = pColData->iRow = 0;
+
+        m_ColumnLayoutData.Insert(pColData, i);
+    }
+
+    for( i = 0; i < iCurrentRows; i++ )
+    {
+        if( pLoCell->lo_cell.y == m_RowLayoutData[i]->Y )
+        {
+            // We already have the first cell in this column
+            // Just increase the row count
+            m_RowLayoutData[i]->iCellsInRow += lo_GetRowSpan(pLoCell);
+            break;
+        } 
+        else if( pLoCell->lo_cell.y > m_RowLayoutData[i]->Y &&
+                 ( i+1 == iCurrentRows ||
+                  pLoCell->lo_cell.y < m_RowLayoutData[i+1]->Y ) )
+        {
+            // We are at the last existing cell in array or
+            // this cell's Y is between current cell's and 
+            // the next cell in array,
+            // so we have a new row to insert between existing rows
+            bNewRow = TRUE;
+            // The index to insert at is the NEXT location
+            i++;
+            break;
+        }
+    }
+
+    if( bNewRow )
+    {
+        pRowData = new EDT_CellLayoutData;
+        if( !pRowData )
+            return;
+
+        pRowData->X = pLoCell->lo_cell.x;
+        pRowData->Y = pLoCell->lo_cell.y;
+        pRowData->pEdCell = pEdCell;
+        pRowData->pLoCell = pLoCell;
+        pRowData->iRow = i;
+        pRowData->iCellsInRow = lo_GetRowSpan(pLoCell);
+        // These are ignored for row data
+        pColData->iCellsInColumn = pColData->iColumn = 0;
+
+        m_RowLayoutData.Insert(pRowData, i);
     }
 }
 
@@ -3450,7 +3882,6 @@ void CEditTableRowElement::FinishedLoad( CEditBuffer* pBuffer ){
 
 static void edt_InsertCells(intn number, XP_Bool bAfter, CEditTableCellElement *pExisting, CEditTableRowElement* pSource)
 {
-    CEditTableCellElement *pInsertCell = NULL;
     XP_ASSERT(pExisting);
     if( !pExisting )
         return;
@@ -3461,21 +3892,32 @@ static void edt_InsertCells(intn number, XP_Bool bAfter, CEditTableCellElement *
     // Insert new cells at new insert position
     for ( intn col = 0; col < number; col++ )
     {
+        CEditTableCellElement *pInsertCell = NULL;
         if ( pSource )
         {
             // Remove cells from source from left to right
             pInsertCell = pSource->GetFirstCell();
-            pInsertCell->Unlink();
+            if( pInsertCell )
+            {
+                // We found a cell - unlink it from source row
+                // Note: When pasting a column, we  get a NULL cell 
+                //       if any cell in the column has COLSPAN > 1. 
+                //       The cells without colspan will be "missing" in the source
+                pInsertCell->Unlink();
 
-            // If inserted cell spans > 1 column, then
-            //   we should insert fewer to keep table rectangular
-            intn iColSpan = pInsertCell->GetColSpan();
-            if( iColSpan > 1 )
-                number -= iColSpan - 1;
+                // If inserted cell spans > 1 column, then
+                //   we should insert fewer to keep table rectangular
+                intn iColSpan = pInsertCell->GetColSpan();
+                if( iColSpan > 1 )
+                    number -= iColSpan - 1;
+            }
         }
-        else {
+        // We didn't find a cell in source 
+        // (no source or because of COLSPAN > 1),
+        // so insert a blank cell instead
+        if( !pInsertCell )
             pInsertCell = new CEditTableCellElement();
-        }
+
         if( pInsertCell )
         {
             if( bAfter )
@@ -3510,15 +3952,14 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
     if( !pTable || !pTable->IsTable() )
         return;
 
-    int32 iInterCellSpace = pTable->GetInterCellSpace();
+    int32 iInterCellSpace = pTable->GetCellSpacing();
     int32 iCellX;
-
-    if ( pTable->GetFirstColumnX() == iNewX )
+    if ( pTable->GetColumnX(0) == iNewX )
     {
         // Insert at the start.
         for ( intn col = 0; col < number; col++ )
         {
-            CEditTableCellElement* pInsertCell;
+            CEditTableCellElement* pInsertCell = NULL;
             if ( pSource )
             {
                 // Insert cells from the end
@@ -3531,7 +3972,7 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
                 if( iColSpan > 1 )
                     number -= iColSpan - 1;
             }
-            //Note: Create a new cell if source was missing enough cells
+            //Note: Create a new cell if no source or source row was incomplete
             if( !pInsertCell ) 
             {
                 pInsertCell = new CEditTableCellElement();
@@ -3551,7 +3992,7 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
         if( pExisting )
         {
             iCellX = pExisting->GetX();
-            if( (iCellX < X || X != iNewX) && ((iCellX + pExisting->GetWidth()) > iNewX) )
+            if( (iCellX < X || X != iNewX) && ((iCellX + pExisting->GetFullWidth()) > iNewX) ) // WAS GetWidth()
             {
                 // Cell extends past new column insert point,
                 //  so simply increase span and don't add new cell
@@ -3562,7 +4003,7 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
                 edt_InsertCells(number, X < iNewX, pExisting, pSource);
             }
         } 
-        else if( (X != iNewX) && (pExisting = FindCell(iNewX+iInterCellSpace)) != NULL )
+        else if( (X != iNewX) && (pExisting = FindCell(iNewX/*+iInterCellSpace*/)) != NULL )
         {
             // No cell in current column, but we found cell at NEW insert column
             //  so put new cell(s) before this
@@ -3589,7 +4030,7 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
             while(pCell)
             {
                 iCellX = pCell->GetX();
-                int32 iCellWidth = pCell->GetWidth();
+                int32 iCellWidth = pCell->GetFullWidth(); // WAS GetWidth()
                 if( iCellX == X )
                 {
                     // We found a cell from another row that spans current row
@@ -3604,7 +4045,7 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
                 //   to our target column             
                 if( pCell->GetRow() == iCurrentRow )
                 {
-                    if( (iCellX + pCell->GetWidth()) <= X )
+                    if( (iCellX + pCell->GetFullWidth()) <= X )
                         pCellBefore = pCell;
                     if( iCellX >= X && !pCellAfter )
                         pCellAfter = pCell;
@@ -3613,7 +4054,7 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
             }
             if( pCellAfter )
             {
-                // Force inserting before the cell found
+                // FALSE = Force inserting before the cell found
                 edt_InsertCells(number, FALSE, pCellAfter, pSource);
                 return;
             }
@@ -3621,7 +4062,10 @@ void CEditTableRowElement::InsertCells(int32 X, int32 iNewX, intn number, CEditT
             {
                 // This is tough. We know we need to add cells, but how many?
                 // We can't be sure we had enough before so new cells end up
-                //   at desired new column. TODO: For now, just add and come back to this later
+                //   at desired new column. 
+                // TODO: USE pTable->m_ColumnLayoutData to figure out how
+                //       many cells to add to bring us to desired X
+                // TRUE = insert after the cell found
                 edt_InsertCells(number, TRUE, pCellBefore, pSource);
             }
         }
@@ -3661,32 +4105,23 @@ void CEditTableRowElement::PadRowWithEmptyCells( intn iColumns )
     CEditTableCellElement *pLastCell = NULL;
 
     // Use number of columns supplied, or get current number in table
-    intn iMaxColumns = iColumns ? iColumns : pTable->GetMaxColumns();
-    intn iCurrentColumns = 0;
+    intn iTotalColumns = iColumns ? iColumns : pTable->GetColumns();
 
     while( pCell )
     {
-        iCurrentColumns += pCell->GetColSpan();
         pLastCell = pCell;
         pCell = pCell->GetNextCellInLogicalRow();
     }
     if( pLastCell )
     {
-        intn iExtraColumns = iMaxColumns - iCurrentColumns;
-        if( iExtraColumns > 0 )
-            edt_InsertCells( iExtraColumns, TRUE, pLastCell, NULL );
-    }
-}
-
-static void edt_DeleteCell(CEditTableCellElement* pCell, CEditTableRowElement* pUndoContainer)
-{
-    if ( pUndoContainer )
-    {
-        pCell->Unlink();
-        pCell->InsertAsFirstChild(pUndoContainer);
-    }
-    else {
-        delete pCell;
+        // Get which column the last cell is in
+        intn iLastIndex = pTable->GetColumnIndex(pLastCell->GetX());
+        if( iLastIndex >= 0 )
+        {
+            intn iExtraColumns = iTotalColumns - iLastIndex - 1;
+            if( iExtraColumns > 0 )
+                edt_InsertCells( iExtraColumns, TRUE, pLastCell, NULL );
+        }
     }
 }
 
@@ -3695,8 +4130,7 @@ void CEditTableRowElement::DeleteCells(int32 X, intn number, CEditTableRowElemen
     {
         return; /* A waste of time, but legal. */
     }
-    GetEditBuffer()->ClearTableAndCellSelection();
-    intn cells = GetCells();
+
     if ( number < 0 || X < 0 )
     {
         /* Illegal. */
@@ -3723,7 +4157,21 @@ void CEditTableRowElement::DeleteCells(int32 X, intn number, CEditTableRowElemen
                 if( iColSpan <= iRemaining )
                 {
                     // Simplest case - just delete one cell
-                    edt_DeleteCell(pCell, pUndoContainer);
+
+                    // Remove any selected cells from our lists
+                    //  else relayout blows up
+                    // NULL means let function find the corresponding LO_CellStruct
+                    if( pCell->IsSelected() )
+                        GetEditBuffer()->SelectCell(FALSE, NULL, pCell);
+
+                    if ( pUndoContainer )
+                    {
+                        pCell->Unlink();
+                        pCell->InsertAsFirstChild(pUndoContainer);
+                    }
+                    else {
+                        delete pCell;
+                    }
                     iRemaining -= iColSpan;
                 } 
                 else if( iColSpan > iRemaining )
@@ -3732,15 +4180,14 @@ void CEditTableRowElement::DeleteCells(int32 X, intn number, CEditTableRowElemen
                     //  so reduce span instead of actually deleting
                     pCell->DecreaseColSpan(iRemaining);
                     iRemaining = 0;
+                    // Since this cell is in the delete column (same X),
+                    //  then we want it to look deleted, so empty contents
+                    pCell->DeleteContents();
                 }
             } else {
                 // Start of cell is before delete column
                 //  (but end must be past delete column)
-                // This case is difficult, since its hard 
-                //  to figure out how many columns it spans before
-                //  delete column. This may be underestimated,
-                //  resulting in too much reduction in column span,
-                //    but since contents aren't deleted, its not too risky
+                // Figure out how many columns it spans before delete column.
                 int32 iSpanAvailable = iColSpan - pTable->GetColumnsSpanned(iCellX, X);
                 if( iSpanAvailable > 0 )
                 {
@@ -3748,6 +4195,12 @@ void CEditTableRowElement::DeleteCells(int32 X, intn number, CEditTableRowElemen
                     intn iDecrease = min(iSpanAvailable,iRemaining);
                     pCell->DecreaseColSpan(iDecrease);
                     iRemaining -= iDecrease;
+                    // "Undefine" (1st param) the width since it is no longer
+                    //   in the same column as before
+                    // Keep existing bWidthPercent, the last param = width
+                    //  (it doesn't matter what it is now)
+                    pCell->SetWidth(FALSE, pCell->GetWidthPercent(), 1);
+                    //  then we want to use the width of the 
                 }
             }
             // We are done if no more cells in row or nothing remaining to delete
@@ -3776,7 +4229,7 @@ CEditTableCellElement* CEditTableRowElement::FindCell(int32 X, XP_Bool bIncludeR
         if ( pChild->IsTableCell() )
         {
             int32 cellX = pChild->TableCell()->GetX();
-            int32 cellRight = cellX + pChild->TableCell()->GetWidth();
+            int32 cellRight = cellX + pChild->TableCell()->GetFullWidth(); // WAS GetWidth()
 
             // Back up 1 pixel if we shouldn't match the right edge
             if( !bIncludeRightEdge )
@@ -3788,7 +4241,7 @@ CEditTableCellElement* CEditTableRowElement::FindCell(int32 X, XP_Bool bIncludeR
                 {
                     return pChild->TableCell();
                 } else {
-                    // First time we find a cell
+                    // We are here whe we first find a cell
                     // Save it but continue to see if next cell's
                     //   left edge matches - use that instead if it does
                     // (This nonsense is needed for 0 borders where
@@ -4026,7 +4479,13 @@ CEditTableCellElement::CEditTableCellElement()
       m_X(0),
       m_Y(0),
       m_pSaveParent(0),
-      m_pSaveNext(0)
+      m_pSaveNext(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE),
+      m_bSelected(FALSE),
+      m_bDeleted(FALSE)
 {
 }
 
@@ -4047,7 +4506,13 @@ CEditTableCellElement::CEditTableCellElement(XP_Bool bIsHeader)
       m_X(0),
       m_Y(0),
       m_pSaveParent(0),
-      m_pSaveNext(0)
+      m_pSaveNext(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE),
+      m_bSelected(FALSE),
+      m_bDeleted(FALSE)
 {
 }
 
@@ -4068,7 +4533,13 @@ CEditTableCellElement::CEditTableCellElement(CEditElement *pParent, PA_Tag *pTag
       m_X(0),
       m_Y(0),
       m_pSaveParent(0),
-      m_pSaveNext(0)
+      m_pSaveNext(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE),
+      m_bSelected(FALSE),
+      m_bDeleted(FALSE)
 {
     if( pTag ){
         char *locked_buff;
@@ -4098,8 +4569,18 @@ CEditTableCellElement::CEditTableCellElement(IStreamIn *pStreamIn, CEditBuffer *
       m_X(0),
       m_Y(0),
       m_pSaveParent(0),
-      m_pSaveNext(0)
+      m_pSaveNext(0),
+      m_bSaveWidthPercent(FALSE),
+      m_bSaveHeightPercent(FALSE),
+      m_bSaveWidthDefined(FALSE),
+      m_bSaveHeightDefined(FALSE),
+      m_bSelected(FALSE),
+      m_bDeleted(FALSE)
 {
+    // We need this so we can accurately determine number
+    //  of columns in stream
+    m_X = pStreamIn->ReadInt();
+
     // Get width from stream -- needed for pasting tables/cells
     // We must get CSID from buffer since element is not in doc yet
     //TODO: Should we pass in CSID from paste stream instead?
@@ -4193,6 +4674,252 @@ void CEditTableCellElement::DecreaseRowSpan(int32 iDecrease)
         SetData(pData);
         EDT_FreeTableCellData(pData);
     }
+}
+
+// Save size percent and defined params so we can much with them during resizing,
+//  and restore them later. Supply bWidthDefined and bHeightDefined
+//  for efficiency so we don't have to do GetData() here
+void CEditTableCellElement::SaveSizeMode(XP_Bool bWidthDefined, XP_Bool bHeightDefined)
+{
+    m_bSaveWidthPercent = m_bWidthPercent; 
+    m_bSaveHeightPercent = m_bWidthPercent;
+    m_bSaveWidthDefined = bWidthDefined;
+    m_bSaveHeightDefined = bHeightDefined;
+}
+
+// This will restore saved width and height percent modes,
+//   readjust m_bWidth an m_bHeight, and call SetData to set tag data
+// Note: no need to relayout -- we are just changing modes,
+//   not actual size of cell
+void CEditTableCellElement::RestoreSizeMode(int32 iParentWidth, int32 iParentHeight)
+{
+    EDT_TableCellData *pData = GetData();
+
+    if( iParentWidth == 0 )
+        iParentWidth = GetParentWidth();
+    if( iParentHeight == 0 )
+        iParentHeight = GetParentHeight();
+
+    if( pData )
+    {
+        if( m_bSaveWidthPercent )
+        {
+            // Convert existing Pixel value to % of parent size
+            pData->iWidth = (m_iWidthPixels * 100) / iParentWidth;
+            pData->iHeight = (m_iHeightPixels * 100) / iParentHeight;
+        } else {
+            // Converting to pixels is simple - just use the pixel value we already have
+            pData->iWidth = m_iWidthPixels;
+            pData->iHeight = m_iHeightPixels;
+        }
+        pData->bWidthDefined = m_bSaveWidthDefined;
+        pData->bHeightDefined = m_bSaveHeightDefined;
+        pData->bWidthPercent = m_bSaveWidthPercent;
+        pData->bHeightPercent = m_bSaveHeightPercent;
+        SetData(pData);
+        EDT_FreeTableCellData(pData);
+    }
+}
+
+// Calculate the Percent size from the iWidthPixels and iHeightPixels in pData
+void CEditTableCellElement::CalcPercentWidth(EDT_TableCellData *pData)
+{
+    if( pData && pData->bWidthDefined )
+    {
+        if( pData->bWidthPercent )
+            pData->iWidth = (pData->iWidthPixels * 100) / GetParentWidth(); 
+        else
+            pData->iWidth = pData->iWidthPixels;
+    }
+}
+
+void CEditTableCellElement::CalcPercentHeight(EDT_TableCellData *pData)
+{
+    if( pData && pData->bHeightDefined ) 
+    {
+        if( pData->bHeightPercent )
+            pData->iHeight = (pData->iHeightPixels * 100) / GetParentHeight();
+        else
+            pData->iHeight = pData->iHeightPixels;
+    }
+}
+
+// Calculate the Pixel size from the iWidth and iHeight in pData
+void CEditTableCellElement::CalcPixelWidth(EDT_TableCellData *pData)
+{
+    if( pData && pData->bWidthDefined )
+    {
+        if( pData->bWidthPercent )
+            pData->iWidthPixels = (pData->iWidth * GetParentWidth()) / 100; 
+        else
+            pData->iWidthPixels = pData->iWidth;
+    }
+}
+
+void CEditTableCellElement::CalcPixelHeight(EDT_TableCellData *pData)
+{
+    if( pData && pData->bHeightDefined )
+    {
+        if( pData->bHeightPercent )
+            pData->iHeightPixels = (pData->iHeight * GetParentHeight()) / 100;
+        else
+            pData->iHeightPixels = pData->iHeight;
+    }
+}
+
+void CEditTableCellElement::SetWidth(XP_Bool bWidthDefined, XP_Bool bWidthPercent, int32 iWidthPixels)
+{
+    EDT_TableCellData * pData = GetData(0);
+    if( pData )
+    {
+        pData->bWidthDefined = bWidthDefined;
+        pData->bWidthPercent = bWidthPercent;
+        pData->iWidthPixels = iWidthPixels;
+        CalcPercentWidth(pData);
+        SetData(pData);
+        EDT_FreeTableCellData(pData);
+    }
+}
+
+void CEditTableCellElement::SetHeight(XP_Bool bHeightDefined, XP_Bool bHeightPercent, int32 iHeightPixels)
+{
+    EDT_TableCellData * pData = GetData(0);
+    if( pData )
+    {
+        pData->bHeightDefined = bHeightDefined;
+        pData->bHeightPercent = bHeightPercent;
+        pData->iHeightPixels = iHeightPixels;
+        CalcPercentHeight(pData);
+        SetData(pData);
+        EDT_FreeTableCellData(pData);
+    }
+}
+
+// Set width of supplied cell and all other cells sharing or spanning the same right edge
+// Also sets the bWidthDefined and bWidthPercent modes
+void CEditTableCellElement::SetColumnWidthRight(CEditTableElement *pTable, LO_Element *pLoCell, EDT_TableCellData *pData)
+{
+    if( !pTable || !pLoCell || !pData || pData->iWidthPixels <= 0 )
+        return;
+
+    // Get LoTable to start scanning through cells
+    LO_Element *pLoElement = (LO_Element*)lo_GetParentTable(NULL, pLoCell);
+    if( !pLoElement )
+        return;
+    
+    // Amount of change in supplied cell
+    int32 iDeltaWidth = pData->iWidthPixels - pLoCell->lo_any.width;
+    int32 iRightEdge = pLoCell->lo_cell.x + pLoCell->lo_cell.width;
+
+    // Set the width for all cells sharing or spanning the right edge of cell resized
+    while (pLoElement && pLoElement->type != LO_LINEFEED )
+    {
+        if( pLoElement->type == LO_CELL &&
+            pLoElement->lo_cell.x < iRightEdge &&
+            (pLoElement->lo_cell.x + pLoElement->lo_cell.width) >= iRightEdge )
+        {
+            CEditTableCellElement *pEdCell = 
+                (CEditTableCellElement*)edt_GetTableElementFromLO_Element( pLoElement, LO_CELL );
+
+            if( pEdCell )
+            {
+                pLoElement->lo_cell.width = max(1, pLoElement->lo_cell.width + iDeltaWidth);
+                // Compensate for cell padding, border, and COLSPAN to get 
+                //   the value to use for WIDTH tag param
+                pEdCell->SetWidth( pData->bWidthDefined, pData->bWidthPercent,
+                                   lo_GetCellTagWidth(pLoElement) );
+            }
+        }
+        pLoElement = pLoElement->lo_any.next;
+    }
+}
+
+// Set height of all cells sharing or spanning the bottom edge
+// Also sets the bWidthDefined and bWidthPercent modes
+void CEditTableCellElement::SetRowHeightBottom(CEditTableElement *pTable, LO_Element *pLoCell, EDT_TableCellData *pData)
+{
+    if( !pTable || !pLoCell || !pData || pData->iHeightPixels <= 0 )
+        return;
+
+    // Get LoTable to start scanning through cells
+    LO_Element *pLoElement = (LO_Element*)lo_GetParentTable(NULL, pLoCell);
+    if( !pLoElement )
+        return;
+
+    // Amount of change in supplied cell - use this for all cells we will resize
+    int32 iDeltaHeight = pData->iHeightPixels - pLoCell->lo_any.height;
+    int32 iBottomEdge = pLoCell->lo_cell.y + pLoCell->lo_cell.height;
+
+    // Set the height for all cells sharing or spanning the right edge of cell resized
+    while (pLoElement && pLoElement->type != LO_LINEFEED )
+    {
+        if( pLoElement->type == LO_CELL &&
+            pLoElement->lo_cell.y < iBottomEdge &&
+            (pLoElement->lo_cell.y + pLoElement->lo_cell.height) >= iBottomEdge )
+        {
+            CEditTableCellElement *pEdCell = 
+                (CEditTableCellElement*)edt_GetTableElementFromLO_Element( pLoElement, LO_CELL );
+
+            if( pEdCell )
+            {
+                pLoElement->lo_cell.height = max(1, pLoElement->lo_cell.height + iDeltaHeight); 
+                pEdCell->SetHeight( pData->bHeightDefined, pData->bHeightPercent,
+                                    lo_GetCellTagHeight(pLoElement) );
+            }
+        }
+        pLoElement = pLoElement->lo_any.next;
+    }
+}
+
+// Set width of supplied cell and all other cells sharing or spanning the same left edge
+// Also sets the bWidthDefined and bWidthPercent modes
+void CEditTableCellElement::SetColumnWidthLeft(CEditTableElement *pTable, CEditTableCellElement *pCell, EDT_TableCellData *pData)
+{
+    if( !pTable || !pCell || !pData || pData->iWidthPixels <= 0 )
+        return;
+
+    // Amount of change in supplied cell
+    int32 iDeltaWidth = pData->iWidthPixels - pCell->GetWidth();
+
+    // TRUE means we include cells that span over cell's left edge,
+    //   not just start at that value. 
+    pCell = pCell->GetFirstCellInColumn(pCell->GetX(), TRUE);
+    while( pCell )
+    {
+        // Set width - be sure it is at least 1
+        pCell->SetWidth( pData->bWidthDefined, pData->bWidthPercent,
+                         max(1, pCell->GetWidth() + iDeltaWidth) );
+        pCell = pCell->GetNextCellInColumn();
+    }
+}
+
+// Set height of all cells sharing or spanning the top edge
+// Also sets the bWidthDefined and bWidthPercent modes
+void CEditTableCellElement::SetRowHeightTop(CEditTableElement *pTable, CEditTableCellElement *pCell, EDT_TableCellData *pData)
+{
+    if( !pTable || !pCell || !pData || pData->iHeightPixels <= 0 )
+        return;
+
+    // Amount of change in supplied cell - use this for all cells we will resize
+    int32 iDeltaHeight = pData->iHeightPixels - pCell->GetHeight();
+
+    // TRUE means we include cells that span over current cell's Y,
+    //   not just start at Y
+    pCell = pCell->GetFirstCellInRow(pCell->GetY(), TRUE);
+    while( pCell )
+    {
+        // Set height - be sure it is at least 1
+        pCell->SetHeight( pData->bHeightDefined, pData->bHeightPercent,
+                          max(1, pCell->GetHeight() + iDeltaHeight) );
+        pCell = pCell->GetNextCellInRow();
+    }
+}
+
+void CEditTableCellElement::StreamOut(IStreamOut *pOut){
+    CEditElement::StreamOut( pOut );
+    // We write our X so we can accurately determine
+    // the number of columns when streaming in (pasting)
+    pOut->WriteInt( m_X );
 }
 
 void CEditTableCellElement::SetData( EDT_TableCellData *pData ){
@@ -4296,7 +5023,8 @@ EDT_TableCellData* CEditTableCellElement::GetData( int16 csid )
     // Must supply csid if cell is not already in the document
     if( csid == 0 )
         csid = GetWinCSID();
-
+    
+    // Get params stored in the HTML tag struct
     pRet = ParseParams( pTag, csid );
     PA_FreeTag( pTag );
     // Return the actual X, Y, width, and height
@@ -4317,6 +5045,29 @@ EDT_TableCellData* CEditTableCellElement::GetData( int16 csid )
     pRet->iSelectionType = ED_HIT_NONE;
     pRet->iSelectedCount = 0;
     return pRet;
+}
+
+// Include all borders, spacing, and padding up to the next cell
+int32 CEditTableCellElement::GetFullWidth(CEditTableElement *pTable)
+{
+    if( !pTable )
+        pTable = GetParentTable();
+    if( !pTable )
+        return 0;
+
+    return (m_iWidthPixels + 2*(pTable->GetCellBorder() + pTable->GetCellPadding()) +
+            m_iColSpan * pTable->GetCellSpacing() );
+}
+
+int32 CEditTableCellElement::GetFullHeight(CEditTableElement *pTable)
+{
+    if( !pTable )
+        pTable = GetParentTable();
+    if( !pTable )
+        return 0;
+
+    return (m_iHeightPixels + 2*(pTable->GetCellBorder() + pTable->GetCellPadding()) +
+            m_iRowSpan * pTable->GetCellSpacing() );
 }
 
 static XP_Bool edt_CompareLoColors( LO_Color *pLoColor1, LO_Color *pLoColor2 )
@@ -4460,7 +5211,7 @@ void CEditTableCellElement::MaskData( EDT_TableCellData *pData )
 int32 CEditTableCellElement::GetParentWidth()
 {
     // Don't return 0 to avoid divide by zero errors
-    int32 iMaxWidth = 1;
+    int32 iParentWidth = 1;
 
     CEditTableElement *pTable = GetParentTable();
     if( pTable )
@@ -4468,17 +5219,17 @@ int32 CEditTableCellElement::GetParentWidth()
         CEditTableCellElement *pCell = pTable->GetFirstCell();
         while( pCell && pCell->IsTableCell() )
         {
-            iMaxWidth += pCell->GetWidth();
+            iParentWidth += pCell->GetWidth(); // TODO: SHOULD WE USE GetFullWidth()???
             pCell = (CEditTableCellElement*)(pCell->GetNextSibling());
         }
     }
-    return iMaxWidth;
+    return iParentWidth;
 }
 
 int32 CEditTableCellElement::GetParentHeight()
 {
     // Don't return 0 to avoid divide by zero errors
-    int32 iMaxHeight = 1;
+    int32 iParentHeight = 1;
 
     CEditTableElement *pTable = GetParentTable();
     if( pTable )
@@ -4486,11 +5237,11 @@ int32 CEditTableCellElement::GetParentHeight()
         CEditTableCellElement *pCell = pTable->GetFirstCell();
         while( pCell )
         {
-            iMaxHeight += pCell->GetHeight();
+            iParentHeight += pCell->GetHeight();
             pCell = pTable->GetNextCellInColumn(pCell);
         }
     }
-    return iMaxHeight;
+    return iParentHeight;
 }
 
 static char *tableCellParams[] = {
@@ -4536,12 +5287,19 @@ EDT_TableCellData* CEditTableCellElement::ParseParams( PA_Tag *pTag, int16 csid 
     pData->bHeightDefined = edt_FetchDimension( pTag, PARAM_HEIGHT, 
                     &pData->iHeight, &pData->bHeightPercent,
                     100, TRUE, csid );
-
+    
+    // This and CEditBuffer::FixupTableData() are the only
+    //   places member variable should be set
     // If width and/or height are NOT defined, use the
     //    "bPercent" values set by any previous SetData() calls
-    if( !pData->bWidthDefined )
+    if( pData->bWidthDefined )
+        m_iWidth = pData->iWidth;
+    else
         pData->bWidthPercent = m_bWidthPercent;
-    if( !pData->bHeightDefined )
+
+    if( pData->bHeightDefined )
+        m_iHeight = pData->iHeight;
+    else
         pData->bHeightPercent = m_bHeightPercent;
 
     pData->pColorBackground = edt_MakeLoColor(edt_FetchParamColor( pTag, PARAM_BGCOLOR, csid ));
@@ -4558,22 +5316,20 @@ EDT_TableCellData* CEditTableCellElement::NewData(){
         return pData;
     }
     pData->align = ED_ALIGN_DEFAULT;
-    pData->valign = ED_ALIGN_ABSTOP; //ED_ALIGN_TOP; // was ED_ALIGN_DEFAULT; this is centered - stupid!
+    pData->valign = ED_ALIGN_ABSTOP; //ED_ALIGN_TOP; // was ED_ALIGN_DEFAULT; this is centerred - stupid!
     pData->iColSpan = 1;
     pData->iRowSpan = 1;
     pData->bHeader = FALSE;
     pData->bNoWrap = FALSE;
     pData->bWidthDefined = FALSE;
-    pData->bWidthPercent = TRUE;
-    pData->iWidth = 100;
-    pData->X = 0;
-    pData->Y = 0;
-    pData->iRow = 0;
+    pData->bWidthPercent = FALSE;
+    pData->iWidth = 1;
     pData->iWidthPixels = 1;
+    pData->iRow = 0;
+    pData->iHeight = 1;
     pData->iHeightPixels = 1;
     pData->bHeightDefined = FALSE;
-    pData->bHeightPercent = TRUE;
-    pData->iHeight = 100;
+    pData->bHeightPercent = FALSE;
     pData->pColorBackground = 0;
     pData->pBackgroundImage = 0;
     pData->bBackgroundNoSave = FALSE;
@@ -4581,6 +5337,8 @@ EDT_TableCellData* CEditTableCellElement::NewData(){
     pData->mask = -1;
     pData->iSelectionType = ED_HIT_NONE;
     pData->iSelectedCount = 0;
+    pData->X = 0;
+    pData->Y = 0;
     return pData;
 }
 
@@ -4681,6 +5439,10 @@ CEditTableCellElement* CEditTableCellElement::GetNextCellInLogicalRow()
 
 CEditTableCellElement* CEditTableCellElement::GetFirstCellInRow(int32 Y, XP_Bool bSpan)
 {
+    // No Y supplied - just get it from the cell
+    if( Y == -1 )
+        Y = GetY();
+
     CEditTableElement *pTable = GetParentTable();
     if( pTable )
         return pTable->GetFirstCellInRow(Y, bSpan);
@@ -4690,6 +5452,10 @@ CEditTableCellElement* CEditTableCellElement::GetFirstCellInRow(int32 Y, XP_Bool
 
 CEditTableCellElement* CEditTableCellElement::GetFirstCellInColumn(int32 X, XP_Bool bSpan)
 {
+    // No X supplied - just get it from the cell
+    if( X == -1 )
+        X = GetX();
+
     CEditTableElement *pTable = GetParentTable();
     if( pTable )
         return pTable->GetFirstCellInColumn(X, bSpan);
@@ -4697,22 +5463,50 @@ CEditTableCellElement* CEditTableCellElement::GetFirstCellInColumn(int32 X, XP_B
     return NULL;
 }
 
-CEditTableCellElement* CEditTableCellElement::GetNextCellInRow()
+CEditTableCellElement* CEditTableCellElement::GetNextCellInRow(CEditTableCellElement *pCell)
 {
     CEditTableElement *pTable = GetParentTable();
     if( pTable )
-        return pTable->GetNextCellInRow();
+        return pTable->GetNextCellInRow(pCell);
 
     return NULL;
 }
 
-CEditTableCellElement* CEditTableCellElement::GetNextCellInColumn()
+CEditTableCellElement* CEditTableCellElement::GetNextCellInColumn(CEditTableCellElement *pCell)
 {
     CEditTableElement *pTable = GetParentTable();
     if( pTable )
-        return pTable->GetNextCellInColumn();
+        return pTable->GetNextCellInColumn(pCell);
 
     return NULL;
+}
+
+XP_Bool CEditTableCellElement::AllCellsInColumnAreSelected()
+{
+    CEditTableCellElement *pCell = GetFirstCellInColumn();
+    XP_Bool bAllSelected = TRUE;
+    while( pCell )
+    {
+        if( !pCell->IsSelected() )
+            return FALSE;
+
+        pCell = GetNextCellInColumn();
+    }
+    return TRUE;
+}
+
+XP_Bool CEditTableCellElement::AllCellsInRowAreSelected()
+{
+    CEditTableCellElement *pCell = GetFirstCellInRow();
+    XP_Bool bAllSelected = TRUE;
+    while( pCell )
+    {
+        if( !pCell->IsSelected() )
+            return FALSE;
+
+        pCell = GetNextCellInRow();
+    }
+    return TRUE;
 }
 
 XP_Bool CEditTableCellElement::IsEmpty()
@@ -4791,7 +5585,7 @@ void CEditTableCellElement::MergeCells(CEditTableCellElement* pCell)
     delete pCell;
 }
 
-void CEditTableCellElement::DeleteContents()
+void CEditTableCellElement::DeleteContents(XP_Bool bMarkAsDeleted)
 {
     // Get the first conainer in the cell
     CEditElement *pChild = GetChild();
@@ -4813,6 +5607,10 @@ void CEditTableCellElement::DeleteContents()
         //  a leaf element to place caret at
         CEditTextElement *pText = new CEditTextElement(pContainer,"");
     }
+    // Mark this cell as deleted so CEditBuffer::DeleteSelectedCells()
+    //  can skip over this during multiple deletion passes
+    if( bMarkAsDeleted )
+        m_bDeleted = TRUE;
 }
 
 // Insert as last child of supplied parent 

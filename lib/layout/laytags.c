@@ -1277,9 +1277,9 @@ lo_process_span_tag(MWContext *context, lo_DocState *state, PA_Tag *tag)
   span->lo_any.width = 0;
   span->lo_any.height = 0;
   span->lo_any.line_height = 0;
-  span->name_rec = NULL;
 
 #ifdef DOM
+    span->name_rec = NULL;
 	if (tag->is_end == FALSE)
 	{		
 		/* get the span's ID. */

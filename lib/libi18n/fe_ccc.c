@@ -300,9 +300,13 @@ MODULE_PRIVATE cscvt_t		cscvt_tbl[] = {
 		/* auto-detect Korean conversions						*/
 		{CS_KSC_8BIT_AUTO,  CS_KSC_8BIT,1, (CCCFunc)autoKCCC,		0},
  		{(CS_2022_KR|CS_AUTO) ,  CS_KSC_8BIT,1, (CCCFunc)autoKCCC,		0},
+		{CS_KSC5601,	CS_KSC_8BIT,	0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
+		{CS_KSC_8BIT,	CS_KSC5601,	0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
 
 		/*  SIMPLIFIED CHINESE */
 		{CS_GB_8BIT,	CS_GB_8BIT,		0, (CCCFunc)mz_gb2gb,		0},
+		{CS_GB2312,	  CS_GB_8BIT,	0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
+		{CS_GB_8BIT,	CS_GB2312,	0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
 
 		/*  TRADITIONAL CHINESE */
 		{CS_BIG5,		CS_BIG5,		0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
@@ -310,6 +314,8 @@ MODULE_PRIVATE cscvt_t		cscvt_tbl[] = {
 		{CS_BIG5,		CS_CNS_8BIT,	0, (CCCFunc)mz_b52cns,		0},
 		{CS_CNS_8BIT,	CS_BIG5,		0, (CCCFunc)mz_cns2b5,		0},
 #endif
+		{CS_X_BIG5,		CS_BIG5,		0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
+		{CS_BIG5,		CS_X_BIG5,		0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_CGK},
 
 		/* UNICODE */
 		{CS_UTF8,		CS_UTF8,		0, (CCCFunc)mz_mbNullConv,	INTL_CHARLEN_UTF8},
@@ -424,6 +430,8 @@ MODULE_PRIVATE cscvt_t		cscvt_tbl[] = {
 		/* LATIN2 */
 		{CS_LATIN2,		CS_LATIN2,		0, NULL,			0},
 		{CS_LATIN2,		CS_ASCII,		0, NULL,			0},
+		{CS_LATIN2,		CS_CP_1250,		0, (CCCFunc)One2OneCCC,	0},
+		{CS_CP_1250,	CS_LATIN2,		0, (CCCFunc)One2OneCCC,	0},
 
 		/* CYRILLIC */
 		{CS_KOI8_R,		CS_KOI8_R,		0, NULL,			0},	
@@ -433,6 +441,8 @@ MODULE_PRIVATE cscvt_t		cscvt_tbl[] = {
 
 		/* GREEK */
 		{CS_8859_7,		CS_8859_7,		0, NULL,			0},	
+		{CS_8859_7,		CS_CP_1253,		0, (CCCFunc)One2OneCCC,	0},
+		{CS_CP_1253,	CS_8859_7,		0, (CCCFunc)One2OneCCC,	0},
 
 		/* TURKISH */
 		{CS_8859_9,		CS_8859_9,		0, NULL,			0},	

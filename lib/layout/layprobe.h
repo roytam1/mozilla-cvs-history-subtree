@@ -20,10 +20,11 @@
 /* 
  * Defines the abstraction of a layout probe object that gives information about 
  * layout elements.  No mutilation of the layout elements is allowed by this
- * probe.  Each FE uses this API to satisfy QA Partner script requests for layout 
- * information. 
+ * probe.  Each FE uses this API to satisfy requests for layout information. 
  *
  */
+
+#include "structs.h"
 
 /* 
  * Constructor/Destructor for probe 
@@ -31,7 +32,7 @@
  */
 
 /* Probe state is created.  Probe position gets set to "nothing". */
-long LO_QA_CreateProbe( void );			
+long LO_QA_CreateProbe( MWContext *context );
 
 /* Probe state is destroyed. */
 void LO_QA_DestroyProbe( long probeID );

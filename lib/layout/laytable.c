@@ -2269,6 +2269,8 @@ lo_EndCellSubDoc(MWContext *context, lo_DocState *state, lo_DocState *old_state,
 		     * must be relayed out to take care of window
 		     * width and height dependencies.
 		     */
+
+
 			/* case LO_HRULE: */
 		    case LO_SUBDOC:
 		    case LO_TABLE:
@@ -5210,7 +5212,7 @@ lo_BeginTableAttributes(MWContext *context,
 	table->fixed_width_remaining = 0;
 	table->fixed_col_widths = NULL;
 	table->table_width_fixed = FALSE;
-	table->fixed_cols = 0;
+	table->fixed_cols = 0;	
 	
 	/*
 	 * You can't do percentage widths if the parent's
@@ -7918,6 +7920,7 @@ fprintf(stderr, "lo_EndTable called\n");
 	{
  		state->top_state->table_nesting_level--;
 	}
+
 #ifdef XP_WIN16
 	_hfree(cell_array);
 #else

@@ -1525,6 +1525,10 @@ lo_rl_FitSpacer( lo_RelayoutState *relay_state, LO_Element *lo_ele )
 
 static LO_Element * lo_rl_FitSpan( lo_RelayoutState *relay_state, LO_Element *lo_ele )
 {	
+#ifndef DOM
+	XP_ASSERT(0);
+	return lo_tv_GetNextLayoutElement( relay_state->doc_state, lo_ele, TRUE);
+#else
 	MWContext *context = relay_state->context;
 	lo_DocState *state = relay_state->doc_state;
 	LO_Element *next = lo_tv_GetNextLayoutElement( relay_state->doc_state, lo_ele, TRUE);
@@ -1542,6 +1546,7 @@ static LO_Element * lo_rl_FitSpan( lo_RelayoutState *relay_state, LO_Element *lo
 	}
 
 	return next;
+#endif
 }
 
 static LO_Element * lo_rl_FitDiv( lo_RelayoutState *relay_state, LO_Element *lo_ele )

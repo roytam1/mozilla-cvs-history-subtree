@@ -1688,11 +1688,11 @@ lo_CreateCellBackgroundLayer(MWContext *context, LO_CellStruct *cell,
         return NULL;
 
 	/* The z-order of the background layer of cells should increase
- 	   as the cell's nest within tables.  This ensures that the innermost
- 	   cell's background ends up with the highest z-order and gets
- 	   displayed 
- 	*/	   
- 	z_order = Z_CELL_BACKGROUND_LAYER + table_nesting_level;
+	   as the cell's nest within tables.  This ensures that the innermost
+	   cell's background ends up with the highest z-order and gets
+	   displayed 
+	*/	   
+	z_order = Z_CELL_BACKGROUND_LAYER + table_nesting_level;
     CL_InsertChildByZ(parent_layer, cellbg_layer, z_order);
 
     /* Start loading tiled cell backdrop image, if present */

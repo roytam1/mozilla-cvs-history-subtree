@@ -327,7 +327,7 @@ typedef struct lo_TableRec_struct {
 	LO_SubDocStruct *current_subdoc;
 	lo_TableRow *row_list;
 	lo_TableRow *row_ptr;
-	int32 *fixed_col_widths;
+	int32 *fixed_col_widths;	
 } lo_TableRec;
 
 
@@ -839,7 +839,7 @@ struct lo_TopState_struct {
     PRPackedBool flushing_blockage;
     PRPackedBool wedged_on_mocha;
 	Bool in_cell_relayout;
- 	int16 table_nesting_level;	/* Counter to keep track of depth of nesting within tables */
+	int16 table_nesting_level;	/* Counter to keep track of depth of nesting within tables */
 #ifdef DEBUG_ScriptPlugin
 	char * mimetype;
 #endif 
@@ -1584,6 +1584,8 @@ lo_BindNamedAnchorToElement(lo_DocState *state, PA_Block name,
 Bool
 lo_BindNamedSpanToElement(lo_DocState *state, PA_Block name,
                            LO_Element *element);
+
+LO_SpanStruct * lo_FindParentSpan( LO_Element *ele );
 #endif
 
 /* Return the table element containing the given element (usually a LO_CELL type) */
@@ -1624,9 +1626,20 @@ int32 lo_GetNumberOfCellsInTable(LO_TableStruct *pTable );
 */
 int32 lo_CalcTableWidthForPercentMode(LO_Element *pCellElement);
 
-#ifdef DOM
-static LO_SpanStruct *
-lo_FindParentSpan( LO_Element *ele );
-#endif
+/* The LO_CellStruct.width does not include border, cell padding etc and is complicated
+ * by Column Span as well. Calculate the value to use for <TD WIDTH> param that 
+ * would result in current pCellElement->lo_cell.width during the next layout
+*/ 
+int32 lo_GetCellTagWidth(LO_Element *pCellElement);
+
+/* Similar calculation for height. Unfortunately, there are differences from width.
+ * e.g., the cell border must be subtracted from width, but not height! (a bug???)
+*/
+int32 lo_GetCellTagHeight(LO_Element *pCellElement);
+
+/* Helpers to access the lo_TableCell members now accessible through the LO_CellStruct */
+int32 lo_GetRowSpan(LO_Element *pCellElement);
+int32 lo_GetColSpan(LO_Element *pCellElement);
+int32 lo_GetCellPadding(LO_Element *pCellElement);
 
 #endif /* _Layout_h_ */
