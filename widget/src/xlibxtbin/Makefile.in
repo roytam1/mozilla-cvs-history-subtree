@@ -34,9 +34,9 @@ REQUIRES	= xlibrgb
 CPPSRCS         = \
                 xlibxtbin.cpp \
 
-EXTRA_DSO_LDOPTS += -L$(DIST)/bin -L$(DIST)/lib -lxlibrgb
+EXTRA_DSO_LDOPTS += -L$(LIBS_DIR) -lxlibrgb
 
-EXTRA_DSO_LDOPTS += $(MOZ_XLIB_LDFLAGS) -L/usr/X11R6/lib -lXt
+EXTRA_DSO_LDOPTS += $(MOZ_XLIB_LDFLAGS) $(XLDFLAGS) -lXt
 
 EXPORTS         = xlibxtbin.h 
 
