@@ -11,14 +11,16 @@
 
 <!ENTITY done.label                       "Done">
 <!ENTITY cancel.label                     "Cancel">
-<!ENTITY cancelled.label                  "Cancelled">
+<!ENTITY canceled.label                  "Cancelled">
 <!ENTITY launch.label                     "Launch">
 <!ENTITY divider.label                    "-">
 <!ENTITY show.label                       "Show">
 <!ENTITY open.label                       "Open">
 <!ENTITY retry.label                      "Retry">
-<!ENTITY close.label                      "Close">
+<!ENTITY remove.label                     "Remove">
+<!ENTITY pause.label                      "Pause">
 
+<!ENTITY starting.label                   "Starting...">
 <!ENTITY failed.label                     "Failed">
 
 <!ENTITY downloads.title                  "Downloads">

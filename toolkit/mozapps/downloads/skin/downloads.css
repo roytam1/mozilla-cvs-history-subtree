@@ -2,14 +2,30 @@
   font-weight: bold;
 }
 
+#downloadManager {
+  background-color: ThreeDFace;
+}
+
 #downloadView {
   background-color: Window;
-  padding: 10px 0px 10px 10px;
+  background-image: url("chrome://mozapps/skin/downloads/viewFader.png");
+  padding: 0px;
+  margin: 10px;
+  -moz-appearance: listbox;
+}
+
+#commandBar {
+  padding: 0px 10px 10px 10px;
 }
 
 download {
-  padding: 3px 0px 3px 3px;
+  padding: 13px 10px 13px 13px;
   min-height: 25px;
+  border-bottom: 1px dotted #C0C0C0;
+}
+
+download[state="0"], download[state="-1"] {
+  background-color: Window;
 }
 
 #downloadHistoryView > treechildren::-moz-tree-image(Name) {

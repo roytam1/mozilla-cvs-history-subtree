@@ -129,3 +129,7 @@ toolbarbutton[type="menu-button"][open="true"] > .toolbarbutton-menubutton-dropm
 toolbarbutton[type="menu-button"][buttondown="true"] > .toolbarbutton-menubutton-dropmarker {
   padding: 1px 0 0 0;
 }
+
+toolbarbutton[type="checbox"][checked="true"] {
+  -moz-appearance: toolbarbutton-pressed;
+}

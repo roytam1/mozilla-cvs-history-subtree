@@ -9,7 +9,8 @@
 
 <window xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        orient="vertical" title="&downloads.title;" windowtype="Download:Manager"
+        id="downloadManager" windowtype="Download:Manager"
+        orient="vertical" title="&downloads.title;"
         width="400" height="300" screenX="10" screenY="10"
         persist="width height screenX screenY sizeMode"
         onload="Startup();" onunload="Shutdown();">
@@ -73,11 +74,15 @@
     </vbox>
   </vbox>
 
-  <statusbar>
-    <button id="clearAllButton" label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" oncommand="clearAllDownloads();"/>
-    <checkbox label="&closeWhenDone.label;" tooltiptext="&closeWhenDone.tooltip;" oncommand="toggleCloseWhenDone(this);"/>
+  <hbox>
+    <hbox id="commandBar">
+      <toolbarbutton id="cleanUpButton" label="&cmd.cleanUp.label;" tooltiptext="&cmd.cleanUp.tooltip;" oncommand="cleanUpDownloads();"/>
+      <toolbarbutton type="checkbox" label="&closeWhenDone.label;" tooltiptext="&closeWhenDone.tooltip;" oncommand="toggleCloseWhenDone(this);"/>
+    </hbox>
+    
     <spacer flex="1"/>
-  </statusbar>  
+    <resizer dir="bottomright"/>
+  </hbox>  
 
 </window>
 

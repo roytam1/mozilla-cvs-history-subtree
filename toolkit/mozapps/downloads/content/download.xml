@@ -9,95 +9,129 @@
           xmlns:xbl="http://www.mozilla.org/xbl"
           xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 
-  <binding id="download">
+  <binding id="download-base">
     <resources>
       <stylesheet src="chrome://mozapps/skin/downloads/downloads.css"/>
     </resources>
+    <implementation>
+      <method name="fireEvent">
+        <parameter name="aEventType"/>
+        <body>
+        <![CDATA[
+          var e = document.createEvent("Events");
+          e.initEvent("download-" + aEventType, false, true);
+          
+          this.dispatchEvent(e);
+        ]]>
+        </body>
+      </method>
+    </implementation>
+  </binding>
+  
+  <binding id="download-starting" extends="chrome://mozapps/content/downloads/download.xml#download-base">
     <content>
-      <xul:hbox>
-#ifdef XP_WIN
-        <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
-#endif
-        <xul:label xbl:inherits="value=target"/>
-      </xul:hbox>
       <xul:hbox flex="1">
-        <xul:vbox flex="1"
 #ifdef XP_WIN
-                  class="indented"
+        <xul:vbox pack="start">
+          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+        </xul:vbox>
 #endif
-        >
+        <xul:vbox pack="start" flex="1">
+          <xul:label xbl:inherits="value=target" crop="middle"/>
+          <xul:label value="&starting.label;"/>
+        </xul:vbox>
+        <xul:vbox pack="start">
+          <xul:label value="&cancel.label;" class="link" 
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('cancel');"/>
+        </xul:vbox>
+      </xul:hbox>
+    </content>  
+  </binding>
+  
+  <binding id="download-downloading" extends="chrome://mozapps/content/downloads/download.xml#download-base">
+    <content>
+      <xul:hbox flex="1">
+#ifdef XP_WIN
+        <xul:vbox pack="start">
+          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+        </xul:vbox>
+#endif
+        <xul:vbox flex="1">
+          <xul:label xbl:inherits="value=target" flex="1" crop="middle"/>
           <xul:hbox flex="1" align="center">
             <xul:progressmeter mode="normal" value="0" flex="1"
                               xbl:inherits="value=progress,mode=progressmode"/>
             <xul:label xbl:inherits="value=progress" class="progressField"/>
           </xul:hbox>
-          <xul:label xbl:inherits="value=status"/>
+          <xul:label value="&pause.label;" class="link" 
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('pause');"/>          
         </xul:vbox>
-        <xul:label xbl:inherits="value=state"/>
-        <xul:deck xbl:inherits="index=state">
-          <xul:vbox align="start">
-            <xul:label value="&cancel.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.cancel();"/>
-          </xul:vbox>
-          <xul:vbox align="start">
-            <xul:label value="&show.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.show();"/>
-            <xul:label value="&open.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.open();"/>
-          </xul:vbox>
-          <xul:vbox align="start">
-            <xul:label value="&retry.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.retry();"/>
-            <xul:label value="&close.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.close();"/>
-          </xul:vbox>
-          <xul:vbox align="start">
-            <xul:label value="&retry.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.retry();"/>
-            <xul:label value="&close.label;" class="link" onclick="this.parentNode.parentNode.parentNode.parentNode.close();"/>
-          </xul:vbox>
-
-        </xul:deck>
+        <xul:vbox pack="start">
+          <xul:label value="&cancel.label;" class="link"
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('cancel');"/>          
+        </xul:vbox>
       </xul:hbox>
     </content>
-    <implementation>           
-      <method name="cancel">
-        <body>
-        <![CDATA[
-          const dlmgrContractID = "@mozilla.org/download-manager;1";
-          const dlmgrIID = Components.interfaces.nsIDownloadManager;
-          var dlmgr = Components.classes[dlmgrContractID].getService(dlmgrIID);
-          dlmgr.cancelDownload(this.id);
-        ]]>
-        </body>
-      </method>
-      
-      <method name="show">
-        <body>
-        <![CDATA[
-          dump("*** SHOW\n");
-        ]]>
-        </body>
-      </method>
-      
-      <method name="open">
-        <body>
-        <![CDATA[
-          dump("*** RUN\n");
-        ]]>
-        </body>
-      </method>
-      
-      <method name="retry">
-        <body>
-        <![CDATA[
-          dump("*** RETRY\n");
-        ]]>
-        </body>
-      </method>
-      
-      <method name="close">
-        <body>
-        <![CDATA[
-          dump("*** CLOSE\n");
-        ]]>
-        </body>
-      </method>
-      
-    </implementation>
   </binding>
+  
+  <binding id="download-done" extends="chrome://mozapps/content/downloads/download.xml#download-base">
+    <content>
+      <xul:hbox flex="1">
+#ifdef XP_WIN
+        <xul:vbox pack="start">
+          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+        </xul:vbox>
+#endif
+        <xul:vbox pack="start" flex="1">
+          <xul:label xbl:inherits="value=target" crop="middle"/>
+          <xul:label value="&done.label;"/>
+        </xul:vbox>
+        <xul:vbox pack="start">
+          <xul:label value="&show.label;" class="link" 
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('show');"/>
+        </xul:vbox>
+      </xul:hbox>
+    </content>  
+  </binding>
+  
+  <binding id="download-canceled" extends="chrome://mozapps/content/downloads/download.xml#download-base">
+    <content>
+      <xul:hbox flex="1">
+#ifdef XP_WIN
+        <xul:vbox pack="start">
+          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+        </xul:vbox>
+#endif
+        <xul:vbox pack="start" flex="1">
+          <xul:label xbl:inherits="value=target" crop="middle"/>
+          <xul:label value="&canceled.label;"/>
+        </xul:vbox>
+        <xul:vbox pack="start">
+          <xul:label value="&retry.label;" class="link" 
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('retry');"/>
+        </xul:vbox>
+      </xul:hbox>
+    </content>  
+  </binding>
+  
+  <binding id="download-failed" extends="chrome://mozapps/content/downloads/download.xml#download-base">
+    <content>
+      <xul:hbox flex="1">
+#ifdef XP_WIN
+        <xul:vbox pack="start">
+          <xul:image style="width: 16px; max-width: 16px; height: 16px; max-height: 16px;" xbl:inherits="src=image"/>
+        </xul:vbox>
+#endif
+        <xul:vbox pack="start" flex="1">
+          <xul:label xbl:inherits="value=target" crop="middle"/>
+          <xul:label value="&failed.label;"/>
+        </xul:vbox>
+        <xul:vbox pack="start">
+          <xul:label value="&retry.label;" class="link" 
+                     onclick="this.parentNode.parentNode.parentNode.fireEvent('retry');"/>
+        </xul:vbox>
+      </xul:hbox>
+    </content>  
+  </binding>
+  
 </bindings>

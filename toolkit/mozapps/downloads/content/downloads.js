@@ -28,12 +28,60 @@ const dlObserver = {
   }
 };
 
+function onDownloadCancel(aEvent)
+{
+  dump("*** DL = " + aEvent.target.id + "\n");
+  gDownloadManager.cancelDownload(aEvent.target.id);
+}
+
+function onDownloadPause(aEvent)
+{
+
+}
+
+function onDownloadRemove(aEvent)
+{
+
+}
+
+function onDownloadShow(aEvent)
+{
+  var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+  f.initWithPath(aEvent.target.id);
+
+  if (f.exists())
+    f.reveal();
+}
+
+function onDownloadOpen(aEvent)
+{
+  var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+  f.initWithPath(aEvent.target.id);
+
+  if (f.exists()) {
+    // XXXben security check!  
+    f.launch();
+  }
+}
+
+function onDownloadRetry(aEvent)
+{
+
+}
+
 function Startup() {
   var downloadView = document.getElementById("downloadView");
 
   const dlmgrContractID = "@mozilla.org/download-manager;1";
   const dlmgrIID = Components.interfaces.nsIDownloadManager;
   gDownloadManager = Components.classes[dlmgrContractID].getService(dlmgrIID);
+
+  downloadView.addEventListener("download-cancel",  onDownloadCancel, false);
+  downloadView.addEventListener("download-pause",   onDownloadPause,  false);
+  downloadView.addEventListener("download-remove",  onDownloadRemove, false);
+  downloadView.addEventListener("download-show",    onDownloadShow,   false);
+  downloadView.addEventListener("download-retry",   onDownloadRetry,  false);
+  downloadView.addEventListener("dblclick",         onDownloadOpen,   false);
 
   var ds = gDownloadManager.datasource;
 
@@ -233,3 +281,17 @@ function buildContextMenu()
   return true;
 }
     
+function cleanUpDownloads()
+{
+  var downloadView = document.getElementById("downloadView");
+  for (var i = downloadView.childNodes.length - 1; i >= 0; --i) {
+    var currItem = downloadView.childNodes[i];
+    if (currItem.getAttribute("state") != "0" || 
+        currItem.getAttribute("state") != "-1") {
+      dump("*** removing item at " + i + "\n");
+      gDownloadManager.removeDownload(currItem.id);
+    }
+  }
+}
+
+

@@ -2,3 +2,29 @@ download {
   -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download');
   -moz-box-orient: vertical;
 }
+
+download[state="-1"] {
+  -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-starting');
+  -moz-box-orient: vertical;
+}
+
+download[state="0"] {
+  -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-downloading');
+  -moz-box-orient: vertical;
+}
+
+download[state="1"] {
+  -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-done');
+  -moz-box-orient: vertical;
+}
+
+download[state="2"] {
+  -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-failed');
+  -moz-box-orient: vertical;
+}
+
+download[state="3"] {
+  -moz-binding: url('chrome://mozapps/content/downloads/download.xml#download-canceled');
+  -moz-box-orient: vertical;
+}
+

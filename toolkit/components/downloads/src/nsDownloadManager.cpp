@@ -428,7 +428,7 @@ nsDownloadManager::AddDownload(nsIURI* aSource,
     rv = downloads->RemoveElementAt(itemIndex, PR_TRUE, getter_AddRefs(node));
     if (NS_FAILED(rv)) return rv;
   }
-  rv = downloads->AppendElement(downloadRes);
+  rv = downloads->InsertElementAt(downloadRes, 1, PR_TRUE);
   if (NS_FAILED(rv)) return rv;
   
   // Assert source url information
