@@ -1531,7 +1531,25 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 		pButton->SetBitmapSize(CSize(size.cx, size.cy + (m_nRowHeight - buttonSize.cy)));
 	}
 
-	AddButtonAtIndex(pButton); // Have to put the button in the array, since the toolbar base class depends on it.
+	m_pButtonArray[m_nNumButtons] = pButton;
+	
+	m_nNumButtons++;
+
+	if(CheckMaxButtonSizeChanged(pButton, TRUE))
+	{
+		ChangeButtonSizes();
+	}
+	else
+	{
+		CSize size = pButton->GetRequiredButtonSize();
+		int nWidth = size.cx;
+
+		if (m_bButtonsSameWidth && !HT_IsURLBar(item) && !HT_IsSeparator(item))
+			nWidth = m_nMaxButtonWidth;
+
+		//make sure it's the size of the largest button so far
+		pButton->SetButtonSize(CSize(nWidth, m_nMaxButtonHeight));
+	}
 
 	// Update the button if it's a command.
 	if (pButton->NeedsUpdate())

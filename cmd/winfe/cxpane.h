@@ -190,6 +190,7 @@ public:
     virtual void FinishedLayout(MWContext *pContext);
     virtual void SetDocDimension(MWContext *pContext, int iLocation, int32 lWidth, int32 lLength);
 	virtual void DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruct *pBuiltin);
+	virtual void FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *pBuiltin);
 };
 
 inline HWND CPaneCX::GetPane() const

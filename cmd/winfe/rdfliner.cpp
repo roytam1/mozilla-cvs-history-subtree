@@ -3845,7 +3845,7 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 		theOutliner->HandleEvent(ns, n, whatHappened);
 }
 
-void CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height)
+CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height)
 {
 	HT_Notification ns = new HT_NotificationStruct;
 	ns->notifyProc = embeddedTreeNotifyProcedure;
@@ -3867,6 +3867,8 @@ void CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int widt
 
 	// Set our FE data to be the outliner.
 	HT_SetViewFEData(HT_GetSelectedView(thePane), newParent->GetOutliner());
+
+	return (CRDFOutliner*)newParent->GetOutliner();
 }
 
 // Function to grab an RDF context

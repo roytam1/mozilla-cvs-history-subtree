@@ -1513,7 +1513,13 @@ void CFE_DisplayBuiltin(MWContext *context, int iLocation, LO_BuiltinStruct *bui
     ABSTRACTCX(context)->DisplayBuiltin(context, iLocation, builtin_struct);
 }
 
-void CFE_FreeBuiltinElement(MWContext *context, LO_BuiltinStruct *builtin_struct)
+void CFE_FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *builtin_struct)
 {
-    return;
+    if(ABSTRACTCX(pContext)->IsDestroyed())	{
+		//	Don't allow this to happen if the context has been destroyed...
+		TRACE("Context %p Destroyed :: FreeBuiltinElement Blocking\n", pContext);
+		return;
+	}
+
+    ABSTRACTCX(pContext)->FreeBuiltinElement(pContext, builtin_struct);
 }

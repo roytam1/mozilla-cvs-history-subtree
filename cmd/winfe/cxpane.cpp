@@ -1495,7 +1495,7 @@ BOOL CPaneCX::SubClass(HWND hWnd, BOOL bSubClass)
 
 void CPaneCX::DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruct *builtin_struct)
 {
-	// get the current view for param 5 of CreateWindow() below
+	// This code assumes a type of builtin/tree.  Will have to be changed.
     HWND cView = PANECX(pContext)->GetPane();
 
 	// Ok, we have the parent window.  we need to know where to display it.
@@ -1504,5 +1504,16 @@ void CPaneCX::DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruc
 	int width = builtin_struct->width;
 	int height = builtin_struct->height;
 	
-	CRDFContentView::DisplayRDFTree(CWnd::FromHandle(cView), xPos, yPos, width, height);
+	CRDFOutliner* pWnd = CRDFContentView::DisplayRDFTree(CWnd::FromHandle(cView), xPos, yPos, width, height);
+	builtin_struct->FE_Data = pWnd;
+
+}
+
+void CPaneCX::FreeBuiltinElement(MWContext *pContext, LO_BuiltinStruct *pBuiltin)
+{
+	// This code assumed a type of builtin/tree.  Will have to be changed.
+
+	CRDFOutliner* pWnd = (CRDFOutliner*)pBuiltin->FE_Data;
+	HT_DeletePane(HT_GetPane(pWnd->GetHTView()));
+	pWnd->GetParent()->GetParent()->DestroyWindow();
 }
