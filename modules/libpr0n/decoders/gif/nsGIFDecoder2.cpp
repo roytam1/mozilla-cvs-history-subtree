@@ -341,7 +341,6 @@ int HaveDecodedRow(
     decoder->mImageFrame->GetImageBytesPerRow(&bpr);
     decoder->mImageFrame->GetAlphaBytesPerRow(&abpr);
 
-    decoder->colorLine = (PRUint8 *)nsMemory::Alloc(bpr);
     if (format == nsIGFXFormat::RGB_A1 || format == nsIGFXFormat::BGR_A1)
       decoder->alphaLine = (PRUint8 *)nsMemory::Alloc(abpr);
   } else {
@@ -404,16 +403,21 @@ int HaveDecodedRow(
           if (*rowBufIndex == decoder->mGIFStruct.tpixel) {
             // set mask bit
           }
+#ifdef XP_PC
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
+#else
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
           *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue;
-
+#endif
           if (*rowBufIndex == decoder->mGIFStruct.tpixel)
             decoder->alphaLine[x>>3] |= 1<<(7-x&0x7);
 
           ++rowBufIndex;
         }
-        decoder->mImageFrame->SetImageData(decoder->colorLine, bpr, aRowNumber*bpr);
+        decoder->mImageFrame->SetImageData((PRUint8*)aRGBrowBufPtr, bpr, aRowNumber*bpr);
         decoder->mImageFrame->SetAlphaData(decoder->alphaLine, abpr, aRowNumber*abpr);
       }
       break;

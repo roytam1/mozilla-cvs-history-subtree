@@ -65,7 +65,7 @@ public:
   
   gif_struct mGIFStruct;
   
-  PRUint8 *colorLine, *alphaLine;
+  PRUint8 *alphaLine;
   PRUint8 *interlacebuf;
   PRUint32 ibpr;
 };
