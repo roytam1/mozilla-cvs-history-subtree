@@ -130,11 +130,9 @@ typedef struct lo_NameList_struct {
 	LO_Element *element;
 	PA_Block name; 	/* really a (char *) */
 	struct lo_NameList_struct *next;
-#ifdef MOCHA
         uint32 index;           /* Needed because with nested tables, the list
                                    is not guaranteed to be ordered. */
 	struct JSObject *mocha_object;
-#endif
 } lo_NameList;
 
 typedef struct lo_SavedFormListData_struct {
@@ -230,10 +228,8 @@ typedef struct lo_FormData_struct {
 	int32 form_ele_size;
 	PA_Block form_elements;		/* really a (LO_Element **) */
 	struct lo_FormData_struct *next;
-#ifdef MOCHA
 	PA_Block name;
 	struct JSObject *mocha_object;
-#endif
 } lo_FormData;
 
 
@@ -644,9 +640,7 @@ typedef struct lo_DocState_struct {
     int edit_current_offset;
     Bool edit_force_offset;
     Bool edit_relayout_display_blocked;
-#ifdef MOCHA
     Bool in_relayout;	/* true if we're in lo_RelayoutSubdoc */
-#endif
 
     int32 tab_stop;
     int32 beginning_tag_count;  /* the tag count at the beginning of this state */
@@ -702,7 +696,6 @@ typedef struct lo_SavedData {
     lo_SavedFormListData*	FormList;	/* Data for all form elements in doc */
     lo_SavedEmbedListData*	EmbedList;	/* session data for all embeds and applets in doc */
     lo_SavedGridData*		Grid;		/* saved for grid history. */
-#ifdef MOCHA
     PA_Block			OnLoad;		/* JavaScript onload event handler source */
     PA_Block			OnUnload;	/* JavaScript onunload event handler source */
     PA_Block			OnFocus;	/* JavaScript onfocus event handler source */
@@ -713,7 +706,6 @@ typedef struct lo_SavedData {
     PA_Block			OnDragDrop;	/* JavaScript ondragdrop event handler source */
     PA_Block			OnMove;		/* JavaScript onmove event handler source */
     PA_Block			OnResize;	/* JavaScript onresize event handler source */
-#endif
 } lo_SavedData;
 
 /* 
@@ -805,7 +797,6 @@ struct lo_TopState_struct {
     lo_DocState *doc_state;
 
     ED_Buffer *edit_buffer;
-#ifdef MOCHA
     uint32 script_tag_count;	/* number of script tags processed so far */
     uint script_lineno;	/* parser newline count at last <SCRIPT> tag */
     int8 in_script;		/* script type if in script, see below */
@@ -821,7 +812,6 @@ struct lo_TopState_struct {
     uint32 mocha_loading_embeds_count;
     NET_StreamClass *mocha_write_stream;
     void *scriptData;
-#endif
 
     struct pa_DocData_struct *doc_data;
     PA_Tag **input_write_point[MAX_INPUT_WRITE_LEVEL];
@@ -1481,7 +1471,6 @@ lo_BumpEditablePosition(MWContext *context, lo_DocState *state,
 Bool
 lo_IsEmptyTag(TagType type);
 
-#ifdef MOCHA
 
 extern lo_TopState *
 lo_GetMochaTopState(MWContext *context);
@@ -1532,7 +1521,6 @@ lo_ProcessStyleTag(MWContext *context, lo_DocState *state, PA_Tag *tag);
 
 extern void
 lo_BlockScriptTag(MWContext *context, lo_DocState *state, PA_Tag *tag);
-#endif /* MOCHA */
 
 extern lo_DocLists *
 lo_GetCurrentDocLists(lo_DocState *state);

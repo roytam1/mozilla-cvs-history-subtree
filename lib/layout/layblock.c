@@ -1731,9 +1731,7 @@ lo_begin_layer_internal(MWContext *context,
 
     /* Push this layer on the layer stack */
     lo_PushLayerState(state->top_state, layer_state);
-#ifdef MOCHA
 	ET_SetActiveLayer(context, layer_state->id);
-#endif /* MOCHA */
 	state->layer_nest_level++;
 
 	if (param->src) {
@@ -2309,10 +2307,8 @@ lo_EndLayer(MWContext *context,
 
 	state->layer_nest_level--;
     lo_PopLayerState(state);
-#ifdef MOCHA
     enclosing_layer_state = lo_CurrentLayerState(state);
     ET_SetActiveLayer(context, enclosing_layer_state->id);
-#endif /* MOCHA */
 
 	if (block->is_dynamic) {
 	    lo_TopState * top_state;
@@ -2339,11 +2335,9 @@ lo_EndLayer(MWContext *context,
 		}
 	}
 
-#ifdef MOCHA
     if (send_load_event)
         ET_SendLoadEvent(context, EVENT_LOAD, NULL, NULL, layer_state->id,
                          state->top_state->resize_reload);
-#endif
 
 	lo_DeleteBlock(block);
     layer_state->temp_block = NULL;
@@ -2687,9 +2681,7 @@ LO_PrepareLayerForWriting(MWContext *context, int32 layer_id,
 	state->layer_nest_level++;
     /* Push this layer on the layer stack */
     lo_PushLayerState(state->top_state, layer_state);
-#ifdef MOCHA
 	ET_SetActiveLayer(context, layer_state->id);
-#endif /* MOCHA */
 
     block->clip_expansion_policy = lo_GetLayerClipExpansionPolicy(layer);
 

@@ -444,10 +444,8 @@ lo_BeginForm(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	form->form_ele_size = 0;
 	form->form_elements = NULL;
 	form->next = NULL;
-#ifdef MOCHA
 	form->name = lo_FetchParamValue(context, tag, PARAM_NAME);
 	form->mocha_object = NULL;
-#endif
 
 	buff = lo_FetchParamValue(context, tag, PARAM_ACTION);
 	if (buff != NULL)
@@ -554,12 +552,10 @@ lo_BeginForm(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	form->next = doc_lists->form_list;
 	doc_lists->form_list = form;
 
-#ifdef MOCHA
 	if (!state->in_relayout)
 	{
 		lo_BeginReflectForm(context, state, tag, form);
 	}
-#endif
 }
 
 
@@ -623,12 +619,10 @@ lo_EndForm(MWContext *context, lo_DocState *state)
 		FE_FormTextIsSubmit(context, single_text_ele);
 	}
 
-#ifdef MOCHA
 	if (!state->in_relayout)
 	{
 		lo_EndReflectForm(context, form_list);
 	}
-#endif
 }
 
 
@@ -770,10 +764,8 @@ new_form_element(MWContext *context, lo_DocState *state, int32 type)
 	form_element->layer_id = lo_CurrentLayerId(state);
 	form_element->element_data = NULL;
 	form_element->element_index = 0;
-#ifdef MOCHA
 	form_element->mocha_object = NULL;
 	form_element->event_handler_present = FALSE;
-#endif
 
 	if (state->font_stack == NULL)
 	{
@@ -932,9 +924,9 @@ lo_form_input_text(MWContext *context, lo_DocState *state,
 	LO_FormElementStruct *form_element;
 	lo_FormElementTextData *form_data;
 	PA_Block buff;
-#if defined(XP_MAC)&&defined(MOCHA)
+#if defined(XP_MAC)
 	PA_Block keydown, keypress, keyup;
-#endif /* defined(XP_MAC)&&defined(MOCHA) */
+#endif /* defined(XP_MAC) */
 	char *str;
 	char *tptr;
 	int16 charset;
@@ -1071,7 +1063,7 @@ lo_form_input_text(MWContext *context, lo_DocState *state,
 		PA_FREE(buff);
 	}
 	
-#if defined(XP_MAC)&&defined(MOCHA)
+#if defined(XP_MAC)
     keydown = lo_FetchParamValue(context, tag, PARAM_ONKEYDOWN);
     keypress = lo_FetchParamValue(context, tag, PARAM_ONKEYPRESS);
     keyup = lo_FetchParamValue(context, tag, PARAM_ONKEYUP);
@@ -1087,7 +1079,7 @@ lo_form_input_text(MWContext *context, lo_DocState *state,
 		PA_FREE(keypress);
 	if (keyup)
 		PA_FREE(keyup);		
-#endif /* defined(XP_MAC)&&defined(MOCHA) */
+#endif /* defined(XP_MAC) */
 
 	return(form_element);
 }
@@ -1100,9 +1092,9 @@ lo_form_textarea(MWContext *context, lo_DocState *state,
 	LO_FormElementStruct *form_element;
 	lo_FormElementTextareaData *form_data;
 	PA_Block buff;
-#if defined(XP_MAC)&&defined(MOCHA)
+#if defined(XP_MAC)
 	PA_Block keydown, keypress, keyup;
-#endif /* defined(XP_MAC)&&defined(MOCHA) */
+#endif /* defined(XP_MAC) */
 	char *str;
 
 	form_element = new_form_element(context, state, type);
@@ -1209,7 +1201,7 @@ lo_form_textarea(MWContext *context, lo_DocState *state,
 		PA_FREE(buff);
 	}
 
-#if defined(XP_MAC)&&defined(MOCHA)
+#if defined(XP_MAC)
     keydown = lo_FetchParamValue(context, tag, PARAM_ONKEYDOWN);
     keypress = lo_FetchParamValue(context, tag, PARAM_ONKEYPRESS);
     keyup = lo_FetchParamValue(context, tag, PARAM_ONKEYUP);
@@ -1225,7 +1217,7 @@ lo_form_textarea(MWContext *context, lo_DocState *state,
 		PA_FREE(keypress);
 	if (keyup)
 		PA_FREE(keyup);		
-#endif /* defined(XP_MAC)&&defined(MOCHA) */
+#endif /* defined(XP_MAC) */
 
 	return(form_element);
 }
@@ -1747,10 +1739,8 @@ lo_form_select(MWContext *context, lo_DocState *state, PA_Tag *tag)
     			form_data->saved_tag = PA_CloneMDLTag(tag);
 	}
 
-#ifdef MOCHA
 	/* needs to be moved */
 	lo_ReflectFormElement(context, state, tag, form_element);
-#endif
 
 	return(form_element);
 }
@@ -1839,7 +1829,6 @@ lo_add_element_to_form_list(MWContext *context, lo_DocState *state,
 				(form_list->form_ele_cnt *
 				sizeof(LO_Element *)));
 		}
-#ifdef MOCHA
 		if (form_list->form_elements != NULL)
 		{
 			int32 i;
@@ -1854,7 +1843,6 @@ lo_add_element_to_form_list(MWContext *context, lo_DocState *state,
 			}
 			PA_UNLOCK(form_list->form_elements);
 		}
-#endif
 		form_list->form_ele_size = form_list->form_ele_cnt;
 	}
 	if (form_list->form_elements == NULL)
@@ -1865,7 +1853,6 @@ lo_add_element_to_form_list(MWContext *context, lo_DocState *state,
 		return(FALSE);
 	}
 	PA_LOCK(ele_array, LO_Element **, form_list->form_elements);
-#ifdef MOCHA
 	{
 		LO_FormElementStruct *old_form_ele;
 
@@ -1877,7 +1864,6 @@ lo_add_element_to_form_list(MWContext *context, lo_DocState *state,
 			form_element->mocha_object = old_form_ele->mocha_object;
 		}
 	}
-#endif
 	ele_array[form_list->form_ele_cnt - 1] = (LO_Element *)form_element;
 	PA_UNLOCK(form_list->form_elements);
 	return(TRUE);
@@ -2515,9 +2501,7 @@ lo_ProcessInputTag(MWContext *context, lo_DocState *state, PA_Tag *tag)
 		lo_add_form_element(context, state, form_element);
 	}
 
-#ifdef MOCHA
 	lo_ReflectFormElement(context, state, tag, form_element);
-#endif
 }
 
 

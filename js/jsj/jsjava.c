@@ -43,11 +43,8 @@
 #include "jri.h"
 
 /* nspr stuph */
-#ifndef NSPR20
-#include "prhash.h"
-#else
+
 #include "plhash.h"
-#endif
 #include "prmon.h"      /* for PR_XLock and PR_XUNlock */
 #include "prlog.h"
 #include "prprf.h"
@@ -67,15 +64,11 @@
 #define VARARGS_ASSIGN(foo, bar) (foo) = (bar)
 #endif /*MKLINUX*/
 
-#ifndef NSPR20
-#define WAIT_FOREVER LL_MAXINT
-#else
 #define WAIT_FOREVER PR_INTERVAL_NO_TIMEOUT
 /* PR_LOG hacks */
 #define debug PR_LOG_MAX
 #define error PR_LOG_ERROR
 #define warn PR_LOG_WARNING
-#endif
 
 /*
  * "exception" is defined by some Windows OS headers.
@@ -2737,20 +2730,14 @@ scanJSJavaReflections(void *runtime)
 
     /* FIXME this is kind of scary long-term access inside the
      * monitor - is there any alternative? */
-#ifndef NSPR20
-    PR_EnterMonitor(javaReflectionsMonitor);
-#endif
+
     if (javaReflections) {
 	PR_HashTableEnumerateEntries(javaReflections,
 				     scanJSJavaReflectionEntry,
 				     &args);
     }
-#ifndef NSPR20
-    PR_ExitMonitor(javaReflectionsMonitor);
-#endif
 }
 
-#ifdef NSPR20
 void PR_CALLBACK PrepareJSLocksForGC(GCLockHookArg arg1)
 {
     PR_ASSERT(arg1 == PR_GCBEGIN || arg1 == PR_GCEND);
@@ -2760,7 +2747,6 @@ void PR_CALLBACK PrepareJSLocksForGC(GCLockHookArg arg1)
     else
         PR_ExitMonitor(javaReflectionsMonitor);
 }
-#endif
 
 static JSObject *
 js_ReflectJava(JSContext *cx, JSJavaType type, HObject *handle,
@@ -3596,12 +3582,7 @@ js_ExecuteJavaMethod(JSContext *cx, void *raddr, size_t rsize,
     JSBool success;
     va_list args;
 
-#if defined(XP_MAC) && !defined(NSPR20)
- /* Metrowerks va_start() doesn't handle one-byte parameters properly. FIX this when va_start() works again. */
-	args = &isStaticCall+1;
-#else
     va_start(args, isStaticCall);
-#endif
 
     data.self = ho;
     data.name = name;
@@ -4060,10 +4041,9 @@ JSJ_Init(JSJCallbacks *callbacks)
     if (!callbacks)
 	return JS_TRUE;
 
-#ifdef NSPR20
+
     if (MojaSrc == NULL)
         MojaSrc = PR_NewLogModule("MojaSrc");
-#endif
 
     jsj_callbacks = callbacks;
 

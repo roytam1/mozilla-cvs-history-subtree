@@ -28,19 +28,12 @@
 #include "jri.h"
 #include "jriext.h"
 #include "jsjava.h"
-#ifndef NSPR20
-#include "prglobal.h"
-#endif
 #include "prthread.h"
 #include "prmon.h"
 #include "prlog.h"
 #include "prcmon.h"
 
-#ifndef NSPR20
-#define WAIT_FOREVER LL_MAXINT
-#else
 #define WAIT_FOREVER PR_INTERVAL_NO_TIMEOUT
-#endif
 
 static JSTaskState *jsjiTask = 0;
 static PRMonitor *jsmon = NULL;

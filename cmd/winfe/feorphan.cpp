@@ -53,7 +53,7 @@
 #endif
 #endif
 
-#if defined(OJI) || defined(JAVA) || defined(MOCHA)
+#if defined(OJI) || defined(JAVA)
 
 #ifndef XP_PC
 #define XP_PC
@@ -74,7 +74,7 @@
 
 #include "nspr.h"
 #include "plevent.h"
-#endif /* OJI || JAVA || MOCHA */
+#endif /* OJI || JAVA */
 
 #if defined(OJI)
 #include "jvmmgr.h"
@@ -632,7 +632,7 @@ static struct PRMethodCallbackStr DLLCallbacks = {
 #endif	/* NSPR20 */
 #endif /* XP_WIN16 */
 
-#if defined(OJI) || defined(JAVA) || defined(MOCHA)
+#if defined(OJI) || defined(JAVA)
 #ifndef NSPR20
     // Initialize the NSPR library
     PR_Init( "mozilla", MOZILLA_THREAD_PRIORITY, 1, stackBase);
@@ -645,7 +645,7 @@ static struct PRMethodCallbackStr DLLCallbacks = {
     PR_SetThreadPriority(mozilla_thread, MOZILLA_THREAD_PRIORITY);
     PL_InitializeEventsLib("mozilla");
 #endif
-#endif /* OJI || JAVA || MOCHA */
+#endif /* OJI || JAVA */
 }
 
 BOOL fe_ShutdownJava()
@@ -805,7 +805,7 @@ BOOL fe_RegisterOLEIcon ( LPSTR szCLSIDObject,	 // Class ID of the Object
 /* BEWARE! BEWARE! BEWARE! BEWARE! BEWARE! BEWARE! BEWARE! BEWARE! BEWARE!  */
 /*									    */
 /****************************************************************************/
-#if defined(MOCHA) && !defined(JAVA)
+#if !defined(JAVA)
 #include "prevent.h"
 #include "prlog.h"
 
@@ -840,7 +840,7 @@ LJ_ProcessEvent()
 
     }
 }
-#endif	// MOCHA && !JAVA
+#endif	// !JAVA
 #endif	// XP_WIN16
 
 #ifdef XP_WIN16

@@ -31,10 +31,8 @@
 #include "plstr.h"
 #include "jni.h"
 #include "jsjava.h"
-#ifdef MOCHA
 #include "libmocha.h"
 #include "libevent.h"
-#endif
 
 #include "xpgetstr.h"
 extern "C" int XP_PROGRESS_STARTING_JAVA;
@@ -155,7 +153,6 @@ PR_BEGIN_EXTERN_C
 
 #include "jscntxt.h"
 
-#ifdef MOCHA
 
 static JSContext* PR_CALLBACK
 map_jsj_thread_to_js_context_impl(JSJavaThreadState *jsj_env, JNIEnv *env, char **errp)
@@ -381,7 +378,6 @@ exit_js_impl(JNIEnv *jEnv)
 }
 #endif /* OJI */
 
-#endif /* MOCHA */
 
 PR_END_EXTERN_C
 

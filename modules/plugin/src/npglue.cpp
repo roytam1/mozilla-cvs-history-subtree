@@ -2215,9 +2215,7 @@ npn_forceredraw(NPP npp)
 #define JRI_NO_CPLUSPLUS
 #define IMPLEMENT_netscape_plugin_Plugin
 #include "netscape_plugin_Plugin.h"
-#ifdef MOCHA
 #include "libmocha.h"
-#endif /* MOCHA */
 #endif /* JAVA */
 
 #if defined(XP_MAC) && !defined(powerc)
@@ -2936,7 +2934,6 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
     */
 
 #endif
-#ifdef MOCHA
     {
         /* only wait on applets if onload flag */
         lo_TopState *top_state = lo_FetchTopState(XP_DOCID(cx));
@@ -2962,7 +2959,6 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
             ET_SetPluginWindow(cx, (void *)instance);
         }
     }
-#endif /* MOCHA */
            
     return instance;
     

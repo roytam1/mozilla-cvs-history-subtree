@@ -50,11 +50,7 @@
 #include "xp.h"						/* for XP_STRDUP */
 #include "xp_qsort.h"
 #include "prmem.h"
-
-
-#ifdef NSPR20
 #include "prerror.h"
-#endif
 
 #ifndef max
 #define max(a, b) ((a) > (b) ? (a) : (b))

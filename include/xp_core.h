@@ -36,7 +36,7 @@
         And TRUE, FALSE, ON, OFF, YES, NO
 -----------------------------------------------------------------------------*/
 
-#ifdef NSPR20
+
 #include "prtypes.h"	/* for intn, etc. */
 #ifdef XP_MAC
 #include "prosdep.h"
@@ -44,7 +44,6 @@
 #include "md/prosdep.h"
 #endif
 #include "prlog.h"
-#endif /* NSPR20 */
 
 #ifndef _XP_Core_
 #define _XP_Core_
@@ -253,10 +252,6 @@
 #define _UINT16
 #define _INT32
 #define _UINT32
-
-#ifndef NSPR20
-typedef int         	intn;
-#endif /* NSPR20 */
 
 /* function classifications */
 

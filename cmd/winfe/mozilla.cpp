@@ -2395,7 +2395,7 @@ int CNetscapeApp::ExitInstance()
     // Free all resources allocated by NSPR...
     //
 #if !defined(_WIN32)
-#if defined(OJI) || defined(JAVA) || defined(MOCHA)
+#if defined(OJI) || defined(JAVA)
 #if defined(NSPR20)
 	/*
 	 * XXX SHould PR_CLeanup be called here?
@@ -2408,7 +2408,7 @@ int CNetscapeApp::ExitInstance()
     PR_Shutdown();
 #endif
 #endif
-#endif  /* OJI || JAVA || MOCHA */
+#endif  /* OJI || JAVA */
 
 	if (theApp.m_bNetworkProfile) {
 		// if we have a network profile command-line we are assuming delete on exit (for now)
