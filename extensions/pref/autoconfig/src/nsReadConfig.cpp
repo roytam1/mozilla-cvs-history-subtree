@@ -55,7 +55,9 @@
 #include "prmem.h"
 #include "nsString.h"
 #include "nsCRT.h"
+#include "nspr.h"
 
+extern PRLogModuleInfo *MCD;
 
 extern nsresult EvaluateAdminConfigScript(const char *js_buffer, size_t length,
                                           const char *filename, 
@@ -105,6 +107,8 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsReadConfig, nsIReadConfig, nsIObserver)
 nsReadConfig::nsReadConfig() :
     mRead(PR_FALSE)
 {
+    if (!MCD)
+      MCD = PR_NewLogModule("MCD");
 }
 
 nsresult nsReadConfig::Init()
@@ -166,6 +170,9 @@ nsresult nsReadConfig::readConfigFile()
 
     rv = prefBranch->GetCharPref("general.config.filename", 
                                   getter_Copies(lockFileName));
+
+
+    PR_LOG(MCD, PR_LOG_DEBUG, ("general.config.filename = %s\n", lockFileName.get()));
     if (NS_FAILED(rv))
         return rv;
 
@@ -200,10 +207,13 @@ nsresult nsReadConfig::readConfigFile()
 
     PRInt32 obscureValue = 0;
     (void) prefBranch->GetIntPref("general.config.obscure_value", &obscureValue);
+    PR_LOG(MCD, PR_LOG_DEBUG, ("evaluating .cfg file %s with obscureValue %d\n", lockFileName.get(), obscureValue));
     rv = openAndEvaluateJSFile(lockFileName.get(), obscureValue, PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) 
-        return rv;
-    
+    {
+      PR_LOG(MCD, PR_LOG_DEBUG, ("error evaluating .cfg file %s %x\n", lockFileName.get(), rv));
+      return rv;
+    }
     rv = prefBranch->GetCharPref("general.config.filename", 
                                   getter_Copies(lockFileName));
     if (NS_FAILED(rv))
