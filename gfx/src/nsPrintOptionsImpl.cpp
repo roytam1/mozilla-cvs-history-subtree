@@ -128,8 +128,7 @@ nsPrintOptions::nsPrintOptions() :
   mPrintReversed(PR_FALSE),
   mPrintInColor(PR_TRUE),
   mOrientation(kPortraitOrientation),
-  mPrintToFile(PR_FALSE),
-  mIsExtendedInfo(PR_FALSE)
+  mPrintToFile(PR_FALSE)
 {
   NS_INIT_ISUPPORTS();
 
@@ -183,7 +182,7 @@ nsPrinterListEnumerator : public nsISimpleEnumerator
      //nsISimpleEnumerator interface
      NS_DECL_NSISIMPLEENUMERATOR
 
-     NS_IMETHOD Init(PRBool& aIsExtendedInfo);
+     NS_IMETHOD Init();
 
    protected:
      PRUnichar **mPrinters;
@@ -210,7 +209,7 @@ nsPrinterListEnumerator::~nsPrinterListEnumerator()
 
 NS_IMPL_ISUPPORTS1(nsPrinterListEnumerator, nsISimpleEnumerator)
 
-NS_IMETHODIMP nsPrinterListEnumerator::Init(PRBool& aIsExtended)
+NS_IMETHODIMP nsPrinterListEnumerator::Init()
 {
    nsresult rv;
    nsCOMPtr<nsIPrinterEnumerator> printerEnumerator;
@@ -219,17 +218,7 @@ NS_IMETHODIMP nsPrinterListEnumerator::Init(PRBool& aIsExtended)
    if (NS_FAILED(rv))
       return rv;
 
-   // First check to see if we can get the extended printer informations
-   // if not then get the regular
-
-   rv = printerEnumerator->EnumeratePrintersExtended(&mCount, &mPrinters);
-   if (NS_SUCCEEDED(rv) && mCount > 0) {
-     aIsExtended = PR_TRUE;
-   } else {
-     aIsExtended = PR_FALSE;
-     rv = printerEnumerator->EnumeratePrinters(&mCount, &mPrinters);
-   }
-   return rv;
+   return printerEnumerator->EnumeratePrinters(&mCount, &mPrinters);
 }
 
 NS_IMETHODIMP nsPrinterListEnumerator::HasMoreElements(PRBool *result)
@@ -708,22 +697,13 @@ NS_IMETHODIMP nsPrintOptions::AvailablePrinters(nsISimpleEnumerator **aPrinterEn
    NS_ENSURE_TRUE(printerListEnum.get(), NS_ERROR_OUT_OF_MEMORY);
 
    // if Init fails NS_OK is return (script needs NS_OK) but the enumerator will be null
-   nsresult rv = printerListEnum->Init(mIsExtendedInfo);
+   nsresult rv = printerListEnum->Init();
    if (NS_SUCCEEDED(rv)) {
      *aPrinterEnumerator = NS_STATIC_CAST(nsISimpleEnumerator*, printerListEnum);
      NS_ADDREF(*aPrinterEnumerator);
    }
    return NS_OK;
 }
-
-/* readonly attribute boolean isExtended; */
-NS_IMETHODIMP nsPrintOptions::GetIsExtended(PRBool *aIsExtended)
-{
-   NS_ENSURE_ARG(aIsExtended);
-   *aIsExtended = mIsExtendedInfo;
-   return NS_OK;
-}
-
 
 NS_IMETHODIMP nsPrintOptions::DisplayJobProperties( const PRUnichar *aPrinter, nsIPrintSettings* aPrintSettings, PRBool *aDisplayed)
 {
@@ -897,8 +877,11 @@ NS_IMETHODIMP nsPrintOptions::GetTitle(PRUnichar * *aTitle)
 }
 NS_IMETHODIMP nsPrintOptions::SetTitle(const PRUnichar * aTitle)
 {
-  NS_ENSURE_ARG_POINTER(aTitle);
-  mTitle = aTitle;
+  if (aTitle) {
+    mTitle = aTitle;
+  } else {
+    mTitle.SetLength(0);
+  }
   return NS_OK;
 }
 
@@ -911,8 +894,11 @@ NS_IMETHODIMP nsPrintOptions::GetDocURL(PRUnichar * *aDocURL)
 }
 NS_IMETHODIMP nsPrintOptions::SetDocURL(const PRUnichar * aDocURL)
 {
-  NS_ENSURE_ARG_POINTER(aDocURL);
-  mURL = aDocURL;
+  if (aDocURL) {
+    mURL = aDocURL;
+  } else {
+    mURL.SetLength(0);
+  }
   return NS_OK;
 }
 
@@ -1393,6 +1379,25 @@ NS_IMETHODIMP nsPrintOptions::CreatePrintSettings(nsIPrintSettings **_retval)
   InitPrintSettingsFromPrefs(*_retval); // ignore return value
 
   return rv;
+}
+
+/* readonly attribute nsIPrintSettings globalPrintSettings; */
+NS_IMETHODIMP nsPrintOptions::GetGlobalPrintSettings(nsIPrintSettings * *aGlobalPrintSettings)
+{
+  if (!mGlobalPrintSettings) {
+    CreatePrintSettings(getter_AddRefs(mGlobalPrintSettings));
+    NS_ASSERTION(mGlobalPrintSettings, "Can't be NULL!");
+  }
+
+  // If this still NULL, we have some very big problems going on
+  if (!mGlobalPrintSettings) {
+    return NS_ERROR_FAILURE;
+  }
+
+  *aGlobalPrintSettings = mGlobalPrintSettings.get();
+  NS_ADDREF(*aGlobalPrintSettings);
+
+  return NS_OK;
 }
 
 
