@@ -150,11 +150,12 @@ void StringList::insertBefore(String* strptr, StringListItem* refItem) {
 } //-- insertBefore
 
 /**
- * Returns a StringListIterator for this StringList
+ * Returns a StringListIterator for this StringList, this iterator
+ * will need to be deleted by the caller.
 **/
-StringListIterator StringList::iterator() {
-   return StringListIterator(this);
-}
+StringListIterator* StringList::iterator() {
+   return new StringListIterator(this);
+} //-- iterator
 
 String* StringList::remove(String* strptr) {
    StringListItem* sItem = firstItem;

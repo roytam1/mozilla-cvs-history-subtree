@@ -63,7 +63,7 @@ class StringList {
       /**
        * Returns a StringListIterator for this StringList
       **/
-      StringListIterator iterator();
+      StringListIterator* iterator();
 
       /**
        * Adds the given String to the list
