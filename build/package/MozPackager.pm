@@ -39,11 +39,55 @@ use warnings;
 
 use File::Spec;
 
+package MozPackages;
+
+# A global list of packages is kept at in build/package/packages.list
+# This function takes a package name and returns a list of all the
+# package dependencies. This is normally fed directly into MozParser::parse
+
+sub getPackagesFor {
+    my ($package, $packageListFile) = @_;
+
+    my $fileh;
+    open $packageListFile, $fileh || die("Could not open $packageListFile");
+
+    local %MozPackages::packages;
+    while (my $line = <$fileh>) {
+        chop $line;
+        chomp $line;
+
+        # ignore blank lines and comment lines (beginning with #)
+        next if (! $line);
+        next if ($line =~ /^#/);
+
+        $line =~ /^([-[:alnum:]]+)[[:space:]]*:(.*)$/ &&
+            die("Could not parse package list, line $.: $line");
+
+        exists($MozPackages::packages{$1}) && die("Package $1 defined twice.");
+        $MozPackages::packages{$1} = \split(' ', $2);
+    }
+
+    local %MozPackages::packageList; # hash set of package names
+    _recursePackage($package);
+    return keys(%MozPackages::packageList);
+}
+
+sub _recursePackage {
+    my ($package) = @_;
+
+    exists($MozPackages::packages{$package}) || die("Package $package does not exist.");
+    $MozPackages::packageList{$package} = 1;
+
+    foreach my $packageName (@{$MozPackages::packages{$package}}) {
+        _recursePackage($packageName);
+    }
+}
+
 package MozParser;
 
 sub new {
     return bless {
-        # Hash of package names to build (hash-set)
+        # Hash of package names to build (hash-set, no data)
         'packages' => { },
 
         # list of mappings from tree-filenames to archive-filenames
@@ -87,7 +131,8 @@ sub parse {
     my $self = shift;
     my ($file, @packages) = @_;
     
-    die("Path not found: $file") unless -e $file;
+    -e $file || die("Path not found: $file");
+
     foreach my $package (@packages) {
         $self->{'packages'}->{$package} = 1;
     }

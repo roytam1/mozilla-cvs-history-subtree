@@ -1,10 +1,9 @@
-[gecko]
+[xpfe-browser]
 #if SHARED_LIBRARY
 dist/bin/components/@SHARED_LIBRARY@
 #endif
 !xpt dist/bin/components/wallet.xpt
 
-[gecko-support]
 dist/bin/defaults/wallet/DistinguishedSchema.tbl
 dist/bin/defaults/wallet/FieldSchema.tbl
 dist/bin/defaults/wallet/VcardSchema.tbl

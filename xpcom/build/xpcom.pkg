@@ -7,6 +7,7 @@ dist/bin/@DLLP@xpcom@DLLS@
 !xpt components/xpcom_nativeapp.xpt
 !xpt components/xpcom_thread.xpt
 !xpt components/xpcom_xpti.xpt
+!xpt components/proxyObject.xpt
 
 [gecko xpi-bootstrap]
 dist/bin/@DLLP@xpcom_compat@DLLS@
@@ -14,6 +15,9 @@ dist/bin/components/@DLLP@xpcom_compat_c@DLLS@
 
 [gecko]
 !xpt dist/bin/components/xpcom_obsolete.xpt
+
+[gecko-support]
+dist/bin/regxpcom@BINS@
 
 # we put NSPR here, because hacking the NSPR build system is too painful
 [nspr]

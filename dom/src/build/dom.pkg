@@ -14,4 +14,5 @@ dist/bin/components/@SHARED_LIBRARY@
 !xpt dist/bin/components/dom_views.xpt
 !xpt dist/bin/components/dom_xbl.xpt
 !xpt dist/bin/components/dom_xul.xpt
+!xpt dist/bin/components/dom_xpath.xpt
 !xpt dist/bin/components/jsurl.xpt

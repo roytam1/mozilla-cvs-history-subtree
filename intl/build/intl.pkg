@@ -4,5 +4,6 @@ dist/bin/components/@SHARED_LIBRARY@
 #endif
 !xpt dist/bin/components/unicharutil.xpt
 !xpt dist/bin/components/locale.xpt
+!xpt dist/bin/components/chardet.xpt
 dist/bin/res/langGroups.properties
 dist/bin/res/language.properties
