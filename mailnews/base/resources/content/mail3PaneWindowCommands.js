@@ -57,14 +57,14 @@ var FolderPaneController =
 				if ( command == "cmd_delete" )
 					goSetMenuValue(command, 'valueFolder');
                                 var folderOutliner = GetFolderOutliner();
-                                if (folderOutliner.outlinerBoxObject.selection.count > 0) {
+                                var startIndex = {};
+                                var endIndex = {};
+                                folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+                                if (startIndex.value >= 0) {
 					var specialFolder = null;
 					var isServer = null;
 					var serverType = null;
 					try {
-                                                var startIndex = {};
-                                                var endIndex = {};
-                                                folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
                                                 var folderResource = GetFolderResource(startIndex.value);
                                                 specialFolder = GetFolderAttribute(folderResource, "SpecialFolder");
                                                 isServer = GetFolderAttribute(folderResource, "IsServer");
@@ -808,11 +808,11 @@ function SetupCommandUpdateHandlers()
 function IsRenameFolderEnabled()
 {
     var folderOutliner = GetFolderOutliner();
-    if (folderOutliner.outlinerBoxObject.selection.count == 1)
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    if (startIndex.value >= 0 && startIndex.value = endIndex.value)
     {
-        var startIndex = {};
-        var endIndex = {};
-        folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
         var folderResource = GetFolderResource(startIndex.value);
         return GetFolderAttribute(folderResource, "CanRename") == "true";
     }
@@ -838,11 +838,11 @@ function IsViewNavigationItemEnabled()
 function IsFolderSelected()
 {
     var folderOutliner = GetFolderOutliner();
-    if (folderOutliner.outlinerBoxObject.selection.count == 1)
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    if (startIndex.value >= 0 && startIndex.value == endIndex.value)
     {
-        var startIndex = {};
-        var endIndex = {};
-        folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
         var folderResource = GetFolderResource(startIndex.value);
         return GetFolderAttribute(folderResource, "IsServer") != "true";
     }

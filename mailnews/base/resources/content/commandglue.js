@@ -688,13 +688,11 @@ function OnClickThreadAndMessagePaneSplitterGrippy()
 function FolderPaneSelectionChange()
 {
     var folderOutliner = GetFolderOutliner();
-    if (folderOutliner.outlinerBoxObject.selection.count == 1)
-    {
-        var startIndex = {};
-        var endIndex = {};
-        folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    var startIndex = {};
+    var endIndex = {};
+    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startIndex, endIndex);
+    if (startIndex.value >= 0 && startIndex.value == endIndex.value)
         ChangeFolderByIndex(startIndex.value);
-     }
     else
         ClearThreadPane();
 
