@@ -921,8 +921,8 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
         PR_Unlock(pt_book.ml);
 
         _PR_LogCleanup();
-        /* Close all the fd's before calling _PR_CleanupIO */
-        _PR_CleanupIO();
+        /* Close all the fd's before calling _PR_CleanupFdCache */
+        _PR_CleanupFdCache();
 
         /*
          * I am not sure if it's safe to delete the cv and lock here,
@@ -936,10 +936,6 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
             PR_DestroyLock(pt_book.ml); pt_book.ml = NULL;
         }
         _pt_thread_death(me);
-        PR_DestroyLock(_pr_sleeplock);
-        _pr_sleeplock = NULL;
-        _PR_CleanupLayerCache();
-        _PR_CleanupEnv();
         _pr_initialized = PR_FALSE;
         return PR_SUCCESS;
     }
@@ -1034,7 +1030,7 @@ static void init_pthread_gc_support()
     PR_ASSERT(0 == rv);
 #else  /* defined(_PR_DCETHREADS) */
 	{
-	    struct sigaction sigact_usr2;
+	    struct sigaction sigact_usr2 = {0};
 
 	    sigact_usr2.sa_handler = suspend_signal_handler;
 	    sigact_usr2.sa_flags = SA_RESTART;
@@ -1052,7 +1048,7 @@ static void init_pthread_gc_support()
 	}
 #if defined(PT_NO_SIGTIMEDWAIT)
 	{
-	    struct sigaction sigact_null;
+	    struct sigaction sigact_null = {0};
 	    sigact_null.sa_handler = null_signal_handler;
 	    sigact_null.sa_flags = SA_RESTART;
 	    sigemptyset (&sigact_null.sa_mask);

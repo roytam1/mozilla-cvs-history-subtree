@@ -44,21 +44,9 @@ static const char NSSPKI_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
  * This file prototypes the methods of the top-level PKI objects.
  */
 
-#ifndef DEVT_H
-#include "devt.h"
-#endif /* DEVT_H */
-
 #ifndef NSSPKIT_H
 #include "nsspkit.h"
 #endif /* NSSPKIT_H */
-
-#ifndef NSSPKI1_H
-#include "nsspki1.h"
-#endif /* NSSPKI1_H */
-
-#ifndef BASE_H
-#include "base.h"
-#endif /* BASE_H */
 
 PR_BEGIN_EXTERN_C
 
@@ -799,7 +787,7 @@ NSSPrivateKey_FindPublicKey
 NSS_EXTERN NSSCryptoContext *
 NSSPrivateKey_CreateCryptoContext
 (
-  NSSPrivateKey *vk,
+  NSSPrivateKey *vk
   NSSAlgorithmAndParameters *apOpt,
   NSSCallback *uhh
 );
@@ -1014,7 +1002,7 @@ NSSPublicKey_WrapSymmetricKey
 NSS_EXTERN NSSCryptoContext *
 NSSPublicKey_CreateCryptoContext
 (
-  NSSPublicKey *bk,
+  NSSPublicKey *bk
   NSSAlgorithmAndParameters *apOpt,
   NSSCallback *uhh
 );
@@ -1459,7 +1447,6 @@ NSSTrustDomain_GetDefaultCallback
 NSS_EXTERN PRStatus
 NSSTrustDomain_LoadModule
 (
-  NSSTrustDomain *td,
   NSSUTF8 *moduleOpt,
   NSSUTF8 *uriOpt,
   NSSUTF8 *opaqueOpt,
@@ -1839,7 +1826,7 @@ NSSTrustDomain_FindCertificateByEmail
  */
 
 NSS_EXTERN NSSCertificate **
-NSSTrustDomain_FindCertificatesByEmail
+NSSTrustDomain_FindCertificateByEmail
 (
   NSSTrustDomain *td,
   NSSASCII7 *email,
@@ -1872,20 +1859,16 @@ NSSTrustDomain_FindCertificateByOCSPHash
  * discourage traversal.  Thus for now, this is commented out.
  * If it's needed, let's look at the situation more closely to
  * find out what the actual requirements are.
+ *
+ * 
+ * NSS_EXTERN PRStatus *
+ * NSSTrustDomain_TraverseCertificates
+ * (
+ *   NSSTrustDomain *td,
+ *   PRStatus (*callback)(NSSCertificate *c, void *arg),
+ *   void *arg
+ * );
  */
- 
-/* For now, adding this function.  This may only be for debugging
- * purposes.
- * Perhaps some equivalent function, on a specified token, will be
- * needed in a "friend" header file?
- */
-NSS_EXTERN PRStatus *
-NSSTrustDomain_TraverseCertificates
-(
-  NSSTrustDomain *td,
-  PRStatus (*callback)(NSSCertificate *c, void *arg),
-  void *arg
-);
 
 /*
  * NSSTrustDomain_FindBestUserCertificate
@@ -2171,7 +2154,7 @@ NSSTrustDomain_CreateCryptoContextForAlgorithmAndParameters
 NSS_EXTERN PRStatus
 NSSCryptoContext_Destroy
 (
-  NSSCryptoContext *cc
+  NSSCryptoContext *td
 );
 
 /* establishing a default callback */
@@ -2184,7 +2167,7 @@ NSSCryptoContext_Destroy
 NSS_EXTERN PRStatus
 NSSCryptoContext_SetDefaultCallback
 (
-  NSSCryptoContext *cc,
+  NSSCryptoContext *td,
   NSSCallback *newCallback,
   NSSCallback **oldCallbackOpt
 );
@@ -2197,7 +2180,7 @@ NSSCryptoContext_SetDefaultCallback
 NSS_EXTERN NSSCallback *
 NSSCryptoContext_GetDefaultCallback
 (
-  NSSCryptoContext *cc,
+  NSSCryptoContext *td,
   PRStatus *statusOpt
 );
 
@@ -2209,7 +2192,7 @@ NSSCryptoContext_GetDefaultCallback
 NSS_EXTERN NSSTrustDomain *
 NSSCryptoContext_GetTrustDomain
 (
-  NSSCryptoContext *cc
+  NSSCryptoContext *td
 );
 
 /* AddModule, etc: should we allow "temporary" changes here? */
@@ -2433,7 +2416,7 @@ NSS_EXTERN NSSCertificate *
 NSSCryptoContext_FindCertificateByOCSPHash
 (
   NSSCryptoContext *cc,
-  NSSItem *hash
+  NSSITem *hash
 );
 
 /*
@@ -2773,7 +2756,7 @@ NSSCryptoContext_BeginSign
  */
 
 NSS_EXTERN PRStatus
-NSSCryptoContext_ContinueSign
+NSSCryptoContext_BeginSign
 (
   NSSCryptoContext *cc,
   NSSItem *data

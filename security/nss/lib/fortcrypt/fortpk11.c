@@ -59,19 +59,10 @@
 #include <ctype.h>
 #include <stdio.h>
 #endif
-
-/* sigh */
-#ifndef EOF
-/* stdio was not included */
-extern int sprintf(char *out, char *fmt, ...);
-#endif
-
 #ifdef XP_MAC 
 #ifndef __POWERPC__
 #include <A4Stuff.h>
 #endif
-
-
 /* This is not a 4.0 project, so I can't depend on
  * 4.0 defines, so instead I depend on CodeWarrior 
  * defines.  I define XP_MAC in fpkmem.h
@@ -247,7 +238,7 @@ fort11_FreeFortezzaKey (void *inFortezzaKey) {
 
 static void
 fort11_DestroySlotObjects (PK11Slot *slot, PK11Session *session) {
-    PK11Object *currObject, *nextObject = NULL, *oldObject;
+    PK11Object *currObject, *nextObject, *oldObject;
     int i;
 
     for (i=0; i<HASH_SIZE; i++) {
@@ -2174,9 +2165,9 @@ PR_PUBLIC_API(CK_RV) C_GetTokenInfo(CK_SLOT_ID        slotID,
     }
 
 #ifdef SWFORT
-    sprintf (tmp, "Software FORTEZZA Slot #%d", (int) slotID);
+    sprintf (tmp, "Software FORTEZZA Slot #%d", slotID);
 #else
-    sprintf (tmp, "FORTEZZA Slot #%d", (int) slotID);
+    sprintf (tmp, "FORTEZZA Slot #%d", slotID);
 #endif
     
     PORT_Memcpy (pInfo->label, tmp, PORT_Strlen(tmp)+1);

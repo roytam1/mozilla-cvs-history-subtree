@@ -287,7 +287,7 @@ make_datastruct(char  *data, int len)
 	    datastruct = (Pair *) PORT_Realloc
 		(datastruct, fields * sizeof(Pair));
 	    if (datastruct == NULL) {
-		error_allocate();
+		error_allocate;
 	    }
 	    current = datastruct + (fields - remaining);
 	}
@@ -1346,15 +1346,17 @@ string_to_oid(char  *string)
 	    string += i;
 	} else {
 	    if (*(string + i) == '.') {
-		*(string + i) = '\0';
+		*(string + i) == '\0';
 		value = atoi(string);
 		string += i + 1;
 	    } else {
 		*(string + i) = '\0';
 		i++;
 		value = atoi(string);
-		while (*(string + i) == ' ')
-		    i++;
+		if (*(string + i) == ' ') {
+		    while (*(string + i) == ' ')
+			i++;
+		}
 		if (*(string + i) != '\0') {
 		    error_out("ERROR: Improperly formated OID");
 		}
@@ -2414,7 +2416,7 @@ main(int argc, char **argv)
     fclose(outfile);
 #endif
     fflush(stdout);
-    return 0;
+    return;
 }
 
 

@@ -1156,7 +1156,7 @@ sec_pkcs12_decoder_verify_mac(SEC_PKCS12DecoderContext *p12dcx)
     unsigned char buf[IN_BUF_LEN];
     unsigned int bufLen;
     int iteration;
-    PK11Context *pk11cx = NULL;
+    PK11Context *pk11cx;
     SECItem ignore = {0};
     PK11SymKey *symKey;
     SECItem *params;
@@ -1305,6 +1305,8 @@ SEC_PKCS12DecoderVerify(SEC_PKCS12DecoderContext *p12dcx)
 void
 SEC_PKCS12DecoderFinish(SEC_PKCS12DecoderContext *p12dcx)
 {
+    void *freedCtxt = NULL;
+
     if(!p12dcx) {
 	return;
     }
@@ -2200,6 +2202,7 @@ sec_pkcs12_remove_existing_cert(sec_PKCS12SafeBag *cert,
     SECItem *derCert = NULL;
     CERTCertificate *tempCert = NULL;
     CK_OBJECT_HANDLE certObj;
+    PK11SlotInfo *slot = NULL;
     PRBool removed = PR_FALSE;
 
     if(!cert) {

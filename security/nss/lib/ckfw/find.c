@@ -134,7 +134,7 @@ nssCKFWFindObjects_Create
   CK_RV *pError
 )
 {
-  NSSCKFWFindObjects *fwFindObjects = NULL;
+  NSSCKFWFindObjects *fwFindObjects;
   NSSArena *arena;
   NSSCKMDSession *mdSession;
   NSSCKMDToken *mdToken;

@@ -298,11 +298,6 @@ PK11_IsUserCert(PK11SlotInfo *slot, CERTCertificate *cert,
 	    PK11_SETATTRS(&theTemplate,CKA_VALUE, pubKey->u.dh.publicValue.data,
 						pubKey->u.dh.publicValue.len);
 	    break;
-	case keaKey:
-	case fortezzaKey:
-	case nullKey:
-	    /* fall through and return false */
-	    break;
 	}
 
 	if (theTemplate.ulValueLen == 0) {
@@ -438,11 +433,11 @@ pk11_HandleTrustObject(PK11SlotInfo *slot, CERTCertificate *cert, CERTCertTrust 
   CK_OBJECT_HANDLE tobjID;
   unsigned char sha1_hash[SHA1_LENGTH];
 
-  CK_TRUST serverAuth, codeSigning, emailProtection;
-/*
   CK_TRUST digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment,
     keyAgreement, keyCertSign, crlSign, serverAuth, clientAuth, codeSigning,
-    emailProtection, ipsecEndSystem, ipsecTunnel, ipsecUser, timeStamping; */
+    emailProtection, ipsecEndSystem, ipsecTunnel, ipsecUser, timeStamping;
+
+  SECItem item;
 
   PK11_HashBuf(SEC_OID_SHA1, sha1_hash, cert->derCert.data, cert->derCert.len);
 
@@ -858,6 +853,7 @@ PK11_TraverseSlot(PK11SlotInfo *slot, void *arg)
     int i;
     CK_OBJECT_HANDLE *objID = NULL;
     int object_count = 0;
+    CK_ULONG returned_count = 0;
     pk11TraverseSlot *slotcb = (pk11TraverseSlot*) arg;
 
     objID = pk11_FindObjectsByTemplate(slot,slotcb->findTemplate,
@@ -1759,6 +1755,7 @@ pk11_AllFindCertObjectByRecipientNew(NSSCMSRecipient **recipientlist, void *winc
     PK11SlotList *list;
     PK11SlotListElement *le;
     CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
+    PK11SlotInfo *slot = NULL;
     SECStatus rv;
 
     /* get them all! */
@@ -1901,6 +1898,7 @@ PK11_FindCertAndKeyByRecipientList(PK11SlotInfo **slotPtr,
 {
     CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
     CK_OBJECT_HANDLE keyHandle = CK_INVALID_KEY;
+    PK11SlotInfo *slot = NULL;
     CERTCertificate *cert = NULL;
     SECStatus rv;
 
@@ -1951,6 +1949,7 @@ PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *win
 {
     CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
     CK_OBJECT_HANDLE keyHandle = CK_INVALID_KEY;
+    SECStatus rv;
     NSSCMSRecipient *rl;
     int rlIndex;
 
@@ -2489,6 +2488,8 @@ SECStatus
 PK11_GetKEAMatchedCerts(PK11SlotInfo *slot1, PK11SlotInfo *slot2,
 	CERTCertificate **cert1, CERTCertificate **cert2)
 {
+    PK11SlotList *keaList = PK11_GetAllTokens(CKM_KEA_KEY_DERIVE,
+							PR_FALSE,PR_TRUE,NULL);
     CERTCertificate *returnedCert = NULL;
     int i;
 
@@ -2760,6 +2761,7 @@ SECItem *
 PK11_GetLowLevelKeyIDForCert(PK11SlotInfo *slot,
 					CERTCertificate *cert, void *wincx)
 {
+    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
     CK_ATTRIBUTE theTemplate[] = {
 	{ CKA_VALUE, NULL, 0 },
 	{ CKA_CLASS, NULL, 0 }
