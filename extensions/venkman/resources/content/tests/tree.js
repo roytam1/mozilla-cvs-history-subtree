@@ -33,8 +33,7 @@
  *
  */
 
-var sampleShare = new Object();
-var sampleTree = new TreeOView(sampleShare);
+var sampleTree = new XULTreeView();
 
 function SampleRecord (name, gender) 
 {
@@ -44,7 +43,7 @@ function SampleRecord (name, gender)
     this.gender = gender;
 }
 
-SampleRecord.prototype = new TreeOViewRecord(sampleShare);
+SampleRecord.prototype = new XULTreeViewRecord(sampleTree.share);
 
 sampleTree.childData.appendChild (new SampleRecord ("vinnie", "male"));
 var betty = new SampleRecord ("betty", "female");
@@ -108,7 +107,6 @@ function nativeFrameTest()
 {
     function compare(a, b)
     {
-        debugger;
         if (a > b)
             return 1;
 
@@ -126,6 +124,7 @@ function dbg()
 {
     var a = 0;
     dbg2();
+    nativeFrameTest();
     var c = 0;
 }
 
@@ -136,12 +135,45 @@ function dbg2()
     var nope = null;
     var f = false;
     var i = 4;
+    //@JSD_BREAK
     var d = Number.MAX_VALUE;
     var s = "hello world";
     var fun = dbg;
+    //@JSD_BREAK s == "hello world"
     var obj = new Object();
     debugger;
-    guessThis();
+
+    try
+    {        
+        guessThis();
+        throwSomething();    
+    }
+    catch (ex)
+    {
+        dd ("caught " + ex);
+    }
+    
+    //@JSD_EVAL alert("foo");
+    var rv = returnSomething();
+
+    //@JSD_LOG "this is a log message";
+
+    dd ("returned " + rv);
+
+}
+
+function throwSomething()
+{
+    var str = "this is a test";
+    var obj = { message: "this is only a test" };
+    throw "momma from the train";
+}
+
+function returnSomething()
+{
+    var str = "this is a test";
+    var obj = { message: "this is only a test" };
+    return "your library books on time!";
 }
 
 function dt()
@@ -178,4 +210,3 @@ function switchTest ()
             break;
     }
 }
-

@@ -45,8 +45,9 @@
 #include "jstypes.h"
 #include "jsbit.h"
 #include "jscntxt.h"
-#include "jslock.h"
+#include "jsdtoa.h"
 #include "jsgc.h"
+#include "jslock.h"
 #include "jsscope.h"
 #include "jsstr.h"
 
@@ -823,9 +824,6 @@ js_SetupLocks(int listc, int globc)
 #endif /* !NSPR_LOCK */
     return JS_TRUE;
 }
-
-/* pull in the cleanup function from jsdtoa.c */
-extern void js_FinishDtoa(void);
 
 void
 js_CleanupLocks()

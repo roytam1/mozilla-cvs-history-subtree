@@ -40,7 +40,9 @@
   <![CDATA[
   
   var panel = "chrome://cookie/content/pref-images.xul";
-  var _elementIDs = ["accOrgImages", "networkImageBehaviour", "networkImageWarnAboutImages", "imageLooping"];
+  var _elementIDs = ["accOrgImages", "networkImageBehaviour",
+                   /*"networkImageWarnAboutImages",*/
+                     "imageLooping"];
 
   function init()
   {
@@ -71,9 +73,10 @@
 
   function setDisables()
   {
+/*
     var imageBehavior = document.getElementById("networkImageBehaviour");
     setWarnAboutImagesEnabled(imageBehavior.value != "2");
-
+*/
     // if mailnews is installed then we will have networkImageDisableImagesInMailNews checkbox
       var networkImageDisableImagesInMailNews = document.getElementById("networkImageDisableImagesInMailNews");
     if (networkImageDisableImagesInMailNews)
@@ -117,13 +120,13 @@
     </radiogroup>
 
     <separator id="networkImagesBehaviorSeparator" observes="haveImageBlockingOrMailnews"/>
-
+<!--
     <vbox align="start">
       <checkbox id="networkImageWarnAboutImages" label="&warnAboutImages.label;"
                 accesskey="&warnAboutImages.accesskey;" observes="haveImageBlocking"
                 prefstring="network.image.warnAboutImages"/>
     </vbox>
-
+-->
     <separator observes="haveImageBlocking"/>
 
     <hbox pack="end">
