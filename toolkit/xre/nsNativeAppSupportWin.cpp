@@ -82,6 +82,8 @@
 #include <io.h>
 #include <fcntl.h>
 
+#define kMailtoUrlScheme "mailto:"
+
 #ifdef MOZ_THUNDERBIRD
 #define MAPI_STARTUP_ARG       "/MAPIStartUp"
 #endif
@@ -1381,6 +1383,8 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
     int argc;
     char *p;
     nsCAutoString arg;
+    nsDependentCString mailtoUrlScheme (kMailtoUrlScheme);
+
     // We loop if we've not finished the second pass through.
     while ( 1 ) {
         // Initialize if required.
@@ -1418,7 +1422,9 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
         } else {
             // We are processing the contents of an argument.
             // Check for whitespace or end.
-            if ( *p == 0 || ( !quoted && isspace( *p ) ) ) {
+            // if the argument we are parsing is a mailto url then all of the remaining command line data
+            // needs to be part of the mailto url even if it has spaces. See Bug #231032
+            if ( *p == 0 || ( !quoted && isspace( *p ) && !StringBeginsWith(arg, mailtoUrlScheme, nsCaseInsensitiveCStringComparator()) ) ) {
                 // Process pending backslashes (interpret them
                 // literally since they're not followed by a ").
                 while( bSlashCount ) {
