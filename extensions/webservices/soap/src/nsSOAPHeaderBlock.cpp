@@ -36,7 +36,7 @@ nsSOAPHeaderBlock::~nsSOAPHeaderBlock()
 {
 }
 
-NS_IMPL_ISUPPORTS3(nsSOAPHeaderBlock, 
+NS_IMPL_ISUPPORTS3_CI(nsSOAPHeaderBlock, 
                    nsISOAPHeaderBlock, 
                    nsISecurityCheckedComponent,
                    nsIJSNativeInitializer)
