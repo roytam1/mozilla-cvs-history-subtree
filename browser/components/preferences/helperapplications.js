@@ -138,15 +138,13 @@ function HelperApps()
   if (prefs.prefHasUserValue(kDisabledPluginTypesPref)) 
     disabled = prefs.getCharPref(kDisabledPluginTypesPref);
 
-  var catman = Components.classes["@mozilla.org/categorymanager;1"].getService(Components.interfaces.nsICategoryManager);
-  var types = catman.enumerateCategory("Gecko-Content-Viewers");
-  while (types.hasMoreElements()) {
-    var currType = types.getNext().QueryInterface(Components.interfaces.nsISupportsCString).data;
-    var contractid = catman.getCategoryEntry("Gecko-Content-Viewers", currType);
-    if (contractid == kPluginHandlerContractID) {
+  for (var i = 0; i < navigator.plugins.length; ++i) {
+    var plugin = navigator.plugins[i];
+    for (var j = 0; j < plugin.length; ++j) {
+      var currType = plugin[j].type;
       this._availableTypes[currType] = { mimeURI: MIME_URI(currType),
                                          pluginAvailable: true,
-                                         pluginEnabled: disabled.indexOf("currType") == -1 };
+                                         pluginEnabled: disabled.indexOf(currType) == -1 };
     }
   }
 }

@@ -99,7 +99,6 @@ var gChangeActionDialog = {
           lf.initWithPath(path);
           customApp.file = lf;
           customApp.label = this._getDisplayNameForFile(lf);
-          dump("*** intergoat = " + this._getDisplayNameForFile(lf) + "\n");
           customApp.image = this._getIconURLForFile(lf);
         }
         catch (e) {
@@ -111,7 +110,6 @@ var gChangeActionDialog = {
       var defaultApp = document.getElementById("defaultApp");
       var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
       defaultApp.label = mimeInfo.defaultDescription;
-      dump("*** goatinter = " + mimeInfo.defaultDescription + "\n");
       defaultApp.image = this._getIconURLForFile(mimeInfo.defaultApplicationHandler); 
       
       var pluginName = document.getElementById("pluginName");
@@ -224,6 +222,9 @@ var gChangeActionDialog = {
                                .getService(Components.interfaces.nsICategoryManager);
         catman.addCategoryEntry("Gecko-Content-Viewers", mimeInfo.MIMEType,
                                 kPluginHandlerContractID, false, true);
+
+        var newHandler = this._helperApps.GetTarget(this._itemRes, this._fileHandlerArc, true);
+        this._helperApps.onChange(this._helperApps, this._itemRes, this._fileHandlerArc, newHandler);
       }
       return;
     }
@@ -232,7 +233,8 @@ var gChangeActionDialog = {
     
     var dirty = false;
     
-    if (this._handlerRes) {  
+    if (this._handlerRes) {
+      dump("*** selected = " + handlerGroup.selectedItem.value + "\n");
       switch (handlerGroup.selectedItem.value) {
       case "system":
         this._setLiteralValue(this._handlerRes, "saveToDisk", "false");
@@ -253,7 +255,7 @@ var gChangeActionDialog = {
       
     if (this._extAppRes) {
       var customApp = document.getElementById("customApp");
-      if (customApp.label != "") {
+      if (customApp.file) {
         this._setLiteralValue(this._extAppRes, "path", customApp.file.path);
         this._setLiteralValue(this._extAppRes, "prettyName", customApp.label);
       }

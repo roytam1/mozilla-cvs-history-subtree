@@ -66,7 +66,8 @@
              no discernible reason -->
     <tree id="fileHandlersList" flex="1" class="contentPane"
           datasources="rdf:null" lastSelected="0" persist="lastSelected"
-          onselect="gDownloadActionsDialog.onSelectionChanged();">
+          onselect="gDownloadActionsDialog.onSelectionChanged();"
+          ondblclick="gDownloadActionsDialog.editFileHandler();">
       <template>
         <rule>
           <conditions>
