@@ -141,8 +141,6 @@ typedef unsigned int uint32;
 #    else  /* __alpha */
 typedef unsigned long uint32;
 #    endif /* __alpha */
-#  else  /* NSPR20 */
-typedef PRUint32 uint32;
 #  endif /* NSPR20 */
 #endif
 
@@ -157,8 +155,6 @@ typedef int int32;
 #    else  /* __alpha */
 typedef long int32;
 #    endif /* __alpha */
-#  else  /* NSPR20 */
-typedef PRInt32 int32;
 #  endif /* NSPR20 */
 #endif
 
