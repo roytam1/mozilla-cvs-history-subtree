@@ -53,6 +53,7 @@ nsMsgDBView::nsMsgDBView()
   m_sortValid = PR_TRUE;
   m_sortOrder = nsMsgViewSortOrder::none;
   m_viewFlags = nsMsgViewFlagsType::kNone;
+  m_cachedMsgKey = nsMsgKey_None;
 }
 
 nsMsgDBView::~nsMsgDBView()
@@ -93,26 +94,42 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID
 
 NS_IMETHODIMP nsMsgDBView::IsContainer(PRInt32 index, PRBool *_retval)
 {
+  PRUint32 flags = m_flags[index];
+  *_retval = (flags & MSG_VIEW_FLAG_HASCHILDREN) != 0;
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
 {
+  PRUint32 flags = m_flags[index];
+  *_retval = (flags & MSG_FLAG_ELIDED) == 0;
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
 {
+  *_retval = m_levels[index];
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
 {
-
+  nsresult rv = NS_OK;
   nsMsgKey key = m_keys.GetAt(aRow);
   nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  nsresult rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
-  NS_ENSURE_SUCCESS(rv,rv);
+  if (key == m_cachedMsgKey)
+    msgHdr = m_cachedHdr;
+  else
+  {
+    rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+    if (NS_SUCCEEDED(rv))
+    {
+      m_cachedHdr = msgHdr;
+      m_cachedMsgKey = key;
+    }
+    else
+      return rv;
+  }
 
   // just a hack
   nsXPIDLCString dbString;

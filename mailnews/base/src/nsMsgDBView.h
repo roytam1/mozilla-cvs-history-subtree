@@ -115,6 +115,10 @@ protected:
   nsUInt32Array m_flags;
   nsUint8Array   m_levels;
 
+  // cache the most recently asked fo header and corresponding msgKey.
+  nsCOMPtr <nsIMsgDBHdr>  m_cachedHdr;
+  nsMsgKey                m_cachedMsgKey;
+
   nsCOMPtr <nsIMsgDatabase> m_db;
   PRBool		m_sortValid;
   nsMsgViewSortTypeValue  m_sortType;
