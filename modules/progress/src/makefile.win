@@ -48,7 +48,6 @@ CPP_OBJS=\
 #ifdef MOZ_SMOOTH_PROGRESS
         .\$(OBJDIR)\nsProgressManager.obj       \
         .\$(OBJDIR)\progress.obj                \
-        .\$(OBJDIR)\nsTime.obj                  \
 #endif
         $(NULL)
 
