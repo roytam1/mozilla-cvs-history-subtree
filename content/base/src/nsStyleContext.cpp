@@ -1965,7 +1965,6 @@ void StyleContextImpl::RecalcAutomaticData(nsIPresContext* aPresContext)
 NS_IMETHODIMP
 StyleContextImpl::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBool aStopAtFirstDifference /*= PR_FALSE*/)
 {
-  // XXXdwh figure this out!
   if (NS_FAILED(HaveStyleData())) {
     return NS_ERROR_NULL_POINTER;
   }
@@ -2256,7 +2255,7 @@ StyleContextImpl::StyleDataMatches(nsIStyleContext* aStyleContextToMatch,
   //       nsIStyleContext implementors...
   StyleContextImpl* other = NS_STATIC_CAST(StyleContextImpl*,aStyleContextToMatch);
   *aMatches = PR_FALSE;
-
+/*
   // check same pointer value
   if (other->mStyleData != mStyleData) {
     // check using the crc first: 
@@ -2281,15 +2280,16 @@ StyleContextImpl::StyleDataMatches(nsIStyleContext* aStyleContextToMatch,
       // XXX NOTE: this should be removed when we trust the CRC matching
       //           as this slows it way down
       gScreenedByCRC++;
-      /*
-      PRInt32 hint = 0;
-      CalcStyleDifference(aStyleContextToMatch, hint, PR_TRUE);
-      NS_ASSERTION(hint>0,"!!!FALSE-NEGATIVE in StyleMatchesData!!!");
-      */
+      
+     // PRInt32 hint = 0;
+     // CalcStyleDifference(aStyleContextToMatch, hint, PR_TRUE);
+     // NS_ASSERTION(hint>0,"!!!FALSE-NEGATIVE in StyleMatchesData!!!");
+      
     }
     // printf("False-Pos: %ld - Screened: %ld\n", gFalsePos, gScreenedByCRC);
 #endif
   }
+ */
   return rv;
 }
 

@@ -773,13 +773,16 @@ nsRuleNode::ComputeFontData(nsStyleFont* aStartFont, const nsCSSFont& aFontData,
       // MJA: bug 31816
       PRBool fontFaceOK = PR_TRUE;
       PRBool isMozFixed = font->mFont.name.EqualsIgnoreCase("-moz-fixed");
-      if ((chromeOverride || useDocumentFonts))
-        fontFaceOK = (NS_OK == dc->FirstExistingFont(font->mFont, face));
-      if (!fontFaceOK || !(chromeOverride || useDocumentFonts)) {
+      if (chromeOverride || useDocumentFonts) {
+        font->mFont.name += nsAutoString(NS_LITERAL_STRING(",")) + defaultFont.name;
+        font->mFixedFont.name += nsAutoString(NS_LITERAL_STRING(",")) + defaultFixedFont.name;
+      }
+      else {
         // now set to defaults
         font->mFont.name = defaultFont.name;
-        font->mFixedFont.name= defaultFixedFont.name;
+        font->mFixedFont.name = defaultFixedFont.name;
       }
+
       // set to monospace if using moz-fixed
       if (isMozFixed)
         font->mFlags |= NS_STYLE_FONT_USE_FIXED;
