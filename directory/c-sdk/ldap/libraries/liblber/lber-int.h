@@ -236,7 +236,7 @@ void ber_err_print( char *data );
 	     (((_l)&0xff0000)>>8) + (((_l)&0xff000000)>>24))
 #define LBER_NTOHL(_l) LBER_HTONL(_l)
 
-#elif (!defined(__alpha) || defined(VMS)) && !defined(__amd64__)
+#elif (!defined(__alpha) || defined(VMS)) && !defined(__amd64__) && !defined(__x86_64__)
 
 #define LBER_HTONL( l )	htonl( l )
 #define LBER_NTOHL( l )	ntohl( l )
