@@ -156,7 +156,7 @@ static int quiet_fgets (char *buf, int length, FILE *input)
   memset (buf, 0, length);
 
   if (input != stdin) {
-     return fgets(buf,length,input);
+	return fgets(buf,length,input);
   }
 
   while (1)

@@ -55,13 +55,11 @@ DIRS = lib  \
  p7verify  \
  pp  \
  rngtest \
- sdrtest \
  selfserv  \
  ssltap  \
  strsclnt \
  swfort  \
  tstclnt  \
- smimetools  \
  $(NULL)
 
 TEMPORARILY_DONT_BUILD = \

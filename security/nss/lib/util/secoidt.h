@@ -281,9 +281,6 @@ typedef enum {
     SEC_OID_CMS_3DES_KEY_WRAP,
     SEC_OID_CMS_RC2_KEY_WRAP,
 
-    /* SMIME attributes */
-    SEC_OID_SMIME_ENCRYPTION_KEY_PREFERENCE,
-
     SEC_OID_TOTAL
 } SECOidTag;
 

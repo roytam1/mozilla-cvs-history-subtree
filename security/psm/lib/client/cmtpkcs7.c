@@ -343,10 +343,9 @@ CMTStatus CMT_CreateSigned(PCMT_CONTROL control, CMUint32 scertRID,
     CMTItem message;
     CreateSignedRequest request;
     CreateContentInfoReply reply;
-    char checkMessageForError = 0;
 
     /* Do some parameter checking */
-    if (!control || !scertRID || !digest || !ciRID) {
+    if (!control || !scertRID || !ecertRID || !digest || !ciRID) {
         goto loser;
     }
 
@@ -368,7 +367,7 @@ CMTStatus CMT_CreateSigned(PCMT_CONTROL control, CMUint32 scertRID,
     if (CMT_SendMessage(control, &message) == CMTFailure) {
         goto loser;
     }
-    checkMessageForError = 1;
+
     /* Validate the message reply type */
     if (message.type != (SSM_REPLY_OK_MESSAGE | SSM_OBJECT_SIGNING | SSM_CREATE_SIGNED)) {
         goto loser;
@@ -385,9 +384,7 @@ CMTStatus CMT_CreateSigned(PCMT_CONTROL control, CMUint32 scertRID,
 	} 
 
 loser:
-    if (checkMessageForError && 
-	CMT_DecodeMessage(SingleNumMessageTemplate, 
-			  &reply, &message) == CMTSuccess) {
+    if (CMT_DecodeMessage(CreateContentInfoReplyTemplate, &reply, &message) == CMTSuccess) {
         *errCode = reply.errorCode;
     } else {
         *errCode = 0;

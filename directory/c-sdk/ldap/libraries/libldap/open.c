@@ -57,7 +57,6 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 int	ldap_debug;
 #endif
 
-extern int SSL_IsDomestic(void);
 
 /*
  * global defaults for callbacks are stored here.  callers of the API set
@@ -98,6 +97,8 @@ nsldapi_initialize_defaults( void )
 
 /*
  * ldap_version - report version levels for important properties
+ * This function is deprecated.  Use ldap_get_option( ..., LDAP_OPT_API_INFO,
+ *	... ) instead.
  *
  * Example:
  *	LDAPVersion ver;
@@ -121,11 +122,19 @@ ldap_version( LDAPVersion *ver )
 		ver->sdk_version = (int)(VI_PRODUCTVERSION * 100);
 		ver->protocol_version = LDAP_VERSION_MAX * 100;
 		ver->SSL_version = SSL_VERSION * 100;
-#if defined(LINK_SSL)
-		ver->security_level = SSL_IsDomestic() ? 128 : 40;
-#else
+		/* 
+		 * set security to none by default 
+		 */
+
 		ver->security_level = LDAP_SECURITY_NONE;
+#if defined(LINK_SSL)
+#if defined(NS_DOMESTIC)
+		ver->security_level = 128;
+#elif defined(NSS_EXPORT)
+		ver->security_level = 40;
 #endif
+#endif
+
 	}
 	return (int)(VI_PRODUCTVERSION * 100);
 }
@@ -155,7 +164,7 @@ ldap_open( const char *host, int port )
 	LDAP_MUTEX_LOCK( ld, LDAP_CONN_LOCK );
 	if ( nsldapi_open_ldap_defconn( ld ) < 0 ) {
 		LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
-		ldap_ld_free( ld, 0 );
+		ldap_ld_free( ld, NULL, NULL, 0 );
 		return( NULL );
 	}
 
@@ -223,8 +232,24 @@ ldap_init( const char *defhost, int defport )
 		return( NULL );
 	}
 
-	for( i=0; i<LDAP_MAX_LOCK; i++ )
+	/* install Sockbuf I/O functions if set in LDAP * */
+	if ( ld->ld_read_fn != NULL ) {
+		ber_sockbuf_set_option( ld->ld_sbp, LBER_SOCKBUF_OPT_READ_FN,
+			(void *)ld->ld_read_fn );
+	}
+	if ( ld->ld_write_fn != NULL ) {
+		ber_sockbuf_set_option( ld->ld_sbp, LBER_SOCKBUF_OPT_WRITE_FN,
+			(void *)ld->ld_write_fn );
+	}
+
+	/* allocate mutexes */
+	for( i=0; i<LDAP_MAX_LOCK; i++ ) {
 		ld->ld_mutex[i] = LDAP_MUTEX_ALLOC( ld );
+		ld->ld_mutex_threadid[i] = (void *) -1; 
+		ld->ld_mutex_refcnt[i] = 0; 
+	} 
+
+	/* set default port */
 	ld->ld_defport = ( defport == 0 ) ? LDAP_PORT : defport;
 
 	return( ld );
@@ -270,8 +295,8 @@ nsldapi_open_ldap_connection( LDAP *ld, Sockbuf *sb, char *host, int defport,
 			    port = defport;   
 			}
 
-			if (( rc = nsldapi_connect_to_host( ld, sb, curhost, 0L,
-			    port, async, secure )) != -1 ) {
+			if (( rc = nsldapi_connect_to_host( ld, sb, curhost,
+			    0, port, async, secure )) != -1 ) {
 				break;
 			}
 		}
@@ -376,12 +401,14 @@ nsldapi_free( void *ptr )
 }
 
 
+/* if s is NULL, returns NULL */
 char *
 nsldapi_strdup( const char *s )
 {
 	char	*p;
 
-	if ( (p = (char *)NSLDAPI_MALLOC( strlen( s ) + 1 )) == NULL )
+	if ( s == NULL ||
+	    (p = (char *)NSLDAPI_MALLOC( strlen( s ) + 1 )) == NULL )
 		return( NULL );
 
 	strcpy( p, s );
