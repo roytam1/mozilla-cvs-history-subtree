@@ -93,7 +93,7 @@ Rights Reserved.
     
     <titledbox value="&results.label;" orient="vertical" class="dialog box-padded" flex="1">
        <box id="searchTermListBox" orient="vertical" flex="1">
-            <tree id="threadTree" flex="1" context="threadPaneContext"/>
+            <outliner id="threadOutliner" flex="1" context="threadPaneContext"/>
        </box>
     </titledbox>
     

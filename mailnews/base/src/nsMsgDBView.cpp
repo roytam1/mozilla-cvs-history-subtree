@@ -647,17 +647,19 @@ NS_IMETHODIMP nsMsgDBView::SetSortedColumn(nsIDOMElement * aColumn)
 
 NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
 {
-  NS_ENSURE_ARG(folder);
-  nsCOMPtr <nsIDBFolderInfo> folderInfo;
 
   m_viewFlags = viewFlags;
   m_sortOrder = sortOrder;
   m_sortType = sortType;
 
-  nsresult rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
-  NS_ENSURE_SUCCESS(rv,rv);
-	m_db->AddListener(this);
-  m_folder = folder;
+  if (folder) // search view will have a null folder
+  {
+    nsCOMPtr <nsIDBFolderInfo> folderInfo;
+    nsresult rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
+    NS_ENSURE_SUCCESS(rv,rv);
+	  m_db->AddListener(this);
+    m_folder = folder;
+  }
 #ifdef HAVE_PORT
 	CacheAdd ();
 #endif
@@ -1371,9 +1373,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
 {
     nsresult rv;
 
-    NS_ASSERTION(m_db, "no db");
-    if (!m_db) return NS_ERROR_FAILURE;
-
+    // null db is OK.
     nsMsgKeyArray preservedSelection;
 
 #ifdef DEBUG_seth
@@ -1450,7 +1450,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     while (more && numSoFar < arraySize) {
       nsMsgKey thisKey = m_keys.GetAt(numSoFar);
       if (sortType != nsMsgViewSortType::byId) {
-        rv = m_db->GetMsgHdrForKey(thisKey, getter_AddRefs(msgHdr));
+        rv = GetMsgHdrForViewIndex(numSoFar, getter_AddRefs(msgHdr));
         NS_ASSERTION(NS_SUCCEEDED(rv) && msgHdr, "header not found");
         if (NS_FAILED(rv) || !msgHdr) {
           FreeAll(&ptrs);

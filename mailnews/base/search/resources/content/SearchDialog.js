@@ -23,6 +23,7 @@ var rdfServiceContractID    = "@mozilla.org/rdf/rdf-service;1";
 var searchSessionContractID = "@mozilla.org/messenger/searchSession;1";
 var folderDSContractID         = rdfDatasourcePrefix + "mailnewsfolders";
 var gSearchDatasource;
+var gSearchView;
 var gSearchSession;
 var gCurrentFolder;
 
@@ -41,7 +42,7 @@ var Bundle;
 // Datasource search listener -- made global as it has to be registered
 // and unregistered in different functions.
 var gDataSourceSearchListener;
-
+var gViewSearchListener;
 var gIsSearchHit = false;
 var gButton;
 
@@ -64,8 +65,8 @@ var nsSearchResultsController =
     isCommandEnabled: function(command)
     {
         var enabled = true;
-        if (gThreadTree.selectedItems.length <= 0)
-            enabled = false;
+//        if (gThreadTree.selectedItems.length <= 0)
+//            enabled = false;
 
         return enabled;
     },
@@ -115,10 +116,10 @@ var gSearchNotificationListener =
     onNewSearch: function() 
     {
         gButton.setAttribute("value", Bundle.GetStringFromName("labelForStopButton"));
-        if (gThreadTree)
-            gThreadTree.clearItemSelection();
+//        if (gThreadTree)
+//            gThreadTree.clearItemSelection();
         ThreadTreeUpdate_Search();
-        gStatusFeedback.ShowStatusString(Bundle.GetStringFromName("searchingMessage"));
+//        gStatusFeedback.ShowStatusString(Bundle.GetStringFromName("searchingMessage"));
     }
 }
 
@@ -143,7 +144,7 @@ function searchOnLoad()
 function searchOnUnload()
 {
     // unregister listeners
-    gSearchSession.unregisterListener(gDataSourceSearchListener);
+    gSearchSession.unregisterListener(gViewSearchListener);
     gSearchSession.unregisterListener(gSearchNotificationListener);
 
     // release this early because msgWindow holds a weak reference
@@ -153,7 +154,7 @@ function searchOnUnload()
 function initializeSearchWindowWidgets()
 {
     gFolderPicker = document.getElementById("searchableFolders");
-    gThreadTree = document.getElementById("threadTree");
+//    gThreadTree = document.getElementById("threadTree");
     gButton = document.getElementById("search-button");
 
     msgWindow = Components.classes[msgWindowContractID].createInstance(nsIMsgWindow);
@@ -162,7 +163,7 @@ function initializeSearchWindowWidgets()
 
     // functionality to enable/disable buttons using nsSearchResultsController
     // depending of whether items are selected in the search results thread pane.
-    gThreadTree.controllers.appendController(nsSearchResultsController);
+//    gThreadTree.controllers.appendController(nsSearchResultsController);
     top.controllers.insertControllerAt(0, nsSearchResultsController);
     ThreadTreeUpdate_Search();
 }
@@ -255,8 +256,8 @@ function onSearch(event)
     gSearchSession.search(msgWindow);
     // refresh the tree after the search starts, because initiating the
     // search will cause the datasource to clear itself
-    gThreadTree.setAttribute("ref", gThreadTree.getAttribute("ref"));
-    dump("Kicking it off with " + gThreadTree.getAttribute("ref") + "\n");
+//    gThreadTree.setAttribute("ref", gThreadTree.getAttribute("ref"));
+//    dump("Kicking it off with " + gThreadTree.getAttribute("ref") + "\n");
 }
 
 function AddSubFolders(folder) {
@@ -294,32 +295,48 @@ function GetScopeForFolder(folder) {
     else
         return nsMsgSearchScope.MailFolder;
 }
+
+var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
+var nsMsgViewSortOrder = Components.interfaces.nsMsgViewSortOrder;
+var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
+var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
     
 function setupDatasource() {
 
     RDF = Components.classes[rdfServiceContractID].getService(Components.interfaces.nsIRDFService);
     
     gSearchDatasource = Components.classes[rdfDatasourcePrefix + "msgsearch"].createInstance(Components.interfaces.nsIRDFDataSource);
-
+    gSearchView = Components.classes["@mozilla.org/messenger/msgdbview;1?type=search"].createInstance(Components.interfaces.nsIMsgDBView);
     dump("The root is " + gSearchDatasource.URI + "\n");
-    gThreadTree.setAttribute("ref", gSearchDatasource.URI);
+//    gThreadTree.setAttribute("ref", gSearchDatasource.URI);
     
+    var count = new Object;
+    gSearchView.init(messenger, msgWindow);
+    gSearchView.open(null, nsMsgViewSortType.byId, nsMsgViewSortOrder.ascending, nsMsgViewFlagsType.kFlatDisplay, count);
+
+    var outlinerView = gSearchView.QueryInterface(Components.interfaces.nsIOutlinerView);
+    if (outlinerView)
+    {     
+      var outliner = GetThreadOutliner();
+      outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView; 
+      dump('set outliner view\n');
+    }
     // the thread pane needs to use the search datasource (to get the
     // actual list of messages) and the message datasource (to get any
     // attributes about each message)
     gSearchSession = Components.classes[searchSessionContractID].createInstance(Components.interfaces.nsIMsgSearchSession);
     
-    setMsgDatasourceWindow(gSearchDatasource, msgWindow);
-    gThreadTree.database.AddDataSource(gSearchDatasource);
+//    setMsgDatasourceWindow(gSearchDatasource, msgWindow);
+//    gThreadTree.database.AddDataSource(gSearchDatasource);
 
-    var messageDatasource = Components.classes[rdfDatasourcePrefix + "mailnewsmessages"].createInstance(Components.interfaces.nsIRDFDataSource);
-    setMsgDatasourceWindow(messageDatasource, msgWindow);
+//    var messageDatasource = Components.classes[rdfDatasourcePrefix + "mailnewsmessages"].createInstance(Components.interfaces.nsIRDFDataSource);
+//    setMsgDatasourceWindow(messageDatasource, msgWindow);
     
-    gThreadTree.database.AddDataSource(messageDatasource);
+//    gThreadTree.database.AddDataSource(messageDatasource);
     
     // the datasource is a listener on the search results
-    gDataSourceSearchListener = gSearchDatasource.QueryInterface(Components.interfaces.nsIMsgSearchNotify);
-    gSearchSession.registerListener(gDataSourceSearchListener);
+    gViewSearchListener = gSearchView.QueryInterface(Components.interfaces.nsIMsgSearchNotify);
+    gSearchSession.registerListener(gViewSearchListener);
 }
 
 

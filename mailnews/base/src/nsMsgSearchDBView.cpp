@@ -45,6 +45,9 @@ NS_IMPL_QUERY_TAIL_INHERITING(nsMsgDBView)
 NS_IMETHODIMP nsMsgSearchDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
 {
 	nsresult rv;
+  m_folders = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
 	rv = nsMsgDBView::Open(folder, sortType, sortOrder, viewFlags, pCount);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -75,15 +78,44 @@ nsresult nsMsgSearchDBView::FetchLocation(nsIMsgDBHdr * aHdr, PRUnichar ** aSize
 
 nsresult nsMsgSearchDBView::GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsresult rv;
+  nsCOMPtr <nsISupports> supports = getter_AddRefs(m_folders->ElementAt(index));
+	if(supports)
+	{
+		nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(supports);
+    if (folder)
+    {
+      nsCOMPtr <nsIMsgDatabase> db;
+      rv = folder->GetMsgDatabase(mMsgWindow, getter_AddRefs(db));
+      NS_ENSURE_SUCCESS(rv, rv);
+      if (db)
+        rv = db->GetMsgHdrForKey(m_keys.GetAt(index), msgHdr);
+    }
+  }
+  return rv;
 }
 
 NS_IMETHODIMP
 nsMsgSearchDBView::OnSearchHit(nsIMsgDBHdr* aMsgHdr, nsIMsgFolder *folder)
 {
-    nsresult rv = NS_OK;
+  NS_ENSURE_ARG(aMsgHdr);
+  NS_ENSURE_ARG(folder);
+  nsCOMPtr <nsISupports> supports = do_QueryInterface(folder);
 
-    return rv;
+  m_folders->AppendElement(supports);
+
+  nsresult rv = NS_OK;
+  nsMsgKey msgKey;
+  PRUint32 msgFlags;
+  aMsgHdr->GetMessageKey(&msgKey);
+  aMsgHdr->GetFlags(&msgFlags);
+  m_keys.Add(msgKey);
+  m_levels.Add(0);
+  m_flags.Add(msgFlags);
+  if (mOutliner)
+    mOutliner->RowCountChanged(m_keys.GetSize() - 1, 1);
+
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -97,6 +129,15 @@ nsMsgSearchDBView::OnSearchDone(nsresult status)
 NS_IMETHODIMP
 nsMsgSearchDBView::OnNewSearch()
 {
+  if (mOutliner)
+  {
+    PRInt32 viewSize = m_keys.GetSize();
+    mOutliner->RowCountChanged(0, -viewSize); // all rows gone.
+  }
+  m_folders->Clear();
+  m_keys.RemoveAll();
+  m_levels.RemoveAll();
+  m_flags.RemoveAll();
 //    mSearchResults->Clear();
     return NS_OK;
 }
