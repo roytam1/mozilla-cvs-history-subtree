@@ -778,14 +778,10 @@ nsSiteWindow::GetDimensions(PRUint32 aFlags,
 NS_IMETHODIMP
 nsSiteWindow::SetFocus(void)
 {
-  nsXULWindow *window = mProxy->XULWindow();
-  if (window) {
-    nsCOMPtr<nsIDocShell> docshell;
-    window->GetDocShell(getter_AddRefs(docshell));
-    nsCOMPtr<nsIDOMWindowInternal> domWindow(do_GetInterface(docshell));
-    if (domWindow)
-      domWindow->Focus();
-  }
+  /* This method is being used from within nsGlobalWindow::Focus,
+     providing a hook for MDI embedding apps. We do nothing,
+     allowing nsGlobalWindow to carry on unhindered.
+  */
   return NS_OK;
 }
 
