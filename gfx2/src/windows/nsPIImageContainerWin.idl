@@ -25,9 +25,13 @@
 #include "gfxtypes.idl"
 
 %{C++
-#include <windows.h>    
+#include <windows.h>
+#include "nsRect.h"
+#include "nsPoint.h"
 %}
 
+native HDC(HDC);
+[ptr] native nsPoint(nsPoint);
 
 /**
  * nsPIImageContainerWin interface
@@ -41,6 +45,5 @@ interface nsPIImageContainerWin : nsISupports
 {
   /**
    */
-  void drawImage(in PRInt32 width,
-                 in PRInt32 height);
+  void drawImage(in HDC aDestDC, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint);
 };
