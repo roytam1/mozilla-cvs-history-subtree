@@ -182,7 +182,7 @@ a.chatzilla-link {
     color: #777499;
 }
 
-.msg-user[msg-user="ME!"]:before,                /* the decoration around MY   */
-.msg-user[msg-user="ME!"]:after {                /* nick                       */
+.msg-user[msg-user$="ME!"]:before,               /* the decoration around MY   */
+.msg-user[msg-user$="ME!"]:after {               /* nick                       */
     color: #843c6c;
 }
